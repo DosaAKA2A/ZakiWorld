@@ -268,8 +268,8 @@ footer{border-top:1px solid var(--line);padding:2.2rem 0;color:var(--text-dim);f
       <a href="#como-funciona" class="btn btn-ghost">¿CÓMO FUNCIONA?</a>
     </div>
     <div class="hero-stats reveal" style="transition-delay:.32s">
-      <div class="hero-stat"><span class="pixel-num" data-count="1284">0</span><span>compras entregadas</span></div>
-      <div class="hero-stat"><span class="pixel-num" data-count="347">0</span><span>donadores</span></div>
+      <div class="hero-stat"><span class="pixel-num" data-count="213">0</span><span>compras entregadas</span></div>
+      <div class="hero-stat"><span class="pixel-num" data-count="119">0</span><span>donadores</span></div>
       <div class="hero-stat"><span class="pixel-num">&lt;60s</span><span>tiempo de entrega</span></div>
     </div>
   </div>
@@ -278,7 +278,7 @@ footer{border-top:1px solid var(--line);padding:2.2rem 0;color:var(--text-dim);f
       <span class="h-particle"></span><span class="h-particle"></span><span class="h-particle"></span><span class="h-particle"></span><span class="h-particle"></span><span class="h-particle"></span><span class="h-particle"></span><span class="h-particle"></span>
     </div>
     <div class="hero-skin">
-      <img id="hero-skin-img" src="https://mc-heads.net/body/MHF_Steve/right" alt="Skin de Minecraft" width="120" height="280">
+      <img id="hero-skin-img" src="https://mc-heads.net/body/SayCles_/right" alt="Skin de Minecraft" width="120" height="280">
       <div class="hero-platform"></div>
     </div>
   </div>
@@ -397,6 +397,10 @@ let DONATIONS=[
   {name:"NovaTenshi",pkg:"SUPREME",amt:"18.00€"},
   {name:"NovaTenshi",pkg:"VIP++",amt:"15.00€"},
   {name:"Kainemon",pkg:"VIP",amt:"5.00€"},
+  {name:"Victooryas",pkg:"VIP+",amt:"10.00€"},
+  {name:"LaSuerteYes",pkg:"VIP",amt:"3.00€"},
+  {name:"pato7w7",pkg:"VIP++",amt:"15.00€"},
+  {name:"Faram0",pkg:"SUPREME",amt:"15.00€"},
 ];
 let TOP_DONOR={name:"Dosa__",total:"3,000.00",currency:"$"};
 
@@ -442,7 +446,7 @@ if(CONFIG.WORKER_URL){
         DONATIONS=data.donations;
         // Rebuild ticker
         const t=document.getElementById("ticker");
-        const items=[...DONATIONS,...DONATIONS,...DONATIONS];
+        const items=[...DONATIONS,...DONATIONS];
         t.innerHTML=items.map(slotHTML).join("");
       }
       if(data.topDonor){
@@ -483,7 +487,7 @@ const slotHTML=d=>`<div class="slot">
   <div class="slot__info"><div class="slot__name">${d.name}</div><div class="slot__pkg">${d.pkg}</div></div>
   <span class="slot__amt">${d.amt}</span>
 </div>`;
-ticker.innerHTML=[...DONATIONS,...DONATIONS,...DONATIONS].map(slotHTML).join("");
+ticker.innerHTML=[...DONATIONS,...DONATIONS].map(slotHTML).join("");
 
 /* ============================================================
    MÁXIMO DONADOR
