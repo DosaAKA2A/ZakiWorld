@@ -304,7 +304,8 @@ footer{border-top:1px solid var(--line);padding:2.2rem 0;color:var(--text-dim);f
     </div>
     <div class="top-donor__info">
       <span class="eyebrow" style="color:var(--gold)">Julio 2026</span>
-      <div class="top-donor__name" id="top-donor-name">¿Serás tú?</div>
+      <div class="top-donor__name" id="top-donor-name">Dosa__</div>
+      <div class="top-donor__amount" id="top-donor-amount" style="font-family:var(--font-pixel);font-size:1.4rem;color:var(--aurora);margin:.3rem 0 .6rem">$3,000.00 donados</div>
       <p class="top-donor__desc">Cada mes coronamos a quien más apoya el servidor. Su skin se exhibe aquí y recibe recompensas exclusivas dentro del juego.</p>
       <div class="medal-row">
         <span class="medal">🏆 <strong>Título exclusivo</strong> en el chat</span>
@@ -397,7 +398,7 @@ let DONATIONS=[
   {name:"NovaTenshi",pkg:"VIP++",amt:"15.00€"},
   {name:"Kainemon",pkg:"VIP",amt:"5.00€"},
 ];
-let TOP_DONOR={name:"NovaTenshi"};
+let TOP_DONOR={name:"Dosa__",total:"3,000.00",currency:"$"};
 
 const PACKAGES=[
   {id:"r1",icon:"⭐",name:"VIP",tag:"",accent:"#9b6dff",price:4.99,perks:[
@@ -447,6 +448,7 @@ if(CONFIG.WORKER_URL){
       if(data.topDonor){
         TOP_DONOR=data.topDonor;
         document.getElementById("top-donor-name").textContent=TOP_DONOR.name;
+        document.getElementById("top-donor-amount").textContent=`$${TOP_DONOR.total} donados`;
         document.getElementById("top-donor-skin").src=`https://starlightskins.lunareclipse.studio/render/ultimate/${encodeURIComponent(TOP_DONOR.name)}/full`;
       }
       // Update hero counters with real data
@@ -488,6 +490,7 @@ ticker.innerHTML=[...DONATIONS,...DONATIONS,...DONATIONS].map(slotHTML).join("")
 ============================================================ */
 if(TOP_DONOR){
   document.getElementById("top-donor-name").textContent=TOP_DONOR.name;
+  document.getElementById("top-donor-amount").textContent=`${TOP_DONOR.currency}${TOP_DONOR.total} donados`;
   document.getElementById("top-donor-skin").src=`https://starlightskins.lunareclipse.studio/render/ultimate/${encodeURIComponent(TOP_DONOR.name)}/full`;
 }
 
