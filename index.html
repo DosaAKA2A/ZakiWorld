@@ -387,16 +387,17 @@ const CONFIG={
   TEBEX_PUBLIC_TOKEN:"gkwh-9fc4e04539d07122497f102bdae86d73157aaf17",
   TEBEX_PROJECT_ID:"773585",
   DISCORD_INVITE:"https://discord.gg/jtbYpTvp25",
+  WORKER_URL:"",  // TODO: pegar aquí la URL del Cloudflare Worker (ej: https://tebex-api.xxx.workers.dev)
 };
 
-/* ── Datos de ejemplo (se reemplazarán por la API de Tebex) ── */
-const DONATIONS=[
+/* ── Donaciones (se cargan dinámicamente del Worker, estos son fallback) ── */
+let DONATIONS=[
   {name:"SunDy",pkg:"VIP",amt:"5.00€"},
   {name:"NovaTenshi",pkg:"SUPREME",amt:"18.00€"},
   {name:"NovaTenshi",pkg:"VIP++",amt:"15.00€"},
   {name:"Kainemon",pkg:"VIP",amt:"5.00€"},
 ];
-const TOP_DONOR={name:"NovaTenshi"};
+let TOP_DONOR={name:"NovaTenshi"};
 
 const PACKAGES=[
   {id:"r1",icon:"⭐",name:"VIP",tag:"",accent:"#9b6dff",price:4.99,perks:[
@@ -428,6 +429,37 @@ const PACKAGES=[
     "Estatua en el spawn"
   ]},
 ];
+
+/* ============================================================
+   CARGA DINÁMICA DE DONACIONES (Cloudflare Worker → Tebex API)
+============================================================ */
+if(CONFIG.WORKER_URL){
+  fetch(CONFIG.WORKER_URL+"/donations")
+    .then(r=>r.json())
+    .then(data=>{
+      if(data.donations&&data.donations.length){
+        DONATIONS=data.donations;
+        // Rebuild ticker
+        const t=document.getElementById("ticker");
+        const items=[...DONATIONS,...DONATIONS,...DONATIONS];
+        t.innerHTML=items.map(slotHTML).join("");
+      }
+      if(data.topDonor){
+        TOP_DONOR=data.topDonor;
+        document.getElementById("top-donor-name").textContent=TOP_DONOR.name;
+        document.getElementById("top-donor-skin").src=`https://mc-heads.net/body/${encodeURIComponent(TOP_DONOR.name)}/right`;
+      }
+      // Update hero counters with real data
+      if(data.totalDonations){
+        const el=document.querySelector("[data-count='1284']");
+        if(el){el.dataset.count=data.totalDonations;el.textContent=data.totalDonations.toLocaleString("es-ES");}
+      }
+      if(data.totalDonors){
+        const el=document.querySelector("[data-count='347']");
+        if(el){el.dataset.count=data.totalDonors;el.textContent=data.totalDonors.toLocaleString("es-ES");}
+      }
+    }).catch(()=>{});
+}
 
 /* ============================================================
    ESTRELLAS
