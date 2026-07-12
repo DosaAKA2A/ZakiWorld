@@ -782,6 +782,48 @@ function trackCursor(){
   })();
 }
 
+/* ============================================================
+   ANIMACIÓN "6-7" AL HACER CLICK 🤲
+============================================================ */
+let doing67=false;
+skinCanvas.addEventListener("click",()=>{
+  if(!skinViewer||!skinViewer.playerObject||doing67)return;
+  doing67=true;
+  const skin=skinViewer.playerObject.skin;
+  const rArm=skin.rightArm, lArm=skin.leftArm;
+  const prevAnim=skinViewer.animation;
+  skinViewer.animation=null; // pausar idle para control total
+  const t0=performance.now();
+  const DUR=2200; // ~4 balanceos
+
+  (function anim67(t){
+    const el=t-t0;
+    if(el>=DUR){
+      // restaurar
+      rArm.rotation.x=0;rArm.rotation.z=0;
+      lArm.rotation.x=0;lArm.rotation.z=0;
+      skinViewer.animation=prevAnim;
+      doing67=false;
+      return;
+    }
+    const k=el/DUR;
+    // Entrada/salida suave de la pose (brazos al frente, palmas arriba)
+    const ease=k<.12?k/.12:(k>.88?(1-k)/.12:1);
+    const base=-Math.PI/2.1*ease;           // brazos extendidos al frente
+    const sway=Math.sin(el/140)*.5*ease;    // el balancín arriba/abajo
+    rArm.rotation.x=base+sway;              // derecha sube...
+    lArm.rotation.x=base-sway;              // ...izquierda baja (alternado)
+    rArm.rotation.z=-.12*ease;              // palmas ligeramente abiertas
+    lArm.rotation.z=.12*ease;
+    // Cabecita al ritmo
+    skin.head.rotation.z=Math.sin(el/140)*.07*ease;
+    requestAnimationFrame(anim67);
+  })(t0);
+
+  showToast("6️⃣7️⃣");
+});
+skinCanvas.style.cursor="pointer";
+
 /* Inicializar todo */
 renderCards();
 applyUser();
