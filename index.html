@@ -832,7 +832,6 @@ skinCanvas.addEventListener("click",()=>{
   bubble.classList.add("pop");
   const skin=skinViewer.playerObject.skin;
   const rArm=skin.rightArm, lArm=skin.leftArm;
-  const prevAnim=skinViewer.animation;
   skinViewer.animation=null; // pausar idle para control total
   const t0=performance.now();
   const DUR=2950; // sincronizado con la duración del audio (una pasada)
@@ -840,12 +839,14 @@ skinCanvas.addEventListener("click",()=>{
   (function anim67(t){
     const el=t-t0;
     if(el>=DUR){
-      // restaurar
+      // Restaurar TODAS las rotaciones tocadas (incluida la cabeza)
       rArm.rotation.x=0;rArm.rotation.z=0;
       lArm.rotation.x=0;lArm.rotation.z=0;
-      skinViewer.animation=prevAnim;
-      bubble.classList.remove("pop");
-      try{sfx67.pause();}catch(e){}
+      skin.head.rotation.z=0;
+      // Idle NUEVA: arranca en fase 0 (pose neutral) → sin salto.
+      // Reutilizar la anterior retomaba a mitad de ciclo y causaba el glitch.
+      skinViewer.animation=new skinview3d.IdleAnimation();
+      skinViewer.animation.speed=.9;
       doing67=false;
       return;
     }
