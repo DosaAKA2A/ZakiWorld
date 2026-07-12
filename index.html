@@ -108,13 +108,8 @@ header{position:sticky;top:0;z-index:60;backdrop-filter:blur(18px) saturate(1.6)
 @keyframes spin{to{rotate:360deg}}
 .hero-skin{position:relative;z-index:3;text-align:center}
 #skin-canvas{filter:drop-shadow(0 24px 55px rgba(155,109,255,.45))}
-/* Globo de chat pixelart — blanco, sobre la cabeza */
-.chat-bubble{position:absolute;top:-14px;left:50%;transform:translate(-50%,10px) scale(.6);transform-origin:bottom center;background:#fff;color:#1a1533;font-family:var(--font-pixel);font-size:1.4rem;font-weight:700;padding:.45rem 1.05rem;border-radius:0;z-index:5;opacity:0;pointer-events:none;
-  /* borde pixel: doble caja escalonada */
-  box-shadow:0 0 0 3px #1a1533,0 0 0 6px #fff,0 8px 0 3px rgba(0,0,0,.25);
-  transition:opacity .15s steps(2),transform .15s steps(2)}
-/* Colita pixel: escaloncitos blancos descendentes */
-.chat-bubble::after{content:"";position:absolute;bottom:-15px;left:50%;transform:translateX(-50%);width:9px;height:9px;background:#fff;box-shadow:0 0 0 3px #1a1533,0 9px 0 -3px #fff,0 9px 0 0 #1a1533}
+/* Globo de chat pixelart (SVG) — flota sobre la cabeza */
+.chat-bubble{position:absolute;top:-52px;left:50%;transform:translate(-50%,10px) scale(.6);transform-origin:bottom center;z-index:5;opacity:0;pointer-events:none;line-height:0;filter:drop-shadow(0 3px 6px rgba(0,0,0,.35));transition:opacity .15s steps(2),transform .15s steps(2)}
 .chat-bubble.pop{opacity:1;transform:translate(-50%,0) scale(1)}
 .hero-skin img{height:300px;margin-inline:auto;image-rendering:pixelated;filter:drop-shadow(0 24px 55px rgba(155,109,255,.45));animation:skinFloat 5s ease-in-out infinite}
 @keyframes skinFloat{0%,100%{transform:translateY(0)}50%{transform:translateY(-16px)}}
@@ -324,7 +319,14 @@ footer{border-top:1px solid var(--line);padding:2.4rem 0;color:var(--text-dim);f
     <div class="hero-ring hero-ring--2"></div>
     <span class="h-particle"></span><span class="h-particle"></span><span class="h-particle"></span><span class="h-particle"></span><span class="h-particle"></span><span class="h-particle"></span>
     <div class="hero-skin">
-      <div class="chat-bubble" id="chat-bubble" aria-hidden="true">67</div>
+      <div class="chat-bubble" id="chat-bubble" aria-hidden="true">
+        <svg viewBox="0 0 26 18" width="100" shape-rendering="crispEdges" xmlns="http://www.w3.org/2000/svg">
+          <path fill="#1a1533" d="M3 0H23V1H24V2H25V3H26V11H25V12H24V13H23V14H17V15H16V16H15V17H14V16H13V15H12V14H3V13H2V12H1V11H0V3H1V2H2V1H3Z"/>
+          <path fill="#ffffff" d="M3 1H23V2H24V3H25V11H24V12H23V13H16V14H15V15H14V14H13V13H3V12H2V11H1V3H2V2H3Z"/>
+          <rect x="2" y="11" width="21" height="1" fill="#d8d8de"/>
+          <text x="13" y="9.2" text-anchor="middle" font-family="Silkscreen,monospace" font-size="6" fill="#1a1533">67</text>
+        </svg>
+      </div>
       <canvas id="skin-canvas" width="300" height="360" style="display:none;margin-inline:auto;cursor:grab"></canvas>
       <img id="hero-skin-img" src="https://mc-heads.net/body/SayCles_/right" alt="Tu skin de Minecraft" width="120" height="300">
       <div class="hero-shadow"></div>
