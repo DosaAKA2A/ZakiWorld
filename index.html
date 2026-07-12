@@ -53,6 +53,29 @@ img{display:block;max-width:100%}
 /* Easter egg: video de fondo */
 #egg-video{position:fixed;inset:0;width:100vw;height:100vh;object-fit:cover;z-index:-1;opacity:0;pointer-events:none;transition:opacity .8s ease}
 #egg-video.playing{opacity:.1}
+/* Backdrop del hero: el spawn asomando tras la niebla del void */
+.hero-backdrop{position:absolute;top:0;left:0;right:0;height:min(96vh,880px);z-index:-1;overflow:hidden;pointer-events:none}
+.hero-backdrop img{width:100%;height:100%;object-fit:cover;object-position:center 30%;opacity:.22;filter:saturate(1.15)}
+.hero-backdrop::after{content:"";position:absolute;inset:0;background:linear-gradient(180deg,rgba(11,9,24,.5) 0%,rgba(11,9,24,.25) 45%,var(--void) 97%)}
+/* Sección spawn */
+.spawn-frame{position:relative;border-radius:18px;overflow:hidden;border:1px solid var(--line);aspect-ratio:21/9;box-shadow:0 30px 70px rgba(0,0,0,.5)}
+.spawn-frame img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:0;transition:opacity .8s ease,transform 8s ease}
+.spawn-frame img.active{opacity:1;transform:scale(1.04)}
+.spawn-frame::after{content:"";position:absolute;inset:0;background:linear-gradient(180deg,transparent 45%,rgba(11,9,24,.75));pointer-events:none}
+.spawn-caption{position:absolute;left:2rem;bottom:1.8rem;z-index:2}
+.spawn-caption h3{font-family:var(--font-display);font-weight:800;font-size:clamp(1.3rem,2.4vw,1.9rem);text-shadow:0 2px 18px rgba(0,0,0,.6)}
+.spawn-caption p{color:var(--text-dim);font-size:.95rem;text-shadow:0 1px 10px rgba(0,0,0,.6)}
+.spawn-thumbs{position:absolute;right:1.6rem;bottom:1.6rem;display:flex;gap:.7rem;z-index:2}
+.spawn-thumb{width:92px;height:56px;border-radius:10px;overflow:hidden;border:2px solid rgba(255,255,255,.25);cursor:pointer;transition:border-color .3s,transform .3s;padding:0;background:none}
+.spawn-thumb img{width:100%;height:100%;object-fit:cover;display:block}
+.spawn-thumb:hover{transform:translateY(-3px)}
+.spawn-thumb.active{border-color:var(--gold)}
+@media(max-width:768px){
+  .spawn-frame{aspect-ratio:4/3}
+  .spawn-thumbs{right:.9rem;bottom:.9rem}
+  .spawn-thumb{width:64px;height:40px}
+  .spawn-caption{left:1rem;bottom:.9rem;max-width:55%}
+}
 /* El personaje huye hacia la derecha */
 #skin-canvas.run-away{transition:transform 1.7s cubic-bezier(.45,.02,.85,.4),opacity .3s ease 1.5s;transform:translateX(130vw)!important;opacity:0}
 .hero-shadow.run-away{transition:opacity .5s ease;opacity:0!important}
@@ -278,6 +301,7 @@ footer{border-top:1px solid var(--line);padding:2.4rem 0;color:var(--text-dim);f
 <div class="sky"></div>
 <div class="stars" id="stars"></div>
 <video id="egg-video" src="assets/leavemealone.mp4" playsinline preload="none"></video>
+<div class="hero-backdrop" aria-hidden="true"><img src="assets/spawn-puerto.webp" alt="" loading="eager" fetchpriority="low"></div>
 
 <!-- ═══════════ HEADER ═══════════ -->
 <header>
@@ -400,6 +424,29 @@ footer{border-top:1px solid var(--line);padding:2.4rem 0;color:var(--text-dim);f
     <div class="step reveal"><span class="step__num">01</span><span class="step__ico">🧺</span><h3>Elige y paga</h3><p>Añade un rango al carrito y paga con tarjeta, PayPal y más. El pago lo procesa Tebex de forma segura.</p></div>
     <div class="step reveal" style="transition-delay:.1s"><span class="step__num">02</span><span class="step__ico">⚡</span><h3>El servidor lo detecta</h3><p>Nuestro sistema confirma tu compra automáticamente. No hay que abrir ticket ni avisar a nadie.</p></div>
     <div class="step reveal" style="transition-delay:.2s"><span class="step__num">03</span><span class="step__ico">🎁</span><h3>Recibe tu rango</h3><p>Tu rango aparece en el juego al instante. Si estás desconectado, se entrega al volver a entrar.</p></div>
+  </div>
+</section>
+
+<!-- ═══════════ NUESTRO SPAWN ═══════════ -->
+<section class="container" id="spawn">
+  <div class="sec-head reveal">
+    <span class="eyebrow">Nuestro mundo</span>
+    <h2>Así se ve el spawn de ZakiWorld</h2>
+    <p>Cada donación mantiene vivo este mundo. Entra y recórrelo tú mismo: <strong style="color:var(--aurora);cursor:pointer" id="spawn-copy-ip">zakiworld.holy.gg</strong></p>
+  </div>
+  <div class="spawn-frame reveal" style="transition-delay:.1s">
+    <img src="assets/spawn-panorama.webp" alt="Vista panorámica del spawn de ZakiWorld" class="active" data-view="panorama">
+    <img src="assets/spawn-puerto.webp" alt="El puerto del spawn al atardecer" data-view="puerto" loading="lazy">
+    <img src="assets/spawn-palacio.webp" alt="El palacio flotante" data-view="palacio" loading="lazy">
+    <div class="spawn-caption">
+      <h3 id="spawn-title">La isla principal</h3>
+      <p id="spawn-desc">Pagodas, cerezos y el árbol ancestral que corona el mundo.</p>
+    </div>
+    <div class="spawn-thumbs">
+      <button class="spawn-thumb active" data-goto="panorama" aria-label="Ver panorámica"><img src="assets/spawn-panorama.webp" alt=""></button>
+      <button class="spawn-thumb" data-goto="puerto" aria-label="Ver el puerto"><img src="assets/spawn-puerto.webp" alt=""></button>
+      <button class="spawn-thumb" data-goto="palacio" aria-label="Ver el palacio"><img src="assets/spawn-palacio.webp" alt=""></button>
+    </div>
   </div>
 </section>
 
@@ -945,6 +992,27 @@ skinCanvas.addEventListener("click",()=>{
 
 });
 skinCanvas.style.cursor="pointer";
+
+/* ============================================================
+   GALERÍA DEL SPAWN
+============================================================ */
+const SPAWN_VIEWS={
+  panorama:{t:"La isla principal",d:"Pagodas, cerezos y el árbol ancestral que corona el mundo."},
+  puerto:{t:"El puerto al atardecer",d:"Muelles de madera bajo la gran torre del faro."},
+  palacio:{t:"El palacio flotante",d:"Islas suspendidas de mármol y jardines colgantes."},
+};
+document.querySelectorAll(".spawn-thumb").forEach(btn=>{
+  btn.addEventListener("click",()=>{
+    const view=btn.dataset.goto;
+    document.querySelectorAll(".spawn-frame > img").forEach(im=>im.classList.toggle("active",im.dataset.view===view));
+    document.querySelectorAll(".spawn-thumb").forEach(b=>b.classList.toggle("active",b===btn));
+    document.getElementById("spawn-title").textContent=SPAWN_VIEWS[view].t;
+    document.getElementById("spawn-desc").textContent=SPAWN_VIEWS[view].d;
+  });
+});
+document.getElementById("spawn-copy-ip").onclick=()=>{
+  navigator.clipboard?.writeText(CONFIG.SERVER_IP).then(()=>showToast("IP copiada: "+CONFIG.SERVER_IP));
+};
 
 /* Inicializar todo */
 renderCards();
