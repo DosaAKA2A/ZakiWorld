@@ -317,8 +317,6 @@ footer{border-top:1px solid var(--line);padding:2.6rem 0;color:var(--text-dim);f
     </div>
     <div class="tabs" id="tabs">
       <button class="tab active" data-cat="rangos">RANGOS</button>
-      <button class="tab" data-cat="llaves">LLAVES</button>
-      <button class="tab" data-cat="cosmeticos">COSMÉTICOS</button>
     </div>
   </div>
   <div class="grid" id="grid"></div>
@@ -355,7 +353,7 @@ footer{border-top:1px solid var(--line);padding:2.6rem 0;color:var(--text-dim);f
 <aside class="drawer" id="drawer" aria-label="Carrito de compras">
   <h3>Tu carrito <button class="drawer-close" id="close-cart">CERRAR ✕</button></h3>
   <div class="drawer-items" id="drawer-items"></div>
-  <div class="drawer-total"><span>TOTAL</span><span id="cart-total" style="color:var(--gold)">0.00 USD</span></div>
+  <div class="drawer-total"><span>TOTAL</span><span id="cart-total" style="color:var(--gold)">0.00 EUR</span></div>
   <button class="btn btn-gold" id="checkout-btn" style="justify-content:center">PAGAR CON TEBEX ▸</button>
 </aside>
 
@@ -374,28 +372,21 @@ const CONFIG = {
 
 /* ---------- Datos de ejemplo (luego vendrán de la API Headless de Tebex) ---------- */
 const DONATIONS = [
-  {name:"Zakito",    pkg:"Rango Amatista", amt:"24.99"},
-  {name:"Notch",     pkg:"Llave Legendaria x5", amt:"9.99"},
-  {name:"jeb_",      pkg:"Rango Aurora", amt:"14.99"},
-  {name:"Dinnerbone",pkg:"Alas del End", amt:"6.99"},
-  {name:"Grumm",     pkg:"Rango Vacío", amt:"39.99"},
-  {name:"Marc",      pkg:"Llave Épica x3", amt:"4.99"},
+  {name:"Zakito",    pkg:"VIP", amt:"4.99€"},
+  {name:"Notch",     pkg:"VIP+", amt:"9.99€"},
+  {name:"jeb_",      pkg:"VIP++", amt:"14.99€"},
+  {name:"Dinnerbone",pkg:"SUPREME", amt:"19.99€"},
+  {name:"Grumm",     pkg:"VIP+", amt:"9.99€"},
+  {name:"Marc",      pkg:"VIP", amt:"4.99€"},
 ];
 const TOP_DONOR = null; // ej: {name:"Zakito"} — null muestra "¿Serás tú?"
 
 const PACKAGES = {
   rangos: [
-    {id:"r1",icon:"💜",name:"Amatista",tag:"POPULAR",accent:"#9b6dff",price:24.99,perks:["Kit Amatista cada 24h","3 homes adicionales","/fly en tu claim","Prefijo morado en el chat"]},
-    {id:"r2",icon:"🌊",name:"Aurora",tag:"",accent:"#5ef2c8",price:14.99,perks:["Kit Aurora cada 24h","2 homes adicionales","/hat y /nick","Prefijo aurora en el chat"]},
-    {id:"r3",icon:"🌑",name:"Vacío",tag:"MÁXIMO",accent:"#ffc94a",price:39.99,perks:["Todos los kits","/fly global","Mascota exclusiva del End","Acceso anticipado a eventos"]},
-  ],
-  llaves: [
-    {id:"k1",icon:"🗝️",name:"Llave Épica x3",tag:"",accent:"#9b6dff",price:4.99,perks:["3 aperturas del cofre épico","Objetos encantados","Posibilidad de rango temporal"]},
-    {id:"k2",icon:"🔑",name:"Llave Legendaria x5",tag:"MEJOR VALOR",accent:"#ffc94a",price:9.99,perks:["5 aperturas del cofre legendario","Equipo netherite","Cosméticos raros garantizados"]},
-  ],
-  cosmeticos: [
-    {id:"c1",icon:"🕊️",name:"Alas del End",tag:"",accent:"#9b6dff",price:6.99,perks:["Alas de partículas moradas","Visible para todos","Permanente"]},
-    {id:"c2",icon:"🎆",name:"Rastro de estrellas",tag:"NUEVO",accent:"#5ef2c8",price:3.99,perks:["Partículas al caminar","5 colores intercambiables","Permanente"]},
+    {id:"r1",icon:"⭐",name:"VIP",tag:"",accent:"#9b6dff",price:4.99,perks:["Kit VIP cada 24h","2 homes adicionales","Prefijo VIP en el chat","Acceso a /hat"]},
+    {id:"r2",icon:"💎",name:"VIP+",tag:"POPULAR",accent:"#5ef2c8",price:9.99,perks:["Todo lo de VIP","Kit VIP+ mejorado cada 24h","4 homes adicionales","/fly en tu claim","/nick con colores"]},
+    {id:"r3",icon:"🔮",name:"VIP++",tag:"",accent:"#b493ff",price:14.99,perks:["Todo lo de VIP+","Kit VIP++ premium cada 24h","6 homes adicionales","/fly global","Acceso anticipado a eventos"]},
+    {id:"r4",icon:"👑",name:"SUPREME",tag:"MÁXIMO",accent:"#ffc94a",price:19.99,perks:["Todo lo de VIP++","Kit SUPREME exclusivo cada 24h","Homes ilimitados","Mascota exclusiva","Partículas y cosméticos únicos","Estatua en el spawn"]},
   ],
 };
 
@@ -432,7 +423,7 @@ const ticker=document.getElementById("ticker");
 const slotHTML=d=>`<div class="slot">
   <img src="https://mc-heads.net/avatar/${encodeURIComponent(d.name)}/38" alt="${d.name}" loading="lazy">
   <div><div class="slot__name">${d.name}</div><div class="slot__pkg">${d.pkg}</div></div>
-  <span class="slot__amt">$${d.amt}</span>
+  <span class="slot__amt">${d.amt}</span>
 </div>`;
 ticker.innerHTML=[...DONATIONS,...DONATIONS].map(slotHTML).join("");
 
@@ -456,7 +447,7 @@ function renderCat(cat){
       <h3>${p.name}</h3>
       <ul>${p.perks.map(x=>`<li>${x}</li>`).join("")}</ul>
       <div class="card__foot">
-        <div class="price">$${p.price.toFixed(2)}<small>USD · pago único</small></div>
+        <div class="price">€${p.price.toFixed(2)}<small>EUR · pago único</small></div>
         <button class="add-btn" data-add="${p.id}" data-cat="${cat}">AÑADIR +</button>
       </div>
     </article>`).join("");
@@ -504,8 +495,8 @@ function renderCart(){
   const box=document.getElementById("drawer-items");
   document.getElementById("cart-count").textContent=cart.length;
   if(!cart.length){box.innerHTML=`<div class="drawer-empty">Tu carrito está vacío.<br>Añade un paquete para continuar.</div>`;}
-  else box.innerHTML=cart.map((p,i)=>`<div class="d-item"><span>${p.icon} ${p.name}</span><span class="price">$${p.price.toFixed(2)}</span><button data-rm="${i}">✕</button></div>`).join("");
-  document.getElementById("cart-total").textContent=cart.reduce((s,p)=>s+p.price,0).toFixed(2)+" USD";
+  else box.innerHTML=cart.map((p,i)=>`<div class="d-item"><span>${p.icon} ${p.name}</span><span class="price">€${p.price.toFixed(2)}</span><button data-rm="${i}">✕</button></div>`).join("");
+  document.getElementById("cart-total").textContent=cart.reduce((s,p)=>s+p.price,0).toFixed(2)+" EUR";
 }
 document.addEventListener("click",e=>{
   const add=e.target.closest("[data-add]");
