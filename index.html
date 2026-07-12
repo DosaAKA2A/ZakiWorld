@@ -845,27 +845,31 @@ function runAway(){
   skin.head.rotation.set(0,0,0);
   try{sfx67.pause();}catch(e){}
   document.getElementById("chat-bubble").classList.remove("pop");
-  // Mirar hacia la derecha y CORRER (rotación forzada cada frame
-  // para que ni el idle ni el seguimiento de cursor la pisen)
+  // Empieza a correr y GIRA PROGRESIVAMENTE hacia la derecha
   skinViewer.animation=new skinview3d.RunningAnimation();
   skinViewer.animation.speed=1.1;
-  (function forceFacing(){
+  const startYaw=skinViewer.playerObject.rotation.y; // desde donde mira ahora
+  const endYaw=Math.PI/2;                             // hasta mirar a la derecha
+  const turnT0=performance.now(), TURN_DUR=850;
+  (function turnAndRun(t){
     if(!skinViewer)return; // ya fue destruido
-    skinViewer.playerObject.rotation.y=Math.PI/2;
-    requestAnimationFrame(forceFacing);
-  })();
-  // Despegue con leve retardo para que se vea el primer paso
+    const k=Math.min((t-turnT0)/TURN_DUR,1);
+    const e=1-Math.pow(1-k,3); // ease-out: gira rápido al inicio, asienta suave
+    skinViewer.playerObject.rotation.y=startYaw+(endYaw-startYaw)*e;
+    requestAnimationFrame(turnAndRun);
+  })(turnT0);
+  // Despega cuando ya casi completó el giro (corre en el sitio mientras gira)
   setTimeout(()=>{
     skinCanvas.classList.add("run-away");
     document.querySelector(".hero-shadow").classList.add("run-away");
-  },180);
+  },650);
   // Al salir de pantalla: desaparecer del todo y liberar recursos
   setTimeout(()=>{
     skinCanvas.style.display="none";
     try{skinViewer.dispose();}catch(e){}
     skinViewer=null;
     document.getElementById("hero-user-tag").innerHTML=`Se fue corriendo… <strong>recarga la página</strong> para que vuelva 😔`;
-  },2100);
+  },2600);
 }
 
 function checkEgg(){
