@@ -53,6 +53,9 @@ img{display:block;max-width:100%}
 /* Easter egg: video de fondo */
 #egg-video{position:fixed;inset:0;width:100vw;height:100vh;object-fit:cover;z-index:-1;opacity:0;pointer-events:none;transition:opacity .8s ease}
 #egg-video.playing{opacity:.1}
+/* El personaje huye hacia la derecha */
+#skin-canvas.run-away{transition:transform 1.7s cubic-bezier(.45,.02,.85,.4),opacity .3s ease 1.5s;transform:translateX(130vw)!important;opacity:0}
+.hero-shadow.run-away{transition:opacity .5s ease;opacity:0!important}
 
 /* ── Utilidades ── */
 .container{width:min(1260px,90%);margin-inline:auto}
@@ -807,7 +810,7 @@ function trackCursor(){
     // Interpolación suave (lerp) para movimiento fluido
     lookCurrent.yaw+=(lookTarget.yaw-lookCurrent.yaw)*.08;
     lookCurrent.pitch+=(lookTarget.pitch-lookCurrent.pitch)*.08;
-    if(skinViewer&&skinViewer.playerObject){
+    if(!characterGone&&skinViewer&&skinViewer.playerObject){
       skinViewer.playerObject.rotation.y=lookCurrent.yaw;
       const head=skinViewer.playerObject.skin.head;
       head.rotation.x=lookCurrent.pitch;
@@ -825,10 +828,41 @@ const sfx67=new Audio("assets/doot67.mp3");
 sfx67.preload="auto";
 sfx67.volume=.65;
 
-/* Easter egg secreto: 4 clicks rápidos → video de fondo */
+/* Easter egg secreto: 4 clicks rápidos → video de fondo + el personaje huye */
 const eggVideo=document.getElementById("egg-video");
 let clickTimes=[];
 let eggPlaying=false;
+let characterGone=false; // no vuelve hasta recargar la página
+
+function runAway(){
+  if(characterGone||!skinViewer)return;
+  characterGone=true;
+  doing67=true; // bloquea el emote y aborta su loop
+  const skin=skinViewer.playerObject.skin;
+  // Reset de pose por si estaba a mitad del 67
+  skin.rightArm.rotation.set(0,0,0);
+  skin.leftArm.rotation.set(0,0,0);
+  skin.head.rotation.set(0,0,0);
+  try{sfx67.pause();}catch(e){}
+  document.getElementById("chat-bubble").classList.remove("pop");
+  // Mirar hacia la derecha y CORRER
+  skinViewer.playerObject.rotation.y=Math.PI/2;
+  skinViewer.animation=new skinview3d.RunningAnimation();
+  skinViewer.animation.speed=1.1;
+  // Despegue con leve retardo para que se vea el primer paso
+  setTimeout(()=>{
+    skinCanvas.classList.add("run-away");
+    document.querySelector(".hero-shadow").classList.add("run-away");
+  },180);
+  // Al salir de pantalla: desaparecer del todo y liberar recursos
+  setTimeout(()=>{
+    skinCanvas.style.display="none";
+    try{skinViewer.dispose();}catch(e){}
+    skinViewer=null;
+    document.getElementById("hero-user-tag").innerHTML=`Se fue corriendo… <strong>recarga la página</strong> para que vuelva 😔`;
+  },2100);
+}
+
 function checkEgg(){
   const now=performance.now();
   clickTimes.push(now);
@@ -843,6 +877,7 @@ function checkEgg(){
       eggVideo.classList.remove("playing");
       setTimeout(()=>{eggPlaying=false;},900); // esperar el fade out
     };
+    runAway(); // 🏃💨
   }
 }
 
@@ -863,6 +898,7 @@ skinCanvas.addEventListener("click",()=>{
   const DUR=2950; // sincronizado con la duración del audio (una pasada)
 
   (function anim67(t){
+    if(characterGone)return; // huyó a mitad del emote → abortar
     const el=t-t0;
     if(el>=DUR){
       // Restaurar TODAS las rotaciones tocadas (incluida la cabeza)
