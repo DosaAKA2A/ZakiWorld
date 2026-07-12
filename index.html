@@ -109,8 +109,8 @@ header{position:sticky;top:0;z-index:60;backdrop-filter:blur(18px) saturate(1.6)
 .hero-skin{position:relative;z-index:3;text-align:center}
 #skin-canvas{filter:drop-shadow(0 24px 55px rgba(155,109,255,.45))}
 /* Globo de chat pixelart (SVG) — flota sobre la cabeza */
-.chat-bubble{position:absolute;top:-52px;left:50%;transform:translate(-50%,10px) scale(.6);transform-origin:bottom center;z-index:5;opacity:0;pointer-events:none;line-height:0;filter:drop-shadow(0 3px 6px rgba(0,0,0,.35));transition:opacity .15s steps(2),transform .15s steps(2)}
-.chat-bubble.pop{opacity:1;transform:translate(-50%,0) scale(1)}
+.chat-bubble{position:absolute;top:-52px;left:50%;transform:translate(-50%,14px) scale(.82);transform-origin:bottom center;z-index:5;opacity:0;pointer-events:none;line-height:0;filter:drop-shadow(0 3px 6px rgba(0,0,0,.35));transition:opacity .45s ease,transform .45s cubic-bezier(.4,0,.6,1)}
+.chat-bubble.pop{opacity:1;transform:translate(-50%,0) scale(1);transition:opacity .3s ease-out,transform .45s cubic-bezier(.34,1.56,.64,1)}
 .hero-skin img{height:300px;margin-inline:auto;image-rendering:pixelated;filter:drop-shadow(0 24px 55px rgba(155,109,255,.45));animation:skinFloat 5s ease-in-out infinite}
 @keyframes skinFloat{0%,100%{transform:translateY(0)}50%{transform:translateY(-16px)}}
 .hero-shadow{width:170px;height:26px;background:radial-gradient(ellipse,rgba(155,109,255,.35),transparent 70%);margin:-8px auto 0;animation:shadowPulse 5s ease-in-out infinite}
@@ -850,6 +850,8 @@ skinCanvas.addEventListener("click",()=>{
       return;
     }
     const k=el/DUR;
+    // El globo se despide un poco antes del final (salida solapada)
+    if(el>DUR-550&&bubble.classList.contains("pop"))bubble.classList.remove("pop");
     // Entrada/salida suave de la pose (brazos al frente, palmas arriba)
     const ease=k<.1?k/.1:(k>.88?(1-k)/.12:1);
     const base=-Math.PI/2.1*ease;           // brazos extendidos al frente
