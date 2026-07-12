@@ -108,6 +108,11 @@ header{position:sticky;top:0;z-index:60;backdrop-filter:blur(18px) saturate(1.6)
 @keyframes spin{to{rotate:360deg}}
 .hero-skin{position:relative;z-index:3;text-align:center}
 #skin-canvas{filter:drop-shadow(0 24px 55px rgba(155,109,255,.45))}
+/* Globo de chat estilo Minecraft */
+.chat-bubble{position:absolute;top:-8px;left:50%;transform:translate(-50%,10px) scale(.6);background:rgba(12,10,26,.88);border:2px solid #fff;color:#fff;font-family:var(--font-pixel);font-size:1.5rem;padding:.45rem 1.1rem;z-index:5;opacity:0;pointer-events:none;image-rendering:pixelated;box-shadow:0 4px 0 rgba(0,0,0,.35);transition:opacity .18s steps(3),transform .18s steps(3)}
+.chat-bubble::after{content:"";position:absolute;bottom:-12px;left:50%;transform:translateX(-50%);width:0;height:0;border:6px solid transparent;border-top-color:#fff}
+.chat-bubble::before{content:"";position:absolute;bottom:-8px;left:50%;transform:translateX(-50%);width:0;height:0;border:5px solid transparent;border-top-color:rgba(12,10,26,.95);z-index:1}
+.chat-bubble.pop{opacity:1;transform:translate(-50%,0) scale(1)}
 .hero-skin img{height:300px;margin-inline:auto;image-rendering:pixelated;filter:drop-shadow(0 24px 55px rgba(155,109,255,.45));animation:skinFloat 5s ease-in-out infinite}
 @keyframes skinFloat{0%,100%{transform:translateY(0)}50%{transform:translateY(-16px)}}
 .hero-shadow{width:170px;height:26px;background:radial-gradient(ellipse,rgba(155,109,255,.35),transparent 70%);margin:-8px auto 0;animation:shadowPulse 5s ease-in-out infinite}
@@ -316,6 +321,7 @@ footer{border-top:1px solid var(--line);padding:2.4rem 0;color:var(--text-dim);f
     <div class="hero-ring hero-ring--2"></div>
     <span class="h-particle"></span><span class="h-particle"></span><span class="h-particle"></span><span class="h-particle"></span><span class="h-particle"></span><span class="h-particle"></span>
     <div class="hero-skin">
+      <div class="chat-bubble" id="chat-bubble" aria-hidden="true">67</div>
       <canvas id="skin-canvas" width="300" height="360" style="display:none;margin-inline:auto;cursor:grab"></canvas>
       <img id="hero-skin-img" src="https://mc-heads.net/body/SayCles_/right" alt="Tu skin de Minecraft" width="120" height="300">
       <div class="hero-shadow"></div>
@@ -789,6 +795,9 @@ let doing67=false;
 skinCanvas.addEventListener("click",()=>{
   if(!skinViewer||!skinViewer.playerObject||doing67)return;
   doing67=true;
+  // Globo de chat "67"
+  const bubble=document.getElementById("chat-bubble");
+  bubble.classList.add("pop");
   const skin=skinViewer.playerObject.skin;
   const rArm=skin.rightArm, lArm=skin.leftArm;
   const prevAnim=skinViewer.animation;
@@ -803,6 +812,7 @@ skinCanvas.addEventListener("click",()=>{
       rArm.rotation.x=0;rArm.rotation.z=0;
       lArm.rotation.x=0;lArm.rotation.z=0;
       skinViewer.animation=prevAnim;
+      bubble.classList.remove("pop");
       doing67=false;
       return;
     }
@@ -820,7 +830,6 @@ skinCanvas.addEventListener("click",()=>{
     requestAnimationFrame(anim67);
   })(t0);
 
-  showToast("6️⃣7️⃣");
 });
 skinCanvas.style.cursor="pointer";
 
