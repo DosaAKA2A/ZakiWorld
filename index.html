@@ -835,7 +835,7 @@ skinCanvas.addEventListener("click",()=>{
   const prevAnim=skinViewer.animation;
   skinViewer.animation=null; // pausar idle para control total
   const t0=performance.now();
-  const DUR=8300; // sincronizado con la duración del audio
+  const DUR=2950; // sincronizado con la duración del audio (una pasada)
 
   (function anim67(t){
     const el=t-t0;
@@ -845,12 +845,13 @@ skinCanvas.addEventListener("click",()=>{
       lArm.rotation.x=0;lArm.rotation.z=0;
       skinViewer.animation=prevAnim;
       bubble.classList.remove("pop");
+      try{sfx67.pause();}catch(e){}
       doing67=false;
       return;
     }
     const k=el/DUR;
     // Entrada/salida suave de la pose (brazos al frente, palmas arriba)
-    const ease=k<.05?k/.05:(k>.94?(1-k)/.06:1);
+    const ease=k<.1?k/.1:(k>.88?(1-k)/.12:1);
     const base=-Math.PI/2.1*ease;           // brazos extendidos al frente
     const sway=Math.sin(el/140)*.5*ease;    // el balancín arriba/abajo
     rArm.rotation.x=base+sway;              // derecha sube...
