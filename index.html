@@ -1,0 +1,569 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ZakiWorld | Tienda oficial</title>
+<meta name="description" content="Tienda oficial de ZakiWorld. Rangos, llaves y cosméticos con entrega automática en el servidor.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,600;12..96,800&family=Outfit:wght@300;400;500;600;700&family=Silkscreen:wght@400;700&display=swap" rel="stylesheet">
+<style>
+/* ============================================================
+   ZAKIWORLD STORE — Dimensión Amatista
+   Tokens de diseño
+============================================================ */
+:root{
+  --void:#0b0918;
+  --void-2:#110d24;
+  --dusk:#171331;
+  --dusk-2:#1f1941;
+  --line:#2c2455;
+  --amethyst:#9b6dff;
+  --amethyst-soft:#b493ff;
+  --aurora:#5ef2c8;
+  --gold:#ffc94a;
+  --gold-deep:#e8a520;
+  --text:#edeaf7;
+  --text-dim:#a79fc9;
+  --danger:#ff6d8a;
+  --radius:14px;
+  --font-display:"Bricolage Grotesque",sans-serif;
+  --font-body:"Outfit",sans-serif;
+  --font-pixel:"Silkscreen",monospace;
+  --pixel-clip:polygon(0 8px,4px 8px,4px 4px,8px 4px,8px 0,calc(100% - 8px) 0,calc(100% - 8px) 4px,calc(100% - 4px) 4px,calc(100% - 4px) 8px,100% 8px,100% calc(100% - 8px),calc(100% - 4px) calc(100% - 8px),calc(100% - 4px) calc(100% - 4px),calc(100% - 8px) calc(100% - 4px),calc(100% - 8px) 100%,8px 100%,8px calc(100% - 4px),4px calc(100% - 4px),4px calc(100% - 8px),0 calc(100% - 8px));
+}
+*{margin:0;padding:0;box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{
+  background:var(--void);
+  color:var(--text);
+  font-family:var(--font-body);
+  overflow-x:hidden;
+  min-height:100vh;
+}
+::selection{background:var(--amethyst);color:#fff}
+
+/* ---------- Fondo: vacío del End ---------- */
+.sky{position:fixed;inset:0;z-index:-2;background:
+  radial-gradient(1200px 700px at 80% -10%,rgba(155,109,255,.22),transparent 60%),
+  radial-gradient(900px 600px at 10% 110%,rgba(94,242,200,.10),transparent 60%),
+  linear-gradient(180deg,#0b0918 0%,#0e0b20 55%,#0b0918 100%);
+}
+.stars{position:fixed;inset:0;z-index:-1;pointer-events:none}
+.star{position:absolute;background:#fff;image-rendering:pixelated;animation:twinkle 3.2s ease-in-out infinite}
+@keyframes twinkle{0%,100%{opacity:.15}50%{opacity:.85}}
+
+/* ---------- Utilidades ---------- */
+.container{width:min(1180px,92%);margin-inline:auto}
+.eyebrow{font-family:var(--font-pixel);font-size:.68rem;letter-spacing:.18em;color:var(--aurora);text-transform:uppercase;display:inline-flex;align-items:center;gap:.6rem}
+.eyebrow::before{content:"";width:10px;height:10px;background:var(--aurora);clip-path:var(--pixel-clip)}
+.pixel-num{font-family:var(--font-pixel)}
+.reveal{opacity:0;transform:translateY(26px);transition:opacity .7s cubic-bezier(.22,.9,.3,1),transform .7s cubic-bezier(.22,.9,.3,1)}
+.reveal.in{opacity:1;transform:none}
+
+/* ---------- Topbar / HUD ---------- */
+header{position:sticky;top:0;z-index:60;backdrop-filter:blur(14px);background:rgba(11,9,24,.72);border-bottom:1px solid var(--line)}
+.topbar{display:flex;align-items:center;gap:1rem;padding:.8rem 0}
+.brand{display:flex;align-items:center;gap:.7rem;text-decoration:none;color:var(--text)}
+.brand__mark{width:38px;height:38px;flex:none}
+.brand__name{font-family:var(--font-display);font-weight:800;font-size:1.25rem;letter-spacing:.02em}
+.brand__name em{font-style:normal;color:var(--amethyst)}
+.hud{display:flex;align-items:center;gap:.6rem;margin-left:auto}
+.hud-chip{display:flex;align-items:center;gap:.5rem;background:var(--dusk);border:1px solid var(--line);padding:.5rem .8rem;font-family:var(--font-pixel);font-size:.66rem;color:var(--text-dim);clip-path:var(--pixel-clip);cursor:pointer;transition:border-color .25s,transform .2s;user-select:none}
+.hud-chip:hover{border-color:var(--amethyst);transform:translateY(-1px)}
+.hud-dot{width:8px;height:8px;background:var(--aurora);clip-path:var(--pixel-clip);animation:pulse 2s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.35}}
+.hud-chip strong{color:var(--text)}
+.cart-btn{background:var(--amethyst);color:#160d33;border:none;font-family:var(--font-pixel);font-size:.66rem;padding:.6rem 1rem;clip-path:var(--pixel-clip);cursor:pointer;display:flex;gap:.5rem;align-items:center;transition:transform .2s,background .25s}
+.cart-btn:hover{transform:translateY(-2px);background:var(--amethyst-soft)}
+.cart-count{background:#160d33;color:var(--gold);padding:.1rem .4rem;clip-path:var(--pixel-clip)}
+
+/* ---------- Hero ---------- */
+.hero{position:relative;padding:5.5rem 0 4.5rem;display:grid;grid-template-columns:1.1fr .9fr;gap:2rem;align-items:center}
+.hero h1{font-family:var(--font-display);font-weight:800;font-size:clamp(2.4rem,5.6vw,4.3rem);line-height:1.02;letter-spacing:-.02em}
+.hero h1 .glow{color:var(--amethyst);text-shadow:0 0 34px rgba(155,109,255,.55)}
+.hero p.lead{color:var(--text-dim);font-size:1.12rem;max-width:34rem;margin:1.2rem 0 2rem;font-weight:300}
+.hero-cta{display:flex;gap:1rem;flex-wrap:wrap;align-items:center}
+.btn{font-family:var(--font-pixel);font-size:.74rem;letter-spacing:.04em;padding:.95rem 1.5rem;clip-path:var(--pixel-clip);cursor:pointer;border:none;text-decoration:none;display:inline-flex;align-items:center;gap:.6rem;transition:transform .2s,filter .2s}
+.btn:hover{transform:translateY(-3px)}
+.btn-gold{background:linear-gradient(180deg,var(--gold),var(--gold-deep));color:#3a2600}
+.btn-gold:hover{filter:brightness(1.08)}
+.btn-ghost{background:transparent;color:var(--text);outline:1px solid var(--line);outline-offset:-1px}
+.btn-ghost:hover{outline-color:var(--amethyst)}
+.hero-stats{display:flex;gap:2.2rem;margin-top:2.6rem}
+.hero-stat .pixel-num{font-size:1.5rem;color:var(--gold)}
+.hero-stat span{display:block;color:var(--text-dim);font-size:.85rem;margin-top:.3rem}
+
+/* Islas voxel flotantes */
+.scene{position:relative;height:420px;perspective:900px}
+.island{position:absolute;transform-style:preserve-3d;animation:float 6s ease-in-out infinite}
+.island:nth-child(2){animation-delay:-2s;animation-duration:7s}
+.island:nth-child(3){animation-delay:-4s;animation-duration:8s}
+@keyframes float{0%,100%{translate:0 0}50%{translate:0 -18px}}
+.cube{position:absolute;transform-style:preserve-3d}
+.cube i{position:absolute;width:var(--s);height:var(--s);image-rendering:pixelated}
+.cube i:nth-child(1){transform:rotateX(90deg) translateZ(calc(var(--s)/2));background:var(--top)}
+.cube i:nth-child(2){transform:translateZ(calc(var(--s)/2));background:var(--front)}
+.cube i:nth-child(3){transform:rotateY(90deg) translateZ(calc(var(--s)/2));background:var(--side)}
+.spark{position:absolute;width:6px;height:6px;background:var(--aurora);clip-path:var(--pixel-clip);animation:sparkfloat 4s ease-in-out infinite;opacity:.8}
+@keyframes sparkfloat{0%,100%{translate:0 0;opacity:.3}50%{translate:0 -26px;opacity:.9}}
+
+/* ---------- Ticker de donaciones (hotbar) ---------- */
+.ticker-wrap{border-block:1px solid var(--line);background:linear-gradient(180deg,rgba(23,19,49,.7),rgba(17,13,36,.7));padding:1rem 0;overflow:hidden;position:relative}
+.ticker-wrap::before,.ticker-wrap::after{content:"";position:absolute;top:0;bottom:0;width:110px;z-index:2;pointer-events:none}
+.ticker-wrap::before{left:0;background:linear-gradient(90deg,var(--void),transparent)}
+.ticker-wrap::after{right:0;background:linear-gradient(-90deg,var(--void),transparent)}
+.ticker-label{position:absolute;top:-11px;left:50%;translate:-50% 0;background:var(--void);border:1px solid var(--line);padding:.25rem .8rem;font-family:var(--font-pixel);font-size:.6rem;color:var(--gold);z-index:3;clip-path:var(--pixel-clip)}
+.ticker{display:flex;gap:.9rem;width:max-content;animation:marquee 38s linear infinite}
+.ticker:hover{animation-play-state:paused}
+@keyframes marquee{to{transform:translateX(-50%)}}
+.slot{display:flex;align-items:center;gap:.75rem;background:var(--dusk);border:1px solid var(--line);padding:.6rem .9rem;clip-path:var(--pixel-clip);min-width:230px;transition:border-color .25s}
+.slot:hover{border-color:var(--gold)}
+.slot img{width:38px;height:38px;image-rendering:pixelated;clip-path:var(--pixel-clip)}
+.slot__name{font-weight:600;font-size:.92rem}
+.slot__pkg{color:var(--text-dim);font-size:.78rem}
+.slot__amt{margin-left:auto;font-family:var(--font-pixel);font-size:.66rem;color:var(--gold)}
+
+/* ---------- Secciones ---------- */
+section{padding:5rem 0}
+.sec-head{display:flex;align-items:end;justify-content:space-between;gap:1rem;margin-bottom:2.4rem;flex-wrap:wrap}
+.sec-head h2{font-family:var(--font-display);font-weight:800;font-size:clamp(1.7rem,3.4vw,2.5rem);letter-spacing:-.01em;margin-top:.6rem}
+.sec-head p{color:var(--text-dim);max-width:30rem}
+
+/* ---------- Máximo donador ---------- */
+.top-donor{display:grid;grid-template-columns:.85fr 1.15fr;gap:3rem;align-items:center;background:linear-gradient(135deg,rgba(255,201,74,.06),rgba(155,109,255,.06));border:1px solid var(--line);border-radius:var(--radius);padding:3rem;position:relative;overflow:hidden}
+.top-donor::before{content:"";position:absolute;inset:-40%;background:conic-gradient(from 0deg,transparent 70%,rgba(255,201,74,.14),transparent 85%);animation:rotate 9s linear infinite;pointer-events:none}
+@keyframes rotate{to{rotate:360deg}}
+.podium{position:relative;display:flex;flex-direction:column;align-items:center;z-index:1}
+.podium img.body{height:250px;image-rendering:pixelated;filter:drop-shadow(0 14px 34px rgba(255,201,74,.35));animation:float 5s ease-in-out infinite;z-index:2}
+.crown{font-size:1.9rem;animation:float 5s ease-in-out infinite;animation-delay:-.4s;z-index:3;margin-bottom:-6px}
+.podium-blocks{display:flex;margin-top:-14px}
+.podium-blocks span{width:56px;height:38px;background:linear-gradient(180deg,#5b4a9e,#3a2f6b);border:2px solid #7a63cf;image-rendering:pixelated}
+.podium-blocks span:nth-child(2){height:50px;background:linear-gradient(180deg,var(--gold),var(--gold-deep));border-color:#ffe08f;translate:0 -12px}
+.top-donor__info{z-index:1}
+.top-donor__name{font-family:var(--font-display);font-weight:800;font-size:clamp(1.9rem,4vw,3rem);color:var(--gold)}
+.top-donor__desc{color:var(--text-dim);margin:.9rem 0 1.6rem;max-width:28rem}
+.medal-row{display:flex;gap:.8rem;flex-wrap:wrap}
+.medal{font-family:var(--font-pixel);font-size:.62rem;padding:.5rem .8rem;background:var(--dusk);border:1px solid var(--line);clip-path:var(--pixel-clip);color:var(--text-dim)}
+.medal strong{color:var(--text)}
+
+/* ---------- Catálogo ---------- */
+.tabs{display:flex;gap:.6rem;flex-wrap:wrap}
+.tab{font-family:var(--font-pixel);font-size:.66rem;padding:.6rem 1rem;background:var(--dusk);border:1px solid var(--line);color:var(--text-dim);clip-path:var(--pixel-clip);cursor:pointer;transition:all .25s}
+.tab:hover{color:var(--text)}
+.tab.active{background:var(--amethyst);color:#160d33;border-color:var(--amethyst)}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(255px,1fr));gap:1.4rem}
+.card{background:linear-gradient(180deg,var(--dusk-2),var(--dusk));border:1px solid var(--line);border-radius:var(--radius);padding:1.6rem;position:relative;transition:transform .35s cubic-bezier(.22,.9,.3,1),border-color .3s,box-shadow .35s;transform-style:preserve-3d;will-change:transform}
+.card:hover{border-color:var(--card-accent,var(--amethyst));box-shadow:0 18px 44px rgba(0,0,0,.45),0 0 0 1px var(--card-accent,var(--amethyst)) inset}
+.card__icon{width:52px;height:52px;display:grid;place-items:center;background:var(--void-2);clip-path:var(--pixel-clip);font-size:1.5rem;margin-bottom:1rem;border:1px solid var(--line)}
+.card__tag{position:absolute;top:1.1rem;right:1.1rem;font-family:var(--font-pixel);font-size:.56rem;color:var(--card-accent,var(--amethyst));border:1px solid currentColor;padding:.25rem .5rem;clip-path:var(--pixel-clip)}
+.card h3{font-family:var(--font-display);font-weight:700;font-size:1.3rem;color:var(--card-accent,var(--text))}
+.card ul{list-style:none;margin:1rem 0 1.4rem;display:grid;gap:.5rem}
+.card li{color:var(--text-dim);font-size:.9rem;display:flex;gap:.55rem;align-items:baseline}
+.card li::before{content:"";width:7px;height:7px;flex:none;background:var(--card-accent,var(--amethyst));clip-path:var(--pixel-clip);translate:0 -1px}
+.card__foot{display:flex;align-items:center;justify-content:space-between;gap:.8rem;margin-top:auto}
+.price{font-family:var(--font-pixel);font-size:1.05rem;color:var(--gold)}
+.price small{font-size:.6rem;color:var(--text-dim);display:block}
+.add-btn{background:var(--void-2);border:1px solid var(--line);color:var(--text);font-family:var(--font-pixel);font-size:.6rem;padding:.6rem .9rem;clip-path:var(--pixel-clip);cursor:pointer;transition:all .25s}
+.add-btn:hover{background:var(--card-accent,var(--amethyst));color:#160d33;border-color:transparent}
+
+/* ---------- Cómo funciona ---------- */
+.steps{display:grid;grid-template-columns:repeat(3,1fr);gap:1.4rem}
+.step{background:var(--dusk);border:1px solid var(--line);border-radius:var(--radius);padding:1.8rem;position:relative}
+.step__ico{font-size:1.7rem;margin-bottom:1rem;display:inline-block;animation:float 5s ease-in-out infinite}
+.step h3{font-family:var(--font-display);font-size:1.15rem;margin-bottom:.5rem}
+.step p{color:var(--text-dim);font-size:.92rem;line-height:1.55}
+.step::after{content:"";position:absolute;right:-1.05rem;top:50%;width:14px;height:14px;background:var(--amethyst);clip-path:var(--pixel-clip);translate:0 -50%}
+.step:last-child::after{display:none}
+
+/* ---------- Carrito drawer ---------- */
+.drawer{position:fixed;top:0;right:0;height:100vh;width:min(400px,92vw);background:var(--void-2);border-left:1px solid var(--line);z-index:90;transform:translateX(105%);transition:transform .45s cubic-bezier(.22,.9,.3,1);display:flex;flex-direction:column;padding:1.6rem}
+.drawer.open{transform:none}
+.drawer h3{font-family:var(--font-display);font-size:1.3rem;display:flex;justify-content:space-between;align-items:center}
+.drawer-close{background:none;border:1px solid var(--line);color:var(--text);clip-path:var(--pixel-clip);font-family:var(--font-pixel);font-size:.6rem;padding:.5rem .7rem;cursor:pointer}
+.drawer-items{flex:1;overflow-y:auto;margin:1.4rem 0;display:grid;gap:.8rem;align-content:start}
+.drawer-empty{color:var(--text-dim);text-align:center;padding:3rem 1rem;border:1px dashed var(--line);border-radius:var(--radius)}
+.d-item{display:flex;align-items:center;gap:.8rem;background:var(--dusk);border:1px solid var(--line);padding:.8rem;clip-path:var(--pixel-clip)}
+.d-item span{flex:1;font-size:.92rem}
+.d-item .price{font-size:.72rem}
+.d-item button{background:none;border:none;color:var(--danger);cursor:pointer;font-family:var(--font-pixel);font-size:.7rem}
+.drawer-total{display:flex;justify-content:space-between;font-family:var(--font-pixel);font-size:.8rem;padding:1rem 0;border-top:1px solid var(--line)}
+.overlay{position:fixed;inset:0;background:rgba(5,4,12,.6);backdrop-filter:blur(3px);z-index:80;opacity:0;pointer-events:none;transition:opacity .4s}
+.overlay.show{opacity:1;pointer-events:auto}
+
+/* ---------- Toast ---------- */
+.toast{position:fixed;bottom:1.4rem;left:50%;translate:-50% 0;background:var(--dusk-2);border:1px solid var(--aurora);color:var(--text);padding:.8rem 1.3rem;clip-path:var(--pixel-clip);font-size:.9rem;z-index:100;opacity:0;transform:translateY(16px);transition:all .4s;pointer-events:none}
+.toast.show{opacity:1;transform:none}
+
+/* ---------- Footer ---------- */
+footer{border-top:1px solid var(--line);padding:2.6rem 0;color:var(--text-dim);font-size:.85rem}
+.foot{display:flex;justify-content:space-between;gap:1.5rem;flex-wrap:wrap;align-items:center}
+.foot a{color:var(--amethyst-soft);text-decoration:none}
+.foot a:hover{text-decoration:underline}
+.legal{margin-top:1.4rem;font-size:.75rem;opacity:.65;max-width:52rem}
+
+/* ---------- Responsive ---------- */
+@media(max-width:920px){
+  .hero{grid-template-columns:1fr;padding-top:3.5rem}
+  .scene{height:300px;order:-1}
+  .top-donor{grid-template-columns:1fr;text-align:center;padding:2rem}
+  .medal-row{justify-content:center}
+  .steps{grid-template-columns:1fr}
+  .step::after{display:none}
+  .hud-chip.hide-m{display:none}
+}
+@media(prefers-reduced-motion:reduce){
+  *,*::before,*::after{animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important}
+  .ticker{animation:none}
+}
+</style>
+</head>
+<body>
+
+<div class="sky"></div>
+<div class="stars" id="stars"></div>
+
+<!-- ================= TOPBAR ================= -->
+<header>
+  <div class="container topbar">
+    <a class="brand" href="#">
+      <svg class="brand__mark" viewBox="0 0 38 38" fill="none" aria-hidden="true">
+        <rect x="1" y="1" width="36" height="36" fill="#171331" stroke="#9b6dff" stroke-width="2"/>
+        <path d="M9 9h20v6H17l12 8v6H9v-6h12L9 15V9z" fill="#9b6dff"/>
+        <rect x="26" y="26" width="4" height="4" fill="#ffc94a"/>
+      </svg>
+      <span class="brand__name">Zaki<em>World</em><span style="font-family:var(--font-pixel);font-size:.55rem;color:var(--text-dim);margin-left:.4rem">STORE</span></span>
+    </a>
+    <div class="hud">
+      <div class="hud-chip hide-m" id="copy-ip" title="Copiar IP">
+        <span class="hud-dot"></span> play.zakiworld.net · <strong id="online-count">—</strong> online
+      </div>
+      <div class="hud-chip hide-m" id="discord-chip">
+        💬 <strong id="discord-count">—</strong> en Discord
+      </div>
+      <button class="cart-btn" id="open-cart">🛒 CARRITO <span class="cart-count" id="cart-count">0</span></button>
+    </div>
+  </div>
+</header>
+
+<!-- ================= HERO ================= -->
+<section class="hero container">
+  <div>
+    <span class="eyebrow reveal">Tienda oficial · entrega automática</span>
+    <h1 class="reveal" style="transition-delay:.08s">Apoya <span class="glow">ZakiWorld</span>.<br>Recibe tu recompensa al instante.</h1>
+    <p class="lead reveal" style="transition-delay:.16s">Rangos, llaves y cosméticos que se entregan solos en el servidor segundos después de tu compra. Cada donación mantiene el mundo girando.</p>
+    <div class="hero-cta reveal" style="transition-delay:.24s">
+      <a href="#catalogo" class="btn btn-gold">VER RANGOS ▸</a>
+      <a href="#como-funciona" class="btn btn-ghost">¿CÓMO FUNCIONA?</a>
+    </div>
+    <div class="hero-stats reveal" style="transition-delay:.32s">
+      <div class="hero-stat"><span class="pixel-num" data-count="1284">0</span><span>compras entregadas</span></div>
+      <div class="hero-stat"><span class="pixel-num" data-count="347">0</span><span>donadores este año</span></div>
+      <div class="hero-stat"><span class="pixel-num">&lt;60s</span><span>tiempo de entrega</span></div>
+    </div>
+  </div>
+  <div class="scene" id="scene">
+    <div class="island" style="left:12%;top:8%"><div class="cube" style="--s:74px;--top:#8f6fe8;--front:#5b4a9e;--side:#453781;transform:rotateX(-24deg) rotateY(38deg)"><i></i><i></i><i></i></div></div>
+    <div class="island" style="left:56%;top:34%"><div class="cube" style="--s:104px;--top:#6fe8c4;--front:#3f9e85;--side:#2f7a67;transform:rotateX(-24deg) rotateY(38deg)"><i></i><i></i><i></i></div></div>
+    <div class="island" style="left:30%;top:62%"><div class="cube" style="--s:58px;--top:#ffd76e;--front:#d19a2b;--side:#a87a1d;transform:rotateX(-24deg) rotateY(38deg)"><i></i><i></i><i></i></div></div>
+    <span class="spark" style="left:48%;top:18%"></span>
+    <span class="spark" style="left:22%;top:44%;animation-delay:-1.4s"></span>
+    <span class="spark" style="left:72%;top:66%;animation-delay:-2.6s"></span>
+    <span class="spark" style="left:84%;top:22%;animation-delay:-3.2s"></span>
+  </div>
+</section>
+
+<!-- ================= TICKER DE DONACIONES ================= -->
+<div class="ticker-wrap">
+  <span class="ticker-label">ÚLTIMAS DONACIONES</span>
+  <div class="ticker" id="ticker"></div>
+</div>
+
+<!-- ================= MÁXIMO DONADOR ================= -->
+<section class="container" id="top-donador">
+  <div class="sec-head reveal">
+    <div>
+      <span class="eyebrow">Salón de la fama</span>
+      <h2>Máximo donador del mes</h2>
+    </div>
+  </div>
+  <div class="top-donor reveal">
+    <div class="podium">
+      <span class="crown">👑</span>
+      <img class="body" id="top-donor-skin" src="https://mc-heads.net/body/MHF_Steve/right" alt="Skin del máximo donador">
+      <div class="podium-blocks"><span></span><span></span><span></span></div>
+    </div>
+    <div class="top-donor__info">
+      <span class="eyebrow" style="color:var(--gold)">Julio 2026</span>
+      <div class="top-donor__name" id="top-donor-name">¿Serás tú?</div>
+      <p class="top-donor__desc">Cada mes coronamos a quien más apoya el servidor. Su skin se exhibe aquí y recibe recompensas exclusivas dentro del juego.</p>
+      <div class="medal-row">
+        <span class="medal">🏆 <strong>Título exclusivo</strong> en el chat</span>
+        <span class="medal">✨ <strong>Partículas doradas</strong></span>
+        <span class="medal">🗿 <strong>Estatua</strong> en el spawn</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ================= CATÁLOGO ================= -->
+<section class="container" id="catalogo">
+  <div class="sec-head reveal">
+    <div>
+      <span class="eyebrow">Catálogo</span>
+      <h2>Elige tu paquete</h2>
+      <p>Precios de ejemplo — se actualizarán con la lista oficial de ZakiWorld.</p>
+    </div>
+    <div class="tabs" id="tabs">
+      <button class="tab active" data-cat="rangos">RANGOS</button>
+      <button class="tab" data-cat="llaves">LLAVES</button>
+      <button class="tab" data-cat="cosmeticos">COSMÉTICOS</button>
+    </div>
+  </div>
+  <div class="grid" id="grid"></div>
+</section>
+
+<!-- ================= CÓMO FUNCIONA ================= -->
+<section class="container" id="como-funciona">
+  <div class="sec-head reveal">
+    <div>
+      <span class="eyebrow">Entrega automática</span>
+      <h2>Del pago a tu inventario en menos de un minuto</h2>
+    </div>
+  </div>
+  <div class="steps">
+    <div class="step reveal"><span class="step__ico">🧺</span><h3>1 · Elige y paga</h3><p>Añade paquetes al carrito y paga con tarjeta, PayPal y más. El pago lo procesa Tebex de forma segura.</p></div>
+    <div class="step reveal" style="transition-delay:.1s"><span class="step__ico">⚡</span><h3>2 · El servidor lo detecta</h3><p>Nuestro sistema confirma tu compra automáticamente. No hay que abrir ticket ni avisar a nadie.</p></div>
+    <div class="step reveal" style="transition-delay:.2s"><span class="step__ico">🎁</span><h3>3 · Recibe tu recompensa</h3><p>Tu rango, llaves u objetos aparecen en el juego. Si estás desconectado, se entregan al volver a entrar.</p></div>
+  </div>
+</section>
+
+<!-- ================= FOOTER ================= -->
+<footer>
+  <div class="container">
+    <div class="foot">
+      <span>© 2026 ZakiWorld · play.zakiworld.net</span>
+      <span><a href="#" id="foot-discord">Discord</a> · <a href="#catalogo">Tienda</a> · <a href="#">Términos</a></span>
+    </div>
+    <p class="legal">ZakiWorld no está afiliado con Mojang AB ni Microsoft. Al conectar la tienda con Tebex, aquí irá el aviso legal obligatorio de Tebex Limited como procesador de pagos (footer contractual requerido).</p>
+  </div>
+</footer>
+
+<!-- ================= CARRITO ================= -->
+<div class="overlay" id="overlay"></div>
+<aside class="drawer" id="drawer" aria-label="Carrito de compras">
+  <h3>Tu carrito <button class="drawer-close" id="close-cart">CERRAR ✕</button></h3>
+  <div class="drawer-items" id="drawer-items"></div>
+  <div class="drawer-total"><span>TOTAL</span><span id="cart-total" style="color:var(--gold)">0.00 USD</span></div>
+  <button class="btn btn-gold" id="checkout-btn" style="justify-content:center">PAGAR CON TEBEX ▸</button>
+</aside>
+
+<div class="toast" id="toast"></div>
+
+<script>
+/* ============================================================
+   CONFIGURACIÓN — reemplazar cuando tengamos los datos reales
+============================================================ */
+const CONFIG = {
+  SERVER_IP: "play.zakiworld.net",          // TODO: IP real del servidor
+  SERVER_PORT: 25565,
+  DISCORD_GUILD_ID: "",                      // TODO: ID del SERVIDOR de Discord (con widget activado)
+  TEBEX_IDENT: "",                           // TODO: ident del checkout de Tebex.js al crear la cuenta
+};
+
+/* ---------- Datos de ejemplo (luego vendrán de la API Headless de Tebex) ---------- */
+const DONATIONS = [
+  {name:"Zakito",    pkg:"Rango Amatista", amt:"24.99"},
+  {name:"Notch",     pkg:"Llave Legendaria x5", amt:"9.99"},
+  {name:"jeb_",      pkg:"Rango Aurora", amt:"14.99"},
+  {name:"Dinnerbone",pkg:"Alas del End", amt:"6.99"},
+  {name:"Grumm",     pkg:"Rango Vacío", amt:"39.99"},
+  {name:"Marc",      pkg:"Llave Épica x3", amt:"4.99"},
+];
+const TOP_DONOR = null; // ej: {name:"Zakito"} — null muestra "¿Serás tú?"
+
+const PACKAGES = {
+  rangos: [
+    {id:"r1",icon:"💜",name:"Amatista",tag:"POPULAR",accent:"#9b6dff",price:24.99,perks:["Kit Amatista cada 24h","3 homes adicionales","/fly en tu claim","Prefijo morado en el chat"]},
+    {id:"r2",icon:"🌊",name:"Aurora",tag:"",accent:"#5ef2c8",price:14.99,perks:["Kit Aurora cada 24h","2 homes adicionales","/hat y /nick","Prefijo aurora en el chat"]},
+    {id:"r3",icon:"🌑",name:"Vacío",tag:"MÁXIMO",accent:"#ffc94a",price:39.99,perks:["Todos los kits","/fly global","Mascota exclusiva del End","Acceso anticipado a eventos"]},
+  ],
+  llaves: [
+    {id:"k1",icon:"🗝️",name:"Llave Épica x3",tag:"",accent:"#9b6dff",price:4.99,perks:["3 aperturas del cofre épico","Objetos encantados","Posibilidad de rango temporal"]},
+    {id:"k2",icon:"🔑",name:"Llave Legendaria x5",tag:"MEJOR VALOR",accent:"#ffc94a",price:9.99,perks:["5 aperturas del cofre legendario","Equipo netherite","Cosméticos raros garantizados"]},
+  ],
+  cosmeticos: [
+    {id:"c1",icon:"🕊️",name:"Alas del End",tag:"",accent:"#9b6dff",price:6.99,perks:["Alas de partículas moradas","Visible para todos","Permanente"]},
+    {id:"c2",icon:"🎆",name:"Rastro de estrellas",tag:"NUEVO",accent:"#5ef2c8",price:3.99,perks:["Partículas al caminar","5 colores intercambiables","Permanente"]},
+  ],
+};
+
+/* ============================================================
+   Estrellas del fondo
+============================================================ */
+const starsBox = document.getElementById("stars");
+for(let i=0;i<70;i++){
+  const s=document.createElement("span");
+  s.className="star";
+  const size=Math.random()<.85?2:3;
+  s.style.cssText=`left:${Math.random()*100}%;top:${Math.random()*100}%;width:${size}px;height:${size}px;animation-delay:${Math.random()*3}s`;
+  starsBox.appendChild(s);
+}
+
+/* ============================================================
+   Parallax de las islas
+============================================================ */
+const scene=document.getElementById("scene");
+if(scene && matchMedia("(pointer:fine)").matches){
+  addEventListener("mousemove",e=>{
+    const x=(e.clientX/innerWidth-.5), y=(e.clientY/innerHeight-.5);
+    scene.querySelectorAll(".island").forEach((el,i)=>{
+      const d=(i+1)*8;
+      el.style.transform=`translate(${x*d}px,${y*d}px)`;
+    });
+  });
+}
+
+/* ============================================================
+   Ticker de donaciones (duplicado para loop infinito)
+============================================================ */
+const ticker=document.getElementById("ticker");
+const slotHTML=d=>`<div class="slot">
+  <img src="https://mc-heads.net/avatar/${encodeURIComponent(d.name)}/38" alt="${d.name}" loading="lazy">
+  <div><div class="slot__name">${d.name}</div><div class="slot__pkg">${d.pkg}</div></div>
+  <span class="slot__amt">$${d.amt}</span>
+</div>`;
+ticker.innerHTML=[...DONATIONS,...DONATIONS].map(slotHTML).join("");
+
+/* ============================================================
+   Máximo donador
+============================================================ */
+if(TOP_DONOR){
+  document.getElementById("top-donor-name").textContent=TOP_DONOR.name;
+  document.getElementById("top-donor-skin").src=`https://mc-heads.net/body/${encodeURIComponent(TOP_DONOR.name)}/right`;
+}
+
+/* ============================================================
+   Catálogo + tabs
+============================================================ */
+const grid=document.getElementById("grid");
+function renderCat(cat){
+  grid.innerHTML=PACKAGES[cat].map(p=>`
+    <article class="card reveal in" style="--card-accent:${p.accent}" data-id="${p.id}">
+      ${p.tag?`<span class="card__tag">${p.tag}</span>`:""}
+      <div class="card__icon">${p.icon}</div>
+      <h3>${p.name}</h3>
+      <ul>${p.perks.map(x=>`<li>${x}</li>`).join("")}</ul>
+      <div class="card__foot">
+        <div class="price">$${p.price.toFixed(2)}<small>USD · pago único</small></div>
+        <button class="add-btn" data-add="${p.id}" data-cat="${cat}">AÑADIR +</button>
+      </div>
+    </article>`).join("");
+  attachTilt();
+}
+document.getElementById("tabs").addEventListener("click",e=>{
+  const t=e.target.closest(".tab"); if(!t)return;
+  document.querySelectorAll(".tab").forEach(x=>x.classList.remove("active"));
+  t.classList.add("active");
+  renderCat(t.dataset.cat);
+});
+renderCat("rangos");
+
+/* Tilt 3D en tarjetas */
+function attachTilt(){
+  if(!matchMedia("(pointer:fine)").matches)return;
+  grid.querySelectorAll(".card").forEach(card=>{
+    card.addEventListener("mousemove",e=>{
+      const r=card.getBoundingClientRect();
+      const rx=((e.clientY-r.top)/r.height-.5)*-7;
+      const ry=((e.clientX-r.left)/r.width-.5)*7;
+      card.style.transform=`perspective(700px) rotateX(${rx}deg) rotateY(${ry}deg) translateY(-4px)`;
+    });
+    card.addEventListener("mouseleave",()=>card.style.transform="");
+  });
+}
+
+/* ============================================================
+   Carrito
+============================================================ */
+let cart=[];
+const drawer=document.getElementById("drawer"),overlay=document.getElementById("overlay");
+const toast=document.getElementById("toast");
+function openCart(){drawer.classList.add("open");overlay.classList.add("show")}
+function closeCart(){drawer.classList.remove("open");overlay.classList.remove("show")}
+document.getElementById("open-cart").onclick=openCart;
+document.getElementById("close-cart").onclick=closeCart;
+overlay.onclick=closeCart;
+
+function showToast(msg){
+  toast.textContent=msg;toast.classList.add("show");
+  clearTimeout(showToast.t);showToast.t=setTimeout(()=>toast.classList.remove("show"),2400);
+}
+function renderCart(){
+  const box=document.getElementById("drawer-items");
+  document.getElementById("cart-count").textContent=cart.length;
+  if(!cart.length){box.innerHTML=`<div class="drawer-empty">Tu carrito está vacío.<br>Añade un paquete para continuar.</div>`;}
+  else box.innerHTML=cart.map((p,i)=>`<div class="d-item"><span>${p.icon} ${p.name}</span><span class="price">$${p.price.toFixed(2)}</span><button data-rm="${i}">✕</button></div>`).join("");
+  document.getElementById("cart-total").textContent=cart.reduce((s,p)=>s+p.price,0).toFixed(2)+" USD";
+}
+document.addEventListener("click",e=>{
+  const add=e.target.closest("[data-add]");
+  if(add){
+    const p=PACKAGES[add.dataset.cat].find(x=>x.id===add.dataset.add);
+    cart.push(p);renderCart();showToast(`${p.icon} ${p.name} añadido al carrito`);
+  }
+  const rm=e.target.closest("[data-rm]");
+  if(rm){cart.splice(+rm.dataset.rm,1);renderCart();}
+});
+document.getElementById("checkout-btn").onclick=()=>{
+  if(!cart.length)return showToast("Añade algo al carrito primero 🙂");
+  if(!CONFIG.TEBEX_IDENT)return showToast("Checkout pendiente: falta conectar la cuenta de Tebex");
+  /* Cuando exista la cuenta de Tebex:
+     Tebex.checkout.init({ident:CONFIG.TEBEX_IDENT,theme:"dark",
+       colors:[{name:"primary",color:"#9b6dff"},{name:"secondary",color:"#ffc94a"}]});
+     Tebex.checkout.launch(); */
+};
+renderCart();
+
+/* ============================================================
+   Stats en vivo (jugadores online + Discord)
+============================================================ */
+fetch(`https://api.minetools.eu/ping/${CONFIG.SERVER_IP}/${CONFIG.SERVER_PORT}`)
+  .then(r=>r.json()).then(d=>{
+    if(!d.error)document.getElementById("online-count").textContent=d.players.online;
+  }).catch(()=>{});
+if(CONFIG.DISCORD_GUILD_ID){
+  fetch(`https://discord.com/api/guilds/${CONFIG.DISCORD_GUILD_ID}/widget.json`)
+    .then(r=>r.json()).then(d=>{
+      document.getElementById("discord-count").textContent=d.presence_count;
+    }).catch(()=>{});
+}
+
+/* Copiar IP */
+document.getElementById("copy-ip").onclick=()=>{
+  navigator.clipboard?.writeText(CONFIG.SERVER_IP).then(()=>showToast("IP copiada: "+CONFIG.SERVER_IP));
+};
+
+/* ============================================================
+   Reveals al scroll + contadores
+============================================================ */
+const io=new IntersectionObserver(es=>es.forEach(e=>{
+  if(e.isIntersecting){e.target.classList.add("in");io.unobserve(e.target);}
+}),{threshold:.15});
+document.querySelectorAll(".reveal").forEach(el=>io.observe(el));
+
+const cio=new IntersectionObserver(es=>es.forEach(e=>{
+  if(!e.isIntersecting)return;
+  const el=e.target,target=+el.dataset.count,dur=1400,t0=performance.now();
+  (function tick(t){
+    const k=Math.min((t-t0)/dur,1);
+    el.textContent=Math.floor(target*(1-Math.pow(1-k,3))).toLocaleString();
+    if(k<1)requestAnimationFrame(tick);
+  })(t0);
+  cio.unobserve(el);
+}),{threshold:.6});
+document.querySelectorAll("[data-count]").forEach(el=>cio.observe(el));
+</script>
+</body>
+</html>
