@@ -814,12 +814,19 @@ function trackCursor(){
 }
 
 /* ============================================================
-   ANIMACIÓN "6-7" AL HACER CLICK 🤲
+   ANIMACIÓN "6-7" AL HACER CLICK 🤲 + AUDIO (con cooldown)
 ============================================================ */
 let doing67=false;
+const sfx67=new Audio("assets/doot67.mp3");
+sfx67.preload="auto";
+sfx67.volume=.65;
+
 skinCanvas.addEventListener("click",()=>{
-  if(!skinViewer||!skinViewer.playerObject||doing67)return;
+  if(!skinViewer||!skinViewer.playerObject)return;
+  if(doing67){showToast("Espera a que termine el emote 😅");return;}
   doing67=true;
+  // Audio desde el inicio
+  try{sfx67.currentTime=0;sfx67.play().catch(()=>{});}catch(e){}
   // Globo de chat "67"
   const bubble=document.getElementById("chat-bubble");
   bubble.classList.add("pop");
@@ -828,7 +835,7 @@ skinCanvas.addEventListener("click",()=>{
   const prevAnim=skinViewer.animation;
   skinViewer.animation=null; // pausar idle para control total
   const t0=performance.now();
-  const DUR=2200; // ~4 balanceos
+  const DUR=8300; // sincronizado con la duración del audio
 
   (function anim67(t){
     const el=t-t0;
@@ -843,7 +850,7 @@ skinCanvas.addEventListener("click",()=>{
     }
     const k=el/DUR;
     // Entrada/salida suave de la pose (brazos al frente, palmas arriba)
-    const ease=k<.12?k/.12:(k>.88?(1-k)/.12:1);
+    const ease=k<.05?k/.05:(k>.94?(1-k)/.06:1);
     const base=-Math.PI/2.1*ease;           // brazos extendidos al frente
     const sway=Math.sin(el/140)*.5*ease;    // el balancín arriba/abajo
     rArm.rotation.x=base+sway;              // derecha sube...
