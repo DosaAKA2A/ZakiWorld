@@ -845,10 +845,15 @@ function runAway(){
   skin.head.rotation.set(0,0,0);
   try{sfx67.pause();}catch(e){}
   document.getElementById("chat-bubble").classList.remove("pop");
-  // Mirar hacia la derecha y CORRER
-  skinViewer.playerObject.rotation.y=Math.PI/2;
+  // Mirar hacia la derecha y CORRER (rotación forzada cada frame
+  // para que ni el idle ni el seguimiento de cursor la pisen)
   skinViewer.animation=new skinview3d.RunningAnimation();
   skinViewer.animation.speed=1.1;
+  (function forceFacing(){
+    if(!skinViewer)return; // ya fue destruido
+    skinViewer.playerObject.rotation.y=Math.PI/2;
+    requestAnimationFrame(forceFacing);
+  })();
   // Despegue con leve retardo para que se vea el primer paso
   setTimeout(()=>{
     skinCanvas.classList.add("run-away");
