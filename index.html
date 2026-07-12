@@ -833,6 +833,20 @@ const eggVideo=document.getElementById("egg-video");
 let clickTimes=[];
 let eggPlaying=false;
 let characterGone=false; // no vuelve hasta recargar la página
+let emoteCount=0;        // emotes 67 completados (a cualquier ritmo)
+
+function triggerEgg(){
+  if(eggPlaying||characterGone)return;
+  eggPlaying=true;
+  eggVideo.currentTime=0;
+  eggVideo.volume=.5;
+  eggVideo.play().then(()=>eggVideo.classList.add("playing")).catch(()=>{eggPlaying=false;});
+  eggVideo.onended=()=>{
+    eggVideo.classList.remove("playing");
+    setTimeout(()=>{eggPlaying=false;},900); // esperar el fade out
+  };
+  runAway(); // 🏃💨
+}
 
 function runAway(){
   if(characterGone||!skinViewer)return;
@@ -876,25 +890,17 @@ function checkEgg(){
   const now=performance.now();
   clickTimes.push(now);
   clickTimes=clickTimes.filter(t=>now-t<2200); // ventana de 2.2s
-  if(clickTimes.length>=4&&!eggPlaying){
-    clickTimes=[];
-    eggPlaying=true;
-    eggVideo.currentTime=0;
-    eggVideo.volume=.5;
-    eggVideo.play().then(()=>eggVideo.classList.add("playing")).catch(()=>{eggPlaying=false;});
-    eggVideo.onended=()=>{
-      eggVideo.classList.remove("playing");
-      setTimeout(()=>{eggPlaying=false;},900); // esperar el fade out
-    };
-    runAway(); // 🏃💨
-  }
+  if(clickTimes.length>=4){clickTimes=[];triggerEgg();}
 }
 
 skinCanvas.addEventListener("click",()=>{
-  if(!skinViewer||!skinViewer.playerObject)return;
+  if(!skinViewer||!skinViewer.playerObject||characterGone)return;
   checkEgg();
   if(doing67)return; // cooldown silencioso
+  // Ya hizo el 67 cuatro veces (a cualquier ritmo) → se hartó
+  if(emoteCount>=4){triggerEgg();return;}
   doing67=true;
+  emoteCount++;
   // Audio desde el inicio
   try{sfx67.currentTime=0;sfx67.play().catch(()=>{});}catch(e){}
   // Globo de chat "67"
