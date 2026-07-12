@@ -375,7 +375,7 @@ footer{border-top:1px solid var(--line);padding:2.2rem 0;color:var(--text-dim);f
 
 <div class="toast" id="toast"></div>
 
-<!-- ═══════════ JAVASCRIPT ═══════════ -->
+<script src="https://js.tebex.io/v/tebex.js"></script>
 <script>
 /* ============================================================
    CONFIG — TODO: rellenar con datos reales
@@ -384,7 +384,8 @@ const CONFIG={
   SERVER_IP:"zakiworld.holy.gg",
   SERVER_PORT:25565,
   DISCORD_GUILD_ID:"1175880499093319690",
-  TEBEX_IDENT:"",        // TODO: ident del checkout de Tebex.js
+  TEBEX_PUBLIC_TOKEN:"gkwh-9fc4e04539d07122497f102bdae86d73157aaf17",
+  TEBEX_PROJECT_ID:"773585",
   DISCORD_INVITE:"https://discord.gg/jtbYpTvp25",
 };
 
@@ -530,7 +531,21 @@ document.addEventListener("click",e=>{
 });
 document.getElementById("checkout-btn").onclick=()=>{
   if(!cart.length)return showToast("Añade algo al carrito primero");
-  if(!CONFIG.TEBEX_IDENT)return showToast("Checkout pendiente — falta conectar Tebex");
+  if(!CONFIG.TEBEX_PUBLIC_TOKEN)return showToast("Checkout pendiente — falta conectar Tebex");
+  try{
+    Tebex.checkout.init({
+      ident:CONFIG.TEBEX_PUBLIC_TOKEN,
+      theme:"dark",
+      colors:[
+        {name:"primary",color:"#9b6dff"},
+        {name:"secondary",color:"#ffc94a"}
+      ]
+    });
+    Tebex.checkout.launch();
+  }catch(err){
+    showToast("Error al abrir checkout — intenta de nuevo");
+    console.error(err);
+  }
 };
 renderCart();
 
