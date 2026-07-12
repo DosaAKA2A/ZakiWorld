@@ -278,7 +278,7 @@ footer{border-top:1px solid var(--line);padding:2.2rem 0;color:var(--text-dim);f
       <span class="h-particle"></span><span class="h-particle"></span><span class="h-particle"></span><span class="h-particle"></span><span class="h-particle"></span><span class="h-particle"></span><span class="h-particle"></span><span class="h-particle"></span>
     </div>
     <div class="hero-skin">
-      <img id="hero-skin-img" src="https://mc-heads.net/body/MHF_Steve/right" alt="Skin de Minecraft" width="120" height="280">
+      <img id="hero-skin-img" src="https://starlightskins.lunareclipse.studio/render/ultimate/MHF_Steve/full" alt="Skin de Minecraft" width="120" height="280">
       <div class="hero-platform"></div>
     </div>
   </div>
@@ -299,7 +299,7 @@ footer{border-top:1px solid var(--line);padding:2.2rem 0;color:var(--text-dim);f
   <div class="top-donor reveal" style="transition-delay:.1s">
     <div class="podium">
       <span class="crown">👑</span>
-      <img class="body-render" id="top-donor-skin" src="https://mc-heads.net/body/MHF_Steve/right" alt="Skin del máximo donador" width="100" height="230">
+      <img class="body-render" id="top-donor-skin" src="https://starlightskins.lunareclipse.studio/render/ultimate/MHF_Steve/full" alt="Skin del máximo donador" width="100" height="230">
       <div class="podium-base"><span></span><span></span><span></span></div>
     </div>
     <div class="top-donor__info">
@@ -447,7 +447,7 @@ if(CONFIG.WORKER_URL){
       if(data.topDonor){
         TOP_DONOR=data.topDonor;
         document.getElementById("top-donor-name").textContent=TOP_DONOR.name;
-        document.getElementById("top-donor-skin").src=`https://mc-heads.net/body/${encodeURIComponent(TOP_DONOR.name)}/right`;
+        document.getElementById("top-donor-skin").src=`https://starlightskins.lunareclipse.studio/render/ultimate/${encodeURIComponent(TOP_DONOR.name)}/full`;
       }
       // Update hero counters with real data
       if(data.totalDonations){
@@ -488,7 +488,7 @@ ticker.innerHTML=[...DONATIONS,...DONATIONS,...DONATIONS].map(slotHTML).join("")
 ============================================================ */
 if(TOP_DONOR){
   document.getElementById("top-donor-name").textContent=TOP_DONOR.name;
-  document.getElementById("top-donor-skin").src=`https://mc-heads.net/body/${encodeURIComponent(TOP_DONOR.name)}/right`;
+  document.getElementById("top-donor-skin").src=`https://starlightskins.lunareclipse.studio/render/ultimate/${encodeURIComponent(TOP_DONOR.name)}/full`;
 }
 
 /* ============================================================
