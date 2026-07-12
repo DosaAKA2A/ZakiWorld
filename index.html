@@ -280,13 +280,14 @@ footer{border-top:1px solid var(--line);padding:2.4rem 0;color:var(--text-dim);f
         <span class="hud-dot"></span> zakiworld.holy.gg · <strong id="online-count">—</strong> online
       </div>
       <div class="hud-chip hide-m" id="discord-chip" title="Únete a nuestro Discord">
-        💬 <strong id="discord-count">—</strong> en Discord
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="currentColor" style="image-rendering:pixelated;flex:none" aria-hidden="true"><path d="M22,11V8H21V6H20V5H18V4H15V5H9V4H6V5H4V6H3V8H2v3H1v7H3v1H5v1H7V18H6V17H8v1H9v1h6V18h1V17h2v1H17v2h2V19h2V18h2V11ZM9,15H7V14H6V12H7V11H9v1h1v2H9Zm9-1H17v1H15V14H14V12h1V11h2v1h1Z"/></svg>
+        <strong id="discord-count">—</strong> en Discord
       </div>
       <div class="hud-chip" id="user-chip" title="Tu cuenta">
         <span id="user-chip-content">👤 INICIAR SESIÓN</span>
       </div>
       <button class="cart-btn" id="open-cart" aria-label="Abrir carrito">
-        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="9" cy="21" r="1.6"/><circle cx="19" cy="21" r="1.6"/><path d="M2.5 3h2l2.6 12.5a2 2 0 0 0 2 1.5h9.2a2 2 0 0 0 2-1.6L22 7H6"/></svg>
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="flex:none" aria-hidden="true"><polygon points="9 19 10 19 10 21 9 21 9 22 7 22 7 21 6 21 6 19 7 19 7 18 9 18 9 19"/><polygon points="20 19 21 19 21 21 20 21 20 22 18 22 18 21 17 21 17 19 18 19 18 18 20 18 20 19"/><polygon points="23 3 23 6 22 6 22 9 21 9 21 12 20 12 20 13 8 13 8 15 20 15 20 17 7 17 7 16 6 16 6 12 5 12 5 7 4 7 4 4 1 4 1 2 4 2 4 3 23 3"/></svg>
         CARRITO <span class="cart-count" id="cart-count">0</span>
       </button>
     </div>
@@ -385,7 +386,7 @@ footer{border-top:1px solid var(--line);padding:2.4rem 0;color:var(--text-dim);f
       <span>© 2026 ZakiWorld · zakiworld.holy.gg</span>
       <span><a href="#" id="foot-discord">Discord</a> · <a href="#catalogo">Tienda</a> · <a href="/terminos.html">Términos y Condiciones</a></span>
     </div>
-    <p class="legal">ZakiWorld no está afiliado con Mojang AB ni Microsoft. Los pagos son procesados de forma segura por Tebex Limited (Merchant of Record), quienes gestionan facturación, soporte de pagos y reembolsos.</p>
+    <p class="legal">ZakiWorld no está afiliado con Mojang AB ni Microsoft. Los pagos son procesados de forma segura por Tebex Limited (Merchant of Record), quienes gestionan facturación, soporte de pagos y reembolsos. Iconos pixel de <a href="https://pixeliconlibrary.com/" target="_blank" rel="noopener" style="color:inherit">Pixel Icon Library by HackerNoon</a> (CC BY 4.0).</p>
   </div>
 </footer>
 
@@ -500,12 +501,12 @@ function applyUser(){
   const heroTag=document.getElementById("hero-user-tag");
   const drawerUser=document.getElementById("drawer-user");
   if(USER){
-    chip.innerHTML=`<img src="https://mc-heads.net/avatar/${encodeURIComponent(USER)}/22" alt=""> ${USER}`;
+    chip.innerHTML=`<span style="display:inline-flex;align-items:center;gap:.55rem"><img src="https://mc-heads.net/avatar/${encodeURIComponent(USER)}/22" alt="" style="width:22px;height:22px;border-radius:6px;image-rendering:pixelated;flex:none"><span style="color:var(--text)">${USER}</span></span>`;
     heroImg.src=`https://mc-heads.net/body/${encodeURIComponent(USER)}/right`;
     heroTag.innerHTML=`Jugando como <strong>${USER}</strong>`;
     drawerUser.innerHTML=`Comprando como: <strong>${USER}</strong>`;
   }else{
-    chip.textContent="👤 INICIAR SESIÓN";
+    chip.innerHTML=`<svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor" style="flex:none;vertical-align:-2px" aria-hidden="true"><polygon points="7 9 6 9 6 5 7 5 7 3 8 3 8 2 10 2 10 1 14 1 14 2 16 2 16 3 17 3 17 5 18 5 18 9 17 9 17 11 16 11 16 12 14 12 14 13 10 13 10 12 8 12 8 11 7 11 7 9"/><polygon points="22 19 22 22 21 22 21 23 3 23 3 22 2 22 2 19 3 19 3 18 4 18 4 17 5 17 5 16 7 16 7 15 17 15 17 16 19 16 19 17 20 17 20 18 21 18 21 19 22 19"/></svg> INICIAR SESIÓN`;
     heroImg.src=`https://mc-heads.net/body/${CONFIG.DEFAULT_SKIN}/right`;
     heroTag.innerHTML=`Inicia sesión para ver <strong>tu skin</strong> aquí`;
     drawerUser.innerHTML=`<span style="color:var(--danger)">Sin usuario — inicia sesión para comprar</span>`;
