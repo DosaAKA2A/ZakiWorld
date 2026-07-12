@@ -50,6 +50,9 @@ img{display:block;max-width:100%}
 .stars{position:fixed;inset:0;z-index:-2;pointer-events:none}
 .star{position:absolute;background:#fff;border-radius:1px;animation:twinkle 3s ease-in-out infinite}
 @keyframes twinkle{0%,100%{opacity:.1}50%{opacity:.7}}
+/* Easter egg: video de fondo */
+#egg-video{position:fixed;inset:0;width:100vw;height:100vh;object-fit:cover;z-index:-1;opacity:0;pointer-events:none;transition:opacity .8s ease}
+#egg-video.playing{opacity:.1}
 
 /* ── Utilidades ── */
 .container{width:min(1260px,90%);margin-inline:auto}
@@ -271,6 +274,7 @@ footer{border-top:1px solid var(--line);padding:2.4rem 0;color:var(--text-dim);f
 
 <div class="sky"></div>
 <div class="stars" id="stars"></div>
+<video id="egg-video" src="assets/leavemealone.mp4" playsinline preload="none"></video>
 
 <!-- ═══════════ HEADER ═══════════ -->
 <header>
@@ -821,9 +825,31 @@ const sfx67=new Audio("assets/doot67.mp3");
 sfx67.preload="auto";
 sfx67.volume=.65;
 
+/* Easter egg secreto: 4 clicks rápidos → video de fondo */
+const eggVideo=document.getElementById("egg-video");
+let clickTimes=[];
+let eggPlaying=false;
+function checkEgg(){
+  const now=performance.now();
+  clickTimes.push(now);
+  clickTimes=clickTimes.filter(t=>now-t<2200); // ventana de 2.2s
+  if(clickTimes.length>=4&&!eggPlaying){
+    clickTimes=[];
+    eggPlaying=true;
+    eggVideo.currentTime=0;
+    eggVideo.volume=.5;
+    eggVideo.play().then(()=>eggVideo.classList.add("playing")).catch(()=>{eggPlaying=false;});
+    eggVideo.onended=()=>{
+      eggVideo.classList.remove("playing");
+      setTimeout(()=>{eggPlaying=false;},900); // esperar el fade out
+    };
+  }
+}
+
 skinCanvas.addEventListener("click",()=>{
   if(!skinViewer||!skinViewer.playerObject)return;
-  if(doing67){showToast("Espera a que termine el emote 😅");return;}
+  checkEgg();
+  if(doing67)return; // cooldown silencioso
   doing67=true;
   // Audio desde el inicio
   try{sfx67.currentTime=0;sfx67.play().catch(()=>{});}catch(e){}
