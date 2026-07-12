@@ -107,6 +107,7 @@ header{position:sticky;top:0;z-index:60;backdrop-filter:blur(18px) saturate(1.6)
 .hero-ring--2::before{background:var(--aurora)}
 @keyframes spin{to{rotate:360deg}}
 .hero-skin{position:relative;z-index:3;text-align:center}
+#skin-canvas{filter:drop-shadow(0 24px 55px rgba(155,109,255,.45))}
 .hero-skin img{height:300px;margin-inline:auto;image-rendering:pixelated;filter:drop-shadow(0 24px 55px rgba(155,109,255,.45));animation:skinFloat 5s ease-in-out infinite}
 @keyframes skinFloat{0%,100%{transform:translateY(0)}50%{transform:translateY(-16px)}}
 .hero-shadow{width:170px;height:26px;background:radial-gradient(ellipse,rgba(155,109,255,.35),transparent 70%);margin:-8px auto 0;animation:shadowPulse 5s ease-in-out infinite}
@@ -315,6 +316,7 @@ footer{border-top:1px solid var(--line);padding:2.4rem 0;color:var(--text-dim);f
     <div class="hero-ring hero-ring--2"></div>
     <span class="h-particle"></span><span class="h-particle"></span><span class="h-particle"></span><span class="h-particle"></span><span class="h-particle"></span><span class="h-particle"></span>
     <div class="hero-skin">
+      <canvas id="skin-canvas" width="300" height="360" style="display:none;margin-inline:auto;cursor:grab"></canvas>
       <img id="hero-skin-img" src="https://mc-heads.net/body/SayCles_/right" alt="Tu skin de Minecraft" width="120" height="300">
       <div class="hero-shadow"></div>
       <div class="hero-user-tag" id="hero-user-tag">Inicia sesión para ver <strong>tu skin</strong> aquí</div>
@@ -417,6 +419,7 @@ footer{border-top:1px solid var(--line);padding:2.4rem 0;color:var(--text-dim);f
 <div class="toast" id="toast"></div>
 
 <script src="https://js.tebex.io/v/tebex.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/skinview3d@3.4.1/bundles/skinview3d.bundle.js"></script>
 <script>
 /* ============================================================
    CONFIG
@@ -505,11 +508,13 @@ function applyUser(){
     heroImg.src=`https://mc-heads.net/body/${encodeURIComponent(USER)}/right`;
     heroTag.innerHTML=`Jugando como <strong>${USER}</strong>`;
     drawerUser.innerHTML=`Comprando como: <strong>${USER}</strong>`;
+    initSkinViewer(USER);
   }else{
     chip.innerHTML=`<svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor" style="flex:none;vertical-align:-2px" aria-hidden="true"><polygon points="7 9 6 9 6 5 7 5 7 3 8 3 8 2 10 2 10 1 14 1 14 2 16 2 16 3 17 3 17 5 18 5 18 9 17 9 17 11 16 11 16 12 14 12 14 13 10 13 10 12 8 12 8 11 7 11 7 9"/><polygon points="22 19 22 22 21 22 21 23 3 23 3 22 2 22 2 19 3 19 3 18 4 18 4 17 5 17 5 16 7 16 7 15 17 15 17 16 19 16 19 17 20 17 20 18 21 18 21 19 22 19"/></svg> INICIAR SESIÓN`;
     heroImg.src=`https://mc-heads.net/body/${CONFIG.DEFAULT_SKIN}/right`;
     heroTag.innerHTML=`Inicia sesión para ver <strong>tu skin</strong> aquí`;
     drawerUser.innerHTML=`<span style="color:var(--danger)">Sin usuario — inicia sesión para comprar</span>`;
+    initSkinViewer(CONFIG.DEFAULT_SKIN);
   }
 }
 document.getElementById("user-chip").onclick=()=>openUserModal();
@@ -708,6 +713,73 @@ if(matchMedia("(pointer:fine)").matches){
     const x=(e.clientX/innerWidth-.5), y=(e.clientY/innerHeight-.5);
     if(visual)visual.style.translate=`${x*14}px ${y*10}px`;
   });
+}
+
+/* ============================================================
+   SKIN 3D — sigue al cursor con cuerpo y mirada (skinview3d)
+============================================================ */
+let skinViewer=null;
+const skinCanvas=document.getElementById("skin-canvas");
+const skinFallbackImg=document.getElementById("hero-skin-img");
+const lookTarget={yaw:0,pitch:0};
+const lookCurrent={yaw:0,pitch:0};
+
+function skinURL(name){return `https://mc-heads.net/skin/${encodeURIComponent(name)}`;}
+
+function initSkinViewer(name){
+  if(typeof skinview3d==="undefined")return; // CDN falló → queda la imagen
+  try{
+    if(!skinViewer){
+      skinViewer=new skinview3d.SkinViewer({
+        canvas:skinCanvas,
+        width:300,height:360,
+        skin:skinURL(name),
+        preserveDrawingBuffer:false,
+      });
+      skinViewer.fov=32;
+      skinViewer.zoom=.92;
+      skinViewer.globalLight.intensity=2.6;
+      skinViewer.cameraLight.intensity=1.4;
+      skinViewer.animation=new skinview3d.IdleAnimation();
+      skinViewer.animation.speed=.9;
+      skinViewer.controls.enableZoom=false;
+      skinViewer.controls.enablePan=false;
+      skinViewer.controls.enableRotate=false; // el cursor manda, no el drag
+      skinCanvas.style.display="block";
+      skinFallbackImg.style.display="none";
+      trackCursor();
+    }else{
+      skinViewer.loadSkin(skinURL(name)).catch(()=>{});
+    }
+  }catch(err){
+    // WebGL no disponible → imagen estática
+    skinCanvas.style.display="none";
+    skinFallbackImg.style.display="block";
+  }
+}
+
+function trackCursor(){
+  addEventListener("mousemove",e=>{
+    const r=skinCanvas.getBoundingClientRect();
+    const cx=r.left+r.width/2, cy=r.top+r.height/2;
+    // Normalizado -1..1 respecto al centro del muñeco, en toda la ventana
+    const nx=Math.max(-1,Math.min(1,(e.clientX-cx)/(innerWidth/2)));
+    const ny=Math.max(-1,Math.min(1,(e.clientY-cy)/(innerHeight/2)));
+    lookTarget.yaw=nx*.9;      // giro del cuerpo (rad)
+    lookTarget.pitch=ny*.45;   // inclinación de la cabeza
+  });
+  (function animateLook(){
+    // Interpolación suave (lerp) para movimiento fluido
+    lookCurrent.yaw+=(lookTarget.yaw-lookCurrent.yaw)*.08;
+    lookCurrent.pitch+=(lookTarget.pitch-lookCurrent.pitch)*.08;
+    if(skinViewer&&skinViewer.playerObject){
+      skinViewer.playerObject.rotation.y=lookCurrent.yaw;
+      const head=skinViewer.playerObject.skin.head;
+      head.rotation.x=lookCurrent.pitch;
+      head.rotation.y=lookCurrent.yaw*.35; // la cabeza gira un extra sobre el cuerpo
+    }
+    requestAnimationFrame(animateLook);
+  })();
 }
 
 /* Inicializar todo */
