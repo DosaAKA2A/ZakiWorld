@@ -108,10 +108,14 @@ header{position:sticky;top:0;z-index:60;backdrop-filter:blur(18px) saturate(1.6)
 @keyframes spin{to{rotate:360deg}}
 .hero-skin{position:relative;z-index:3;text-align:center}
 #skin-canvas{filter:drop-shadow(0 24px 55px rgba(155,109,255,.45))}
-/* Globo de chat estilo Minecraft — la skin "habla" */
-.chat-bubble{position:absolute;top:26px;left:calc(50% + 46px);transform:translateY(8px) scale(.6);transform-origin:bottom left;background:#fff;color:#1a1533;font-family:var(--font-pixel);font-size:1.35rem;font-weight:700;padding:.4rem 1rem;border-radius:12px;z-index:5;opacity:0;pointer-events:none;box-shadow:0 4px 14px rgba(0,0,0,.35);transition:opacity .18s steps(3),transform .18s steps(3)}
-.chat-bubble::after{content:"";position:absolute;bottom:-9px;left:14px;width:0;height:0;border:7px solid transparent;border-top-color:#fff;border-left-width:4px;border-right-width:10px}
-.chat-bubble.pop{opacity:1;transform:translateY(0) scale(1)}
+/* Globo de chat pixelart — blanco, sobre la cabeza */
+.chat-bubble{position:absolute;top:-14px;left:50%;transform:translate(-50%,10px) scale(.6);transform-origin:bottom center;background:#fff;color:#1a1533;font-family:var(--font-pixel);font-size:1.4rem;font-weight:700;padding:.45rem 1.05rem;border-radius:0;z-index:5;opacity:0;pointer-events:none;
+  /* borde pixel: doble caja escalonada */
+  box-shadow:0 0 0 3px #1a1533,0 0 0 6px #fff,0 8px 0 3px rgba(0,0,0,.25);
+  transition:opacity .15s steps(2),transform .15s steps(2)}
+/* Colita pixel: escaloncitos blancos descendentes */
+.chat-bubble::after{content:"";position:absolute;bottom:-15px;left:50%;transform:translateX(-50%);width:9px;height:9px;background:#fff;box-shadow:0 0 0 3px #1a1533,0 9px 0 -3px #fff,0 9px 0 0 #1a1533}
+.chat-bubble.pop{opacity:1;transform:translate(-50%,0) scale(1)}
 .hero-skin img{height:300px;margin-inline:auto;image-rendering:pixelated;filter:drop-shadow(0 24px 55px rgba(155,109,255,.45));animation:skinFloat 5s ease-in-out infinite}
 @keyframes skinFloat{0%,100%{transform:translateY(0)}50%{transform:translateY(-16px)}}
 .hero-shadow{width:170px;height:26px;background:radial-gradient(ellipse,rgba(155,109,255,.35),transparent 70%);margin:-8px auto 0;animation:shadowPulse 5s ease-in-out infinite}
