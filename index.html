@@ -358,8 +358,9 @@ section{padding:5rem 0}
 .contact-side__ico{font-size:2rem;margin-bottom:.8rem}
 .contact-side h3{font-family:var(--font-display);font-size:1.25rem;margin-bottom:1rem}
 .contact-side ul{list-style:none;display:grid;gap:.75rem;margin-bottom:1.5rem}
-.contact-side li{color:var(--text-dim);font-size:.92rem;line-height:1.5;display:flex;gap:.6rem;align-items:baseline;counter-increment:step}
-.contact-side li::before{content:counter(step);flex:none;width:20px;height:20px;background:var(--void-2);border:1px solid var(--line);border-radius:6px;display:grid;place-items:center;font-family:var(--font-pixel);font-size:.55rem;color:var(--aurora)}
+.contact-side li{color:var(--text-dim);font-size:.92rem;line-height:1.55;display:flex;gap:.65rem;align-items:flex-start;counter-increment:step}
+.contact-side li::before{content:counter(step);flex:none;width:22px;height:22px;background:var(--void-2);border:1px solid var(--line);border-radius:6px;display:grid;place-items:center;font-family:var(--font-pixel);font-size:.55rem;color:var(--aurora);margin-top:.1rem}
+.contact-side li strong{color:var(--text);font-weight:600}
 .contact-side ul{counter-reset:step}
 .contact-discord{display:inline-block;color:var(--amethyst-soft);text-decoration:none;font-size:.92rem;font-weight:500;transition:color .2s}
 .contact-discord:hover{color:var(--amethyst)}
