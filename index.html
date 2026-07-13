@@ -191,12 +191,8 @@ section{padding:5rem 0}
 .top-donor::before{content:"";position:absolute;inset:-50%;background:conic-gradient(from 0deg,transparent 62%,rgba(255,201,74,.12),transparent 82%);animation:rotate 11s linear infinite;pointer-events:none}
 @keyframes rotate{to{rotate:360deg}}
 .podium{position:relative;display:flex;flex-direction:column;align-items:center;z-index:1}
-.podium img.body-render{height:290px;image-rendering:pixelated;filter:drop-shadow(0 14px 36px rgba(255,201,74,.35));animation:skinFloat 5s ease-in-out infinite;z-index:2}
-.crown{font-size:2.2rem;animation:skinFloat 5s ease-in-out infinite;animation-delay:-.4s;z-index:3;margin-bottom:-4px}
-.podium-base{display:flex;margin-top:-10px;z-index:1}
-.podium-base span{width:56px;height:36px;image-rendering:pixelated}
-.podium-base span:nth-child(1),.podium-base span:nth-child(3){background:linear-gradient(180deg,#5b4a9e,#3a2f6b);border:2px solid #7a63cf}
-.podium-base span:nth-child(2){height:50px;background:linear-gradient(180deg,var(--gold),var(--gold-deep));border:2px solid #ffe08f;transform:translateY(-14px)}
+.podium img.body-render{height:340px;width:auto;image-rendering:pixelated;object-fit:contain;filter:drop-shadow(0 20px 40px rgba(255,201,74,.3));animation:skinFloat 5s ease-in-out infinite;z-index:2}
+.crown{font-size:2.2rem;animation:skinFloat 5s ease-in-out infinite;animation-delay:-.4s;z-index:3;margin-bottom:2px}
 .top-donor__info{z-index:1}
 .top-donor__name{font-family:var(--font-display);font-weight:800;font-size:clamp(1.6rem,2.8vw,2.4rem);color:var(--gold)}
 .top-donor__amount{font-family:var(--font-pixel);font-size:1.1rem;color:var(--aurora);margin:.35rem 0 .6rem}
@@ -521,8 +517,7 @@ footer{border-top:1px solid var(--line);padding:2.4rem 0;color:var(--text-dim);f
     <div class="top-donor">
       <div class="podium">
         <span class="crown">👑</span>
-        <img class="body-render" id="top-donor-skin" src="https://mc-heads.net/body/Dosa__/right" alt="Skin del máximo donador" width="90" height="200">
-        <div class="podium-base"><span></span><span></span><span></span></div>
+        <img class="body-render" id="top-donor-skin" src="https://mc-heads.net/body/Faram0/right" alt="Skin del máximo donador">
       </div>
       <div class="top-donor__info">
         <span class="eyebrow" style="color:var(--gold)">Julio 2026</span>
@@ -724,7 +719,7 @@ let DONATIONS=[
   {name:"pato7w7",pkg:"VIP++",amt:"15.00€"},
   {name:"Faram0",pkg:"SUPREME",amt:"15.00€"},
 ];
-let TOP_DONOR={name:"Dosa__",total:"3,000.00",currency:"$"};
+let TOP_DONOR={name:"Faram0",total:"186.00",currency:"$"};
 
 /* Ranking top 10 (datos reales del CSV; el Worker lo actualizará en vivo) */
 let RANKING=[
