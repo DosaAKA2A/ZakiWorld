@@ -221,6 +221,72 @@ section{padding:5rem 0}
 .add-btn{background:var(--void-2);border:1px solid var(--line);color:var(--text);font-family:var(--font-pixel);font-size:.6rem;padding:.6rem .9rem;border-radius:10px;cursor:pointer;transition:all .25s;white-space:nowrap}
 .add-btn:hover{background:var(--card-accent,var(--amethyst));color:#160d33;border-color:transparent}
 
+/* ═══ Card destacada POPULAR ═══ */
+.card--popular{border-color:color-mix(in srgb,var(--card-accent) 40%,transparent)}
+.card--popular::after{content:"";position:absolute;inset:0;border-radius:inherit;box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--card-accent) 30%,transparent);pointer-events:none}
+
+/* ═══ SUPREME — producto estrella ═══ */
+.card--supreme{
+  border:1.5px solid transparent;
+  background:
+    linear-gradient(180deg,#241a0a,#1a1412) padding-box,
+    linear-gradient(135deg,var(--gold) 0%,#ffe08f 25%,var(--gold-deep) 50%,var(--gold) 75%,#ffe08f 100%) border-box;
+  background-size:100% 100%, 300% 300%;
+  animation:supremeBorder 6s linear infinite;
+  overflow:visible;
+}
+@keyframes supremeBorder{to{background-position:0 0, 300% 300%}}
+/* Halo dorado pulsante detrás */
+.card--supreme::after{
+  content:"";position:absolute;inset:-2px;border-radius:inherit;z-index:-1;
+  background:linear-gradient(135deg,var(--gold),var(--gold-deep),var(--gold));
+  background-size:200% 200%;
+  filter:blur(16px);opacity:.35;
+  animation:supremeGlow 4s ease-in-out infinite;
+}
+@keyframes supremeGlow{0%,100%{opacity:.25;background-position:0 0}50%{opacity:.55;background-position:100% 100%}}
+/* Brillo diagonal que recorre la card */
+.card--supreme::before{
+  content:"";position:absolute;inset:0;border-radius:inherit;pointer-events:none;overflow:hidden;
+  background:linear-gradient(105deg,transparent 40%,rgba(255,255,255,.13) 48%,rgba(255,255,255,.13) 52%,transparent 60%);
+  background-size:250% 100%;
+  animation:supremeShine 4.5s ease-in-out infinite;
+  opacity:1;
+}
+@keyframes supremeShine{0%{background-position:150% 0}55%,100%{background-position:-150% 0}}
+.card--supreme:hover{transform:translateY(-12px) scale(1.02)}
+.card--supreme .card__icon{
+  background:linear-gradient(180deg,var(--gold),var(--gold-deep));
+  border-color:#ffe08f;
+  box-shadow:0 0 20px rgba(255,201,74,.5);
+  animation:supremeIconFloat 3s ease-in-out infinite;
+}
+@keyframes supremeIconFloat{0%,100%{transform:translateY(0) rotate(0)}50%{transform:translateY(-5px) rotate(4deg)}}
+.card--supreme:hover .card__icon{transform:scale(1.15) rotate(-6deg)}
+.card--supreme h3{
+  background:linear-gradient(90deg,var(--gold),#fff5d6,var(--gold));
+  background-size:200% 100%;-webkit-background-clip:text;background-clip:text;color:transparent;
+  animation:supremeText 3s linear infinite;
+}
+@keyframes supremeText{to{background-position:-200% 0}}
+.card--supreme li::before{box-shadow:0 0 6px var(--gold)}
+.card--supreme .card__tag{
+  background:linear-gradient(180deg,var(--gold),var(--gold-deep));color:#3a2600;border:none;font-weight:700;
+  animation:supremeTagPulse 2s ease-in-out infinite;
+}
+@keyframes supremeTagPulse{0%,100%{box-shadow:0 0 0 0 rgba(255,201,74,.5)}50%{box-shadow:0 0 0 6px rgba(255,201,74,0)}}
+.card--supreme .add-btn{background:linear-gradient(180deg,var(--gold),var(--gold-deep));color:#3a2600;border:none;font-weight:700}
+.card--supreme .add-btn:hover{filter:brightness(1.12);box-shadow:0 6px 20px rgba(255,201,74,.4)}
+/* Partículas doradas flotando */
+.supreme-spark{position:absolute;width:4px;height:4px;background:var(--gold);border-radius:1px;pointer-events:none;opacity:0;box-shadow:0 0 6px var(--gold)}
+.card--supreme .supreme-spark{animation:sparkFloat 3s ease-in-out infinite}
+.card--supreme .supreme-spark:nth-child(1){left:15%;animation-delay:0s}
+.card--supreme .supreme-spark:nth-child(2){left:45%;animation-delay:1s}
+.card--supreme .supreme-spark:nth-child(3){left:75%;animation-delay:.5s}
+.card--supreme .supreme-spark:nth-child(4){left:88%;animation-delay:1.8s}
+@keyframes sparkFloat{0%{opacity:0;transform:translateY(100%) scale(0)}20%{opacity:1;transform:translateY(70%) scale(1)}80%{opacity:1;transform:translateY(10%) scale(1)}100%{opacity:0;transform:translateY(-10%) scale(0)}}
+@media(prefers-reduced-motion:reduce){.card--supreme,.card--supreme::before,.card--supreme::after,.card--supreme .card__icon,.card--supreme h3,.supreme-spark{animation:none!important}}
+
 /* ── Cómo funciona ── */
 .steps{display:grid;grid-template-columns:repeat(3,1fr);gap:1.4rem}
 .step{background:var(--dusk);border:1px solid var(--line);border-radius:var(--radius);padding:1.8rem;position:relative;transition:border-color .3s,transform .4s cubic-bezier(.16,1,.3,1)}
@@ -738,8 +804,14 @@ applyTopDonor();
 ============================================================ */
 const grid=document.getElementById("grid");
 function renderCards(){
-  grid.innerHTML=PACKAGES.map((p,i)=>`
-    <article class="card reveal" style="--card-accent:${p.accent};transition-delay:${i*.08}s" data-id="${p.id}">
+  grid.innerHTML=PACKAGES.map((p,i)=>{
+    const isSupreme=p.name==="SUPREME";
+    const isPopular=p.tag==="POPULAR";
+    const extraClass=isSupreme?" card--supreme":(isPopular?" card--popular":"");
+    const sparks=isSupreme?'<span class="supreme-spark"></span><span class="supreme-spark"></span><span class="supreme-spark"></span><span class="supreme-spark"></span>':"";
+    return `
+    <article class="card${extraClass} reveal" style="--card-accent:${p.accent};transition-delay:${i*.08}s" data-id="${p.id}">
+      ${sparks}
       ${p.tag?`<span class="card__tag">${p.tag}</span>`:""}
       <div class="card__icon">${p.icon}</div>
       <h3>${p.name}</h3>
@@ -748,7 +820,8 @@ function renderCards(){
         <div class="price">${p.price.toFixed(2)}€<small>pago único</small></div>
         <button class="add-btn" data-add="${p.id}">AÑADIR +</button>
       </div>
-    </article>`).join("");
+    </article>`;
+  }).join("");
   grid.querySelectorAll(".card").forEach(el=>io.observe(el));
   attachCardFX();
 }
@@ -757,16 +830,18 @@ function renderCards(){
 function attachCardFX(){
   if(!matchMedia("(pointer:fine)").matches)return;
   grid.querySelectorAll(".card").forEach(card=>{
+    const isSupreme=card.classList.contains("card--supreme");
     card.addEventListener("mousemove",e=>{
       const r=card.getBoundingClientRect();
       const px=e.clientX-r.left, py=e.clientY-r.top;
       card.style.setProperty("--mx",`${px}px`);
       card.style.setProperty("--my",`${py}px`);
+      if(isSupreme)return; // SUPREME conserva su animación propia
       const rx=((py)/r.height-.5)*-5;
       const ry=((px)/r.width-.5)*5;
       card.style.transform=`perspective(800px) rotateX(${rx}deg) rotateY(${ry}deg) translateY(-8px)`;
     });
-    card.addEventListener("mouseleave",()=>{card.style.transform="";});
+    card.addEventListener("mouseleave",()=>{if(!isSupreme)card.style.transform="";});
   });
 }
 
