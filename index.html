@@ -192,7 +192,8 @@ section{padding:5rem 0}
 @keyframes rotate{to{rotate:360deg}}
 .podium{position:relative;display:flex;flex-direction:column;align-items:center;z-index:1}
 .podium img.body-render{height:340px;width:auto;image-rendering:pixelated;object-fit:contain;filter:drop-shadow(0 20px 40px rgba(255,201,74,.3));animation:skinFloat 5s ease-in-out infinite;z-index:2}
-.crown{font-size:2.2rem;animation:skinFloat 5s ease-in-out infinite;animation-delay:-.4s;z-index:3;margin-bottom:2px}
+.crown{line-height:0;animation:skinFloat 5s ease-in-out infinite;animation-delay:-.4s;z-index:3;margin-bottom:-6px;filter:drop-shadow(0 3px 5px rgba(0,0,0,.4))}
+.crown svg{width:64px;height:44px}
 .top-donor__info{z-index:1}
 .top-donor__name{font-family:var(--font-display);font-weight:800;font-size:clamp(1.6rem,2.8vw,2.4rem);color:var(--gold)}
 .top-donor__amount{font-family:var(--font-pixel);font-size:1.1rem;color:var(--aurora);margin:.35rem 0 .6rem}
@@ -516,7 +517,29 @@ footer{border-top:1px solid var(--line);padding:2.4rem 0;color:var(--text-dim);f
   <div class="fame-grid reveal" style="transition-delay:.1s">
     <div class="top-donor">
       <div class="podium">
-        <span class="crown">👑</span>
+        <span class="crown" aria-hidden="true">
+          <svg viewBox="0 0 64 44" shape-rendering="crispEdges" width="72" height="50">
+            <rect x="10" y="40" width="44" height="3" fill="#00000030"/>
+            <rect x="12" y="30" width="40" height="9" fill="#e8a520"/>
+            <rect x="12" y="30" width="40" height="3" fill="#ffe08f"/>
+            <rect x="12" y="36" width="40" height="3" fill="#c8871a"/>
+            <rect x="20" y="32" width="5" height="5" fill="#ff5d8f"/>
+            <rect x="30" y="32" width="5" height="5" fill="#5ef2c8"/>
+            <rect x="40" y="32" width="5" height="5" fill="#6db3ff"/>
+            <rect x="12" y="18" width="7" height="12" fill="#ffc94a"/>
+            <rect x="12" y="18" width="7" height="3" fill="#ffe08f"/>
+            <rect x="13" y="12" width="5" height="6" fill="#ffd766"/>
+            <rect x="28" y="12" width="8" height="18" fill="#ffc94a"/>
+            <rect x="28" y="12" width="8" height="3" fill="#ffe08f"/>
+            <rect x="29" y="5" width="6" height="7" fill="#ffd766"/>
+            <rect x="30" y="2" width="4" height="4" fill="#fff3c4"/>
+            <rect x="45" y="18" width="7" height="12" fill="#e8a520"/>
+            <rect x="45" y="18" width="7" height="3" fill="#ffc94a"/>
+            <rect x="46" y="12" width="5" height="6" fill="#ffc94a"/>
+            <rect x="19" y="24" width="9" height="6" fill="#e8a520"/>
+            <rect x="36" y="24" width="9" height="6" fill="#d18f1c"/>
+          </svg>
+        </span>
         <img class="body-render" id="top-donor-skin" src="https://mc-heads.net/body/Faram0/right" alt="Skin del máximo donador">
       </div>
       <div class="top-donor__info">
