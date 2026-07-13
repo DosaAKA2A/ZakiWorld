@@ -192,8 +192,6 @@ section{padding:5rem 0}
 @keyframes rotate{to{rotate:360deg}}
 .podium{position:relative;display:flex;flex-direction:column;align-items:center;z-index:1}
 .podium img.body-render{height:340px;width:auto;image-rendering:pixelated;object-fit:contain;filter:drop-shadow(0 20px 40px rgba(255,201,74,.3));animation:skinFloat 5s ease-in-out infinite;z-index:2}
-.crown{line-height:0;animation:skinFloat 5s ease-in-out infinite;animation-delay:-.4s;z-index:3;margin-bottom:-8px;margin-left:-6px;filter:drop-shadow(0 3px 5px rgba(0,0,0,.4))}
-.crown svg{width:68px;height:46px}
 .top-donor__info{z-index:1}
 .top-donor__name{font-family:var(--font-display);font-weight:800;font-size:clamp(1.6rem,2.8vw,2.4rem);color:var(--gold)}
 .top-donor__amount{font-family:var(--font-pixel);font-size:1.1rem;color:var(--aurora);margin:.35rem 0 .6rem}
@@ -517,35 +515,6 @@ footer{border-top:1px solid var(--line);padding:2.4rem 0;color:var(--text-dim);f
   <div class="fame-grid reveal" style="transition-delay:.1s">
     <div class="top-donor">
       <div class="podium">
-        <span class="crown" aria-hidden="true">
-          <svg viewBox="0 0 72 48" shape-rendering="crispEdges" width="76" height="52">
-            <rect x="8" y="34" width="8" height="10" fill="#e8a520"/>
-            <rect x="16" y="32" width="8" height="10" fill="#e8a520"/>
-            <rect x="24" y="30" width="8" height="10" fill="#e8a520"/>
-            <rect x="32" y="28" width="8" height="10" fill="#e8a520"/>
-            <rect x="8" y="34" width="8" height="2" fill="#ffe08f"/>
-            <rect x="16" y="32" width="8" height="2" fill="#ffe08f"/>
-            <rect x="24" y="30" width="8" height="2" fill="#ffe08f"/>
-            <rect x="32" y="28" width="8" height="2" fill="#ffe08f"/>
-            <rect x="40" y="24" width="12" height="12" fill="#a86e14"/>
-            <rect x="40" y="24" width="12" height="2" fill="#c8871a"/>
-            <rect x="40" y="34" width="12" height="2" fill="#8a5810"/>
-            <rect x="12" y="36" width="4" height="4" fill="#ff5d8f"/>
-            <rect x="22" y="33" width="4" height="4" fill="#5ef2c8"/>
-            <rect x="32" y="30" width="4" height="4" fill="#6db3ff"/>
-            <rect x="8" y="24" width="7" height="10" fill="#ffc94a"/>
-            <rect x="15" y="23" width="3" height="10" fill="#b8791a"/>
-            <rect x="9" y="19" width="5" height="5" fill="#ffd766"/>
-            <rect x="22" y="16" width="7" height="14" fill="#ffc94a"/>
-            <rect x="29" y="15" width="3" height="14" fill="#b8791a"/>
-            <rect x="23" y="10" width="5" height="6" fill="#ffd766"/>
-            <rect x="24" y="7" width="3" height="3" fill="#fff3c4"/>
-            <rect x="36" y="14" width="8" height="14" fill="#ffc94a"/>
-            <rect x="44" y="13" width="4" height="14" fill="#b8791a"/>
-            <rect x="37" y="8" width="6" height="6" fill="#ffd766"/>
-            <rect x="38" y="5" width="3" height="3" fill="#fff3c4"/>
-          </svg>
-        </span>
         <img class="body-render" id="top-donor-skin" src="https://mc-heads.net/body/Faram0/right" alt="Skin del máximo donador">
       </div>
       <div class="top-donor__info">
