@@ -266,7 +266,33 @@ section{padding:5rem 0}
 .toast{position:fixed;bottom:1.4rem;left:50%;transform:translateX(-50%) translateY(16px);background:var(--dusk-2);border:1px solid var(--aurora);color:var(--text);padding:.75rem 1.3rem;border-radius:12px;font-size:.92rem;z-index:100;opacity:0;transition:all .45s cubic-bezier(.16,1,.3,1);pointer-events:none;white-space:nowrap}
 .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
 
-/* ── Footer ── */
+/* ── Contacto / Reclamos ── */
+.contact-grid{display:grid;grid-template-columns:1.4fr .85fr;gap:1.6rem;align-items:start}
+.contact-form{background:linear-gradient(180deg,var(--dusk-2),var(--dusk));border:1px solid var(--line);border-radius:var(--radius);padding:2rem}
+.field{margin-bottom:1.3rem;position:relative}
+.field label{display:block;font-family:var(--font-pixel);font-size:.6rem;letter-spacing:.06em;color:var(--text-dim);text-transform:uppercase;margin-bottom:.55rem}
+.field input,.field textarea,.select-wrap select{width:100%;background:var(--void-2);border:1px solid var(--line);color:var(--text);font-family:var(--font-body);font-size:.98rem;padding:.85rem 1rem;border-radius:10px;outline:none;transition:border-color .3s,box-shadow .3s}
+.field input:focus,.field textarea:focus,.select-wrap select:focus{border-color:var(--amethyst);box-shadow:0 0 0 3px rgba(155,109,255,.15)}
+.field textarea{resize:vertical;min-height:120px;line-height:1.55}
+.field input::placeholder,.field textarea::placeholder{color:var(--text-dim);opacity:.55}
+.select-wrap{position:relative}
+.select-wrap::after{content:"▾";position:absolute;right:1rem;top:50%;transform:translateY(-50%);color:var(--text-dim);pointer-events:none;font-size:.9rem}
+.select-wrap select{appearance:none;-webkit-appearance:none;cursor:pointer;padding-right:2.5rem}
+.select-wrap select option{background:var(--void-2);color:var(--text)}
+.char-count{position:absolute;right:.4rem;bottom:-1.3rem;font-family:var(--font-pixel);font-size:.55rem;color:var(--text-dim)}
+.c-hint{min-height:1.4rem;font-size:.85rem;margin-bottom:.7rem;transition:color .3s}
+.c-hint.error{color:var(--danger)}
+.c-hint.success{color:var(--aurora)}
+.contact-side{background:var(--dusk);border:1px solid var(--line);border-radius:var(--radius);padding:2rem;position:sticky;top:90px}
+.contact-side__ico{font-size:2rem;margin-bottom:.8rem}
+.contact-side h3{font-family:var(--font-display);font-size:1.25rem;margin-bottom:1rem}
+.contact-side ul{list-style:none;display:grid;gap:.75rem;margin-bottom:1.5rem}
+.contact-side li{color:var(--text-dim);font-size:.92rem;line-height:1.5;display:flex;gap:.6rem;align-items:baseline;counter-increment:step}
+.contact-side li::before{content:counter(step);flex:none;width:20px;height:20px;background:var(--void-2);border:1px solid var(--line);border-radius:6px;display:grid;place-items:center;font-family:var(--font-pixel);font-size:.55rem;color:var(--aurora)}
+.contact-side ul{counter-reset:step}
+.contact-discord{display:inline-block;color:var(--amethyst-soft);text-decoration:none;font-size:.92rem;font-weight:500;transition:color .2s}
+.contact-discord:hover{color:var(--amethyst)}
+@media(max-width:768px){.contact-grid{grid-template-columns:1fr}.contact-side{position:static}}
 footer{border-top:1px solid var(--line);padding:2.4rem 0;color:var(--text-dim);font-size:.88rem}
 .foot{display:flex;justify-content:space-between;gap:1.4rem;flex-wrap:wrap;align-items:center}
 .foot a{color:var(--amethyst-soft);text-decoration:none;transition:color .2s}
@@ -455,12 +481,60 @@ footer{border-top:1px solid var(--line);padding:2.4rem 0;color:var(--text-dim);f
   </div>
 </section>
 
+<!-- ═══════════ CONTACTO / RECLAMOS ═══════════ -->
+<section class="container" id="contacto">
+  <div class="sec-head reveal">
+    <span class="eyebrow">Soporte</span>
+    <h2>Consultas y reclamos</h2>
+    <p>¿Un problema con tu compra, un baneo que crees injusto o un error del servidor? Escríbenos y el equipo lo revisará directamente. Te responderemos por Discord.</p>
+  </div>
+  <div class="contact-grid reveal" style="transition-delay:.1s">
+    <div class="contact-form">
+      <div class="field">
+        <label for="c-nick">Tu usuario de Minecraft</label>
+        <input type="text" id="c-nick" maxlength="16" placeholder="Ej: SayCles_" autocomplete="off" spellcheck="false">
+      </div>
+      <div class="field">
+        <label for="c-reason">Motivo</label>
+        <div class="select-wrap">
+          <select id="c-reason">
+            <option value="" disabled selected>Elige un motivo…</option>
+            <option value="pago">Problemas con el pago</option>
+            <option value="desbaneo">Solicitud de desbaneo</option>
+            <option value="error">Reporte de errores</option>
+            <option value="reporte">Reporte a personas</option>
+            <option value="otro">Otras consultas</option>
+          </select>
+        </div>
+      </div>
+      <div class="field">
+        <label for="c-message">Tu mensaje</label>
+        <textarea id="c-message" rows="5" maxlength="1200" placeholder="Explica tu situación con el mayor detalle posible…"></textarea>
+        <span class="char-count"><span id="c-count">0</span>/1200</span>
+      </div>
+      <div class="c-hint" id="c-hint"></div>
+      <button class="btn btn-gold" id="c-send" style="width:100%;justify-content:center">ENVIAR MENSAJE ▸</button>
+    </div>
+    <aside class="contact-side">
+      <div class="contact-side__ico">💬</div>
+      <h3>¿Cómo funciona?</h3>
+      <ul>
+        <li>Rellena el formulario con tu usuario y tu problema.</li>
+        <li>Tu mensaje llega directo a nuestro equipo de soporte.</li>
+        <li>Un administrador lo revisa junto a tu historial de compras.</li>
+        <li>Te contactamos por Discord para resolverlo.</li>
+      </ul>
+      <a class="contact-discord" id="c-discord-link" href="#">Únete al Discord para seguimiento →</a>
+    </aside>
+  </div>
+</section>
+
 <!-- ═══════════ FOOTER ═══════════ -->
 <footer>
   <div class="container">
     <div class="foot">
       <span>© 2026 ZakiWorld · zakiworld.holy.gg</span>
-      <span><a href="#" id="foot-discord">Discord</a> · <a href="#catalogo">Tienda</a> · <a href="/terminos.html">Términos y Condiciones</a></span>
+      <span><a href="#" id="foot-discord">Discord</a> · <a href="#catalogo">Tienda</a> · <a href="#contacto">Soporte</a> · <a href="/terminos.html">Términos y Condiciones</a></span>
     </div>
     <p class="legal">ZakiWorld no está afiliado con Mojang AB ni Microsoft. Los pagos son procesados de forma segura por Tebex Limited (Merchant of Record), quienes gestionan facturación, soporte de pagos y reembolsos. Iconos pixel de <a href="https://pixeliconlibrary.com/" target="_blank" rel="noopener" style="color:inherit">Pixel Icon Library by HackerNoon</a> (CC BY 4.0).</p>
     <a class="dev-credit" href="https://iris.it.com" target="_blank" rel="noopener" aria-label="Desarrollado por Iris Studio — visitar iris.it.com">
@@ -1022,6 +1096,63 @@ document.querySelectorAll(".spawn-thumb").forEach(btn=>{
 });
 document.getElementById("spawn-copy-ip").onclick=()=>{
   navigator.clipboard?.writeText(CONFIG.SERVER_IP).then(()=>showToast("IP copiada: "+CONFIG.SERVER_IP));
+};
+
+/* ============================================================
+   FORMULARIO DE CONTACTO / RECLAMOS
+============================================================ */
+const cNick=document.getElementById("c-nick");
+const cReason=document.getElementById("c-reason");
+const cMessage=document.getElementById("c-message");
+const cHint=document.getElementById("c-hint");
+const cSend=document.getElementById("c-send");
+const cCount=document.getElementById("c-count");
+
+// Autocompletar el nick si ya inició sesión
+if(USER)cNick.value=USER;
+
+cMessage.addEventListener("input",()=>{cCount.textContent=cMessage.value.length;});
+document.getElementById("c-discord-link").onclick=e=>{
+  e.preventDefault();if(CONFIG.DISCORD_INVITE)window.open(CONFIG.DISCORD_INVITE,"_blank");
+};
+
+const REASON_LABELS={pago:"Problemas con el pago",desbaneo:"Solicitud de desbaneo",error:"Reporte de errores",reporte:"Reporte a personas",otro:"Otras consultas"};
+
+cSend.onclick=()=>{
+  const nick=cNick.value.trim();
+  const reason=cReason.value;
+  const message=cMessage.value.trim();
+  cHint.className="c-hint";
+
+  if(!/^[A-Za-z0-9_]{3,16}$/.test(nick)){cHint.textContent="Escribe un usuario de Minecraft válido (3-16 caracteres).";cHint.classList.add("error");return;}
+  if(!reason){cHint.textContent="Elige un motivo para tu mensaje.";cHint.classList.add("error");return;}
+  if(message.length<10){cHint.textContent="Cuéntanos un poco más (mínimo 10 caracteres).";cHint.classList.add("error");return;}
+
+  cSend.disabled=true;cSend.textContent="ENVIANDO…";
+
+  // Guardar el nick para futuras visitas
+  if(!USER){USER=nick;localStorage.setItem("zw_user",USER);applyUser();}
+
+  const payload={nick,reason,reasonLabel:REASON_LABELS[reason],message,ts:Date.now(),ua:navigator.userAgent.slice(0,120)};
+
+  fetch(CONFIG.WORKER_URL+"/tickets",{
+    method:"POST",
+    headers:{"Content-Type":"application/json"},
+    body:JSON.stringify(payload),
+  }).then(r=>{
+    if(!r.ok)throw new Error("bad status");
+    return r.json();
+  }).then(()=>{
+    cHint.textContent="✓ ¡Mensaje enviado! Te contactaremos por Discord.";
+    cHint.classList.add("success");
+    cReason.value="";cMessage.value="";cCount.textContent="0";
+    showToast("Mensaje enviado correctamente");
+  }).catch(()=>{
+    cHint.textContent="No se pudo enviar (el soporte se activará junto con Tebex). Mientras, escríbenos por Discord.";
+    cHint.classList.add("error");
+  }).finally(()=>{
+    cSend.disabled=false;cSend.textContent="ENVIAR MENSAJE ▸";
+  });
 };
 
 /* Inicializar todo */
