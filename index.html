@@ -187,16 +187,16 @@ section{padding:5rem 0}
 
 /* ── Salón de la fama: top donador + ranking ── */
 .fame-grid{display:grid;grid-template-columns:1.35fr .95fr;gap:1.4rem;align-items:stretch}
-.top-donor{display:grid;grid-template-columns:.7fr 1.3fr;gap:1.8rem;align-items:center;background:linear-gradient(135deg,rgba(255,201,74,.05),rgba(155,109,255,.06));border:1px solid var(--line);border-radius:var(--radius);padding:2rem;position:relative;overflow:hidden}
+.top-donor{display:grid;grid-template-columns:.9fr 1.1fr;gap:1.6rem;align-items:center;background:linear-gradient(135deg,rgba(255,201,74,.05),rgba(155,109,255,.06));border:1px solid var(--line);border-radius:var(--radius);padding:2rem;position:relative;overflow:hidden}
 .top-donor::before{content:"";position:absolute;inset:-50%;background:conic-gradient(from 0deg,transparent 62%,rgba(255,201,74,.12),transparent 82%);animation:rotate 11s linear infinite;pointer-events:none}
 @keyframes rotate{to{rotate:360deg}}
 .podium{position:relative;display:flex;flex-direction:column;align-items:center;z-index:1}
-.podium img.body-render{height:200px;image-rendering:pixelated;filter:drop-shadow(0 14px 36px rgba(255,201,74,.35));animation:skinFloat 5s ease-in-out infinite;z-index:2}
-.crown{font-size:1.7rem;animation:skinFloat 5s ease-in-out infinite;animation-delay:-.4s;z-index:3;margin-bottom:-4px}
+.podium img.body-render{height:290px;image-rendering:pixelated;filter:drop-shadow(0 14px 36px rgba(255,201,74,.35));animation:skinFloat 5s ease-in-out infinite;z-index:2}
+.crown{font-size:2.2rem;animation:skinFloat 5s ease-in-out infinite;animation-delay:-.4s;z-index:3;margin-bottom:-4px}
 .podium-base{display:flex;margin-top:-10px;z-index:1}
-.podium-base span{width:44px;height:30px;image-rendering:pixelated}
+.podium-base span{width:56px;height:36px;image-rendering:pixelated}
 .podium-base span:nth-child(1),.podium-base span:nth-child(3){background:linear-gradient(180deg,#5b4a9e,#3a2f6b);border:2px solid #7a63cf}
-.podium-base span:nth-child(2){height:42px;background:linear-gradient(180deg,var(--gold),var(--gold-deep));border:2px solid #ffe08f;transform:translateY(-12px)}
+.podium-base span:nth-child(2){height:50px;background:linear-gradient(180deg,var(--gold),var(--gold-deep));border:2px solid #ffe08f;transform:translateY(-14px)}
 .top-donor__info{z-index:1}
 .top-donor__name{font-family:var(--font-display);font-weight:800;font-size:clamp(1.6rem,2.8vw,2.4rem);color:var(--gold)}
 .top-donor__amount{font-family:var(--font-pixel);font-size:1.1rem;color:var(--aurora);margin:.35rem 0 .6rem}
