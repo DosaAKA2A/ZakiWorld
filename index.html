@@ -509,6 +509,7 @@ const CONFIG={
   SERVER_IP:"zakiworld.holy.gg",
   SERVER_PORT:25565,
   DISCORD_GUILD_ID:"1175880499093319690",
+  DISCORD_INVITE_CODE:"jtbYpTvp25",
   TEBEX_PUBLIC_TOKEN:"gkwh-9fc4e04539d07122497f102bdae86d73157aaf17",
   TEBEX_PROJECT_ID:"773585",
   DISCORD_INVITE:"https://discord.gg/jtbYpTvp25",
@@ -754,10 +755,20 @@ fetch(`https://api.minetools.eu/ping/${CONFIG.SERVER_IP}/${CONFIG.SERVER_PORT}`)
   .then(r=>r.json()).then(d=>{
     if(d&&!d.error&&d.players)document.getElementById("online-count").textContent=d.players.online;
   }).catch(()=>{});
-if(CONFIG.DISCORD_GUILD_ID){
-  fetch(`https://discord.com/api/guilds/${CONFIG.DISCORD_GUILD_ID}/widget.json`)
+if(CONFIG.DISCORD_INVITE_CODE){
+  // Endpoint de invitación con conteo: funciona aunque el widget esté desactivado.
+  // approximate_presence_count = usuarios conectados ahora mismo.
+  fetch(`https://discord.com/api/v10/invites/${CONFIG.DISCORD_INVITE_CODE}?with_counts=true&with_expiration=true`)
     .then(r=>r.json()).then(d=>{
-      if(d.presence_count!=null)document.getElementById("discord-count").textContent=d.presence_count;
+      if(d&&d.approximate_presence_count!=null){
+        document.getElementById("discord-count").textContent=d.approximate_presence_count;
+      }else if(CONFIG.DISCORD_GUILD_ID){
+        // Fallback al widget por si la invitación fallara
+        return fetch(`https://discord.com/api/guilds/${CONFIG.DISCORD_GUILD_ID}/widget.json`)
+          .then(r=>r.json()).then(w=>{
+            if(w.presence_count!=null)document.getElementById("discord-count").textContent=w.presence_count;
+          });
+      }
     }).catch(()=>{});
 }
 document.getElementById("copy-ip").onclick=()=>{
