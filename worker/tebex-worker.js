@@ -246,9 +246,16 @@ async function getDonations(env) {
     }
   }
 
+  // Ranking top 10 por total donado
+  const ranking = Object.values(totals)
+    .sort((a, b) => b.total - a.total)
+    .slice(0, 10)
+    .map(info => ({ name: info.name, total: Number(info.total.toFixed(2)) }));
+
   return new Response(JSON.stringify({
     donations: donations.slice(0, 20),
     topDonor,
+    ranking,
     totalDonations: donations.length,
     totalDonors: Object.keys(totals).length,
     updatedAt: new Date().toISOString(),
