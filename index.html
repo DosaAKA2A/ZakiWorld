@@ -208,11 +208,11 @@ section{padding:5rem 0}
 .card::before{content:"";position:absolute;inset:0;border-radius:inherit;background:radial-gradient(420px circle at var(--mx,50%) var(--my,50%),color-mix(in srgb,var(--card-accent,#9b6dff) 14%,transparent),transparent 65%);opacity:0;transition:opacity .35s;pointer-events:none}
 .card:hover::before{opacity:1}
 .card:hover{border-color:var(--card-accent,var(--amethyst));box-shadow:0 24px 55px rgba(0,0,0,.5);transform:translateY(-8px)}
-.card__badge{width:96px;height:96px;margin-bottom:.8rem;display:grid;place-items:center;filter:drop-shadow(0 8px 20px rgba(0,0,0,.45));transition:transform .45s cubic-bezier(.34,1.56,.64,1)}
-.card__badge img{width:100%;height:100%;object-fit:contain}
+.card__badge{width:110px;height:110px;margin:0 auto .9rem;display:flex;align-items:center;justify-content:center;filter:drop-shadow(0 8px 20px rgba(0,0,0,.45));transition:transform .45s cubic-bezier(.34,1.56,.64,1)}
+.card__badge img{max-width:100%;max-height:100%;width:auto;height:auto;object-fit:contain}
 .card:hover .card__badge{transform:scale(1.1) translateY(-3px)}
 .card__tag{position:absolute;top:1.1rem;right:1.1rem;font-family:var(--font-pixel);font-size:.55rem;color:var(--card-accent,var(--amethyst));border:1px solid currentColor;padding:.22rem .5rem;border-radius:8px}
-.card h3{font-family:var(--font-display);font-weight:700;font-size:1.3rem;color:var(--card-accent,var(--text))}
+.card h3{font-family:var(--font-display);font-weight:700;font-size:1.3rem;color:var(--card-accent,var(--text));text-align:center}
 .card ul{list-style:none;margin:1rem 0 1.3rem;display:grid;gap:.5rem;flex:1}
 .card li{color:var(--text-dim);font-size:.9rem;display:flex;gap:.55rem;align-items:baseline;line-height:1.45}
 .card li::before{content:"";width:7px;height:7px;flex:none;background:var(--card-accent,var(--amethyst));border-radius:2px;translate:0 -1px}
@@ -686,10 +686,37 @@ let DONATIONS=[
 let TOP_DONOR={name:"Dosa__",total:"3,000.00",currency:"$"};
 
 const PACKAGES=[
-  {id:"r1",icon:"⭐",badge:"vip.svg",name:"VIP",tag:"",accent:"#9b6dff",price:4.99,perks:["Kit VIP cada 24h","2 homes adicionales","Prefijo VIP en el chat","Acceso a /hat"]},
-  {id:"r2",icon:"💎",badge:"vip-plus.svg",name:"VIP+",tag:"POPULAR",accent:"#5ef2c8",price:9.99,perks:["Todo lo de VIP","Kit VIP+ mejorado cada 24h","4 homes adicionales","/fly en tu claim","/nick con colores"]},
-  {id:"r3",icon:"🔮",badge:"vip-plusplus.svg",name:"VIP++",tag:"",accent:"#b493ff",price:14.99,perks:["Todo lo de VIP+","Kit VIP++ premium cada 24h","6 homes adicionales","/fly global","Acceso anticipado a eventos"]},
-  {id:"r4",icon:"👑",badge:"supreme.svg",name:"SUPREME",tag:"MÁXIMO",accent:"#ffc94a",price:19.99,perks:["Todo lo de VIP++","Kit SUPREME exclusivo cada 24h","Homes ilimitados","Mascota exclusiva","Partículas y cosméticos únicos","Estatua en el spawn"]},
+  {id:"r1",icon:"⭐",badge:"vip.svg",name:"VIP",tag:"",accent:"#9b6dff",price:4.99,perks:[
+    "Mochila 2×9 · 5 homes · 5 trabajos",
+    "5 casillas extra en Casa de Subastas",
+    "Comandos: /fly · /hat · /feed · /nick",
+    "Llaves VIP al votar por el servidor",
+    "Bonus: paquete de 3 llaves + $3.000",
+  ]},
+  {id:"r2",icon:"💎",badge:"vip-plus.svg",name:"VIP+",tag:"POPULAR",accent:"#5ef2c8",price:9.99,perks:[
+    "Todo lo de VIP",
+    "Mochila 3×9 · 7 homes · 7 trabajos",
+    "7 casillas extra en Casa de Subastas",
+    "Comandos: +/repair",
+    "Llaves VIP al votar por el servidor",
+    "Bonus: paquete de 3 llaves + $3.500",
+  ]},
+  {id:"r3",icon:"🔮",badge:"vip-plusplus.svg",name:"VIP++",tag:"",accent:"#b493ff",price:14.99,perks:[
+    "Todo lo de VIP+",
+    "Mochila 4×9 · 9 homes · 9 trabajos",
+    "Teletransporte instantáneo",
+    "9 casillas extra en Casa de Subastas",
+    "Comandos: +/repair",
+    "Bonus: paquete de 3 llaves + $4.500",
+  ]},
+  {id:"r4",icon:"👑",badge:"supreme.svg",name:"SUPREME",tag:"MÁXIMO",accent:"#ffc94a",price:19.99,perks:[
+    "Todo lo de VIP++",
+    "Mochila 4×9 · 12 homes · 12 trabajos",
+    "Teletransporte instantáneo",
+    "15 casillas extra en Casa de Subastas",
+    "Comandos: +/repair · /repair all",
+    "Bonus: paquete de 3 llaves + $5.000",
+  ]},
 ];
 
 /* ============================================================
