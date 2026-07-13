@@ -271,6 +271,11 @@ section{padding:5rem 0}
 .contact-form{background:linear-gradient(180deg,var(--dusk-2),var(--dusk));border:1px solid var(--line);border-radius:var(--radius);padding:2rem}
 .field{margin-bottom:1.3rem;position:relative}
 .field label{display:block;font-family:var(--font-pixel);font-size:.6rem;letter-spacing:.06em;color:var(--text-dim);text-transform:uppercase;margin-bottom:.55rem}
+.field .req{color:var(--danger)}
+.field-help{display:block;font-size:.8rem;color:var(--text-dim);margin-top:.4rem;opacity:.8}
+.c-disclaimer{font-size:.8rem;color:var(--text-dim);text-align:center;margin-top:1rem;line-height:1.5}
+.c-disclaimer a{color:var(--amethyst-soft);text-decoration:none}
+.c-disclaimer a:hover{text-decoration:underline}
 .field input,.field textarea,.select-wrap select{width:100%;background:var(--void-2);border:1px solid var(--line);color:var(--text);font-family:var(--font-body);font-size:.98rem;padding:.85rem 1rem;border-radius:10px;outline:none;transition:border-color .3s,box-shadow .3s}
 .field input:focus,.field textarea:focus,.select-wrap select:focus{border-color:var(--amethyst);box-shadow:0 0 0 3px rgba(155,109,255,.15)}
 .field textarea{resize:vertical;min-height:120px;line-height:1.55}
@@ -491,40 +496,50 @@ footer{border-top:1px solid var(--line);padding:2.4rem 0;color:var(--text-dim);f
   <div class="contact-grid reveal" style="transition-delay:.1s">
     <div class="contact-form">
       <div class="field">
-        <label for="c-nick">Tu usuario de Minecraft</label>
+        <label for="c-nick">Tu usuario de Minecraft <span class="req">*</span></label>
         <input type="text" id="c-nick" maxlength="16" placeholder="Ej: SayCles_" autocomplete="off" spellcheck="false">
       </div>
       <div class="field">
-        <label for="c-reason">Motivo</label>
+        <label for="c-reason">Categoría de la solicitud <span class="req">*</span></label>
         <div class="select-wrap">
           <select id="c-reason">
-            <option value="" disabled selected>Elige un motivo…</option>
-            <option value="pago">Problemas con el pago</option>
-            <option value="desbaneo">Solicitud de desbaneo</option>
-            <option value="error">Reporte de errores</option>
-            <option value="reporte">Reporte a personas</option>
-            <option value="otro">Otras consultas</option>
+            <option value="" disabled selected>Selecciona una categoría…</option>
+            <option value="pago">💳 Problema con un pago o compra</option>
+            <option value="desbaneo">⚖️ Apelación de sanción (ban/mute)</option>
+            <option value="error">🐛 Reporte de bug o error del servidor</option>
+            <option value="reporte">🚩 Denunciar a un jugador</option>
+            <option value="cuenta">🔒 Problema con mi cuenta o rango</option>
+            <option value="otro">💬 Consulta general</option>
           </select>
         </div>
       </div>
+
+      <!-- Campo dinámico según categoría -->
+      <div class="field" id="dynamic-field" style="display:none">
+        <label id="dyn-label" for="c-extra"></label>
+        <input type="text" id="c-extra" autocomplete="off" spellcheck="false">
+        <span class="field-help" id="dyn-help"></span>
+      </div>
+
       <div class="field">
-        <label for="c-message">Tu mensaje</label>
-        <textarea id="c-message" rows="5" maxlength="1200" placeholder="Explica tu situación con el mayor detalle posible…"></textarea>
-        <span class="char-count"><span id="c-count">0</span>/1200</span>
+        <label for="c-message">Descripción del problema <span class="req">*</span></label>
+        <textarea id="c-message" rows="5" maxlength="1500" placeholder="Describe tu situación con el mayor detalle posible. Cuanta más información aportes, más rápido podremos ayudarte."></textarea>
+        <span class="char-count"><span id="c-count">0</span>/1500</span>
       </div>
       <div class="c-hint" id="c-hint"></div>
-      <button class="btn btn-gold" id="c-send" style="width:100%;justify-content:center">ENVIAR MENSAJE ▸</button>
+      <button class="btn btn-gold" id="c-send" style="width:100%;justify-content:center">ENVIAR SOLICITUD ▸</button>
+      <p class="c-disclaimer">Al enviar aceptas nuestros <a href="/terminos.html">Términos</a>. Tiempo medio de respuesta: <strong>24-48h</strong> por Discord.</p>
     </div>
     <aside class="contact-side">
-      <div class="contact-side__ico">💬</div>
-      <h3>¿Cómo funciona?</h3>
+      <div class="contact-side__ico">🎫</div>
+      <h3>Antes de escribir</h3>
       <ul>
-        <li>Rellena el formulario con tu usuario y tu problema.</li>
-        <li>Tu mensaje llega directo a nuestro equipo de soporte.</li>
-        <li>Un administrador lo revisa junto a tu historial de compras.</li>
-        <li>Te contactamos por Discord para resolverlo.</li>
+        <li>Revisa que tu <strong>usuario esté bien escrito</strong>: las respuestas y entregas dependen de él.</li>
+        <li>Para problemas de pago, ten a mano tu <strong>ID de transacción</strong> (te llega al correo tras comprar).</li>
+        <li>Para denuncias o apelaciones, aporta <strong>pruebas</strong> (capturas o vídeos) en el mensaje.</li>
+        <li>Una sola solicitud por caso: enviar duplicados <strong>ralentiza</strong> la cola de soporte.</li>
       </ul>
-      <a class="contact-discord" id="c-discord-link" href="#">Únete al Discord para seguimiento →</a>
+      <a class="contact-discord" id="c-discord-link" href="#">¿Es urgente? Abre ticket en Discord →</a>
     </aside>
   </div>
 </section>
@@ -1107,33 +1122,68 @@ const cMessage=document.getElementById("c-message");
 const cHint=document.getElementById("c-hint");
 const cSend=document.getElementById("c-send");
 const cCount=document.getElementById("c-count");
+const cExtra=document.getElementById("c-extra");
+const dynField=document.getElementById("dynamic-field");
+const dynLabel=document.getElementById("dyn-label");
+const dynHelp=document.getElementById("dyn-help");
 
 // Autocompletar el nick si ya inició sesión
 if(USER)cNick.value=USER;
+
+// Configuración de campo extra + placeholder del mensaje según categoría
+const REASON_CONFIG={
+  pago:{label:"ID de transacción (opcional)",ph:"Ej: tbx-a1b2c3d4...",help:"Lo encuentras en el correo de confirmación de tu compra.",msg:"Indica qué compraste, cuándo, y qué ocurrió (no llegó el rango, cobro duplicado, etc.)."},
+  desbaneo:{label:"Fecha aproximada de la sanción",ph:"Ej: 10 de julio de 2026",help:"Ayúdanos a localizar el registro de tu sanción.",msg:"Explica por qué crees que la sanción debería revisarse. Sé honesto: revisamos el historial completo."},
+  error:{label:"¿Dónde ocurre el error?",ph:"Ej: Survival, spawn, /tienda...",help:"Zona, comando o modalidad donde sucede.",msg:"Describe el error paso a paso: qué hiciste, qué esperabas y qué pasó. Adjunta capturas si puedes."},
+  reporte:{label:"Usuario que quieres denunciar",ph:"Ej: JugadorTramposo123",help:"Nombre exacto del jugador infractor.",msg:"Describe qué hizo y cuándo. Aporta pruebas (capturas/vídeos) enlazándolas aquí — sin pruebas es difícil sancionar."},
+  cuenta:{label:"",ph:"",help:"",msg:"Describe el problema con tu cuenta o rango: qué rango compraste, qué no funciona, etc."},
+  otro:{label:"",ph:"",help:"",msg:"Cuéntanos en qué podemos ayudarte."},
+};
+
+cReason.addEventListener("change",()=>{
+  const cfg=REASON_CONFIG[cReason.value];
+  if(cfg&&cfg.label){
+    dynLabel.textContent=cfg.label;
+    cExtra.placeholder=cfg.ph;
+    dynHelp.textContent=cfg.help;
+    dynField.style.display="block";
+  }else{
+    dynField.style.display="none";
+    cExtra.value="";
+  }
+  if(cfg&&cfg.msg)cMessage.placeholder=cfg.msg;
+});
 
 cMessage.addEventListener("input",()=>{cCount.textContent=cMessage.value.length;});
 document.getElementById("c-discord-link").onclick=e=>{
   e.preventDefault();if(CONFIG.DISCORD_INVITE)window.open(CONFIG.DISCORD_INVITE,"_blank");
 };
 
-const REASON_LABELS={pago:"Problemas con el pago",desbaneo:"Solicitud de desbaneo",error:"Reporte de errores",reporte:"Reporte a personas",otro:"Otras consultas"};
+const REASON_LABELS={pago:"Problema con un pago o compra",desbaneo:"Apelación de sanción",error:"Reporte de bug o error",reporte:"Denuncia de jugador",cuenta:"Problema de cuenta o rango",otro:"Consulta general"};
 
 cSend.onclick=()=>{
   const nick=cNick.value.trim();
   const reason=cReason.value;
   const message=cMessage.value.trim();
+  const extra=cExtra.value.trim();
   cHint.className="c-hint";
 
   if(!/^[A-Za-z0-9_]{3,16}$/.test(nick)){cHint.textContent="Escribe un usuario de Minecraft válido (3-16 caracteres).";cHint.classList.add("error");return;}
-  if(!reason){cHint.textContent="Elige un motivo para tu mensaje.";cHint.classList.add("error");return;}
-  if(message.length<10){cHint.textContent="Cuéntanos un poco más (mínimo 10 caracteres).";cHint.classList.add("error");return;}
+  if(!reason){cHint.textContent="Selecciona una categoría para tu solicitud.";cHint.classList.add("error");return;}
+  if(message.length<15){cHint.textContent="Añade más detalle a tu descripción (mínimo 15 caracteres).";cHint.classList.add("error");return;}
 
   cSend.disabled=true;cSend.textContent="ENVIANDO…";
 
-  // Guardar el nick para futuras visitas
   if(!USER){USER=nick;localStorage.setItem("zw_user",USER);applyUser();}
 
-  const payload={nick,reason,reasonLabel:REASON_LABELS[reason],message,ts:Date.now(),ua:navigator.userAgent.slice(0,120)};
+  // Incluir el campo extra dentro del mensaje para el backoffice
+  let fullMessage=message;
+  if(extra){
+    const cfg=REASON_CONFIG[reason];
+    fullMessage=`[${cfg.label}: ${extra}]\n\n${message}`;
+  }
+
+  const payload={nick,reason,reasonLabel:REASON_LABELS[reason],message:fullMessage,ts:Date.now(),ua:navigator.userAgent.slice(0,120)};
 
   fetch(CONFIG.WORKER_URL+"/tickets",{
     method:"POST",
@@ -1143,15 +1193,16 @@ cSend.onclick=()=>{
     if(!r.ok)throw new Error("bad status");
     return r.json();
   }).then(()=>{
-    cHint.textContent="✓ ¡Mensaje enviado! Te contactaremos por Discord.";
+    cHint.textContent="✓ Solicitud recibida. Nuestro equipo te contactará por Discord en 24-48h.";
     cHint.classList.add("success");
-    cReason.value="";cMessage.value="";cCount.textContent="0";
-    showToast("Mensaje enviado correctamente");
+    cReason.value="";cMessage.value="";cExtra.value="";cCount.textContent="0";dynField.style.display="none";
+    cMessage.placeholder="Describe tu situación con el mayor detalle posible.";
+    showToast("Solicitud enviada correctamente");
   }).catch(()=>{
-    cHint.textContent="No se pudo enviar (el soporte se activará junto con Tebex). Mientras, escríbenos por Discord.";
+    cHint.textContent="No se pudo enviar en este momento. Por favor, abre un ticket en nuestro Discord.";
     cHint.classList.add("error");
   }).finally(()=>{
-    cSend.disabled=false;cSend.textContent="ENVIAR MENSAJE ▸";
+    cSend.disabled=false;cSend.textContent="ENVIAR SOLICITUD ▸";
   });
 };
 

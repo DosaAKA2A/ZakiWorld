@@ -79,7 +79,7 @@ async function createTicket(request, env) {
   const nick = String(body.nick || "").trim();
   const reason = String(body.reason || "").trim();
   const message = String(body.message || "").trim();
-  const validReasons = ["pago", "desbaneo", "error", "reporte", "otro"];
+  const validReasons = ["pago", "desbaneo", "error", "reporte", "cuenta", "otro"];
 
   if (!/^[A-Za-z0-9_]{3,16}$/.test(nick)) return bad("Usuario inválido");
   if (!validReasons.includes(reason)) return bad("Motivo inválido");

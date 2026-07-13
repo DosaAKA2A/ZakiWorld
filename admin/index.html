@@ -72,6 +72,7 @@ body{background:var(--void);color:var(--text);font-family:var(--font-body);min-h
 .ticket__reason.desbaneo{color:var(--danger)}
 .ticket__reason.error{color:var(--aurora)}
 .ticket__reason.reporte{color:var(--amethyst-soft)}
+.ticket__reason.cuenta{color:var(--amethyst)}
 .ticket__date{margin-left:auto;color:var(--text-dim);font-size:.8rem}
 .ticket__msg{color:var(--text);line-height:1.6;background:var(--void-2);border-radius:10px;padding:1rem;font-size:.95rem;white-space:pre-wrap;word-break:break-word}
 .ticket__foot{display:flex;gap:.6rem;margin-top:1rem;flex-wrap:wrap;align-items:center}
@@ -121,7 +122,8 @@ body{background:var(--void);color:var(--text);font-family:var(--font-body);min-h
       <button class="chip" data-filter="pago">PAGOS</button>
       <button class="chip" data-filter="desbaneo">DESBANEOS</button>
       <button class="chip" data-filter="error">ERRORES</button>
-      <button class="chip" data-filter="reporte">REPORTES</button>
+      <button class="chip" data-filter="reporte">DENUNCIAS</button>
+      <button class="chip" data-filter="cuenta">CUENTA</button>
     </div>
     <div id="tickets-container"><div class="spinner"></div></div>
   </div>
@@ -132,7 +134,7 @@ const WORKER_URL="https://tebex-api.studio-iris2026.workers.dev";
 let ADMIN_KEY=sessionStorage.getItem("zw_admin_key")||"";
 let ALL_TICKETS=[];
 let CURRENT_FILTER="todos";
-const REASON_LABELS={pago:"Problemas con el pago",desbaneo:"Solicitud de desbaneo",error:"Reporte de errores",reporte:"Reporte a personas",otro:"Otras consultas"};
+const REASON_LABELS={pago:"Problema con un pago o compra",desbaneo:"Apelación de sanción",error:"Reporte de bug o error",reporte:"Denuncia de jugador",cuenta:"Problema de cuenta o rango",otro:"Consulta general"};
 
 const $=id=>document.getElementById(id);
 
@@ -196,7 +198,7 @@ function render(){
   // Filtrar
   let list=ALL_TICKETS;
   const statusFilters=["nuevo","leido","resuelto"];
-  const reasonFilters=["pago","desbaneo","error","reporte","otro"];
+  const reasonFilters=["pago","desbaneo","error","reporte","cuenta","otro"];
   if(statusFilters.includes(CURRENT_FILTER))list=list.filter(t=>t.status===CURRENT_FILTER);
   else if(reasonFilters.includes(CURRENT_FILTER))list=list.filter(t=>t.reason===CURRENT_FILTER);
 
