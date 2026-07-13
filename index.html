@@ -23,6 +23,9 @@
   --aurora:#5ef2c8;
   --gold:#ffc94a;
   --gold-deep:#e8a520;
+  --champagne:#e6c88a;
+  --champagne-deep:#c99f52;
+  --champagne-soft:#f2e2bd;
   --text:#edeaf7;
   --text-dim:#a79fc9;
   --danger:#ff6d8a;
@@ -231,22 +234,22 @@ section{padding:5rem 0}
 .card--supreme{
   border:1.5px solid transparent;
   background:
-    linear-gradient(180deg,#241a0a,#1a1412) padding-box,
-    linear-gradient(135deg,var(--gold) 0%,#ffe08f 25%,var(--gold-deep) 50%,var(--gold) 75%,#ffe08f 100%) border-box;
+    linear-gradient(180deg,#1e1a12,#181410) padding-box,
+    linear-gradient(135deg,var(--champagne) 0%,var(--champagne-soft) 25%,var(--champagne-deep) 50%,var(--champagne) 75%,var(--champagne-soft) 100%) border-box;
   background-size:100% 100%, 300% 300%;
   animation:supremeBorder 6s linear infinite;
   overflow:visible;
 }
 @keyframes supremeBorder{to{background-position:0 0, 300% 300%}}
-/* Halo dorado pulsante detrás */
+/* Halo champagne pulsante detrás */
 .card--supreme::after{
   content:"";position:absolute;inset:-2px;border-radius:inherit;z-index:-1;
-  background:linear-gradient(135deg,var(--gold),var(--gold-deep),var(--gold));
+  background:linear-gradient(135deg,var(--champagne),var(--champagne-deep),var(--champagne));
   background-size:200% 200%;
-  filter:blur(16px);opacity:.35;
+  filter:blur(18px);opacity:.28;
   animation:supremeGlow 4s ease-in-out infinite;
 }
-@keyframes supremeGlow{0%,100%{opacity:.25;background-position:0 0}50%{opacity:.55;background-position:100% 100%}}
+@keyframes supremeGlow{0%,100%{opacity:.2;background-position:0 0}50%{opacity:.4;background-position:100% 100%}}
 /* Brillo diagonal que recorre la card */
 .card--supreme::before{
   content:"";position:absolute;inset:0;border-radius:inherit;pointer-events:none;overflow:hidden;
@@ -258,27 +261,28 @@ section{padding:5rem 0}
 @keyframes supremeShine{0%{background-position:150% 0}55%,100%{background-position:-150% 0}}
 .card--supreme:hover{transform:translateY(-12px) scale(1.02)}
 .card--supreme .card__badge{
+  width:135px;height:135px;
   animation:supremeIconFloat 3s ease-in-out infinite;
-  filter:drop-shadow(0 8px 24px rgba(255,201,74,.5));
+  filter:drop-shadow(0 10px 28px rgba(230,200,138,.45));
 }
 @keyframes supremeIconFloat{0%,100%{transform:translateY(0) rotate(0)}50%{transform:translateY(-6px) rotate(2deg)}}
 .card--supreme:hover .card__badge{transform:scale(1.14) translateY(-4px)}
 .card--supreme h3{
-  background:linear-gradient(90deg,var(--gold),#fff5d6,var(--gold));
+  background:linear-gradient(90deg,var(--champagne),var(--champagne-soft),var(--champagne));
   background-size:200% 100%;-webkit-background-clip:text;background-clip:text;color:transparent;
   animation:supremeText 3s linear infinite;
 }
 @keyframes supremeText{to{background-position:-200% 0}}
-.card--supreme li::before{box-shadow:0 0 6px var(--gold)}
+.card--supreme li::before{background:var(--champagne);box-shadow:0 0 5px var(--champagne)}
 .card--supreme .card__tag{
-  background:linear-gradient(180deg,var(--gold),var(--gold-deep));color:#3a2600;border:none;font-weight:700;
-  animation:supremeTagPulse 2s ease-in-out infinite;
+  background:linear-gradient(180deg,var(--champagne),var(--champagne-deep));color:#3a2c10;border:none;font-weight:700;
+  animation:supremeTagPulse 2.5s ease-in-out infinite;
 }
-@keyframes supremeTagPulse{0%,100%{box-shadow:0 0 0 0 rgba(255,201,74,.5)}50%{box-shadow:0 0 0 6px rgba(255,201,74,0)}}
-.card--supreme .add-btn{background:linear-gradient(180deg,var(--gold),var(--gold-deep));color:#3a2600;border:none;font-weight:700}
-.card--supreme .add-btn:hover{filter:brightness(1.12);box-shadow:0 6px 20px rgba(255,201,74,.4)}
-/* Partículas doradas flotando */
-.supreme-spark{position:absolute;width:4px;height:4px;background:var(--gold);border-radius:1px;pointer-events:none;opacity:0;box-shadow:0 0 6px var(--gold)}
+@keyframes supremeTagPulse{0%,100%{box-shadow:0 0 0 0 rgba(230,200,138,.5)}50%{box-shadow:0 0 0 6px rgba(230,200,138,0)}}
+.card--supreme .add-btn{background:linear-gradient(180deg,var(--champagne),var(--champagne-deep));color:#3a2c10;border:none;font-weight:700}
+.card--supreme .add-btn:hover{filter:brightness(1.08);box-shadow:0 6px 20px rgba(230,200,138,.35)}
+/* Partículas champagne */
+.supreme-spark{position:absolute;width:4px;height:4px;background:var(--champagne);border-radius:1px;pointer-events:none;opacity:0;box-shadow:0 0 6px var(--champagne)}
 .card--supreme .supreme-spark{animation:sparkFloat 3s ease-in-out infinite}
 .card--supreme .supreme-spark:nth-child(1){left:15%;animation-delay:0s}
 .card--supreme .supreme-spark:nth-child(2){left:45%;animation-delay:1s}
