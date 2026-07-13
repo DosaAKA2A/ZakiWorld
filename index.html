@@ -198,7 +198,8 @@ section{padding:5rem 0}
 .top-donor__amount{font-family:var(--font-pixel);font-size:1.35rem;color:var(--aurora);margin:.4rem 0 .7rem}
 .top-donor__desc{color:var(--text-dim);margin:.4rem 0 1.5rem;max-width:28rem;line-height:1.6;font-size:1rem}
 .medal-row{display:flex;gap:.8rem;flex-wrap:wrap}
-.medal{font-family:var(--font-pixel);font-size:.62rem;padding:.5rem .85rem;background:var(--dusk);border:1px solid var(--line);border-radius:10px;color:var(--text-dim);transition:border-color .3s,transform .3s}
+.medal{font-family:var(--font-pixel);font-size:.62rem;padding:.5rem .85rem;background:var(--dusk);border:1px solid var(--line);border-radius:10px;color:var(--text-dim);transition:border-color .3s,transform .3s;display:inline-flex;align-items:center;gap:.5rem}
+.medal svg{width:16px;height:16px;flex:none;color:var(--gold)}
 .medal:hover{border-color:var(--gold);transform:translateY(-2px)}
 .medal strong{color:var(--text)}
 
@@ -291,7 +292,8 @@ section{padding:5rem 0}
 .step{background:var(--dusk);border:1px solid var(--line);border-radius:var(--radius);padding:1.8rem;position:relative;transition:border-color .3s,transform .4s cubic-bezier(.16,1,.3,1)}
 .step:hover{border-color:var(--amethyst);transform:translateY(-4px)}
 .step__num{font-family:var(--font-pixel);font-size:.55rem;color:var(--amethyst);position:absolute;top:1.1rem;right:1.1rem;opacity:.5}
-.step__ico{font-size:1.7rem;margin-bottom:.9rem;display:block}
+.step__ico{font-size:1.7rem;margin-bottom:.9rem;display:block;color:var(--amethyst)}
+.step__ico svg{width:30px;height:30px}
 .step h3{font-family:var(--font-display);font-size:1.15rem;margin-bottom:.45rem}
 .step p{color:var(--text-dim);font-size:.94rem;line-height:1.6}
 
@@ -354,7 +356,7 @@ section{padding:5rem 0}
 .c-hint.error{color:var(--danger)}
 .c-hint.success{color:var(--aurora)}
 .contact-side{background:var(--dusk);border:1px solid var(--line);border-radius:var(--radius);padding:2rem;position:sticky;top:90px}
-.contact-side__ico{font-size:2rem;margin-bottom:.8rem}
+.contact-side__ico{font-size:2rem;margin-bottom:.8rem;color:var(--aurora);line-height:0}
 .contact-side h3{font-family:var(--font-display);font-size:1.25rem;margin-bottom:1rem}
 .contact-side ul{list-style:none;display:grid;gap:.75rem;margin-bottom:1.5rem}
 .contact-side li{color:var(--text-dim);font-size:.92rem;line-height:1.55;display:flex;gap:.65rem;align-items:flex-start;counter-increment:step}
@@ -498,9 +500,9 @@ footer{border-top:1px solid var(--line);padding:2.4rem 0;color:var(--text-dim);f
       <div class="top-donor__amount" id="top-donor-amount">$3,000.00 donados</div>
       <p class="top-donor__desc">Cada mes coronamos a quien más apoya el servidor. Su skin se exhibe aquí y recibe recompensas exclusivas dentro del juego.</p>
       <div class="medal-row">
-        <span class="medal">🏆 <strong>Título exclusivo</strong> en el chat</span>
-        <span class="medal">✨ <strong>Partículas doradas</strong></span>
-        <span class="medal">🗿 <strong>Estatua</strong> en el spawn</span>
+        <span class="medal"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9a6 6 0 0 0 12 0V3H6v6Z"/><path d="M6 4H4v2a3 3 0 0 0 2 2.8M18 4h2v2a3 3 0 0 1-2 2.8M9 21h6M12 15v6"/></svg> Título exclusivo en el chat</span>
+        <span class="medal"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v4M12 17v4M3 12h4M17 12h4M5.6 5.6l2.8 2.8M15.6 15.6l2.8 2.8M18.4 5.6l-2.8 2.8M8.4 15.6l-2.8 2.8"/></svg> Partículas doradas</span>
+        <span class="medal"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 2h6l-1 5h-4L9 2Z"/><path d="M8 7h8v4a4 4 0 0 1-8 0V7Z"/><path d="M7 22h10M9 22v-3a3 3 0 0 1 6 0v3"/></svg> Estatua en el spawn</span>
       </div>
     </div>
   </div>
@@ -523,9 +525,9 @@ footer{border-top:1px solid var(--line);padding:2.4rem 0;color:var(--text-dim);f
     <h2>Del pago a tu inventario en menos de un minuto</h2>
   </div>
   <div class="steps">
-    <div class="step reveal"><span class="step__num">01</span><span class="step__ico">🧺</span><h3>Elige y paga</h3><p>Añade un rango al carrito y paga con tarjeta, PayPal y más. El pago lo procesa Tebex de forma segura.</p></div>
-    <div class="step reveal" style="transition-delay:.1s"><span class="step__num">02</span><span class="step__ico">⚡</span><h3>El servidor lo detecta</h3><p>Nuestro sistema confirma tu compra automáticamente. No hay que abrir ticket ni avisar a nadie.</p></div>
-    <div class="step reveal" style="transition-delay:.2s"><span class="step__num">03</span><span class="step__ico">🎁</span><h3>Recibe tu rango</h3><p>Tu rango aparece en el juego al instante. Si estás desconectado, se entrega al volver a entrar.</p></div>
+    <div class="step reveal"><span class="step__num">01</span><span class="step__ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18l-1.5 10.5a2 2 0 0 1-2 1.5H6.5a2 2 0 0 1-2-1.5L3 6Z"/><path d="M8 6V4a4 4 0 0 1 8 0v2"/></svg></span><h3>Elige y paga</h3><p>Añade un rango al carrito y paga con tarjeta, PayPal y más. El pago lo procesa Tebex de forma segura.</p></div>
+    <div class="step reveal" style="transition-delay:.1s"><span class="step__num">02</span><span class="step__ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2 4.5 13H11l-1 9 8.5-11H12l1-9Z"/></svg></span><h3>El servidor lo detecta</h3><p>Nuestro sistema confirma tu compra automáticamente. No hay que abrir ticket ni avisar a nadie.</p></div>
+    <div class="step reveal" style="transition-delay:.2s"><span class="step__num">03</span><span class="step__ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="8" width="18" height="4" rx="1"/><path d="M12 8v13M4 12v7a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-7"/><path d="M12 8S10 3 7.5 3 4 6 6 8M12 8s2-5 4.5-5S20 6 18 8"/></svg></span><h3>Recibe tu rango</h3><p>Tu rango aparece en el juego al instante. Si estás desconectado, se entrega al volver a entrar.</p></div>
   </div>
 </section>
 
@@ -597,7 +599,7 @@ footer{border-top:1px solid var(--line);padding:2.4rem 0;color:var(--text-dim);f
       <p class="c-disclaimer">Al enviar aceptas nuestros <a href="/terminos.html">Términos</a>. Tiempo medio de respuesta: <strong>24-48h</strong> por Discord.</p>
     </div>
     <aside class="contact-side">
-      <div class="contact-side__ico">🎫</div>
+      <div class="contact-side__ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" width="34" height="34"><path d="M3 8a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v2a2 2 0 0 0 0 4v2a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-2a2 2 0 0 0 0-4V8Z"/><path d="M13 6v2M13 11v2M13 16v2" stroke-dasharray="0.1 3.5"/></svg></div>
       <h3>Antes de escribir</h3>
       <ul>
         <li>Escribe tu usuario correctamente: de él dependen las respuestas y entregas.</li>
@@ -697,24 +699,21 @@ const PACKAGES=[
     "Todo lo de VIP",
     "Mochila 3×9 · 7 homes · 7 trabajos",
     "7 casillas extra en Casa de Subastas",
-    "Comandos: +/repair",
-    "Llaves VIP al votar por el servidor",
+    "Acceso al comando /repair",
     "Bonus: paquete de 3 llaves + $3.500",
   ]},
   {id:"r3",icon:"🔮",badge:"vip-plusplus.svg",name:"VIP++",tag:"",accent:"#b493ff",price:14.99,perks:[
     "Todo lo de VIP+",
     "Mochila 4×9 · 9 homes · 9 trabajos",
-    "Teletransporte instantáneo",
+    "Teletransporte instantáneo (sin espera)",
     "9 casillas extra en Casa de Subastas",
-    "Comandos: +/repair",
     "Bonus: paquete de 3 llaves + $4.500",
   ]},
   {id:"r4",icon:"👑",badge:"supreme.svg",name:"SUPREME",tag:"MÁXIMO",accent:"#ffc94a",price:19.99,perks:[
     "Todo lo de VIP++",
     "Mochila 4×9 · 12 homes · 12 trabajos",
-    "Teletransporte instantáneo",
     "15 casillas extra en Casa de Subastas",
-    "Comandos: +/repair · /repair all",
+    "Acceso al comando /repair all",
     "Bonus: paquete de 3 llaves + $5.000",
   ]},
 ];
