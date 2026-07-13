@@ -53,6 +53,11 @@ img{display:block;max-width:100%}
 /* Easter egg: video de fondo */
 #egg-video{position:fixed;inset:0;width:100vw;height:100vh;object-fit:cover;z-index:-1;opacity:0;pointer-events:none;transition:opacity .8s ease}
 #egg-video.playing{opacity:.1}
+/* Backdrop del hero (5K optimizada — nítida en UWQHD) */
+.hero-backdrop{position:absolute;top:0;left:0;right:0;height:min(96vh,900px);z-index:-1;overflow:hidden;pointer-events:none;opacity:1;transition:opacity .9s ease}
+.hero-backdrop.hidden{opacity:0}
+.hero-backdrop img{width:100%;height:100%;object-fit:cover;object-position:center 40%;opacity:.3;filter:saturate(1.05)}
+.hero-backdrop::after{content:"";position:absolute;inset:0;background:linear-gradient(180deg,rgba(11,9,24,.55) 0%,rgba(11,9,24,.3) 45%,var(--void) 97%)}
 /* Sección spawn */
 .spawn-frame{position:relative;border-radius:18px;overflow:hidden;border:1px solid var(--line);aspect-ratio:21/9;box-shadow:0 30px 70px rgba(0,0,0,.5)}
 .spawn-frame > img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:0;transition:opacity .8s ease,transform 8s ease}
@@ -297,6 +302,7 @@ footer{border-top:1px solid var(--line);padding:2.4rem 0;color:var(--text-dim);f
 <div class="sky"></div>
 <div class="stars" id="stars"></div>
 <video id="egg-video" src="assets/leavemealone.mp4" playsinline preload="none"></video>
+<div class="hero-backdrop" id="hero-backdrop" aria-hidden="true"><img src="assets/hero-bg.webp" alt=""></div>
 
 <!-- ═══════════ HEADER ═══════════ -->
 <header>
@@ -880,11 +886,14 @@ let emoteCount=0;        // emotes 67 completados (a cualquier ritmo)
 function triggerEgg(){
   if(eggPlaying||characterGone)return;
   eggPlaying=true;
+  const backdrop=document.getElementById("hero-backdrop");
+  backdrop.classList.add("hidden"); // fade out del fondo para dejar ver el video
   eggVideo.currentTime=0;
   eggVideo.volume=.5;
-  eggVideo.play().then(()=>eggVideo.classList.add("playing")).catch(()=>{eggPlaying=false;});
+  eggVideo.play().then(()=>eggVideo.classList.add("playing")).catch(()=>{eggPlaying=false;backdrop.classList.remove("hidden");});
   eggVideo.onended=()=>{
     eggVideo.classList.remove("playing");
+    backdrop.classList.remove("hidden"); // fade in de vuelta
     setTimeout(()=>{eggPlaying=false;},900); // esperar el fade out
   };
   runAway(); // 🏃💨
