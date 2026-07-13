@@ -1144,14 +1144,40 @@ function triggerEgg(){
   eggPlaying=true;
   const backdrop=document.getElementById("hero-backdrop");
   backdrop.classList.add("hidden"); // fade out del fondo para dejar ver el video
+
+  let restored=false;
+  function restoreBackdrop(){
+    if(restored)return;
+    restored=true;
+    clearTimeout(eggFallbackTimer);
+    eggVideo.classList.remove("playing");
+    backdrop.classList.remove("hidden"); // fade in de vuelta (siempre ocurre)
+    eggVideo.removeEventListener("ended",restoreBackdrop);
+    eggVideo.removeEventListener("pause",restoreBackdrop);
+    eggVideo.removeEventListener("error",restoreBackdrop);
+    setTimeout(()=>{eggPlaying=false;},900);
+  }
+
+  // Respaldo por tiempo: si 'ended' no dispara (cambio de pestaña, códec, etc.),
+  // restauramos igualmente tras la duración del vídeo + margen.
+  const fallbackMs=(isFinite(eggVideo.duration)&&eggVideo.duration>0?eggVideo.duration*1000:9000)+1500;
+  let eggFallbackTimer=setTimeout(restoreBackdrop,fallbackMs);
+
+  eggVideo.addEventListener("ended",restoreBackdrop);
+  eggVideo.addEventListener("pause",restoreBackdrop);
+  eggVideo.addEventListener("error",restoreBackdrop);
+
   eggVideo.currentTime=0;
   eggVideo.volume=.5;
-  eggVideo.play().then(()=>eggVideo.classList.add("playing")).catch(()=>{eggPlaying=false;backdrop.classList.remove("hidden");});
-  eggVideo.onended=()=>{
-    eggVideo.classList.remove("playing");
-    backdrop.classList.remove("hidden"); // fade in de vuelta
-    setTimeout(()=>{eggPlaying=false;},900); // esperar el fade out
-  };
+  eggVideo.play().then(()=>{
+    eggVideo.classList.add("playing");
+    // Recalcular el respaldo ahora que ya conocemos la duración real
+    if(isFinite(eggVideo.duration)&&eggVideo.duration>0){
+      clearTimeout(eggFallbackTimer);
+      eggFallbackTimer=setTimeout(restoreBackdrop,eggVideo.duration*1000+1500);
+    }
+  }).catch(()=>{restoreBackdrop();});
+
   runAway(); // 🏃💨
 }
 
@@ -1366,6 +1392,20 @@ cSend.onclick=()=>{
     cSend.disabled=false;cSend.textContent="ENVIAR SOLICITUD ▸";
   });
 };
+
+/* Red de seguridad: si al volver a la pestaña el fondo quedó oculto
+   pero el vídeo ya no se reproduce, forzar su restauración. */
+document.addEventListener("visibilitychange",()=>{
+  if(document.visibilityState==="visible"){
+    const bd=document.getElementById("hero-backdrop");
+    const vid=document.getElementById("egg-video");
+    if(bd&&bd.classList.contains("hidden")&&(!vid||vid.paused||vid.ended)){
+      bd.classList.remove("hidden");
+      if(vid)vid.classList.remove("playing");
+      eggPlaying=false;
+    }
+  }
+});
 
 /* Inicializar todo */
 renderCards();
