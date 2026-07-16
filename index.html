@@ -1054,20 +1054,20 @@ if(new URLSearchParams(location.search).get("compra")==="ok"){
   history.replaceState(null,"",location.pathname);
 }
 
-/* Sincronizar precios con Tebex: la tienda manda, la web nunca miente.
-   Usamos total_price (lo que el cliente paga de verdad), no base_price:
-   - Si el IVA se añade al pagar → muestra el total con el impuesto del país del visitante.
-   - Si el IVA va incluido en el precio → total_price == base_price y no cambia nada.
-   En ambos casos el precio de la web coincide con el del checkout. */
+/* Sincronizar precios con Tebex.
+   Usamos base_price: es el importe que fijas en el panel y, con el modo
+   "Prices are inclusive of sales tax" activo, es exactamente lo que paga
+   el cliente (el IVA sale de dentro de esa cifra, no se suma encima).
+   OJO: si algún día se cambia el modo a "exclusive" en Tebex, la web
+   mostraría menos de lo que se cobra. El modo debe quedarse en inclusive. */
 fetch(`${CONFIG.TEBEX_HEADLESS}/accounts/${CONFIG.TEBEX_PUBLIC_TOKEN}/packages`)
   .then(r=>r.json()).then(({data})=>{
     if(!data)return;
     let changed=false;
     data.forEach(tp=>{
       const local=PACKAGES.find(p=>p.tebexId===tp.id);
-      const real=typeof tp.total_price==="number"?tp.total_price:tp.base_price;
-      if(local&&typeof real==="number"&&local.price!==real){
-        local.price=real;changed=true;
+      if(local&&typeof tp.base_price==="number"&&local.price!==tp.base_price){
+        local.price=tp.base_price;changed=true;
       }
     });
     if(changed){renderCards();renderCart();}
