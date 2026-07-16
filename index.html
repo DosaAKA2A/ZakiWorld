@@ -701,6 +701,7 @@ const CONFIG={
   DISCORD_INVITE_CODE:"jtbYpTvp25",
   TEBEX_PUBLIC_TOKEN:"gkwh-9fc4e04539d07122497f102bdae86d73157aaf17",
   TEBEX_PROJECT_ID:"773585",
+  TEBEX_HEADLESS:"https://headless.tebex.io/api",
   DISCORD_INVITE:"https://discord.gg/jtbYpTvp25",
   WORKER_URL:"https://tebex-api.studio-iris2026.workers.dev",
   DEFAULT_SKIN:"SayCles_",
@@ -734,31 +735,31 @@ let RANKING=[
 ];
 
 const PACKAGES=[
-  {id:"r1",icon:"⭐",badge:"vip.svg",name:"VIP",tag:"",accent:"#9b6dff",price:4.99,perks:[
+  {id:"r1",tebexId:6442463,icon:"⭐",badge:"vip.svg",name:"VIP",tag:"",accent:"#9b6dff",price:4.99,perks:[
     "Mochila 2×9 · 5 homes · 5 trabajos",
     "5 casillas extra en Casa de Subastas",
     "Comandos: /fly · /hat · /feed · /nick",
     "Llaves VIP al votar por el servidor",
     "Bonus: paquete de 3 llaves + $3.000",
   ]},
-  {id:"r2",icon:"💎",badge:"vip-plus.svg",name:"VIP+",tag:"POPULAR",accent:"#5ef2c8",price:9.99,perks:[
+  {id:"r2",tebexId:6442964,icon:"💎",badge:"vip-plus.svg",name:"VIP+",tag:"POPULAR",accent:"#5ef2c8",price:9.99,perks:[
     "Todo lo de VIP",
     "Mochila 3×9 · 7 homes · 7 trabajos",
     "7 casillas extra en Casa de Subastas",
     "Acceso al comando /repair",
     "Bonus: paquete de 3 llaves + $3.500",
   ]},
-  {id:"r3",icon:"🔮",badge:"vip-plusplus.svg",name:"VIP++",tag:"",accent:"#b493ff",price:14.99,perks:[
+  {id:"r3",tebexId:6443405,icon:"🔮",badge:"vip-plusplus.svg",name:"VIP++",tag:"",accent:"#b493ff",price:14.99,perks:[
     "Todo lo de VIP+",
     "Mochila 4×9 · 9 homes · 9 trabajos",
     "Teletransporte instantáneo (sin espera)",
     "9 casillas extra en Casa de Subastas",
     "Bonus: paquete de 3 llaves + $4.500",
   ]},
-  {id:"r4",icon:"👑",badge:"supreme.svg",name:"SUPREME",tag:"MÁXIMO",accent:"#ffc94a",price:19.99,perks:[
+  {id:"r4",tebexId:6443413,icon:"👑",badge:"supreme.svg",name:"SUPREME",tag:"MÁXIMO",accent:"#ffc94a",price:19.99,perks:[
     "Todo lo de VIP++",
     "Mochila 4×9 · 12 homes · 12 trabajos",
-    "15 casillas extra en Casa de Subastas",
+    "12 casillas extra en Casa de Subastas",
     "Acceso al comando /repair all",
     "Bonus: paquete de 3 llaves + $5.000",
   ]},
@@ -970,21 +971,103 @@ document.addEventListener("click",e=>{
   const rm=e.target.closest("[data-rm]");
   if(rm){cart.splice(+rm.dataset.rm,1);renderCart();}
 });
-document.getElementById("checkout-btn").onclick=()=>{
-  if(!USER)return openUserModal();
+/* ── Checkout real (Tebex Headless API + Tebex.js) ──
+   Flujo: crear cesta con el nick → añadir paquetes → lanzar checkout embebido.
+   La cesta se crea DESDE EL NAVEGADOR a propósito: así Tebex detecta la IP del
+   cliente automáticamente. Hacerlo desde el Worker obligaría a enviar ip_address
+   y Tebex aún no admite IPv6 (Cloudflare entrega IPv6 con frecuencia). */
+const checkoutBtn=document.getElementById("checkout-btn");
+
+async function createBasket(){
+  const base=location.origin+location.pathname;
+  const r=await fetch(`${CONFIG.TEBEX_HEADLESS}/accounts/${CONFIG.TEBEX_PUBLIC_TOKEN}/baskets`,{
+    method:"POST",
+    headers:{"Content-Type":"application/json"},
+    body:JSON.stringify({
+      username:USER,                       // obligatorio en tiendas de Minecraft
+      complete_url:base+"?compra=ok",
+      cancel_url:base,
+      complete_auto_redirect:false,        // el popup gestiona el final
+      custom:{source:"zakiworld-web"},
+    }),
+  });
+  if(!r.ok)throw new Error("No se pudo crear la cesta ("+r.status+")");
+  const j=await r.json();
+  return j.data||j;
+}
+
+async function addPackagesToBasket(ident){
+  // Agrupar por paquete para enviar cantidades en vez de repetir llamadas
+  const counts={};
+  cart.forEach(p=>{counts[p.tebexId]=(counts[p.tebexId]||0)+1;});
+  for(const [pid,qty] of Object.entries(counts)){
+    const r=await fetch(`${CONFIG.TEBEX_HEADLESS}/baskets/${ident}/packages`,{
+      method:"POST",
+      headers:{"Content-Type":"application/json"},
+      body:JSON.stringify({package_id:Number(pid),quantity:qty}),
+    });
+    if(!r.ok)throw new Error("No se pudo añadir el paquete "+pid);
+  }
+}
+
+checkoutBtn.onclick=async()=>{
+  if(!USER){openUserModal();return;}
   if(!cart.length)return showToast("Añade algo al carrito primero");
+  if(typeof Tebex==="undefined")return showToast("El checkout no está disponible ahora mismo");
+
+  checkoutBtn.disabled=true;
+  const original=checkoutBtn.textContent;
+  checkoutBtn.textContent="PREPARANDO…";
   try{
+    const basket=await createBasket();
+    await addPackagesToBasket(basket.ident);
+
     Tebex.checkout.init({
-      ident:CONFIG.TEBEX_PUBLIC_TOKEN,
+      ident:basket.ident,
       theme:"dark",
-      colors:[{name:"primary",color:"#9b6dff"},{name:"secondary",color:"#ffc94a"}]
+      locale:"es_ES",
+      colors:[{name:"primary",color:"#9b6dff"},{name:"secondary",color:"#ffc94a"}],
+    });
+    // Nota: estos eventos son solo para la UI. La entrega real la confirma
+    // Tebex al servidor por su cuenta; no dependemos de ellos.
+    Tebex.checkout.on("payment:complete",()=>{
+      cart=[];renderCart();closeCart();
+      showToast("¡Pago completado! Tu rango llegará en segundos.");
+    });
+    Tebex.checkout.on("payment:error",()=>{
+      showToast("Hubo un problema con el pago. Inténtalo de nuevo.");
     });
     Tebex.checkout.launch();
   }catch(err){
-    showToast("El checkout se activará cuando Tebex apruebe la tienda");
     console.error(err);
+    showToast("No se pudo abrir el pago. Inténtalo de nuevo o avísanos por Discord.");
+  }finally{
+    checkoutBtn.disabled=false;
+    checkoutBtn.textContent=original;
   }
 };
+
+/* Vuelta desde el checkout con pago completado */
+if(new URLSearchParams(location.search).get("compra")==="ok"){
+  cart=[];
+  setTimeout(()=>showToast("¡Gracias por tu compra! Tu rango ya está en camino."),700);
+  history.replaceState(null,"",location.pathname);
+}
+
+/* Sincronizar precios con Tebex: la tienda manda, la web nunca miente */
+fetch(`${CONFIG.TEBEX_HEADLESS}/accounts/${CONFIG.TEBEX_PUBLIC_TOKEN}/packages`)
+  .then(r=>r.json()).then(({data})=>{
+    if(!data)return;
+    let changed=false;
+    data.forEach(tp=>{
+      const local=PACKAGES.find(p=>p.tebexId===tp.id);
+      if(local&&typeof tp.base_price==="number"&&local.price!==tp.base_price){
+        local.price=tp.base_price;changed=true;
+      }
+    });
+    if(changed){renderCards();renderCart();}
+  }).catch(()=>{});
+
 renderCart();
 
 /* ============================================================
