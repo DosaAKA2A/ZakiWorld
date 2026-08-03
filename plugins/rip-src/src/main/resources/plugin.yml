@@ -1,0 +1,73 @@
+name: Rip
+version: '3.1.2'
+main: net.zakiworld.rip.RipPlugin
+api-version: '1.20'
+author: Iris Studio
+description: Efectos de kill y muerte con menu por calidades (incluida INMORTAL), modo aleatorio y permisos por efecto.
+commands:
+  rip:
+    description: Menu y ajustes de efectos Rip
+    usage: /rip <gui|kill|death|list|test|reload>
+permissions:
+  rip.use:
+    description: Acceso basico al menu Rip
+    default: true
+  rip.admin:
+    description: Comandos administrativos (test, reload) y ver los nodos de permiso
+    default: op
+  rip.*:
+    description: Acceso a todos los efectos Rip
+    default: op
+    children:
+      rip.kill.blood: true
+      rip.kill.hearts: true
+      rip.kill.spark: true
+      rip.kill.coins: true
+      rip.kill.poof: true
+      rip.kill.firework: true
+      rip.kill.notes: true
+      rip.kill.slash: true
+      rip.kill.confetti: true
+      rip.kill.pierce: true
+      rip.kill.explosion: true
+      rip.kill.frost: true
+      rip.kill.inferno: true
+      rip.kill.shockwave: true
+      rip.kill.meteor: true
+      rip.kill.geyser: true
+      rip.kill.souls: true
+      rip.kill.dragon: true
+      rip.kill.totem: true
+      rip.kill.chains: true
+      rip.kill.eclipse: true
+      rip.kill.lightning: true
+      rip.kill.blackhole: true
+      rip.kill.laser: true
+      rip.kill.swordfall: true
+      rip.kill.orbital: true
+      rip.death.smoke: true
+      rip.death.bones: true
+      rip.death.bloodpool: true
+      rip.death.splat: true
+      rip.death.dust: true
+      rip.death.firework: true
+      rip.death.cherry: true
+      rip.death.rain: true
+      rip.death.balloons: true
+      rip.death.spores: true
+      rip.death.grave: true
+      rip.death.shatter: true
+      rip.death.void: true
+      rip.death.ender: true
+      rip.death.statue: true
+      rip.death.whirlpool: true
+      rip.death.angel: true
+      rip.death.souls: true
+      rip.death.glitch: true
+      rip.death.phoenix: true
+      rip.death.specters: true
+      rip.death.implosion: true
+      rip.death.supernova: true
+      rip.death.lightning: true
+      rip.death.pufferfish: true
+      rip.death.requiem: true

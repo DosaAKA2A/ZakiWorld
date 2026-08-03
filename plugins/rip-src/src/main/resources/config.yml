@@ -1,0 +1,38 @@
+# ╦═╗╦╔═╗   Rip v3.1.0 - Iris Studio
+# ╠╦╝║╠═╝   Compatible 1.20 - 1.21
+# ╩╚═╩╩
+#
+# 27 efectos de kill y 27 de muerte en 6 calidades (nueva: INMORTAL). Se equipan con /rip gui
+# (menu paginado) o /rip kill|death <id|random|none>. Cada efecto tiene su
+# propio permiso: rip.kill.<id> / rip.death.<id>; rip.* concede los 52.
+#
+# El boton "Aleatorio" del menu sortea uno de tus efectos desbloqueados en
+# cada kill o muerte.
+#
+# INMORTAL (calidad 6):
+#  - kill "Despegue Estelar" (blastoff): la victima sale disparada al cielo
+#    al estilo Equipo Rocket y desaparece con un destello.
+#  - muerte "SESENTA Y SIETE" (sixtyseven): un 67 gigante late sobre tu
+#    tumba entre fuegos, espirales y fanfarrias.
+#
+# Efectos legendarios con entidades (Juicio de Espadas, Peces Globo):
+#  - En 1.21.9+ el doble de la victima es un Mannequin con su skin completa.
+#  - En 1.20 - 1.21.8 se usa un ArmorStand con su cabeza y su armadura.
+#  - Los peces globo y las espadas son invulnerables, no hacen dano y se
+#    limpian solos.
+#
+# Las cabezas del menu se configuran en heads.yml.
+
+# Milisegundos minimos entre dos efectos del mismo jugador.
+# Evita apilar animaciones en muertes encadenadas. 0 = sin limite.
+cooldown-ms: 250
+
+# ---- SESENTA Y SIETE ----
+# El efecto puede reproducir el sonido "doot 67" de la tienda de zakiworld.net.
+# Requiere que los clientes tengan el resource pack ZakiWorld-RipSounds
+# (idealmente forzado por servidor con resource-pack en server.properties).
+# Si no quieres usar el pack, pon custom-sound: false y sonara una corneta
+# vanilla equivalente.
+sixtyseven:
+  custom-sound: true
+  custom-sound-key: "zakiworld:doot67"
