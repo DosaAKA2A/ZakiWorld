@@ -3,9 +3,16 @@
  */
 package net.zakiworld.rip;
 
+import java.io.BufferedReader;
 import java.io.File;
 import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.util.ArrayDeque;
 import java.util.ArrayList;
+import java.util.Deque;
 import java.util.EnumMap;
 import java.util.EnumSet;
 import java.util.List;
@@ -53,13 +60,15 @@ import org.bukkit.plugin.java.JavaPlugin;
 public final class RipPlugin
 extends JavaPlugin
 implements Listener {
-    private static final String VERSION = "3.1.7";
+    private static final String VERSION = "3.1.8";
     private final Map<UUID, String> killChoice = new ConcurrentHashMap<UUID, String>();
     private final Map<UUID, String> deathChoice = new ConcurrentHashMap<UUID, String>();
     private final Map<UUID, Long> busyUntil = new ConcurrentHashMap<UUID, Long>();
     private final Set<UUID> hiddenBodies = ConcurrentHashMap.newKeySet();
     private Set<RipEffect> hideBody = EnumSet.noneOf(RipEffect.class);
     private Map<RipEffect, Long> cooldownOverrides = new EnumMap<RipEffect, Long>(RipEffect.class);
+    private final Deque<Long> runningUntil = new ArrayDeque<Long>();
+    private int maxConcurrent;
     private final AtomicBoolean dirty = new AtomicBoolean(false);
     private File selFile;
     private FileConfiguration selConfig;
@@ -71,6 +80,7 @@ implements Listener {
 
     public void onEnable() {
         this.saveDefaultConfig();
+        this.mergeMissingConfigSections();
         this.reloadSettings();
         this.heads = new HeadCache(this);
         this.heads.load();
@@ -131,8 +141,97 @@ implements Listener {
         }
     }
 
+    /*
+     * saveDefaultConfig() no toca un config.yml que ya existe, asi que al
+     * actualizar el plugin las claves nuevas no aparecerian nunca en el archivo
+     * del servidor y no habria nada que editar. Aqui se anaden las que falten,
+     * con sus comentarios y sin tocar lo que el usuario ya tenga puesto.
+     */
+    private void mergeMissingConfigSections() {
+        File file = new File(this.getDataFolder(), "config.yml");
+        if (!file.exists()) {
+            return;
+        }
+        List<String> defaults = this.defaultConfigLines();
+        if (defaults.isEmpty()) {
+            return;
+        }
+        ArrayList<String> added = new ArrayList<String>();
+        StringBuilder append = new StringBuilder();
+        ArrayList<String> lead = new ArrayList<String>();
+        int i = 0;
+        while (i < defaults.size()) {
+            String line = defaults.get(i);
+            if (line.isBlank() || line.startsWith("#")) {
+                lead.add(line);
+                ++i;
+                continue;
+            }
+            if (line.startsWith(" ") || line.startsWith("\t") || line.startsWith("-")) {
+                lead.clear();
+                ++i;
+                continue;
+            }
+            int colon = line.indexOf(58);
+            String key = colon > 0 ? line.substring(0, colon).trim() : "";
+            ArrayList<String> block = new ArrayList<String>(lead);
+            block.add(line);
+            lead.clear();
+            int j = i + 1;
+            while (j < defaults.size()) {
+                String next = defaults.get(j);
+                if (next.isBlank() || !next.startsWith(" ") && !next.startsWith("\t") && !next.startsWith("-")) break;
+                block.add(next);
+                ++j;
+            }
+            i = j;
+            if (key.isEmpty() || this.getConfig().isSet(key)) continue;
+            added.add(key);
+            for (String out : block) {
+                append.append(out).append('\n');
+            }
+        }
+        if (added.isEmpty()) {
+            return;
+        }
+        try {
+            String current = new String(Files.readAllBytes(file.toPath()), StandardCharsets.UTF_8);
+            StringBuilder merged = new StringBuilder(current);
+            if (!current.endsWith("\n")) {
+                merged.append('\n');
+            }
+            merged.append('\n').append(append);
+            Files.write(file.toPath(), merged.toString().getBytes(StandardCharsets.UTF_8), new java.nio.file.OpenOption[0]);
+            this.reloadConfig();
+            this.getLogger().info("config.yml actualizado con las claves nuevas: " + String.join((CharSequence)", ", added));
+        }
+        catch (Throwable ex) {
+            this.getLogger().log(Level.WARNING, "No se pudo anadir las claves nuevas a config.yml; se usan los valores de fabrica", ex);
+        }
+    }
+
+    private List<String> defaultConfigLines() {
+        ArrayList<String> out = new ArrayList<String>();
+        try (InputStream in = this.getResource("config.yml");){
+            if (in == null) {
+                List<String> list = out;
+                return list;
+            }
+            BufferedReader reader = new BufferedReader(new InputStreamReader(in, StandardCharsets.UTF_8));
+            String line;
+            while ((line = reader.readLine()) != null) {
+                out.add(line);
+            }
+        }
+        catch (Throwable ex) {
+            this.getLogger().log(Level.WARNING, "No se pudo leer el config.yml de fabrica", ex);
+        }
+        return out;
+    }
+
     private void reloadSettings() {
         this.cooldownMillis = Math.max(0L, this.getConfig().getLong("cooldown-ms", 250L));
+        this.maxConcurrent = Math.max(0, this.getConfig().getInt("max-animaciones-simultaneas", 3));
         this.hideBody = this.readHideBody();
         this.cooldownOverrides = this.readCooldowns();
         this.applyRarities();
@@ -479,14 +578,42 @@ implements Listener {
         return left > 0L ? left : 0L;
     }
 
+    /*
+     * Un jugador no puede lanzar otra animacion hasta que se le acabe el
+     * enfriamiento: si mata a cinco de golpe, solo suena la primera. El limite
+     * global es aparte y cuenta animaciones de cualquiera a la vez, que es lo
+     * unico que frena a cinco victimas distintas muriendo en el mismo tick.
+     */
     public boolean claim(UUID uuid, RipEffect effect) {
         long now = System.currentTimeMillis();
         Long until = this.busyUntil.get(uuid);
         if (until != null && now < until) {
             return false;
         }
+        if (!this.claimGlobalSlot(now, effect)) {
+            return false;
+        }
         this.busyUntil.put(uuid, now + this.effectCooldownMillis(effect));
         return true;
+    }
+
+    private synchronized boolean claimGlobalSlot(long now, RipEffect effect) {
+        this.runningUntil.removeIf(end -> end.longValue() <= now);
+        if (this.maxConcurrent > 0 && this.runningUntil.size() >= this.maxConcurrent) {
+            return false;
+        }
+        this.runningUntil.addLast(Long.valueOf(now + Math.max(50L, effect.defaultCooldownMillis())));
+        return true;
+    }
+
+    public int runningAnimations() {
+        long now = System.currentTimeMillis();
+        int n = 0;
+        for (Long end : this.runningUntil) {
+            if (end.longValue() <= now) continue;
+            ++n;
+        }
+        return n;
     }
 
     public static String formatSeconds(long millis) {

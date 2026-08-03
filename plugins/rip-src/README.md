@@ -18,6 +18,14 @@ Requiere JDK 17 o superior. La dependencia es `paper-api 1.20.1` a propósito: e
 
 ## Historial de versiones
 
+### 3.1.8 — 3 de agosto de 2026
+
+**El `config.yml` de un servidor que ya existía ahora recibe las claves nuevas.** `saveDefaultConfig()` no toca un archivo que ya está, así que al actualizar desde la 3.1.0 no aparecían `ocultar-cuerpo`, `calidades` ni `enfriamientos`: el plugin usaba los valores de fábrica y no había nada que editar en el archivo. Al arrancar se añaden los bloques que falten, con sus comentarios, sin tocar lo que ya estuviera puesto.
+
+**Nuevo `max-animaciones-simultaneas`, por defecto 3.** El enfriamiento por jugador ya impedía que uno que mata a cinco de golpe lanzara cinco animaciones: solo suena la primera. Lo que no cubría es cinco víctimas distintas muriendo en el mismo tick, porque cada una es un jugador distinto con su propio enfriamiento. Este límite cuenta animaciones de cualquiera a la vez; las que no entran no suenan. `0` lo desactiva.
+
+Verificado en Paper 26.1.2 con un `config.yml` de la era 3.1.0: se añaden las cuatro claves y se conservan `cooldown-ms` y el bloque `sixtyseven`. Un mismo asesino con cinco bajas de golpe lanza 1 animación de 5; cinco víctimas distintas a la vez lanzan 3 de 5 con el límite en 3.
+
 ### 3.1.7 — 3 de agosto de 2026
 
 **Los enfriamientos se editan desde `config.yml`**, en la clave `enfriamientos`, con la misma forma anidada por tipo que `calidades` y con los 54 efectos listados. El valor va **en segundos** y admite decimales, de 0 a 60. Los valores de fábrica son exactamente lo que dura cada animación.

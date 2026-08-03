@@ -29,6 +29,16 @@
 # jugador nunca tiene dos animaciones a la vez. Esto solo sube ese suelo.
 cooldown-ms: 250
 
+# Maximo de animaciones sonando a la vez en todo el servidor, sean de quien
+# sean. El enfriamiento de arriba es por jugador, asi que ya frena a uno que
+# mate a cinco de golpe (solo suena la primera), pero no frena a cinco victimas
+# distintas muriendo en el mismo tick: cada una es un jugador distinto y cada
+# una lanza la suya.
+#
+# Este limite es lo unico que corta eso. Las animaciones que no entran
+# sencillamente no suenan. 0 = sin limite.
+max-animaciones-simultaneas: 3
+
 # ---- OCULTAR EL CUERPO ----
 # Al morir, el cliente reproduce la animacion vanilla: el jugador se pone rojo y
 # cae de lado durante un segundo. En los efectos que destruyen el cuerpo
