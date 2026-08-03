@@ -18,6 +18,10 @@ Requiere JDK 17 o superior. La dependencia es `paper-api 1.20.1` a propósito: e
 
 ## Historial de versiones
 
+### 3.1.5 — 3 de agosto de 2026
+
+En el Juicio de Espadas, el maniquí desaparece en el momento en que la espada gigante toca el suelo (tick 103) en vez de aguantar hasta el tick 160. Se lleva consigo el humo y el sonido de teletransporte, y se le añadieron partículas de alma. Las espadas siguen clavadas hasta el 160 como antes.
+
 ### 3.1.4 — 3 de agosto de 2026
 
 **El cuerpo desaparece al instante en los efectos que lo destruyen.** Al morir, el cliente reproduce la animación vanilla: el jugador se pone rojo y cae de lado durante cerca de un segundo. En una explosión o un despegue eso se ve mal, porque el cadáver sigue tumbándose por debajo de la animación. Y en el Juicio de Espadas y el Despegue Estelar era peor, porque el clon nace de pie en el mismo punto y durante un rato hay dos cuerpos superpuestos.

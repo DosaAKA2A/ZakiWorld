@@ -1105,6 +1105,12 @@ public final class EffectRunner {
                 Compat.sound(w, base, "block.bell.use", 1.5f, 0.55f);
                 this.later(6L, () -> Compat.sound(w, base, "block.bell.resonate", 1.2f, 0.75f));
                 this.later(16L, () -> Compat.sound(w, base, "block.bell.resonate", 0.8f, 0.6f));
+                if (frozen != null && frozen.isValid()) {
+                    Compat.spawn(w, Compat.POOF, frozen.getLocation().add(0.0, 1.0, 0.0), 20, 0.3, 0.6, 0.3, 0.03);
+                    Compat.spawn(w, Compat.SOUL, frozen.getLocation().add(0.0, 1.0, 0.0), 12, 0.25, 0.5, 0.25, 0.05);
+                    Compat.sound(w, base, "entity.enderman.teleport", 0.8f, 0.6f);
+                }
+                this.discard((Entity)frozen);
             }
             if (t > 103 && t <= 117) {
                 double r = (double)(t - 103) * 0.45;
@@ -1124,11 +1130,6 @@ public final class EffectRunner {
                     }
                     swords.clear();
                 }
-                if (frozen != null && frozen.isValid()) {
-                    Compat.spawn(w, Compat.POOF, frozen.getLocation().add(0.0, 1.0, 0.0), 20, 0.3, 0.6, 0.3, 0.03);
-                    Compat.sound(w, base, "entity.enderman.teleport", 0.8f, 0.6f);
-                }
-                this.discard((Entity)frozen);
             }
         }, () -> {
             Set set;
