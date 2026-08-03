@@ -18,6 +18,14 @@ Requiere JDK 17 o superior. La dependencia es `paper-api 1.20.1` a propósito: e
 
 ## Historial de versiones
 
+### 3.1.7 — 3 de agosto de 2026
+
+**Los enfriamientos se editan desde `config.yml`**, en la clave `enfriamientos`, con la misma forma anidada por tipo que `calidades` y con los 54 efectos listados. El valor va **en segundos** y admite decimales, de 0 a 60. Los valores de fábrica son exactamente lo que dura cada animación.
+
+Se acepta poner a un efecto menos de lo que dura su animación, pero avisa por consola, porque a partir de ahí ese jugador puede tener dos animaciones a la vez, que es justo lo que el enfriamiento evitaba. Un valor no numérico o fuera de rango se descarta con aviso y el efecto se queda con su valor de fábrica; borrar la clave entera devuelve todo a fábrica. `cooldown-ms` sigue siendo el mínimo global y gana si es mayor.
+
+El menú, `/rip list` y `/rip test` leen todos el valor efectivo, así que reflejan los cambios sin tocar nada más.
+
 ### 3.1.6 — 3 de agosto de 2026
 
 - **Las calidades se reasignan desde `config.yml`**, en la clave `calidades`, anidada por tipo (`kill:` / `death:`) y con los 54 efectos listados. Los valores válidos son `COMUN`, `POCO_COMUN`, `RARO`, `MITICO`, `LEGENDARIO` e `INMORTAL`, y no distinguen mayúsculas. Un valor inválido o un id que no existe se ignoran con un aviso en consola y el efecto se queda con su calidad de fábrica; borrar la clave entera devuelve todo a fábrica. Se aplica con `/rip reload`.

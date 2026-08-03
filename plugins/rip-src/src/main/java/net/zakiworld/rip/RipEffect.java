@@ -146,24 +146,20 @@ public enum RipEffect {
     }
 
     /*
-     * Cuanto dura la animacion en el mundo. El enfriamiento sale de aqui: no se
-     * puede lanzar otra hasta que la anterior haya terminado.
+     * Cuanto dura la animacion en el mundo. De aqui sale el enfriamiento de
+     * fabrica: no se puede lanzar otra hasta que la anterior haya terminado.
+     * En config.yml se puede poner otro valor.
      */
     public int durationTicks() {
         return this.durationTicks;
     }
 
-    public int cooldownTicks() {
+    public int defaultCooldownTicks() {
         return Math.max(MIN_COOLDOWN_TICKS, this.durationTicks);
     }
 
-    public long cooldownMillis() {
-        return (long)this.cooldownTicks() * 50L;
-    }
-
-    public String cooldownLabel() {
-        long tenths = (this.cooldownMillis() + 50L) / 100L;
-        return tenths % 10L == 0L ? tenths / 10L + "s" : tenths / 10L + "," + tenths % 10L + "s";
+    public long defaultCooldownMillis() {
+        return (long)this.defaultCooldownTicks() * 50L;
     }
 
     public String permission() {

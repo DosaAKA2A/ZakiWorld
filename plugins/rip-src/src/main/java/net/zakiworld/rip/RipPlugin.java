@@ -53,12 +53,13 @@ import org.bukkit.plugin.java.JavaPlugin;
 public final class RipPlugin
 extends JavaPlugin
 implements Listener {
-    private static final String VERSION = "3.1.6";
+    private static final String VERSION = "3.1.7";
     private final Map<UUID, String> killChoice = new ConcurrentHashMap<UUID, String>();
     private final Map<UUID, String> deathChoice = new ConcurrentHashMap<UUID, String>();
     private final Map<UUID, Long> busyUntil = new ConcurrentHashMap<UUID, Long>();
     private final Set<UUID> hiddenBodies = ConcurrentHashMap.newKeySet();
     private Set<RipEffect> hideBody = EnumSet.noneOf(RipEffect.class);
+    private Map<RipEffect, Long> cooldownOverrides = new EnumMap<RipEffect, Long>(RipEffect.class);
     private final AtomicBoolean dirty = new AtomicBoolean(false);
     private File selFile;
     private FileConfiguration selConfig;
@@ -133,6 +134,7 @@ implements Listener {
     private void reloadSettings() {
         this.cooldownMillis = Math.max(0L, this.getConfig().getLong("cooldown-ms", 250L));
         this.hideBody = this.readHideBody();
+        this.cooldownOverrides = this.readCooldowns();
         this.applyRarities();
         this.prefix = ((TextComponent)Component.text((String)"\u2726 ", (TextColor)TextColor.color((int)0xFF5555)).append((Component)Component.text((String)"RIP ", (TextColor)TextColor.color((int)0xFFFFFF), (TextDecoration[])new TextDecoration[]{TextDecoration.BOLD}))).append((Component)Component.text((String)"\u2502 ", (TextColor)TextColor.color((int)0x404040)));
     }
@@ -177,6 +179,50 @@ implements Listener {
      * Se anida por tipo a proposito: una clave suelta "kill.swordfall" la
      * partiria Bukkit por el punto y no se encontraria nunca.
      */
+    /*
+     * enfriamientos:
+     *   kill:
+     *     swordfall: 9.5
+     * En segundos. Mismo anidado por tipo que "calidades", y por el mismo
+     * motivo: Bukkit partiria una clave "kill.swordfall" por el punto.
+     */
+    private Map<RipEffect, Long> readCooldowns() {
+        EnumMap<RipEffect, Long> out = new EnumMap<RipEffect, Long>(RipEffect.class);
+        ConfigurationSection root = this.getConfig().getConfigurationSection("enfriamientos");
+        if (root == null) {
+            return out;
+        }
+        for (RipEffect.Type type : RipEffect.Type.values()) {
+            ConfigurationSection section = root.getConfigurationSection(type.lower());
+            if (section == null) continue;
+            for (String id : section.getKeys(false)) {
+                RipEffect effect = RipEffect.byId(type, id);
+                if (effect == null) {
+                    this.getLogger().warning("enfriamientos: efecto desconocido '" + type.lower() + "." + id + "'");
+                    continue;
+                }
+                if (!section.isDouble(id) && !section.isInt(id) && !section.isLong(id)) {
+                    this.getLogger().warning("enfriamientos: valor no numerico en " + type.lower() + "." + id + "; se deja el de fabrica");
+                    continue;
+                }
+                double seconds = section.getDouble(id);
+                if (seconds < 0.0 || seconds > 60.0) {
+                    this.getLogger().warning("enfriamientos: " + type.lower() + "." + id + " fuera de rango (" + seconds + "); se admite de 0 a 60 segundos");
+                    continue;
+                }
+                long millis = Math.round(seconds * 1000.0);
+                if (millis == effect.defaultCooldownMillis()) continue;
+                out.put(effect, Long.valueOf(millis));
+                if (millis >= effect.defaultCooldownMillis()) continue;
+                this.getLogger().warning("enfriamientos: " + type.lower() + "." + id + " en " + seconds + "s es menos de lo que dura su animacion (" + RipPlugin.formatSeconds(effect.defaultCooldownMillis()) + "); podran solaparse dos animaciones del mismo jugador");
+            }
+        }
+        if (!out.isEmpty()) {
+            this.getLogger().info("enfriamientos: " + out.size() + " efectos ajustados desde config.yml");
+        }
+        return out;
+    }
+
     private void applyRarities() {
         EnumMap<RipEffect, Rarity> overrides = new EnumMap<RipEffect, Rarity>(RipEffect.class);
         ConfigurationSection root = this.getConfig().getConfigurationSection("calidades");
@@ -412,12 +458,16 @@ implements Listener {
     }
 
     /*
-     * El enfriamiento de cada efecto es lo que dura su animacion, asi que un
-     * jugador nunca puede tener dos corriendo a la vez. El cooldown-ms del
-     * config actua solo como minimo.
+     * De fabrica el enfriamiento es lo que dura la animacion, asi que un
+     * jugador nunca puede tener dos corriendo a la vez. config.yml puede
+     * cambiarlo efecto por efecto; cooldown-ms sigue siendo el minimo global.
      */
     public long effectCooldownMillis(RipEffect effect) {
-        return Math.max(this.cooldownMillis, effect.cooldownMillis());
+        if (effect == null) {
+            return this.cooldownMillis;
+        }
+        Long override = this.cooldownOverrides.get(effect);
+        return Math.max(this.cooldownMillis, override != null ? override.longValue() : effect.defaultCooldownMillis());
     }
 
     public long cooldownRemaining(UUID uuid) {
