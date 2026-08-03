@@ -1,5 +1,5 @@
 name: Rip
-version: '3.1.2'
+version: '3.1.3'
 main: net.zakiworld.rip.RipPlugin
 api-version: '1.20'
 author: Iris Studio
@@ -13,8 +13,14 @@ permissions:
     description: Acceso basico al menu Rip
     default: true
   rip.admin:
-    description: Comandos administrativos (test, reload) y ver los nodos de permiso
+    description: Comandos administrativos (test, reload) y ver los nodos de permiso en el menu
     default: op
+  rip.kill.blastoff:
+    description: Efecto INMORTAL de kill "Despegue Estelar"; no lo concede rip.*
+    default: false
+  rip.death.sixtyseven:
+    description: Efecto INMORTAL de muerte "SESENTA Y SIETE"; no lo concede rip.*
+    default: false
   rip.*:
     description: Acceso a todos los efectos Rip
     default: op

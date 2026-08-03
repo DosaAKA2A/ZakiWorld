@@ -151,6 +151,12 @@ implements Listener {
         lore.add(Component.empty());
         lore.add(Component.text((String)e.description(), (TextColor)SOFT).decoration(TextDecoration.ITALIC, false));
         lore.add(Component.empty());
+        lore.add(((TextComponent)Component.text((String)"⏱ Enfriamiento  ", (TextColor)TextColor.color((int)0x404040)).append((Component)Component.text((String)RipPlugin.formatSeconds(this.plugin.effectCooldownMillis(e)), (TextColor)NamedTextColor.AQUA))).decoration(TextDecoration.ITALIC, false));
+        long left = this.plugin.cooldownRemaining(player.getUniqueId());
+        if (left > 0L) {
+            lore.add(((TextComponent)Component.text((String)"⏱ Disponible en  ", (TextColor)TextColor.color((int)0x404040)).append((Component)Component.text((String)RipPlugin.formatSeconds(left), (TextColor)NamedTextColor.RED))).decoration(TextDecoration.ITALIC, false));
+        }
+        lore.add(Component.empty());
         if (admin) {
             lore.add(((TextComponent)Component.text((String)"\u2503 Permiso  ", (TextColor)TextColor.color((int)0x404040)).append((Component)Component.text((String)e.permission(), (TextColor)GOLD))).decoration(TextDecoration.ITALIC, false));
             lore.add(Component.empty());

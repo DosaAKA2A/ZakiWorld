@@ -45,10 +45,10 @@ import org.bukkit.plugin.java.JavaPlugin;
 public final class RipPlugin
 extends JavaPlugin
 implements Listener {
-    private static final String VERSION = "3.1.2";
+    private static final String VERSION = "3.1.3";
     private final Map<UUID, String> killChoice = new ConcurrentHashMap<UUID, String>();
     private final Map<UUID, String> deathChoice = new ConcurrentHashMap<UUID, String>();
-    private final Map<UUID, Long> lastPlay = new ConcurrentHashMap<UUID, Long>();
+    private final Map<UUID, Long> busyUntil = new ConcurrentHashMap<UUID, Long>();
     private final AtomicBoolean dirty = new AtomicBoolean(false);
     private File selFile;
     private FileConfiguration selConfig;
@@ -92,7 +92,28 @@ implements Listener {
         String v = this.getServer().getBukkitVersion();
         int missing = Compat.missingParticles();
         String cloneMode = MannequinHook.available() ? "Mannequin (skin completa)" : "ArmorStand (cabeza)";
-        for (String line : new String[]{"", "  \u2588\u2588\u2588\u2588\u2588\u2588\u2557  \u2588\u2588\u2557\u2588\u2588\u2588\u2588\u2588\u2588\u2557", "  \u2588\u2588\u2554\u2550\u2550\u2588\u2588\u2557\u2588\u2588\u2551\u2588\u2588\u2554\u2550\u2550\u2588\u2588\u2557", "  \u2588\u2588\u2588\u2588\u2588\u2588\u2554\u255d\u2588\u2588\u2551\u2588\u2588\u2588\u2588\u2588\u2588\u2554\u255d    R I P   v3.1.2", "  \u2588\u2588\u2554\u2550\u2550\u2588\u2588\u2557\u2588\u2588\u2551\u2588\u2588\u2554\u2550\u2550\u2550\u255d     by Iris Studio", "  \u2588\u2588\u2551  \u2588\u2588\u2551\u2588\u2588\u2551\u2588\u2588\u2551", "  \u255a\u2550\u255d  \u255a\u2550\u255d\u255a\u2550\u255d\u255a\u2550\u255d", "", "   Efectos    " + RipEffect.count(RipEffect.Type.KILL) + " kill  \u00b7  " + RipEffect.count(RipEffect.Type.DEATH) + " muerte  \u00b7  " + Rarity.values().length + " calidades", "   Cabezas    " + this.heads.loaded() + " cargadas" + (String)(this.heads.failed() > 0 ? "  \u00b7  " + this.heads.failed() + " con fallo" : ""), "   Clones     " + cloneMode, "   Servidor   " + v + (String)(missing > 0 ? "  \u00b7  " + missing + " particulas no disponibles" : ""), ""}) {
+        String[] art = new String[]{
+            "",
+            "      ___                       ___",
+            "     /\\  \\                     /\\  \\",
+            "    /::\\  \\       ___         /::\\  \\",
+            "   /:/\\:\\__\\     /\\__\\       /:/\\:\\__\\",
+            "  /:/ /:/  /    /:/__/      /:/ /:/  /",
+            " /:/_/:/__/___ /::\\  \\     /:/_/:/  /",
+            " \\:\\/:::::/  / \\/\\:\\  \\__  \\:\\/:/  /",
+            "  \\::/~~/~~~~   ~~\\:\\/\\__\\  \\::/__/",
+            "   \\:\\~~\\          \\::/  /   \\:\\  \\",
+            "    \\:\\__\\         /:/  /     \\:\\__\\",
+            "     \\/__/         \\/__/       \\/__/",
+            "",
+            "   R I P   v" + VERSION + "   by Iris Studio",
+            "",
+            "   Efectos    " + RipEffect.count(RipEffect.Type.KILL) + " kill  \u00b7  " + RipEffect.count(RipEffect.Type.DEATH) + " muerte  \u00b7  " + Rarity.values().length + " calidades",
+            "   Cabezas    " + this.heads.loaded() + " cargadas" + (String)(this.heads.failed() > 0 ? "  \u00b7  " + this.heads.failed() + " con fallo" : ""),
+            "   Clones     " + cloneMode,
+            "   Servidor   " + v + (String)(missing > 0 ? "  \u00b7  " + missing + " particulas no disponibles" : ""),
+            ""};
+        for (String line : art) {
             this.getLogger().info(line);
         }
     }
@@ -164,10 +185,10 @@ implements Listener {
         Player victim = event.getEntity();
         Player killer = victim.getKiller();
         RipEffect death = this.resolveEffect(victim, RipEffect.Type.DEATH);
-        if (death != null && this.ready(victim.getUniqueId())) {
+        if (death != null && this.claim(victim.getUniqueId(), death)) {
             this.safePlay(death, victim.getLocation(), killer, victim);
         }
-        if (killer != null && !killer.equals((Object)victim) && (kill = this.resolveEffect(killer, RipEffect.Type.KILL)) != null && this.ready(killer.getUniqueId())) {
+        if (killer != null && !killer.equals((Object)victim) && (kill = this.resolveEffect(killer, RipEffect.Type.KILL)) != null && this.claim(killer.getUniqueId(), kill)) {
             this.safePlay(kill, victim.getLocation(), killer, victim);
         }
     }
@@ -202,17 +223,37 @@ implements Listener {
         }
     }
 
-    private boolean ready(UUID uuid) {
-        if (this.cooldownMillis <= 0L) {
-            return true;
+    /*
+     * El enfriamiento de cada efecto es lo que dura su animacion, asi que un
+     * jugador nunca puede tener dos corriendo a la vez. El cooldown-ms del
+     * config actua solo como minimo.
+     */
+    public long effectCooldownMillis(RipEffect effect) {
+        return Math.max(this.cooldownMillis, effect.cooldownMillis());
+    }
+
+    public long cooldownRemaining(UUID uuid) {
+        Long until = this.busyUntil.get(uuid);
+        if (until == null) {
+            return 0L;
         }
+        long left = until - System.currentTimeMillis();
+        return left > 0L ? left : 0L;
+    }
+
+    public boolean claim(UUID uuid, RipEffect effect) {
         long now = System.currentTimeMillis();
-        Long last = this.lastPlay.get(uuid);
-        if (last != null && now - last < this.cooldownMillis) {
+        Long until = this.busyUntil.get(uuid);
+        if (until != null && now < until) {
             return false;
         }
-        this.lastPlay.put(uuid, now);
+        this.busyUntil.put(uuid, now + this.effectCooldownMillis(effect));
         return true;
+    }
+
+    public static String formatSeconds(long millis) {
+        long tenths = (millis + 50L) / 100L;
+        return tenths % 10L == 0L ? tenths / 10L + "s" : tenths / 10L + "," + tenths % 10L + "s";
     }
 
     public String getChoice(UUID uuid, RipEffect.Type type) {

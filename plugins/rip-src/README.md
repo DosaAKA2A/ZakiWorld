@@ -18,6 +18,17 @@ Requiere JDK 17 o superior. La dependencia es `paper-api 1.20.1` a propósito: e
 
 ## Historial de versiones
 
+### 3.1.3 — 3 de agosto de 2026
+
+- **Juicio de Espadas en oro.** Las once espadas de la lluvia y la gigante final son de oro. Antes eran de hierro y netherita.
+- **Ninguna animación empuja.** Se eliminó el `knockback`, que en la explosión y en el impacto del Juicio zarandeaba a todo bicho viviente en un radio de 5 bloques. Son animaciones, no deben mover a nadie.
+- **Enfriamiento por efecto.** Cada efecto tiene ahora su propia duración declarada en `RipEffect`, y su enfriamiento es exactamente esa duración, con un mínimo de 1 segundo. Un jugador no puede tener dos animaciones corriendo a la vez, y cuanto más larga es la animación más espera. Va de 1 s en los efectos instantáneos a 9,5 s en el Juicio de Espadas. El `cooldown-ms` del config sigue existiendo pero solo actúa como mínimo global.
+- **El enfriamiento se ve en el menú**, en el lore de cada efecto y para todos los usuarios, no solo para los administradores. Si el jugador está en espera aparece además cuánto le queda. `/rip list` también lo muestra en columna.
+- El nodo de permiso de cada efecto sigue viéndose solo con `rip.admin`, que es `default: op`.
+- `/rip test` respeta el enfriamiento en vez de saltárselo, que era la forma más fácil de apilar animaciones.
+- Declarados en `plugin.yml` los permisos `rip.kill.blastoff` y `rip.death.sixtyseven`, que existían pero no estaban registrados. Siguen fuera de `rip.*` a propósito: son los dos INMORTAL y se conceden a mano.
+- Nuevo ASCII de arranque en consola.
+
 ### 3.1.2 — 3 de agosto de 2026
 
 Arregla el Juicio de Espadas, que en servidores 1.21.9 y posteriores se cortaba en el tick 84 de 190 y dejaba el maniquí y las espadas clavados en el mundo para siempre.

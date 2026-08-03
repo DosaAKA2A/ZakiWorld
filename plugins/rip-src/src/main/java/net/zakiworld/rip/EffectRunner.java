@@ -235,25 +235,6 @@ public final class EffectRunner {
         }
     }
 
-    private void knockback(Location center, double radius, double strength) {
-        World w = center.getWorld();
-        if (w == null) {
-            return;
-        }
-        for (Entity e : w.getNearbyEntities(center, radius, radius, radius)) {
-            if (!(e instanceof LivingEntity) || this.isFxEntity(e)) continue;
-            Vector push = e.getLocation().toVector().subtract(center.toVector());
-            if (push.lengthSquared() < 0.01) {
-                push = new Vector(0, 1, 0);
-            }
-            push.normalize().multiply(strength).setY(Math.max(0.35, push.getY() * strength * 0.5));
-            try {
-                e.setVelocity(e.getVelocity().add(push));
-            }
-            catch (Throwable throwable) {}
-        }
-    }
-
     private void firework(World w, Location loc, FireworkEffect.Type type, org.bukkit.Color ... colors) {
         try {
             Firework fw = (Firework)w.spawn(loc, Firework.class, f -> {
@@ -1042,7 +1023,6 @@ public final class EffectRunner {
                 Compat.spawn(w, Compat.EXPLOSION_EMITTER, c, 2);
                 Compat.spawn(w, Compat.FLASH, c, 1);
                 Compat.spawn(w, Compat.END_ROD, c, 60, 0.4, 0.4, 0.4, 0.45);
-                this.knockback(c, 4.5, 0.55);
                 Compat.sound(w, c, "entity.generic.explode", 1.0f, 0.5f);
                 Compat.sound(w, c, "entity.warden.sonic_boom", 0.8f, 0.8f);
                 Compat.sound(w, c, "entity.wither.death", 0.25f, 0.5f);
@@ -1083,7 +1063,7 @@ public final class EffectRunner {
                 double r = EffectRunner.rnd(0.9, 2.5);
                 Location ground = base.clone().add(Math.cos(a) * r, 0.0, Math.sin(a) * r);
                 int fallTicks = 7;
-                ItemDisplay sword = this.fallingItem(w, ground, new ItemStack(Material.IRON_SWORD), 1.4f, (float)rng.nextDouble(Math.PI * 2), (float)Math.toRadians(EffectRunner.rnd(-12.0, 12.0)), 13.0, 0.85, fallTicks);
+                ItemDisplay sword = this.fallingItem(w, ground, new ItemStack(Material.GOLDEN_SWORD), 1.4f, (float)rng.nextDouble(Math.PI * 2), (float)Math.toRadians(EffectRunner.rnd(-12.0, 12.0)), 13.0, 0.85, fallTicks);
                 if (sword != null) {
                     swords.add(sword);
                     this.later((long)fallTicks + 2L, () -> {
@@ -1104,7 +1084,7 @@ public final class EffectRunner {
             }
             if (t == 90) {
                 int fallTicks = 11;
-                ItemDisplay giant = this.fallingItem(w, base.clone(), new ItemStack(Material.NETHERITE_SWORD), 6.0f, 0.6f, 0.0f, 24.0, 2.6, fallTicks);
+                ItemDisplay giant = this.fallingItem(w, base.clone(), new ItemStack(Material.GOLDEN_SWORD), 6.0f, 0.6f, 0.0f, 24.0, 2.6, fallTicks);
                 if (giant != null) {
                     swords.add(giant);
                 }
@@ -1118,7 +1098,6 @@ public final class EffectRunner {
                 Compat.spawn(w, Compat.EXPLOSION_EMITTER, base, 1);
                 Compat.spawn(w, Compat.FLASH, c, 1);
                 Compat.spawn(w, Compat.BLOCK, base.clone().add(0.0, 0.3, 0.0), 60, 1.2, 0.3, 1.2, 0.1, Material.DEEPSLATE.createBlockData());
-                this.knockback(base, 5.0, 0.6);
                 Compat.sound(w, base, "block.anvil.land", 1.0f, 0.5f);
                 Compat.sound(w, base, "block.anvil.use", 1.0f, 0.4f);
                 Compat.sound(w, base, "entity.lightning_bolt.impact", 1.0f, 0.7f);

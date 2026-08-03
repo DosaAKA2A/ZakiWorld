@@ -94,7 +94,7 @@ TabCompleter {
                     for (RipEffect e : RipEffect.of(type)) {
                         Player p2;
                         boolean has = !(sender instanceof Player) || this.plugin.allows(p2 = (Player)sender, e);
-                        Component line = ((TextComponent)((TextComponent)Component.text((String)(has ? " \u2714 " : " \u2718 "), (TextColor)(has ? NamedTextColor.GREEN : NamedTextColor.RED)).append(e.rarity().bar())).append((Component)Component.text((String)("  " + RipCommand.pad(e.id(), 11)), (TextColor)NamedTextColor.WHITE))).append((Component)Component.text((String)RipCommand.pad(e.display(), 22), (TextColor)e.rarity().color()));
+                        Component line = ((TextComponent)((TextComponent)((TextComponent)Component.text((String)(has ? " \u2714 " : " \u2718 "), (TextColor)(has ? NamedTextColor.GREEN : NamedTextColor.RED)).append(e.rarity().bar())).append((Component)Component.text((String)("  " + RipCommand.pad(e.id(), 11)), (TextColor)NamedTextColor.WHITE))).append((Component)Component.text((String)RipCommand.pad(e.display(), 22), (TextColor)e.rarity().color()))).append((Component)Component.text((String)RipCommand.pad(RipPlugin.formatSeconds(this.plugin.effectCooldownMillis(e)), 7), (TextColor)NamedTextColor.AQUA));
                         if (showPerms) {
                             line = line.append((Component)Component.text((String)e.permission(), (TextColor)TextColor.color((int)0x555555)));
                         }
@@ -127,8 +127,12 @@ TabCompleter {
                         return true;
                     }
                 }
+                if (!this.plugin.claim(p.getUniqueId(), e)) {
+                    p.sendMessage(this.plugin.prefix().append((Component)Component.text((String)"Espera ", (TextColor)NamedTextColor.RED)).append((Component)Component.text((String)RipPlugin.formatSeconds(this.plugin.cooldownRemaining(p.getUniqueId())), (TextColor)GOLD)).append((Component)Component.text((String)" antes de lanzar otra animacion.", (TextColor)SOFT)));
+                    return true;
+                }
                 this.plugin.runner().play(e, p.getLocation(), p, p);
-                p.sendMessage(this.plugin.prefix().append((Component)Component.text((String)"Probando  ", (TextColor)SOFT)).append((Component)Component.text((String)e.display(), (TextColor)e.rarity().color())));
+                p.sendMessage(this.plugin.prefix().append((Component)Component.text((String)"Probando  ", (TextColor)SOFT)).append((Component)Component.text((String)e.display(), (TextColor)e.rarity().color())).append((Component)Component.text((String)("  ·  enfriamiento " + RipPlugin.formatSeconds(this.plugin.effectCooldownMillis(e))), (TextColor)TextColor.color((int)0x555555))));
                 break;
             }
             case "reload": {
