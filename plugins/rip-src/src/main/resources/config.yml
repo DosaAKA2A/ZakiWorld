@@ -23,10 +23,10 @@
 #
 # Las cabezas del menu se configuran en heads.yml.
 
-# Minimo de milisegundos entre dos efectos del mismo jugador.
-# Cada efecto ya tiene su propio enfriamiento igual a lo que dura su animacion
-# (de 1 s en los instantaneos a 9,5 s en el Juicio de Espadas), asi que un
-# jugador nunca tiene dos animaciones a la vez. Esto solo sube ese suelo.
+# Suelo minimo, en milisegundos, entre dos efectos del mismo jugador.
+# NO es el enfriamiento: cada efecto tiene el suyo propio, abajo del todo en
+# "enfriamientos". Esto solo evita que un valor de 0 deje pasar todo. Lo normal
+# es no tocarlo.
 cooldown-ms: 250
 
 # Maximo de animaciones sonando a la vez en todo el servidor, sean de quien
@@ -157,71 +157,76 @@ calidades:
     sixtyseven: INMORTAL
 
 # ---- ENFRIAMIENTOS ----
-# Segundos que un jugador debe esperar entre dos animaciones suyas. Los valores
-# de fabrica son exactamente lo que dura cada animacion, asi que nunca se
-# solapan dos. Admite decimales, de 0 a 60.
+# Segundos que ese jugador debe esperar para volver a lanzar ESE efecto. Cada
+# efecto tiene el suyo, independiente del resto. Admite decimales, de 0 a 600
+# (10 minutos).
 #
-# Si pones a un efecto menos de lo que dura su animacion, el plugin lo acepta
-# pero avisa por consola: a partir de ahi ese jugador puede tener dos
-# animaciones a la vez.
+# Los valores de fabrica van por calidad, de menos a mas raro:
+#   COMUN 10s   POCO_COMUN 20s   RARO 40s   MITICO 75s   LEGENDARIO 120s
+#   INMORTAL 180s
+# Cuanto mas raro es el efecto, menos veces se ve. Cambia el numero que quieras
+# sin tocar los demas; no tienen por que seguir la calidad.
 #
-# cooldown-ms de arriba sigue siendo el minimo global y gana si es mayor. Un
-# valor no numerico o fuera de rango se ignora con un aviso. Borra la clave
+# La animacion mas larga (Juicio de Espadas) dura 9,5 segundos. Si pones a un
+# efecto menos de lo que dura su animacion, el plugin lo acepta pero avisa por
+# consola: a partir de ahi ese jugador puede tener dos animaciones a la vez.
+#
+# Un valor no numerico o fuera de rango se ignora con un aviso. Borra la clave
 # "enfriamientos" entera para volver a los valores de fabrica.
 enfriamientos:
   kill:
-    blood: 1
-    hearts: 1
-    spark: 1
-    coins: 1
-    poof: 1
-    firework: 1
-    notes: 1
-    slash: 1
-    confetti: 1
-    pierce: 1
-    explosion: 1.4
-    frost: 1.5
-    inferno: 1.6
-    shockwave: 1.2
-    meteor: 1.9
-    geyser: 1.7
-    souls: 2.4
-    dragon: 2.5
-    totem: 2.2
-    chains: 2.8
-    eclipse: 3
-    lightning: 4.8
-    blackhole: 4.6
-    laser: 4.2
-    swordfall: 9.5
-    orbital: 5.6
-    blastoff: 4.8
+    blood: 10
+    hearts: 10
+    spark: 10
+    coins: 10
+    poof: 10
+    firework: 20
+    notes: 20
+    slash: 20
+    confetti: 20
+    pierce: 20
+    explosion: 40
+    frost: 40
+    inferno: 40
+    shockwave: 40
+    meteor: 40
+    geyser: 40
+    souls: 75
+    dragon: 75
+    totem: 75
+    chains: 75
+    eclipse: 75
+    lightning: 120
+    blackhole: 120
+    laser: 120
+    swordfall: 120
+    orbital: 120
+    blastoff: 180
   death:
-    smoke: 1
-    bones: 1
-    bloodpool: 1
-    splat: 1
-    dust: 1
-    firework: 1
-    cherry: 1.1
-    rain: 1.2
-    balloons: 1.3
-    spores: 1.2
-    grave: 1.7
-    shatter: 1.3
-    void: 1.4
-    ender: 1.3
-    statue: 2
-    whirlpool: 1.8
-    angel: 2.6
-    souls: 2.3
-    glitch: 2.1
-    phoenix: 3.2
-    specters: 2.8
-    implosion: 4.6
-    supernova: 5.2
-    lightning: 4.5
-    pufferfish: 4.2
-    requiem: 5.6
-    sixtyseven: 6.5
+    smoke: 10
+    bones: 10
+    bloodpool: 10
+    splat: 10
+    dust: 10
+    firework: 20
+    cherry: 20
+    rain: 20
+    balloons: 20
+    spores: 20
+    grave: 40
+    shatter: 40
+    void: 40
+    ender: 40
+    statue: 40
+    whirlpool: 40
+    angel: 75
+    souls: 75
+    glitch: 75
+    phoenix: 75
+    specters: 75
+    implosion: 120
+    supernova: 120
+    lightning: 120
+    pufferfish: 120
+    requiem: 120
+    sixtyseven: 180

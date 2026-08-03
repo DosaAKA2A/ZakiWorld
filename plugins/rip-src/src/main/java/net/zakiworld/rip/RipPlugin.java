@@ -39,6 +39,7 @@ import net.zakiworld.rip.RipMenu;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.command.CommandExecutor;
+import org.bukkit.command.CommandSender;
 import org.bukkit.command.TabCompleter;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.file.FileConfiguration;
@@ -60,7 +61,7 @@ import org.bukkit.plugin.java.JavaPlugin;
 public final class RipPlugin
 extends JavaPlugin
 implements Listener {
-    private static final String VERSION = "3.1.8";
+    private static final String VERSION = "3.1.9";
     private final Map<UUID, String> killChoice = new ConcurrentHashMap<UUID, String>();
     private final Map<UUID, String> deathChoice = new ConcurrentHashMap<UUID, String>();
     private final Map<UUID, Long> busyUntil = new ConcurrentHashMap<UUID, Long>();
@@ -111,34 +112,51 @@ implements Listener {
         }
     }
 
+    /*
+     * Va por el ConsoleCommandSender y no por el logger para que salga en color
+     * y sin el prefijo [Rip] machacando cada linea del dibujo.
+     */
     private void banner() {
         String v = this.getServer().getBukkitVersion();
         int missing = Compat.missingParticles();
         String cloneMode = MannequinHook.available() ? "Mannequin (skin completa)" : "ArmorStand (cabeza)";
+        CommandSender console = Bukkit.getConsoleSender();
         String[] art = new String[]{
-            "",
-            "      ___                       ___",
-            "     /\\  \\                     /\\  \\",
-            "    /::\\  \\       ___         /::\\  \\",
-            "   /:/\\:\\__\\     /\\__\\       /:/\\:\\__\\",
-            "  /:/ /:/  /    /:/__/      /:/ /:/  /",
-            " /:/_/:/__/___ /::\\  \\     /:/_/:/  /",
-            " \\:\\/:::::/  / \\/\\:\\  \\__  \\:\\/:/  /",
-            "  \\::/~~/~~~~   ~~\\:\\/\\__\\  \\::/__/",
-            "   \\:\\~~\\          \\::/  /   \\:\\  \\",
-            "    \\:\\__\\         /:/  /     \\:\\__\\",
-            "     \\/__/         \\/__/       \\/__/",
-            "",
-            "   R I P   v" + VERSION + "   by Iris Studio",
-            "",
-            "   Efectos    " + RipEffect.count(RipEffect.Type.KILL) + " kill  \u00b7  " + RipEffect.count(RipEffect.Type.DEATH) + " muerte  \u00b7  " + Rarity.values().length + " calidades",
-            "   Cabezas    " + this.heads.loaded() + " cargadas" + (String)(this.heads.failed() > 0 ? "  \u00b7  " + this.heads.failed() + " con fallo" : ""),
-            "   Clones     " + cloneMode,
-            "   Servidor   " + v + (String)(missing > 0 ? "  \u00b7  " + missing + " particulas no disponibles" : ""),
-            ""};
-        for (String line : art) {
-            this.getLogger().info(line);
+            "       ___                       ___",
+            "      /\\  \\                     /\\  \\",
+            "     /::\\  \\       ___         /::\\  \\",
+            "    /:/\\:\\__\\     /\\__\\       /:/\\:\\__\\",
+            "   /:/ /:/  /    /:/__/      /:/ /:/  /",
+            "  /:/_/:/__/___ /::\\  \\     /:/_/:/  /",
+            "  \\:\\/:::::/  / \\/\\:\\  \\__  \\:\\/:/  /",
+            "   \\::/~~/~~~~   ~~\\:\\/\\__\\  \\::/__/",
+            "    \\:\\~~\\          \\::/  /   \\:\\  \\",
+            "     \\:\\__\\         /:/  /     \\:\\__\\",
+            "      \\/__/         \\/__/       \\/__/"};
+        TextColor rule = TextColor.color((int)0x6E0000);
+        console.sendMessage((Component)Component.empty());
+        console.sendMessage((Component)Component.text((String)"  ============================================", (TextColor)rule));
+        console.sendMessage((Component)Component.empty());
+        for (int i = 0; i < art.length; ++i) {
+            float t = (float)i / (float)(art.length - 1);
+            int r = Math.round(255.0f + -96.0f * t);
+            int g = Math.round(90.0f + -90.0f * t);
+            console.sendMessage((Component)Component.text((String)art[i], (TextColor)TextColor.color((int)r, (int)g, (int)g), (TextDecoration[])new TextDecoration[]{TextDecoration.BOLD}));
         }
+        console.sendMessage((Component)Component.empty());
+        console.sendMessage(((TextComponent)((TextComponent)Component.text((String)"      R I P  ", (TextColor)TextColor.color((int)0xFF3030), (TextDecoration[])new TextDecoration[]{TextDecoration.BOLD}).append((Component)Component.text((String)("v" + VERSION), (TextColor)TextColor.color((int)0xFFD966), (TextDecoration[])new TextDecoration[]{TextDecoration.BOLD}))).append((Component)Component.text((String)"   por ", (TextColor)TextColor.color((int)0x707070)))).append((Component)Component.text((String)"Dosa e Iris Studio", (TextColor)TextColor.color((int)0xFFFFFF))));
+        console.sendMessage((Component)Component.empty());
+        this.bannerRow(console, "Efectos", RipEffect.count(RipEffect.Type.KILL) + " kill  \u00b7  " + RipEffect.count(RipEffect.Type.DEATH) + " muerte  \u00b7  " + Rarity.values().length + " calidades");
+        this.bannerRow(console, "Cabezas", this.heads.loaded() + " cargadas" + (this.heads.failed() > 0 ? "  \u00b7  " + this.heads.failed() + " con fallo" : ""));
+        this.bannerRow(console, "Clones", cloneMode);
+        this.bannerRow(console, "Servidor", v + (missing > 0 ? "  \u00b7  " + missing + " particulas no disponibles" : ""));
+        console.sendMessage((Component)Component.empty());
+        console.sendMessage((Component)Component.text((String)"  ============================================", (TextColor)rule));
+        console.sendMessage((Component)Component.empty());
+    }
+
+    private void bannerRow(CommandSender console, String label, String value) {
+        console.sendMessage(((TextComponent)Component.text((String)"      \u00bb ", (TextColor)TextColor.color((int)0xFF3030)).append((Component)Component.text((String)String.format("%-10s", label), (TextColor)TextColor.color((int)0x909090)))).append((Component)Component.text((String)value, (TextColor)TextColor.color((int)0xE0E0E0))));
     }
 
     /*
@@ -305,15 +323,15 @@ implements Listener {
                     continue;
                 }
                 double seconds = section.getDouble(id);
-                if (seconds < 0.0 || seconds > 60.0) {
-                    this.getLogger().warning("enfriamientos: " + type.lower() + "." + id + " fuera de rango (" + seconds + "); se admite de 0 a 60 segundos");
+                if (seconds < 0.0 || seconds > 600.0) {
+                    this.getLogger().warning("enfriamientos: " + type.lower() + "." + id + " fuera de rango (" + seconds + "); se admite de 0 a 600 segundos");
                     continue;
                 }
                 long millis = Math.round(seconds * 1000.0);
                 if (millis == effect.defaultCooldownMillis()) continue;
                 out.put(effect, Long.valueOf(millis));
-                if (millis >= effect.defaultCooldownMillis()) continue;
-                this.getLogger().warning("enfriamientos: " + type.lower() + "." + id + " en " + seconds + "s es menos de lo que dura su animacion (" + RipPlugin.formatSeconds(effect.defaultCooldownMillis()) + "); podran solaparse dos animaciones del mismo jugador");
+                if (millis >= effect.animationMillis()) continue;
+                this.getLogger().warning("enfriamientos: " + type.lower() + "." + id + " en " + seconds + "s es menos de lo que dura su animacion (" + RipPlugin.formatSeconds(effect.animationMillis()) + "); podran solaparse dos animaciones del mismo jugador");
             }
         }
         if (!out.isEmpty()) {

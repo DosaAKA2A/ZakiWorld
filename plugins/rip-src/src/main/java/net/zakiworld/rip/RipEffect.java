@@ -154,12 +154,19 @@ public enum RipEffect {
         return this.durationTicks;
     }
 
-    public int defaultCooldownTicks() {
-        return Math.max(MIN_COOLDOWN_TICKS, this.durationTicks);
+    /** Lo que tarda la animacion en terminar. Un enfriamiento por debajo de esto permite solapes. */
+    public long animationMillis() {
+        return (long)Math.max(MIN_COOLDOWN_TICKS, this.durationTicks) * 50L;
     }
 
+    /*
+     * El enfriamiento de fabrica lo marca la calidad, no la duracion: un comun
+     * cada 10 s y un inmortal cada 3 minutos. Se usa la calidad de fabrica y no
+     * la de config.yml para que reasignar calidades no mueva los enfriamientos
+     * por debajo sin avisar.
+     */
     public long defaultCooldownMillis() {
-        return (long)this.defaultCooldownTicks() * 50L;
+        return Math.max(this.animationMillis(), (long)this.rarity.cooldownSeconds() * 1000L);
     }
 
     public String permission() {

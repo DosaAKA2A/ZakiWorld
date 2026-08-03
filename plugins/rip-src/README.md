@@ -18,6 +18,16 @@ Requiere JDK 17 o superior. La dependencia es `paper-api 1.20.1` a propósito: e
 
 ## Historial de versiones
 
+### 3.1.9 — 3 de agosto de 2026
+
+**Los enfriamientos pasan a ser tiempos de juego, no duraciones de animación.** Antes el valor de fábrica de cada efecto era lo que tardaba su animación, de 1 a 9,5 segundos: servía para que no se apilaran, pero no para que un legendario se sintiera raro. Ahora los marca la calidad: común 10 s, poco común 20 s, raro 40 s, mítico 75 s, legendario 120 s e inmortal 180 s.
+
+El tope de la validación sube de 60 a **600 segundos**, que era lo que impedía poner los 3 minutos. Y el aviso de solape ahora compara contra la duración real de la animación y no contra el enfriamiento de fábrica, que es lo que corresponde.
+
+Sigue siendo por efecto: los valores por calidad son solo el punto de partida y cada línea del YAML se cambia por separado.
+
+**Banner de consola en rojo.** Sale por el `ConsoleCommandSender` en vez del logger, así que va en color y sin el prefijo `[Rip]` repetido en cada línea del dibujo. El logo lleva un degradado de rojo vivo arriba a rojo oscuro abajo. Todos los caracteres son ASCII o Latin-1 para que no salgan interrogantes en consolas de Windows.
+
 ### 3.1.8 — 3 de agosto de 2026
 
 **El `config.yml` de un servidor que ya existía ahora recibe las claves nuevas.** `saveDefaultConfig()` no toca un archivo que ya está, así que al actualizar desde la 3.1.0 no aparecían `ocultar-cuerpo`, `calidades` ni `enfriamientos`: el plugin usaba los valores de fábrica y no había nada que editar en el archivo. Al arrancar se añaden los bloques que falten, con sus comentarios, sin tocar lo que ya estuviera puesto.

@@ -9,21 +9,32 @@ import net.kyori.adventure.text.format.TextColor;
 import net.kyori.adventure.text.format.TextDecoration;
 
 public enum Rarity {
-    COMUN("Comun", 0xB0B0B0, 1),
-    POCO_COMUN("Poco Comun", 5635962, 2),
-    RARO("Raro", 5220863, 3),
-    MITICO("Mitico", 11829247, 4),
-    LEGENDARIO("Legendario", 16758048, 5),
-    INMORTAL("Inmortal", 16723349, 6);
+    COMUN("Comun", 0xB0B0B0, 1, 10),
+    POCO_COMUN("Poco Comun", 5635962, 2, 20),
+    RARO("Raro", 5220863, 3, 40),
+    MITICO("Mitico", 11829247, 4, 75),
+    LEGENDARIO("Legendario", 16758048, 5, 120),
+    INMORTAL("Inmortal", 16723349, 6, 180);
 
     private final String display;
     private final TextColor color;
     private final int level;
+    private final int cooldownSeconds;
 
-    private Rarity(String display, int rgb, int level) {
+    private Rarity(String display, int rgb, int level, int cooldownSeconds) {
         this.display = display;
         this.color = TextColor.color((int)rgb);
         this.level = level;
+        this.cooldownSeconds = cooldownSeconds;
+    }
+
+    /*
+     * Enfriamiento de fabrica de los efectos de esta calidad, en segundos.
+     * Cuanto mas rara, mas se hace esperar. Se puede cambiar efecto por efecto
+     * en config.yml.
+     */
+    public int cooldownSeconds() {
+        return this.cooldownSeconds;
     }
 
     public String display() {
