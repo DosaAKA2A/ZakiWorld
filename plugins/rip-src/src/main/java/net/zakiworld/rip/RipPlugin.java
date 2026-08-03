@@ -6,6 +6,7 @@ package net.zakiworld.rip;
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.EnumMap;
 import java.util.EnumSet;
 import java.util.List;
 import java.util.Locale;
@@ -32,6 +33,7 @@ import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.TabCompleter;
+import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.entity.Player;
@@ -51,7 +53,7 @@ import org.bukkit.plugin.java.JavaPlugin;
 public final class RipPlugin
 extends JavaPlugin
 implements Listener {
-    private static final String VERSION = "3.1.5";
+    private static final String VERSION = "3.1.6";
     private final Map<UUID, String> killChoice = new ConcurrentHashMap<UUID, String>();
     private final Map<UUID, String> deathChoice = new ConcurrentHashMap<UUID, String>();
     private final Map<UUID, Long> busyUntil = new ConcurrentHashMap<UUID, Long>();
@@ -131,6 +133,7 @@ implements Listener {
     private void reloadSettings() {
         this.cooldownMillis = Math.max(0L, this.getConfig().getLong("cooldown-ms", 250L));
         this.hideBody = this.readHideBody();
+        this.applyRarities();
         this.prefix = ((TextComponent)Component.text((String)"\u2726 ", (TextColor)TextColor.color((int)0xFF5555)).append((Component)Component.text((String)"RIP ", (TextColor)TextColor.color((int)0xFFFFFF), (TextDecoration[])new TextDecoration[]{TextDecoration.BOLD}))).append((Component)Component.text((String)"\u2502 ", (TextColor)TextColor.color((int)0x404040)));
     }
 
@@ -165,6 +168,53 @@ implements Listener {
 
     public boolean hidesBody(RipEffect effect) {
         return effect != null && this.hideBody.contains(effect);
+    }
+
+    /*
+     * calidades:
+     *   kill:
+     *     swordfall: LEGENDARIO
+     * Se anida por tipo a proposito: una clave suelta "kill.swordfall" la
+     * partiria Bukkit por el punto y no se encontraria nunca.
+     */
+    private void applyRarities() {
+        EnumMap<RipEffect, Rarity> overrides = new EnumMap<RipEffect, Rarity>(RipEffect.class);
+        ConfigurationSection root = this.getConfig().getConfigurationSection("calidades");
+        if (root == null) {
+            RipEffect.applyRarityOverrides(overrides);
+            return;
+        }
+        for (RipEffect.Type type : RipEffect.Type.values()) {
+            ConfigurationSection section = root.getConfigurationSection(type.lower());
+            if (section == null) continue;
+            for (String id : section.getKeys(false)) {
+                RipEffect effect = RipEffect.byId(type, id);
+                if (effect == null) {
+                    this.getLogger().warning("calidades: efecto desconocido '" + type.lower() + "." + id + "'");
+                    continue;
+                }
+                String value = section.getString(id);
+                Rarity rarity = null;
+                if (value != null) {
+                    try {
+                        rarity = Rarity.valueOf(value.trim().toUpperCase(Locale.ROOT));
+                    }
+                    catch (IllegalArgumentException illegalArgumentException) {
+                        // empty catch block
+                    }
+                }
+                if (rarity == null) {
+                    this.getLogger().warning("calidades: calidad desconocida '" + value + "' en " + type.lower() + "." + id + "; se deja " + effect.defaultRarity().name());
+                    continue;
+                }
+                if (rarity == effect.defaultRarity()) continue;
+                overrides.put(effect, rarity);
+            }
+        }
+        RipEffect.applyRarityOverrides(overrides);
+        if (!overrides.isEmpty()) {
+            this.getLogger().info("calidades: " + overrides.size() + " efectos reasignados desde config.yml");
+        }
     }
 
     /*

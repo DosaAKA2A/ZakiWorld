@@ -18,6 +18,14 @@ Requiere JDK 17 o superior. La dependencia es `paper-api 1.20.1` a propósito: e
 
 ## Historial de versiones
 
+### 3.1.6 — 3 de agosto de 2026
+
+- **Las calidades se reasignan desde `config.yml`**, en la clave `calidades`, anidada por tipo (`kill:` / `death:`) y con los 54 efectos listados. Los valores válidos son `COMUN`, `POCO_COMUN`, `RARO`, `MITICO`, `LEGENDARIO` e `INMORTAL`, y no distinguen mayúsculas. Un valor inválido o un id que no existe se ignoran con un aviso en consola y el efecto se queda con su calidad de fábrica; borrar la clave entera devuelve todo a fábrica. Se aplica con `/rip reload`.
+
+  La calidad va anidada por tipo a propósito: una clave suelta `kill.swordfall` la partiría Bukkit por el punto y no se encontraría nunca. La lista `ocultar-cuerpo` sí usa esa forma porque son cadenas dentro de una lista, no claves.
+
+- **Nuevo `/rip info`**, sin permiso, con el ASCII, la versión, la autoría y de qué va el plugin.
+
 ### 3.1.5 — 3 de agosto de 2026
 
 En el Juicio de Espadas, el maniquí desaparece en el momento en que la espada gigante toca el suelo (tick 103) en vez de aguantar hasta el tick 160. Se lleva consigo el humo y el sonido de teletransporte, y se le añadieron partículas de alma. Las espadas siguen clavadas hasta el 160 como antes.

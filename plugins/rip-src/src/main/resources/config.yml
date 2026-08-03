@@ -77,3 +77,71 @@ ocultar-cuerpo:
 sixtyseven:
   custom-sound: true
   custom-sound-key: "zakiworld:doot67"
+
+# ---- CALIDADES ----
+# Reasigna la calidad de cualquier efecto sin recompilar. Cambia el color del
+# nombre, los rombos de la barra y el orden que se lee en el menu.
+#
+# Valores validos, de menor a mayor:
+#   COMUN  POCO_COMUN  RARO  MITICO  LEGENDARIO  INMORTAL
+#
+# Un valor invalido se ignora con un aviso en consola y el efecto se queda con
+# su calidad de fabrica. Borra la clave "calidades" entera para volver todo a
+# los valores de fabrica. Recarga con /rip reload.
+calidades:
+  kill:
+    blood: COMUN
+    hearts: COMUN
+    spark: COMUN
+    coins: COMUN
+    poof: COMUN
+    firework: POCO_COMUN
+    notes: POCO_COMUN
+    slash: POCO_COMUN
+    confetti: POCO_COMUN
+    pierce: POCO_COMUN
+    explosion: RARO
+    frost: RARO
+    inferno: RARO
+    shockwave: RARO
+    meteor: RARO
+    geyser: RARO
+    souls: MITICO
+    dragon: MITICO
+    totem: MITICO
+    chains: MITICO
+    eclipse: MITICO
+    lightning: LEGENDARIO
+    blackhole: LEGENDARIO
+    laser: LEGENDARIO
+    swordfall: LEGENDARIO
+    orbital: LEGENDARIO
+    blastoff: INMORTAL
+  death:
+    smoke: COMUN
+    bones: COMUN
+    bloodpool: COMUN
+    splat: COMUN
+    dust: COMUN
+    firework: POCO_COMUN
+    cherry: POCO_COMUN
+    rain: POCO_COMUN
+    balloons: POCO_COMUN
+    spores: POCO_COMUN
+    grave: RARO
+    shatter: RARO
+    void: RARO
+    ender: RARO
+    statue: RARO
+    whirlpool: RARO
+    angel: MITICO
+    souls: MITICO
+    glitch: MITICO
+    phoenix: MITICO
+    specters: MITICO
+    implosion: LEGENDARIO
+    supernova: LEGENDARIO
+    lightning: LEGENDARIO
+    pufferfish: LEGENDARIO
+    requiem: LEGENDARIO
+    sixtyseven: INMORTAL

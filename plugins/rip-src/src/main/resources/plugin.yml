@@ -1,5 +1,5 @@
 name: Rip
-version: '3.1.5'
+version: '3.1.6'
 main: net.zakiworld.rip.RipPlugin
 api-version: '1.20'
 author: Iris Studio
@@ -7,7 +7,7 @@ description: Efectos de kill y muerte con menu por calidades (incluida INMORTAL)
 commands:
   rip:
     description: Menu y ajustes de efectos Rip
-    usage: /rip <gui|kill|death|list|test|reload>
+    usage: /rip <gui|kill|death|list|info|test|reload>
 permissions:
   rip.use:
     description: Acceso basico al menu Rip

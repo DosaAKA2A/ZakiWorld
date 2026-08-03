@@ -24,7 +24,7 @@ implements CommandExecutor,
 TabCompleter {
     private static final TextColor GOLD = TextColor.color((int)16766822);
     private static final TextColor SOFT = TextColor.color((int)0x8A8A8A);
-    private static final String[] SUBS = new String[]{"gui", "kill", "death", "list", "test", "reload"};
+    private static final String[] SUBS = new String[]{"gui", "kill", "death", "list", "info", "test", "reload"};
     private final RipPlugin plugin;
 
     public RipCommand(RipPlugin plugin) {
@@ -135,6 +135,10 @@ TabCompleter {
                 p.sendMessage(this.plugin.prefix().append((Component)Component.text((String)"Probando  ", (TextColor)SOFT)).append((Component)Component.text((String)e.display(), (TextColor)e.rarity().color())).append((Component)Component.text((String)("  ·  enfriamiento " + RipPlugin.formatSeconds(this.plugin.effectCooldownMillis(e))), (TextColor)TextColor.color((int)0x555555))));
                 break;
             }
+            case "info": {
+                this.info(sender);
+                break;
+            }
             case "reload": {
                 if (!sender.hasPermission("rip.admin")) {
                     this.denied(sender);
@@ -151,8 +155,40 @@ TabCompleter {
         return true;
     }
 
+    private void info(CommandSender sender) {
+        TextColor ink = TextColor.color((int)0x606060);
+        String[] art = new String[]{
+            "      ___                       ___",
+            "     /\\  \\                     /\\  \\",
+            "    /::\\  \\       ___         /::\\  \\",
+            "   /:/\\:\\__\\     /\\__\\       /:/\\:\\__\\",
+            "  /:/ /:/  /    /:/__/      /:/ /:/  /",
+            " /:/_/:/__/___ /::\\  \\     /:/_/:/  /",
+            " \\:\\/:::::/  / \\/\\:\\  \\__  \\:\\/:/  /",
+            "  \\::/~~/~~~~   ~~\\:\\/\\__\\  \\::/__/",
+            "   \\:\\~~\\          \\::/  /   \\:\\  \\",
+            "    \\:\\__\\         /:/  /     \\:\\__\\",
+            "     \\/__/         \\/__/       \\/__/"};
+        sender.sendMessage((Component)Component.empty());
+        for (String line : art) {
+            sender.sendMessage((Component)Component.text((String)line, (TextColor)ink).decoration(TextDecoration.ITALIC, false));
+        }
+        sender.sendMessage((Component)Component.empty());
+        sender.sendMessage(((TextComponent)Component.text((String)"  RIP ", (TextColor)TextColor.color((int)0xFF5555), (TextDecoration[])new TextDecoration[]{TextDecoration.BOLD}).append((Component)Component.text((String)("v" + RipPlugin.version()), (TextColor)GOLD))).decoration(TextDecoration.ITALIC, false));
+        sender.sendMessage(((TextComponent)Component.text((String)"  Creado por ", (TextColor)SOFT).append((Component)Component.text((String)"Dosa", (TextColor)TextColor.color((int)0xFFFFFF), (TextDecoration[])new TextDecoration[]{TextDecoration.BOLD}))).append((Component)((TextComponent)Component.text((String)" e ", (TextColor)SOFT)).append((Component)Component.text((String)"Iris Studio", (TextColor)TextColor.color((int)7268320), (TextDecoration[])new TextDecoration[]{TextDecoration.BOLD}))).decoration(TextDecoration.ITALIC, false));
+        sender.sendMessage((Component)Component.empty());
+        sender.sendMessage((Component)Component.text((String)"  Efectos de kill y de muerte para ZakiWorld: cada vez que", (TextColor)SOFT).decoration(TextDecoration.ITALIC, false));
+        sender.sendMessage((Component)Component.text((String)"  matas o te matan se dispara una animacion tuya, elegida", (TextColor)SOFT).decoration(TextDecoration.ITALIC, false));
+        sender.sendMessage((Component)Component.text((String)"  en /rip gui y desbloqueada por permisos.", (TextColor)SOFT).decoration(TextDecoration.ITALIC, false));
+        sender.sendMessage((Component)Component.empty());
+        String dot = "  \u00b7  ";
+        Component counts = ((TextComponent)((TextComponent)((TextComponent)Component.text((String)("  " + RipEffect.count(RipEffect.Type.KILL) + " de kill"), (TextColor)TextColor.color((int)0xFF5555)).append((Component)Component.text((String)dot, (TextColor)TextColor.color((int)0x404040)))).append((Component)Component.text((String)(RipEffect.count(RipEffect.Type.DEATH) + " de muerte"), (TextColor)TextColor.color((int)11829247)))).append((Component)Component.text((String)dot, (TextColor)TextColor.color((int)0x404040)))).append((Component)Component.text((String)(Rarity.values().length + " calidades"), (TextColor)GOLD)).decoration(TextDecoration.ITALIC, false);
+        sender.sendMessage(counts);
+        sender.sendMessage((Component)Component.empty());
+    }
+
     private void usage(CommandSender sender) {
-        sender.sendMessage(this.plugin.prefix().append((Component)Component.text((String)"/rip <gui|kill|death|list|test|reload>", (TextColor)SOFT)));
+        sender.sendMessage(this.plugin.prefix().append((Component)Component.text((String)"/rip <gui|kill|death|list|info|test|reload>", (TextColor)SOFT)));
     }
 
     private void denied(CommandSender sender) {

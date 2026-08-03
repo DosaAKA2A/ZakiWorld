@@ -79,6 +79,7 @@ public enum RipEffect {
     private static final int MIN_COOLDOWN_TICKS = 20;
     private static final RipEffect[] VALUES;
     private static final Map<Type, List<RipEffect>> BY_TYPE;
+    private static final Map<RipEffect, Rarity> RARITY_OVERRIDES = new EnumMap<RipEffect, Rarity>(RipEffect.class);
 
     private RipEffect(Type type, String id, String display, Rarity rarity, Material fallbackIcon, String description, int durationTicks, boolean hidesBody) {
         this.type = type;
@@ -116,8 +117,24 @@ public enum RipEffect {
         return this.display;
     }
 
+    /*
+     * La calidad se puede reasignar desde config.yml, asi que hay que pasar
+     * siempre por aqui y no leer el campo directamente.
+     */
     public Rarity rarity() {
+        Rarity override = RARITY_OVERRIDES.get((Object)this);
+        return override != null ? override : this.rarity;
+    }
+
+    public Rarity defaultRarity() {
         return this.rarity;
+    }
+
+    static void applyRarityOverrides(Map<RipEffect, Rarity> overrides) {
+        RARITY_OVERRIDES.clear();
+        if (overrides != null) {
+            RARITY_OVERRIDES.putAll(overrides);
+        }
     }
 
     public Material fallbackIcon() {
