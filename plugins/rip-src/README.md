@@ -18,6 +18,12 @@ Requiere JDK 17 o superior. La dependencia es `paper-api 1.20.1` a propósito: e
 
 ## Historial de versiones
 
+### 3.2.0 — 3 de agosto de 2026
+
+- **`/rip test` deja de consumir enfriamiento.** Es un comando de operador para probar efectos, así que no tiene sentido que espere. El enfriamiento sigue aplicándose en las muertes reales, que es donde importa. El mensaje de confirmación sigue mostrando cuál sería el enfriamiento del efecto, como referencia al ajustarlos.
+- **`/rip info` ya no nombra ningún servidor.** El texto describe el plugin y nada más.
+- **Fuera el ASCII de `/rip info`.** El chat de Minecraft usa fuente proporcional, así que un dibujo con diagonales se descuadra siempre; no era cuestión de afinarlo. Sustituido por un recuadro de reglas y texto centrado, que son líneas sueltas y cuadran solas. El ASCII grande sigue en la consola, que sí es monoespaciada.
+
 ### 3.1.9 — 3 de agosto de 2026
 
 **Los enfriamientos pasan a ser tiempos de juego, no duraciones de animación.** Antes el valor de fábrica de cada efecto era lo que tardaba su animación, de 1 a 9,5 segundos: servía para que no se apilaran, pero no para que un legendario se sintiera raro. Ahora los marca la calidad: común 10 s, poco común 20 s, raro 40 s, mítico 75 s, legendario 120 s e inmortal 180 s.

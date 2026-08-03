@@ -127,10 +127,6 @@ TabCompleter {
                         return true;
                     }
                 }
-                if (!this.plugin.claim(p.getUniqueId(), e)) {
-                    p.sendMessage(this.plugin.prefix().append((Component)Component.text((String)"Espera ", (TextColor)NamedTextColor.RED)).append((Component)Component.text((String)RipPlugin.formatSeconds(this.plugin.cooldownRemaining(p.getUniqueId())), (TextColor)GOLD)).append((Component)Component.text((String)" antes de lanzar otra animacion.", (TextColor)SOFT)));
-                    return true;
-                }
                 this.plugin.runner().play(e, p.getLocation(), p, p);
                 p.sendMessage(this.plugin.prefix().append((Component)Component.text((String)"Probando  ", (TextColor)SOFT)).append((Component)Component.text((String)e.display(), (TextColor)e.rarity().color())).append((Component)Component.text((String)("  ·  enfriamiento " + RipPlugin.formatSeconds(this.plugin.effectCooldownMillis(e))), (TextColor)TextColor.color((int)0x555555))));
                 break;
@@ -155,35 +151,30 @@ TabCompleter {
         return true;
     }
 
+    /*
+     * Nada de dibujos ASCII aqui: el chat de Minecraft usa fuente proporcional
+     * y las diagonales se descuadran. Solo lineas sueltas, que siempre cuadran.
+     */
     private void info(CommandSender sender) {
-        TextColor ink = TextColor.color((int)0x606060);
-        String[] art = new String[]{
-            "      ___                       ___",
-            "     /\\  \\                     /\\  \\",
-            "    /::\\  \\       ___         /::\\  \\",
-            "   /:/\\:\\__\\     /\\__\\       /:/\\:\\__\\",
-            "  /:/ /:/  /    /:/__/      /:/ /:/  /",
-            " /:/_/:/__/___ /::\\  \\     /:/_/:/  /",
-            " \\:\\/:::::/  / \\/\\:\\  \\__  \\:\\/:/  /",
-            "  \\::/~~/~~~~   ~~\\:\\/\\__\\  \\::/__/",
-            "   \\:\\~~\\          \\::/  /   \\:\\  \\",
-            "    \\:\\__\\         /:/  /     \\:\\__\\",
-            "     \\/__/         \\/__/       \\/__/"};
+        TextColor rule = TextColor.color((int)0x8B1A1A);
+        Component bar = Component.text((String)"\u25ac\u25ac\u25ac\u25ac\u25ac\u25ac\u25ac\u25ac\u25ac\u25ac\u25ac\u25ac\u25ac\u25ac\u25ac\u25ac\u25ac\u25ac\u25ac\u25ac\u25ac\u25ac\u25ac\u25ac\u25ac\u25ac\u25ac\u25ac\u25ac\u25ac", (TextColor)rule).decoration(TextDecoration.ITALIC, false);
         sender.sendMessage((Component)Component.empty());
-        for (String line : art) {
-            sender.sendMessage((Component)Component.text((String)line, (TextColor)ink).decoration(TextDecoration.ITALIC, false));
-        }
+        sender.sendMessage(bar);
         sender.sendMessage((Component)Component.empty());
-        sender.sendMessage(((TextComponent)Component.text((String)"  RIP ", (TextColor)TextColor.color((int)0xFF5555), (TextDecoration[])new TextDecoration[]{TextDecoration.BOLD}).append((Component)Component.text((String)("v" + RipPlugin.version()), (TextColor)GOLD))).decoration(TextDecoration.ITALIC, false));
-        sender.sendMessage(((TextComponent)Component.text((String)"  Creado por ", (TextColor)SOFT).append((Component)Component.text((String)"Dosa", (TextColor)TextColor.color((int)0xFFFFFF), (TextDecoration[])new TextDecoration[]{TextDecoration.BOLD}))).append((Component)((TextComponent)Component.text((String)" e ", (TextColor)SOFT)).append((Component)Component.text((String)"Iris Studio", (TextColor)TextColor.color((int)7268320), (TextDecoration[])new TextDecoration[]{TextDecoration.BOLD}))).decoration(TextDecoration.ITALIC, false));
+        sender.sendMessage(((TextComponent)((TextComponent)Component.text((String)"            \u2726 ", (TextColor)TextColor.color((int)0xFF5555)).append((Component)Component.text((String)"R I P", (TextColor)TextColor.color((int)0xFF3030), (TextDecoration[])new TextDecoration[]{TextDecoration.BOLD}))).append((Component)Component.text((String)" \u2726  ", (TextColor)TextColor.color((int)0xFF5555)))).append((Component)Component.text((String)("v" + RipPlugin.version()), (TextColor)GOLD, (TextDecoration[])new TextDecoration[]{TextDecoration.BOLD})).decoration(TextDecoration.ITALIC, false));
+        sender.sendMessage(((TextComponent)((TextComponent)Component.text((String)"        Creado por ", (TextColor)SOFT).append((Component)Component.text((String)"Dosa", (TextColor)TextColor.color((int)0xFFFFFF), (TextDecoration[])new TextDecoration[]{TextDecoration.BOLD}))).append((Component)Component.text((String)" e ", (TextColor)SOFT))).append((Component)Component.text((String)"Iris Studio", (TextColor)TextColor.color((int)7268320), (TextDecoration[])new TextDecoration[]{TextDecoration.BOLD})).decoration(TextDecoration.ITALIC, false));
         sender.sendMessage((Component)Component.empty());
-        sender.sendMessage((Component)Component.text((String)"  Efectos de kill y de muerte para ZakiWorld: cada vez que", (TextColor)SOFT).decoration(TextDecoration.ITALIC, false));
-        sender.sendMessage((Component)Component.text((String)"  matas o te matan se dispara una animacion tuya, elegida", (TextColor)SOFT).decoration(TextDecoration.ITALIC, false));
-        sender.sendMessage((Component)Component.text((String)"  en /rip gui y desbloqueada por permisos.", (TextColor)SOFT).decoration(TextDecoration.ITALIC, false));
+        sender.sendMessage((Component)Component.text((String)"  Efectos de kill y de muerte. Cada vez que matas", (TextColor)SOFT).decoration(TextDecoration.ITALIC, false));
+        sender.sendMessage((Component)Component.text((String)"  o te matan se dispara la animacion que tengas", (TextColor)SOFT).decoration(TextDecoration.ITALIC, false));
+        sender.sendMessage((Component)Component.text((String)"  equipada, con su propio enfriamiento.", (TextColor)SOFT).decoration(TextDecoration.ITALIC, false));
+        sender.sendMessage((Component)Component.empty());
+        sender.sendMessage(((TextComponent)Component.text((String)"  Elige la tuya en ", (TextColor)SOFT).append((Component)Component.text((String)"/rip gui", (TextColor)TextColor.color((int)0xFFFFFF), (TextDecoration[])new TextDecoration[]{TextDecoration.BOLD}))).decoration(TextDecoration.ITALIC, false));
         sender.sendMessage((Component)Component.empty());
         String dot = "  \u00b7  ";
         Component counts = ((TextComponent)((TextComponent)((TextComponent)Component.text((String)("  " + RipEffect.count(RipEffect.Type.KILL) + " de kill"), (TextColor)TextColor.color((int)0xFF5555)).append((Component)Component.text((String)dot, (TextColor)TextColor.color((int)0x404040)))).append((Component)Component.text((String)(RipEffect.count(RipEffect.Type.DEATH) + " de muerte"), (TextColor)TextColor.color((int)11829247)))).append((Component)Component.text((String)dot, (TextColor)TextColor.color((int)0x404040)))).append((Component)Component.text((String)(Rarity.values().length + " calidades"), (TextColor)GOLD)).decoration(TextDecoration.ITALIC, false);
         sender.sendMessage(counts);
+        sender.sendMessage((Component)Component.empty());
+        sender.sendMessage(Component.text((String)"▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬", (TextColor)TextColor.color((int)0x8B1A1A)).decoration(TextDecoration.ITALIC, false));
         sender.sendMessage((Component)Component.empty());
     }
 

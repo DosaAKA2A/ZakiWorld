@@ -61,7 +61,7 @@ import org.bukkit.plugin.java.JavaPlugin;
 public final class RipPlugin
 extends JavaPlugin
 implements Listener {
-    private static final String VERSION = "3.1.9";
+    private static final String VERSION = "3.2.0";
     private final Map<UUID, String> killChoice = new ConcurrentHashMap<UUID, String>();
     private final Map<UUID, String> deathChoice = new ConcurrentHashMap<UUID, String>();
     private final Map<UUID, Long> busyUntil = new ConcurrentHashMap<UUID, Long>();
