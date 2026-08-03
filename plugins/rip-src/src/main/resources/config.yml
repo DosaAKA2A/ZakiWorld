@@ -23,9 +23,50 @@
 #
 # Las cabezas del menu se configuran en heads.yml.
 
-# Milisegundos minimos entre dos efectos del mismo jugador.
-# Evita apilar animaciones en muertes encadenadas. 0 = sin limite.
+# Minimo de milisegundos entre dos efectos del mismo jugador.
+# Cada efecto ya tiene su propio enfriamiento igual a lo que dura su animacion
+# (de 1 s en los instantaneos a 9,5 s en el Juicio de Espadas), asi que un
+# jugador nunca tiene dos animaciones a la vez. Esto solo sube ese suelo.
 cooldown-ms: 250
+
+# ---- OCULTAR EL CUERPO ----
+# Al morir, el cliente reproduce la animacion vanilla: el jugador se pone rojo y
+# cae de lado durante un segundo. En los efectos que destruyen el cuerpo
+# (explosion, desintegracion, despegue...) eso se ve mal, porque el cadaver
+# sigue ahi tumbandose por debajo de la animacion.
+#
+# Los efectos de esta lista esconden el cadaver del resto de jugadores en el
+# mismo tick de la muerte, asi que el cuerpo desaparece al instante y solo se ve
+# la animacion. Vuelve a mostrarse al reaparecer.
+#
+# Formato: kill.<id> o death.<id>. Borra la clave entera para volver a los
+# valores de fabrica; dejala vacia para no ocultar el cuerpo nunca.
+ocultar-cuerpo:
+  - kill.poof
+  - kill.explosion
+  - kill.frost
+  - kill.inferno
+  - kill.meteor
+  - kill.dragon
+  - kill.blackhole
+  - kill.laser
+  - kill.swordfall
+  - kill.orbital
+  - kill.blastoff
+  - death.bones
+  - death.splat
+  - death.dust
+  - death.shatter
+  - death.void
+  - death.ender
+  - death.statue
+  - death.whirlpool
+  - death.angel
+  - death.souls
+  - death.phoenix
+  - death.implosion
+  - death.supernova
+  - death.pufferfish
 
 # ---- SESENTA Y SIETE ----
 # El efecto puede reproducir el sonido "doot 67" de la tienda de zakiworld.net.

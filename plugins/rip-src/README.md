@@ -18,6 +18,16 @@ Requiere JDK 17 o superior. La dependencia es `paper-api 1.20.1` a propósito: e
 
 ## Historial de versiones
 
+### 3.1.4 — 3 de agosto de 2026
+
+**El cuerpo desaparece al instante en los efectos que lo destruyen.** Al morir, el cliente reproduce la animación vanilla: el jugador se pone rojo y cae de lado durante cerca de un segundo. En una explosión o un despegue eso se ve mal, porque el cadáver sigue tumbándose por debajo de la animación. Y en el Juicio de Espadas y el Despegue Estelar era peor, porque el clon nace de pie en el mismo punto y durante un rato hay dos cuerpos superpuestos.
+
+Ahora los efectos marcados esconden al muerto del resto de clientes en el mismo tick de la muerte, con `Player#hidePlayer`, y lo vuelven a mostrar al reaparecer. No se toca al jugador ni al evento: solo deja de enviarse su entidad, así que el cliente no tiene qué animar.
+
+La lista está en `config.yml`, en la clave `ocultar-cuerpo`, con formato `kill.<id>` o `death.<id>`. Vienen marcados 25 de los 54: los que revientan, desintegran, congelan, absorben o se llevan el cuerpo. Si borras la clave entera se vuelve a los valores de fábrica; si la dejas vacía no se oculta nunca. El menú indica en el lore qué efectos lo hacen.
+
+Contra el riesgo de dejar a alguien invisible hay tres redes: se revela al reaparecer, se limpia al salir del servidor, y un barrido cada 5 segundos revela a cualquiera que esté oculto y ya no esté muerto. Al desactivar el plugin se revela a todos.
+
 ### 3.1.3 — 3 de agosto de 2026
 
 - **Juicio de Espadas en oro.** Las once espadas de la lluvia y la gigante final son de oro. Antes eran de hierro y netherita.

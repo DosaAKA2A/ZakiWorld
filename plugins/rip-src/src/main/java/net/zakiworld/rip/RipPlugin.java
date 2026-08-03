@@ -6,8 +6,11 @@ package net.zakiworld.rip;
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.EnumSet;
+import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ThreadLocalRandom;
@@ -39,16 +42,21 @@ import org.bukkit.event.entity.EntityDamageByEntityEvent;
 import org.bukkit.event.entity.EntityDamageEvent;
 import org.bukkit.event.entity.PlayerDeathEvent;
 import org.bukkit.event.player.PlayerInteractEntityEvent;
+import org.bukkit.event.player.PlayerJoinEvent;
+import org.bukkit.event.player.PlayerQuitEvent;
+import org.bukkit.event.player.PlayerRespawnEvent;
 import org.bukkit.plugin.Plugin;
 import org.bukkit.plugin.java.JavaPlugin;
 
 public final class RipPlugin
 extends JavaPlugin
 implements Listener {
-    private static final String VERSION = "3.1.3";
+    private static final String VERSION = "3.1.4";
     private final Map<UUID, String> killChoice = new ConcurrentHashMap<UUID, String>();
     private final Map<UUID, String> deathChoice = new ConcurrentHashMap<UUID, String>();
     private final Map<UUID, Long> busyUntil = new ConcurrentHashMap<UUID, Long>();
+    private final Set<UUID> hiddenBodies = ConcurrentHashMap.newKeySet();
+    private Set<RipEffect> hideBody = EnumSet.noneOf(RipEffect.class);
     private final AtomicBoolean dirty = new AtomicBoolean(false);
     private File selFile;
     private FileConfiguration selConfig;
@@ -76,10 +84,12 @@ implements Listener {
                 this.saveSelections();
             }
         }, 600L, 600L);
+        Bukkit.getScheduler().runTaskTimer((Plugin)this, this::revealStrays, 100L, 100L);
         this.banner();
     }
 
     public void onDisable() {
+        this.revealAll();
         if (this.runner != null) {
             this.runner.cancelAll();
         }
@@ -120,7 +130,129 @@ implements Listener {
 
     private void reloadSettings() {
         this.cooldownMillis = Math.max(0L, this.getConfig().getLong("cooldown-ms", 250L));
+        this.hideBody = this.readHideBody();
         this.prefix = ((TextComponent)Component.text((String)"\u2726 ", (TextColor)TextColor.color((int)0xFF5555)).append((Component)Component.text((String)"RIP ", (TextColor)TextColor.color((int)0xFFFFFF), (TextDecoration[])new TextDecoration[]{TextDecoration.BOLD}))).append((Component)Component.text((String)"\u2502 ", (TextColor)TextColor.color((int)0x404040)));
+    }
+
+    private Set<RipEffect> readHideBody() {
+        EnumSet<RipEffect> set = EnumSet.noneOf(RipEffect.class);
+        if (!this.getConfig().isSet("ocultar-cuerpo")) {
+            for (RipEffect e : RipEffect.values()) {
+                if (!e.hidesBodyByDefault()) continue;
+                set.add(e);
+            }
+            return set;
+        }
+        for (String raw : this.getConfig().getStringList("ocultar-cuerpo")) {
+            if (raw == null) continue;
+            String entry = raw.trim().toLowerCase(Locale.ROOT);
+            int dot = entry.indexOf(46);
+            if (dot <= 0 || dot == entry.length() - 1) {
+                this.getLogger().warning("ocultar-cuerpo: entrada invalida '" + raw + "', se esperaba kill.<id> o death.<id>");
+                continue;
+            }
+            String typeName = entry.substring(0, dot);
+            RipEffect.Type type = typeName.equals("kill") ? RipEffect.Type.KILL : (typeName.equals("death") ? RipEffect.Type.DEATH : null);
+            RipEffect effect = type == null ? null : RipEffect.byId(type, entry.substring(dot + 1));
+            if (effect == null) {
+                this.getLogger().warning("ocultar-cuerpo: efecto desconocido '" + raw + "'");
+                continue;
+            }
+            set.add(effect);
+        }
+        return set;
+    }
+
+    public boolean hidesBody(RipEffect effect) {
+        return effect != null && this.hideBody.contains(effect);
+    }
+
+    /*
+     * Esconder al muerto del resto de clientes en el mismo tick de la muerte
+     * evita que se vea la caida de lado de vanilla por debajo de la animacion.
+     * Se vuelve a mostrar al reaparecer; el barrido de revealStrays() es la red
+     * de seguridad para que nadie se quede invisible.
+     */
+    private void hideBody(Player victim) {
+        if (!this.hiddenBodies.add(victim.getUniqueId())) {
+            return;
+        }
+        for (Player p : Bukkit.getOnlinePlayers()) {
+            if (p.equals((Object)victim)) continue;
+            try {
+                p.hidePlayer((Plugin)this, victim);
+            }
+            catch (Throwable throwable) {
+                // empty catch block
+            }
+        }
+    }
+
+    private void revealBody(Player victim) {
+        if (!this.hiddenBodies.remove(victim.getUniqueId())) {
+            return;
+        }
+        for (Player p : Bukkit.getOnlinePlayers()) {
+            if (p.equals((Object)victim)) continue;
+            try {
+                p.showPlayer((Plugin)this, victim);
+            }
+            catch (Throwable throwable) {
+                // empty catch block
+            }
+        }
+    }
+
+    private void revealStrays() {
+        if (this.hiddenBodies.isEmpty()) {
+            return;
+        }
+        for (UUID id : new ArrayList<UUID>(this.hiddenBodies)) {
+            Player p = Bukkit.getPlayer(id);
+            if (p == null) {
+                this.hiddenBodies.remove(id);
+                continue;
+            }
+            if (p.isDead()) continue;
+            this.revealBody(p);
+        }
+    }
+
+    private void revealAll() {
+        for (UUID id : new ArrayList<UUID>(this.hiddenBodies)) {
+            Player p = Bukkit.getPlayer(id);
+            if (p == null) {
+                this.hiddenBodies.remove(id);
+                continue;
+            }
+            this.revealBody(p);
+        }
+        this.hiddenBodies.clear();
+    }
+
+    @EventHandler(priority=EventPriority.MONITOR)
+    public void onRespawn(PlayerRespawnEvent event) {
+        this.revealBody(event.getPlayer());
+    }
+
+    @EventHandler(priority=EventPriority.MONITOR)
+    public void onQuit(PlayerQuitEvent event) {
+        this.hiddenBodies.remove(event.getPlayer().getUniqueId());
+    }
+
+    @EventHandler(priority=EventPriority.MONITOR)
+    public void onJoin(PlayerJoinEvent event) {
+        Player joined = event.getPlayer();
+        for (UUID id : this.hiddenBodies) {
+            Player dead = Bukkit.getPlayer(id);
+            if (dead == null || dead.equals((Object)joined)) continue;
+            try {
+                joined.hidePlayer((Plugin)this, dead);
+            }
+            catch (Throwable throwable) {
+                // empty catch block
+            }
+        }
     }
 
     public void reloadAll() {
@@ -184,12 +316,18 @@ implements Listener {
         RipEffect kill;
         Player victim = event.getEntity();
         Player killer = victim.getKiller();
+        boolean hide = false;
         RipEffect death = this.resolveEffect(victim, RipEffect.Type.DEATH);
         if (death != null && this.claim(victim.getUniqueId(), death)) {
             this.safePlay(death, victim.getLocation(), killer, victim);
+            hide |= this.hidesBody(death);
         }
         if (killer != null && !killer.equals((Object)victim) && (kill = this.resolveEffect(killer, RipEffect.Type.KILL)) != null && this.claim(killer.getUniqueId(), kill)) {
             this.safePlay(kill, victim.getLocation(), killer, victim);
+            hide |= this.hidesBody(kill);
+        }
+        if (hide) {
+            this.hideBody(victim);
         }
     }
 
