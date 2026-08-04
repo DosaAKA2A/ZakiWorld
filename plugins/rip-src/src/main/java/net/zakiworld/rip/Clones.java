@@ -51,6 +51,8 @@ final class Clones {
                 stand.setCanMove(false);
                 stand.setCanTick(false);
                 stand.setDisabledSlots(EquipmentSlot.values());
+                stand.customName(net.kyori.adventure.text.Component.text(victim.getName()));
+                stand.setCustomNameVisible(true);
                 ItemStack skull = new ItemStack(Material.PLAYER_HEAD);
                 ItemMeta patt0$temp = skull.getItemMeta();
                 if (patt0$temp instanceof SkullMeta) {

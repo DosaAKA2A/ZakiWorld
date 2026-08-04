@@ -7,6 +7,7 @@ import com.destroystokyo.paper.ClientOption;
 import com.destroystokyo.paper.SkinParts;
 import com.destroystokyo.paper.profile.PlayerProfile;
 import java.lang.reflect.Method;
+import net.kyori.adventure.text.Component;
 import org.bukkit.Location;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.EntityType;
@@ -54,7 +55,11 @@ final class MannequinHook {
                 // empty catch block
             }
             SET_IMMOVABLE.invoke(living, true);
-            SET_DESCRIPTION.invoke(living, new Object[]{null});
+            String label = likeness.getName();
+            Component name = Component.text(label);
+            SET_DESCRIPTION.invoke(living, Component.empty());
+            living.customName(name);
+            living.setCustomNameVisible(true);
             living.setInvulnerable(true);
             living.setSilent(true);
             living.setCollidable(false);
