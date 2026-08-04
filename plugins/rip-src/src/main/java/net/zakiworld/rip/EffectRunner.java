@@ -1216,27 +1216,44 @@ public final class EffectRunner {
     }
 
     /*
-     * Enciende (o apaga) un haz de faro DE VERDAD, el mismo que renderiza el
-     * cliente para un beacon con su piramide. No se toca el mundo: se manda un
-     * cambio de bloque falso solo a los clientes cercanos y, al apagarlo, se
-     * les reenvia el bloque real. El faro va en el bloque de debajo de los pies
-     * con un 3x3 de hierro bajo el, que es lo minimo para que el haz salga. Si
-     * hay techo encima no se vera, igual que en vanilla.
+     * Enciende (o apaga) el haz de faro DE VERDAD, el que renderiza el cliente.
+     * El motor exige un beacon para dibujarlo, asi que el faro y su base van
+     * ENTERRADOS seis bloques bajo los pies y se abre un hueco de 1x1 por
+     * encima para que la luz salga: a la vista solo queda el haz saliendo del
+     * suelo, sin faro ni plataforma.
+     *
+     * Nada de esto toca el mundo. Son cambios de bloque falsos enviados solo a
+     * los clientes cercanos; al apagarlo se les reenvia el bloque real. Si hay
+     * techo sobre la victima el haz no se vera, igual que un faro normal.
      */
     private void beaconBeam(World w, Location feet, boolean on) {
-        Location bc = feet.clone().subtract(0.0, 1.0, 0.0).getBlock().getLocation();
-        org.bukkit.block.data.BlockData beacon = Material.BEACON.createBlockData();
+        Location ground = feet.clone().subtract(0.0, 1.0, 0.0).getBlock().getLocation();
+        int depth = 6;
+        int floor = w.getMinHeight() + 2;
+        if (ground.getBlockY() - depth - 1 < floor) {
+            depth = ground.getBlockY() - floor - 1;
+        }
+        if (depth < 2) {
+            return;
+        }
+        Location beacon = ground.clone().subtract(0.0, (double)depth, 0.0);
+        org.bukkit.block.data.BlockData beaconData = Material.BEACON.createBlockData();
         org.bukkit.block.data.BlockData iron = Material.IRON_BLOCK.createBlockData();
+        org.bukkit.block.data.BlockData air = Material.AIR.createBlockData();
         for (Player p : Bukkit.getOnlinePlayers()) {
             if (!p.getWorld().equals(w)) continue;
             try {
-                if (p.getLocation().distanceSquared(bc) > 9216.0) continue;
-                p.sendBlockChange(bc, on ? beacon : bc.getBlock().getBlockData());
+                if (p.getLocation().distanceSquared(ground) > 9216.0) continue;
+                p.sendBlockChange(beacon, on ? beaconData : beacon.getBlock().getBlockData());
                 for (int dx = -1; dx <= 1; ++dx) {
                     for (int dz = -1; dz <= 1; ++dz) {
-                        Location b = bc.clone().add((double)dx, -1.0, (double)dz);
+                        Location b = beacon.clone().add((double)dx, -1.0, (double)dz);
                         p.sendBlockChange(b, on ? iron : b.getBlock().getBlockData());
                     }
+                }
+                for (int dy = 1; dy <= depth; ++dy) {
+                    Location b = beacon.clone().add(0.0, (double)dy, 0.0);
+                    p.sendBlockChange(b, on ? air : b.getBlock().getBlockData());
                 }
             }
             catch (Throwable throwable) {
