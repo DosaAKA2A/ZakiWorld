@@ -1092,7 +1092,7 @@ public final class SepulchralKnight extends BossFight {
         soundAt(start, "entity.horse.angry", 1.4f, 0.6f);
         broadcastNear(Component.text("El fantasma de la montura vuelve.", ACCENT));
         titleNear(Component.text("ULTIMA CARGA", NamedTextColor.RED, TextDecoration.BOLD),
-                Component.text("Aparten se del pasillo", NamedTextColor.GRAY));
+                Component.text("Apartense del pasillo", NamedTextColor.GRAY));
 
         animate(120, tick -> {
             if (!alive()) return;

@@ -286,7 +286,7 @@ public final class AnomalyManager implements Listener {
             // de un detalle interno del plugin.
             event.addDamage(p, e.getFinalDamage());
 
-            double factor = event.fight().damageScale() * event.fight().incomingDamageMultiplier();
+            double factor = event.fight().damageScale() * event.fight().incomingDamageMultiplier(e.getDamager());
             if (factor != 1.0) e.setDamage(e.getDamage() * factor);
             return;
         }

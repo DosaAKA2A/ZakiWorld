@@ -46,6 +46,9 @@ public final class Compat {
     public static final Particle SNOWFLAKE = particle("SNOWFLAKE");
     public static final Particle NOTE = particle("NOTE");
     public static final Particle HEART = particle("HEART");
+    public static final Particle SPLASH = particle("SPLASH", "WATER_SPLASH");
+    public static final Particle BUBBLE = particle("BUBBLE", "WATER_BUBBLE");
+    public static final Particle DRIPPING_WATER = particle("DRIPPING_WATER", "WATER_DRIP");
     public static final Particle PORTAL = particle("PORTAL");
     public static final Particle REVERSE_PORTAL = particle("REVERSE_PORTAL");
     public static final Particle END_ROD = particle("END_ROD");

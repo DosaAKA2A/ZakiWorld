@@ -92,6 +92,11 @@ anomalias:
     vida: 1500
     dano: 1.0
     nombre: 'Conejo Asesino'
+  storm_rider:
+    activa: true
+    vida: 1700
+    dano: 1.0
+    nombre: 'Storm Rider'
 
 menu:
   # La anomalia que abre el boton Iniciar del panel.

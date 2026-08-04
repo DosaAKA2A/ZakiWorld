@@ -326,6 +326,14 @@ public abstract class BossFight {
     }
 
     /**
+     * Igual que el anterior pero sabiendo QUIEN pega. Lo usa el Storm Rider para que
+     * en su fase de vuelo la espada no valga y haya que sacar el arco.
+     */
+    public double incomingDamageMultiplier(Entity damager) {
+        return incomingDamageMultiplier();
+    }
+
+    /**
      * Aviso de que el jefe (o uno de sus esbirros) acaba de pegar a un jugador.
      * Por defecto no hace nada; el Conejo Asesino lo usa para multiplicarse.
      */

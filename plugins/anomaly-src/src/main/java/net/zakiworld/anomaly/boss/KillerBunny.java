@@ -9,6 +9,7 @@ import net.zakiworld.anomaly.AnomalyPlugin;
 import net.zakiworld.anomaly.core.ActiveAnomaly;
 import net.zakiworld.anomaly.core.Compat;
 import net.zakiworld.anomaly.core.Fx;
+import net.zakiworld.anomaly.core.Glow;
 import net.zakiworld.anomaly.core.Stop;
 import net.zakiworld.anomaly.core.Tags;
 import org.bukkit.Location;
@@ -62,6 +63,7 @@ public final class KillerBunny extends BossFight {
     private boolean hordeCalled;
     private double damageBonus = 1.0;
     private long lastSplit;
+    private long revealUntil;
 
     public KillerBunny(AnomalyPlugin plugin, ActiveAnomaly event, Location where) {
         super(plugin, event, where);
@@ -161,6 +163,7 @@ public final class KillerBunny extends BossFight {
     @Override
     protected void ambient() {
         pruneCopies();
+        tickReveal();
         if (ticks() % 5 != 0 || !alive()) return;
         // Las particulas las sueltan el jefe Y las copias, con el mismo color. Antes solo
         // las tiraba el jefe y eso lo senalaba a distancia, que es justo lo contrario
@@ -178,6 +181,32 @@ public final class KillerBunny extends BossFight {
                             copies.size() >= MAX_COPIES ? NamedTextColor.RED : NamedTextColor.GOLD,
                             TextDecoration.BOLD)));
         }
+    }
+
+    /**
+     * El conejo se delata: brilla en rojo unos segundos.
+     *
+     * Sin esto la pelea era injusta de verdad — no habia forma de saber a cual pegarle
+     * y solo se avanzaba por casualidad. Ahora, cada vez que se compromete con una
+     * habilidad grande, ensena cual es y abre una ventana para castigarlo. Que sea
+     * rojo y no su color es a proposito: canta muchisimo sobre el blanco de las copias.
+     */
+    private void reveal(int seconds) {
+        if (!alive()) return;
+        revealUntil = Math.max(revealUntil, ticks() + seconds * 20L);
+        Glow.apply(boss, NamedTextColor.RED);
+        Compat.spawn(world(), Compat.DUST, boss.getLocation().add(0, 0.6, 0), 24, 0.4, 0.4, 0.4, 0,
+                Compat.dust(BLOOD, 1.5f));
+        soundAt(boss.getLocation(), "entity.rabbit.hurt", 1.1f, 1.5f);
+        warn(Component.text("El de verdad se ha delatado.", NamedTextColor.RED, TextDecoration.BOLD));
+    }
+
+    /** Le apaga el brillo cuando se le pasa el arrebato. */
+    private void tickReveal() {
+        if (revealUntil == 0 || ticks() < revealUntil) return;
+        revealUntil = 0;
+        Glow.clear(boss);
+        if (alive()) boss.setGlowing(false);
     }
 
     // ------------------------------------------------------------ LA MULTIPLICACION
@@ -328,6 +357,7 @@ public final class KillerBunny extends BossFight {
     @Override
     public void onDeath() {
         Location l = loc();
+        Glow.clear(boss);
         soundAt(l, "entity.rabbit.death", 1.8f, 0.5f);
 
         // Al caer el jefe, las copias se deshacen una a una: la plaga se apaga sola.
@@ -387,6 +417,7 @@ public final class KillerBunny extends BossFight {
         Player target = randomTarget();
         if (target == null || !alive()) return;
         Location mark = Fx.ground(target.getLocation(), 4);
+        reveal(4);
 
         soundAt(loc(), "entity.rabbit.jump", 1.5f, 0.9f);
         animate(60, tick -> {
@@ -592,6 +623,7 @@ public final class KillerBunny extends BossFight {
     public void deepBite() {
         Player target = Fx.nearest(loc(), 7);
         if (target == null || !alive()) return;
+        reveal(5);
 
         soundAt(loc(), "entity.rabbit.attack", 1.5f, 0.6f);
         animate(45, tick -> {
@@ -673,6 +705,7 @@ public final class KillerBunny extends BossFight {
     public void furStampede() {
         Player target = randomTarget();
         if (target == null || !alive()) return;
+        reveal(5);
         pruneCopies();
         Location start = boss.getLocation();
         Vector dir = target.getLocation().toVector().subtract(start.toVector()).setY(0);
@@ -709,6 +742,7 @@ public final class KillerBunny extends BossFight {
     /** 12. Salto Lunar: sube muchisimo y cae de golpe, con onda. */
     public void moonLeap() {
         if (!alive()) return;
+        reveal(6);
         Set<UUID> struck = new HashSet<>();
         soundAt(loc(), "entity.rabbit.jump", 1.6f, 0.5f);
         broadcastNear(Component.text("Salta hasta perderse de vista.", ACCENT));
@@ -760,6 +794,7 @@ public final class KillerBunny extends BossFight {
     /** 13. Division Final: se parte hasta llenar el tope de copias de una vez. */
     public void finalDivision() {
         if (!alive()) return;
+        reveal(5);
         pruneCopies();
         int room = MAX_COPIES - copies.size();
         if (room <= 0) {
@@ -785,6 +820,7 @@ public final class KillerBunny extends BossFight {
     public void finalBite() {
         Player target = randomTarget();
         if (target == null || !alive()) return;
+        reveal(6);
 
         soundAt(loc(), "entity.rabbit.attack", 1.8f, 0.4f);
         target.sendActionBar(Component.text("Se te ha agarrado.", NamedTextColor.RED, TextDecoration.BOLD));
@@ -812,6 +848,7 @@ public final class KillerBunny extends BossFight {
     /** 15. Devorar: se come una copia y se cura con ella. */
     public void devour() {
         if (!alive()) return;
+        reveal(4);
         pruneCopies();
         if (copies.isEmpty()) return;
         Rabbit prey = copies.get(random.nextInt(copies.size()));

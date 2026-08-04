@@ -7,6 +7,7 @@ import net.zakiworld.anomaly.boss.Ability;
 import net.zakiworld.anomaly.boss.BossFight;
 import net.zakiworld.anomaly.boss.KillerBunny;
 import net.zakiworld.anomaly.boss.ScreamingGoat;
+import net.zakiworld.anomaly.boss.StormRider;
 import net.zakiworld.anomaly.boss.SepulchralKnight;
 import org.bukkit.Location;
 import org.bukkit.Material;
@@ -34,6 +35,7 @@ public final class AnomalyRegistry {
         register(new KnightType());
         register(new GoatType());
         register(new BunnyType());
+        register(new RiderType());
     }
 
     public void register(AnomalyType type) {
@@ -54,6 +56,10 @@ public final class AnomalyRegistry {
 
     public AnomalyType bunny() {
         return types.get(KillerBunny.ID);
+    }
+
+    public AnomalyType rider() {
+        return types.get(StormRider.ID);
     }
 
     public List<AnomalyType> all() {
@@ -481,7 +487,8 @@ public final class AnomalyRegistry {
                     "SE MULTIPLICA cada vez que muerde, hasta 20 copias",
                     "Cuantas mas copias vivas, menos dano recibe el grande",
                     "No brilla, no avisa y no lleva nombre encima",
-                    "Sus copias son identicas: mismo tamano y mismo nombre");
+                    "Sus copias son identicas: mismo tamano y mismo nombre",
+                    "Solo se delata, en ROJO, al lanzar sus golpes grandes");
         }
 
         @Override
@@ -573,6 +580,157 @@ public final class AnomalyRegistry {
 
     private static KillerBunny bunny(BossFight fight) {
         return (KillerBunny) fight;
+    }
+
+
+    // -------------------------------------------------------------- el Storm Rider
+
+    /** Ficha del Storm Rider. */
+    public final class RiderType implements AnomalyType {
+
+        @Override
+        public String id() {
+            return StormRider.ID;
+        }
+
+        @Override
+        public String display() {
+            return plugin.getConfig().getString("anomalias." + id() + ".nombre", "Storm Rider");
+        }
+
+        @Override
+        public TextColor color() {
+            return StormRider.ACCENT;
+        }
+
+        @Override
+        public NamedTextColor glowColor() {
+            return NamedTextColor.AQUA;
+        }
+
+        /** Viento: necesita cielo abierto y altura, que es donde pelea la primera fase. */
+        @Override
+        public Element element() {
+            return Element.VIENTO;
+        }
+
+        @Override
+        public Material icon() {
+            Material m = Material.matchMaterial("TRIDENT");
+            return m != null ? m : Material.PHANTOM_MEMBRANE;
+        }
+
+        @Override
+        public String tagline() {
+            return "Ahogado con tridente sobre un phantom gigante";
+        }
+
+        @Override
+        public List<String> origin() {
+            return List.of(
+                    "Se ahogo persiguiendo una tormenta y la tormenta",
+                    "no lo solto: le devolvio el tridente y le dio",
+                    "algo con lo que volar. Desde entonces cabalga",
+                    "el frente de cada temporal buscando la orilla",
+                    "en la que se quedo sin aire.");
+        }
+
+        @Override
+        public List<String> threat() {
+            return List.of(
+                    "Elemento de viento: cumbres y cielo abierto",
+                    "FASE I: vuela alto, la espada casi no le hace nada",
+                    "FASE II: cae al suelo y pelea con el tridente",
+                    "FASE III: dos tridentes y modo berserker, fragil pero brutal");
+        }
+
+        @Override
+        public double baseHealth() {
+            return 1700;
+        }
+
+        @Override
+        public int arenaRadius() {
+            return 26;
+        }
+
+        @Override
+        public List<Ability> abilities() {
+            return riderAbilities();
+        }
+
+        @Override
+        public BossFight create(AnomalyPlugin plugin, ActiveAnomaly event, Location where) {
+            return new StormRider(plugin, event, where);
+        }
+    }
+
+    /**
+     * Las 15 habilidades del Storm Rider, repartidas muy desigualmente a proposito:
+     * la fase del aire es larga y a distancia, la del suelo es corta y directa, y la
+     * berserker es una tromba.
+     */
+    public List<Ability> riderAbilities() {
+        List<Ability> list = new ArrayList<>();
+
+        // --- Fase I: desde el aire
+        add(list, "lanza_tormenta", "Lanza de Tormenta", 1, 160, 50, 5,
+                "Arroja el tridente contra hasta tres jugadores.",
+                icon("TRIDENT", "ARROW"), f -> rider(f).stormJavelin());
+        add(list, "picado", "Picado", 1, 240, 80, 4,
+                "Se lanza en vertical sobre una marca y vuelve a subir.",
+                icon("PHANTOM_MEMBRANE", "FEATHER"), f -> rider(f).divebomb());
+        add(list, "ojo_huracan", "Ojo del Huracan", 1, 380, 140, 3,
+                "Un remolino que arrastra a todos hacia el centro durante siete segundos.",
+                icon("WIND_CHARGE", "GLASS_BOTTLE"), f -> rider(f).hurricaneEye());
+        add(list, "descarga", "Descarga", 1, 300, 120, 4,
+                "Rayos sobre marcas que persiguen a cada jugador.",
+                icon("LIGHTNING_ROD", "COPPER_INGOT"), f -> rider(f).discharge());
+        add(list, "bandada", "Bandada", 1, 560, 60, 2,
+                "Llama de tres a cinco phantoms menores que hostigan desde arriba.",
+                icon("PHANTOM_SPAWN_EGG", "PHANTOM_MEMBRANE"), f -> rider(f).flock());
+        add(list, "viento_cortante", "Viento Cortante", 1, 260, 90, 4,
+                "Cuchillas de aire que barren el suelo desde el cielo.",
+                icon("SHEARS", "FLINT"), f -> rider(f).windBlades());
+
+        // --- Fase II: a pie (lote corto a proposito)
+        add(list, "barrido_tridente", "Barrido de Tridente", 2, 150, 40, 5,
+                "Un arco amplio a ras de suelo con el tridente por delante.",
+                icon("TRIDENT", "IRON_SWORD"), f -> rider(f).tridentSweep());
+        add(list, "maremoto", "Maremoto", 2, 260, 70, 4,
+                "Una ola que sale de el y barre once bloques a la redonda.",
+                icon("WATER_BUCKET", "PRISMARINE_SHARD"), f -> rider(f).tidalWave());
+        add(list, "ancla", "Ancla de Tormenta", 2, 220, 50, 4,
+                "Arponea al que mas se aleja y lo trae de vuelta.",
+                icon("CHAIN", "IRON_INGOT"), f -> rider(f).stormAnchor());
+        add(list, "carga_marea", "Carga de Marea", 2, 230, 60, 4,
+                "Embiste en linea recta con el tridente por delante.",
+                icon("HEART_OF_THE_SEA", "PRISMARINE_CRYSTALS"), f -> rider(f).tideCharge());
+
+        // --- Fase III: berserker
+        add(list, "frenesi_tridentes", "Frenesi de Tridentes", 3, 200, 80, 5,
+                "Una tanda de golpes rapidisimos con los dos tridentes a la vez.",
+                icon("TRIDENT", "IRON_SWORD"), f -> rider(f).tridentFrenzy());
+        add(list, "doble_tajo", "Doble Tajo", 3, 180, 50, 5,
+                "Dos cortes cruzados, uno con cada mano.",
+                icon("TRIDENT", "IRON_AXE"), f -> rider(f).crossSlash());
+        add(list, "tormenta_perfecta", "Tormenta Perfecta", 3, 400, 150, 3,
+                "Rayos, viento y embestidas a la vez durante siete segundos y medio.",
+                icon("BEACON", "LIGHTNING_ROD"), f -> rider(f).perfectStorm());
+        add(list, "salto_trueno", "Salto del Trueno", 3, 260, 80, 4,
+                "Salta y cae sobre la marca con un rayo encima.",
+                icon("NETHERITE_BOOTS", "IRON_BOOTS"), f -> rider(f).thunderJump());
+
+        // --- Cualquier fase
+        add(list, "relampago_guia", "Relampago Guia", 0, 300, 70, 3,
+                "Marca a uno y le cae el rayo donde este seis segundos despues.",
+                icon("TARGET", "REDSTONE"), f -> rider(f).guidingBolt());
+
+        return list;
+    }
+
+    private static StormRider rider(BossFight fight) {
+        return (StormRider) fight;
     }
 
     private static SepulchralKnight knight(BossFight fight) {

@@ -35,3 +35,7 @@ anomalias:
     experiencia: 850
     comandos: []
     botin: {}
+  storm_rider:
+    experiencia: 1000
+    comandos: []
+    botin: {}

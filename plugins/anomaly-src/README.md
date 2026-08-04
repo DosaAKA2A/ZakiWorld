@@ -8,7 +8,7 @@ La intención de fondo es empujar a la gente a **salir del spawn** y a **pelear 
 el jefe escala con el número de jugadores, varias habilidades castigan dispersarse y el
 botín se reparte entre todos los que participaron, no solo entre quien da el último golpe.
 
-- **Versión:** 1.3.1
+- **Versión:** 1.4.0
 - **Paquete:** `net.zakiworld.anomaly`
 - **Probado contra:** Paper 26.1.2 (MC 26.1.2), compilado con `--release 21`
 - **Permiso único:** `anomaly.gui` (`default: op`)
@@ -230,6 +230,37 @@ Transiciones: **ojos rojos** (I → II, saca cuatro copias y muerde más fuerte)
 
 ---
 
+## Storm Rider
+
+Un ahogado con tridente montado en un **phantom gigante**. El tamaño es real, no un truco
+de partículas: `Phantom#setSize(8)` escala el modelo **y la caja de golpe**, y
+`setAnchorLocation` lo mantiene sobrevolando la arena en vez de irse a dar una vuelta.
+Elemento **viento** (cumbres y cielo abierto), brillo **aqua**.
+
+Tres fases deliberadamente desiguales:
+
+- **Fase I — desde el aire.** Vuela a trece bloques y el cuerpo a cuerpo le hace un **20 %**
+  del daño; las flechas entran enteras. Es lo que obliga a pelearla con arco. Seis
+  habilidades: Lanza de Tormenta, Picado, Ojo del Huracán, Descarga, Bandada, Viento Cortante.
+- **Fase II — a pie.** El phantom se parte y el jinete cae con un rayo encima. Repertorio
+  corto a propósito: Barrido de Tridente, Maremoto, Ancla de Tormenta, Carga de Marea.
+- **Fase III — berserker.** Saca el **segundo tridente**, sube velocidad de ataque a 4.0,
+  movimiento a 0.52 y daño a 20. Frenesí de Tridentes, Doble Tajo, Tormenta Perfecta,
+  Salto del Trueno.
+
+Y en cualquier fase, Relámpago Guía.
+
+**"Menos vida" en la fase 3 se hace subiendo el daño que recibe (×1.6), no bajándole la
+vida máxima.** Bajársela le subiría la fracción de vida y lo devolvería a la fase 2, y el
+combate entraría en bucle — el mismo trampa que con la resurrección del Caballero. El
+efecto para quien pelea es idéntico: dura mucho menos.
+
+Los tridentes que lanza se quedan clavados y se pueden recoger, lo que en un survival es
+una fábrica de tridentes gratis. Se les quita la recogida y se marcan para que la limpieza
+final se los lleve.
+
+---
+
 ## Decisiones que conviene no deshacer
 
 - **Vida por encima de 1024.** El atributo `max_health` de Minecraft topa en 1024 y pasarse
@@ -283,7 +314,7 @@ No hay Maven en el PATH. Con el JDK 25 portátil y `paper-api 26.1.2`:
 
 ```
 javac --release 21 -encoding UTF-8 -cp "<paper-api + libs del servidor>" -d build @sources
-jar --create --file Anomaly-1.3.1.jar -C build .
+jar --create --file Anomaly-1.4.0.jar -C build .
 ```
 
 El `pom.xml` está para quien tenga Maven; `paper-api` es `provided`.
