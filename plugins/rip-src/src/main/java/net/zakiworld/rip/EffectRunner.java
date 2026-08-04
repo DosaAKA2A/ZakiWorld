@@ -4,9 +4,12 @@
 package net.zakiworld.rip;
 
 import java.awt.Color;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.Iterator;
+import java.util.LinkedHashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
@@ -300,6 +303,40 @@ public final class EffectRunner {
         catch (Throwable ex) {
             return null;
         }
+    }
+
+    private static Location ringPoint(Location base, int index, int count, double radius) {
+        double a = Math.PI * 2 / (double)Math.max(1, count) * (double)index;
+        return base.clone().add(Math.cos(a) * radius, 0.0, Math.sin(a) * radius);
+    }
+
+    private void flashAway(World w, ItemDisplay display) {
+        if (display == null) {
+            return;
+        }
+        Location at = null;
+        float scale = 1.0f;
+        try {
+            if (display.isValid()) {
+                Transformation tr = display.getTransformation();
+                at = display.getLocation().clone().add(0.0, (double)tr.getTranslation().y, 0.0);
+                scale = tr.getScale().x;
+            }
+        }
+        catch (Throwable throwable) {
+            // empty catch block
+        }
+        if (at != null) {
+            boolean big = scale > 3.0f;
+            Compat.spawn(w, Compat.FLASH, at, 1);
+            Compat.spawn(w, Compat.END_ROD, at, big ? 40 : 14, big ? 0.5 : 0.18, big ? 0.7 : 0.3, big ? 0.5 : 0.18, big ? 0.12 : 0.05);
+            Compat.spawn(w, Compat.ELECTRIC_SPARK, at, big ? 26 : 9, big ? 0.4 : 0.2, big ? 0.6 : 0.3, big ? 0.4 : 0.2, big ? 0.15 : 0.08);
+            Compat.sound(w, at, "block.amethyst_block.chime", big ? 1.2f : 0.6f, big ? 0.8f : (float)EffectRunner.rnd(1.3, 1.8));
+            if (big) {
+                Compat.sound(w, at, "entity.illusioner.mirror_move", 1.0f, 0.7f);
+            }
+        }
+        this.discard((Entity)display);
     }
 
     private void shrinkAndDiscard(ItemDisplay display, int ticks) {
@@ -1050,20 +1087,24 @@ public final class EffectRunner {
             }
         }
         LivingEntity frozen = clone;
-        Set<ItemDisplay> swords = Collections.synchronizedSet(new HashSet<ItemDisplay>());
-        ThreadLocalRandom rng = ThreadLocalRandom.current();
+        Set<ItemDisplay> swords = Collections.synchronizedSet(new LinkedHashSet<ItemDisplay>());
         if (frozen != null) {
             this.circle(base.clone().add(0.0, 0.2, 0.0), 1.0, 14, p -> Compat.spawn(w, Compat.ENCHANT, p, 2, 0.05, 0.3, 0.05, 0.4));
             Compat.sound(w, base, "block.respawn_anchor.charge", 1.0f, 0.6f);
             Compat.sound(w, base, "entity.elder_guardian.curse", 0.5f, 1.4f);
         }
         this.animate(190, 1L, t -> {
-            if (t >= 8 && t <= 68 && (t - 8) % 6 == 0) {
-                double a = rng.nextDouble(Math.PI * 2);
-                double r = EffectRunner.rnd(0.9, 2.5);
-                Location ground = base.clone().add(Math.cos(a) * r, 0.0, Math.sin(a) * r);
+            if (t >= 4 && t <= 70 && (t - 4) % 6 == 0) {
+                Location origin = EffectRunner.ringPoint(base, (t - 4) / 6, 12, 2.2).add(0.0, 13.0, 0.0);
+                Compat.spawn(w, Compat.CLOUD, origin, 12, 0.35, 0.15, 0.35, 0.01);
+                Compat.spawn(w, Compat.LARGE_SMOKE, origin, 5, 0.25, 0.1, 0.25, 0.0);
+            }
+            if (t >= 8 && t <= 74 && (t - 8) % 6 == 0) {
+                int i = (t - 8) / 6;
+                double a = Math.PI * 2 / 12.0 * (double)i;
+                Location ground = EffectRunner.ringPoint(base, i, 12, 2.2);
                 int fallTicks = 7;
-                ItemDisplay sword = this.fallingItem(w, ground, new ItemStack(Material.GOLDEN_SWORD), 1.4f, (float)rng.nextDouble(Math.PI * 2), (float)Math.toRadians(EffectRunner.rnd(-12.0, 12.0)), 13.0, 0.85, fallTicks);
+                ItemDisplay sword = this.fallingItem(w, ground, new ItemStack(Material.GOLDEN_SWORD), 1.4f, (float)(-a), 0.0f, 13.0, 0.85, fallTicks);
                 if (sword != null) {
                     swords.add(sword);
                     this.later((long)fallTicks + 2L, () -> {
@@ -1082,8 +1123,13 @@ public final class EffectRunner {
                 Compat.sound(w, c, "entity.lightning_bolt.thunder", 0.6f, 0.5f);
                 Compat.spawn(w, Compat.FLASH, c.clone().add(0.0, 12.0, 0.0), 1);
             }
-            if (t == 90) {
-                int fallTicks = 11;
+            if (t >= 85 && t <= 92 && t % 2 == 0) {
+                Location sky = base.clone().add(0.0, 24.0, 0.0);
+                Compat.spawn(w, Compat.CLOUD, sky, 26, 1.1, 0.3, 1.1, 0.02);
+                Compat.spawn(w, Compat.LARGE_SMOKE, sky, 12, 0.9, 0.25, 0.9, 0.01);
+            }
+            if (t == 93) {
+                int fallTicks = 8;
                 ItemDisplay giant = this.fallingItem(w, base.clone(), new ItemStack(Material.GOLDEN_SWORD), 6.0f, 0.6f, 0.0f, 24.0, 2.6, fallTicks);
                 if (giant != null) {
                     swords.add(giant);
@@ -1122,13 +1168,16 @@ public final class EffectRunner {
                 });
             }
             if (t == 160) {
+                List<ItemDisplay> pending;
                 Set set;
                 Set set2 = set = swords;
                 synchronized (set2) {
-                    for (ItemDisplay sword : swords) {
-                        this.shrinkAndDiscard(sword, 12);
-                    }
+                    pending = new ArrayList<ItemDisplay>(swords);
                     swords.clear();
+                }
+                for (int i = 0; i < pending.size(); ++i) {
+                    ItemDisplay sword = pending.get(i);
+                    this.later((long)i * 2L, () -> this.flashAway(w, sword));
                 }
             }
         }, () -> {
