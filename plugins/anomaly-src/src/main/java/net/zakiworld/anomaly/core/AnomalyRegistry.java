@@ -5,6 +5,7 @@ import net.kyori.adventure.text.format.TextColor;
 import net.zakiworld.anomaly.AnomalyPlugin;
 import net.zakiworld.anomaly.boss.Ability;
 import net.zakiworld.anomaly.boss.BossFight;
+import net.zakiworld.anomaly.boss.KillerBunny;
 import net.zakiworld.anomaly.boss.ScreamingGoat;
 import net.zakiworld.anomaly.boss.SepulchralKnight;
 import org.bukkit.Location;
@@ -32,6 +33,7 @@ public final class AnomalyRegistry {
         this.plugin = plugin;
         register(new KnightType());
         register(new GoatType());
+        register(new BunnyType());
     }
 
     public void register(AnomalyType type) {
@@ -48,6 +50,10 @@ public final class AnomalyRegistry {
 
     public AnomalyType goat() {
         return types.get(ScreamingGoat.ID);
+    }
+
+    public AnomalyType bunny() {
+        return types.get(KillerBunny.ID);
     }
 
     public List<AnomalyType> all() {
@@ -84,6 +90,22 @@ public final class AnomalyRegistry {
 
     public void setHealth(AnomalyType type, double value) {
         plugin.settings().set("anomalias." + type.id() + ".vida", Math.round(Fx.clamp(value, 100, 20000)));
+    }
+
+    /**
+     * Multiplicador del dano de TODAS las habilidades de esta anomalia. 1.0 es el
+     * valor de diseno; subirlo o bajarlo mueve el jefe entero de golpe, sin tener que
+     * tocar habilidad por habilidad.
+     *
+     * No afecta al golpe cuerpo a cuerpo normal, que es un atributo de la entidad.
+     */
+    public double damageMultiplier(AnomalyType type) {
+        return Fx.clamp(plugin.getConfig().getDouble("anomalias." + type.id() + ".dano", 1.0), 0.1, 5.0);
+    }
+
+    public void setDamageMultiplier(AnomalyType type, double value) {
+        plugin.settings().set("anomalias." + type.id() + ".dano",
+                Math.round(Fx.clamp(value, 0.1, 5.0) * 10.0) / 10.0);
     }
 
     /**
@@ -398,6 +420,155 @@ public final class AnomalyRegistry {
 
     private static ScreamingGoat goat(BossFight fight) {
         return (ScreamingGoat) fight;
+    }
+
+
+    // ----------------------------------------------------------- el Conejo Asesino
+
+    /** Ficha del Conejo Asesino. */
+    public final class BunnyType implements AnomalyType {
+
+        @Override
+        public String id() {
+            return KillerBunny.ID;
+        }
+
+        @Override
+        public String display() {
+            return plugin.getConfig().getString("anomalias." + id() + ".nombre", "Conejo Asesino");
+        }
+
+        @Override
+        public TextColor color() {
+            return KillerBunny.ACCENT;
+        }
+
+        /** Sin brillo a proposito: esta anomalia no se ve venir. */
+        @Override
+        public NamedTextColor glowColor() {
+            return null;
+        }
+
+        @Override
+        public Element element() {
+            return Element.TIERRA;
+        }
+
+        @Override
+        public Material icon() {
+            Material m = Material.matchMaterial("RABBIT_FOOT");
+            return m != null ? m : Material.RABBIT_HIDE;
+        }
+
+        @Override
+        public String tagline() {
+            return "Muerde y se multiplica; no brilla, no avisa";
+        }
+
+        @Override
+        public List<String> origin() {
+            return List.of(
+                    "En el Aether corria una liebre blanca que nadie",
+                    "conseguia contar dos veces igual. Cada mordisco",
+                    "que daba le salia otra, y otra, y otra.",
+                    "Aqui hace lo mismo, y aqui tampoco se deja contar.");
+        }
+
+        @Override
+        public List<String> threat() {
+            return List.of(
+                    "Elemento de tierra: campo abierto y seco",
+                    "SE MULTIPLICA cada vez que muerde, hasta 20 copias",
+                    "Cuantas mas copias vivas, menos dano recibe el grande",
+                    "No brilla ni levanta pilar: solo tienes las coordenadas");
+        }
+
+        @Override
+        public double baseHealth() {
+            return 1500;
+        }
+
+        @Override
+        public int arenaRadius() {
+            return 22;
+        }
+
+        @Override
+        public List<Ability> abilities() {
+            return bunnyAbilities();
+        }
+
+        @Override
+        public BossFight create(AnomalyPlugin plugin, ActiveAnomaly event, Location where) {
+            return new KillerBunny(plugin, event, where);
+        }
+    }
+
+    /**
+     * Las 15 habilidades del Conejo. Casi todas giran alrededor de lo mismo: llenar la
+     * arena de copias y obligar al grupo a repartirse entre limpiarlas y pegarle al grande.
+     */
+    public List<Ability> bunnyAbilities() {
+        List<Ability> list = new ArrayList<>();
+
+        // --- Fase I: la plaga
+        add(list, "camada", "Camada", 1, 200, 30, 4,
+                "Se parte en tres de golpe, sin necesidad de morder a nadie.",
+                icon("RABBIT_HIDE", "WHITE_WOOL"), f -> bunny(f).litter());
+        add(list, "salto_asesino", "Salto Asesino", 1, 170, 60, 5,
+                "Se lanza sobre alguien desde arriba y cae encima.",
+                icon("RABBIT_FOOT", "FEATHER"), f -> bunny(f).killerLeap());
+        add(list, "madriguera", "Madriguera", 1, 260, 70, 3,
+                "Se hunde en el suelo y sale al lado del que mas se ha alejado.",
+                icon("ROOTED_DIRT", "DIRT"), f -> bunny(f).burrow());
+        add(list, "zigzag", "Carrera en Zigzag", 1, 190, 80, 4,
+                "Cruza la arena a saltos cortos y sin linea recta.",
+                icon("SUGAR", "FEATHER"), f -> bunny(f).zigzag());
+        add(list, "patada_trasera", "Patada Trasera", 1, 150, 35, 4,
+                "Una coz que manda al mas cercano al otro lado de la arena.",
+                icon("LEATHER_BOOTS", "IRON_BOOTS"), f -> bunny(f).backKick());
+
+        // --- Fase II: la marea
+        add(list, "enjambre", "Enjambre", 2, 260, 70, 4,
+                "Todas las copias se lanzan a la vez sobre el mismo jugador.",
+                icon("BEEHIVE", "HONEYCOMB"), f -> bunny(f).swarm());
+        add(list, "frenesi", "Frenesi", 2, 340, 120, 3,
+                "El conejo y todas sus copias se vuelven mucho mas rapidos.",
+                icon("SUGAR", "REDSTONE"), f -> bunny(f).frenzy());
+        add(list, "mordisco_profundo", "Mordisco Profundo", 2, 200, 45, 4,
+                "Un bocado que sigue sangrando seis segundos.",
+                icon("RABBIT", "BEEF"), f -> bunny(f).deepBite());
+        add(list, "campo_madrigueras", "Campo de Madrigueras", 2, 380, 160, 3,
+                "Nueve agujeros por la arena; pisar uno duele y frena.",
+                icon("ROOTED_DIRT", "COARSE_DIRT"), f -> bunny(f).burrowField());
+        add(list, "zarpazo", "Zarpazo Giratorio", 2, 170, 50, 4,
+                "Gira sobre si mismo repartiendo zarpazos a todo lo que toca.",
+                icon("SHEARS", "FLINT"), f -> bunny(f).spinClaw());
+
+        // --- Fase III: la horda
+        add(list, "estampida_pelaje", "Estampida de Pelaje", 3, 300, 70, 4,
+                "La horda entera cruza la arena en linea recta.",
+                icon("WHITE_WOOL", "RABBIT_HIDE"), f -> bunny(f).furStampede());
+        add(list, "salto_lunar", "Salto Lunar", 3, 320, 100, 4,
+                "Sube hasta perderse de vista y cae con una onda de nueve bloques.",
+                icon("PHANTOM_MEMBRANE", "FEATHER"), f -> bunny(f).moonLeap());
+        add(list, "division_final", "Division Final", 3, 420, 60, 3,
+                "Se parte hasta llenar el tope de veinte copias de una sentada.",
+                icon("RABBIT_STEW", "RABBIT_HIDE"), f -> bunny(f).finalDivision());
+        add(list, "mordida_final", "Mordida Final", 3, 260, 80, 4,
+                "Se agarra a uno y le va arrancando trozos hasta que lo suelten.",
+                icon("RABBIT_FOOT", "BONE"), f -> bunny(f).finalBite());
+
+        // --- Cualquier fase
+        add(list, "devorar", "Devorar", 0, 300, 50, 2,
+                "Se come una de sus copias y se cura un 5% con ella.",
+                icon("COOKED_RABBIT", "RABBIT"), f -> bunny(f).devour());
+
+        return list;
+    }
+
+    private static KillerBunny bunny(BossFight fight) {
+        return (KillerBunny) fight;
     }
 
     private static SepulchralKnight knight(BossFight fight) {

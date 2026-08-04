@@ -79,11 +79,19 @@ anomalias:
   caballero_sepulcral:
     activa: true
     vida: 1400
+    dano: 1.0
     nombre: 'Caballero Sepulcral'
   cabra_gritona:
     activa: true
     vida: 1600
+    # Multiplicador del dano de TODAS sus habilidades. 1.0 es lo de diseno.
+    dano: 1.0
     nombre: 'Cabra Gritona'
+  conejo_asesino:
+    activa: true
+    vida: 1500
+    dano: 1.0
+    nombre: 'Conejo Asesino'
 
 menu:
   # La anomalia que abre el boton Iniciar del panel.

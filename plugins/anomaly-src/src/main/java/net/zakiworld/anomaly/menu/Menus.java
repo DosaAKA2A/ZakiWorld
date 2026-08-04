@@ -280,8 +280,11 @@ public final class Menus implements Listener {
             lore.add(Component.text("Elemento  ", MenuUtil.LABEL)
                     .append(Component.text(type.element().display(), type.element().color(), TextDecoration.BOLD))
                     .append(Component.text("   " + type.element().terrain(), MenuUtil.DIM)));
-            lore.add(Component.text("Brillo  ", MenuUtil.LABEL)
-                    .append(Component.text("■ " + type.glowColor().toString(), type.glowColor())));
+            lore.add(type.glowColor() == null
+                    ? Component.text("Brillo  ", MenuUtil.LABEL)
+                            .append(Component.text("ninguno, aparece por sorpresa", MenuUtil.DIM))
+                    : Component.text("Brillo  ", MenuUtil.LABEL)
+                            .append(Component.text("■ " + type.glowColor().toString(), type.glowColor())));
             lore.add(MenuUtil.blank());
             lore.add(Component.text("DE DONDE VIENE", NamedTextColor.WHITE, TextDecoration.BOLD));
             for (String s : type.origin()) lore.add(Component.text(s, MenuUtil.SOFT));
@@ -345,28 +348,40 @@ public final class Menus implements Listener {
                 Component.text("Pagina siguiente ▶", NamedTextColor.YELLOW),
                 List.of(Component.text("Pagina " + (page + 2) + " de " + pages, MenuUtil.SOFT))) : MenuUtil.pane());
 
-        // Control de vida del jefe, aqui y no en la lista: es un ajuste de ESTA anomalia.
+        // Los dos ajustes de ESTA anomalia. Una casilla cada uno, con izquierda para
+        // subir y derecha para bajar, igual que en la pantalla de Ajustes.
         double health = plugin.registry().health(type);
-        inv.setItem(46, MenuUtil.simple(Material.REDSTONE,
-                Component.text("− Vida del jefe", NamedTextColor.RED),
-                List.of(MenuUtil.line("Baja 100. Con shift, 500."))));
         inv.setItem(47, MenuUtil.icon(Material.GOLDEN_APPLE,
                 MenuUtil.title("Vida del jefe", MenuUtil.GOLD),
                 List.of(
                         MenuUtil.field("Vida base", String.valueOf((int) health), NamedTextColor.GREEN),
+                        MenuUtil.field("Con 5 jugadores",
+                                String.valueOf((int) plugin.registry().scaledHealth(type, 5)), NamedTextColor.WHITE),
+                        MenuUtil.blank(),
                         MenuUtil.line("Sube un " + Math.round(plugin.settings().healthPerPlayer() * 100)
                                 + "% por cada jugador de mas."),
+                        MenuUtil.line("Por encima de 1024 el resto se cobra bajandole"),
+                        MenuUtil.line("el dano que recibe; para quien pelea es igual."),
                         MenuUtil.blank(),
-                        MenuUtil.field("Con 5 jugadores",
-                                ((int) plugin.registry().scaledHealth(type, 5)) + " de vida", NamedTextColor.WHITE),
+                        MenuUtil.action("Click izquierdo: +100"),
+                        Component.text("► Click derecho: -100", NamedTextColor.YELLOW),
+                        Component.text("► Shift para pasos de 500", NamedTextColor.GRAY)), false));
+
+        double dmg = plugin.registry().damageMultiplier(type);
+        inv.setItem(51, MenuUtil.icon(Material.IRON_SWORD,
+                MenuUtil.title("Dano de las habilidades", MenuUtil.GOLD),
+                List.of(
+                        MenuUtil.field("Multiplicador", "x" + dmg,
+                                dmg > 1.0 ? NamedTextColor.RED
+                                        : dmg < 1.0 ? NamedTextColor.GREEN : NamedTextColor.WHITE),
                         MenuUtil.blank(),
-                        MenuUtil.line("Por encima de 1024 el jefe no aguanta mas"),
-                        MenuUtil.line("vida real, asi que el resto se cobra"),
-                        MenuUtil.line("bajandole el dano que recibe. El efecto"),
-                        MenuUtil.line("para quien pelea es el mismo.")), false));
-        inv.setItem(52, MenuUtil.simple(Material.GLOWSTONE_DUST,
-                Component.text("+ Vida del jefe", NamedTextColor.GREEN),
-                List.of(MenuUtil.line("Sube 100. Con shift, 500."))));
+                        MenuUtil.line("Afecta a TODAS las habilidades de esta"),
+                        MenuUtil.line("anomalia a la vez. 1.0 es lo de diseno."),
+                        MenuUtil.line("No toca el golpe cuerpo a cuerpo normal."),
+                        MenuUtil.blank(),
+                        MenuUtil.action("Click izquierdo: +0.1"),
+                        Component.text("► Click derecho: -0.1", NamedTextColor.YELLOW),
+                        Component.text("► Shift para pasos de 0.5", NamedTextColor.GRAY)), dmg != 1.0));
     }
 
     // ---------------------------------------------------------------------- botin
@@ -546,7 +561,8 @@ public final class Menus implements Listener {
             }
             case ABILITIES -> {
                 lore.add(MenuUtil.line("Todo lo que sabe hacer esta anomalia,"));
-                lore.add(MenuUtil.line("y abajo la vida base del jefe."));
+                lore.add(MenuUtil.line("y abajo su vida base y el multiplicador"));
+                lore.add(MenuUtil.line("de dano de todas sus habilidades."));
                 lore.add(MenuUtil.line("Cada habilidad avisa antes de golpear:"));
                 lore.add(MenuUtil.line("la marca en el suelo es la senal."));
             }
@@ -724,13 +740,24 @@ public final class Menus implements Listener {
             open(player, Screen.ABILITIES, holder.page + 1, holder.context, false);
             return;
         }
-        if (slot == 46 || slot == 52) {
-            int step = (event.isShiftClick() ? 500 : 100) * (slot == 52 ? 1 : -1);
+        boolean up = event.isLeftClick();
+        if (slot == 47) {
+            int step = (event.isShiftClick() ? 500 : 100) * (up ? 1 : -1);
             plugin.registry().setHealth(type, plugin.registry().health(type) + step);
-            click(player, slot == 52 ? 1.4f : 0.9f);
+            click(player, up ? 1.4f : 0.9f);
             player.sendActionBar(Component.text("Vida base de " + type.display() + "  ", MenuUtil.SOFT)
                     .append(Component.text((int) plugin.registry().health(type), NamedTextColor.GREEN,
                             TextDecoration.BOLD)));
+            render(event.getInventory(), player, holder);
+            return;
+        }
+        if (slot == 51) {
+            double step = (event.isShiftClick() ? 0.5 : 0.1) * (up ? 1 : -1);
+            plugin.registry().setDamageMultiplier(type, plugin.registry().damageMultiplier(type) + step);
+            click(player, up ? 1.4f : 0.9f);
+            player.sendActionBar(Component.text("Dano de " + type.display() + "  ", MenuUtil.SOFT)
+                    .append(Component.text("x" + plugin.registry().damageMultiplier(type),
+                            NamedTextColor.GOLD, TextDecoration.BOLD)));
             render(event.getInventory(), player, holder);
         }
     }

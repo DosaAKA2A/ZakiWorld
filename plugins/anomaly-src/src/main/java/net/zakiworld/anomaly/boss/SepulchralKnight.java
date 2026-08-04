@@ -79,7 +79,8 @@ public final class SepulchralKnight extends BossFight {
     }
 
     /** Multiplicador de dano RECIBIDO. Sube si le rompen las anclas. */
-    public double vulnerability() {
+    @Override
+    public double incomingDamageMultiplier() {
         return vulnerability;
     }
 

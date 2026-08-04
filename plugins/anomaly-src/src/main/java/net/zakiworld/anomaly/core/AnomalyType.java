@@ -28,11 +28,15 @@ public interface AnomalyType {
     TextColor color();
 
     /**
-     * El color del brillo del jefe. Cada anomalia tiene el suyo y es como se la
-     * reconoce de lejos: el contorno se ve a traves de las paredes.
+     * El color del brillo del jefe: el contorno se ve a traves de las paredes y es
+     * como se la reconoce de lejos.
      *
      * Tiene que ser un color con nombre porque Minecraft saca el brillo del equipo de
      * marcador, y los equipos solo admiten los dieciseis colores clasicos.
+     *
+     * Devolver null es una decision de diseno, no un descuido: esa anomalia no brilla
+     * ni levanta pilar de luz. Solo se sabe donde esta por las coordenadas del anuncio,
+     * y cuando llegas ya te tiene encima.
      */
     NamedTextColor glowColor();
 

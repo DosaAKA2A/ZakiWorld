@@ -8,7 +8,7 @@ La intención de fondo es empujar a la gente a **salir del spawn** y a **pelear 
 el jefe escala con el número de jugadores, varias habilidades castigan dispersarse y el
 botín se reparte entre todos los que participaron, no solo entre quien da el último golpe.
 
-- **Versión:** 1.2.0
+- **Versión:** 1.3.0
 - **Paquete:** `net.zakiworld.anomaly`
 - **Probado contra:** Paper 26.1.2 (MC 26.1.2), compilado con `--release 21`
 - **Permiso único:** `anomaly.gui` (`default: op`)
@@ -42,8 +42,12 @@ Alias: `/anomalia`, `/anom`.
 - **Anomalías** — click para elegirla, click derecho para abrir su ficha,
   shift para encenderla o apagarla.
 - **Ficha** — todas sus habilidades (fase, duración, enfriamiento y qué hace) y abajo
-  la **vida base del jefe**, con − y + de 100 (500 con shift). El menú enseña también
-  cuánta vida tendría con cinco jugadores, que es lo que de verdad importa al calibrar.
+  los dos mandos de esa anomalía, izquierda para subir y derecha para bajar:
+  - **Vida del jefe** — ±100 (±500 con shift). Enseña también cuánta vida tendría con
+    cinco jugadores, que es el número que de verdad importa al calibrar.
+  - **Daño de las habilidades** — un multiplicador que afecta a **todas** las habilidades
+    de esa anomalía a la vez, ±0.1 (±0.5 con shift). Por defecto **1.0**. No toca el golpe
+    cuerpo a cuerpo normal, que es un atributo de la entidad.
 - **Botín** — dos modos. En *colocar*, traes el objeto en el cursor y haces click:
   se guarda una **copia**, no pierdes tu objeto. En *ajustar*, cambias probabilidad,
   cantidad y a quién le toca.
@@ -79,8 +83,12 @@ Cada anomalía declara dos cosas que la definen de un vistazo:
   Sepulcral es de **tierra**.
 - **Brillo** — un color propio, visible **a través del terreno** y a mucha más distancia que
   cualquier partícula. Es en la práctica la forma de encontrar al jefe. El Caballero brilla
-  en **rojo**. Sale del equipo de marcador (Minecraft no deja pintar el contorno de otra
-  forma), por eso tiene que ser uno de los dieciséis colores con nombre.
+  en **rojo** y la Cabra en **blanco**. Sale del equipo de marcador (Minecraft no deja pintar
+  el contorno de otra forma), por eso tiene que ser uno de los dieciséis colores con nombre.
+
+  Una anomalía puede declarar `glowColor()` a **null**, y eso es una decisión de diseño, no
+  un descuido: ni brilla ni levanta pilar de luz. Solo se sabe dónde está por las coordenadas
+  del anuncio, y cuando llegas ya la tienes encima. Es el caso del **Conejo Asesino**.
 
 A eso se suma un **pilar de luz** del mismo color sobre el jefe, que se puede apagar con
 `anuncio.pilar-de-luz` si alguna vez pesa.
@@ -191,6 +199,32 @@ aplica el plugin a mano. Un rayo de verdad prende fuego al terreno y esto es un 
 
 ---
 
+## El Conejo Asesino
+
+El killer bunny del Aether. Su gracia es la de siempre: **cada vez que muerde a alguien
+se multiplica**. La copia también muerde, y también se multiplica, así que la pelea se le
+va de las manos al grupo en segundos si no las limpian.
+
+- **Tope de 20 copias vivas.** No es decorativo: sin él, veinte jugadores mordidos a la
+  vez tiran el servidor.
+- **Cuantas más copias vivas, menos daño recibe el grande** (hasta la mitad). Eso es lo
+  que convierte la multiplicación en una mecánica en vez de en un estorbo: si el grupo se
+  dedica solo al jefe, el jefe casi no baja. Hay que repartirse.
+- **No brilla ni levanta pilar**, por petición expresa. Es la única que aparece por sorpresa.
+- Elemento **tierra**, campo abierto y seco.
+
+| Fase | Habilidades |
+|---|---|
+| I — la plaga | Camada · Salto Asesino · Madriguera · Carrera en Zigzag · Patada Trasera |
+| II — la marea | Enjambre · Frenesí · Mordisco Profundo · Campo de Madrigueras · Zarpazo Giratorio |
+| III — la horda | Estampida de Pelaje · Salto Lunar · División Final · Mordida Final |
+| Cualquiera | Devorar — se come una copia y se cura un 5 % con ella |
+
+Transiciones: **ojos rojos** (I → II, saca cuatro copias y muerde más fuerte) y **la horda**
+(II → III, se parte hasta el tope de golpe). Al morir, las copias se deshacen una a una.
+
+---
+
 ## Decisiones que conviene no deshacer
 
 - **Vida por encima de 1024.** El atributo `max_health` de Minecraft topa en 1024 y pasarse
@@ -219,6 +253,9 @@ aplica el plugin a mano. Un rayo de verdad prende fuego al terreno y esto es un 
   parecían magia, y el Caballero tiene que ser fuerza bruta. Las ondas de choque llevan
   un `Set` de UUID por lanzamiento, porque si no el anillo golpea al mismo jugador un tick
   tras otro mientras lo atraviesa y un solo pisotón lo mata.
+- **El daño de las habilidades pasa todo por `BossFight.hit()`.** Por eso el multiplicador
+  configurable se aplica en un solo sitio. Si alguna habilidad futura llama a `player.damage()`
+  directamente, se saltará el ajuste sin avisar.
 - **Interruptor de empuje.** `combate.permitir-empuje` apaga todo el empuje de golpe, por la
   misma razón por la que se prohibió en las animaciones de Rip.
 
@@ -241,7 +278,7 @@ No hay Maven en el PATH. Con el JDK 25 portátil y `paper-api 26.1.2`:
 
 ```
 javac --release 21 -encoding UTF-8 -cp "<paper-api + libs del servidor>" -d build @sources
-jar --create --file Anomaly-1.2.0.jar -C build .
+jar --create --file Anomaly-1.3.0.jar -C build .
 ```
 
 El `pom.xml` está para quien tenga Maven; `paper-api` es `provided`.

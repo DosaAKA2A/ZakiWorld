@@ -317,9 +317,29 @@ public abstract class BossFight {
         Anim.later(plugin, delay, action);
     }
 
-    /** Dano del jefe a un jugador, atribuido al jefe para que cuente como muerte suya. */
+    /**
+     * Cuanto se multiplica el dano que RECIBE el jefe. Lo usan las anomalias para
+     * volverse mas fragiles o mas duras segun lo que este pasando en la pelea.
+     */
+    public double incomingDamageMultiplier() {
+        return 1.0;
+    }
+
+    /**
+     * Aviso de que el jefe (o uno de sus esbirros) acaba de pegar a un jugador.
+     * Por defecto no hace nada; el Conejo Asesino lo usa para multiplicarse.
+     */
+    public void onDealtDamage(Player victim, org.bukkit.entity.Entity dealer) {
+    }
+
+    /**
+     * Dano de una habilidad a un jugador, atribuido al jefe para que cuente como
+     * muerte suya. Todas las habilidades pasan por aqui, y por eso este es el unico
+     * sitio donde hace falta aplicar el multiplicador configurado.
+     */
     public void hit(Player p, double amount) {
         if (p == null || !Fx.isFightable(p)) return;
+        amount *= plugin.registry().damageMultiplier(event.type());
         try {
             if (boss != null && boss.isValid()) {
                 p.damage(amount, boss);

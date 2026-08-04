@@ -31,3 +31,7 @@ anomalias:
     experiencia: 900
     comandos: []
     botin: {}
+  conejo_asesino:
+    experiencia: 850
+    comandos: []
+    botin: {}

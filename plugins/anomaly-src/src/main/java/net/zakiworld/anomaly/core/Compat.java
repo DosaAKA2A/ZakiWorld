@@ -45,6 +45,7 @@ public final class Compat {
     public static final Particle SCULK_CHARGE_POP = particle("SCULK_CHARGE_POP");
     public static final Particle SNOWFLAKE = particle("SNOWFLAKE");
     public static final Particle NOTE = particle("NOTE");
+    public static final Particle HEART = particle("HEART");
     public static final Particle PORTAL = particle("PORTAL");
     public static final Particle REVERSE_PORTAL = particle("REVERSE_PORTAL");
     public static final Particle END_ROD = particle("END_ROD");

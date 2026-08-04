@@ -24,7 +24,8 @@ public final class Glow {
     }
 
     public static void apply(Entity entity, NamedTextColor color) {
-        if (entity == null) return;
+        // color null = anomalia sin brillo, a proposito. Ni se enciende ni entra a un equipo.
+        if (entity == null || color == null) return;
         try {
             entity.setGlowing(true);
             Team team = teamFor(color);

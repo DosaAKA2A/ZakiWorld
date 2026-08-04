@@ -5,7 +5,6 @@ import net.kyori.adventure.text.format.NamedTextColor;
 import net.zakiworld.anomaly.AnomalyPlugin;
 import net.zakiworld.anomaly.boss.BossFight;
 import net.zakiworld.anomaly.boss.PhaseBars;
-import net.zakiworld.anomaly.boss.SepulchralKnight;
 import org.bukkit.Chunk;
 import org.bukkit.Location;
 import org.bukkit.command.CommandSender;
@@ -185,6 +184,8 @@ public final class AnomalyManager implements Listener {
      * el sitio como una baliza.
      */
     private void beacon(ActiveAnomaly event, Location where) {
+        // Sin color de brillo no hay pilar: esa anomalia quiere pillarte por sorpresa.
+        if (event.type().glowColor() == null) return;
         Location base = Fx.ground(where, 4);
         var dust = Compat.dust(event.type().glowColor().value(), 2.2f);
         // Pocas particulas y grandes: cada una forzada es un paquete por jugador a la
@@ -285,12 +286,20 @@ public final class AnomalyManager implements Listener {
             // de un detalle interno del plugin.
             event.addDamage(p, e.getFinalDamage());
 
-            double factor = event.fight().damageScale();
-            if (event.fight() instanceof SepulchralKnight knight) {
-                factor *= knight.vulnerability();
-            }
+            double factor = event.fight().damageScale() * event.fight().incomingDamageMultiplier();
             if (factor != 1.0) e.setDamage(e.getDamage() * factor);
             return;
+        }
+
+        // El jefe o uno de los suyos le ha pegado a alguien: hay anomalias que
+        // reaccionan a eso, como el Conejo, que se multiplica en cada mordisco.
+        if (victim instanceof Player hurt
+                && (e.getDamager().equals(boss) || Tags.isMinion(e.getDamager()))) {
+            try {
+                event.fight().onDealtDamage(hurt, e.getDamager());
+            } catch (Throwable t) {
+                plugin.getLogger().warning("Fallo al reaccionar a un golpe del jefe: " + t);
+            }
         }
 
         // Ni el jefe pega a sus esbirros ni ellos a el.
