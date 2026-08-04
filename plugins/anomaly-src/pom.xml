@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+
+  <groupId>net.zakiworld</groupId>
+  <artifactId>Anomaly</artifactId>
+  <version>1.0.0</version>
+  <packaging>jar</packaging>
+  <name>Anomaly</name>
+  <description>Eventos anomalos con jefes por fases para Ederus</description>
+
+  <properties>
+    <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+    <maven.compiler.release>21</maven.compiler.release>
+  </properties>
+
+  <repositories>
+    <repository>
+      <id>papermc</id>
+      <url>https://repo.papermc.io/repository/maven-public/</url>
+    </repository>
+  </repositories>
+
+  <dependencies>
+    <dependency>
+      <groupId>io.papermc.paper</groupId>
+      <artifactId>paper-api</artifactId>
+      <version>26.1.2-R0.1-SNAPSHOT</version>
+      <scope>provided</scope>
+    </dependency>
+    <!--
+      WorldGuard / ProtectionStones NO son dependencias de compilacion a proposito:
+      el hook de protecciones se resuelve entero por reflexion en runtime
+      (net.zakiworld.anomaly.core.Protection), asi el jar compila y arranca
+      aunque el servidor no tenga ninguno de los dos.
+    -->
+  </dependencies>
+
+  <build>
+    <finalName>Anomaly-1.0.0</finalName>
+    <resources>
+      <resource>
+        <directory>src/main/resources</directory>
+        <filtering>false</filtering>
+      </resource>
+    </resources>
+  </build>
+</project>
