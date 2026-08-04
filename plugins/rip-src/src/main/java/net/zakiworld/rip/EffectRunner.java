@@ -30,6 +30,7 @@ import org.bukkit.Material;
 import org.bukkit.NamespacedKey;
 import org.bukkit.Particle;
 import org.bukkit.World;
+import org.bukkit.entity.BlockDisplay;
 import org.bukkit.entity.Display;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.Firework;
@@ -1216,50 +1217,55 @@ public final class EffectRunner {
     }
 
     /*
-     * Enciende (o apaga) el haz de faro DE VERDAD, el que renderiza el cliente.
-     * El motor exige un beacon para dibujarlo, asi que el faro y su base van
-     * ENTERRADOS seis bloques bajo los pies y se abre un hueco de 1x1 por
-     * encima para que la luz salga: a la vista solo queda el haz saliendo del
-     * suelo, sin faro ni plataforma.
+     * Haz de luz con la pinta del de un faro pero SIN faro: son dos entidades
+     * de visualizacion, un nucleo blanco opaco y una envoltura de cristal
+     * translucido, estiradas en vertical y a brillo maximo. Es exactamente
+     * como dibuja el juego el haz del beacon (nucleo + halo), pero al ser
+     * entidades no aparece ningun bloque ni se toca el mundo.
      *
-     * Nada de esto toca el mundo. Son cambios de bloque falsos enviados solo a
-     * los clientes cercanos; al apagarlo se les reenvia el bloque real. Si hay
-     * techo sobre la victima el haz no se vera, igual que un faro normal.
+     * Baja desde arriba: nace con altura cero pegado al techo del haz y se
+     * estira hacia el suelo interpolando en fallTicks.
      */
-    private void beaconBeam(World w, Location feet, boolean on) {
-        Location ground = feet.clone().subtract(0.0, 1.0, 0.0).getBlock().getLocation();
-        int depth = 6;
-        int floor = w.getMinHeight() + 2;
-        if (ground.getBlockY() - depth - 1 < floor) {
-            depth = ground.getBlockY() - floor - 1;
-        }
-        if (depth < 2) {
-            return;
-        }
-        Location beacon = ground.clone().subtract(0.0, (double)depth, 0.0);
-        org.bukkit.block.data.BlockData beaconData = Material.BEACON.createBlockData();
-        org.bukkit.block.data.BlockData iron = Material.IRON_BLOCK.createBlockData();
-        org.bukkit.block.data.BlockData air = Material.AIR.createBlockData();
-        for (Player p : Bukkit.getOnlinePlayers()) {
-            if (!p.getWorld().equals(w)) continue;
-            try {
-                if (p.getLocation().distanceSquared(ground) > 9216.0) continue;
-                p.sendBlockChange(beacon, on ? beaconData : beacon.getBlock().getBlockData());
-                for (int dx = -1; dx <= 1; ++dx) {
-                    for (int dz = -1; dz <= 1; ++dz) {
-                        Location b = beacon.clone().add((double)dx, -1.0, (double)dz);
-                        p.sendBlockChange(b, on ? iron : b.getBlock().getBlockData());
-                    }
+    private BlockDisplay beamPart(World w, Location foot, Material mat, float width, float height, int fallTicks) {
+        try {
+            BlockDisplay d = (BlockDisplay)w.spawn(foot, BlockDisplay.class, b -> {
+                b.setBlock(mat.createBlockData());
+                b.setBrightness(new Display.Brightness(15, 15));
+                b.setShadowRadius(0.0f);
+                b.setShadowStrength(0.0f);
+                b.setViewRange(4.0f);
+                b.setPersistent(false);
+                b.setTransformation(new Transformation(new Vector3f(-width / 2.0f, height, -width / 2.0f), new Quaternionf(), new Vector3f(width, 0.0f, width), new Quaternionf()));
+                b.setInterpolationDelay(0);
+                b.setInterpolationDuration(0);
+            });
+            this.tag((Entity)d);
+            this.later(2L, () -> {
+                if (!d.isValid()) {
+                    return;
                 }
-                for (int dy = 1; dy <= depth; ++dy) {
-                    Location b = beacon.clone().add(0.0, (double)dy, 0.0);
-                    p.sendBlockChange(b, on ? air : b.getBlock().getBlockData());
-                }
-            }
-            catch (Throwable throwable) {
-                // empty catch block
-            }
+                d.setInterpolationDelay(0);
+                d.setInterpolationDuration(fallTicks);
+                d.setTransformation(new Transformation(new Vector3f(-width / 2.0f, 0.0f, -width / 2.0f), new Quaternionf(), new Vector3f(width, height, width), new Quaternionf()));
+            });
+            return d;
         }
+        catch (Throwable ex) {
+            return null;
+        }
+    }
+
+    private List<Entity> lightBeam(World w, Location foot, float height, int fallTicks) {
+        ArrayList<Entity> out = new ArrayList<Entity>();
+        BlockDisplay core = this.beamPart(w, foot, Material.WHITE_CONCRETE, 0.22f, height, fallTicks);
+        if (core != null) {
+            out.add(core);
+        }
+        BlockDisplay halo = this.beamPart(w, foot, Material.WHITE_STAINED_GLASS, 0.8f, height, fallTicks);
+        if (halo != null) {
+            out.add(halo);
+        }
+        return out;
     }
 
     private void dAgony(World w, Location base, Location c, Player victim) {
@@ -1282,6 +1288,7 @@ public final class EffectRunner {
         }
         long startTime = w.getTime();
         double rise = 2.4;
+        List<Entity> beam = Collections.synchronizedList(new ArrayList<Entity>());
         Compat.sound(w, base, "entity.ender_dragon.growl", 1.2f, 0.4f);
         Compat.sound(w, base, "ambient.cave", 1.0f, 0.5f);
         this.animate(170, 1L, t -> {
@@ -1341,7 +1348,7 @@ public final class EffectRunner {
                 Compat.sound(w, base, "block.enchantment_table.use", 1.0f, 0.5f);
             }
             if (t == 112) {
-                this.beaconBeam(w, base, true);
+                beam.addAll(this.lightBeam(w, base.clone(), 48.0f, 8));
                 Compat.sound(w, base, "block.beacon.activate", 1.0f, 0.7f);
                 Compat.sound(w, base, "block.conduit.activate", 0.9f, 0.8f);
             }
@@ -1357,7 +1364,12 @@ public final class EffectRunner {
                 Compat.sound(w, base, "block.amethyst_block.chime", 1.0f, 0.6f);
                 Compat.sound(w, base, "block.beacon.deactivate", 1.0f, 0.7f);
                 this.discard((Entity)god);
-                this.beaconBeam(w, base, false);
+                synchronized (beam) {
+                    for (Entity b : beam) {
+                        this.discard(b);
+                    }
+                    beam.clear();
+                }
                 this.skyReset();
             }
             if (t == 158) {
@@ -1365,7 +1377,12 @@ public final class EffectRunner {
             }
         }, () -> {
             this.skyReset();
-            this.beaconBeam(w, base, false);
+            synchronized (beam) {
+                for (Entity b : beam) {
+                    this.discard(b);
+                }
+                beam.clear();
+            }
             this.discard((Entity)god);
         });
         this.later(200L, this::skyReset);
