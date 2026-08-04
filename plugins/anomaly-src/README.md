@@ -39,9 +39,11 @@ Alias: `/anomalia`, `/anom`.
 - **Panel** — iniciar, **ir a la anomalía**, elegir, botín, ajustes, detener y estado en vivo.
   El botón de viaje te deja a diez bloques del jefe, en suelo firme y mirándolo: encima no,
   que caer dentro del alcance de un jefe que ya pelea es una muerte gratis.
-- **Anomalías** — click para elegirla, click derecho para ver sus habilidades,
-  shift para encenderla o apagarla, rueda para subir la vida base.
-- **Habilidades** — ficha de cada una: fase, duración, enfriamiento y qué hace.
+- **Anomalías** — click para elegirla, click derecho para abrir su ficha,
+  shift para encenderla o apagarla.
+- **Ficha** — todas sus habilidades (fase, duración, enfriamiento y qué hace) y abajo
+  la **vida base del jefe**, con − y + de 100 (500 con shift). El menú enseña también
+  cuánta vida tendría con cinco jugadores, que es lo que de verdad importa al calibrar.
 - **Botín** — dos modos. En *colocar*, traes el objeto en el cursor y haces click:
   se guarda una **copia**, no pierdes tu objeto. En *ajustar*, cambias probabilidad,
   cantidad y a quién le toca.
