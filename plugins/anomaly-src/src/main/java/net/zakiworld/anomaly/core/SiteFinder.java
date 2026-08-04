@@ -129,7 +129,15 @@ public final class SiteFinder {
         Location loc = new Location(world, x + 0.5, y + 1, z + 0.5);
 
         if (!terrainSuits(world, x, y, z, type.element())) return null;
-        if (!hasHeadroom(world, x, y + 1, z, type.element() == Element.VIENTO ? 6 : 4)) return null;
+
+        // Las de agua no se pelean flotando en la superficie: hay que bajar al fondo.
+        if (type.element() == Element.AGUA) {
+            Location deep = seabed(world, x, y, z);
+            if (deep == null) return null;
+            loc = deep;
+        }
+        int headY = type.element() == Element.AGUA ? loc.getBlockY() : y + 1;
+        if (!hasHeadroom(world, x, headY, z, type.element() == Element.VIENTO ? 6 : 4)) return null;
         if (!isFlatEnough(world, x, y, z, settings.arenaRadius())) return null;
 
         if (protection.tooCloseToSpawn(loc, settings.minSpawnDistance())) return null;
@@ -166,6 +174,29 @@ public final class SiteFinder {
         };
     }
 
+    /**
+     * Baja por la columna de agua hasta el fondo y devuelve un punto a tres bloques
+     * por encima, que es donde se planta la arena de una anomalia acuatica.
+     *
+     * Exige una profundidad minima: un charco de dos bloques no es un abismo, y una
+     * pelea ahi seria una pelea en tierra con el agua a las rodillas.
+     *
+     * @return null si no hay agua suficiente
+     */
+    private Location seabed(World world, int x, int surfaceY, int z) {
+        int depth = 0;
+        int y = surfaceY;
+        while (y > world.getMinHeight() + 2 && world.getBlockAt(x, y, z).isLiquid()) {
+            y--;
+            depth++;
+            if (depth > 64) break;
+        }
+        if (depth < settings.minWaterDepth()) return null;
+        Block floor = world.getBlockAt(x, y, z);
+        if (!floor.getType().isSolid()) return null;
+        return new Location(world, x + 0.5, y + 3.0, z + 0.5);
+    }
+
     /** Que parte de la arena esta cubierta de liquido, muestreando de 3 en 3 bloques. */
     private double liquidFraction(World world, int x, int y, int z, int radius) {
         int checks = 0;
@@ -181,6 +212,7 @@ public final class SiteFinder {
         return checks == 0 ? 1 : wet / (double) checks;
     }
 
+    /** El hueco libre por encima. Para las de agua el agua no estorba, solo la lava. */
     private boolean hasHeadroom(World world, int x, int y, int z, int needed) {
         for (int i = 0; i < needed; i++) {
             Material m = world.getBlockAt(x, y + i, z).getType();

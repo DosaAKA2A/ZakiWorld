@@ -8,7 +8,7 @@ La intención de fondo es empujar a la gente a **salir del spawn** y a **pelear 
 el jefe escala con el número de jugadores, varias habilidades castigan dispersarse y el
 botín se reparte entre todos los que participaron, no solo entre quien da el último golpe.
 
-- **Versión:** 1.4.0
+- **Versión:** 1.5.0
 - **Paquete:** `net.zakiworld.anomaly`
 - **Probado contra:** Paper 26.1.2 (MC 26.1.2), compilado con `--release 21`
 - **Permiso único:** `anomaly.gui` (`default: op`)
@@ -261,6 +261,52 @@ final se los lleve.
 
 ---
 
+## El Leviatán de Sal
+
+Un guardián anciano descomunal (`scale 2.6`) **en el fondo del mar**. Elemento **agua**,
+brillo aqua oscuro. Es la primera anomalía que pelea sumergida de verdad: el buscador de
+sitios baja por la columna de agua hasta el lecho y planta la arena tres bloques por
+encima, exigiendo al menos ocho de profundidad.
+
+**El problema obvio de una pelea sumergida es que sin pociones es una tortura, no un
+combate.** Se resuelve con la propia ficción: mientras estás **dentro** de su arena
+(22 bloques) el abismo te deja respirar y ver — poder de conducto, refrescado cada segundo.
+En cuanto sales, se acaba el favor. Así la arena tiene borde sin paredes invisibles, y
+huir del jefe pasa a ser peor idea que quedarse. El borde se dibuja con partículas forzadas
+para que se vea dónde acaba el aire.
+
+Quince habilidades: haz cargado de guardián, coro de espinas, remolino que te hunde,
+columnas de burbujas que te disparan hacia arriba (lejos de él y cerca del borde), banco de
+guardianes, haces encadenados que saltan de uno a otro, tinta que ciega, **Presión** (cuanto
+más alto estás, más duele: castiga huir a la superficie), látigo de marea, torbellino de
+espinas, rayo giratorio, implosión, maelstrom, mordida y el Canto de Sal.
+
+---
+
+## El Coro Abisal
+
+**El jefe más distinto de los seis: no se gana pegando más fuerte, se gana coordinándose.**
+
+Tres cantores orbitan un núcleo **intocable**, unidos a él por haces de luz. El núcleo no
+recibe daño mientras el coro cante. Hay que apagar a los cantores en el **orden que marcan
+sus luces** — blanco, amarillo, rojo — y solo entonces se abre una ventana para castigarlo.
+
+- **Acertar el orden** → el núcleo queda expuesto. La ventana empieza en 12 s y se acorta
+  un segundo por cada ronda ganada.
+- **Fallar el orden** → el coro se rehace entero, todos los presentes reciben daño y hay
+  que volver a empezar.
+- Los **Ecos** del Enjambre Abisal no cuentan para el orden: matarlos no avanza ni penaliza.
+- Cada cambio de fase rehace el coro y cierra la ventana que hubiera.
+
+Doce habilidades, menos que las demás **a propósito**: aquí el contenido es el puzzle, y
+llenarlo de golpes lo taparía.
+
+Este boss necesitó dos ganchos nuevos en `BossFight`: `onMinionDeath` (para comprobar el
+orden) y `allowLongInvulnerability` (porque el vigilante que quita la invulnerabilidad a la
+fuerza, pensado para animaciones que mueren a medias, aquí rompería la mecánica entera).
+
+---
+
 ## Decisiones que conviene no deshacer
 
 - **Vida por encima de 1024.** El atributo `max_health` de Minecraft topa en 1024 y pasarse
@@ -314,7 +360,7 @@ No hay Maven en el PATH. Con el JDK 25 portátil y `paper-api 26.1.2`:
 
 ```
 javac --release 21 -encoding UTF-8 -cp "<paper-api + libs del servidor>" -d build @sources
-jar --create --file Anomaly-1.4.0.jar -C build .
+jar --create --file Anomaly-1.5.0.jar -C build .
 ```
 
 El `pom.xml` está para quien tenga Maven; `paper-api` es `provided`.

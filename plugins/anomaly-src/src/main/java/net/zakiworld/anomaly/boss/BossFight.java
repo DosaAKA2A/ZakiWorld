@@ -181,6 +181,7 @@ public abstract class BossFight {
             invulnerableSince = ticks;
             return;
         }
+        if (allowLongInvulnerability()) return;
         if (ticks - invulnerableSince <= MAX_INVULNERABLE_TICKS) return;
         boss.setInvulnerable(false);
         invulnerableSince = 0;
@@ -338,6 +339,24 @@ public abstract class BossFight {
      * Por defecto no hace nada; el Conejo Asesino lo usa para multiplicarse.
      */
     public void onDealtDamage(Player victim, org.bukkit.entity.Entity dealer) {
+    }
+
+    /**
+     * Aviso de que uno de los esbirros del jefe acaba de morir. El Coro Abisal lo usa
+     * para comprobar si lo mataron en el orden correcto.
+     */
+    public void onMinionDeath(LivingEntity minion) {
+    }
+
+    /**
+     * Si un jefe puede estar invulnerable mucho rato POR DISENO.
+     *
+     * Por defecto no: el vigilante le quita la invulnerabilidad a la fuerza porque
+     * casi siempre significa que una animacion guionizada murio a medias. El Coro
+     * Abisal es la excepcion, porque su nucleo solo se abre cuando cae el coro.
+     */
+    protected boolean allowLongInvulnerability() {
+        return false;
     }
 
     /**

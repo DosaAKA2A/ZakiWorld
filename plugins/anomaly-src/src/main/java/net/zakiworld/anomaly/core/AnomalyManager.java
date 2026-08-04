@@ -338,6 +338,11 @@ public final class AnomalyManager implements Listener {
         if (Tags.isMinion(e.getEntity())) {
             e.getDrops().clear();
             e.setDroppedExp(0);
+            try {
+                event.fight().onMinionDeath(e.getEntity());
+            } catch (Throwable t) {
+                plugin.getLogger().warning("Fallo al reaccionar a la muerte de un esbirro: " + t);
+            }
             return;
         }
         if (boss == null || !e.getEntity().equals(boss)) return;

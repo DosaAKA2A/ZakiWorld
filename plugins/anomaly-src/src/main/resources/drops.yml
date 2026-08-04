@@ -39,3 +39,11 @@ anomalias:
     experiencia: 1000
     comandos: []
     botin: {}
+  leviatan_de_sal:
+    experiencia: 1100
+    comandos: []
+    botin: {}
+  coro_abisal:
+    experiencia: 1200
+    comandos: []
+    botin: {}

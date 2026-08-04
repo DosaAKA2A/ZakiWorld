@@ -5,7 +5,9 @@ import net.kyori.adventure.text.format.TextColor;
 import net.zakiworld.anomaly.AnomalyPlugin;
 import net.zakiworld.anomaly.boss.Ability;
 import net.zakiworld.anomaly.boss.BossFight;
+import net.zakiworld.anomaly.boss.AbyssalChoir;
 import net.zakiworld.anomaly.boss.KillerBunny;
+import net.zakiworld.anomaly.boss.SaltLeviathan;
 import net.zakiworld.anomaly.boss.ScreamingGoat;
 import net.zakiworld.anomaly.boss.StormRider;
 import net.zakiworld.anomaly.boss.SepulchralKnight;
@@ -36,6 +38,8 @@ public final class AnomalyRegistry {
         register(new GoatType());
         register(new BunnyType());
         register(new RiderType());
+        register(new LeviathanType());
+        register(new ChoirType());
     }
 
     public void register(AnomalyType type) {
@@ -60,6 +64,14 @@ public final class AnomalyRegistry {
 
     public AnomalyType rider() {
         return types.get(StormRider.ID);
+    }
+
+    public AnomalyType leviathan() {
+        return types.get(SaltLeviathan.ID);
+    }
+
+    public AnomalyType choir() {
+        return types.get(AbyssalChoir.ID);
     }
 
     public List<AnomalyType> all() {
@@ -731,6 +743,282 @@ public final class AnomalyRegistry {
 
     private static StormRider rider(BossFight fight) {
         return (StormRider) fight;
+    }
+
+
+    // ------------------------------------------------------------ el Leviatan de Sal
+
+    /** Ficha del Leviatan de Sal. */
+    public final class LeviathanType implements AnomalyType {
+
+        @Override
+        public String id() {
+            return SaltLeviathan.ID;
+        }
+
+        @Override
+        public String display() {
+            return plugin.getConfig().getString("anomalias." + id() + ".nombre", "Leviatan de Sal");
+        }
+
+        @Override
+        public TextColor color() {
+            return SaltLeviathan.ACCENT;
+        }
+
+        @Override
+        public NamedTextColor glowColor() {
+            return NamedTextColor.DARK_AQUA;
+        }
+
+        @Override
+        public Element element() {
+            return Element.AGUA;
+        }
+
+        @Override
+        public Material icon() {
+            Material m = Material.matchMaterial("HEART_OF_THE_SEA");
+            return m != null ? m : Material.PRISMARINE_SHARD;
+        }
+
+        @Override
+        public String tagline() {
+            return "Guardian anciano descomunal en el fondo del mar";
+        }
+
+        @Override
+        public List<String> origin() {
+            return List.of(
+                    "Los monumentos del oceano no se construyeron solos,",
+                    "y lo que los mando levantar sigue ahi abajo.",
+                    "Duerme en la sal desde antes de que hubiera orilla,",
+                    "y cuando alguien baja demasiado, abre un ojo.");
+        }
+
+        @Override
+        public List<String> threat() {
+            return List.of(
+                    "Elemento de agua: se pelea en el FONDO, sumergido",
+                    "Dentro de su arena el abismo te deja respirar",
+                    "Fuera de ella no hay aire: huir es peor que quedarse",
+                    "15 habilidades de haz, corriente y presion");
+        }
+
+        @Override
+        public double baseHealth() {
+            return 1800;
+        }
+
+        @Override
+        public int arenaRadius() {
+            return 22;
+        }
+
+        @Override
+        public List<Ability> abilities() {
+            return leviathanAbilities();
+        }
+
+        @Override
+        public BossFight create(AnomalyPlugin plugin, ActiveAnomaly event, Location where) {
+            return new SaltLeviathan(plugin, event, where);
+        }
+    }
+
+    /** Las 15 habilidades del Leviatan: haces, corrientes y presion. */
+    public List<Ability> leviathanAbilities() {
+        List<Ability> list = new ArrayList<>();
+
+        add(list, "haz_abisal", "Haz Abisal", 1, 170, 60, 5,
+                "El rayo de guardian, cargado y con dos segundos de aviso.",
+                icon("PRISMARINE_CRYSTALS", "GLOWSTONE_DUST"), f -> leviathan(f).abyssalBeam());
+        add(list, "coro_espinas", "Coro de Espinas", 1, 220, 90, 4,
+                "El fondo se eriza de espinas de prismarina en anillos.",
+                icon("PRISMARINE_SHARD", "QUARTZ"), f -> leviathan(f).thornChoir());
+        add(list, "remolino", "Remolino", 1, 340, 140, 3,
+                "Un embudo que arrastra a todos hacia el fondo y hacia el.",
+                icon("WATER_BUCKET", "BUCKET"), f -> leviathan(f).whirlpool());
+        add(list, "columna_ascendente", "Columna Ascendente", 1, 260, 70, 3,
+                "Chorros que te disparan hacia arriba, lejos de el y del aire.",
+                icon("MAGMA_BLOCK", "SOUL_SAND"), f -> leviathan(f).risingColumn());
+        add(list, "banco_guardianes", "Banco de Guardianes", 1, 520, 60, 2,
+                "Llama de tres a cinco guardianes que hostigan desde los lados.",
+                icon("GUARDIAN_SPAWN_EGG", "PRISMARINE"), f -> leviathan(f).guardianShoal());
+
+        add(list, "haces_encadenados", "Haces Encadenados", 2, 280, 100, 4,
+                "El rayo salta de un jugador al siguiente hasta acabar la fila.",
+                icon("CHAIN", "PRISMARINE_CRYSTALS"), f -> leviathan(f).chainedBeams());
+        add(list, "tinta_abismo", "Tinta del Abismo", 2, 300, 120, 3,
+                "Una nube negra que ciega y frena a quien se queda dentro.",
+                icon("INK_SAC", "BLACK_DYE"), f -> leviathan(f).abyssalInk());
+        add(list, "presion", "Presion", 2, 320, 140, 3,
+                "Castiga a quien intenta huir hacia la superficie: mas alto, mas duele.",
+                icon("PISTON", "ANVIL"), f -> leviathan(f).pressure());
+        add(list, "latigo_marea", "Latigo de Marea", 2, 190, 60, 5,
+                "Un latigazo de agua que barre dieciseis bloques en linea.",
+                icon("KELP", "SEAGRASS"), f -> leviathan(f).tideWhip());
+        add(list, "torbellino_espinas", "Torbellino de Espinas", 2, 200, 70, 4,
+                "Gira soltando cuatro brazos de espinas a su alrededor.",
+                icon("PRISMARINE_BRICKS", "PRISMARINE"), f -> leviathan(f).thornSpin());
+
+        add(list, "rayo_abismo", "Rayo del Abismo", 3, 360, 140, 4,
+                "Un haz gigantesco que barre la arena girando; hay que ponerse detras.",
+                icon("BEACON", "SEA_LANTERN"), f -> leviathan(f).abyssRay());
+        add(list, "implosion", "Implosion", 3, 340, 100, 4,
+                "Succiona a todo el mundo al centro y revienta.",
+                icon("HEART_OF_THE_SEA", "NAUTILUS_SHELL"), f -> leviathan(f).implosion());
+        add(list, "maelstrom", "Maelstrom", 3, 400, 160, 3,
+                "La arena entera gira y te hace dar vueltas sin control.",
+                icon("CONDUIT", "NAUTILUS_SHELL"), f -> leviathan(f).maelstrom());
+        add(list, "mordida_abisal", "Mordida Abisal", 3, 240, 70, 4,
+                "Se lanza y muerde con todo lo que tiene.",
+                icon("COD", "SALMON"), f -> leviathan(f).abyssalBite());
+
+        add(list, "canto_sal", "Canto de Sal", 0, 400, 80, 2,
+                "La maldicion del guardian anciano, esta vez con aviso.",
+                icon("SPONGE", "WET_SPONGE"), f -> leviathan(f).saltSong());
+
+        return list;
+    }
+
+    private static SaltLeviathan leviathan(BossFight fight) {
+        return (SaltLeviathan) fight;
+    }
+
+    // --------------------------------------------------------------- el Coro Abisal
+
+    /** Ficha del Coro Abisal. */
+    public final class ChoirType implements AnomalyType {
+
+        @Override
+        public String id() {
+            return AbyssalChoir.ID;
+        }
+
+        @Override
+        public String display() {
+            return plugin.getConfig().getString("anomalias." + id() + ".nombre", "Coro Abisal");
+        }
+
+        @Override
+        public TextColor color() {
+            return AbyssalChoir.ACCENT;
+        }
+
+        @Override
+        public NamedTextColor glowColor() {
+            return NamedTextColor.LIGHT_PURPLE;
+        }
+
+        @Override
+        public Element element() {
+            return Element.AGUA;
+        }
+
+        @Override
+        public Material icon() {
+            Material m = Material.matchMaterial("AMETHYST_CLUSTER");
+            return m != null ? m : Material.AMETHYST_SHARD;
+        }
+
+        @Override
+        public String tagline() {
+            return "Tres cantores, un nucleo intocable y un orden que romper";
+        }
+
+        @Override
+        public List<String> origin() {
+            return List.of(
+                    "Bajo el agua hay una nota que nunca ha dejado",
+                    "de sonar. Tres voces la sostienen y una cuarta",
+                    "la escucha desde el centro, sin tocar nunca nada.",
+                    "Callar a las tres en el orden equivocado solo",
+                    "consigue que vuelvan a empezar.");
+        }
+
+        @Override
+        public List<String> threat() {
+            return List.of(
+                    "Elemento de agua: se pelea en el FONDO, sumergido",
+                    "El nucleo es INTOCABLE mientras cante el coro",
+                    "Hay que apagar a los cantores en el orden de sus luces",
+                    "Fallar el orden lo revive todo y castiga a los presentes");
+        }
+
+        @Override
+        public double baseHealth() {
+            return 1300;
+        }
+
+        @Override
+        public int arenaRadius() {
+            return 20;
+        }
+
+        @Override
+        public List<Ability> abilities() {
+            return choirAbilities();
+        }
+
+        @Override
+        public BossFight create(AnomalyPlugin plugin, ActiveAnomaly event, Location where) {
+            return new AbyssalChoir(plugin, event, where);
+        }
+    }
+
+    /**
+     * Las 12 habilidades del Coro. Son menos que las de los demas a proposito: aqui
+     * el contenido de la pelea es el puzzle del orden, y llenarla de golpes lo taparia.
+     */
+    public List<Ability> choirAbilities() {
+        List<Ability> list = new ArrayList<>();
+
+        add(list, "orden_coro", "Orden del Coro", 1, 400, 20, 3,
+                "Baraja el orden sin rehacer los cantores: hay que volver a mirar las luces.",
+                icon("AMETHYST_SHARD", "QUARTZ"), f -> choir(f).reorder());
+        add(list, "haz_nucleo", "Haz del Nucleo", 1, 190, 55, 5,
+                "Un rayo largo desde el centro, con aviso.",
+                icon("SEA_LANTERN", "GLOWSTONE"), f -> choir(f).coreBeam());
+        add(list, "pulso_armonico", "Pulso Armonico", 1, 220, 60, 4,
+                "Un anillo de luz que se expande dieciseis bloques.",
+                icon("AMETHYST_CLUSTER", "AMETHYST_SHARD"), f -> choir(f).harmonicPulse());
+        add(list, "marea_baja", "Marea Baja", 1, 300, 100, 3,
+                "Arrastra a todos hacia el centro durante cinco segundos.",
+                icon("WATER_BUCKET", "BUCKET"), f -> choir(f).undertow());
+
+        add(list, "contracanto", "Contracanto", 2, 240, 80, 4,
+                "Cada cantor dispara su propio haz a un jugador distinto.",
+                icon("NOTE_BLOCK", "AMETHYST_SHARD"), f -> choir(f).counterSong());
+        add(list, "disonancia", "Disonancia", 2, 300, 70, 3,
+                "Una nota desafinada que ciega, marea y entumece.",
+                icon("BELL", "AMETHYST_BLOCK"), f -> choir(f).dissonance());
+        add(list, "enjambre_abisal", "Enjambre Abisal", 2, 460, 60, 2,
+                "Ecos que hostigan y que NO cuentan para el orden del coro.",
+                icon("GUARDIAN_SPAWN_EGG", "PRISMARINE"), f -> choir(f).abyssalSwarm());
+
+        add(list, "crescendo", "Crescendo", 3, 340, 110, 4,
+                "La nota sube seis segundos y revienta en catorce bloques.",
+                icon("BEACON", "AMETHYST_CLUSTER"), f -> choir(f).crescendo());
+        add(list, "nota_final", "Nota Final", 3, 320, 120, 4,
+                "Un haz que barre girando por toda la arena.",
+                icon("SEA_LANTERN", "GLOWSTONE"), f -> choir(f).finalNote());
+        add(list, "coro_completo", "Coro Completo", 3, 300, 80, 4,
+                "Nucleo y cantores disparan a la vez, cada uno a uno.",
+                icon("AMETHYST_BLOCK", "AMETHYST_CLUSTER"), f -> choir(f).fullChoir());
+
+        add(list, "eco", "Eco", 0, 260, 20, 3,
+                "Los cantores se intercambian el sitio; el turno de cada uno no cambia.",
+                icon("ENDER_PEARL", "AMETHYST_SHARD"), f -> choir(f).echo());
+        add(list, "silencio", "Silencio", 0, 320, 80, 3,
+                "Un instante de calma que termina en golpe.",
+                icon("SCULK_SENSOR", "WOOL"), f -> choir(f).silence());
+
+        return list;
+    }
+
+    private static AbyssalChoir choir(BossFight fight) {
+        return (AbyssalChoir) fight;
     }
 
     private static SepulchralKnight knight(BossFight fight) {

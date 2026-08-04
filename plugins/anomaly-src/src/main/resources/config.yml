@@ -38,6 +38,10 @@ general:
   radio-arena: 12
   desnivel-maximo: 4
 
+  # Profundidad minima de agua para las anomalias acuaticas, que pelean en el FONDO
+  # y no en la superficie. Con menos de esto el sitio se descarta.
+  profundidad-minima-agua: 8
+
 automatico:
   # Si se activa, el plugin abre anomalias solo cada X minutos.
   activo: false
@@ -97,6 +101,16 @@ anomalias:
     vida: 1700
     dano: 1.0
     nombre: 'Storm Rider'
+  leviatan_de_sal:
+    activa: true
+    vida: 1800
+    dano: 1.0
+    nombre: 'Leviatan de Sal'
+  coro_abisal:
+    activa: true
+    vida: 1300
+    dano: 1.0
+    nombre: 'Coro Abisal'
 
 menu:
   # La anomalia que abre el boton Iniciar del panel.

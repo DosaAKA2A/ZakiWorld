@@ -64,6 +64,11 @@ public final class Settings {
         return cfg().getInt("general.desnivel-maximo", 4);
     }
 
+    /** Profundidad minima de agua para una anomalia acuatica. Un charco no es un abismo. */
+    public int minWaterDepth() {
+        return cfg().getInt("general.profundidad-minima-agua", 8);
+    }
+
     // ----------------------------------------------------------------- automatico
 
     public boolean autoEnabled() {
