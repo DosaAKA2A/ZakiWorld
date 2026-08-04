@@ -1093,17 +1093,12 @@ public final class EffectRunner {
             Compat.sound(w, base, "block.respawn_anchor.charge", 1.0f, 0.6f);
             Compat.sound(w, base, "entity.elder_guardian.curse", 0.5f, 1.4f);
         }
-        this.animate(190, 1L, t -> {
-            if (t >= 4 && t <= 70 && (t - 4) % 6 == 0) {
-                Location origin = EffectRunner.ringPoint(base, (t - 4) / 6, 12, 2.2).add(0.0, 13.0, 0.0);
-                Compat.spawn(w, Compat.CLOUD, origin, 12, 0.35, 0.15, 0.35, 0.01);
-                Compat.spawn(w, Compat.LARGE_SMOKE, origin, 5, 0.25, 0.1, 0.25, 0.0);
-            }
-            if (t >= 8 && t <= 74 && (t - 8) % 6 == 0) {
-                int i = (t - 8) / 6;
+        this.animate(140, 1L, t -> {
+            if (t >= 4 && t <= 26 && (t - 4) % 2 == 0) {
+                int i = (t - 4) / 2;
                 double a = Math.PI * 2 / 12.0 * (double)i;
                 Location ground = EffectRunner.ringPoint(base, i, 12, 2.2);
-                int fallTicks = 7;
+                int fallTicks = 4;
                 ItemDisplay sword = this.fallingItem(w, ground, new ItemStack(Material.GOLDEN_SWORD), 1.4f, (float)(-a), 0.0f, 13.0, 0.85, fallTicks);
                 if (sword != null) {
                     swords.add(sword);
@@ -1116,19 +1111,14 @@ public final class EffectRunner {
                     });
                 }
             }
-            if (t < 90 && t % 4 == 0 && frozen != null && frozen.isValid()) {
+            if (t < 40 && t % 4 == 0 && frozen != null && frozen.isValid()) {
                 Compat.spawn(w, Compat.ENCHANT, frozen.getLocation().add(0.0, 1.4, 0.0), 4, 0.35, 0.6, 0.35, 0.3);
             }
-            if (t == 84) {
+            if (t == 36) {
                 Compat.sound(w, c, "entity.lightning_bolt.thunder", 0.6f, 0.5f);
                 Compat.spawn(w, Compat.FLASH, c.clone().add(0.0, 12.0, 0.0), 1);
             }
-            if (t >= 85 && t <= 92 && t % 2 == 0) {
-                Location sky = base.clone().add(0.0, 24.0, 0.0);
-                Compat.spawn(w, Compat.CLOUD, sky, 26, 1.1, 0.3, 1.1, 0.02);
-                Compat.spawn(w, Compat.LARGE_SMOKE, sky, 12, 0.9, 0.25, 0.9, 0.01);
-            }
-            if (t == 93) {
+            if (t == 40) {
                 int fallTicks = 8;
                 ItemDisplay giant = this.fallingItem(w, base.clone(), new ItemStack(Material.GOLDEN_SWORD), 6.0f, 0.6f, 0.0f, 24.0, 2.6, fallTicks);
                 if (giant != null) {
@@ -1140,7 +1130,7 @@ public final class EffectRunner {
                     Compat.spawn(w, Compat.CRIT, base.clone().add(0.0, y, 0.0), 4, 0.2, 0.4, 0.2, 0.05);
                 });
             }
-            if (t == 103) {
+            if (t == 50) {
                 Compat.spawn(w, Compat.EXPLOSION_EMITTER, base, 1);
                 Compat.spawn(w, Compat.FLASH, c, 1);
                 Compat.spawn(w, Compat.BLOCK, base.clone().add(0.0, 0.3, 0.0), 60, 1.2, 0.3, 1.2, 0.1, Material.DEEPSLATE.createBlockData());
@@ -1158,8 +1148,8 @@ public final class EffectRunner {
                 }
                 this.discard((Entity)frozen);
             }
-            if (t > 103 && t <= 117) {
-                double r = (double)(t - 103) * 0.45;
+            if (t > 50 && t <= 64) {
+                double r = (double)(t - 50) * 0.45;
                 this.circle(base.clone().add(0.0, 0.15, 0.0), r, (int)(10.0 + r * 6.0), p -> {
                     Compat.spawn(w, Compat.CLOUD, p, 1);
                     if (t % 2 == 0) {
@@ -1167,7 +1157,7 @@ public final class EffectRunner {
                     }
                 });
             }
-            if (t == 160) {
+            if (t == 96) {
                 List<ItemDisplay> pending;
                 Set set;
                 Set set2 = set = swords;

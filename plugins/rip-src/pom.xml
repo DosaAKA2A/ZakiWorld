@@ -3,7 +3,7 @@
   <modelVersion>4.0.0</modelVersion>
   <groupId>net.zakiworld</groupId>
   <artifactId>rip</artifactId>
-  <version>3.2.2</version>
+  <version>3.2.3</version>
   <packaging>jar</packaging>
   <properties>
     <maven.compiler.release>17</maven.compiler.release>
@@ -24,7 +24,7 @@
     </dependency>
   </dependencies>
   <build>
-    <finalName>Rip-3.2.2</finalName>
+    <finalName>Rip-3.2.3</finalName>
     <plugins>
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>

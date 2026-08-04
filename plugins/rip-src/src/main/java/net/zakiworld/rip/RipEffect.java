@@ -36,7 +36,7 @@ public enum RipEffect {
     K_LIGHTNING(Type.KILL, "lightning", "Tormenta Divina", Rarity.LEGENDARIO, Material.LIGHTNING_ROD, "La tormenta se forma, ruge y fulmina tres veces.", 96, false),
     K_BLACKHOLE(Type.KILL, "blackhole", "Agujero Negro", Rarity.LEGENDARIO, Material.OBSIDIAN, "Un disco de acrecion devora la luz y colapsa.", 92, true),
     K_LASER(Type.KILL, "laser", "Canon Laser", Rarity.LEGENDARIO, Material.END_ROD, "Carga, dispara y funde el suelo bajo tu presa.", 84, true),
-    K_SWORDFALL(Type.KILL, "swordfall", "Juicio de Espadas", Rarity.LEGENDARIO, Material.NETHERITE_SWORD, "La victima queda petrificada bajo una lluvia de espadas.", 190, true),
+    K_SWORDFALL(Type.KILL, "swordfall", "Juicio de Espadas", Rarity.LEGENDARIO, Material.NETHERITE_SWORD, "La victima queda petrificada bajo una lluvia de espadas.", 140, true),
     K_ORBITAL(Type.KILL, "orbital", "Canon Celestial", Rarity.LEGENDARIO, Material.BEACON, "Un pilar de luz orbital aniquila la zona marcada.", 112, true),
     K_BLASTOFF(Type.KILL, "blastoff", "Despegue Estelar", Rarity.INMORTAL, Material.ELYTRA, "La victima sale disparada al cielo... y se apaga con un destello.", 96, true),
     D_SMOKE(Type.DEATH, "smoke", "Humo", Rarity.COMUN, Material.CAMPFIRE, "Columna de humo negro.", 14, false),
