@@ -66,7 +66,7 @@ public enum RipEffect {
     D_PUFFERFISH(Type.DEATH, "pufferfish", "Peces Globo", Rarity.LEGENDARIO, Material.PUFFERFISH, "Explotas en peces globo que quedan saltando... puff.", 84, true),
     D_REQUIEM(Type.DEATH, "requiem", "Requiem Celestial", Rarity.LEGENDARIO, Material.AMETHYST_CLUSTER, "Un pilar de luz desciende y canta tu funeral.", 112, false),
     D_SIXTYSEVEN(Type.DEATH, "sixtyseven", "SESENTA Y SIETE", Rarity.INMORTAL, Material.GOLD_BLOCK, "El numero prohibido preside tu funeral entre fuegos y fanfarrias. 67.", 130, false),
-    D_AGONY(Type.DEATH, "agony", "Agonia", Rarity.INMORTAL, Material.WITHER_ROSE, "Los dias pasan en un suspiro, un dios se alza de tu cadaver y un rayo de luz lo borra.", 220, true);
+    D_AGONY(Type.DEATH, "agony", "Agonia", Rarity.INMORTAL, Material.WITHER_ROSE, "La noche cae de golpe, un dios se alza de tu cadaver y un haz de faro lo borra del mundo.", 170, true);
 
     private final Type type;
     private final String id;

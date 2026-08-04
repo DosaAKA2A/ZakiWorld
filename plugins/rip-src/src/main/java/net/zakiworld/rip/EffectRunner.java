@@ -1215,6 +1215,36 @@ public final class EffectRunner {
         }
     }
 
+    /*
+     * Enciende (o apaga) un haz de faro DE VERDAD, el mismo que renderiza el
+     * cliente para un beacon con su piramide. No se toca el mundo: se manda un
+     * cambio de bloque falso solo a los clientes cercanos y, al apagarlo, se
+     * les reenvia el bloque real. El faro va en el bloque de debajo de los pies
+     * con un 3x3 de hierro bajo el, que es lo minimo para que el haz salga. Si
+     * hay techo encima no se vera, igual que en vanilla.
+     */
+    private void beaconBeam(World w, Location feet, boolean on) {
+        Location bc = feet.clone().subtract(0.0, 1.0, 0.0).getBlock().getLocation();
+        org.bukkit.block.data.BlockData beacon = Material.BEACON.createBlockData();
+        org.bukkit.block.data.BlockData iron = Material.IRON_BLOCK.createBlockData();
+        for (Player p : Bukkit.getOnlinePlayers()) {
+            if (!p.getWorld().equals(w)) continue;
+            try {
+                if (p.getLocation().distanceSquared(bc) > 9216.0) continue;
+                p.sendBlockChange(bc, on ? beacon : bc.getBlock().getBlockData());
+                for (int dx = -1; dx <= 1; ++dx) {
+                    for (int dz = -1; dz <= 1; ++dz) {
+                        Location b = bc.clone().add((double)dx, -1.0, (double)dz);
+                        p.sendBlockChange(b, on ? iron : b.getBlock().getBlockData());
+                    }
+                }
+            }
+            catch (Throwable throwable) {
+                // empty catch block
+            }
+        }
+    }
+
     private void dAgony(World w, Location base, Location c, Player victim) {
         ItemStack[] armor = null;
         ItemStack hand = null;
@@ -1232,46 +1262,29 @@ public final class EffectRunner {
         final LivingEntity god = clone;
         if (god != null) {
             this.tag((Entity)god);
-            try {
-                god.setGlowing(true);
-            }
-            catch (Throwable throwable) {
-                // empty catch block
-            }
         }
         long startTime = w.getTime();
         double rise = 2.4;
-        org.bukkit.Color white = org.bukkit.Color.fromRGB(255, 255, 255);
         Compat.sound(w, base, "entity.ender_dragon.growl", 1.2f, 0.4f);
         Compat.sound(w, base, "ambient.cave", 1.0f, 0.5f);
-        Compat.sound(w, base, "block.beacon.deactivate", 1.0f, 0.5f);
-        this.animate(220, 1L, t -> {
-            if (t < 14) {
+        this.animate(170, 1L, t -> {
+            if (t < 12) {
                 this.circle(base.clone().add(0.0, 0.15, 0.0), 1.6, 18, p -> Compat.spawn(w, Compat.SOUL, p, 1, 0.02, 0.12, 0.02, 0.02));
                 Compat.spawn(w, Compat.LARGE_SMOKE, base.clone().add(0.0, 0.4, 0.0), 3, 0.5, 0.15, 0.5, 0.01);
             }
-            if (t == 10) {
-                Compat.sound(w, base, "block.portal.trigger", 0.5f, 0.6f);
+            if (t == 6 && god != null && god.isValid()) {
+                try {
+                    god.setGlowing(true);
+                }
+                catch (Throwable throwable) {
+                    // empty catch block
+                }
                 Compat.spawn(w, Compat.FLASH, c, 1);
-            }
-            /*
-             * El cielo gira de un tiron, sin fases ni pausa: 14 dias completos en
-             * 180 ticks, o sea unos 4,7 dias cada 3 segundos. Al ser un numero
-             * entero de dias, el ultimo tick cae exactamente en la misma hora en
-             * la que empezo la animacion.
-             */
-            if (t >= 12 && t <= 192) {
-                double p = (double)(t - 12) / 180.0;
-                this.sky(w, startTime + (long)(336000.0 * p));
-            } else if (t == 193) {
-                this.skyReset();
-            }
-            if (t == 20) {
-                Compat.sound(w, base, "entity.illusioner.prepare_mirror", 1.0f, 0.6f);
+                Compat.sound(w, base, "block.portal.trigger", 0.5f, 0.6f);
                 Compat.sound(w, base, "block.respawn_anchor.charge", 1.0f, 0.5f);
             }
-            if (t >= 20 && t <= 90 && god != null && god.isValid()) {
-                double p = (double)(t - 20) / 70.0;
+            if (t >= 8 && t <= 70 && god != null && god.isValid()) {
+                double p = (double)(t - 8) / 62.0;
                 double eased = p * p * (3.0 - 2.0 * p);
                 Location at = base.clone().add(0.0, rise * eased, 0.0);
                 at.setPitch(0.0f);
@@ -1282,7 +1295,20 @@ public final class EffectRunner {
                     // empty catch block
                 }
             }
-            if (t > 90 && t < 196 && god != null && god.isValid()) {
+            /*
+             * Un solo cambio de hora: del momento en el que murio a la fase
+             * contraria, en 60 ticks (3 s). Como setPlayerTime deja la hora
+             * congelada, luego se queda ahi hasta que el destello final lo
+             * resetea y tapa el salto de vuelta.
+             */
+            if (t >= 20 && t <= 80) {
+                double p = (double)(t - 20) / 60.0;
+                this.sky(w, startTime + (long)(12000.0 * p));
+            }
+            if (t == 20) {
+                Compat.sound(w, base, "entity.illusioner.prepare_mirror", 1.0f, 0.6f);
+            }
+            if (t > 70 && t < 146 && god != null && god.isValid()) {
                 double bob = Math.sin((double)t * 0.09) * 0.14;
                 Location at = base.clone().add(0.0, rise + bob, 0.0);
                 at.setPitch(0.0f);
@@ -1293,56 +1319,39 @@ public final class EffectRunner {
                     // empty catch block
                 }
             }
-            if (t == 45) {
-                Compat.sound(w, base, "block.beacon.activate", 0.8f, 0.6f);
-            }
-            if (t == 80) {
-                Compat.sound(w, base, "block.enchantment_table.use", 1.0f, 0.5f);
-                Compat.sound(w, base, "entity.illusioner.cast_spell", 0.9f, 0.7f);
-            }
-            if (t == 130) {
+            if (t == 90) {
                 Compat.sound(w, base, "entity.elder_guardian.curse", 0.6f, 0.6f);
+                Compat.sound(w, base, "block.enchantment_table.use", 1.0f, 0.5f);
             }
-            if (t == 178) {
-                Compat.sound(w, base, "block.beacon.power_select", 1.0f, 0.5f);
-                Compat.sound(w, base, "block.conduit.activate", 0.9f, 0.7f);
+            if (t == 112) {
+                this.beaconBeam(w, base, true);
+                Compat.sound(w, base, "block.beacon.activate", 1.0f, 0.7f);
+                Compat.sound(w, base, "block.conduit.activate", 0.9f, 0.8f);
             }
-            if (t >= 184 && t < 196) {
-                double top = Math.max(rise + 1.0, 30.0 - (double)(t - 184) * 2.6);
-                for (double y = top; y < 30.0; y += 1.0) {
-                    Compat.spawn(w, Compat.END_ROD, base.clone().add(0.0, y, 0.0), 2, 0.16, 0.3, 0.16, 0.005);
-                    Compat.spawn(w, Compat.DUST, base.clone().add(0.0, y, 0.0), 1, 0.16, 0.3, 0.16, 0.0, new Particle.DustOptions(white, 1.4f));
-                }
+            if (t == 138) {
+                Compat.sound(w, base, "block.beacon.power_select", 1.0f, 0.6f);
             }
-            if (t == 196) {
-                for (double y = 0.2; y < 30.0; y += 0.5) {
-                    Compat.spawn(w, Compat.END_ROD, base.clone().add(0.0, y, 0.0), 3, 0.18, 0.2, 0.18, 0.0);
-                    Compat.spawn(w, Compat.DUST, base.clone().add(0.0, y, 0.0), 2, 0.2, 0.2, 0.2, 0.0, new Particle.DustOptions(white, 1.8f));
-                }
+            if (t == 146) {
                 Compat.spawn(w, Compat.FLASH, base.clone().add(0.0, rise + 1.0, 0.0), 1);
-                Compat.sound(w, base, "item.trident.thunder", 1.0f, 1.2f);
-                Compat.sound(w, base, "entity.warden.sonic_boom", 0.7f, 1.2f);
+                Compat.spawn(w, Compat.POOF, base.clone().add(0.0, rise + 1.0, 0.0), 40, 0.4, 0.7, 0.4, 0.06);
                 Compat.spawn(w, Compat.END_ROD, base.clone().add(0.0, rise + 1.0, 0.0), 50, 0.4, 0.8, 0.4, 0.25);
                 Compat.spawn(w, Compat.SOUL, base.clone().add(0.0, rise + 1.0, 0.0), 24, 0.3, 0.6, 0.3, 0.06);
-                Compat.spawn(w, Compat.POOF, base.clone().add(0.0, rise + 1.0, 0.0), 30, 0.35, 0.6, 0.35, 0.05);
                 Compat.sound(w, base, "entity.enderman.teleport", 0.9f, 0.5f);
                 Compat.sound(w, base, "block.amethyst_block.chime", 1.0f, 0.6f);
+                Compat.sound(w, base, "block.beacon.deactivate", 1.0f, 0.7f);
                 this.discard((Entity)god);
+                this.beaconBeam(w, base, false);
+                this.skyReset();
             }
-            if (t > 196 && t < 210) {
-                float fade = (float)(1.0 - (double)(t - 196) / 14.0);
-                for (double y = 0.4; y < 30.0; y += 1.6) {
-                    Compat.spawn(w, Compat.DUST, base.clone().add(0.0, y, 0.0), 1, 0.12, 0.2, 0.12, 0.0, new Particle.DustOptions(white, Math.max(0.2f, 1.6f * fade)));
-                }
-            }
-            if (t == 208) {
+            if (t == 158) {
                 Compat.sound(w, base, "block.bell.resonate", 0.9f, 0.7f);
             }
         }, () -> {
             this.skyReset();
+            this.beaconBeam(w, base, false);
             this.discard((Entity)god);
         });
-        this.later(260L, this::skyReset);
+        this.later(200L, this::skyReset);
     }
 
     private void dSmoke(World w, Location c) {
