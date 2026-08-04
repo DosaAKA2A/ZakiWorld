@@ -153,6 +153,29 @@ public final class Compat {
         return new Particle.DustOptions(Color.fromRGB(rgb), size);
     }
 
+    /**
+     * Particula "forzada": el servidor la manda a todo el que este a menos de 512
+     * bloques en vez de a los 32 de siempre.
+     *
+     * Es lo unico que hace visible un pilar de luz desde lejos; con una particula normal
+     * hay que estar ya encima para verlo, que es justo cuando ya no hace falta.
+     */
+    public static <T> void spawnForced(World w, Particle p, Location l, int count,
+                                       double ox, double oy, double oz, double extra, T data) {
+        if (p == null || l == null || w == null) return;
+        try {
+            Class<?> expected = p.getDataType();
+            if (expected == Void.class) {
+                w.spawnParticle(p, l, count, ox, oy, oz, extra, null, true);
+                return;
+            }
+            Object payload = expected.isInstance(data) ? data : defaultData(expected);
+            if (payload != null) w.spawnParticle(p, l, count, ox, oy, oz, extra, payload, true);
+        } catch (Throwable ignored) {
+            spawn(w, p, l, count, ox, oy, oz, extra, data);
+        }
+    }
+
     // ------------------------------------------------------------------- sonidos
 
     public static void sound(World w, Location l, String key, float volume, float pitch) {

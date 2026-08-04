@@ -9,6 +9,7 @@ import net.zakiworld.anomaly.AnomalyPlugin;
 import net.zakiworld.anomaly.core.ActiveAnomaly;
 import net.zakiworld.anomaly.core.Compat;
 import net.zakiworld.anomaly.core.Fx;
+import net.zakiworld.anomaly.core.Glow;
 import net.zakiworld.anomaly.core.Stop;
 import net.zakiworld.anomaly.core.Tags;
 import org.bukkit.Location;
@@ -130,6 +131,12 @@ public final class SepulchralKnight extends BossFight {
         Tags.markEvent(boss, event.id());
         mount.addPassenger(boss);
 
+        // El brillo rojo es la marca de esta anomalia y, en la practica, la forma de
+        // encontrarla: el contorno se ve a traves del terreno y a mucha mas distancia
+        // que cualquier particula.
+        Glow.apply(boss, event.type().glowColor());
+        Glow.apply(mount, event.type().glowColor());
+
         arrivalAnimation(spot);
     }
 
@@ -197,7 +204,7 @@ public final class SepulchralKnight extends BossFight {
             Compat.spawn(world(), Compat.EXPLOSION_EMITTER, spot, 1);
             Compat.spawn(world(), Compat.FLASH, spot.clone().add(0, 1, 0), 1);
             soundAt(spot, "entity.ender_dragon.growl", 1.4f, 0.7f);
-            for (Player p : targets(80)) {
+            for (Player p : Fx.viewersNear(spot, 80)) {
                 p.showTitle(Title.title(
                         Component.text("✦ ANOMALIA ✦", ACCENT, TextDecoration.BOLD),
                         Component.text("El Caballero Sepulcral ha cruzado", NamedTextColor.GRAY),
@@ -1276,11 +1283,11 @@ public final class SepulchralKnight extends BossFight {
         Component line = Component.text("✦ ", ACCENT)
                 .append(Component.text("Caballero Sepulcral  ", ACCENT, TextDecoration.BOLD))
                 .append(message.colorIfAbsent(NamedTextColor.GRAY));
-        for (Player p : targets(80)) p.sendActionBar(line);
+        for (Player p : Fx.viewersNear(loc(), 80)) p.sendActionBar(line);
     }
 
     private void titleNear(Component title, Component subtitle) {
-        for (Player p : targets(80)) {
+        for (Player p : Fx.viewersNear(loc(), 80)) {
             p.showTitle(Title.title(title, subtitle,
                     Title.Times.times(Duration.ofMillis(200), Duration.ofMillis(1400), Duration.ofMillis(500))));
         }

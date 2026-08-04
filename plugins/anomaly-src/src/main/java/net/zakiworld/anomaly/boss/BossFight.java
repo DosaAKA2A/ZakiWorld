@@ -5,6 +5,7 @@ import net.zakiworld.anomaly.AnomalyPlugin;
 import net.zakiworld.anomaly.core.Anim;
 import net.zakiworld.anomaly.core.Compat;
 import net.zakiworld.anomaly.core.Fx;
+import net.zakiworld.anomaly.core.Glow;
 import net.zakiworld.anomaly.core.Tags;
 import net.zakiworld.anomaly.core.ActiveAnomaly;
 import org.bukkit.Location;
@@ -241,9 +242,17 @@ public abstract class BossFight {
 
     public void cleanup() {
         finished = true;
-        for (Entity e : spawned) Fx.safeRemove(e);
+        for (Entity e : spawned) {
+            Glow.clear(e);
+            Fx.safeRemove(e);
+        }
         spawned.clear();
-        if (boss != null) Fx.safeRemove(boss);
+        if (boss != null) {
+            // Sacarlo del equipo de brillo antes de borrarlo: si no, el equipo se llena
+            // de UUID de entidades muertas y el marcador crece sin parar.
+            Glow.clear(boss);
+            Fx.safeRemove(boss);
+        }
     }
 
     /** Registra una entidad para que la limpieza final se la lleve por delante. */
@@ -333,9 +342,11 @@ public abstract class BossFight {
         }
     }
 
-    /** Aviso en la barra de accion a todos los que estan viendo la pelea. */
+    /** Aviso en la barra de accion a todos los que estan viendo la pelea, peleen o no. */
     public void warn(Component message) {
-        for (Player p : targets()) p.sendActionBar(message);
+        for (Player p : Fx.viewersNear(loc(), plugin.settings().participationRadius())) {
+            p.sendActionBar(message);
+        }
     }
 
     protected void markMinion(Entity e) {

@@ -114,6 +114,11 @@ public final class Settings {
         return cfg().getBoolean("anuncio.titulo", true);
     }
 
+    /** El pilar de luz sobre el jefe, del color de la anomalia. Se puede apagar si pesa. */
+    public boolean lightPillar() {
+        return cfg().getBoolean("anuncio.pilar-de-luz", true);
+    }
+
     /** Redondea las coordenadas anunciadas a multiplos de N para dar margen de busqueda. */
     public int coordinatePrecision() {
         return Math.max(1, cfg().getInt("anuncio.precision-coordenadas", 1));

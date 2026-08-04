@@ -1,5 +1,6 @@
 package net.zakiworld.anomaly.core;
 
+import net.kyori.adventure.text.format.NamedTextColor;
 import net.kyori.adventure.text.format.TextColor;
 import net.zakiworld.anomaly.AnomalyPlugin;
 import net.zakiworld.anomaly.boss.Ability;
@@ -112,6 +113,16 @@ public final class AnomalyRegistry {
         }
 
         @Override
+        public NamedTextColor glowColor() {
+            return NamedTextColor.RED;
+        }
+
+        @Override
+        public Element element() {
+            return Element.TIERRA;
+        }
+
+        @Override
         public Material icon() {
             Material m = Material.matchMaterial("NETHERITE_SPEAR");
             return m != null ? m : Material.NETHERITE_HELMET;
@@ -135,6 +146,7 @@ public final class AnomalyRegistry {
         @Override
         public List<String> threat() {
             return List.of(
+                    "Elemento de tierra: suelo firme y seco",
                     "Tres fases: montado, a pie y heraldo",
                     "18 habilidades, todas con aviso previo",
                     "Se cura nunca; se enfurece si le fallan");

@@ -70,6 +70,10 @@ anuncio:
   # 1 = coordenadas exactas.
   precision-coordenadas: 1
 
+  # La columna de luz del color de la anomalia sobre el jefe. Se ve desde lejos y es
+  # lo que hace que las coordenadas basten para encontrarlo. Apagalo solo si pesa.
+  pilar-de-luz: true
+
 # Ajustes por anomalia. Se rellenan solos al tocarlos desde el menu.
 anomalias:
   caballero_sepulcral:

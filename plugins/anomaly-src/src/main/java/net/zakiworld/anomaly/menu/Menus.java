@@ -9,10 +9,14 @@ import net.zakiworld.anomaly.boss.Ability;
 import net.zakiworld.anomaly.core.ActiveAnomaly;
 import net.zakiworld.anomaly.core.AnomalyType;
 import net.zakiworld.anomaly.core.Compat;
+import net.zakiworld.anomaly.core.Fx;
 import net.zakiworld.anomaly.drops.DropEntry;
 import net.zakiworld.anomaly.drops.DropTable;
 import org.bukkit.Bukkit;
+import org.bukkit.Location;
 import org.bukkit.Material;
+import org.bukkit.block.Block;
+import org.bukkit.util.Vector;
 import org.bukkit.entity.HumanEntity;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
@@ -125,6 +129,26 @@ public final class Menus implements Listener {
     private void renderHub(Inventory inv) {
         AnomalyType selected = plugin.selected();
         boolean active = plugin.manager().active();
+        ActiveAnomaly live = plugin.manager().current();
+
+        List<Component> tpLore = new ArrayList<>();
+        if (live == null) {
+            tpLore.add(MenuUtil.line("Te lleva junto a la anomalia abierta."));
+            tpLore.add(MenuUtil.blank());
+            tpLore.add(Component.text("No hay ninguna abierta ahora mismo.", MenuUtil.DIM));
+        } else {
+            tpLore.add(MenuUtil.line("Te deja a unos bloques del jefe,"));
+            tpLore.add(MenuUtil.line("en suelo firme y mirando hacia el."));
+            tpLore.add(MenuUtil.blank());
+            tpLore.add(MenuUtil.field("Anomalia", live.type().display(), live.type().color()));
+            tpLore.add(MenuUtil.field("Coordenadas", live.where().getBlockX() + "  "
+                    + live.where().getBlockY() + "  " + live.where().getBlockZ(), NamedTextColor.WHITE));
+            tpLore.add(MenuUtil.blank());
+            tpLore.add(MenuUtil.action("Click para viajar alli"));
+        }
+        inv.setItem(13, MenuUtil.icon(live == null ? Material.GRAY_DYE : Material.ENDER_PEARL,
+                MenuUtil.title("Ir a la anomalia", live == null ? MenuUtil.DIM : NamedTextColor.LIGHT_PURPLE),
+                tpLore, live != null));
 
         inv.setItem(20, MenuUtil.icon(active ? Material.GRAY_DYE : Material.NETHER_STAR,
                 MenuUtil.title("Iniciar anomalia", active ? MenuUtil.DIM : NamedTextColor.GREEN),
@@ -252,6 +276,12 @@ public final class Menus implements Listener {
 
             List<Component> lore = new ArrayList<>();
             lore.add(Component.text(type.tagline(), MenuUtil.SOFT));
+            lore.add(MenuUtil.blank());
+            lore.add(Component.text("Elemento  ", MenuUtil.LABEL)
+                    .append(Component.text(type.element().display(), type.element().color(), TextDecoration.BOLD))
+                    .append(Component.text("   " + type.element().terrain(), MenuUtil.DIM)));
+            lore.add(Component.text("Brillo  ", MenuUtil.LABEL)
+                    .append(Component.text("■ " + type.glowColor().toString(), type.glowColor())));
             lore.add(MenuUtil.blank());
             lore.add(Component.text("DE DONDE VIENE", NamedTextColor.WHITE, TextDecoration.BOLD));
             for (String s : type.origin()) lore.add(Component.text(s, MenuUtil.SOFT));
@@ -435,6 +465,8 @@ public final class Menus implements Listener {
                 "El cartel grande al abrirse la anomalia."));
         inv.setItem(32, number(Material.MAP, "Precision de coordenadas", "anuncio.precision-coordenadas", 1,
                 " bloques", "Redondea el punto anunciado para dar margen."));
+        inv.setItem(33, toggle(Material.BEACON, "Pilar de luz", "anuncio.pilar-de-luz", true,
+                "Una columna del color de la anomalia sobre el jefe."));
     }
 
     private ItemStack toggle(Material material, String name, String path, boolean def, String help) {
@@ -561,6 +593,16 @@ public final class Menus implements Listener {
 
     private void clickHub(Player player, int slot) {
         switch (slot) {
+            case 13 -> {
+                ActiveAnomaly live = plugin.manager().current();
+                if (live == null) {
+                    deny(player, "No hay ninguna anomalia abierta.");
+                    return;
+                }
+                click(player, 1.5f);
+                player.closeInventory();
+                travelTo(player, live);
+            }
             case 20 -> {
                 AnomalyType type = plugin.selected();
                 if (type == null) {
@@ -760,6 +802,7 @@ public final class Menus implements Listener {
             case 30 -> plugin.settings().toggle("anuncio.sonido", true);
             case 31 -> plugin.settings().toggle("anuncio.titulo", true);
             case 32 -> plugin.settings().bumpInt("anuncio.precision-coordenadas", up ? step : -step, 1, 256, 1);
+            case 33 -> plugin.settings().toggle("anuncio.pilar-de-luz", true);
             default -> {
                 return;
             }
@@ -781,6 +824,44 @@ public final class Menus implements Listener {
     }
 
     // ------------------------------------------------------------------ utilidades
+
+    /**
+     * Deja al jugador a unos bloques del jefe, en suelo firme y mirandolo.
+     *
+     * No se le teletransporta encima a proposito: caer dentro del alcance de un jefe
+     * que ya esta peleando es una muerte gratis, y ademas se perderia la entrada.
+     */
+    private void travelTo(Player player, ActiveAnomaly live) {
+        Location target = live.fight() != null && live.fight().alive()
+                ? live.fight().loc() : live.where();
+        if (target.getWorld() == null) {
+            deny(player, "El mundo de la anomalia ya no esta cargado.");
+            return;
+        }
+
+        Location spot = null;
+        for (int i = 0; i < 8 && spot == null; i++) {
+            double a = Math.PI * 2 * i / 8.0;
+            Location probe = Fx.ground(target.clone().add(Math.cos(a) * 10, 2, Math.sin(a) * 10), 6);
+            Block floor = probe.getBlock().getRelative(0, -1, 0);
+            if (!floor.getType().isSolid() || floor.isLiquid()) continue;
+            if (probe.getBlock().getType().isSolid()) continue;
+            if (probe.getBlock().getRelative(0, 1, 0).getType().isSolid()) continue;
+            spot = probe;
+        }
+        if (spot == null) spot = target.clone().add(0, 1, 0);
+
+        // Que mire hacia el jefe, para no aparecer de espaldas al combate.
+        Vector look = target.toVector().subtract(spot.toVector());
+        if (look.lengthSquared() > 0.01) spot.setDirection(look);
+
+        player.teleport(spot);
+        Compat.sound(player.getWorld(), spot, "entity.enderman.teleport", 0.9f, 1.1f);
+        player.sendMessage(plugin.prefix()
+                .append(Component.text("Te dejo junto a ", MenuUtil.SOFT))
+                .append(Component.text(live.type().display(), live.type().color(), TextDecoration.BOLD))
+                .append(Component.text(".", MenuUtil.SOFT)));
+    }
 
     private static int indexOf(int[] slots, int slot) {
         for (int i = 0; i < slots.length; i++) {

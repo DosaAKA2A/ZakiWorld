@@ -1,5 +1,6 @@
 package net.zakiworld.anomaly.core;
 
+import net.kyori.adventure.text.format.NamedTextColor;
 import net.kyori.adventure.text.format.TextColor;
 import net.zakiworld.anomaly.AnomalyPlugin;
 import net.zakiworld.anomaly.boss.Ability;
@@ -25,6 +26,20 @@ public interface AnomalyType {
 
     /** Color de marca de la anomalia; tiñe el nombre, las barras y los mensajes. */
     TextColor color();
+
+    /**
+     * El color del brillo del jefe. Cada anomalia tiene el suyo y es como se la
+     * reconoce de lejos: el contorno se ve a traves de las paredes.
+     *
+     * Tiene que ser un color con nombre porque Minecraft saca el brillo del equipo de
+     * marcador, y los equipos solo admiten los dieciseis colores clasicos.
+     */
+    NamedTextColor glowColor();
+
+    /**
+     * Tierra, agua o viento. No es una etiqueta: decide en que terreno puede aparecer.
+     */
+    Element element();
 
     /** Icono del menu. */
     Material icon();

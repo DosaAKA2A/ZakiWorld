@@ -8,7 +8,7 @@ La intención de fondo es empujar a la gente a **salir del spawn** y a **pelear 
 el jefe escala con el número de jugadores, varias habilidades castigan dispersarse y el
 botín se reparte entre todos los que participaron, no solo entre quien da el último golpe.
 
-- **Versión:** 1.0.0
+- **Versión:** 1.1.0
 - **Paquete:** `net.zakiworld.anomaly`
 - **Probado contra:** Paper 26.1.2 (MC 26.1.2), compilado con `--release 21`
 - **Permiso único:** `anomaly.gui` (`default: op`)
@@ -35,7 +35,9 @@ Alias: `/anomalia`, `/anom`.
 
 ### El menú
 
-- **Panel** — iniciar, elegir, botín, ajustes, detener y estado en vivo.
+- **Panel** — iniciar, **ir a la anomalía**, elegir, botín, ajustes, detener y estado en vivo.
+  El botón de viaje te deja a diez bloques del jefe, en suelo firme y mirándolo: encima no,
+  que caer dentro del alcance de un jefe que ya pelea es una muerte gratis.
 - **Anomalías** — click para elegirla, click derecho para ver sus habilidades,
   shift para encenderla o apagarla, rueda para subir la vida base.
 - **Habilidades** — ficha de cada una: fase, duración, enfriamiento y qué hace.
@@ -50,26 +52,53 @@ Alias: `/anomalia`, `/anom`.
 ## El anuncio
 
 ```
-✦ Una Anomalía apareció en  X 412  Y 71  Z -1180   ·   world
+  ▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬
+  ✦  Una Anomalía apareció en   412 · 71 · -1180
+     pasa el ratón por Anomalía para saber a qué se enfrentan · se cierra en 15 min
+  ▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬
 ```
 
-- **"Anomalía"** es un hover: al pasar el ratón cuenta qué anomalía es, **de dónde viene**
-  y, en un color distinto (dorado), **qué suelta**, con probabilidad y destinatario.
-- Las **coordenadas** se copian al portapapeles con un click.
+- **"Anomalía"** es un hover: al pasar el ratón cuenta qué anomalía es, su **elemento**,
+  **de dónde viene** y, en un color distinto (dorado), **qué suelta**, con probabilidad
+  y destinatario.
+- Las **coordenadas** se copian al portapapeles con un click. Sin nombre de mundo: la línea
+  gana quitándoselo y no aporta nada.
 
 ---
+
+## Elemento y brillo
+
+Cada anomalía declara dos cosas que la definen de un vistazo:
+
+- **Elemento** — `TIERRA`, `AGUA` o `VIENTO`. No es una etiqueta decorativa: es el filtro
+  de terreno del buscador. Una de tierra exige suelo firme y seco y rechaza el sitio si más
+  del 10 % de la arena está bajo agua; una de agua exige justo lo contrario. El Caballero
+  Sepulcral es de **tierra**.
+- **Brillo** — un color propio, visible **a través del terreno** y a mucha más distancia que
+  cualquier partícula. Es en la práctica la forma de encontrar al jefe. El Caballero brilla
+  en **rojo**. Sale del equipo de marcador (Minecraft no deja pintar el contorno de otra
+  forma), por eso tiene que ser uno de los dieciséis colores con nombre.
+
+A eso se suma un **pilar de luz** del mismo color sobre el jefe, que se puede apagar con
+`anuncio.pilar-de-luz` si alguna vez pesa.
 
 ## Dónde aparece
 
 El buscador prueba hasta 40 puntos, cargando los trozos de forma **asíncrona** (nunca
 congela el servidor), y descarta un sitio si:
 
-1. Está dentro o cerca de una región de **WorldGuard** — lo que cubre también los claims
+1. El terreno no encaja con el **elemento** de la anomalía (agua, altura, suelo firme).
+2. Está dentro o cerca de una región de **WorldGuard** — lo que cubre también los claims
    de **ProtectionStones**, porque los crea como regiones WG. El margen es configurable
    para que la pelea, que se mueve, no acabe dentro del terreno de nadie.
-2. Está a menos de X del spawn del mundo.
-3. Tiene pinta de base aunque no haya claim: cofres, camas, hornos, yunques, spawners…
-4. No hay hueco suficiente o el terreno es demasiado escarpado (el jefe va montado).
+3. Está a menos de X del spawn del mundo.
+4. Tiene pinta de base aunque no haya claim: cofres, camas, hornos, yunques, spawners…
+5. No hay hueco suficiente o el terreno es demasiado escarpado (el jefe va montado).
+
+La distancia se mide **desde un jugador**, nunca desde el spawn del mundo si hay alguien
+conectado — y eso incluye a quien esté en creativo. Anclarse al spawn hacía que todas las
+anomalías salieran alrededor del centro del mapa. El punto se sortea repartido por **área**
+(raíz cuadrada del radio), que si no se amontonan todos en la distancia mínima.
 
 El hook de WorldGuard es **entero por reflexión**: si mañana se quita, el plugin sigue
 arrancando y lo dice en el log; solo pierde esa comprobación.
@@ -147,6 +176,12 @@ cuando la de arriba llega a cero desaparece y la siguiente pasa a ser la princip
   por defecto, igual que en Rip.
 - **`Stop` no es un error.** Cortar una animación antes de tiempo es una salida normal y no
   ensucia el log; `Anim` siempre ejecuta la limpieza, incluso si un tick lanza una excepción.
+- **Ver y pelear son cosas distintas.** `playersNear` son los que reciben daño (solo
+  supervivencia y aventura); `viewersNear` son los que ven barras, títulos y avisos, e
+  incluye a quien está en creativo. Confundirlos hacía que un operador probando el evento
+  no viera la barra de jefe y creyera que el jefe no había aparecido.
+- **El brillo se limpia al terminar.** Si no se saca a la entidad del equipo de marcador,
+  el equipo se llena de UUID de entidades muertas y crece sin parar.
 - **Interruptor de empuje.** `combate.permitir-empuje` apaga todo el empuje de golpe, por la
   misma razón por la que se prohibió en las animaciones de Rip.
 
@@ -169,7 +204,7 @@ No hay Maven en el PATH. Con el JDK 25 portátil y `paper-api 26.1.2`:
 
 ```
 javac --release 21 -encoding UTF-8 -cp "<paper-api + libs del servidor>" -d build @sources
-jar --create --file Anomaly-1.0.0.jar -C build .
+jar --create --file Anomaly-1.1.0.jar -C build .
 ```
 
 El `pom.xml` está para quien tenga Maven; `paper-api` es `provided`.

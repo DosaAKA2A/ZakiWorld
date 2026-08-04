@@ -40,10 +40,11 @@ public final class Announcer {
 
     public void opened(ActiveAnomaly event) {
         if (!plugin.settings().announceEnabled()) return;
-        Component message = openingLine(event);
         plugin.getServer().sendMessage(Component.empty());
-        plugin.getServer().sendMessage(message);
+        plugin.getServer().sendMessage(rule());
+        plugin.getServer().sendMessage(openingLine(event));
         plugin.getServer().sendMessage(hintLine(event));
+        plugin.getServer().sendMessage(rule());
         plugin.getServer().sendMessage(Component.empty());
 
         if (plugin.settings().announceSound()) {
@@ -61,6 +62,11 @@ public final class Announcer {
         }
     }
 
+    /** La linea fina de arriba y abajo, del color de la anomalia pero apagado. */
+    private Component rule() {
+        return Component.text("  ▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬", LINE);
+    }
+
     private Component openingLine(ActiveAnomaly event) {
         AnomalyType type = event.type();
         Location l = event.where();
@@ -72,26 +78,31 @@ public final class Announcer {
         Component word = Component.text("Anomalia", type.color(), TextDecoration.BOLD)
                 .hoverEvent(HoverEvent.showText(dossier(event)));
 
-        Component coords = Component.text("X " + x, NamedTextColor.WHITE)
-                .append(Component.text("  Y " + y, NamedTextColor.WHITE))
-                .append(Component.text("  Z " + z, NamedTextColor.WHITE))
-                .hoverEvent(HoverEvent.showText(Component.text("Clic para copiar las coordenadas", SOFT)))
+        // Sin el nombre del mundo: el servidor tiene uno solo que importe y la linea
+        // gana mucho quitandoselo. Las coordenadas son lo unico que hace falta.
+        Component coords = Component.text(String.valueOf(x), NamedTextColor.WHITE, TextDecoration.BOLD)
+                .append(Component.text("  ·  ", DIM))
+                .append(Component.text(String.valueOf(y), NamedTextColor.WHITE, TextDecoration.BOLD))
+                .append(Component.text("  ·  ", DIM))
+                .append(Component.text(String.valueOf(z), NamedTextColor.WHITE, TextDecoration.BOLD))
+                .hoverEvent(HoverEvent.showText(Component.text("Clic para copiar  ", SOFT)
+                        .append(Component.text(x + " " + y + " " + z, NamedTextColor.WHITE))))
                 .clickEvent(ClickEvent.copyToClipboard(x + " " + y + " " + z));
 
-        return Component.text("✦ ", type.color())
+        return Component.text("  ✦  ", type.color())
                 .append(Component.text("Una ", NamedTextColor.GRAY))
                 .append(word)
-                .append(Component.text(" aparecio en  ", NamedTextColor.GRAY))
-                .append(coords)
-                .append(Component.text("   ·   ", DIM))
-                .append(Component.text(l.getWorld() == null ? "?" : l.getWorld().getName(), SOFT));
+                .append(Component.text(" aparecio en   ", NamedTextColor.GRAY))
+                .append(coords);
     }
 
     private Component hintLine(ActiveAnomaly event) {
         int minutes = plugin.settings().timeLimitMinutes();
-        return Component.text("   Se cierra sola en ", DIM)
-                .append(Component.text(minutes + " minutos", SOFT))
-                .append(Component.text(".  No iran a sobrarles manos.", DIM));
+        return Component.text("     pasa el raton por ", DIM)
+                .append(Component.text("Anomalia", event.type().color()))
+                .append(Component.text(" para saber a que se enfrentan", DIM))
+                .append(Component.text("   ·   ", LINE))
+                .append(Component.text("se cierra en " + minutes + " min", DIM));
     }
 
     private static int round(int value, int step) {
@@ -109,6 +120,10 @@ public final class Announcer {
                 .append(Component.text(type.display(), type.color(), TextDecoration.BOLD))
                 .append(Component.newline())
                 .append(Component.text(type.tagline(), SOFT))
+                .append(Component.newline())
+                .append(Component.text("Elemento  ", DIM))
+                .append(Component.text(type.element().display(), type.element().color(), TextDecoration.BOLD))
+                .append(Component.text("   " + type.element().terrain(), DIM))
                 .append(Component.newline())
                 .append(separator());
 
@@ -174,11 +189,11 @@ public final class Announcer {
 
     public void defeated(ActiveAnomaly event, List<String> report) {
         AnomalyType type = event.type();
-        Component top = Component.text("✦ ", type.color())
+        Component top = Component.text("  ✦  ", type.color())
                 .append(Component.text(type.display(), type.color(), TextDecoration.BOLD))
                 .append(Component.text(" ha caido.", NamedTextColor.GRAY));
 
-        Component who = Component.text("   ", DIM);
+        Component who = Component.text("     ", DIM);
         if (event.participants() == 0) {
             who = who.append(Component.text("Nadie reclamo el botin.", DIM));
         } else {
@@ -189,8 +204,10 @@ public final class Announcer {
         }
 
         plugin.getServer().sendMessage(Component.empty());
+        plugin.getServer().sendMessage(rule());
         plugin.getServer().sendMessage(top);
         plugin.getServer().sendMessage(who);
+        plugin.getServer().sendMessage(rule());
         plugin.getServer().sendMessage(Component.empty());
 
         if (plugin.settings().announceSound()) {
@@ -204,7 +221,7 @@ public final class Announcer {
     }
 
     public void expired(ActiveAnomaly event) {
-        plugin.getServer().sendMessage(Component.text("✦ ", event.type().color())
+        plugin.getServer().sendMessage(Component.text("  ✦  ", event.type().color())
                 .append(Component.text("La anomalia se cerro sola. ", NamedTextColor.GRAY))
                 .append(Component.text(event.type().display() + " sigue del otro lado.", DIM)));
     }

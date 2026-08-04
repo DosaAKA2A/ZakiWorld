@@ -226,14 +226,32 @@ public final class Fx {
 
     // ------------------------------------------------------------------ objetivos
 
-    /** Jugadores vivos y en modo jugable dentro del radio. */
+    /**
+     * Jugadores a los que el jefe puede pegar: vivos y en modo jugable.
+     * Nadie en creativo o espectador entra aqui, y eso es correcto.
+     */
     public static List<Player> playersNear(Location center, double radius) {
+        return near(center, radius, Fx::isFightable);
+    }
+
+    /**
+     * Jugadores que deben VER el evento: barras de jefe, avisos, titulos.
+     *
+     * Esto incluye a quien esta en creativo, a diferencia de playersNear. Son dos ideas
+     * distintas y confundirlas hace que un operador probando el evento no vea ni la barra
+     * ni nada, y crea que el jefe no ha aparecido.
+     */
+    public static List<Player> viewersNear(Location center, double radius) {
+        return near(center, radius, p -> p != null && p.isOnline());
+    }
+
+    private static List<Player> near(Location center, double radius, java.util.function.Predicate<Player> filter) {
         List<Player> out = new ArrayList<>();
         World w = center.getWorld();
         if (w == null) return out;
         double sq = radius * radius;
         for (Player p : w.getPlayers()) {
-            if (!isFightable(p)) continue;
+            if (!filter.test(p)) continue;
             if (p.getLocation().distanceSquared(center) <= sq) out.add(p);
         }
         return out;

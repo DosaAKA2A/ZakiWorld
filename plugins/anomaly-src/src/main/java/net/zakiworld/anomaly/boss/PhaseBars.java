@@ -123,7 +123,9 @@ public final class PhaseBars {
      * las recibe y quien se aleja o se desconecta deja de verlas.
      */
     public void refreshViewers(Location center, double radius) {
-        Set<Player> should = new HashSet<>(Fx.playersNear(center, radius));
+        // A proposito viewersNear y no playersNear: la barra la ve todo el que este
+        // cerca, tambien un operador en creativo. Ver es una cosa y pelear es otra.
+        Set<Player> should = new HashSet<>(Fx.viewersNear(center, radius));
 
         for (Player p : new HashSet<>(viewers)) {
             if (should.contains(p) && p.isOnline()) continue;

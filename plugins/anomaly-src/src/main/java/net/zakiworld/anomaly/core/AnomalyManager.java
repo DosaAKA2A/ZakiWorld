@@ -71,7 +71,7 @@ public final class AnomalyManager implements Listener {
             return;
         }
         searching = true;
-        plugin.sites().find(loc -> {
+        plugin.sites().find(type, loc -> {
             searching = false;
             if (loc == null) {
                 done.accept(false);
@@ -168,11 +168,34 @@ public final class AnomalyManager implements Listener {
             }
         }
 
+        if (fight.ticks() % 10 == 0 && plugin.settings().lightPillar()) beacon(event, fight.loc());
+
         if (event.state() == ActiveAnomaly.State.ACTIVA
                 && event.elapsedSeconds() > plugin.settings().timeLimitMinutes() * 60L) {
             plugin.announcer().expired(event);
             stop(true);
         }
+    }
+
+    /**
+     * El pilar de luz sobre el jefe, del color de la anomalia.
+     *
+     * Las coordenadas del anuncio te dejan en la zona, pero encontrar al jefe entre
+     * arboles seguia siendo cosa de suerte. Esto se ve desde lejos y de noche marca
+     * el sitio como una baliza.
+     */
+    private void beacon(ActiveAnomaly event, Location where) {
+        Location base = Fx.ground(where, 4);
+        var dust = Compat.dust(event.type().glowColor().value(), 2.2f);
+        // Pocas particulas y grandes: cada una forzada es un paquete por jugador a la
+        // redonda, asi que el pilar se dibuja espaciado en vez de denso.
+        for (double y = 0.5; y <= 40; y += 2.5) {
+            Compat.spawnForced(where.getWorld(), Compat.DUST, base.clone().add(0, y, 0), 1,
+                    0.14, 0.2, 0.14, 0, dust);
+        }
+        Fx.ring(base.clone().add(0, 0.3, 0), 3.0, 12, l ->
+                Compat.spawnForced(where.getWorld(), Compat.DUST, Fx.ground(l, 3).add(0, 0.2, 0), 1,
+                        0, 0, 0, 0, dust));
     }
 
     // ---------------------------------------------------------------------- cierre
