@@ -8,7 +8,7 @@ La intención de fondo es empujar a la gente a **salir del spawn** y a **pelear 
 el jefe escala con el número de jugadores, varias habilidades castigan dispersarse y el
 botín se reparte entre todos los que participaron, no solo entre quien da el último golpe.
 
-- **Versión:** 1.1.0
+- **Versión:** 1.2.0
 - **Paquete:** `net.zakiworld.anomaly`
 - **Probado contra:** Paper 26.1.2 (MC 26.1.2), compilado con `--release 21`
 - **Permiso único:** `anomaly.gui` (`default: op`)
@@ -25,6 +25,7 @@ lo mismo desde consola.
 | `/anomaly` | Abre el panel |
 | `/anomaly start [id]` | Busca sitio válido y abre la anomalía |
 | `/anomaly here [id]` | La abre donde estás, sin buscar ni mirar protecciones |
+| `/anomaly at <x> <y> <z> [id] [mundo]` | La abre en esas coordenadas; funciona desde consola |
 | `/anomaly stop` | La cierra y limpia la escena |
 | `/anomaly info` | Estado del plugin y del evento |
 | `/anomaly abilities [id]` | Lista las habilidades |
@@ -52,11 +53,11 @@ Alias: `/anomalia`, `/anom`.
 ## El anuncio
 
 ```
-  ▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬
-  ✦  Una Anomalía apareció en   412 · 71 · -1180
-     pasa el ratón por Anomalía para saber a qué se enfrentan · se cierra en 15 min
-  ▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬
+✦ Una Anomalía ha aparecido en 412 71 -1180
 ```
+
+Una línea y nada más. Ni marcos, ni segunda fila, ni gris sobre negro: todo lo demás
+vive en el hover, que es donde se puede leer con calma.
 
 - **"Anomalía"** es un hover: al pasar el ratón cuenta qué anomalía es, su **elemento**,
   **de dónde viene** y, en un color distinto (dorado), **qué suelta**, con probabilidad
@@ -110,15 +111,16 @@ arrancando y lo dice en el log; solo pierde esa comprobación.
 Esqueleto con armadura de netherita, **lanza de netherita** (el arma nueva de la versión)
 y montado en un caballo esqueleto. Viene del Páramo de Batalla del Aether.
 
-**Tres barras de jefe apiladas**, un tercio de vida cada una. Se vacían de arriba abajo:
-cuando la de arriba llega a cero desaparece y la siguiente pasa a ser la principal.
+**Tres barras de jefe**, un tercio de vida cada una, pero **de una en una**: cuando la de
+la fase en curso se agota, desaparece y sale la siguiente. No se ven las tres a la vez a
+propósito, ni siquiera para avisar de cuánto queda.
 
 ### Fase I — montado
 | Habilidad | Qué hace |
 |---|---|
 | Carga de Lanza | Marca un pasillo y galopa por él |
 | Barrido de Guadaña | Tres barridos concéntricos; solo pega el borde de cada onda |
-| Lanzas del Páramo | Bajo los pies de cada uno brotan cinco lanzas |
+| Pisotón de la Montura | El caballo se encabrita y descarga los cascos |
 | Estandarte de Guerra | Le da resistencia; hay que **derribarlo a golpes** |
 | Relincho Aterrador | Cono de miedo: ciega, marea y frena |
 | Llamada de Jinetes | Salen 2-4 jinetes menores con arco |
@@ -127,7 +129,7 @@ cuando la de arriba llega a cero desaparece y la siguiente pasa a ser la princip
 | Habilidad | Qué hace |
 |---|---|
 | Estocada Fantasma | Se teletransporta a la espalda del más lejano |
-| Muro de Lanzas | Nueve lanzas atraviesan la arena |
+| Tajo Descendente | Parte el suelo en línea recta de un tajo |
 | Cadena de Hueso | Arrastra al que se aleja de vuelta al centro |
 | Juramento Roto | Si te alejas más de 16 bloques en 7 s, golpe brutal |
 | Círculo de Osario | Cerco que se cierra de 18 a 7 bloques |
@@ -136,16 +138,20 @@ cuando la de arriba llega a cero desaparece y la siguiente pasa a ser la princip
 ### Fase III — heraldo
 | Habilidad | Qué hace |
 |---|---|
-| Lluvia de Acero | 8 s de lanzas del cielo sobre marcas que te persiguen |
-| Tormenta Espectral | Se eleva y descarga rayos |
+| Sismo del Páramo | Cuatro pisotones seguidos, cada uno con su onda |
+| Salto Demoledor | Salta muy alto y cae de lleno sobre la marca |
 | Última Carga | El fantasma de la montura vuelve |
 | Grito del Páramo | Haz sónico frontal de 24 bloques |
 
 ### Cualquier fase
 | Habilidad | Qué hace |
 |---|---|
-| Marca del Sepulcro | Señala al que se aleja y le tira una lanza encima |
+| Cacería | Le echa el ojo al que se aleja y va a por él a la carrera |
 | Leva de Huesos | Recluta 3-6 caídos que salen del suelo |
+
+El Caballero es **fuerza bruta, no magia**: no hay una sola arma que flote, se eleve o
+caiga sola del cielo. Todo lo que pega lo pega él, con la lanza o con los cascos, y los
+escombros que levanta son del bloque que esté pisando.
 
 ### Las tres animaciones guionizadas
 
@@ -156,6 +162,30 @@ cuando la de arriba llega a cero desaparece y la siguiente pasa a ser la princip
   daño; si no, se levanta pegando un 35 % más fuerte. **No se cura a propósito**: curarse
   lo devolvería a la fase 2 y el combate entraría en bucle.
 - **Ocaso (muerte)** — la armadura se desprende pieza a pieza y la grieta se cierra.
+
+---
+
+## La Cabra Gritona
+
+La cabra chillona del Aether, pero del tamaño de una casa (atributo `scale`), en
+**blanco** y de elemento **viento**, así que solo aparece en cumbres y a cielo abierto.
+
+Todo lo suyo nace del **grito**: empuja, hace daño, marea y **parte el cielo en rayos**
+sobre quien lo haya recibido, dejándola ardiendo en blanco. Lo demás es embestir, saltar
+y no dejarse mover.
+
+| Fase | Habilidades |
+|---|---|
+| I — la embestida | Grito Atronador · Embestida de Cuernos · Pisotón de Pezuñas · Berrido · Salto Montañés |
+| II — la rabia | Tormenta de Balidos · Rebote · Manada · Cornada Ascendente · Pelaje Blanco |
+| III — el trueno | Grito del Trueno · Estampida · Cielo Partido · Aullido Final |
+| Cualquiera | Tozudez |
+
+Transiciones: **se le parte un cuerno** (I → II, se vuelve más rápida) y **el cielo le
+responde** (II → III, arde en blanco y pega un 25 % más).
+
+Los rayos son `strikeLightningEffect`, es decir **solo el efecto visual**, y el daño lo
+aplica el plugin a mano. Un rayo de verdad prende fuego al terreno y esto es un survival.
 
 ---
 
@@ -182,6 +212,11 @@ cuando la de arriba llega a cero desaparece y la siguiente pasa a ser la princip
   no viera la barra de jefe y creyera que el jefe no había aparecido.
 - **El brillo se limpia al terminar.** Si no se saca a la entidad del equipo de marcador,
   el equipo se llena de UUID de entidades muertas y crece sin parar.
+- **Nada de armas flotantes en el Caballero.** Se quitaron a propósito las cinco
+  habilidades en las que las lanzas brotaban, llovían o formaban muros: leídas en juego
+  parecían magia, y el Caballero tiene que ser fuerza bruta. Las ondas de choque llevan
+  un `Set` de UUID por lanzamiento, porque si no el anillo golpea al mismo jugador un tick
+  tras otro mientras lo atraviesa y un solo pisotón lo mata.
 - **Interruptor de empuje.** `combate.permitir-empuje` apaga todo el empuje de golpe, por la
   misma razón por la que se prohibió en las animaciones de Rip.
 
@@ -204,7 +239,7 @@ No hay Maven en el PATH. Con el JDK 25 portátil y `paper-api 26.1.2`:
 
 ```
 javac --release 21 -encoding UTF-8 -cp "<paper-api + libs del servidor>" -d build @sources
-jar --create --file Anomaly-1.1.0.jar -C build .
+jar --create --file Anomaly-1.2.0.jar -C build .
 ```
 
 El `pom.xml` está para quien tenga Maven; `paper-api` es `provided`.

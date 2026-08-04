@@ -287,7 +287,7 @@ public final class Menus implements Listener {
             for (String s : type.origin()) lore.add(Component.text(s, MenuUtil.SOFT));
             lore.add(MenuUtil.blank());
             lore.add(MenuUtil.field("Vida base", String.valueOf((int) plugin.registry().health(type)),
-                    NamedTextColor.WHITE));
+                    NamedTextColor.GREEN));
             lore.add(MenuUtil.field("Habilidades", String.valueOf(type.abilities().size()), NamedTextColor.WHITE));
             lore.add(MenuUtil.field("Estado", enabled ? "activa" : "apagada",
                     enabled ? NamedTextColor.GREEN : NamedTextColor.RED));
@@ -297,10 +297,9 @@ public final class Menus implements Listener {
             lore.add(MenuUtil.blank());
             lore.add(chosen ? Component.text("✔ ELEGIDA", NamedTextColor.GREEN, TextDecoration.BOLD)
                     : MenuUtil.action("Click para elegirla"));
-            lore.add(MenuUtil.actionSecondary("Click derecho: ver sus habilidades"));
+            lore.add(MenuUtil.actionSecondary("Click derecho: habilidades y vida del jefe"));
             lore.add(Component.text("► Shift + click: " + (enabled ? "apagarla" : "activarla"),
                     NamedTextColor.GRAY));
-            lore.add(Component.text("► Rueda: subir o bajar la vida base", NamedTextColor.GRAY));
 
             inv.setItem(BODY[i], MenuUtil.icon(enabled ? type.icon() : Material.GRAY_DYE,
                     MenuUtil.title(type.display(), enabled ? type.color() : MenuUtil.DIM), lore, chosen));
@@ -340,10 +339,34 @@ public final class Menus implements Listener {
         inv.setItem(49, MenuUtil.icon(type.icon(), MenuUtil.title(type.display(), type.color()),
                 List.of(
                         MenuUtil.field("Habilidades", String.valueOf(abilities.size()), NamedTextColor.WHITE),
+                        MenuUtil.field("Elemento", type.element().display(), type.element().color()),
                         MenuUtil.field("Pagina", (page + 1) + " de " + pages, MenuUtil.SOFT)), false));
         inv.setItem(50, page < pages - 1 ? MenuUtil.simple(Material.SPECTRAL_ARROW,
                 Component.text("Pagina siguiente ▶", NamedTextColor.YELLOW),
                 List.of(Component.text("Pagina " + (page + 2) + " de " + pages, MenuUtil.SOFT))) : MenuUtil.pane());
+
+        // Control de vida del jefe, aqui y no en la lista: es un ajuste de ESTA anomalia.
+        double health = plugin.registry().health(type);
+        inv.setItem(46, MenuUtil.simple(Material.REDSTONE,
+                Component.text("− Vida del jefe", NamedTextColor.RED),
+                List.of(MenuUtil.line("Baja 100. Con shift, 500."))));
+        inv.setItem(47, MenuUtil.icon(Material.GOLDEN_APPLE,
+                MenuUtil.title("Vida del jefe", MenuUtil.GOLD),
+                List.of(
+                        MenuUtil.field("Vida base", String.valueOf((int) health), NamedTextColor.GREEN),
+                        MenuUtil.line("Sube un " + Math.round(plugin.settings().healthPerPlayer() * 100)
+                                + "% por cada jugador de mas."),
+                        MenuUtil.blank(),
+                        MenuUtil.field("Con 5 jugadores",
+                                ((int) plugin.registry().scaledHealth(type, 5)) + " de vida", NamedTextColor.WHITE),
+                        MenuUtil.blank(),
+                        MenuUtil.line("Por encima de 1024 el jefe no aguanta mas"),
+                        MenuUtil.line("vida real, asi que el resto se cobra"),
+                        MenuUtil.line("bajandole el dano que recibe. El efecto"),
+                        MenuUtil.line("para quien pelea es el mismo.")), false));
+        inv.setItem(52, MenuUtil.simple(Material.GLOWSTONE_DUST,
+                Component.text("+ Vida del jefe", NamedTextColor.GREEN),
+                List.of(MenuUtil.line("Sube 100. Con shift, 500."))));
     }
 
     // ---------------------------------------------------------------------- botin
@@ -515,12 +538,15 @@ public final class Menus implements Listener {
                 lore.add(MenuUtil.line("Solo operadores o quien lo tenga."));
             }
             case ANOMALIES -> {
-                lore.add(MenuUtil.line("Elige cual se abre al pulsar Iniciar,"));
-                lore.add(MenuUtil.line("apaga las que no quieras que salgan solas"));
-                lore.add(MenuUtil.line("y ajusta la vida base de cada una."));
+                lore.add(MenuUtil.line("Elige cual se abre al pulsar Iniciar"));
+                lore.add(MenuUtil.line("y apaga las que no quieras que salgan solas."));
+                lore.add(MenuUtil.blank());
+                lore.add(MenuUtil.line("La vida del jefe se ajusta en su ficha:"));
+                lore.add(MenuUtil.line("click derecho sobre la anomalia."));
             }
             case ABILITIES -> {
-                lore.add(MenuUtil.line("Todo lo que sabe hacer esta anomalia."));
+                lore.add(MenuUtil.line("Todo lo que sabe hacer esta anomalia,"));
+                lore.add(MenuUtil.line("y abajo la vida base del jefe."));
                 lore.add(MenuUtil.line("Cada habilidad avisa antes de golpear:"));
                 lore.add(MenuUtil.line("la marca en el suelo es la senal."));
             }
@@ -585,7 +611,7 @@ public final class Menus implements Listener {
         switch (holder.screen) {
             case HUB -> clickHub(player, slot);
             case ANOMALIES -> clickAnomalies(player, event, holder, slot);
-            case ABILITIES -> clickAbilities(player, holder, slot);
+            case ABILITIES -> clickAbilities(player, event, holder, slot);
             case DROPS -> clickDrops(player, event, holder, slot);
             case SETTINGS -> clickSettings(player, event, holder, slot);
         }
@@ -667,10 +693,7 @@ public final class Menus implements Listener {
         if (index >= all.size()) return;
         AnomalyType type = all.get(index);
 
-        if (event.getClick() == ClickType.MIDDLE) {
-            plugin.registry().setHealth(type, plugin.registry().health(type) + 100);
-            click(player, 1.5f);
-        } else if (event.isShiftClick()) {
+        if (event.isShiftClick()) {
             plugin.registry().setEnabled(type, !plugin.registry().isEnabled(type));
             click(player, plugin.registry().isEnabled(type) ? 1.5f : 0.7f);
         } else if (event.isRightClick()) {
@@ -687,16 +710,28 @@ public final class Menus implements Listener {
         render(event.getInventory(), player, holder);
     }
 
-    private void clickAbilities(Player player, Holder holder, int slot) {
+    private void clickAbilities(Player player, InventoryClickEvent event, Holder holder, int slot) {
         AnomalyType type = plugin.registry().get(holder.context);
         if (type == null) return;
         int pages = Math.max(1, (type.abilities().size() + BODY.length - 1) / BODY.length);
         if (slot == 48 && holder.page > 0) {
             click(player, 1.0f);
             open(player, Screen.ABILITIES, holder.page - 1, holder.context, false);
-        } else if (slot == 50 && holder.page < pages - 1) {
+            return;
+        }
+        if (slot == 50 && holder.page < pages - 1) {
             click(player, 1.1f);
             open(player, Screen.ABILITIES, holder.page + 1, holder.context, false);
+            return;
+        }
+        if (slot == 46 || slot == 52) {
+            int step = (event.isShiftClick() ? 500 : 100) * (slot == 52 ? 1 : -1);
+            plugin.registry().setHealth(type, plugin.registry().health(type) + step);
+            click(player, slot == 52 ? 1.4f : 0.9f);
+            player.sendActionBar(Component.text("Vida base de " + type.display() + "  ", MenuUtil.SOFT)
+                    .append(Component.text((int) plugin.registry().health(type), NamedTextColor.GREEN,
+                            TextDecoration.BOLD)));
+            render(event.getInventory(), player, holder);
         }
     }
 

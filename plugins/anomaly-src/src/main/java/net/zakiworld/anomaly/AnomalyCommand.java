@@ -8,6 +8,8 @@ import net.zakiworld.anomaly.boss.Ability;
 import net.zakiworld.anomaly.core.ActiveAnomaly;
 import net.zakiworld.anomaly.core.AnomalyType;
 import net.zakiworld.anomaly.core.Compat;
+import org.bukkit.Location;
+import org.bukkit.World;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
@@ -54,6 +56,7 @@ public final class AnomalyCommand implements CommandExecutor, TabCompleter {
         switch (args[0].toLowerCase(Locale.ROOT)) {
             case "start", "iniciar" -> start(sender, args);
             case "here", "aqui" -> here(sender, args);
+            case "at", "en" -> at(sender, args);
             case "stop", "parar", "detener" -> stop(sender);
             case "info", "estado" -> info(sender);
             case "abilities", "habilidades" -> abilities(sender, args);
@@ -98,6 +101,64 @@ public final class AnomalyCommand implements CommandExecutor, TabCompleter {
         }
         plugin.manager().open(type, player.getLocation());
         sender.sendMessage(plugin.prefix().append(Component.text("Abierta aqui mismo, sin comprobar protecciones.", SOFT)));
+    }
+
+    /**
+     * La abre en unas coordenadas concretas, sin buscar sitio ni mirar protecciones.
+     * Funciona desde consola, que es lo que permite colocarla a dedo o probarla sin
+     * depender de que el terreno cumpla el elemento de la anomalia.
+     */
+    private void at(CommandSender sender, String[] args) {
+        if (args.length < 4) {
+            sender.sendMessage(plugin.prefix().append(
+                    Component.text("Uso: /anomaly at <x> <y> <z> [id] [mundo]", SOFT)));
+            return;
+        }
+        double x, y, z;
+        try {
+            x = Double.parseDouble(args[1]);
+            y = Double.parseDouble(args[2]);
+            z = Double.parseDouble(args[3]);
+        } catch (NumberFormatException ex) {
+            sender.sendMessage(plugin.prefix().append(
+                    Component.text("Las coordenadas tienen que ser numeros.", NamedTextColor.RED)));
+            return;
+        }
+
+        AnomalyType type = resolve(sender, args, 4);
+        if (type == null) return;
+
+        World world = null;
+        if (args.length > 5) {
+            world = plugin.getServer().getWorld(args[5]);
+            if (world == null) {
+                sender.sendMessage(plugin.prefix().append(
+                        Component.text("No existe el mundo '" + args[5] + "'.", NamedTextColor.RED)));
+                return;
+            }
+        } else if (sender instanceof Player player) {
+            world = player.getWorld();
+        } else {
+            List<String> allowed = plugin.settings().allowedWorlds();
+            world = allowed.isEmpty()
+                    ? plugin.getServer().getWorlds().get(0)
+                    : plugin.getServer().getWorld(allowed.get(0));
+        }
+        if (world == null) {
+            sender.sendMessage(plugin.prefix().append(
+                    Component.text("No se pudo determinar el mundo. Pasalo como ultimo argumento.",
+                            NamedTextColor.RED)));
+            return;
+        }
+        if (plugin.manager().active()) {
+            sender.sendMessage(plugin.prefix().append(
+                    Component.text("Ya hay una anomalia abierta.", NamedTextColor.RED)));
+            return;
+        }
+        plugin.manager().open(type, new Location(world, x, y, z));
+        sender.sendMessage(plugin.prefix().append(Component.text(
+                "Abierta en " + world.getName() + " " + (int) x + " " + (int) y + " " + (int) z
+                        + ", sin comprobar protecciones.", SOFT)));
     }
 
     private void stop(CommandSender sender) {
@@ -244,6 +305,7 @@ public final class AnomalyCommand implements CommandExecutor, TabCompleter {
         line(sender, "/anomaly", "abre el panel");
         line(sender, "/anomaly start [id]", "busca sitio y abre la anomalia");
         line(sender, "/anomaly here [id]", "la abre donde estas, sin comprobaciones");
+        line(sender, "/anomaly at <x> <y> <z> [id]", "la abre en esas coordenadas");
         line(sender, "/anomaly stop", "la cierra y limpia la escena");
         line(sender, "/anomaly info", "estado del plugin y del evento");
         line(sender, "/anomaly abilities [id]", "lista las habilidades");
@@ -285,8 +347,14 @@ public final class AnomalyCommand implements CommandExecutor, TabCompleter {
         List<String> out = new ArrayList<>();
         if (!plugin.mayUseGui(sender)) return out;
         if (args.length == 1) {
-            for (String s : List.of("menu", "start", "here", "stop", "info", "abilities", "test", "hurt", "reload")) {
+            for (String s : List.of("menu", "start", "here", "at", "stop", "info", "abilities", "test", "hurt", "reload")) {
                 if (s.startsWith(args[0].toLowerCase(Locale.ROOT))) out.add(s);
+            }
+            return out;
+        }
+        if (args.length == 5 && List.of("at", "en").contains(args[0].toLowerCase(Locale.ROOT))) {
+            for (AnomalyType t : plugin.registry().all()) {
+                if (t.id().startsWith(args[4].toLowerCase(Locale.ROOT))) out.add(t.id());
             }
             return out;
         }

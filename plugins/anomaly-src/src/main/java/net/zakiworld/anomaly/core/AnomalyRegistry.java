@@ -5,6 +5,7 @@ import net.kyori.adventure.text.format.TextColor;
 import net.zakiworld.anomaly.AnomalyPlugin;
 import net.zakiworld.anomaly.boss.Ability;
 import net.zakiworld.anomaly.boss.BossFight;
+import net.zakiworld.anomaly.boss.ScreamingGoat;
 import net.zakiworld.anomaly.boss.SepulchralKnight;
 import org.bukkit.Location;
 import org.bukkit.Material;
@@ -30,6 +31,7 @@ public final class AnomalyRegistry {
     public AnomalyRegistry(AnomalyPlugin plugin) {
         this.plugin = plugin;
         register(new KnightType());
+        register(new GoatType());
     }
 
     public void register(AnomalyType type) {
@@ -42,6 +44,10 @@ public final class AnomalyRegistry {
 
     public AnomalyType knight() {
         return types.get(SepulchralKnight.ID);
+    }
+
+    public AnomalyType goat() {
+        return types.get(ScreamingGoat.ID);
     }
 
     public List<AnomalyType> all() {
@@ -148,7 +154,7 @@ public final class AnomalyRegistry {
             return List.of(
                     "Elemento de tierra: suelo firme y seco",
                     "Tres fases: montado, a pie y heraldo",
-                    "18 habilidades, todas con aviso previo",
+                    "18 habilidades de fuerza bruta, todas con aviso",
                     "Se cura nunca; se enfurece si le fallan");
         }
 
@@ -187,10 +193,10 @@ public final class AnomalyRegistry {
                 icon("NETHERITE_SPEAR", "TRIDENT"), f -> knight(f).lanceCharge());
         add(list, "barrido", "Barrido de Guadana", 1, 150, 40, 5,
                 "Tres barridos concentricos de la lanza; solo pega el borde de cada onda.",
-                icon("IRON_SWORD"), f -> knight(f).scytheSweep());
-        add(list, "lanzas_paramo", "Lanzas del Paramo", 1, 240, 90, 3,
-                "Bajo los pies de cada uno brotan cinco lanzas del suelo.",
-                icon("SPECTRAL_ARROW", "ARROW"), f -> knight(f).wastelandSpears());
+                icon("NETHERITE_SPEAR", "TRIDENT"), f -> knight(f).scytheSweep());
+        add(list, "pisoton", "Pisoton de la Montura", 1, 220, 70, 4,
+                "El caballo se encabrita y descarga los cascos; la onda barre nueve bloques.",
+                icon("IRON_HORSE_ARMOR", "SADDLE"), f -> knight(f).hoofSlam());
         add(list, "estandarte", "Estandarte de Guerra", 1, 520, 300, 2,
                 "Planta un estandarte que le da resistencia; hay que derribarlo a golpes.",
                 icon("BLACK_BANNER", "WHITE_BANNER"), f -> knight(f).warBanner());
@@ -205,9 +211,9 @@ public final class AnomalyRegistry {
         add(list, "estocada_fantasma", "Estocada Fantasma", 2, 170, 45, 5,
                 "Se teletransporta a la espalda del mas lejano y suelta una estocada.",
                 icon("ENDER_PEARL"), f -> knight(f).phantomThrust());
-        add(list, "muro_lanzas", "Muro de Lanzas", 2, 260, 80, 3,
-                "Una hilera de nueve lanzas atraviesa la arena de lado a lado.",
-                icon("IRON_BARS"), f -> knight(f).spearWall());
+        add(list, "tajo_descendente", "Tajo Descendente", 2, 240, 80, 4,
+                "Parte el suelo en linea recta con un tajo de arriba abajo.",
+                icon("CRACKED_DEEPSLATE_BRICKS", "DEEPSLATE"), f -> knight(f).overheadCleave());
         add(list, "cadena_hueso", "Cadena de Hueso", 2, 210, 55, 3,
                 "Engancha al que mas se aleja y lo arrastra de vuelta al centro.",
                 icon("CHAIN"), f -> knight(f).boneChain());
@@ -222,12 +228,12 @@ public final class AnomalyRegistry {
                 icon("NETHERITE_INGOT"), f -> knight(f).netheriteWard());
 
         // --- Fase III: heraldo
-        add(list, "lluvia_acero", "Lluvia de Acero", 3, 320, 160, 4,
-                "Ocho segundos de lanzas cayendo del cielo sobre marcas que te persiguen.",
-                icon("NETHERITE_SCRAP"), f -> knight(f).steelRain());
-        add(list, "tormenta_espectral", "Tormenta Espectral", 3, 340, 110, 3,
-                "Se eleva y descarga rayos sobre marcas en el suelo.",
-                icon("LIGHTNING_ROD", "COPPER_INGOT"), f -> knight(f).spectralStorm());
+        add(list, "sismo", "Sismo del Paramo", 3, 360, 200, 3,
+                "Cuatro pisotones seguidos, cada uno con su onda; hay que moverse entre ellas.",
+                icon("COARSE_DIRT", "DIRT"), f -> knight(f).earthquake());
+        add(list, "salto_demoledor", "Salto Demoledor", 3, 330, 110, 3,
+                "Salta muy alto y cae de lleno sobre la marca; el golpe mas bruto que tiene.",
+                icon("NETHERITE_BOOTS", "IRON_BOOTS"), f -> knight(f).crushingLeap());
         add(list, "ultima_carga", "Ultima Carga", 3, 380, 120, 3,
                 "El fantasma de la montura vuelve para una carga que atraviesa la arena.",
                 icon("SKELETON_SKULL"), f -> knight(f).finalCharge());
@@ -236,14 +242,162 @@ public final class AnomalyRegistry {
                 icon("ECHO_SHARD", "AMETHYST_SHARD"), f -> knight(f).wastelandScream());
 
         // --- Cualquier fase
-        add(list, "marca_sepulcro", "Marca del Sepulcro", 0, 360, 80, 2,
-                "Senala al que se aleja y le deja caer una lanza encima.",
-                icon("TARGET", "REDSTONE"), f -> knight(f).graveMark());
+        add(list, "caceria", "Caceria", 0, 340, 120, 2,
+                "Le echa el ojo al que mas se aleja y va a por el a la carrera.",
+                icon("TARGET", "REDSTONE"), f -> knight(f).hunt());
         add(list, "leva_huesos", "Leva de Huesos", 0, 700, 60, 2,
                 "Recluta entre tres y seis caidos que salen del suelo alrededor.",
                 icon("SKELETON_SPAWN_EGG", "BONE_MEAL"), f -> knight(f).boneLevy());
 
         return list;
+    }
+
+
+    // ------------------------------------------------------------ la Cabra Gritona
+
+    /** Ficha de la Cabra Gritona. */
+    public final class GoatType implements AnomalyType {
+
+        @Override
+        public String id() {
+            return ScreamingGoat.ID;
+        }
+
+        @Override
+        public String display() {
+            return plugin.getConfig().getString("anomalias." + id() + ".nombre", "Cabra Gritona");
+        }
+
+        @Override
+        public TextColor color() {
+            return ScreamingGoat.ACCENT;
+        }
+
+        @Override
+        public NamedTextColor glowColor() {
+            return NamedTextColor.WHITE;
+        }
+
+        @Override
+        public Element element() {
+            return Element.VIENTO;
+        }
+
+        @Override
+        public Material icon() {
+            Material m = Material.matchMaterial("GOAT_HORN");
+            return m != null ? m : Material.BONE;
+        }
+
+        @Override
+        public String tagline() {
+            return "Cabra chillona del tamano de una casa";
+        }
+
+        @Override
+        public List<String> origin() {
+            return List.of(
+                    "Bajaba de los riscos del Aether a gritarle",
+                    "a las tormentas, y una de ellas le contesto.",
+                    "Desde entonces el trueno le hace caso: grita,",
+                    "y el cielo se parte donde ella mira.");
+        }
+
+        @Override
+        public List<String> threat() {
+            return List.of(
+                    "Elemento de viento: cumbres y cielo abierto",
+                    "Cada grito empuja, hace dano y trae rayos",
+                    "15 habilidades, ninguna a distancia sin aviso",
+                    "Embiste, salta y no se deja mover");
+        }
+
+        @Override
+        public double baseHealth() {
+            return 1600;
+        }
+
+        @Override
+        public int arenaRadius() {
+            return 26;
+        }
+
+        @Override
+        public List<Ability> abilities() {
+            return goatAbilities();
+        }
+
+        @Override
+        public BossFight create(AnomalyPlugin plugin, ActiveAnomaly event, Location where) {
+            return new ScreamingGoat(plugin, event, where);
+        }
+    }
+
+    /**
+     * Las 15 habilidades de la Cabra. Todo lo suyo nace del grito: el berrido empuja,
+     * llama al rayo y la deja ardiendo en blanco. Lo demas es embestir y saltar.
+     */
+    public List<Ability> goatAbilities() {
+        List<Ability> list = new ArrayList<>();
+
+        // --- Fase I: la embestida
+        add(list, "grito_atronador", "Grito Atronador", 1, 200, 66, 5,
+                "Cono de grito: empuja, marea y deja caer tres rayos sobre quien lo pille.",
+                icon("GOAT_HORN", "BONE"), f -> goat(f).thunderScream());
+        add(list, "embestida", "Embestida de Cuernos", 1, 190, 70, 5,
+                "Retrocede, baja la cabeza y sale disparada en linea recta.",
+                icon("IRON_HORSE_ARMOR", "SADDLE"), f -> goat(f).hornCharge());
+        add(list, "pisoton_pezunas", "Pisoton de Pezunas", 1, 170, 60, 4,
+                "Se alza y descarga las cuatro patas; la onda barre ocho bloques.",
+                icon("COARSE_DIRT", "DIRT"), f -> goat(f).hoofStomp());
+        add(list, "berrido", "Berrido", 1, 120, 52, 4,
+                "Grito corto y circular, sin rayos, para quitarse gente de encima.",
+                icon("NOTE_BLOCK", "BONE"), f -> goat(f).bleat());
+        add(list, "salto_montanes", "Salto Montanes", 1, 260, 90, 3,
+                "Salta como en el cerro y cae encima de donde estabas.",
+                icon("FEATHER"), f -> goat(f).mountainLeap());
+
+        // --- Fase II: la rabia
+        add(list, "tormenta_balidos", "Tormenta de Balidos", 2, 300, 225, 4,
+                "Cuatro gritos girando sobre si misma; no hay lado seguro.",
+                icon("GOAT_HORN", "BONE"), f -> goat(f).bleatStorm());
+        add(list, "rebote", "Rebote", 2, 220, 100, 4,
+                "Va rebotando de uno a otro embistiendo a cada uno.",
+                icon("SLIME_BALL"), f -> goat(f).ricochet());
+        add(list, "manada", "Manada", 2, 600, 60, 2,
+                "Baja el resto del rebano y embiste con ella.",
+                icon("GOAT_SPAWN_EGG", "WHITE_WOOL"), f -> goat(f).herd());
+        add(list, "cornada", "Cornada Ascendente", 2, 200, 40, 4,
+                "Engancha al mas cercano con el cuerno y lo manda por los aires.",
+                icon("GOAT_HORN", "BONE"), f -> goat(f).upwardGore());
+        add(list, "pelaje_blanco", "Pelaje Blanco", 2, 420, 140, 3,
+                "Arde en blanco: aguanta mucho mas y grita cada dos segundos.",
+                icon("WHITE_WOOL"), f -> goat(f).whiteCoat());
+
+        // --- Fase III: el trueno
+        add(list, "grito_del_trueno", "Grito del Trueno", 3, 280, 80, 5,
+                "Grito circular de dieciseis bloques con ocho rayos alrededor.",
+                icon("LIGHTNING_ROD", "COPPER_INGOT"), f -> goat(f).thunderCry());
+        add(list, "estampida", "Estampida", 3, 340, 180, 4,
+                "Tres embestidas seguidas por toda la arena, sin descanso.",
+                icon("IRON_HORSE_ARMOR", "SADDLE"), f -> goat(f).stampede());
+        add(list, "cielo_partido", "Cielo Partido", 3, 320, 140, 4,
+                "Siete segundos de rayos persiguiendo a cada uno por separado.",
+                icon("TRIDENT", "COPPER_INGOT"), f -> goat(f).splitSky());
+        add(list, "aullido_final", "Aullido Final", 3, 400, 90, 3,
+                "El grito mas grande que tiene: veintidos bloques y doce rayos.",
+                icon("BEACON", "GLOWSTONE"), f -> goat(f).finalHowl());
+
+        // --- Cualquier fase
+        add(list, "tozudez", "Tozudez", 0, 380, 70, 2,
+                "Se planta, no la mueve nadie, y al soltarse embiste sin avisar.",
+                icon("ANVIL", "IRON_BLOCK"), f -> goat(f).stubbornness());
+
+        return list;
+    }
+
+    private static ScreamingGoat goat(BossFight fight) {
+        return (ScreamingGoat) fight;
     }
 
     private static SepulchralKnight knight(BossFight fight) {

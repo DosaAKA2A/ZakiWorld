@@ -15,6 +15,7 @@ import net.zakiworld.anomaly.core.Tags;
 import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.Particle;
+import org.bukkit.block.data.BlockData;
 import org.bukkit.entity.ArmorStand;
 import org.bukkit.entity.Display;
 import org.bukkit.entity.Entity;
@@ -31,7 +32,10 @@ import org.bukkit.util.Vector;
 
 import java.time.Duration;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
+import java.util.UUID;
 
 /**
  * EL CABALLERO SEPULCRAL, la primera anomalia.
@@ -536,67 +540,53 @@ public final class SepulchralKnight extends BossFight {
         }, null);
     }
 
-    /** 3. Lanzas del Paramo: brotan lanzas del suelo bajo los pies de cada uno. */
-    public void wastelandSpears() {
-        List<Player> victims = targets();
-        if (victims.isEmpty() || !alive()) return;
-        soundAt(loc(), "entity.evoker.prepare_attack", 1.4f, 0.7f);
+    /**
+     * 3. Pisoton de la Montura: el caballo se encabrita y descarga los cascos.
+     * La onda sale del suelo, no de ningun arma: aqui todo es peso y golpe.
+     */
+    public void hoofSlam() {
+        if (!alive()) return;
+        Set<UUID> struck = new HashSet<>();
+        soundAt(boss.getLocation(), "entity.horse.angry", 1.4f, 0.6f);
+        broadcastNear(Component.text("Encabrita la montura.", ACCENT));
 
-        for (Player victim : victims) {
-            Location mark = Fx.ground(victim.getLocation(), 4);
-            List<ItemDisplay> risers = new ArrayList<>();
-
-            animate(90, tick -> {
-                if (tick < 30) {
-                    // aviso en el suelo
-                    Fx.telegraph(world(), mark, 1.8, RUST);
-                    if (tick % 10 == 0) soundAt(mark, "block.note_block.bass", 0.9f, 0.6f);
-                    return;
-                }
-                if (tick == 30) {
-                    for (int i = 0; i < 5; i++) {
-                        double a = Math.PI * 2 * i / 5.0;
-                        Location sl = mark.clone().add(Math.cos(a) * 1.1, -1.2, Math.sin(a) * 1.1);
-                        ItemDisplay d = Fx.itemDisplay(world(), sl, spear(), 1.6f);
-                        Fx.aim(d, new Vector(0, 1, 0), 1.6f, 0);
-                        risers.add(track(d));
-                    }
-                    soundAt(mark, "block.stone.break", 1.3f, 0.5f);
-                    Compat.spawn(world(), Compat.BLOCK, mark, 60, 1.2, 0.1, 1.2, 0.15,
-                            Material.DEEPSLATE.createBlockData());
-                    return;
-                }
-                if (tick > 30 && tick <= 45) {
-                    double t = (tick - 30) / 15.0;
-                    for (ItemDisplay d : risers) {
-                        if (!d.isValid()) continue;
-                        d.teleport(d.getLocation().add(0, 0.16, 0));
-                        Compat.spawn(world(), Compat.CRIT, d.getLocation().add(0, 0.5, 0), 2, 0.1, 0.2, 0.1, 0.02);
-                    }
-                    if (tick == 45) {
-                        soundAt(mark, "item.trident.throw", 1.4f, 0.8f);
-                        Compat.spawn(world(), Compat.ENCHANTED_HIT, mark.clone().add(0, 1, 0), 40, 1.2, 0.8, 1.2, 0.3);
-                        for (Player p : Fx.playersNear(mark, 2.6)) {
-                            hit(p, 10 * damageBonus);
-                            push(p, new Vector(0, 0.5, 0));
-                            soundAt(p.getLocation(), "item.trident.hit_ground", 1.2f, 1.0f);
-                        }
-                    }
-                    Compat.spawn(world(), Compat.DUST, mark.clone().add(0, 0.2, 0), 3, 1.0, 0.1, 1.0, 0,
-                            Compat.dust(SPECTRAL, 1.0f));
-                }
-                if (tick > 60) {
-                    for (ItemDisplay d : risers) {
-                        if (d.isValid()) d.teleport(d.getLocation().subtract(0, 0.1, 0));
-                    }
-                }
-            }, () -> {
-                for (ItemDisplay d : risers) {
-                    spawned.remove(d);
-                    Fx.safeRemove(d);
-                }
-            });
-        }
+        animate(70, tick -> {
+            if (!alive()) return;
+            Location l = boss.getLocation();
+            if (tick < 25) {
+                Entity mover = boss.getVehicle() != null ? boss.getVehicle() : boss;
+                mover.setVelocity(new Vector(0, 0.08, 0));
+                Compat.spawn(world(), Compat.DUST, l.clone().add(0, 0.4, 0), 5, 0.5, 0.3, 0.5, 0,
+                        Compat.dust(BONE, 1.2f));
+                Fx.telegraph(world(), Fx.ground(l, 4), 7.0, RUST);
+                if (tick % 6 == 0) soundAt(l, "entity.horse.breathe", 1.1f, 0.5f);
+                return;
+            }
+            if (tick == 25) {
+                Location g = Fx.ground(l, 4);
+                Compat.spawn(world(), Compat.EXPLOSION_EMITTER, g, 1);
+                Compat.spawn(world(), Compat.BLOCK, g, 140, 2.0, 0.3, 2.0, 0.2, groundBlock(g));
+                soundAt(g, "entity.generic.explode", 1.5f, 0.55f);
+                soundAt(g, "block.anvil_land", 1.4f, 0.5f);
+                soundAt(g, "entity.ravager.stunned", 1.2f, 0.7f);
+                return;
+            }
+            double radius = (tick - 25) * 0.42;
+            if (radius > 9) return;
+            Location g = Fx.ground(boss.getLocation(), 4);
+            Fx.shockwave(world(), g, radius, Compat.CLOUD, 8);
+            Fx.ring(g, radius, (int) (radius * 8) + 6, pt -> Compat.spawn(world(), Compat.BLOCK,
+                    Fx.ground(pt, 3).add(0, 0.25, 0), 2, 0.15, 0.1, 0.15, 0.05, groundBlock(g)));
+            for (Player p : targets(radius + 1.0)) {
+                if (p.getLocation().distance(g) < radius - 1.4) continue;
+                // Sin esto la onda golpearia al mismo jugador un tick tras otro mientras
+                // el anillo lo atraviesa, y de un solo pisoton se moriria.
+                if (!struck.add(p.getUniqueId())) continue;
+                hit(p, 13 * damageBonus);
+                push(p, p.getLocation().toVector().subtract(g.toVector()).normalize().setY(0.5).multiply(0.8));
+                soundAt(p.getLocation(), "entity.player.attack.crit", 1.2f, 0.7f);
+            }
+        }, null);
     }
 
     /** 4. Estandarte de Guerra: planta un estandarte que lo protege mientras siga en pie. */
@@ -742,13 +732,13 @@ public final class SepulchralKnight extends BossFight {
         Vector behind = target.getLocation().getDirection().setY(0).normalize().multiply(-2.2);
         Location to = Fx.ground(target.getLocation().add(behind), 3);
 
-        soundAt(from, "entity.enderman.teleport", 1.4f, 0.7f);
-        Compat.spawn(world(), Compat.REVERSE_PORTAL, from.clone().add(0, 1, 0), 60, 0.4, 0.9, 0.4, 0.15);
+        soundAt(from, "entity.ravager.step", 1.4f, 0.9f);
+        Compat.spawn(world(), Compat.LARGE_SMOKE, from.clone().add(0, 1, 0), 40, 0.4, 0.9, 0.4, 0.06);
         Fx.beam(from.clone().add(0, 1, 0), to.clone().add(0, 1, 0), 0.4, p ->
-                Compat.spawn(world(), Compat.PORTAL, p, 2, 0.05, 0.05, 0.05, 0.02));
+                Compat.spawn(world(), Compat.DUST, p, 2, 0.05, 0.05, 0.05, 0, Compat.dust(BONE, 1.2f)));
 
         boss.teleport(to);
-        soundAt(to, "entity.enderman.teleport", 1.4f, 1.1f);
+        soundAt(to, "entity.player.attack.sweep", 1.4f, 0.7f);
 
         animate(45, tick -> {
             if (!alive()) return;
@@ -778,68 +768,54 @@ public final class SepulchralKnight extends BossFight {
         }, null);
     }
 
-    /** 8. Muro de Lanzas: una hilera de lanzas atraviesa la arena de lado a lado. */
-    public void spearWall() {
+    /**
+     * 8. Tajo Descendente: levanta la lanza con las dos manos y parte el suelo en
+     * linea recta. La grieta la abre el golpe; no hay nada flotando por su cuenta.
+     */
+    public void overheadCleave() {
         Player target = randomTarget();
         if (target == null || !alive()) return;
         Location origin = boss.getLocation();
         Vector dir = target.getLocation().toVector().subtract(origin.toVector()).setY(0);
         if (dir.lengthSquared() < 0.01) return;
         dir.normalize();
-        Vector side = new Vector(-dir.getZ(), 0, dir.getX());
+        Set<UUID> cleaved = new HashSet<>();
 
-        soundAt(origin, "entity.evoker.prepare_summon", 1.4f, 0.8f);
-        List<ItemDisplay> wall = new ArrayList<>();
+        soundAt(origin, "entity.player.attack.strong", 1.4f, 0.6f);
+        broadcastNear(Component.text("Levanta la lanza.", ACCENT));
 
         animate(80, tick -> {
-            if (tick < 25) {
-                for (int i = -4; i <= 4; i++) {
-                    Location l = Fx.ground(origin.clone().add(dir.clone().multiply(4)).add(side.clone().multiply(i * 1.5)), 4);
-                    Compat.spawn(world(), Compat.DUST, l.clone().add(0, 0.15, 0), 1, 0.2, 0, 0.2, 0,
+            if (!alive()) return;
+            Location l = boss.getLocation();
+            if (tick < 28) {
+                Compat.spawn(world(), Compat.DUST, l.clone().add(0, 2.6, 0), 4, 0.3, 0.2, 0.3, 0,
+                        Compat.dust(RUST, 1.5f));
+                for (double d = 1.5; d < 15; d += 1.2) {
+                    Location g = Fx.ground(l.clone().add(dir.clone().multiply(d)), 4);
+                    Compat.spawn(world(), Compat.DUST, g.clone().add(0, 0.15, 0), 1, 0.35, 0, 0.35, 0,
                             Compat.dust(RUST, 1.4f));
                 }
-                if (tick % 8 == 0) soundAt(origin, "block.note_block.bass", 1.0f, 0.6f);
+                if (tick % 7 == 0) soundAt(l, "block.note_block.bass", 1.1f, 0.45f + tick / 90f);
                 return;
             }
-            if (tick == 25) {
-                for (int i = -4; i <= 4; i++) {
-                    Location l = Fx.ground(origin.clone().add(dir.clone().multiply(4)).add(side.clone().multiply(i * 1.5)), 4);
-                    ItemDisplay d = Fx.itemDisplay(world(), l.clone().add(0, -1.5, 0), spear(), 2.0f);
-                    Fx.aim(d, new Vector(0, 1, 0), 2.0f, 0);
-                    wall.add(track(d));
-                }
-                soundAt(origin, "block.deepslate.break", 1.5f, 0.5f);
-                soundAt(origin, "item.trident.throw", 1.2f, 0.7f);
+            if (tick == 28) {
+                soundAt(l, "item.trident.riptide_3", 1.3f, 0.7f);
+                soundAt(l, "block.deepslate.break", 1.5f, 0.5f);
+                soundAt(l, "entity.player.attack.crit", 1.4f, 0.5f);
                 return;
             }
-            if (tick <= 40) {
-                for (ItemDisplay d : wall) {
-                    if (d.isValid()) d.teleport(d.getLocation().add(0, 0.22, 0));
-                }
-                if (tick == 40) {
-                    for (ItemDisplay d : wall) {
-                        Compat.spawn(world(), Compat.BLOCK, d.getLocation(), 30, 0.4, 0.2, 0.4, 0.1,
-                                Material.DEEPSLATE.createBlockData());
-                        for (Player p : Fx.playersNear(d.getLocation(), 1.8)) {
-                            hit(p, 11 * damageBonus);
-                            push(p, new Vector(0, 0.55, 0));
-                        }
-                    }
-                    soundAt(origin, "item.trident.hit_ground", 1.6f, 0.8f);
-                }
-                return;
+            double reach = (tick - 28) * 1.1;
+            if (reach > 15) return;
+            Location g = Fx.ground(l.clone().add(dir.clone().multiply(reach)), 4);
+            Compat.spawn(world(), Compat.BLOCK, g.clone().add(0, 0.3, 0), 30, 0.5, 0.25, 0.5, 0.22, groundBlock(g));
+            Compat.spawn(world(), Compat.LARGE_SMOKE, g.clone().add(0, 0.4, 0), 6, 0.4, 0.2, 0.4, 0.02);
+            for (Player p : Fx.playersNear(g, 2.4)) {
+                if (!cleaved.add(p.getUniqueId())) continue;
+                hit(p, 17 * damageBonus);
+                push(p, new Vector(0, 0.5, 0));
+                soundAt(p.getLocation(), "entity.player.attack.crit", 1.3f, 0.6f);
             }
-            if (tick > 65) {
-                for (ItemDisplay d : wall) {
-                    if (d.isValid()) d.teleport(d.getLocation().subtract(0, 0.14, 0));
-                }
-            }
-        }, () -> {
-            for (ItemDisplay d : wall) {
-                spawned.remove(d);
-                Fx.safeRemove(d);
-            }
-        });
+        }, null);
     }
 
     /** 9. Cadena de Hueso: engancha al mas lejano y lo arrastra de vuelta al centro. */
@@ -962,7 +938,7 @@ public final class SepulchralKnight extends BossFight {
         });
     }
 
-    /** 12. Guardia de Netherita: un escudo de absorcion que hay que romper a golpes. */
+    /** 12. Guardia de Netherita: se cubre con la armadura y aguanta a pie firme. */
     public void netheriteWard() {
         if (!alive()) return;
         Location c = boss.getLocation();
@@ -972,127 +948,133 @@ public final class SepulchralKnight extends BossFight {
         soundAt(c, "block.anvil_use", 1.2f, 0.7f);
         broadcastNear(Component.text("Alza la guardia. Rompanla a golpes.", ACCENT));
 
-        List<ItemDisplay> shards = new ArrayList<>();
-        for (int i = 0; i < 6; i++) {
-            ItemDisplay d = Fx.itemDisplay(world(), c.clone().add(0, 1.2, 0),
-                    new ItemStack(Material.NETHERITE_INGOT), 0.55f);
-            shards.add(track(d));
-        }
-
         animate(160, tick -> {
             if (!alive()) throw Stop.now();
-            Location l = boss.getLocation().add(0, 1.2, 0);
-            for (int i = 0; i < shards.size(); i++) {
-                ItemDisplay d = shards.get(i);
-                if (!d.isValid()) continue;
-                double a = tick * 0.12 + Math.PI * 2 * i / shards.size();
-                double y = Math.sin(tick * 0.09 + i) * 0.35;
-                d.teleport(l.clone().add(Math.cos(a) * 1.5, y, Math.sin(a) * 1.5));
-                Fx.spin(d, (float) a, 0.55f, 2);
-            }
-            if (tick % 8 == 0) {
-                Fx.sphere(l, 1.9, 14, p -> Compat.spawn(world(), Compat.DUST, p, 1, 0, 0, 0, 0,
-                        Compat.dust(VOID_PURPLE, 1.1f)));
+            Location l = boss.getLocation().add(0, 1.1, 0);
+            // Placas pegadas al cuerpo, no objetos girando alrededor: es armadura,
+            // no un encantamiento.
+            double r = 1.0 + Math.sin(tick * 0.15) * 0.12;
+            Fx.sphere(l, r, 26, p -> Compat.spawn(world(), Compat.DUST, p, 1, 0, 0, 0, 0,
+                    Compat.dust(VOID_PURPLE, 1.3f)));
+            if (tick % 5 == 0) {
+                Fx.ring(l, r + 0.25, 12, tick * 0.2, p ->
+                        Compat.spawn(world(), Compat.ELECTRIC_SPARK, p, 1, 0, 0, 0, 0.01));
             }
             if (tick % 20 == 0) {
-                soundAt(l, "block.beacon.ambient", 0.7f, 0.5f);
-                double left = boss.getAbsorptionAmount();
+                soundAt(l, "block.anvil_land", 0.5f, 1.7f);
                 warn(Component.text("Guardia  ", NamedTextColor.GRAY)
-                        .append(Component.text((int) left + " / " + (int) shield, NamedTextColor.LIGHT_PURPLE,
-                                TextDecoration.BOLD)));
+                        .append(Component.text((int) boss.getAbsorptionAmount() + " / " + (int) shield,
+                                NamedTextColor.LIGHT_PURPLE, TextDecoration.BOLD)));
             }
             if (boss.getAbsorptionAmount() <= 0) {
                 Compat.spawn(world(), Compat.EXPLOSION, l, 2, 0.5, 0.5, 0.5, 0);
-                soundAt(l, "block.glass.break", 1.6f, 0.7f);
-                soundAt(l, "item.shield.break", 1.4f, 0.9f);
+                soundAt(l, "item.shield.break", 1.6f, 0.7f);
+                soundAt(l, "block.anvil_destroy", 1.2f, 1.0f);
                 broadcastNear(Component.text("Guardia rota.", NamedTextColor.GREEN));
                 throw Stop.now();
             }
         }, () -> {
             if (alive()) boss.setAbsorptionAmount(0);
-            for (ItemDisplay d : shards) {
-                spawned.remove(d);
-                Fx.safeRemove(d);
-            }
         });
     }
 
     // ------------------------------------------------------------- FASE III: heraldo
 
-    /** 13. Lluvia de Acero: lanzas del cielo sobre marcas que persiguen a la gente. */
-    public void steelRain() {
+    /**
+     * 13. Sismo del Paramo: cuatro pisotones seguidos, cada uno con su onda.
+     * Hay que moverse entre onda y onda; quedarse quieto no vale.
+     */
+    public void earthquake() {
         if (!alive()) return;
-        soundAt(loc(), "entity.lightning_bolt.thunder", 1.2f, 1.6f);
-        broadcastNear(Component.text("El cielo se llena de acero.", ACCENT));
+        broadcastNear(Component.text("El suelo empieza a partirse.", ACCENT));
+        soundAt(loc(), "entity.ravager.roar", 1.3f, 0.6f);
 
-        animate(160, tick -> {
-            if (tick % 20 != 0) return;
-            for (Player p : targets()) {
-                Location mark = Fx.ground(p.getLocation(), 4);
-                Fx.telegraph(world(), mark, 2.2, RUST);
-                soundAt(mark, "block.note_block.bass", 1.0f, 0.5f);
-                later(25, () -> {
-                    ItemDisplay d = Fx.itemDisplay(world(), mark.clone().add(0, 14, 0), spear(), 2.2f);
-                    Fx.aim(d, new Vector(0, -1, 0), 2.2f, 0);
-                    track(d);
-                    soundAt(mark, "item.trident.throw", 1.2f, 0.9f);
-                    animate(16, t2 -> {
-                        if (d.isValid()) d.teleport(d.getLocation().subtract(0, 0.9, 0));
-                    }, () -> {
-                        spawned.remove(d);
-                        Fx.safeRemove(d);
-                        Compat.spawn(world(), Compat.EXPLOSION, mark.clone().add(0, 0.5, 0), 2, 0.3, 0.2, 0.3, 0);
-                        Compat.spawn(world(), Compat.BLOCK, mark, 50, 1.2, 0.2, 1.2, 0.12,
-                                Material.DEEPSLATE.createBlockData());
-                        soundAt(mark, "item.trident.hit_ground", 1.4f, 0.8f);
-                        for (Player v : Fx.playersNear(mark, 2.8)) {
-                            hit(v, 13 * damageBonus);
-                            push(v, new Vector(0, 0.35, 0));
+        for (int wave = 0; wave < 4; wave++) {
+            final int index = wave;
+            later(wave * 45, () -> {
+                if (!alive()) return;
+                Location aim = Fx.ground(boss.getLocation(), 4);
+                Fx.telegraph(world(), aim, 5.0, RUST);
+                soundAt(aim, "block.note_block.bass", 1.2f, 0.4f);
+                later(16, () -> {
+                    if (!alive()) return;
+                    Location impact = Fx.ground(boss.getLocation(), 4);
+                    Set<UUID> struck = new HashSet<>();
+                    Compat.spawn(world(), Compat.EXPLOSION_EMITTER, impact, 1);
+                    Compat.spawn(world(), Compat.BLOCK, impact, 120, 1.8, 0.3, 1.8, 0.25, groundBlock(impact));
+                    soundAt(impact, "entity.generic.explode", 1.4f, 0.5f);
+                    soundAt(impact, "block.anvil_land", 1.3f, 0.45f);
+                    animate(24, t -> {
+                        double radius = t * 0.55;
+                        Fx.shockwave(world(), impact, radius, Compat.CLOUD, 7);
+                        Fx.ring(impact, radius, (int) (radius * 7) + 6, pt ->
+                                Compat.spawn(world(), Compat.BLOCK, Fx.ground(pt, 3).add(0, 0.2, 0), 2,
+                                        0.12, 0.1, 0.12, 0.05, groundBlock(impact)));
+                        for (Player p : Fx.playersNear(impact, radius + 1.0)) {
+                            if (p.getLocation().distance(impact) < radius - 1.4) continue;
+                            if (!struck.add(p.getUniqueId())) continue;
+                            hit(p, (12 + index) * damageBonus);
+                            push(p, p.getLocation().toVector().subtract(impact.toVector())
+                                    .normalize().setY(0.45).multiply(0.7));
                         }
-                    });
+                    }, null);
                 });
-            }
-        }, null);
+            });
+        }
     }
 
-    /** 14. Tormenta Espectral: se eleva y descarga rayos sobre marcas en el suelo. */
-    public void spectralStorm() {
-        if (!alive()) return;
-        Location c = boss.getLocation();
-        soundAt(c, "entity.ender_dragon.flap", 1.6f, 0.6f);
-        soundAt(c, "item.trident.thunder", 1.2f, 0.8f);
-        broadcastNear(Component.text("Se alza sobre la tormenta.", ACCENT));
+    /**
+     * 14. Salto Demoledor: se agacha, salta muy alto y cae de lleno sobre la marca.
+     * Es el golpe mas bruto que tiene, y por eso el que mas avisa.
+     */
+    public void crushingLeap() {
+        Player target = randomTarget();
+        if (target == null || !alive()) return;
+        Location mark = Fx.ground(target.getLocation(), 4);
+
+        soundAt(loc(), "entity.ravager.step", 1.4f, 0.5f);
+        broadcastNear(Component.text("Se agacha para saltar.", ACCENT));
 
         animate(110, tick -> {
             if (!alive()) return;
             Location l = boss.getLocation();
-            if (tick < 20) {
-                boss.setVelocity(new Vector(0, 0.22, 0));
-                Compat.spawn(world(), Compat.CLOUD, l, 8, 0.5, 0.2, 0.5, 0.03);
-                Compat.spawn(world(), Compat.ELECTRIC_SPARK, l.clone().add(0, 1.2, 0), 10, 0.6, 0.8, 0.6, 0.08);
+            if (tick < 18) {
+                Compat.spawn(world(), Compat.BLOCK, Fx.ground(l, 3), 12, 0.5, 0.05, 0.5, 0.05, groundBlock(l));
                 return;
             }
-            Compat.apply(boss, "slow_falling", 40, 0);
-            Fx.ring(l.clone().add(0, 1.2, 0), 2.4, 20, tick * 0.3, p ->
-                    Compat.spawn(world(), Compat.ELECTRIC_SPARK, p, 1, 0, 0, 0, 0.02));
-
-            if (tick % 22 != 0) return;
-            List<Player> victims = targets();
-            if (victims.isEmpty()) return;
-            Player v = victims.get(random.nextInt(victims.size()));
-            Location mark = Fx.ground(v.getLocation(), 4);
-            Fx.telegraph(world(), mark, 2.6, SPECTRAL);
-            soundAt(mark, "block.beacon.power_select", 1.2f, 1.8f);
-            later(18, () -> {
-                world().strikeLightningEffect(mark);
-                Compat.spawn(world(), Compat.FLASH, mark.clone().add(0, 1, 0), 1);
-                Compat.spawn(world(), Compat.ELECTRIC_SPARK, mark.clone().add(0, 0.5, 0), 80, 1.2, 0.6, 1.2, 0.3);
-                soundAt(mark, "entity.lightning_bolt.impact", 1.6f, 1.2f);
-                for (Player p : Fx.playersNear(mark, 3.4)) {
-                    hit(p, 14 * damageBonus);
-                    Compat.apply(p, "slowness", 60, 1);
-                }
-            });
+            if (tick == 18) {
+                boss.setVelocity(new Vector(0, 1.35, 0));
+                soundAt(l, "entity.generic.explode", 1.1f, 1.6f);
+                Compat.spawn(world(), Compat.CLOUD, Fx.ground(l, 3), 40, 0.8, 0.1, 0.8, 0.12);
+                return;
+            }
+            if (tick < 46) {
+                Compat.spawn(world(), Compat.LARGE_SMOKE, l, 3, 0.3, 0.3, 0.3, 0.01);
+                Fx.telegraph(world(), mark, 4.5, RUST);
+                if (tick % 8 == 0) soundAt(mark, "block.note_block.bass", 1.0f, 0.5f);
+                return;
+            }
+            if (tick == 46) {
+                boss.teleport(mark.clone().add(0, 9, 0));
+                return;
+            }
+            if (tick < 60) {
+                boss.setVelocity(new Vector(0, -1.6, 0));
+                Compat.spawn(world(), Compat.DUST, l, 6, 0.3, 0.5, 0.3, 0, Compat.dust(RUST, 1.6f));
+                return;
+            }
+            if (tick != 60) return;
+            boss.teleport(mark);
+            Compat.spawn(world(), Compat.EXPLOSION_EMITTER, mark, 2);
+            Compat.spawn(world(), Compat.BLOCK, mark, 200, 2.5, 0.5, 2.5, 0.35, groundBlock(mark));
+            soundAt(mark, "entity.generic.explode", 1.8f, 0.4f);
+            soundAt(mark, "block.anvil_land", 1.6f, 0.4f);
+            soundAt(mark, "entity.ravager.stunned", 1.4f, 0.6f);
+            for (Player p : Fx.playersNear(mark, 6.5)) {
+                double d = p.getLocation().distance(mark);
+                hit(p, Math.max(7, 24 - d * 2) * damageBonus);
+                push(p, p.getLocation().toVector().subtract(mark.toVector()).normalize().setY(0.7));
+            }
         }, null);
     }
 
@@ -1183,46 +1165,48 @@ public final class SepulchralKnight extends BossFight {
 
     // -------------------------------------------------------- CUALQUIER FASE
 
-    /** 17. Marca del Sepulcro: senala al que se aleja y le tira una lanza encima. */
-    public void graveMark() {
+    /**
+     * 17. Caceria: le echa el ojo al que mas se aleja y va a por el en persona.
+     * Mismo castigo de antes a quien se despega del grupo, pero a la carrera.
+     */
+    public void hunt() {
         Player target = Fx.farthest(loc(), plugin.settings().participationRadius());
         if (target == null || !alive()) return;
 
-        soundAt(target.getLocation(), "block.beacon.power_select", 1.2f, 0.6f);
-        target.sendActionBar(Component.text("Te ha marcado.", NamedTextColor.RED, TextDecoration.BOLD));
+        soundAt(loc(), "entity.ravager.roar", 1.4f, 0.7f);
+        target.sendActionBar(Component.text("Te ha echado el ojo.", NamedTextColor.RED, TextDecoration.BOLD));
+        Compat.setAttribute(boss, "movement_speed", 0.46);
 
-        animate(80, tick -> {
-            if (!Fx.isFightable(target)) throw Stop.now();
+        animate(120, tick -> {
+            if (!alive() || !Fx.isFightable(target)) throw Stop.now();
+            Location l = boss.getLocation();
             Location tl = target.getLocation();
-            if (tick < 60) {
-                Fx.ring(tl.clone().add(0, 0.15, 0), 2.0, 20, tick * 0.2, p ->
-                        Compat.spawn(world(), Compat.DUST, Fx.ground(p, 3).add(0, 0.15, 0), 1, 0, 0, 0, 0,
-                                Compat.dust(RUST, 1.3f)));
-                Fx.beam(tl.clone().add(0, 0.2, 0), tl.clone().add(0, 12, 0), 0.8, p ->
-                        Compat.spawn(world(), Compat.DUST, p, 1, 0, 0, 0, 0, Compat.dust(RUST, 1.0f)));
-                if (tick % 15 == 0) soundAt(tl, "block.note_block.pling", 1.0f, 0.6f + tick / 60f);
-                return;
+            if (l.getWorld() == null || !l.getWorld().equals(tl.getWorld())) throw Stop.now();
+
+            Compat.spawn(world(), Compat.DUST, l.clone().add(0, 0.3, 0), 4, 0.3, 0.2, 0.3, 0,
+                    Compat.dust(RUST, 1.3f));
+            Fx.ring(tl.clone().add(0, 0.15, 0), 1.4, 12, tick * 0.3, p ->
+                    Compat.spawn(world(), Compat.DUST, Fx.ground(p, 3).add(0, 0.15, 0), 1, 0, 0, 0, 0,
+                            Compat.dust(RUST, 1.1f)));
+
+            Vector dir = tl.toVector().subtract(l.toVector()).setY(0);
+            if (dir.lengthSquared() > 0.04) {
+                Entity mover = boss.getVehicle() != null ? boss.getVehicle() : boss;
+                mover.setVelocity(dir.normalize().multiply(0.42).setY(mover.getVelocity().getY()));
             }
-            if (tick != 60) return;
-            Location mark = Fx.ground(tl, 4);
-            ItemDisplay d = Fx.itemDisplay(world(), mark.clone().add(0, 12, 0), spear(), 2.4f);
-            Fx.aim(d, new Vector(0, -1, 0), 2.4f, 0);
-            track(d);
-            soundAt(mark, "item.trident.throw", 1.4f, 0.7f);
-            animate(14, t2 -> {
-                if (d.isValid()) d.teleport(d.getLocation().subtract(0, 0.88, 0));
-            }, () -> {
-                spawned.remove(d);
-                Fx.safeRemove(d);
-                Compat.spawn(world(), Compat.EXPLOSION_EMITTER, mark, 1);
-                Compat.spawn(world(), Compat.ENCHANTED_HIT, mark.clone().add(0, 1, 0), 60, 1.2, 0.8, 1.2, 0.3);
-                soundAt(mark, "item.trident.hit_ground", 1.6f, 0.7f);
-                for (Player p : Fx.playersNear(mark, 3.0)) {
-                    hit(p, 16 * damageBonus);
-                    push(p, new Vector(0, 0.4, 0));
-                }
-            });
-        }, null);
+            if (tick % 10 == 0) soundAt(l, "entity.ravager.step", 1.0f, 0.8f);
+
+            if (l.distanceSquared(tl) < 9) {
+                hit(target, 19 * damageBonus);
+                push(target, tl.toVector().subtract(l.toVector()).normalize().setY(0.45).multiply(1.1));
+                Compat.spawn(world(), Compat.CRIT, tl.clone().add(0, 1, 0), 30, 0.4, 0.5, 0.4, 0.3);
+                soundAt(tl, "entity.player.attack.knockback", 1.4f, 0.6f);
+                soundAt(tl, "item.shield.block", 1.2f, 0.5f);
+                throw Stop.now();
+            }
+        }, () -> {
+            if (alive()) Compat.setAttribute(boss, "movement_speed", phase() == 1 ? 0.26 : 0.33);
+        });
     }
 
     /** 18. Leva de Huesos: recluta esqueletos que salen del suelo alrededor. */
@@ -1278,6 +1262,13 @@ public final class SepulchralKnight extends BossFight {
     }
 
     // ------------------------------------------------------------------- mensajeria
+
+    /** Los datos del bloque que pisa, para que los escombros sean del terreno real. */
+    private BlockData groundBlock(Location l) {
+        Material m = Fx.ground(l, 3).getBlock().getRelative(0, -1, 0).getType();
+        if (!m.isSolid() || m.isAir()) m = Material.DIRT;
+        return m.createBlockData();
+    }
 
     private void broadcastNear(Component message) {
         Component line = Component.text("✦ ", ACCENT)

@@ -1,5 +1,5 @@
 name: Anomaly
-version: '1.1.0'
+version: '1.2.0'
 main: net.zakiworld.anomaly.AnomalyPlugin
 api-version: '1.20'
 author: Iris Studio
@@ -9,7 +9,7 @@ softdepend: [WorldGuard, ProtectionStones, MMOItems]
 commands:
   anomaly:
     description: 'Panel de anomalias: iniciar, elegir, botin y ajustes.'
-    usage: /anomaly <menu|start|here|stop|info|abilities|test|hurt|reload>
+    usage: /anomaly <menu|start|here|at|stop|info|abilities|test|hurt|reload>
     aliases: [anomalia, anom]
 
 permissions:

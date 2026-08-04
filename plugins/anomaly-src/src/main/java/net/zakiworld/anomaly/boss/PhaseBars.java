@@ -13,19 +13,19 @@ import java.util.HashSet;
 import java.util.Set;
 
 /**
- * Las tres barras apiladas del jefe. Cada una cubre un tercio de la vida y se vacian
- * de arriba abajo: cuando la de arriba llega a cero desaparece y la siguiente pasa a
- * ser la principal, que es el efecto que se buscaba.
+ * Las tres barras de vida del jefe, una por fase y un tercio de vida cada una.
  *
- * Minecraft apila las barras de jefe en el orden en que se le muestran al cliente,
- * asi que basta con mostrarlas siempre en el mismo orden y quitarlas al agotarse.
+ * Se enseñan de una en una: cuando la de la fase en curso se agota, desaparece y sale
+ * la siguiente. Es a proposito que no se vean las tres a la vez, ni siquiera para
+ * "avisar" de cuanto queda; asi cada fase nueva es una sorpresa.
  */
 public final class PhaseBars {
 
     public static final int PHASES = 3;
 
     private final BossBar[] bars = new BossBar[PHASES];
-    private final boolean[] retired = new boolean[PHASES];
+    /** Indice de la unica barra visible ahora mismo; -1 mientras no se ha mostrado ninguna. */
+    private int shown = -1;
     private final Set<Player> viewers = new HashSet<>();
     private final String bossName;
     private final TextColor accent;
@@ -34,7 +34,7 @@ public final class PhaseBars {
         this.bossName = bossName;
         this.accent = accent;
         for (int i = 0; i < PHASES; i++) {
-            bars[i] = BossBar.bossBar(title(i, false), 1.0f, colorFor(i), overlayFor(i));
+            bars[i] = BossBar.bossBar(title(i), 1.0f, colorFor(i), overlayFor(i));
         }
     }
 
@@ -62,7 +62,7 @@ public final class PhaseBars {
         };
     }
 
-    private Component title(int index, boolean active) {
+    private Component title(int index) {
         TextColor phaseColor = switch (index) {
             case 0 -> NamedTextColor.WHITE;
             case 1 -> NamedTextColor.GOLD;
@@ -71,11 +71,8 @@ public final class PhaseBars {
         Component name = Component.text(bossName, accent, TextDecoration.BOLD);
         Component phase = Component.text("FASE " + roman(index), phaseColor);
         Component sep = Component.text("  ·  ", TextColor.color(0x555555));
-        Component base = Component.text("✦ ", accent).append(name).append(sep).append(phase);
-        if (active) {
-            base = base.append(Component.text("  ◀", phaseColor));
-        }
-        return base;
+        return Component.text("✦ ", accent).append(name).append(sep).append(phase)
+                .append(Component.text(" de III", TextColor.color(0x555555)));
     }
 
     /**
@@ -85,14 +82,18 @@ public final class PhaseBars {
     public int update(double fraction) {
         double f = Fx.clamp(fraction, 0, 1);
         int current = currentPhase(f);
-        for (int i = 0; i < PHASES; i++) {
-            if (retired[i]) continue;
-            float progress = (float) Fx.clamp((f - (PHASES - 1 - i) / (double) PHASES) * PHASES, 0, 1);
-            bars[i].progress(progress);
-            bars[i].name(title(i, (i + 1) == current));
-            if (progress <= 0.0f && (i + 1) < current) {
-                retire(i);
-            }
+        int index = current - 1;
+
+        float progress = (float) Fx.clamp((f - (PHASES - 1 - index) / (double) PHASES) * PHASES, 0, 1);
+        bars[index].progress(progress);
+        bars[index].name(title(index));
+
+        // Solo se enseña la barra de la fase en curso. Cuando se agota, esa desaparece
+        // y aparece la siguiente debajo: es la sensacion de "otra barra mas" que se pidio,
+        // y ademas no revela de entrada que quedan tres.
+        if (index != shown) {
+            for (Player p : viewers) swapTo(p, index);
+            shown = index;
         }
         return current;
     }
@@ -104,15 +105,18 @@ public final class PhaseBars {
         return 3;
     }
 
-    private void retire(int index) {
-        retired[index] = true;
-        for (Player p : viewers) p.hideBossBar(bars[index]);
+    /** Quita la barra que se acaba de agotar y saca la de la fase nueva. */
+    private void swapTo(Player p, int index) {
+        for (int i = 0; i < PHASES; i++) {
+            if (i != index) p.hideBossBar(bars[i]);
+        }
+        p.showBossBar(bars[index]);
     }
 
     /** Un destello blanco en la barra que se acaba de romper, antes de retirarla. */
     public void flash(int phase) {
         int index = phase - 1;
-        if (index < 0 || index >= PHASES || retired[index]) return;
+        if (index < 0 || index >= PHASES) return;
         bars[index].color(BossBar.Color.WHITE);
         bars[index].name(Component.text("✦ ", NamedTextColor.WHITE)
                 .append(Component.text("ARMADURA ROTA", NamedTextColor.WHITE, TextDecoration.BOLD)));
@@ -138,9 +142,7 @@ public final class PhaseBars {
     }
 
     private void showTo(Player p) {
-        for (int i = 0; i < PHASES; i++) {
-            if (!retired[i]) p.showBossBar(bars[i]);
-        }
+        swapTo(p, Math.max(0, shown));
     }
 
     private void hideFrom(Player p) {
