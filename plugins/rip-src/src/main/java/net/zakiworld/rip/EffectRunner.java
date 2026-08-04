@@ -30,7 +30,6 @@ import org.bukkit.Material;
 import org.bukkit.NamespacedKey;
 import org.bukkit.Particle;
 import org.bukkit.World;
-import org.bukkit.entity.BlockDisplay;
 import org.bukkit.entity.Display;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.Firework;
@@ -1216,58 +1215,6 @@ public final class EffectRunner {
         }
     }
 
-    /*
-     * Haz de luz con la pinta del de un faro pero SIN faro: son dos entidades
-     * de visualizacion, un nucleo blanco opaco y una envoltura de cristal
-     * translucido, estiradas en vertical y a brillo maximo. Es exactamente
-     * como dibuja el juego el haz del beacon (nucleo + halo), pero al ser
-     * entidades no aparece ningun bloque ni se toca el mundo.
-     *
-     * Baja desde arriba: nace con altura cero pegado al techo del haz y se
-     * estira hacia el suelo interpolando en fallTicks.
-     */
-    private BlockDisplay beamPart(World w, Location foot, Material mat, float width, float height, int fallTicks) {
-        try {
-            BlockDisplay d = (BlockDisplay)w.spawn(foot, BlockDisplay.class, b -> {
-                b.setBlock(mat.createBlockData());
-                b.setBrightness(new Display.Brightness(15, 15));
-                b.setShadowRadius(0.0f);
-                b.setShadowStrength(0.0f);
-                b.setViewRange(4.0f);
-                b.setPersistent(false);
-                b.setTransformation(new Transformation(new Vector3f(-width / 2.0f, height, -width / 2.0f), new Quaternionf(), new Vector3f(width, 0.0f, width), new Quaternionf()));
-                b.setInterpolationDelay(0);
-                b.setInterpolationDuration(0);
-            });
-            this.tag((Entity)d);
-            this.later(2L, () -> {
-                if (!d.isValid()) {
-                    return;
-                }
-                d.setInterpolationDelay(0);
-                d.setInterpolationDuration(fallTicks);
-                d.setTransformation(new Transformation(new Vector3f(-width / 2.0f, 0.0f, -width / 2.0f), new Quaternionf(), new Vector3f(width, height, width), new Quaternionf()));
-            });
-            return d;
-        }
-        catch (Throwable ex) {
-            return null;
-        }
-    }
-
-    private List<Entity> lightBeam(World w, Location foot, float height, int fallTicks) {
-        ArrayList<Entity> out = new ArrayList<Entity>();
-        BlockDisplay core = this.beamPart(w, foot, Material.WHITE_CONCRETE, 0.22f, height, fallTicks);
-        if (core != null) {
-            out.add(core);
-        }
-        BlockDisplay halo = this.beamPart(w, foot, Material.WHITE_STAINED_GLASS, 0.8f, height, fallTicks);
-        if (halo != null) {
-            out.add(halo);
-        }
-        return out;
-    }
-
     private void dAgony(World w, Location base, Location c, Player victim) {
         ItemStack[] armor = null;
         ItemStack hand = null;
@@ -1288,10 +1235,9 @@ public final class EffectRunner {
         }
         long startTime = w.getTime();
         double rise = 2.4;
-        List<Entity> beam = Collections.synchronizedList(new ArrayList<Entity>());
         Compat.sound(w, base, "entity.ender_dragon.growl", 1.2f, 0.4f);
         Compat.sound(w, base, "ambient.cave", 1.0f, 0.5f);
-        this.animate(170, 1L, t -> {
+        this.animate(150, 1L, t -> {
             if (t < 12) {
                 this.circle(base.clone().add(0.0, 0.15, 0.0), 1.6, 18, p -> Compat.spawn(w, Compat.SOUL, p, 1, 0.02, 0.12, 0.02, 0.02));
                 Compat.spawn(w, Compat.LARGE_SMOKE, base.clone().add(0.0, 0.4, 0.0), 3, 0.5, 0.15, 0.5, 0.01);
@@ -1332,7 +1278,7 @@ public final class EffectRunner {
             if (t == 20) {
                 Compat.sound(w, base, "entity.illusioner.prepare_mirror", 1.0f, 0.6f);
             }
-            if (t > 70 && t < 146 && god != null && god.isValid()) {
+            if (t > 70 && t < 112 && god != null && god.isValid()) {
                 double bob = Math.sin((double)t * 0.09) * 0.14;
                 Location at = base.clone().add(0.0, rise + bob, 0.0);
                 at.setPitch(0.0f);
@@ -1347,42 +1293,38 @@ public final class EffectRunner {
                 Compat.sound(w, base, "entity.elder_guardian.curse", 0.6f, 0.6f);
                 Compat.sound(w, base, "block.enchantment_table.use", 1.0f, 0.5f);
             }
+            if (t == 98) {
+                Compat.sound(w, base, "entity.lightning_bolt.thunder", 0.7f, 0.4f);
+                Compat.spawn(w, Compat.FLASH, c.clone().add(0.0, 24.0, 0.0), 1);
+            }
+            if (t >= 104 && t < 112 && t % 2 == 0) {
+                Compat.spawn(w, Compat.ELECTRIC_SPARK, base.clone().add(0.0, rise + 1.0, 0.0), 8, 0.4, 0.7, 0.4, 0.06);
+            }
+            /*
+             * El rayo. strikeLightningEffect es el rayo vanilla puramente
+             * visual: ni dana, ni prende fuego, ni transforma mobs.
+             */
             if (t == 112) {
-                beam.addAll(this.lightBeam(w, base.clone(), 48.0f, 8));
-                Compat.sound(w, base, "block.beacon.activate", 1.0f, 0.7f);
-                Compat.sound(w, base, "block.conduit.activate", 0.9f, 0.8f);
-            }
-            if (t == 138) {
-                Compat.sound(w, base, "block.beacon.power_select", 1.0f, 0.6f);
-            }
-            if (t == 146) {
+                w.strikeLightningEffect(base);
                 Compat.spawn(w, Compat.FLASH, base.clone().add(0.0, rise + 1.0, 0.0), 1);
                 Compat.spawn(w, Compat.POOF, base.clone().add(0.0, rise + 1.0, 0.0), 40, 0.4, 0.7, 0.4, 0.06);
-                Compat.spawn(w, Compat.END_ROD, base.clone().add(0.0, rise + 1.0, 0.0), 50, 0.4, 0.8, 0.4, 0.25);
                 Compat.spawn(w, Compat.SOUL, base.clone().add(0.0, rise + 1.0, 0.0), 24, 0.3, 0.6, 0.3, 0.06);
+                this.circle(base.clone().add(0.0, 0.15, 0.0), 1.6, 18, p -> Compat.spawn(w, Compat.ELECTRIC_SPARK, p, 2, 0.05, 0.15, 0.05, 0.03));
+                Compat.sound(w, base, "entity.lightning_bolt.impact", 1.0f, 0.8f);
+                Compat.sound(w, base, "entity.lightning_bolt.thunder", 1.0f, 0.9f);
                 Compat.sound(w, base, "entity.enderman.teleport", 0.9f, 0.5f);
-                Compat.sound(w, base, "block.amethyst_block.chime", 1.0f, 0.6f);
-                Compat.sound(w, base, "block.beacon.deactivate", 1.0f, 0.7f);
                 this.discard((Entity)god);
-                synchronized (beam) {
-                    for (Entity b : beam) {
-                        this.discard(b);
-                    }
-                    beam.clear();
-                }
                 this.skyReset();
             }
-            if (t == 158) {
+            if (t == 118) {
+                Compat.spawn(w, Compat.LARGE_SMOKE, base.clone().add(0.0, 0.6, 0.0), 16, 0.5, 0.4, 0.5, 0.02);
+                Compat.sound(w, base, "block.amethyst_block.chime", 1.0f, 0.6f);
+            }
+            if (t == 132) {
                 Compat.sound(w, base, "block.bell.resonate", 0.9f, 0.7f);
             }
         }, () -> {
             this.skyReset();
-            synchronized (beam) {
-                for (Entity b : beam) {
-                    this.discard(b);
-                }
-                beam.clear();
-            }
             this.discard((Entity)god);
         });
         this.later(200L, this::skyReset);
