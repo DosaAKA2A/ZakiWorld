@@ -47,6 +47,12 @@ public final class KillerBunny extends BossFight {
     /** Tope duro de copias vivas. */
     public static final int MAX_COPIES = 20;
 
+    /**
+     * El nombre que llevan el jefe y TODAS sus copias, siempre oculto. Que sea el mismo
+     * es deliberado: no debe haber ninguna forma de saber cual es el conejo de verdad.
+     */
+    private static final Component DISGUISE = Component.text("Conejo Asesino", ACCENT);
+
     private static final int FUR = 0xE8DCD2;
     private static final int BLOOD = 0xB01A1A;
     private static final int SOIL = 0x6B4A2F;
@@ -79,9 +85,10 @@ public final class KillerBunny extends BossFight {
             r.setRemoveWhenFarAway(false);
             r.setCanPickupItems(false);
             killerType(r);
-            r.customName(Component.text("✦ ", ACCENT)
-                    .append(Component.text("Conejo Asesino", ACCENT, TextDecoration.BOLD)));
-            r.setCustomNameVisible(true);
+            // Nombre puesto pero NUNCA visible, y exactamente el mismo que llevaran las
+            // copias: es lo que impide distinguir al de verdad ni siquiera mirando NBT.
+            r.customName(DISGUISE);
+            r.setCustomNameVisible(false);
         });
 
         Compat.setAttribute(boss, "attack_damage", 9);
@@ -89,7 +96,7 @@ public final class KillerBunny extends BossFight {
         Compat.setAttribute(boss, "knockback_resistance", 0.6);
         Compat.setAttribute(boss, "follow_range", 64);
         Compat.setAttribute(boss, "movement_speed", 0.42);
-        Compat.setAttribute(boss, "scale", 1.9);
+        // Sin escala: del tamano de un conejo normal, como cualquiera de sus copias.
         applyHealth(plugin.registry().scaledHealth(plugin.registry().bunny(), targets(96).size()));
         boss.setMaximumNoDamageTicks(6);
 
@@ -155,8 +162,16 @@ public final class KillerBunny extends BossFight {
     protected void ambient() {
         pruneCopies();
         if (ticks() % 5 != 0 || !alive()) return;
-        Location l = boss.getLocation().add(0, 0.5, 0);
-        Compat.spawn(world(), Compat.DUST, l, 1, 0.35, 0.25, 0.35, 0, Compat.dust(redEyes ? BLOOD : FUR, 0.9f));
+        // Las particulas las sueltan el jefe Y las copias, con el mismo color. Antes solo
+        // las tiraba el jefe y eso lo senalaba a distancia, que es justo lo contrario
+        // de lo que se busca con esta anomalia.
+        var tint = Compat.dust(redEyes ? BLOOD : FUR, 0.9f);
+        Compat.spawn(world(), Compat.DUST, boss.getLocation().add(0, 0.4, 0), 1, 0.3, 0.2, 0.3, 0, tint);
+        for (Rabbit r : copies) {
+            if (r != null && r.isValid()) {
+                Compat.spawn(world(), Compat.DUST, r.getLocation().add(0, 0.4, 0), 1, 0.3, 0.2, 0.3, 0, tint);
+            }
+        }
         if (ticks() % 60 == 0 && !copies.isEmpty()) {
             warn(Component.text("Copias vivas  ", NamedTextColor.GRAY)
                     .append(Component.text(copies.size() + " / " + MAX_COPIES,
@@ -197,11 +212,13 @@ public final class KillerBunny extends BossFight {
                 r.setPersistent(false);
                 r.setCanPickupItems(false);
                 killerType(r);
-                r.customName(Component.text("Copia", TextColor.color(0xBFB4AA)));
+                // Mismo nombre oculto y mismo tamano que el jefe. Lo unico que cambia
+                // es la vida y el dano, y eso no se ve.
+                r.customName(DISGUISE);
+                r.setCustomNameVisible(false);
                 Compat.setAttribute(r, "max_health", 20);
                 Compat.setAttribute(r, "attack_damage", 5);
-                Compat.setAttribute(r, "movement_speed", 0.46);
-                Compat.setAttribute(r, "scale", 1.2);
+                Compat.setAttribute(r, "movement_speed", 0.44);
                 r.setHealth(20);
             });
             markMinion(copy);
@@ -822,6 +839,59 @@ public final class KillerBunny extends BossFight {
             Fx.safeRemove(prey);
             throw Stop.now();
         }, null);
+    }
+
+    /**
+     * 16. Cambiazo: se intercambia el sitio con sus copias varias veces seguidas.
+     *
+     * Es la habilidad que remata la idea de esta anomalia: aunque hayas seguido al
+     * conejo bueno con la vista, despues de esto ya no sabes cual era. El humo sale a
+     * la vez en los dos puntos para que no se pueda deducir quien salio de donde.
+     */
+    public void swapPlaces() {
+        pruneCopies();
+        if (!alive() || copies.isEmpty()) return;
+        soundAt(loc(), "entity.rabbit.jump", 1.2f, 1.5f);
+        broadcastNear(Component.text("Se cambian de sitio.", ACCENT));
+
+        animate(60, tick -> {
+            if (!alive()) throw Stop.now();
+            if (tick % 18 != 0) return;
+            pruneCopies();
+            if (copies.isEmpty()) throw Stop.now();
+
+            Rabbit twin = copies.get(random.nextInt(copies.size()));
+            if (twin == null || !twin.isValid()) return;
+            Location a = boss.getLocation().clone();
+            Location b = twin.getLocation().clone();
+
+            puff(a);
+            puff(b);
+            boss.teleport(b);
+            twin.teleport(a);
+
+            // Y de paso se barajan dos copias entre ellas, para meter mas ruido.
+            if (copies.size() >= 3) {
+                Rabbit x = copies.get(random.nextInt(copies.size()));
+                Rabbit y = copies.get(random.nextInt(copies.size()));
+                if (x != null && y != null && x.isValid() && y.isValid() && !x.equals(y)) {
+                    Location xl = x.getLocation().clone();
+                    Location yl = y.getLocation().clone();
+                    puff(xl);
+                    puff(yl);
+                    x.teleport(yl);
+                    y.teleport(xl);
+                }
+            }
+        }, null);
+    }
+
+    /** La nube que tapa un cambio de sitio. Identica siempre, venga de quien venga. */
+    private void puff(Location l) {
+        Compat.spawn(world(), Compat.POOF, l.clone().add(0, 0.4, 0), 24, 0.35, 0.35, 0.35, 0.05);
+        Compat.spawn(world(), Compat.DUST, l.clone().add(0, 0.4, 0), 16, 0.35, 0.35, 0.35, 0,
+                Compat.dust(FUR, 1.3f));
+        Compat.sound(world(), l, "entity.rabbit.jump", 0.9f, 1.4f);
     }
 
     // ------------------------------------------------------------------ utilidades

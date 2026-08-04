@@ -480,7 +480,8 @@ public final class AnomalyRegistry {
                     "Elemento de tierra: campo abierto y seco",
                     "SE MULTIPLICA cada vez que muerde, hasta 20 copias",
                     "Cuantas mas copias vivas, menos dano recibe el grande",
-                    "No brilla ni levanta pilar: solo tienes las coordenadas");
+                    "No brilla, no avisa y no lleva nombre encima",
+                    "Sus copias son identicas: mismo tamano y mismo nombre");
         }
 
         @Override
@@ -505,7 +506,7 @@ public final class AnomalyRegistry {
     }
 
     /**
-     * Las 15 habilidades del Conejo. Casi todas giran alrededor de lo mismo: llenar la
+     * Las 16 habilidades del Conejo. Casi todas giran alrededor de lo mismo: llenar la
      * arena de copias y obligar al grupo a repartirse entre limpiarlas y pegarle al grande.
      */
     public List<Ability> bunnyAbilities() {
@@ -563,6 +564,9 @@ public final class AnomalyRegistry {
         add(list, "devorar", "Devorar", 0, 300, 50, 2,
                 "Se come una de sus copias y se cura un 5% con ella.",
                 icon("COOKED_RABBIT", "RABBIT"), f -> bunny(f).devour());
+        add(list, "cambiazo", "Cambiazo", 0, 240, 60, 4,
+                "Se cambia de sitio con sus copias varias veces; despues ya no sabes cual era.",
+                icon("ENDER_PEARL", "SNOWBALL"), f -> bunny(f).swapPlaces());
 
         return list;
     }

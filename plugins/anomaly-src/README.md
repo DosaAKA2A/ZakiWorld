@@ -8,7 +8,7 @@ La intención de fondo es empujar a la gente a **salir del spawn** y a **pelear 
 el jefe escala con el número de jugadores, varias habilidades castigan dispersarse y el
 botín se reparte entre todos los que participaron, no solo entre quien da el último golpe.
 
-- **Versión:** 1.3.0
+- **Versión:** 1.3.1
 - **Paquete:** `net.zakiworld.anomaly`
 - **Probado contra:** Paper 26.1.2 (MC 26.1.2), compilado con `--release 21`
 - **Permiso único:** `anomaly.gui` (`default: op`)
@@ -211,6 +211,11 @@ va de las manos al grupo en segundos si no las limpian.
   que convierte la multiplicación en una mecánica en vez de en un estorbo: si el grupo se
   dedica solo al jefe, el jefe casi no baja. Hay que repartirse.
 - **No brilla ni levanta pilar**, por petición expresa. Es la única que aparece por sorpresa.
+- **Es indistinguible de sus copias**, y eso es el diseño, no un descuido: tamaño de conejo
+  normal (sin `scale`), **sin nombre encima**, el mismo nombre oculto en todos para que ni
+  el NBT lo delate, y las partículas de ambiente las sueltan todos por igual. Lo único que
+  cambia entre el jefe y una copia es la vida y el daño, que no se ven. La barra de jefe es
+  la única pista: solo baja cuando pegas al de verdad.
 - Elemento **tierra**, campo abierto y seco.
 
 | Fase | Habilidades |
@@ -218,7 +223,7 @@ va de las manos al grupo en segundos si no las limpian.
 | I — la plaga | Camada · Salto Asesino · Madriguera · Carrera en Zigzag · Patada Trasera |
 | II — la marea | Enjambre · Frenesí · Mordisco Profundo · Campo de Madrigueras · Zarpazo Giratorio |
 | III — la horda | Estampida de Pelaje · Salto Lunar · División Final · Mordida Final |
-| Cualquiera | Devorar — se come una copia y se cura un 5 % con ella |
+| Cualquiera | Devorar — se come una copia y se cura un 5 % con ella · **Cambiazo** — se intercambia el sitio con sus copias varias veces, con humo simultáneo en los dos puntos para que no se pueda deducir quién salió de dónde |
 
 Transiciones: **ojos rojos** (I → II, saca cuatro copias y muerde más fuerte) y **la horda**
 (II → III, se parte hasta el tope de golpe). Al morir, las copias se deshacen una a una.
@@ -278,7 +283,7 @@ No hay Maven en el PATH. Con el JDK 25 portátil y `paper-api 26.1.2`:
 
 ```
 javac --release 21 -encoding UTF-8 -cp "<paper-api + libs del servidor>" -d build @sources
-jar --create --file Anomaly-1.3.0.jar -C build .
+jar --create --file Anomaly-1.3.1.jar -C build .
 ```
 
 El `pom.xml` está para quien tenga Maven; `paper-api` es `provided`.
