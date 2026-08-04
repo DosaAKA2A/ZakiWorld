@@ -49,7 +49,7 @@ import org.joml.Quaternionf;
 import org.joml.Vector3f;
 
 public final class EffectRunner {
-    private static final int MAX_TICKS = 200;
+    private static final int MAX_TICKS = 400;
     private static final long FX_TTL_MS = 30000L;
     private final RipPlugin plugin;
     private final NamespacedKey fxKey;
@@ -150,7 +150,7 @@ public final class EffectRunner {
     }
 
     private void animate(int ticks, long period, final TickAction action, final Runnable onEnd) {
-        final int limit = Math.min(ticks, 200);
+        final int limit = Math.min(ticks, MAX_TICKS);
         BukkitRunnable task = new BukkitRunnable(){
             int t = 0;
             int errors = 0;
@@ -578,6 +578,10 @@ public final class EffectRunner {
             }
             case D_REQUIEM: {
                 this.dRequiem(w, base, c);
+                break;
+            }
+            case D_AGONY: {
+                this.dAgony(w, base, c, victim);
             }
         }
     }
@@ -1181,6 +1185,233 @@ public final class EffectRunner {
             }
             this.discard((Entity)frozen);
         });
+    }
+
+    /*
+     * Fija la hora del cielo en el cliente de todos los jugadores del mundo.
+     * Es puramente visual: no toca la hora real del mundo, asi que no afecta
+     * a mobs, granjas ni al dormir. Siempre hay que cerrarlo con skyReset.
+     */
+    private void sky(World w, long absolute) {
+        for (Player p : Bukkit.getOnlinePlayers()) {
+            if (!p.getWorld().equals(w)) continue;
+            try {
+                p.setPlayerTime(absolute, false);
+            }
+            catch (Throwable throwable) {
+                // empty catch block
+            }
+        }
+    }
+
+    private void skyReset() {
+        for (Player p : Bukkit.getOnlinePlayers()) {
+            try {
+                p.resetPlayerTime();
+            }
+            catch (Throwable throwable) {
+                // empty catch block
+            }
+        }
+    }
+
+    private static Location planePoint(Location center, Vector right, Vector up, double r, double phi) {
+        double cx = Math.cos(phi) * r;
+        double cy = Math.sin(phi) * r;
+        return center.clone().add(right.getX() * cx + up.getX() * cy, right.getY() * cx + up.getY() * cy, right.getZ() * cx + up.getZ() * cy);
+    }
+
+    /*
+     * Dibuja el sello a base de particulas en el plano vertical que definen
+     * right y up. El mandala se descubre por capas segun "reveal" (0 a 1):
+     * primero el contorno de loto, luego el circulo interior y por ultimo el
+     * triangulo invertido. "spin" lo hace girar despacio.
+     */
+    private void drawGlyph(World w, Location center, Vector right, Vector up, double radius, double reveal, double spin, org.bukkit.Color color, float dotSize) {
+        if (reveal <= 0.0 || radius <= 0.0) {
+            return;
+        }
+        Particle.DustOptions dust = new Particle.DustOptions(color, dotSize);
+        int outer = 96;
+        int shown = (int)Math.ceil((double)outer * Math.min(1.0, reveal));
+        for (int i = 0; i < shown; ++i) {
+            double phi = Math.PI * 2 / (double)outer * (double)i + spin;
+            double r = radius * (0.88 + 0.12 * Math.cos(16.0 * phi));
+            Compat.spawn(w, Compat.DUST, EffectRunner.planePoint(center, right, up, r, phi), 1, dust);
+        }
+        if (reveal < 0.45) {
+            return;
+        }
+        double inner = Math.min(1.0, (reveal - 0.45) / 0.4);
+        int innerPoints = 44;
+        int shownInner = (int)Math.ceil((double)innerPoints * inner);
+        for (int i = 0; i < shownInner; ++i) {
+            double phi = Math.PI * 2 / (double)innerPoints * (double)i - spin;
+            Compat.spawn(w, Compat.DUST, EffectRunner.planePoint(center, right, up, radius * 0.42, phi), 1, dust);
+        }
+        if (inner < 0.6) {
+            return;
+        }
+        double tri = Math.min(1.0, (inner - 0.6) / 0.4);
+        double tr = radius * 0.4;
+        double[] angs = new double[]{Math.toRadians(-90.0), Math.toRadians(30.0), Math.toRadians(150.0)};
+        for (int e = 0; e < 3; ++e) {
+            Location p1 = EffectRunner.planePoint(center, right, up, tr, angs[e] - spin);
+            Location p2 = EffectRunner.planePoint(center, right, up, tr, angs[(e + 1) % 3] - spin);
+            int steps = 16;
+            int shownSteps = (int)Math.ceil((double)steps * tri);
+            for (int s = 0; s <= shownSteps; ++s) {
+                double f = (double)s / (double)steps;
+                Location p = p1.clone().add((p2.getX() - p1.getX()) * f, (p2.getY() - p1.getY()) * f, (p2.getZ() - p1.getZ()) * f);
+                Compat.spawn(w, Compat.DUST, p, 1, dust);
+            }
+        }
+    }
+
+    private void dAgony(World w, Location base, Location c, Player victim) {
+        ItemStack[] armor = null;
+        ItemStack hand = null;
+        LivingEntity clone = null;
+        if (victim != null) {
+            try {
+                armor = victim.getInventory().getArmorContents();
+                hand = victim.getInventory().getItemInMainHand();
+            }
+            catch (Throwable throwable) {
+                // empty catch block
+            }
+            clone = Clones.spawnFrozenClone(base, victim, armor, hand);
+        }
+        final LivingEntity god = clone;
+        if (god != null) {
+            this.tag((Entity)god);
+            try {
+                god.setGlowing(true);
+            }
+            catch (Throwable throwable) {
+                // empty catch block
+            }
+        }
+        double yaw = Math.toRadians(base.getYaw());
+        Vector forward = new Vector(-Math.sin(yaw), 0.0, Math.cos(yaw));
+        Vector right = new Vector(Math.cos(yaw), 0.0, Math.sin(yaw));
+        Vector up = new Vector(0.0, 1.0, 0.0);
+        Location seal = base.clone().add(forward.getX() * -1.5, 3.1, forward.getZ() * -1.5);
+        org.bukkit.Color magenta = org.bukkit.Color.fromRGB(255, 40, 200);
+        org.bukkit.Color rose = org.bukkit.Color.fromRGB(255, 150, 235);
+        long startTime = w.getTime();
+        double rise = 2.4;
+        Compat.sound(w, base, "entity.ender_dragon.growl", 1.2f, 0.4f);
+        Compat.sound(w, base, "ambient.cave", 1.0f, 0.5f);
+        Compat.sound(w, base, "block.beacon.deactivate", 1.0f, 0.5f);
+        this.animate(280, 1L, t -> {
+            if (t < 16) {
+                this.circle(base.clone().add(0.0, 0.15, 0.0), 1.6, 18, p -> Compat.spawn(w, Compat.SOUL, p, 1, 0.02, 0.12, 0.02, 0.02));
+                Compat.spawn(w, Compat.LARGE_SMOKE, base.clone().add(0.0, 0.4, 0.0), 3, 0.5, 0.15, 0.5, 0.01);
+            }
+            if (t == 10) {
+                Compat.sound(w, base, "block.portal.trigger", 0.5f, 0.6f);
+                Compat.spawn(w, Compat.FLASH, c, 1);
+            }
+            if (t >= 16 && t <= 76) {
+                double p = (double)(t - 16) / 60.0;
+                this.sky(w, startTime + (long)(12000.0 * p));
+            } else if (t > 76 && t <= 200) {
+                this.sky(w, startTime + 12000L);
+            } else if (t > 200 && t <= 260) {
+                double p = (double)(t - 200) / 60.0;
+                this.sky(w, startTime + 12000L + (long)(12000.0 * p));
+            } else if (t == 261) {
+                this.skyReset();
+            }
+            if (t == 20) {
+                Compat.sound(w, base, "entity.illusioner.prepare_mirror", 1.0f, 0.6f);
+                Compat.sound(w, base, "block.respawn_anchor.charge", 1.0f, 0.5f);
+            }
+            if (t >= 20 && t <= 90 && god != null && god.isValid()) {
+                double p = (double)(t - 20) / 70.0;
+                double eased = p * p * (3.0 - 2.0 * p);
+                Location at = base.clone().add(0.0, rise * eased, 0.0);
+                at.setPitch(0.0f);
+                try {
+                    god.teleport(at);
+                }
+                catch (Throwable throwable) {
+                    // empty catch block
+                }
+                double sa = (double)t * 0.5;
+                for (int k = 0; k < 3; ++k) {
+                    double ang = sa + Math.PI * 2 / 3.0 * (double)k;
+                    Location m = base.clone().add(Math.cos(ang) * 1.1, rise * eased * 0.9 + 0.3, Math.sin(ang) * 1.1);
+                    Compat.spawn(w, Compat.END_ROD, m, 1, 0.02, 0.05, 0.02, 0.01);
+                    Compat.spawn(w, Compat.DUST, m, 1, new Particle.DustOptions(rose, 1.1f));
+                }
+            }
+            if (t > 90 && t < 252 && god != null && god.isValid()) {
+                double bob = Math.sin((double)t * 0.09) * 0.14;
+                Location at = base.clone().add(0.0, rise + bob, 0.0);
+                at.setPitch(0.0f);
+                try {
+                    god.teleport(at);
+                }
+                catch (Throwable throwable) {
+                    // empty catch block
+                }
+            }
+            if (t == 45) {
+                Compat.sound(w, base, "block.beacon.activate", 0.8f, 0.6f);
+            }
+            if (t >= 56 && t <= 260) {
+                double reveal = t <= 120 ? (double)(t - 56) / 64.0 : (t <= 210 ? 1.0 : Math.max(0.0, 1.0 - (double)(t - 210) / 50.0));
+                double radius = 2.9 * (t <= 120 ? 0.55 + 0.45 * Math.min(1.0, (double)(t - 56) / 64.0) : (t <= 210 ? 1.0 : Math.max(0.05, 1.0 - (double)(t - 210) / 55.0)));
+                this.drawGlyph(w, seal, right, up, radius, reveal, (double)t * 0.012, magenta, 1.5f);
+            }
+            if (t == 80) {
+                Compat.sound(w, base, "block.enchantment_table.use", 1.0f, 0.5f);
+                Compat.sound(w, base, "entity.illusioner.cast_spell", 0.9f, 0.7f);
+            }
+            if (t == 120) {
+                Compat.spawn(w, Compat.FLASH, seal, 1);
+                Compat.spawn(w, Compat.FLASH, base.clone().add(0.0, rise + 1.0, 0.0), 1);
+                Compat.spawn(w, Compat.END_ROD, base.clone().add(0.0, rise + 1.0, 0.0), 60, 0.6, 0.9, 0.6, 0.18);
+                Compat.spawn(w, Compat.ELECTRIC_SPARK, seal, 40, 1.2, 1.2, 0.3, 0.2);
+                Compat.sound(w, base, "item.totem.use", 1.0f, 0.8f);
+                Compat.sound(w, base, "block.conduit.activate", 1.0f, 0.6f);
+                Compat.sound(w, base, "entity.lightning_bolt.thunder", 0.5f, 0.5f);
+                for (int y = 0; y < 26; ++y) {
+                    Compat.spawn(w, Compat.DUST, base.clone().add(0.0, 0.3 + (double)y * 0.55, 0.0), 2, 0.25, 0.1, 0.25, 0.0, new Particle.DustOptions(rose, 1.6f));
+                }
+            }
+            if (t > 120 && t < 210 && t % 6 == 0) {
+                Compat.spawn(w, Compat.END_ROD, base.clone().add(0.0, rise + 0.9, 0.0), 4, 0.45, 0.6, 0.45, 0.02);
+                Compat.spawn(w, Compat.ENCHANT, base.clone().add(0.0, rise + 1.6, 0.0), 6, 0.5, 0.6, 0.5, 0.4);
+            }
+            if (t > 120 && t < 210 && t % 24 == 0) {
+                Compat.spawn(w, Compat.FLASH, seal, 1);
+                Compat.sound(w, base, "block.amethyst_block.chime", 0.7f, (float)EffectRunner.rnd(0.7, 1.1));
+            }
+            if (t == 150) {
+                Compat.sound(w, base, "entity.elder_guardian.curse", 0.6f, 0.6f);
+            }
+            if (t == 205) {
+                Compat.sound(w, base, "block.beacon.deactivate", 0.9f, 0.5f);
+            }
+            if (t == 252) {
+                Compat.spawn(w, Compat.FLASH, base.clone().add(0.0, rise + 1.0, 0.0), 1);
+                Compat.spawn(w, Compat.END_ROD, base.clone().add(0.0, rise + 1.0, 0.0), 50, 0.4, 0.8, 0.4, 0.25);
+                Compat.spawn(w, Compat.SOUL, base.clone().add(0.0, rise + 1.0, 0.0), 24, 0.3, 0.6, 0.3, 0.06);
+                Compat.sound(w, base, "entity.enderman.teleport", 0.9f, 0.5f);
+                Compat.sound(w, base, "block.amethyst_block.chime", 1.0f, 0.6f);
+                this.discard((Entity)god);
+            }
+            if (t == 268) {
+                Compat.sound(w, base, "block.bell.resonate", 0.9f, 0.7f);
+            }
+        }, () -> {
+            this.skyReset();
+            this.discard((Entity)god);
+        });
+        this.later(320L, this::skyReset);
     }
 
     private void dSmoke(World w, Location c) {

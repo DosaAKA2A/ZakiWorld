@@ -1,5 +1,5 @@
 name: Rip
-version: '3.2.3'
+version: '3.3.0'
 main: net.zakiworld.rip.RipPlugin
 api-version: '1.20'
 author: Iris Studio
@@ -20,6 +20,9 @@ permissions:
     default: false
   rip.death.sixtyseven:
     description: Efecto INMORTAL de muerte "SESENTA Y SIETE"; no lo concede rip.*
+    default: false
+  rip.death.agony:
+    description: Efecto INMORTAL de muerte "Agonia"; exclusivo, no lo concede rip.*
     default: false
   rip.*:
     description: Acceso a todos los efectos Rip
