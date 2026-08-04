@@ -1215,59 +1215,6 @@ public final class EffectRunner {
         }
     }
 
-    private static Location planePoint(Location center, Vector right, Vector up, double r, double phi) {
-        double cx = Math.cos(phi) * r;
-        double cy = Math.sin(phi) * r;
-        return center.clone().add(right.getX() * cx + up.getX() * cy, right.getY() * cx + up.getY() * cy, right.getZ() * cx + up.getZ() * cy);
-    }
-
-    /*
-     * Dibuja el sello a base de particulas en el plano vertical que definen
-     * right y up. El mandala se descubre por capas segun "reveal" (0 a 1):
-     * primero el contorno de loto, luego el circulo interior y por ultimo el
-     * triangulo invertido. "spin" lo hace girar despacio.
-     */
-    private void drawGlyph(World w, Location center, Vector right, Vector up, double radius, double reveal, double spin, org.bukkit.Color color, float dotSize) {
-        if (reveal <= 0.0 || radius <= 0.0) {
-            return;
-        }
-        Particle.DustOptions dust = new Particle.DustOptions(color, dotSize);
-        int outer = 96;
-        int shown = (int)Math.ceil((double)outer * Math.min(1.0, reveal));
-        for (int i = 0; i < shown; ++i) {
-            double phi = Math.PI * 2 / (double)outer * (double)i + spin;
-            double r = radius * (0.88 + 0.12 * Math.cos(16.0 * phi));
-            Compat.spawn(w, Compat.DUST, EffectRunner.planePoint(center, right, up, r, phi), 1, dust);
-        }
-        if (reveal < 0.45) {
-            return;
-        }
-        double inner = Math.min(1.0, (reveal - 0.45) / 0.4);
-        int innerPoints = 44;
-        int shownInner = (int)Math.ceil((double)innerPoints * inner);
-        for (int i = 0; i < shownInner; ++i) {
-            double phi = Math.PI * 2 / (double)innerPoints * (double)i - spin;
-            Compat.spawn(w, Compat.DUST, EffectRunner.planePoint(center, right, up, radius * 0.42, phi), 1, dust);
-        }
-        if (inner < 0.6) {
-            return;
-        }
-        double tri = Math.min(1.0, (inner - 0.6) / 0.4);
-        double tr = radius * 0.4;
-        double[] angs = new double[]{Math.toRadians(-90.0), Math.toRadians(30.0), Math.toRadians(150.0)};
-        for (int e = 0; e < 3; ++e) {
-            Location p1 = EffectRunner.planePoint(center, right, up, tr, angs[e] - spin);
-            Location p2 = EffectRunner.planePoint(center, right, up, tr, angs[(e + 1) % 3] - spin);
-            int steps = 16;
-            int shownSteps = (int)Math.ceil((double)steps * tri);
-            for (int s = 0; s <= shownSteps; ++s) {
-                double f = (double)s / (double)steps;
-                Location p = p1.clone().add((p2.getX() - p1.getX()) * f, (p2.getY() - p1.getY()) * f, (p2.getZ() - p1.getZ()) * f);
-                Compat.spawn(w, Compat.DUST, p, 1, dust);
-            }
-        }
-    }
-
     private void dAgony(World w, Location base, Location c, Player victim) {
         ItemStack[] armor = null;
         ItemStack hand = null;
@@ -1292,20 +1239,14 @@ public final class EffectRunner {
                 // empty catch block
             }
         }
-        double yaw = Math.toRadians(base.getYaw());
-        Vector forward = new Vector(-Math.sin(yaw), 0.0, Math.cos(yaw));
-        Vector right = new Vector(Math.cos(yaw), 0.0, Math.sin(yaw));
-        Vector up = new Vector(0.0, 1.0, 0.0);
-        Location seal = base.clone().add(forward.getX() * -1.5, 3.1, forward.getZ() * -1.5);
-        org.bukkit.Color magenta = org.bukkit.Color.fromRGB(255, 40, 200);
-        org.bukkit.Color rose = org.bukkit.Color.fromRGB(255, 150, 235);
         long startTime = w.getTime();
         double rise = 2.4;
+        org.bukkit.Color white = org.bukkit.Color.fromRGB(255, 255, 255);
         Compat.sound(w, base, "entity.ender_dragon.growl", 1.2f, 0.4f);
         Compat.sound(w, base, "ambient.cave", 1.0f, 0.5f);
         Compat.sound(w, base, "block.beacon.deactivate", 1.0f, 0.5f);
-        this.animate(280, 1L, t -> {
-            if (t < 16) {
+        this.animate(220, 1L, t -> {
+            if (t < 14) {
                 this.circle(base.clone().add(0.0, 0.15, 0.0), 1.6, 18, p -> Compat.spawn(w, Compat.SOUL, p, 1, 0.02, 0.12, 0.02, 0.02));
                 Compat.spawn(w, Compat.LARGE_SMOKE, base.clone().add(0.0, 0.4, 0.0), 3, 0.5, 0.15, 0.5, 0.01);
             }
@@ -1313,15 +1254,16 @@ public final class EffectRunner {
                 Compat.sound(w, base, "block.portal.trigger", 0.5f, 0.6f);
                 Compat.spawn(w, Compat.FLASH, c, 1);
             }
-            if (t >= 16 && t <= 76) {
-                double p = (double)(t - 16) / 60.0;
-                this.sky(w, startTime + (long)(12000.0 * p));
-            } else if (t > 76 && t <= 200) {
-                this.sky(w, startTime + 12000L);
-            } else if (t > 200 && t <= 260) {
-                double p = (double)(t - 200) / 60.0;
-                this.sky(w, startTime + 12000L + (long)(12000.0 * p));
-            } else if (t == 261) {
+            /*
+             * El cielo gira de un tiron, sin fases ni pausa: 14 dias completos en
+             * 180 ticks, o sea unos 4,7 dias cada 3 segundos. Al ser un numero
+             * entero de dias, el ultimo tick cae exactamente en la misma hora en
+             * la que empezo la animacion.
+             */
+            if (t >= 12 && t <= 192) {
+                double p = (double)(t - 12) / 180.0;
+                this.sky(w, startTime + (long)(336000.0 * p));
+            } else if (t == 193) {
                 this.skyReset();
             }
             if (t == 20) {
@@ -1339,15 +1281,8 @@ public final class EffectRunner {
                 catch (Throwable throwable) {
                     // empty catch block
                 }
-                double sa = (double)t * 0.5;
-                for (int k = 0; k < 3; ++k) {
-                    double ang = sa + Math.PI * 2 / 3.0 * (double)k;
-                    Location m = base.clone().add(Math.cos(ang) * 1.1, rise * eased * 0.9 + 0.3, Math.sin(ang) * 1.1);
-                    Compat.spawn(w, Compat.END_ROD, m, 1, 0.02, 0.05, 0.02, 0.01);
-                    Compat.spawn(w, Compat.DUST, m, 1, new Particle.DustOptions(rose, 1.1f));
-                }
             }
-            if (t > 90 && t < 252 && god != null && god.isValid()) {
+            if (t > 90 && t < 196 && god != null && god.isValid()) {
                 double bob = Math.sin((double)t * 0.09) * 0.14;
                 Location at = base.clone().add(0.0, rise + bob, 0.0);
                 at.setPitch(0.0f);
@@ -1361,57 +1296,53 @@ public final class EffectRunner {
             if (t == 45) {
                 Compat.sound(w, base, "block.beacon.activate", 0.8f, 0.6f);
             }
-            if (t >= 56 && t <= 260) {
-                double reveal = t <= 120 ? (double)(t - 56) / 64.0 : (t <= 210 ? 1.0 : Math.max(0.0, 1.0 - (double)(t - 210) / 50.0));
-                double radius = 2.9 * (t <= 120 ? 0.55 + 0.45 * Math.min(1.0, (double)(t - 56) / 64.0) : (t <= 210 ? 1.0 : Math.max(0.05, 1.0 - (double)(t - 210) / 55.0)));
-                this.drawGlyph(w, seal, right, up, radius, reveal, (double)t * 0.012, magenta, 1.5f);
-            }
             if (t == 80) {
                 Compat.sound(w, base, "block.enchantment_table.use", 1.0f, 0.5f);
                 Compat.sound(w, base, "entity.illusioner.cast_spell", 0.9f, 0.7f);
             }
-            if (t == 120) {
-                Compat.spawn(w, Compat.FLASH, seal, 1);
-                Compat.spawn(w, Compat.FLASH, base.clone().add(0.0, rise + 1.0, 0.0), 1);
-                Compat.spawn(w, Compat.END_ROD, base.clone().add(0.0, rise + 1.0, 0.0), 60, 0.6, 0.9, 0.6, 0.18);
-                Compat.spawn(w, Compat.ELECTRIC_SPARK, seal, 40, 1.2, 1.2, 0.3, 0.2);
-                Compat.sound(w, base, "item.totem.use", 1.0f, 0.8f);
-                Compat.sound(w, base, "block.conduit.activate", 1.0f, 0.6f);
-                Compat.sound(w, base, "entity.lightning_bolt.thunder", 0.5f, 0.5f);
-                for (int y = 0; y < 26; ++y) {
-                    Compat.spawn(w, Compat.DUST, base.clone().add(0.0, 0.3 + (double)y * 0.55, 0.0), 2, 0.25, 0.1, 0.25, 0.0, new Particle.DustOptions(rose, 1.6f));
-                }
-            }
-            if (t > 120 && t < 210 && t % 6 == 0) {
-                Compat.spawn(w, Compat.END_ROD, base.clone().add(0.0, rise + 0.9, 0.0), 4, 0.45, 0.6, 0.45, 0.02);
-                Compat.spawn(w, Compat.ENCHANT, base.clone().add(0.0, rise + 1.6, 0.0), 6, 0.5, 0.6, 0.5, 0.4);
-            }
-            if (t > 120 && t < 210 && t % 24 == 0) {
-                Compat.spawn(w, Compat.FLASH, seal, 1);
-                Compat.sound(w, base, "block.amethyst_block.chime", 0.7f, (float)EffectRunner.rnd(0.7, 1.1));
-            }
-            if (t == 150) {
+            if (t == 130) {
                 Compat.sound(w, base, "entity.elder_guardian.curse", 0.6f, 0.6f);
             }
-            if (t == 205) {
-                Compat.sound(w, base, "block.beacon.deactivate", 0.9f, 0.5f);
+            if (t == 178) {
+                Compat.sound(w, base, "block.beacon.power_select", 1.0f, 0.5f);
+                Compat.sound(w, base, "block.conduit.activate", 0.9f, 0.7f);
             }
-            if (t == 252) {
+            if (t >= 184 && t < 196) {
+                double top = Math.max(rise + 1.0, 30.0 - (double)(t - 184) * 2.6);
+                for (double y = top; y < 30.0; y += 1.0) {
+                    Compat.spawn(w, Compat.END_ROD, base.clone().add(0.0, y, 0.0), 2, 0.16, 0.3, 0.16, 0.005);
+                    Compat.spawn(w, Compat.DUST, base.clone().add(0.0, y, 0.0), 1, 0.16, 0.3, 0.16, 0.0, new Particle.DustOptions(white, 1.4f));
+                }
+            }
+            if (t == 196) {
+                for (double y = 0.2; y < 30.0; y += 0.5) {
+                    Compat.spawn(w, Compat.END_ROD, base.clone().add(0.0, y, 0.0), 3, 0.18, 0.2, 0.18, 0.0);
+                    Compat.spawn(w, Compat.DUST, base.clone().add(0.0, y, 0.0), 2, 0.2, 0.2, 0.2, 0.0, new Particle.DustOptions(white, 1.8f));
+                }
                 Compat.spawn(w, Compat.FLASH, base.clone().add(0.0, rise + 1.0, 0.0), 1);
+                Compat.sound(w, base, "item.trident.thunder", 1.0f, 1.2f);
+                Compat.sound(w, base, "entity.warden.sonic_boom", 0.7f, 1.2f);
                 Compat.spawn(w, Compat.END_ROD, base.clone().add(0.0, rise + 1.0, 0.0), 50, 0.4, 0.8, 0.4, 0.25);
                 Compat.spawn(w, Compat.SOUL, base.clone().add(0.0, rise + 1.0, 0.0), 24, 0.3, 0.6, 0.3, 0.06);
+                Compat.spawn(w, Compat.POOF, base.clone().add(0.0, rise + 1.0, 0.0), 30, 0.35, 0.6, 0.35, 0.05);
                 Compat.sound(w, base, "entity.enderman.teleport", 0.9f, 0.5f);
                 Compat.sound(w, base, "block.amethyst_block.chime", 1.0f, 0.6f);
                 this.discard((Entity)god);
             }
-            if (t == 268) {
+            if (t > 196 && t < 210) {
+                float fade = (float)(1.0 - (double)(t - 196) / 14.0);
+                for (double y = 0.4; y < 30.0; y += 1.6) {
+                    Compat.spawn(w, Compat.DUST, base.clone().add(0.0, y, 0.0), 1, 0.12, 0.2, 0.12, 0.0, new Particle.DustOptions(white, Math.max(0.2f, 1.6f * fade)));
+                }
+            }
+            if (t == 208) {
                 Compat.sound(w, base, "block.bell.resonate", 0.9f, 0.7f);
             }
         }, () -> {
             this.skyReset();
             this.discard((Entity)god);
         });
-        this.later(320L, this::skyReset);
+        this.later(260L, this::skyReset);
     }
 
     private void dSmoke(World w, Location c) {
