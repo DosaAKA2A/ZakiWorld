@@ -613,7 +613,7 @@ public final class Mimic extends BossFight {
             if (victim != null && !victim.isOnline()) {
                 Disguises.resolveAccount(plugin, victim.getName(), this::reskinShell);
             }
-            dressAs(copy, victim, disguised);
+            dressAs(copy, victim);
             Compat.setAttribute(boss, "attack_damage", 16);
             Compat.setAttribute(boss, "armor", 12);
             Compat.setAttribute(boss, "movement_speed", 0.32);
@@ -631,14 +631,19 @@ public final class Mimic extends BossFight {
     }
 
     /**
-     * La armadura y las armas del jugador, copiadas pieza a pieza.
+     * La armadura y las armas del jugador, copiadas pieza a pieza SOLO en el cuerpo
+     * visible. Con maniqui, el zombi de debajo se queda vacio: es invisible pero sus
+     * items no, y vestirlo tambien dejaba cada objeto flotando junto al del maniqui,
+     * todo por duplicado.
      *
      * El casco es el unico caso raro: si el disfraz de jugador ha funcionado, la cara
      * ya es la suya y ponerle ademas su cabeza le deja un segundo craneo flotando; solo
      * se recurre a la cabeza cuando NO hay disfraz.
      */
-    private void dressAs(Zombie copy, Player victim, boolean disguised) {
-        EntityEquipment eq = copy.getEquipment();
+    private void dressAs(Zombie copy, Player victim) {
+        LivingEntity visible = body();
+        boolean shelled = visible != copy;
+        EntityEquipment eq = visible.getEquipment();
         if (eq == null) return;
         if (victim != null) {
             ItemStack[] armor = victim.getInventory().getArmorContents();
@@ -651,7 +656,7 @@ public final class Mimic extends BossFight {
             ItemStack ownHelmet = cloneOf(armor[3]);
             if (ownHelmet != null) {
                 eq.setHelmet(ownHelmet);
-            } else if (!disguised) {
+            } else if (!shelled) {
                 ItemStack head = new ItemStack(Material.PLAYER_HEAD);
                 if (head.getItemMeta() instanceof SkullMeta meta) {
                     meta.setOwningPlayer(victim);
@@ -661,14 +666,19 @@ public final class Mimic extends BossFight {
             }
         } else {
             eq.setItemInMainHand(new ItemStack(Material.NETHERITE_SWORD));
-            if (!disguised) eq.setHelmet(new ItemStack(Material.NETHERITE_HELMET));
+            if (!shelled) eq.setHelmet(new ItemStack(Material.NETHERITE_HELMET));
         }
-        eq.setHelmetDropChance(0);
-        eq.setChestplateDropChance(0);
-        eq.setLeggingsDropChance(0);
-        eq.setBootsDropChance(0);
-        eq.setItemInMainHandDropChance(0);
-        eq.setItemInOffHandDropChance(0);
+        // El maniqui no suelta equipo al retirarse, pero por si el cuerpo visible es
+        // el zombi (sin disfraz) o la entidad decide lo contrario algun dia.
+        try {
+            eq.setHelmetDropChance(0);
+            eq.setChestplateDropChance(0);
+            eq.setLeggingsDropChance(0);
+            eq.setBootsDropChance(0);
+            eq.setItemInMainHandDropChance(0);
+            eq.setItemInOffHandDropChance(0);
+        } catch (Throwable ignored) {
+        }
     }
 
     private static ItemStack cloneOf(ItemStack item) {

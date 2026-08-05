@@ -502,6 +502,10 @@ public abstract class BossFight {
             // gruñidos delatan lo que hay dentro del disfraz; los sonidos del jefe los
             // pone cada habilidad a mano.
             boss.setSilent(true);
+            // Y DESNUDO. La invisibilidad no esconde el equipo, y un zombi puede nacer
+            // con pala o casco de serie: se veria flotando al lado del maniqui.
+            org.bukkit.inventory.EntityEquipment naked = boss.getEquipment();
+            if (naked != null) naked.clear();
             // El perfil, otra vez un par de ticks despues. Si por lo que sea no viajo
             // en el paquete de aparicion, este segundo intento lo arregla.
             later(2, () -> {
@@ -546,7 +550,15 @@ public abstract class BossFight {
         }
     }
 
-    /** El cuerpo sigue al jefe pegado, con su misma orientacion y su mismo equipo. */
+    /**
+     * El cuerpo sigue al jefe pegado y con su misma orientacion.
+     *
+     * El equipo NO se copia del jefe: la invisibilidad esconde el cuerpo del mob
+     * pero no lo que lleva puesto, asi que si el zombi de debajo cargara los mismos
+     * items que el maniqui se verian flotando a su lado, todo por duplicado. El
+     * equipo se le pone directamente al cuerpo visible (ver Mimic.dressAs) y el mob
+     * de debajo va vacio.
+     */
     private void tickShell() {
         if (shell == null) return;
         if (!shell.isValid()) {
@@ -555,16 +567,6 @@ public abstract class BossFight {
         }
         try {
             shell.teleport(boss.getLocation());
-            org.bukkit.inventory.EntityEquipment from = boss.getEquipment();
-            org.bukkit.inventory.EntityEquipment to = shell.getEquipment();
-            if (from != null && to != null && ticks() % 20 == 0) {
-                to.setHelmet(from.getHelmet());
-                to.setChestplate(from.getChestplate());
-                to.setLeggings(from.getLeggings());
-                to.setBoots(from.getBoots());
-                to.setItemInMainHand(from.getItemInMainHand());
-                to.setItemInOffHand(from.getItemInOffHand());
-            }
         } catch (Throwable ignored) {
         }
     }
