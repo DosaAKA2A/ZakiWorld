@@ -99,14 +99,20 @@ public final class Rabby extends BossFight {
             eq.setBootsDropChance(0);
             eq.setItemInMainHandDropChance(0);
         }
-        // El cuerpo de persona con SU skin. El zombi de debajo sigue peleando, pero
-        // invisible: lo que se ve —y lo que se golpea— es el maniqui.
+        // El cuerpo de persona. El zombi de debajo sigue peleando, pero invisible y
+        // callado: lo que se ve —y lo que se golpea— es el maniqui.
         var profile = Disguises.profileOf(plugin, SKIN, "Rabby");
         if (profile != null) {
             wearShell(profile, Component.text("Rabby", ACCENT, TextDecoration.BOLD));
-        } else if (eq != null) {
-            eq.setHelmet(Disguises.head(plugin, SKIN, "Rabby"));
         }
+        // Y LA CARA SIEMPRE, por cabeza.
+        //
+        // El perfil del maniqui lleva la textura correcta —comprobado en su NBT, y la
+        // URL de Mojang devuelve el PNG bueno—, pero el cliente no la pinta y saca la
+        // skin de serie. La cabeza como casco SI se pinta: es el mismo mecanismo que un
+        // /give de player_head, que funciona en cualquier servidor. Asi que la cara va
+        // por ahi y deja de depender de que el perfil llegue a aplicarse.
+        if (eq != null) eq.setHelmet(Disguises.head(plugin, SKIN, "Rabby"));
 
         Compat.setAttribute(boss, "max_health", 20);
         Compat.setAttribute(boss, "attack_damage", 0);
