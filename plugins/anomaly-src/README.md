@@ -8,7 +8,7 @@ La intención de fondo es empujar a la gente a **salir del spawn** y a **pelear 
 el jefe escala con el número de jugadores, varias habilidades castigan dispersarse y el
 botín se reparte entre todos los que participaron, no solo entre quien da el último golpe.
 
-- **Versión:** 1.7.0
+- **Versión:** 1.8.0
 - **Paquete:** `net.zakiworld.anomaly`
 - **Probado contra:** Paper 26.1.2 (MC 26.1.2), compilado con `--release 21`
 - **Permiso único:** `anomaly.gui` (`default: op`)
@@ -31,6 +31,7 @@ lo mismo desde consola.
 | `/anomaly abilities [id]` | Lista las habilidades |
 | `/anomaly test <id\|all>` | Lanza una habilidad ya, saltándose fase y enfriamiento |
 | `/anomaly hurt <vida>` | Le baja vida a mano, para ver las fases sin juntar un grupo |
+| `/anomaly logros` | Cuántas anomalías llevas derrotadas y cuáles te faltan |
 
 Alias: `/anomalia`, `/anom`.
 
@@ -353,6 +354,27 @@ círculo convertido en jardín para siempre. Por eso Herbola alarga la espera de
 
 ---
 
+## El árbol de logros
+
+Diez logros: la raíz, uno por anomalía y **El que las vio todas**, que exige los ocho.
+Todos los de jefe son de tipo *challenge*, así que traen el marco morado y el sonido de
+desafío de vanilla.
+
+Minecraft solo lee logros desde un **datapack**, así que el plugin se escribe el suyo
+dentro del mundo al arrancar y lo reescribe cuando sube `PACK_VERSION`. Tras instalarlo
+por primera vez hace falta un `/minecraft:reload` o un reinicio; el log lo dice.
+
+- El logro se concede a **todos los que participaron**, no a quien da el último golpe.
+- Todos los iconos y el fondo son **texturas vanilla** a propósito: un datapack que apunte
+  a una textura inexistente se ve como un cuadro morado y negro.
+- `World#getWorldFolder()` devuelve la carpeta de la **dimensión** en Paper moderno
+  (`world/dimensions/minecraft/overworld`). Los datapacks van en la raíz del mundo, así
+  que la ruta se compone con `getWorldContainer()` y el nombre del nivel.
+- El `pack.mcmeta` usa `min_format`/`max_format` como pares `[mayor, menor]`, calcado del
+  datapack que genera el propio Bukkit. El viejo `pack_format` a secas ya no vale.
+
+---
+
 ## Decisiones que conviene no deshacer
 
 - **Vida por encima de 1024.** El atributo `max_health` de Minecraft topa en 1024 y pasarse
@@ -418,7 +440,7 @@ No hay Maven en el PATH. Con el JDK 25 portátil y `paper-api 26.1.2`:
 
 ```
 javac --release 21 -encoding UTF-8 -cp "<paper-api + libs del servidor>" -d build @sources
-jar --create --file Anomaly-1.7.0.jar -C build .
+jar --create --file Anomaly-1.8.0.jar -C build .
 ```
 
 El `pom.xml` está para quien tenga Maven; `paper-api` es `provided`.

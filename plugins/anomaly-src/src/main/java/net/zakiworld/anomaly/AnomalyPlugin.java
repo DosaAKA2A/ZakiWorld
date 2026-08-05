@@ -4,6 +4,7 @@ import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
 import net.kyori.adventure.text.format.TextColor;
 import net.kyori.adventure.text.format.TextDecoration;
+import net.zakiworld.anomaly.core.Advancements;
 import net.zakiworld.anomaly.core.Anchors;
 import net.zakiworld.anomaly.core.Anim;
 import net.zakiworld.anomaly.core.AnomalyManager;
@@ -40,7 +41,7 @@ import org.bukkit.plugin.java.JavaPlugin;
 public final class AnomalyPlugin extends JavaPlugin {
 
     /** La lee el banner de /anomaly info; hay que subirla junto al pom y al plugin.yml. */
-    public static final String VERSION = "1.7.1";
+    public static final String VERSION = "1.8.0";
 
     private static final TextColor BRAND = TextColor.color(0x9BD7E4);
 
@@ -53,6 +54,7 @@ public final class AnomalyPlugin extends JavaPlugin {
     private Announcer announcer;
     private Menus menus;
     private Anchors anchors;
+    private Advancements advancements;
 
     @Override
     public void onEnable() {
@@ -70,6 +72,7 @@ public final class AnomalyPlugin extends JavaPlugin {
         this.announcer = new Announcer(this);
         this.manager = new AnomalyManager(this);
         this.menus = new Menus(this);
+        this.advancements = new Advancements(this);
 
         getServer().getPluginManager().registerEvents(manager, this);
         getServer().getPluginManager().registerEvents(menus, this);
@@ -83,6 +86,11 @@ public final class AnomalyPlugin extends JavaPlugin {
 
         sweepLeftovers();
         manager.restartScheduler();
+
+        if (advancements.install()) {
+            getLogger().info("El arbol de logros es nuevo: hace falta un /minecraft:reload "
+                    + "o un reinicio para que el servidor lo cargue.");
+        }
 
         banner();
         if (Compat.missingParticles() > 0) {
@@ -225,6 +233,10 @@ public final class AnomalyPlugin extends JavaPlugin {
 
     public Anchors anchors() {
         return anchors;
+    }
+
+    public Advancements advancements() {
+        return advancements;
     }
 
     // ---------------------------------------------------------------------- estado

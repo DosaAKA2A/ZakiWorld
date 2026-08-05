@@ -62,6 +62,7 @@ public final class AnomalyCommand implements CommandExecutor, TabCompleter {
             case "abilities", "habilidades" -> abilities(sender, args);
             case "test", "probar" -> test(sender, args);
             case "hurt", "danar" -> hurt(sender, args);
+            case "logros", "advancements" -> trophies(sender);
             case "reload", "recargar" -> reload(sender);
             default -> help(sender);
         }
@@ -293,6 +294,31 @@ public final class AnomalyCommand implements CommandExecutor, TabCompleter {
                         + ((int) (ev.fight().healthFraction() * 100)) + "%)", SOFT)));
     }
 
+    /** Cuantas anomalias lleva derrotadas quien lo pregunta. */
+    private void trophies(CommandSender sender) {
+        if (!(sender instanceof Player player)) {
+            sender.sendMessage(plugin.prefix().append(
+                    Component.text("Este subcomando necesita un jugador.", NamedTextColor.RED)));
+            return;
+        }
+        int owned = plugin.advancements().owned(player);
+        int total = plugin.registry().all().size();
+        List<String> missing = plugin.advancements().missing(player);
+
+        sender.sendMessage(Component.empty());
+        sender.sendMessage(Component.text("✦ ", GOLD)
+                .append(Component.text("Anomalias derrotadas  ", NamedTextColor.WHITE, TextDecoration.BOLD))
+                .append(Component.text(owned + " / " + total,
+                        owned == total ? NamedTextColor.GREEN : GOLD, TextDecoration.BOLD)));
+        if (missing.isEmpty()) {
+            sender.sendMessage(Component.text("  Las has visto todas.", NamedTextColor.GREEN));
+        } else {
+            sender.sendMessage(Component.text("  Te faltan  ", TextColor.color(0x404040))
+                    .append(Component.text(String.join(", ", missing), SOFT)));
+        }
+        sender.sendMessage(Component.empty());
+    }
+
     private void reload(CommandSender sender) {
         plugin.reloadEverything();
         sender.sendMessage(plugin.prefix().append(Component.text(
@@ -311,6 +337,7 @@ public final class AnomalyCommand implements CommandExecutor, TabCompleter {
         line(sender, "/anomaly abilities [id]", "lista las habilidades");
         line(sender, "/anomaly test <id|all>", "lanza una habilidad ya, para revisarla");
         line(sender, "/anomaly hurt <vida>", "le baja vida a mano, para ver las fases");
+        line(sender, "/anomaly logros", "cuantas anomalias llevas derrotadas");
         line(sender, "/anomaly reload", "recarga la configuracion");
         sender.sendMessage(Component.empty());
     }
@@ -347,7 +374,7 @@ public final class AnomalyCommand implements CommandExecutor, TabCompleter {
         List<String> out = new ArrayList<>();
         if (!plugin.mayUseGui(sender)) return out;
         if (args.length == 1) {
-            for (String s : List.of("menu", "start", "here", "at", "stop", "info", "abilities", "test", "hurt", "reload")) {
+            for (String s : List.of("menu", "start", "here", "at", "stop", "info", "abilities", "test", "hurt", "logros", "reload")) {
                 if (s.startsWith(args[0].toLowerCase(Locale.ROOT))) out.add(s);
             }
             return out;

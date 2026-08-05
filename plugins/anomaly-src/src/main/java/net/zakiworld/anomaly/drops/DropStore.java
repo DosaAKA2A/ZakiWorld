@@ -25,12 +25,12 @@ import java.util.logging.Level;
  */
 public final class DropStore {
 
-    private final JavaPlugin plugin;
+    private final net.zakiworld.anomaly.AnomalyPlugin plugin;
     private final Map<String, DropTable> tables = new HashMap<>();
     private final Random random = new Random();
     private File file;
 
-    public DropStore(JavaPlugin plugin) {
+    public DropStore(net.zakiworld.anomaly.AnomalyPlugin plugin) {
         this.plugin = plugin;
     }
 
@@ -173,6 +173,15 @@ public final class DropStore {
 
         if (table.experience() > 0) {
             for (Player p : participants) p.giveExp(table.experience());
+        }
+
+        // El logro va por participar de verdad, no por dar el ultimo golpe.
+        for (Player p : participants) {
+            try {
+                plugin.advancements().award(p, anomalyId);
+            } catch (Throwable t) {
+                plugin.getLogger().warning("No se pudo conceder el logro de " + anomalyId + ": " + t);
+            }
         }
 
         for (String raw : table.commands()) {

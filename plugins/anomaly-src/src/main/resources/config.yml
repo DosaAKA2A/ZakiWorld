@@ -78,6 +78,11 @@ anuncio:
   # lo que hace que las coordenadas basten para encontrarlo. Apagalo solo si pesa.
   pilar-de-luz: true
 
+# Los logros se escriben solos como datapack dentro del mundo y se conceden a todos
+# los que participaron en la pelea, no solo a quien da el ultimo golpe.
+logros:
+  sonido: true
+
 # Ajustes por anomalia. Se rellenan solos al tocarlos desde el menu.
 anomalias:
   caballero_sepulcral:
