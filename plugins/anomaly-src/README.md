@@ -8,7 +8,7 @@ La intención de fondo es empujar a la gente a **salir del spawn** y a **pelear 
 el jefe escala con el número de jugadores, varias habilidades castigan dispersarse y el
 botín se reparte entre todos los que participaron, no solo entre quien da el último golpe.
 
-- **Versión:** 1.8.0
+- **Versión:** 1.9.0
 - **Paquete:** `net.zakiworld.anomaly`
 - **Probado contra:** Paper 26.1.2 (MC 26.1.2), compilado con `--release 21`
 - **Permiso único:** `anomaly.gui` (`default: op`)
@@ -286,7 +286,7 @@ espinas, rayo giratorio, implosión, maelstrom, mordida y el Canto de Sal.
 
 ## El Coro Abisal
 
-**El jefe más distinto de los seis: no se gana pegando más fuerte, se gana coordinándose.**
+**El jefe más distinto del catálogo: no se gana pegando más fuerte, se gana coordinándose.**
 
 Tres cantores orbitan un núcleo **intocable**, unidos a él por haces de luz. El núcleo no
 recibe daño mientras el coro cante. Hay que apagar a los cantores en el **orden que marcan
@@ -354,9 +354,67 @@ círculo convertido en jardín para siempre. Por eso Herbola alarga la espera de
 
 ---
 
+## Medusa
+
+La gorgona: un husk con armadura de cuero verde, cabellera de serpientes dibujada en
+partículas y elemento **tierra** (terreno firme y rocoso). Brilla en **verde oscuro**.
+
+Toda la pelea es una regla: **cuando ella mira, tú no miras.** Sus tres miradas
+(Pétrea, en Barrido y de la Gorgona) petrifican a quien esté apuntándole con la cámara
+al terminar el aviso — y petrificar no es matar, es **clavarte en el sitio** delante de
+todo lo demás que tira. Hay tres salvaciones, las tres jugables:
+
+- **Apartar la vista** (dejar de apuntarle).
+- **El escudo levantado**, como Perseo. Si además la estabas mirando, la mirada rebota.
+- **Esconderse tras sus estatuas**: los menhires que planta el Jardín de Estatuas
+  valen de cobertura, hasta que en fase 3 **despiertan** y sale lo que había dentro.
+
+| Fase | Habilidades |
+|---|---|
+| I — el jardín | Mirada Pétrea · Látigo de Serpientes · Andanada Venenosa · Nido de Víboras · Jardín de Estatuas |
+| II — la muda | Mirada en Barrido · Colmillo Certero · Abrazo Pétreo · Lluvia de Colmillos · Veneno Ancestral |
+| III — los ojos arden | Mirada de la Gorgona · Las Estatuas Despiertan · Furia Serpentina |
+| Cualquiera | Siseo |
+
+Transiciones: **muda de piel** (I → II, más rápida) y **los ojos arden** (II → III).
+Al morir se resquebraja y se deshace en piedra, como sus víctimas. Las víboras son
+arañas de cueva con nombre; los menhires, columnas de visualización (la técnica del
+haz de Agonía), así que no tocan ni un bloque real del mundo.
+
+---
+
+## La Bruja
+
+Una bruja con el **caldero puesto en la cabeza** a modo de sombrero (una entidad de
+visualización que la sigue pegada) y un **Sapo Blanco** —rana de variante cálida—
+sentado en el hombro. Elemento **tierra**, brillo **dorado**.
+
+El sapo es la mitad del jefe:
+
+- **Fase I** — intocable en el hombro; le croa regeneración y resistencia.
+- **Fase II** — **SE BAJA**, crece hasta 2.6 y pelea como esbirro fuerte con 140 de
+  vida propia: salta encima de marcas, engancha con la lengua al que huye y da brincos
+  por su cuenta. Se le puede matar, pero **matárselo la desata**: +20% de daño y más
+  velocidad el resto de la pelea.
+- **Fase III** — el caldero rebosa: el Gran Hechizo (círculo con cuenta atrás de diez
+  segundos), murciélagos que ciegan y la Pócima Final sobre todos a la vez.
+
+| Fase | Habilidades |
+|---|---|
+| I — el aquelarre | Pócima Virulenta · Caldero Hirviente · Maleficio · Canto del Sapo · Risa de Bruja · Hervor Súbito |
+| II — el sapo baja | Salto del Sapo · Lengua Látigo · Lluvia de Sapos · Brebaje Oscuro |
+| III — el caldero rebosa | El Gran Hechizo · Nube de Murciélagos · Pócima Final |
+| Cualquiera | Trago Amargo |
+
+Como es una bruja de vanilla, además bebe y lanza sus pociones por su cuenta; eso
+viene gratis con la entidad y es sabor, no el plato. Al morir, el caldero se le cae
+de la cabeza y se derrama; si el sapo sigue vivo, se marcha solo dando brincos.
+
+---
+
 ## El árbol de logros
 
-Diez logros: la raíz, uno por anomalía y **El que las vio todas**, que exige los ocho.
+Doce logros: la raíz, uno por anomalía y **El que las vio todas**, que exige las diez.
 Todos los de jefe son de tipo *challenge*, así que traen el marco morado y el sonido de
 desafío de vanilla.
 
@@ -440,7 +498,7 @@ No hay Maven en el PATH. Con el JDK 25 portátil y `paper-api 26.1.2`:
 
 ```
 javac --release 21 -encoding UTF-8 -cp "<paper-api + libs del servidor>" -d build @sources
-jar --create --file Anomaly-1.8.0.jar -C build .
+jar --create --file Anomaly-1.9.0.jar -C build .
 ```
 
 El `pom.xml` está para quien tenga Maven; `paper-api` es `provided`.

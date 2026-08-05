@@ -6,8 +6,10 @@ import net.zakiworld.anomaly.AnomalyPlugin;
 import net.zakiworld.anomaly.boss.Ability;
 import net.zakiworld.anomaly.boss.BossFight;
 import net.zakiworld.anomaly.boss.AbyssalChoir;
+import net.zakiworld.anomaly.boss.Bruja;
 import net.zakiworld.anomaly.boss.Darkness;
 import net.zakiworld.anomaly.boss.Herbola;
+import net.zakiworld.anomaly.boss.Medusa;
 import net.zakiworld.anomaly.boss.KillerBunny;
 import net.zakiworld.anomaly.boss.SaltLeviathan;
 import net.zakiworld.anomaly.boss.ScreamingGoat;
@@ -44,6 +46,8 @@ public final class AnomalyRegistry {
         register(new ChoirType());
         register(new DarknessType());
         register(new HerbolaType());
+        register(new MedusaType());
+        register(new BrujaType());
     }
 
     public void register(AnomalyType type) {
@@ -84,6 +88,14 @@ public final class AnomalyRegistry {
 
     public AnomalyType herbola() {
         return types.get(Herbola.ID);
+    }
+
+    public AnomalyType medusa() {
+        return types.get(Medusa.ID);
+    }
+
+    public AnomalyType bruja() {
+        return types.get(Bruja.ID);
     }
 
     public List<AnomalyType> all() {
@@ -1310,6 +1322,297 @@ public final class AnomalyRegistry {
 
     private static Herbola herbola(BossFight fight) {
         return (Herbola) fight;
+    }
+
+    // ---------------------------------------------------------------------- Medusa
+
+    /** Ficha de la Medusa. */
+    public final class MedusaType implements AnomalyType {
+
+        @Override
+        public String id() {
+            return Medusa.ID;
+        }
+
+        @Override
+        public String display() {
+            return plugin.getConfig().getString("anomalias." + id() + ".nombre", "Medusa");
+        }
+
+        @Override
+        public TextColor color() {
+            return Medusa.ACCENT;
+        }
+
+        @Override
+        public NamedTextColor glowColor() {
+            return NamedTextColor.DARK_GREEN;
+        }
+
+        @Override
+        public Element element() {
+            return Element.TIERRA;
+        }
+
+        @Override
+        public Material icon() {
+            Material m = Material.matchMaterial("SPIDER_EYE");
+            return m != null ? m : Material.SLIME_BALL;
+        }
+
+        @Override
+        public String tagline() {
+            return "La gorgona: si la miras, te quedas de piedra";
+        }
+
+        @Override
+        public List<String> origin() {
+            return List.of(
+                    "Nadie recuerda que fue antes de la maldicion,",
+                    "solo lo que quedo: un jardin de estatuas con",
+                    "caras de espanto y una silueta que se pasea",
+                    "entre ellas hablandoles bajito. Cuando la",
+                    "grieta se abrio, el jardin se quedo vacio.");
+        }
+
+        @Override
+        public List<String> threat() {
+            return List.of(
+                    "Elemento de tierra: terreno firme y rocoso",
+                    "SU MIRADA PETRIFICA: no la mires cuando avise",
+                    "El ESCUDO levantado aguanta la mirada, como Perseo",
+                    "Sus propias estatuas sirven de escondite",
+                    "Viboras, veneno y colmillos para el que se libre");
+        }
+
+        @Override
+        public double baseHealth() {
+            return 1700;
+        }
+
+        @Override
+        public int arenaRadius() {
+            return 24;
+        }
+
+        @Override
+        public List<Ability> abilities() {
+            return medusaAbilities();
+        }
+
+        @Override
+        public BossFight create(AnomalyPlugin plugin, ActiveAnomaly event, Location where) {
+            return new Medusa(plugin, event, where);
+        }
+    }
+
+    /**
+     * Las 14 habilidades de la Medusa. La mitad son la mirada en sus tres tamanos;
+     * la otra mitad, serpientes y piedra para que apartar la vista tampoco sea gratis.
+     */
+    public List<Ability> medusaAbilities() {
+        List<Ability> list = new ArrayList<>();
+
+        // --- Fase I: el jardin
+        add(list, "mirada_petrea", "Mirada Petrea", 1, 260, 60, 4,
+                "Busca tus ojos: quien la este mirando al final del aviso, se queda de piedra.",
+                icon("ENDER_EYE", "SPIDER_EYE"), f -> medusa(f).stoneGaze());
+        add(list, "latigo_serpientes", "Latigo de Serpientes", 1, 160, 45, 5,
+                "Tres zarpazos de la cabellera en arco, cada uno mas lejos.",
+                icon("VINE", "STRING"), f -> medusa(f).serpentLash());
+        add(list, "andanada_venenosa", "Andanada Venenosa", 1, 220, 60, 4,
+                "Escupe veneno sobre marcas que caen donde estabas.",
+                icon("SPIDER_EYE", "SLIME_BALL"), f -> medusa(f).venomVolley());
+        add(list, "nido_viboras", "Nido de Viboras", 1, 520, 60, 2,
+                "De la cabellera caen viboras que muerden con veneno.",
+                icon("CAVE_SPIDER_SPAWN_EGG", "SPIDER_EYE"), f -> medusa(f).viperNest());
+        add(list, "jardin_estatuas", "Jardin de Estatuas", 1, 480, 90, 3,
+                "Planta menhires de piedra. Esconderse detras salva de la mirada.",
+                icon("STONE", "COBBLESTONE"), f -> medusa(f).statueGarden());
+
+        // --- Fase II: la muda
+        add(list, "mirada_barrida", "Mirada en Barrido", 2, 320, 100, 4,
+                "El rayo de la mirada recorre la arena girando una vuelta entera.",
+                icon("SPYGLASS", "ENDER_EYE"), f -> medusa(f).sweepingGaze());
+        add(list, "colmillo_certero", "Colmillo Certero", 2, 150, 30, 5,
+                "Se lanza al mas cercano y muerde con todo el veneno.",
+                icon("FLINT", "IRON_SWORD"), f -> medusa(f).preciseFang());
+        add(list, "abrazo_petreo", "Abrazo Petreo", 2, 240, 55, 3,
+                "Manos de piedra que agarran al que mas se aleja y lo traen.",
+                icon("CHAIN", "STONE"), f -> medusa(f).stoneEmbrace());
+        add(list, "lluvia_colmillos", "Lluvia de Colmillos", 2, 260, 50, 4,
+                "Colmillos de piedra que brotan del suelo bajo cada uno.",
+                icon("DEEPSLATE", "POINTED_DRIPSTONE"), f -> medusa(f).fangRain());
+        add(list, "veneno_ancestral", "Veneno Ancestral", 2, 300, 70, 3,
+                "Una onda de veneno viejo que solo pega en el borde.",
+                icon("FERMENTED_SPIDER_EYE", "SPIDER_EYE"), f -> medusa(f).ancientVenom());
+
+        // --- Fase III: los ojos arden
+        add(list, "mirada_gorgona", "Mirada de la Gorgona", 3, 420, 110, 4,
+                "Cinco segundos avisando y luego la arena entera. Escudo, estatua o espalda.",
+                icon("ENDER_EYE", "END_CRYSTAL"), f -> medusa(f).gorgonGaze());
+        add(list, "despertar_estatuas", "Las Estatuas Despiertan", 3, 520, 90, 3,
+                "Sus menhires se rompen y sale lo que habia dentro.",
+                icon("CRACKED_STONE_BRICKS", "STONE_BRICKS"), f -> medusa(f).wakeStatues());
+        add(list, "furia_serpentina", "Furia Serpentina", 3, 280, 80, 4,
+                "La cabellera entera barre alrededor en tres ondas.",
+                icon("LIME_DYE", "GREEN_DYE"), f -> medusa(f).serpentineFury());
+
+        // --- Cualquier fase
+        add(list, "siseo", "Siseo", 0, 260, 40, 3,
+                "Un cono de siseo que marea, frena y empuja.",
+                icon("SCULK_SENSOR", "NOTE_BLOCK"), f -> medusa(f).hiss());
+
+        return list;
+    }
+
+    private static Medusa medusa(BossFight fight) {
+        return (Medusa) fight;
+    }
+
+    // ---------------------------------------------------------------------- Bruja
+
+    /** Ficha de la Bruja. */
+    public final class BrujaType implements AnomalyType {
+
+        @Override
+        public String id() {
+            return Bruja.ID;
+        }
+
+        @Override
+        public String display() {
+            return plugin.getConfig().getString("anomalias." + id() + ".nombre", "Bruja");
+        }
+
+        @Override
+        public TextColor color() {
+            return Bruja.ACCENT;
+        }
+
+        @Override
+        public NamedTextColor glowColor() {
+            return NamedTextColor.GOLD;
+        }
+
+        @Override
+        public Element element() {
+            return Element.TIERRA;
+        }
+
+        @Override
+        public Material icon() {
+            Material m = Material.matchMaterial("CAULDRON");
+            return m != null ? m : Material.BREWING_STAND;
+        }
+
+        @Override
+        public String tagline() {
+            return "Caldero en la cabeza y un sapo blanco al hombro";
+        }
+
+        @Override
+        public List<String> origin() {
+            return List.of(
+                    "Vivia en una choza que nadie encontraba dos",
+                    "veces, cocinando cosas que era mejor no oler.",
+                    "Un dia el caldero le hablo, y desde entonces",
+                    "lo lleva puesto. El sapo opina que fue al reves:",
+                    "que el caldero la lleva puesta a ella.");
+        }
+
+        @Override
+        public List<String> threat() {
+            return List.of(
+                    "Elemento de tierra: campo abierto para su aquelarre",
+                    "El SAPO BLANCO la protege en fase 1; en fase 2 BAJA y pelea",
+                    "Matarle el sapo la desata: pega mas y corre mas",
+                    "Pocimas, maleficios y un Gran Hechizo con cuenta atras");
+        }
+
+        @Override
+        public double baseHealth() {
+            return 1500;
+        }
+
+        @Override
+        public int arenaRadius() {
+            return 22;
+        }
+
+        @Override
+        public List<Ability> abilities() {
+            return brujaAbilities();
+        }
+
+        @Override
+        public BossFight create(AnomalyPlugin plugin, ActiveAnomaly event, Location where) {
+            return new Bruja(plugin, event, where);
+        }
+    }
+
+    /**
+     * Las 14 habilidades de la Bruja. En la fase 1 el sapo es su escudo; en la 2 es
+     * su espada; y la 3 es el caldero vaciandose encima de todo el mundo.
+     */
+    public List<Ability> brujaAbilities() {
+        List<Ability> list = new ArrayList<>();
+
+        // --- Fase I: el aquelarre
+        add(list, "pocima_virulenta", "Pocima Virulenta", 1, 200, 50, 5,
+                "Tres frascos por los aires, cada uno a una marca distinta.",
+                icon("SPLASH_POTION", "POTION"), f -> bruja(f).virulentBrew());
+        add(list, "caldero_hirviente", "Caldero Hirviente", 1, 300, 140, 3,
+                "El caldero rebosa y deja charcos de brebaje que queman al pisarlos.",
+                icon("CAULDRON", "BUCKET"), f -> bruja(f).boilingCauldron());
+        add(list, "maleficio", "Maleficio", 1, 340, 160, 3,
+                "Le echa el mal de ojo a uno y lo va royendo ocho segundos.",
+                icon("FERMENTED_SPIDER_EYE", "SPIDER_EYE"), f -> bruja(f).hex());
+        add(list, "canto_sapo", "Canto del Sapo", 1, 400, 120, 3,
+                "El sapo le croa desde el hombro: regeneracion y resistencia.",
+                icon("LILY_PAD", "SLIME_BALL"), f -> bruja(f).toadSong());
+        add(list, "risa_bruja", "Risa de Bruja", 1, 220, 40, 4,
+                "Una carcajada en cono que marea y empuja.",
+                icon("NOTE_BLOCK", "JUKEBOX"), f -> bruja(f).witchCackle());
+        add(list, "hervor_subito", "Hervor Subito", 1, 260, 60, 4,
+                "Una ola de brebaje hirviendo que solo pega en el borde.",
+                icon("MAGMA_CREAM", "BLAZE_POWDER"), f -> bruja(f).suddenBoil());
+
+        // --- Fase II: el sapo baja
+        add(list, "salto_sapo", "Salto del Sapo", 2, 240, 60, 5,
+                "El Sapo de Guerra toma carrerilla y se lanza sobre una marca.",
+                icon("SLIME_BLOCK", "SLIME_BALL"), f -> bruja(f).toadSlam());
+        add(list, "lengua_latigo", "Lengua Latigo", 2, 260, 50, 4,
+                "La lengua del sapo engancha al que mas se aleja y lo trae.",
+                icon("LEAD", "STRING"), f -> bruja(f).tongueWhip());
+        add(list, "lluvia_sapos", "Lluvia de Sapos", 2, 320, 90, 3,
+                "Sapos pequenos que caen del cielo y revientan en veneno.",
+                icon("FROGSPAWN", "SLIME_BALL"), f -> bruja(f).toadRain());
+        add(list, "brebaje_oscuro", "Brebaje Oscuro", 2, 300, 140, 3,
+                "Una nube negra que ciega y envenena a quien se quede dentro.",
+                icon("INK_SAC", "BLACK_DYE"), f -> bruja(f).darkBrew());
+
+        // --- Fase III: el caldero rebosa
+        add(list, "gran_hechizo", "El Gran Hechizo", 3, 460, 210, 4,
+                "Un circulo enorme y diez segundos de cuenta atras. Adentro, nadie.",
+                icon("ENCHANTING_TABLE", "BOOK"), f -> bruja(f).grandSpell());
+        add(list, "nube_murcielagos", "Nube de Murcielagos", 3, 340, 170, 3,
+                "Una bandada que persigue a cada uno y no deja ver.",
+                icon("BAT_SPAWN_EGG", "COAL"), f -> bruja(f).batCloud());
+        add(list, "pocima_final", "Pocima Final", 3, 320, 110, 4,
+                "Marcas bajo todos, tres tandas seguidas, efectos al azar.",
+                icon("LINGERING_POTION", "SPLASH_POTION"), f -> bruja(f).finalBrew());
+
+        // --- Cualquier fase
+        add(list, "trago_amargo", "Trago Amargo", 0, 360, 45, 2,
+                "Bebe de su propio caldero: aguanta mas un rato y suelta el eructo.",
+                icon("GLASS_BOTTLE", "HONEY_BOTTLE"), f -> bruja(f).bitterSip());
+
+        return list;
+    }
+
+    private static Bruja bruja(BossFight fight) {
+        return (Bruja) fight;
     }
 
     private static SepulchralKnight knight(BossFight fight) {

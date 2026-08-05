@@ -69,6 +69,8 @@ public final class Compat {
     public static final Particle ANGRY_VILLAGER = particle("ANGRY_VILLAGER", "VILLAGER_ANGRY");
     public static final Particle DAMAGE_INDICATOR = particle("DAMAGE_INDICATOR");
     public static final Particle TRIAL_OMEN = particle("TRIAL_OMEN", "WITCH");
+    public static final Particle WITCH = particle("WITCH", "SPELL_WITCH");
+    public static final Particle BUBBLE_POP = particle("BUBBLE_POP", "BUBBLE");
     public static final Particle GUST = particle("GUST", "CLOUD");
     public static final Particle DUST_PLUME = particle("DUST_PLUME", "LARGE_SMOKE");
     public static final Particle FALLING_DUST = particle("FALLING_DUST");

@@ -126,6 +126,16 @@ anomalias:
     vida: 1600
     dano: 1.0
     nombre: 'Herbola'
+  medusa:
+    activa: true
+    vida: 1700
+    dano: 1.0
+    nombre: 'Medusa'
+  bruja:
+    activa: true
+    vida: 1500
+    dano: 1.0
+    nombre: 'Bruja'
 
 menu:
   # La anomalia que abre el boton Iniciar del panel.

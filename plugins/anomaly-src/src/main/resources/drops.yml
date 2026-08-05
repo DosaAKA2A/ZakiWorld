@@ -55,3 +55,11 @@ anomalias:
     experiencia: 1300
     comandos: []
     botin: {}
+  medusa:
+    experiencia: 1400
+    comandos: []
+    botin: {}
+  bruja:
+    experiencia: 1200
+    comandos: []
+    botin: {}

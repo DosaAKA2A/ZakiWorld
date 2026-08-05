@@ -30,7 +30,7 @@ import java.util.logging.Level;
 public final class Advancements {
 
     /** Sube esto para que el datapack se reescriba en el proximo arranque. */
-    private static final int PACK_VERSION = 4;
+    private static final int PACK_VERSION = 6;
 
     private static final String NS = "anomaly";
     private static final String ROOT = "raiz";
@@ -64,14 +64,17 @@ public final class Advancements {
                     && Files.readString(marker.toPath(), StandardCharsets.UTF_8).trim().equals(String.valueOf(PACK_VERSION))) {
                 return false;
             }
-            // Formato de metadatos calcado del datapack que genera el propio Bukkit en
-            // esta version: min_format y max_format como pares [mayor, menor]. Mezclarlo
-            // con el viejo pack_format hacia que el servidor no supiera leerlo y avisara
-            // en cada arranque.
+            // Este mcmeta lleva LOS DOS esquemas de metadatos a la vez. Paper 26.1.x
+            // todavia lee el viejo (pack_format + supported_formats) y sin el campo
+            // supported_formats escupia "Error reading pack metadata" en cada arranque
+            // — el propio error pedia ese campo. min_format/max_format quedan para
+            // cuando el juego salte al esquema nuevo.
             write(new File(pack, "pack.mcmeta"), """
                     {
                       "pack": {
                         "description": "Anomaly - arbol de logros de las anomalias",
+                        "pack_format": 81,
+                        "supported_formats": [4, 81],
                         "min_format": [4, 0],
                         "max_format": [101, 1]
                       }
@@ -144,7 +147,7 @@ public final class Advancements {
     }
 
     /**
-     * El logro legendario: exige tener los ocho.
+     * El logro legendario: exige tener el catalogo entero.
      *
      * requirements con todos los criterios en listas separadas significa "y", que es
      * justo lo que se quiere: no vale con uno, hay que traerlos todos.
@@ -168,7 +171,7 @@ public final class Advancements {
                   "display": {
                     "icon": {"id": "minecraft:nether_star"},
                     "title": {"text": "El que las vio todas", "color": "#FFC64D", "bold": true},
-                    "description": {"text": "Derrota a las ocho anomalias. Ninguna se repite.", "color": "gray"},
+                    "description": {"text": "Derrota a las %d anomalias. Ninguna se repite.", "color": "gray"},
                     "frame": "challenge",
                     "show_toast": true,
                     "announce_to_chat": true,
@@ -178,7 +181,7 @@ public final class Advancements {
                     %s
                   },
                   "requirements": [%s]
-                }""".formatted(NS, ROOT, criteria, reqs);
+                }""".formatted(NS, ROOT, all.size(), criteria, reqs);
     }
 
     private static String escape(String s) {
