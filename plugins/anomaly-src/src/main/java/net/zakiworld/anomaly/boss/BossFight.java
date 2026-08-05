@@ -44,6 +44,16 @@ public abstract class BossFight {
     protected LivingEntity boss;
     /** Cuerpo visible con forma de persona, si el jefe lleva uno. Ver wearShell(). */
     protected LivingEntity shell;
+    /**
+     * El perfil que DEBE llevar el maniqui ahora mismo; lo actualiza reskinShell.
+     *
+     * Existe por una carrera con la cache de skins: el reintento de los 2 ticks de
+     * wearShell aplicaba el perfil SIN resolver que capturo al programarse, y cuando
+     * la skin salia de la cache (toda pelea que no fuera la primera tras el arranque)
+     * reskinShell ya habia puesto la buena en el mismo tick... y el reintento la
+     * machacaba. Rabby perdia la skin en cada pelea menos la primera.
+     */
+    private io.papermc.paper.datacomponent.item.ResolvableProfile shellProfile;
     private int phase = 1;
     private long ticks;
     private long busyUntil;
@@ -495,6 +505,7 @@ public abstract class BossFight {
                         }
                     });
             shell = body;
+            shellProfile = profile;
             markMinion(body);
             boss.setInvisible(true);
             boss.setCustomNameVisible(false);
@@ -507,9 +518,13 @@ public abstract class BossFight {
             org.bukkit.inventory.EntityEquipment naked = boss.getEquipment();
             if (naked != null) naked.clear();
             // El perfil, otra vez un par de ticks despues. Si por lo que sea no viajo
-            // en el paquete de aparicion, este segundo intento lo arregla.
+            // en el paquete de aparicion, este segundo intento lo arregla. OJO: se
+            // aplica el perfil VIGENTE (shellProfile), no el capturado; si reskinShell
+            // ya trajo el resuelto de la cache, este reintento no debe pisarlo.
             later(2, () -> {
-                if (shell instanceof org.bukkit.entity.Mannequin m && m.isValid()) m.setProfile(profile);
+                if (shell instanceof org.bukkit.entity.Mannequin m && m.isValid() && shellProfile != null) {
+                    m.setProfile(shellProfile);
+                }
             });
         } catch (Throwable t) {
             plugin.getLogger().warning("No se pudo poner el cuerpo con skin: " + t);
@@ -525,6 +540,7 @@ public abstract class BossFight {
     /** Le cambia la cara al cuerpo visible una vez resuelta la skin. */
     public void reskinShell(io.papermc.paper.datacomponent.item.ResolvableProfile profile) {
         if (profile == null) return;
+        shellProfile = profile;
         if (shell instanceof org.bukkit.entity.Mannequin m && m.isValid()) m.setProfile(profile);
     }
 
