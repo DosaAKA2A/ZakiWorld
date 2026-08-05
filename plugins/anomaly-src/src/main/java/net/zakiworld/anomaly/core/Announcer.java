@@ -113,14 +113,14 @@ public final class Announcer {
 
         c = c.append(Component.text("DE DONDE VIENE", NamedTextColor.WHITE, TextDecoration.BOLD))
                 .append(Component.newline());
-        for (String line : type.origin()) {
+        for (String line : plugin.registry().origin(type)) {
             c = c.append(Component.text(line, SOFT)).append(Component.newline());
         }
 
         c = c.append(separator())
                 .append(Component.text("AMENAZA", NamedTextColor.WHITE, TextDecoration.BOLD))
                 .append(Component.newline());
-        for (String line : type.threat()) {
+        for (String line : plugin.registry().threat(type)) {
             c = c.append(Component.text("· ", DIM)).append(Component.text(line, SOFT)).append(Component.newline());
         }
 

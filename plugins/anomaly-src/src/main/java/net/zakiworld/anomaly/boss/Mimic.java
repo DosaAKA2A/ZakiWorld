@@ -262,8 +262,11 @@ public final class Mimic extends BossFight {
 
         switch (phase()) {
             case 1 -> {
-                // Descubierto demasiado rato: destello y vuelta al anonimato.
-                if (revealed && ticks() - revealTick > 280) camouflage();
+                if (revealed) {
+                    huntRevealed();
+                    // Descubierto demasiado rato: destello y vuelta al anonimato.
+                    if (ticks() - revealTick > 280) camouflage();
+                }
             }
             case 2 -> {
                 greed();
@@ -278,6 +281,36 @@ public final class Mimic extends BossFight {
         }
 
         if (ticks() % 100 == 0) decoys.removeIf(d -> !d.isValid());
+    }
+
+    /**
+     * Descubierto y a la caza: persigue al mas cercano y le entra a mordiscos.
+     *
+     * Sin esto, la fase 1 era un animal grande dando vueltas: crecia, soltaba una
+     * habilidad de tarde en tarde y se dejaba pegar. Ahora, mientras esta destapado,
+     * no para.
+     */
+    private void huntRevealed() {
+        if (ticks() % 10 != 0) return;
+        Player t = Fx.nearest(boss.getLocation(), plugin.settings().participationRadius());
+        if (t == null) return;
+        if (boss instanceof Mob m) {
+            LivingEntity current = m.getTarget();
+            if (current == null || !current.isValid() || current.isDead()) m.setTarget(t);
+        }
+        double d2 = boss.getLocation().distanceSquared(t.getLocation());
+        if (d2 < 9) {
+            if (ticks() % 20 == 0) {
+                hit(t, 12 * damageBonus);
+                Compat.spawn(world(), Compat.CRIT, t.getLocation().add(0, 1, 0), 10, 0.3, 0.3, 0.3, 0.2);
+                soundAt(t.getLocation(), voice("hurt"), 1.2f, 0.7f);
+            }
+            return;
+        }
+        Vector to = t.getLocation().toVector().subtract(boss.getLocation().toVector());
+        if (to.lengthSquared() > 0.25) {
+            boss.setVelocity(to.normalize().multiply(0.55).setY(Math.max(0.05, boss.getVelocity().getY())));
+        }
     }
 
     /**
@@ -446,8 +479,12 @@ public final class Mimic extends BossFight {
      * cofres. Cuanto mas tardan, mas duele; encontrarlo la corta hasta la ronda siguiente.
      */
     private void greed() {
-        if (!hidden || ticks() % 40 != 0 || chestsSince < 0) return;
-        double bite = Math.min(8, 1 + (ticks() - chestsSince) / 300.0);
+        // Roe durante TODA la fase de los cofres, tambien mientras da la cara: antes
+        // solo mordia estando escondido, asi que en cuanto lo encontraban se acababa el
+        // reloj y la fase se volvia un paseo. Y sube mucho mas rapido: la idea es que
+        // tardar duela, no que pique.
+        if (!chestsStarted || faceStolen || ticks() % 30 != 0 || chestsSince < 0) return;
+        double bite = Math.min(26, 4 + (ticks() - chestsSince) / 60.0);
         for (Player p : targets(40)) {
             hit(p, bite);
             Compat.spawn(world(), Compat.OMINOUS_SPAWNING, p.getLocation().add(0, 1.0, 0), 4,
@@ -570,6 +607,11 @@ public final class Mimic extends BossFight {
             disguised = profile != null;
             if (disguised) {
                 wearShell(profile, Component.text(mimickedName, NamedTextColor.WHITE));
+            }
+            // Si el jugador copiado no estuviera conectado, se le pregunta a Mojang por
+            // su nombre, igual que con la cuenta de Rabby.
+            if (victim != null && !victim.isOnline()) {
+                Disguises.resolveAccount(plugin, victim.getName(), this::reskinShell);
             }
             dressAs(copy, victim, disguised);
             Compat.setAttribute(boss, "attack_damage", 16);
@@ -792,7 +834,7 @@ public final class Mimic extends BossFight {
             double d = 1 + tick * 0.4;
             if (d > 11) return;
             Fx.arc(boss.getLocation().add(0, 1.2, 0), dir, d, Math.PI * 0.55, (int) (d * 4), p ->
-                    Compat.spawn(world(), Compat.NOTE, p, 1, 0.1, 0.1, 0.1, 1));
+                    Compat.spawn(world(), Compat.SONIC_BOOM, p, 1, 0, 0, 0, 0));
             if (tick % 8 != 0) return;
             for (Player p : targets(11)) {
                 Vector to = p.getLocation().toVector().subtract(boss.getLocation().toVector()).setY(0);

@@ -507,7 +507,7 @@ public final class Bruja extends BossFight {
 
         animate(120, tick -> {
             if (!alive() || toad == null || !toad.isValid()) throw Stop.now();
-            Compat.spawn(world(), Compat.NOTE, toad.getLocation().add(0, 0.5, 0), 2, 0.3, 0.3, 0.3, 1);
+            Compat.spawn(world(), Compat.NOTE, toad.getLocation().add(0, 0.5, 0), 1, 0.15, 0.15, 0.15, 1);
             Fx.ring(boss.getLocation().add(0, 1.0, 0), 1.5, 12, tick * 0.2, p ->
                     Compat.spawn(world(), Compat.ITEM_SLIME, p, 1, 0, 0, 0, 0, Compat.dust(TOAD, 1.2f)));
             Compat.apply(boss, "regeneration", 40, 2);
@@ -531,7 +531,7 @@ public final class Bruja extends BossFight {
             double d = 1 + tick * 0.35;
             if (d > 10) return;
             Fx.arc(boss.getLocation().add(0, 1.4, 0), dir, d, Math.PI * 0.6, (int) (d * 4), p ->
-                    Compat.spawn(world(), Compat.NOTE, p, 1, 0.1, 0.1, 0.1, 1));
+                    Compat.spawn(world(), Compat.SONIC_BOOM, p, 1, 0, 0, 0, 0));
             if (tick % 10 != 0) return;
             for (Player p : targets(10)) {
                 Vector to = p.getLocation().toVector().subtract(boss.getLocation().toVector()).setY(0);
@@ -717,18 +717,19 @@ public final class Bruja extends BossFight {
         final double radius = 14;
         soundAt(center, "entity.evoker.prepare_summon", 1.6f, 0.5f);
         titleNear(Component.text("EL GRAN HECHIZO", NamedTextColor.RED, TextDecoration.BOLD),
-                Component.text("Salgan del circulo", NamedTextColor.GRAY));
+                Component.text("Cinco segundos para salir", NamedTextColor.GRAY));
 
-        animate(200, tick -> {
+        // Cinco segundos, no diez: con diez daba tiempo a salir andando sin mirar.
+        animate(100, tick -> {
             if (!alive()) throw Stop.now();
-            double t = tick / 200.0;
+            double t = tick / 100.0;
             Fx.ring(center, radius, (int) (30 + t * 80), tick * 0.05, p ->
                     Compat.spawn(world(), Compat.WITCH, Fx.ground(p, 5).add(0, 0.3, 0), 1, 0, 0, 0, 0,
                             Compat.dust(BREW, (float) (1.3 + t))));
             Fx.helix(center, 1.5, 3.0 + t * 3, 20, 2.5, p ->
                     Compat.spawn(world(), Compat.ENTITY_EFFECT, p, 1, 0, 0, 0, 0));
             if (tick % 20 == 0) {
-                int left = (200 - tick) / 20;
+                int left = (100 - tick) / 20;
                 soundAt(center, "block.note_block.bell", 1.3f, 0.4f + (float) t);
                 for (Player p : Fx.viewersNear(center, 60)) {
                     boolean safe = p.getLocation().distance(center) > radius;
@@ -860,6 +861,116 @@ public final class Bruja extends BossFight {
                 Compat.apply(p, "nausea", 80, 0);
             }
         }, null);
+    }
+
+    /**
+     * 15. Rayo Arcano: un haz que salta de uno a otro.
+     *
+     * La Bruja no es solo la que tira frascos: esto es magia a secas, sin objeto de por
+     * medio, y encadena a todo el grupo si estan juntos.
+     */
+    public void arcaneBolt() {
+        if (!alive()) return;
+        List<Player> pool = targets(28);
+        if (pool.isEmpty()) return;
+        soundAt(loc(), "entity.illusioner.cast_spell", 1.6f, 0.7f);
+        broadcastNear(Component.text("Traza un rayo.", ACCENT));
+
+        Location from = boss.getEyeLocation();
+        java.util.Set<java.util.UUID> chained = new java.util.HashSet<>();
+        Location cursor = from.clone();
+        int jumps = 0;
+        for (Player p : pool) {
+            if (jumps++ >= 5) break;
+            if (!chained.add(p.getUniqueId())) continue;
+            final Location a = cursor.clone();
+            final Location b = p.getEyeLocation().clone();
+            final int delay = jumps * 6;
+            later(delay, () -> {
+                if (!alive() || !Fx.isFightable(p)) return;
+                Fx.beam(a, b, 0.5, q -> {
+                    Compat.spawn(world(), Compat.ELECTRIC_SPARK, q, 1, 0.04, 0.04, 0.04, 0.01);
+                    Compat.spawn(world(), Compat.ENTITY_EFFECT, q, 1, 0, 0, 0, 0,
+                            org.bukkit.Color.fromRGB(BREW));
+                });
+                hit(p, 13 * damageBonus);
+                Compat.apply(p, "slowness", 60, 1);
+                Compat.spawn(world(), Compat.INSTANT_EFFECT, b, 12, 0.3, 0.4, 0.3, 0);
+                soundAt(b, "entity.illusioner.mirror_move", 1.1f, 1.4f);
+            });
+            cursor = p.getEyeLocation().clone();
+        }
+    }
+
+    /**
+     * 16. Circulo de Runas: dibuja runas en el suelo y lo que quede dentro se marchita.
+     *
+     * Es lo contrario del Gran Hechizo: aqui no hay cuenta atras ni aviso enorme, hay
+     * un sitio del suelo que deja de ser tuyo mientras dure.
+     */
+    public void runeCircle() {
+        if (!alive()) return;
+        Location c = Fx.ground(boss.getLocation(), 5);
+        soundAt(c, "block.enchantment_table.use", 1.6f, 0.6f);
+        broadcastNear(Component.text("Dibuja runas.", ACCENT));
+
+        animate(160, tick -> {
+            if (tick % 2 == 0) {
+                // Dos anillos girando en sentidos opuestos: se lee como un sello.
+                Fx.ring(c.clone().add(0, 0.15, 0), 6.0, 26, tick * 0.05, p ->
+                        Compat.spawn(world(), Compat.ENCHANT, Fx.ground(p, 3).add(0, 0.2, 0), 1,
+                                0, 0, 0, 0));
+                Fx.ring(c.clone().add(0, 0.15, 0), 3.6, 16, -tick * 0.08, p ->
+                        Compat.spawn(world(), Compat.INSTANT_EFFECT, Fx.ground(p, 3).add(0, 0.2, 0), 1,
+                                0, 0, 0, 0));
+            }
+            if (tick % 20 != 0) return;
+            soundAt(c, "block.enchantment_table.use", 0.8f, 1.2f);
+            for (Player p : Fx.playersNear(c, 6.2)) {
+                hit(p, 9 * damageBonus);
+                Compat.apply(p, "weakness", 80, 0);
+                Compat.apply(p, "mining_fatigue", 80, 1);
+                Compat.spawn(world(), Compat.ENTITY_EFFECT, p.getLocation().add(0, 1.2, 0), 4,
+                        0.3, 0.5, 0.3, 0, org.bukkit.Color.fromRGB(0x3A2A4A));
+            }
+        }, null);
+    }
+
+    /**
+     * 17. Mano de Bruja: agarra a alguien con magia, lo levanta y lo suelta.
+     *
+     * Sin frasco, sin sapo y sin caldero: solo ella y el gesto. Levantar a un jugador
+     * pasa por lift(), que es lo que concede el permiso de vuelo temporal.
+     */
+    public void witchHand() {
+        if (!alive()) return;
+        List<Player> pool = targets(18);
+        if (pool.isEmpty()) return;
+        soundAt(loc(), "entity.evoker.prepare_attack", 1.5f, 0.8f);
+        broadcastNear(Component.text("Cierra la mano.", ACCENT));
+
+        for (Player victim : pool) {
+            animate(70, tick -> {
+                if (!alive() || !Fx.isFightable(victim)) throw Stop.now();
+                if (tick < 40) {
+                    lift(victim, new Vector(0, 0.16, 0));
+                    Compat.apply(victim, "slow_falling", 40, 0);
+                    Fx.ring(victim.getLocation().add(0, 1.0, 0), 0.9, 8, tick * 0.3, p ->
+                            Compat.spawn(world(), Compat.ENTITY_EFFECT, p, 1, 0, 0, 0, 0,
+                                    org.bukkit.Color.fromRGB(BREW)));
+                    Fx.beam(boss.getEyeLocation(), victim.getLocation().add(0, 1, 0), 1.0, q ->
+                            Compat.spawn(world(), Compat.EFFECT, q, 1, 0, 0, 0, 0));
+                    return;
+                }
+                if (tick != 40) return;
+                victim.setVelocity(new Vector(0, -1.9, 0));
+                hit(victim, 15 * damageBonus);
+                Compat.spawn(world(), Compat.INSTANT_EFFECT, victim.getLocation().add(0, 1, 0), 20,
+                        0.4, 0.5, 0.4, 0);
+                soundAt(victim.getLocation(), "entity.illusioner.prepare_blindness", 1.3f, 0.7f);
+                victim.sendActionBar(Component.text("Te ha soltado.", NamedTextColor.RED, TextDecoration.BOLD));
+            }, null);
+        }
     }
 
     // ------------------------------------------------------------------ mensajeria

@@ -56,6 +56,16 @@ public interface AnomalyType {
         return null;
     }
 
+    /**
+     * Componentes del icono para el datapack de logros, en JSON.
+     *
+     * Un `player_head` a secas sale con la cabeza de serie; con el componente de perfil
+     * sale la cabeza de verdad. Null = icono normal.
+     */
+    default String iconComponentsJson() {
+        return null;
+    }
+
     /** Una linea que resume que es, para la lista del menu. */
     String tagline();
 

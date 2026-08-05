@@ -155,6 +155,24 @@ public final class AnomalyRegistry {
         plugin.settings().set("anomalias." + type.id() + ".activa", value);
     }
 
+    /**
+     * De donde viene la anomalia, que es lo que cuenta el hover del anuncio.
+     *
+     * Se puede reescribir entera desde config.yml sin tocar el plugin: basta con poner
+     * `anomalias.<id>.descripcion` como una lista de lineas. Si no esta, se usa la que
+     * trae escrita la anomalia.
+     */
+    public List<String> origin(AnomalyType type) {
+        List<String> custom = plugin.getConfig().getStringList("anomalias." + type.id() + ".descripcion");
+        return custom.isEmpty() ? type.origin() : custom;
+    }
+
+    /** Lo mismo para el aviso de peligro: `anomalias.<id>.amenaza`. */
+    public List<String> threat(AnomalyType type) {
+        List<String> custom = plugin.getConfig().getStringList("anomalias." + type.id() + ".amenaza");
+        return custom.isEmpty() ? type.threat() : custom;
+    }
+
     /** Vida base configurada; si no hay override, la que trae la anomalia. */
     public double health(AnomalyType type) {
         return plugin.getConfig().getDouble("anomalias." + type.id() + ".vida", type.baseHealth());
@@ -1582,7 +1600,7 @@ public final class AnomalyRegistry {
     }
 
     /**
-     * Las 14 habilidades de la Bruja. En la fase 1 el sapo es su escudo; en la 2 es
+     * Las 17 habilidades de la Bruja. En la fase 1 el sapo es su escudo; en la 2 es
      * su espada; y la 3 es el caldero vaciandose encima de todo el mundo.
      */
     public List<Ability> brujaAbilities() {
@@ -1632,6 +1650,17 @@ public final class AnomalyRegistry {
         add(list, "pocima_final", "Pocima Final", 3, 320, 110, 4,
                 "Marcas bajo todos, tres tandas seguidas, efectos al azar.",
                 icon("LINGERING_POTION", "SPLASH_POTION"), f -> bruja(f).finalBrew());
+
+        // --- Magia de verdad, sin frasco de por medio
+        add(list, "rayo_arcano", "Rayo Arcano", 1, 200, 45, 5,
+                "Un haz que salta de uno a otro encadenando a todo el grupo.",
+                icon("BREEZE_ROD", "BLAZE_ROD"), f -> bruja(f).arcaneBolt());
+        add(list, "circulo_runas", "Circulo de Runas", 2, 320, 165, 4,
+                "Dibuja runas en el suelo y lo que quede dentro se marchita.",
+                icon("ENCHANTING_TABLE", "BOOKSHELF"), f -> bruja(f).runeCircle());
+        add(list, "mano_bruja", "Mano de Bruja", 3, 260, 75, 5,
+                "Agarra con magia a los que tenga cerca, los levanta y los suelta.",
+                icon("AMETHYST_SHARD", "ECHO_SHARD"), f -> bruja(f).witchHand());
 
         // --- Cualquier fase
         add(list, "trago_amargo", "Trago Amargo", 0, 360, 45, 2,
@@ -1829,6 +1858,17 @@ public final class AnomalyRegistry {
         @Override
         public org.bukkit.inventory.ItemStack iconItem() {
             return Disguises.head(plugin, Rabby.SKIN, "Rabby");
+        }
+
+        /** Y en el arbol de logros, lo mismo. */
+        @Override
+        public String iconComponentsJson() {
+            String json = "{\"textures\":{\"SKIN\":{\"url\":\"http://textures.minecraft.net/texture/"
+                    + Rabby.SKIN + "\"}}}";
+            String value = java.util.Base64.getEncoder()
+                    .encodeToString(json.getBytes(java.nio.charset.StandardCharsets.UTF_8));
+            return "{\"minecraft:profile\": {\"properties\": [{\"name\": \"textures\", \"value\": \""
+                    + value + "\"}]}}";
         }
 
         @Override

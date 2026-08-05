@@ -287,7 +287,7 @@ public final class Menus implements Listener {
                             .append(Component.text("■ " + type.glowColor().toString(), type.glowColor())));
             lore.add(MenuUtil.blank());
             lore.add(Component.text("DE DONDE VIENE", NamedTextColor.WHITE, TextDecoration.BOLD));
-            for (String s : type.origin()) lore.add(Component.text(s, MenuUtil.SOFT));
+            for (String s : plugin.registry().origin(type)) lore.add(Component.text(s, MenuUtil.SOFT));
             lore.add(MenuUtil.blank());
             lore.add(MenuUtil.field("Vida base", String.valueOf((int) plugin.registry().health(type)),
                     NamedTextColor.GREEN));

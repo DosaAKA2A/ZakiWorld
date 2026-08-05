@@ -173,7 +173,7 @@ public final class Aragon extends BossFight {
                     Compat.setAttribute(s, "movement_speed", 0.42);
                     s.setHealth(8);
                 });
-                baby.customName(Component.text("Cria", ACCENT));
+                baby.customName(Component.text("Esbirro", ACCENT));
                 baby.setCustomNameVisible(false);
                 markMinion(baby);
                 broodIds.put(baby.getUniqueId(), 1);
@@ -196,7 +196,7 @@ public final class Aragon extends BossFight {
                 Compat.setAttribute(s, "attack_damage", 8);
                 s.setHealth(34);
             });
-            guard.customName(Component.text("Guardiana", ACCENT));
+            guard.customName(Component.text("Esbirro Mayor", ACCENT));
             markMinion(guard);
             broodIds.put(guard.getUniqueId(), 2);
         } catch (Throwable ignored) {

@@ -24,11 +24,9 @@ import org.bukkit.block.data.type.Stairs;
 import org.bukkit.entity.CaveSpider;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.Goat;
-import org.bukkit.entity.ItemDisplay;
 import org.bukkit.entity.LivingEntity;
 import org.bukkit.entity.Player;
 import org.bukkit.entity.Ravager;
-import org.bukkit.inventory.ItemStack;
 import org.bukkit.util.Vector;
 
 import java.time.Duration;
@@ -73,7 +71,7 @@ public final class Quimera extends BossFight {
 
     private final List<Pillar> pillars = new ArrayList<>();
     /** Los eslabones de la cola, que se arrastran detras del cuerpo. */
-    private final List<ItemDisplay> tail = new ArrayList<>();
+    private final List<org.bukkit.entity.BlockDisplay> tail = new ArrayList<>();
 
     private Goat goatHead;
     private boolean mortal;
@@ -144,10 +142,13 @@ public final class Quimera extends BossFight {
 
     /** La cola: seis eslabones que van detras con retardo, como una serpiente. */
     private void growTail() {
+        // Bloques, no objetos de musgo: los eslabones eran alfombra de musgo y azalea, y
+        // arrastrandose por el suelo parecia que la Quimera iba dejando jardin detras
+        // como Herbola. Un cubo escamoso se lee como cola y no se confunde con nada.
         for (int i = 0; i < 6; i++) {
-            ItemDisplay link = Fx.itemDisplay(world(), boss.getLocation(),
-                    new ItemStack(i == 0 ? Material.LIME_CANDLE : Material.MOSS_CARPET),
-                    i == 0 ? 0.9f : 0.7f - i * 0.05f);
+            org.bukkit.entity.BlockDisplay link = Fx.blockDisplay(world(), boss.getLocation(),
+                    i == 0 ? Material.GREEN_TERRACOTTA : Material.GREEN_GLAZED_TERRACOTTA,
+                    i == 0 ? 0.62f : 0.52f - i * 0.05f);
             markMinion(link);
             tail.add(link);
         }
@@ -350,7 +351,7 @@ public final class Quimera extends BossFight {
 
         Location anchor = boss.getLocation().add(0, 0.9, 0).add(back.clone().multiply(1.1));
         for (int i = 0; i < tail.size(); i++) {
-            ItemDisplay link = tail.get(i);
+            org.bukkit.entity.BlockDisplay link = tail.get(i);
             if (!link.isValid()) continue;
             double wave = Math.sin(ticks() * 0.16 - i * 0.7) * (0.35 + i * 0.06);
             Vector side = new Vector(-back.getZ(), 0, back.getX()).multiply(wave);
@@ -583,9 +584,10 @@ public final class Quimera extends BossFight {
         soundAt(l, "entity.ravager.death", 1.6f, 0.5f);
         soundAt(l, "entity.goat.screaming.death", 1.4f, 0.6f);
 
-        for (ItemDisplay link : tail) {
+        for (org.bukkit.entity.BlockDisplay link : tail) {
             if (!link.isValid()) continue;
-            Compat.spawn(world(), Compat.ITEM_SLIME, link.getLocation(), 8, 0.2, 0.2, 0.2, 0);
+            Compat.spawn(world(), Compat.BLOCK, link.getLocation(), 8, 0.2, 0.2, 0.2, 0.02,
+                    Material.GREEN_TERRACOTTA.createBlockData());
             spawned.remove(link);
             Fx.safeRemove(link);
         }

@@ -259,7 +259,7 @@ public final class ScreamingGoat extends BossFight {
             if (!alive()) return;
             Location l = boss.getLocation();
             Fx.sphere(l.clone().add(0, 1.4, 0), 1.6 + Math.sin(tick * 0.2) * 0.3, 22, p ->
-                    Compat.spawn(world(), Compat.NOTE, p, 1, 0, 0, 0, 0, Compat.dust(WHITE_HOT, 1.6f)));
+                    Compat.spawn(world(), Compat.SMALL_GUST, p, 1, 0, 0, 0, 0));
             if (tick % 12 == 0) {
                 double a = tick * 0.5;
                 Location bolt = Fx.ground(l.clone().add(Math.cos(a) * 7, 0, Math.sin(a) * 7), 5);
@@ -436,7 +436,7 @@ public final class ScreamingGoat extends BossFight {
                 return;
             }
             boss.setVelocity(dir.clone().multiply(1.25).setY(boss.getVelocity().getY()));
-            Compat.spawn(world(), Compat.NOTE, l.clone().add(0, 0.4, 0), 6, 0.4, 0.3, 0.4, 0,
+            Compat.spawn(world(), Compat.WHITE_ASH, l.clone().add(0, 0.4, 0), 6, 0.4, 0.3, 0.4, 0,
                     Compat.dust(WHITE_HOT, 1.4f));
             if (tick % 4 == 0) soundAt(l, "entity.goat.step", 1.3f, 0.8f);
             for (Player p : targets(3.4)) {

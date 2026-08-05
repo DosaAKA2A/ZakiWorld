@@ -260,10 +260,18 @@ public final class Disguises {
     public static io.papermc.paper.datacomponent.item.ResolvableProfile profileOf(
             Plugin plugin, org.bukkit.entity.Player player) {
         try {
-            return io.papermc.paper.datacomponent.item.ResolvableProfile.resolvableProfile()
+            var props = player.getPlayerProfile().getProperties();
+            var builder = io.papermc.paper.datacomponent.item.ResolvableProfile.resolvableProfile()
                     .uuid(player.getUniqueId())
-                    .name(player.getName())
-                    .build();
+                    .name(player.getName());
+            // Un jugador conectado YA trae sus texturas firmadas: el servidor se las
+            // pidio a Mojang al entrar. Copiarlas es lo unico que hace falta, y ademas
+            // asi la copia sale al instante. Sin ellas el perfil se queda en blanco y
+            // la copia aparece con una skin de serie, que fue justo lo que paso.
+            if (!props.isEmpty()) builder.addProperties(props);
+            else plugin.getLogger().warning("El perfil de " + player.getName()
+                    + " no trae texturas; la copia saldra con la skin de serie.");
+            return builder.build();
         } catch (Throwable t) {
             plugin.getLogger().warning("No se pudo copiar el perfil de " + player.getName() + ": " + t);
             return null;

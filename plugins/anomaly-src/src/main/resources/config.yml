@@ -84,6 +84,22 @@ logros:
   sonido: true
 
 # Ajustes por anomalia. Se rellenan solos al tocarlos desde el menu.
+#
+# Ademas de vida y dano, cada anomalia admite DOS LISTAS DE TEXTO opcionales que son
+# exactamente lo que se lee en el hover del anuncio del chat:
+#
+#   descripcion:  de donde viene, su historia. Una linea por renglon.
+#   amenaza:      el aviso de peligro, a que se enfrentan.
+#
+# Si no estan, se usa la que trae escrita el plugin. Ejemplo:
+#
+#   caballero_sepulcral:
+#     descripcion:
+#       - 'Cabalgaba el Paramo de Batalla, en el Aether,'
+#       - 'jurado a una corona que ya no existe.'
+#     amenaza:
+#       - 'Tres fases: montado, a pie y heraldo'
+#       - 'Se enfurece si le fallan'
 anomalias:
   caballero_sepulcral:
     activa: true

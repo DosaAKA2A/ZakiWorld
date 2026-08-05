@@ -30,7 +30,7 @@ import java.util.logging.Level;
 public final class Advancements {
 
     /** Sube esto para que el datapack se reescriba en el proximo arranque. */
-    private static final int PACK_VERSION = 9;
+    private static final int PACK_VERSION = 10;
 
     private static final String NS = "anomaly";
     private static final String ROOT = "raiz";
@@ -132,6 +132,12 @@ public final class Advancements {
     /** Un logro por anomalia, todos colgando de la raiz y todos de tipo desafio. */
     private String forAnomaly(AnomalyType type) {
         String icon = type.icon().getKey().toString();
+        // Con componentes cuando la anomalia los pida: es lo que hace que la cabeza de
+        // Rabby salga con SU cara y no con la de serie.
+        String components = type.iconComponentsJson();
+        String iconJson = components == null
+                ? "{\"id\": \"" + icon + "\"}"
+                : "{\"id\": \"" + icon + "\", \"components\": " + components + "}";
         String color = String.format(Locale.ROOT, "#%06X", type.color().value());
         String title = escape(type.display());
         String desc = escape("Derrota a " + type.display() + ". " + type.tagline() + ".");
@@ -139,7 +145,7 @@ public final class Advancements {
                 {
                   "parent": "%s:%s",
                   "display": {
-                    "icon": {"id": "%s"},
+                    "icon": %s,
                     "title": {"text": "%s", "color": "%s", "bold": true},
                     "description": {"text": "%s", "color": "gray"},
                     "frame": "challenge",
@@ -148,7 +154,7 @@ public final class Advancements {
                     "hidden": false
                   },
                   "criteria": {"caida": {"trigger": "minecraft:impossible"}}
-                }""".formatted(NS, ROOT, icon, title, color, desc);
+                }""".formatted(NS, ROOT, iconJson, title, color, desc);
     }
 
     /**

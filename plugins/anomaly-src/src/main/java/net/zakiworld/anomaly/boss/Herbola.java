@@ -163,7 +163,7 @@ public final class Herbola extends BossFight {
      */
     private void raiseNameplate() {
         if (nameplate != null) return;
-        nameplate = world().spawn(boss.getLocation().add(0, 2.6, 0), TextDisplay.class, d -> {
+        nameplate = world().spawn(nameplateSpot(), TextDisplay.class, d -> {
             d.text(Component.text("✦ ", ACCENT)
                     .append(Component.text("Herbola", ACCENT, TextDecoration.BOLD)));
             d.setBillboard(Display.Billboard.CENTER);
@@ -173,6 +173,17 @@ public final class Herbola extends BossFight {
             d.setBrightness(new Display.Brightness(15, 15));
         });
         markMinion(nameplate);
+    }
+
+    /**
+     * Donde va el cartel del nombre: JUSTO ENCIMA de la cabeza.
+     *
+     * Estaba clavado a 2.6 bloques, y como Herbola va a escala 1.8 mide bastante mas
+     * que eso: el nombre le salia a la altura del pecho. Se calcula de su altura real,
+     * asi que si algun dia cambia de tamaño el cartel la sigue.
+     */
+    private Location nameplateSpot() {
+        return boss.getLocation().add(0, boss.getHeight() + 0.55, 0);
     }
 
     /** Quita el cartel flotante y le devuelve el suyo al jefe. */
@@ -310,7 +321,7 @@ public final class Herbola extends BossFight {
         }
 
         if (nameplate != null && nameplate.isValid() && !parrotFreed) {
-            nameplate.teleport(boss.getLocation().add(0, 2.6, 0));
+            nameplate.teleport(nameplateSpot());
         }
 
         // El loro suelto persigue por su cuenta; el de la cabeza canta.
@@ -319,7 +330,7 @@ public final class Herbola extends BossFight {
                 if (ticks() % 60 == 0) {
                     Compat.apply(boss, "regeneration", 80, 1);
                     Compat.apply(boss, "resistance", 80, 0);
-                    Compat.spawn(world(), Compat.NOTE, parrot.getLocation().add(0, 0.6, 0), 4, 0.3, 0.3, 0.3, 1);
+                    Compat.spawn(world(), Compat.NOTE, parrot.getLocation().add(0, 0.6, 0), 1, 0.1, 0.1, 0.1, 1);
                     soundAt(parrot.getLocation(), "entity.parrot.ambient", 0.9f, 1.3f);
                 }
             } else if (ticks() % 5 == 0) {
@@ -351,8 +362,8 @@ public final class Herbola extends BossFight {
         double d2 = boss.getLocation().distanceSquared(t.getLocation());
         // Al alcance: zarpazo de amapola.
         if (d2 < 9) {
-            if (ticks() % 20 == 0) {
-                hit(t, 9 * damageBonus);
+            if (ticks() % 16 == 0) {
+                hit(t, 10 * damageBonus);
                 Compat.spawn(world(), Compat.SWEEP_ATTACK, t.getLocation().add(0, 1, 0), 1);
                 Compat.spawn(world(), Compat.ITEM, t.getLocation().add(0, 1, 0), 10, 0.3, 0.3, 0.3, 0.1,
                         new ItemStack(Material.POPPY));
@@ -360,15 +371,39 @@ public final class Herbola extends BossFight {
             }
             return;
         }
-        // Lejos: acelera hacia el en vez de esperar a que la pathfinding se decida.
-        if (d2 > 36 && ticks() % 20 == 0) {
+
+        // NO SE LE ESCAPA NADIE. La pathfinding de un esqueleto se pierde con cualquier
+        // desnivel y se queda plantada, asi que se le empuja hacia el objetivo cada
+        // pocos ticks, mas fuerte cuanto mas lejos este. Perseguir es su mecanica: si
+        // no corre, no convierte terreno y el jefe entero deja de tener sentido.
+        if (ticks() % 8 == 0) {
             Vector to = t.getLocation().toVector().subtract(boss.getLocation().toVector());
-            if (to.lengthSquared() > 0.01) {
-                boss.setVelocity(to.normalize().multiply(0.55).setY(Math.max(0.05, boss.getVelocity().getY())));
-                Compat.spawn(world(), Compat.SPORE_BLOSSOM_AIR, boss.getLocation().add(0, 0.4, 0), 3,
+            double dist = to.length();
+            if (dist > 0.5) {
+                double push = dist > 20 ? 0.62 : dist > 10 ? 0.5 : 0.36;
+                Vector step = to.normalize().multiply(push);
+                // Un saltito si tiene algo delante, para no atascarse en un bordillo.
+                double lift = boss.isOnGround() && blocked(step) ? 0.42 : Math.max(0.0, boss.getVelocity().getY());
+                boss.setVelocity(step.setY(lift));
+                Compat.spawn(world(), Compat.SPORE_BLOSSOM_AIR, boss.getLocation().add(0, 0.4, 0), 2,
                         0.3, 0.2, 0.3, 0.01);
             }
         }
+        // Si se le escapa del todo, aparece de golpe entre la maleza.
+        if (d2 > 55 * 55 && ticks() % 60 == 0) {
+            Location behind = Fx.ground(t.getLocation().clone().add(
+                    (Math.random() - 0.5) * 6, 1, (Math.random() - 0.5) * 6), 6);
+            boss.teleport(behind);
+            Compat.spawn(world(), Compat.COMPOSTER, behind.clone().add(0, 1, 0), 24, 0.5, 0.7, 0.5, 0);
+            soundAt(behind, "block.moss.place", 1.3f, 0.7f);
+            broadcastNear(Component.text("El bosque te alcanza.", ACCENT));
+        }
+    }
+
+    /** Si tiene un bloque justo delante a la altura de los pies. */
+    private boolean blocked(Vector step) {
+        Location ahead = boss.getLocation().add(step.clone().normalize().multiply(0.9));
+        return ahead.getBlock().getType().isSolid();
     }
 
     // --------------------------------------------------------------- cambio de fase
@@ -474,7 +509,7 @@ public final class Herbola extends BossFight {
     /** El llanto del Cantor dura mucho mas que una muerte normal; hay que esperarlo. */
     @Override
     public int deathAnimationTicks() {
-        return 60 + 240 + 60;
+        return 60 + 100 + 60;
     }
 
     /** El llanto: se eleva, carga, y revienta en un jardin permanente. */
@@ -500,13 +535,14 @@ public final class Herbola extends BossFight {
         Glow.apply(parrot, NamedTextColor.RED);
         soundAt(center, "entity.parrot.imitate.ghast", 1.8f, 0.6f);
 
-        // 12 segundos de aviso: sube despacio y el circulo se pinta cada vez mas denso.
-        animate(240, tick -> {
+        // CINCO segundos. Antes eran doce y daba tiempo a salir andando; ahora hay que
+        // decidir ya, y quedarse dentro se paga con la vida.
+        animate(100, tick -> {
             if (parrot == null || !parrot.isValid()) throw Stop.now();
             parrot.teleport(parrot.getLocation().add(0, 0.045, 0));
-            double t = tick / 240.0;
+            double t = tick / 100.0;
 
-            Fx.ring(center, radius, (int) (40 + t * 90), tick * 0.05, p ->
+            Fx.ring(center, radius, (int) (40 + t * 90), tick * 0.12, p ->
                     Compat.spawnForced(world(), Compat.COMPOSTER, Fx.ground(p, 5).add(0, 0.3, 0), 1, 0, 0, 0, 0,
                             Compat.dust(0xE05A4A, (float) (1.4 + t))));
             Fx.beam(center, parrot.getLocation(), 1.2, p ->
@@ -515,7 +551,7 @@ public final class Herbola extends BossFight {
                     Compat.dust(0xE05A4A, (float) (1.2 + t)));
 
             if (tick % 20 == 0) {
-                int left = (240 - tick) / 20;
+                int left = (100 - tick) / 20;
                 soundAt(center, "block.note_block.pling", 1.4f, 0.4f + (float) t);
                 for (Player p : Fx.viewersNear(center, 60)) {
                     boolean safe = p.getLocation().distance(center) > radius;
@@ -541,9 +577,11 @@ public final class Herbola extends BossFight {
                         Compat.spawn(world(), Compat.MYCELIUM, Fx.ground(p, 4).add(0, 0.4, 0), 2, 0, 0, 0, 0,
                                 Compat.dust(BLOOM, 1.8f))));
             }
+            // CASI DESTRUCTIVO: a bocajarro se lleva por delante a cualquiera, y
+            // hasta en el borde del circulo hace falta ir muy bien de vida.
             for (Player p : Fx.playersNear(center, radius)) {
                 double d = p.getLocation().distance(center);
-                hit(p, Math.max(14, 46 - d * 1.2));
+                hit(p, Math.max(65, 240 - d * 7));
                 push(p, p.getLocation().toVector().subtract(center.toVector())
                         .normalize().setY(0.8).multiply(1.6));
             }
@@ -695,7 +733,7 @@ public final class Herbola extends BossFight {
         animate(120, tick -> {
             if (!alive() || parrot == null || !parrot.isValid()) throw Stop.now();
             Location pl = parrot.getLocation().add(0, 0.5, 0);
-            Compat.spawn(world(), Compat.NOTE, pl, 2, 0.4, 0.3, 0.4, 1);
+            if (ticks() % 20 == 0) Compat.spawn(world(), Compat.NOTE, pl, 1, 0.1, 0.1, 0.1, 1);
             Fx.ring(boss.getLocation().add(0, 1.0, 0), 1.6, 12, tick * 0.2, p ->
                     Compat.spawn(world(), Compat.CHERRY_LEAVES, p, 1, 0, 0, 0, 0, Compat.dust(SAP, 1.3f)));
             Compat.apply(boss, "regeneration", 40, 2);
