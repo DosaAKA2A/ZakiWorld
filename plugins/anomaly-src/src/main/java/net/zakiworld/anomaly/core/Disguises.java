@@ -95,13 +95,22 @@ public final class Disguises {
             String value = java.util.Base64.getEncoder()
                     .encodeToString(json.getBytes(java.nio.charset.StandardCharsets.UTF_8));
 
-            // SIN NOMBRE, y esto es lo importante. Un perfil que lleva nombre es
-            // "dinamico": el servidor lo resuelve contra Mojang y se queda con la skin
-            // del jugador que se llame asi, tirando a la basura la textura que le hemos
-            // dado. Con uuid + propiedad y nada mas, el perfil es estatico y se pinta
-            // exactamente la textura pedida.
+            // Las tres piezas, y las tres hacen falta:
+            //
+            //  - LA TEXTURA, que es la skin de verdad.
+            //  - EL UUID, para que no se confunda con ninguna cuenta real.
+            //  - EL NOMBRE, porque el cliente indexa las skins de los cuerpos de jugador
+            //    por nombre: sin el se queda con la de por defecto aunque la textura
+            //    viaje en el paquete. Es lo mismo que pasa con los servidores en modo
+            //    offline, donde las skins se sirven sin firmar y se ven igual.
+            //
+            // Lo que NO se puede hacer es armar el perfil desde un PlayerProfile con
+            // nombre: eso sale "dinamico", el servidor lo resuelve contra Mojang y se
+            // queda con la skin del jugador que se llame asi. Por el builder, con la
+            // propiedad ya puesta, el perfil es estatico y la textura sobrevive.
             var profile = io.papermc.paper.datacomponent.item.ResolvableProfile.resolvableProfile()
                     .uuid(UUID.nameUUIDFromBytes(("skin:" + hash).getBytes()))
+                    .name(name)
                     .addProperty(new com.destroystokyo.paper.profile.ProfileProperty("textures", value))
                     .build();
             if (profile.dynamic()) {
@@ -129,10 +138,12 @@ public final class Disguises {
                 // Sin texturas cargadas no hay nada que copiar; que lo resuelva por uuid.
                 return io.papermc.paper.datacomponent.item.ResolvableProfile.resolvableProfile()
                         .uuid(player.getUniqueId())
+                        .name(player.getName())
                         .build();
             }
             return io.papermc.paper.datacomponent.item.ResolvableProfile.resolvableProfile()
                     .uuid(player.getUniqueId())
+                    .name(player.getName())
                     .addProperties(props)
                     .build();
         } catch (Throwable t) {
