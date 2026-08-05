@@ -151,14 +151,14 @@ public final class Bruja extends BossFight {
             double t = tick / 80.0;
             Fx.ring(spot, t * 8, (int) (t * 8 * 6) + 8, l -> {
                 Location g = Fx.ground(l, 4);
-                Compat.spawn(world(), Compat.DUST, g.clone().add(0, 0.2, 0), 1, 0, 0, 0, 0,
+                Compat.spawn(world(), Compat.EFFECT, g.clone().add(0, 0.2, 0), 1, 0, 0, 0, 0,
                         Compat.dust(BREW, 1.4f));
             });
             Fx.helix(spot, 1.2, 3.5, 20, 3.0, l ->
                     Compat.spawn(world(), Compat.WITCH, l, 1, 0, 0, 0, 0));
             if (tick % 14 == 0) {
                 soundAt(spot, "entity.witch.ambient", 1.2f, 0.8f);
-                Compat.spawn(world(), Compat.DUST, spot.clone().add(0, 2.5, 0), 10, 0.4, 0.4, 0.4, 0,
+                Compat.spawn(world(), Compat.INSTANT_EFFECT, spot.clone().add(0, 2.5, 0), 10, 0.4, 0.4, 0.4, 0,
                         Compat.dust(BREW, 1.6f));
             }
         }, () -> {
@@ -234,7 +234,7 @@ public final class Bruja extends BossFight {
 
         animate(30, tick -> {
             if (toad == null || !toad.isValid()) throw Stop.now();
-            Compat.spawn(world(), Compat.DUST, toad.getLocation(), 2, 0.2, 0.2, 0.2, 0,
+            Compat.spawn(world(), Compat.WITCH, toad.getLocation(), 2, 0.2, 0.2, 0.2, 0,
                     Compat.dust(TOAD, 1.2f));
             for (Player p : Fx.playersNear(toad.getLocation(), 2.2)) {
                 hit(p, 9 * damageBonus);
@@ -421,7 +421,7 @@ public final class Bruja extends BossFight {
                         Vector to = mark.clone().add(0, 0.5, 0).toVector().multiply(t);
                         Location air = from.add(to).toLocation(world())
                                 .add(0, Math.sin(t * Math.PI) * 4, 0);
-                        Compat.spawn(world(), Compat.DUST, air, 3, 0.1, 0.1, 0.1, 0,
+                        Compat.spawn(world(), Compat.ENTITY_EFFECT, air, 3, 0.1, 0.1, 0.1, 0,
                                 Compat.dust(BREW, 1.3f));
                     }
                     return;
@@ -509,7 +509,7 @@ public final class Bruja extends BossFight {
             if (!alive() || toad == null || !toad.isValid()) throw Stop.now();
             Compat.spawn(world(), Compat.NOTE, toad.getLocation().add(0, 0.5, 0), 2, 0.3, 0.3, 0.3, 1);
             Fx.ring(boss.getLocation().add(0, 1.0, 0), 1.5, 12, tick * 0.2, p ->
-                    Compat.spawn(world(), Compat.DUST, p, 1, 0, 0, 0, 0, Compat.dust(TOAD, 1.2f)));
+                    Compat.spawn(world(), Compat.ITEM_SLIME, p, 1, 0, 0, 0, 0, Compat.dust(TOAD, 1.2f)));
             Compat.apply(boss, "regeneration", 40, 2);
             Compat.apply(boss, "resistance", 40, 1);
             if (tick % 30 == 0) soundAt(toad.getLocation(), "entity.frog.ambient", 1.1f, 0.6f);
@@ -560,7 +560,7 @@ public final class Bruja extends BossFight {
             if (radius > 10) return;
             Fx.ring(c, radius, (int) (radius * 6) + 8, p -> {
                 Location g = Fx.ground(p, 4);
-                Compat.spawn(world(), Compat.DUST, g.clone().add(0, 0.3, 0), 1, 0.1, 0.2, 0.1, 0,
+                Compat.spawn(world(), Compat.DRIPPING_HONEY, g.clone().add(0, 0.3, 0), 1, 0.1, 0.2, 0.1, 0,
                         Compat.dust(BREW, 1.5f));
                 if (Math.random() < 0.2) {
                     Compat.spawn(world(), Compat.BUBBLE_POP, g.clone().add(0, 0.4, 0), 1, 0.1, 0.1, 0.1, 0);
@@ -597,7 +597,7 @@ public final class Bruja extends BossFight {
                 soundAt(toad.getLocation(), "entity.frog.long_jump", 1.5f, 0.5f);
                 return;
             }
-            Compat.spawn(world(), Compat.DUST, toad.getLocation(), 2, 0.3, 0.3, 0.3, 0,
+            Compat.spawn(world(), Compat.COMPOSTER, toad.getLocation(), 2, 0.3, 0.3, 0.3, 0,
                     Compat.dust(TOAD, 1.3f));
             boolean landed = toad.isOnGround() || toad.getLocation().distanceSquared(mark) < 4;
             if (tick < 30 || !landed) return;
@@ -626,7 +626,7 @@ public final class Bruja extends BossFight {
         animate(45, tick -> {
             if (toad == null || !toad.isValid() || !Fx.isFightable(target)) throw Stop.now();
             Fx.beam(toad.getLocation().add(0, 0.6, 0), target.getLocation().add(0, 1, 0), 0.8, p ->
-                    Compat.spawn(world(), Compat.DUST, p, 1, 0.05, 0.05, 0.05, 0,
+                    Compat.spawn(world(), Compat.SNEEZE, p, 1, 0.05, 0.05, 0.05, 0,
                             Compat.dust(0xE8A0B4, 1.3f)));
             if (tick < 10 || tick % 5 != 0) return;
             Vector pull = toad.getLocation().toVector().subtract(target.getLocation().toVector());
@@ -665,7 +665,7 @@ public final class Bruja extends BossFight {
                 markMinion(drop);
                 animate(40, tick -> {
                     if (!drop.isValid()) throw Stop.now();
-                    Compat.spawn(world(), Compat.DUST, drop.getLocation(), 1, 0.1, 0.1, 0.1, 0,
+                    Compat.spawn(world(), Compat.EFFECT, drop.getLocation(), 1, 0.1, 0.1, 0.1, 0,
                             Compat.dust(ACID, 1.1f));
                     if (!drop.isOnGround()) return;
                     Location bl = drop.getLocation();
@@ -698,7 +698,7 @@ public final class Bruja extends BossFight {
         animate(140, tick -> {
             double r = Math.min(9, 2 + tick * 0.1);
             Fx.sphere(c, r, 34, p -> {
-                Compat.spawn(world(), Compat.DUST, p, 1, 0.3, 0.3, 0.3, 0, Compat.dust(0x3A2A4A, 1.5f));
+                Compat.spawn(world(), Compat.INSTANT_EFFECT, p, 1, 0.3, 0.3, 0.3, 0, Compat.dust(0x3A2A4A, 1.5f));
                 if (Math.random() < 0.1) Compat.spawn(world(), Compat.WITCH, p, 1, 0, 0, 0, 0);
             });
             if (tick % 15 != 0) return;
@@ -723,7 +723,7 @@ public final class Bruja extends BossFight {
             if (!alive()) throw Stop.now();
             double t = tick / 200.0;
             Fx.ring(center, radius, (int) (30 + t * 80), tick * 0.05, p ->
-                    Compat.spawn(world(), Compat.DUST, Fx.ground(p, 5).add(0, 0.3, 0), 1, 0, 0, 0, 0,
+                    Compat.spawn(world(), Compat.WITCH, Fx.ground(p, 5).add(0, 0.3, 0), 1, 0, 0, 0, 0,
                             Compat.dust(BREW, (float) (1.3 + t))));
             Fx.helix(center, 1.5, 3.0 + t * 3, 20, 2.5, p ->
                     Compat.spawn(world(), Compat.WITCH, p, 1, 0, 0, 0, 0));
@@ -846,7 +846,7 @@ public final class Bruja extends BossFight {
 
         animate(40, tick -> {
             if (!alive()) throw Stop.now();
-            Compat.spawn(world(), Compat.DUST, boss.getEyeLocation(), 2, 0.2, 0.2, 0.2, 0,
+            Compat.spawn(world(), Compat.ENTITY_EFFECT, boss.getEyeLocation(), 2, 0.2, 0.2, 0.2, 0,
                     Compat.dust(BREW, 1.2f));
             if (tick != 30) return;
             Compat.apply(boss, "resistance", 100, 1);
@@ -854,7 +854,7 @@ public final class Bruja extends BossFight {
             // El eructo: una nubecita acida alrededor. Poco dano, mucho teatro.
             soundAt(loc(), "entity.witch.celebrate", 1.4f, 0.5f);
             Fx.ring(boss.getLocation().add(0, 1.2, 0), 2.5, 18, p ->
-                    Compat.spawn(world(), Compat.DUST, p, 2, 0.2, 0.3, 0.2, 0, Compat.dust(ACID, 1.5f)));
+                    Compat.spawn(world(), Compat.ITEM_SLIME, p, 2, 0.2, 0.3, 0.2, 0, Compat.dust(ACID, 1.5f)));
             for (Player p : targets(4)) {
                 hit(p, 6 * damageBonus);
                 Compat.apply(p, "nausea", 80, 0);

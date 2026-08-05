@@ -186,7 +186,7 @@ public final class StormRider extends BossFight {
             Fx.ring(air, 10 - t * 6, 26, tick * 0.12, l ->
                     Compat.spawn(world(), Compat.CLOUD, l, 2, 0.3, 0.2, 0.3, 0.02));
             Fx.ring(spot, 8 - t * 4, 22, tick * -0.1, l ->
-                    Compat.spawn(world(), Compat.DUST, Fx.ground(l, 3).add(0, 0.15, 0), 1, 0, 0, 0, 0,
+                    Compat.spawn(world(), Compat.ELECTRIC_SPARK, Fx.ground(l, 3).add(0, 0.15, 0), 1, 0, 0, 0, 0,
                             Compat.dust(STORM, 1.5f)));
             if (tick % 16 == 0) {
                 double a = Math.random() * Math.PI * 2;
@@ -218,7 +218,7 @@ public final class StormRider extends BossFight {
 
         if (ticks() % 4 == 0) {
             Location l = boss.getLocation().add(0, 1.2, 0);
-            Compat.spawn(world(), Compat.DUST, l, 2, 0.4, 0.4, 0.4, 0,
+            Compat.spawn(world(), Compat.CLOUD, l, 2, 0.4, 0.4, 0.4, 0,
                     Compat.dust(berserk ? RAGE : STORM, 1.0f));
             if (berserk) {
                 Compat.spawn(world(), Compat.ELECTRIC_SPARK, l, 2, 0.5, 0.5, 0.5, 0.03);
@@ -396,7 +396,7 @@ public final class StormRider extends BossFight {
             if (!alive()) return;
             Location l = boss.getLocation().add(0, 1.1, 0);
             Fx.sphere(l, 1.3 + Math.sin(tick * 0.2) * 0.25, 22, p ->
-                    Compat.spawn(world(), Compat.DUST, p, 1, 0, 0, 0, 0, Compat.dust(RAGE, 1.5f)));
+                    Compat.spawn(world(), Compat.SMALL_GUST, p, 1, 0, 0, 0, 0, Compat.dust(RAGE, 1.5f)));
             if (tick % 12 == 0) {
                 world().strikeLightningEffect(Fx.ground(
                         l.clone().add((Math.random() - 0.5) * 8, 0, (Math.random() - 0.5) * 8), 5));
@@ -430,7 +430,7 @@ public final class StormRider extends BossFight {
         animate(70, tick -> {
             double t = tick / 70.0;
             Fx.helix(l, 1.6 * (1 - t) + 0.3, 3.0, 18, 2.0, p ->
-                    Compat.spawn(world(), Compat.DUST, p, 1, 0, 0, 0, 0, Compat.dust(DEEP, 1.4f)));
+                    Compat.spawn(world(), Compat.SPLASH, p, 1, 0, 0, 0, 0, Compat.dust(DEEP, 1.4f)));
             if (tick % 12 == 0) {
                 Compat.spawn(world(), Compat.SPLASH,
                         l.clone().add(0, 1, 0), 20, 0.6, 0.5, 0.6, 0.05);
@@ -464,7 +464,7 @@ public final class StormRider extends BossFight {
             Location l = boss.getLocation();
             if (tick < 26) {
                 Fx.sphere(l, 2.4 - tick * 0.05, 24, p ->
-                        Compat.spawn(world(), Compat.DUST, p, 1, 0, 0, 0, 0, Compat.dust(STORM, 1.4f)));
+                        Compat.spawn(world(), Compat.WAX_OFF, p, 1, 0, 0, 0, 0, Compat.dust(STORM, 1.4f)));
                 if (tick % 8 == 0) soundAt(l, "entity.phantom.ambient", 1.2f, 0.4f + tick / 40f);
                 return;
             }
@@ -511,7 +511,7 @@ public final class StormRider extends BossFight {
                 Vector to = mark.clone().add(0, 1.5, 0).toVector().subtract(boss.getLocation().toVector());
                 if (to.lengthSquared() > 0.5) boss.setVelocity(to.normalize().multiply(1.15));
                 Compat.spawn(world(), Compat.CLOUD, boss.getLocation(), 8, 0.5, 0.4, 0.5, 0.04);
-                Compat.spawn(world(), Compat.DUST, boss.getLocation(), 4, 0.4, 0.4, 0.4, 0,
+                Compat.spawn(world(), Compat.GUST, boss.getLocation(), 4, 0.4, 0.4, 0.4, 0,
                         Compat.dust(STORM, 1.4f));
                 for (Player p : Fx.playersNear(boss.getLocation(), 3.6)) {
                     hit(p, 13 * damageBonus);
@@ -537,7 +537,7 @@ public final class StormRider extends BossFight {
             Fx.helix(eye, radius * 0.5, 6, 26, 3.0, p ->
                     Compat.spawn(world(), Compat.CLOUD, p, 1, 0.1, 0.1, 0.1, 0.01));
             Fx.ring(eye, radius, (int) (radius * 4), tick * 0.25, p ->
-                    Compat.spawn(world(), Compat.DUST, Fx.ground(p, 3).add(0, 0.3, 0), 1, 0, 0, 0, 0,
+                    Compat.spawn(world(), Compat.ELECTRIC_SPARK, Fx.ground(p, 3).add(0, 0.3, 0), 1, 0, 0, 0, 0,
                             Compat.dust(STORM, 1.3f)));
             if (tick % 5 != 0) return;
             for (Player p : Fx.playersNear(eye, 16)) {
@@ -590,7 +590,7 @@ public final class StormRider extends BossFight {
             for (double d = 2; d <= 16; d += 0.8) {
                 Location p = Fx.ground(c.clone().add(Math.cos(base) * d, 0, Math.sin(base) * d), 4);
                 Compat.spawn(world(), Compat.SWEEP_ATTACK, p.clone().add(0, 0.4, 0), 1);
-                Compat.spawn(world(), Compat.DUST, p.clone().add(0, 0.3, 0), 2, 0.3, 0.1, 0.3, 0,
+                Compat.spawn(world(), Compat.CLOUD, p.clone().add(0, 0.3, 0), 2, 0.3, 0.1, 0.3, 0,
                         Compat.dust(STORM, 1.4f));
                 for (Player v : Fx.playersNear(p, 2.0)) {
                     if (!cut.add(v.getUniqueId())) continue;
@@ -617,7 +617,7 @@ public final class StormRider extends BossFight {
             double radius = 1.5 + tick * 0.16;
             Fx.arc(l, facing, radius, Math.toRadians(150), (int) (radius * 5), p -> {
                 Compat.spawn(world(), Compat.SWEEP_ATTACK, p, 1);
-                Compat.spawn(world(), Compat.DUST, p, 1, 0, 0, 0, 0, Compat.dust(STORM, 1.2f));
+                Compat.spawn(world(), Compat.SMALL_GUST, p, 1, 0, 0, 0, 0, Compat.dust(STORM, 1.2f));
             });
             if (tick != 22) return;
             soundAt(l, "entity.player.attack.sweep", 1.5f, 0.8f);
@@ -650,7 +650,7 @@ public final class StormRider extends BossFight {
                 Location gp = Fx.ground(p, 3);
                 Compat.spawn(world(), Compat.SPLASH,
                         gp.clone().add(0, 0.4, 0), 2, 0.15, 0.25, 0.15, 0.02);
-                Compat.spawn(world(), Compat.DUST, gp.clone().add(0, 0.3, 0), 1, 0, 0, 0, 0,
+                Compat.spawn(world(), Compat.SPLASH, gp.clone().add(0, 0.3, 0), 1, 0, 0, 0, 0,
                         Compat.dust(DEEP, 1.5f));
             });
             if (tick % 6 == 0) soundAt(g, "entity.player.swim", 1.2f, 0.7f);
@@ -678,7 +678,7 @@ public final class StormRider extends BossFight {
             Location from = boss.getLocation().add(0, 1.2, 0);
             Location to = target.getLocation().add(0, 1.0, 0);
             Fx.beam(from, to, 0.4, p ->
-                    Compat.spawn(world(), Compat.DUST, p, 1, 0, 0, 0, 0, Compat.dust(DEEP, 1.2f)));
+                    Compat.spawn(world(), Compat.WAX_OFF, p, 1, 0, 0, 0, 0, Compat.dust(DEEP, 1.2f)));
             if (tick < 16) {
                 if (tick % 5 == 0) soundAt(to, "block.chain.hit", 1.0f, 0.9f);
                 return;
@@ -711,7 +711,7 @@ public final class StormRider extends BossFight {
             if (tick < 20) {
                 for (double d = 2; d < 18; d += 1.2) {
                     Location g = Fx.ground(l.clone().add(run.clone().multiply(d)), 4);
-                    Compat.spawn(world(), Compat.DUST, g.clone().add(0, 0.15, 0), 1, 0.9, 0, 0.9, 0,
+                    Compat.spawn(world(), Compat.GUST, g.clone().add(0, 0.15, 0), 1, 0.9, 0, 0.9, 0,
                             Compat.dust(DEEP, 1.4f));
                 }
                 return;
@@ -743,7 +743,7 @@ public final class StormRider extends BossFight {
             double a = tick * 0.9;
             Fx.ring(l, 2.4, 8, a, p -> {
                 Compat.spawn(world(), Compat.SWEEP_ATTACK, p, 1);
-                Compat.spawn(world(), Compat.DUST, p, 1, 0, 0, 0, 0, Compat.dust(RAGE, 1.3f));
+                Compat.spawn(world(), Compat.ELECTRIC_SPARK, p, 1, 0, 0, 0, 0, Compat.dust(RAGE, 1.3f));
             });
             if (tick % 8 != 0) return;
             soundAt(l, "item.trident.hit", 1.3f, 1.3f);
@@ -771,7 +771,7 @@ public final class StormRider extends BossFight {
                     double base = Math.atan2(facing.getZ(), facing.getX()) + spread;
                     Location p = l.clone().add(Math.cos(base) * d, 0.2 * side, Math.sin(base) * d);
                     Compat.spawn(world(), Compat.SWEEP_ATTACK, p, 1);
-                    Compat.spawn(world(), Compat.DUST, p, 2, 0.1, 0.1, 0.1, 0, Compat.dust(RAGE, 1.4f));
+                    Compat.spawn(world(), Compat.CLOUD, p, 2, 0.1, 0.1, 0.1, 0, Compat.dust(RAGE, 1.4f));
                 }
                 for (Player p : targets(7.0)) {
                     Vector to = p.getLocation().toVector().subtract(l.toVector()).setY(0);
@@ -877,9 +877,9 @@ public final class StormRider extends BossFight {
             if (!Fx.isFightable(target)) throw Stop.now();
             Location tl = target.getLocation();
             Fx.beam(tl.clone().add(0, 0.3, 0), tl.clone().add(0, 12, 0), 0.9, p ->
-                    Compat.spawn(world(), Compat.DUST, p, 1, 0, 0, 0, 0, Compat.dust(STORM, 1.1f)));
+                    Compat.spawn(world(), Compat.SMALL_GUST, p, 1, 0, 0, 0, 0, Compat.dust(STORM, 1.1f)));
             Fx.ring(tl.clone().add(0, 0.15, 0), 1.8, 14, tick * 0.25, p ->
-                    Compat.spawn(world(), Compat.DUST, Fx.ground(p, 3).add(0, 0.15, 0), 1, 0, 0, 0, 0,
+                    Compat.spawn(world(), Compat.SPLASH, Fx.ground(p, 3).add(0, 0.15, 0), 1, 0, 0, 0, 0,
                             Compat.dust(STORM, 1.2f)));
             if (tick % 14 == 0) soundAt(tl, "block.note_block.pling", 1.0f, 0.6f + tick / 70f);
             if (tick != 60) return;

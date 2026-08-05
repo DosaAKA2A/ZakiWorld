@@ -109,7 +109,7 @@ public final class Darkness extends BossFight {
         animate(90, tick -> {
             double t = tick / 90.0;
             Fx.sphere(spot.clone().add(0, 2, 0), 12 - t * 9, 44, p ->
-                    Compat.spawn(world(), Compat.DUST, p, 1, 0, 0, 0, 0, Compat.dust(PITCH, 2.0f)));
+                    Compat.spawn(world(), Compat.SCULK_SOUL, p, 1, 0, 0, 0, 0, Compat.dust(PITCH, 2.0f)));
             Fx.helix(spot, 3.0, 7.0, 28, 3.0, p ->
                     Compat.spawn(world(), Compat.PORTAL, p, 2, 0.05, 0.05, 0.05, 0.02));
             if (tick % 12 == 0) {
@@ -138,7 +138,7 @@ public final class Darkness extends BossFight {
         if (ticks() % 3 == 0) {
             Location l = boss.getLocation().add(0, colossus ? 3.0 : 1.8, 0);
             Compat.spawn(world(), Compat.PORTAL, l, 4, 0.8, 1.0, 0.8, 0.03);
-            Compat.spawn(world(), Compat.DUST, l, 2, 0.7, 0.9, 0.7, 0,
+            Compat.spawn(world(), Compat.SQUID_INK, l, 2, 0.7, 0.9, 0.7, 0,
                     Compat.dust(colossus ? 0xFFFFFF : VOID_PURPLE, 1.4f));
         }
         // Una penumbra constante alrededor: la temática por encima de todo.
@@ -157,7 +157,7 @@ public final class Darkness extends BossFight {
     public void onDamaged(Player attacker, double amount) {
         if (!healing) return;
         ritualDamage += amount;
-        Compat.spawn(world(), Compat.DUST, boss.getLocation().add(0, 2, 0), 12, 0.5, 0.6, 0.5, 0,
+        Compat.spawn(world(), Compat.REVERSE_PORTAL, boss.getLocation().add(0, 2, 0), 12, 0.5, 0.6, 0.5, 0,
                 Compat.dust(MAGENTA, 1.6f));
         warn(Component.text("Ritual  ", NamedTextColor.GRAY)
                 .append(Component.text((int) Math.min(100, ritualDamage / RITUAL_BREAK * 100) + "%",
@@ -200,7 +200,7 @@ public final class Darkness extends BossFight {
             double scale = 1.9 + (tick / 110.0) * 3.6;
             Compat.setAttribute(boss, "scale", scale);
             Fx.sphere(l.clone().add(0, scale, 0), scale * 1.2, 40, p ->
-                    Compat.spawn(world(), Compat.DUST, p, 1, 0, 0, 0, 0, Compat.dust(PITCH, 2.0f)));
+                    Compat.spawn(world(), Compat.PORTAL, p, 1, 0, 0, 0, 0, Compat.dust(PITCH, 2.0f)));
             Fx.helix(l, scale, scale * 3, 30, 3.0, p ->
                     Compat.spawn(world(), Compat.PORTAL, p, 2, 0.05, 0.05, 0.05, 0.03));
             if (tick % 14 == 0) {
@@ -234,7 +234,7 @@ public final class Darkness extends BossFight {
         animate(90, tick -> {
             double t = tick / 90.0;
             Fx.sphere(l.clone().add(0, 2, 0), 6 * (1 - t) + 0.5, 40, p ->
-                    Compat.spawn(world(), Compat.DUST, p, 1, 0, 0, 0, 0, Compat.dust(PITCH, 2.0f)));
+                    Compat.spawn(world(), Compat.SCULK_CHARGE_POP, p, 1, 0, 0, 0, 0, Compat.dust(PITCH, 2.0f)));
             Fx.helix(l, 2.0 * (1 - t) + 0.4, 6.0, 26, 3.0, p ->
                     Compat.spawn(world(), Compat.PORTAL, p, 2, 0.03, 0.03, 0.03, 0.04));
             if (tick % 10 == 0) {
@@ -340,7 +340,7 @@ public final class Darkness extends BossFight {
     /** El humo que tapa un cambio de sitio. Identico siempre, venga de quien venga. */
     private void blink(Location at) {
         Compat.spawn(world(), Compat.REVERSE_PORTAL, at.clone().add(0, 1.5, 0), 40, 0.4, 0.9, 0.4, 0.12);
-        Compat.spawn(world(), Compat.DUST, at.clone().add(0, 1.5, 0), 20, 0.4, 0.8, 0.4, 0,
+        Compat.spawn(world(), Compat.SMOKE, at.clone().add(0, 1.5, 0), 20, 0.4, 0.8, 0.4, 0,
                 Compat.dust(VOID_PURPLE, 1.5f));
         Compat.sound(world(), at, "entity.enderman.teleport", 1.0f, 0.6f);
     }
@@ -348,7 +348,7 @@ public final class Darkness extends BossFight {
     /** El temblor de rabia de un doble: se mueve un pelo pero no se va del sitio. */
     private void shiver(Location at) {
         Compat.spawn(world(), Compat.PORTAL, at.clone().add(0, 1.6, 0), 6, 0.5, 1.0, 0.5, 0.06);
-        Compat.spawn(world(), Compat.DUST, at.clone().add(0, 1.6, 0), 2, 0.45, 0.9, 0.45, 0,
+        Compat.spawn(world(), Compat.SCULK_SOUL, at.clone().add(0, 1.6, 0), 2, 0.45, 0.9, 0.45, 0,
                 Compat.dust(VOID_PURPLE, 1.4f));
     }
 
@@ -410,10 +410,10 @@ public final class Darkness extends BossFight {
             // La pared: un cilindro de sombra que se cierra sobre el jefe.
             for (double h = 0; h <= 6; h += 1.5) {
                 Fx.ring(center.clone().add(0, h, 0), radius, (int) (radius * 3) + 10, tick * 0.04, p ->
-                        Compat.spawn(world(), Compat.DUST, p, 1, 0, 0.2, 0, 0, Compat.dust(PITCH, 2.2f)));
+                        Compat.spawn(world(), Compat.SQUID_INK, p, 1, 0, 0.2, 0, 0, Compat.dust(PITCH, 2.2f)));
             }
             Fx.ring(center.clone().add(0, 0.3, 0), radius, (int) (radius * 4) + 12, p ->
-                    Compat.spawn(world(), Compat.DUST, Fx.ground(p, 4).add(0, 0.25, 0), 1, 0, 0, 0, 0,
+                    Compat.spawn(world(), Compat.REVERSE_PORTAL, Fx.ground(p, 4).add(0, 0.25, 0), 1, 0, 0, 0, 0,
                             Compat.dust(MAGENTA, 1.7f)));
 
             if (tick % 20 == 0) soundAt(center, "ambient.cave", 1.2f, 0.4f);
@@ -463,12 +463,12 @@ public final class Darkness extends BossFight {
                     Compat.apply(p, "slow_falling", 40, 0);
                     Compat.spawn(world(), Compat.PORTAL, p.getLocation().add(0, 1, 0), 6, 0.4, 0.6, 0.4, 0.04);
                     Fx.beam(l, p.getLocation().add(0, 1, 0), 0.7, q ->
-                            Compat.spawn(world(), Compat.DUST, q, 1, 0, 0, 0, 0, Compat.dust(VOID_PURPLE, 1.1f)));
+                            Compat.spawn(world(), Compat.PORTAL, q, 1, 0, 0, 0, 0, Compat.dust(VOID_PURPLE, 1.1f)));
                 }
                 // El vibra cada vez mas fuerte segun se carga.
                 double shake = tick / 110.0;
                 Fx.sphere(l, 1.4 + shake * 1.6, (int) (18 + shake * 26), p ->
-                        Compat.spawn(world(), Compat.DUST, p, 1, 0, 0, 0, 0,
+                        Compat.spawn(world(), Compat.SCULK_CHARGE_POP, p, 1, 0, 0, 0, 0,
                                 Compat.dust(MAGENTA, (float) (1.0 + shake))));
                 if (tick % Math.max(3, (int) (12 - shake * 9)) == 0) {
                     soundAt(l, "entity.enderman.stare", 1.0f, 0.4f + (float) shake);
@@ -479,7 +479,7 @@ public final class Darkness extends BossFight {
 
             Compat.spawn(world(), Compat.FLASH, l, 1);
             Compat.spawn(world(), Compat.EXPLOSION_EMITTER, l, 3);
-            Compat.spawn(world(), Compat.DUST, l, 200, 4.0, 4.0, 4.0, 0, Compat.dust(MAGENTA, 2.0f));
+            Compat.spawn(world(), Compat.SMOKE, l, 200, 4.0, 4.0, 4.0, 0, Compat.dust(MAGENTA, 2.0f));
             soundAt(l, "entity.generic.explode", 2.0f, 0.4f);
             soundAt(l, "entity.enderman.scream", 1.8f, 0.5f);
 
@@ -508,7 +508,7 @@ public final class Darkness extends BossFight {
         animate(90, tick -> {
             double r = 3 + tick * 0.18;
             Fx.sphere(c, r, 36, p ->
-                    Compat.spawn(world(), Compat.DUST, p, 1, 0.2, 0.2, 0.2, 0, Compat.dust(PITCH, 2.0f)));
+                    Compat.spawn(world(), Compat.SCULK_SOUL, p, 1, 0.2, 0.2, 0.2, 0, Compat.dust(PITCH, 2.0f)));
             if (tick % 15 != 0) return;
             for (Player p : Fx.playersNear(c, r)) {
                 Compat.apply(p, "darkness", 200, 0);
@@ -561,7 +561,7 @@ public final class Darkness extends BossFight {
             Location l = boss.getLocation().add(0, 2.0, 0);
             Location tl = target.getLocation().add(0, 1, 0);
             Fx.beam(l, tl, 0.7, p ->
-                    Compat.spawn(world(), Compat.DUST, p, 1, 0, 0, 0, 0, Compat.dust(MAGENTA, 1.0f)));
+                    Compat.spawn(world(), Compat.SQUID_INK, p, 1, 0, 0, 0, 0, Compat.dust(MAGENTA, 1.0f)));
             if (tick % 20 != 0) return;
 
             Vector look = target.getLocation().getDirection().setY(0);
@@ -574,7 +574,7 @@ public final class Darkness extends BossFight {
             }
             hit(target, 14 * damageBonus);
             Compat.apply(target, "darkness", 120, 0);
-            Compat.spawn(world(), Compat.DUST, tl, 30, 0.4, 0.5, 0.4, 0, Compat.dust(PITCH, 1.8f));
+            Compat.spawn(world(), Compat.REVERSE_PORTAL, tl, 30, 0.4, 0.5, 0.4, 0, Compat.dust(PITCH, 1.8f));
             soundAt(tl, "entity.enderman.scream", 1.2f, 0.7f);
         }, null);
     }
@@ -595,7 +595,7 @@ public final class Darkness extends BossFight {
             if (radius > 15) return;
             Fx.ring(c, radius, (int) (radius * 7) + 10, p -> {
                 Location g = Fx.ground(p, 4);
-                Compat.spawn(world(), Compat.DUST, g.clone().add(0, 0.4, 0), 1, 0, 0.4, 0, 0,
+                Compat.spawn(world(), Compat.PORTAL, g.clone().add(0, 0.4, 0), 1, 0, 0.4, 0, 0,
                         Compat.dust(PITCH, 1.9f));
                 Compat.spawn(world(), Compat.PORTAL, g.clone().add(0, 0.4, 0), 1, 0.1, 0.2, 0.1, 0.02);
             });
@@ -621,7 +621,7 @@ public final class Darkness extends BossFight {
             Location from = boss.getLocation().add(0, 1.8, 0);
             Location to = target.getLocation().add(0, 1, 0);
             Fx.beam(from, to, 0.4, p -> {
-                Compat.spawn(world(), Compat.DUST, p, 1, 0, 0, 0, 0, Compat.dust(PITCH, 1.5f));
+                Compat.spawn(world(), Compat.SCULK_CHARGE_POP, p, 1, 0, 0, 0, 0, Compat.dust(PITCH, 1.5f));
                 Compat.spawn(world(), Compat.PORTAL, p, 1, 0.05, 0.05, 0.05, 0.02);
             });
             if (tick < 20) return;
@@ -649,7 +649,7 @@ public final class Darkness extends BossFight {
                 Fx.telegraph(world(), mark, 2.6, VOID_PURPLE);
                 later(20, () -> {
                     for (double h = 12; h > 0; h -= 1.0) {
-                        Compat.spawn(world(), Compat.DUST, mark.clone().add(0, h, 0), 2, 0.2, 0.2, 0.2, 0,
+                        Compat.spawn(world(), Compat.SMOKE, mark.clone().add(0, h, 0), 2, 0.2, 0.2, 0.2, 0,
                                 Compat.dust(PITCH, 1.7f));
                     }
                     Compat.spawn(world(), Compat.EXPLOSION, mark.clone().add(0, 0.5, 0), 2, 0.4, 0.3, 0.4, 0);
@@ -678,7 +678,7 @@ public final class Darkness extends BossFight {
                 Compat.spawn(world(), Compat.REVERSE_PORTAL, l.clone().add(0, 1.5, 0), 20, 0.4, 0.8, 0.4, 0.05);
             }
             for (Location l : trail) {
-                Compat.spawn(world(), Compat.DUST, l.clone().add(0, 1.5, 0), 1, 0.4, 0.8, 0.4, 0,
+                Compat.spawn(world(), Compat.SCULK_SOUL, l.clone().add(0, 1.5, 0), 1, 0.4, 0.8, 0.4, 0,
                         Compat.dust(VOID_PURPLE, 1.2f));
             }
             if (tick != 100) return;
@@ -686,7 +686,7 @@ public final class Darkness extends BossFight {
             for (Location l : trail) {
                 later(i++ * 6, () -> {
                     Compat.spawn(world(), Compat.EXPLOSION, l.clone().add(0, 1, 0), 2, 0.4, 0.4, 0.4, 0);
-                    Compat.spawn(world(), Compat.DUST, l.clone().add(0, 1, 0), 30, 0.6, 0.8, 0.6, 0,
+                    Compat.spawn(world(), Compat.SQUID_INK, l.clone().add(0, 1, 0), 30, 0.6, 0.8, 0.6, 0,
                             Compat.dust(MAGENTA, 1.7f));
                     soundAt(l, "entity.enderman.teleport", 1.1f, 0.7f);
                     for (Player p : Fx.playersNear(l, 3.2)) {
@@ -710,7 +710,7 @@ public final class Darkness extends BossFight {
             if (!alive()) return;
             Location l = boss.getLocation().add(0, 2, 0);
             Fx.sphere(l, 2 + tick * 0.14, 40, p ->
-                    Compat.spawn(world(), Compat.DUST, p, 1, 0, 0, 0, 0, Compat.dust(PITCH, 2.0f)));
+                    Compat.spawn(world(), Compat.REVERSE_PORTAL, p, 1, 0, 0, 0, 0, Compat.dust(PITCH, 2.0f)));
             if (tick % 20 != 0) return;
             for (Player p : Fx.viewersNear(c, plugin.settings().participationRadius())) {
                 Compat.apply(p, "darkness", 220, 0);
@@ -732,7 +732,7 @@ public final class Darkness extends BossFight {
             double radius = 2 + tick * 0.2;
             Fx.arc(l, facing, radius, Math.toRadians(130), (int) (radius * 5), p -> {
                 Compat.spawn(world(), Compat.SWEEP_ATTACK, p, 1);
-                Compat.spawn(world(), Compat.DUST, p, 1, 0, 0, 0, 0, Compat.dust(MAGENTA, 1.5f));
+                Compat.spawn(world(), Compat.PORTAL, p, 1, 0, 0, 0, 0, Compat.dust(MAGENTA, 1.5f));
             });
             if (tick != 24) return;
             soundAt(l, "entity.player.attack.sweep", 1.6f, 0.4f);
@@ -762,9 +762,9 @@ public final class Darkness extends BossFight {
                 // El disco negro y su corona de luz: la esfera se ve maciza a proposito.
                 double r = 1.0 + (tick / 150.0) * 2.5;
                 Fx.sphere(hole, r, (int) (40 + r * 18), p ->
-                        Compat.spawn(world(), Compat.DUST, p, 1, 0, 0, 0, 0, Compat.dust(PITCH, 2.4f)));
+                        Compat.spawn(world(), Compat.SCULK_CHARGE_POP, p, 1, 0, 0, 0, 0, Compat.dust(PITCH, 2.4f)));
                 Fx.ring(hole, r + 1.2, 30, tick * 0.25, p ->
-                        Compat.spawn(world(), Compat.DUST, p, 1, 0, 0, 0, 0, Compat.dust(MAGENTA, 1.8f)));
+                        Compat.spawn(world(), Compat.SMOKE, p, 1, 0, 0, 0, 0, Compat.dust(MAGENTA, 1.8f)));
                 for (Player p : Fx.playersNear(hole, 22)) {
                     Vector pull = hole.toVector().subtract(p.getLocation().toVector());
                     if (pull.lengthSquared() < 4) continue;
@@ -781,7 +781,7 @@ public final class Darkness extends BossFight {
 
             Compat.spawn(world(), Compat.FLASH, hole, 1);
             Compat.spawn(world(), Compat.EXPLOSION_EMITTER, hole, 4);
-            Compat.spawn(world(), Compat.DUST, hole, 260, 5.0, 5.0, 5.0, 0, Compat.dust(PITCH, 2.6f));
+            Compat.spawn(world(), Compat.SCULK_SOUL, hole, 260, 5.0, 5.0, 5.0, 0, Compat.dust(PITCH, 2.6f));
             soundAt(hole, "entity.generic.explode", 2.0f, 0.3f);
             soundAt(hole, "entity.wither.death", 1.6f, 0.4f);
             for (Player p : Fx.playersNear(hole, 16)) {
@@ -809,7 +809,7 @@ public final class Darkness extends BossFight {
             if (tick < 22) {
                 for (double d = 2; d < 18; d += 1.0) {
                     Location g = Fx.ground(origin.clone().add(run.clone().multiply(d)), 4);
-                    Compat.spawn(world(), Compat.DUST, g.clone().add(0, 0.15, 0), 1, 0.5, 0, 0.5, 0,
+                    Compat.spawn(world(), Compat.SQUID_INK, g.clone().add(0, 0.15, 0), 1, 0.5, 0, 0.5, 0,
                             Compat.dust(VOID_PURPLE, 1.4f));
                 }
                 return;
@@ -818,7 +818,7 @@ public final class Darkness extends BossFight {
             if (reach > 18) return;
             Location g = Fx.ground(origin.clone().add(run.clone().multiply(reach)), 4);
             for (double h = 0; h < 4; h += 0.5) {
-                Compat.spawn(world(), Compat.DUST, g.clone().add(0, h, 0), 2, 0.4, 0.1, 0.4, 0,
+                Compat.spawn(world(), Compat.REVERSE_PORTAL, g.clone().add(0, h, 0), 2, 0.4, 0.1, 0.4, 0,
                         Compat.dust(PITCH, 1.9f));
             }
             Compat.spawn(world(), Compat.PORTAL, g.clone().add(0, 1, 0), 8, 0.4, 0.6, 0.4, 0.05);
@@ -846,7 +846,7 @@ public final class Darkness extends BossFight {
             if (tick < 60) {
                 double r = 8 - tick * 0.12;
                 Fx.sphere(l, Math.max(0.5, r), 44, p ->
-                        Compat.spawn(world(), Compat.DUST, p, 1, 0, 0, 0, 0, Compat.dust(MAGENTA, 1.8f)));
+                        Compat.spawn(world(), Compat.PORTAL, p, 1, 0, 0, 0, 0, Compat.dust(MAGENTA, 1.8f)));
                 for (Player p : Fx.playersNear(l, 18)) {
                     Vector pull = l.toVector().subtract(p.getLocation().toVector());
                     if (pull.lengthSquared() < 4) continue;
@@ -862,7 +862,7 @@ public final class Darkness extends BossFight {
                 final int r = ring;
                 later(ring * 5, () -> {
                     Fx.ring(Fx.ground(boss.getLocation(), 5), r * 4.0, r * 16, p ->
-                            Compat.spawn(world(), Compat.DUST, Fx.ground(p, 3).add(0, 0.4, 0), 1, 0, 0, 0, 0,
+                            Compat.spawn(world(), Compat.SCULK_CHARGE_POP, Fx.ground(p, 3).add(0, 0.4, 0), 1, 0, 0, 0, 0,
                                     Compat.dust(PITCH, 2.0f)));
                     for (Player p : targets(r * 4.0 + 1.5)) {
                         if (p.getLocation().distance(loc()) < (r - 1) * 4.0) continue;

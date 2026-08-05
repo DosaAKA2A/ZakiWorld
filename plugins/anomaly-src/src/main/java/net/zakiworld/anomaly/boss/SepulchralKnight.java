@@ -188,7 +188,7 @@ public final class SepulchralKnight extends BossFight {
             double t = tick / 70.0;
             double radius = 1.2 + t * 7.0;
             Fx.ring(spot, radius, (int) (18 + radius * 4), tick * 0.18, l -> {
-                Compat.spawn(world(), Compat.DUST, Fx.ground(l, 3).add(0, 0.15, 0), 1, 0, 0, 0, 0,
+                Compat.spawn(world(), Compat.ASH, Fx.ground(l, 3).add(0, 0.15, 0), 1, 0, 0, 0, 0,
                         Compat.dust(SPECTRAL, 1.5f));
             });
             if (tick % 4 == 0) {
@@ -224,7 +224,7 @@ public final class SepulchralKnight extends BossFight {
     protected void ambient() {
         if (ticks() % 3 != 0 || !alive()) return;
         Location l = boss.getLocation().add(0, 1.1, 0);
-        Compat.spawn(world(), Compat.DUST, l, 2, 0.35, 0.5, 0.35, 0, Compat.dust(SPECTRAL, 0.9f));
+        Compat.spawn(world(), Compat.WHITE_ASH, l, 2, 0.35, 0.5, 0.35, 0, Compat.dust(SPECTRAL, 0.9f));
         if (ticks() % 30 == 0) {
             Compat.spawn(world(), Compat.SOUL, l, 4, 0.4, 0.6, 0.4, 0.005);
         }
@@ -263,7 +263,7 @@ public final class SepulchralKnight extends BossFight {
             if (tick < 30 && mount != null && mount.isValid()) {
                 // encabritado: el caballo tiembla y suelta polvo de hueso
                 mount.setVelocity(new Vector(0, 0.06, 0));
-                Compat.spawn(world(), Compat.DUST, l.clone().add(0, 0.6, 0), 6, 0.6, 0.4, 0.6, 0,
+                Compat.spawn(world(), Compat.SOUL, l.clone().add(0, 0.6, 0), 6, 0.6, 0.4, 0.6, 0,
                         Compat.dust(BONE, 1.2f));
                 if (tick % 6 == 0) soundAt(l, "entity.skeleton.hurt", 1.0f, 0.6f + tick / 60f);
             }
@@ -373,7 +373,7 @@ public final class SepulchralKnight extends BossFight {
             for (Entity anchor : anchorList) {
                 if (!anchor.isValid()) continue;
                 Fx.beam(anchor.getLocation().add(0, 1.6, 0), l.clone().add(0, 1.2, 0), 0.55, p ->
-                        Compat.spawn(world(), Compat.DUST, p, 1, 0, 0, 0, 0, Compat.dust(SPECTRAL, 1.0f)));
+                        Compat.spawn(world(), Compat.SCRAPE, p, 1, 0, 0, 0, 0, Compat.dust(SPECTRAL, 1.0f)));
             }
             if (tick % 20 == 0) {
                 int left = 3 - broken[0];
@@ -483,7 +483,7 @@ public final class SepulchralKnight extends BossFight {
         animate(25, tick -> {
             for (double d = 2; d < 26; d += 1.0) {
                 Location l = Fx.ground(start.clone().add(dir.clone().multiply(d)), 4);
-                Compat.spawn(world(), Compat.DUST, l.clone().add(0, 0.15, 0), 1, 1.1, 0, 1.1, 0,
+                Compat.spawn(world(), Compat.CRIT, l.clone().add(0, 0.15, 0), 1, 1.1, 0, 1.1, 0,
                         Compat.dust(RUST, 1.3f));
             }
             if (tick % 8 == 0) soundAt(start, "block.note_block.bass", 1.0f, 0.5f);
@@ -495,7 +495,7 @@ public final class SepulchralKnight extends BossFight {
                 Entity mover = boss.getVehicle() != null ? boss.getVehicle() : boss;
                 mover.setVelocity(dir.clone().multiply(1.15).setY(mover.getVelocity().getY()));
                 Location l = boss.getLocation();
-                Compat.spawn(world(), Compat.DUST, l.clone().add(0, 0.3, 0), 6, 0.4, 0.3, 0.4, 0,
+                Compat.spawn(world(), Compat.SOUL_FIRE_FLAME, l.clone().add(0, 0.3, 0), 6, 0.4, 0.3, 0.4, 0,
                         Compat.dust(BONE, 1.4f));
                 Compat.spawn(world(), Compat.SWEEP_ATTACK, l.clone().add(dir.clone().multiply(1.6)).add(0, 1, 0), 1);
                 if (tick % 5 == 0) soundAt(l, "entity.horse.gallop", 1.1f, 0.9f);
@@ -530,7 +530,7 @@ public final class SepulchralKnight extends BossFight {
             soundAt(l, "item.trident.return", 1.0f, 1.2f);
             Fx.ring(l, radius, (int) (radius * 9), p -> {
                 Compat.spawn(world(), Compat.SWEEP_ATTACK, p, 1);
-                Compat.spawn(world(), Compat.DUST, p, 1, 0, 0, 0, 0, Compat.dust(BONE, 1.1f));
+                Compat.spawn(world(), Compat.ASH, p, 1, 0, 0, 0, 0, Compat.dust(BONE, 1.1f));
             });
             for (Player p : targets(radius)) {
                 double d = p.getLocation().distance(l);
@@ -557,7 +557,7 @@ public final class SepulchralKnight extends BossFight {
             if (tick < 25) {
                 Entity mover = boss.getVehicle() != null ? boss.getVehicle() : boss;
                 mover.setVelocity(new Vector(0, 0.08, 0));
-                Compat.spawn(world(), Compat.DUST, l.clone().add(0, 0.4, 0), 5, 0.5, 0.3, 0.5, 0,
+                Compat.spawn(world(), Compat.WHITE_ASH, l.clone().add(0, 0.4, 0), 5, 0.5, 0.3, 0.5, 0,
                         Compat.dust(BONE, 1.2f));
                 Fx.telegraph(world(), Fx.ground(l, 4), 7.0, RUST);
                 if (tick % 6 == 0) soundAt(l, "entity.horse.breathe", 1.1f, 0.5f);
@@ -627,14 +627,14 @@ public final class SepulchralKnight extends BossFight {
             if (!banner.isValid() || down[0]) throw Stop.now();
             Location bl = banner.getLocation().add(0, 1.9, 0);
             Fx.ring(bl, 0.6, 8, tick * 0.3, p ->
-                    Compat.spawn(world(), Compat.DUST, p, 1, 0, 0, 0, 0, Compat.dust(RUST, 1.0f)));
+                    Compat.spawn(world(), Compat.SOUL, p, 1, 0, 0, 0, 0, Compat.dust(RUST, 1.0f)));
             if (!alive()) return;
             if (boss.getLocation().distanceSquared(banner.getLocation()) < 15 * 15) {
                 Compat.apply(boss, "resistance", 25, 1);
                 Compat.apply(boss, "speed", 25, 0);
                 if (tick % 10 == 0) {
                     Fx.beam(bl, boss.getLocation().add(0, 1.2, 0), 0.6, p ->
-                            Compat.spawn(world(), Compat.DUST, p, 1, 0, 0, 0, 0, Compat.dust(RUST, 0.8f)));
+                            Compat.spawn(world(), Compat.SCRAPE, p, 1, 0, 0, 0, 0, Compat.dust(RUST, 0.8f)));
                 }
             }
             if (tick % 40 == 0) soundAt(bl, "block.beacon.ambient", 0.6f, 0.7f);
@@ -660,7 +660,7 @@ public final class SepulchralKnight extends BossFight {
             double radius = 1.5 + tick * 0.36;
             Fx.arc(l, facing, radius, Math.toRadians(110), (int) (10 + radius * 3), p -> {
                 Compat.spawn(world(), Compat.CLOUD, p, 1, 0.1, 0.1, 0.1, 0.01);
-                Compat.spawn(world(), Compat.DUST, p, 1, 0, 0, 0, 0, Compat.dust(VOID_PURPLE, 1.6f));
+                Compat.spawn(world(), Compat.CRIT, p, 1, 0, 0, 0, 0, Compat.dust(VOID_PURPLE, 1.6f));
             });
             if (tick % 10 == 0) soundAt(l, "entity.warden.roar", 0.6f, 1.6f);
             if (tick != 20) return;
@@ -736,7 +736,7 @@ public final class SepulchralKnight extends BossFight {
         soundAt(from, "entity.ravager.step", 1.4f, 0.9f);
         Compat.spawn(world(), Compat.LARGE_SMOKE, from.clone().add(0, 1, 0), 40, 0.4, 0.9, 0.4, 0.06);
         Fx.beam(from.clone().add(0, 1, 0), to.clone().add(0, 1, 0), 0.4, p ->
-                Compat.spawn(world(), Compat.DUST, p, 2, 0.05, 0.05, 0.05, 0, Compat.dust(BONE, 1.2f)));
+                Compat.spawn(world(), Compat.SOUL_FIRE_FLAME, p, 2, 0.05, 0.05, 0.05, 0, Compat.dust(BONE, 1.2f)));
 
         boss.teleport(to);
         soundAt(to, "entity.player.attack.sweep", 1.4f, 0.7f);
@@ -758,7 +758,7 @@ public final class SepulchralKnight extends BossFight {
             for (double d = 0.5; d <= 5.0; d += 0.4) {
                 Location p = l.clone().add(dir.clone().multiply(d));
                 Compat.spawn(world(), Compat.CRIT, p, 6, 0.12, 0.12, 0.12, 0.08);
-                Compat.spawn(world(), Compat.DUST, p, 2, 0.1, 0.1, 0.1, 0, Compat.dust(SPECTRAL, 1.2f));
+                Compat.spawn(world(), Compat.ASH, p, 2, 0.1, 0.1, 0.1, 0, Compat.dust(SPECTRAL, 1.2f));
             }
             for (Player p : targets(5.5)) {
                 Vector to2 = p.getLocation().toVector().subtract(l.toVector()).setY(0);
@@ -789,11 +789,11 @@ public final class SepulchralKnight extends BossFight {
             if (!alive()) return;
             Location l = boss.getLocation();
             if (tick < 28) {
-                Compat.spawn(world(), Compat.DUST, l.clone().add(0, 2.6, 0), 4, 0.3, 0.2, 0.3, 0,
+                Compat.spawn(world(), Compat.WHITE_ASH, l.clone().add(0, 2.6, 0), 4, 0.3, 0.2, 0.3, 0,
                         Compat.dust(RUST, 1.5f));
                 for (double d = 1.5; d < 15; d += 1.2) {
                     Location g = Fx.ground(l.clone().add(dir.clone().multiply(d)), 4);
-                    Compat.spawn(world(), Compat.DUST, g.clone().add(0, 0.15, 0), 1, 0.35, 0, 0.35, 0,
+                    Compat.spawn(world(), Compat.SOUL, g.clone().add(0, 0.15, 0), 1, 0.35, 0, 0.35, 0,
                             Compat.dust(RUST, 1.4f));
                 }
                 if (tick % 7 == 0) soundAt(l, "block.note_block.bass", 1.1f, 0.45f + tick / 90f);
@@ -834,7 +834,7 @@ public final class SepulchralKnight extends BossFight {
             Location from = boss.getLocation().add(0, 1.2, 0);
             Location to = target.getLocation().add(0, 1.0, 0);
             Fx.beam(from, to, 0.45, p -> {
-                Compat.spawn(world(), Compat.DUST, p, 1, 0, 0, 0, 0, Compat.dust(BONE, 1.0f));
+                Compat.spawn(world(), Compat.SCRAPE, p, 1, 0, 0, 0, 0, Compat.dust(BONE, 1.0f));
                 if (tick % 6 == 0) Compat.spawn(world(), Compat.ITEM, p, 1, 0.04, 0.04, 0.04, 0.01,
                         new ItemStack(Material.BONE));
             });
@@ -874,7 +874,7 @@ public final class SepulchralKnight extends BossFight {
             if (!Fx.isFightable(target) || !alive()) throw Stop.now();
             Location tl = target.getLocation().add(0, 2.4, 0);
             Fx.ring(tl, 0.7, 10, tick * 0.35, p ->
-                    Compat.spawn(world(), Compat.DUST, p, 1, 0, 0, 0, 0, Compat.dust(RUST, 1.2f)));
+                    Compat.spawn(world(), Compat.CRIT, p, 1, 0, 0, 0, 0, Compat.dust(RUST, 1.2f)));
 
             double dist = target.getLocation().distance(boss.getLocation());
             boolean far = dist > 16;
@@ -916,7 +916,7 @@ public final class SepulchralKnight extends BossFight {
             int points = (int) (radius * 6);
             Fx.ring(c, radius, points, tick * 0.05, p -> {
                 Location g = Fx.ground(p, 4);
-                Compat.spawn(world(), Compat.DUST, g.clone().add(0, 0.3, 0), 1, 0, 0.35, 0, 0,
+                Compat.spawn(world(), Compat.SOUL_FIRE_FLAME, g.clone().add(0, 0.3, 0), 1, 0, 0.35, 0, 0,
                         Compat.dust(BONE, 1.5f));
                 if (tick % 10 == 0) {
                     Compat.spawn(world(), Compat.ITEM, g.clone().add(0, 0.5, 0), 1, 0.05, 0.1, 0.05, 0.02,
@@ -955,7 +955,7 @@ public final class SepulchralKnight extends BossFight {
             // Placas pegadas al cuerpo, no objetos girando alrededor: es armadura,
             // no un encantamiento.
             double r = 1.0 + Math.sin(tick * 0.15) * 0.12;
-            Fx.sphere(l, r, 26, p -> Compat.spawn(world(), Compat.DUST, p, 1, 0, 0, 0, 0,
+            Fx.sphere(l, r, 26, p -> Compat.spawn(world(), Compat.ASH, p, 1, 0, 0, 0, 0,
                     Compat.dust(VOID_PURPLE, 1.3f)));
             if (tick % 5 == 0) {
                 Fx.ring(l, r + 0.25, 12, tick * 0.2, p ->
@@ -1061,7 +1061,7 @@ public final class SepulchralKnight extends BossFight {
             }
             if (tick < 60) {
                 boss.setVelocity(new Vector(0, -1.6, 0));
-                Compat.spawn(world(), Compat.DUST, l, 6, 0.3, 0.5, 0.3, 0, Compat.dust(RUST, 1.6f));
+                Compat.spawn(world(), Compat.WHITE_ASH, l, 6, 0.3, 0.5, 0.3, 0, Compat.dust(RUST, 1.6f));
                 return;
             }
             if (tick != 60) return;
@@ -1100,10 +1100,10 @@ public final class SepulchralKnight extends BossFight {
                 // el espectro del caballo se dibuja bajo el caballero
                 Location l = boss.getLocation();
                 Fx.helix(l, 1.3, 2.2, 20, 1.5, p ->
-                        Compat.spawn(world(), Compat.DUST, p, 1, 0, 0, 0, 0, Compat.dust(SPECTRAL, 1.5f)));
+                        Compat.spawn(world(), Compat.SOUL, p, 1, 0, 0, 0, 0, Compat.dust(SPECTRAL, 1.5f)));
                 for (double d = 2; d < 30; d += 1.0) {
                     Location g = Fx.ground(l.clone().add(dir.clone().multiply(d)), 4);
-                    Compat.spawn(world(), Compat.DUST, g.clone().add(0, 0.15, 0), 1, 1.3, 0, 1.3, 0,
+                    Compat.spawn(world(), Compat.SCRAPE, g.clone().add(0, 0.15, 0), 1, 1.3, 0, 1.3, 0,
                             Compat.dust(RUST, 1.5f));
                 }
                 if (tick % 8 == 0) soundAt(l, "entity.horse.breathe", 1.2f, 0.5f);
@@ -1114,7 +1114,7 @@ public final class SepulchralKnight extends BossFight {
             Location l = boss.getLocation();
             Fx.helix(l, 1.1, 2.0, 14, 1.0, p ->
                     Compat.spawn(world(), Compat.SOUL_FIRE_FLAME, p, 1, 0.02, 0.02, 0.02, 0.005));
-            Compat.spawn(world(), Compat.DUST, l.clone().add(0, 0.3, 0), 8, 0.5, 0.4, 0.5, 0,
+            Compat.spawn(world(), Compat.CRIT, l.clone().add(0, 0.3, 0), 8, 0.5, 0.4, 0.5, 0,
                     Compat.dust(SPECTRAL, 1.6f));
             if (tick % 4 == 0) soundAt(l, "entity.horse.gallop", 1.4f, 0.7f);
             for (Player p : targets(3.6)) {
@@ -1139,9 +1139,9 @@ public final class SepulchralKnight extends BossFight {
             if (tick < 40) {
                 double r = 2.2 - tick * 0.045;
                 Fx.sphere(l, Math.max(0.4, r), 16, p ->
-                        Compat.spawn(world(), Compat.DUST, p, 1, 0, 0, 0, 0, Compat.dust(SPECTRAL, 1.3f)));
+                        Compat.spawn(world(), Compat.SOUL_FIRE_FLAME, p, 1, 0, 0, 0, 0, Compat.dust(SPECTRAL, 1.3f)));
                 for (double d = 1; d < 22; d += 1.5) {
-                    Compat.spawn(world(), Compat.DUST, l.clone().add(dir.clone().multiply(d)), 1, 0.25, 0.25, 0.25, 0,
+                    Compat.spawn(world(), Compat.ASH, l.clone().add(dir.clone().multiply(d)), 1, 0.25, 0.25, 0.25, 0,
                             Compat.dust(VOID_PURPLE, 1.0f));
                 }
                 if (tick % 10 == 0) soundAt(l, "block.note_block.bass", 1.2f, 0.4f + tick / 40f);
@@ -1152,7 +1152,7 @@ public final class SepulchralKnight extends BossFight {
             for (double d = 1; d <= 24; d += 0.8) {
                 Location p = l.clone().add(dir.clone().multiply(d));
                 Compat.spawn(world(), Compat.SONIC_BOOM != null ? Compat.SONIC_BOOM : Compat.CLOUD, p, 1);
-                Compat.spawn(world(), Compat.DUST, p, 4, 0.35, 0.35, 0.35, 0, Compat.dust(SPECTRAL, 1.6f));
+                Compat.spawn(world(), Compat.WHITE_ASH, p, 4, 0.35, 0.35, 0.35, 0, Compat.dust(SPECTRAL, 1.6f));
             }
             for (Player p : targets(24)) {
                 Vector to = p.getLocation().toVector().subtract(l.toVector()).setY(0);
@@ -1184,10 +1184,10 @@ public final class SepulchralKnight extends BossFight {
             Location tl = target.getLocation();
             if (l.getWorld() == null || !l.getWorld().equals(tl.getWorld())) throw Stop.now();
 
-            Compat.spawn(world(), Compat.DUST, l.clone().add(0, 0.3, 0), 4, 0.3, 0.2, 0.3, 0,
+            Compat.spawn(world(), Compat.SOUL, l.clone().add(0, 0.3, 0), 4, 0.3, 0.2, 0.3, 0,
                     Compat.dust(RUST, 1.3f));
             Fx.ring(tl.clone().add(0, 0.15, 0), 1.4, 12, tick * 0.3, p ->
-                    Compat.spawn(world(), Compat.DUST, Fx.ground(p, 3).add(0, 0.15, 0), 1, 0, 0, 0, 0,
+                    Compat.spawn(world(), Compat.SCRAPE, Fx.ground(p, 3).add(0, 0.15, 0), 1, 0, 0, 0, 0,
                             Compat.dust(RUST, 1.1f)));
 
             Vector dir = tl.toVector().subtract(l.toVector()).setY(0);

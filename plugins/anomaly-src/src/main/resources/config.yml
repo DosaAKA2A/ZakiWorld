@@ -126,11 +126,11 @@ anomalias:
     vida: 1600
     dano: 1.0
     nombre: 'Herbola'
-  medusa:
+  quimera:
     activa: true
-    vida: 1700
+    vida: 1900
     dano: 1.0
-    nombre: 'Medusa'
+    nombre: 'Quimera'
   bruja:
     activa: true
     vida: 1500
@@ -146,6 +146,21 @@ anomalias:
     vida: 2400
     dano: 1.0
     nombre: 'Rabby'
+  cazador:
+    activa: true
+    vida: 2100
+    dano: 1.0
+    nombre: 'El Cazador'
+  aragon:
+    activa: true
+    vida: 2300
+    dano: 1.0
+    nombre: 'Áragon'
+  piromante:
+    activa: true
+    vida: 1900
+    dano: 1.0
+    nombre: 'El Piromante'
 
 menu:
   # La anomalia que abre el boton Iniciar del panel.

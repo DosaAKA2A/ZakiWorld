@@ -387,7 +387,7 @@ public abstract class BossFight {
      * Aviso de que un jugador ha roto un bloque durante el evento.
      *
      * @return true si hay que cancelar la rotura. Lo usan las anomalias que construyen
-     *         algo de verdad, como los pilares de la Medusa: solo se puede romper la
+     *         algo de verdad, como los pilares de la Quimera: solo se puede romper la
      *         pieza central, y hacerlo derrumba el resto.
      */
     public boolean onBlockBroken(org.bukkit.block.Block block, Player who) {

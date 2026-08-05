@@ -8,11 +8,11 @@ import net.kyori.adventure.title.Title;
 import net.zakiworld.anomaly.AnomalyPlugin;
 import net.zakiworld.anomaly.core.ActiveAnomaly;
 import net.zakiworld.anomaly.core.Compat;
+import net.zakiworld.anomaly.core.Disguises;
 import net.zakiworld.anomaly.core.Fx;
 import net.zakiworld.anomaly.core.Glow;
 import net.zakiworld.anomaly.core.Stop;
 import net.zakiworld.anomaly.core.Tags;
-import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.entity.LivingEntity;
@@ -20,13 +20,8 @@ import org.bukkit.entity.Mob;
 import org.bukkit.entity.Player;
 import org.bukkit.entity.Zombie;
 import org.bukkit.inventory.EntityEquipment;
-import org.bukkit.inventory.ItemStack;
-import org.bukkit.inventory.meta.SkullMeta;
-import org.bukkit.profile.PlayerProfile;
-import org.bukkit.profile.PlayerTextures;
 import org.bukkit.util.Vector;
 
-import java.net.URL;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
@@ -54,9 +49,13 @@ public final class Rabby extends BossFight {
     public static final String ID = "rabby";
     public static final TextColor ACCENT = TextColor.color(0xF2C14E);
 
-    /** La skin pedida (laby.net). El identificador es el hash de textura de Mojang. */
-    private static final String SKIN = "28420739c7b72266936ddf24f0ceb4d4";
-    private static final UUID SKIN_ID = UUID.nameUUIDFromBytes(("rabby:" + SKIN).getBytes());
+    /** La skin pedida. Es el hash de textura de Mojang, el de la orden /give. */
+    private static final String SKIN =
+            "f523eb05428bd5a8df0bddd6213cd7ce77814084de7b84a33c1b9a8629198a05";
+    /** El mismo perfil en base64, que es lo que entiende LibsDisguises. */
+    private static final String SKIN_VALUE = "eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJl"
+            + "cy5taW5lY3JhZnQubmV0L3RleHR1cmUvZjUyM2ViMDU0MjhiZDVhOGRmMGJkZGQ2MjEzY2Q3Y2U3NzgxNDA4"
+            + "NGRlN2I4NGEzM2MxYjlhODYyOTE5OGEwNSJ9fX0=";
 
     private static final int SPARK = 0xFFF2A8;
 
@@ -91,13 +90,15 @@ public final class Rabby extends BossFight {
             z.setCustomNameVisible(true);
         });
 
+        // Primero el disfraz de jugador entero; la cabeza con skin solo si no hay
+        // LibsDisguises, porque puestas las dos se le ve la cabeza flotando encima.
+        boolean disguised = Disguises.asPlayer(plugin, boss, "Rabby", SKIN_VALUE);
         EntityEquipment eq = boss.getEquipment();
         if (eq != null) {
-            eq.setHelmet(skinHead());
+            if (!disguised) eq.setHelmet(Disguises.head(plugin, SKIN, "Rabby"));
             eq.setHelmetDropChance(0);
             eq.setItemInMainHandDropChance(0);
         }
-        disguiseIfPossible();
 
         Compat.setAttribute(boss, "max_health", 20);
         Compat.setAttribute(boss, "attack_damage", 0);
@@ -120,47 +121,6 @@ public final class Rabby extends BossFight {
         }
         soundAt(spot, "entity.player.levelup", 1.0f, 1.8f);
         Compat.spawn(world(), Compat.HAPPY_VILLAGER, spot.clone().add(0, 2, 0), 20, 0.5, 0.6, 0.5, 0);
-    }
-
-    /** La cabeza con la skin puesta, por la API de perfiles de Bukkit. */
-    private ItemStack skinHead() {
-        ItemStack head = new ItemStack(Material.PLAYER_HEAD);
-        try {
-            PlayerProfile profile = Bukkit.createPlayerProfile(SKIN_ID, "Rabby");
-            PlayerTextures textures = profile.getTextures();
-            textures.setSkin(new URL("https://textures.minecraft.net/texture/" + SKIN));
-            profile.setTextures(textures);
-            if (head.getItemMeta() instanceof SkullMeta meta) {
-                meta.setOwnerProfile(profile);
-                head.setItemMeta(meta);
-            }
-        } catch (Throwable t) {
-            plugin.getLogger().warning("Rabby: no se pudo poner la skin en la cabeza (" + t + ").");
-        }
-        return head;
-    }
-
-    /**
-     * Si el servidor tiene LibsDisguises, Rabby pasa a verse como un jugador entero con
-     * su skin en vez de como un zombi con una cabeza puesta.
-     *
-     * Va por reflexion, igual que el hook de WorldGuard: si manana se quita el plugin,
-     * esto no compila menos ni arranca peor, solo deja de verse tan bien.
-     */
-    private void disguiseIfPossible() {
-        if (plugin.getServer().getPluginManager().getPlugin("LibsDisguises") == null) return;
-        try {
-            Class<?> playerDisguise = Class.forName("me.libraryaddict.disguise.disguisetypes.PlayerDisguise");
-            Object disguise = playerDisguise.getConstructor(String.class).newInstance("Rabby");
-            playerDisguise.getMethod("setSkin", String.class).invoke(disguise, SKIN);
-            Class<?> api = Class.forName("me.libraryaddict.disguise.DisguiseAPI");
-            Class<?> base = Class.forName("me.libraryaddict.disguise.disguisetypes.Disguise");
-            api.getMethod("disguiseEntity", org.bukkit.entity.Entity.class, base).invoke(null, boss, disguise);
-            plugin.getLogger().info("Rabby: disfraz de jugador puesto con LibsDisguises.");
-        } catch (Throwable t) {
-            plugin.getLogger().info("Rabby: sin disfraz de LibsDisguises (" + t.getClass().getSimpleName()
-                    + "); se queda con la cabeza con skin.");
-        }
     }
 
     // -------------------------------------------------------------------- ambiente

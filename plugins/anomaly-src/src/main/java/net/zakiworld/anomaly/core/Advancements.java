@@ -30,7 +30,7 @@ import java.util.logging.Level;
 public final class Advancements {
 
     /** Sube esto para que el datapack se reescriba en el proximo arranque. */
-    private static final int PACK_VERSION = 8;
+    private static final int PACK_VERSION = 9;
 
     private static final String NS = "anomaly";
     private static final String ROOT = "raiz";
@@ -106,7 +106,12 @@ public final class Advancements {
 
     /**
      * La raiz del arbol: la que pone el fondo y el titulo de la pestana.
-     * El fondo es sculk, que es oscuro, con textura y existe desde 1.19.
+     *
+     * OJO CON EL FONDO. Ya no es una ruta de textura sino el ID DE UN SPRITE, y solo
+     * valen los cinco que trae el juego (stone, nether, end, adventure, husbandry).
+     * Poner "minecraft:textures/block/sculk.png" —que era lo correcto en su dia— pinta
+     * el cuadriculado morado y negro de textura ausente y deja el titulo ilegible.
+     * Comprobado contra los propios logros de vanilla en 26.1.2.
      */
     private String root() {
         return """
@@ -115,7 +120,7 @@ public final class Advancements {
                     "icon": {"id": "minecraft:end_crystal"},
                     "title": {"text": "Anomalias", "color": "#9BD7E4", "bold": true},
                     "description": {"text": "Grietas que se abren solas en el mapa, y lo que sale por ellas.", "color": "gray"},
-                    "background": "minecraft:textures/block/sculk.png",
+                    "background": "minecraft:gui/advancements/backgrounds/end",
                     "frame": "task",
                     "show_toast": false,
                     "announce_to_chat": false

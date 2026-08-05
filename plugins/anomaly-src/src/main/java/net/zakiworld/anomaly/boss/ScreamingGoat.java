@@ -110,7 +110,7 @@ public final class ScreamingGoat extends BossFight {
             double t = tick / 70.0;
             double radius = 9.0 - t * 7.0;
             Fx.ring(spot, radius, (int) (16 + radius * 4), tick * -0.14, l ->
-                    Compat.spawn(world(), Compat.DUST, Fx.ground(l, 3).add(0, 0.15, 0), 1, 0, 0, 0, 0,
+                    Compat.spawn(world(), Compat.SMALL_GUST, Fx.ground(l, 3).add(0, 0.15, 0), 1, 0, 0, 0, 0,
                             Compat.dust(STORM, 1.5f)));
             if (tick % 5 == 0) {
                 Compat.spawn(world(), Compat.CLOUD, spot.clone().add(0, 3, 0), 12, 2.0, 0.6, 2.0, 0.02);
@@ -145,7 +145,7 @@ public final class ScreamingGoat extends BossFight {
         pursue();
         if (ticks() % 3 != 0) return;
         Location l = boss.getLocation().add(0, 1.4, 0);
-        Compat.spawn(world(), Compat.DUST, l, 2, 0.6, 0.5, 0.6, 0, Compat.dust(WHITE_HOT, 1.0f));
+        Compat.spawn(world(), Compat.CLOUD, l, 2, 0.6, 0.5, 0.6, 0, Compat.dust(WHITE_HOT, 1.0f));
         if (ticks() % 40 == 0) {
             Compat.spawn(world(), Compat.WHITE_SMOKE, l, 5, 0.5, 0.4, 0.5, 0.01);
         }
@@ -218,7 +218,7 @@ public final class ScreamingGoat extends BossFight {
             if (!alive()) return;
             Location l = boss.getLocation().add(0, 1.8, 0);
             if (tick < 40) {
-                Compat.spawn(world(), Compat.DUST, l, 6, 0.7, 0.4, 0.7, 0, Compat.dust(HORN, 1.4f));
+                Compat.spawn(world(), Compat.ELECTRIC_SPARK, l, 6, 0.7, 0.4, 0.7, 0, Compat.dust(HORN, 1.4f));
                 if (tick % 8 == 0) soundAt(l, "entity.goat.hurt", 1.2f, 0.7f);
                 return;
             }
@@ -259,7 +259,7 @@ public final class ScreamingGoat extends BossFight {
             if (!alive()) return;
             Location l = boss.getLocation();
             Fx.sphere(l.clone().add(0, 1.4, 0), 1.6 + Math.sin(tick * 0.2) * 0.3, 22, p ->
-                    Compat.spawn(world(), Compat.DUST, p, 1, 0, 0, 0, 0, Compat.dust(WHITE_HOT, 1.6f)));
+                    Compat.spawn(world(), Compat.NOTE, p, 1, 0, 0, 0, 0, Compat.dust(WHITE_HOT, 1.6f)));
             if (tick % 12 == 0) {
                 double a = tick * 0.5;
                 Location bolt = Fx.ground(l.clone().add(Math.cos(a) * 7, 0, Math.sin(a) * 7), 5);
@@ -288,7 +288,7 @@ public final class ScreamingGoat extends BossFight {
         animate(70, tick -> {
             double t = tick / 70.0;
             Fx.ring(l.clone().add(0, 0.3 + t * 2.0, 0), 2.4 * (1 - t) + 0.4, 20, tick * -0.3, p ->
-                    Compat.spawn(world(), Compat.DUST, p, 1, 0, 0, 0, 0, Compat.dust(WHITE_HOT, 1.5f)));
+                    Compat.spawn(world(), Compat.WHITE_ASH, p, 1, 0, 0, 0, 0, Compat.dust(WHITE_HOT, 1.5f)));
             if (tick % 14 == 0) {
                 double a = Math.random() * Math.PI * 2;
                 Location bolt = Fx.ground(l.clone().add(Math.cos(a) * (5 - t * 4), 0, Math.sin(a) * (5 - t * 4)), 5);
@@ -333,7 +333,7 @@ public final class ScreamingGoat extends BossFight {
             if (tick < windup) {
                 // Toma aire: se hincha y el blanco sube de intensidad.
                 double r = 0.6 + (tick / (double) windup) * 1.4;
-                Fx.sphere(l, r, 20, p -> Compat.spawn(world(), Compat.DUST, p, 1, 0, 0, 0, 0,
+                Fx.sphere(l, r, 20, p -> Compat.spawn(world(), Compat.SNEEZE, p, 1, 0, 0, 0, 0,
                         Compat.dust(WHITE_HOT, 1.2f)));
                 if (tick % 6 == 0) soundAt(l, "entity.goat.long_jump", 0.8f, 0.6f + tick / (float) windup);
                 return;
@@ -389,11 +389,11 @@ public final class ScreamingGoat extends BossFight {
             if (radius > reach) return;
             if (circular) {
                 Fx.ring(l, radius, (int) (radius * 6) + 8, p ->
-                        Compat.spawn(world(), Compat.DUST, Fx.ground(p, 3).add(0, 0.3, 0), 1, 0, 0, 0, 0,
+                        Compat.spawn(world(), Compat.SMALL_GUST, Fx.ground(p, 3).add(0, 0.3, 0), 1, 0, 0, 0, 0,
                                 Compat.dust(WHITE_HOT, 1.6f)));
             } else {
                 Fx.arc(l, dir, radius, Math.toRadians(spread), (int) (radius * 3) + 6, p ->
-                        Compat.spawn(world(), Compat.DUST, Fx.ground(p, 3).add(0, 0.3, 0), 1, 0, 0, 0, 0,
+                        Compat.spawn(world(), Compat.CLOUD, Fx.ground(p, 3).add(0, 0.3, 0), 1, 0, 0, 0, 0,
                                 Compat.dust(WHITE_HOT, 1.6f)));
             }
         }, null);
@@ -429,14 +429,14 @@ public final class ScreamingGoat extends BossFight {
                 Compat.spawn(world(), Compat.BLOCK, Fx.ground(l, 3), 14, 0.5, 0.05, 0.5, 0.06, groundBlock(l));
                 for (double d = 2; d < 20; d += 1.2) {
                     Location g = Fx.ground(l.clone().add(dir.clone().multiply(d)), 4);
-                    Compat.spawn(world(), Compat.DUST, g.clone().add(0, 0.15, 0), 1, 0.9, 0, 0.9, 0,
+                    Compat.spawn(world(), Compat.ELECTRIC_SPARK, g.clone().add(0, 0.15, 0), 1, 0.9, 0, 0.9, 0,
                             Compat.dust(STORM, 1.3f));
                 }
                 if (tick % 6 == 0) soundAt(l, "entity.goat.step", 1.2f, 0.6f);
                 return;
             }
             boss.setVelocity(dir.clone().multiply(1.25).setY(boss.getVelocity().getY()));
-            Compat.spawn(world(), Compat.DUST, l.clone().add(0, 0.4, 0), 6, 0.4, 0.3, 0.4, 0,
+            Compat.spawn(world(), Compat.NOTE, l.clone().add(0, 0.4, 0), 6, 0.4, 0.3, 0.4, 0,
                     Compat.dust(WHITE_HOT, 1.4f));
             if (tick % 4 == 0) soundAt(l, "entity.goat.step", 1.3f, 0.8f);
             for (Player p : targets(3.4)) {
@@ -566,7 +566,7 @@ public final class ScreamingGoat extends BossFight {
                 Location from = boss.getLocation();
                 Location to = Fx.ground(victim.getLocation(), 4);
                 Fx.beam(from.clone().add(0, 1, 0), to.clone().add(0, 1, 0), 0.5, p ->
-                        Compat.spawn(world(), Compat.DUST, p, 1, 0, 0, 0, 0, Compat.dust(WHITE_HOT, 1.4f)));
+                        Compat.spawn(world(), Compat.WHITE_ASH, p, 1, 0, 0, 0, 0, Compat.dust(WHITE_HOT, 1.4f)));
                 boss.setVelocity(to.toVector().subtract(from.toVector()).normalize().multiply(1.4).setY(0.35));
                 soundAt(from, "entity.goat.long_jump", 1.4f, 1.1f);
                 later(8, () -> {
@@ -630,7 +630,7 @@ public final class ScreamingGoat extends BossFight {
             Location l = boss.getLocation().add(0, 1.2, 0);
             if (tick < 22) {
                 Fx.beam(l, target.getLocation().add(0, 1, 0), 0.4, p ->
-                        Compat.spawn(world(), Compat.DUST, p, 1, 0, 0, 0, 0, Compat.dust(HORN, 1.2f)));
+                        Compat.spawn(world(), Compat.SNEEZE, p, 1, 0, 0, 0, 0, Compat.dust(HORN, 1.2f)));
                 return;
             }
             if (tick != 22) return;
@@ -652,7 +652,7 @@ public final class ScreamingGoat extends BossFight {
             if (!alive()) throw Stop.now();
             Location l = boss.getLocation().add(0, 1.3, 0);
             Compat.apply(boss, "resistance", 25, 1);
-            Fx.sphere(l, 1.7, 24, p -> Compat.spawn(world(), Compat.DUST, p, 1, 0, 0, 0, 0,
+            Fx.sphere(l, 1.7, 24, p -> Compat.spawn(world(), Compat.SMALL_GUST, p, 1, 0, 0, 0, 0,
                     Compat.dust(WHITE_HOT, 1.7f)));
             if (tick % 35 == 0) {
                 soundAt(l, "entity.goat.screaming_ambient", 1.2f, 1.0f);
@@ -726,7 +726,7 @@ public final class ScreamingGoat extends BossFight {
             Location l = boss.getLocation();
             Compat.apply(boss, "resistance", 20, 2);
             Fx.ring(Fx.ground(l, 3).add(0, 0.2, 0), 2.0, 16, tick * 0.25, p ->
-                    Compat.spawn(world(), Compat.DUST, p, 1, 0, 0, 0, 0, Compat.dust(HORN, 1.5f)));
+                    Compat.spawn(world(), Compat.CLOUD, p, 1, 0, 0, 0, 0, Compat.dust(HORN, 1.5f)));
             if (tick % 14 == 0) {
                 Compat.spawn(world(), Compat.BLOCK, Fx.ground(l, 3), 20, 0.6, 0.05, 0.6, 0.08, groundBlock(l));
                 soundAt(l, "entity.goat.step", 1.3f, 0.5f);

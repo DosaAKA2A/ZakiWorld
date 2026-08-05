@@ -142,7 +142,7 @@ public final class KillerBunny extends BossFight {
             }
             if (tick == 40) {
                 soundAt(g, "entity.rabbit.attack", 1.4f, 0.5f);
-                Compat.spawn(world(), Compat.DUST, g.clone().add(0, 0.8, 0), 40, 0.7, 0.5, 0.7, 0,
+                Compat.spawn(world(), Compat.WHITE_SMOKE, g.clone().add(0, 0.8, 0), 40, 0.7, 0.5, 0.7, 0,
                         Compat.dust(BLOOD, 1.4f));
             }
         }, () -> {
@@ -169,10 +169,10 @@ public final class KillerBunny extends BossFight {
         // las tiraba el jefe y eso lo senalaba a distancia, que es justo lo contrario
         // de lo que se busca con esta anomalia.
         var tint = Compat.dust(redEyes ? BLOOD : FUR, 0.9f);
-        Compat.spawn(world(), Compat.DUST, boss.getLocation().add(0, 0.4, 0), 1, 0.3, 0.2, 0.3, 0, tint);
+        Compat.spawn(world(), Compat.POOF, boss.getLocation().add(0, 0.4, 0), 1, 0.3, 0.2, 0.3, 0, tint);
         for (Rabbit r : copies) {
             if (r != null && r.isValid()) {
-                Compat.spawn(world(), Compat.DUST, r.getLocation().add(0, 0.4, 0), 1, 0.3, 0.2, 0.3, 0, tint);
+                Compat.spawn(world(), Compat.CLOUD, r.getLocation().add(0, 0.4, 0), 1, 0.3, 0.2, 0.3, 0, tint);
             }
         }
         if (ticks() % 60 == 0 && !copies.isEmpty()) {
@@ -195,7 +195,7 @@ public final class KillerBunny extends BossFight {
         if (!alive()) return;
         revealUntil = Math.max(revealUntil, ticks() + seconds * 20L);
         Glow.apply(boss, NamedTextColor.RED);
-        Compat.spawn(world(), Compat.DUST, boss.getLocation().add(0, 0.6, 0), 24, 0.4, 0.4, 0.4, 0,
+        Compat.spawn(world(), Compat.SNEEZE, boss.getLocation().add(0, 0.6, 0), 24, 0.4, 0.4, 0.4, 0,
                 Compat.dust(BLOOD, 1.5f));
         soundAt(boss.getLocation(), "entity.rabbit.hurt", 1.1f, 1.5f);
         warn(Component.text("El de verdad se ha delatado.", NamedTextColor.RED, TextDecoration.BOLD));
@@ -253,7 +253,7 @@ public final class KillerBunny extends BossFight {
             markMinion(copy);
             copies.add(copy);
 
-            Compat.spawn(world(), Compat.DUST, sl.clone().add(0, 0.5, 0), 20, 0.4, 0.4, 0.4, 0,
+            Compat.spawn(world(), Compat.ITEM_SLIME, sl.clone().add(0, 0.5, 0), 20, 0.4, 0.4, 0.4, 0,
                     Compat.dust(FUR, 1.3f));
             Compat.spawn(world(), Compat.POOF, sl, 10, 0.3, 0.3, 0.3, 0.03);
             soundAt(sl, "entity.rabbit.jump", 1.1f, 1.4f);
@@ -303,11 +303,11 @@ public final class KillerBunny extends BossFight {
         animate(60, tick -> {
             if (!alive()) return;
             Location l = boss.getLocation().add(0, 0.7, 0);
-            Fx.sphere(l, 1.1, 18, p -> Compat.spawn(world(), Compat.DUST, p, 1, 0, 0, 0, 0,
+            Fx.sphere(l, 1.1, 18, p -> Compat.spawn(world(), Compat.SMALL_GUST, p, 1, 0, 0, 0, 0,
                     Compat.dust(BLOOD, 1.4f)));
             if (tick % 10 == 0) soundAt(l, "entity.rabbit.hurt", 1.2f, 0.6f);
             if (tick == 40) {
-                Compat.spawn(world(), Compat.DUST, l, 60, 0.7, 0.6, 0.7, 0, Compat.dust(BLOOD, 1.8f));
+                Compat.spawn(world(), Compat.WHITE_SMOKE, l, 60, 0.7, 0.6, 0.7, 0, Compat.dust(BLOOD, 1.8f));
                 split(boss.getLocation(), 4);
             }
         }, () -> {
@@ -342,7 +342,7 @@ public final class KillerBunny extends BossFight {
                 soundAt(l, "entity.rabbit.jump", 1.2f, 1.0f);
             }
             Fx.ring(Fx.ground(l, 3).add(0, 0.2, 0), 3.0, 18, tick * 0.2, p ->
-                    Compat.spawn(world(), Compat.DUST, p, 1, 0, 0, 0, 0, Compat.dust(BLOOD, 1.3f)));
+                    Compat.spawn(world(), Compat.POOF, p, 1, 0, 0, 0, 0, Compat.dust(BLOOD, 1.3f)));
         }, () -> {
             if (!alive()) return;
             boss.setInvulnerable(false);
@@ -367,7 +367,7 @@ public final class KillerBunny extends BossFight {
                 if (copy == null || !copy.isValid()) return;
                 Location cl = copy.getLocation();
                 Compat.spawn(world(), Compat.POOF, cl.clone().add(0, 0.4, 0), 14, 0.3, 0.3, 0.3, 0.04);
-                Compat.spawn(world(), Compat.DUST, cl.clone().add(0, 0.4, 0), 10, 0.3, 0.3, 0.3, 0,
+                Compat.spawn(world(), Compat.CLOUD, cl.clone().add(0, 0.4, 0), 10, 0.3, 0.3, 0.3, 0,
                         Compat.dust(FUR, 1.2f));
                 Compat.sound(world(), cl, "entity.rabbit.death", 0.7f, 1.3f);
                 spawned.remove(copy);
@@ -379,9 +379,9 @@ public final class KillerBunny extends BossFight {
         animate(70, tick -> {
             double t = tick / 70.0;
             Fx.ring(l.clone().add(0, 0.3 + t * 1.4, 0), 1.8 * (1 - t) + 0.3, 16, tick * 0.3, p ->
-                    Compat.spawn(world(), Compat.DUST, p, 1, 0, 0, 0, 0, Compat.dust(BLOOD, 1.4f)));
+                    Compat.spawn(world(), Compat.SNEEZE, p, 1, 0, 0, 0, 0, Compat.dust(BLOOD, 1.4f)));
             if (tick % 10 == 0) {
-                Compat.spawn(world(), Compat.DUST, l.clone().add(0, 0.6, 0), 16, 0.5, 0.4, 0.5, 0,
+                Compat.spawn(world(), Compat.ITEM_SLIME, l.clone().add(0, 0.6, 0), 16, 0.5, 0.4, 0.5, 0,
                         Compat.dust(FUR, 1.3f));
             }
         }, () -> {
@@ -407,7 +407,7 @@ public final class KillerBunny extends BossFight {
             if (!alive()) return;
             Location c = boss.getLocation().add(0, 0.5, 0);
             Fx.ring(c, 1.2, 10, tick * 0.4, p ->
-                    Compat.spawn(world(), Compat.DUST, p, 1, 0, 0, 0, 0, Compat.dust(FUR, 1.2f)));
+                    Compat.spawn(world(), Compat.SMALL_GUST, p, 1, 0, 0, 0, 0, Compat.dust(FUR, 1.2f)));
             if (tick == 20) split(boss.getLocation(), 3);
         }, null);
     }
@@ -430,7 +430,7 @@ public final class KillerBunny extends BossFight {
             }
             if (tick > 10 && tick < 32) {
                 Fx.telegraph(world(), mark, 2.6, BLOOD);
-                Compat.spawn(world(), Compat.DUST, l, 2, 0.2, 0.2, 0.2, 0, Compat.dust(FUR, 1.0f));
+                Compat.spawn(world(), Compat.WHITE_SMOKE, l, 2, 0.2, 0.2, 0.2, 0, Compat.dust(FUR, 1.0f));
                 return;
             }
             if (tick == 32) {
@@ -444,7 +444,7 @@ public final class KillerBunny extends BossFight {
             if (tick != 42) return;
             boss.teleport(mark);
             Compat.spawn(world(), Compat.BLOCK, mark, 80, 1.2, 0.3, 1.2, 0.2, groundBlock(mark));
-            Compat.spawn(world(), Compat.DUST, mark.clone().add(0, 0.6, 0), 40, 0.8, 0.4, 0.8, 0,
+            Compat.spawn(world(), Compat.POOF, mark.clone().add(0, 0.6, 0), 40, 0.8, 0.4, 0.8, 0,
                     Compat.dust(BLOOD, 1.5f));
             soundAt(mark, "entity.rabbit.attack", 1.6f, 0.6f);
             for (Player p : Fx.playersNear(mark, 3.4)) {
@@ -583,7 +583,7 @@ public final class KillerBunny extends BossFight {
             if (!Fx.isFightable(target)) throw Stop.now();
             Location tl = target.getLocation();
             Fx.ring(tl.clone().add(0, 0.15, 0), 2.0, 14, tick * 0.3, p ->
-                    Compat.spawn(world(), Compat.DUST, Fx.ground(p, 3).add(0, 0.15, 0), 1, 0, 0, 0, 0,
+                    Compat.spawn(world(), Compat.CLOUD, Fx.ground(p, 3).add(0, 0.15, 0), 1, 0, 0, 0, 0,
                             Compat.dust(BLOOD, 1.2f)));
             if (tick % 8 != 0) return;
             for (Rabbit r : copies) {
@@ -609,10 +609,10 @@ public final class KillerBunny extends BossFight {
             }
             if (tick % 6 != 0) return;
             Location l = boss.getLocation().add(0, 0.5, 0);
-            Compat.spawn(world(), Compat.DUST, l, 3, 0.4, 0.3, 0.4, 0, Compat.dust(BLOOD, 1.1f));
+            Compat.spawn(world(), Compat.SNEEZE, l, 3, 0.4, 0.3, 0.4, 0, Compat.dust(BLOOD, 1.1f));
             for (Rabbit r : copies) {
                 if (r != null && r.isValid()) {
-                    Compat.spawn(world(), Compat.DUST, r.getLocation().add(0, 0.4, 0), 2, 0.2, 0.2, 0.2, 0,
+                    Compat.spawn(world(), Compat.ITEM_SLIME, r.getLocation().add(0, 0.4, 0), 2, 0.2, 0.2, 0.2, 0,
                             Compat.dust(FUR, 0.9f));
                 }
             }
@@ -630,7 +630,7 @@ public final class KillerBunny extends BossFight {
             if (!alive() || !Fx.isFightable(target)) throw Stop.now();
             if (tick < 20) {
                 Fx.beam(boss.getLocation().add(0, 0.6, 0), target.getLocation().add(0, 1, 0), 0.4, p ->
-                        Compat.spawn(world(), Compat.DUST, p, 1, 0, 0, 0, 0, Compat.dust(BLOOD, 1.1f)));
+                        Compat.spawn(world(), Compat.SMALL_GUST, p, 1, 0, 0, 0, 0, Compat.dust(BLOOD, 1.1f)));
                 return;
             }
             if (tick != 20) return;
@@ -638,7 +638,7 @@ public final class KillerBunny extends BossFight {
             Compat.apply(target, "wither", 120, 1);
             Compat.spawn(world(), Compat.DAMAGE_INDICATOR, target.getLocation().add(0, 1.1, 0), 24,
                     0.3, 0.4, 0.3, 0.15);
-            Compat.spawn(world(), Compat.DUST, target.getLocation().add(0, 1.1, 0), 30, 0.4, 0.5, 0.4, 0,
+            Compat.spawn(world(), Compat.WHITE_SMOKE, target.getLocation().add(0, 1.1, 0), 30, 0.4, 0.5, 0.4, 0,
                     Compat.dust(BLOOD, 1.6f));
             soundAt(target.getLocation(), "entity.rabbit.attack", 1.7f, 0.5f);
             target.sendActionBar(Component.text("Te ha mordido hondo.", NamedTextColor.RED, TextDecoration.BOLD));
@@ -664,7 +664,7 @@ public final class KillerBunny extends BossFight {
                         groundBlock(h));
                 if (tick % 20 == 0) {
                     Fx.ring(h.clone().add(0, 0.15, 0), 1.4, 10, p ->
-                            Compat.spawn(world(), Compat.DUST, p, 1, 0, 0, 0, 0, Compat.dust(SOIL, 1.3f)));
+                            Compat.spawn(world(), Compat.POOF, p, 1, 0, 0, 0, 0, Compat.dust(SOIL, 1.3f)));
                 }
             }
             if (tick % 20 != 0) return;
@@ -720,7 +720,7 @@ public final class KillerBunny extends BossFight {
             if (tick < 20) {
                 for (double d = 2; d < 20; d += 1.2) {
                     Location g = Fx.ground(start.clone().add(run.clone().multiply(d)), 4);
-                    Compat.spawn(world(), Compat.DUST, g.clone().add(0, 0.15, 0), 1, 1.2, 0, 1.2, 0,
+                    Compat.spawn(world(), Compat.CLOUD, g.clone().add(0, 0.15, 0), 1, 1.2, 0, 1.2, 0,
                             Compat.dust(BLOOD, 1.4f));
                 }
                 return;
@@ -808,7 +808,7 @@ public final class KillerBunny extends BossFight {
             if (!alive()) return;
             Location l = boss.getLocation();
             Fx.ring(l.clone().add(0, 0.5, 0), 1.0 + tick * 0.04, 12, tick * 0.5, p ->
-                    Compat.spawn(world(), Compat.DUST, p, 1, 0, 0, 0, 0, Compat.dust(FUR, 1.3f)));
+                    Compat.spawn(world(), Compat.SNEEZE, p, 1, 0, 0, 0, 0, Compat.dust(FUR, 1.3f)));
             if (tick % 8 == 0) {
                 split(l, 2);
                 soundAt(l, "entity.rabbit.jump", 1.1f, 1.3f);
@@ -832,7 +832,7 @@ public final class KillerBunny extends BossFight {
                 Vector dir = tl.toVector().subtract(boss.getLocation().toVector());
                 if (dir.lengthSquared() > 0.04) boss.setVelocity(dir.normalize().multiply(0.75).setY(0.25));
                 Fx.beam(boss.getLocation().add(0, 0.6, 0), tl.clone().add(0, 1, 0), 0.4, p ->
-                        Compat.spawn(world(), Compat.DUST, p, 1, 0, 0, 0, 0, Compat.dust(BLOOD, 1.3f)));
+                        Compat.spawn(world(), Compat.ITEM_SLIME, p, 1, 0, 0, 0, 0, Compat.dust(BLOOD, 1.3f)));
                 return;
             }
             if (tick % 12 != 0) return;
@@ -863,7 +863,7 @@ public final class KillerBunny extends BossFight {
             Vector dir = boss.getLocation().toVector().subtract(pl.toVector());
             if (dir.lengthSquared() > 0.04) prey.setVelocity(dir.normalize().multiply(0.5));
             Fx.beam(pl, boss.getLocation().add(0, 0.6, 0), 0.35, p ->
-                    Compat.spawn(world(), Compat.DUST, p, 1, 0, 0, 0, 0, Compat.dust(BLOOD, 1.2f)));
+                    Compat.spawn(world(), Compat.SMALL_GUST, p, 1, 0, 0, 0, 0, Compat.dust(BLOOD, 1.2f)));
             if (tick < 40) return;
             double max = Compat.getAttribute(boss, "max_health", boss.getHealth());
             boss.setHealth(Math.min(max, boss.getHealth() + max * 0.05));
@@ -926,7 +926,7 @@ public final class KillerBunny extends BossFight {
     /** La nube que tapa un cambio de sitio. Identica siempre, venga de quien venga. */
     private void puff(Location l) {
         Compat.spawn(world(), Compat.POOF, l.clone().add(0, 0.4, 0), 24, 0.35, 0.35, 0.35, 0.05);
-        Compat.spawn(world(), Compat.DUST, l.clone().add(0, 0.4, 0), 16, 0.35, 0.35, 0.35, 0,
+        Compat.spawn(world(), Compat.WHITE_SMOKE, l.clone().add(0, 0.4, 0), 16, 0.35, 0.35, 0.35, 0,
                 Compat.dust(FUR, 1.3f));
         Compat.sound(world(), l, "entity.rabbit.jump", 0.9f, 1.4f);
     }

@@ -8,6 +8,7 @@ import net.kyori.adventure.title.Title;
 import net.zakiworld.anomaly.AnomalyPlugin;
 import net.zakiworld.anomaly.core.ActiveAnomaly;
 import net.zakiworld.anomaly.core.Compat;
+import net.zakiworld.anomaly.core.Disguises;
 import net.zakiworld.anomaly.core.Fx;
 import net.zakiworld.anomaly.core.Glow;
 import net.zakiworld.anomaly.core.Stop;
@@ -80,6 +81,8 @@ public final class Mimic extends BossFight {
 
     private UUID mimickedId;
     private String mimickedName;
+    /** Si la copia lleva puesto el disfraz de jugador de LibsDisguises. */
+    private boolean disguised;
 
     private final List<LivingEntity> decoys = new ArrayList<>();
     private final List<LivingEntity> chestDecoys = new ArrayList<>();
@@ -314,7 +317,7 @@ public final class Mimic extends BossFight {
         boss.setCustomNameVisible(true);
 
         Compat.spawn(world(), Compat.FLASH, l.clone().add(0, 1, 0), 1);
-        Compat.spawn(world(), Compat.DUST, l.clone().add(0, 1.2, 0), 30, 0.8, 1.0, 0.8, 0,
+        Compat.spawn(world(), Compat.INFESTED, l.clone().add(0, 1.2, 0), 30, 0.8, 1.0, 0.8, 0,
                 Compat.dust(GOLD, 1.6f));
         soundAt(l, voice("ambient"), 1.8f, 0.4f);
         soundAt(l, "entity.ravager.roar", 1.2f, 1.3f);
@@ -368,7 +371,7 @@ public final class Mimic extends BossFight {
         animate(50, tick -> {
             if (!alive()) return;
             Fx.helix(boss.getLocation(), 1.5, 3.0, 18, 2.5, p ->
-                    Compat.spawn(world(), Compat.DUST, p, 1, 0, 0, 0, 0, Compat.dust(GOLD, 1.4f)));
+                    Compat.spawn(world(), Compat.VAULT_CONNECTION, p, 1, 0, 0, 0, 0, Compat.dust(GOLD, 1.4f)));
         }, () -> {
             if (!alive()) return;
             boss.setInvulnerable(false);
@@ -550,7 +553,7 @@ public final class Mimic extends BossFight {
             if (!alive()) return;
             Location l = boss.getLocation();
             Fx.helix(l, 1.2, 2.8, 16, 3.0, p ->
-                    Compat.spawn(world(), Compat.DUST, p, 1, 0, 0, 0, 0, Compat.dust(0x9BE3F0, 1.3f)));
+                    Compat.spawn(world(), Compat.OMINOUS_SPAWNING, p, 1, 0, 0, 0, 0, Compat.dust(0x9BE3F0, 1.3f)));
             if (tick % 12 == 0) soundAt(l, "entity.illusioner.mirror_move", 1.2f, 0.6f + tick * 0.01f);
         }, () -> {
             if (!alive()) return;
@@ -561,7 +564,11 @@ public final class Mimic extends BossFight {
             Zombie copy = (Zombie) become(EntityType.ZOMBIE, at, 1.0,
                     Component.text(mimickedName, NamedTextColor.WHITE));
             copy.setShouldBurnInDay(false);
-            dressAs(copy, victim);
+            // La copia tiene que PARECER esa persona, no un zombi con su cabeza puesta.
+            // Con el nombre de la victima, LibsDisguises le pone su skin de verdad.
+            disguised = Disguises.asPlayer(plugin, copy, mimickedName,
+                    victim != null ? victim.getName() : null);
+            dressAs(copy, victim, disguised);
             Compat.setAttribute(boss, "attack_damage", 16);
             Compat.setAttribute(boss, "armor", 12);
             Compat.setAttribute(boss, "movement_speed", 0.32);
@@ -578,8 +585,14 @@ public final class Mimic extends BossFight {
         });
     }
 
-    /** La cara del jugador (su cabeza), su armadura y sus armas, todo copiado. */
-    private void dressAs(Zombie copy, Player victim) {
+    /**
+     * La armadura y las armas del jugador, copiadas pieza a pieza.
+     *
+     * El casco es el unico caso raro: si el disfraz de jugador ha funcionado, la cara
+     * ya es la suya y ponerle ademas su cabeza le deja un segundo craneo flotando; solo
+     * se recurre a la cabeza cuando NO hay disfraz.
+     */
+    private void dressAs(Zombie copy, Player victim, boolean disguised) {
         EntityEquipment eq = copy.getEquipment();
         if (eq == null) return;
         if (victim != null) {
@@ -590,15 +603,20 @@ public final class Mimic extends BossFight {
             eq.setItemInMainHand(cloneOf(victim.getInventory().getItemInMainHand()));
             eq.setItemInOffHand(cloneOf(victim.getInventory().getItemInOffHand()));
 
-            ItemStack head = new ItemStack(Material.PLAYER_HEAD);
-            if (head.getItemMeta() instanceof SkullMeta meta) {
-                meta.setOwningPlayer(victim);
-                head.setItemMeta(meta);
+            ItemStack ownHelmet = cloneOf(armor[3]);
+            if (ownHelmet != null) {
+                eq.setHelmet(ownHelmet);
+            } else if (!disguised) {
+                ItemStack head = new ItemStack(Material.PLAYER_HEAD);
+                if (head.getItemMeta() instanceof SkullMeta meta) {
+                    meta.setOwningPlayer(victim);
+                    head.setItemMeta(meta);
+                }
+                eq.setHelmet(head);
             }
-            eq.setHelmet(head);
         } else {
             eq.setItemInMainHand(new ItemStack(Material.NETHERITE_SWORD));
-            eq.setHelmet(new ItemStack(Material.NETHERITE_HELMET));
+            if (!disguised) eq.setHelmet(new ItemStack(Material.NETHERITE_HELMET));
         }
         eq.setHelmetDropChance(0);
         eq.setChestplateDropChance(0);
@@ -673,7 +691,7 @@ public final class Mimic extends BossFight {
             }
             Compat.spawn(world(), Compat.POOF, l.clone().add(0, 1, 0), 4, 0.5, 0.6, 0.5, 0.03);
             Fx.ring(l.clone().add(0, 0.3, 0), 1 + tick * 0.08, 12, tick * 0.2, p ->
-                    Compat.spawn(world(), Compat.DUST, p, 1, 0, 0, 0, 0, Compat.dust(GOLD, 1.4f)));
+                    Compat.spawn(world(), Compat.WHITE_SMOKE, p, 1, 0, 0, 0, 0, Compat.dust(GOLD, 1.4f)));
         }, () -> {
             Compat.spawn(world(), Compat.ITEM, l.clone().add(0, 0.8, 0), 40, 0.8, 0.6, 0.8, 0.15,
                     new ItemStack(Material.CHEST));
@@ -709,7 +727,7 @@ public final class Mimic extends BossFight {
             if (tick < 16) {
                 for (double d = 1; d < 14; d += 1.2) {
                     Location g = Fx.ground(boss.getLocation().add(run.clone().multiply(d)), 4);
-                    Compat.spawn(world(), Compat.DUST, g.clone().add(0, 0.2, 0), 1, 0.2, 0.05, 0.2, 0,
+                    Compat.spawn(world(), Compat.INFESTED, g.clone().add(0, 0.2, 0), 1, 0.2, 0.05, 0.2, 0,
                             Compat.dust(GOLD, 1.3f));
                 }
                 return;
@@ -741,7 +759,7 @@ public final class Mimic extends BossFight {
                     double radius = 1.5 + tick * (0.5 + w * 0.15);
                     Fx.ring(c, radius, (int) (radius * 6), l -> {
                         Location g = Fx.ground(l, 3);
-                        Compat.spawn(world(), Compat.DUST, g.clone().add(0, 0.25, 0), 1, 0.1, 0.05, 0.1, 0,
+                        Compat.spawn(world(), Compat.VAULT_CONNECTION, g.clone().add(0, 0.25, 0), 1, 0.1, 0.05, 0.1, 0,
                                 Compat.dust(WOOD, 1.4f));
                     });
                     for (Player p : targets(radius + 1.0)) {

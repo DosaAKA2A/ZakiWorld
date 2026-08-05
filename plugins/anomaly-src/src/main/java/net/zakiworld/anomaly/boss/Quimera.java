@@ -17,20 +17,18 @@ import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.block.Block;
 import org.bukkit.block.BlockFace;
-import org.bukkit.block.data.BlockData;
 import org.bukkit.block.data.Bisected;
+import org.bukkit.block.data.BlockData;
 import org.bukkit.block.data.type.Slab;
 import org.bukkit.block.data.type.Stairs;
-import org.bukkit.entity.Arrow;
 import org.bukkit.entity.CaveSpider;
 import org.bukkit.entity.Entity;
-import org.bukkit.entity.Husk;
+import org.bukkit.entity.Goat;
 import org.bukkit.entity.ItemDisplay;
 import org.bukkit.entity.LivingEntity;
 import org.bukkit.entity.Player;
-import org.bukkit.inventory.EntityEquipment;
+import org.bukkit.entity.Ravager;
 import org.bukkit.inventory.ItemStack;
-import org.bukkit.inventory.meta.LeatherArmorMeta;
 import org.bukkit.util.Vector;
 
 import java.time.Duration;
@@ -41,52 +39,54 @@ import java.util.Map;
 import java.util.UUID;
 
 /**
- * MEDUSA, la novena anomalia.
+ * LA QUIMERA, la novena anomalia.
  *
- * La gorgona. Dos ideas la sostienen, y las dos son de mirar:
+ * Tres animales mal cosidos en uno: cuerpo de fiera, una CABRA clavada en el lomo y
+ * una COLA DE SERPIENTE arrastrandose detras. No es un dibujo en particulas: son
+ * entidades de verdad montadas unas sobre otras, que es la unica forma honesta de
+ * hacer una quimera cuando el servidor no puede repintar una criatura.
  *
- *  - LOS CINCO PILARES. Mientras quede uno en pie, Medusa NO se puede matar. Son
- *    construcciones de bloques de verdad, no un adorno estirado: base de escaleras,
- *    columna de ladrillo de piedra y, a la altura de la cara, el ladrillo CINCELADO,
- *    que es lo unico que se puede picar. Al partirlo se derrumba el pilar entero.
- *    Y ahi esta la gracia: esos mismos pilares son la unica cobertura contra su
- *    mirada, asi que cada uno que tiran es un escondite menos.
+ * Se queda con las dos ideas que ya funcionaban:
  *
- *  - LA MIRADA. Cuando ella mira, tu no miras. Petrificar no mata: te clava en el
- *    sitio delante de todo lo demas. Hay tres formas de librarse, las tres jugables:
- *    apartar la vista, levantar el ESCUDO (el reflejo de Perseo) o ponerse detras
- *    de un pilar.
+ *  - LOS CINCO PILARES. Mientras quede uno en pie, la Quimera NO se puede matar. Son
+ *    construcciones de bloques de verdad; solo cede el ladrillo CINCELADO del centro,
+ *    y al partirlo se derrumba el pilar entero. Esos mismos pilares son la unica
+ *    cobertura contra la mirada, asi que cada uno que tiran es un escondite menos.
+ *
+ *  - LA MIRADA DE LA COLA. Quien la mire de frente cuando la serpiente levanta la
+ *    cabeza se queda de piedra: no mata, CLAVA en el sitio, que delante de una fiera
+ *    de tres cabezas es peor. Se libra quien aparta la vista, quien levanta el ESCUDO
+ *    y quien se pone detras de un pilar.
  *
  * Lo que toca del mundo lo DEVUELVE: cada bloque de cada pilar se guarda con su
- * estado original y se restaura al derrumbarlo o al cerrar el evento. La unica
- * anomalia que deja marca permanente es Herbola, y es a proposito.
+ * estado original y se restaura al derrumbarlo o al cerrar el evento.
  */
-public final class Medusa extends BossFight {
+public final class Quimera extends BossFight {
 
-    public static final String ID = "medusa";
-    public static final TextColor ACCENT = TextColor.color(0xA7C957);
+    public static final String ID = "quimera";
+    public static final TextColor ACCENT = TextColor.color(0xC08A4A);
 
     private static final int VENOM = 0x6DBF3F;
-    private static final int EYES = 0xD8F05A;
 
     /** Cuantos pilares se levantan, y por tanto cuantos hay que tirar. */
     private static final int PILLARS = 5;
 
     private final List<Pillar> pillars = new ArrayList<>();
-    /** Las serpientes de la cabellera, que se mueven solas. */
-    private final List<ItemDisplay> hair = new ArrayList<>();
+    /** Los eslabones de la cola, que se arrastran detras del cuerpo. */
+    private final List<ItemDisplay> tail = new ArrayList<>();
 
+    private Goat goatHead;
     private boolean mortal;
     private double damageBonus = 1.0;
 
-    public Medusa(AnomalyPlugin plugin, ActiveAnomaly event, Location where) {
+    public Quimera(AnomalyPlugin plugin, ActiveAnomaly event, Location where) {
         super(plugin, event, where);
-        abilities.addAll(plugin.registry().medusaAbilities());
+        abilities.addAll(plugin.registry().quimeraAbilities());
     }
 
     @Override
     public String bossName() {
-        return "Medusa";
+        return "Quimera";
     }
 
     // ------------------------------------------------------------------- aparicion
@@ -95,85 +95,90 @@ public final class Medusa extends BossFight {
     public void spawn() {
         Location spot = arena.clone();
 
-        boss = world().spawn(spot, Husk.class, h -> {
-            h.setAdult();
-            h.setPersistent(true);
-            h.setRemoveWhenFarAway(false);
-            h.setCanPickupItems(false);
-            h.customName(Component.text("✦ ", ACCENT)
-                    .append(Component.text("Medusa", ACCENT, TextDecoration.BOLD)));
-            h.setCustomNameVisible(true);
-            EntityEquipment eq = h.getEquipment();
-            if (eq != null) {
-                // Arco en la mano: la gorgona de las estatuas tambien caza de lejos.
-                eq.setItemInMainHand(new ItemStack(Material.BOW));
-                eq.setChestplate(dyed(Material.LEATHER_CHESTPLATE, 0x3F5D2A));
-                eq.setLeggings(dyed(Material.LEATHER_LEGGINGS, 0x33491F));
-                eq.setBoots(dyed(Material.LEATHER_BOOTS, 0x6E6E63));
-                eq.setItemInMainHandDropChance(0);
-                eq.setChestplateDropChance(0);
-                eq.setLeggingsDropChance(0);
-                eq.setBootsDropChance(0);
-            }
+        // El cuerpo: un ravager, la fiera mas grande y con peor idea que hay a mano.
+        boss = world().spawn(spot, Ravager.class, r -> {
+            r.setPersistent(true);
+            r.setRemoveWhenFarAway(false);
+            r.setCanPickupItems(false);
+            r.customName(Component.text("✦ ", ACCENT)
+                    .append(Component.text("Quimera", ACCENT, TextDecoration.BOLD)));
+            r.setCustomNameVisible(true);
         });
 
-        Compat.setAttribute(boss, "attack_damage", 12);
+        Compat.setAttribute(boss, "attack_damage", 14);
         Compat.setAttribute(boss, "armor", 14);
-        Compat.setAttribute(boss, "knockback_resistance", 0.8);
+        Compat.setAttribute(boss, "knockback_resistance", 1.0);
         Compat.setAttribute(boss, "follow_range", 64);
-        Compat.setAttribute(boss, "movement_speed", 0.30);
-        Compat.setAttribute(boss, "scale", 1.7);
-        applyHealth(plugin.registry().scaledHealth(plugin.registry().medusa(), targets(96).size()));
+        Compat.setAttribute(boss, "movement_speed", 0.32);
+        Compat.setAttribute(boss, "scale", 1.35);
+        applyHealth(plugin.registry().scaledHealth(plugin.registry().quimera(), targets(96).size()));
         boss.setMaximumNoDamageTicks(6);
 
         Tags.markBoss(boss, ID);
         Tags.markEvent(boss, event.id());
         Glow.apply(boss, event.type().glowColor());
 
-        growHair();
+        growGoatHead();
+        growTail();
         raisePillars();
         arrivalAnimation(spot);
     }
 
-    /** Armadura de cuero tenida de verde gorgona, sin posibilidad de que caiga. */
-    private static ItemStack dyed(Material piece, int rgb) {
-        ItemStack item = new ItemStack(piece);
-        if (item.getItemMeta() instanceof LeatherArmorMeta meta) {
-            meta.setColor(Color.fromRGB(rgb));
-            item.setItemMeta(meta);
+    /**
+     * La cabra del lomo. Va montada de verdad, asi que se mueve con el cuerpo y berrea
+     * por su cuenta. Es intocable: matar una cabeza suelta no es la mecanica.
+     */
+    private void growGoatHead() {
+        goatHead = world().spawn(boss.getLocation().add(0, 1.2, 0), Goat.class, g -> {
+            g.setAdult();
+            g.setScreaming(true);
+            g.setPersistent(true);
+            g.setRemoveWhenFarAway(false);
+            g.setInvulnerable(true);
+            g.setCustomNameVisible(false);
+            Compat.setAttribute(g, "scale", 0.95);
+        });
+        markMinion(goatHead);
+        boss.addPassenger(goatHead);
+    }
+
+    /** La cola: seis eslabones que van detras con retardo, como una serpiente. */
+    private void growTail() {
+        for (int i = 0; i < 6; i++) {
+            ItemDisplay link = Fx.itemDisplay(world(), boss.getLocation(),
+                    new ItemStack(i == 0 ? Material.LIME_CANDLE : Material.MOSS_CARPET),
+                    i == 0 ? 0.9f : 0.7f - i * 0.05f);
+            markMinion(link);
+            tail.add(link);
         }
-        return item;
     }
 
     private void arrivalAnimation(Location spot) {
         boss.setInvulnerable(true);
         busyFor(80);
-        soundAt(spot, "block.deepslate.break", 1.6f, 0.5f);
-        soundAt(spot, "entity.cave_spider.ambient", 1.5f, 0.6f);
+        soundAt(spot, "entity.ravager.roar", 1.6f, 0.6f);
+        soundAt(spot, "entity.goat.screaming.ambient", 1.4f, 0.7f);
 
         animate(80, tick -> {
             double t = tick / 80.0;
-            // El suelo se cuartea a su alrededor: polvo de piedra de verdad.
             Fx.ring(spot, t * 8, (int) (t * 8 * 5) + 6, l -> {
                 Location g = Fx.ground(l, 4);
                 Compat.spawn(world(), Compat.BLOCK, g.clone().add(0, 0.2, 0), 1, 0.1, 0.05, 0.1, 0.01,
                         Material.STONE.createBlockData());
             });
-            Fx.helix(spot, 1.4, 3.2, 14, 2.5, l ->
-                    Compat.spawn(world(), Compat.ENTITY_EFFECT, l, 1, 0, 0, 0, 0, Color.fromRGB(VENOM)));
-            if (tick % 12 == 0) {
+            if (tick % 20 == 0) {
                 Compat.spawn(world(), Compat.DUST_PILLAR, spot.clone().add(0, 0.2, 0), 6, 1.2, 0.1, 1.2, 0,
                         Material.STONE.createBlockData());
-                soundAt(spot, "block.stone.break", 1.2f, 0.6f);
+                soundAt(spot, "entity.ravager.step", 1.3f, 0.6f);
             }
+            if (tick % 26 == 0) soundAt(spot, "entity.goat.screaming.ambient", 1.1f, 0.8f);
         }, () -> {
             if (!alive()) return;
-            // Sigue intocable: de eso se encargan los pilares, no la animacion.
-            soundAt(spot, "entity.husk.ambient", 1.6f, 0.5f);
+            soundAt(spot, "entity.ravager.roar", 1.8f, 0.5f);
             for (Player p : Fx.viewersNear(spot, 90)) {
                 p.showTitle(Title.title(
                         Component.text("✦ ANOMALIA ✦", ACCENT, TextDecoration.BOLD),
-                        Component.text("Medusa  ·  rompe los cinco pilares", NamedTextColor.GRAY),
+                        Component.text("Quimera  ·  rompe los cinco pilares", NamedTextColor.GRAY),
                         Title.Times.times(Duration.ofMillis(400), Duration.ofMillis(1800), Duration.ofMillis(600))));
             }
         });
@@ -200,20 +205,18 @@ public final class Medusa extends BossFight {
             Location base = Fx.ground(center.clone().add(Math.cos(a) * d, 2, Math.sin(a) * d), 8);
             buildPillar(base);
         }
-        plugin.getLogger().info("Medusa: levantados " + pillars.size() + " pilares.");
+        plugin.getLogger().info("Quimera: levantados " + pillars.size() + " pilares.");
     }
 
     /**
-     * Levanta un pilar de bloques de verdad.
-     *
-     * Nada de texturas estiradas: escaleras alrededor de la base, dos ladrillos de
-     * columna, el CINCELADO a la altura de la cara —el unico que se puede romper— y
-     * una losa de remate. Cada bloque que se pisa se guarda antes para devolverlo.
+     * Levanta un pilar de bloques de verdad: escaleras alrededor de la base, dos
+     * ladrillos de columna, el CINCELADO a la altura de la cara —el unico que se puede
+     * romper— y una losa de remate. Cada bloque se guarda antes para devolverlo.
      */
     private void buildPillar(Location base) {
         Pillar pillar = new Pillar(base.clone().add(0, 3, 0));
 
-        set(pillar, base.clone().add(0, 0, 0), Material.STONE_BRICKS.createBlockData());
+        set(pillar, base.clone(), Material.STONE_BRICKS.createBlockData());
         set(pillar, base.clone().add(0, 1, 0), Material.STONE_BRICKS.createBlockData());
         set(pillar, base.clone().add(0, 2, 0), Material.CHISELED_STONE_BRICKS.createBlockData());
         set(pillar, base.clone().add(0, 3, 0), Material.CHISELED_STONE_BRICKS.createBlockData());
@@ -221,7 +224,6 @@ public final class Medusa extends BossFight {
         if (cap instanceof Slab slab) slab.setType(Slab.Type.BOTTOM);
         set(pillar, base.clone().add(0, 4, 0), cap);
 
-        // El pedestal: cuatro escaleras mirando hacia fuera, como en la referencia.
         BlockFace[] around = {BlockFace.NORTH, BlockFace.SOUTH, BlockFace.EAST, BlockFace.WEST};
         for (BlockFace face : around) {
             BlockData stair = Material.STONE_BRICK_STAIRS.createBlockData();
@@ -232,7 +234,6 @@ public final class Medusa extends BossFight {
             set(pillar, base.clone().add(face.getModX(), 0, face.getModZ()), stair);
         }
 
-        // El cincelado de arriba es el corazon; el de abajo es solo decoracion.
         pillar.core.setY(base.getY() + 3);
         pillars.add(pillar);
 
@@ -242,7 +243,6 @@ public final class Medusa extends BossFight {
         soundAt(base, "block.stone.place", 1.5f, 0.5f);
     }
 
-    /** Coloca un bloque guardando antes lo que hubiera. */
     private void set(Pillar pillar, Location at, BlockData data) {
         Block b = at.getBlock();
         Location key = b.getLocation();
@@ -250,7 +250,6 @@ public final class Medusa extends BossFight {
         b.setBlockData(data, false);
     }
 
-    /** Devuelve el terreno tal y como estaba. */
     private void restore(Pillar pillar) {
         for (Map.Entry<Location, BlockData> e : pillar.before.entrySet()) {
             try {
@@ -312,9 +311,7 @@ public final class Medusa extends BossFight {
         restore(pillar);
 
         int left = standingPillars();
-        if (who != null) {
-            soundAt(who.getLocation(), "block.amethyst_block.break", 1.4f, 0.7f);
-        }
+        if (who != null) soundAt(who.getLocation(), "block.amethyst_block.break", 1.4f, 0.7f);
         for (Player p : Fx.viewersNear(loc(), 90)) {
             p.sendActionBar(Component.text("Pilar caido  ", NamedTextColor.GRAY)
                     .append(Component.text((PILLARS - left) + "/" + PILLARS, ACCENT, TextDecoration.BOLD))
@@ -322,11 +319,10 @@ public final class Medusa extends BossFight {
                             left > 0 ? NamedTextColor.RED : NamedTextColor.GREEN)));
         }
         if (left > 0) return;
-
         becomeMortal();
     }
 
-    /** Caido el ultimo pilar, la gorgona deja de estar protegida. */
+    /** Caido el ultimo pilar, la fiera deja de estar protegida. */
     private void becomeMortal() {
         mortal = true;
         if (!alive()) return;
@@ -334,63 +330,60 @@ public final class Medusa extends BossFight {
         Location l = boss.getLocation();
         Compat.spawn(world(), Compat.FLASH, l.clone().add(0, 1.5, 0), 1);
         Compat.spawn(world(), Compat.SCULK_CHARGE_POP, l.clone().add(0, 1.5, 0), 40, 0.8, 1.0, 0.8, 0.1);
-        soundAt(l, "entity.warden.sonic_boom", 1.4f, 1.2f);
+        soundAt(l, "entity.ravager.roar", 1.8f, 0.7f);
         titleNear(Component.text("CAEN LOS PILARES", ACCENT, TextDecoration.BOLD),
-                Component.text("Medusa ya puede morir", NamedTextColor.GRAY));
+                Component.text("La Quimera ya puede morir", NamedTextColor.GRAY));
         broadcastNear(Component.text("Se le acabo la piedra que la sostenia.", ACCENT));
     }
 
-    // ------------------------------------------------------------- LA CABELLERA
+    // ---------------------------------------------------- LA COLA Y SU MIRADA
 
     /**
-     * Las serpientes de la cabeza. Seis, cada una con su propio compas, que es lo que
-     * hace que parezcan bichos y no un adorno girando.
+     * La cola se arrastra con retardo: cada eslabon persigue al anterior en vez de ir
+     * clavado a una posicion, que es lo que la hace parecer un bicho y no una fila.
      */
-    private void growHair() {
-        for (int i = 0; i < 6; i++) {
-            ItemDisplay snake = Fx.itemDisplay(world(), boss.getEyeLocation(),
-                    new ItemStack(i % 2 == 0 ? Material.TWISTING_VINES : Material.WEEPING_VINES), 0.75f);
-            markMinion(snake);
-            hair.add(snake);
-        }
-    }
-
-    private void slitherHair() {
+    private void dragTail() {
         if (!alive()) return;
-        Location head = boss.getEyeLocation().add(0, 0.35, 0);
-        for (int i = 0; i < hair.size(); i++) {
-            ItemDisplay snake = hair.get(i);
-            if (!snake.isValid()) continue;
-            double phase = ticks() * 0.12 + i * (Math.PI * 2 / hair.size());
-            double radius = 0.55 + Math.sin(ticks() * 0.09 + i) * 0.16;
-            Location at = head.clone().add(
-                    Math.cos(phase) * radius,
-                    Math.sin(ticks() * 0.15 + i * 1.3) * 0.14,
-                    Math.sin(phase) * radius);
-            at.setYaw((float) Math.toDegrees(-phase));
-            snake.teleport(at);
+        Vector back = boss.getLocation().getDirection().setY(0);
+        if (back.lengthSquared() < 0.01) back = new Vector(1, 0, 0);
+        back = back.normalize().multiply(-1);
+
+        Location anchor = boss.getLocation().add(0, 0.9, 0).add(back.clone().multiply(1.1));
+        for (int i = 0; i < tail.size(); i++) {
+            ItemDisplay link = tail.get(i);
+            if (!link.isValid()) continue;
+            double wave = Math.sin(ticks() * 0.16 - i * 0.7) * (0.35 + i * 0.06);
+            Vector side = new Vector(-back.getZ(), 0, back.getX()).multiply(wave);
+            Location at = anchor.clone()
+                    .add(back.clone().multiply(i * 0.55))
+                    .add(side)
+                    .add(0, i == 0 ? 0.35 : -i * 0.06, 0);
+            at.setYaw(boss.getLocation().getYaw());
+            link.teleport(at);
         }
-        if (ticks() % 6 == 0) {
-            Compat.spawn(world(), Compat.ENTITY_EFFECT, head, 2, 0.5, 0.25, 0.5, 0, Color.fromRGB(VENOM));
+        if (ticks() % 8 == 0 && !tail.isEmpty() && tail.get(0).isValid()) {
+            Compat.spawn(world(), Compat.ENTITY_EFFECT, tail.get(0).getLocation(), 1, 0.1, 0.1, 0.1, 0,
+                    Color.fromRGB(VENOM));
         }
-        if (ticks() % 70 == 0) soundAt(loc(), "entity.cave_spider.ambient", 0.7f, 0.7f);
     }
 
-    // ----------------------------------------------------------------- LA MIRADA
+    /** La cabeza de la serpiente, que es de donde sale la mirada. */
+    private Location snakeHead() {
+        if (!tail.isEmpty() && tail.get(0).isValid()) return tail.get(0).getLocation().add(0, 0.3, 0);
+        return boss.getEyeLocation();
+    }
 
-    private boolean lookingAtHer(Player p) {
+    private boolean lookingAtIt(Player p) {
         if (!alive()) return false;
-        Vector to = boss.getEyeLocation().toVector().subtract(p.getEyeLocation().toVector());
+        Vector to = snakeHead().toVector().subtract(p.getEyeLocation().toVector());
         if (to.lengthSquared() < 1.0E-4) return true;
         double dot = p.getEyeLocation().getDirection().normalize().dot(to.normalize());
         return dot > 0.55 && p.hasLineOfSight(boss);
     }
 
     /**
-     * Estar a cubierto detras de un pilar que siga en pie.
-     *
-     * Los pilares hacen dos cosas a la vez, y esa es toda la tension del combate: son
-     * lo que hay que tirar para poder matarla y son el unico escondite de su mirada.
+     * Estar a cubierto detras de un pilar en pie. Los pilares hacen dos cosas a la vez,
+     * y esa es la tension: son lo que hay que tirar y el unico escondite que hay.
      */
     private boolean behindPillar(Player p) {
         for (Pillar pillar : pillars) {
@@ -404,10 +397,10 @@ public final class Medusa extends BossFight {
         if (!Fx.isFightable(p)) return false;
         if (p.isBlocking()) return false;
         if (behindPillar(p)) return false;
-        return lookingAtHer(p);
+        return lookingAtIt(p);
     }
 
-    /** Petrifica: no mata, CLAVA. Y te deja la cascara de piedra encima. */
+    /** Petrifica: no mata, CLAVA. Y deja la cascara de piedra encima. */
     private void petrify(Player p, int ticksHeld, double damage) {
         hit(p, damage * damageBonus);
         root(p, ticksHeld);
@@ -438,14 +431,14 @@ public final class Medusa extends BossFight {
         } else if (behindPillar(p)) {
             state = "a cubierto tras el pilar";
             color = NamedTextColor.GREEN;
-        } else if (lookingAtHer(p)) {
+        } else if (lookingAtIt(p)) {
             state = "¡APARTA LA VISTA!";
             color = NamedTextColor.RED;
         } else {
             state = "mirando a otro lado";
             color = NamedTextColor.GREEN;
         }
-        p.sendActionBar(Component.text("Medusa te busca los ojos  ", NamedTextColor.GRAY)
+        p.sendActionBar(Component.text("La cola te busca los ojos  ", NamedTextColor.GRAY)
                 .append(Component.text(state, color, TextDecoration.BOLD)));
     }
 
@@ -455,21 +448,22 @@ public final class Medusa extends BossFight {
     protected void ambient() {
         if (!alive()) return;
         keepHostile();
-        slitherHair();
+        dragTail();
 
-        // Mientras quede un pilar, es intocable. Se reafirma cada tick por si algo
-        // (una animacion, un plugin de terceros) se lo quita por el camino.
+        if (goatHead != null && goatHead.isValid() && ticks() % 90 == 0) {
+            soundAt(loc(), "entity.goat.screaming.ambient", 0.9f, 0.8f);
+        }
+
         if (!mortal) {
             if (!boss.isInvulnerable()) boss.setInvulnerable(true);
             if (ticks() % 60 == 0) {
                 int left = standingPillars();
                 for (Player p : Fx.viewersNear(loc(), 60)) {
-                    p.sendActionBar(Component.text("Medusa es intocable  ", NamedTextColor.GRAY)
+                    p.sendActionBar(Component.text("La Quimera es intocable  ", NamedTextColor.GRAY)
                             .append(Component.text(left + " pilar" + (left == 1 ? "" : "es") + " en pie",
                                     ACCENT, TextDecoration.BOLD)));
                 }
             }
-            // Un hilo de luz de ella a cada pilar: se ve de lejos que estan unidos.
             if (ticks() % 10 == 0) {
                 for (Pillar pillar : pillars) {
                     if (!pillar.standing) continue;
@@ -480,7 +474,6 @@ public final class Medusa extends BossFight {
         }
     }
 
-    /** Siempre agresiva, y con el arco puesto tambien de lejos. */
     private void keepHostile() {
         if (ticks() % 10 != 0) return;
         Player t = Fx.nearest(boss.getLocation(), plugin.settings().participationRadius());
@@ -497,22 +490,17 @@ public final class Medusa extends BossFight {
             if (pillar.standing) restore(pillar);
         }
         pillars.clear();
-        hair.clear();
+        tail.clear();
+        goatHead = null;
         super.cleanup();
     }
 
-    /**
-     * Sus flechas tambien petrifican, un poquito. Llega aqui porque el manager avisa
-     * de todo golpe dado por el jefe o por algo suyo, y las flechas van marcadas.
-     */
+    /** Lo que escupe la cola tambien envenena; va marcado como suyo. */
     @Override
     public void onDealtDamage(Player victim, Entity dealer) {
-        if (!(dealer instanceof Arrow)) return;
-        Compat.apply(victim, "slowness", 60, 2);
-        Compat.spawn(world(), Compat.FALLING_DUST_BLOCK, victim.getLocation().add(0, 1.2, 0), 12,
-                0.3, 0.5, 0.3, 0, Material.STONE.createBlockData());
-        victim.sendActionBar(Component.text("La flecha te deja la pierna de piedra.",
-                NamedTextColor.RED, TextDecoration.BOLD));
+        if (!(dealer instanceof org.bukkit.entity.Projectile)) return;
+        Compat.apply(victim, "poison", 100, 1);
+        Compat.spawn(world(), Compat.ITEM_SLIME, victim.getLocation().add(0, 1.2, 0), 10, 0.3, 0.4, 0.3, 0);
     }
 
     /**
@@ -530,82 +518,84 @@ public final class Medusa extends BossFight {
     @Override
     protected void onPhaseChange(int from, int to) {
         if (event.bars() != null) event.bars().flash(from);
-        if (to == 2) shedSkin();
-        if (to == 3) eyesAblaze();
+        if (to == 2) goatFury();
+        if (to == 3) snakeAwakens();
     }
 
-    /** FASE I -> II. Muda de piel: la cascara vieja cae y sale mas rapida. */
-    private void shedSkin() {
+    /** FASE I -> II. La cabra se vuelve loca y el cuerpo entero acelera. */
+    private void goatFury() {
         if (!alive()) return;
         busyFor(70);
         Location spot = boss.getLocation();
-        soundAt(spot, "entity.cave_spider.hurt", 1.6f, 0.5f);
-        broadcastNear(Component.text("Muda la piel.", ACCENT));
+        soundAt(spot, "entity.goat.screaming.death", 1.8f, 0.7f);
+        broadcastNear(Component.text("La cabra pierde la cabeza.", ACCENT));
 
         animate(70, tick -> {
             if (!alive()) return;
-            Location l = boss.getLocation();
-            Compat.spawn(world(), Compat.FALLING_DUST_BLOCK, l.clone().add(0, 1.2, 0), 3, 0.5, 0.8, 0.5, 0,
-                    Material.STONE.createBlockData());
-            if (tick % 10 == 0) {
-                Compat.spawn(world(), Compat.ITEM, l.clone().add(0, 1.5, 0), 10, 0.5, 0.7, 0.5, 0.1,
-                        new ItemStack(Material.TWISTING_VINES));
-                soundAt(l, "entity.spider.step", 1.1f, 0.7f);
+            Location l = boss.getLocation().add(0, 1.8, 0);
+            Compat.spawn(world(), Compat.ANGRY_VILLAGER, l, 2, 0.4, 0.3, 0.4, 0);
+            if (tick % 12 == 0) {
+                soundAt(l, "entity.goat.screaming.ambient", 1.4f, 0.9f);
+                Compat.spawn(world(), Compat.SMALL_GUST, l, 2, 0.4, 0.3, 0.4, 0);
             }
-            Fx.helix(l, 1.2, 2.8, 12, 2.0, p ->
-                    Compat.spawn(world(), Compat.ENTITY_EFFECT, p, 1, 0, 0, 0, 0, Color.fromRGB(VENOM)));
         }, () -> {
             if (!alive()) return;
             damageBonus = 1.2;
-            Compat.setAttribute(boss, "attack_damage", 14);
-            Compat.setAttribute(boss, "movement_speed", 0.34);
+            Compat.setAttribute(boss, "attack_damage", 17);
+            Compat.setAttribute(boss, "movement_speed", 0.37);
             titleNear(Component.text("FASE II", NamedTextColor.GOLD, TextDecoration.BOLD),
-                    Component.text("La piel nueva es mas rapida", NamedTextColor.GRAY));
+                    Component.text("Embiste sin frenar", NamedTextColor.GRAY));
         });
     }
 
-    /** FASE III. Los ojos arden: la mirada deja de ser una habilidad y pasa a ser ELLA. */
-    private void eyesAblaze() {
+    /** FASE III. La serpiente levanta la cabeza: la mirada pasa a ser lo importante. */
+    private void snakeAwakens() {
         if (!alive()) return;
         busyFor(70);
         Location spot = boss.getLocation();
         soundAt(spot, "entity.warden.sonic_charge", 1.4f, 1.6f);
         titleNear(Component.text("FASE III", NamedTextColor.RED, TextDecoration.BOLD),
-                Component.text("Los ojos arden; que no te pillen mirando", NamedTextColor.GRAY));
+                Component.text("La cola levanta la cabeza", NamedTextColor.GRAY));
 
         animate(70, tick -> {
             if (!alive()) return;
-            Location eye = boss.getEyeLocation();
-            Compat.spawn(world(), Compat.END_ROD, eye, 3, 0.25, 0.15, 0.25, 0.01);
+            Location head = snakeHead();
+            Compat.spawn(world(), Compat.END_ROD, head, 3, 0.25, 0.15, 0.25, 0.01);
             if (tick % 8 == 0) {
-                Compat.spawn(world(), Compat.SCULK_CHARGE_POP, eye, 6, 0.3, 0.2, 0.3, 0.02);
-                soundAt(spot, "block.amethyst_block.chime", 1.2f, 0.5f);
+                Compat.spawn(world(), Compat.SCULK_CHARGE_POP, head, 6, 0.3, 0.2, 0.3, 0.02);
+                soundAt(spot, "entity.cave_spider.ambient", 1.0f, 0.5f);
             }
         }, () -> {
             if (!alive()) return;
             damageBonus = 1.45;
-            Compat.setAttribute(boss, "attack_damage", 16);
-            Compat.setAttribute(boss, "movement_speed", 0.36);
+            Compat.setAttribute(boss, "attack_damage", 20);
+            Compat.setAttribute(boss, "movement_speed", 0.40);
         });
     }
 
     // ---------------------------------------------------------------------- muerte
 
-    /** Se resquebraja de dentro afuera y se deshace en piedra, como sus victimas. */
+    /** Se le sueltan las costuras: cada animal se deshace por su lado. */
     @Override
     public void onDeath() {
         Location l = loc();
         BlockData stone = Material.STONE.createBlockData();
-        soundAt(l, "entity.husk.death", 1.6f, 0.5f);
+        soundAt(l, "entity.ravager.death", 1.6f, 0.5f);
+        soundAt(l, "entity.goat.screaming.death", 1.4f, 0.6f);
 
-        for (ItemDisplay snake : hair) {
-            if (!snake.isValid()) continue;
-            Compat.spawn(world(), Compat.ITEM, snake.getLocation(), 8, 0.1, 0.1, 0.1, 0.05,
-                    new ItemStack(Material.TWISTING_VINES));
-            spawned.remove(snake);
-            Fx.safeRemove(snake);
+        for (ItemDisplay link : tail) {
+            if (!link.isValid()) continue;
+            Compat.spawn(world(), Compat.ITEM_SLIME, link.getLocation(), 8, 0.2, 0.2, 0.2, 0);
+            spawned.remove(link);
+            Fx.safeRemove(link);
         }
-        hair.clear();
+        tail.clear();
+        if (goatHead != null && goatHead.isValid()) {
+            Compat.spawn(world(), Compat.POOF, goatHead.getLocation(), 20, 0.4, 0.4, 0.4, 0.05);
+            spawned.remove(goatHead);
+            Fx.safeRemove(goatHead);
+            goatHead = null;
+        }
 
         animate(90, tick -> {
             double t = tick / 90.0;
@@ -616,114 +606,114 @@ public final class Medusa extends BossFight {
             }
         }, () -> {
             Compat.spawn(world(), Compat.EXPLOSION_EMITTER, l.clone().add(0, 1, 0), 2);
-            Compat.spawn(world(), Compat.BLOCK, l.clone().add(0, 1, 0), 60, 1.0, 1.2, 1.0, 0.1, stone);
             Compat.spawn(world(), Compat.DUST_PILLAR, l.clone().add(0, 0.2, 0), 30, 1.0, 0.2, 1.0, 0, stone);
             soundAt(l, "block.stone.break", 1.8f, 0.4f);
-            broadcastNear(Component.text("La piedra, por fin, la reclama a ella.", ACCENT));
+            broadcastNear(Component.text("Se le sueltan las costuras.", ACCENT));
         });
     }
 
     // ============================================================== HABILIDADES ==
 
-    /** 1. Mirada Petrea: la basica. Aviso largo, y al final castiga al que siga mirando. */
+    /** 1. Mirada de la Cola: la basica. Aviso largo, y castiga al que siga mirando. */
     public void stoneGaze() {
         if (!alive()) return;
         soundAt(loc(), "block.amethyst_block.resonate", 1.6f, 0.5f);
-        broadcastNear(Component.text("Busca tus ojos.", ACCENT));
+        broadcastNear(Component.text("La cola busca tus ojos.", ACCENT));
 
         animate(50, tick -> {
             if (!alive()) throw Stop.now();
-            Location eye = boss.getEyeLocation();
-            Compat.spawn(world(), Compat.END_ROD, eye, 2, 0.2, 0.1, 0.2, 0.01);
+            Location head = snakeHead();
+            Compat.spawn(world(), Compat.END_ROD, head, 2, 0.2, 0.1, 0.2, 0.01);
             if (tick % 10 == 0) {
                 for (Player p : targets(24)) gazeWarning(p);
                 soundAt(loc(), "block.sculk_shrieker.shriek", 0.8f, 1.8f);
             }
             if (tick != 46) return;
-            Compat.spawn(world(), Compat.FLASH, eye, 1);
+            Compat.spawn(world(), Compat.FLASH, head, 1);
             soundAt(loc(), "entity.warden.sonic_boom", 1.2f, 1.6f);
             for (Player p : targets(24)) {
                 if (exposed(p)) {
                     petrify(p, 50, 12);
-                } else if (p.isBlocking() && lookingAtHer(p)) {
-                    // El reflejo de Perseo: la mirada rebota y le pica a ELLA.
+                } else if (p.isBlocking() && lookingAtIt(p)) {
                     push(p, p.getLocation().getDirection().multiply(-0.4).setY(0.1));
                     p.sendActionBar(Component.text("El escudo devuelve la mirada.",
                             NamedTextColor.GREEN, TextDecoration.BOLD));
-                    Compat.spawn(world(), Compat.ENCHANTED_HIT, boss.getEyeLocation(), 12, 0.3, 0.3, 0.3, 0.1);
+                    Compat.spawn(world(), Compat.ENCHANTED_HIT, head, 12, 0.3, 0.3, 0.3, 0.1);
                 }
             }
         }, null);
     }
 
-    /** 2. Latigo de Serpientes: tres zarpazos en arco delante de ella. */
-    public void serpentLash() {
+    /** 2. Embestida de la Fiera: baja la cabeza y arrolla en linea recta. */
+    public void beastCharge() {
         Player target = randomTarget();
         if (target == null || !alive()) return;
-        Location origin = boss.getLocation().add(0, 1.0, 0);
-        Vector dir = target.getLocation().toVector().subtract(origin.toVector()).setY(0);
+        Location from = boss.getLocation();
+        Vector dir = target.getLocation().toVector().subtract(from.toVector()).setY(0);
         if (dir.lengthSquared() < 0.01) return;
-        final Vector face = dir.normalize();
-        soundAt(origin, "entity.cave_spider.ambient", 1.4f, 0.6f);
+        final Vector run = dir.normalize();
+        java.util.Set<UUID> hitSet = new java.util.HashSet<>();
 
-        for (int i = 0; i < 3; i++) {
-            final double radius = 2.5 + i * 1.5;
-            later(8 + i * 10, () -> {
-                if (!alive()) return;
-                Location c = boss.getLocation().add(0, 1.0, 0);
-                Fx.arc(c, face, radius, Math.PI * 0.7, (int) (radius * 6), p -> {
-                    Location g = Fx.ground(p, 3).add(0, 0.3, 0);
-                    Compat.spawn(world(), Compat.ENTITY_EFFECT, g, 1, 0.1, 0.15, 0.1, 0, Color.fromRGB(VENOM));
-                });
-                soundAt(c, "entity.player.attack.sweep", 1.2f, 0.7f);
-                for (Player p : targets(radius + 1.2)) {
-                    double d = p.getLocation().distance(c);
-                    if (Math.abs(d - radius) > 1.2) continue;
-                    Vector to = p.getLocation().toVector().subtract(c.toVector()).setY(0);
-                    if (to.lengthSquared() < 0.01 || to.normalize().dot(face) < 0.3) continue;
-                    hit(p, 10 * damageBonus);
-                    Compat.apply(p, "poison", 60, 0);
+        soundAt(from, "entity.ravager.roar", 1.6f, 0.8f);
+        broadcastNear(Component.text("Baja la cabeza.", ACCENT));
+
+        animate(50, tick -> {
+            if (!alive()) throw Stop.now();
+            if (tick < 16) {
+                for (double d = 1; d < 14; d += 1.2) {
+                    Location g = Fx.ground(boss.getLocation().add(run.clone().multiply(d)), 4);
+                    Compat.spawn(world(), Compat.DUST_PILLAR, g.clone().add(0, 0.15, 0), 1, 0.15, 0.05, 0.15, 0,
+                            Material.STONE.createBlockData());
                 }
+                return;
+            }
+            boss.setVelocity(run.clone().multiply(1.15).setY(boss.getVelocity().getY()));
+            Compat.spawn(world(), Compat.SMALL_GUST, boss.getLocation(), 1, 0.2, 0.1, 0.2, 0);
+            for (Player p : Fx.playersNear(boss.getLocation(), 2.6)) {
+                if (!hitSet.add(p.getUniqueId())) continue;
+                hit(p, 15 * damageBonus);
+                push(p, run.clone().multiply(1.3).setY(0.55));
+                soundAt(p.getLocation(), "entity.ravager.attack", 1.3f, 0.9f);
+            }
+        }, null);
+    }
+
+    /** 3. Berrido de la Cabra: un grito en cono que empuja y marea. */
+    public void goatBleat() {
+        if (!alive()) return;
+        Location origin = boss.getEyeLocation();
+        Vector face = origin.getDirection().setY(0);
+        if (face.lengthSquared() < 0.01) face = new Vector(1, 0, 0);
+        final Vector dir = face.normalize();
+        soundAt(origin, "entity.goat.screaming.ambient", 2.0f, 0.5f);
+        broadcastNear(Component.text("La cabra berrea.", ACCENT));
+
+        animate(30, tick -> {
+            if (!alive()) throw Stop.now();
+            double d = 1 + tick * 0.4;
+            if (d > 12) return;
+            Fx.arc(boss.getLocation().add(0, 1.6, 0), dir, d, Math.PI * 0.55, (int) (d * 4), p -> {
+                Compat.spawn(world(), Compat.NOTE, p, 1, 0.1, 0.1, 0.1, 1);
+                Compat.spawn(world(), Compat.SMALL_GUST, p, 1, 0, 0, 0, 0);
             });
-        }
+            if (tick % 8 != 0) return;
+            for (Player p : targets(12)) {
+                Vector to = p.getLocation().toVector().subtract(boss.getLocation().toVector()).setY(0);
+                if (to.lengthSquared() < 0.01 || to.normalize().dot(dir) < 0.45) continue;
+                hit(p, 7 * damageBonus);
+                Compat.apply(p, "nausea", 90, 0);
+                push(p, to.normalize().multiply(0.8).setY(0.3));
+            }
+        }, null);
     }
 
-    /** 3. Andanada Venenosa: escupe veneno sobre marcas que caen donde estabas. */
-    public void venomVolley() {
-        List<Player> victims = targets(22);
-        if (victims.isEmpty() || !alive()) return;
-        soundAt(loc(), "entity.llama.spit", 1.4f, 0.5f);
-        broadcastNear(Component.text("Escupe veneno.", ACCENT));
-
-        for (Player victim : victims) {
-            Location mark = Fx.ground(victim.getLocation(), 4);
-            animate(50, tick -> {
-                if (tick < 24) {
-                    Fx.telegraph(world(), mark, 2.2, VENOM);
-                    return;
-                }
-                if (tick != 24) return;
-                if (alive()) {
-                    Fx.beam(boss.getEyeLocation(), mark.clone().add(0, 0.5, 0), 1.0, p ->
-                            Compat.spawn(world(), Compat.SPIT, p, 1, 0.05, 0.05, 0.05, 0));
-                }
-                Compat.spawn(world(), Compat.ITEM_SLIME, mark.clone().add(0, 0.4, 0), 26, 1.0, 0.3, 1.0, 0);
-                soundAt(mark, "entity.slime.squish", 1.3f, 0.6f);
-                for (Player p : Fx.playersNear(mark, 2.4)) {
-                    hit(p, 9 * damageBonus);
-                    Compat.apply(p, "poison", 100, 1);
-                }
-            }, null);
-        }
-    }
-
-    /** 4. Nido de Viboras: de la cabellera caen viboras que muerden con veneno. */
+    /** 4. Nido de Viboras: de la cola se descuelgan viboras. */
     public void viperNest() {
         if (!alive()) return;
         int count = 3 + random.nextInt(3);
-        Location c = boss.getLocation();
+        Location c = snakeHead();
         soundAt(c, "entity.cave_spider.ambient", 1.6f, 0.5f);
-        broadcastNear(Component.text("Se le caen del pelo.", ACCENT));
+        broadcastNear(Component.text("De la cola se descuelgan viboras.", ACCENT));
 
         for (int i = 0; i < count; i++) {
             double a = Math.PI * 2 * i / count + random.nextDouble() * 0.4;
@@ -738,38 +728,38 @@ public final class Medusa extends BossFight {
                 });
                 viper.customName(Component.text("Vibora", TextColor.color(VENOM)));
                 markMinion(viper);
-                Compat.spawn(world(), Compat.ENTITY_EFFECT, sl.clone().add(0, 0.4, 0), 14, 0.4, 0.3, 0.4, 0,
+                Compat.spawn(world(), Compat.ENTITY_EFFECT, sl.clone().add(0, 0.4, 0), 12, 0.4, 0.3, 0.4, 0,
                         Color.fromRGB(VENOM));
                 soundAt(sl, "entity.cave_spider.step", 1.2f, 0.8f);
             });
         }
     }
 
-    /** 5. Flecha Petrea: tres saetas que dejan la pierna de piedra a quien tocan. */
-    public void stoneArrow() {
+    /** 5. Escupitajo Venenoso: la cola escupe veneno a distancia. */
+    public void venomSpit() {
         if (!alive()) return;
         List<Player> victims = targets(30);
         if (victims.isEmpty()) return;
-        soundAt(loc(), "item.crossbow.quick_charge_1", 1.4f, 0.6f);
-        broadcastNear(Component.text("Tensa el arco.", ACCENT));
+        soundAt(loc(), "entity.llama.spit", 1.5f, 0.5f);
+        broadcastNear(Component.text("La cola escupe.", ACCENT));
 
         for (int i = 0; i < 3; i++) {
             Player victim = victims.get(random.nextInt(victims.size()));
-            later(14 + i * 8, () -> {
+            later(10 + i * 8, () -> {
                 if (!alive() || !Fx.isFightable(victim)) return;
+                Location head = snakeHead();
                 try {
-                    Arrow arrow = boss.launchProjectile(Arrow.class,
-                            victim.getEyeLocation().toVector().subtract(boss.getEyeLocation().toVector())
-                                    .normalize().multiply(2.4));
-                    arrow.setDamage(6 * damageBonus);
-                    arrow.setPersistent(false);
-                    arrow.setPickupStatus(Arrow.PickupStatus.DISALLOWED);
-                    arrow.setColor(Color.fromRGB(0x9A9A92));
-                    Tags.markMinion(arrow, ID);
-                    Tags.markEvent(arrow, event.id());
-                    soundAt(loc(), "entity.arrow.shoot", 1.3f, 0.7f);
+                    org.bukkit.entity.LlamaSpit spit =
+                            world().spawn(head, org.bukkit.entity.LlamaSpit.class);
+                    spit.setShooter(boss);
+                    spit.setVelocity(victim.getEyeLocation().toVector().subtract(head.toVector())
+                            .normalize().multiply(1.8));
+                    Tags.markMinion(spit, ID);
+                    Tags.markEvent(spit, event.id());
                 } catch (Throwable ignored) {
                 }
+                Compat.spawn(world(), Compat.SPIT, head, 10, 0.2, 0.2, 0.2, 0.05);
+                soundAt(head, "entity.llama.spit", 1.3f, 0.7f);
             });
         }
     }
@@ -784,20 +774,20 @@ public final class Medusa extends BossFight {
         animate(100, tick -> {
             if (!alive()) throw Stop.now();
             if (tick < 20) {
-                Compat.spawn(world(), Compat.END_ROD, boss.getEyeLocation(), 3, 0.2, 0.1, 0.2, 0.01);
+                Compat.spawn(world(), Compat.END_ROD, snakeHead(), 3, 0.2, 0.1, 0.2, 0.01);
                 if (tick % 10 == 0) for (Player p : targets(24)) gazeWarning(p);
                 return;
             }
             double angle = (tick - 20) * (Math.PI * 2 / 80.0);
             Vector dir = new Vector(Math.cos(angle), 0, Math.sin(angle));
-            Location eye = boss.getEyeLocation();
+            Location head = snakeHead();
             for (double d = 1.5; d < 18; d += 1.0) {
-                Compat.spawn(world(), Compat.END_ROD, eye.clone().add(dir.clone().multiply(d)), 1,
+                Compat.spawn(world(), Compat.END_ROD, head.clone().add(dir.clone().multiply(d)), 1,
                         0.04, 0.04, 0.04, 0);
             }
-            if (tick % 20 == 0) soundAt(eye, "block.sculk_shrieker.shriek", 0.7f, 1.6f);
+            if (tick % 20 == 0) soundAt(head, "block.sculk_shrieker.shriek", 0.7f, 1.6f);
             for (Player p : targets(18)) {
-                Vector to = p.getLocation().toVector().subtract(eye.toVector()).setY(0);
+                Vector to = p.getLocation().toVector().subtract(head.toVector()).setY(0);
                 if (to.lengthSquared() < 0.01) continue;
                 double diff = Math.abs(Math.atan2(to.getZ(), to.getX()) - Math.atan2(dir.getZ(), dir.getX()));
                 diff = Math.min(diff, Math.PI * 2 - diff);
@@ -809,50 +799,40 @@ public final class Medusa extends BossFight {
         }, null);
     }
 
-    /** 7. Colmillo Certero: se lanza al mas cercano y muerde. */
-    public void preciseFang() {
-        Player target = Fx.nearest(loc(), 14);
-        if (target == null || !alive()) return;
-        soundAt(loc(), "entity.cave_spider.hurt", 1.4f, 0.7f);
-
-        Vector run = target.getLocation().toVector().subtract(boss.getLocation().toVector()).setY(0);
-        if (run.lengthSquared() > 0.01) {
-            boss.setVelocity(run.normalize().multiply(1.0).setY(0.2));
+    /** 7. Zarpazo Triple: las tres cabezas pegan seguidas a lo que tenga delante. */
+    public void tripleMaul() {
+        if (!alive()) return;
+        soundAt(loc(), "entity.ravager.attack", 1.5f, 0.8f);
+        for (int i = 0; i < 3; i++) {
+            later(i * 8, () -> {
+                if (!alive()) return;
+                Location c = boss.getLocation().add(0, 1.2, 0);
+                Vector face = boss.getLocation().getDirection().setY(0);
+                if (face.lengthSquared() < 0.01) face = new Vector(1, 0, 0);
+                final Vector dir = face.normalize();
+                Fx.arc(c, dir, 3.5, Math.PI * 0.8, 22, p ->
+                        Compat.spawn(world(), Compat.SWEEP_ATTACK, p, 1, 0, 0, 0, 0));
+                for (Player p : targets(4.5)) {
+                    Vector to = p.getLocation().toVector().subtract(c.toVector()).setY(0);
+                    if (to.lengthSquared() < 0.01 || to.normalize().dot(dir) < 0.2) continue;
+                    hit(p, 8 * damageBonus);
+                    Compat.spawn(world(), Compat.CRIT, p.getLocation().add(0, 1, 0), 10, 0.3, 0.3, 0.3, 0.2);
+                }
+            });
         }
-        later(10, () -> {
-            if (!alive() || !Fx.isFightable(target)) return;
-            if (boss.getLocation().distanceSquared(target.getLocation()) > 9) return;
-            hit(target, 12 * damageBonus);
-            Compat.apply(target, "poison", 120, 1);
-            Compat.spawn(world(), Compat.CRIT, target.getLocation().add(0, 1, 0), 16, 0.3, 0.4, 0.3, 0.2);
-            soundAt(target.getLocation(), "entity.player.attack.strong", 1.2f, 0.8f);
-        });
     }
 
-    /** 8. Abrazo Petreo: manos de piedra que arrastran al que mas se aleja. */
-    public void stoneEmbrace() {
-        Player target = Fx.farthest(loc(), plugin.settings().participationRadius());
+    /** 8. Cornada Ascendente: engancha al mas cercano y lo manda por los aires. */
+    public void upwardGore() {
+        Player target = Fx.nearest(loc(), 5);
         if (target == null || !alive()) return;
-        soundAt(target.getLocation(), "block.deepslate.break", 1.5f, 0.4f);
-        target.sendActionBar(Component.text("La piedra te agarra.", NamedTextColor.RED, TextDecoration.BOLD));
-        BlockData stone = Material.STONE.createBlockData();
-
-        animate(55, tick -> {
-            if (!alive() || !Fx.isFightable(target)) throw Stop.now();
-            Location tl = target.getLocation();
-            Fx.ring(tl, 1.0, 8, tick * 0.3, p ->
-                    Compat.spawn(world(), Compat.BLOCK, p, 1, 0.05, 0.3, 0.05, 0.02, stone));
-            if (tick < 15) return;
-            if (tick % 5 == 0) {
-                Vector pull = boss.getLocation().toVector().subtract(tl.toVector());
-                double dist = pull.length();
-                if (dist < 4) throw Stop.now();
-                push(target, pull.normalize().multiply(0.55).setY(0.15));
-                Compat.spawn(world(), Compat.DUST_PILLAR, tl, 6, 0.3, 0.2, 0.3, 0, stone);
-                soundAt(tl, "block.gravel.break", 1.0f, 0.6f);
-            }
-            if (tick % 20 == 0) hit(target, 5 * damageBonus);
-        }, null);
+        soundAt(loc(), "entity.goat.ram_impact", 1.6f, 0.7f);
+        hit(target, 13 * damageBonus);
+        push(target, new Vector(0, 1.15, 0));
+        Compat.spawn(world(), Compat.SMALL_GUST, target.getLocation(), 6, 0.3, 0.2, 0.3, 0);
+        Compat.spawn(world(), Compat.CRIT, target.getLocation().add(0, 1, 0), 20, 0.3, 0.4, 0.3, 0.3);
+        target.sendActionBar(Component.text("Te ha enganchado con el cuerno.",
+                NamedTextColor.RED, TextDecoration.BOLD));
     }
 
     /** 9. Lluvia de Colmillos: colmillos de piedra que brotan bajo cada uno. */
@@ -912,8 +892,8 @@ public final class Medusa extends BossFight {
         }, null);
     }
 
-    /** 11. Mirada de la Gorgona: la grande. Cinco segundos avisando, y luego la arena entera. */
-    public void gorgonGaze() {
+    /** 11. La Mirada Entera: cinco segundos avisando, y luego la arena entera. */
+    public void fullGaze() {
         if (!alive()) return;
         soundAt(loc(), "entity.warden.sonic_charge", 1.6f, 0.8f);
         titleNear(Component.text("LA MIRADA", NamedTextColor.RED, TextDecoration.BOLD),
@@ -921,18 +901,18 @@ public final class Medusa extends BossFight {
 
         animate(100, tick -> {
             if (!alive()) throw Stop.now();
-            Location eye = boss.getEyeLocation();
+            Location head = snakeHead();
             double t = tick / 100.0;
-            Compat.spawn(world(), Compat.END_ROD, eye, (int) (2 + t * 5), 0.3, 0.2, 0.3, 0.01);
-            Fx.ring(eye, 1.2 + t * 2.0, 14, tick * 0.2, p ->
+            Compat.spawn(world(), Compat.END_ROD, head, (int) (2 + t * 5), 0.3, 0.2, 0.3, 0.01);
+            Fx.ring(head, 1.2 + t * 2.0, 14, tick * 0.2, p ->
                     Compat.spawn(world(), Compat.SCULK_CHARGE_POP, p, 1, 0, 0, 0, 0));
             if (tick % 20 == 0) {
-                soundAt(eye, "block.amethyst_block.chime", 1.3f, 0.4f + (float) t);
+                soundAt(head, "block.amethyst_block.chime", 1.3f, 0.4f + (float) t);
                 for (Player p : targets(26)) gazeWarning(p);
             }
             if (tick != 96) return;
-            Compat.spawn(world(), Compat.FLASH, eye, 1);
-            soundAt(eye, "entity.warden.sonic_boom", 1.6f, 1.2f);
+            Compat.spawn(world(), Compat.FLASH, head, 1);
+            soundAt(head, "entity.warden.sonic_boom", 1.6f, 1.2f);
             for (Player p : targets(26)) {
                 if (exposed(p)) {
                     petrify(p, 100, 20);
@@ -944,44 +924,42 @@ public final class Medusa extends BossFight {
         }, null);
     }
 
-    /** 12. Furia Serpentina: la cabellera entera barre alrededor en tres ondas. */
-    public void serpentineFury() {
+    /** 12. Pisoton de la Fiera: se alza y descarga; la onda barre diez bloques. */
+    public void beastStomp() {
         if (!alive()) return;
-        Location c = boss.getLocation().add(0, 1.0, 0);
-        soundAt(c, "entity.cave_spider.death", 1.5f, 0.5f);
-        broadcastNear(Component.text("La cabellera se desata.", ACCENT));
+        Location c = Fx.ground(boss.getLocation(), 4);
+        java.util.Set<UUID> struck = new java.util.HashSet<>();
+        soundAt(c, "entity.ravager.step", 1.8f, 0.5f);
+        broadcastNear(Component.text("Se alza.", ACCENT));
 
-        for (int wave = 0; wave < 3; wave++) {
-            final int w = wave;
-            later(wave * 22, () -> {
-                if (!alive()) return;
-                java.util.Set<UUID> lashed = new java.util.HashSet<>();
-                animate(16, tick -> {
-                    double radius = 1.5 + tick * 0.45 + w * 0.5;
-                    Location cc = boss.getLocation().add(0, 1.0, 0);
-                    Fx.ring(cc, radius, (int) (radius * 6), tick * 0.3, p ->
-                            Compat.spawn(world(), Compat.ENTITY_EFFECT, p, 1, 0.1, 0.25, 0.1, 0,
-                                    Color.fromRGB(VENOM)));
-                    for (Player p : targets(radius + 1.0)) {
-                        double d = p.getLocation().distance(cc);
-                        if (Math.abs(d - radius) > 1.1) continue;
-                        if (!lashed.add(p.getUniqueId())) continue;
-                        hit(p, 9 * damageBonus);
-                        Compat.apply(p, "poison", 60, 1);
-                        push(p, p.getLocation().toVector().subtract(cc.toVector())
-                                .normalize().multiply(0.7).setY(0.3));
-                    }
-                }, null);
-                soundAt(c, "entity.player.attack.sweep", 1.3f, 0.6f);
+        animate(60, tick -> {
+            if (tick < 20) {
+                Fx.telegraph(world(), c, 10.0, 0x9A9A92);
+                return;
+            }
+            double radius = (tick - 20) * 0.45;
+            if (radius > 10) return;
+            Fx.ring(c, radius, (int) (radius * 6) + 6, p -> {
+                Location g = Fx.ground(p, 4);
+                Compat.spawn(world(), Compat.DUST_PILLAR, g.clone().add(0, 0.15, 0), 1, 0.1, 0.05, 0.1, 0,
+                        Material.STONE.createBlockData());
             });
-        }
+            if (tick % 8 == 0) soundAt(c, "entity.ravager.attack", 1.1f, 0.6f);
+            for (Player p : targets(radius + 1.2)) {
+                if (p.getLocation().distance(c) < radius - 1.5) continue;
+                if (!struck.add(p.getUniqueId())) continue;
+                hit(p, 13 * damageBonus);
+                push(p, p.getLocation().toVector().subtract(c.toVector())
+                        .normalize().multiply(1.1).setY(0.65));
+            }
+        }, null);
     }
 
     /** 13. Siseo: un cono de miedo que marea y quita las ganas de estar delante. */
     public void hiss() {
         if (!alive()) return;
-        Location origin = boss.getEyeLocation();
-        Vector face = origin.getDirection().setY(0);
+        Location origin = snakeHead();
+        Vector face = boss.getLocation().getDirection().setY(0);
         if (face.lengthSquared() < 0.01) face = new Vector(1, 0, 0);
         final Vector dir = face.normalize();
         soundAt(origin, "entity.cave_spider.ambient", 1.8f, 0.4f);
@@ -1009,7 +987,7 @@ public final class Medusa extends BossFight {
 
     private void broadcastNear(Component message) {
         Component line = Component.text("✦ ", ACCENT)
-                .append(Component.text("Medusa  ", ACCENT, TextDecoration.BOLD))
+                .append(Component.text("Quimera  ", ACCENT, TextDecoration.BOLD))
                 .append(message.colorIfAbsent(NamedTextColor.GRAY));
         for (Player p : Fx.viewersNear(loc(), 90)) p.sendActionBar(line);
     }

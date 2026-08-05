@@ -110,9 +110,9 @@ public final class AbyssalChoir extends BossFight {
         animate(90, tick -> {
             double t = tick / 90.0;
             Fx.sphere(spot, 10 - t * 7, 44, p ->
-                    Compat.spawn(world(), Compat.DUST, p, 1, 0, 0, 0, 0, Compat.dust(VIOLET, 1.6f)));
+                    Compat.spawn(world(), Compat.NAUTILUS, p, 1, 0, 0, 0, 0, Compat.dust(VIOLET, 1.6f)));
             Fx.helix(spot.clone().subtract(0, 3, 0), 4.0, 8.0, 30, 3.0, p ->
-                    Compat.spawn(world(), Compat.DUST, p, 1, 0, 0, 0, 0, Compat.dust(LIGHT, 1.2f)));
+                    Compat.spawn(world(), Compat.GLOW, p, 1, 0, 0, 0, 0, Compat.dust(LIGHT, 1.2f)));
             if (tick % 18 == 0) soundAt(spot, "block.amethyst_block.chime", 1.3f, 0.5f + (float) t);
         }, () -> {
             if (!alive()) return;
@@ -214,7 +214,7 @@ public final class AbyssalChoir extends BossFight {
         }
 
         nextInOrder++;
-        Compat.spawn(world(), Compat.DUST, l.clone().add(0, 1, 0), 40, 0.6, 0.6, 0.6, 0,
+        Compat.spawn(world(), Compat.BUBBLE_POP, l.clone().add(0, 1, 0), 40, 0.6, 0.6, 0.6, 0,
                 Compat.dust(LIGHT, 1.6f));
         soundAt(l, "block.amethyst_block.chime", 1.5f, 0.8f + nextInOrder * 0.3f);
         broadcastNear(Component.text("Cantor " + nextInOrder + " apagado.", NamedTextColor.GREEN));
@@ -233,7 +233,7 @@ public final class AbyssalChoir extends BossFight {
         for (Player p : Fx.playersNear(c, ARENA)) {
             hit(p, 12 * damageBonus);
             Compat.apply(p, "slowness", 80, 1);
-            Compat.spawn(world(), Compat.DUST, p.getLocation().add(0, 1.2, 0), 20, 0.4, 0.5, 0.4, 0,
+            Compat.spawn(world(), Compat.END_ROD, p.getLocation().add(0, 1.2, 0), 20, 0.4, 0.5, 0.4, 0,
                     Compat.dust(DEEPV, 1.6f));
         }
         Compat.spawn(world(), Compat.EXPLOSION_EMITTER, where, 1);
@@ -290,7 +290,7 @@ public final class AbyssalChoir extends BossFight {
             for (Guardian g : singers) {
                 if (g == null || !g.isValid()) continue;
                 Fx.beam(g.getLocation().add(0, 0.8, 0), c.clone().add(0, 1.4, 0), 0.5, p ->
-                        Compat.spawn(world(), Compat.DUST, p, 1, 0, 0, 0, 0, Compat.dust(LIGHT, 1.1f)));
+                        Compat.spawn(world(), Compat.DOLPHIN, p, 1, 0, 0, 0, 0, Compat.dust(LIGHT, 1.1f)));
             }
         }
 
@@ -310,7 +310,7 @@ public final class AbyssalChoir extends BossFight {
 
         if (ticks() % 4 == 0) {
             Fx.sphere(c.clone().add(0, 1.2, 0), open ? 2.2 : 1.6, 20, p ->
-                    Compat.spawn(world(), Compat.DUST, p, 1, 0, 0, 0, 0,
+                    Compat.spawn(world(), Compat.ENCHANT, p, 1, 0, 0, 0, 0,
                             Compat.dust(open ? LIGHT : VIOLET, open ? 1.8f : 1.2f)));
         }
         if (ticks() % 20 == 0) {
@@ -372,7 +372,7 @@ public final class AbyssalChoir extends BossFight {
                 if (g == null || !g.isValid()) return;
                 Location gl = g.getLocation();
                 Compat.spawn(world(), Compat.FLASH, gl, 1);
-                Compat.spawn(world(), Compat.DUST, gl, 30, 0.5, 0.5, 0.5, 0, Compat.dust(LIGHT, 1.6f));
+                Compat.spawn(world(), Compat.NAUTILUS, gl, 30, 0.5, 0.5, 0.5, 0, Compat.dust(LIGHT, 1.6f));
                 Compat.sound(world(), gl, "block.amethyst_block.chime", 1.2f, 1.4f);
                 Glow.clear(g);
                 spawned.remove(g);
@@ -384,7 +384,7 @@ public final class AbyssalChoir extends BossFight {
         animate(90, tick -> {
             double t = tick / 90.0;
             Fx.helix(l.clone().subtract(0, 2, 0), 3.0 * (1 - t) + 0.5, 6.0, 24, 3.0, p ->
-                    Compat.spawn(world(), Compat.DUST, p, 1, 0, 0, 0, 0, Compat.dust(LIGHT, 1.5f)));
+                    Compat.spawn(world(), Compat.GLOW, p, 1, 0, 0, 0, 0, Compat.dust(LIGHT, 1.5f)));
             if (tick % 10 == 0) {
                 Compat.spawn(world(), Compat.ITEM, l.clone().add(0, 1, 0), 20, 1.0, 1.0, 1.0, 0.15,
                         new org.bukkit.inventory.ItemStack(Material.AMETHYST_SHARD));
@@ -430,13 +430,13 @@ public final class AbyssalChoir extends BossFight {
             Location from = boss.getLocation().add(0, 1.4, 0);
             Location to = target.getLocation().add(0, 1, 0);
             if (tick < 36) {
-                Fx.beam(from, to, 0.6, p -> Compat.spawn(world(), Compat.DUST, p, 1, 0, 0, 0, 0,
+                Fx.beam(from, to, 0.6, p -> Compat.spawn(world(), Compat.BUBBLE_POP, p, 1, 0, 0, 0, 0,
                         Compat.dust(tick < 26 ? VIOLET : LIGHT, 1.0f)));
                 return;
             }
             if (tick != 36) return;
             Fx.beam(from, to, 0.25, p -> {
-                Compat.spawn(world(), Compat.DUST, p, 2, 0.1, 0.1, 0.1, 0, Compat.dust(LIGHT, 1.7f));
+                Compat.spawn(world(), Compat.END_ROD, p, 2, 0.1, 0.1, 0.1, 0, Compat.dust(LIGHT, 1.7f));
                 Compat.spawn(world(), Compat.END_ROD, p, 1, 0.02, 0.02, 0.02, 0.01);
             });
             hit(target, 16 * damageBonus);
@@ -455,7 +455,7 @@ public final class AbyssalChoir extends BossFight {
             double radius = tick * 0.35;
             if (radius > 16) return;
             Fx.sphere(c, radius, (int) (radius * 8) + 12, p ->
-                    Compat.spawn(world(), Compat.DUST, p, 1, 0, 0, 0, 0, Compat.dust(LIGHT, 1.3f)));
+                    Compat.spawn(world(), Compat.DOLPHIN, p, 1, 0, 0, 0, 0, Compat.dust(LIGHT, 1.3f)));
             if (tick % 8 == 0) soundAt(c, "block.amethyst_block.chime", 1.0f, 0.6f + tick / 60f);
             for (Player p : Fx.playersNear(c, radius + 1.2)) {
                 if (p.getLocation().distance(c) < radius - 1.6) continue;
@@ -506,13 +506,13 @@ public final class AbyssalChoir extends BossFight {
                     Location from = g.getLocation().add(0, 0.8, 0);
                     Location to = victim.getLocation().add(0, 1, 0);
                     if (tick < 26) {
-                        Fx.beam(from, to, 0.7, p -> Compat.spawn(world(), Compat.DUST, p, 1, 0, 0, 0, 0,
+                        Fx.beam(from, to, 0.7, p -> Compat.spawn(world(), Compat.ENCHANT, p, 1, 0, 0, 0, 0,
                                 Compat.dust(VIOLET, 0.9f)));
                         return;
                     }
                     if (tick != 26) return;
                     Fx.beam(from, to, 0.3, p ->
-                            Compat.spawn(world(), Compat.DUST, p, 2, 0.08, 0.08, 0.08, 0,
+                            Compat.spawn(world(), Compat.NAUTILUS, p, 2, 0.08, 0.08, 0.08, 0,
                                     Compat.dust(LIGHT, 1.5f)));
                     hit(victim, 9 * damageBonus);
                     soundAt(to, "entity.guardian.attack", 1.2f, 1.2f);
@@ -530,7 +530,7 @@ public final class AbyssalChoir extends BossFight {
 
         animate(70, tick -> {
             Fx.sphere(c, 3 + tick * 0.12, 30, p ->
-                    Compat.spawn(world(), Compat.DUST, p, 1, 0.2, 0.2, 0.2, 0, Compat.dust(DEEPV, 1.7f)));
+                    Compat.spawn(world(), Compat.GLOW, p, 1, 0.2, 0.2, 0.2, 0, Compat.dust(DEEPV, 1.7f)));
             if (tick % 14 == 0) soundAt(c, "block.amethyst_block.hit", 1.2f, 0.4f);
             if (tick != 50) return;
             for (Player p : Fx.playersNear(c, 14)) {
@@ -555,7 +555,7 @@ public final class AbyssalChoir extends BossFight {
             Location sl = c.clone().add(Math.cos(a) * 9, 1 + random.nextDouble() * 2, Math.sin(a) * 9);
             later(i * 7, () -> {
                 if (!alive()) return;
-                Compat.spawn(world(), Compat.DUST, sl, 20, 0.4, 0.4, 0.4, 0, Compat.dust(VIOLET, 1.3f));
+                Compat.spawn(world(), Compat.BUBBLE_POP, sl, 20, 0.4, 0.4, 0.4, 0, Compat.dust(VIOLET, 1.3f));
                 Guardian g = world().spawn(sl, Guardian.class, e -> {
                     e.setPersistent(false);
                     Compat.setAttribute(e, "max_health", 22);
@@ -581,7 +581,7 @@ public final class AbyssalChoir extends BossFight {
         animate(110, tick -> {
             if (tick < 70) {
                 double r = 2 + tick * 0.05;
-                Fx.sphere(c, r, 26, p -> Compat.spawn(world(), Compat.DUST, p, 1, 0, 0, 0, 0,
+                Fx.sphere(c, r, 26, p -> Compat.spawn(world(), Compat.END_ROD, p, 1, 0, 0, 0, 0,
                         Compat.dust(LIGHT, 1.0f + tick / 70f)));
                 if (tick % 8 == 0) soundAt(c, "block.amethyst_block.chime", 1.2f, 0.4f + tick / 60f);
                 return;
@@ -609,14 +609,14 @@ public final class AbyssalChoir extends BossFight {
             Location l = boss.getLocation().add(0, 1.4, 0);
             if (tick < 30) {
                 Fx.sphere(l, 2.2 - tick * 0.05, 22, p ->
-                        Compat.spawn(world(), Compat.DUST, p, 1, 0, 0, 0, 0, Compat.dust(LIGHT, 1.5f)));
+                        Compat.spawn(world(), Compat.DOLPHIN, p, 1, 0, 0, 0, 0, Compat.dust(LIGHT, 1.5f)));
                 return;
             }
             double angle = (tick - 30) * 0.08;
             Vector dir = new Vector(Math.cos(angle), 0, Math.sin(angle));
             for (double d = 1; d <= 18; d += 0.5) {
                 Location p = l.clone().add(dir.clone().multiply(d));
-                Compat.spawn(world(), Compat.DUST, p, 2, 0.12, 0.12, 0.12, 0, Compat.dust(LIGHT, 1.6f));
+                Compat.spawn(world(), Compat.ENCHANT, p, 2, 0.12, 0.12, 0.12, 0, Compat.dust(LIGHT, 1.6f));
                 Compat.spawn(world(), Compat.END_ROD, p, 1, 0.02, 0.02, 0.02, 0.01);
             }
             if (tick % 6 == 0) soundAt(l, "block.amethyst_block.chime", 1.1f, 1.4f);
@@ -651,13 +651,13 @@ public final class AbyssalChoir extends BossFight {
                 Location from = sources.get(i);
                 Location to = v.getLocation().add(0, 1, 0);
                 if (tick < 50) {
-                    Fx.beam(from, to, 0.8, p -> Compat.spawn(world(), Compat.DUST, p, 1, 0, 0, 0, 0,
+                    Fx.beam(from, to, 0.8, p -> Compat.spawn(world(), Compat.NAUTILUS, p, 1, 0, 0, 0, 0,
                             Compat.dust(VIOLET, 1.0f)));
                     continue;
                 }
                 if (tick != 50) continue;
                 Fx.beam(from, to, 0.3, p ->
-                        Compat.spawn(world(), Compat.DUST, p, 2, 0.1, 0.1, 0.1, 0, Compat.dust(LIGHT, 1.7f)));
+                        Compat.spawn(world(), Compat.GLOW, p, 2, 0.1, 0.1, 0.1, 0, Compat.dust(LIGHT, 1.7f)));
                 hit(v, 10 * damageBonus);
                 Compat.spawn(world(), Compat.FLASH, to, 1);
             }
@@ -680,8 +680,8 @@ public final class AbyssalChoir extends BossFight {
         for (Guardian g : singers) {
             if (g == null || !g.isValid() || i >= spots.size()) continue;
             Location to = spots.get(i++);
-            Compat.spawn(world(), Compat.DUST, g.getLocation(), 20, 0.4, 0.4, 0.4, 0, Compat.dust(VIOLET, 1.4f));
-            Compat.spawn(world(), Compat.DUST, to, 20, 0.4, 0.4, 0.4, 0, Compat.dust(VIOLET, 1.4f));
+            Compat.spawn(world(), Compat.BUBBLE_POP, g.getLocation(), 20, 0.4, 0.4, 0.4, 0, Compat.dust(VIOLET, 1.4f));
+            Compat.spawn(world(), Compat.END_ROD, to, 20, 0.4, 0.4, 0.4, 0, Compat.dust(VIOLET, 1.4f));
             g.teleport(to);
         }
         // El color no se toca: el turno sigue siendo el mismo, solo cambia donde esta.
@@ -699,7 +699,7 @@ public final class AbyssalChoir extends BossFight {
             if (tick < 55) {
                 if (tick % 10 == 0) {
                     Fx.ring(c, 10, 26, tick * 0.1, p ->
-                            Compat.spawn(world(), Compat.DUST, p, 1, 0, 0, 0, 0, Compat.dust(DEEPV, 1.2f)));
+                            Compat.spawn(world(), Compat.DOLPHIN, p, 1, 0, 0, 0, 0, Compat.dust(DEEPV, 1.2f)));
                 }
                 return;
             }

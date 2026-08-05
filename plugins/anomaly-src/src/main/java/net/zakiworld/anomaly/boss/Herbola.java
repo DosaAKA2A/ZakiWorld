@@ -101,18 +101,21 @@ public final class Herbola extends BossFight {
             b.setCustomNameVisible(false);
             EntityEquipment eq = b.getEquipment();
             if (eq != null) {
-                eq.setItemInMainHand(new ItemStack(Material.BOW));
+                // Una amapola por arma. Pega igual de fuerte y se lee muchisimo mejor:
+                // el bosque no dispara flechas, el bosque te alcanza y te toca.
+                eq.setItemInMainHand(new ItemStack(Material.POPPY));
                 eq.setHelmet(new ItemStack(Material.FLOWERING_AZALEA));
                 eq.setItemInMainHandDropChance(0);
                 eq.setHelmetDropChance(0);
             }
         });
 
-        Compat.setAttribute(boss, "attack_damage", 11);
+        Compat.setAttribute(boss, "attack_damage", 14);
         Compat.setAttribute(boss, "armor", 12);
         Compat.setAttribute(boss, "knockback_resistance", 0.8);
-        Compat.setAttribute(boss, "follow_range", 64);
-        Compat.setAttribute(boss, "movement_speed", 0.30);
+        Compat.setAttribute(boss, "follow_range", 72);
+        // Rapida a proposito: su gracia es cubrir terreno, y para eso hay que andarlo.
+        Compat.setAttribute(boss, "movement_speed", 0.40);
         Compat.setAttribute(boss, "scale", 1.8);
         applyHealth(plugin.registry().scaledHealth(plugin.registry().herbola(), targets(96).size()));
         boss.setMaximumNoDamageTicks(6);
@@ -193,7 +196,7 @@ public final class Herbola extends BossFight {
             double radius = t * 9;
             Fx.ring(spot, radius, (int) (radius * 6) + 8, l -> {
                 Location g = Fx.ground(l, 4);
-                Compat.spawn(world(), Compat.DUST, g.clone().add(0, 0.2, 0), 1, 0, 0, 0, 0,
+                Compat.spawn(world(), Compat.SPORE_BLOSSOM_AIR, g.clone().add(0, 0.2, 0), 1, 0, 0, 0, 0,
                         Compat.dust(MOSS, 1.4f));
             });
             if (tick % 8 == 0) {
@@ -293,12 +296,13 @@ public final class Herbola extends BossFight {
     protected void ambient() {
         if (!alive()) return;
 
-        if (ticks() % 6 == 0) trail();
+        // Va mas rapida que antes, asi que el rastro se pinta mas a menudo o se corta.
+        if (ticks() % 3 == 0) trail();
         keepHostile();
 
         if (ticks() % 4 == 0) {
             Location l = boss.getLocation().add(0, 1.4, 0);
-            Compat.spawn(world(), Compat.DUST, l, 2, 0.5, 0.6, 0.5, 0, Compat.dust(MOSS, 1.1f));
+            Compat.spawn(world(), Compat.COMPOSTER, l, 2, 0.5, 0.6, 0.5, 0, Compat.dust(MOSS, 1.1f));
             if (Math.random() < 0.3) {
                 Compat.spawn(world(), Compat.SPORE_BLOSSOM_AIR,
                         l, 1, 0.6, 0.6, 0.6, 0.01);
@@ -319,19 +323,20 @@ public final class Herbola extends BossFight {
                     soundAt(parrot.getLocation(), "entity.parrot.ambient", 0.9f, 1.3f);
                 }
             } else if (ticks() % 5 == 0) {
-                Compat.spawn(world(), Compat.DUST, parrot.getLocation(), 2, 0.2, 0.2, 0.2, 0,
+                Compat.spawn(world(), Compat.HAPPY_VILLAGER, parrot.getLocation(), 2, 0.2, 0.2, 0.2, 0,
                         Compat.dust(0xE05A4A, 1.0f));
             }
         }
     }
 
     /**
-     * Herbola es hostil de verdad, con Cantor o sin el.
+     * Herbola persigue y pelea de cerca, con Cantor o sin el.
      *
-     * Con el loro montado en la cabeza se quedaba mirando: un mob que lleva pasajero
-     * pierde buena parte de su IA de combate, asi que confiar en que "el esqueleto ya
-     * disparara solo" no vale. Aqui se le renueva el objetivo a menudo y ADEMAS se le
-     * dispara la flecha a mano, que es lo unico que garantiza que siempre ataque.
+     * Con el loro montado en la cabeza se quedaba parada: un mob que lleva pasajero
+     * pierde buena parte de su IA de combate. Asi que ni se confia en su IA ni se le
+     * deja arco: se le renueva el objetivo cada medio segundo, se le empuja hacia el
+     * cuando se queda atras y se le da el golpe a mano si lo tiene al alcance. Ademas
+     * es lo que interesa a su mecanica: mientras corre, va dejando jardin.
      */
     private void keepHostile() {
         if (ticks() % 10 != 0) return;
@@ -343,20 +348,26 @@ public final class Herbola extends BossFight {
         }
         face(t.getEyeLocation());
 
-        // Un flechazo cada segundo y medio a quien tenga a tiro y a la vista.
-        if (ticks() % 30 != 0) return;
-        if (boss.getLocation().distanceSquared(t.getLocation()) < 9) return;
-        if (!boss.hasLineOfSight(t)) return;
-        try {
-            org.bukkit.entity.Arrow arrow = boss.launchProjectile(org.bukkit.entity.Arrow.class,
-                    t.getEyeLocation().toVector().subtract(boss.getEyeLocation().toVector())
-                            .normalize().multiply(1.9));
-            arrow.setDamage(4 + 2 * damageBonus);
-            arrow.setPersistent(false);
-            arrow.setPickupStatus(org.bukkit.entity.AbstractArrow.PickupStatus.DISALLOWED);
-            Tags.markMinion(arrow, ID);
-            soundAt(boss.getLocation(), "entity.skeleton.shoot", 1.2f, 0.9f);
-        } catch (Throwable ignored) {
+        double d2 = boss.getLocation().distanceSquared(t.getLocation());
+        // Al alcance: zarpazo de amapola.
+        if (d2 < 9) {
+            if (ticks() % 20 == 0) {
+                hit(t, 9 * damageBonus);
+                Compat.spawn(world(), Compat.SWEEP_ATTACK, t.getLocation().add(0, 1, 0), 1);
+                Compat.spawn(world(), Compat.ITEM, t.getLocation().add(0, 1, 0), 10, 0.3, 0.3, 0.3, 0.1,
+                        new ItemStack(Material.POPPY));
+                soundAt(t.getLocation(), "entity.player.attack.sweep", 1.2f, 0.8f);
+            }
+            return;
+        }
+        // Lejos: acelera hacia el en vez de esperar a que la pathfinding se decida.
+        if (d2 > 36 && ticks() % 20 == 0) {
+            Vector to = t.getLocation().toVector().subtract(boss.getLocation().toVector());
+            if (to.lengthSquared() > 0.01) {
+                boss.setVelocity(to.normalize().multiply(0.55).setY(Math.max(0.05, boss.getVelocity().getY())));
+                Compat.spawn(world(), Compat.SPORE_BLOSSOM_AIR, boss.getLocation().add(0, 0.4, 0), 3,
+                        0.3, 0.2, 0.3, 0.01);
+            }
         }
     }
 
@@ -386,13 +397,13 @@ public final class Herbola extends BossFight {
                 dropNameplate();
                 boss.eject();
                 parrot.setVelocity(new Vector(0, 0.8, 0));
-                Compat.spawn(world(), Compat.DUST, parrot.getLocation(), 40, 0.5, 0.5, 0.5, 0,
+                Compat.spawn(world(), Compat.CHERRY_LEAVES, parrot.getLocation(), 40, 0.5, 0.5, 0.5, 0,
                         Compat.dust(0xE05A4A, 1.5f));
                 soundAt(parrot.getLocation(), "entity.parrot.fly", 1.4f, 1.0f);
             }
             Location l = boss.getLocation();
             Fx.ring(Fx.ground(l, 3).add(0, 0.2, 0), 2 + tick * 0.06, 20, tick * 0.2, p ->
-                    Compat.spawn(world(), Compat.DUST, p, 1, 0, 0, 0, 0, Compat.dust(MOSS, 1.3f)));
+                    Compat.spawn(world(), Compat.MYCELIUM, p, 1, 0, 0, 0, 0, Compat.dust(MOSS, 1.3f)));
             if (tick % 10 == 0) bloomAround(Fx.ground(l, 4), 5, 0.3);
         }, () -> {
             if (!alive()) return;
@@ -421,7 +432,7 @@ public final class Herbola extends BossFight {
             if (!alive()) return;
             Location l = boss.getLocation();
             Fx.helix(l, 2.5, 5.0, 24, 3.0, p ->
-                    Compat.spawn(world(), Compat.DUST, p, 1, 0, 0, 0, 0, Compat.dust(BLOOM, 1.5f)));
+                    Compat.spawn(world(), Compat.FALLING_SPORE_BLOSSOM, p, 1, 0, 0, 0, 0, Compat.dust(BLOOM, 1.5f)));
             if (tick % 12 == 0) {
                 bloomAround(Fx.ground(l, 4), 8, 0.4);
                 soundAt(l, "block.azalea_leaves.place", 1.3f, 0.7f);
@@ -451,7 +462,7 @@ public final class Herbola extends BossFight {
         animate(60, tick -> {
             double t = tick / 60.0;
             Fx.helix(l, 2.4 * (1 - t) + 0.4, 4.0, 22, 2.5, p ->
-                    Compat.spawn(world(), Compat.DUST, p, 1, 0, 0, 0, 0, Compat.dust(MOSS, 1.5f)));
+                    Compat.spawn(world(), Compat.SPORE_BLOSSOM_AIR, p, 1, 0, 0, 0, 0, Compat.dust(MOSS, 1.5f)));
             if (tick % 10 == 0) {
                 Compat.spawn(world(), Compat.ITEM, l.clone().add(0, 1, 0), 20, 0.7, 0.7, 0.7, 0.12,
                         new ItemStack(Material.FLOWERING_AZALEA_LEAVES));
@@ -496,11 +507,11 @@ public final class Herbola extends BossFight {
             double t = tick / 240.0;
 
             Fx.ring(center, radius, (int) (40 + t * 90), tick * 0.05, p ->
-                    Compat.spawnForced(world(), Compat.DUST, Fx.ground(p, 5).add(0, 0.3, 0), 1, 0, 0, 0, 0,
+                    Compat.spawnForced(world(), Compat.COMPOSTER, Fx.ground(p, 5).add(0, 0.3, 0), 1, 0, 0, 0, 0,
                             Compat.dust(0xE05A4A, (float) (1.4 + t))));
             Fx.beam(center, parrot.getLocation(), 1.2, p ->
-                    Compat.spawn(world(), Compat.DUST, p, 1, 0, 0, 0, 0, Compat.dust(0xE05A4A, 1.3f)));
-            Compat.spawn(world(), Compat.DUST, parrot.getLocation(), 6, 0.4, 0.4, 0.4, 0,
+                    Compat.spawn(world(), Compat.HAPPY_VILLAGER, p, 1, 0, 0, 0, 0, Compat.dust(0xE05A4A, 1.3f)));
+            Compat.spawn(world(), Compat.CHERRY_LEAVES, parrot.getLocation(), 6, 0.4, 0.4, 0.4, 0,
                     Compat.dust(0xE05A4A, (float) (1.2 + t)));
 
             if (tick % 20 == 0) {
@@ -527,7 +538,7 @@ public final class Herbola extends BossFight {
             for (int r = 1; r <= 6; r++) {
                 final int ring = r;
                 later(r * 3, () -> Fx.ring(center, ring * 3.0, ring * 14, p ->
-                        Compat.spawn(world(), Compat.DUST, Fx.ground(p, 4).add(0, 0.4, 0), 2, 0, 0, 0, 0,
+                        Compat.spawn(world(), Compat.MYCELIUM, Fx.ground(p, 4).add(0, 0.4, 0), 2, 0, 0, 0, 0,
                                 Compat.dust(BLOOM, 1.8f))));
             }
             for (Player p : Fx.playersNear(center, radius)) {
@@ -562,7 +573,7 @@ public final class Herbola extends BossFight {
             if (r > 10) return;
             bloomAround(c, r, 0.55);
             Fx.ring(c, r, r * 6, p ->
-                    Compat.spawn(world(), Compat.DUST, Fx.ground(p, 3).add(0, 0.25, 0), 1, 0, 0, 0, 0,
+                    Compat.spawn(world(), Compat.FALLING_SPORE_BLOSSOM, Fx.ground(p, 3).add(0, 0.25, 0), 1, 0, 0, 0, 0,
                             Compat.dust(MOSS, 1.4f)));
             soundAt(c, "block.moss.step", 1.2f, 0.7f);
             for (Player p : Fx.playersNear(c, r)) {
@@ -593,7 +604,7 @@ public final class Herbola extends BossFight {
                 if (tick > 70) return;
                 for (double h = 0; h < 2.0; h += 0.35) {
                     Fx.ring(mark.clone().add(0, h, 0), 1.0, 8, tick * 0.2 + h, p ->
-                            Compat.spawn(world(), Compat.DUST, p, 1, 0, 0, 0, 0, Compat.dust(MOSS, 1.2f)));
+                            Compat.spawn(world(), Compat.SPORE_BLOSSOM_AIR, p, 1, 0, 0, 0, 0, Compat.dust(MOSS, 1.2f)));
                 }
                 for (Player p : Fx.playersNear(mark, 1.9)) {
                     rootWithRoots(p, 20);
@@ -627,7 +638,7 @@ public final class Herbola extends BossFight {
         animate(140, tick -> {
             double r = Math.min(9, 2 + tick * 0.1);
             Fx.sphere(c, r, 34, p -> {
-                Compat.spawn(world(), Compat.DUST, p, 1, 0.3, 0.3, 0.3, 0, Compat.dust(SAP, 1.4f));
+                Compat.spawn(world(), Compat.COMPOSTER, p, 1, 0.3, 0.3, 0.3, 0, Compat.dust(SAP, 1.4f));
                 if (Math.random() < 0.15) {
                     Compat.spawn(world(), Compat.SPORE_BLOSSOM_AIR, p, 1, 0.2, 0.2, 0.2, 0.01);
                 }
@@ -658,7 +669,7 @@ public final class Herbola extends BossFight {
             Fx.ring(c, radius, (int) (radius * 6) + 8, p -> {
                 Location g = Fx.ground(p, 4);
                 for (double h = 0; h < 2.2; h += 0.4) {
-                    Compat.spawn(world(), Compat.DUST, g.clone().add(0, h, 0), 1, 0.1, 0.1, 0.1, 0,
+                    Compat.spawn(world(), Compat.HAPPY_VILLAGER, g.clone().add(0, h, 0), 1, 0.1, 0.1, 0.1, 0,
                             Compat.dust(Math.random() < 0.5 ? BLOOM : MOSS, 1.4f));
                 }
             });
@@ -686,7 +697,7 @@ public final class Herbola extends BossFight {
             Location pl = parrot.getLocation().add(0, 0.5, 0);
             Compat.spawn(world(), Compat.NOTE, pl, 2, 0.4, 0.3, 0.4, 1);
             Fx.ring(boss.getLocation().add(0, 1.0, 0), 1.6, 12, tick * 0.2, p ->
-                    Compat.spawn(world(), Compat.DUST, p, 1, 0, 0, 0, 0, Compat.dust(SAP, 1.3f)));
+                    Compat.spawn(world(), Compat.CHERRY_LEAVES, p, 1, 0, 0, 0, 0, Compat.dust(SAP, 1.3f)));
             Compat.apply(boss, "regeneration", 40, 2);
             Compat.apply(boss, "resistance", 40, 1);
             Compat.apply(boss, "speed", 40, 1);
@@ -710,7 +721,7 @@ public final class Herbola extends BossFight {
             Location l = boss.getLocation().add(0, 1.2, 0);
             if (tick < 20) {
                 for (double d = 2; d < 14; d += 1.0) {
-                    Compat.spawn(world(), Compat.DUST, l.clone().add(run.clone().multiply(d)), 1,
+                    Compat.spawn(world(), Compat.MYCELIUM, l.clone().add(run.clone().multiply(d)), 1,
                             0.4, 0.3, 0.4, 0, Compat.dust(MOSS, 1.3f));
                 }
                 return;
@@ -718,7 +729,7 @@ public final class Herbola extends BossFight {
             double reach = (tick - 20) * 1.1;
             if (reach > 14) return;
             Location p = l.clone().add(run.clone().multiply(reach));
-            Compat.spawn(world(), Compat.DUST, p, 8, 0.4, 0.4, 0.4, 0, Compat.dust(MOSS, 1.5f));
+            Compat.spawn(world(), Compat.FALLING_SPORE_BLOSSOM, p, 8, 0.4, 0.4, 0.4, 0, Compat.dust(MOSS, 1.5f));
             if (tick == 21) soundAt(l, "item.whip.crack", 1.4f, 0.8f);
             for (Player v : Fx.playersNear(p, 2.4)) {
                 if (!lashed.add(v.getUniqueId())) continue;
@@ -753,12 +764,12 @@ public final class Herbola extends BossFight {
             if (tick < 55) {
                 Vector to = tl.toVector().subtract(pl.toVector());
                 if (to.lengthSquared() > 0.4) parrot.setVelocity(to.normalize().multiply(1.15));
-                Compat.spawn(world(), Compat.DUST, pl, 3, 0.2, 0.2, 0.2, 0, Compat.dust(0xE05A4A, 1.2f));
+                Compat.spawn(world(), Compat.SPORE_BLOSSOM_AIR, pl, 3, 0.2, 0.2, 0.2, 0, Compat.dust(0xE05A4A, 1.2f));
                 if (pl.distanceSquared(tl) < 4) {
                     hit(target, 11 * damageBonus);
                     rootWithRoots(target, 70);
                     Compat.spawn(world(), Compat.CRIT, tl, 24, 0.3, 0.4, 0.3, 0.25);
-                    Compat.spawn(world(), Compat.DUST, tl, 30, 0.4, 0.5, 0.4, 0, Compat.dust(MOSS, 1.5f));
+                    Compat.spawn(world(), Compat.COMPOSTER, tl, 30, 0.4, 0.5, 0.4, 0, Compat.dust(MOSS, 1.5f));
                     soundAt(tl, "entity.parrot.hurt", 1.5f, 0.8f);
                     target.sendActionBar(Component.text("Te ha amarrado al suelo.",
                             NamedTextColor.RED, TextDecoration.BOLD));
@@ -783,7 +794,7 @@ public final class Herbola extends BossFight {
             Fx.ring(c, radius, (int) (radius * 5) + 8, tick * 0.06, p -> {
                 Location g = Fx.ground(p, 4);
                 for (double h = 0; h < 1.6; h += 0.4) {
-                    Compat.spawn(world(), Compat.DUST, g.clone().add(0, h, 0), 1, 0, 0, 0, 0,
+                    Compat.spawn(world(), Compat.HAPPY_VILLAGER, g.clone().add(0, h, 0), 1, 0, 0, 0, 0,
                             Compat.dust(MOSS, 1.4f));
                 }
             });
@@ -806,7 +817,7 @@ public final class Herbola extends BossFight {
 
         animate(90, tick -> {
             Fx.sphere(c, 3 + tick * 0.1, 30, p ->
-                    Compat.spawn(world(), Compat.DUST, p, 1, 0.3, 0.3, 0.3, 0, Compat.dust(BLOOM, 1.5f)));
+                    Compat.spawn(world(), Compat.CHERRY_LEAVES, p, 1, 0.3, 0.3, 0.3, 0, Compat.dust(BLOOM, 1.5f)));
             if (tick % 18 != 0) return;
             for (Player p : Fx.playersNear(c, 3 + tick * 0.1)) {
                 Compat.apply(p, "blindness", 70, 0);
@@ -834,7 +845,7 @@ public final class Herbola extends BossFight {
                     bloomAround(sl, 2, 0.9);
                     for (double h = 0; h < 4; h += 0.4) {
                         Fx.ring(sl.clone().add(0, h, 0), 1.2, 10, h, p ->
-                                Compat.spawn(world(), Compat.DUST, p, 1, 0, 0, 0, 0, Compat.dust(MOSS, 1.5f)));
+                                Compat.spawn(world(), Compat.MYCELIUM, p, 1, 0, 0, 0, 0, Compat.dust(MOSS, 1.5f)));
                     }
                     Compat.spawn(world(), Compat.ITEM, sl.clone().add(0, 2, 0), 40, 0.8, 1.0, 0.8, 0.1,
                             new ItemStack(Material.FLOWERING_AZALEA_LEAVES));
@@ -883,7 +894,7 @@ public final class Herbola extends BossFight {
                     // Primero busca altura, como se pidio.
                     if (tick < 34) {
                         bird.setVelocity(new Vector(0, 0.42, 0));
-                        Compat.spawn(world(), Compat.DUST, bl, 2, 0.15, 0.15, 0.15, 0,
+                        Compat.spawn(world(), Compat.FALLING_SPORE_BLOSSOM, bl, 2, 0.15, 0.15, 0.15, 0,
                                 Compat.dust(0xE05A4A, 1.0f));
                         return;
                     }
@@ -893,7 +904,7 @@ public final class Herbola extends BossFight {
 
                     Vector to = aim.clone().add(0, 0.5, 0).toVector().subtract(bl.toVector());
                     if (to.lengthSquared() > 0.6) bird.setVelocity(to.normalize().multiply(1.3));
-                    Compat.spawn(world(), Compat.DUST, bl, 3, 0.2, 0.2, 0.2, 0, Compat.dust(BLOOM, 1.2f));
+                    Compat.spawn(world(), Compat.SPORE_BLOSSOM_AIR, bl, 3, 0.2, 0.2, 0.2, 0, Compat.dust(BLOOM, 1.2f));
 
                     boolean landed = bl.distanceSquared(aim) < 4
                             || Fx.ground(bl, 2).getBlock().getRelative(0, -1, 0).getType().isSolid()
@@ -901,7 +912,7 @@ public final class Herbola extends BossFight {
                     if (!landed && tick < 110) return;
 
                     Compat.spawn(world(), Compat.EXPLOSION, bl, 2, 0.4, 0.4, 0.4, 0);
-                    Compat.spawn(world(), Compat.DUST, bl, 50, 0.8, 0.8, 0.8, 0, Compat.dust(BLOOM, 1.7f));
+                    Compat.spawn(world(), Compat.COMPOSTER, bl, 50, 0.8, 0.8, 0.8, 0, Compat.dust(BLOOM, 1.7f));
                     Compat.spawn(world(), Compat.ITEM, bl, 30, 0.6, 0.6, 0.6, 0.15,
                             new ItemStack(Material.FLOWERING_AZALEA_LEAVES));
                     soundAt(bl, "entity.generic.explode", 1.3f, 1.3f);
@@ -934,7 +945,7 @@ public final class Herbola extends BossFight {
                     return;
                 }
                 Fx.ring(mark.clone().add(0, 0.2, 0), 2.6, 16, tick * 0.1, p ->
-                        Compat.spawn(world(), Compat.DUST, Fx.ground(p, 3).add(0, 0.2, 0), 1, 0, 0, 0, 0,
+                        Compat.spawn(world(), Compat.HAPPY_VILLAGER, Fx.ground(p, 3).add(0, 0.2, 0), 1, 0, 0, 0, 0,
                                 Compat.dust(SAP, 1.4f)));
                 if (tick % 20 != 0) return;
                 for (Player p : Fx.playersNear(mark, 2.8)) {
@@ -969,7 +980,7 @@ public final class Herbola extends BossFight {
             Compat.spawn(world(), Compat.EXPLOSION_EMITTER, c, 2);
             for (double h = 0; h < 7; h += 0.4) {
                 Fx.ring(c.clone().add(0, h, 0), 2.5 - h * 0.2, 14, h * 2, p ->
-                        Compat.spawn(world(), Compat.DUST, p, 1, 0, 0, 0, 0, Compat.dust(MOSS, 1.7f)));
+                        Compat.spawn(world(), Compat.CHERRY_LEAVES, p, 1, 0, 0, 0, 0, Compat.dust(MOSS, 1.7f)));
             }
             soundAt(c, "block.roots.break", 1.8f, 0.4f);
             soundAt(c, "entity.generic.explode", 1.4f, 0.5f);
@@ -999,7 +1010,7 @@ public final class Herbola extends BossFight {
 
         animate(170, tick -> {
             for (Location s : seeds) {
-                Compat.spawn(world(), Compat.DUST, s.clone().add(0, 0.3, 0), 1, 0.3, 0.15, 0.3, 0,
+                Compat.spawn(world(), Compat.MYCELIUM, s.clone().add(0, 0.3, 0), 1, 0.3, 0.15, 0.3, 0,
                         Compat.dust(SAP, 1.2f));
             }
             if (tick % 20 != 0) return;

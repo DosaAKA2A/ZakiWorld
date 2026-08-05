@@ -55,8 +55,8 @@ anomalias:
     experiencia: 1300
     comandos: []
     botin: {}
-  medusa:
-    experiencia: 1400
+  quimera:
+    experiencia: 1500
     comandos: []
     botin: {}
   bruja:
@@ -69,5 +69,17 @@ anomalias:
     botin: {}
   rabby:
     experiencia: 2200
+    comandos: []
+    botin: {}
+  cazador:
+    experiencia: 1800
+    comandos: []
+    botin: {}
+  aragon:
+    experiencia: 2000
+    comandos: []
+    botin: {}
+  piromante:
+    experiencia: 1700
     comandos: []
     botin: {}

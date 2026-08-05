@@ -8,7 +8,7 @@ La intención de fondo es empujar a la gente a **salir del spawn** y a **pelear 
 el jefe escala con el número de jugadores, varias habilidades castigan dispersarse y el
 botín se reparte entre todos los que participaron, no solo entre quien da el último golpe.
 
-- **Versión:** 1.11.0
+- **Versión:** 1.12.0
 - **Paquete:** `net.zakiworld.anomaly`
 - **Probado contra:** Paper 26.1.2 (MC 26.1.2), compilado con `--release 21`
 - **Permiso único:** `anomaly.gui` (`default: op`)
@@ -331,7 +331,7 @@ Quince habilidades y **cero esbirros**: los siete dobles son su curación, no ay
 
 ## Herbola
 
-Un **bogged** que convierte en jardín todo lo que pisa: musgo, azalea y flores, dejando
+Un **bogged** con una **amapola por arma** que convierte en jardín todo lo que pisa: musgo, azalea y flores, dejando
 alfombra de musgo por donde pasa igual que un muñeco de nieve deja nieve. Encima lleva un
 **loro rojo** cantándole, y ese canto es lo que la mantiene entera.
 
@@ -354,16 +354,16 @@ círculo convertido en jardín para siempre. Por eso Herbola alarga la espera de
 
 ---
 
-## Medusa
+## La Quimera
 
-La gorgona: un husk con armadura de cuero verde, **arco** en la mano y una **cabellera
-de serpientes** que se mueve sola — seis entidades de visualización con vides, cada una
-con su compás, para que parezcan bichos y no un adorno girando. Elemento **tierra**,
-brillo **verde oscuro**.
+Tres animales mal cosidos en uno: **cuerpo de fiera** (un ravager), una **cabra**
+clavada en el lomo y una **cola de serpiente** arrastrándose detrás. No es un dibujo en
+partículas: son entidades de verdad montadas unas sobre otras, que es la única forma
+honesta de hacer una quimera cuando el servidor **no puede repintar una criatura**.
 
 ### Los cinco pilares
 
-**Medusa no se puede matar mientras quede uno de sus cinco pilares en pie.** No son
+**La Quimera no se puede matar mientras quede uno de sus cinco pilares en pie.** No son
 adornos ni texturas estiradas: son construcciones de **bloques de verdad** — base de
 escaleras, columna de ladrillo de piedra, el **ladrillo cincelado** a la altura de la
 cara y una losa de remate. Solo cede el cincelado; picar cualquier otra pieza no hace
@@ -371,29 +371,24 @@ nada, porque si se pudieran desmontar por abajo la mecánica se resolvería cava
 partir el cincelado **se derrumba el pilar entero**.
 
 Y ahí está la tensión: **esos mismos pilares son la única cobertura contra su mirada**,
-así que cada uno que se tira es un escondite menos. El terreno se devuelve tal cual:
-cada bloque se guarda con su estado original antes de tocarlo y se restaura al
-derrumbar el pilar o al cerrar el evento.
+así que cada uno que se tira es un escondite menos. El terreno se devuelve tal cual.
 
-### La mirada
+### La mirada de la cola
 
-**Cuando ella mira, tú no miras.** Sus tres miradas (Pétrea, en Barrido y de la Gorgona)
-petrifican a quien esté apuntándole con la cámara al acabar el aviso — y petrificar no
-es matar, es **clavarte en el sitio** delante de todo lo demás que tira. Tres salvaciones:
-apartar la vista, **el escudo levantado** (como Perseo: si además la mirabas, la mirada
-rebota) o **ponerse detrás de un pilar**.
+Quien mire de frente a la serpiente cuando levanta la cabeza **se queda de piedra** — y
+petrificar no es matar, es **clavarte en el sitio** delante de una fiera de tres cabezas.
+Tres salvaciones: apartar la vista, **el escudo levantado** (como Perseo: si además la
+mirabas, la mirada rebota) o **ponerse detrás de un pilar**.
 
 | Fase | Habilidades |
 |---|---|
-| I — la gorgona | Mirada Pétrea · Látigo de Serpientes · Andanada Venenosa · Nido de Víboras · Flecha Pétrea |
-| II — la muda | Mirada en Barrido · Colmillo Certero · Abrazo Pétreo · Lluvia de Colmillos · Veneno Ancestral |
-| III — los ojos arden | Mirada de la Gorgona · Furia Serpentina |
+| I — la fiera | Mirada de la Cola · Embestida de la Fiera · Berrido de la Cabra · Nido de Víboras · Escupitajo Venenoso |
+| II — la cabra rabiosa | Mirada en Barrido · Zarpazo Triple · Cornada Ascendente · Lluvia de Colmillos · Veneno Ancestral |
+| III — la serpiente | La Mirada Entera · Pisotón de la Fiera |
 | Cualquiera | Siseo |
 
-Sus flechas también petrifican un poco (dejan la pierna de piedra). Al morir se
-resquebraja y se deshace, como sus víctimas. Necesita `allowLongInvulnerability`: sin
-eso, el vigilante que quita la invulnerabilidad a los veinte segundos haría inútiles
-los pilares.
+Necesita `allowLongInvulnerability`: sin eso, el vigilante que quita la invulnerabilidad
+a los veinte segundos haría inútiles los pilares.
 
 ---
 
@@ -519,9 +514,70 @@ temporal: sin eso el servidor expulsa por "volar" a mitad del combo.
 
 ---
 
+## El Cazador
+
+Un **piglin brute** vestido de cuero negro y con sombrero. No es fuerza bruta: es un
+cazador, y lo que lo hace peligroso es que **no pelea siempre igual**. Cambia de arma
+delante de ti, y con el arma cambia todo lo demás — **el arma que lleva en la mano
+siempre dice lo que va a hacer**, que es lo que lo hace legible: si saca el hacha, viene.
+
+| Fase | Cómo pelea |
+|---|---|
+| I — el acecho | **Ballesta y arco.** Se mantiene lejos y **retrocede si te acercas**: perseguirlo a la carrera es perder. Andanada de Ballesta · Lluvia de Flechas · Saeta Perforante · Marcar la Presa |
+| II — el cepo | Siembra el suelo de **trampas**. Se ven —una placa que parpadea y hace clic— pero cubren tanto terreno que acabas pisando una, y revienta con muy buen radio. Cepo · Cepo Dirigido · Red de Cepos · Retirada Calculada |
+| III — la estocada | Tira lo de lejos y saca la **lanza de netherita**, el hacha y la espada. Estocada de Lanza · Hachazo Descendente · Danza de Espada |
+| Cualquiera | Cambio de Arma |
+
+Las trampas caducan al minuto y medio: sin eso, la arena acabaría siendo un campo de
+minas del que no se sale.
+
+---
+
+## Áragon
+
+Una araña **descomunal y lentísima**. Ese es el diseño entero: Áragon casi no pelea. Se
+arrastra, teje y pone huevos; **quien te muerde son sus hijas**, y son muchas.
+
+- **Crías diminutas y a montones.** Salen a camadas de doce, del tamaño de un puño
+  (atributo `scale`, que es todo lo que hace falta), corriendo más rápido de lo que se
+  puede retroceder. Sueltas no son nada; en enjambre te comen. Tope de **sesenta vivas**.
+- **Los huevos.** Bolas blancas plantadas por la arena, que **laten cada vez más rápido**
+  según se acercan a abrirse. Si se rompen a tiempo no pasa nada; si no, **eclosionan** y
+  sale otra camada. Son la única forma de que el enjambre deje de crecer, y por eso
+  obligan a repartirse: unos al jefe, otros a los huevos.
+- **La tela.** Telaraña de verdad, la que frena. Solo se teje sobre aire —nunca sustituye
+  un bloque de nadie— y se devuelve entera al cerrar el evento.
+
+Lleva **muy pocas partículas sueltas a propósito**: lo que tiene que llenar la pantalla
+son las patas, no el confeti.
+
+---
+
+## El Piromante
+
+Un **aldeano del desierto** —el de la túnica más naranja que hay— con armadura de cuero
+teñida de rojo y una **vara de blaze**. Es el único jefe puramente mágico y puramente a
+distancia: no tiene un solo golpe cuerpo a cuerpo, todo sale ardiendo de las manos, y
+**encima persigue**, así que no se le gana quedándose lejos.
+
+| Fase | Habilidades |
+|---|---|
+| I — la chispa | Bola de Fuego · Andanada de Brasas · Aliento de Fuego · Rastro de Brasas |
+| II — la hoguera | Mar de Llamas · Meteoros · Muro de Fuego · Guardia de Brasas |
+| III — el infierno | **Nova Ígnea** · Columna de Lava · Anillo de Cenizas |
+| Cualquiera | Marca Ardiente |
+
+**Quema el suelo de verdad**, y de ahí sale su única regla dura: cada fuego que prende
+pasa antes por WorldGuard, con dos bloques de margen. Dentro de una región protegida —de
+la administración o el terreno de un jugador— **no se enciende nada**. Y todo lo que
+prende queda anotado y se apaga al cerrar el evento: el jardín permanente es cosa de
+Herbola; aquí no queda ni una brasa.
+
+---
+
 ## El árbol de logros
 
-Catorce logros: la raíz, uno por anomalía y **El que las vio todas**, que exige las doce.
+Diecisiete logros: la raíz, uno por anomalía y **El que las vio todas**, que exige las quince.
 Todos los de jefe son de tipo *challenge*, así que traen el marco morado y el sonido de
 desafío de vanilla.
 
@@ -581,6 +637,17 @@ por primera vez hace falta un `/minecraft:reload` o un reinicio; el log lo dice.
   echaba a la gente en cuanto una habilidad la levantaba. Va por `push()` **y por
   `lift()`**: quien llame a `setVelocity` a pelo se salta el permiso, que es justo lo que
   hacía el campo cinético de Darkness.
+- **El fondo de un logro es un SPRITE, no una ruta de textura.** En 26.1.2 lo válido es
+  `minecraft:gui/advancements/backgrounds/end` (o stone, nether, adventure, husbandry).
+  Poner `minecraft:textures/block/sculk.png` —que fue lo correcto en su día— pinta el
+  cuadriculado morado y negro de textura ausente y deja el título ilegible. Se comprobó
+  abriendo los propios logros de vanilla dentro del jar del servidor.
+- **Al añadir una anomalía hay que subir también `PACK_VERSION`.** Es lo único que hace
+  que el datapack se reescriba; si no, el servidor arranca con el catálogo nuevo y los
+  logros viejos.
+- **NUNCA editar los `.java` con PowerShell.** `Get-Content`/`Set-Content` de PS 5.1 leen
+  en ANSI un fichero UTF-8 sin BOM y devuelven mojibake en cada `✦` y cada tilde. Para
+  reemplazos masivos, Python con `encoding="utf-8"` explícito.
 - **Nada de `jump_boost` con amplificador 128 para anular el salto.** Era el truco de las
   versiones viejas, cuando el amplificador era un byte y 128 se leía como −128. Hoy son
   ciento veintiocho niveles de salto: al intentar saltar te ibas al cielo y el servidor te
@@ -623,7 +690,7 @@ No hay Maven en el PATH. Con el JDK 25 portátil y `paper-api 26.1.2`:
 
 ```
 javac --release 21 -encoding UTF-8 -cp "<paper-api + libs del servidor>" -d build @sources
-jar --create --file Anomaly-1.11.0.jar -C build .
+jar --create --file Anomaly-1.12.0.jar -C build .
 ```
 
 El `pom.xml` está para quien tenga Maven; `paper-api` es `provided`.

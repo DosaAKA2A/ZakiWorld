@@ -6,10 +6,13 @@ import net.zakiworld.anomaly.AnomalyPlugin;
 import net.zakiworld.anomaly.boss.Ability;
 import net.zakiworld.anomaly.boss.BossFight;
 import net.zakiworld.anomaly.boss.AbyssalChoir;
+import net.zakiworld.anomaly.boss.Aragon;
 import net.zakiworld.anomaly.boss.Bruja;
+import net.zakiworld.anomaly.boss.Cazador;
+import net.zakiworld.anomaly.boss.Piromante;
 import net.zakiworld.anomaly.boss.Darkness;
 import net.zakiworld.anomaly.boss.Herbola;
-import net.zakiworld.anomaly.boss.Medusa;
+import net.zakiworld.anomaly.boss.Quimera;
 import net.zakiworld.anomaly.boss.Mimic;
 import net.zakiworld.anomaly.boss.Rabby;
 import net.zakiworld.anomaly.boss.KillerBunny;
@@ -48,10 +51,13 @@ public final class AnomalyRegistry {
         register(new ChoirType());
         register(new DarknessType());
         register(new HerbolaType());
-        register(new MedusaType());
+        register(new QuimeraType());
         register(new BrujaType());
         register(new MimicType());
         register(new RabbyType());
+        register(new CazadorType());
+        register(new AragonType());
+        register(new PiromanteType());
     }
 
     public void register(AnomalyType type) {
@@ -94,8 +100,8 @@ public final class AnomalyRegistry {
         return types.get(Herbola.ID);
     }
 
-    public AnomalyType medusa() {
-        return types.get(Medusa.ID);
+    public AnomalyType quimera() {
+        return types.get(Quimera.ID);
     }
 
     public AnomalyType bruja() {
@@ -108,6 +114,18 @@ public final class AnomalyRegistry {
 
     public AnomalyType rabby() {
         return types.get(Rabby.ID);
+    }
+
+    public AnomalyType cazador() {
+        return types.get(Cazador.ID);
+    }
+
+    public AnomalyType aragon() {
+        return types.get(Aragon.ID);
+    }
+
+    public AnomalyType piromante() {
+        return types.get(Piromante.ID);
     }
 
     public List<AnomalyType> all() {
@@ -1336,29 +1354,29 @@ public final class AnomalyRegistry {
         return (Herbola) fight;
     }
 
-    // ---------------------------------------------------------------------- Medusa
+    // --------------------------------------------------------------------- Quimera
 
-    /** Ficha de la Medusa. */
-    public final class MedusaType implements AnomalyType {
+    /** Ficha de la Quimera. */
+    public final class QuimeraType implements AnomalyType {
 
         @Override
         public String id() {
-            return Medusa.ID;
+            return Quimera.ID;
         }
 
         @Override
         public String display() {
-            return plugin.getConfig().getString("anomalias." + id() + ".nombre", "Medusa");
+            return plugin.getConfig().getString("anomalias." + id() + ".nombre", "Quimera");
         }
 
         @Override
         public TextColor color() {
-            return Medusa.ACCENT;
+            return Quimera.ACCENT;
         }
 
         @Override
         public NamedTextColor glowColor() {
-            return NamedTextColor.DARK_GREEN;
+            return NamedTextColor.GOLD;
         }
 
         @Override
@@ -1368,8 +1386,8 @@ public final class AnomalyRegistry {
 
         @Override
         public Material icon() {
-            Material m = Material.matchMaterial("SPIDER_EYE");
-            return m != null ? m : Material.SLIME_BALL;
+            Material m = Material.matchMaterial("GOAT_HORN");
+            return m != null ? m : Material.BONE;
         }
 
         @Override
@@ -1380,11 +1398,11 @@ public final class AnomalyRegistry {
         @Override
         public List<String> origin() {
             return List.of(
-                    "Nadie recuerda que fue antes de la maldicion,",
-                    "solo lo que quedo: un jardin de estatuas con",
-                    "caras de espanto y una silueta que se pasea",
-                    "entre ellas hablandoles bajito. Cuando la",
-                    "grieta se abrio, el jardin se quedo vacio.");
+                    "Tres animales que no deberian compartir cuerpo",
+                    "y lo comparten. Nadie sabe si alguien la coso o",
+                    "si nacio asi de un mal sueno; lo que si se sabe",
+                    "es que las tres cabezas no se ponen de acuerdo",
+                    "en nada salvo en lo que hay que hacer contigo.");
         }
 
         @Override
@@ -1393,92 +1411,92 @@ public final class AnomalyRegistry {
                     "Elemento de tierra: terreno firme y rocoso",
                     "ES INTOCABLE mientras quede uno de sus cinco pilares",
                     "Solo cede el ladrillo CINCELADO; el resto se derrumba solo",
-                    "SU MIRADA PETRIFICA: no la mires cuando avise",
+                    "LA COLA PETRIFICA: no la mires cuando avise",
                     "El ESCUDO levantado la aguanta, como Perseo",
                     "Y los pilares son la unica cobertura: cada uno menos, peor");
         }
 
         @Override
         public double baseHealth() {
-            return 1700;
+            return 1900;
         }
 
         @Override
         public int arenaRadius() {
-            return 24;
+            return 26;
         }
 
         @Override
         public List<Ability> abilities() {
-            return medusaAbilities();
+            return quimeraAbilities();
         }
 
         @Override
         public BossFight create(AnomalyPlugin plugin, ActiveAnomaly event, Location where) {
-            return new Medusa(plugin, event, where);
+            return new Quimera(plugin, event, where);
         }
     }
 
     /**
-     * Las 13 habilidades de la Medusa. La mitad son la mirada en sus tres tamanos;
-     * la otra mitad, serpientes y piedra para que apartar la vista tampoco sea gratis.
+     * Las 13 habilidades de la Quimera, repartidas entre sus tres animales: la fiera
+     * embiste y pisa, la cabra berrea y cornea, y la cola mira, escupe y envenena.
      * Los cinco pilares NO son una habilidad: son la condicion para poder matarla.
      */
-    public List<Ability> medusaAbilities() {
+    public List<Ability> quimeraAbilities() {
         List<Ability> list = new ArrayList<>();
 
-        // --- Fase I: el jardin
-        add(list, "mirada_petrea", "Mirada Petrea", 1, 260, 60, 4,
-                "Busca tus ojos: quien la este mirando al final del aviso, se queda de piedra.",
-                icon("ENDER_EYE", "SPIDER_EYE"), f -> medusa(f).stoneGaze());
-        add(list, "latigo_serpientes", "Latigo de Serpientes", 1, 160, 45, 5,
-                "Tres zarpazos de la cabellera en arco, cada uno mas lejos.",
-                icon("VINE", "STRING"), f -> medusa(f).serpentLash());
-        add(list, "andanada_venenosa", "Andanada Venenosa", 1, 220, 60, 4,
-                "Escupe veneno sobre marcas que caen donde estabas.",
-                icon("SPIDER_EYE", "SLIME_BALL"), f -> medusa(f).venomVolley());
+        // --- Fase I: la fiera
+        add(list, "mirada_petrea", "Mirada de la Cola", 1, 260, 60, 4,
+                "La serpiente busca tus ojos: quien la mire al final del aviso se queda de piedra.",
+                icon("ENDER_EYE", "SPIDER_EYE"), f -> quimera(f).stoneGaze());
+        add(list, "embestida_fiera", "Embestida de la Fiera", 1, 200, 55, 5,
+                "Baja la cabeza y arrolla en linea recta.",
+                icon("RAVAGER_SPAWN_EGG", "IRON_HORSE_ARMOR"), f -> quimera(f).beastCharge());
+        add(list, "berrido_cabra", "Berrido de la Cabra", 1, 220, 35, 4,
+                "Un grito en cono que empuja y marea.",
+                icon("GOAT_HORN", "NOTE_BLOCK"), f -> quimera(f).goatBleat());
         add(list, "nido_viboras", "Nido de Viboras", 1, 520, 60, 2,
-                "De la cabellera caen viboras que muerden con veneno.",
-                icon("CAVE_SPIDER_SPAWN_EGG", "SPIDER_EYE"), f -> medusa(f).viperNest());
-        add(list, "flecha_petrea", "Flecha Petrea", 1, 200, 50, 4,
-                "Tres saetas que dejan la pierna de piedra a quien tocan.",
-                icon("ARROW", "BOW"), f -> medusa(f).stoneArrow());
+                "De la cola se descuelgan viboras que muerden con veneno.",
+                icon("CAVE_SPIDER_SPAWN_EGG", "SPIDER_EYE"), f -> quimera(f).viperNest());
+        add(list, "escupitajo", "Escupitajo Venenoso", 1, 200, 50, 4,
+                "La cola escupe veneno a distancia.",
+                icon("SPIDER_EYE", "SLIME_BALL"), f -> quimera(f).venomSpit());
 
-        // --- Fase II: la muda
+        // --- Fase II: la cabra rabiosa
         add(list, "mirada_barrida", "Mirada en Barrido", 2, 320, 100, 4,
                 "El rayo de la mirada recorre la arena girando una vuelta entera.",
-                icon("SPYGLASS", "ENDER_EYE"), f -> medusa(f).sweepingGaze());
-        add(list, "colmillo_certero", "Colmillo Certero", 2, 150, 30, 5,
-                "Se lanza al mas cercano y muerde con todo el veneno.",
-                icon("FLINT", "IRON_SWORD"), f -> medusa(f).preciseFang());
-        add(list, "abrazo_petreo", "Abrazo Petreo", 2, 240, 55, 3,
-                "Manos de piedra que agarran al que mas se aleja y lo traen.",
-                icon("CHAIN", "STONE"), f -> medusa(f).stoneEmbrace());
+                icon("SPYGLASS", "ENDER_EYE"), f -> quimera(f).sweepingGaze());
+        add(list, "zarpazo_triple", "Zarpazo Triple", 2, 170, 40, 5,
+                "Las tres cabezas pegan seguidas a lo que tenga delante.",
+                icon("FLINT", "IRON_SWORD"), f -> quimera(f).tripleMaul());
+        add(list, "cornada", "Cornada Ascendente", 2, 200, 25, 4,
+                "Engancha al mas cercano con el cuerno y lo manda por los aires.",
+                icon("GOAT_HORN", "BONE"), f -> quimera(f).upwardGore());
         add(list, "lluvia_colmillos", "Lluvia de Colmillos", 2, 260, 50, 4,
                 "Colmillos de piedra que brotan del suelo bajo cada uno.",
-                icon("DEEPSLATE", "POINTED_DRIPSTONE"), f -> medusa(f).fangRain());
+                icon("DEEPSLATE", "POINTED_DRIPSTONE"), f -> quimera(f).fangRain());
         add(list, "veneno_ancestral", "Veneno Ancestral", 2, 300, 70, 3,
                 "Una onda de veneno viejo que solo pega en el borde.",
-                icon("FERMENTED_SPIDER_EYE", "SPIDER_EYE"), f -> medusa(f).ancientVenom());
+                icon("FERMENTED_SPIDER_EYE", "SPIDER_EYE"), f -> quimera(f).ancientVenom());
 
-        // --- Fase III: los ojos arden
-        add(list, "mirada_gorgona", "Mirada de la Gorgona", 3, 420, 110, 4,
-                "Cinco segundos avisando y luego la arena entera. Escudo, estatua o espalda.",
-                icon("ENDER_EYE", "END_CRYSTAL"), f -> medusa(f).gorgonGaze());
-        add(list, "furia_serpentina", "Furia Serpentina", 3, 280, 80, 4,
-                "La cabellera entera barre alrededor en tres ondas.",
-                icon("LIME_DYE", "GREEN_DYE"), f -> medusa(f).serpentineFury());
+        // --- Fase III: la serpiente
+        add(list, "mirada_entera", "La Mirada Entera", 3, 420, 110, 4,
+                "Cinco segundos avisando y luego la arena entera. Escudo, pilar o espalda.",
+                icon("ENDER_EYE", "END_CRYSTAL"), f -> quimera(f).fullGaze());
+        add(list, "pisoton_fiera", "Pisoton de la Fiera", 3, 280, 70, 4,
+                "Se alza y descarga; la onda barre diez bloques.",
+                icon("COARSE_DIRT", "DIRT"), f -> quimera(f).beastStomp());
 
         // --- Cualquier fase
         add(list, "siseo", "Siseo", 0, 260, 40, 3,
                 "Un cono de siseo que marea, frena y empuja.",
-                icon("SCULK_SENSOR", "NOTE_BLOCK"), f -> medusa(f).hiss());
+                icon("SCULK_SENSOR", "NOTE_BLOCK"), f -> quimera(f).hiss());
 
         return list;
     }
 
-    private static Medusa medusa(BossFight fight) {
-        return (Medusa) fight;
+    private static Quimera quimera(BossFight fight) {
+        return (Quimera) fight;
     }
 
     // ---------------------------------------------------------------------- Bruja
@@ -1914,6 +1932,411 @@ public final class AnomalyRegistry {
 
     private static Rabby rabby(BossFight fight) {
         return (Rabby) fight;
+    }
+
+    // ------------------------------------------------------------------ El Cazador
+
+    /** Ficha de El Cazador. */
+    public final class CazadorType implements AnomalyType {
+
+        @Override
+        public String id() {
+            return Cazador.ID;
+        }
+
+        @Override
+        public String display() {
+            return plugin.getConfig().getString("anomalias." + id() + ".nombre", "El Cazador");
+        }
+
+        @Override
+        public TextColor color() {
+            return Cazador.ACCENT;
+        }
+
+        @Override
+        public NamedTextColor glowColor() {
+            return NamedTextColor.DARK_RED;
+        }
+
+        @Override
+        public Element element() {
+            return Element.TIERRA;
+        }
+
+        @Override
+        public Material icon() {
+            Material m = Material.matchMaterial("CROSSBOW");
+            return m != null ? m : Material.BOW;
+        }
+
+        @Override
+        public String tagline() {
+            return "Mira lo que lleva en la mano";
+        }
+
+        @Override
+        public List<String> origin() {
+            return List.of(
+                    "Cazaba en el Nether cosas que no dejan rastro,",
+                    "y aprendio que el arma correcta importa mas que",
+                    "la fuerza. Cuando la grieta se abrio no vino a",
+                    "pelear: vino a cazar, que no es lo mismo, y por",
+                    "eso te esta esperando en vez de buscarte.");
+        }
+
+        @Override
+        public List<String> threat() {
+            return List.of(
+                    "Elemento de tierra: campo abierto donde tenderte trampas",
+                    "CAMBIA DE ARMA constantemente, y el arma dice lo que hara",
+                    "FASE I: ballesta y arco; retrocede si te acercas",
+                    "FASE II: siembra el suelo de TRAMPAS que revientan en area",
+                    "FASE III: tira lo de lejos y saca la lanza de netherita");
+        }
+
+        @Override
+        public double baseHealth() {
+            return 2100;
+        }
+
+        @Override
+        public int arenaRadius() {
+            return 28;
+        }
+
+        @Override
+        public List<Ability> abilities() {
+            return cazadorAbilities();
+        }
+
+        @Override
+        public BossFight create(AnomalyPlugin plugin, ActiveAnomaly event, Location where) {
+            return new Cazador(plugin, event, where);
+        }
+    }
+
+    /**
+     * Las 12 habilidades de El Cazador. Cada una le cambia el arma de la mano, y esa
+     * es la lectura del jefe: si saca el hacha, es que viene.
+     */
+    public List<Ability> cazadorAbilities() {
+        List<Ability> list = new ArrayList<>();
+
+        // --- Fase I: el acecho
+        add(list, "andanada_ballesta", "Andanada de Ballesta", 1, 160, 45, 5,
+                "Tres saetas seguidas a quien tenga a tiro.",
+                icon("CROSSBOW", "BOW"), f -> cazador(f).crossbowVolley());
+        add(list, "lluvia_flechas", "Lluvia de Flechas", 1, 260, 70, 4,
+                "Apunta al cielo y caen sobre las marcas.",
+                icon("ARROW", "BOW"), f -> cazador(f).arrowRain());
+        add(list, "saeta_perforante", "Saeta Perforante", 1, 240, 45, 4,
+                "Un disparo cargado que atraviesa a todo el que pille en linea.",
+                icon("SPECTRAL_ARROW", "ARROW"), f -> cazador(f).piercingBolt());
+        add(list, "marcar_presa", "Marcar la Presa", 1, 340, 40, 3,
+                "Elige a uno y le pega mucho mas fuerte mientras dure la marca.",
+                icon("TARGET", "REDSTONE"), f -> cazador(f).markPrey());
+
+        // --- Fase II: el cepo
+        add(list, "cepo", "Cepo", 2, 220, 40, 5,
+                "Siembra el suelo de trampas que revientan al pisarlas.",
+                icon("TRIPWIRE_HOOK", "STRING"), f -> cazador(f).trapField());
+        add(list, "cepo_dirigido", "Cepo Dirigido", 2, 200, 30, 4,
+                "Pone la trampa justo bajo los pies de cada uno.",
+                icon("HEAVY_WEIGHTED_PRESSURE_PLATE", "STONE_PRESSURE_PLATE"),
+                f -> cazador(f).aimedTrap());
+        add(list, "red_cepos", "Red de Cepos", 2, 340, 50, 3,
+                "Un cerco entero de trampas alrededor del grupo.",
+                icon("CHAIN", "IRON_BARS"), f -> cazador(f).trapRing());
+        add(list, "retirada", "Retirada Calculada", 2, 180, 25, 4,
+                "Salta hacia atras y deja una trampa donde estaba.",
+                icon("FEATHER", "LEATHER_BOOTS"), f -> cazador(f).calculatedRetreat());
+
+        // --- Fase III: la estocada
+        add(list, "estocada_lanza", "Estocada de Lanza", 3, 190, 50, 5,
+                "La lanza por delante, en linea y con mucho alcance.",
+                icon("NETHERITE_SPEAR", "TRIDENT"), f -> cazador(f).spearThrust());
+        add(list, "hachazo", "Hachazo Descendente", 3, 210, 45, 4,
+                "Cambia al hacha y parte el suelo en linea recta.",
+                icon("NETHERITE_AXE", "IRON_AXE"), f -> cazador(f).axeCleave());
+        add(list, "danza_espada", "Danza de Espada", 3, 200, 45, 4,
+                "Saca la espada y suelta una tanda rapida al que tenga delante.",
+                icon("NETHERITE_SWORD", "IRON_SWORD"), f -> cazador(f).bladeDance());
+
+        // --- Cualquier fase
+        add(list, "cambio_arma", "Cambio de Arma", 0, 260, 20, 3,
+                "Se replantea la pelea y saca otra cosa del cinto.",
+                icon("SMITHING_TABLE", "ANVIL"), f -> cazador(f).switchWeapon());
+
+        return list;
+    }
+
+    private static Cazador cazador(BossFight fight) {
+        return (Cazador) fight;
+    }
+
+    // ---------------------------------------------------------------------- Áragon
+
+    /** Ficha de Áragon. */
+    public final class AragonType implements AnomalyType {
+
+        @Override
+        public String id() {
+            return Aragon.ID;
+        }
+
+        @Override
+        public String display() {
+            return plugin.getConfig().getString("anomalias." + id() + ".nombre", "Áragon");
+        }
+
+        @Override
+        public TextColor color() {
+            return Aragon.ACCENT;
+        }
+
+        @Override
+        public NamedTextColor glowColor() {
+            return NamedTextColor.DARK_PURPLE;
+        }
+
+        @Override
+        public Element element() {
+            return Element.TIERRA;
+        }
+
+        @Override
+        public Material icon() {
+            Material m = Material.matchMaterial("COBWEB");
+            return m != null ? m : Material.STRING;
+        }
+
+        @Override
+        public String tagline() {
+            return "Ella no corre; corren sus hijas, y son muchas";
+        }
+
+        @Override
+        public List<String> origin() {
+            return List.of(
+                    "Llevaba tanto tiempo en el mismo sitio que el",
+                    "sitio se hizo a su forma. No caza: espera, teje",
+                    "y pone. Todo lo que se le acerca acaba siendo",
+                    "comida para una camada que nunca deja de crecer.");
+        }
+
+        @Override
+        public List<String> threat() {
+            return List.of(
+                    "Elemento de tierra: cuevas abiertas y campo seco",
+                    "ES LENTISIMA: quien te muerde son sus crias",
+                    "CRIAS DIMINUTAS Y A MONTONES, hasta sesenta a la vez",
+                    "Sus HUEVOS eclosionan si no los rompes a tiempo",
+                    "Teje telaraña de verdad; se devuelve al terminar");
+        }
+
+        @Override
+        public double baseHealth() {
+            return 2300;
+        }
+
+        @Override
+        public int arenaRadius() {
+            return 28;
+        }
+
+        @Override
+        public List<Ability> abilities() {
+            return aragonAbilities();
+        }
+
+        @Override
+        public BossFight create(AnomalyPlugin plugin, ActiveAnomaly event, Location where) {
+            return new Aragon(plugin, event, where);
+        }
+    }
+
+    /**
+     * Las 10 habilidades de Áragon. Casi todas son poner mas bichos o mas tela: ella
+     * pega poco y muy de tarde en tarde, y eso es exactamente el diseño.
+     */
+    public List<Ability> aragonAbilities() {
+        List<Ability> list = new ArrayList<>();
+
+        add(list, "camada", "Camada", 1, 220, 30, 5,
+                "Doce crias diminutas de golpe, corriendo mas de lo que se puede retroceder.",
+                icon("SPIDER_SPAWN_EGG", "STRING"), f -> aragon(f).spawnBrood());
+        add(list, "puesta", "Puesta", 1, 320, 40, 4,
+                "Pone huevos por la arena. Si no se rompen, eclosionan.",
+                icon("WHITE_CONCRETE", "SNOWBALL"), f -> aragon(f).eggClutch());
+        add(list, "telar", "Telar", 1, 240, 40, 4,
+                "Teje una maraña de telaraña alrededor de cada uno.",
+                icon("COBWEB", "STRING"), f -> aragon(f).weave());
+        add(list, "hilo", "Hilo", 1, 200, 55, 4,
+                "Engancha al que mas se aleja y lo arrastra hacia ella.",
+                icon("STRING", "LEAD"), f -> aragon(f).webPull());
+
+        add(list, "guardianas", "Guardianas", 2, 400, 30, 3,
+                "Dos aranas grandes que si pegan de verdad.",
+                icon("SPIDER_EYE", "SPIDER_SPAWN_EGG"), f -> aragon(f).summonGuardians());
+        add(list, "mordisco_madre", "Mordisco de la Madre", 2, 260, 55, 4,
+                "Lento, avisado y brutal si te pilla debajo.",
+                icon("FERMENTED_SPIDER_EYE", "SPIDER_EYE"), f -> aragon(f).motherBite());
+        add(list, "cortina_tela", "Cortina de Tela", 2, 380, 40, 3,
+                "Un cerco de telaraña que encierra al grupo con ella.",
+                icon("COBWEB", "WHITE_WOOL"), f -> aragon(f).webWall());
+
+        add(list, "marea_crias", "Marea de Crias", 3, 300, 80, 5,
+                "Tres camadas seguidas por toda la arena.",
+                icon("SPIDER_SPAWN_EGG", "EGG"), f -> aragon(f).broodTide());
+        add(list, "veneno_nido", "Veneno de Nido", 3, 280, 130, 4,
+                "Charcos pegajosos que envenenan y frenan donde caen.",
+                icon("SLIME_BALL", "SPIDER_EYE"), f -> aragon(f).nestVenom());
+        add(list, "sacudida", "Sacudida", 3, 260, 65, 4,
+                "Se alza sobre las patas y las baja de golpe; la onda barre nueve bloques.",
+                icon("COARSE_DIRT", "DIRT"), f -> aragon(f).legSlam());
+
+        return list;
+    }
+
+    private static Aragon aragon(BossFight fight) {
+        return (Aragon) fight;
+    }
+
+    // ------------------------------------------------------------------ El Piromante
+
+    /** Ficha de El Piromante. */
+    public final class PiromanteType implements AnomalyType {
+
+        @Override
+        public String id() {
+            return Piromante.ID;
+        }
+
+        @Override
+        public String display() {
+            return plugin.getConfig().getString("anomalias." + id() + ".nombre", "El Piromante");
+        }
+
+        @Override
+        public TextColor color() {
+            return Piromante.ACCENT;
+        }
+
+        @Override
+        public NamedTextColor glowColor() {
+            return NamedTextColor.RED;
+        }
+
+        @Override
+        public Element element() {
+            return Element.TIERRA;
+        }
+
+        @Override
+        public Material icon() {
+            Material m = Material.matchMaterial("BLAZE_ROD");
+            return m != null ? m : Material.FIRE_CHARGE;
+        }
+
+        @Override
+        public String tagline() {
+            return "Todo lo que hace sale ardiendo, y ademas te persigue";
+        }
+
+        @Override
+        public List<String> origin() {
+            return List.of(
+                    "Era el armero de una aldea del desierto y se paso",
+                    "media vida delante de una fragua. Un dia el fuego",
+                    "le respondio, y desde entonces no ha vuelto a",
+                    "apagar nada: lo suyo ya no es forjar, es prender.");
+        }
+
+        @Override
+        public List<String> threat() {
+            return List.of(
+                    "Elemento de tierra: terreno abierto que pueda arder",
+                    "TODO a distancia y TODO fuego; no tiene cuerpo a cuerpo",
+                    "PERSIGUE: quedarse lejos no sirve de nada",
+                    "QUEMA EL SUELO de verdad, con muy buen radio",
+                    "Nunca prende dentro de terreno protegido, y lo apaga al irse");
+        }
+
+        @Override
+        public double baseHealth() {
+            return 1900;
+        }
+
+        @Override
+        public int arenaRadius() {
+            return 26;
+        }
+
+        @Override
+        public List<Ability> abilities() {
+            return piromanteAbilities();
+        }
+
+        @Override
+        public BossFight create(AnomalyPlugin plugin, ActiveAnomaly event, Location where) {
+            return new Piromante(plugin, event, where);
+        }
+    }
+
+    /** Las 12 habilidades del Piromante. Todas arden, y casi todas cubren area. */
+    public List<Ability> piromanteAbilities() {
+        List<Ability> list = new ArrayList<>();
+
+        // --- Fase I: la chispa
+        add(list, "bola_fuego", "Bola de Fuego", 1, 170, 40, 5,
+                "La clasica, cargada y con aviso.",
+                icon("FIRE_CHARGE", "BLAZE_POWDER"), f -> piromante(f).fireball());
+        add(list, "andanada_brasas", "Andanada de Brasas", 1, 200, 35, 5,
+                "Seis bolas pequenas en abanico.",
+                icon("BLAZE_POWDER", "GUNPOWDER"), f -> piromante(f).emberVolley());
+        add(list, "aliento", "Aliento de Fuego", 1, 220, 55, 4,
+                "Un cono de fuego largo delante de el.",
+                icon("CAMPFIRE", "TORCH"), f -> piromante(f).flameBreath());
+        add(list, "rastro_brasas", "Rastro de Brasas", 1, 300, 170, 3,
+                "Por donde pisa deja el suelo ardiendo un buen rato.",
+                icon("MAGMA_BLOCK", "NETHERRACK"), f -> piromante(f).emberTrail());
+
+        // --- Fase II: la hoguera
+        add(list, "mar_llamas", "Mar de Llamas", 2, 300, 75, 4,
+                "Un circulo enorme de suelo ardiendo que se abre desde el.",
+                icon("LAVA_BUCKET", "FIRE_CHARGE"), f -> piromante(f).seaOfFlames());
+        add(list, "meteoros", "Meteoros", 2, 320, 110, 4,
+                "Bolas que caen del cielo sobre las marcas.",
+                icon("FIRE_CHARGE", "MAGMA_CREAM"), f -> piromante(f).meteorShower());
+        add(list, "muro_fuego", "Muro de Fuego", 2, 280, 65, 4,
+                "Una pared de llamas que avanza y no se puede cruzar de frente.",
+                icon("CAMPFIRE", "SOUL_CAMPFIRE"), f -> piromante(f).fireWall());
+        add(list, "guardia_blazes", "Guardia de Brasas", 2, 420, 30, 3,
+                "Llama a dos blazes que hostigan por su cuenta.",
+                icon("BLAZE_SPAWN_EGG", "BLAZE_ROD"), f -> piromante(f).blazeGuard());
+
+        // --- Fase III: el infierno
+        add(list, "nova_ignea", "Nova Ignea", 3, 460, 120, 4,
+                "Se enciende entero y revienta en catorce bloques a la redonda.",
+                icon("FIRE_CHARGE", "NETHER_STAR"), f -> piromante(f).igniteNova());
+        add(list, "columna_lava", "Columna de Lava", 3, 260, 60, 4,
+                "Una columna que sube y revienta bajo cada uno.",
+                icon("MAGMA_BLOCK", "LAVA_BUCKET"), f -> piromante(f).lavaPillar());
+        add(list, "anillo_cenizas", "Anillo de Cenizas", 3, 300, 85, 4,
+                "Dos anillos que se cruzan: uno sale y otro entra.",
+                icon("BLACK_DYE", "CHARCOAL"), f -> piromante(f).ashRings());
+
+        // --- Cualquier fase
+        add(list, "marca_ardiente", "Marca Ardiente", 0, 280, 95, 3,
+                "Te pone una marca encima que estalla donde estes.",
+                icon("TARGET", "FIRE_CHARGE"), f -> piromante(f).burningMark());
+
+        return list;
+    }
+
+    private static Piromante piromante(BossFight fight) {
+        return (Piromante) fight;
     }
 
     private static SepulchralKnight knight(BossFight fight) {
