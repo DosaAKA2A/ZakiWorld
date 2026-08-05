@@ -71,6 +71,44 @@ public final class Compat {
     public static final Particle TRIAL_OMEN = particle("TRIAL_OMEN", "WITCH");
     public static final Particle WITCH = particle("WITCH", "SPELL_WITCH");
     public static final Particle BUBBLE_POP = particle("BUBBLE_POP", "BUBBLE");
+    // --- Ampliacion del repertorio. Antes casi todo se pintaba con DUST recoloreado,
+    // que se acaba notando: todas las anomalias soltaban la misma bolita de colores.
+    // Estas son las vanilla que dan textura propia a cada cosa.
+    public static final Particle EFFECT = particle("EFFECT", "SPELL");
+    public static final Particle INSTANT_EFFECT = particle("INSTANT_EFFECT", "SPELL_INSTANT");
+    public static final Particle ENTITY_EFFECT = particle("ENTITY_EFFECT", "SPELL_MOB");
+    public static final Particle SNEEZE = particle("SNEEZE");
+    public static final Particle SPIT = particle("SPIT");
+    public static final Particle ITEM_SLIME = particle("ITEM_SLIME", "SLIME");
+    public static final Particle ITEM_COBWEB = particle("ITEM_COBWEB");
+    public static final Particle INFESTED = particle("INFESTED");
+    public static final Particle VAULT_CONNECTION = particle("VAULT_CONNECTION");
+    public static final Particle OMINOUS_SPAWNING = particle("OMINOUS_SPAWNING");
+    public static final Particle TRIAL_SPAWNER_DETECTION = particle("TRIAL_SPAWNER_DETECTION");
+    public static final Particle FALLING_DUST_BLOCK = particle("FALLING_DUST");
+    public static final Particle BLOCK_CRUMBLE = particle("BLOCK_CRUMBLE");
+    public static final Particle DUST_PILLAR = particle("DUST_PILLAR");
+    public static final Particle SCULK_CHARGE = particle("SCULK_CHARGE");
+    public static final Particle SMALL_GUST = particle("SMALL_GUST", "GUST");
+    public static final Particle GUST_EMITTER_LARGE = particle("GUST_EMITTER_LARGE", "GUST_EMITTER", "EXPLOSION");
+    public static final Particle SQUID_INK = particle("SQUID_INK");
+    public static final Particle GLOW_SQUID_INK = particle("GLOW_SQUID_INK");
+    public static final Particle DOLPHIN = particle("DOLPHIN");
+    public static final Particle NAUTILUS = particle("NAUTILUS");
+    public static final Particle DRIPPING_HONEY = particle("DRIPPING_HONEY");
+    public static final Particle FALLING_HONEY = particle("FALLING_HONEY");
+    public static final Particle LANDING_HONEY = particle("LANDING_HONEY");
+    public static final Particle COMPOSTER = particle("COMPOSTER");
+    public static final Particle MYCELIUM = particle("MYCELIUM", "TOWN_AURA");
+    public static final Particle CAMPFIRE_COSY_SMOKE = particle("CAMPFIRE_COSY_SMOKE");
+    public static final Particle CAMPFIRE_SIGNAL_SMOKE = particle("CAMPFIRE_SIGNAL_SMOKE");
+    public static final Particle LAVA = particle("LAVA");
+    public static final Particle EGG_CRACK = particle("EGG_CRACK");
+    public static final Particle HAPPY_VILLAGER = particle("HAPPY_VILLAGER", "VILLAGER_HAPPY");
+    public static final Particle SCRAPE = particle("SCRAPE");
+    public static final Particle WAX_ON = particle("WAX_ON");
+    public static final Particle END_ROD_TRAIL = particle("END_ROD");
+    public static final Particle FIREWORK_SPARK = particle("FIREWORK", "FIREWORKS_SPARK");
     public static final Particle GUST = particle("GUST", "CLOUD");
     public static final Particle DUST_PLUME = particle("DUST_PLUME", "LARGE_SMOKE");
     public static final Particle FALLING_DUST = particle("FALLING_DUST");
@@ -155,6 +193,19 @@ public final class Compat {
     private static Object defaultData(Class<?> expected) {
         if (expected == Color.class) return Color.WHITE;
         if (expected == Float.class) return 1.0f;
+        if (expected == Integer.class) return 0;
+        // Las de bloque y de objeto (FALLING_DUST, BLOCK_CRUMBLE, DUST_PILLAR, ITEM...)
+        // no pintan NADA si se las llama sin dato; con esto al menos siempre se ven.
+        if (org.bukkit.block.data.BlockData.class.isAssignableFrom(expected)) {
+            return org.bukkit.Material.STONE.createBlockData();
+        }
+        if (org.bukkit.inventory.ItemStack.class.isAssignableFrom(expected)) {
+            return new org.bukkit.inventory.ItemStack(org.bukkit.Material.STONE);
+        }
+        if (expected == Particle.DustOptions.class) return dust(0xFFFFFF, 1.0f);
+        if (expected == Particle.DustTransition.class) {
+            return new Particle.DustTransition(Color.WHITE, Color.GRAY, 1.0f);
+        }
         return null;
     }
 

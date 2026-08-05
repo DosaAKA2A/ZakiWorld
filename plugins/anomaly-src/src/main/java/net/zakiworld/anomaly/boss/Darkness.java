@@ -457,7 +457,9 @@ public final class Darkness extends BossFight {
                 // Los sujeta y los sube despacio, sin dejarles caer.
                 for (Player p : caught) {
                     if (!Fx.isFightable(p)) continue;
-                    p.setVelocity(new Vector(0, 0.14, 0));
+                    // Por lift() y no a pelo: es lo que concede el permiso de vuelo
+                    // temporal. Sin el, el servidor expulsaba por volar a media subida.
+                    lift(p, new Vector(0, 0.14, 0));
                     Compat.apply(p, "slow_falling", 40, 0);
                     Compat.spawn(world(), Compat.PORTAL, p.getLocation().add(0, 1, 0), 6, 0.4, 0.6, 0.4, 0.04);
                     Fx.beam(l, p.getLocation().add(0, 1, 0), 0.7, q ->

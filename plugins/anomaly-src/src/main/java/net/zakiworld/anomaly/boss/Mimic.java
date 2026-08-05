@@ -70,6 +70,8 @@ public final class Mimic extends BossFight {
     private boolean revealed;
     private long revealTick;
     private boolean hidden;
+    private boolean chestsStarted;
+    private boolean faceStolen;
     private boolean unleashed;
     private long chestsSince = -1;
     private int round;
@@ -349,6 +351,7 @@ public final class Mimic extends BossFight {
 
     private void startChests() {
         if (!alive()) return;
+        chestsStarted = true;
         chestsSince = ticks();
         round = 0;
         revealed = false;
@@ -416,12 +419,22 @@ public final class Mimic extends BossFight {
         broadcastNear(Component.text("Elige bien: la codicia no espera.", ACCENT));
     }
 
-    /** Brillo dorado IGUAL en los cinco cofres: bonito y sin dar pistas. */
+    /**
+     * El reclamo de los cinco cofres, IGUAL en todos para no dar pistas.
+     *
+     * Son las hebras doradas de la boveda de las mazmorras de prueba: es exactamente
+     * la lectura que se busca —"aqui dentro hay algo bueno"— y ademas no se parece a
+     * ninguna otra cosa que suelte el plugin.
+     */
     private void shimmerChests() {
         for (BlockDisplay c : chestProps) {
             if (!c.isValid()) continue;
-            Compat.spawn(world(), Compat.DUST, c.getLocation().add(0, 0.6, 0), 1, 0.3, 0.3, 0.3, 0,
-                    Compat.dust(GOLD, 1.1f));
+            Compat.spawn(world(), Compat.VAULT_CONNECTION, c.getLocation().add(0, 0.6, 0), 1,
+                    0.35, 0.35, 0.35, 0);
+            if (random.nextInt(6) == 0) {
+                Compat.spawn(world(), Compat.TRIAL_SPAWNER_DETECTION, c.getLocation().add(0, 0.9, 0),
+                        1, 0.2, 0.2, 0.2, 0);
+            }
         }
     }
 
@@ -434,8 +447,8 @@ public final class Mimic extends BossFight {
         double bite = Math.min(8, 1 + (ticks() - chestsSince) / 300.0);
         for (Player p : targets(40)) {
             hit(p, bite);
-            Compat.spawn(world(), Compat.DUST, p.getLocation().add(0, 1.0, 0), 6, 0.3, 0.5, 0.3, 0,
-                    Compat.dust(GOLD, 1.3f));
+            Compat.spawn(world(), Compat.OMINOUS_SPAWNING, p.getLocation().add(0, 1.0, 0), 4,
+                    0.3, 0.5, 0.3, 0);
             p.sendActionBar(Component.text("La Codicia te roe  ", NamedTextColor.GRAY)
                     .append(Component.text("-" + String.format(java.util.Locale.ROOT, "%.1f", bite),
                             ACCENT, TextDecoration.BOLD)));
@@ -501,6 +514,8 @@ public final class Mimic extends BossFight {
         Fx.safeRemove(chest);
         Compat.spawn(world(), Compat.ITEM, l.clone().add(0, 0.6, 0), 24, 0.4, 0.4, 0.4, 0.1,
                 new ItemStack(Material.CHEST));
+        // Las mismas motas que sueltan los bloques infestados: el cofre estaba vivo.
+        Compat.spawn(world(), Compat.INFESTED, l.clone().add(0, 0.7, 0), 20, 0.5, 0.4, 0.5, 0.05);
         Compat.spawn(world(), Compat.CRIT, l.clone().add(0, 0.8, 0), 16, 0.4, 0.4, 0.4, 0.2);
         soundAt(l, "entity.generic.eat", 1.6f, 0.5f);
         soundAt(l, "block.chest.close", 1.4f, 1.4f);
@@ -519,6 +534,7 @@ public final class Mimic extends BossFight {
     /** Se copia a un jugador de verdad: cara, armadura, armas y nombre a secas. */
     private void stealFace() {
         if (!alive()) return;
+        faceStolen = true;
         if (hidden) {
             hidden = false;
             clearRound();
@@ -625,6 +641,21 @@ public final class Mimic extends BossFight {
         if (event.bars() != null) event.bars().flash(from);
         if (to == 2) startChests();
         if (to == 3) stealFace();
+    }
+
+    /**
+     * El Mimic no puede morirse sin haber enganado en las tres fases.
+     *
+     * Un jugador con buen equipo revienta el cofre de la fase 2 de un golpe y se llevaba
+     * por delante el 40% de la barra: el jefe moria sin llegar a robarle la cara a nadie,
+     * que es justo el final que hay que ver. Con esto el golpe se recorta hasta dejarlo
+     * en el umbral, la fase salta en el tick siguiente y el suelo se levanta solo.
+     */
+    @Override
+    public double survivalFloor() {
+        if (!chestsStarted) return 2.0 / 3.0;
+        if (!faceStolen) return 1.0 / 3.0;
+        return 0;
     }
 
     // ---------------------------------------------------------------------- muerte

@@ -371,6 +371,30 @@ public abstract class BossFight {
     }
 
     /**
+     * Fraccion de vida por debajo de la cual el jefe NO puede bajar todavia.
+     *
+     * Un jugador con equipo bueno puede quitar media barra de un golpe, y eso se llevaba
+     * por delante fases enteras: al Mimic le reventaban el cofre de la fase 2 y se moria
+     * sin llegar a robarle la cara a nadie. Con esto el golpe se recorta para dejarlo
+     * justo en el umbral, la transicion salta en el tick siguiente y la pelea se juega
+     * entera. Por defecto 0: los demas jefes no lo necesitan.
+     */
+    public double survivalFloor() {
+        return 0;
+    }
+
+    /**
+     * Aviso de que un jugador ha roto un bloque durante el evento.
+     *
+     * @return true si hay que cancelar la rotura. Lo usan las anomalias que construyen
+     *         algo de verdad, como los pilares de la Medusa: solo se puede romper la
+     *         pieza central, y hacerlo derrumba el resto.
+     */
+    public boolean onBlockBroken(org.bukkit.block.Block block, Player who) {
+        return false;
+    }
+
+    /**
      * Si un jefe puede estar invulnerable mucho rato POR DISENO.
      *
      * Por defecto no: el vigilante le quita la invulnerabilidad a la fuerza porque
@@ -410,10 +434,62 @@ public abstract class BossFight {
     public void push(Player p, Vector velocity) {
         if (p == null || !plugin.settings().allowKnockback()) return;
         try {
-            if (velocity.getY() > 0.35) grantAirTime(p, 120);
+            // Umbral bajo a proposito: el servidor no mide "cuanto" te levantan, mide que
+            // estes en el aire sin motivo. Un empujon flojo hacia arriba tambien expulsa.
+            if (velocity.getY() > 0.15) grantAirTime(p, 160);
             p.setVelocity(p.getVelocity().add(velocity));
         } catch (Throwable ignored) {
         }
+    }
+
+    /**
+     * Mueve al jugador a una velocidad EXACTA, en vez de sumarsela a la que lleva.
+     *
+     * Existe porque las habilidades que levantan despacio (el campo cinetico de Darkness)
+     * llamaban a setVelocity a pelo y se saltaban el permiso de vuelo, que es justo lo
+     * que hace que el servidor eche a la gente por "volar". Todo lo que levante a un
+     * jugador tiene que pasar por aqui o por push().
+     */
+    public void lift(Player p, Vector velocity) {
+        if (p == null || !plugin.settings().allowKnockback()) return;
+        try {
+            if (velocity.getY() > 0.05) grantAirTime(p, 160);
+            p.setVelocity(velocity);
+        } catch (Throwable ignored) {
+        }
+    }
+
+    /**
+     * Gira al jefe para que mire a un punto. Paper solo trae la version con ancla, y
+     * ademas cambia de firma cada pocas versiones, asi que se aisla aqui.
+     */
+    public void face(Location at) {
+        if (boss == null || !boss.isValid() || at == null) return;
+        try {
+            boss.lookAt(at.getX(), at.getY(), at.getZ(), io.papermc.paper.entity.LookAnchor.EYES);
+        } catch (Throwable ignored) {
+        }
+    }
+
+    /**
+     * Amarra a un jugador al suelo: ni se mueve ni salta, pero NO sale volando.
+     *
+     * La version anterior usaba jump_boost con amplificador 128, que era el truco de las
+     * versiones viejas para anular el salto (128 se leia como -128 en un byte). En las
+     * actuales el amplificador es un entero de verdad, asi que 128 son ciento veintiocho
+     * niveles de salto: al intentar saltar te ibas al cielo y el servidor te expulsaba
+     * por moverte demasiado rapido. Ahora se anula el salto a mano, tick a tick.
+     */
+    public void root(Player p, int ticksHeld) {
+        if (p == null || !Fx.isFightable(p)) return;
+        Compat.apply(p, "slowness", ticksHeld, 250);
+        Compat.apply(p, "mining_fatigue", ticksHeld, 1);
+        animate(ticksHeld, tick -> {
+            if (!Fx.isFightable(p)) throw net.zakiworld.anomaly.core.Stop.now();
+            Vector v = p.getVelocity();
+            // Solo se corta lo que sube; caer se deja, que si no queda flotando.
+            if (v.getY() > 0) p.setVelocity(new Vector(v.getX() * 0.2, -0.08, v.getZ() * 0.2));
+        }, null);
     }
 
     /**

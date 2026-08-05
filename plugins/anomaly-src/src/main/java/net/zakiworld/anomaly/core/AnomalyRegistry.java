@@ -11,6 +11,7 @@ import net.zakiworld.anomaly.boss.Darkness;
 import net.zakiworld.anomaly.boss.Herbola;
 import net.zakiworld.anomaly.boss.Medusa;
 import net.zakiworld.anomaly.boss.Mimic;
+import net.zakiworld.anomaly.boss.Rabby;
 import net.zakiworld.anomaly.boss.KillerBunny;
 import net.zakiworld.anomaly.boss.SaltLeviathan;
 import net.zakiworld.anomaly.boss.ScreamingGoat;
@@ -50,6 +51,7 @@ public final class AnomalyRegistry {
         register(new MedusaType());
         register(new BrujaType());
         register(new MimicType());
+        register(new RabbyType());
     }
 
     public void register(AnomalyType type) {
@@ -102,6 +104,10 @@ public final class AnomalyRegistry {
 
     public AnomalyType mimic() {
         return types.get(Mimic.ID);
+    }
+
+    public AnomalyType rabby() {
+        return types.get(Rabby.ID);
     }
 
     public List<AnomalyType> all() {
@@ -1368,7 +1374,7 @@ public final class AnomalyRegistry {
 
         @Override
         public String tagline() {
-            return "La gorgona: si la miras, te quedas de piedra";
+            return "Intocable hasta que caigan sus cinco pilares";
         }
 
         @Override
@@ -1385,10 +1391,11 @@ public final class AnomalyRegistry {
         public List<String> threat() {
             return List.of(
                     "Elemento de tierra: terreno firme y rocoso",
+                    "ES INTOCABLE mientras quede uno de sus cinco pilares",
+                    "Solo cede el ladrillo CINCELADO; el resto se derrumba solo",
                     "SU MIRADA PETRIFICA: no la mires cuando avise",
-                    "El ESCUDO levantado aguanta la mirada, como Perseo",
-                    "Sus propias estatuas sirven de escondite",
-                    "Viboras, veneno y colmillos para el que se libre");
+                    "El ESCUDO levantado la aguanta, como Perseo",
+                    "Y los pilares son la unica cobertura: cada uno menos, peor");
         }
 
         @Override
@@ -1413,8 +1420,9 @@ public final class AnomalyRegistry {
     }
 
     /**
-     * Las 14 habilidades de la Medusa. La mitad son la mirada en sus tres tamanos;
+     * Las 13 habilidades de la Medusa. La mitad son la mirada en sus tres tamanos;
      * la otra mitad, serpientes y piedra para que apartar la vista tampoco sea gratis.
+     * Los cinco pilares NO son una habilidad: son la condicion para poder matarla.
      */
     public List<Ability> medusaAbilities() {
         List<Ability> list = new ArrayList<>();
@@ -1432,9 +1440,9 @@ public final class AnomalyRegistry {
         add(list, "nido_viboras", "Nido de Viboras", 1, 520, 60, 2,
                 "De la cabellera caen viboras que muerden con veneno.",
                 icon("CAVE_SPIDER_SPAWN_EGG", "SPIDER_EYE"), f -> medusa(f).viperNest());
-        add(list, "jardin_estatuas", "Jardin de Estatuas", 1, 480, 90, 3,
-                "Planta menhires de piedra. Esconderse detras salva de la mirada.",
-                icon("STONE", "COBBLESTONE"), f -> medusa(f).statueGarden());
+        add(list, "flecha_petrea", "Flecha Petrea", 1, 200, 50, 4,
+                "Tres saetas que dejan la pierna de piedra a quien tocan.",
+                icon("ARROW", "BOW"), f -> medusa(f).stoneArrow());
 
         // --- Fase II: la muda
         add(list, "mirada_barrida", "Mirada en Barrido", 2, 320, 100, 4,
@@ -1457,9 +1465,6 @@ public final class AnomalyRegistry {
         add(list, "mirada_gorgona", "Mirada de la Gorgona", 3, 420, 110, 4,
                 "Cinco segundos avisando y luego la arena entera. Escudo, estatua o espalda.",
                 icon("ENDER_EYE", "END_CRYSTAL"), f -> medusa(f).gorgonGaze());
-        add(list, "despertar_estatuas", "Las Estatuas Despiertan", 3, 520, 90, 3,
-                "Sus menhires se rompen y sale lo que habia dentro.",
-                icon("CRACKED_STONE_BRICKS", "STONE_BRICKS"), f -> medusa(f).wakeStatues());
         add(list, "furia_serpentina", "Furia Serpentina", 3, 280, 80, 4,
                 "La cabellera entera barre alrededor en tres ondas.",
                 icon("LIME_DYE", "GREEN_DYE"), f -> medusa(f).serpentineFury());
@@ -1759,6 +1764,156 @@ public final class AnomalyRegistry {
 
     private static Mimic mimic(BossFight fight) {
         return (Mimic) fight;
+    }
+
+    // ---------------------------------------------------------------------- Rabby
+
+    /** Ficha de Rabby. */
+    public final class RabbyType implements AnomalyType {
+
+        @Override
+        public String id() {
+            return Rabby.ID;
+        }
+
+        @Override
+        public String display() {
+            return plugin.getConfig().getString("anomalias." + id() + ".nombre", "Rabby");
+        }
+
+        @Override
+        public TextColor color() {
+            return Rabby.ACCENT;
+        }
+
+        /**
+         * Sin brillo: mientras esta tranquilo es un vecino cualquiera. El unico brillo
+         * que tiene es el BLANCO de la concentracion, y se lo pone el solo.
+         */
+        @Override
+        public NamedTextColor glowColor() {
+            return null;
+        }
+
+        @Override
+        public Element element() {
+            return Element.TIERRA;
+        }
+
+        @Override
+        public Material icon() {
+            Material m = Material.matchMaterial("PLAYER_HEAD");
+            return m != null ? m : Material.GOLDEN_APPLE;
+        }
+
+        @Override
+        public String tagline() {
+            return "Parece inofensivo. No le pegues";
+        }
+
+        @Override
+        public List<String> origin() {
+            return List.of(
+                    "No se sabe de donde vino ni por que se quedo.",
+                    "Saluda, se aparta para dejarte pasar y no ha",
+                    "hecho nunca nada a nadie. Los que le levantaron",
+                    "la mano tampoco lo han contado, asi que la parte",
+                    "importante de la historia sigue sin escribirse.");
+        }
+
+        @Override
+        public List<String> threat() {
+            return List.of(
+                    "Elemento de tierra: campo abierto para correr",
+                    "PASIVO hasta que alguien le pega. Y entonces no para",
+                    "Batea al cielo, se teletransporta y remata contra el suelo",
+                    "CONCENTRACION: brillo blanco, un rayo y CINCO VECES el dano",
+                    "Su carga devastadora revienta a quien no lleve buen equipo");
+        }
+
+        @Override
+        public double baseHealth() {
+            return 2400;
+        }
+
+        @Override
+        public int arenaRadius() {
+            return 30;
+        }
+
+        @Override
+        public List<Ability> abilities() {
+            return rabbyAbilities();
+        }
+
+        @Override
+        public BossFight create(AnomalyPlugin plugin, ActiveAnomaly event, Location where) {
+            return new Rabby(plugin, event, where);
+        }
+    }
+
+    /**
+     * Las 14 habilidades de Rabby. Casi todas mueven a alguien de sitio: a el, a ti, o
+     * a los dos. Ninguna funciona mientras siga tranquilo.
+     */
+    public List<Ability> rabbyAbilities() {
+        List<Ability> list = new ArrayList<>();
+
+        // --- Fase I: los puños
+        add(list, "carrera_fantasma", "Carrera Fantasma", 1, 170, 40, 5,
+                "Cruza la arena tan rapido que deja estela, y se lleva por delante a quien pille.",
+                icon("FEATHER", "SUGAR"), f -> rabby(f).ghostRun());
+        add(list, "batazo", "Batazo", 1, 200, 30, 5,
+                "Manda a uno al cielo de un golpe, como quien saca un home run.",
+                icon("MACE", "STICK"), f -> rabby(f).homeRun());
+        add(list, "pisoton_sonico", "Pisoton Sonico", 1, 260, 70, 4,
+                "Salta muy alto y revienta el suelo; la onda saca volando a todos.",
+                icon("HEAVY_CORE", "ANVIL"), f -> rabby(f).sonicStomp());
+        add(list, "rafaga_golpes", "Rafaga de Golpes", 1, 150, 50, 5,
+                "Una tanda de puñetazos a quien tenga delante; concentrado, el doble.",
+                icon("IRON_INGOT", "STICK"), f -> rabby(f).punchFlurry());
+
+        // --- Fase II: los combos
+        add(list, "combo_aereo", "Combo Aereo", 2, 320, 130, 5,
+                "Batea al cielo, se teletransporta arriba, remata y lo clava contra el suelo.",
+                icon("NETHERITE_SWORD", "IRON_SWORD"), f -> rabby(f).airCombo());
+        add(list, "acoso_relampago", "Acoso Relampago", 2, 240, 60, 4,
+                "Se teletransporta a la espalda de cuatro y pega en cada parada.",
+                icon("ENDER_PEARL", "CHORUS_FRUIT"), f -> rabby(f).blinkHarass());
+        add(list, "puno_cometa", "Puño Cometa", 2, 280, 80, 4,
+                "Sube hasta perderse y cae de puño sobre la marca.",
+                icon("FIRE_CHARGE", "MAGMA_CREAM"), f -> rabby(f).cometFist());
+        add(list, "patada_giratoria", "Patada Giratoria", 2, 200, 30, 4,
+                "Gira sobre si mismo y saca de la arena todo lo que tenga cerca.",
+                icon("NETHERITE_BOOTS", "IRON_BOOTS"), f -> rabby(f).spinKick());
+
+        // --- Fase III: se acabo
+        add(list, "concentracion", "Concentracion", 3, 600, 40, 4,
+                "Un rayo, brillo blanco y CINCO VECES el dano durante quince segundos.",
+                icon("NETHER_STAR", "GLOWSTONE_DUST"), f -> rabby(f).concentration());
+        add(list, "carga_devastadora", "Carga Devastadora", 3, 520, 190, 4,
+                "Se traga las estelas de media arena y lo suelta todo de golpe.",
+                icon("DRAGON_BREATH", "END_CRYSTAL"), f -> rabby(f).devastatingCharge());
+        add(list, "onda_expansiva", "Onda Expansiva", 3, 240, 70, 4,
+                "Un puñetazo al suelo que barre dieciseis bloques a la redonda.",
+                icon("MACE", "IRON_BLOCK"), f -> rabby(f).shockwave());
+        add(list, "tromba_final", "Tromba Final", 3, 300, 90, 4,
+                "Tres embestidas seguidas por toda la arena, sin respirar entre ellas.",
+                icon("BLAZE_POWDER", "REDSTONE"), f -> rabby(f).finalRush());
+
+        // --- Cualquier fase
+        add(list, "paso_relampago", "Paso Relampago", 0, 220, 30, 3,
+                "Aparece detras del que mas se aleja y lo devuelve al grupo de un golpe.",
+                icon("ENDER_EYE", "ENDER_PEARL"), f -> rabby(f).lightningStep());
+        add(list, "burla", "Burla", 0, 340, 30, 2,
+                "Se rie, se estira y se pone todavia mas rapido.",
+                icon("NOTE_BLOCK", "JUKEBOX"), f -> rabby(f).taunt());
+
+        return list;
+    }
+
+    private static Rabby rabby(BossFight fight) {
+        return (Rabby) fight;
     }
 
     private static SepulchralKnight knight(BossFight fight) {

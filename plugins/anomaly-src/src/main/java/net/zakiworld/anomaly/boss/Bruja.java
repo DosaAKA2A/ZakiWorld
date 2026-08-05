@@ -16,11 +16,9 @@ import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.entity.Bat;
 import org.bukkit.entity.BlockDisplay;
-import org.bukkit.entity.Display;
 import org.bukkit.entity.Frog;
 import org.bukkit.entity.LivingEntity;
 import org.bukkit.entity.Player;
-import org.bukkit.entity.TextDisplay;
 import org.bukkit.entity.Witch;
 import org.bukkit.util.Vector;
 
@@ -51,7 +49,6 @@ public final class Bruja extends BossFight {
 
     private Frog toad;
     private BlockDisplay cauldron;
-    private TextDisplay nameplate;
     private boolean toadFreed;
     private double damageBonus = 1.0;
 
@@ -77,8 +74,7 @@ public final class Bruja extends BossFight {
             w.setCanPickupItems(false);
             w.customName(Component.text("✦ ", ACCENT)
                     .append(Component.text("Bruja", ACCENT, TextDecoration.BOLD)));
-            // El caldero le tapa la cabeza; el nombre va en un cartel flotante encima.
-            w.setCustomNameVisible(false);
+            w.setCustomNameVisible(true);
         });
 
         Compat.setAttribute(boss, "attack_damage", 8);
@@ -94,52 +90,55 @@ public final class Bruja extends BossFight {
         Tags.markEvent(boss, event.id());
         Glow.apply(boss, event.type().glowColor());
 
-        spawnCauldron();
         spawnToad();
-        raiseNameplate();
         arrivalAnimation(spot);
     }
 
-    /** El caldero-sombrero: una entidad de dibujo que la sigue pegada a la cabeza. */
-    private void spawnCauldron() {
-        cauldron = Fx.blockDisplay(world(), boss.getEyeLocation().add(0, 0.55, 0),
-                Material.CAULDRON, 0.85f);
+    /**
+     * El caldero, plantado en el SUELO a su lado.
+     *
+     * Antes lo llevaba puesto en la cabeza como sombrero y quedaba fatal: un bloque
+     * enorme flotando que ademas tapaba el nombre. Ahora es lo que siempre tuvo que
+     * ser, un caldero puesto donde cocina, y solo aparece cuando le hace falta.
+     */
+    private void placeCauldron(Location where, int ticksToLive) {
+        dropCauldron();
+        Location spot = Fx.ground(where, 4);
+        cauldron = Fx.blockDisplay(world(), spot.clone().add(0, 0.5, 0), Material.CAULDRON, 1.0f);
         markMinion(cauldron);
+        Compat.spawn(world(), Compat.BLOCK, spot.clone().add(0, 0.5, 0), 14, 0.3, 0.2, 0.3, 0.03,
+                Material.CAULDRON.createBlockData());
+        soundAt(spot, "block.anvil.place", 1.1f, 1.3f);
+        final BlockDisplay mine = cauldron;
+        later(ticksToLive, () -> {
+            if (cauldron == mine) dropCauldron();
+        });
+    }
+
+    private void dropCauldron() {
+        if (cauldron == null) return;
+        spawned.remove(cauldron);
+        Fx.safeRemove(cauldron);
+        cauldron = null;
     }
 
     /**
-     * El Sapo Blanco, sentado en el hombro. En fase 1 es intocable y solo canta;
-     * cuando baje al barro, ya sera otra historia.
+     * El Sapo Blanco. La acompana ANDANDO desde el principio, no montado encima:
+     * va a su lado como quien saca al perro, y en la fase 2 ya se pone serio.
      */
     private void spawnToad() {
-        toad = world().spawn(boss.getLocation().add(0.6, 1.6, 0), Frog.class, f -> {
+        toad = world().spawn(boss.getLocation().add(1.2, 0, 0), Frog.class, f -> {
             f.setPersistent(true);
             f.setRemoveWhenFarAway(false);
             f.setInvulnerable(true);
-            f.setGravity(false);
             try {
                 f.setVariant(Frog.Variant.WARM);
             } catch (Throwable ignored) {
             }
             f.customName(Component.text("Sapo Blanco", TextColor.color(TOAD)));
-            f.setCustomNameVisible(false);
+            f.setCustomNameVisible(true);
         });
         markMinion(toad);
-    }
-
-    /** El cartel con el nombre, por encima del caldero. Se queda toda la pelea. */
-    private void raiseNameplate() {
-        if (nameplate != null) return;
-        nameplate = world().spawn(boss.getLocation().add(0, 3.1, 0), TextDisplay.class, d -> {
-            d.text(Component.text("✦ ", ACCENT)
-                    .append(Component.text("Bruja", ACCENT, TextDecoration.BOLD)));
-            d.setBillboard(Display.Billboard.CENTER);
-            d.setSeeThrough(false);
-            d.setPersistent(false);
-            d.setViewRange(1.2f);
-            d.setBrightness(new Display.Brightness(15, 15));
-        });
-        markMinion(nameplate);
     }
 
     private void arrivalAnimation(Location spot) {
@@ -182,28 +181,25 @@ public final class Bruja extends BossFight {
         if (!alive()) return;
         keepHostile();
 
-        // El caldero y el cartel la siguen; el sapo va sentado en el hombro derecho.
-        if (cauldron != null && cauldron.isValid()) {
-            cauldron.teleport(boss.getEyeLocation().add(0, 0.55, 0));
-        }
-        if (nameplate != null && nameplate.isValid()) {
-            nameplate.teleport(boss.getLocation().add(0, 3.1, 0));
-        }
-        if (toad != null && toad.isValid() && !toadFreed && ticks() % 2 == 0) {
-            double yaw = Math.toRadians(boss.getLocation().getYaw());
-            Vector right = new Vector(Math.cos(yaw), 0, Math.sin(yaw));
-            Location shoulder = boss.getLocation()
-                    .add(right.multiply(0.65)).add(0, boss.getEyeHeight() * 0.8, 0);
-            shoulder.setYaw(boss.getLocation().getYaw());
-            toad.teleport(shoulder);
+        // El sapo la sigue andando: si se descuelga, pega un brinco para alcanzarla.
+        if (toad != null && toad.isValid() && !toadFreed && ticks() % 20 == 0) {
+            double d2 = toad.getLocation().distanceSquared(boss.getLocation());
+            if (d2 > 400) {
+                toad.teleport(boss.getLocation().add(1.2, 0, 0));
+            } else if (d2 > 9) {
+                Vector to = boss.getLocation().toVector().subtract(toad.getLocation().toVector());
+                toad.setVelocity(to.normalize().multiply(0.42).setY(0.32));
+                soundAt(toad.getLocation(), "entity.frog.step", 0.7f, 1.1f);
+            }
         }
 
-        // El caldero hierve: burbujas moradas que se escapan por el borde.
+        // Le humean las manos: siempre esta a medio hechizo.
         if (ticks() % 5 == 0) {
-            Compat.spawn(world(), Compat.DUST, boss.getEyeLocation().add(0, 0.9, 0), 2,
-                    0.25, 0.1, 0.25, 0, Compat.dust(BREW, 1.1f));
-            if (Math.random() < 0.25) {
-                soundAt(boss.getLocation(), "block.bubble_column.upwards_ambient", 0.5f, 0.6f);
+            Compat.spawn(world(), Compat.EFFECT, boss.getEyeLocation().add(0, 0.2, 0), 2,
+                    0.3, 0.2, 0.3, 0);
+            if (Math.random() < 0.15) {
+                Compat.spawn(world(), Compat.ENTITY_EFFECT, boss.getLocation().add(0, 1.2, 0), 1,
+                        0.3, 0.4, 0.3, 0, org.bukkit.Color.fromRGB(BREW));
             }
         }
 
@@ -261,7 +257,7 @@ public final class Bruja extends BossFight {
         if (to == 3) grandRitual();
     }
 
-    /** FASE I -> II. El sapo se baja del hombro, crece y entra a pelear. */
+    /** FASE I -> II. El sapo deja de ser mascota: crece de golpe y entra a pelear. */
     private void freeToad() {
         if (toadFreed || !alive()) return;
         toadFreed = true;
@@ -270,12 +266,11 @@ public final class Bruja extends BossFight {
 
         Location spot = boss.getLocation();
         soundAt(spot, "entity.witch.hurt", 1.6f, 0.6f);
-        broadcastNear(Component.text("El sapo baja al barro.", ACCENT));
+        broadcastNear(Component.text("Le suelta la correa al sapo.", ACCENT));
 
         animate(70, tick -> {
             if (!alive()) return;
             if (tick == 25 && toad != null && toad.isValid()) {
-                toad.setGravity(true);
                 toad.setVelocity(new Vector(0.3, 0.5, 0));
                 soundAt(toad.getLocation(), "entity.frog.long_jump", 1.5f, 0.5f);
             }
@@ -286,13 +281,14 @@ public final class Bruja extends BossFight {
                 toad.setHealth(140);
                 Compat.setAttribute(toad, "movement_speed", 0.32);
                 toad.setInvulnerable(false);
-                toad.setCustomNameVisible(true);
-                Compat.spawn(world(), Compat.DUST, toad.getLocation().add(0, 1, 0), 40, 0.8, 0.8, 0.8, 0,
-                        Compat.dust(TOAD, 1.8f));
+                Compat.spawn(world(), Compat.EGG_CRACK, toad.getLocation().add(0, 1, 0), 30,
+                        0.8, 0.8, 0.8, 0);
+                Compat.spawn(world(), Compat.ITEM_SLIME, toad.getLocation().add(0, 0.6, 0), 24,
+                        0.7, 0.4, 0.7, 0);
                 soundAt(toad.getLocation(), "entity.frog.ambient", 1.7f, 0.4f);
             }
             Fx.ring(Fx.ground(boss.getLocation(), 3).add(0, 0.2, 0), 2 + tick * 0.06, 20, tick * 0.2, p ->
-                    Compat.spawn(world(), Compat.DUST, p, 1, 0, 0, 0, 0, Compat.dust(BREW, 1.3f)));
+                    Compat.spawn(world(), Compat.EFFECT, p, 1, 0, 0, 0, 0));
         }, () -> {
             if (!alive()) return;
             boss.setInvulnerable(false);
@@ -314,10 +310,17 @@ public final class Bruja extends BossFight {
         titleNear(Component.text("FASE III", NamedTextColor.RED, TextDecoration.BOLD),
                 Component.text("El caldero rebosa", NamedTextColor.GRAY));
 
+        // A partir de aqui el caldero se queda puesto a su lado hasta el final.
+        placeCauldron(spot, 20 * 60 * 15);
+
         animate(80, tick -> {
             if (!alive()) return;
-            Location head = boss.getEyeLocation().add(0, 0.9, 0);
-            Compat.spawn(world(), Compat.DUST, head, 6, 0.4, 0.3, 0.4, 0, Compat.dust(BREW, 1.7f));
+            if (cauldron != null && cauldron.isValid()) {
+                Compat.spawn(world(), Compat.LANDING_HONEY, cauldron.getLocation().add(0, 0.9, 0), 3,
+                        0.25, 0.1, 0.25, 0);
+                Compat.spawn(world(), Compat.INSTANT_EFFECT, cauldron.getLocation().add(0, 1.1, 0), 2,
+                        0.3, 0.2, 0.3, 0);
+            }
             Fx.helix(boss.getLocation(), 2.0, 4.5, 24, 3.0, p ->
                     Compat.spawn(world(), Compat.WITCH, p, 1, 0, 0, 0, 0));
             if (tick % 12 == 0) {
@@ -326,8 +329,10 @@ public final class Bruja extends BossFight {
                 for (int i = 0; i < 3; i++) {
                     Location drop = Fx.ground(spot.clone().add(
                             (Math.random() - 0.5) * 10, 1, (Math.random() - 0.5) * 10), 5);
-                    Compat.spawn(world(), Compat.DUST, drop.clone().add(0, 0.3, 0), 8, 0.4, 0.2, 0.4, 0,
-                            Compat.dust(ACID, 1.4f));
+                    Compat.spawn(world(), Compat.ITEM_SLIME, drop.clone().add(0, 0.3, 0), 6,
+                            0.4, 0.2, 0.4, 0);
+                    Compat.spawn(world(), Compat.DRIPPING_HONEY, drop.clone().add(0, 0.6, 0), 3,
+                            0.3, 0.2, 0.3, 0);
                     for (Player p : Fx.playersNear(drop, 1.6)) hit(p, 4 * damageBonus);
                 }
             }
@@ -366,17 +371,18 @@ public final class Bruja extends BossFight {
         soundAt(l, "entity.witch.death", 1.7f, 0.8f);
 
         animate(70, tick -> {
+            // El caldero se vuelca y el brebaje se derrama por el suelo.
             if (tick == 20 && cauldron != null && cauldron.isValid()) {
                 cauldron.teleport(Fx.ground(l, 4).add(0, 0.2, 0));
                 soundAt(l, "block.anvil.land", 1.2f, 1.4f);
-                Compat.spawn(world(), Compat.DUST, l.clone().add(0, 0.4, 0), 30, 1.0, 0.3, 1.0, 0,
-                        Compat.dust(BREW, 1.7f));
+                Compat.spawn(world(), Compat.ITEM_SLIME, l.clone().add(0, 0.4, 0), 30, 1.0, 0.2, 1.0, 0);
+                Compat.spawn(world(), Compat.FALLING_HONEY, l.clone().add(0, 0.6, 0), 20, 0.9, 0.3, 0.9, 0);
             }
             Compat.spawn(world(), Compat.WITCH, l.clone().add(0, 1.2, 0), 3, 0.5, 0.6, 0.5, 0);
             if (tick % 12 == 0) {
                 soundAt(l, "block.brewing_stand.brew", 1.1f, 0.4f);
                 Fx.ring(Fx.ground(l, 4).add(0, 0.25, 0), tick * 0.12, 14, p ->
-                        Compat.spawn(world(), Compat.DUST, p, 1, 0, 0, 0, 0, Compat.dust(ACID, 1.4f)));
+                        Compat.spawn(world(), Compat.COMPOSTER, p, 1, 0, 0, 0, 0));
             }
         }, () -> {
             Compat.spawn(world(), Compat.EXPLOSION, l, 2, 0.4, 0.4, 0.4, 0);
@@ -437,7 +443,8 @@ public final class Bruja extends BossFight {
         if (!alive()) return;
         Location c = Fx.ground(boss.getLocation(), 5);
         soundAt(c, "block.brewing_stand.brew", 1.6f, 0.4f);
-        broadcastNear(Component.text("El caldero rebosa.", ACCENT));
+        broadcastNear(Component.text("Planta el caldero y lo pone a hervir.", ACCENT));
+        placeCauldron(c.clone().add(1.5, 0, 0), 160);
 
         List<Location> puddles = new ArrayList<>();
         for (int i = 0; i < 6; i++) {
@@ -449,10 +456,12 @@ public final class Bruja extends BossFight {
         animate(140, tick -> {
             for (Location s : puddles) {
                 Fx.ring(s.clone().add(0, 0.2, 0), 2.2, 12, tick * 0.1, p ->
-                        Compat.spawn(world(), Compat.DUST, Fx.ground(p, 3).add(0, 0.2, 0), 1, 0, 0, 0, 0,
-                                Compat.dust(BREW, 1.4f)));
-                if (Math.random() < 0.2) {
+                        Compat.spawn(world(), Compat.ITEM_SLIME, Fx.ground(p, 3).add(0, 0.2, 0), 1,
+                                0, 0, 0, 0));
+                if (Math.random() < 0.3) {
                     Compat.spawn(world(), Compat.BUBBLE_POP, s.clone().add(0, 0.4, 0), 2, 0.5, 0.2, 0.5, 0);
+                    Compat.spawn(world(), Compat.CAMPFIRE_COSY_SMOKE, s.clone().add(0, 0.5, 0), 1,
+                            0.3, 0.1, 0.3, 0.01);
                 }
             }
             if (tick % 20 != 0) return;

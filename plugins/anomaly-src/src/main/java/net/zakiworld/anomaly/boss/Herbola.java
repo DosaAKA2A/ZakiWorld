@@ -326,15 +326,38 @@ public final class Herbola extends BossFight {
     }
 
     /**
-     * Herbola es hostil de verdad: nunca deja de tener objetivo, asi que dispara con
-     * el arco como cualquier esqueleto MIENTRAS lanza sus habilidades.
+     * Herbola es hostil de verdad, con Cantor o sin el.
+     *
+     * Con el loro montado en la cabeza se quedaba mirando: un mob que lleva pasajero
+     * pierde buena parte de su IA de combate, asi que confiar en que "el esqueleto ya
+     * disparara solo" no vale. Aqui se le renueva el objetivo a menudo y ADEMAS se le
+     * dispara la flecha a mano, que es lo unico que garantiza que siempre ataque.
      */
     private void keepHostile() {
-        if (ticks() % 20 != 0) return;
-        org.bukkit.entity.LivingEntity current = boss instanceof org.bukkit.entity.Mob m ? m.getTarget() : null;
-        if (current != null && current.isValid() && !current.isDead()) return;
+        if (ticks() % 10 != 0) return;
         Player t = Fx.nearest(boss.getLocation(), plugin.settings().participationRadius());
-        if (t != null && boss instanceof org.bukkit.entity.Mob m) m.setTarget(t);
+        if (t == null) return;
+        if (boss instanceof org.bukkit.entity.Mob m) {
+            org.bukkit.entity.LivingEntity current = m.getTarget();
+            if (current == null || !current.isValid() || current.isDead()) m.setTarget(t);
+        }
+        face(t.getEyeLocation());
+
+        // Un flechazo cada segundo y medio a quien tenga a tiro y a la vista.
+        if (ticks() % 30 != 0) return;
+        if (boss.getLocation().distanceSquared(t.getLocation()) < 9) return;
+        if (!boss.hasLineOfSight(t)) return;
+        try {
+            org.bukkit.entity.Arrow arrow = boss.launchProjectile(org.bukkit.entity.Arrow.class,
+                    t.getEyeLocation().toVector().subtract(boss.getEyeLocation().toVector())
+                            .normalize().multiply(1.9));
+            arrow.setDamage(4 + 2 * damageBonus);
+            arrow.setPersistent(false);
+            arrow.setPickupStatus(org.bukkit.entity.AbstractArrow.PickupStatus.DISALLOWED);
+            Tags.markMinion(arrow, ID);
+            soundAt(boss.getLocation(), "entity.skeleton.shoot", 1.2f, 0.9f);
+        } catch (Throwable ignored) {
+        }
     }
 
     // --------------------------------------------------------------- cambio de fase
@@ -573,7 +596,7 @@ public final class Herbola extends BossFight {
                             Compat.spawn(world(), Compat.DUST, p, 1, 0, 0, 0, 0, Compat.dust(MOSS, 1.2f)));
                 }
                 for (Player p : Fx.playersNear(mark, 1.9)) {
-                    root(p, 20);
+                    rootWithRoots(p, 20);
                     if (tick % 20 == 0) hit(p, 7 * damageBonus);
                 }
             }, null);
@@ -584,12 +607,14 @@ public final class Herbola extends BossFight {
      * Amarra a un jugador: no es solo lentitud, es que no se mueve del sitio.
      * Es lo que pedia el picado del loro, y se reutiliza en las raices.
      */
-    private void root(Player p, int ticksHeld) {
-        Compat.apply(p, "slowness", ticksHeld, 250);
-        Compat.apply(p, "jump_boost", ticksHeld, 128);
-        p.setVelocity(new Vector(0, -0.05, 0));
-        Compat.spawn(world(), Compat.DUST, p.getLocation().add(0, 0.4, 0), 6, 0.3, 0.2, 0.3, 0,
-                Compat.dust(MOSS, 1.3f));
+    private void rootWithRoots(Player p, int ticksHeld) {
+        // El amarre en si vive en BossFight: el de aqui usaba jump_boost con amplificador
+        // 128, que en las versiones actuales son ciento veintiocho niveles de salto y te
+        // mandaba al cielo, con expulsion por "moverse muy rapido" de regalo.
+        root(p, ticksHeld);
+        Compat.spawn(world(), Compat.ITEM_COBWEB, p.getLocation().add(0, 0.4, 0), 4, 0.3, 0.3, 0.3, 0);
+        Compat.spawn(world(), Compat.BLOCK, p.getLocation().add(0, 0.4, 0), 12, 0.3, 0.25, 0.3, 0.02,
+                Material.MOSS_BLOCK.createBlockData());
     }
 
     /** 3. Esporas: una nube que envenena y ciega un poco. */
@@ -699,7 +724,7 @@ public final class Herbola extends BossFight {
                 if (!lashed.add(v.getUniqueId())) continue;
                 hit(v, 14 * damageBonus);
                 push(v, l.toVector().subtract(v.getLocation().toVector()).normalize().multiply(0.9).setY(0.25));
-                root(v, 30);
+                rootWithRoots(v, 30);
             }
         }, null);
     }
@@ -731,7 +756,7 @@ public final class Herbola extends BossFight {
                 Compat.spawn(world(), Compat.DUST, pl, 3, 0.2, 0.2, 0.2, 0, Compat.dust(0xE05A4A, 1.2f));
                 if (pl.distanceSquared(tl) < 4) {
                     hit(target, 11 * damageBonus);
-                    root(target, 70);
+                    rootWithRoots(target, 70);
                     Compat.spawn(world(), Compat.CRIT, tl, 24, 0.3, 0.4, 0.3, 0.25);
                     Compat.spawn(world(), Compat.DUST, tl, 30, 0.4, 0.5, 0.4, 0, Compat.dust(MOSS, 1.5f));
                     soundAt(tl, "entity.parrot.hurt", 1.5f, 0.8f);
@@ -817,7 +842,7 @@ public final class Herbola extends BossFight {
                     for (Player p : Fx.playersNear(sl, 3.0)) {
                         hit(p, 13 * damageBonus);
                         push(p, new Vector(0, 0.7, 0));
-                        root(p, 40);
+                        rootWithRoots(p, 40);
                     }
                 });
             });
@@ -952,7 +977,7 @@ public final class Herbola extends BossFight {
                 double d = p.getLocation().distance(c);
                 hit(p, Math.max(9, 26 - d * 2) * damageBonus);
                 push(p, p.getLocation().toVector().subtract(c.toVector()).normalize().setY(0.8).multiply(1.2));
-                root(p, 50);
+                rootWithRoots(p, 50);
             }
         }, null);
     }
@@ -981,9 +1006,8 @@ public final class Herbola extends BossFight {
             for (Location s : seeds) {
                 for (Player p : Fx.playersNear(s, 1.8)) {
                     hit(p, 7 * damageBonus);
-                    root(p, 30);
-                    Compat.spawn(world(), Compat.DUST, p.getLocation().add(0, 0.5, 0), 14, 0.3, 0.4, 0.3, 0,
-                            Compat.dust(MOSS, 1.4f));
+                    rootWithRoots(p, 30);
+                    Compat.spawn(world(), Compat.COMPOSTER, p.getLocation().add(0, 0.5, 0), 14, 0.3, 0.4, 0.3, 0);
                     soundAt(p.getLocation(), "block.roots.place", 1.0f, 0.9f);
                 }
             }

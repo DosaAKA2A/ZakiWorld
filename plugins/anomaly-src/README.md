@@ -8,7 +8,7 @@ La intención de fondo es empujar a la gente a **salir del spawn** y a **pelear 
 el jefe escala con el número de jugadores, varias habilidades castigan dispersarse y el
 botín se reparte entre todos los que participaron, no solo entre quien da el último golpe.
 
-- **Versión:** 1.10.0
+- **Versión:** 1.11.0
 - **Paquete:** `net.zakiworld.anomaly`
 - **Probado contra:** Paper 26.1.2 (MC 26.1.2), compilado con `--release 21`
 - **Permiso único:** `anomaly.gui` (`default: op`)
@@ -356,45 +356,62 @@ círculo convertido en jardín para siempre. Por eso Herbola alarga la espera de
 
 ## Medusa
 
-La gorgona: un husk con armadura de cuero verde, cabellera de serpientes dibujada en
-partículas y elemento **tierra** (terreno firme y rocoso). Brilla en **verde oscuro**.
+La gorgona: un husk con armadura de cuero verde, **arco** en la mano y una **cabellera
+de serpientes** que se mueve sola — seis entidades de visualización con vides, cada una
+con su compás, para que parezcan bichos y no un adorno girando. Elemento **tierra**,
+brillo **verde oscuro**.
 
-Toda la pelea es una regla: **cuando ella mira, tú no miras.** Sus tres miradas
-(Pétrea, en Barrido y de la Gorgona) petrifican a quien esté apuntándole con la cámara
-al terminar el aviso — y petrificar no es matar, es **clavarte en el sitio** delante de
-todo lo demás que tira. Hay tres salvaciones, las tres jugables:
+### Los cinco pilares
 
-- **Apartar la vista** (dejar de apuntarle).
-- **El escudo levantado**, como Perseo. Si además la estabas mirando, la mirada rebota.
-- **Esconderse tras sus estatuas**: los menhires que planta el Jardín de Estatuas
-  valen de cobertura, hasta que en fase 3 **despiertan** y sale lo que había dentro.
+**Medusa no se puede matar mientras quede uno de sus cinco pilares en pie.** No son
+adornos ni texturas estiradas: son construcciones de **bloques de verdad** — base de
+escaleras, columna de ladrillo de piedra, el **ladrillo cincelado** a la altura de la
+cara y una losa de remate. Solo cede el cincelado; picar cualquier otra pieza no hace
+nada, porque si se pudieran desmontar por abajo la mecánica se resolvería cavando. Al
+partir el cincelado **se derrumba el pilar entero**.
+
+Y ahí está la tensión: **esos mismos pilares son la única cobertura contra su mirada**,
+así que cada uno que se tira es un escondite menos. El terreno se devuelve tal cual:
+cada bloque se guarda con su estado original antes de tocarlo y se restaura al
+derrumbar el pilar o al cerrar el evento.
+
+### La mirada
+
+**Cuando ella mira, tú no miras.** Sus tres miradas (Pétrea, en Barrido y de la Gorgona)
+petrifican a quien esté apuntándole con la cámara al acabar el aviso — y petrificar no
+es matar, es **clavarte en el sitio** delante de todo lo demás que tira. Tres salvaciones:
+apartar la vista, **el escudo levantado** (como Perseo: si además la mirabas, la mirada
+rebota) o **ponerse detrás de un pilar**.
 
 | Fase | Habilidades |
 |---|---|
-| I — el jardín | Mirada Pétrea · Látigo de Serpientes · Andanada Venenosa · Nido de Víboras · Jardín de Estatuas |
+| I — la gorgona | Mirada Pétrea · Látigo de Serpientes · Andanada Venenosa · Nido de Víboras · Flecha Pétrea |
 | II — la muda | Mirada en Barrido · Colmillo Certero · Abrazo Pétreo · Lluvia de Colmillos · Veneno Ancestral |
-| III — los ojos arden | Mirada de la Gorgona · Las Estatuas Despiertan · Furia Serpentina |
+| III — los ojos arden | Mirada de la Gorgona · Furia Serpentina |
 | Cualquiera | Siseo |
 
-Transiciones: **muda de piel** (I → II, más rápida) y **los ojos arden** (II → III).
-Al morir se resquebraja y se deshace en piedra, como sus víctimas. Las víboras son
-arañas de cueva con nombre; los menhires, columnas de visualización (la técnica del
-haz de Agonía), así que no tocan ni un bloque real del mundo.
+Sus flechas también petrifican un poco (dejan la pierna de piedra). Al morir se
+resquebraja y se deshace, como sus víctimas. Necesita `allowLongInvulnerability`: sin
+eso, el vigilante que quita la invulnerabilidad a los veinte segundos haría inútiles
+los pilares.
 
 ---
 
 ## La Bruja
 
-Una bruja con el **caldero puesto en la cabeza** a modo de sombrero (una entidad de
-visualización que la sigue pegada) y un **Sapo Blanco** —rana de variante cálida—
-sentado en el hombro. Elemento **tierra**, brillo **dorado**.
+Una bruja con su **caldero** y un **Sapo Blanco** —rana de variante cálida— que la
+acompaña **andando** a su lado. Elemento **tierra**, brillo **dorado**.
+
+El caldero no va en la cabeza: quedaba fatal, un bloque enorme flotando que además
+tapaba el nombre. Es lo que siempre tuvo que ser, **un caldero puesto en el suelo**
+donde cocina, y aparece cuando le hace falta (al hervir y ya fijo en la fase 3).
 
 El sapo es la mitad del jefe:
 
-- **Fase I** — intocable en el hombro; le croa regeneración y resistencia.
-- **Fase II** — **SE BAJA**, crece hasta 2.6 y pelea como esbirro fuerte con 140 de
-  vida propia: salta encima de marcas, engancha con la lengua al que huye y da brincos
-  por su cuenta. Se le puede matar, pero **matárselo la desata**: +20% de daño y más
+- **Fase I** — trota a su lado, intocable; le croa regeneración y resistencia.
+- **Fase II** — **crece hasta 2.6** y pelea como esbirro fuerte con 140 de vida propia:
+  salta encima de marcas, engancha con la lengua al que huye y da brincos por su
+  cuenta. Se le puede matar, pero **matárselo la desata**: +20% de daño y más
   velocidad el resto de la pelea.
 - **Fase III** — el caldero rebosa: el Gran Hechizo (círculo con cuenta atrás de diez
   segundos), murciélagos que ciegan y la Pócima Final sobre todos a la vez.
@@ -407,8 +424,8 @@ El sapo es la mitad del jefe:
 | Cualquiera | Trago Amargo |
 
 Como es una bruja de vanilla, además bebe y lanza sus pociones por su cuenta; eso
-viene gratis con la entidad y es sabor, no el plato. Al morir, el caldero se le cae
-de la cabeza y se derrama; si el sapo sigue vivo, se marcha solo dando brincos.
+viene gratis con la entidad y es sabor, no el plato. Al morir, el caldero se vuelca y
+se derrama; si el sapo sigue vivo, se marcha solo dando brincos.
 
 ---
 
@@ -454,11 +471,57 @@ carnicero, torbellino de acero y la sombra que aparece por la espalda del copiad
 
 Al morir, los disfraces se le caen entre destellos, y debajo no había nada.
 
+**No puede morirse sin haber engañado en las tres fases.** Con buen equipo, un solo
+mandoble se llevaba el 40 % de la barra y el jefe se moría al reventar el cofre, sin
+llegar nunca a robarle la cara a nadie. El `survivalFloor` de `BossFight` recorta el
+golpe hasta dejarlo justo en el umbral: la fase salta en el tick siguiente y el suelo
+se levanta solo.
+
+---
+
+## Rabby
+
+**Un tipo bajito con cara de buena persona que está ahí parado saludando.** Y de
+verdad no hace nada: se le puede rodear, mirar y hasta ignorar. Elemento **tierra**,
+sin brillo y sin pilar de luz — es un vecino cualquiera hasta que deja de serlo.
+
+El aspecto sale de una **skin de verdad**: la cabeza lleva la textura puesta con la API
+de perfiles de Bukkit y, si el servidor tiene **LibsDisguises** (Ederus lo tiene), se le
+pone además el disfraz de jugador completo. El hook es **por reflexión**, así que sin
+LibsDisguises el plugin arranca igual y solo se ve un poco menos fino.
+
+### Pegarle es la mala idea
+
+**Rabby es pasivo hasta que alguien le pega.** Ese primer golpe cae un rayo, se pone
+nombre de anomalía y a partir de ahí no para. Todo lo suyo es desplazamiento y castigo:
+
+| Fase | Habilidades |
+|---|---|
+| I — los puños | Carrera Fantasma · Batazo · Pisotón Sónico · Ráfaga de Golpes |
+| II — los combos | **Combo Aéreo** · Acoso Relámpago · Puño Cometa · Patada Giratoria |
+| III — se acabó | **Concentración** · **Carga Devastadora** · Onda Expansiva · Tromba Final |
+| Cualquiera | Paso Relámpago · Burla |
+
+- **Combo Aéreo** es la firma: te **batea al cielo** como quien saca un home run, se
+  **teletransporta** a tu altura, te mete una tanda de golpes ahí arriba siguiéndote el
+  paso para que no te caigas a mitad, y te **clava contra el suelo** — el remate es lo
+  que más duele, y la caída encima.
+- **Concentración** es el interruptor de la pelea: un **rayo**, **brillo blanco** (el
+  único que tiene) y **cinco veces el daño** durante quince segundos. Los combos, que ya
+  multiplican de por sí, se vuelven una sentencia.
+- **Carga Devastadora**: se traga las **estelas** de media arena —las mismas motas que
+  convergen cuando muere el dragón, que es exactamente la lectura de "esto se está
+  concentrando aquí"— durante ocho segundos y lo suelta de golpe. A bocajarro **revienta
+  a cualquiera que no lleve buen equipo**; en el borde sigue siendo un susto muy serio.
+
+Todo lo que levanta a un jugador pasa por `push`/`lift`, que conceden permiso de vuelo
+temporal: sin eso el servidor expulsa por "volar" a mitad del combo.
+
 ---
 
 ## El árbol de logros
 
-Trece logros: la raíz, uno por anomalía y **El que las vio todas**, que exige las once.
+Catorce logros: la raíz, uno por anomalía y **El que las vio todas**, que exige las doce.
 Todos los de jefe son de tipo *challenge*, así que traen el marco morado y el sonido de
 desafío de vanilla.
 
@@ -513,9 +576,27 @@ por primera vez hace falta un `/minecraft:reload` o un reinicio; el log lo dice.
   estrella en picado y **cambia de cuerpo** al ahogado, copiando vida y máximo para que la
   barra ni se entere. Que el phantom no sea una montura quita de en medio toda la fricción
   que daba su IA de vuelo.
-- **Nadie debe ser expulsado por volar.** Cualquier empuje con componente vertical seria
+- **Nadie debe ser expulsado por volar.** Cualquier empuje con componente vertical
   concede permiso de vuelo temporal al jugador y se lo retira después. Sin eso el servidor
-  echaba a la gente en cuanto una habilidad la levantaba.
+  echaba a la gente en cuanto una habilidad la levantaba. Va por `push()` **y por
+  `lift()`**: quien llame a `setVelocity` a pelo se salta el permiso, que es justo lo que
+  hacía el campo cinético de Darkness.
+- **Nada de `jump_boost` con amplificador 128 para anular el salto.** Era el truco de las
+  versiones viejas, cuando el amplificador era un byte y 128 se leía como −128. Hoy son
+  ciento veintiocho niveles de salto: al intentar saltar te ibas al cielo y el servidor te
+  expulsaba por moverte demasiado rápido. El amarre (`BossFight#root`) anula el salto a
+  mano, tick a tick, cortando solo la velocidad que sube.
+- **Un mob con pasajero pierde media IA de combate.** Herbola se quedaba mirando con el
+  Cantor en la cabeza. No basta con confiar en que "el esqueleto ya disparará solo": hay
+  que renovarle el objetivo a menudo y lanzarle la flecha a mano.
+- **Las partículas de bloque y de objeto no pintan nada sin su dato.** `FALLING_DUST`,
+  `BLOCK_CRUMBLE`, `DUST_PILLAR` e `ITEM` exigen un `BlockData` o un `ItemStack`;
+  llamarlas sin él no da error, simplemente no se ve. `Compat.defaultData` los rellena.
+- **Variar la partícula, no solo el color.** Durante un tiempo casi todo se pintó con
+  `DUST` recoloreado y se acababa notando: todas las anomalías soltaban la misma bolita
+  de colores. Hay un catálogo entero — `VAULT_CONNECTION` para el reclamo de los cofres,
+  `INFESTED` para lo que está vivo y no debería, `ENTITY_EFFECT` para las serpientes,
+  `REVERSE_PORTAL` para lo que se concentra, `DUST_PILLAR` para la piedra que cae.
 - **La cabra necesita agresividad escrita a mano.** `Goat` es un animal PASIVO en Minecraft:
   no tiene IA que persiga ni que ataque, por eso se quedaba parada mirando.
 - **El menú de botín no puede cancelar los clics del inventario propio.** Si se cancelan
@@ -542,7 +623,7 @@ No hay Maven en el PATH. Con el JDK 25 portátil y `paper-api 26.1.2`:
 
 ```
 javac --release 21 -encoding UTF-8 -cp "<paper-api + libs del servidor>" -d build @sources
-jar --create --file Anomaly-1.10.0.jar -C build .
+jar --create --file Anomaly-1.11.0.jar -C build .
 ```
 
 El `pom.xml` está para quien tenga Maven; `paper-api` es `provided`.

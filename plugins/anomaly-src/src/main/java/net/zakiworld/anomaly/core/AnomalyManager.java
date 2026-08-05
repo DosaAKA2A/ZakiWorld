@@ -295,6 +295,7 @@ public final class AnomalyManager implements Listener {
 
             double factor = event.fight().damageScale() * event.fight().incomingDamageMultiplier(e.getDamager());
             if (factor != 1.0) e.setDamage(e.getDamage() * factor);
+            clampToSurvivalFloor(e, event.fight(), boss);
             return;
         }
 
@@ -316,6 +317,42 @@ public final class AnomalyManager implements Listener {
         }
         if (boss != null && victim.equals(boss) && Tags.isMinion(e.getDamager())) {
             e.setCancelled(true);
+        }
+    }
+
+    /**
+     * Recorta el golpe para que el jefe no baje del suelo que declara su fase.
+     *
+     * Con equipo bueno un solo mandoble se lleva media barra, y eso saltaba fases
+     * guionizadas enteras: el jefe se moria sin llegar a ejecutarlas. Aqui el golpe se
+     * queda justo en el umbral, la transicion salta en el tick siguiente y a partir de
+     * ahi el suelo baja solo.
+     */
+    private void clampToSurvivalFloor(EntityDamageByEntityEvent e, BossFight fight, LivingEntity boss) {
+        double floor = fight.survivalFloor();
+        if (floor <= 0) return;
+        double max = Compat.getAttribute(boss, "max_health", boss.getHealth());
+        double limit = max * floor;
+        double allowed = boss.getHealth() - limit;
+        if (allowed <= 0) {
+            e.setCancelled(true);
+            return;
+        }
+        if (e.getDamage() > allowed) e.setDamage(allowed);
+    }
+
+    /**
+     * Las anomalias que construyen algo de verdad deciden que se puede romper y que no.
+     * Fuera de eso el plugin no toca el minado de nadie.
+     */
+    @EventHandler(ignoreCancelled = true)
+    public void onBlockBreak(org.bukkit.event.block.BlockBreakEvent e) {
+        ActiveAnomaly event = current;
+        if (event == null || event.fight() == null) return;
+        try {
+            if (event.fight().onBlockBroken(e.getBlock(), e.getPlayer())) e.setCancelled(true);
+        } catch (Throwable t) {
+            plugin.getLogger().warning("Fallo al reaccionar a un bloque roto: " + t);
         }
     }
 

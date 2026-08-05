@@ -141,6 +141,11 @@ anomalias:
     vida: 2000
     dano: 1.0
     nombre: 'Mimic'
+  rabby:
+    activa: true
+    vida: 2400
+    dano: 1.0
+    nombre: 'Rabby'
 
 menu:
   # La anomalia que abre el boton Iniciar del panel.

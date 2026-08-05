@@ -1,10 +1,10 @@
 name: Anomaly
-version: '1.10.0'
+version: '1.11.0'
 main: net.zakiworld.anomaly.AnomalyPlugin
 api-version: '1.20'
 author: Iris Studio
 description: 'Eventos anomalos: un jefe por fases aparece en un punto libre del mapa, se anuncia en el chat y suelta un botin configurable desde el menu.'
-softdepend: [WorldGuard, ProtectionStones, MMOItems]
+softdepend: [WorldGuard, ProtectionStones, MMOItems, LibsDisguises]
 
 commands:
   anomaly:
