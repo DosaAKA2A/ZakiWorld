@@ -16,6 +16,7 @@ import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
 import org.bukkit.event.entity.EntityDamageByEntityEvent;
+import org.bukkit.event.entity.EntityDamageEvent;
 import org.bukkit.event.entity.EntityDeathEvent;
 import org.bukkit.event.entity.EntityTargetEvent;
 import org.bukkit.event.player.PlayerQuitEvent;
@@ -285,6 +286,11 @@ public final class AnomalyManager implements Listener {
             // reescalarlo al tope de vida de la entidad: asi el ranking no depende
             // de un detalle interno del plugin.
             event.addDamage(p, e.getFinalDamage());
+            try {
+                event.fight().onDamaged(p, e.getFinalDamage());
+            } catch (Throwable t) {
+                plugin.getLogger().warning("Fallo al reaccionar al dano recibido: " + t);
+            }
 
             double factor = event.fight().damageScale() * event.fight().incomingDamageMultiplier(e.getDamager());
             if (factor != 1.0) e.setDamage(e.getDamage() * factor);
@@ -319,6 +325,28 @@ public final class AnomalyManager implements Listener {
             if (src instanceof Player p) return p;
         }
         return null;
+    }
+
+    /**
+     * Un jefe no se muere de lluvia, de una caida ni de asfixia.
+     *
+     * Sin esto el Enderman de Darkness se derrite en cuanto llueve y cualquiera de
+     * ellos puede morirse solo por caerse de una animacion, dejando el evento a medias.
+     */
+    @EventHandler(ignoreCancelled = true)
+    public void onEnvironmentalDamage(EntityDamageEvent e) {
+        if (e instanceof EntityDamageByEntityEvent) return;
+        ActiveAnomaly event = current;
+        if (event == null || event.fight() == null) return;
+        LivingEntity boss = event.fight().entity();
+        if (boss == null || !e.getEntity().equals(boss)) {
+            if (!Tags.isOurs(e.getEntity())) return;
+        }
+        switch (e.getCause()) {
+            case ENTITY_ATTACK, ENTITY_SWEEP_ATTACK, PROJECTILE, MAGIC, THORNS, CUSTOM -> {
+            }
+            default -> e.setCancelled(true);
+        }
     }
 
     /** Los esbirros no se pelean entre ellos ni con el jefe. */

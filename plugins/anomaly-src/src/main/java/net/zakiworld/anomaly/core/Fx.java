@@ -158,6 +158,29 @@ public final class Fx {
         return d;
     }
 
+    /**
+     * Una columna de luz vertical al estilo del haz de un faro, hecha con una entidad
+     * de visualizacion en vez de con un faro real.
+     *
+     * Es la misma tecnica que se uso en Rip para el haz de Agonia: un bloque estirado
+     * hacia arriba. Un faro de verdad exigiria construir la piramide y romper el mundo.
+     */
+    public static BlockDisplay lightColumn(World w, Location base, Material mat, float width, float height) {
+        BlockDisplay d = w.spawn(base, BlockDisplay.class, e -> {
+            e.setBlock(mat.createBlockData());
+            e.setViewRange(4.0f);
+            e.setBrightness(new Display.Brightness(15, 15));
+            e.setPersistent(false);
+            e.setTransformation(new Transformation(
+                    new Vector3f(-width / 2, 0, -width / 2),
+                    new AxisAngle4f(0, 0, 0, 1),
+                    new Vector3f(width, height, width),
+                    new AxisAngle4f(0, 0, 0, 1)));
+        });
+        Tags.markTemporary(d);
+        return d;
+    }
+
     public static BlockDisplay blockDisplay(World w, Location loc, Material mat, float scale) {
         BlockDisplay d = w.spawn(loc, BlockDisplay.class, e -> {
             e.setBlock(mat.createBlockData());

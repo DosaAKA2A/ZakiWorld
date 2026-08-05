@@ -57,9 +57,9 @@ public final class StormRider extends BossFight {
     /** Altura a la que se mantiene el phantom sobre la arena durante la fase 1. */
     private static final double FLIGHT_HEIGHT = 13;
 
-    private Phantom mount;
     private boolean grounded;
     private boolean berserk;
+    private boolean diving;
     private double damageBonus = 1.0;
 
     public StormRider(AnomalyPlugin plugin, ActiveAnomaly event, Location where) {
@@ -77,21 +77,6 @@ public final class StormRider extends BossFight {
     @Override
     public void spawn() {
         Location air = arena.clone().add(0, FLIGHT_HEIGHT, 0);
-
-        mount = world().spawn(air, Phantom.class, p -> {
-            // Lo que hace grande al phantom de verdad: escala modelo y caja de golpe.
-            p.setSize(8);
-            p.setPersistent(true);
-            p.setRemoveWhenFarAway(false);
-            p.setInvulnerable(true);
-            p.setShouldBurnInDay(false);
-            p.setAnchorLocation(air);
-            p.customName(Component.text("Montura de Tormenta", ACCENT));
-            p.setCustomNameVisible(false);
-            Compat.setAttribute(p, "max_health", 200);
-            p.setHealth(200);
-        });
-        markMinion(mount);
 
         boss = world().spawn(air, Drowned.class, d -> {
             d.setAdult();
@@ -116,9 +101,16 @@ public final class StormRider extends BossFight {
 
         Tags.markBoss(boss, ID);
         Tags.markEvent(boss, event.id());
-        mount.addPassenger(boss);
         Glow.apply(boss, event.type().glowColor());
-        Glow.apply(mount, event.type().glowColor());
+
+        // Vuela por su cuenta: sin gravedad y movido a mano. La montura phantom se
+        // descartó porque su IA de vuelo peleaba contra el control del plugin y la
+        // animacion se rompia constantemente. Con la elytra el vuelo es nuestro.
+        boss.setGravity(false);
+        try {
+            boss.setGliding(true);
+        } catch (Throwable ignored) {
+        }
 
         arrivalAnimation(arena.clone());
     }
@@ -126,7 +118,10 @@ public final class StormRider extends BossFight {
     private void dressUp(EntityEquipment eq, boolean dual) {
         if (eq == null) return;
         eq.setHelmet(named(Material.TURTLE_HELMET, "Yelmo de la Corriente"));
-        eq.setChestplate(named(Material.IRON_CHESTPLATE, "Peto Anegado"));
+        // En el aire lleva la elytra puesta; al caer al suelo se cambia por el peto.
+        eq.setChestplate(grounded
+                ? named(Material.IRON_CHESTPLATE, "Peto Anegado")
+                : named(Material.ELYTRA, "Alas de Temporal"));
         eq.setItemInMainHand(named(Material.TRIDENT, "Tridente de Tormenta"));
         eq.setItemInOffHand(dual ? named(Material.TRIDENT, "Tridente de Tormenta") : null);
         eq.setHelmetDropChance(0);
@@ -186,20 +181,7 @@ public final class StormRider extends BossFight {
     protected void ambient() {
         if (!alive()) return;
 
-        if (mount != null && mount.isValid()) {
-            mount.setFireTicks(0);
-            // Lo mantiene sobre la arena y a su altura. Sin esto el phantom se va a dar
-            // una vuelta por el mapa y la pelea se queda sin jefe.
-            Location m = mount.getLocation();
-            double targetY = Fx.ground(arena, 5).getY() + FLIGHT_HEIGHT;
-            if (m.getY() < targetY - 1.5) {
-                mount.setVelocity(mount.getVelocity().setY(0.35));
-            }
-            if (m.distanceSquared(arena) > 40 * 40) {
-                Vector back = arena.toVector().subtract(m.toVector()).normalize().multiply(0.5);
-                mount.setVelocity(back.setY(Math.max(0, mount.getVelocity().getY())));
-            }
-        }
+        if (!grounded && !diving) flyOrbit();
 
         if (ticks() % 4 == 0) {
             Location l = boss.getLocation().add(0, 1.2, 0);
@@ -214,6 +196,36 @@ public final class StormRider extends BossFight {
             warn(Component.text("Vuela demasiado alto para la espada. ", NamedTextColor.GRAY)
                     .append(Component.text("Usa el arco.", NamedTextColor.AQUA, TextDecoration.BOLD)));
         }
+    }
+
+    /**
+     * El vuelo, hecho a mano.
+     *
+     * Da vueltas sobre la arena a su altura, ladeandose hacia donde va. Al ser velocidad
+     * impuesta cada tick y sin gravedad, no hay IA con la que pelear y la animacion deja
+     * de romperse: el jefe esta exactamente donde el plugin dice que esta.
+     */
+    private void flyOrbit() {
+        double targetY = Fx.ground(arena, 6).getY() + FLIGHT_HEIGHT;
+        double angle = ticks() * 0.035;
+        Location want = arena.clone().add(Math.cos(angle) * 9, targetY - arena.getY(), Math.sin(angle) * 9);
+
+        Vector move = want.toVector().subtract(boss.getLocation().toVector());
+        double len = move.length();
+        boss.setVelocity(len < 0.2 ? new Vector(0, 0, 0) : move.multiply(Math.min(0.35, 0.9 / len)));
+
+        // Que mire hacia donde vuela y, de paso, hacia abajo: esta cazando desde arriba.
+        Player look = Fx.nearest(arena, plugin.settings().participationRadius());
+        Location face = boss.getLocation();
+        if (look != null) {
+            face.setDirection(look.getLocation().toVector().subtract(face.toVector()));
+            boss.setRotation(face.getYaw(), face.getPitch());
+        }
+
+        if (ticks() % 6 == 0) {
+            Compat.spawn(world(), Compat.CLOUD, boss.getLocation(), 3, 0.4, 0.2, 0.4, 0.01);
+        }
+        if (ticks() % 40 == 0) soundAt(boss.getLocation(), "item.elytra.flying", 0.7f, 0.8f);
     }
 
     /**
@@ -262,7 +274,7 @@ public final class StormRider extends BossFight {
         if (to == 3) berserker();
     }
 
-    /** FASE I -> II. El phantom se parte en el aire y el jinete cae de pie. */
+    /** FASE I -> II. Se le desgarran las alas y cae de pie con un rayo encima. */
     private void crashDown() {
         if (grounded || !alive()) return;
         grounded = true;
@@ -270,33 +282,25 @@ public final class StormRider extends BossFight {
         busyFor(90);
 
         Location spot = boss.getLocation();
-        soundAt(spot, "entity.phantom.death", 1.8f, 0.5f);
-        broadcastNear(Component.text("La montura se parte.", ACCENT));
+        soundAt(spot, "item.elytra.flying", 1.8f, 0.4f);
+        broadcastNear(Component.text("Se le desgarran las alas.", ACCENT));
 
         animate(90, tick -> {
             if (!alive()) return;
             Location l = boss.getLocation();
             if (tick < 26) {
-                if (mount != null && mount.isValid()) {
-                    mount.setVelocity(new Vector((Math.random() - 0.5) * 0.3, -0.15, (Math.random() - 0.5) * 0.3));
-                    Compat.spawn(world(), Compat.LARGE_SMOKE, mount.getLocation(), 8, 1.0, 0.6, 1.0, 0.03);
-                }
-                if (tick % 6 == 0) soundAt(l, "entity.phantom.hurt", 1.3f, 0.6f);
+                boss.setVelocity(new Vector((Math.random() - 0.5) * 0.25, -0.12, (Math.random() - 0.5) * 0.25));
+                Compat.spawn(world(), Compat.LARGE_SMOKE, l, 8, 0.7, 0.5, 0.7, 0.03);
+                Compat.spawn(world(), Compat.ITEM, l, 6, 0.5, 0.5, 0.5, 0.1,
+                        new ItemStack(Material.PHANTOM_MEMBRANE));
+                if (tick % 6 == 0) soundAt(l, "entity.player.hurt", 1.1f, 0.6f);
                 return;
             }
             if (tick == 26) {
-                if (mount != null && mount.isValid()) {
-                    Location m = mount.getLocation();
-                    mount.eject();
-                    Compat.spawn(world(), Compat.EXPLOSION_EMITTER, m, 1);
-                    Compat.spawn(world(), Compat.ITEM, m, 80, 1.0, 0.8, 1.0, 0.25,
-                            new ItemStack(Material.PHANTOM_MEMBRANE));
-                    soundAt(m, "entity.phantom.death", 1.8f, 0.7f);
-                    spawned.remove(mount);
-                    Glow.clear(mount);
-                    Fx.safeRemove(mount);
-                    mount = null;
-                }
+                Compat.spawn(world(), Compat.EXPLOSION, l, 2, 0.6, 0.6, 0.6, 0);
+                Compat.spawn(world(), Compat.ITEM, l, 60, 0.8, 0.8, 0.8, 0.25,
+                        new ItemStack(Material.PHANTOM_MEMBRANE));
+                soundAt(l, "entity.item.break", 1.6f, 0.6f);
                 return;
             }
             if (tick < 64) {
@@ -319,6 +323,12 @@ public final class StormRider extends BossFight {
         }, () -> {
             if (!alive()) return;
             boss.setInvulnerable(false);
+            boss.setGravity(true);
+            try {
+                boss.setGliding(false);
+            } catch (Throwable ignored) {
+            }
+            dressUp(boss.getEquipment(), false);
             Compat.setAttribute(boss, "movement_speed", 0.36);
             Compat.setAttribute(boss, "attack_damage", 13);
             titleNear(Component.text("FASE II", NamedTextColor.GOLD, TextDecoration.BOLD),
@@ -435,33 +445,37 @@ public final class StormRider extends BossFight {
     /** 2. Picado: se lanza en vertical sobre alguien y vuelve a subir. */
     public void divebomb() {
         Player target = randomTarget();
-        if (target == null || !alive() || mount == null || !mount.isValid()) return;
+        if (target == null || !alive() || grounded) return;
         Location mark = Fx.ground(target.getLocation(), 4);
 
         soundAt(loc(), "entity.phantom.swoop", 1.6f, 0.7f);
         broadcastNear(Component.text("Se lanza en picado.", ACCENT));
 
+        // Mientras dura el picado el vuelo automatico se aparta: manda la habilidad.
+        diving = true;
         animate(80, tick -> {
-            if (!alive() || mount == null || !mount.isValid()) throw Stop.now();
+            if (!alive() || grounded) throw Stop.now();
             if (tick < 24) {
                 Fx.telegraph(world(), mark, 3.6, STORM);
-                if (tick % 8 == 0) soundAt(mark, "entity.phantom.flap", 1.2f, 0.8f);
+                if (tick % 8 == 0) soundAt(mark, "item.elytra.flying", 1.0f, 1.4f);
                 return;
             }
             if (tick < 46) {
-                Vector to = mark.clone().add(0, 2, 0).toVector().subtract(mount.getLocation().toVector());
-                if (to.lengthSquared() > 0.5) mount.setVelocity(to.normalize().multiply(1.1));
-                Compat.spawn(world(), Compat.CLOUD, mount.getLocation(), 6, 0.6, 0.4, 0.6, 0.03);
-                for (Player p : Fx.playersNear(mount.getLocation(), 4.0)) {
+                Vector to = mark.clone().add(0, 1.5, 0).toVector().subtract(boss.getLocation().toVector());
+                if (to.lengthSquared() > 0.5) boss.setVelocity(to.normalize().multiply(1.15));
+                Compat.spawn(world(), Compat.CLOUD, boss.getLocation(), 8, 0.5, 0.4, 0.5, 0.04);
+                Compat.spawn(world(), Compat.DUST, boss.getLocation(), 4, 0.4, 0.4, 0.4, 0,
+                        Compat.dust(STORM, 1.4f));
+                for (Player p : Fx.playersNear(boss.getLocation(), 3.6)) {
                     hit(p, 13 * damageBonus);
-                    push(p, p.getLocation().toVector().subtract(mount.getLocation().toVector())
+                    push(p, p.getLocation().toVector().subtract(boss.getLocation().toVector())
                             .normalize().setY(0.5).multiply(1.0));
                 }
                 return;
             }
-            mount.setVelocity(new Vector(0, 0.75, 0));
-            if (tick % 8 == 0) soundAt(mount.getLocation(), "entity.phantom.flap", 1.3f, 0.7f);
-        }, null);
+            boss.setVelocity(new Vector(0, 0.8, 0));
+            if (tick % 8 == 0) soundAt(boss.getLocation(), "item.elytra.flying", 1.0f, 0.7f);
+        }, () -> diving = false);
     }
 
     /** 3. Ojo del Huracan: un remolino que arrastra a todos hacia el centro. */

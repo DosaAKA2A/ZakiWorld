@@ -6,6 +6,8 @@ import net.zakiworld.anomaly.AnomalyPlugin;
 import net.zakiworld.anomaly.boss.Ability;
 import net.zakiworld.anomaly.boss.BossFight;
 import net.zakiworld.anomaly.boss.AbyssalChoir;
+import net.zakiworld.anomaly.boss.Darkness;
+import net.zakiworld.anomaly.boss.Herbola;
 import net.zakiworld.anomaly.boss.KillerBunny;
 import net.zakiworld.anomaly.boss.SaltLeviathan;
 import net.zakiworld.anomaly.boss.ScreamingGoat;
@@ -40,6 +42,8 @@ public final class AnomalyRegistry {
         register(new RiderType());
         register(new LeviathanType());
         register(new ChoirType());
+        register(new DarknessType());
+        register(new HerbolaType());
     }
 
     public void register(AnomalyType type) {
@@ -72,6 +76,14 @@ public final class AnomalyRegistry {
 
     public AnomalyType choir() {
         return types.get(AbyssalChoir.ID);
+    }
+
+    public AnomalyType darkness() {
+        return types.get(Darkness.ID);
+    }
+
+    public AnomalyType herbola() {
+        return types.get(Herbola.ID);
     }
 
     public List<AnomalyType> all() {
@@ -802,7 +814,7 @@ public final class AnomalyRegistry {
                     "Elemento de agua: se pelea en el FONDO, sumergido",
                     "Dentro de su arena el abismo te deja respirar",
                     "Fuera de ella no hay aire: huir es peor que quedarse",
-                    "15 habilidades de haz, corriente y presion");
+                    "14 habilidades de haz, corriente y presion, sin esbirros");
         }
 
         @Override
@@ -826,7 +838,10 @@ public final class AnomalyRegistry {
         }
     }
 
-    /** Las 15 habilidades del Leviatan: haces, corrientes y presion. */
+    /**
+     * Las 14 habilidades del Leviatan: haces, corrientes y presion.
+     * SIN esbirros a proposito; de eso ya van sobradas las otras anomalias.
+     */
     public List<Ability> leviathanAbilities() {
         List<Ability> list = new ArrayList<>();
 
@@ -842,9 +857,6 @@ public final class AnomalyRegistry {
         add(list, "columna_ascendente", "Columna Ascendente", 1, 260, 70, 3,
                 "Chorros que te disparan hacia arriba, lejos de el y del aire.",
                 icon("MAGMA_BLOCK", "SOUL_SAND"), f -> leviathan(f).risingColumn());
-        add(list, "banco_guardianes", "Banco de Guardianes", 1, 520, 60, 2,
-                "Llama de tres a cinco guardianes que hostigan desde los lados.",
-                icon("GUARDIAN_SPAWN_EGG", "PRISMARINE"), f -> leviathan(f).guardianShoal());
 
         add(list, "haces_encadenados", "Haces Encadenados", 2, 280, 100, 4,
                 "El rayo salta de un jugador al siguiente hasta acabar la fila.",
@@ -1019,6 +1031,285 @@ public final class AnomalyRegistry {
 
     private static AbyssalChoir choir(BossFight fight) {
         return (AbyssalChoir) fight;
+    }
+
+
+    // -------------------------------------------------------------------- Darkness
+
+    /** Ficha de Darkness. */
+    public final class DarknessType implements AnomalyType {
+
+        @Override
+        public String id() {
+            return Darkness.ID;
+        }
+
+        @Override
+        public String display() {
+            return plugin.getConfig().getString("anomalias." + id() + ".nombre", "Darkness");
+        }
+
+        @Override
+        public TextColor color() {
+            return Darkness.ACCENT;
+        }
+
+        /** Morado casi todo el combate; en la ultima fase el propio jefe lo cambia a blanco. */
+        @Override
+        public NamedTextColor glowColor() {
+            return NamedTextColor.DARK_PURPLE;
+        }
+
+        @Override
+        public Element element() {
+            return Element.TIERRA;
+        }
+
+        @Override
+        public Material icon() {
+            Material m = Material.matchMaterial("ENDER_EYE");
+            return m != null ? m : Material.ENDER_PEARL;
+        }
+
+        @Override
+        public String tagline() {
+            return "Enderman colosal; el jefe mas duro del catalogo";
+        }
+
+        @Override
+        public List<String> origin() {
+            return List.of(
+                    "No vino de ningun sitio: estaba en el hueco que",
+                    "queda cuando se apaga una antorcha y todavia no",
+                    "has encendido la siguiente. Ese hueco crecio, y",
+                    "un dia se levanto y echo a andar.");
+        }
+
+        @Override
+        public List<String> threat() {
+            return List.of(
+                    "Casi todo lo suyo ciega: se pelea a oscuras",
+                    "Se cura partiendose en siete; hay que dar con el de verdad",
+                    "Coronas de faro moradas girando: tocarlas duele muchisimo",
+                    "En la ultima fase crece hasta coloso y abre un agujero negro");
+        }
+
+        @Override
+        public double baseHealth() {
+            return 2600;
+        }
+
+        @Override
+        public int arenaRadius() {
+            return 28;
+        }
+
+        @Override
+        public List<Ability> abilities() {
+            return darknessAbilities();
+        }
+
+        @Override
+        public BossFight create(AnomalyPlugin plugin, ActiveAnomaly event, Location where) {
+            return new Darkness(plugin, event, where);
+        }
+    }
+
+    /** Las 15 habilidades de Darkness. Ninguna trae esbirros: los dobles son su cura. */
+    public List<Ability> darknessAbilities() {
+        List<Ability> list = new ArrayList<>();
+
+        add(list, "septeto", "Septeto", 2, 700, 300, 3,
+                "Se parte en siete dobles que vibran mientras el original se cura.",
+                icon("ENDER_PEARL", "ENDER_EYE"), f -> darkness(f).septet());
+        add(list, "coronas", "Coronas del Vacio", 0, 520, 260, 4,
+                "Columnas de faro moradas girando a su alrededor; lo que tocan lo destrozan.",
+                icon("BEACON", "PURPLE_STAINED_GLASS"), f -> darkness(f).voidCrowns());
+        add(list, "campo_cinetico", "Campo Cinetico", 0, 420, 150, 4,
+                "Los sujeta, los levanta y revienta mandandolos volando muy lejos.",
+                icon("HEAVY_CORE", "ANVIL"), f -> darkness(f).kineticField());
+
+        add(list, "velo", "Velo de Oscuridad", 1, 240, 90, 5,
+                "Apaga la vista de todo el que este cerca.",
+                icon("BLACK_DYE", "INK_SAC"), f -> darkness(f).veil());
+        add(list, "parpadeo", "Parpadeo", 1, 200, 80, 5,
+                "Aparece detras de uno, pega y desaparece. Tres veces seguidas.",
+                icon("ENDER_PEARL", "CHORUS_FRUIT"), f -> darkness(f).blink());
+        add(list, "mirada", "La Mirada", 1, 340, 160, 3,
+                "Fija a uno y lo castiga cada vez que le da la espalda.",
+                icon("ENDER_EYE", "SPYGLASS"), f -> darkness(f).stare());
+        add(list, "pulso_negro", "Pulso Negro", 1, 260, 70, 4,
+                "Una onda de vacio que apaga la vista al pasar.",
+                icon("OBSIDIAN", "BLACK_CONCRETE"), f -> darkness(f).blackPulse());
+
+        add(list, "agarre_sombrio", "Agarre Sombrio", 2, 240, 70, 4,
+                "Una mano de vacio que arrastra al que mas se aleja.",
+                icon("CHAIN", "STRING"), f -> darkness(f).shadowGrasp());
+        add(list, "lluvia_vacio", "Lluvia del Vacio", 2, 320, 150, 4,
+                "Motas negras que caen sobre marcas que te persiguen.",
+                icon("BLACK_CONCRETE_POWDER", "GUNPOWDER"), f -> darkness(f).voidRain());
+        add(list, "eco_vacio", "Eco del Vacio", 2, 300, 140, 3,
+                "Sus posiciones pasadas estallan una detras de otra.",
+                icon("SCULK_SENSOR", "SCULK"), f -> darkness(f).voidEcho());
+        add(list, "fisura", "Fisura", 2, 250, 70, 4,
+                "El suelo se abre en una grieta de dieciocho bloques que escupe oscuridad.",
+                icon("DEEPSLATE", "CRACKED_DEEPSLATE_BRICKS"), f -> darkness(f).fissure());
+
+        add(list, "ceguera_total", "Ceguera Total", 3, 380, 100, 4,
+                "A todo el mundo, sin sitio donde esconderse: se pelea de oido.",
+                icon("BLACK_WOOL", "BLACK_DYE"), f -> darkness(f).totalBlindness());
+        add(list, "desgarro", "Desgarro", 3, 200, 45, 5,
+                "Un zarpazo enorme en arco de ocho bloques.",
+                icon("NETHERITE_SCRAP", "IRON_INGOT"), f -> darkness(f).rend());
+        add(list, "colapso", "Colapso", 3, 520, 200, 4,
+                "Un agujero negro que se lo traga todo durante siete segundos y revienta.",
+                icon("CRYING_OBSIDIAN", "OBSIDIAN"), f -> darkness(f).collapse());
+        add(list, "singularidad", "Singularidad", 3, 400, 120, 4,
+                "Se encoge en un punto y sale con cuatro anillos de golpe.",
+                icon("NETHER_STAR", "END_CRYSTAL"), f -> darkness(f).singularity());
+
+        return list;
+    }
+
+    private static Darkness darkness(BossFight fight) {
+        return (Darkness) fight;
+    }
+
+    // --------------------------------------------------------------------- Herbola
+
+    /** Ficha de Herbola. */
+    public final class HerbolaType implements AnomalyType {
+
+        @Override
+        public String id() {
+            return Herbola.ID;
+        }
+
+        @Override
+        public String display() {
+            return plugin.getConfig().getString("anomalias." + id() + ".nombre", "Herbola");
+        }
+
+        @Override
+        public TextColor color() {
+            return Herbola.ACCENT;
+        }
+
+        @Override
+        public NamedTextColor glowColor() {
+            return NamedTextColor.GREEN;
+        }
+
+        @Override
+        public Element element() {
+            return Element.TIERRA;
+        }
+
+        @Override
+        public Material icon() {
+            Material m = Material.matchMaterial("FLOWERING_AZALEA");
+            return m != null ? m : Material.MOSS_BLOCK;
+        }
+
+        @Override
+        public String tagline() {
+            return "Bogged que convierte en jardin todo lo que pisa";
+        }
+
+        @Override
+        public List<String> origin() {
+            return List.of(
+                    "Se quedo dormida en un bosque humedo y el bosque",
+                    "no espero a que despertara: le crecio encima.",
+                    "Ahora camina y el musgo va con ella, y en la cabeza",
+                    "lleva al unico que se acuerda de como era antes.");
+        }
+
+        @Override
+        public List<String> threat() {
+            return List.of(
+                    "Elemento de tierra: convierte el suelo a su paso",
+                    "El loro rojo la cura mientras le cante",
+                    "FASE II: el loro se suelta, ataca en picado y te AMARRA",
+                    "FASE III: bandadas de loros que revientan al caer");
+        }
+
+        @Override
+        public double baseHealth() {
+            return 1600;
+        }
+
+        @Override
+        public int arenaRadius() {
+            return 22;
+        }
+
+        @Override
+        public List<Ability> abilities() {
+            return herbolaAbilities();
+        }
+
+        @Override
+        public BossFight create(AnomalyPlugin plugin, ActiveAnomaly event, Location where) {
+            return new Herbola(plugin, event, where);
+        }
+    }
+
+    /** Las 14 habilidades de Herbola. */
+    public List<Ability> herbolaAbilities() {
+        List<Ability> list = new ArrayList<>();
+
+        add(list, "manto", "Manto de Musgo", 1, 240, 80, 4,
+                "Convierte un circulo entero en musgo y castiga a quien lo pise.",
+                icon("MOSS_BLOCK", "MOSS_CARPET"), f -> herbola(f).mossMantle());
+        add(list, "raices", "Raices", 1, 220, 90, 4,
+                "El suelo agarra por los pies a cada uno donde este.",
+                icon("HANGING_ROOTS", "ROOTED_DIRT"), f -> herbola(f).roots());
+        add(list, "esporas", "Esporas", 1, 300, 140, 3,
+                "Una nube que envenena y marea durante siete segundos.",
+                icon("SPORE_BLOSSOM", "BROWN_MUSHROOM"), f -> herbola(f).spores());
+        add(list, "floracion", "Floracion", 1, 260, 80, 4,
+                "La azalea revienta desde abajo en anillos de once bloques.",
+                icon("FLOWERING_AZALEA", "AZALEA"), f -> herbola(f).bloom());
+        add(list, "canto", "Canto del Loro", 1, 400, 120, 3,
+                "El loro le canta: regeneracion, resistencia y velocidad.",
+                icon("NOTE_BLOCK", "JUKEBOX"), f -> herbola(f).parrotSong());
+        add(list, "latigo_liana", "Latigo de Liana", 1, 170, 55, 5,
+                "Una liana que barre catorce bloques, arrastra y amarra.",
+                icon("VINE", "TWISTING_VINES"), f -> herbola(f).vineWhip());
+
+        add(list, "picado_loro", "Picado del Loro", 2, 200, 80, 5,
+                "El loro coge altura, se tira encima y te deja amarrado al suelo.",
+                icon("FEATHER", "RED_DYE"), f -> herbola(f).parrotDive());
+        add(list, "zarzal", "Zarzal", 2, 380, 140, 3,
+                "Un cerco de espinos que se cierra; fuera del claro se pierde vida.",
+                icon("SWEET_BERRIES", "SWEET_BERRY_BUSH"), f -> herbola(f).bramble());
+        add(list, "polen", "Polen Cegador", 2, 260, 90, 4,
+                "Una nube dorada que no deja ver ni correr.",
+                icon("PINK_PETALS", "DANDELION"), f -> herbola(f).pollen());
+        add(list, "bosque", "Bosque Subito", 2, 320, 110, 3,
+                "Brotan seis arboles de azalea que revientan el suelo al salir.",
+                icon("AZALEA", "OAK_SAPLING"), f -> herbola(f).suddenForest());
+
+        add(list, "bandada_explosiva", "Bandada Explosiva", 3, 300, 130, 5,
+                "Loros que suben, se tiran en picado y revientan al tocar el suelo.",
+                icon("RED_DYE", "FIREWORK_ROCKET"), f -> herbola(f).explosiveFlock());
+        add(list, "savia", "Savia Corrosiva", 3, 280, 140, 4,
+                "Charcos de savia bajo cada uno que queman y envenenan.",
+                icon("HONEY_BOTTLE", "SLIME_BALL"), f -> herbola(f).corrosiveSap());
+        add(list, "raiz_madre", "Raiz Madre", 3, 360, 110, 4,
+                "Una raiz enorme sale del suelo y revienta ocho bloques a la redonda.",
+                icon("BIG_DRIPLEAF", "ROOTED_DIRT"), f -> herbola(f).motherRoot());
+
+        add(list, "siembra", "Siembra", 0, 300, 170, 3,
+                "Deja ocho semillas que brotan y agarran a quien pase por encima.",
+                icon("WHEAT_SEEDS", "BONE_MEAL"), f -> herbola(f).sowing());
+
+        return list;
+    }
+
+    private static Herbola herbola(BossFight fight) {
+        return (Herbola) fight;
     }
 
     private static SepulchralKnight knight(BossFight fight) {

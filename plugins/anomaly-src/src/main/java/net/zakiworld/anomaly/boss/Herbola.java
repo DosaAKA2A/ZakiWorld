@@ -1,0 +1,876 @@
+package net.zakiworld.anomaly.boss;
+
+import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.format.NamedTextColor;
+import net.kyori.adventure.text.format.TextColor;
+import net.kyori.adventure.text.format.TextDecoration;
+import net.kyori.adventure.title.Title;
+import net.zakiworld.anomaly.AnomalyPlugin;
+import net.zakiworld.anomaly.core.ActiveAnomaly;
+import net.zakiworld.anomaly.core.Compat;
+import net.zakiworld.anomaly.core.Fx;
+import net.zakiworld.anomaly.core.Glow;
+import net.zakiworld.anomaly.core.Stop;
+import net.zakiworld.anomaly.core.Tags;
+import org.bukkit.Location;
+import org.bukkit.Material;
+import org.bukkit.block.Block;
+import org.bukkit.block.data.BlockData;
+import org.bukkit.entity.Bogged;
+import org.bukkit.entity.Parrot;
+import org.bukkit.entity.Player;
+import org.bukkit.inventory.EntityEquipment;
+import org.bukkit.inventory.ItemStack;
+import org.bukkit.util.Vector;
+
+import java.time.Duration;
+import java.util.ArrayList;
+import java.util.EnumSet;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+
+/**
+ * HERBOLA, la octava anomalia.
+ *
+ * Un bogged que convierte en jardin todo lo que pisa: musgo, azalea y flores, dejando
+ * alfombra de musgo por donde pasa igual que un muneco de nieve deja nieve. Encima de
+ * la cabeza lleva un loro rojo cantandole, y ese canto es lo que la mantiene entera.
+ *
+ * OJO: esta anomalia MODIFICA EL MUNDO. Cada bloque que cambia queda anotado con su
+ * estado original y se devuelve tal cual al terminar el evento. Solo convierte bloques
+ * naturales de una lista blanca: nunca toca cofres, puertas ni nada construido.
+ */
+public final class Herbola extends BossFight {
+
+    public static final String ID = "herbola";
+    public static final TextColor ACCENT = TextColor.color(0x7BC96F);
+
+    private static final int MOSS = 0x5E8C3F;
+    private static final int BLOOM = 0xE86FA8;
+    private static final int SAP = 0xC8E06A;
+
+    /** Tope de bloques convertidos. Pasado de aqui deja de transformar. */
+    private static final int MAX_CHANGED = 4000;
+
+    /** Lo unico que se permite convertir: terreno natural y nada mas. */
+    private static final Set<Material> GROUND = EnumSet.of(
+            Material.GRASS_BLOCK, Material.DIRT, Material.COARSE_DIRT, Material.PODZOL,
+            Material.ROOTED_DIRT, Material.MUD, Material.CLAY, Material.SAND, Material.RED_SAND,
+            Material.GRAVEL, Material.STONE, Material.ANDESITE, Material.DIORITE, Material.GRANITE,
+            Material.DEEPSLATE, Material.TUFF, Material.SNOW_BLOCK, Material.DIRT_PATH);
+
+    private static final Set<Material> OVERGROWABLE = EnumSet.of(
+            Material.AIR, Material.CAVE_AIR, Material.SHORT_GRASS, Material.TALL_GRASS,
+            Material.FERN, Material.LARGE_FERN, Material.DEAD_BUSH, Material.SNOW);
+
+    /** Cada bloque tocado con su estado original, para devolverlo al acabar. */
+    private final Map<Location, BlockData> restore = new LinkedHashMap<>();
+
+    private Parrot parrot;
+    private boolean parrotFreed;
+    private boolean flockPhase;
+    private double damageBonus = 1.0;
+
+    public Herbola(AnomalyPlugin plugin, ActiveAnomaly event, Location where) {
+        super(plugin, event, where);
+        abilities.addAll(plugin.registry().herbolaAbilities());
+    }
+
+    @Override
+    public String bossName() {
+        return "Herbola";
+    }
+
+    // ------------------------------------------------------------------- aparicion
+
+    @Override
+    public void spawn() {
+        Location spot = arena.clone();
+
+        boss = world().spawn(spot, Bogged.class, b -> {
+            b.setPersistent(true);
+            b.setRemoveWhenFarAway(false);
+            b.setCanPickupItems(false);
+            b.setShouldBurnInDay(false);
+            b.customName(Component.text("✦ ", ACCENT)
+                    .append(Component.text("Herbola", ACCENT, TextDecoration.BOLD)));
+            b.setCustomNameVisible(true);
+            EntityEquipment eq = b.getEquipment();
+            if (eq != null) {
+                eq.setItemInMainHand(new ItemStack(Material.BOW));
+                eq.setHelmet(new ItemStack(Material.FLOWERING_AZALEA));
+                eq.setItemInMainHandDropChance(0);
+                eq.setHelmetDropChance(0);
+            }
+        });
+
+        Compat.setAttribute(boss, "attack_damage", 11);
+        Compat.setAttribute(boss, "armor", 12);
+        Compat.setAttribute(boss, "knockback_resistance", 0.8);
+        Compat.setAttribute(boss, "follow_range", 64);
+        Compat.setAttribute(boss, "movement_speed", 0.30);
+        Compat.setAttribute(boss, "scale", 1.8);
+        applyHealth(plugin.registry().scaledHealth(plugin.registry().herbola(), targets(96).size()));
+        boss.setMaximumNoDamageTicks(6);
+
+        Tags.markBoss(boss, ID);
+        Tags.markEvent(boss, event.id());
+        Glow.apply(boss, event.type().glowColor());
+
+        spawnParrot();
+        arrivalAnimation(spot);
+    }
+
+    /** El loro rojo que le canta desde la cabeza. Nunca se le puede matar. */
+    private void spawnParrot() {
+        parrot = world().spawn(boss.getLocation().add(0, 1.6, 0), Parrot.class, p -> {
+            p.setAdult();
+            p.setPersistent(true);
+            p.setRemoveWhenFarAway(false);
+            p.setInvulnerable(true);
+            p.setSilent(false);
+            try {
+                p.setVariant(Parrot.Variant.RED);
+            } catch (Throwable ignored) {
+            }
+            p.customName(Component.text("Cantor de Herbola", TextColor.color(0xE05A4A)));
+            p.setCustomNameVisible(false);
+        });
+        markMinion(parrot);
+        boss.addPassenger(parrot);
+    }
+
+    private void arrivalAnimation(Location spot) {
+        boss.setInvulnerable(true);
+        busyFor(80);
+        soundAt(spot, "block.moss.place", 1.6f, 0.6f);
+        soundAt(spot, "entity.parrot.ambient", 1.4f, 1.0f);
+
+        animate(80, tick -> {
+            double t = tick / 80.0;
+            double radius = t * 9;
+            Fx.ring(spot, radius, (int) (radius * 6) + 8, l -> {
+                Location g = Fx.ground(l, 4);
+                Compat.spawn(world(), Compat.DUST, g.clone().add(0, 0.2, 0), 1, 0, 0, 0, 0,
+                        Compat.dust(MOSS, 1.4f));
+            });
+            if (tick % 8 == 0) {
+                bloomAround(Fx.ground(spot, 4), (int) radius, 0.35);
+                soundAt(spot, "block.azalea.place", 1.1f, 0.8f);
+            }
+            if (tick % 16 == 0) soundAt(spot, "entity.parrot.ambient", 1.0f, 1.2f);
+        }, () -> {
+            if (!alive()) return;
+            boss.setInvulnerable(false);
+            soundAt(spot, "entity.parrot.imitate.creeper", 1.2f, 1.0f);
+            for (Player p : Fx.viewersNear(spot, 90)) {
+                p.showTitle(Title.title(
+                        Component.text("✦ ANOMALIA ✦", ACCENT, TextDecoration.BOLD),
+                        Component.text("Herbola  ·  el bosque se le adelanta", NamedTextColor.GRAY),
+                        Title.Times.times(Duration.ofMillis(400), Duration.ofMillis(1800), Duration.ofMillis(600))));
+            }
+        });
+    }
+
+    // --------------------------------------------------- LA CONVERSION DEL TERRENO
+
+    /** Anota el estado original antes de cambiar nada, para poder devolverlo despues. */
+    private void convert(Block b, Material to) {
+        if (restore.size() >= MAX_CHANGED) return;
+        if (b.getType() == to) return;
+        Location key = b.getLocation();
+        if (!restore.containsKey(key)) restore.put(key, b.getBlockData());
+        b.setType(to, false);
+    }
+
+    /** El rastro de musgo por donde pisa, como la nieve del muneco. */
+    private void trail() {
+        if (!alive() || restore.size() >= MAX_CHANGED) return;
+        Location g = Fx.ground(boss.getLocation(), 3);
+        Block floor = g.getBlock().getRelative(0, -1, 0);
+        if (GROUND.contains(floor.getType())) convert(floor, Material.MOSS_BLOCK);
+        Block on = g.getBlock();
+        if (OVERGROWABLE.contains(on.getType())) convert(on, Material.MOSS_CARPET);
+    }
+
+    /**
+     * Convierte en jardin un area alrededor de un punto.
+     *
+     * @param density de 0 a 1; cuanta parte de los bloques se transforma
+     */
+    private void bloomAround(Location center, int radius, double density) {
+        if (restore.size() >= MAX_CHANGED) return;
+        for (int x = -radius; x <= radius; x++) {
+            for (int z = -radius; z <= radius; z++) {
+                if (x * x + z * z > radius * radius) continue;
+                if (Math.random() > density) continue;
+                Location probe = Fx.ground(center.clone().add(x, 1, z), 5);
+                Block floor = probe.getBlock().getRelative(0, -1, 0);
+                if (!GROUND.contains(floor.getType())) continue;
+                convert(floor, Math.random() < 0.75 ? Material.MOSS_BLOCK : Material.ROOTED_DIRT);
+
+                Block on = probe.getBlock();
+                if (!OVERGROWABLE.contains(on.getType())) continue;
+                double roll = Math.random();
+                Material top;
+                if (roll < 0.45) top = Material.MOSS_CARPET;
+                else if (roll < 0.65) top = Material.SHORT_GRASS;
+                else if (roll < 0.80) top = Material.AZALEA;
+                else if (roll < 0.92) top = Material.FLOWERING_AZALEA;
+                else top = Math.random() < 0.5 ? Material.OXEYE_DAISY : Material.PINK_PETALS;
+                convert(on, top);
+            }
+        }
+    }
+
+    /**
+     * Devuelve el terreno tal y como estaba.
+     *
+     * Es obligatorio: sin esto la anomalia dejaria el mapa lleno de musgo permanente y
+     * seria griefing con pasos extra. Se hace en orden inverso para que las plantas se
+     * quiten antes que el bloque que las sostiene.
+     */
+    private void restoreTerrain() {
+        List<Map.Entry<Location, BlockData>> entries = new ArrayList<>(restore.entrySet());
+        for (int i = entries.size() - 1; i >= 0; i--) {
+            Map.Entry<Location, BlockData> e = entries.get(i);
+            try {
+                e.getKey().getBlock().setBlockData(e.getValue(), false);
+            } catch (Throwable ignored) {
+            }
+        }
+        if (!restore.isEmpty()) {
+            plugin.getLogger().info("Herbola: devueltos " + restore.size() + " bloque(s) a su estado original.");
+        }
+        restore.clear();
+    }
+
+    @Override
+    public void cleanup() {
+        restoreTerrain();
+        if (parrot != null) {
+            Glow.clear(parrot);
+            spawned.remove(parrot);
+            Fx.safeRemove(parrot);
+            parrot = null;
+        }
+        super.cleanup();
+    }
+
+    // -------------------------------------------------------------------- ambiente
+
+    @Override
+    protected void ambient() {
+        if (!alive()) return;
+
+        if (ticks() % 6 == 0) trail();
+
+        if (ticks() % 4 == 0) {
+            Location l = boss.getLocation().add(0, 1.4, 0);
+            Compat.spawn(world(), Compat.DUST, l, 2, 0.5, 0.6, 0.5, 0, Compat.dust(MOSS, 1.1f));
+            if (Math.random() < 0.3) {
+                Compat.spawn(world(), Compat.SPORE_BLOSSOM_AIR,
+                        l, 1, 0.6, 0.6, 0.6, 0.01);
+            }
+        }
+
+        // El loro suelto persigue por su cuenta; el loro montado canta.
+        if (parrot != null && parrot.isValid()) {
+            if (!parrotFreed) {
+                if (ticks() % 60 == 0) {
+                    Compat.apply(boss, "regeneration", 80, 1);
+                    Compat.apply(boss, "resistance", 80, 0);
+                    Compat.spawn(world(), Compat.NOTE, parrot.getLocation().add(0, 0.6, 0), 4, 0.3, 0.3, 0.3, 1);
+                    soundAt(parrot.getLocation(), "entity.parrot.ambient", 0.9f, 1.3f);
+                }
+            } else if (ticks() % 5 == 0) {
+                Compat.spawn(world(), Compat.DUST, parrot.getLocation(), 2, 0.2, 0.2, 0.2, 0,
+                        Compat.dust(0xE05A4A, 1.0f));
+            }
+        }
+    }
+
+    // --------------------------------------------------------------- cambio de fase
+
+    @Override
+    protected void onPhaseChange(int from, int to) {
+        if (event.bars() != null) event.bars().flash(from);
+        if (to == 2) freeParrot();
+        if (to == 3) callFlock();
+    }
+
+    /** FASE I -> II. El loro se suelta y empieza a hostigar por su cuenta. */
+    private void freeParrot() {
+        if (parrotFreed || !alive()) return;
+        parrotFreed = true;
+        boss.setInvulnerable(true);
+        busyFor(70);
+
+        Location spot = boss.getLocation();
+        soundAt(spot, "entity.parrot.imitate.ender_dragon", 1.6f, 1.0f);
+        broadcastNear(Component.text("El loro deja de cantar.", ACCENT));
+
+        animate(70, tick -> {
+            if (!alive()) return;
+            if (tick == 30 && parrot != null && parrot.isValid()) {
+                boss.eject();
+                parrot.setVelocity(new Vector(0, 0.8, 0));
+                Compat.spawn(world(), Compat.DUST, parrot.getLocation(), 40, 0.5, 0.5, 0.5, 0,
+                        Compat.dust(0xE05A4A, 1.5f));
+                soundAt(parrot.getLocation(), "entity.parrot.fly", 1.4f, 1.0f);
+            }
+            Location l = boss.getLocation();
+            Fx.ring(Fx.ground(l, 3).add(0, 0.2, 0), 2 + tick * 0.06, 20, tick * 0.2, p ->
+                    Compat.spawn(world(), Compat.DUST, p, 1, 0, 0, 0, 0, Compat.dust(MOSS, 1.3f)));
+            if (tick % 10 == 0) bloomAround(Fx.ground(l, 4), 5, 0.3);
+        }, () -> {
+            if (!alive()) return;
+            boss.setInvulnerable(false);
+            damageBonus = 1.2;
+            Compat.setAttribute(boss, "attack_damage", 14);
+            Compat.setAttribute(boss, "movement_speed", 0.34);
+            titleNear(Component.text("FASE II", NamedTextColor.GOLD, TextDecoration.BOLD),
+                    Component.text("El loro ataca en picado y amarra", NamedTextColor.GRAY));
+        });
+    }
+
+    /** FASE III. Empieza a llamar bandadas de loros que revientan al caer. */
+    private void callFlock() {
+        if (flockPhase || !alive()) return;
+        flockPhase = true;
+        boss.setInvulnerable(true);
+        busyFor(80);
+
+        Location spot = boss.getLocation();
+        soundAt(spot, "entity.parrot.imitate.witch", 1.6f, 0.9f);
+        titleNear(Component.text("FASE III", NamedTextColor.RED, TextDecoration.BOLD),
+                Component.text("Vienen mas, y estos revientan", NamedTextColor.GRAY));
+
+        animate(80, tick -> {
+            if (!alive()) return;
+            Location l = boss.getLocation();
+            Fx.helix(l, 2.5, 5.0, 24, 3.0, p ->
+                    Compat.spawn(world(), Compat.DUST, p, 1, 0, 0, 0, 0, Compat.dust(BLOOM, 1.5f)));
+            if (tick % 12 == 0) {
+                bloomAround(Fx.ground(l, 4), 8, 0.4);
+                soundAt(l, "block.azalea_leaves.place", 1.3f, 0.7f);
+            }
+        }, () -> {
+            if (!alive()) return;
+            boss.setInvulnerable(false);
+            damageBonus = 1.45;
+            Compat.setAttribute(boss, "movement_speed", 0.38);
+        });
+    }
+
+    // ---------------------------------------------------------------------- muerte
+
+    @Override
+    public void onDeath() {
+        Location l = loc();
+        soundAt(l, "entity.bogged.death", 1.6f, 0.7f);
+        soundAt(l, "entity.parrot.death", 1.4f, 0.9f);
+
+        animate(90, tick -> {
+            double t = tick / 90.0;
+            Fx.helix(l, 2.4 * (1 - t) + 0.4, 4.0, 22, 2.5, p ->
+                    Compat.spawn(world(), Compat.DUST, p, 1, 0, 0, 0, 0, Compat.dust(MOSS, 1.5f)));
+            if (tick % 10 == 0) {
+                Compat.spawn(world(), Compat.ITEM, l.clone().add(0, 1, 0), 20, 0.7, 0.7, 0.7, 0.12,
+                        new ItemStack(Material.FLOWERING_AZALEA_LEAVES));
+                soundAt(l, "block.moss.break", 1.1f, 0.6f + (float) t);
+            }
+        }, () -> {
+            Compat.spawn(world(), Compat.EXPLOSION_EMITTER, l, 1);
+            Compat.spawn(world(), Compat.DUST, l.clone().add(0, 1, 0), 120, 1.5, 1.5, 1.5, 0,
+                    Compat.dust(BLOOM, 1.8f));
+            soundAt(l, "block.moss.break", 1.6f, 0.5f);
+            // El jardin se marchita solo: el terreno vuelve como estaba.
+            broadcastNear(Component.text("El jardin se marchita.", ACCENT));
+        });
+    }
+
+    // ============================================================== HABILIDADES ==
+
+    /** 1. Manto de Musgo: convierte un circulo entero y castiga a quien lo pise. */
+    public void mossMantle() {
+        if (!alive()) return;
+        Location c = Fx.ground(boss.getLocation(), 5);
+        soundAt(c, "block.moss.place", 1.6f, 0.5f);
+        broadcastNear(Component.text("Extiende el manto.", ACCENT));
+
+        animate(80, tick -> {
+            if (tick % 8 != 0) return;
+            int r = 2 + tick / 8;
+            if (r > 10) return;
+            bloomAround(c, r, 0.55);
+            Fx.ring(c, r, r * 6, p ->
+                    Compat.spawn(world(), Compat.DUST, Fx.ground(p, 3).add(0, 0.25, 0), 1, 0, 0, 0, 0,
+                            Compat.dust(MOSS, 1.4f)));
+            soundAt(c, "block.moss.step", 1.2f, 0.7f);
+            for (Player p : Fx.playersNear(c, r)) {
+                hit(p, 6 * damageBonus);
+                Compat.apply(p, "slowness", 60, 1);
+            }
+        }, null);
+    }
+
+    /** 2. Raices: al que pisa el musgo lo agarran del suelo. */
+    public void roots() {
+        List<Player> victims = targets(14);
+        if (victims.isEmpty() || !alive()) return;
+        soundAt(loc(), "block.roots.place", 1.5f, 0.6f);
+        broadcastNear(Component.text("El suelo agarra.", ACCENT));
+
+        for (Player victim : victims) {
+            Location mark = Fx.ground(victim.getLocation(), 4);
+            animate(90, tick -> {
+                if (tick < 20) {
+                    Fx.telegraph(world(), mark, 2.0, MOSS);
+                    return;
+                }
+                if (tick == 20) {
+                    bloomAround(mark, 2, 0.8);
+                    soundAt(mark, "block.roots.break", 1.3f, 0.5f);
+                }
+                if (tick > 70) return;
+                for (double h = 0; h < 2.0; h += 0.35) {
+                    Fx.ring(mark.clone().add(0, h, 0), 1.0, 8, tick * 0.2 + h, p ->
+                            Compat.spawn(world(), Compat.DUST, p, 1, 0, 0, 0, 0, Compat.dust(MOSS, 1.2f)));
+                }
+                for (Player p : Fx.playersNear(mark, 1.9)) {
+                    root(p, 20);
+                    if (tick % 20 == 0) hit(p, 7 * damageBonus);
+                }
+            }, null);
+        }
+    }
+
+    /**
+     * Amarra a un jugador: no es solo lentitud, es que no se mueve del sitio.
+     * Es lo que pedia el picado del loro, y se reutiliza en las raices.
+     */
+    private void root(Player p, int ticksHeld) {
+        Compat.apply(p, "slowness", ticksHeld, 250);
+        Compat.apply(p, "jump_boost", ticksHeld, 128);
+        p.setVelocity(new Vector(0, -0.05, 0));
+        Compat.spawn(world(), Compat.DUST, p.getLocation().add(0, 0.4, 0), 6, 0.3, 0.2, 0.3, 0,
+                Compat.dust(MOSS, 1.3f));
+    }
+
+    /** 3. Esporas: una nube que envenena y ciega un poco. */
+    public void spores() {
+        if (!alive()) return;
+        Location c = loc();
+        soundAt(c, "block.big_dripleaf.tilt_down", 1.5f, 0.6f);
+        broadcastNear(Component.text("Suelta esporas.", ACCENT));
+
+        animate(140, tick -> {
+            double r = Math.min(9, 2 + tick * 0.1);
+            Fx.sphere(c, r, 34, p -> {
+                Compat.spawn(world(), Compat.DUST, p, 1, 0.3, 0.3, 0.3, 0, Compat.dust(SAP, 1.4f));
+                if (Math.random() < 0.15) {
+                    Compat.spawn(world(), Compat.SPORE_BLOSSOM_AIR, p, 1, 0.2, 0.2, 0.2, 0.01);
+                }
+            });
+            if (tick % 15 != 0) return;
+            for (Player p : Fx.playersNear(c, r)) {
+                Compat.apply(p, "poison", 100, 1);
+                Compat.apply(p, "nausea", 80, 0);
+                if (tick % 30 == 0) hit(p, 5 * damageBonus);
+            }
+        }, null);
+    }
+
+    /** 4. Floracion: la azalea revienta desde abajo en anillos. */
+    public void bloom() {
+        if (!alive()) return;
+        Location c = Fx.ground(boss.getLocation(), 5);
+        java.util.Set<java.util.UUID> hit = new java.util.HashSet<>();
+        soundAt(c, "block.azalea.break", 1.6f, 0.5f);
+
+        animate(80, tick -> {
+            if (tick < 22) {
+                Fx.telegraph(world(), c, 11.0, BLOOM);
+                return;
+            }
+            double radius = (tick - 22) * 0.4;
+            if (radius > 11) return;
+            Fx.ring(c, radius, (int) (radius * 6) + 8, p -> {
+                Location g = Fx.ground(p, 4);
+                for (double h = 0; h < 2.2; h += 0.4) {
+                    Compat.spawn(world(), Compat.DUST, g.clone().add(0, h, 0), 1, 0.1, 0.1, 0.1, 0,
+                            Compat.dust(Math.random() < 0.5 ? BLOOM : MOSS, 1.4f));
+                }
+            });
+            if (tick % 6 == 0) {
+                bloomAround(c, (int) radius, 0.25);
+                soundAt(c, "block.azalea_leaves.break", 1.2f, 0.8f);
+            }
+            for (Player p : targets(radius + 1.2)) {
+                if (p.getLocation().distance(c) < radius - 1.5) continue;
+                if (!hit.add(p.getUniqueId())) continue;
+                hit(p, 14 * damageBonus);
+                push(p, new Vector(0, 0.6, 0));
+            }
+        }, null);
+    }
+
+    /** 5. Canto del Loro: el loro le canta y ella aguanta el doble. Solo fase 1. */
+    public void parrotSong() {
+        if (!alive() || parrotFreed || parrot == null || !parrot.isValid()) return;
+        soundAt(parrot.getLocation(), "entity.parrot.imitate.evoker", 1.4f, 1.2f);
+        broadcastNear(Component.text("El loro le canta.", ACCENT));
+
+        animate(120, tick -> {
+            if (!alive() || parrot == null || !parrot.isValid()) throw Stop.now();
+            Location pl = parrot.getLocation().add(0, 0.5, 0);
+            Compat.spawn(world(), Compat.NOTE, pl, 2, 0.4, 0.3, 0.4, 1);
+            Fx.ring(boss.getLocation().add(0, 1.0, 0), 1.6, 12, tick * 0.2, p ->
+                    Compat.spawn(world(), Compat.DUST, p, 1, 0, 0, 0, 0, Compat.dust(SAP, 1.3f)));
+            Compat.apply(boss, "regeneration", 40, 2);
+            Compat.apply(boss, "resistance", 40, 1);
+            Compat.apply(boss, "speed", 40, 1);
+            if (tick % 25 == 0) soundAt(pl, "entity.parrot.ambient", 1.1f, 1.4f);
+        }, null);
+    }
+
+    /** 6. Latigo de Liana: una liana que barre en linea y arrastra. */
+    public void vineWhip() {
+        Player target = randomTarget();
+        if (target == null || !alive()) return;
+        Location origin = boss.getLocation().add(0, 1.2, 0);
+        Vector dir = target.getLocation().toVector().subtract(origin.toVector()).setY(0);
+        if (dir.lengthSquared() < 0.01) return;
+        final Vector run = dir.normalize();
+        java.util.Set<java.util.UUID> lashed = new java.util.HashSet<>();
+
+        soundAt(origin, "block.vine.break", 1.4f, 0.6f);
+        animate(55, tick -> {
+            if (!alive()) return;
+            Location l = boss.getLocation().add(0, 1.2, 0);
+            if (tick < 20) {
+                for (double d = 2; d < 14; d += 1.0) {
+                    Compat.spawn(world(), Compat.DUST, l.clone().add(run.clone().multiply(d)), 1,
+                            0.4, 0.3, 0.4, 0, Compat.dust(MOSS, 1.3f));
+                }
+                return;
+            }
+            double reach = (tick - 20) * 1.1;
+            if (reach > 14) return;
+            Location p = l.clone().add(run.clone().multiply(reach));
+            Compat.spawn(world(), Compat.DUST, p, 8, 0.4, 0.4, 0.4, 0, Compat.dust(MOSS, 1.5f));
+            if (tick == 21) soundAt(l, "item.whip.crack", 1.4f, 0.8f);
+            for (Player v : Fx.playersNear(p, 2.4)) {
+                if (!lashed.add(v.getUniqueId())) continue;
+                hit(v, 14 * damageBonus);
+                push(v, l.toVector().subtract(v.getLocation().toVector()).normalize().multiply(0.9).setY(0.25));
+                root(v, 30);
+            }
+        }, null);
+    }
+
+    /** 7. Picado del Loro: el loro se tira encima y te deja amarrado. Fase 2. */
+    public void parrotDive() {
+        if (!alive() || !parrotFreed || parrot == null || !parrot.isValid()) return;
+        Player target = randomTarget();
+        if (target == null) return;
+
+        soundAt(parrot.getLocation(), "entity.parrot.fly", 1.5f, 0.9f);
+        broadcastNear(Component.text("El loro se lanza.", ACCENT));
+
+        animate(80, tick -> {
+            if (!alive() || parrot == null || !parrot.isValid()) throw Stop.now();
+            if (!Fx.isFightable(target)) throw Stop.now();
+            Location pl = parrot.getLocation();
+            Location tl = target.getLocation().add(0, 1, 0);
+
+            if (tick < 22) {
+                // sube para coger altura antes de tirarse
+                parrot.setVelocity(new Vector(0, 0.35, 0));
+                Fx.telegraph(world(), Fx.ground(target.getLocation(), 4), 2.2, 0xE05A4A);
+                return;
+            }
+            if (tick < 55) {
+                Vector to = tl.toVector().subtract(pl.toVector());
+                if (to.lengthSquared() > 0.4) parrot.setVelocity(to.normalize().multiply(1.15));
+                Compat.spawn(world(), Compat.DUST, pl, 3, 0.2, 0.2, 0.2, 0, Compat.dust(0xE05A4A, 1.2f));
+                if (pl.distanceSquared(tl) < 4) {
+                    hit(target, 11 * damageBonus);
+                    root(target, 70);
+                    Compat.spawn(world(), Compat.CRIT, tl, 24, 0.3, 0.4, 0.3, 0.25);
+                    Compat.spawn(world(), Compat.DUST, tl, 30, 0.4, 0.5, 0.4, 0, Compat.dust(MOSS, 1.5f));
+                    soundAt(tl, "entity.parrot.hurt", 1.5f, 0.8f);
+                    target.sendActionBar(Component.text("Te ha amarrado al suelo.",
+                            NamedTextColor.RED, TextDecoration.BOLD));
+                    throw Stop.now();
+                }
+                return;
+            }
+            parrot.setVelocity(new Vector(0, 0.4, 0));
+        }, null);
+    }
+
+    /** 8. Zarzal: un cerco de espinos que se cierra. */
+    public void bramble() {
+        if (!alive()) return;
+        Location c = Fx.ground(boss.getLocation(), 5);
+        soundAt(c, "block.sweet_berry_bush.place", 1.5f, 0.6f);
+        broadcastNear(Component.text("Levanta el zarzal.", ACCENT));
+
+        animate(140, tick -> {
+            double t = tick / 140.0;
+            double radius = 15 - t * 9;
+            Fx.ring(c, radius, (int) (radius * 5) + 8, tick * 0.06, p -> {
+                Location g = Fx.ground(p, 4);
+                for (double h = 0; h < 1.6; h += 0.4) {
+                    Compat.spawn(world(), Compat.DUST, g.clone().add(0, h, 0), 1, 0, 0, 0, 0,
+                            Compat.dust(MOSS, 1.4f));
+                }
+            });
+            if (tick % 20 != 0) return;
+            soundAt(c, "block.sweet_berry_bush.break", 1.1f, 0.7f);
+            for (Player p : targets(60)) {
+                if (p.getLocation().distance(c) <= radius) continue;
+                hit(p, 9 * damageBonus);
+                Compat.apply(p, "poison", 60, 0);
+                p.sendActionBar(Component.text("Estas fuera del claro.", NamedTextColor.RED, TextDecoration.BOLD));
+            }
+        }, null);
+    }
+
+    /** 9. Polen Cegador: una nube dorada que no deja ver. */
+    public void pollen() {
+        if (!alive()) return;
+        Location c = loc();
+        soundAt(c, "block.pink_petals.place", 1.5f, 0.8f);
+
+        animate(90, tick -> {
+            Fx.sphere(c, 3 + tick * 0.1, 30, p ->
+                    Compat.spawn(world(), Compat.DUST, p, 1, 0.3, 0.3, 0.3, 0, Compat.dust(BLOOM, 1.5f)));
+            if (tick % 18 != 0) return;
+            for (Player p : Fx.playersNear(c, 3 + tick * 0.1)) {
+                Compat.apply(p, "blindness", 70, 0);
+                Compat.apply(p, "slowness", 70, 0);
+                hit(p, 5 * damageBonus);
+            }
+        }, null);
+    }
+
+    /** 10. Bosque Subito: brotan arboles de azalea alrededor. */
+    public void suddenForest() {
+        if (!alive()) return;
+        Location c = Fx.ground(boss.getLocation(), 5);
+        soundAt(c, "block.azalea_leaves.place", 1.6f, 0.5f);
+        broadcastNear(Component.text("Crece el bosque.", ACCENT));
+
+        for (int i = 0; i < 6; i++) {
+            double a = Math.PI * 2 * i / 6;
+            double d = 5 + Math.random() * 5;
+            Location sl = Fx.ground(c.clone().add(Math.cos(a) * d, 1, Math.sin(a) * d), 5);
+            later(i * 8, () -> {
+                if (!alive()) return;
+                Fx.telegraph(world(), sl, 2.0, MOSS);
+                later(16, () -> {
+                    bloomAround(sl, 2, 0.9);
+                    for (double h = 0; h < 4; h += 0.4) {
+                        Fx.ring(sl.clone().add(0, h, 0), 1.2, 10, h, p ->
+                                Compat.spawn(world(), Compat.DUST, p, 1, 0, 0, 0, 0, Compat.dust(MOSS, 1.5f)));
+                    }
+                    Compat.spawn(world(), Compat.ITEM, sl.clone().add(0, 2, 0), 40, 0.8, 1.0, 0.8, 0.1,
+                            new ItemStack(Material.FLOWERING_AZALEA_LEAVES));
+                    soundAt(sl, "block.azalea.break", 1.3f, 0.6f);
+                    for (Player p : Fx.playersNear(sl, 3.0)) {
+                        hit(p, 13 * damageBonus);
+                        push(p, new Vector(0, 0.7, 0));
+                        root(p, 40);
+                    }
+                });
+            });
+        }
+    }
+
+    /** 11. Bandada Explosiva: loros que suben, se tiran y revientan. Fase 3. */
+    public void explosiveFlock() {
+        if (!alive()) return;
+        int count = 4 + random.nextInt(3);
+        Location c = boss.getLocation();
+        soundAt(c, "entity.parrot.imitate.ghast", 1.6f, 1.0f);
+        broadcastNear(Component.text("Llama a la bandada.", ACCENT));
+
+        for (int i = 0; i < count; i++) {
+            double a = Math.PI * 2 * i / count;
+            Location sl = c.clone().add(Math.cos(a) * 5, 1.5, Math.sin(a) * 5);
+            later(i * 10, () -> {
+                if (!alive()) return;
+                Parrot bird = world().spawn(sl, Parrot.class, p -> {
+                    p.setAdult();
+                    p.setPersistent(false);
+                    p.setInvulnerable(true);
+                    p.setSilent(true);
+                    try {
+                        p.setVariant(Math.random() < 0.5 ? Parrot.Variant.RED : Parrot.Variant.GREEN);
+                    } catch (Throwable ignored) {
+                    }
+                });
+                markMinion(bird);
+                soundAt(sl, "entity.parrot.fly", 1.2f, 1.3f);
+
+                Player victim = randomTarget();
+                animate(120, tick -> {
+                    if (!bird.isValid()) throw Stop.now();
+                    Location bl = bird.getLocation();
+
+                    // Primero busca altura, como se pidio.
+                    if (tick < 34) {
+                        bird.setVelocity(new Vector(0, 0.42, 0));
+                        Compat.spawn(world(), Compat.DUST, bl, 2, 0.15, 0.15, 0.15, 0,
+                                Compat.dust(0xE05A4A, 1.0f));
+                        return;
+                    }
+                    Location aim = victim != null && Fx.isFightable(victim)
+                            ? victim.getLocation() : Fx.ground(boss.getLocation(), 4);
+                    if (tick == 34) Fx.telegraph(world(), Fx.ground(aim, 4), 2.6, BLOOM);
+
+                    Vector to = aim.clone().add(0, 0.5, 0).toVector().subtract(bl.toVector());
+                    if (to.lengthSquared() > 0.6) bird.setVelocity(to.normalize().multiply(1.3));
+                    Compat.spawn(world(), Compat.DUST, bl, 3, 0.2, 0.2, 0.2, 0, Compat.dust(BLOOM, 1.2f));
+
+                    boolean landed = bl.distanceSquared(aim) < 4
+                            || Fx.ground(bl, 2).getBlock().getRelative(0, -1, 0).getType().isSolid()
+                            && bl.getY() <= Fx.ground(aim, 5).getY() + 1.2;
+                    if (!landed && tick < 110) return;
+
+                    Compat.spawn(world(), Compat.EXPLOSION, bl, 2, 0.4, 0.4, 0.4, 0);
+                    Compat.spawn(world(), Compat.DUST, bl, 50, 0.8, 0.8, 0.8, 0, Compat.dust(BLOOM, 1.7f));
+                    Compat.spawn(world(), Compat.ITEM, bl, 30, 0.6, 0.6, 0.6, 0.15,
+                            new ItemStack(Material.FLOWERING_AZALEA_LEAVES));
+                    soundAt(bl, "entity.generic.explode", 1.3f, 1.3f);
+                    soundAt(bl, "entity.parrot.death", 1.2f, 1.0f);
+                    bloomAround(Fx.ground(bl, 4), 3, 0.6);
+                    for (Player p : Fx.playersNear(bl, 4.0)) {
+                        hit(p, 12 * damageBonus);
+                        push(p, p.getLocation().toVector().subtract(bl.toVector())
+                                .normalize().setY(0.7).multiply(1.5));
+                    }
+                    spawned.remove(bird);
+                    Fx.safeRemove(bird);
+                    throw Stop.now();
+                }, null);
+            });
+        }
+    }
+
+    /** 12. Savia Corrosiva: charcos de savia que queman al pisarlos. */
+    public void corrosiveSap() {
+        List<Player> victims = targets();
+        if (victims.isEmpty() || !alive()) return;
+        soundAt(loc(), "block.honey_block.slide", 1.4f, 0.6f);
+
+        for (Player victim : victims) {
+            Location mark = Fx.ground(victim.getLocation(), 4);
+            animate(140, tick -> {
+                if (tick < 20) {
+                    Fx.telegraph(world(), mark, 2.8, SAP);
+                    return;
+                }
+                Fx.ring(mark.clone().add(0, 0.2, 0), 2.6, 16, tick * 0.1, p ->
+                        Compat.spawn(world(), Compat.DUST, Fx.ground(p, 3).add(0, 0.2, 0), 1, 0, 0, 0, 0,
+                                Compat.dust(SAP, 1.4f)));
+                if (tick % 20 != 0) return;
+                for (Player p : Fx.playersNear(mark, 2.8)) {
+                    hit(p, 8 * damageBonus);
+                    Compat.apply(p, "poison", 80, 1);
+                    Compat.apply(p, "slowness", 60, 1);
+                }
+            }, null);
+        }
+    }
+
+    /** 13. Raiz Madre: una raiz enorme que sale del suelo y lo revienta todo. */
+    public void motherRoot() {
+        if (!alive()) return;
+        Location c = Fx.ground(boss.getLocation(), 5);
+        titleNear(Component.text("RAIZ MADRE", NamedTextColor.RED, TextDecoration.BOLD),
+                Component.text("Sal del circulo", NamedTextColor.GRAY));
+        soundAt(c, "block.roots.break", 1.7f, 0.4f);
+
+        animate(110, tick -> {
+            if (tick < 60) {
+                Fx.telegraph(world(), c, 8.0, MOSS);
+                if (tick % 10 == 0) {
+                    soundAt(c, "block.rooted_dirt.break", 1.2f, 0.5f);
+                    Compat.spawn(world(), Compat.BLOCK, c, 20, 3.0, 0.1, 3.0, 0.05,
+                            Material.MOSS_BLOCK.createBlockData());
+                }
+                return;
+            }
+            if (tick != 60) return;
+            bloomAround(c, 8, 0.85);
+            Compat.spawn(world(), Compat.EXPLOSION_EMITTER, c, 2);
+            for (double h = 0; h < 7; h += 0.4) {
+                Fx.ring(c.clone().add(0, h, 0), 2.5 - h * 0.2, 14, h * 2, p ->
+                        Compat.spawn(world(), Compat.DUST, p, 1, 0, 0, 0, 0, Compat.dust(MOSS, 1.7f)));
+            }
+            soundAt(c, "block.roots.break", 1.8f, 0.4f);
+            soundAt(c, "entity.generic.explode", 1.4f, 0.5f);
+            for (Player p : Fx.playersNear(c, 8.5)) {
+                double d = p.getLocation().distance(c);
+                hit(p, Math.max(9, 26 - d * 2) * damageBonus);
+                push(p, p.getLocation().toVector().subtract(c.toVector()).normalize().setY(0.8).multiply(1.2));
+                root(p, 50);
+            }
+        }, null);
+    }
+
+    /** 14. Siembra: deja semillas que brotan y agarran a quien pasa. */
+    public void sowing() {
+        if (!alive()) return;
+        Location c = Fx.ground(boss.getLocation(), 5);
+        soundAt(c, "item.bone_meal.use", 1.5f, 0.8f);
+        broadcastNear(Component.text("Siembra el terreno.", ACCENT));
+
+        List<Location> seeds = new ArrayList<>();
+        for (int i = 0; i < 8; i++) {
+            double a = Math.PI * 2 * i / 8 + Math.random() * 0.4;
+            double d = 3 + Math.random() * 8;
+            seeds.add(Fx.ground(c.clone().add(Math.cos(a) * d, 1, Math.sin(a) * d), 5));
+        }
+        for (Location s : seeds) bloomAround(s, 1, 1.0);
+
+        animate(170, tick -> {
+            for (Location s : seeds) {
+                Compat.spawn(world(), Compat.DUST, s.clone().add(0, 0.3, 0), 1, 0.3, 0.15, 0.3, 0,
+                        Compat.dust(SAP, 1.2f));
+            }
+            if (tick % 20 != 0) return;
+            for (Location s : seeds) {
+                for (Player p : Fx.playersNear(s, 1.8)) {
+                    hit(p, 7 * damageBonus);
+                    root(p, 30);
+                    Compat.spawn(world(), Compat.DUST, p.getLocation().add(0, 0.5, 0), 14, 0.3, 0.4, 0.3, 0,
+                            Compat.dust(MOSS, 1.4f));
+                    soundAt(p.getLocation(), "block.roots.place", 1.0f, 0.9f);
+                }
+            }
+        }, null);
+    }
+
+    // ------------------------------------------------------------------ mensajeria
+
+    private void broadcastNear(Component message) {
+        Component line = Component.text("✦ ", ACCENT)
+                .append(Component.text("Herbola  ", ACCENT, TextDecoration.BOLD))
+                .append(message.colorIfAbsent(NamedTextColor.GRAY));
+        for (Player p : Fx.viewersNear(loc(), 90)) p.sendActionBar(line);
+    }
+
+    private void titleNear(Component title, Component subtitle) {
+        for (Player p : Fx.viewersNear(loc(), 90)) {
+            p.showTitle(Title.title(title, subtitle,
+                    Title.Times.times(Duration.ofMillis(200), Duration.ofMillis(1400), Duration.ofMillis(500))));
+        }
+    }
+}

@@ -8,7 +8,7 @@ La intención de fondo es empujar a la gente a **salir del spawn** y a **pelear 
 el jefe escala con el número de jugadores, varias habilidades castigan dispersarse y el
 botín se reparte entre todos los que participaron, no solo entre quien da el último golpe.
 
-- **Versión:** 1.5.0
+- **Versión:** 1.6.0
 - **Paquete:** `net.zakiworld.anomaly`
 - **Probado contra:** Paper 26.1.2 (MC 26.1.2), compilado con `--release 21`
 - **Permiso único:** `anomaly.gui` (`default: op`)
@@ -307,6 +307,47 @@ fuerza, pensado para animaciones que mueren a medias, aquí rompería la mecáni
 
 ---
 
+## Darkness
+
+Un **enderman colosal** y, con diferencia, el jefe más duro del catálogo. Todo lo suyo
+es morado, negro y ciego: no hay una sola habilidad que no quite visión. Brilla en
+**morado** hasta la fase 3, donde él mismo se cambia a **blanco**.
+
+- **Septeto** — se parte en siete dobles que vibran de rabia mientras el original se cura.
+  Los dobles no atacan ni se mueven: son un escondite. Hay que dar con el de verdad y
+  meterle 260 de daño para romperle el ritual; si no, recupera una barbaridad.
+- **Coronas del Vacío** — de cuatro a ocho **columnas de faro moradas** girando a su
+  alrededor, cada vez más rápido. Son entidades de visualización estiradas, la misma
+  técnica del haz de Agonía en Rip: un faro de verdad exigiría construir la pirámide.
+- **Campo Cinético** — sujeta a todos los de alrededor, los levanta despacio mientras él
+  se carga vibrando, y revienta mandándolos volando muy lejos.
+- **Colapso** — en la última fase crece hasta coloso y abre un **agujero negro** que se lo
+  traga todo siete segundos antes de estallar.
+
+Quince habilidades y **cero esbirros**: los siete dobles son su curación, no ayudantes.
+
+---
+
+## Herbola
+
+Un **bogged** que convierte en jardín todo lo que pisa: musgo, azalea y flores, dejando
+alfombra de musgo por donde pasa igual que un muñeco de nieve deja nieve. Encima lleva un
+**loro rojo** cantándole, y ese canto es lo que la mantiene entera.
+
+- **Fase I** — el loro le da regeneración, resistencia y velocidad mientras cante.
+- **Fase II** — el loro se suelta, ataca **en picado** y cada impacto te **amarra al suelo**
+  varios segundos. Es inmortal a propósito: no se puede quitar del medio.
+- **Fase III** — llegan bandadas de loros rojos y verdes que **buscan altura, se tiran en
+  picado y revientan** al tocar el suelo, empujando a quien pillen.
+
+**MODIFICA EL MUNDO, y eso está resuelto.** Cada bloque que cambia queda anotado con su
+estado original y se devuelve tal cual al cerrar el evento — el log dice cuántos. Solo toca
+bloques de una **lista blanca** de terreno natural (tierra, piedra, arena, nieve…): nunca
+un cofre, una puerta ni nada construido. Hay un tope de 4000 bloques por pelea. Sin eso,
+esta anomalía sería griefing con pasos extra.
+
+---
+
 ## Decisiones que conviene no deshacer
 
 - **Vida por encima de 1024.** El atributo `max_health` de Minecraft topa en 1024 y pasarse
@@ -338,6 +379,14 @@ fuerza, pensado para animaciones que mueren a medias, aquí rompería la mecáni
 - **El daño de las habilidades pasa todo por `BossFight.hit()`.** Por eso el multiplicador
   configurable se aplica en un solo sitio. Si alguna habilidad futura llama a `player.damage()`
   directamente, se saltará el ajuste sin avisar.
+- **La montura del Storm Rider se cambió por una elytra.** El phantom gigante funcionaba
+  (`setSize` escala modelo y hitbox de verdad), pero su IA de vuelo peleaba contra el
+  control del plugin y la animación se rompía constantemente. Ahora vuela sin gravedad y
+  movido a mano: está exactamente donde el plugin dice que está.
+- **La cabra necesita agresividad escrita a mano.** `Goat` es un animal PASIVO en Minecraft:
+  no tiene IA que persiga ni que ataque, por eso se quedaba parada mirando.
+- **El menú de botín no puede cancelar los clics del inventario propio.** Si se cancelan
+  todos, el jugador no puede coger nada con el cursor y el menú parece congelado.
 - **Interruptor de empuje.** `combate.permitir-empuje` apaga todo el empuje de golpe, por la
   misma razón por la que se prohibió en las animaciones de Rip.
 
@@ -360,7 +409,7 @@ No hay Maven en el PATH. Con el JDK 25 portátil y `paper-api 26.1.2`:
 
 ```
 javac --release 21 -encoding UTF-8 -cp "<paper-api + libs del servidor>" -d build @sources
-jar --create --file Anomaly-1.5.0.jar -C build .
+jar --create --file Anomaly-1.6.0.jar -C build .
 ```
 
 El `pom.xml` está para quien tenga Maven; `paper-api` es `provided`.

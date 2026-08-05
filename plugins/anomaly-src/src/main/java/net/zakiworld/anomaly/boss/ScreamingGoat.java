@@ -48,6 +48,7 @@ public final class ScreamingGoat extends BossFight {
     private boolean hornBroken;
     private boolean skyAnswered;
     private double damageBonus = 1.0;
+    private long lastGore;
 
     public ScreamingGoat(AnomalyPlugin plugin, ActiveAnomaly event, Location where) {
         super(plugin, event, where);
@@ -140,7 +141,9 @@ public final class ScreamingGoat extends BossFight {
 
     @Override
     protected void ambient() {
-        if (ticks() % 3 != 0 || !alive()) return;
+        if (!alive()) return;
+        pursue();
+        if (ticks() % 3 != 0) return;
         Location l = boss.getLocation().add(0, 1.4, 0);
         Compat.spawn(world(), Compat.DUST, l, 2, 0.6, 0.5, 0.6, 0, Compat.dust(WHITE_HOT, 1.0f));
         if (ticks() % 40 == 0) {
@@ -149,6 +152,45 @@ public final class ScreamingGoat extends BossFight {
         if (skyAnswered && ticks() % 12 == 0) {
             Compat.spawn(world(), Compat.ELECTRIC_SPARK, l, 4, 0.7, 0.6, 0.7, 0.03);
         }
+    }
+
+    /**
+     * La cabra es un animal PASIVO en Minecraft: no tiene IA que persiga ni que pegue,
+     * por eso se quedaba parada mirando. Aqui se le pone la agresividad a mano.
+     */
+    private void pursue() {
+        if (busy() || ticks() % 4 != 0) return;
+        Player target = Fx.nearest(boss.getLocation(), plugin.settings().participationRadius());
+        if (target == null) return;
+
+        Location l = boss.getLocation();
+        Location tl = target.getLocation();
+        if (l.getWorld() == null || !l.getWorld().equals(tl.getWorld())) return;
+
+        double distSq = l.distanceSquared(tl);
+        Vector dir = tl.toVector().subtract(l.toVector()).setY(0);
+        if (dir.lengthSquared() < 0.01) return;
+        dir.normalize();
+
+        // Siempre encarada al objetivo, que si no da la sensacion de estar despistada.
+        Location face = l.clone();
+        face.setDirection(dir);
+        boss.setRotation(face.getYaw(), 0);
+
+        if (distSq > 9) {
+            double speed = phase() == 3 ? 0.30 : phase() == 2 ? 0.26 : 0.22;
+            boss.setVelocity(dir.multiply(speed).setY(boss.getVelocity().getY()));
+            if (ticks() % 24 == 0) soundAt(l, "entity.goat.step", 0.9f, 0.9f);
+            return;
+        }
+
+        // A tiro: cabezazo con su enfriamiento propio, aparte de las habilidades.
+        if (ticks() - lastGore < 20) return;
+        lastGore = ticks();
+        hit(target, 11 * damageBonus);
+        push(target, dir.clone().multiply(0.9).setY(0.4));
+        Compat.spawn(world(), Compat.CRIT, tl.clone().add(0, 1, 0), 16, 0.3, 0.4, 0.3, 0.2);
+        soundAt(tl, "entity.goat.ram_impact", 1.2f, 0.9f);
     }
 
     // --------------------------------------------------------------- cambio de fase

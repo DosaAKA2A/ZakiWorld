@@ -111,6 +111,16 @@ anomalias:
     vida: 1300
     dano: 1.0
     nombre: 'Coro Abisal'
+  darkness:
+    activa: true
+    vida: 2600
+    dano: 1.0
+    nombre: 'Darkness'
+  herbola:
+    activa: true
+    vida: 1600
+    dano: 1.0
+    nombre: 'Herbola'
 
 menu:
   # La anomalia que abre el boton Iniciar del panel.

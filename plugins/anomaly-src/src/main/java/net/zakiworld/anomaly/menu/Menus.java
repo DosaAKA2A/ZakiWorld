@@ -586,17 +586,25 @@ public final class Menus implements Listener {
     @EventHandler
     public void onClick(InventoryClickEvent event) {
         if (!(event.getInventory().getHolder() instanceof Holder holder)) return;
-        event.setCancelled(true);
 
         HumanEntity human = event.getWhoClicked();
         if (!(human instanceof Player player)) return;
         if (!plugin.mayUseGui(player)) {
+            event.setCancelled(true);
             player.closeInventory();
             return;
         }
 
         int slot = event.getRawSlot();
         boolean inTop = slot >= 0 && slot < event.getInventory().getSize();
+        boolean placingLoot = holder.screen == Screen.DROPS && holder.placeMode;
+
+        // En el modo de colocar botin hay que DEJAR tocar el inventario propio, porque
+        // si no el jugador no puede coger nada con el cursor y el menu parece congelado.
+        // Todo lo demas sigue cancelado: el menu nunca se puede desmontar.
+        if (inTop || !placingLoot || event.isShiftClick()) {
+            event.setCancelled(true);
+        }
 
         // Colocar botin: copiar desde el inventario del jugador con shift.
         if (holder.screen == Screen.DROPS && holder.placeMode && !inTop && event.isShiftClick()) {
@@ -656,14 +664,26 @@ public final class Menus implements Listener {
                     return;
                 }
                 click(player, 1.6f);
-                player.closeInventory();
                 player.sendMessage(plugin.prefix().append(
                         Component.text("Buscando un sitio libre para la anomalia...", MenuUtil.SOFT)));
+                // El menu se queda abierto a proposito: en cuanto aparezca, el boton de
+                // viajar esta justo arriba y se quiere poder usar sin volver a abrirlo.
                 plugin.manager().start(type, ok -> {
                     if (!ok) {
                         player.sendMessage(plugin.prefix().append(Component.text(
                                 "No se encontro ningun sitio valido. Prueba a bajar la distancia minima "
                                         + "o el margen de proteccion en Ajustes.", NamedTextColor.RED)));
+                    }
+                    if (player.isOnline() && player.getOpenInventory().getTopInventory().getHolder() instanceof Holder h
+                            && h.screen == Screen.HUB) {
+                        render(player.getOpenInventory().getTopInventory(), player, h);
+                        if (ok) {
+                            player.sendMessage(plugin.prefix().append(Component.text(
+                                    "Lista. Pulsa ", MenuUtil.SOFT))
+                                    .append(Component.text("Ir a la anomalia", NamedTextColor.LIGHT_PURPLE,
+                                            TextDecoration.BOLD))
+                                    .append(Component.text(" para viajar.", MenuUtil.SOFT)));
+                        }
                     }
                 });
             }

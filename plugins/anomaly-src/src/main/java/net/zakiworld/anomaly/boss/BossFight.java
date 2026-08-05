@@ -349,6 +349,13 @@ public abstract class BossFight {
     }
 
     /**
+     * Aviso de que al jefe le acaban de hacer dano, con la cantidad ya final.
+     * Darkness lo usa para saber cuando le han roto el ritual de curacion.
+     */
+    public void onDamaged(Player attacker, double amount) {
+    }
+
+    /**
      * Si un jefe puede estar invulnerable mucho rato POR DISENO.
      *
      * Por defecto no: el vigilante le quita la invulnerabilidad a la fuerza porque

@@ -47,6 +47,9 @@ public final class Compat {
     public static final Particle NOTE = particle("NOTE");
     public static final Particle HEART = particle("HEART");
     public static final Particle SPLASH = particle("SPLASH", "WATER_SPLASH");
+    public static final Particle SPORE_BLOSSOM_AIR = particle("SPORE_BLOSSOM_AIR");
+    public static final Particle FALLING_SPORE_BLOSSOM = particle("FALLING_SPORE_BLOSSOM");
+    public static final Particle CHERRY_LEAVES = particle("CHERRY_LEAVES");
     public static final Particle BUBBLE = particle("BUBBLE", "WATER_BUBBLE");
     public static final Particle DRIPPING_WATER = particle("DRIPPING_WATER", "WATER_DRIP");
     public static final Particle PORTAL = particle("PORTAL");

@@ -40,7 +40,7 @@ import org.bukkit.plugin.java.JavaPlugin;
 public final class AnomalyPlugin extends JavaPlugin {
 
     /** La lee el banner de /anomaly info; hay que subirla junto al pom y al plugin.yml. */
-    public static final String VERSION = "1.5.0";
+    public static final String VERSION = "1.6.0";
 
     private static final TextColor BRAND = TextColor.color(0x9BD7E4);
 
