@@ -51,7 +51,16 @@ public final class Rabby extends BossFight {
     public static final String ID = "rabby";
     public static final TextColor ACCENT = TextColor.color(0xF2C14E);
 
-    /** La skin pedida. Es el hash de textura de Mojang, el de la orden /give. */
+    /**
+     * La cuenta que lleva puesta la skin de Rabby.
+     *
+     * Se apunta a una cuenta de verdad y no a la textura suelta porque es la unica via
+     * que funciona: el cuerpo con forma de jugador solo pinta perfiles que Mojang pueda
+     * resolver y firmar. Si algun dia se le cambia la skin a esta cuenta, cambia Rabby.
+     */
+    private static final String SKIN_ACCOUNT = "LeanFish_CKB";
+
+    /** La textura, para la cabeza de repuesto si la cuenta no se pudiera resolver. */
     private static final String SKIN =
             "f523eb05428bd5a8df0bddd6213cd7ce77814084de7b84a33c1b9a8629198a05";
 
@@ -90,29 +99,19 @@ public final class Rabby extends BossFight {
 
         EntityEquipment eq = boss.getEquipment();
         if (eq != null) {
-            eq.setChestplate(dyed(Material.LEATHER_CHESTPLATE, 0xF2F2F2));
-            eq.setLeggings(dyed(Material.LEATHER_LEGGINGS, 0xE8E8E8));
-            eq.setBoots(dyed(Material.LEATHER_BOOTS, 0xDDDDDD));
             eq.setHelmetDropChance(0);
-            eq.setChestplateDropChance(0);
-            eq.setLeggingsDropChance(0);
-            eq.setBootsDropChance(0);
             eq.setItemInMainHandDropChance(0);
         }
-        // El cuerpo de persona. El zombi de debajo sigue peleando, pero invisible y
-        // callado: lo que se ve —y lo que se golpea— es el maniqui.
-        var profile = Disguises.profileOf(plugin, SKIN, "Rabby");
+        // El cuerpo de persona con SU skin, sacada de una cuenta de verdad: es la unica
+        // forma de que el maniqui la pinte. El zombi de debajo sigue peleando, pero
+        // invisible y callado; lo que se ve —y lo que se golpea— es el maniqui.
+        var profile = Disguises.profileOfAccount(plugin, SKIN_ACCOUNT);
         if (profile != null) {
             wearShell(profile, Component.text("Rabby", ACCENT, TextDecoration.BOLD));
+        } else if (eq != null) {
+            // Sin cuenta que resolver, al menos la cara por cabeza.
+            eq.setHelmet(Disguises.head(plugin, SKIN, "Rabby"));
         }
-        // Y LA CARA SIEMPRE, por cabeza.
-        //
-        // El perfil del maniqui lleva la textura correcta —comprobado en su NBT, y la
-        // URL de Mojang devuelve el PNG bueno—, pero el cliente no la pinta y saca la
-        // skin de serie. La cabeza como casco SI se pinta: es el mismo mecanismo que un
-        // /give de player_head, que funciona en cualquier servidor. Asi que la cara va
-        // por ahi y deja de depender de que el perfil llegue a aplicarse.
-        if (eq != null) eq.setHelmet(Disguises.head(plugin, SKIN, "Rabby"));
 
         Compat.setAttribute(boss, "max_health", 20);
         Compat.setAttribute(boss, "attack_damage", 0);

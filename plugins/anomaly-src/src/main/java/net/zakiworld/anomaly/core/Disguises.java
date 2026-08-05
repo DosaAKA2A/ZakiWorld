@@ -125,26 +125,42 @@ public final class Disguises {
     }
 
     /**
+     * El perfil de una CUENTA DE VERDAD, por su nombre.
+     *
+     * Esta es la unica forma de que un maniqui lleve una skin concreta, y costo
+     * averiguarlo: el cuerpo con forma de jugador NO pinta una textura suelta por mucho
+     * que el dato sea correcto —comprobado con el NBT delante y con la URL de Mojang
+     * devolviendo el PNG bueno—, pero SI pinta el perfil de una cuenta existente, porque
+     * ese se resuelve firmado contra Mojang.
+     *
+     * Asi que la receta es: alguien se pone la skin en una cuenta, y aqui se apunta a
+     * esa cuenta. El nombre que se ve encima del jefe es otra cosa y se pone aparte.
+     */
+    public static io.papermc.paper.datacomponent.item.ResolvableProfile profileOfAccount(
+            Plugin plugin, String account) {
+        try {
+            return io.papermc.paper.datacomponent.item.ResolvableProfile.resolvableProfile()
+                    .name(account)
+                    .build();
+        } catch (Throwable t) {
+            plugin.getLogger().warning("No se pudo preparar el perfil de la cuenta " + account + ": " + t);
+            return null;
+        }
+    }
+
+    /**
      * El perfil de un jugador de verdad, para copiarle la cara tal cual.
      *
-     * Se le copian las propiedades de textura y se le quita el nombre, por lo mismo:
-     * un perfil con nombre se vuelve a resolver online y deja de ser una copia.
+     * Se deja DINAMICO —solo su uuid y su nombre— para que el servidor lo resuelva
+     * firmado contra Mojang. Copiar la propiedad de texturas a mano no vale: el cuerpo
+     * con forma de jugador no la pinta.
      */
     public static io.papermc.paper.datacomponent.item.ResolvableProfile profileOf(
             Plugin plugin, org.bukkit.entity.Player player) {
         try {
-            var props = player.getPlayerProfile().getProperties();
-            if (props.isEmpty()) {
-                // Sin texturas cargadas no hay nada que copiar; que lo resuelva por uuid.
-                return io.papermc.paper.datacomponent.item.ResolvableProfile.resolvableProfile()
-                        .uuid(player.getUniqueId())
-                        .name(player.getName())
-                        .build();
-            }
             return io.papermc.paper.datacomponent.item.ResolvableProfile.resolvableProfile()
                     .uuid(player.getUniqueId())
                     .name(player.getName())
-                    .addProperties(props)
                     .build();
         } catch (Throwable t) {
             plugin.getLogger().warning("No se pudo copiar el perfil de " + player.getName() + ": " + t);
