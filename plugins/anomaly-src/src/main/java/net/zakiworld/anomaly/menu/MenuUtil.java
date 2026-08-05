@@ -68,7 +68,15 @@ public final class MenuUtil {
     }
 
     public static ItemStack icon(Material material, Component name, List<Component> lore, boolean glow) {
-        ItemStack item = new ItemStack(material);
+        return icon(new ItemStack(material), name, lore, glow);
+    }
+
+    /**
+     * Igual, pero partiendo de un objeto ya hecho. Lo necesitan las anomalias cuyo
+     * icono no se puede describir con un material a secas, como una cabeza con skin.
+     */
+    public static ItemStack icon(ItemStack base, Component name, List<Component> lore, boolean glow) {
+        ItemStack item = base.clone();
         ItemMeta meta = item.getItemMeta();
         if (meta == null) return item;
         meta.displayName(name.decoration(TextDecoration.ITALIC, false));

@@ -149,6 +149,108 @@ public final class Disguises {
     }
 
     /**
+     * Resuelve de verdad el perfil de una cuenta y lo entrega ya completo.
+     *
+     * ESTO ES LO QUE FALTABA. Un perfil "dinamico" no se resuelve solo: lleva el nombre
+     * apuntado y nada mas, asi que el cliente, al no encontrar textura, pinta una de las
+     * skins de serie. Hay que pedir la resolucion a mano —que sale a Mojang por la red,
+     * y por eso va fuera del hilo principal— y solo entonces se tiene un perfil con la
+     * textura firmada dentro.
+     *
+     * @param andThen se ejecuta EN EL HILO PRINCIPAL con el perfil ya resuelto
+     */
+    public static void resolveAccount(Plugin plugin, String account,
+                                      java.util.function.Consumer<io.papermc.paper.datacomponent.item.ResolvableProfile> andThen) {
+        var cached = CACHE.get(account.toLowerCase(java.util.Locale.ROOT));
+        if (cached != null) {
+            andThen.accept(cached);
+            return;
+        }
+        plugin.getServer().getScheduler().runTaskAsynchronously(plugin, () -> {
+            var built = lookup(plugin, account);
+            if (built == null) return;
+            CACHE.put(account.toLowerCase(java.util.Locale.ROOT), built);
+            plugin.getServer().getScheduler().runTask(plugin, () -> andThen.accept(built));
+        });
+    }
+
+    /** Una skin resuelta se guarda: no hace falta preguntarle a Mojang en cada pelea. */
+    private static final java.util.Map<String, io.papermc.paper.datacomponent.item.ResolvableProfile>
+            CACHE = new java.util.concurrent.ConcurrentHashMap<>();
+
+    /**
+     * Le pregunta a Mojang por la cuenta y arma el perfil con la textura FIRMADA.
+     *
+     * Se hace la consulta a mano en vez de fiarse de `resolve()` porque ese depende del
+     * modo del servidor: en un servidor en modo offline devuelve el perfil vacio, sin
+     * texturas, y entonces el cuerpo sale con una skin de serie. Dos peticiones: el
+     * nombre da el uuid y el uuid da las propiedades, firma incluida.
+     *
+     * Va SIEMPRE fuera del hilo principal.
+     */
+    private static io.papermc.paper.datacomponent.item.ResolvableProfile lookup(Plugin plugin, String account) {
+        try {
+            var http = java.net.http.HttpClient.newBuilder()
+                    .connectTimeout(java.time.Duration.ofSeconds(8)).build();
+            var gson = new com.google.gson.Gson();
+
+            var idRes = http.send(java.net.http.HttpRequest.newBuilder()
+                            .uri(java.net.URI.create("https://api.mojang.com/users/profiles/minecraft/" + account))
+                            .timeout(java.time.Duration.ofSeconds(10)).GET().build(),
+                    java.net.http.HttpResponse.BodyHandlers.ofString());
+            if (idRes.statusCode() != 200) {
+                plugin.getLogger().warning("La cuenta " + account + " no existe o Mojang no responde ("
+                        + idRes.statusCode() + "); el cuerpo se quedara con la skin de serie.");
+                return null;
+            }
+            var idJson = gson.fromJson(idRes.body(), com.google.gson.JsonObject.class);
+            String raw = idJson.get("id").getAsString();
+            UUID uuid = UUID.fromString(raw.replaceFirst(
+                    "(\\w{8})(\\w{4})(\\w{4})(\\w{4})(\\w{12})", "$1-$2-$3-$4-$5"));
+
+            var profRes = http.send(java.net.http.HttpRequest.newBuilder()
+                            // unsigned=false trae la FIRMA de Mojang. Sin ella el perfil
+                            // es autentico a medias, y hay clientes que solo se fian de
+                            // los perfiles firmados para pintar un cuerpo de jugador.
+                            .uri(java.net.URI.create(
+                                    "https://sessionserver.mojang.com/session/minecraft/profile/"
+                                            + raw + "?unsigned=false"))
+                            .timeout(java.time.Duration.ofSeconds(10)).GET().build(),
+                    java.net.http.HttpResponse.BodyHandlers.ofString());
+            if (profRes.statusCode() != 200) {
+                plugin.getLogger().warning("Mojang no devolvio el perfil de " + account
+                        + " (" + profRes.statusCode() + ").");
+                return null;
+            }
+            var profJson = gson.fromJson(profRes.body(), com.google.gson.JsonObject.class);
+            String name = profJson.get("name").getAsString();
+
+            var builder = io.papermc.paper.datacomponent.item.ResolvableProfile.resolvableProfile()
+                    .uuid(uuid).name(name);
+            int found = 0;
+            for (var el : profJson.getAsJsonArray("properties")) {
+                var prop = el.getAsJsonObject();
+                if (!"textures".equals(prop.get("name").getAsString())) continue;
+                String value = prop.get("value").getAsString();
+                String signature = prop.has("signature") ? prop.get("signature").getAsString() : null;
+                builder.addProperty(signature == null
+                        ? new com.destroystokyo.paper.profile.ProfileProperty("textures", value)
+                        : new com.destroystokyo.paper.profile.ProfileProperty("textures", value, signature));
+                found++;
+            }
+            if (found == 0) {
+                plugin.getLogger().warning("La cuenta " + account + " no tiene skin puesta.");
+                return null;
+            }
+            plugin.getLogger().info("Skin de " + account + " lista (uuid " + uuid + ").");
+            return builder.build();
+        } catch (Throwable t) {
+            plugin.getLogger().warning("No se pudo consultar la skin de " + account + ": " + t);
+            return null;
+        }
+    }
+
+    /**
      * El perfil de un jugador de verdad, para copiarle la cara tal cual.
      *
      * Se deja DINAMICO —solo su uuid y su nombre— para que el servidor lo resuelva

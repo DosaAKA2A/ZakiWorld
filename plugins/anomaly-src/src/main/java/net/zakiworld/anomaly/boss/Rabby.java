@@ -61,7 +61,7 @@ public final class Rabby extends BossFight {
     private static final String SKIN_ACCOUNT = "LeanFish_CKB";
 
     /** La textura, para la cabeza de repuesto si la cuenta no se pudiera resolver. */
-    private static final String SKIN =
+    public static final String SKIN =
             "f523eb05428bd5a8df0bddd6213cd7ce77814084de7b84a33c1b9a8629198a05";
 
     private static final int SPARK = 0xFFF2A8;
@@ -102,16 +102,15 @@ public final class Rabby extends BossFight {
             eq.setHelmetDropChance(0);
             eq.setItemInMainHandDropChance(0);
         }
-        // El cuerpo de persona con SU skin, sacada de una cuenta de verdad: es la unica
-        // forma de que el maniqui la pinte. El zombi de debajo sigue peleando, pero
-        // invisible y callado; lo que se ve —y lo que se golpea— es el maniqui.
-        var profile = Disguises.profileOfAccount(plugin, SKIN_ACCOUNT);
-        if (profile != null) {
-            wearShell(profile, Component.text("Rabby", ACCENT, TextDecoration.BOLD));
-        } else if (eq != null) {
-            // Sin cuenta que resolver, al menos la cara por cabeza.
-            eq.setHelmet(Disguises.head(plugin, SKIN, "Rabby"));
-        }
+        // El cuerpo de persona. El zombi de debajo sigue peleando, pero invisible y
+        // callado; lo que se ve —y lo que se golpea— es el maniqui.
+        //
+        // Aparece con el perfil sin resolver (skin de serie durante un instante) y en
+        // cuanto Mojang devuelve el de la cuenta, se le cambia la cara. La resolucion
+        // sale por la red, asi que no puede bloquear la aparicion del jefe.
+        wearShell(Disguises.profileOfAccount(plugin, SKIN_ACCOUNT),
+                Component.text("Rabby", ACCENT, TextDecoration.BOLD));
+        Disguises.resolveAccount(plugin, SKIN_ACCOUNT, this::reskinShell);
 
         Compat.setAttribute(boss, "max_health", 20);
         Compat.setAttribute(boss, "attack_damage", 0);

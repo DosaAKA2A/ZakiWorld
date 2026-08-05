@@ -518,6 +518,12 @@ public abstract class BossFight {
         return shell;
     }
 
+    /** Le cambia la cara al cuerpo visible una vez resuelta la skin. */
+    public void reskinShell(io.papermc.paper.datacomponent.item.ResolvableProfile profile) {
+        if (profile == null) return;
+        if (shell instanceof org.bukkit.entity.Mannequin m && m.isValid()) m.setProfile(profile);
+    }
+
     /** Lo que de verdad se ve: el maniqui si lo lleva, y si no el propio jefe. */
     public LivingEntity body() {
         return shell != null && shell.isValid() ? shell : boss;

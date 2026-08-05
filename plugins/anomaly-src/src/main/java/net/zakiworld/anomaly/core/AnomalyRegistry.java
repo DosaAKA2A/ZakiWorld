@@ -1825,6 +1825,12 @@ public final class AnomalyRegistry {
             return m != null ? m : Material.GOLDEN_APPLE;
         }
 
+        /** En el menu sale SU cabeza, con la skin puesta, no una cabeza en blanco. */
+        @Override
+        public org.bukkit.inventory.ItemStack iconItem() {
+            return Disguises.head(plugin, Rabby.SKIN, "Rabby");
+        }
+
         @Override
         public String tagline() {
             return "Parece inofensivo. No le pegues";

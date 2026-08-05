@@ -48,6 +48,14 @@ public interface AnomalyType {
     /** Icono del menu. */
     Material icon();
 
+    /**
+     * Icono del menu cuando un material a secas no basta: una cabeza con skin, por
+     * ejemplo. Si devuelve null se usa icon(), que es lo normal.
+     */
+    default org.bukkit.inventory.ItemStack iconItem() {
+        return null;
+    }
+
     /** Una linea que resume que es, para la lista del menu. */
     String tagline();
 

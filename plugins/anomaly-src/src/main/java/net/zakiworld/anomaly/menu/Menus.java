@@ -304,8 +304,14 @@ public final class Menus implements Listener {
             lore.add(Component.text("► Shift + click: " + (enabled ? "apagarla" : "activarla"),
                     NamedTextColor.GRAY));
 
-            inv.setItem(BODY[i], MenuUtil.icon(enabled ? type.icon() : Material.GRAY_DYE,
-                    MenuUtil.title(type.display(), enabled ? type.color() : MenuUtil.DIM), lore, chosen));
+            // Si la anomalia trae un icono con forma propia (una cabeza con skin), se
+            // respeta; apagada siempre va en gris, que es lo que dice que esta apagada.
+            org.bukkit.inventory.ItemStack custom = enabled ? type.iconItem() : null;
+            inv.setItem(BODY[i], custom != null
+                    ? MenuUtil.icon(custom,
+                            MenuUtil.title(type.display(), type.color()), lore, chosen)
+                    : MenuUtil.icon(enabled ? type.icon() : Material.GRAY_DYE,
+                            MenuUtil.title(type.display(), enabled ? type.color() : MenuUtil.DIM), lore, chosen));
         }
     }
 
