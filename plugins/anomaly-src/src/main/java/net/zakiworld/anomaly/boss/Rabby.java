@@ -52,10 +52,6 @@ public final class Rabby extends BossFight {
     /** La skin pedida. Es el hash de textura de Mojang, el de la orden /give. */
     private static final String SKIN =
             "f523eb05428bd5a8df0bddd6213cd7ce77814084de7b84a33c1b9a8629198a05";
-    /** El mismo perfil en base64, que es lo que entiende LibsDisguises. */
-    private static final String SKIN_VALUE = "eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJl"
-            + "cy5taW5lY3JhZnQubmV0L3RleHR1cmUvZjUyM2ViMDU0MjhiZDVhOGRmMGJkZGQ2MjEzY2Q3Y2U3NzgxNDA4"
-            + "NGRlN2I4NGEzM2MxYjlhODYyOTE5OGEwNSJ9fX0=";
 
     private static final int SPARK = 0xFFF2A8;
 
@@ -90,14 +86,18 @@ public final class Rabby extends BossFight {
             z.setCustomNameVisible(true);
         });
 
-        // Primero el disfraz de jugador entero; la cabeza con skin solo si no hay
-        // LibsDisguises, porque puestas las dos se le ve la cabeza flotando encima.
-        boolean disguised = Disguises.asPlayer(plugin, boss, "Rabby", SKIN_VALUE);
         EntityEquipment eq = boss.getEquipment();
         if (eq != null) {
-            if (!disguised) eq.setHelmet(Disguises.head(plugin, SKIN, "Rabby"));
             eq.setHelmetDropChance(0);
             eq.setItemInMainHandDropChance(0);
+        }
+        // El cuerpo de persona con SU skin. El zombi de debajo sigue peleando, pero
+        // invisible: lo que se ve —y lo que se golpea— es el maniqui.
+        var profile = Disguises.profileOf(plugin, SKIN, "Rabby");
+        if (profile != null) {
+            wearShell(profile, Component.text("Rabby", ACCENT, TextDecoration.BOLD));
+        } else if (eq != null) {
+            eq.setHelmet(Disguises.head(plugin, SKIN, "Rabby"));
         }
 
         Compat.setAttribute(boss, "max_health", 20);
@@ -188,7 +188,7 @@ public final class Rabby extends BossFight {
         Compat.setAttribute(boss, "movement_speed", 0.42);
         Compat.setAttribute(boss, "attack_speed", 2.4);
         Compat.setAttribute(boss, "armor", 12);
-        boss.customName(Component.text("✦ ", ACCENT)
+        renameBody(Component.text("✦ ", ACCENT)
                 .append(Component.text("Rabby", ACCENT, TextDecoration.BOLD)));
 
         world().strikeLightningEffect(l);
@@ -588,8 +588,7 @@ public final class Rabby extends BossFight {
 
         Location l = boss.getLocation();
         world().strikeLightningEffect(l);
-        Glow.clear(boss);
-        Glow.apply(boss, NamedTextColor.WHITE);
+        glowBody(NamedTextColor.WHITE);
         Compat.spawn(world(), Compat.FLASH, l.clone().add(0, 1, 0), 1);
         Compat.spawn(world(), Compat.ELECTRIC_SPARK, l.clone().add(0, 1, 0), 60, 0.6, 1.0, 0.6, 0.3);
         Compat.spawn(world(), Compat.END_ROD, l.clone().add(0, 1, 0), 40, 0.5, 1.0, 0.5, 0.1);
@@ -605,7 +604,7 @@ public final class Rabby extends BossFight {
     private void endConcentration() {
         concentrated = false;
         if (!alive()) return;
-        Glow.clear(boss);
+        glowBody(null);
         soundAt(loc(), "block.beacon.deactivate", 1.2f, 0.7f);
         broadcastNear(Component.text("Suelta el aire.", ACCENT));
     }

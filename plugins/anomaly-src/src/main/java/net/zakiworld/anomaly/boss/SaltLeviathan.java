@@ -106,7 +106,7 @@ public final class SaltLeviathan extends BossFight {
             Fx.sphere(spot, 12 - t * 8, 40, p ->
                     Compat.spawn(world(), Compat.BUBBLE, p, 1, 0, 0, 0, 0, Compat.dust(PRISM, 1.5f)));
             if (tick % 4 == 0) {
-                Compat.spawn(world(), Compat.BUBBLE, spot, 30, 3.0, 2.0, 3.0, 0.05);
+                Compat.spawn(world(), Compat.NAUTILUS, spot, 30, 3.0, 2.0, 3.0, 0.05);
             }
             if (tick % 16 == 0) {
                 soundAt(spot, "block.conduit.ambient", 1.2f, 0.5f);
@@ -191,7 +191,7 @@ public final class SaltLeviathan extends BossFight {
             Location l = boss.getLocation();
             boss.setVelocity(new Vector(0, -0.12, 0));
             Fx.helix(l, 3.0, 5.0, 26, 3.0, p ->
-                    Compat.spawn(world(), Compat.BUBBLE, p, 1, 0.05, 0.05, 0.05, 0.02));
+                    Compat.spawn(world(), Compat.BUBBLE_POP, p, 1, 0.05, 0.05, 0.05, 0.02));
             if (tick % 10 == 0) soundAt(l, "block.conduit.ambient", 1.2f, 0.4f);
             if (tick != 60) return;
             Compat.spawn(world(), Compat.EXPLOSION_EMITTER, l, 1);
@@ -297,7 +297,7 @@ public final class SaltLeviathan extends BossFight {
             if (tick != 40) return;
             soundAt(from, "entity.guardian.attack", 1.8f, 0.9f);
             Fx.beam(from, to, 0.25, p -> {
-                Compat.spawn(world(), Compat.BUBBLE, p, 3, 0.1, 0.1, 0.1, 0, Compat.dust(0xFF5555, 1.6f));
+                Compat.spawn(world(), Compat.GLOW_SQUID_INK, p, 3, 0.1, 0.1, 0.1, 0, Compat.dust(0xFF5555, 1.6f));
                 Compat.spawn(world(), Compat.END_ROD, p, 1, 0.02, 0.02, 0.02, 0.01);
             });
             hit(target, 18 * damageBonus);
@@ -384,7 +384,7 @@ public final class SaltLeviathan extends BossFight {
                 if (tick < 24) {
                     Fx.telegraph(world(), mark, 2.2, PRISM);
                     for (double h = 0; h < 8; h += 0.8) {
-                        Compat.spawn(world(), Compat.BUBBLE, mark.clone().add(0, h, 0), 1, 0.2, 0.1, 0.2, 0.01);
+                        Compat.spawn(world(), Compat.DOLPHIN, mark.clone().add(0, h, 0), 1, 0.2, 0.1, 0.2, 0.01);
                     }
                     return;
                 }
@@ -414,7 +414,7 @@ public final class SaltLeviathan extends BossFight {
             Location sl = c.clone().add(Math.cos(a) * 7, 1 + random.nextDouble() * 3, Math.sin(a) * 7);
             later(i * 8, () -> {
                 if (!alive()) return;
-                Compat.spawn(world(), Compat.BUBBLE, sl, 24, 0.6, 0.6, 0.6, 0.05);
+                Compat.spawn(world(), Compat.NAUTILUS, sl, 24, 0.6, 0.6, 0.6, 0.05);
                 Guardian g = world().spawn(sl, Guardian.class, e -> {
                     e.setPersistent(false);
                     Compat.setAttribute(e, "max_health", 30);
@@ -536,7 +536,7 @@ public final class SaltLeviathan extends BossFight {
             if (reach > 16) return;
             Location p = l.clone().add(run.clone().multiply(reach));
             Compat.spawn(world(), Compat.SPLASH, p, 12, 0.6, 0.6, 0.6, 0.06);
-            Compat.spawn(world(), Compat.BUBBLE, p, 6, 0.5, 0.5, 0.5, 0, Compat.dust(PRISM, 1.5f));
+            Compat.spawn(world(), Compat.BUBBLE_POP, p, 6, 0.5, 0.5, 0.5, 0, Compat.dust(PRISM, 1.5f));
             if (tick == 23) soundAt(l, "item.trident.riptide_2", 1.5f, 0.7f);
             for (Player v : Fx.playersNear(p, 2.6)) {
                 if (!lashed.add(v.getUniqueId())) continue;
@@ -654,7 +654,7 @@ public final class SaltLeviathan extends BossFight {
             for (int layer = 0; layer < 6; layer++) {
                 double r = 4 + layer * 3;
                 Fx.ring(c.clone().add(0, layer * 0.8, 0), r, (int) (r * 2) + 8, tick * 0.22 + layer * 0.5, p ->
-                        Compat.spawn(world(), Compat.BUBBLE, p, 1, 0.05, 0.05, 0.05, 0.02));
+                        Compat.spawn(world(), Compat.GLOW_SQUID_INK, p, 1, 0.05, 0.05, 0.05, 0.02));
             }
             if (tick % 3 != 0) return;
             for (Player p : Fx.playersNear(c, 20)) {
@@ -716,7 +716,7 @@ public final class SaltLeviathan extends BossFight {
             if (!alive()) return;
             Location l = boss.getLocation().add(0, 1.6, 0);
             Fx.ring(l, 2 + tick * 0.1, 20, tick * 0.15, p ->
-                    Compat.spawn(world(), Compat.BUBBLE, p, 1, 0, 0, 0, 0, Compat.dust(PRISM, 1.4f)));
+                    Compat.spawn(world(), Compat.DOLPHIN, p, 1, 0, 0, 0, 0, Compat.dust(PRISM, 1.4f)));
             if (tick % 16 == 0) soundAt(l, "block.conduit.ambient", 1.1f, 0.5f);
             if (tick != 60) return;
             for (Player p : Fx.playersNear(c, ARENA)) {

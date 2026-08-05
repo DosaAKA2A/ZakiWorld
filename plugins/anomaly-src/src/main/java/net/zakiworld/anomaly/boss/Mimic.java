@@ -565,9 +565,12 @@ public final class Mimic extends BossFight {
                     Component.text(mimickedName, NamedTextColor.WHITE));
             copy.setShouldBurnInDay(false);
             // La copia tiene que PARECER esa persona, no un zombi con su cabeza puesta.
-            // Con el nombre de la victima, LibsDisguises le pone su skin de verdad.
-            disguised = Disguises.asPlayer(plugin, copy, mimickedName,
-                    victim != null ? victim.getName() : null);
+            // El maniqui lleva el perfil del jugador, asi que sale su cara de verdad.
+            var profile = victim != null ? Disguises.profileOf(plugin, victim) : null;
+            disguised = profile != null;
+            if (disguised) {
+                wearShell(profile, Component.text(mimickedName, NamedTextColor.WHITE));
+            }
             dressAs(copy, victim, disguised);
             Compat.setAttribute(boss, "attack_damage", 16);
             Compat.setAttribute(boss, "armor", 12);
@@ -639,9 +642,9 @@ public final class Mimic extends BossFight {
         Compat.setAttribute(boss, "attack_damage", 22);
         Compat.setAttribute(boss, "attack_speed", 4.0);
         Compat.setAttribute(boss, "movement_speed", 0.42);
-        boss.customName(Component.text("✦ ", NamedTextColor.DARK_RED)
+        renameBody(Component.text("✦ ", NamedTextColor.DARK_RED)
                 .append(Component.text("Mimic", NamedTextColor.DARK_RED, TextDecoration.BOLD)));
-        Glow.apply(boss, NamedTextColor.RED);
+        glowBody(NamedTextColor.RED);
 
         Location l = boss.getLocation();
         Compat.spawn(world(), Compat.FLASH, l.clone().add(0, 1, 0), 1);

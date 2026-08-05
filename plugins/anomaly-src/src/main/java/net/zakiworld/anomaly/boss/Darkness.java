@@ -137,7 +137,7 @@ public final class Darkness extends BossFight {
         if (!alive()) return;
         if (ticks() % 3 == 0) {
             Location l = boss.getLocation().add(0, colossus ? 3.0 : 1.8, 0);
-            Compat.spawn(world(), Compat.PORTAL, l, 4, 0.8, 1.0, 0.8, 0.03);
+            Compat.spawn(world(), Compat.SMOKE, l, 4, 0.8, 1.0, 0.8, 0.03);
             Compat.spawn(world(), Compat.SQUID_INK, l, 2, 0.7, 0.9, 0.7, 0,
                     Compat.dust(colossus ? 0xFFFFFF : VOID_PURPLE, 1.4f));
         }
@@ -202,7 +202,7 @@ public final class Darkness extends BossFight {
             Fx.sphere(l.clone().add(0, scale, 0), scale * 1.2, 40, p ->
                     Compat.spawn(world(), Compat.PORTAL, p, 1, 0, 0, 0, 0, Compat.dust(PITCH, 2.0f)));
             Fx.helix(l, scale, scale * 3, 30, 3.0, p ->
-                    Compat.spawn(world(), Compat.PORTAL, p, 2, 0.05, 0.05, 0.05, 0.03));
+                    Compat.spawn(world(), Compat.LARGE_SMOKE, p, 2, 0.05, 0.05, 0.05, 0.03));
             if (tick % 14 == 0) {
                 soundAt(l, "entity.enderman.stare", 1.6f, 0.4f);
                 world().strikeLightningEffect(Fx.ground(l, 6));
@@ -238,7 +238,7 @@ public final class Darkness extends BossFight {
             Fx.helix(l, 2.0 * (1 - t) + 0.4, 6.0, 26, 3.0, p ->
                     Compat.spawn(world(), Compat.PORTAL, p, 2, 0.03, 0.03, 0.03, 0.04));
             if (tick % 10 == 0) {
-                Compat.spawn(world(), Compat.REVERSE_PORTAL, l.clone().add(0, 2, 0), 40, 1.0, 1.5, 1.0, 0.2);
+                Compat.spawn(world(), Compat.DRAGON_BREATH, l.clone().add(0, 2, 0), 40, 1.0, 1.5, 1.0, 0.2);
                 soundAt(l, "entity.enderman.teleport", 1.0f, 0.4f + (float) t);
             }
         }, () -> {
@@ -347,7 +347,7 @@ public final class Darkness extends BossFight {
 
     /** El temblor de rabia de un doble: se mueve un pelo pero no se va del sitio. */
     private void shiver(Location at) {
-        Compat.spawn(world(), Compat.PORTAL, at.clone().add(0, 1.6, 0), 6, 0.5, 1.0, 0.5, 0.06);
+        Compat.spawn(world(), Compat.SCULK_SOUL, at.clone().add(0, 1.6, 0), 6, 0.5, 1.0, 0.5, 0.06);
         Compat.spawn(world(), Compat.SCULK_SOUL, at.clone().add(0, 1.6, 0), 2, 0.45, 0.9, 0.45, 0,
                 Compat.dust(VOID_PURPLE, 1.4f));
     }
@@ -413,7 +413,7 @@ public final class Darkness extends BossFight {
                         Compat.spawn(world(), Compat.SQUID_INK, p, 1, 0, 0.2, 0, 0, Compat.dust(PITCH, 2.2f)));
             }
             Fx.ring(center.clone().add(0, 0.3, 0), radius, (int) (radius * 4) + 12, p ->
-                    Compat.spawn(world(), Compat.REVERSE_PORTAL, Fx.ground(p, 4).add(0, 0.25, 0), 1, 0, 0, 0, 0,
+                    Compat.spawn(world(), Compat.SCULK_CHARGE_POP, Fx.ground(p, 4).add(0, 0.25, 0), 1, 0, 0, 0, 0,
                             Compat.dust(MAGENTA, 1.7f)));
 
             if (tick % 20 == 0) soundAt(center, "ambient.cave", 1.2f, 0.4f);
@@ -463,7 +463,7 @@ public final class Darkness extends BossFight {
                     Compat.apply(p, "slow_falling", 40, 0);
                     Compat.spawn(world(), Compat.PORTAL, p.getLocation().add(0, 1, 0), 6, 0.4, 0.6, 0.4, 0.04);
                     Fx.beam(l, p.getLocation().add(0, 1, 0), 0.7, q ->
-                            Compat.spawn(world(), Compat.PORTAL, q, 1, 0, 0, 0, 0, Compat.dust(VOID_PURPLE, 1.1f)));
+                            Compat.spawn(world(), Compat.SMOKE, q, 1, 0, 0, 0, 0, Compat.dust(VOID_PURPLE, 1.1f)));
                 }
                 // El vibra cada vez mas fuerte segun se carga.
                 double shake = tick / 110.0;
@@ -574,7 +574,7 @@ public final class Darkness extends BossFight {
             }
             hit(target, 14 * damageBonus);
             Compat.apply(target, "darkness", 120, 0);
-            Compat.spawn(world(), Compat.REVERSE_PORTAL, tl, 30, 0.4, 0.5, 0.4, 0, Compat.dust(PITCH, 1.8f));
+            Compat.spawn(world(), Compat.DRAGON_BREATH, tl, 30, 0.4, 0.5, 0.4, 0, Compat.dust(PITCH, 1.8f));
             soundAt(tl, "entity.enderman.scream", 1.2f, 0.7f);
         }, null);
     }
@@ -595,7 +595,7 @@ public final class Darkness extends BossFight {
             if (radius > 15) return;
             Fx.ring(c, radius, (int) (radius * 7) + 10, p -> {
                 Location g = Fx.ground(p, 4);
-                Compat.spawn(world(), Compat.PORTAL, g.clone().add(0, 0.4, 0), 1, 0, 0.4, 0, 0,
+                Compat.spawn(world(), Compat.LARGE_SMOKE, g.clone().add(0, 0.4, 0), 1, 0, 0.4, 0, 0,
                         Compat.dust(PITCH, 1.9f));
                 Compat.spawn(world(), Compat.PORTAL, g.clone().add(0, 0.4, 0), 1, 0.1, 0.2, 0.1, 0.02);
             });
@@ -622,7 +622,7 @@ public final class Darkness extends BossFight {
             Location to = target.getLocation().add(0, 1, 0);
             Fx.beam(from, to, 0.4, p -> {
                 Compat.spawn(world(), Compat.SCULK_CHARGE_POP, p, 1, 0, 0, 0, 0, Compat.dust(PITCH, 1.5f));
-                Compat.spawn(world(), Compat.PORTAL, p, 1, 0.05, 0.05, 0.05, 0.02);
+                Compat.spawn(world(), Compat.SCULK_SOUL, p, 1, 0.05, 0.05, 0.05, 0.02);
             });
             if (tick < 20) return;
             if (tick % 4 == 0) {
@@ -710,7 +710,7 @@ public final class Darkness extends BossFight {
             if (!alive()) return;
             Location l = boss.getLocation().add(0, 2, 0);
             Fx.sphere(l, 2 + tick * 0.14, 40, p ->
-                    Compat.spawn(world(), Compat.REVERSE_PORTAL, p, 1, 0, 0, 0, 0, Compat.dust(PITCH, 2.0f)));
+                    Compat.spawn(world(), Compat.SCULK_CHARGE_POP, p, 1, 0, 0, 0, 0, Compat.dust(PITCH, 2.0f)));
             if (tick % 20 != 0) return;
             for (Player p : Fx.viewersNear(c, plugin.settings().participationRadius())) {
                 Compat.apply(p, "darkness", 220, 0);
@@ -821,7 +821,7 @@ public final class Darkness extends BossFight {
                 Compat.spawn(world(), Compat.REVERSE_PORTAL, g.clone().add(0, h, 0), 2, 0.4, 0.1, 0.4, 0,
                         Compat.dust(PITCH, 1.9f));
             }
-            Compat.spawn(world(), Compat.PORTAL, g.clone().add(0, 1, 0), 8, 0.4, 0.6, 0.4, 0.05);
+            Compat.spawn(world(), Compat.SMOKE, g.clone().add(0, 1, 0), 8, 0.4, 0.6, 0.4, 0.05);
             if (tick == 23) soundAt(origin, "block.deepslate.break", 1.6f, 0.4f);
             for (Player p : Fx.playersNear(g, 2.4)) {
                 if (!split.add(p.getUniqueId())) continue;

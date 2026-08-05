@@ -566,7 +566,7 @@ public final class SepulchralKnight extends BossFight {
             if (tick == 25) {
                 Location g = Fx.ground(l, 4);
                 Compat.spawn(world(), Compat.EXPLOSION_EMITTER, g, 1);
-                Compat.spawn(world(), Compat.BLOCK, g, 140, 2.0, 0.3, 2.0, 0.2, groundBlock(g));
+                Compat.spawn(world(), Compat.BLOCK_CRUMBLE, g, 140, 2.0, 0.3, 2.0, 0.2, groundBlock(g));
                 soundAt(g, "entity.generic.explode", 1.5f, 0.55f);
                 soundAt(g, "block.anvil_land", 1.4f, 0.5f);
                 soundAt(g, "entity.ravager.stunned", 1.2f, 0.7f);
@@ -576,7 +576,7 @@ public final class SepulchralKnight extends BossFight {
             if (radius > 9) return;
             Location g = Fx.ground(boss.getLocation(), 4);
             Fx.shockwave(world(), g, radius, Compat.CLOUD, 8);
-            Fx.ring(g, radius, (int) (radius * 8) + 6, pt -> Compat.spawn(world(), Compat.BLOCK,
+            Fx.ring(g, radius, (int) (radius * 8) + 6, pt -> Compat.spawn(world(), Compat.DUST_PILLAR,
                     Fx.ground(pt, 3).add(0, 0.25, 0), 2, 0.15, 0.1, 0.15, 0.05, groundBlock(g)));
             for (Player p : targets(radius + 1.0)) {
                 if (p.getLocation().distance(g) < radius - 1.4) continue;
@@ -808,7 +808,7 @@ public final class SepulchralKnight extends BossFight {
             double reach = (tick - 28) * 1.1;
             if (reach > 15) return;
             Location g = Fx.ground(l.clone().add(dir.clone().multiply(reach)), 4);
-            Compat.spawn(world(), Compat.BLOCK, g.clone().add(0, 0.3, 0), 30, 0.5, 0.25, 0.5, 0.22, groundBlock(g));
+            Compat.spawn(world(), Compat.DUST_PILLAR, g.clone().add(0, 0.3, 0), 30, 0.5, 0.25, 0.5, 0.22, groundBlock(g));
             Compat.spawn(world(), Compat.LARGE_SMOKE, g.clone().add(0, 0.4, 0), 6, 0.4, 0.2, 0.4, 0.02);
             for (Player p : Fx.playersNear(g, 2.4)) {
                 if (!cleaved.add(p.getUniqueId())) continue;
@@ -1002,7 +1002,7 @@ public final class SepulchralKnight extends BossFight {
                     Location impact = Fx.ground(boss.getLocation(), 4);
                     Set<UUID> struck = new HashSet<>();
                     Compat.spawn(world(), Compat.EXPLOSION_EMITTER, impact, 1);
-                    Compat.spawn(world(), Compat.BLOCK, impact, 120, 1.8, 0.3, 1.8, 0.25, groundBlock(impact));
+                    Compat.spawn(world(), Compat.BLOCK_CRUMBLE, impact, 120, 1.8, 0.3, 1.8, 0.25, groundBlock(impact));
                     soundAt(impact, "entity.generic.explode", 1.4f, 0.5f);
                     soundAt(impact, "block.anvil_land", 1.3f, 0.45f);
                     animate(24, t -> {
@@ -1040,7 +1040,7 @@ public final class SepulchralKnight extends BossFight {
             if (!alive()) return;
             Location l = boss.getLocation();
             if (tick < 18) {
-                Compat.spawn(world(), Compat.BLOCK, Fx.ground(l, 3), 12, 0.5, 0.05, 0.5, 0.05, groundBlock(l));
+                Compat.spawn(world(), Compat.BLOCK_CRUMBLE, Fx.ground(l, 3), 12, 0.5, 0.05, 0.5, 0.05, groundBlock(l));
                 return;
             }
             if (tick == 18) {
@@ -1067,7 +1067,7 @@ public final class SepulchralKnight extends BossFight {
             if (tick != 60) return;
             boss.teleport(mark);
             Compat.spawn(world(), Compat.EXPLOSION_EMITTER, mark, 2);
-            Compat.spawn(world(), Compat.BLOCK, mark, 200, 2.5, 0.5, 2.5, 0.35, groundBlock(mark));
+            Compat.spawn(world(), Compat.DUST_PILLAR, mark, 200, 2.5, 0.5, 2.5, 0.35, groundBlock(mark));
             soundAt(mark, "entity.generic.explode", 1.8f, 0.4f);
             soundAt(mark, "block.anvil_land", 1.6f, 0.4f);
             soundAt(mark, "entity.ravager.stunned", 1.4f, 0.6f);

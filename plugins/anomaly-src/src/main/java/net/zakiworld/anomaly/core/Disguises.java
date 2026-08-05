@@ -78,6 +78,45 @@ public final class Disguises {
     }
 
     /**
+     * El perfil de una skin concreta, listo para ponerselo a un MANNEQUIN.
+     *
+     * Esta es la via buena: el maniqui es una entidad viva con forma de jugador y
+     * perfil propio, asi que la skin es EXACTAMENTE la que se le pide, sin depender
+     * de que haya LibsDisguises ni de que Mojang resuelva un nombre.
+     *
+     * @param hash el identificador de textura de Mojang (lo que va detras de
+     *             textures.minecraft.net/texture/)
+     */
+    public static io.papermc.paper.datacomponent.item.ResolvableProfile profileOf(
+            Plugin plugin, String hash, String name) {
+        try {
+            com.destroystokyo.paper.profile.PlayerProfile profile =
+                    Bukkit.createProfile(UUID.nameUUIDFromBytes(hash.getBytes()), name);
+            String json = "{\"textures\":{\"SKIN\":{\"url\":\"http://textures.minecraft.net/texture/"
+                    + hash + "\"}}}";
+            String value = java.util.Base64.getEncoder()
+                    .encodeToString(json.getBytes(java.nio.charset.StandardCharsets.UTF_8));
+            profile.setProperty(new com.destroystokyo.paper.profile.ProfileProperty("textures", value));
+            return io.papermc.paper.datacomponent.item.ResolvableProfile.resolvableProfile(profile);
+        } catch (Throwable t) {
+            plugin.getLogger().warning("No se pudo construir el perfil de la skin " + hash + ": " + t);
+            return null;
+        }
+    }
+
+    /** El perfil de un jugador de verdad, para copiarle la cara tal cual. */
+    public static io.papermc.paper.datacomponent.item.ResolvableProfile profileOf(
+            Plugin plugin, org.bukkit.entity.Player player) {
+        try {
+            return io.papermc.paper.datacomponent.item.ResolvableProfile
+                    .resolvableProfile(player.getPlayerProfile());
+        } catch (Throwable t) {
+            plugin.getLogger().warning("No se pudo copiar el perfil de " + player.getName() + ": " + t);
+            return null;
+        }
+    }
+
+    /**
      * Una cabeza de jugador con una textura concreta puesta.
      *
      * @param hash el identificador de textura de Mojang (lo que va detras de

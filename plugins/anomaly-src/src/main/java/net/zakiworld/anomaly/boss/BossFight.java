@@ -42,6 +42,8 @@ public abstract class BossFight {
     public static final double VANILLA_HEALTH_CAP = 1024;
 
     protected LivingEntity boss;
+    /** Cuerpo visible con forma de persona, si el jefe lleva uno. Ver wearShell(). */
+    protected LivingEntity shell;
     private int phase = 1;
     private long ticks;
     private long busyUntil;
@@ -159,6 +161,7 @@ public abstract class BossFight {
 
         watchInvulnerability();
         tickAirTime();
+        tickShell();
 
         int newPhase = PhaseBars.currentPhase(healthFraction());
         if (newPhase != phase) {
@@ -258,6 +261,11 @@ public abstract class BossFight {
     public void cleanup() {
         finished = true;
         clearAirTime();
+        if (shell != null) {
+            spawned.remove(shell);
+            Fx.safeRemove(shell);
+            shell = null;
+        }
         for (Entity e : spawned) {
             Glow.clear(e);
             Fx.safeRemove(e);
@@ -455,6 +463,93 @@ public abstract class BossFight {
         try {
             if (velocity.getY() > 0.05) grantAirTime(p, 160);
             p.setVelocity(velocity);
+        } catch (Throwable ignored) {
+        }
+    }
+
+    /**
+     * Le pone al jefe un CUERPO DE PERSONA con una skin concreta.
+     *
+     * El truco: la pelea la sigue llevando el mob de siempre —con su IA, su
+     * pathfinding y su golpe— pero se vuelve invisible, y encima se le pega un
+     * MANNEQUIN, que es una entidad viva con forma de jugador y perfil de skin propio.
+     * Es la unica forma nativa de que se vea EXACTAMENTE la skin pedida: ni depende de
+     * que haya LibsDisguises ni de que Mojang resuelva un nombre.
+     *
+     * Los golpes que reciba el maniqui se le pasan al jefe (lo hace AnomalyManager),
+     * asi que para quien pelea todo funciona como si el cuerpo visible fuera el jefe.
+     */
+    protected void wearShell(io.papermc.paper.datacomponent.item.ResolvableProfile profile, Component name) {
+        if (boss == null || profile == null) return;
+        try {
+            org.bukkit.entity.Mannequin body = world().spawn(boss.getLocation(),
+                    org.bukkit.entity.Mannequin.class, m -> {
+                        m.setProfile(profile);
+                        m.setPersistent(false);
+                        m.setGravity(false);
+                        m.setCollidable(false);
+                        m.setSilent(true);
+                        if (name != null) {
+                            m.customName(name);
+                            m.setCustomNameVisible(true);
+                        }
+                    });
+            shell = body;
+            markMinion(body);
+            boss.setInvisible(true);
+            boss.setCustomNameVisible(false);
+        } catch (Throwable t) {
+            plugin.getLogger().warning("No se pudo poner el cuerpo con skin: " + t);
+            shell = null;
+        }
+    }
+
+    /** El cuerpo visible, si lo hay. Lo consulta el manager para redirigir los golpes. */
+    public LivingEntity shell() {
+        return shell;
+    }
+
+    /** Lo que de verdad se ve: el maniqui si lo lleva, y si no el propio jefe. */
+    public LivingEntity body() {
+        return shell != null && shell.isValid() ? shell : boss;
+    }
+
+    /** Pinta el contorno del cuerpo VISIBLE, que con maniqui no es el mismo mob. */
+    protected void glowBody(net.kyori.adventure.text.format.NamedTextColor color) {
+        LivingEntity target = body();
+        if (target == null) return;
+        Glow.clear(target);
+        if (color != null) Glow.apply(target, color);
+    }
+
+    /** Renombra el cuerpo visible y el jefe a la vez. */
+    protected void renameBody(Component name) {
+        if (boss != null && boss.isValid()) boss.customName(name);
+        if (shell != null && shell.isValid()) {
+            shell.customName(name);
+            shell.setCustomNameVisible(true);
+        }
+    }
+
+    /** El cuerpo sigue al jefe pegado, con su misma orientacion y su mismo equipo. */
+    private void tickShell() {
+        if (shell == null) return;
+        if (!shell.isValid()) {
+            shell = null;
+            return;
+        }
+        try {
+            shell.teleport(boss.getLocation());
+            org.bukkit.inventory.EntityEquipment from = boss.getEquipment();
+            org.bukkit.inventory.EntityEquipment to = shell.getEquipment();
+            if (from != null && to != null && ticks() % 20 == 0) {
+                to.setHelmet(from.getHelmet());
+                to.setChestplate(from.getChestplate());
+                to.setLeggings(from.getLeggings());
+                to.setBoots(from.getBoots());
+                to.setItemInMainHand(from.getItemInMainHand());
+                to.setItemInOffHand(from.getItemInOffHand());
+            }
         } catch (Throwable ignored) {
         }
     }

@@ -280,6 +280,25 @@ public final class AnomalyManager implements Listener {
         if (event == null || event.fight() == null) return;
         LivingEntity boss = event.fight().entity();
 
+        // Los jefes con cuerpo de persona pelean con un mob invisible y se ven con un
+        // maniqui encima. Quien golpea le pega al maniqui, que es lo que ve; el golpe
+        // se le pasa al jefe para que todo lo demas (barra, merito, fases) funcione.
+        LivingEntity shell = event.fight().shell();
+        if (shell != null && victim.equals(shell)) {
+            e.setCancelled(true);
+            Player p = attacker(e.getDamager());
+            if (boss == null || !boss.isValid()) return;
+            try {
+                if (p != null) {
+                    boss.damage(e.getDamage(), p);
+                } else {
+                    boss.damage(e.getDamage());
+                }
+            } catch (Throwable ignored) {
+            }
+            return;
+        }
+
         if (boss != null && victim.equals(boss)) {
             Player p = attacker(e.getDamager());
             if (p == null) return;

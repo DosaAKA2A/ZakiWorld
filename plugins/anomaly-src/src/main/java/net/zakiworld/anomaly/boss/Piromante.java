@@ -219,7 +219,7 @@ public final class Piromante extends BossFight {
     private void scorch(Player p, double damage, int fireTicks) {
         hit(p, damage * damageBonus);
         if (fireTicks > 0) p.setFireTicks(Math.max(p.getFireTicks(), fireTicks));
-        Compat.spawn(world(), Compat.FLAME, p.getLocation().add(0, 1, 0), 12, 0.3, 0.5, 0.3, 0.03);
+        Compat.spawn(world(), Compat.SOUL_FIRE_FLAME, p.getLocation().add(0, 1, 0), 12, 0.3, 0.5, 0.3, 0.03);
         Compat.spawn(world(), Compat.LAVA, p.getLocation().add(0, 1, 0), 2, 0.2, 0.2, 0.2, 0);
         soundAt(p.getLocation(), "entity.player.hurt_on_fire", 1.1f, 0.9f);
     }
@@ -259,11 +259,11 @@ public final class Piromante extends BossFight {
         face(t.getEyeLocation());
 
         double d2 = boss.getLocation().distanceSquared(t.getLocation());
-        if (d2 > 64 && ticks() % 20 == 0) {
+        if (d2 > 25 && ticks() % 20 == 0) {
             Vector to = t.getLocation().toVector().subtract(boss.getLocation().toVector());
             if (to.lengthSquared() > 0.01) {
                 boss.setVelocity(to.normalize().multiply(0.5).setY(Math.max(0.05, boss.getVelocity().getY())));
-                Compat.spawn(world(), Compat.FLAME, boss.getLocation(), 4, 0.2, 0.1, 0.2, 0.02);
+                Compat.spawn(world(), Compat.CAMPFIRE_COSY_SMOKE, boss.getLocation(), 4, 0.2, 0.1, 0.2, 0.02);
             }
         }
         // Un fogonazo de aviso cada tanto, para que se note que sigue ahi.
@@ -306,7 +306,7 @@ public final class Piromante extends BossFight {
         animate(60, tick -> {
             if (!alive()) return;
             Location l = boss.getLocation();
-            Fx.helix(l, 1.1, 2.8, 14, 2.5, p -> Compat.spawn(world(), Compat.FLAME, p, 1, 0, 0, 0, 0.01));
+            Fx.helix(l, 1.1, 2.8, 14, 2.5, p -> Compat.spawn(world(), Compat.CAMPFIRE_COSY_SMOKE, p, 1, 0, 0, 0, 0.01));
             if (tick % 10 == 0) {
                 Compat.spawn(world(), Compat.LAVA, l.clone().add(0, 1, 0), 6, 0.4, 0.4, 0.4, 0);
                 soundAt(l, "block.lava.pop", 1.2f, 0.8f);
@@ -335,7 +335,7 @@ public final class Piromante extends BossFight {
             if (!alive()) return;
             Location l = boss.getLocation().add(0, 1, 0);
             Fx.sphere(l, 1.5 + tick * 0.03, 20, p -> {
-                Compat.spawn(world(), Compat.FLAME, p, 1, 0, 0, 0, 0.01);
+                Compat.spawn(world(), Compat.ASH, p, 1, 0, 0, 0, 0.01);
                 if (Math.random() < 0.15) Compat.spawn(world(), Compat.SOUL_FIRE_FLAME, p, 1, 0, 0, 0, 0);
             });
             if (tick % 12 == 0) {
@@ -377,8 +377,9 @@ public final class Piromante extends BossFight {
     /** 1. Bola de Fuego: la clasica, cargada y con aviso. */
     public void fireball() {
         if (!alive()) return;
-        Player target = randomTarget();
-        if (target == null) return;
+        List<Player> pool = targets(30);
+        if (pool.isEmpty()) return;
+        Player target = pool.get(0);
         soundAt(loc(), "entity.blaze.shoot", 1.6f, 0.7f);
         broadcastNear(Component.text("Carga una bola.", ACCENT));
 
@@ -387,19 +388,25 @@ public final class Piromante extends BossFight {
             Location hand = boss.getEyeLocation();
             if (tick < 24) {
                 Fx.sphere(hand, 0.4 + tick * 0.02, 8, p ->
-                        Compat.spawn(world(), Compat.FLAME, p, 1, 0, 0, 0, 0));
+                        Compat.spawn(world(), Compat.ASH, p, 1, 0, 0, 0, 0));
                 return;
             }
             if (tick != 24) return;
-            if (!Fx.isFightable(target)) throw Stop.now();
-            try {
-                LargeFireball ball = boss.launchProjectile(LargeFireball.class,
-                        target.getEyeLocation().toVector().subtract(hand.toVector()).normalize());
-                ball.setYield(0);
-                ball.setIsIncendiary(false);
-                Tags.markMinion(ball, ID);
-                Tags.markEvent(ball, event.id());
-            } catch (Throwable ignored) {
+            // Una bola por cabeza, hasta tres: contra un grupo, apuntar a uno solo
+            // no se nota.
+            int thrown = 0;
+            for (Player p : pool) {
+                if (thrown++ >= 3) break;
+                if (!Fx.isFightable(p)) continue;
+                try {
+                    LargeFireball ball = boss.launchProjectile(LargeFireball.class,
+                            p.getEyeLocation().toVector().subtract(hand.toVector()).normalize());
+                    ball.setYield(0);
+                    ball.setIsIncendiary(false);
+                    Tags.markMinion(ball, ID);
+                    Tags.markEvent(ball, event.id());
+                } catch (Throwable ignored) {
+                }
             }
             soundAt(hand, "item.firecharge.use", 1.7f, 0.8f);
         }, null);
@@ -449,7 +456,7 @@ public final class Piromante extends BossFight {
             if (radius > 11) return;
             Fx.ring(c, radius, (int) (radius * 6) + 8, p -> {
                 Location g = Fx.ground(p, 4);
-                Compat.spawn(world(), Compat.FLAME, g.clone().add(0, 0.25, 0), 2, 0.1, 0.05, 0.1, 0.01);
+                Compat.spawn(world(), Compat.DUST_PLUME, g.clone().add(0, 0.25, 0), 2, 0.1, 0.05, 0.1, 0.01);
             });
             if (tick % 6 == 0) {
                 igniteArea(c, radius, 0.28);
@@ -532,7 +539,7 @@ public final class Piromante extends BossFight {
                 Location at = center.clone().add(side.clone().multiply(s));
                 Location g = Fx.ground(at, 4);
                 for (double h = 0; h < 2.5; h += 0.5) {
-                    Compat.spawn(world(), Compat.FLAME, g.clone().add(0, h, 0), 1, 0.05, 0.05, 0.05, 0.01);
+                    Compat.spawn(world(), Compat.DUST_PLUME, g.clone().add(0, h, 0), 1, 0.05, 0.05, 0.05, 0.01);
                 }
                 if (tick % 6 == 0) ignite(at);
                 for (Player p : Fx.playersNear(g, 1.6)) {
@@ -548,8 +555,15 @@ public final class Piromante extends BossFight {
     /** 6. Aliento de Ghast: un cono de fuego largo delante de el. */
     public void flameBreath() {
         if (!alive()) return;
+        // APUNTA AL OBJETIVO, no a donde mira. Un aldeano gira la cabeza por su cuenta
+        // y con la version anterior, si no te tenia de frente, el cono no te tocaba:
+        // parecia que el jefe no atacaba. Aqui la direccion la decide la victima.
+        Player aim = Fx.nearest(loc(), 16);
+        if (aim == null) aim = randomTarget();
+        if (aim == null) return;
+        face(aim.getEyeLocation());
         Location origin = boss.getEyeLocation();
-        Vector face = origin.getDirection().setY(0);
+        Vector face = aim.getLocation().toVector().subtract(boss.getLocation().toVector()).setY(0);
         if (face.lengthSquared() < 0.01) face = new Vector(1, 0, 0);
         final Vector dir = face.normalize();
         soundAt(origin, "entity.ghast.shoot", 1.7f, 0.8f);
@@ -560,7 +574,7 @@ public final class Piromante extends BossFight {
             double reach = 2 + tick * 0.3;
             if (reach > 14) return;
             Fx.arc(boss.getEyeLocation(), dir, reach, Math.PI * 0.35, (int) (reach * 4), p -> {
-                Compat.spawn(world(), Compat.FLAME, p, 2, 0.15, 0.15, 0.15, 0.02);
+                Compat.spawn(world(), Compat.SOUL_FIRE_FLAME, p, 2, 0.15, 0.15, 0.15, 0.02);
                 if (Math.random() < 0.1) Compat.spawn(world(), Compat.LAVA, p, 1, 0, 0, 0, 0);
             });
             if (tick % 10 != 0) return;
@@ -652,7 +666,7 @@ public final class Piromante extends BossFight {
                 Fx.ring(c, radius, (int) (radius * 5) + 6, p -> {
                     Location g = Fx.ground(p, 4);
                     Compat.spawn(world(), Compat.ASH, g.clone().add(0, 0.3, 0), 2, 0.1, 0.1, 0.1, 0.01);
-                    Compat.spawn(world(), Compat.FLAME, g.clone().add(0, 0.2, 0), 1, 0.05, 0.02, 0.05, 0);
+                    Compat.spawn(world(), Compat.SOUL_FIRE_FLAME, g.clone().add(0, 0.2, 0), 1, 0.05, 0.02, 0.05, 0);
                 });
                 for (Player p : targets(radius + 1.0)) {
                     double d = p.getLocation().distance(c);
@@ -683,7 +697,7 @@ public final class Piromante extends BossFight {
                 if (tick > 44) return;
                 double h = (tick - 24) * 0.35;
                 Fx.ring(mark.clone().add(0, h, 0), 1.2, 10, tick * 0.3, p -> {
-                    Compat.spawn(world(), Compat.FLAME, p, 1, 0, 0, 0, 0.01);
+                    Compat.spawn(world(), Compat.CAMPFIRE_COSY_SMOKE, p, 1, 0, 0, 0, 0.01);
                     if (Math.random() < 0.2) Compat.spawn(world(), Compat.LAVA, p, 1, 0, 0, 0, 0);
                 });
                 if (tick != 44) return;
@@ -753,7 +767,7 @@ public final class Piromante extends BossFight {
             if (tick % 4 != 0) return;
             Location l = Fx.ground(boss.getLocation(), 4);
             ignite(l.clone().add(0, 1, 0));
-            Compat.spawn(world(), Compat.FLAME, l.clone().add(0, 0.2, 0), 4, 0.3, 0.05, 0.3, 0.01);
+            Compat.spawn(world(), Compat.CAMPFIRE_COSY_SMOKE, l.clone().add(0, 0.2, 0), 4, 0.3, 0.05, 0.3, 0.01);
             for (Player p : Fx.playersNear(l, 2.0)) scorch(p, 5, 60);
         }, null);
     }

@@ -56,7 +56,7 @@ public final class Aragon extends BossFight {
     public static final TextColor ACCENT = TextColor.color(0x6B5B7B);
 
     /** Tope de esbirros vivos a la vez. Sin esto, veinte jugadores tiran el servidor. */
-    private static final int MAX_BROOD = 60;
+    private static final int MAX_BROOD = 110;
     /** Tope de bloques de tela puestos a la vez. */
     private static final int MAX_WEB = 400;
 
@@ -99,7 +99,11 @@ public final class Aragon extends BossFight {
         Compat.setAttribute(boss, "follow_range", 72);
         // Lentisima a proposito: es una mole que se arrastra, no algo que te persigue.
         Compat.setAttribute(boss, "movement_speed", 0.11);
-        Compat.setAttribute(boss, "scale", 4.5);
+        // 4.5 la dejaba flotando: con una caja de golpe tan enorme el servidor la
+        // expulsa hacia arriba en cuanto roza un bloque, y se queda a medio metro del
+        // suelo. A 2.8 sigue siendo una mole y pisa la tierra.
+        Compat.setAttribute(boss, "scale", 2.8);
+        Compat.setAttribute(boss, "step_height", 1.5);
         applyHealth(plugin.registry().scaledHealth(plugin.registry().aragon(), targets(96).size()));
         boss.setMaximumNoDamageTicks(6);
 
@@ -108,7 +112,7 @@ public final class Aragon extends BossFight {
         Glow.apply(boss, event.type().glowColor());
 
         arrivalAnimation(spot);
-        later(60, () -> brood(10));
+        later(60, () -> brood(24));
     }
 
     private void arrivalAnimation(Location spot) {
@@ -279,7 +283,7 @@ public final class Aragon extends BossFight {
         soundAt(l, "entity.spider.ambient", 1.3f, 1.7f);
 
         int room = MAX_BROOD - broodAlive();
-        int n = Math.min(12, Math.max(0, room));
+        int n = Math.min(16, Math.max(0, room));
         for (int i = 0; i < n; i++) {
             double a = Math.PI * 2 * i / Math.max(1, n);
             Location sl = Fx.ground(l.clone().add(Math.cos(a) * 1.2, 0, Math.sin(a) * 1.2), 4);
@@ -334,6 +338,20 @@ public final class Aragon extends BossFight {
 
     // -------------------------------------------------------------------- LA TELA
 
+    /**
+     * La mantiene pegada al suelo. Una arana trepa paredes y con este tamaño se queda
+     * flotando en cuanto roza algo, que se ve fatal; si la pillamos en el aire sin
+     * bloque debajo, se la empuja hacia abajo hasta que apoya las patas.
+     */
+    private void stayGrounded() {
+        if (ticks() % 4 != 0 || !alive()) return;
+        if (boss.isOnGround()) return;
+        Location l = boss.getLocation();
+        Location ground = Fx.ground(l, 6);
+        if (l.getY() - ground.getY() < 0.35) return;
+        boss.setVelocity(boss.getVelocity().setY(Math.min(-0.35, boss.getVelocity().getY())));
+    }
+
     /** Solo teje sobre aire: nunca sustituye un bloque de nadie. */
     private void weaveAt(Location where) {
         if (webs.size() >= MAX_WEB) return;
@@ -364,6 +382,8 @@ public final class Aragon extends BossFight {
         if (!alive()) return;
         tickEggs();
         keepHostile();
+        driveBrood();
+        stayGrounded();
 
         // Muy poco efecto de ambiente a proposito: lo que llena la pantalla son las
         // crias, y si ademas se echa confeti no se ve nada.
@@ -372,8 +392,8 @@ public final class Aragon extends BossFight {
         }
         if (ticks() % 120 == 0) soundAt(loc(), "entity.spider.ambient", 1.0f, 0.4f);
 
-        // Reponer camada: nunca se queda sola del todo.
-        if (ticks() % 200 == 0 && broodAlive() < 12) brood(6);
+        // Reponer camada sin parar: la arena tiene que estar SIEMPRE llena de bichos.
+        if (ticks() % 100 == 0 && broodAlive() < 45) brood(10);
     }
 
     private void keepHostile() {
@@ -386,6 +406,41 @@ public final class Aragon extends BossFight {
         }
         // Si alguien esta pegado a un huevo, cuenta como intento de romperlo.
         for (Player p : targets(30)) breakEggNear(p.getLocation(), null);
+    }
+
+    /**
+     * Que la camada ATAQUE de verdad, y a montones.
+     *
+     * Las aranas de Minecraft son NEUTRALES de dia: sin esto, el enjambre se quedaba
+     * paseando alrededor mientras el grupo pegaba tranquilamente a la madre. Aqui se
+     * les renueva el objetivo a todas, se les quita el miedo a la luz y se empuja a las
+     * que se quedan atras, que es lo que convierte "muchas aranas" en "te comen".
+     */
+    private void driveBrood() {
+        if (ticks() % 20 != 0) return;
+        List<Player> pool = targets(46);
+        if (pool.isEmpty()) return;
+        int i = 0;
+        for (UUID id : new ArrayList<>(broodIds.keySet())) {
+            org.bukkit.entity.Entity e = plugin.getServer().getEntity(id);
+            if (!(e instanceof org.bukkit.entity.Mob m) || !m.isValid()) {
+                broodIds.remove(id);
+                continue;
+            }
+            Player target = pool.get(i++ % pool.size());
+            LivingEntity current = m.getTarget();
+            if (current == null || !current.isValid() || current.isDead() || random.nextInt(4) == 0) {
+                m.setTarget(target);
+            }
+            // Las que se descuelgan pegan un tiron para volver a la pelea.
+            double d2 = m.getLocation().distanceSquared(target.getLocation());
+            if (d2 > 144 && d2 < 90 * 90) {
+                Vector to = target.getLocation().toVector().subtract(m.getLocation().toVector());
+                if (to.lengthSquared() > 0.01) {
+                    m.setVelocity(to.normalize().multiply(0.42).setY(0.24));
+                }
+            }
+        }
     }
 
     @Override
@@ -418,7 +473,7 @@ public final class Aragon extends BossFight {
                     Component.text("Pone mas huevos", NamedTextColor.GRAY));
             soundAt(loc(), "entity.spider.ambient", 1.6f, 0.5f);
             layEggs();
-            brood(12);
+            brood(24);
         }
         if (to == 3) {
             damageBonus = 1.45;
@@ -426,7 +481,7 @@ public final class Aragon extends BossFight {
             titleNear(Component.text("FASE III", NamedTextColor.RED, TextDecoration.BOLD),
                     Component.text("Sale la camada entera", NamedTextColor.GRAY));
             layEggs();
-            brood(20);
+            brood(34);
             guardian();
             guardian();
         }
@@ -459,7 +514,7 @@ public final class Aragon extends BossFight {
     public void spawnBrood() {
         if (!alive()) return;
         broadcastNear(Component.text("Suelta la camada.", ACCENT));
-        brood(12);
+        brood(22);
     }
 
     /** 2. Puesta: tres o cuatro huevos por la arena. */
@@ -569,7 +624,7 @@ public final class Aragon extends BossFight {
         for (int i = 0; i < 3; i++) {
             later(i * 24, () -> {
                 if (!alive()) return;
-                brood(10);
+                brood(18);
                 soundAt(loc(), "entity.spider.step", 1.3f, 1.7f);
             });
         }

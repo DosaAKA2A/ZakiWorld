@@ -227,14 +227,34 @@ public final class Cazador extends BossFight {
             Location spot = Fx.ground(c.clone().add(Math.cos(a) * d, 1, Math.sin(a) * d), 6);
             later(i * 4, () -> {
                 if (!alive()) return;
-                BlockDisplay mark = Fx.blockDisplay(world(), spot.clone().add(0, 0.08, 0),
-                        Material.HEAVY_WEIGHTED_PRESSURE_PLATE, 0.85f);
-                markMinion(mark);
-                traps.add(new Trap(spot.clone(), mark, ticks()));
-                Compat.spawn(world(), Compat.CRIT, spot.clone().add(0, 0.3, 0), 6, 0.3, 0.1, 0.3, 0.02);
+                traps.add(new Trap(spot.clone(), plantMine(spot), ticks()));
                 soundAt(spot, "block.tripwire.click_on", 1.0f, 1.4f);
             });
         }
+    }
+
+    /**
+     * Planta la marca de una mina y la deja BIEN VISIBLE.
+     *
+     * La placa a ras de suelo de la primera version no se veia: quedaba enterrada en la
+     * hierba y la gente la pisaba sin enterarse de que existia el mecanismo. Ahora es un
+     * bloque rojo levantado del suelo y con CONTORNO ROJO —los displays admiten color
+     * libre, no solo los dieciseis del marcador—, asi que se ve incluso a traves del
+     * terreno. Que se vea es parte del trato: la trampa castiga no mirar, no la mala
+     * suerte.
+     */
+    private BlockDisplay plantMine(Location spot) {
+        BlockDisplay mark = Fx.blockDisplay(world(), spot.clone().add(0, 0.45, 0),
+                Material.REDSTONE_BLOCK, 0.55f);
+        markMinion(mark);
+        try {
+            mark.setGlowColorOverride(org.bukkit.Color.fromRGB(0xFF2D2D));
+            mark.setGlowing(true);
+            mark.setViewRange(6.0f);
+        } catch (Throwable ignored) {
+        }
+        Compat.spawn(world(), Compat.ELECTRIC_SPARK, spot.clone().add(0, 0.5, 0), 8, 0.25, 0.15, 0.25, 0.03);
+        return mark;
     }
 
     /** Vigila las trampas: parpadean, caducan y revientan si alguien las pisa. */
@@ -248,9 +268,12 @@ public final class Cazador extends BossFight {
                 continue;
             }
             // Un guiño rojo cada segundo: la trampa se ve, si se mira.
-            if (ticks() % 20 == 0) {
-                Compat.spawn(world(), Compat.WAX_ON, trap.at.clone().add(0, 0.25, 0), 2, 0.2, 0.05, 0.2, 0);
-                soundAt(trap.at, "block.tripwire.click_off", 0.35f, 1.8f);
+            if (ticks() % 16 == 0) {
+                Compat.spawn(world(), Compat.ELECTRIC_SPARK, trap.at.clone().add(0, 0.55, 0), 4,
+                        0.2, 0.1, 0.2, 0.02);
+                Fx.ring(trap.at.clone().add(0, 0.12, 0), 1.5, 12, q ->
+                        Compat.spawn(world(), Compat.TRIAL_SPAWNER_DETECTION, q, 1, 0, 0, 0, 0));
+                soundAt(trap.at, "block.tripwire.click_off", 0.5f, 1.8f);
             }
             // Caducan al minuto y medio, que si no la arena acaba siendo un campo de minas.
             if (ticks() - trap.armedAt > 1800) {
@@ -320,7 +343,7 @@ public final class Cazador extends BossFight {
      * mientras dispara. Es lo que obliga a perseguirlo por el campo de trampas.
      */
     private void keepHostile() {
-        if (ticks() % 10 != 0) return;
+        if (ticks() % 5 != 0) return;
         Player t = Fx.nearest(boss.getLocation(), plugin.settings().participationRadius());
         if (t == null) return;
         if (boss instanceof org.bukkit.entity.Mob m) {
@@ -333,10 +356,66 @@ public final class Cazador extends BossFight {
         if (phase() < 3 && d2 < 25) {
             Vector away = boss.getLocation().toVector().subtract(t.getLocation().toVector()).setY(0);
             if (away.lengthSquared() > 0.01) {
-                boss.setVelocity(away.normalize().multiply(0.45).setY(0.1));
+                boss.setVelocity(away.normalize().multiply(0.5).setY(0.1));
                 Compat.spawn(world(), Compat.SMALL_GUST, boss.getLocation(), 2, 0.2, 0.1, 0.2, 0);
             }
         }
+
+        // El pulso del cazador: sin esperar a que le toque una habilidad, elige el arma
+        // por la DISTANCIA y dispara. Antes se quedaba largos ratos mirando entre
+        // habilidad y habilidad, que es justo lo contrario de un genio de las armas.
+        if (ticks() % 20 != 0) return;
+        if (d2 > 100) {
+            // Lejos: ballesta o arco, y una rafaga a varios a la vez.
+            if (!holding(Material.CROSSBOW) && !holding(Material.BOW)) {
+                drawWeapon(random.nextBoolean() ? Material.CROSSBOW : Material.BOW);
+            }
+            List<Player> pool = targets(60);
+            int fired = 0;
+            for (Player p : pool) {
+                if (fired++ >= 3) break;
+                if (!boss.hasLineOfSight(p)) continue;
+                shoot(p, 2.8, 6);
+            }
+            if (fired > 0) soundAt(loc(), "item.crossbow.shoot", 1.3f, 1.0f);
+            return;
+        }
+        if (d2 > 25) {
+            // Media distancia: la lanza, que tiene alcance de sobra.
+            if (!holding(SPEAR)) drawWeapon(SPEAR);
+            if (boss.getLocation().distanceSquared(t.getLocation()) < 64) jab(t);
+            return;
+        }
+        // Encima: hacha o espada, y rapido.
+        if (!holding(AXE) && !holding(BLADE)) drawWeapon(random.nextBoolean() ? AXE : BLADE);
+        hit(t, 8 * damageBonus);
+        Compat.spawn(world(), Compat.SWEEP_ATTACK, t.getLocation().add(0, 1, 0), 1);
+        soundAt(t.getLocation(), "entity.player.attack.sweep", 1.1f, 1.0f);
+    }
+
+    private static final Material SPEAR = pick("NETHERITE_SPEAR", "TRIDENT", "IRON_SPEAR");
+    private static final Material AXE = pick("NETHERITE_AXE", "DIAMOND_AXE", "IRON_AXE");
+    private static final Material BLADE = pick("NETHERITE_SWORD", "DIAMOND_SWORD", "IRON_SWORD");
+
+    private boolean holding(Material m) {
+        EntityEquipment eq = boss.getEquipment();
+        return eq != null && eq.getItemInMainHand().getType() == m;
+    }
+
+    /** Un lanzazo corto de mantenimiento: alcanza a todo lo que este en la linea. */
+    private void jab(Player target) {
+        Vector dir = target.getLocation().toVector().subtract(boss.getLocation().toVector()).setY(0);
+        if (dir.lengthSquared() < 0.01) return;
+        final Vector run = dir.normalize();
+        for (double d = 1.5; d < 6.5; d += 1.0) {
+            Location tip = boss.getEyeLocation().add(run.clone().multiply(d));
+            Compat.spawn(world(), Compat.ENCHANTED_HIT, tip, 2, 0.1, 0.1, 0.1, 0.02);
+            for (Player p : Fx.playersNear(tip, 1.6)) {
+                hit(p, 9 * damageBonus);
+                push(p, run.clone().multiply(0.35).setY(0.12));
+            }
+        }
+        soundAt(loc(), "item.trident.hit", 1.1f, 1.1f);
     }
 
     @Override
@@ -415,17 +494,24 @@ public final class Cazador extends BossFight {
     /** 1. Andanada de Ballesta: tres saetas seguidas al que tenga a tiro. */
     public void crossbowVolley() {
         if (!alive()) return;
-        Player target = randomTarget();
-        if (target == null) return;
+        List<Player> pool = targets(60);
+        if (pool.isEmpty()) return;
         drawWeapon(Material.CROSSBOW);
         soundAt(loc(), "item.crossbow.loading_start", 1.4f, 0.9f);
         broadcastNear(Component.text("Carga la ballesta.", ACCENT));
 
-        for (int i = 0; i < 3; i++) {
-            later(16 + i * 7, () -> {
-                if (!alive() || !Fx.isFightable(target)) return;
-                shoot(target, 2.6, 7);
-                soundAt(loc(), "item.crossbow.shoot", 1.4f, 1.0f);
+        // Seis saetas REPARTIDAS entre todos los que tenga a tiro. Vaciar el cargador
+        // en una sola cabeza no sirve de nada cuando vienen en grupo.
+        for (int i = 0; i < 6; i++) {
+            final int idx = i;
+            later(12 + i * 5, () -> {
+                if (!alive()) return;
+                List<Player> now = targets(60);
+                if (now.isEmpty()) return;
+                Player p = now.get(idx % now.size());
+                if (!Fx.isFightable(p)) return;
+                shoot(p, 2.8, 7);
+                soundAt(loc(), "item.crossbow.shoot", 1.3f, 1.0f);
             });
         }
     }
@@ -532,12 +618,8 @@ public final class Cazador extends BossFight {
             Location spot = Fx.ground(victim.getLocation(), 4);
             later(10, () -> {
                 if (!alive()) return;
-                BlockDisplay mark = Fx.blockDisplay(world(), spot.clone().add(0, 0.08, 0),
-                        Material.HEAVY_WEIGHTED_PRESSURE_PLATE, 0.85f);
-                markMinion(mark);
                 // Se arma con retardo: si no, revienta en el mismo tick que se pone.
-                traps.add(new Trap(spot.clone(), mark, ticks() + 30));
-                Compat.spawn(world(), Compat.CRIT, spot.clone().add(0, 0.3, 0), 8, 0.3, 0.1, 0.3, 0.02);
+                traps.add(new Trap(spot.clone(), plantMine(spot), ticks() + 30));
             });
         }
     }
@@ -554,10 +636,7 @@ public final class Cazador extends BossFight {
 
         later(6, () -> {
             if (!alive()) return;
-            BlockDisplay mark = Fx.blockDisplay(world(), where.clone().add(0, 0.08, 0),
-                    Material.HEAVY_WEIGHTED_PRESSURE_PLATE, 0.85f);
-            markMinion(mark);
-            traps.add(new Trap(where.clone(), mark, ticks()));
+            traps.add(new Trap(where.clone(), plantMine(where), ticks()));
             soundAt(where, "block.tripwire.click_on", 1.1f, 1.3f);
         });
     }
@@ -588,7 +667,7 @@ public final class Cazador extends BossFight {
             boss.setVelocity(run.clone().multiply(0.95).setY(boss.getVelocity().getY()));
             Location tip = boss.getEyeLocation().add(run.clone().multiply(2.2));
             Compat.spawn(world(), Compat.ENCHANTED_HIT, tip, 3, 0.15, 0.15, 0.15, 0.05);
-            for (Player p : Fx.playersNear(tip, 2.2)) {
+            for (Player p : Fx.playersNear(tip, 3.0)) {
                 if (!pierced.add(p.getUniqueId())) continue;
                 hit(p, 20 * damageBonus);
                 push(p, run.clone().multiply(1.0).setY(0.35));
@@ -654,8 +733,10 @@ public final class Cazador extends BossFight {
     /** 10. Marcar la Presa: elige a uno y le pega mucho mas fuerte mientras dure. */
     public void markPrey() {
         if (!alive()) return;
-        Player target = randomTarget();
-        if (target == null) return;
+        List<Player> pool = targets(40);
+        if (pool.isEmpty()) return;
+        for (int i = 1; i < Math.min(3, pool.size()); i++) markOne(pool.get(i));
+        Player target = pool.get(0);
         soundAt(loc(), "entity.piglin_brute.angry", 1.5f, 1.1f);
         target.sendActionBar(Component.text("El Cazador te ha marcado.",
                 NamedTextColor.RED, TextDecoration.BOLD));
@@ -688,11 +769,7 @@ public final class Cazador extends BossFight {
             Location spot = Fx.ground(c.clone().add(Math.cos(a) * 9, 1, Math.sin(a) * 9), 6);
             later(i * 3, () -> {
                 if (!alive()) return;
-                BlockDisplay mark = Fx.blockDisplay(world(), spot.clone().add(0, 0.08, 0),
-                        Material.HEAVY_WEIGHTED_PRESSURE_PLATE, 0.85f);
-                markMinion(mark);
-                traps.add(new Trap(spot.clone(), mark, ticks()));
-                Compat.spawn(world(), Compat.CRIT, spot.clone().add(0, 0.3, 0), 5, 0.2, 0.1, 0.2, 0.02);
+                traps.add(new Trap(spot.clone(), plantMine(spot), ticks()));
             });
         }
     }
@@ -710,6 +787,21 @@ public final class Cazador extends BossFight {
         drawWeapon(arsenal[weapon]);
         broadcastNear(Component.text("Cambia de arma.", ACCENT));
         Compat.spawn(world(), Compat.ENCHANT, boss.getEyeLocation(), 20, 0.4, 0.4, 0.4, 0.6);
+    }
+
+    /** Marca a uno mas, sin el titulo ni el aviso grande. */
+    private void markOne(Player victim) {
+        victim.sendActionBar(Component.text("El Cazador te ha marcado.",
+                NamedTextColor.RED, TextDecoration.BOLD));
+        animate(200, tick -> {
+            if (!alive() || !Fx.isFightable(victim)) throw Stop.now();
+            if (tick % 10 == 0) {
+                Compat.spawn(world(), Compat.WAX_ON, victim.getLocation().add(0, 2.4, 0), 3, 0.2, 0.1, 0.2, 0);
+            }
+            if (tick % 40 == 0 && boss.getLocation().distanceSquared(victim.getLocation()) < 16) {
+                hit(victim, 9 * damageBonus);
+            }
+        }, null);
     }
 
     // ------------------------------------------------------------------ mensajeria

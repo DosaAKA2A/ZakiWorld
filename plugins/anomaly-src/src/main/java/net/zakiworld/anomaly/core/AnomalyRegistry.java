@@ -1386,7 +1386,8 @@ public final class AnomalyRegistry {
 
         @Override
         public Material icon() {
-            Material m = Material.matchMaterial("GOAT_HORN");
+            Material m = Material.matchMaterial("RAVAGER_SPAWN_EGG");
+            if (m == null) m = Material.matchMaterial("CHISELED_STONE_BRICKS");
             return m != null ? m : Material.BONE;
         }
 
@@ -2024,47 +2025,47 @@ public final class AnomalyRegistry {
         List<Ability> list = new ArrayList<>();
 
         // --- Fase I: el acecho
-        add(list, "andanada_ballesta", "Andanada de Ballesta", 1, 160, 45, 5,
+        add(list, "andanada_ballesta", "Andanada de Ballesta", 1, 90, 32, 6,
                 "Tres saetas seguidas a quien tenga a tiro.",
                 icon("CROSSBOW", "BOW"), f -> cazador(f).crossbowVolley());
-        add(list, "lluvia_flechas", "Lluvia de Flechas", 1, 260, 70, 4,
+        add(list, "lluvia_flechas", "Lluvia de Flechas", 1, 150, 55, 5,
                 "Apunta al cielo y caen sobre las marcas.",
                 icon("ARROW", "BOW"), f -> cazador(f).arrowRain());
-        add(list, "saeta_perforante", "Saeta Perforante", 1, 240, 45, 4,
+        add(list, "saeta_perforante", "Saeta Perforante", 1, 130, 40, 5,
                 "Un disparo cargado que atraviesa a todo el que pille en linea.",
                 icon("SPECTRAL_ARROW", "ARROW"), f -> cazador(f).piercingBolt());
-        add(list, "marcar_presa", "Marcar la Presa", 1, 340, 40, 3,
+        add(list, "marcar_presa", "Marcar la Presa", 1, 260, 30, 3,
                 "Elige a uno y le pega mucho mas fuerte mientras dure la marca.",
                 icon("TARGET", "REDSTONE"), f -> cazador(f).markPrey());
 
         // --- Fase II: el cepo
-        add(list, "cepo", "Cepo", 2, 220, 40, 5,
+        add(list, "cepo", "Cepo", 2, 150, 30, 5,
                 "Siembra el suelo de trampas que revientan al pisarlas.",
                 icon("TRIPWIRE_HOOK", "STRING"), f -> cazador(f).trapField());
-        add(list, "cepo_dirigido", "Cepo Dirigido", 2, 200, 30, 4,
+        add(list, "cepo_dirigido", "Cepo Dirigido", 2, 130, 22, 5,
                 "Pone la trampa justo bajo los pies de cada uno.",
                 icon("HEAVY_WEIGHTED_PRESSURE_PLATE", "STONE_PRESSURE_PLATE"),
                 f -> cazador(f).aimedTrap());
-        add(list, "red_cepos", "Red de Cepos", 2, 340, 50, 3,
+        add(list, "red_cepos", "Red de Cepos", 2, 240, 40, 3,
                 "Un cerco entero de trampas alrededor del grupo.",
                 icon("CHAIN", "IRON_BARS"), f -> cazador(f).trapRing());
-        add(list, "retirada", "Retirada Calculada", 2, 180, 25, 4,
+        add(list, "retirada", "Retirada Calculada", 2, 120, 18, 4,
                 "Salta hacia atras y deja una trampa donde estaba.",
                 icon("FEATHER", "LEATHER_BOOTS"), f -> cazador(f).calculatedRetreat());
 
         // --- Fase III: la estocada
-        add(list, "estocada_lanza", "Estocada de Lanza", 3, 190, 50, 5,
-                "La lanza por delante, en linea y con mucho alcance.",
+        add(list, "estocada_lanza", "Estocada de Lanza", 0, 120, 38, 6,
+                "La lanza por delante, en linea y con mucho alcance. La usa en cualquier fase.",
                 icon("NETHERITE_SPEAR", "TRIDENT"), f -> cazador(f).spearThrust());
-        add(list, "hachazo", "Hachazo Descendente", 3, 210, 45, 4,
+        add(list, "hachazo", "Hachazo Descendente", 3, 130, 35, 5,
                 "Cambia al hacha y parte el suelo en linea recta.",
                 icon("NETHERITE_AXE", "IRON_AXE"), f -> cazador(f).axeCleave());
-        add(list, "danza_espada", "Danza de Espada", 3, 200, 45, 4,
+        add(list, "danza_espada", "Danza de Espada", 3, 120, 35, 5,
                 "Saca la espada y suelta una tanda rapida al que tenga delante.",
                 icon("NETHERITE_SWORD", "IRON_SWORD"), f -> cazador(f).bladeDance());
 
         // --- Cualquier fase
-        add(list, "cambio_arma", "Cambio de Arma", 0, 260, 20, 3,
+        add(list, "cambio_arma", "Cambio de Arma", 0, 160, 14, 3,
                 "Se replantea la pelea y saca otra cosa del cinto.",
                 icon("SMITHING_TABLE", "ANVIL"), f -> cazador(f).switchWeapon());
 

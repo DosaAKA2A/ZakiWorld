@@ -8,7 +8,7 @@ La intención de fondo es empujar a la gente a **salir del spawn** y a **pelear 
 el jefe escala con el número de jugadores, varias habilidades castigan dispersarse y el
 botín se reparte entre todos los que participaron, no solo entre quien da el último golpe.
 
-- **Versión:** 1.12.0
+- **Versión:** 1.12.1
 - **Paquete:** `net.zakiworld.anomaly`
 - **Probado contra:** Paper 26.1.2 (MC 26.1.2), compilado con `--release 21`
 - **Permiso único:** `anomaly.gui` (`default: op`)
@@ -480,10 +480,13 @@ se levanta solo.
 verdad no hace nada: se le puede rodear, mirar y hasta ignorar. Elemento **tierra**,
 sin brillo y sin pilar de luz — es un vecino cualquiera hasta que deja de serlo.
 
-El aspecto sale de una **skin de verdad**: la cabeza lleva la textura puesta con la API
-de perfiles de Bukkit y, si el servidor tiene **LibsDisguises** (Ederus lo tiene), se le
-pone además el disfraz de jugador completo. El hook es **por reflexión**, así que sin
-LibsDisguises el plugin arranca igual y solo se ve un poco menos fino.
+El aspecto sale de una **skin de verdad**, y de la forma nativa: pelea un zombi
+**invisible** con toda su IA, y encima lleva pegado un **MANNEQUIN** —una entidad viva
+con forma de jugador y perfil de skin propio— que es lo que se ve. Los golpes que recibe
+el maniquí se le pasan al jefe, así que para quien pelea el cuerpo visible *es* el jefe.
+Es la única manera de que salga **exactamente** la skin pedida: no depende de que haya
+LibsDisguises ni de que Mojang resuelva un nombre. El mecanismo vive en
+`BossFight#wearShell` y lo comparte con el Mimic.
 
 ### Pegarle es la mala idea
 
@@ -528,19 +531,34 @@ siempre dice lo que va a hacer**, que es lo que lo hace legible: si saca el hach
 | III — la estocada | Tira lo de lejos y saca la **lanza de netherita**, el hacha y la espada. Estocada de Lanza · Hachazo Descendente · Danza de Espada |
 | Cualquiera | Cambio de Arma |
 
-Las trampas caducan al minuto y medio: sin eso, la arena acabaría siendo un campo de
-minas del que no se sale.
+Además de sus habilidades tiene un **pulso de combate propio** que corre cada segundo:
+mira a qué distancia estás y actúa sin esperar turno — lejos saca ballesta o arco y
+reparte una ráfaga **entre varios objetivos**, a media distancia la lanza (que alcanza a
+todo lo que pille en la línea) y encima el hacha o la espada. Sin eso se quedaba largos
+ratos parado entre habilidad y habilidad, que es justo lo contrario de un genio de las
+armas. **La lanza ya no es exclusiva de la fase 3**: la usa en cualquiera.
+
+Las **minas se ven**: un bloque rojo levantado del suelo, con **contorno rojo** —los
+displays admiten color libre, no solo los dieciséis del marcador— y un chispazo cada
+segundo. La primera versión ponía una placa a ras de suelo que quedaba enterrada en la
+hierba, y así la trampa castigaba la mala suerte en vez de castigar no mirar. Caducan
+al minuto y medio: sin eso la arena acabaría siendo un campo de minas del que no se sale.
 
 ---
 
 ## Áragon
 
-Una araña **descomunal y lentísima**. Ese es el diseño entero: Áragon casi no pelea. Se
+Una araña **enorme y lentísima** (escala 2.8: a 4.5 se quedaba flotando, porque con una caja de golpe tan grande el servidor la expulsa hacia arriba en cuanto roza un bloque). Ese es el diseño entero: Áragon casi no pelea. Se
 arrastra, teje y pone huevos; **quien te muerde son sus hijas**, y son muchas.
 
-- **Crías diminutas y a montones.** Salen a camadas de doce, del tamaño de un puño
-  (atributo `scale`, que es todo lo que hace falta), corriendo más rápido de lo que se
-  puede retroceder. Sueltas no son nada; en enjambre te comen. Tope de **sesenta vivas**.
+- **Crías diminutas y a montones.** Salen a camadas de veinte y pico, del tamaño de un
+  puño (atributo `scale`, que es todo lo que hace falta), corriendo más rápido de lo que
+  se puede retroceder. Sueltas no son nada; en enjambre te comen. Tope de **ciento diez
+  vivas**, y la arena se repone sola mientras haya menos de cuarenta y cinco.
+- **Y atacan de verdad.** Las arañas de Minecraft son **neutrales de día**: sin forzarlas,
+  el enjambre se quedaba paseando mientras el grupo pegaba tranquilamente a la madre. Cada
+  segundo se les reparte objetivo entre todos los presentes y se empuja a las que se
+  descuelgan, que es lo que convierte "muchas arañas" en "te comen".
 - **Los huevos.** Bolas blancas plantadas por la arena, que **laten cada vez más rápido**
   según se acercan a abrirse. Si se rompen a tiempo no pasa nada; si no, **eclosionan** y
   sale otra camada. Son la única forma de que el enjambre deje de crecer, y por eso
@@ -566,6 +584,11 @@ distancia: no tiene un solo golpe cuerpo a cuerpo, todo sale ardiendo de las man
 | II — la hoguera | Mar de Llamas · Meteoros · Muro de Fuego · Guardia de Brasas |
 | III — el infierno | **Nova Ígnea** · Columna de Lava · Anillo de Cenizas |
 | Cualquiera | Marca Ardiente |
+
+Sus conos y sus bolas **apuntan al objetivo, no a donde mira**. Un aldeano gira la
+cabeza por su cuenta, así que con la versión anterior, si no te tenía de frente, el ataque
+no te tocaba y parecía que el jefe no hacía nada. Y la bola de fuego sale **una por
+cabeza, hasta tres**: contra un grupo, apuntar a uno solo no se nota.
 
 **Quema el suelo de verdad**, y de ahí sale su única regla dura: cada fuego que prende
 pasa antes por WorldGuard, con dos bloques de margen. Dentro de una región protegida —de
@@ -637,6 +660,22 @@ por primera vez hace falta un `/minecraft:reload` o un reinicio; el log lo dice.
   echaba a la gente en cuanto una habilidad la levantaba. Va por `push()` **y por
   `lift()`**: quien llame a `setVelocity` a pelo se salta el permiso, que es justo lo que
   hacía el campo cinético de Darkness.
+- **Para que se vea una skin concreta, MANNEQUIN.** Es una entidad viva con forma de
+  jugador y perfil propio (`setProfile`), así que la skin es exactamente la pedida. El
+  patrón está en `BossFight#wearShell`: pelea el mob invisible de siempre, se ve el
+  maniquí, y `AnomalyManager` redirige al jefe los golpes que reciba el maniquí. No hace
+  falta LibsDisguises ni fiarse de que Mojang resuelva un nombre.
+- **Escalar un mob demasiado lo deja flotando.** Con una caja de golpe enorme el servidor
+  lo expulsa hacia arriba en cuanto roza un bloque. Áragon a 4.5 no pisaba el suelo; a 2.8
+  sí. Si aun así hace falta, un empujón hacia abajo cuando no está apoyado lo arregla.
+- **Las arañas son NEUTRALES de día.** Un enjambre que no ataca no es un enjambre: hay que
+  repartirles objetivo a mano, igual que a cualquier esbirro que deba pelear sí o sí.
+- **Un mob con IA propia mira a donde quiere.** Cualquier ataque en cono que use
+  `getDirection()` del jefe fallará cuando su IA le gire la cabeza. Los conos apuntan al
+  objetivo, nunca a la orientación de la entidad.
+- **Con grupos, los ataques de un solo objetivo se diluyen.** Lo que se lanza a "uno" debe
+  repartirse entre varios o barrer un área; si no, cuatro de cada cinco jugadores no ven
+  nunca la habilidad.
 - **El fondo de un logro es un SPRITE, no una ruta de textura.** En 26.1.2 lo válido es
   `minecraft:gui/advancements/backgrounds/end` (o stone, nether, adventure, husbandry).
   Poner `minecraft:textures/block/sculk.png` —que fue lo correcto en su día— pinta el
@@ -690,7 +729,7 @@ No hay Maven en el PATH. Con el JDK 25 portátil y `paper-api 26.1.2`:
 
 ```
 javac --release 21 -encoding UTF-8 -cp "<paper-api + libs del servidor>" -d build @sources
-jar --create --file Anomaly-1.12.0.jar -C build .
+jar --create --file Anomaly-1.12.1.jar -C build .
 ```
 
 El `pom.xml` está para quien tenga Maven; `paper-api` es `provided`.

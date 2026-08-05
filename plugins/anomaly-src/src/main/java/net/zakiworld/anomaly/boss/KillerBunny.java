@@ -255,7 +255,7 @@ public final class KillerBunny extends BossFight {
 
             Compat.spawn(world(), Compat.ITEM_SLIME, sl.clone().add(0, 0.5, 0), 20, 0.4, 0.4, 0.4, 0,
                     Compat.dust(FUR, 1.3f));
-            Compat.spawn(world(), Compat.POOF, sl, 10, 0.3, 0.3, 0.3, 0.03);
+            Compat.spawn(world(), Compat.SNEEZE, sl, 10, 0.3, 0.3, 0.3, 0.03);
             soundAt(sl, "entity.rabbit.jump", 1.1f, 1.4f);
         }
     }
@@ -366,7 +366,7 @@ public final class KillerBunny extends BossFight {
             later(delay += 3, () -> {
                 if (copy == null || !copy.isValid()) return;
                 Location cl = copy.getLocation();
-                Compat.spawn(world(), Compat.POOF, cl.clone().add(0, 0.4, 0), 14, 0.3, 0.3, 0.3, 0.04);
+                Compat.spawn(world(), Compat.CLOUD, cl.clone().add(0, 0.4, 0), 14, 0.3, 0.3, 0.3, 0.04);
                 Compat.spawn(world(), Compat.CLOUD, cl.clone().add(0, 0.4, 0), 10, 0.3, 0.3, 0.3, 0,
                         Compat.dust(FUR, 1.2f));
                 Compat.sound(world(), cl, "entity.rabbit.death", 0.7f, 1.3f);
@@ -444,7 +444,7 @@ public final class KillerBunny extends BossFight {
             if (tick != 42) return;
             boss.teleport(mark);
             Compat.spawn(world(), Compat.BLOCK, mark, 80, 1.2, 0.3, 1.2, 0.2, groundBlock(mark));
-            Compat.spawn(world(), Compat.POOF, mark.clone().add(0, 0.6, 0), 40, 0.8, 0.4, 0.8, 0,
+            Compat.spawn(world(), Compat.WHITE_SMOKE, mark.clone().add(0, 0.6, 0), 40, 0.8, 0.4, 0.8, 0,
                     Compat.dust(BLOOD, 1.5f));
             soundAt(mark, "entity.rabbit.attack", 1.6f, 0.6f);
             for (Player p : Fx.playersNear(mark, 3.4)) {
@@ -869,7 +869,7 @@ public final class KillerBunny extends BossFight {
             boss.setHealth(Math.min(max, boss.getHealth() + max * 0.05));
             Compat.spawn(world(), Compat.HEART == null ? Compat.DUST : Compat.HEART,
                     boss.getLocation().add(0, 1, 0), 10, 0.4, 0.4, 0.4, 0.05);
-            Compat.spawn(world(), Compat.POOF, pl, 20, 0.3, 0.3, 0.3, 0.05);
+            Compat.spawn(world(), Compat.SNEEZE, pl, 20, 0.3, 0.3, 0.3, 0.05);
             soundAt(pl, "entity.rabbit.death", 1.2f, 1.2f);
             copies.remove(prey);
             spawned.remove(prey);

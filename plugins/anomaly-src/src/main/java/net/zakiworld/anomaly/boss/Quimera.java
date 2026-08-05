@@ -692,9 +692,10 @@ public final class Quimera extends BossFight {
             if (!alive()) throw Stop.now();
             double d = 1 + tick * 0.4;
             if (d > 12) return;
+            // Nada de notas musicales: esto es un berrido, no una cancion.
             Fx.arc(boss.getLocation().add(0, 1.6, 0), dir, d, Math.PI * 0.55, (int) (d * 4), p -> {
-                Compat.spawn(world(), Compat.NOTE, p, 1, 0.1, 0.1, 0.1, 1);
                 Compat.spawn(world(), Compat.SMALL_GUST, p, 1, 0, 0, 0, 0);
+                Compat.spawn(world(), Compat.WHITE_ASH, p, 1, 0.1, 0.1, 0.1, 0.01);
             });
             if (tick % 8 != 0) return;
             for (Player p : targets(12)) {
