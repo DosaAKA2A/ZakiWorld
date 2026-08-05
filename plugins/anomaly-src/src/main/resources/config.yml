@@ -136,6 +136,11 @@ anomalias:
     vida: 1500
     dano: 1.0
     nombre: 'Bruja'
+  mimic:
+    activa: true
+    vida: 2000
+    dano: 1.0
+    nombre: 'Mimic'
 
 menu:
   # La anomalia que abre el boton Iniciar del panel.

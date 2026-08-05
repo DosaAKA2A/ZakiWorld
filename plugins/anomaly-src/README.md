@@ -8,7 +8,7 @@ La intención de fondo es empujar a la gente a **salir del spawn** y a **pelear 
 el jefe escala con el número de jugadores, varias habilidades castigan dispersarse y el
 botín se reparte entre todos los que participaron, no solo entre quien da el último golpe.
 
-- **Versión:** 1.9.0
+- **Versión:** 1.10.0
 - **Paquete:** `net.zakiworld.anomaly`
 - **Probado contra:** Paper 26.1.2 (MC 26.1.2), compilado con `--release 21`
 - **Permiso único:** `anomaly.gui` (`default: op`)
@@ -412,9 +412,53 @@ de la cabeza y se derrama; si el sapo sigue vivo, se marcha solo dando brincos.
 
 ---
 
+## El Mimic
+
+El único jefe que no quiere que lo encuentres. Elemento **tierra** y, como el Conejo,
+**sin brillo, sin pilar y sin nombre encima**: el camuflaje es el jefe entero. Cada
+fase es un engaño distinto.
+
+### Fase I — el rebaño
+
+Al llegar a las coordenadas solo hay un **grupo de animales del bioma** (vacas y ovejas
+en la llanura, zorros y conejos en la nieve, ocelotes y loros en la jungla…). Uno de
+ellos es él. La única pista es la de siempre en un mimic: **pegarle**. Al recibir daño
+**crece de golpe** — cuánto depende del animal: un pollo pasa a 3.4, una vaca a 2.5 —
+y suelta sus habilidades: embestida, pisotón en ondas, el chillido con una voz que no
+es suya y la estampida de señuelos. Si lo dejan demasiado rato a la vista, **Camuflaje**:
+destello, cuerpo nuevo de otra especie, rebaño nuevo, y vuelta a no ser nadie. Así
+hasta acabar la fase.
+
+Que le han pegado se detecta **vigilando la vida en cada tick**, no por evento: así
+cuentan la espada, las flechas y hasta el `/anomaly hurt` de las pruebas. El cuerpo
+cambia con el truco del Storm Rider (entidad nueva, vida y máximo copiados).
+
+### Fase II — los cofres
+
+Se esconde **dentro de uno de cinco cofres** puestos en círculo. Los cuatro falsos
+**muerden** a quien los toca (un shulker invisible de 1 de vida bajo cada cofre; al
+romperlo, dentellada a su verdugo); el verdadero es **el propio jefe**, invisible y
+encogido dentro del cofre — por eso la barra baja al acertar, que es la confirmación.
+Mientras el grupo duda, **La Codicia** roe a todos los presentes con daño por tiempo
+que **crece cuanto más tardan** (de 1 hasta 8 por tanda). Al encontrarlo revienta el
+cofre, da la cara unos segundos y vuelve a esconderse. Así hasta el 33 %.
+
+### Fase III — el robo de rostro
+
+Se copia a un **jugador de verdad**: su cara (la cabeza con su skin), su armadura y
+sus armas clonadas pieza a pieza, y **su nombre a secas** encima — sin estrella, como
+un jugador más. Pega muchísimo más fuerte que el original. Y a la **mitad de la fase
+se desata**: brillo rojo (el único momento en que brilla), velocidad de ataque 4.0,
+más daño, más velocidad y el repertorio berserker — frenesí de golpes, salto
+carnicero, torbellino de acero y la sombra que aparece por la espalda del copiado.
+
+Al morir, los disfraces se le caen entre destellos, y debajo no había nada.
+
+---
+
 ## El árbol de logros
 
-Doce logros: la raíz, uno por anomalía y **El que las vio todas**, que exige las diez.
+Trece logros: la raíz, uno por anomalía y **El que las vio todas**, que exige las once.
 Todos los de jefe son de tipo *challenge*, así que traen el marco morado y el sonido de
 desafío de vanilla.
 
@@ -498,7 +542,7 @@ No hay Maven en el PATH. Con el JDK 25 portátil y `paper-api 26.1.2`:
 
 ```
 javac --release 21 -encoding UTF-8 -cp "<paper-api + libs del servidor>" -d build @sources
-jar --create --file Anomaly-1.9.0.jar -C build .
+jar --create --file Anomaly-1.10.0.jar -C build .
 ```
 
 El `pom.xml` está para quien tenga Maven; `paper-api` es `provided`.

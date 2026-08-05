@@ -30,7 +30,7 @@ import java.util.logging.Level;
 public final class Advancements {
 
     /** Sube esto para que el datapack se reescriba en el proximo arranque. */
-    private static final int PACK_VERSION = 6;
+    private static final int PACK_VERSION = 7;
 
     private static final String NS = "anomaly";
     private static final String ROOT = "raiz";

@@ -10,6 +10,7 @@ import net.zakiworld.anomaly.boss.Bruja;
 import net.zakiworld.anomaly.boss.Darkness;
 import net.zakiworld.anomaly.boss.Herbola;
 import net.zakiworld.anomaly.boss.Medusa;
+import net.zakiworld.anomaly.boss.Mimic;
 import net.zakiworld.anomaly.boss.KillerBunny;
 import net.zakiworld.anomaly.boss.SaltLeviathan;
 import net.zakiworld.anomaly.boss.ScreamingGoat;
@@ -48,6 +49,7 @@ public final class AnomalyRegistry {
         register(new HerbolaType());
         register(new MedusaType());
         register(new BrujaType());
+        register(new MimicType());
     }
 
     public void register(AnomalyType type) {
@@ -96,6 +98,10 @@ public final class AnomalyRegistry {
 
     public AnomalyType bruja() {
         return types.get(Bruja.ID);
+    }
+
+    public AnomalyType mimic() {
+        return types.get(Mimic.ID);
     }
 
     public List<AnomalyType> all() {
@@ -1613,6 +1619,146 @@ public final class AnomalyRegistry {
 
     private static Bruja bruja(BossFight fight) {
         return (Bruja) fight;
+    }
+
+    // ---------------------------------------------------------------------- Mimic
+
+    /** Ficha del Mimic. */
+    public final class MimicType implements AnomalyType {
+
+        @Override
+        public String id() {
+            return Mimic.ID;
+        }
+
+        @Override
+        public String display() {
+            return plugin.getConfig().getString("anomalias." + id() + ".nombre", "Mimic");
+        }
+
+        @Override
+        public TextColor color() {
+            return Mimic.ACCENT;
+        }
+
+        /** Sin brillo ni pilar a proposito: el camuflaje es el jefe entero. */
+        @Override
+        public NamedTextColor glowColor() {
+            return null;
+        }
+
+        @Override
+        public Element element() {
+            return Element.TIERRA;
+        }
+
+        @Override
+        public Material icon() {
+            Material m = Material.matchMaterial("CHEST");
+            return m != null ? m : Material.BARREL;
+        }
+
+        @Override
+        public String tagline() {
+            return "Uno de esos animales no es un animal";
+        }
+
+        @Override
+        public List<String> origin() {
+            return List.of(
+                    "Nadie lo ha visto nunca, y ese es el problema:",
+                    "todo el mundo lo ha visto. Era la vaca del",
+                    "vecino, el cofre del tesoro, aquel viajero tan",
+                    "amable. Cuando la grieta se abrio, ni siquiera",
+                    "salio nada... o eso parecio.");
+        }
+
+        @Override
+        public List<String> threat() {
+            return List.of(
+                    "Elemento de tierra: aparece entre la fauna del bioma",
+                    "NO brilla, NO lleva nombre: hay que pegarle para saber",
+                    "FASE II: escondite en cofres; los falsos MUERDEN",
+                    "La Codicia hace dano a todos, y crece con el tiempo",
+                    "FASE III: se copia a un jugador (cara, armadura, armas)",
+                    "A mitad de la fase SE DESATA: berserker puro");
+        }
+
+        @Override
+        public double baseHealth() {
+            return 2000;
+        }
+
+        @Override
+        public int arenaRadius() {
+            return 24;
+        }
+
+        @Override
+        public List<Ability> abilities() {
+            return mimicAbilities();
+        }
+
+        @Override
+        public BossFight create(AnomalyPlugin plugin, ActiveAnomaly event, Location where) {
+            return new Mimic(plugin, event, where);
+        }
+    }
+
+    /**
+     * Las 12 habilidades del Mimic. Las de la fase 1 solo funcionan destapado; las de
+     * la 2 giran alrededor de los cofres; las de la 3 pegan mas si ya se desato.
+     */
+    public List<Ability> mimicAbilities() {
+        List<Ability> list = new ArrayList<>();
+
+        // --- Fase I: el rebano
+        add(list, "camuflaje", "Camuflaje", 1, 400, 40, 3,
+                "Destello, cuerpo nuevo y rebano nuevo: vuelve a no ser nadie.",
+                icon("ENDER_PEARL", "SNOWBALL"), f -> mimic(f).camouflageCast());
+        add(list, "embestida_salvaje", "Embestida Salvaje", 1, 180, 50, 5,
+                "Marca una linea y la cruza arrollando. Solo destapado.",
+                icon("LEAD", "SADDLE"), f -> mimic(f).wildCharge());
+        add(list, "pisoton_creciente", "Pisoton Creciente", 1, 220, 60, 4,
+                "Tres ondas desde donde pisa, cada una mas ancha que la anterior.",
+                icon("COARSE_DIRT", "DIRT"), f -> mimic(f).growingStomp());
+        add(list, "chillido_bestial", "Chillido Bestial", 1, 240, 30, 4,
+                "El grito del animal de turno, en cono y con una voz que no es suya.",
+                icon("NOTE_BLOCK", "GOAT_HORN"), f -> mimic(f).beastShriek());
+        add(list, "estampida_senuelos", "Estampida de Senuelos", 1, 380, 60, 2,
+                "El rebano entero embiste a la vez; los senuelos tambien empujan.",
+                icon("WHEAT", "HAY_BLOCK"), f -> mimic(f).decoyStampede());
+
+        // --- Fase II: los cofres
+        add(list, "ronda_cofres", "Ronda de Cofres", 2, 400, 60, 3,
+                "Cinco cofres en circulo y el dentro de uno. La barra delata al verdadero.",
+                icon("CHEST", "BARREL"), f -> mimic(f).chestRound());
+        add(list, "dentellada", "Dentellada", 2, 120, 20, 5,
+                "El cofre del jefe pega un bocado a quien se arrima de mas.",
+                icon("BONE", "FLINT"), f -> mimic(f).chestBite());
+
+        // --- Fase III: el robo de rostro
+        add(list, "tajo_ladron", "Tajo Ladron", 3, 160, 30, 5,
+                "Se lanza, corta y te roba la prisa: tu velocidad ahora es suya.",
+                icon("IRON_SWORD", "STONE_SWORD"), f -> mimic(f).thiefSlash());
+        add(list, "sombra_del_otro", "Sombra del Otro", 3, 240, 40, 4,
+                "Aparece detras del jugador al que copio y descarga.",
+                icon("ENDER_PEARL", "ENDER_EYE"), f -> mimic(f).othersShadow());
+        add(list, "frenesi_carnicero", "Frenesi Carnicero", 3, 260, 60, 4,
+                "Una tanda de golpes rapidisimos; desatado, casi el doble.",
+                icon("IRON_AXE", "STONE_AXE"), f -> mimic(f).butcherFrenzy());
+        add(list, "salto_carnicero", "Salto Carnicero", 3, 300, 60, 4,
+                "Salta muy alto y cae de lleno sobre la marca.",
+                icon("NETHERITE_BOOTS", "IRON_BOOTS"), f -> mimic(f).butcherLeap());
+        add(list, "torbellino_acero", "Torbellino de Acero", 3, 280, 70, 4,
+                "Gira repartiendo tajos en tres ondas concentricas.",
+                icon("SHEARS", "IRON_SWORD"), f -> mimic(f).steelWhirlwind());
+
+        return list;
+    }
+
+    private static Mimic mimic(BossFight fight) {
+        return (Mimic) fight;
     }
 
     private static SepulchralKnight knight(BossFight fight) {
