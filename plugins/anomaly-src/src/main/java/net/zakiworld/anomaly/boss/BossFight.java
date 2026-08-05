@@ -498,6 +498,15 @@ public abstract class BossFight {
             markMinion(body);
             boss.setInvisible(true);
             boss.setCustomNameVisible(false);
+            // Y CALLADO. El mob de debajo sigue siendo un zombi (o lo que sea) y sus
+            // gruñidos delatan lo que hay dentro del disfraz; los sonidos del jefe los
+            // pone cada habilidad a mano.
+            boss.setSilent(true);
+            // El perfil, otra vez un par de ticks despues. Si por lo que sea no viajo
+            // en el paquete de aparicion, este segundo intento lo arregla.
+            later(2, () -> {
+                if (shell instanceof org.bukkit.entity.Mannequin m && m.isValid()) m.setProfile(profile);
+            });
         } catch (Throwable t) {
             plugin.getLogger().warning("No se pudo poner el cuerpo con skin: " + t);
             shell = null;

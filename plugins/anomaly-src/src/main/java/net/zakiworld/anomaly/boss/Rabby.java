@@ -20,6 +20,7 @@ import org.bukkit.entity.Mob;
 import org.bukkit.entity.Player;
 import org.bukkit.entity.Zombie;
 import org.bukkit.inventory.EntityEquipment;
+import org.bukkit.inventory.ItemStack;
 import org.bukkit.util.Vector;
 
 import java.time.Duration;
@@ -40,9 +41,10 @@ import java.util.UUID;
  * el dano— y carga un ataque que se traga las estelas de media arena y revienta a
  * cualquiera que no lleve buen equipo.
  *
- * El aspecto sale de una skin de verdad: la cabeza lleva la textura puesta y, si el
- * servidor tiene LibsDisguises, ademas se le pone el disfraz de jugador completo. Sin
- * LibsDisguises sigue funcionando; solo se ve un poco menos fino.
+ * El cuerpo que se ve es un MANNEQUIN con perfil de skin propio; el zombi que pelea va
+ * debajo, invisible y CALLADO —sus gruñidos delataban el truco— y los golpes que recibe
+ * el maniqui se le pasan a el. La ropa blanca de cuero es aparte: si el cliente no
+ * llegara a pintar la textura del perfil, la silueta se sigue pareciendo a la skin.
  */
 public final class Rabby extends BossFight {
 
@@ -88,7 +90,13 @@ public final class Rabby extends BossFight {
 
         EntityEquipment eq = boss.getEquipment();
         if (eq != null) {
+            eq.setChestplate(dyed(Material.LEATHER_CHESTPLATE, 0xF2F2F2));
+            eq.setLeggings(dyed(Material.LEATHER_LEGGINGS, 0xE8E8E8));
+            eq.setBoots(dyed(Material.LEATHER_BOOTS, 0xDDDDDD));
             eq.setHelmetDropChance(0);
+            eq.setChestplateDropChance(0);
+            eq.setLeggingsDropChance(0);
+            eq.setBootsDropChance(0);
             eq.setItemInMainHandDropChance(0);
         }
         // El cuerpo de persona con SU skin. El zombi de debajo sigue peleando, pero
@@ -120,7 +128,16 @@ public final class Rabby extends BossFight {
                     Title.Times.times(Duration.ofMillis(400), Duration.ofMillis(1800), Duration.ofMillis(600))));
         }
         soundAt(spot, "entity.player.levelup", 1.0f, 1.8f);
-        Compat.spawn(world(), Compat.HAPPY_VILLAGER, spot.clone().add(0, 2, 0), 20, 0.5, 0.6, 0.5, 0);
+        Compat.spawn(world(), Compat.FIREWORK_SPARK, spot.clone().add(0, 2, 0), 14, 0.5, 0.6, 0.5, 0.05);
+    }
+
+    private static ItemStack dyed(Material piece, int rgb) {
+        ItemStack item = new ItemStack(piece);
+        if (item.getItemMeta() instanceof org.bukkit.inventory.meta.LeatherArmorMeta meta) {
+            meta.setColor(org.bukkit.Color.fromRGB(rgb));
+            item.setItemMeta(meta);
+        }
+        return item;
     }
 
     // -------------------------------------------------------------------- ambiente
@@ -153,16 +170,16 @@ public final class Rabby extends BossFight {
      */
     private void idle() {
         if (boss instanceof Mob m && m.getTarget() != null) m.setTarget(null);
-        if (ticks() % 40 == 0) {
-            Compat.spawn(world(), Compat.HAPPY_VILLAGER, boss.getLocation().add(0, 2.2, 0), 2,
-                    0.3, 0.2, 0.3, 0);
+        if (ticks() % 60 == 0) {
+            Compat.spawn(world(), Compat.FIREWORK_SPARK, boss.getLocation().add(0, 2.2, 0), 1,
+                    0.25, 0.15, 0.25, 0.01);
         }
         if (ticks() % 70 != 0) return;
         Player near = Fx.nearest(boss.getLocation(), 8);
         if (near == null) return;
         face(near.getEyeLocation());
         near.sendActionBar(Component.text("Rabby te saluda.", ACCENT));
-        if (random.nextInt(3) == 0) soundAt(boss.getLocation(), "entity.villager.yes", 0.8f, 1.6f);
+        if (random.nextInt(3) == 0) soundAt(boss.getLocation(), "block.note_block.bell", 0.7f, 1.8f);
     }
 
     private void keepHostile() {
@@ -744,12 +761,12 @@ public final class Rabby extends BossFight {
     public void taunt() {
         if (!alive() || !angry) return;
         Location l = boss.getLocation();
-        soundAt(l, "entity.villager.no", 1.4f, 1.5f);
+        soundAt(l, "entity.player.attack.nodamage", 1.4f, 1.5f);
         broadcastNear(Component.text("Se esta riendo de ustedes.", ACCENT));
         Compat.apply(boss, "speed", 160, 2);
         Compat.apply(boss, "strength", 160, 0);
-        Compat.spawn(world(), Compat.NOTE, l.clone().add(0, 2.2, 0), 14, 0.4, 0.3, 0.4, 1);
-        Compat.spawn(world(), Compat.HAPPY_VILLAGER, l.clone().add(0, 2.2, 0), 10, 0.4, 0.3, 0.4, 0);
+        Compat.spawn(world(), Compat.FIREWORK_SPARK, l.clone().add(0, 2.2, 0), 14, 0.4, 0.3, 0.4, 0.06);
+        Compat.spawn(world(), Compat.ELECTRIC_SPARK, l.clone().add(0, 2.2, 0), 10, 0.4, 0.3, 0.4, 0.02);
 
         for (Player p : targets(12)) {
             Compat.apply(p, "slowness", 60, 0);
