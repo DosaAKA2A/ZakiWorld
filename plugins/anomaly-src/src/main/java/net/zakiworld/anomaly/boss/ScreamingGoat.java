@@ -331,7 +331,7 @@ public final class ScreamingGoat extends BossFight {
             Location l = boss.getLocation().add(0, 1.3, 0);
 
             if (tick < windup) {
-                // Coge aire: se hincha y el blanco sube de intensidad.
+                // Toma aire: se hincha y el blanco sube de intensidad.
                 double r = 0.6 + (tick / (double) windup) * 1.4;
                 Fx.sphere(l, r, 20, p -> Compat.spawn(world(), Compat.DUST, p, 1, 0, 0, 0, 0,
                         Compat.dust(WHITE_HOT, 1.2f)));
@@ -403,7 +403,7 @@ public final class ScreamingGoat extends BossFight {
 
     /** 1. Grito Atronador: el cono de siempre, con tres rayos sobre quien lo pille. */
     public void thunderScream() {
-        broadcastNear(Component.text("Coge aire.", ACCENT));
+        broadcastNear(Component.text("Toma aire.", ACCENT));
         scream(120, 14, 11, 1.1, 3, 26);
     }
 

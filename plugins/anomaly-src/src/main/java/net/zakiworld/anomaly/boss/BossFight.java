@@ -48,6 +48,8 @@ public abstract class BossFight {
     private boolean finished;
     private double damageScale = 1.0;
     private long invulnerableSince;
+    /** Jugadores con permiso de vuelo temporal y el tick en que se les retira. */
+    private final java.util.Map<java.util.UUID, Long> airTime = new java.util.HashMap<>();
 
     /** La animacion guionizada mas larga es la resurreccion (13 s); esto le da margen. */
     private static final int MAX_INVULNERABLE_TICKS = 400;
@@ -68,6 +70,17 @@ public abstract class BossFight {
 
     /** La animacion de muerte, antes de repartir el botin. */
     public abstract void onDeath();
+
+    /**
+     * Cuanto hay que esperar tras la muerte antes de barrer la escena.
+     *
+     * Por defecto lo que dura una animacion de muerte normal. Herbola lo alarga porque
+     * su llanto del Cantor sigue quince segundos DESPUES de que ella caiga, y si se
+     * limpia antes se borra al loro en mitad de la cuenta atras.
+     */
+    public int deathAnimationTicks() {
+        return 110;
+    }
 
     /** Nombre corto para los mensajes de combate. */
     public abstract String bossName();
@@ -145,6 +158,7 @@ public abstract class BossFight {
         boss.setRemainingAir(boss.getMaximumAir());
 
         watchInvulnerability();
+        tickAirTime();
 
         int newPhase = PhaseBars.currentPhase(healthFraction());
         if (newPhase != phase) {
@@ -243,6 +257,7 @@ public abstract class BossFight {
 
     public void cleanup() {
         finished = true;
+        clearAirTime();
         for (Entity e : spawned) {
             Glow.clear(e);
             Fx.safeRemove(e);
@@ -387,13 +402,64 @@ public abstract class BossFight {
     /**
      * Empuje. Respeta el interruptor de config: en Rip el usuario prohibio que las
      * animaciones movieran a nadie, y aqui se puede apagar igual sin tocar codigo.
+     *
+     * Si el empuje tiene componente vertical seria, se le da permiso de vuelo temporal
+     * al jugador. Sin eso el servidor lo expulsa por "volar" o por "moverse muy rapido"
+     * en cuanto una habilidad lo levanta, que es exactamente lo que pasaba.
      */
     public void push(Player p, Vector velocity) {
         if (p == null || !plugin.settings().allowKnockback()) return;
         try {
+            if (velocity.getY() > 0.35) grantAirTime(p, 120);
             p.setVelocity(p.getVelocity().add(velocity));
         } catch (Throwable ignored) {
         }
+    }
+
+    /**
+     * Deja al jugador "volar" durante un rato a ojos del servidor.
+     *
+     * No le da vuelo de creativo: solo desactiva la comprobacion que lo echaria del
+     * servidor por estar en el aire sin motivo. Se le devuelve su estado original
+     * despues, y nunca se le quita el vuelo a quien ya lo tuviera de antes.
+     */
+    public void grantAirTime(Player p, int ticks) {
+        if (p == null || !p.isOnline()) return;
+        if (p.getAllowFlight()) return;
+        if (airTime.containsKey(p.getUniqueId())) {
+            airTime.put(p.getUniqueId(), ticks() + ticks);
+            return;
+        }
+        airTime.put(p.getUniqueId(), ticks() + ticks);
+        p.setAllowFlight(true);
+    }
+
+    /** Devuelve el estado de vuelo a quien ya se le paso el efecto. */
+    private void tickAirTime() {
+        if (airTime.isEmpty()) return;
+        airTime.entrySet().removeIf(e -> {
+            if (ticks() < e.getValue()) return false;
+            Player p = plugin.getServer().getPlayer(e.getKey());
+            if (p != null && p.isOnline() && p.getGameMode() != org.bukkit.GameMode.CREATIVE
+                    && p.getGameMode() != org.bukkit.GameMode.SPECTATOR) {
+                p.setAllowFlight(false);
+                p.setFlying(false);
+            }
+            return true;
+        });
+    }
+
+    /** Se llama al cerrar el evento: nadie se queda con el vuelo puesto. */
+    private void clearAirTime() {
+        for (java.util.UUID id : airTime.keySet()) {
+            Player p = plugin.getServer().getPlayer(id);
+            if (p != null && p.isOnline() && p.getGameMode() != org.bukkit.GameMode.CREATIVE
+                    && p.getGameMode() != org.bukkit.GameMode.SPECTATOR) {
+                p.setAllowFlight(false);
+                p.setFlying(false);
+            }
+        }
+        airTime.clear();
     }
 
     /** Aviso en la barra de accion a todos los que estan viendo la pelea, peleen o no. */

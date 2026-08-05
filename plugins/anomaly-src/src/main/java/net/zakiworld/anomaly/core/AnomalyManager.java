@@ -400,7 +400,7 @@ public final class AnomalyManager implements Listener {
         if (event.bars() != null) event.bars().removeAll();
 
         // Se deja respirar la animacion de muerte antes de barrer la escena.
-        Anim.later(plugin, 110, () -> {
+        Anim.later(plugin, event.fight().deathAnimationTicks(), () -> {
             if (current == event) {
                 current = null;
                 releaseChunks();

@@ -15,7 +15,6 @@ import net.zakiworld.anomaly.core.Tags;
 import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.block.Block;
-import org.bukkit.block.data.BlockData;
 import org.bukkit.entity.Bogged;
 import org.bukkit.entity.Parrot;
 import org.bukkit.entity.Player;
@@ -26,9 +25,7 @@ import org.bukkit.util.Vector;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.EnumSet;
-import java.util.LinkedHashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.Set;
 
 /**
@@ -65,8 +62,8 @@ public final class Herbola extends BossFight {
             Material.AIR, Material.CAVE_AIR, Material.SHORT_GRASS, Material.TALL_GRASS,
             Material.FERN, Material.LARGE_FERN, Material.DEAD_BUSH, Material.SNOW);
 
-    /** Cada bloque tocado con su estado original, para devolverlo al acabar. */
-    private final Map<Location, BlockData> restore = new LinkedHashMap<>();
+    /** Cuantos bloques lleva convertidos, solo para el tope y el log. */
+    private int changed;
 
     private Parrot parrot;
     private boolean parrotFreed;
@@ -123,23 +120,36 @@ public final class Herbola extends BossFight {
         arrivalAnimation(spot);
     }
 
-    /** El loro rojo que le canta desde la cabeza. Nunca se le puede matar. */
+    /**
+     * El Cantor: el loro rojo que le canta. Nunca se le puede matar.
+     *
+     * NO va de pasajero: un pasajero se sienta en la cabeza y tapaba el nombre del
+     * jefe. Se le coloca a mano en el hombro cada tick, girando con ella.
+     */
     private void spawnParrot() {
-        parrot = world().spawn(boss.getLocation().add(0, 1.6, 0), Parrot.class, p -> {
+        parrot = world().spawn(shoulder(), Parrot.class, p -> {
             p.setAdult();
             p.setPersistent(true);
             p.setRemoveWhenFarAway(false);
             p.setInvulnerable(true);
             p.setSilent(false);
+            p.setAI(false);
+            p.setGravity(false);
             try {
                 p.setVariant(Parrot.Variant.RED);
             } catch (Throwable ignored) {
             }
-            p.customName(Component.text("Cantor de Herbola", TextColor.color(0xE05A4A)));
-            p.setCustomNameVisible(false);
+            p.customName(Component.text("Cantor", TextColor.color(0xE05A4A)));
+            p.setCustomNameVisible(true);
         });
         markMinion(parrot);
-        boss.addPassenger(parrot);
+    }
+
+    /** El punto exacto del hombro derecho, girando con el cuerpo del jefe. */
+    private Location shoulder() {
+        Location l = boss.getLocation();
+        double yaw = Math.toRadians(l.getYaw() + 90);
+        return l.clone().add(Math.cos(yaw) * 0.55, 1.05, Math.sin(yaw) * 0.55);
     }
 
     private void arrivalAnimation(Location spot) {
@@ -176,18 +186,21 @@ public final class Herbola extends BossFight {
 
     // --------------------------------------------------- LA CONVERSION DEL TERRENO
 
-    /** Anota el estado original antes de cambiar nada, para poder devolverlo despues. */
+    /**
+     * Convierte un bloque. Lo que Herbola cambia SE QUEDA: el jardin es permanente,
+     * asi lo quiso el servidor. Por eso importa mas que nunca la lista blanca: solo
+     * toca terreno natural, nunca un cofre, una puerta ni nada construido.
+     */
     private void convert(Block b, Material to) {
-        if (restore.size() >= MAX_CHANGED) return;
+        if (changed >= MAX_CHANGED) return;
         if (b.getType() == to) return;
-        Location key = b.getLocation();
-        if (!restore.containsKey(key)) restore.put(key, b.getBlockData());
         b.setType(to, false);
+        changed++;
     }
 
     /** El rastro de musgo por donde pisa, como la nieve del muneco. */
     private void trail() {
-        if (!alive() || restore.size() >= MAX_CHANGED) return;
+        if (!alive() || changed >= MAX_CHANGED) return;
         Location g = Fx.ground(boss.getLocation(), 3);
         Block floor = g.getBlock().getRelative(0, -1, 0);
         if (GROUND.contains(floor.getType())) convert(floor, Material.MOSS_BLOCK);
@@ -201,7 +214,7 @@ public final class Herbola extends BossFight {
      * @param density de 0 a 1; cuanta parte de los bloques se transforma
      */
     private void bloomAround(Location center, int radius, double density) {
-        if (restore.size() >= MAX_CHANGED) return;
+        if (changed >= MAX_CHANGED) return;
         for (int x = -radius; x <= radius; x++) {
             for (int z = -radius; z <= radius; z++) {
                 if (x * x + z * z > radius * radius) continue;
@@ -225,31 +238,11 @@ public final class Herbola extends BossFight {
         }
     }
 
-    /**
-     * Devuelve el terreno tal y como estaba.
-     *
-     * Es obligatorio: sin esto la anomalia dejaria el mapa lleno de musgo permanente y
-     * seria griefing con pasos extra. Se hace en orden inverso para que las plantas se
-     * quiten antes que el bloque que las sostiene.
-     */
-    private void restoreTerrain() {
-        List<Map.Entry<Location, BlockData>> entries = new ArrayList<>(restore.entrySet());
-        for (int i = entries.size() - 1; i >= 0; i--) {
-            Map.Entry<Location, BlockData> e = entries.get(i);
-            try {
-                e.getKey().getBlock().setBlockData(e.getValue(), false);
-            } catch (Throwable ignored) {
-            }
-        }
-        if (!restore.isEmpty()) {
-            plugin.getLogger().info("Herbola: devueltos " + restore.size() + " bloque(s) a su estado original.");
-        }
-        restore.clear();
-    }
-
     @Override
     public void cleanup() {
-        restoreTerrain();
+        if (changed > 0) {
+            plugin.getLogger().info("Herbola: dejo " + changed + " bloque(s) convertidos. Es a proposito.");
+        }
         if (parrot != null) {
             Glow.clear(parrot);
             spawned.remove(parrot);
@@ -266,6 +259,7 @@ public final class Herbola extends BossFight {
         if (!alive()) return;
 
         if (ticks() % 6 == 0) trail();
+        keepHostile();
 
         if (ticks() % 4 == 0) {
             Location l = boss.getLocation().add(0, 1.4, 0);
@@ -276,9 +270,10 @@ public final class Herbola extends BossFight {
             }
         }
 
-        // El loro suelto persigue por su cuenta; el loro montado canta.
+        // El loro suelto persigue por su cuenta; el del hombro canta.
         if (parrot != null && parrot.isValid()) {
             if (!parrotFreed) {
+                parrot.teleport(shoulder());
                 if (ticks() % 60 == 0) {
                     Compat.apply(boss, "regeneration", 80, 1);
                     Compat.apply(boss, "resistance", 80, 0);
@@ -290,6 +285,18 @@ public final class Herbola extends BossFight {
                         Compat.dust(0xE05A4A, 1.0f));
             }
         }
+    }
+
+    /**
+     * Herbola es hostil de verdad: nunca deja de tener objetivo, asi que dispara con
+     * el arco como cualquier esqueleto MIENTRAS lanza sus habilidades.
+     */
+    private void keepHostile() {
+        if (ticks() % 20 != 0) return;
+        org.bukkit.entity.LivingEntity current = boss instanceof org.bukkit.entity.Mob m ? m.getTarget() : null;
+        if (current != null && current.isValid() && !current.isDead()) return;
+        Player t = Fx.nearest(boss.getLocation(), plugin.settings().participationRadius());
+        if (t != null && boss instanceof org.bukkit.entity.Mob m) m.setTarget(t);
     }
 
     // --------------------------------------------------------------- cambio de fase
@@ -367,14 +374,20 @@ public final class Herbola extends BossFight {
 
     // ---------------------------------------------------------------------- muerte
 
+    /**
+     * La muerte de Herbola no termina la pelea: empieza el llanto del Cantor.
+     *
+     * El loro se eleva iluminado de rojo mientras carga un area enorme, muy despacio y
+     * muy avisada. Quien no salga a tiempo se come la explosion, y todo lo que alcance
+     * queda convertido en jardin para siempre.
+     */
     @Override
     public void onDeath() {
         Location l = loc();
         soundAt(l, "entity.bogged.death", 1.6f, 0.7f);
-        soundAt(l, "entity.parrot.death", 1.4f, 0.9f);
 
-        animate(90, tick -> {
-            double t = tick / 90.0;
+        animate(60, tick -> {
+            double t = tick / 60.0;
             Fx.helix(l, 2.4 * (1 - t) + 0.4, 4.0, 22, 2.5, p ->
                     Compat.spawn(world(), Compat.DUST, p, 1, 0, 0, 0, 0, Compat.dust(MOSS, 1.5f)));
             if (tick % 10 == 0) {
@@ -382,13 +395,93 @@ public final class Herbola extends BossFight {
                         new ItemStack(Material.FLOWERING_AZALEA_LEAVES));
                 soundAt(l, "block.moss.break", 1.1f, 0.6f + (float) t);
             }
+        }, () -> cantorWeeps(l));
+    }
+
+    /** El llanto del Cantor dura mucho mas que una muerte normal; hay que esperarlo. */
+    @Override
+    public int deathAnimationTicks() {
+        return 60 + 240 + 60;
+    }
+
+    /** El llanto: se eleva, carga, y revienta en un jardin permanente. */
+    private void cantorWeeps(Location l) {
+        if (parrot == null || !parrot.isValid()) {
+            plugin.getLogger().warning("El Cantor ya no estaba al morir Herbola; no hubo llanto.");
+            return;
+        }
+        plugin.getLogger().info("Herbola: empieza el llanto del Cantor.");
+        final Location center = Fx.ground(l, 6);
+        final double radius = 18;
+
+        for (Player p : Fx.viewersNear(center, 90)) {
+            p.sendMessage(plugin.prefix()
+                    .append(Component.text("El Cantor llora.", TextColor.color(0xE05A4A), TextDecoration.BOLD)));
+            p.showTitle(net.kyori.adventure.title.Title.title(
+                    Component.text("EL CANTOR LLORA", TextColor.color(0xE05A4A), TextDecoration.BOLD),
+                    Component.text("Salgan del circulo", NamedTextColor.GRAY),
+                    net.kyori.adventure.title.Title.Times.times(
+                            Duration.ofMillis(300), Duration.ofMillis(2200), Duration.ofMillis(600))));
+        }
+        Glow.clear(parrot);
+        Glow.apply(parrot, NamedTextColor.RED);
+        soundAt(center, "entity.parrot.imitate.ghast", 1.8f, 0.6f);
+
+        // 12 segundos de aviso: sube despacio y el circulo se pinta cada vez mas denso.
+        animate(240, tick -> {
+            if (parrot == null || !parrot.isValid()) throw Stop.now();
+            parrot.teleport(parrot.getLocation().add(0, 0.045, 0));
+            double t = tick / 240.0;
+
+            Fx.ring(center, radius, (int) (40 + t * 90), tick * 0.05, p ->
+                    Compat.spawnForced(world(), Compat.DUST, Fx.ground(p, 5).add(0, 0.3, 0), 1, 0, 0, 0, 0,
+                            Compat.dust(0xE05A4A, (float) (1.4 + t))));
+            Fx.beam(center, parrot.getLocation(), 1.2, p ->
+                    Compat.spawn(world(), Compat.DUST, p, 1, 0, 0, 0, 0, Compat.dust(0xE05A4A, 1.3f)));
+            Compat.spawn(world(), Compat.DUST, parrot.getLocation(), 6, 0.4, 0.4, 0.4, 0,
+                    Compat.dust(0xE05A4A, (float) (1.2 + t)));
+
+            if (tick % 20 == 0) {
+                int left = (240 - tick) / 20;
+                soundAt(center, "block.note_block.pling", 1.4f, 0.4f + (float) t);
+                for (Player p : Fx.viewersNear(center, 60)) {
+                    boolean safe = p.getLocation().distance(center) > radius;
+                    p.sendActionBar(Component.text("El Cantor llora  ", NamedTextColor.GRAY)
+                            .append(Component.text(left + "s", TextColor.color(0xE05A4A), TextDecoration.BOLD))
+                            .append(Component.text(safe ? "   estas fuera" : "   ESTAS DENTRO",
+                                    safe ? NamedTextColor.GREEN : NamedTextColor.RED, TextDecoration.BOLD)));
+                }
+            }
         }, () -> {
-            Compat.spawn(world(), Compat.EXPLOSION_EMITTER, l, 1);
-            Compat.spawn(world(), Compat.DUST, l.clone().add(0, 1, 0), 120, 1.5, 1.5, 1.5, 0,
-                    Compat.dust(BLOOM, 1.8f));
-            soundAt(l, "block.moss.break", 1.6f, 0.5f);
-            // El jardin se marchita solo: el terreno vuelve como estaba.
-            broadcastNear(Component.text("El jardin se marchita.", ACCENT));
+            Location pl = parrot != null && parrot.isValid() ? parrot.getLocation() : center;
+            Compat.spawn(world(), Compat.FLASH, pl, 1);
+            Compat.spawn(world(), Compat.EXPLOSION_EMITTER, center, 4);
+            soundAt(center, "entity.generic.explode", 2.0f, 0.4f);
+            soundAt(center, "entity.parrot.death", 1.8f, 0.7f);
+            soundAt(center, "block.moss.place", 1.8f, 0.5f);
+
+            // Todo el circulo queda convertido, y se queda asi.
+            bloomAround(center, (int) radius, 1.0);
+            for (int r = 1; r <= 6; r++) {
+                final int ring = r;
+                later(r * 3, () -> Fx.ring(center, ring * 3.0, ring * 14, p ->
+                        Compat.spawn(world(), Compat.DUST, Fx.ground(p, 4).add(0, 0.4, 0), 2, 0, 0, 0, 0,
+                                Compat.dust(BLOOM, 1.8f))));
+            }
+            for (Player p : Fx.playersNear(center, radius)) {
+                double d = p.getLocation().distance(center);
+                hit(p, Math.max(14, 46 - d * 1.2));
+                push(p, p.getLocation().toVector().subtract(center.toVector())
+                        .normalize().setY(0.8).multiply(1.6));
+            }
+            if (parrot != null) {
+                Glow.clear(parrot);
+                spawned.remove(parrot);
+                Fx.safeRemove(parrot);
+                parrot = null;
+            }
+            plugin.getLogger().info("Herbola: el Cantor estallo; el jardin queda.");
+            broadcastNear(Component.text("Donde lloro, crecio un jardin.", ACCENT));
         });
     }
 

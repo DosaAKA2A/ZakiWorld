@@ -663,8 +663,8 @@ public final class AnomalyRegistry {
         public List<String> threat() {
             return List.of(
                     "Elemento de viento: cumbres y cielo abierto",
-                    "FASE I: vuela alto, la espada casi no le hace nada",
-                    "FASE II: cae al suelo y pelea con el tridente",
+                    "FASE I: ES un phantom gigante; la espada casi no le hace nada",
+                    "FASE II: se estrella en picado y sale su forma terrestre",
                     "FASE III: dos tridentes y modo berserker, fragil pero brutal");
         }
 
@@ -695,12 +695,13 @@ public final class AnomalyRegistry {
      * berserker es una tromba.
      */
     public List<Ability> riderAbilities() {
+        // Sin esbirros: los phantoms menores se quitaron porque estorbaban mas que aportaban.
         List<Ability> list = new ArrayList<>();
 
         // --- Fase I: desde el aire
-        add(list, "lanza_tormenta", "Lanza de Tormenta", 1, 160, 50, 5,
-                "Arroja el tridente contra hasta tres jugadores.",
-                icon("TRIDENT", "ARROW"), f -> rider(f).stormJavelin());
+        add(list, "chillido", "Chillido del Temporal", 1, 170, 70, 5,
+                "Un grito desde arriba: cinco ondas que empujan y dejan sin vista.",
+                icon("PHANTOM_MEMBRANE", "ECHO_SHARD"), f -> rider(f).stormShriek());
         add(list, "picado", "Picado", 1, 240, 80, 4,
                 "Se lanza en vertical sobre una marca y vuelve a subir.",
                 icon("PHANTOM_MEMBRANE", "FEATHER"), f -> rider(f).divebomb());
@@ -710,9 +711,6 @@ public final class AnomalyRegistry {
         add(list, "descarga", "Descarga", 1, 300, 120, 4,
                 "Rayos sobre marcas que persiguen a cada jugador.",
                 icon("LIGHTNING_ROD", "COPPER_INGOT"), f -> rider(f).discharge());
-        add(list, "bandada", "Bandada", 1, 560, 60, 2,
-                "Llama de tres a cinco phantoms menores que hostigan desde arriba.",
-                icon("PHANTOM_SPAWN_EGG", "PHANTOM_MEMBRANE"), f -> rider(f).flock());
         add(list, "viento_cortante", "Viento Cortante", 1, 260, 90, 4,
                 "Cuchillas de aire que barren el suelo desde el cielo.",
                 icon("SHEARS", "FLINT"), f -> rider(f).windBlades());
@@ -1090,7 +1088,7 @@ public final class AnomalyRegistry {
             return List.of(
                     "Casi todo lo suyo ciega: se pelea a oscuras",
                     "Se cura partiendose en siete; hay que dar con el de verdad",
-                    "Coronas de faro moradas girando: tocarlas duele muchisimo",
+                    "Su prision de sombra se cierra y no deja salir",
                     "En la ultima fase crece hasta coloso y abre un agujero negro");
         }
 
@@ -1122,9 +1120,9 @@ public final class AnomalyRegistry {
         add(list, "septeto", "Septeto", 2, 700, 300, 3,
                 "Se parte en siete dobles que vibran mientras el original se cura.",
                 icon("ENDER_PEARL", "ENDER_EYE"), f -> darkness(f).septet());
-        add(list, "coronas", "Coronas del Vacio", 0, 520, 260, 4,
-                "Columnas de faro moradas girando a su alrededor; lo que tocan lo destrozan.",
-                icon("BEACON", "PURPLE_STAINED_GLASS"), f -> darkness(f).voidCrowns());
+        add(list, "prision", "Prision de Vacio", 0, 520, 220, 4,
+                "Una cupula de sombra que se cierra sobre la arena; fuera de ella no se aguanta.",
+                icon("OBSIDIAN", "BLACK_CONCRETE"), f -> darkness(f).voidPrison());
         add(list, "campo_cinetico", "Campo Cinetico", 0, 420, 150, 4,
                 "Los sujeta, los levanta y revienta mandandolos volando muy lejos.",
                 icon("HEAVY_CORE", "ANVIL"), f -> darkness(f).kineticField());
@@ -1231,7 +1229,9 @@ public final class AnomalyRegistry {
                     "Elemento de tierra: convierte el suelo a su paso",
                     "El loro rojo la cura mientras le cante",
                     "FASE II: el loro se suelta, ataca en picado y te AMARRA",
-                    "FASE III: bandadas de loros que revientan al caer");
+                    "FASE III: bandadas de loros que revientan al caer",
+                    "Al morir, el Cantor llora: 12 s para salir de su circulo",
+                    "Lo que convierte SE QUEDA convertido");
         }
 
         @Override
@@ -1279,7 +1279,7 @@ public final class AnomalyRegistry {
                 icon("VINE", "TWISTING_VINES"), f -> herbola(f).vineWhip());
 
         add(list, "picado_loro", "Picado del Loro", 2, 200, 80, 5,
-                "El loro coge altura, se tira encima y te deja amarrado al suelo.",
+                "El loro toma altura, se tira encima y te deja amarrado al suelo.",
                 icon("FEATHER", "RED_DYE"), f -> herbola(f).parrotDive());
         add(list, "zarzal", "Zarzal", 2, 380, 140, 3,
                 "Un cerco de espinos que se cierra; fuera del claro se pierde vida.",

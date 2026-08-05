@@ -8,7 +8,7 @@ La intención de fondo es empujar a la gente a **salir del spawn** y a **pelear 
 el jefe escala con el número de jugadores, varias habilidades castigan dispersarse y el
 botín se reparte entre todos los que participaron, no solo entre quien da el último golpe.
 
-- **Versión:** 1.6.0
+- **Versión:** 1.7.0
 - **Paquete:** `net.zakiworld.anomaly`
 - **Probado contra:** Paper 26.1.2 (MC 26.1.2), compilado con `--release 21`
 - **Permiso único:** `anomaly.gui` (`default: op`)
@@ -340,11 +340,16 @@ alfombra de musgo por donde pasa igual que un muñeco de nieve deja nieve. Encim
 - **Fase III** — llegan bandadas de loros rojos y verdes que **buscan altura, se tiran en
   picado y revientan** al tocar el suelo, empujando a quien pillen.
 
-**MODIFICA EL MUNDO, y eso está resuelto.** Cada bloque que cambia queda anotado con su
-estado original y se devuelve tal cual al cerrar el evento — el log dice cuántos. Solo toca
-bloques de una **lista blanca** de terreno natural (tierra, piedra, arena, nieve…): nunca
-un cofre, una puerta ni nada construido. Hay un tope de 4000 bloques por pelea. Sin eso,
-esta anomalía sería griefing con pasos extra.
+**MODIFICA EL MUNDO Y LO DEJA ASÍ**, por decisión del servidor: el jardín es permanente.
+Precisamente por eso la **lista blanca** es lo más importante del boss — solo convierte
+terreno natural (tierra, piedra, arena, nieve…) y **nunca** un cofre, una puerta ni nada
+construido. Tope de 4000 bloques por pelea, y el log dice cuántos dejó.
+
+**Al morir no acaba la pelea: empieza el llanto del Cantor.** El loro se eleva iluminado
+en rojo mientras carga un círculo de 18 bloques durante **12 segundos**, con cuenta atrás y
+avisando a cada uno si está dentro o fuera. Al final estalla: daño por cercanía y todo el
+círculo convertido en jardín para siempre. Por eso Herbola alarga la espera de limpieza
+(`deathAnimationTicks`) — con la de serie se borraba al Cantor a mitad de la cuenta atrás.
 
 ---
 
@@ -379,10 +384,14 @@ esta anomalía sería griefing con pasos extra.
 - **El daño de las habilidades pasa todo por `BossFight.hit()`.** Por eso el multiplicador
   configurable se aplica en un solo sitio. Si alguna habilidad futura llama a `player.damage()`
   directamente, se saltará el ajuste sin avisar.
-- **La montura del Storm Rider se cambió por una elytra.** El phantom gigante funcionaba
-  (`setSize` escala modelo y hitbox de verdad), pero su IA de vuelo peleaba contra el
-  control del plugin y la animación se rompía constantemente. Ahora vuela sin gravedad y
-  movido a mano: está exactamente donde el plugin dice que está.
+- **El Storm Rider ES el phantom en la fase 1.** Primero fue montura, luego elytra, y al
+  final lo correcto: el jefe es la propia criatura voladora y al entrar en fase 2 se
+  estrella en picado y **cambia de cuerpo** al ahogado, copiando vida y máximo para que la
+  barra ni se entere. Que el phantom no sea una montura quita de en medio toda la fricción
+  que daba su IA de vuelo.
+- **Nadie debe ser expulsado por volar.** Cualquier empuje con componente vertical seria
+  concede permiso de vuelo temporal al jugador y se lo retira después. Sin eso el servidor
+  echaba a la gente en cuanto una habilidad la levantaba.
 - **La cabra necesita agresividad escrita a mano.** `Goat` es un animal PASIVO en Minecraft:
   no tiene IA que persiga ni que ataque, por eso se quedaba parada mirando.
 - **El menú de botín no puede cancelar los clics del inventario propio.** Si se cancelan
@@ -409,7 +418,7 @@ No hay Maven en el PATH. Con el JDK 25 portátil y `paper-api 26.1.2`:
 
 ```
 javac --release 21 -encoding UTF-8 -cp "<paper-api + libs del servidor>" -d build @sources
-jar --create --file Anomaly-1.6.0.jar -C build .
+jar --create --file Anomaly-1.7.0.jar -C build .
 ```
 
 El `pom.xml` está para quien tenga Maven; `paper-api` es `provided`.

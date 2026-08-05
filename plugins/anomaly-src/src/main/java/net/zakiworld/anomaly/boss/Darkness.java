@@ -13,8 +13,6 @@ import net.zakiworld.anomaly.core.Glow;
 import net.zakiworld.anomaly.core.Stop;
 import net.zakiworld.anomaly.core.Tags;
 import org.bukkit.Location;
-import org.bukkit.Material;
-import org.bukkit.entity.BlockDisplay;
 import org.bukkit.entity.Enderman;
 import org.bukkit.entity.Player;
 import org.bukkit.util.Vector;
@@ -50,7 +48,6 @@ public final class Darkness extends BossFight {
     private static final double RITUAL_BREAK = 260;
 
     private final List<Enderman> decoys = new ArrayList<>();
-    private final List<BlockDisplay> beams = new ArrayList<>();
 
     private boolean healing;
     private double ritualDamage;
@@ -88,7 +85,8 @@ public final class Darkness extends BossFight {
         Compat.setAttribute(boss, "knockback_resistance", 1.0);
         Compat.setAttribute(boss, "follow_range", 80);
         Compat.setAttribute(boss, "movement_speed", 0.38);
-        Compat.setAttribute(boss, "scale", 2.5);
+        // Poco mas grande que un enderman normal: lo gordo se guarda para la fase 3.
+        Compat.setAttribute(boss, "scale", 1.5);
         applyHealth(plugin.registry().scaledHealth(plugin.registry().darkness(), targets(96).size()));
         boss.setMaximumNoDamageTicks(6);
 
@@ -173,7 +171,7 @@ public final class Darkness extends BossFight {
         if (event.bars() != null) event.bars().flash(from);
         if (to == 2) {
             damageBonus = 1.25;
-            Compat.setAttribute(boss, "scale", 3.2);
+            Compat.setAttribute(boss, "scale", 1.9);
             titleNear(Component.text("FASE II", NamedTextColor.GOLD, TextDecoration.BOLD),
                     Component.text("Aprende a curarse", NamedTextColor.GRAY));
             soundAt(loc(), "entity.enderman.scream", 1.6f, 0.5f);
@@ -197,7 +195,7 @@ public final class Darkness extends BossFight {
         animate(110, tick -> {
             if (!alive()) return;
             Location l = boss.getLocation();
-            double scale = 3.2 + (tick / 110.0) * 2.3;
+            double scale = 1.9 + (tick / 110.0) * 3.6;
             Compat.setAttribute(boss, "scale", scale);
             Fx.sphere(l.clone().add(0, scale, 0), scale * 1.2, 40, p ->
                     Compat.spawn(world(), Compat.DUST, p, 1, 0, 0, 0, 0, Compat.dust(PITCH, 2.0f)));
@@ -228,7 +226,6 @@ public final class Darkness extends BossFight {
     public void onDeath() {
         Location l = loc();
         clearDecoys();
-        clearBeams();
         Glow.clear(boss);
         soundAt(l, "entity.enderman.death", 1.8f, 0.4f);
 
@@ -366,69 +363,49 @@ public final class Darkness extends BossFight {
     // ------------------------------------------------------- LAS CORONAS DE FAROS
 
     /**
-     * 2. Coronas del Vacio: varias columnas de luz morada, como haces de faro, girando
-     * alrededor de el. Lo que tocan lo destrozan.
+     * 2. Prision de Vacio: una cupula de sombra que se cierra sobre la arena.
      *
-     * Los haces son entidades de visualizacion estiradas, no faros de verdad: montar
-     * un faro exigiria construir la piramide y destrozar el mundo.
+     * Sustituye a las coronas de faro, que sobre el terreno real quedaban mal: las
+     * columnas se clavaban en las paredes y se veian partidas. Esto no depende del
+     * relieve, se lee de lejos y obliga a lo mismo pero mejor: pelear pegados a el.
      */
-    public void voidCrowns() {
+    public void voidPrison() {
         if (!alive()) return;
-        clearBeams();
-        int count = colossus ? 8 : phase() >= 2 ? 6 : 4;
-        double radius = colossus ? 11 : 8;
-        Set<UUID> burned = new HashSet<>();
-
         Location c = Fx.ground(boss.getLocation(), 6);
-        soundAt(c, "block.beacon.activate", 1.8f, 0.5f);
-        titleNear(Component.text("CORONAS DEL VACIO", NamedTextColor.LIGHT_PURPLE, TextDecoration.BOLD),
-                Component.text("No dejes que te alcance ninguna", NamedTextColor.GRAY));
+        soundAt(c, "entity.enderman.scream", 1.8f, 0.4f);
+        titleNear(Component.text("PRISION DE VACIO", NamedTextColor.LIGHT_PURPLE, TextDecoration.BOLD),
+                Component.text("La sombra se cierra: quedate dentro", NamedTextColor.GRAY));
 
-        for (int i = 0; i < count; i++) {
-            beams.add(track(Fx.lightColumn(world(), c, Material.PURPLE_STAINED_GLASS, 0.9f, 40f)));
-        }
-
-        animate(260, tick -> {
+        animate(220, tick -> {
             if (!alive()) throw Stop.now();
             Location center = Fx.ground(boss.getLocation(), 6);
-            // Giran cada vez mas rapido: al principio se esquivan, al final ya no tanto.
-            double speed = 0.035 + (tick / 260.0) * 0.05;
-            double spin = tick * speed;
+            double t = Math.min(1.0, tick / 180.0);
+            double radius = 20 - t * 13;
 
-            for (int i = 0; i < beams.size(); i++) {
-                BlockDisplay b = beams.get(i);
-                if (b == null || !b.isValid()) continue;
-                double a = spin + Math.PI * 2 * i / beams.size();
-                Location at = center.clone().add(Math.cos(a) * radius, 0, Math.sin(a) * radius);
-                b.teleport(at);
-
-                if (tick % 2 == 0) {
-                    for (double h = 0; h < 6; h += 1.2) {
-                        Compat.spawn(world(), Compat.DUST, at.clone().add(0, h, 0), 1, 0.15, 0.3, 0.15, 0,
-                                Compat.dust(MAGENTA, 1.6f));
-                    }
-                }
-                for (Player p : Fx.playersNear(at, 1.8)) {
-                    // Cada haz solo puede quemar a un jugador una vez por vuelta.
-                    String key = p.getUniqueId() + ":" + (int) (spin / (Math.PI * 2));
-                    if (!burned.add(UUID.nameUUIDFromBytes(key.getBytes()))) continue;
-                    hit(p, 22 * damageBonus);
-                    Compat.apply(p, "darkness", 80, 0);
-                    push(p, p.getLocation().toVector().subtract(at.toVector()).normalize().setY(0.4).multiply(0.9));
-                    Compat.spawn(world(), Compat.FLASH, p.getLocation().add(0, 1, 0), 1);
-                    soundAt(p.getLocation(), "entity.enderman.teleport", 1.4f, 0.5f);
-                }
+            // La pared: un cilindro de sombra que se cierra sobre el jefe.
+            for (double h = 0; h <= 6; h += 1.5) {
+                Fx.ring(center.clone().add(0, h, 0), radius, (int) (radius * 3) + 10, tick * 0.04, p ->
+                        Compat.spawn(world(), Compat.DUST, p, 1, 0, 0.2, 0, 0, Compat.dust(PITCH, 2.2f)));
             }
-            if (tick % 20 == 0) soundAt(center, "block.beacon.ambient", 1.0f, 0.4f);
-        }, this::clearBeams);
-    }
+            Fx.ring(center.clone().add(0, 0.3, 0), radius, (int) (radius * 4) + 12, p ->
+                    Compat.spawn(world(), Compat.DUST, Fx.ground(p, 4).add(0, 0.25, 0), 1, 0, 0, 0, 0,
+                            Compat.dust(MAGENTA, 1.7f)));
 
-    private void clearBeams() {
-        for (BlockDisplay b : beams) {
-            spawned.remove(b);
-            Fx.safeRemove(b);
-        }
-        beams.clear();
+            if (tick % 20 == 0) soundAt(center, "ambient.cave", 1.2f, 0.4f);
+            if (tick % 10 != 0) return;
+
+            for (Player p : targets(60)) {
+                if (p.getLocation().distance(center) <= radius) continue;
+                hit(p, 15 * damageBonus);
+                Compat.apply(p, "darkness", 120, 0);
+                // Empujado hacia dentro: la pared no deja salir, mete de vuelta.
+                push(p, center.toVector().subtract(p.getLocation().toVector())
+                        .normalize().multiply(1.1).setY(0.25));
+                p.sendActionBar(Component.text("La sombra no te deja salir.",
+                        NamedTextColor.RED, TextDecoration.BOLD));
+                soundAt(p.getLocation(), "entity.enderman.hurt", 1.1f, 0.5f);
+            }
+        }, null);
     }
 
     // ----------------------------------------------------------- EL CAMPO CINETICO
@@ -445,7 +422,7 @@ public final class Darkness extends BossFight {
 
         soundAt(c, "block.beacon.power_select", 1.6f, 0.4f);
         titleNear(Component.text("CAMPO CINETICO", NamedTextColor.LIGHT_PURPLE, TextDecoration.BOLD),
-                Component.text("Te tiene cogido", NamedTextColor.GRAY));
+                Component.text("Te tiene sujeto", NamedTextColor.GRAY));
 
         animate(150, tick -> {
             if (!alive()) throw Stop.now();
@@ -610,7 +587,7 @@ public final class Darkness extends BossFight {
         Player target = Fx.farthest(loc(), plugin.settings().participationRadius());
         if (target == null || !alive()) return;
         soundAt(loc(), "entity.enderman.stare", 1.4f, 0.4f);
-        target.sendActionBar(Component.text("Algo te tiene cogido.", NamedTextColor.RED, TextDecoration.BOLD));
+        target.sendActionBar(Component.text("Algo te tiene sujeto.", NamedTextColor.RED, TextDecoration.BOLD));
 
         animate(70, tick -> {
             if (!alive() || !Fx.isFightable(target)) throw Stop.now();
@@ -877,7 +854,6 @@ public final class Darkness extends BossFight {
     @Override
     public void cleanup() {
         clearDecoys();
-        clearBeams();
         super.cleanup();
     }
 

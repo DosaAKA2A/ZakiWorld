@@ -40,7 +40,7 @@ import org.bukkit.plugin.java.JavaPlugin;
 public final class AnomalyPlugin extends JavaPlugin {
 
     /** La lee el banner de /anomaly info; hay que subirla junto al pom y al plugin.yml. */
-    public static final String VERSION = "1.6.0";
+    public static final String VERSION = "1.7.0";
 
     private static final TextColor BRAND = TextColor.color(0x9BD7E4);
 
@@ -83,8 +83,11 @@ public final class AnomalyPlugin extends JavaPlugin {
         sweepLeftovers();
         manager.restartScheduler();
 
-        getLogger().info("Anomaly " + VERSION + " listo. " + registry.all().size()
-                + " anomalia(s) en el catalogo, " + Compat.missingParticles() + " particula(s) ausente(s).");
+        banner();
+        if (Compat.missingParticles() > 0) {
+            getLogger().warning(Compat.missingParticles() + " particula(s) no existen en esta version; "
+                    + "las animaciones que las usen se veran mas pobres.");
+        }
     }
 
     @Override
@@ -92,6 +95,46 @@ public final class AnomalyPlugin extends JavaPlugin {
         if (manager != null) manager.shutdown();
         if (drops != null) drops.save();
         Anim.cancelAll();
+    }
+
+
+    /**
+     * El cartel de arranque en consola.
+     *
+     * Se manda por el mensajero de la consola y no por el logger para que salga limpio,
+     * sin el prefijo [Anomaly] repetido en cada renglon del dibujo.
+     */
+    private void banner() {
+        String[] art = {
+                " _______  __    _  _______  __   __  _______  ___      __   __ ",
+                "|   _   ||  |  | ||       ||  |_|  ||   _   ||   |    |  | |  |",
+                "|  |_|  ||   |_| ||   _   ||       ||  |_|  ||   |    |  |_|  |",
+                "|       ||       ||  | |  ||       ||       ||   |    |       |",
+                "|       ||  _    ||  |_|  ||       ||       ||   |___ |_     _|",
+                "|   _   || | |   ||       || ||_|| ||   _   ||       |  |   |  ",
+                "|__| |__||_|  |__||_______||_|   |_||__| |__||_______|  |___|  ",
+        };
+        var console = getServer().getConsoleSender();
+        console.sendMessage(Component.empty());
+        for (String line : art) {
+            console.sendMessage(Component.text(line, BRAND));
+        }
+        console.sendMessage(Component.empty());
+        console.sendMessage(Component.text("   Grietas que se abren solas en el mapa, y lo que sale por ellas.",
+                NamedTextColor.GRAY));
+        console.sendMessage(Component.text("   Desarrollado por ", TextColor.color(0x555555))
+                .append(Component.text("Dosa", NamedTextColor.WHITE, TextDecoration.BOLD))
+                .append(Component.text(" e ", TextColor.color(0x555555)))
+                .append(Component.text("Iris Studio", BRAND, TextDecoration.BOLD)));
+        console.sendMessage(Component.empty());
+        console.sendMessage(Component.text("   version  ", TextColor.color(0x404040))
+                .append(Component.text(VERSION, NamedTextColor.WHITE))
+                .append(Component.text("      catalogo  ", TextColor.color(0x404040)))
+                .append(Component.text(registry.all().size() + " anomalias", NamedTextColor.WHITE))
+                .append(Component.text("      protecciones  ", TextColor.color(0x404040)))
+                .append(Component.text(protection.hasWorldGuard() ? "WorldGuard" : "heuristica",
+                        protection.hasWorldGuard() ? NamedTextColor.GREEN : NamedTextColor.YELLOW)));
+        console.sendMessage(Component.empty());
     }
 
     /**

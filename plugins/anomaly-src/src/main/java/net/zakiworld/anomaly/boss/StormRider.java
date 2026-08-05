@@ -74,11 +74,58 @@ public final class StormRider extends BossFight {
 
     // ------------------------------------------------------------------- aparicion
 
+    /**
+     * Nace siendo EL phantom, no montado en uno.
+     *
+     * En la fase uno el jefe es la propia criatura voladora; al entrar en la segunda se
+     * estrella contra el suelo y toma su forma terrestre. Que el phantom sea el jefe y
+     * no una montura quita de en medio toda la friccion que daba la IA de vuelo.
+     */
     @Override
     public void spawn() {
         Location air = arena.clone().add(0, FLIGHT_HEIGHT, 0);
 
-        boss = world().spawn(air, Drowned.class, d -> {
+        boss = world().spawn(air, Phantom.class, p -> {
+            p.setSize(9);
+            p.setPersistent(true);
+            p.setRemoveWhenFarAway(false);
+            p.setShouldBurnInDay(false);
+            p.setAnchorLocation(air);
+            p.customName(Component.text("✦ ", ACCENT)
+                    .append(Component.text("Storm Rider", ACCENT, TextDecoration.BOLD)));
+            p.setCustomNameVisible(true);
+        });
+
+        Compat.setAttribute(boss, "attack_damage", 12);
+        Compat.setAttribute(boss, "armor", 10);
+        Compat.setAttribute(boss, "knockback_resistance", 1.0);
+        Compat.setAttribute(boss, "follow_range", 80);
+        applyHealth(plugin.registry().scaledHealth(plugin.registry().rider(), targets(96).size()));
+        boss.setMaximumNoDamageTicks(6);
+
+        Tags.markBoss(boss, ID);
+        Tags.markEvent(boss, event.id());
+        Glow.apply(boss, event.type().glowColor());
+        boss.setGravity(false);
+
+        arrivalAnimation(arena.clone());
+    }
+
+    /**
+     * Cambia el cuerpo del jefe conservando su vida.
+     *
+     * La barra sigue igual porque trabaja con la fraccion vida/maxima, y aqui se copian
+     * las dos. Es la unica forma limpia de que un jefe cambie de criatura a mitad de
+     * combate sin que el evento se entere.
+     */
+    private void becomeDrowned(Location at) {
+        double health = boss.getHealth();
+        double max = Compat.getAttribute(boss, "max_health", health);
+
+        Glow.clear(boss);
+        Fx.safeRemove(boss);
+
+        boss = world().spawn(at, Drowned.class, d -> {
             d.setAdult();
             d.setPersistent(true);
             d.setRemoveWhenFarAway(false);
@@ -87,41 +134,27 @@ public final class StormRider extends BossFight {
             d.customName(Component.text("✦ ", ACCENT)
                     .append(Component.text("Storm Rider", ACCENT, TextDecoration.BOLD)));
             d.setCustomNameVisible(true);
-            dressUp(d.getEquipment(), false);
         });
-
-        Compat.setAttribute(boss, "attack_damage", 10);
+        dressUp(boss.getEquipment(), false);
+        Compat.setAttribute(boss, "max_health", max);
+        boss.setHealth(Math.min(max, health));
+        Compat.setAttribute(boss, "attack_damage", 13);
         Compat.setAttribute(boss, "armor", 12);
         Compat.setAttribute(boss, "armor_toughness", 4);
         Compat.setAttribute(boss, "knockback_resistance", 1.0);
         Compat.setAttribute(boss, "follow_range", 72);
-        Compat.setAttribute(boss, "movement_speed", 0.30);
-        applyHealth(plugin.registry().scaledHealth(plugin.registry().rider(), targets(96).size()));
+        Compat.setAttribute(boss, "movement_speed", 0.36);
         boss.setMaximumNoDamageTicks(6);
 
         Tags.markBoss(boss, ID);
         Tags.markEvent(boss, event.id());
         Glow.apply(boss, event.type().glowColor());
-
-        // Vuela por su cuenta: sin gravedad y movido a mano. La montura phantom se
-        // descartó porque su IA de vuelo peleaba contra el control del plugin y la
-        // animacion se rompia constantemente. Con la elytra el vuelo es nuestro.
-        boss.setGravity(false);
-        try {
-            boss.setGliding(true);
-        } catch (Throwable ignored) {
-        }
-
-        arrivalAnimation(arena.clone());
     }
 
     private void dressUp(EntityEquipment eq, boolean dual) {
         if (eq == null) return;
         eq.setHelmet(named(Material.TURTLE_HELMET, "Yelmo de la Corriente"));
-        // En el aire lleva la elytra puesta; al caer al suelo se cambia por el peto.
-        eq.setChestplate(grounded
-                ? named(Material.IRON_CHESTPLATE, "Peto Anegado")
-                : named(Material.ELYTRA, "Alas de Temporal"));
+        eq.setChestplate(named(Material.IRON_CHESTPLATE, "Peto Anegado"));
         eq.setItemInMainHand(named(Material.TRIDENT, "Tridente de Tormenta"));
         eq.setItemInOffHand(dual ? named(Material.TRIDENT, "Tridente de Tormenta") : null);
         eq.setHelmetDropChance(0);
@@ -207,25 +240,24 @@ public final class StormRider extends BossFight {
      */
     private void flyOrbit() {
         double targetY = Fx.ground(arena, 6).getY() + FLIGHT_HEIGHT;
-        double angle = ticks() * 0.035;
-        Location want = arena.clone().add(Math.cos(angle) * 9, targetY - arena.getY(), Math.sin(angle) * 9);
+        double angle = ticks() * 0.03;
+        Location want = arena.clone().add(Math.cos(angle) * 10, targetY - arena.getY(), Math.sin(angle) * 10);
 
         Vector move = want.toVector().subtract(boss.getLocation().toVector());
         double len = move.length();
-        boss.setVelocity(len < 0.2 ? new Vector(0, 0, 0) : move.multiply(Math.min(0.35, 0.9 / len)));
+        boss.setVelocity(len < 0.2 ? new Vector(0, 0, 0) : move.multiply(Math.min(0.32, 0.85 / len)));
 
-        // Que mire hacia donde vuela y, de paso, hacia abajo: esta cazando desde arriba.
         Player look = Fx.nearest(arena, plugin.settings().participationRadius());
-        Location face = boss.getLocation();
         if (look != null) {
+            Location face = boss.getLocation();
             face.setDirection(look.getLocation().toVector().subtract(face.toVector()));
             boss.setRotation(face.getYaw(), face.getPitch());
         }
 
         if (ticks() % 6 == 0) {
-            Compat.spawn(world(), Compat.CLOUD, boss.getLocation(), 3, 0.4, 0.2, 0.4, 0.01);
+            Compat.spawn(world(), Compat.CLOUD, boss.getLocation(), 4, 0.8, 0.4, 0.8, 0.01);
         }
-        if (ticks() % 40 == 0) soundAt(boss.getLocation(), "item.elytra.flying", 0.7f, 0.8f);
+        if (ticks() % 40 == 0) soundAt(boss.getLocation(), "entity.phantom.flap", 0.9f, 0.6f);
     }
 
     /**
@@ -274,65 +306,71 @@ public final class StormRider extends BossFight {
         if (to == 3) berserker();
     }
 
-    /** FASE I -> II. Se le desgarran las alas y cae de pie con un rayo encima. */
+    /**
+     * FASE I -> II. El picado que lo cambia todo.
+     *
+     * El phantom se lanza en vertical contra el suelo, revienta al impactar y de la
+     * explosion sale el ahogado con el tridente: la forma terrestre.
+     */
     private void crashDown() {
         if (grounded || !alive()) return;
         grounded = true;
         boss.setInvulnerable(true);
-        busyFor(90);
+        busyFor(120);
 
-        Location spot = boss.getLocation();
-        soundAt(spot, "item.elytra.flying", 1.8f, 0.4f);
-        broadcastNear(Component.text("Se le desgarran las alas.", ACCENT));
+        final Location impact = Fx.ground(arena, 6);
+        soundAt(boss.getLocation(), "entity.phantom.swoop", 2.0f, 0.4f);
+        titleNear(Component.text("SE VIENE ENCIMA", NamedTextColor.GOLD, TextDecoration.BOLD),
+                Component.text("Apartense del punto de impacto", NamedTextColor.GRAY));
 
-        animate(90, tick -> {
+        animate(120, tick -> {
             if (!alive()) return;
             Location l = boss.getLocation();
-            if (tick < 26) {
-                boss.setVelocity(new Vector((Math.random() - 0.5) * 0.25, -0.12, (Math.random() - 0.5) * 0.25));
-                Compat.spawn(world(), Compat.LARGE_SMOKE, l, 8, 0.7, 0.5, 0.7, 0.03);
-                Compat.spawn(world(), Compat.ITEM, l, 6, 0.5, 0.5, 0.5, 0.1,
-                        new ItemStack(Material.PHANTOM_MEMBRANE));
-                if (tick % 6 == 0) soundAt(l, "entity.player.hurt", 1.1f, 0.6f);
+
+            if (tick < 40) {
+                // Sube y se coloca sobre el punto, avisando con la marca en el suelo.
+                Location want = impact.clone().add(0, 18, 0);
+                Vector move = want.toVector().subtract(l.toVector());
+                if (move.lengthSquared() > 0.5) boss.setVelocity(move.normalize().multiply(0.75));
+                Fx.telegraph(world(), impact, 7.0, STORM);
+                if (tick % 8 == 0) soundAt(impact, "entity.phantom.flap", 1.4f, 0.5f);
                 return;
             }
-            if (tick == 26) {
-                Compat.spawn(world(), Compat.EXPLOSION, l, 2, 0.6, 0.6, 0.6, 0);
-                Compat.spawn(world(), Compat.ITEM, l, 60, 0.8, 0.8, 0.8, 0.25,
-                        new ItemStack(Material.PHANTOM_MEMBRANE));
-                soundAt(l, "entity.item.break", 1.6f, 0.6f);
+            if (tick < 62) {
+                boss.setVelocity(new Vector(0, -1.5, 0));
+                Fx.telegraph(world(), impact, 7.0, RAGE);
+                Compat.spawn(world(), Compat.CLOUD, l, 10, 0.9, 0.6, 0.9, 0.06);
+                Compat.spawn(world(), Compat.LARGE_SMOKE, l, 6, 0.7, 0.5, 0.7, 0.03);
+                if (tick % 4 == 0) soundAt(l, "entity.phantom.swoop", 1.4f, 0.5f);
                 return;
             }
-            if (tick < 64) {
-                boss.setVelocity(new Vector(0, -0.9, 0));
-                Compat.spawn(world(), Compat.DUST, l, 4, 0.3, 0.4, 0.3, 0, Compat.dust(STORM, 1.4f));
-                return;
+            if (tick != 62) return;
+
+            boss.teleport(impact);
+            world().strikeLightningEffect(impact);
+            Compat.spawn(world(), Compat.EXPLOSION_EMITTER, impact, 3);
+            Compat.spawn(world(), Compat.BLOCK, impact, 220, 2.6, 0.5, 2.6, 0.35, groundBlock(impact));
+            Compat.spawn(world(), Compat.ITEM, impact.clone().add(0, 1, 0), 90, 1.2, 1.0, 1.2, 0.3,
+                    new ItemStack(Material.PHANTOM_MEMBRANE));
+            soundAt(impact, "entity.generic.explode", 2.0f, 0.4f);
+            soundAt(impact, "entity.phantom.death", 1.8f, 0.5f);
+            soundAt(impact, "entity.lightning_bolt.impact", 1.6f, 0.8f);
+
+            for (Player p : Fx.playersNear(impact, 9)) {
+                double d = p.getLocation().distance(impact);
+                hit(p, Math.max(10, 28 - d * 1.8) * damageBonus);
+                push(p, p.getLocation().toVector().subtract(impact.toVector())
+                        .normalize().setY(0.7).multiply(1.5));
             }
-            if (tick != 64) return;
-            Location g = Fx.ground(l, 6);
-            boss.teleport(g);
-            world().strikeLightningEffect(g);
-            Compat.spawn(world(), Compat.EXPLOSION_EMITTER, g, 1);
-            Compat.spawn(world(), Compat.BLOCK, g, 140, 2.0, 0.3, 2.0, 0.25, groundBlock(g));
-            soundAt(g, "entity.lightning_bolt.impact", 1.6f, 0.9f);
-            soundAt(g, "item.trident.hit_ground", 1.6f, 0.6f);
-            for (Player p : Fx.playersNear(g, 7)) {
-                hit(p, 12 * damageBonus);
-                push(p, p.getLocation().toVector().subtract(g.toVector()).normalize().setY(0.5).multiply(0.9));
-            }
+
+            // De la explosion sale la forma terrestre.
+            becomeDrowned(impact);
         }, () -> {
             if (!alive()) return;
             boss.setInvulnerable(false);
-            boss.setGravity(true);
-            try {
-                boss.setGliding(false);
-            } catch (Throwable ignored) {
-            }
-            dressUp(boss.getEquipment(), false);
-            Compat.setAttribute(boss, "movement_speed", 0.36);
-            Compat.setAttribute(boss, "attack_damage", 13);
             titleNear(Component.text("FASE II", NamedTextColor.GOLD, TextDecoration.BOLD),
                     Component.text("Ya lo tienes al alcance", NamedTextColor.GRAY));
+            soundAt(boss.getLocation(), "item.trident.return", 1.6f, 0.6f);
         });
     }
 
@@ -414,32 +452,41 @@ public final class StormRider extends BossFight {
 
     // -------------------------------------------------------- FASE I: desde el aire
 
-    /** 1. Lanza de Tormenta: arroja el tridente contra alguien. */
-    public void stormJavelin() {
-        List<Player> victims = targets();
-        if (victims.isEmpty() || !alive()) return;
-        soundAt(loc(), "item.trident.throw", 1.5f, 0.8f);
+    /** 1. Chillido del Temporal: un grito que empuja y deja sordo de vista. */
+    public void stormShriek() {
+        if (!alive()) return;
+        Location c = boss.getLocation();
+        soundAt(c, "entity.phantom.hurt", 1.8f, 0.4f);
+        broadcastNear(Component.text("Chilla desde arriba.", ACCENT));
 
-        for (int i = 0; i < Math.min(3, victims.size()); i++) {
-            Player victim = victims.get(i);
-            later(i * 12, () -> {
-                if (!alive() || !Fx.isFightable(victim)) return;
-                Location from = boss.getEyeLocation();
-                Vector dir = victim.getLocation().add(0, 1, 0).toVector().subtract(from.toVector());
-                if (dir.lengthSquared() < 0.01) return;
-                try {
-                    Trident t = boss.launchProjectile(Trident.class, dir.normalize().multiply(2.2));
-                    t.setPickupStatus(AbstractArrow.PickupStatus.DISALLOWED);
-                    t.setDamage(9 * damageBonus * plugin.registry().damageMultiplier(event.type()));
-                    Tags.markTemporary(t);
-                    track(t);
-                    expire(t, 120);
-                } catch (Throwable ignored) {
-                }
-                soundAt(from, "item.trident.throw", 1.3f, 1.0f);
-                Compat.spawn(world(), Compat.DUST, from, 12, 0.2, 0.2, 0.2, 0, Compat.dust(STORM, 1.2f));
-            });
-        }
+        animate(70, tick -> {
+            if (!alive()) return;
+            Location l = boss.getLocation();
+            if (tick < 26) {
+                Fx.sphere(l, 2.4 - tick * 0.05, 24, p ->
+                        Compat.spawn(world(), Compat.DUST, p, 1, 0, 0, 0, 0, Compat.dust(STORM, 1.4f)));
+                if (tick % 8 == 0) soundAt(l, "entity.phantom.ambient", 1.2f, 0.4f + tick / 40f);
+                return;
+            }
+            if (tick != 26) return;
+            soundAt(l, "entity.phantom.bite", 2.0f, 0.5f);
+            for (int r = 1; r <= 5; r++) {
+                final int ring = r;
+                later(r * 3, () -> {
+                    Location g = Fx.ground(boss.getLocation(), 8);
+                    Fx.ring(g, ring * 3.2, ring * 12, p ->
+                            Compat.spawn(world(), Compat.CLOUD, Fx.ground(p, 4).add(0, 0.4, 0), 2,
+                                    0.15, 0.15, 0.15, 0.02));
+                    for (Player p : Fx.playersNear(g, ring * 3.2 + 1.5)) {
+                        if (p.getLocation().distance(g) < (ring - 1) * 3.2) continue;
+                        hit(p, (14 - ring) * damageBonus);
+                        Compat.apply(p, "blindness", 60, 0);
+                        push(p, p.getLocation().toVector().subtract(g.toVector())
+                                .normalize().setY(0.4).multiply(0.9));
+                    }
+                });
+            }
+        }, null);
     }
 
     /** 2. Picado: se lanza en vertical sobre alguien y vuelve a subir. */
@@ -457,7 +504,7 @@ public final class StormRider extends BossFight {
             if (!alive() || grounded) throw Stop.now();
             if (tick < 24) {
                 Fx.telegraph(world(), mark, 3.6, STORM);
-                if (tick % 8 == 0) soundAt(mark, "item.elytra.flying", 1.0f, 1.4f);
+                if (tick % 8 == 0) soundAt(mark, "entity.phantom.flap", 1.2f, 1.0f);
                 return;
             }
             if (tick < 46) {
@@ -474,7 +521,7 @@ public final class StormRider extends BossFight {
                 return;
             }
             boss.setVelocity(new Vector(0, 0.8, 0));
-            if (tick % 8 == 0) soundAt(boss.getLocation(), "item.elytra.flying", 1.0f, 0.7f);
+            if (tick % 8 == 0) soundAt(boss.getLocation(), "entity.phantom.flap", 1.2f, 0.7f);
         }, () -> diving = false);
     }
 
@@ -528,34 +575,6 @@ public final class StormRider extends BossFight {
                 });
             }
         }, null);
-    }
-
-    /** 5. Bandada: llama phantoms menores que hostigan desde arriba. */
-    public void flock() {
-        if (!alive()) return;
-        int count = 3 + random.nextInt(3);
-        Location air = arena.clone().add(0, FLIGHT_HEIGHT - 3, 0);
-        soundAt(air, "entity.phantom.ambient", 1.6f, 1.1f);
-        broadcastNear(Component.text("Llama a la bandada.", ACCENT));
-
-        for (int i = 0; i < count; i++) {
-            double a = Math.PI * 2 * i / count;
-            Location sl = air.clone().add(Math.cos(a) * 6, 0, Math.sin(a) * 6);
-            later(i * 8, () -> {
-                if (!alive()) return;
-                Compat.spawn(world(), Compat.CLOUD, sl, 20, 0.6, 0.4, 0.6, 0.04);
-                Phantom small = world().spawn(sl, Phantom.class, p -> {
-                    p.setSize(2);
-                    p.setPersistent(false);
-                    p.setShouldBurnInDay(false);
-                    p.setAnchorLocation(air);
-                    Compat.setAttribute(p, "max_health", 24);
-                    p.setHealth(24);
-                });
-                markMinion(small);
-                soundAt(sl, "entity.phantom.flap", 1.2f, 1.2f);
-            });
-        }
     }
 
     /** 6. Viento Cortante: cuchillas de aire que barren el suelo desde el cielo. */
