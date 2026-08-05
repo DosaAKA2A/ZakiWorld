@@ -90,26 +90,51 @@ public final class Disguises {
     public static io.papermc.paper.datacomponent.item.ResolvableProfile profileOf(
             Plugin plugin, String hash, String name) {
         try {
-            com.destroystokyo.paper.profile.PlayerProfile profile =
-                    Bukkit.createProfile(UUID.nameUUIDFromBytes(hash.getBytes()), name);
             String json = "{\"textures\":{\"SKIN\":{\"url\":\"http://textures.minecraft.net/texture/"
                     + hash + "\"}}}";
             String value = java.util.Base64.getEncoder()
                     .encodeToString(json.getBytes(java.nio.charset.StandardCharsets.UTF_8));
-            profile.setProperty(new com.destroystokyo.paper.profile.ProfileProperty("textures", value));
-            return io.papermc.paper.datacomponent.item.ResolvableProfile.resolvableProfile(profile);
+
+            // SIN NOMBRE, y esto es lo importante. Un perfil que lleva nombre es
+            // "dinamico": el servidor lo resuelve contra Mojang y se queda con la skin
+            // del jugador que se llame asi, tirando a la basura la textura que le hemos
+            // dado. Con uuid + propiedad y nada mas, el perfil es estatico y se pinta
+            // exactamente la textura pedida.
+            var profile = io.papermc.paper.datacomponent.item.ResolvableProfile.resolvableProfile()
+                    .uuid(UUID.nameUUIDFromBytes(("skin:" + hash).getBytes()))
+                    .addProperty(new com.destroystokyo.paper.profile.ProfileProperty("textures", value))
+                    .build();
+            if (profile.dynamic()) {
+                plugin.getLogger().warning("El perfil de la skin " + hash.substring(0, 8)
+                        + " salio DINAMICO: se resolvera online y no se vera la textura pedida.");
+            }
+            return profile;
         } catch (Throwable t) {
             plugin.getLogger().warning("No se pudo construir el perfil de la skin " + hash + ": " + t);
             return null;
         }
     }
 
-    /** El perfil de un jugador de verdad, para copiarle la cara tal cual. */
+    /**
+     * El perfil de un jugador de verdad, para copiarle la cara tal cual.
+     *
+     * Se le copian las propiedades de textura y se le quita el nombre, por lo mismo:
+     * un perfil con nombre se vuelve a resolver online y deja de ser una copia.
+     */
     public static io.papermc.paper.datacomponent.item.ResolvableProfile profileOf(
             Plugin plugin, org.bukkit.entity.Player player) {
         try {
-            return io.papermc.paper.datacomponent.item.ResolvableProfile
-                    .resolvableProfile(player.getPlayerProfile());
+            var props = player.getPlayerProfile().getProperties();
+            if (props.isEmpty()) {
+                // Sin texturas cargadas no hay nada que copiar; que lo resuelva por uuid.
+                return io.papermc.paper.datacomponent.item.ResolvableProfile.resolvableProfile()
+                        .uuid(player.getUniqueId())
+                        .build();
+            }
+            return io.papermc.paper.datacomponent.item.ResolvableProfile.resolvableProfile()
+                    .uuid(player.getUniqueId())
+                    .addProperties(props)
+                    .build();
         } catch (Throwable t) {
             plugin.getLogger().warning("No se pudo copiar el perfil de " + player.getName() + ": " + t);
             return null;
