@@ -16,6 +16,8 @@ import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.block.Block;
 import org.bukkit.entity.Bogged;
+import org.bukkit.entity.Display;
+import org.bukkit.entity.TextDisplay;
 import org.bukkit.entity.Parrot;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.EntityEquipment;
@@ -66,6 +68,7 @@ public final class Herbola extends BossFight {
     private int changed;
 
     private Parrot parrot;
+    private TextDisplay nameplate;
     private boolean parrotFreed;
     private boolean flockPhase;
     private double damageBonus = 1.0;
@@ -93,7 +96,9 @@ public final class Herbola extends BossFight {
             b.setShouldBurnInDay(false);
             b.customName(Component.text("✦ ", ACCENT)
                     .append(Component.text("Herbola", ACCENT, TextDecoration.BOLD)));
-            b.setCustomNameVisible(true);
+            // Mientras el Cantor vaya en la cabeza, el nombre lo lleva un holograma por
+            // encima de el; si no, el propio loro lo taparia.
+            b.setCustomNameVisible(false);
             EntityEquipment eq = b.getEquipment();
             if (eq != null) {
                 eq.setItemInMainHand(new ItemStack(Material.BOW));
@@ -121,35 +126,60 @@ public final class Herbola extends BossFight {
     }
 
     /**
-     * El Cantor: el loro rojo que le canta. Nunca se le puede matar.
+     * El Cantor: el loro rojo que le canta desde la cabeza. Nunca se le puede matar.
      *
-     * NO va de pasajero: un pasajero se sienta en la cabeza y tapaba el nombre del
-     * jefe. Se le coloca a mano en el hombro cada tick, girando con ella.
+     * Su nombre NO se muestra fijo: solo aparece cuando le apuntas de cerca, que es el
+     * comportamiento normal de un nombre puesto pero no visible. Asi no hay dos carteles
+     * peleandose por el mismo hueco.
      */
     private void spawnParrot() {
-        parrot = world().spawn(shoulder(), Parrot.class, p -> {
+        parrot = world().spawn(boss.getLocation().add(0, 1.6, 0), Parrot.class, p -> {
             p.setAdult();
             p.setPersistent(true);
             p.setRemoveWhenFarAway(false);
             p.setInvulnerable(true);
             p.setSilent(false);
-            p.setAI(false);
-            p.setGravity(false);
             try {
                 p.setVariant(Parrot.Variant.RED);
             } catch (Throwable ignored) {
             }
             p.customName(Component.text("Cantor", TextColor.color(0xE05A4A)));
-            p.setCustomNameVisible(true);
+            p.setCustomNameVisible(false);
         });
         markMinion(parrot);
+        boss.addPassenger(parrot);
+        raiseNameplate();
     }
 
-    /** El punto exacto del hombro derecho, girando con el cuerpo del jefe. */
-    private Location shoulder() {
-        Location l = boss.getLocation();
-        double yaw = Math.toRadians(l.getYaw() + 90);
-        return l.clone().add(Math.cos(yaw) * 0.55, 1.05, Math.sin(yaw) * 0.55);
+    /**
+     * El cartel con el nombre de Herbola, flotando por ENCIMA del Cantor.
+     *
+     * Con el loro sentado en la cabeza, el nombre del jefe quedaba tapado. Se sube a un
+     * texto flotante propio, que se retira en cuanto el Cantor se suelta y el jefe
+     * recupera su cartel de siempre.
+     */
+    private void raiseNameplate() {
+        if (nameplate != null) return;
+        nameplate = world().spawn(boss.getLocation().add(0, 2.6, 0), TextDisplay.class, d -> {
+            d.text(Component.text("✦ ", ACCENT)
+                    .append(Component.text("Herbola", ACCENT, TextDecoration.BOLD)));
+            d.setBillboard(Display.Billboard.CENTER);
+            d.setSeeThrough(false);
+            d.setPersistent(false);
+            d.setViewRange(1.2f);
+            d.setBrightness(new Display.Brightness(15, 15));
+        });
+        markMinion(nameplate);
+    }
+
+    /** Quita el cartel flotante y le devuelve el suyo al jefe. */
+    private void dropNameplate() {
+        if (nameplate != null) {
+            spawned.remove(nameplate);
+            Fx.safeRemove(nameplate);
+            nameplate = null;
+        }
+        if (alive()) boss.setCustomNameVisible(true);
     }
 
     private void arrivalAnimation(Location spot) {
@@ -240,6 +270,11 @@ public final class Herbola extends BossFight {
 
     @Override
     public void cleanup() {
+        if (nameplate != null) {
+            spawned.remove(nameplate);
+            Fx.safeRemove(nameplate);
+            nameplate = null;
+        }
         if (changed > 0) {
             plugin.getLogger().info("Herbola: dejo " + changed + " bloque(s) convertidos. Es a proposito.");
         }
@@ -270,10 +305,13 @@ public final class Herbola extends BossFight {
             }
         }
 
-        // El loro suelto persigue por su cuenta; el del hombro canta.
+        if (nameplate != null && nameplate.isValid() && !parrotFreed) {
+            nameplate.teleport(boss.getLocation().add(0, 2.6, 0));
+        }
+
+        // El loro suelto persigue por su cuenta; el de la cabeza canta.
         if (parrot != null && parrot.isValid()) {
             if (!parrotFreed) {
-                parrot.teleport(shoulder());
                 if (ticks() % 60 == 0) {
                     Compat.apply(boss, "regeneration", 80, 1);
                     Compat.apply(boss, "resistance", 80, 0);
@@ -322,6 +360,7 @@ public final class Herbola extends BossFight {
         animate(70, tick -> {
             if (!alive()) return;
             if (tick == 30 && parrot != null && parrot.isValid()) {
+                dropNameplate();
                 boss.eject();
                 parrot.setVelocity(new Vector(0, 0.8, 0));
                 Compat.spawn(world(), Compat.DUST, parrot.getLocation(), 40, 0.5, 0.5, 0.5, 0,

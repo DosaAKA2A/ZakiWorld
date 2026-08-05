@@ -40,7 +40,7 @@ import org.bukkit.plugin.java.JavaPlugin;
 public final class AnomalyPlugin extends JavaPlugin {
 
     /** La lee el banner de /anomaly info; hay que subirla junto al pom y al plugin.yml. */
-    public static final String VERSION = "1.7.0";
+    public static final String VERSION = "1.7.1";
 
     private static final TextColor BRAND = TextColor.color(0x9BD7E4);
 
@@ -57,6 +57,7 @@ public final class AnomalyPlugin extends JavaPlugin {
     @Override
     public void onEnable() {
         saveDefaultConfig();
+        migrateConfig();
         Tags.init(this);
 
         this.settings = new Settings(this);
@@ -135,6 +136,30 @@ public final class AnomalyPlugin extends JavaPlugin {
                 .append(Component.text(protection.hasWorldGuard() ? "WorldGuard" : "heuristica",
                         protection.hasWorldGuard() ? NamedTextColor.GREEN : NamedTextColor.YELLOW)));
         console.sendMessage(Component.empty());
+    }
+
+    /**
+     * Mete en config.yml las claves nuevas sin tocar las que ya estan.
+     *
+     * saveDefaultConfig() NO sobrescribe un fichero existente, asi que un servidor que
+     * instalo la primera version se quedaba para siempre con el config de entonces: las
+     * anomalias añadidas despues no tenian ni su seccion ni sus valores. Con esto cada
+     * arranque completa lo que falte y respeta lo que el admin haya cambiado.
+     */
+    private void migrateConfig() {
+        try {
+            var defaults = getConfig().getDefaults();
+            int before = getConfig().getKeys(true).size();
+            getConfig().options().copyDefaults(true);
+            saveConfig();
+            int added = getConfig().getKeys(true).size() - before;
+            if (added > 0 && defaults != null) {
+                getLogger().info("config.yml completado con " + added
+                        + " ajuste(s) nuevo(s); lo que ya estaba no se ha tocado.");
+            }
+        } catch (Throwable t) {
+            getLogger().warning("No se pudo completar config.yml: " + t);
+        }
     }
 
     /**

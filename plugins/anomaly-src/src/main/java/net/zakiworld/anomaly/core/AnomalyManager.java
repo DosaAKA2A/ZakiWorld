@@ -16,6 +16,7 @@ import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
 import org.bukkit.event.entity.EntityDamageByEntityEvent;
+import org.bukkit.event.entity.EntityChangeBlockEvent;
 import org.bukkit.event.entity.EntityDamageEvent;
 import org.bukkit.event.entity.EntityDeathEvent;
 import org.bukkit.event.entity.EntityTargetEvent;
@@ -347,6 +348,18 @@ public final class AnomalyManager implements Listener {
             }
             default -> e.setCancelled(true);
         }
+    }
+
+    /**
+     * Ninguna criatura del plugin toca un solo bloque del mundo.
+     *
+     * Los endermans recogen y colocan bloques por su cuenta, y Darkness es un enderman:
+     * sin esto se dedicaria a desmontar el mapa mientras pelea. Vale para cualquier
+     * entidad nuestra, asi que tambien cubre lo que venga despues.
+     */
+    @EventHandler(ignoreCancelled = true)
+    public void onEntityChangeBlock(EntityChangeBlockEvent e) {
+        if (Tags.isOurs(e.getEntity())) e.setCancelled(true);
     }
 
     /** Los esbirros no se pelean entre ellos ni con el jefe. */

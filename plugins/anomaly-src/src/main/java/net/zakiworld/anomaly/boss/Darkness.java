@@ -74,6 +74,8 @@ public final class Darkness extends BossFight {
             e.setPersistent(true);
             e.setRemoveWhenFarAway(false);
             e.setCanPickupItems(false);
+            // Un enderman va desmontando el mapa mientras camina. Aqui no.
+            e.setCarriedBlock(null);
             e.customName(Component.text("✦ ", ACCENT)
                     .append(Component.text("Darkness", ACCENT, TextDecoration.BOLD)));
             e.setCustomNameVisible(true);
@@ -301,6 +303,21 @@ public final class Darkness extends BossFight {
             if (!alive() || !healing) throw Stop.now();
             Location l = boss.getLocation();
 
+            // Cada dos segundos el original y un doble se cambian el sitio, los dos con
+            // el mismo humo. Aunque lo hayas seguido con la vista, lo pierdes: es lo que
+            // convierte el ritual en una busqueda y no en pegarle al que ya tenias fichado.
+            if (tick > 20 && tick % 40 == 0 && !decoys.isEmpty()) {
+                Enderman twin = decoys.get(random.nextInt(decoys.size()));
+                if (twin != null && twin.isValid()) {
+                    Location here = boss.getLocation().clone();
+                    Location there = twin.getLocation().clone();
+                    blink(here);
+                    blink(there);
+                    boss.teleport(there);
+                    twin.teleport(here);
+                }
+            }
+
             // Todos vibran igual, el original incluido: no hay pista visual.
             for (Enderman d : decoys) {
                 if (d == null || !d.isValid()) continue;
@@ -318,6 +335,14 @@ public final class Darkness extends BossFight {
                 for (Player p : targets(20)) Compat.apply(p, "darkness", 90, 0);
             }
         }, () -> breakRitual(false));
+    }
+
+    /** El humo que tapa un cambio de sitio. Identico siempre, venga de quien venga. */
+    private void blink(Location at) {
+        Compat.spawn(world(), Compat.REVERSE_PORTAL, at.clone().add(0, 1.5, 0), 40, 0.4, 0.9, 0.4, 0.12);
+        Compat.spawn(world(), Compat.DUST, at.clone().add(0, 1.5, 0), 20, 0.4, 0.8, 0.4, 0,
+                Compat.dust(VOID_PURPLE, 1.5f));
+        Compat.sound(world(), at, "entity.enderman.teleport", 1.0f, 0.6f);
     }
 
     /** El temblor de rabia de un doble: se mueve un pelo pero no se va del sitio. */
