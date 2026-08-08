@@ -3,7 +3,6 @@ package com.ederus.main;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.event.ClickEvent;
 import net.kyori.adventure.text.event.HoverEvent;
-import net.kyori.adventure.title.Title;
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
 import org.bukkit.entity.Player;
@@ -119,13 +118,12 @@ public final class AvisoTiendas {
         List<String> lineas = plugin.getConfig().getStringList(base + ".chat");
         if (lineas.isEmpty()) return;
 
-        String titulo = color(plugin.getConfig().getString(base + ".titulo", ""));
-        String subtitulo = color(plugin.getConfig().getString(base + ".subtitulo", ""));
         String sonido = plugin.getConfig().getString(base + ".sonido", "");
         String botonTexto = plugin.getConfig().getString(base + ".boton-texto", "");
         String botonCmd = plugin.getConfig().getString(base + ".boton-comando", "/mobcoins");
         String botonHover = plugin.getConfig().getString(base + ".boton-hover", "");
 
+        // El aviso va SOLO por chat: nada de titulos en pantalla.
         // Todo lo que toca a jugadores va por el hilo principal.
         Bukkit.getScheduler().runTask(plugin, () -> {
             Component boton = botonTexto.isBlank() ? null : Component.text(color(botonTexto))
@@ -144,13 +142,6 @@ public final class AvisoTiendas {
                     } else {
                         p.sendMessage(color(cruda));
                     }
-                }
-                if (!titulo.isBlank() || !subtitulo.isBlank()) {
-                    p.showTitle(Title.title(
-                            Component.text(titulo),
-                            Component.text(subtitulo),
-                            Title.Times.times(Duration.ofMillis(400),
-                                    Duration.ofMillis(2600), Duration.ofMillis(700))));
                 }
                 if (!sonido.isBlank()) {
                     try {

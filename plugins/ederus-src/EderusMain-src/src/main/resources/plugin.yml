@@ -1,5 +1,5 @@
 name: EderusMain
-version: 1.2.0
+version: 1.3.0
 main: com.ederus.main.EderusMain
 api-version: '1.20'
 description: Nucleo principal de Ederus - libro encantado aleatorio de calidades bajas
