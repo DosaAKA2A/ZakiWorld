@@ -1,0 +1,176 @@
+# ============================================================
+# EderusMain - Libro encantado aleatorio
+# ============================================================
+# encantamientos: lista 'nombre:nivelmax' (nombres internos de AE).
+# Solo calidades bajas: SIMPLE, UNIQUE, ELITE y ULTIMATE.
+# rotura: rango del Destroy Rate (exito = 100 - rotura).
+# comando: se ejecuta desde consola; variables:
+#   %jugador% %encanto% %nivel% %exito% %rotura%
+# Tras editar: /ederuslibro reload
+
+rotura:
+  minimo: 75
+  maximo: 90
+
+comando: 'ae givebook %jugador% %encanto% %nivel% 1 %exito% %rotura%'
+
+# ============================================================
+# Aviso de renovacion de las tiendas de MobCoins
+# ============================================================
+# UltimateMobCoins no avisa cuando rota su tienda. Este bloque vigila el
+# sello de tiempo que el propio plugin deja en su carpeta de datos y anuncia
+# en cuanto cambia. No hay que configurar ninguna hora: si alguien fuerza un
+# refresco a mano, el aviso sale igual.
+#
+# webhook: opcional. Si pones la URL de un webhook de Discord, tambien avisa
+# alli. Dejalo vacio para no usarlo.
+tiendas:
+  activo: true
+  revisar-cada-segundos: 30
+  ruta-diaria: 'plugins/UltimateMobCoins/data/rotating_shop-data.yml'
+  ruta-boveda: 'plugins/UltimateMobCoins/data/shop_with_timer-data.yml'
+  webhook: ''
+  webhook-texto: 'Se ha renovado la tienda de MobCoins: %tienda%'
+  mensaje-diaria:
+    - '&8&m                                        '
+    - '&e&lMERCADO DEL DIA &7se ha renovado'
+    - '&7Hay diez articulos nuevos esperando.'
+    - '&7Echales un ojo con &b/mobcoins'
+    - '&8&m                                        '
+  mensaje-boveda:
+    - '&8&m                                        '
+    - '&6&lLA BOVEDA &7se ha renovado'
+    - '&7Vuelve el stock de los doce articulos del mes.'
+    - '&7Echale un ojo con &b/mobcoins'
+    - '&8&m                                        '
+
+encantamientos:
+  # --- SIMPLE (12) ---
+  - 'aquatic:1'
+  - 'bonecrusher:3'
+  - 'deathpunch:5'
+  - 'decapitation:3'
+  - 'epicness:3'
+  - 'experience:5'
+  - 'forcefield:5'
+  - 'glowing:1'
+  - 'hasten:3'
+  - 'rebreather:2'
+  - 'smelting:3'
+  - 'strike:3'
+  # --- UNIQUE (18) ---
+  - 'berserk:5'
+  - 'devour:3'
+  - 'explosive:5'
+  - 'explosivedemise:8'
+  - 'famine:4'
+  - 'featherweight:3'
+  - 'frenzy:5'
+  - 'hunter:4'
+  - 'molten:4'
+  - 'perish:5'
+  - 'ravenous:4'
+  - 'reflect:5'
+  - 'replanter:1'
+  - 'slayer:4'
+  - 'soulless:4'
+  - 'telepathy:4'
+  - 'virus:3'
+  - 'ward:4'
+  # --- ELITE (43) ---
+  - 'allure:3'
+  - 'blind:3'
+  - 'bluntforce:4'
+  - 'bowmaster:5'
+  - 'critical:3'
+  - 'curse:2'
+  - 'enderslayer:5'
+  - 'extinguish:3'
+  - 'firehook:3'
+  - 'frozen:3'
+  - 'greatsword:5'
+  - 'hook:3'
+  - 'immolate:3'
+  - 'impact:4'
+  - 'infernal:3'
+  - 'magnet:3'
+  - 'marksman:4'
+  - 'missile:5'
+  - 'momentum:3'
+  - 'netherslayer:5'
+  - 'nightwalker:3'
+  - 'paralyze:4'
+  - 'poison:3'
+  - 'poisoned:4'
+  - 'poisonedhook:3'
+  - 'poseidon:4'
+  - 'reaper:4'
+  - 'reforged:10'
+  - 'replenish:3'
+  - 'rocketescape:3'
+  - 'shockwave:5'
+  - 'smokebomb:8'
+  - 'snap:3'
+  - 'snare:4'
+  - 'spark:3'
+  - 'springs:3'
+  - 'suspend:3'
+  - 'trickster:8'
+  - 'undeadruse:10'
+  - 'vampire:3'
+  - 'veinminer:3'
+  - 'voodoo:6'
+  - 'wither:5'
+  # --- ULTIMATE (52) ---
+  - 'aegis:3'
+  - 'ambit:7'
+  - 'angelic:5'
+  - 'archer:4'
+  - 'arrowbreak:6'
+  - 'arrowdeflect:4'
+  - 'autoreel:4'
+  - 'bleed:6'
+  - 'block:3'
+  - 'carrotplanter:3'
+  - 'cleave:7'
+  - 'confuse:4'
+  - 'creeperarmor:3'
+  - 'diminish:1'
+  - 'disappear:4'
+  - 'disintegrate:4'
+  - 'distance:4'
+  - 'dodge:5'
+  - 'endmaster:3'
+  - 'exalted:4'
+  - 'fuddle:3'
+  - 'guardians:10'
+  - 'harvest:9'
+  - 'heavy:5'
+  - 'hellfire:5'
+  - 'iceaspect:3'
+  - 'immolation:3'
+  - 'implants:3'
+  - 'interrupt:2'
+  - 'jellylegs:3'
+  - 'longbow:4'
+  - 'lucky:3'
+  - 'netherling:3'
+  - 'nightowl:3'
+  - 'obsidianshield:1'
+  - 'permafrost:5'
+  - 'piercing:5'
+  - 'planter:3'
+  - 'plummet:3'
+  - 'potatoplanter:3'
+  - 'ragdoll:4'
+  - 'reinforced:4'
+  - 'safeguard:2'
+  - 'sharpnesshook:9'
+  - 'shatter:4'
+  - 'sniper:5'
+  - 'spirits:10'
+  - 'striker:3'
+  - 'swordsman:5'
+  - 'tank:4'
+  - 'timber:3'
+  - 'trench:9'

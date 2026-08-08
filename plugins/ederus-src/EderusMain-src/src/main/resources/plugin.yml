@@ -1,0 +1,15 @@
+name: EderusMain
+version: 1.1.0
+main: com.ederus.main.EderusMain
+api-version: '1.20'
+description: Nucleo principal de Ederus - libro encantado aleatorio de calidades bajas
+authors: [Ederus]
+commands:
+  ederuslibro:
+    description: Entrega un libro encantado aleatorio de calidad baja
+    usage: /ederuslibro <jugador> | /ederuslibro reload
+    permission: ederus.libro
+permissions:
+  ederus.libro:
+    description: Permite usar /ederuslibro
+    default: op
