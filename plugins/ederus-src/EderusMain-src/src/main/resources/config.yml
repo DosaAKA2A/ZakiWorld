@@ -35,7 +35,9 @@ tiendas:
 
   # El anuncio va SOLO por chat: titulo y subtitulo se dejan vacios a proposito.
   # La linea del chat que lleve %boton% se manda pinchable.
-  # Los degradados usan el formato &x&R&R&G&G&B&B de Spigot, caracter a caracter.
+  # OJO al centrar: la fuente de Minecraft es proporcional, asi que el relleno de
+  # delante esta calculado en pixeles (centro del chat = 154 px, espacio = 4 px).
+  # Si cambias un texto hay que recalcular el relleno o quedara descentrado.
   diaria:
     titulo: ''
     subtitulo: ''
@@ -44,17 +46,17 @@ tiendas:
     boton-comando: '/mobcoins shop'
     boton-hover: '&7Clic para abrir el Mercado del Dia'
     chat:
-      - '&8&m                                                  '
+      - '      &8&m                                                                '
       - ''
-      - '            &x&F&F&E&2&5&9&lM&x&F&F&D&D&5&8&lE&x&F&F&D&8&5&7&lR&x&F&F&D&3&5&7&lC&x&F&F&C&E&5&6&lA&x&F&F&C&9&5&5&lD&x&F&F&C&4&5&5&lO &x&F&F&B&F&5&4&lD&x&F&F&B&A&5&3&lE&x&F&F&B&5&5&3&lL &x&F&F&B&0&5&2&lD&x&F&F&A&B&5&1&lI&x&F&F&A&7&5&1&lA'
-      - '            &7El catalogo se ha renovado'
+      - '                          &x&F&F&E&2&5&9&lM&x&F&F&D&D&5&8&lE&x&F&F&D&8&5&7&lR&x&F&F&D&3&5&7&lC&x&F&F&C&E&5&6&lA&x&F&F&C&9&5&5&lD&x&F&F&C&4&5&5&lO &x&F&F&B&F&5&4&lD&x&F&F&B&A&5&3&lE&x&F&F&B&5&5&3&lL &x&F&F&B&0&5&2&lD&x&F&F&A&B&5&1&lI&x&F&F&A&7&5&1&lA'
+      - '                     &7El catalogo se ha renovado'
       - ''
-      - '     &6* &fDiez articulos nuevos &7elegidos al azar'
-      - '     &6* &fStock limitado &7para todo el servidor'
-      - '     &6* &fVuelve a cambiar &7dentro de 24 horas'
+      - '             &6* &fDiez articulos nuevos &7elegidos al azar'
+      - '             &6* &fStock limitado &7para todo el servidor'
+      - '             &6* &fVuelve a cambiar &7dentro de 24 horas'
       - ''
-      - '                &8[ %boton% &8]'
-      - '&8&m                                                  '
+      - '                        &8[ %boton% &8]'
+      - '      &8&m                                                                '
 
   boveda:
     titulo: ''
@@ -64,17 +66,17 @@ tiendas:
     boton-comando: '/mobcoins shop'
     boton-hover: '&7Clic para abrir La Boveda'
     chat:
-      - '&8&m                                                  '
+      - '      &8&m                                                                '
       - ''
-      - '                 &x&F&F&D&7&0&0&lL&x&F&F&C&C&0&0&lA &x&F&F&C&1&0&0&lB&x&F&F&B&6&0&0&lO&x&F&F&A&C&0&0&lV&x&F&F&A&1&0&0&lE&x&F&F&9&6&0&0&lD&x&F&F&8&C&0&0&lA'
-      - '            &7Stock del mes repuesto'
+      - '                               &x&F&F&D&7&0&0&lL&x&F&F&C&C&0&0&lA &x&F&F&C&1&0&0&lB&x&F&F&B&6&0&0&lO&x&F&F&A&C&0&0&lV&x&F&F&A&1&0&0&lE&x&F&F&9&6&0&0&lD&x&F&F&8&C&0&0&lA'
+      - '                        &7Stock del mes repuesto'
       - ''
-      - '     &e* &fLos doce articulos &7vuelven a estar disponibles'
-      - '     &e* &fLlaves top y libros &7de clase Ancestral'
-      - '     &e* &fNo se repone &7hasta dentro de 30 dias'
+      - '       &e* &fLos doce articulos &7vuelven a estar disponibles'
+      - '       &e* &fLlaves top y libros &7de clase Ancestral'
+      - '       &e* &fNo se repone &7hasta dentro de 30 dias'
       - ''
-      - '                &8[ %boton% &8]'
-      - '&8&m                                                  '
+      - '                          &8[ %boton% &8]'
+      - '      &8&m                                                                '
 
 encantamientos:
   # --- SIMPLE (12) ---
