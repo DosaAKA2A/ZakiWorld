@@ -8,7 +8,7 @@ La intención de fondo es empujar a la gente a **salir del spawn** y a **pelear 
 el jefe escala con el número de jugadores, varias habilidades castigan dispersarse y el
 botín se reparte entre todos los que participaron, no solo entre quien da el último golpe.
 
-- **Versión:** 1.14.0
+- **Versión:** 1.14.1
 - **Paquete:** `net.zakiworld.anomaly`
 - **Probado contra:** Paper 26.1.2 (MC 26.1.2), compilado con `--release 21`
 - **Permiso único:** `anomaly.gui` (`default: op`)
@@ -344,7 +344,8 @@ cartel. Con el arco de vuelta y el loro escoltándola en vuelo, pelea de verdad.
 - **Fase I** — el loro le da regeneración, resistencia y velocidad mientras cante.
 - **Fase II** — el loro deja de cantar, ataca **en picado** y cada impacto te **amarra al suelo**
   varios segundos. Es inmortal a propósito: no se puede quitar del medio.
-- **Fase III** — llegan bandadas de loros rojos y verdes que **buscan altura, se tiran en
+- **Fase III** — llegan bandadas de 4-6 loros rojos y verdes que **suben nueve bloques, se
+  quedan un momento arriba dando vueltas —para que se lea que es una bandada—, se tiran en
   picado y revientan** al tocar el suelo, empujando a quien pillen.
 
 **MODIFICA EL MUNDO Y LO DEJA ASÍ**, por decisión del servidor: el jardín es permanente.
@@ -556,10 +557,11 @@ sembrado de placas rojas que solo estorbaban a la vista; ahora cada tanda es una
 con fecha y el campo se renueva en vez de acumularse.
 
 **Al entrar en fase III recoge el campo de minas y te lo tira encima.** Todo lo que sembró
-y nadie llegó a pisar sale volando hacia sus enemigos, una detrás de otra, a 0,9 bloques
-por tick —lo justo para apartarse si se ve venir— y revienta al llegar. Es la traducción
-literal de tirar las armas de distancia: ya no espera a que caigas en la trampa, te la
-lleva él.
+y nadie llegó a pisar sale **disparado** hacia sus enemigos: la tanda entera despega casi a
+la vez (un tick entre mina y mina) y cada una vuela a **2,4 bloques por tick**, con estela
+de chispas pintada a lo largo del camino, porque a esa velocidad y sin ella la mina se ve
+saltar de sitio en sitio en vez de volar. Es la traducción literal de tirar las armas de
+distancia: ya no espera a que caigas en la trampa, te la lleva él.
 
 ---
 
@@ -715,6 +717,16 @@ por primera vez hace falta un `/minecraft:reload` o un reinicio; el log lo dice.
   mano tick a tick, y con el arco puesto su rutina de tiro vuelve a funcionar sola. Al
   cambiarle el arma en caliente, `AbstractSkeleton#setItemSlot` reevalúa el objetivo de
   arco, así que basta con equipárselo.
+- **`setVelocity` NO mueve a un mob con IA.** Es el mismo problema visto por otro lado, y
+  costó dos veces: el mob se pisa la velocidad en su propio tick, así que el bicho se queda
+  revoloteando donde nació. La **Bandada Explosiva no se veía** por esto — los loros no
+  cogían altura, el detector de "ha tocado suelo" saltaba en el acto y la habilidad entera
+  se resolvía en cuatro segundos en un par de petardazos a los pies de Herbola— y al
+  Picado del Loro le pasaba igual. Todo lo que vuele en esta anomalía va por
+  `Herbola#fly`: **teleport tick a tick**, que además deja al bicho siempre en el aire y
+  por eso el cliente le pinta la animación de vuelo. Se comprobó con
+  `execute as @e[type=parrot] ... unless entity @e[type=bogged,distance=..6]`: antes ni un
+  loro se separaba de ella, ahora seis a la vez.
 - **Las partículas de bloque y de objeto no pintan nada sin su dato.** `FALLING_DUST`,
   `BLOCK_CRUMBLE`, `DUST_PILLAR` e `ITEM` exigen un `BlockData` o un `ItemStack`;
   llamarlas sin él no da error, simplemente no se ve. `Compat.defaultData` los rellena.
@@ -749,7 +761,7 @@ No hay Maven en el PATH. Con el JDK 25 portátil y `paper-api 26.1.2`:
 
 ```
 javac --release 21 -encoding UTF-8 -cp "<paper-api + libs del servidor>" -d build @sources
-jar --create --file Anomaly-1.14.0.jar -C build .
+jar --create --file Anomaly-1.14.1.jar -C build .
 ```
 
 El `pom.xml` está para quien tenga Maven; `paper-api` es `provided`.

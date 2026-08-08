@@ -498,9 +498,14 @@ public final class Cazador extends BossFight {
     /**
      * Al entrar en la ultima fase RECOGE EL CAMPO DE MINAS Y TE LO TIRA ENCIMA.
      *
-     * Todo lo que sembro y nadie llego a pisar sale volando hacia sus enemigos, una
-     * detras de otra. Es la traduccion literal de tirar las armas de distancia: ya no
-     * espera a que caigas en la trampa, te la lleva el.
+     * Todo lo que sembro y nadie llego a pisar sale volando hacia sus enemigos. Es la
+     * traduccion literal de tirar las armas de distancia: ya no espera a que caigas en
+     * la trampa, te la lleva el.
+     *
+     * Y sale DISPARADO, que es como se pidio: la tanda entera despega casi a la vez —un
+     * tick entre mina y mina, lo justo para que no sea un unico fogonazo— y cada una
+     * vuela a {@link #HURL_SPEED} bloques por tick. Con la version lenta parecian
+     * flotar hacia ti y se perdia todo el susto.
      */
     private void hurlTraps() {
         if (traps.isEmpty()) return;
@@ -510,14 +515,18 @@ public final class Cazador extends BossFight {
         titleNear(Component.text("RECOGE LOS CEPOS", NamedTextColor.RED, TextDecoration.BOLD),
                 Component.text("Te los tira encima", NamedTextColor.GRAY));
         soundAt(loc(), "block.chain.break", 1.6f, 0.6f);
+        soundAt(loc(), "entity.wind_charge.wind_burst", 1.8f, 0.7f);
 
         int delay = 0;
         for (Trap trap : flying) {
             final Trap mine = trap;
             later(delay, () -> hurl(mine));
-            delay += 5;
+            delay += 1;
         }
     }
+
+    /** Bloques por tick de una mina lanzada. A 2,4 cruza diez bloques en cuatro ticks. */
+    private static final double HURL_SPEED = 2.4;
 
     /** Una mina en vuelo: sube, va a por alguien y revienta al llegar o al agotarse. */
     private void hurl(Trap trap) {
@@ -532,7 +541,7 @@ public final class Cazador extends BossFight {
         Location from = trap.at.clone().add(0, 0.45, 0);
         soundAt(from, "entity.wind_charge.wind_burst", 1.2f, 1.4f);
 
-        animate(70, tick -> {
+        animate(50, tick -> {
             if (!mark.isValid()) throw Stop.now();
             Location here = mark.getLocation();
             Player aim = Fx.isFightable(victim) ? victim : Fx.nearest(here, 40);
@@ -546,21 +555,23 @@ public final class Cazador extends BossFight {
             Vector step = to.toVector().subtract(here.toVector());
             double dist = step.length();
 
-            if (dist < 1.6 || tick >= 68) {
+            if (dist < HURL_SPEED || tick >= 48) {
                 blast(here, aim);
                 spawned.remove(mark);
                 Fx.safeRemove(mark);
                 throw Stop.now();
             }
-            // Persigue, pero sin teledirigirse del todo: 0.9 bloques por tick da tiempo
-            // justo a apartarse si se ve venir.
-            Location next = here.clone().add(step.normalize().multiply(Math.min(0.9, dist)));
-            // Los primeros ticks va hacia arriba, para que se vea salir del suelo.
-            if (tick < 6) next.add(0, 0.35, 0);
+            Location next = here.clone().add(step.normalize().multiply(Math.min(HURL_SPEED, dist)));
+            // El primer tick sale hacia arriba, para que se vea despegar del suelo.
+            if (tick < 2) next.add(0, 0.5, 0);
             mark.teleport(next);
-            Compat.spawn(world(), Compat.ELECTRIC_SPARK, here, 3, 0.1, 0.1, 0.1, 0.02);
-            Compat.spawn(world(), Compat.SMALL_FLAME, here, 2, 0.08, 0.08, 0.08, 0.01);
-            if (tick % 6 == 0) soundAt(here, "entity.creeper.primed", 0.7f, 1.9f);
+            // Estela: a esta velocidad hay que pintar el camino entero, que si no se ve
+            // la mina saltando de sitio en sitio en vez de volando.
+            Fx.beam(here, next, 0.5, p -> {
+                Compat.spawn(world(), Compat.ELECTRIC_SPARK, p, 2, 0.05, 0.05, 0.05, 0.02);
+                Compat.spawn(world(), Compat.SMALL_FLAME, p, 1, 0.04, 0.04, 0.04, 0.01);
+            });
+            if (tick % 3 == 0) soundAt(here, "entity.creeper.primed", 0.7f, 1.9f);
         }, null);
     }
 

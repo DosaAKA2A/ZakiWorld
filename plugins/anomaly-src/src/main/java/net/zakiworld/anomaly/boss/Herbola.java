@@ -190,6 +190,34 @@ public final class Herbola extends BossFight {
         }
     }
 
+    /**
+     * Mueve un loro un paso hacia un punto, A MANO.
+     *
+     * Es LA forma de volar de esta anomalia, y no es un capricho: a un mob con IA se le
+     * pisa la velocidad en su propio tick, asi que `setVelocity` no lo lleva a ningun
+     * sitio —se quedaba revoloteando donde nacio— y ademas se posa en cuanto ve un
+     * bloque. Teleportandolo cada tick manda el codigo, y como nunca toca el suelo el
+     * cliente le pinta la animacion de vuelo.
+     *
+     * @param speed bloques por tick
+     */
+    private void fly(org.bukkit.entity.LivingEntity bird, Location to, double speed) {
+        if (bird == null || !bird.isValid() || to == null) return;
+        try {
+            Location here = bird.getLocation();
+            Vector step = to.toVector().subtract(here.toVector());
+            double dist = step.length();
+            if (dist < 0.02) return;
+            Location next = dist <= speed ? to.clone()
+                    : here.clone().add(step.clone().multiply(speed / dist));
+            // Mira siempre a donde va; si no, vuela de espaldas.
+            next.setDirection(step);
+            bird.setVelocity(new Vector(0, 0, 0));
+            bird.teleport(next);
+        } catch (Throwable ignored) {
+        }
+    }
+
     private void arrivalAnimation(Location spot) {
         boss.setInvulnerable(true);
         busyFor(80);
@@ -775,7 +803,9 @@ public final class Herbola extends BossFight {
         broadcastNear(Component.text("El loro se lanza.", ACCENT));
 
         // Mientras dure el picado vuela el solo: la escolta no le toca la posicion.
+        // Y vuela a mano, como la bandada: con setVelocity no se movia del sitio.
         parrotBusy = true;
+        final Location top = parrot.getLocation().clone().add(0, 6, 0);
         animate(80, tick -> {
             if (!alive() || parrot == null || !parrot.isValid()) throw Stop.now();
             if (!Fx.isFightable(target)) throw Stop.now();
@@ -784,13 +814,12 @@ public final class Herbola extends BossFight {
 
             if (tick < 22) {
                 // sube para coger altura antes de tirarse
-                parrot.setVelocity(new Vector(0, 0.35, 0));
+                fly(parrot, top, 0.35);
                 Fx.telegraph(world(), Fx.ground(target.getLocation(), 4), 2.2, 0xE05A4A);
                 return;
             }
             if (tick < 55) {
-                Vector to = tl.toVector().subtract(pl.toVector());
-                if (to.lengthSquared() > 0.4) parrot.setVelocity(to.normalize().multiply(1.15));
+                fly(parrot, tl, 0.8);
                 Compat.spawn(world(), Compat.SPORE_BLOSSOM_AIR, pl, 3, 0.2, 0.2, 0.2, 0, Compat.dust(0xE05A4A, 1.2f));
                 if (pl.distanceSquared(tl) < 4) {
                     hit(target, 11 * damageBonus);
@@ -804,7 +833,8 @@ public final class Herbola extends BossFight {
                 }
                 return;
             }
-            parrot.setVelocity(new Vector(0, 0.4, 0));
+            // Fallo el picado: vuelve arriba y que la escolta lo recoja.
+            fly(parrot, top, 0.4);
         }, () -> parrotBusy = false);
     }
 
@@ -887,7 +917,17 @@ public final class Herbola extends BossFight {
         }
     }
 
-    /** 11. Bandada Explosiva: loros que suben, se tiran y revientan. Fase 3. */
+    /**
+     * 11. Bandada Explosiva: loros que suben, se tiran y revientan. Fase 3.
+     *
+     * OJO CON COMO VUELAN. La primera version los movia con setVelocity y NO SE VEIA LA
+     * BANDADA: a un mob con IA se le pisa la velocidad en su propio tick, asi que los
+     * loros no cogian altura, el detector de "ha tocado suelo" saltaba en el acto y toda
+     * la habilidad se resolvia en cuatro segundos en un par de petardazos encima de
+     * Herbola. Se les lleva a mano —teleport tick a tick, como al Cantor— y ademas se le
+     * da tiempo a la escena: suben del todo, se quedan un momento arriba a la vista, y
+     * entonces se tiran.
+     */
     public void explosiveFlock() {
         if (!alive()) return;
         int count = 4 + random.nextInt(3);
@@ -902,9 +942,11 @@ public final class Herbola extends BossFight {
                 if (!alive()) return;
                 Parrot bird = world().spawn(sl, Parrot.class, p -> {
                     p.setAdult();
-                    p.setPersistent(false);
+                    p.setPersistent(true);
+                    p.setRemoveWhenFarAway(false);
                     p.setInvulnerable(true);
                     p.setSilent(true);
+                    p.setCollidable(false);
                     try {
                         p.setVariant(Math.random() < 0.5 ? Parrot.Variant.RED : Parrot.Variant.GREEN);
                     } catch (Throwable ignored) {
@@ -913,30 +955,45 @@ public final class Herbola extends BossFight {
                 markMinion(bird);
                 soundAt(sl, "entity.parrot.fly", 1.2f, 1.3f);
 
+                // El techo de la bandada: nueve bloques por encima de donde nacio.
+                final Location perch = sl.clone().add(0, 9, 0);
                 Player victim = randomTarget();
-                animate(120, tick -> {
+                animate(160, tick -> {
                     if (!bird.isValid()) throw Stop.now();
                     Location bl = bird.getLocation();
 
-                    // Primero busca altura, como se pidio.
-                    if (tick < 34) {
-                        bird.setVelocity(new Vector(0, 0.42, 0));
+                    // 1) SUBE. Dos segundos largos, y se ve subir.
+                    if (tick < 44) {
+                        fly(bird, perch, 0.32);
                         Compat.spawn(world(), Compat.FALLING_SPORE_BLOSSOM, bl, 2, 0.15, 0.15, 0.15, 0,
                                 Compat.dust(0xE05A4A, 1.0f));
                         return;
                     }
+                    // 2) SE QUEDA ARRIBA. Un segundo entero de bandada a la vista, dando
+                    //    vueltas, que es lo que hace que se lea como una bandada.
+                    if (tick < 64) {
+                        double turn = tick * 0.18;
+                        fly(bird, perch.clone().add(Math.cos(turn) * 1.6, 0, Math.sin(turn) * 1.6), 0.35);
+                        Compat.spawn(world(), Compat.CHERRY_LEAVES, bl, 2, 0.2, 0.2, 0.2, 0,
+                                Compat.dust(0xE05A4A, 1.2f));
+                        if (tick % 8 == 0) soundAt(bl, "entity.parrot.fly", 0.8f, 1.4f);
+                        return;
+                    }
                     Location aim = victim != null && Fx.isFightable(victim)
                             ? victim.getLocation() : Fx.ground(boss.getLocation(), 4);
-                    if (tick == 34) Fx.telegraph(world(), Fx.ground(aim, 4), 2.6, BLOOM);
+                    if (tick == 64) {
+                        soundAt(bl, "entity.parrot.imitate.ghast", 1.1f, 1.3f);
+                    }
+                    Fx.telegraph(world(), Fx.ground(aim, 4), 2.6, BLOOM);
 
-                    Vector to = aim.clone().add(0, 0.5, 0).toVector().subtract(bl.toVector());
-                    if (to.lengthSquared() > 0.6) bird.setVelocity(to.normalize().multiply(1.3));
+                    // 3) SE TIRA. Rapido, pero no instantaneo: da para apartarse.
+                    fly(bird, aim.clone().add(0, 0.5, 0), 0.85);
                     Compat.spawn(world(), Compat.SPORE_BLOSSOM_AIR, bl, 3, 0.2, 0.2, 0.2, 0, Compat.dust(BLOOM, 1.2f));
 
-                    boolean landed = bl.distanceSquared(aim) < 4
+                    boolean landed = bl.distanceSquared(aim) < 2.5
                             || Fx.ground(bl, 2).getBlock().getRelative(0, -1, 0).getType().isSolid()
                             && bl.getY() <= Fx.ground(aim, 5).getY() + 1.2;
-                    if (!landed && tick < 110) return;
+                    if (!landed && tick < 150) return;
 
                     Compat.spawn(world(), Compat.EXPLOSION, bl, 2, 0.4, 0.4, 0.4, 0);
                     Compat.spawn(world(), Compat.COMPOSTER, bl, 50, 0.8, 0.8, 0.8, 0, Compat.dust(BLOOM, 1.7f));
