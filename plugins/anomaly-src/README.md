@@ -8,7 +8,7 @@ La intención de fondo es empujar a la gente a **salir del spawn** y a **pelear 
 el jefe escala con el número de jugadores, varias habilidades castigan dispersarse y el
 botín se reparte entre todos los que participaron, no solo entre quien da el último golpe.
 
-- **Versión:** 1.13.0
+- **Versión:** 1.14.0
 - **Paquete:** `net.zakiworld.anomaly`
 - **Probado contra:** Paper 26.1.2 (MC 26.1.2), compilado con `--release 21`
 - **Permiso único:** `anomaly.gui` (`default: op`)
@@ -331,12 +331,18 @@ Quince habilidades y **cero esbirros**: los siete dobles son su curación, no ay
 
 ## Herbola
 
-Un **bogged** con una **amapola por arma** que convierte en jardín todo lo que pisa: musgo, azalea y flores, dejando
-alfombra de musgo por donde pasa igual que un muñeco de nieve deja nieve. Encima lleva un
-**loro rojo** cantándole, y ese canto es lo que la mantiene entera.
+Un **bogged con arco** que convierte en jardín todo lo que pisa: musgo, azalea y flores, dejando
+alfombra de musgo por donde pasa igual que un muñeco de nieve deja nieve. La acompaña un
+**loro rojo**, el **Cantor**, que **vuela con ella sin posarse encima**, y ese canto es lo
+que la mantiene entera.
+
+**Los dos llevan su nombre, y no igual:** el de Herbola **se ve siempre**; el del Cantor
+solo aparece **al acercarte y apuntarle**. El loro iba de pasajero en su cabeza, y eso le
+costaba a Herbola media IA —un mob con pasajero deja de disparar— además de taparle el
+cartel. Con el arco de vuelta y el loro escoltándola en vuelo, pelea de verdad.
 
 - **Fase I** — el loro le da regeneración, resistencia y velocidad mientras cante.
-- **Fase II** — el loro se suelta, ataca **en picado** y cada impacto te **amarra al suelo**
+- **Fase II** — el loro deja de cantar, ataca **en picado** y cada impacto te **amarra al suelo**
   varios segundos. Es inmortal a propósito: no se puede quitar del medio.
 - **Fase III** — llegan bandadas de loros rojos y verdes que **buscan altura, se tiran en
   picado y revientan** al tocar el suelo, empujando a quien pillen.
@@ -527,8 +533,8 @@ siempre dice lo que va a hacer**, que es lo que lo hace legible: si saca el hach
 | Fase | Cómo pelea |
 |---|---|
 | I — el acecho | **Ballesta y arco.** Se mantiene lejos y **retrocede si te acercas**: perseguirlo a la carrera es perder. Andanada de Ballesta · Lluvia de Flechas · Saeta Perforante · Marcar la Presa |
-| II — el cepo | Siembra el suelo de **trampas**. Se ven —una placa que parpadea y hace clic— pero cubren tanto terreno que acabas pisando una, y revienta con muy buen radio. Cepo · Cepo Dirigido · Red de Cepos · Retirada Calculada |
-| III — la estocada | Tira lo de lejos y saca la **lanza de netherita**, el hacha y la espada. Estocada de Lanza · Hachazo Descendente · Danza de Espada |
+| II — el cepo | Siembra el suelo de **trampas**. Se ven —una placa que parpadea y hace clic— pero cubren tanto terreno que acabas pisando una, y revienta con muy buen radio. Todas llevan **mecha**. Cepo · Cepo Dirigido · Red de Cepos · Retirada Calculada |
+| III — la estocada | **Recoge las minas que queden y te las tira encima**, tira lo de lejos y saca la **lanza de netherita**, el hacha y la espada. Estocada de Lanza · Hachazo Descendente · Danza de Espada |
 | Cualquiera | Cambio de Arma |
 
 Además de sus habilidades tiene un **pulso de combate propio** que corre cada segundo:
@@ -541,8 +547,19 @@ armas. **La lanza ya no es exclusiva de la fase 3**: la usa en cualquiera.
 Las **minas se ven**: un bloque rojo levantado del suelo, con **contorno rojo** —los
 displays admiten color libre, no solo los dieciséis del marcador— y un chispazo cada
 segundo. La primera versión ponía una placa a ras de suelo que quedaba enterrada en la
-hierba, y así la trampa castigaba la mala suerte en vez de castigar no mirar. Caducan
-al minuto y medio: sin eso la arena acabaría siendo un campo de minas del que no se sale.
+hierba, y así la trampa castigaba la mala suerte en vez de castigar no mirar.
+
+**Todas llevan mecha: a los 20 segundos revientan solas, las pise alguien o no**, y los
+tres últimos parpadean el doble de rápido y suenan a creeper cebado para que dé tiempo a
+salir. Antes caducaban al minuto y medio y desaparecían sin más, así que el suelo acababa
+sembrado de placas rojas que solo estorbaban a la vista; ahora cada tanda es una amenaza
+con fecha y el campo se renueva en vez de acumularse.
+
+**Al entrar en fase III recoge el campo de minas y te lo tira encima.** Todo lo que sembró
+y nadie llegó a pisar sale volando hacia sus enemigos, una detrás de otra, a 0,9 bloques
+por tick —lo justo para apartarse si se ve venir— y revienta al llegar. Es la traducción
+literal de tirar las armas de distancia: ya no espera a que caigas en la trampa, te la
+lleva él.
 
 ---
 
@@ -693,8 +710,11 @@ por primera vez hace falta un `/minecraft:reload` o un reinicio; el log lo dice.
   expulsaba por moverte demasiado rápido. El amarre (`BossFight#root`) anula el salto a
   mano, tick a tick, cortando solo la velocidad que sube.
 - **Un mob con pasajero pierde media IA de combate.** Herbola se quedaba mirando con el
-  Cantor en la cabeza. No basta con confiar en que "el esqueleto ya disparará solo": hay
-  que renovarle el objetivo a menudo y lanzarle la flecha a mano.
+  Cantor en la cabeza. La solución no es quitarle el arco y pegar a mano —eso la dejó sin
+  ataque a distancia—, es **quitarle el pasajero**: el loro vuela suelto y se le lleva a
+  mano tick a tick, y con el arco puesto su rutina de tiro vuelve a funcionar sola. Al
+  cambiarle el arma en caliente, `AbstractSkeleton#setItemSlot` reevalúa el objetivo de
+  arco, así que basta con equipárselo.
 - **Las partículas de bloque y de objeto no pintan nada sin su dato.** `FALLING_DUST`,
   `BLOCK_CRUMBLE`, `DUST_PILLAR` e `ITEM` exigen un `BlockData` o un `ItemStack`;
   llamarlas sin él no da error, simplemente no se ve. `Compat.defaultData` los rellena.
@@ -729,7 +749,7 @@ No hay Maven en el PATH. Con el JDK 25 portátil y `paper-api 26.1.2`:
 
 ```
 javac --release 21 -encoding UTF-8 -cp "<paper-api + libs del servidor>" -d build @sources
-jar --create --file Anomaly-1.13.0.jar -C build .
+jar --create --file Anomaly-1.14.0.jar -C build .
 ```
 
 El `pom.xml` está para quien tenga Maven; `paper-api` es `provided`.

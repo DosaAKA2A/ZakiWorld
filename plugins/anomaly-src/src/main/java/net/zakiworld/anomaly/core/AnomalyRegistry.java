@@ -2086,7 +2086,7 @@ public final class AnomalyRegistry {
 
         // --- Fase II: el cepo
         add(list, "cepo", "Cepo", 2, 150, 30, 5,
-                "Siembra el suelo de trampas que revientan al pisarlas.",
+                "Siembra el suelo de trampas: revientan al pisarlas y, si no, solas a los 20 s.",
                 icon("TRIPWIRE_HOOK", "STRING"), f -> cazador(f).trapField());
         add(list, "cepo_dirigido", "Cepo Dirigido", 2, 130, 22, 5,
                 "Pone la trampa justo bajo los pies de cada uno.",

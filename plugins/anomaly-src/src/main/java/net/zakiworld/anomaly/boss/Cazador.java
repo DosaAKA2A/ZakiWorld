@@ -40,10 +40,12 @@ import java.util.UUID;
  *
  *  - FASE I, el acecho: ballesta y arco. Se mantiene lejos, dispara y retrocede si te
  *    acercas. Pelearlo a la carrera es perder.
- *  - FASE II, el cepo: siembra el suelo de TRAMPAS. Se ven —una placa de piedra que
- *    parpadea—, pero cubren tanto terreno que acabas pisando una, y lo que sigue es
- *    una explosion con muy buen radio. Mientras tanto sigue disparando.
- *  - FASE III, la estocada: tira las armas de distancia y saca la LANZA DE NETHERITA,
+ *  - FASE II, el cepo: siembra el suelo de TRAMPAS. Se ven —una placa que parpadea—,
+ *    pero cubren tanto terreno que acabas pisando una, y lo que sigue es una explosion
+ *    con muy buen radio. Todas llevan MECHA: la que nadie pisa revienta sola a los doce
+ *    segundos, asi que el campo se renueva en vez de acumularse. Mientras tanto dispara.
+ *  - FASE III, la estocada: recoge de golpe todas las minas que quedaban y SE LAS TIRA
+ *    ENCIMA a sus enemigos, tira las armas de distancia y saca la LANZA DE NETHERITA,
  *    el hacha y la espada, alternandolas segun la distancia a la que estes.
  *
  * El arma que lleva en la mano SIEMPRE dice lo que va a hacer, que es lo que lo hace
@@ -211,6 +213,23 @@ public final class Cazador extends BossFight {
     }
 
     /**
+     * LA MECHA. Una mina que nadie pisa NO se queda ahi para siempre: cuenta atras y
+     * revienta sola.
+     *
+     * Antes caducaban al minuto y medio y desaparecian sin mas, asi que el suelo acababa
+     * sembrado de placas rojas que solo estorbaban a la vista. Con mecha, cada tanda que
+     * siembra es una amenaza con fecha: o la esquivas o te pilla el reventon.
+     *
+     * Veinte segundos, no doce: con una mecha muy corta el campo se vacia antes de que le
+     * de tiempo a sembrar la siguiente tanda, y en la ultima fase no le quedaria nada que
+     * tirar. Asi se estabiliza en un puñado de minas en vez de en treinta.
+     */
+    private static final int FUSE = 400;
+
+    /** Los ultimos tres segundos pitan de verdad, para que se pueda salir. */
+    private static final int FUSE_WARNING = 60;
+
+    /**
      * Siembra trampas. Se ven —una placa que asoma del suelo y parpadea—, pero cubren
      * tanto terreno que retroceder sin mirar es pisar una.
      */
@@ -267,18 +286,23 @@ public final class Cazador extends BossFight {
                 it.remove();
                 continue;
             }
-            // Un guiño rojo cada segundo: la trampa se ve, si se mira.
-            if (ticks() % 16 == 0) {
-                Compat.spawn(world(), Compat.ELECTRIC_SPARK, trap.at.clone().add(0, 0.55, 0), 4,
+            long age = ticks() - trap.armedAt;
+            boolean burning = age > FUSE - FUSE_WARNING;
+
+            // Un guiño rojo cada segundo: la trampa se ve, si se mira. Con la mecha ya
+            // corta, el guiño se acelera y suena a lo que es.
+            if (ticks() % (burning ? 4 : 16) == 0) {
+                Compat.spawn(world(), Compat.ELECTRIC_SPARK, trap.at.clone().add(0, 0.55, 0), burning ? 8 : 4,
                         0.2, 0.1, 0.2, 0.02);
                 Fx.ring(trap.at.clone().add(0, 0.12, 0), 1.5, 12, q ->
                         Compat.spawn(world(), Compat.TRIAL_SPAWNER_DETECTION, q, 1, 0, 0, 0, 0));
-                soundAt(trap.at, "block.tripwire.click_off", 0.5f, 1.8f);
+                soundAt(trap.at, burning ? "entity.creeper.primed" : "block.tripwire.click_off",
+                        burning ? 0.8f : 0.5f, 1.8f);
             }
-            // Caducan al minuto y medio, que si no la arena acaba siendo un campo de minas.
-            if (ticks() - trap.armedAt > 1800) {
-                disarm(trap);
+            // Se acabo la mecha: revienta sola, la pise alguien o no.
+            if (age > FUSE) {
                 it.remove();
+                detonate(trap, null);
                 continue;
             }
             Player victim = null;
@@ -302,7 +326,11 @@ public final class Cazador extends BossFight {
     private void detonate(Trap trap, Player who) {
         Location l = trap.at.clone().add(0, 0.4, 0);
         disarm(trap);
+        blast(l, who);
+    }
 
+    /** El reventon en si, en el punto que sea: en el suelo o en el aire al llegar. */
+    private void blast(Location l, Player who) {
         Compat.spawn(world(), Compat.EXPLOSION_EMITTER, l, 2);
         Compat.spawn(world(), Compat.GUST_EMITTER_LARGE, l, 1, 0, 0, 0, 0);
         Compat.spawn(world(), Compat.DUST_PILLAR, l, 30, 1.2, 0.2, 1.2, 0,
@@ -463,6 +491,77 @@ public final class Cazador extends BossFight {
         Compat.setAttribute(boss, "attack_speed", 2.6);
         Compat.setAttribute(boss, "movement_speed", 0.44);
         Compat.spawn(world(), Compat.CRIT, l.clone().add(0, 1.4, 0), 30, 0.5, 0.6, 0.5, 0.3);
+
+        hurlTraps();
+    }
+
+    /**
+     * Al entrar en la ultima fase RECOGE EL CAMPO DE MINAS Y TE LO TIRA ENCIMA.
+     *
+     * Todo lo que sembro y nadie llego a pisar sale volando hacia sus enemigos, una
+     * detras de otra. Es la traduccion literal de tirar las armas de distancia: ya no
+     * espera a que caigas en la trampa, te la lleva el.
+     */
+    private void hurlTraps() {
+        if (traps.isEmpty()) return;
+        List<Trap> flying = new ArrayList<>(traps);
+        traps.clear();
+
+        titleNear(Component.text("RECOGE LOS CEPOS", NamedTextColor.RED, TextDecoration.BOLD),
+                Component.text("Te los tira encima", NamedTextColor.GRAY));
+        soundAt(loc(), "block.chain.break", 1.6f, 0.6f);
+
+        int delay = 0;
+        for (Trap trap : flying) {
+            final Trap mine = trap;
+            later(delay, () -> hurl(mine));
+            delay += 5;
+        }
+    }
+
+    /** Una mina en vuelo: sube, va a por alguien y revienta al llegar o al agotarse. */
+    private void hurl(Trap trap) {
+        BlockDisplay mark = trap.mark;
+        if (mark == null || !mark.isValid()) return;
+        Player victim = randomTarget();
+        if (victim == null) {
+            // Sin nadie a quien tirarsela, revienta donde estaba: no se queda de adorno.
+            detonate(trap, null);
+            return;
+        }
+        Location from = trap.at.clone().add(0, 0.45, 0);
+        soundAt(from, "entity.wind_charge.wind_burst", 1.2f, 1.4f);
+
+        animate(70, tick -> {
+            if (!mark.isValid()) throw Stop.now();
+            Location here = mark.getLocation();
+            Player aim = Fx.isFightable(victim) ? victim : Fx.nearest(here, 40);
+            if (aim == null) {
+                blast(here, null);
+                spawned.remove(mark);
+                Fx.safeRemove(mark);
+                throw Stop.now();
+            }
+            Location to = aim.getLocation().add(0, 1.0, 0);
+            Vector step = to.toVector().subtract(here.toVector());
+            double dist = step.length();
+
+            if (dist < 1.6 || tick >= 68) {
+                blast(here, aim);
+                spawned.remove(mark);
+                Fx.safeRemove(mark);
+                throw Stop.now();
+            }
+            // Persigue, pero sin teledirigirse del todo: 0.9 bloques por tick da tiempo
+            // justo a apartarse si se ve venir.
+            Location next = here.clone().add(step.normalize().multiply(Math.min(0.9, dist)));
+            // Los primeros ticks va hacia arriba, para que se vea salir del suelo.
+            if (tick < 6) next.add(0, 0.35, 0);
+            mark.teleport(next);
+            Compat.spawn(world(), Compat.ELECTRIC_SPARK, here, 3, 0.1, 0.1, 0.1, 0.02);
+            Compat.spawn(world(), Compat.SMALL_FLAME, here, 2, 0.08, 0.08, 0.08, 0.01);
+            if (tick % 6 == 0) soundAt(here, "entity.creeper.primed", 0.7f, 1.9f);
+        }, null);
     }
 
     // ---------------------------------------------------------------------- muerte

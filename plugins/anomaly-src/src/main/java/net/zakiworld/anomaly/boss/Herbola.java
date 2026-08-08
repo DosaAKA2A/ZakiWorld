@@ -16,8 +16,6 @@ import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.block.Block;
 import org.bukkit.entity.Bogged;
-import org.bukkit.entity.Display;
-import org.bukkit.entity.TextDisplay;
 import org.bukkit.entity.Parrot;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.EntityEquipment;
@@ -33,9 +31,10 @@ import java.util.Set;
 /**
  * HERBOLA, la octava anomalia.
  *
- * Un bogged que convierte en jardin todo lo que pisa: musgo, azalea y flores, dejando
- * alfombra de musgo por donde pasa igual que un muneco de nieve deja nieve. Encima de
- * la cabeza lleva un loro rojo cantandole, y ese canto es lo que la mantiene entera.
+ * Un bogged con arco que convierte en jardin todo lo que pisa: musgo, azalea y flores,
+ * dejando alfombra de musgo por donde pasa igual que un muneco de nieve deja nieve. La
+ * acompana un loro rojo, el Cantor, que vuela con ella —nunca posado encima— y cuyo
+ * canto es lo que la mantiene entera.
  *
  * OJO: esta anomalia MODIFICA EL MUNDO. Cada bloque que cambia queda anotado con su
  * estado original y se devuelve tal cual al terminar el evento. Solo convierte bloques
@@ -68,8 +67,9 @@ public final class Herbola extends BossFight {
     private int changed;
 
     private Parrot parrot;
-    private TextDisplay nameplate;
     private boolean parrotFreed;
+    /** Mientras el Cantor hace lo suyo (un picado, el llanto) nadie le toca la posicion. */
+    private boolean parrotBusy;
     private boolean flockPhase;
     private double damageBonus = 1.0;
 
@@ -96,14 +96,16 @@ public final class Herbola extends BossFight {
             b.setShouldBurnInDay(false);
             b.customName(Component.text("✦ ", ACCENT)
                     .append(Component.text("Herbola", ACCENT, TextDecoration.BOLD)));
-            // Mientras el Cantor vaya en la cabeza, el nombre lo lleva un holograma por
-            // encima de el; si no, el propio loro lo taparia.
-            b.setCustomNameVisible(false);
+            // Su nombre SIEMPRE a la vista. Ya no hay loro sentado en la cabeza que lo
+            // tape, asi que no hace falta ningun holograma aparte.
+            b.setCustomNameVisible(true);
             EntityEquipment eq = b.getEquipment();
             if (eq != null) {
-                // Una amapola por arma. Pega igual de fuerte y se lee muchisimo mejor:
-                // el bosque no dispara flechas, el bosque te alcanza y te toca.
-                eq.setItemInMainHand(new ItemStack(Material.POPPY));
+                // EL ARCO, otra vez. La amapola la dejaba sin ataque a distancia: un
+                // bogged sin arco pierde su rutina de disparo y solo sabe empujar, y con
+                // el loro montado encima ni eso. Con arco vuelve a tener con que pelear,
+                // y sus flechas envenenan de serie.
+                eq.setItemInMainHand(new ItemStack(Material.BOW));
                 eq.setHelmet(new ItemStack(Material.FLOWERING_AZALEA));
                 eq.setItemInMainHandDropChance(0);
                 eq.setHelmetDropChance(0);
@@ -129,19 +131,24 @@ public final class Herbola extends BossFight {
     }
 
     /**
-     * El Cantor: el loro rojo que le canta desde la cabeza. Nunca se le puede matar.
+     * El Cantor: el loro rojo que le canta. Nunca se le puede matar.
      *
-     * Su nombre NO se muestra fijo: solo aparece cuando le apuntas de cerca, que es el
-     * comportamiento normal de un nombre puesto pero no visible. Asi no hay dos carteles
-     * peleandose por el mismo hueco.
+     * NO SE POSA ENCIMA. Iba de pasajero en la cabeza y eso le costaba a Herbola la mitad
+     * de su IA —un mob que lleva pasajero deja de disparar y casi de moverse— ademas de
+     * taparle el nombre. Ahora vuela suelto y la sigue, orbitandola por encima.
+     *
+     * Su nombre lo lleva puesto pero NO fijo: aparece solo cuando le apuntas de cerca,
+     * que es el comportamiento normal de un nombre no visible. El de Herbola, en cambio,
+     * se ve siempre.
      */
     private void spawnParrot() {
-        parrot = world().spawn(boss.getLocation().add(0, 1.6, 0), Parrot.class, p -> {
+        parrot = world().spawn(escortSpot(), Parrot.class, p -> {
             p.setAdult();
             p.setPersistent(true);
             p.setRemoveWhenFarAway(false);
             p.setInvulnerable(true);
             p.setSilent(false);
+            p.setCollidable(false);
             try {
                 p.setVariant(Parrot.Variant.RED);
             } catch (Throwable ignored) {
@@ -150,50 +157,37 @@ public final class Herbola extends BossFight {
             p.setCustomNameVisible(false);
         });
         markMinion(parrot);
-        boss.addPassenger(parrot);
-        raiseNameplate();
     }
 
     /**
-     * El cartel con el nombre de Herbola, flotando por ENCIMA del Cantor.
+     * Donde le toca volar al Cantor: orbitando por encima de Herbola.
      *
-     * Con el loro sentado en la cabeza, el nombre del jefe quedaba tapado. Se sube a un
-     * texto flotante propio, que se retira en cuanto el Cantor se suelta y el jefe
-     * recupera su cartel de siempre.
+     * Suelto (fase 2 en adelante) vuela mas alto y mas abierto, para que se lea que ya
+     * no le esta cantando al oido sino buscando a quien tirarse.
      */
-    private void raiseNameplate() {
-        if (nameplate != null) return;
-        nameplate = world().spawn(nameplateSpot(), TextDisplay.class, d -> {
-            d.text(Component.text("✦ ", ACCENT)
-                    .append(Component.text("Herbola", ACCENT, TextDecoration.BOLD)));
-            d.setBillboard(Display.Billboard.CENTER);
-            d.setSeeThrough(false);
-            d.setPersistent(false);
-            d.setViewRange(1.2f);
-            d.setBrightness(new Display.Brightness(15, 15));
-        });
-        markMinion(nameplate);
+    private Location escortSpot() {
+        double angle = ticks() * 0.05;
+        double radius = parrotFreed ? 2.4 : 1.1;
+        Location spot = boss.getLocation().add(
+                Math.cos(angle) * radius,
+                boss.getHeight() + (parrotFreed ? 1.5 : 0.7),
+                Math.sin(angle) * radius);
+        Vector toBoss = boss.getEyeLocation().toVector().subtract(spot.toVector());
+        if (toBoss.lengthSquared() > 0.01) spot.setDirection(toBoss);
+        return spot;
     }
 
     /**
-     * Donde va el cartel del nombre: JUSTO ENCIMA de la cabeza.
-     *
-     * Estaba clavado a 2.6 bloques, y como Herbola va a escala 1.8 mide bastante mas
-     * que eso: el nombre le salia a la altura del pecho. Se calcula de su altura real,
-     * asi que si algun dia cambia de tamaño el cartel la sigue.
+     * Lo pega a su sitio tick a tick. Se le lleva a mano en vez de fiarlo a la IA del
+     * loro, que se distrae con cualquier cosa y acaba posandose en un arbol.
      */
-    private Location nameplateSpot() {
-        return boss.getLocation().add(0, boss.getHeight() + 0.55, 0);
-    }
-
-    /** Quita el cartel flotante y le devuelve el suyo al jefe. */
-    private void dropNameplate() {
-        if (nameplate != null) {
-            spawned.remove(nameplate);
-            Fx.safeRemove(nameplate);
-            nameplate = null;
+    private void escortParrot() {
+        if (parrotBusy || parrot == null || !parrot.isValid() || !alive()) return;
+        try {
+            parrot.setVelocity(new Vector(0, 0, 0));
+            parrot.teleport(escortSpot());
+        } catch (Throwable ignored) {
         }
-        if (alive()) boss.setCustomNameVisible(true);
     }
 
     private void arrivalAnimation(Location spot) {
@@ -284,11 +278,6 @@ public final class Herbola extends BossFight {
 
     @Override
     public void cleanup() {
-        if (nameplate != null) {
-            spawned.remove(nameplate);
-            Fx.safeRemove(nameplate);
-            nameplate = null;
-        }
         if (changed > 0) {
             plugin.getLogger().info("Herbola: dejo " + changed + " bloque(s) convertidos. Es a proposito.");
         }
@@ -320,11 +309,9 @@ public final class Herbola extends BossFight {
             }
         }
 
-        if (nameplate != null && nameplate.isValid() && !parrotFreed) {
-            nameplate.teleport(nameplateSpot());
-        }
+        escortParrot();
 
-        // El loro suelto persigue por su cuenta; el de la cabeza canta.
+        // El loro suelto hostiga por su cuenta; el de fase 1 canta mientras vuela.
         if (parrot != null && parrot.isValid()) {
             if (!parrotFreed) {
                 if (ticks() % 60 == 0) {
@@ -341,13 +328,13 @@ public final class Herbola extends BossFight {
     }
 
     /**
-     * Herbola persigue y pelea de cerca, con Cantor o sin el.
+     * Herbola persigue, dispara y pega de cerca.
      *
-     * Con el loro montado en la cabeza se quedaba parada: un mob que lleva pasajero
-     * pierde buena parte de su IA de combate. Asi que ni se confia en su IA ni se le
-     * deja arco: se le renueva el objetivo cada medio segundo, se le empuja hacia el
-     * cuando se queda atras y se le da el golpe a mano si lo tiene al alcance. Ademas
-     * es lo que interesa a su mecanica: mientras corre, va dejando jardin.
+     * Con el arco de vuelta la rutina de tiro del bogged hace el trabajo sola —eso es lo
+     * que se habia perdido y por lo que parecia inofensiva—, asi que aqui solo se le
+     * ayuda con lo que su IA hace mal: renovar objetivo, no quedarse plantada en un
+     * desnivel y no dejar que nadie se le vaya del mapa. El empujon solo se aplica si
+     * esta LEJOS: de cerca estorbaria al tiro y a su propio movimiento.
      */
     private void keepHostile() {
         if (ticks() % 10 != 0) return;
@@ -357,12 +344,13 @@ public final class Herbola extends BossFight {
             org.bukkit.entity.LivingEntity current = m.getTarget();
             if (current == null || !current.isValid() || current.isDead()) m.setTarget(t);
         }
-        face(t.getEyeLocation());
 
         double d2 = boss.getLocation().distanceSquared(t.getLocation());
-        // Al alcance: zarpazo de amapola.
+        // Encima: culatazo. El arco no sirve a bocajarro y no se la va a dejar inofensiva
+        // a quien se le pegue.
         if (d2 < 9) {
             if (ticks() % 16 == 0) {
+                face(t.getEyeLocation());
                 hit(t, 10 * damageBonus);
                 Compat.spawn(world(), Compat.SWEEP_ATTACK, t.getLocation().add(0, 1, 0), 1);
                 Compat.spawn(world(), Compat.ITEM, t.getLocation().add(0, 1, 0), 10, 0.3, 0.3, 0.3, 0.1,
@@ -373,14 +361,14 @@ public final class Herbola extends BossFight {
         }
 
         // NO SE LE ESCAPA NADIE. La pathfinding de un esqueleto se pierde con cualquier
-        // desnivel y se queda plantada, asi que se le empuja hacia el objetivo cada
-        // pocos ticks, mas fuerte cuanto mas lejos este. Perseguir es su mecanica: si
-        // no corre, no convierte terreno y el jefe entero deja de tener sentido.
-        if (ticks() % 8 == 0) {
+        // desnivel y se queda plantada, asi que si el objetivo esta fuera del alcance del
+        // arco se le empuja hacia el. Perseguir es su mecanica: si no corre, no convierte
+        // terreno y el jefe entero deja de tener sentido.
+        if (d2 > 18 * 18 && ticks() % 8 == 0) {
             Vector to = t.getLocation().toVector().subtract(boss.getLocation().toVector());
             double dist = to.length();
             if (dist > 0.5) {
-                double push = dist > 20 ? 0.62 : dist > 10 ? 0.5 : 0.36;
+                double push = dist > 30 ? 0.62 : 0.5;
                 Vector step = to.normalize().multiply(push);
                 // Un saltito si tiene algo delante, para no atascarse en un bordillo.
                 double lift = boss.isOnGround() && blocked(step) ? 0.42 : Math.max(0.0, boss.getVelocity().getY());
@@ -415,7 +403,7 @@ public final class Herbola extends BossFight {
         if (to == 3) callFlock();
     }
 
-    /** FASE I -> II. El loro se suelta y empieza a hostigar por su cuenta. */
+    /** FASE I -> II. El loro deja de cantar y empieza a hostigar por su cuenta. */
     private void freeParrot() {
         if (parrotFreed || !alive()) return;
         parrotFreed = true;
@@ -429,9 +417,6 @@ public final class Herbola extends BossFight {
         animate(70, tick -> {
             if (!alive()) return;
             if (tick == 30 && parrot != null && parrot.isValid()) {
-                dropNameplate();
-                boss.eject();
-                parrot.setVelocity(new Vector(0, 0.8, 0));
                 Compat.spawn(world(), Compat.CHERRY_LEAVES, parrot.getLocation(), 40, 0.5, 0.5, 0.5, 0,
                         Compat.dust(0xE05A4A, 1.5f));
                 soundAt(parrot.getLocation(), "entity.parrot.fly", 1.4f, 1.0f);
@@ -519,6 +504,8 @@ public final class Herbola extends BossFight {
             return;
         }
         plugin.getLogger().info("Herbola: empieza el llanto del Cantor.");
+        // Ya no sigue a nadie: se eleva el solo mientras carga.
+        parrotBusy = true;
         final Location center = Fx.ground(l, 6);
         final double radius = 18;
 
@@ -787,6 +774,8 @@ public final class Herbola extends BossFight {
         soundAt(parrot.getLocation(), "entity.parrot.fly", 1.5f, 0.9f);
         broadcastNear(Component.text("El loro se lanza.", ACCENT));
 
+        // Mientras dure el picado vuela el solo: la escolta no le toca la posicion.
+        parrotBusy = true;
         animate(80, tick -> {
             if (!alive() || parrot == null || !parrot.isValid()) throw Stop.now();
             if (!Fx.isFightable(target)) throw Stop.now();
@@ -816,7 +805,7 @@ public final class Herbola extends BossFight {
                 return;
             }
             parrot.setVelocity(new Vector(0, 0.4, 0));
-        }, null);
+        }, () -> parrotBusy = false);
     }
 
     /** 8. Zarzal: un cerco de espinos que se cierra. */
