@@ -1,5 +1,9 @@
 package com.ederus.main;
 
+import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.event.ClickEvent;
+import net.kyori.adventure.text.event.HoverEvent;
+import net.kyori.adventure.title.Title;
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
 import org.bukkit.entity.Player;
@@ -87,10 +91,10 @@ public final class AvisoTiendas {
         }
 
         if (diaria > 0 && ultimoDiaria > 0 && diaria != ultimoDiaria) {
-            anunciar("tiendas.mensaje-diaria", "Mercado del Dia");
+            anunciar("tiendas.diaria", "Mercado del Dia");
         }
         if (boveda > 0 && ultimoBoveda > 0 && boveda != ultimoBoveda) {
-            anunciar("tiendas.mensaje-boveda", "La Boveda");
+            anunciar("tiendas.boveda", "La Boveda");
         }
 
         if (diaria > 0) ultimoDiaria = diaria;
@@ -111,22 +115,62 @@ public final class AvisoTiendas {
         return -1L;
     }
 
-    private void anunciar(String clave, String queTienda) {
-        List<String> lineas = plugin.getConfig().getStringList(clave);
+    private void anunciar(String base, String queTienda) {
+        List<String> lineas = plugin.getConfig().getStringList(base + ".chat");
         if (lineas.isEmpty()) return;
 
-        // El chat se toca desde el hilo principal.
+        String titulo = color(plugin.getConfig().getString(base + ".titulo", ""));
+        String subtitulo = color(plugin.getConfig().getString(base + ".subtitulo", ""));
+        String sonido = plugin.getConfig().getString(base + ".sonido", "");
+        String botonTexto = plugin.getConfig().getString(base + ".boton-texto", "");
+        String botonCmd = plugin.getConfig().getString(base + ".boton-comando", "/mobcoins");
+        String botonHover = plugin.getConfig().getString(base + ".boton-hover", "");
+
+        // Todo lo que toca a jugadores va por el hilo principal.
         Bukkit.getScheduler().runTask(plugin, () -> {
-            for (String cruda : lineas) {
-                String linea = ChatColor.translateAlternateColorCodes('&', cruda);
-                for (Player p : Bukkit.getOnlinePlayers()) {
-                    p.sendMessage(linea);
+            Component boton = botonTexto.isBlank() ? null : Component.text(color(botonTexto))
+                    .clickEvent(ClickEvent.runCommand(botonCmd))
+                    .hoverEvent(HoverEvent.showText(Component.text(color(
+                            botonHover.isBlank() ? "Clic para abrir" : botonHover))));
+
+            for (Player p : Bukkit.getOnlinePlayers()) {
+                for (String cruda : lineas) {
+                    // La linea que lleve %boton% se manda como componente pinchable.
+                    if (boton != null && cruda.contains("%boton%")) {
+                        String[] trozos = color(cruda).split("%boton%", -1);
+                        p.sendMessage(Component.text(trozos[0])
+                                .append(boton)
+                                .append(Component.text(trozos.length > 1 ? trozos[1] : "")));
+                    } else {
+                        p.sendMessage(color(cruda));
+                    }
                 }
-                Bukkit.getConsoleSender().sendMessage(linea);
+                if (!titulo.isBlank() || !subtitulo.isBlank()) {
+                    p.showTitle(Title.title(
+                            Component.text(titulo),
+                            Component.text(subtitulo),
+                            Title.Times.times(Duration.ofMillis(400),
+                                    Duration.ofMillis(2600), Duration.ofMillis(700))));
+                }
+                if (!sonido.isBlank()) {
+                    try {
+                        p.playSound(p.getLocation(), sonido, 0.8f, 1.2f);
+                    } catch (Exception e) {
+                        // Un nombre de sonido invalido no debe tumbar el anuncio.
+                    }
+                }
+            }
+
+            for (String cruda : lineas) {
+                Bukkit.getConsoleSender().sendMessage(color(cruda).replace("%boton%", ""));
             }
         });
 
         enviarWebhook(queTienda);
+    }
+
+    private static String color(String s) {
+        return s == null ? "" : ChatColor.translateAlternateColorCodes('&', s);
     }
 
     /** Aviso opcional a Discord. Si no hay URL configurada, no hace nada. */

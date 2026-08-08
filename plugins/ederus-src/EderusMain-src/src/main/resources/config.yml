@@ -24,25 +24,54 @@ comando: 'ae givebook %jugador% %encanto% %nivel% 1 %exito% %rotura%'
 #
 # webhook: opcional. Si pones la URL de un webhook de Discord, tambien avisa
 # alli. Dejalo vacio para no usarlo.
+
 tiendas:
   activo: true
-  revisar-cada-segundos: 30
+  revisar-cada-segundos: 5
   ruta-diaria: 'plugins/UltimateMobCoins/data/rotating_shop-data.yml'
   ruta-boveda: 'plugins/UltimateMobCoins/data/shop_with_timer-data.yml'
   webhook: ''
   webhook-texto: 'Se ha renovado la tienda de MobCoins: %tienda%'
-  mensaje-diaria:
-    - '&8&m                                        '
-    - '&e&lMERCADO DEL DIA &7se ha renovado'
-    - '&7Hay diez articulos nuevos esperando.'
-    - '&7Echales un ojo con &b/mobcoins'
-    - '&8&m                                        '
-  mensaje-boveda:
-    - '&8&m                                        '
-    - '&6&lLA BOVEDA &7se ha renovado'
-    - '&7Vuelve el stock de los doce articulos del mes.'
-    - '&7Echale un ojo con &b/mobcoins'
-    - '&8&m                                        '
+
+  # titulo/subtitulo salen en grande en pantalla. sonido es un nombre de sonido
+  # de Minecraft. La linea del chat que lleve %boton% se manda pinchable.
+  diaria:
+    titulo: '&e&lMERCADO DEL DIA'
+    subtitulo: '&7El catalogo se ha renovado'
+    sonido: 'block.note_block.pling'
+    boton-texto: '&e&l>> &6&lABRIR LA TIENDA &e&l<<'
+    boton-comando: '/mobcoins'
+    boton-hover: '&7Clic para abrir el Mercado del Dia'
+    chat:
+      - '&8&m                                                            '
+      - '&e&l              MERCADO DEL DIA'
+      - '&7           El catalogo se ha renovado'
+      - ''
+      - '  &6- &7Diez articulos nuevos, elegidos al azar'
+      - '  &6- &7Stock limitado para todo el servidor'
+      - '  &6- &7Vuelve a cambiar dentro de 24 horas'
+      - ''
+      - '                 %boton%'
+      - '&8&m                                                            '
+
+  boveda:
+    titulo: '&6&lLA BOVEDA'
+    subtitulo: '&7Stock del mes repuesto'
+    sonido: 'ui.toast.challenge_complete'
+    boton-texto: '&6&l>> &e&lVER LA BOVEDA &6&l<<'
+    boton-comando: '/mobcoins'
+    boton-hover: '&7Clic para abrir La Boveda'
+    chat:
+      - '&8&m                                                            '
+      - '&6&l                 LA BOVEDA'
+      - '&7            Stock del mes repuesto'
+      - ''
+      - '  &e- &7Los doce articulos vuelven a estar disponibles'
+      - '  &e- &7Aqui viven las llaves top y los libros cumbre'
+      - '  &e- &7No vuelve a reponerse hasta dentro de 30 dias'
+      - ''
+      - '                 %boton%'
+      - '&8&m                                                            '
 
 encantamientos:
   # --- SIMPLE (12) ---
