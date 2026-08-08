@@ -4,14 +4,22 @@ import org.bukkit.Bukkit;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandSender;
 import org.bukkit.command.ConsoleCommandSender;
+import org.bukkit.command.TabCompleter;
 import org.bukkit.entity.Player;
 import org.bukkit.plugin.java.JavaPlugin;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
+import java.util.Locale;
 import java.util.concurrent.ThreadLocalRandom;
 
-public final class EderusMain extends JavaPlugin {
+public final class EderusMain extends JavaPlugin implements TabCompleter {
+
+    /** Se compila contra la API 1.20 y se ejecuta en Paper 26: getDescription() esta
+     *  en retirada, asi que la version se mantiene aqui. Cambiar tambien en pom.xml
+     *  y plugin.yml al subir de version. */
+    private static final String VERSION = "1.4.0";
 
     private final List<String> nombres = new ArrayList<>();
     private final List<Integer> niveles = new ArrayList<>();
@@ -28,6 +36,7 @@ public final class EderusMain extends JavaPlugin {
                 + destruirMin + "-" + destruirMax + "%");
         avisoTiendas = new AvisoTiendas(this);
         avisoTiendas.iniciar();
+        if (getCommand("main") != null) getCommand("main").setTabCompleter(this);
     }
 
     @Override
@@ -65,24 +74,122 @@ public final class EderusMain extends JavaPlugin {
 
     @Override
     public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
+        if (command.getName().equalsIgnoreCase("main")) {
+            return comandoPrincipal(sender, label, args);
+        }
+        return comandoLibro(sender, label, args);
+    }
+
+    // ------------------------------------------------------------------
+    // /main - administracion del nucleo
+    // ------------------------------------------------------------------
+
+    private boolean comandoPrincipal(CommandSender sender, String label, String[] args) {
+        if (args.length == 0) {
+            ayuda(sender, label);
+            return true;
+        }
+        switch (args[0].toLowerCase(Locale.ROOT)) {
+            case "reload" -> {
+                cargar();
+                if (avisoTiendas != null) avisoTiendas.iniciar();
+                sender.sendMessage("§aNucleo recargado. §7Encantamientos: §f" + nombres.size()
+                        + " §7| rotura §f" + destruirMin + "-" + destruirMax + "%");
+                sender.sendMessage("§7El aviso de tiendas vuelve a tomar la referencia: "
+                        + "una rotacion en los proximos segundos no se anuncia.");
+                return true;
+            }
+            case "aviso" -> {
+                if (args.length != 2) {
+                    sender.sendMessage("§eUso: /" + label + " aviso <diaria|boveda>");
+                    return true;
+                }
+                String cual = args[1].toLowerCase(Locale.ROOT);
+                if (!cual.equals("diaria") && !cual.equals("boveda")) {
+                    sender.sendMessage("§cSolo vale §fdiaria §co §fboveda§c.");
+                    return true;
+                }
+                if (avisoTiendas == null || !avisoTiendas.probar(cual)) {
+                    sender.sendMessage("§cNo hay mensajes configurados para esa tienda.");
+                    return true;
+                }
+                sender.sendMessage("§aAviso de prueba enviado a los jugadores conectados.");
+                return true;
+            }
+            case "libro" -> {
+                if (args.length != 2) {
+                    sender.sendMessage("§eUso: /" + label + " libro <jugador>");
+                    return true;
+                }
+                return entregarLibro(sender, args[1]);
+            }
+            default -> {
+                ayuda(sender, label);
+                return true;
+            }
+        }
+    }
+
+    private void ayuda(CommandSender sender, String label) {
+        sender.sendMessage("§8§m                                        ");
+        sender.sendMessage("§6§lNUCLEO DE EDERUS §7v" + VERSION);
+        sender.sendMessage("");
+        sender.sendMessage("§6/" + label + " reload §8- §fRecarga la configuracion");
+        sender.sendMessage("§6/" + label + " aviso <diaria|boveda> §8- §fLanza el aviso de prueba");
+        sender.sendMessage("§6/" + label + " libro <jugador> §8- §fEntrega un libro aleatorio");
+        sender.sendMessage("");
+        sender.sendMessage("§7Encantamientos cargados: §f" + nombres.size()
+                + " §7| rotura §f" + destruirMin + "-" + destruirMax + "%");
+        sender.sendMessage("§8§m                                        ");
+    }
+
+    @Override
+    public List<String> onTabComplete(CommandSender sender, Command command, String alias, String[] args) {
+        if (args.length == 1) {
+            return filtrar(List.of("reload", "aviso", "libro"), args[0]);
+        }
+        if (args.length == 2 && args[0].equalsIgnoreCase("aviso")) {
+            return filtrar(List.of("diaria", "boveda"), args[1]);
+        }
+        if (args.length == 2 && args[0].equalsIgnoreCase("libro")) {
+            List<String> conectados = new ArrayList<>();
+            for (Player p : Bukkit.getOnlinePlayers()) conectados.add(p.getName());
+            return filtrar(conectados, args[1]);
+        }
+        return Collections.emptyList();
+    }
+
+    private static List<String> filtrar(List<String> opciones, String prefijo) {
+        String p = prefijo.toLowerCase(Locale.ROOT);
+        List<String> out = new ArrayList<>();
+        for (String o : opciones) if (o.toLowerCase(Locale.ROOT).startsWith(p)) out.add(o);
+        return out;
+    }
+
+    // ------------------------------------------------------------------
+    // /ederuslibro - se conserva porque lo llaman cofres, misiones y rangos
+    // ------------------------------------------------------------------
+
+    private boolean comandoLibro(CommandSender sender, String label, String[] args) {
         if (!(sender instanceof ConsoleCommandSender)) {
             sender.sendMessage("§cEste comando solo puede ejecutarse desde la consola.");
             return true;
         }
         if (args.length == 1 && args[0].equalsIgnoreCase("reload")) {
-            cargar();
-            if (avisoTiendas != null) avisoTiendas.iniciar();
-            sender.sendMessage("§aEderusMain recargado. Encantamientos: " + nombres.size()
-                    + " | rotura " + destruirMin + "-" + destruirMax + "%");
+            sender.sendMessage("§eEse comando se ha movido: usa §f/main reload§e.");
             return true;
         }
         if (args.length != 1) {
-            sender.sendMessage("§eUso: /" + label + " <jugador>  |  /" + label + " reload");
+            sender.sendMessage("§eUso: /" + label + " <jugador>");
             return true;
         }
-        Player objetivo = Bukkit.getPlayerExact(args[0]);
+        return entregarLibro(sender, args[0]);
+    }
+
+    private boolean entregarLibro(CommandSender sender, String nombre) {
+        Player objetivo = Bukkit.getPlayerExact(nombre);
         if (objetivo == null) {
-            sender.sendMessage("§cJugador no conectado: " + args[0]);
+            sender.sendMessage("§cJugador no conectado: " + nombre);
             return true;
         }
         if (nombres.isEmpty()) {

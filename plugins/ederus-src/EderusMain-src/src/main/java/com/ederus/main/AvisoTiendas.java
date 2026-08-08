@@ -90,10 +90,10 @@ public final class AvisoTiendas {
         }
 
         if (diaria > 0 && ultimoDiaria > 0 && diaria != ultimoDiaria) {
-            anunciar("tiendas.diaria", "Mercado del Dia");
+            anunciar("tiendas.diaria", "Mercado del Dia", true);
         }
         if (boveda > 0 && ultimoBoveda > 0 && boveda != ultimoBoveda) {
-            anunciar("tiendas.boveda", "La Boveda");
+            anunciar("tiendas.boveda", "La Boveda", true);
         }
 
         if (diaria > 0) ultimoDiaria = diaria;
@@ -114,7 +114,22 @@ public final class AvisoTiendas {
         return -1L;
     }
 
-    private void anunciar(String base, String queTienda) {
+    /**
+     * Lanza el aviso a mano, sin esperar a que rote la tienda. Es para /main aviso:
+     * probar el mensaje sin tener que forzar un refresco y aguantar la espera.
+     * No avisa a Discord, que una prueba no tiene por que salir del juego.
+     *
+     * @return false si esa tienda no tiene mensajes configurados.
+     */
+    public boolean probar(String cual) {
+        boolean diaria = cual.equalsIgnoreCase("diaria");
+        String base = diaria ? "tiendas.diaria" : "tiendas.boveda";
+        if (plugin.getConfig().getStringList(base + ".chat").isEmpty()) return false;
+        anunciar(base, diaria ? "Mercado del Dia" : "La Boveda", false);
+        return true;
+    }
+
+    private void anunciar(String base, String queTienda, boolean avisarDiscord) {
         List<String> lineas = plugin.getConfig().getStringList(base + ".chat");
         if (lineas.isEmpty()) return;
 
@@ -157,7 +172,7 @@ public final class AvisoTiendas {
             }
         });
 
-        enviarWebhook(queTienda);
+        if (avisarDiscord) enviarWebhook(queTienda);
     }
 
     private static String color(String s) {
