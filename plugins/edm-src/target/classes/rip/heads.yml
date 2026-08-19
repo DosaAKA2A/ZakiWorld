@@ -1,0 +1,81 @@
+# ╦═╗╦╔═╗   Rip v3.1.0 - cabezas del menu
+# ╠╦╝║╠═╝   Texturas de textures.minecraft.net (hash publico).
+# ╩╚═╩╩      Cada valor es un hash; tambien admite el 'Value' base64 completo.
+#            Si borras una entrada o el hash falla, se usa el item de respaldo.
+#
+# Los 27 efectos de kill y 27 de muerte tienen cabeza asignada para que el
+# menu se vea uniforme y ordenado. Puedes cambiar cualquiera por la tuya.
+
+kill:
+  # -- Comun --
+  blood:      26896c0886bf9486239de8443768288829da62fa2a4b7ebd78af415d47b218c1  # Sangre
+  hearts:     d45f4d139c9e89262ec06b27aaad73fa488ab49290d2ccd685a2554725373c9b  # Corazon
+  spark:      1c52aaa1d40d6ef48b86eb7e7a0189b9aeb85474a6b0678eac891b707b95b899  # Electricidad
+  coins:      47b44fca612e24a1dce737a4c3d22747fce0011d662f6f9554794500cddbb7cc  # Oro (totem)
+  poof:       1a9570415f94b394ff51a9259f1fcf9db306677438bdc8bac35dcd591aa02ede  # Nube
+  # -- Poco Comun --
+  firework:   98b30172e4fb11974398c54e6c74560ce30ec1dae8ab492826c24fda2946b786  # Cohete
+  notes:      9b612023a6327465cbda247006cabd72c93406d6621b99dfabdaa04997856b24  # Nota musical
+  slash:      50dfc8a3563bf996f5c1b74b0b015b2cceb2d04f94bbcdafb2299d8a5979fac1  # Espada
+  confetti:   98b30172e4fb11974398c54e6c74560ce30ec1dae8ab492826c24fda2946b786  # Cohete
+  pierce:     50dfc8a3563bf996f5c1b74b0b015b2cceb2d04f94bbcdafb2299d8a5979fac1  # Espada
+  # -- Raro --
+  explosion:  a15d36aba81539263615789bf314b033e62c738c6ac6f496e4cc79e918f06  # Explosion
+  frost:      ca4cb39b983f8aa61f3716f8a61713e2da93feeec3feb684807279ff8b1e22ac  # Copo de nieve
+  inferno:    bb58b83f07618ea79a1a1202b5a77b14df1c8e35b6e1deb8a26d8976f85360c3  # Llama
+  shockwave:  e855b3e1d9a7b9fd76a776fa4eec871d52ed26932538628c43de32d1d2d743  # Yunque
+  meteor:     bb58b83f07618ea79a1a1202b5a77b14df1c8e35b6e1deb8a26d8976f85360c3  # Llama
+  geyser:     5da65e5705c8e984629cacf5ae7902b3a7766f908363048e6d7e200397d77eab  # Agua
+  # -- Mitico --
+  souls:      54b8f3dbea08b3640555729c32d7461aa49ee229b9d6bb9ba3c907fdc45fa952  # Alma
+  dragon:     771c17002ca4cf37cdbb22942172299a1c5c5e82d2962d813c43c3da9be53efe  # Dragon
+  totem:      47b44fca612e24a1dce737a4c3d22747fce0011d662f6f9554794500cddbb7cc  # Totem
+  chains:     54b8f3dbea08b3640555729c32d7461aa49ee229b9d6bb9ba3c907fdc45fa952  # Alma (cadenas de fuego)
+  eclipse:    6e451a4365c49b42d7cd4e08f6ed7be6612ee4d79ceee1c210b63d06c0514b9c  # Oscuridad
+  # -- Legendario --
+  lightning:  5d225635fe66cced5e1f1030a11bfbe1e28a8745f920e7b7076eb669c902283  # Rayo
+  blackhole:  6e451a4365c49b42d7cd4e08f6ed7be6612ee4d79ceee1c210b63d06c0514b9c  # Agujero negro
+  laser:      ce38875659ae4cdc9f88f2a54c3c1cfb4560fa5f39d0489b451f41b3a38697d2  # Haz de luz
+  swordfall:  50dfc8a3563bf996f5c1b74b0b015b2cceb2d04f94bbcdafb2299d8a5979fac1  # Espada
+  orbital:    ce38875659ae4cdc9f88f2a54c3c1cfb4560fa5f39d0489b451f41b3a38697d2  # Haz orbital
+  # -- Inmortal --
+  blastoff:   98b30172e4fb11974398c54e6c74560ce30ec1dae8ab492826c24fda2946b786  # Cohete (Team Rocket)
+
+death:
+  # -- Comun --
+  smoke:      1a9570415f94b394ff51a9259f1fcf9db306677438bdc8bac35dcd591aa02ede  # Nube
+  bones:      1e8f36b2715ae4d897acda7f06cb2b053de5328869e3fa7608ef5ec75238ad2d  # Hueso
+  bloodpool:  26896c0886bf9486239de8443768288829da62fa2a4b7ebd78af415d47b218c1  # Sangre
+  splat:      26896c0886bf9486239de8443768288829da62fa2a4b7ebd78af415d47b218c1  # Sangre
+  dust:       1a9570415f94b394ff51a9259f1fcf9db306677438bdc8bac35dcd591aa02ede  # Nube
+  # -- Poco Comun --
+  firework:   302f48f34d22ded7404f76e8a132af5d7919c8dcd51df6e7a85ddfac85ab  # Cohete
+  cherry:     e5c97b06fca94887830b5a319bb9a98773eee6e449007d12870e504a3ba0ee22  # Cerezo
+  rain:       5da65e5705c8e984629cacf5ae7902b3a7766f908363048e6d7e200397d77eab  # Lluvia
+  balloons:   302f48f34d22ded7404f76e8a132af5d7919c8dcd51df6e7a85ddfac85ab  # Cohete
+  spores:     e5c97b06fca94887830b5a319bb9a98773eee6e449007d12870e504a3ba0ee22  # Follaje
+  # -- Raro --
+  grave:      b7cab56c82cb81bdb9979a464bc9d3ba3e6722ba122cf6c52873010a2b59aefe  # Tumba
+  shatter:    e389e8ede43f1bb81679c41a531e12190cc22326cd7a06c11f95c5e8643858bc  # Amatista
+  void:       c6826148b2cfa1f42a585c983ba3a62106f74c438c10a323781d7c4de9c8eaea  # Vacio
+  ender:      4d2de5755f1a511096fb02e7d6796a4c501340cb7b9564285fdaa166a28b1ab4  # Ojo del End
+  statue:     b7cab56c82cb81bdb9979a464bc9d3ba3e6722ba122cf6c52873010a2b59aefe  # Piedra (tumba)
+  whirlpool:  5da65e5705c8e984629cacf5ae7902b3a7766f908363048e6d7e200397d77eab  # Agua
+  # -- Mitico --
+  angel:      aa4eaca5b0ed7b27dd59d81cd0c387c72dab5e5c2e3c6926126eccc3ff7d7812  # Angel
+  souls:      10891e7666a41d13ae139a196968acce8a054d84dd8304ceadd28a8789883b26  # Alma
+  glitch:     9f13197c6a7cf52570fe564aab9944a9043bdf7d957479311ece0225e1d38df4  # Error
+  phoenix:    bb58b83f07618ea79a1a1202b5a77b14df1c8e35b6e1deb8a26d8976f85360c3  # Llama
+  specters:   c6826148b2cfa1f42a585c983ba3a62106f74c438c10a323781d7c4de9c8eaea  # Espectro (vacio)
+  # -- Legendario --
+  implosion:  6201ae1a8a04df52656f5e4813e1fbcf97877dbbfbc4268d04316d6f9f753  # Singularidad
+  supernova:  57c66f5a4b408005b336da6676e8f6a2a67eea315fb7e91360acc047802fa320  # Estrella nether
+  lightning:  26f62e68a89f3d96dad4a6bbfd0d930a0a943c7378d4d3cb351a37812640b275  # Rayo
+  pufferfish: 5da65e5705c8e984629cacf5ae7902b3a7766f908363048e6d7e200397d77eab  # Agua
+  requiem:    aa4eaca5b0ed7b27dd59d81cd0c387c72dab5e5c2e3c6926126eccc3ff7d7812  # Celestial (angel)
+  # -- Inmortal --
+  sixtyseven: 47b44fca612e24a1dce737a4c3d22747fce0011d662f6f9554794500cddbb7cc  # Oro (67)
+
+ui:
+  tab_kill:   50dfc8a3563bf996f5c1b74b0b015b2cceb2d04f94bbcdafb2299d8a5979fac1  # Espada
+  tab_death:  81d0deae05488b54e32d54d0e53ba9d4d38b6ebb76a7d73137dfdd44f57b7649  # Craneo

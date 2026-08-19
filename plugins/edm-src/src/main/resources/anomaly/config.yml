@@ -1,0 +1,183 @@
+# ============================================================
+#  ANOMALY  ·  Iris Studio
+#
+#  Todo esto se puede tocar desde el juego con /anomaly (menu Ajustes),
+#  y cada cambio hecho ahi se escribe aqui al momento.
+#  Editar a mano tambien vale: despues, /anomaly reload.
+# ============================================================
+
+general:
+  # Mundos donde puede aparecer una anomalia. Vacio = TODOS, incluidos nether y end,
+  # que rara vez es lo que se quiere. Por eso viene acotado al mundo normal.
+  mundos:
+    - world
+
+  # Lo mas cerca y lo mas lejos que puede salir respecto a un jugador conectado.
+  # Salir demasiado cerca mata la exploracion; demasiado lejos y no va nadie.
+  distancia-minima: 200
+  distancia-maxima: 1200
+
+  # Radio alrededor del spawn del mundo donde nunca aparecera.
+  distancia-minima-spawn: 300
+
+  # Cuantos puntos se prueban antes de rendirse. Cada intento carga un trozo
+  # de forma asincrona, asi que subirlo no congela el servidor, solo tarda mas.
+  intentos-de-busqueda: 40
+
+  # Distancia de respeto al borde de una region de WorldGuard / ProtectionStones.
+  # No basta con caer fuera del claim: el combate se mueve, y no queremos que la
+  # pelea acabe dentro del terreno de alguien.
+  margen-proteccion: 24
+
+  # Descarta sitios con senales de base aunque no haya claim: cofres, camas,
+  # hornos, yunques, spawners... Cuesta unas milesimas y evita disgustos.
+  evitar-bases: true
+  radio-escaneo-bases: 24
+
+  # El jefe va montado y necesita sitio. Estos dos deciden cuanto claro exige.
+  radio-arena: 12
+  desnivel-maximo: 4
+
+  # Profundidad minima de agua para las anomalias acuaticas, que pelean en el FONDO
+  # y no en la superficie. Con menos de esto el sitio se descarta.
+  profundidad-minima-agua: 8
+
+automatico:
+  # Si se activa, el plugin abre anomalias solo cada X minutos.
+  activo: false
+  intervalo-minutos: 90
+  # Por debajo de esta gente conectada no abre ninguna.
+  jugadores-minimos: 2
+  # Un id concreto, o "aleatoria" para que elija entre las activas.
+  anomalia: aleatoria
+
+combate:
+  # Quien este dentro de este radio ve las barras de jefe y cuenta para el botin.
+  radio-participacion: 64
+
+  # Si nadie la mata en este tiempo, se cierra sola y no reparte nada.
+  minutos-limite: 15
+
+  # Interruptor global del empuje. En false, ninguna habilidad movera a nadie
+  # (misma regla que se pidio para las animaciones de Rip).
+  permitir-empuje: true
+
+  # Cuanto sube la vida del jefe por cada jugador de mas. 0.15 = +15% por jugador,
+  # asi que cinco jugadores pelean contra un jefe con un 60% mas de vida.
+  vida-extra-por-jugador: 0.15
+
+anuncio:
+  activo: true
+  sonido: true
+  titulo: true
+  # Redondea las coordenadas anunciadas a multiplos de N para dar margen de busqueda.
+  # 1 = coordenadas exactas.
+  precision-coordenadas: 1
+
+  # La columna de luz del color de la anomalia sobre el jefe. Se ve desde lejos y es
+  # lo que hace que las coordenadas basten para encontrarlo. Apagalo solo si pesa.
+  pilar-de-luz: true
+
+# Los logros se escriben solos como datapack dentro del mundo y se conceden a todos
+# los que participaron en la pelea, no solo a quien da el ultimo golpe.
+logros:
+  sonido: true
+
+# Ajustes por anomalia. Se rellenan solos al tocarlos desde el menu.
+#
+# Ademas de vida y dano, cada anomalia admite DOS LISTAS DE TEXTO opcionales que son
+# exactamente lo que se lee en el hover del anuncio del chat:
+#
+#   descripcion:  de donde viene, su historia. Una linea por renglon.
+#   amenaza:      el aviso de peligro, a que se enfrentan.
+#
+# Si no estan, se usa la que trae escrita el plugin. Ejemplo:
+#
+#   caballero_sepulcral:
+#     descripcion:
+#       - 'Cabalgaba el Paramo de Batalla, en el Aether,'
+#       - 'jurado a una corona que ya no existe.'
+#     amenaza:
+#       - 'Tres fases: montado, a pie y heraldo'
+#       - 'Se enfurece si le fallan'
+anomalias:
+  caballero_sepulcral:
+    activa: true
+    vida: 1400
+    dano: 1.0
+    nombre: 'Caballero Sepulcral'
+  cabra_gritona:
+    activa: true
+    vida: 1600
+    # Multiplicador del dano de TODAS sus habilidades. 1.0 es lo de diseno.
+    dano: 1.0
+    nombre: 'Cabra Gritona'
+  conejo_asesino:
+    activa: true
+    vida: 1500
+    dano: 1.0
+    nombre: 'Conejo Asesino'
+  storm_rider:
+    activa: true
+    vida: 1700
+    dano: 1.0
+    nombre: 'Storm Rider'
+  leviatan_de_sal:
+    activa: true
+    vida: 1800
+    dano: 1.0
+    nombre: 'Leviatan de Sal'
+  coro_abisal:
+    activa: true
+    vida: 1300
+    dano: 1.0
+    nombre: 'Coro Abisal'
+  darkness:
+    activa: true
+    vida: 2600
+    dano: 1.0
+    nombre: 'Darkness'
+  herbola:
+    activa: true
+    vida: 1600
+    dano: 1.0
+    nombre: 'Herbola'
+  quimera:
+    activa: true
+    vida: 1900
+    dano: 1.0
+    nombre: 'Quimera'
+  bruja:
+    activa: true
+    vida: 1500
+    dano: 1.0
+    nombre: 'Bruja'
+  mimic:
+    activa: true
+    vida: 2000
+    dano: 1.0
+    nombre: 'Mimic'
+  rabby:
+    activa: true
+    vida: 2400
+    dano: 1.0
+    nombre: 'Rabby'
+  cazador:
+    activa: true
+    vida: 2100
+    dano: 1.0
+    nombre: 'El Cazador'
+  aragon:
+    activa: true
+    vida: 2300
+    dano: 1.0
+    nombre: 'Áragon'
+  piromante:
+    activa: true
+    vida: 1900
+    dano: 1.0
+    nombre: 'El Piromante'
+
+menu:
+  # La anomalia que abre el boton Iniciar del panel.
+  seleccion: caballero_sepulcral

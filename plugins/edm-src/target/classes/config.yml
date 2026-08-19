@@ -1,0 +1,14 @@
+# EDM - nucleo de Ederus
+#
+# Cada modulo tiene su propia carpeta y su propio config dentro de plugins/EDM/:
+#   rip/      efectos de kill y muerte      (antes plugins/Rip)
+#   anomaly/  jefes y botin                 (antes plugins/Anomaly)
+#   core/     libros y avisos de tiendas    (antes plugins/EderusMain)
+#
+# Al arrancar por primera vez se copian solos desde las carpetas viejas,
+# que se conservan intactas por si hay que volver atras.
+
+modulos:
+  rip: true
+  anomaly: true
+  core: true

@@ -1,0 +1,232 @@
+# ╦═╗╦╔═╗   Rip v3.1.0 - Iris Studio
+# ╠╦╝║╠═╝   Compatible 1.20 - 1.21
+# ╩╚═╩╩
+#
+# 27 efectos de kill y 27 de muerte en 6 calidades (nueva: INMORTAL). Se equipan con /rip gui
+# (menu paginado) o /rip kill|death <id|random|none>. Cada efecto tiene su
+# propio permiso: rip.kill.<id> / rip.death.<id>; rip.* concede los 52.
+#
+# El boton "Aleatorio" del menu sortea uno de tus efectos desbloqueados en
+# cada kill o muerte.
+#
+# INMORTAL (calidad 6):
+#  - kill "Despegue Estelar" (blastoff): la victima sale disparada al cielo
+#    al estilo Equipo Rocket y desaparece con un destello.
+#  - muerte "SESENTA Y SIETE" (sixtyseven): un 67 gigante late sobre tu
+#    tumba entre fuegos, espirales y fanfarrias.
+#
+# Efectos legendarios con entidades (Juicio de Espadas, Peces Globo):
+#  - En 1.21.9+ el doble de la victima es un Mannequin con su skin completa.
+#  - En 1.20 - 1.21.8 se usa un ArmorStand con su cabeza y su armadura.
+#  - Los peces globo y las espadas son invulnerables, no hacen dano y se
+#    limpian solos.
+#
+# Las cabezas del menu se configuran en heads.yml.
+
+# Suelo minimo, en milisegundos, entre dos efectos del mismo jugador.
+# NO es el enfriamiento: cada efecto tiene el suyo propio, abajo del todo en
+# "enfriamientos". Esto solo evita que un valor de 0 deje pasar todo. Lo normal
+# es no tocarlo.
+cooldown-ms: 250
+
+# Maximo de animaciones sonando a la vez en todo el servidor, sean de quien
+# sean. El enfriamiento de arriba es por jugador, asi que ya frena a uno que
+# mate a cinco de golpe (solo suena la primera), pero no frena a cinco victimas
+# distintas muriendo en el mismo tick: cada una es un jugador distinto y cada
+# una lanza la suya.
+#
+# Este limite es lo unico que corta eso. Las animaciones que no entran
+# sencillamente no suenan. 0 = sin limite.
+max-animaciones-simultaneas: 3
+
+# ---- OCULTAR EL CUERPO ----
+# Al morir, el cliente reproduce la animacion vanilla: el jugador se pone rojo y
+# cae de lado durante un segundo. En los efectos que destruyen el cuerpo
+# (explosion, desintegracion, despegue...) eso se ve mal, porque el cadaver
+# sigue ahi tumbandose por debajo de la animacion.
+#
+# Los efectos de esta lista esconden el cadaver del resto de jugadores en el
+# mismo tick de la muerte, asi que el cuerpo desaparece al instante y solo se ve
+# la animacion. Vuelve a mostrarse al reaparecer.
+#
+# Formato: kill.<id> o death.<id>. Borra la clave entera para volver a los
+# valores de fabrica; dejala vacia para no ocultar el cuerpo nunca.
+ocultar-cuerpo:
+  - kill.poof
+  - kill.explosion
+  - kill.frost
+  - kill.inferno
+  - kill.meteor
+  - kill.dragon
+  - kill.blackhole
+  - kill.laser
+  - kill.swordfall
+  - kill.orbital
+  - kill.blastoff
+  - death.bones
+  - death.splat
+  - death.dust
+  - death.shatter
+  - death.void
+  - death.ender
+  - death.statue
+  - death.whirlpool
+  - death.angel
+  - death.souls
+  - death.phoenix
+  - death.implosion
+  - death.supernova
+  - death.pufferfish
+
+# ---- SESENTA Y SIETE ----
+# El efecto puede reproducir el sonido "doot 67" de la tienda de zakiworld.net.
+# Requiere que los clientes tengan el resource pack ZakiWorld-RipSounds
+# (idealmente forzado por servidor con resource-pack en server.properties).
+# Si no quieres usar el pack, pon custom-sound: false y sonara una corneta
+# vanilla equivalente.
+sixtyseven:
+  custom-sound: true
+  custom-sound-key: "zakiworld:doot67"
+
+# ---- CALIDADES ----
+# Reasigna la calidad de cualquier efecto sin recompilar. Cambia el color del
+# nombre, los rombos de la barra y el orden que se lee en el menu.
+#
+# Valores validos, de menor a mayor:
+#   COMUN  POCO_COMUN  RARO  MITICO  LEGENDARIO  INMORTAL
+#
+# Un valor invalido se ignora con un aviso en consola y el efecto se queda con
+# su calidad de fabrica. Borra la clave "calidades" entera para volver todo a
+# los valores de fabrica. Recarga con /rip reload.
+calidades:
+  kill:
+    blood: COMUN
+    hearts: COMUN
+    spark: COMUN
+    coins: COMUN
+    poof: COMUN
+    firework: POCO_COMUN
+    notes: POCO_COMUN
+    slash: POCO_COMUN
+    confetti: POCO_COMUN
+    pierce: POCO_COMUN
+    explosion: RARO
+    frost: RARO
+    inferno: RARO
+    shockwave: RARO
+    meteor: RARO
+    geyser: RARO
+    souls: MITICO
+    dragon: MITICO
+    totem: MITICO
+    chains: MITICO
+    eclipse: MITICO
+    lightning: LEGENDARIO
+    blackhole: LEGENDARIO
+    laser: LEGENDARIO
+    swordfall: LEGENDARIO
+    orbital: LEGENDARIO
+    blastoff: INMORTAL
+  death:
+    smoke: COMUN
+    bones: COMUN
+    bloodpool: COMUN
+    splat: COMUN
+    dust: COMUN
+    firework: POCO_COMUN
+    cherry: POCO_COMUN
+    rain: POCO_COMUN
+    balloons: POCO_COMUN
+    spores: POCO_COMUN
+    grave: RARO
+    shatter: RARO
+    void: RARO
+    ender: RARO
+    statue: RARO
+    whirlpool: RARO
+    angel: MITICO
+    souls: MITICO
+    glitch: MITICO
+    phoenix: MITICO
+    specters: MITICO
+    implosion: LEGENDARIO
+    supernova: LEGENDARIO
+    lightning: LEGENDARIO
+    pufferfish: LEGENDARIO
+    requiem: LEGENDARIO
+    sixtyseven: INMORTAL
+
+# ---- ENFRIAMIENTOS ----
+# Segundos que ese jugador debe esperar para volver a lanzar ESE efecto. Cada
+# efecto tiene el suyo, independiente del resto. Admite decimales, de 0 a 600
+# (10 minutos).
+#
+# Los valores de fabrica van por calidad, de menos a mas raro:
+#   COMUN 10s   POCO_COMUN 20s   RARO 40s   MITICO 75s   LEGENDARIO 120s
+#   INMORTAL 180s
+# Cuanto mas raro es el efecto, menos veces se ve. Cambia el numero que quieras
+# sin tocar los demas; no tienen por que seguir la calidad.
+#
+# La animacion mas larga (Juicio de Espadas) dura 9,5 segundos. Si pones a un
+# efecto menos de lo que dura su animacion, el plugin lo acepta pero avisa por
+# consola: a partir de ahi ese jugador puede tener dos animaciones a la vez.
+#
+# Un valor no numerico o fuera de rango se ignora con un aviso. Borra la clave
+# "enfriamientos" entera para volver a los valores de fabrica.
+enfriamientos:
+  kill:
+    blood: 10
+    hearts: 10
+    spark: 10
+    coins: 10
+    poof: 10
+    firework: 20
+    notes: 20
+    slash: 20
+    confetti: 20
+    pierce: 20
+    explosion: 40
+    frost: 40
+    inferno: 40
+    shockwave: 40
+    meteor: 40
+    geyser: 40
+    souls: 75
+    dragon: 75
+    totem: 75
+    chains: 75
+    eclipse: 75
+    lightning: 120
+    blackhole: 120
+    laser: 120
+    swordfall: 120
+    orbital: 120
+    blastoff: 180
+  death:
+    smoke: 10
+    bones: 10
+    bloodpool: 10
+    splat: 10
+    dust: 10
+    firework: 20
+    cherry: 20
+    rain: 20
+    balloons: 20
+    spores: 20
+    grave: 40
+    shatter: 40
+    void: 40
+    ender: 40
+    statue: 40
+    whirlpool: 40
+    angel: 75
+    souls: 75
+    glitch: 75
+    phoenix: 75
+    specters: 75
+    implosion: 120
+    supernova: 120
+    lightning: 120
+    pufferfish: 120
+    requiem: 120
+    sixtyseven: 180

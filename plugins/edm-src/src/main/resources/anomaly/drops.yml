@@ -1,0 +1,85 @@
+# ============================================================
+#  ANOMALY  ·  tablas de botin
+#
+#  Lo normal es editarlo desde el juego: /anomaly -> Botin.
+#  Ahi se arrastra el objeto real (vale cualquiera, tambien los de MMOItems)
+#  y se ajustan probabilidad, cantidad y a quien le toca.
+#
+#  A mano tambien se puede. Formato de cada entrada:
+#    item:          el objeto serializado por Bukkit (conserva NBT y nombre)
+#    probabilidad:  0.1 a 100
+#    cantidad-min / cantidad-max
+#    para:          TODOS | MEJOR | ALEATORIO
+#                   TODOS      -> cada participante recibe su copia
+#                   MEJOR      -> solo quien mas dano hizo
+#                   ALEATORIO  -> uno al azar, con peso por dano
+#
+#  comandos: los ejecuta la consola al caer el jefe.
+#            %jugador% se sustituye por el nombre.
+#            Si el comando empieza por [mejor] solo corre para quien mas dano hizo.
+#            Ejemplo con MMOItems:  [mejor] mi give %jugador% SWORD EXCALIBUR_MISTICA
+#
+#  Se entrega vacio a proposito: el botin lo decide el servidor, no el plugin.
+# ============================================================
+
+anomalias:
+  caballero_sepulcral:
+    experiencia: 800
+    comandos: []
+    botin: {}
+  cabra_gritona:
+    experiencia: 900
+    comandos: []
+    botin: {}
+  conejo_asesino:
+    experiencia: 850
+    comandos: []
+    botin: {}
+  storm_rider:
+    experiencia: 1000
+    comandos: []
+    botin: {}
+  leviatan_de_sal:
+    experiencia: 1100
+    comandos: []
+    botin: {}
+  coro_abisal:
+    experiencia: 1200
+    comandos: []
+    botin: {}
+  darkness:
+    experiencia: 2500
+    comandos: []
+    botin: {}
+  herbola:
+    experiencia: 1300
+    comandos: []
+    botin: {}
+  quimera:
+    experiencia: 1500
+    comandos: []
+    botin: {}
+  bruja:
+    experiencia: 1200
+    comandos: []
+    botin: {}
+  mimic:
+    experiencia: 1600
+    comandos: []
+    botin: {}
+  rabby:
+    experiencia: 2200
+    comandos: []
+    botin: {}
+  cazador:
+    experiencia: 1800
+    comandos: []
+    botin: {}
+  aragon:
+    experiencia: 2000
+    comandos: []
+    botin: {}
+  piromante:
+    experiencia: 1700
+    comandos: []
+    botin: {}
