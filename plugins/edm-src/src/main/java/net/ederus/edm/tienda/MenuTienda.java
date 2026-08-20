@@ -14,6 +14,7 @@ import org.bukkit.event.inventory.InventoryDragEvent;
 import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.InventoryHolder;
 import org.bukkit.inventory.ItemStack;
+import org.bukkit.inventory.ItemFlag;
 import org.bukkit.inventory.meta.ItemMeta;
 
 import java.util.ArrayList;
@@ -230,6 +231,11 @@ public final class MenuTienda implements Listener {
             meta.displayName(Component.text(titulo, NamedTextColor.AQUA)
                     .decoration(TextDecoration.ITALIC, false));
             if (!lore.isEmpty()) meta.lore(lore);
+            /* Fuera la etiqueta que pone Minecraft sola (daño, velocidad de
+             * ataque, encantamientos...): en un icono de tienda es ruido y
+             * empuja el precio fuera de la vista. values() lo cubre todo y no
+             * hay que revisarlo cuando salga una version nueva. */
+            meta.addItemFlags(ItemFlag.values());
             pila.setItemMeta(meta);
         }
         return pila;
