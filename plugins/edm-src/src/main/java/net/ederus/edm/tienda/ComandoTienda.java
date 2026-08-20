@@ -45,6 +45,7 @@ public final class ComandoTienda implements CommandExecutor, TabCompleter {
             case "precio" -> { return precio(quien, args); }
             case "topes" -> { return verTopes(quien); }
             case "mercado" -> { return mercado(quien, args); }
+            case "rotacion" -> { return rotacion(quien); }
             case "recargar" -> { return recargar(quien); }
             default -> { ayuda(quien); return true; }
         }
@@ -57,6 +58,7 @@ public final class ComandoTienda implements CommandExecutor, TabCompleter {
         q.sendMessage("/etienda precio <item>");
         q.sendMessage("/etienda topes");
         q.sendMessage("/etienda mercado <item> [simular <cantidad>]");
+        q.sendMessage("/etienda rotacion");
         if (q.hasPermission("ederus.tienda.admin")) q.sendMessage("/etienda recargar");
     }
 
@@ -180,6 +182,39 @@ public final class ComandoTienda implements CommandExecutor, TabCompleter {
         return true;
     }
 
+    /** Que le toco hoy a Ofertas y a Demandas. */
+    private boolean rotacion(CommandSender quien) {
+        Rotacion rot = modulo.rotacion();
+        if (rot == null || !rot.activo()) { quien.sendMessage("La rotacion esta desactivada."); return true; }
+        quien.sendMessage("Rotacion del " + rot.dia() + " (cambia en " + Motor.duracion(Rotacion.hastaManana()) + ")");
+
+        quien.sendMessage("OFERTAS (baja la compra):");
+        int n = 0;
+        for (Rotacion.Trato t : rot.ofertas()) {
+            Catalogo.Articulo a = catalogo.de(t.clave());
+            if (a == null) continue;
+            quien.sendMessage("  " + Motor.nombre(a) + ": " + Motor.fmt(a.compra())
+                    + " -> " + Motor.fmt(a.compra() * t.factor())
+                    + "  (-" + Math.round((1 - t.factor()) * 100) + "%)  quedan " + rot.restanteHoy(t));
+            n++;
+        }
+        if (n == 0) quien.sendMessage("  (ninguna)");
+
+        quien.sendMessage("DEMANDAS (sube la venta):");
+        n = 0;
+        for (Rotacion.Trato t : rot.demandas()) {
+            Catalogo.Articulo a = catalogo.de(t.clave());
+            if (a == null) continue;
+            Motor m = modulo.motor();
+            String ahora = m != null ? Motor.fmt(m.ventaEfectiva(a)) : Motor.fmt(a.venta() * t.factor());
+            quien.sendMessage("  " + Motor.nombre(a) + ": " + Motor.fmt(a.venta())
+                    + " -> " + ahora + "  (+" + Math.round((t.factor() - 1) * 100) + "%)  quedan " + rot.restanteHoy(t));
+            n++;
+        }
+        if (n == 0) quien.sendMessage("  (ninguna)");
+        return true;
+    }
+
     private boolean recargar(CommandSender quien) {
         if (!quien.hasPermission("ederus.tienda.admin")) { quien.sendMessage("No puedes."); return true; }
         if (modulo.cargarCatalogo()) {
@@ -194,7 +229,7 @@ public final class ComandoTienda implements CommandExecutor, TabCompleter {
     public List<String> onTabComplete(CommandSender quien, Command cmd, String etiqueta, String[] args) {
         List<String> out = new ArrayList<>();
         if (args.length == 1) {
-            for (String s : List.of("vender", "comprar", "precio", "topes", "mercado", "recargar")) {
+            for (String s : List.of("vender", "comprar", "precio", "topes", "mercado", "rotacion", "recargar")) {
                 if (s.startsWith(args[0].toLowerCase(Locale.ROOT))) out.add(s);
             }
         } else if (args.length == 2 && !args[0].equalsIgnoreCase("topes")) {

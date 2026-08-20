@@ -39,6 +39,7 @@ public final class Motor {
     private final Registro registro;
     private final Economy economia;
     private final Mercado mercado;
+    private Rotacion rotacion;
 
     public Motor(Catalogo catalogo, Topes topes, Registro registro, Economy economia, Mercado mercado) {
         this.catalogo = catalogo;
@@ -50,14 +51,32 @@ public final class Motor {
 
     public Mercado mercado() { return mercado; }
 
-    /** Lo que cuesta comprar una unidad ahora mismo (aqui entrara Ofertas). */
+    public void rotacion(Rotacion r) { this.rotacion = r; }
+    public Rotacion rotacion() { return rotacion; }
+
+    /** Lo que cuesta comprar una unidad ahora mismo, con la oferta del dia. */
     public double compraEfectiva(Catalogo.Articulo art) {
-        return art.compra();
+        if (rotacion == null) return art.compra();
+        Rotacion.Trato t = rotacion.oferta(art.clave());
+        return t == null ? art.compra() : art.compra() * t.factor();
     }
 
-    /** Lo que se paga por vender una unidad ahora mismo. */
+    /**
+     * Lo que se paga por vender una unidad ahora mismo: precio dinamico, mas el
+     * bonus de Demandas si toca, y SIEMPRE recortado contra la compra efectiva.
+     * El recorte va el ultimo a proposito: es la ultima palabra.
+     */
     public double ventaEfectiva(Catalogo.Articulo art) {
-        return mercado.ventaEfectiva(art, compraEfectiva(art));
+        double compra = compraEfectiva(art);
+        double precio = mercado.ventaEfectiva(art, compra);
+        if (rotacion != null) {
+            Rotacion.Trato t = rotacion.demanda(art.clave());
+            if (t != null) {
+                precio *= t.factor();
+                if (compra > 0) precio = Math.min(precio, compra * mercado.margen());
+            }
+        }
+        return precio;
     }
 
     /**
@@ -171,6 +190,19 @@ public final class Motor {
         }
 
         int cantidad = Math.min(Math.min(pedido, disponible), Math.min(margen, MAX_POR_OPERACION));
+        /* Tope diario de SERVIDOR de la seccion Demandas: sin el, cuatro
+         * jugadores agotarian el precio inflado en la primera hora. */
+        if (rotacion != null) {
+            Rotacion.Trato t = rotacion.demanda(art.clave());
+            if (t != null) {
+                int quedaHoy = rotacion.restanteHoy(t);
+                if (quedaHoy <= 0) {
+                    return Resultado.no("La demanda de " + bonito(material)
+                            + " ya se cubrio hoy. Manana rota.");
+                }
+                cantidad = Math.min(cantidad, quedaHoy);
+            }
+        }
 
         // 1. los items fuera
         int quitados = quitarLimpios(jugador.getInventory(), material, cantidad);
@@ -187,6 +219,7 @@ public final class Motor {
 
         topes.anotar(jugador.getUniqueId(), art, quitados);
         mercado.anotarVenta(art, quitados);
+        if (rotacion != null && rotacion.demanda(art.clave()) != null) rotacion.anotar(art.clave(), quitados);
         registro.anotar("VENTA", jugador.getName(), quitados, art.clave(),
                 unitario, total, economia.getBalance(jugador));
         /* Si el recorte contra la compra llego a actuar, queda constancia: es la
@@ -219,6 +252,16 @@ public final class Motor {
         }
 
         int cantidad = Math.min(pedido, MAX_POR_OPERACION);
+        if (rotacion != null) {
+            Rotacion.Trato t = rotacion.oferta(art.clave());
+            if (t != null) {
+                int quedaHoy = rotacion.restanteHoy(t);
+                if (quedaHoy <= 0) {
+                    return Resultado.no("La oferta de " + nombre(art) + " se agoto hoy. Manana rota.");
+                }
+                cantidad = Math.min(cantidad, quedaHoy);
+            }
+        }
         int sitio = huecoLibre(jugador.getInventory(), art);
         if (sitio <= 0) return Resultado.no("No te cabe nada mas en el inventario.");
         if (sitio < cantidad) cantidad = sitio;
@@ -240,6 +283,7 @@ public final class Motor {
             return Resultado.no("No pude entregarte el item; se te devolvio el dinero.");
         }
 
+        if (rotacion != null && rotacion.oferta(art.clave()) != null) rotacion.anotar(art.clave(), cantidad);
         registro.anotar("COMPRA", jugador.getName(), cantidad, art.clave(),
                 compraEfectiva(art), coste, economia.getBalance(jugador));
 

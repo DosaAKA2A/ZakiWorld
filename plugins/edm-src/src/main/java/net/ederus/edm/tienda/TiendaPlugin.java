@@ -22,7 +22,8 @@ public final class TiendaPlugin extends Module {
     private Registro registro;
     private Motor motor;
     private MenuTienda menu;
-    private final Iconos iconos = new Iconos();
+    private final Secciones secciones = new Secciones();
+    private Rotacion rotacion;
     private Mercado mercado;
     private Economy economia;
     private BukkitTask tareaGuardado;
@@ -47,9 +48,12 @@ public final class TiendaPlugin extends Module {
         mercado.cargar();
         registro = new Registro(new File(getDataFolder(), "registro"));
 
-        saveResource("iconos.yml", false);
-        iconos.cargar(new File(getDataFolder(), "iconos.yml"));
-        menu = new MenuTienda(this, catalogo, topes, iconos);
+        saveResource("secciones.yml", false);
+        secciones.cargar(new File(getDataFolder(), "secciones.yml"));
+        rotacion = new Rotacion(new File(getDataFolder(), "rotacion.yml"));
+        rotacion.configurar(getConfig().getConfigurationSection("rotacion"));
+        rotacion.cargar(catalogo);
+        menu = new MenuTienda(this, catalogo, topes, secciones);
         core.getServer().getPluginManager().registerEvents(menu, this);
 
         ComandoTienda comando = new ComandoTienda(this, catalogo, topes);
@@ -81,6 +85,7 @@ public final class TiendaPlugin extends Module {
                 return;
             }
             motor = new Motor(catalogo, topes, registro, economia, mercado);
+            motor.rotacion(rotacion);
             getLogger().info("Economia enganchada: " + economia.getName());
         });
 
@@ -89,11 +94,15 @@ public final class TiendaPlugin extends Module {
             topes.limpiar(catalogo);
             topes.guardar();
             mercado.guardar();
+            /* La rotacion se comprueba aqui y no con una tarea a medianoche: si
+             * el servidor estaba apagado a esa hora, igual rota al arrancar. */
+            rotacion.alDia(catalogo);
+            rotacion.guardar();
         }, cada, cada);
 
         getLogger().info("Tienda activa | " + catalogo.total() + " articulos en "
                 + catalogo.categorias().size() + " categorias ("
-                + catalogo.variantes() + " variantes) | " + iconos.configurados() + " iconos");
+                + catalogo.variantes() + " variantes) | " + secciones.cuantas() + " secciones");
     }
 
     @Override
@@ -101,6 +110,7 @@ public final class TiendaPlugin extends Module {
         if (tareaGuardado != null) tareaGuardado.cancel();
         if (topes != null) topes.guardar();
         if (mercado != null) mercado.guardar();
+        if (rotacion != null) rotacion.guardar();
         if (registro != null) registro.cerrar();
     }
 
@@ -128,8 +138,9 @@ public final class TiendaPlugin extends Module {
 
     @Override
     public String recargar() {
-        iconos.cargar(new File(getDataFolder(), "iconos.yml"));
+        secciones.cargar(new File(getDataFolder(), "secciones.yml"));
         reloadConfig();
+        if (rotacion != null) rotacion.configurar(getConfig().getConfigurationSection("rotacion"));
         if (mercado != null) mercado.configurar(getConfig().getConfigurationSection("mercado"));
         if (!cargarCatalogo()) return "el precios.yml tiene errores; se mantiene el anterior";
         return catalogo.total() + " articulos en " + catalogo.categorias().size() + " categorias";
@@ -138,6 +149,10 @@ public final class TiendaPlugin extends Module {
     public MenuTienda menu() { return menu; }
 
     public Mercado mercado() { return mercado; }
+
+    public Rotacion rotacion() { return rotacion; }
+
+    public Secciones secciones() { return secciones; }
 
     /** null hasta que engancha Vault en el primer tick. */
     public Motor motor() { return motor; }

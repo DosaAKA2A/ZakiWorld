@@ -33,3 +33,35 @@ mercado:
   # esto no se activa nunca; solo salta si algo se va de rango, y queda anotado
   # en el registro como RECORTE.
   margen-venta-compra: 0.60
+
+# ---------------------------------------------------------------------------
+# Ofertas y Demandas: las dos secciones que cambian solas cada dia.
+#
+# NO PUEDEN SOLAPARSE, y no depende de una comprobacion que se pueda olvidar:
+# Ofertas solo elige items que la tienda NO recompra, y Demandas solo items que
+# si se venden. Los dos conjuntos son disjuntos por construccion. Hace falta:
+# en el catalogo hay cacao a compra 30 / venta 15, y un -65% lo dejaria a 10,50
+# comprando y 15 vendiendo, que es dinero infinito.
+#
+# El sorteo es determinista por fecha: reiniciar no vuelve a sortear.
+# ---------------------------------------------------------------------------
+rotacion:
+  activo: true
+  cuantas-ofertas: 14
+  cuantas-demandas: 14
+
+  # Cuanto baja el precio de COMPRA en Ofertas.
+  descuento-min: 0.15
+  descuento-max: 0.65
+
+  # Cuanto sube el precio de VENTA en Demandas.
+  bonus-min: 0.25
+  bonus-max: 0.75
+
+  # Tope de TODO EL SERVIDOR por dia y por item. Sin esto, cuatro jugadores
+  # agotarian el precio inflado en la primera hora.
+  tope-diario-oferta: 512
+  tope-diario-demanda: 512
+
+  # 0 = la semilla sale solo de la fecha. Ponle un numero si quieres otra serie.
+  semilla: 0

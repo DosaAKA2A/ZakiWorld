@@ -38,6 +38,9 @@ public final class MenuTienda implements Listener {
     private static final int RANURA_VOLVER = 49;
     private static final int RANURA_ANTERIOR = 45;
     private static final int RANURA_SIGUIENTE = 53;
+    /* Fila 4, centradas bajo las 14 categorias. */
+    private static final int RANURA_OFERTAS = 30;
+    private static final int RANURA_DEMANDAS = 32;
 
     /** Marca nuestras ventanas. Nunca se identifica un menu por su titulo: el
      *  jugador puede tener un cofre llamado igual y acabariamos operando sobre el. */
@@ -52,46 +55,110 @@ public final class MenuTienda implements Listener {
     private final TiendaPlugin modulo;
     private final Catalogo catalogo;
     private final Topes topes;
-    private final Iconos iconos;
+    private final Secciones secciones;
 
-    public MenuTienda(TiendaPlugin modulo, Catalogo catalogo, Topes topes, Iconos iconos) {
+    public MenuTienda(TiendaPlugin modulo, Catalogo catalogo, Topes topes, Secciones secciones) {
         this.modulo = modulo;
         this.catalogo = catalogo;
         this.topes = topes;
-        this.iconos = iconos;
+        this.secciones = secciones;
     }
 
     // ------------------------------------------------------------- construir
 
+    /** Los huecos libres llevan el mismo panel separador que ya usan sus
+     *  paginas: sin el, el menu se ve a medio hacer. */
+    private void rellenar(Inventory inv) {
+        ItemStack panel = secciones.relleno();
+        if (panel == null) return;
+        for (int i = 0; i < inv.getSize(); i++) {
+            ItemStack actual = inv.getItem(i);
+            if (actual == null || actual.getType().isAir()) inv.setItem(i, panel.clone());
+        }
+    }
+
     public void abrirPrincipal(Player jugador) {
-        List<String> categorias = new ArrayList<>(catalogo.categorias().keySet());
         Vista vista = new Vista(null, 0);
         Inventory inv = Bukkit.createInventory(vista, 54, Estilo.titulo("TIENDA", "Ederus"));
         vista.inv = inv;
 
-        /* Centradas: dos filas de siete, como la tienda que ya conocen. */
-        int[] ranuras = {10, 11, 12, 13, 14, 15, 16, 19, 20, 21, 22, 23, 24, 25, 28, 29, 30, 31};
-        for (int i = 0; i < categorias.size() && i < ranuras.length; i++) {
-            String cat = categorias.get(i);
-            int n = catalogo.categorias().getOrDefault(cat, 0);
-            List<Component> lore = List.of(Estilo.valor(n + (n == 1 ? " articulo" : " articulos")),
-                    Estilo.vacio(), Estilo.accion("Click para entrar", Estilo.ACCION_COMPRA));
-            ItemStack icono = iconos.de(cat);
-            inv.setItem(ranuras[i], icono != null
-                    ? decorar(icono, bonito(cat), lore)
-                    : pieza(catalogo.iconoDe(cat), bonito(cat), lore));
+        for (Secciones.Seccion s : secciones.todas()) {
+            if (s.ranura() < 0 || s.ranura() >= inv.getSize()) continue;
+            int n = catalogo.categorias().getOrDefault(s.id(), 0);
+            if (n == 0) continue;
+            ItemStack icono = secciones.icono(s.id());
+            if (icono == null) icono = new ItemStack(catalogo.iconoDe(s.id()));
+            inv.setItem(s.ranura(), decorarCon(icono, secciones.nombreDe(s.id()),
+                    List.of(Estilo.valor(n + (n == 1 ? " articulo" : " articulos")),
+                            Estilo.vacio(),
+                            Estilo.accion("Click para entrar", Estilo.ACCION_COMPRA))));
         }
+
+        Rotacion rot = modulo.rotacion();
+        if (rot != null && rot.activo()) {
+            inv.setItem(RANURA_OFERTAS, decorarCon(new ItemStack(Material.SUNFLOWER),
+                    Estilo.texto("→ ", NamedTextColor.DARK_GRAY)
+                        .append(Estilo.texto("Ofertas del dia", Estilo.ACCION_COMPRA)),
+                    List.of(Estilo.valor(contar(rot.ofertas()) + " articulos rebajados"),
+                            Estilo.texto("   entre un 15% y un 65%", Estilo.APAGADO),
+                            Estilo.vacio(),
+                            Estilo.texto("   rota en " + Motor.duracion(Rotacion.hastaManana()), Estilo.APAGADO),
+                            Estilo.vacio(),
+                            Estilo.accion("Click para entrar", Estilo.ACCION_COMPRA))));
+            inv.setItem(RANURA_DEMANDAS, decorarCon(new ItemStack(Material.EMERALD),
+                    Estilo.texto("→ ", NamedTextColor.DARK_GRAY)
+                        .append(Estilo.texto("Demanda del dia", Estilo.VENTA)),
+                    List.of(Estilo.valor(contar(rot.demandas()) + " articulos que se pagan mas"),
+                            Estilo.texto("   entre un 25% y un 75% mas", Estilo.APAGADO),
+                            Estilo.vacio(),
+                            Estilo.texto("   rota en " + Motor.duracion(Rotacion.hastaManana()), Estilo.APAGADO),
+                            Estilo.vacio(),
+                            Estilo.accion("Click para entrar", Estilo.ACCION_VENTA))));
+        }
+
+        rellenar(inv);
         jugador.openInventory(inv);
+        secciones.sonar(jugador, "abrir-menu");
+    }
+
+    private static int contar(Iterable<?> it) {
+        int n = 0; for (Object o : it) n++; return n;
+    }
+
+    /** Las dos secciones del dia no viven en el catalogo: se arman al vuelo. */
+    static final String OFERTAS = "@ofertas";
+    static final String DEMANDAS = "@demandas";
+
+    private List<Catalogo.Articulo> articulosDe(String categoria) {
+        Rotacion rot = modulo.rotacion();
+        if (OFERTAS.equals(categoria) || DEMANDAS.equals(categoria)) {
+            List<Catalogo.Articulo> out = new ArrayList<>();
+            if (rot == null) return out;
+            for (Rotacion.Trato tr : (OFERTAS.equals(categoria) ? rot.ofertas() : rot.demandas())) {
+                Catalogo.Articulo a = catalogo.de(tr.clave());
+                if (a != null) out.add(a);
+            }
+            return out;
+        }
+        return catalogo.deCategoria(categoria);
+    }
+
+    private static String tituloDe(String categoria) {
+        if (OFERTAS.equals(categoria)) return "Ofertas del dia";
+        if (DEMANDAS.equals(categoria)) return "Demanda del dia";
+        return null;
     }
 
     public void abrirCategoria(Player jugador, String categoria, int pagina) {
-        List<Catalogo.Articulo> items = catalogo.deCategoria(categoria);
+        List<Catalogo.Articulo> items = articulosDe(categoria);
         int paginas = Math.max(1, (int) Math.ceil(items.size() / (double) POR_PAGINA));
         if (pagina < 0) pagina = 0;
         if (pagina >= paginas) pagina = paginas - 1;
 
         Vista vista = new Vista(categoria, pagina);
-        Inventory inv = Bukkit.createInventory(vista, FILAS * 9, Estilo.titulo("EDERUS", bonito(categoria)));
+        String especial = tituloDe(categoria);
+        Inventory inv = Bukkit.createInventory(vista, FILAS * 9,
+                Estilo.titulo("EDERUS", especial != null ? especial : bonito(categoria)));
         vista.inv = inv;
 
         int desde = pagina * POR_PAGINA;
@@ -108,7 +175,9 @@ public final class MenuTienda implements Listener {
         inv.setItem(RANURA_VOLVER, pieza(Material.BARRIER, "Volver",
                 List.of(Estilo.valor("Pagina " + (pagina + 1) + " de " + paginas))));
 
+        rellenar(inv);
         jugador.openInventory(inv);
+        secciones.sonar(jugador, "abrir-categoria");
     }
 
     /** Un articulo con su precio, sus topes y lo que se puede hacer con el. */
@@ -189,23 +258,23 @@ public final class MenuTienda implements Listener {
         if (pulsado == null || pulsado.getType().isAir()) return;
 
         if (vista.categoria == null) {
-            List<String> categorias = new ArrayList<>(catalogo.categorias().keySet());
-            int[] ranuras = {10, 11, 12, 13, 14, 15, 16, 19, 20, 21, 22, 23, 24, 25, 28, 29, 30, 31};
-            for (int i = 0; i < categorias.size() && i < ranuras.length; i++) {
-                if (ranuras[i] == e.getSlot()) { abrirCategoria(jugador, categorias.get(i), 0); return; }
+            if (e.getSlot() == RANURA_OFERTAS) { abrirCategoria(jugador, OFERTAS, 0); return; }
+            if (e.getSlot() == RANURA_DEMANDAS) { abrirCategoria(jugador, DEMANDAS, 0); return; }
+            for (Secciones.Seccion s : secciones.todas()) {
+                if (s.ranura() == e.getSlot()) { abrirCategoria(jugador, s.id(), 0); return; }
             }
             return;
         }
 
         switch (e.getSlot()) {
-            case RANURA_VOLVER -> { abrirPrincipal(jugador); return; }
-            case RANURA_ANTERIOR -> { abrirCategoria(jugador, vista.categoria, vista.pagina - 1); return; }
-            case RANURA_SIGUIENTE -> { abrirCategoria(jugador, vista.categoria, vista.pagina + 1); return; }
+            case RANURA_VOLVER -> { secciones.sonar(jugador, "volver"); abrirPrincipal(jugador); return; }
+            case RANURA_ANTERIOR -> { secciones.sonar(jugador, "cambiar-pagina"); abrirCategoria(jugador, vista.categoria, vista.pagina - 1); return; }
+            case RANURA_SIGUIENTE -> { secciones.sonar(jugador, "cambiar-pagina"); abrirCategoria(jugador, vista.categoria, vista.pagina + 1); return; }
             default -> { /* es un articulo */ }
         }
         if (e.getSlot() >= POR_PAGINA) return;
 
-        List<Catalogo.Articulo> items = catalogo.deCategoria(vista.categoria);
+        List<Catalogo.Articulo> items = articulosDe(vista.categoria);
         int indice = vista.pagina * POR_PAGINA + e.getSlot();
         if (indice >= items.size()) return;
         Catalogo.Articulo art = items.get(indice);
@@ -226,11 +295,23 @@ public final class MenuTienda implements Listener {
         }
 
         jugador.sendMessage(r.mensaje());
+        secciones.sonar(jugador, r.ok() ? "elegir-item" : "error");
         /* Se repinta: el tope que queda y el saldo acaban de cambiar. */
         abrirCategoria(jugador, vista.categoria, vista.pagina);
     }
 
     // --------------------------------------------------------------- adornos
+
+    private static ItemStack decorarCon(ItemStack pila, Component titulo, List<Component> lore) {
+        ItemMeta meta = pila.getItemMeta();
+        if (meta != null) {
+            meta.displayName(titulo.decoration(TextDecoration.ITALIC, false));
+            if (!lore.isEmpty()) meta.lore(lore);
+            meta.addItemFlags(ItemFlag.values());
+            pila.setItemMeta(meta);
+        }
+        return pila;
+    }
 
     private static ItemStack pieza(Material material, String titulo, List<Component> lore) {
         return decorar(new ItemStack(material), titulo, lore);
