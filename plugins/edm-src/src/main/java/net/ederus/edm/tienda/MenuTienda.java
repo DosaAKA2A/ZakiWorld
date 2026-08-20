@@ -115,9 +115,17 @@ public final class MenuTienda implements Listener {
         if (art.seCompra()) lore.add(Component.text("Comprar: ", NamedTextColor.GRAY)
                 .append(Component.text(Motor.fmt(art.compra()), NamedTextColor.GREEN))
                 .decoration(TextDecoration.ITALIC, false));
-        if (art.seVende()) lore.add(Component.text("Vender: ", NamedTextColor.GRAY)
-                .append(Component.text(Motor.fmt(art.venta()), NamedTextColor.GOLD))
-                .decoration(TextDecoration.ITALIC, false));
+        int llevas = 0;
+        if (art.seVende()) {
+            lore.add(Component.text("Vender: ", NamedTextColor.GRAY)
+                    .append(Component.text(Motor.fmt(art.venta()), NamedTextColor.GOLD))
+                    .decoration(TextDecoration.ITALIC, false));
+            /* Lo que la tienda ACEPTA de lo que lleva encima, no lo que lleva:
+             * un MMOItems no cuenta, y verlo aqui a 0 explica solo por que no
+             * se puede vender, sin tener que probarlo a ciegas. */
+            llevas = Motor.contarLimpios(jugador.getInventory(), art.material());
+            lore.add(gris("Llevas: " + llevas));
+        }
 
         if (art.tieneTope()) {
             int quedan = topes.restante(jugador.getUniqueId(), art);
@@ -137,7 +145,9 @@ public final class MenuTienda implements Listener {
         }
         if (art.seVende()) {
             lore.add(verde("Clic derecho: vender 1"));
-            lore.add(verde("Shift + derecho: vender todo"));
+            lore.add(llevas > 0
+                    ? verde("Shift + derecho: vender los " + llevas + " que llevas")
+                    : gris("Shift + derecho: vender todo lo que lleves"));
         }
         if (!art.seCompra() && !art.seVende()) lore.add(gris("Solo de exposicion"));
 
