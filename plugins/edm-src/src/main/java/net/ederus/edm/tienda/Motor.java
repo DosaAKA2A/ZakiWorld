@@ -41,6 +41,7 @@ public final class Motor {
     private final Mercado mercado;
     private Rotacion rotacion;
     private Compras compras;
+    private Mensajes mensajes;
 
     public Motor(Catalogo catalogo, Topes topes, Registro registro, Economy economia, Mercado mercado) {
         this.catalogo = catalogo;
@@ -57,6 +58,12 @@ public final class Motor {
 
     public void rotacion(Rotacion r) { this.rotacion = r; }
     public void compras(Compras c) { this.compras = c; }
+    public void mensajes(Mensajes m) { this.mensajes = m; }
+
+    /** Texto para el jugador: sale de mensajes.yml, con su prefijo. */
+    private String msg(String clave, String respaldo, String... p) {
+        return mensajes == null ? respaldo : mensajes.plano(clave, respaldo, p);
+    }
     public Compras compras() { return compras; }
     public Rotacion rotacion() { return rotacion; }
 
@@ -184,8 +191,8 @@ public final class Motor {
 
         int disponible = contarLimpios(jugador.getInventory(), material);
         if (disponible <= 0) {
-            return Resultado.no("No llevas " + bonito(material)
-                    + " que la tienda acepte (los items con nombre, encantados o de MMOItems no valen).");
+            return Resultado.no(msg("nada-que-vender",
+                    "No tienes %item% que la tienda acepte.", "%item%", bonito(material)));
         }
 
         int margen = topes.restante(jugador.getUniqueId(), art);
@@ -203,8 +210,7 @@ public final class Motor {
             if (t != null) {
                 int quedaHoy = rotacion.restanteHoy(t);
                 if (quedaHoy <= 0) {
-                    return Resultado.no("La demanda de " + bonito(material)
-                            + " ya se cubrio hoy. Manana rota.");
+                    return Resultado.no(msg("demanda-cubierta", "La demanda de %item% ya se cubrio hoy.", "%item%", bonito(material)));
                 }
                 cantidad = Math.min(cantidad, quedaHoy);
             }
@@ -252,8 +258,12 @@ public final class Motor {
             if (art.tieneTope() && quitados >= margen) aviso = " (tope alcanzado)";
             else if (quitados >= disponible) aviso = " (era todo lo que llevabas)";
         }
-        return new Resultado(true, "Vendiste " + quitados + " x " + bonito(material)
-                + " por " + fmt(total) + aviso, quitados, total);
+        String clave = aviso.isEmpty() ? "venta-hecha" : "venta-hecha-todo";
+        return new Resultado(true, msg(clave,
+                "Vendiste %cantidad% x %item% por %total%" + aviso,
+                "%cantidad%", String.valueOf(quitados),
+                "%item%", bonito(material),
+                "%total%", fmt(total)), quitados, total);
     }
 
     // ----------------------------------------------------------------- comprar
@@ -278,8 +288,8 @@ public final class Motor {
         if (compras != null && art.tieneLimiteJugador()) {
             int puede = compras.restante(jugador.getUniqueId(), art);
             if (puede <= 0) {
-                return Resultado.no("Ya tienes el maximo de " + nombre(art)
-                        + " (" + art.limiteJugador() + ").");
+                return Resultado.no(msg("maximo-alcanzado", "Ya tienes el maximo de %item% (%limite%).",
+                        "%item%", nombre(art), "%limite%", String.valueOf(art.limiteJugador())));
             }
             pedido = Math.min(pedido, puede);
         }
@@ -296,18 +306,19 @@ public final class Motor {
             if (t != null) {
                 int quedaHoy = rotacion.restanteHoy(t);
                 if (quedaHoy <= 0) {
-                    return Resultado.no("La oferta de " + nombre(art) + " se agoto hoy. Manana rota.");
+                    return Resultado.no(msg("oferta-agotada", "La oferta de %item% se agoto hoy.", "%item%", nombre(art)));
                 }
                 cantidad = Math.min(cantidad, quedaHoy);
             }
         }
         int sitio = huecoLibre(jugador.getInventory(), art);
-        if (sitio <= 0) return Resultado.no("No te cabe nada mas en el inventario.");
+        if (sitio <= 0) return Resultado.no(msg("sin-espacio", "No te cabe nada mas en el inventario."));
         if (sitio < cantidad) cantidad = sitio;
 
         double coste = compraEfectiva(art) * cantidad;
         if (!economia.has(jugador, coste)) {
-            return Resultado.no("Te faltan " + fmt(coste - economia.getBalance(jugador)) + ".");
+            return Resultado.no(msg("sin-dinero", "Te faltan %falta%.",
+                    "%falta%", fmt(coste - economia.getBalance(jugador))));
         }
 
         // 1. cobrar
@@ -327,8 +338,11 @@ public final class Motor {
         registro.anotar("COMPRA", jugador.getName(), cantidad, art.clave(),
                 compraEfectiva(art), coste, economia.getBalance(jugador));
 
-        return new Resultado(true, "Compraste " + cantidad + " x " + nombre(art)
-                + " por " + fmt(coste), cantidad, coste);
+        return new Resultado(true, msg("compra-hecha",
+                "Compraste %cantidad% x %item% por %total%",
+                "%cantidad%", String.valueOf(cantidad),
+                "%item%", nombre(art),
+                "%total%", fmt(coste)), cantidad, coste);
     }
 
     /**
@@ -344,7 +358,7 @@ public final class Motor {
             Catalogo.Articulo a = catalogo.de(s.getType());
             if (a != null && a.seVende() && esLimpio(s, s.getType())) vistos.add(s.getType());
         }
-        if (vistos.isEmpty()) return Resultado.no("No llevas nada que la tienda compre.");
+        if (vistos.isEmpty()) return Resultado.no(msg("nada-que-vender-todo", "No tienes nada que la tienda compre."));
 
         double total = 0;
         int piezas = 0, tipos = 0;
@@ -356,8 +370,11 @@ public final class Motor {
             tipos++;
         }
         if (tipos == 0) return Resultado.no("No se pudo vender nada.");
-        return new Resultado(true, "Vendiste " + piezas + " objetos de " + tipos
-                + (tipos == 1 ? " tipo" : " tipos") + " por " + fmt(total), piezas, total);
+        return new Resultado(true, msg("sellall-hecho",
+                "Vendiste %cantidad% objetos de %tipos% tipos por %total%",
+                "%cantidad%", String.valueOf(piezas),
+                "%tipos%", String.valueOf(tipos),
+                "%total%", fmt(total)), piezas, total);
     }
 
     // ------------------------------------------------------------------ varios

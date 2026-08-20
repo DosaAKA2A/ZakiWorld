@@ -25,6 +25,7 @@ public final class TiendaPlugin extends Module {
     private final Secciones secciones = new Secciones();
     private Rotacion rotacion;
     private Compras compras;
+    private final Mensajes mensajes = new Mensajes();
     private Mercado mercado;
     private Economy economia;
     private BukkitTask tareaGuardado;
@@ -55,6 +56,8 @@ public final class TiendaPlugin extends Module {
         compras.cargar();
 
         migrar("secciones.yml", SECCIONES_VERSION);
+        saveResource("mensajes.yml", false);
+        mensajes.cargar(new File(getDataFolder(), "mensajes.yml"));
         secciones.cargar(new File(getDataFolder(), "secciones.yml"));
         rotacion = new Rotacion(new File(getDataFolder(), "rotacion.yml"));
         rotacion.configurar(getConfig().getConfigurationSection("rotacion"));
@@ -93,6 +96,7 @@ public final class TiendaPlugin extends Module {
             motor = new Motor(catalogo, topes, registro, economia, mercado);
             motor.rotacion(rotacion);
             motor.compras(compras);
+            motor.mensajes(mensajes);
             getLogger().info("Economia enganchada: " + economia.getName());
         });
 
@@ -103,7 +107,10 @@ public final class TiendaPlugin extends Module {
             mercado.guardar();
             /* La rotacion se comprueba aqui y no con una tarea a medianoche: si
              * el servidor estaba apagado a esa hora, igual rota al arrancar. */
-            rotacion.alDia(catalogo);
+            if (rotacion.alDia(catalogo)) {
+                /* Solo se anuncia cuando ha rotado de verdad, no en cada guardado. */
+                core.getServer().getScheduler().runTask(core, mensajes::anunciarRotacion);
+            }
             rotacion.guardar();
             compras.guardar();
         }, cada, cada);
@@ -181,6 +188,7 @@ public final class TiendaPlugin extends Module {
     @Override
     public String recargar() {
         secciones.cargar(new File(getDataFolder(), "secciones.yml"));
+        mensajes.cargar(new File(getDataFolder(), "mensajes.yml"));
         reloadConfig();
         if (rotacion != null) rotacion.configurar(getConfig().getConfigurationSection("rotacion"));
         if (mercado != null) mercado.configurar(getConfig().getConfigurationSection("mercado"));

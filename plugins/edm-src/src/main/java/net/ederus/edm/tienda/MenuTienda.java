@@ -278,7 +278,7 @@ public final class MenuTienda implements Listener {
             /* Lo que la tienda ACEPTA de lo que lleva encima: un MMOItems no
              * cuenta, y verlo a 0 explica solo por que no se puede vender. */
             llevas = Motor.contarLimpios(jugador.getInventory(), art.material());
-            lore.add(Estilo.valor("Llevas " + llevas));
+            lore.add(Estilo.valor("Tienes " + llevas));
         }
 
         if (topes.activo() && art.tieneTope()) {
@@ -295,7 +295,7 @@ public final class MenuTienda implements Listener {
         Rotacion.Trato trato = oferta != null ? oferta : demanda;
         if (trato != null && rot != null) {
             lore.add(Estilo.vacio());
-            lore.add(Estilo.texto("Quedan hoy " + rot.restanteHoy(trato) + " en el servidor", Estilo.APAGADO));
+            lore.add(Estilo.texto("Quedan hoy " + rot.restanteHoy(trato) + " en el mundo", Estilo.APAGADO));
         }
 
         lore.add(Estilo.vacio());
@@ -306,7 +306,7 @@ public final class MenuTienda implements Listener {
         if (art.seVende()) {
             lore.add(Estilo.accion("Click derecho para vender 1", Estilo.ACCION_VENTA));
             lore.add(llevas > 0
-                    ? Estilo.accion("Shift + derecho para vender " + llevas, Estilo.ACCION_VENTA)
+                    ? Estilo.accion("Shift + derecho para vender los " + llevas, Estilo.ACCION_VENTA)
                     : Estilo.accion("Shift + derecho para vender todo", Estilo.APAGADO));
         }
         if (!art.seCompra() && !art.seVende()) lore.add(Estilo.accion("Solo de exposicion", Estilo.APAGADO));

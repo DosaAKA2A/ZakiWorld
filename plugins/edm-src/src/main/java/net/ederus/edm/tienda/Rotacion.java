@@ -73,10 +73,12 @@ public final class Rotacion {
     }
 
     /** Sortea el dia de hoy si aun no estaba sorteado. */
-    public synchronized void alDia(Catalogo catalogo) {
-        if (!activo) return;
+    /** @return true si ha rotado de verdad en esta llamada. */
+    public synchronized boolean alDia(Catalogo catalogo) {
+        if (!activo) return false;
         LocalDate hoy = LocalDate.now();
-        if (hoy.equals(dia)) return;
+        if (hoy.equals(dia)) return false;
+        boolean primeraVez = dia == null;
 
         dia = hoy;
         ofertas.clear();
@@ -98,6 +100,8 @@ public final class Rotacion {
         Random azar = new Random(semilla(hoy));
         elegir(soloCompra, cuantasOfertas, azar, ofertaMin, ofertaMax, topeOferta, ofertas, true);
         elegir(vendibles, cuantasDemandas, azar, demandaMin, demandaMax, topeDemanda, demandas, false);
+        /* Al arrancar no se anuncia: solo cuando cambia el dia con el servidor vivo. */
+        return !primeraVez;
     }
 
     private long semilla(LocalDate hoy) {
