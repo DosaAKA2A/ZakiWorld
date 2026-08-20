@@ -1,3 +1,7 @@
+# NO borres la linea version: el plugin la usa para poner al dia tu fichero
+# cuando cambia el formato, guardando el tuyo al lado.
+version: 2
+
 # Cada cuanto se vuelcan los topes y el mercado a disco (segundos, minimo 30).
 guardado-segundos: 120
 
@@ -34,10 +38,14 @@ mercado:
   # Cada cuanto se olvida la mitad de lo vendido. Mas corto = se recupera antes.
   recuperacion: 6h
 
-  # Cuanto dinero hay que sacarle a un item para hundir su precio a mitad de
-  # camino del suelo. De aqui sale H para los 968 articulos sin tocar ninguno a
-  # mano: un item caro aguanta pocas unidades y uno barato muchas.
-  presupuesto: 300000
+  # LA PERILLA PRINCIPAL: cuanto dinero tiene que sacar el servidor de un item
+  # para que su precio caiga a mitad de camino del suelo.
+  #
+  # Mas bajo = se devalua antes = hay que rotar mas. Con 20.000, unas 2.000
+  # cañas de azucar ya bajan el precio un 26%; con 300.000 hacian falta 30.000.
+  # Vale para los 968 articulos a la vez y en proporcion: como se mide en
+  # dinero, un item caro aguanta pocas unidades y uno barato muchas.
+  presupuesto: 20000
 
   # LA RED DE SEGURIDAD. La venta nunca puede pasar de este porcentaje de la
   # compra efectiva del mismo item, pase lo que pase con los multiplicadores.

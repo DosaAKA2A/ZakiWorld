@@ -34,7 +34,9 @@ public final class TiendaPlugin extends Module {
 
     @Override
     public void onEnable() {
+        migrar("config.yml", CONFIG_VERSION);
         saveDefaultConfig();
+        reloadConfig();
 
         if (!cargarCatalogo()) {
             // Arrancar con precios malos es peor que no arrancar: seria dinero regalado.
@@ -49,7 +51,7 @@ public final class TiendaPlugin extends Module {
         mercado.cargar();
         registro = new Registro(new File(getDataFolder(), "registro"));
 
-        migrarSecciones();
+        migrar("secciones.yml", SECCIONES_VERSION);
         secciones.cargar(new File(getDataFolder(), "secciones.yml"));
         rotacion = new Rotacion(new File(getDataFolder(), "rotacion.yml"));
         rotacion.configurar(getConfig().getConfigurationSection("rotacion"));
@@ -127,6 +129,7 @@ public final class TiendaPlugin extends Module {
     /** Version del secciones.yml que espera este codigo. Subirla cuando el
      *  formato cambie: el fichero viejo se guarda al lado y se pone el nuevo. */
     private static final int SECCIONES_VERSION = 2;
+    private static final int CONFIG_VERSION = 2;
 
     /**
      * Pone al dia secciones.yml sin que nadie tenga que borrar nada a mano.
@@ -136,22 +139,23 @@ public final class TiendaPlugin extends Module {
      * nunca. Aqui se detecta por su 'version', se aparta el viejo con su fecha
      * y se escribe el nuevo.
      */
-    private void migrarSecciones() {
-        File destino = new File(getDataFolder(), "secciones.yml");
-        if (!destino.exists()) { saveResource("secciones.yml", false); return; }
+    private void migrar(String nombre, int esperada) {
+        File destino = new File(getDataFolder(), nombre);
+        if (!destino.exists()) { saveResource(nombre, false); return; }
 
         int suya = org.bukkit.configuration.file.YamlConfiguration
                 .loadConfiguration(destino).getInt("version", 1);
-        if (suya >= SECCIONES_VERSION) return;
+        if (suya >= esperada) return;
 
+        String base = nombre.replace(".yml", "");
         File aparte = new File(getDataFolder(),
-                "secciones-v" + suya + "-" + java.time.LocalDate.now() + ".yml");
+                base + "-v" + suya + "-" + java.time.LocalDate.now() + ".yml");
         if (destino.renameTo(aparte)) {
-            saveResource("secciones.yml", false);
-            getLogger().warning("secciones.yml era de la version " + suya + " y se puso al dia. "
+            saveResource(nombre, false);
+            getLogger().warning(nombre + " era de la version " + suya + " y se puso al dia. "
                     + "El tuyo quedo en " + aparte.getName() + " por si le habias cambiado algo.");
         } else {
-            getLogger().severe("No pude apartar el secciones.yml viejo; el menu puede verse mal.");
+            getLogger().severe("No pude apartar el " + nombre + " viejo; puede quedar desactualizado.");
         }
     }
 
