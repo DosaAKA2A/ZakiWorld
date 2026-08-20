@@ -66,8 +66,7 @@ public final class MenuTienda implements Listener {
     public void abrirPrincipal(Player jugador) {
         List<String> categorias = new ArrayList<>(catalogo.categorias().keySet());
         Vista vista = new Vista(null, 0);
-        Inventory inv = Bukkit.createInventory(vista, 54,
-                Component.text("Tienda de Ederus", NamedTextColor.DARK_AQUA));
+        Inventory inv = Bukkit.createInventory(vista, 54, Estilo.titulo("TIENDA", "Ederus"));
         vista.inv = inv;
 
         /* Centradas: dos filas de siete, como la tienda que ya conocen. */
@@ -75,8 +74,8 @@ public final class MenuTienda implements Listener {
         for (int i = 0; i < categorias.size() && i < ranuras.length; i++) {
             String cat = categorias.get(i);
             int n = catalogo.categorias().getOrDefault(cat, 0);
-            List<Component> lore = List.of(gris(n + (n == 1 ? " articulo" : " articulos")),
-                    Component.empty(), verde("Clic para entrar"));
+            List<Component> lore = List.of(Estilo.valor(n + (n == 1 ? " articulo" : " articulos")),
+                    Estilo.vacio(), Estilo.accion("Click para entrar", Estilo.ACCION_COMPRA));
             ItemStack icono = iconos.de(cat);
             inv.setItem(ranuras[i], icono != null
                     ? decorar(icono, bonito(cat), lore)
@@ -92,8 +91,7 @@ public final class MenuTienda implements Listener {
         if (pagina >= paginas) pagina = paginas - 1;
 
         Vista vista = new Vista(categoria, pagina);
-        Inventory inv = Bukkit.createInventory(vista, FILAS * 9,
-                Component.text("Ederus | " + bonito(categoria), NamedTextColor.DARK_AQUA));
+        Inventory inv = Bukkit.createInventory(vista, FILAS * 9, Estilo.titulo("EDERUS", bonito(categoria)));
         vista.inv = inv;
 
         int desde = pagina * POR_PAGINA;
@@ -108,53 +106,55 @@ public final class MenuTienda implements Listener {
             inv.setItem(RANURA_SIGUIENTE, pieza(Material.ARROW, "Pagina siguiente", List.of()));
         }
         inv.setItem(RANURA_VOLVER, pieza(Material.BARRIER, "Volver",
-                List.of(gris("Pagina " + (pagina + 1) + " de " + paginas))));
+                List.of(Estilo.valor("Pagina " + (pagina + 1) + " de " + paginas))));
 
         jugador.openInventory(inv);
     }
 
     /** Un articulo con su precio, sus topes y lo que se puede hacer con el. */
+    /** Un articulo con su precio, sus topes y lo que se puede hacer con el. */
     private ItemStack pintar(Catalogo.Articulo art, Player jugador) {
         List<Component> lore = new ArrayList<>();
 
-        if (art.seCompra()) lore.add(Component.text("Comprar: ", NamedTextColor.GRAY)
-                .append(Component.text(Motor.fmt(art.compra()), NamedTextColor.GREEN))
-                .decoration(TextDecoration.ITALIC, false));
+        if (art.seCompra()) {
+            lore.add(Estilo.etiqueta("Precio de compra", Estilo.COMPRA));
+            lore.add(Estilo.valor(Estilo.dinero(art.compra())));
+        }
+
         int llevas = 0;
         if (art.seVende()) {
-            lore.add(Component.text("Vender: ", NamedTextColor.GRAY)
-                    .append(Component.text(Motor.fmt(art.venta()), NamedTextColor.GOLD))
-                    .decoration(TextDecoration.ITALIC, false));
+            lore.add(Estilo.etiqueta("Precio de venta", Estilo.VENTA));
+            lore.add(Estilo.valor(Estilo.dinero(art.venta())));
             /* Lo que la tienda ACEPTA de lo que lleva encima, no lo que lleva:
-             * un MMOItems no cuenta, y verlo aqui a 0 explica solo por que no
-             * se puede vender, sin tener que probarlo a ciegas. */
+             * un MMOItems no cuenta, y verlo a 0 explica solo por que no se
+             * puede vender, sin tener que probarlo a ciegas. */
             llevas = Motor.contarLimpios(jugador.getInventory(), art.material());
-            lore.add(gris("Llevas: " + llevas));
+            lore.add(Estilo.valor("Llevas " + llevas));
         }
 
         if (art.tieneTope()) {
             int quedan = topes.restante(jugador.getUniqueId(), art);
-            lore.add(Component.empty());
-            lore.add(gris("Tope: " + art.topeVenta() + " cada " + Motor.duracion(art.ventanaMs())));
-            lore.add(gris("Te quedan " + quedan)
-                    .color(quedan > 0 ? NamedTextColor.GRAY : NamedTextColor.RED));
-            if (quedan <= 0) {
-                lore.add(gris("Se reinicia en " + Motor.duracion(topes.esperaMs(jugador.getUniqueId(), art))));
-            }
+            lore.add(Estilo.vacio());
+            lore.add(Estilo.etiqueta("Limite", Estilo.CLARO));
+            lore.add(Estilo.valor(art.topeVenta() + " cada " + Motor.duracion(art.ventanaMs())));
+            lore.add(quedan > 0
+                    ? Estilo.valor("Te quedan " + quedan)
+                    : Estilo.texto(" " + Estilo.FLECHA + " Agotado, vuelve en "
+                        + Motor.duracion(topes.esperaMs(jugador.getUniqueId(), art)), NamedTextColor.RED));
         }
 
-        lore.add(Component.empty());
+        lore.add(Estilo.vacio());
         if (art.seCompra()) {
-            lore.add(verde("Clic izquierdo: comprar 1"));
-            lore.add(verde("Shift + izquierdo: comprar 64"));
+            lore.add(Estilo.accion("Click para comprar 1", Estilo.ACCION_COMPRA));
+            lore.add(Estilo.accion("Shift + click para 64", Estilo.ACCION_COMPRA));
         }
         if (art.seVende()) {
-            lore.add(verde("Clic derecho: vender 1"));
+            lore.add(Estilo.accion("Click derecho para vender 1", Estilo.ACCION_VENTA));
             lore.add(llevas > 0
-                    ? verde("Shift + derecho: vender los " + llevas + " que llevas")
-                    : gris("Shift + derecho: vender todo lo que lleves"));
+                    ? Estilo.accion("Shift + derecho para vender " + llevas, Estilo.ACCION_VENTA)
+                    : Estilo.accion("Shift + derecho para vender todo", Estilo.APAGADO));
         }
-        if (!art.seCompra() && !art.seVende()) lore.add(gris("Solo de exposicion"));
+        if (!art.seCompra() && !art.seVende()) lore.add(Estilo.accion("Solo de exposicion", Estilo.APAGADO));
 
         ItemStack icono = Motor.construir(art, 1);
         if (icono == null) icono = new ItemStack(art.material());
@@ -232,8 +232,7 @@ public final class MenuTienda implements Listener {
     private static ItemStack decorar(ItemStack pila, String titulo, List<Component> lore) {
         ItemMeta meta = pila.getItemMeta();
         if (meta != null) {
-            meta.displayName(Component.text(titulo, NamedTextColor.AQUA)
-                    .decoration(TextDecoration.ITALIC, false));
+            meta.displayName(Estilo.texto(titulo, Estilo.CLARO));
             if (!lore.isEmpty()) meta.lore(lore);
             /* Fuera la etiqueta que pone Minecraft sola (daño, velocidad de
              * ataque, encantamientos...): en un icono de tienda es ruido y
