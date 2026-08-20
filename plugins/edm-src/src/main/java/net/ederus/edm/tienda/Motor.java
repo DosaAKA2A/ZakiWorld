@@ -38,12 +38,26 @@ public final class Motor {
     private final Topes topes;
     private final Registro registro;
     private final Economy economia;
+    private final Mercado mercado;
 
-    public Motor(Catalogo catalogo, Topes topes, Registro registro, Economy economia) {
+    public Motor(Catalogo catalogo, Topes topes, Registro registro, Economy economia, Mercado mercado) {
         this.catalogo = catalogo;
         this.topes = topes;
         this.registro = registro;
         this.economia = economia;
+        this.mercado = mercado;
+    }
+
+    public Mercado mercado() { return mercado; }
+
+    /** Lo que cuesta comprar una unidad ahora mismo (aqui entrara Ofertas). */
+    public double compraEfectiva(Catalogo.Articulo art) {
+        return art.compra();
+    }
+
+    /** Lo que se paga por vender una unidad ahora mismo. */
+    public double ventaEfectiva(Catalogo.Articulo art) {
+        return mercado.ventaEfectiva(art, compraEfectiva(art));
     }
 
     /**
@@ -163,7 +177,8 @@ public final class Motor {
         if (quitados <= 0) return Resultado.no("No pude sacar los items del inventario.");
 
         // 2. el dinero despues
-        double total = art.venta() * quitados;
+        double unitario = ventaEfectiva(art);
+        double total = unitario * quitados;
         EconomyResponse resp = economia.depositPlayer(jugador, total);
         if (!resp.transactionSuccess()) {
             entregar(jugador, art, quitados);                 // se devuelve TODO
@@ -171,8 +186,15 @@ public final class Motor {
         }
 
         topes.anotar(jugador.getUniqueId(), art, quitados);
+        mercado.anotarVenta(art, quitados);
         registro.anotar("VENTA", jugador.getName(), quitados, art.clave(),
-                art.venta(), total, economia.getBalance(jugador));
+                unitario, total, economia.getBalance(jugador));
+        /* Si el recorte contra la compra llego a actuar, queda constancia: es la
+         * unica pista de que un precio se habia ido de rango. */
+        if (mercado.recortado(art, compraEfectiva(art))) {
+            registro.anotar("RECORTE", jugador.getName(), quitados, art.clave(),
+                    unitario, total, economia.getBalance(jugador));
+        }
 
         String aviso = "";
         if (quitados < pedido) {
@@ -201,7 +223,7 @@ public final class Motor {
         if (sitio <= 0) return Resultado.no("No te cabe nada mas en el inventario.");
         if (sitio < cantidad) cantidad = sitio;
 
-        double coste = art.compra() * cantidad;
+        double coste = compraEfectiva(art) * cantidad;
         if (!economia.has(jugador, coste)) {
             return Resultado.no("Te faltan " + fmt(coste - economia.getBalance(jugador)) + ".");
         }
@@ -219,7 +241,7 @@ public final class Motor {
         }
 
         registro.anotar("COMPRA", jugador.getName(), cantidad, art.clave(),
-                art.compra(), coste, economia.getBalance(jugador));
+                compraEfectiva(art), coste, economia.getBalance(jugador));
 
         return new Resultado(true, "Compraste " + cantidad + " x " + nombre(art)
                 + " por " + fmt(coste), cantidad, coste);

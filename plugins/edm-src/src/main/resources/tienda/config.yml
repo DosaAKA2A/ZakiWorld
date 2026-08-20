@@ -1,2 +1,35 @@
-# Cada cuanto se vuelcan los topes a disco (segundos, minimo 30).
+# Cada cuanto se vuelcan los topes y el mercado a disco (segundos, minimo 30).
 guardado-segundos: 120
+
+# ---------------------------------------------------------------------------
+# Precio dinamico GLOBAL: lo que vende todo el servidor hunde el precio para
+# todos. Es lo que obliga a rotar la economia en vez de exprimir un solo item.
+#
+#   precio = base x (suelo + (1 - suelo) x 2^(-V/H))
+#
+# V es lo vendido en el servidor y H cuanto hay que vender para quedarse a mitad
+# de camino del suelo. La recuperacion es la misma operacion al reves: V se
+# olvida solo con la vida media de abajo.
+# ---------------------------------------------------------------------------
+mercado:
+  activo: true
+
+  # El precio de venta MAS BAJO al que puede llegar, en tanto por uno sobre el
+  # precio base. 0.25 = puede caer hasta un 75%.
+  suelo: 0.25
+
+  # Cada cuanto se olvida la mitad de lo vendido. Mas corto = se recupera antes.
+  recuperacion: 6h
+
+  # Cuanto dinero hay que sacarle a un item para hundir su precio a mitad de
+  # camino del suelo. De aqui sale H para los 968 articulos sin tocar ninguno a
+  # mano: un item caro aguanta pocas unidades y uno barato muchas.
+  presupuesto: 300000
+
+  # LA RED DE SEGURIDAD. La venta nunca puede pasar de este porcentaje de la
+  # compra efectiva del mismo item, pase lo que pase con los multiplicadores.
+  # Si se acercaran, comprar y vender el mismo item daria beneficio: dinero
+  # infinito. Hoy el peor caso natural del catalogo es 50%, asi que con 0.60
+  # esto no se activa nunca; solo salta si algo se va de rango, y queda anotado
+  # en el registro como RECORTE.
+  margen-venta-compra: 0.60

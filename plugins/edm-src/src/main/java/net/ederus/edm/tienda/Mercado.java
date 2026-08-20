@@ -1,0 +1,183 @@
+package net.ederus.edm.tienda;
+
+import org.bukkit.configuration.ConfigurationSection;
+import org.bukkit.configuration.file.YamlConfiguration;
+
+import java.io.File;
+import java.io.IOException;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
+
+/**
+ * El precio dinamico. GLOBAL: lo que vende todo el servidor hunde el precio para
+ * todos, que es lo que obliga a rotar la economia.
+ *
+ * LA CURVA
+ *
+ *   precio = base x (suelo + (1 - suelo) x 2^(-V/H))
+ *
+ * V es lo vendido en todo el servidor y H cuanto hay que vender para quedarse a
+ * mitad de camino del suelo. No es lineal a proposito: restar un % por venta
+ * tiene un acanti lado al llegar al suelo y castiga igual al que vende 10 que al
+ * que vende 10.000. Con la exponencial las primeras ventas casi no mueven el
+ * precio y el castigo crece con el volumen.
+ *
+ * LA RECUPERACION es la misma operacion al reves: V decae solo con vida media
+ * 'recuperacion'. Un solo mecanismo para las dos direcciones.
+ *
+ * H NO SE CONFIGURA 968 VECES. Se deriva del dinero: 'presupuesto' es cuanto
+ * dinero hay que sacarle a un item para que su precio caiga a mitad de camino
+ * del suelo, y H sale de dividirlo entre el precio base. Asi un item caro
+ * aguanta pocas unidades y uno barato muchas, sin tocar nada a mano.
+ */
+public final class Mercado {
+
+    /** Presion acumulada por clave, y cuando se toco por ultima vez. */
+    private static final class Estado {
+        double vendido;
+        long momento;
+        Estado(double vendido, long momento) { this.vendido = vendido; this.momento = momento; }
+    }
+
+    private final Map<String, Estado> estados = new ConcurrentHashMap<>();
+    private final File fichero;
+
+    private boolean activo = true;
+    private double suelo = 0.25;
+    private long recuperacionMs = 6L * 3600_000L;
+    private double presupuesto = 300_000d;
+    private double margenVentaCompra = 0.60;
+    private volatile boolean sucio;
+
+    public Mercado(File fichero) { this.fichero = fichero; }
+
+    public void configurar(ConfigurationSection sec) {
+        if (sec == null) return;
+        activo = sec.getBoolean("activo", activo);
+        suelo = Math.min(1, Math.max(0.05, sec.getDouble("suelo", suelo)));
+        recuperacionMs = Math.max(60_000L, Catalogo.leerDuracion(sec.getString("recuperacion", "6h")));
+        presupuesto = Math.max(1, sec.getDouble("presupuesto", presupuesto));
+        margenVentaCompra = Math.min(0.95, Math.max(0.05, sec.getDouble("margen-venta-compra", margenVentaCompra)));
+    }
+
+    /** Cuantas unidades hunden el precio a mitad de camino del suelo. */
+    private double mitad(Catalogo.Articulo art) {
+        double base = art.venta() > 0 ? art.venta() : art.compra();
+        if (base <= 0) return Double.MAX_VALUE;
+        return Math.max(8, presupuesto / base);
+    }
+
+    /** Lo vendido que "queda", ya descontado el olvido por el paso del tiempo. */
+    private double presion(String clave) {
+        Estado e = estados.get(clave);
+        if (e == null) return 0;
+        synchronized (e) {
+            long ahora = System.currentTimeMillis();
+            long transcurrido = ahora - e.momento;
+            if (transcurrido > 0) {
+                e.vendido *= Math.pow(2, -(double) transcurrido / recuperacionMs);
+                e.momento = ahora;
+                if (e.vendido < 0.01) { estados.remove(clave); return 0; }
+                sucio = true;
+            }
+            return e.vendido;
+        }
+    }
+
+    /** 1.0 = precio intacto; 'suelo' = todo lo bajo que puede llegar. */
+    public double multiplicador(Catalogo.Articulo art) {
+        if (!activo || !art.seVende()) return 1;
+        double v = presion(art.clave());
+        if (v <= 0) return 1;
+        return suelo + (1 - suelo) * Math.pow(2, -v / mitad(art));
+    }
+
+    /**
+     * El precio de venta que se paga de verdad.
+     *
+     * El recorte contra la compra NO es negociable: si la venta se acerca al
+     * precio de compra, comprar y vender el mismo item da beneficio y eso es
+     * dinero infinito. Se aplica sobre la compra EFECTIVA (la que pagaria el
+     * jugador ahora mismo, con Ofertas incluidas), no sobre la del fichero.
+     */
+    public double ventaEfectiva(Catalogo.Articulo art, double compraEfectiva) {
+        double precio = art.venta() * multiplicador(art);
+        if (compraEfectiva > 0) {
+            double techo = compraEfectiva * margenVentaCompra;
+            if (precio > techo) return techo;
+        }
+        return precio;
+    }
+
+    public boolean recortado(Catalogo.Articulo art, double compraEfectiva) {
+        return compraEfectiva > 0
+                && art.venta() * multiplicador(art) > compraEfectiva * margenVentaCompra;
+    }
+
+    /** Se llama DESPUES de una venta cobrada. */
+    public void anotarVenta(Catalogo.Articulo art, int cantidad) {
+        if (!activo || cantidad <= 0) return;
+        presion(art.clave());          // pone al dia el olvido antes de sumar
+        estados.compute(art.clave(), (k, e) -> {
+            if (e == null) return new Estado(cantidad, System.currentTimeMillis());
+            synchronized (e) { e.vendido += cantidad; e.momento = System.currentTimeMillis(); }
+            return e;
+        });
+        sucio = true;
+    }
+
+    /** Cuanto ha caido, en porcentaje, para enseñarlo en el menu. */
+    public int caidaPorCiento(Catalogo.Articulo art) {
+        return (int) Math.round((1 - multiplicador(art)) * 100);
+    }
+
+    /** Que precio tendria si el servidor vendiera 'extra' unidades mas. Solo
+     *  calcula: no toca el estado. Sirve para afinar los numeros sin probarlos
+     *  en produccion. */
+    public double simular(Catalogo.Articulo art, double extra) {
+        if (!activo || !art.seVende()) return art.venta();
+        double v = presion(art.clave()) + Math.max(0, extra);
+        double mult = suelo + (1 - suelo) * Math.pow(2, -v / mitad(art));
+        double precio = art.venta() * mult;
+        double techo = art.compra() > 0 ? art.compra() * margenVentaCompra : Double.MAX_VALUE;
+        return Math.min(precio, techo);
+    }
+
+    public boolean activo() { return activo; }
+    public double suelo() { return suelo; }
+    public double margen() { return margenVentaCompra; }
+    public int itemsMovidos() { return estados.size(); }
+
+    // ---------------------------------------------------------- persistencia
+
+    public void cargar() {
+        estados.clear();
+        if (!fichero.exists()) return;
+        YamlConfiguration yml = YamlConfiguration.loadConfiguration(fichero);
+        for (String clave : yml.getKeys(false)) {
+            double v = yml.getDouble(clave + ".vendido", 0);
+            long m = yml.getLong(clave + ".momento", 0);
+            if (v > 0 && m > 0) estados.put(clave, new Estado(v, m));
+        }
+        sucio = false;
+    }
+
+    public void guardar() {
+        if (!sucio) return;
+        YamlConfiguration yml = new YamlConfiguration();
+        estados.forEach((clave, e) -> {
+            synchronized (e) {
+                yml.set(clave + ".vendido", Math.round(e.vendido * 100) / 100d);
+                yml.set(clave + ".momento", e.momento);
+            }
+        });
+        try {
+            File padre = fichero.getParentFile();
+            if (padre != null) padre.mkdirs();
+            yml.save(fichero);
+            sucio = false;
+        } catch (IOException ex) {
+            throw new IllegalStateException("no pude guardar el mercado: " + ex.getMessage(), ex);
+        }
+    }
+}

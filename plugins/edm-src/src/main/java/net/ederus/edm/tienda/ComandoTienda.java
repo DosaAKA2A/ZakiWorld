@@ -44,6 +44,7 @@ public final class ComandoTienda implements CommandExecutor, TabCompleter {
             case "comprar" -> { return comprar(quien, args); }
             case "precio" -> { return precio(quien, args); }
             case "topes" -> { return verTopes(quien); }
+            case "mercado" -> { return mercado(quien, args); }
             case "recargar" -> { return recargar(quien); }
             default -> { ayuda(quien); return true; }
         }
@@ -55,6 +56,7 @@ public final class ComandoTienda implements CommandExecutor, TabCompleter {
         q.sendMessage("/etienda comprar <item> <cantidad>   (ej: spawner:pig)");
         q.sendMessage("/etienda precio <item>");
         q.sendMessage("/etienda topes");
+        q.sendMessage("/etienda mercado <item> [simular <cantidad>]");
         if (q.hasPermission("ederus.tienda.admin")) q.sendMessage("/etienda recargar");
     }
 
@@ -143,6 +145,41 @@ public final class ComandoTienda implements CommandExecutor, TabCompleter {
         return true;
     }
 
+    /** Ver como esta el precio de un item y simular cuanto caeria. */
+    private boolean mercado(CommandSender quien, String[] args) {
+        if (args.length < 2) { quien.sendMessage("/etienda mercado <item> [simular <cantidad>]"); return true; }
+        Catalogo.Articulo a = catalogo.de(args[1]);
+        if (a == null) {
+            Material m = quien instanceof Player p ? material(p, args[1]) : Material.matchMaterial(args[1]);
+            if (m != null) a = catalogo.de(m);
+        }
+        if (a == null) { quien.sendMessage("'" + args[1] + "' no esta en la tienda."); return true; }
+        if (!a.seVende()) { quien.sendMessage(Motor.nombre(a) + " no se vende, no tiene precio dinamico."); return true; }
+
+        Mercado mk = modulo.mercado();
+        if (mk == null) { quien.sendMessage("El mercado aun no esta listo."); return true; }
+
+        quien.sendMessage(Motor.nombre(a) + "  [" + a.categoria() + "]");
+        quien.sendMessage("  base " + Motor.fmt(a.venta())
+                + "  ->  ahora " + Motor.fmt(mk.ventaEfectiva(a, a.compra()))
+                + "  (-" + mk.caidaPorCiento(a) + "%)");
+        quien.sendMessage("  suelo " + Motor.fmt(a.venta() * mk.suelo())
+                + "  |  margen contra la compra " + Math.round(mk.margen() * 100) + "%");
+
+        if (args.length >= 4 && args[2].equalsIgnoreCase("simular")) {
+            int n;
+            try { n = Integer.parseInt(args[3]); }
+            catch (NumberFormatException e) { quien.sendMessage("Cantidad invalida."); return true; }
+            quien.sendMessage("  si el servidor vendiera " + n + " mas:");
+            for (int paso : new int[]{n / 4, n / 2, n, n * 2, n * 4}) {
+                if (paso <= 0) continue;
+                quien.sendMessage("    " + String.format("%,d", paso) + " -> "
+                        + Motor.fmt(mk.simular(a, paso)));
+            }
+        }
+        return true;
+    }
+
     private boolean recargar(CommandSender quien) {
         if (!quien.hasPermission("ederus.tienda.admin")) { quien.sendMessage("No puedes."); return true; }
         if (modulo.cargarCatalogo()) {
@@ -157,7 +194,7 @@ public final class ComandoTienda implements CommandExecutor, TabCompleter {
     public List<String> onTabComplete(CommandSender quien, Command cmd, String etiqueta, String[] args) {
         List<String> out = new ArrayList<>();
         if (args.length == 1) {
-            for (String s : List.of("vender", "comprar", "precio", "topes", "recargar")) {
+            for (String s : List.of("vender", "comprar", "precio", "topes", "mercado", "recargar")) {
                 if (s.startsWith(args[0].toLowerCase(Locale.ROOT))) out.add(s);
             }
         } else if (args.length == 2 && !args[0].equalsIgnoreCase("topes")) {

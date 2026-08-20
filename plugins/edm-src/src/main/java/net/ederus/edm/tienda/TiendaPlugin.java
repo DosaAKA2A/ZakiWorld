@@ -23,6 +23,7 @@ public final class TiendaPlugin extends Module {
     private Motor motor;
     private MenuTienda menu;
     private final Iconos iconos = new Iconos();
+    private Mercado mercado;
     private Economy economia;
     private BukkitTask tareaGuardado;
 
@@ -41,6 +42,9 @@ public final class TiendaPlugin extends Module {
 
         topes = new Topes(new File(getDataFolder(), "topes.yml"));
         topes.cargar();
+        mercado = new Mercado(new File(getDataFolder(), "mercado.yml"));
+        mercado.configurar(getConfig().getConfigurationSection("mercado"));
+        mercado.cargar();
         registro = new Registro(new File(getDataFolder(), "registro"));
 
         saveResource("iconos.yml", false);
@@ -76,7 +80,7 @@ public final class TiendaPlugin extends Module {
                 getLogger().severe("No hay economia de Vault. La tienda se queda sin motor.");
                 return;
             }
-            motor = new Motor(catalogo, topes, registro, economia);
+            motor = new Motor(catalogo, topes, registro, economia, mercado);
             getLogger().info("Economia enganchada: " + economia.getName());
         });
 
@@ -84,6 +88,7 @@ public final class TiendaPlugin extends Module {
         tareaGuardado = core.getServer().getScheduler().runTaskTimerAsynchronously(core, () -> {
             topes.limpiar(catalogo);
             topes.guardar();
+            mercado.guardar();
         }, cada, cada);
 
         getLogger().info("Tienda activa | " + catalogo.total() + " articulos en "
@@ -95,6 +100,7 @@ public final class TiendaPlugin extends Module {
     public void onDisable() {
         if (tareaGuardado != null) tareaGuardado.cancel();
         if (topes != null) topes.guardar();
+        if (mercado != null) mercado.guardar();
         if (registro != null) registro.cerrar();
     }
 
@@ -123,11 +129,15 @@ public final class TiendaPlugin extends Module {
     @Override
     public String recargar() {
         iconos.cargar(new File(getDataFolder(), "iconos.yml"));
+        reloadConfig();
+        if (mercado != null) mercado.configurar(getConfig().getConfigurationSection("mercado"));
         if (!cargarCatalogo()) return "el precios.yml tiene errores; se mantiene el anterior";
         return catalogo.total() + " articulos en " + catalogo.categorias().size() + " categorias";
     }
 
     public MenuTienda menu() { return menu; }
+
+    public Mercado mercado() { return mercado; }
 
     /** null hasta que engancha Vault en el primer tick. */
     public Motor motor() { return motor; }

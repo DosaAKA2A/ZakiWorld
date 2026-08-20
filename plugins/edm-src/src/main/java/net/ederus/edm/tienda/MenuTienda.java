@@ -123,8 +123,15 @@ public final class MenuTienda implements Listener {
 
         int llevas = 0;
         if (art.seVende()) {
+            Mercado mercado = modulo.mercado();
+            double efectiva = mercado != null ? mercado.ventaEfectiva(art, art.compra()) : art.venta();
+            int caida = mercado != null ? mercado.caidaPorCiento(art) : 0;
             lore.add(Estilo.etiqueta("Precio de venta", Estilo.VENTA));
-            lore.add(Estilo.valor(Estilo.dinero(art.venta())));
+            /* Un precio que baja en silencio parece un bug: se dice cuanto y por que. */
+            lore.add(caida > 0
+                    ? Estilo.valor(Estilo.dinero(efectiva)).append(Estilo.texto("  -" + caida + "%", Estilo.ACCION_VENTA))
+                    : Estilo.valor(Estilo.dinero(efectiva)));
+            if (caida > 0) lore.add(Estilo.texto("   sobrevendido, se recupera solo", Estilo.APAGADO));
             /* Lo que la tienda ACEPTA de lo que lleva encima, no lo que lleva:
              * un MMOItems no cuenta, y verlo a 0 explica solo por que no se
              * puede vender, sin tener que probarlo a ciegas. */
