@@ -31,7 +31,7 @@ public final class ComandoTienda implements CommandExecutor, TabCompleter {
         if (cmd.getName().equalsIgnoreCase("sellall")) {
             if (!(quien instanceof Player j)) { quien.sendMessage("Solo desde el juego."); return true; }
             Motor m = modulo.motor();
-            if (m == null) { quien.sendMessage("La tienda aun no esta lista."); return true; }
+            if (m == null) { quien.sendMessage(Estilo.legado("&cLa tienda todavia esta arrancando.")); return true; }
             quien.sendMessage(m.venderTodo(j).mensaje());
             return true;
         }
@@ -39,7 +39,7 @@ public final class ComandoTienda implements CommandExecutor, TabCompleter {
         if (esShop || args.length == 0) {
             if (quien instanceof Player jugador) {
                 MenuTienda menu = modulo.menu();
-                if (menu == null) { quien.sendMessage("La tienda aun no esta lista."); return true; }
+                if (menu == null) { quien.sendMessage(Estilo.legado("&cLa tienda todavia esta arrancando.")); return true; }
                 menu.abrirPrincipal(jugador);
             } else {
                 ayuda(quien);
@@ -92,7 +92,7 @@ public final class ComandoTienda implements CommandExecutor, TabCompleter {
         }
 
         Motor motor = modulo.motor();
-        if (motor == null) { quien.sendMessage("La tienda aun no esta lista."); return true; }
+        if (motor == null) { quien.sendMessage(Estilo.legado("&cLa tienda todavia esta arrancando.")); return true; }
         quien.sendMessage(motor.vender(jugador, material, cantidad).mensaje());
         return true;
     }
@@ -115,7 +115,7 @@ public final class ComandoTienda implements CommandExecutor, TabCompleter {
         catch (NumberFormatException e) { quien.sendMessage("Cantidad invalida."); return true; }
 
         Motor motor = modulo.motor();
-        if (motor == null) { quien.sendMessage("La tienda aun no esta lista."); return true; }
+        if (motor == null) { quien.sendMessage(Estilo.legado("&cLa tienda todavia esta arrancando.")); return true; }
         quien.sendMessage(motor.comprar(jugador, art, cantidad).mensaje());
         return true;
     }

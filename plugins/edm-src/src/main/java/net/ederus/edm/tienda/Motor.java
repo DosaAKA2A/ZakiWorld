@@ -30,8 +30,16 @@ public final class Motor {
     /** Techo por operacion, para que un /etienda vender 999999 no barra el inventario entero. */
     public static final int MAX_POR_OPERACION = 2304;   // 36 stacks
 
-    public record Resultado(boolean ok, String mensaje, int cantidad, double total) {
-        static Resultado no(String mensaje) { return new Resultado(false, mensaje, 0, 0); }
+    /**
+     * El mensaje va como Component y no como String: serializarlo a texto plano
+     * se comia el prefijo, los hex y las negritas de mensajes.yml, que es justo
+     * lo que se configura ahi.
+     */
+    public record Resultado(boolean ok, net.kyori.adventure.text.Component mensaje,
+                            int cantidad, double total) {
+        static Resultado no(net.kyori.adventure.text.Component mensaje) {
+            return new Resultado(false, mensaje, 0, 0);
+        }
     }
 
     private final Catalogo catalogo;
@@ -60,9 +68,9 @@ public final class Motor {
     public void compras(Compras c) { this.compras = c; }
     public void mensajes(Mensajes m) { this.mensajes = m; }
 
-    /** Texto para el jugador: sale de mensajes.yml, con su prefijo. */
-    private String msg(String clave, String respaldo, String... p) {
-        return mensajes == null ? respaldo : mensajes.plano(clave, respaldo, p);
+    /** Texto para el jugador: sale de mensajes.yml, con su prefijo y su color. */
+    private net.kyori.adventure.text.Component msg(String clave, String respaldo, String... p) {
+        return mensajes == null ? Estilo.legado(respaldo) : mensajes.de(clave, respaldo, p);
     }
     public Compras compras() { return compras; }
     public Rotacion rotacion() { return rotacion; }
@@ -185,9 +193,9 @@ public final class Motor {
 
     public Resultado vender(Player jugador, Material material, int pedido) {
         Catalogo.Articulo art = catalogo.de(material);
-        if (art == null) return Resultado.no("Ese item no esta en la tienda.");
-        if (!art.seVende()) return Resultado.no("La tienda no compra " + bonito(material) + ".");
-        if (pedido <= 0) return Resultado.no("La cantidad tiene que ser mayor que cero.");
+        if (art == null) return Resultado.no(msg("no-esta", "Ese objeto no esta en la tienda."));
+        if (!art.seVende()) return Resultado.no(msg("no-se-vende", "La tienda no compra %item%.", "%item%", bonito(material)));
+        if (pedido <= 0) return Resultado.no(Estilo.legado("&cLa cantidad tiene que ser mayor que cero."));
 
         int disponible = contarLimpios(jugador.getInventory(), material);
         if (disponible <= 0) {
@@ -198,8 +206,8 @@ public final class Motor {
         int margen = topes.restante(jugador.getUniqueId(), art);
         if (margen <= 0) {
             long espera = topes.esperaMs(jugador.getUniqueId(), art);
-            return Resultado.no("Llegaste al tope de " + art.topeVenta() + " " + bonito(material)
-                    + ". Vuelve en " + duracion(espera) + ".");
+            return Resultado.no(Estilo.legado("&cLlegaste al tope de " + art.topeVenta() + " "
+                    + bonito(material) + ". Vuelve en " + duracion(espera) + "."));
         }
 
         int cantidad = Math.min(Math.min(pedido, disponible), Math.min(margen, MAX_POR_OPERACION));
@@ -218,7 +226,7 @@ public final class Motor {
 
         // 1. los items fuera
         int quitados = quitarLimpios(jugador.getInventory(), material, cantidad);
-        if (quitados <= 0) return Resultado.no("No pude sacar los items del inventario.");
+        if (quitados <= 0) return Resultado.no(Estilo.legado("&cNo pude sacar los objetos del inventario."));
 
         // 2. el dinero despues
         /* El total se integra a lo largo de la venta, no se multiplica por el
@@ -238,7 +246,8 @@ public final class Motor {
         EconomyResponse resp = economia.depositPlayer(jugador, total);
         if (!resp.transactionSuccess()) {
             entregar(jugador, art, quitados);                 // se devuelve TODO
-            return Resultado.no("El banco rechazo la operacion: " + resp.errorMessage);
+            return Resultado.no(msg("banco-fallo", "El banco rechazo la operacion: %motivo%",
+                    "%motivo%", String.valueOf(resp.errorMessage)));
         }
 
         topes.anotar(jugador.getUniqueId(), art, quitados);
@@ -269,18 +278,17 @@ public final class Motor {
     // ----------------------------------------------------------------- comprar
 
     public Resultado comprar(Player jugador, Catalogo.Articulo art, int pedido) {
-        if (art == null) return Resultado.no("Ese item no esta en la tienda.");
-        if (!art.seCompra()) return Resultado.no("La tienda no vende " + nombre(art) + ".");
-        if (pedido <= 0) return Resultado.no("La cantidad tiene que ser mayor que cero.");
+        if (art == null) return Resultado.no(msg("no-esta", "Ese objeto no esta en la tienda."));
+        if (!art.seCompra()) return Resultado.no(msg("no-se-compra", "La tienda no vende %item%.", "%item%", nombre(art)));
+        if (pedido <= 0) return Resultado.no(Estilo.legado("&cLa cantidad tiene que ser mayor que cero."));
 
         /* El permiso y su mensaje vienen del propio articulo: los spawners de
          * combate piden group.level5 y traen escrito que decir si no lo tienes. */
         if (art.pideePermiso() && !jugador.hasPermission(art.permiso())) {
             String m = art.mensajePermiso();
             return Resultado.no(m != null && !m.isBlank()
-                    ? net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer.plainText()
-                        .serialize(Estilo.legado(m))
-                    : "No tienes permiso para comprar " + nombre(art) + ".");
+                    ? Estilo.legado(m)
+                    : msg("sin-permiso", "No tienes permiso para comprar %item%.", "%item%", nombre(art)));
         }
 
         /* Limite DE POR VIDA, no por dia: 'Limite personal: 6' son seis en toda
@@ -297,7 +305,7 @@ public final class Motor {
         /* Se comprueba ANTES de cobrar que se puede construir: mejor no vender
          * que cobrar 75.000 por un spawner vacio. */
         if (construir(art, 1) == null) {
-            return Resultado.no("No pude preparar ese item. Avisa a un administrador.");
+            return Resultado.no(Estilo.legado("&cNo pude preparar ese objeto. Avisa a un administrador."));
         }
 
         int cantidad = Math.min(pedido, MAX_POR_OPERACION);
@@ -324,13 +332,14 @@ public final class Motor {
         // 1. cobrar
         EconomyResponse resp = economia.withdrawPlayer(jugador, coste);
         if (!resp.transactionSuccess()) {
-            return Resultado.no("El banco rechazo la operacion: " + resp.errorMessage);
+            return Resultado.no(msg("banco-fallo", "El banco rechazo la operacion: %motivo%",
+                    "%motivo%", String.valueOf(resp.errorMessage)));
         }
 
         // 2. entregar (lo que no quepa cae al suelo, nunca se pierde)
         if (!entregar(jugador, art, cantidad)) {
             economia.depositPlayer(jugador, coste);           // se devuelve el dinero
-            return Resultado.no("No pude entregarte el item; se te devolvio el dinero.");
+            return Resultado.no(Estilo.legado("&cNo pude entregarte el objeto; se te devolvio el dinero."));
         }
 
         if (rotacion != null && rotacion.oferta(art.clave()) != null) rotacion.anotar(art.clave(), cantidad);
@@ -369,7 +378,7 @@ public final class Motor {
             piezas += r.cantidad();
             tipos++;
         }
-        if (tipos == 0) return Resultado.no("No se pudo vender nada.");
+        if (tipos == 0) return Resultado.no(msg("nada-que-vender-todo", "No tienes nada que la tienda compre."));
         return new Resultado(true, msg("sellall-hecho",
                 "Vendiste %cantidad% objetos de %tipos% tipos por %total%",
                 "%cantidad%", String.valueOf(piezas),

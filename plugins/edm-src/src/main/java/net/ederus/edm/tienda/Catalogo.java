@@ -27,13 +27,14 @@ public final class Catalogo {
     public record Articulo(String clave, Material material, EntityType spawner, String categoria,
                            double compra, double venta, int topeVenta, long ventanaMs,
                            java.util.List<String> lore, int limiteJugador,
-                           String permiso, String mensajePermiso) {
+                           String permiso, String mensajePermiso, String nombrePropio) {
 
         public boolean seCompra() { return compra > 0; }
         public boolean seVende() { return venta > 0; }
         public boolean tieneTope() { return topeVenta > 0; }
         public boolean esVariante() { return spawner != null; }
         public boolean tieneLore() { return lore != null && !lore.isEmpty(); }
+        public boolean tieneNombre() { return nombrePropio != null && !nombrePropio.isBlank(); }
         public boolean tieneLimiteJugador() { return limiteJugador > 0; }
         public boolean pideePermiso() { return permiso != null && !permiso.isBlank(); }
     }
@@ -119,7 +120,8 @@ public final class Catalogo {
 
                 Articulo art = new Articulo(texto, material, spawner, categoria, compra, venta, tope, ventana,
                         it.getStringList("lore"), it.getInt("limite-jugador", 0),
-                        it.getString("permiso"), it.getString("mensaje-permiso"));
+                        it.getString("permiso"), it.getString("mensaje-permiso"),
+                        it.getString("nombre"));
                 nuevoPorClave.put(texto, art);
                 if (spawner == null) nuevoPlanos.put(material, art);
                 n++;

@@ -348,7 +348,7 @@ public final class MenuTienda implements Listener {
 
     /** El displayname del fichero si lo hubiera; si no, el nombre normal. */
     private static String nombrePropio(Catalogo.Articulo art) {
-        return Motor.nombre(art);
+        return art.tieneNombre() ? art.nombrePropio() : Motor.nombre(art);
     }
 
     // --------------------------------------------------------------- clics
@@ -396,7 +396,7 @@ public final class MenuTienda implements Listener {
         Catalogo.Articulo art = items.get(indice);
 
         Motor motor = modulo.motor();
-        if (motor == null) { jugador.sendMessage("La tienda aun no esta lista."); return; }
+        if (motor == null) { jugador.sendMessage(Estilo.legado("&cLa tienda todavia esta arrancando.")); return; }
 
         ClickType clic = e.getClick();
         Motor.Resultado r;

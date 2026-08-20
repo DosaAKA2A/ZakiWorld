@@ -91,6 +91,7 @@ for (const fichero of ficheros) {
     /* Lo que hace que la ficha se vea como la suya y no como una lista de
      * precios: el lore escrito a mano, el tope de por vida y el permiso. */
     const loreItem = Array.isArray(nodo.lore) ? nodo.lore.slice() : null;
+    const nombrePropio = typeof nodo.displayname === 'string' ? nodo.displayname : null;
     const limiteJugador = parseInt(nodo['stock-limit-player'], 10) || 0;
     let permiso = null, mensajePermiso = null;
     if (Array.isArray(nodo.requirements)) {
@@ -151,6 +152,7 @@ for (const fichero of ficheros) {
       tope: parseInt(nodo['sell-limit-player'], 10) || 0,
       ventana: String(nodo['auto-restock-player-sell'] || '24h').trim(),
       lore: loreItem,
+      nombrePropio,
       limiteJugador,
       permiso,
       mensajePermiso
@@ -193,6 +195,7 @@ for (const [categoria, items] of porCategoria) {
     lineas.push('        venta: ' + d.venta);
     lineas.push('        tope: ' + d.tope);
     lineas.push('        ventana: ' + d.ventana);
+    if (d.nombrePropio) lineas.push('        nombre: ' + JSON.stringify(d.nombrePropio));
     if (d.limiteJugador) lineas.push('        limite-jugador: ' + d.limiteJugador);
     if (d.permiso) {
       lineas.push('        permiso: ' + d.permiso);
