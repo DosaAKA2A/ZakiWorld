@@ -1,5 +1,10 @@
 # Como se ve el menu principal.
 #
+# NO borres la linea version: el plugin la usa para saber si tu fichero se
+# quedo antiguo y migrarlo solo, guardando el tuyo al lado.
+version: 2
+
+#
 # Ranuras, nombres, colores y cabezas SACADOS de los sections/*.yml de
 # EconomyShopGUI en produccion, para que al cambiar de tienda el jugador vea
 # exactamente el mismo menu. Ojo: varios nombres visibles no coinciden con el de

@@ -48,7 +48,7 @@ public final class TiendaPlugin extends Module {
         mercado.cargar();
         registro = new Registro(new File(getDataFolder(), "registro"));
 
-        saveResource("secciones.yml", false);
+        migrarSecciones();
         secciones.cargar(new File(getDataFolder(), "secciones.yml"));
         rotacion = new Rotacion(new File(getDataFolder(), "rotacion.yml"));
         rotacion.configurar(getConfig().getConfigurationSection("rotacion"));
@@ -121,6 +121,37 @@ public final class TiendaPlugin extends Module {
         if (rsp == null) return false;
         economia = rsp.getProvider();
         return economia != null;
+    }
+
+    /** Version del secciones.yml que espera este codigo. Subirla cuando el
+     *  formato cambie: el fichero viejo se guarda al lado y se pone el nuevo. */
+    private static final int SECCIONES_VERSION = 2;
+
+    /**
+     * Pone al dia secciones.yml sin que nadie tenga que borrar nada a mano.
+     *
+     * saveResource(false) NO sobrescribe, asi que un fichero de una version
+     * anterior se quedaba para siempre y los arreglos del menu no llegaban
+     * nunca. Aqui se detecta por su 'version', se aparta el viejo con su fecha
+     * y se escribe el nuevo.
+     */
+    private void migrarSecciones() {
+        File destino = new File(getDataFolder(), "secciones.yml");
+        if (!destino.exists()) { saveResource("secciones.yml", false); return; }
+
+        int suya = org.bukkit.configuration.file.YamlConfiguration
+                .loadConfiguration(destino).getInt("version", 1);
+        if (suya >= SECCIONES_VERSION) return;
+
+        File aparte = new File(getDataFolder(),
+                "secciones-v" + suya + "-" + java.time.LocalDate.now() + ".yml");
+        if (destino.renameTo(aparte)) {
+            saveResource("secciones.yml", false);
+            getLogger().warning("secciones.yml era de la version " + suya + " y se puso al dia. "
+                    + "El tuyo quedo en " + aparte.getName() + " por si le habias cambiado algo.");
+        } else {
+            getLogger().severe("No pude apartar el secciones.yml viejo; el menu puede verse mal.");
+        }
     }
 
     /** Devuelve false y explica el motivo si el catalogo no esta sano. */
