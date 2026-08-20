@@ -22,6 +22,8 @@ import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.UUID;
+import net.kyori.adventure.text.format.TextDecoration;
+import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer;
 
 /**
  * El aspecto del menu principal: en que hueco va cada categoria, como se llama,
@@ -41,6 +43,13 @@ public final class Secciones {
     private final Map<String, ItemStack> cache = new HashMap<>();
     private ItemStack relleno;
     private final Map<String, String> sonidos = new HashMap<>();
+    private final Map<String, String> textos = new HashMap<>();
+
+    /** Entiende &7, &#RRGGBB y el &x&R&R&G&G&B&B de Spigot: los tres formatos
+     *  que aparecen en los ficheros de EconomyShopGUI. */
+    private static final LegacyComponentSerializer LEGADO = LegacyComponentSerializer.builder()
+            .character('&').hexCharacter('#').hexColors()
+            .useUnusualXRepeatedCharacterHexFormat().build();
 
     public void cargar(File fichero) {
         porId.clear();
@@ -82,8 +91,28 @@ public final class Secciones {
             }
         }
 
+        ConfigurationSection txt = yml.getConfigurationSection("textos");
+        if (txt != null) for (String k : txt.getKeys(false)) textos.put(k, txt.getString(k, ""));
+
         ConfigurationSection son = yml.getConfigurationSection("sonidos");
         if (son != null) for (String k : son.getKeys(false)) sonidos.put(k, son.getString(k, ""));
+    }
+
+    /**
+     * Un texto del fichero, con sus marcadores sustituidos. Si la clave no
+     * existe devuelve el respaldo, para que quitar una linea del yml no deje
+     * un hueco en blanco en el menu.
+     */
+    public Component texto(String clave, String respaldo, String... pares) {
+        String s = textos.getOrDefault(clave, respaldo);
+        if (s == null || s.isEmpty()) return Component.empty();
+        for (int i = 0; i + 1 < pares.length; i += 2) s = s.replace(pares[i], pares[i + 1]);
+        return LEGADO.deserialize(s).decoration(TextDecoration.ITALIC, false);
+    }
+
+    public boolean tieneTexto(String clave) {
+        String s = textos.get(clave);
+        return s != null && !s.isEmpty();
     }
 
     public Seccion de(String id) { return porId.get(id); }
@@ -155,7 +184,11 @@ public final class Secciones {
     public Component nombreDe(String id) {
         Seccion s = porId.get(id);
         if (s == null) return Estilo.texto(id, Estilo.CLARO);
-        /* La flechita delante es la que ya usan en sus nombres de categoria. */
+        /* Si el nombre trae codigos de color, manda el fichero entero: asi se
+         * puede escribir '&8→ &#80FF00Bloques' y olvidarse del campo color. */
+        if (s.nombre().indexOf('&') >= 0) {
+            return LEGADO.deserialize(s.nombre()).decoration(TextDecoration.ITALIC, false);
+        }
         return Estilo.texto("→ ", NamedTextColor.DARK_GRAY)
                 .append(Estilo.texto(s.nombre(), s.color()));
     }

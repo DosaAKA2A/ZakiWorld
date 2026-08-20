@@ -5,25 +5,28 @@
 # exactamente el mismo menu. Ojo: varios nombres visibles no coinciden con el de
 # la categoria (Alimentos se llama "Comida", Mobs se llama "MobDrops").
 #
-#   ranura : hueco del inventario (fila 2 = 11..17, fila 3 = 20..26)
+#   ranura : indice real del hueco (fila 2 = 10..16, fila 3 = 19..25)
+#            OJO: los sections/*.yml de ESGUI numeran desde 1, asi que su
+#            "slot: 11" es este 10. Copiarlos tal cual corre el menu una
+#            columna a la derecha y lo deja pegado a un lado.
 #   nombre : lo que lee el jugador
 #   color  : hex del nombre
 #   cabeza : hash de la textura, o MAT:MATERIAL para un bloque normal
 secciones:
-  Bloques:          { ranura: 11, nombre: 'Bloques',           color: '#80FF00', cabeza: 81201b7fe60d9b8386320ef309e8669488957d64e4ad6aa7b6fd311f0e85bc57 }
-  Minerales:        { ranura: 12, nombre: 'Minerales',         color: '#00CDCD', cabeza: 1adb4a7c3a7c0711a0fcacb244b8a5382478c28f04f6d1d236c82e2b07264cb9 }
-  Alimentos:        { ranura: 13, nombre: 'Comida',            color: '#FF9BD1', cabeza: 87a3987c5cdb35aba9ae6f2e23489aa96e080e93fac435dc640f737b5ca401d3 }
-  Mobs:             { ranura: 14, nombre: 'MobDrops',          color: '#FFFFFF', cabeza: 6f7e52098f027d6ced9cb2cb19c8b30f79873136b52ddaee1fe24c4d3e26c63c }
-  Decoracion:       { ranura: 15, nombre: 'Decoracion',        color: '#FF55FF', cabeza: 42ee210e7c2727788afc27c0cc9699f52467aa513157be97d920c22a0e109be6 }
-  Bloques_Modernos: { ranura: 16, nombre: 'Bloques Modernos',  color: '#9E9E9E', cabeza: e9998cb96a897dc33ac3358afe5bb7584906ec6901d565f996f32c664b1aa91 }
-  Variedad:         { ranura: 17, nombre: 'Variedad',          color: '#6FC3FF', cabeza: 1f575bb54a2e9133aaa1310a14642f78a014fcc9360774171663d34db236ccc4 }
-  Herramientas:     { ranura: 20, nombre: 'Herramientas',      color: '#C08552', cabeza: b6ea2135838461534372f2da6c862d21cd5f3d2c7119f2bb674bbd42791 }
-  Madera:           { ranura: 21, nombre: 'Maderas',           color: '#7B8CFF', cabeza: a77eb6ed3f557e35788eb548560c16916ac800d575dab6270649383753c6314e }
-  Cultivos:         { ranura: 22, nombre: 'Cultivos',          color: '#FFD700', cabeza: f86badb0d913b391fb48d7776c378ca3f4b2dbe724534034f350ccd38f904473 }
-  Marinos:          { ranura: 23, nombre: 'Items Marinos',     color: '#55D355', cabeza: fca298093963ca18f9b6c264196817919068bd4928f3fef1f4583cdfa7a06758 }
-  Flora:            { ranura: 24, nombre: 'Flora',             color: '#FF77C6', cabeza: 112f8aba55b16a526ccfe9effc65900118ba31bd501c82df3f80b47f1480693a }
-  Herreria:         { ranura: 25, nombre: 'Herreria',          color: '#D0D0D0', cabeza: e855b3e1d9a7b9fd76a776fa4eec871d52ed26932538628c43de32d1d2d743 }
-  Spawners:         { ranura: 26, nombre: 'Spawners',          color: '#FFC857', cabeza: 'MAT:SPAWNER' }
+  Bloques:          { ranura: 10, nombre: 'Bloques',           color: '#80FF00', cabeza: 81201b7fe60d9b8386320ef309e8669488957d64e4ad6aa7b6fd311f0e85bc57 }
+  Minerales:        { ranura: 11, nombre: 'Minerales',         color: '#00CDCD', cabeza: 1adb4a7c3a7c0711a0fcacb244b8a5382478c28f04f6d1d236c82e2b07264cb9 }
+  Alimentos:        { ranura: 12, nombre: 'Comida',            color: '#FF9BD1', cabeza: 87a3987c5cdb35aba9ae6f2e23489aa96e080e93fac435dc640f737b5ca401d3 }
+  Mobs:             { ranura: 13, nombre: 'MobDrops',          color: '#FFFFFF', cabeza: 6f7e52098f027d6ced9cb2cb19c8b30f79873136b52ddaee1fe24c4d3e26c63c }
+  Decoracion:       { ranura: 14, nombre: 'Decoracion',        color: '#FF55FF', cabeza: 42ee210e7c2727788afc27c0cc9699f52467aa513157be97d920c22a0e109be6 }
+  Bloques_Modernos: { ranura: 15, nombre: 'Bloques Modernos',  color: '#9E9E9E', cabeza: e9998cb96a897dc33ac3358afe5bb7584906ec6901d565f996f32c664b1aa91 }
+  Variedad:         { ranura: 16, nombre: 'Variedad',          color: '#6FC3FF', cabeza: 1f575bb54a2e9133aaa1310a14642f78a014fcc9360774171663d34db236ccc4 }
+  Herramientas:     { ranura: 19, nombre: 'Herramientas',      color: '#C08552', cabeza: b6ea2135838461534372f2da6c862d21cd5f3d2c7119f2bb674bbd42791 }
+  Madera:           { ranura: 20, nombre: 'Maderas',           color: '#7B8CFF', cabeza: a77eb6ed3f557e35788eb548560c16916ac800d575dab6270649383753c6314e }
+  Cultivos:         { ranura: 21, nombre: 'Cultivos',          color: '#FFD700', cabeza: f86badb0d913b391fb48d7776c378ca3f4b2dbe724534034f350ccd38f904473 }
+  Marinos:          { ranura: 22, nombre: 'Items Marinos',     color: '#55D355', cabeza: fca298093963ca18f9b6c264196817919068bd4928f3fef1f4583cdfa7a06758 }
+  Flora:            { ranura: 23, nombre: 'Flora',             color: '#FF77C6', cabeza: 112f8aba55b16a526ccfe9effc65900118ba31bd501c82df3f80b47f1480693a }
+  Herreria:         { ranura: 24, nombre: 'Herreria',          color: '#D0D0D0', cabeza: e855b3e1d9a7b9fd76a776fa4eec871d52ed26932538628c43de32d1d2d743 }
+  Spawners:         { ranura: 25, nombre: 'Spawners',          color: '#FFC857', cabeza: 'MAT:SPAWNER' }
 
 # El panel que rellena los huecos. Es el mismo separador que ya usan sus
 # paginas: sin esto el menu se ve a medio hacer.
@@ -39,3 +42,37 @@ sonidos:
   cambiar-pagina: ITEM_BOOK_PAGE_TURN
   volver: UI_TOAST_OUT
   error: BLOCK_NOTE_BLOCK_BASS
+
+# ---------------------------------------------------------------------------
+# TEXTOS. Todo lo que lee el jugador se cambia aqui, con los mismos codigos de
+# color que usas en EconomyShopGUI: &7, &#RRGGBB y &x&R&R&G&G&B&B.
+#
+# Marcadores disponibles:
+#   %categoria%  nombre de la categoria abierta
+#   %jugador%    nombre del jugador
+#   %saldo%      su dinero, ya formateado
+#   %rota%       lo que falta para la siguiente rotacion (ej: 17h 43m)
+#   %articulos%  cuantos articulos tiene la categoria
+#   %pagina%     pagina actual        %paginas%  total de paginas
+# ---------------------------------------------------------------------------
+textos:
+  titulo-principal: '&x&0&0&8&3&F&D&lTIENDA &8| &x&D&7&F&3&F&FEderus'
+  titulo-categoria: '&x&0&0&8&3&F&D&lEDERUS &8| &x&D&7&F&3&F&F%categoria%'
+
+  categoria-articulos: '&8▸ &f%articulos% articulos'
+  categoria-entrar: '&#4FFF55▸ Click para entrar'
+
+  ofertas-nombre: '&8→ &#4FFF55Ofertas del dia'
+  ofertas-descripcion: '&7Estos objetos estan rebajados'
+  demandas-nombre: '&8→ &#FDFF66Demanda del dia'
+  demandas-descripcion: '&7Estos objetos son muy pedidos'
+  rota-en: '&#545454Rota en %rota%'
+
+  saldo-nombre: '&x&D&7&F&3&F&F%jugador%'
+  saldo-etiqueta: '&#FDFF66Tu dinero'
+  saldo-valor: '&8▸ &f%saldo%'
+
+  volver: '&x&D&7&F&3&F&FVolver'
+  pagina: '&8▸ &fPagina %pagina% de %paginas%'
+  anterior: '&x&D&7&F&3&F&FPagina anterior'
+  siguiente: '&x&D&7&F&3&F&FPagina siguiente'

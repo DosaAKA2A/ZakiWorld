@@ -42,12 +42,19 @@ public final class Estilo {
 
     /** "TIENDA | Ederus" y "EDERUS | Minerales", con el corte en gris como el suyo. */
     public static Component titulo(String izquierda, String derecha) {
-        Component c = Component.text(izquierda, MARCA)
-                .decorate(TextDecoration.BOLD)
+        /* Ojo: en Adventure los hijos HEREDAN el estilo del padre. Si la
+         * negrita se pone en el componente raiz, se la lleva tambien el
+         * separador y el nombre. En el titulo original solo va en la primera
+         * palabra, asi que cada trozo lleva la suya y se apaga a mano. */
+        Component izq = Component.text(izquierda, MARCA)
+                .decoration(TextDecoration.BOLD, true)
                 .decoration(TextDecoration.ITALIC, false);
-        if (derecha == null) return c;
-        return c.append(texto(" | ", NamedTextColor.DARK_GRAY))
-                .append(texto(derecha, CLARO));
+        if (derecha == null) return izq;
+        return Component.empty()
+                .decoration(TextDecoration.ITALIC, false)
+                .append(izq)
+                .append(texto(" | ", NamedTextColor.DARK_GRAY).decoration(TextDecoration.BOLD, false))
+                .append(texto(derecha, CLARO).decoration(TextDecoration.BOLD, false));
     }
 
     /** Un dato con su etiqueta encima, que es como lo presentan ellos. */

@@ -95,11 +95,13 @@ public final class MenuTienda implements Listener {
         ItemStack pila = new ItemStack(Material.PLAYER_HEAD);
         if (pila.getItemMeta() instanceof SkullMeta meta) {
             meta.setOwningPlayer(jugador);
-            meta.displayName(Estilo.texto(jugador.getName(), Estilo.CLARO));
+            meta.displayName(secciones.texto("saldo-nombre", "&x&D&7&F&3&F&F%jugador%",
+                    "%jugador%", jugador.getName()));
             Motor motor = modulo.motor();
             List<Component> lore = new ArrayList<>();
-            lore.add(Estilo.etiqueta("Tu dinero", Estilo.VENTA));
-            lore.add(Estilo.valor(motor != null ? Estilo.dinero(motor.saldo(jugador)) : "..."));
+            lore.add(secciones.texto("saldo-etiqueta", "&#FDFF66Tu dinero"));
+            lore.add(secciones.texto("saldo-valor", "&8▸ &f%saldo%",
+                    "%saldo%", motor != null ? Estilo.dinero(motor.saldo(jugador)) : "..."));
             meta.lore(lore);
             meta.addItemFlags(ItemFlag.values());
             pila.setItemMeta(meta);
@@ -109,7 +111,8 @@ public final class MenuTienda implements Listener {
 
     public void abrirPrincipal(Player jugador) {
         Vista vista = new Vista(null, 0);
-        Inventory inv = Bukkit.createInventory(vista, 54, Estilo.titulo("TIENDA", "Ederus"));
+        Inventory inv = Bukkit.createInventory(vista, 54,
+                secciones.texto("titulo-principal", "&x&0&0&8&3&F&D&lTIENDA &8| &x&D&7&F&3&F&FEderus"));
         vista.inv = inv;
 
         for (Secciones.Seccion s : secciones.todas()) {
@@ -119,29 +122,30 @@ public final class MenuTienda implements Listener {
             ItemStack icono = secciones.icono(s.id());
             if (icono == null) icono = new ItemStack(catalogo.iconoDe(s.id()));
             inv.setItem(s.ranura(), decorarCon(icono, secciones.nombreDe(s.id()),
-                    List.of(Estilo.valor(n + (n == 1 ? " articulo" : " articulos")),
+                    List.of(secciones.texto("categoria-articulos", "&8▸ &f%articulos% articulos",
+                                    "%articulos%", String.valueOf(n)),
                             Estilo.vacio(),
-                            Estilo.accion("Click para entrar", Estilo.ACCION_COMPRA))));
+                            secciones.texto("categoria-entrar", "&#4FFF55▸ Click para entrar"))));
         }
 
         Rotacion rot = modulo.rotacion();
         if (rot != null && rot.activo()) {
             inv.setItem(RANURA_OFERTAS, decorarCon(new ItemStack(Material.SUNFLOWER),
-                    Estilo.texto("→ ", NamedTextColor.DARK_GRAY)
-                        .append(Estilo.texto("Ofertas del dia", Estilo.ACCION_COMPRA)),
-                    List.of(Estilo.texto("Estos objetos estan rebajados", NamedTextColor.GRAY),
+                    secciones.texto("ofertas-nombre", "&8→ &#4FFF55Ofertas del dia"),
+                    List.of(secciones.texto("ofertas-descripcion", "&7Estos objetos estan rebajados"),
                             Estilo.vacio(),
-                            Estilo.texto("Rota en " + Motor.duracion(Rotacion.hastaManana()), Estilo.APAGADO),
+                            secciones.texto("rota-en", "&#545454Rota en %rota%",
+                                    "%rota%", Motor.duracion(Rotacion.hastaManana())),
                             Estilo.vacio(),
-                            Estilo.accion("Click para entrar", Estilo.ACCION_COMPRA))));
+                            secciones.texto("categoria-entrar", "&#4FFF55▸ Click para entrar"))));
             inv.setItem(RANURA_DEMANDAS, decorarCon(new ItemStack(Material.EMERALD),
-                    Estilo.texto("→ ", NamedTextColor.DARK_GRAY)
-                        .append(Estilo.texto("Demanda del dia", Estilo.VENTA)),
-                    List.of(Estilo.texto("Estos objetos son muy pedidos", NamedTextColor.GRAY),
+                    secciones.texto("demandas-nombre", "&8→ &#FDFF66Demanda del dia"),
+                    List.of(secciones.texto("demandas-descripcion", "&7Estos objetos son muy pedidos"),
                             Estilo.vacio(),
-                            Estilo.texto("Rota en " + Motor.duracion(Rotacion.hastaManana()), Estilo.APAGADO),
+                            secciones.texto("rota-en", "&#545454Rota en %rota%",
+                                    "%rota%", Motor.duracion(Rotacion.hastaManana())),
                             Estilo.vacio(),
-                            Estilo.accion("Click para entrar", Estilo.ACCION_VENTA))));
+                            secciones.texto("categoria-entrar", "&#4FFF55▸ Click para entrar"))));
         }
 
         inv.setItem(RANURA_SALDO, saldo(jugador));
@@ -204,7 +208,8 @@ public final class MenuTienda implements Listener {
         Vista vista = new Vista(categoria, pagina);
         String especial = tituloDe(categoria);
         Inventory inv = Bukkit.createInventory(vista, FILAS * 9,
-                Estilo.titulo("EDERUS", especial != null ? especial : bonito(categoria)));
+                secciones.texto("titulo-categoria", "&x&0&0&8&3&F&D&lEDERUS &8| &x&D&7&F&3&F&F%categoria%",
+                        "%categoria%", especial != null ? especial : bonito(categoria)));
         vista.inv = inv;
 
         int desde = pagina * POR_PAGINA;
@@ -215,10 +220,14 @@ public final class MenuTienda implements Listener {
         final int base = desde;
         vista.ranuraAIndice.replaceAll((r, i) -> i + base);
 
-        if (pagina > 0) inv.setItem(RANURA_ANTERIOR, pieza(Material.ARROW, "Pagina anterior", List.of()));
-        if (pagina < paginas - 1) inv.setItem(RANURA_SIGUIENTE, pieza(Material.ARROW, "Pagina siguiente", List.of()));
-        inv.setItem(RANURA_VOLVER, pieza(Material.BARRIER, "Volver",
-                List.of(Estilo.valor("Pagina " + (pagina + 1) + " de " + paginas))));
+        if (pagina > 0) inv.setItem(RANURA_ANTERIOR, decorarCon(new ItemStack(Material.ARROW),
+                secciones.texto("anterior", "&x&D&7&F&3&F&FPagina anterior"), List.of()));
+        if (pagina < paginas - 1) inv.setItem(RANURA_SIGUIENTE, decorarCon(new ItemStack(Material.ARROW),
+                secciones.texto("siguiente", "&x&D&7&F&3&F&FPagina siguiente"), List.of()));
+        inv.setItem(RANURA_VOLVER, decorarCon(new ItemStack(Material.BARRIER),
+                secciones.texto("volver", "&x&D&7&F&3&F&FVolver"),
+                List.of(secciones.texto("pagina", "&8▸ &fPagina %pagina% de %paginas%",
+                        "%pagina%", String.valueOf(pagina + 1), "%paginas%", String.valueOf(paginas)))));
 
         rellenar(inv);
         jugador.openInventory(inv);
