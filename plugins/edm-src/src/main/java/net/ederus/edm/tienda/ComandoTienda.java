@@ -168,6 +168,31 @@ public final class ComandoTienda implements CommandExecutor, TabCompleter {
         quien.sendMessage("  suelo " + Motor.fmt(a.venta() * mk.suelo())
                 + "  |  margen contra la compra " + Math.round(mk.margen() * 100) + "%");
 
+        if (args.length >= 4 && args[2].equalsIgnoreCase("vender")) {
+            int n;
+            try { n = Integer.parseInt(args[3]); }
+            catch (NumberFormatException ex) { quien.sendMessage("Cantidad invalida."); return true; }
+            Motor mt = modulo.motor();
+            double compra = mt != null ? mt.compraEfectiva(a) : a.compra();
+            quien.sendMessage("  vender " + String.format("%,d", n) + " ahora mismo:");
+            int[] cortes = {1, n / 8, n / 4, n / 2, n};
+            double previo = 0;
+            for (int c : cortes) {
+                if (c <= 0) continue;
+                double total = mk.totalVenta(a, c, compra);
+                quien.sendMessage("    " + String.format("%,7d", c) + " -> " + Motor.fmt(total)
+                        + "   (" + Motor.fmt(total / c) + " por unidad)");
+                previo = total;
+            }
+            quien.sendMessage("  y si el servidor YA hubiera vendido antes:");
+            for (int antes : new int[]{n, n * 5, n * 25, n * 100}) {
+                double conPrevia = mk.totalVentaDesde(a, n, compra, antes);
+                quien.sendMessage("    tras " + String.format("%,d", antes) + " -> " + Motor.fmt(conPrevia)
+                        + "   (" + Motor.fmt(conPrevia / n) + " por unidad)");
+            }
+            return true;
+        }
+
         if (args.length >= 4 && args[2].equalsIgnoreCase("simular")) {
             int n;
             try { n = Integer.parseInt(args[3]); }

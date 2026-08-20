@@ -131,6 +131,47 @@ public final class Mercado {
         return (int) Math.round((1 - multiplicador(art)) * 100);
     }
 
+    /**
+     * Lo que se paga por vender 'cantidad' unidades AHORA, integrando el precio
+     * a lo largo de la venta.
+     *
+     * Sin esto, vender 1200 de golpe se cobraria al precio de la primera unidad
+     * y pagaria mas que vender 12 veces 100: la devaluacion no morderia justo en
+     * el caso para el que existe, y ademas premiaria al que acumula. Con la
+     * integral, partir la venta da exactamente lo mismo.
+     *
+     * La curva es base x (suelo + (1-suelo) x 2^(-v/H)), asi que su integral
+     * entre V y V+n tiene forma cerrada y no hace falta sumar unidad a unidad.
+     */
+    public double totalVenta(Catalogo.Articulo art, int cantidad, double compraEfectiva) {
+        if (cantidad <= 0) return 0;
+        double techo = compraEfectiva > 0 ? compraEfectiva * margenVentaCompra : Double.MAX_VALUE;
+        if (!activo || !art.seVende()) return Math.min(art.venta(), techo) * cantidad;
+
+        double v = presion(art.clave());
+        double h = mitad(art);
+        double ln2 = Math.log(2);
+        double parteFija = suelo * cantidad;
+        double parteQueCae = (1 - suelo) * (h / ln2)
+                * (Math.pow(2, -v / h) - Math.pow(2, -(v + cantidad) / h));
+        double total = art.venta() * (parteFija + parteQueCae);
+
+        /* El recorte contra la compra se aplica al precio medio resultante: si
+         * hiciera falta, ninguna unidad puede haberse pagado por encima. */
+        return Math.min(total, techo * cantidad);
+    }
+
+    /** Como totalVenta pero partiendo de una presion inventada, para poder
+     *  enseñar en una tabla que pasaria con el mercado ya cargado. */
+    public double totalVentaDesde(Catalogo.Articulo art, int cantidad, double compraEfectiva, double presionPrevia) {
+        if (cantidad <= 0 || !activo || !art.seVende()) return 0;
+        double h = mitad(art), ln2 = Math.log(2);
+        double total = art.venta() * (suelo * cantidad + (1 - suelo) * (h / ln2)
+                * (Math.pow(2, -presionPrevia / h) - Math.pow(2, -(presionPrevia + cantidad) / h)));
+        double techo = compraEfectiva > 0 ? compraEfectiva * margenVentaCompra * cantidad : Double.MAX_VALUE;
+        return Math.min(total, techo);
+    }
+
     /** Que precio tendria si el servidor vendiera 'extra' unidades mas. Solo
      *  calcula: no toca el estado. Sirve para afinar los numeros sin probarlos
      *  en produccion. */

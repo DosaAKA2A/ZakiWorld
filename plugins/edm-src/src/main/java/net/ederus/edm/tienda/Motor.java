@@ -212,8 +212,20 @@ public final class Motor {
         if (quitados <= 0) return Resultado.no("No pude sacar los items del inventario.");
 
         // 2. el dinero despues
-        double unitario = ventaEfectiva(art);
-        double total = unitario * quitados;
+        /* El total se integra a lo largo de la venta, no se multiplica por el
+         * precio de la primera unidad: vender de golpe tiene que pagar lo mismo
+         * que vender a trozos. */
+        double total = mercado.totalVenta(art, quitados, compraEfectiva(art));
+        if (rotacion != null) {
+            Rotacion.Trato t = rotacion.demanda(art.clave());
+            if (t != null) {
+                total *= t.factor();
+                double techo = compraEfectiva(art) > 0
+                        ? compraEfectiva(art) * mercado.margen() * quitados : Double.MAX_VALUE;
+                total = Math.min(total, techo);
+            }
+        }
+        double unitario = total / quitados;
         EconomyResponse resp = economia.depositPlayer(jugador, total);
         if (!resp.transactionSuccess()) {
             entregar(jugador, art, quitados);                 // se devuelve TODO
