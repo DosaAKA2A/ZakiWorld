@@ -51,6 +51,7 @@ const ficheros = fs.readdirSync(carpeta)
 
 const porMaterial = new Map();
 const avisos = [];
+const repetidosInocentes = [];
 const resumen = [];
 
 for (const fichero of ficheros) {
@@ -76,11 +77,28 @@ for (const fichero of ficheros) {
       continue;
     }
 
+    // Un item que solo se distingue por metadatos (los spawners de Ederus son
+    // todos SPAWNER y cambian en 'spawnertype') no cabe en un catalogo indexado
+    // por material. Antes de tratarlo como duplicado, se dice lo que es.
+    const variante = nodo.spawnertype || nodo['potion-type'] || nodo.enchantments;
+    if (variante) {
+      avisos.push('VARIANTE ' + material + ' (' + categoria + '.' + ruta + '): se distingue por '
+        + (nodo.spawnertype ? 'spawnertype=' + nodo.spawnertype : 'metadatos')
+        + '. El catalogo indexa por material y no sabe separarlas.');
+      continue;
+    }
+
     const previo = porMaterial.get(material);
     if (previo) {
-      // Quedarse con "el primero" seria dejar que el orden alfabetico de los
-      // ficheros decida un precio. Y un material en dos categorias con precios
-      // distintos es justo el arbitraje que imprime dinero: lo decide un humano.
+      // Mismo material en dos categorias AL MISMO PRECIO no hace daño: no hay
+      // arbitraje posible, solo aparece dos veces en la tienda. Se queda una vez.
+      if (previo.compra === compra && previo.venta === venta) {
+        repetidosInocentes.push(material + ' (' + previo.categoria + ' y ' + categoria + ')');
+        continue;
+      }
+      // A distinto precio SI es peligroso: comprar barato en una y vender caro
+      // en otra es dinero infinito. Y quedarse con "el primero" dejaria que el
+      // orden alfabetico de los ficheros decidiera. Lo decide un humano.
       avisos.push('DUPLICADO ' + material + ': en ' + previo.categoria
         + ' (compra ' + previo.compra + '/venta ' + previo.venta + ') y en '
         + categoria + ' (compra ' + compra + '/venta ' + venta + ')');
@@ -142,6 +160,10 @@ const conTope = [...porMaterial.values()].filter(d => d.tope > 0).length;
 const soloCompra = [...porMaterial.values()].filter(d => d.compra && !d.venta).length;
 const soloVenta = [...porMaterial.values()].filter(d => d.venta && !d.compra).length;
 console.log('  ' + conTope + ' con tope de venta | ' + soloCompra + ' solo compra | ' + soloVenta + ' solo venta');
+if (repetidosInocentes.length) {
+  console.log('\n' + repetidosInocentes.length + ' repetidos al MISMO precio (inofensivos, se quedan una vez):');
+  repetidosInocentes.forEach(x => console.log('  ' + x));
+}
 
 if (informe) {
   console.log('\npor categoria:');
