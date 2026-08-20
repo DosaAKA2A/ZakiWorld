@@ -22,6 +22,7 @@ public final class TiendaPlugin extends Module {
     private Registro registro;
     private Motor motor;
     private MenuTienda menu;
+    private final Iconos iconos = new Iconos();
     private Economy economia;
     private BukkitTask tareaGuardado;
 
@@ -42,7 +43,9 @@ public final class TiendaPlugin extends Module {
         topes.cargar();
         registro = new Registro(new File(getDataFolder(), "registro"));
 
-        menu = new MenuTienda(this, catalogo, topes);
+        saveResource("iconos.yml", false);
+        iconos.cargar(new File(getDataFolder(), "iconos.yml"));
+        menu = new MenuTienda(this, catalogo, topes, iconos);
         core.getServer().getPluginManager().registerEvents(menu, this);
 
         ComandoTienda comando = new ComandoTienda(this, catalogo, topes);
@@ -85,7 +88,7 @@ public final class TiendaPlugin extends Module {
 
         getLogger().info("Tienda activa | " + catalogo.total() + " articulos en "
                 + catalogo.categorias().size() + " categorias ("
-                + catalogo.variantes() + " variantes)");
+                + catalogo.variantes() + " variantes) | " + iconos.configurados() + " iconos");
     }
 
     @Override
@@ -119,6 +122,7 @@ public final class TiendaPlugin extends Module {
 
     @Override
     public String recargar() {
+        iconos.cargar(new File(getDataFolder(), "iconos.yml"));
         if (!cargarCatalogo()) return "el precios.yml tiene errores; se mantiene el anterior";
         return catalogo.total() + " articulos en " + catalogo.categorias().size() + " categorias";
     }

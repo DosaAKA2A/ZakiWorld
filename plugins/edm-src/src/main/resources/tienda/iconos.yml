@@ -1,0 +1,27 @@
+# Iconos del menu principal.
+#
+# Son las MISMAS cabezas que usa hoy EconomyShopGUI: se sacaron de sus
+# sections/*.yml para que al cambiar de tienda al jugador no le cambie la cara
+# de ninguna categoria.
+#
+# El valor es el hash de la textura (lo que va detras de
+# textures.minecraft.net/texture/). Para usar un bloque normal en vez de una
+# cabeza, se pone MAT:NOMBRE_DEL_MATERIAL.
+#
+# Si una categoria no esta aqui, el menu usa el primer articulo de esa
+# categoria como icono.
+categorias:
+  Alimentos: 87a3987c5cdb35aba9ae6f2e23489aa96e080e93fac435dc640f737b5ca401d3
+  Bloques: 81201b7fe60d9b8386320ef309e8669488957d64e4ad6aa7b6fd311f0e85bc57
+  Bloques_Modernos: e9998cb96a897dc33ac3358afe5bb7584906ec6901d565f996f32c664b1aa91
+  Cultivos: f86badb0d913b391fb48d7776c378ca3f4b2dbe724534034f350ccd38f904473
+  Decoracion: 42ee210e7c2727788afc27c0cc9699f52467aa513157be97d920c22a0e109be6
+  Flora: 112f8aba55b16a526ccfe9effc65900118ba31bd501c82df3f80b47f1480693a
+  Herramientas: b6ea2135838461534372f2da6c862d21cd5f3d2c7119f2bb674bbd42791
+  Herreria: e855b3e1d9a7b9fd76a776fa4eec871d52ed26932538628c43de32d1d2d743
+  Madera: a77eb6ed3f557e35788eb548560c16916ac800d575dab6270649383753c6314e
+  Marinos: fca298093963ca18f9b6c264196817919068bd4928f3fef1f4583cdfa7a06758
+  Minerales: 1adb4a7c3a7c0711a0fcacb244b8a5382478c28f04f6d1d236c82e2b07264cb9
+  Mobs: 6f7e52098f027d6ced9cb2cb19c8b30f79873136b52ddaee1fe24c4d3e26c63c
+  Spawners: MAT:SPAWNER
+  Variedad: 1f575bb54a2e9133aaa1310a14642f78a014fcc9360774171663d34db236ccc4

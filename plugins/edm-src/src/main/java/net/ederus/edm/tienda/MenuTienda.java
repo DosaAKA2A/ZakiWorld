@@ -52,11 +52,13 @@ public final class MenuTienda implements Listener {
     private final TiendaPlugin modulo;
     private final Catalogo catalogo;
     private final Topes topes;
+    private final Iconos iconos;
 
-    public MenuTienda(TiendaPlugin modulo, Catalogo catalogo, Topes topes) {
+    public MenuTienda(TiendaPlugin modulo, Catalogo catalogo, Topes topes, Iconos iconos) {
         this.modulo = modulo;
         this.catalogo = catalogo;
         this.topes = topes;
+        this.iconos = iconos;
     }
 
     // ------------------------------------------------------------- construir
@@ -73,10 +75,12 @@ public final class MenuTienda implements Listener {
         for (int i = 0; i < categorias.size() && i < ranuras.length; i++) {
             String cat = categorias.get(i);
             int n = catalogo.categorias().getOrDefault(cat, 0);
-            inv.setItem(ranuras[i], pieza(catalogo.iconoDe(cat), bonito(cat),
-                    List.of(gris(n + (n == 1 ? " articulo" : " articulos")),
-                            Component.empty(),
-                            verde("Clic para entrar"))));
+            List<Component> lore = List.of(gris(n + (n == 1 ? " articulo" : " articulos")),
+                    Component.empty(), verde("Clic para entrar"));
+            ItemStack icono = iconos.de(cat);
+            inv.setItem(ranuras[i], icono != null
+                    ? decorar(icono, bonito(cat), lore)
+                    : pieza(catalogo.iconoDe(cat), bonito(cat), lore));
         }
         jugador.openInventory(inv);
     }
