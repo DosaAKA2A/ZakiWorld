@@ -27,7 +27,18 @@ public final class ComandoTienda implements CommandExecutor, TabCompleter {
 
     @Override
     public boolean onCommand(CommandSender quien, Command cmd, String etiqueta, String[] args) {
-        if (args.length == 0) { ayuda(quien); return true; }
+        /* /shop es solo la puerta del menu: no lleva subcomandos. */
+        boolean esShop = cmd.getName().equalsIgnoreCase("shop");
+        if (esShop || args.length == 0) {
+            if (quien instanceof Player jugador) {
+                MenuTienda menu = modulo.menu();
+                if (menu == null) { quien.sendMessage("La tienda aun no esta lista."); return true; }
+                menu.abrirPrincipal(jugador);
+            } else {
+                ayuda(quien);
+            }
+            return true;
+        }
         switch (args[0].toLowerCase(Locale.ROOT)) {
             case "vender" -> { return vender(quien, args); }
             case "comprar" -> { return comprar(quien, args); }

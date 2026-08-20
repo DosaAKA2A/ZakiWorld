@@ -7,6 +7,13 @@ description: Nucleo de Ederus - Rip, Anomaly, libros, avisos de tiendas y la tie
 softdepend: [Vault, WorldGuard, ProtectionStones, MMOItems, LibsDisguises, AdvancedEnchantments, UltimateMobCoins]
 
 commands:
+  edm:
+    description: Estado del nucleo de Ederus
+    usage: /edm [reload]
+  shop:
+    description: Abre la tienda de Ederus
+    usage: /shop
+    aliases: [tienda]
   rip:
     description: Menu y ajustes de efectos Rip
     usage: /rip <gui|kill|death|list|info|test|reload>

@@ -21,6 +21,7 @@ public final class TiendaPlugin extends Module {
     private Topes topes;
     private Registro registro;
     private Motor motor;
+    private MenuTienda menu;
     private Economy economia;
     private BukkitTask tareaGuardado;
 
@@ -41,15 +42,26 @@ public final class TiendaPlugin extends Module {
         topes.cargar();
         registro = new Registro(new File(getDataFolder(), "registro"));
 
+        menu = new MenuTienda(this, catalogo, topes);
+        core.getServer().getPluginManager().registerEvents(menu, this);
+
         ComandoTienda comando = new ComandoTienda(this, catalogo, topes);
         /* Como el resto de modulos: el plugin que ve Bukkit es EDM, asi que hay
          * que registrarse como ejecutor a mano o /etienda solo imprime su uso. */
-        var cmd = core.getCommand("etienda");
-        if (cmd != null) {
-            cmd.setExecutor(comando);
-            cmd.setTabCompleter(comando);
-        } else {
-            getLogger().warning("El comando /etienda no esta en el plugin.yml de EDM.");
+        for (String nombre : new String[]{"etienda", "shop"}) {
+            var cmd = core.getCommand(nombre);
+            if (cmd != null) {
+                cmd.setExecutor(comando);
+                cmd.setTabCompleter(comando);
+            } else {
+                getLogger().warning("El comando /" + nombre + " no esta en el plugin.yml de EDM.");
+            }
+        }
+        /* Con EconomyShopGUI instalado, /shop se lo queda el que Bukkit decida.
+         * Mientras convivan, la forma inequivoca de abrir la nuestra es /edm:shop. */
+        if (core.getServer().getPluginManager().getPlugin("EconomyShopGUI") != null
+                || core.getServer().getPluginManager().getPlugin("EconomyShopGUI-Premium") != null) {
+            getLogger().warning("EconomyShopGUI esta instalado: /shop puede abrir el suyo. Usa /edm:shop.");
         }
 
         /* Vault se engancha en el primer tick, no aqui: el proveedor de economia
@@ -104,6 +116,14 @@ public final class TiendaPlugin extends Module {
             return false;
         }
     }
+
+    @Override
+    public String recargar() {
+        if (!cargarCatalogo()) return "el precios.yml tiene errores; se mantiene el anterior";
+        return catalogo.total() + " articulos en " + catalogo.categorias().size() + " categorias";
+    }
+
+    public MenuTienda menu() { return menu; }
 
     /** null hasta que engancha Vault en el primer tick. */
     public Motor motor() { return motor; }

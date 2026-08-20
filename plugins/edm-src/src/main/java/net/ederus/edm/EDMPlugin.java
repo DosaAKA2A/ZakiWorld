@@ -12,6 +12,8 @@ import java.util.Map;
 
 import org.bukkit.Bukkit;
 import org.bukkit.event.HandlerList;
+import org.bukkit.command.Command;
+import org.bukkit.command.CommandSender;
 import org.bukkit.plugin.java.JavaPlugin;
 
 import net.ederus.edm.anomaly.AnomalyPlugin;
@@ -50,7 +52,86 @@ public final class EDMPlugin extends JavaPlugin {
         arrancar(new EderusMain(this));
         arrancar(new TiendaPlugin(this));
 
+        registrarComando();
         banner();
+    }
+
+    private void registrarComando() {
+        var cmd = getCommand("edm");
+        if (cmd != null) {
+            cmd.setExecutor(this);
+        }
+    }
+
+    /* Alias comodos: la gente escribe el nombre del comando, no el id del modulo. */
+    private static final Map<String, String> ALIAS_MODULO = Map.of("shop", "tienda", "tienda", "tienda");
+
+    @Override
+    public boolean onCommand(CommandSender quien, Command cmd, String etiqueta, String[] args) {
+        if (args.length == 0) {
+            estado(quien);
+            return true;
+        }
+
+        /* /edm <modulo> reload -> recarga solo ese */
+        if (args.length >= 2 && args[1].equalsIgnoreCase("reload")) {
+            if (!permitido(quien)) return true;
+            String id = ALIAS_MODULO.getOrDefault(args[0].toLowerCase(java.util.Locale.ROOT),
+                    args[0].toLowerCase(java.util.Locale.ROOT));
+            Module m = this.modulos.get(id);
+            if (m == null) {
+                quien.sendMessage("No hay ningun modulo activo llamado '" + args[0] + "'.");
+                quien.sendMessage("Activos: " + String.join(", ", this.modulos.keySet()));
+                return true;
+            }
+            if (!recargarUno(quien, m)) {
+                quien.sendMessage("El modulo " + m.getId() + " no sabe recargarse en caliente.");
+            }
+            return true;
+        }
+
+        /* /edm reload -> todos los que sepan */
+        if (args[0].equalsIgnoreCase("reload")) {
+            if (!permitido(quien)) return true;
+            reloadConfig();
+            int n = 0;
+            for (Module m : this.modulos.values()) {
+                if (recargarUno(quien, m)) n++;
+            }
+            quien.sendMessage(n == 0 ? "Ningun modulo sabe recargarse en caliente."
+                    : "Recargados " + n + (n == 1 ? " modulo." : " modulos."));
+            return true;
+        }
+
+        estado(quien);
+        return true;
+    }
+
+    private boolean permitido(CommandSender quien) {
+        if (quien.hasPermission("ederus.admin")) return true;
+        quien.sendMessage("No puedes.");
+        return false;
+    }
+
+    /** Devuelve true si el modulo sabia recargarse. */
+    private boolean recargarUno(CommandSender quien, Module m) {
+        String r;
+        try {
+            r = m.recargar();
+        } catch (Throwable t) {
+            quien.sendMessage("  " + m.getId() + ": fallo al recargar (" + t + ")");
+            getLogger().warning("Fallo recargando " + m.getId() + ": " + t);
+            return true;
+        }
+        if (r == null) return false;
+        quien.sendMessage("  " + m.getId() + ": " + r);
+        return true;
+    }
+
+    private void estado(CommandSender quien) {
+        quien.sendMessage("EDM v" + VERSION + " | modulos: " + String.join(", ", this.modulos.keySet()));
+        if (!this.fallidos.isEmpty()) quien.sendMessage("caidos: " + String.join(", ", this.fallidos));
+        quien.sendMessage("/edm reload  |  /edm <modulo> reload");
     }
 
     @Override

@@ -48,6 +48,15 @@ public abstract class Module implements Plugin {
         this.dataFolder = new File(core.getDataFolder(), id);
     }
 
+    /**
+     * Recarga la configuracion del modulo en caliente. Por omision NO hace nada:
+     * recargar a ciegas un modulo que no lo espera es peor que no recargarlo.
+     * Devuelve el resultado para /edm reload.
+     */
+    public String recargar() {
+        return null;
+    }
+
     public final String getId() {
         return this.id;
     }

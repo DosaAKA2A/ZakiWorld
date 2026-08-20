@@ -156,4 +156,21 @@ public final class Catalogo {
     public int variantes() { return (int) porClave.values().stream().filter(Articulo::esVariante).count(); }
     public Map<String, Integer> categorias() { return porCategoria; }
     public Iterable<String> claves() { return porClave.keySet(); }
+
+    /** Los articulos de una categoria, en el orden en que estaban en el fichero. */
+    public java.util.List<Articulo> deCategoria(String categoria) {
+        java.util.List<Articulo> out = new java.util.ArrayList<>();
+        for (Articulo a : porClave.values()) if (a.categoria().equals(categoria)) out.add(a);
+        return out;
+    }
+
+    /**
+     * El icono de una categoria en el menu: el primero de sus articulos.
+     * No se saca de las secciones de EconomyShopGUI a proposito — este catalogo
+     * tiene que valer por si solo cuando ESGUI ya no este.
+     */
+    public Material iconoDe(String categoria) {
+        for (Articulo a : porClave.values()) if (a.categoria().equals(categoria)) return a.material();
+        return Material.CHEST;
+    }
 }
