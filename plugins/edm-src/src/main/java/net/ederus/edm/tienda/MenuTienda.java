@@ -277,7 +277,7 @@ public final class MenuTienda implements Listener {
             lore.add(Estilo.valor("Llevas " + llevas));
         }
 
-        if (art.tieneTope()) {
+        if (topes.activo() && art.tieneTope()) {
             int quedan = topes.restante(jugador.getUniqueId(), art);
             lore.add(Estilo.vacio());
             lore.add(Estilo.etiqueta("Limite", Estilo.CLARO));

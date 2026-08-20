@@ -31,11 +31,25 @@ public final class Topes {
     private final File fichero;
     private volatile boolean sucio;
 
+    /**
+     * Apagados por defecto. El freno de la economia es el precio dinamico: si
+     * el servidor vende mucho de algo, ese algo pierde valor. Un tope ademas
+     * seria un muro, que es justo lo que se quiso quitar. Los valores siguen en
+     * precios.yml por si algun dia hay que volver a encenderlos.
+     */
+    private boolean activo = false;
+
     public Topes(File fichero) { this.fichero = fichero; }
+
+    public void configurar(org.bukkit.configuration.ConfigurationSection sec) {
+        if (sec != null) activo = sec.getBoolean("activos", false);
+    }
+
+    public boolean activo() { return activo; }
 
     /** Cuanto le queda por vender. Integer.MAX_VALUE si ese articulo no lleva tope. */
     public int restante(UUID jugador, Catalogo.Articulo articulo) {
-        if (!articulo.tieneTope()) return Integer.MAX_VALUE;
+        if (!activo || !articulo.tieneTope()) return Integer.MAX_VALUE;
         Ventana v = ventanaViva(jugador, articulo);
         return v == null ? articulo.topeVenta() : Math.max(0, articulo.topeVenta() - v.vendido);
     }
@@ -63,7 +77,7 @@ public final class Topes {
 
     /** Apunta una venta ya cobrada. Solo se llama DESPUES de pagar. */
     public void anotar(UUID jugador, Catalogo.Articulo articulo, int cantidad) {
-        if (!articulo.tieneTope() || cantidad <= 0) return;
+        if (!activo || !articulo.tieneTope() || cantidad <= 0) return;
         Map<String, Ventana> del = datos.computeIfAbsent(jugador, k -> new ConcurrentHashMap<>());
         Ventana v = ventanaViva(jugador, articulo);
         if (v == null) del.put(articulo.clave(), new Ventana(System.currentTimeMillis(), cantidad));

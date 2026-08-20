@@ -2,6 +2,19 @@
 guardado-segundos: 120
 
 # ---------------------------------------------------------------------------
+# Topes por jugador. APAGADOS: se vende sin limite de horas ni de dia.
+#
+# El freno de la economia es el precio dinamico de mas abajo: si el servidor
+# vende mucho de algo, ese algo pierde valor y hay que rotar a otra cosa. Un
+# tope, ademas, es un muro; el precio que baja no bloquea a nadie.
+#
+# Los valores por item siguen en precios.yml, asi que encender esto los
+# recupera tal cual estaban.
+# ---------------------------------------------------------------------------
+topes:
+  activos: false
+
+# ---------------------------------------------------------------------------
 # Precio dinamico GLOBAL: lo que vende todo el servidor hunde el precio para
 # todos. Es lo que obliga a rotar la economia en vez de exprimir un solo item.
 #

@@ -126,7 +126,7 @@ public final class ComandoTienda implements CommandExecutor, TabCompleter {
         quien.sendMessage(Motor.nombre(a) + "  [" + a.categoria() + "]");
         quien.sendMessage("  compra: " + (a.seCompra() ? Motor.fmt(a.compra()) : "no se vende"));
         quien.sendMessage("  venta:  " + (a.seVende() ? Motor.fmt(a.venta()) : "no se compra"));
-        if (a.tieneTope()) {
+        if (topes.activo() && a.tieneTope()) {
             String resto = quien instanceof Player p ? " | te quedan " + topes.restante(p.getUniqueId(), a) : "";
             quien.sendMessage("  tope:   " + a.topeVenta() + " cada " + Motor.duracion(a.ventanaMs()) + resto);
         }

@@ -42,6 +42,7 @@ public final class TiendaPlugin extends Module {
         }
 
         topes = new Topes(new File(getDataFolder(), "topes.yml"));
+        topes.configurar(getConfig().getConfigurationSection("topes"));
         topes.cargar();
         mercado = new Mercado(new File(getDataFolder(), "mercado.yml"));
         mercado.configurar(getConfig().getConfigurationSection("mercado"));
@@ -173,6 +174,7 @@ public final class TiendaPlugin extends Module {
         reloadConfig();
         if (rotacion != null) rotacion.configurar(getConfig().getConfigurationSection("rotacion"));
         if (mercado != null) mercado.configurar(getConfig().getConfigurationSection("mercado"));
+        if (topes != null) topes.configurar(getConfig().getConfigurationSection("topes"));
         if (!cargarCatalogo()) return "el precios.yml tiene errores; se mantiene el anterior";
         return catalogo.total() + " articulos en " + catalogo.categorias().size() + " categorias";
     }
