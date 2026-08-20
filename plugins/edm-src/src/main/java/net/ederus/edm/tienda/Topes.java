@@ -1,6 +1,5 @@
-package com.ederus.tienda;
+package net.ederus.edm.tienda;
 
-import org.bukkit.Material;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.file.YamlConfiguration;
 
@@ -13,7 +12,7 @@ import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
- * Cuanto puede vender cada jugador de cada material antes de que se le corte.
+ * Cuanto puede vender cada jugador de cada articulo antes de que se le corte.
  *
  * La ventana es RODANTE y por item: arranca en la primera venta de ese material
  * y, cuando pasa su duracion, el contador vuelve a cero. No es por reloj — eso
@@ -28,7 +27,7 @@ public final class Topes {
         Ventana(long inicio, int vendido) { this.inicio = inicio; this.vendido = vendido; }
     }
 
-    private final Map<UUID, Map<Material, Ventana>> datos = new ConcurrentHashMap<>();
+    private final Map<UUID, Map<String, Ventana>> datos = new ConcurrentHashMap<>();
     private final File fichero;
     private volatile boolean sucio;
 
@@ -50,12 +49,12 @@ public final class Topes {
     }
 
     private Ventana ventanaViva(UUID jugador, Catalogo.Articulo articulo) {
-        Map<Material, Ventana> del = datos.get(jugador);
+        Map<String, Ventana> del = datos.get(jugador);
         if (del == null) return null;
-        Ventana v = del.get(articulo.material());
+        Ventana v = del.get(articulo.clave());
         if (v == null) return null;
         if (System.currentTimeMillis() - v.inicio >= articulo.ventanaMs()) {
-            del.remove(articulo.material());   // caducada: se limpia sola
+            del.remove(articulo.clave());   // caducada: se limpia sola
             sucio = true;
             return null;
         }
@@ -65,9 +64,9 @@ public final class Topes {
     /** Apunta una venta ya cobrada. Solo se llama DESPUES de pagar. */
     public void anotar(UUID jugador, Catalogo.Articulo articulo, int cantidad) {
         if (!articulo.tieneTope() || cantidad <= 0) return;
-        Map<Material, Ventana> del = datos.computeIfAbsent(jugador, k -> new ConcurrentHashMap<>());
+        Map<String, Ventana> del = datos.computeIfAbsent(jugador, k -> new ConcurrentHashMap<>());
         Ventana v = ventanaViva(jugador, articulo);
-        if (v == null) del.put(articulo.material(), new Ventana(System.currentTimeMillis(), cantidad));
+        if (v == null) del.put(articulo.clave(), new Ventana(System.currentTimeMillis(), cantidad));
         else v.vendido += cantidad;
         sucio = true;
     }
@@ -76,8 +75,8 @@ public final class Topes {
     public int limpiar(Catalogo catalogo) {
         long ahora = System.currentTimeMillis();
         int fuera = 0;
-        for (Iterator<Map.Entry<UUID, Map<Material, Ventana>>> it = datos.entrySet().iterator(); it.hasNext(); ) {
-            Map.Entry<UUID, Map<Material, Ventana>> e = it.next();
+        for (Iterator<Map.Entry<UUID, Map<String, Ventana>>> it = datos.entrySet().iterator(); it.hasNext(); ) {
+            Map.Entry<UUID, Map<String, Ventana>> e = it.next();
             e.getValue().entrySet().removeIf(x -> {
                 Catalogo.Articulo a = catalogo.de(x.getKey());
                 return a == null || ahora - x.getValue().inicio >= a.ventanaMs();
@@ -97,13 +96,11 @@ public final class Topes {
             if (sec == null) continue;
             UUID id;
             try { id = UUID.fromString(uuid); } catch (IllegalArgumentException e) { continue; }
-            Map<Material, Ventana> del = new ConcurrentHashMap<>();
+            Map<String, Ventana> del = new ConcurrentHashMap<>();
             for (String mat : sec.getKeys(false)) {
-                Material material = Material.matchMaterial(mat);
-                if (material == null) continue;
                 long inicio = sec.getLong(mat + ".inicio", 0);
                 int vendido = sec.getInt(mat + ".vendido", 0);
-                if (inicio > 0 && vendido > 0) del.put(material, new Ventana(inicio, vendido));
+                if (inicio > 0 && vendido > 0) del.put(mat, new Ventana(inicio, vendido));
             }
             if (!del.isEmpty()) datos.put(id, del);
         }
@@ -113,9 +110,9 @@ public final class Topes {
     public void guardar() {
         if (!sucio) return;
         YamlConfiguration yml = new YamlConfiguration();
-        for (Map.Entry<UUID, Map<Material, Ventana>> e : datos.entrySet()) {
-            for (Map.Entry<Material, Ventana> x : e.getValue().entrySet()) {
-                String base = e.getKey() + "." + x.getKey().name();
+        for (Map.Entry<UUID, Map<String, Ventana>> e : datos.entrySet()) {
+            for (Map.Entry<String, Ventana> x : e.getValue().entrySet()) {
+                String base = e.getKey() + "." + x.getKey();
                 yml.set(base + ".inicio", x.getValue().inicio);
                 yml.set(base + ".vendido", x.getValue().vendido);
             }
@@ -137,9 +134,9 @@ public final class Topes {
         if (datos.remove(jugador) != null) sucio = true;
     }
 
-    public Map<Material, int[]> resumen(UUID jugador) {
-        Map<Material, int[]> out = new HashMap<>();
-        Map<Material, Ventana> del = datos.get(jugador);
+    public Map<String, int[]> resumen(UUID jugador) {
+        Map<String, int[]> out = new HashMap<>();
+        Map<String, Ventana> del = datos.get(jugador);
         if (del == null) return out;
         del.forEach((m, v) -> out.put(m, new int[]{v.vendido, (int) (v.inicio / 1000L)}));
         return out;

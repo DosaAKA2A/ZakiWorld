@@ -1,23 +1,21 @@
-package com.ederus.tienda;
+package net.ederus.edm.tienda;
 
+import net.ederus.edm.EDMPlugin;
+import net.ederus.edm.Module;
 import net.milkbowl.vault.economy.Economy;
 import org.bukkit.plugin.RegisteredServiceProvider;
-import org.bukkit.plugin.java.JavaPlugin;
 import org.bukkit.scheduler.BukkitTask;
 
 import java.io.File;
 
 /**
- * Tienda propia de Ederus. Version 0: sin interfaz, solo el motor de compra y
- * venta con log y topes, para poder probarlo a fondo antes de que lo vea nadie.
+ * Modulo de tienda: sustituto propio de EconomyShopGUI.
  *
- * Convive con EconomyShopGUI: no toca su configuracion ni sus datos.
+ * Version 0: sin interfaz, solo el motor de compra y venta con registro y topes,
+ * para poder probarlo a fondo antes de que lo vea nadie. Convive con
+ * EconomyShopGUI sin tocar su configuracion ni sus datos.
  */
-public final class EderusTienda extends JavaPlugin {
-
-    /** Se compila contra la API de Paper 26 pero la version se mantiene aqui,
-     *  como en EderusMain. Cambiar tambien en pom.xml y plugin.yml. */
-    private static final String VERSION = "0.1.0";
+public final class TiendaPlugin extends Module {
 
     private final Catalogo catalogo = new Catalogo();
     private Topes topes;
@@ -26,14 +24,17 @@ public final class EderusTienda extends JavaPlugin {
     private Economy economia;
     private BukkitTask tareaGuardado;
 
+    public TiendaPlugin(EDMPlugin core) {
+        super(core, "tienda", "EderusTienda");
+    }
+
     @Override
     public void onEnable() {
         saveDefaultConfig();
 
         if (!cargarCatalogo()) {
             // Arrancar con precios malos es peor que no arrancar: seria dinero regalado.
-            getServer().getPluginManager().disablePlugin(this);
-            return;
+            throw new IllegalStateException("precios.yml invalido; el modulo no arranca");
         }
 
         topes = new Topes(new File(getDataFolder(), "topes.yml"));
@@ -41,19 +42,23 @@ public final class EderusTienda extends JavaPlugin {
         registro = new Registro(new File(getDataFolder(), "registro"));
 
         ComandoTienda comando = new ComandoTienda(this, catalogo, topes);
-        if (getCommand("etienda") != null) {
-            getCommand("etienda").setExecutor(comando);
-            getCommand("etienda").setTabCompleter(comando);
+        /* Como el resto de modulos: el plugin que ve Bukkit es EDM, asi que hay
+         * que registrarse como ejecutor a mano o /etienda solo imprime su uso. */
+        var cmd = core.getCommand("etienda");
+        if (cmd != null) {
+            cmd.setExecutor(comando);
+            cmd.setTabCompleter(comando);
+        } else {
+            getLogger().warning("El comando /etienda no esta en el plugin.yml de EDM.");
         }
 
         /* Vault se engancha en el primer tick, no aqui: el proveedor de economia
-           (EssentialsX y compania) se registra en SU onEnable, y el orden de
-           carga entre plugins no esta garantizado. Enganchar aqui hacia que la
-           tienda se apagara sola segun quien arrancara primero. */
-        getServer().getScheduler().runTask(this, () -> {
+           (EssentialsX) se registra en SU onEnable y el orden de carga entre
+           plugins no esta garantizado. Enganchar aqui apagaba el modulo segun
+           quien arrancara primero. */
+        core.getServer().getScheduler().runTask(core, () -> {
             if (!engancharVault()) {
-                getLogger().severe("No hay economia de Vault. La tienda se queda apagada.");
-                getServer().getPluginManager().disablePlugin(this);
+                getLogger().severe("No hay economia de Vault. La tienda se queda sin motor.");
                 return;
             }
             motor = new Motor(catalogo, topes, registro, economia);
@@ -61,13 +66,14 @@ public final class EderusTienda extends JavaPlugin {
         });
 
         long cada = Math.max(20L * 30, getConfig().getLong("guardado-segundos", 120) * 20L);
-        tareaGuardado = getServer().getScheduler().runTaskTimerAsynchronously(this, () -> {
+        tareaGuardado = core.getServer().getScheduler().runTaskTimerAsynchronously(core, () -> {
             topes.limpiar(catalogo);
             topes.guardar();
         }, cada, cada);
 
-        getLogger().info("EderusTienda " + VERSION + " activa | " + catalogo.total()
-                + " articulos en " + catalogo.categorias().size() + " categorias");
+        getLogger().info("Tienda activa | " + catalogo.total() + " articulos en "
+                + catalogo.categorias().size() + " categorias ("
+                + catalogo.variantes() + " variantes)");
     }
 
     @Override
@@ -78,8 +84,9 @@ public final class EderusTienda extends JavaPlugin {
     }
 
     private boolean engancharVault() {
-        if (getServer().getPluginManager().getPlugin("Vault") == null) return false;
-        RegisteredServiceProvider<Economy> rsp = getServer().getServicesManager().getRegistration(Economy.class);
+        if (core.getServer().getPluginManager().getPlugin("Vault") == null) return false;
+        RegisteredServiceProvider<Economy> rsp =
+                core.getServer().getServicesManager().getRegistration(Economy.class);
         if (rsp == null) return false;
         economia = rsp.getProvider();
         return economia != null;
@@ -88,9 +95,7 @@ public final class EderusTienda extends JavaPlugin {
     /** Devuelve false y explica el motivo si el catalogo no esta sano. */
     public boolean cargarCatalogo() {
         File fichero = new File(getDataFolder(), "precios.yml");
-        if (!fichero.exists()) {
-            saveResource("precios.yml", false);
-        }
+        if (!fichero.exists()) saveResource("precios.yml", false);
         try {
             catalogo.cargar(fichero);
             return true;
@@ -99,8 +104,6 @@ public final class EderusTienda extends JavaPlugin {
             return false;
         }
     }
-
-    public String version() { return VERSION; }
 
     /** null hasta que engancha Vault en el primer tick. */
     public Motor motor() { return motor; }

@@ -1,4 +1,4 @@
-package com.ederus.tienda;
+package net.ederus.edm.tienda;
 
 import org.bukkit.Material;
 import org.bukkit.command.Command;
@@ -12,15 +12,15 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 
-/** /etienda — la cara del v0 mientras no hay interfaz grafica. */
+/** /etienda — la cara del modulo mientras no hay interfaz grafica. */
 public final class ComandoTienda implements CommandExecutor, TabCompleter {
 
-    private final EderusTienda plugin;
+    private final TiendaPlugin modulo;
     private final Catalogo catalogo;
     private final Topes topes;
 
-    public ComandoTienda(EderusTienda plugin, Catalogo catalogo, Topes topes) {
-        this.plugin = plugin;
+    public ComandoTienda(TiendaPlugin modulo, Catalogo catalogo, Topes topes) {
+        this.modulo = modulo;
         this.catalogo = catalogo;
         this.topes = topes;
     }
@@ -28,7 +28,6 @@ public final class ComandoTienda implements CommandExecutor, TabCompleter {
     @Override
     public boolean onCommand(CommandSender quien, Command cmd, String etiqueta, String[] args) {
         if (args.length == 0) { ayuda(quien); return true; }
-
         switch (args[0].toLowerCase(Locale.ROOT)) {
             case "vender" -> { return vender(quien, args); }
             case "comprar" -> { return comprar(quien, args); }
@@ -40,15 +39,15 @@ public final class ComandoTienda implements CommandExecutor, TabCompleter {
     }
 
     private void ayuda(CommandSender q) {
-        q.sendMessage("EderusTienda " + plugin.version());
+        q.sendMessage("Tienda de Ederus");
         q.sendMessage("/etienda vender <item|mano> [cantidad|todo]");
-        q.sendMessage("/etienda comprar <item> <cantidad>");
+        q.sendMessage("/etienda comprar <item> <cantidad>   (ej: spawner:pig)");
         q.sendMessage("/etienda precio <item>");
         q.sendMessage("/etienda topes");
         if (q.hasPermission("ederus.tienda.admin")) q.sendMessage("/etienda recargar");
     }
 
-    /** 'mano' evita tener que escribir el nombre del material, que es lo que mas se falla. */
+    /** 'mano' evita escribir el nombre del material, que es lo que mas se falla. */
     private Material material(Player jugador, String texto) {
         if (texto.equalsIgnoreCase("mano")) {
             ItemStack enMano = jugador.getInventory().getItemInMainHand();
@@ -70,10 +69,9 @@ public final class ComandoTienda implements CommandExecutor, TabCompleter {
             catch (NumberFormatException e) { quien.sendMessage("Cantidad invalida."); return true; }
         }
 
-        Motor motor = plugin.motor();
+        Motor motor = modulo.motor();
         if (motor == null) { quien.sendMessage("La tienda aun no esta lista."); return true; }
-        Motor.Resultado r = motor.vender(jugador, material, cantidad);
-        quien.sendMessage(r.mensaje());
+        quien.sendMessage(motor.vender(jugador, material, cantidad).mensaje());
         return true;
     }
 
@@ -81,38 +79,41 @@ public final class ComandoTienda implements CommandExecutor, TabCompleter {
         if (!(quien instanceof Player jugador)) { quien.sendMessage("Solo desde el juego."); return true; }
         if (args.length < 3) { quien.sendMessage("/etienda comprar <item> <cantidad>"); return true; }
 
-        Material material = material(jugador, args[1]);
-        if (material == null) { quien.sendMessage("No conozco el item '" + args[1] + "'."); return true; }
+        /* Aqui se busca por CLAVE, no por material: es lo que permite pedir
+         * spawner:pig y distinguirlo de spawner:zombie. */
+        Catalogo.Articulo art = catalogo.de(args[1]);
+        if (art == null && quien instanceof Player p) {
+            Material m = material(p, args[1]);
+            if (m != null) art = catalogo.de(m);
+        }
+        if (art == null) { quien.sendMessage("No conozco el item '" + args[1] + "'."); return true; }
 
         int cantidad;
         try { cantidad = Integer.parseInt(args[2]); }
         catch (NumberFormatException e) { quien.sendMessage("Cantidad invalida."); return true; }
 
-        Motor motor = plugin.motor();
+        Motor motor = modulo.motor();
         if (motor == null) { quien.sendMessage("La tienda aun no esta lista."); return true; }
-        Motor.Resultado r = motor.comprar(jugador, material, cantidad);
-        quien.sendMessage(r.mensaje());
+        quien.sendMessage(motor.comprar(jugador, art, cantidad).mensaje());
         return true;
     }
 
     private boolean precio(CommandSender quien, String[] args) {
         if (args.length < 2) { quien.sendMessage("/etienda precio <item>"); return true; }
-        Material material = quien instanceof Player p ? material(p, args[1]) : Material.matchMaterial(args[1]);
-        if (material == null) { quien.sendMessage("No conozco el item '" + args[1] + "'."); return true; }
 
-        Catalogo.Articulo a = catalogo.de(material);
-        if (a == null) { quien.sendMessage(Motor.bonito(material) + " no esta en la tienda."); return true; }
+        Catalogo.Articulo a = catalogo.de(args[1]);
+        if (a == null) {
+            Material m = quien instanceof Player p ? material(p, args[1]) : Material.matchMaterial(args[1]);
+            if (m != null) a = catalogo.de(m);
+        }
+        if (a == null) { quien.sendMessage("'" + args[1] + "' no esta en la tienda."); return true; }
 
-        quien.sendMessage(Motor.bonito(material) + "  [" + a.categoria() + "]");
+        quien.sendMessage(Motor.nombre(a) + "  [" + a.categoria() + "]");
         quien.sendMessage("  compra: " + (a.seCompra() ? Motor.fmt(a.compra()) : "no se vende"));
         quien.sendMessage("  venta:  " + (a.seVende() ? Motor.fmt(a.venta()) : "no se compra"));
         if (a.tieneTope()) {
-            String resto = "";
-            if (quien instanceof Player p) {
-                resto = " | te quedan " + topes.restante(p.getUniqueId(), a);
-            }
-            quien.sendMessage("  tope:   " + a.topeVenta() + " cada "
-                    + Motor.duracion(a.ventanaMs()) + resto);
+            String resto = quien instanceof Player p ? " | te quedan " + topes.restante(p.getUniqueId(), a) : "";
+            quien.sendMessage("  tope:   " + a.topeVenta() + " cada " + Motor.duracion(a.ventanaMs()) + resto);
         }
         return true;
     }
@@ -122,10 +123,10 @@ public final class ComandoTienda implements CommandExecutor, TabCompleter {
         var resumen = topes.resumen(jugador.getUniqueId());
         if (resumen.isEmpty()) { quien.sendMessage("No tienes ninguna ventana de venta abierta."); return true; }
         quien.sendMessage("Ventanas abiertas:");
-        resumen.forEach((m, v) -> {
-            Catalogo.Articulo a = catalogo.de(m);
+        resumen.forEach((clave, v) -> {
+            Catalogo.Articulo a = catalogo.de(clave);
             if (a == null) return;
-            quien.sendMessage("  " + Motor.bonito(m) + ": " + v[0] + "/" + a.topeVenta()
+            quien.sendMessage("  " + Motor.nombre(a) + ": " + v[0] + "/" + a.topeVenta()
                     + " | se reinicia en " + Motor.duracion(topes.esperaMs(jugador.getUniqueId(), a)));
         });
         return true;
@@ -133,7 +134,7 @@ public final class ComandoTienda implements CommandExecutor, TabCompleter {
 
     private boolean recargar(CommandSender quien) {
         if (!quien.hasPermission("ederus.tienda.admin")) { quien.sendMessage("No puedes."); return true; }
-        if (plugin.cargarCatalogo()) {
+        if (modulo.cargarCatalogo()) {
             quien.sendMessage("Catalogo recargado: " + catalogo.total() + " articulos.");
         } else {
             quien.sendMessage("El catalogo tiene errores; se mantiene el anterior. Mira la consola.");
@@ -151,9 +152,8 @@ public final class ComandoTienda implements CommandExecutor, TabCompleter {
         } else if (args.length == 2 && !args[0].equalsIgnoreCase("topes")) {
             String p = args[1].toUpperCase(Locale.ROOT);
             if ("MANO".startsWith(p)) out.add("mano");
-            for (Material m : Material.values()) {
-                if (catalogo.de(m) == null) continue;
-                if (m.name().startsWith(p)) out.add(m.name().toLowerCase(Locale.ROOT));
+            for (String clave : catalogo.claves()) {
+                if (clave.startsWith(p)) out.add(clave.toLowerCase(Locale.ROOT));
                 if (out.size() > 40) break;
             }
         } else if (args.length == 3 && args[0].equalsIgnoreCase("vender")) {

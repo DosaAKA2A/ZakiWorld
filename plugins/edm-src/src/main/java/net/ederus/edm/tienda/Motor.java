@@ -1,18 +1,20 @@
-package com.ederus.tienda;
+package net.ederus.edm.tienda;
 
 import net.milkbowl.vault.economy.Economy;
 import net.milkbowl.vault.economy.EconomyResponse;
 import org.bukkit.Material;
+import org.bukkit.block.CreatureSpawner;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemStack;
+import org.bukkit.inventory.meta.BlockStateMeta;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
 /**
- * Comprar y vender. Es la parte peligrosa del plugin: un fallo aqui no rompe una
+ * Comprar y vender. Es la parte peligrosa del modulo: un fallo aqui no rompe una
  * partida, imprime dinero para 372 cuentas y eso no se revierte con un backup.
  *
  * Dos reglas que no se tocan:
@@ -25,7 +27,7 @@ import java.util.Map;
  */
 public final class Motor {
 
-    /** Techo por operacion, para que un /tienda vender 999999 no barra el inventario entero. */
+    /** Techo por operacion, para que un /etienda vender 999999 no barra el inventario entero. */
     public static final int MAX_POR_OPERACION = 2304;   // 36 stacks
 
     public record Resultado(boolean ok, String mensaje, int cantidad, double total) {
@@ -51,7 +53,8 @@ public final class Motor {
      * por meta (nombre, lore, encantamientos, durabilidad, modelo, PDC...). Esa
      * lista siempre se queda corta cuando sale una version nueva; isSimilar()
      * compara los metadatos enteros y no se deja nada, incluido lo que guardan
-     * MMOItems y compania.
+     * MMOItems y compania. Tambien deja fuera un spawner con mob dentro, que es
+     * lo que queremos: las variantes solo se compran.
      */
     static boolean esLimpio(ItemStack stack, Material material) {
         if (stack == null || stack.getType() != material) return false;
@@ -80,28 +83,54 @@ public final class Motor {
         return cantidad - quedan;
     }
 
+    /**
+     * Construye el item del articulo. Para un spawner, le mete su mob dentro:
+     * sin esto la tienda entregaria un spawner vacio y el jugador habria pagado
+     * 75.000 por un bloque inutil.
+     */
+    static ItemStack construir(Catalogo.Articulo art, int cantidad) {
+        ItemStack pila = new ItemStack(art.material(), cantidad);
+        if (art.spawner() == null) return pila;
+
+        if (pila.getItemMeta() instanceof BlockStateMeta bsm
+                && bsm.getBlockState() instanceof CreatureSpawner cs) {
+            cs.setSpawnedType(art.spawner());
+            bsm.setBlockState(cs);
+            pila.setItemMeta(bsm);
+            return pila;
+        }
+        /* Si la API cambia y esto deja de funcionar, mejor no entregar nada que
+         * cobrar por un spawner vacio. Lo detecta comprar() y aborta el cobro. */
+        return null;
+    }
+
     /** Mete lo que quepa y lo que no, al suelo: nunca se pierde nada. */
-    private static void entregar(Player jugador, Material material, int cantidad) {
+    private static boolean entregar(Player jugador, Catalogo.Articulo art, int cantidad) {
         List<ItemStack> pilas = new ArrayList<>();
         int quedan = cantidad;
-        int max = material.getMaxStackSize();
+        int max = art.material().getMaxStackSize();
         while (quedan > 0) {
             int n = Math.min(max, quedan);
-            pilas.add(new ItemStack(material, n));
+            ItemStack pila = construir(art, n);
+            if (pila == null) return false;
+            pilas.add(pila);
             quedan -= n;
         }
         for (ItemStack pila : pilas) {
             Map<Integer, ItemStack> sobra = jugador.getInventory().addItem(pila);
             for (ItemStack s : sobra.values()) jugador.getWorld().dropItemNaturally(jugador.getLocation(), s);
         }
+        return true;
     }
 
-    private static int huecoLibre(Inventory inv, Material material) {
-        int max = material.getMaxStackSize();
+    private static int huecoLibre(Inventory inv, Catalogo.Articulo art) {
+        int max = art.material().getMaxStackSize();
         int sitio = 0;
         for (ItemStack s : inv.getStorageContents()) {
             if (s == null || s.getType().isAir()) sitio += max;
-            else if (esLimpio(s, material)) sitio += Math.max(0, max - s.getAmount());
+            /* Un spawner con mob no apila con otro de otro mob: solo cuentan los
+             * huecos vacios. Para el resto, un stack a medias tambien sirve. */
+            else if (art.spawner() == null && esLimpio(s, art.material())) sitio += Math.max(0, max - s.getAmount());
         }
         return sitio;
     }
@@ -137,17 +166,17 @@ public final class Motor {
         double total = art.venta() * quitados;
         EconomyResponse resp = economia.depositPlayer(jugador, total);
         if (!resp.transactionSuccess()) {
-            entregar(jugador, material, quitados);            // se devuelve TODO
+            entregar(jugador, art, quitados);                 // se devuelve TODO
             return Resultado.no("El banco rechazo la operacion: " + resp.errorMessage);
         }
 
         topes.anotar(jugador.getUniqueId(), art, quitados);
-        registro.anotar("VENTA", jugador.getName(), quitados, material.name(),
+        registro.anotar("VENTA", jugador.getName(), quitados, art.clave(),
                 art.venta(), total, economia.getBalance(jugador));
 
         String aviso = "";
         if (quitados < pedido) {
-            if (quitados >= margen && art.tieneTope()) aviso = " (tope alcanzado)";
+            if (art.tieneTope() && quitados >= margen) aviso = " (tope alcanzado)";
             else if (quitados >= disponible) aviso = " (era todo lo que llevabas)";
         }
         return new Resultado(true, "Vendiste " + quitados + " x " + bonito(material)
@@ -156,14 +185,19 @@ public final class Motor {
 
     // ----------------------------------------------------------------- comprar
 
-    public Resultado comprar(Player jugador, Material material, int pedido) {
-        Catalogo.Articulo art = catalogo.de(material);
+    public Resultado comprar(Player jugador, Catalogo.Articulo art, int pedido) {
         if (art == null) return Resultado.no("Ese item no esta en la tienda.");
-        if (!art.seCompra()) return Resultado.no("La tienda no vende " + bonito(material) + ".");
+        if (!art.seCompra()) return Resultado.no("La tienda no vende " + nombre(art) + ".");
         if (pedido <= 0) return Resultado.no("La cantidad tiene que ser mayor que cero.");
 
+        /* Se comprueba ANTES de cobrar que se puede construir: mejor no vender
+         * que cobrar 75.000 por un spawner vacio. */
+        if (construir(art, 1) == null) {
+            return Resultado.no("No pude preparar ese item. Avisa a un administrador.");
+        }
+
         int cantidad = Math.min(pedido, MAX_POR_OPERACION);
-        int sitio = huecoLibre(jugador.getInventory(), material);
+        int sitio = huecoLibre(jugador.getInventory(), art);
         if (sitio <= 0) return Resultado.no("No te cabe nada mas en el inventario.");
         if (sitio < cantidad) cantidad = sitio;
 
@@ -179,19 +213,29 @@ public final class Motor {
         }
 
         // 2. entregar (lo que no quepa cae al suelo, nunca se pierde)
-        entregar(jugador, material, cantidad);
+        if (!entregar(jugador, art, cantidad)) {
+            economia.depositPlayer(jugador, coste);           // se devuelve el dinero
+            return Resultado.no("No pude entregarte el item; se te devolvio el dinero.");
+        }
 
-        registro.anotar("COMPRA", jugador.getName(), cantidad, material.name(),
+        registro.anotar("COMPRA", jugador.getName(), cantidad, art.clave(),
                 art.compra(), coste, economia.getBalance(jugador));
 
-        return new Resultado(true, "Compraste " + cantidad + " x " + bonito(material)
+        return new Resultado(true, "Compraste " + cantidad + " x " + nombre(art)
                 + " por " + fmt(coste), cantidad, coste);
     }
 
     // ------------------------------------------------------------------ varios
 
-    public static String bonito(Material material) {
-        String s = material.name().toLowerCase().replace('_', ' ');
+    public static String nombre(Catalogo.Articulo art) {
+        if (art.spawner() == null) return bonito(art.material());
+        return "Spawner de " + bonito(art.spawner().name());
+    }
+
+    public static String bonito(Material material) { return bonito(material.name()); }
+
+    public static String bonito(String crudo) {
+        String s = crudo.toLowerCase(java.util.Locale.ROOT).replace('_', ' ');
         return Character.toUpperCase(s.charAt(0)) + s.substring(1);
     }
 

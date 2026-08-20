@@ -1,7 +1,7 @@
 # EDM - nucleo de Ederus
 
-Fusion de **Rip 3.3.5**, **Anomaly 1.14.1** y **EderusMain 1.4.0** (libros encantados y
-avisos de las tiendas de MobCoins) en un solo plugin.
+Fusion de **Rip 3.3.5**, **Anomaly 1.14.1**, **EderusMain 1.4.0** (libros encantados y
+avisos de las tiendas de MobCoins) y la **tienda propia** en un solo plugin.
 
 ## Como esta montado
 
@@ -26,6 +26,7 @@ Dos cosas que el modulo NO delega, y son deliberadas:
 | `rip` | Efectos de kill y muerte | `/rip` |
 | `anomaly` | Jefes por fases y botin | `/anomaly` (`/anomalia`, `/anom`) |
 | `core` | Libros encantados y avisos de tiendas | `/main` (`/ederus`, `/edmain`), `/ederuslibro` |
+| `tienda` | Tienda propia: compra, venta, topes y registro | `/etienda` (`/etnd`) |
 
 Se apagan por separado en `plugins/EDM/config.yml` (`modulos.<id>: false`). Si uno
 revienta al arrancar, se anota en consola y los otros siguen: antes eran tres plugins y
@@ -55,3 +56,33 @@ viejos de Anomaly y Rip.
   clase del plugin y Bukkit le enrutaba los comandos sola; ahora la clase del plugin es
   EDM y sin esto los dos comandos solo imprimian su linea de uso.
 - `Settings` de Anomaly acepta `Plugin` en vez de `JavaPlugin`.
+
+## El modulo `tienda`
+
+Sustituto propio de EconomyShopGUI. De momento **sin interfaz**: solo el motor,
+que es donde un fallo no rompe una partida sino que imprime dinero.
+
+Dos reglas del motor que no se tocan:
+
+1. **Primero se quitan los items, despues se paga.** Si el banco falla, se
+   devuelven. Al reves, un error de Vault regala el dinero y el item.
+2. **Solo se compran items "a pelo"**, comparando contra un `ItemStack` recien
+   creado con `isSimilar()`. Enumerar meta por meta (nombre, lore,
+   encantamientos, PDC...) siempre se queda corto en la version siguiente. Sin
+   esto la tienda se tragaria un MMOItems por el precio de su material.
+
+El catalogo (`plugins/EDM/tienda/precios.yml`) **se niega a cargar** si encuentra
+un bucle de precio o una clave repetida, y en ese caso deja el catalogo anterior
+en pie en vez de arrancar con precios malos.
+
+La clave de un articulo es el material, o `MATERIAL:VARIANTE` para los spawners
+(`SPAWNER:PIG`): los 8 de Ederus son todos `SPAWNER` y solo cambian en el mob.
+Al entregarlos, el motor construye el spawner con su mob dentro; si no pudiera,
+aborta antes de cobrar.
+
+Necesita **Vault**, que se engancha en el primer tick y no en `onEnable`: el
+proveedor de economia se registra en su propio `onEnable` y el orden de carga
+entre plugins no esta garantizado.
+
+El catalogo se genera con `plugins/ederus-src/EderusTienda-src/scripts/migrar-esgui.js`
+a partir de los YAML de EconomyShopGUI.

@@ -77,35 +77,46 @@ for (const fichero of ficheros) {
       continue;
     }
 
-    // Un item que solo se distingue por metadatos (los spawners de Ederus son
-    // todos SPAWNER y cambian en 'spawnertype') no cabe en un catalogo indexado
-    // por material. Antes de tratarlo como duplicado, se dice lo que es.
-    const variante = nodo.spawnertype || nodo['potion-type'] || nodo.enchantments;
-    if (variante) {
-      avisos.push('VARIANTE ' + material + ' (' + categoria + '.' + ruta + '): se distingue por '
-        + (nodo.spawnertype ? 'spawnertype=' + nodo.spawnertype : 'metadatos')
-        + '. El catalogo indexa por material y no sabe separarlas.');
+    // Los 8 spawners de Ederus son todos SPAWNER y cambian en 'spawnertype': la
+    // clave lleva el mob detras (SPAWNER:PIG) y el plugin construye el spawner
+    // con su mob al entregarlo.
+    let clave = material;
+    if (nodo.spawnertype) {
+      if (material !== 'SPAWNER') {
+        avisos.push('VARIANTE en ' + material + ' (' + categoria + '.' + ruta
+          + '): solo se soportan variantes de SPAWNER.');
+        continue;
+      }
+      if (venta) {
+        avisos.push('VARIANTE ' + material + ':' + nodo.spawnertype + ' tiene precio de venta '
+          + venta + ', y una variante no se puede vender (el motor solo acepta items a pelo).');
+        continue;
+      }
+      clave = 'SPAWNER:' + String(nodo.spawnertype).toUpperCase().trim();
+    } else if (nodo['potion-type'] || nodo.enchantments) {
+      avisos.push('VARIANTE ' + material + ' (' + categoria + '.' + ruta
+        + '): se distingue por metadatos que el catalogo aun no sabe representar.');
       continue;
     }
 
-    const previo = porMaterial.get(material);
+    const previo = porMaterial.get(clave);
     if (previo) {
       // Mismo material en dos categorias AL MISMO PRECIO no hace daño: no hay
       // arbitraje posible, solo aparece dos veces en la tienda. Se queda una vez.
       if (previo.compra === compra && previo.venta === venta) {
-        repetidosInocentes.push(material + ' (' + previo.categoria + ' y ' + categoria + ')');
+        repetidosInocentes.push(clave + ' (' + previo.categoria + ' y ' + categoria + ')');
         continue;
       }
       // A distinto precio SI es peligroso: comprar barato en una y vender caro
       // en otra es dinero infinito. Y quedarse con "el primero" dejaria que el
       // orden alfabetico de los ficheros decidiera. Lo decide un humano.
-      avisos.push('DUPLICADO ' + material + ': en ' + previo.categoria
+      avisos.push('DUPLICADO ' + clave + ': en ' + previo.categoria
         + ' (compra ' + previo.compra + '/venta ' + previo.venta + ') y en '
         + categoria + ' (compra ' + compra + '/venta ' + venta + ')');
       continue;
     }
 
-    porMaterial.set(material, {
+    porMaterial.set(clave, {
       categoria,
       compra,
       venta,
@@ -145,7 +156,7 @@ for (const [categoria, items] of porCategoria) {
   lineas.push('  ' + categoria + ':');
   lineas.push('    items:');
   for (const [material, d] of items) {
-    lineas.push('      ' + material + ':');
+    lineas.push('      ' + (material.includes(':') ? "'" + material + "'" : material) + ':');
     lineas.push('        compra: ' + d.compra);
     lineas.push('        venta: ' + d.venta);
     lineas.push('        tope: ' + d.tope);

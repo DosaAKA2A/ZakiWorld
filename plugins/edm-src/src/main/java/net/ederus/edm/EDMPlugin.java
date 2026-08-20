@@ -17,6 +17,7 @@ import org.bukkit.plugin.java.JavaPlugin;
 import net.ederus.edm.anomaly.AnomalyPlugin;
 import net.ederus.edm.core.EderusMain;
 import net.ederus.edm.rip.RipPlugin;
+import net.ederus.edm.tienda.TiendaPlugin;
 
 /*
  * EDM: el nucleo de Ederus. Reune Rip, Anomaly y EderusMain (libros + avisos de
@@ -28,7 +29,7 @@ import net.ederus.edm.rip.RipPlugin;
  */
 public final class EDMPlugin extends JavaPlugin {
 
-    public static final String VERSION = "1.0.0";
+    public static final String VERSION = "1.1.0";
 
     /* id del modulo -> carpeta del plugin viejo de la que se migran los datos */
     private static final Map<String, String> CARPETAS_VIEJAS = Map.of(
@@ -47,6 +48,7 @@ public final class EDMPlugin extends JavaPlugin {
         arrancar(new RipPlugin(this));
         arrancar(new AnomalyPlugin(this));
         arrancar(new EderusMain(this));
+        arrancar(new TiendaPlugin(this));
 
         banner();
     }

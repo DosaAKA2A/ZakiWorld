@@ -1,10 +1,10 @@
 name: EDM
-version: '1.0.0'
+version: '1.1.0'
 main: net.ederus.edm.EDMPlugin
 api-version: '1.20'
 author: Iris Studio
-description: Nucleo de Ederus - Rip, Anomaly, libros encantados y avisos de tiendas de MobCoins
-softdepend: [WorldGuard, ProtectionStones, MMOItems, LibsDisguises, AdvancedEnchantments, UltimateMobCoins]
+description: Nucleo de Ederus - Rip, Anomaly, libros, avisos de tiendas y la tienda propia
+softdepend: [Vault, WorldGuard, ProtectionStones, MMOItems, LibsDisguises, AdvancedEnchantments, UltimateMobCoins]
 
 commands:
   rip:
@@ -19,12 +19,22 @@ commands:
     usage: /main <reload|aviso|libro>
     aliases: [ederus, edmain]
     permission: ederus.admin
+  etienda:
+    description: Tienda de Ederus
+    usage: /etienda <vender|comprar|precio|topes|recargar>
+    aliases: [etnd]
   ederuslibro:
     description: Entrega un libro encantado aleatorio de calidad baja
     usage: /ederuslibro <jugador>
     permission: ederus.libro
 
 permissions:
+  ederus.tienda.usar:
+    description: Permite comprar y vender en la tienda
+    default: true
+  ederus.tienda.admin:
+    description: Permite recargar el catalogo de la tienda
+    default: op
   rip.use:
     description: Acceso basico al menu Rip
     default: true

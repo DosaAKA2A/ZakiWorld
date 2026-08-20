@@ -1,4 +1,4 @@
-package com.ederus.tienda;
+package net.ederus.edm.tienda;
 
 import java.io.BufferedWriter;
 import java.io.File;
