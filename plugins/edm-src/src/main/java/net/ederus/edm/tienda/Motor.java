@@ -51,6 +51,9 @@ public final class Motor {
 
     public Mercado mercado() { return mercado; }
 
+    /** El saldo del jugador, para la cabeza del menu. */
+    public double saldo(Player jugador) { return economia.getBalance(jugador); }
+
     public void rotacion(Rotacion r) { this.rotacion = r; }
     public Rotacion rotacion() { return rotacion; }
 

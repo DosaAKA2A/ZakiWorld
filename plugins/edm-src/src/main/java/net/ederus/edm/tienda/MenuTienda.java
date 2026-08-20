@@ -13,40 +13,55 @@ import org.bukkit.event.inventory.InventoryClickEvent;
 import org.bukkit.event.inventory.InventoryDragEvent;
 import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.InventoryHolder;
-import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.ItemFlag;
+import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
+import org.bukkit.inventory.meta.SkullMeta;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 /**
- * El menu de la tienda. Lo que ve el jugador: una rejilla de categorias y,
- * dentro, los articulos con su precio.
+ * El menu de la tienda.
  *
  * Los clics se cancelan TODOS antes de hacer nada. Un menu de tienda del que se
  * puedan sacar items es una duplicadora, y el bug se descubre cuando ya hay
  * cuarenta cofres llenos.
  *
- * Los controles son los de EconomyShopGUI a proposito, para que a los jugadores
- * no les cambie nada: clic izquierdo compra, derecho vende, con shift por lotes.
+ * LA REJILLA es de 7 columnas con borde, no de 9 a sangre. Con 9 los articulos
+ * llegan al filo y la ventana parece un cofre; con el borde relleno y el
+ * contenido centrado parece una tienda. Cuando una pagina va a medias, las
+ * filas se centran en vertical y la ultima en horizontal, para que no quede un
+ * bloque de huecos abajo a la derecha.
  */
 public final class MenuTienda implements Listener {
 
     private static final int FILAS = 6;
-    private static final int POR_PAGINA = 45;          // 5 filas; la ultima es la barra
-    private static final int RANURA_VOLVER = 49;
+
+    /* Zona util: filas 1..4, columnas 1..7. El resto es borde. */
+    private static final int COLUMNAS = 7;
+    private static final int FILAS_UTILES = 4;
+    private static final int POR_PAGINA = COLUMNAS * FILAS_UTILES;   // 28
+
     private static final int RANURA_ANTERIOR = 45;
+    private static final int RANURA_VOLVER = 49;
     private static final int RANURA_SIGUIENTE = 53;
-    /* Fila 4, centradas bajo las 14 categorias. */
-    private static final int RANURA_OFERTAS = 30;
-    private static final int RANURA_DEMANDAS = 32;
+    /* Una fila por debajo de las categorias. */
+    private static final int RANURA_OFERTAS = 39;
+    private static final int RANURA_DEMANDAS = 41;
+    private static final int RANURA_SALDO = 49;
+
+    static final String OFERTAS = "@ofertas";
+    static final String DEMANDAS = "@demandas";
 
     /** Marca nuestras ventanas. Nunca se identifica un menu por su titulo: el
      *  jugador puede tener un cofre llamado igual y acabariamos operando sobre el. */
     static final class Vista implements InventoryHolder {
-        final String categoria;       // null = menu principal
+        final String categoria;                 // null = menu principal
         final int pagina;
+        final Map<Integer, Integer> ranuraAIndice = new HashMap<>();
         Inventory inv;
         Vista(String categoria, int pagina) { this.categoria = categoria; this.pagina = pagina; }
         @Override public Inventory getInventory() { return inv; }
@@ -66,8 +81,6 @@ public final class MenuTienda implements Listener {
 
     // ------------------------------------------------------------- construir
 
-    /** Los huecos libres llevan el mismo panel separador que ya usan sus
-     *  paginas: sin el, el menu se ve a medio hacer. */
     private void rellenar(Inventory inv) {
         ItemStack panel = secciones.relleno();
         if (panel == null) return;
@@ -75,6 +88,23 @@ public final class MenuTienda implements Listener {
             ItemStack actual = inv.getItem(i);
             if (actual == null || actual.getType().isAir()) inv.setItem(i, panel.clone());
         }
+    }
+
+    /** La cabeza del jugador con su saldo, como en la tienda de siempre. */
+    private ItemStack saldo(Player jugador) {
+        ItemStack pila = new ItemStack(Material.PLAYER_HEAD);
+        if (pila.getItemMeta() instanceof SkullMeta meta) {
+            meta.setOwningPlayer(jugador);
+            meta.displayName(Estilo.texto(jugador.getName(), Estilo.CLARO));
+            Motor motor = modulo.motor();
+            List<Component> lore = new ArrayList<>();
+            lore.add(Estilo.etiqueta("Tu dinero", Estilo.VENTA));
+            lore.add(Estilo.valor(motor != null ? Estilo.dinero(motor.saldo(jugador)) : "..."));
+            meta.lore(lore);
+            meta.addItemFlags(ItemFlag.values());
+            pila.setItemMeta(meta);
+        }
+        return pila;
     }
 
     public void abrirPrincipal(Player jugador) {
@@ -99,36 +129,28 @@ public final class MenuTienda implements Listener {
             inv.setItem(RANURA_OFERTAS, decorarCon(new ItemStack(Material.SUNFLOWER),
                     Estilo.texto("→ ", NamedTextColor.DARK_GRAY)
                         .append(Estilo.texto("Ofertas del dia", Estilo.ACCION_COMPRA)),
-                    List.of(Estilo.valor(contar(rot.ofertas()) + " articulos rebajados"),
-                            Estilo.texto("   entre un 15% y un 65%", Estilo.APAGADO),
+                    List.of(Estilo.texto("Estos objetos estan rebajados", NamedTextColor.GRAY),
                             Estilo.vacio(),
-                            Estilo.texto("   rota en " + Motor.duracion(Rotacion.hastaManana()), Estilo.APAGADO),
+                            Estilo.texto("Rota en " + Motor.duracion(Rotacion.hastaManana()), Estilo.APAGADO),
                             Estilo.vacio(),
                             Estilo.accion("Click para entrar", Estilo.ACCION_COMPRA))));
             inv.setItem(RANURA_DEMANDAS, decorarCon(new ItemStack(Material.EMERALD),
                     Estilo.texto("→ ", NamedTextColor.DARK_GRAY)
                         .append(Estilo.texto("Demanda del dia", Estilo.VENTA)),
-                    List.of(Estilo.valor(contar(rot.demandas()) + " articulos que se pagan mas"),
-                            Estilo.texto("   entre un 25% y un 75% mas", Estilo.APAGADO),
+                    List.of(Estilo.texto("Estos objetos son muy pedidos", NamedTextColor.GRAY),
                             Estilo.vacio(),
-                            Estilo.texto("   rota en " + Motor.duracion(Rotacion.hastaManana()), Estilo.APAGADO),
+                            Estilo.texto("Rota en " + Motor.duracion(Rotacion.hastaManana()), Estilo.APAGADO),
                             Estilo.vacio(),
                             Estilo.accion("Click para entrar", Estilo.ACCION_VENTA))));
         }
 
+        inv.setItem(RANURA_SALDO, saldo(jugador));
         rellenar(inv);
         jugador.openInventory(inv);
         secciones.sonar(jugador, "abrir-menu");
     }
 
-    private static int contar(Iterable<?> it) {
-        int n = 0; for (Object o : it) n++; return n;
-    }
-
     /** Las dos secciones del dia no viven en el catalogo: se arman al vuelo. */
-    static final String OFERTAS = "@ofertas";
-    static final String DEMANDAS = "@demandas";
-
     private List<Catalogo.Articulo> articulosDe(String categoria) {
         Rotacion rot = modulo.rotacion();
         if (OFERTAS.equals(categoria) || DEMANDAS.equals(categoria)) {
@@ -149,6 +171,30 @@ public final class MenuTienda implements Listener {
         return null;
     }
 
+    /**
+     * Coloca los articulos centrados en la zona util. Las filas que sobran se
+     * reparten arriba y abajo, y la ultima fila incompleta se centra: asi una
+     * pagina de 14 no deja media ventana vacia.
+     */
+    private void colocar(Inventory inv, Vista vista, List<Catalogo.Articulo> pagina, Player jugador) {
+        int n = pagina.size();
+        if (n == 0) return;
+        int filas = Math.min(FILAS_UTILES, (int) Math.ceil(n / (double) COLUMNAS));
+        int filaInicio = 1 + Math.max(0, (FILAS_UTILES - filas) / 2);
+
+        int i = 0;
+        for (int f = 0; f < filas && i < n; f++) {
+            int enEsta = Math.min(COLUMNAS, n - i);
+            int hueco = (COLUMNAS - enEsta) / 2;
+            for (int c = 0; c < enEsta; c++, i++) {
+                int ranura = (filaInicio + f) * 9 + 1 + hueco + c;
+                if (ranura >= inv.getSize()) break;
+                inv.setItem(ranura, pintar(pagina.get(i), jugador));
+                vista.ranuraAIndice.put(ranura, i);
+            }
+        }
+    }
+
     public void abrirCategoria(Player jugador, String categoria, int pagina) {
         List<Catalogo.Articulo> items = articulosDe(categoria);
         int paginas = Math.max(1, (int) Math.ceil(items.size() / (double) POR_PAGINA));
@@ -162,16 +208,15 @@ public final class MenuTienda implements Listener {
         vista.inv = inv;
 
         int desde = pagina * POR_PAGINA;
-        for (int i = 0; i < POR_PAGINA && desde + i < items.size(); i++) {
-            inv.setItem(i, pintar(items.get(desde + i), jugador));
-        }
+        List<Catalogo.Articulo> enPagina =
+                new ArrayList<>(items.subList(desde, Math.min(items.size(), desde + POR_PAGINA)));
+        colocar(inv, vista, enPagina, jugador);
+        /* Los indices se guardaron relativos a la pagina: se pasan a absolutos. */
+        final int base = desde;
+        vista.ranuraAIndice.replaceAll((r, i) -> i + base);
 
-        if (pagina > 0) {
-            inv.setItem(RANURA_ANTERIOR, pieza(Material.ARROW, "Pagina anterior", List.of()));
-        }
-        if (pagina < paginas - 1) {
-            inv.setItem(RANURA_SIGUIENTE, pieza(Material.ARROW, "Pagina siguiente", List.of()));
-        }
+        if (pagina > 0) inv.setItem(RANURA_ANTERIOR, pieza(Material.ARROW, "Pagina anterior", List.of()));
+        if (pagina < paginas - 1) inv.setItem(RANURA_SIGUIENTE, pieza(Material.ARROW, "Pagina siguiente", List.of()));
         inv.setItem(RANURA_VOLVER, pieza(Material.BARRIER, "Volver",
                 List.of(Estilo.valor("Pagina " + (pagina + 1) + " de " + paginas))));
 
@@ -181,29 +226,44 @@ public final class MenuTienda implements Listener {
     }
 
     /** Un articulo con su precio, sus topes y lo que se puede hacer con el. */
-    /** Un articulo con su precio, sus topes y lo que se puede hacer con el. */
     private ItemStack pintar(Catalogo.Articulo art, Player jugador) {
         List<Component> lore = new ArrayList<>();
+        Motor motor = modulo.motor();
+        Rotacion rot = modulo.rotacion();
+        Rotacion.Trato oferta = rot == null ? null : rot.oferta(art.clave());
+        Rotacion.Trato demanda = rot == null ? null : rot.demanda(art.clave());
 
         if (art.seCompra()) {
+            double efectiva = motor != null ? motor.compraEfectiva(art) : art.compra();
             lore.add(Estilo.etiqueta("Precio de compra", Estilo.COMPRA));
-            lore.add(Estilo.valor(Estilo.dinero(art.compra())));
+            if (oferta != null) {
+                int pc = (int) Math.round((1 - oferta.factor()) * 100);
+                /* Con la referencia al lado: un -52% no dice nada a quien no se
+                 * sepa el catalogo de memoria. */
+                lore.add(Estilo.valor(Estilo.dinero(efectiva))
+                        .append(Estilo.texto("   antes " + Estilo.dinero(art.compra()), Estilo.APAGADO)));
+                lore.add(Estilo.texto("   " + pc + "% mas barato", Estilo.ACCION_COMPRA));
+            } else {
+                lore.add(Estilo.valor(Estilo.dinero(efectiva)));
+            }
         }
 
         int llevas = 0;
         if (art.seVende()) {
-            Mercado mercado = modulo.mercado();
-            double efectiva = mercado != null ? mercado.ventaEfectiva(art, art.compra()) : art.venta();
-            int caida = mercado != null ? mercado.caidaPorCiento(art) : 0;
+            double efectiva = motor != null ? motor.ventaEfectiva(art) : art.venta();
+            int caida = modulo.mercado() != null ? modulo.mercado().caidaPorCiento(art) : 0;
             lore.add(Estilo.etiqueta("Precio de venta", Estilo.VENTA));
-            /* Un precio que baja en silencio parece un bug: se dice cuanto y por que. */
-            lore.add(caida > 0
-                    ? Estilo.valor(Estilo.dinero(efectiva)).append(Estilo.texto("  -" + caida + "%", Estilo.ACCION_VENTA))
-                    : Estilo.valor(Estilo.dinero(efectiva)));
-            if (caida > 0) lore.add(Estilo.texto("   sobrevendido, se recupera solo", Estilo.APAGADO));
-            /* Lo que la tienda ACEPTA de lo que lleva encima, no lo que lleva:
-             * un MMOItems no cuenta, y verlo a 0 explica solo por que no se
-             * puede vender, sin tener que probarlo a ciegas. */
+            if (demanda != null) {
+                int pc = (int) Math.round((efectiva / art.venta() - 1) * 100);
+                lore.add(Estilo.valor(Estilo.dinero(efectiva))
+                        .append(Estilo.texto("   normal " + Estilo.dinero(art.venta()), Estilo.APAGADO)));
+                if (pc > 0) lore.add(Estilo.texto("   " + pc + "% mas de lo normal", Estilo.VENTA));
+            } else {
+                lore.add(Estilo.valor(Estilo.dinero(efectiva)));
+                if (caida > 0) lore.add(Estilo.texto("   -" + caida + "%, sobrevendido", Estilo.APAGADO));
+            }
+            /* Lo que la tienda ACEPTA de lo que lleva encima: un MMOItems no
+             * cuenta, y verlo a 0 explica solo por que no se puede vender. */
             llevas = Motor.contarLimpios(jugador.getInventory(), art.material());
             lore.add(Estilo.valor("Llevas " + llevas));
         }
@@ -217,6 +277,12 @@ public final class MenuTienda implements Listener {
                     ? Estilo.valor("Te quedan " + quedan)
                     : Estilo.texto(" " + Estilo.FLECHA + " Agotado, vuelve en "
                         + Motor.duracion(topes.esperaMs(jugador.getUniqueId(), art)), NamedTextColor.RED));
+        }
+
+        Rotacion.Trato trato = oferta != null ? oferta : demanda;
+        if (trato != null && rot != null) {
+            lore.add(Estilo.vacio());
+            lore.add(Estilo.texto("Quedan hoy " + rot.restanteHoy(trato) + " en el servidor", Estilo.APAGADO));
         }
 
         lore.add(Estilo.vacio());
@@ -253,7 +319,7 @@ public final class MenuTienda implements Listener {
         e.setCancelled(true);
 
         if (!(e.getWhoClicked() instanceof Player jugador)) return;
-        if (e.getClickedInventory() != e.getInventory()) return;   // clic en su propio inventario
+        if (e.getClickedInventory() != e.getInventory()) return;
         ItemStack pulsado = e.getCurrentItem();
         if (pulsado == null || pulsado.getType().isAir()) return;
 
@@ -268,14 +334,16 @@ public final class MenuTienda implements Listener {
 
         switch (e.getSlot()) {
             case RANURA_VOLVER -> { secciones.sonar(jugador, "volver"); abrirPrincipal(jugador); return; }
-            case RANURA_ANTERIOR -> { secciones.sonar(jugador, "cambiar-pagina"); abrirCategoria(jugador, vista.categoria, vista.pagina - 1); return; }
-            case RANURA_SIGUIENTE -> { secciones.sonar(jugador, "cambiar-pagina"); abrirCategoria(jugador, vista.categoria, vista.pagina + 1); return; }
+            case RANURA_ANTERIOR -> { secciones.sonar(jugador, "cambiar-pagina");
+                                      abrirCategoria(jugador, vista.categoria, vista.pagina - 1); return; }
+            case RANURA_SIGUIENTE -> { secciones.sonar(jugador, "cambiar-pagina");
+                                       abrirCategoria(jugador, vista.categoria, vista.pagina + 1); return; }
             default -> { /* es un articulo */ }
         }
-        if (e.getSlot() >= POR_PAGINA) return;
 
+        Integer indice = vista.ranuraAIndice.get(e.getSlot());
+        if (indice == null) return;
         List<Catalogo.Articulo> items = articulosDe(vista.categoria);
-        int indice = vista.pagina * POR_PAGINA + e.getSlot();
         if (indice >= items.size()) return;
         Catalogo.Articulo art = items.get(indice);
 
@@ -302,42 +370,25 @@ public final class MenuTienda implements Listener {
 
     // --------------------------------------------------------------- adornos
 
-    private static ItemStack decorarCon(ItemStack pila, Component titulo, List<Component> lore) {
-        ItemMeta meta = pila.getItemMeta();
-        if (meta != null) {
-            meta.displayName(titulo.decoration(TextDecoration.ITALIC, false));
-            if (!lore.isEmpty()) meta.lore(lore);
-            meta.addItemFlags(ItemFlag.values());
-            pila.setItemMeta(meta);
-        }
-        return pila;
-    }
-
     private static ItemStack pieza(Material material, String titulo, List<Component> lore) {
         return decorar(new ItemStack(material), titulo, lore);
     }
 
     private static ItemStack decorar(ItemStack pila, String titulo, List<Component> lore) {
+        return decorarCon(pila, Estilo.texto(titulo, Estilo.CLARO), lore);
+    }
+
+    private static ItemStack decorarCon(ItemStack pila, Component titulo, List<Component> lore) {
         ItemMeta meta = pila.getItemMeta();
         if (meta != null) {
-            meta.displayName(Estilo.texto(titulo, Estilo.CLARO));
+            meta.displayName(titulo.decoration(TextDecoration.ITALIC, false));
             if (!lore.isEmpty()) meta.lore(lore);
             /* Fuera la etiqueta que pone Minecraft sola (daño, velocidad de
-             * ataque, encantamientos...): en un icono de tienda es ruido y
-             * empuja el precio fuera de la vista. values() lo cubre todo y no
-             * hay que revisarlo cuando salga una version nueva. */
+             * ataque...): en un icono de tienda es ruido. */
             meta.addItemFlags(ItemFlag.values());
             pila.setItemMeta(meta);
         }
         return pila;
-    }
-
-    private static Component gris(String t) {
-        return Component.text(t, NamedTextColor.GRAY).decoration(TextDecoration.ITALIC, false);
-    }
-
-    private static Component verde(String t) {
-        return Component.text(t, NamedTextColor.GREEN).decoration(TextDecoration.ITALIC, false);
     }
 
     private static String bonito(String crudo) {
