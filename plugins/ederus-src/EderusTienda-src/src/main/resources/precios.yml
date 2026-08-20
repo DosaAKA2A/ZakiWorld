@@ -1,0 +1,53 @@
+# ---------------------------------------------------------------------------
+# MUESTRA PARA PROBAR. No son los precios de Ederus.
+#
+# El fichero bueno lo genera scripts/migrar-esgui.js a partir de los YAML de
+# EconomyShopGUI-Premium. Este solo existe para que el plugin arranque en el
+# servidor de pruebas antes de tener la migracion.
+#
+#   compra:  lo que paga el jugador por una unidad. 0 = la tienda no lo vende.
+#   venta:   lo que cobra el jugador por una unidad. 0 = la tienda no lo compra.
+#   tope:    unidades que puede vender por ventana. 0 = sin tope.
+#   ventana: 30m, 4h, 24h, 7d...
+#
+# Regla que el plugin comprueba al cargar y que aborta el arranque si se rompe:
+# ningun item puede venderse por igual o mas de lo que cuesta comprarlo, y un
+# material no puede estar en dos categorias.
+# ---------------------------------------------------------------------------
+categorias:
+  Minerales:
+    items:
+      DIAMOND:
+        compra: 700
+        venta: 150
+        tope: 128
+        ventana: 24h
+      IRON_INGOT:
+        compra: 350
+        venta: 40
+        tope: 80
+        ventana: 4h
+      COAL:
+        compra: 60
+        venta: 8
+        tope: 128
+        ventana: 4h
+  Cultivos:
+    items:
+      POTATO:
+        compra: 30
+        venta: 5
+        tope: 425
+        ventana: 4h
+      WHEAT:
+        compra: 30
+        venta: 5
+        tope: 425
+        ventana: 4h
+  Bloques:
+    items:
+      STONE:
+        compra: 75
+        venta: 0
+        tope: 0
+        ventana: 24h

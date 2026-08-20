@@ -1,0 +1,9 @@
+{
+  "name": "ederus-tienda-scripts",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Migracion de precios de EconomyShopGUI a EderusTienda",
+  "dependencies": {
+    "js-yaml": "^5.3.0"
+  }
+}

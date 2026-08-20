@@ -1,1 +1,3 @@
 plugins/edm-src/target/
+plugins/ederus-src/*/target/
+plugins/ederus-src/*/scripts/node_modules/

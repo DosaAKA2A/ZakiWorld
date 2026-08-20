@@ -1,0 +1,11 @@
+name: EconomiaPruebas
+version: 0.1.0
+main: com.ederus.pruebas.EconomiaPruebas
+api-version: '1.21'
+description: SOLO PRUEBAS - economia de Vault de mentira, con interruptor de fallo
+authors: [Ederus]
+depend: [Vault]
+commands:
+  banco:
+    description: Manejar la economia de pruebas
+    usage: /banco <dar|ver|romper>

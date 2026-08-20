@@ -1,0 +1,2 @@
+# Cada cuanto se vuelcan los topes a disco (segundos, minimo 30).
+guardado-segundos: 120
