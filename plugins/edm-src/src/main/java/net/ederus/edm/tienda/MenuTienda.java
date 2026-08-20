@@ -236,6 +236,10 @@ public final class MenuTienda implements Listener {
 
     /** Un articulo con su precio, sus topes y lo que se puede hacer con el. */
     private ItemStack pintar(Catalogo.Articulo art, Player jugador) {
+        /* Si el articulo trae su lore escrito a mano (los spawners lo traen),
+         * manda el suyo: es lo que le da la ficha de tienda de verdad en vez de
+         * una lista de precios. Solo se le añade lo que cambia sobre la marcha. */
+        if (art.tieneLore()) return pintarConSuLore(art, jugador);
         List<Component> lore = new ArrayList<>();
         Motor motor = modulo.motor();
         Rotacion rot = modulo.rotacion();
@@ -310,6 +314,41 @@ public final class MenuTienda implements Listener {
         ItemStack icono = Motor.construir(art, 1);
         if (icono == null) icono = new ItemStack(art.material());
         return decorar(icono, Motor.nombre(art), lore);
+    }
+
+    /** Ficha de un articulo que trae su propio lore en precios.yml. */
+    private ItemStack pintarConSuLore(Catalogo.Articulo art, Player jugador) {
+        List<Component> lore = new ArrayList<>();
+        for (String l : art.lore()) lore.add(Estilo.legado(l));
+
+        Motor motor = modulo.motor();
+        Rotacion rot = modulo.rotacion();
+        Rotacion.Trato oferta = rot == null ? null : rot.oferta(art.clave());
+        if (oferta != null && motor != null) {
+            lore.add(Estilo.vacio());
+            lore.add(Estilo.texto("En oferta: " + Estilo.dinero(motor.compraEfectiva(art))
+                    + "  (" + Math.round((1 - oferta.factor()) * 100) + "% menos)", Estilo.ACCION_COMPRA));
+        }
+        if (art.tieneLimiteJugador() && motor != null && motor.compras() != null) {
+            lore.add(Estilo.vacio());
+            lore.add(Estilo.texto("Te quedan " + motor.compras().restante(jugador.getUniqueId(), art)
+                    + " de " + art.limiteJugador(), Estilo.CLARO));
+        }
+        if (art.pideePermiso() && !jugador.hasPermission(art.permiso())) {
+            lore.add(Estilo.vacio());
+            lore.add(Estilo.texto("No cumples el requisito", NamedTextColor.RED));
+        }
+        lore.add(Estilo.vacio());
+        lore.add(Estilo.accion("Click para comprar 1", Estilo.ACCION_COMPRA));
+
+        ItemStack icono = Motor.construir(art, 1);
+        if (icono == null) icono = new ItemStack(art.material());
+        return decorarCon(icono, Estilo.legado(nombrePropio(art)), lore);
+    }
+
+    /** El displayname del fichero si lo hubiera; si no, el nombre normal. */
+    private static String nombrePropio(Catalogo.Articulo art) {
+        return Motor.nombre(art);
     }
 
     // --------------------------------------------------------------- clics

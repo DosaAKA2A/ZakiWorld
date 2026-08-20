@@ -24,6 +24,7 @@ public final class TiendaPlugin extends Module {
     private MenuTienda menu;
     private final Secciones secciones = new Secciones();
     private Rotacion rotacion;
+    private Compras compras;
     private Mercado mercado;
     private Economy economia;
     private BukkitTask tareaGuardado;
@@ -50,6 +51,8 @@ public final class TiendaPlugin extends Module {
         mercado.configurar(getConfig().getConfigurationSection("mercado"));
         mercado.cargar();
         registro = new Registro(new File(getDataFolder(), "registro"));
+        compras = new Compras(new File(getDataFolder(), "compras.yml"));
+        compras.cargar();
 
         migrar("secciones.yml", SECCIONES_VERSION);
         secciones.cargar(new File(getDataFolder(), "secciones.yml"));
@@ -62,7 +65,7 @@ public final class TiendaPlugin extends Module {
         ComandoTienda comando = new ComandoTienda(this, catalogo, topes);
         /* Como el resto de modulos: el plugin que ve Bukkit es EDM, asi que hay
          * que registrarse como ejecutor a mano o /etienda solo imprime su uso. */
-        for (String nombre : new String[]{"etienda", "shop"}) {
+        for (String nombre : new String[]{"etienda", "shop", "sellall"}) {
             var cmd = core.getCommand(nombre);
             if (cmd != null) {
                 cmd.setExecutor(comando);
@@ -89,6 +92,7 @@ public final class TiendaPlugin extends Module {
             }
             motor = new Motor(catalogo, topes, registro, economia, mercado);
             motor.rotacion(rotacion);
+            motor.compras(compras);
             getLogger().info("Economia enganchada: " + economia.getName());
         });
 
@@ -101,6 +105,7 @@ public final class TiendaPlugin extends Module {
              * el servidor estaba apagado a esa hora, igual rota al arrancar. */
             rotacion.alDia(catalogo);
             rotacion.guardar();
+            compras.guardar();
         }, cada, cada);
 
         getLogger().info("Tienda activa | " + catalogo.total() + " articulos en "
@@ -114,6 +119,7 @@ public final class TiendaPlugin extends Module {
         if (topes != null) topes.guardar();
         if (mercado != null) mercado.guardar();
         if (rotacion != null) rotacion.guardar();
+        if (compras != null) compras.guardar();
         if (registro != null) registro.cerrar();
     }
 

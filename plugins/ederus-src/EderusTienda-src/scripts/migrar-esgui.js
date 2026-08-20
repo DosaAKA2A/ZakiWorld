@@ -68,9 +68,37 @@ for (const fichero of ficheros) {
   let metidos = 0;
   for (const { ruta, nodo } of hallados) {
     const material = String(nodo.material).toUpperCase().split(':')[0].trim();
-    const compra = numero(nodo.buy);
+
+    /* Premium tiene DOS formas de poner el precio de compra: el 'buy:' de toda
+     * la vida y un 'buy-prices:' con lista de monedas ('VAULT::300000'). Los 4
+     * spawners de combate usan la segunda, y mirar solo la primera los dejaba
+     * fuera del catalogo sin que nadie se enterara. */
+    let compra = numero(nodo.buy);
+    if (!compra && nodo['buy-prices'] && Array.isArray(nodo['buy-prices'].prices)) {
+      for (const p of nodo['buy-prices'].prices) {
+        const m = /^VAULT::([0-9.]+)/i.exec(String(p).trim());
+        if (m) { compra = numero(m[1]); break; }
+      }
+      if (!compra) {
+        avisos.push('MONEDA NO SOPORTADA ' + material + ' (' + categoria + '.' + ruta + '): '
+          + JSON.stringify(nodo['buy-prices'].prices) + ' -- solo se entiende VAULT');
+        continue;
+      }
+    }
     const venta = numero(nodo.sell);
     if (!compra && !venta) continue;
+
+    /* Lo que hace que la ficha se vea como la suya y no como una lista de
+     * precios: el lore escrito a mano, el tope de por vida y el permiso. */
+    const loreItem = Array.isArray(nodo.lore) ? nodo.lore.slice() : null;
+    const limiteJugador = parseInt(nodo['stock-limit-player'], 10) || 0;
+    let permiso = null, mensajePermiso = null;
+    if (Array.isArray(nodo.requirements)) {
+      for (const r of nodo.requirements) {
+        const m = /^PERMISSION::([^:]+)::?(.*)$/.exec(String(r));
+        if (m) { permiso = m[1]; mensajePermiso = m[2] || null; break; }
+      }
+    }
 
     if (venta && compra && venta >= compra) {
       avisos.push('BUCLE ' + material + ' (' + categoria + '.' + ruta + '): venta ' + venta + ' >= compra ' + compra);
@@ -121,7 +149,11 @@ for (const fichero of ficheros) {
       compra,
       venta,
       tope: parseInt(nodo['sell-limit-player'], 10) || 0,
-      ventana: String(nodo['auto-restock-player-sell'] || '24h').trim()
+      ventana: String(nodo['auto-restock-player-sell'] || '24h').trim(),
+      lore: loreItem,
+      limiteJugador,
+      permiso,
+      mensajePermiso
     });
     metidos++;
   }
@@ -161,6 +193,15 @@ for (const [categoria, items] of porCategoria) {
     lineas.push('        venta: ' + d.venta);
     lineas.push('        tope: ' + d.tope);
     lineas.push('        ventana: ' + d.ventana);
+    if (d.limiteJugador) lineas.push('        limite-jugador: ' + d.limiteJugador);
+    if (d.permiso) {
+      lineas.push('        permiso: ' + d.permiso);
+      if (d.mensajePermiso) lineas.push('        mensaje-permiso: ' + JSON.stringify(d.mensajePermiso));
+    }
+    if (d.lore && d.lore.length) {
+      lineas.push('        lore:');
+      d.lore.forEach(l => lineas.push('        - ' + JSON.stringify(String(l))));
+    }
   }
 }
 fs.writeFileSync(salida, lineas.join('\n') + '\n', 'utf8');

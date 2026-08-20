@@ -71,6 +71,17 @@ public final class Estilo {
         return texto(FLECHA + " ", APAGADO).append(texto(t, color));
     }
 
+    /** Los codigos & de sus ficheros (incluido el &x&R&R&G&G&B&B de Spigot). */
+    public static final net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer LEGADO =
+            net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer.builder()
+                    .character('&').hexCharacter('#').hexColors()
+                    .useUnusualXRepeatedCharacterHexFormat().build();
+
+    public static Component legado(String s) {
+        return LEGADO.deserialize(s == null ? "" : s)
+                .decoration(TextDecoration.ITALIC, false);
+    }
+
     /** El simbolo y el formato de moneda son los de su config: '#,##0.00'. */
     public static String dinero(double d) {
         return "$" + String.format(java.util.Locale.US, "%,.2f", d);

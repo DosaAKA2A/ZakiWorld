@@ -40,6 +40,7 @@ public final class Motor {
     private final Economy economia;
     private final Mercado mercado;
     private Rotacion rotacion;
+    private Compras compras;
 
     public Motor(Catalogo catalogo, Topes topes, Registro registro, Economy economia, Mercado mercado) {
         this.catalogo = catalogo;
@@ -55,6 +56,8 @@ public final class Motor {
     public double saldo(Player jugador) { return economia.getBalance(jugador); }
 
     public void rotacion(Rotacion r) { this.rotacion = r; }
+    public void compras(Compras c) { this.compras = c; }
+    public Compras compras() { return compras; }
     public Rotacion rotacion() { return rotacion; }
 
     /** Lo que cuesta comprar una unidad ahora mismo, con la oferta del dia. */
@@ -260,6 +263,27 @@ public final class Motor {
         if (!art.seCompra()) return Resultado.no("La tienda no vende " + nombre(art) + ".");
         if (pedido <= 0) return Resultado.no("La cantidad tiene que ser mayor que cero.");
 
+        /* El permiso y su mensaje vienen del propio articulo: los spawners de
+         * combate piden group.level5 y traen escrito que decir si no lo tienes. */
+        if (art.pideePermiso() && !jugador.hasPermission(art.permiso())) {
+            String m = art.mensajePermiso();
+            return Resultado.no(m != null && !m.isBlank()
+                    ? net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer.plainText()
+                        .serialize(Estilo.legado(m))
+                    : "No tienes permiso para comprar " + nombre(art) + ".");
+        }
+
+        /* Limite DE POR VIDA, no por dia: 'Limite personal: 6' son seis en toda
+         * la partida, que es lo que significa en su tienda. */
+        if (compras != null && art.tieneLimiteJugador()) {
+            int puede = compras.restante(jugador.getUniqueId(), art);
+            if (puede <= 0) {
+                return Resultado.no("Ya tienes el maximo de " + nombre(art)
+                        + " (" + art.limiteJugador() + ").");
+            }
+            pedido = Math.min(pedido, puede);
+        }
+
         /* Se comprueba ANTES de cobrar que se puede construir: mejor no vender
          * que cobrar 75.000 por un spawner vacio. */
         if (construir(art, 1) == null) {
@@ -299,11 +323,41 @@ public final class Motor {
         }
 
         if (rotacion != null && rotacion.oferta(art.clave()) != null) rotacion.anotar(art.clave(), cantidad);
+        if (compras != null) compras.anotar(jugador.getUniqueId(), art, cantidad);
         registro.anotar("COMPRA", jugador.getName(), cantidad, art.clave(),
                 compraEfectiva(art), coste, economia.getBalance(jugador));
 
         return new Resultado(true, "Compraste " + cantidad + " x " + nombre(art)
                 + " por " + fmt(coste), cantidad, coste);
+    }
+
+    /**
+     * Vende TODO lo vendible que lleve encima. Es el /sellall de siempre: la
+     * gente lo usa a diario y sin el la tienda se siente un paso atras.
+     * Va item a item por el camino normal, asi que respeta el precio dinamico,
+     * el recorte contra la compra y el registro.
+     */
+    public Resultado venderTodo(Player jugador) {
+        java.util.Set<Material> vistos = new java.util.LinkedHashSet<>();
+        for (ItemStack s : jugador.getInventory().getStorageContents()) {
+            if (s == null || s.getType().isAir()) continue;
+            Catalogo.Articulo a = catalogo.de(s.getType());
+            if (a != null && a.seVende() && esLimpio(s, s.getType())) vistos.add(s.getType());
+        }
+        if (vistos.isEmpty()) return Resultado.no("No llevas nada que la tienda compre.");
+
+        double total = 0;
+        int piezas = 0, tipos = 0;
+        for (Material m : vistos) {
+            Resultado r = vender(jugador, m, MAX_POR_OPERACION);
+            if (!r.ok()) continue;
+            total += r.total();
+            piezas += r.cantidad();
+            tipos++;
+        }
+        if (tipos == 0) return Resultado.no("No se pudo vender nada.");
+        return new Resultado(true, "Vendiste " + piezas + " objetos de " + tipos
+                + (tipos == 1 ? " tipo" : " tipos") + " por " + fmt(total), piezas, total);
     }
 
     // ------------------------------------------------------------------ varios

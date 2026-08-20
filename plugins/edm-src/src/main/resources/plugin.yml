@@ -10,6 +10,10 @@ commands:
   edm:
     description: Estado del nucleo de Ederus
     usage: /edm [reload]
+  sellall:
+    description: Vende todo lo vendible que lleves encima
+    usage: /sellall
+    aliases: [venderotodo]
   shop:
     description: Abre la tienda de Ederus
     usage: /shop
