@@ -202,7 +202,7 @@ public final class Motor {
     public static String duracion(long ms) {
         long s = ms / 1000;
         long h = s / 3600, m = (s % 3600) / 60;
-        if (h > 0) return h + "h " + m + "m";
+        if (h > 0) return m > 0 ? h + "h " + m + "m" : h + "h";
         if (m > 0) return m + "m";
         return Math.max(1, s) + "s";
     }
