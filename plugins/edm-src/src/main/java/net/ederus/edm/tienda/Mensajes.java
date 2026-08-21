@@ -1,5 +1,8 @@
 package net.ederus.edm.tienda;
 
+import net.ederus.edm.comun.Estilo;
+import net.ederus.edm.comun.Textos;
+
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.event.ClickEvent;
 import net.kyori.adventure.text.event.HoverEvent;
@@ -8,70 +11,30 @@ import org.bukkit.Bukkit;
 import org.bukkit.NamespacedKey;
 import org.bukkit.Registry;
 import org.bukkit.Sound;
-import org.bukkit.command.CommandSender;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.entity.Player;
 
-import java.io.File;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
-import java.util.Map;
 
 /**
  * Lo que la tienda dice por el chat.
  *
- * Todo sale de mensajes.yml para que se pueda reescribir sin recompilar, y con
- * un prefijo delante siguiendo el convenio del resto del servidor
- * (EDERUS », LAG »...). EconomyShopGUI no tiene prefijo propio en su fichero de
- * idioma: el convenio viene de los otros plugins, no de el.
+ * El grueso lo hace {@link Textos}: cargar el yml, el prefijo, los marcadores y
+ * el {sin-prefijo}. Aqui solo queda lo que es de la tienda y de nadie mas, el
+ * aviso de rotacion del mercado. EconomyShopGUI no tiene prefijo propio en su
+ * fichero de idioma: el convenio (EDERUS », LAG »...) viene de los otros
+ * plugins del servidor, no de el.
  */
-public final class Mensajes {
+public final class Mensajes extends Textos {
 
-    /** Marca una linea que debe salir SIN el prefijo. */
-    private static final String SIN_PREFIJO = "{sin-prefijo}";
-
-    private final Map<String, String> textos = new HashMap<>();
-    private String prefijo = "";
     private ConfigurationSection rotacion;
 
-    public void cargar(File fichero) {
-        textos.clear();
-        prefijo = "";
-        rotacion = null;
-        if (!fichero.exists()) return;
-
-        YamlConfiguration yml = YamlConfiguration.loadConfiguration(fichero);
-        prefijo = yml.getString("prefijo", "");
+    @Override
+    protected void alCargar(YamlConfiguration yml) {
         rotacion = yml.getConfigurationSection("rotacion");
-        for (String k : yml.getKeys(false)) {
-            if (yml.isString(k)) textos.put(k, yml.getString(k, ""));
-        }
-    }
-
-    /** El texto con sus marcadores puestos, ya con prefijo. */
-    public Component de(String clave, String respaldo, String... pares) {
-        String s = textos.getOrDefault(clave, respaldo);
-        if (s == null || s.isEmpty()) return Component.empty();
-        for (int i = 0; i + 1 < pares.length; i += 2) {
-            s = s.replace(pares[i], pares[i + 1] == null ? "" : pares[i + 1]);
-        }
-        boolean sinPrefijo = s.startsWith(SIN_PREFIJO);
-        if (sinPrefijo) s = s.substring(SIN_PREFIJO.length());
-        return Estilo.legado((sinPrefijo ? "" : prefijo) + s);
-    }
-
-    public void manda(CommandSender a, String clave, String respaldo, String... pares) {
-        Component c = de(clave, respaldo, pares);
-        if (!Component.empty().equals(c)) a.sendMessage(c);
-    }
-
-    /** Texto plano, para los sitios que aun devuelven String. */
-    public String plano(String clave, String respaldo, String... pares) {
-        return net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer.plainText()
-                .serialize(de(clave, respaldo, pares));
     }
 
     // ------------------------------------------------------ aviso de rotacion

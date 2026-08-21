@@ -1,4 +1,4 @@
-package net.ederus.edm.tienda;
+package net.ederus.edm.comun;
 
 import io.papermc.paper.event.player.AsyncChatEvent;
 import net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer;

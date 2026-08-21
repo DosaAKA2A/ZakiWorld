@@ -27,6 +27,7 @@ Dos cosas que el modulo NO delega, y son deliberadas:
 | `anomaly` | Jefes por fases y botin | `/anomaly` (`/anomalia`, `/anom`) |
 | `core` | Libros encantados y avisos de tiendas | `/main` (`/ederus`, `/edmain`), `/ederuslibro` |
 | `tienda` | Tienda propia: compra, venta, topes y registro | `/etienda` (`/etnd`) |
+| `coinflip` | Apuestas cara o cruz entre jugadores | `/cf` (`/coinflip`, `/apuesta`) |
 
 Se apagan por separado en `plugins/EDM/config.yml` (`modulos.<id>: false`). Si uno
 revienta al arrancar, se anota en consola y los otros siguen: antes eran tres plugins y
@@ -120,3 +121,39 @@ porque el evento de chat es asincrono.
 `rotacion.tope-diario-oferta` y `tope-diario-demanda` son el "Quedan hoy X en el
 mundo" del lore. **Desde la 1.3.0 un 0 lo quita** (antes el minimo era 1 y poner
 0 dejaba el articulo agotado desde el primer segundo, justo lo contrario).
+
+## El modulo `coinflip`
+
+Dos jugadores ponen lo mismo y la moneda decide. Convive con las apuestas de
+Duels sin tocarlas: aquello es PvP, esto es suerte.
+
+Las reglas del dinero, que son las que importan:
+
+1. **Se cobra al PONER la apuesta, no al resolverla.** Si se cobrara al final,
+   cualquiera podria apostar un millon, gastarselo y ganar sin haber puesto nada.
+2. **Si el pago al ganador falla, se devuelve a los dos.** Nadie gana, pero nadie
+   pierde, que es lo unico inaceptable.
+3. **La apuesta se marca como tomada ANTES de tocar el banco.** Dos clics en el
+   mismo tick sobre la misma mesa la aceptarian dos veces.
+4. **Lo abierto se devuelve al apagar Y al arrancar.** Lo de arrancar es por si
+   el servidor se cayo de mala manera: `mesa.yml` sobrevive a la caida y el
+   dinero vuelve solo. El fichero se vacia siempre, aunque algo falle, porque
+   dejarlo lleno lo devolveria otra vez en el siguiente arranque.
+5. **La animacion es teatro.** Cuando la moneda empieza a girar la jugada ya
+   esta sorteada y pagada. Los dos jugadores miran el MISMO inventario, asi que
+   ven lo mismo a la vez; con uno por cabeza se descoordinan un tick y el
+   perdedor jura que a el le salio otra cosa.
+6. El sorteo va con `SecureRandom`. Un `Random` normal se predice viendo unas
+   cuantas tiradas, y aqui cada tirada mueve dinero.
+
+Lo unico que crea o destruye dinero es **la comision** (5% del bote por
+omision): el resto solo cambia de dueño. Con comision el coinflip es un
+sumidero, que en un survival OP con inflacion es lo que interesa; a 0 queda
+neutro.
+
+`Mesa.leerCantidad` entiende `50000`, `50.000`, `50k` y `1.5m`. Existe porque en
+un servidor de millones nadie escribe los ceros, y un `1.000.000` leido como 1.0
+seria un desastre silencioso: la apuesta saldria, solo que de un euro.
+
+Cada jugada queda en `plugins/EDM/coinflip/registro/apuestas-<fecha>.log`. No es
+un extra: es la unica respuesta a "me ha robado el coinflip".

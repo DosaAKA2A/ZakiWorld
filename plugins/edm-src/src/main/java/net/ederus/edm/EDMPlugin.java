@@ -17,6 +17,8 @@ import org.bukkit.command.CommandSender;
 import org.bukkit.plugin.java.JavaPlugin;
 
 import net.ederus.edm.anomaly.AnomalyPlugin;
+import net.ederus.edm.coinflip.CoinflipPlugin;
+import net.ederus.edm.comun.EntradaChat;
 import net.ederus.edm.core.EderusMain;
 import net.ederus.edm.rip.RipPlugin;
 import net.ederus.edm.tienda.TiendaPlugin;
@@ -31,7 +33,7 @@ import net.ederus.edm.tienda.TiendaPlugin;
  */
 public final class EDMPlugin extends JavaPlugin {
 
-    public static final String VERSION = "1.3.0";
+    public static final String VERSION = "1.4.0";
 
     /* id del modulo -> carpeta del plugin viejo de la que se migran los datos */
     private static final Map<String, String> CARPETAS_VIEJAS = Map.of(
@@ -42,15 +44,24 @@ public final class EDMPlugin extends JavaPlugin {
     private final Map<String, Module> modulos = new LinkedHashMap<>();
     private final List<String> fallidos = new ArrayList<>();
 
+    /* Preguntar una linea por el chat lo necesitan la tienda (la cantidad
+     * exacta) y el coinflip (cuanto apuestas). Una sola instancia para todos:
+     * con una por modulo, dos preguntas al mismo jugador se pisarian. */
+    private EntradaChat chat;
+
     @Override
     public void onEnable() {
         saveDefaultConfig();
         migrarDatosAntiguos();
 
+        chat = new EntradaChat(this);
+        getServer().getPluginManager().registerEvents(chat, this);
+
         arrancar(new RipPlugin(this));
         arrancar(new AnomalyPlugin(this));
         arrancar(new EderusMain(this));
         arrancar(new TiendaPlugin(this));
+        arrancar(new CoinflipPlugin(this));
 
         registrarComando();
         banner();
@@ -64,7 +75,9 @@ public final class EDMPlugin extends JavaPlugin {
     }
 
     /* Alias comodos: la gente escribe el nombre del comando, no el id del modulo. */
-    private static final Map<String, String> ALIAS_MODULO = Map.of("shop", "tienda", "tienda", "tienda");
+    private static final Map<String, String> ALIAS_MODULO = Map.of(
+            "shop", "tienda", "tienda", "tienda",
+            "cf", "coinflip", "apuestas", "coinflip");
 
     @Override
     public boolean onCommand(CommandSender quien, Command cmd, String etiqueta, String[] args) {
@@ -166,6 +179,11 @@ public final class EDMPlugin extends JavaPlugin {
             getLogger().severe("El modulo " + id + " no arranco: " + t);
             t.printStackTrace();
         }
+    }
+
+    /** La entrada por chat compartida. Nunca es null despues de onEnable. */
+    public EntradaChat chat() {
+        return this.chat;
     }
 
     public Module modulo(String id) {

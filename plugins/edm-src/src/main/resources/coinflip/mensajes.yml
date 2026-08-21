@@ -1,0 +1,51 @@
+# ---------------------------------------------------------------------------
+# Todo lo que el coinflip le dice al jugador por el chat.
+#
+# Codigos de color: &7, &#RRGGBB y el &x&R&R&G&G&B&B de Spigot, los tres.
+#
+# El prefijo sigue el convenio del resto del servidor (EDERUS », MARKET »...).
+# Para que una linea salga SIN prefijo, empiezala con {sin-prefijo}.
+# ---------------------------------------------------------------------------
+version: 1
+
+prefijo: '&x&0&0&8&3&F&D&lCOINFLIP &8» &f'
+
+# El titulo del menu va sin prefijo: es el nombre de la ventana, no una frase.
+titulo-menu: '{sin-prefijo}&x&0&0&8&3&F&D&lCOINFLIP &8| &x&D&7&F&3&F&FMesas abiertas'
+
+# --- poner una apuesta ---
+# %cantidad% %id% %rival%
+pide-cantidad: '&fEscribe cuanto quieres apostar. &7Escribe cancelar para dejarlo.'
+creada: '&fApuesta de &#4FFF55%cantidad% &fpuesta. &7Numero %id%.'
+creada-reto: '&fRetaste a &x&D&7&F&3&F&F%rival% &fpor &#4FFF55%cantidad%'
+te-retaron: '&x&D&7&F&3&F&F%rival% &fte reto por &#4FFF55%cantidad%&f. &7Abrelo con /cf'
+cancelada: '&fApuesta cancelada. Se te devolvieron &#4FFF55%cantidad%'
+retiradas: '&fRetiraste &x&D&7&F&3&F&F%cuantas% &fapuestas y se te devolvieron &#4FFF55%total%'
+caducada: '&7Tu apuesta de %cantidad% caduco y se te devolvio.'
+
+# --- el resultado ---
+# %premio% %cantidad% %rival% %comision%
+ganaste: '&fGanaste &#4FFF55%premio% &fcontra &x&D&7&F&3&F&F%rival%'
+perdiste: '&fPerdiste &#FF5C5C%cantidad% &fcontra &x&D&7&F&3&F&F%rival%'
+anuncio-publico: '&x&D&7&F&3&F&F%ganador% &fle gano &#4FFF55%premio% &fa &x&D&7&F&3&F&F%perdedor% &7en el coinflip.'
+
+# --- cuando no se puede ---
+minima: '&#FF5C5CLa apuesta minima es %minima%&#FF5C5C.'
+maxima: '&#FF5C5CLa apuesta maxima es %maxima%&#FF5C5C.'
+demasiadas: '&#FF5C5CYa tienes %cuantas% apuestas abiertas. &7Retira alguna con /cf cancelar.'
+espera: '&#FF5C5CEspera %segundos%s antes de poner otra.'
+sin-dinero: '&#FF5C5CTe faltan %falta%&#FF5C5C.'
+cantidad-mala: '&#FF5C5CEso no es una cantidad&8: &7%texto%'
+contra-ti: '&#FF5C5CNo puedes apostar contra ti mismo.'
+no-esta: '&#FF5C5CEsa apuesta ya no esta en la mesa.'
+no-es-tuya: '&#FF5C5CEsa apuesta no es tuya.'
+no-es-tu-reto: '&#FF5C5CEse reto no es para ti.'
+ya-tomada: '&#FF5C5CEsa apuesta ya la esta cogiendo alguien.'
+no-tienes: '&7No tienes ninguna apuesta puesta.'
+rival-fuera: '&#FF5C5C%rival% ya no esta conectado.'
+no-esta-conectado: '&#FF5C5C%rival% no esta conectado.'
+retos-apagados: '&#FF5C5CLos retos estan desactivados.'
+sin-permiso: '&#FF5C5CNo puedes usar las apuestas.'
+no-listo: '&#FF5C5CLas apuestas todavia estan arrancando. Prueba en un momento.'
+banco-fallo: '&#FF5C5CEl banco rechazo la operacion&8: &7%motivo%'
+pago-fallo: '&#FF5C5CNo se pudo pagar el bote. Se os devolvio a los dos.'

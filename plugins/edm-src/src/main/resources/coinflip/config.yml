@@ -1,0 +1,64 @@
+# ---------------------------------------------------------------------------
+# COINFLIP: dos jugadores ponen lo mismo y la moneda decide.
+#
+# NO borres la linea version: el plugin la usa para poner al dia tu fichero
+# cuando cambia el formato, guardando el tuyo al lado.
+# ---------------------------------------------------------------------------
+version: 1
+
+apuestas:
+  # Los topes de una apuesta. Se parecen a los de Duels a proposito, que es el
+  # otro sitio del servidor donde ya se apuesta dinero.
+  apuesta-minima: 1000
+  apuesta-maxima: 10000000
+
+  # LO QUE SE QUEDA LA CASA, en % del bote (los dos, no de lo que puso uno).
+  #
+  # Es lo unico que destruye dinero aqui: el resto solo cambia de dueño. Con un
+  # 5%, dos jugadores que se pasen el dia apostando entre ellos van perdiendo
+  # dinero poco a poco, asi que el coinflip es un SUMIDERO y no una fabrica.
+  # Ponerlo a 0 lo deja neutro: ni crea ni destruye.
+  comision: 5
+
+  # Cuantas puede tener puestas a la vez el mismo jugador. Sin esto, uno solo
+  # llena la mesa de mesas de 1.000 y no se ve nada mas.
+  maximo-abiertas: 3
+
+  # Segundos entre una apuesta y la siguiente del mismo jugador.
+  espera-segundos: 5
+
+  # Una apuesta que nadie coge se cancela sola y se devuelve el dinero.
+  # 0 = no caducan nunca (no recomendado: se acumulan).
+  caducidad-minutos: 30
+
+  # Al desconectarse, sus apuestas se le devuelven. Conviene dejarlo en true:
+  # hacen falta los dos conectados para ver la moneda, asi que una mesa cuyo
+  # dueño no esta solo sirve para que otro se lleve un "ya no esta conectado".
+  cancelar-al-salir: true
+
+  retos:
+    # /cf retar <jugador> <cantidad>. Con esto en false solo hay mesa abierta.
+    activos: true
+
+# ---------------------------------------------------------------------------
+# LA ANIMACION de la moneda.
+#
+# Es teatro: cuando empieza, la jugada ya esta sorteada y pagada. Se hace asi
+# para que un reinicio a mitad de la moneda no deje el bote sin dueño.
+#
+# Los dos jugadores miran la MISMA ventana, asi que ven lo mismo a la vez.
+# ---------------------------------------------------------------------------
+animacion:
+  activa: true
+
+  # Cuantas veces cambia de cara antes de parar, y cada cuantos ticks.
+  # 16 x 3 = 48 ticks, unos 2,4 segundos.
+  vueltas: 16
+  ticks-por-vuelta: 3
+
+  # Lo que se queda enseñando al ganador antes de cerrarse sola.
+  ticks-antes-de-cerrar: 45
+
+# Avisar al servidor entero cuando alguien gana a partir de esta cantidad.
+# 0 = no anunciar nunca.
+anuncio-publico-desde: 0

@@ -1,5 +1,7 @@
 package net.ederus.edm.tienda;
 
+import net.ederus.edm.comun.Estilo;
+
 import org.bukkit.Material;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;

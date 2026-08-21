@@ -1,5 +1,7 @@
 package net.ederus.edm.tienda;
 
+import net.ederus.edm.comun.Estilo;
+
 import net.milkbowl.vault.economy.Economy;
 import net.milkbowl.vault.economy.EconomyResponse;
 import org.bukkit.Material;

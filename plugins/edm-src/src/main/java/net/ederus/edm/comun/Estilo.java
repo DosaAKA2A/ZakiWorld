@@ -1,4 +1,4 @@
-package net.ederus.edm.tienda;
+package net.ederus.edm.comun;
 
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;

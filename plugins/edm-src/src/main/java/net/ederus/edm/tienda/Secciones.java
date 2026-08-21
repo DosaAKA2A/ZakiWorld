@@ -1,5 +1,7 @@
 package net.ederus.edm.tienda;
 
+import net.ederus.edm.comun.Estilo;
+
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
 import net.kyori.adventure.text.format.TextColor;

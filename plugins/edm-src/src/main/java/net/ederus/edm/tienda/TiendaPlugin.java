@@ -1,5 +1,7 @@
 package net.ederus.edm.tienda;
 
+import net.ederus.edm.comun.EntradaChat;
+
 import net.ederus.edm.EDMPlugin;
 import net.ederus.edm.Module;
 import net.milkbowl.vault.economy.Economy;
@@ -70,8 +72,7 @@ public final class TiendaPlugin extends Module {
         /* La pantalla de cantidad y el buscador comparten la entrada por chat:
          * los dos necesitan una linea del jugador y no hay dos preguntas a la
          * vez para la misma persona. */
-        chat = new EntradaChat(core);
-        core.getServer().getPluginManager().registerEvents(chat, this);
+        chat = core.chat();
         pantalla = new PantallaCantidad(this, secciones, chat);
         core.getServer().getPluginManager().registerEvents(pantalla, this);
         menu.enlazar(pantalla, chat);

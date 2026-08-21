@@ -1,5 +1,8 @@
 package net.ederus.edm.tienda;
 
+import net.ederus.edm.comun.EntradaChat;
+import net.ederus.edm.comun.Estilo;
+
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.TextDecoration;
 import org.bukkit.Bukkit;
