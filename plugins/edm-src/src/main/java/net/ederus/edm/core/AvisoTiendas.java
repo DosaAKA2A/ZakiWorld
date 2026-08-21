@@ -9,14 +9,9 @@ import org.bukkit.entity.Player;
 import org.bukkit.scheduler.BukkitTask;
 
 import java.io.IOException;
-import java.net.URI;
-import java.net.http.HttpClient;
-import java.net.http.HttpRequest;
-import java.net.http.HttpResponse;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.time.Duration;
 import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -180,50 +175,12 @@ public final class AvisoTiendas {
         return s == null ? "" : ChatColor.translateAlternateColorCodes('&', s);
     }
 
-    /* UNO para todo el plugin. Cada HttpClient se lleva su hilo selector y su
-     * pool, y no se cierran solos: crear uno por aviso iba dejando hilos atras. */
-    private static volatile HttpClient cliente;
-
-    private static HttpClient cliente() {
-        HttpClient c = cliente;
-        if (c == null) {
-            synchronized (AvisoTiendas.class) {
-                c = cliente;
-                if (c == null) {
-                    c = HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(10)).build();
-                    cliente = c;
-                }
-            }
-        }
-        return c;
-    }
-
     /** Aviso opcional a Discord. Si no hay URL configurada, no hace nada. */
     private void enviarWebhook(String queTienda) {
         String url = plugin.getConfig().getString("tiendas.webhook", "");
-        if (url == null || url.isBlank()) return;
-
         String texto = plugin.getConfig().getString("tiendas.webhook-texto",
                 "Se ha renovado la tienda de MobCoins: %tienda%").replace("%tienda%", queTienda);
-        String cuerpo = "{\"content\":\"" + escapar(texto) + "\"}";
-
-        try {
-            HttpRequest peticion = HttpRequest.newBuilder(URI.create(url))
-                    .timeout(Duration.ofSeconds(10))
-                    .header("Content-Type", "application/json")
-                    .POST(HttpRequest.BodyPublishers.ofString(cuerpo, StandardCharsets.UTF_8))
-                    .build();
-            cliente().sendAsync(peticion, HttpResponse.BodyHandlers.discarding())
-                    .exceptionally(e -> {
-                        plugin.getLogger().warning("No se pudo avisar a Discord: " + e.getMessage());
-                        return null;
-                    });
-        } catch (IllegalArgumentException e) {
-            plugin.getLogger().warning("La URL del webhook no es valida: " + url);
-        }
+        net.ederus.edm.comun.Webhook.texto(url, texto, plugin.getLogger());
     }
 
-    private static String escapar(String s) {
-        return s.replace("\\", "\\\\").replace("\"", "\\\"").replace("\n", "\\n");
-    }
 }

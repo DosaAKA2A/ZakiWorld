@@ -7,7 +7,7 @@
 # Se pega delante de cada linea; si dejas 'prefijo' vacio, no se pone nada.
 # Para que una linea suelta salga SIN prefijo, empiezala con {sin-prefijo}.
 # ---------------------------------------------------------------------------
-version: 3
+version: 4
 
 prefijo: '&x&0&0&8&3&F&D&lMARKET &8» &f'
 
@@ -53,6 +53,27 @@ tienda-no-lista: '&#FF5C5CLa tienda todavía está arrancando. Prueba en un mome
 # ---------------------------------------------------------------------------
 rotacion:
   activo: true
+
+  # ---------------------------------------------------------------------------
+  # AVISO A DISCORD (opcional).
+  #
+  # Pega aqui la URL del webhook del canal y el Mercado avisara ahi cada vez que
+  # rote, con la lista de ofertas y demandas del dia. Vacio = apagado.
+  #
+  # La URL es una CREDENCIAL: quien la tenga puede publicar en ese canal. No se
+  # escribe nunca en la consola ni en los logs, y este fichero no deberia acabar
+  # en un repositorio publico.
+  #
+  # El aviso NUNCA frena al servidor: se manda por su cuenta y si Discord no
+  # responde, se pierde ese aviso y ya. Para probarlo sin esperar a medianoche:
+  # /etienda webhook
+  # ---------------------------------------------------------------------------
+  webhook: ''
+  webhook-titulo: 'El Mercado se renovó'
+  webhook-texto: 'Las ofertas y la demanda del día han cambiado.'
+  webhook-pie: 'Vuelve a cambiar a medianoche · /shop'
+  # Cuantos articulos se listan de cada seccion antes de resumir con "y N mas".
+  webhook-cuantos: 10
   sonido: 'block.note_block.pling'
   boton-texto: '&x&0&0&8&3&F&D&lA&x&2&2&9&5&F&D&lB&x&4&4&A&7&F&D&lR&x&6&6&B&9&F&D&lI&x&8&8&C&B&F&D&lR &x&A&A&D&D&F&D&lT&x&C&C&E&F&F&D&lI&x&D&7&F&3&F&F&lE&x&D&7&F&3&F&F&lN&x&D&7&F&3&F&F&lD&x&D&7&F&3&F&F&lA'
   boton-comando: '/shop'

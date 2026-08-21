@@ -48,7 +48,16 @@ public final class Mensajes extends Textos {
      * tiendas de MobCoins del modulo core: bloque de chat con su raya, el
      * titulo centrado y un boton pinchable.
      */
-    public void anunciarRotacion() {
+    public void anunciarRotacion(Rotacion rot, Catalogo catalogo) {
+        /* 'activo: false' apaga el aviso ENTERO, chat y Discord. El
+         * /etienda webhook llama a aDiscord por su cuenta y si sale, porque es
+         * una prueba a mano y ahi manda quien la pide. */
+        if (!avisoActivo()) return;
+        porChat();
+        aDiscord(rot, catalogo);
+    }
+
+    private void porChat() {
         if (!avisoActivo()) return;
 
         List<String> lineas = rotacion.getStringList("chat");
@@ -88,4 +97,68 @@ public final class Mensajes extends Textos {
         }
         bloque.forEach(Bukkit.getConsoleSender()::sendMessage);
     }
+
+    // ------------------------------------------------------------------ discord
+
+    /** La URL del canal, o vacio si no se ha puesto ninguna. */
+    public String webhook() {
+        return rotacion == null ? "" : rotacion.getString("webhook", "");
+    }
+
+    public boolean hayWebhook() {
+        return net.ederus.edm.comun.Webhook.configurada(webhook());
+    }
+
+    /**
+     * Manda a Discord lo que le toco hoy al Mercado.
+     *
+     * No es el mismo texto que el del chat: alli hay codigos de color y un
+     * bloque centrado a pixel que en Discord no significa nada. Aqui va la
+     * lista de verdad, que es lo que la gente quiere ver desde el movil.
+     */
+    public void aDiscord(Rotacion rot, Catalogo catalogo) {
+        String url = webhook();
+        if (!net.ederus.edm.comun.Webhook.configurada(url)) return;
+
+        List<String> partes = new ArrayList<>();
+        String intro = rotacion.getString("webhook-texto", "Las ofertas y la demanda del día han cambiado.");
+        if (intro != null && !intro.isBlank()) { partes.add(intro); partes.add(""); }
+
+        int tope = Math.max(1, rotacion.getInt("webhook-cuantos", 10));
+        pinta(partes, "**Ofertas del día** — más baratas al comprar",
+                rot == null ? List.of() : rot.ofertas(), catalogo, tope, true);
+        pinta(partes, "**Demanda del día** — se paga más al vender",
+                rot == null ? List.of() : rot.demandas(), catalogo, tope, false);
+
+        net.ederus.edm.comun.Webhook.aviso(url,
+                rotacion.getString("webhook-titulo", "El Mercado se renovó"),
+                net.ederus.edm.comun.Webhook.lineas(partes),
+                0x0083FD,
+                rotacion.getString("webhook-pie", "Vuelve a cambiar a medianoche · /shop"),
+                registro);
+    }
+
+    private static void pinta(List<String> partes, String titulo, List<Rotacion.Trato> tratos,
+                              Catalogo catalogo, int tope, boolean descuento) {
+        if (tratos.isEmpty()) return;
+        partes.add(titulo);
+        int puestos = 0;
+        for (Rotacion.Trato t : tratos) {
+            Catalogo.Articulo a = catalogo == null ? null : catalogo.de(t.clave());
+            if (a == null) continue;
+            if (puestos >= tope) {
+                partes.add("· y " + (tratos.size() - puestos) + " más");
+                break;
+            }
+            int pc = (int) Math.round(Math.abs(1 - t.factor()) * 100);
+            partes.add("· " + Motor.nombre(a) + "  " + (descuento ? "−" : "+") + pc + "%");
+            puestos++;
+        }
+        partes.add("");
+    }
+
+    /** Para que los fallos de Discord salgan en la consola del servidor. */
+    private java.util.logging.Logger registro;
+
+    public void registro(java.util.logging.Logger log) { this.registro = log; }
 }

@@ -55,7 +55,7 @@ public final class Mercado {
     private long recuperacionMs = 6L * 3600_000L;
     /** Pase lo que pase, a las tantas horas de la ultima venta el precio esta
      *  como nuevo. 0 = sin tope (el olvido de siempre, que nunca llega a cero). */
-    private long olvidoTotalMs = 28L * 3600_000L;
+    private long olvidoTotalMs = 24L * 3600_000L;
     private double presupuesto = 300_000d;
     private double margenVentaCompra = 0.60;
     private volatile boolean sucio;
@@ -67,7 +67,7 @@ public final class Mercado {
         activo = sec.getBoolean("activo", activo);
         suelo = Math.min(1, Math.max(0.05, sec.getDouble("suelo", suelo)));
         recuperacionMs = Math.max(60_000L, Catalogo.leerDuracion(sec.getString("recuperacion", "6h")));
-        String tope = sec.getString("recuperacion-total", "28h");
+        String tope = sec.getString("recuperacion-total", "24h");
         if (tope == null || tope.isBlank() || tope.trim().equals("0")
                 || tope.trim().equalsIgnoreCase("no") || tope.trim().equalsIgnoreCase("nunca")) {
             olvidoTotalMs = 0;

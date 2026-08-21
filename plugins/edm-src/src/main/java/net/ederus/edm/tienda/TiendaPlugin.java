@@ -65,6 +65,7 @@ public final class TiendaPlugin extends Module {
         migrar("nombres.yml", NOMBRES_VERSION);
         Nombres.cargar(new File(getDataFolder(), "nombres.yml"));
         mensajes.cargar(new File(getDataFolder(), "mensajes.yml"));
+        mensajes.registro(getLogger());
         secciones.cargar(new File(getDataFolder(), "secciones.yml"));
         rotacion = new Rotacion(new File(getDataFolder(), "rotacion.yml"));
         rotacion.configurar(getConfig().getConfigurationSection("rotacion"));
@@ -133,14 +134,15 @@ public final class TiendaPlugin extends Module {
          * cada minuto, no con una tarea a medianoche: si el servidor estaba
          * apagado a esa hora, igual rota al arrancar. */
         tareaRotacion = core.getServer().getScheduler().runTaskTimer(core, () -> {
-            if (rotacion.alDia(catalogo)) mensajes.anunciarRotacion();
+            if (rotacion.alDia(catalogo)) mensajes.anunciarRotacion(rotacion, catalogo);
         }, 20L * 60, 20L * 60);
 
         getLogger().info("Tienda activa | " + Nombres.cuantos() + " nombres en espanol | "
                 + catalogo.total() + " articulos en "
                 + catalogo.categorias().size() + " categorias ("
                 + catalogo.variantes() + " variantes) | " + secciones.cuantas() + " secciones"
-                + " | click: " + menu.modo() + " | buscador: " + (menu.buscador() ? "si" : "no"));
+                + " | click: " + menu.modo() + " | buscador: " + (menu.buscador() ? "si" : "no")
+                + " | discord: " + (mensajes.hayWebhook() ? "si" : "no"));
     }
 
     @Override
@@ -176,7 +178,7 @@ public final class TiendaPlugin extends Module {
      *  formato cambie: el fichero viejo se guarda al lado y se pone el nuevo. */
     private static final int SECCIONES_VERSION = 4;
     private static final int CONFIG_VERSION = 3;
-    private static final int MENSAJES_VERSION = 3;
+    private static final int MENSAJES_VERSION = 4;
     private static final int NOMBRES_VERSION = 1;
 
     /**
@@ -234,6 +236,7 @@ public final class TiendaPlugin extends Module {
     public String recargar() {
         secciones.cargar(new File(getDataFolder(), "secciones.yml"));
         mensajes.cargar(new File(getDataFolder(), "mensajes.yml"));
+        mensajes.registro(getLogger());
         Nombres.cargar(new File(getDataFolder(), "nombres.yml"));
         reloadConfig();
         aplicarAjustes();

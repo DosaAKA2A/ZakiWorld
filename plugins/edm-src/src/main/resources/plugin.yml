@@ -1,5 +1,5 @@
 name: EDM
-version: '1.7.0'
+version: '1.8.0'
 main: net.ederus.edm.EDMPlugin
 api-version: '1.20'
 author: Iris Studio
@@ -33,7 +33,7 @@ commands:
     permission: ederus.admin
   etienda:
     description: Tienda de Ederus
-    usage: /etienda <vender|comprar|precio|topes|recargar>
+    usage: /etienda <webhook|vender|comprar|precio|topes|recargar>
     aliases: [etnd]
   cf:
     description: Apuestas cara o cruz entre jugadores

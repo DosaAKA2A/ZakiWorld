@@ -70,6 +70,7 @@ public final class ComandoTienda implements CommandExecutor, TabCompleter {
             case "topes" -> { return verTopes(quien); }
             case "mercado" -> { return mercado(quien, args); }
             case "rotacion" -> { return rotacion(quien); }
+            case "webhook" -> { return webhook(quien); }
             case "recargar" -> { return recargar(quien); }
             default -> { ayuda(quien); return true; }
         }
@@ -84,7 +85,10 @@ public final class ComandoTienda implements CommandExecutor, TabCompleter {
         q.sendMessage("/etienda topes");
         q.sendMessage("/etienda mercado <item> [simular <cantidad>]");
         q.sendMessage("/etienda rotacion");
-        if (q.hasPermission("ederus.tienda.admin")) q.sendMessage("/etienda recargar");
+        if (q.hasPermission("ederus.tienda.admin")) {
+            q.sendMessage("/etienda webhook                  (prueba el aviso de Discord)");
+            q.sendMessage("/etienda recargar");
+        }
     }
 
     private boolean buscar(CommandSender quien, String[] args) {
@@ -282,6 +286,27 @@ public final class ComandoTienda implements CommandExecutor, TabCompleter {
         return Rotacion.sinTope(t) ? "sin tope" : String.valueOf(rot.restanteHoy(t));
     }
 
+    /**
+     * Lanza el aviso de Discord al momento.
+     *
+     * Existe por lo mismo que el /main aviso del core: el de verdad solo sale
+     * al rotar el dia, y esperar a medianoche para descubrir que la URL estaba
+     * mal copiada no es forma de probar nada.
+     */
+    private boolean webhook(CommandSender quien) {
+        if (!quien.hasPermission("ederus.tienda.admin")) { quien.sendMessage("No puedes."); return true; }
+        Mensajes m = modulo.mensajes();
+        if (m == null || !m.hayWebhook()) {
+            quien.sendMessage("No hay webhook configurado.");
+            quien.sendMessage("Pon la URL en 'rotacion.webhook' de mensajes.yml y usa /etienda recargar.");
+            return true;
+        }
+        m.aDiscord(modulo.rotacion(), catalogo);
+        quien.sendMessage("Aviso mandado a Discord. Si no aparece, mira la consola:");
+        quien.sendMessage("va por su cuenta, asi que un fallo sale ahi y no aqui.");
+        return true;
+    }
+
     private boolean recargar(CommandSender quien) {
         if (!quien.hasPermission("ederus.tienda.admin")) { quien.sendMessage("No puedes."); return true; }
         if (modulo.cargarCatalogo()) {
@@ -296,8 +321,14 @@ public final class ComandoTienda implements CommandExecutor, TabCompleter {
     public List<String> onTabComplete(CommandSender quien, Command cmd, String etiqueta, String[] args) {
         List<String> out = new ArrayList<>();
         if (args.length == 1) {
-            for (String s : List.of("buscar", "vender", "comprar", "precio", "topes", "mercado", "rotacion", "recargar")) {
+            for (String s : List.of("buscar", "vender", "comprar", "precio", "topes", "mercado", "rotacion")) {
                 if (s.startsWith(args[0].toLowerCase(Locale.ROOT))) out.add(s);
+            }
+            /* Los de admin solo se sugieren a quien puede usarlos. */
+            if (quien.hasPermission("ederus.tienda.admin")) {
+                for (String s : List.of("webhook", "recargar")) {
+                    if (s.startsWith(args[0].toLowerCase(Locale.ROOT))) out.add(s);
+                }
             }
         } else if (args.length == 2 && !args[0].equalsIgnoreCase("topes")
                 && !args[0].equalsIgnoreCase("buscar")) {

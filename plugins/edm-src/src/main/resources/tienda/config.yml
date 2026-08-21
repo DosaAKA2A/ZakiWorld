@@ -48,7 +48,7 @@ mercado:
   # Con el tope, la curva es la misma pero termina cuando aqui se diga.
   #
   # Ponlo en 0 para quitarlo y volver al olvido sin final.
-  recuperacion-total: 28h
+  recuperacion-total: 24h
 
   # LA PERILLA PRINCIPAL: cuanto dinero tiene que sacar el servidor de un item
   # para que su precio caiga a mitad de camino del suelo.
