@@ -6,6 +6,7 @@
 #   core/     libros y avisos de tiendas    (antes plugins/EderusMain)
 #   tienda/   la tienda propia (/shop)
 #   coinflip/ apuestas entre jugadores (/cf)
+#   troll/    bromas de admin (/troll)
 #
 # Al arrancar por primera vez se copian solos desde las carpetas viejas,
 # que se conservan intactas por si hay que volver atras.
@@ -16,3 +17,4 @@ modulos:
   core: true
   tienda: true
   coinflip: true
+  troll: true

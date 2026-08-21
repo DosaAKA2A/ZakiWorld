@@ -18,6 +18,7 @@ import org.bukkit.plugin.java.JavaPlugin;
 
 import net.ederus.edm.anomaly.AnomalyPlugin;
 import net.ederus.edm.coinflip.CoinflipPlugin;
+import net.ederus.edm.troll.TrollPlugin;
 import net.ederus.edm.comun.EntradaChat;
 import net.ederus.edm.core.EderusMain;
 import net.ederus.edm.rip.RipPlugin;
@@ -33,7 +34,7 @@ import net.ederus.edm.tienda.TiendaPlugin;
  */
 public final class EDMPlugin extends JavaPlugin {
 
-    public static final String VERSION = "1.4.0";
+    public static final String VERSION = "1.5.0";
 
     /* id del modulo -> carpeta del plugin viejo de la que se migran los datos */
     private static final Map<String, String> CARPETAS_VIEJAS = Map.of(
@@ -62,6 +63,7 @@ public final class EDMPlugin extends JavaPlugin {
         arrancar(new EderusMain(this));
         arrancar(new TiendaPlugin(this));
         arrancar(new CoinflipPlugin(this));
+        arrancar(new TrollPlugin(this));
 
         registrarComando();
         banner();
@@ -77,7 +79,8 @@ public final class EDMPlugin extends JavaPlugin {
     /* Alias comodos: la gente escribe el nombre del comando, no el id del modulo. */
     private static final Map<String, String> ALIAS_MODULO = Map.of(
             "shop", "tienda", "tienda", "tienda",
-            "cf", "coinflip", "apuestas", "coinflip");
+            "cf", "coinflip", "apuestas", "coinflip",
+            "bromas", "troll");
 
     @Override
     public boolean onCommand(CommandSender quien, Command cmd, String etiqueta, String[] args) {

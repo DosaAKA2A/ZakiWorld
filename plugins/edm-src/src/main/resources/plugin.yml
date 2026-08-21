@@ -1,9 +1,9 @@
 name: EDM
-version: '1.4.0'
+version: '1.5.0'
 main: net.ederus.edm.EDMPlugin
 api-version: '1.20'
 author: Iris Studio
-description: Nucleo de Ederus - Rip, Anomaly, libros, avisos de tiendas, la tienda propia y las apuestas
+description: Nucleo de Ederus - Rip, Anomaly, libros, avisos de tiendas, tienda propia, apuestas y bromas
 softdepend: [Vault, WorldGuard, ProtectionStones, MMOItems, LibsDisguises, AdvancedEnchantments, UltimateMobCoins]
 
 commands:
@@ -41,12 +41,29 @@ commands:
   coinflip:
     description: Apuestas cara o cruz entre jugadores
     usage: /coinflip [crear|retar|aceptar|cancelar|lista]
+  troll:
+    description: Bromas de admin sobre un jugador
+    usage: /troll [jugador] [broma]
+    aliases: [bromas]
+    permission: ederus.troll.usar
   ederuslibro:
     description: Entrega un libro encantado aleatorio de calidad baja
     usage: /ederuslibro <jugador>
     permission: ederus.libro
 
 permissions:
+  ederus.troll.usar:
+    description: Permite gastar bromas a otros jugadores
+    default: op
+  ederus.troll.destructivo:
+    description: Permite las bromas que borran progreso (matar, tirar el inventario, al vacio)
+    default: op
+  ederus.troll.admin:
+    description: Permite recargar el modulo de bromas
+    default: op
+  ederus.troll.inmune:
+    description: A quien lo tenga no se le pueden gastar bromas
+    default: false
   ederus.coinflip.usar:
     description: Permite poner y coger apuestas de coinflip
     default: true

@@ -1,0 +1,27 @@
+# ---------------------------------------------------------------------------
+# Lo que el modulo de bromas le dice al ADMIN (a la victima casi nunca se le
+# dice nada: esa es la gracia).
+#
+# Codigos de color: &7, &#RRGGBB y el &x&R&R&G&G&B&B de Spigot.
+# Para que una linea salga SIN prefijo, empiezala con {sin-prefijo}.
+# ---------------------------------------------------------------------------
+version: 1
+
+prefijo: '&x&0&0&8&3&F&D&lBROMAS &8» &f'
+
+# %broma% %jugador% %cuantas% %segundos%
+hecha: '&fLe hiciste &x&D&7&F&3&F&F%broma% &fa &x&D&7&F&3&F&F%jugador%'
+confirmar: '&#FF5C5C%broma% &fle borra progreso a &x&D&7&F&3&F&F%jugador%&f. Vuelve a pulsarla en %segundos%s para confirmar.'
+deshechas: '&fLe quitaste &x&D&7&F&3&F&F%cuantas% &fbromas a %jugador%'
+en-creativo: '&7Ojo: esta en creativo o espectador, puede no notarse.'
+
+# --- cuando no se puede ---
+sin-permiso: '&#FF5C5CNo puedes usar esa broma.'
+inmune: '&#FF5C5C%jugador% esta a salvo de las bromas.'
+contra-ti: '&#FF5C5CNo puedes gastarte bromas a ti mismo.'
+no-existe: '&#FF5C5CNo tengo ninguna broma que se llame %broma%.'
+no-esta-conectado: '&#FF5C5C%rival% no esta conectado.'
+fallo: '&#FF5C5CEsa broma fallo. Se deshizo lo que hubiera.'
+
+# Lo unico que se le dice a la victima, y solo si avisar-a-la-victima esta en true.
+te-la-hicieron: '&7Alguien te acaba de gastar una broma.'

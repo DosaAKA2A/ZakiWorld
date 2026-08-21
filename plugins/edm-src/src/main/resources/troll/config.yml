@@ -1,0 +1,50 @@
+# ---------------------------------------------------------------------------
+# BROMAS DE ADMIN.
+#
+# NO borres la linea version: el plugin la usa para poner al dia tu fichero
+# cuando cambia el formato, guardando el tuyo al lado.
+# ---------------------------------------------------------------------------
+version: 1
+
+# Segundos que tiene un admin para volver a pulsar y confirmar una broma que
+# borra progreso (matar, tirar el inventario, al vacio, pisotear el campo).
+segundos-para-confirmar: 15
+
+# Si la victima recibe un aviso de que le han gastado una broma. En false, que
+# es lo suyo, no se entera de nada y esa es la gracia.
+avisar-a-la-victima: false
+
+# Poder gastarselas a uno mismo, que es como se prueban sin molestar a nadie.
+permitir-a-uno-mismo: true
+
+# Con esto en true hace falta ederus.troll.<id> para CADA broma, y no solo
+# ederus.troll.usar. Sirve para dar dos o tres bromas sueltas a un moderador
+# sin darle el resto.
+permiso-por-broma: false
+
+# ---------------------------------------------------------------------------
+# Cuanto dura cada broma temporal, en segundos. Lo que no aparezca aqui usa el
+# valor que trae el catalogo. Todas se deshacen solas al acabarse el tiempo, al
+# desconectarse el jugador y al apagar el servidor: no hace falta acordarse.
+# ---------------------------------------------------------------------------
+duraciones:
+  drogado: 20
+  infectado: 15
+  ciego: 10
+  congelar: 15
+  pegado: 15
+  correr: 12
+  basura: 60
+  patata: 45
+  calabaza: 30
+  sinminar: 20
+  sinrecoger: 30
+  novato: 25
+  hambre: 25
+  letras: 60
+  falsaexpulsion: 4
+  callar: 30
+  atrapar: 20
+  telarana: 15
+  enterrar: 20
+  borde: 20

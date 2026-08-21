@@ -28,6 +28,7 @@ Dos cosas que el modulo NO delega, y son deliberadas:
 | `core` | Libros encantados y avisos de tiendas | `/main` (`/ederus`, `/edmain`), `/ederuslibro` |
 | `tienda` | Tienda propia: compra, venta, topes y registro | `/etienda` (`/etnd`) |
 | `coinflip` | Apuestas cara o cruz entre jugadores | `/cf` (`/coinflip`, `/apuesta`) |
+| `troll` | Bromas de admin sobre un jugador | `/troll` (`/bromas`) |
 
 Se apagan por separado en `plugins/EDM/config.yml` (`modulos.<id>: false`). Si uno
 revienta al arrancar, se anota en consola y los otros siguen: antes eran tres plugins y
@@ -157,3 +158,40 @@ seria un desastre silencioso: la apuesta saldria, solo que de un euro.
 
 Cada jugada queda en `plugins/EDM/coinflip/registro/apuestas-<fecha>.log`. No es
 un extra: es la unica respuesta a "me ha robado el coinflip".
+
+## El modulo `troll`
+
+Bromas de admin. **La lista de ideas se mira de TrollBoss, pero no hay una linea
+de su codigo**: TrollBoss es GPL v3 y este repo es publico, asi que copiarlo
+habria obligado a poner TODO EDM bajo GPL. Una lista de ideas no es de nadie;
+la implementacion es nuestra.
+
+52 bromas en 5 familias, con menu (elegir a quien, luego que) y `/troll`.
+
+Lo que hace que sea seguro tener esto en un servidor abierto:
+
+1. **Toda broma temporal sabe deshacerse**, y se deshace **si o si**: al acabar
+   el tiempo, al desconectarse el jugador y al apagar el modulo. Sin esto, el
+   que se quedo encerrado en cristal sigue encerrado despues del reinicio.
+   Es lo que `Estados` garantiza, y por eso cada efecto se guarda con SU clave
+   y no con su marca: dos bromas pueden dejar dos vueltas atras pendientes.
+2. **Lo que borra progreso pide confirmacion** (segundo clic sobre la MISMA
+   broma y la MISMA victima) y `ederus.troll.destructivo` aparte. En un survival
+   OP el equipo de MMOItems ES el progreso.
+3. **Lo que toca el mundo guarda lo que habia** como `BlockState` y solo tapa
+   aire: una caja de cristal no se puede comer el cofre de nadie. Nunca se
+   repone "aire".
+4. **Lo que toca el inventario solo usa huecos VACIOS**, y al deshacer solo
+   retira lo que sigue siendo lo que se puso.
+5. **Red de caida**: todas las bromas de altura ponen `SIN_CAIDA`. Subir a
+   alguien y soltarlo lo mata, y matar no es una broma.
+6. **`ederus.troll.inmune`** deja a alguien fuera del alcance de todas.
+7. **Un solo listener para las 52**, no 36 clases: cada evento pregunta por su
+   marca y se va. Es lo que hace que no pese en el tick.
+8. Todo queda en `troll/registro/bromas-<fecha>.log` con quien, a quien y que.
+
+`/troll deshacer <jugador|todos>` es la salida de emergencia y no necesita
+reiniciar nada.
+
+Dos cosas que NO se portaron y conviene saber: el "crash" de cliente (tirarle el
+juego a alguien a proposito es otra cosa) y las bromas de chiste grueso.
