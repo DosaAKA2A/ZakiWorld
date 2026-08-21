@@ -201,6 +201,9 @@ public final class ComandoTienda implements CommandExecutor, TabCompleter {
                 + "  (-" + mk.caidaPorCiento(a) + "%)");
         quien.sendMessage("  suelo " + Motor.fmt(a.venta() * mk.suelo())
                 + "  |  margen contra la compra " + Math.round(mk.margen() * 100) + "%");
+        quien.sendMessage("  vuelve a su precio de siempre en " + (mk.olvidoTotalMs() > 0
+                ? Motor.duracion(mk.olvidoTotalMs()) + " sin ventas"
+                : "nunca del todo (tope quitado)"));
 
         if (args.length >= 4 && args[2].equalsIgnoreCase("vender")) {
             int n;

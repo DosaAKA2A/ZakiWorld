@@ -175,7 +175,7 @@ public final class TiendaPlugin extends Module {
     /** Version del secciones.yml que espera este codigo. Subirla cuando el
      *  formato cambie: el fichero viejo se guarda al lado y se pone el nuevo. */
     private static final int SECCIONES_VERSION = 4;
-    private static final int CONFIG_VERSION = 2;
+    private static final int CONFIG_VERSION = 3;
     private static final int MENSAJES_VERSION = 3;
     private static final int NOMBRES_VERSION = 1;
 

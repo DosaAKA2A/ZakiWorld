@@ -32,7 +32,15 @@ import java.util.concurrent.ConcurrentHashMap;
  */
 public final class Mercado {
 
-    /** Presion acumulada por clave, y cuando se toco por ultima vez. */
+    /**
+     * Presion acumulada por clave.
+     *
+     * 'vendido' es lo que habia justo DESPUES de la ultima venta y 'momento'
+     * cuando fue. Antes se guardaba "lo que queda ahora mismo" y se reescribia
+     * en cada lectura, lo que obligaba a que el olvido no tuviera memoria; con
+     * el tope de recuperacion si la tiene, asi que hay que saber cuando fue la
+     * ultima venta de verdad.
+     */
     private static final class Estado {
         double vendido;
         long momento;
@@ -45,6 +53,9 @@ public final class Mercado {
     private boolean activo = true;
     private double suelo = 0.25;
     private long recuperacionMs = 6L * 3600_000L;
+    /** Pase lo que pase, a las tantas horas de la ultima venta el precio esta
+     *  como nuevo. 0 = sin tope (el olvido de siempre, que nunca llega a cero). */
+    private long olvidoTotalMs = 28L * 3600_000L;
     private double presupuesto = 300_000d;
     private double margenVentaCompra = 0.60;
     private volatile boolean sucio;
@@ -56,6 +67,15 @@ public final class Mercado {
         activo = sec.getBoolean("activo", activo);
         suelo = Math.min(1, Math.max(0.05, sec.getDouble("suelo", suelo)));
         recuperacionMs = Math.max(60_000L, Catalogo.leerDuracion(sec.getString("recuperacion", "6h")));
+        String tope = sec.getString("recuperacion-total", "28h");
+        if (tope == null || tope.isBlank() || tope.trim().equals("0")
+                || tope.trim().equalsIgnoreCase("no") || tope.trim().equalsIgnoreCase("nunca")) {
+            olvidoTotalMs = 0;
+        } else {
+            /* Nunca por debajo de la vida media: un tope mas corto que ella
+             * deja una curva rarisima y no es lo que quiere nadie. */
+            olvidoTotalMs = Math.max(recuperacionMs, Catalogo.leerDuracion(tope));
+        }
         presupuesto = Math.max(1, sec.getDouble("presupuesto", presupuesto));
         margenVentaCompra = Math.min(0.95, Math.max(0.05, sec.getDouble("margen-venta-compra", margenVentaCompra)));
     }
@@ -67,21 +87,39 @@ public final class Mercado {
         return Math.max(8, presupuesto / base);
     }
 
-    /** Lo vendido que "queda", ya descontado el olvido por el paso del tiempo. */
+    /**
+     * Que fraccion de lo vendido sigue pesando despues de 'transcurrido'.
+     *
+     * 1 recien vendido, 0 cuando ya se olvido del todo. La forma es la de
+     * siempre —la mitad cada 'recuperacion'— pero desplazada para que toque
+     * CERO exacto al llegar al tope, en vez de acercarse sin llegar nunca.
+     * Sin el desplazamiento, tras una venta muy gorda el precio seguia por
+     * debajo dos y tres dias despues.
+     */
+    private double queda(long transcurrido) {
+        if (transcurrido <= 0) return 1;
+        double vidas = (double) transcurrido / recuperacionMs;
+        if (olvidoTotalMs <= 0) return Math.pow(2, -vidas);
+        if (transcurrido >= olvidoTotalMs) return 0;
+        double resto = Math.pow(2, -(double) olvidoTotalMs / recuperacionMs);
+        return (Math.pow(2, -vidas) - resto) / (1 - resto);
+    }
+
+    /** Lo vendido que "queda", ya descontado el olvido por el paso del tiempo.
+     *  Es una LECTURA: no toca el estado salvo para tirar lo ya olvidado. */
     private double presion(String clave) {
         Estado e = estados.get(clave);
         if (e == null) return 0;
+        double v;
         synchronized (e) {
-            long ahora = System.currentTimeMillis();
-            long transcurrido = ahora - e.momento;
-            if (transcurrido > 0) {
-                e.vendido *= Math.pow(2, -(double) transcurrido / recuperacionMs);
-                e.momento = ahora;
-                if (e.vendido < 0.01) { estados.remove(clave); return 0; }
-                sucio = true;
-            }
-            return e.vendido;
+            v = e.vendido * queda(System.currentTimeMillis() - e.momento);
         }
+        if (v < 0.01) {
+            estados.remove(clave);
+            sucio = true;
+            return 0;
+        }
+        return v;
     }
 
     /** 1.0 = precio intacto; 'suelo' = todo lo bajo que puede llegar. */
@@ -117,10 +155,15 @@ public final class Mercado {
     /** Se llama DESPUES de una venta cobrada. */
     public void anotarVenta(Catalogo.Articulo art, int cantidad) {
         if (!activo || cantidad <= 0) return;
-        presion(art.clave());          // pone al dia el olvido antes de sumar
+        long ahora = System.currentTimeMillis();
         estados.compute(art.clave(), (k, e) -> {
-            if (e == null) return new Estado(cantidad, System.currentTimeMillis());
-            synchronized (e) { e.vendido += cantidad; e.momento = System.currentTimeMillis(); }
+            if (e == null) return new Estado(cantidad, ahora);
+            synchronized (e) {
+                /* Se suma sobre lo que QUEDA ahora, no sobre lo que habia en la
+                 * venta anterior: las horas de en medio ya se olvidaron. */
+                e.vendido = e.vendido * queda(ahora - e.momento) + cantidad;
+                e.momento = ahora;
+            }
             return e;
         });
         sucio = true;
@@ -191,6 +234,8 @@ public final class Mercado {
 
     public boolean activo() { return activo; }
     public double suelo() { return suelo; }
+    /** Horas hasta que un item vuelve a su precio de siempre. 0 = sin tope. */
+    public long olvidoTotalMs() { return olvidoTotalMs; }
     public double margen() { return margenVentaCompra; }
     public int itemsMovidos() { return estados.size(); }
 
@@ -213,6 +258,9 @@ public final class Mercado {
         YamlConfiguration yml = new YamlConfiguration();
         estados.forEach((clave, e) -> {
             synchronized (e) {
+                /* Lo ya olvidado no se escribe: si no, el fichero se queda con
+                 * lineas de items que hace dias que nadie vende. */
+                if (e.vendido * queda(System.currentTimeMillis() - e.momento) < 0.01) return;
                 yml.set(clave + ".vendido", Math.round(e.vendido * 100) / 100d);
                 yml.set(clave + ".momento", e.momento);
             }

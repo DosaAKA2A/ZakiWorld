@@ -1,6 +1,6 @@
 # NO borres la linea version: el plugin la usa para poner al dia tu fichero
 # cuando cambia el formato, guardando el tuyo al lado.
-version: 2
+version: 3
 
 # Cada cuanto se vuelcan los topes y el mercado a disco (segundos, minimo 30).
 guardado-segundos: 120
@@ -35,8 +35,20 @@ mercado:
   # precio base. 0.25 = puede caer hasta un 75%.
   suelo: 0.25
 
-  # Cada cuanto se olvida la mitad de lo vendido. Mas corto = se recupera antes.
+  # Cada cuanto se olvida la mitad de lo vendido. Manda la FORMA de la subida:
+  # con 6h, la mayor parte del precio vuelve el primer dia.
   recuperacion: 6h
+
+  # EL TOPE. Pase lo que pase, a las tantas horas de la ultima venta el articulo
+  # esta a su precio de siempre, exacto.
+  #
+  # Hace falta porque el olvido de arriba se acerca a cero pero no llega nunca:
+  # tras una venta muy gorda (20.000 canas de una sentada) el precio seguia un
+  # 18% por debajo a las 28h y tardaba unos tres dias en recuperarse del todo.
+  # Con el tope, la curva es la misma pero termina cuando aqui se diga.
+  #
+  # Ponlo en 0 para quitarlo y volver al olvido sin final.
+  recuperacion-total: 28h
 
   # LA PERILLA PRINCIPAL: cuanto dinero tiene que sacar el servidor de un item
   # para que su precio caiga a mitad de camino del suelo.
