@@ -73,6 +73,22 @@ public final class Rotacion {
         topeOferta = Math.max(0, sec.getInt("tope-diario-oferta", topeOferta));
         topeDemanda = Math.max(0, sec.getInt("tope-diario-demanda", topeDemanda));
         semillaFija = sec.getLong("semilla", semillaFija);
+        reponerTopes();
+    }
+
+    /**
+     * Pone el tope nuevo a los tratos que ya estaban sorteados.
+     *
+     * Cada trato guarda su tope dentro, asi que sin esto cambiar el numero en el
+     * config y recargar no se notaba hasta la rotacion de manana, y parecia que
+     * el ajuste no funcionara.
+     */
+    private synchronized void reponerTopes() {
+        ofertas.replaceAll((k, t) -> t.topeDia() == topeOferta
+                ? t : new Trato(t.clave(), t.factor(), topeOferta));
+        demandas.replaceAll((k, t) -> t.topeDia() == topeDemanda
+                ? t : new Trato(t.clave(), t.factor(), topeDemanda));
+        sucio = true;
     }
 
     /** Sortea el dia de hoy si aun no estaba sorteado. */
