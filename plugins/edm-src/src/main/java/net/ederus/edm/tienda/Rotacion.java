@@ -49,7 +49,7 @@ public final class Rotacion {
     private int topeOferta = 512, topeDemanda = 512;
     private long semillaFija = 0;
 
-    private LocalDate dia;
+    private volatile LocalDate dia;
     private final Map<String, Trato> ofertas = new LinkedHashMap<>();
     private final Map<String, Trato> demandas = new LinkedHashMap<>();
     /** Lo movido hoy por item, para el tope diario de SERVIDOR. */
@@ -63,10 +63,13 @@ public final class Rotacion {
         activo = sec.getBoolean("activo", activo);
         cuantasOfertas = Math.max(1, Math.min(45, sec.getInt("cuantas-ofertas", cuantasOfertas)));
         cuantasDemandas = Math.max(1, Math.min(45, sec.getInt("cuantas-demandas", cuantasDemandas)));
-        ofertaMin = sec.getDouble("descuento-min", ofertaMin);
-        ofertaMax = sec.getDouble("descuento-max", ofertaMax);
-        demandaMin = sec.getDouble("bonus-min", demandaMin);
-        demandaMax = sec.getDouble("bonus-max", demandaMax);
+        /* Acotados a proposito. Un descuento por encima de 1 deja el factor en
+         * negativo, y un precio de compra negativo no es una oferta: es cobrar
+         * al reves. Un bonus desbocado es lo mismo por el otro lado. */
+        ofertaMin = acotar(sec.getDouble("descuento-min", ofertaMin), 0, 0.95);
+        ofertaMax = acotar(sec.getDouble("descuento-max", ofertaMax), ofertaMin, 0.95);
+        demandaMin = acotar(sec.getDouble("bonus-min", demandaMin), 0, 10);
+        demandaMax = acotar(sec.getDouble("bonus-max", demandaMax), demandaMin, 10);
         /* 0 o menos = SIN TOPE. Antes el minimo era 1, asi que poner 0 para
          * quitarlo dejaba el articulo agotado desde el primer segundo, que es
          * lo contrario de lo que pide quien escribe un 0. */
@@ -74,6 +77,11 @@ public final class Rotacion {
         topeDemanda = Math.max(0, sec.getInt("tope-diario-demanda", topeDemanda));
         semillaFija = sec.getLong("semilla", semillaFija);
         reponerTopes();
+    }
+
+    private static double acotar(double v, double min, double max) {
+        if (Double.isNaN(v)) return min;
+        return Math.min(max, Math.max(min, v));
     }
 
     /**
@@ -100,9 +108,17 @@ public final class Rotacion {
         boolean primeraVez = dia == null;
 
         dia = hoy;
+        /* Dia nuevo, cuenta a cero. Al ARRANCAR no se pasa por aqui: eso lo
+         * hace sortear() directamente, para no borrar lo que ya se movio hoy. */
+        movidoHoy.clear();
+        sortear(catalogo, hoy);
+        return !primeraVez;
+    }
+
+    /** Solo el sorteo. No toca el contador del dia. */
+    private synchronized void sortear(Catalogo catalogo, LocalDate hoy) {
         ofertas.clear();
         demandas.clear();
-        movidoHoy.clear();
         sucio = true;
 
         List<Catalogo.Articulo> soloCompra = new ArrayList<>();
@@ -119,8 +135,6 @@ public final class Rotacion {
         Random azar = new Random(semilla(hoy));
         elegir(soloCompra, cuantasOfertas, azar, ofertaMin, ofertaMax, topeOferta, ofertas, true);
         elegir(vendibles, cuantasDemandas, azar, demandaMin, demandaMax, topeDemanda, demandas, false);
-        /* Al arrancar no se anuncia: solo cuando cambia el dia con el servidor vivo. */
-        return !primeraVez;
     }
 
     private long semilla(LocalDate hoy) {
@@ -143,10 +157,15 @@ public final class Rotacion {
         }
     }
 
-    public Trato oferta(String clave) { return activo ? ofertas.get(clave) : null; }
-    public Trato demanda(String clave) { return activo ? demandas.get(clave) : null; }
-    public Iterable<Trato> ofertas() { return ofertas.values(); }
-    public Iterable<Trato> demandas() { return demandas.values(); }
+    /* Los cuatro van sincronizados con el sorteo: 'ofertas' y 'demandas' se
+     * vacian y se rellenan enteros al rotar, y leerlos a medias desde el menu
+     * mientras eso pasa es lo que deja una ventana con la mitad de los precios
+     * del dia de ayer. Las listas se devuelven COPIADAS para que nadie las
+     * itere por fuera del candado. */
+    public synchronized Trato oferta(String clave) { return activo ? ofertas.get(clave) : null; }
+    public synchronized Trato demanda(String clave) { return activo ? demandas.get(clave) : null; }
+    public synchronized List<Trato> ofertas() { return List.copyOf(ofertas.values()); }
+    public synchronized List<Trato> demandas() { return List.copyOf(demandas.values()); }
     public boolean activo() { return activo; }
     public LocalDate dia() { return dia; }
 
@@ -177,18 +196,27 @@ public final class Rotacion {
 
     // ---------------------------------------------------------- persistencia
 
-    public void cargar(Catalogo catalogo) {
+    public synchronized void cargar(Catalogo catalogo) {
+        LocalDate hoy = LocalDate.now();
+        movidoHoy.clear();
         if (fichero.exists()) {
             YamlConfiguration yml = YamlConfiguration.loadConfiguration(fichero);
             String d = yml.getString("dia", "");
             ConfigurationSection mov = yml.getConfigurationSection("movido");
             /* Solo se recupera lo movido si es del MISMO dia: si no, el tope
              * diario se arrastraria de ayer. */
-            if (!d.isBlank() && d.equals(LocalDate.now().toString()) && mov != null) {
+            if (!d.isBlank() && d.equals(hoy.toString()) && mov != null) {
                 for (String k : mov.getKeys(false)) movidoHoy.put(k, mov.getInt(k, 0));
             }
         }
-        alDia(catalogo);   // el sorteo se rehace igual: es determinista por fecha
+        if (activo) {
+            /* Se marca el dia y se rehace el sorteo (es determinista por fecha)
+             * SIN pasar por alDia: alDia pone el contador a cero, y aqui acabamos
+             * de leerlo del fichero. Antes se borraba justo despues de cargarlo y
+             * el tope diario de servidor se reponia en cada arranque. */
+            dia = hoy;
+            sortear(catalogo, hoy);
+        }
         sucio = false;
     }
 

@@ -27,8 +27,19 @@ public final class ComandoTienda implements CommandExecutor, TabCompleter {
         this.topes = topes;
     }
 
+    /** Declarado en el plugin.yml desde siempre, pero no se miraba en ningun
+     *  sitio: quitarselo a alguien no le cerraba la tienda. */
+    private static final String USAR = "ederus.tienda.usar";
+
     @Override
     public boolean onCommand(CommandSender quien, Command cmd, String etiqueta, String[] args) {
+        /* Los subcomandos de admin traen su propia comprobacion; lo que se le
+         * cierra a un jugador sin permiso es comprar y vender. */
+        if (quien instanceof Player && !quien.hasPermission(USAR)
+                && !quien.hasPermission("ederus.tienda.admin")) {
+            quien.sendMessage(Estilo.legado("&cNo puedes usar la tienda."));
+            return true;
+        }
         /* /shop es solo la puerta del menu: no lleva subcomandos. */
         if (cmd.getName().equalsIgnoreCase("sellall")) {
             if (!(quien instanceof Player j)) { quien.sendMessage("Solo desde el juego."); return true; }
@@ -199,16 +210,16 @@ public final class ComandoTienda implements CommandExecutor, TabCompleter {
             double compra = mt != null ? mt.compraEfectiva(a) : a.compra();
             quien.sendMessage("  vender " + String.format("%,d", n) + " ahora mismo:");
             int[] cortes = {1, n / 8, n / 4, n / 2, n};
-            double previo = 0;
             for (int c : cortes) {
                 if (c <= 0) continue;
                 double total = mk.totalVenta(a, c, compra);
                 quien.sendMessage("    " + String.format("%,7d", c) + " -> " + Motor.fmt(total)
                         + "   (" + Motor.fmt(total / c) + " por unidad)");
-                previo = total;
             }
             quien.sendMessage("  y si el servidor YA hubiera vendido antes:");
-            for (int antes : new int[]{n, n * 5, n * 25, n * 100}) {
+            /* En long y acotado: con un n grande, n * 100 se sale del entero y
+             * la tabla pasaba a enseñar presiones negativas. */
+            for (long antes : new long[]{n, n * 5L, n * 25L, n * 100L}) {
                 double conPrevia = mk.totalVentaDesde(a, n, compra, antes);
                 quien.sendMessage("    tras " + String.format("%,d", antes) + " -> " + Motor.fmt(conPrevia)
                         + "   (" + Motor.fmt(conPrevia / n) + " por unidad)");

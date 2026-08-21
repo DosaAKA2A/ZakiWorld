@@ -166,11 +166,11 @@ public final class Disguises {
             andThen.accept(cached);
             return;
         }
-        plugin.getServer().getScheduler().runTaskAsynchronously(plugin, () -> {
+        plugin.getServer().getScheduler().runTaskAsynchronously(net.ederus.edm.Module.dueno(plugin), () -> {
             var built = lookup(plugin, account);
             if (built == null) return;
             CACHE.put(account.toLowerCase(java.util.Locale.ROOT), built);
-            plugin.getServer().getScheduler().runTask(plugin, () -> andThen.accept(built));
+            plugin.getServer().getScheduler().runTask(net.ederus.edm.Module.dueno(plugin), () -> andThen.accept(built));
         });
     }
 

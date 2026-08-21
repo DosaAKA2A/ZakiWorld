@@ -121,9 +121,15 @@ public final class Motor {
      * MMOItems y compania. Tambien deja fuera un spawner con mob dentro, que es
      * lo que queremos: las variantes solo se compran.
      */
+    /* Un ItemStack pelado por material, reutilizado. Pintar una pagina hace
+     * ~1.000 de estas comparaciones y antes cada una creaba su propio stack.
+     * Concurrente por si alguna vez se llama fuera del hilo principal: es un
+     * cache de solo lectura y no cuesta nada dejarlo a prueba de eso. */
+    private static final Map<Material, ItemStack> PLANTILLAS = new java.util.concurrent.ConcurrentHashMap<>();
+
     static boolean esLimpio(ItemStack stack, Material material) {
         if (stack == null || stack.getType() != material) return false;
-        return new ItemStack(material).isSimilar(stack);
+        return PLANTILLAS.computeIfAbsent(material, ItemStack::new).isSimilar(stack);
     }
 
     static int contarLimpios(Inventory inv, Material material) {

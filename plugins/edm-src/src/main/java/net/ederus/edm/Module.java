@@ -61,6 +61,19 @@ public abstract class Module implements Plugin {
         return this.id;
     }
 
+    /**
+     * El plugin que Bukkit conoce de verdad.
+     *
+     * Un modulo NO esta registrado como plugin, asi que el scheduler no cancela
+     * sus tareas al apagar EDM: se quedan corriendo para siempre y sujetando el
+     * modulo muerto en memoria. Todo lo que se programe tiene que ir a nombre
+     * del nucleo. Los NamespacedKey son al reves y siguen usando el modulo, para
+     * que las marcas del mundo sigan siendo rip:algo.
+     */
+    public static Plugin dueno(Plugin p) {
+        return p instanceof Module m ? m.core : p;
+    }
+
     public final EDMPlugin core() {
         return this.core;
     }

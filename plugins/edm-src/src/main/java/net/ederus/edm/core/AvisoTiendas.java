@@ -67,7 +67,8 @@ public final class AvisoTiendas {
         ultimoBoveda = -1L;
 
         long ticks = segundos * 20L;
-        tarea = Bukkit.getScheduler().runTaskTimerAsynchronously(plugin, this::revisar, ticks, ticks);
+        tarea = Bukkit.getScheduler().runTaskTimerAsynchronously(
+                net.ederus.edm.Module.dueno(plugin), this::revisar, ticks, ticks);
         plugin.getLogger().info("Aviso de tiendas activo | revisando cada " + segundos + "s");
     }
 
@@ -140,7 +141,7 @@ public final class AvisoTiendas {
 
         // El aviso va SOLO por chat: nada de titulos en pantalla.
         // Todo lo que toca a jugadores va por el hilo principal.
-        Bukkit.getScheduler().runTask(plugin, () -> {
+        Bukkit.getScheduler().runTask(net.ederus.edm.Module.dueno(plugin), () -> {
             Component boton = botonTexto.isBlank() ? null : Component.text(color(botonTexto))
                     .clickEvent(ClickEvent.runCommand(botonCmd))
                     .hoverEvent(HoverEvent.showText(Component.text(color(
@@ -179,6 +180,24 @@ public final class AvisoTiendas {
         return s == null ? "" : ChatColor.translateAlternateColorCodes('&', s);
     }
 
+    /* UNO para todo el plugin. Cada HttpClient se lleva su hilo selector y su
+     * pool, y no se cierran solos: crear uno por aviso iba dejando hilos atras. */
+    private static volatile HttpClient cliente;
+
+    private static HttpClient cliente() {
+        HttpClient c = cliente;
+        if (c == null) {
+            synchronized (AvisoTiendas.class) {
+                c = cliente;
+                if (c == null) {
+                    c = HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(10)).build();
+                    cliente = c;
+                }
+            }
+        }
+        return c;
+    }
+
     /** Aviso opcional a Discord. Si no hay URL configurada, no hace nada. */
     private void enviarWebhook(String queTienda) {
         String url = plugin.getConfig().getString("tiendas.webhook", "");
@@ -189,15 +208,12 @@ public final class AvisoTiendas {
         String cuerpo = "{\"content\":\"" + escapar(texto) + "\"}";
 
         try {
-            HttpClient cliente = HttpClient.newBuilder()
-                    .connectTimeout(Duration.ofSeconds(10))
-                    .build();
             HttpRequest peticion = HttpRequest.newBuilder(URI.create(url))
                     .timeout(Duration.ofSeconds(10))
                     .header("Content-Type", "application/json")
                     .POST(HttpRequest.BodyPublishers.ofString(cuerpo, StandardCharsets.UTF_8))
                     .build();
-            cliente.sendAsync(peticion, HttpResponse.BodyHandlers.discarding())
+            cliente().sendAsync(peticion, HttpResponse.BodyHandlers.discarding())
                     .exceptionally(e -> {
                         plugin.getLogger().warning("No se pudo avisar a Discord: " + e.getMessage());
                         return null;

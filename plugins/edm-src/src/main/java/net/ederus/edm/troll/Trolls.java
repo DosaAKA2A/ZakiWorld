@@ -71,11 +71,18 @@ public final class Trolls {
         pon(m, Troll.de("creeper", "Creeper detras", "Un creeper aparece, sisea y desaparece",
                 Material.CREEPER_HEAD, Familia.SUSTO, c -> {
             Location detras = c.donde().add(c.donde().getDirection().multiply(-2));
-            var bicho = c.v().getWorld().spawnEntity(detras, EntityType.CREEPER);
+            var bicho = c.v().getWorld().spawn(detras, org.bukkit.entity.Creeper.class, cr -> {
+                /* Un creeper de verdad enciende la mecha en 30 ticks y aqui
+                 * estaba 40: el susto se quedaba a medio segundo de abrirle un
+                 * agujero a la base de alguien. Sin IA no se acerca, y con radio
+                 * 0 no revienta nada ni aunque llegara a encenderse. */
+                cr.setAI(false);
+                cr.setExplosionRadius(0);
+                cr.setInvulnerable(true);
+                cr.setSilent(false);
+            });
             c.sonido("entity.creeper.primed", 1f);
-            /* Se va solo a los 2 segundos: un creeper suelto en un survival OP
-             * no es una broma, es un agujero en la base de alguien. */
-            c.tras(40, bicho::remove);
+            c.bichoTemporal(bicho, 40);
         }));
 
         pon(m, Troll.de("herobrine", "Herobrine", "Alguien te mira y ya no esta",
@@ -88,14 +95,14 @@ public final class Trolls {
                 s.getEquipment().setHelmet(new ItemStack(Material.PLAYER_HEAD));
             });
             c.sonido("ambient.cave", 0.6f);
-            c.tras(50, soporte::remove);
+            c.bichoTemporal(soporte, 50);
         }));
 
         pon(m, Troll.de("calamares", "Lluvia de calamares", "Caen calamares del cielo",
                 Material.INK_SAC, Familia.SUSTO, c -> c.repetir(4, 12, i -> {
             Location arriba = c.donde().add(Contexto.azar().nextInt(7) - 3, 8, Contexto.azar().nextInt(7) - 3);
             var calamar = c.v().getWorld().spawnEntity(arriba, EntityType.SQUID);
-            c.tras(120, calamar::remove);
+            c.bichoTemporal(calamar, 120);
         })));
 
         pon(m, Troll.de("sparta", "Esto es Ederus", "Una patada de las de pelicula",
@@ -255,10 +262,18 @@ public final class Trolls {
         pon(m, Troll.temporal("calabaza", "Calabaza", "Le pone una calabaza en la cabeza",
                 Material.CARVED_PUMPKIN, Familia.INVENTARIO, 30, c -> {
             ItemStack antes = c.v().getInventory().getHelmet();
-            c.v().getInventory().setHelmet(new ItemStack(Material.CARVED_PUMPKIN));
+            ItemStack calabaza = new ItemStack(Material.CARVED_PUMPKIN);
+            c.v().getInventory().setHelmet(calabaza);
             /* El casco que llevaba se guarda y se repone: si era un MMOItems,
-             * tirarlo al suelo seria perderlo. */
-            c.alAcabar(() -> { if (c.v().isOnline()) c.v().getInventory().setHelmet(antes); });
+             * tirarlo al suelo seria perderlo. Y solo se repone si SIGUE la
+             * calabaza puesta: si se la quito y se puso otra cosa en esos 30 s,
+             * reponer a ciegas le borraba el casco nuevo, que es justo lo
+             * destructivo que estas bromas no pueden hacer. */
+            c.alAcabar(() -> {
+                if (!c.v().isOnline()) return;
+                ItemStack ahora = c.v().getInventory().getHelmet();
+                if (ahora != null && ahora.isSimilar(calabaza)) c.v().getInventory().setHelmet(antes);
+            });
         }));
 
         pon(m, Troll.temporal("sinminar", "Sin picar", "No puede romper bloques",
@@ -395,7 +410,13 @@ public final class Trolls {
              * una broma. El susto es el mismo. */
             Location al = c.donde().add(Contexto.azar().nextInt(5) - 2, 12, Contexto.azar().nextInt(5) - 2);
             if (al.getBlock().getLocation().distance(c.donde()) < 1.2) return;
-            c.v().getWorld().spawnFallingBlock(al, Material.ANVIL.createBlockData());
+            var yunque = c.v().getWorld().spawnFallingBlock(al, Material.ANVIL.createBlockData());
+            /* Al posarse NO deja bloque ni suelta item, y no hace daño. Antes
+             * quedaban yunques de verdad clavados en el terreno, que es dejar
+             * el mundo tocado por una broma que se supone reversible. */
+            yunque.setCancelDrop(true);
+            yunque.setHurtEntities(false);
+            c.bichoTemporal(yunque, 60);
         })));
 
         pon(m, Troll.temporal("borde", "El mundo se encoge", "Le aparece el borde del mundo encima",

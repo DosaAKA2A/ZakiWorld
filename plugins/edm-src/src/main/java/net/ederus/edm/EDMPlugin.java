@@ -34,7 +34,7 @@ import net.ederus.edm.tienda.TiendaPlugin;
  */
 public final class EDMPlugin extends JavaPlugin {
 
-    public static final String VERSION = "1.5.0";
+    public static final String VERSION = "1.5.1";
 
     /* id del modulo -> carpeta del plugin viejo de la que se migran los datos */
     private static final Map<String, String> CARPETAS_VIEJAS = Map.of(
@@ -179,6 +179,10 @@ public final class EDMPlugin extends JavaPlugin {
             this.modulos.put(id, modulo);
         } catch (Throwable t) {
             this.fallidos.add(id);
+            /* Si revento a mitad de onEnable puede haber registrado ya sus
+             * listeners: sin esto se quedan atendiendo eventos con el modulo
+             * medio construido, que da errores raros de un modulo "caido". */
+            HandlerList.unregisterAll(modulo);
             getLogger().severe("El modulo " + id + " no arranco: " + t);
             t.printStackTrace();
         }

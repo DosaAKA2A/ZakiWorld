@@ -139,6 +139,22 @@ public final class Contexto {
         estados().poner(victima, troll.id(), null, segundos, deshacer);
     }
 
+    /**
+     * Un bicho de adorno que se borra solo.
+     *
+     * NO va con un simple tras(...): esa tarea muere con el plugin, asi que si
+     * el modulo se apaga o el servidor se cae en esos segundos, el creeper o el
+     * armor stand se quedan puestos en el mundo. Registrado aqui, lo borra
+     * tambien el quitarTodo() del apagado. Y sin persistencia, para que no se
+     * guarde a disco si el trozo de mundo se descarga antes de tiempo.
+     */
+    public void bichoTemporal(org.bukkit.entity.Entity bicho, int ticks) {
+        if (bicho == null) return;
+        bicho.setPersistent(false);
+        int seg = Math.max(1, (ticks + 19) / 20);
+        estados().poner(victima, troll.id() + ":bicho:" + bicho.getUniqueId(), null, seg, bicho::remove);
+    }
+
     /** Enciende una marca para los listeners mientras dure la broma. */
     public void marcar(Estados.Marca marca) {
         marcar(marca, () -> { });

@@ -86,6 +86,7 @@ public final class TrollPlugin extends Module {
          * plugins pesen. */
         tarea = core.getServer().getScheduler().runTaskTimer(core, () -> {
             estados.repasar();
+            confirmaciones.values().removeIf(p -> p.caduca() <= System.currentTimeMillis());
             for (Player p : Bukkit.getOnlinePlayers()) {
                 if (!estados.tiene(p, Estados.Marca.INVERTIDO)) continue;
                 var l = p.getLocation();

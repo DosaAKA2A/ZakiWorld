@@ -164,7 +164,12 @@ public final class Mercado {
     /** Como totalVenta pero partiendo de una presion inventada, para poder
      *  enseñar en una tabla que pasaria con el mercado ya cargado. */
     public double totalVentaDesde(Catalogo.Articulo art, int cantidad, double compraEfectiva, double presionPrevia) {
-        if (cantidad <= 0 || !activo || !art.seVende()) return 0;
+        if (cantidad <= 0) return 0;
+        /* Igual que totalVenta: con el mercado apagado el precio es el del
+         * fichero, no cero. Devolver cero aqui hacia que la tabla de
+         * /etienda mercado dijera que no se paga nada. */
+        double techoFijo = compraEfectiva > 0 ? compraEfectiva * margenVentaCompra : Double.MAX_VALUE;
+        if (!activo || !art.seVende()) return Math.min(art.venta(), techoFijo) * cantidad;
         double h = mitad(art), ln2 = Math.log(2);
         double total = art.venta() * (suelo * cantidad + (1 - suelo) * (h / ln2)
                 * (Math.pow(2, -presionPrevia / h) - Math.pow(2, -(presionPrevia + cantidad) / h)));

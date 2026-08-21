@@ -191,6 +191,8 @@ public final class Mesa {
                 cantidad, System.currentTimeMillis());
         abiertas.put(a.id(), a);
         ultimaVez.put(creador.getUniqueId(), System.currentTimeMillis());
+        guardar();
+        podarEsperas();
         registro.anotar("ABRE", a.nombreCreador(), a.id(), cantidad, 0,
                 a.esReto() ? "reto a " + a.nombreRetado() : "mesa abierta");
 
@@ -200,6 +202,13 @@ public final class Mesa {
                 "%cantidad%", Estilo.dinero(cantidad),
                 "%rival%", String.valueOf(a.nombreRetado()),
                 "%id%", String.valueOf(a.id())));
+    }
+
+    /** La espera entre apuestas solo vale unos segundos: pasada, la entrada
+     *  sobra. Sin esto el mapa se queda con una linea por jugador para siempre. */
+    private void podarEsperas() {
+        long limite = System.currentTimeMillis() - Math.max(1, esperaSegundos) * 1000L;
+        ultimaVez.values().removeIf(t -> t < limite);
     }
 
     private long esperaRestante(UUID quien) {
@@ -220,16 +229,27 @@ public final class Mesa {
         if (a.tomada()) {
             return Resultado.no(textos.de("ya-tomada", "&#FF5C5CEsa apuesta ya la esta cogiendo alguien."));
         }
-        devolver(a, "CANCELA");
+        if (!devolver(a, "CANCELA")) {
+            return Resultado.no(textos.de("no-listo", "&#FF5C5CLas apuestas todavia estan arrancando."));
+        }
         return new Resultado(true, textos.de("cancelada",
                 "&fApuesta cancelada. Se te devolvieron &#4FFF55%cantidad%",
                 "%cantidad%", Estilo.dinero(a.cantidad())));
     }
 
-    /** Saca la apuesta de la mesa y le devuelve el dinero al creador. */
-    private void devolver(Apuesta a, String motivo) {
+    /** Saca la apuesta de la mesa y le devuelve el dinero al creador.
+     *  @return false si no se pudo y la apuesta sigue puesta. */
+    private boolean devolver(Apuesta a, String motivo) {
+        /* Sin banco no se saca de la mesa: quitarla aqui borraria una apuesta
+         * cuyo dinero ya esta retirado y no habria por donde recuperarlo.
+         * Se queda puesta y se avisa; al apagar sale en el fichero. */
+        if (economia == null) {
+            log.severe("SIN BANCO: no puedo devolver " + a.cantidad() + " a " + a.nombreCreador()
+                    + " (apuesta " + a.id() + "); la apuesta se queda en la mesa.");
+            return false;
+        }
         abiertas.remove(a.id());
-        if (economia == null) return;
+        guardar();
         OfflinePlayer duenio = Bukkit.getOfflinePlayer(a.creador());
         EconomyResponse r = economia.depositPlayer(duenio, a.cantidad());
         if (!r.transactionSuccess()) {
@@ -239,23 +259,27 @@ public final class Mesa {
                     + " (apuesta " + a.id() + "): " + r.errorMessage);
         }
         registro.anotar(motivo, a.nombreCreador(), a.id(), a.cantidad(), 0, "devuelto");
+        return true;
     }
 
     /** Las que se pasaron de tiempo. Se llama desde la tarea de mantenimiento. */
     public int caducar() {
+        podarEsperas();
         if (caducidadMinutos <= 0) return 0;
         long tope = caducidadMinutos * 60_000L;
         List<Apuesta> viejas = new ArrayList<>();
         for (Apuesta a : abiertas.values()) if (!a.tomada() && a.edadMs() > tope) viejas.add(a);
+        int n = 0;
         for (Apuesta a : viejas) {
-            devolver(a, "CADUCA");
+            if (!devolver(a, "CADUCA")) continue;
+            n++;
             Player p = Bukkit.getPlayer(a.creador());
             if (p != null) {
                 textos.manda(p, "caducada", "&7Tu apuesta de %cantidad% caduco y se te devolvio.",
                         "%cantidad%", Estilo.dinero(a.cantidad()));
             }
         }
-        return viejas.size();
+        return n;
     }
 
     /** Al salir del servidor se le devuelven las suyas: una mesa cuyo dueño no
@@ -267,15 +291,14 @@ public final class Mesa {
          * cuando fueron 2 es la clase de linea que luego nadie sabe leer. */
         for (Apuesta a : deJugador(quien)) {
             if (a.tomada()) continue;
-            devolver(a, "SALE");
-            n++;
+            if (devolver(a, "SALE")) n++;
         }
         return n;
     }
 
     public int devolverTodo(String motivo) {
         int n = 0;
-        for (Apuesta a : todas()) { devolver(a, motivo); n++; }
+        for (Apuesta a : todas()) { if (devolver(a, motivo)) n++; }
         return n;
     }
 
@@ -322,6 +345,7 @@ public final class Mesa {
                     "%motivo%", String.valueOf(cobro.errorMessage)));
         }
         abiertas.remove(a.id());
+        guardar();
 
         boolean ganaCreador = Sorteo.caraOCruz();
         UUID ganador = ganaCreador ? a.creador() : quien.getUniqueId();
@@ -406,9 +430,11 @@ public final class Mesa {
     // ------------------------------------------------------------ en disco
 
     /**
-     * Guarda las abiertas. NO es un guardado periodico: solo se escribe al
-     * apagar, para que si el servidor se cae de mala manera el fichero siga ahi
-     * y el dinero se pueda devolver al arrancar.
+     * Guarda las abiertas. Se llama en CADA cambio de la mesa, no solo al
+     * apagar: el fichero es la unica copia del dinero que ya esta retirado, y
+     * si solo se escribiera al apagar quedaria siempre vacio (al apagar se
+     * devuelve todo antes de guardar) y una caida a lo bruto se llevaria por
+     * delante lo apostado.
      */
     public void guardar() {
         YamlConfiguration yml = new YamlConfiguration();

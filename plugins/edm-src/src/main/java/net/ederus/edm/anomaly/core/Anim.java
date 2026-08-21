@@ -21,8 +21,11 @@ import java.util.logging.Level;
 public final class Anim {
 
     private static final int MAX_ERRORS = 5;
+    /* Sincronizado y con las entradas debiles: si el scheduler ya solto una
+     * tarea terminada, aqui desaparece sola y no se acumulan handles muertos.
+     * El candado hace falta porque cancelAll() copia el conjunto entero. */
     private static final Set<BukkitTask> RUNNING =
-            Collections.newSetFromMap(new WeakHashMap<>());
+            Collections.synchronizedSet(Collections.newSetFromMap(new WeakHashMap<>()));
 
     private Anim() {
     }
@@ -74,14 +77,16 @@ public final class Anim {
                 }
             }
         };
-        BukkitTask handle = task.runTaskTimer(plugin, delay, period);
+        /* A nombre del nucleo: los modulos no son plugins registrados y el
+         * scheduler no cancelaria sus tareas al apagar EDM. */
+        BukkitTask handle = task.runTaskTimer(net.ederus.edm.Module.dueno(plugin), delay, period);
         RUNNING.add(handle);
         return handle;
     }
 
     /** Ejecuta algo una sola vez tras un retardo, con las mismas garantias de no reventar. */
     public static BukkitTask later(Plugin plugin, int delayTicks, Runnable action) {
-        return plugin.getServer().getScheduler().runTaskLater(plugin, () -> {
+        return plugin.getServer().getScheduler().runTaskLater(net.ederus.edm.Module.dueno(plugin), () -> {
             try {
                 action.run();
             } catch (Throwable t) {
@@ -91,12 +96,19 @@ public final class Anim {
     }
 
     public static void cancelAll() {
-        for (BukkitTask t : Set.copyOf(RUNNING)) {
+        java.util.List<BukkitTask> copia;
+        synchronized (RUNNING) {
+            /* ArrayList y no Set.copyOf: una entrada debil puede quedarse en
+             * null justo aqui y copyOf revienta con NPE. */
+            copia = new java.util.ArrayList<>(RUNNING);
+            RUNNING.clear();
+        }
+        for (BukkitTask t : copia) {
+            if (t == null) continue;
             try {
                 t.cancel();
             } catch (Throwable ignored) {
             }
         }
-        RUNNING.clear();
     }
 }

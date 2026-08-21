@@ -21,10 +21,15 @@ public final class Registro {
     private static final DateTimeFormatter HORA = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
 
     private final File carpeta;
+    private final java.util.logging.Logger log;
     private BufferedWriter salida;
     private LocalDate diaAbierto;
+    private boolean yaAvisado;
 
-    public Registro(File carpeta) { this.carpeta = carpeta; }
+    public Registro(File carpeta, java.util.logging.Logger log) {
+        this.carpeta = carpeta;
+        this.log = log;
+    }
 
     /** Un fichero por dia: buscar en el log de una fecha concreta es lo que se acaba haciendo. */
     private synchronized void asegurarDia() throws IOException {
@@ -52,8 +57,18 @@ public final class Registro {
                     "saldo " + fmt(saldo)));
             salida.newLine();
             salida.flush();
+            yaAvisado = false;
         } catch (IOException e) {
-            throw new IllegalStateException("no pude escribir el log de transacciones", e);
+            /* Esto se llama DESPUES de haber cobrado o pagado. Si revienta, la
+             * excepcion sube hasta el clic del menu: el jugador se queda sin
+             * mensaje y sin ver el menu repintado, con la operacion ya hecha.
+             * Un log que no se puede escribir es grave, pero no es motivo para
+             * romper una compra que ya ocurrio. */
+            if (!yaAvisado) {
+                yaAvisado = true;
+                log.severe("No puedo escribir el log de transacciones de la tienda ("
+                        + e.getMessage() + "). Las operaciones siguen, pero SIN registro.");
+            }
         }
     }
 

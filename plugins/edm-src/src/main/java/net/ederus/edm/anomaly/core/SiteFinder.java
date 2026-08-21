@@ -108,7 +108,7 @@ public final class SiteFinder {
             return;
         }
 
-        world.getChunkAtAsync(x >> 4, z >> 4).thenAccept(chunk -> plugin.getServer().getScheduler().runTask(plugin, () -> {
+        world.getChunkAtAsync(x >> 4, z >> 4).thenAccept(chunk -> plugin.getServer().getScheduler().runTask(net.ederus.edm.Module.dueno(plugin), () -> {
             Location candidate = evaluate(world, x, z, type);
             if (candidate != null) {
                 callback.accept(candidate);
@@ -116,7 +116,7 @@ public final class SiteFinder {
                 attempt(world, anchor, type, tries + 1, callback);
             }
         })).exceptionally(t -> {
-            plugin.getServer().getScheduler().runTask(plugin, () -> attempt(world, anchor, type, tries + 1, callback));
+            plugin.getServer().getScheduler().runTask(net.ederus.edm.Module.dueno(plugin), () -> attempt(world, anchor, type, tries + 1, callback));
             return null;
         });
     }

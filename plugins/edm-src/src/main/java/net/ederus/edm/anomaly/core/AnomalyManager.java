@@ -107,7 +107,8 @@ public final class AnomalyManager implements Listener {
         plugin.announcer().opened(event);
         plugin.getLogger().info("Anomalia " + type.id() + " abierta en " + describe(where));
 
-        ticker = plugin.getServer().getScheduler().runTaskTimer(plugin, this::tick, 1L, 1L);
+        ticker = plugin.getServer().getScheduler().runTaskTimer(
+                net.ederus.edm.Module.dueno(plugin), this::tick, 1L, 1L);
     }
 
     private static String describe(Location l) {
@@ -127,7 +128,12 @@ public final class AnomalyManager implements Listener {
             for (int dz = -1; dz <= 1; dz++) {
                 try {
                     Chunk c = where.getWorld().getChunkAt(cx + dx, cz + dz);
-                    c.setForceLoaded(true);
+                    /* Billete de plugin y NO setForceLoaded: el force-loaded se
+                     * escribe en level.dat y sobrevive al servidor, asi que una
+                     * caida en mitad de una anomalia dejaba nueve trozos de
+                     * mundo cargados para siempre y sin nadie que los soltara.
+                     * El billete se suelta solo cuando el plugin se descarga. */
+                    c.addPluginChunkTicket(net.ederus.edm.Module.dueno(plugin));
                     forced.add(c);
                 } catch (Throwable ignored) {
                 }
@@ -138,7 +144,7 @@ public final class AnomalyManager implements Listener {
     private void releaseChunks() {
         for (Chunk c : forced) {
             try {
-                c.setForceLoaded(false);
+                c.removePluginChunkTicket(net.ederus.edm.Module.dueno(plugin));
             } catch (Throwable ignored) {
             }
         }
@@ -241,7 +247,8 @@ public final class AnomalyManager implements Listener {
         }
         if (!plugin.settings().autoEnabled()) return;
         long period = plugin.settings().autoIntervalMinutes() * 60L * 20L;
-        autoTask = plugin.getServer().getScheduler().runTaskTimer(plugin, this::autoTrigger, period, period);
+        autoTask = plugin.getServer().getScheduler().runTaskTimer(
+                net.ederus.edm.Module.dueno(plugin), this::autoTrigger, period, period);
         plugin.getLogger().info("Anomalias automaticas cada " + plugin.settings().autoIntervalMinutes() + " min.");
     }
 

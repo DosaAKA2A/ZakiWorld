@@ -56,11 +56,17 @@ public final class EffectRunner {
     private final Set<BukkitRunnable> active = Collections.synchronizedSet(new HashSet());
     private final Set<Entity> fxEntities = Collections.synchronizedSet(new HashSet());
     private final Map<Entity, Long> fxBorn = new ConcurrentHashMap<Entity, Long>();
+    private org.bukkit.scheduler.BukkitTask sweepTask;
 
     public EffectRunner(RipPlugin plugin) {
         this.plugin = plugin;
+        /* El NamespacedKey SIGUE siendo del modulo (rip:fx): cambiarlo dejaria
+         * sin reconocer las entidades ya marcadas en el mundo. Las tareas, en
+         * cambio, van a nombre del nucleo: un modulo no es un plugin registrado
+         * y el scheduler no cancelaria las suyas al apagar. */
         this.fxKey = new NamespacedKey((Plugin)plugin, "fx");
-        Bukkit.getScheduler().runTaskTimer((Plugin)plugin, this::sweep, 100L, 100L);
+        this.sweepTask = Bukkit.getScheduler().runTaskTimer(
+                net.ederus.edm.Module.dueno(plugin), this::sweep, 100L, 100L);
     }
 
     /*
@@ -113,6 +119,13 @@ public final class EffectRunner {
                 e.remove();
             }
             catch (Throwable throwable) {}
+        }
+        if (this.sweepTask != null) {
+            try {
+                this.sweepTask.cancel();
+            }
+            catch (Throwable throwable) {}
+            this.sweepTask = null;
         }
     }
 
@@ -188,7 +201,7 @@ public final class EffectRunner {
             }
         };
         this.active.add(task);
-        task.runTaskTimer((Plugin)this.plugin, 0L, period);
+        task.runTaskTimer(net.ederus.edm.Module.dueno(this.plugin), 0L, period);
     }
 
     private void later(long delay, final Runnable action) {
@@ -205,7 +218,7 @@ public final class EffectRunner {
             }
         };
         this.active.add(task);
-        task.runTaskLater((Plugin)this.plugin, Math.max(0L, delay));
+        task.runTaskLater(net.ederus.edm.Module.dueno(this.plugin), Math.max(0L, delay));
     }
 
     private void stop(BukkitRunnable task) {

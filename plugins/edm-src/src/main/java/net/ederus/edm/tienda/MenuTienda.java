@@ -71,7 +71,10 @@ public final class MenuTienda implements Listener {
     static final class Vista implements InventoryHolder {
         final String categoria;                 // null = menu principal
         final int pagina;
-        final Map<Integer, Integer> ranuraAIndice = new HashMap<>();
+        /* La CLAVE del articulo, no su posicion en la lista. Con el indice, si
+         * el catalogo se recarga o rota el dia con el menu abierto, la misma
+         * ranura pasa a apuntar a otra cosa y se compra lo que no era. */
+        final Map<Integer, String> ranuraAClave = new HashMap<>();
         Inventory inv;
         Vista(String categoria, int pagina) { this.categoria = categoria; this.pagina = pagina; }
         @Override public Inventory getInventory() { return inv; }
@@ -90,6 +93,8 @@ public final class MenuTienda implements Listener {
     /** Que hace el click normal: abrir la pantalla de cantidad o comprar 1. */
     private boolean pantallaAlHacerClick = true;
     private boolean buscadorActivo = true;
+    /** Para no repetir el aviso de ranura pisada en cada apertura del menu. */
+    private final java.util.Set<String> avisoRanuras = new java.util.HashSet<>();
 
     public MenuTienda(TiendaPlugin modulo, Catalogo catalogo, Topes topes, Secciones secciones) {
         this.modulo = modulo;
@@ -157,6 +162,16 @@ public final class MenuTienda implements Listener {
             if (s.ranura() < 0 || s.ranura() >= inv.getSize()) continue;
             int n = catalogo.categorias().getOrDefault(s.id(), 0);
             if (n == 0) continue;
+            if (s.ranura() == RANURA_OFERTAS || s.ranura() == RANURA_DEMANDAS || s.ranura() == RANURA_BUSCAR) {
+                /* Esas tres ranuras las atiende el clic antes que a las
+                 * secciones: dejar una ahi la pinta pero no la abre nunca. */
+                if (avisoRanuras.add(s.id())) {
+                    modulo.getLogger().warning("La seccion '" + s.id() + "' esta en la ranura "
+                            + s.ranura() + ", que ya usan Ofertas/Demandas/Buscar: no se podra abrir."
+                            + " Cambiala en secciones.yml.");
+                }
+                continue;
+            }
             ItemStack icono = secciones.icono(s.id());
             if (icono == null) icono = new ItemStack(catalogo.iconoDe(s.id()));
             inv.setItem(s.ranura(), decorarCon(icono, secciones.nombreDe(s.id()),
@@ -246,7 +261,7 @@ public final class MenuTienda implements Listener {
                 int ranura = (filaInicio + f) * 9 + 1 + hueco + c;
                 if (ranura >= inv.getSize()) break;
                 inv.setItem(ranura, pintar(pagina.get(i), jugador));
-                vista.ranuraAIndice.put(ranura, i);
+                vista.ranuraAClave.put(ranura, pagina.get(i).clave());
             }
         }
     }
@@ -268,9 +283,6 @@ public final class MenuTienda implements Listener {
         List<Catalogo.Articulo> enPagina =
                 new ArrayList<>(items.subList(desde, Math.min(items.size(), desde + POR_PAGINA)));
         colocar(inv, vista, enPagina, jugador);
-        /* Los indices se guardaron relativos a la pagina: se pasan a absolutos. */
-        final int base = desde;
-        vista.ranuraAIndice.replaceAll((r, i) -> i + base);
 
         if (pagina > 0) inv.setItem(RANURA_ANTERIOR, decorarCon(new ItemStack(Material.ARROW),
                 secciones.texto("anterior", "&x&D&7&F&3&F&FPagina anterior"), List.of()));
@@ -458,11 +470,15 @@ public final class MenuTienda implements Listener {
             default -> { /* es un articulo */ }
         }
 
-        Integer indice = vista.ranuraAIndice.get(e.getSlot());
-        if (indice == null) return;
-        List<Catalogo.Articulo> items = articulosDe(vista.categoria);
-        if (indice >= items.size()) return;
-        Catalogo.Articulo art = items.get(indice);
+        String clave = vista.ranuraAClave.get(e.getSlot());
+        if (clave == null) return;
+        Catalogo.Articulo art = catalogo.de(clave);
+        if (art == null) {
+            /* Se recargo el catalogo y ese articulo ya no existe: se repinta en
+             * vez de operar sobre un precio que ya no esta. */
+            abrirCategoria(jugador, vista.categoria, vista.pagina);
+            return;
+        }
 
         Motor motor = modulo.motor();
         if (motor == null) { jugador.sendMessage(Estilo.legado("&cLa tienda todavia esta arrancando.")); return; }
@@ -536,10 +552,6 @@ public final class MenuTienda implements Listener {
     }
 
     // --------------------------------------------------------------- adornos
-
-    private static ItemStack pieza(Material material, String titulo, List<Component> lore) {
-        return decorar(new ItemStack(material), titulo, lore);
-    }
 
     private static ItemStack decorar(ItemStack pila, String titulo, List<Component> lore) {
         return decorarCon(pila, Estilo.texto(titulo, Estilo.CLARO), lore);

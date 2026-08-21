@@ -33,6 +33,7 @@ public final class TiendaPlugin extends Module {
     private Mercado mercado;
     private Economy economia;
     private BukkitTask tareaGuardado;
+    private BukkitTask tareaRotacion;
 
     public TiendaPlugin(EDMPlugin core) {
         super(core, "tienda", "EderusTienda");
@@ -55,7 +56,7 @@ public final class TiendaPlugin extends Module {
         mercado = new Mercado(new File(getDataFolder(), "mercado.yml"));
         mercado.configurar(getConfig().getConfigurationSection("mercado"));
         mercado.cargar();
-        registro = new Registro(new File(getDataFolder(), "registro"));
+        registro = new Registro(new File(getDataFolder(), "registro"), getLogger());
         compras = new Compras(new File(getDataFolder(), "compras.yml"));
         compras.cargar();
 
@@ -115,18 +116,23 @@ public final class TiendaPlugin extends Module {
 
         long cada = Math.max(20L * 30, getConfig().getLong("guardado-segundos", 120) * 20L);
         tareaGuardado = core.getServer().getScheduler().runTaskTimerAsynchronously(core, () -> {
-            topes.limpiar(catalogo);
-            topes.guardar();
-            mercado.guardar();
-            /* La rotacion se comprueba aqui y no con una tarea a medianoche: si
-             * el servidor estaba apagado a esa hora, igual rota al arrancar. */
-            if (rotacion.alDia(catalogo)) {
-                /* Solo se anuncia cuando ha rotado de verdad, no en cada guardado. */
-                core.getServer().getScheduler().runTask(core, mensajes::anunciarRotacion);
-            }
-            rotacion.guardar();
-            compras.guardar();
+            /* Cada guardado va en su propio try: si el disco falla al escribir
+             * los topes, los otros tres tienen que guardarse igual. Antes la
+             * primera excepcion se llevaba por delante el resto de la tanda. */
+            guardar("topes", () -> { topes.limpiar(catalogo); topes.guardar(); });
+            guardar("mercado", mercado::guardar);
+            guardar("rotacion", rotacion::guardar);
+            guardar("compras", compras::guardar);
         }, cada, cada);
+
+        /* La rotacion se comprueba en el hilo principal y no dentro del guardado
+         * asincrono: al rotar se vacia y se rellena el sorteo entero y hace falta
+         * recorrer el catalogo, y el menu esta leyendo las dos cosas. Se mira
+         * cada minuto, no con una tarea a medianoche: si el servidor estaba
+         * apagado a esa hora, igual rota al arrancar. */
+        tareaRotacion = core.getServer().getScheduler().runTaskTimer(core, () -> {
+            if (rotacion.alDia(catalogo)) mensajes.anunciarRotacion();
+        }, 20L * 60, 20L * 60);
 
         getLogger().info("Tienda activa | " + catalogo.total() + " articulos en "
                 + catalogo.categorias().size() + " categorias ("
@@ -137,11 +143,21 @@ public final class TiendaPlugin extends Module {
     @Override
     public void onDisable() {
         if (tareaGuardado != null) tareaGuardado.cancel();
+        if (tareaRotacion != null) tareaRotacion.cancel();
         if (topes != null) topes.guardar();
         if (mercado != null) mercado.guardar();
         if (rotacion != null) rotacion.guardar();
         if (compras != null) compras.guardar();
         if (registro != null) registro.cerrar();
+    }
+
+    /** Un guardado que no puede llevarse por delante a los demas. */
+    private void guardar(String que, Runnable accion) {
+        try {
+            accion.run();
+        } catch (Throwable t) {
+            getLogger().warning("No se pudo guardar " + que + " de la tienda: " + t.getMessage());
+        }
     }
 
     private boolean engancharVault() {

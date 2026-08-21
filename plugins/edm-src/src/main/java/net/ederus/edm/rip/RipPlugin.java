@@ -77,6 +77,8 @@ implements Listener {
     private final AtomicBoolean dirty = new AtomicBoolean(false);
     private File selFile;
     private FileConfiguration selConfig;
+    private org.bukkit.scheduler.BukkitTask tareaGuardado;
+    private org.bukkit.scheduler.BukkitTask tareaBarrido;
     private EffectRunner runner;
     private RipMenu menu;
     private HeadCache heads;
@@ -97,16 +99,27 @@ implements Listener {
         RipCommand command = new RipCommand(this);
         this.getCommand("rip").setExecutor((CommandExecutor)command);
         this.getCommand("rip").setTabCompleter((TabCompleter)command);
-        Bukkit.getScheduler().runTaskTimerAsynchronously((Plugin)this, () -> {
+        /* A nombre del nucleo: un modulo no es un plugin registrado, asi que
+         * Bukkit no cancela sus tareas al apagar y estas dos se quedaban
+         * corriendo para siempre sujetando el modulo muerto. */
+        this.tareaGuardado = Bukkit.getScheduler().runTaskTimerAsynchronously(dueno(this), () -> {
             if (this.dirty.compareAndSet(true, false)) {
                 this.saveSelections();
             }
         }, 600L, 600L);
-        Bukkit.getScheduler().runTaskTimer((Plugin)this, this::revealStrays, 100L, 100L);
+        this.tareaBarrido = Bukkit.getScheduler().runTaskTimer(dueno(this), this::revealStrays, 100L, 100L);
         this.banner();
     }
 
     public void onDisable() {
+        if (this.tareaGuardado != null) {
+            this.tareaGuardado.cancel();
+            this.tareaGuardado = null;
+        }
+        if (this.tareaBarrido != null) {
+            this.tareaBarrido.cancel();
+            this.tareaBarrido = null;
+        }
         this.revealAll();
         if (this.runner != null) {
             this.runner.cancelAll();
@@ -420,7 +433,15 @@ implements Listener {
         }
     }
 
+    /* El mapa de enfriamientos solo crecia: una linea por jugador que haya
+     * usado un efecto, para siempre. Se poda en el mismo barrido. */
+    private void purgeCooldowns() {
+        long now = System.currentTimeMillis();
+        this.busyUntil.values().removeIf(until -> until == null || until <= now);
+    }
+
     private void revealStrays() {
+        this.purgeCooldowns();
         if (this.hiddenBodies.isEmpty()) {
             return;
         }

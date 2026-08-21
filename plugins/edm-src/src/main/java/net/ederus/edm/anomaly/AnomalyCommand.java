@@ -243,7 +243,7 @@ public final class AnomalyCommand implements CommandExecutor, TabCompleter {
             int delay = 0;
             for (Ability a : ev.type().abilities()) {
                 final String id = a.id();
-                plugin.getServer().getScheduler().runTaskLater(plugin, () -> {
+                plugin.getServer().getScheduler().runTaskLater(net.ederus.edm.Module.dueno(plugin), () -> {
                     if (plugin.manager().current() == null) return;
                     plugin.getLogger().info("[test] " + id);
                     plugin.manager().current().fight().castNow(id);
