@@ -183,6 +183,26 @@ public final class Secciones {
         }
     }
 
+    /**
+     * El nombre de la categoria en texto pelado, sin colores.
+     *
+     * Lo necesita el titulo de la ventana, que se arma con marcadores y no con
+     * componentes. Sin esto el menu principal decia "Botin de mobs" y al entrar
+     * la ventana se titulaba "Mobs", que es el id interno.
+     */
+    public String nombrePlano(String id) {
+        Seccion s = porId.get(id);
+        if (s == null) return null;
+        String n = s.nombre();
+        if (n == null || n.isBlank()) return null;
+        if (n.indexOf('&') >= 0) {
+            n = net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer.plainText()
+                    .serialize(LEGADO.deserialize(n));
+        }
+        /* Las flechitas decorativas del nombre no pintan nada en un titulo. */
+        return n.replace("→", "").replace("▸", "").trim();
+    }
+
     public Component nombreDe(String id) {
         Seccion s = porId.get(id);
         if (s == null) return Estilo.texto(id, Estilo.CLARO);

@@ -62,6 +62,8 @@ public final class TiendaPlugin extends Module {
 
         migrar("secciones.yml", SECCIONES_VERSION);
         migrar("mensajes.yml", MENSAJES_VERSION);
+        migrar("nombres.yml", NOMBRES_VERSION);
+        Nombres.cargar(new File(getDataFolder(), "nombres.yml"));
         mensajes.cargar(new File(getDataFolder(), "mensajes.yml"));
         secciones.cargar(new File(getDataFolder(), "secciones.yml"));
         rotacion = new Rotacion(new File(getDataFolder(), "rotacion.yml"));
@@ -134,7 +136,8 @@ public final class TiendaPlugin extends Module {
             if (rotacion.alDia(catalogo)) mensajes.anunciarRotacion();
         }, 20L * 60, 20L * 60);
 
-        getLogger().info("Tienda activa | " + catalogo.total() + " articulos en "
+        getLogger().info("Tienda activa | " + Nombres.cuantos() + " nombres en espanol | "
+                + catalogo.total() + " articulos en "
                 + catalogo.categorias().size() + " categorias ("
                 + catalogo.variantes() + " variantes) | " + secciones.cuantas() + " secciones"
                 + " | click: " + menu.modo() + " | buscador: " + (menu.buscador() ? "si" : "no"));
@@ -171,9 +174,10 @@ public final class TiendaPlugin extends Module {
 
     /** Version del secciones.yml que espera este codigo. Subirla cuando el
      *  formato cambie: el fichero viejo se guarda al lado y se pone el nuevo. */
-    private static final int SECCIONES_VERSION = 3;
+    private static final int SECCIONES_VERSION = 4;
     private static final int CONFIG_VERSION = 2;
-    private static final int MENSAJES_VERSION = 2;
+    private static final int MENSAJES_VERSION = 3;
+    private static final int NOMBRES_VERSION = 1;
 
     /**
      * Pone al dia secciones.yml sin que nadie tenga que borrar nada a mano.
@@ -230,6 +234,7 @@ public final class TiendaPlugin extends Module {
     public String recargar() {
         secciones.cargar(new File(getDataFolder(), "secciones.yml"));
         mensajes.cargar(new File(getDataFolder(), "mensajes.yml"));
+        Nombres.cargar(new File(getDataFolder(), "nombres.yml"));
         reloadConfig();
         aplicarAjustes();
         if (rotacion != null) rotacion.configurar(getConfig().getConfigurationSection("rotacion"));

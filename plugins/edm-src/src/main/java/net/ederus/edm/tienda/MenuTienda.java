@@ -181,38 +181,38 @@ public final class MenuTienda implements Listener {
             ItemStack icono = secciones.icono(s.id());
             if (icono == null) icono = new ItemStack(catalogo.iconoDe(s.id()));
             inv.setItem(s.ranura(), decorarCon(icono, secciones.nombreDe(s.id()),
-                    List.of(secciones.texto("categoria-articulos", "&8▸ &f%articulos% articulos",
+                    List.of(secciones.texto("categoria-articulos", "&8▸ &f%articulos% artículos",
                                     "%articulos%", String.valueOf(n)),
                             Estilo.vacio(),
-                            secciones.texto("categoria-entrar", "&#4FFF55▸ Click para entrar"))));
+                            secciones.texto("categoria-entrar", "&#4FFF55▸ Clic para entrar"))));
         }
 
         Rotacion rot = modulo.rotacion();
         if (rot != null && rot.activo()) {
             inv.setItem(RANURA_OFERTAS, decorarCon(new ItemStack(Material.SUNFLOWER),
-                    secciones.texto("ofertas-nombre", "&8→ &#4FFF55Ofertas del dia"),
-                    List.of(secciones.texto("ofertas-descripcion", "&7Estos objetos estan rebajados"),
+                    secciones.texto("ofertas-nombre", "&8→ &#4FFF55Ofertas del día"),
+                    List.of(secciones.texto("ofertas-descripcion", "&7Estos objetos están rebajados"),
                             Estilo.vacio(),
                             secciones.texto("rota-en", "&#545454Rota en %rota%",
                                     "%rota%", Motor.duracion(Rotacion.hastaManana())),
                             Estilo.vacio(),
-                            secciones.texto("categoria-entrar", "&#4FFF55▸ Click para entrar"))));
+                            secciones.texto("categoria-entrar", "&#4FFF55▸ Clic para entrar"))));
             inv.setItem(RANURA_DEMANDAS, decorarCon(new ItemStack(Material.EMERALD),
-                    secciones.texto("demandas-nombre", "&8→ &#FDFF66Demanda del dia"),
+                    secciones.texto("demandas-nombre", "&8→ &#FDFF66Demanda del día"),
                     List.of(secciones.texto("demandas-descripcion", "&7Estos objetos son muy pedidos"),
                             Estilo.vacio(),
                             secciones.texto("rota-en", "&#545454Rota en %rota%",
                                     "%rota%", Motor.duracion(Rotacion.hastaManana())),
                             Estilo.vacio(),
-                            secciones.texto("categoria-entrar", "&#4FFF55▸ Click para entrar"))));
+                            secciones.texto("categoria-entrar", "&#4FFF55▸ Clic para entrar"))));
         }
 
         if (buscadorActivo && chat != null) {
             inv.setItem(RANURA_BUSCAR, decorarCon(new ItemStack(Material.COMPASS),
                     secciones.texto("buscar-nombre", "&8→ &#91F4FFBuscar"),
-                    List.of(secciones.texto("buscar-descripcion", "&7Encuentra un articulo por su nombre"),
+                    List.of(secciones.texto("buscar-descripcion", "&7Encuentra un artículo por su nombre"),
                             Estilo.vacio(),
-                            secciones.texto("buscar-entrar", "&#4FFF55▸ Click para escribirlo"))));
+                            secciones.texto("buscar-entrar", "&#4FFF55▸ Clic para escribirlo"))));
         }
 
         inv.setItem(RANURA_SALDO, saldo(jugador));
@@ -240,8 +240,8 @@ public final class MenuTienda implements Listener {
     }
 
     private static String tituloDe(String categoria) {
-        if (OFERTAS.equals(categoria)) return "Ofertas del dia";
-        if (DEMANDAS.equals(categoria)) return "Demanda del dia";
+        if (OFERTAS.equals(categoria)) return "Ofertas del día";
+        if (DEMANDAS.equals(categoria)) return "Demanda del día";
         if (categoria != null && categoria.startsWith(BUSCAR)) {
             return "Buscar: " + categoria.substring(BUSCAR.length());
         }
@@ -280,6 +280,9 @@ public final class MenuTienda implements Listener {
 
         Vista vista = new Vista(categoria, pagina);
         String especial = tituloDe(categoria);
+        /* El nombre de verdad de la categoria, el mismo que se lee en el menu
+         * principal. Si no lo tuviera, el id interno como respaldo. */
+        if (especial == null) especial = secciones.nombrePlano(categoria);
         Inventory inv = Bukkit.createInventory(vista, FILAS * 9,
                 secciones.texto("titulo-categoria", "&x&0&0&8&3&F&D&lEDERUS &8| &x&D&7&F&3&F&F%categoria%",
                         "%categoria%", especial != null ? especial : bonito(categoria)));
@@ -291,12 +294,12 @@ public final class MenuTienda implements Listener {
         colocar(inv, vista, enPagina, jugador);
 
         if (pagina > 0) inv.setItem(RANURA_ANTERIOR, decorarCon(new ItemStack(Material.ARROW),
-                secciones.texto("anterior", "&x&D&7&F&3&F&FPagina anterior"), List.of()));
+                secciones.texto("anterior", "&x&D&7&F&3&F&FPágina anterior"), List.of()));
         if (pagina < paginas - 1) inv.setItem(RANURA_SIGUIENTE, decorarCon(new ItemStack(Material.ARROW),
-                secciones.texto("siguiente", "&x&D&7&F&3&F&FPagina siguiente"), List.of()));
+                secciones.texto("siguiente", "&x&D&7&F&3&F&FPágina siguiente"), List.of()));
         inv.setItem(RANURA_VOLVER, decorarCon(new ItemStack(Material.BARRIER),
                 secciones.texto("volver", "&x&D&7&F&3&F&FVolver"),
-                List.of(secciones.texto("pagina", "&8▸ &fPagina %pagina% de %paginas%",
+                List.of(secciones.texto("pagina", "&8▸ &fPágina %pagina% de %paginas%",
                         "%pagina%", String.valueOf(pagina + 1), "%paginas%", String.valueOf(paginas)))));
 
         rellenar(inv);
@@ -325,7 +328,7 @@ public final class MenuTienda implements Listener {
                  * sepa el catalogo de memoria. */
                 lore.add(Estilo.valor(Estilo.dinero(efectiva))
                         .append(Estilo.texto("   antes " + Estilo.dinero(art.compra()), Estilo.APAGADO)));
-                lore.add(Estilo.texto("   " + pc + "% mas barato", Estilo.ACCION_COMPRA));
+                lore.add(Estilo.texto("   " + pc + "% más barato", Estilo.ACCION_COMPRA));
             } else {
                 lore.add(Estilo.valor(Estilo.dinero(efectiva)));
             }
@@ -340,7 +343,7 @@ public final class MenuTienda implements Listener {
                 int pc = (int) Math.round((efectiva / art.venta() - 1) * 100);
                 lore.add(Estilo.valor(Estilo.dinero(efectiva))
                         .append(Estilo.texto("   normal " + Estilo.dinero(art.venta()), Estilo.APAGADO)));
-                if (pc > 0) lore.add(Estilo.texto("   " + pc + "% mas de lo normal", Estilo.VENTA));
+                if (pc > 0) lore.add(Estilo.texto("   " + pc + "% más de lo normal", Estilo.VENTA));
             } else {
                 lore.add(Estilo.valor(Estilo.dinero(efectiva)));
                 if (caida > 0) lore.add(Estilo.texto("   -" + caida + "%, sobrevendido", Estilo.APAGADO));
@@ -354,7 +357,7 @@ public final class MenuTienda implements Listener {
         if (topes.activo() && art.tieneTope()) {
             int quedan = topes.restante(jugador.getUniqueId(), art);
             lore.add(Estilo.vacio());
-            lore.add(Estilo.etiqueta("Limite", Estilo.CLARO));
+            lore.add(Estilo.etiqueta("Límite", Estilo.CLARO));
             lore.add(Estilo.valor(art.topeVenta() + " cada " + Motor.duracion(art.ventanaMs())));
             lore.add(quedan > 0
                     ? Estilo.valor("Te quedan " + quedan)
@@ -373,14 +376,14 @@ public final class MenuTienda implements Listener {
         lore.add(Estilo.vacio());
         if (art.seCompra()) {
             lore.add(Estilo.accion(pantallaAlHacerClick
-                    ? "Click para elegir cuanto comprar"
-                    : "Click para comprar 1", Estilo.ACCION_COMPRA));
-            lore.add(Estilo.accion("Shift + click para comprar 64", Estilo.ACCION_COMPRA));
+                    ? "Clic para elegir cuánto comprar"
+                    : "Clic para comprar 1", Estilo.ACCION_COMPRA));
+            lore.add(Estilo.accion("Shift + clic para comprar 64", Estilo.ACCION_COMPRA));
         }
         if (art.seVende()) {
             lore.add(Estilo.accion(pantallaAlHacerClick
-                    ? "Click derecho para elegir cuanto vender"
-                    : "Click derecho para vender 1", Estilo.ACCION_VENTA));
+                    ? "Clic derecho para elegir cuánto vender"
+                    : "Clic derecho para vender 1", Estilo.ACCION_VENTA));
             lore.add(llevas > 0
                     ? Estilo.accion("Shift + derecho para vender los " + llevas, Estilo.ACCION_VENTA)
                     : Estilo.accion("Shift + derecho para vender todo", Estilo.APAGADO));
@@ -390,7 +393,7 @@ public final class MenuTienda implements Listener {
         if (!pantallaAlHacerClick && pantalla != null && (art.seCompra() || art.seVende())) {
             lore.add(Estilo.accion("Q para elegir la cantidad", Estilo.APAGADO));
         }
-        if (!art.seCompra() && !art.seVende()) lore.add(Estilo.accion("Solo de exposicion", Estilo.APAGADO));
+        if (!art.seCompra() && !art.seVende()) lore.add(Estilo.accion("Solo de exposición", Estilo.APAGADO));
 
         ItemStack icono = Motor.construir(art, 1);
         if (icono == null) icono = new ItemStack(art.material());
@@ -421,8 +424,8 @@ public final class MenuTienda implements Listener {
         }
         lore.add(Estilo.vacio());
         lore.add(Estilo.accion(pantallaAlHacerClick
-                ? "Click para elegir cuantos comprar"
-                : "Click para comprar 1", Estilo.ACCION_COMPRA));
+                ? "Clic para elegir cuántos comprar"
+                : "Clic para comprar 1", Estilo.ACCION_COMPRA));
 
         ItemStack icono = Motor.construir(art, 1);
         if (icono == null) icono = new ItemStack(art.material());
@@ -492,7 +495,7 @@ public final class MenuTienda implements Listener {
         }
 
         Motor motor = modulo.motor();
-        if (motor == null) { jugador.sendMessage(Estilo.legado("&cLa tienda todavia esta arrancando.")); return; }
+        if (motor == null) { jugador.sendMessage(Estilo.legado("&cLa tienda todavía está arrancando.")); return; }
 
         ClickType clic = e.getClick();
 
@@ -551,7 +554,7 @@ public final class MenuTienda implements Listener {
         Mensajes m = modulo.mensajes();
         if (res.isEmpty()) {
             if (m != null) m.manda(jugador, "buscar-sin-resultados",
-                    "&#FF5C5CNo encontre nada con &7%texto%", "%texto%", texto);
+                    "&#FF5C5CNo encontré nada con &7%texto%", "%texto%", texto);
             secciones.sonar(jugador, "error");
             abrirPrincipal(jugador);
             return;

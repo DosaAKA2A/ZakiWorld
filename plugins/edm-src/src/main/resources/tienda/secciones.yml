@@ -2,7 +2,7 @@
 #
 # NO borres la linea version: el plugin la usa para saber si tu fichero se
 # quedo antiguo y migrarlo solo, guardando el tuyo al lado.
-version: 3
+version: 4
 
 #
 # Ranuras, nombres, colores y cabezas SACADOS de los sections/*.yml de
@@ -21,16 +21,16 @@ secciones:
   Bloques:          { ranura: 10, nombre: 'Bloques',           color: '#80FF00', cabeza: 81201b7fe60d9b8386320ef309e8669488957d64e4ad6aa7b6fd311f0e85bc57 }
   Minerales:        { ranura: 11, nombre: 'Minerales',         color: '#00CDCD', cabeza: 1adb4a7c3a7c0711a0fcacb244b8a5382478c28f04f6d1d236c82e2b07264cb9 }
   Alimentos:        { ranura: 12, nombre: 'Comida',            color: '#FF9BD1', cabeza: 87a3987c5cdb35aba9ae6f2e23489aa96e080e93fac435dc640f737b5ca401d3 }
-  Mobs:             { ranura: 13, nombre: 'MobDrops',          color: '#FFFFFF', cabeza: 6f7e52098f027d6ced9cb2cb19c8b30f79873136b52ddaee1fe24c4d3e26c63c }
-  Decoracion:       { ranura: 14, nombre: 'Decoracion',        color: '#FF55FF', cabeza: 42ee210e7c2727788afc27c0cc9699f52467aa513157be97d920c22a0e109be6 }
+  Mobs:             { ranura: 13, nombre: 'Botín de mobs',          color: '#FFFFFF', cabeza: 6f7e52098f027d6ced9cb2cb19c8b30f79873136b52ddaee1fe24c4d3e26c63c }
+  Decoracion:       { ranura: 14, nombre: 'Decoración',        color: '#FF55FF', cabeza: 42ee210e7c2727788afc27c0cc9699f52467aa513157be97d920c22a0e109be6 }
   Bloques_Modernos: { ranura: 15, nombre: 'Bloques Modernos',  color: '#9E9E9E', cabeza: e9998cb96a897dc33ac3358afe5bb7584906ec6901d565f996f32c664b1aa91 }
   Variedad:         { ranura: 16, nombre: 'Variedad',          color: '#6FC3FF', cabeza: 1f575bb54a2e9133aaa1310a14642f78a014fcc9360774171663d34db236ccc4 }
   Herramientas:     { ranura: 19, nombre: 'Herramientas',      color: '#C08552', cabeza: b6ea2135838461534372f2da6c862d21cd5f3d2c7119f2bb674bbd42791 }
   Madera:           { ranura: 20, nombre: 'Maderas',           color: '#7B8CFF', cabeza: a77eb6ed3f557e35788eb548560c16916ac800d575dab6270649383753c6314e }
   Cultivos:         { ranura: 21, nombre: 'Cultivos',          color: '#FFD700', cabeza: f86badb0d913b391fb48d7776c378ca3f4b2dbe724534034f350ccd38f904473 }
-  Marinos:          { ranura: 22, nombre: 'Items Marinos',     color: '#55D355', cabeza: fca298093963ca18f9b6c264196817919068bd4928f3fef1f4583cdfa7a06758 }
+  Marinos:          { ranura: 22, nombre: 'Objetos marinos',     color: '#55D355', cabeza: fca298093963ca18f9b6c264196817919068bd4928f3fef1f4583cdfa7a06758 }
   Flora:            { ranura: 23, nombre: 'Flora',             color: '#FF77C6', cabeza: 112f8aba55b16a526ccfe9effc65900118ba31bd501c82df3f80b47f1480693a }
-  Herreria:         { ranura: 24, nombre: 'Herreria',          color: '#D0D0D0', cabeza: e855b3e1d9a7b9fd76a776fa4eec871d52ed26932538628c43de32d1d2d743 }
+  Herreria:         { ranura: 24, nombre: 'Herrería',          color: '#D0D0D0', cabeza: e855b3e1d9a7b9fd76a776fa4eec871d52ed26932538628c43de32d1d2d743 }
   Spawners:         { ranura: 25, nombre: 'Spawners',          color: '#FFC857', cabeza: 'MAT:SPAWNER' }
 
 # El panel que rellena los huecos. Es el mismo separador que ya usan sus
@@ -64,12 +64,12 @@ textos:
   titulo-principal: '&x&0&0&8&3&F&D&lTIENDA &8| &x&D&7&F&3&F&FEderus'
   titulo-categoria: '&x&0&0&8&3&F&D&lEDERUS &8| &x&D&7&F&3&F&F%categoria%'
 
-  categoria-articulos: '&8▸ &f%articulos% articulos'
-  categoria-entrar: '&#4FFF55▸ Click para entrar'
+  categoria-articulos: '&8▸ &f%articulos% artículos'
+  categoria-entrar: '&#4FFF55▸ Clic para entrar'
 
-  ofertas-nombre: '&8→ &#4FFF55Ofertas del dia'
-  ofertas-descripcion: '&7Estos objetos estan rebajados'
-  demandas-nombre: '&8→ &#FDFF66Demanda del dia'
+  ofertas-nombre: '&8→ &#4FFF55Ofertas del día'
+  ofertas-descripcion: '&7Estos objetos están rebajados'
+  demandas-nombre: '&8→ &#FDFF66Demanda del día'
   demandas-descripcion: '&7Estos objetos son muy pedidos'
   rota-en: '&#545454Rota en %rota%'
 
@@ -78,17 +78,17 @@ textos:
   saldo-valor: '&8▸ &f%saldo%'
 
   volver: '&x&D&7&F&3&F&FVolver'
-  pagina: '&8▸ &fPagina %pagina% de %paginas%'
-  anterior: '&x&D&7&F&3&F&FPagina anterior'
-  siguiente: '&x&D&7&F&3&F&FPagina siguiente'
+  pagina: '&8▸ &fPágina %pagina% de %paginas%'
+  anterior: '&x&D&7&F&3&F&FPágina anterior'
+  siguiente: '&x&D&7&F&3&F&FPágina siguiente'
 
   # --- el buscador del menu principal ---
   buscar-nombre: '&8→ &#91F4FFBuscar'
-  buscar-descripcion: '&7Encuentra un articulo por su nombre'
-  buscar-entrar: '&#4FFF55▸ Click para escribirlo'
+  buscar-descripcion: '&7Encuentra un artículo por su nombre'
+  buscar-entrar: '&#4FFF55▸ Clic para escribirlo'
 
   # ---------------------------------------------------------------------------
-  # LA PANTALLA DE CANTIDAD ("COMPRANDO → Azure Bluet").
+  # LA PANTALLA DE CANTIDAD ("COMPRANDO → Rubiácea").
   #
   # Marcadores propios de estas lineas:
   #   %item%      el articulo          %cantidad%  la cantidad elegida
@@ -111,15 +111,15 @@ textos:
   cantidad-maximo-compra: '&#4FFF55Todo lo que puedas pagar'
   cantidad-maximo-venta: '&#FDFF66Todo lo que llevas'
   cantidad-maximo-valor: '&8▸ &f%maximo%'
-  cantidad-maximo-linea: '&8▸ &7Maximo ahora mismo&8: &f%maximo%'
+  cantidad-maximo-linea: '&8▸ &7Máximo ahora mismo&8: &f%maximo%'
   cantidad-confirmar-compra: '&#4FFF55Comprar %cantidad%'
   cantidad-confirmar-venta: '&#FDFF66Vender %cantidad%'
   cantidad-confirmar-total: '&8▸ &f%total%'
   cantidad-tienes: '&8▸ &7Tienes &f%saldo%'
-  cantidad-te-queda: '&8▸ &7Te quedaria &f%saldo%'
+  cantidad-te-queda: '&8▸ &7Te quedaría &f%saldo%'
   cantidad-te-falta: '&#FF5C5C▸ Te faltan %falta%'
   cantidad-llevas: '&8▸ &7Llevas &f%llevas%'
-  cantidad-te-quedarian: '&8▸ &7Te quedarian &f%llevas%'
+  cantidad-te-quedarian: '&8▸ &7Te quedarían &f%llevas%'
   cantidad-cambiar-a-venta: '&#FDFF66Cambiar a vender'
   cantidad-cambiar-a-compra: '&#91F4FFCambiar a comprar'
   cantidad-volver: '&x&D&7&F&3&F&FVolver'
@@ -131,5 +131,5 @@ textos:
   limite-tope: '&8▸ &7Es tu tope de ventas'
   limite-oferta: '&8▸ &7Es lo que queda hoy de la oferta'
   limite-demanda: '&8▸ &7Es lo que queda hoy de la demanda'
-  limite-personal: '&8▸ &7Es tu limite personal'
-  limite-operacion: '&8▸ &7Es el maximo por operacion'
+  limite-personal: '&8▸ &7Es tu límite personal'
+  limite-operacion: '&8▸ &7Es el máximo por operación'

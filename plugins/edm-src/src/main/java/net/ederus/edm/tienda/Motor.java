@@ -303,7 +303,7 @@ public final class Motor {
 
     public Resultado vender(Player jugador, Material material, int pedido) {
         Catalogo.Articulo art = catalogo.de(material);
-        if (art == null) return Resultado.no(msg("no-esta", "Ese objeto no esta en la tienda."));
+        if (art == null) return Resultado.no(msg("no-esta", "Ese objeto no está en la tienda."));
         if (!art.seVende()) return Resultado.no(msg("no-se-vende", "La tienda no compra %item%.", "%item%", bonito(material)));
         if (pedido <= 0) return Resultado.no(Estilo.legado("&cLa cantidad tiene que ser mayor que cero."));
 
@@ -328,7 +328,7 @@ public final class Motor {
             if (t != null) {
                 int quedaHoy = rotacion.restanteHoy(t);
                 if (quedaHoy <= 0) {
-                    return Resultado.no(msg("demanda-cubierta", "La demanda de %item% ya se cubrio hoy.", "%item%", bonito(material)));
+                    return Resultado.no(msg("demanda-cubierta", "La demanda de %item% ya se cubrió hoy.", "%item%", bonito(material)));
                 }
                 cantidad = Math.min(cantidad, quedaHoy);
             }
@@ -347,7 +347,7 @@ public final class Motor {
         EconomyResponse resp = economia.depositPlayer(jugador, total);
         if (!resp.transactionSuccess()) {
             entregar(jugador, art, quitados);                 // se devuelve TODO
-            return Resultado.no(msg("banco-fallo", "El banco rechazo la operacion: %motivo%",
+            return Resultado.no(msg("banco-fallo", "El banco rechazó la operación: %motivo%",
                     "%motivo%", String.valueOf(resp.errorMessage)));
         }
 
@@ -379,7 +379,7 @@ public final class Motor {
     // ----------------------------------------------------------------- comprar
 
     public Resultado comprar(Player jugador, Catalogo.Articulo art, int pedido) {
-        if (art == null) return Resultado.no(msg("no-esta", "Ese objeto no esta en la tienda."));
+        if (art == null) return Resultado.no(msg("no-esta", "Ese objeto no está en la tienda."));
         if (!art.seCompra()) return Resultado.no(msg("no-se-compra", "La tienda no vende %item%.", "%item%", nombre(art)));
         if (pedido <= 0) return Resultado.no(Estilo.legado("&cLa cantidad tiene que ser mayor que cero."));
 
@@ -397,7 +397,7 @@ public final class Motor {
         if (compras != null && art.tieneLimiteJugador()) {
             int puede = compras.restante(jugador.getUniqueId(), art);
             if (puede <= 0) {
-                return Resultado.no(msg("maximo-alcanzado", "Ya tienes el maximo de %item% (%limite%).",
+                return Resultado.no(msg("maximo-alcanzado", "Ya tienes el máximo de %item% (%limite%).",
                         "%item%", nombre(art), "%limite%", String.valueOf(art.limiteJugador())));
             }
             pedido = Math.min(pedido, puede);
@@ -415,13 +415,13 @@ public final class Motor {
             if (t != null) {
                 int quedaHoy = rotacion.restanteHoy(t);
                 if (quedaHoy <= 0) {
-                    return Resultado.no(msg("oferta-agotada", "La oferta de %item% se agoto hoy.", "%item%", nombre(art)));
+                    return Resultado.no(msg("oferta-agotada", "La oferta de %item% se agotó hoy.", "%item%", nombre(art)));
                 }
                 cantidad = Math.min(cantidad, quedaHoy);
             }
         }
         int sitio = huecoLibre(jugador.getInventory(), art);
-        if (sitio <= 0) return Resultado.no(msg("sin-espacio", "No te cabe nada mas en el inventario."));
+        if (sitio <= 0) return Resultado.no(msg("sin-espacio", "No te cabe nada más en el inventario."));
         if (sitio < cantidad) cantidad = sitio;
 
         double coste = compraEfectiva(art) * cantidad;
@@ -433,14 +433,14 @@ public final class Motor {
         // 1. cobrar
         EconomyResponse resp = economia.withdrawPlayer(jugador, coste);
         if (!resp.transactionSuccess()) {
-            return Resultado.no(msg("banco-fallo", "El banco rechazo la operacion: %motivo%",
+            return Resultado.no(msg("banco-fallo", "El banco rechazó la operación: %motivo%",
                     "%motivo%", String.valueOf(resp.errorMessage)));
         }
 
         // 2. entregar (lo que no quepa cae al suelo, nunca se pierde)
         if (!entregar(jugador, art, cantidad)) {
             economia.depositPlayer(jugador, coste);           // se devuelve el dinero
-            return Resultado.no(Estilo.legado("&cNo pude entregarte el objeto; se te devolvio el dinero."));
+            return Resultado.no(Estilo.legado("&cNo pude entregarte el objeto; se te devolvió el dinero."));
         }
 
         if (rotacion != null && rotacion.oferta(art.clave()) != null) rotacion.anotar(art.clave(), cantidad);
@@ -490,16 +490,16 @@ public final class Motor {
     // ------------------------------------------------------------------ varios
 
     public static String nombre(Catalogo.Articulo art) {
+        /* "Spawner", no "Generador": Minecraft lo traduce asi pero en Ederus
+         * nadie lo llama de esa forma y la categoria se llama Spawners. */
         if (art.spawner() == null) return bonito(art.material());
-        return "Spawner de " + bonito(art.spawner().name());
+        return "Spawner de " + Nombres.deMob(art.spawner());
     }
 
-    public static String bonito(Material material) { return bonito(material.name()); }
+    /** El nombre que lee el jugador, en espanol. Ver {@link Nombres}. */
+    public static String bonito(Material material) { return Nombres.de(material); }
 
-    public static String bonito(String crudo) {
-        String s = crudo.toLowerCase(java.util.Locale.ROOT).replace('_', ' ');
-        return Character.toUpperCase(s.charAt(0)) + s.substring(1);
-    }
+    public static String bonito(String crudo) { return Nombres.porDefecto(crudo); }
 
     public static String fmt(double d) {
         return String.format(java.util.Locale.US, "%,.2f", d);

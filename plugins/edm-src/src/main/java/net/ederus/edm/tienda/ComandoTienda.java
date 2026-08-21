@@ -44,7 +44,7 @@ public final class ComandoTienda implements CommandExecutor, TabCompleter {
         if (cmd.getName().equalsIgnoreCase("sellall")) {
             if (!(quien instanceof Player j)) { quien.sendMessage("Solo desde el juego."); return true; }
             Motor m = modulo.motor();
-            if (m == null) { quien.sendMessage(Estilo.legado("&cLa tienda todavia esta arrancando.")); return true; }
+            if (m == null) { quien.sendMessage(Estilo.legado("&cLa tienda todavía está arrancando.")); return true; }
             quien.sendMessage(m.venderTodo(j).mensaje());
             return true;
         }
@@ -52,7 +52,7 @@ public final class ComandoTienda implements CommandExecutor, TabCompleter {
         if (esShop || args.length == 0) {
             if (quien instanceof Player jugador) {
                 MenuTienda menu = modulo.menu();
-                if (menu == null) { quien.sendMessage(Estilo.legado("&cLa tienda todavia esta arrancando.")); return true; }
+                if (menu == null) { quien.sendMessage(Estilo.legado("&cLa tienda todavía está arrancando.")); return true; }
                 /* /shop diamante busca directamente: es mas rapido que abrir el
                  * menu y ponerse a pasar paginas. */
                 if (esShop && args.length > 0) menu.abrirBusqueda(jugador, String.join(" ", args));
@@ -91,7 +91,7 @@ public final class ComandoTienda implements CommandExecutor, TabCompleter {
         if (!(quien instanceof Player jugador)) { quien.sendMessage("Solo desde el juego."); return true; }
         if (args.length < 2) { quien.sendMessage("/etienda buscar <texto>"); return true; }
         MenuTienda menu = modulo.menu();
-        if (menu == null) { quien.sendMessage(Estilo.legado("&cLa tienda todavia esta arrancando.")); return true; }
+        if (menu == null) { quien.sendMessage(Estilo.legado("&cLa tienda todavía está arrancando.")); return true; }
         menu.abrirBusqueda(jugador, String.join(" ", java.util.Arrays.copyOfRange(args, 1, args.length)));
         return true;
     }
@@ -110,7 +110,7 @@ public final class ComandoTienda implements CommandExecutor, TabCompleter {
         if (args.length < 2) { quien.sendMessage("/etienda vender <item|mano> [cantidad|todo]"); return true; }
 
         Material material = material(jugador, args[1]);
-        if (material == null) { quien.sendMessage("No conozco el item '" + args[1] + "'."); return true; }
+        if (material == null) { quien.sendMessage("No conozco el objeto '" + args[1] + "'."); return true; }
 
         int cantidad = Motor.MAX_POR_OPERACION;
         if (args.length >= 3 && !args[2].equalsIgnoreCase("todo")) {
@@ -119,7 +119,7 @@ public final class ComandoTienda implements CommandExecutor, TabCompleter {
         }
 
         Motor motor = modulo.motor();
-        if (motor == null) { quien.sendMessage(Estilo.legado("&cLa tienda todavia esta arrancando.")); return true; }
+        if (motor == null) { quien.sendMessage(Estilo.legado("&cLa tienda todavía está arrancando.")); return true; }
         quien.sendMessage(motor.vender(jugador, material, cantidad).mensaje());
         return true;
     }
@@ -135,14 +135,14 @@ public final class ComandoTienda implements CommandExecutor, TabCompleter {
             Material m = material(p, args[1]);
             if (m != null) art = catalogo.de(m);
         }
-        if (art == null) { quien.sendMessage("No conozco el item '" + args[1] + "'."); return true; }
+        if (art == null) { quien.sendMessage("No conozco el objeto '" + args[1] + "'."); return true; }
 
         int cantidad;
         try { cantidad = Integer.parseInt(args[2]); }
         catch (NumberFormatException e) { quien.sendMessage("Cantidad invalida."); return true; }
 
         Motor motor = modulo.motor();
-        if (motor == null) { quien.sendMessage(Estilo.legado("&cLa tienda todavia esta arrancando.")); return true; }
+        if (motor == null) { quien.sendMessage(Estilo.legado("&cLa tienda todavía está arrancando.")); return true; }
         quien.sendMessage(motor.comprar(jugador, art, cantidad).mensaje());
         return true;
     }
@@ -155,7 +155,7 @@ public final class ComandoTienda implements CommandExecutor, TabCompleter {
             Material m = quien instanceof Player p ? material(p, args[1]) : Material.matchMaterial(args[1]);
             if (m != null) a = catalogo.de(m);
         }
-        if (a == null) { quien.sendMessage("'" + args[1] + "' no esta en la tienda."); return true; }
+        if (a == null) { quien.sendMessage("'" + args[1] + "' no está en la tienda."); return true; }
 
         quien.sendMessage(Motor.nombre(a) + "  [" + a.categoria() + "]");
         quien.sendMessage("  compra: " + (a.seCompra() ? Motor.fmt(a.compra()) : "no se vende"));
@@ -189,7 +189,7 @@ public final class ComandoTienda implements CommandExecutor, TabCompleter {
             Material m = quien instanceof Player p ? material(p, args[1]) : Material.matchMaterial(args[1]);
             if (m != null) a = catalogo.de(m);
         }
-        if (a == null) { quien.sendMessage("'" + args[1] + "' no esta en la tienda."); return true; }
+        if (a == null) { quien.sendMessage("'" + args[1] + "' no está en la tienda."); return true; }
         if (!a.seVende()) { quien.sendMessage(Motor.nombre(a) + " no se vende, no tiene precio dinamico."); return true; }
 
         Mercado mk = modulo.mercado();

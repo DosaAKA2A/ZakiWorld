@@ -7,7 +7,7 @@
 # Se pega delante de cada linea; si dejas 'prefijo' vacio, no se pone nada.
 # Para que una linea suelta salga SIN prefijo, empiezala con {sin-prefijo}.
 # ---------------------------------------------------------------------------
-version: 2
+version: 3
 
 prefijo: '&x&0&0&8&3&F&D&lMARKET &8» &f'
 
@@ -15,30 +15,30 @@ prefijo: '&x&0&0&8&3&F&D&lMARKET &8» &f'
 # %cantidad% %item% %total% %unidad% %saldo%
 compra-hecha: '&fCompraste &x&D&7&F&3&F&F%cantidad% &fx &x&D&7&F&3&F&F%item% &fpor &#4FFF55%total%'
 venta-hecha: '&fVendiste &x&D&7&F&3&F&F%cantidad% &fx &x&D&7&F&3&F&F%item% &fpor &#FDFF66%total%'
-venta-hecha-todo: '&fVendiste &x&D&7&F&3&F&F%cantidad% &fx &x&D&7&F&3&F&F%item% &fpor &#FDFF66%total% &7(era todo lo que tenias)'
+venta-hecha-todo: '&fVendiste &x&D&7&F&3&F&F%cantidad% &fx &x&D&7&F&3&F&F%item% &fpor &#FDFF66%total% &7(era todo lo que tenías)'
 sellall-hecho: '&fVendiste &x&D&7&F&3&F&F%cantidad% &fobjetos de &x&D&7&F&3&F&F%tipos% &ftipos por &#FDFF66%total%'
 
 # --- la pantalla de cantidad y el buscador ---
 cantidad-pide: '&fEscribe la cantidad en el chat. &7Escribe cancelar para dejarlo.'
-cantidad-mala: '&#FF5C5CEso no es un numero&8: &7%texto%'
+cantidad-mala: '&#FF5C5CEso no es un número&8: &7%texto%'
 buscar-pide: '&fEscribe en el chat lo que buscas. &7Escribe cancelar para dejarlo.'
 buscar-resultados: '&f%cuantos% resultados para &x&D&7&F&3&F&F%texto%'
-buscar-sin-resultados: '&#FF5C5CNo encontre nada con &7%texto%'
+buscar-sin-resultados: '&#FF5C5CNo encontré nada con &7%texto%'
 
 # --- cuando no se puede ---
 sin-dinero: '&#FF5C5CTe faltan %falta%&#FF5C5C.'
-sin-espacio: '&#FF5C5CNo te cabe nada mas en el inventario.'
+sin-espacio: '&#FF5C5CNo te cabe nada más en el inventario.'
 no-se-vende: '&#FF5C5CLa tienda no compra %item%&#FF5C5C.'
 no-se-compra: '&#FF5C5CLa tienda no vende %item%&#FF5C5C.'
-no-esta: '&#FF5C5CEse objeto no esta en la tienda.'
+no-esta: '&#FF5C5CEse objeto no está en la tienda.'
 nada-que-vender: '&#FF5C5CNo tienes %item% &#FF5C5Cque la tienda acepte. &7Los objetos con nombre, encantados o de MMOItems no valen.'
 nada-que-vender-todo: '&#FF5C5CNo tienes nada que la tienda compre.'
 sin-permiso: '&#FF5C5CNo tienes permiso para comprar %item%&#FF5C5C.'
-maximo-alcanzado: '&#FF5C5CYa tienes el maximo de %item% &7(%limite%)&#FF5C5C.'
-oferta-agotada: '&#FF5C5CLa oferta de %item% &#FF5C5Cse agoto hoy. &7Manana rota.'
-demanda-cubierta: '&#FF5C5CLa demanda de %item% &#FF5C5Cya se cubrio hoy. &7Manana rota.'
-banco-fallo: '&#FF5C5CEl banco rechazo la operacion&8: &7%motivo%'
-tienda-no-lista: '&#FF5C5CLa tienda todavia esta arrancando. Prueba en un momento.'
+maximo-alcanzado: '&#FF5C5CYa tienes el máximo de %item% &7(%limite%)&#FF5C5C.'
+oferta-agotada: '&#FF5C5CLa oferta de %item% &#FF5C5Cse agotó hoy. &7Mañana rota.'
+demanda-cubierta: '&#FF5C5CLa demanda de %item% &#FF5C5Cya se cubrió hoy. &7Mañana rota.'
+banco-fallo: '&#FF5C5CEl banco rechazó la operación&8: &7%motivo%'
+tienda-no-lista: '&#FF5C5CLa tienda todavía está arrancando. Prueba en un momento.'
 
 # ---------------------------------------------------------------------------
 # AVISO DE ROTACION DEL MERCADO
@@ -63,8 +63,8 @@ rotacion:
     - '                        &x&0&0&8&3&F&D&lM&x&2&2&9&5&F&D&lE&x&4&4&A&7&F&D&lR&x&6&6&B&9&F&D&lC&x&8&8&C&B&F&D&lA&x&A&A&D&D&F&D&lD&x&C&C&E&F&F&D&lO &x&D&7&F&3&F&F&lR&x&D&7&F&3&F&F&lE&x&D&7&F&3&F&F&lN&x&D&7&F&3&F&F&lO&x&D&7&F&3&F&F&lV&x&D&7&F&3&F&F&lA&x&D&7&F&3&F&F&lD&x&D&7&F&3&F&F&lO'
     - '                  &7Las ofertas y la demanda han cambiado'
     - ''
-    - '             &b* &fOfertas del dia &7hasta un 65% mas baratas'
-    - '             &b* &fDemanda del dia &7se paga hasta un 75% mas'
+    - '             &b* &fOfertas del día &7hasta un 65% más baratas'
+    - '             &b* &fDemanda del día &7se paga hasta un 75% más'
     - '             &b* &fVuelve a cambiar &7a medianoche'
     - ''
     - '                        &8[ %boton% &8]'

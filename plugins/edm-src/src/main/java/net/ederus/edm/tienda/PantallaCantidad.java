@@ -25,7 +25,7 @@ import java.util.List;
 import java.util.Locale;
 
 /**
- * La pantalla de cantidad: "COMPRANDO → Azure Bluet".
+ * La pantalla de cantidad: "COMPRANDO → Rubiácea".
  *
  * Es lo unico que le faltaba a la tienda para no quedarse por detras de
  * EconomyShopGUI: elegir CUANTO, ver el total antes de pagar y confirmar. El
@@ -109,7 +109,7 @@ public final class PantallaCantidad implements Listener {
                       String categoria, int pagina) {
         Motor motor = modulo.motor();
         if (motor == null) {
-            jugador.sendMessage(Estilo.legado("&cLa tienda todavia esta arrancando."));
+            jugador.sendMessage(Estilo.legado("&cLa tienda todavía está arrancando."));
             return;
         }
         Motor.Limite limite = comprando ? motor.maximoCompra(jugador, art) : motor.maximoVenta(jugador, art);
@@ -219,7 +219,7 @@ public final class PantallaCantidad implements Listener {
             lore.add(secciones.texto("cantidad-tienes", "&8▸ &7Tienes &f%saldo%",
                     "%saldo%", Estilo.dinero(tiene)));
             lore.add(tiene >= total
-                    ? secciones.texto("cantidad-te-queda", "&8▸ &7Te quedaria &f%saldo%",
+                    ? secciones.texto("cantidad-te-queda", "&8▸ &7Te quedaría &f%saldo%",
                             "%saldo%", Estilo.dinero(tiene - total))
                     : secciones.texto("cantidad-te-falta", "&#FF5C5C▸ Te faltan %falta%",
                             "%falta%", Estilo.dinero(total - tiene)));
@@ -238,12 +238,12 @@ public final class PantallaCantidad implements Listener {
             int llevas = Motor.contarLimpios(jugador.getInventory(), art.material());
             lore.add(secciones.texto("cantidad-llevas", "&8▸ &7Llevas &f%llevas%",
                     "%llevas%", numero(llevas)));
-            lore.add(secciones.texto("cantidad-te-quedarian", "&8▸ &7Te quedarian &f%llevas%",
+            lore.add(secciones.texto("cantidad-te-quedarian", "&8▸ &7Te quedarían &f%llevas%",
                     "%llevas%", numero(Math.max(0, llevas - n))));
         }
 
         lore.add(Estilo.vacio());
-        lore.add(secciones.texto("cantidad-maximo-linea", "&8▸ &7Maximo ahora mismo&8: &f%maximo%",
+        lore.add(secciones.texto("cantidad-maximo-linea", "&8▸ &7Máximo ahora mismo&8: &f%maximo%",
                 "%maximo%", numero(limite.cantidad())));
 
         ItemStack icono = Motor.construir(art, 1);
@@ -278,8 +278,8 @@ public final class PantallaCantidad implements Listener {
             case "tope" -> secciones.texto("limite-tope", "&8▸ &7Es tu tope de ventas");
             case "oferta" -> secciones.texto("limite-oferta", "&8▸ &7Es lo que queda hoy de la oferta");
             case "demanda" -> secciones.texto("limite-demanda", "&8▸ &7Es lo que queda hoy de la demanda");
-            case "personal" -> secciones.texto("limite-personal", "&8▸ &7Es tu limite personal");
-            case "operacion" -> secciones.texto("limite-operacion", "&8▸ &7Es el maximo por operacion");
+            case "personal" -> secciones.texto("limite-personal", "&8▸ &7Es tu límite personal");
+            case "operacion" -> secciones.texto("limite-operacion", "&8▸ &7Es el máximo por operación");
             default -> null;
         };
     }
@@ -350,7 +350,7 @@ public final class PantallaCantidad implements Listener {
                 n = Integer.parseInt(texto.replace(".", "").replace(",", "").replace(" ", ""));
             } catch (NumberFormatException ex) {
                 if (m != null) m.manda(jugador, "cantidad-mala",
-                        "&#FF5C5CEso no es un numero&8: &7%texto%", "%texto%", texto);
+                        "&#FF5C5CEso no es un número&8: &7%texto%", "%texto%", texto);
                 pintar(jugador, vista, true);
                 return;
             }
@@ -362,7 +362,7 @@ public final class PantallaCantidad implements Listener {
     private void confirmar(Player jugador, Vista vista) {
         Motor motor = modulo.motor();
         if (motor == null) {
-            jugador.sendMessage(Estilo.legado("&cLa tienda todavia esta arrancando."));
+            jugador.sendMessage(Estilo.legado("&cLa tienda todavía está arrancando."));
             return;
         }
         Motor.Resultado r = vista.comprando
