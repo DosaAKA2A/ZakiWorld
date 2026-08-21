@@ -42,6 +42,15 @@ public final class Motor {
         }
     }
 
+    /**
+     * Cuanto se puede comprar o vender AHORA MISMO y que es lo que lo limita.
+     *
+     * El motivo es una clave, no una frase: quien lo enseñe pone el texto. Sirve
+     * para que la pantalla de cantidad no tenga que rehacer estas cuentas por su
+     * cuenta y acabe enseñando un numero distinto del que se cobra.
+     */
+    public record Limite(int cantidad, String motivo) { }
+
     private final Catalogo catalogo;
     private final Topes topes;
     private final Registro registro;
@@ -189,6 +198,99 @@ public final class Motor {
         return sitio;
     }
 
+    // -------------------------------------------------- lo que costaria / daria
+
+    /** Lo que costaria comprar esa cantidad ahora mismo. */
+    public double totalCompraDe(Catalogo.Articulo art, int cantidad) {
+        if (art == null || cantidad <= 0) return 0;
+        return compraEfectiva(art) * cantidad;
+    }
+
+    /**
+     * Lo que se pagaria por vender esa cantidad ahora mismo, con el precio
+     * integrado a lo largo de la venta y el bonus de Demandas si toca.
+     *
+     * Lo usan la pantalla de cantidad, la tabla de /etienda mercado y la propia
+     * venta. Es a proposito: si cada uno hiciera su cuenta, el dia que cambie la
+     * formula uno de los tres se quedaria atras enseñando un numero mentiroso.
+     */
+    public double totalVentaDe(Catalogo.Articulo art, int cantidad) {
+        if (art == null || cantidad <= 0) return 0;
+        double total = mercado.totalVenta(art, cantidad, compraEfectiva(art));
+        if (rotacion != null) {
+            Rotacion.Trato t = rotacion.demanda(art.clave());
+            if (t != null) {
+                total *= t.factor();
+                double techo = compraEfectiva(art) > 0
+                        ? compraEfectiva(art) * mercado.margen() * cantidad : Double.MAX_VALUE;
+                total = Math.min(total, techo);
+            }
+        }
+        return total;
+    }
+
+    /**
+     * Lo maximo que puede comprar y por que no mas.
+     *
+     * Mira los mismos frenos que comprar() y en el mismo orden, pero sin tocar
+     * nada. No sustituye a los de comprar(): es la foto para enseñar, y el que
+     * decide sigue siendo el que cobra.
+     */
+    public Limite maximoCompra(Player jugador, Catalogo.Articulo art) {
+        if (art == null || !art.seCompra()) return new Limite(0, "no-se-compra");
+        if (art.pideePermiso() && !jugador.hasPermission(art.permiso())) return new Limite(0, "permiso");
+        if (construir(art, 1) == null) return new Limite(0, "roto");
+
+        int cantidad = MAX_POR_OPERACION;
+        String motivo = "operacion";
+
+        if (compras != null && art.tieneLimiteJugador()) {
+            int puede = compras.restante(jugador.getUniqueId(), art);
+            if (puede < cantidad) { cantidad = puede; motivo = "personal"; }
+        }
+        if (rotacion != null) {
+            Rotacion.Trato t = rotacion.oferta(art.clave());
+            if (t != null && rotacion.restanteHoy(t) < cantidad) {
+                cantidad = rotacion.restanteHoy(t);
+                motivo = "oferta";
+            }
+        }
+        int sitio = huecoLibre(jugador.getInventory(), art);
+        if (sitio < cantidad) { cantidad = sitio; motivo = "espacio"; }
+
+        double precio = compraEfectiva(art);
+        if (precio > 0) {
+            /* En double y comparando antes de convertir: el saldo de este
+             * servidor se sale del int sin despeinarse. */
+            double puedePagar = Math.floor(economia.getBalance(jugador) / precio);
+            if (puedePagar < cantidad) { cantidad = (int) Math.max(0, puedePagar); motivo = "dinero"; }
+        }
+        return new Limite(Math.max(0, cantidad), motivo);
+    }
+
+    /** Lo maximo que puede vender y por que no mas. */
+    public Limite maximoVenta(Player jugador, Catalogo.Articulo art) {
+        if (art == null || !art.seVende()) return new Limite(0, "no-se-vende");
+
+        int cantidad = MAX_POR_OPERACION;
+        String motivo = "operacion";
+
+        int llevas = contarLimpios(jugador.getInventory(), art.material());
+        if (llevas < cantidad) { cantidad = llevas; motivo = "stock"; }
+
+        int margen = topes.restante(jugador.getUniqueId(), art);
+        if (margen < cantidad) { cantidad = margen; motivo = "tope"; }
+
+        if (rotacion != null) {
+            Rotacion.Trato t = rotacion.demanda(art.clave());
+            if (t != null && rotacion.restanteHoy(t) < cantidad) {
+                cantidad = rotacion.restanteHoy(t);
+                motivo = "demanda";
+            }
+        }
+        return new Limite(Math.max(0, cantidad), motivo);
+    }
+
     // ------------------------------------------------------------------ vender
 
     public Resultado vender(Player jugador, Material material, int pedido) {
@@ -232,16 +334,7 @@ public final class Motor {
         /* El total se integra a lo largo de la venta, no se multiplica por el
          * precio de la primera unidad: vender de golpe tiene que pagar lo mismo
          * que vender a trozos. */
-        double total = mercado.totalVenta(art, quitados, compraEfectiva(art));
-        if (rotacion != null) {
-            Rotacion.Trato t = rotacion.demanda(art.clave());
-            if (t != null) {
-                total *= t.factor();
-                double techo = compraEfectiva(art) > 0
-                        ? compraEfectiva(art) * mercado.margen() * quitados : Double.MAX_VALUE;
-                total = Math.min(total, techo);
-            }
-        }
+        double total = totalVentaDe(art, quitados);
         double unitario = total / quitados;
         EconomyResponse resp = economia.depositPlayer(jugador, total);
         if (!resp.transactionSuccess()) {

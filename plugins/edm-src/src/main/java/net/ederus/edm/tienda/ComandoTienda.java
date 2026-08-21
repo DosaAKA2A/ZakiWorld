@@ -40,13 +40,17 @@ public final class ComandoTienda implements CommandExecutor, TabCompleter {
             if (quien instanceof Player jugador) {
                 MenuTienda menu = modulo.menu();
                 if (menu == null) { quien.sendMessage(Estilo.legado("&cLa tienda todavia esta arrancando.")); return true; }
-                menu.abrirPrincipal(jugador);
+                /* /shop diamante busca directamente: es mas rapido que abrir el
+                 * menu y ponerse a pasar paginas. */
+                if (esShop && args.length > 0) menu.abrirBusqueda(jugador, String.join(" ", args));
+                else menu.abrirPrincipal(jugador);
             } else {
                 ayuda(quien);
             }
             return true;
         }
         switch (args[0].toLowerCase(Locale.ROOT)) {
+            case "buscar" -> { return buscar(quien, args); }
             case "vender" -> { return vender(quien, args); }
             case "comprar" -> { return comprar(quien, args); }
             case "precio" -> { return precio(quien, args); }
@@ -60,6 +64,7 @@ public final class ComandoTienda implements CommandExecutor, TabCompleter {
 
     private void ayuda(CommandSender q) {
         q.sendMessage("Tienda de Ederus");
+        q.sendMessage("/etienda buscar <texto>          (o /shop <texto>)");
         q.sendMessage("/etienda vender <item|mano> [cantidad|todo]");
         q.sendMessage("/etienda comprar <item> <cantidad>   (ej: spawner:pig)");
         q.sendMessage("/etienda precio <item>");
@@ -67,6 +72,15 @@ public final class ComandoTienda implements CommandExecutor, TabCompleter {
         q.sendMessage("/etienda mercado <item> [simular <cantidad>]");
         q.sendMessage("/etienda rotacion");
         if (q.hasPermission("ederus.tienda.admin")) q.sendMessage("/etienda recargar");
+    }
+
+    private boolean buscar(CommandSender quien, String[] args) {
+        if (!(quien instanceof Player jugador)) { quien.sendMessage("Solo desde el juego."); return true; }
+        if (args.length < 2) { quien.sendMessage("/etienda buscar <texto>"); return true; }
+        MenuTienda menu = modulo.menu();
+        if (menu == null) { quien.sendMessage(Estilo.legado("&cLa tienda todavia esta arrancando.")); return true; }
+        menu.abrirBusqueda(jugador, String.join(" ", java.util.Arrays.copyOfRange(args, 1, args.length)));
+        return true;
     }
 
     /** 'mano' evita escribir el nombre del material, que es lo que mas se falla. */
@@ -227,7 +241,7 @@ public final class ComandoTienda implements CommandExecutor, TabCompleter {
             if (a == null) continue;
             quien.sendMessage("  " + Motor.nombre(a) + ": " + Motor.fmt(a.compra())
                     + " -> " + Motor.fmt(a.compra() * t.factor())
-                    + "  (-" + Math.round((1 - t.factor()) * 100) + "%)  quedan " + rot.restanteHoy(t));
+                    + "  (-" + Math.round((1 - t.factor()) * 100) + "%)  quedan " + quedan(rot, t));
             n++;
         }
         if (n == 0) quien.sendMessage("  (ninguna)");
@@ -240,11 +254,16 @@ public final class ComandoTienda implements CommandExecutor, TabCompleter {
             Motor m = modulo.motor();
             String ahora = m != null ? Motor.fmt(m.ventaEfectiva(a)) : Motor.fmt(a.venta() * t.factor());
             quien.sendMessage("  " + Motor.nombre(a) + ": " + Motor.fmt(a.venta())
-                    + " -> " + ahora + "  (+" + Math.round((t.factor() - 1) * 100) + "%)  quedan " + rot.restanteHoy(t));
+                    + " -> " + ahora + "  (+" + Math.round((t.factor() - 1) * 100) + "%)  quedan " + quedan(rot, t));
             n++;
         }
         if (n == 0) quien.sendMessage("  (ninguna)");
         return true;
+    }
+
+    /** Sin tope no se imprime el numero: 2.147.483.647 no se lo cree nadie. */
+    private static String quedan(Rotacion rot, Rotacion.Trato t) {
+        return Rotacion.sinTope(t) ? "sin tope" : String.valueOf(rot.restanteHoy(t));
     }
 
     private boolean recargar(CommandSender quien) {
@@ -261,10 +280,11 @@ public final class ComandoTienda implements CommandExecutor, TabCompleter {
     public List<String> onTabComplete(CommandSender quien, Command cmd, String etiqueta, String[] args) {
         List<String> out = new ArrayList<>();
         if (args.length == 1) {
-            for (String s : List.of("vender", "comprar", "precio", "topes", "mercado", "rotacion", "recargar")) {
+            for (String s : List.of("buscar", "vender", "comprar", "precio", "topes", "mercado", "rotacion", "recargar")) {
                 if (s.startsWith(args[0].toLowerCase(Locale.ROOT))) out.add(s);
             }
-        } else if (args.length == 2 && !args[0].equalsIgnoreCase("topes")) {
+        } else if (args.length == 2 && !args[0].equalsIgnoreCase("topes")
+                && !args[0].equalsIgnoreCase("buscar")) {
             String p = args[1].toUpperCase(Locale.ROOT);
             if ("MANO".startsWith(p)) out.add("mano");
             for (String clave : catalogo.claves()) {

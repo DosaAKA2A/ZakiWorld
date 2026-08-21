@@ -7,7 +7,7 @@
 # Se pega delante de cada linea; si dejas 'prefijo' vacio, no se pone nada.
 # Para que una linea suelta salga SIN prefijo, empiezala con {sin-prefijo}.
 # ---------------------------------------------------------------------------
-version: 1
+version: 2
 
 prefijo: '&x&0&0&8&3&F&D&lMARKET &8» &f'
 
@@ -17,6 +17,13 @@ compra-hecha: '&fCompraste &x&D&7&F&3&F&F%cantidad% &fx &x&D&7&F&3&F&F%item% &fp
 venta-hecha: '&fVendiste &x&D&7&F&3&F&F%cantidad% &fx &x&D&7&F&3&F&F%item% &fpor &#FDFF66%total%'
 venta-hecha-todo: '&fVendiste &x&D&7&F&3&F&F%cantidad% &fx &x&D&7&F&3&F&F%item% &fpor &#FDFF66%total% &7(era todo lo que tenias)'
 sellall-hecho: '&fVendiste &x&D&7&F&3&F&F%cantidad% &fobjetos de &x&D&7&F&3&F&F%tipos% &ftipos por &#FDFF66%total%'
+
+# --- la pantalla de cantidad y el buscador ---
+cantidad-pide: '&fEscribe la cantidad en el chat. &7Escribe cancelar para dejarlo.'
+cantidad-mala: '&#FF5C5CEso no es un numero&8: &7%texto%'
+buscar-pide: '&fEscribe en el chat lo que buscas. &7Escribe cancelar para dejarlo.'
+buscar-resultados: '&f%cuantos% resultados para &x&D&7&F&3&F&F%texto%'
+buscar-sin-resultados: '&#FF5C5CNo encontre nada con &7%texto%'
 
 # --- cuando no se puede ---
 sin-dinero: '&#FF5C5CTe faltan %falta%&#FF5C5C.'

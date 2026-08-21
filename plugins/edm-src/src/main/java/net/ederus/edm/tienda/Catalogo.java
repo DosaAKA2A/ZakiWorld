@@ -174,6 +174,41 @@ public final class Catalogo {
     }
 
     /**
+     * Los articulos cuyo nombre o clave contengan el texto.
+     *
+     * Busca sobre el nombre BONITO ademas de la clave, porque quien escribe
+     * "hierro" no tiene por que saber que el material se llama IRON_INGOT, y
+     * sobre el nombre propio del articulo si lo trae (los spawners lo traen).
+     */
+    public java.util.List<Articulo> buscar(String texto, int tope) {
+        java.util.List<Articulo> out = new java.util.ArrayList<>();
+        if (texto == null || texto.isBlank()) return out;
+        String t = normalizar(texto);
+        if (t.isEmpty()) return out;
+        for (Articulo a : porClave.values()) {
+            if (coincide(a, t)) out.add(a);
+            if (out.size() >= tope) break;
+        }
+        return out;
+    }
+
+    private static boolean coincide(Articulo a, String t) {
+        if (normalizar(a.clave()).contains(t)) return true;
+        if (normalizar(Motor.nombre(a)).contains(t)) return true;
+        return a.tieneNombre() && normalizar(sinColores(a.nombrePropio())).contains(t);
+    }
+
+    /** Minusculas y sin guiones bajos: "iron ingot" y "iron_ingot" son lo mismo. */
+    private static String normalizar(String s) {
+        return s == null ? "" : s.trim().toLowerCase(Locale.ROOT).replace('_', ' ');
+    }
+
+    /** El nombre propio viene con codigos de color; para buscar estorban. */
+    private static String sinColores(String s) {
+        return s == null ? "" : s.replaceAll("&[0-9a-fA-Fk-orK-ORx]", "");
+    }
+
+    /**
      * El icono de una categoria en el menu: el primero de sus articulos.
      * No se saca de las secciones de EconomyShopGUI a proposito — este catalogo
      * tiene que valer por si solo cuando ESGUI ya no este.

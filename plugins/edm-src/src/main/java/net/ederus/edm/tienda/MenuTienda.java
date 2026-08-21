@@ -53,8 +53,15 @@ public final class MenuTienda implements Listener {
     private static final int RANURA_DEMANDAS = 41;
     private static final int RANURA_SALDO = 49;
 
+    /* Una fila por debajo de las categorias, al lado de Ofertas y Demandas. */
+    private static final int RANURA_BUSCAR = 43;
+
     static final String OFERTAS = "@ofertas";
     static final String DEMANDAS = "@demandas";
+    /** Categoria que no existe en el catalogo: se arma con lo que se busque. */
+    static final String BUSCAR = "@buscar:";
+    /** Tope de resultados. Con 4 paginas ya nadie sigue mirando. */
+    private static final int TOPE_BUSQUEDA = 112;
 
     /** Marca nuestras ventanas. Nunca se identifica un menu por su titulo: el
      *  jugador puede tener un cofre llamado igual y acabariamos operando sobre el. */
@@ -72,11 +79,39 @@ public final class MenuTienda implements Listener {
     private final Topes topes;
     private final Secciones secciones;
 
+    /* Se enlazan despues de construir: la pantalla necesita el menu y el menu
+     * necesita la pantalla, y por el constructor eso no se puede atar. */
+    private PantallaCantidad pantalla;
+    private EntradaChat chat;
+
+    /** Que hace el click normal: abrir la pantalla de cantidad o comprar 1. */
+    private boolean pantallaAlHacerClick = true;
+    private boolean buscadorActivo = true;
+
     public MenuTienda(TiendaPlugin modulo, Catalogo catalogo, Topes topes, Secciones secciones) {
         this.modulo = modulo;
         this.catalogo = catalogo;
         this.topes = topes;
         this.secciones = secciones;
+    }
+
+    /** Para el log de arranque: si el click abre la pantalla o compra de una. */
+    public String modo() { return pantallaAlHacerClick ? "pantalla" : "directo"; }
+
+    public boolean buscador() { return buscadorActivo && chat != null; }
+
+    public void enlazar(PantallaCantidad pantalla, EntradaChat chat) {
+        this.pantalla = pantalla;
+        this.chat = chat;
+    }
+
+    public void configurar(org.bukkit.configuration.ConfigurationSection cantidad,
+                           org.bukkit.configuration.ConfigurationSection buscador) {
+        if (cantidad != null) {
+            pantallaAlHacerClick = cantidad.getBoolean("activa", true)
+                    && "pantalla".equalsIgnoreCase(cantidad.getString("al-hacer-click", "pantalla"));
+        }
+        if (buscador != null) buscadorActivo = buscador.getBoolean("activo", true);
     }
 
     // ------------------------------------------------------------- construir
@@ -148,6 +183,14 @@ public final class MenuTienda implements Listener {
                             secciones.texto("categoria-entrar", "&#4FFF55▸ Click para entrar"))));
         }
 
+        if (buscadorActivo && chat != null) {
+            inv.setItem(RANURA_BUSCAR, decorarCon(new ItemStack(Material.COMPASS),
+                    secciones.texto("buscar-nombre", "&8→ &#91F4FFBuscar"),
+                    List.of(secciones.texto("buscar-descripcion", "&7Encuentra un articulo por su nombre"),
+                            Estilo.vacio(),
+                            secciones.texto("buscar-entrar", "&#4FFF55▸ Click para escribirlo"))));
+        }
+
         inv.setItem(RANURA_SALDO, saldo(jugador));
         rellenar(inv);
         jugador.openInventory(inv);
@@ -157,6 +200,9 @@ public final class MenuTienda implements Listener {
     /** Las dos secciones del dia no viven en el catalogo: se arman al vuelo. */
     private List<Catalogo.Articulo> articulosDe(String categoria) {
         Rotacion rot = modulo.rotacion();
+        if (categoria != null && categoria.startsWith(BUSCAR)) {
+            return catalogo.buscar(categoria.substring(BUSCAR.length()), TOPE_BUSQUEDA);
+        }
         if (OFERTAS.equals(categoria) || DEMANDAS.equals(categoria)) {
             List<Catalogo.Articulo> out = new ArrayList<>();
             if (rot == null) return out;
@@ -172,6 +218,9 @@ public final class MenuTienda implements Listener {
     private static String tituloDe(String categoria) {
         if (OFERTAS.equals(categoria)) return "Ofertas del dia";
         if (DEMANDAS.equals(categoria)) return "Demanda del dia";
+        if (categoria != null && categoria.startsWith(BUSCAR)) {
+            return "Buscar: " + categoria.substring(BUSCAR.length());
+        }
         return null;
     }
 
@@ -292,22 +341,33 @@ public final class MenuTienda implements Listener {
                         + Motor.duracion(topes.esperaMs(jugador.getUniqueId(), art)), NamedTextColor.RED));
         }
 
+        /* La linea del tope de servidor solo sale si hay tope. Con el tope
+         * quitado no se enseña nada: un numero enorme ahi solo confunde. */
         Rotacion.Trato trato = oferta != null ? oferta : demanda;
-        if (trato != null && rot != null) {
+        if (trato != null && rot != null && !Rotacion.sinTope(trato)) {
             lore.add(Estilo.vacio());
             lore.add(Estilo.texto("Quedan hoy " + rot.restanteHoy(trato) + " en el mundo", Estilo.APAGADO));
         }
 
         lore.add(Estilo.vacio());
         if (art.seCompra()) {
-            lore.add(Estilo.accion("Click para comprar 1", Estilo.ACCION_COMPRA));
-            lore.add(Estilo.accion("Shift + click para 64", Estilo.ACCION_COMPRA));
+            lore.add(Estilo.accion(pantallaAlHacerClick
+                    ? "Click para elegir cuanto comprar"
+                    : "Click para comprar 1", Estilo.ACCION_COMPRA));
+            lore.add(Estilo.accion("Shift + click para comprar 64", Estilo.ACCION_COMPRA));
         }
         if (art.seVende()) {
-            lore.add(Estilo.accion("Click derecho para vender 1", Estilo.ACCION_VENTA));
+            lore.add(Estilo.accion(pantallaAlHacerClick
+                    ? "Click derecho para elegir cuanto vender"
+                    : "Click derecho para vender 1", Estilo.ACCION_VENTA));
             lore.add(llevas > 0
                     ? Estilo.accion("Shift + derecho para vender los " + llevas, Estilo.ACCION_VENTA)
                     : Estilo.accion("Shift + derecho para vender todo", Estilo.APAGADO));
+        }
+        /* En modo directo la pantalla de cantidad sigue estando, con la Q. Se
+         * dice aqui porque si no, nadie la encuentra. */
+        if (!pantallaAlHacerClick && pantalla != null && (art.seCompra() || art.seVende())) {
+            lore.add(Estilo.accion("Q para elegir la cantidad", Estilo.APAGADO));
         }
         if (!art.seCompra() && !art.seVende()) lore.add(Estilo.accion("Solo de exposicion", Estilo.APAGADO));
 
@@ -339,7 +399,9 @@ public final class MenuTienda implements Listener {
             lore.add(Estilo.texto("No cumples el requisito", NamedTextColor.RED));
         }
         lore.add(Estilo.vacio());
-        lore.add(Estilo.accion("Click para comprar 1", Estilo.ACCION_COMPRA));
+        lore.add(Estilo.accion(pantallaAlHacerClick
+                ? "Click para elegir cuantos comprar"
+                : "Click para comprar 1", Estilo.ACCION_COMPRA));
 
         ItemStack icono = Motor.construir(art, 1);
         if (icono == null) icono = new ItemStack(art.material());
@@ -372,6 +434,10 @@ public final class MenuTienda implements Listener {
         if (pulsado == null || pulsado.getType().isAir()) return;
 
         if (vista.categoria == null) {
+            if (e.getSlot() == RANURA_BUSCAR && buscadorActivo && chat != null) {
+                pedirBusqueda(jugador);
+                return;
+            }
             if (e.getSlot() == RANURA_OFERTAS) { abrirCategoria(jugador, OFERTAS, 0); return; }
             if (e.getSlot() == RANURA_DEMANDAS) { abrirCategoria(jugador, DEMANDAS, 0); return; }
             for (Secciones.Seccion s : secciones.todas()) {
@@ -399,12 +465,30 @@ public final class MenuTienda implements Listener {
         if (motor == null) { jugador.sendMessage(Estilo.legado("&cLa tienda todavia esta arrancando.")); return; }
 
         ClickType clic = e.getClick();
+
+        /* La Q abre la pantalla de cantidad SIEMPRE, aunque el click normal
+         * este puesto en directo: es la via que no depende del modo. */
+        if (clic == ClickType.DROP || clic == ClickType.CONTROL_DROP) {
+            if (pantalla == null) return;
+            if (!art.seCompra() && !art.seVende()) return;
+            pantalla.abrir(jugador, art, art.seCompra(), vista.categoria, vista.pagina);
+            return;
+        }
+
         Motor.Resultado r;
         if (clic.isRightClick()) {
             if (!art.seVende()) return;
+            if (!clic.isShiftClick() && pantallaAlHacerClick && pantalla != null) {
+                pantalla.abrir(jugador, art, false, vista.categoria, vista.pagina);
+                return;
+            }
             r = motor.vender(jugador, art.material(), clic.isShiftClick() ? Motor.MAX_POR_OPERACION : 1);
         } else if (clic.isLeftClick()) {
             if (!art.seCompra()) return;
+            if (!clic.isShiftClick() && pantallaAlHacerClick && pantalla != null) {
+                pantalla.abrir(jugador, art, true, vista.categoria, vista.pagina);
+                return;
+            }
             r = motor.comprar(jugador, art, clic.isShiftClick() ? 64 : 1);
         } else {
             return;
@@ -414,6 +498,38 @@ public final class MenuTienda implements Listener {
         secciones.sonar(jugador, r.ok() ? "elegir-item" : "error");
         /* Se repinta: el tope que queda y el saldo acaban de cambiar. */
         abrirCategoria(jugador, vista.categoria, vista.pagina);
+    }
+
+    // -------------------------------------------------------------- buscador
+
+    /** Pide por el chat que buscar y enseña el resultado como una categoria. */
+    public void pedirBusqueda(Player jugador) {
+        if (chat == null) return;
+        Mensajes m = modulo.mensajes();
+        if (m != null) m.manda(jugador, "buscar-pide",
+                "&fEscribe en el chat lo que buscas. &7Escribe cancelar para dejarlo.");
+        chat.pedir(jugador, texto -> abrirBusqueda(jugador, texto), () -> abrirPrincipal(jugador));
+    }
+
+    /**
+     * Abre los resultados. Si no hay ninguno NO abre una ventana vacia: lo dice
+     * y devuelve al menu, que es lo que espera cualquiera que se equivoque
+     * escribiendo.
+     */
+    public void abrirBusqueda(Player jugador, String texto) {
+        List<Catalogo.Articulo> res = catalogo.buscar(texto, TOPE_BUSQUEDA);
+        Mensajes m = modulo.mensajes();
+        if (res.isEmpty()) {
+            if (m != null) m.manda(jugador, "buscar-sin-resultados",
+                    "&#FF5C5CNo encontre nada con &7%texto%", "%texto%", texto);
+            secciones.sonar(jugador, "error");
+            abrirPrincipal(jugador);
+            return;
+        }
+        if (m != null) m.manda(jugador, "buscar-resultados",
+                "&f%cuantos% resultados para &x&D&7&F&3&F&F%texto%",
+                "%cuantos%", String.valueOf(res.size()), "%texto%", texto);
+        abrirCategoria(jugador, BUSCAR + texto, 0);
     }
 
     // --------------------------------------------------------------- adornos

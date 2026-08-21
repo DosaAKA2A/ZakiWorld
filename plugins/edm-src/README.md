@@ -59,8 +59,8 @@ viejos de Anomaly y Rip.
 
 ## El modulo `tienda`
 
-Sustituto propio de EconomyShopGUI. De momento **sin interfaz**: solo el motor,
-que es donde un fallo no rompe una partida sino que imprime dinero.
+Sustituto propio de EconomyShopGUI: menu, motor, precio dinamico, Ofertas y
+Demandas, pantalla de cantidad y buscador.
 
 Dos reglas del motor que no se tocan:
 
@@ -86,3 +86,37 @@ entre plugins no esta garantizado.
 
 El catalogo se genera con `plugins/ederus-src/EderusTienda-src/scripts/migrar-esgui.js`
 a partir de los YAML de EconomyShopGUI.
+
+### La pantalla de cantidad (1.3.0)
+
+La ventana "COMPRANDO -> X": botones de -32/-8/-1 y +1/+8/+32, un boton que pide
+la cantidad exacta por el chat, el minimo, el maximo y el total ANTES de pagar.
+
+- Los tres saltos, el multiplicador del shift y si el click normal la abre se
+  cambian en `config.yml` (`cantidad:`). En modo `directo` la tienda vuelve a
+  comprar de 1 en 1 con el click y la pantalla se abre con **Q**.
+- **La pantalla no calcula nada**: el precio, el total y el maximo salen de
+  `Motor.totalCompraDe`, `Motor.totalVentaDe` y `Motor.maximoCompra/maximoVenta`,
+  que son los mismos que usa la venta. Si cada uno hiciera su cuenta, un dia
+  enseñaria un numero y cobraria otro.
+- Si ahora mismo no se puede ni una unidad NO se abre: se lanza la operacion
+  normal para que el motor diga el motivo de verdad (te faltan $400, no te cabe).
+- El maximo dice **por que** es ese (dinero, espacio, tope, oferta del dia...).
+  Un tope sin explicacion parece un fallo del plugin.
+
+### El buscador (1.3.0)
+
+Brujula en el menu principal, `/shop <texto>` o `/etienda buscar <texto>`. Busca
+por clave y por nombre visible, asi que "hierro" encuentra el Iron ingot. Los
+resultados se enseñan como una categoria virtual (`@buscar:<texto>`), con lo que
+heredan paginacion, lore y clicks sin codigo aparte.
+
+Los dos comparten `EntradaChat`, que pregunta por el chat: cancela la linea para
+que no salga en publico, caduca al minuto y atiende la respuesta con `runTask`
+porque el evento de chat es asincrono.
+
+### Tope diario de servidor
+
+`rotacion.tope-diario-oferta` y `tope-diario-demanda` son el "Quedan hoy X en el
+mundo" del lore. **Desde la 1.3.0 un 0 lo quita** (antes el minimo era 1 y poner
+0 dejaba el articulo agotado desde el primer segundo, justo lo contrario).

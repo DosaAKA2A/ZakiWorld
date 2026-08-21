@@ -67,8 +67,11 @@ public final class Rotacion {
         ofertaMax = sec.getDouble("descuento-max", ofertaMax);
         demandaMin = sec.getDouble("bonus-min", demandaMin);
         demandaMax = sec.getDouble("bonus-max", demandaMax);
-        topeOferta = Math.max(1, sec.getInt("tope-diario-oferta", topeOferta));
-        topeDemanda = Math.max(1, sec.getInt("tope-diario-demanda", topeDemanda));
+        /* 0 o menos = SIN TOPE. Antes el minimo era 1, asi que poner 0 para
+         * quitarlo dejaba el articulo agotado desde el primer segundo, que es
+         * lo contrario de lo que pide quien escribe un 0. */
+        topeOferta = Math.max(0, sec.getInt("tope-diario-oferta", topeOferta));
+        topeDemanda = Math.max(0, sec.getInt("tope-diario-demanda", topeDemanda));
         semillaFija = sec.getLong("semilla", semillaFija);
     }
 
@@ -132,8 +135,14 @@ public final class Rotacion {
     public LocalDate dia() { return dia; }
 
     /** Lo que queda hoy de ese trato en TODO el servidor. */
+    /** true si ese trato va sin tope diario de servidor. */
+    public static boolean sinTope(Trato t) {
+        return t != null && t.topeDia() <= 0;
+    }
+
     public int restanteHoy(Trato t) {
         if (t == null) return Integer.MAX_VALUE;
+        if (t.topeDia() <= 0) return Integer.MAX_VALUE;
         return Math.max(0, t.topeDia() - movidoHoy.getOrDefault(t.clave(), 0));
     }
 

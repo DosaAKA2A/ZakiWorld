@@ -79,10 +79,50 @@ rotacion:
   bonus-min: 0.25
   bonus-max: 0.75
 
-  # Tope de TODO EL SERVIDOR por dia y por item. Sin esto, cuatro jugadores
-  # agotarian el precio inflado en la primera hora.
+  # Tope de TODO EL SERVIDOR por dia y por item, el que sale en el lore como
+  # "Quedan hoy X en el mundo". Sin el, cuatro jugadores agotarian el precio
+  # inflado en la primera hora.
+  #
+  # PONER 0 LO QUITA: se puede comprar y vender sin limite de unidades al dia y
+  # la linea desaparece del lore. Ojo con quitarlo en Demandas: el bonus de
+  # hasta +75% deja de tener freno y el unico que queda es el precio dinamico.
   tope-diario-oferta: 512
   tope-diario-demanda: 512
 
   # 0 = la semilla sale solo de la fecha. Ponle un numero si quieres otra serie.
   semilla: 0
+
+# ---------------------------------------------------------------------------
+# LA PANTALLA DE CANTIDAD. La ventana "COMPRANDO -> X" con los botones de mas y
+# de menos, el total antes de pagar y el boton de confirmar.
+#
+#   activa          : false la apaga entera y la tienda vuelve a comprar de 1 en
+#                     1 con el click, como antes.
+#   al-hacer-click  : que hace el click normal sobre un articulo.
+#                       pantalla -> abre la pantalla de cantidad (lo de ESGUI)
+#                       directo  -> compra 1 / vende 1 en el acto
+#                     En los dos modos, el shift-click sigue siendo el atajo de
+#                     64 (y de vender todo), y la Q abre siempre la pantalla.
+#   pasos           : los tres saltos de los botones, de menor a mayor. Cambian
+#                     los seis botones a la vez (-32 -8 -1  +1 +8 +32).
+#   multiplicador-shift : lo que multiplica el shift sobre un boton. Con 8, el
+#                     shift sobre +32 sube de 256 en 256.
+#   escribir-en-chat: el boton que pide la cantidad exacta por el chat. Es la
+#                     unica via para pedir un numero que no sale de los saltos.
+# ---------------------------------------------------------------------------
+cantidad:
+  activa: true
+  al-hacer-click: pantalla
+  pasos: [1, 8, 32]
+  multiplicador-shift: 8
+  escribir-en-chat: true
+
+# ---------------------------------------------------------------------------
+# EL BUSCADOR. La brujula del menu principal: pregunta por el chat y enseña los
+# resultados como una categoria mas. Busca por el nombre visible y por el nombre
+# del material, asi que "hierro" encuentra el Iron ingot igual que "iron".
+#
+# Tambien se puede llamar de frente con /shop <texto> o /etienda buscar <texto>.
+# ---------------------------------------------------------------------------
+buscador:
+  activo: true

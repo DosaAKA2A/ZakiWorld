@@ -2,7 +2,7 @@
 #
 # NO borres la linea version: el plugin la usa para saber si tu fichero se
 # quedo antiguo y migrarlo solo, guardando el tuyo al lado.
-version: 2
+version: 3
 
 #
 # Ranuras, nombres, colores y cabezas SACADOS de los sections/*.yml de
@@ -81,3 +81,55 @@ textos:
   pagina: '&8▸ &fPagina %pagina% de %paginas%'
   anterior: '&x&D&7&F&3&F&FPagina anterior'
   siguiente: '&x&D&7&F&3&F&FPagina siguiente'
+
+  # --- el buscador del menu principal ---
+  buscar-nombre: '&8→ &#91F4FFBuscar'
+  buscar-descripcion: '&7Encuentra un articulo por su nombre'
+  buscar-entrar: '&#4FFF55▸ Click para escribirlo'
+
+  # ---------------------------------------------------------------------------
+  # LA PANTALLA DE CANTIDAD ("COMPRANDO → Azure Bluet").
+  #
+  # Marcadores propios de estas lineas:
+  #   %item%      el articulo          %cantidad%  la cantidad elegida
+  #   %paso%      cuanto suma o resta el boton
+  #   %total%     dinero, ya formateado con su simbolo
+  #   %maximo%    lo maximo que se puede ahora mismo
+  #   %saldo%     dinero del jugador   %falta%   lo que le falta
+  #   %llevas%    unidades que lleva encima
+  # ---------------------------------------------------------------------------
+  titulo-comprando: '&x&0&0&8&3&F&D&lCOMPRANDO &8→ &x&D&7&F&3&F&F%item%'
+  titulo-vendiendo: '&x&0&0&8&3&F&D&lVENDIENDO &8→ &x&D&7&F&3&F&F%item%'
+
+  cantidad-nombre: '&x&D&7&F&3&F&F%item% &8x &f%cantidad%'
+  cantidad-mas: '&#4FFF55+ %paso%'
+  cantidad-menos: '&#FF5C5C- %paso%'
+  cantidad-shift: '&8▸ &7Shift para %total%'
+  cantidad-escribir: '&#91F4FFEscribir la cantidad'
+  cantidad-escribir-lore: '&8▸ &7Te la pide por el chat'
+  cantidad-minimo: '&x&D&7&F&3&F&FPoner 1'
+  cantidad-maximo-compra: '&#4FFF55Todo lo que puedas pagar'
+  cantidad-maximo-venta: '&#FDFF66Todo lo que llevas'
+  cantidad-maximo-valor: '&8▸ &f%maximo%'
+  cantidad-maximo-linea: '&8▸ &7Maximo ahora mismo&8: &f%maximo%'
+  cantidad-confirmar-compra: '&#4FFF55Comprar %cantidad%'
+  cantidad-confirmar-venta: '&#FDFF66Vender %cantidad%'
+  cantidad-confirmar-total: '&8▸ &f%total%'
+  cantidad-tienes: '&8▸ &7Tienes &f%saldo%'
+  cantidad-te-queda: '&8▸ &7Te quedaria &f%saldo%'
+  cantidad-te-falta: '&#FF5C5C▸ Te faltan %falta%'
+  cantidad-llevas: '&8▸ &7Llevas &f%llevas%'
+  cantidad-te-quedarian: '&8▸ &7Te quedarian &f%llevas%'
+  cantidad-cambiar-a-venta: '&#FDFF66Cambiar a vender'
+  cantidad-cambiar-a-compra: '&#91F4FFCambiar a comprar'
+  cantidad-volver: '&x&D&7&F&3&F&FVolver'
+
+  # Por que el maximo es ese y no mas. Sin esta linea el tope parece un fallo.
+  limite-dinero: '&8▸ &7Es lo que te da el dinero'
+  limite-espacio: '&8▸ &7Es lo que te cabe encima'
+  limite-stock: '&8▸ &7Es lo que llevas'
+  limite-tope: '&8▸ &7Es tu tope de ventas'
+  limite-oferta: '&8▸ &7Es lo que queda hoy de la oferta'
+  limite-demanda: '&8▸ &7Es lo que queda hoy de la demanda'
+  limite-personal: '&8▸ &7Es tu limite personal'
+  limite-operacion: '&8▸ &7Es el maximo por operacion'

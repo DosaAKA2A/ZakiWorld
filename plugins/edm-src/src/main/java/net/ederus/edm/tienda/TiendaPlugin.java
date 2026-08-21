@@ -22,6 +22,8 @@ public final class TiendaPlugin extends Module {
     private Registro registro;
     private Motor motor;
     private MenuTienda menu;
+    private PantallaCantidad pantalla;
+    private EntradaChat chat;
     private final Secciones secciones = new Secciones();
     private Rotacion rotacion;
     private Compras compras;
@@ -56,7 +58,7 @@ public final class TiendaPlugin extends Module {
         compras.cargar();
 
         migrar("secciones.yml", SECCIONES_VERSION);
-        saveResource("mensajes.yml", false);
+        migrar("mensajes.yml", MENSAJES_VERSION);
         mensajes.cargar(new File(getDataFolder(), "mensajes.yml"));
         secciones.cargar(new File(getDataFolder(), "secciones.yml"));
         rotacion = new Rotacion(new File(getDataFolder(), "rotacion.yml"));
@@ -64,6 +66,16 @@ public final class TiendaPlugin extends Module {
         rotacion.cargar(catalogo);
         menu = new MenuTienda(this, catalogo, topes, secciones);
         core.getServer().getPluginManager().registerEvents(menu, this);
+
+        /* La pantalla de cantidad y el buscador comparten la entrada por chat:
+         * los dos necesitan una linea del jugador y no hay dos preguntas a la
+         * vez para la misma persona. */
+        chat = new EntradaChat(core);
+        core.getServer().getPluginManager().registerEvents(chat, this);
+        pantalla = new PantallaCantidad(this, secciones, chat);
+        core.getServer().getPluginManager().registerEvents(pantalla, this);
+        menu.enlazar(pantalla, chat);
+        aplicarAjustes();
 
         ComandoTienda comando = new ComandoTienda(this, catalogo, topes);
         /* Como el resto de modulos: el plugin que ve Bukkit es EDM, asi que hay
@@ -117,7 +129,8 @@ public final class TiendaPlugin extends Module {
 
         getLogger().info("Tienda activa | " + catalogo.total() + " articulos en "
                 + catalogo.categorias().size() + " categorias ("
-                + catalogo.variantes() + " variantes) | " + secciones.cuantas() + " secciones");
+                + catalogo.variantes() + " variantes) | " + secciones.cuantas() + " secciones"
+                + " | click: " + menu.modo() + " | buscador: " + (menu.buscador() ? "si" : "no"));
     }
 
     @Override
@@ -141,8 +154,9 @@ public final class TiendaPlugin extends Module {
 
     /** Version del secciones.yml que espera este codigo. Subirla cuando el
      *  formato cambie: el fichero viejo se guarda al lado y se pone el nuevo. */
-    private static final int SECCIONES_VERSION = 2;
+    private static final int SECCIONES_VERSION = 3;
     private static final int CONFIG_VERSION = 2;
+    private static final int MENSAJES_VERSION = 2;
 
     /**
      * Pone al dia secciones.yml sin que nadie tenga que borrar nada a mano.
@@ -185,11 +199,22 @@ public final class TiendaPlugin extends Module {
         }
     }
 
+    /** Los ajustes que se pueden cambiar en caliente, en un solo sitio para que
+     *  arrancar y recargar no acaben aplicando cosas distintas. */
+    private void aplicarAjustes() {
+        if (pantalla != null) pantalla.configurar(getConfig().getConfigurationSection("cantidad"));
+        if (menu != null) {
+            menu.configurar(getConfig().getConfigurationSection("cantidad"),
+                    getConfig().getConfigurationSection("buscador"));
+        }
+    }
+
     @Override
     public String recargar() {
         secciones.cargar(new File(getDataFolder(), "secciones.yml"));
         mensajes.cargar(new File(getDataFolder(), "mensajes.yml"));
         reloadConfig();
+        aplicarAjustes();
         if (rotacion != null) rotacion.configurar(getConfig().getConfigurationSection("rotacion"));
         if (mercado != null) mercado.configurar(getConfig().getConfigurationSection("mercado"));
         if (topes != null) topes.configurar(getConfig().getConfigurationSection("topes"));
@@ -204,6 +229,10 @@ public final class TiendaPlugin extends Module {
     public Rotacion rotacion() { return rotacion; }
 
     public Secciones secciones() { return secciones; }
+
+    public Mensajes mensajes() { return mensajes; }
+
+    public PantallaCantidad pantalla() { return pantalla; }
 
     /** null hasta que engancha Vault en el primer tick. */
     public Motor motor() { return motor; }
