@@ -31,7 +31,20 @@ TabCompleter {
         this.plugin = plugin;
     }
 
+    /** Los dos subcomandos que NO son para cualquiera. */
+    private static boolean esDeAdmin(String sub) {
+        return "test".equals(sub) || "reload".equals(sub);
+    }
+
     public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
+        /* rip.use viene declarado en el plugin.yml desde siempre con default
+         * true, pero no se miraba en ningun sitio: quitarselo a alguien no le
+         * cerraba nada. Sigue abierto a todo el mundo, solo que ahora se puede
+         * revocar de verdad. */
+        if (!sender.hasPermission("rip.use") && !sender.hasPermission("rip.admin")) {
+            this.denied(sender);
+            return true;
+        }
         if (args.length == 0) {
             if (sender instanceof Player) {
                 Player p = (Player)sender;
@@ -220,6 +233,10 @@ TabCompleter {
                     if (args.length != 1) break block17;
                     for (String s : SUBS) {
                         if (!s.startsWith(last)) continue;
+                        /* test y reload solo se sugieren a quien puede usarlos:
+                         * ofrecerselos a un jugador normal es ensenarle una
+                         * puerta que va a encontrar cerrada. */
+                        if (esDeAdmin(s) && !sender.hasPermission("rip.admin")) continue;
                         out.add(s);
                     }
                     break block18;
@@ -242,8 +259,10 @@ TabCompleter {
                         }
                         break block18;
                     }
+                    case "test": {
+                        if (!sender.hasPermission("rip.admin")) break block18;
+                    }
                     case "gui": 
-                    case "test": 
                     case "list": {
                         for (String s : new String[]{"kill", "death"}) {
                             if (!s.startsWith(last)) continue;
@@ -254,6 +273,7 @@ TabCompleter {
                 break block18;
             }
             if (args.length != 3 || !args[0].equalsIgnoreCase("test")) break block18;
+            if (!sender.hasPermission("rip.admin")) break block18;
             RipEffect.Type type = args[1].equalsIgnoreCase("death") ? RipEffect.Type.DEATH : RipEffect.Type.KILL;
             for (RipEffect e : RipEffect.of(type)) {
                 if (!e.id().startsWith(last)) continue;

@@ -32,7 +32,7 @@ import java.util.UUID;
  */
 public final class TrollPlugin extends Module {
 
-    private static final int CONFIG_VERSION = 1;
+    private static final int CONFIG_VERSION = 2;
     private static final int MENSAJES_VERSION = 1;
 
     /** Lo que espera un segundo clic. */
@@ -49,6 +49,7 @@ public final class TrollPlugin extends Module {
 
     private int segundosConfirmar = 15;
     private boolean avisarALaVictima = false;
+    private boolean inmunidadActiva = false;
 
     public TrollPlugin(EDMPlugin core) {
         super(core, "troll", "EderusTroll");
@@ -97,7 +98,8 @@ public final class TrollPlugin extends Module {
 
         getLogger().info("Bromas activas | " + catalogo.size() + " en el catalogo ("
                 + Trolls.sorteables(catalogo).size() + " sin riesgo)"
-                + " | confirmar: " + segundosConfirmar + "s");
+                + " | confirmar: " + segundosConfirmar + "s"
+                + " | inmunidad: " + (inmunidadActiva ? "si" : "no, funcionan con todos"));
     }
 
     @Override
@@ -115,6 +117,7 @@ public final class TrollPlugin extends Module {
     private void aplicarAjustes() {
         segundosConfirmar = Math.max(3, getConfig().getInt("segundos-para-confirmar", 15));
         avisarALaVictima = getConfig().getBoolean("avisar-a-la-victima", false);
+        inmunidadActiva = getConfig().getBoolean("inmunidad-por-permiso", false);
     }
 
     @Override
@@ -209,9 +212,17 @@ public final class TrollPlugin extends Module {
         return true;
     }
 
-    /** Al que lleva ederus.troll.inmune no se le puede tocar. */
+    /**
+     * Quien no puede recibir bromas.
+     *
+     * APAGADO por omision: las bromas funcionan con todo el mundo, operadores
+     * incluidos. La inmunidad existe como opcion pero no se aplica sola, y hay
+     * un motivo concreto: un rango con el comodin '*' de LuckPerms se lleva
+     * ederus.troll.inmune sin que nadie lo haya decidido, asi que el staff
+     * entero se volveria intocable de rebote. Se enciende a mano en el config.
+     */
     public boolean inmune(Player victima) {
-        return victima.hasPermission("ederus.troll.inmune");
+        return inmunidadActiva && victima.hasPermission("ederus.troll.inmune");
     }
 
     // ----------------------------------------------------------------- acceso

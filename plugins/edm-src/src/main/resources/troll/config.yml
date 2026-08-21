@@ -4,7 +4,7 @@
 # NO borres la linea version: el plugin la usa para poner al dia tu fichero
 # cuando cambia el formato, guardando el tuyo al lado.
 # ---------------------------------------------------------------------------
-version: 1
+version: 2
 
 # Segundos que tiene un admin para volver a pulsar y confirmar una broma que
 # borra progreso (matar, tirar el inventario, al vacio, pisotear el campo).
@@ -16,6 +16,15 @@ avisar-a-la-victima: false
 
 # Poder gastarselas a uno mismo, que es como se prueban sin molestar a nadie.
 permitir-a-uno-mismo: true
+
+# INMUNIDAD. APAGADA a proposito: las bromas tienen que funcionar con TODO el
+# mundo, operadores incluidos. Con esto en false no se salva nadie.
+#
+# Si algun dia lo pones en true, quien tenga ederus.troll.inmune deja de poder
+# recibirlas y ademas desaparece de la lista de /troll. OJO: un rango con el
+# comodin '*' de LuckPerms se lleva ese permiso sin pedirlo, asi que el staff
+# se volveria inmune sin que nadie lo decidiera. Por eso viene apagado.
+inmunidad-por-permiso: false
 
 # Con esto en true hace falta ederus.troll.<id> para CADA broma, y no solo
 # ederus.troll.usar. Sirve para dar dos o tres bromas sueltas a un moderador
