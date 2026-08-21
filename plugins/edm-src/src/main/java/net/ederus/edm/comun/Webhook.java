@@ -50,6 +50,26 @@ public final class Webhook {
         return c;
     }
 
+    /**
+     * Suelta el cliente al apagar.
+     *
+     * Un HttpClient se lleva su hilo selector y su pool, y esos hilos guardan
+     * una referencia al cargador de clases del plugin: sin cerrarlo, un reload
+     * deja el EDM viejo entero sin poder recogerse. Va con shutdownNow y no con
+     * close() porque close() espera a los envios en vuelo y no vamos a retrasar
+     * el apagado del servidor por un aviso de Discord.
+     */
+    public static void cerrar() {
+        HttpClient c;
+        synchronized (Webhook.class) {
+            c = cliente;
+            cliente = null;
+        }
+        if (c != null) {
+            try { c.shutdownNow(); } catch (Throwable ignored) { }
+        }
+    }
+
     public static boolean configurada(String url) {
         return url != null && !url.isBlank() && url.startsWith("https://");
     }

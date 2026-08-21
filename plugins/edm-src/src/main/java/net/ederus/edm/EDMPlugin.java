@@ -34,7 +34,7 @@ import net.ederus.edm.tienda.TiendaPlugin;
  */
 public final class EDMPlugin extends JavaPlugin {
 
-    public static final String VERSION = "1.8.0";
+    public static final String VERSION = "1.8.1";
 
     /* id del modulo -> carpeta del plugin viejo de la que se migran los datos */
     private static final Map<String, String> CARPETAS_VIEJAS = Map.of(
@@ -165,6 +165,16 @@ public final class EDMPlugin extends JavaPlugin {
             HandlerList.unregisterAll(m);
         }
         this.modulos.clear();
+
+        /* Lo que es estatico no muere con los modulos. Sin esto, un reload deja
+         * atras el cliente HTTP con sus hilos y unos cuantos mapas, y con ellos
+         * el cargador de clases del EDM viejo entero. */
+        try {
+            net.ederus.edm.comun.Webhook.cerrar();
+            net.ederus.edm.anomaly.core.Disguises.limpiarCache();
+        } catch (Throwable t) {
+            getLogger().warning("Fallo al soltar el estado compartido: " + t);
+        }
     }
 
     private void arrancar(Module modulo) {

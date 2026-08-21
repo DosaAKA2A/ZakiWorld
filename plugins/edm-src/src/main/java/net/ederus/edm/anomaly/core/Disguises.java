@@ -178,6 +178,12 @@ public final class Disguises {
     private static final java.util.Map<String, io.papermc.paper.datacomponent.item.ResolvableProfile>
             CACHE = new java.util.concurrent.ConcurrentHashMap<>();
 
+    /** Se vacia al apagar: es estatico, asi que si no, sobrevive al plugin y
+     *  se lleva por delante su cargador de clases en un reload. */
+    public static void limpiarCache() {
+        CACHE.clear();
+    }
+
     /**
      * Le pregunta a Mojang por la cuenta y arma el perfil con la textura FIRMADA.
      *
