@@ -132,6 +132,9 @@ public final class DropStore {
      * @param where  donde tirar al suelo lo que no quepa en el inventario
      * @return un resumen legible de lo que se dio, para el log y para el chat
      */
+    /** 36 stacks: mas que eso no es un premio, es un fallo de configuracion. */
+    private static final int MAX_POR_ENTRADA = 2304;
+
     public List<String> award(String anomalyId, Map<UUID, Double> damage, Location where) {
         DropTable table = tables.get(anomalyId);
         List<String> report = new ArrayList<>();
@@ -158,6 +161,14 @@ public final class DropStore {
             if (random.nextDouble() * 100.0 > entry.chance()) continue;
             int amount = entry.min() + (entry.max() > entry.min() ? random.nextInt(entry.max() - entry.min() + 1) : 0);
             if (amount <= 0) continue;
+            if (amount > MAX_POR_ENTRADA) {
+                /* Un cero de mas en drops.yml no puede llenar el suelo de la
+                 * arena con miles de items y tirar el tick del servidor. */
+                plugin.getLogger().warning("El botin de " + anomalyId + " pedia " + amount + " x "
+                        + entry.item().getType() + "; se recorta a " + MAX_POR_ENTRADA
+                        + ". Revisa cantidad-max en drops.yml.");
+                amount = MAX_POR_ENTRADA;
+            }
 
             List<Player> targets = switch (entry.to()) {
                 case TODOS -> participants;

@@ -78,6 +78,16 @@ public final class AnomalyPlugin extends net.ederus.edm.Module {
         this.menus = new Menus(this);
         this.advancements = new Advancements(this);
 
+        /* Si el servidor se cayo en mitad de una anomalia, los UUID del jefe y
+         * sus esbirros siguen en los equipos de brillo del marcador principal,
+         * que se guarda en disco. Aqui no hay ninguna anomalia viva todavia, asi
+         * que todo lo que quede ahi es basura de la caida anterior. */
+        int brillosViejos = net.ederus.edm.anomaly.core.Glow.purgeStale();
+        if (brillosViejos > 0) {
+            getLogger().info("Limpiadas " + brillosViejos
+                    + " entradas de brillo que quedaron de un arranque anterior.");
+        }
+
         getServer().getPluginManager().registerEvents(manager, this);
         getServer().getPluginManager().registerEvents(menus, this);
 

@@ -272,6 +272,12 @@ public abstract class BossFight {
         finished = true;
         clearAirTime();
         if (shell != null) {
+            /* Glow.clear ANTES de sacarlo: el maniqui es justo la entidad a la
+             * que glowBody() le pone el color, y al sacarlo de 'spawned' se
+             * saltaba el bucle de abajo que limpia el equipo. Su UUID se quedaba
+             * en el marcador PRINCIPAL, que se guarda en scoreboard.dat y no lo
+             * borra nadie: una entrada muerta por cada pelea con maniqui. */
+            Glow.clear(shell);
             spawned.remove(shell);
             Fx.safeRemove(shell);
             shell = null;

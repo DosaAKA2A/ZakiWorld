@@ -48,6 +48,36 @@ public final class Glow {
         }
     }
 
+    /**
+     * Vacia los equipos de brillo. Se llama AL ARRANCAR.
+     *
+     * Las entradas viven en el marcador principal, que Minecraft guarda en
+     * scoreboard.dat y conserva entre reinicios. Si el servidor se cae en mitad
+     * de una anomalia, cleanup() no llega a correr y los UUID de ese jefe y sus
+     * esbirros se quedan ahi para siempre, sumando en cada caida.
+     *
+     * Al arrancar no hay ninguna anomalia viva, asi que TODA entrada de estos
+     * equipos es basura por definicion y se puede tirar entera.
+     *
+     * @return cuantas entradas se tiraron
+     */
+    public static int purgeStale() {
+        int fuera = 0;
+        try {
+            Scoreboard board = board();
+            if (board == null) return 0;
+            for (Team team : board.getTeams()) {
+                if (!team.getName().startsWith(PREFIX)) continue;
+                for (String entry : new java.util.ArrayList<>(team.getEntries())) {
+                    team.removeEntry(entry);
+                    fuera++;
+                }
+            }
+        } catch (Throwable ignored) {
+        }
+        return fuera;
+    }
+
     /** Las entidades que no son jugadores entran en un equipo por su UUID en texto. */
     private static String entryOf(Entity entity) {
         return entity.getUniqueId().toString();

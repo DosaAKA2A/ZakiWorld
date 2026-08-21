@@ -51,13 +51,19 @@ public final class MenuTienda implements Listener {
     private static final int RANURA_ANTERIOR = 45;
     private static final int RANURA_VOLVER = 49;
     private static final int RANURA_SIGUIENTE = 53;
-    /* Una fila por debajo de las categorias. */
-    private static final int RANURA_OFERTAS = 39;
-    private static final int RANURA_DEMANDAS = 41;
+    /*
+     * Una fila por debajo de las categorias, CENTRADAS.
+     *
+     * Estaban en 39/41/43, que son las columnas 4, 6 y 8: tres columnas de
+     * margen a la izquierda y una a la derecha, con el trio centrado en la
+     * columna 6 mientras la fila y la cabeza del saldo se centran en la 5.
+     * Se veia torcido. En 38/40/42 son las columnas 3, 5 y 7: dos de margen a
+     * cada lado, y Demandas cae justo encima del saldo.
+     */
+    private static final int RANURA_OFERTAS = 38;
+    private static final int RANURA_DEMANDAS = 40;
+    private static final int RANURA_BUSCAR = 42;
     private static final int RANURA_SALDO = 49;
-
-    /* Una fila por debajo de las categorias, al lado de Ofertas y Demandas. */
-    private static final int RANURA_BUSCAR = 43;
 
     static final String OFERTAS = "@ofertas";
     static final String DEMANDAS = "@demandas";
@@ -453,8 +459,13 @@ public final class MenuTienda implements Listener {
                 pedirBusqueda(jugador);
                 return;
             }
-            if (e.getSlot() == RANURA_OFERTAS) { abrirCategoria(jugador, OFERTAS, 0); return; }
-            if (e.getSlot() == RANURA_DEMANDAS) { abrirCategoria(jugador, DEMANDAS, 0); return; }
+            /* Solo si de verdad estan pintadas: con la rotacion apagada esas dos
+             * ranuras llevan el panel del borde, y pulsarlas abria una seccion
+             * vacia titulada "Ofertas del dia". */
+            Rotacion rot = modulo.rotacion();
+            boolean hayRotacion = rot != null && rot.activo();
+            if (hayRotacion && e.getSlot() == RANURA_OFERTAS) { abrirCategoria(jugador, OFERTAS, 0); return; }
+            if (hayRotacion && e.getSlot() == RANURA_DEMANDAS) { abrirCategoria(jugador, DEMANDAS, 0); return; }
             for (Secciones.Seccion s : secciones.todas()) {
                 if (s.ranura() == e.getSlot()) { abrirCategoria(jugador, s.id(), 0); return; }
             }

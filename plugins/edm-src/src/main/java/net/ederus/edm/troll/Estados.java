@@ -46,7 +46,13 @@ public final class Estados {
 
     private final Plugin plugin;
     private final Logger log;
-    private final Map<UUID, Map<String, Activo>> porJugador = new LinkedHashMap<>();
+    /*
+     * Concurrente y no LinkedHashMap: la marca MUDO se consulta desde
+     * AsyncChatEvent, que corre en OTRO hilo, mientras el hilo principal pone,
+     * quita y repasa bromas. Leer un LinkedHashMap mientras se reestructura es
+     * la clase de cosa que se cuelga una vez cada mil y no hay quien la repita.
+     */
+    private final Map<UUID, Map<String, Activo>> porJugador = new java.util.concurrent.ConcurrentHashMap<>();
 
     public Estados(Plugin plugin, Logger log) {
         this.plugin = plugin;
@@ -64,7 +70,7 @@ public final class Estados {
     public void poner(Player quien, String clave, Marca marca, int segundos, Runnable deshacer) {
         quitar(quien.getUniqueId(), clave);
         long hasta = System.currentTimeMillis() + Math.max(1, segundos) * 1000L;
-        porJugador.computeIfAbsent(quien.getUniqueId(), k -> new LinkedHashMap<>())
+        porJugador.computeIfAbsent(quien.getUniqueId(), k -> new java.util.concurrent.ConcurrentHashMap<>())
                 .put(clave, new Activo(clave, marca, hasta, deshacer));
     }
 
@@ -111,7 +117,7 @@ public final class Estados {
     /** Todo lo de todos. Al apagar el modulo, sin excepciones. */
     public int quitarTodo() {
         int n = 0;
-        for (Map<String, Activo> suyas : new LinkedHashMap<>(porJugador).values()) {
+        for (Map<String, Activo> suyas : new java.util.ArrayList<>(porJugador.values())) {
             suyas.values().forEach(this::ejecutar);
             n += suyas.size();
         }
@@ -140,7 +146,7 @@ public final class Estados {
     /** Caduca lo que se haya pasado de tiempo. Lo llama una tarea cada segundo. */
     public void repasar() {
         long ahora = System.currentTimeMillis();
-        for (var entrada : new LinkedHashMap<>(porJugador).entrySet()) {
+        for (var entrada : new java.util.ArrayList<>(porJugador.entrySet())) {
             Map<String, Activo> suyas = porJugador.get(entrada.getKey());
             if (suyas == null) continue;
             for (Activo a : new ArrayList<>(suyas.values())) {
