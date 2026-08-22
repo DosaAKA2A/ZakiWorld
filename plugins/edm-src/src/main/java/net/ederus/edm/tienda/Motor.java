@@ -227,7 +227,13 @@ public final class Motor {
     /** Lo que costaria comprar esa cantidad ahora mismo. */
     public double totalCompraDe(Catalogo.Articulo art, int cantidad) {
         if (art == null || cantidad <= 0) return 0;
-        return compraEfectiva(art) * cantidad;
+        Rotacion.Trato t = ofertaViva(art);
+        if (t == null) return art.compra() * cantidad;
+        /* Igual que la venta: el cupo va con el descuento de la Oferta y el
+         * resto se cobra al precio regular, sin frenar la compra. */
+        int conOferta = Math.min(cantidad, rotacion.restanteHoy(t));
+        return art.compra() * t.factor() * conOferta
+                + art.compra() * (cantidad - conOferta);
     }
 
     /**
@@ -240,17 +246,25 @@ public final class Motor {
      */
     public double totalVentaDe(Catalogo.Articulo art, int cantidad) {
         if (art == null || cantidad <= 0) return 0;
-        double total = mercado.totalVenta(art, cantidad, compraEfectiva(art));
-        if (rotacion != null) {
-            Rotacion.Trato t = demandaViva(art);
-            if (t != null) {
-                total *= t.factor();
-                double techo = compraEfectiva(art) > 0
-                        ? compraEfectiva(art) * mercado.margen() * cantidad : Double.MAX_VALUE;
-                total = Math.min(total, techo);
-            }
-        }
-        return total;
+        double compra = compraEfectiva(art);
+        Rotacion.Trato t = demandaViva(art);
+        if (t == null) return mercado.totalVenta(art, cantidad, compra);
+
+        /* En dos tramos: el cupo del dia se paga con el bonus de la Demanda y
+         * lo que sobre se paga al precio regular, en la MISMA venta. Agotar el
+         * cupo nunca frena la operacion: solo apaga el extra. */
+        int conBonus = Math.min(cantidad, rotacion.restanteHoy(t));
+        double tramoBonus = mercado.totalVenta(art, conBonus, compra) * t.factor();
+        double techo = compra > 0 ? compra * mercado.margen() * conBonus : Double.MAX_VALUE;
+        tramoBonus = Math.min(tramoBonus, techo);
+
+        int aRegular = cantidad - conBonus;
+        if (aRegular <= 0) return tramoBonus;
+        /* El segundo tramo arranca con la presion que dejaria el primero, para
+         * que vender de golpe siga pagando lo mismo que vender a trozos. */
+        double tramoRegular = mercado.totalVentaDesde(art, aRegular, compra,
+                mercado.presionActual(art.clave()) + conBonus);
+        return tramoBonus + tramoRegular;
     }
 
     /**
@@ -272,22 +286,19 @@ public final class Motor {
             int puede = compras.restante(jugador.getUniqueId(), art);
             if (puede < cantidad) { cantidad = puede; motivo = "personal"; }
         }
-        if (rotacion != null) {
-            Rotacion.Trato t = ofertaViva(art);
-            if (t != null && rotacion.restanteHoy(t) < cantidad) {
-                cantidad = rotacion.restanteHoy(t);
-                motivo = "oferta";
-            }
-        }
         int sitio = huecoLibre(jugador.getInventory(), art);
         if (sitio < cantidad) { cantidad = sitio; motivo = "espacio"; }
 
-        double precio = compraEfectiva(art);
-        if (precio > 0) {
-            /* En double y comparando antes de convertir: el saldo de este
-             * servidor se sale del int sin despeinarse. */
-            double puedePagar = Math.floor(economia.getBalance(jugador) / precio);
-            if (puedePagar < cantidad) { cantidad = (int) Math.max(0, puedePagar); motivo = "dinero"; }
+        if (art.compra() > 0) {
+            /* Con la compra en dos tramos el coste ya no es lineal: se le
+             * pregunta al mismo totalCompraDe que luego cobra, bajando de uno
+             * en uno. Esta acotado por MAX_POR_OPERACION y cada consulta es
+             * de coste fijo. */
+            double saldo = economia.getBalance(jugador);
+            if (totalCompraDe(art, cantidad) > saldo) {
+                motivo = "dinero";
+                while (cantidad > 0 && totalCompraDe(art, cantidad) > saldo) cantidad--;
+            }
         }
         return new Limite(Math.max(0, cantidad), motivo);
     }
@@ -305,13 +316,6 @@ public final class Motor {
         int margen = topes.restante(jugador.getUniqueId(), art);
         if (margen < cantidad) { cantidad = margen; motivo = "tope"; }
 
-        if (rotacion != null) {
-            Rotacion.Trato t = demandaViva(art);
-            if (t != null && rotacion.restanteHoy(t) < cantidad) {
-                cantidad = rotacion.restanteHoy(t);
-                motivo = "demanda";
-            }
-        }
         return new Limite(Math.max(0, cantidad), motivo);
     }
 
@@ -337,13 +341,13 @@ public final class Motor {
         }
 
         int cantidad = Math.min(Math.min(pedido, disponible), Math.min(margen, MAX_POR_OPERACION));
-        /* Tope diario de SERVIDOR de la seccion Demandas: sin el, cuatro
-         * jugadores agotarian el precio inflado en la primera hora. */
+        /* El cupo diario de SERVIDOR de las Demandas ya no recorta la venta:
+         * marca cuantas unidades van con bonus. El resto va a precio regular
+         * dentro de la misma operacion (ver totalVentaDe). */
+        int conBonus = 0;
         if (rotacion != null) {
             Rotacion.Trato t = demandaViva(art);
-            if (t != null) {
-                cantidad = Math.min(cantidad, rotacion.restanteHoy(t));
-            }
+            if (t != null) conBonus = Math.min(cantidad, rotacion.restanteHoy(t));
         }
 
         // 1. los items fuera
@@ -365,7 +369,8 @@ public final class Motor {
 
         topes.anotar(jugador.getUniqueId(), art, quitados);
         mercado.anotarVenta(art, quitados);
-        if (demandaViva(art) != null) rotacion.anotar(art.clave(), quitados);
+        /* Al cupo del dia solo se le anota el tramo con bonus. */
+        if (conBonus > 0) rotacion.anotar(art.clave(), Math.min(conBonus, quitados));
         registro.anotar("VENTA", jugador.getName(), quitados, art.clave(),
                 unitario, total, economia.getBalance(jugador));
         /* Si el recorte contra la compra llego a actuar, queda constancia: es la
@@ -422,17 +427,18 @@ public final class Motor {
         }
 
         int cantidad = Math.min(pedido, MAX_POR_OPERACION);
+        /* El cupo de la Oferta ya no recorta la compra: marca cuantas unidades
+         * llevan el descuento; el resto se cobra al precio regular. */
+        int conOferta = 0;
         if (rotacion != null) {
             Rotacion.Trato t = ofertaViva(art);
-            if (t != null) {
-                cantidad = Math.min(cantidad, rotacion.restanteHoy(t));
-            }
+            if (t != null) conOferta = Math.min(cantidad, rotacion.restanteHoy(t));
         }
         int sitio = huecoLibre(jugador.getInventory(), art);
         if (sitio <= 0) return Resultado.no(msg("sin-espacio", "No te cabe nada más en el inventario."));
         if (sitio < cantidad) cantidad = sitio;
 
-        double coste = compraEfectiva(art) * cantidad;
+        double coste = totalCompraDe(art, cantidad);
         if (!economia.has(jugador, coste)) {
             return Resultado.no(msg("sin-dinero", "Te faltan %falta%.",
                     "%falta%", fmt(coste - economia.getBalance(jugador))));
@@ -451,10 +457,10 @@ public final class Motor {
             return Resultado.no(Estilo.legado("&cNo pude entregarte el objeto; se te devolvió el dinero."));
         }
 
-        if (ofertaViva(art) != null) rotacion.anotar(art.clave(), cantidad);
+        if (conOferta > 0) rotacion.anotar(art.clave(), Math.min(conOferta, cantidad));
         if (compras != null) compras.anotar(jugador.getUniqueId(), art, cantidad);
         registro.anotar("COMPRA", jugador.getName(), cantidad, art.clave(),
-                compraEfectiva(art), coste, economia.getBalance(jugador));
+                coste / cantidad, coste, economia.getBalance(jugador));
 
         return new Resultado(true, msg("compra-hecha",
                 "Compraste %cantidad% x %item% por %total%",

@@ -122,6 +122,10 @@ public final class Mercado {
         return v;
     }
 
+    /** La presion actual de ese articulo, para cotizar un tramo que empieza
+     *  donde acabaria otro. Es la misma lectura que usa el precio. */
+    public double presionActual(String clave) { return presion(clave); }
+
     /** 1.0 = precio intacto; 'suelo' = todo lo bajo que puede llegar. */
     public double multiplicador(Catalogo.Articulo art) {
         if (!activo || !art.seVende()) return 1;
