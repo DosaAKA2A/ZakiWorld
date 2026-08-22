@@ -366,11 +366,24 @@ public final class MenuTienda implements Listener {
         }
 
         /* La linea del tope de servidor solo sale si hay tope. Con el tope
-         * quitado no se enseña nada: un numero enorme ahi solo confunde. */
+         * quitado no se enseña nada: un numero enorme ahi solo confunde.
+         *
+         * Agotarse el cupo NO cierra nada: apaga el trato del dia y el articulo
+         * sigue comprandose y vendiendose al precio normal. La linea tiene que
+         * decir eso, porque un "quedan 0" a secas se lee como "ya no se puede". */
         Rotacion.Trato trato = oferta != null ? oferta : demanda;
         if (trato != null && rot != null && !Rotacion.sinTope(trato)) {
+            int quedanHoy = rot.restanteHoy(trato);
             lore.add(Estilo.vacio());
-            lore.add(Estilo.texto("Quedan hoy " + rot.restanteHoy(trato) + " en el mundo", Estilo.APAGADO));
+            if (quedanHoy > 0) {
+                lore.add(Estilo.texto("Quedan hoy " + quedanHoy
+                        + (oferta != null ? " con descuento" : " con bonus"), Estilo.APAGADO));
+            } else {
+                lore.add(Estilo.texto((oferta != null ? "Descuento" : "Bonus")
+                        + " del día agotado", Estilo.APAGADO));
+                lore.add(Estilo.texto("Sigue " + (oferta != null ? "comprándose" : "vendiéndose")
+                        + " a precio normal", Estilo.APAGADO));
+            }
         }
 
         lore.add(Estilo.vacio());
