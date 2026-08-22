@@ -86,10 +86,26 @@ public final class Motor {
     public Compras compras() { return compras; }
     public Rotacion rotacion() { return rotacion; }
 
+    /*
+     * El trato del dia SOLO si aun queda cupo. Si el cupo de servidor se agoto,
+     * aqui no hay trato: el articulo vuelve a su precio normal en vez de quedar
+     * bloqueado. Agotarse una Demanda quita el bonus, no la venta.
+     */
+    private Rotacion.Trato ofertaViva(Catalogo.Articulo art) {
+        if (rotacion == null) return null;
+        Rotacion.Trato t = rotacion.oferta(art.clave());
+        return t != null && rotacion.restanteHoy(t) > 0 ? t : null;
+    }
+
+    private Rotacion.Trato demandaViva(Catalogo.Articulo art) {
+        if (rotacion == null) return null;
+        Rotacion.Trato t = rotacion.demanda(art.clave());
+        return t != null && rotacion.restanteHoy(t) > 0 ? t : null;
+    }
+
     /** Lo que cuesta comprar una unidad ahora mismo, con la oferta del dia. */
     public double compraEfectiva(Catalogo.Articulo art) {
-        if (rotacion == null) return art.compra();
-        Rotacion.Trato t = rotacion.oferta(art.clave());
+        Rotacion.Trato t = ofertaViva(art);
         return t == null ? art.compra() : art.compra() * t.factor();
     }
 
@@ -102,7 +118,7 @@ public final class Motor {
         double compra = compraEfectiva(art);
         double precio = mercado.ventaEfectiva(art, compra);
         if (rotacion != null) {
-            Rotacion.Trato t = rotacion.demanda(art.clave());
+            Rotacion.Trato t = demandaViva(art);
             if (t != null) {
                 precio *= t.factor();
                 if (compra > 0) precio = Math.min(precio, compra * mercado.margen());
@@ -226,7 +242,7 @@ public final class Motor {
         if (art == null || cantidad <= 0) return 0;
         double total = mercado.totalVenta(art, cantidad, compraEfectiva(art));
         if (rotacion != null) {
-            Rotacion.Trato t = rotacion.demanda(art.clave());
+            Rotacion.Trato t = demandaViva(art);
             if (t != null) {
                 total *= t.factor();
                 double techo = compraEfectiva(art) > 0
@@ -257,7 +273,7 @@ public final class Motor {
             if (puede < cantidad) { cantidad = puede; motivo = "personal"; }
         }
         if (rotacion != null) {
-            Rotacion.Trato t = rotacion.oferta(art.clave());
+            Rotacion.Trato t = ofertaViva(art);
             if (t != null && rotacion.restanteHoy(t) < cantidad) {
                 cantidad = rotacion.restanteHoy(t);
                 motivo = "oferta";
@@ -290,7 +306,7 @@ public final class Motor {
         if (margen < cantidad) { cantidad = margen; motivo = "tope"; }
 
         if (rotacion != null) {
-            Rotacion.Trato t = rotacion.demanda(art.clave());
+            Rotacion.Trato t = demandaViva(art);
             if (t != null && rotacion.restanteHoy(t) < cantidad) {
                 cantidad = rotacion.restanteHoy(t);
                 motivo = "demanda";
@@ -324,13 +340,9 @@ public final class Motor {
         /* Tope diario de SERVIDOR de la seccion Demandas: sin el, cuatro
          * jugadores agotarian el precio inflado en la primera hora. */
         if (rotacion != null) {
-            Rotacion.Trato t = rotacion.demanda(art.clave());
+            Rotacion.Trato t = demandaViva(art);
             if (t != null) {
-                int quedaHoy = rotacion.restanteHoy(t);
-                if (quedaHoy <= 0) {
-                    return Resultado.no(msg("demanda-cubierta", "La demanda de %item% ya se cubrió hoy.", "%item%", bonito(material)));
-                }
-                cantidad = Math.min(cantidad, quedaHoy);
+                cantidad = Math.min(cantidad, rotacion.restanteHoy(t));
             }
         }
 
@@ -353,7 +365,7 @@ public final class Motor {
 
         topes.anotar(jugador.getUniqueId(), art, quitados);
         mercado.anotarVenta(art, quitados);
-        if (rotacion != null && rotacion.demanda(art.clave()) != null) rotacion.anotar(art.clave(), quitados);
+        if (demandaViva(art) != null) rotacion.anotar(art.clave(), quitados);
         registro.anotar("VENTA", jugador.getName(), quitados, art.clave(),
                 unitario, total, economia.getBalance(jugador));
         /* Si el recorte contra la compra llego a actuar, queda constancia: es la
@@ -411,13 +423,9 @@ public final class Motor {
 
         int cantidad = Math.min(pedido, MAX_POR_OPERACION);
         if (rotacion != null) {
-            Rotacion.Trato t = rotacion.oferta(art.clave());
+            Rotacion.Trato t = ofertaViva(art);
             if (t != null) {
-                int quedaHoy = rotacion.restanteHoy(t);
-                if (quedaHoy <= 0) {
-                    return Resultado.no(msg("oferta-agotada", "La oferta de %item% se agotó hoy.", "%item%", nombre(art)));
-                }
-                cantidad = Math.min(cantidad, quedaHoy);
+                cantidad = Math.min(cantidad, rotacion.restanteHoy(t));
             }
         }
         int sitio = huecoLibre(jugador.getInventory(), art);
@@ -443,7 +451,7 @@ public final class Motor {
             return Resultado.no(Estilo.legado("&cNo pude entregarte el objeto; se te devolvió el dinero."));
         }
 
-        if (rotacion != null && rotacion.oferta(art.clave()) != null) rotacion.anotar(art.clave(), cantidad);
+        if (ofertaViva(art) != null) rotacion.anotar(art.clave(), cantidad);
         if (compras != null) compras.anotar(jugador.getUniqueId(), art, cantidad);
         registro.anotar("COMPRA", jugador.getName(), cantidad, art.clave(),
                 compraEfectiva(art), coste, economia.getBalance(jugador));
