@@ -34,7 +34,7 @@ import net.ederus.edm.tienda.TiendaPlugin;
  */
 public final class EDMPlugin extends JavaPlugin {
 
-    public static final String VERSION = "1.8.1";
+    public static final String VERSION = "1.9.0";
 
     /* id del modulo -> carpeta del plugin viejo de la que se migran los datos */
     private static final Map<String, String> CARPETAS_VIEJAS = Map.of(
@@ -248,13 +248,38 @@ public final class EDMPlugin extends JavaPlugin {
         }
     }
 
+    /*
+     * El dibujo va a la CONSOLA y solo ahi. En el chat de Minecraft la fuente
+     * es proporcional y esto se descuadraria entero; en una consola es
+     * monoespaciada y cuadra.
+     */
+    private static final String[] ARTE = {
+        "                       ▄▄▄                      ",
+        "     ▄▄▄▄▄        ▄▄▓▓▓▓▓▓▓▓▄                   ",
+        "  ▄▒▒▓▓▀▀██▄   ▄▓▓▓▓▒▀▀▀▒▒▒▒▓▓   ▄▄▓░▄▄▄▓▓▓▄▄   ",
+        " ░░▒▀     ▀▀   ▓▒▒▒▒      ▀░▒▒▓ ▐▓▓▓▒▀▒▓▀▒▒▒▓▓  ",
+        "▐█ ▌ ▄▄▄▄      ▐░░░░        ░░▒ ▒▒▒▓▌ ░░▐ ▀░▒▒░ ",
+        "░░░█░▒▀▀        ░  ▌          ░ ░░░▒▌ ▄░▓ ▐ ░░▒▌",
+        "▐░▒█      ▀█▄   ▐░░▌      ▒░░   ▐  ░█  ▀  ▐   ░▌",
+        " ░▒▒▄     ▄██▀   ▒▒▌    ▄▓▒▓▀    █░░▒▌    ▒░░▒█ ",
+        "  ▀▒▓▓▄▄███▀     ▐▓▓▄▄██▓▀▀      ▐▒▒▒▌    ▐▓██▌ ",
+        "     ▀▀▀▀         ███▀▀           ▀▀▀      ▀▀▀  "
+    };
+
     private void banner() {
         var consola = Bukkit.getConsoleSender();
         String cargados = this.modulos.isEmpty() ? "ninguno" : String.join(", ", this.modulos.keySet());
-        consola.sendMessage("§8[§bEDM§8] §fNucleo de Ederus §7v" + VERSION);
-        consola.sendMessage("§8[§bEDM§8] §7Modulos activos: §f" + cargados);
-        if (!this.fallidos.isEmpty()) {
-            consola.sendMessage("§8[§bEDM§8] §cModulos caidos: §f" + String.join(", ", this.fallidos));
+        consola.sendMessage("");
+        for (String linea : ARTE) {
+            consola.sendMessage("§b" + linea);
         }
+        consola.sendMessage("");
+        consola.sendMessage("   §f§lEDM §8· §7Nucleo de Ederus §8· §fv" + VERSION);
+        consola.sendMessage("   §7Creado por §b§lDosa §r§7e §b§lIris Studio");
+        consola.sendMessage("   §7Modulos activos §8· §f" + cargados);
+        if (!this.fallidos.isEmpty()) {
+            consola.sendMessage("   §cModulos caidos §8· §f" + String.join(", ", this.fallidos));
+        }
+        consola.sendMessage("");
     }
 }
