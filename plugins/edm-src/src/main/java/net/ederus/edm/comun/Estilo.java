@@ -86,4 +86,64 @@ public final class Estilo {
     public static String dinero(double d) {
         return "$" + String.format(java.util.Locale.US, "%,.2f", d);
     }
+
+    /**
+     * Lo mismo pero sin los decimales cuando no dicen nada. En el lore de un
+     * item cabe '$250.00' y ademas es lo que el jugador lleva viendo desde
+     * ESGUI; en una linea de chat, con el nombre delante y el porcentaje
+     * detras, esos dos ceros son los que hacen que la linea se parta.
+     */
+    public static String dineroCorto(double d) {
+        double r = Math.round(d * 100.0) / 100.0;
+        if (r == Math.rint(r)) return "$" + String.format(java.util.Locale.US, "%,.0f", r);
+        return "$" + String.format(java.util.Locale.US, "%,.2f", r);
+    }
+
+    // ------------------------------------------------- bloques de chat
+
+    /**
+     * La raya de los bloques de chat.
+     *
+     * Es corta a proposito. El chat mide unos 320 px y la fuente es de ancho
+     * variable, asi que una raya larga se parte en dos renglones en cuanto
+     * alguien juega con la ventana pequeña o con el chat al 100%.
+     */
+    private static final String RAYA = "━".repeat(26);
+
+    public static Component regla() {
+        return texto(RAYA, APAGADO);
+    }
+
+    /** "MERCADO . Lingote de hierro", con el corte en gris como el del menu. */
+    public static Component cabecera(String titulo, String detalle) {
+        Component izq = Component.text(titulo, MARCA)
+                .decoration(TextDecoration.BOLD, true)
+                .decoration(TextDecoration.ITALIC, false);
+        if (detalle == null) return izq;
+        return Component.empty()
+                .decoration(TextDecoration.ITALIC, false)
+                .append(izq)
+                .append(texto(" · ", NamedTextColor.DARK_GRAY).decoration(TextDecoration.BOLD, false))
+                .append(texto(detalle, CLARO).decoration(TextDecoration.BOLD, false));
+    }
+
+    /**
+     * Una linea de dato: "  > etiqueta  valor".
+     *
+     * NO se alinea en columnas y no es un descuido: la fuente del chat es
+     * proporcional, asi que rellenar con espacios para cuadrar una tabla
+     * (String.format("%,7d", ...)) queda perfecto en la consola y torcido en el
+     * juego. Etiqueta y valor en el mismo renglon, separados por color.
+     */
+    public static Component linea(String etiqueta, String valor, TextColor color) {
+        Component base = texto(" " + FLECHA + " ", APAGADO)
+                .append(texto(etiqueta, CLARO));
+        if (valor == null || valor.isEmpty()) return base;
+        return base.append(texto("  " + valor, color));
+    }
+
+    /** Un apunte flojo debajo de un dato, para el matiz que no es el numero. */
+    public static Component nota(String t) {
+        return texto("   " + t, APAGADO);
+    }
 }

@@ -77,18 +77,25 @@ public final class ComandoTienda implements CommandExecutor, TabCompleter {
     }
 
     private void ayuda(CommandSender q) {
-        q.sendMessage("Tienda de Ederus");
-        q.sendMessage("/etienda buscar <texto>          (o /shop <texto>)");
-        q.sendMessage("/etienda vender <item|mano> [cantidad|todo]");
-        q.sendMessage("/etienda comprar <item> <cantidad>   (ej: spawner:pig)");
-        q.sendMessage("/etienda precio <item>");
-        q.sendMessage("/etienda topes");
-        q.sendMessage("/etienda mercado <item> [simular <cantidad>]");
-        q.sendMessage("/etienda rotacion");
+        q.sendMessage(Estilo.regla());
+        q.sendMessage(Estilo.cabecera("TIENDA", "Ederus"));
+        q.sendMessage(Estilo.regla());
+        q.sendMessage(Estilo.linea("/tienda", "abre la tienda", Estilo.CLARO));
+        q.sendMessage(Estilo.linea("/tienda buscar <texto>", "encuentra un artículo", Estilo.CLARO));
+        q.sendMessage(Estilo.linea("/tienda vender mano todo", "vende lo que llevas en la mano", Estilo.VENTA));
+        q.sendMessage(Estilo.linea("/tienda vender <artículo> <cuántos>", null, Estilo.VENTA));
+        q.sendMessage(Estilo.linea("/tienda comprar <artículo> <cuántos>", null, Estilo.COMPRA));
+        q.sendMessage(Estilo.linea("/tienda precio <artículo>", "a cómo está", Estilo.CLARO));
+        q.sendMessage(Estilo.linea("/tienda mercado <artículo>", "cuánto ha bajado y por qué", Estilo.CLARO));
+        q.sendMessage(Estilo.linea("/tienda rotacion", "los tratos de hoy", Estilo.CLARO));
+        q.sendMessage(Estilo.linea("/venderotodo", "vende todo lo vendible que lleves", Estilo.VENTA));
         if (q.hasPermission("ederus.tienda.admin")) {
-            q.sendMessage("/etienda webhook                  (prueba el aviso de Discord)");
-            q.sendMessage("/etienda recargar");
+            q.sendMessage(Estilo.regla());
+            q.sendMessage(Estilo.linea("/etienda recargar", "recarga el catálogo", Estilo.APAGADO));
+            q.sendMessage(Estilo.linea("/etienda webhook", "prueba el aviso de Discord", Estilo.APAGADO));
+            q.sendMessage(Estilo.linea("/etienda mercado <art> vender <n>", "la tabla de presión", Estilo.APAGADO));
         }
+        q.sendMessage(Estilo.regla());
     }
 
     private boolean buscar(CommandSender quien, String[] args) {
@@ -151,70 +158,135 @@ public final class ComandoTienda implements CommandExecutor, TabCompleter {
         return true;
     }
 
+    /**
+     * La ficha corta de un articulo.
+     *
+     * Enseña el precio EFECTIVO, que es lo que se va a cobrar de verdad, no el
+     * de precios.yml. Antes enseñaba el base y le mentia al jugador: veia $55 y
+     * al vender cobraba $40 porque el mercado estaba sobrevendido.
+     */
     private boolean precio(CommandSender quien, String[] args) {
-        if (args.length < 2) { quien.sendMessage("/etienda precio <item>"); return true; }
+        if (args.length < 2) { uso(quien, "precio <artículo>"); return true; }
 
-        Catalogo.Articulo a = catalogo.de(args[1]);
-        if (a == null) {
-            Material m = quien instanceof Player p ? material(p, args[1]) : Material.matchMaterial(args[1]);
-            if (m != null) a = catalogo.de(m);
+        Catalogo.Articulo a = articuloDe(quien, args[1]);
+        if (a == null) { noConozco(quien, args[1]); return true; }
+
+        Motor motor = modulo.motor();
+        quien.sendMessage(Estilo.regla());
+        quien.sendMessage(Estilo.cabecera("TIENDA", Motor.nombre(a)));
+        quien.sendMessage(Estilo.regla());
+        quien.sendMessage(Estilo.linea("Categoría", a.categoria(), Estilo.CLARO));
+
+        if (a.seCompra()) {
+            double ef = motor != null ? motor.compraEfectiva(a) : a.compra();
+            quien.sendMessage(Estilo.linea("Te cuesta", Estilo.dineroCorto(ef), Estilo.COMPRA));
+            if (Math.round(ef) != Math.round(a.compra())) {
+                quien.sendMessage(Estilo.nota("normal " + Estilo.dineroCorto(a.compra()) + ", en oferta hoy"));
+            }
+        } else {
+            quien.sendMessage(Estilo.linea("Te cuesta", "no se vende aquí", Estilo.APAGADO));
         }
-        if (a == null) { quien.sendMessage("'" + args[1] + "' no está en la tienda."); return true; }
 
-        quien.sendMessage(Motor.nombre(a) + "  [" + a.categoria() + "]");
-        quien.sendMessage("  compra: " + (a.seCompra() ? Motor.fmt(a.compra()) : "no se vende"));
-        quien.sendMessage("  venta:  " + (a.seVende() ? Motor.fmt(a.venta()) : "no se compra"));
+        if (a.seVende()) {
+            double ef = motor != null ? motor.ventaEfectiva(a) : a.venta();
+            quien.sendMessage(Estilo.linea("Te pagan", Estilo.dineroCorto(ef), Estilo.VENTA));
+            int caida = modulo.mercado() != null ? modulo.mercado().caidaPorCiento(a) : 0;
+            if (caida > 0) {
+                quien.sendMessage(Estilo.nota("normal " + Estilo.dineroCorto(a.venta())
+                        + ", -" + caida + "% por sobrevendido"));
+            } else if (Math.round(ef) > Math.round(a.venta())) {
+                quien.sendMessage(Estilo.nota("normal " + Estilo.dineroCorto(a.venta()) + ", muy pedido hoy"));
+            }
+        } else {
+            quien.sendMessage(Estilo.linea("Te pagan", "no se compra aquí", Estilo.APAGADO));
+        }
+
         if (topes.activo() && a.tieneTope()) {
-            String resto = quien instanceof Player p ? " | te quedan " + topes.restante(p.getUniqueId(), a) : "";
-            quien.sendMessage("  tope:   " + a.topeVenta() + " cada " + Motor.duracion(a.ventanaMs()) + resto);
+            String resto = quien instanceof Player pl
+                    ? "  te quedan " + topes.restante(pl.getUniqueId(), a) : "";
+            quien.sendMessage(Estilo.linea("Límite",
+                    a.topeVenta() + " cada " + Motor.duracion(a.ventanaMs()) + resto, Estilo.CLARO));
         }
+        quien.sendMessage(Estilo.regla());
         return true;
     }
 
+    /**
+     * Las ventanas de venta abiertas.
+     *
+     * Con los topes apagados NO se dice "no tienes ninguna ventana abierta":
+     * eso suena a que el jugador hizo algo mal. Se dice que no hay topes, que
+     * es la verdad y ademas es una buena noticia.
+     */
     private boolean verTopes(CommandSender quien) {
         if (!(quien instanceof Player jugador)) { quien.sendMessage("Solo desde el juego."); return true; }
+
+        quien.sendMessage(Estilo.regla());
+        quien.sendMessage(Estilo.cabecera("TIENDA", "Tus límites de venta"));
+        quien.sendMessage(Estilo.regla());
+        if (!topes.activo()) {
+            quien.sendMessage(Estilo.linea("Sin límite", "vende lo que quieras", Estilo.ACCION_COMPRA));
+            quien.sendMessage(Estilo.nota("lo único que frena es el precio: baja cuanto más se vende"));
+            quien.sendMessage(Estilo.regla());
+            return true;
+        }
         var resumen = topes.resumen(jugador.getUniqueId());
-        if (resumen.isEmpty()) { quien.sendMessage("No tienes ninguna ventana de venta abierta."); return true; }
-        quien.sendMessage("Ventanas abiertas:");
-        resumen.forEach((clave, v) -> {
-            Catalogo.Articulo a = catalogo.de(clave);
-            if (a == null) return;
-            quien.sendMessage("  " + Motor.nombre(a) + ": " + v[0] + "/" + a.topeVenta()
-                    + " | se reinicia en " + Motor.duracion(topes.esperaMs(jugador.getUniqueId(), a)));
-        });
+        if (resumen.isEmpty()) {
+            quien.sendMessage(Estilo.linea("Nada vendido todavía", "los tienes enteros", Estilo.CLARO));
+        } else {
+            resumen.forEach((clave, v) -> {
+                Catalogo.Articulo a = catalogo.de(clave);
+                if (a == null) return;
+                quien.sendMessage(Estilo.linea(Motor.nombre(a),
+                        v[0] + " de " + a.topeVenta(), Estilo.VENTA));
+                quien.sendMessage(Estilo.nota("se reinicia en "
+                        + Motor.duracion(topes.esperaMs(jugador.getUniqueId(), a))));
+            });
+        }
+        quien.sendMessage(Estilo.regla());
         return true;
     }
 
-    /** Ver como esta el precio de un item y simular cuanto caeria. */
+    /** Como esta hoy el precio dinamico de un articulo. */
     private boolean mercado(CommandSender quien, String[] args) {
-        if (args.length < 2) { quien.sendMessage("/etienda mercado <item> [simular <cantidad>]"); return true; }
-        Catalogo.Articulo a = catalogo.de(args[1]);
-        if (a == null) {
-            Material m = quien instanceof Player p ? material(p, args[1]) : Material.matchMaterial(args[1]);
-            if (m != null) a = catalogo.de(m);
+        if (args.length < 2) { uso(quien, "mercado <artículo>"); return true; }
+        Catalogo.Articulo a = articuloDe(quien, args[1]);
+        if (a == null) { noConozco(quien, args[1]); return true; }
+        if (!a.seVende()) {
+            quien.sendMessage(Estilo.linea(Motor.nombre(a), "no se compra aquí", Estilo.APAGADO));
+            quien.sendMessage(Estilo.nota("solo tienen precio dinámico las cosas que la tienda te compra"));
+            return true;
         }
-        if (a == null) { quien.sendMessage("'" + args[1] + "' no está en la tienda."); return true; }
-        if (!a.seVende()) { quien.sendMessage(Motor.nombre(a) + " no se vende, no tiene precio dinamico."); return true; }
 
         Mercado mk = modulo.mercado();
-        if (mk == null) { quien.sendMessage("El mercado aun no esta listo."); return true; }
+        if (mk == null) { quien.sendMessage(Estilo.legado("&cEl mercado todavía está arrancando.")); return true; }
+        Motor mt = modulo.motor();
+        double compra = mt != null ? mt.compraEfectiva(a) : a.compra();
+        double ahora = mk.ventaEfectiva(a, compra);
+        int caida = mk.caidaPorCiento(a);
 
-        quien.sendMessage(Motor.nombre(a) + "  [" + a.categoria() + "]");
-        quien.sendMessage("  base " + Motor.fmt(a.venta())
-                + "  ->  ahora " + Motor.fmt(mk.ventaEfectiva(a, a.compra()))
-                + "  (-" + mk.caidaPorCiento(a) + "%)");
-        quien.sendMessage("  suelo " + Motor.fmt(a.venta() * mk.suelo())
-                + "  |  margen contra la compra " + Math.round(mk.margen() * 100) + "%");
-        quien.sendMessage("  vuelve a su precio de siempre en " + (mk.olvidoTotalMs() > 0
-                ? Motor.duracion(mk.olvidoTotalMs()) + " sin ventas"
-                : "nunca del todo (tope quitado)"));
+        quien.sendMessage(Estilo.regla());
+        quien.sendMessage(Estilo.cabecera("MERCADO", Motor.nombre(a)));
+        quien.sendMessage(Estilo.regla());
+        quien.sendMessage(Estilo.linea("Se paga ahora", Estilo.dineroCorto(ahora), Estilo.VENTA));
+        quien.sendMessage(Estilo.nota(caida > 0
+                ? "normal " + Estilo.dineroCorto(a.venta()) + ", va -" + caida + "% de tanto venderse"
+                : "es su precio normal, nadie lo está inundando"));
+        quien.sendMessage(Estilo.linea("Nunca baja de", Estilo.dineroCorto(a.venta() * mk.suelo()), Estilo.CLARO));
+        quien.sendMessage(Estilo.linea("Se recupera",
+                mk.olvidoTotalMs() > 0 ? "en " + Motor.duracion(mk.olvidoTotalMs()) + " sin ventas"
+                                       : "poco a poco, sin tope", Estilo.CLARO));
+        quien.sendMessage(Estilo.regla());
+
+        /* Las dos tablas son herramienta de calibrar la economia, no algo que
+         * un jugador vaya a leer: cinco cortes y cuatro escenarios. Ademas van
+         * con relleno de espacios, que en el chat no alinea nada. Solo staff. */
+        if (!quien.hasPermission("ederus.tienda.admin")) return true;
 
         if (args.length >= 4 && args[2].equalsIgnoreCase("vender")) {
             int n;
             try { n = Integer.parseInt(args[3]); }
-            catch (NumberFormatException ex) { quien.sendMessage("Cantidad invalida."); return true; }
-            Motor mt = modulo.motor();
-            double compra = mt != null ? mt.compraEfectiva(a) : a.compra();
+            catch (NumberFormatException ex) { cantidadMala(quien); return true; }
             quien.sendMessage("  vender " + String.format("%,d", n) + " ahora mismo:");
             int[] cortes = {1, n / 8, n / 4, n / 2, n};
             for (int c : cortes) {
@@ -237,7 +309,7 @@ public final class ComandoTienda implements CommandExecutor, TabCompleter {
         if (args.length >= 4 && args[2].equalsIgnoreCase("simular")) {
             int n;
             try { n = Integer.parseInt(args[3]); }
-            catch (NumberFormatException e) { quien.sendMessage("Cantidad invalida."); return true; }
+            catch (NumberFormatException e) { cantidadMala(quien); return true; }
             quien.sendMessage("  si el servidor vendiera " + n + " mas:");
             for (int paso : new int[]{n / 4, n / 2, n, n * 2, n * 4}) {
                 if (paso <= 0) continue;
@@ -248,37 +320,89 @@ public final class ComandoTienda implements CommandExecutor, TabCompleter {
         return true;
     }
 
-    /** Que le toco hoy a Ofertas y a Demandas. */
+    /**
+     * Que le toco hoy a Ofertas y a Demandas.
+     *
+     * En el juego solo el RESUMEN. La lista entera son veinte articulos y el
+     * chat no es sitio para eso: las lineas se parten por la mitad y en un
+     * telefono con Bedrock no hay quien lo lea. Las dos secciones ya son
+     * pantallas del menu (@ofertas y @demandas), asi que ahi se manda.
+     *
+     * En consola SI se imprime la lista: ahi la fuente es monoespaciada, no hay
+     * menu al que mandar a nadie, y es donde se revisa que la rotacion del dia
+     * salio bien.
+     */
     private boolean rotacion(CommandSender quien) {
         Rotacion rot = modulo.rotacion();
-        if (rot == null || !rot.activo()) { quien.sendMessage("La rotacion esta desactivada."); return true; }
-        quien.sendMessage("Rotacion del " + rot.dia() + " (cambia en " + Motor.duracion(Rotacion.hastaManana()) + ")");
-
-        quien.sendMessage("OFERTAS (baja la compra):");
-        int n = 0;
-        for (Rotacion.Trato t : rot.ofertas()) {
-            Catalogo.Articulo a = catalogo.de(t.clave());
-            if (a == null) continue;
-            quien.sendMessage("  " + Motor.nombre(a) + ": " + Motor.fmt(a.compra())
-                    + " -> " + Motor.fmt(a.compra() * t.factor())
-                    + "  (-" + Math.round((1 - t.factor()) * 100) + "%)  quedan " + quedan(rot, t));
-            n++;
+        if (rot == null || !rot.activo()) {
+            quien.sendMessage(Estilo.linea("La rotación está desactivada", null, Estilo.APAGADO));
+            return true;
         }
-        if (n == 0) quien.sendMessage("  (ninguna)");
 
-        quien.sendMessage("DEMANDAS (sube la venta):");
-        n = 0;
-        for (Rotacion.Trato t : rot.demandas()) {
-            Catalogo.Articulo a = catalogo.de(t.clave());
-            if (a == null) continue;
+        if (!(quien instanceof Player)) {
+            quien.sendMessage("Rotacion del " + rot.dia()
+                    + " (cambia en " + Motor.duracion(Rotacion.hastaManana()) + ")");
+            quien.sendMessage("OFERTAS (baja la compra):");
+            for (Rotacion.Trato t : rot.ofertas()) {
+                Catalogo.Articulo a = catalogo.de(t.clave());
+                if (a == null) continue;
+                quien.sendMessage("  " + Motor.nombre(a) + ": " + Motor.fmt(a.compra())
+                        + " -> " + Motor.fmt(a.compra() * t.factor())
+                        + "  (-" + Math.round((1 - t.factor()) * 100) + "%)  quedan " + quedan(rot, t));
+            }
+            quien.sendMessage("DEMANDAS (sube la venta):");
             Motor m = modulo.motor();
-            String ahora = m != null ? Motor.fmt(m.ventaEfectiva(a)) : Motor.fmt(a.venta() * t.factor());
-            quien.sendMessage("  " + Motor.nombre(a) + ": " + Motor.fmt(a.venta())
-                    + " -> " + ahora + "  (+" + Math.round((t.factor() - 1) * 100) + "%)  quedan " + quedan(rot, t));
-            n++;
+            for (Rotacion.Trato t : rot.demandas()) {
+                Catalogo.Articulo a = catalogo.de(t.clave());
+                if (a == null) continue;
+                String ahora = m != null ? Motor.fmt(m.ventaEfectiva(a)) : Motor.fmt(a.venta() * t.factor());
+                quien.sendMessage("  " + Motor.nombre(a) + ": " + Motor.fmt(a.venta())
+                        + " -> " + ahora + "  (+" + Math.round((t.factor() - 1) * 100) + "%)  quedan " + quedan(rot, t));
+            }
+            return true;
         }
-        if (n == 0) quien.sendMessage("  (ninguna)");
+
+        int ofertas = 0, demandas = 0;
+        for (Rotacion.Trato t : rot.ofertas()) if (catalogo.de(t.clave()) != null) ofertas++;
+        for (Rotacion.Trato t : rot.demandas()) if (catalogo.de(t.clave()) != null) demandas++;
+
+        quien.sendMessage(Estilo.regla());
+        quien.sendMessage(Estilo.cabecera("MERCADO", "Los tratos de hoy"));
+        quien.sendMessage(Estilo.regla());
+        quien.sendMessage(Estilo.linea("Ofertas", ofertas + (ofertas == 1 ? " artículo" : " artículos"),
+                Estilo.ACCION_COMPRA));
+        quien.sendMessage(Estilo.nota("te cuestan menos de lo normal"));
+        quien.sendMessage(Estilo.linea("Demandas", demandas + (demandas == 1 ? " artículo" : " artículos"),
+                Estilo.VENTA));
+        quien.sendMessage(Estilo.nota("te los pagan mejor de lo normal"));
+        quien.sendMessage(Estilo.linea("Cambian", "en " + Motor.duracion(Rotacion.hastaManana()), Estilo.CLARO));
+        quien.sendMessage(Estilo.regla());
+        quien.sendMessage(Estilo.linea("Ábrelos en /tienda", null, Estilo.MARCA));
+        quien.sendMessage(Estilo.regla());
         return true;
+    }
+
+    // -------------------------------------------------- pequenas ayudas
+
+    /** El articulo por su clave o por su nombre de material. */
+    private Catalogo.Articulo articuloDe(CommandSender quien, String texto) {
+        Catalogo.Articulo a = catalogo.de(texto);
+        if (a != null) return a;
+        Material m = quien instanceof Player p ? material(p, texto) : Material.matchMaterial(texto);
+        return m != null ? catalogo.de(m) : null;
+    }
+
+    private void uso(CommandSender quien, String resto) {
+        quien.sendMessage(Estilo.linea("Se usa así", "/tienda " + resto, Estilo.CLARO));
+    }
+
+    private void noConozco(CommandSender quien, String texto) {
+        quien.sendMessage(Estilo.linea("No tengo nada llamado", texto, Estilo.APAGADO));
+        quien.sendMessage(Estilo.nota("prueba a buscarlo: /tienda buscar " + texto));
+    }
+
+    private void cantidadMala(CommandSender quien) {
+        quien.sendMessage(Estilo.linea("Eso no es una cantidad", null, Estilo.APAGADO));
     }
 
     /** Sin tope no se imprime el numero: 2.147.483.647 no se lo cree nadie. */

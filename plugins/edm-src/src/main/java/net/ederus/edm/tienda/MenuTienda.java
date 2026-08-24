@@ -2,6 +2,7 @@ package net.ederus.edm.tienda;
 
 import net.ederus.edm.comun.EntradaChat;
 import net.ederus.edm.comun.Estilo;
+import net.ederus.edm.comun.Plataforma;
 
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
@@ -266,7 +267,9 @@ public final class MenuTienda implements Listener {
             for (int c = 0; c < enEsta; c++, i++) {
                 int ranura = (filaInicio + f) * 9 + 1 + hueco + c;
                 if (ranura >= inv.getSize()) break;
-                inv.setItem(ranura, pintar(pagina.get(i), jugador));
+                ItemStack pila = pintar(pagina.get(i), jugador);
+                marcarTrato(pila, pagina.get(i), vista.categoria);
+                inv.setItem(ranura, pila);
                 vista.ranuraAClave.put(ranura, pagina.get(i).clave());
             }
         }
@@ -305,6 +308,40 @@ public final class MenuTienda implements Listener {
         rellenar(inv);
         jugador.openInventory(inv);
         secciones.sonar(jugador, "abrir-categoria");
+    }
+
+    /**
+     * En Ofertas y Demandas, el trato del dia tiene que leerse SIN abrir el
+     * globo del item.
+     *
+     * En Java basta pasar el raton por encima. En Bedrock no hay hover: hay que
+     * mantener pulsado, y quien no lo sepa ve un cofre lleno de iconos sin
+     * saber cual esta rebajado. Asi que el porcentaje va en dos sitios que se
+     * ven de golpe: pegado al nombre, y como numero de la pila (un -45% es una
+     * pila de 45). Los tratos van de -16% a -52%, o sea que siempre cabe en las
+     * 64 de una pila.
+     */
+    private void marcarTrato(ItemStack pila, Catalogo.Articulo art, String categoria) {
+        if (pila == null) return;
+        boolean esOferta = OFERTAS.equals(categoria);
+        if (!esOferta && !DEMANDAS.equals(categoria)) return;
+        Rotacion rot = modulo.rotacion();
+        if (rot == null) return;
+        Rotacion.Trato t = esOferta ? rot.oferta(art.clave()) : rot.demanda(art.clave());
+        if (t == null) return;
+        int pc = esOferta
+                ? (int) Math.round((1 - t.factor()) * 100)
+                : (int) Math.round((t.factor() - 1) * 100);
+        if (pc <= 0) return;
+
+        pila.setAmount(Math.max(1, Math.min(64, pc)));
+        ItemMeta meta = pila.getItemMeta();
+        if (meta == null) return;
+        Component nombre = meta.displayName();
+        if (nombre == null) nombre = Estilo.texto(Motor.nombre(art), Estilo.CLARO);
+        meta.displayName(nombre.append(Estilo.texto("  " + (esOferta ? "-" : "+") + pc + "%",
+                esOferta ? Estilo.ACCION_COMPRA : Estilo.VENTA)));
+        pila.setItemMeta(meta);
     }
 
     /** Un articulo con su precio, sus topes y lo que se puede hacer con el. */
@@ -387,24 +424,40 @@ public final class MenuTienda implements Listener {
         }
 
         lore.add(Estilo.vacio());
-        if (art.seCompra()) {
-            lore.add(Estilo.accion(pantallaAlHacerClick
-                    ? "Clic para elegir cuánto comprar"
-                    : "Clic para comprar 1", Estilo.ACCION_COMPRA));
-            lore.add(Estilo.accion("Shift + clic para comprar 64", Estilo.ACCION_COMPRA));
-        }
-        if (art.seVende()) {
-            lore.add(Estilo.accion(pantallaAlHacerClick
-                    ? "Clic derecho para elegir cuánto vender"
-                    : "Clic derecho para vender 1", Estilo.ACCION_VENTA));
-            lore.add(llevas > 0
-                    ? Estilo.accion("Shift + derecho para vender los " + llevas, Estilo.ACCION_VENTA)
-                    : Estilo.accion("Shift + derecho para vender todo", Estilo.APAGADO));
-        }
-        /* En modo directo la pantalla de cantidad sigue estando, con la Q. Se
-         * dice aqui porque si no, nadie la encuentra. */
-        if (!pantallaAlHacerClick && pantalla != null && (art.seCompra() || art.seVende())) {
-            lore.add(Estilo.accion("Q para elegir la cantidad", Estilo.APAGADO));
+        /*
+         * Lo que se le ofrece a cada uno. A un jugador de Bedrock no se le
+         * puede prometer el clic derecho ni el shift: Geyser no se los manda.
+         * Antes el lore les decia "Clic derecho para vender" y era mentira; se
+         * quedaban mirando un item que no respondia.
+         */
+        boolean bedrock = Plataforma.esBedrock(jugador);
+        if (bedrock) {
+            if (art.seCompra()) lore.add(Estilo.accion("Toca para elegir cuánto comprar", Estilo.ACCION_COMPRA));
+            if (art.seVende()) {
+                lore.add(Estilo.accion("Toca para elegir cuánto vender", Estilo.ACCION_VENTA));
+                if (art.seCompra()) lore.add(Estilo.accion("Dentro, cambia a vender", Estilo.APAGADO));
+            }
+        } else {
+            if (art.seCompra()) {
+                lore.add(Estilo.accion(pantallaAlHacerClick
+                        ? "Clic para elegir cuánto comprar"
+                        : "Clic para comprar 1", Estilo.ACCION_COMPRA));
+                lore.add(Estilo.accion("Shift + clic para comprar 64", Estilo.ACCION_COMPRA));
+            }
+            if (art.seVende()) {
+                lore.add(Estilo.accion(pantallaAlHacerClick
+                        ? "Clic derecho para elegir cuánto vender"
+                        : "Clic derecho para vender 1", Estilo.ACCION_VENTA));
+                lore.add(llevas > 0
+                        ? Estilo.accion("Shift + derecho para vender los " + llevas, Estilo.ACCION_VENTA)
+                        : Estilo.accion("Shift + derecho para vender todo", Estilo.APAGADO));
+            }
+            /* En modo directo la pantalla de cantidad sigue estando, con la Q. Se
+             * dice aqui porque si no, nadie la encuentra. Y solo a Java: en
+             * Bedrock la Q dentro de un menu no llega. */
+            if (!pantallaAlHacerClick && pantalla != null && (art.seCompra() || art.seVende())) {
+                lore.add(Estilo.accion("Q para elegir la cantidad", Estilo.APAGADO));
+            }
         }
         if (!art.seCompra() && !art.seVende()) lore.add(Estilo.accion("Solo de exposición", Estilo.APAGADO));
 
@@ -530,12 +583,28 @@ public final class MenuTienda implements Listener {
             }
             r = motor.vender(jugador, art.material(), clic.isShiftClick() ? Motor.MAX_POR_OPERACION : 1);
         } else if (clic.isLeftClick()) {
-            if (!art.seCompra()) return;
+            /*
+             * El clic izquierdo NUNCA se queda en nada.
+             *
+             * Antes esto era `if (!art.seCompra()) return;`, y como la mayoria
+             * del catalogo es solo venta, un jugador de Bedrock -que no tiene
+             * mas clic que este- tocaba casi cualquier articulo y no pasaba
+             * absolutamente nada: ni mensaje, ni sonido. Parecia roto. Si el
+             * articulo no se compra pero se vende, se abre la cara de vender.
+             */
+            boolean comprando = art.seCompra();
+            if (!comprando && !art.seVende()) return;
             if (!clic.isShiftClick() && pantallaAlHacerClick && pantalla != null) {
-                pantalla.abrir(jugador, art, true, vista.categoria, vista.pagina);
+                pantalla.abrir(jugador, art, comprando, vista.categoria, vista.pagina);
                 return;
             }
-            r = motor.comprar(jugador, art, clic.isShiftClick() ? 64 : 1);
+            if (!comprando) {
+                /* En modo directo y sin pantalla: vender 1, que es el
+                 * equivalente de lo que hace el clic al comprar. */
+                r = motor.vender(jugador, art.material(), clic.isShiftClick() ? Motor.MAX_POR_OPERACION : 1);
+            } else {
+                r = motor.comprar(jugador, art, clic.isShiftClick() ? 64 : 1);
+            }
         } else {
             return;
         }

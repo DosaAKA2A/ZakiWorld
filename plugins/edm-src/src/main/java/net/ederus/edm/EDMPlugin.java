@@ -34,7 +34,7 @@ import net.ederus.edm.tienda.TiendaPlugin;
  */
 public final class EDMPlugin extends JavaPlugin {
 
-    public static final String VERSION = "1.12.0";
+    public static final String VERSION = "1.13.0";
 
     /* id del modulo -> carpeta del plugin viejo de la que se migran los datos */
     private static final Map<String, String> CARPETAS_VIEJAS = Map.of(
@@ -84,7 +84,15 @@ public final class EDMPlugin extends JavaPlugin {
 
     @Override
     public boolean onCommand(CommandSender quien, Command cmd, String etiqueta, String[] args) {
-        if (args.length == 0) {
+        if (args.length == 0 || args[0].equalsIgnoreCase("info")) {
+            ficha(quien);
+            return true;
+        }
+
+        /* La lista de modulos y los caidos son tripas de mantenimiento: dejaban
+         * de ser publicos el dia que /edm paso a tener una ficha. */
+        if (args[0].equalsIgnoreCase("estado")) {
+            if (!permitido(quien)) return true;
             estado(quien);
             return true;
         }
@@ -144,10 +152,85 @@ public final class EDMPlugin extends JavaPlugin {
         return true;
     }
 
+    /*
+     * LA FICHA DE /edm, la unica parte del nucleo que ve un jugador.
+     *
+     * El dibujo del arranque va a la consola y solo ahi, porque la consola es
+     * monoespaciada. En el chat de Minecraft la fuente es de ancho variable: en
+     * cuanto mezclas espacios con simbolos, cada renglon empieza en un sitio y
+     * el dibujo se desmonta.
+     *
+     * La salida es no mezclar nunca. TODAS las celdas son el mismo caracter, el
+     * bloque lleno, y lo unico que cambia es el color: tinta o fondo. Midan lo
+     * que midan, miden todas igual, asi que las cinco filas cuadran solas y el
+     * texto de la derecha arranca a la misma altura en todas.
+     */
+    private static final String[] LOGO = {
+        "XXX.XX..X.X",
+        "X...X.X.XXX",
+        "XX..X.X.X.X",
+        "X...X.X.X.X",
+        "XXX.XX..X.X"
+    };
+
+    private static final net.kyori.adventure.text.format.TextColor TINTA =
+            net.kyori.adventure.text.format.TextColor.fromHexString("#0083FD");
+    private static final net.kyori.adventure.text.format.TextColor FONDO =
+            net.kyori.adventure.text.format.TextColor.fromHexString("#12202B");
+
+    /** Una fila del logo, con el texto que la acompaña a la derecha. */
+    private static net.kyori.adventure.text.Component filaLogo(String patron,
+                                                               net.kyori.adventure.text.Component detras) {
+        net.kyori.adventure.text.Component out = net.kyori.adventure.text.Component.empty()
+                .decoration(net.kyori.adventure.text.format.TextDecoration.ITALIC, false);
+        int i = 0;
+        while (i < patron.length()) {
+            char c = patron.charAt(i);
+            int j = i;
+            while (j < patron.length() && patron.charAt(j) == c) j++;
+            out = out.append(net.kyori.adventure.text.Component.text(
+                    "█".repeat(j - i), c == 'X' ? TINTA : FONDO));
+            i = j;
+        }
+        return detras == null ? out : out.append(detras);
+    }
+
+    private static net.kyori.adventure.text.Component alLado(String texto,
+                                                             net.kyori.adventure.text.format.TextColor color,
+                                                             boolean negrita) {
+        return net.kyori.adventure.text.Component.text("   " + texto, color)
+                .decoration(net.kyori.adventure.text.format.TextDecoration.BOLD, negrita)
+                .decoration(net.kyori.adventure.text.format.TextDecoration.ITALIC, false);
+    }
+
+    /**
+     * Lo unico que /edm le enseña a cualquiera. Ni versiones de modulos ni que
+     * esta caido: eso es mantenimiento y va en /edm estado, que pide permiso.
+     */
+    private void ficha(CommandSender quien) {
+        quien.sendMessage(net.ederus.edm.comun.Estilo.regla());
+        quien.sendMessage(filaLogo(LOGO[0], alLado("EDM", TINTA, true)));
+        quien.sendMessage(filaLogo(LOGO[1], alLado("Núcleo de Ederus", net.ederus.edm.comun.Estilo.CLARO, false)));
+        quien.sendMessage(filaLogo(LOGO[2], alLado("Dosa · IRIS Studio", net.ederus.edm.comun.Estilo.CLARO, false)));
+        quien.sendMessage(filaLogo(LOGO[3], null));
+        quien.sendMessage(filaLogo(LOGO[4], alLado("v" + VERSION, net.ederus.edm.comun.Estilo.APAGADO, false)));
+        quien.sendMessage(net.ederus.edm.comun.Estilo.regla());
+        quien.sendMessage(net.ederus.edm.comun.Estilo.linea(
+                "Un solo plugin mueve Ederus", null, net.ederus.edm.comun.Estilo.CLARO));
+        quien.sendMessage(net.ederus.edm.comun.Estilo.nota("la tienda, las anomalías, los efectos Rip,"));
+        quien.sendMessage(net.ederus.edm.comun.Estilo.nota("las apuestas y las bromas"));
+        quien.sendMessage(net.ederus.edm.comun.Estilo.regla());
+        quien.sendMessage(net.ederus.edm.comun.Estilo.linea("/tienda", "la tienda del servidor",
+                net.ederus.edm.comun.Estilo.MARCA));
+        quien.sendMessage(net.ederus.edm.comun.Estilo.linea("/rip", "tus efectos de muerte",
+                net.ederus.edm.comun.Estilo.MARCA));
+        quien.sendMessage(net.ederus.edm.comun.Estilo.regla());
+    }
+
     private void estado(CommandSender quien) {
         quien.sendMessage("EDM v" + VERSION + " | modulos: " + String.join(", ", this.modulos.keySet()));
         if (!this.fallidos.isEmpty()) quien.sendMessage("caidos: " + String.join(", ", this.fallidos));
-        quien.sendMessage("/edm reload  |  /edm <modulo> reload");
+        quien.sendMessage("/edm reload  |  /edm <modulo> reload  |  /edm info");
     }
 
     @Override
@@ -275,7 +358,7 @@ public final class EDMPlugin extends JavaPlugin {
         }
         consola.sendMessage("");
         consola.sendMessage("   §f§lEDM §8· §7Nucleo de Ederus §8· §fv" + VERSION);
-        consola.sendMessage("   §7Creado por §b§lDosa §r§7e §b§lIris Studio");
+        consola.sendMessage("   §7Creado por §b§lDosa §r§7e §b§lIRIS Studio");
         consola.sendMessage("   §7Modulos activos §8· §f" + cargados);
         if (!this.fallidos.isEmpty()) {
             consola.sendMessage("   §cModulos caidos §8· §f" + String.join(", ", this.fallidos));
