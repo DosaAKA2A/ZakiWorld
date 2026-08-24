@@ -85,7 +85,7 @@ public final class TiendaPlugin extends Module {
         ComandoTienda comando = new ComandoTienda(this, catalogo, topes);
         /* Como el resto de modulos: el plugin que ve Bukkit es EDM, asi que hay
          * que registrarse como ejecutor a mano o /etienda solo imprime su uso. */
-        for (String nombre : new String[]{"etienda", "shop", "sellall"}) {
+        for (String nombre : new String[]{"shop", "sellall"}) {
             var cmd = core.getCommand(nombre);
             if (cmd != null) {
                 cmd.setExecutor(comando);

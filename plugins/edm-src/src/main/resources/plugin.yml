@@ -15,8 +15,8 @@ commands:
     usage: /sellall
     aliases: [venderotodo]
   shop:
-    description: Abre la tienda de Ederus
-    usage: /shop
+    description: 'La tienda de Ederus. Subcomandos en ingles por /shop, en espanol por /tienda'
+    usage: /shop [search|sell|buy|price|limits|market|rotation]
     aliases: [tienda]
   rip:
     description: Menu y ajustes de efectos Rip
@@ -31,10 +31,6 @@ commands:
     usage: /main <reload|aviso|libro>
     aliases: [ederus, edmain]
     permission: ederus.admin
-  etienda:
-    description: Tienda de Ederus
-    usage: /etienda <webhook|vender|comprar|precio|topes|recargar>
-    aliases: [etnd]
   cf:
     description: Apuestas cara o cruz entre jugadores
     usage: /cf [crear|retar|aceptar|cancelar|lista]

@@ -208,23 +208,11 @@ public final class EDMPlugin extends JavaPlugin {
      * esta caido: eso es mantenimiento y va en /edm estado, que pide permiso.
      */
     private void ficha(CommandSender quien) {
-        quien.sendMessage(net.ederus.edm.comun.Estilo.regla());
         quien.sendMessage(filaLogo(LOGO[0], alLado("EDM", TINTA, true)));
         quien.sendMessage(filaLogo(LOGO[1], alLado("Núcleo de Ederus", net.ederus.edm.comun.Estilo.CLARO, false)));
         quien.sendMessage(filaLogo(LOGO[2], alLado("Dosa · IRIS Studio", net.ederus.edm.comun.Estilo.CLARO, false)));
         quien.sendMessage(filaLogo(LOGO[3], null));
         quien.sendMessage(filaLogo(LOGO[4], alLado("v" + VERSION, net.ederus.edm.comun.Estilo.APAGADO, false)));
-        quien.sendMessage(net.ederus.edm.comun.Estilo.regla());
-        quien.sendMessage(net.ederus.edm.comun.Estilo.linea(
-                "Un solo plugin mueve Ederus", null, net.ederus.edm.comun.Estilo.CLARO));
-        quien.sendMessage(net.ederus.edm.comun.Estilo.nota("la tienda, las anomalías, los efectos Rip,"));
-        quien.sendMessage(net.ederus.edm.comun.Estilo.nota("las apuestas y las bromas"));
-        quien.sendMessage(net.ederus.edm.comun.Estilo.regla());
-        quien.sendMessage(net.ederus.edm.comun.Estilo.linea("/tienda", "la tienda del servidor",
-                net.ederus.edm.comun.Estilo.MARCA));
-        quien.sendMessage(net.ederus.edm.comun.Estilo.linea("/rip", "tus efectos de muerte",
-                net.ederus.edm.comun.Estilo.MARCA));
-        quien.sendMessage(net.ederus.edm.comun.Estilo.regla());
     }
 
     private void estado(CommandSender quien) {

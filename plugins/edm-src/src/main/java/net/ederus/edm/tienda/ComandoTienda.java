@@ -13,6 +13,7 @@ import org.bukkit.inventory.ItemStack;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 
 /** /etienda — la cara del modulo mientras no hay interfaz grafica. */
 public final class ComandoTienda implements CommandExecutor, TabCompleter {
@@ -31,16 +32,72 @@ public final class ComandoTienda implements CommandExecutor, TabCompleter {
      *  sitio: quitarselo a alguien no le cerraba la tienda. */
     private static final String USAR = "ederus.tienda.usar";
 
+    /*
+     * LOS SUBCOMANDOS VAN EN EL IDIOMA DE LA PUERTA POR LA QUE ENTRAS.
+     *
+     * "/shop vender" mezcla dos idiomas en la misma linea y se lee mal. Asi que
+     * cada alias tiene su vocabulario y solo el suyo: por /shop se habla ingles
+     * y por /tienda español. Bukkit da el alias que se escribio de verdad en la
+     * etiqueta del comando; cmd.getName() no vale, devuelve "shop" para los dos.
+     *
+     * Cruzarse de idioma NO es un error seco: se le dice al jugador cual es su
+     * palabra y cual es la puerta de la otra. Antes esto caia en el buscador y
+     * contestaba "No encontre nada con vender iron_ingot 512", que no ayuda a
+     * nadie.
+     *
+     * Los nombres de articulo se aceptan en los dos lados a proposito:
+     * iron_ingot no es ingles, es un identificador. Lo que cambia por idioma es
+     * el verbo, que es lo unico donde se nota la mezcla.
+     */
+    private static final Map<String, String> VERBOS_ES = Map.ofEntries(
+            Map.entry("vender", "vender"),
+            Map.entry("comprar", "comprar"),
+            Map.entry("precio", "precio"),
+            Map.entry("buscar", "buscar"),
+            Map.entry("topes", "topes"),
+            Map.entry("mercado", "mercado"),
+            Map.entry("rotacion", "rotacion"),
+            Map.entry("rotación", "rotacion"),
+            Map.entry("ayuda", "ayuda"),
+            Map.entry("recargar", "recargar"),
+            Map.entry("webhook", "webhook"));
+
+    private static final Map<String, String> VERBOS_EN = Map.ofEntries(
+            Map.entry("sell", "vender"),
+            Map.entry("buy", "comprar"),
+            Map.entry("price", "precio"),
+            Map.entry("search", "buscar"),
+            Map.entry("limits", "topes"),
+            Map.entry("market", "mercado"),
+            Map.entry("rotation", "rotacion"),
+            Map.entry("help", "ayuda"),
+            Map.entry("reload", "recargar"),
+            Map.entry("webhook", "webhook"));
+
+    /** Los que no se le sugieren a quien no es staff. */
+    private static final List<String> SOLO_STAFF = List.of("recargar", "reload", "webhook");
+
+    /** El alias tal cual se escribio, sin el "edm:" de delante si lo lleva. */
+    private static String alias(String etiqueta) {
+        String e = etiqueta == null ? "" : etiqueta.toLowerCase(Locale.ROOT);
+        int dp = e.indexOf(':');
+        return dp >= 0 ? e.substring(dp + 1) : e;
+    }
+
+    private static boolean enIngles(String etiqueta) {
+        return "shop".equals(alias(etiqueta));
+    }
+
     @Override
     public boolean onCommand(CommandSender quien, Command cmd, String etiqueta, String[] args) {
-        /* Los subcomandos de admin traen su propia comprobacion; lo que se le
+        /* Los subcomandos de staff traen su propia comprobacion; lo que se le
          * cierra a un jugador sin permiso es comprar y vender. */
         if (quien instanceof Player && !quien.hasPermission(USAR)
                 && !quien.hasPermission("ederus.tienda.admin")) {
             quien.sendMessage(Estilo.legado("&cNo puedes usar la tienda."));
             return true;
         }
-        /* /shop es solo la puerta del menu: no lleva subcomandos. */
+
         if (cmd.getName().equalsIgnoreCase("sellall")) {
             if (!(quien instanceof Player j)) { quien.sendMessage("Solo desde el juego."); return true; }
             Motor m = modulo.motor();
@@ -48,21 +105,48 @@ public final class ComandoTienda implements CommandExecutor, TabCompleter {
             quien.sendMessage(m.venderTodo(j).mensaje());
             return true;
         }
-        boolean esShop = cmd.getName().equalsIgnoreCase("shop");
-        if (esShop || args.length == 0) {
+
+        boolean ingles = enIngles(etiqueta);
+        Map<String, String> mio = ingles ? VERBOS_EN : VERBOS_ES;
+        Map<String, String> ajeno = ingles ? VERBOS_ES : VERBOS_EN;
+
+        if (args.length == 0) {
             if (quien instanceof Player jugador) {
                 MenuTienda menu = modulo.menu();
                 if (menu == null) { quien.sendMessage(Estilo.legado("&cLa tienda todavía está arrancando.")); return true; }
-                /* /shop diamante busca directamente: es mas rapido que abrir el
-                 * menu y ponerse a pasar paginas. */
-                if (esShop && args.length > 0) menu.abrirBusqueda(jugador, String.join(" ", args));
-                else menu.abrirPrincipal(jugador);
+                menu.abrirPrincipal(jugador);
             } else {
-                ayuda(quien);
+                ayuda(quien, ingles);
             }
             return true;
         }
-        switch (args[0].toLowerCase(Locale.ROOT)) {
+
+        String escrito = args[0].toLowerCase(Locale.ROOT);
+        String accion = mio.get(escrito);
+
+        if (accion == null && ajeno.containsKey(escrito)) {
+            /* Se cruzo de idioma. Se le da su palabra, no un "no existe". */
+            String suyo = suPalabra(ajeno.get(escrito), ingles);
+            quien.sendMessage(Estilo.linea(ingles ? "In /shop it is" : "En /tienda se dice",
+                    "/" + alias(etiqueta) + " " + suyo, Estilo.CLARO));
+            quien.sendMessage(Estilo.nota(ingles
+                    ? "o usa /tienda " + escrito
+                    : "o usa /shop " + escrito));
+            return true;
+        }
+
+        /* Ni suyo ni del otro idioma: se busca, que es el atajo de siempre
+         * (/shop diamante) y lo que mas se escribe. */
+        if (accion == null) {
+            if (quien instanceof Player jugador) {
+                MenuTienda menu = modulo.menu();
+                if (menu != null) { menu.abrirBusqueda(jugador, String.join(" ", args)); return true; }
+            }
+            ayuda(quien, ingles);
+            return true;
+        }
+
+        switch (accion) {
             case "buscar" -> { return buscar(quien, args); }
             case "vender" -> { return vender(quien, args); }
             case "comprar" -> { return comprar(quien, args); }
@@ -72,28 +156,53 @@ public final class ComandoTienda implements CommandExecutor, TabCompleter {
             case "rotacion" -> { return rotacion(quien); }
             case "webhook" -> { return webhook(quien); }
             case "recargar" -> { return recargar(quien); }
-            default -> { ayuda(quien); return true; }
+            default -> { ayuda(quien, ingles); return true; }
         }
     }
 
-    private void ayuda(CommandSender q) {
+    /** La palabra equivalente en el idioma de la puerta por la que entro. */
+    private static String suPalabra(String accion, boolean ingles) {
+        for (Map.Entry<String, String> e : (ingles ? VERBOS_EN : VERBOS_ES).entrySet()) {
+            if (e.getValue().equals(accion)) return e.getKey();
+        }
+        return accion;
+    }
+
+    /** La chuleta, en el idioma de la puerta por la que entro. */
+    private void ayuda(CommandSender q, boolean ingles) {
+        String c = ingles ? "/shop" : "/tienda";
         q.sendMessage(Estilo.regla());
-        q.sendMessage(Estilo.cabecera("TIENDA", "Ederus"));
+        q.sendMessage(Estilo.cabecera(ingles ? "SHOP" : "TIENDA", "Ederus"));
         q.sendMessage(Estilo.regla());
-        q.sendMessage(Estilo.linea("/tienda", "abre la tienda", Estilo.CLARO));
-        q.sendMessage(Estilo.linea("/tienda buscar <texto>", "encuentra un artículo", Estilo.CLARO));
-        q.sendMessage(Estilo.linea("/tienda vender mano todo", "vende lo que llevas en la mano", Estilo.VENTA));
-        q.sendMessage(Estilo.linea("/tienda vender <artículo> <cuántos>", null, Estilo.VENTA));
-        q.sendMessage(Estilo.linea("/tienda comprar <artículo> <cuántos>", null, Estilo.COMPRA));
-        q.sendMessage(Estilo.linea("/tienda precio <artículo>", "a cómo está", Estilo.CLARO));
-        q.sendMessage(Estilo.linea("/tienda mercado <artículo>", "cuánto ha bajado y por qué", Estilo.CLARO));
-        q.sendMessage(Estilo.linea("/tienda rotacion", "los tratos de hoy", Estilo.CLARO));
-        q.sendMessage(Estilo.linea("/venderotodo", "vende todo lo vendible que lleves", Estilo.VENTA));
+        if (ingles) {
+            q.sendMessage(Estilo.linea(c, "open the shop", Estilo.CLARO));
+            q.sendMessage(Estilo.linea(c + " search <text>", "find an item", Estilo.CLARO));
+            q.sendMessage(Estilo.linea(c + " sell hand all", "sell what you are holding", Estilo.VENTA));
+            q.sendMessage(Estilo.linea(c + " sell <item> <amount>", null, Estilo.VENTA));
+            q.sendMessage(Estilo.linea(c + " buy <item> <amount>", null, Estilo.COMPRA));
+            q.sendMessage(Estilo.linea(c + " price <item>", "what it is worth now", Estilo.CLARO));
+            q.sendMessage(Estilo.linea(c + " market <item>", "how far the price has dropped", Estilo.CLARO));
+            q.sendMessage(Estilo.linea(c + " rotation", "today's deals", Estilo.CLARO));
+            q.sendMessage(Estilo.linea("/sellall", "sell everything sellable you carry", Estilo.VENTA));
+        } else {
+            q.sendMessage(Estilo.linea(c, "abre la tienda", Estilo.CLARO));
+            q.sendMessage(Estilo.linea(c + " buscar <texto>", "encuentra un artículo", Estilo.CLARO));
+            q.sendMessage(Estilo.linea(c + " vender mano todo", "vende lo que llevas en la mano", Estilo.VENTA));
+            q.sendMessage(Estilo.linea(c + " vender <artículo> <cuántos>", null, Estilo.VENTA));
+            q.sendMessage(Estilo.linea(c + " comprar <artículo> <cuántos>", null, Estilo.COMPRA));
+            q.sendMessage(Estilo.linea(c + " precio <artículo>", "a cómo está", Estilo.CLARO));
+            q.sendMessage(Estilo.linea(c + " mercado <artículo>", "cuánto ha bajado y por qué", Estilo.CLARO));
+            q.sendMessage(Estilo.linea(c + " rotacion", "los tratos de hoy", Estilo.CLARO));
+            q.sendMessage(Estilo.linea("/venderotodo", "vende todo lo vendible que lleves", Estilo.VENTA));
+        }
         if (q.hasPermission("ederus.tienda.admin")) {
             q.sendMessage(Estilo.regla());
-            q.sendMessage(Estilo.linea("/etienda recargar", "recarga el catálogo", Estilo.APAGADO));
-            q.sendMessage(Estilo.linea("/etienda webhook", "prueba el aviso de Discord", Estilo.APAGADO));
-            q.sendMessage(Estilo.linea("/etienda mercado <art> vender <n>", "la tabla de presión", Estilo.APAGADO));
+            q.sendMessage(Estilo.linea(c + (ingles ? " reload" : " recargar"),
+                    ingles ? "reload the catalogue" : "recarga el catálogo", Estilo.APAGADO));
+            q.sendMessage(Estilo.linea(c + " webhook",
+                    ingles ? "test the Discord notice" : "prueba el aviso de Discord", Estilo.APAGADO));
+            q.sendMessage(Estilo.linea(c + (ingles ? " market <item> sell <n>" : " mercado <art> vender <n>"),
+                    ingles ? "pressure table" : "la tabla de presión", Estilo.APAGADO));
         }
         q.sendMessage(Estilo.regla());
     }
@@ -109,24 +218,107 @@ public final class ComandoTienda implements CommandExecutor, TabCompleter {
 
     /** 'mano' evita escribir el nombre del material, que es lo que mas se falla. */
     private Material material(Player jugador, String texto) {
-        if (texto.equalsIgnoreCase("mano")) {
+        if (texto.equalsIgnoreCase("mano") || texto.equalsIgnoreCase("hand")) {
             ItemStack enMano = jugador.getInventory().getItemInMainHand();
             return enMano.getType().isAir() ? null : enMano.getType();
         }
         return Material.matchMaterial(texto);
     }
 
+    /** Que se va a hacer con el articulo, para no ofrecer los que no valen. */
+    private enum Busca { CUALQUIERA, VENDIBLE, COMPRABLE }
+
+    /**
+     * El articulo, escrito como lo escribiria un jugador.
+     *
+     * Se prueba por clave, luego por nombre de material, y si nada de eso vale
+     * se busca por el nombre visible: "hierro" tiene que encontrar el Lingote de
+     * hierro. Escribir IRON_INGOT desde un telefono no es razonable y en Bedrock
+     * el comando es la via buena para vender, asi que aqui no se puede exigir el
+     * identificador interno.
+     *
+     * Se filtra por lo que se va a hacer ANTES de cortar la lista. Sin esto,
+     * "vender hierro" contestaba con la puerta, la trampilla, la cadena, las
+     * barras, la pala y el pico -seis que la tienda ni siquiera compra- y se
+     * quedaba sin sitio justo para el lingote, que era el unico que valia.
+     *
+     * Si aun asi quedan varios NO se elige por el jugador: se le enseñan y elige
+     * el. Vender lo que no era es irreversible.
+     */
+    private Catalogo.Articulo resolver(CommandSender quien, String texto, Busca que) {
+        Catalogo.Articulo a = catalogo.de(texto);
+        if (a != null) return a;
+
+        Material m = quien instanceof Player p ? material(p, texto) : Material.matchMaterial(texto);
+        if (m != null) {
+            a = catalogo.de(m);
+            if (a != null) return a;
+        }
+
+        List<Catalogo.Articulo> todos = catalogo.buscar(texto, 80);
+        List<Catalogo.Articulo> encontrados = new ArrayList<>();
+        for (Catalogo.Articulo c : todos) {
+            if (que == Busca.VENDIBLE && !c.seVende()) continue;
+            if (que == Busca.COMPRABLE && !c.seCompra()) continue;
+            encontrados.add(c);
+        }
+        /*
+         * Primero lo que la tienda TE COMPRA, y dentro de eso el nombre mas
+         * corto.
+         *
+         * Ordenar solo por longitud dejaba "hierro" contestando con la pala, el
+         * pico y la azada -catorce letras cada una- y el Lingote de hierro, que
+         * es lo que busca cualquiera, se caia de la lista por tener diecisiete.
+         * Lo que la tienda recompra es lo que se consulta, asi que manda.
+         */
+        encontrados.sort(java.util.Comparator
+                .comparingInt((Catalogo.Articulo x) -> x.seVende() ? 0 : 1)
+                .thenComparingInt(x -> Motor.nombre(x).length()));
+
+        if (encontrados.size() == 1) return encontrados.get(0);
+        if (encontrados.isEmpty()) {
+            quien.sendMessage(Estilo.linea("No tengo nada llamado", texto, Estilo.APAGADO));
+            if (que == Busca.VENDIBLE && !todos.isEmpty()) {
+                quien.sendMessage(Estilo.nota("hay cosas con ese nombre, pero la tienda no las compra"));
+            } else if (que == Busca.COMPRABLE && !todos.isEmpty()) {
+                quien.sendMessage(Estilo.nota("hay cosas con ese nombre, pero la tienda no las vende"));
+            }
+            return null;
+        }
+        quien.sendMessage(Estilo.linea("Hay varios que se llaman así", texto, Estilo.CLARO));
+        int n = 0;
+        for (Catalogo.Articulo c : encontrados) {
+            if (n++ >= 6) break;
+            quien.sendMessage(Estilo.nota(Motor.nombre(c) + "  ·  " + c.clave().toLowerCase(Locale.ROOT)));
+        }
+        if (encontrados.size() > 6) {
+            quien.sendMessage(Estilo.nota("y " + (encontrados.size() - 6) + " más: míralos en /tienda buscar " + texto));
+        }
+        quien.sendMessage(Estilo.nota("escribe el de la derecha para no equivocarte"));
+        return null;
+    }
+
     private boolean vender(CommandSender quien, String[] args) {
         if (!(quien instanceof Player jugador)) { quien.sendMessage("Solo desde el juego."); return true; }
-        if (args.length < 2) { quien.sendMessage("/etienda vender <item|mano> [cantidad|todo]"); return true; }
+        if (args.length < 2) { uso(quien, "vender <artículo|mano> [cuántos|todo]"); return true; }
 
-        Material material = material(jugador, args[1]);
-        if (material == null) { quien.sendMessage("No conozco el objeto '" + args[1] + "'."); return true; }
+        Material material;
+        if (args[1].equalsIgnoreCase("mano") || args[1].equalsIgnoreCase("hand")) {
+            material = material(jugador, args[1]);
+            if (material == null) {
+                quien.sendMessage(Estilo.linea("No llevas nada en la mano", null, Estilo.APAGADO));
+                return true;
+            }
+        } else {
+            Catalogo.Articulo art = resolver(quien, args[1], Busca.VENDIBLE);
+            if (art == null) return true;
+            material = art.material();
+        }
 
         int cantidad = Motor.MAX_POR_OPERACION;
-        if (args.length >= 3 && !args[2].equalsIgnoreCase("todo")) {
+        if (args.length >= 3 && !args[2].equalsIgnoreCase("todo") && !args[2].equalsIgnoreCase("all")) {
             try { cantidad = Integer.parseInt(args[2]); }
-            catch (NumberFormatException e) { quien.sendMessage("Cantidad invalida."); return true; }
+            catch (NumberFormatException e) { cantidadMala(quien); return true; }
         }
 
         Motor motor = modulo.motor();
@@ -137,20 +329,16 @@ public final class ComandoTienda implements CommandExecutor, TabCompleter {
 
     private boolean comprar(CommandSender quien, String[] args) {
         if (!(quien instanceof Player jugador)) { quien.sendMessage("Solo desde el juego."); return true; }
-        if (args.length < 3) { quien.sendMessage("/etienda comprar <item> <cantidad>"); return true; }
+        if (args.length < 3) { uso(quien, "comprar <artículo> <cuántos>"); return true; }
 
-        /* Aqui se busca por CLAVE, no por material: es lo que permite pedir
+        /* resolver() prueba primero por CLAVE, que es lo que permite pedir
          * spawner:pig y distinguirlo de spawner:zombie. */
-        Catalogo.Articulo art = catalogo.de(args[1]);
-        if (art == null && quien instanceof Player p) {
-            Material m = material(p, args[1]);
-            if (m != null) art = catalogo.de(m);
-        }
-        if (art == null) { quien.sendMessage("No conozco el objeto '" + args[1] + "'."); return true; }
+        Catalogo.Articulo art = resolver(quien, args[1], Busca.COMPRABLE);
+        if (art == null) return true;
 
         int cantidad;
         try { cantidad = Integer.parseInt(args[2]); }
-        catch (NumberFormatException e) { quien.sendMessage("Cantidad invalida."); return true; }
+        catch (NumberFormatException e) { cantidadMala(quien); return true; }
 
         Motor motor = modulo.motor();
         if (motor == null) { quien.sendMessage(Estilo.legado("&cLa tienda todavía está arrancando.")); return true; }
@@ -168,8 +356,8 @@ public final class ComandoTienda implements CommandExecutor, TabCompleter {
     private boolean precio(CommandSender quien, String[] args) {
         if (args.length < 2) { uso(quien, "precio <artículo>"); return true; }
 
-        Catalogo.Articulo a = articuloDe(quien, args[1]);
-        if (a == null) { noConozco(quien, args[1]); return true; }
+        Catalogo.Articulo a = resolver(quien, args[1], Busca.CUALQUIERA);
+        if (a == null) return true;
 
         Motor motor = modulo.motor();
         quien.sendMessage(Estilo.regla());
@@ -250,8 +438,8 @@ public final class ComandoTienda implements CommandExecutor, TabCompleter {
     /** Como esta hoy el precio dinamico de un articulo. */
     private boolean mercado(CommandSender quien, String[] args) {
         if (args.length < 2) { uso(quien, "mercado <artículo>"); return true; }
-        Catalogo.Articulo a = articuloDe(quien, args[1]);
-        if (a == null) { noConozco(quien, args[1]); return true; }
+        Catalogo.Articulo a = resolver(quien, args[1], Busca.VENDIBLE);
+        if (a == null) return true;
         if (!a.seVende()) {
             quien.sendMessage(Estilo.linea(Motor.nombre(a), "no se compra aquí", Estilo.APAGADO));
             quien.sendMessage(Estilo.nota("solo tienen precio dinámico las cosas que la tienda te compra"));
@@ -384,14 +572,6 @@ public final class ComandoTienda implements CommandExecutor, TabCompleter {
 
     // -------------------------------------------------- pequenas ayudas
 
-    /** El articulo por su clave o por su nombre de material. */
-    private Catalogo.Articulo articuloDe(CommandSender quien, String texto) {
-        Catalogo.Articulo a = catalogo.de(texto);
-        if (a != null) return a;
-        Material m = quien instanceof Player p ? material(p, texto) : Material.matchMaterial(texto);
-        return m != null ? catalogo.de(m) : null;
-    }
-
     private void uso(CommandSender quien, String resto) {
         quien.sendMessage(Estilo.linea("Se usa así", "/tienda " + resto, Estilo.CLARO));
     }
@@ -444,26 +624,36 @@ public final class ComandoTienda implements CommandExecutor, TabCompleter {
     @Override
     public List<String> onTabComplete(CommandSender quien, Command cmd, String etiqueta, String[] args) {
         List<String> out = new ArrayList<>();
+        boolean ingles = enIngles(etiqueta);
+        Map<String, String> mio = ingles ? VERBOS_EN : VERBOS_ES;
+        boolean staff = quien.hasPermission("ederus.tienda.admin");
+
         if (args.length == 1) {
-            for (String s : List.of("buscar", "vender", "comprar", "precio", "topes", "mercado", "rotacion")) {
-                if (s.startsWith(args[0].toLowerCase(Locale.ROOT))) out.add(s);
+            /* Solo el vocabulario de esta puerta: por /shop no se sugiere
+             * "vender" ni por /tienda "sell". Y lo de staff no existe para
+             * quien no lo es: ni se sugiere ni se ve. */
+            String p = args[0].toLowerCase(Locale.ROOT);
+            for (String palabra : mio.keySet()) {
+                if (!staff && SOLO_STAFF.contains(palabra)) continue;
+                if (palabra.startsWith(p)) out.add(palabra);
             }
-            /* Los de admin solo se sugieren a quien puede usarlos. */
-            if (quien.hasPermission("ederus.tienda.admin")) {
-                for (String s : List.of("webhook", "recargar")) {
-                    if (s.startsWith(args[0].toLowerCase(Locale.ROOT))) out.add(s);
-                }
-            }
-        } else if (args.length == 2 && !args[0].equalsIgnoreCase("topes")
-                && !args[0].equalsIgnoreCase("buscar")) {
+            java.util.Collections.sort(out);
+            return out;
+        }
+
+        String accion = mio.get(args[0].toLowerCase(Locale.ROOT));
+        if (accion == null) return out;
+
+        if (args.length == 2 && !"topes".equals(accion) && !"buscar".equals(accion)) {
             String p = args[1].toUpperCase(Locale.ROOT);
-            if ("MANO".startsWith(p)) out.add("mano");
+            String mano = ingles ? "hand" : "mano";
+            if (mano.toUpperCase(Locale.ROOT).startsWith(p) && "vender".equals(accion)) out.add(mano);
             for (String clave : catalogo.claves()) {
                 if (clave.startsWith(p)) out.add(clave.toLowerCase(Locale.ROOT));
                 if (out.size() > 40) break;
             }
-        } else if (args.length == 3 && args[0].equalsIgnoreCase("vender")) {
-            out.add("todo");
+        } else if (args.length == 3 && "vender".equals(accion)) {
+            out.add(ingles ? "all" : "todo");
         }
         return out;
     }
