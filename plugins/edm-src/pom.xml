@@ -6,7 +6,7 @@
 
   <groupId>net.ederus</groupId>
   <artifactId>EDM</artifactId>
-  <version>1.13.0</version>
+  <version>1.14.0</version>
   <packaging>jar</packaging>
   <name>EDM</name>
   <description>Nucleo de Ederus: Rip + Anomaly + libros y avisos de tiendas</description>

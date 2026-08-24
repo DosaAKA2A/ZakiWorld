@@ -111,6 +111,7 @@ public final class TiendaPlugin extends Module {
                 return;
             }
             motor = new Motor(catalogo, topes, registro, economia, mercado);
+            motor.plugin(core);
             motor.rotacion(rotacion);
             motor.compras(compras);
             motor.mensajes(mensajes);

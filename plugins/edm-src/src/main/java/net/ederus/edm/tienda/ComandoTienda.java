@@ -323,7 +323,7 @@ public final class ComandoTienda implements CommandExecutor, TabCompleter {
 
         Motor motor = modulo.motor();
         if (motor == null) { quien.sendMessage(Estilo.legado("&cLa tienda todavía está arrancando.")); return true; }
-        quien.sendMessage(motor.vender(jugador, material, cantidad).mensaje());
+        quien.sendMessage(motor.vender(jugador, material, cantidad, TransaccionTiendaEvent.Tipo.SELL_COMMAND).mensaje());
         return true;
     }
 
@@ -342,7 +342,7 @@ public final class ComandoTienda implements CommandExecutor, TabCompleter {
 
         Motor motor = modulo.motor();
         if (motor == null) { quien.sendMessage(Estilo.legado("&cLa tienda todavía está arrancando.")); return true; }
-        quien.sendMessage(motor.comprar(jugador, art, cantidad).mensaje());
+        quien.sendMessage(motor.comprar(jugador, art, cantidad, TransaccionTiendaEvent.Tipo.BUY_COMMAND).mensaje());
         return true;
     }
 

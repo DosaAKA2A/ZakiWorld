@@ -4,6 +4,7 @@ import net.ederus.edm.comun.Estilo;
 
 import net.milkbowl.vault.economy.Economy;
 import net.milkbowl.vault.economy.EconomyResponse;
+import org.bukkit.Bukkit;
 import org.bukkit.Material;
 import org.bukkit.block.CreatureSpawner;
 import org.bukkit.entity.Player;
@@ -61,6 +62,7 @@ public final class Motor {
     private Rotacion rotacion;
     private Compras compras;
     private Mensajes mensajes;
+    private org.bukkit.plugin.Plugin plugin;
 
     public Motor(Catalogo catalogo, Topes topes, Registro registro, Economy economia, Mercado mercado) {
         this.catalogo = catalogo;
@@ -78,6 +80,33 @@ public final class Motor {
     public void rotacion(Rotacion r) { this.rotacion = r; }
     public void compras(Compras c) { this.compras = c; }
     public void mensajes(Mensajes m) { this.mensajes = m; }
+
+    /** Hace falta para lanzar el TransaccionTiendaEvent en el hilo principal. */
+    public void plugin(org.bukkit.plugin.Plugin p) { this.plugin = p; }
+
+    /**
+     * Avisa al servidor de una operacion YA cerrada (ver TransaccionTiendaEvent).
+     *
+     * Nunca puede tumbar una venta: si el evento revienta, la operacion ya esta
+     * hecha y lo unico que corresponde es dejarlo en el log. Y si por donde sea
+     * se llega desde un hilo asincrono, se salta al principal, que es donde
+     * Bukkit permite lanzar un evento sincrono.
+     */
+    private void avisar(Player jugador, TransaccionTiendaEvent.Tipo tipo, Material material,
+                        String clave, String nombre, int cantidad, double total) {
+        if (tipo == null || cantidad <= 0) return;
+        TransaccionTiendaEvent ev =
+                new TransaccionTiendaEvent(jugador, tipo, material, clave, nombre, cantidad, total);
+        Runnable lanzar = () -> {
+            try {
+                Bukkit.getPluginManager().callEvent(ev);
+            } catch (Throwable t) {
+                Bukkit.getLogger().warning("[EDM] fallo un oyente de TransaccionTiendaEvent: " + t);
+            }
+        };
+        if (Bukkit.isPrimaryThread() || plugin == null) lanzar.run();
+        else Bukkit.getScheduler().runTask(plugin, lanzar);
+    }
 
     /** Texto para el jugador: sale de mensajes.yml, con su prefijo y su color. */
     private net.kyori.adventure.text.Component msg(String clave, String respaldo, String... p) {
@@ -321,7 +350,19 @@ public final class Motor {
 
     // ------------------------------------------------------------------ vender
 
+    /** Por omision, la venta de la interfaz. Los comandos pasan su propio tipo. */
     public Resultado vender(Player jugador, Material material, int pedido) {
+        return vender(jugador, material, pedido, TransaccionTiendaEvent.Tipo.SELL_SCREEN);
+    }
+
+    /**
+     * El tipo va con la venta porque es lo que distingue una venta del menu de
+     * una por comando de cara a las misiones. Un tipo nulo no avisa a nadie: es
+     * lo que usa venderTodo, que prefiere lanzar un solo evento con el total en
+     * vez de uno por cada material del inventario.
+     */
+    public Resultado vender(Player jugador, Material material, int pedido,
+                            TransaccionTiendaEvent.Tipo tipo) {
         Catalogo.Articulo art = catalogo.de(material);
         if (art == null) return Resultado.no(msg("no-esta", "Ese objeto no está en la tienda."));
         if (!art.seVende()) return Resultado.no(msg("no-se-vende", "La tienda no compra %item%.", "%item%", bonito(material)));
@@ -385,6 +426,8 @@ public final class Motor {
             if (art.tieneTope() && quitados >= margen) aviso = " (tope alcanzado)";
             else if (quitados >= disponible) aviso = " (era todo lo que llevabas)";
         }
+        avisar(jugador, tipo, material, art.clave(), bonito(material), quitados, total);
+
         String clave = aviso.isEmpty() ? "venta-hecha" : "venta-hecha-todo";
         return new Resultado(true, msg(clave,
                 "Vendiste %cantidad% x %item% por %total%" + aviso,
@@ -395,7 +438,13 @@ public final class Motor {
 
     // ----------------------------------------------------------------- comprar
 
+    /** Por omision, la compra de la interfaz. Los comandos pasan su propio tipo. */
     public Resultado comprar(Player jugador, Catalogo.Articulo art, int pedido) {
+        return comprar(jugador, art, pedido, TransaccionTiendaEvent.Tipo.BUY_SCREEN);
+    }
+
+    public Resultado comprar(Player jugador, Catalogo.Articulo art, int pedido,
+                             TransaccionTiendaEvent.Tipo tipo) {
         if (art == null) return Resultado.no(msg("no-esta", "Ese objeto no está en la tienda."));
         if (!art.seCompra()) return Resultado.no(msg("no-se-compra", "La tienda no vende %item%.", "%item%", nombre(art)));
         if (pedido <= 0) return Resultado.no(Estilo.legado("&cLa cantidad tiene que ser mayor que cero."));
@@ -461,6 +510,7 @@ public final class Motor {
         if (compras != null) compras.anotar(jugador.getUniqueId(), art, cantidad);
         registro.anotar("COMPRA", jugador.getName(), cantidad, art.clave(),
                 coste / cantidad, coste, economia.getBalance(jugador));
+        avisar(jugador, tipo, art.material(), art.clave(), nombre(art), cantidad, coste);
 
         return new Resultado(true, msg("compra-hecha",
                 "Compraste %cantidad% x %item% por %total%",
@@ -487,13 +537,18 @@ public final class Motor {
         double total = 0;
         int piezas = 0, tipos = 0;
         for (Material m : vistos) {
-            Resultado r = vender(jugador, m, MAX_POR_OPERACION);
+            /* Tipo nulo: el aviso de la pasada entera se lanza abajo una sola
+             * vez. Uno por material dejaria una mision de "vende 5 de golpe"
+             * contando ventas de una pieza. */
+            Resultado r = vender(jugador, m, MAX_POR_OPERACION, null);
             if (!r.ok()) continue;
             total += r.total();
             piezas += r.cantidad();
             tipos++;
         }
         if (tipos == 0) return Resultado.no(msg("nada-que-vender-todo", "No tienes nada que la tienda compre."));
+        avisar(jugador, TransaccionTiendaEvent.Tipo.SELL_ALL_COMMAND, null, "VARIOS",
+                "varios artículos", piezas, total);
         return new Resultado(true, msg("sellall-hecho",
                 "Vendiste %cantidad% objetos de %tipos% tipos por %total%",
                 "%cantidad%", String.valueOf(piezas),
