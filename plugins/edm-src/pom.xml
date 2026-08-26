@@ -6,7 +6,7 @@
 
   <groupId>net.ederus</groupId>
   <artifactId>EDM</artifactId>
-  <version>1.14.0</version>
+  <version>1.15.0</version>
   <packaging>jar</packaging>
   <name>EDM</name>
   <description>Nucleo de Ederus: Rip + Anomaly + libros y avisos de tiendas</description>
@@ -46,6 +46,16 @@
           <artifactId>bukkit</artifactId>
         </exclusion>
       </exclusions>
+    </dependency>
+    <!-- Quests (LMBishop). No esta en ningun repo publico util aqui: se usa el
+         propio jar del servidor, guardado en _toolchain/libs. Solo hace falta para
+         compilar; en el servidor lo pone el plugin. -->
+    <dependency>
+      <groupId>com.leonardobishop</groupId>
+      <artifactId>quests</artifactId>
+      <version>3.16.1</version>
+      <scope>system</scope>
+      <systemPath>${project.basedir}/../../../_toolchain/libs/Quests-3.16.1.jar</systemPath>
     </dependency>
   </dependencies>
 
