@@ -10,6 +10,7 @@ import net.ederus.edm.anomaly.boss.Aragon;
 import net.ederus.edm.anomaly.boss.Bruja;
 import net.ederus.edm.anomaly.boss.Cazador;
 import net.ederus.edm.anomaly.boss.Piromante;
+import net.ederus.edm.anomaly.boss.Keeper;
 import net.ederus.edm.anomaly.boss.Darkness;
 import net.ederus.edm.anomaly.boss.Herbola;
 import net.ederus.edm.anomaly.boss.Quimera;
@@ -58,6 +59,7 @@ public final class AnomalyRegistry {
         register(new CazadorType());
         register(new AragonType());
         register(new PiromanteType());
+        register(new KeeperType());
     }
 
     public void register(AnomalyType type) {
@@ -126,6 +128,10 @@ public final class AnomalyRegistry {
 
     public AnomalyType piromante() {
         return types.get(Piromante.ID);
+    }
+
+    public AnomalyType keeper() {
+        return types.get(Keeper.ID);
     }
 
     /**
@@ -2457,12 +2463,194 @@ public final class AnomalyRegistry {
         return list;
     }
 
+    // ------------------------------------------------------------------- KEEPER
+
+    /** Ficha de KEEPER, el Monarca del Silencio. */
+    public final class KeeperType implements AnomalyType {
+
+        @Override
+        public String id() {
+            return Keeper.ID;
+        }
+
+        @Override
+        public String display() {
+            return plugin.getConfig().getString("anomalias." + id() + ".nombre", "KEEPER");
+        }
+
+        @Override
+        public TextColor color() {
+            return Keeper.ACCENT;
+        }
+
+        @Override
+        public NamedTextColor glowColor() {
+            return NamedTextColor.AQUA;
+        }
+
+        @Override
+        public Element element() {
+            return Element.TIERRA;
+        }
+
+        @Override
+        public Material icon() {
+            Material m = Material.matchMaterial("SCULK_SHRIEKER");
+            return m != null ? m : Material.ECHO_SHARD;
+        }
+
+        @Override
+        public String tagline() {
+            return "El warden que dejo de ser un guardian";
+        }
+
+        @Override
+        public net.ederus.edm.anomaly.core.AnomalyClass defaultClass() {
+            return net.ederus.edm.anomaly.core.AnomalyClass.MONARCA;
+        }
+
+        @Override
+        public List<String> origin() {
+            return List.of(
+                    "Las ciudades del abismo tenian un guardian",
+                    "que escuchaba. Escucho tanto que aprendio",
+                    "lo que vibra arriba, y decidio subir a",
+                    "reclamarlo. Ya no guarda nada: REINA.");
+        }
+
+        @Override
+        public List<String> threat() {
+            return List.of(
+                    "MONARCA: pelea a CUATRO fases, no a tres",
+                    "Es ciego: caza las VIBRACIONES; agacharse ayuda",
+                    "26 habilidades de eco, sculk y oscuridad",
+                    "Rompan lo que plante: chirriadores, sensores",
+                    "y catalizadores trabajan para el",
+                    "Su latido dice cuanta vida le queda");
+        }
+
+        @Override
+        public double baseHealth() {
+            return 3200;
+        }
+
+        @Override
+        public int arenaRadius() {
+            return 30;
+        }
+
+        @Override
+        public List<Ability> abilities() {
+            return keeperAbilities();
+        }
+
+        @Override
+        public BossFight create(AnomalyPlugin plugin, ActiveAnomaly event, Location where) {
+            return new Keeper(plugin, event, where);
+        }
+    }
+
+    public List<Ability> keeperAbilities() {
+        List<Ability> list = new ArrayList<>();
+
+        // --- Fase I: el Centinela
+        add(list, "bramido_sonico", "Bramido Sonico", 1, 180, 45, 5,
+                "La linea perforante: el boom del warden atraviesa a todos los que cruce.",
+                icon("ECHO_SHARD"), f -> keeper(f).sonicRoar());
+        add(list, "abanico_ecos", "Abanico de Ecos", 1, 260, 55, 4,
+                "Cinco bramidos a la vez, uno por cada cabeza cercana.",
+                icon("AMETHYST_SHARD", "ECHO_SHARD"), f -> keeper(f).echoFan());
+        add(list, "pisoton_sismico", "Pisoton Sismico", 1, 240, 60, 4,
+                "Golpea el suelo: la onda barre ocho bloques y empuja.",
+                icon("SCULK", "COARSE_DIRT"), f -> keeper(f).seismicStomp());
+        add(list, "chirrido_convocador", "Chirrido Convocador", 1, 500, 60, 2,
+                "Planta chirriadores que gritan Oscuridad; se rompen a golpes.",
+                icon("SCULK_SHRIEKER"), f -> keeper(f).shriekerCall());
+        add(list, "sensores_trampa", "Sensores Trampa", 1, 460, 50, 3,
+                "Siembra sensores: pasar sin agacharse los detona.",
+                icon("SCULK_SENSOR"), f -> keeper(f).sensorTraps());
+
+        // --- Fase II: el Excavador
+        add(list, "inmersion", "Inmersion", 2, 320, 90, 4,
+                "Se entierra y emerge bajo un jugador reventando el suelo.",
+                icon("MUD", "DIRT"), f -> keeper(f).submerge());
+        add(list, "tuneles_abismo", "Tuneles del Abismo", 2, 480, 180, 3,
+                "Tres emersiones seguidas, cada una bajo un jugador distinto.",
+                icon("SCULK_VEIN", "SCULK"), f -> keeper(f).abyssTunnels());
+        add(list, "tentaculos_sculk", "Tentaculos de Sculk", 2, 340, 70, 4,
+                "Brotan bajo cuatro a la vez y los anclan al suelo.",
+                icon("SCULK_VEIN", "CHAIN"), f -> keeper(f).sculkTendrils());
+        add(list, "catalizador_voraz", "Catalizador Voraz", 2, 560, 60, 2,
+                "Planta un catalizador que drena a los cercanos y LE CURA. Rompanlo.",
+                icon("SCULK_CATALYST"), f -> keeper(f).voraciousCatalyst());
+        add(list, "marea_sculk", "Marea Sculk", 2, 300, 80, 4,
+                "Una ola de sculk que se expande y pega en el frente.",
+                icon("SCULK", "KELP"), f -> keeper(f).sculkTide());
+        add(list, "latigazo_abismo", "Latigazo del Abismo", 2, 200, 45, 5,
+                "Un barrido en cono de 120 grados, apuntado al objetivo.",
+                icon("BONE", "STICK"), f -> keeper(f).abyssLash());
+
+        // --- Fase III: la Voz del Abismo
+        add(list, "coro_alaridos", "Coro de Alaridos", 3, 400, 70, 4,
+                "El grito global: Oscuridad y empujon a toda la arena.",
+                icon("SCULK_SHRIEKER", "NOTE_BLOCK"), f -> keeper(f).shriekChorus());
+        add(list, "bramido_orbital", "Bramido Orbital", 3, 460, 110, 3,
+                "Cuatro brazos sonicos girando dos vueltas; hay que bailarlos.",
+                icon("CONDUIT", "HEART_OF_THE_SEA"), f -> keeper(f).orbitalRoar());
+        add(list, "ecolocalizacion", "Ecolocalizacion", 3, 400, 90, 3,
+                "Los cinco que mas dano le hicieron reciben su eco, con aviso.",
+                icon("SPYGLASS", "TARGET"), f -> keeper(f).echolocation());
+        add(list, "prision_vibracion", "Prision de Vibracion", 3, 540, 120, 2,
+                "Enjaula a uno: o le rompen el cerrojo o la jaula estalla.",
+                icon("IRON_BARS"), f -> keeper(f).vibrationPrison());
+        add(list, "pulso_devorador", "Pulso Devorador", 3, 380, 130, 3,
+                "Ruge y lee la arena: el que se MUEVA recibe su bramido.",
+                icon("SCULK_SENSOR", "CLOCK"), f -> keeper(f).devouringPulse());
+        add(list, "almas_en_pena", "Almas en Pena", 3, 500, 60, 3,
+                "Suelta almas que persiguen cada una a un jugador; un golpe las disipa.",
+                icon("SOUL_LANTERN", "SOUL_TORCH"), f -> keeper(f).lostSouls());
+        add(list, "terremoto_abismo", "Terremoto del Abismo", 3, 340, 80, 4,
+                "Grietas que corren hacia varios y erupcionan lanzandolos al aire.",
+                icon("DEEPSLATE", "COBBLED_DEEPSLATE"), f -> keeper(f).abyssQuake());
+
+        // --- Fase IV: el Monarca del Silencio
+        add(list, "silencio_absoluto", "Silencio Absoluto", 4, 440, 50, 3,
+                "Oscuridad total sostenida: los avisos pasan a ser solo visuales.",
+                icon("BLACK_CANDLE", "BLACK_DYE"), f -> keeper(f).absoluteSilence());
+        add(list, "detonacion_cadena", "Detonacion en Cadena", 4, 400, 70, 3,
+                "Todo lo que planto revienta en secuencia, pieza a pieza.",
+                icon("TNT"), f -> keeper(f).chainDetonation());
+        add(list, "bramido_cruz", "Bramido en Cruz", 4, 320, 95, 4,
+                "Cuatro lineas en cruz; la cruz gira 45 grados y repite.",
+                icon("NETHER_STAR", "ECHO_SHARD"), f -> keeper(f).crossRoar());
+        add(list, "cataclismo_sonico", "Cataclismo Sonico", 4, 760, 165, 2,
+                "La onda global. Agachado y sin moverse se recibe la cuarta parte.",
+                icon("BEACON", "ECHO_SHARD"), f -> keeper(f).sonicCataclysm());
+        add(list, "vastagos_sculk", "Vastagos del Sculk", 4, 460, 60, 3,
+                "Crias brillantes que corren cada una a por un jugador y revientan.",
+                icon("SILVERFISH_SPAWN_EGG", "SCULK"), f -> keeper(f).sculkSpawn());
+        add(list, "abrazo_abismo", "Abrazo del Abismo", 4, 520, 110, 2,
+                "Agarra al mas cercano y lo aprieta; se suelta pegandole AL JEFE.",
+                icon("CHAIN", "SLIME_BALL"), f -> keeper(f).abyssEmbrace());
+
+        // --- Cualquier fase
+        add(list, "garra_resonante", "Garra Resonante", 0, 140, 25, 5,
+                "El zarpazo al que mas vibra: el unico golpe que reserva para uno.",
+                icon("ECHO_SHARD", "FLINT"), f -> keeper(f).resonantClaw());
+
+        return list;
+    }
+
     private static Piromante piromante(BossFight fight) {
         return (Piromante) fight;
     }
 
     private static SepulchralKnight knight(BossFight fight) {
         return (SepulchralKnight) fight;
+    }
+
+    private static Keeper keeper(BossFight fight) {
+        return (Keeper) fight;
     }
 
     private static void add(List<Ability> list, String id, String display, int phase,

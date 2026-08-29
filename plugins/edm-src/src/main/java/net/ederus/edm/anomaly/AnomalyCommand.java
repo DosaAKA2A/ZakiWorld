@@ -232,7 +232,7 @@ public final class AnomalyCommand implements CommandExecutor, TabCompleter {
             sender.sendMessage(field("Donde", ev.where().getBlockX() + " " + ev.where().getBlockY() + " "
                     + ev.where().getBlockZ() + "  en " + (ev.where().getWorld() == null ? "?" : ev.where().getWorld().getName())));
             if (ev.fight() != null) {
-                sender.sendMessage(field("Fase", ev.fight().phase() + " de 3"));
+                sender.sendMessage(field("Fase", ev.fight().phase() + " de " + ev.fight().phaseCount()));
                 sender.sendMessage(field("Vida", ((int) (ev.fight().healthFraction() * 100)) + "%"));
             }
             sender.sendMessage(field("Peleando", ev.participants() + " jugador(es)"));

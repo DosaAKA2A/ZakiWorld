@@ -200,6 +200,12 @@ anomalias:
     vida: 1900
     dano: 1.0
     nombre: 'El Piromante'
+  keeper:
+    activa: true
+    clase: MONARCA
+    vida: 3200
+    dano: 1.0
+    nombre: 'KEEPER'
 
 menu:
   # La anomalia que abre el boton Iniciar del panel.
