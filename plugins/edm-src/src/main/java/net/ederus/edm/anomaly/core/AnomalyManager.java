@@ -105,7 +105,10 @@ public final class AnomalyManager implements Listener {
 
         BossFight fight = type.create(plugin, event, where);
         event.fight(fight);
-        event.bars(new PhaseBars(type.display(), type.color(), fight.phaseCount()));
+        // Un jefe doble pinta sus propias barras (una por gemelo): la de fases sobra.
+        if (!fight.usesOwnBars()) {
+            event.bars(new PhaseBars(type.display(), type.color(), fight.phaseCount()));
+        }
 
         try {
             fight.spawn();
@@ -335,6 +338,20 @@ public final class AnomalyManager implements Listener {
             if (factor != 1.0) e.setDamage(e.getDamage() * factor);
             clampToSurvivalFloor(e, event.fight(), boss);
             return;
+        }
+
+        // Le han pegado a un esbirro: el jefe puede querer enterarse. Lo usa el jefe
+        // doble para apuntar el dano hecho al segundo gemelo, que si no no contaria.
+        if (Tags.isMinion(victim) && victim instanceof LivingEntity hurtMinion) {
+            Player p = attacker(e.getDamager());
+            if (p != null) {
+                event.addDamage(p, e.getFinalDamage());
+                try {
+                    event.fight().onMinionDamaged(hurtMinion, p, e.getFinalDamage());
+                } catch (Throwable t) {
+                    plugin.getLogger().warning("Fallo al reaccionar al dano de un esbirro: " + t);
+                }
+            }
         }
 
         // El jefe o uno de los suyos le ha pegado a alguien: hay anomalias que

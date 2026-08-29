@@ -11,6 +11,7 @@ import net.ederus.edm.anomaly.boss.Bruja;
 import net.ederus.edm.anomaly.boss.Cazador;
 import net.ederus.edm.anomaly.boss.Piromante;
 import net.ederus.edm.anomaly.boss.Keeper;
+import net.ederus.edm.anomaly.boss.CopperTwins;
 import net.ederus.edm.anomaly.boss.Darkness;
 import net.ederus.edm.anomaly.boss.Herbola;
 import net.ederus.edm.anomaly.boss.Quimera;
@@ -60,6 +61,7 @@ public final class AnomalyRegistry {
         register(new AragonType());
         register(new PiromanteType());
         register(new KeeperType());
+        register(new CopperTwinsType());
     }
 
     public void register(AnomalyType type) {
@@ -132,6 +134,10 @@ public final class AnomalyRegistry {
 
     public AnomalyType keeper() {
         return types.get(Keeper.ID);
+    }
+
+    public AnomalyType copperTwins() {
+        return types.get(CopperTwins.ID);
     }
 
     /**
@@ -1556,10 +1562,10 @@ public final class AnomalyRegistry {
                 "Un grito en cono que empuja y marea.",
                 icon("GOAT_HORN", "NOTE_BLOCK"), f -> quimera(f).goatBleat());
         add(list, "nido_viboras", "Nido de Viboras", 1, 520, 60, 2,
-                "De la cola se descuelgan viboras que muerden con veneno.",
+                "Del lomo se descuelgan esbirros que muerden con veneno.",
                 icon("CAVE_SPIDER_SPAWN_EGG", "SPIDER_EYE"), f -> quimera(f).viperNest());
         add(list, "escupitajo", "Escupitajo Venenoso", 1, 200, 50, 4,
-                "La cola escupe veneno a tres jugadores distintos.",
+                "La cabra escupe veneno a tres jugadores distintos.",
                 icon("SPIDER_EYE", "SLIME_BALL"), f -> quimera(f).venomSpit());
 
         // --- Fase II: la cabra rabiosa
@@ -2641,6 +2647,195 @@ public final class AnomalyRegistry {
         return list;
     }
 
+    // ------------------------------------------------------- KEM y KAM, los gemelos
+
+    /** Ficha del dueto de cobre. Es UN evento con DOS jefes que hay que tumbar a la vez. */
+    public final class CopperTwinsType implements AnomalyType {
+
+        @Override
+        public String id() {
+            return CopperTwins.ID;
+        }
+
+        @Override
+        public String display() {
+            return plugin.getConfig().getString("anomalias." + id() + ".nombre", "Kem y Kam");
+        }
+
+        @Override
+        public TextColor color() {
+            return CopperTwins.ACCENT;
+        }
+
+        @Override
+        public NamedTextColor glowColor() {
+            // El contorno sale del equipo de marcador y solo admite los dieciseis
+            // colores clasicos: el dorado es lo mas parecido al naranja de KEM. KAM
+            // lleva el suyo en verde, puesto entidad por entidad.
+            return NamedTextColor.GOLD;
+        }
+
+        @Override
+        public Element element() {
+            return Element.TIERRA;
+        }
+
+        @Override
+        public Material icon() {
+            Material m = Material.matchMaterial("COPPER_GOLEM_STATUE");
+            if (m == null) m = Material.matchMaterial("COPPER_BLOCK");
+            return m != null ? m : Material.RAW_COPPER;
+        }
+
+        @Override
+        public String tagline() {
+            return "Dos golems de cobre que no se dejan matar por separado";
+        }
+
+        @Override
+        public net.ederus.edm.anomaly.core.AnomalyClass defaultClass() {
+            return net.ederus.edm.anomaly.core.AnomalyClass.MONARCA;
+        }
+
+        @Override
+        public List<String> origin() {
+            return List.of(
+                    "Se fundieron del mismo lingote y por eso no",
+                    "saben estar el uno sin el otro: si uno cae,",
+                    "el que queda le presta la mitad de lo que le",
+                    "queda de vida y lo levanta otra vez.",
+                    "KEM salio naranja y KAM se dejo oxidar.");
+        }
+
+        @Override
+        public List<String> threat() {
+            return List.of(
+                    "DOS jefes con DOS barras: tienen que caer los dos",
+                    "Si solo cae uno, el otro lo RESUCITA a los 30 s",
+                    "KEM: area, debuffs y la Quietud de Oxido",
+                    "KAM: cuerpo a cuerpo y la Marca de la Muerte",
+                    "Las dos firmadas se juegan igual: QUIETOS",
+                    "Juntos se curan; hay que separarlos");
+        }
+
+        @Override
+        public double baseHealth() {
+            // La vida del DUETO: cada gemelo se lleva la mitad.
+            return 3600;
+        }
+
+        @Override
+        public int arenaRadius() {
+            return 28;
+        }
+
+        @Override
+        public List<Ability> abilities() {
+            return twinsAbilities();
+        }
+
+        @Override
+        public BossFight create(AnomalyPlugin plugin, ActiveAnomaly event, Location where) {
+            return new CopperTwins(plugin, event, where);
+        }
+    }
+
+    /**
+     * El repertorio del dueto. Los id que empiezan por `kam_` los lanza KAM a su
+     * propio ritmo; el resto van al motor, que es quien lleva a KEM. Asi los dos
+     * gemelos pueden estar haciendo algo a la vez.
+     *
+     * Ninguna lleva fase: este jefe no tiene fases, solo dos cuerpos que tumbar.
+     */
+    public List<Ability> twinsAbilities() {
+        List<Ability> list = new ArrayList<>();
+
+        // --- Las dos firmadas: las dos se juegan quedandose quieto
+        add(list, "kem_quietud", "Quietud de Oxido", 0, 700, 120, 3,
+                "KEM lee la arena: quien se mueva queda PETRIFICADO un minuto, en naranja.",
+                icon("COPPER_BLOCK", "RAW_COPPER"), f -> twins(f).rustStillness());
+        add(list, "kam_marca_muerte", "Marca de la Muerte", 0, 800, 120, 3,
+                "KAM marca en verde a quien se mueva: cinco segundos despues, 2000 de dano.",
+                icon("OXIDIZED_COPPER", "GREEN_DYE"), f -> twins(f).deathMark());
+
+        // --- KEM: el artillero (area, debuffs, control)
+        add(list, "kem_verdin", "Nube de Verdin", 0, 320, 80, 4,
+                "Charcos de verdin bajo varios: envenenan y marean siete segundos.",
+                icon("GREEN_DYE", "SLIME_BALL"), f -> twins(f).verdigrisCloud());
+        add(list, "kem_descarga", "Descarga de Cobre", 0, 220, 45, 5,
+                "El rayo salta de uno a otro encadenando a seis; el cobre conduce.",
+                icon("LIGHTNING_ROD", "COPPER_INGOT"), f -> twins(f).copperArc());
+        add(list, "kem_onda", "Onda Oxidante", 0, 260, 70, 4,
+                "Onda radial de diez bloques que reparte lentitud y debilidad.",
+                icon("COPPER_BULB", "COPPER_BLOCK"), f -> twins(f).oxidizingWave());
+        add(list, "kem_esquirlas", "Lluvia de Esquirlas", 0, 300, 55, 4,
+                "Astillas de cobre sobre la marca de TODOS; cada impacto oxida.",
+                icon("COPPER_NUGGET", "IRON_NUGGET"), f -> twins(f).shrapnelRain());
+        add(list, "kem_iman", "Campo Magnetico", 0, 380, 100, 3,
+                "Arrastra a todo el mundo hacia el durante cinco segundos.",
+                icon("HEAVY_CORE", "IRON_BLOCK"), f -> twins(f).magneticField());
+        add(list, "kem_herrumbre", "Herrumbre", 0, 340, 30, 4,
+                "Una capa mas de oxido a cinco jugadores: cada capa sube un 12% lo que duele todo.",
+                icon("COPPER_DOOR", "COPPER_INGOT"), f -> twins(f).rustPlague());
+        add(list, "kem_pararrayos", "Pararrayos", 0, 520, 50, 2,
+                "Planta un poste que llama al rayo cada cuatro segundos. Se tumba a golpes.",
+                icon("LIGHTNING_ROD", "COPPER_BLOCK"), f -> twins(f).lightningRod());
+        add(list, "kem_estatica", "Estatica", 0, 400, 160, 3,
+                "Durante ocho segundos, correr cerca de KEM da calambre.",
+                icon("COPPER_BULB", "REDSTONE"), f -> twins(f).staticCharge());
+        add(list, "kem_detonacion", "Detonacion de Oxido", 0, 340, 75, 4,
+                "Cargas retardadas bajo cuatro jugadores a la vez.",
+                icon("TNT", "COPPER_BLOCK"), f -> twins(f).rustDetonation());
+        add(list, "kem_salva", "Salva de Cobre", 0, 260, 60, 4,
+                "Tres andanadas repartidas entre el grupo entero.",
+                icon("CROSSBOW", "COPPER_NUGGET"), f -> twins(f).copperVolley());
+
+        // --- KAM: el yunque (cuerpo a cuerpo, aguante, castigo por huir)
+        add(list, "kam_puno", "Puño de Cobre", 0, 200, 45, 5,
+                "Mandoble en cono de cien grados: lento, avisado y brutal.",
+                icon("IRON_BLOCK", "COPPER_BLOCK"), f -> twins(f).copperFist());
+        add(list, "kam_embestida", "Embestida Verdosa", 0, 280, 65, 4,
+                "Carga en linea recta arrollando a todo el que pille.",
+                icon("OXIDIZED_COPPER", "MOSS_BLOCK"), f -> twins(f).verdantCharge());
+        add(list, "kam_pisoton", "Pisoton del Yunque", 0, 240, 55, 4,
+                "Onda corta de siete bloques, pero de las que levantan.",
+                icon("ANVIL", "IRON_BLOCK"), f -> twins(f).anvilStomp());
+        add(list, "kam_muro", "Muro de Cobre", 0, 420, 165, 3,
+                "Se cubre: aguanta el doble y devuelve parte de lo que le peguen.",
+                icon("SHIELD", "OXIDIZED_COPPER"), f -> twins(f).copperWall());
+        add(list, "kam_barrido", "Barrido de Brazos", 0, 220, 65, 5,
+                "Gira repartiendo a todos los que tenga pegados.",
+                icon("MACE", "IRON_SWORD"), f -> twins(f).armSweep());
+        add(list, "kam_agarre", "Agarre y Lanzamiento", 0, 320, 55, 3,
+                "Coge al mas cercano y lo lanza contra los suyos.",
+                icon("CHAIN", "LEAD"), f -> twins(f).grabAndThrow());
+        add(list, "kam_provocacion", "Provocacion", 0, 380, 165, 3,
+                "Ocho segundos en los que alejarse mas de nueve bloques duele.",
+                icon("GOAT_HORN", "BELL"), f -> twins(f).taunt());
+        add(list, "kam_placa", "Placa Reactiva", 0, 340, 125, 3,
+                "Se electrifica: durante seis segundos devuelve dano en area.",
+                icon("COPPER_BULB", "REDSTONE_BLOCK"), f -> twins(f).reactivePlating());
+        add(list, "kam_salto", "Salto de Yunque", 0, 300, 75, 4,
+                "Sube y cae de lleno sobre la marca.",
+                icon("ANVIL", "OXIDIZED_COPPER"), f -> twins(f).anvilLeap());
+        add(list, "kam_muralla", "Muralla", 0, 360, 145, 3,
+                "Se planta: quien cruce a su lado se queda pegado al suelo.",
+                icon("IRON_BARS", "COPPER_GRATE"), f -> twins(f).bulwark());
+
+        // --- Los dos a la vez
+        add(list, "duo_sincronia", "Sincronia", 0, 460, 125, 3,
+                "Si estan a menos de doce bloques se curan el uno al otro. SEPARENLOS.",
+                icon("HEART_OF_THE_SEA", "COPPER_BLOCK"), f -> twins(f).synchrony());
+        add(list, "duo_resonancia", "Resonancia Gemela", 0, 380, 80, 4,
+                "Los dos golpean el suelo: dos ondas cruzadas sin hueco comodo.",
+                icon("BELL", "COPPER_BULB"), f -> twins(f).twinResonance());
+        add(list, "duo_relevo", "Relevo", 0, 300, 25, 3,
+                "Se cambian el sitio: el yunque aparece donde estaba el artillero.",
+                icon("ENDER_PEARL", "COPPER_INGOT"), f -> twins(f).relay());
+
+        return list;
+    }
+
     private static Piromante piromante(BossFight fight) {
         return (Piromante) fight;
     }
@@ -2651,6 +2846,10 @@ public final class AnomalyRegistry {
 
     private static Keeper keeper(BossFight fight) {
         return (Keeper) fight;
+    }
+
+    private static CopperTwins twins(BossFight fight) {
+        return (CopperTwins) fight;
     }
 
     private static void add(List<Ability> list, String id, String display, int phase,

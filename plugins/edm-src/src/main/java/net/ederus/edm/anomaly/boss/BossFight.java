@@ -105,6 +105,17 @@ public abstract class BossFight {
         return PhaseBars.DEFAULT_PHASES;
     }
 
+    /**
+     * Si el jefe se pinta sus PROPIAS barras de vida en vez de las de fase.
+     *
+     * Lo necesita un jefe DOBLE: dos cuerpos vivos a la vez no caben en una barra
+     * por fases, hacen falta dos barras independientes. Cuando esto es true el
+     * manager no crea PhaseBars y el jefe se encarga de mostrarlas y retirarlas.
+     */
+    public boolean usesOwnBars() {
+        return false;
+    }
+
     // --------------------------------------------------------------------- estado
 
     public LivingEntity entity() {
@@ -423,6 +434,16 @@ public abstract class BossFight {
      * para comprobar si lo mataron en el orden correcto.
      */
     public void onMinionDeath(LivingEntity minion) {
+    }
+
+    /**
+     * Aviso de que un JUGADOR le ha pegado a un esbirro, con el dano ya final.
+     *
+     * Existe por los jefes dobles: el segundo gemelo es tecnicamente un esbirro, y
+     * sin esto el dano que se le hace no contaria para el reparto del botin, con lo
+     * que quien se dedique a el se quedaria sin nada.
+     */
+    public void onMinionDamaged(LivingEntity minion, Player attacker, double amount) {
     }
 
     /**

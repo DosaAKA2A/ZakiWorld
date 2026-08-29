@@ -78,8 +78,14 @@ public final class Glow {
         return fuera;
     }
 
-    /** Las entidades que no son jugadores entran en un equipo por su UUID en texto. */
+    /**
+     * La clave del equipo. Las entidades entran por su UUID en texto, pero los
+     * JUGADORES entran por su NOMBRE: con el UUID el equipo se traga la entrada sin
+     * quejarse y el jugador nunca llega a brillar. Hizo falta al marcar jugadores
+     * (petrificados y sentenciados) con el color del gemelo que los marco.
+     */
     private static String entryOf(Entity entity) {
+        if (entity instanceof org.bukkit.entity.Player p) return p.getName();
         return entity.getUniqueId().toString();
     }
 

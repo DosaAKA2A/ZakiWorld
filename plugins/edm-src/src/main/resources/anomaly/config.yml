@@ -206,6 +206,13 @@ anomalias:
     vida: 3200
     dano: 1.0
     nombre: 'KEEPER'
+  gemelos_cobre:
+    activa: true
+    clase: MONARCA
+    # La vida del DUETO: cada gemelo se lleva la mitad.
+    vida: 3600
+    dano: 1.0
+    nombre: 'Kem y Kam'
 
 menu:
   # La anomalia que abre el boton Iniciar del panel.

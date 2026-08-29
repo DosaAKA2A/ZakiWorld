@@ -70,8 +70,6 @@ public final class Quimera extends BossFight {
     private static final int PILLARS = 5;
 
     private final List<Pillar> pillars = new ArrayList<>();
-    /** Los eslabones de la cola, que se arrastran detras del cuerpo. */
-    private final List<org.bukkit.entity.BlockDisplay> tail = new ArrayList<>();
 
     private Goat goatHead;
     private boolean mortal;
@@ -117,7 +115,6 @@ public final class Quimera extends BossFight {
         Glow.apply(boss, event.type().glowColor());
 
         growGoatHead();
-        growTail();
         raisePillars();
         arrivalAnimation(spot);
     }
@@ -138,20 +135,6 @@ public final class Quimera extends BossFight {
         });
         markMinion(goatHead);
         boss.addPassenger(goatHead);
-    }
-
-    /** La cola: seis eslabones que van detras con retardo, como una serpiente. */
-    private void growTail() {
-        // Bloques, no objetos de musgo: los eslabones eran alfombra de musgo y azalea, y
-        // arrastrandose por el suelo parecia que la Quimera iba dejando jardin detras
-        // como Herbola. Un cubo escamoso se lee como cola y no se confunde con nada.
-        for (int i = 0; i < 6; i++) {
-            org.bukkit.entity.BlockDisplay link = Fx.blockDisplay(world(), boss.getLocation(),
-                    i == 0 ? Material.GREEN_TERRACOTTA : Material.GREEN_GLAZED_TERRACOTTA,
-                    i == 0 ? 0.62f : 0.52f - i * 0.05f);
-            markMinion(link);
-            tail.add(link);
-        }
     }
 
     private void arrivalAnimation(Location spot) {
@@ -210,16 +193,19 @@ public final class Quimera extends BossFight {
     }
 
     /**
-     * Levanta un pilar de bloques de verdad: escaleras alrededor de la base, dos
+     * Levanta un pilar de bloques de verdad: escaleras alrededor de la base, tres
      * ladrillos de columna, el CINCELADO a la altura de la cara —el unico que se puede
-     * romper— y una losa de remate. Cada bloque se guarda antes para devolverlo.
+     * romper, y el unico que se ve distinto— y una losa de remate. Cada bloque se
+     * guarda antes para devolverlo.
      */
     private void buildPillar(Location base) {
         Pillar pillar = new Pillar(base.clone().add(0, 3, 0));
 
         set(pillar, base.clone(), Material.STONE_BRICKS.createBlockData());
         set(pillar, base.clone().add(0, 1, 0), Material.STONE_BRICKS.createBlockData());
-        set(pillar, base.clone().add(0, 2, 0), Material.CHISELED_STONE_BRICKS.createBlockData());
+        set(pillar, base.clone().add(0, 2, 0), Material.STONE_BRICKS.createBlockData());
+        // El CINCELADO es unico y esta a la altura de la cara: es la pieza que se pica.
+        // Si hay dos, la gente pega al de abajo y cree que el pilar no se rompe.
         set(pillar, base.clone().add(0, 3, 0), Material.CHISELED_STONE_BRICKS.createBlockData());
         BlockData cap = Material.STONE_BRICK_SLAB.createBlockData();
         if (cap instanceof Slab slab) slab.setType(Slab.Type.BOTTOM);
@@ -340,37 +326,13 @@ public final class Quimera extends BossFight {
     // ---------------------------------------------------- LA COLA Y SU MIRADA
 
     /**
-     * La cola se arrastra con retardo: cada eslabon persigue al anterior en vez de ir
-     * clavado a una posicion, que es lo que la hace parecer un bicho y no una fila.
+     * De donde sale la mirada que petrifica: los ojos de la CABRA del lomo.
+     *
+     * Antes salia de la cabeza de la cola de serpiente; al quitarle la cola, la mirada
+     * se queda donde tiene sentido que este, que es la unica cabeza que le queda arriba.
      */
-    private void dragTail() {
-        if (!alive()) return;
-        Vector back = boss.getLocation().getDirection().setY(0);
-        if (back.lengthSquared() < 0.01) back = new Vector(1, 0, 0);
-        back = back.normalize().multiply(-1);
-
-        Location anchor = boss.getLocation().add(0, 0.9, 0).add(back.clone().multiply(1.1));
-        for (int i = 0; i < tail.size(); i++) {
-            org.bukkit.entity.BlockDisplay link = tail.get(i);
-            if (!link.isValid()) continue;
-            double wave = Math.sin(ticks() * 0.16 - i * 0.7) * (0.35 + i * 0.06);
-            Vector side = new Vector(-back.getZ(), 0, back.getX()).multiply(wave);
-            Location at = anchor.clone()
-                    .add(back.clone().multiply(i * 0.55))
-                    .add(side)
-                    .add(0, i == 0 ? 0.35 : -i * 0.06, 0);
-            at.setYaw(boss.getLocation().getYaw());
-            link.teleport(at);
-        }
-        if (ticks() % 8 == 0 && !tail.isEmpty() && tail.get(0).isValid()) {
-            Compat.spawn(world(), Compat.ENTITY_EFFECT, tail.get(0).getLocation(), 1, 0.1, 0.1, 0.1, 0,
-                    Color.fromRGB(VENOM));
-        }
-    }
-
-    /** La cabeza de la serpiente, que es de donde sale la mirada. */
     private Location snakeHead() {
-        if (!tail.isEmpty() && tail.get(0).isValid()) return tail.get(0).getLocation().add(0, 0.3, 0);
+        if (goatHead != null && goatHead.isValid()) return goatHead.getEyeLocation();
         return boss.getEyeLocation();
     }
 
@@ -449,7 +411,6 @@ public final class Quimera extends BossFight {
     protected void ambient() {
         if (!alive()) return;
         keepHostile();
-        dragTail();
 
         if (goatHead != null && goatHead.isValid() && ticks() % 90 == 0) {
             soundAt(loc(), "entity.goat.screaming.ambient", 0.9f, 0.8f);
@@ -491,7 +452,6 @@ public final class Quimera extends BossFight {
             if (pillar.standing) restore(pillar);
         }
         pillars.clear();
-        tail.clear();
         goatHead = null;
         super.cleanup();
     }
@@ -584,14 +544,6 @@ public final class Quimera extends BossFight {
         soundAt(l, "entity.ravager.death", 1.6f, 0.5f);
         soundAt(l, "entity.goat.screaming.death", 1.4f, 0.6f);
 
-        for (org.bukkit.entity.BlockDisplay link : tail) {
-            if (!link.isValid()) continue;
-            Compat.spawn(world(), Compat.BLOCK, link.getLocation(), 8, 0.2, 0.2, 0.2, 0.02,
-                    Material.GREEN_TERRACOTTA.createBlockData());
-            spawned.remove(link);
-            Fx.safeRemove(link);
-        }
-        tail.clear();
         if (goatHead != null && goatHead.isValid()) {
             Compat.spawn(world(), Compat.POOF, goatHead.getLocation(), 20, 0.4, 0.4, 0.4, 0.05);
             spawned.remove(goatHead);
@@ -729,7 +681,7 @@ public final class Quimera extends BossFight {
                     Compat.setAttribute(s, "max_health", 20);
                     s.setHealth(20);
                 });
-                viper.customName(Component.text("Vibora", TextColor.color(VENOM)));
+                viper.customName(Component.text("Esbirro", TextColor.color(VENOM)));
                 markMinion(viper);
                 Compat.spawn(world(), Compat.ENTITY_EFFECT, sl.clone().add(0, 0.4, 0), 12, 0.4, 0.3, 0.4, 0,
                         Color.fromRGB(VENOM));

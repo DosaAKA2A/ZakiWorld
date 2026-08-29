@@ -53,6 +53,9 @@ public final class AbyssalChoir extends BossFight {
     private static final NamedTextColor[] ORDER_COLORS = {
             NamedTextColor.WHITE, NamedTextColor.YELLOW, NamedTextColor.RED};
 
+    /** Como se NOMBRA cada turno: por su color, nunca por un numero. */
+    private static final String[] ORDER_NAMES = {"BLANCO", "AMARILLO", "ROJO"};
+
     private final List<Guardian> singers = new ArrayList<>();
     /** Los cantores en el orden en que hay que apagarlos. */
     private final List<UUID> order = new ArrayList<>();
@@ -172,7 +175,7 @@ public final class AbyssalChoir extends BossFight {
             if (g == null) continue;
             Glow.clear(g);
             Glow.apply(g, ORDER_COLORS[Math.min(i, ORDER_COLORS.length - 1)]);
-            g.customName(Component.text("Cantor " + (i + 1), ORDER_COLORS[Math.min(i, ORDER_COLORS.length - 1)],
+            g.customName(Component.text("Cantor", ORDER_COLORS[Math.min(i, ORDER_COLORS.length - 1)],
                     TextDecoration.BOLD));
             g.setCustomNameVisible(true);
         }
@@ -217,7 +220,8 @@ public final class AbyssalChoir extends BossFight {
         Compat.spawn(world(), Compat.BUBBLE_POP, l.clone().add(0, 1, 0), 40, 0.6, 0.6, 0.6, 0,
                 Compat.dust(LIGHT, 1.6f));
         soundAt(l, "block.amethyst_block.chime", 1.5f, 0.8f + nextInOrder * 0.3f);
-        broadcastNear(Component.text("Cantor " + nextInOrder + " apagado.", NamedTextColor.GREEN));
+        broadcastNear(Component.text("Cantor " + ORDER_NAMES[Math.min(nextInOrder - 1, 2)]
+                + " apagado.", NamedTextColor.GREEN));
 
         if (nextInOrder >= order.size()) openCore();
     }
@@ -318,7 +322,7 @@ public final class AbyssalChoir extends BossFight {
                     ? Component.text("NUCLEO ABIERTO  ", NamedTextColor.GREEN, TextDecoration.BOLD)
                             .append(Component.text(((openUntil - ticks()) / 20) + "s", NamedTextColor.WHITE))
                     : Component.text("Nucleo protegido  ", NamedTextColor.GRAY)
-                            .append(Component.text("apaga el Cantor " + (nextInOrder + 1),
+                            .append(Component.text("apaga el Cantor " + ORDER_NAMES[Math.min(nextInOrder, 2)],
                                     ORDER_COLORS[Math.min(nextInOrder, 2)], TextDecoration.BOLD)));
         }
     }

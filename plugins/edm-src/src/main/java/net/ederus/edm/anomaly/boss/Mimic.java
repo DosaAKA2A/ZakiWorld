@@ -770,6 +770,7 @@ public final class Mimic extends BossFight {
         if (!alive() || phase() != 1 || !revealed) return;
         Player target = randomTarget();
         if (target == null) return;
+        face(target.getLocation());
         Location from = boss.getLocation();
         Vector dir = target.getLocation().toVector().subtract(from.toVector()).setY(0);
         if (dir.lengthSquared() < 0.01) return;
@@ -900,6 +901,7 @@ public final class Mimic extends BossFight {
         if (!alive() || phase() != 2 || !hidden) return;
         Player near = Fx.nearest(boss.getLocation(), 3.5);
         if (near == null) return;
+        face(near.getLocation());
         Location l = boss.getLocation();
         Compat.spawn(world(), Compat.ITEM, l.clone().add(0, 0.8, 0), 14, 0.3, 0.4, 0.3, 0.08,
                 new ItemStack(Material.CHEST));
@@ -915,6 +917,7 @@ public final class Mimic extends BossFight {
         if (!alive() || phase() != 3) return;
         Player target = Fx.nearest(loc(), 12);
         if (target == null) return;
+        face(target.getLocation());
         Vector run = target.getLocation().toVector().subtract(boss.getLocation().toVector()).setY(0);
         if (run.lengthSquared() > 0.01) {
             boss.setVelocity(run.normalize().multiply(0.9).setY(0.2));
@@ -951,6 +954,7 @@ public final class Mimic extends BossFight {
                 target.getLocation().getDirection().setY(0).normalize().multiply(-1.6));
         Compat.spawn(world(), Compat.POOF, boss.getLocation().add(0, 1, 0), 16, 0.3, 0.5, 0.3, 0.04);
         boss.teleport(behind);
+        face(target.getLocation());
         Compat.spawn(world(), Compat.FLASH, behind.clone().add(0, 1, 0), 1);
         soundAt(behind, "entity.illusioner.mirror_move", 1.4f, 1.0f);
         target.sendActionBar(Component.text("Esta DETRAS de ti.", NamedTextColor.RED, TextDecoration.BOLD));
@@ -989,6 +993,7 @@ public final class Mimic extends BossFight {
         if (!alive() || phase() != 3) return;
         Player target = randomTarget();
         if (target == null) return;
+        face(target.getLocation());
         Location mark = Fx.ground(target.getLocation(), 4);
         soundAt(loc(), "entity.ravager.roar", 1.3f, 1.4f);
 
