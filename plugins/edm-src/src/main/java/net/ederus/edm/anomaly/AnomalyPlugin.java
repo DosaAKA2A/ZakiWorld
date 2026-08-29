@@ -45,7 +45,7 @@ public final class AnomalyPlugin extends net.ederus.edm.Module {
 
 
     /** La lee el banner de /anomaly info; hay que subirla junto al pom y al plugin.yml. */
-    public static final String VERSION = "1.14.1";
+    public static final String VERSION = "1.15.0";
 
     private static final TextColor BRAND = TextColor.color(0x9BD7E4);
 
@@ -57,6 +57,7 @@ public final class AnomalyPlugin extends net.ederus.edm.Module {
     private AnomalyManager manager;
     private Announcer announcer;
     private Menus menus;
+    private net.ederus.edm.anomaly.menu.SpawnMarker spawnMarker;
     private Anchors anchors;
     private Advancements advancements;
 
@@ -76,6 +77,7 @@ public final class AnomalyPlugin extends net.ederus.edm.Module {
         this.announcer = new Announcer(this);
         this.manager = new AnomalyManager(this);
         this.menus = new Menus(this);
+        this.spawnMarker = new net.ederus.edm.anomaly.menu.SpawnMarker(this);
         this.advancements = new Advancements(this);
 
         /* Si el servidor se cayo en mitad de una anomalia, los UUID del jefe y
@@ -90,6 +92,9 @@ public final class AnomalyPlugin extends net.ederus.edm.Module {
 
         getServer().getPluginManager().registerEvents(manager, this);
         getServer().getPluginManager().registerEvents(menus, this);
+        getServer().getPluginManager().registerEvents(spawnMarker, this);
+        // El almacen de botin escucha por el aviso de "quien se llevo el UNICO".
+        getServer().getPluginManager().registerEvents(drops, this);
 
         PluginCommand command = getCommand("anomaly");
         if (command != null) {
@@ -243,6 +248,10 @@ public final class AnomalyPlugin extends net.ederus.edm.Module {
 
     public Menus menus() {
         return menus;
+    }
+
+    public net.ederus.edm.anomaly.menu.SpawnMarker spawnMarker() {
+        return spawnMarker;
     }
 
     public Anchors anchors() {

@@ -9,11 +9,18 @@ import org.bukkit.inventory.ItemStack;
  */
 public final class DropEntry {
 
-    /** A quien le toca el objeto cuando cae. */
+    /**
+     * A quien le toca el objeto cuando cae.
+     *
+     * Desde que el botin EXPLOTA (sale disparado del cuerpo del jefe), esto ya no
+     * decide a que inventario va: decide quien PUEDE recogerlo del suelo. TODOS es
+     * la rebatinga pura; MEJOR y ALEATORIO salen igual en la explosion pero el item
+     * lleva dueno y nadie mas lo puede levantar.
+     */
     public enum Recipient {
-        TODOS("Todos los que pelearon", "Cada participante recibe su copia."),
-        MEJOR("Quien mas dano hizo", "Solo el jugador con mas dano acumulado."),
-        ALEATORIO("Uno al azar", "Un participante al azar, con peso por dano.");
+        TODOS("Libre para todos", "Explota al suelo: se lo queda quien lo agarre."),
+        MEJOR("Reservado al mejor", "Sale en la explosion, pero solo lo recoge quien mas dano hizo."),
+        ALEATORIO("Reservado a uno al azar", "Solo lo recoge un participante al azar, con peso por dano.");
 
         private final String display;
         private final String help;
@@ -42,6 +49,8 @@ public final class DropEntry {
     private int min;
     private int max;
     private Recipient to;
+    /** El objeto UNICO de la tabla: super raro y senalado. Solo puede haber uno. */
+    private boolean unique;
 
     public DropEntry(ItemStack item, double chance, int min, int max, Recipient to) {
         this.item = item;
@@ -82,6 +91,14 @@ public final class DropEntry {
     public void amount(int min, int max) {
         this.min = Math.max(1, Math.min(64, min));
         this.max = Math.max(this.min, Math.min(64, max));
+    }
+
+    public boolean unique() {
+        return unique;
+    }
+
+    public void unique(boolean unique) {
+        this.unique = unique;
     }
 
     public Recipient to() {

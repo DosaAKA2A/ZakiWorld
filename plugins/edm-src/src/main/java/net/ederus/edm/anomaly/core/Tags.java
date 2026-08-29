@@ -16,6 +16,7 @@ public final class Tags {
     private static NamespacedKey MINION;
     private static NamespacedKey TEMP;
     private static NamespacedKey EVENT;
+    private static NamespacedKey UNIQUE_DROP;
 
     private Tags() {
     }
@@ -25,6 +26,7 @@ public final class Tags {
         MINION = new NamespacedKey(plugin, "minion");
         TEMP = new NamespacedKey(plugin, "temp");
         EVENT = new NamespacedKey(plugin, "event");
+        UNIQUE_DROP = new NamespacedKey(plugin, "unique_drop");
     }
 
     private static boolean ready() {
@@ -75,6 +77,21 @@ public final class Tags {
     public static String eventId(Entity e) {
         if (!ready() || e == null) return null;
         return e.getPersistentDataContainer().get(EVENT, PersistentDataType.STRING);
+    }
+
+    /**
+     * Marca el item tirado al suelo que es el drop UNICO de una anomalia. La marca va
+     * en la ENTIDAD de item, no en el ItemStack: al recogerlo el objeto queda limpio
+     * y la marca muere con la entidad. Lo lee el aviso de "quien se lo llevo".
+     */
+    public static void markUniqueDrop(Entity e, String anomalyId) {
+        if (!ready() || e == null) return;
+        e.getPersistentDataContainer().set(UNIQUE_DROP, PersistentDataType.STRING, anomalyId);
+    }
+
+    public static String uniqueDropOf(Entity e) {
+        if (!ready() || e == null) return null;
+        return e.getPersistentDataContainer().get(UNIQUE_DROP, PersistentDataType.STRING);
     }
 
     /** Cualquier entidad creada por el plugin: jefe, esbirro o decoracion. */

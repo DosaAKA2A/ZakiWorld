@@ -41,8 +41,11 @@ public final class DropTable {
         return experience;
     }
 
+    /** Tope de experiencia por jefe. Da para x20 largos del valor que sea. */
+    public static final int MAX_EXPERIENCE = 1000000;
+
     public void experience(int experience) {
-        this.experience = Math.max(0, Math.min(20000, experience));
+        this.experience = Math.max(0, Math.min(MAX_EXPERIENCE, experience));
     }
 
     public boolean isEmpty() {
@@ -64,10 +67,40 @@ public final class DropTable {
     }
 
     /**
-     * El objeto "estrella" que se enseña en el hover del anuncio: el mas raro de todos.
-     * Si hay empate gana el primero, que es el que el admin puso arriba del todo.
+     * Marca un objeto como el UNICO de la tabla y desmarca cualquier otro: solo
+     * puede haber uno. Marcarlo lo vuelve ademas super raro de serie (1%), aunque la
+     * probabilidad se puede reajustar despues como la de cualquier otro.
+     *
+     * @return true si quedo marcado, false si quedo desmarcado (era el unico y se repitio el toque)
+     */
+    public boolean markUnique(int index) {
+        DropEntry target = get(index);
+        if (target == null) return false;
+        boolean wasUnique = target.unique();
+        for (DropEntry e : entries) e.unique(false);
+        if (!wasUnique) {
+            target.unique(true);
+            if (target.chance() > 5.0) target.chance(1.0);
+        }
+        return !wasUnique;
+    }
+
+    /** El objeto UNICO de la tabla, si el admin marco alguno. */
+    public DropEntry uniqueEntry() {
+        for (DropEntry e : entries) {
+            if (e.unique()) return e;
+        }
+        return null;
+    }
+
+    /**
+     * El objeto "estrella" que se enseña en el hover del anuncio. Si hay un UNICO
+     * marcado es el; si no, el mas raro de todos, y en empate gana el primero, que
+     * es el que el admin puso arriba del todo.
      */
     public DropEntry headline() {
+        DropEntry unique = uniqueEntry();
+        if (unique != null) return unique;
         DropEntry best = null;
         for (DropEntry e : entries) {
             if (best == null || e.chance() < best.chance()) best = e;
@@ -94,7 +127,11 @@ public final class DropTable {
             return Component.text("Sin botin configurado", NamedTextColor.DARK_GRAY)
                     .decoration(TextDecoration.ITALIC, false);
         }
-        return Component.text("", accent)
+        Component line = Component.text("", accent);
+        if (star.unique()) {
+            line = line.append(Component.text("✦UNICO ", NamedTextColor.AQUA, TextDecoration.BOLD));
+        }
+        return line
                 .append(nameOf(star.item()).colorIfAbsent(accent))
                 .append(Component.text("  x" + star.amountLabel(), NamedTextColor.GRAY))
                 .append(Component.text("  " + trimChance(star.chance()) + "%", NamedTextColor.DARK_GRAY))

@@ -63,14 +63,26 @@ public final class AnomalyManager implements Listener {
     // ------------------------------------------------------------------- apertura
 
     /**
-     * Busca sitio y abre la anomalia. La busqueda es asincrona, asi que el resultado
-     * llega por el callback: true si se abrio, false si no habia ningun sitio valido.
+     * Abre la anomalia donde le toque: en su punto fijo si el admin marco uno desde
+     * el menu, y si no buscando un sitio aleatorio valido. La busqueda es asincrona,
+     * asi que el resultado llega por el callback: true si se abrio, false si no
+     * habia ningun sitio valido.
      */
     public void start(AnomalyType type, Consumer<Boolean> done) {
         if (active() || searching) {
             done.accept(false);
             return;
         }
+
+        // El punto marcado manda: ahi no se busca ni se comprueba nada, porque el
+        // admin eligio ese bloque a proposito (un coliseo, una arena construida).
+        Location fixed = plugin.registry().spawnPoint(type);
+        if (fixed != null) {
+            open(type, fixed);
+            done.accept(active());
+            return;
+        }
+
         searching = true;
         plugin.sites().find(type, loc -> {
             searching = false;
@@ -93,7 +105,7 @@ public final class AnomalyManager implements Listener {
 
         BossFight fight = type.create(plugin, event, where);
         event.fight(fight);
-        event.bars(new PhaseBars(type.display(), type.color()));
+        event.bars(new PhaseBars(type.display(), type.color(), fight.phaseCount()));
 
         try {
             fight.spawn();

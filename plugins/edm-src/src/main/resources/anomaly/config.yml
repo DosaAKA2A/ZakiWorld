@@ -85,7 +85,15 @@ logros:
 
 # Ajustes por anomalia. Se rellenan solos al tocarlos desde el menu.
 #
-# Ademas de vida y dano, cada anomalia admite DOS LISTAS DE TEXTO opcionales que son
+#   clase:  ESBIRRO, GENERAL o MONARCA. Ordena el catalogo (Monarcas arriba) y se
+#           cambia desde el menu con shift + click derecho sobre la anomalia.
+#   vida:   hasta 400000 (por encima de 1024 el exceso se cobra en reduccion de
+#           dano recibido; la pelea dura exactamente lo configurado).
+#   dano:   multiplicador de TODAS sus habilidades, de 0.1 a 20.0.
+#   spawn:  el punto fijo de aparicion marcado desde el menu (mundo/x/y/z). Si no
+#           esta, la anomalia aparece en un sitio aleatorio valido, como siempre.
+#
+# Ademas, cada anomalia admite DOS LISTAS DE TEXTO opcionales que son
 # exactamente lo que se lee en el hover del anuncio del chat:
 #
 #   descripcion:  de donde viene, su historia. Una linea por renglon.
@@ -103,77 +111,92 @@ logros:
 anomalias:
   caballero_sepulcral:
     activa: true
+    clase: GENERAL
     vida: 1400
     dano: 1.0
     nombre: 'Caballero Sepulcral'
   cabra_gritona:
     activa: true
+    clase: GENERAL
     vida: 1600
     # Multiplicador del dano de TODAS sus habilidades. 1.0 es lo de diseno.
     dano: 1.0
     nombre: 'Cabra Gritona'
   conejo_asesino:
     activa: true
+    clase: GENERAL
     vida: 1500
     dano: 1.0
     nombre: 'Conejo Asesino'
   storm_rider:
     activa: true
+    clase: GENERAL
     vida: 1700
     dano: 1.0
     nombre: 'Storm Rider'
   leviatan_de_sal:
     activa: true
+    clase: GENERAL
     vida: 1800
     dano: 1.0
     nombre: 'Leviatan de Sal'
   coro_abisal:
     activa: true
+    clase: GENERAL
     vida: 1300
     dano: 1.0
     nombre: 'Coro Abisal'
   darkness:
     activa: true
+    clase: GENERAL
     vida: 2600
     dano: 1.0
     nombre: 'Darkness'
   herbola:
     activa: true
+    clase: GENERAL
     vida: 1600
     dano: 1.0
     nombre: 'Herbola'
   quimera:
     activa: true
+    clase: GENERAL
     vida: 1900
     dano: 1.0
     nombre: 'Quimera'
   bruja:
     activa: true
+    clase: GENERAL
     vida: 1500
     dano: 1.0
     nombre: 'Bruja'
   mimic:
     activa: true
+    clase: GENERAL
     vida: 2000
     dano: 1.0
     nombre: 'Mimic'
   rabby:
     activa: true
+    clase: GENERAL
     vida: 2400
     dano: 1.0
     nombre: 'Rabby'
   cazador:
     activa: true
+    clase: GENERAL
     vida: 2100
     dano: 1.0
     nombre: 'El Cazador'
   aragon:
     activa: true
+    clase: GENERAL
     vida: 2300
     dano: 1.0
     nombre: 'Áragon'
   piromante:
     activa: true
+    clase: GENERAL
     vida: 1900
     dano: 1.0
     nombre: 'El Piromante'

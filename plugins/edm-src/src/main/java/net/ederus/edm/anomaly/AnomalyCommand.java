@@ -63,10 +63,45 @@ public final class AnomalyCommand implements CommandExecutor, TabCompleter {
             case "test", "probar" -> test(sender, args);
             case "hurt", "danar" -> hurt(sender, args);
             case "logros", "advancements" -> trophies(sender);
+            case "botin", "loot" -> lootPreview(sender, args);
             case "reload", "recargar" -> reload(sender);
             default -> help(sender);
         }
         return true;
+    }
+
+    /**
+     * Revienta la tabla de botin de una anomalia aqui mismo, para VERLA: cada objeto
+     * sale una vez con su cantidad maxima, sin duenos ni experiencia ni comandos.
+     * Con una anomalia abierta revienta sobre el jefe; si no, donde este el admin.
+     */
+    private void lootPreview(CommandSender sender, String[] args) {
+        ActiveAnomaly live = plugin.manager().current();
+        // Sin id explicito, la abierta manda: es la que el admin esta mirando.
+        AnomalyType type = args.length > 1 || live == null ? resolve(sender, args, 1) : live.type();
+        if (type == null) return;
+        Location where = null;
+        if (live != null && live.fight() != null) {
+            where = live.fight().loc();
+        } else if (sender instanceof Player player) {
+            where = player.getLocation();
+        }
+        if (where == null) {
+            sender.sendMessage(plugin.prefix().append(Component.text(
+                    "Desde consola hace falta una anomalia abierta para saber donde reventarlo.",
+                    NamedTextColor.RED)));
+            return;
+        }
+        int lines = plugin.drops().preview(type.id(), where);
+        if (lines == 0) {
+            sender.sendMessage(plugin.prefix().append(Component.text(
+                    "La tabla de " + type.display() + " esta vacia.", SOFT)));
+        } else {
+            sender.sendMessage(plugin.prefix()
+                    .append(Component.text("Botin de ", SOFT))
+                    .append(Component.text(type.display(), type.color(), TextDecoration.BOLD))
+                    .append(Component.text(" reventado: " + lines + " objeto(s), solo para verlo.", SOFT)));
+        }
     }
 
     private void start(CommandSender sender, String[] args) {
@@ -77,7 +112,9 @@ public final class AnomalyCommand implements CommandExecutor, TabCompleter {
                     Component.text("Ya hay una anomalia abierta. Cierrala con /anomaly stop.", NamedTextColor.RED)));
             return;
         }
-        sender.sendMessage(plugin.prefix().append(Component.text("Buscando un sitio libre...", SOFT)));
+        boolean fixed = plugin.registry().spawnPoint(type) != null;
+        sender.sendMessage(plugin.prefix().append(Component.text(
+                fixed ? "Abriendola en su punto marcado..." : "Buscando un sitio libre...", SOFT)));
         plugin.manager().start(type, ok -> {
             if (ok) return;
             sender.sendMessage(plugin.prefix().append(Component.text(
@@ -337,6 +374,7 @@ public final class AnomalyCommand implements CommandExecutor, TabCompleter {
         line(sender, "/anomaly abilities [id]", "lista las habilidades");
         line(sender, "/anomaly test <id|all>", "lanza una habilidad ya, para revisarla");
         line(sender, "/anomaly hurt <vida>", "le baja vida a mano, para ver las fases");
+        line(sender, "/anomaly botin [id]", "revienta la tabla aqui mismo, solo para verla");
         line(sender, "/anomaly logros", "cuantas anomalias llevas derrotadas");
         line(sender, "/anomaly reload", "recarga la configuracion");
         sender.sendMessage(Component.empty());
@@ -374,7 +412,7 @@ public final class AnomalyCommand implements CommandExecutor, TabCompleter {
         List<String> out = new ArrayList<>();
         if (!plugin.mayUseGui(sender)) return out;
         if (args.length == 1) {
-            for (String s : List.of("menu", "start", "here", "at", "stop", "info", "abilities", "test", "hurt", "logros", "reload")) {
+            for (String s : List.of("menu", "start", "here", "at", "stop", "info", "abilities", "test", "hurt", "botin", "logros", "reload")) {
                 if (s.startsWith(args[0].toLowerCase(Locale.ROOT))) out.add(s);
             }
             return out;

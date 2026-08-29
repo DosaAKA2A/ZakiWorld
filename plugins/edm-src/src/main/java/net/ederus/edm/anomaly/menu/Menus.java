@@ -67,6 +67,9 @@ public final class Menus implements Listener {
     // ------------------------------------------------------------------- apertura
 
     public void openHub(Player player) {
+        // Abrir el menu cancela el modo de marcar punto, si estaba puesto: es la
+        // forma natural de decir "mejor no".
+        plugin.spawnMarker().cancel(player);
         open(player, Screen.HUB, 0, plugin.selectedId(), false);
     }
 
@@ -150,19 +153,30 @@ public final class Menus implements Listener {
                 MenuUtil.title("Ir a la anomalia", live == null ? MenuUtil.DIM : NamedTextColor.LIGHT_PURPLE),
                 tpLore, live != null));
 
+        Location fixedSpawn = selected == null ? null : plugin.registry().spawnPoint(selected);
         inv.setItem(20, MenuUtil.icon(active ? Material.GRAY_DYE : Material.NETHER_STAR,
                 MenuUtil.title("Iniciar anomalia", active ? MenuUtil.DIM : NamedTextColor.GREEN),
                 List.of(
-                        MenuUtil.line("Abre la anomalia elegida en un punto"),
-                        MenuUtil.line("valido del mapa y lo anuncia en el chat."),
+                        fixedSpawn == null
+                                ? MenuUtil.line("Abre la anomalia elegida en un punto")
+                                : MenuUtil.line("Abre la anomalia elegida en su punto"),
+                        fixedSpawn == null
+                                ? MenuUtil.line("valido del mapa y lo anuncia en el chat.")
+                                : MenuUtil.line("marcado y lo anuncia en el chat."),
                         MenuUtil.blank(),
                         MenuUtil.field("Elegida", selected == null ? "ninguna" : selected.display(),
                                 selected == null ? MenuUtil.DIM : selected.color()),
+                        MenuUtil.field("Aparece", fixedSpawn == null ? "en un sitio aleatorio"
+                                        : fixedSpawn.getBlockX() + " " + fixedSpawn.getBlockY() + " "
+                                        + fixedSpawn.getBlockZ(),
+                                fixedSpawn == null ? MenuUtil.SOFT : NamedTextColor.WHITE),
                         MenuUtil.blank(),
                         active
                                 ? Component.text("Ya hay una anomalia abierta.", NamedTextColor.RED)
                                 : MenuUtil.action("Click para iniciar")),
                 !active && selected != null));
+
+        inv.setItem(15, spawnPointItem(selected, fixedSpawn));
 
         inv.setItem(22, MenuUtil.icon(selected == null ? Material.BARRIER : selected.icon(),
                 MenuUtil.title("Elegir anomalia", MenuUtil.GOLD),
@@ -221,6 +235,37 @@ public final class Menus implements Listener {
                 liveLore(), false));
     }
 
+    /**
+     * El boton del punto de aparicion: marca un bloque como spawner de la anomalia
+     * elegida, o la devuelve al modo aleatorio. Marcar SOLO marca; iniciar sigue
+     * siendo cosa del boton Iniciar.
+     */
+    private ItemStack spawnPointItem(AnomalyType selected, Location fixed) {
+        List<Component> lore = new ArrayList<>();
+        lore.add(MenuUtil.line("Donde aparece la anomalia elegida al"));
+        lore.add(MenuUtil.line("pulsar Iniciar: un bloque marcado por ti"));
+        lore.add(MenuUtil.line("(tu coliseo) o un sitio aleatorio del mapa."));
+        lore.add(MenuUtil.blank());
+        if (selected == null) {
+            lore.add(Component.text("Elige una anomalia primero.", MenuUtil.DIM));
+        } else if (fixed == null) {
+            lore.add(MenuUtil.field("Ahora", "aleatorio, lo busca el plugin", MenuUtil.SOFT));
+            lore.add(MenuUtil.blank());
+            lore.add(MenuUtil.action("Click: salir y marcar un bloque a golpe"));
+        } else {
+            lore.add(MenuUtil.field("Punto fijo", fixed.getBlockX() + " " + fixed.getBlockY() + " "
+                    + fixed.getBlockZ(), NamedTextColor.WHITE));
+            lore.add(MenuUtil.field("Mundo", fixed.getWorld() == null ? "?" : fixed.getWorld().getName(),
+                    MenuUtil.SOFT));
+            lore.add(MenuUtil.blank());
+            lore.add(MenuUtil.action("Click: marcar un bloque nuevo"));
+            lore.add(Component.text("► Click derecho: volver a aleatorio", NamedTextColor.YELLOW));
+        }
+        return MenuUtil.icon(fixed == null ? Material.COMPASS : Material.LODESTONE,
+                MenuUtil.title("Punto de aparicion", fixed == null ? MenuUtil.GOLD : NamedTextColor.GREEN),
+                lore, fixed != null);
+    }
+
     private List<Component> liveLore() {
         List<Component> lore = new ArrayList<>();
         ActiveAnomaly ev = plugin.manager().current();
@@ -274,9 +319,13 @@ public final class Menus implements Listener {
             boolean enabled = plugin.registry().isEnabled(type);
             boolean chosen = type.id().equals(selected);
 
+            net.ederus.edm.anomaly.core.AnomalyClass clazz = plugin.registry().classOf(type);
             List<Component> lore = new ArrayList<>();
             lore.add(Component.text(type.tagline(), MenuUtil.SOFT));
             lore.add(MenuUtil.blank());
+            lore.add(Component.text("Clase  ", MenuUtil.LABEL)
+                    .append(Component.text(clazz.display().toUpperCase(java.util.Locale.ROOT),
+                            clazz.color(), TextDecoration.BOLD)));
             lore.add(Component.text("Elemento  ", MenuUtil.LABEL)
                     .append(Component.text(type.element().display(), type.element().color(), TextDecoration.BOLD))
                     .append(Component.text("   " + type.element().terrain(), MenuUtil.DIM)));
@@ -301,8 +350,9 @@ public final class Menus implements Listener {
             lore.add(chosen ? Component.text("✔ ELEGIDA", NamedTextColor.GREEN, TextDecoration.BOLD)
                     : MenuUtil.action("Click para elegirla"));
             lore.add(MenuUtil.actionSecondary("Click derecho: habilidades y vida del jefe"));
-            lore.add(Component.text("► Shift + click: " + (enabled ? "apagarla" : "activarla"),
+            lore.add(Component.text("► Shift + izquierdo: " + (enabled ? "apagarla" : "activarla"),
                     NamedTextColor.GRAY));
+            lore.add(Component.text("► Shift + derecho: cambiar de clase", NamedTextColor.GRAY));
 
             // Si la anomalia trae un icono con forma propia (una cabeza con skin), se
             // respeta; apagada siempre va en gris, que es lo que dice que esta apagada.
@@ -357,27 +407,30 @@ public final class Menus implements Listener {
         // Los dos ajustes de ESTA anomalia. Una casilla cada uno, con izquierda para
         // subir y derecha para bajar, igual que en la pantalla de Ajustes.
         double health = plugin.registry().health(type);
+        double times = plugin.registry().healthTimes(type);
         inv.setItem(47, MenuUtil.icon(Material.GOLDEN_APPLE,
                 MenuUtil.title("Vida del jefe", MenuUtil.GOLD),
                 List.of(
-                        MenuUtil.field("Vida base", String.valueOf((int) health), NamedTextColor.GREEN),
+                        MenuUtil.field("Vida base", (int) health + "  (x" + times + " de lo original)",
+                                NamedTextColor.GREEN),
                         MenuUtil.field("Con 5 jugadores",
                                 String.valueOf((int) plugin.registry().scaledHealth(type, 5)), NamedTextColor.WHITE),
                         MenuUtil.blank(),
                         MenuUtil.line("Sube un " + Math.round(plugin.settings().healthPerPlayer() * 100)
-                                + "% por cada jugador de mas."),
+                                + "% por cada jugador de mas. Admite hasta"),
+                        MenuUtil.line("x20 largos de la vida original del jefe."),
                         MenuUtil.line("Por encima de 1024 el resto se cobra bajandole"),
                         MenuUtil.line("el dano que recibe; para quien pelea es igual."),
                         MenuUtil.blank(),
-                        MenuUtil.action("Click izquierdo: +100"),
-                        Component.text("► Click derecho: -100", NamedTextColor.YELLOW),
-                        Component.text("► Shift para pasos de 500", NamedTextColor.GRAY)), false));
+                        MenuUtil.action("Click izquierdo: +500"),
+                        Component.text("► Click derecho: -500", NamedTextColor.YELLOW),
+                        Component.text("► Shift para pasos de 5000", NamedTextColor.GRAY)), times >= 2));
 
         double dmg = plugin.registry().damageMultiplier(type);
         inv.setItem(51, MenuUtil.icon(Material.IRON_SWORD,
                 MenuUtil.title("Dano de las habilidades", MenuUtil.GOLD),
                 List.of(
-                        MenuUtil.field("Multiplicador", "x" + dmg,
+                        MenuUtil.field("Multiplicador", "x" + dmg + "  (hasta x20)",
                                 dmg > 1.0 ? NamedTextColor.RED
                                         : dmg < 1.0 ? NamedTextColor.GREEN : NamedTextColor.WHITE),
                         MenuUtil.blank(),
@@ -387,7 +440,7 @@ public final class Menus implements Listener {
                         MenuUtil.blank(),
                         MenuUtil.action("Click izquierdo: +0.1"),
                         Component.text("► Click derecho: -0.1", NamedTextColor.YELLOW),
-                        Component.text("► Shift para pasos de 0.5", NamedTextColor.GRAY)), dmg != 1.0));
+                        Component.text("► Shift para pasos de 1.0", NamedTextColor.GRAY)), dmg != 1.0));
     }
 
     // ---------------------------------------------------------------------- botin
@@ -404,6 +457,10 @@ public final class Menus implements Listener {
                 continue;
             }
             List<Component> lore = new ArrayList<>();
+            if (entry.unique()) {
+                lore.add(Component.text("✦ OBJETO UNICO", NamedTextColor.AQUA, TextDecoration.BOLD));
+                lore.add(Component.text("   Brilla al caer y el chat anuncia quien se lo llevo.", MenuUtil.DIM));
+            }
             lore.add(MenuUtil.field("Probabilidad", DropTable.trimChance(entry.chance()) + "%",
                     entry.chance() >= 100 ? NamedTextColor.GREEN : MenuUtil.LOOT));
             lore.add(MenuUtil.field("Cantidad", entry.amountLabel(), NamedTextColor.WHITE));
@@ -413,14 +470,20 @@ public final class Menus implements Listener {
             if (holder.placeMode) {
                 lore.add(MenuUtil.action("Click para quitarlo de la tabla"));
                 lore.add(Component.text("► Con un objeto en el cursor: lo reemplaza", NamedTextColor.GRAY));
+                lore.add(Component.text("► Shift + click: marcarlo como UNICO", NamedTextColor.GRAY));
             } else {
                 lore.add(MenuUtil.action("Click izquierdo: +5% de probabilidad"));
                 lore.add(Component.text("► Click derecho: -5%", NamedTextColor.YELLOW));
                 lore.add(Component.text("► Shift + izquierdo: cambiar a quien le toca", NamedTextColor.GRAY));
                 lore.add(Component.text("► Shift + derecho: cambiar la cantidad", NamedTextColor.GRAY));
+                lore.add(Component.text("► Tecla F (o click central): marcarlo como UNICO", NamedTextColor.GRAY));
                 lore.add(Component.text("► Tecla de tirar (Q): quitarlo", NamedTextColor.GRAY));
             }
-            inv.setItem(BODY[i], MenuUtil.decorate(entry.item(), null, lore, false));
+            // La cantidad se ve desde el propio inventario: el stack pinta el numero
+            // que cae de verdad (el maximo de la horquilla), no hay que leer el lore.
+            ItemStack shown = entry.item().clone();
+            shown.setAmount(Math.max(1, Math.min(64, entry.max())));
+            inv.setItem(BODY[i], MenuUtil.decorate(shown, null, lore, entry.unique()));
         }
 
         inv.setItem(46, MenuUtil.icon(holder.placeMode ? Material.HOPPER : Material.COMPARATOR,
@@ -438,15 +501,18 @@ public final class Menus implements Listener {
 
         inv.setItem(48, MenuUtil.simple(Material.REDSTONE,
                 Component.text("− Experiencia", NamedTextColor.RED),
-                List.of(MenuUtil.line("Baja 100 puntos."))));
+                List.of(MenuUtil.line("Baja 100 puntos."),
+                        Component.text("► Con shift: 1000", NamedTextColor.GRAY))));
         inv.setItem(49, MenuUtil.icon(Material.EXPERIENCE_BOTTLE,
                 MenuUtil.title("Experiencia", MenuUtil.GOLD),
                 List.of(
                         MenuUtil.field("Da", table.experience() + " puntos", NamedTextColor.GREEN),
-                        MenuUtil.line("A cada participante, aparte del botin.")), false));
+                        MenuUtil.line("A cada participante, aparte del botin."),
+                        MenuUtil.line("Admite hasta 1.000.000 por jefe.")), false));
         inv.setItem(50, MenuUtil.simple(Material.GLOWSTONE_DUST,
                 Component.text("+ Experiencia", NamedTextColor.GREEN),
-                List.of(MenuUtil.line("Sube 100 puntos."))));
+                List.of(MenuUtil.line("Sube 100 puntos."),
+                        Component.text("► Con shift: 1000", NamedTextColor.GRAY))));
 
         List<Component> cmdLore = new ArrayList<>();
         cmdLore.add(MenuUtil.line("Comandos que corre la consola al caer el jefe."));
@@ -577,6 +643,11 @@ public final class Menus implements Listener {
                 lore.add(MenuUtil.line("con su NBT, asi que los items de MMOItems"));
                 lore.add(MenuUtil.line("caen exactamente igual que el original."));
                 lore.add(MenuUtil.blank());
+                lore.add(MenuUtil.line("Al caer el jefe, TODO el botin explota de su"));
+                lore.add(MenuUtil.line("cuerpo y sale disparado por el suelo. Lo"));
+                lore.add(MenuUtil.line("reservado sale igual pero solo lo recoge"));
+                lore.add(MenuUtil.line("su dueno. El UNICO cae brillando."));
+                lore.add(MenuUtil.blank());
                 lore.add(MenuUtil.line("Se guarda solo al cerrar el menu."));
             }
             case SETTINGS -> {
@@ -639,7 +710,7 @@ public final class Menus implements Listener {
         }
 
         switch (holder.screen) {
-            case HUB -> clickHub(player, slot);
+            case HUB -> clickHub(player, event, slot);
             case ANOMALIES -> clickAnomalies(player, event, holder, slot);
             case ABILITIES -> clickAbilities(player, event, holder, slot);
             case DROPS -> clickDrops(player, event, holder, slot);
@@ -647,8 +718,30 @@ public final class Menus implements Listener {
         }
     }
 
-    private void clickHub(Player player, int slot) {
+    private void clickHub(Player player, InventoryClickEvent event, int slot) {
         switch (slot) {
+            case 15 -> {
+                AnomalyType type = plugin.selected();
+                if (type == null) {
+                    deny(player, "Elige una anomalia primero.");
+                    return;
+                }
+                if (event.isRightClick()) {
+                    if (plugin.registry().spawnPoint(type) == null) {
+                        deny(player, "Esa anomalia ya aparece en sitios aleatorios.");
+                        return;
+                    }
+                    plugin.registry().clearSpawnPoint(type);
+                    click(player, 0.8f);
+                    player.sendMessage(plugin.prefix()
+                            .append(Component.text(type.display(), type.color(), TextDecoration.BOLD))
+                            .append(Component.text(" vuelve a aparecer en un sitio aleatorio.", MenuUtil.SOFT)));
+                    render(event.getInventory(), player, (Holder) event.getInventory().getHolder());
+                    return;
+                }
+                click(player, 1.4f);
+                plugin.spawnMarker().begin(player, type);
+            }
             case 13 -> {
                 ActiveAnomaly live = plugin.manager().current();
                 if (live == null) {
@@ -670,8 +763,10 @@ public final class Menus implements Listener {
                     return;
                 }
                 click(player, 1.6f);
-                player.sendMessage(plugin.prefix().append(
-                        Component.text("Buscando un sitio libre para la anomalia...", MenuUtil.SOFT)));
+                player.sendMessage(plugin.prefix().append(Component.text(
+                        plugin.registry().spawnPoint(type) != null
+                                ? "Abriendo la anomalia en su punto marcado..."
+                                : "Buscando un sitio libre para la anomalia...", MenuUtil.SOFT)));
                 // El menu se queda abierto a proposito: en cuanto aparezca, el boton de
                 // viajar esta justo arriba y se quiere poder usar sin volver a abrirlo.
                 plugin.manager().start(type, ok -> {
@@ -735,7 +830,15 @@ public final class Menus implements Listener {
         if (index >= all.size()) return;
         AnomalyType type = all.get(index);
 
-        if (event.isShiftClick()) {
+        if (event.isShiftClick() && event.isRightClick()) {
+            // Cicla Esbirro -> General -> Monarca y reordena el catalogo al momento.
+            net.ederus.edm.anomaly.core.AnomalyClass next = plugin.registry().classOf(type).next();
+            plugin.registry().setClass(type, next);
+            click(player, 1.3f);
+            player.sendActionBar(Component.text(type.display() + "  ", MenuUtil.SOFT)
+                    .append(Component.text(next.display().toUpperCase(java.util.Locale.ROOT),
+                            next.color(), TextDecoration.BOLD)));
+        } else if (event.isShiftClick()) {
             plugin.registry().setEnabled(type, !plugin.registry().isEnabled(type));
             click(player, plugin.registry().isEnabled(type) ? 1.5f : 0.7f);
         } else if (event.isRightClick()) {
@@ -768,7 +871,7 @@ public final class Menus implements Listener {
         }
         boolean up = event.isLeftClick();
         if (slot == 47) {
-            int step = (event.isShiftClick() ? 500 : 100) * (up ? 1 : -1);
+            int step = (event.isShiftClick() ? 5000 : 500) * (up ? 1 : -1);
             plugin.registry().setHealth(type, plugin.registry().health(type) + step);
             click(player, up ? 1.4f : 0.9f);
             player.sendActionBar(Component.text("Vida base de " + type.display() + "  ", MenuUtil.SOFT)
@@ -778,7 +881,7 @@ public final class Menus implements Listener {
             return;
         }
         if (slot == 51) {
-            double step = (event.isShiftClick() ? 0.5 : 0.1) * (up ? 1 : -1);
+            double step = (event.isShiftClick() ? 1.0 : 0.1) * (up ? 1 : -1);
             plugin.registry().setDamageMultiplier(type, plugin.registry().damageMultiplier(type) + step);
             click(player, up ? 1.4f : 0.9f);
             player.sendActionBar(Component.text("Dano de " + type.display() + "  ", MenuUtil.SOFT)
@@ -797,7 +900,8 @@ public final class Menus implements Listener {
             return;
         }
         if (slot == 48 || slot == 50) {
-            table.experience(table.experience() + (slot == 50 ? 100 : -100));
+            int step = event.isShiftClick() ? 1000 : 100;
+            table.experience(table.experience() + (slot == 50 ? step : -step));
             click(player, slot == 50 ? 1.4f : 0.8f);
             plugin.drops().save();
             render(event.getInventory(), player, holder);
@@ -808,6 +912,14 @@ public final class Menus implements Listener {
         if (index < 0) return;
 
         if (holder.placeMode) {
+            // Shift + click sobre un objeto de la tabla: marcarlo (o desmarcarlo) como
+            // UNICO. Va en shift a proposito: es el unico gesto que Bedrock tambien tiene.
+            if (event.isShiftClick() && table.get(index) != null) {
+                markUnique(player, table, index);
+                plugin.drops().save();
+                render(event.getInventory(), player, holder);
+                return;
+            }
             ItemStack cursor = event.getCursor();
             if (cursor != null && !cursor.getType().isAir()) {
                 // Se guarda una COPIA: el objeto del cursor sigue siendo del jugador.
@@ -831,7 +943,9 @@ public final class Menus implements Listener {
         } else {
             DropEntry entry = table.get(index);
             if (entry == null) return;
-            if (event.getClick() == ClickType.DROP || event.getClick() == ClickType.CONTROL_DROP) {
+            if (event.getClick() == ClickType.SWAP_OFFHAND || event.getClick() == ClickType.MIDDLE) {
+                markUnique(player, table, index);
+            } else if (event.getClick() == ClickType.DROP || event.getClick() == ClickType.CONTROL_DROP) {
                 table.remove(index);
                 click(player, 0.7f);
             } else if (event.isShiftClick() && event.isLeftClick()) {
@@ -864,6 +978,20 @@ public final class Menus implements Listener {
         }
         int[] next = AMOUNTS[(current + 1) % AMOUNTS.length];
         entry.amount(next[0], next[1]);
+    }
+
+    /** Marca o desmarca el UNICO de la tabla, con su sonido y su aviso. */
+    private void markUnique(Player player, DropTable table, int index) {
+        boolean marked = table.markUnique(index);
+        click(player, marked ? 1.8f : 0.8f);
+        if (marked) {
+            Compat.sound(player.getWorld(), player.getLocation(), "block.amethyst_block.resonate", 0.8f, 1.5f);
+            player.sendActionBar(Component.text("✦ ", NamedTextColor.AQUA)
+                    .append(Component.text("OBJETO UNICO", NamedTextColor.AQUA, TextDecoration.BOLD))
+                    .append(Component.text("  queda en super raro; ajusta el % si quieres", MenuUtil.SOFT)));
+        } else {
+            player.sendActionBar(Component.text("Ya no es el objeto unico.", MenuUtil.SOFT));
+        }
     }
 
     private void clickSettings(Player player, InventoryClickEvent event, Holder holder, int slot) {

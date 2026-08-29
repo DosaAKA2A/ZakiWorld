@@ -35,7 +35,7 @@ import net.ederus.edm.tienda.TiendaPlugin;
  */
 public final class EDMPlugin extends JavaPlugin {
 
-    public static final String VERSION = "1.15.0";
+    public static final String VERSION = "1.16.0";
 
     /* id del modulo -> carpeta del plugin viejo de la que se migran los datos */
     private static final Map<String, String> CARPETAS_VIEJAS = Map.of(
@@ -65,7 +65,15 @@ public final class EDMPlugin extends JavaPlugin {
         arrancar(new TiendaPlugin(this));
         arrancar(new CoinflipPlugin(this));
         arrancar(new TrollPlugin(this));
-        arrancar(new MisionesPlugin(this));
+        /* Quests es softdepend: sin el instalado, la clase del modulo de misiones
+         * ni siquiera carga (referencia TaskType de Quests) y tumbaba TODO el
+         * nucleo en el arranque. En Ederus siempre esta; esto protege cualquier
+         * otro entorno, como el servidor local de pruebas. */
+        if (getServer().getPluginManager().getPlugin("Quests") != null) {
+            arrancar(new MisionesPlugin(this));
+        } else {
+            getLogger().info("Quests no esta instalado: el modulo de misiones queda apagado.");
+        }
 
         registrarComando();
         banner();

@@ -128,8 +128,16 @@ public final class AnomalyRegistry {
         return types.get(Piromante.ID);
     }
 
+    /**
+     * El catalogo entero, ordenado por clase: primero los Monarcas, despues los
+     * Generales y al final los Esbirros. Dentro de una clase se respeta el orden de
+     * registro, que es el historico. TODO el que pinte o indexe la lista debe usar
+     * este metodo, para que el menu y los clics hablen del mismo orden.
+     */
     public List<AnomalyType> all() {
-        return new ArrayList<>(types.values());
+        List<AnomalyType> out = new ArrayList<>(types.values());
+        out.sort(java.util.Comparator.comparingInt((AnomalyType t) -> -classOf(t).rank()));
+        return out;
     }
 
     public List<AnomalyType> enabled() {
@@ -156,6 +164,53 @@ public final class AnomalyRegistry {
     }
 
     /**
+     * La clase de la anomalia (Esbirro, General o Monarca). Se guarda en config.yml
+     * en cuanto se toca desde el menu; si nunca se ha tocado vale la de diseno.
+     */
+    public AnomalyClass classOf(AnomalyType type) {
+        String raw = plugin.getConfig().getString("anomalias." + type.id() + ".clase", null);
+        return AnomalyClass.parse(raw, type.defaultClass());
+    }
+
+    public void setClass(AnomalyType type, AnomalyClass clazz) {
+        plugin.settings().set("anomalias." + type.id() + ".clase", clazz.name());
+    }
+
+    /**
+     * El punto fijo de aparicion, si el admin marco uno golpeando un bloque desde el
+     * menu. Null significa lo de siempre: el buscador elige un sitio aleatorio valido.
+     *
+     * Si el mundo guardado ya no existe se devuelve null en vez de romper: la anomalia
+     * vuelve a ser aleatoria sola y el menu lo ensena como tal.
+     */
+    public Location spawnPoint(AnomalyType type) {
+        String base = "anomalias." + type.id() + ".spawn";
+        var cfg = plugin.getConfig();
+        String worldName = cfg.getString(base + ".mundo", null);
+        if (worldName == null || worldName.isBlank()) return null;
+        org.bukkit.World world = plugin.getServer().getWorld(worldName);
+        if (world == null) return null;
+        return new Location(world, cfg.getDouble(base + ".x"), cfg.getDouble(base + ".y"), cfg.getDouble(base + ".z"));
+    }
+
+    public void setSpawnPoint(AnomalyType type, Location where) {
+        if (where == null || where.getWorld() == null) return;
+        String base = "anomalias." + type.id() + ".spawn";
+        var cfg = plugin.getConfig();
+        cfg.set(base + ".mundo", where.getWorld().getName());
+        cfg.set(base + ".x", where.getX());
+        cfg.set(base + ".y", where.getY());
+        cfg.set(base + ".z", where.getZ());
+        plugin.saveConfig();
+    }
+
+    /** Borra la marca: la anomalia vuelve a aparecer en un sitio aleatorio. */
+    public void clearSpawnPoint(AnomalyType type) {
+        plugin.getConfig().set("anomalias." + type.id() + ".spawn", null);
+        plugin.saveConfig();
+    }
+
+    /**
      * De donde viene la anomalia, que es lo que cuenta el hover del anuncio.
      *
      * Se puede reescribir entera desde config.yml sin tocar el plugin: basta con poner
@@ -178,8 +233,23 @@ public final class AnomalyRegistry {
         return plugin.getConfig().getDouble("anomalias." + type.id() + ".vida", type.baseHealth());
     }
 
+    /**
+     * Tope del ajuste de vida. Da para un x20 largo sobre el jefe mas gordo del
+     * catalogo; por encima de 1024 el exceso se cobra en reduccion de dano recibido
+     * (ver BossFight#applyHealth), asi que el numero puede crecer sin romper nada.
+     */
+    public static final double MAX_HEALTH_SETTING = 400000;
+
     public void setHealth(AnomalyType type, double value) {
-        plugin.settings().set("anomalias." + type.id() + ".vida", Math.round(Fx.clamp(value, 100, 20000)));
+        plugin.settings().set("anomalias." + type.id() + ".vida",
+                Math.round(Fx.clamp(value, 100, MAX_HEALTH_SETTING)));
+    }
+
+    /** Cuantas veces la vida original es la vida configurada. Para el menu. */
+    public double healthTimes(AnomalyType type) {
+        double base = type.baseHealth();
+        if (base <= 0) return 1;
+        return Math.round(health(type) / base * 10.0) / 10.0;
     }
 
     /**
@@ -189,13 +259,17 @@ public final class AnomalyRegistry {
      *
      * No afecta al golpe cuerpo a cuerpo normal, que es un atributo de la entidad.
      */
+    /** Tope del multiplicador de dano: hasta x20 el dano de diseno. */
+    public static final double MAX_DAMAGE_MULTIPLIER = 20.0;
+
     public double damageMultiplier(AnomalyType type) {
-        return Fx.clamp(plugin.getConfig().getDouble("anomalias." + type.id() + ".dano", 1.0), 0.1, 5.0);
+        return Fx.clamp(plugin.getConfig().getDouble("anomalias." + type.id() + ".dano", 1.0),
+                0.1, MAX_DAMAGE_MULTIPLIER);
     }
 
     public void setDamageMultiplier(AnomalyType type, double value) {
         plugin.settings().set("anomalias." + type.id() + ".dano",
-                Math.round(Fx.clamp(value, 0.1, 5.0) * 10.0) / 10.0);
+                Math.round(Fx.clamp(value, 0.1, MAX_DAMAGE_MULTIPLIER) * 10.0) / 10.0);
     }
 
     /**
@@ -207,7 +281,8 @@ public final class AnomalyRegistry {
         double base = health(type);
         double perPlayer = plugin.settings().healthPerPlayer();
         double scaled = base * (1 + perPlayer * Math.max(0, players - 1));
-        return Fx.clamp(scaled, 100, 100000);
+        // Margen por encima del tope del ajuste: el escalado por jugadores se suma.
+        return Fx.clamp(scaled, 100, MAX_HEALTH_SETTING * 5);
     }
 
     // ------------------------------------------------------- el Caballero Sepulcral

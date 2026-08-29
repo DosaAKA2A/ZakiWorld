@@ -1,12 +1,23 @@
 package net.ederus.edm.anomaly.drops;
 
+import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.format.NamedTextColor;
+import net.kyori.adventure.text.format.TextDecoration;
+import net.ederus.edm.anomaly.core.AnomalyType;
+import net.ederus.edm.anomaly.core.Compat;
+import net.ederus.edm.anomaly.core.Tags;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
+import org.bukkit.World;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.file.YamlConfiguration;
+import org.bukkit.entity.Item;
 import org.bukkit.entity.Player;
+import org.bukkit.event.EventHandler;
+import org.bukkit.event.Listener;
+import org.bukkit.event.entity.EntityPickupItemEvent;
 import org.bukkit.inventory.ItemStack;
-import org.bukkit.plugin.java.JavaPlugin;
+import org.bukkit.util.Vector;
 
 import java.io.File;
 import java.io.IOException;
@@ -22,8 +33,13 @@ import java.util.logging.Level;
  * Guarda y reparte el botin. Cada anomalia tiene su propia tabla en drops.yml,
  * y se escribe con la serializacion nativa de Bukkit para que los objetos de MMOItems
  * conserven su contenedor de datos y sigan siendo el mismo item al caer.
+ *
+ * El reparto es una EXPLOSION: al caer el jefe, todo el botin sale disparado de su
+ * cuerpo en todas direcciones, como una pinata, para que recogerlo sea parte de la
+ * pelea. Lo reservado (al mejor, a uno al azar) sale igual en la explosion pero con
+ * dueno: nadie mas puede levantarlo del suelo.
  */
-public final class DropStore {
+public final class DropStore implements Listener {
 
     private final net.ederus.edm.anomaly.AnomalyPlugin plugin;
     private final Map<String, DropTable> tables = new HashMap<>();
@@ -75,7 +91,15 @@ public final class DropStore {
                     DropEntry entry = new DropEntry(item, e.getDouble("probabilidad", 100), 1, 1, to);
                     entry.amount(e.getInt("cantidad-min", item.getAmount()), e.getInt("cantidad-max", item.getAmount()));
                     entry.chance(e.getDouble("probabilidad", 100));
+                    entry.unique(e.getBoolean("unico", false));
                     table.entries().add(entry);
+                }
+                // Por si alguien edito el yml a mano y marco dos: solo puede haber uno.
+                boolean seen = false;
+                for (DropEntry e : table.entries()) {
+                    if (!e.unique()) continue;
+                    if (seen) e.unique(false);
+                    seen = true;
                 }
             }
             tables.put(id, table);
@@ -100,6 +124,9 @@ public final class DropStore {
                 "Cada objeto se guarda tal cual, con su NBT, asi que los items de MMOItems",
                 "se pueden arrastrar directamente al menu y caen identicos.",
                 "",
+                "unico: true marca el objeto UNICO de la tabla (uno como mucho): sale",
+                "       brillando en la explosion y el chat anuncia quien se lo llevo.",
+                "",
                 "comandos: se ejecutan desde la consola. %jugador% se sustituye por el nombre.",
                 "          si el comando empieza por [mejor] solo se ejecuta para quien mas dano hizo."));
         for (DropTable table : tables.values()) {
@@ -114,6 +141,7 @@ public final class DropStore {
                 yml.set(p + ".cantidad-min", e.min());
                 yml.set(p + ".cantidad-max", e.max());
                 yml.set(p + ".para", e.to().name());
+                if (e.unique()) yml.set(p + ".unico", true);
             }
         }
         try {
@@ -125,16 +153,16 @@ public final class DropStore {
 
     // -------------------------------------------------------------------- reparto
 
-    /**
-     * Reparte la tabla entre los participantes.
-     *
-     * @param damage dano acumulado por jugador; decide quien es "el mejor" y pondera los sorteos
-     * @param where  donde tirar al suelo lo que no quepa en el inventario
-     * @return un resumen legible de lo que se dio, para el log y para el chat
-     */
     /** 36 stacks: mas que eso no es un premio, es un fallo de configuracion. */
     private static final int MAX_POR_ENTRADA = 2304;
 
+    /**
+     * Revienta la tabla de botin desde el cuerpo del jefe.
+     *
+     * @param damage dano acumulado por jugador; decide quien es "el mejor" y pondera los sorteos
+     * @param where  el punto de la explosion: donde murio el jefe
+     * @return un resumen legible de lo que cayo, para el log
+     */
     public List<String> award(String anomalyId, Map<UUID, Double> damage, Location where) {
         DropTable table = tables.get(anomalyId);
         List<String> report = new ArrayList<>();
@@ -157,6 +185,7 @@ public final class DropStore {
             }
         }
 
+        boolean anyBurst = false;
         for (DropEntry entry : table.entries()) {
             if (random.nextDouble() * 100.0 > entry.chance()) continue;
             int amount = entry.min() + (entry.max() > entry.min() ? random.nextInt(entry.max() - entry.min() + 1) : 0);
@@ -170,16 +199,23 @@ public final class DropStore {
                 amount = MAX_POR_ENTRADA;
             }
 
-            List<Player> targets = switch (entry.to()) {
-                case TODOS -> participants;
-                case MEJOR -> best == null ? List.of() : List.of(best);
-                case ALEATORIO -> List.of(weighted(participants, damage));
+            Player reserved = switch (entry.to()) {
+                case TODOS -> null;
+                case MEJOR -> best;
+                case ALEATORIO -> weighted(participants, damage);
             };
-            for (Player p : targets) {
-                if (p == null) continue;
-                give(p, entry.item(), amount, where);
-            }
-            report.add(amount + "x " + entry.item().getType() + " -> " + entry.to().name());
+            burst(where, entry, amount, reserved, anomalyId);
+            anyBurst = true;
+            report.add(amount + "x " + entry.item().getType()
+                    + (entry.unique() ? " [UNICO]" : "")
+                    + " -> " + entry.to().name()
+                    + (reserved != null ? " (" + reserved.getName() + ")" : ""));
+        }
+        if (anyBurst && where.getWorld() != null) {
+            // El estallido de la pinata: se oye y se ve que algo acaba de saltar por los aires.
+            Compat.spawn(where.getWorld(), Compat.FIREWORK, where.clone().add(0, 1.2, 0), 24, 0.4, 0.5, 0.4, 0.08);
+            Compat.sound(where.getWorld(), where, "entity.firework_rocket.large_blast", 0.9f, 0.8f);
+            Compat.sound(where.getWorld(), where, "entity.item.pickup", 0.8f, 0.6f);
         }
 
         if (table.experience() > 0) {
@@ -212,6 +248,25 @@ public final class DropStore {
         return report;
     }
 
+    /**
+     * Revienta la tabla AQUI MISMO para verla: cada objeto sale una vez con su
+     * cantidad maxima, sin duenos, sin experiencia, sin comandos y sin logros.
+     * Es la forma de comprobar como queda la explosion sin matar a nadie.
+     *
+     * @return cuantas lineas de botin se tiraron
+     */
+    public int preview(String anomalyId, Location where) {
+        DropTable table = tables.get(anomalyId);
+        if (table == null || table.entries().isEmpty() || where.getWorld() == null) return 0;
+        for (DropEntry entry : table.entries()) {
+            burst(where, entry, Math.min(entry.max(), MAX_POR_ENTRADA), null, anomalyId);
+        }
+        Compat.spawn(where.getWorld(), Compat.FIREWORK, where.clone().add(0, 1.2, 0), 24, 0.4, 0.5, 0.4, 0.08);
+        Compat.sound(where.getWorld(), where, "entity.firework_rocket.large_blast", 0.9f, 0.8f);
+        Compat.sound(where.getWorld(), where, "entity.item.pickup", 0.8f, 0.6f);
+        return table.entries().size();
+    }
+
     private Player weighted(List<Player> players, Map<UUID, Double> damage) {
         double total = 0;
         for (Player p : players) total += Math.max(1, damage.getOrDefault(p.getUniqueId(), 0.0));
@@ -223,20 +278,70 @@ public final class DropStore {
         return players.get(players.size() - 1);
     }
 
-    /** Mete el objeto en el inventario y lo que no quepa lo deja en el suelo, nunca lo pierde. */
-    private void give(Player p, ItemStack template, int amount, Location where) {
-        int left = amount;
-        int stackSize = Math.max(1, template.getType().getMaxStackSize());
-        while (left > 0) {
-            int chunk = Math.min(left, stackSize);
-            ItemStack copy = template.clone();
-            copy.setAmount(chunk);
-            Map<Integer, ItemStack> overflow = p.getInventory().addItem(copy);
-            for (ItemStack rest : overflow.values()) {
-                Location drop = p.isOnline() ? p.getLocation() : where;
-                if (drop != null && drop.getWorld() != null) drop.getWorld().dropItemNaturally(drop, rest);
+    /**
+     * Tira una linea de botin al mundo en varios montones que salen DISPARADOS en
+     * direcciones distintas. Los items van invulnerables para que el fuego o las
+     * explosiones que deje la propia pelea no se coman el premio.
+     *
+     * Un item con dueno solo lo puede recoger su dueno: la reserva se respeta aunque
+     * este tirado en mitad de la rebatinga.
+     */
+    private void burst(Location where, DropEntry entry, int amount, Player reserved, String anomalyId) {
+        World w = where.getWorld();
+        if (w == null) return;
+        Location from = where.clone().add(0, 1.0, 0);
+
+        // El UNICO cae entero, un solo objeto brillando; lo demas se parte en montones
+        // para que la explosion reparta de verdad por el suelo. Ningun monton puede
+        // superar el stack del material: un item con 400 de cantidad no es legal.
+        int stackSize = Math.max(1, entry.item().getMaxStackSize());
+        int minPiles = (amount + stackSize - 1) / stackSize;
+        int piles = entry.unique() ? Math.max(1, minPiles)
+                : Math.max(minPiles, Math.min(3 + random.nextInt(3), amount));
+        int per = amount / piles;
+        int rest = amount % piles;
+        for (int i = 0; i < piles; i++) {
+            int n = per + (i < rest ? 1 : 0);
+            if (n <= 0) continue;
+            ItemStack copy = entry.item().clone();
+            copy.setAmount(n);
+            Item it = w.dropItem(from, copy);
+            double angle = random.nextDouble() * Math.PI * 2;
+            double push = 0.12 + random.nextDouble() * 0.24;
+            it.setVelocity(new Vector(Math.cos(angle) * push,
+                    0.34 + random.nextDouble() * 0.26, Math.sin(angle) * push));
+            it.setInvulnerable(true);
+            if (reserved != null) it.setOwner(reserved.getUniqueId());
+            if (entry.unique()) {
+                it.setGlowing(true);
+                Tags.markUniqueDrop(it, anomalyId);
             }
-            left -= chunk;
+        }
+    }
+
+    /**
+     * El aviso del UNICO: cuando alguien levanta del suelo el objeto marcado, todo el
+     * servidor se entera de quien fue. Es la gracia de marcarlo.
+     */
+    @EventHandler(ignoreCancelled = true)
+    public void onPickup(EntityPickupItemEvent e) {
+        String anomalyId = Tags.uniqueDropOf(e.getItem());
+        if (anomalyId == null || !(e.getEntity() instanceof Player p)) return;
+        AnomalyType type = plugin.registry().get(anomalyId);
+        Component itemName = DropTable.nameOf(e.getItem().getItemStack());
+        Component who = Component.text("✦ ", NamedTextColor.AQUA)
+                .append(Component.text(p.getName(), NamedTextColor.WHITE, TextDecoration.BOLD))
+                .append(Component.text(" se llevo el objeto ", NamedTextColor.GRAY))
+                .append(Component.text("UNICO", NamedTextColor.AQUA, TextDecoration.BOLD))
+                .append(Component.text(" de ", NamedTextColor.GRAY))
+                .append(type == null
+                        ? Component.text(anomalyId, NamedTextColor.WHITE)
+                        : Component.text(type.display(), type.color(), TextDecoration.BOLD))
+                .append(Component.text(": ", NamedTextColor.GRAY))
+                .append(itemName.colorIfAbsent(NamedTextColor.AQUA));
+        plugin.getServer().sendMessage(who);
+        for (Player online : plugin.getServer().getOnlinePlayers()) {
+            Compat.sound(online.getWorld(), online.getLocation(), "block.amethyst_block.resonate", 0.7f, 1.4f);
         }
     }
 }

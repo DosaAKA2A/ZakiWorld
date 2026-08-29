@@ -100,10 +100,15 @@ public final class Announcer {
      */
     public Component dossier(ActiveAnomaly event) {
         AnomalyType type = event.type();
+        AnomalyClass clazz = plugin.registry().classOf(type);
         Component c = Component.text("✦ ", type.color())
                 .append(Component.text(type.display(), type.color(), TextDecoration.BOLD))
                 .append(Component.newline())
                 .append(Component.text(type.tagline(), SOFT))
+                .append(Component.newline())
+                .append(Component.text("Clase  ", DIM))
+                .append(Component.text(clazz.display().toUpperCase(java.util.Locale.ROOT),
+                        clazz.color(), TextDecoration.BOLD))
                 .append(Component.newline())
                 .append(Component.text("Elemento  ", DIM))
                 .append(Component.text(type.element().display(), type.element().color(), TextDecoration.BOLD))
@@ -142,8 +147,11 @@ public final class Announcer {
         int shown = Math.min(entries.size(), 6);
         for (int i = 0; i < shown; i++) {
             DropEntry e = entries.get(i);
-            c = c.append(Component.text("· ", LOOT))
-                    .append(DropTable.nameOf(e.item()).colorIfAbsent(LOOT))
+            c = c.append(Component.text("· ", LOOT));
+            if (e.unique()) {
+                c = c.append(Component.text("✦UNICO ", NamedTextColor.AQUA, TextDecoration.BOLD));
+            }
+            c = c.append(DropTable.nameOf(e.item()).colorIfAbsent(e.unique() ? NamedTextColor.AQUA : LOOT))
                     .append(Component.text("  x" + e.amountLabel(), TextColor.color(0xC79A3A)))
                     .append(Component.text("   " + DropTable.trimChance(e.chance()) + "%", DIM))
                     .append(Component.text("   " + e.to().display(), DIM))

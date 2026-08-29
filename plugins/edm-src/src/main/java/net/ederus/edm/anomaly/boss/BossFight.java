@@ -97,6 +97,14 @@ public abstract class BossFight {
     /** Nombre corto para los mensajes de combate. */
     public abstract String bossName();
 
+    /**
+     * En cuantas fases pelea este jefe. Tres para todo el catalogo clasico; un
+     * Monarca puede declarar cuatro y las barras, los umbrales y el menu le siguen.
+     */
+    public int phaseCount() {
+        return PhaseBars.DEFAULT_PHASES;
+    }
+
     // --------------------------------------------------------------------- estado
 
     public LivingEntity entity() {
@@ -173,7 +181,7 @@ public abstract class BossFight {
         tickAirTime();
         tickShell();
 
-        int newPhase = PhaseBars.currentPhase(healthFraction());
+        int newPhase = PhaseBars.currentPhase(healthFraction(), phaseCount());
         if (newPhase != phase) {
             int old = phase;
             phase = newPhase;

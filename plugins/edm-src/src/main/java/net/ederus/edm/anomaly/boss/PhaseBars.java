@@ -13,17 +13,22 @@ import java.util.HashSet;
 import java.util.Set;
 
 /**
- * Las tres barras de vida del jefe, una por fase y un tercio de vida cada una.
+ * Las barras de vida del jefe, una por fase y una fraccion igual de vida cada una.
  *
  * Se enseñan de una en una: cuando la de la fase en curso se agota, desaparece y sale
- * la siguiente. Es a proposito que no se vean las tres a la vez, ni siquiera para
+ * la siguiente. Es a proposito que no se vean todas a la vez, ni siquiera para
  * "avisar" de cuanto queda; asi cada fase nueva es una sorpresa.
+ *
+ * Casi todos los jefes pelean a tres fases; un Monarca puede pedir cuatro
+ * (BossFight#phaseCount) y aqui simplemente salen cuatro barras.
  */
 public final class PhaseBars {
 
-    public static final int PHASES = 3;
+    /** Lo normal del catalogo. Quien no diga otra cosa pelea a tres fases. */
+    public static final int DEFAULT_PHASES = 3;
 
-    private final BossBar[] bars = new BossBar[PHASES];
+    private final int phases;
+    private final BossBar[] bars;
     /** Indice de la unica barra visible ahora mismo; -1 mientras no se ha mostrado ninguna. */
     private int shown = -1;
     private final Set<Player> viewers = new HashSet<>();
@@ -31,9 +36,15 @@ public final class PhaseBars {
     private final TextColor accent;
 
     public PhaseBars(String bossName, TextColor accent) {
+        this(bossName, accent, DEFAULT_PHASES);
+    }
+
+    public PhaseBars(String bossName, TextColor accent, int phases) {
         this.bossName = bossName;
         this.accent = accent;
-        for (int i = 0; i < PHASES; i++) {
+        this.phases = Math.max(1, Math.min(4, phases));
+        this.bars = new BossBar[this.phases];
+        for (int i = 0; i < this.phases; i++) {
             bars[i] = BossBar.bossBar(title(i), 1.0f, colorFor(i), overlayFor(i));
         }
     }
@@ -42,7 +53,8 @@ public final class PhaseBars {
         return switch (index) {
             case 0 -> BossBar.Color.WHITE;
             case 1 -> BossBar.Color.YELLOW;
-            default -> BossBar.Color.RED;
+            case 2 -> BossBar.Color.RED;
+            default -> BossBar.Color.PURPLE;
         };
     }
 
@@ -50,7 +62,8 @@ public final class PhaseBars {
         return switch (index) {
             case 0 -> BossBar.Overlay.NOTCHED_6;
             case 1 -> BossBar.Overlay.NOTCHED_10;
-            default -> BossBar.Overlay.NOTCHED_20;
+            case 2 -> BossBar.Overlay.NOTCHED_20;
+            default -> BossBar.Overlay.PROGRESS;
         };
     }
 
@@ -58,7 +71,8 @@ public final class PhaseBars {
         return switch (index) {
             case 0 -> "I";
             case 1 -> "II";
-            default -> "III";
+            case 2 -> "III";
+            default -> "IV";
         };
     }
 
@@ -66,31 +80,32 @@ public final class PhaseBars {
         TextColor phaseColor = switch (index) {
             case 0 -> NamedTextColor.WHITE;
             case 1 -> NamedTextColor.GOLD;
-            default -> NamedTextColor.RED;
+            case 2 -> NamedTextColor.RED;
+            default -> NamedTextColor.LIGHT_PURPLE;
         };
         Component name = Component.text(bossName, accent, TextDecoration.BOLD);
         Component phase = Component.text("FASE " + roman(index), phaseColor);
         Component sep = Component.text("  ·  ", TextColor.color(0x555555));
         return Component.text("✦ ", accent).append(name).append(sep).append(phase)
-                .append(Component.text(" de III", TextColor.color(0x555555)));
+                .append(Component.text(" de " + roman(phases - 1), TextColor.color(0x555555)));
     }
 
     /**
      * @param fraction vida restante del jefe entre 0 y 1
-     * @return la fase actual, de 1 a 3
+     * @return la fase actual, de 1 al numero de fases
      */
     public int update(double fraction) {
         double f = Fx.clamp(fraction, 0, 1);
-        int current = currentPhase(f);
+        int current = currentPhase(f, phases);
         int index = current - 1;
 
-        float progress = (float) Fx.clamp((f - (PHASES - 1 - index) / (double) PHASES) * PHASES, 0, 1);
+        float progress = (float) Fx.clamp((f - (phases - 1 - index) / (double) phases) * phases, 0, 1);
         bars[index].progress(progress);
         bars[index].name(title(index));
 
         // Solo se enseña la barra de la fase en curso. Cuando se agota, esa desaparece
         // y aparece la siguiente debajo: es la sensacion de "otra barra mas" que se pidio,
-        // y ademas no revela de entrada que quedan tres.
+        // y ademas no revela de entrada cuantas quedan.
         if (index != shown) {
             for (Player p : viewers) swapTo(p, index);
             shown = index;
@@ -98,16 +113,22 @@ public final class PhaseBars {
         return current;
     }
 
-    public static int currentPhase(double fraction) {
+    /** La fase que toca con esa fraccion de vida, para un jefe de N fases. */
+    public static int currentPhase(double fraction, int phases) {
         double f = Fx.clamp(fraction, 0, 1);
-        if (f > 2.0 / 3.0) return 1;
-        if (f > 1.0 / 3.0) return 2;
-        return 3;
+        int idx = (int) Math.floor((1.0 - f) * phases);
+        if (idx >= phases) idx = phases - 1;
+        return idx + 1;
+    }
+
+    /** Version a tres fases, que es la del catalogo entero salvo excepcion. */
+    public static int currentPhase(double fraction) {
+        return currentPhase(fraction, DEFAULT_PHASES);
     }
 
     /** Quita la barra que se acaba de agotar y saca la de la fase nueva. */
     private void swapTo(Player p, int index) {
-        for (int i = 0; i < PHASES; i++) {
+        for (int i = 0; i < bars.length; i++) {
             if (i != index) p.hideBossBar(bars[i]);
         }
         p.showBossBar(bars[index]);
@@ -116,7 +137,7 @@ public final class PhaseBars {
     /** Un destello blanco en la barra que se acaba de romper, antes de retirarla. */
     public void flash(int phase) {
         int index = phase - 1;
-        if (index < 0 || index >= PHASES) return;
+        if (index < 0 || index >= bars.length) return;
         bars[index].color(BossBar.Color.WHITE);
         bars[index].name(Component.text("✦ ", NamedTextColor.WHITE)
                 .append(Component.text("ARMADURA ROTA", NamedTextColor.WHITE, TextDecoration.BOLD)));

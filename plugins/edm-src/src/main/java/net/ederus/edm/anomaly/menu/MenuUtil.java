@@ -156,6 +156,7 @@ public final class MenuUtil {
             case 1 -> "I";
             case 2 -> "II";
             case 3 -> "III";
+            case 4 -> "IV";
             default -> "todas";
         };
     }
@@ -165,6 +166,7 @@ public final class MenuUtil {
             case 1 -> NamedTextColor.WHITE;
             case 2 -> GOLD;
             case 3 -> NamedTextColor.RED;
+            case 4 -> NamedTextColor.LIGHT_PURPLE;
             default -> NamedTextColor.AQUA;
         };
     }
