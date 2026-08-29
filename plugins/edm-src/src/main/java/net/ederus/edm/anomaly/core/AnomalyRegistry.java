@@ -395,17 +395,17 @@ public final class AnomalyRegistry {
                 icon("SADDLE"), f -> knight(f).ridersCall());
 
         // --- Fase II: a pie
-        add(list, "estocada_fantasma", "Estocada Fantasma", 2, 170, 45, 5,
-                "Se teletransporta a la espalda del mas lejano y suelta una estocada.",
+        add(list, "estocada_fantasma", "Estocadas Fantasma", 2, 220, 105, 5,
+                "Se teletransporta a la espalda de hasta tres, uno tras otro, y estoca a cada uno.",
                 icon("ENDER_PEARL"), f -> knight(f).phantomThrust());
         add(list, "tajo_descendente", "Tajo Descendente", 2, 240, 80, 4,
                 "Parte el suelo en linea recta con un tajo de arriba abajo.",
                 icon("CRACKED_DEEPSLATE_BRICKS", "DEEPSLATE"), f -> knight(f).overheadCleave());
-        add(list, "cadena_hueso", "Cadena de Hueso", 2, 210, 55, 3,
-                "Engancha al que mas se aleja y lo arrastra de vuelta al centro.",
+        add(list, "cadena_hueso", "Cadenas de Hueso", 2, 210, 55, 3,
+                "Engancha a los tres que mas se alejan y los arrastra de vuelta al centro.",
                 icon("CHAIN"), f -> knight(f).boneChain());
         add(list, "juramento_roto", "Juramento Roto", 2, 400, 140, 3,
-                "Marca a alguien: si se aleja mas de 16 bloques en 7 s, recibe un golpe brutal.",
+                "Marca hasta a tres: quien se aleje mas de 16 bloques en 7 s recibe un golpe brutal.",
                 icon("WRITABLE_BOOK", "BOOK"), f -> knight(f).brokenOath());
         add(list, "circulo_osario", "Circulo de Osario", 2, 480, 120, 2,
                 "Un cerco de hueso que se cierra de 18 a 7 bloques; fuera se pierde vida.",
@@ -555,7 +555,7 @@ public final class AnomalyRegistry {
                 "Baja el resto del rebano y embiste con ella.",
                 icon("GOAT_SPAWN_EGG", "WHITE_WOOL"), f -> goat(f).herd());
         add(list, "cornada", "Cornada Ascendente", 2, 200, 40, 4,
-                "Engancha al mas cercano con el cuerno y lo manda por los aires.",
+                "Engancha con el cuerno a los que tenga pegados y los manda por los aires.",
                 icon("GOAT_HORN", "BONE"), f -> goat(f).upwardGore());
         add(list, "pelaje_blanco", "Pelaje Blanco", 2, 420, 140, 3,
                 "Arde en blanco: aguanta mucho mas y grita cada dos segundos.",
@@ -682,8 +682,8 @@ public final class AnomalyRegistry {
         add(list, "camada", "Camada", 1, 200, 30, 4,
                 "Se parte en tres de golpe, sin necesidad de morder a nadie.",
                 icon("RABBIT_HIDE", "WHITE_WOOL"), f -> bunny(f).litter());
-        add(list, "salto_asesino", "Salto Asesino", 1, 170, 60, 5,
-                "Se lanza sobre alguien desde arriba y cae encima.",
+        add(list, "salto_asesino", "Salto Asesino", 1, 220, 125, 5,
+                "Dos saltos desde arriba, cada uno sobre un jugador distinto.",
                 icon("RABBIT_FOOT", "FEATHER"), f -> bunny(f).killerLeap());
         add(list, "madriguera", "Madriguera", 1, 260, 70, 3,
                 "Se hunde en el suelo y sale al lado del que mas se ha alejado.",
@@ -697,13 +697,13 @@ public final class AnomalyRegistry {
 
         // --- Fase II: la marea
         add(list, "enjambre", "Enjambre", 2, 260, 70, 4,
-                "Todas las copias se lanzan a la vez sobre el mismo jugador.",
+                "La horda se reparte: cada copia se lanza a por un jugador distinto.",
                 icon("BEEHIVE", "HONEYCOMB"), f -> bunny(f).swarm());
         add(list, "frenesi", "Frenesi", 2, 340, 120, 3,
                 "El conejo y todas sus copias se vuelven mucho mas rapidos.",
                 icon("SUGAR", "REDSTONE"), f -> bunny(f).frenzy());
         add(list, "mordisco_profundo", "Mordisco Profundo", 2, 200, 45, 4,
-                "Un bocado que sigue sangrando seis segundos.",
+                "Dentelladas a los tres mas cercanos; cada una sangra seis segundos.",
                 icon("RABBIT", "BEEF"), f -> bunny(f).deepBite());
         add(list, "campo_madrigueras", "Campo de Madrigueras", 2, 380, 160, 3,
                 "Nueve agujeros por la arena; pisar uno duele y frena.",
@@ -837,8 +837,8 @@ public final class AnomalyRegistry {
         add(list, "chillido", "Chillido del Temporal", 1, 170, 70, 5,
                 "Un grito desde arriba: cinco ondas que empujan y dejan sin vista.",
                 icon("PHANTOM_MEMBRANE", "ECHO_SHARD"), f -> rider(f).stormShriek());
-        add(list, "picado", "Picado", 1, 240, 80, 4,
-                "Se lanza en vertical sobre una marca y vuelve a subir.",
+        add(list, "picado", "Picado", 1, 260, 170, 4,
+                "Dos picados seguidos, cada uno sobre un jugador distinto.",
                 icon("PHANTOM_MEMBRANE", "FEATHER"), f -> rider(f).divebomb());
         add(list, "ojo_huracan", "Ojo del Huracan", 1, 380, 140, 3,
                 "Un remolino que arrastra a todos hacia el centro durante siete segundos.",
@@ -858,7 +858,7 @@ public final class AnomalyRegistry {
                 "Una ola que sale de el y barre once bloques a la redonda.",
                 icon("WATER_BUCKET", "PRISMARINE_SHARD"), f -> rider(f).tidalWave());
         add(list, "ancla", "Ancla de Tormenta", 2, 220, 50, 4,
-                "Arponea al que mas se aleja y lo trae de vuelta.",
+                "Arponea a los dos que mas se alejan y los trae de vuelta.",
                 icon("CHAIN", "IRON_INGOT"), f -> rider(f).stormAnchor());
         add(list, "carga_marea", "Carga de Marea", 2, 230, 60, 4,
                 "Embiste en linea recta con el tridente por delante.",
@@ -880,7 +880,7 @@ public final class AnomalyRegistry {
 
         // --- Cualquier fase
         add(list, "relampago_guia", "Relampago Guia", 0, 300, 70, 3,
-                "Marca a uno y le cae el rayo donde este seis segundos despues.",
+                "Marca a tres y a cada uno le cae el rayo donde este seis segundos despues.",
                 icon("TARGET", "REDSTONE"), f -> rider(f).guidingBolt());
 
         return list;
@@ -979,7 +979,7 @@ public final class AnomalyRegistry {
         List<Ability> list = new ArrayList<>();
 
         add(list, "haz_abisal", "Haz Abisal", 1, 170, 60, 5,
-                "El rayo de guardian, cargado y con dos segundos de aviso.",
+                "Tres rayos de guardian a la vez, cargados y con dos segundos de aviso.",
                 icon("PRISMARINE_CRYSTALS", "GLOWSTONE_DUST"), f -> leviathan(f).abyssalBeam());
         add(list, "coro_espinas", "Coro de Espinas", 1, 220, 90, 4,
                 "El fondo se eriza de espinas de prismarina en anillos.",
@@ -1123,7 +1123,7 @@ public final class AnomalyRegistry {
                 "Baraja el orden sin rehacer los cantores: hay que volver a mirar las luces.",
                 icon("AMETHYST_SHARD", "QUARTZ"), f -> choir(f).reorder());
         add(list, "haz_nucleo", "Haz del Nucleo", 1, 190, 55, 5,
-                "Un rayo largo desde el centro, con aviso.",
+                "El rayo del centro se parte en dos, cada mitad a un jugador.",
                 icon("SEA_LANTERN", "GLOWSTONE"), f -> choir(f).coreBeam());
         add(list, "pulso_armonico", "Pulso Armonico", 1, 220, 60, 4,
                 "Un anillo de luz que se expande dieciseis bloques.",
@@ -1266,7 +1266,7 @@ public final class AnomalyRegistry {
                 "Apaga la vista de todo el que este cerca.",
                 icon("BLACK_DYE", "INK_SAC"), f -> darkness(f).veil());
         add(list, "parpadeo", "Parpadeo", 1, 200, 80, 5,
-                "Aparece detras de uno, pega y desaparece. Tres veces seguidas.",
+                "Tres apariciones por la espalda, cada una a un jugador distinto.",
                 icon("ENDER_PEARL", "CHORUS_FRUIT"), f -> darkness(f).blink());
         add(list, "mirada", "La Mirada", 1, 340, 160, 3,
                 "Fija a uno y lo castiga cada vez que le da la espalda.",
@@ -1276,7 +1276,7 @@ public final class AnomalyRegistry {
                 icon("OBSIDIAN", "BLACK_CONCRETE"), f -> darkness(f).blackPulse());
 
         add(list, "agarre_sombrio", "Agarre Sombrio", 2, 240, 70, 4,
-                "Una mano de vacio que arrastra al que mas se aleja.",
+                "Dos manos de vacio que arrastran a los que mas se alejan.",
                 icon("CHAIN", "STRING"), f -> darkness(f).shadowGrasp());
         add(list, "lluvia_vacio", "Lluvia del Vacio", 2, 320, 150, 4,
                 "Motas negras que caen sobre marcas que te persiguen.",
@@ -1413,8 +1413,8 @@ public final class AnomalyRegistry {
                 "Una liana que barre catorce bloques, arrastra y amarra.",
                 icon("VINE", "TWISTING_VINES"), f -> herbola(f).vineWhip());
 
-        add(list, "picado_loro", "Picado del Loro", 2, 200, 80, 5,
-                "El loro toma altura, se tira encima y te deja amarrado al suelo.",
+        add(list, "picado_loro", "Picado del Loro", 2, 260, 170, 5,
+                "El loro encadena dos picados sobre jugadores distintos y los amarra al suelo.",
                 icon("FEATHER", "RED_DYE"), f -> herbola(f).parrotDive());
         add(list, "zarzal", "Zarzal", 2, 380, 140, 3,
                 "Un cerco de espinos que se cierra; fuera del claro se pierde vida.",
@@ -1553,7 +1553,7 @@ public final class AnomalyRegistry {
                 "De la cola se descuelgan viboras que muerden con veneno.",
                 icon("CAVE_SPIDER_SPAWN_EGG", "SPIDER_EYE"), f -> quimera(f).viperNest());
         add(list, "escupitajo", "Escupitajo Venenoso", 1, 200, 50, 4,
-                "La cola escupe veneno a distancia.",
+                "La cola escupe veneno a tres jugadores distintos.",
                 icon("SPIDER_EYE", "SLIME_BALL"), f -> quimera(f).venomSpit());
 
         // --- Fase II: la cabra rabiosa
@@ -1564,7 +1564,7 @@ public final class AnomalyRegistry {
                 "Las tres cabezas pegan seguidas a lo que tenga delante.",
                 icon("FLINT", "IRON_SWORD"), f -> quimera(f).tripleMaul());
         add(list, "cornada", "Cornada Ascendente", 2, 200, 25, 4,
-                "Engancha al mas cercano con el cuerno y lo manda por los aires.",
+                "Engancha con el cuerno a los que tenga pegados y los manda por los aires.",
                 icon("GOAT_HORN", "BONE"), f -> quimera(f).upwardGore());
         add(list, "lluvia_colmillos", "Lluvia de Colmillos", 2, 260, 50, 4,
                 "Colmillos de piedra que brotan del suelo bajo cada uno.",
@@ -1689,7 +1689,7 @@ public final class AnomalyRegistry {
                 "El caldero rebosa y deja charcos de brebaje que queman al pisarlos.",
                 icon("CAULDRON", "BUCKET"), f -> bruja(f).boilingCauldron());
         add(list, "maleficio", "Maleficio", 1, 340, 160, 3,
-                "Le echa el mal de ojo a uno y lo va royendo ocho segundos.",
+                "Mal de ojo a tres a la vez; los va royendo ocho segundos.",
                 icon("FERMENTED_SPIDER_EYE", "SPIDER_EYE"), f -> bruja(f).hex());
         add(list, "canto_sapo", "Canto del Sapo", 1, 400, 120, 3,
                 "El sapo le croa desde el hombro: regeneracion y resistencia.",
@@ -1705,8 +1705,8 @@ public final class AnomalyRegistry {
         add(list, "salto_sapo", "Salto del Sapo", 2, 240, 60, 5,
                 "El Sapo de Guerra toma carrerilla y se lanza sobre una marca.",
                 icon("SLIME_BLOCK", "SLIME_BALL"), f -> bruja(f).toadSlam());
-        add(list, "lengua_latigo", "Lengua Latigo", 2, 260, 50, 4,
-                "La lengua del sapo engancha al que mas se aleja y lo trae.",
+        add(list, "lengua_latigo", "Lengua Latigo", 2, 260, 100, 4,
+                "La lengua engancha uno tras otro a los dos que mas se alejan.",
                 icon("LEAD", "STRING"), f -> bruja(f).tongueWhip());
         add(list, "lluvia_sapos", "Lluvia de Sapos", 2, 320, 90, 3,
                 "Sapos pequenos que caen del cielo y revientan en veneno.",
@@ -1867,13 +1867,13 @@ public final class AnomalyRegistry {
 
         // --- Fase III: el robo de rostro
         add(list, "tajo_ladron", "Tajo Ladron", 3, 160, 30, 5,
-                "Se lanza, corta y te roba la prisa: tu velocidad ahora es suya.",
+                "Se lanza y el corte roba la prisa de todos los que pille en el tajo.",
                 icon("IRON_SWORD", "STONE_SWORD"), f -> mimic(f).thiefSlash());
         add(list, "sombra_del_otro", "Sombra del Otro", 3, 240, 40, 4,
                 "Aparece detras del jugador al que copio y descarga.",
                 icon("ENDER_PEARL", "ENDER_EYE"), f -> mimic(f).othersShadow());
         add(list, "frenesi_carnicero", "Frenesi Carnicero", 3, 260, 60, 4,
-                "Una tanda de golpes rapidisimos; desatado, casi el doble.",
+                "Una tanda que barre a todos los que tenga pegados; desatado, casi el doble.",
                 icon("IRON_AXE", "STONE_AXE"), f -> mimic(f).butcherFrenzy());
         add(list, "salto_carnicero", "Salto Carnicero", 3, 300, 60, 4,
                 "Salta muy alto y cae de lleno sobre la marca.",
@@ -2004,7 +2004,7 @@ public final class AnomalyRegistry {
                 "Cruza la arena tan rapido que deja estela, y se lleva por delante a quien pille.",
                 icon("FEATHER", "SUGAR"), f -> rabby(f).ghostRun());
         add(list, "batazo", "Batazo", 1, 200, 30, 5,
-                "Manda a uno al cielo de un golpe, como quien saca un home run.",
+                "Un solo swing que manda al cielo a todos los que pille en el arco.",
                 icon("MACE", "STICK"), f -> rabby(f).homeRun());
         add(list, "pisoton_sonico", "Pisoton Sonico", 1, 260, 70, 4,
                 "Salta muy alto y revienta el suelo; la onda saca volando a todos.",
@@ -2021,7 +2021,7 @@ public final class AnomalyRegistry {
                 "Se teletransporta a la espalda de cuatro y pega en cada parada.",
                 icon("ENDER_PEARL", "CHORUS_FRUIT"), f -> rabby(f).blinkHarass());
         add(list, "puno_cometa", "Puño Cometa", 2, 280, 80, 4,
-                "Sube hasta perderse y cae de puño sobre la marca.",
+                "Sube hasta perderse y cae de puño donde mas gente hay junta.",
                 icon("FIRE_CHARGE", "MAGMA_CREAM"), f -> rabby(f).cometFist());
         add(list, "patada_giratoria", "Patada Giratoria", 2, 200, 30, 4,
                 "Gira sobre si mismo y saca de la arena todo lo que tenga cerca.",
@@ -2147,7 +2147,7 @@ public final class AnomalyRegistry {
 
         // --- Fase I: el acecho
         add(list, "andanada_ballesta", "Andanada de Ballesta", 1, 90, 32, 6,
-                "Tres saetas seguidas a quien tenga a tiro.",
+                "Seis saetas repartidas entre todos los que tenga a tiro.",
                 icon("CROSSBOW", "BOW"), f -> cazador(f).crossbowVolley());
         add(list, "lluvia_flechas", "Lluvia de Flechas", 1, 150, 55, 5,
                 "Apunta al cielo y caen sobre las marcas.",
@@ -2182,7 +2182,7 @@ public final class AnomalyRegistry {
                 "Cambia al hacha y parte el suelo en linea recta.",
                 icon("NETHERITE_AXE", "IRON_AXE"), f -> cazador(f).axeCleave());
         add(list, "danza_espada", "Danza de Espada", 3, 120, 35, 5,
-                "Saca la espada y suelta una tanda rapida al que tenga delante.",
+                "Saca la espada y la tanda barre a todos los que tenga pegados.",
                 icon("NETHERITE_SWORD", "IRON_SWORD"), f -> cazador(f).bladeDance());
 
         // --- Cualquier fase
@@ -2286,7 +2286,7 @@ public final class AnomalyRegistry {
         List<Ability> list = new ArrayList<>();
 
         add(list, "camada", "Camada", 1, 220, 30, 5,
-                "Doce crias diminutas de golpe, corriendo mas de lo que se puede retroceder.",
+                "Doce crias de golpe, de varios tamanos, corriendo mas de lo que se puede retroceder.",
                 icon("SPIDER_SPAWN_EGG", "STRING"), f -> aragon(f).spawnBrood());
         add(list, "puesta", "Puesta", 1, 320, 40, 4,
                 "Pone huevos por la arena. Si no se rompen, eclosionan.",
@@ -2295,7 +2295,7 @@ public final class AnomalyRegistry {
                 "Teje una maraña de telaraña alrededor de cada uno.",
                 icon("COBWEB", "STRING"), f -> aragon(f).weave());
         add(list, "hilo", "Hilo", 1, 200, 55, 4,
-                "Engancha al que mas se aleja y lo arrastra hacia ella.",
+                "Dos hilos a la vez: los que mas se alejan vuelven arrastrados.",
                 icon("STRING", "LEAD"), f -> aragon(f).webPull());
 
         add(list, "guardianas", "Guardianas", 2, 400, 30, 3,
@@ -2412,7 +2412,7 @@ public final class AnomalyRegistry {
 
         // --- Fase I: la chispa
         add(list, "bola_fuego", "Bola de Fuego", 1, 170, 40, 5,
-                "La clasica, cargada y con aviso.",
+                "Hasta tres bolas a la vez, una por cabeza, cargadas y con aviso.",
                 icon("FIRE_CHARGE", "BLAZE_POWDER"), f -> piromante(f).fireball());
         add(list, "andanada_brasas", "Andanada de Brasas", 1, 200, 35, 5,
                 "Seis bolas pequenas en abanico.",
@@ -2451,7 +2451,7 @@ public final class AnomalyRegistry {
 
         // --- Cualquier fase
         add(list, "marca_ardiente", "Marca Ardiente", 0, 280, 95, 3,
-                "Te pone una marca encima que estalla donde estes.",
+                "Marca a TODOS a la vez; cada marca estalla donde este su dueno.",
                 icon("TARGET", "FIRE_CHARGE"), f -> piromante(f).burningMark());
 
         return list;

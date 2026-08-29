@@ -491,8 +491,20 @@ public final class StormRider extends BossFight {
 
     /** 2. Picado: se lanza en vertical sobre alguien y vuelve a subir. */
     public void divebomb() {
-        Player target = randomTarget();
-        if (target == null || !alive() || grounded) return;
+        if (!alive() || grounded) return;
+        // Dos picados seguidos sobre jugadores distintos: el segundo cae donde
+        // nadie lo espera, que es la gracia de un ave de tormenta.
+        List<Player> marks = pickTargets(2);
+        if (marks.isEmpty()) return;
+        diveOn(marks.get(0));
+        if (marks.size() > 1) {
+            later(85, () -> diveOn(marks.get(1)));
+        }
+    }
+
+    /** Un picado: la marca en el suelo, la caida y la subida. */
+    private void diveOn(Player target) {
+        if (target == null || !alive() || grounded || !Fx.isFightable(target)) return;
         Location mark = Fx.ground(target.getLocation(), 4);
 
         soundAt(loc(), "entity.phantom.swoop", 1.6f, 0.7f);
@@ -666,11 +678,19 @@ public final class StormRider extends BossFight {
 
     /** 9. Ancla de Tormenta: arponea al mas lejano y lo trae de vuelta. */
     public void stormAnchor() {
-        Player target = Fx.farthest(loc(), plugin.settings().participationRadius());
-        if (target == null || !alive()) return;
-        if (target.getLocation().distanceSquared(loc()) < 36) return;
+        if (!alive()) return;
+        // Dos arpones a la vez: huir en pareja tampoco funciona.
+        boolean any = false;
+        for (Player target : farthestTargets(2)) {
+            if (target.getLocation().distanceSquared(loc()) < 36) continue;
+            if (!any) soundAt(loc(), "item.trident.throw", 1.5f, 0.7f);
+            any = true;
+            harpoon(target);
+        }
+    }
 
-        soundAt(loc(), "item.trident.throw", 1.5f, 0.7f);
+    /** Un arpon: el sedal de agua, el tiron periodico y el golpe al llegar. */
+    private void harpoon(Player target) {
         target.sendActionBar(Component.text("Te ha arponeado.", NamedTextColor.RED, TextDecoration.BOLD));
 
         animate(50, tick -> {
@@ -868,8 +888,15 @@ public final class StormRider extends BossFight {
 
     /** 15. Relampago Guia: marca a uno y le cae el rayo donde este. */
     public void guidingBolt() {
-        Player target = randomTarget();
-        if (target == null || !alive()) return;
+        if (!alive()) return;
+        // El cielo elige a TRES: cada uno con su rayo guiado encima.
+        for (Player target : pickTargets(3)) {
+            boltOn(target);
+        }
+    }
+
+    /** Un rayo guiado: la columna que te sigue y el impacto del final. */
+    private void boltOn(Player target) {
         soundAt(target.getLocation(), "block.beacon.power_select", 1.2f, 1.7f);
         target.sendActionBar(Component.text("El cielo te ha elegido.", NamedTextColor.RED, TextDecoration.BOLD));
 

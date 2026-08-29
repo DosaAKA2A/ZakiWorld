@@ -796,8 +796,20 @@ public final class Herbola extends BossFight {
     /** 7. Picado del Loro: el loro se tira encima y te deja amarrado. Fase 2. */
     public void parrotDive() {
         if (!alive() || !parrotFreed || parrot == null || !parrot.isValid()) return;
-        Player target = randomTarget();
-        if (target == null) return;
+        // Dos picados seguidos, cada uno sobre un jugador distinto: el loro no
+        // se conforma con amarrar a uno solo.
+        List<Player> marks = pickTargets(2);
+        if (marks.isEmpty()) return;
+        diveOn(marks.get(0));
+        if (marks.size() > 1) {
+            later(88, () -> diveOn(marks.get(1)));
+        }
+    }
+
+    /** Un picado del loro: sube, marca, cae y amarra si acierta. */
+    private void diveOn(Player target) {
+        if (!alive() || !parrotFreed || parrot == null || !parrot.isValid()) return;
+        if (target == null || !Fx.isFightable(target)) return;
 
         soundAt(parrot.getLocation(), "entity.parrot.fly", 1.5f, 0.9f);
         broadcastNear(Component.text("El loro se lanza.", ACCENT));

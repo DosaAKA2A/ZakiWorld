@@ -345,6 +345,36 @@ public abstract class BossFight {
         return list.isEmpty() ? null : list.get(random.nextInt(list.size()));
     }
 
+    /*
+     * Los tres repartidores de objetivos. Contra un grupo grande, una habilidad a un
+     * solo jugador se diluye hasta desaparecer; estas devuelven VARIOS para que el
+     * golpe se reparta. Devuelven menos si no hay tantos, y nunca repiten jugador.
+     */
+
+    /** Hasta n jugadores distintos al azar. */
+    public List<Player> pickTargets(int n) {
+        List<Player> pool = targets();
+        java.util.Collections.shuffle(pool, random);
+        return pool.subList(0, Math.min(n, pool.size()));
+    }
+
+    /** Hasta n jugadores, los mas cercanos al jefe primero. */
+    public List<Player> nearestTargets(int n) {
+        List<Player> pool = targets();
+        Location at = loc();
+        pool.sort(java.util.Comparator.comparingDouble(p -> p.getLocation().distanceSquared(at)));
+        return pool.subList(0, Math.min(n, pool.size()));
+    }
+
+    /** Hasta n jugadores, los que MAS lejos estan primero: los que intentan escaparse. */
+    public List<Player> farthestTargets(int n) {
+        List<Player> pool = targets();
+        Location at = loc();
+        pool.sort(java.util.Comparator.comparingDouble(
+                (Player p) -> p.getLocation().distanceSquared(at)).reversed());
+        return pool.subList(0, Math.min(n, pool.size()));
+    }
+
     public void sound(String key, float volume, float pitch) {
         Compat.sound(world(), loc(), key, volume, pitch);
     }

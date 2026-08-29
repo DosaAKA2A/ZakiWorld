@@ -741,13 +741,14 @@ public final class Quimera extends BossFight {
     /** 5. Escupitajo Venenoso: la cola escupe veneno a distancia. */
     public void venomSpit() {
         if (!alive()) return;
-        List<Player> victims = targets(30);
+        // Tres escupitajos y cada uno a un jugador DISTINTO: repartidos de verdad.
+        List<Player> victims = pickTargets(3);
         if (victims.isEmpty()) return;
         soundAt(loc(), "entity.llama.spit", 1.5f, 0.5f);
         broadcastNear(Component.text("La cola escupe.", ACCENT));
 
-        for (int i = 0; i < 3; i++) {
-            Player victim = victims.get(random.nextInt(victims.size()));
+        for (int i = 0; i < victims.size(); i++) {
+            Player victim = victims.get(i);
             later(10 + i * 8, () -> {
                 if (!alive() || !Fx.isFightable(victim)) return;
                 Location head = snakeHead();
@@ -825,17 +826,21 @@ public final class Quimera extends BossFight {
         }
     }
 
-    /** 8. Cornada Ascendente: engancha al mas cercano y lo manda por los aires. */
+    /** 8. Cornada Ascendente: engancha a los que tenga pegados y los manda por los aires. */
     public void upwardGore() {
-        Player target = Fx.nearest(loc(), 5);
-        if (target == null || !alive()) return;
-        soundAt(loc(), "entity.goat.ram_impact", 1.6f, 0.7f);
-        hit(target, 13 * damageBonus);
-        push(target, new Vector(0, 1.15, 0));
-        Compat.spawn(world(), Compat.SMALL_GUST, target.getLocation(), 6, 0.3, 0.2, 0.3, 0);
-        Compat.spawn(world(), Compat.CRIT, target.getLocation().add(0, 1, 0), 20, 0.3, 0.4, 0.3, 0.3);
-        target.sendActionBar(Component.text("Te ha enganchado con el cuerno.",
-                NamedTextColor.RED, TextDecoration.BOLD));
+        if (!alive()) return;
+        boolean any = false;
+        for (Player target : nearestTargets(3)) {
+            if (target.getLocation().distanceSquared(loc()) > 25) continue;
+            any = true;
+            hit(target, 13 * damageBonus);
+            push(target, new Vector(0, 1.15, 0));
+            Compat.spawn(world(), Compat.SMALL_GUST, target.getLocation(), 6, 0.3, 0.2, 0.3, 0);
+            Compat.spawn(world(), Compat.CRIT, target.getLocation().add(0, 1, 0), 20, 0.3, 0.4, 0.3, 0.3);
+            target.sendActionBar(Component.text("Te ha enganchado con el cuerno.",
+                    NamedTextColor.RED, TextDecoration.BOLD));
+        }
+        if (any) soundAt(loc(), "entity.goat.ram_impact", 1.6f, 0.7f);
     }
 
     /** 9. Lluvia de Colmillos: colmillos de piedra que brotan bajo cada uno. */

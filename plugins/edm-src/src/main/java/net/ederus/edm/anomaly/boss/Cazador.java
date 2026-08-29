@@ -830,12 +830,13 @@ public final class Cazador extends BossFight {
         for (int i = 0; i < 6; i++) {
             later(i * 6, () -> {
                 if (!alive()) return;
-                Player near = Fx.nearest(boss.getLocation(), 4.0);
-                if (near == null) return;
-                hit(near, 7 * damageBonus);
-                Compat.spawn(world(), Compat.SWEEP_ATTACK, near.getLocation().add(0, 1, 0), 1);
-                Compat.spawn(world(), Compat.CRIT, near.getLocation().add(0, 1, 0), 8, 0.25, 0.3, 0.25, 0.2);
-                soundAt(near.getLocation(), "entity.player.attack.sweep", 1.1f, 1.0f + random.nextFloat() * 0.3f);
+                // Cada corte de la danza barre a TODOS los que esten al alcance.
+                for (Player near : targets(4.0)) {
+                    hit(near, 7 * damageBonus);
+                    Compat.spawn(world(), Compat.SWEEP_ATTACK, near.getLocation().add(0, 1, 0), 1);
+                    Compat.spawn(world(), Compat.CRIT, near.getLocation().add(0, 1, 0), 8, 0.25, 0.3, 0.25, 0.2);
+                    soundAt(near.getLocation(), "entity.player.attack.sweep", 1.1f, 1.0f + random.nextFloat() * 0.3f);
+                }
             });
         }
     }

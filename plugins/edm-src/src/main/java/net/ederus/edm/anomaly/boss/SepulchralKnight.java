@@ -724,10 +724,21 @@ public final class SepulchralKnight extends BossFight {
 
     // ---------------------------------------------------------------- FASE II: a pie
 
-    /** 7. Estocada Fantasma: se teletransporta a la espalda del mas lejano y estoca. */
+    /**
+     * 7. Estocadas Fantasma: se teletransporta a la espalda de HASTA TRES, uno tras
+     * otro, y estoca a cada uno. Contra un grupo grande la version de un solo
+     * objetivo se diluia: ahora la habilidad persigue a los que se creen a salvo.
+     */
     public void phantomThrust() {
-        Player target = Fx.farthest(loc(), plugin.settings().participationRadius());
-        if (target == null || !alive()) return;
+        int i = 0;
+        for (Player target : farthestTargets(3)) {
+            later(i++ * 34, () -> thrustAt(target));
+        }
+    }
+
+    /** Una estocada de la cadena: aparicion a la espalda, carga corta y golpe en cono. */
+    private void thrustAt(Player target) {
+        if (target == null || !alive() || !Fx.isFightable(target)) return;
 
         Location from = boss.getLocation();
         Vector behind = target.getLocation().getDirection().setY(0).normalize().multiply(-2.2);
@@ -739,19 +750,20 @@ public final class SepulchralKnight extends BossFight {
                 Compat.spawn(world(), Compat.SOUL_FIRE_FLAME, p, 2, 0.05, 0.05, 0.05, 0, Compat.dust(BONE, 1.2f)));
 
         boss.teleport(to);
+        face(target.getLocation());
         soundAt(to, "entity.player.attack.sweep", 1.4f, 0.7f);
 
-        animate(45, tick -> {
+        animate(30, tick -> {
             if (!alive()) return;
             Location l = boss.getLocation().add(0, 1.2, 0);
-            if (tick < 18) {
+            if (tick < 14) {
                 // carga la estocada: la lanza se echa atras
-                Fx.ring(l, 1.2 - tick * 0.05, 10, tick * 0.6, p ->
+                Fx.ring(l, 1.2 - tick * 0.06, 10, tick * 0.6, p ->
                         Compat.spawn(world(), Compat.ENCHANTED_HIT, p, 1));
                 if (tick % 6 == 0) soundAt(l, "block.note_block.hat", 1.0f, 1.6f);
                 return;
             }
-            if (tick != 18) return;
+            if (tick != 14) return;
             Vector dir = boss.getLocation().getDirection().setY(0).normalize();
             soundAt(l, "item.trident.riptide_1", 1.4f, 1.2f);
             soundAt(l, "item.trident.hit", 1.4f, 0.9f);
@@ -819,13 +831,23 @@ public final class SepulchralKnight extends BossFight {
         }, null);
     }
 
-    /** 9. Cadena de Hueso: engancha al mas lejano y lo arrastra de vuelta al centro. */
+    /**
+     * 9. Cadenas de Hueso: engancha a los TRES que mas se alejan y los arrastra de
+     * vuelta al centro, cada uno con su cadena. Que huir en grupo tampoco salga gratis.
+     */
     public void boneChain() {
-        Player target = Fx.farthest(loc(), plugin.settings().participationRadius());
-        if (target == null || !alive()) return;
-        if (target.getLocation().distanceSquared(loc()) < 36) return;
+        if (!alive()) return;
+        boolean any = false;
+        for (Player target : farthestTargets(3)) {
+            if (target.getLocation().distanceSquared(loc()) < 36) continue;
+            if (!any) soundAt(loc(), "entity.leashknot.place", 1.4f, 0.6f);
+            any = true;
+            chainPull(target);
+        }
+    }
 
-        soundAt(loc(), "entity.leashknot.place", 1.4f, 0.6f);
+    /** Una cadena: el haz de hueso, el tiron periodico y el golpe del final. */
+    private void chainPull(Player target) {
         soundAt(target.getLocation(), "block.chain.place", 1.2f, 0.7f);
         target.sendActionBar(Component.text("Te ha enganchado.", NamedTextColor.RED, TextDecoration.BOLD));
 
@@ -860,9 +882,15 @@ public final class SepulchralKnight extends BossFight {
      * Es la habilidad mas "de equipo": obliga a que el grupo no se disperse.
      */
     public void brokenOath() {
-        Player target = randomTarget();
-        if (target == null || !alive()) return;
+        if (!alive()) return;
+        // Hasta tres jurados a la vez: con veinte peleando, un solo juramento no ata a nadie.
+        for (Player target : pickTargets(3)) {
+            oathOn(target);
+        }
+    }
 
+    /** Un juramento: la marca, la cuenta y el castigo o el perdon del final. */
+    private void oathOn(Player target) {
         soundAt(target.getLocation(), "entity.evoker.prepare_summon", 1.4f, 0.6f);
         soundAt(target.getLocation(), "block.beacon.activate", 1.0f, 0.5f);
         target.showTitle(Title.title(

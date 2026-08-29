@@ -523,11 +523,14 @@ public final class Darkness extends BossFight {
         if (!alive()) return;
         soundAt(loc(), "entity.enderman.teleport", 1.5f, 0.6f);
 
+        // Tres apariciones y cada una a la espalda de un jugador DISTINTO: antes
+        // el azar podia cebarse tres veces con el mismo.
+        List<Player> marks = pickTargets(3);
+        if (marks.isEmpty()) return;
         for (int i = 0; i < 3; i++) {
+            Player t = marks.get(i % marks.size());
             later(i * 26, () -> {
-                if (!alive()) return;
-                Player t = randomTarget();
-                if (t == null) return;
+                if (!alive() || !Fx.isFightable(t)) return;
                 Location from = boss.getLocation();
                 Vector behind = t.getLocation().getDirection().setY(0).normalize().multiply(-2.5);
                 Location to = Fx.ground(t.getLocation().add(behind), 4);
@@ -611,9 +614,18 @@ public final class Darkness extends BossFight {
 
     /** 8. Agarre Sombrio: una mano de vacio que arrastra al mas lejano. */
     public void shadowGrasp() {
-        Player target = Fx.farthest(loc(), plugin.settings().participationRadius());
-        if (target == null || !alive()) return;
-        soundAt(loc(), "entity.enderman.stare", 1.4f, 0.4f);
+        if (!alive()) return;
+        // Dos manos de vacio, una por cada jugador que intenta poner tierra de por medio.
+        boolean any = false;
+        for (Player target : farthestTargets(2)) {
+            if (!any) soundAt(loc(), "entity.enderman.stare", 1.4f, 0.4f);
+            any = true;
+            graspOn(target);
+        }
+    }
+
+    /** Una mano: el hilo de vacio, el arrastre y el apreton del final. */
+    private void graspOn(Player target) {
         target.sendActionBar(Component.text("Algo te tiene sujeto.", NamedTextColor.RED, TextDecoration.BOLD));
 
         animate(70, tick -> {

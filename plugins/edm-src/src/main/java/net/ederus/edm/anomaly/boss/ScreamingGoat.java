@@ -619,12 +619,20 @@ public final class ScreamingGoat extends BossFight {
         }
     }
 
-    /** 9. Cornada Ascendente: engancha al mas cercano y lo manda por los aires. */
+    /** 9. Cornada Ascendente: engancha a los que tenga cerca y los manda por los aires. */
     public void upwardGore() {
-        Player target = Fx.nearest(loc(), 7);
-        if (target == null || !alive()) return;
+        if (!alive()) return;
+        boolean any = false;
+        for (Player target : nearestTargets(3)) {
+            if (target.getLocation().distanceSquared(loc()) > 49) continue;
+            any = true;
+            goreOn(target);
+        }
+        if (any) soundAt(loc(), "entity.goat.prepare_ram", 1.4f, 1.2f);
+    }
 
-        soundAt(loc(), "entity.goat.prepare_ram", 1.4f, 1.2f);
+    /** Una cornada: el apunte con el cuerno y el lanzamiento vertical. */
+    private void goreOn(Player target) {
         animate(40, tick -> {
             if (!alive() || !Fx.isFightable(target)) throw Stop.now();
             Location l = boss.getLocation().add(0, 1.2, 0);

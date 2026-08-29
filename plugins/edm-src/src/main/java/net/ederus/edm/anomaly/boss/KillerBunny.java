@@ -414,8 +414,20 @@ public final class KillerBunny extends BossFight {
 
     /** 2. Salto Asesino: se lanza sobre alguien desde arriba. */
     public void killerLeap() {
-        Player target = randomTarget();
-        if (target == null || !alive()) return;
+        if (!alive()) return;
+        // Dos saltos seguidos, cada uno sobre un jugador distinto: el primero avisa,
+        // el segundo pilla a quien creyo que ya habia pasado el peligro.
+        List<Player> marks = pickTargets(2);
+        if (marks.isEmpty()) return;
+        leapOn(marks.get(0));
+        if (marks.size() > 1) {
+            later(62, () -> leapOn(marks.get(1)));
+        }
+    }
+
+    /** Un salto asesino: sube, marca el suelo del objetivo y cae encima. */
+    private void leapOn(Player target) {
+        if (target == null || !alive() || !Fx.isFightable(target)) return;
         Location mark = Fx.ground(target.getLocation(), 4);
         reveal(4);
 
@@ -569,25 +581,35 @@ public final class KillerBunny extends BossFight {
 
     /** 6. Enjambre: todas las copias se lanzan a la vez sobre el mismo jugador. */
     public void swarm() {
-        Player target = randomTarget();
-        if (target == null || !alive()) return;
+        if (!alive()) return;
         pruneCopies();
         if (copies.isEmpty()) {
             split(boss.getLocation(), 3);
         }
-        broadcastNear(Component.text("Van todas a por uno.", ACCENT));
-        target.sendActionBar(Component.text("Vienen todas a por ti.", NamedTextColor.RED, TextDecoration.BOLD));
-        soundAt(target.getLocation(), "entity.rabbit.attack", 1.4f, 1.2f);
+        // Antes iban todas a por UNO, y con veinte peleando eso era regalarle la
+        // habilidad al resto: ahora la horda se reparte y cada copia caza al suyo.
+        List<Player> marks = pickTargets(Math.max(1, copies.size()));
+        if (marks.isEmpty()) return;
+        broadcastNear(Component.text("Se reparten la caza.", ACCENT));
+        for (Player m : marks) {
+            m.sendActionBar(Component.text("Una viene a por ti.", NamedTextColor.RED, TextDecoration.BOLD));
+        }
+        soundAt(loc(), "entity.rabbit.attack", 1.4f, 1.2f);
 
         animate(70, tick -> {
-            if (!Fx.isFightable(target)) throw Stop.now();
-            Location tl = target.getLocation();
-            Fx.ring(tl.clone().add(0, 0.15, 0), 2.0, 14, tick * 0.3, p ->
-                    Compat.spawn(world(), Compat.CLOUD, Fx.ground(p, 3).add(0, 0.15, 0), 1, 0, 0, 0, 0,
-                            Compat.dust(BLOOD, 1.2f)));
-            if (tick % 8 != 0) return;
+            if (!alive()) throw Stop.now();
+            int i = 0;
             for (Rabbit r : copies) {
                 if (r == null || !r.isValid()) continue;
+                Player target = marks.get(i++ % marks.size());
+                if (!Fx.isFightable(target)) continue;
+                Location tl = target.getLocation();
+                if (tick % 10 == 0) {
+                    Fx.ring(tl.clone().add(0, 0.15, 0), 1.6, 10, tick * 0.3, p ->
+                            Compat.spawn(world(), Compat.CLOUD, Fx.ground(p, 3).add(0, 0.15, 0), 1, 0, 0, 0, 0,
+                                    Compat.dust(BLOOD, 1.1f)));
+                }
+                if (tick % 8 != 0) continue;
                 Vector dir = tl.toVector().subtract(r.getLocation().toVector());
                 if (dir.lengthSquared() < 0.04) continue;
                 r.setVelocity(dir.normalize().multiply(0.8).setY(0.3));
@@ -619,13 +641,22 @@ public final class KillerBunny extends BossFight {
         }, null);
     }
 
-    /** 8. Mordisco Profundo: un bocado que sigue sangrando un rato. */
+    /** 8. Mordisco Profundo: dentelladas que siguen sangrando, a todos los que tenga cerca. */
     public void deepBite() {
-        Player target = Fx.nearest(loc(), 7);
-        if (target == null || !alive()) return;
+        if (!alive()) return;
+        boolean any = false;
+        for (Player target : nearestTargets(3)) {
+            if (target.getLocation().distanceSquared(loc()) > 49) continue;
+            any = true;
+            biteOn(target);
+        }
+        if (!any) return;
         reveal(5);
-
         soundAt(loc(), "entity.rabbit.attack", 1.5f, 0.6f);
+    }
+
+    /** Una dentellada: el rastro, el bocado y la sangria que deja. */
+    private void biteOn(Player target) {
         animate(45, tick -> {
             if (!alive() || !Fx.isFightable(target)) throw Stop.now();
             if (tick < 20) {

@@ -477,9 +477,18 @@ public final class Bruja extends BossFight {
 
     /** 3. Maleficio: marca a uno y lo va royendo mientras dura. */
     public void hex() {
-        Player target = randomTarget();
-        if (target == null || !alive()) return;
+        if (!alive()) return;
+        // El mal de ojo cae sobre TRES a la vez: una bruja no raciona sus rencores.
+        List<Player> marks = pickTargets(3);
+        if (marks.isEmpty()) return;
         soundAt(loc(), "entity.witch.ambient", 1.6f, 0.5f);
+        for (Player target : marks) {
+            hexOn(target);
+        }
+    }
+
+    /** Un mal de ojo: la debilidad, el goteo de dano y el final del rezo. */
+    private void hexOn(Player target) {
         target.sendActionBar(Component.text("La Bruja te ha echado el mal de ojo.",
                 NamedTextColor.RED, TextDecoration.BOLD));
         Compat.apply(target, "weakness", 160, 0);
@@ -617,8 +626,19 @@ public final class Bruja extends BossFight {
     /** 8. Lengua Latigo: el sapo engancha al que mas se aleja y lo trae. Fase 2. */
     public void tongueWhip() {
         if (!alive() || !toadFreed || toad == null || !toad.isValid()) return;
-        Player target = Fx.farthest(toad.getLocation(), plugin.settings().participationRadius());
-        if (target == null) return;
+        // Dos latigazos de lengua, uno tras otro, a los dos que mas se alejan.
+        List<Player> marks = farthestTargets(2);
+        if (marks.isEmpty()) return;
+        whipOn(marks.get(0));
+        if (marks.size() > 1) {
+            later(50, () -> whipOn(marks.get(1)));
+        }
+    }
+
+    /** Un latigazo: la lengua sale, tira del jugador y lo suelta al llegar. */
+    private void whipOn(Player target) {
+        if (!alive() || !toadFreed || toad == null || !toad.isValid()) return;
+        if (target == null || !Fx.isFightable(target)) return;
         soundAt(toad.getLocation(), "entity.frog.tongue", 1.6f, 0.7f);
         target.sendActionBar(Component.text("La lengua del sapo te engancha.",
                 NamedTextColor.RED, TextDecoration.BOLD));

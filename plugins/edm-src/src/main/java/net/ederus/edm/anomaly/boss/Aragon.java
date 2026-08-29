@@ -164,19 +164,38 @@ public final class Aragon extends BossFight {
             double r = 1.5 + random.nextDouble() * 3;
             Location sl = Fx.ground(c.clone().add(Math.cos(a) * r, 1, Math.sin(a) * r), 5);
             try {
-                CaveSpider baby = world().spawn(sl, CaveSpider.class, s -> {
-                    s.setPersistent(false);
-                    s.setRemoveWhenFarAway(true);
-                    Compat.setAttribute(s, "scale", 0.35);
-                    Compat.setAttribute(s, "max_health", 8);
-                    Compat.setAttribute(s, "attack_damage", 3);
-                    Compat.setAttribute(s, "movement_speed", 0.42);
-                    s.setHealth(8);
-                });
-                baby.customName(Component.text("Esbirro", ACCENT));
-                baby.setCustomNameVisible(false);
-                markMinion(baby);
-                broodIds.put(baby.getUniqueId(), 1);
+                if (random.nextInt(10) < 3) {
+                    // Cria JOVEN: el escalon que faltaba entre la diminuta y la
+                    // guardiana. Misma camada, otra silueta: el ataque se ve vivo.
+                    Spider young = world().spawn(sl, Spider.class, s -> {
+                        s.setPersistent(false);
+                        s.setRemoveWhenFarAway(true);
+                        Compat.setAttribute(s, "scale", 0.62 + random.nextDouble() * 0.18);
+                        Compat.setAttribute(s, "max_health", 14);
+                        Compat.setAttribute(s, "attack_damage", 5);
+                        Compat.setAttribute(s, "movement_speed", 0.36);
+                        s.setHealth(14);
+                    });
+                    young.customName(Component.text("Esbirro", ACCENT));
+                    young.setCustomNameVisible(false);
+                    markMinion(young);
+                    broodIds.put(young.getUniqueId(), 1);
+                } else {
+                    CaveSpider baby = world().spawn(sl, CaveSpider.class, s -> {
+                        s.setPersistent(false);
+                        s.setRemoveWhenFarAway(true);
+                        // Jitter de tamaño: ninguna cria es identica a la de al lado.
+                        Compat.setAttribute(s, "scale", 0.28 + random.nextDouble() * 0.14);
+                        Compat.setAttribute(s, "max_health", 8);
+                        Compat.setAttribute(s, "attack_damage", 3);
+                        Compat.setAttribute(s, "movement_speed", 0.42);
+                        s.setHealth(8);
+                    });
+                    baby.customName(Component.text("Esbirro", ACCENT));
+                    baby.setCustomNameVisible(false);
+                    markMinion(baby);
+                    broodIds.put(baby.getUniqueId(), 1);
+                }
             } catch (Throwable ignored) {
             }
         }
@@ -291,7 +310,7 @@ public final class Aragon extends BossFight {
                 CaveSpider baby = world().spawn(sl, CaveSpider.class, s -> {
                     s.setPersistent(false);
                     s.setRemoveWhenFarAway(true);
-                    Compat.setAttribute(s, "scale", 0.3);
+                    Compat.setAttribute(s, "scale", 0.26 + random.nextDouble() * 0.14);
                     Compat.setAttribute(s, "max_health", 6);
                     Compat.setAttribute(s, "attack_damage", 3);
                     Compat.setAttribute(s, "movement_speed", 0.45);
@@ -420,6 +439,9 @@ public final class Aragon extends BossFight {
         if (ticks() % 20 != 0) return;
         List<Player> pool = targets(46);
         if (pool.isEmpty()) return;
+        // Barajado: sin esto el reparto por indice empezaba siempre por el mismo
+        // jugador y el enjambre acababa apilado sobre dos o tres cabezas.
+        java.util.Collections.shuffle(pool, random);
         int i = 0;
         for (UUID id : new ArrayList<>(broodIds.keySet())) {
             org.bukkit.entity.Entity e = plugin.getServer().getEntity(id);
@@ -429,7 +451,9 @@ public final class Aragon extends BossFight {
             }
             Player target = pool.get(i++ % pool.size());
             LivingEntity current = m.getTarget();
-            if (current == null || !current.isValid() || current.isDead() || random.nextInt(4) == 0) {
+            // La mitad de las veces se le renueva el objetivo aunque tenga uno: es lo
+            // que impide que toda la camada muerda al que pego primero.
+            if (current == null || !current.isValid() || current.isDead() || random.nextInt(2) == 0) {
                 m.setTarget(target);
             }
             // Las que se descuelgan pegan un tiron para volver a la pelea.
@@ -545,10 +569,16 @@ public final class Aragon extends BossFight {
         }
     }
 
-    /** 4. Hilo: engancha al que mas se aleja y lo arrastra hacia la madre. */
+    /** 4. Hilo: engancha a los DOS que mas se alejan y los arrastra hacia la madre. */
     public void webPull() {
-        Player target = Fx.farthest(loc(), plugin.settings().participationRadius());
-        if (target == null || !alive()) return;
+        if (!alive()) return;
+        for (Player target : farthestTargets(2)) {
+            pullOn(target);
+        }
+    }
+
+    /** Un hilo: el sedal de telarana y el tiron periodico hasta traerlo. */
+    private void pullOn(Player target) {
         soundAt(target.getLocation(), "entity.spider.ambient", 1.3f, 1.3f);
         target.sendActionBar(Component.text("Un hilo te tira.", NamedTextColor.RED, TextDecoration.BOLD));
 

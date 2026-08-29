@@ -324,18 +324,20 @@ public final class Rabby extends BossFight {
         if (to.lengthSquared() > 0.01) boss.setVelocity(to.normalize().multiply(0.9).setY(0.25));
 
         later(8, () -> {
-            if (!alive() || !Fx.isFightable(target)) return;
-            if (boss.getLocation().distanceSquared(target.getLocation()) > 25) return;
-            hit(target, 14 * power());
-            // lift() y no setVelocity a pelo: es lo que da permiso de vuelo y evita
-            // que el servidor lo eche por "moverse muy rapido" a mitad del viaje.
-            lift(target, new Vector(0, 1.75, 0));
-            Compat.spawn(world(), Compat.SONIC_BOOM, target.getLocation().add(0, 1, 0), 1);
-            Compat.spawn(world(), Compat.FIREWORK_SPARK, target.getLocation().add(0, 1, 0), 30,
-                    0.4, 0.4, 0.4, 0.35);
-            soundAt(target.getLocation(), "entity.player.attack.crit", 1.8f, 0.6f);
-            soundAt(target.getLocation(), "block.anvil.land", 1.2f, 1.8f);
-            target.sendActionBar(Component.text("¡BATAZO!", NamedTextColor.RED, TextDecoration.BOLD));
+            if (!alive()) return;
+            // Un solo swing, pero el bate es ancho: TODO el que este en el arco sale bateado.
+            for (Player p : targets(4.0)) {
+                hit(p, 14 * power());
+                // lift() y no setVelocity a pelo: es lo que da permiso de vuelo y evita
+                // que el servidor lo eche por "moverse muy rapido" a mitad del viaje.
+                lift(p, new Vector(0, 1.75, 0));
+                Compat.spawn(world(), Compat.SONIC_BOOM, p.getLocation().add(0, 1, 0), 1);
+                Compat.spawn(world(), Compat.FIREWORK_SPARK, p.getLocation().add(0, 1, 0), 30,
+                        0.4, 0.4, 0.4, 0.35);
+                soundAt(p.getLocation(), "entity.player.attack.crit", 1.8f, 0.6f);
+                soundAt(p.getLocation(), "block.anvil.land", 1.2f, 1.8f);
+                p.sendActionBar(Component.text("¡BATAZO!", NamedTextColor.RED, TextDecoration.BOLD));
+            }
         });
     }
 
@@ -522,8 +524,18 @@ public final class Rabby extends BossFight {
     /** 7. Puño Cometa: se lanza desde muy arriba sobre una marca. */
     public void cometFist() {
         if (!alive() || !angry) return;
-        Player target = randomTarget();
-        if (target == null) return;
+        // El puño cae donde MAS gente hay junta: agruparse contra Rabby se paga.
+        List<Player> pool = targets();
+        if (pool.isEmpty()) return;
+        Player target = pool.get(0);
+        int best = -1;
+        for (Player cand : pool) {
+            int around = Fx.playersNear(cand.getLocation(), 5).size();
+            if (around > best) {
+                best = around;
+                target = cand;
+            }
+        }
         Location mark = Fx.ground(target.getLocation(), 5);
         soundAt(loc(), "item.trident.riptide_3", 1.5f, 0.8f);
         broadcastNear(Component.text("Se va para arriba.", ACCENT));

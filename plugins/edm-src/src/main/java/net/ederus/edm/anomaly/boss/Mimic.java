@@ -921,14 +921,18 @@ public final class Mimic extends BossFight {
         }
         soundAt(loc(), "entity.player.attack.sweep", 1.4f, 0.7f);
         later(8, () -> {
-            if (!alive() || !Fx.isFightable(target)) return;
-            if (boss.getLocation().distanceSquared(target.getLocation()) > 9) return;
-            hit(target, (12 + (unleashed ? 6 : 0)) * damageBonus);
-            Compat.apply(target, "slowness", 100, 1);
-            Compat.apply(boss, "speed", 100, 1);
-            Compat.spawn(world(), Compat.SWEEP_ATTACK, target.getLocation().add(0, 1, 0), 2, 0.3, 0.3, 0.3, 0);
-            soundAt(target.getLocation(), "entity.player.attack.strong", 1.3f, 0.7f);
-            target.sendActionBar(Component.text("Te ha robado la prisa.", NamedTextColor.RED, TextDecoration.BOLD));
+            if (!alive()) return;
+            // El corte es un tajo ancho: roba la prisa de TODOS los que pille en el arco.
+            boolean stole = false;
+            for (Player p : targets(3.2)) {
+                hit(p, (12 + (unleashed ? 6 : 0)) * damageBonus);
+                Compat.apply(p, "slowness", 100, 1);
+                Compat.spawn(world(), Compat.SWEEP_ATTACK, p.getLocation().add(0, 1, 0), 2, 0.3, 0.3, 0.3, 0);
+                soundAt(p.getLocation(), "entity.player.attack.strong", 1.3f, 0.7f);
+                p.sendActionBar(Component.text("Te ha robado la prisa.", NamedTextColor.RED, TextDecoration.BOLD));
+                stole = true;
+            }
+            if (stole) Compat.apply(boss, "speed", 100, 1);
         });
     }
 
@@ -970,11 +974,12 @@ public final class Mimic extends BossFight {
         for (int i = 0; i < blows; i++) {
             later(i * 6, () -> {
                 if (!alive()) return;
-                Player near = Fx.nearest(boss.getLocation(), 4.0);
-                if (near == null) return;
-                hit(near, (4 + (unleashed ? 2 : 0)) * damageBonus);
-                Compat.spawn(world(), Compat.SWEEP_ATTACK, near.getLocation().add(0, 1, 0), 1, 0.2, 0.2, 0.2, 0);
-                soundAt(near.getLocation(), "entity.player.attack.sweep", 1.1f, 0.9f + random.nextFloat() * 0.3f);
+                // Cada golpe de la tanda barre a TODOS los que esten pegados, no a uno.
+                for (Player near : targets(4.0)) {
+                    hit(near, (4 + (unleashed ? 2 : 0)) * damageBonus);
+                    Compat.spawn(world(), Compat.SWEEP_ATTACK, near.getLocation().add(0, 1, 0), 1, 0.2, 0.2, 0.2, 0);
+                    soundAt(near.getLocation(), "entity.player.attack.sweep", 1.1f, 0.9f + random.nextFloat() * 0.3f);
+                }
             });
         }
     }

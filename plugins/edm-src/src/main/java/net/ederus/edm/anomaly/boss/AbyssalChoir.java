@@ -421,10 +421,18 @@ public final class AbyssalChoir extends BossFight {
 
     /** 2. Haz del Nucleo: un rayo largo desde el centro. */
     public void coreBeam() {
-        Player target = randomTarget();
-        if (target == null || !alive()) return;
+        if (!alive()) return;
+        // El haz del nucleo se parte en dos horquillas, cada una a un jugador.
+        List<Player> marks = pickTargets(2);
+        if (marks.isEmpty()) return;
         soundAt(loc(), "block.conduit.attack_target", 1.5f, 0.6f);
+        for (Player target : marks) {
+            beamOn(target);
+        }
+    }
 
+    /** Una horquilla del haz: la carga y la descarga sobre su objetivo. */
+    private void beamOn(Player target) {
         animate(55, tick -> {
             if (!alive() || !Fx.isFightable(target)) throw Stop.now();
             Location from = boss.getLocation().add(0, 1.4, 0);

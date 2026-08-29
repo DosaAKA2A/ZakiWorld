@@ -277,10 +277,19 @@ public final class SaltLeviathan extends BossFight {
 
     /** 1. Haz Abisal: el rayo de guardian, pero cargado y con aviso. */
     public void abyssalBeam() {
-        Player target = randomTarget();
-        if (target == null || !alive()) return;
+        if (!alive()) return;
+        // Tres haces a la vez, cada uno tensandose sobre su jugador: el abismo
+        // no elige a uno, elige a los que le caben en la mirada.
+        List<Player> marks = pickTargets(3);
+        if (marks.isEmpty()) return;
         soundAt(loc(), "entity.guardian.attack", 1.6f, 0.5f);
+        for (Player target : marks) {
+            beamOn(target);
+        }
+    }
 
+    /** Un haz: se tensa cuarenta ticks sobre el objetivo y descarga. */
+    private void beamOn(Player target) {
         animate(60, tick -> {
             if (!alive() || !Fx.isFightable(target)) throw Stop.now();
             Location from = boss.getEyeLocation();
