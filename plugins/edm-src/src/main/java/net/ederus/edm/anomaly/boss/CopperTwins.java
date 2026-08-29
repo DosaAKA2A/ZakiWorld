@@ -92,6 +92,15 @@ public final class CopperTwins extends BossFight {
     private final List<Ability> kamPool = new ArrayList<>();
     private long kamBusyUntil;
 
+    /**
+     * Hasta que tick dura la TREGUA de una mecanica de quietud.
+     *
+     * Cuando uno de los dos pide que nadie se mueva, ellos tampoco pueden pegar: se
+     * paran, escuchan y esperan el veredicto. Sin esto la mecanica era una trampa —
+     * te clavaban en el sitio y te seguian moliendo mientras no podias apartarte.
+     */
+    private long truceUntil;
+
     /** Golpe cuerpo a cuerpo a mano: los golems de cobre no traen ataque vanilla. */
     private long kemSwingAt;
     private long kamSwingAt;
@@ -217,6 +226,31 @@ public final class CopperTwins extends BossFight {
     }
 
     // ------------------------------------------------------------------ estado vivo
+
+    /** Hay una mecanica de quietud en marcha: los dos gemelos estan en tregua. */
+    private boolean truce() {
+        return ticks() < truceUntil;
+    }
+
+    /** Abre la tregua: los dos se paran hasta que se resuelva la quietud. */
+    private void callTruce(int duration) {
+        truceUntil = Math.max(truceUntil, ticks() + duration);
+        // El motor lleva a KEM: se le deja ocupado para que no encadene nada encima.
+        busyFor(duration);
+        // Y KAM va por su cuenta, asi que hay que frenarlo aparte.
+        kamBusyUntil = Math.max(kamBusyUntil, ticks() + duration);
+        // Ninguno de los dos remata el golpe que tuviera a medias.
+        kemSwingAt = Math.max(kemSwingAt, ticks() + duration);
+        kamSwingAt = Math.max(kamSwingAt, ticks() + duration);
+        for (LivingEntity twin : new LivingEntity[]{boss, kam}) {
+            if (twin instanceof Mob mob && twin.isValid()) {
+                try {
+                    mob.getPathfinder().stopPathfinding();
+                } catch (Throwable ignored) {
+                }
+            }
+        }
+    }
 
     /** KAM esta en pie: existe, no esta abatido y no esta muerto. */
     private boolean kamUp() {
@@ -459,6 +493,14 @@ public final class CopperTwins extends BossFight {
      */
     private void driveMelee(LivingEntity twin, boolean orange) {
         if (twin == null || !twin.isValid()) return;
+        // En tregua no persiguen ni pegan: se quedan tan quietos como el resto.
+        if (truce()) {
+            if (ticks() % 20 == 0) {
+                Compat.spawn(world(), Compat.DUST, twin.getLocation().add(0, 2.4, 0), 3,
+                        0.2, 0.2, 0.2, 0, Compat.dust(orange ? KEM_RGB : KAM_RGB, 1.2f));
+            }
+            return;
+        }
         if (ticks() % 10 == 0 && twin instanceof Mob mob) {
             Player prey = orange ? Fx.farthest(twin.getLocation(), 40) : Fx.nearest(twin.getLocation(), 40);
             if (prey == null) prey = Fx.nearest(twin.getLocation(), 64);
@@ -490,7 +532,7 @@ public final class CopperTwins extends BossFight {
 
     /** El ritmo propio de KAM: sin esto solo actuaria uno de los dos a la vez. */
     private void tickKamAbilities() {
-        if (!kamUp() || kamPool.isEmpty()) return;
+        if (!kamUp() || kamPool.isEmpty() || truce()) return;
         if (ticks() < kamBusyUntil || ticks() % 10 != 0) return;
         List<Ability> ready = new ArrayList<>();
         int total = 0;
@@ -542,10 +584,12 @@ public final class CopperTwins extends BossFight {
      */
     public void rustStillness() {
         if (!kemUp()) return;
+        // Los dos se paran: si exigen quietud, la cumplen ellos tambien.
+        callTruce(115);
         Map<UUID, Location> frozen = new HashMap<>();
         soundAt(loc(), "block.copper.place", 1.8f, 0.4f);
         titleNear(Component.text("QUIETUD DE OXIDO", TextColor.color(KEM_RGB), TextDecoration.BOLD),
-                Component.text("NO TE MUEVAS", NamedTextColor.RED));
+                Component.text("NO TE MUEVAS  ·  ellos tampoco pegan", NamedTextColor.RED));
 
         animate(120, tick -> {
             if (!kemUp()) throw Stop.now();
@@ -627,10 +671,12 @@ public final class CopperTwins extends BossFight {
      */
     public void deathMark() {
         if (!kamUp()) return;
+        // Igual que su hermano: mientras la marca busca, nadie pega.
+        callTruce(115);
         Map<UUID, Location> frozen = new HashMap<>();
         soundAt(kam.getLocation(), "entity.iron_golem.damage", 1.8f, 0.4f);
         titleNear(Component.text("MARCA DE LA MUERTE", TextColor.color(KAM_RGB), TextDecoration.BOLD),
-                Component.text("QUIETOS o la marca los busca", NamedTextColor.RED));
+                Component.text("QUIETOS  ·  ellos tampoco pegan", NamedTextColor.RED));
 
         animate(120, tick -> {
             if (!kamUp()) throw Stop.now();
