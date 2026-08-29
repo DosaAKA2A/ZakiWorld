@@ -54,6 +54,16 @@ public abstract class BossFight {
      * machacaba. Rabby perdia la skin en cada pelea menos la primera.
      */
     private io.papermc.paper.datacomponent.item.ResolvableProfile shellProfile;
+    /**
+     * Donde estaba el jefe la ultima vez que se le vio vivo.
+     *
+     * Existe porque loc() devolvia el centro de la ARENA en cuanto el jefe moria, y
+     * eso es el punto donde se abrio la anomalia, no donde cayo. Como toda pelea se
+     * mueve —persigue, embiste, salta—, las animaciones de muerte se pintaban a
+     * decenas de bloques del cadaver: parecia que no hubiera animacion ninguna. El
+     * botin explotaba en el mismo sitio equivocado.
+     */
+    private Location lastKnown;
     private int phase = 1;
     private long ticks;
     private long busyUntil;
@@ -184,6 +194,9 @@ public abstract class BossFight {
         ticks++;
         if (!alive()) return;
 
+        // Se apunta cada tick para que la muerte sepa DONDE cayo, no donde empezo.
+        lastKnown = boss.getLocation().clone();
+
         // Ni se quema al amanecer ni se ahoga: el combate no lo decide el entorno.
         boss.setFireTicks(0);
         boss.setRemainingAir(boss.getMaximumAir());
@@ -303,6 +316,12 @@ public abstract class BossFight {
         }
         for (Entity e : spawned) {
             Glow.clear(e);
+            // Un puf por cada cosa que se retira: sin esto la escena entera se
+            // evaporaba de golpe y quedaba un vacio raro donde estaba la pelea.
+            if (e.isValid() && world() != null) {
+                Compat.spawn(world(), Compat.POOF, e.getLocation().add(0, 0.4, 0), 6,
+                        0.2, 0.2, 0.2, 0.03);
+            }
             Fx.safeRemove(e);
         }
         spawned.clear();
@@ -312,6 +331,67 @@ public abstract class BossFight {
             Glow.clear(boss);
             Fx.safeRemove(boss);
         }
+    }
+
+    /**
+     * El destello con el que se apaga CUALQUIER anomalia, tenga o no animacion propia.
+     *
+     * Es el mismo lenguaje que usa Rip cuando retira una espada: un fogonazo, varillas
+     * de luz saliendo, chispas y la campanada de amatista. Se llama siempre desde el
+     * manager al morir el jefe, asi que ninguna anomalia puede quedarse sin un final
+     * visible: las que tienen animacion propia la rematan con esto.
+     *
+     * Ademas se lleva el CUERPO VISIBLE. Los jefes con maniqui (Rabby, el Mimic) no
+     * mueven un dedo al morir —el que muere es el mob invisible de debajo— y el
+     * cuerpo se quedaba plantado hasta que la limpieza lo borraba de golpe. Ahora se
+     * encoge y se va en el destello, como las piezas de Rip.
+     */
+    public void deathFlash() {
+        Location at = loc().clone().add(0, 1.0, 0);
+        World w = world();
+        if (w == null) return;
+        int rgb = event.type().color().value();
+
+        // El fogonazo, inmediato: es lo que dice "acaba de morir AQUI".
+        Compat.spawn(w, Compat.FLASH, at, 1);
+        Compat.spawn(w, Compat.END_ROD, at, 45, 0.5, 0.7, 0.5, 0.14);
+        Compat.spawn(w, Compat.ELECTRIC_SPARK, at, 30, 0.45, 0.6, 0.45, 0.16);
+        Compat.spawn(w, Compat.DUST, at, 50, 0.7, 0.9, 0.7, 0, Compat.dust(rgb, 2.0f));
+        Compat.sound(w, at, "block.amethyst_block.chime", 1.4f, 0.8f);
+        Compat.sound(w, at, "entity.illusioner.mirror_move", 1.1f, 0.6f);
+
+        // Tres anillos que se abren del color de la anomalia: se ve desde lejos.
+        for (int i = 0; i < 3; i++) {
+            final double radius = 1.5 + i * 2.4;
+            later(i * 6, () -> Fx.ring(at, radius, (int) (radius * 8) + 10, p -> {
+                Compat.spawn(w, Compat.END_ROD, p, 1, 0.02, 0.02, 0.02, 0.01);
+                Compat.spawn(w, Compat.DUST, p, 1, 0, 0, 0, 0, Compat.dust(rgb, 1.6f));
+            }));
+        }
+
+        // El cuerpo visible se va al final, no de golpe: primero se le deja terminar
+        // la animacion propia del jefe y despues se apaga con su propio destello.
+        final LivingEntity body = shell;
+        if (body == null || !body.isValid()) return;
+        int wait = Math.max(10, deathAnimationTicks() - 25);
+        animate(wait, tick -> {
+            if (!body.isValid()) throw net.ederus.edm.anomaly.core.Stop.now();
+            if (tick % 4 != 0) return;
+            // Se va cayendo: humo por los pies segun se apaga.
+            Compat.spawn(w, Compat.LARGE_SMOKE, body.getLocation().add(0, 0.2, 0), 3,
+                    0.3, 0.1, 0.3, 0.01);
+        }, () -> {
+            if (!body.isValid()) return;
+            Location bl = body.getLocation().add(0, 1.0, 0);
+            Compat.spawn(w, Compat.FLASH, bl, 1);
+            Compat.spawn(w, Compat.END_ROD, bl, 40, 0.4, 0.7, 0.4, 0.12);
+            Compat.spawn(w, Compat.ELECTRIC_SPARK, bl, 26, 0.4, 0.6, 0.4, 0.15);
+            Compat.spawn(w, Compat.POOF, bl, 30, 0.4, 0.6, 0.4, 0.06);
+            Compat.sound(w, bl, "block.amethyst_block.chime", 1.2f, 1.3f);
+            spawned.remove(body);
+            Fx.safeRemove(body);
+            shell = null;
+        });
     }
 
     /** Registra una entidad para que la limpieza final se la lleve por delante. */
@@ -335,11 +415,15 @@ public abstract class BossFight {
     }
 
     public Location loc() {
-        return alive() ? boss.getLocation() : arena.clone();
+        if (alive()) return boss.getLocation();
+        return lastKnown != null ? lastKnown.clone() : arena.clone();
     }
 
     public Location center() {
-        return alive() ? boss.getLocation().add(0, 1, 0) : arena.clone().add(0, 1, 0);
+        // Misma regla que loc(): muerto el jefe, vale la ultima posicion VIVA. Con
+        // arena.clone() las animaciones de muerte se pintaban donde se abrio la
+        // anomalia, no sobre el cadaver.
+        return loc().add(0, 1, 0);
     }
 
     /** Jugadores peleables dentro del radio de combate. */

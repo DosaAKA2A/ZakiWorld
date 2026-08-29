@@ -500,6 +500,14 @@ public final class AnomalyManager implements Listener {
             plugin.getLogger().warning("Fallo en la animacion de muerte: " + t);
         }
 
+        // El destello final va SIEMPRE, tenga el jefe animacion propia o no: es lo
+        // que garantiza que ninguna anomalia se apague sin que se note.
+        try {
+            event.fight().deathFlash();
+        } catch (Throwable t) {
+            plugin.getLogger().warning("Fallo en el destello de muerte: " + t);
+        }
+
         List<String> report = plugin.drops().award(event.typeId(), event.damage(), where);
         plugin.announcer().defeated(event, report);
         if (event.bars() != null) event.bars().removeAll();
