@@ -6,6 +6,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.regex.Pattern;
 
 import org.bukkit.enchantments.Enchantment;
 import org.bukkit.inventory.ItemStack;
@@ -18,6 +19,7 @@ import io.papermc.paper.datacomponent.item.TooltipDisplay;
 
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.TextDecoration;
+import net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer;
 
 /**
  * Coge el item que el servidor esta a punto de mandar al cliente y devuelve una
@@ -29,18 +31,20 @@ import net.kyori.adventure.text.format.TextDecoration;
  *
  *  1. Apaga el bloque de encantamientos que dibuja el cliente (el componente
  *     tooltip_display), que es el que se rompe por encima del nivel 10.
- *  2. Escribe el bloque el mismo, en el lore, con los niveles en romano.
+ *  2. Escribe el bloque el mismo, ordenado y con los niveles en romano.
+ *  3. Se lleva dentro del bloque las lineas de encantamiento que ya hubiera
+ *     escrito otro plugin (las de AdvancedEnchantments), que si no se quedan
+ *     sueltas por encima del encabezado.
  *
  * El nombre del encantamiento NO se traduce aqui: se manda como componente
- * traducible y lo resuelve el cliente. Asi un jugador en espanol sigue leyendo
- * "Proteccion" y uno en ingles "Protection", sin que tengamos que mantener
- * ninguna tabla de nombres.
+ * traducible y lo resuelve el cliente. Asi cada jugador lo lee en su idioma sin
+ * que tengamos que mantener ninguna tabla de nombres.
  *
  * Cuando NO toca nada, y es a proposito:
  *
  *  - Si el item ya trae los encantamientos ocultos, lo deja en paz. Eso es lo
- *    que hacen los items de MMOItems que se pintan su propio bloque: si
- *    escribieramos el nuestro encima saldria dos veces.
+ *    que hacen los items que se pintan su propio bloque: si escribieramos el
+ *    nuestro encima saldria dos veces.
  *  - Si el tooltip entero esta oculto, tampoco hay nada que dibujar.
  */
 final class Reescritor {
@@ -82,12 +86,25 @@ final class Reescritor {
                 return hecho.clone();
             }
         }
-        ItemStack copia = construir(original);
+
+        /*
+         * OJO, esto no es una manera rebuscada de copiar un item.
+         *
+         * Lo que ProtocolLib entrega es un espejo del ItemStack que el servidor
+         * tiene vivo en el inventario, y clone() no bastaba: la primera version
+         * de esto acabo escribiendo el bloque DENTRO de los items de verdad, y
+         * se vio en un libro recien creado por consola que salio del give ya
+         * con el lore metido. Pasar por bytes deja una copia sin ningun hilo
+         * que la una al original, y como el resultado se guarda en la cache el
+         * viaje se paga una vez por item distinto, no una vez por paquete.
+         */
+        byte[] bytes = original.serializeAsBytes();
+        ItemStack copia = construir(ItemStack.deserializeBytes(bytes));
         if (copia == null) {
             return null;
         }
         synchronized (this.cache) {
-            this.cache.put(original.clone(), copia);
+            this.cache.put(ItemStack.deserializeBytes(bytes), copia);
         }
         return copia.clone();
     }
@@ -116,8 +133,8 @@ final class Reescritor {
         return !niveles(item).isEmpty();
     }
 
-    private ItemStack construir(ItemStack original) {
-        List<Map.Entry<Enchantment, Integer>> encantos = niveles(original);
+    private ItemStack construir(ItemStack base) {
+        List<Map.Entry<Enchantment, Integer>> encantos = niveles(base);
         if (encantos.isEmpty()) {
             return null;
         }
@@ -125,34 +142,89 @@ final class Reescritor {
 
         /* Solo los que se rompen, si asi se ha pedido. Sirve para estrenar esto
          * sin cambiarle el aspecto a todo el servidor de golpe. */
-        if (a.soloSiSePasa()) {
-            boolean alguno = encantos.stream().anyMatch(e -> e.getValue() > 10);
-            if (!alguno) {
-                return null;
-            }
+        if (a.soloSiSePasa() && encantos.stream().noneMatch(e -> e.getValue() > 10)) {
+            return null;
         }
 
         ordenar(encantos, a);
 
-        List<Component> lineas = new ArrayList<>();
-        ItemLore loreViejo = original.getData(DataComponentTypes.LORE);
+        ItemLore loreViejo = base.getData(DataComponentTypes.LORE);
         List<Component> previas = loreViejo == null ? List.of() : loreViejo.lines();
 
+        /* Las lineas de encantamiento de otros plugins se sacan de arriba y se
+         * meten en el bloque; el resto del lore se queda tal cual. */
+        List<Component> absorbidas = new ArrayList<>();
+        List<Component> resto = repartir(previas, absorbidas, a);
+
+        List<Component> lineas = new ArrayList<>();
         if (!a.encabezado().isEmpty()) {
             lineas.add(a.encabezadoComponente());
+        }
+        if (a.absorbidosPrimero()) {
+            absorbidas.forEach(l -> lineas.add(vineta(l, a)));
         }
         for (Map.Entry<Enchantment, Integer> e : encantos) {
             lineas.add(linea(e.getKey(), e.getValue(), a));
         }
-        if (!previas.isEmpty() && a.lineaEnBlanco()) {
+        if (!a.absorbidosPrimero()) {
+            absorbidas.forEach(l -> lineas.add(vineta(l, a)));
+        }
+        if (!resto.isEmpty() && a.lineaEnBlanco()) {
             lineas.add(Component.empty().decoration(TextDecoration.ITALIC, false));
         }
-        lineas.addAll(previas);
+        lineas.addAll(resto);
 
-        ItemStack copia = original.clone();
+        ItemStack copia = base.clone();
         copia.setData(DataComponentTypes.LORE, ItemLore.lore(lineas));
-        copia.setData(DataComponentTypes.TOOLTIP_DISPLAY, ocultarEncantamientos(original));
+        copia.setData(DataComponentTypes.TOOLTIP_DISPLAY, ocultarEncantamientos(base));
         return copia;
+    }
+
+    /*
+     * Separa el lore en dos: lo que se absorbe y lo que se queda donde estaba.
+     *
+     * Solo se mira el bloque de arriba del todo, hasta el primer renglon en
+     * blanco: ahi es donde AdvancedEnchantments escribe los suyos. Mas abajo
+     * esta la descripcion del item y las estadisticas de MMOItems, y esas no se
+     * tocan ni por asomo.
+     */
+    private static List<Component> repartir(List<Component> previas, List<Component> absorbidas, Ajustes a) {
+        List<Component> resto = new ArrayList<>(previas);
+        if (a.absorber().isEmpty()) {
+            return resto;
+        }
+        var plano = PlainTextComponentSerializer.plainText();
+        while (!resto.isEmpty()) {
+            String texto = plano.serialize(resto.get(0)).trim();
+            if (texto.isEmpty()) {
+                /* El renglon en blanco cierra el bloque de arriba. Si todo lo
+                 * que habia encima se ha absorbido, sobra tambien. */
+                if (!absorbidas.isEmpty()) {
+                    resto.remove(0);
+                }
+                break;
+            }
+            boolean casa = false;
+            for (Pattern p : a.absorber()) {
+                if (p.matcher(texto).find()) {
+                    casa = true;
+                    break;
+                }
+            }
+            if (!casa) {
+                break;
+            }
+            absorbidas.add(resto.remove(0));
+        }
+        return resto;
+    }
+
+    /** Le pone nuestra vineta a una linea ajena, respetando sus colores. */
+    private static Component vineta(Component linea, Ajustes a) {
+        return Component.empty()
+                .decoration(TextDecoration.ITALIC, false)
+                .append(Component.text(a.vineta(), a.colorVineta()))
+                .append(linea);
     }
 
     /*
@@ -160,8 +232,8 @@ final class Reescritor {
      * escondido los atributos o la durabilidad, se quedan escondidos. Solo se
      * anaden los dos componentes de encantamientos.
      */
-    private static TooltipDisplay ocultarEncantamientos(ItemStack original) {
-        TooltipDisplay previo = original.getData(DataComponentTypes.TOOLTIP_DISPLAY);
+    private static TooltipDisplay ocultarEncantamientos(ItemStack base) {
+        TooltipDisplay previo = base.getData(DataComponentTypes.TOOLTIP_DISPLAY);
         TooltipDisplay.Builder b = TooltipDisplay.tooltipDisplay();
         if (previo != null) {
             b.hideTooltip(previo.hideTooltip());
@@ -173,16 +245,23 @@ final class Reescritor {
 
     /** " · Proteccion III". El nombre va traducible; el numeral, escrito por nosotros. */
     private static Component linea(Enchantment encanto, int nivel, Ajustes a) {
+        boolean maldito = encanto.isCursed();
+        /* Traducible a proposito: description() devuelve el nombre YA resuelto
+         * en el idioma del servidor y a un jugador en espanol le salia
+         * "Sharpness". Con la clave, cada cliente lo traduce al suyo. */
+        Component nombre = Component.translatable(encanto.translationKey())
+                .color(maldito ? a.colorMaldicion() : a.colorNombre());
+
         Component texto = Component.empty()
                 .decoration(TextDecoration.ITALIC, false)
                 .append(Component.text(a.vineta(), a.colorVineta()))
-                .append(encanto.description().color(encanto.isCursed() ? a.colorMaldicion() : a.colorNombre()));
+                .append(nombre);
 
         /* La regla de vanilla: un encantamiento que solo tiene un nivel no
          * lleva numeral. Por eso "Reparacion" va suelto y "Proteccion" no. */
         if (nivel != 1 || encanto.getMaxLevel() != 1) {
             texto = texto.append(Component.text(" " + Numerales.de(nivel, a.tope()),
-                    encanto.isCursed() ? a.colorMaldicion() : a.colorNivel()));
+                    maldito ? a.colorMaldicion() : a.colorDeNivel(nivel)));
         }
         return texto;
     }

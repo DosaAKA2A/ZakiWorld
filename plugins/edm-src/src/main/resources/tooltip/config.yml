@@ -33,9 +33,37 @@ vineta: ' · '
 # item (el de MMOItems, el de un cofre, el que sea).
 linea-en-blanco: true
 
+# Lineas del lore que ya escribe otro plugin y que tienen que entrar DENTRO del
+# bloque en vez de quedarse sueltas por encima del encabezado. El caso real son
+# los encantamientos de AdvancedEnchantments, que se guardan como lore normal
+# ("🗡 Vampiro III") y se quedaban arriba del todo.
+#
+# Solo se miran las lineas de arriba del todo, hasta el primer renglon en
+# blanco: ahi es donde escribe AE. La descripcion del item y las estadisticas
+# de MMOItems, que van mas abajo, no se tocan.
+# Lista vacia = no absorber nada.
+absorber:
+  - ' [IVXLCDM]+$'
+
+# Los absorbidos van antes que los vanilla (son los especiales del item).
+absorbidos-primero: true
+
 colores:
   vineta: '#545454'
   nombre: '#C8C8C8'
-  nivel: '#FF6FD8'
   # Las maldiciones (Vinculacion, Desaparicion) van enteras en este color.
   maldicion: '#FF5555'
+
+  # El color del numeral segun el nivel. Cada entrada dice "hasta que nivel" y
+  # con que color; la ultima vale tambien para todo lo que se pase de ella.
+  # Hasta 5 en gris a proposito: es el gris de siempre del juego, asi un item
+  # normal se sigue viendo normal y solo destaca lo que de verdad es alto.
+  niveles:
+    - hasta: 5
+      color: '#AAAAAA'
+    - hasta: 10
+      color: '#55FF55'
+    - hasta: 15
+      color: '#55FFFF'
+    - hasta: 20
+      color: '#FF6FD8'
