@@ -1,10 +1,10 @@
 name: EDM
-version: '1.16.0'
+version: '1.17.0'
 main: net.ederus.edm.EDMPlugin
 api-version: '1.20'
 author: Iris Studio
 description: Nucleo de Ederus - Rip, Anomaly, libros, avisos de tiendas, tienda propia, apuestas y bromas
-softdepend: [Vault, WorldGuard, ProtectionStones, MMOItems, LibsDisguises, AdvancedEnchantments, UltimateMobCoins, Quests]
+softdepend: [Vault, WorldGuard, ProtectionStones, MMOItems, LibsDisguises, AdvancedEnchantments, UltimateMobCoins, Quests, ProtocolLib]
 
 commands:
   edm:

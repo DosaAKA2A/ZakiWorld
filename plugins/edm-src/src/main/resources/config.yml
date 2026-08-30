@@ -7,6 +7,7 @@
 #   tienda/   la tienda propia (/shop)
 #   coinflip/ apuestas entre jugadores (/cf)
 #   troll/    bromas de admin (/troll)
+#   tooltip/  como se ven los encantamientos de los items
 #
 # Al arrancar por primera vez se copian solos desde las carpetas viejas,
 # que se conservan intactas por si hay que volver atras.
@@ -18,3 +19,4 @@ modulos:
   tienda: true
   coinflip: true
   troll: true
+  tooltip: true

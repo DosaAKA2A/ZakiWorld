@@ -24,6 +24,7 @@ import net.ederus.edm.core.EderusMain;
 import net.ederus.edm.misiones.MisionesPlugin;
 import net.ederus.edm.rip.RipPlugin;
 import net.ederus.edm.tienda.TiendaPlugin;
+import net.ederus.edm.tooltip.TooltipPlugin;
 
 /*
  * EDM: el nucleo de Ederus. Reune Rip, Anomaly y EderusMain (libros + avisos de
@@ -35,7 +36,7 @@ import net.ederus.edm.tienda.TiendaPlugin;
  */
 public final class EDMPlugin extends JavaPlugin {
 
-    public static final String VERSION = "1.16.0";
+    public static final String VERSION = "1.17.0";
 
     /* id del modulo -> carpeta del plugin viejo de la que se migran los datos */
     private static final Map<String, String> CARPETAS_VIEJAS = Map.of(
@@ -69,6 +70,14 @@ public final class EDMPlugin extends JavaPlugin {
          * ni siquiera carga (referencia TaskType de Quests) y tumbaba TODO el
          * nucleo en el arranque. En Ederus siempre esta; esto protege cualquier
          * otro entorno, como el servidor local de pruebas. */
+        /* ProtocolLib es softdepend por lo mismo que Quests: la clase del
+         * modulo referencia sus tipos y sin el jar delante no llega ni a
+         * cargarse. En Ederus esta desde siempre; esto cubre el resto. */
+        if (getServer().getPluginManager().getPlugin("ProtocolLib") != null) {
+            arrancar(new TooltipPlugin(this));
+        } else {
+            getLogger().info("ProtocolLib no esta instalado: el modulo de tooltip queda apagado.");
+        }
         if (getServer().getPluginManager().getPlugin("Quests") != null) {
             arrancar(new MisionesPlugin(this));
         } else {

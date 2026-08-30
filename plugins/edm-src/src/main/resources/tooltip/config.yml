@@ -1,0 +1,41 @@
+# EDM - modulo tooltip
+#
+# Como se dibujan los encantamientos de un item.
+#
+# Esto NO toca los items: se reescribe el paquete justo antes de que salga
+# hacia el cliente. Apagar el modulo (modulos.tooltip: false en el config del
+# nucleo) deja el juego exactamente como estaba, sin limpiezas ni migraciones.
+
+# Hasta que nivel se escribe en numeros romanos.
+# Por encima de este numero se usa la cifra normal, porque un XLVII no se lee.
+romanos-hasta: 20
+
+# Si se pone en true, solo se reescriben los items con algun encantamiento por
+# encima del 10, que son los unicos que salen rotos en vanilla. El resto del
+# servidor se ve igual que siempre.
+# En false (por defecto) todos los items encantados se ven ordenados y en romano.
+solo-los-que-se-rompen: false
+
+# Orden de las lineas:
+#   nombre   alfabetico por el id del encantamiento (siempre el mismo orden)
+#   nivel    primero los niveles mas altos
+#   ninguno  como venga guardado, que es lo que hace vanilla
+# Las maldiciones van al final en todos los casos.
+orden: nombre
+
+# La cabecera del bloque. Vacio para no poner ninguna.
+encabezado: '&x&F&F&6&F&D&8▎Encantamientos:'
+
+# Lo que va delante de cada encantamiento.
+vineta: ' · '
+
+# Deja un renglon en blanco entre nuestro bloque y el lore que ya trajera el
+# item (el de MMOItems, el de un cofre, el que sea).
+linea-en-blanco: true
+
+colores:
+  vineta: '#545454'
+  nombre: '#C8C8C8'
+  nivel: '#FF6FD8'
+  # Las maldiciones (Vinculacion, Desaparicion) van enteras en este color.
+  maldicion: '#FF5555'
