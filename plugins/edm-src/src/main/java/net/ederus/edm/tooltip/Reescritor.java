@@ -65,6 +65,10 @@ final class Reescritor {
         this.ajustes = ajustes;
     }
 
+    Ajustes ajustesActuales() {
+        return this.ajustes;
+    }
+
     /** Como se escribe el paquete: clon, directo o lectura. Ver EscuchaPaquetes. */
     String modo() {
         return this.ajustes.modo();

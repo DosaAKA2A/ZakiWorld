@@ -32,6 +32,7 @@ record Ajustes(
         TextColor colorVineta,
         TextColor colorNombre,
         TextColor colorMaldicion,
+        List<String> paquetes,
         List<Tramo> tramos,
         List<Pattern> absorber) {
 
@@ -71,8 +72,22 @@ record Ajustes(
                 color(c.getString("colores.vineta"), TextColor.fromHexString("#545454")),
                 color(c.getString("colores.nombre"), TextColor.fromHexString("#C8C8C8")),
                 color(c.getString("colores.maldicion"), NamedTextColor.RED),
+                paquetes(c),
                 tramos(c),
                 patrones(c));
+    }
+
+    /*
+     * Que paquetes se enganchan. Existe para poder aislar una averia sin
+     * recompilar: quitando uno y recargando se ve al momento si el daño venia
+     * por ahi. Vacio = todos.
+     */
+    private static List<String> paquetes(FileConfiguration c) {
+        List<String> l = new ArrayList<>();
+        for (String s : c.getStringList("paquetes")) {
+            l.add(s.trim().toUpperCase(java.util.Locale.ROOT));
+        }
+        return List.copyOf(l);
     }
 
     private static List<Tramo> tramos(FileConfiguration c) {

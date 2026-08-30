@@ -48,8 +48,7 @@ public final class TooltipPlugin extends Module {
         /* El listener va a nombre del nucleo, no del modulo: un Module no es un
          * plugin registrado en Bukkit y ProtocolLib pide uno de verdad para
          * poder soltar los enganches cuando el plugin se apague. */
-        this.escucha = new EscuchaPaquetes(this.core, this.reescritor);
-        ProtocolLibrary.getProtocolManager().addPacketListener(this.escucha);
+        enganchar(Ajustes.de(getConfig()));
 
         getLogger().info("Modulo tooltip listo: encantamientos en romano hasta el nivel "
                 + getConfig().getInt("romanos-hasta", 20) + ".");
@@ -107,11 +106,22 @@ public final class TooltipPlugin extends Module {
         return true;
     }
 
+    /* El listener lleva la lista de paquetes dentro, asi que cambiarla obliga a
+     * soltarlo y volver a engancharlo. Es instantaneo y no pide reinicio. */
+    private void enganchar(Ajustes a) {
+        var tipos = EscuchaPaquetes.tipos(a.paquetes());
+        this.escucha = new EscuchaPaquetes(this.core, this.reescritor, tipos);
+        ProtocolLibrary.getProtocolManager().addPacketListener(this.escucha);
+    }
+
     @Override
     public String recargar() {
         reloadConfig();
-        this.reescritor.ajustes(Ajustes.de(getConfig()));
-        return "Tooltip recargado. Romanos hasta el " + getConfig().getInt("romanos-hasta", 20)
-                + "; el cambio se ve al reabrir el inventario.";
+        Ajustes a = Ajustes.de(getConfig());
+        this.reescritor.ajustes(a);
+        onDisable();
+        enganchar(a);
+        return "Tooltip recargado. Modo " + a.modo() + ", romanos hasta el " + a.tope()
+                + ", " + EscuchaPaquetes.tipos(a.paquetes()).length + " paquetes enganchados.";
     }
 }

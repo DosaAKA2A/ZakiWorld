@@ -39,13 +39,31 @@ final class EscuchaPaquetes extends PacketAdapter {
 
     private final Reescritor reescritor;
 
-    EscuchaPaquetes(Plugin plugin, Reescritor reescritor) {
-        super(plugin, ListenerPriority.HIGH,
-                PacketType.Play.Server.SET_SLOT,             // un hueco suelto
-                PacketType.Play.Server.WINDOW_ITEMS,         // el inventario entero al abrirlo
-                PacketType.Play.Server.SET_CURSOR_ITEM,      // lo que llevas en el raton
-                PacketType.Play.Server.SET_PLAYER_INVENTORY, // un hueco de tu propio inventario
-                PacketType.Play.Server.ENTITY_EQUIPMENT);    // lo que lleva puesto otro
+    /** Todos los caminos por los que un item llega a la pantalla. */
+    private static final Map<String, PacketType> TODOS = Map.of(
+            "SET_SLOT", PacketType.Play.Server.SET_SLOT,                         // un hueco suelto
+            "WINDOW_ITEMS", PacketType.Play.Server.WINDOW_ITEMS,                 // el inventario al abrirlo
+            "SET_CURSOR_ITEM", PacketType.Play.Server.SET_CURSOR_ITEM,           // lo que llevas en el raton
+            "SET_PLAYER_INVENTORY", PacketType.Play.Server.SET_PLAYER_INVENTORY, // un hueco propio
+            "ENTITY_EQUIPMENT", PacketType.Play.Server.ENTITY_EQUIPMENT,         // lo que lleva puesto otro
+            "SET_CREATIVE_SLOT", PacketType.Play.Client.SET_CREATIVE_SLOT);      // ENTRANTE: el eco del creativo
+
+    static PacketType[] tipos(List<String> pedidos) {
+        if (pedidos == null || pedidos.isEmpty()) {
+            return TODOS.values().toArray(new PacketType[0]);
+        }
+        List<PacketType> fuera = new ArrayList<>();
+        for (String s : pedidos) {
+            PacketType t = TODOS.get(s);
+            if (t != null) {
+                fuera.add(t);
+            }
+        }
+        return fuera.isEmpty() ? TODOS.values().toArray(new PacketType[0]) : fuera.toArray(new PacketType[0]);
+    }
+
+    EscuchaPaquetes(Plugin plugin, Reescritor reescritor, PacketType... tipos) {
+        super(plugin, ListenerPriority.HIGH, tipos);
         this.reescritor = reescritor;
     }
 
@@ -57,6 +75,37 @@ final class EscuchaPaquetes extends PacketAdapter {
 
         boolean vacio() {
             return this.sueltos.isEmpty() && this.listas.isEmpty() && this.equipos.isEmpty();
+        }
+    }
+
+    /*
+     * EL ECO DEL CREATIVO, la fuga que sobrevivio al modo clon.
+     *
+     * Un jugador en modo creativo no le pide al servidor que mueva items: le
+     * manda el item ENTERO, NBT incluida, cada vez que lo toca. Como lo que el
+     * cliente tiene es nuestra version dibujada, al tocarla nos la devolvia con
+     * el bloque dentro y el servidor la guardaba tal cual. Por eso los items se
+     * ensuciaban "solos" al manosearlos, aunque la salida ya fuera limpia, y
+     * por eso en survival no pasaba.
+     *
+     * La solucion es limpiar el paquete entrante: si el item que llega trae
+     * nuestro bloque, se le quita antes de que el servidor lo guarde.
+     */
+    @Override
+    public void onPacketReceiving(PacketEvent evento) {
+        try {
+            var mod = evento.getPacket().getItemModifier();
+            for (int i = 0; i < mod.size(); i++) {
+                ItemStack item = mod.read(i);
+                if (item == null || item.isEmpty()) {
+                    continue;
+                }
+                if (Limpiador.limpiarItem(item, this.reescritor.ajustesActuales())) {
+                    mod.write(i, item);
+                }
+            }
+        } catch (Throwable t) {
+            this.plugin.getLogger().warning("[tooltip] no se pudo limpiar un paquete entrante: " + t);
         }
     }
 

@@ -14,6 +14,24 @@
 #   lectura  se calcula todo y no se escribe nada. Para aislar averias.
 modo: clon
 
+# Que paquetes se enganchan. Quitar uno y recargar es la forma de aislar una
+# averia en segundos, sin recompilar ni reiniciar. Lista vacia = todos.
+#   SET_SLOT              un hueco suelto de un inventario abierto
+#   WINDOW_ITEMS          el inventario entero al abrirlo
+#   SET_CURSOR_ITEM       lo que llevas cogido con el raton
+#   SET_PLAYER_INVENTORY  un hueco de tu propio inventario
+#   ENTITY_EQUIPMENT      lo que lleva puesto o en la mano un jugador
+#   SET_CREATIVE_SLOT     ENTRANTE: limpia el eco del modo creativo. Sin este,
+#                         un admin en creativo guarda el bloque dentro del item
+#                         con solo tocarlo. No quitarlo.
+paquetes:
+  - SET_SLOT
+  - WINDOW_ITEMS
+  - SET_CURSOR_ITEM
+  - SET_PLAYER_INVENTORY
+  - ENTITY_EQUIPMENT
+  - SET_CREATIVE_SLOT
+
 # Hasta que nivel se escribe en numeros romanos.
 # Por encima de este numero se usa la cifra normal, porque un XLVII no se lee.
 romanos-hasta: 20

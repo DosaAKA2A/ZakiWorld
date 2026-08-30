@@ -66,10 +66,35 @@ final class Limpiador {
         var plano = PlainTextComponentSerializer.plainText();
         List<Component> lineas = new ArrayList<>(lore.lines());
 
+        /*
+         * El encabezado NO tiene por que estar el primero. AdvancedEnchantments
+         * escribe sus lineas al principio del lore, asi que en un item que ya
+         * estaba sucio y luego recibio un encanto suyo, el bloque queda por
+         * debajo. Buscarlo solo en la linea 0 fue justo lo que hizo que la
+         * primera version del limpiador dijera "0 items" con el item delante.
+         */
         String cabecera = plano.serialize(a.encabezadoComponente()).trim();
-        if (cabecera.isEmpty() || !plano.serialize(lineas.get(0)).trim().equals(cabecera)) {
+        if (cabecera.isEmpty()) {
             return false;
         }
+        int inicio = -1;
+        for (int i = 0; i < lineas.size(); i++) {
+            if (plano.serialize(lineas.get(i)).trim().equals(cabecera)) {
+                inicio = i;
+                break;
+            }
+        }
+        if (inicio < 0) {
+            return false;
+        }
+        /* El renglon de aire que ponemos encima del bloque, si es que estaba. */
+        if (inicio == 1 && plano.serialize(lineas.get(0)).isBlank()) {
+            lineas.remove(0);
+            inicio = 0;
+        }
+        /* Lo de encima del bloque no se toca: se guarda y se vuelve a poner. */
+        List<Component> encima = new ArrayList<>(lineas.subList(0, inicio));
+        lineas = new ArrayList<>(lineas.subList(inicio, lineas.size()));
         lineas.remove(0);
 
         /* El bloque son las lineas seguidas que empiezan por nuestra vineta. */
@@ -96,6 +121,17 @@ final class Limpiador {
             lineas.remove(0);
         }
 
+        /* Si AE ya volvio a escribir su linea arriba (lo hace entero cada vez
+         * que anade un encanto), la copia absorbida sobra: restaurarla la
+         * duplicaria. Se compara por el texto plano. */
+        java.util.Set<String> yaEstan = new java.util.HashSet<>();
+        for (Component c : encima) {
+            yaEstan.add(plano.serialize(c).trim());
+        }
+        restauradas.removeIf(c -> yaEstan.contains(plano.serialize(c).trim()));
+
+        encima.addAll(restauradas);
+        restauradas = encima;
         restauradas.addAll(lineas);
         if (restauradas.isEmpty()) {
             item.unsetData(DataComponentTypes.LORE);
