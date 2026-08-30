@@ -36,7 +36,7 @@ import net.ederus.edm.tooltip.TooltipPlugin;
  */
 public final class EDMPlugin extends JavaPlugin {
 
-    public static final String VERSION = "1.17.5";
+    public static final String VERSION = "1.17.6";
 
     /* id del modulo -> carpeta del plugin viejo de la que se migran los datos */
     private static final Map<String, String> CARPETAS_VIEJAS = Map.of(

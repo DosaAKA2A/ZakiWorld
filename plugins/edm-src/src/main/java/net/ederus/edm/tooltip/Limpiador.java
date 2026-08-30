@@ -130,6 +130,25 @@ final class Limpiador {
         }
         restauradas.removeIf(c -> yaEstan.contains(plano.serialize(c).trim()));
 
+        /* Los cadaveres de las versiones rotas: lineas planas que dicen lo
+         * mismo que un encantamiento real del item ("Fire Aspect II"). No son
+         * de AE (las suyas llevan su icono delante) ni de MMOItems: son
+         * nuestras grabadas, y se tiran esten donde esten. */
+        Set<String> viejos = textosViejos(item, a);
+        restauradas.removeIf(c -> viejos.contains(plano.serialize(c).trim()));
+        lineas.removeIf(c -> viejos.contains(plano.serialize(c).trim()));
+
+        /* Si al barrer quedo un renglon en blanco pegado a otro, sobra uno. */
+        for (int i = lineas.size() - 1; i > 0; i--) {
+            if (plano.serialize(lineas.get(i)).isBlank()
+                    && plano.serialize(lineas.get(i - 1)).isBlank()) {
+                lineas.remove(i);
+            }
+        }
+        while (!lineas.isEmpty() && plano.serialize(lineas.get(0)).isBlank()) {
+            lineas.remove(0);
+        }
+
         encima.addAll(restauradas);
         restauradas = encima;
         restauradas.addAll(lineas);
@@ -140,6 +159,34 @@ final class Limpiador {
         }
         destapar(item);
         return true;
+    }
+
+    /*
+     * Los textos que las versiones rotas pudieron dejar grabados como texto
+     * plano: "Fire Aspect II", "Mending", "Sharpness 7"... Se generan desde los
+     * encantamientos que el item tiene de verdad, en el idioma del servidor,
+     * que es como los escribia la 1.17.0. Sirven para reconocer esas lineas
+     * huerfanas, que por estructura son indistinguibles de las de AE.
+     */
+    private static Set<String> textosViejos(ItemStack item, Ajustes a) {
+        var plano = PlainTextComponentSerializer.plainText();
+        Set<String> fuera = new LinkedHashSet<>();
+        var todos = new java.util.HashMap<org.bukkit.enchantments.Enchantment, Integer>();
+        var e1 = item.getData(DataComponentTypes.ENCHANTMENTS);
+        if (e1 != null) {
+            todos.putAll(e1.enchantments());
+        }
+        var e2 = item.getData(DataComponentTypes.STORED_ENCHANTMENTS);
+        if (e2 != null) {
+            todos.putAll(e2.enchantments());
+        }
+        for (var e : todos.entrySet()) {
+            String nombre = plano.serialize(e.getKey().description()).trim();
+            fuera.add(nombre);
+            fuera.add(nombre + " " + Numerales.de(e.getValue(), a.tope()));
+            fuera.add(nombre + " " + e.getValue());
+        }
+        return fuera;
     }
 
     /** Nuestras lineas llevan el nombre traducible; las ajenas son texto plano. */
