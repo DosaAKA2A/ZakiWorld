@@ -67,6 +67,46 @@ public final class TooltipPlugin extends Module {
         }
     }
 
+    /**
+     * /edm tooltip limpiar [jugador|todos]
+     *
+     * Quita el bloque que la 1.17.0 grabo dentro de los items de verdad. Se
+     * deja puesto aunque aquella averia ya este arreglada: si algun dia se
+     * vuelve a tocar el camino del paquete, esto es la marcha atras.
+     */
+    @Override
+    public boolean subcomando(org.bukkit.command.CommandSender quien, String[] args) {
+        if (args.length == 0 || !args[0].equalsIgnoreCase("limpiar")) {
+            return false;
+        }
+        java.util.List<org.bukkit.entity.Player> lista = new java.util.ArrayList<>();
+        if (args.length >= 2 && args[1].equalsIgnoreCase("todos")) {
+            lista.addAll(getServer().getOnlinePlayers());
+        } else if (args.length >= 2) {
+            org.bukkit.entity.Player p = getServer().getPlayerExact(args[1]);
+            if (p == null) {
+                quien.sendMessage("No hay ningun jugador conectado que se llame '" + args[1] + "'.");
+                return true;
+            }
+            lista.add(p);
+        } else if (quien instanceof org.bukkit.entity.Player p) {
+            lista.add(p);
+        } else {
+            quien.sendMessage("Desde la consola hace falta decir a quien: /edm tooltip limpiar <jugador|todos>");
+            return true;
+        }
+
+        Ajustes a = Ajustes.de(getConfig());
+        int total = 0;
+        for (org.bukkit.entity.Player p : lista) {
+            int n = Limpiador.limpiar(p, a);
+            total += n;
+            quien.sendMessage("  " + p.getName() + ": " + n + (n == 1 ? " item limpiado." : " items limpiados."));
+        }
+        quien.sendMessage("Total: " + total + " (inventario y cofre de ender).");
+        return true;
+    }
+
     @Override
     public String recargar() {
         reloadConfig();

@@ -36,7 +36,7 @@ import net.ederus.edm.tooltip.TooltipPlugin;
  */
 public final class EDMPlugin extends JavaPlugin {
 
-    public static final String VERSION = "1.17.1";
+    public static final String VERSION = "1.17.3";
 
     /* id del modulo -> carpeta del plugin viejo de la que se migran los datos */
     private static final Map<String, String> CARPETAS_VIEJAS = Map.of(
@@ -114,6 +114,17 @@ public final class EDMPlugin extends JavaPlugin {
             if (!permitido(quien)) return true;
             estado(quien);
             return true;
+        }
+
+        /* /edm <modulo> <subcomando> -> lo atiende el modulo, si sabe */
+        if (args.length >= 2 && !args[1].equalsIgnoreCase("reload")) {
+            if (!permitido(quien)) return true;
+            String id = ALIAS_MODULO.getOrDefault(args[0].toLowerCase(java.util.Locale.ROOT),
+                    args[0].toLowerCase(java.util.Locale.ROOT));
+            Module m = this.modulos.get(id);
+            if (m != null && m.subcomando(quien, java.util.Arrays.copyOfRange(args, 1, args.length))) {
+                return true;
+            }
         }
 
         /* /edm <modulo> reload -> recarga solo ese */

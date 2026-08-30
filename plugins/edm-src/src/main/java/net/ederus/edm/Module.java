@@ -57,6 +57,14 @@ public abstract class Module implements Plugin {
         return null;
     }
 
+    /**
+     * Un subcomando propio del modulo: /edm <modulo> <lo que sea>.
+     * Por omision no hay ninguno. Devuelve true si lo ha atendido el.
+     */
+    public boolean subcomando(org.bukkit.command.CommandSender quien, String[] args) {
+        return false;
+    }
+
     public final String getId() {
         return this.id;
     }

@@ -20,9 +20,11 @@ import net.kyori.adventure.text.format.TextColor;
  * y leer el config desde ahi seria pedir una carrera de datos.
  */
 record Ajustes(
+        String modo,
         int tope,
         boolean soloSiSePasa,
         boolean lineaEnBlanco,
+        boolean lineaEnBlancoAntes,
         boolean absorbidosPrimero,
         String orden,
         String encabezado,
@@ -57,9 +59,11 @@ record Ajustes(
 
     static Ajustes de(FileConfiguration c) {
         return new Ajustes(
+                c.getString("modo", "clon").toLowerCase(java.util.Locale.ROOT),
                 Math.max(1, c.getInt("romanos-hasta", 20)),
                 c.getBoolean("solo-los-que-se-rompen", false),
                 c.getBoolean("linea-en-blanco", true),
+                c.getBoolean("linea-en-blanco-antes", true),
                 c.getBoolean("absorbidos-primero", true),
                 c.getString("orden", "nombre").toLowerCase(java.util.Locale.ROOT),
                 c.getString("encabezado", "&x&F&F&6&F&D&8▎Encantamientos:"),

@@ -65,6 +65,11 @@ final class Reescritor {
         this.ajustes = ajustes;
     }
 
+    /** Como se escribe el paquete: clon, directo o lectura. Ver EscuchaPaquetes. */
+    String modo() {
+        return this.ajustes.modo();
+    }
+
     void ajustes(Ajustes nuevos) {
         this.ajustes = nuevos;
         synchronized (this.cache) {
@@ -157,6 +162,12 @@ final class Reescritor {
         List<Component> resto = repartir(previas, absorbidas, a);
 
         List<Component> lineas = new ArrayList<>();
+        /* Un renglon de aire entre el nombre del item y el bloque. Sin esto el
+         * encabezado queda pegado al titulo y el tooltip se lee como un muro;
+         * en la referencia que puso el dueno cada bloque va separado. */
+        if (a.lineaEnBlancoAntes()) {
+            lineas.add(Component.empty().decoration(TextDecoration.ITALIC, false));
+        }
         if (!a.encabezado().isEmpty()) {
             lineas.add(a.encabezadoComponente());
         }

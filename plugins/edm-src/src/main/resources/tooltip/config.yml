@@ -6,6 +6,14 @@
 # hacia el cliente. Apagar el modulo (modulos.tooltip: false en el config del
 # nucleo) deja el juego exactamente como estaba, sin limpiezas ni migraciones.
 
+# Como se escribe el paquete. NO tocar sin motivo.
+#   clon     se duplica el paquete y se escribe sobre el duplicado. Es el bueno:
+#            lo que ProtocolLib entrega esta pegado al item vivo del inventario,
+#            y escribir ahi cambia el item de verdad (paso, y se comprobo).
+#   directo  se escribe sobre el paquete tal cual. Solo para comparar.
+#   lectura  se calcula todo y no se escribe nada. Para aislar averias.
+modo: clon
+
 # Hasta que nivel se escribe en numeros romanos.
 # Por encima de este numero se usa la cifra normal, porque un XLVII no se lee.
 romanos-hasta: 20
@@ -29,8 +37,12 @@ encabezado: '&x&F&F&6&F&D&8▎Encantamientos:'
 # Lo que va delante de cada encantamiento.
 vineta: ' · '
 
-# Deja un renglon en blanco entre nuestro bloque y el lore que ya trajera el
-# item (el de MMOItems, el de un cofre, el que sea).
+# Un renglon en blanco ENCIMA del bloque, para que no quede pegado al nombre
+# del item. Cada bloque separado del siguiente, como en el resto de los items.
+linea-en-blanco-antes: true
+
+# Y otro DEBAJO, entre nuestro bloque y el lore que ya trajera el item
+# (el de MMOItems, el de un cofre, el que sea).
 linea-en-blanco: true
 
 # Lineas del lore que ya escribe otro plugin y que tienen que entrar DENTRO del
