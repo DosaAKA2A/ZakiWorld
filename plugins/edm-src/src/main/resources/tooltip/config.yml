@@ -50,7 +50,7 @@ solo-los-que-se-rompen: false
 orden: nombre
 
 # La cabecera del bloque. Vacio para no poner ninguna.
-encabezado: '&x&F&F&6&F&D&8▎Encantamientos:'
+encabezado: '&#FFA500▎ Encantamientos:'
 
 # Lo que va delante de cada encantamiento.
 vineta: ' · '

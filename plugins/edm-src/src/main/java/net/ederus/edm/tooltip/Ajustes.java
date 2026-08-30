@@ -67,7 +67,7 @@ record Ajustes(
                 c.getBoolean("linea-en-blanco-antes", true),
                 c.getBoolean("absorbidos-primero", true),
                 c.getString("orden", "nombre").toLowerCase(java.util.Locale.ROOT),
-                c.getString("encabezado", "&x&F&F&6&F&D&8▎Encantamientos:"),
+                c.getString("encabezado", "&#FFA500▎ Encantamientos:"),
                 c.getString("vineta", " · "),
                 color(c.getString("colores.vineta"), TextColor.fromHexString("#545454")),
                 color(c.getString("colores.nombre"), TextColor.fromHexString("#C8C8C8")),
