@@ -291,6 +291,63 @@ public final class Alba extends BossFight {
         if (ticks() % 14 == 0) {
             Compat.spawn(world(), Compat.END_ROD, body().getLocation().add(0, 2.2, 0), 1, 0.25, 0.15, 0.25, 0.0);
         }
+        hunt();
+    }
+
+    // ------------------------------------------------------------------ la caza
+
+    /** El proximo tick en que el brazo descansado puede soltar otro basico. */
+    private long proximoBasico = 0;
+
+    /**
+     * LA CAZA: sin esto Alba era una torreta que spameaba habilidades sin
+     * moverse del sitio. Montada, el corcel no persigue a nadie (la IA de un
+     * caballo domado no ataca), asi que se le lleva a mano con velocity +
+     * encarar, igual que en las cargas; a pie, a la IA del zombi solo hay que
+     * darle el objetivo. Y al alcance pega BASICOS de verdad, con su tajo.
+     */
+    private void hunt() {
+        if (!alive() || busy()) return;
+        Player p = nearestTargets(1).stream().findFirst().orElse(null);
+        if (p == null) return;
+        /* El zombi de combate siempre con objetivo: a pie camina su IA. */
+        if (ticks() % 10 == 0 && boss instanceof org.bukkit.entity.Mob m) {
+            var actual = m.getTarget();
+            if (actual == null || !actual.isValid() || actual.isDead()) m.setTarget(p);
+        }
+        double dist = body().getLocation().distance(p.getLocation());
+        if (mounted() && steed != null && steed.isValid() && ticks() % 4 == 0) {
+            Vector dir = p.getLocation().toVector().subtract(steed.getLocation().toVector()).setY(0);
+            encarar(dir);
+            if (dist > 3.0 && dir.lengthSquared() > 0.04) {
+                steed.setVelocity(dir.normalize().multiply(0.42).setY(steed.getVelocity().getY()));
+                if (ticks() % 16 == 0) {
+                    Compat.sound(world(), steed.getLocation(), "entity.horse.gallop", 0.6f, 1.05f);
+                }
+            }
+        }
+        if (dist <= 3.4 && ticks() >= proximoBasico) {
+            proximoBasico = ticks() + 24;
+            basico(p);
+        }
+    }
+
+    /** Un golpe basico: tajo con la lanza, sonido de espada y empujon corto. */
+    private void basico(Player p) {
+        World w = world();
+        encarar(p.getLocation().toVector().subtract(body().getLocation().toVector()));
+        try {
+            if (shell() != null && shell().isValid()) shell().swingMainHand();
+        } catch (Throwable ignored) {
+        }
+        Location q = p.getLocation().add(0, 1, 0);
+        Compat.spawn(w, Compat.SWEEP_ATTACK, q, 1, 0, 0, 0, 0);
+        Compat.spawn(w, Compat.CRIT, q, 6, 0.25, 0.3, 0.25, 0.06);
+        Compat.sound(w, q, "entity.player.attack.sweep", 1.1f, 1.2f);
+        Compat.sound(w, q, "block.bell.use", 0.5f, 1.9f);
+        hit(p, phase() >= 4 ? 10 : 8);
+        push(p, p.getLocation().toVector().subtract(body().getLocation().toVector())
+                .setY(0).normalize().multiply(0.35).setY(0.2));
     }
 
     @Override
@@ -1222,23 +1279,144 @@ public final class Alba extends BossFight {
         }
     }
 
-    /** 3b. Juicio de Hojas: el swordfall completo sobre un jugador. */
-    public void juicioDeHojas() {
-        Player p = randomTarget();
-        if (p == null) return;
+    /** El adios de una hoja: fogonazo y chispas. Copiado del flashAway de RIP. */
+    private void hojaFugaz(ItemDisplay d) {
+        if (d == null) return;
         World w = world();
-        Location c = p.getLocation().clone();
-        warn(Component.text("El cielo dicta sobre " + p.getName() + ".", ORO, TextDecoration.BOLD));
-        Compat.sound(w, c, "block.respawn_anchor.charge", 1.0f, 0.7f);
-        busyFor(56);
-        for (int i = 0; i < 12; i++) {
-            double a = Math.PI * 2 / 12 * i;
-            Location spot = c.clone().add(Math.cos(a) * 3.0, 0, Math.sin(a) * 3.0);
-            later(4 + i * 2, () -> fallBlade(spot, goldBlade(), 1.6f, 6, 1.6, 5));
+        Location at = null;
+        float scale = 1.0f;
+        try {
+            if (d.isValid()) {
+                Transformation tr = d.getTransformation();
+                at = d.getLocation().clone().add(0, tr.getTranslation().y, 0);
+                scale = tr.getScale().x;
+            }
+        } catch (Throwable ignored) {
         }
-        later(34, () -> {
-            Compat.sound(w, c, "entity.lightning_bolt.thunder", 0.8f, 0.6f);
-            fallBlade(c, goldBlade(), 4.2f, 12, 3.0, 8);
+        if (at != null) {
+            boolean big = scale > 3.0f;
+            Compat.spawn(w, Compat.FLASH, at, 1);
+            Compat.spawn(w, Compat.END_ROD, at, big ? 40 : 14, big ? 0.5 : 0.18, big ? 0.7 : 0.3, big ? 0.5 : 0.18, big ? 0.12 : 0.05);
+            Compat.spawn(w, Compat.ELECTRIC_SPARK, at, big ? 26 : 9, big ? 0.4 : 0.2, big ? 0.6 : 0.3, big ? 0.4 : 0.2, big ? 0.15 : 0.08);
+            Compat.sound(w, at, "block.amethyst_block.chime", big ? 1.2f : 0.6f,
+                    big ? 0.8f : 1.3f + (float) random.nextDouble() * 0.5f);
+            if (big) Compat.sound(w, at, "entity.illusioner.mirror_move", 1.0f, 0.7f);
+        }
+        Fx.safeRemove(d);
+    }
+
+    /**
+     * 3b. Juicio de Hojas: el swordfall de RIP COPIADO TICK A TICK (kSwordfall
+     * de EffectRunner), que es la version completa: 12 hojas cayendo una a una
+     * en anillo, trueno y fogonazo en lo alto, la GIGANTE bajando con su estela
+     * de nubes, el coro del impacto con la onda expansiva creciendo, y las
+     * hojas retirandose en destellos una por una. Solo cambia el sabor (oro en
+     * vez de piedra) y que aqui las hojas HACEN daño de jefe.
+     */
+    public void juicioDeHojas() {
+        Player objetivo = randomTarget();
+        if (objetivo == null) return;
+        World w = world();
+        Location base = Fx.ground(objetivo.getLocation().clone(), 8);
+        Location c = base.clone().add(0, 1, 0);
+        warn(Component.text("El cielo dicta sobre " + objetivo.getName() + ".", ORO, TextDecoration.BOLD));
+        busyFor(120);
+        Fx.ring(base.clone().add(0, 0.2, 0), 2.2, 14, p ->
+                Compat.spawn(w, Compat.ENCHANT, p, 2, 0.05, 0.3, 0.05, 0.4));
+        Compat.sound(w, base, "block.respawn_anchor.charge", 1.0f, 0.6f);
+        Compat.sound(w, base, "entity.elder_guardian.curse", 0.5f, 1.4f);
+        List<ItemDisplay> hojas = new ArrayList<>();
+        java.util.Set<java.util.UUID> barridos = new java.util.HashSet<>();
+        animate(140, t -> {
+            /* t=4..26: las doce hojas del anillo, una cada dos ticks. */
+            if (t >= 4 && t <= 26 && (t - 4) % 2 == 0) {
+                int i = (t - 4) / 2;
+                double a = Math.PI * 2 / 12 * i;
+                Location ground = Fx.ground(base.clone().add(Math.cos(a) * 2.2, 1, Math.sin(a) * 2.2), 6);
+                ItemDisplay hoja = verticalBlade(ground, goldBlade(), 1.6f, (float) -a, 13.0, 0.95, 4, 0);
+                if (hoja != null) {
+                    hojas.add(hoja);
+                    expire(hoja, 150);
+                    later(6, () -> {
+                        Compat.spawn(w, Compat.BLOCK, ground.clone().add(0, 0.2, 0), 12, 0.15, 0.1, 0.15, 0.05,
+                                Material.GOLD_BLOCK.createBlockData());
+                        Compat.spawn(w, Compat.CRIT, ground.clone().add(0, 0.5, 0), 6, 0.1, 0.2, 0.1, 0.1);
+                        Compat.sound(w, ground, "entity.player.attack.sweep", 1.0f, 0.7f + (float) random.nextDouble() * 0.6f);
+                        Compat.sound(w, ground, "item.trident.hit_ground", 0.8f, 0.8f + (float) random.nextDouble() * 0.4f);
+                        Compat.sound(w, ground, "block.bell.use", 0.45f, 1.4f + (float) random.nextDouble() * 0.5f);
+                        for (Player v : Fx.playersNear(ground, 1.5)) hit(v, 6);
+                    });
+                }
+            }
+            /* La carga sobre el centro mientras el anillo se cierra. */
+            if (t < 40 && t % 4 == 0) {
+                Compat.spawn(w, Compat.ENCHANT, c.clone().add(0, 0.4, 0), 4, 0.35, 0.6, 0.35, 0.3);
+            }
+            /* t=36: el cielo avisa. */
+            if (t == 36) {
+                Compat.sound(w, c, "entity.lightning_bolt.thunder", 0.6f, 0.5f);
+                Compat.spawn(w, Compat.FLASH, c.clone().add(0, 12, 0), 1);
+            }
+            /* t=40: la GIGANTE baja con su estela de nubes. */
+            if (t == 40) {
+                ItemDisplay gigante = verticalBlade(base.clone(), goldBlade(), 6.0f, 0.6f, 24.0, 2.6, 8, 0);
+                if (gigante != null) {
+                    hojas.add(gigante);
+                    expire(gigante, 150);
+                }
+                animate(8, tick -> {
+                    double y = 24.0 - tick * (21.4 / 8.0);
+                    Compat.spawn(w, Compat.CLOUD, base.clone().add(0, y, 0), 3, 0.3, 0.5, 0.3, 0.01);
+                    Compat.spawn(w, Compat.CRIT, base.clone().add(0, y, 0), 4, 0.2, 0.4, 0.2, 0.05);
+                }, null);
+            }
+            /* t=50: el impacto, con el coro entero del original. */
+            if (t == 50) {
+                Compat.spawn(w, Compat.EXPLOSION_EMITTER, base, 1);
+                Compat.spawn(w, Compat.FLASH, c, 1);
+                Compat.spawn(w, Compat.BLOCK, base.clone().add(0, 0.3, 0), 60, 1.2, 0.3, 1.2, 0.1,
+                        Material.GOLD_BLOCK.createBlockData());
+                Compat.sound(w, base, "block.anvil.land", 1.0f, 0.5f);
+                Compat.sound(w, base, "block.anvil.use", 1.0f, 0.4f);
+                Compat.sound(w, base, "entity.lightning_bolt.impact", 1.0f, 0.7f);
+                Compat.sound(w, base, "item.mace.smash_ground_heavy", 1.0f, 0.6f);
+                Compat.sound(w, base, "block.bell.use", 1.5f, 0.55f);
+                later(6, () -> Compat.sound(w, base, "block.bell.resonate", 1.2f, 0.75f));
+                later(16, () -> Compat.sound(w, base, "block.bell.resonate", 0.8f, 0.6f));
+                for (Player v : Fx.playersNear(base, 3.5)) {
+                    hit(v, 12);
+                    lift(v, new Vector(0, 0.6, 0));
+                }
+            }
+            /* t=50..64: la onda expansiva de nubes, que aqui ademas barre. */
+            if (t > 50 && t <= 64) {
+                double r = (t - 50) * 0.45;
+                Fx.ring(base.clone().add(0, 0.15, 0), r, (int) (10 + r * 6), p -> {
+                    Compat.spawn(w, Compat.CLOUD, p, 1);
+                    if (t % 2 == 0) Compat.spawn(w, Compat.CRIT, p, 1, 0.03, 0.05, 0.03, 0.02);
+                });
+                for (Player v : Fx.playersNear(base, r + 0.9)) {
+                    if (Math.abs(v.getLocation().distance(base) - r) < 0.9 && barridos.add(v.getUniqueId())) {
+                        hit(v, 5);
+                        push(v, v.getLocation().toVector().subtract(base.toVector()).setY(0).normalize()
+                                .multiply(0.5).setY(0.3));
+                    }
+                }
+            }
+            /* t=96: el tesoro se retira, un destello por hoja. */
+            if (t == 96) {
+                List<ItemDisplay> pendientes = new ArrayList<>(hojas);
+                hojas.clear();
+                for (int i = 0; i < pendientes.size(); i++) {
+                    ItemDisplay hoja = pendientes.get(i);
+                    later(i * 2, () -> hojaFugaz(hoja));
+                }
+            }
+        }, () -> {
+            for (ItemDisplay hoja : hojas) {
+                if (hoja != null && hoja.isValid()) Fx.safeRemove(hoja);
+            }
+            hojas.clear();
         });
     }
 
@@ -1662,8 +1840,11 @@ public final class Alba extends BossFight {
         for (int i = 0; i < rayos; i++) {
             double a = Math.PI * 2 / rayos * i;
             Location at = new Location(w, c.getX() + Math.cos(a) * 0.8, baseY, c.getZ() + Math.sin(a) * 0.8);
-            org.bukkit.entity.BlockDisplay funda = haz(at, Material.YELLOW_STAINED_GLASS, 0.36f);
-            org.bukkit.entity.BlockDisplay nucleo = haz(at, Material.GLOWSTONE, 0.15f);
+            /* El nucleo es FROGLIGHT OCRE, el bloque mas claro y amarillo que
+             * existe, bien gordo; la funda de cristal solo lo tiñe. Con el
+             * glowstone fino de la primera version el rayo se veia OSCURO. */
+            org.bukkit.entity.BlockDisplay funda = haz(at, Material.YELLOW_STAINED_GLASS, 0.62f);
+            org.bukkit.entity.BlockDisplay nucleo = haz(at, pickMat("OCHRE_FROGLIGHT", "GLOWSTONE"), 0.4f);
             if (funda != null || nucleo != null) {
                 haces.add(new org.bukkit.entity.BlockDisplay[]{funda, nucleo});
             }

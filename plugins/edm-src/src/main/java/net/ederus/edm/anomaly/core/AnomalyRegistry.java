@@ -3033,8 +3033,8 @@ public final class AnomalyRegistry {
             add(list, "au_corona", "Corona de la Diosa", 5, 340, 36, 3,
                     "El estallido final: cuanto mas cerca, mas duele.",
                     AnomalyRegistry.icon("GOLDEN_HELMET", "GOLD_INGOT"), f -> alba(f).coronaDelDios());
-            add(list, "au_juicio_hojas", "Juicio de Hojas", 1, 260, 56, 5,
-                    "El swordfall entero: 12 espadas en anillo y la gigante al centro.",
+            add(list, "au_juicio_hojas", "Juicio de Hojas", 1, 300, 120, 5,
+                    "El swordfall entero: anillo de 12, la gigante, la onda y la retirada.",
                     AnomalyRegistry.icon("GOLDEN_SWORD"), f -> alba(f).juicioDeHojas());
             add(list, "au_siembra", "Siembra de Acero", 1, 300, 110, 4,
                     "Un pasillo de espadas clavadas que estalla en cadena.",
