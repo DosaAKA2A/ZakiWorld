@@ -652,6 +652,12 @@ public abstract class BossFight {
                             m.customName(name);
                             m.setCustomNameVisible(true);
                         }
+                        /* El maniqui trae de serie una segunda linea "NPC"
+                         * debajo del nombre. Fuera. */
+                        try {
+                            m.setDescription(Component.empty());
+                        } catch (Throwable ignored) {
+                        }
                     });
             shell = body;
             shellProfile = profile;
@@ -731,7 +737,10 @@ public abstract class BossFight {
             return;
         }
         try {
-            shell.teleport(boss.getLocation());
+            /* Si el cuerpo va MONTADO (pasajero de un caballo, por ejemplo),
+             * teletransportarlo lo desmontaria cada tick: se deja quieto y es
+             * la montura quien lo lleva. */
+            if (shell.getVehicle() == null) shell.teleport(boss.getLocation());
         } catch (Throwable ignored) {
         }
     }

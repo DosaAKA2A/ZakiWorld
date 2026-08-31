@@ -3033,6 +3033,27 @@ public final class AnomalyRegistry {
             add(list, "au_corona", "Corona de la Diosa", 5, 340, 36, 3,
                     "El estallido final: cuanto mas cerca, mas duele.",
                     AnomalyRegistry.icon("GOLDEN_HELMET", "GOLD_INGOT"), f -> alba(f).coronaDelDios());
+            add(list, "au_juicio_hojas", "Juicio de Hojas", 1, 260, 56, 5,
+                    "El swordfall entero: 12 espadas en anillo y la gigante al centro.",
+                    AnomalyRegistry.icon("GOLDEN_SWORD"), f -> alba(f).juicioDeHojas());
+            add(list, "au_siembra", "Siembra de Acero", 1, 300, 110, 4,
+                    "Un pasillo de espadas clavadas que estalla en cadena.",
+                    AnomalyRegistry.icon("GOLDEN_SWORD","GOLD_INGOT"), f -> alba(f).siembraDeAcero());
+            add(list, "au_cosecha", "Cosecha Clavada", 2, 320, 60, 5,
+                    "Una espada plantada donde pisaba cada jugador; estallan en cruz.",
+                    AnomalyRegistry.icon("IRON_SWORD"), f -> alba(f).cosechaClavada());
+            add(list, "au_diluvio", "Diluvio Menor", 2, 300, 60, 5,
+                    "Cuatro olas de espadas sobre el area entera.",
+                    AnomalyRegistry.icon("ANVIL","IRON_BLOCK"), f -> alba(f).diluvioMenor());
+            add(list, "au_replica", "Replica Enterrada", 3, 340, 100, 4,
+                    "Planta 5 espadas mientras duela; detonan hacia fuera.",
+                    AnomalyRegistry.icon("GOLDEN_SWORD"), f -> alba(f).replicaEnterrada());
+            add(list, "au_agujas", "Campo de Agujas", 4, 380, 80, 5,
+                    "Una jaula de 24 lanzas clavadas que implota.",
+                    AnomalyRegistry.icon("TRIDENT","IRON_BARS"), f -> alba(f).campoDeAgujas());
+            add(list, "au_mil_lanzas", "LLUVIA DE MIL LANZAS", 5, 1600, 210, 5,
+                    "Diez segundos de cielo lleno; solo los claros de luz salvan.",
+                    AnomalyRegistry.icon("TRIDENT","GOLD_BLOCK"), f -> alba(f).lluviaDeMilLanzas());
             return list;
         }
 

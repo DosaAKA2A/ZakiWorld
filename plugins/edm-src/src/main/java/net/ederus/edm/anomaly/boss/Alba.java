@@ -151,6 +151,15 @@ public final class Alba extends BossFight {
     }
 
     /** El corcel dorado. Sin nombre: se presenta solo. */
+    /** Sube el CUERPO VISIBLE al caballo. El que se ve cabalgando es el maniqui. */
+    private void montarCuerpo() {
+        if (steed == null || !steed.isValid()) return;
+        var cuerpo = shell() != null && shell().isValid() ? shell() : boss;
+        if (cuerpo != null && cuerpo.isValid() && !steed.getPassengers().contains(cuerpo)) {
+            steed.addPassenger(cuerpo);
+        }
+    }
+
     private void mount(Location spot) {
         steed = world().spawn(spot, Horse.class, h -> {
             h.setAdult();
@@ -164,25 +173,47 @@ public final class Alba extends BossFight {
         });
         markMinion(steed);
         Compat.setAttribute(steed, "movement_speed", 0.32);
-        steed.addPassenger(boss);
+        montarCuerpo();
         Compat.spawn(world(), Compat.FIREWORK_SPARK, spot.clone().add(0, 1.2, 0), 20, 0.8, 0.6, 0.8, 0.06);
         soundAt(spot, "entity.horse.armor", 1.2f, 0.8f);
         soundAt(spot, "entity.horse.angry", 1.0f, 0.9f);
     }
 
-    /** La lanza dorada en la mano del cuerpo visible. */
+    /** Una pieza de la Regalia para el cuerpo: oro con trim de diamante. */
+    private static ItemStack piezaRegalia(Material mat, org.bukkit.inventory.meta.trim.TrimPattern patron) {
+        ItemStack pieza = new ItemStack(mat);
+        try {
+            if (pieza.getItemMeta() instanceof org.bukkit.inventory.meta.ArmorMeta am) {
+                am.setTrim(new org.bukkit.inventory.meta.trim.ArmorTrim(
+                        org.bukkit.inventory.meta.trim.TrimMaterial.DIAMOND, patron));
+                pieza.setItemMeta(am);
+            }
+        } catch (Throwable ignored) {
+        }
+        return pieza;
+    }
+
+    /** La Regalia del Alba puesta: la dama pelea con su propia armadura. */
     private void armarLanza() {
         try {
-            if (shell() != null && shell().isValid() && shell().getEquipment() != null) {
-                shell().getEquipment().setItemInMainHand(lance());
-                shell().getEquipment().setItemInMainHandDropChance(0);
-            }
+            if (shell() == null || !shell().isValid() || shell().getEquipment() == null) return;
+            var eq = shell().getEquipment();
+            eq.setItemInMainHand(lance());
+            eq.setHelmet(piezaRegalia(Material.GOLDEN_HELMET, org.bukkit.inventory.meta.trim.TrimPattern.FLOW));
+            eq.setChestplate(piezaRegalia(Material.GOLDEN_CHESTPLATE, org.bukkit.inventory.meta.trim.TrimPattern.RAISER));
+            eq.setLeggings(piezaRegalia(Material.GOLDEN_LEGGINGS, org.bukkit.inventory.meta.trim.TrimPattern.SPIRE));
+            eq.setBoots(piezaRegalia(Material.GOLDEN_BOOTS, org.bukkit.inventory.meta.trim.TrimPattern.FLOW));
+            eq.setItemInMainHandDropChance(0);
+            /* La montura se engancha cuando el cuerpo ya existe. */
+            montarCuerpo();
         } catch (Throwable ignored) {
         }
     }
 
     private boolean mounted() {
-        return steed != null && steed.isValid() && steed.getPassengers().contains(boss);
+        if (steed == null || !steed.isValid()) return false;
+        var cuerpo = shell() != null && shell().isValid() ? shell() : boss;
+        return steed.getPassengers().contains(cuerpo);
     }
 
     private void dismount() {
@@ -199,8 +230,8 @@ public final class Alba extends BossFight {
             mount(loc());
             return;
         }
-        steed.teleport(loc());
-        steed.addPassenger(boss);
+        steed.teleport(boss.getLocation());
+        montarCuerpo();
         soundAt(loc(), "entity.horse.armor", 1.2f, 0.7f);
         Compat.spawn(world(), Compat.FIREWORK_SPARK, loc().add(0, 1, 0), 16, 0.6, 0.5, 0.6, 0.05);
     }
@@ -245,6 +276,11 @@ public final class Alba extends BossFight {
     protected void ambient() {
         super.ambient();
         barra();
+        /* Mientras cabalga, el mob de combate (invisible) viaja pegado al
+         * caballo: el maniqui es el pasajero y el zombi lo sigue por debajo. */
+        if (mounted() && boss != null && boss.isValid()) {
+            boss.teleport(steed.getLocation());
+        }
         /* El guardian de la montura: en toda fase menos la del duelo a pie,
          * Alba pelea A CABALLO. Si algo la baja (o el enganche del spawn
          * fallo), se la vuelve a subir. */
@@ -379,7 +415,7 @@ public final class Alba extends BossFight {
         Compat.sound(w, at, "block.end_portal_frame.fill", 1.1f, 1.6f);
         Compat.sound(w, at, "block.bell.use", 0.7f, 1.9f);
         animate(lifeTicks, t -> {
-            double r = 0.9;
+            double r = 1.3;
             for (int i = 0; i < 10; i++) {
                 double a = Math.PI * 2 / 10 * i + t * 0.25;
                 Location p = at.clone().add(Math.cos(a) * r, Math.sin(a) * r, 0);
@@ -419,13 +455,16 @@ public final class Alba extends BossFight {
      * tocar hace daño en un radio corto. Se recoge sola.
      */
     private void shootBlade(Location from, Location to, ItemStack arma, float scale, double dmg, double speed) {
+        /* La escala de "majestuoso": todo proyectil sale mas grande y pega mas. */
+        final float escala = scale * 1.3f;
+        final double dano = dmg + 2;
         World w = world();
         Vector dir = to.toVector().subtract(from.toVector());
         double dist = Math.max(0.01, dir.length());
         dir.multiply(1.0 / dist);
         float yaw = (float) Math.toDegrees(Math.atan2(-dir.getX(), dir.getZ()));
         float pitch = (float) Math.toDegrees(Math.asin(-dir.getY()));
-        ItemDisplay d = bladeDisplay(from.clone(), arma, scale, yaw, pitch);
+        ItemDisplay d = bladeDisplay(from.clone(), arma, escala, yaw, pitch);
         if (d == null) return;
         int life = (int) Math.ceil(dist / speed) + 2;
         Compat.sound(w, from, "item.trident.throw", 1.0f, 1.5f);
@@ -437,7 +476,7 @@ public final class Alba extends BossFight {
             Compat.spawn(w, Compat.ELECTRIC_SPARK, next, 1, 0.03, 0.03, 0.03, 0.0);
             if (t % 2 == 0) Compat.spawn(w, Compat.END_ROD, next, 1, 0.0, 0.0, 0.0, 0.0);
             for (Player p : Fx.playersNear(next, 1.3)) {
-                hit(p, dmg);
+                hit(p, dano);
                 push(p, step.clone().normalize().multiply(0.35).setY(0.12));
                 Compat.spawn(w, Compat.CRIT, p.getLocation().add(0, 1, 0), 8, 0.2, 0.3, 0.2, 0.1);
                 Compat.sound(w, p.getLocation(), "block.bell.use", 0.8f, 1.9f);
@@ -455,25 +494,28 @@ public final class Alba extends BossFight {
 
     /** Una hoja que CAE del cielo sobre un punto y castiga el circulo. */
     private void fallBlade(Location groundSpot, ItemStack arma, float scale, double dmg, double radius, int fallTicks) {
+        final float escala = scale * 1.5f;
+        final double dano = dmg + 3;
+        final double radio = radius * 1.25;
         World w = world();
         Location ground = Fx.ground(groundSpot, 10);
         Location top = ground.clone().add(0, 14, 0);
-        ItemDisplay d = bladeDisplay(top, arma, scale, (float) (random.nextDouble() * 360), 90);
+        ItemDisplay d = bladeDisplay(top, arma, escala, (float) (random.nextDouble() * 360), 90);
         if (d == null) return;
-        Fx.ring(ground.clone().add(0, 0.15, 0), Math.max(0.8, radius * 0.7), 14, p ->
+        Fx.ring(ground.clone().add(0, 0.15, 0), Math.max(0.8, radio * 0.7), 14, p ->
                 Compat.spawn(w, Compat.GLOW, p, 1, 0.02, 0.02, 0.02, 0.0));
         double per = 14.0 / fallTicks;
         animate(fallTicks, t -> {
             if (d.isValid()) d.teleport(d.getLocation().subtract(0, per, 0));
             Compat.spawn(w, Compat.END_ROD, d.getLocation(), 1, 0.05, 0.1, 0.05, 0.0);
         }, () -> {
-            Compat.spawn(w, Compat.CRIT, ground.clone().add(0, 0.4, 0), 14, radius * 0.4, 0.2, radius * 0.4, 0.08);
+            Compat.spawn(w, Compat.CRIT, ground.clone().add(0, 0.4, 0), 14, radio * 0.4, 0.2, radio * 0.4, 0.08);
             Compat.spawn(w, Compat.BLOCK, ground.clone().add(0, 0.2, 0), 16, 0.3, 0.1, 0.3, 0.05,
                     Material.GOLD_BLOCK.createBlockData());
             Compat.sound(w, ground, "item.trident.hit_ground", 1.1f, 1.1f);
             Compat.sound(w, ground, "block.bell.use", 0.8f, 1.7f);
-            for (Player p : Fx.playersNear(ground, radius)) {
-                hit(p, dmg);
+            for (Player p : Fx.playersNear(ground, radio)) {
+                hit(p, dano);
             }
             if (d.isValid()) Fx.safeRemove(d);
         });
@@ -506,6 +548,41 @@ public final class Alba extends BossFight {
         Location l = body().getLocation().add(0, 2.1, 0);
         Vector side = l.getDirection().setY(0).normalize().rotateAroundY(Math.PI / 2).multiply(0.9);
         return l.add(side);
+    }
+
+    /** Una hoja que cae y QUEDA CLAVADA en el suelo, punta abajo. */
+    private ItemDisplay plantada(Location groundSpot, ItemStack arma, float scale) {
+        World w = world();
+        Location ground = Fx.ground(groundSpot, 10);
+        ItemDisplay d = bladeDisplay(ground.clone().add(0, 12, 0), arma, scale, (float) (random.nextDouble() * 360), 90);
+        if (d == null) return null;
+        animate(4, t -> {
+            if (d.isValid()) d.teleport(d.getLocation().subtract(0, 12.0 / 4, 0).add(0, 0, 0));
+        }, () -> {
+            if (!d.isValid()) return;
+            d.teleport(ground.clone().add(0, 0.9 * scale * 0.5, 0));
+            Compat.spawn(w, Compat.BLOCK, ground.clone().add(0, 0.2, 0), 10, 0.2, 0.1, 0.2, 0.04,
+                    Material.GOLD_BLOCK.createBlockData());
+            Compat.sound(w, ground, "item.trident.hit_ground", 1.0f, 1.0f);
+            Compat.sound(w, ground, "block.bell.use", 0.5f, 1.9f);
+        });
+        return d;
+    }
+
+    /** El estallido de una hoja clavada: fogonazo, metralla y daño en circulo. */
+    private void estallidoHoja(Location at, double dmg, double radius) {
+        World w = world();
+        Compat.spawn(w, Compat.EXPLOSION, at, 1);
+        Compat.spawn(w, Compat.FLASH, at, 1);
+        Compat.spawn(w, Compat.CRIT, at.clone().add(0, 0.5, 0), 18, radius * 0.4, 0.4, radius * 0.4, 0.12);
+        Compat.spawn(w, Compat.BLOCK, at.clone().add(0, 0.3, 0), 20, 0.4, 0.2, 0.4, 0.06,
+                Material.GOLD_BLOCK.createBlockData());
+        Compat.sound(w, at, "item.mace.smash_ground", 1.0f, 1.4f);
+        Compat.sound(w, at, "block.bell.use", 0.9f, 1.7f);
+        for (Player p : Fx.playersNear(at, radius)) {
+            hit(p, dmg);
+            lift(p, p.getLocation().toVector().subtract(at.toVector()).normalize().multiply(0.5).setY(0.45));
+        }
     }
 
     // ================================================================== FASE 0
@@ -1033,6 +1110,234 @@ public final class Alba extends BossFight {
                 }, null);
             });
         }
+    }
+
+    /** 3b. Juicio de Hojas: el swordfall completo sobre un jugador. */
+    public void juicioDeHojas() {
+        Player p = randomTarget();
+        if (p == null) return;
+        World w = world();
+        Location c = p.getLocation().clone();
+        warn(Component.text("El cielo dicta sobre " + p.getName() + ".", ORO, TextDecoration.BOLD));
+        Compat.sound(w, c, "block.respawn_anchor.charge", 1.0f, 0.7f);
+        busyFor(56);
+        for (int i = 0; i < 12; i++) {
+            double a = Math.PI * 2 / 12 * i;
+            Location spot = c.clone().add(Math.cos(a) * 3.0, 0, Math.sin(a) * 3.0);
+            later(4 + i * 2, () -> fallBlade(spot, goldBlade(), 1.6f, 6, 1.6, 5));
+        }
+        later(34, () -> {
+            Compat.sound(w, c, "entity.lightning_bolt.thunder", 0.8f, 0.6f);
+            fallBlade(c, goldBlade(), 4.2f, 12, 3.0, 8);
+        });
+    }
+
+    /** 6. Siembra de Acero: un pasillo de espadas clavadas que estalla en cadena. */
+    public void siembraDeAcero() {
+        Player p = randomTarget();
+        if (p == null) return;
+        World w = world();
+        Location from = body().getLocation().clone();
+        org.bukkit.util.Vector dir = p.getLocation().toVector().subtract(from.toVector()).setY(0).normalize();
+        warn(Component.text("Siembra de acero: no pisen la hilera.", ORO_PALIDO));
+        List<ItemDisplay> hilera = new ArrayList<>();
+        for (int i = 1; i <= 8; i++) {
+            Location spot = from.clone().add(dir.clone().multiply(1.8 * i));
+            int d = i * 3;
+            later(d, () -> {
+                ItemDisplay pl = plantada(spot, goldBlade(), 1.7f);
+                if (pl != null) hilera.add(pl);
+            });
+        }
+        later(80, () -> {
+            for (int i = 0; i < hilera.size(); i++) {
+                ItemDisplay pl = hilera.get(i);
+                later(i * 4, () -> {
+                    if (pl == null || !pl.isValid()) return;
+                    Location at = pl.getLocation().clone();
+                    Fx.safeRemove(pl);
+                    estallidoHoja(at, 9, 2.4);
+                });
+            }
+        });
+        hilera.forEach(d -> { if (d != null) expire(d, 130); });
+    }
+
+    /** 11. Cosecha Clavada: una espada plantada donde pisaba CADA jugador; estallan en cruz. */
+    public void cosechaClavada() {
+        World w = world();
+        List<Player> ps = targets(36);
+        if (ps.isEmpty()) return;
+        warn(Component.text("Cosecha clavada: MUEVANSE de donde estan.", ORO, TextDecoration.BOLD));
+        for (Player p : ps) {
+            Location donde = p.getLocation().clone();
+            ItemDisplay pl = plantada(donde, silverBlade(), 2.0f);
+            if (pl == null) continue;
+            expire(pl, 70);
+            animate(46, t -> {
+                if (t % 6 == 0 && pl.isValid()) {
+                    Fx.ring(pl.getLocation().clone().subtract(0, 0.5, 0).add(0, 0.2, 0), 1.6, 12, q ->
+                            Compat.spawn(w, Compat.GLOW, q, 1, 0.02, 0.02, 0.02, 0.0));
+                }
+            }, () -> {
+                if (!pl.isValid()) return;
+                Location at = pl.getLocation().clone();
+                Fx.safeRemove(pl);
+                estallidoHoja(at, 8, 1.6);
+                org.bukkit.util.Vector[] brazos = {new org.bukkit.util.Vector(1, 0, 0), new org.bukkit.util.Vector(-1, 0, 0),
+                        new org.bukkit.util.Vector(0, 0, 1), new org.bukkit.util.Vector(0, 0, -1)};
+                for (org.bukkit.util.Vector b : brazos) {
+                    for (int d = 1; d <= 3; d++) {
+                        Location q = at.clone().add(b.clone().multiply(d));
+                        Compat.spawn(w, Compat.CRIT, q, 6, 0.15, 0.3, 0.15, 0.05);
+                        Compat.spawn(w, Compat.END_ROD, q, 2, 0.05, 0.2, 0.05, 0.01);
+                        for (Player v : Fx.playersNear(q, 1.1)) hit(v, 7);
+                    }
+                }
+                Compat.sound(w, at, "entity.player.attack.sweep", 1.2f, 0.7f);
+            });
+        }
+    }
+
+    /** 13. Diluvio Menor: cuatro olas de espadas sobre el area entera. */
+    public void diluvioMenor() {
+        World w = world();
+        Location c = center();
+        warn(Component.text("Diluvio de acero.", PLATA, TextDecoration.BOLD));
+        Compat.sound(w, c, "entity.lightning_bolt.thunder", 0.9f, 1.2f);
+        busyFor(60);
+        for (int ola = 0; ola < 4; ola++) {
+            int d = ola * 14;
+            later(d, () -> {
+                Compat.sound(w, c, "block.bell.resonate", 1.1f, 1.5f);
+                for (int i = 0; i < 8; i++) {
+                    double a = random.nextDouble() * Math.PI * 2;
+                    double r = random.nextDouble() * 9;
+                    fallBlade(c.clone().add(Math.cos(a) * r, 0, Math.sin(a) * r),
+                            random.nextBoolean() ? goldBlade() : silverBlade(), 1.6f, 6, 1.8, 6);
+                }
+            });
+        }
+    }
+
+    /** 20. Replica Enterrada: planta 5 espadas alrededor mientras duela; detonan hacia fuera. */
+    public void replicaEnterrada() {
+        World w = world();
+        Location c = body().getLocation().clone();
+        warn(Component.text("La duelista siembra sus replicas.", ORO_PALIDO));
+        List<ItemDisplay> replicas = new ArrayList<>();
+        for (int i = 0; i < 5; i++) {
+            double a = Math.PI * 2 / 5 * i;
+            Location spot = c.clone().add(Math.cos(a) * 2.6, 0, Math.sin(a) * 2.6);
+            later(i * 3, () -> {
+                ItemDisplay pl = plantada(spot, goldBlade(), 1.5f);
+                if (pl != null) replicas.add(pl);
+            });
+        }
+        later(66, () -> {
+            Compat.sound(w, body().getLocation(), "block.amethyst_cluster.break", 1.4f, 0.8f);
+            for (ItemDisplay pl : replicas) {
+                if (pl == null || !pl.isValid()) continue;
+                Location at = pl.getLocation().clone();
+                org.bukkit.util.Vector fuera = at.toVector().subtract(c.toVector()).setY(0).normalize();
+                Fx.safeRemove(pl);
+                estallidoHoja(at, 8, 2.2);
+                shootBlade(at.clone().add(0, 1, 0), at.clone().add(fuera.multiply(14)).add(0, 1, 0),
+                        goldBlade(), 1.0f, 6, 1.6);
+            }
+        });
+        replicas.forEach(d -> { if (d != null) expire(d, 110); });
+    }
+
+    /** 27. Campo de Agujas: una jaula de 24 lanzas clavadas que implota. */
+    public void campoDeAgujas() {
+        Player objetivo = randomTarget();
+        if (objetivo == null) return;
+        World w = world();
+        Location c = objetivo.getLocation().clone();
+        warn(Component.text("Campo de agujas: la jaula se cierra.", ORO, TextDecoration.BOLD));
+        Compat.sound(w, c, "block.respawn_anchor.charge", 1.2f, 0.6f);
+        busyFor(50);
+        List<ItemDisplay> jaula = new ArrayList<>();
+        for (int i = 0; i < 24; i++) {
+            double a = Math.PI * 2 / 24 * i;
+            Location spot = c.clone().add(Math.cos(a) * 7.0, 0, Math.sin(a) * 7.0);
+            later(i, () -> {
+                ItemDisplay pl = plantada(spot, lance(), 1.8f);
+                if (pl != null) jaula.add(pl);
+            });
+        }
+        animate(70, t -> {
+            if (t < 26 || t % 5 != 0) return;
+            Fx.ring(c.clone().add(0, 0.2, 0), 7.0, 40, q -> Compat.spawn(w, Compat.GLOW, q, 1, 0.02, 0.05, 0.02, 0.0));
+            for (Player p : targets(9)) {
+                double d = p.getLocation().distance(c);
+                if (d > 6.2 && d < 7.8) {
+                    hit(p, 4);
+                    push(p, p.getLocation().toVector().subtract(c.toVector()).normalize().multiply(-0.5).setY(0.2));
+                }
+            }
+        }, () -> {
+            Compat.sound(w, c, "entity.lightning_bolt.impact", 1.0f, 0.9f);
+            for (ItemDisplay pl : jaula) {
+                if (pl == null || !pl.isValid()) continue;
+                Location at = pl.getLocation().clone();
+                Fx.safeRemove(pl);
+                Compat.spawn(w, Compat.END_ROD, at, 4, 0.1, 0.4, 0.1, 0.02);
+                shootBlade(at.clone().add(0, 1.2, 0), c.clone().add(0, 1.0, 0), lance(), 1.1f, 6, 1.8);
+            }
+            later(6, () -> estallidoHoja(c.clone(), 12, 3.2));
+        });
+        jaula.forEach(d -> { if (d != null) expire(d, 110); });
+    }
+
+    /** 30. LLUVIA DE MIL LANZAS: diez segundos de cielo lleno, con claros moviles. */
+    public void lluviaDeMilLanzas() {
+        World w = world();
+        Location c = center();
+        for (Player p : targets(60)) {
+            p.showTitle(net.kyori.adventure.title.Title.title(
+                    Component.text("✦ MIL LANZAS ✦", ORO, TextDecoration.BOLD),
+                    Component.text("Busquen los claros de luz", ORO_PALIDO),
+                    net.kyori.adventure.title.Title.Times.times(java.time.Duration.ofMillis(300),
+                            java.time.Duration.ofMillis(1600), java.time.Duration.ofMillis(500))));
+        }
+        warn(Component.text("«QUE NO QUEDE UN PALMO SIN ACERO.»", PLATA, TextDecoration.BOLD));
+        Compat.sound(w, c, "entity.lightning_bolt.thunder", 1.2f, 0.5f);
+        Compat.sound(w, c, "block.bell.resonate", 1.6f, 0.5f);
+        busyFor(210);
+        /* Dos claros de luz que se van moviendo: ahi no cae nada. */
+        Location[] claros = {c.clone().add(5, 0, 5), c.clone().add(-5, 0, -5)};
+        org.bukkit.util.Vector[] deriva = {
+                new org.bukkit.util.Vector(random.nextDouble() - 0.5, 0, random.nextDouble() - 0.5).normalize().multiply(0.12),
+                new org.bukkit.util.Vector(random.nextDouble() - 0.5, 0, random.nextDouble() - 0.5).normalize().multiply(0.12)};
+        animate(200, t -> {
+            for (int k = 0; k < claros.length; k++) {
+                claros[k].add(deriva[k]);
+                if (claros[k].distance(c) > 9) deriva[k].multiply(-1);
+                if (t % 4 == 0) {
+                    Fx.ring(Fx.ground(claros[k], 6).add(0, 0.2, 0), 2.6, 18, q ->
+                            Compat.spawn(w, Compat.WAX_ON, q, 1, 0.02, 0.02, 0.02, 0.0));
+                }
+            }
+            if (t % 2 != 0) return;
+            if (t % 20 == 0) Compat.sound(w, c, "block.bell.use", 1.0f, 1.6f + (t % 60) * 0.005f);
+            for (int i = 0; i < 5; i++) {
+                double a = random.nextDouble() * Math.PI * 2;
+                double r = random.nextDouble() * 11;
+                Location spot = c.clone().add(Math.cos(a) * r, 0, Math.sin(a) * r);
+                boolean aSalvo = false;
+                for (Location claro : claros) {
+                    if (spot.distance(claro) < 3.0) { aSalvo = true; break; }
+                }
+                if (aSalvo) continue;
+                fallBlade(spot, random.nextInt(3) == 0 ? silverBlade() : lance(), 1.5f, 8, 1.5, 4);
+            }
+        }, () -> {
+            Compat.spawn(w, Compat.FLASH, c, 1);
+            Compat.sound(w, c, "item.trident.thunder", 1.4f, 0.8f);
+            Compat.sound(w, c, "block.bell.resonate", 1.2f, 0.6f);
+        });
     }
 
     // ================================================================== FASE 5
