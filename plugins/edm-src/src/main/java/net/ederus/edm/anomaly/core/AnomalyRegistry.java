@@ -62,7 +62,7 @@ public final class AnomalyRegistry {
         register(new PiromanteType());
         register(new KeeperType());
         register(new CopperTwinsType());
-        register(new AuroraType());
+        register(new AlbaType());
     }
 
     public void register(AnomalyType type) {
@@ -137,8 +137,8 @@ public final class AnomalyRegistry {
         return types.get(Keeper.ID);
     }
 
-    public AnomalyType aurora() {
-        return types.get(net.ederus.edm.anomaly.boss.Aurora.ID);
+    public AnomalyType alba() {
+        return types.get(net.ederus.edm.anomaly.boss.Alba.ID);
     }
 
     public AnomalyType copperTwins() {
@@ -2853,8 +2853,8 @@ public final class AnomalyRegistry {
         return (Keeper) fight;
     }
 
-    private static net.ederus.edm.anomaly.boss.Aurora aurora(BossFight fight) {
-        return (net.ederus.edm.anomaly.boss.Aurora) fight;
+    private static net.ederus.edm.anomaly.boss.Alba alba(BossFight fight) {
+        return (net.ederus.edm.anomaly.boss.Alba) fight;
     }
 
     private static CopperTwins twins(BossFight fight) {
@@ -2863,21 +2863,21 @@ public final class AnomalyRegistry {
 
 
     // ------------------------------------------------------- AUREA, la Dama Celeste
-    private static final class AuroraType implements AnomalyType {
+    private static final class AlbaType implements AnomalyType {
 
         @Override
         public String id() {
-            return net.ederus.edm.anomaly.boss.Aurora.ID;
+            return net.ederus.edm.anomaly.boss.Alba.ID;
         }
 
         @Override
         public String display() {
-            return "Aurora, la Dama Celeste";
+            return "Alba, la Primera Luz";
         }
 
         @Override
         public TextColor color() {
-            return net.ederus.edm.anomaly.boss.Aurora.ORO;
+            return net.ederus.edm.anomaly.boss.Alba.ORO;
         }
 
         @Override
@@ -2910,7 +2910,7 @@ public final class AnomalyRegistry {
             return List.of(
                     "Cuando el primer tesoro del mundo quedo sin",
                     "dueno, el cielo mando a alguien a custodiarlo.",
-                    "Aurora decidio, con los siglos, que custodiar",
+                    "Alba decidio, con los siglos, que custodiar",
                     "y poseer eran la misma palabra.");
         }
 
@@ -2939,106 +2939,106 @@ public final class AnomalyRegistry {
             List<Ability> list = new ArrayList<>();
             add(list, "au_aura", "Aura de la Reina", 0, 160, 10, 2,
                     "Destello que empuja y castiga a quien se arrima.",
-                    AnomalyRegistry.icon("AMETHYST_SHARD", "GOLD_NUGGET"), f -> aurora(f).auraDeLaReina());
+                    AnomalyRegistry.icon("AMETHYST_SHARD", "GOLD_NUGGET"), f -> alba(f).auraDeLaReina());
             add(list, "au_desden", "Desden", 0, 220, 26, 2,
                     "Mira al mas lejano y le manda una hoja certera.",
-                    AnomalyRegistry.icon("SPYGLASS", "ARROW"), f -> aurora(f).desden());
-            add(list, "au_carga", "Carga Celeste", 1, 240, 24, 4,
+                    AnomalyRegistry.icon("SPYGLASS", "ARROW"), f -> alba(f).desden());
+            add(list, "au_carga", "Carga del Alba", 1, 240, 24, 4,
                     "El corcel arrolla en linea recta.",
-                    AnomalyRegistry.icon("GOLDEN_HORSE_ARMOR", "SADDLE"), f -> aurora(f).cargaCeleste());
+                    AnomalyRegistry.icon("GOLDEN_HORSE_ARMOR", "SADDLE"), f -> alba(f).cargaCeleste());
             add(list, "au_lanzas_alba", "Lanzas del Alba", 1, 200, 24, 4,
                     "Tres lanzas plateadas a los tres mas cercanos.",
-                    AnomalyRegistry.icon("TRIDENT"), f -> aurora(f).lanzasDelAlba());
+                    AnomalyRegistry.icon("TRIDENT"), f -> alba(f).lanzasDelAlba());
             add(list, "au_lluvia_menor", "Lluvia Menor", 1, 220, 28, 3,
                     "Seis hojas caen alrededor del objetivo.",
-                    AnomalyRegistry.icon("GOLDEN_SWORD"), f -> aurora(f).lluviaMenor());
+                    AnomalyRegistry.icon("GOLDEN_SWORD"), f -> alba(f).lluviaMenor());
             add(list, "au_pisoteo", "Pisoteo Solar", 1, 260, 28, 3,
                     "El corcel se alza; la onda tira al circulo entero.",
-                    AnomalyRegistry.icon("GOLD_BLOCK"), f -> aurora(f).pisoteoSolar());
+                    AnomalyRegistry.icon("GOLD_BLOCK"), f -> alba(f).pisoteoSolar());
             add(list, "au_clarin", "Clarin del Heraldo", 1, 420, 12, 1,
                     "Campanas agudas: la reina se blinda unos segundos.",
-                    AnomalyRegistry.icon("BELL"), f -> aurora(f).clarin());
+                    AnomalyRegistry.icon("BELL"), f -> alba(f).clarin());
             add(list, "au_latigo", "Latigo Dorado", 1, 180, 12, 3,
                     "Un arco de chispas barre delante del corcel.",
-                    AnomalyRegistry.icon("LEAD", "CHAIN"), f -> aurora(f).latigoDorado());
+                    AnomalyRegistry.icon("LEAD", "CHAIN"), f -> alba(f).latigoDorado());
             add(list, "au_puerta", "Puerta Dorada", 2, 240, 40, 4,
                     "Un anillo de puertas dispara al centro.",
-                    AnomalyRegistry.icon("END_PORTAL_FRAME", "GOLD_INGOT"), f -> aurora(f).puertaDorada());
+                    AnomalyRegistry.icon("END_PORTAL_FRAME", "GOLD_INGOT"), f -> alba(f).puertaDorada());
             add(list, "au_cadenas", "Cadenas del Cielo", 2, 300, 50, 3,
                     "Encadena a los dos mas cercanos.",
-                    AnomalyRegistry.icon("CHAIN"), f -> aurora(f).cadenasDelCielo());
+                    AnomalyRegistry.icon("CHAIN"), f -> alba(f).cadenasDelCielo());
             add(list, "au_salva", "Salva Real", 2, 220, 20, 4,
                     "Ocho hojas en abanico desde el hombro.",
-                    AnomalyRegistry.icon("GOLDEN_SWORD"), f -> aurora(f).salvaReal());
+                    AnomalyRegistry.icon("GOLDEN_SWORD"), f -> alba(f).salvaReal());
             add(list, "au_espejismo", "Espejismo Platino", 2, 320, 46, 3,
                     "Hojas plateadas orbitan y salen despedidas.",
-                    AnomalyRegistry.icon("IRON_SWORD"), f -> aurora(f).espejismoPlatino());
+                    AnomalyRegistry.icon("IRON_SWORD"), f -> alba(f).espejismoPlatino());
             add(list, "au_juicio_menor", "Juicio Menor", 2, 280, 16, 3,
                     "Una hoja cae sobre CADA presente.",
-                    AnomalyRegistry.icon("ANVIL", "IRON_BLOCK"), f -> aurora(f).juicioMenor());
+                    AnomalyRegistry.icon("ANVIL", "IRON_BLOCK"), f -> alba(f).juicioMenor());
             add(list, "au_tesoro_giro", "Tesoro Giratorio", 2, 300, 46, 2,
                     "Un disco de hojas gira y se expande.",
-                    AnomalyRegistry.icon("CLOCK", "GOLD_INGOT"), f -> aurora(f).tesoroGiratorio());
+                    AnomalyRegistry.icon("CLOCK", "GOLD_INGOT"), f -> alba(f).tesoroGiratorio());
             add(list, "au_tajo", "Tajo Aureo", 3, 160, 22, 5,
                     "Combo de tres cortes pegado al objetivo.",
-                    AnomalyRegistry.icon("GOLDEN_SWORD"), f -> aurora(f).tajoAureo());
+                    AnomalyRegistry.icon("GOLDEN_SWORD"), f -> alba(f).tajoAureo());
             add(list, "au_estocada", "Estocada del Sol", 3, 200, 12, 4,
                     "Cierra la distancia en un destello.",
-                    AnomalyRegistry.icon("END_ROD", "BLAZE_ROD"), f -> aurora(f).estocadaDelSol());
+                    AnomalyRegistry.icon("END_ROD", "BLAZE_ROD"), f -> alba(f).estocadaDelSol());
             add(list, "au_torbellino", "Torbellino Dorado", 3, 260, 30, 3,
                     "Gira con el tesoro alrededor, tres vueltas.",
-                    AnomalyRegistry.icon("SUNFLOWER", "GOLD_NUGGET"), f -> aurora(f).torbellinoDorado());
+                    AnomalyRegistry.icon("SUNFLOWER", "GOLD_NUGGET"), f -> alba(f).torbellinoDorado());
             add(list, "au_muro", "Muro de Espadas", 3, 360, 20, 2,
                     "Una empalizada de hojas corta la retirada.",
-                    AnomalyRegistry.icon("IRON_BARS"), f -> aurora(f).muroDeEspadas());
+                    AnomalyRegistry.icon("IRON_BARS"), f -> alba(f).muroDeEspadas());
             add(list, "au_paso", "Paso Fulgor", 3, 240, 26, 3,
                     "Tres parpadeos con corte en cada aparicion.",
-                    AnomalyRegistry.icon("ENDER_PEARL"), f -> aurora(f).pasoFulgor());
+                    AnomalyRegistry.icon("ENDER_PEARL"), f -> alba(f).pasoFulgor());
             add(list, "au_quiebra", "Quiebra Guardia", 3, 200, 10, 3,
                     "Golpe seco que rompe la postura y debilita.",
-                    AnomalyRegistry.icon("MACE", "IRON_AXE"), f -> aurora(f).quiebraGuardia());
+                    AnomalyRegistry.icon("MACE", "IRON_AXE"), f -> alba(f).quiebraGuardia());
             add(list, "au_tormenta", "Tormenta de Tesoros", 4, 420, 60, 4,
                     "Bombardeo largo sobre toda el area.",
-                    AnomalyRegistry.icon("GOLDEN_SWORD"), f -> aurora(f).tormentaDeTesoros());
+                    AnomalyRegistry.icon("GOLDEN_SWORD"), f -> alba(f).tormentaDeTesoros());
             add(list, "au_lanza_ocaso", "Lanza del Ocaso", 4, 320, 34, 3,
                     "UNA lanza enorme sobre quien mas dano hizo.",
-                    AnomalyRegistry.icon("TRIDENT"), f -> aurora(f).lanzaDelOcaso());
+                    AnomalyRegistry.icon("TRIDENT"), f -> alba(f).lanzaDelOcaso());
             add(list, "au_cometas", "Cometas Gemelos", 4, 260, 22, 3,
                     "Dos hojas gigantes cruzan el area en arco.",
-                    AnomalyRegistry.icon("FIRE_CHARGE", "BLAZE_POWDER"), f -> aurora(f).cometasGemelos());
+                    AnomalyRegistry.icon("FIRE_CHARGE", "BLAZE_POWDER"), f -> alba(f).cometasGemelos());
             add(list, "au_vinculo", "Vinculo Dorado", 4, 380, 12, 2,
                     "Ata a dos jugadores: alejarse duele.",
-                    AnomalyRegistry.icon("LEAD", "STRING"), f -> aurora(f).vinculoDorado());
+                    AnomalyRegistry.icon("LEAD", "STRING"), f -> alba(f).vinculoDorado());
             add(list, "au_halo", "Halo Reflector", 4, 420, 12, 2,
                     "Escudo que devuelve parte de cada golpe.",
-                    AnomalyRegistry.icon("SHIELD", "GOLDEN_APPLE"), f -> aurora(f).haloReflector());
+                    AnomalyRegistry.icon("SHIELD", "GOLDEN_APPLE"), f -> alba(f).haloReflector());
             add(list, "au_galope", "Galope Solar", 4, 300, 42, 3,
                     "Cruza el area a la carga, dos pasadas.",
-                    AnomalyRegistry.icon("GOLDEN_HORSE_ARMOR", "SADDLE"), f -> aurora(f).galopeSolar());
+                    AnomalyRegistry.icon("GOLDEN_HORSE_ARMOR", "SADDLE"), f -> alba(f).galopeSolar());
             add(list, "au_cien_puertas", "Cien Puertas", 5, 380, 52, 4,
                     "Tres anillos de puertas; el cielo dispara solo.",
-                    AnomalyRegistry.icon("END_PORTAL_FRAME", "GOLD_BLOCK"), f -> aurora(f).cienPuertas());
+                    AnomalyRegistry.icon("END_PORTAL_FRAME", "GOLD_BLOCK"), f -> alba(f).cienPuertas());
             add(list, "au_cadenas_juicio", "Cadenas del Juicio", 5, 420, 62, 3,
                     "TODOS encadenados; la lluvia decide.",
-                    AnomalyRegistry.icon("CHAIN"), f -> aurora(f).cadenasDelJuicio());
+                    AnomalyRegistry.icon("CHAIN"), f -> alba(f).cadenasDelJuicio());
             add(list, "au_clave", "La Clave del Cielo", 5, 520, 72, 3,
                     "La espada enorme: carga, caida y tres ondas.",
-                    AnomalyRegistry.icon("NETHERITE_SWORD", "GOLDEN_SWORD"), f -> aurora(f).claveDelCielo());
+                    AnomalyRegistry.icon("NETHERITE_SWORD", "GOLDEN_SWORD"), f -> alba(f).claveDelCielo());
             add(list, "au_veredicto", "Veredicto", 5, 300, 62, 3,
                     "Marca a un jugador; tres segundos despues, sentencia.",
-                    AnomalyRegistry.icon("WRITABLE_BOOK", "PAPER"), f -> aurora(f).veredicto());
+                    AnomalyRegistry.icon("WRITABLE_BOOK", "PAPER"), f -> alba(f).veredicto());
             add(list, "au_alba_final", "Alba Final", 5, 280, 38, 3,
                     "Anillos de luz expansivos, sin hueco donde esconderse.",
-                    AnomalyRegistry.icon("SUNFLOWER", "GLOWSTONE_DUST"), f -> aurora(f).albaFinal());
+                    AnomalyRegistry.icon("SUNFLOWER", "GLOWSTONE_DUST"), f -> alba(f).albaFinal());
             add(list, "au_corona", "Corona de la Diosa", 5, 340, 36, 3,
                     "El estallido final: cuanto mas cerca, mas duele.",
-                    AnomalyRegistry.icon("GOLDEN_HELMET", "GOLD_INGOT"), f -> aurora(f).coronaDelDios());
+                    AnomalyRegistry.icon("GOLDEN_HELMET", "GOLD_INGOT"), f -> alba(f).coronaDelDios());
             return list;
         }
 
         @Override
         public BossFight create(AnomalyPlugin plugin, ActiveAnomaly event, Location where) {
-            return new net.ederus.edm.anomaly.boss.Aurora(plugin, event, where);
+            return new net.ederus.edm.anomaly.boss.Alba(plugin, event, where);
         }
     }
 

@@ -47,16 +47,16 @@ import java.util.List;
  *
  * Reglas de la casa que este jefe cumple a rajatabla:
  *  - NADA de nombres flotantes en lo que invoca: ni el caballo, ni las armas,
- *    ni los soportes. Solo la propia Aurora lleva nombre (como Rabby).
+ *    ni los soportes. Solo la propia Alba lleva nombre (como Rabby).
  *  - Nada queda vivo al terminar una habilidad: toda entidad de dibujo se
  *    registra con track()/expire() y el cleanup() de BossFight la barre.
  *
  * El cuerpo es un MANNEQUIN con la skin de la cuenta AttackOnKilla (la logica
  * de Rabby): el zombi de debajo pelea invisible y callado.
  */
-public final class Aurora extends BossFight {
+public final class Alba extends BossFight {
 
-    public static final String ID = "aurora";
+    public static final String ID = "alba";
 
     /** La cuenta que lleva puesta la skin del caballero. */
     private static final String SKIN_ACCOUNT = "AttackOnKilla";
@@ -72,13 +72,16 @@ public final class Aurora extends BossFight {
     /** Marcas de cadena activas, para no encadenar dos veces al mismo. */
     private final List<Player> chained = new ArrayList<>();
 
-    public Aurora(AnomalyPlugin plugin, ActiveAnomaly event, Location arena) {
+    public Alba(AnomalyPlugin plugin, ActiveAnomaly event, Location arena) {
         super(plugin, event, arena);
+        /* Sin esto la pelea no tiene NINGUNA habilidad y el jefe se queda en
+         * golpes basicos: fue exactamente el fallo de la primera prueba. */
+        abilities.addAll(plugin.registry().alba().abilities());
     }
 
     @Override
     public String bossName() {
-        return "Aurora";
+        return "Alba";
     }
 
     @Override
@@ -116,8 +119,9 @@ public final class Aurora extends BossFight {
         }
 
         wearShell(Disguises.profileOfAccount(plugin, SKIN_ACCOUNT),
-                Component.text("✦ Aurora ✦", ORO, TextDecoration.BOLD));
+                Component.text("✦ Alba ✦", ORO, TextDecoration.BOLD));
         Disguises.resolveAccount(plugin, SKIN_ACCOUNT, this::reskinShell);
+        later(3, this::armarLanza);
 
         Compat.setAttribute(boss, "max_health", 20);
         Compat.setAttribute(boss, "attack_damage", 11);
@@ -126,19 +130,19 @@ public final class Aurora extends BossFight {
         Compat.setAttribute(boss, "knockback_resistance", 1.0);
         Compat.setAttribute(boss, "follow_range", 80);
         Compat.setAttribute(boss, "movement_speed", 0.3);
-        applyHealth(plugin.registry().scaledHealth(plugin.registry().aurora(), targets(96).size()));
+        applyHealth(plugin.registry().scaledHealth(plugin.registry().alba(), targets(96).size()));
         boss.setMaximumNoDamageTicks(6);
 
         Tags.markBoss(boss, ID);
         Tags.markEvent(boss, event.id());
         glowBody(NamedTextColor.GOLD);
 
-        mount(spot);
+        later(2, () -> mount(boss.getLocation()));
 
         for (Player p : Fx.viewersNear(spot, 110)) {
             p.showTitle(Title.title(
                     Component.text("✦ ANOMALIA DIOS ✦", ORO, TextDecoration.BOLD),
-                    Component.text("Aurora, la Dama Celeste", PLATA),
+                    Component.text("Alba, la Primera Luz", PLATA),
                     Title.Times.times(Duration.ofMillis(500), Duration.ofMillis(2400), Duration.ofMillis(800))));
         }
         warn(Component.text("El cielo se abre. Una reina baja a juzgar.", ORO_PALIDO));
@@ -166,6 +170,17 @@ public final class Aurora extends BossFight {
         soundAt(spot, "entity.horse.angry", 1.0f, 0.9f);
     }
 
+    /** La lanza dorada en la mano del cuerpo visible. */
+    private void armarLanza() {
+        try {
+            if (shell() != null && shell().isValid() && shell().getEquipment() != null) {
+                shell().getEquipment().setItemInMainHand(lance());
+                shell().getEquipment().setItemInMainHandDropChance(0);
+            }
+        } catch (Throwable ignored) {
+        }
+    }
+
     private boolean mounted() {
         return steed != null && steed.isValid() && steed.getPassengers().contains(boss);
     }
@@ -188,6 +203,66 @@ public final class Aurora extends BossFight {
         steed.addPassenger(boss);
         soundAt(loc(), "entity.horse.armor", 1.2f, 0.7f);
         Compat.spawn(world(), Compat.FIREWORK_SPARK, loc().add(0, 1, 0), 16, 0.6, 0.5, 0.6, 0.05);
+    }
+
+    // ------------------------------------------------------------------ barra propia
+
+    /** Una sola barra, dorada y continua. Las 5 barras seccionadas saturaban. */
+    private net.kyori.adventure.bossbar.BossBar barra;
+    private final java.util.Set<Player> viendoBarra = new java.util.HashSet<>();
+
+    @Override
+    public boolean usesOwnBars() {
+        return true;
+    }
+
+    private void barra() {
+        if (barra == null) {
+            barra = net.kyori.adventure.bossbar.BossBar.bossBar(
+                    Component.text("✦ ALBA ✦ ", ORO, TextDecoration.BOLD)
+                            .append(Component.text("La Primera Luz", ORO_PALIDO)
+                                    .decoration(TextDecoration.BOLD, false)),
+                    1.0f,
+                    net.kyori.adventure.bossbar.BossBar.Color.YELLOW,
+                    net.kyori.adventure.bossbar.BossBar.Overlay.PROGRESS);
+        }
+        barra.progress((float) Math.max(0.0, Math.min(1.0, healthFraction())));
+        if (ticks() % 20 == 0) {
+            java.util.Set<Player> cerca = new java.util.HashSet<>(Fx.viewersNear(loc(), 90));
+            for (Player p : new java.util.ArrayList<>(viendoBarra)) {
+                if (!cerca.contains(p) || !p.isOnline()) {
+                    p.hideBossBar(barra);
+                    viendoBarra.remove(p);
+                }
+            }
+            for (Player p : cerca) {
+                if (viendoBarra.add(p)) p.showBossBar(barra);
+            }
+        }
+    }
+
+    @Override
+    protected void ambient() {
+        super.ambient();
+        barra();
+        /* El guardian de la montura: en toda fase menos la del duelo a pie,
+         * Alba pelea A CABALLO. Si algo la baja (o el enganche del spawn
+         * fallo), se la vuelve a subir. */
+        if (phase() != 3 && ticks() % 40 == 0 && alive() && !mounted()) {
+            remount();
+        }
+        if (ticks() % 14 == 0) {
+            Compat.spawn(world(), Compat.END_ROD, body().getLocation().add(0, 2.2, 0), 1, 0.25, 0.15, 0.25, 0.0);
+        }
+    }
+
+    @Override
+    public void cleanup() {
+        if (barra != null) {
+            for (Player p : viendoBarra) p.hideBossBar(barra);
+            viendoBarra.clear();
+        }
+        super.cleanup();
     }
 
     // ------------------------------------------------------------------ fases
@@ -248,7 +323,7 @@ public final class Aurora extends BossFight {
             Compat.sound(w, c, "entity.player.levelup", 1.2f, 0.6f);
             Compat.sound(w, c, "item.trident.thunder", 1.0f, 1.8f);
         });
-        warn(Component.text("La Dama Celeste devuelve su tesoro al cielo.", ORO_PALIDO));
+        warn(Component.text("Alba devuelve su tesoro al cielo.", ORO_PALIDO));
     }
 
     // ================================================================== ARSENAL
@@ -263,8 +338,19 @@ public final class Aurora extends BossFight {
         return new ItemStack(Material.IRON_SWORD);
     }
 
+    /** La lanza nueva de esta version; si algun dia falta, el tridente de siempre. */
+    private static final Material MAT_LANZA = pickMat("GOLDEN_SPEAR", "TRIDENT");
+
+    private static Material pickMat(String... nombres) {
+        for (String n : nombres) {
+            Material m = Material.matchMaterial(n);
+            if (m != null) return m;
+        }
+        return Material.TRIDENT;
+    }
+
     private ItemStack lance() {
-        return new ItemStack(Material.TRIDENT);
+        return new ItemStack(MAT_LANZA);
     }
 
     /** Un arma de dibujo con la punta hacia donde viaja. */
@@ -443,7 +529,7 @@ public final class Aurora extends BossFight {
         Player p = farthestTargets(1).stream().findFirst().orElse(null);
         if (p == null) return;
         face(p.getLocation());
-        warn(Component.text("Aurora te ha mirado, " + p.getName() + ".", ORO_PALIDO));
+        warn(Component.text("Alba te ha mirado, " + p.getName() + ".", ORO_PALIDO));
         gate(shoulder(), 14);
         later(8, () -> shootBlade(shoulder(), p.getEyeLocation(), goldBlade(), 1.1f, 6, 1.4));
     }

@@ -22,7 +22,7 @@
 #    Generales MobCoins, llaves de rankup y el primer totem
 #    Monarcas  llaves gordas + libro del nucleo; sus ITEMS custom los pone
 #              el dueño desde el juego, aqui solo va lo generico
-#    DIOS      Aurora: garantizados + la Regalia del Alba por tiradas
+#    DIOS      Alba: garantizados + la Regalia del Alba por tiradas
 # ============================================================
 
 anomalias:
@@ -36,10 +36,9 @@ anomalias:
       '1':
         item:
           ==: org.bukkit.inventory.ItemStack
-          DataVersion: 4790
-          id: minecraft:golden_apple
-          count: 3
-          schema_version: 1
+          v: 4790
+          type: GOLDEN_APPLE
+          amount: 3
         probabilidad: 100
         cantidad-min: 3
         cantidad-max: 3
@@ -47,10 +46,9 @@ anomalias:
       '2':
         item:
           ==: org.bukkit.inventory.ItemStack
-          DataVersion: 4790
-          id: minecraft:experience_bottle
-          count: 16
-          schema_version: 1
+          v: 4790
+          type: EXPERIENCE_BOTTLE
+          amount: 16
         probabilidad: 100
         cantidad-min: 16
         cantidad-max: 16
@@ -58,10 +56,9 @@ anomalias:
       '3':
         item:
           ==: org.bukkit.inventory.ItemStack
-          DataVersion: 4790
-          id: minecraft:netherite_scrap
-          count: 1
-          schema_version: 1
+          v: 4790
+          type: NETHERITE_SCRAP
+          amount: 1
         probabilidad: 25
         cantidad-min: 1
         cantidad-max: 1
@@ -69,10 +66,9 @@ anomalias:
       '4':
         item:
           ==: org.bukkit.inventory.ItemStack
-          DataVersion: 4790
-          id: minecraft:golden_carrot
-          count: 12
-          schema_version: 1
+          v: 4790
+          type: GOLDEN_CARROT
+          amount: 12
         probabilidad: 60
         cantidad-min: 12
         cantidad-max: 12
@@ -88,10 +84,9 @@ anomalias:
       '1':
         item:
           ==: org.bukkit.inventory.ItemStack
-          DataVersion: 4790
-          id: minecraft:golden_apple
-          count: 3
-          schema_version: 1
+          v: 4790
+          type: GOLDEN_APPLE
+          amount: 3
         probabilidad: 100
         cantidad-min: 3
         cantidad-max: 3
@@ -99,10 +94,9 @@ anomalias:
       '2':
         item:
           ==: org.bukkit.inventory.ItemStack
-          DataVersion: 4790
-          id: minecraft:experience_bottle
-          count: 16
-          schema_version: 1
+          v: 4790
+          type: EXPERIENCE_BOTTLE
+          amount: 16
         probabilidad: 100
         cantidad-min: 16
         cantidad-max: 16
@@ -110,10 +104,9 @@ anomalias:
       '3':
         item:
           ==: org.bukkit.inventory.ItemStack
-          DataVersion: 4790
-          id: minecraft:netherite_scrap
-          count: 1
-          schema_version: 1
+          v: 4790
+          type: NETHERITE_SCRAP
+          amount: 1
         probabilidad: 25
         cantidad-min: 1
         cantidad-max: 1
@@ -121,10 +114,9 @@ anomalias:
       '4':
         item:
           ==: org.bukkit.inventory.ItemStack
-          DataVersion: 4790
-          id: minecraft:golden_carrot
-          count: 12
-          schema_version: 1
+          v: 4790
+          type: GOLDEN_CARROT
+          amount: 12
         probabilidad: 60
         cantidad-min: 12
         cantidad-max: 12
@@ -140,10 +132,9 @@ anomalias:
       '1':
         item:
           ==: org.bukkit.inventory.ItemStack
-          DataVersion: 4790
-          id: minecraft:golden_apple
-          count: 3
-          schema_version: 1
+          v: 4790
+          type: GOLDEN_APPLE
+          amount: 3
         probabilidad: 100
         cantidad-min: 3
         cantidad-max: 3
@@ -151,10 +142,9 @@ anomalias:
       '2':
         item:
           ==: org.bukkit.inventory.ItemStack
-          DataVersion: 4790
-          id: minecraft:experience_bottle
-          count: 16
-          schema_version: 1
+          v: 4790
+          type: EXPERIENCE_BOTTLE
+          amount: 16
         probabilidad: 100
         cantidad-min: 16
         cantidad-max: 16
@@ -162,10 +152,9 @@ anomalias:
       '3':
         item:
           ==: org.bukkit.inventory.ItemStack
-          DataVersion: 4790
-          id: minecraft:netherite_scrap
-          count: 1
-          schema_version: 1
+          v: 4790
+          type: NETHERITE_SCRAP
+          amount: 1
         probabilidad: 25
         cantidad-min: 1
         cantidad-max: 1
@@ -173,10 +162,9 @@ anomalias:
       '4':
         item:
           ==: org.bukkit.inventory.ItemStack
-          DataVersion: 4790
-          id: minecraft:golden_carrot
-          count: 12
-          schema_version: 1
+          v: 4790
+          type: GOLDEN_CARROT
+          amount: 12
         probabilidad: 60
         cantidad-min: 12
         cantidad-max: 12
@@ -192,10 +180,9 @@ anomalias:
       '1':
         item:
           ==: org.bukkit.inventory.ItemStack
-          DataVersion: 4790
-          id: minecraft:golden_apple
-          count: 3
-          schema_version: 1
+          v: 4790
+          type: GOLDEN_APPLE
+          amount: 3
         probabilidad: 100
         cantidad-min: 3
         cantidad-max: 3
@@ -203,10 +190,9 @@ anomalias:
       '2':
         item:
           ==: org.bukkit.inventory.ItemStack
-          DataVersion: 4790
-          id: minecraft:experience_bottle
-          count: 16
-          schema_version: 1
+          v: 4790
+          type: EXPERIENCE_BOTTLE
+          amount: 16
         probabilidad: 100
         cantidad-min: 16
         cantidad-max: 16
@@ -214,10 +200,9 @@ anomalias:
       '3':
         item:
           ==: org.bukkit.inventory.ItemStack
-          DataVersion: 4790
-          id: minecraft:netherite_scrap
-          count: 1
-          schema_version: 1
+          v: 4790
+          type: NETHERITE_SCRAP
+          amount: 1
         probabilidad: 25
         cantidad-min: 1
         cantidad-max: 1
@@ -225,10 +210,9 @@ anomalias:
       '4':
         item:
           ==: org.bukkit.inventory.ItemStack
-          DataVersion: 4790
-          id: minecraft:golden_carrot
-          count: 12
-          schema_version: 1
+          v: 4790
+          type: GOLDEN_CARROT
+          amount: 12
         probabilidad: 60
         cantidad-min: 12
         cantidad-max: 12
@@ -247,10 +231,9 @@ anomalias:
       '1':
         item:
           ==: org.bukkit.inventory.ItemStack
-          DataVersion: 4790
-          id: minecraft:golden_apple
-          count: 5
-          schema_version: 1
+          v: 4790
+          type: GOLDEN_APPLE
+          amount: 5
         probabilidad: 100
         cantidad-min: 5
         cantidad-max: 5
@@ -258,10 +241,9 @@ anomalias:
       '2':
         item:
           ==: org.bukkit.inventory.ItemStack
-          DataVersion: 4790
-          id: minecraft:enchanted_golden_apple
-          count: 1
-          schema_version: 1
+          v: 4790
+          type: ENCHANTED_GOLDEN_APPLE
+          amount: 1
         probabilidad: 55
         cantidad-min: 1
         cantidad-max: 1
@@ -269,10 +251,9 @@ anomalias:
       '3':
         item:
           ==: org.bukkit.inventory.ItemStack
-          DataVersion: 4790
-          id: minecraft:experience_bottle
-          count: 24
-          schema_version: 1
+          v: 4790
+          type: EXPERIENCE_BOTTLE
+          amount: 24
         probabilidad: 100
         cantidad-min: 24
         cantidad-max: 24
@@ -280,10 +261,9 @@ anomalias:
       '4':
         item:
           ==: org.bukkit.inventory.ItemStack
-          DataVersion: 4790
-          id: minecraft:netherite_scrap
-          count: 2
-          schema_version: 1
+          v: 4790
+          type: NETHERITE_SCRAP
+          amount: 2
         probabilidad: 40
         cantidad-min: 2
         cantidad-max: 2
@@ -291,10 +271,9 @@ anomalias:
       '5':
         item:
           ==: org.bukkit.inventory.ItemStack
-          DataVersion: 4790
-          id: minecraft:totem_of_undying
-          count: 1
-          schema_version: 1
+          v: 4790
+          type: TOTEM_OF_UNDYING
+          amount: 1
         probabilidad: 20
         cantidad-min: 1
         cantidad-max: 1
@@ -313,10 +292,9 @@ anomalias:
       '1':
         item:
           ==: org.bukkit.inventory.ItemStack
-          DataVersion: 4790
-          id: minecraft:golden_apple
-          count: 5
-          schema_version: 1
+          v: 4790
+          type: GOLDEN_APPLE
+          amount: 5
         probabilidad: 100
         cantidad-min: 5
         cantidad-max: 5
@@ -324,10 +302,9 @@ anomalias:
       '2':
         item:
           ==: org.bukkit.inventory.ItemStack
-          DataVersion: 4790
-          id: minecraft:enchanted_golden_apple
-          count: 1
-          schema_version: 1
+          v: 4790
+          type: ENCHANTED_GOLDEN_APPLE
+          amount: 1
         probabilidad: 55
         cantidad-min: 1
         cantidad-max: 1
@@ -335,10 +312,9 @@ anomalias:
       '3':
         item:
           ==: org.bukkit.inventory.ItemStack
-          DataVersion: 4790
-          id: minecraft:experience_bottle
-          count: 24
-          schema_version: 1
+          v: 4790
+          type: EXPERIENCE_BOTTLE
+          amount: 24
         probabilidad: 100
         cantidad-min: 24
         cantidad-max: 24
@@ -346,10 +322,9 @@ anomalias:
       '4':
         item:
           ==: org.bukkit.inventory.ItemStack
-          DataVersion: 4790
-          id: minecraft:netherite_scrap
-          count: 2
-          schema_version: 1
+          v: 4790
+          type: NETHERITE_SCRAP
+          amount: 2
         probabilidad: 40
         cantidad-min: 2
         cantidad-max: 2
@@ -357,10 +332,9 @@ anomalias:
       '5':
         item:
           ==: org.bukkit.inventory.ItemStack
-          DataVersion: 4790
-          id: minecraft:totem_of_undying
-          count: 1
-          schema_version: 1
+          v: 4790
+          type: TOTEM_OF_UNDYING
+          amount: 1
         probabilidad: 20
         cantidad-min: 1
         cantidad-max: 1
@@ -379,10 +353,9 @@ anomalias:
       '1':
         item:
           ==: org.bukkit.inventory.ItemStack
-          DataVersion: 4790
-          id: minecraft:golden_apple
-          count: 5
-          schema_version: 1
+          v: 4790
+          type: GOLDEN_APPLE
+          amount: 5
         probabilidad: 100
         cantidad-min: 5
         cantidad-max: 5
@@ -390,10 +363,9 @@ anomalias:
       '2':
         item:
           ==: org.bukkit.inventory.ItemStack
-          DataVersion: 4790
-          id: minecraft:enchanted_golden_apple
-          count: 1
-          schema_version: 1
+          v: 4790
+          type: ENCHANTED_GOLDEN_APPLE
+          amount: 1
         probabilidad: 55
         cantidad-min: 1
         cantidad-max: 1
@@ -401,10 +373,9 @@ anomalias:
       '3':
         item:
           ==: org.bukkit.inventory.ItemStack
-          DataVersion: 4790
-          id: minecraft:experience_bottle
-          count: 24
-          schema_version: 1
+          v: 4790
+          type: EXPERIENCE_BOTTLE
+          amount: 24
         probabilidad: 100
         cantidad-min: 24
         cantidad-max: 24
@@ -412,10 +383,9 @@ anomalias:
       '4':
         item:
           ==: org.bukkit.inventory.ItemStack
-          DataVersion: 4790
-          id: minecraft:netherite_scrap
-          count: 2
-          schema_version: 1
+          v: 4790
+          type: NETHERITE_SCRAP
+          amount: 2
         probabilidad: 40
         cantidad-min: 2
         cantidad-max: 2
@@ -423,10 +393,9 @@ anomalias:
       '5':
         item:
           ==: org.bukkit.inventory.ItemStack
-          DataVersion: 4790
-          id: minecraft:totem_of_undying
-          count: 1
-          schema_version: 1
+          v: 4790
+          type: TOTEM_OF_UNDYING
+          amount: 1
         probabilidad: 20
         cantidad-min: 1
         cantidad-max: 1
@@ -445,10 +414,9 @@ anomalias:
       '1':
         item:
           ==: org.bukkit.inventory.ItemStack
-          DataVersion: 4790
-          id: minecraft:golden_apple
-          count: 5
-          schema_version: 1
+          v: 4790
+          type: GOLDEN_APPLE
+          amount: 5
         probabilidad: 100
         cantidad-min: 5
         cantidad-max: 5
@@ -456,10 +424,9 @@ anomalias:
       '2':
         item:
           ==: org.bukkit.inventory.ItemStack
-          DataVersion: 4790
-          id: minecraft:enchanted_golden_apple
-          count: 1
-          schema_version: 1
+          v: 4790
+          type: ENCHANTED_GOLDEN_APPLE
+          amount: 1
         probabilidad: 55
         cantidad-min: 1
         cantidad-max: 1
@@ -467,10 +434,9 @@ anomalias:
       '3':
         item:
           ==: org.bukkit.inventory.ItemStack
-          DataVersion: 4790
-          id: minecraft:experience_bottle
-          count: 24
-          schema_version: 1
+          v: 4790
+          type: EXPERIENCE_BOTTLE
+          amount: 24
         probabilidad: 100
         cantidad-min: 24
         cantidad-max: 24
@@ -478,10 +444,9 @@ anomalias:
       '4':
         item:
           ==: org.bukkit.inventory.ItemStack
-          DataVersion: 4790
-          id: minecraft:netherite_scrap
-          count: 2
-          schema_version: 1
+          v: 4790
+          type: NETHERITE_SCRAP
+          amount: 2
         probabilidad: 40
         cantidad-min: 2
         cantidad-max: 2
@@ -489,10 +454,9 @@ anomalias:
       '5':
         item:
           ==: org.bukkit.inventory.ItemStack
-          DataVersion: 4790
-          id: minecraft:totem_of_undying
-          count: 1
-          schema_version: 1
+          v: 4790
+          type: TOTEM_OF_UNDYING
+          amount: 1
         probabilidad: 20
         cantidad-min: 1
         cantidad-max: 1
@@ -511,10 +475,9 @@ anomalias:
       '1':
         item:
           ==: org.bukkit.inventory.ItemStack
-          DataVersion: 4790
-          id: minecraft:golden_apple
-          count: 5
-          schema_version: 1
+          v: 4790
+          type: GOLDEN_APPLE
+          amount: 5
         probabilidad: 100
         cantidad-min: 5
         cantidad-max: 5
@@ -522,10 +485,9 @@ anomalias:
       '2':
         item:
           ==: org.bukkit.inventory.ItemStack
-          DataVersion: 4790
-          id: minecraft:enchanted_golden_apple
-          count: 1
-          schema_version: 1
+          v: 4790
+          type: ENCHANTED_GOLDEN_APPLE
+          amount: 1
         probabilidad: 55
         cantidad-min: 1
         cantidad-max: 1
@@ -533,10 +495,9 @@ anomalias:
       '3':
         item:
           ==: org.bukkit.inventory.ItemStack
-          DataVersion: 4790
-          id: minecraft:experience_bottle
-          count: 24
-          schema_version: 1
+          v: 4790
+          type: EXPERIENCE_BOTTLE
+          amount: 24
         probabilidad: 100
         cantidad-min: 24
         cantidad-max: 24
@@ -544,10 +505,9 @@ anomalias:
       '4':
         item:
           ==: org.bukkit.inventory.ItemStack
-          DataVersion: 4790
-          id: minecraft:netherite_scrap
-          count: 2
-          schema_version: 1
+          v: 4790
+          type: NETHERITE_SCRAP
+          amount: 2
         probabilidad: 40
         cantidad-min: 2
         cantidad-max: 2
@@ -555,10 +515,9 @@ anomalias:
       '5':
         item:
           ==: org.bukkit.inventory.ItemStack
-          DataVersion: 4790
-          id: minecraft:totem_of_undying
-          count: 1
-          schema_version: 1
+          v: 4790
+          type: TOTEM_OF_UNDYING
+          amount: 1
         probabilidad: 20
         cantidad-min: 1
         cantidad-max: 1
@@ -577,10 +536,9 @@ anomalias:
       '1':
         item:
           ==: org.bukkit.inventory.ItemStack
-          DataVersion: 4790
-          id: minecraft:golden_apple
-          count: 5
-          schema_version: 1
+          v: 4790
+          type: GOLDEN_APPLE
+          amount: 5
         probabilidad: 100
         cantidad-min: 5
         cantidad-max: 5
@@ -588,10 +546,9 @@ anomalias:
       '2':
         item:
           ==: org.bukkit.inventory.ItemStack
-          DataVersion: 4790
-          id: minecraft:enchanted_golden_apple
-          count: 1
-          schema_version: 1
+          v: 4790
+          type: ENCHANTED_GOLDEN_APPLE
+          amount: 1
         probabilidad: 55
         cantidad-min: 1
         cantidad-max: 1
@@ -599,10 +556,9 @@ anomalias:
       '3':
         item:
           ==: org.bukkit.inventory.ItemStack
-          DataVersion: 4790
-          id: minecraft:experience_bottle
-          count: 24
-          schema_version: 1
+          v: 4790
+          type: EXPERIENCE_BOTTLE
+          amount: 24
         probabilidad: 100
         cantidad-min: 24
         cantidad-max: 24
@@ -610,10 +566,9 @@ anomalias:
       '4':
         item:
           ==: org.bukkit.inventory.ItemStack
-          DataVersion: 4790
-          id: minecraft:netherite_scrap
-          count: 2
-          schema_version: 1
+          v: 4790
+          type: NETHERITE_SCRAP
+          amount: 2
         probabilidad: 40
         cantidad-min: 2
         cantidad-max: 2
@@ -621,10 +576,9 @@ anomalias:
       '5':
         item:
           ==: org.bukkit.inventory.ItemStack
-          DataVersion: 4790
-          id: minecraft:totem_of_undying
-          count: 1
-          schema_version: 1
+          v: 4790
+          type: TOTEM_OF_UNDYING
+          amount: 1
         probabilidad: 20
         cantidad-min: 1
         cantidad-max: 1
@@ -643,10 +597,9 @@ anomalias:
       '1':
         item:
           ==: org.bukkit.inventory.ItemStack
-          DataVersion: 4790
-          id: minecraft:golden_apple
-          count: 5
-          schema_version: 1
+          v: 4790
+          type: GOLDEN_APPLE
+          amount: 5
         probabilidad: 100
         cantidad-min: 5
         cantidad-max: 5
@@ -654,10 +607,9 @@ anomalias:
       '2':
         item:
           ==: org.bukkit.inventory.ItemStack
-          DataVersion: 4790
-          id: minecraft:enchanted_golden_apple
-          count: 1
-          schema_version: 1
+          v: 4790
+          type: ENCHANTED_GOLDEN_APPLE
+          amount: 1
         probabilidad: 55
         cantidad-min: 1
         cantidad-max: 1
@@ -665,10 +617,9 @@ anomalias:
       '3':
         item:
           ==: org.bukkit.inventory.ItemStack
-          DataVersion: 4790
-          id: minecraft:experience_bottle
-          count: 24
-          schema_version: 1
+          v: 4790
+          type: EXPERIENCE_BOTTLE
+          amount: 24
         probabilidad: 100
         cantidad-min: 24
         cantidad-max: 24
@@ -676,10 +627,9 @@ anomalias:
       '4':
         item:
           ==: org.bukkit.inventory.ItemStack
-          DataVersion: 4790
-          id: minecraft:netherite_scrap
-          count: 2
-          schema_version: 1
+          v: 4790
+          type: NETHERITE_SCRAP
+          amount: 2
         probabilidad: 40
         cantidad-min: 2
         cantidad-max: 2
@@ -687,10 +637,9 @@ anomalias:
       '5':
         item:
           ==: org.bukkit.inventory.ItemStack
-          DataVersion: 4790
-          id: minecraft:totem_of_undying
-          count: 1
-          schema_version: 1
+          v: 4790
+          type: TOTEM_OF_UNDYING
+          amount: 1
         probabilidad: 20
         cantidad-min: 1
         cantidad-max: 1
@@ -709,10 +658,9 @@ anomalias:
       '1':
         item:
           ==: org.bukkit.inventory.ItemStack
-          DataVersion: 4790
-          id: minecraft:golden_apple
-          count: 5
-          schema_version: 1
+          v: 4790
+          type: GOLDEN_APPLE
+          amount: 5
         probabilidad: 100
         cantidad-min: 5
         cantidad-max: 5
@@ -720,10 +668,9 @@ anomalias:
       '2':
         item:
           ==: org.bukkit.inventory.ItemStack
-          DataVersion: 4790
-          id: minecraft:enchanted_golden_apple
-          count: 1
-          schema_version: 1
+          v: 4790
+          type: ENCHANTED_GOLDEN_APPLE
+          amount: 1
         probabilidad: 55
         cantidad-min: 1
         cantidad-max: 1
@@ -731,10 +678,9 @@ anomalias:
       '3':
         item:
           ==: org.bukkit.inventory.ItemStack
-          DataVersion: 4790
-          id: minecraft:experience_bottle
-          count: 24
-          schema_version: 1
+          v: 4790
+          type: EXPERIENCE_BOTTLE
+          amount: 24
         probabilidad: 100
         cantidad-min: 24
         cantidad-max: 24
@@ -742,10 +688,9 @@ anomalias:
       '4':
         item:
           ==: org.bukkit.inventory.ItemStack
-          DataVersion: 4790
-          id: minecraft:netherite_scrap
-          count: 2
-          schema_version: 1
+          v: 4790
+          type: NETHERITE_SCRAP
+          amount: 2
         probabilidad: 40
         cantidad-min: 2
         cantidad-max: 2
@@ -753,10 +698,9 @@ anomalias:
       '5':
         item:
           ==: org.bukkit.inventory.ItemStack
-          DataVersion: 4790
-          id: minecraft:totem_of_undying
-          count: 1
-          schema_version: 1
+          v: 4790
+          type: TOTEM_OF_UNDYING
+          amount: 1
         probabilidad: 20
         cantidad-min: 1
         cantidad-max: 1
@@ -775,10 +719,9 @@ anomalias:
       '1':
         item:
           ==: org.bukkit.inventory.ItemStack
-          DataVersion: 4790
-          id: minecraft:golden_apple
-          count: 5
-          schema_version: 1
+          v: 4790
+          type: GOLDEN_APPLE
+          amount: 5
         probabilidad: 100
         cantidad-min: 5
         cantidad-max: 5
@@ -786,10 +729,9 @@ anomalias:
       '2':
         item:
           ==: org.bukkit.inventory.ItemStack
-          DataVersion: 4790
-          id: minecraft:enchanted_golden_apple
-          count: 1
-          schema_version: 1
+          v: 4790
+          type: ENCHANTED_GOLDEN_APPLE
+          amount: 1
         probabilidad: 55
         cantidad-min: 1
         cantidad-max: 1
@@ -797,10 +739,9 @@ anomalias:
       '3':
         item:
           ==: org.bukkit.inventory.ItemStack
-          DataVersion: 4790
-          id: minecraft:experience_bottle
-          count: 24
-          schema_version: 1
+          v: 4790
+          type: EXPERIENCE_BOTTLE
+          amount: 24
         probabilidad: 100
         cantidad-min: 24
         cantidad-max: 24
@@ -808,10 +749,9 @@ anomalias:
       '4':
         item:
           ==: org.bukkit.inventory.ItemStack
-          DataVersion: 4790
-          id: minecraft:netherite_scrap
-          count: 2
-          schema_version: 1
+          v: 4790
+          type: NETHERITE_SCRAP
+          amount: 2
         probabilidad: 40
         cantidad-min: 2
         cantidad-max: 2
@@ -819,10 +759,9 @@ anomalias:
       '5':
         item:
           ==: org.bukkit.inventory.ItemStack
-          DataVersion: 4790
-          id: minecraft:totem_of_undying
-          count: 1
-          schema_version: 1
+          v: 4790
+          type: TOTEM_OF_UNDYING
+          amount: 1
         probabilidad: 20
         cantidad-min: 1
         cantidad-max: 1
@@ -841,10 +780,9 @@ anomalias:
       '1':
         item:
           ==: org.bukkit.inventory.ItemStack
-          DataVersion: 4790
-          id: minecraft:golden_apple
-          count: 5
-          schema_version: 1
+          v: 4790
+          type: GOLDEN_APPLE
+          amount: 5
         probabilidad: 100
         cantidad-min: 5
         cantidad-max: 5
@@ -852,10 +790,9 @@ anomalias:
       '2':
         item:
           ==: org.bukkit.inventory.ItemStack
-          DataVersion: 4790
-          id: minecraft:enchanted_golden_apple
-          count: 1
-          schema_version: 1
+          v: 4790
+          type: ENCHANTED_GOLDEN_APPLE
+          amount: 1
         probabilidad: 55
         cantidad-min: 1
         cantidad-max: 1
@@ -863,10 +800,9 @@ anomalias:
       '3':
         item:
           ==: org.bukkit.inventory.ItemStack
-          DataVersion: 4790
-          id: minecraft:experience_bottle
-          count: 24
-          schema_version: 1
+          v: 4790
+          type: EXPERIENCE_BOTTLE
+          amount: 24
         probabilidad: 100
         cantidad-min: 24
         cantidad-max: 24
@@ -874,10 +810,9 @@ anomalias:
       '4':
         item:
           ==: org.bukkit.inventory.ItemStack
-          DataVersion: 4790
-          id: minecraft:netherite_scrap
-          count: 2
-          schema_version: 1
+          v: 4790
+          type: NETHERITE_SCRAP
+          amount: 2
         probabilidad: 40
         cantidad-min: 2
         cantidad-max: 2
@@ -885,10 +820,9 @@ anomalias:
       '5':
         item:
           ==: org.bukkit.inventory.ItemStack
-          DataVersion: 4790
-          id: minecraft:totem_of_undying
-          count: 1
-          schema_version: 1
+          v: 4790
+          type: TOTEM_OF_UNDYING
+          amount: 1
         probabilidad: 20
         cantidad-min: 1
         cantidad-max: 1
@@ -909,10 +843,9 @@ anomalias:
       '1':
         item:
           ==: org.bukkit.inventory.ItemStack
-          DataVersion: 4790
-          id: minecraft:enchanted_golden_apple
-          count: 3
-          schema_version: 1
+          v: 4790
+          type: ENCHANTED_GOLDEN_APPLE
+          amount: 3
         probabilidad: 100
         cantidad-min: 3
         cantidad-max: 3
@@ -920,10 +853,9 @@ anomalias:
       '2':
         item:
           ==: org.bukkit.inventory.ItemStack
-          DataVersion: 4790
-          id: minecraft:experience_bottle
-          count: 48
-          schema_version: 1
+          v: 4790
+          type: EXPERIENCE_BOTTLE
+          amount: 48
         probabilidad: 100
         cantidad-min: 48
         cantidad-max: 48
@@ -931,10 +863,9 @@ anomalias:
       '3':
         item:
           ==: org.bukkit.inventory.ItemStack
-          DataVersion: 4790
-          id: minecraft:netherite_ingot
-          count: 2
-          schema_version: 1
+          v: 4790
+          type: NETHERITE_INGOT
+          amount: 2
         probabilidad: 70
         cantidad-min: 2
         cantidad-max: 2
@@ -942,10 +873,9 @@ anomalias:
       '4':
         item:
           ==: org.bukkit.inventory.ItemStack
-          DataVersion: 4790
-          id: minecraft:totem_of_undying
-          count: 1
-          schema_version: 1
+          v: 4790
+          type: TOTEM_OF_UNDYING
+          amount: 1
         probabilidad: 50
         cantidad-min: 1
         cantidad-max: 1
@@ -953,10 +883,9 @@ anomalias:
       '5':
         item:
           ==: org.bukkit.inventory.ItemStack
-          DataVersion: 4790
-          id: minecraft:golden_apple
-          count: 8
-          schema_version: 1
+          v: 4790
+          type: GOLDEN_APPLE
+          amount: 8
         probabilidad: 100
         cantidad-min: 8
         cantidad-max: 8
@@ -977,10 +906,9 @@ anomalias:
       '1':
         item:
           ==: org.bukkit.inventory.ItemStack
-          DataVersion: 4790
-          id: minecraft:enchanted_golden_apple
-          count: 3
-          schema_version: 1
+          v: 4790
+          type: ENCHANTED_GOLDEN_APPLE
+          amount: 3
         probabilidad: 100
         cantidad-min: 3
         cantidad-max: 3
@@ -988,10 +916,9 @@ anomalias:
       '2':
         item:
           ==: org.bukkit.inventory.ItemStack
-          DataVersion: 4790
-          id: minecraft:experience_bottle
-          count: 48
-          schema_version: 1
+          v: 4790
+          type: EXPERIENCE_BOTTLE
+          amount: 48
         probabilidad: 100
         cantidad-min: 48
         cantidad-max: 48
@@ -999,10 +926,9 @@ anomalias:
       '3':
         item:
           ==: org.bukkit.inventory.ItemStack
-          DataVersion: 4790
-          id: minecraft:netherite_ingot
-          count: 2
-          schema_version: 1
+          v: 4790
+          type: NETHERITE_INGOT
+          amount: 2
         probabilidad: 70
         cantidad-min: 2
         cantidad-max: 2
@@ -1010,10 +936,9 @@ anomalias:
       '4':
         item:
           ==: org.bukkit.inventory.ItemStack
-          DataVersion: 4790
-          id: minecraft:totem_of_undying
-          count: 1
-          schema_version: 1
+          v: 4790
+          type: TOTEM_OF_UNDYING
+          amount: 1
         probabilidad: 50
         cantidad-min: 1
         cantidad-max: 1
@@ -1021,10 +946,9 @@ anomalias:
       '5':
         item:
           ==: org.bukkit.inventory.ItemStack
-          DataVersion: 4790
-          id: minecraft:golden_apple
-          count: 8
-          schema_version: 1
+          v: 4790
+          type: GOLDEN_APPLE
+          amount: 8
         probabilidad: 100
         cantidad-min: 8
         cantidad-max: 8
@@ -1045,10 +969,9 @@ anomalias:
       '1':
         item:
           ==: org.bukkit.inventory.ItemStack
-          DataVersion: 4790
-          id: minecraft:enchanted_golden_apple
-          count: 3
-          schema_version: 1
+          v: 4790
+          type: ENCHANTED_GOLDEN_APPLE
+          amount: 3
         probabilidad: 100
         cantidad-min: 3
         cantidad-max: 3
@@ -1056,10 +979,9 @@ anomalias:
       '2':
         item:
           ==: org.bukkit.inventory.ItemStack
-          DataVersion: 4790
-          id: minecraft:experience_bottle
-          count: 48
-          schema_version: 1
+          v: 4790
+          type: EXPERIENCE_BOTTLE
+          amount: 48
         probabilidad: 100
         cantidad-min: 48
         cantidad-max: 48
@@ -1067,10 +989,9 @@ anomalias:
       '3':
         item:
           ==: org.bukkit.inventory.ItemStack
-          DataVersion: 4790
-          id: minecraft:netherite_ingot
-          count: 2
-          schema_version: 1
+          v: 4790
+          type: NETHERITE_INGOT
+          amount: 2
         probabilidad: 70
         cantidad-min: 2
         cantidad-max: 2
@@ -1078,10 +999,9 @@ anomalias:
       '4':
         item:
           ==: org.bukkit.inventory.ItemStack
-          DataVersion: 4790
-          id: minecraft:totem_of_undying
-          count: 1
-          schema_version: 1
+          v: 4790
+          type: TOTEM_OF_UNDYING
+          amount: 1
         probabilidad: 50
         cantidad-min: 1
         cantidad-max: 1
@@ -1089,16 +1009,15 @@ anomalias:
       '5':
         item:
           ==: org.bukkit.inventory.ItemStack
-          DataVersion: 4790
-          id: minecraft:golden_apple
-          count: 8
-          schema_version: 1
+          v: 4790
+          type: GOLDEN_APPLE
+          amount: 8
         probabilidad: 100
         cantidad-min: 8
         cantidad-max: 8
         para: TODOS
 
-  aurora:
+  alba:
     experiencia: 4000
     comandos:
     - 'mobcoin give %jugador% 120'
@@ -1117,10 +1036,9 @@ anomalias:
       '1':
         item:
           ==: org.bukkit.inventory.ItemStack
-          DataVersion: 4790
-          id: minecraft:enchanted_golden_apple
-          count: 5
-          schema_version: 1
+          v: 4790
+          type: ENCHANTED_GOLDEN_APPLE
+          amount: 5
         probabilidad: 100
         cantidad-min: 5
         cantidad-max: 5
@@ -1128,10 +1046,9 @@ anomalias:
       '2':
         item:
           ==: org.bukkit.inventory.ItemStack
-          DataVersion: 4790
-          id: minecraft:experience_bottle
-          count: 64
-          schema_version: 1
+          v: 4790
+          type: EXPERIENCE_BOTTLE
+          amount: 64
         probabilidad: 100
         cantidad-min: 64
         cantidad-max: 64
@@ -1139,10 +1056,9 @@ anomalias:
       '3':
         item:
           ==: org.bukkit.inventory.ItemStack
-          DataVersion: 4790
-          id: minecraft:netherite_ingot
-          count: 3
-          schema_version: 1
+          v: 4790
+          type: NETHERITE_INGOT
+          amount: 3
         probabilidad: 80
         cantidad-min: 3
         cantidad-max: 3
@@ -1150,10 +1066,9 @@ anomalias:
       '4':
         item:
           ==: org.bukkit.inventory.ItemStack
-          DataVersion: 4790
-          id: minecraft:totem_of_undying
-          count: 1
-          schema_version: 1
+          v: 4790
+          type: TOTEM_OF_UNDYING
+          amount: 1
         probabilidad: 70
         cantidad-min: 1
         cantidad-max: 1
