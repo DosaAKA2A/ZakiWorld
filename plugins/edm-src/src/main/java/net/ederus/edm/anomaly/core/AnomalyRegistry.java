@@ -2964,7 +2964,7 @@ public final class AnomalyRegistry {
             add(list, "au_puerta", "Puerta Dorada", 2, 240, 40, 4,
                     "Un anillo de puertas dispara al centro.",
                     AnomalyRegistry.icon("END_PORTAL_FRAME", "GOLD_INGOT"), f -> alba(f).puertaDorada());
-            add(list, "au_cadenas", "Cadenas del Cielo", 2, 300, 50, 3,
+            add(list, "au_cadenas", "Cadenas del Cielo", 2, 240, 50, 5,
                     "Encadena a los dos mas cercanos.",
                     AnomalyRegistry.icon("CHAIN"), f -> alba(f).cadenasDelCielo());
             add(list, "au_salva", "Salva Real", 2, 220, 20, 4,
