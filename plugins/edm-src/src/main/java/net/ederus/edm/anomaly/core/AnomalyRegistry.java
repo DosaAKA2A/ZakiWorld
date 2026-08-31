@@ -3054,6 +3054,9 @@ public final class AnomalyRegistry {
             add(list, "au_mil_lanzas", "LLUVIA DE MIL LANZAS", 5, 1600, 210, 5,
                     "Diez segundos de cielo lleno; solo los claros de luz salvan.",
                     AnomalyRegistry.icon("TRIDENT","GOLD_BLOCK"), f -> alba(f).lluviaDeMilLanzas());
+            add(list, "au_rayos", "Rayos del Alba", 5, 460, 90, 4,
+                    "Ocho columnas de luz nacen del subsuelo y barren el area en espiral.",
+                    AnomalyRegistry.icon("BEACON", "GLOWSTONE"), f -> alba(f).rayosDelAlba());
             return list;
         }
 

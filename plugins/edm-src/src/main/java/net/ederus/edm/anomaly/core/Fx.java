@@ -121,18 +121,32 @@ public final class Fx {
         });
     }
 
-    /** Baja desde loc buscando el primer bloque solido; si no lo encuentra devuelve loc. */
+    /**
+     * Busca el suelo de verdad bajo (o sobre) loc.
+     *
+     * La version vieja solo miraba hacia abajo y devolvia loc tal cual si no
+     * encontraba nada: sobre una bajada las espadas quedaban CLAVADAS EN EL AIRE,
+     * y dentro de una ladera que sube quedaban enterradas enteras. Ahora, si el
+     * punto nace dentro de un bloque primero se sale al aire por arriba, hacia
+     * abajo se busca bastante mas alla del rango pedido antes de rendirse, y la
+     * altura devuelta se ajusta a la CARA SUPERIOR del bloque encontrado.
+     */
     public static Location ground(Location loc, int maxDown) {
         World w = loc.getWorld();
         if (w == null) return loc;
         Location probe = loc.clone();
-        for (int i = 0; i <= maxDown; i++) {
+        for (int up = 0; up < 12 && probe.getBlock().getType().isSolid(); up++) {
+            probe.add(0, 1, 0);
+        }
+        for (int i = 0; i <= maxDown + 16; i++) {
             Block b = probe.clone().subtract(0, i, 0).getBlock();
             if (b.getType().isSolid()) {
-                return probe.clone().subtract(0, i - 1, 0);
+                Location out = probe.clone().subtract(0, i - 1, 0);
+                out.setY(b.getY() + 1.0);
+                return out;
             }
         }
-        return loc;
+        return probe;
     }
 
     // ------------------------------------------------------- entidades de dibujo

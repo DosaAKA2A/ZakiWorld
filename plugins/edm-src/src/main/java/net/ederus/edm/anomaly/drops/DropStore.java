@@ -327,7 +327,7 @@ public final class DropStore implements Listener {
     private void burst(Location where, DropEntry entry, int amount, Player reserved, String anomalyId) {
         World w = where.getWorld();
         if (w == null) return;
-        Location from = where.clone().add(0, 1.0, 0);
+        Location from = where.clone().add(0, 1.6, 0);
 
         // El UNICO cae entero, un solo objeto brillando; lo demas se parte en montones
         // para que la explosion reparta de verdad por el suelo. Ningun monton puede
@@ -345,9 +345,12 @@ public final class DropStore implements Listener {
             copy.setAmount(n);
             Item it = w.dropItem(from, copy);
             double angle = random.nextDouble() * Math.PI * 2;
-            double push = 0.12 + random.nextDouble() * 0.24;
+            /* LLUVIA de botin de verdad: los montones salen DISPARADOS lejos del
+             * cuerpo (entre ~3 y ~20 bloques), no gotean a sus pies. Un item con
+             * empuje horizontal v recorre ~22*v bloques antes de frenar. */
+            double push = 0.16 + random.nextDouble() * 0.75;
             it.setVelocity(new Vector(Math.cos(angle) * push,
-                    0.34 + random.nextDouble() * 0.26, Math.sin(angle) * push));
+                    0.40 + random.nextDouble() * 0.25, Math.sin(angle) * push));
             it.setInvulnerable(true);
             if (reserved != null) it.setOwner(reserved.getUniqueId());
             if (entry.unique()) {

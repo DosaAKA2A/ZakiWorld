@@ -609,9 +609,10 @@ public final class Alba extends BossFight {
     }
 
     /**
-     * ATADURA CELESTIAL: cuatro columnas de CADENA de verdad (BlockDisplay)
-     * caen del cielo alrededor del jugador y lo enjaulan mientras dura la
-     * raiz. Antes eran cuatro chispas y no se veian: ahora se VEN.
+     * ATADURA CELESTIAL: el apresamiento se dibuja SOLO con particulas (decision
+     * del dueño: nada de cadenas de BlockDisplay). Cuatro sogas de polvo dorado
+     * caen del cielo en diagonal y quedan TENSADAS sobre el jugador, clavandolo
+     * al suelo, con su grillete de anillo a los pies. La raiz es la de siempre.
      */
     private void chain(Player p, int ticksHeld, double dmg) {
         if (p == null || chained.contains(p)) return;
@@ -623,54 +624,60 @@ public final class Alba extends BossFight {
         Compat.sound(w, p.getLocation(), "block.anvil.place", 0.7f, 1.6f);
         if (dmg > 0) hit(p, dmg);
         Location base = p.getLocation().clone();
-        List<org.bukkit.entity.BlockDisplay> grilletes = new ArrayList<>();
+        /* Los cuatro anclajes altos de las sogas, en diagonal sobre la victima. */
+        Location[] anclas = new Location[4];
         for (int i = 0; i < 4; i++) {
             double a = Math.PI / 2 * i + Math.PI / 4;
-            Location at = base.clone().add(Math.cos(a) * 1.15, 0, Math.sin(a) * 1.15);
-            try {
-                org.bukkit.entity.BlockDisplay bd = w.spawn(at, org.bukkit.entity.BlockDisplay.class, e -> {
-                    e.setBlock(pickMat("IRON_CHAIN", "CHAIN", "COPPER_CHAIN").createBlockData());
-                    e.setBrightness(new org.bukkit.entity.Display.Brightness(15, 15));
-                    e.setShadowRadius(0.0f);
-                    e.setPersistent(false);
-                    e.setTransformation(new Transformation(new Vector3f(-0.5f, 9f, -0.5f),
-                            new org.joml.Quaternionf(), new Vector3f(1f, 3f, 1f), new org.joml.Quaternionf()));
-                    e.setInterpolationDelay(0);
-                    e.setInterpolationDuration(0);
-                });
-                track(bd);
-                grilletes.add(bd);
-                later(1, () -> {
-                    if (!bd.isValid()) return;
-                    Transformation t = bd.getTransformation();
-                    bd.setInterpolationDelay(0);
-                    bd.setInterpolationDuration(4);
-                    bd.setTransformation(new Transformation(new Vector3f(-0.5f, 0f, -0.5f),
-                            t.getLeftRotation(), t.getScale(), t.getRightRotation()));
-                });
-            } catch (Throwable ignored) {
-            }
+            anclas[i] = base.clone().add(Math.cos(a) * 3.2, 7.5, Math.sin(a) * 3.2);
         }
+        var oro = Compat.dust(0xFFD700, 0.9f);
+        var oroPalido = Compat.dust(0xFFF3B0, 0.7f);
         later(5, () -> Compat.sound(w, base, "block.chain.fall", 1.2f, 0.6f));
         animate(ticksHeld, t -> {
-            if (t % 4 == 0) {
-                Fx.ring(base.clone().add(0, 0.15, 0), 1.3, 10, q ->
-                        Compat.spawn(w, Compat.WAX_OFF, q, 1, 0.02, 0.02, 0.02, 0.0));
+            Location pecho = base.clone().add(0, 1.0, 0);
+            /* Los primeros ticks las sogas BAJAN del cielo; luego quedan tensas. */
+            double avance = Math.min(1.0, (t + 1) / 6.0);
+            int pasos = 10;
+            for (Location ancla : anclas) {
+                Vector delta = pecho.toVector().subtract(ancla.toVector());
+                int hasta = (int) Math.round(pasos * avance);
+                for (int k = 0; k <= hasta; k++) {
+                    if ((k + t) % 2 != 0) continue; // eslabones alternos: se ve cadena, no linea
+                    Location q = ancla.clone().add(delta.clone().multiply((double) k / pasos));
+                    Compat.spawn(w, Compat.DUST, q, 1, 0.02, 0.02, 0.02, 0.0, oro);
+                }
+            }
+            /* El grillete a los pies. */
+            if (t % 3 == 0) {
+                Fx.ring(base.clone().add(0, 0.15, 0), 0.9, 10, q ->
+                        Compat.spawn(w, Compat.DUST, q, 1, 0.02, 0.02, 0.02, 0.0, oroPalido));
             }
             if (t % 12 == 0) Compat.sound(w, base, "block.chain.step", 0.9f, 0.55f);
         }, () -> {
             chained.remove(p);
-            for (org.bukkit.entity.BlockDisplay bd : grilletes) {
-                if (bd.isValid()) {
-                    Compat.spawn(w, Compat.POOF, bd.getLocation().add(0, 1, 0), 5, 0.1, 0.5, 0.1, 0.01);
-                    Fx.safeRemove(bd);
-                }
-            }
+            Compat.spawn(w, Compat.WAX_OFF, base.clone().add(0, 1, 0), 14, 0.5, 0.8, 0.5, 0.04);
             Compat.sound(w, base, "block.chain.break", 1.1f, 0.7f);
         });
-        grilletes.forEach(bd -> expire(bd, ticksHeld + 12));
     }
 
+
+    /**
+     * Encara TODO lo visible hacia una direccion. El face() de siempre no sirve
+     * montada: rota al zombi invisible, y lo que se ve es la pareja corcel+maniqui,
+     * que llevan su propia guiñada (era el fallo de las embestidas, el mismo que
+     * el del Mimic). setRotation NO desmonta al pasajero, un teleport si.
+     */
+    private void encarar(Vector dir) {
+        if (dir == null || dir.lengthSquared() < 1.0E-4) return;
+        float yaw = (float) Math.toDegrees(Math.atan2(-dir.getX(), dir.getZ()));
+        try {
+            if (steed != null && steed.isValid()) steed.setRotation(yaw, 0f);
+            var cuerpo = shell();
+            if (cuerpo != null && cuerpo.isValid()) cuerpo.setRotation(yaw, 0f);
+            if (boss != null && boss.isValid()) boss.setRotation(yaw, 0f);
+        } catch (Throwable ignored) {
+        }
+    }
 
     /** El punto del que salen las armas: la puerta mas cercana al hombro de la reina. */
     private Location shoulder() {
@@ -721,6 +728,7 @@ public final class Alba extends BossFight {
         busyFor(24);
         animate(20, t -> {
             var quien = monturaViva && steed.isValid() ? steed : boss;
+            encarar(dir);
             quien.setVelocity(dir.clone().multiply(0.85).setY(-0.05));
             Location at = quien.getLocation();
             Compat.spawn(w, Compat.CLOUD, at, 3, 0.3, 0.1, 0.3, 0.02);
@@ -850,10 +858,18 @@ public final class Alba extends BossFight {
     /** 11. Salva Real: ocho hojas en abanico desde el hombro. */
     public void salvaReal() {
         World w = world();
+        Player objetivo = nearestTargets(1).stream().findFirst().orElse(null);
+        if (objetivo == null) return;
         Location g = shoulder();
         gate(g, 20);
         Compat.sound(w, g, "block.respawn_anchor.charge", 1.0f, 1.6f);
-        Vector base = body().getLocation().getDirection().setY(0).normalize();
+        /* El abanico se centra en un jugador REAL. Antes salia hacia donde
+         * "miraba" el mob de combate, que con la IA mira a cualquier parte:
+         * era la espada dorada disparada al vacio. */
+        Vector base = objetivo.getEyeLocation().toVector().subtract(g.toVector()).setY(0);
+        if (base.lengthSquared() < 0.01) base = new Vector(1, 0, 0);
+        base.normalize();
+        encarar(base);
         for (int i = 0; i < 8; i++) {
             double ang = -52.5 + i * 15;
             Vector dir = base.clone().rotateAroundY(Math.toRadians(ang));
@@ -1192,6 +1208,7 @@ public final class Alba extends BossFight {
                 Compat.sound(w, loc(), "entity.horse.gallop", 1.3f, 0.9f);
                 animate(16, t -> {
                     var quien = mounted() && steed.isValid() ? steed : boss;
+                    encarar(dir);
                     quien.setVelocity(dir.clone().multiply(0.95).setY(-0.05));
                     Location at = quien.getLocation();
                     Compat.spawn(w, Compat.FLAME, at, 2, 0.2, 0.1, 0.2, 0.01);
@@ -1621,5 +1638,110 @@ public final class Alba extends BossFight {
                 push(p, p.getLocation().toVector().subtract(c.toVector()).normalize().multiply(1.1).setY(0.55));
             }
         });
+    }
+
+    /**
+     * 33. RAYOS DEL ALBA: columnas de luz verticales tipo beacon. Cada rayo son
+     * dos BlockDisplay anidados (cristal amarillo por fuera, nucleo de glowstone
+     * por dentro) estirados ~320 bloques, con la BASE ~25 bloques BAJO el suelo:
+     * el rayo emerge del subsuelo y se pierde en el cielo, nunca "nace de la
+     * nada". Ocho rayos se desprenden de Alba y se ABREN en espiral hacia fuera,
+     * castigando a quien pillan en el camino. El deslizamiento va por
+     * setTeleportDuration, no por saltos de teleport secos.
+     */
+    public void rayosDelAlba() {
+        World w = world();
+        Location c = body().getLocation().clone();
+        double baseY = Math.max(w.getMinHeight() + 1, c.getY() - 25);
+        warn(Component.text("«QUE LA LUZ LOS ATRAVIESE.»", ORO, TextDecoration.BOLD));
+        Compat.sound(w, c, "block.beacon.activate", 1.6f, 0.7f);
+        Compat.sound(w, c, "block.respawn_anchor.charge", 1.2f, 0.5f);
+        busyFor(100);
+        final int rayos = 8;
+        List<org.bukkit.entity.BlockDisplay[]> haces = new ArrayList<>();
+        for (int i = 0; i < rayos; i++) {
+            double a = Math.PI * 2 / rayos * i;
+            Location at = new Location(w, c.getX() + Math.cos(a) * 0.8, baseY, c.getZ() + Math.sin(a) * 0.8);
+            org.bukkit.entity.BlockDisplay funda = haz(at, Material.YELLOW_STAINED_GLASS, 0.36f);
+            org.bukkit.entity.BlockDisplay nucleo = haz(at, Material.GLOWSTONE, 0.15f);
+            if (funda != null || nucleo != null) {
+                haces.add(new org.bukkit.entity.BlockDisplay[]{funda, nucleo});
+            }
+        }
+        java.util.Map<java.util.UUID, Integer> ultimoGolpe = new java.util.HashMap<>();
+        animate(90, t -> {
+            double r = Math.min(16.0, 0.8 + t * 0.18);
+            double giro = t * 0.022;
+            if (t % 15 == 0) Compat.sound(w, c, "block.beacon.ambient", 1.8f, 1.2f);
+            if (t % 30 == 0) Compat.sound(w, c, "block.amethyst_block.resonate", 1.2f, 1.6f);
+            for (int i = 0; i < haces.size(); i++) {
+                double a = Math.PI * 2 / rayos * i + giro;
+                double x = c.getX() + Math.cos(a) * r;
+                double z = c.getZ() + Math.sin(a) * r;
+                Location at = new Location(w, x, baseY, z);
+                for (org.bukkit.entity.BlockDisplay bd : haces.get(i)) {
+                    if (bd != null && bd.isValid()) bd.teleport(at);
+                }
+                /* Chispas donde el rayo corta el suelo, para leer el barrido. */
+                if (t % 2 == 0) {
+                    Location pie = Fx.ground(new Location(w, x, c.getY() + 1, z), 12);
+                    Compat.spawn(w, Compat.END_ROD, pie.clone().add(0, 0.5, 0), 2, 0.1, 0.6, 0.1, 0.02);
+                    Compat.spawn(w, Compat.GLOW, pie.clone().add(0, 0.2, 0), 1, 0.06, 0.1, 0.06, 0.0);
+                }
+                /* El rayo es una columna infinita: el toque se mide en el plano. */
+                for (Player p : targets(40)) {
+                    double dx = p.getLocation().getX() - x;
+                    double dz = p.getLocation().getZ() - z;
+                    if (dx * dx + dz * dz > 1.6) continue;
+                    int last = ultimoGolpe.getOrDefault(p.getUniqueId(), -100);
+                    if (t - last < 10) continue;
+                    ultimoGolpe.put(p.getUniqueId(), t);
+                    hit(p, 9);
+                    push(p, new Vector(Math.cos(a), 0, Math.sin(a)).multiply(0.6).setY(0.35));
+                    Compat.spawn(w, Compat.FLASH, p.getLocation(), 1);
+                    Compat.spawn(w, Compat.ELECTRIC_SPARK, p.getLocation().add(0, 1, 0), 12, 0.3, 0.6, 0.3, 0.1);
+                    Compat.sound(w, p.getLocation(), "entity.lightning_bolt.impact", 0.9f, 1.6f);
+                }
+            }
+        }, () -> {
+            Compat.sound(w, c, "block.beacon.deactivate", 1.4f, 0.8f);
+            for (org.bukkit.entity.BlockDisplay[] par : haces) {
+                for (org.bukkit.entity.BlockDisplay bd : par) {
+                    if (bd == null || !bd.isValid()) continue;
+                    Location pie = Fx.ground(new Location(w, bd.getLocation().getX(), c.getY() + 1,
+                            bd.getLocation().getZ()), 12);
+                    Compat.spawn(w, Compat.FLASH, pie, 1);
+                    Compat.spawn(w, Compat.END_ROD, pie.clone().add(0, 1, 0), 8, 0.15, 1.2, 0.15, 0.03);
+                    Fx.safeRemove(bd);
+                }
+            }
+        });
+        haces.forEach(par -> {
+            for (org.bukkit.entity.BlockDisplay bd : par) if (bd != null) expire(bd, 110);
+        });
+    }
+
+    /** Una columna de luz: un BlockDisplay estirado a 320 de alto desde su base. */
+    private org.bukkit.entity.BlockDisplay haz(Location at, Material mat, float grosor) {
+        try {
+            org.bukkit.entity.BlockDisplay bd = world().spawn(at, org.bukkit.entity.BlockDisplay.class, e -> {
+                e.setBlock(mat.createBlockData());
+                e.setBrightness(new org.bukkit.entity.Display.Brightness(15, 15));
+                e.setShadowRadius(0.0f);
+                e.setPersistent(false);
+                e.setViewRange(4.0f);
+                /* El bloque local [0..1] escalado crece hacia ARRIBA de la entidad. */
+                e.setTransformation(new Transformation(new Vector3f(-grosor / 2f, 0f, -grosor / 2f),
+                        new org.joml.Quaternionf(), new Vector3f(grosor, 320f, grosor), new org.joml.Quaternionf()));
+                try {
+                    e.setTeleportDuration(2);
+                } catch (Throwable ignored2) {
+                }
+            });
+            track(bd);
+            return bd;
+        } catch (Throwable t) {
+            return null;
+        }
     }
 }

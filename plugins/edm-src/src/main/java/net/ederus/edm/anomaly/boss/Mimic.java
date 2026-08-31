@@ -309,6 +309,9 @@ public final class Mimic extends BossFight {
         }
         Vector to = t.getLocation().toVector().subtract(boss.getLocation().toVector());
         if (to.lengthSquared() > 0.25) {
+            /* Sin esto embestia mirando a cualquier parte (el maniqui copia la
+             * guiñada del zombi al teleportarse encima, asi que basta girarlo). */
+            face(t.getLocation());
             boss.setVelocity(to.normalize().multiply(0.55).setY(Math.max(0.05, boss.getVelocity().getY())));
         }
     }
@@ -788,6 +791,7 @@ public final class Mimic extends BossFight {
                 }
                 return;
             }
+            face(boss.getLocation().clone().add(run.clone().multiply(4)));
             boss.setVelocity(run.clone().multiply(0.85).setY(boss.getVelocity().getY()));
             Compat.spawn(world(), Compat.CLOUD, boss.getLocation(), 2, 0.3, 0.1, 0.3, 0.01);
             for (Player p : Fx.playersNear(boss.getLocation(), 2.2)) {
