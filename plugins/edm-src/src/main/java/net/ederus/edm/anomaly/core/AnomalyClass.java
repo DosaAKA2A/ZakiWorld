@@ -15,7 +15,13 @@ public enum AnomalyClass {
 
     ESBIRRO("Esbirro", "La clase mas baja: amenazas menores.", NamedTextColor.GRAY, 1),
     GENERAL("General", "El grueso del catalogo: jefes de pleno derecho.", NamedTextColor.GOLD, 2),
-    MONARCA("Monarca", "La clase mas alta: las anomalias capitales.", NamedTextColor.LIGHT_PURPLE, 3);
+    MONARCA("Monarca", "La clase mas alta del catalogo comun: las anomalias capitales.", NamedTextColor.LIGHT_PURPLE, 3),
+
+    /**
+     * Por encima de todo. No es "una clase mas": es un tier unico y señalado,
+     * pensado para UNA anomalia cada vez. El catalogo lo ordena primero.
+     */
+    DIOS("Dios", "Unico y especial: por encima de los Monarcas.", NamedTextColor.WHITE, 4);
 
     private final String display;
     private final String help;

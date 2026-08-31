@@ -1237,14 +1237,15 @@ public final class Keeper extends BossFight {
      * al sistema de objetivos rompibles y apuntado en la lista para la Detonacion.
      */
     private ArmorStand fixture(Location spot, Material block, String name, int hits) {
-        ArmorStand stand = world().spawn(spot, ArmorStand.class, s -> {
+        /* Sin nombre flotante: el dueño los quito el 2026-08-31 ("son molestos de
+         * ver"). El bloque se explica solo, y el aviso de la habilidad ya dice
+         * que hay que hacer. El parametro name se queda para el registro. */
+        ArmorStand stand = world().spawn(surface(spot), ArmorStand.class, s -> {
             s.setInvisible(true);
             s.setGravity(false);
             s.setPersistent(false);
             s.setBasePlate(false);
             s.setSmall(true);
-            s.customName(Component.text(name, ACCENT, TextDecoration.BOLD));
-            s.setCustomNameVisible(true);
             EntityEquipment eq = s.getEquipment();
             if (eq != null) eq.setHelmet(new ItemStack(block));
         });
@@ -1259,6 +1260,25 @@ public final class Keeper extends BossFight {
                     soundAt(stand.getLocation(), "block.sculk.break", 1.3f, 0.7f);
                 });
         return stand;
+    }
+
+    /**
+     * Suelo DE VERDAD para las piezas plantadas. Fx.ground solo mira 5 bloques y
+     * si no encuentra devuelve el punto tal cual: en una ladera los chirriadores
+     * quedaban colgados en el aire. Aqui se baja hasta 24 bloques, se prueba
+     * tambien hacia arriba, y si ni asi hay suelo la pieza se planta al pie del
+     * jefe, que siempre lo tiene.
+     */
+    private Location surface(Location spot) {
+        org.bukkit.World w = spot.getWorld();
+        if (w == null) return spot;
+        Location abajo = Fx.ground(spot, 24);
+        if (abajo.clone().subtract(0, 1, 0).getBlock().getType().isSolid()) return abajo;
+        for (int up = 1; up <= 6; up++) {
+            Location probe = spot.clone().add(0, up, 0);
+            if (probe.clone().subtract(0, 1, 0).getBlock().getType().isSolid()) return probe;
+        }
+        return Fx.ground(loc().clone(), 8);
     }
 
     /** Retira una pieza plantada: del ancla, de la lista y del mundo. */

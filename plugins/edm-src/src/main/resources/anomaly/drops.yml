@@ -5,81 +5,1157 @@
 #  Ahi se arrastra el objeto real (vale cualquiera, tambien los de MMOItems)
 #  y se ajustan probabilidad, cantidad y a quien le toca.
 #
-#  A mano tambien se puede. Formato de cada entrada:
+#  A mano tambien se puede. Formato de cada entrada de botin:
 #    item:          el objeto serializado por Bukkit (conserva NBT y nombre)
 #    probabilidad:  0.1 a 100
 #    cantidad-min / cantidad-max
 #    para:          TODOS | MEJOR | ALEATORIO
-#                   TODOS      -> cada participante recibe su copia
-#                   MEJOR      -> solo quien mas dano hizo
-#                   ALEATORIO  -> uno al azar, con peso por dano
 #
 #  comandos: los ejecuta la consola al caer el jefe.
 #            %jugador% se sustituye por el nombre.
-#            Si el comando empieza por [mejor] solo corre para quien mas dano hizo.
-#            Ejemplo con MMOItems:  [mejor] mi give %jugador% SWORD EXCALIBUR_MISTICA
+#            [mejor]  -> solo corre para quien mas daño hizo.
+#            [35%]    -> probabilidad de ese comando, POR JUGADOR.
+#            Se combinan: "[mejor] [25%] crates key give %jugador% legendary 1"
 #
-#  Se entrega vacio a proposito: el botin lo decide el servidor, no el plugin.
+#  Este fichero viene PRECARGADO por bandas de clase (2026-08-31):
+#    Esbirros  calderilla constante + llave de vote de vez en cuando
+#    Generales MobCoins, llaves de rankup y el primer totem
+#    Monarcas  llaves gordas + libro del nucleo; sus ITEMS custom los pone
+#              el dueño desde el juego, aqui solo va lo generico
+#    DIOS      Aurora: garantizados + la Regalia del Alba por tiradas
 # ============================================================
 
 anomalias:
   caballero_sepulcral:
     experiencia: 800
-    comandos: []
-    botin: {}
+    comandos:
+    - 'mobcoin give %jugador% 15'
+    - '[40%] crates key give %jugador% vote 1'
+    - '[mejor] eco give %jugador% 5000'
+    botin:
+      '1':
+        item:
+          ==: org.bukkit.inventory.ItemStack
+          DataVersion: 4790
+          id: minecraft:golden_apple
+          count: 3
+          schema_version: 1
+        probabilidad: 100
+        cantidad-min: 3
+        cantidad-max: 3
+        para: TODOS
+      '2':
+        item:
+          ==: org.bukkit.inventory.ItemStack
+          DataVersion: 4790
+          id: minecraft:experience_bottle
+          count: 16
+          schema_version: 1
+        probabilidad: 100
+        cantidad-min: 16
+        cantidad-max: 16
+        para: TODOS
+      '3':
+        item:
+          ==: org.bukkit.inventory.ItemStack
+          DataVersion: 4790
+          id: minecraft:netherite_scrap
+          count: 1
+          schema_version: 1
+        probabilidad: 25
+        cantidad-min: 1
+        cantidad-max: 1
+        para: TODOS
+      '4':
+        item:
+          ==: org.bukkit.inventory.ItemStack
+          DataVersion: 4790
+          id: minecraft:golden_carrot
+          count: 12
+          schema_version: 1
+        probabilidad: 60
+        cantidad-min: 12
+        cantidad-max: 12
+        para: TODOS
+
   cabra_gritona:
     experiencia: 900
-    comandos: []
-    botin: {}
+    comandos:
+    - 'mobcoin give %jugador% 15'
+    - '[40%] crates key give %jugador% vote 1'
+    - '[mejor] eco give %jugador% 5000'
+    botin:
+      '1':
+        item:
+          ==: org.bukkit.inventory.ItemStack
+          DataVersion: 4790
+          id: minecraft:golden_apple
+          count: 3
+          schema_version: 1
+        probabilidad: 100
+        cantidad-min: 3
+        cantidad-max: 3
+        para: TODOS
+      '2':
+        item:
+          ==: org.bukkit.inventory.ItemStack
+          DataVersion: 4790
+          id: minecraft:experience_bottle
+          count: 16
+          schema_version: 1
+        probabilidad: 100
+        cantidad-min: 16
+        cantidad-max: 16
+        para: TODOS
+      '3':
+        item:
+          ==: org.bukkit.inventory.ItemStack
+          DataVersion: 4790
+          id: minecraft:netherite_scrap
+          count: 1
+          schema_version: 1
+        probabilidad: 25
+        cantidad-min: 1
+        cantidad-max: 1
+        para: TODOS
+      '4':
+        item:
+          ==: org.bukkit.inventory.ItemStack
+          DataVersion: 4790
+          id: minecraft:golden_carrot
+          count: 12
+          schema_version: 1
+        probabilidad: 60
+        cantidad-min: 12
+        cantidad-max: 12
+        para: TODOS
+
   conejo_asesino:
     experiencia: 850
-    comandos: []
-    botin: {}
+    comandos:
+    - 'mobcoin give %jugador% 15'
+    - '[40%] crates key give %jugador% vote 1'
+    - '[mejor] eco give %jugador% 5000'
+    botin:
+      '1':
+        item:
+          ==: org.bukkit.inventory.ItemStack
+          DataVersion: 4790
+          id: minecraft:golden_apple
+          count: 3
+          schema_version: 1
+        probabilidad: 100
+        cantidad-min: 3
+        cantidad-max: 3
+        para: TODOS
+      '2':
+        item:
+          ==: org.bukkit.inventory.ItemStack
+          DataVersion: 4790
+          id: minecraft:experience_bottle
+          count: 16
+          schema_version: 1
+        probabilidad: 100
+        cantidad-min: 16
+        cantidad-max: 16
+        para: TODOS
+      '3':
+        item:
+          ==: org.bukkit.inventory.ItemStack
+          DataVersion: 4790
+          id: minecraft:netherite_scrap
+          count: 1
+          schema_version: 1
+        probabilidad: 25
+        cantidad-min: 1
+        cantidad-max: 1
+        para: TODOS
+      '4':
+        item:
+          ==: org.bukkit.inventory.ItemStack
+          DataVersion: 4790
+          id: minecraft:golden_carrot
+          count: 12
+          schema_version: 1
+        probabilidad: 60
+        cantidad-min: 12
+        cantidad-max: 12
+        para: TODOS
+
   storm_rider:
     experiencia: 1000
-    comandos: []
-    botin: {}
+    comandos:
+    - 'mobcoin give %jugador% 15'
+    - '[40%] crates key give %jugador% vote 1'
+    - '[mejor] eco give %jugador% 5000'
+    botin:
+      '1':
+        item:
+          ==: org.bukkit.inventory.ItemStack
+          DataVersion: 4790
+          id: minecraft:golden_apple
+          count: 3
+          schema_version: 1
+        probabilidad: 100
+        cantidad-min: 3
+        cantidad-max: 3
+        para: TODOS
+      '2':
+        item:
+          ==: org.bukkit.inventory.ItemStack
+          DataVersion: 4790
+          id: minecraft:experience_bottle
+          count: 16
+          schema_version: 1
+        probabilidad: 100
+        cantidad-min: 16
+        cantidad-max: 16
+        para: TODOS
+      '3':
+        item:
+          ==: org.bukkit.inventory.ItemStack
+          DataVersion: 4790
+          id: minecraft:netherite_scrap
+          count: 1
+          schema_version: 1
+        probabilidad: 25
+        cantidad-min: 1
+        cantidad-max: 1
+        para: TODOS
+      '4':
+        item:
+          ==: org.bukkit.inventory.ItemStack
+          DataVersion: 4790
+          id: minecraft:golden_carrot
+          count: 12
+          schema_version: 1
+        probabilidad: 60
+        cantidad-min: 12
+        cantidad-max: 12
+        para: TODOS
+
   leviatan_de_sal:
     experiencia: 1100
-    comandos: []
-    botin: {}
+    comandos:
+    - 'mobcoin give %jugador% 30'
+    - '[50%] crates key give %jugador% vote 1'
+    - '[20%] crates key give %jugador% llave_rankup 1'
+    - '[10%] crates key give %jugador% booster 1'
+    - '[mejor] eco give %jugador% 12000'
+    - '[mejor] [25%] ederuslibro %jugador%'
+    botin:
+      '1':
+        item:
+          ==: org.bukkit.inventory.ItemStack
+          DataVersion: 4790
+          id: minecraft:golden_apple
+          count: 5
+          schema_version: 1
+        probabilidad: 100
+        cantidad-min: 5
+        cantidad-max: 5
+        para: TODOS
+      '2':
+        item:
+          ==: org.bukkit.inventory.ItemStack
+          DataVersion: 4790
+          id: minecraft:enchanted_golden_apple
+          count: 1
+          schema_version: 1
+        probabilidad: 55
+        cantidad-min: 1
+        cantidad-max: 1
+        para: TODOS
+      '3':
+        item:
+          ==: org.bukkit.inventory.ItemStack
+          DataVersion: 4790
+          id: minecraft:experience_bottle
+          count: 24
+          schema_version: 1
+        probabilidad: 100
+        cantidad-min: 24
+        cantidad-max: 24
+        para: TODOS
+      '4':
+        item:
+          ==: org.bukkit.inventory.ItemStack
+          DataVersion: 4790
+          id: minecraft:netherite_scrap
+          count: 2
+          schema_version: 1
+        probabilidad: 40
+        cantidad-min: 2
+        cantidad-max: 2
+        para: TODOS
+      '5':
+        item:
+          ==: org.bukkit.inventory.ItemStack
+          DataVersion: 4790
+          id: minecraft:totem_of_undying
+          count: 1
+          schema_version: 1
+        probabilidad: 20
+        cantidad-min: 1
+        cantidad-max: 1
+        para: MEJOR
+
   coro_abisal:
     experiencia: 1200
-    comandos: []
-    botin: {}
-  darkness:
-    experiencia: 2500
-    comandos: []
-    botin: {}
+    comandos:
+    - 'mobcoin give %jugador% 30'
+    - '[50%] crates key give %jugador% vote 1'
+    - '[20%] crates key give %jugador% llave_rankup 1'
+    - '[10%] crates key give %jugador% booster 1'
+    - '[mejor] eco give %jugador% 12000'
+    - '[mejor] [25%] ederuslibro %jugador%'
+    botin:
+      '1':
+        item:
+          ==: org.bukkit.inventory.ItemStack
+          DataVersion: 4790
+          id: minecraft:golden_apple
+          count: 5
+          schema_version: 1
+        probabilidad: 100
+        cantidad-min: 5
+        cantidad-max: 5
+        para: TODOS
+      '2':
+        item:
+          ==: org.bukkit.inventory.ItemStack
+          DataVersion: 4790
+          id: minecraft:enchanted_golden_apple
+          count: 1
+          schema_version: 1
+        probabilidad: 55
+        cantidad-min: 1
+        cantidad-max: 1
+        para: TODOS
+      '3':
+        item:
+          ==: org.bukkit.inventory.ItemStack
+          DataVersion: 4790
+          id: minecraft:experience_bottle
+          count: 24
+          schema_version: 1
+        probabilidad: 100
+        cantidad-min: 24
+        cantidad-max: 24
+        para: TODOS
+      '4':
+        item:
+          ==: org.bukkit.inventory.ItemStack
+          DataVersion: 4790
+          id: minecraft:netherite_scrap
+          count: 2
+          schema_version: 1
+        probabilidad: 40
+        cantidad-min: 2
+        cantidad-max: 2
+        para: TODOS
+      '5':
+        item:
+          ==: org.bukkit.inventory.ItemStack
+          DataVersion: 4790
+          id: minecraft:totem_of_undying
+          count: 1
+          schema_version: 1
+        probabilidad: 20
+        cantidad-min: 1
+        cantidad-max: 1
+        para: MEJOR
+
   herbola:
     experiencia: 1300
-    comandos: []
-    botin: {}
+    comandos:
+    - 'mobcoin give %jugador% 30'
+    - '[50%] crates key give %jugador% vote 1'
+    - '[20%] crates key give %jugador% llave_rankup 1'
+    - '[10%] crates key give %jugador% booster 1'
+    - '[mejor] eco give %jugador% 12000'
+    - '[mejor] [25%] ederuslibro %jugador%'
+    botin:
+      '1':
+        item:
+          ==: org.bukkit.inventory.ItemStack
+          DataVersion: 4790
+          id: minecraft:golden_apple
+          count: 5
+          schema_version: 1
+        probabilidad: 100
+        cantidad-min: 5
+        cantidad-max: 5
+        para: TODOS
+      '2':
+        item:
+          ==: org.bukkit.inventory.ItemStack
+          DataVersion: 4790
+          id: minecraft:enchanted_golden_apple
+          count: 1
+          schema_version: 1
+        probabilidad: 55
+        cantidad-min: 1
+        cantidad-max: 1
+        para: TODOS
+      '3':
+        item:
+          ==: org.bukkit.inventory.ItemStack
+          DataVersion: 4790
+          id: minecraft:experience_bottle
+          count: 24
+          schema_version: 1
+        probabilidad: 100
+        cantidad-min: 24
+        cantidad-max: 24
+        para: TODOS
+      '4':
+        item:
+          ==: org.bukkit.inventory.ItemStack
+          DataVersion: 4790
+          id: minecraft:netherite_scrap
+          count: 2
+          schema_version: 1
+        probabilidad: 40
+        cantidad-min: 2
+        cantidad-max: 2
+        para: TODOS
+      '5':
+        item:
+          ==: org.bukkit.inventory.ItemStack
+          DataVersion: 4790
+          id: minecraft:totem_of_undying
+          count: 1
+          schema_version: 1
+        probabilidad: 20
+        cantidad-min: 1
+        cantidad-max: 1
+        para: MEJOR
+
   quimera:
     experiencia: 1500
-    comandos: []
-    botin: {}
+    comandos:
+    - 'mobcoin give %jugador% 30'
+    - '[50%] crates key give %jugador% vote 1'
+    - '[20%] crates key give %jugador% llave_rankup 1'
+    - '[10%] crates key give %jugador% booster 1'
+    - '[mejor] eco give %jugador% 12000'
+    - '[mejor] [25%] ederuslibro %jugador%'
+    botin:
+      '1':
+        item:
+          ==: org.bukkit.inventory.ItemStack
+          DataVersion: 4790
+          id: minecraft:golden_apple
+          count: 5
+          schema_version: 1
+        probabilidad: 100
+        cantidad-min: 5
+        cantidad-max: 5
+        para: TODOS
+      '2':
+        item:
+          ==: org.bukkit.inventory.ItemStack
+          DataVersion: 4790
+          id: minecraft:enchanted_golden_apple
+          count: 1
+          schema_version: 1
+        probabilidad: 55
+        cantidad-min: 1
+        cantidad-max: 1
+        para: TODOS
+      '3':
+        item:
+          ==: org.bukkit.inventory.ItemStack
+          DataVersion: 4790
+          id: minecraft:experience_bottle
+          count: 24
+          schema_version: 1
+        probabilidad: 100
+        cantidad-min: 24
+        cantidad-max: 24
+        para: TODOS
+      '4':
+        item:
+          ==: org.bukkit.inventory.ItemStack
+          DataVersion: 4790
+          id: minecraft:netherite_scrap
+          count: 2
+          schema_version: 1
+        probabilidad: 40
+        cantidad-min: 2
+        cantidad-max: 2
+        para: TODOS
+      '5':
+        item:
+          ==: org.bukkit.inventory.ItemStack
+          DataVersion: 4790
+          id: minecraft:totem_of_undying
+          count: 1
+          schema_version: 1
+        probabilidad: 20
+        cantidad-min: 1
+        cantidad-max: 1
+        para: MEJOR
+
   bruja:
     experiencia: 1200
-    comandos: []
-    botin: {}
+    comandos:
+    - 'mobcoin give %jugador% 30'
+    - '[50%] crates key give %jugador% vote 1'
+    - '[20%] crates key give %jugador% llave_rankup 1'
+    - '[10%] crates key give %jugador% booster 1'
+    - '[mejor] eco give %jugador% 12000'
+    - '[mejor] [25%] ederuslibro %jugador%'
+    botin:
+      '1':
+        item:
+          ==: org.bukkit.inventory.ItemStack
+          DataVersion: 4790
+          id: minecraft:golden_apple
+          count: 5
+          schema_version: 1
+        probabilidad: 100
+        cantidad-min: 5
+        cantidad-max: 5
+        para: TODOS
+      '2':
+        item:
+          ==: org.bukkit.inventory.ItemStack
+          DataVersion: 4790
+          id: minecraft:enchanted_golden_apple
+          count: 1
+          schema_version: 1
+        probabilidad: 55
+        cantidad-min: 1
+        cantidad-max: 1
+        para: TODOS
+      '3':
+        item:
+          ==: org.bukkit.inventory.ItemStack
+          DataVersion: 4790
+          id: minecraft:experience_bottle
+          count: 24
+          schema_version: 1
+        probabilidad: 100
+        cantidad-min: 24
+        cantidad-max: 24
+        para: TODOS
+      '4':
+        item:
+          ==: org.bukkit.inventory.ItemStack
+          DataVersion: 4790
+          id: minecraft:netherite_scrap
+          count: 2
+          schema_version: 1
+        probabilidad: 40
+        cantidad-min: 2
+        cantidad-max: 2
+        para: TODOS
+      '5':
+        item:
+          ==: org.bukkit.inventory.ItemStack
+          DataVersion: 4790
+          id: minecraft:totem_of_undying
+          count: 1
+          schema_version: 1
+        probabilidad: 20
+        cantidad-min: 1
+        cantidad-max: 1
+        para: MEJOR
+
   mimic:
     experiencia: 1600
-    comandos: []
-    botin: {}
+    comandos:
+    - 'mobcoin give %jugador% 30'
+    - '[50%] crates key give %jugador% vote 1'
+    - '[20%] crates key give %jugador% llave_rankup 1'
+    - '[10%] crates key give %jugador% booster 1'
+    - '[mejor] eco give %jugador% 12000'
+    - '[mejor] [25%] ederuslibro %jugador%'
+    botin:
+      '1':
+        item:
+          ==: org.bukkit.inventory.ItemStack
+          DataVersion: 4790
+          id: minecraft:golden_apple
+          count: 5
+          schema_version: 1
+        probabilidad: 100
+        cantidad-min: 5
+        cantidad-max: 5
+        para: TODOS
+      '2':
+        item:
+          ==: org.bukkit.inventory.ItemStack
+          DataVersion: 4790
+          id: minecraft:enchanted_golden_apple
+          count: 1
+          schema_version: 1
+        probabilidad: 55
+        cantidad-min: 1
+        cantidad-max: 1
+        para: TODOS
+      '3':
+        item:
+          ==: org.bukkit.inventory.ItemStack
+          DataVersion: 4790
+          id: minecraft:experience_bottle
+          count: 24
+          schema_version: 1
+        probabilidad: 100
+        cantidad-min: 24
+        cantidad-max: 24
+        para: TODOS
+      '4':
+        item:
+          ==: org.bukkit.inventory.ItemStack
+          DataVersion: 4790
+          id: minecraft:netherite_scrap
+          count: 2
+          schema_version: 1
+        probabilidad: 40
+        cantidad-min: 2
+        cantidad-max: 2
+        para: TODOS
+      '5':
+        item:
+          ==: org.bukkit.inventory.ItemStack
+          DataVersion: 4790
+          id: minecraft:totem_of_undying
+          count: 1
+          schema_version: 1
+        probabilidad: 20
+        cantidad-min: 1
+        cantidad-max: 1
+        para: MEJOR
+
   rabby:
     experiencia: 2200
-    comandos: []
-    botin: {}
+    comandos:
+    - 'mobcoin give %jugador% 30'
+    - '[50%] crates key give %jugador% vote 1'
+    - '[20%] crates key give %jugador% llave_rankup 1'
+    - '[10%] crates key give %jugador% booster 1'
+    - '[mejor] eco give %jugador% 12000'
+    - '[mejor] [25%] ederuslibro %jugador%'
+    botin:
+      '1':
+        item:
+          ==: org.bukkit.inventory.ItemStack
+          DataVersion: 4790
+          id: minecraft:golden_apple
+          count: 5
+          schema_version: 1
+        probabilidad: 100
+        cantidad-min: 5
+        cantidad-max: 5
+        para: TODOS
+      '2':
+        item:
+          ==: org.bukkit.inventory.ItemStack
+          DataVersion: 4790
+          id: minecraft:enchanted_golden_apple
+          count: 1
+          schema_version: 1
+        probabilidad: 55
+        cantidad-min: 1
+        cantidad-max: 1
+        para: TODOS
+      '3':
+        item:
+          ==: org.bukkit.inventory.ItemStack
+          DataVersion: 4790
+          id: minecraft:experience_bottle
+          count: 24
+          schema_version: 1
+        probabilidad: 100
+        cantidad-min: 24
+        cantidad-max: 24
+        para: TODOS
+      '4':
+        item:
+          ==: org.bukkit.inventory.ItemStack
+          DataVersion: 4790
+          id: minecraft:netherite_scrap
+          count: 2
+          schema_version: 1
+        probabilidad: 40
+        cantidad-min: 2
+        cantidad-max: 2
+        para: TODOS
+      '5':
+        item:
+          ==: org.bukkit.inventory.ItemStack
+          DataVersion: 4790
+          id: minecraft:totem_of_undying
+          count: 1
+          schema_version: 1
+        probabilidad: 20
+        cantidad-min: 1
+        cantidad-max: 1
+        para: MEJOR
+
   cazador:
     experiencia: 1800
-    comandos: []
-    botin: {}
+    comandos:
+    - 'mobcoin give %jugador% 30'
+    - '[50%] crates key give %jugador% vote 1'
+    - '[20%] crates key give %jugador% llave_rankup 1'
+    - '[10%] crates key give %jugador% booster 1'
+    - '[mejor] eco give %jugador% 12000'
+    - '[mejor] [25%] ederuslibro %jugador%'
+    botin:
+      '1':
+        item:
+          ==: org.bukkit.inventory.ItemStack
+          DataVersion: 4790
+          id: minecraft:golden_apple
+          count: 5
+          schema_version: 1
+        probabilidad: 100
+        cantidad-min: 5
+        cantidad-max: 5
+        para: TODOS
+      '2':
+        item:
+          ==: org.bukkit.inventory.ItemStack
+          DataVersion: 4790
+          id: minecraft:enchanted_golden_apple
+          count: 1
+          schema_version: 1
+        probabilidad: 55
+        cantidad-min: 1
+        cantidad-max: 1
+        para: TODOS
+      '3':
+        item:
+          ==: org.bukkit.inventory.ItemStack
+          DataVersion: 4790
+          id: minecraft:experience_bottle
+          count: 24
+          schema_version: 1
+        probabilidad: 100
+        cantidad-min: 24
+        cantidad-max: 24
+        para: TODOS
+      '4':
+        item:
+          ==: org.bukkit.inventory.ItemStack
+          DataVersion: 4790
+          id: minecraft:netherite_scrap
+          count: 2
+          schema_version: 1
+        probabilidad: 40
+        cantidad-min: 2
+        cantidad-max: 2
+        para: TODOS
+      '5':
+        item:
+          ==: org.bukkit.inventory.ItemStack
+          DataVersion: 4790
+          id: minecraft:totem_of_undying
+          count: 1
+          schema_version: 1
+        probabilidad: 20
+        cantidad-min: 1
+        cantidad-max: 1
+        para: MEJOR
+
   aragon:
     experiencia: 2000
-    comandos: []
-    botin: {}
+    comandos:
+    - 'mobcoin give %jugador% 30'
+    - '[50%] crates key give %jugador% vote 1'
+    - '[20%] crates key give %jugador% llave_rankup 1'
+    - '[10%] crates key give %jugador% booster 1'
+    - '[mejor] eco give %jugador% 12000'
+    - '[mejor] [25%] ederuslibro %jugador%'
+    botin:
+      '1':
+        item:
+          ==: org.bukkit.inventory.ItemStack
+          DataVersion: 4790
+          id: minecraft:golden_apple
+          count: 5
+          schema_version: 1
+        probabilidad: 100
+        cantidad-min: 5
+        cantidad-max: 5
+        para: TODOS
+      '2':
+        item:
+          ==: org.bukkit.inventory.ItemStack
+          DataVersion: 4790
+          id: minecraft:enchanted_golden_apple
+          count: 1
+          schema_version: 1
+        probabilidad: 55
+        cantidad-min: 1
+        cantidad-max: 1
+        para: TODOS
+      '3':
+        item:
+          ==: org.bukkit.inventory.ItemStack
+          DataVersion: 4790
+          id: minecraft:experience_bottle
+          count: 24
+          schema_version: 1
+        probabilidad: 100
+        cantidad-min: 24
+        cantidad-max: 24
+        para: TODOS
+      '4':
+        item:
+          ==: org.bukkit.inventory.ItemStack
+          DataVersion: 4790
+          id: minecraft:netherite_scrap
+          count: 2
+          schema_version: 1
+        probabilidad: 40
+        cantidad-min: 2
+        cantidad-max: 2
+        para: TODOS
+      '5':
+        item:
+          ==: org.bukkit.inventory.ItemStack
+          DataVersion: 4790
+          id: minecraft:totem_of_undying
+          count: 1
+          schema_version: 1
+        probabilidad: 20
+        cantidad-min: 1
+        cantidad-max: 1
+        para: MEJOR
+
   piromante:
     experiencia: 1700
-    comandos: []
-    botin: {}
+    comandos:
+    - 'mobcoin give %jugador% 30'
+    - '[50%] crates key give %jugador% vote 1'
+    - '[20%] crates key give %jugador% llave_rankup 1'
+    - '[10%] crates key give %jugador% booster 1'
+    - '[mejor] eco give %jugador% 12000'
+    - '[mejor] [25%] ederuslibro %jugador%'
+    botin:
+      '1':
+        item:
+          ==: org.bukkit.inventory.ItemStack
+          DataVersion: 4790
+          id: minecraft:golden_apple
+          count: 5
+          schema_version: 1
+        probabilidad: 100
+        cantidad-min: 5
+        cantidad-max: 5
+        para: TODOS
+      '2':
+        item:
+          ==: org.bukkit.inventory.ItemStack
+          DataVersion: 4790
+          id: minecraft:enchanted_golden_apple
+          count: 1
+          schema_version: 1
+        probabilidad: 55
+        cantidad-min: 1
+        cantidad-max: 1
+        para: TODOS
+      '3':
+        item:
+          ==: org.bukkit.inventory.ItemStack
+          DataVersion: 4790
+          id: minecraft:experience_bottle
+          count: 24
+          schema_version: 1
+        probabilidad: 100
+        cantidad-min: 24
+        cantidad-max: 24
+        para: TODOS
+      '4':
+        item:
+          ==: org.bukkit.inventory.ItemStack
+          DataVersion: 4790
+          id: minecraft:netherite_scrap
+          count: 2
+          schema_version: 1
+        probabilidad: 40
+        cantidad-min: 2
+        cantidad-max: 2
+        para: TODOS
+      '5':
+        item:
+          ==: org.bukkit.inventory.ItemStack
+          DataVersion: 4790
+          id: minecraft:totem_of_undying
+          count: 1
+          schema_version: 1
+        probabilidad: 20
+        cantidad-min: 1
+        cantidad-max: 1
+        para: MEJOR
+
+  darkness:
+    experiencia: 2500
+    comandos:
+    - 'mobcoin give %jugador% 60'
+    - 'ederuslibro %jugador%'
+    - '[50%] crates key give %jugador% llave_epica 1'
+    - '[40%] crates key give %jugador% llave_dungeon 1'
+    - '[35%] crates key give %jugador% legendary 1'
+    - '[15%] crates key give %jugador% booster 1'
+    - '[mejor] eco give %jugador% 25000'
+    - '[mejor] [30%] crates key give %jugador% pets 1'
+    botin:
+      '1':
+        item:
+          ==: org.bukkit.inventory.ItemStack
+          DataVersion: 4790
+          id: minecraft:enchanted_golden_apple
+          count: 3
+          schema_version: 1
+        probabilidad: 100
+        cantidad-min: 3
+        cantidad-max: 3
+        para: TODOS
+      '2':
+        item:
+          ==: org.bukkit.inventory.ItemStack
+          DataVersion: 4790
+          id: minecraft:experience_bottle
+          count: 48
+          schema_version: 1
+        probabilidad: 100
+        cantidad-min: 48
+        cantidad-max: 48
+        para: TODOS
+      '3':
+        item:
+          ==: org.bukkit.inventory.ItemStack
+          DataVersion: 4790
+          id: minecraft:netherite_ingot
+          count: 2
+          schema_version: 1
+        probabilidad: 70
+        cantidad-min: 2
+        cantidad-max: 2
+        para: TODOS
+      '4':
+        item:
+          ==: org.bukkit.inventory.ItemStack
+          DataVersion: 4790
+          id: minecraft:totem_of_undying
+          count: 1
+          schema_version: 1
+        probabilidad: 50
+        cantidad-min: 1
+        cantidad-max: 1
+        para: TODOS
+      '5':
+        item:
+          ==: org.bukkit.inventory.ItemStack
+          DataVersion: 4790
+          id: minecraft:golden_apple
+          count: 8
+          schema_version: 1
+        probabilidad: 100
+        cantidad-min: 8
+        cantidad-max: 8
+        para: TODOS
+
+  keeper:
+    experiencia: 2800
+    comandos:
+    - 'mobcoin give %jugador% 60'
+    - 'ederuslibro %jugador%'
+    - '[50%] crates key give %jugador% llave_epica 1'
+    - '[40%] crates key give %jugador% llave_dungeon 1'
+    - '[35%] crates key give %jugador% legendary 1'
+    - '[15%] crates key give %jugador% booster 1'
+    - '[mejor] eco give %jugador% 25000'
+    - '[mejor] [30%] crates key give %jugador% pets 1'
+    botin:
+      '1':
+        item:
+          ==: org.bukkit.inventory.ItemStack
+          DataVersion: 4790
+          id: minecraft:enchanted_golden_apple
+          count: 3
+          schema_version: 1
+        probabilidad: 100
+        cantidad-min: 3
+        cantidad-max: 3
+        para: TODOS
+      '2':
+        item:
+          ==: org.bukkit.inventory.ItemStack
+          DataVersion: 4790
+          id: minecraft:experience_bottle
+          count: 48
+          schema_version: 1
+        probabilidad: 100
+        cantidad-min: 48
+        cantidad-max: 48
+        para: TODOS
+      '3':
+        item:
+          ==: org.bukkit.inventory.ItemStack
+          DataVersion: 4790
+          id: minecraft:netherite_ingot
+          count: 2
+          schema_version: 1
+        probabilidad: 70
+        cantidad-min: 2
+        cantidad-max: 2
+        para: TODOS
+      '4':
+        item:
+          ==: org.bukkit.inventory.ItemStack
+          DataVersion: 4790
+          id: minecraft:totem_of_undying
+          count: 1
+          schema_version: 1
+        probabilidad: 50
+        cantidad-min: 1
+        cantidad-max: 1
+        para: TODOS
+      '5':
+        item:
+          ==: org.bukkit.inventory.ItemStack
+          DataVersion: 4790
+          id: minecraft:golden_apple
+          count: 8
+          schema_version: 1
+        probabilidad: 100
+        cantidad-min: 8
+        cantidad-max: 8
+        para: TODOS
+
+  gemelos_cobre:
+    experiencia: 2800
+    comandos:
+    - 'mobcoin give %jugador% 60'
+    - 'ederuslibro %jugador%'
+    - '[50%] crates key give %jugador% llave_epica 1'
+    - '[40%] crates key give %jugador% llave_dungeon 1'
+    - '[35%] crates key give %jugador% legendary 1'
+    - '[15%] crates key give %jugador% booster 1'
+    - '[mejor] eco give %jugador% 25000'
+    - '[mejor] [30%] crates key give %jugador% pets 1'
+    botin:
+      '1':
+        item:
+          ==: org.bukkit.inventory.ItemStack
+          DataVersion: 4790
+          id: minecraft:enchanted_golden_apple
+          count: 3
+          schema_version: 1
+        probabilidad: 100
+        cantidad-min: 3
+        cantidad-max: 3
+        para: TODOS
+      '2':
+        item:
+          ==: org.bukkit.inventory.ItemStack
+          DataVersion: 4790
+          id: minecraft:experience_bottle
+          count: 48
+          schema_version: 1
+        probabilidad: 100
+        cantidad-min: 48
+        cantidad-max: 48
+        para: TODOS
+      '3':
+        item:
+          ==: org.bukkit.inventory.ItemStack
+          DataVersion: 4790
+          id: minecraft:netherite_ingot
+          count: 2
+          schema_version: 1
+        probabilidad: 70
+        cantidad-min: 2
+        cantidad-max: 2
+        para: TODOS
+      '4':
+        item:
+          ==: org.bukkit.inventory.ItemStack
+          DataVersion: 4790
+          id: minecraft:totem_of_undying
+          count: 1
+          schema_version: 1
+        probabilidad: 50
+        cantidad-min: 1
+        cantidad-max: 1
+        para: TODOS
+      '5':
+        item:
+          ==: org.bukkit.inventory.ItemStack
+          DataVersion: 4790
+          id: minecraft:golden_apple
+          count: 8
+          schema_version: 1
+        probabilidad: 100
+        cantidad-min: 8
+        cantidad-max: 8
+        para: TODOS
+
+  aurora:
+    experiencia: 4000
+    comandos:
+    - 'mobcoin give %jugador% 120'
+    - 'ederuslibro %jugador%'
+    - 'crates key give %jugador% llave_epica 1'
+    - '[60%] crates key give %jugador% legendary 1'
+    - '[25%] crates key give %jugador% booster 1'
+    - '[mejor] eco give %jugador% 50000'
+    # --- la Regalia del Alba: una tirada por pieza, solo al mejor ---
+    - '[mejor] [40%] mi give ARMOR CORONA_DEL_ALBA %jugador%'
+    - '[mejor] [40%] mi give ARMOR CORAZA_DEL_ALBA %jugador%'
+    - '[mejor] [40%] mi give ARMOR FALDARES_DEL_ALBA %jugador%'
+    - '[mejor] [40%] mi give ARMOR SOLERETAS_DEL_ALBA %jugador%'
+    - '[mejor] [20%] mi give SPEAR LANZA_DEL_ALBA %jugador%'
+    botin:
+      '1':
+        item:
+          ==: org.bukkit.inventory.ItemStack
+          DataVersion: 4790
+          id: minecraft:enchanted_golden_apple
+          count: 5
+          schema_version: 1
+        probabilidad: 100
+        cantidad-min: 5
+        cantidad-max: 5
+        para: TODOS
+      '2':
+        item:
+          ==: org.bukkit.inventory.ItemStack
+          DataVersion: 4790
+          id: minecraft:experience_bottle
+          count: 64
+          schema_version: 1
+        probabilidad: 100
+        cantidad-min: 64
+        cantidad-max: 64
+        para: TODOS
+      '3':
+        item:
+          ==: org.bukkit.inventory.ItemStack
+          DataVersion: 4790
+          id: minecraft:netherite_ingot
+          count: 3
+          schema_version: 1
+        probabilidad: 80
+        cantidad-min: 3
+        cantidad-max: 3
+        para: TODOS
+      '4':
+        item:
+          ==: org.bukkit.inventory.ItemStack
+          DataVersion: 4790
+          id: minecraft:totem_of_undying
+          count: 1
+          schema_version: 1
+        probabilidad: 70
+        cantidad-min: 1
+        cantidad-max: 1
+        para: TODOS
+

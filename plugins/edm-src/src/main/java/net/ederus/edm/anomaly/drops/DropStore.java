@@ -128,7 +128,8 @@ public final class DropStore implements Listener {
                 "       brillando en la explosion y el chat anuncia quien se lo llevo.",
                 "",
                 "comandos: se ejecutan desde la consola. %jugador% se sustituye por el nombre.",
-                "          si el comando empieza por [mejor] solo se ejecuta para quien mas dano hizo."));
+                "          [mejor] -> solo para quien mas dano hizo. [35%] -> probabilidad por jugador.",
+                "          Se combinan: [mejor] [25%] crates key give %jugador% legendary 1"));
         for (DropTable table : tables.values()) {
             String base = "anomalias." + table.anomalyId();
             yml.set(base + ".experiencia", table.experience());
@@ -232,11 +233,48 @@ public final class DropStore implements Listener {
         }
 
         for (String raw : table.commands()) {
-            boolean onlyBest = raw.toLowerCase(java.util.Locale.ROOT).startsWith("[mejor]");
-            String cmd = onlyBest ? raw.substring("[mejor]".length()).trim() : raw.trim();
+            /*
+             * Prefijos, combinables y en cualquier orden:
+             *   [mejor]  solo corre para quien mas daño hizo
+             *   [35%]    corre solo si sale el dado (una tirada POR JUGADOR,
+             *            para que la suerte de uno no arrastre a los demas)
+             * Sin prefijo de porcentaje el comando es seguro: 100%.
+             */
+            boolean onlyBest = false;
+            double chance = 100.0;
+            String cmd = raw.trim();
+            boolean pelando = true;
+            while (pelando) {
+                pelando = false;
+                String bajo = cmd.toLowerCase(java.util.Locale.ROOT);
+                if (bajo.startsWith("[mejor]")) {
+                    onlyBest = true;
+                    cmd = cmd.substring("[mejor]".length()).trim();
+                    pelando = true;
+                    continue;
+                }
+                int cierre = cmd.indexOf("%]");
+                if (cmd.startsWith("[") && cierre > 1) {
+                    String num = cmd.substring(1, cierre);
+                    boolean numerico = !num.isEmpty();
+                    for (int k = 0; k < num.length(); k++) {
+                        char ch = num.charAt(k);
+                        if (!Character.isDigit(ch) && ch != '.') { numerico = false; break; }
+                    }
+                    if (numerico) {
+                        try {
+                            chance = Math.max(0.0, Math.min(100.0, Double.parseDouble(num)));
+                        } catch (NumberFormatException ignored) {
+                        }
+                        cmd = cmd.substring(cierre + 2).trim();
+                        pelando = true;
+                    }
+                }
+            }
             if (cmd.isEmpty()) continue;
             List<Player> targets = onlyBest ? (best == null ? List.<Player>of() : List.of(best)) : participants;
             for (Player p : targets) {
+                if (chance < 100.0 && random.nextDouble() * 100.0 >= chance) continue;
                 String finalCmd = cmd.replace("%jugador%", p.getName()).replace("%player%", p.getName());
                 try {
                     Bukkit.dispatchCommand(Bukkit.getConsoleSender(), finalCmd);
