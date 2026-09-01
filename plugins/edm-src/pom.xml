@@ -6,7 +6,7 @@
 
   <groupId>net.ederus</groupId>
   <artifactId>EDM</artifactId>
-  <version>1.19.1</version>
+  <version>1.20.0</version>
   <packaging>jar</packaging>
   <name>EDM</name>
   <description>Nucleo de Ederus: Rip + Anomaly + libros y avisos de tiendas</description>

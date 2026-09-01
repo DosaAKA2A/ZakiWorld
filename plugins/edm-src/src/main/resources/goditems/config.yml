@@ -1,0 +1,31 @@
+# ---------------------------------------------------------------------------
+# GodItems: items con activadores, acciones y condiciones.
+#
+# Los items NO se definen aqui. Cada uno es un YAML suelto en
+#   plugins/EDM/goditems/items/<loquesea>.yml
+# y se recargan todos con /gi reload (o /edm goditems reload).
+#
+# Este fichero solo lleva los ajustes del modulo.
+# ---------------------------------------------------------------------------
+
+# Cada cuantos ticks se repasan los activadores de tick (EN_MANO, PUESTO,
+# EN_INVENTARIO). No es el intervalo de cada item: es el SUELO. El "cada" que
+# ponga un item se redondea hacia arriba a un multiplo de esto, asi que con 10
+# aqui un "cada: 3" se comporta como "cada: 10".
+#
+# Se hace asi porque repasar el inventario entero de todos los conectados sesenta
+# veces por segundo cuesta caro y no se nota en nada.
+ticks-de-revision: 10
+
+# Vuelca la traza completa cuando una accion falla. Solo para depurar: en marcha
+# normal basta con la linea de aviso.
+detalle-en-el-log: false
+
+# Los avisos que da el modulo por su cuenta. Aceptan codigos & y los mismos
+# %placeholders% que las acciones. Dejar uno vacio lo apaga.
+mensajes:
+  # %tiempo% es lo que falta, ya escrito ("12.5s", "2m 10s").
+  cooldown: '&7Aun no. Te quedan &f%tiempo%&7.'
+  sin-usos: '&cEste objeto ya no tiene usos.'
+  sin-usos-hoy: '&cPor hoy no te quedan usos de este objeto.'
+  no-es-tuyo: '&cEste objeto no responde en tus manos.'

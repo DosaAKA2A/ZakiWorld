@@ -1,0 +1,63 @@
+# ---------------------------------------------------------------------------
+# CETRO DEL ALBA - el item de ejemplo de GodItems.
+#
+# Es NATIVO: lo fabrica GodItems. Un item nativo es para trastos sueltos
+# (cetros, llaves, consumibles) que no llevan stats ni pertenecen a un set.
+#
+# Si lo que quieres es darle comportamiento a un arma de MMOItems, NO copies
+# esto: borra el bloque "item" y pon en su lugar
+#     enlace: KATANA.MENGUANTE_CARMESI
+# GodItems no le escribe nada al item de MMOItems, asi que sus revisiones de
+# plantilla no se llevan nada por delante.
+# ---------------------------------------------------------------------------
+
+id: CETRO_DEL_ALBA
+
+item:
+  material: BLAZE_ROD
+  nombre: '&#FFD65C&lCetro del Alba'
+  lore:
+    - '&8Un pedazo de la primera luz.'
+    - ''
+    - '&#FFD65CClic derecho &7Llama a la columna'
+    - '&7Enfriamiento &f30s'
+  irrompible: true
+  brillo: true
+  ocultar:
+    - ATRIBUTOS
+    - IRROMPIBLE
+
+usos: -1
+usos-por-dia: -1
+solo-dueno: false
+conservar-al-morir: false
+
+# Silencia la habilidad que el item pueda tener por su set de MMOItems en ese
+# mismo gesto. En un nativo no hace falta; se deja en false y documentado.
+exclusivo: false
+
+activadores:
+
+  CLIC_DERECHO:
+    cooldown: 30s
+    cuenta-atras: true
+    condiciones:
+      - '!ARDIENDO | &cNo mientras ardes.'
+    acciones:
+      # 1. La columna de luz sale del subsuelo y se queda mientras se carga.
+      - 'RAYO_BEACON @yo duracion:40 ancho:0.7'
+      - "SECUENCIA @yo sonidos:'block.beacon.activate|1.6|0.7|0, block.respawn_anchor.charge|1.2|0.5|2'"
+      - 'TITULO @yo entrada:5 duracion:25 salida:10 &#FFD65CQUE LA LUZ LOS ATRAVIESE'
+
+      # 2. El anillo de aviso: quien esta dentro sabe que le va a caer.
+      - repetir:
+          veces: 20
+          cada: 1
+          acciones:
+            - 'ANILLO @yo radio:8 puntos:60 tipo:END_ROD cantidad:1 alto:0.2'
+
+      # 3. Y revienta. La explosion NO rompe bloques: Ederus es un survival con
+      #    bases, y un item que agujerea el suelo se acaba retirando.
+      - 'EXPLOSION @yo radio:8 anillos:3 dano:14 empuje:true'
+      - "SECUENCIA @yo sonidos:'entity.warden.sonic_boom|1.4|0.6|0, entity.ender_dragon.growl|1.2|0.5|2, block.bell.resonate|1.6|0.4|4'"
+      - 'ESPADA_CAIDA @yo cantidad:10 radio:7 material:NETHERITE_SWORD clavadas:60'

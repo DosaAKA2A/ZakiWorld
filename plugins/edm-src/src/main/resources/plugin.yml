@@ -1,5 +1,5 @@
 name: EDM
-version: '1.19.1'
+version: '1.20.0'
 main: net.ederus.edm.EDMPlugin
 api-version: '1.20'
 author: Iris Studio
@@ -43,12 +43,20 @@ commands:
     usage: /troll [jugador] [broma]
     aliases: [bromas]
     permission: ederus.troll.usar
+  gi:
+    description: GodItems - items con activadores, acciones y condiciones
+    usage: /gi <give|list|info|reload|trigger>
+    aliases: [goditems, goditem]
+    permission: ederus.goditems
   ederuslibro:
     description: Entrega un libro encantado aleatorio de calidad baja
     usage: /ederuslibro <jugador>
     permission: ederus.libro
 
 permissions:
+  ederus.goditems:
+    description: Permite dar, mirar, disparar y recargar GodItems
+    default: op
   ederus.troll.usar:
     description: Permite gastar bromas a otros jugadores
     default: op
