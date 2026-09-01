@@ -36,9 +36,13 @@ public final class GodItem {
                          int cada,
                          double probabilidad,
                          int gastaUsos,
+                         /* Solo para SET_COMPLETO: cuantas piezas hacen falta.
+                          * 0 = las que MMOItems declare para ese set. */
+                         int piezas,
                          List<Condicion.Prueba> condiciones,
                          List<Paso> pasos) { }
 
+    private final java.io.File fichero;
     private final String id;
     private final String enlaceTipo;
     private final String enlaceId;
@@ -49,13 +53,15 @@ public final class GodItem {
     private final boolean conservarAlMorir;
     private final boolean exclusivo;
     private final List<String> mundos;
+    private final List<String> loreExtra;
     private final Map<String, String> variables;
     private final Map<Activador, Bloque> bloques;
 
-    public GodItem(String id, String enlaceTipo, String enlaceId, Apariencia apariencia,
+    public GodItem(java.io.File fichero, String id, String enlaceTipo, String enlaceId, Apariencia apariencia,
                    int usos, int usosPorDia, boolean soloDueno, boolean conservarAlMorir,
-                   boolean exclusivo, List<String> mundos, Map<String, String> variables,
-                   Map<Activador, Bloque> bloques) {
+                   boolean exclusivo, List<String> mundos, List<String> loreExtra,
+                   Map<String, String> variables, Map<Activador, Bloque> bloques) {
+        this.fichero = fichero;
         this.id = id;
         this.enlaceTipo = enlaceTipo;
         this.enlaceId = enlaceId;
@@ -66,11 +72,15 @@ public final class GodItem {
         this.conservarAlMorir = conservarAlMorir;
         this.exclusivo = exclusivo;
         this.mundos = mundos;
+        this.loreExtra = loreExtra;
         this.variables = variables;
         this.bloques = bloques;
     }
 
     public String id() { return this.id; }
+
+    /** El YAML del que salio. Lo necesita la interfaz para escribir encima. */
+    public java.io.File fichero() { return this.fichero; }
 
     public boolean enlazado() { return this.enlaceTipo != null; }
 
@@ -103,6 +113,16 @@ public final class GodItem {
 
     /** Vacia = vale en todos. */
     public List<String> mundos() { return this.mundos; }
+
+    /**
+     * Lineas que GodItems añade al lore de un item ENLAZADO, y que se estampan
+     * en el ItemBuildEvent de MMOItems.
+     *
+     * Van aqui y no en el YAML de MMOItems porque describen lo que hace NUESTRO
+     * comportamiento: si un dia se le quita el activador al item, la linea se va
+     * con el en vez de quedarse mintiendo en la plantilla de MMOItems.
+     */
+    public List<String> loreExtra() { return this.loreExtra; }
 
     public Map<String, String> variablesIniciales() { return this.variables; }
 

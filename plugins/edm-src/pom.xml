@@ -6,7 +6,7 @@
 
   <groupId>net.ederus</groupId>
   <artifactId>EDM</artifactId>
-  <version>1.20.0</version>
+  <version>1.21.0</version>
   <packaging>jar</packaging>
   <name>EDM</name>
   <description>Nucleo de Ederus: Rip + Anomaly + libros y avisos de tiendas</description>
@@ -56,6 +56,23 @@
       <version>3.16.1</version>
       <scope>system</scope>
       <systemPath>${project.basedir}/../../../_toolchain/libs/Quests-3.16.1.jar</systemPath>
+    </dependency>
+    <!-- MMOItems y MythicLib. GodItems es un addon suyo: lee y escribe sus
+         plantillas. Los jars salen del propio servidor (son de pago, no hay
+         repo publico), guardados en _toolchain/libs como los otros. -->
+    <dependency>
+      <groupId>net.Indyuce</groupId>
+      <artifactId>MMOItems</artifactId>
+      <version>6.10.1</version>
+      <scope>system</scope>
+      <systemPath>${project.basedir}/../../../_toolchain/libs/MMOItems.jar</systemPath>
+    </dependency>
+    <dependency>
+      <groupId>io.lumine</groupId>
+      <artifactId>MythicLib</artifactId>
+      <version>1.7.1</version>
+      <scope>system</scope>
+      <systemPath>${project.basedir}/../../../_toolchain/libs/MythicLib.jar</systemPath>
     </dependency>
     <dependency>
       <groupId>com.comphenix.protocol</groupId>

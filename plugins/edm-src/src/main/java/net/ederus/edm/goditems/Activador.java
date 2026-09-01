@@ -33,6 +33,16 @@ public enum Activador {
     /** Deja de estar en la mano principal. */
     GUARDAR,
 
+    /*
+     * --- conjuntos de MMOItems ---
+     * El set NO lo define GodItems: se lee de la etiqueta MMOITEMS_ITEM_SET que
+     * MMOItems ya pone en cada pieza. Cuantas piezas hacen falta se puede fijar
+     * con `piezas:` en el activador; por omision, todas las que el set tenga
+     * declaradas en MMOItems.
+     */
+    SET_COMPLETO,
+    SET_ROTO,
+
     /* --- ticks --- */
     /** Cada X ticks mientras este en la mano principal. */
     EN_MANO,
@@ -58,6 +68,11 @@ public enum Activador {
     /** Los tres que corren solos por tiempo, no por un gesto del jugador. */
     public boolean esTick() {
         return this == EN_MANO || this == PUESTO || this == EN_INVENTARIO;
+    }
+
+    /** Los que dependen de llevar puesto un conjunto entero de MMOItems. */
+    public boolean esDeConjunto() {
+        return this == SET_COMPLETO || this == SET_ROTO;
     }
 
     public static Activador porNombre(String s) {

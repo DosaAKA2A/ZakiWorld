@@ -57,19 +57,16 @@ public final class Identidad {
         String propio = pdc.get(this.clave, PersistentDataType.STRING);
         if (propio != null) return propio;
 
-        String tipo = null;
-        String id = null;
-        for (NamespacedKey k : pdc.getKeys()) {
-            if (!k.getNamespace().equalsIgnoreCase("mmoitems")) continue;
-            String nombre = k.getKey().toLowerCase(Locale.ROOT);
-            if (nombre.endsWith("item_type") || nombre.equals("type")) {
-                tipo = texto(pdc, k);
-            } else if (nombre.endsWith("item_id") || nombre.equals("id")) {
-                id = texto(pdc, k);
-            }
-        }
-        if (tipo == null || id == null) return null;
-        return this.modulo.registro().porEnlace(tipo, id);
+        /* Con MMOItems delante se le pregunta a el; sin el, se rebusca en su
+         * namespace del PDC. El puente decide cual de los dos toca. */
+        String enlace = this.modulo.puente() != null
+                ? this.modulo.puente().enlaceDe(item)
+                : net.ederus.edm.goditems.mmo.Puente.enlacePorPdc(item);
+        if (enlace == null) return null;
+        int punto = enlace.indexOf('.');
+        if (punto <= 0 || punto == enlace.length() - 1) return null;
+        return this.modulo.registro().porEnlace(
+                enlace.substring(0, punto), enlace.substring(punto + 1));
     }
 
     public GodItem definicionDe(ItemStack item) {
@@ -77,30 +74,9 @@ public final class Identidad {
         return id == null ? null : this.modulo.registro().porId(id);
     }
 
-    /** MMOItems guarda casi todo como STRING, pero no siempre. */
-    private static String texto(PersistentDataContainer pdc, NamespacedKey k) {
-        try {
-            String s = pdc.get(k, PersistentDataType.STRING);
-            if (s != null && !s.isBlank()) return s;
-        } catch (Throwable ignored) {
-        }
-        return null;
-    }
-
-    /** El "TIPO.ID" de MMOItems que lleva un item, o null. Solo para /gi info. */
+    /** El "TIPO.ID" de MMOItems que lleva un item, o null. */
     public String enlaceDe(ItemStack item) {
-        if (item == null || item.getType().isAir()) return null;
-        ItemMeta meta = item.getItemMeta();
-        if (meta == null) return null;
-        PersistentDataContainer pdc = meta.getPersistentDataContainer();
-        String tipo = null;
-        String id = null;
-        for (NamespacedKey k : pdc.getKeys()) {
-            if (!k.getNamespace().equalsIgnoreCase("mmoitems")) continue;
-            String nombre = k.getKey().toLowerCase(Locale.ROOT);
-            if (nombre.endsWith("item_type") || nombre.equals("type")) tipo = texto(pdc, k);
-            else if (nombre.endsWith("item_id") || nombre.equals("id")) id = texto(pdc, k);
-        }
-        return tipo == null || id == null ? null : tipo + "." + id;
+        if (this.modulo.puente() != null) return this.modulo.puente().enlaceDe(item);
+        return net.ederus.edm.goditems.mmo.Puente.enlacePorPdc(item);
     }
 }

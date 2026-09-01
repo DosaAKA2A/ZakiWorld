@@ -52,6 +52,11 @@ public final class GodItemsPlugin extends Module {
     private Regiones regiones;
     private Cargador cargador;
     private Economy economia;
+    private net.ederus.edm.goditems.mmo.Puente puente;
+    private net.ederus.edm.goditems.mmo.Conjuntos conjuntos;
+    private net.ederus.edm.goditems.mmo.Plantillas plantillas;
+    private Ficha ficha;
+    private net.ederus.edm.goditems.menu.MenuGi menu;
 
     private NamespacedKey claveDueno;
     private BukkitTask tareaTicks;
@@ -59,6 +64,7 @@ public final class GodItemsPlugin extends Module {
     private int contador;
 
     private boolean detalle;
+    private boolean hayConjuntos;
     private int ticksDeRevision = 10;
     private Map<String, String> mensajes = new HashMap<>();
 
@@ -87,6 +93,11 @@ public final class GodItemsPlugin extends Module {
         this.motor = new Motor(this);
         this.regiones = new Regiones(this);
         this.cargador = new Cargador(this);
+        this.puente = new net.ederus.edm.goditems.mmo.Puente(this);
+        this.conjuntos = new net.ederus.edm.goditems.mmo.Conjuntos(this, this.puente);
+        this.plantillas = new net.ederus.edm.goditems.mmo.Plantillas(this, this.puente);
+        this.ficha = new Ficha(this);
+        this.menu = new net.ederus.edm.goditems.menu.MenuGi(this);
 
         engancharEconomia();
         File items = new File(getDataFolder(), "items");
@@ -100,6 +111,15 @@ public final class GodItemsPlugin extends Module {
         int n = this.cargador.cargarCarpeta(items, this.registro);
 
         core.getServer().getPluginManager().registerEvents(new Escuchas(this), this);
+        core.getServer().getPluginManager().registerEvents(this.menu, this);
+        /* La clase de escuchas de MMOItems referencia sus tipos: sin su jar
+         * delante ni siquiera carga. Por eso se instancia SOLO si esta, igual
+         * que se hizo con Quests y ProtocolLib despues de que tumbaran el
+         * nucleo entero al arrancar sin ellos. */
+        if (this.puente.hay()) {
+            core.getServer().getPluginManager().registerEvents(
+                    new net.ederus.edm.goditems.mmo.EscuchasMmo(this, this.puente, this.conjuntos), this);
+        }
         ComandoGi comando = new ComandoGi(this);
         var cmd = core.getCommand("gi");
         if (cmd != null) {
@@ -121,7 +141,13 @@ public final class GodItemsPlugin extends Module {
 
     private void arrancarTareas() {
         pararTareas();
-        if (this.registro.hayTicks()) {
+        this.hayConjuntos = false;
+        for (GodItem def : this.registro.todos()) {
+            for (Activador a : def.bloques().keySet()) {
+                if (a.esDeConjunto()) { this.hayConjuntos = true; break; }
+            }
+        }
+        if (this.registro.hayTicks() || this.hayConjuntos) {
             this.tareaTicks = core.getServer().getScheduler().runTaskTimer(core,
                     this::pasarTicks, this.ticksDeRevision, this.ticksDeRevision);
         }
@@ -183,6 +209,11 @@ public final class GodItemsPlugin extends Module {
     public Vuelo vuelo() { return this.vuelo; }
     public Regiones regiones() { return this.regiones; }
     public Cargador cargador() { return this.cargador; }
+    public net.ederus.edm.goditems.mmo.Puente puente() { return this.puente; }
+    public net.ederus.edm.goditems.mmo.Conjuntos conjuntos() { return this.conjuntos; }
+    public net.ederus.edm.goditems.mmo.Plantillas plantillas() { return this.plantillas; }
+    public Ficha ficha() { return this.ficha; }
+    public net.ederus.edm.goditems.menu.MenuGi menu() { return this.menu; }
     public Economy economia() { return this.economia; }
     public boolean detalle() { return this.detalle; }
 
@@ -329,6 +360,10 @@ public final class GodItemsPlugin extends Module {
             if (def.bloque(Activador.EN_INVENTARIO) != null) { hayInventario = true; break; }
         }
         for (Player j : core.getServer().getOnlinePlayers()) {
+            /* Red de seguridad de los conjuntos: los eventos de MMOItems cubren
+             * casi todo, pero no un item que cambia en la mano por otra via
+             * (un /give, un cofre). Aqui se recoge lo que se les escape. */
+            if (this.hayConjuntos) this.conjuntos.repasar(j);
             mirarTick(j, j.getInventory().getItemInMainHand(), Activador.EN_MANO, EquipmentSlot.HAND);
             mirarTick(j, j.getInventory().getHelmet(), Activador.PUESTO, EquipmentSlot.HEAD);
             mirarTick(j, j.getInventory().getChestplate(), Activador.PUESTO, EquipmentSlot.CHEST);
@@ -375,6 +410,7 @@ public final class GodItemsPlugin extends Module {
     public void olvidar(Player j) {
         this.cooldowns.olvidar(j.getUniqueId());
         this.vuelo.olvidar(j.getUniqueId());
+        this.conjuntos.olvidar(j.getUniqueId());
     }
 
     /* ============================================================ /edm goditems */

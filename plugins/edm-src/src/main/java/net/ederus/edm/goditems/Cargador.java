@@ -125,13 +125,14 @@ public final class Cargador {
 
         List<String> mundos = yml.getStringList("mundos");
 
-        return new GodItem(id, enlaceTipo, enlaceId, apariencia,
+        return new GodItem(fichero, id, enlaceTipo, enlaceId, apariencia,
                 yml.getInt("usos", -1),
                 yml.getInt("usos-por-dia", -1),
                 yml.getBoolean("solo-dueno", false),
                 yml.getBoolean("conservar-al-morir", false),
                 yml.getBoolean("exclusivo", false),
                 mundos == null ? List.of() : List.copyOf(mundos),
+                List.copyOf(yml.getStringList("lore-extra")),
                 Collections.unmodifiableMap(variables),
                 Collections.unmodifiableMap(bloques));
     }
@@ -202,6 +203,7 @@ public final class Cargador {
 
         return new GodItem.Bloque(a, cooldown, s.getString("mensaje-cooldown"),
                 s.getBoolean("cuenta-atras", true), Math.max(1, cada), prob, gasta,
+                Math.max(0, s.getInt("piezas", 0)),
                 List.copyOf(condiciones), List.copyOf(pasos));
     }
 

@@ -246,6 +246,34 @@ public final class Condiciones {
             return Math.random() * 100.0 < pct;
         });
 
+        /*
+         * Cuantas piezas del conjunto lleva puestas. El set se saca del propio
+         * item si no se dice otro, que es lo que se quiere el 90 % de las veces:
+         * "solo si llevas 3 o mas de MI set".
+         */
+        reg("PIEZAS_DEL_SET", (ctx, a) -> {
+            if (ctx.jugador() == null) return false;
+            String set = a.s("set", null);
+            if (set == null) set = ctx.modulo().puente().setDe(ctx.item());
+            if (set == null) return false;
+            List<String> p = a.palabras();
+            double valor = Numeros.decimal(p.isEmpty() ? "0" : p.get(p.size() - 1), 0);
+            return comparar(ctx.modulo().conjuntos().piezasPuestas(ctx.jugador(), set),
+                    operador(p), valor);
+        });
+
+        /** El item pertenece a ese conjunto de MMOItems. */
+        reg("SET", (ctx, a) -> {
+            String set = ctx.modulo().puente().setDe(ctx.item());
+            if (set == null) return false;
+            String quiero = a.texto().trim();
+            if (quiero.isEmpty()) return true;
+            for (String s2 : quiero.split("[,\s]+")) {
+                if (s2.equalsIgnoreCase(set)) return true;
+            }
+            return false;
+        });
+
         reg("MANO", (ctx, a) -> {
             if (ctx.mano() == null) return false;
             String quiero = a.texto().trim().toLowerCase(Locale.ROOT);

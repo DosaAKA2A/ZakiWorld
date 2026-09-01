@@ -38,6 +38,13 @@ public final class ComandoGi implements TabExecutor {
             return true;
         }
         if (args.length == 0) {
+            /* Sin argumentos abre la interfaz, que es lo que se espera de un
+             * plugin de items. La ayuda en texto queda para la consola y para
+             * quien la pida a mano. */
+            if (quien instanceof Player p) {
+                this.modulo.menu().raiz(p, 0);
+                return true;
+            }
             ayuda(quien);
             return true;
         }
@@ -46,6 +53,12 @@ public final class ComandoGi implements TabExecutor {
             case "list", "lista" -> lista(quien);
             case "info" -> info(quien, args);
             case "reload", "recargar" -> recargar(quien);
+            case "import", "importar" -> importar(quien, args);
+            case "menu", "gui" -> {
+                if (quien instanceof Player p) this.modulo.menu().raiz(p, 0);
+                else quien.sendMessage(Estilo.legado("&cLa interfaz solo se abre dentro del juego."));
+            }
+            case "ayuda", "help" -> ayuda(quien);
             case "trigger", "disparar" -> disparar(quien, args);
             default -> ayuda(quien);
         }
@@ -182,6 +195,44 @@ public final class ComandoGi implements TabExecutor {
         }
     }
 
+    /* ------------------------------------------------------------ importar */
+
+    /**
+     * Trae un item de MMOItems. Sin argumentos abre el importador visual, que
+     * es mas comodo que acordarse del TIPO.ID exacto entre cientos de items.
+     */
+    private void importar(CommandSender quien, String[] args) {
+        if (!this.modulo.puente().hay()) {
+            quien.sendMessage(Estilo.legado("&cMMOItems no esta instalado: no hay nada que importar."));
+            return;
+        }
+        if (args.length < 2) {
+            if (quien instanceof Player p) this.modulo.menu().importador(p, 0);
+            else quien.sendMessage(Estilo.legado("&7Uso: &f/gi import <TIPO.ID>"));
+            return;
+        }
+        String enlace = args[1];
+        int punto = enlace.indexOf('.');
+        if (punto <= 0 || punto == enlace.length() - 1) {
+            quien.sendMessage(Estilo.legado("&cEscribelo como &fTIPO.ID&c, por ejemplo &fKATANA.FLOWING_KATANA&c."));
+            return;
+        }
+        String tipo = enlace.substring(0, punto);
+        String id = enlace.substring(punto + 1);
+        if (!this.modulo.puente().existe(tipo, id)) {
+            quien.sendMessage(Estilo.legado("&cMMOItems no tiene ningun &f" + tipo + "." + id + "&c."));
+            return;
+        }
+        GodItem def = this.modulo.ficha().importar(tipo, id);
+        if (def == null) {
+            quien.sendMessage(Estilo.legado("&cNo se pudo crear la ficha."));
+            return;
+        }
+        quien.sendMessage(Estilo.legado("&aImportado &f" + tipo + "." + id + " &acomo &f" + def.id() + "&a."));
+        quien.sendMessage(Estilo.legado("&7Sus stats los sigue teniendo MMOItems; aqui se le pone el comportamiento."));
+        if (quien instanceof Player p) this.modulo.menu().ficha(p, def.id());
+    }
+
     /* ------------------------------------------------------------- trigger */
 
     private void disparar(CommandSender quien, String[] args) {
@@ -213,6 +264,8 @@ public final class ComandoGi implements TabExecutor {
 
     private void ayuda(CommandSender quien) {
         quien.sendMessage(Estilo.cabecera("GODITEMS", "v1"));
+        quien.sendMessage(Estilo.linea("/gi", "abre la interfaz", Estilo.CLARO));
+        quien.sendMessage(Estilo.linea("/gi import [TIPO.ID]", "trae un item de MMOItems", Estilo.CLARO));
         quien.sendMessage(Estilo.linea("/gi list", "los items cargados", Estilo.CLARO));
         quien.sendMessage(Estilo.linea("/gi info [item]", "sin nombre, el de la mano", Estilo.CLARO));
         quien.sendMessage(Estilo.linea("/gi give <item> [jugador] [n]", "entrega un item nativo", Estilo.CLARO));
@@ -229,7 +282,7 @@ public final class ComandoGi implements TabExecutor {
         List<String> out = new ArrayList<>();
         if (!quien.hasPermission(PERMISO)) return out;
         if (args.length == 1) {
-            filtrar(out, args[0], List.of("give", "list", "info", "reload", "trigger"));
+            filtrar(out, args[0], List.of("give", "list", "info", "reload", "trigger", "import", "menu"));
         } else if (args.length == 2 && esDeItem(args[0])) {
             filtrar(out, args[1], this.modulo.registro().ids());
         } else if (args.length == 3 && esDeItem(args[0]) && !args[0].equalsIgnoreCase("info")) {
