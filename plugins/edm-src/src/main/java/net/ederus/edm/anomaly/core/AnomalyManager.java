@@ -4,6 +4,7 @@ import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
 import net.ederus.edm.anomaly.AnomalyPlugin;
 import net.ederus.edm.anomaly.boss.BossFight;
+import net.ederus.edm.anomaly.boss.Keeper;
 import net.ederus.edm.anomaly.boss.PhaseBars;
 import org.bukkit.Chunk;
 import org.bukkit.Location;
@@ -26,6 +27,7 @@ import org.bukkit.scheduler.BukkitTask;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.UUID;
 import java.util.function.Consumer;
 
 /**
@@ -510,6 +512,7 @@ public final class AnomalyManager implements Listener {
 
         List<String> report = plugin.drops().award(event.typeId(), event.damage(), where);
         plugin.announcer().defeated(event, report);
+        contarParaElRankup(event);
         if (event.bars() != null) event.bars().removeAll();
 
         // Se deja respirar la animacion de muerte antes de barrer la escena.
@@ -527,6 +530,32 @@ public final class AnomalyManager implements Listener {
     public void onQuit(PlayerQuitEvent e) {
         ActiveAnomaly event = current;
         if (event != null && event.bars() != null) event.bars().viewers().remove(e.getPlayer());
+    }
+
+
+    /**
+     * Sube los contadores de ServerVariables que pide el rankup 11-20 (camino PvE):
+     * anomalias_derrotadas para todo participante que hizo dano, y anomalias_keeper
+     * ademas si el jefe era el Keeper. Van por comando de consola con silent:true
+     * para no ensuciar el chat; si algo falla queda en el log sin tocar el botin.
+     */
+    private void contarParaElRankup(ActiveAnomaly event) {
+        boolean keeper = Keeper.ID.equals(event.typeId());
+        for (UUID uuid : event.damage().keySet()) {
+            Player p = plugin.getServer().getPlayer(uuid);
+            if (p == null || !p.isOnline()) continue;
+            svarAdd("anomalias_derrotadas", p.getName());
+            if (keeper) svarAdd("anomalias_keeper", p.getName());
+        }
+    }
+
+    private void svarAdd(String variable, String jugador) {
+        try {
+            plugin.getServer().dispatchCommand(plugin.getServer().getConsoleSender(),
+                    "svar add " + variable + " 1 " + jugador + " silent:true");
+        } catch (Throwable t) {
+            plugin.getLogger().warning("No se pudo subir " + variable + " de " + jugador + ": " + t);
+        }
     }
 
     /** Aviso a un operador de que algo no salio. */
