@@ -8,9 +8,7 @@ import java.util.Map;
 
 import org.bukkit.Location;
 import org.bukkit.Material;
-import org.bukkit.NamespacedKey;
 import org.bukkit.Particle;
-import org.bukkit.Registry;
 import org.bukkit.World;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.EntityType;
@@ -411,12 +409,22 @@ public final class Acciones {
         return l.clone().add(a.d("dx", 0), a.d("alto", 0) + a.d("dy", 0), a.d("dz", 0));
     }
 
+    /**
+     * Pinta UN punto.
+     *
+     * Todas las visuales pasan por aqui, asi que todas entienden las mismas
+     * claves y todas saben pasarle a la particula el dato que exige (color,
+     * bloque, item, vibracion...). Antes solo se sabia pasar el color del
+     * polvo: el resto salia con el dato por defecto y por eso un BLOCK pintaba
+     * piedra pusieras lo que pusieras.
+     */
     private static void pintar(Ctx ctx, Args a, Location l) {
         World w = l.getWorld();
         if (w == null) return;
-        Particle p = particula(a.s("tipo", "FLAME"));
+        Particle p = Particulas.particula(a.s("tipo", "FLAME"));
         if (p == null) {
-            ctx.modulo().getLogger().warning("[GodItems] Particula desconocida: " + a.s("tipo", "?"));
+            ctx.modulo().avisoUnaVez("part." + a.s("tipo", "?"),
+                    "Particula desconocida: " + a.s("tipo", "?") + " (mira /gi particulas)");
             return;
         }
         int cuantas = Math.max(1, Math.min(500, a.i("cantidad", 1)));
@@ -424,45 +432,16 @@ public final class Acciones {
         double oy = a.d("altura", ox);
         double oz = a.d("fondo", ox);
         double vel = a.d("velocidad", 0.0);
-        String color = a.s("color", null);
-        if (color != null && necesitaColor(p)) {
-            Integer rgb = rgb(color);
-            if (rgb != null) {
-                Compat.spawn(w, p, l, cuantas, ox, oy, oz, vel,
-                        Compat.dust(rgb, (float) a.d("tamano", 1.2)));
-                return;
-            }
-        }
-        Compat.spawn(w, p, l, cuantas, ox, oy, oz, vel);
-    }
 
-    private static boolean necesitaColor(Particle p) {
-        return p == Compat.DUST || p.name().contains("DUST");
-    }
+        /* VIBRATION y TRAIL viajan hacia algo. Por omision, hacia el objetivo
+         * de la propia linea; si no hay, hacia arriba. */
+        Entity hacia = null;
+        if (a.tiene("hacia")) hacia = Objetivos.uno(ctx, a.s("hacia", "@golpeado"));
+        else if (a.selector() != null) hacia = Objetivos.uno(ctx, a.selector());
 
-    private static Integer rgb(String s) {
-        String v = s.trim();
-        if (v.startsWith("#")) v = v.substring(1);
-        try {
-            return Integer.parseInt(v, 16) & 0xFFFFFF;
-        } catch (NumberFormatException e) {
-            return null;
-        }
-    }
-
-    private static Particle particula(String s) {
-        if (s == null) return null;
-        String v = s.trim();
-        try {
-            Particle p = Registry.PARTICLE_TYPE.get(NamespacedKey.minecraft(v.toLowerCase(Locale.ROOT)));
-            if (p != null) return p;
-        } catch (Throwable ignored) {
-        }
-        try {
-            return Particle.valueOf(v.toUpperCase(Locale.ROOT));
-        } catch (IllegalArgumentException e) {
-            return null;
-        }
+        Object dato = Particulas.datos(p, a, l, hacia);
+        if (dato == null) Compat.spawn(w, p, l, cuantas, ox, oy, oz, vel);
+        else Compat.spawn(w, p, l, cuantas, ox, oy, oz, vel, dato);
     }
 
     private static Material material(String s, Material pordefecto) {

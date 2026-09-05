@@ -58,6 +58,11 @@ public final class ComandoGi implements TabExecutor {
                 if (quien instanceof Player p) this.modulo.menu().raiz(p, 0);
                 else quien.sendMessage(Estilo.legado("&cLa interfaz solo se abre dentro del juego."));
             }
+            case "particulas", "particles" -> {
+                if (quien instanceof Player p) this.modulo.menu().particulas(p);
+                else particulasPorConsola(quien);
+            }
+            case "catalogo" -> catalogo(quien);
             case "ayuda", "help" -> ayuda(quien);
             case "trigger", "disparar" -> disparar(quien, args);
             default -> ayuda(quien);
@@ -262,6 +267,42 @@ public final class ComandoGi implements TabExecutor {
                 : "&7No se lanzo: cooldown, usos o alguna condicion lo pararon."));
     }
 
+    /**
+     * El catalogo, en numeros. Sirve para dos cosas: ver de un vistazo lo que
+     * trae el modulo y, sobre todo, enterarse de si alguien añadio una accion al
+     * motor y se olvido de declarar su ficha (esas no se pueden editar desde el
+     * menu, solo escribiendolas a mano).
+     */
+    private void catalogo(CommandSender quien) {
+        quien.sendMessage(Estilo.cabecera("GODITEMS", "catalogo"));
+        quien.sendMessage(Estilo.linea("Acciones",
+                Acciones.nombres().size() + " en el motor  ·  "
+                        + Catalogo.cuantasAcciones() + " con ficha", Estilo.CLARO));
+        quien.sendMessage(Estilo.linea("Condiciones",
+                Condiciones.nombres().size() + " en el motor  ·  "
+                        + Catalogo.cuantasCondiciones() + " con ficha", Estilo.CLARO));
+        quien.sendMessage(Estilo.linea("Activadores",
+                String.valueOf(Activador.values().length), Estilo.CLARO));
+        quien.sendMessage(Estilo.linea("Particulas",
+                Particulas.cuantas() + " en esta version", Estilo.CLARO));
+        var faltan = Catalogo.sinFicha();
+        if (faltan.isEmpty()) {
+            quien.sendMessage(Estilo.nota("todas tienen ficha: el menu las sabe editar"));
+        } else {
+            quien.sendMessage(Estilo.nota("sin ficha (solo se editan a mano): "
+                    + String.join(", ", faltan)));
+        }
+    }
+
+    private void particulasPorConsola(CommandSender quien) {
+        quien.sendMessage(Estilo.cabecera("PARTICULAS", Particulas.cuantas() + " en total"));
+        for (String g : Particulas.gruposConAlgo()) {
+            List<String> nombres = new ArrayList<>();
+            for (Particulas.Info i : Particulas.grupo(g)) nombres.add(i.clave());
+            quien.sendMessage(Estilo.linea(g, String.join(", ", nombres), Estilo.CLARO));
+        }
+    }
+
     private void ayuda(CommandSender quien) {
         quien.sendMessage(Estilo.cabecera("GODITEMS", "v1"));
         quien.sendMessage(Estilo.linea("/gi", "abre la interfaz", Estilo.CLARO));
@@ -270,6 +311,8 @@ public final class ComandoGi implements TabExecutor {
         quien.sendMessage(Estilo.linea("/gi info [item]", "sin nombre, el de la mano", Estilo.CLARO));
         quien.sendMessage(Estilo.linea("/gi give <item> [jugador] [n]", "entrega un item nativo", Estilo.CLARO));
         quien.sendMessage(Estilo.linea("/gi trigger <item> [jugador]", "lanza su bloque DISPARADOR", Estilo.CLARO));
+        quien.sendMessage(Estilo.linea("/gi particulas", "el catalogo de particulas", Estilo.CLARO));
+        quien.sendMessage(Estilo.linea("/gi catalogo", "cuantas acciones y condiciones hay", Estilo.CLARO));
         quien.sendMessage(Estilo.linea("/gi reload", "vuelve a leer los YAML", Estilo.CLARO));
         quien.sendMessage(Component.empty());
         quien.sendMessage(Estilo.nota("los YAML viven en plugins/EDM/goditems/items/"));
@@ -282,7 +325,8 @@ public final class ComandoGi implements TabExecutor {
         List<String> out = new ArrayList<>();
         if (!quien.hasPermission(PERMISO)) return out;
         if (args.length == 1) {
-            filtrar(out, args[0], List.of("give", "list", "info", "reload", "trigger", "import", "menu"));
+            filtrar(out, args[0], List.of("give", "list", "info", "reload", "trigger", "import", "menu",
+                    "particulas", "catalogo"));
         } else if (args.length == 2 && esDeItem(args[0])) {
             filtrar(out, args[1], this.modulo.registro().ids());
         } else if (args.length == 3 && esDeItem(args[0]) && !args[0].equalsIgnoreCase("info")) {

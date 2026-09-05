@@ -61,6 +61,76 @@ public final class Ficha {
         return porEnlace(t, i);
     }
 
+    /**
+     * Crea un GodItem NATIVO desde cero: uno que fabricamos nosotros, con su
+     * apariencia propia. Es lo que hay que usar para cetros, llaves y
+     * consumibles; para cualquier cosa con stats, tier o set hay que importar de
+     * MMOItems, porque un nativo no puede pertenecer a un set.
+     */
+    public GodItem crearNativo(String idPedido, org.bukkit.Material material) {
+        String id = GodItem.normalizar(idPedido).replaceAll("[^A-Z0-9_]", "_");
+        if (id.isBlank()) return null;
+        if (this.modulo.registro().porId(id) != null) return null;
+
+        File carpeta = new File(this.modulo.getDataFolder(), "items");
+        carpeta.mkdirs();
+        File f = libre(carpeta, id.toLowerCase(Locale.ROOT));
+
+        YamlConfiguration yml = new YamlConfiguration();
+        yml.options().setHeader(List.of(
+                "GodItem NATIVO: lo fabrica GodItems, no MMOItems.",
+                "",
+                "Un nativo NO puede pertenecer a un set de MMOItems: esa pertenencia",
+                "se lee de las etiquetas que solo MMOItems pone. Si este item necesita",
+                "set, tier o stats, borralo e importa el de MMOItems desde /gi."));
+        yml.set("id", id);
+        yml.set("item.material", material == null ? "STICK" : material.name());
+        yml.set("item.nombre", "&f" + id.charAt(0) + id.substring(1).toLowerCase(Locale.ROOT).replace('_', ' '));
+        yml.set("item.lore", List.of("&8GodItem nativo"));
+        yml.set("item.brillo", false);
+        guardar(yml, f);
+
+        this.modulo.recargar();
+        return this.modulo.registro().porId(id);
+    }
+
+    /**
+     * Borra un GodItem. El YAML no se pierde: se renombra a `.borrado`, que es
+     * lo unico que hace reversible un clic en un menu.
+     */
+    public boolean borrar(GodItem def) {
+        File f = def.fichero();
+        if (f == null || !f.isFile()) return false;
+        File destino = new File(f.getParentFile(), f.getName() + ".borrado");
+        if (destino.exists()) destino.delete();
+        boolean ok = f.renameTo(destino);
+        if (ok) this.modulo.recargar();
+        return ok;
+    }
+
+    /** Copia entera con otro id. Util para variantes de un mismo cetro. */
+    public GodItem duplicar(GodItem def, String idPedido) {
+        File f = def.fichero();
+        if (f == null || !f.isFile()) return null;
+        String id = GodItem.normalizar(idPedido).replaceAll("[^A-Z0-9_]", "_");
+        if (id.isBlank() || this.modulo.registro().porId(id) != null) return null;
+
+        YamlConfiguration yml = YamlConfiguration.loadConfiguration(f);
+        yml.set("id", id);
+        /* El enlace NO se copia: dos GodItems apuntando al mismo item de
+         * MMOItems es justo el choque que avisa el Cargador, y el segundo
+         * ganaria en silencio. La copia nace nativa y ya se enlazara. */
+        if (def.enlazado()) {
+            yml.set("enlace", null);
+            yml.set("item.material", "STICK");
+            yml.set("item.nombre", "&f" + id.toLowerCase(Locale.ROOT).replace('_', ' '));
+        }
+        File nuevo = libre(f.getParentFile(), id.toLowerCase(Locale.ROOT));
+        if (!guardar(yml, nuevo)) return null;
+        this.modulo.recargar();
+        return this.modulo.registro().porId(id);
+    }
+
     private GodItem porEnlace(String tipo, String id) {
         String existente = this.modulo.registro().porEnlace(tipo, id);
         return existente == null ? null : this.modulo.registro().porId(existente);

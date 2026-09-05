@@ -65,6 +65,20 @@ public final class Apariencia {
 
     public int cantidad() { return this.cantidad; }
 
+    public List<String> lore() { return this.lore == null ? List.of() : this.lore; }
+
+    public Map<String, Integer> encantos() { return this.encantos; }
+
+    public boolean irrompible() { return this.irrompible; }
+
+    public boolean brillo() { return this.brillo; }
+
+    public Integer modelo() { return this.modelo; }
+
+    public String cabeza() { return this.cabeza; }
+
+    public String color() { return this.color; }
+
     /**
      * Fabrica el item. La marca (goditems:id) NO se pone aqui: la pone
      * Identidad, para que exista un unico sitio en todo el modulo que escriba en

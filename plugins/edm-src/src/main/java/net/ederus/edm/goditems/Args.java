@@ -135,6 +135,11 @@ public final class Args {
         return this.claves.containsKey(clave);
     }
 
+    /** Las `clave:valor` tal cual, en el orden en que venian. Lo usa el editor. */
+    public Map<String, String> claves() {
+        return java.util.Collections.unmodifiableMap(this.claves);
+    }
+
     public String s(String clave, String pordefecto) {
         String v = this.claves.get(clave);
         return v == null ? pordefecto : v;
