@@ -196,7 +196,7 @@ reiniciar nada.
 Dos cosas que NO se portaron y conviene saber: el "crash" de cliente (tirarle el
 juego a alguien a proposito es otra cosa) y las bromas de chiste grueso.
 
-## El modulo `anomaly`: los esbirros (1.24.0)
+## El modulo `anomaly`: los esbirros (1.24.0, retocados en la 1.25.1)
 
 Anomaly dejo de ser solo un generador de jefes: ahora el panel tiene **dos puertas**,
 **Jefes** (lo de siempre) y **Esbirros**, que es la tropa que puebla las mazmorras.
@@ -220,9 +220,22 @@ una mazmorra vacia no acumula bichos. La lista de generadores de un esbirro ense
 coordenadas y **region de WorldGuard**, y desde ahi se viaja al punto, se retoca el nivel,
 se pausa o se quita.
 
-**El holograma** (nombre, nivel y vida) va **suelto**, no montado: un mob con pasajero
-pierde media IA de combate, lo mismo que le pasaba a Herbola con el loro en la cabeza. Se
-le teleporta sobre la cabeza tick a tick con un tick de interpolacion.
+**El rango de nivel se escribe** (1.25.1). Los dos escalones —el de la vela y el de cada
+generador— siguen subiendo y bajando a clicks (+-1, o +-10 con shift), pero con la **tecla
+de tirar (Q)** encima de cualquiera de los dos se cierra el menu y el rango entero se
+escribe en el chat: `30-60`. Vale tambien `30 60`, `30 a 60`, del reves (`60-30`, se ordena
+solo) o un numero suelto, que deja el rango clavado en ese nivel. Al terminar se vuelve
+solo a la ficha de la que se salio. Asi un generador se pasa de 5-10 a 30-60 de una vez,
+sin cuarenta clicks. La ficha del esbirro ensena **su** escalado (suelo, medio y techo del
+rango configurado), no una escala fija.
+
+**El holograma** va **suelto**, no montado: un mob con pasajero pierde media IA de combate,
+lo mismo que le pasaba a Herbola con el loro en la cabeza. Se le teleporta sobre la cabeza
+tick a tick con un tick de interpolacion. Son **dos lineas y nada mas**: arriba el nombre
+en su color con su nivel detras, abajo **solo la vida que le queda** —nada de `250 / 250`,
+que es el doble de texto para la misma informacion—, y el numero se tine segun baja (claro,
+ambar por debajo del 60%, rojo por debajo del 30%). El nombre va **en redonda**; la negrita
+es un interruptor de la ficha del esbirro (`negrita` en el yml), apagado de serie.
 
 **El botin** reusa las tablas de Anomaly (`drops.yml`, seccion `esbirro-<id>`) con el
 mismo editor de menu. Si la tabla tiene algo, **sustituye** a los drops de fabrica del

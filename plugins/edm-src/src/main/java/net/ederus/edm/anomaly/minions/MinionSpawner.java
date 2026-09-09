@@ -85,6 +85,14 @@ public final class MinionSpawner {
         if (minLevel > maxLevel) minLevel = maxLevel;
     }
 
+    /** Fija el rango de una vez; se ordena solo si vienen del reves. */
+    public void levels(int min, int max) {
+        int lo = Math.max(1, Math.min(1000, Math.min(min, max)));
+        int hi = Math.max(1, Math.min(1000, Math.max(min, max)));
+        this.minLevel = lo;
+        this.maxLevel = hi;
+    }
+
     public String levelLabel() {
         return minLevel == maxLevel ? String.valueOf(minLevel) : minLevel + " - " + maxLevel;
     }

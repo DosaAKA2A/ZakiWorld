@@ -1,6 +1,8 @@
 package net.ederus.edm.anomaly.minions;
 
+import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.TextColor;
+import net.kyori.adventure.text.format.TextDecoration;
 import org.bukkit.Material;
 import org.bukkit.entity.EntityType;
 
@@ -41,6 +43,8 @@ public final class MinionType {
     private final String id;
     private String display;
     private int color = 0xFFFFFF;
+    /** El nombre del holograma va en redonda; la negrita solo si se pide a mano. */
+    private boolean bold = false;
     private EntityType entity = EntityType.ZOMBIE;
     private final java.util.Set<MinionAbility> abilities = java.util.EnumSet.noneOf(MinionAbility.class);
     private double baseHealth = 20;
@@ -95,6 +99,20 @@ public final class MinionType {
             }
         }
         this.color = PALETA[Math.floorMod(at + (forward ? 1 : -1), PALETA.length)];
+    }
+
+    public boolean bold() {
+        return bold;
+    }
+
+    public void bold(boolean bold) {
+        this.bold = bold;
+    }
+
+    /** El nombre tal cual se pinta: su color y, solo si se pidio, en negrita. */
+    public Component name() {
+        Component c = Component.text(display, color());
+        return bold ? c.decoration(TextDecoration.BOLD, true) : c;
     }
 
     public EntityType entity() {
@@ -201,6 +219,14 @@ public final class MinionType {
     public void wandMaxLevel(int v) {
         this.wandMaxLevel = Math.max(1, Math.min(1000, v));
         if (wandMinLevel > wandMaxLevel) wandMinLevel = wandMaxLevel;
+    }
+
+    /** Fija el rango de la vela de una vez; se ordena solo si vienen del reves. */
+    public void wandLevels(int min, int max) {
+        int lo = Math.max(1, Math.min(1000, Math.min(min, max)));
+        int hi = Math.max(1, Math.min(1000, Math.max(min, max)));
+        this.wandMinLevel = lo;
+        this.wandMaxLevel = hi;
     }
 
     public int wandIntervalSeconds() {

@@ -2,7 +2,6 @@ package net.ederus.edm.anomaly.minions;
 
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
-import net.kyori.adventure.text.format.TextDecoration;
 import net.ederus.edm.anomaly.AnomalyPlugin;
 import net.ederus.edm.anomaly.core.Compat;
 import net.ederus.edm.anomaly.drops.DropEntry;
@@ -283,11 +282,12 @@ public final class MinionManager implements Listener {
         // montarlo como pasajero le comeria la IA al bicho.
         TextDisplay holo = w.spawn(mob.getLocation().add(0, mob.getHeight() + 0.45, 0), TextDisplay.class, d -> {
             d.setBillboard(Display.Billboard.CENTER);
+            d.setAlignment(TextDisplay.TextAlignment.CENTER);
             d.setViewRange(0.6f);
             d.setSeeThrough(false);
             d.setPersistent(false);
             d.setDefaultBackground(false);
-            d.setBackgroundColor(org.bukkit.Color.fromARGB(90, 0, 0, 0));
+            d.setBackgroundColor(org.bukkit.Color.fromARGB(70, 0, 0, 0));
             d.setBrightness(new Display.Brightness(15, 15));
             // Un tick de interpolacion: el cartel sigue al bicho sin dar tirones.
             d.setTeleportDuration(1);
@@ -307,18 +307,47 @@ public final class MinionManager implements Listener {
 
     // ------------------------------------------------------------------ holograma
 
-    /** Nombre en su color, el nivel en dorado y la vida en su segunda linea. */
+    /* Los colores del cartel, aparte para que las dos lineas rimen. */
+    private static final net.kyori.adventure.text.format.TextColor HOLO_LABEL =
+            net.kyori.adventure.text.format.TextColor.color(0x9A9A9A);
+    private static final net.kyori.adventure.text.format.TextColor HOLO_LEVEL =
+            net.kyori.adventure.text.format.TextColor.color(0xFFD966);
+    private static final net.kyori.adventure.text.format.TextColor HOLO_FULL =
+            net.kyori.adventure.text.format.TextColor.color(0xE8E8E8);
+    private static final net.kyori.adventure.text.format.TextColor HOLO_HURT =
+            net.kyori.adventure.text.format.TextColor.color(0xFFB347);
+    private static final net.kyori.adventure.text.format.TextColor HOLO_LOW =
+            net.kyori.adventure.text.format.TextColor.color(0xFF6B6B);
+
+    /**
+     * El cartel: dos lineas cortas y nada mas. Arriba el nombre en su color (en
+     * redonda, salvo que el tipo pida negrita) con su nivel en pequeno detras;
+     * abajo SOLO la vida que le queda —nada de "250 / 250", que es el doble de
+     * texto para la mitad de informacion—, y el numero se va tinendo segun baja.
+     */
     private void updateHolo(TextDisplay holo, LivingEntity mob) {
         MinionType type = typeOf(mob);
         if (type == null) return;
         int level = levelOf(mob);
         int hp = (int) Math.ceil(mob.getHealth());
-        int max = (int) Math.ceil(Compat.getAttribute(mob, "max_health", hp));
-        holo.text(Component.text(type.display(), type.color(), TextDecoration.BOLD)
-                .append(Component.text("  Nv. " + level, NamedTextColor.GOLD))
+        double max = Compat.getAttribute(mob, "max_health", Math.max(1, hp));
+        double left = max <= 0 ? 1 : Math.max(0, Math.min(1, mob.getHealth() / max));
+
+        holo.text(type.name()
+                .append(Component.text("  Nv. ", HOLO_LABEL))
+                .append(Component.text(level, HOLO_LEVEL))
                 .append(Component.newline())
                 .append(Component.text("❤ ", NamedTextColor.RED))
-                .append(Component.text(hp + " / " + max, NamedTextColor.WHITE)));
+                .append(Component.text(hp, left > 0.6 ? HOLO_FULL : left > 0.3 ? HOLO_HURT : HOLO_LOW)));
+    }
+
+    /** Repinta ya los carteles de un tipo: lo usa el menu al cambiar su aspecto. */
+    public void refreshHolos(String typeId) {
+        for (Escolta e : escoltas) {
+            if (!e.mob.isValid() || !e.holo.isValid()) continue;
+            MinionType type = typeOf(e.mob);
+            if (type != null && (typeId == null || type.id().equals(typeId))) updateHolo(e.holo, e.mob);
+        }
     }
 
     // -------------------------------------------------------------------- eventos

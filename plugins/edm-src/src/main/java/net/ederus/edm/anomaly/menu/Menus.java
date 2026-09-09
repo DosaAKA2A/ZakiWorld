@@ -757,7 +757,7 @@ public final class Menus implements Listener {
         ficha.add(Component.text(nombreBonito(type.entity()), MenuUtil.SOFT));
         ficha.add(MenuUtil.blank());
         ficha.add(Component.text("ASI ESCALA", NamedTextColor.WHITE, TextDecoration.BOLD));
-        for (int nivel : new int[]{1, 5, 10, 20, 30}) {
+        for (int nivel : escalones(type.wandMinLevel(), type.wandMaxLevel())) {
             ficha.add(Component.text("Nv. " + nivel + "  ", MenuUtil.LABEL)
                     .append(Component.text((int) type.healthAt(nivel) + " vida", NamedTextColor.GREEN))
                     .append(Component.text("  ·  ", MenuUtil.DIM))
@@ -823,13 +823,16 @@ public final class Menus implements Listener {
                 MenuUtil.title("Nivel minimo", MenuUtil.GOLD),
                 List.of(
                         MenuUtil.field("La vela pone", "Nv. " + type.wandMinLevel(), NamedTextColor.GOLD),
+                        MenuUtil.field("Rango entero", "Nv. " + rangoTexto(type.wandMinLevel(), type.wandMaxLevel()),
+                                NamedTextColor.GOLD),
                         MenuUtil.blank(),
                         MenuUtil.line("El suelo del sorteo de nivel de los"),
                         MenuUtil.line("generadores que plante la proxima vela."),
                         MenuUtil.blank(),
                         MenuUtil.action("Click izquierdo: +1"),
                         Component.text("► Click derecho: -1", NamedTextColor.YELLOW),
-                        Component.text("► Shift para pasos de 10", NamedTextColor.GRAY)), false));
+                        Component.text("► Shift para pasos de 10", NamedTextColor.GRAY),
+                        Component.text("► Tecla de tirar (Q): escribirlo, \"30-60\"", NamedTextColor.GRAY)), false));
 
         inv.setItem(22, MenuUtil.icon(Material.CANDLE,
                 MenuUtil.title("Dame la vela", NamedTextColor.LIGHT_PURPLE),
@@ -853,13 +856,16 @@ public final class Menus implements Listener {
                 MenuUtil.title("Nivel maximo", MenuUtil.GOLD),
                 List.of(
                         MenuUtil.field("La vela pone", "Nv. " + type.wandMaxLevel(), NamedTextColor.GOLD),
+                        MenuUtil.field("Rango entero", "Nv. " + rangoTexto(type.wandMinLevel(), type.wandMaxLevel()),
+                                NamedTextColor.GOLD),
                         MenuUtil.blank(),
                         MenuUtil.line("El techo del sorteo. Cada generador se"),
                         MenuUtil.line("puede retocar luego desde su lista."),
                         MenuUtil.blank(),
                         MenuUtil.action("Click izquierdo: +1"),
                         Component.text("► Click derecho: -1", NamedTextColor.YELLOW),
-                        Component.text("► Shift para pasos de 10", NamedTextColor.GRAY)), false));
+                        Component.text("► Shift para pasos de 10", NamedTextColor.GRAY),
+                        Component.text("► Tecla de tirar (Q): escribirlo, \"30-60\"", NamedTextColor.GRAY)), false));
 
         inv.setItem(24, MenuUtil.icon(Material.CLOCK,
                 MenuUtil.title("Intervalo", MenuUtil.GOLD),
@@ -898,6 +904,17 @@ public final class Menus implements Listener {
                         MenuUtil.action("Click izquierdo: +4"),
                         Component.text("► Click derecho: -4", NamedTextColor.YELLOW),
                         Component.text("► Shift para pasos de 16", NamedTextColor.GRAY)), false));
+
+        inv.setItem(29, MenuUtil.icon(type.bold() ? Material.INK_SAC : Material.GLASS_BOTTLE,
+                MenuUtil.title("Nombre en negrita", MenuUtil.GOLD),
+                List.of(
+                        MenuUtil.line("Como se lee su nombre en el cartel que"),
+                        MenuUtil.line("lleva encima. De serie va en redonda."),
+                        MenuUtil.blank(),
+                        Component.text("Asi se ve  ", MenuUtil.LABEL).append(type.name()),
+                        MenuUtil.field("Ahora", "", MenuUtil.SOFT).append(MenuUtil.state(type.bold())),
+                        MenuUtil.blank(),
+                        MenuUtil.action("Click para cambiar")), type.bold()));
 
         List<Component> habLore = new ArrayList<>();
         habLore.add(MenuUtil.line("Rasgos que lleva puestos siempre: no hay"));
@@ -1079,22 +1096,31 @@ public final class Menus implements Listener {
                 MenuUtil.title("Nivel minimo", MenuUtil.GOLD),
                 List.of(
                         MenuUtil.field("Ahora", "Nv. " + s.minLevel(), NamedTextColor.GOLD),
+                        MenuUtil.field("Rango entero", "Nv. " + rangoTexto(s.minLevel(), s.maxLevel()),
+                                NamedTextColor.GOLD),
                         MenuUtil.blank(),
                         MenuUtil.line("Solo de ESTE generador; los demas"),
                         MenuUtil.line("puntos del esbirro no se tocan."),
                         MenuUtil.blank(),
                         MenuUtil.action("Click izquierdo: +1"),
                         Component.text("► Click derecho: -1", NamedTextColor.YELLOW),
-                        Component.text("► Shift para pasos de 10", NamedTextColor.GRAY)), false));
+                        Component.text("► Shift para pasos de 10", NamedTextColor.GRAY),
+                        Component.text("► Tecla de tirar (Q): escribirlo, \"30-60\"", NamedTextColor.GRAY)), false));
 
         inv.setItem(21, MenuUtil.icon(Material.STONE_SLAB,
                 MenuUtil.title("Nivel maximo", MenuUtil.GOLD),
                 List.of(
                         MenuUtil.field("Ahora", "Nv. " + s.maxLevel(), NamedTextColor.GOLD),
+                        MenuUtil.field("Rango entero", "Nv. " + rangoTexto(s.minLevel(), s.maxLevel()),
+                                NamedTextColor.GOLD),
+                        MenuUtil.blank(),
+                        MenuUtil.line("De aqui a ese suelo se sortea el nivel"),
+                        MenuUtil.line("de cada esbirro que salga del punto."),
                         MenuUtil.blank(),
                         MenuUtil.action("Click izquierdo: +1"),
                         Component.text("► Click derecho: -1", NamedTextColor.YELLOW),
-                        Component.text("► Shift para pasos de 10", NamedTextColor.GRAY)), false));
+                        Component.text("► Shift para pasos de 10", NamedTextColor.GRAY),
+                        Component.text("► Tecla de tirar (Q): escribirlo, \"30-60\"", NamedTextColor.GRAY)), false));
 
         inv.setItem(22, MenuUtil.icon(Material.ENDER_PEARL,
                 MenuUtil.title("Viajar en frente", NamedTextColor.LIGHT_PURPLE),
@@ -1219,6 +1245,16 @@ public final class Menus implements Listener {
         boolean up = event.isLeftClick();
         boolean shift = event.isShiftClick();
 
+        // Q sobre cualquiera de los dos escalones: el rango entero se escribe en
+        // el chat de una vez ("30-60"), que a clicks se hace eterno.
+        if ((slot == 21 || slot == 23)
+                && (event.getClick() == ClickType.DROP || event.getClick() == ClickType.CONTROL_DROP)) {
+            click(player, 1.4f);
+            beginRange(player, PendingInput.Kind.RANGO_TIPO, type.id(),
+                    type.wandMinLevel(), type.wandMaxLevel());
+            return;
+        }
+
         switch (slot) {
             case 10 -> type.cycleEntity(up);
             case 11 -> type.cycleColor(up);
@@ -1253,6 +1289,10 @@ public final class Menus implements Listener {
             case 24 -> type.wandIntervalSeconds(type.wandIntervalSeconds() + (shift ? 30 : 5) * (up ? 1 : -1));
             case 25 -> type.wandMaxAlive(type.wandMaxAlive() + (up ? 1 : -1));
             case 28 -> type.wandActivationRadius(type.wandActivationRadius() + (shift ? 16 : 4) * (up ? 1 : -1));
+            case 29 -> {
+                type.bold(!type.bold());
+                plugin.minionManager().refreshHolos(type.id());
+            }
             case 16 -> {
                 click(player, 1.1f);
                 open(player, Screen.MINION_ABILITIES, 0, type.id(), false);
@@ -1337,6 +1377,13 @@ public final class Menus implements Listener {
         boolean up = event.isLeftClick();
         boolean shift = event.isShiftClick();
 
+        if ((slot == 20 || slot == 21)
+                && (event.getClick() == ClickType.DROP || event.getClick() == ClickType.CONTROL_DROP)) {
+            click(player, 1.4f);
+            beginRange(player, PendingInput.Kind.RANGO_GENERADOR, s.id(), s.minLevel(), s.maxLevel());
+            return;
+        }
+
         switch (slot) {
             case 19 -> s.activationRadius(s.activationRadius() + (shift ? 16 : 4) * (up ? 1 : -1));
             case 20 -> s.minLevel(s.minLevel() + (shift ? 10 : 1) * (up ? 1 : -1));
@@ -1405,16 +1452,23 @@ public final class Menus implements Listener {
                 .append(Component.text(".", MenuUtil.SOFT)));
     }
 
-    // --------------------------------------------------- esbirros: nombre por chat
+    // ------------------------------------------------ esbirros: lo que se escribe
 
-    private record PendingName(String typeId, long expiresAt) {
+    /**
+     * Lo que el menu esta esperando que el jugador escriba en el chat: un nombre
+     * (nuevo o para renombrar) o un rango de nivel. El contexto es el id del tipo
+     * o del generador, segun el caso.
+     */
+    private record PendingInput(Kind kind, String context, long expiresAt) {
+        enum Kind {NOMBRE, RANGO_TIPO, RANGO_GENERADOR}
     }
 
-    private final java.util.Map<java.util.UUID, PendingName> pendingName = new java.util.HashMap<>();
+    private final java.util.Map<java.util.UUID, PendingInput> pendingName = new java.util.HashMap<>();
 
     /** Cierra el menu y espera el nombre en el chat. typeId null = crear uno nuevo. */
     private void beginNaming(Player player, String typeId) {
-        pendingName.put(player.getUniqueId(), new PendingName(typeId, System.currentTimeMillis() + 60_000));
+        pendingName.put(player.getUniqueId(),
+                new PendingInput(PendingInput.Kind.NOMBRE, typeId, System.currentTimeMillis() + 60_000));
         plugin.getServer().getScheduler().runTask(net.ederus.edm.Module.dueno(plugin), () -> {
             if (player.isOnline()) player.closeInventory();
         });
@@ -1428,9 +1482,67 @@ public final class Menus implements Listener {
         Compat.sound(player.getWorld(), player.getLocation(), "block.note_block.pling", 0.7f, 1.6f);
     }
 
+    /**
+     * Cierra el menu y espera el rango en el chat. Vale "30-60", "30 60" o un
+     * numero suelto (que deja el rango clavado en ese nivel).
+     */
+    private void beginRange(Player player, PendingInput.Kind kind, String context, int min, int max) {
+        pendingName.put(player.getUniqueId(),
+                new PendingInput(kind, context, System.currentTimeMillis() + 60_000));
+        plugin.getServer().getScheduler().runTask(net.ederus.edm.Module.dueno(plugin), () -> {
+            if (player.isOnline()) player.closeInventory();
+        });
+        player.sendMessage(plugin.prefix()
+                .append(Component.text("Escribe en el chat de que nivel a que nivel salen, ",
+                        NamedTextColor.WHITE))
+                .append(Component.text("\"30-60\"", NamedTextColor.GOLD))
+                .append(Component.text(".", NamedTextColor.WHITE)));
+        player.sendMessage(plugin.prefix()
+                .append(Component.text("Ahora esta en Nv. " + rangoTexto(min, max)
+                        + ". Un numero suelto lo deja fijo en ese nivel; \"cancelar\" lo deja como esta.",
+                        MenuUtil.SOFT)));
+        Compat.sound(player.getWorld(), player.getLocation(), "block.note_block.pling", 0.7f, 1.6f);
+    }
+
+    /** "30 - 60", o "30" a secas cuando el rango es un solo nivel. */
+    private static String rangoTexto(int min, int max) {
+        return min == max ? String.valueOf(min) : min + " - " + max;
+    }
+
+    /** Los escalones que ensena la ficha: el suelo, el medio y el techo del rango. */
+    private static int[] escalones(int min, int max) {
+        if (min == max) return new int[]{min};
+        int medio = min + (max - min) / 2;
+        if (medio == min || medio == max) return new int[]{min, max};
+        return new int[]{min, medio, max};
+    }
+
+    /**
+     * Lee un rango escrito a mano: "30-60", "30 60", "30 a 60", "60-30" (se ordena
+     * solo) o "45". Devuelve null si no hay ningun numero que valga.
+     */
+    private static int[] parseRange(String raw) {
+        java.util.List<Integer> nums = new ArrayList<>();
+        java.util.regex.Matcher m = java.util.regex.Pattern.compile("[0-9]{1,4}").matcher(raw);
+        while (m.find() && nums.size() < 2) {
+            try {
+                nums.add(Integer.parseInt(m.group()));
+            } catch (NumberFormatException ignored) {
+            }
+        }
+        if (nums.isEmpty()) return null;
+        int a = clampLevel(nums.get(0));
+        int b = clampLevel(nums.size() > 1 ? nums.get(1) : nums.get(0));
+        return new int[]{Math.min(a, b), Math.max(a, b)};
+    }
+
+    private static int clampLevel(int v) {
+        return Math.max(1, Math.min(1000, v));
+    }
+
     @EventHandler(priority = org.bukkit.event.EventPriority.LOWEST)
     public void onChatName(io.papermc.paper.event.player.AsyncChatEvent event) {
-        PendingName pending = pendingName.get(event.getPlayer().getUniqueId());
+        PendingInput pending = pendingName.get(event.getPlayer().getUniqueId());
         if (pending == null) return;
         pendingName.remove(event.getPlayer().getUniqueId());
         event.setCancelled(true);
@@ -1443,11 +1555,15 @@ public final class Menus implements Listener {
             if (!player.isOnline()) return;
             if (raw.isEmpty() || raw.equalsIgnoreCase("cancelar")) {
                 player.sendMessage(plugin.prefix().append(Component.text("Sin cambios.", MenuUtil.SOFT)));
-                openHub(player);
+                volver(player, pending);
+                return;
+            }
+            if (pending.kind() != PendingInput.Kind.NOMBRE) {
+                applyRange(player, pending, raw);
                 return;
             }
             String name = raw.length() > 32 ? raw.substring(0, 32) : raw;
-            if (pending.typeId() == null) {
+            if (pending.context() == null) {
                 MinionType created = plugin.minions().createType(name);
                 player.sendMessage(plugin.prefix()
                         .append(Component.text("Esbirro creado  ", NamedTextColor.GREEN))
@@ -1455,7 +1571,7 @@ public final class Menus implements Listener {
                         .append(Component.text("  Ajusta su criatura, su escalado y su vela.", MenuUtil.SOFT)));
                 open(player, Screen.MINION_EDIT, 0, created.id(), false);
             } else {
-                MinionType type = plugin.minions().type(pending.typeId());
+                MinionType type = plugin.minions().type(pending.context());
                 if (type == null) return;
                 type.display(name);
                 plugin.minions().save();
@@ -1465,6 +1581,51 @@ public final class Menus implements Listener {
                 open(player, Screen.MINION_EDIT, 0, type.id(), false);
             }
         });
+    }
+
+    /** Aplica el rango escrito al tipo o al generador y vuelve a su ficha. */
+    private void applyRange(Player player, PendingInput pending, String raw) {
+        int[] range = parseRange(raw);
+        if (range == null) {
+            deny(player, "No entendi ese rango. Escribelo como \"30-60\" y vuelve a intentarlo.");
+            volver(player, pending);
+            return;
+        }
+        if (pending.kind() == PendingInput.Kind.RANGO_TIPO) {
+            MinionType type = plugin.minions().type(pending.context());
+            if (type == null) return;
+            type.wandLevels(range[0], range[1]);
+            plugin.minions().save();
+            player.sendMessage(plugin.prefix()
+                    .append(Component.text("La vela plantara generadores de  ", NamedTextColor.GREEN))
+                    .append(Component.text("Nv. " + rangoTexto(range[0], range[1]), NamedTextColor.GOLD))
+                    .append(Component.text("  para ", MenuUtil.SOFT))
+                    .append(type.name())
+                    .append(Component.text(".", MenuUtil.SOFT)));
+            player.sendMessage(plugin.prefix().append(Component.text(
+                    "Los generadores ya plantados no se tocan: cada uno guarda su rango.", MenuUtil.SOFT)));
+        } else {
+            MinionSpawner s = plugin.minions().spawner(pending.context());
+            if (s == null) return;
+            s.levels(range[0], range[1]);
+            plugin.minions().save();
+            player.sendMessage(plugin.prefix()
+                    .append(Component.text("El generador " + s.id() + " saca esbirros de  ",
+                            NamedTextColor.GREEN))
+                    .append(Component.text("Nv. " + rangoTexto(range[0], range[1]), NamedTextColor.GOLD))
+                    .append(Component.text(".", MenuUtil.SOFT)));
+        }
+        Compat.sound(player.getWorld(), player.getLocation(), "block.amethyst_block.resonate", 0.7f, 1.4f);
+        volver(player, pending);
+    }
+
+    /** Devuelve al jugador a la ficha desde la que salio a escribir. */
+    private void volver(Player player, PendingInput pending) {
+        switch (pending.kind()) {
+            case RANGO_TIPO -> open(player, Screen.MINION_EDIT, 0, pending.context(), false);
+            case RANGO_GENERADOR -> open(player, Screen.SPAWNER_EDIT, 0, pending.context(), false);
+            default -> openHub(player);
+        }
     }
 
     private ItemStack helpItem(Screen screen) {

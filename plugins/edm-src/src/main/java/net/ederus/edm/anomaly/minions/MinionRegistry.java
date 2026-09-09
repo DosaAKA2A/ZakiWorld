@@ -124,6 +124,7 @@ public final class MinionRegistry {
                 if (s == null) continue;
                 MinionType type = new MinionType(id, s.getString("nombre", id));
                 type.colorRgb(s.getInt("color", 0xFFFFFF));
+                type.bold(s.getBoolean("negrita", false));
                 try {
                     type.entity(EntityType.valueOf(s.getString("entidad", "ZOMBIE")));
                 } catch (IllegalArgumentException ignored) {
@@ -182,6 +183,8 @@ public final class MinionRegistry {
                 "en una sala y 20-30 en otra. El botin se configura en drops.yml, en la",
                 "seccion 'esbirro-<id>'.",
                 "",
+                "negrita: si el nombre del holograma va en negrita (por defecto, no).",
+                "",
                 "habilidades: rasgos que se encienden y se apagan desde el menu.",
                 "  flecha-pesada  cada tercera flecha pega el doble",
                 "  agil           se mueve un 25% mas rapido",
@@ -190,6 +193,7 @@ public final class MinionRegistry {
             String base = "esbirros." + t.id();
             yml.set(base + ".nombre", t.display());
             yml.set(base + ".color", t.colorRgb());
+            yml.set(base + ".negrita", t.bold());
             yml.set(base + ".entidad", t.entity().name());
             yml.set(base + ".vida-base", t.baseHealth());
             yml.set(base + ".vida-por-nivel", t.healthGrowth());
