@@ -42,6 +42,8 @@ public final class MinionType {
 
     private final String id;
     private String display;
+    /** La carpeta en la que vive: mazmorra o proposito. Ver MinionCategory. */
+    private String categoryId = MinionCategory.GENERAL;
     private int color = 0xFFFFFF;
     /** El nombre del holograma va en redonda; la negrita solo si se pide a mano. */
     private boolean bold = false;
@@ -99,6 +101,14 @@ public final class MinionType {
             }
         }
         this.color = PALETA[Math.floorMod(at + (forward ? 1 : -1), PALETA.length)];
+    }
+
+    public String categoryId() {
+        return categoryId;
+    }
+
+    public void categoryId(String categoryId) {
+        this.categoryId = categoryId == null || categoryId.isBlank() ? MinionCategory.GENERAL : categoryId;
     }
 
     public boolean bold() {

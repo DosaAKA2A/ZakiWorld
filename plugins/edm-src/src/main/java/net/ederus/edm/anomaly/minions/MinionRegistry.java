@@ -22,12 +22,84 @@ import java.util.logging.Level;
 public final class MinionRegistry {
 
     private final AnomalyPlugin plugin;
+    private final Map<String, MinionCategory> categories = new LinkedHashMap<>();
     private final Map<String, MinionType> types = new LinkedHashMap<>();
     private final Map<String, MinionSpawner> spawners = new LinkedHashMap<>();
     private File file;
 
     public MinionRegistry(AnomalyPlugin plugin) {
         this.plugin = plugin;
+    }
+
+    // ----------------------------------------------------------------- categorias
+
+    public List<MinionCategory> categories() {
+        return new ArrayList<>(categories.values());
+    }
+
+    public MinionCategory category(String id) {
+        return id == null ? null : categories.get(id);
+    }
+
+    /** La carpeta de un esbirro, y la general si la suya se perdio por el camino. */
+    public MinionCategory categoryOf(MinionType type) {
+        MinionCategory cat = type == null ? null : categories.get(type.categoryId());
+        return cat != null ? cat : general();
+    }
+
+    /** La carpeta de los que no tienen otra. Se crea sola la primera vez. */
+    public MinionCategory general() {
+        MinionCategory cat = categories.get(MinionCategory.GENERAL);
+        if (cat == null) {
+            cat = new MinionCategory(MinionCategory.GENERAL, "Sin clasificar");
+            cat.icon(org.bukkit.Material.BARREL);
+            cat.colorRgb(0xA6ACB9);
+            categories.put(cat.id(), cat);
+        }
+        return cat;
+    }
+
+    public MinionCategory createCategory(String display) {
+        String id = freeId(display, "carpeta", categories.keySet());
+        MinionCategory cat = new MinionCategory(id, display);
+        categories.put(id, cat);
+        save();
+        return cat;
+    }
+
+    /**
+     * Borra la carpeta. Sus esbirros NO se borran: se mudan a la general, que para
+     * eso esta. Perder tropa por vaciar una carpeta seria una trampa fea.
+     */
+    public void deleteCategory(MinionCategory cat) {
+        if (cat.isGeneral()) return;
+        categories.remove(cat.id());
+        String destino = general().id();
+        for (MinionType t : types.values()) {
+            if (t.categoryId().equals(cat.id())) t.categoryId(destino);
+        }
+        save();
+    }
+
+    /** Cuantos esbirros viven en esa carpeta. */
+    public List<MinionType> typesOf(String categoryId) {
+        List<MinionType> out = new ArrayList<>();
+        for (MinionType t : types.values()) {
+            if (t.categoryId().equals(categoryId)) out.add(t);
+        }
+        return out;
+    }
+
+    /** Un id libre a partir del nombre escrito: minusculas y sin rarezas. */
+    private String freeId(String display, String fallback, java.util.Set<String> taken) {
+        String base = display.toLowerCase(Locale.ROOT)
+                .replaceAll("[^a-z0-9ñ]+", "-")
+                .replaceAll("(^-|-$)", "");
+        if (base.isBlank()) base = fallback;
+        String id = base;
+        int n = 2;
+        while (taken.contains(id)) id = base + "-" + n++;
+        return id;
     }
 
     // ---------------------------------------------------------------------- tipos
@@ -45,14 +117,14 @@ public final class MinionRegistry {
      * El id sale del nombre en minusculas; si choca, se le anade un numero.
      */
     public MinionType createType(String display) {
-        String base = display.toLowerCase(Locale.ROOT)
-                .replaceAll("[^a-z0-9ñ]+", "-")
-                .replaceAll("(^-|-$)", "");
-        if (base.isBlank()) base = "esbirro";
-        String id = base;
-        int n = 2;
-        while (types.containsKey(id)) id = base + "-" + n++;
+        return createType(display, MinionCategory.GENERAL);
+    }
+
+    /** Crea el tipo dentro de una carpeta concreta: la que estaba abierta. */
+    public MinionType createType(String display, String categoryId) {
+        String id = freeId(display, "esbirro", types.keySet());
         MinionType type = new MinionType(id, display);
+        type.categoryId(categories.containsKey(categoryId) ? categoryId : general().id());
         types.put(id, type);
         save();
         return type;
@@ -117,6 +189,19 @@ public final class MinionRegistry {
         if (!file.exists()) return;
         YamlConfiguration yml = YamlConfiguration.loadConfiguration(file);
 
+        ConfigurationSection csec = yml.getConfigurationSection("categorias");
+        if (csec != null) {
+            for (String id : csec.getKeys(false)) {
+                ConfigurationSection c = csec.getConfigurationSection(id);
+                if (c == null) continue;
+                MinionCategory cat = new MinionCategory(id, c.getString("nombre", id));
+                org.bukkit.Material icon = org.bukkit.Material.matchMaterial(c.getString("icono", "CHEST"));
+                if (icon != null) cat.icon(icon);
+                cat.colorRgb(c.getInt("color", 0xFFD966));
+                categories.put(id, cat);
+            }
+        }
+
         ConfigurationSection tsec = yml.getConfigurationSection("esbirros");
         if (tsec != null) {
             for (String id : tsec.getKeys(false)) {
@@ -125,6 +210,7 @@ public final class MinionRegistry {
                 MinionType type = new MinionType(id, s.getString("nombre", id));
                 type.colorRgb(s.getInt("color", 0xFFFFFF));
                 type.bold(s.getBoolean("negrita", false));
+                type.categoryId(s.getString("categoria", MinionCategory.GENERAL));
                 try {
                     type.entity(EntityType.valueOf(s.getString("entidad", "ZOMBIE")));
                 } catch (IllegalArgumentException ignored) {
@@ -164,8 +250,15 @@ public final class MinionRegistry {
                 spawners.put(id, sp);
             }
         }
-        plugin.getLogger().info("Esbirros cargados: " + types.size() + " tipo(s), "
-                + spawners.size() + " generador(es).");
+        // Un esbirro cuya carpeta no existe (borrada a mano en el yml) se muda a la
+        // general en vez de desaparecer del menu.
+        for (MinionType t : types.values()) {
+            if (!categories.containsKey(t.categoryId())) t.categoryId(general().id());
+        }
+        if (!types.isEmpty() || !categories.isEmpty()) general();
+
+        plugin.getLogger().info("Esbirros cargados: " + categories.size() + " carpeta(s), "
+                + types.size() + " tipo(s), " + spawners.size() + " generador(es).");
     }
 
     public void save() {
@@ -179,6 +272,10 @@ public final class MinionRegistry {
                 "El dano es un multiplicador sobre el golpe de fabrica del bicho:",
                 "  x dano-base * (1 + dano-por-nivel * (N - 1)).",
                 "",
+                "Los esbirros se organizan en CARPETAS (categorias): la mazmorra o el",
+                "proposito al que sirven. Cada una elige icono y color; borrarla no borra",
+                "su tropa, la muda a la carpeta general.",
+                "",
                 "Cada generador tiene SU rango de nivel: el mismo esbirro puede ser 5-10",
                 "en una sala y 20-30 en otra. El botin se configura en drops.yml, en la",
                 "seccion 'esbirro-<id>'.",
@@ -188,9 +285,24 @@ public final class MinionRegistry {
                 "habilidades: rasgos que se encienden y se apagan desde el menu.",
                 "  flecha-pesada  cada tercera flecha pega el doble",
                 "  agil           se mueve un 25% mas rapido",
-                "  flecha-helada  sus flechas dejan lentitud 3 segundos"));
+                "  flecha-helada  sus flechas dejan lentitud 3 segundos",
+                "  venenoso       sus golpes dejan veneno 4 segundos",
+                "  igneo          deja ardiendo 4 segundos al que golpea",
+                "  acorazado      recibe un 35% menos de dano",
+                "  espinas        devuelve un 25% del dano cuerpo a cuerpo",
+                "  berserk        bajo el 30% de vida pega un 50% mas",
+                "  curandero      cura a los esbirros de alrededor cada 3 s",
+                "  alarma         al ser golpeado manda a los suyos contra el atacante",
+                "  division       al morir se parte en dos crias de la mitad de nivel"));
+        for (MinionCategory c : categories.values()) {
+            String base = "categorias." + c.id();
+            yml.set(base + ".nombre", c.display());
+            yml.set(base + ".icono", c.icon().name());
+            yml.set(base + ".color", c.colorRgb());
+        }
         for (MinionType t : types.values()) {
             String base = "esbirros." + t.id();
+            yml.set(base + ".categoria", t.categoryId());
             yml.set(base + ".nombre", t.display());
             yml.set(base + ".color", t.colorRgb());
             yml.set(base + ".negrita", t.bold());

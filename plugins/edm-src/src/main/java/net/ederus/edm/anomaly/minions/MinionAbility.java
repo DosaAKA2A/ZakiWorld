@@ -25,7 +25,39 @@ public enum MinionAbility {
 
     FLECHA_HELADA("flecha-helada", "Flecha helada", Material.POWDER_SNOW_BUCKET, NamedTextColor.BLUE,
             "Sus flechas dejan lentitud 3 segundos.",
-            "No pega mas, pero te deja a tiro del siguiente.");
+            "No pega mas, pero te deja a tiro del siguiente."),
+
+    VENENOSO("venenoso", "Venenoso", Material.SPIDER_EYE, NamedTextColor.DARK_GREEN,
+            "Cada golpe suyo deja veneno 4 segundos.",
+            "Pelear con tres a la vez te obliga a curarte."),
+
+    IGNEO("igneo", "Igneo", Material.BLAZE_POWDER, NamedTextColor.GOLD,
+            "Al que golpea lo deja ardiendo 4 segundos.",
+            "Castiga quedarse pegado a el."),
+
+    ACORAZADO("acorazado", "Acorazado", Material.NETHERITE_SCRAP, NamedTextColor.GRAY,
+            "Recibe un 35% menos de dano.",
+            "Aguanta el frente mientras los suyos rodean."),
+
+    ESPINAS("espinas", "Espinas", Material.CACTUS, NamedTextColor.GREEN,
+            "Devuelve un 25% del dano cuerpo a cuerpo.",
+            "Cambiar golpes con el sale caro."),
+
+    BERSERK("berserk", "Berserk", Material.REDSTONE, NamedTextColor.RED,
+            "Por debajo del 30% de vida pega un 50% mas.",
+            "El ultimo cuarto de la pelea es el peligroso."),
+
+    CURANDERO("curandero", "Curandero", Material.GLISTERING_MELON_SLICE, NamedTextColor.LIGHT_PURPLE,
+            "Cada 3 segundos cura a los esbirros de alrededor.",
+            "Hay que matarlo a el primero o la sala no baja."),
+
+    ALARMA("alarma", "Alarma", Material.BELL, NamedTextColor.YELLOW,
+            "Al recibir un golpe, la tropa cercana va a por quien se lo dio.",
+            "Se acabo pelear de uno en uno."),
+
+    DIVISION("division", "Division", Material.SLIME_BALL, NamedTextColor.AQUA,
+            "Al morir se parte en dos crias de la mitad de nivel.",
+            "Las crias ya no se dividen: la sala no se desborda.");
 
     private final String id;
     private final String display;

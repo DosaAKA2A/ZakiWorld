@@ -13,6 +13,7 @@ import net.ederus.edm.anomaly.core.Fx;
 import net.ederus.edm.anomaly.drops.DropEntry;
 import net.ederus.edm.anomaly.drops.DropTable;
 import net.ederus.edm.anomaly.minions.MinionAbility;
+import net.ederus.edm.anomaly.minions.MinionCategory;
 import net.ederus.edm.anomaly.minions.MinionSpawner;
 import net.ederus.edm.anomaly.minions.MinionType;
 import org.bukkit.Bukkit;
@@ -59,7 +60,8 @@ public final class Menus implements Listener {
     private static final int SLOT_BACK = 45;
     private static final int SLOT_HELP = 53;
 
-    private enum Screen {HUB, ANOMALIES, ABILITIES, DROPS, SETTINGS, MINIONS, MINION_EDIT, MINION_ABILITIES, SPAWNERS, SPAWNER_EDIT}
+    private enum Screen {HUB, ANOMALIES, ABILITIES, DROPS, SETTINGS,
+        MINION_CATEGORIES, CATEGORY_EDIT, MINIONS, MINION_EDIT, MINION_ABILITIES, SPAWNERS, SPAWNER_EDIT}
 
     private final AnomalyPlugin plugin;
 
@@ -76,10 +78,13 @@ public final class Menus implements Listener {
         open(player, Screen.HUB, 0, plugin.selectedId(), false);
     }
 
-    /** La puerta directa de /anomaly esbirros: el catalogo sin pasar por el panel. */
+    /**
+     * La puerta de /esb: las CARPETAS de esbirros. Los jefes viven en /anomaly y la
+     * tropa aqui; mezclarlos en un solo panel se hacia largo de recorrer.
+     */
     public void openMinions(Player player) {
         plugin.spawnMarker().cancel(player);
-        open(player, Screen.MINIONS, 0, "", false);
+        open(player, Screen.MINION_CATEGORIES, 0, "", false);
     }
 
     private void open(Player player, Screen screen, int page, String context, boolean placeMode) {
@@ -101,7 +106,12 @@ public final class Menus implements Listener {
             case ABILITIES -> "  Habilidades";
             case DROPS -> placeMode ? "  Botin · colocar" : "  Botin · ajustar";
             case SETTINGS -> "  Ajustes";
-            case MINIONS -> "  Esbirros";
+            case MINION_CATEGORIES -> "  Esbirros";
+            case CATEGORY_EDIT -> "  Carpeta";
+            case MINIONS -> {
+                MinionCategory cat = plugin.minions().category(context);
+                yield cat == null ? "  Esbirros" : "  " + cat.display();
+            }
             case MINION_EDIT -> "  Esbirro";
             case MINION_ABILITIES -> "  Habilidades";
             case SPAWNERS -> "  Generadores";
@@ -114,7 +124,9 @@ public final class Menus implements Listener {
         AnomalyType type = plugin.registry().get(context);
         if (type != null) return type.color();
         MinionType minion = minionOf(context);
-        return minion == null ? MenuUtil.GOLD : minion.color();
+        if (minion != null) return minion.color();
+        MinionCategory cat = plugin.minions().category(context);
+        return cat == null ? MenuUtil.GOLD : cat.color();
     }
 
     /** El esbirro detras de un contexto, venga como id o como id de tabla de botin. */
@@ -140,7 +152,9 @@ public final class Menus implements Listener {
             case ABILITIES -> renderAbilities(inv, holder);
             case DROPS -> renderDrops(inv, holder);
             case SETTINGS -> renderSettings(inv);
-            case MINIONS -> renderMinions(inv);
+            case MINION_CATEGORIES -> renderCategories(inv);
+            case CATEGORY_EDIT -> renderCategoryEdit(inv, holder);
+            case MINIONS -> renderMinions(inv, holder);
             case MINION_EDIT -> renderMinionEdit(inv, holder);
             case MINION_ABILITIES -> renderMinionAbilities(inv, holder);
             case SPAWNERS -> renderSpawners(inv, holder);
@@ -149,7 +163,10 @@ public final class Menus implements Listener {
 
         if (holder.screen != Screen.HUB) {
             String backLabel = switch (holder.screen) {
-                case MINION_EDIT -> "◀ Volver a los esbirros";
+                case MINION_CATEGORIES -> "◀ Cerrar";
+                case CATEGORY_EDIT -> "◀ Volver a las carpetas";
+                case MINIONS -> "◀ Volver a las carpetas";
+                case MINION_EDIT -> "◀ Volver a la carpeta";
                 case MINION_ABILITIES -> "◀ Volver a la ficha";
                 case SPAWNERS -> "◀ Volver a la ficha";
                 case SPAWNER_EDIT -> "◀ Volver a los generadores";
@@ -190,22 +207,6 @@ public final class Menus implements Listener {
         inv.setItem(13, MenuUtil.icon(live == null ? Material.GRAY_DYE : Material.ENDER_PEARL,
                 MenuUtil.title("Ir a la anomalia", live == null ? MenuUtil.DIM : NamedTextColor.LIGHT_PURPLE),
                 tpLore, live != null));
-
-        // La otra mitad del plugin: la tropa de las mazmorras.
-        inv.setItem(11, MenuUtil.icon(Material.SPAWNER,
-                MenuUtil.title("Esbirros", NamedTextColor.LIGHT_PURPLE),
-                List.of(
-                        MenuUtil.line("La tropa de las mazmorras: crea tipos de"),
-                        MenuUtil.line("mob con nivel, plantales generadores con"),
-                        MenuUtil.line("la vela y configura su botin."),
-                        MenuUtil.blank(),
-                        MenuUtil.field("Tipos", String.valueOf(plugin.minions().types().size()),
-                                NamedTextColor.WHITE),
-                        MenuUtil.field("Generadores", String.valueOf(plugin.minions().spawners().size()),
-                                NamedTextColor.WHITE),
-                        MenuUtil.blank(),
-                        MenuUtil.action("Click para abrir el catalogo")),
-                false));
 
         Location fixedSpawn = selected == null ? null : plugin.registry().spawnPoint(selected);
         inv.setItem(20, MenuUtil.icon(active ? Material.GRAY_DYE : Material.NETHER_STAR,
@@ -677,9 +678,123 @@ public final class Menus implements Listener {
 
     // ------------------------------------------------------------------- esbirros
 
-    /** El catalogo de esbirros: la otra mitad del panel, con la misma gramatica. */
-    private void renderMinions(Inventory inv) {
-        List<MinionType> all = plugin.minions().types();
+    /**
+     * La portada de /esb: las carpetas. Una mazmorra o un proposito por casilla,
+     * con el icono que le haya puesto el admin.
+     */
+    private void renderCategories(Inventory inv) {
+        List<MinionCategory> all = plugin.minions().categories();
+        for (int i = 0; i < BODY.length; i++) {
+            if (i >= all.size()) break;
+            MinionCategory cat = all.get(i);
+            List<MinionType> dentro = plugin.minions().typesOf(cat.id());
+            int generadores = 0;
+            for (MinionType t : dentro) generadores += plugin.minions().spawnersOf(t.id()).size();
+
+            List<Component> lore = new ArrayList<>();
+            lore.add(MenuUtil.field("Esbirros", String.valueOf(dentro.size()), NamedTextColor.WHITE));
+            lore.add(MenuUtil.field("Generadores", String.valueOf(generadores), NamedTextColor.WHITE));
+            if (!dentro.isEmpty()) {
+                lore.add(MenuUtil.blank());
+                for (int k = 0; k < Math.min(5, dentro.size()); k++) {
+                    MinionType t = dentro.get(k);
+                    lore.add(Component.text("· ", MenuUtil.DIM).append(Component.text(t.display(), t.color())));
+                }
+                if (dentro.size() > 5) {
+                    lore.add(Component.text("  y " + (dentro.size() - 5) + " mas", MenuUtil.DIM));
+                }
+            }
+            lore.add(MenuUtil.blank());
+            lore.add(MenuUtil.action("Click para abrir la carpeta"));
+            lore.add(MenuUtil.actionSecondary("Click derecho: icono, color y nombre"));
+
+            inv.setItem(BODY[i], MenuUtil.icon(cat.icon(),
+                    MenuUtil.title(cat.display(), cat.color()), lore, false));
+        }
+
+        inv.setItem(49, MenuUtil.icon(Material.WRITABLE_BOOK,
+                MenuUtil.title("Crear carpeta", NamedTextColor.GREEN),
+                List.of(
+                        MenuUtil.line("Una mazmorra o un proposito nuevo:"),
+                        MenuUtil.line("Mina, Cripta, Test, lo que sea."),
+                        MenuUtil.line("Se cierra el menu y el nombre se"),
+                        MenuUtil.line("escribe en el chat."),
+                        MenuUtil.blank(),
+                        MenuUtil.action("Click para ponerle nombre")),
+                true));
+    }
+
+    /** La ficha de una carpeta: como se llama, como se ve y que hay dentro. */
+    private void renderCategoryEdit(Inventory inv, Holder holder) {
+        MinionCategory cat = plugin.minions().category(holder.context);
+        if (cat == null) return;
+        List<MinionType> dentro = plugin.minions().typesOf(cat.id());
+
+        inv.setItem(11, MenuUtil.icon(Material.NAME_TAG,
+                MenuUtil.title("Renombrar", MenuUtil.GOLD),
+                List.of(
+                        MenuUtil.field("Ahora", cat.display(), cat.color()),
+                        MenuUtil.blank(),
+                        MenuUtil.line("Se cierra el menu y el nombre nuevo"),
+                        MenuUtil.line("se escribe en el chat."),
+                        MenuUtil.blank(),
+                        MenuUtil.action("Click para renombrar")), false));
+
+        List<Component> ficha = new ArrayList<>();
+        ficha.add(MenuUtil.field("Esbirros", String.valueOf(dentro.size()), NamedTextColor.WHITE));
+        ficha.add(MenuUtil.field("Icono", nombreBonitoMaterial(cat.icon()), MenuUtil.SOFT));
+        inv.setItem(13, MenuUtil.icon(cat.icon(), MenuUtil.title(cat.display(), cat.color()), ficha, true));
+
+        inv.setItem(15, MenuUtil.icon(cat.icon(),
+                MenuUtil.title("Icono", MenuUtil.GOLD),
+                List.of(
+                        MenuUtil.line("Como se reconoce la carpeta de un"),
+                        MenuUtil.line("vistazo. Vale cualquier objeto."),
+                        MenuUtil.blank(),
+                        MenuUtil.field("Ahora", nombreBonitoMaterial(cat.icon()), NamedTextColor.WHITE),
+                        MenuUtil.blank(),
+                        MenuUtil.action("Coge un objeto y clicka aqui con el"),
+                        Component.text("► Tecla de tirar (Q): escribir el nombre", NamedTextColor.GRAY)), false));
+
+        inv.setItem(20, MenuUtil.icon(Material.BRUSH,
+                MenuUtil.title("Color", cat.color()),
+                List.of(
+                        Component.text("Asi se ve  ", MenuUtil.LABEL)
+                                .append(Component.text(cat.display(), cat.color(), TextDecoration.BOLD)),
+                        MenuUtil.blank(),
+                        MenuUtil.line("El color del titulo en los menus."),
+                        MenuUtil.blank(),
+                        MenuUtil.action("Click izquierdo: siguiente color"),
+                        Component.text("► Click derecho: anterior", NamedTextColor.YELLOW)), false));
+
+        inv.setItem(24, MenuUtil.icon(Material.SPAWNER,
+                MenuUtil.title("Abrir la carpeta", NamedTextColor.LIGHT_PURPLE),
+                List.of(
+                        MenuUtil.line("Su tropa: crear esbirros, ajustarlos,"),
+                        MenuUtil.line("plantar generadores y su botin."),
+                        MenuUtil.blank(),
+                        MenuUtil.field("Dentro", dentro.size() + " esbirro(s)", NamedTextColor.WHITE),
+                        MenuUtil.blank(),
+                        MenuUtil.action("Click para abrirla")), false));
+
+        inv.setItem(31, MenuUtil.icon(cat.isGeneral() ? Material.GRAY_DYE : Material.BARRIER,
+                MenuUtil.title("Borrar carpeta", cat.isGeneral() ? MenuUtil.DIM : NamedTextColor.RED),
+                List.of(
+                        cat.isGeneral()
+                                ? MenuUtil.line("La carpeta general no se puede borrar:")
+                                : MenuUtil.line("Quita la carpeta. Sus esbirros NO se"),
+                        cat.isGeneral()
+                                ? MenuUtil.line("es donde caen los esbirros sin sitio.")
+                                : MenuUtil.line("borran: se mudan a Sin clasificar."),
+                        MenuUtil.blank(),
+                        cat.isGeneral() ? Component.text("No se puede.", MenuUtil.DIM)
+                                : MenuUtil.action("Tecla de tirar (Q) dos veces: borrarla")), false));
+    }
+
+    /** El catalogo de una carpeta: su tropa, con la misma gramatica de siempre. */
+    private void renderMinions(Inventory inv, Holder holder) {
+        MinionCategory cat = plugin.minions().category(holder.context);
+        List<MinionType> all = cat == null ? plugin.minions().types() : plugin.minions().typesOf(cat.id());
         for (int i = 0; i < BODY.length; i++) {
             if (i >= all.size()) break;
             MinionType type = all.get(i);
@@ -705,11 +820,14 @@ public final class Menus implements Listener {
                     MenuUtil.title(type.display(), type.color()), lore, false));
         }
 
-        inv.setItem(49, MenuUtil.icon(Material.WRITABLE_BOOK,
+        inv.setItem(49, MenuUtil.icon(cat == null ? Material.WRITABLE_BOOK : cat.icon(),
                 MenuUtil.title("Crear esbirro", NamedTextColor.GREEN),
                 List.of(
                         MenuUtil.line("Un tipo nuevo de tropa. Se cierra el menu"),
                         MenuUtil.line("y el nombre se escribe en el chat."),
+                        MenuUtil.blank(),
+                        MenuUtil.field("Carpeta", cat == null ? "Sin clasificar" : cat.display(),
+                                cat == null ? MenuUtil.SOFT : cat.color()),
                         MenuUtil.blank(),
                         MenuUtil.action("Click para ponerle nombre")),
                 true));
@@ -904,6 +1022,18 @@ public final class Menus implements Listener {
                         MenuUtil.action("Click izquierdo: +4"),
                         Component.text("► Click derecho: -4", NamedTextColor.YELLOW),
                         Component.text("► Shift para pasos de 16", NamedTextColor.GRAY)), false));
+
+        MinionCategory suya = plugin.minions().categoryOf(type);
+        inv.setItem(31, MenuUtil.icon(suya.icon(),
+                MenuUtil.title("Carpeta", suya.color()),
+                List.of(
+                        MenuUtil.field("Ahora", suya.display(), suya.color()),
+                        MenuUtil.blank(),
+                        MenuUtil.line("En que mazmorra o proposito vive."),
+                        MenuUtil.line("Cambiarla no toca nada de su pelea."),
+                        MenuUtil.blank(),
+                        MenuUtil.action("Click izquierdo: siguiente carpeta"),
+                        Component.text("► Click derecho: anterior", NamedTextColor.YELLOW)), false));
 
         inv.setItem(29, MenuUtil.icon(type.bold() ? Material.INK_SAC : Material.GLASS_BOTTLE,
                 MenuUtil.title("Nombre en negrita", MenuUtil.GOLD),
@@ -1182,6 +1312,12 @@ public final class Menus implements Listener {
         return Character.toUpperCase(raw.charAt(0)) + raw.substring(1);
     }
 
+    /** IRON_ORE se lee mejor como "Iron ore" en el lore de un menu. */
+    private static String nombreBonitoMaterial(Material material) {
+        String raw = material.name().toLowerCase(java.util.Locale.ROOT).replace('_', ' ');
+        return Character.toUpperCase(raw.charAt(0)) + raw.substring(1);
+    }
+
     private static String trim(double v) {
         return DropTable.trimChance(v);
     }
@@ -1209,15 +1345,106 @@ public final class Menus implements Listener {
         return false;
     }
 
-    private void clickMinions(Player player, InventoryClickEvent event, Holder holder, int slot) {
+    private void clickCategories(Player player, InventoryClickEvent event, Holder holder, int slot) {
         if (slot == 49) {
             click(player, 1.4f);
-            beginNaming(player, null);
+            beginInput(player, PendingInput.Kind.CARPETA_NUEVA, "",
+                    "Escribe en el chat el nombre de la carpeta nueva.");
             return;
         }
         int index = indexOf(BODY, slot);
         if (index < 0) return;
-        List<MinionType> all = plugin.minions().types();
+        List<MinionCategory> all = plugin.minions().categories();
+        if (index >= all.size()) return;
+        MinionCategory cat = all.get(index);
+
+        if (event.isRightClick()) {
+            click(player, 1.1f);
+            open(player, Screen.CATEGORY_EDIT, 0, cat.id(), false);
+        } else {
+            click(player, 1.2f);
+            open(player, Screen.MINIONS, 0, cat.id(), false);
+        }
+    }
+
+    private void clickCategoryEdit(Player player, InventoryClickEvent event, Holder holder, int slot) {
+        MinionCategory cat = plugin.minions().category(holder.context);
+        if (cat == null) return;
+        boolean up = event.isLeftClick();
+
+        switch (slot) {
+            case 11 -> {
+                click(player, 1.4f);
+                beginInput(player, PendingInput.Kind.CARPETA_NOMBRE, cat.id(),
+                        "Escribe en el chat el nombre nuevo de la carpeta.");
+                return;
+            }
+            case 15 -> {
+                // El icono se pone trayendo el objeto en el cursor; con Q se escribe.
+                if (event.getClick() == ClickType.DROP || event.getClick() == ClickType.CONTROL_DROP) {
+                    click(player, 1.4f);
+                    beginInput(player, PendingInput.Kind.CARPETA_ICONO, cat.id(),
+                            "Escribe en el chat el nombre del bloque u objeto, por ejemplo GOLD_ORE.");
+                    return;
+                }
+                ItemStack cursor = event.getCursor();
+                if (cursor == null || cursor.getType().isAir()) {
+                    deny(player, "Coge antes un objeto con el raton y vuelve a clickar aqui.");
+                    return;
+                }
+                cat.icon(cursor.getType());
+                plugin.minions().save();
+            }
+            case 20 -> cat.cycleColor(up);
+            case 24 -> {
+                click(player, 1.2f);
+                open(player, Screen.MINIONS, 0, cat.id(), false);
+                return;
+            }
+            case 31 -> {
+                if (cat.isGeneral()) {
+                    deny(player, "La carpeta general no se puede borrar.");
+                    return;
+                }
+                if (event.getClick() != ClickType.DROP && event.getClick() != ClickType.CONTROL_DROP) {
+                    deny(player, "Para borrarla, pulsa la tecla de tirar (Q) dos veces.");
+                    return;
+                }
+                if (!confirmDelete(player, "carpeta:" + cat.id())) return;
+                int mudados = plugin.minions().typesOf(cat.id()).size();
+                plugin.minions().deleteCategory(cat);
+                click(player, 0.6f);
+                player.sendMessage(plugin.prefix()
+                        .append(Component.text("Carpeta borrada  ", NamedTextColor.RED))
+                        .append(Component.text(cat.display(), cat.color(), TextDecoration.BOLD))
+                        .append(Component.text(mudados == 0 ? "." : "  " + mudados
+                                + " esbirro(s) se mudaron a Sin clasificar.", MenuUtil.SOFT)));
+                open(player, Screen.MINION_CATEGORIES, 0, "", false);
+                return;
+            }
+            default -> {
+                return;
+            }
+        }
+        plugin.minions().save();
+        click(player, up ? 1.4f : 0.9f);
+        render(event.getInventory(), player, holder);
+    }
+
+    private void clickMinions(Player player, InventoryClickEvent event, Holder holder, int slot) {
+        if (slot == 49) {
+            click(player, 1.4f);
+            MinionCategory abierta = plugin.minions().category(holder.context);
+            beginInput(player, PendingInput.Kind.TIPO_NUEVO,
+                    abierta == null ? plugin.minions().general().id() : abierta.id(),
+                    "Escribe en el chat el nombre del esbirro nuevo.");
+            return;
+        }
+        int index = indexOf(BODY, slot);
+        if (index < 0) return;
+        MinionCategory abierta = plugin.minions().category(holder.context);
+        List<MinionType> all = abierta == null
+                ? plugin.minions().types() : plugin.minions().typesOf(abierta.id());
         if (index >= all.size()) return;
         MinionType type = all.get(index);
 
@@ -1260,7 +1487,8 @@ public final class Menus implements Listener {
             case 11 -> type.cycleColor(up);
             case 12 -> {
                 click(player, 1.4f);
-                beginNaming(player, type.id());
+                beginInput(player, PendingInput.Kind.TIPO_NOMBRE, type.id(),
+                        "Escribe en el chat el nombre nuevo del esbirro.");
                 return;
             }
             case 14 -> type.baseHealth(type.baseHealth() + (shift ? 50 : 5) * (up ? 1 : -1));
@@ -1292,6 +1520,19 @@ public final class Menus implements Listener {
             case 29 -> {
                 type.bold(!type.bold());
                 plugin.minionManager().refreshHolos(type.id());
+            }
+            case 31 -> {
+                List<MinionCategory> todas = plugin.minions().categories();
+                if (todas.size() < 2) {
+                    deny(player, "Solo hay una carpeta: crea otra desde /esb.");
+                    return;
+                }
+                int at = 0;
+                for (int i = 0; i < todas.size(); i++) {
+                    if (todas.get(i).id().equals(type.categoryId())) at = i;
+                }
+                MinionCategory destino = todas.get(Math.floorMod(at + (up ? 1 : -1), todas.size()));
+                type.categoryId(destino.id());
             }
             case 16 -> {
                 click(player, 1.1f);
@@ -1455,27 +1696,25 @@ public final class Menus implements Listener {
     // ------------------------------------------------ esbirros: lo que se escribe
 
     /**
-     * Lo que el menu esta esperando que el jugador escriba en el chat: un nombre
-     * (nuevo o para renombrar) o un rango de nivel. El contexto es el id del tipo
-     * o del generador, segun el caso.
+     * Lo que el menu esta esperando que el jugador escriba en el chat: el nombre de
+     * un esbirro o de una carpeta, el icono de una carpeta o un rango de nivel. El
+     * contexto es el id de lo que se esta tocando (carpeta, tipo o generador).
      */
     private record PendingInput(Kind kind, String context, long expiresAt) {
-        enum Kind {NOMBRE, RANGO_TIPO, RANGO_GENERADOR}
+        enum Kind {TIPO_NUEVO, TIPO_NOMBRE, CARPETA_NUEVA, CARPETA_NOMBRE, CARPETA_ICONO,
+            RANGO_TIPO, RANGO_GENERADOR}
     }
 
     private final java.util.Map<java.util.UUID, PendingInput> pendingName = new java.util.HashMap<>();
 
-    /** Cierra el menu y espera el nombre en el chat. typeId null = crear uno nuevo. */
-    private void beginNaming(Player player, String typeId) {
+    /** Cierra el menu y espera una linea en el chat, con su propio aviso. */
+    private void beginInput(Player player, PendingInput.Kind kind, String context, String aviso) {
         pendingName.put(player.getUniqueId(),
-                new PendingInput(PendingInput.Kind.NOMBRE, typeId, System.currentTimeMillis() + 60_000));
+                new PendingInput(kind, context, System.currentTimeMillis() + 60_000));
         plugin.getServer().getScheduler().runTask(net.ederus.edm.Module.dueno(plugin), () -> {
             if (player.isOnline()) player.closeInventory();
         });
-        player.sendMessage(plugin.prefix()
-                .append(Component.text(typeId == null
-                        ? "Escribe en el chat el nombre del esbirro nuevo."
-                        : "Escribe en el chat el nombre nuevo.", NamedTextColor.WHITE)));
+        player.sendMessage(plugin.prefix().append(Component.text(aviso, NamedTextColor.WHITE)));
         player.sendMessage(plugin.prefix()
                 .append(Component.text("Nadie mas lo vera. Escribe \"cancelar\" para dejarlo estar.",
                         MenuUtil.SOFT)));
@@ -1558,27 +1797,67 @@ public final class Menus implements Listener {
                 volver(player, pending);
                 return;
             }
-            if (pending.kind() != PendingInput.Kind.NOMBRE) {
-                applyRange(player, pending, raw);
-                return;
-            }
             String name = raw.length() > 32 ? raw.substring(0, 32) : raw;
-            if (pending.context() == null) {
-                MinionType created = plugin.minions().createType(name);
-                player.sendMessage(plugin.prefix()
-                        .append(Component.text("Esbirro creado  ", NamedTextColor.GREEN))
-                        .append(Component.text(created.display(), created.color(), TextDecoration.BOLD))
-                        .append(Component.text("  Ajusta su criatura, su escalado y su vela.", MenuUtil.SOFT)));
-                open(player, Screen.MINION_EDIT, 0, created.id(), false);
-            } else {
-                MinionType type = plugin.minions().type(pending.context());
-                if (type == null) return;
-                type.display(name);
-                plugin.minions().save();
-                player.sendMessage(plugin.prefix()
-                        .append(Component.text("Renombrado a  ", NamedTextColor.GREEN))
-                        .append(Component.text(name, type.color(), TextDecoration.BOLD)));
-                open(player, Screen.MINION_EDIT, 0, type.id(), false);
+            switch (pending.kind()) {
+                case RANGO_TIPO, RANGO_GENERADOR -> applyRange(player, pending, raw);
+                case TIPO_NUEVO -> {
+                    MinionType created = plugin.minions().createType(name, pending.context());
+                    MinionCategory cat = plugin.minions().categoryOf(created);
+                    player.sendMessage(plugin.prefix()
+                            .append(Component.text("Esbirro creado  ", NamedTextColor.GREEN))
+                            .append(Component.text(created.display(), created.color(), TextDecoration.BOLD))
+                            .append(Component.text("  en la carpeta ", MenuUtil.SOFT))
+                            .append(Component.text(cat.display(), cat.color()))
+                            .append(Component.text(". Ajusta su criatura, su escalado y su vela.",
+                                    MenuUtil.SOFT)));
+                    open(player, Screen.MINION_EDIT, 0, created.id(), false);
+                }
+                case TIPO_NOMBRE -> {
+                    MinionType type = plugin.minions().type(pending.context());
+                    if (type == null) return;
+                    type.display(name);
+                    plugin.minions().save();
+                    player.sendMessage(plugin.prefix()
+                            .append(Component.text("Renombrado a  ", NamedTextColor.GREEN))
+                            .append(Component.text(name, type.color(), TextDecoration.BOLD)));
+                    open(player, Screen.MINION_EDIT, 0, type.id(), false);
+                }
+                case CARPETA_NUEVA -> {
+                    MinionCategory cat = plugin.minions().createCategory(name);
+                    player.sendMessage(plugin.prefix()
+                            .append(Component.text("Carpeta creada  ", NamedTextColor.GREEN))
+                            .append(Component.text(cat.display(), cat.color(), TextDecoration.BOLD))
+                            .append(Component.text("  Ponle icono y mete dentro su tropa.", MenuUtil.SOFT)));
+                    open(player, Screen.CATEGORY_EDIT, 0, cat.id(), false);
+                }
+                case CARPETA_NOMBRE -> {
+                    MinionCategory cat = plugin.minions().category(pending.context());
+                    if (cat == null) return;
+                    cat.display(name);
+                    plugin.minions().save();
+                    player.sendMessage(plugin.prefix()
+                            .append(Component.text("Carpeta renombrada a  ", NamedTextColor.GREEN))
+                            .append(Component.text(name, cat.color(), TextDecoration.BOLD)));
+                    open(player, Screen.CATEGORY_EDIT, 0, cat.id(), false);
+                }
+                case CARPETA_ICONO -> {
+                    MinionCategory cat = plugin.minions().category(pending.context());
+                    if (cat == null) return;
+                    Material material = Material.matchMaterial(raw.trim().replace(' ', '_'));
+                    if (material == null || !material.isItem()) {
+                        deny(player, "No conozco ningun objeto que se llame \"" + raw + "\".");
+                        open(player, Screen.CATEGORY_EDIT, 0, cat.id(), false);
+                        return;
+                    }
+                    cat.icon(material);
+                    plugin.minions().save();
+                    player.sendMessage(plugin.prefix()
+                            .append(Component.text("Icono de  ", MenuUtil.SOFT))
+                            .append(Component.text(cat.display(), cat.color(), TextDecoration.BOLD))
+                            .append(Component.text(": " + nombreBonitoMaterial(material),
+                                    NamedTextColor.GREEN)));
+                    open(player, Screen.CATEGORY_EDIT, 0, cat.id(), false);
+                }
             }
         });
     }
@@ -1619,12 +1898,15 @@ public final class Menus implements Listener {
         volver(player, pending);
     }
 
-    /** Devuelve al jugador a la ficha desde la que salio a escribir. */
+    /** Devuelve al jugador a la pantalla desde la que salio a escribir. */
     private void volver(Player player, PendingInput pending) {
         switch (pending.kind()) {
-            case RANGO_TIPO -> open(player, Screen.MINION_EDIT, 0, pending.context(), false);
+            case RANGO_TIPO, TIPO_NOMBRE -> open(player, Screen.MINION_EDIT, 0, pending.context(), false);
             case RANGO_GENERADOR -> open(player, Screen.SPAWNER_EDIT, 0, pending.context(), false);
-            default -> openHub(player);
+            case TIPO_NUEVO -> open(player, Screen.MINIONS, 0, pending.context(), false);
+            case CARPETA_NOMBRE, CARPETA_ICONO -> open(player, Screen.CATEGORY_EDIT, 0,
+                    pending.context(), false);
+            case CARPETA_NUEVA -> open(player, Screen.MINION_CATEGORIES, 0, "", false);
         }
     }
 
@@ -1757,7 +2039,14 @@ public final class Menus implements Listener {
             // y perder el sitio a cada vuelta la haria inusable.
             MinionType asMinion = minionOf(holder.context);
             switch (holder.screen) {
-                case MINION_EDIT -> open(player, Screen.MINIONS, 0, "", false);
+                case MINION_CATEGORIES -> player.closeInventory();
+                case CATEGORY_EDIT -> open(player, Screen.MINION_CATEGORIES, 0, "", false);
+                case MINIONS -> open(player, Screen.MINION_CATEGORIES, 0, "", false);
+                case MINION_EDIT -> {
+                    MinionType t = plugin.minions().type(holder.context);
+                    open(player, Screen.MINIONS, 0,
+                            t == null ? "" : plugin.minions().categoryOf(t).id(), false);
+                }
                 case MINION_ABILITIES -> open(player, Screen.MINION_EDIT, 0, holder.context, false);
                 case SPAWNERS -> open(player, Screen.MINION_EDIT, 0, holder.context, false);
                 case SPAWNER_EDIT -> {
@@ -1783,6 +2072,8 @@ public final class Menus implements Listener {
             case ABILITIES -> clickAbilities(player, event, holder, slot);
             case DROPS -> clickDrops(player, event, holder, slot);
             case SETTINGS -> clickSettings(player, event, holder, slot);
+            case MINION_CATEGORIES -> clickCategories(player, event, holder, slot);
+            case CATEGORY_EDIT -> clickCategoryEdit(player, event, holder, slot);
             case MINIONS -> clickMinions(player, event, holder, slot);
             case MINION_EDIT -> clickMinionEdit(player, event, holder, slot);
             case MINION_ABILITIES -> clickMinionAbilities(player, event, holder, slot);
@@ -1793,10 +2084,6 @@ public final class Menus implements Listener {
 
     private void clickHub(Player player, InventoryClickEvent event, int slot) {
         switch (slot) {
-            case 11 -> {
-                click(player, 1.1f);
-                open(player, Screen.MINIONS, 0, "", false);
-            }
             case 15 -> {
                 AnomalyType type = plugin.selected();
                 if (type == null) {

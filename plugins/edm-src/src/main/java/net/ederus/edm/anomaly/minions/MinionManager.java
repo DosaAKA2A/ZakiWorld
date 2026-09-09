@@ -66,6 +66,8 @@ public final class MinionManager implements Listener {
     private final NamespacedKey keyHolo;
     /** La marca que lleva la tercera flecha, la que pega el doble. */
     private final NamespacedKey keyHeavy;
+    /** Una cria de Division: no vuelve a dividirse, o la sala no acaba nunca. */
+    private final NamespacedKey keyChild;
 
     /** Quien esta vivo de cada generador. Se purga en el ticker. */
     private final Map<String, Set<UUID>> alive = new HashMap<>();
@@ -97,6 +99,7 @@ public final class MinionManager implements Listener {
         this.keyLevel = new NamespacedKey(plugin, "esbirro_nivel");
         this.keyHolo = new NamespacedKey(plugin, "esbirro_holo");
         this.keyHeavy = new NamespacedKey(plugin, "esbirro_flecha_pesada");
+        this.keyChild = new NamespacedKey(plugin, "esbirro_cria");
     }
 
     // ---------------------------------------------------------------------- ciclo
@@ -175,8 +178,12 @@ public final class MinionManager implements Listener {
         return removed;
     }
 
+    /** Cuantas vueltas lleva el reloj: los rasgos lentos van cada X segundos. */
+    private int pulso;
+
     private void tick() {
         long now = System.currentTimeMillis();
+        if (++pulso % 3 == 0) healers();
         for (MinionSpawner s : plugin.minions().spawners()) {
             Set<UUID> mine = alive.computeIfAbsent(s.id(), k -> new HashSet<>());
 
@@ -218,6 +225,38 @@ public final class MinionManager implements Listener {
         for (World w : plugin.getServer().getWorlds()) {
             for (TextDisplay d : w.getEntitiesByClass(TextDisplay.class)) {
                 if (isHolo(d) && !escoltados.contains(d.getUniqueId())) d.remove();
+            }
+        }
+    }
+
+    /**
+     * Los curanderos: cada 3 segundos reponen algo de vida a la tropa de alrededor
+     * (a los suyos, no a si mismos, para que no sean inmortales de uno en uno).
+     */
+    private void healers() {
+        for (Escolta e : escoltas) {
+            LivingEntity medico = e.mob;
+            if (!medico.isValid() || medico.isDead()) continue;
+            MinionType type = typeOf(medico);
+            if (type == null || !type.has(MinionAbility.CURANDERO)) continue;
+
+            boolean curoAlguno = false;
+            for (Escolta otro : escoltas) {
+                LivingEntity herido = otro.mob;
+                if (herido == medico || !herido.isValid() || herido.isDead()) continue;
+                if (!herido.getWorld().equals(medico.getWorld())) continue;
+                if (herido.getLocation().distanceSquared(medico.getLocation()) > 64) continue;
+                double max = Compat.getAttribute(herido, "max_health", herido.getHealth());
+                if (herido.getHealth() >= max) continue;
+                herido.setHealth(Math.min(max, herido.getHealth() + max * 0.04));
+                curoAlguno = true;
+                Compat.spawn(herido.getWorld(), Compat.HEART,
+                        herido.getLocation().add(0, herido.getHeight(), 0), 3, 0.3, 0.2, 0.3, 0.01);
+            }
+            if (curoAlguno) {
+                Compat.spawn(medico.getWorld(), Compat.SPORE_BLOSSOM_AIR,
+                        medico.getLocation().add(0, 1, 0), 10, 0.6, 0.6, 0.6, 0.01);
+                Compat.sound(medico.getWorld(), medico.getLocation(), "block.amethyst_block.chime", 0.5f, 1.7f);
             }
         }
     }
@@ -361,6 +400,25 @@ public final class MinionManager implements Listener {
         if (type == null) return;
         e.setDamage(e.getDamage() * type.damageAt(levelOf(minion)));
 
+        // Berserk: acorralado pega mas fuerte.
+        if (type.has(MinionAbility.BERSERK)) {
+            double max = Compat.getAttribute(minion, "max_health", minion.getHealth());
+            if (max > 0 && minion.getHealth() / max < 0.30) e.setDamage(e.getDamage() * 1.5);
+        }
+
+        // Venenoso e Igneo castigan el contacto, venga de garra o de flecha.
+        if (e.getEntity() instanceof LivingEntity tocado) {
+            if (type.has(MinionAbility.VENENOSO)) {
+                var poison = Compat.effect("poison");
+                if (poison != null) tocado.addPotionEffect(new PotionEffect(poison, 80, 0, true, true));
+            }
+            if (type.has(MinionAbility.IGNEO)) {
+                tocado.setFireTicks(Math.max(tocado.getFireTicks(), 80));
+                Compat.spawn(tocado.getWorld(), Compat.SMALL_FLAME,
+                        tocado.getLocation().add(0, 1, 0), 12, 0.3, 0.5, 0.3, 0.02);
+            }
+        }
+
         // Flecha pesada: la tercera venia marcada desde el disparo.
         if (e.getDamager().getPersistentDataContainer().has(keyHeavy, PersistentDataType.BYTE)) {
             e.setDamage(e.getDamage() * 2.0);
@@ -382,6 +440,68 @@ public final class MinionManager implements Listener {
                         victima.getLocation().add(0, 1, 0), 18, 0.35, 0.5, 0.35, 0.02);
             }
         }
+    }
+
+    /**
+     * Lo que pasa cuando el golpeado es el esbirro: coraza, espinas y la alarma que
+     * pone a los suyos a mirar al que le pego.
+     */
+    @EventHandler(ignoreCancelled = true)
+    public void onTake(EntityDamageByEntityEvent e) {
+        if (!(e.getEntity() instanceof LivingEntity victima) || !isMinion(victima)) return;
+        MinionType type = typeOf(victima);
+        if (type == null) return;
+
+        if (type.has(MinionAbility.ACORAZADO)) {
+            e.setDamage(e.getDamage() * 0.65);
+            Compat.spawn(victima.getWorld(), Compat.CRIT,
+                    victima.getLocation().add(0, 1, 0), 6, 0.25, 0.35, 0.25, 0.02);
+        }
+
+        LivingEntity agresor = attackerBehind(e.getDamager());
+        if (agresor == null || agresor.equals(victima)) return;
+
+        // Espinas: se devuelve una parte, con damage() a secas para que el golpe de
+        // vuelta no vuelva a pasar por aqui y se enrede en un bucle.
+        if (type.has(MinionAbility.ESPINAS) && e.getDamager() instanceof LivingEntity) {
+            double vuelta = e.getFinalDamage() * 0.25;
+            if (vuelta > 0.1) {
+                agresor.damage(vuelta);
+                Compat.spawn(agresor.getWorld(), Compat.CRIT,
+                        agresor.getLocation().add(0, 1, 0), 10, 0.3, 0.4, 0.3, 0.05);
+                Compat.sound(agresor.getWorld(), agresor.getLocation(), "block.sweet_berry_bush.break", 0.7f, 1.2f);
+            }
+        }
+
+        // Alarma: los de al lado dejan lo que estaban haciendo y van a por el.
+        if (type.has(MinionAbility.ALARMA)) {
+            int avisados = 0;
+            for (Escolta otro : escoltas) {
+                LivingEntity companero = otro.mob;
+                if (companero.equals(victima) || !companero.isValid() || companero.isDead()) continue;
+                if (!companero.getWorld().equals(victima.getWorld())) continue;
+                if (companero.getLocation().distanceSquared(victima.getLocation()) > 144) continue;
+                if (companero instanceof Mob m) {
+                    m.setTarget(agresor);
+                    avisados++;
+                }
+            }
+            if (avisados > 0) {
+                Compat.sound(victima.getWorld(), victima.getLocation(), "block.bell.use", 0.9f, 1.5f);
+                Compat.spawn(victima.getWorld(), Compat.WHITE_SMOKE,
+                        victima.getLocation().add(0, 1.2, 0), 16, 0.4, 0.4, 0.4, 0.03);
+            }
+        }
+    }
+
+    /** Quien esta detras de un golpe recibido: el que pega o el que disparo. */
+    private LivingEntity attackerBehind(Entity damager) {
+        if (damager instanceof LivingEntity living) return living;
+        if (damager instanceof Projectile projectile
+                && projectile.getShooter() instanceof LivingEntity living) {
+            return living;
+        }
+        return null;
     }
 
     /**
@@ -430,6 +550,25 @@ public final class MinionManager implements Listener {
 
         MinionType type = typeOf(mob);
         if (type == null) return;
+
+        // Division: se parte en dos crias de la mitad de nivel. Las crias llevan
+        // marca y ya no se dividen, o una sala se llenaria sola hasta reventar.
+        if (type.has(MinionAbility.DIVISION)
+                && !mob.getPersistentDataContainer().has(keyChild, PersistentDataType.BYTE)) {
+            int cria = Math.max(1, levelOf(mob) / 2);
+            for (int i = 0; i < 2; i++) {
+                Location donde = mob.getLocation().add((i == 0 ? -0.6 : 0.6), 0, 0);
+                LivingEntity hijo = spawnAt(type, cria, donde, spawnerId);
+                if (hijo != null) {
+                    hijo.getPersistentDataContainer().set(keyChild, PersistentDataType.BYTE, (byte) 1);
+                    if (mob.getKiller() != null && hijo instanceof Mob m) m.setTarget(mob.getKiller());
+                }
+            }
+            Compat.spawn(mob.getWorld(), Compat.ITEM, mob.getLocation().add(0, 0.6, 0), 20,
+                    0.3, 0.3, 0.3, 0.05, new ItemStack(org.bukkit.Material.SLIME_BALL));
+            Compat.sound(mob.getWorld(), mob.getLocation(), "entity.slime.squish", 0.9f, 1.3f);
+        }
+
         DropTable table = plugin.drops().table(type.dropTableId());
         if (table.entries().isEmpty() && table.experience() <= 0 && table.commands().isEmpty()) return;
 

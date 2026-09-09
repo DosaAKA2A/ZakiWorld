@@ -45,7 +45,7 @@ public final class AnomalyPlugin extends net.ederus.edm.Module {
 
 
     /** La lee el banner de /anomaly info; hay que subirla junto al pom y al plugin.yml. */
-    public static final String VERSION = "1.25.1";
+    public static final String VERSION = "1.26.0";
 
     private static final TextColor BRAND = TextColor.color(0x9BD7E4);
 
@@ -118,6 +118,15 @@ public final class AnomalyPlugin extends net.ederus.edm.Module {
             AnomalyCommand handler = new AnomalyCommand(this);
             command.setExecutor(handler);
             command.setTabCompleter(handler);
+        }
+
+        // Los esbirros tienen mando propio: /anomaly es de los jefes.
+        PluginCommand esb = getCommand("esb");
+        if (esb != null) {
+            net.ederus.edm.anomaly.minions.MinionCommand handler =
+                    new net.ederus.edm.anomaly.minions.MinionCommand(this);
+            esb.setExecutor(handler);
+            esb.setTabCompleter(handler);
         }
 
         sweepLeftovers();

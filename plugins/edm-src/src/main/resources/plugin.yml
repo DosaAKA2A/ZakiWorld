@@ -1,5 +1,5 @@
 name: EDM
-version: '1.25.1'
+version: '1.26.0'
 main: net.ederus.edm.EDMPlugin
 api-version: '1.20'
 author: Iris Studio
@@ -22,9 +22,14 @@ commands:
     description: Menu y ajustes de efectos Rip
     usage: /rip <gui|kill|death|list|info|test|reload>
   anomaly:
-    description: 'Panel de anomalias: iniciar, elegir, botin y ajustes.'
+    description: 'Panel de anomalias (jefes): iniciar, elegir, botin y ajustes.'
     usage: /anomaly <menu|start|here|at|stop|info|abilities|test|hurt|logros|reload>
     aliases: [anomalia, anom]
+    permission: anomaly.gui
+  esb:
+    description: 'Los esbirros de mazmorra, por carpetas: crear, ajustar e invocar.'
+    usage: /esb [lista|<id> [nivel] [x y z]]
+    aliases: [esbirros, esbirro]
     permission: anomaly.gui
   main:
     description: Comando principal del nucleo de Ederus

@@ -196,10 +196,24 @@ reiniciar nada.
 Dos cosas que NO se portaron y conviene saber: el "crash" de cliente (tirarle el
 juego a alguien a proposito es otra cosa) y las bromas de chiste grueso.
 
-## El modulo `anomaly`: los esbirros (1.24.0, retocados en la 1.25.1)
+## El modulo `anomaly`: los esbirros (1.24.0, retocados en la 1.25.1 y la 1.26.0)
 
-Anomaly dejo de ser solo un generador de jefes: ahora el panel tiene **dos puertas**,
-**Jefes** (lo de siempre) y **Esbirros**, que es la tropa que puebla las mazmorras.
+Anomaly dejo de ser solo un generador de jefes. Desde la **1.26.0** son **dos mandos
+distintos**: `/anomaly` (`/anom`, `/anomalia`) es el panel de los JEFES y nada mas, y
+`/esb` (`/esbirros`) el de la tropa que puebla las mazmorras. Mezclarlos en un solo
+panel se hacia largo de recorrer.
+
+**Los esbirros viven en CARPETAS** (categorias): la mazmorra o el proposito al que
+sirven —Mina, Cripta, Test—. `/esb` abre las carpetas, no una lista larga de bichos:
+cada una con su icono (cualquier objeto del juego), su color y su tropa dentro. El
+icono se pone trayendo el objeto en el cursor y clickando la casilla, o con la tecla de
+tirar (Q) escribiendo su nombre (`GOLD_ORE`). Borrar una carpeta **no borra su tropa**:
+la muda a *Sin clasificar*. En la ficha de cada esbirro hay un boton para cambiarlo de
+carpeta. Todo se guarda en `esbirros.yml`, en `categorias:` y en la clave `categoria`
+de cada esbirro.
+
+`/esb lista` saca el catalogo en texto, por carpetas, y `/esb <id> [nivel] [x y z]`
+invoca uno suelto (tambien desde consola, con coordenadas).
 
 **Un tipo de esbirro** se define una vez: criatura base, nombre y color, vida y dano a
 nivel 1, y cuanto crecen por nivel. La vida a nivel N es
@@ -254,6 +268,18 @@ Cambiarlas no toca a los que ya estan vivos. De momento hay tres:
 | `flecha-pesada` | Cada tercera flecha que dispara pega el doble; sale brillando y suena distinto |
 | `agil` | Se mueve un 25% mas rapido (por atributo, no por pocion: sin particulas) |
 | `flecha-helada` | Sus flechas dejan lentitud 3 segundos |
+| `venenoso` | Cada golpe suyo deja veneno 4 segundos |
+| `igneo` | Al que golpea lo deja ardiendo 4 segundos |
+| `acorazado` | Recibe un 35% menos de dano |
+| `espinas` | Devuelve un 25% del dano cuerpo a cuerpo (con `damage()` a secas, para no enredarse en un bucle) |
+| `berserk` | Por debajo del 30% de su vida pega un 50% mas |
+| `curandero` | Cada 3 segundos cura un 4% a los esbirros a 8 bloques; a si mismo no |
+| `alarma` | Al recibir un golpe, la tropa a 12 bloques cambia de objetivo al agresor |
+| `division` | Al morir se parte en dos crias de la mitad de nivel; las crias llevan marca y ya no se dividen |
 
-`/anomaly esbirros` abre el catalogo y `/anomaly esbirro <id> [nivel] [x y z]` invoca uno
-suelto para verlo (tambien desde consola, con coordenadas).
+La **Mina** viene montada de serie en el Test (icono: mena de oro): *Minero Perdido*
+(zombi con alarma), *Vigia de la Veta* (esqueleto con flecha pesada y helada),
+*Barrenador* (arana de cueva agil y venenosa), *Grisu* (blaze igneo y acorazado) y el
+*Capataz de la Mina* (piglin brute acorazado, con espinas, berserk y alarma; el unico
+con el nombre en negrita). La carpeta **Test** lleva la *Lepisma de Pruebas*, un
+silverfish que se divide, corre y da la alarma.
