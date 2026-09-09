@@ -1,5 +1,5 @@
 name: EDM
-version: '1.26.0'
+version: '1.26.1'
 main: net.ederus.edm.EDMPlugin
 api-version: '1.20'
 author: Iris Studio
@@ -28,7 +28,7 @@ commands:
     permission: anomaly.gui
   esb:
     description: 'Los esbirros de mazmorra, por carpetas: crear, ajustar e invocar.'
-    usage: /esb [lista|<id> [nivel] [x y z]]
+    usage: /esb [lista|reload|<id> [nivel] [x y z]]
     aliases: [esbirros, esbirro]
     permission: anomaly.gui
   main:

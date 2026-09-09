@@ -58,10 +58,34 @@ public final class MinionCommand implements CommandExecutor, TabCompleter {
 
         switch (args[0].toLowerCase(Locale.ROOT)) {
             case "lista", "list" -> list(sender);
+            case "reload", "recargar" -> reload(sender);
             case "ayuda", "help", "?" -> help(sender, label);
             default -> spawn(sender, args);
         }
         return true;
+    }
+
+    /**
+     * Relee esbirros.yml sin reiniciar el servidor: es lo que hace falta cuando el
+     * fichero se toca a mano. La tropa viva se barre primero, porque un esbirro que
+     * quedara apuntando a un tipo renombrado se quedaria sin cartel ni nivel; sus
+     * generadores la reponen en cuanto vuelva a pasar alguien.
+     */
+    private void reload(CommandSender sender) {
+        int barridos = plugin.minionManager().sweep();
+        plugin.minions().load();
+        int carpetas = plugin.minions().categories().size();
+        int tipos = plugin.minions().types().size();
+        int generadores = plugin.minions().spawners().size();
+        sender.sendMessage(plugin.prefix()
+                .append(Component.text("Esbirros recargados  ", NamedTextColor.GREEN))
+                .append(Component.text(carpetas + " carpeta(s)  ·  " + tipos + " tipo(s)  ·  "
+                        + generadores + " generador(es)", SOFT)));
+        if (barridos > 0) {
+            sender.sendMessage(plugin.prefix().append(Component.text(
+                    "Se retiraron " + barridos + " esbirro(s) que estaban en el mapa; sus "
+                            + "generadores los reponen solos.", SOFT)));
+        }
     }
 
     /** El catalogo en texto, por carpetas: para verlo desde consola. */
@@ -146,6 +170,7 @@ public final class MinionCommand implements CommandExecutor, TabCompleter {
         sender.sendMessage(plugin.prefix().append(Component.text("Los esbirros de mazmorra", GOLD)));
         line(sender, "/" + label, "las carpetas de esbirros");
         line(sender, "/" + label + " lista", "el catalogo en texto, por carpetas");
+        line(sender, "/" + label + " reload", "relee esbirros.yml sin reiniciar");
         line(sender, "/" + label + " <id> [nivel] [x y z]", "invoca uno suelto, para verlo");
     }
 
@@ -159,7 +184,7 @@ public final class MinionCommand implements CommandExecutor, TabCompleter {
         if (!plugin.mayUseGui(sender)) return out;
         if (args.length == 1) {
             String prefix = args[0].toLowerCase(Locale.ROOT);
-            for (String s : List.of("menu", "lista", "ayuda")) {
+            for (String s : List.of("menu", "lista", "reload", "ayuda")) {
                 if (s.startsWith(prefix)) out.add(s);
             }
             for (MinionType t : plugin.minions().types()) {

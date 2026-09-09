@@ -212,8 +212,11 @@ la muda a *Sin clasificar*. En la ficha de cada esbirro hay un boton para cambia
 carpeta. Todo se guarda en `esbirros.yml`, en `categorias:` y en la clave `categoria`
 de cada esbirro.
 
-`/esb lista` saca el catalogo en texto, por carpetas, y `/esb <id> [nivel] [x y z]`
-invoca uno suelto (tambien desde consola, con coordenadas).
+`/esb lista` saca el catalogo en texto, por carpetas; `/esb <id> [nivel] [x y z]` invoca
+uno suelto (tambien desde consola, con coordenadas), y `/esb reload` **relee
+esbirros.yml sin reiniciar** el servidor, que es lo que hace falta cuando el fichero se
+toca a mano: barre la tropa viva —un esbirro apuntando a un tipo renombrado se quedaria
+sin cartel ni nivel— y sus generadores la reponen en cuanto vuelva a pasar alguien.
 
 **Un tipo de esbirro** se define una vez: criatura base, nombre y color, vida y dano a
 nivel 1, y cuanto crecen por nivel. La vida a nivel N es
@@ -278,8 +281,9 @@ Cambiarlas no toca a los que ya estan vivos. De momento hay tres:
 | `division` | Al morir se parte en dos crias de la mitad de nivel; las crias llevan marca y ya no se dividen |
 
 La **Mina** viene montada de serie en el Test (icono: mena de oro): *Minero Perdido*
-(zombi con alarma), *Vigia de la Veta* (esqueleto con flecha pesada y helada),
-*Barrenador* (arana de cueva agil y venenosa), *Grisu* (blaze igneo y acorazado) y el
-*Capataz de la Mina* (piglin brute acorazado, con espinas, berserk y alarma; el unico
-con el nombre en negrita). La carpeta **Test** lleva la *Lepisma de Pruebas*, un
-silverfish que se divide, corre y da la alarma.
+(zombi con alarma), *Centinela* (esqueleto con flecha pesada y helada), *Barrenador*
+(arana de cueva agil y venenosa), *Grisu* (blaze igneo y acorazado) y el *Capataz*
+(piglin brute acorazado, con espinas, berserk y alarma; el unico con el nombre en
+negrita). La carpeta **Test** lleva la *Lepisma*, un silverfish que se divide, corre y
+da la alarma. Los nombres van a **dos palabras como mucho**: en el menu y en el
+holograma, uno largo no cabe.
