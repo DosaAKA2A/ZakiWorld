@@ -24,7 +24,7 @@ Dos cosas que el modulo NO delega, y son deliberadas:
 | id | Que es | Comandos |
 |----|--------|----------|
 | `rip` | Efectos de kill y muerte | `/rip` |
-| `anomaly` | Jefes por fases y botin | `/anomaly` (`/anomalia`, `/anom`) |
+| `anomaly` | Mazmorras: jefes por fases y esbirros con nivel | `/anomaly` (`/anomalia`, `/anom`) |
 | `core` | Libros encantados y avisos de tiendas | `/main` (`/ederus`, `/edmain`), `/ederuslibro` |
 | `tienda` | Tienda propia: compra, venta, topes y registro | `/etienda` (`/etnd`) |
 | `coinflip` | Apuestas cara o cruz entre jugadores | `/cf` (`/coinflip`, `/apuesta`) |
@@ -195,3 +195,42 @@ reiniciar nada.
 
 Dos cosas que NO se portaron y conviene saber: el "crash" de cliente (tirarle el
 juego a alguien a proposito es otra cosa) y las bromas de chiste grueso.
+
+## El modulo `anomaly`: los esbirros (1.24.0)
+
+Anomaly dejo de ser solo un generador de jefes: ahora el panel tiene **dos puertas**,
+**Jefes** (lo de siempre) y **Esbirros**, que es la tropa que puebla las mazmorras.
+
+**Un tipo de esbirro** se define una vez: criatura base, nombre y color, vida y dano a
+nivel 1, y cuanto crecen por nivel. La vida a nivel N es
+`vida-base * (1 + vida-por-nivel * (N - 1))`, y el dano es un **multiplicador** sobre el
+golpe de fabrica del bicho, asi que tambien escala la flecha de un esqueleto o la
+explosion de un creeper, que no pasan por el atributo de ataque.
+
+**La vela** es la herramienta de sembrar, al estilo del hacha del FAWE. En la ficha del
+esbirro se ajustan nivel, intervalo, tope y radio, y el boton *Dame la vela* entrega una
+vela con **esa** configuracion grabada en su NBT; su lore dice de que esbirro es y de que
+nivel. Click derecho en un bloque planta un generador ahi y la vela sigue en la mano: se
+siembra una mazmorra entera sin volver al menu. Sacar dos velas con niveles distintos es
+como se consigue que el mismo esbirro salga 5-10 en la entrada y 20-30 en el fondo.
+
+**Cada generador** guarda su propio rango de nivel, su ritmo, su tope de vivos y su radio
+de activacion, y solo trabaja si su chunk esta cargado y hay alguien dentro del radio:
+una mazmorra vacia no acumula bichos. La lista de generadores de un esbirro ensena mundo,
+coordenadas y **region de WorldGuard**, y desde ahi se viaja al punto, se retoca el nivel,
+se pausa o se quita.
+
+**El holograma** (nombre, nivel y vida) va **suelto**, no montado: un mob con pasajero
+pierde media IA de combate, lo mismo que le pasaba a Herbola con el loro en la cabeza. Se
+le teleporta sobre la cabeza tick a tick con un tick de interpolacion.
+
+**El botin** reusa las tablas de Anomaly (`drops.yml`, seccion `esbirro-<id>`) con el
+mismo editor de menu. Si la tabla tiene algo, **sustituye** a los drops de fabrica del
+bicho; si esta vacia, cae lo vanilla de siempre.
+
+Los esbirros **no se guardan en disco** (`setPersistent(false)`): al descargarse el chunk
+o reiniciar el servidor desaparecen y su generador los repone. Asi nunca queda tropa
+vieja sin holograma ni sin nivel. Todo se guarda en `plugins/EDM/anomaly/esbirros.yml`.
+
+`/anomaly esbirros` abre el catalogo y `/anomaly esbirro <id> [nivel] [x y z]` invoca uno
+suelto para verlo (tambien desde consola, con coordenadas).

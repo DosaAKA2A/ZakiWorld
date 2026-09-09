@@ -1,0 +1,446 @@
+package net.ederus.edm.anomaly.minions;
+
+import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.format.NamedTextColor;
+import net.kyori.adventure.text.format.TextDecoration;
+import net.ederus.edm.anomaly.AnomalyPlugin;
+import net.ederus.edm.anomaly.core.Compat;
+import net.ederus.edm.anomaly.drops.DropEntry;
+import net.ederus.edm.anomaly.drops.DropTable;
+import org.bukkit.Bukkit;
+import org.bukkit.Location;
+import org.bukkit.NamespacedKey;
+import org.bukkit.World;
+import org.bukkit.entity.Display;
+import org.bukkit.entity.Entity;
+import org.bukkit.entity.LivingEntity;
+import org.bukkit.entity.Mob;
+import org.bukkit.entity.Player;
+import org.bukkit.entity.Projectile;
+import org.bukkit.entity.TextDisplay;
+import org.bukkit.event.EventHandler;
+import org.bukkit.event.Listener;
+import org.bukkit.event.entity.EntityDamageByEntityEvent;
+import org.bukkit.event.entity.EntityDeathEvent;
+import org.bukkit.inventory.ItemStack;
+import org.bukkit.persistence.PersistentDataType;
+import org.bukkit.projectiles.ProjectileSource;
+import org.bukkit.scheduler.BukkitTask;
+
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
+import java.util.Random;
+import java.util.Set;
+import java.util.UUID;
+
+/**
+ * El motor de los esbirros: recorre los generadores una vez por segundo y va
+ * reponiendo tropa donde toque. Un generador solo trabaja si su chunk esta
+ * cargado, hay un jugador dentro de su radio de activacion y no ha llegado ya a
+ * su tope de vivos: una mazmorra vacia no acumula bichos.
+ *
+ * Cada esbirro lleva su holograma encima (nombre, nivel y vida). El holograma NO
+ * va montado como pasajero: un mob con pasajero pierde media IA de combate (lo
+ * mismo que le pasaba a Herbola con el loro en la cabeza), y para tropa de
+ * mazmorra la IA es justo lo que hace falta. Va suelto y se le teleporta tick a
+ * tick sobre la cabeza, con interpolacion de un tick para que no de tirones.
+ *
+ * Los esbirros NO se guardan en disco (setPersistent false): si el chunk se
+ * descarga o el servidor se reinicia, desaparecen y el generador los repone; asi
+ * nunca quedan huerfanos sin holograma ni sin nivel.
+ */
+public final class MinionManager implements Listener {
+
+    private final AnomalyPlugin plugin;
+    private final Random random = new Random();
+
+    /* Marcas en la entidad, para reconocer a los nuestros tras cualquier cosa. */
+    private final NamespacedKey keyType;
+    private final NamespacedKey keySpawner;
+    private final NamespacedKey keyLevel;
+    private final NamespacedKey keyHolo;
+
+    /** Quien esta vivo de cada generador. Se purga en el ticker. */
+    private final Map<String, Set<UUID>> alive = new HashMap<>();
+
+    /** Un esbirro vivo y el cartel que le sigue. La lista es corta por definicion. */
+    private static final class Escolta {
+        final LivingEntity mob;
+        final TextDisplay holo;
+        int lastHealth = -1;
+
+        Escolta(LivingEntity mob, TextDisplay holo) {
+            this.mob = mob;
+            this.holo = holo;
+        }
+    }
+
+    private final List<Escolta> escoltas = new ArrayList<>();
+
+    private BukkitTask ticker;
+    private BukkitTask holoTicker;
+
+    public MinionManager(AnomalyPlugin plugin) {
+        this.plugin = plugin;
+        this.keyType = new NamespacedKey(plugin, "esbirro_tipo");
+        this.keySpawner = new NamespacedKey(plugin, "esbirro_generador");
+        this.keyLevel = new NamespacedKey(plugin, "esbirro_nivel");
+        this.keyHolo = new NamespacedKey(plugin, "esbirro_holo");
+    }
+
+    // ---------------------------------------------------------------------- ciclo
+
+    public void start() {
+        stop();
+        ticker = plugin.getServer().getScheduler().runTaskTimer(
+                net.ederus.edm.Module.dueno(plugin), this::tick, 40L, 20L);
+        // Los carteles van a parte y cada tick, que es lo que los hace ir pegados
+        // a la cabeza sin montarse encima del bicho.
+        holoTicker = plugin.getServer().getScheduler().runTaskTimer(
+                net.ederus.edm.Module.dueno(plugin), this::tickHolos, 40L, 1L);
+    }
+
+    public void stop() {
+        if (ticker != null) {
+            ticker.cancel();
+            ticker = null;
+        }
+        if (holoTicker != null) {
+            holoTicker.cancel();
+            holoTicker = null;
+        }
+    }
+
+    /**
+     * Los carteles siguen a su esbirro. Si el bicho murio o se esfumo (chunk
+     * descargado, /kill), el cartel se va con el: nunca queda un nombre flotando.
+     */
+    private void tickHolos() {
+        for (Iterator<Escolta> it = escoltas.iterator(); it.hasNext(); ) {
+            Escolta e = it.next();
+            if (!e.mob.isValid() || e.mob.isDead()) {
+                e.holo.remove();
+                it.remove();
+                continue;
+            }
+            if (!e.holo.isValid()) {
+                it.remove();
+                continue;
+            }
+            e.holo.teleport(e.mob.getLocation().add(0, e.mob.getHeight() + 0.45, 0));
+            int hp = (int) Math.ceil(e.mob.getHealth());
+            if (hp != e.lastHealth) {
+                e.lastHealth = hp;
+                updateHolo(e.holo, e.mob);
+            }
+        }
+    }
+
+    /** Apagado o recarga: fuera todos los esbirros vivos y sus hologramas. */
+    public void removeAll() {
+        for (World w : plugin.getServer().getWorlds()) {
+            for (Entity e : w.getEntities()) {
+                if (isMinion(e) || isHolo(e)) e.remove();
+            }
+        }
+        alive.clear();
+        escoltas.clear();
+    }
+
+    /**
+     * Barrido de arranque: igual que el de los jefes, pero con las marcas de los
+     * esbirros. Un reinicio en caliente no debe dejar tropa vieja sin holograma.
+     */
+    public int sweep() {
+        int removed = 0;
+        for (World w : plugin.getServer().getWorlds()) {
+            for (Entity e : w.getEntities()) {
+                if (isMinion(e) || isHolo(e)) {
+                    e.remove();
+                    removed++;
+                }
+            }
+        }
+        return removed;
+    }
+
+    private void tick() {
+        long now = System.currentTimeMillis();
+        for (MinionSpawner s : plugin.minions().spawners()) {
+            Set<UUID> mine = alive.computeIfAbsent(s.id(), k -> new HashSet<>());
+
+            // Purga: muertos, despawneados o en chunks descargados ya no cuentan.
+            for (Iterator<UUID> it = mine.iterator(); it.hasNext(); ) {
+                Entity e = Bukkit.getEntity(it.next());
+                if (e == null || e.isDead()) it.remove();
+            }
+
+            if (!s.enabled()) continue;
+            MinionType type = plugin.minions().type(s.typeId());
+            if (type == null) continue;
+            if (mine.size() >= s.maxAlive()) continue;
+            if (now < s.nextSpawnAt()) continue;
+
+            Location spot = s.spot();
+            if (spot == null || spot.getWorld() == null) continue;
+            if (!spot.getWorld().isChunkLoaded(spot.getBlockX() >> 4, spot.getBlockZ() >> 4)) continue;
+
+            // Sin publico no hay funcion: el generador espera a que alguien entre.
+            boolean someoneNear = false;
+            for (Player p : spot.getWorld().getPlayers()) {
+                if (p.getGameMode() == org.bukkit.GameMode.SPECTATOR) continue;
+                if (p.getLocation().distanceSquared(spot) <= (double) s.activationRadius() * s.activationRadius()) {
+                    someoneNear = true;
+                    break;
+                }
+            }
+            if (!someoneNear) continue;
+
+            spawn(type, s, spot);
+            s.nextSpawnAt(now + s.intervalSeconds() * 1000L);
+        }
+
+        // Red de seguridad: un cartel que se quedo sin escolta (por ejemplo, si el
+        // chunk se recargo con el display dentro) no puede quedarse flotando.
+        Set<UUID> escoltados = new HashSet<>();
+        for (Escolta e : escoltas) escoltados.add(e.holo.getUniqueId());
+        for (World w : plugin.getServer().getWorlds()) {
+            for (TextDisplay d : w.getEntitiesByClass(TextDisplay.class)) {
+                if (isHolo(d) && !escoltados.contains(d.getUniqueId())) d.remove();
+            }
+        }
+    }
+
+    // ---------------------------------------------------------------------- spawn
+
+    private void spawn(MinionType type, MinionSpawner spawner, Location spot) {
+        int level = spawner.minLevel() + (spawner.maxLevel() > spawner.minLevel()
+                ? random.nextInt(spawner.maxLevel() - spawner.minLevel() + 1) : 0);
+        spawnAt(type, level, spot, spawner.id());
+    }
+
+    /**
+     * Genera uno al momento, sin esperar el reloj. Respeta el tope de vivos.
+     * Lo usa el boton "Generar ahora" de la ficha del generador.
+     */
+    public boolean forceSpawn(MinionSpawner spawner) {
+        MinionType type = plugin.minions().type(spawner.typeId());
+        Location spot = spawner.spot();
+        if (type == null || spot == null || spot.getWorld() == null) return false;
+        if (!spot.getWorld().isChunkLoaded(spot.getBlockX() >> 4, spot.getBlockZ() >> 4)) return false;
+        if (aliveOf(spawner.id()) >= spawner.maxAlive()) return false;
+        spawn(type, spawner, spot);
+        return true;
+    }
+
+    /**
+     * El spawn de verdad. spawnerId null = invocacion suelta (la prueba del menu):
+     * el bicho es identico pero no cuenta para el tope de ningun generador.
+     */
+    public LivingEntity spawnAt(MinionType type, int level, Location spot, String spawnerId) {
+        World w = spot.getWorld();
+        if (w == null) return null;
+
+        Entity raw = w.spawnEntity(spot, type.entity());
+        if (!(raw instanceof LivingEntity mob)) {
+            raw.remove();
+            return null;
+        }
+
+        mob.getPersistentDataContainer().set(keyType, PersistentDataType.STRING, type.id());
+        if (spawnerId != null) {
+            mob.getPersistentDataContainer().set(keySpawner, PersistentDataType.STRING, spawnerId);
+        }
+        mob.getPersistentDataContainer().set(keyLevel, PersistentDataType.INTEGER, level);
+        mob.setPersistent(false);
+        mob.setRemoveWhenFarAway(false);
+        if (mob instanceof Mob m) m.setAware(true);
+
+        double health = type.healthAt(level);
+        Compat.setAttribute(mob, "max_health", health);
+        mob.setHealth(Math.min(health, Compat.getAttribute(mob, "max_health", health)));
+
+        // El cartel va SUELTO y se le teleporta encima cada tick (ver tickHolos):
+        // montarlo como pasajero le comeria la IA al bicho.
+        TextDisplay holo = w.spawn(mob.getLocation().add(0, mob.getHeight() + 0.45, 0), TextDisplay.class, d -> {
+            d.setBillboard(Display.Billboard.CENTER);
+            d.setViewRange(0.6f);
+            d.setSeeThrough(false);
+            d.setPersistent(false);
+            d.setDefaultBackground(false);
+            d.setBackgroundColor(org.bukkit.Color.fromARGB(90, 0, 0, 0));
+            d.setBrightness(new Display.Brightness(15, 15));
+            // Un tick de interpolacion: el cartel sigue al bicho sin dar tirones.
+            d.setTeleportDuration(1);
+            d.getPersistentDataContainer().set(keyHolo, PersistentDataType.STRING, type.id());
+        });
+        updateHolo(holo, mob);
+        escoltas.add(new Escolta(mob, holo));
+
+        if (spawnerId != null) {
+            alive.computeIfAbsent(spawnerId, k -> new HashSet<>()).add(mob.getUniqueId());
+        }
+
+        Compat.spawn(w, Compat.POOF, spot.clone().add(0, 0.4, 0), 8, 0.25, 0.3, 0.25, 0.01);
+        Compat.sound(w, spot, "block.respawn_anchor.deplete", 0.4f, 1.6f);
+        return mob;
+    }
+
+    // ------------------------------------------------------------------ holograma
+
+    /** Nombre en su color, el nivel en dorado y la vida en su segunda linea. */
+    private void updateHolo(TextDisplay holo, LivingEntity mob) {
+        MinionType type = typeOf(mob);
+        if (type == null) return;
+        int level = levelOf(mob);
+        int hp = (int) Math.ceil(mob.getHealth());
+        int max = (int) Math.ceil(Compat.getAttribute(mob, "max_health", hp));
+        holo.text(Component.text(type.display(), type.color(), TextDecoration.BOLD)
+                .append(Component.text("  Nv. " + level, NamedTextColor.GOLD))
+                .append(Component.newline())
+                .append(Component.text("❤ ", NamedTextColor.RED))
+                .append(Component.text(hp + " / " + max, NamedTextColor.WHITE)));
+    }
+
+    // -------------------------------------------------------------------- eventos
+
+    /** El dano del esbirro escala con su nivel, venga de donde venga el golpe. */
+    @EventHandler(ignoreCancelled = true)
+    public void onDeal(EntityDamageByEntityEvent e) {
+        LivingEntity minion = minionBehind(e.getDamager());
+        if (minion == null) return;
+        MinionType type = typeOf(minion);
+        if (type == null) return;
+        e.setDamage(e.getDamage() * type.damageAt(levelOf(minion)));
+    }
+
+    /**
+     * La muerte: fuera holograma, y si su tabla de botin tiene algo, el botin de la
+     * tabla SUSTITUYE a los drops de fabrica (si esta vacia, cae lo vanilla normal).
+     */
+    @EventHandler
+    public void onDeath(EntityDeathEvent e) {
+        LivingEntity mob = e.getEntity();
+        if (!isMinion(mob)) return;
+        for (Iterator<Escolta> it = escoltas.iterator(); it.hasNext(); ) {
+            Escolta esc = it.next();
+            if (esc.mob.getUniqueId().equals(mob.getUniqueId())) {
+                esc.holo.remove();
+                it.remove();
+            }
+        }
+        String spawnerId = mob.getPersistentDataContainer().get(keySpawner, PersistentDataType.STRING);
+        if (spawnerId != null) {
+            Set<UUID> mine = alive.get(spawnerId);
+            if (mine != null) mine.remove(mob.getUniqueId());
+        }
+
+        MinionType type = typeOf(mob);
+        if (type == null) return;
+        DropTable table = plugin.drops().table(type.dropTableId());
+        if (table.entries().isEmpty() && table.experience() <= 0 && table.commands().isEmpty()) return;
+
+        if (!table.entries().isEmpty()) {
+            e.getDrops().clear();
+            List<ItemStack> drops = new ArrayList<>();
+            for (DropEntry entry : table.entries()) {
+                if (random.nextDouble() * 100.0 > entry.chance()) continue;
+                int amount = entry.min() + (entry.max() > entry.min()
+                        ? random.nextInt(entry.max() - entry.min() + 1) : 0);
+                while (amount > 0) {
+                    ItemStack copy = entry.item().clone();
+                    int n = Math.min(amount, Math.max(1, copy.getMaxStackSize()));
+                    copy.setAmount(n);
+                    drops.add(copy);
+                    amount -= n;
+                }
+            }
+            e.getDrops().addAll(drops);
+        }
+        if (table.experience() > 0) e.setDroppedExp(table.experience());
+
+        Player killer = mob.getKiller();
+        if (killer != null) {
+            for (String raw : table.commands()) {
+                String cmd = raw.trim();
+                if (cmd.isEmpty()) continue;
+                // Los prefijos [mejor]/[35%] son de los jefes; aqui el "mejor" es el
+                // killer y el dado se respeta igual.
+                boolean pelando = true;
+                double chance = 100.0;
+                while (pelando) {
+                    pelando = false;
+                    if (cmd.toLowerCase(java.util.Locale.ROOT).startsWith("[mejor]")) {
+                        cmd = cmd.substring("[mejor]".length()).trim();
+                        pelando = true;
+                        continue;
+                    }
+                    int cierre = cmd.indexOf("%]");
+                    if (cmd.startsWith("[") && cierre > 1) {
+                        try {
+                            chance = Math.max(0, Math.min(100, Double.parseDouble(cmd.substring(1, cierre))));
+                            cmd = cmd.substring(cierre + 2).trim();
+                            pelando = true;
+                        } catch (NumberFormatException ignored) {
+                        }
+                    }
+                }
+                if (cmd.isEmpty() || random.nextDouble() * 100.0 >= chance) continue;
+                String finalCmd = cmd.replace("%jugador%", killer.getName()).replace("%player%", killer.getName());
+                try {
+                    Bukkit.dispatchCommand(Bukkit.getConsoleSender(), finalCmd);
+                } catch (Throwable t) {
+                    plugin.getLogger().warning("Comando de botin de esbirro fallido: " + finalCmd);
+                }
+            }
+        }
+    }
+
+    // ----------------------------------------------------------------- consultas
+
+    public boolean isMinion(Entity e) {
+        return e != null && e.getPersistentDataContainer().has(keyType, PersistentDataType.STRING);
+    }
+
+    private boolean isHolo(Entity e) {
+        return e != null && e.getPersistentDataContainer().has(keyHolo, PersistentDataType.STRING);
+    }
+
+    public MinionType typeOf(Entity e) {
+        if (e == null) return null;
+        String id = e.getPersistentDataContainer().get(keyType, PersistentDataType.STRING);
+        return plugin.minions().type(id);
+    }
+
+    public int levelOf(Entity e) {
+        if (e == null) return 1;
+        Integer level = e.getPersistentDataContainer().get(keyLevel, PersistentDataType.INTEGER);
+        return level == null ? 1 : level;
+    }
+
+    /** Cuantos vivos tiene ese generador ahora mismo, ya purgado de fantasmas. */
+    public int aliveOf(String spawnerId) {
+        Set<UUID> mine = alive.get(spawnerId);
+        if (mine == null) return 0;
+        int n = 0;
+        for (UUID id : mine) {
+            Entity e = Bukkit.getEntity(id);
+            if (e != null && !e.isDead()) n++;
+        }
+        return n;
+    }
+
+    /** El esbirro detras de un golpe: el propio bicho o el que disparo el proyectil. */
+    private LivingEntity minionBehind(Entity damager) {
+        if (damager instanceof LivingEntity living && isMinion(living)) return living;
+        if (damager instanceof Projectile projectile) {
+            ProjectileSource shooter = projectile.getShooter();
+            if (shooter instanceof LivingEntity living && isMinion(living)) return living;
+        }
+        return null;
+    }
+}

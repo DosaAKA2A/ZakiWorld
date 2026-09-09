@@ -45,7 +45,7 @@ public final class AnomalyPlugin extends net.ederus.edm.Module {
 
 
     /** La lee el banner de /anomaly info; hay que subirla junto al pom y al plugin.yml. */
-    public static final String VERSION = "1.15.0";
+    public static final String VERSION = "1.24.0";
 
     private static final TextColor BRAND = TextColor.color(0x9BD7E4);
 
@@ -60,6 +60,9 @@ public final class AnomalyPlugin extends net.ederus.edm.Module {
     private net.ederus.edm.anomaly.menu.SpawnMarker spawnMarker;
     private Anchors anchors;
     private Advancements advancements;
+    private net.ederus.edm.anomaly.minions.MinionRegistry minions;
+    private net.ederus.edm.anomaly.minions.MinionManager minionManager;
+    private net.ederus.edm.anomaly.minions.MinionWand minionWand;
 
     @Override
     public void onEnable() {
@@ -79,6 +82,10 @@ public final class AnomalyPlugin extends net.ederus.edm.Module {
         this.menus = new Menus(this);
         this.spawnMarker = new net.ederus.edm.anomaly.menu.SpawnMarker(this);
         this.advancements = new Advancements(this);
+        this.minions = new net.ederus.edm.anomaly.minions.MinionRegistry(this);
+        this.minions.load();
+        this.minionManager = new net.ederus.edm.anomaly.minions.MinionManager(this);
+        this.minionWand = new net.ederus.edm.anomaly.minions.MinionWand(this);
 
         /* Si el servidor se cayo en mitad de una anomalia, los UUID del jefe y
          * sus esbirros siguen en los equipos de brillo del marcador principal,
@@ -95,6 +102,16 @@ public final class AnomalyPlugin extends net.ederus.edm.Module {
         getServer().getPluginManager().registerEvents(spawnMarker, this);
         // El almacen de botin escucha por el aviso de "quien se llevo el UNICO".
         getServer().getPluginManager().registerEvents(drops, this);
+        getServer().getPluginManager().registerEvents(minionManager, this);
+        getServer().getPluginManager().registerEvents(minionWand, this);
+
+        // Los esbirros de un arranque anterior quedaron sin holograma ni contador:
+        // fuera, que sus generadores los reponen solos en cuanto pase alguien.
+        int esbirrosViejos = minionManager.sweep();
+        if (esbirrosViejos > 0) {
+            getLogger().info("Barridos " + esbirrosViejos + " esbirro(s) de un arranque anterior.");
+        }
+        minionManager.start();
 
         PluginCommand command = getCommand("anomaly");
         if (command != null) {
@@ -122,6 +139,10 @@ public final class AnomalyPlugin extends net.ederus.edm.Module {
     public void onDisable() {
         if (manager != null) manager.shutdown();
         if (drops != null) drops.save();
+        if (minionManager != null) {
+            minionManager.stop();
+            minionManager.removeAll();
+        }
         Anim.cancelAll();
     }
 
@@ -214,6 +235,11 @@ public final class AnomalyPlugin extends net.ederus.edm.Module {
         reloadConfig();
         drops.load();
         manager.restartScheduler();
+        // Los esbirros vivos son del catalogo viejo: fuera y que renazcan del nuevo.
+        minionManager.stop();
+        minionManager.removeAll();
+        minions.load();
+        minionManager.start();
     }
 
     // -------------------------------------------------------------------- servicios
@@ -256,6 +282,18 @@ public final class AnomalyPlugin extends net.ederus.edm.Module {
 
     public Anchors anchors() {
         return anchors;
+    }
+
+    public net.ederus.edm.anomaly.minions.MinionRegistry minions() {
+        return minions;
+    }
+
+    public net.ederus.edm.anomaly.minions.MinionManager minionManager() {
+        return minionManager;
+    }
+
+    public net.ederus.edm.anomaly.minions.MinionWand minionWand() {
+        return minionWand;
     }
 
     public Advancements advancements() {

@@ -64,6 +64,15 @@ public final class AnomalyCommand implements CommandExecutor, TabCompleter {
             case "hurt", "danar" -> hurt(sender, args);
             case "logros", "advancements" -> trophies(sender);
             case "botin", "loot" -> lootPreview(sender, args);
+            case "esbirros", "minions" -> {
+                if (!(sender instanceof Player player)) {
+                    sender.sendMessage(plugin.prefix().append(
+                            Component.text("El menu solo se abre desde dentro del juego.", NamedTextColor.RED)));
+                    return true;
+                }
+                plugin.menus().openMinions(player);
+            }
+            case "esbirro", "minion" -> spawnMinion(sender, args);
             case "reload", "recargar" -> reload(sender);
             default -> help(sender);
         }
@@ -362,10 +371,76 @@ public final class AnomalyCommand implements CommandExecutor, TabCompleter {
                 "Recargado: config.yml y drops.yml. La anomalia abierta, si la habia, se cerro.", SOFT)));
     }
 
+    /**
+     * Invoca un esbirro suelto, sin generador: /anomaly esbirro <id> [nivel] [x y z].
+     * Desde el juego cae a los pies del admin; desde la consola hacen falta las
+     * coordenadas. No cuenta para el tope de ningun generador.
+     */
+    private void spawnMinion(CommandSender sender, String[] args) {
+        if (args.length < 2) {
+            sender.sendMessage(plugin.prefix().append(Component.text(
+                    "Usa /anomaly esbirro <id> [nivel] [x y z]", NamedTextColor.RED)));
+            return;
+        }
+        var type = plugin.minions().type(args[1].toLowerCase(Locale.ROOT));
+        if (type == null) {
+            sender.sendMessage(plugin.prefix().append(Component.text(
+                    "No hay ningun esbirro con id " + args[1] + ".", NamedTextColor.RED)));
+            return;
+        }
+        int level = type.wandMinLevel();
+        if (args.length >= 3) {
+            try {
+                level = Math.max(1, Integer.parseInt(args[2]));
+            } catch (NumberFormatException ex) {
+                sender.sendMessage(plugin.prefix().append(Component.text(
+                        "El nivel tiene que ser un numero.", NamedTextColor.RED)));
+                return;
+            }
+        }
+
+        org.bukkit.Location where;
+        if (args.length >= 6) {
+            org.bukkit.World world = sender instanceof Player p ? p.getWorld()
+                    : plugin.getServer().getWorlds().get(0);
+            try {
+                where = new org.bukkit.Location(world, Double.parseDouble(args[3]) + 0.5,
+                        Double.parseDouble(args[4]), Double.parseDouble(args[5]) + 0.5);
+            } catch (NumberFormatException ex) {
+                sender.sendMessage(plugin.prefix().append(Component.text(
+                        "Las coordenadas tienen que ser numeros.", NamedTextColor.RED)));
+                return;
+            }
+        } else if (sender instanceof Player p) {
+            where = p.getLocation();
+        } else {
+            sender.sendMessage(plugin.prefix().append(Component.text(
+                    "Desde la consola hacen falta las coordenadas: /anomaly esbirro <id> <nivel> <x> <y> <z>",
+                    NamedTextColor.RED)));
+            return;
+        }
+
+        var mob = plugin.minionManager().spawnAt(type, level, where, null);
+        if (mob == null) {
+            sender.sendMessage(plugin.prefix().append(Component.text(
+                    "No se pudo invocar ahi.", NamedTextColor.RED)));
+            return;
+        }
+        sender.sendMessage(plugin.prefix()
+                .append(Component.text("Invocado  ", NamedTextColor.GREEN))
+                .append(Component.text(type.display(), type.color(), TextDecoration.BOLD))
+                .append(Component.text("  Nv. " + level + "  con "
+                        + (int) type.healthAt(level) + " de vida y x"
+                        + net.ederus.edm.anomaly.drops.DropTable.trimChance(type.damageAt(level))
+                        + " de dano.", SOFT)));
+    }
+
     private void help(CommandSender sender) {
         sender.sendMessage(Component.empty());
         sender.sendMessage(Component.text("✦ ", GOLD).append(Component.text("ANOMALY", NamedTextColor.WHITE, TextDecoration.BOLD)));
         line(sender, "/anomaly", "abre el panel");
+        line(sender, "/anomaly esbirros", "el catalogo de esbirros de mazmorra");
+        line(sender, "/anomaly esbirro <id> [nivel] [x y z]", "invoca uno suelto, para verlo");
         line(sender, "/anomaly start [id]", "busca sitio y abre la anomalia");
         line(sender, "/anomaly here [id]", "la abre donde estas, sin comprobaciones");
         line(sender, "/anomaly at <x> <y> <z> [id]", "la abre en esas coordenadas");
@@ -412,7 +487,7 @@ public final class AnomalyCommand implements CommandExecutor, TabCompleter {
         List<String> out = new ArrayList<>();
         if (!plugin.mayUseGui(sender)) return out;
         if (args.length == 1) {
-            for (String s : List.of("menu", "start", "here", "at", "stop", "info", "abilities", "test", "hurt", "botin", "logros", "reload")) {
+            for (String s : List.of("menu", "esbirros", "esbirro", "start", "here", "at", "stop", "info", "abilities", "test", "hurt", "botin", "logros", "reload")) {
                 if (s.startsWith(args[0].toLowerCase(Locale.ROOT))) out.add(s);
             }
             return out;

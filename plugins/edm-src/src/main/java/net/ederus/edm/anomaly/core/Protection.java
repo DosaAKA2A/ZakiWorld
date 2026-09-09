@@ -94,6 +94,27 @@ public final class Protection {
     }
 
     /**
+     * Los nombres de las regiones de WorldGuard que cubren ese punto. Vacio si no hay
+     * ninguna o si WorldGuard no esta enganchado. Lo usa la lista de generadores de
+     * esbirros para decir en que sala de la mazmorra esta cada uno.
+     */
+    public java.util.List<String> regionNames(Location loc) {
+        java.util.List<String> names = new java.util.ArrayList<>();
+        if (!worldGuardReady || loc == null) return names;
+        try {
+            Object weLoc = adaptLocation.invoke(null, loc);
+            Object set = getApplicableRegions.invoke(regionQuery, weLoc);
+            // ApplicableRegionSet es Iterable<ProtectedRegion>; getId() es el nombre.
+            for (Object region : (Iterable<?>) set) {
+                Object id = region.getClass().getMethod("getId").invoke(region);
+                if (id != null) names.add(id.toString());
+            }
+        } catch (Throwable ignored) {
+        }
+        return names;
+    }
+
+    /**
      * Comprueba el punto y un anillo a su alrededor, para que el jefe no aparezca
      * pegado al borde de un claim y acabe peleando dentro de el.
      */

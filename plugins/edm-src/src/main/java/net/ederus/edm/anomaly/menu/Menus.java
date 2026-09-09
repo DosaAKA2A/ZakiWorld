@@ -12,6 +12,8 @@ import net.ederus.edm.anomaly.core.Compat;
 import net.ederus.edm.anomaly.core.Fx;
 import net.ederus.edm.anomaly.drops.DropEntry;
 import net.ederus.edm.anomaly.drops.DropTable;
+import net.ederus.edm.anomaly.minions.MinionSpawner;
+import net.ederus.edm.anomaly.minions.MinionType;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.Material;
@@ -56,7 +58,7 @@ public final class Menus implements Listener {
     private static final int SLOT_BACK = 45;
     private static final int SLOT_HELP = 53;
 
-    private enum Screen {HUB, ANOMALIES, ABILITIES, DROPS, SETTINGS}
+    private enum Screen {HUB, ANOMALIES, ABILITIES, DROPS, SETTINGS, MINIONS, MINION_EDIT, SPAWNERS, SPAWNER_EDIT}
 
     private final AnomalyPlugin plugin;
 
@@ -71,6 +73,12 @@ public final class Menus implements Listener {
         // forma natural de decir "mejor no".
         plugin.spawnMarker().cancel(player);
         open(player, Screen.HUB, 0, plugin.selectedId(), false);
+    }
+
+    /** La puerta directa de /anomaly esbirros: el catalogo sin pasar por el panel. */
+    public void openMinions(Player player) {
+        plugin.spawnMarker().cancel(player);
+        open(player, Screen.MINIONS, 0, "", false);
     }
 
     private void open(Player player, Screen screen, int page, String context, boolean placeMode) {
@@ -92,13 +100,28 @@ public final class Menus implements Listener {
             case ABILITIES -> "  Habilidades";
             case DROPS -> placeMode ? "  Botin · colocar" : "  Botin · ajustar";
             case SETTINGS -> "  Ajustes";
+            case MINIONS -> "  Esbirros";
+            case MINION_EDIT -> "  Esbirro";
+            case SPAWNERS -> "  Generadores";
+            case SPAWNER_EDIT -> "  Generador";
         };
         return base.append(Component.text(tail, accent));
     }
 
     private TextColor accentOf(String context) {
         AnomalyType type = plugin.registry().get(context);
-        return type == null ? MenuUtil.GOLD : type.color();
+        if (type != null) return type.color();
+        MinionType minion = minionOf(context);
+        return minion == null ? MenuUtil.GOLD : minion.color();
+    }
+
+    /** El esbirro detras de un contexto, venga como id o como id de tabla de botin. */
+    private MinionType minionOf(String context) {
+        if (context == null) return null;
+        MinionType direct = plugin.minions().type(context);
+        if (direct != null) return direct;
+        if (context.startsWith("esbirro-")) return plugin.minions().type(context.substring("esbirro-".length()));
+        return null;
     }
 
     // -------------------------------------------------------------------- dibujado
@@ -115,11 +138,22 @@ public final class Menus implements Listener {
             case ABILITIES -> renderAbilities(inv, holder);
             case DROPS -> renderDrops(inv, holder);
             case SETTINGS -> renderSettings(inv);
+            case MINIONS -> renderMinions(inv);
+            case MINION_EDIT -> renderMinionEdit(inv, holder);
+            case SPAWNERS -> renderSpawners(inv, holder);
+            case SPAWNER_EDIT -> renderSpawnerEdit(inv, holder);
         }
 
         if (holder.screen != Screen.HUB) {
+            String backLabel = switch (holder.screen) {
+                case MINION_EDIT -> "◀ Volver a los esbirros";
+                case SPAWNERS -> "◀ Volver a la ficha";
+                case SPAWNER_EDIT -> "◀ Volver a los generadores";
+                case DROPS -> minionOf(holder.context) != null ? "◀ Volver a la ficha" : "◀ Volver al panel";
+                default -> "◀ Volver al panel";
+            };
             inv.setItem(SLOT_BACK, MenuUtil.simple(Material.ARROW,
-                    Component.text("◀ Volver al panel", NamedTextColor.YELLOW), List.of()));
+                    Component.text(backLabel, NamedTextColor.YELLOW), List.of()));
         } else {
             inv.setItem(SLOT_BACK, MenuUtil.simple(Material.SPRUCE_DOOR,
                     Component.text("Cerrar", MenuUtil.SOFT), List.of()));
@@ -152,6 +186,22 @@ public final class Menus implements Listener {
         inv.setItem(13, MenuUtil.icon(live == null ? Material.GRAY_DYE : Material.ENDER_PEARL,
                 MenuUtil.title("Ir a la anomalia", live == null ? MenuUtil.DIM : NamedTextColor.LIGHT_PURPLE),
                 tpLore, live != null));
+
+        // La otra mitad del plugin: la tropa de las mazmorras.
+        inv.setItem(11, MenuUtil.icon(Material.SPAWNER,
+                MenuUtil.title("Esbirros", NamedTextColor.LIGHT_PURPLE),
+                List.of(
+                        MenuUtil.line("La tropa de las mazmorras: crea tipos de"),
+                        MenuUtil.line("mob con nivel, plantales generadores con"),
+                        MenuUtil.line("la vela y configura su botin."),
+                        MenuUtil.blank(),
+                        MenuUtil.field("Tipos", String.valueOf(plugin.minions().types().size()),
+                                NamedTextColor.WHITE),
+                        MenuUtil.field("Generadores", String.valueOf(plugin.minions().spawners().size()),
+                                NamedTextColor.WHITE),
+                        MenuUtil.blank(),
+                        MenuUtil.action("Click para abrir el catalogo")),
+                false));
 
         Location fixedSpawn = selected == null ? null : plugin.registry().spawnPoint(selected);
         inv.setItem(20, MenuUtil.icon(active ? Material.GRAY_DYE : Material.NETHER_STAR,
@@ -446,9 +496,11 @@ public final class Menus implements Listener {
     // ---------------------------------------------------------------------- botin
 
     private void renderDrops(Inventory inv, Holder holder) {
-        AnomalyType type = plugin.registry().get(holder.context);
-        if (type == null) return;
-        DropTable table = plugin.drops().table(type.id());
+        // La misma pantalla sirve para el botin de un jefe y el de un esbirro: el
+        // contexto es el id de la tabla. En un esbirro no hay "para quien": el botin
+        // cae al suelo como el de cualquier mob, asi que ese campo no se ensena.
+        boolean minionTable = minionOf(holder.context) != null;
+        DropTable table = plugin.drops().table(holder.context);
 
         for (int i = 0; i < BODY.length; i++) {
             DropEntry entry = table.get(i);
@@ -464,8 +516,10 @@ public final class Menus implements Listener {
             lore.add(MenuUtil.field("Probabilidad", DropTable.trimChance(entry.chance()) + "%",
                     entry.chance() >= 100 ? NamedTextColor.GREEN : MenuUtil.LOOT));
             lore.add(MenuUtil.field("Cantidad", entry.amountLabel(), NamedTextColor.WHITE));
-            lore.add(MenuUtil.field("Para", entry.to().display(), NamedTextColor.AQUA));
-            lore.add(Component.text("   " + entry.to().help(), MenuUtil.DIM));
+            if (!minionTable) {
+                lore.add(MenuUtil.field("Para", entry.to().display(), NamedTextColor.AQUA));
+                lore.add(Component.text("   " + entry.to().help(), MenuUtil.DIM));
+            }
             lore.add(MenuUtil.blank());
             if (holder.placeMode) {
                 lore.add(MenuUtil.action("Click para quitarlo de la tabla"));
@@ -474,7 +528,9 @@ public final class Menus implements Listener {
             } else {
                 lore.add(MenuUtil.action("Click izquierdo: +5% de probabilidad"));
                 lore.add(Component.text("► Click derecho: -5%", NamedTextColor.YELLOW));
-                lore.add(Component.text("► Shift + izquierdo: cambiar a quien le toca", NamedTextColor.GRAY));
+                if (!minionTable) {
+                    lore.add(Component.text("► Shift + izquierdo: cambiar a quien le toca", NamedTextColor.GRAY));
+                }
                 lore.add(Component.text("► Shift + derecho: cambiar la cantidad", NamedTextColor.GRAY));
                 lore.add(Component.text("► Tecla F (o click central): marcarlo como UNICO", NamedTextColor.GRAY));
                 lore.add(Component.text("► Tecla de tirar (Q): quitarlo", NamedTextColor.GRAY));
@@ -615,6 +671,735 @@ public final class Menus implements Listener {
                         Component.text("► Click derecho: bajar 5%", NamedTextColor.YELLOW)), false);
     }
 
+    // ------------------------------------------------------------------- esbirros
+
+    /** El catalogo de esbirros: la otra mitad del panel, con la misma gramatica. */
+    private void renderMinions(Inventory inv) {
+        List<MinionType> all = plugin.minions().types();
+        for (int i = 0; i < BODY.length; i++) {
+            if (i >= all.size()) break;
+            MinionType type = all.get(i);
+            List<MinionSpawner> spawners = plugin.minions().spawnersOf(type.id());
+
+            List<Component> lore = new ArrayList<>();
+            lore.add(Component.text(nombreBonito(type.entity()), MenuUtil.SOFT));
+            lore.add(MenuUtil.blank());
+            lore.add(MenuUtil.field("Vida", (int) type.baseHealth() + " a Nv. 1  ·  +"
+                    + Math.round(type.healthGrowth() * 100) + "% por nivel", NamedTextColor.GREEN));
+            lore.add(MenuUtil.field("Dano", "x" + trim(type.baseDamage()) + "  ·  +"
+                    + Math.round(type.damageGrowth() * 100) + "% por nivel", NamedTextColor.RED));
+            lore.add(MenuUtil.field("Generadores", String.valueOf(spawners.size()), NamedTextColor.WHITE));
+            lore.add(MenuUtil.blank());
+            lore.add(Component.text("SUELTA", MenuUtil.LOOT, TextDecoration.BOLD));
+            lore.add(plugin.drops().table(type.dropTableId()).summaryLine(MenuUtil.LOOT));
+            lore.add(MenuUtil.blank());
+            lore.add(MenuUtil.action("Click para abrir su ficha"));
+            lore.add(MenuUtil.actionSecondary("Click derecho: su botin"));
+            lore.add(Component.text("► Tecla de tirar (Q) dos veces: borrarlo", NamedTextColor.GRAY));
+
+            inv.setItem(BODY[i], MenuUtil.icon(type.icon(),
+                    MenuUtil.title(type.display(), type.color()), lore, false));
+        }
+
+        inv.setItem(49, MenuUtil.icon(Material.WRITABLE_BOOK,
+                MenuUtil.title("Crear esbirro", NamedTextColor.GREEN),
+                List.of(
+                        MenuUtil.line("Un tipo nuevo de tropa. Se cierra el menu"),
+                        MenuUtil.line("y el nombre se escribe en el chat."),
+                        MenuUtil.blank(),
+                        MenuUtil.action("Click para ponerle nombre")),
+                true));
+    }
+
+    /** La ficha de un esbirro: identidad, escalado, la vela y sus puertas. */
+    private void renderMinionEdit(Inventory inv, Holder holder) {
+        MinionType type = plugin.minions().type(holder.context);
+        if (type == null) return;
+
+        inv.setItem(10, MenuUtil.icon(type.icon(),
+                MenuUtil.title("Criatura", MenuUtil.GOLD),
+                List.of(
+                        MenuUtil.field("Ahora", nombreBonito(type.entity()), NamedTextColor.WHITE),
+                        MenuUtil.blank(),
+                        MenuUtil.line("El bicho de base. Su comportamiento es el"),
+                        MenuUtil.line("de fabrica; el plugin le pone vida, dano"),
+                        MenuUtil.line("y holograma segun el nivel."),
+                        MenuUtil.blank(),
+                        MenuUtil.action("Click izquierdo: siguiente"),
+                        Component.text("► Click derecho: anterior", NamedTextColor.YELLOW)), false));
+
+        inv.setItem(11, MenuUtil.icon(Material.BRUSH,
+                MenuUtil.title("Color del nombre", type.color()),
+                List.of(
+                        Component.text("Asi se ve  ", MenuUtil.LABEL)
+                                .append(Component.text(type.display(), type.color(), TextDecoration.BOLD)),
+                        MenuUtil.blank(),
+                        MenuUtil.line("El color del holograma y de los menus."),
+                        MenuUtil.blank(),
+                        MenuUtil.action("Click izquierdo: siguiente color"),
+                        Component.text("► Click derecho: anterior", NamedTextColor.YELLOW)), false));
+
+        inv.setItem(12, MenuUtil.icon(Material.NAME_TAG,
+                MenuUtil.title("Renombrar", MenuUtil.GOLD),
+                List.of(
+                        MenuUtil.field("Ahora", type.display(), type.color()),
+                        MenuUtil.blank(),
+                        MenuUtil.line("Se cierra el menu y el nombre nuevo"),
+                        MenuUtil.line("se escribe en el chat."),
+                        MenuUtil.blank(),
+                        MenuUtil.action("Click para renombrar")), false));
+
+        List<Component> ficha = new ArrayList<>();
+        ficha.add(Component.text(nombreBonito(type.entity()), MenuUtil.SOFT));
+        ficha.add(MenuUtil.blank());
+        ficha.add(Component.text("ASI ESCALA", NamedTextColor.WHITE, TextDecoration.BOLD));
+        for (int nivel : new int[]{1, 5, 10, 20, 30}) {
+            ficha.add(Component.text("Nv. " + nivel + "  ", MenuUtil.LABEL)
+                    .append(Component.text((int) type.healthAt(nivel) + " vida", NamedTextColor.GREEN))
+                    .append(Component.text("  ·  ", MenuUtil.DIM))
+                    .append(Component.text("x" + trim(type.damageAt(nivel)) + " dano", NamedTextColor.RED)));
+        }
+        ficha.add(MenuUtil.blank());
+        ficha.add(MenuUtil.field("Generadores", String.valueOf(plugin.minions().spawnersOf(type.id()).size()),
+                NamedTextColor.WHITE));
+        inv.setItem(13, MenuUtil.icon(type.icon(), MenuUtil.title(type.display(), type.color()), ficha, true));
+
+        inv.setItem(14, MenuUtil.icon(Material.GOLDEN_APPLE,
+                MenuUtil.title("Vida base", MenuUtil.GOLD),
+                List.of(
+                        MenuUtil.field("A nivel 1", (int) type.baseHealth() + " puntos", NamedTextColor.GREEN),
+                        MenuUtil.blank(),
+                        MenuUtil.line("La vida con la que aparece un esbirro"),
+                        MenuUtil.line("de nivel 1; el resto sale del crecimiento."),
+                        MenuUtil.blank(),
+                        MenuUtil.action("Click izquierdo: +5"),
+                        Component.text("► Click derecho: -5", NamedTextColor.YELLOW),
+                        Component.text("► Shift para pasos de 50", NamedTextColor.GRAY)), false));
+
+        inv.setItem(15, MenuUtil.icon(Material.IRON_SWORD,
+                MenuUtil.title("Dano base", MenuUtil.GOLD),
+                List.of(
+                        MenuUtil.field("A nivel 1", "x" + trim(type.baseDamage()) + " del golpe de fabrica",
+                                NamedTextColor.RED),
+                        MenuUtil.blank(),
+                        MenuUtil.line("Multiplica lo que el bicho pegue de serie,"),
+                        MenuUtil.line("valga garra, flecha o explosion."),
+                        MenuUtil.blank(),
+                        MenuUtil.action("Click izquierdo: +0.1"),
+                        Component.text("► Click derecho: -0.1", NamedTextColor.YELLOW),
+                        Component.text("► Shift para pasos de 1.0", NamedTextColor.GRAY)), false));
+
+        inv.setItem(19, MenuUtil.icon(Material.GLOWSTONE_DUST,
+                MenuUtil.title("Crecimiento de vida", MenuUtil.GOLD),
+                List.of(
+                        MenuUtil.field("Por nivel", "+" + Math.round(type.healthGrowth() * 100) + "%",
+                                NamedTextColor.GREEN),
+                        MenuUtil.blank(),
+                        MenuUtil.line("Cuanta vida gana por cada nivel por"),
+                        MenuUtil.line("encima del 1, sobre la vida base."),
+                        MenuUtil.blank(),
+                        MenuUtil.action("Click izquierdo: +5%"),
+                        Component.text("► Click derecho: -5%", NamedTextColor.YELLOW),
+                        Component.text("► Shift para pasos de 25%", NamedTextColor.GRAY)), false));
+
+        inv.setItem(20, MenuUtil.icon(Material.BLAZE_POWDER,
+                MenuUtil.title("Crecimiento de dano", MenuUtil.GOLD),
+                List.of(
+                        MenuUtil.field("Por nivel", "+" + Math.round(type.damageGrowth() * 100) + "%",
+                                NamedTextColor.RED),
+                        MenuUtil.blank(),
+                        MenuUtil.line("Cuanto dano gana por cada nivel por"),
+                        MenuUtil.line("encima del 1, sobre el dano base."),
+                        MenuUtil.blank(),
+                        MenuUtil.action("Click izquierdo: +5%"),
+                        Component.text("► Click derecho: -5%", NamedTextColor.YELLOW),
+                        Component.text("► Shift para pasos de 25%", NamedTextColor.GRAY)), false));
+
+        inv.setItem(21, MenuUtil.icon(Material.OAK_SLAB,
+                MenuUtil.title("Nivel minimo", MenuUtil.GOLD),
+                List.of(
+                        MenuUtil.field("La vela pone", "Nv. " + type.wandMinLevel(), NamedTextColor.GOLD),
+                        MenuUtil.blank(),
+                        MenuUtil.line("El suelo del sorteo de nivel de los"),
+                        MenuUtil.line("generadores que plante la proxima vela."),
+                        MenuUtil.blank(),
+                        MenuUtil.action("Click izquierdo: +1"),
+                        Component.text("► Click derecho: -1", NamedTextColor.YELLOW),
+                        Component.text("► Shift para pasos de 10", NamedTextColor.GRAY)), false));
+
+        inv.setItem(22, MenuUtil.icon(Material.CANDLE,
+                MenuUtil.title("Dame la vela", NamedTextColor.LIGHT_PURPLE),
+                List.of(
+                        MenuUtil.line("La herramienta de sembrar generadores:"),
+                        MenuUtil.line("click derecho en un bloque y ahi queda."),
+                        MenuUtil.line("No se gasta; sirve para toda una mazmorra."),
+                        MenuUtil.blank(),
+                        MenuUtil.field("Esbirro", type.display(), type.color()),
+                        MenuUtil.field("Nivel", type.wandMinLevel() == type.wandMaxLevel()
+                                ? String.valueOf(type.wandMinLevel())
+                                : type.wandMinLevel() + " - " + type.wandMaxLevel(), NamedTextColor.GOLD),
+                        MenuUtil.field("Reaparece", "cada " + type.wandIntervalSeconds() + "s",
+                                NamedTextColor.WHITE),
+                        MenuUtil.field("Tope", type.wandMaxAlive() + " vivos  ·  radio "
+                                + type.wandActivationRadius(), NamedTextColor.WHITE),
+                        MenuUtil.blank(),
+                        MenuUtil.action("Click para recibirla")), true));
+
+        inv.setItem(23, MenuUtil.icon(Material.STONE_SLAB,
+                MenuUtil.title("Nivel maximo", MenuUtil.GOLD),
+                List.of(
+                        MenuUtil.field("La vela pone", "Nv. " + type.wandMaxLevel(), NamedTextColor.GOLD),
+                        MenuUtil.blank(),
+                        MenuUtil.line("El techo del sorteo. Cada generador se"),
+                        MenuUtil.line("puede retocar luego desde su lista."),
+                        MenuUtil.blank(),
+                        MenuUtil.action("Click izquierdo: +1"),
+                        Component.text("► Click derecho: -1", NamedTextColor.YELLOW),
+                        Component.text("► Shift para pasos de 10", NamedTextColor.GRAY)), false));
+
+        inv.setItem(24, MenuUtil.icon(Material.CLOCK,
+                MenuUtil.title("Intervalo", MenuUtil.GOLD),
+                List.of(
+                        MenuUtil.field("La vela pone", "cada " + type.wandIntervalSeconds() + "s",
+                                NamedTextColor.WHITE),
+                        MenuUtil.blank(),
+                        MenuUtil.line("Cada cuanto repone tropa un generador,"),
+                        MenuUtil.line("mientras no llegue a su tope de vivos."),
+                        MenuUtil.blank(),
+                        MenuUtil.action("Click izquierdo: +5s"),
+                        Component.text("► Click derecho: -5s", NamedTextColor.YELLOW),
+                        Component.text("► Shift para pasos de 30s", NamedTextColor.GRAY)), false));
+
+        inv.setItem(25, MenuUtil.icon(Material.ARMOR_STAND,
+                MenuUtil.title("Tope de vivos", MenuUtil.GOLD),
+                List.of(
+                        MenuUtil.field("La vela pone", type.wandMaxAlive() + " a la vez", NamedTextColor.WHITE),
+                        MenuUtil.blank(),
+                        MenuUtil.line("Cuantos puede tener vivos cada generador."),
+                        MenuUtil.line("Al morir uno, el reloj repone el hueco."),
+                        MenuUtil.blank(),
+                        MenuUtil.action("Click izquierdo: +1"),
+                        Component.text("► Click derecho: -1", NamedTextColor.YELLOW)), false));
+
+        inv.setItem(28, MenuUtil.icon(Material.ENDER_EYE,
+                MenuUtil.title("Radio de activacion", MenuUtil.GOLD),
+                List.of(
+                        MenuUtil.field("La vela pone", type.wandActivationRadius() + " bloques",
+                                NamedTextColor.WHITE),
+                        MenuUtil.blank(),
+                        MenuUtil.line("El generador solo trabaja con un jugador"),
+                        MenuUtil.line("dentro de este radio: una mazmorra vacia"),
+                        MenuUtil.line("no acumula bichos."),
+                        MenuUtil.blank(),
+                        MenuUtil.action("Click izquierdo: +4"),
+                        Component.text("► Click derecho: -4", NamedTextColor.YELLOW),
+                        Component.text("► Shift para pasos de 16", NamedTextColor.GRAY)), false));
+
+        List<MinionSpawner> spawners = plugin.minions().spawnersOf(type.id());
+        inv.setItem(30, MenuUtil.icon(Material.LODESTONE,
+                MenuUtil.title("Generadores", MenuUtil.GOLD),
+                List.of(
+                        MenuUtil.line("Todos los puntos donde aparece este"),
+                        MenuUtil.line("esbirro: donde estan, de que nivel salen,"),
+                        MenuUtil.line("viajar alli, retocarlos o quitarlos."),
+                        MenuUtil.blank(),
+                        MenuUtil.field("Plantados", String.valueOf(spawners.size()), NamedTextColor.WHITE),
+                        MenuUtil.blank(),
+                        spawners.isEmpty() ? Component.text("Planta el primero con la vela.", MenuUtil.DIM)
+                                : MenuUtil.action("Click para ver la lista")), false));
+
+        DropTable table = plugin.drops().table(type.dropTableId());
+        inv.setItem(32, MenuUtil.icon(Material.CHEST,
+                MenuUtil.title("Botin", MenuUtil.LOOT),
+                List.of(
+                        MenuUtil.line("Que suelta al morir, este al nivel que"),
+                        MenuUtil.line("este. Si la tabla tiene algo, sustituye"),
+                        MenuUtil.line("al botin de fabrica del bicho."),
+                        MenuUtil.blank(),
+                        MenuUtil.field("Objetos", table.entries().size() + " / " + DropTable.CAPACITY,
+                                NamedTextColor.WHITE),
+                        MenuUtil.blank(),
+                        MenuUtil.action("Click para editar el botin")), false));
+
+        inv.setItem(34, MenuUtil.icon(Material.EGG,
+                MenuUtil.title("Invocar de prueba", NamedTextColor.AQUA),
+                List.of(
+                        MenuUtil.line("Hace aparecer UNO a tu lado, del nivel"),
+                        MenuUtil.line("minimo de la vela, sin generador: para"),
+                        MenuUtil.line("verlo y pegarle sin salir de la sala."),
+                        MenuUtil.blank(),
+                        MenuUtil.action("Click para invocarlo")), false));
+    }
+
+    /** La lista de generadores de un esbirro, paginada como las habilidades. */
+    private void renderSpawners(Inventory inv, Holder holder) {
+        MinionType type = plugin.minions().type(holder.context);
+        if (type == null) return;
+        List<MinionSpawner> spawners = plugin.minions().spawnersOf(type.id());
+        int perPage = BODY.length;
+        int pages = Math.max(1, (spawners.size() + perPage - 1) / perPage);
+        int page = Math.floorMod(holder.page, pages);
+
+        for (int i = 0; i < perPage; i++) {
+            int index = page * perPage + i;
+            if (index >= spawners.size()) break;
+            MinionSpawner s = spawners.get(index);
+            Location spot = s.spot();
+            List<String> regions = spot == null ? List.of() : plugin.protection().regionNames(spot);
+            int vivos = plugin.minionManager().aliveOf(s.id());
+
+            List<Component> lore = new ArrayList<>();
+            lore.add(MenuUtil.field("Mundo", s.worldName(), NamedTextColor.WHITE));
+            lore.add(MenuUtil.field("Donde", s.x() + "  " + (s.y() + 1) + "  " + s.z(), NamedTextColor.WHITE));
+            lore.add(MenuUtil.field("Region", regions.isEmpty() ? "ninguna" : String.join(", ", regions),
+                    regions.isEmpty() ? MenuUtil.DIM : NamedTextColor.AQUA));
+            lore.add(MenuUtil.blank());
+            lore.add(MenuUtil.field("Nivel", s.levelLabel(), NamedTextColor.GOLD));
+            lore.add(MenuUtil.field("Reaparece", "cada " + s.intervalSeconds() + "s", NamedTextColor.WHITE));
+            lore.add(MenuUtil.field("Vivos", vivos + " de " + s.maxAlive(), NamedTextColor.WHITE));
+            lore.add(MenuUtil.field("Estado", s.enabled() ? "activo" : "pausado",
+                    s.enabled() ? NamedTextColor.GREEN : NamedTextColor.RED));
+            lore.add(MenuUtil.blank());
+            lore.add(MenuUtil.action("Click para viajar en frente"));
+            lore.add(MenuUtil.actionSecondary("Click derecho: configurarlo"));
+            lore.add(Component.text("► Tecla de tirar (Q) dos veces: quitarlo", NamedTextColor.GRAY));
+
+            inv.setItem(BODY[i], MenuUtil.icon(s.enabled() ? Material.CANDLE : Material.GRAY_CANDLE,
+                    MenuUtil.title("Generador " + s.id(), type.color()), lore, s.enabled() && vivos > 0));
+        }
+
+        inv.setItem(48, page > 0 ? MenuUtil.simple(Material.ARROW,
+                Component.text("◀ Pagina anterior", NamedTextColor.YELLOW),
+                List.of(Component.text("Pagina " + page + " de " + pages, MenuUtil.SOFT))) : MenuUtil.pane());
+        inv.setItem(49, MenuUtil.icon(type.icon(), MenuUtil.title(type.display(), type.color()),
+                List.of(
+                        MenuUtil.field("Generadores", String.valueOf(spawners.size()), NamedTextColor.WHITE),
+                        MenuUtil.field("Pagina", (page + 1) + " de " + pages, MenuUtil.SOFT),
+                        MenuUtil.blank(),
+                        MenuUtil.line("Cada generador guarda SU rango de nivel:"),
+                        MenuUtil.line("el mismo esbirro puede ser 5-10 aqui"),
+                        MenuUtil.line("y 20-30 en la sala del fondo.")), false));
+        inv.setItem(50, page < pages - 1 ? MenuUtil.simple(Material.SPECTRAL_ARROW,
+                Component.text("Pagina siguiente ▶", NamedTextColor.YELLOW),
+                List.of(Component.text("Pagina " + (page + 2) + " de " + pages, MenuUtil.SOFT))) : MenuUtil.pane());
+    }
+
+    /** La ficha de un generador concreto: su nivel, su ritmo y sus acciones. */
+    private void renderSpawnerEdit(Inventory inv, Holder holder) {
+        MinionSpawner s = plugin.minions().spawner(holder.context);
+        if (s == null) return;
+        MinionType type = plugin.minions().type(s.typeId());
+        if (type == null) return;
+        Location spot = s.spot();
+        List<String> regions = spot == null ? List.of() : plugin.protection().regionNames(spot);
+
+        inv.setItem(13, MenuUtil.icon(Material.CANDLE,
+                MenuUtil.title("Generador " + s.id(), type.color()),
+                List.of(
+                        MenuUtil.field("Esbirro", type.display(), type.color()),
+                        MenuUtil.field("Mundo", s.worldName(), NamedTextColor.WHITE),
+                        MenuUtil.field("Donde", s.x() + "  " + (s.y() + 1) + "  " + s.z(), NamedTextColor.WHITE),
+                        MenuUtil.field("Region", regions.isEmpty() ? "ninguna" : String.join(", ", regions),
+                                regions.isEmpty() ? MenuUtil.DIM : NamedTextColor.AQUA),
+                        MenuUtil.field("Vivos ahora", plugin.minionManager().aliveOf(s.id()) + " de " + s.maxAlive(),
+                                NamedTextColor.WHITE)), true));
+
+        inv.setItem(19, MenuUtil.icon(Material.ENDER_EYE,
+                MenuUtil.title("Radio de activacion", MenuUtil.GOLD),
+                List.of(
+                        MenuUtil.field("Ahora", s.activationRadius() + " bloques", NamedTextColor.WHITE),
+                        MenuUtil.blank(),
+                        MenuUtil.action("Click izquierdo: +4"),
+                        Component.text("► Click derecho: -4", NamedTextColor.YELLOW),
+                        Component.text("► Shift para pasos de 16", NamedTextColor.GRAY)), false));
+
+        inv.setItem(20, MenuUtil.icon(Material.OAK_SLAB,
+                MenuUtil.title("Nivel minimo", MenuUtil.GOLD),
+                List.of(
+                        MenuUtil.field("Ahora", "Nv. " + s.minLevel(), NamedTextColor.GOLD),
+                        MenuUtil.blank(),
+                        MenuUtil.line("Solo de ESTE generador; los demas"),
+                        MenuUtil.line("puntos del esbirro no se tocan."),
+                        MenuUtil.blank(),
+                        MenuUtil.action("Click izquierdo: +1"),
+                        Component.text("► Click derecho: -1", NamedTextColor.YELLOW),
+                        Component.text("► Shift para pasos de 10", NamedTextColor.GRAY)), false));
+
+        inv.setItem(21, MenuUtil.icon(Material.STONE_SLAB,
+                MenuUtil.title("Nivel maximo", MenuUtil.GOLD),
+                List.of(
+                        MenuUtil.field("Ahora", "Nv. " + s.maxLevel(), NamedTextColor.GOLD),
+                        MenuUtil.blank(),
+                        MenuUtil.action("Click izquierdo: +1"),
+                        Component.text("► Click derecho: -1", NamedTextColor.YELLOW),
+                        Component.text("► Shift para pasos de 10", NamedTextColor.GRAY)), false));
+
+        inv.setItem(22, MenuUtil.icon(Material.ENDER_PEARL,
+                MenuUtil.title("Viajar en frente", NamedTextColor.LIGHT_PURPLE),
+                List.of(
+                        MenuUtil.line("Te deja a un par de bloques del punto,"),
+                        MenuUtil.line("mirando hacia el."),
+                        MenuUtil.blank(),
+                        MenuUtil.action("Click para viajar")), false));
+
+        inv.setItem(23, MenuUtil.icon(Material.CLOCK,
+                MenuUtil.title("Intervalo", MenuUtil.GOLD),
+                List.of(
+                        MenuUtil.field("Ahora", "cada " + s.intervalSeconds() + "s", NamedTextColor.WHITE),
+                        MenuUtil.blank(),
+                        MenuUtil.action("Click izquierdo: +5s"),
+                        Component.text("► Click derecho: -5s", NamedTextColor.YELLOW),
+                        Component.text("► Shift para pasos de 30s", NamedTextColor.GRAY)), false));
+
+        inv.setItem(24, MenuUtil.icon(Material.ARMOR_STAND,
+                MenuUtil.title("Tope de vivos", MenuUtil.GOLD),
+                List.of(
+                        MenuUtil.field("Ahora", s.maxAlive() + " a la vez", NamedTextColor.WHITE),
+                        MenuUtil.blank(),
+                        MenuUtil.action("Click izquierdo: +1"),
+                        Component.text("► Click derecho: -1", NamedTextColor.YELLOW)), false));
+
+        inv.setItem(30, MenuUtil.icon(s.enabled() ? Material.LEVER : Material.GRAY_DYE,
+                MenuUtil.title(s.enabled() ? "Activo" : "Pausado",
+                        s.enabled() ? NamedTextColor.GREEN : NamedTextColor.RED),
+                List.of(
+                        MenuUtil.line("Un generador pausado no repone tropa,"),
+                        MenuUtil.line("pero se queda plantado con su config."),
+                        MenuUtil.blank(),
+                        MenuUtil.field("Ahora", "", MenuUtil.SOFT).append(MenuUtil.state(s.enabled())),
+                        MenuUtil.blank(),
+                        MenuUtil.action("Click para cambiar")), s.enabled()));
+
+        inv.setItem(32, MenuUtil.icon(Material.EGG,
+                MenuUtil.title("Generar ahora", NamedTextColor.AQUA),
+                List.of(
+                        MenuUtil.line("Hace aparecer uno al momento, sin"),
+                        MenuUtil.line("esperar el reloj (respeta el tope)."),
+                        MenuUtil.blank(),
+                        MenuUtil.action("Click para generar")), false));
+
+        inv.setItem(34, MenuUtil.icon(Material.BARRIER,
+                MenuUtil.title("Quitar generador", NamedTextColor.RED),
+                List.of(
+                        MenuUtil.line("Lo arranca del suelo para siempre; los"),
+                        MenuUtil.line("que ya esten vivos se quedan hasta morir."),
+                        MenuUtil.blank(),
+                        MenuUtil.action("Click DOS VECES para quitarlo")), false));
+    }
+
+    // Los nombres de EntityType vienen en mayusculas con guion bajo; para el menu
+    // se leen mejor como "Piglin brute" que como PIGLIN_BRUTE.
+    private static String nombreBonito(org.bukkit.entity.EntityType type) {
+        String raw = type.name().toLowerCase(java.util.Locale.ROOT).replace('_', ' ');
+        return Character.toUpperCase(raw.charAt(0)) + raw.substring(1);
+    }
+
+    private static String trim(double v) {
+        return DropTable.trimChance(v);
+    }
+
+    // ------------------------------------------------------- esbirros: los clicks
+
+    /** Confirmaciones de borrado: el primer Q avisa, el segundo (en 5s) ejecuta. */
+    private final java.util.Map<java.util.UUID, String> pendingDelete = new java.util.HashMap<>();
+    private final java.util.Map<java.util.UUID, Long> pendingDeleteAt = new java.util.HashMap<>();
+
+    private boolean confirmDelete(Player player, String what) {
+        long now = System.currentTimeMillis();
+        String prev = pendingDelete.get(player.getUniqueId());
+        Long at = pendingDeleteAt.get(player.getUniqueId());
+        if (what.equals(prev) && at != null && now - at < 5000) {
+            pendingDelete.remove(player.getUniqueId());
+            pendingDeleteAt.remove(player.getUniqueId());
+            return true;
+        }
+        pendingDelete.put(player.getUniqueId(), what);
+        pendingDeleteAt.put(player.getUniqueId(), now);
+        Compat.sound(player.getWorld(), player.getLocation(), "block.note_block.hat", 0.8f, 0.7f);
+        player.sendActionBar(Component.text("Vuelve a pulsar Q para confirmar el borrado.",
+                NamedTextColor.RED));
+        return false;
+    }
+
+    private void clickMinions(Player player, InventoryClickEvent event, Holder holder, int slot) {
+        if (slot == 49) {
+            click(player, 1.4f);
+            beginNaming(player, null);
+            return;
+        }
+        int index = indexOf(BODY, slot);
+        if (index < 0) return;
+        List<MinionType> all = plugin.minions().types();
+        if (index >= all.size()) return;
+        MinionType type = all.get(index);
+
+        if (event.getClick() == ClickType.DROP || event.getClick() == ClickType.CONTROL_DROP) {
+            if (!confirmDelete(player, "tipo:" + type.id())) return;
+            plugin.minions().deleteType(type);
+            click(player, 0.6f);
+            player.sendMessage(plugin.prefix()
+                    .append(Component.text("Esbirro borrado  ", NamedTextColor.RED))
+                    .append(Component.text(type.display(), type.color(), TextDecoration.BOLD))
+                    .append(Component.text("  con sus generadores.", MenuUtil.SOFT)));
+            render(event.getInventory(), player, holder);
+        } else if (event.isRightClick()) {
+            click(player, 1.1f);
+            open(player, Screen.DROPS, 0, type.dropTableId(), true);
+        } else {
+            click(player, 1.2f);
+            open(player, Screen.MINION_EDIT, 0, type.id(), false);
+        }
+    }
+
+    private void clickMinionEdit(Player player, InventoryClickEvent event, Holder holder, int slot) {
+        MinionType type = plugin.minions().type(holder.context);
+        if (type == null) return;
+        boolean up = event.isLeftClick();
+        boolean shift = event.isShiftClick();
+
+        switch (slot) {
+            case 10 -> type.cycleEntity(up);
+            case 11 -> type.cycleColor(up);
+            case 12 -> {
+                click(player, 1.4f);
+                beginNaming(player, type.id());
+                return;
+            }
+            case 14 -> type.baseHealth(type.baseHealth() + (shift ? 50 : 5) * (up ? 1 : -1));
+            case 15 -> type.baseDamage(type.baseDamage() + (shift ? 1.0 : 0.1) * (up ? 1 : -1));
+            case 19 -> type.healthGrowth(type.healthGrowth() + (shift ? 0.25 : 0.05) * (up ? 1 : -1));
+            case 20 -> type.damageGrowth(type.damageGrowth() + (shift ? 0.25 : 0.05) * (up ? 1 : -1));
+            case 21 -> type.wandMinLevel(type.wandMinLevel() + (shift ? 10 : 1) * (up ? 1 : -1));
+            case 22 -> {
+                var leftover = player.getInventory().addItem(plugin.minionWand().create(type));
+                if (!leftover.isEmpty()) {
+                    deny(player, "No tienes hueco en el inventario.");
+                    return;
+                }
+                Compat.sound(player.getWorld(), player.getLocation(), "block.amethyst_block.resonate", 0.8f, 1.3f);
+                player.sendMessage(plugin.prefix()
+                        .append(Component.text("Vela lista: ", NamedTextColor.GREEN))
+                        .append(Component.text("click derecho en un bloque planta un generador de ", MenuUtil.SOFT))
+                        .append(Component.text(type.display(), type.color(), TextDecoration.BOLD))
+                        .append(Component.text("  Nv. " + type.wandMinLevel()
+                                + (type.wandMaxLevel() > type.wandMinLevel() ? " - " + type.wandMaxLevel() : ""),
+                                NamedTextColor.GOLD))
+                        .append(Component.text(".", MenuUtil.SOFT)));
+                return;
+            }
+            case 23 -> type.wandMaxLevel(type.wandMaxLevel() + (shift ? 10 : 1) * (up ? 1 : -1));
+            case 24 -> type.wandIntervalSeconds(type.wandIntervalSeconds() + (shift ? 30 : 5) * (up ? 1 : -1));
+            case 25 -> type.wandMaxAlive(type.wandMaxAlive() + (up ? 1 : -1));
+            case 28 -> type.wandActivationRadius(type.wandActivationRadius() + (shift ? 16 : 4) * (up ? 1 : -1));
+            case 30 -> {
+                if (plugin.minions().spawnersOf(type.id()).isEmpty()) {
+                    deny(player, "Este esbirro aun no tiene generadores: plantale uno con la vela.");
+                    return;
+                }
+                click(player, 1.1f);
+                open(player, Screen.SPAWNERS, 0, type.id(), false);
+                return;
+            }
+            case 32 -> {
+                click(player, 1.1f);
+                open(player, Screen.DROPS, 0, type.dropTableId(), true);
+                return;
+            }
+            case 34 -> {
+                Location at = player.getLocation().add(player.getLocation().getDirection()
+                        .setY(0).normalize().multiply(2.5));
+                plugin.minionManager().spawnAt(type, type.wandMinLevel(), Fx.ground(at, 4), null);
+                click(player, 1.6f);
+                player.sendActionBar(Component.text("Ahi lo tienes: ", MenuUtil.SOFT)
+                        .append(Component.text(type.display() + " Nv. " + type.wandMinLevel(),
+                                type.color(), TextDecoration.BOLD)));
+                return;
+            }
+            default -> {
+                return;
+            }
+        }
+        plugin.minions().save();
+        click(player, up ? 1.4f : 0.9f);
+        render(event.getInventory(), player, holder);
+    }
+
+    private void clickSpawners(Player player, InventoryClickEvent event, Holder holder, int slot) {
+        MinionType type = plugin.minions().type(holder.context);
+        if (type == null) return;
+        List<MinionSpawner> spawners = plugin.minions().spawnersOf(type.id());
+        int pages = Math.max(1, (spawners.size() + BODY.length - 1) / BODY.length);
+        if (slot == 48 && holder.page > 0) {
+            click(player, 1.0f);
+            open(player, Screen.SPAWNERS, holder.page - 1, holder.context, false);
+            return;
+        }
+        if (slot == 50 && holder.page < pages - 1) {
+            click(player, 1.1f);
+            open(player, Screen.SPAWNERS, holder.page + 1, holder.context, false);
+            return;
+        }
+        int index = indexOf(BODY, slot);
+        if (index < 0) return;
+        int at = Math.floorMod(holder.page, pages) * BODY.length + index;
+        if (at >= spawners.size()) return;
+        MinionSpawner s = spawners.get(at);
+
+        if (event.getClick() == ClickType.DROP || event.getClick() == ClickType.CONTROL_DROP) {
+            if (!confirmDelete(player, "generador:" + s.id())) return;
+            plugin.minions().deleteSpawner(s);
+            click(player, 0.6f);
+            player.sendMessage(plugin.prefix()
+                    .append(Component.text("Generador quitado  ", NamedTextColor.RED))
+                    .append(Component.text(s.id() + "  (" + s.x() + " " + (s.y() + 1) + " " + s.z() + ")",
+                            NamedTextColor.WHITE)));
+            render(event.getInventory(), player, holder);
+        } else if (event.isRightClick()) {
+            click(player, 1.2f);
+            open(player, Screen.SPAWNER_EDIT, 0, s.id(), false);
+        } else {
+            travelToSpawner(player, s, type);
+        }
+    }
+
+    private void clickSpawnerEdit(Player player, InventoryClickEvent event, Holder holder, int slot) {
+        MinionSpawner s = plugin.minions().spawner(holder.context);
+        if (s == null) return;
+        MinionType type = plugin.minions().type(s.typeId());
+        if (type == null) return;
+        boolean up = event.isLeftClick();
+        boolean shift = event.isShiftClick();
+
+        switch (slot) {
+            case 19 -> s.activationRadius(s.activationRadius() + (shift ? 16 : 4) * (up ? 1 : -1));
+            case 20 -> s.minLevel(s.minLevel() + (shift ? 10 : 1) * (up ? 1 : -1));
+            case 21 -> s.maxLevel(s.maxLevel() + (shift ? 10 : 1) * (up ? 1 : -1));
+            case 22 -> {
+                travelToSpawner(player, s, type);
+                return;
+            }
+            case 23 -> s.intervalSeconds(s.intervalSeconds() + (shift ? 30 : 5) * (up ? 1 : -1));
+            case 24 -> s.maxAlive(s.maxAlive() + (up ? 1 : -1));
+            case 30 -> s.enabled(!s.enabled());
+            case 32 -> {
+                if (!plugin.minionManager().forceSpawn(s)) {
+                    deny(player, "No se pudo: tope de vivos alcanzado o el mundo no esta cargado.");
+                    return;
+                }
+                click(player, 1.6f);
+                render(event.getInventory(), player, holder);
+                return;
+            }
+            case 34 -> {
+                if (!confirmDelete(player, "generador:" + s.id())) return;
+                plugin.minions().deleteSpawner(s);
+                click(player, 0.6f);
+                open(player, Screen.SPAWNERS, 0, s.typeId(), false);
+                return;
+            }
+            default -> {
+                return;
+            }
+        }
+        plugin.minions().save();
+        click(player, up ? 1.4f : 0.9f);
+        render(event.getInventory(), player, holder);
+    }
+
+    /** Igual que viajar a la anomalia: cerca, en suelo firme y mirando al punto. */
+    private void travelToSpawner(Player player, MinionSpawner s, MinionType type) {
+        Location target = s.spot();
+        if (target == null || target.getWorld() == null) {
+            deny(player, "El mundo de ese generador no esta cargado.");
+            return;
+        }
+        click(player, 1.5f);
+        player.closeInventory();
+
+        Location spot = null;
+        for (int i = 0; i < 8 && spot == null; i++) {
+            double a = Math.PI * 2 * i / 8.0;
+            Location probe = Fx.ground(target.clone().add(Math.cos(a) * 2.5, 1, Math.sin(a) * 2.5), 5);
+            Block floor = probe.getBlock().getRelative(0, -1, 0);
+            if (!floor.getType().isSolid() || floor.isLiquid()) continue;
+            if (probe.getBlock().getType().isSolid()) continue;
+            if (probe.getBlock().getRelative(0, 1, 0).getType().isSolid()) continue;
+            spot = probe;
+        }
+        if (spot == null) spot = target.clone();
+
+        Vector look = target.toVector().subtract(spot.toVector());
+        if (look.lengthSquared() > 0.01) spot.setDirection(look);
+        player.teleport(spot);
+        Compat.sound(player.getWorld(), spot, "entity.enderman.teleport", 0.9f, 1.1f);
+        player.sendMessage(plugin.prefix()
+                .append(Component.text("Te dejo frente al generador ", MenuUtil.SOFT))
+                .append(Component.text(s.id(), type.color(), TextDecoration.BOLD))
+                .append(Component.text(".", MenuUtil.SOFT)));
+    }
+
+    // --------------------------------------------------- esbirros: nombre por chat
+
+    private record PendingName(String typeId, long expiresAt) {
+    }
+
+    private final java.util.Map<java.util.UUID, PendingName> pendingName = new java.util.HashMap<>();
+
+    /** Cierra el menu y espera el nombre en el chat. typeId null = crear uno nuevo. */
+    private void beginNaming(Player player, String typeId) {
+        pendingName.put(player.getUniqueId(), new PendingName(typeId, System.currentTimeMillis() + 60_000));
+        plugin.getServer().getScheduler().runTask(net.ederus.edm.Module.dueno(plugin), () -> {
+            if (player.isOnline()) player.closeInventory();
+        });
+        player.sendMessage(plugin.prefix()
+                .append(Component.text(typeId == null
+                        ? "Escribe en el chat el nombre del esbirro nuevo."
+                        : "Escribe en el chat el nombre nuevo.", NamedTextColor.WHITE)));
+        player.sendMessage(plugin.prefix()
+                .append(Component.text("Nadie mas lo vera. Escribe \"cancelar\" para dejarlo estar.",
+                        MenuUtil.SOFT)));
+        Compat.sound(player.getWorld(), player.getLocation(), "block.note_block.pling", 0.7f, 1.6f);
+    }
+
+    @EventHandler(priority = org.bukkit.event.EventPriority.LOWEST)
+    public void onChatName(io.papermc.paper.event.player.AsyncChatEvent event) {
+        PendingName pending = pendingName.get(event.getPlayer().getUniqueId());
+        if (pending == null) return;
+        pendingName.remove(event.getPlayer().getUniqueId());
+        event.setCancelled(true);
+        if (System.currentTimeMillis() > pending.expiresAt()) return;
+
+        String raw = net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer.plainText()
+                .serialize(event.message()).trim();
+        Player player = event.getPlayer();
+        plugin.getServer().getScheduler().runTask(net.ederus.edm.Module.dueno(plugin), () -> {
+            if (!player.isOnline()) return;
+            if (raw.isEmpty() || raw.equalsIgnoreCase("cancelar")) {
+                player.sendMessage(plugin.prefix().append(Component.text("Sin cambios.", MenuUtil.SOFT)));
+                openHub(player);
+                return;
+            }
+            String name = raw.length() > 32 ? raw.substring(0, 32) : raw;
+            if (pending.typeId() == null) {
+                MinionType created = plugin.minions().createType(name);
+                player.sendMessage(plugin.prefix()
+                        .append(Component.text("Esbirro creado  ", NamedTextColor.GREEN))
+                        .append(Component.text(created.display(), created.color(), TextDecoration.BOLD))
+                        .append(Component.text("  Ajusta su criatura, su escalado y su vela.", MenuUtil.SOFT)));
+                open(player, Screen.MINION_EDIT, 0, created.id(), false);
+            } else {
+                MinionType type = plugin.minions().type(pending.typeId());
+                if (type == null) return;
+                type.display(name);
+                plugin.minions().save();
+                player.sendMessage(plugin.prefix()
+                        .append(Component.text("Renombrado a  ", NamedTextColor.GREEN))
+                        .append(Component.text(name, type.color(), TextDecoration.BOLD)));
+                open(player, Screen.MINION_EDIT, 0, type.id(), false);
+            }
+        });
+    }
+
     private ItemStack helpItem(Screen screen) {
         List<Component> lore = new ArrayList<>();
         switch (screen) {
@@ -653,6 +1438,32 @@ public final class Menus implements Listener {
             case SETTINGS -> {
                 lore.add(MenuUtil.line("Cada cambio se guarda al momento"));
                 lore.add(MenuUtil.line("en config.yml."));
+            }
+            case MINIONS -> {
+                lore.add(MenuUtil.line("La tropa de las mazmorras. Cada tipo se"));
+                lore.add(MenuUtil.line("define una vez y se planta por el mapa"));
+                lore.add(MenuUtil.line("con la vela, cada punto con su nivel."));
+                lore.add(MenuUtil.blank());
+                lore.add(MenuUtil.line("Todo se guarda al momento en esbirros.yml."));
+            }
+            case MINION_EDIT -> {
+                lore.add(MenuUtil.line("La ficha del esbirro. Los ajustes de la"));
+                lore.add(MenuUtil.line("VELA (nivel, ritmo, tope y radio) viajan"));
+                lore.add(MenuUtil.line("grabados en cada vela que pidas: saca una,"));
+                lore.add(MenuUtil.line("cambia el nivel y saca otra para tener"));
+                lore.add(MenuUtil.line("dos siembras distintas del mismo bicho."));
+            }
+            case SPAWNERS -> {
+                lore.add(MenuUtil.line("Todos los puntos plantados de este"));
+                lore.add(MenuUtil.line("esbirro, con su mundo y su region."));
+                lore.add(MenuUtil.blank());
+                lore.add(MenuUtil.line("Cada generador guarda su propio rango"));
+                lore.add(MenuUtil.line("de nivel, su ritmo y su tope."));
+            }
+            case SPAWNER_EDIT -> {
+                lore.add(MenuUtil.line("Este generador en concreto. Lo que"));
+                lore.add(MenuUtil.line("cambies aqui no toca a los demas"));
+                lore.add(MenuUtil.line("puntos del mismo esbirro."));
             }
         }
         return MenuUtil.icon(Material.BOOK, MenuUtil.title("Ayuda", MenuUtil.GOLD), lore, false);
@@ -702,9 +1513,29 @@ public final class Menus implements Listener {
         if (slot == SLOT_BACK) {
             if (holder.screen == Screen.HUB) {
                 player.closeInventory();
-            } else {
-                click(player, 0.9f);
-                openHub(player);
+                return;
+            }
+            click(player, 0.9f);
+            // Cada pantalla vuelve a la que la abrio, no siempre al panel: la seccion
+            // de esbirros es un pasillo (catalogo -> ficha -> generadores -> generador)
+            // y perder el sitio a cada vuelta la haria inusable.
+            MinionType asMinion = minionOf(holder.context);
+            switch (holder.screen) {
+                case MINION_EDIT -> open(player, Screen.MINIONS, 0, "", false);
+                case SPAWNERS -> open(player, Screen.MINION_EDIT, 0, holder.context, false);
+                case SPAWNER_EDIT -> {
+                    MinionSpawner s = plugin.minions().spawner(holder.context);
+                    open(player, Screen.SPAWNERS, 0, s == null ? "" : s.typeId(), false);
+                }
+                case DROPS -> {
+                    if (asMinion != null) {
+                        plugin.drops().save();
+                        open(player, Screen.MINION_EDIT, 0, asMinion.id(), false);
+                    } else {
+                        openHub(player);
+                    }
+                }
+                default -> openHub(player);
             }
             return;
         }
@@ -715,11 +1546,19 @@ public final class Menus implements Listener {
             case ABILITIES -> clickAbilities(player, event, holder, slot);
             case DROPS -> clickDrops(player, event, holder, slot);
             case SETTINGS -> clickSettings(player, event, holder, slot);
+            case MINIONS -> clickMinions(player, event, holder, slot);
+            case MINION_EDIT -> clickMinionEdit(player, event, holder, slot);
+            case SPAWNERS -> clickSpawners(player, event, holder, slot);
+            case SPAWNER_EDIT -> clickSpawnerEdit(player, event, holder, slot);
         }
     }
 
     private void clickHub(Player player, InventoryClickEvent event, int slot) {
         switch (slot) {
+            case 11 -> {
+                click(player, 1.1f);
+                open(player, Screen.MINIONS, 0, "", false);
+            }
             case 15 -> {
                 AnomalyType type = plugin.selected();
                 if (type == null) {
@@ -949,6 +1788,7 @@ public final class Menus implements Listener {
                 table.remove(index);
                 click(player, 0.7f);
             } else if (event.isShiftClick() && event.isLeftClick()) {
+                if (minionOf(holder.context) != null) return; // en esbirros no hay "para quien"
                 entry.cycleRecipient();
                 click(player, 1.3f);
             } else if (event.isShiftClick() && event.isRightClick()) {
