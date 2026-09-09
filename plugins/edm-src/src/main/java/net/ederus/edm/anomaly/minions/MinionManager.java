@@ -359,10 +359,10 @@ public final class MinionManager implements Listener {
             net.kyori.adventure.text.format.TextColor.color(0xFF6B6B);
 
     /**
-     * El cartel: dos lineas cortas y nada mas. Arriba el nombre en su color (en
-     * redonda, salvo que el tipo pida negrita) con su nivel en pequeno detras;
-     * abajo SOLO la vida que le queda —nada de "250 / 250", que es el doble de
-     * texto para la mitad de informacion—, y el numero se va tinendo segun baja.
+     * El cartel: dos lineas cortas y nada mas. Arriba SOLO el nombre en su color
+     * (en redonda, salvo que el tipo pida negrita), que ya viene largo de serie;
+     * abajo el nivel y la vida que le queda —nada de "250 / 250", que es el doble
+     * de texto para la mitad de informacion—, y el numero se va tinendo segun baja.
      */
     private void updateHolo(TextDisplay holo, LivingEntity mob) {
         MinionType type = typeOf(mob);
@@ -373,10 +373,10 @@ public final class MinionManager implements Listener {
         double left = max <= 0 ? 1 : Math.max(0, Math.min(1, mob.getHealth() / max));
 
         holo.text(type.name()
-                .append(Component.text("  Nv. ", HOLO_LABEL))
-                .append(Component.text(level, HOLO_LEVEL))
                 .append(Component.newline())
-                .append(Component.text("❤ ", NamedTextColor.RED))
+                .append(Component.text("Nv. ", HOLO_LABEL))
+                .append(Component.text(level, HOLO_LEVEL))
+                .append(Component.text("  ❤ ", NamedTextColor.RED))
                 .append(Component.text(hp, left > 0.6 ? HOLO_FULL : left > 0.3 ? HOLO_HURT : HOLO_LOW)));
     }
 

@@ -248,9 +248,9 @@ rango configurado), no una escala fija.
 
 **El holograma** va **suelto**, no montado: un mob con pasajero pierde media IA de combate,
 lo mismo que le pasaba a Herbola con el loro en la cabeza. Se le teleporta sobre la cabeza
-tick a tick con un tick de interpolacion. Son **dos lineas y nada mas**: arriba el nombre
-en su color con su nivel detras, abajo **solo la vida que le queda** —nada de `250 / 250`,
-que es el doble de texto para la misma informacion—, y el numero se tine segun baja (claro,
+tick a tick con un tick de interpolacion. Son **dos lineas y nada mas**: arriba **solo el
+nombre** en su color, que ya viene largo de serie; abajo el nivel y **la vida que le queda**
+—nada de `250 / 250`, que es el doble de texto para la misma informacion—, y el numero se tine segun baja (claro,
 ambar por debajo del 60%, rojo por debajo del 30%). El nombre va **en redonda**; la negrita
 es un interruptor de la ficha del esbirro (`negrita` en el yml), apagado de serie.
 
