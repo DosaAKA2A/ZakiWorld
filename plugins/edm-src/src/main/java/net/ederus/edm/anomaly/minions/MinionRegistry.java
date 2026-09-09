@@ -137,6 +137,10 @@ public final class MinionRegistry {
                 type.wandIntervalSeconds(s.getInt("vela.intervalo-segundos", 30));
                 type.wandMaxAlive(s.getInt("vela.tope-vivos", 3));
                 type.wandActivationRadius(s.getInt("vela.radio-activacion", 32));
+                for (String raw : s.getStringList("habilidades")) {
+                    MinionAbility ability = MinionAbility.byId(raw);
+                    if (ability != null) type.abilities().add(ability);
+                }
                 types.put(id, type);
             }
         }
@@ -176,7 +180,12 @@ public final class MinionRegistry {
                 "",
                 "Cada generador tiene SU rango de nivel: el mismo esbirro puede ser 5-10",
                 "en una sala y 20-30 en otra. El botin se configura en drops.yml, en la",
-                "seccion 'esbirro-<id>'."));
+                "seccion 'esbirro-<id>'.",
+                "",
+                "habilidades: rasgos que se encienden y se apagan desde el menu.",
+                "  flecha-pesada  cada tercera flecha pega el doble",
+                "  agil           se mueve un 25% mas rapido",
+                "  flecha-helada  sus flechas dejan lentitud 3 segundos"));
         for (MinionType t : types.values()) {
             String base = "esbirros." + t.id();
             yml.set(base + ".nombre", t.display());
@@ -191,6 +200,9 @@ public final class MinionRegistry {
             yml.set(base + ".vela.intervalo-segundos", t.wandIntervalSeconds());
             yml.set(base + ".vela.tope-vivos", t.wandMaxAlive());
             yml.set(base + ".vela.radio-activacion", t.wandActivationRadius());
+            List<String> abilities = new ArrayList<>();
+            for (MinionAbility a : t.abilities()) abilities.add(a.id());
+            yml.set(base + ".habilidades", abilities);
         }
         for (MinionSpawner s : spawners.values()) {
             String base = "generadores." + s.id();

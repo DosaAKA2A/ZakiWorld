@@ -12,6 +12,7 @@ import net.ederus.edm.anomaly.core.Compat;
 import net.ederus.edm.anomaly.core.Fx;
 import net.ederus.edm.anomaly.drops.DropEntry;
 import net.ederus.edm.anomaly.drops.DropTable;
+import net.ederus.edm.anomaly.minions.MinionAbility;
 import net.ederus.edm.anomaly.minions.MinionSpawner;
 import net.ederus.edm.anomaly.minions.MinionType;
 import org.bukkit.Bukkit;
@@ -58,7 +59,7 @@ public final class Menus implements Listener {
     private static final int SLOT_BACK = 45;
     private static final int SLOT_HELP = 53;
 
-    private enum Screen {HUB, ANOMALIES, ABILITIES, DROPS, SETTINGS, MINIONS, MINION_EDIT, SPAWNERS, SPAWNER_EDIT}
+    private enum Screen {HUB, ANOMALIES, ABILITIES, DROPS, SETTINGS, MINIONS, MINION_EDIT, MINION_ABILITIES, SPAWNERS, SPAWNER_EDIT}
 
     private final AnomalyPlugin plugin;
 
@@ -102,6 +103,7 @@ public final class Menus implements Listener {
             case SETTINGS -> "  Ajustes";
             case MINIONS -> "  Esbirros";
             case MINION_EDIT -> "  Esbirro";
+            case MINION_ABILITIES -> "  Habilidades";
             case SPAWNERS -> "  Generadores";
             case SPAWNER_EDIT -> "  Generador";
         };
@@ -140,6 +142,7 @@ public final class Menus implements Listener {
             case SETTINGS -> renderSettings(inv);
             case MINIONS -> renderMinions(inv);
             case MINION_EDIT -> renderMinionEdit(inv, holder);
+            case MINION_ABILITIES -> renderMinionAbilities(inv, holder);
             case SPAWNERS -> renderSpawners(inv, holder);
             case SPAWNER_EDIT -> renderSpawnerEdit(inv, holder);
         }
@@ -147,6 +150,7 @@ public final class Menus implements Listener {
         if (holder.screen != Screen.HUB) {
             String backLabel = switch (holder.screen) {
                 case MINION_EDIT -> "◀ Volver a los esbirros";
+                case MINION_ABILITIES -> "◀ Volver a la ficha";
                 case SPAWNERS -> "◀ Volver a la ficha";
                 case SPAWNER_EDIT -> "◀ Volver a los generadores";
                 case DROPS -> minionOf(holder.context) != null ? "◀ Volver a la ficha" : "◀ Volver al panel";
@@ -895,6 +899,23 @@ public final class Menus implements Listener {
                         Component.text("► Click derecho: -4", NamedTextColor.YELLOW),
                         Component.text("► Shift para pasos de 16", NamedTextColor.GRAY)), false));
 
+        List<Component> habLore = new ArrayList<>();
+        habLore.add(MenuUtil.line("Rasgos que lleva puestos siempre: no hay"));
+        habLore.add(MenuUtil.line("fases ni enfriamientos, se notan peleando."));
+        habLore.add(MenuUtil.blank());
+        if (type.abilities().isEmpty()) {
+            habLore.add(Component.text("Ninguna todavia.", MenuUtil.DIM));
+        } else {
+            for (MinionAbility a : type.abilities()) {
+                habLore.add(Component.text("· ", MenuUtil.DIM)
+                        .append(Component.text(a.display(), a.color(), TextDecoration.BOLD)));
+            }
+        }
+        habLore.add(MenuUtil.blank());
+        habLore.add(MenuUtil.action("Click para abrir el catalogo"));
+        inv.setItem(16, MenuUtil.icon(Material.ENCHANTED_BOOK,
+                MenuUtil.title("Habilidades", MenuUtil.GOLD), habLore, !type.abilities().isEmpty()));
+
         List<MinionSpawner> spawners = plugin.minions().spawnersOf(type.id());
         inv.setItem(30, MenuUtil.icon(Material.LODESTONE,
                 MenuUtil.title("Generadores", MenuUtil.GOLD),
@@ -929,6 +950,47 @@ public final class Menus implements Listener {
                         MenuUtil.line("verlo y pegarle sin salir de la sala."),
                         MenuUtil.blank(),
                         MenuUtil.action("Click para invocarlo")), false));
+    }
+
+    /** El catalogo de rasgos: uno por casilla, encendido o apagado. */
+    private void renderMinionAbilities(Inventory inv, Holder holder) {
+        MinionType type = plugin.minions().type(holder.context);
+        if (type == null) return;
+        MinionAbility[] all = MinionAbility.values();
+        for (int i = 0; i < BODY.length && i < all.length; i++) {
+            MinionAbility a = all[i];
+            boolean on = type.has(a);
+            List<Component> lore = new ArrayList<>();
+            lore.addAll(MenuUtil.wrap(a.what(), 38, MenuUtil.SOFT));
+            lore.add(MenuUtil.blank());
+            lore.addAll(MenuUtil.wrap(a.why(), 38, MenuUtil.DIM));
+            lore.add(MenuUtil.blank());
+            lore.add(MenuUtil.field("Ahora", "", MenuUtil.SOFT).append(MenuUtil.state(on)));
+            lore.add(MenuUtil.blank());
+            lore.add(MenuUtil.action(on ? "Click para quitarsela" : "Click para dársela"));
+            inv.setItem(BODY[i], MenuUtil.icon(on ? a.icon() : Material.GRAY_DYE,
+                    MenuUtil.title(a.display(), on ? a.color() : MenuUtil.DIM), lore, on));
+        }
+        inv.setItem(49, MenuUtil.icon(type.icon(), MenuUtil.title(type.display(), type.color()),
+                List.of(
+                        MenuUtil.field("Con", type.abilities().size() + " de " + all.length + " habilidades",
+                                NamedTextColor.WHITE),
+                        MenuUtil.blank(),
+                        MenuUtil.line("Se aplican a los que salgan a partir de"),
+                        MenuUtil.line("ahora; los que ya estan vivos no cambian.")), false));
+    }
+
+    private void clickMinionAbilities(Player player, InventoryClickEvent event, Holder holder, int slot) {
+        MinionType type = plugin.minions().type(holder.context);
+        if (type == null) return;
+        int index = indexOf(BODY, slot);
+        if (index < 0 || index >= MinionAbility.values().length) return;
+        MinionAbility a = MinionAbility.values()[index];
+        boolean on = type.toggle(a);
+        plugin.minions().save();
+        click(player, on ? 1.5f : 0.8f);
+        player.sendActionBar(Component.text(a.display() + "  ", MenuUtil.SOFT).append(MenuUtil.state(on)));
+        render(event.getInventory(), player, holder);
     }
 
     /** La lista de generadores de un esbirro, paginada como las habilidades. */
@@ -1191,6 +1253,11 @@ public final class Menus implements Listener {
             case 24 -> type.wandIntervalSeconds(type.wandIntervalSeconds() + (shift ? 30 : 5) * (up ? 1 : -1));
             case 25 -> type.wandMaxAlive(type.wandMaxAlive() + (up ? 1 : -1));
             case 28 -> type.wandActivationRadius(type.wandActivationRadius() + (shift ? 16 : 4) * (up ? 1 : -1));
+            case 16 -> {
+                click(player, 1.1f);
+                open(player, Screen.MINION_ABILITIES, 0, type.id(), false);
+                return;
+            }
             case 30 -> {
                 if (plugin.minions().spawnersOf(type.id()).isEmpty()) {
                     deny(player, "Este esbirro aun no tiene generadores: plantale uno con la vela.");
@@ -1453,6 +1520,14 @@ public final class Menus implements Listener {
                 lore.add(MenuUtil.line("cambia el nivel y saca otra para tener"));
                 lore.add(MenuUtil.line("dos siembras distintas del mismo bicho."));
             }
+            case MINION_ABILITIES -> {
+                lore.add(MenuUtil.line("Los rasgos de este esbirro. A diferencia"));
+                lore.add(MenuUtil.line("de las habilidades de un jefe, no tienen"));
+                lore.add(MenuUtil.line("fase ni enfriamiento: los lleva siempre."));
+                lore.add(MenuUtil.blank());
+                lore.add(MenuUtil.line("Cambiarlos no toca a los que ya estan"));
+                lore.add(MenuUtil.line("vivos, solo a los que salgan luego."));
+            }
             case SPAWNERS -> {
                 lore.add(MenuUtil.line("Todos los puntos plantados de este"));
                 lore.add(MenuUtil.line("esbirro, con su mundo y su region."));
@@ -1522,6 +1597,7 @@ public final class Menus implements Listener {
             MinionType asMinion = minionOf(holder.context);
             switch (holder.screen) {
                 case MINION_EDIT -> open(player, Screen.MINIONS, 0, "", false);
+                case MINION_ABILITIES -> open(player, Screen.MINION_EDIT, 0, holder.context, false);
                 case SPAWNERS -> open(player, Screen.MINION_EDIT, 0, holder.context, false);
                 case SPAWNER_EDIT -> {
                     MinionSpawner s = plugin.minions().spawner(holder.context);
@@ -1548,6 +1624,7 @@ public final class Menus implements Listener {
             case SETTINGS -> clickSettings(player, event, holder, slot);
             case MINIONS -> clickMinions(player, event, holder, slot);
             case MINION_EDIT -> clickMinionEdit(player, event, holder, slot);
+            case MINION_ABILITIES -> clickMinionAbilities(player, event, holder, slot);
             case SPAWNERS -> clickSpawners(player, event, holder, slot);
             case SPAWNER_EDIT -> clickSpawnerEdit(player, event, holder, slot);
         }

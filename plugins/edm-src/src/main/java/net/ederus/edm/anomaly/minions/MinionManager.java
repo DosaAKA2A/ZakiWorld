@@ -21,9 +21,11 @@ import org.bukkit.entity.TextDisplay;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.entity.EntityDamageByEntityEvent;
+import org.bukkit.event.entity.EntityShootBowEvent;
 import org.bukkit.event.entity.EntityDeathEvent;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.persistence.PersistentDataType;
+import org.bukkit.potion.PotionEffect;
 import org.bukkit.projectiles.ProjectileSource;
 import org.bukkit.scheduler.BukkitTask;
 
@@ -63,6 +65,8 @@ public final class MinionManager implements Listener {
     private final NamespacedKey keySpawner;
     private final NamespacedKey keyLevel;
     private final NamespacedKey keyHolo;
+    /** La marca que lleva la tercera flecha, la que pega el doble. */
+    private final NamespacedKey keyHeavy;
 
     /** Quien esta vivo de cada generador. Se purga en el ticker. */
     private final Map<String, Set<UUID>> alive = new HashMap<>();
@@ -81,6 +85,9 @@ public final class MinionManager implements Listener {
 
     private final List<Escolta> escoltas = new ArrayList<>();
 
+    /** Cuantas flechas lleva disparadas cada arquero, para la tercera pesada. */
+    private final Map<UUID, Integer> arrowCount = new HashMap<>();
+
     private BukkitTask ticker;
     private BukkitTask holoTicker;
 
@@ -90,6 +97,7 @@ public final class MinionManager implements Listener {
         this.keySpawner = new NamespacedKey(plugin, "esbirro_generador");
         this.keyLevel = new NamespacedKey(plugin, "esbirro_nivel");
         this.keyHolo = new NamespacedKey(plugin, "esbirro_holo");
+        this.keyHeavy = new NamespacedKey(plugin, "esbirro_flecha_pesada");
     }
 
     // ---------------------------------------------------------------------- ciclo
@@ -260,6 +268,13 @@ public final class MinionManager implements Listener {
         mob.setRemoveWhenFarAway(false);
         if (mob instanceof Mob m) m.setAware(true);
 
+        // Agil: se toca el atributo, no un efecto de pocion, para no llenarle la
+        // pantalla al jugador de particulas de velocidad.
+        if (type.has(MinionAbility.AGIL)) {
+            double base = Compat.getAttribute(mob, "movement_speed", 0.23);
+            Compat.setAttribute(mob, "movement_speed", base * 1.25);
+        }
+
         double health = type.healthAt(level);
         Compat.setAttribute(mob, "max_health", health);
         mob.setHealth(Math.min(health, Compat.getAttribute(mob, "max_health", health)));
@@ -316,6 +331,50 @@ public final class MinionManager implements Listener {
         MinionType type = typeOf(minion);
         if (type == null) return;
         e.setDamage(e.getDamage() * type.damageAt(levelOf(minion)));
+
+        // Flecha pesada: la tercera venia marcada desde el disparo.
+        if (e.getDamager().getPersistentDataContainer().has(keyHeavy, PersistentDataType.BYTE)) {
+            e.setDamage(e.getDamage() * 2.0);
+            if (e.getEntity().getWorld() != null) {
+                Compat.spawn(e.getEntity().getWorld(), Compat.CRIT,
+                        e.getEntity().getLocation().add(0, 1, 0), 14, 0.3, 0.4, 0.3, 0.15);
+                Compat.sound(e.getEntity().getWorld(), e.getEntity().getLocation(),
+                        "entity.player.attack.crit", 0.9f, 0.8f);
+            }
+        }
+
+        // Flecha helada: no pega mas, deja clavado un momento.
+        if (type.has(MinionAbility.FLECHA_HELADA) && e.getDamager() instanceof Projectile
+                && e.getEntity() instanceof LivingEntity victima) {
+            var slow = Compat.effect("slowness");
+            if (slow != null) victima.addPotionEffect(new PotionEffect(slow, 60, 0, true, true));
+            if (victima.getWorld() != null) {
+                Compat.spawn(victima.getWorld(), Compat.SNOWFLAKE,
+                        victima.getLocation().add(0, 1, 0), 18, 0.35, 0.5, 0.35, 0.02);
+            }
+        }
+    }
+
+    /**
+     * Flecha pesada: se lleva la cuenta de los disparos de CADA esqueleto y la
+     * tercera sale marcada. La marca va en la flecha, asi que el golpe extra se
+     * cobra al impactar, aunque para entonces el arquero ya haya disparado otra.
+     */
+    @EventHandler(ignoreCancelled = true)
+    public void onShoot(EntityShootBowEvent e) {
+        if (!(e.getEntity() instanceof LivingEntity shooter) || !isMinion(shooter)) return;
+        MinionType type = typeOf(shooter);
+        if (type == null || !type.has(MinionAbility.FLECHA_PESADA)) return;
+
+        int shots = arrowCount.merge(shooter.getUniqueId(), 1, Integer::sum);
+        if (shots % 3 != 0) return;
+
+        Entity arrow = e.getProjectile();
+        arrow.getPersistentDataContainer().set(keyHeavy, PersistentDataType.BYTE, (byte) 1);
+        arrow.setGlowing(true);
+        Compat.sound(shooter.getWorld(), shooter.getLocation(), "item.trident.throw", 0.8f, 0.7f);
+        Compat.spawn(shooter.getWorld(), Compat.ENCHANTED_HIT,
+                shooter.getEyeLocation(), 12, 0.2, 0.2, 0.2, 0.05);
     }
 
     /**
@@ -333,6 +392,7 @@ public final class MinionManager implements Listener {
                 it.remove();
             }
         }
+        arrowCount.remove(mob.getUniqueId());
         String spawnerId = mob.getPersistentDataContainer().get(keySpawner, PersistentDataType.STRING);
         if (spawnerId != null) {
             Set<UUID> mine = alive.get(spawnerId);

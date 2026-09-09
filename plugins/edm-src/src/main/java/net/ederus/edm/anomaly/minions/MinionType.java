@@ -42,6 +42,7 @@ public final class MinionType {
     private String display;
     private int color = 0xFFFFFF;
     private EntityType entity = EntityType.ZOMBIE;
+    private final java.util.Set<MinionAbility> abilities = java.util.EnumSet.noneOf(MinionAbility.class);
     private double baseHealth = 20;
     private double healthGrowth = 0.35;
     private double baseDamage = 1.0;
@@ -114,6 +115,26 @@ public final class MinionType {
             }
         }
         this.entity = BESTIARIO[Math.floorMod(at + (forward ? 1 : -1), BESTIARIO.length)];
+    }
+
+    // ------------------------------------------------------------------ habilidades
+
+    public java.util.Set<MinionAbility> abilities() {
+        return abilities;
+    }
+
+    public boolean has(MinionAbility ability) {
+        return abilities.contains(ability);
+    }
+
+    /** Enciende o apaga una habilidad; devuelve como queda. */
+    public boolean toggle(MinionAbility ability) {
+        if (abilities.contains(ability)) {
+            abilities.remove(ability);
+            return false;
+        }
+        abilities.add(ability);
+        return true;
     }
 
     /** El huevo de spawn del bicho, que es el icono natural del catalogo. */

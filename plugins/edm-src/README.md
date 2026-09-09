@@ -232,5 +232,15 @@ Los esbirros **no se guardan en disco** (`setPersistent(false)`): al descargarse
 o reiniciar el servidor desaparecen y su generador los repone. Asi nunca queda tropa
 vieja sin holograma ni sin nivel. Todo se guarda en `plugins/EDM/anomaly/esbirros.yml`.
 
+**Las habilidades de un esbirro son RASGOS**, no rutinas por fases: se encienden y se
+apagan desde su ficha, no tienen aviso ni enfriamiento y se notan solas mientras pelea.
+Cambiarlas no toca a los que ya estan vivos. De momento hay tres:
+
+| id | Que hace |
+|----|----------|
+| `flecha-pesada` | Cada tercera flecha que dispara pega el doble; sale brillando y suena distinto |
+| `agil` | Se mueve un 25% mas rapido (por atributo, no por pocion: sin particulas) |
+| `flecha-helada` | Sus flechas dejan lentitud 3 segundos |
+
 `/anomaly esbirros` abre el catalogo y `/anomaly esbirro <id> [nivel] [x y z]` invoca uno
 suelto para verlo (tambien desde consola, con coordenadas).

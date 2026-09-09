@@ -45,7 +45,7 @@ public final class AnomalyPlugin extends net.ederus.edm.Module {
 
 
     /** La lee el banner de /anomaly info; hay que subirla junto al pom y al plugin.yml. */
-    public static final String VERSION = "1.24.0";
+    public static final String VERSION = "1.25.0";
 
     private static final TextColor BRAND = TextColor.color(0x9BD7E4);
 
