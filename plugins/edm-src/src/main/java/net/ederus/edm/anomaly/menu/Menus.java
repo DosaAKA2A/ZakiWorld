@@ -1036,16 +1036,16 @@ public final class Menus implements Listener {
                         MenuUtil.action("Clic izquierdo: siguiente carpeta"),
                         Component.text("► Clic derecho: anterior", NamedTextColor.YELLOW)), false));
 
-        inv.setItem(29, MenuUtil.icon(type.bold() ? Material.INK_SAC : Material.GLASS_BOTTLE,
+        inv.setItem(29, MenuUtil.icon(type.boldFlag() ? Material.INK_SAC : Material.GLASS_BOTTLE,
                 MenuUtil.title("Nombre en negrita", MenuUtil.GOLD),
                 List.of(
                         MenuUtil.line("Cómo se muestra su nombre en el cartel"),
                         MenuUtil.line("que lleva encima. Por omisión, en redonda."),
                         MenuUtil.blank(),
                         Component.text("Vista previa  ", MenuUtil.LABEL).append(type.name()),
-                        MenuUtil.field("Ahora", "", MenuUtil.SOFT).append(MenuUtil.state(type.bold())),
+                        MenuUtil.field("Ahora", "", MenuUtil.SOFT).append(MenuUtil.state(type.boldFlag())),
                         MenuUtil.blank(),
-                        MenuUtil.action("Clic para cambiar")), type.bold()));
+                        MenuUtil.action("Clic para cambiar")), type.boldFlag()));
 
         List<Component> habLore = new ArrayList<>();
         habLore.add(MenuUtil.line("Rasgos permanentes: no hay fases ni"));
@@ -1089,6 +1089,8 @@ public final class Menus implements Listener {
                                 NamedTextColor.WHITE),
                         MenuUtil.blank(),
                         MenuUtil.action("Clic para editar el botín")), false));
+
+        inv.setItem(33, presenciaIcono(type));
 
         inv.setItem(34, MenuUtil.icon(Material.EGG,
                 MenuUtil.title("Invocar de prueba", NamedTextColor.AQUA),
@@ -1308,6 +1310,76 @@ public final class Menus implements Listener {
 
     // Los nombres de EntityType vienen en mayusculas con guion bajo; para el menu
     // se leen mejor como "Piglin brute" que como PIGLIN_BRUTE.
+
+    /**
+     * La ficha de presencia de un esbirro: equipo, aura, contorno y sonidos.
+     *
+     * Es de LECTURA. Esto no se enciende desde el menu: se decide al crear el
+     * tipo, en esbirros.yml, porque es parte de que es ese esbirro y no un
+     * interruptor que convenga tocar en caliente. Aqui esta para consultarlo.
+     */
+    private ItemStack presenciaIcono(MinionType type) {
+        net.ederus.edm.anomaly.minions.MinionPresence look = type.presence();
+        List<Component> lore = new ArrayList<>();
+
+        if (!look.any()) {
+            lore.add(MenuUtil.line("Tropa de a pie: sin equipo, sin aura y sin"));
+            lore.add(MenuUtil.line("contorno. Se distingue por su nombre y su nivel."));
+            lore.add(MenuUtil.blank());
+            lore.add(Component.text("Se configura en esbirros.yml, en", MenuUtil.DIM));
+            lore.add(Component.text("esbirros." + type.id() + ".presencia", MenuUtil.DIM));
+            return MenuUtil.icon(Material.ARMOR_STAND, MenuUtil.title("Presencia", MenuUtil.SOFT), lore, false);
+        }
+
+        lore.add(MenuUtil.field("Destacado", "", MenuUtil.SOFT).append(MenuUtil.state(look.featured())));
+        lore.add(MenuUtil.blank());
+
+        if (look.hasGear()) {
+            lore.add(Component.text("EQUIPO", NamedTextColor.WHITE, TextDecoration.BOLD));
+            for (net.ederus.edm.anomaly.minions.MinionPresence.Slot slot
+                    : net.ederus.edm.anomaly.minions.MinionPresence.Slot.values()) {
+                Material m = look.gear().get(slot);
+                if (m == null) continue;
+                lore.add(Component.text("· ", MenuUtil.DIM)
+                        .append(Component.text(nombreBonito(m), NamedTextColor.WHITE)));
+            }
+            lore.add(MenuUtil.blank());
+        }
+
+        if (!look.auraName().isEmpty()) {
+            lore.add(MenuUtil.field("Aura", look.auraName(), NamedTextColor.AQUA));
+        }
+        if (look.outline() != null) {
+            lore.add(MenuUtil.field("Contorno", look.outline().toString(), NamedTextColor.WHITE));
+        }
+        if (!look.spawnSound().isEmpty()) {
+            lore.add(MenuUtil.field("Al aparecer", look.spawnSound(), MenuUtil.SOFT));
+        }
+        if (!look.ambientSound().isEmpty()) {
+            lore.add(MenuUtil.field("Ambiente", look.ambientSound(), MenuUtil.SOFT));
+        }
+        lore.add(MenuUtil.blank());
+        lore.add(Component.text("Se configura en esbirros.yml.", MenuUtil.DIM));
+
+        Material icono = look.gear().getOrDefault(
+                net.ederus.edm.anomaly.minions.MinionPresence.Slot.MANO,
+                look.gear().getOrDefault(net.ederus.edm.anomaly.minions.MinionPresence.Slot.CASCO,
+                        Material.ARMOR_STAND));
+        return MenuUtil.icon(icono, MenuUtil.title("Presencia", type.color()), lore, look.featured());
+    }
+
+    /** El nombre legible de un material: BLOQUE_DE_ORO -> Bloque de oro. */
+    private static String nombreBonito(Material m) {
+        String[] partes = m.name().toLowerCase(java.util.Locale.ROOT).split("_");
+        StringBuilder sb = new StringBuilder();
+        for (String parte : partes) {
+            if (sb.length() > 0) sb.append(' ');
+            sb.append(parte);
+        }
+        String texto = sb.toString();
+        return texto.isEmpty() ? m.name() : Character.toUpperCase(texto.charAt(0)) + texto.substring(1);
+    }
+
     private static String nombreBonito(org.bukkit.entity.EntityType type) {
         String raw = type.name().toLowerCase(java.util.Locale.ROOT).replace('_', ' ');
         return Character.toUpperCase(raw.charAt(0)) + raw.substring(1);
@@ -1519,7 +1591,7 @@ public final class Menus implements Listener {
             case 25 -> type.wandMaxAlive(type.wandMaxAlive() + (up ? 1 : -1));
             case 28 -> type.wandActivationRadius(type.wandActivationRadius() + (shift ? 16 : 4) * (up ? 1 : -1));
             case 29 -> {
-                type.bold(!type.bold());
+                type.bold(!type.boldFlag());
                 plugin.minionManager().refreshHolos(type.id());
             }
             case 31 -> {

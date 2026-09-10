@@ -130,6 +130,16 @@ public final class Compat {
         return null;
     }
 
+    /**
+     * Una particula por su nombre, para lo que se configura desde un yml en vez de
+     * declararse aqui arriba. Devuelve null si esa version no la trae, y quien la
+     * pida se queda sin aura en lugar de tumbar el arranque.
+     */
+    public static Particle particleByName(String name) {
+        if (name == null || name.isBlank()) return null;
+        return particle(name.trim().toUpperCase(java.util.Locale.ROOT));
+    }
+
     /** Cuantas particulas de las declaradas arriba no existen en esta version. Lo usa /anomaly info. */
     public static int missingParticles() {
         int n = 0;

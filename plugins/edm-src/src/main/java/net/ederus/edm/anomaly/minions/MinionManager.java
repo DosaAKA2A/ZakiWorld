@@ -3,6 +3,7 @@ package net.ederus.edm.anomaly.minions;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
 import net.ederus.edm.anomaly.AnomalyPlugin;
+import net.ederus.edm.anomaly.core.Glow;
 import net.ederus.edm.comun.Compat;
 import net.ederus.edm.anomaly.drops.DropEntry;
 import net.ederus.edm.anomaly.drops.DropTable;
@@ -129,7 +130,12 @@ public final class MinionManager implements Listener {
      * Los carteles siguen a su esbirro. Si el bicho murio o se esfumo (chunk
      * descargado, /kill), el cartel se va con el: nunca queda un nombre flotando.
      */
+    /* El reloj de los carteles lleva la cuenta: el aura de los destacados cuelga
+     * de el para no abrir una segunda tarea por cada esbirro de la mazmorra. */
+    private int holoPulso;
+
     private void tickHolos() {
+        holoPulso++;
         for (Iterator<Escolta> it = escoltas.iterator(); it.hasNext(); ) {
             Escolta e = it.next();
             if (!e.mob.isValid() || e.mob.isDead()) {
@@ -147,6 +153,8 @@ public final class MinionManager implements Listener {
                 e.lastHealth = hp;
                 updateHolo(e.holo, e.mob);
             }
+            presencia(e.mob);
+            if (e.mob instanceof org.bukkit.entity.Warden guardian) vigilarWarden(guardian);
         }
     }
 
@@ -154,7 +162,10 @@ public final class MinionManager implements Listener {
     public void removeAll() {
         for (World w : plugin.getServer().getWorlds()) {
             for (Entity e : w.getEntities()) {
-                if (isMinion(e) || isHolo(e)) e.remove();
+                if (isMinion(e) || isHolo(e)) {
+                    Glow.clear(e);
+                    e.remove();
+                }
             }
         }
         alive.clear();
@@ -170,6 +181,7 @@ public final class MinionManager implements Listener {
         for (World w : plugin.getServer().getWorlds()) {
             for (Entity e : w.getEntities()) {
                 if (isMinion(e) || isHolo(e)) {
+                    Glow.clear(e);
                     e.remove();
                     removed++;
                 }
@@ -339,8 +351,15 @@ public final class MinionManager implements Listener {
             alive.computeIfAbsent(spawnerId, k -> new HashSet<>()).add(mob.getUniqueId());
         }
 
+        // La presencia: equipo, contorno y sonido propio. Va al final para que el
+        // contorno no se pierda si algo de arriba hubiera fallado.
+        MinionPresence look = type.presence();
+        if (look.hasGear()) look.dress(mob);
+        if (look.outline() != null) Glow.apply(mob, look.outline());
+
         Compat.spawn(w, Compat.POOF, spot.clone().add(0, 0.4, 0), 8, 0.25, 0.3, 0.25, 0.01);
         Compat.sound(w, spot, "block.respawn_anchor.deplete", 0.4f, 1.6f);
+        look.playSpawn(w, spot);
         return mob;
     }
 
@@ -378,6 +397,48 @@ public final class MinionManager implements Listener {
                 .append(Component.text(level, HOLO_LEVEL))
                 .append(Component.text("  ❤ ", NamedTextColor.RED))
                 .append(Component.text(hp, left > 0.6 ? HOLO_FULL : left > 0.3 ? HOLO_HURT : HOLO_LOW)));
+    }
+
+    /**
+     * Lo que se ve y se oye de un destacado mientras esta vivo: su aura, a un
+     * pulso lento, y de vez en cuando su sonido de ambiente.
+     *
+     * Solo los destacados entran aqui. Una mazmorra llena de tropa de a pie no
+     * pinta ni una particula de mas, que es justo lo que separa a estos del resto.
+     */
+    private void presencia(LivingEntity mob) {
+        MinionType type = typeOf(mob);
+        if (type == null || !type.presence().featured()) return;
+        MinionPresence look = type.presence();
+        if (holoPulso % look.auraEvery() == 0) look.tickAura(mob);
+        if (holoPulso % 160 == 0 && random.nextDouble() < 0.35) {
+            look.playAmbient(mob.getWorld(), mob.getLocation());
+        }
+    }
+
+    /**
+     * Un warden de tropa no puede enterrarse.
+     *
+     * El warden vanilla se hunde en el suelo a los 60 segundos sin objetivo, y en
+     * una mazmorra eso significa que el guardian de la sala del fondo desaparece
+     * justo cuando el jugador se para a mirar. Mientras haya alguien en la sala se
+     * le renueva la ira; en cuanto la sala se vacia se le deja enterrarse solo,
+     * que es la forma limpia de que la mazmorra no acumule wardens.
+     */
+    private void vigilarWarden(org.bukkit.entity.Warden guardian) {
+        if (holoPulso % 30 != 0) return;
+        if (guardian.getEntityAngryAt() != null) return;
+        Player cerca = null;
+        double mejor = 20 * 20;
+        for (Player p : guardian.getWorld().getPlayers()) {
+            if (p.getGameMode() == org.bukkit.GameMode.SPECTATOR) continue;
+            double d = p.getLocation().distanceSquared(guardian.getLocation());
+            if (d < mejor) {
+                mejor = d;
+                cerca = p;
+            }
+        }
+        if (cerca != null) guardian.increaseAnger(cerca, 40);
     }
 
     /** Repinta ya los carteles de un tipo: lo usa el menu al cambiar su aspecto. */
@@ -542,6 +603,10 @@ public final class MinionManager implements Listener {
             }
         }
         arrowCount.remove(mob.getUniqueId());
+        // El contorno vive en un equipo del marcador, y el marcador SI se guarda
+        // entre reinicios: sin esto, cada destacado muerto deja su UUID dentro
+        // para siempre y el equipo crece sin parar en una mazmorra activa.
+        Glow.clear(mob);
         String spawnerId = mob.getPersistentDataContainer().get(keySpawner, PersistentDataType.STRING);
         if (spawnerId != null) {
             Set<UUID> mine = alive.get(spawnerId);

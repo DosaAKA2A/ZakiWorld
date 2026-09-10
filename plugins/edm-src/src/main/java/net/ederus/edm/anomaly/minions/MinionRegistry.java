@@ -3,7 +3,9 @@ package net.ederus.edm.anomaly.minions;
 import net.ederus.edm.anomaly.AnomalyPlugin;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.file.YamlConfiguration;
+import org.bukkit.Material;
 import org.bukkit.entity.EntityType;
+import net.kyori.adventure.text.format.NamedTextColor;
 
 import java.io.File;
 import java.io.IOException;
@@ -228,6 +230,7 @@ public final class MinionRegistry {
                     MinionAbility ability = MinionAbility.byId(raw);
                     if (ability != null) type.abilities().add(ability);
                 }
+                cargarPresencia(type, s.getConfigurationSection("presencia"));
                 types.put(id, type);
             }
         }
@@ -305,7 +308,7 @@ public final class MinionRegistry {
             yml.set(base + ".categoria", t.categoryId());
             yml.set(base + ".nombre", t.display());
             yml.set(base + ".color", t.colorRgb());
-            yml.set(base + ".negrita", t.bold());
+            yml.set(base + ".negrita", t.boldFlag());
             yml.set(base + ".entidad", t.entity().name());
             yml.set(base + ".vida-base", t.baseHealth());
             yml.set(base + ".vida-por-nivel", t.healthGrowth());
@@ -319,6 +322,7 @@ public final class MinionRegistry {
             List<String> abilities = new ArrayList<>();
             for (MinionAbility a : t.abilities()) abilities.add(a.id());
             yml.set(base + ".habilidades", abilities);
+            guardarPresencia(yml, base + ".presencia", t.presence());
         }
         for (MinionSpawner s : spawners.values()) {
             String base = "generadores." + s.id();
@@ -338,6 +342,58 @@ public final class MinionRegistry {
             yml.save(file);
         } catch (IOException ex) {
             plugin.getLogger().log(Level.SEVERE, "No se pudo guardar esbirros.yml", ex);
+        }
+    }
+
+    /* ------------------------------------------------------------- presencia */
+
+    /**
+     * Lee el bloque `presencia` de un esbirro: equipo, aura, contorno y sonidos.
+     *
+     * Todo es opcional y todo cae de pie: un material que ya no existe, una
+     * particula que esta version no trae o un color mal escrito se ignoran en
+     * silencio en lugar de dejar el esbirro sin cargar.
+     */
+    private void cargarPresencia(MinionType type, ConfigurationSection s) {
+        if (s == null) return;
+        MinionPresence p = type.presence();
+        p.featured(s.getBoolean("destacado", false));
+        p.gearColor(s.getInt("color-equipo", -1));
+        p.auraName(s.getString("aura", ""));
+        p.auraColor(s.getInt("color-aura", -1));
+        p.auraEvery(s.getInt("aura-cada", 4));
+        p.spawnSound(s.getString("sonido", ""));
+        p.ambientSound(s.getString("sonido-ambiente", ""));
+        p.outline(NamedTextColor.NAMES.value(
+                s.getString("contorno", "").trim().toLowerCase(java.util.Locale.ROOT)));
+
+        ConfigurationSection eq = s.getConfigurationSection("equipo");
+        if (eq == null) return;
+        for (String key : eq.getKeys(false)) {
+            MinionPresence.Slot slot = MinionPresence.Slot.byKey(key);
+            if (slot == null) continue;
+            Material m = Material.matchMaterial(eq.getString(key, ""));
+            if (m != null && m.isItem()) p.gear().put(slot, m);
+        }
+    }
+
+    /** Solo escribe lo que tiene valor: un esbirro de a pie no ensucia el fichero. */
+    private void guardarPresencia(YamlConfiguration yml, String base, MinionPresence p) {
+        if (!p.any()) {
+            yml.set(base, null);
+            return;
+        }
+        yml.set(base + ".destacado", p.featured());
+        yml.set(base + ".aura", p.auraName().isEmpty() ? null : p.auraName());
+        yml.set(base + ".color-aura", p.auraColor() < 0 ? null : p.auraColor());
+        yml.set(base + ".aura-cada", p.auraName().isEmpty() ? null : p.auraEvery());
+        yml.set(base + ".color-equipo", p.gearColor() < 0 ? null : p.gearColor());
+        yml.set(base + ".sonido", p.spawnSound().isEmpty() ? null : p.spawnSound());
+        yml.set(base + ".sonido-ambiente", p.ambientSound().isEmpty() ? null : p.ambientSound());
+        yml.set(base + ".contorno", p.outline() == null ? null : p.outline().toString());
+        yml.set(base + ".equipo", null);
+        for (java.util.Map.Entry<MinionPresence.Slot, Material> e : p.gear().entrySet()) {
+            yml.set(base + ".equipo." + e.getKey().key(), e.getValue().name());
         }
     }
 }

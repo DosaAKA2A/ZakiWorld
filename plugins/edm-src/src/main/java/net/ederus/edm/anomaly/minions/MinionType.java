@@ -47,6 +47,8 @@ public final class MinionType {
     private int color = 0xFFFFFF;
     /** El nombre del holograma va en redonda; la negrita solo si se pide a mano. */
     private boolean bold = false;
+    /** Como se ve y como suena. Se define al crear el tipo. Ver MinionPresence. */
+    private final MinionPresence presence = new MinionPresence();
     private EntityType entity = EntityType.ZOMBIE;
     private final java.util.Set<MinionAbility> abilities = java.util.EnumSet.noneOf(MinionAbility.class);
     private double baseHealth = 20;
@@ -111,7 +113,17 @@ public final class MinionType {
         this.categoryId = categoryId == null || categoryId.isBlank() ? MinionCategory.GENERAL : categoryId;
     }
 
+    public MinionPresence presence() {
+        return presence;
+    }
+
+    /** Un destacado se lee en negrita aunque no se haya pedido a mano. */
     public boolean bold() {
+        return bold || presence.featured();
+    }
+
+    /** La negrita puesta a mano, sin contar la que trae el ser destacado. */
+    public boolean boldFlag() {
         return bold;
     }
 
