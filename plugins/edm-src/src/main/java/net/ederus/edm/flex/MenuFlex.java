@@ -16,6 +16,7 @@ import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.InventoryHolder;
 import org.bukkit.inventory.ItemStack;
 
+import net.ederus.edm.comun.Estilo;
 import net.ederus.edm.comun.menu.MenuUtil;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
@@ -67,8 +68,7 @@ public final class MenuFlex implements Listener {
     public void abrirPropia(Player p) {
         Vitrina v = plugin.almacen().de(p.getUniqueId(), p.getName());
         Vista vista = new Vista(p.getUniqueId(), true);
-        vista.inv = Bukkit.createInventory(vista, TAM,
-                Component.text("Tu vitrina", FlexPlugin.MARCA, TextDecoration.BOLD));
+        vista.inv = Bukkit.createInventory(vista, TAM, titulo("La tuya"));
         pintar(vista, v);
         p.openInventory(vista.inv);
     }
@@ -76,10 +76,20 @@ public final class MenuFlex implements Listener {
     /** La de otro, para mirarla. */
     public void abrirAjena(Player quien, Vitrina v) {
         Vista vista = new Vista(v.uuid(), false);
-        vista.inv = Bukkit.createInventory(vista, TAM,
-                Component.text("Vitrina de " + v.nombre(), FlexPlugin.MARCA, TextDecoration.BOLD));
+        vista.inv = Bukkit.createInventory(vista, TAM, titulo(v.nombre()));
         pintar(vista, v);
         quien.openInventory(vista.inv);
+    }
+
+    /**
+     * El titulo, con la misma forma que los de Anomaly y las bovedas: el rombo, el
+     * nombre del panel y la seccion detras. La palabra VITRINA va en degradado, que
+     * es la firma del modulo, y es lo unico con peso de toda la ventana.
+     */
+    private Component titulo(String seccion) {
+        return Component.text("✦ ", FlexPlugin.MARCA)
+                .append(Estilo.degradado("VITRINA", FlexPlugin.MAGENTA, FlexPlugin.CARMESI))
+                .append(Estilo.texto("  " + seccion, FlexPlugin.MARCA));
     }
 
     private void pintar(Vista vista, Vitrina v) {
@@ -94,40 +104,41 @@ public final class MenuFlex implements Listener {
 
         if (vista.editable) {
             inv.setItem(SLOT_AYUDA, MenuUtil.icon(Material.ITEM_FRAME,
-                    MenuUtil.title("Cómo se monta", MenuUtil.GOLD),
+                    MenuUtil.title("Cómo se monta", FlexPlugin.MARCA),
                     List.of(
-                            MenuUtil.line("Clic en un objeto de tu inventario y se"),
-                            MenuUtil.line("COPIA aquí arriba. El tuyo no se mueve:"),
-                            MenuUtil.line("esto es un escaparate, no un cofre."),
-                            MenuUtil.blank(),
-                            MenuUtil.line("Clic en una copia de arriba para quitarla."),
-                            MenuUtil.blank(),
-                            MenuUtil.field("Puestos", v.cuantos() + " / " + Vitrina.CASILLAS,
-                                    NamedTextColor.WHITE)), false));
+                            Estilo.linea("Puestos", v.cuantos() + " de " + Vitrina.CASILLAS,
+                                    Estilo.CLARO),
+                            Estilo.vacio(),
+                            Estilo.texto("Clic en un objeto de tu inventario y se", Estilo.APAGADO),
+                            Estilo.texto("copia aquí arriba. El tuyo no se mueve:", Estilo.APAGADO),
+                            Estilo.texto("esto es un escaparate, no un cofre.", Estilo.APAGADO),
+                            Estilo.vacio(),
+                            Estilo.texto("Clic en una copia para quitarla.", Estilo.APAGADO)), false));
 
             inv.setItem(SLOT_VACIAR, MenuUtil.icon(Material.BARRIER,
                     MenuUtil.title("Vaciar la vitrina", NamedTextColor.RED),
                     List.of(
-                            MenuUtil.line("Quita las 27 copias de golpe."),
-                            MenuUtil.line("No pierdes nada: son copias."),
-                            MenuUtil.blank(),
-                            MenuUtil.action("Clic para vaciarla")), false));
+                            Estilo.texto("Quita las copias de golpe. No pierdes", Estilo.APAGADO),
+                            Estilo.texto("nada: los objetos son tuyos y siguen", Estilo.APAGADO),
+                            Estilo.texto("en tu inventario.", Estilo.APAGADO),
+                            Estilo.vacio(),
+                            Estilo.accion("Clic para vaciarla", NamedTextColor.RED)), false));
 
             inv.setItem(SLOT_ANUNCIAR, MenuUtil.icon(Material.GOAT_HORN,
-                    MenuUtil.title("Mostrarla en el chat", MenuUtil.GOLD),
+                    MenuUtil.title("Mostrarla en el chat", FlexPlugin.MARCA),
                     List.of(
-                            MenuUtil.line("Avisa al servidor de que tu vitrina"),
-                            MenuUtil.line("está a la vista, con un botón para abrirla."),
-                            MenuUtil.blank(),
-                            MenuUtil.action("Clic para mostrarla")), false));
+                            Estilo.texto("Avisa al servidor de que tu vitrina está", Estilo.APAGADO),
+                            Estilo.texto("a la vista, con un botón para abrirla.", Estilo.APAGADO),
+                            Estilo.vacio(),
+                            Estilo.accion("Clic para mostrarla", FlexPlugin.MARCA)), false));
         } else {
             inv.setItem(SLOT_AYUDA, MenuUtil.icon(Material.ITEM_FRAME,
-                    MenuUtil.title("Vitrina de " + v.nombre(), FlexPlugin.MARCA),
+                    MenuUtil.title(v.nombre(), FlexPlugin.MARCA),
                     List.of(
-                            MenuUtil.field("Objetos", String.valueOf(v.cuantos()), NamedTextColor.WHITE),
-                            MenuUtil.blank(),
-                            MenuUtil.line("Solo se mira. Lo que hay aquí son copias:"),
-                            MenuUtil.line("los objetos de verdad los tiene su dueño.")), false));
+                            Estilo.linea("Objetos", String.valueOf(v.cuantos()), Estilo.CLARO),
+                            Estilo.vacio(),
+                            Estilo.texto("Solo se mira. Lo que hay aquí son copias:", Estilo.APAGADO),
+                            Estilo.texto("los objetos los tiene su dueño.", Estilo.APAGADO)), false));
         }
     }
 
@@ -151,7 +162,7 @@ public final class MenuFlex implements Listener {
             if (elegido == null || elegido.getType().isAir()) return;
             int hueco = vitrina.hueco();
             if (hueco < 0) {
-                p.sendMessage(plugin.aviso("La vitrina está llena: quita algo primero."));
+                plugin.di(p, "llena", "La vitrina está llena. Quita algo antes de poner más.");
                 return;
             }
             vitrina.poner(hueco, elegido);
@@ -172,7 +183,7 @@ public final class MenuFlex implements Listener {
             for (int i = 0; i < Vitrina.CASILLAS; i++) vitrina.quitar(i);
             plugin.almacen().guardar(vitrina);
             pintar(v, vitrina);
-            p.sendMessage(plugin.aviso("Vitrina vacía."));
+            plugin.di(p, "vaciada", "Vitrina vacía.");
             return;
         }
         if (slot == SLOT_ANUNCIAR) {
@@ -199,14 +210,13 @@ public final class MenuFlex implements Listener {
             ItemStack it = v.objeto(i);
             if (it == null) continue;
             puestos++;
-            out.add(Component.text("· ", NamedTextColor.DARK_GRAY)
+            out.add(Estilo.texto(" " + Estilo.FLECHA + " ", Estilo.APAGADO)
                     .append(net.ederus.edm.anomaly.drops.DropTable.nameOf(it)
-                            .colorIfAbsent(NamedTextColor.WHITE))
-                    .decoration(TextDecoration.ITALIC, false));
+                            .colorIfAbsent(Estilo.CLARO)
+                            .decoration(TextDecoration.ITALIC, false)));
         }
         if (v.cuantos() > puestos) {
-            out.add(Component.text("y " + (v.cuantos() - puestos) + " más", NamedTextColor.DARK_GRAY)
-                    .decoration(TextDecoration.ITALIC, false));
+            out.add(Estilo.texto("   y " + (v.cuantos() - puestos) + " más", Estilo.APAGADO));
         }
         return out;
     }

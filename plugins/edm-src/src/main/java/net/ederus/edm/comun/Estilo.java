@@ -71,6 +71,30 @@ public final class Estilo {
         return texto(FLECHA + " ", APAGADO).append(texto(t, color));
     }
 
+    /**
+     * Un degradado de color, caracter a caracter.
+     *
+     * Es como se le da empaque a un titulo en Ederus sin recurrir a la negrita ni
+     * a las versalitas: el mismo texto de siempre, pero el color se desplaza de un
+     * extremo al otro. Con dos tonos cercanos queda elegante; con dos opuestos,
+     * un arcoiris. El espacio no se tine, que no se ve y gasta un paso.
+     */
+    public static Component degradado(String texto, int desde, int hasta) {
+        if (texto == null || texto.isEmpty()) return vacio();
+        int n = Math.max(1, texto.length() - 1);
+        int r1 = (desde >> 16) & 0xFF, g1 = (desde >> 8) & 0xFF, b1 = desde & 0xFF;
+        int r2 = (hasta >> 16) & 0xFF, g2 = (hasta >> 8) & 0xFF, b2 = hasta & 0xFF;
+        Component out = vacio();
+        for (int i = 0; i < texto.length(); i++) {
+            double t = (double) i / n;
+            int r = (int) Math.round(r1 + (r2 - r1) * t);
+            int g = (int) Math.round(g1 + (g2 - g1) * t);
+            int b = (int) Math.round(b1 + (b2 - b1) * t);
+            out = out.append(texto(String.valueOf(texto.charAt(i)), TextColor.color(r, g, b)));
+        }
+        return out;
+    }
+
     /** Los codigos & de sus ficheros (incluido el &x&R&R&G&G&B&B de Spigot). */
     public static final net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer LEGADO =
             net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer.builder()

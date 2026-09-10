@@ -11,8 +11,8 @@ import org.bukkit.persistence.PersistentDataType;
 
 import net.ederus.edm.anomaly.drops.DropEntry;
 import net.ederus.edm.anomaly.drops.DropTable;
+import net.ederus.edm.comun.Estilo;
 import net.kyori.adventure.text.Component;
-import net.kyori.adventure.text.format.NamedTextColor;
 import net.kyori.adventure.text.format.TextColor;
 import net.kyori.adventure.text.format.TextDecoration;
 
@@ -30,8 +30,8 @@ import net.kyori.adventure.text.format.TextDecoration;
 public final class Caja {
 
     public enum Tipo {
-        COMUN("Boveda comun", Material.VAULT, Material.TRIAL_KEY, false, 0x8FB8C4),
-        OMINOSA("Boveda ominosa", Material.VAULT, Material.OMINOUS_TRIAL_KEY, true, 0xC792EA);
+        COMUN("Bóveda común", Material.VAULT, Material.TRIAL_KEY, false, 0x91F4FF),
+        OMINOSA("Bóveda ominosa", Material.VAULT, Material.OMINOUS_TRIAL_KEY, true, 0x0083FD);
 
         private final String display;
         private final Material block;
@@ -68,10 +68,13 @@ public final class Caja {
         }
     }
 
+    /** El azul claro de Ederus, para los datos del lore. */
+    private static final TextColor CLARO = Estilo.CLARO;
+
     private final String id;
     private String display;
     private Tipo tipo = Tipo.COMUN;
-    private int color = 0x8FB8C4;
+    private int color = 0xD7F3FF;
 
     /** El botin corriente. Reutiliza la tabla de las anomalias: mismo modelo, mismo editor. */
     private final DropTable tabla;
@@ -153,7 +156,7 @@ public final class Caja {
     }
 
     public Component nombre() {
-        return Component.text(display, color()).decoration(TextDecoration.ITALIC, false);
+        return Estilo.texto(display, color());
     }
 
     public boolean lista() {
@@ -174,14 +177,23 @@ public final class Caja {
         ItemMeta meta = item.getItemMeta();
         if (meta == null) return item;
         String nombre = nombreLlave.isEmpty() ? "Llave de " + display : nombreLlave;
-        meta.displayName(Component.text(nombre, color()).decoration(TextDecoration.ITALIC, false));
+        meta.displayName(Estilo.texto(nombre, color()));
+
         List<Component> lore = new ArrayList<>();
-        lore.add(Component.text(tipo.display(), tipo.color()).decoration(TextDecoration.ITALIC, false));
-        lore.add(Component.empty());
-        lore.add(Component.text("Abre una sola vez la boveda", NamedTextColor.GRAY)
-                .decoration(TextDecoration.ITALIC, false));
-        lore.add(Component.text("de " + display + ".", NamedTextColor.GRAY)
-                .decoration(TextDecoration.ITALIC, false));
+        lore.add(Estilo.texto(tipo.display(), tipo.color()));
+        lore.add(Estilo.vacio());
+        lore.add(Estilo.linea("Abre", display, CLARO));
+        lore.add(Estilo.linea("Se gasta", "al usarla", Estilo.APAGADO));
+        if (unico != null) {
+            lore.add(Estilo.vacio());
+            lore.add(Estilo.texto(" " + Estilo.FLECHA + " ", Estilo.APAGADO)
+                    .append(Estilo.texto("Puede salir ", Estilo.APAGADO))
+                    .append(DropTable.nameOf(unico.item()).colorIfAbsent(CLARO)
+                            .decoration(TextDecoration.ITALIC, false)));
+        }
+        lore.add(Estilo.vacio());
+        lore.add(Estilo.texto("Clic derecho sobre la bóveda", Estilo.APAGADO));
+
         meta.lore(lore);
         meta.getPersistentDataContainer().set(marca, PersistentDataType.STRING, id);
         item.setItemMeta(meta);
@@ -193,14 +205,17 @@ public final class Caja {
         ItemStack item = new ItemStack(tipo.block(), Math.max(1, Math.min(64, cantidad)));
         ItemMeta meta = item.getItemMeta();
         if (meta == null) return item;
-        meta.displayName(Component.text(display, color()).decoration(TextDecoration.ITALIC, false));
+        meta.displayName(Estilo.texto(display, color()));
+
         List<Component> lore = new ArrayList<>();
-        lore.add(Component.text(tipo.display(), tipo.color()).decoration(TextDecoration.ITALIC, false));
-        lore.add(Component.empty());
-        lore.add(Component.text("Colocalo donde quieras y las veces", NamedTextColor.GRAY)
-                .decoration(TextDecoration.ITALIC, false));
-        lore.add(Component.text("que quieras. Se abre con su llave.", NamedTextColor.GRAY)
-                .decoration(TextDecoration.ITALIC, false));
+        lore.add(Estilo.texto(tipo.display(), tipo.color()));
+        lore.add(Estilo.vacio());
+        lore.add(Estilo.linea("Se abre con", "Llave de " + display, CLARO));
+        lore.add(Estilo.linea("Por apertura", tiradas + " objeto(s)", CLARO));
+        lore.add(Estilo.vacio());
+        lore.add(Estilo.texto("Colócala donde quieras, las veces", Estilo.APAGADO));
+        lore.add(Estilo.texto("que quieras.", Estilo.APAGADO));
+
         meta.lore(lore);
         meta.getPersistentDataContainer().set(marca, PersistentDataType.STRING, id);
         item.setItemMeta(meta);

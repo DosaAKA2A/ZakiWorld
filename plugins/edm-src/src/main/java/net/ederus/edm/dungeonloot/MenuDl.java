@@ -19,6 +19,7 @@ import net.ederus.edm.anomaly.drops.DropTable;
 import net.ederus.edm.comun.menu.MenuUtil;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
+import net.kyori.adventure.text.format.TextColor;
 import net.kyori.adventure.text.format.TextDecoration;
 
 /**
@@ -72,7 +73,7 @@ public final class MenuDl implements Listener {
     /* ------------------------------------------------------------------ abrir */
 
     public void abrirLista(Player p) {
-        abrir(p, Pantalla.LISTA, null, "Cajas de mazmorra");
+        abrir(p, Pantalla.LISTA, null, "Cajas");
     }
 
     public void abrirCaja(Player p, String cajaId) {
@@ -81,25 +82,35 @@ public final class MenuDl implements Listener {
     }
 
     public void abrirBotin(Player p, String cajaId) {
-        Caja c = plugin.registro().caja(cajaId);
-        abrir(p, Pantalla.BOTIN, cajaId, "Botín · " + (c == null ? "" : c.display()));
+        abrir(p, Pantalla.BOTIN, cajaId, "Botín");
     }
 
     public void abrirBovedas(Player p, String cajaId) {
-        Caja c = plugin.registro().caja(cajaId);
-        abrir(p, Pantalla.BOVEDAS, cajaId, "Bóvedas · " + (c == null ? "" : c.display()));
+        abrir(p, Pantalla.BOVEDAS, cajaId, "Plantadas");
     }
 
-    private void abrir(Player p, Pantalla pantalla, String contexto, String titulo) {
+    /**
+     * El titulo, con la misma forma que los de Anomaly: el rombo en el color de
+     * la caja, el nombre del panel en blanco y la seccion detras. Es lo unico que
+     * va en negrita en toda la ventana.
+     */
+    private void abrir(Player p, Pantalla pantalla, String contexto, String seccion) {
         Vista v = new Vista(pantalla, contexto);
-        v.inv = Bukkit.createInventory(v, 54,
-                Component.text(titulo, DungeonLootPlugin.MARCA, TextDecoration.BOLD));
+        Caja c = plugin.registro().caja(contexto);
+        TextColor acento = c == null ? DungeonLootPlugin.MARCA : c.color();
+        Component titulo = Component.text("✦ ", acento)
+                .append(Component.text("BÓVEDAS", NamedTextColor.WHITE, TextDecoration.BOLD))
+                .append(Component.text("  " + seccion, acento));
+        v.inv = Bukkit.createInventory(v, 54, titulo);
         pintar(v);
         p.openInventory(v.inv);
     }
 
     private void pintar(Vista v) {
         v.inv.clear();
+        // La fila de abajo entera, como en Anomaly: da suelo a la ventana y deja
+        // los botones de navegacion siempre en el mismo sitio.
+        for (int i = 45; i <= 53; i++) v.inv.setItem(i, MenuUtil.pane());
         switch (v.pantalla) {
             case LISTA -> pintarLista(v.inv);
             case CAJA -> pintarCaja(v.inv, v.contexto);
@@ -364,10 +375,26 @@ public final class MenuDl implements Listener {
         if (!(e.getInventory().getHolder() instanceof Vista v)) return;
         if (!(e.getWhoClicked() instanceof Player p)) return;
 
-        // De este menu no sale ni entra un objeto: para anadir botin se COPIA lo
-        // que traiga el cursor, que asi nunca se le queda dentro a nadie.
-        e.setCancelled(true);
-        if (e.getClickedInventory() != e.getInventory()) return;
+        boolean arriba = e.getRawSlot() >= 0 && e.getRawSlot() < e.getInventory().getSize();
+
+        /*
+         * En la pantalla de botin hay que DEJAR tocar el inventario propio, o el
+         * jugador no puede coger nada con el cursor y el menu parece congelado.
+         * Es exactamente lo que pasaba: no habia forma de anadir un objeto.
+         *
+         * Todo lo demas sigue cancelado, y el shift tambien, porque el shift si
+         * moveria el objeto de verdad en vez de copiarlo.
+         */
+        if (arriba || v.pantalla != Pantalla.BOTIN || e.isShiftClick()) {
+            e.setCancelled(true);
+        }
+
+        // Shift desde el inventario propio: copia ese objeto a la lista.
+        if (v.pantalla == Pantalla.BOTIN && !arriba && e.isShiftClick()) {
+            copiarAlBotin(p, v, e.getCurrentItem());
+            return;
+        }
+        if (!arriba) return;
 
         switch (v.pantalla) {
             case LISTA -> clicLista(p, e);
@@ -375,6 +402,21 @@ public final class MenuDl implements Listener {
             case BOTIN -> clicBotin(p, v, e);
             case BOVEDAS -> clicBovedas(p, v, e);
         }
+    }
+
+    /** Mete una COPIA en la lista: el objeto del jugador no se mueve de su sitio. */
+    private void copiarAlBotin(Player p, Vista v, ItemStack elegido) {
+        if (elegido == null || elegido.getType().isAir()) return;
+        Caja c = plugin.registro().caja(v.contexto);
+        if (c == null) return;
+        if (c.tabla().entries().size() >= DropTable.CAPACITY) {
+            plugin.di(p, "lista-llena", "La lista está llena: %tope% objetos.",
+                    "%tope%", String.valueOf(DropTable.CAPACITY));
+            return;
+        }
+        c.tabla().entries().add(DropEntry.of(elegido.clone()));
+        plugin.registro().guardar();
+        pintar(v);
     }
 
     private static boolean esCasilla(int slot) {
@@ -390,13 +432,12 @@ public final class MenuDl implements Listener {
         if (e.getSlot() == 48 || e.getSlot() == 50) {
             Caja.Tipo tipo = e.getSlot() == 48 ? Caja.Tipo.COMUN : Caja.Tipo.OMINOSA;
             p.closeInventory();
-            p.sendMessage(plugin.aviso("Escribe en el chat el nombre de la caja nueva."));
+            plugin.di(p, "pide-nombre", "Escribe en el chat el nombre de la caja.");
             plugin.core().chat().pedir(p, texto -> {
                 Caja c = plugin.registro().crear(texto.trim(), tipo);
                 plugin.registro().guardar();
-                p.sendMessage(plugin.aviso(Component.text("Caja creada: ", NamedTextColor.GRAY)
-                        .append(c.nombre())
-                        .append(Component.text("  (id " + c.id() + ")", MenuUtil.SOFT))));
+                plugin.di(p, "caja-creada", "Caja creada: %caja% (%id%)",
+                        "%caja%", c.display(), "%id%", c.id());
                 abrirCaja(p, c.id());
             }, () -> abrirLista(p));
             return;
@@ -429,17 +470,19 @@ public final class MenuDl implements Listener {
             case 21 -> {
                 int n = e.isShiftClick() ? 64 : (e.isRightClick() ? 16 : 1);
                 dar(p, c.llave(plugin.claveLlave(), n));
-                p.sendMessage(plugin.aviso("Tienes " + n + " llave(s) de " + c.display() + "."));
+                plugin.di(p, "llaves-dadas", "Tienes %cuantas% llave(s) de %caja%",
+                        "%cuantas%", String.valueOf(n), "%caja%", c.display());
             }
             case 22 -> {
                 int n = e.isRightClick() ? 8 : 1;
                 dar(p, c.bloque(plugin.claveCaja(), n));
-                p.sendMessage(plugin.aviso("Tienes " + n + " bóveda(s) de " + c.display() + "."));
+                plugin.di(p, "bovedas-dadas", "Tienes %cuantas% bóveda(s) de %caja%",
+                        "%cuantas%", String.valueOf(n), "%caja%", c.display());
             }
             case 23 -> abrirBovedas(p, c.id());
             case 24 -> {
                 p.closeInventory();
-                p.sendMessage(plugin.aviso("Escribe en el chat el nombre nuevo."));
+                plugin.di(p, "pide-nombre-nuevo", "Escribe en el chat el nombre nuevo.");
                 plugin.core().chat().pedir(p, texto -> {
                     c.display(texto.trim());
                     plugin.registro().guardar();
@@ -455,13 +498,15 @@ public final class MenuDl implements Listener {
                 if (e.getClick() != ClickType.DROP && e.getClick() != ClickType.CONTROL_DROP) return;
                 if (!c.id().equals(confirmando.get(p.getUniqueId()))) {
                     confirmando.put(p.getUniqueId(), c.id());
-                    p.sendMessage(plugin.aviso("Pulsa Q otra vez para borrar " + c.display() + "."));
+                    plugin.di(p, "caja-confirmar", "Pulsa Q otra vez para borrar %caja%",
+                            "%caja%", c.display());
                     return;
                 }
                 confirmando.remove(p.getUniqueId());
                 plugin.registro().borrar(c);
                 plugin.registro().guardar();
-                p.sendMessage(plugin.aviso("Caja borrada."));
+                plugin.di(p, "caja-borrada", "Se fue la caja %caja% y sus bóvedas con ella.",
+                        "%caja%", c.display());
                 abrirLista(p);
             }
             case SLOT_VOLVER -> abrirLista(p);
@@ -494,7 +539,7 @@ public final class MenuDl implements Listener {
                 c.unico(nuevo);
                 plugin.registro().guardar();
                 pintar(v);
-                p.sendMessage(plugin.aviso("Objeto único puesto, al 1% de probabilidad."));
+                plugin.di(p, "unico-puesto", "Objeto único puesto, al 1% de probabilidad.");
                 return;
             }
             if (c.unico() != null) ajustar(p, v, c, c.unico(), e, true);
@@ -507,7 +552,8 @@ public final class MenuDl implements Listener {
 
         if (traeAlgo) {
             if (lista.size() >= DropTable.CAPACITY) {
-                p.sendMessage(plugin.aviso("La lista está llena: " + DropTable.CAPACITY + " objetos."));
+                plugin.di(p, "lista-llena", "La lista está llena: %tope% objetos.",
+                        "%tope%", String.valueOf(DropTable.CAPACITY));
                 return;
             }
             lista.add(DropEntry.of(cursor.clone()));
@@ -557,7 +603,7 @@ public final class MenuDl implements Listener {
         if (e.getClick() == ClickType.DROP || e.getClick() == ClickType.CONTROL_DROP) {
             if (!b.id().equals(confirmando.get(p.getUniqueId()))) {
                 confirmando.put(p.getUniqueId(), b.id());
-                p.sendMessage(plugin.aviso("Pulsa Q otra vez para quitar esa bóveda."));
+                plugin.di(p, "quitar-confirmar", "Pulsa Q otra vez para quitar esa bóveda.");
                 return;
             }
             confirmando.remove(p.getUniqueId());
@@ -567,20 +613,22 @@ public final class MenuDl implements Listener {
             }
             plugin.registro().quitar(b);
             plugin.registro().guardar();
-            p.sendMessage(plugin.aviso("Bóveda quitada."));
+            plugin.di(p, "quitada", "Bóveda quitada del mapa.");
             pintar(v);
             return;
         }
 
         var destino = b.destino();
         if (destino == null) {
-            p.sendMessage(plugin.aviso("El mundo " + b.worldName() + " no está cargado."));
+            plugin.di(p, "mundo-descargado", "El mundo %mundo% no está cargado.",
+                    "%mundo%", b.worldName());
             return;
         }
         p.closeInventory();
         p.teleport(destino);
-        p.sendMessage(plugin.aviso("Ahí está: " + b.x() + " " + b.y() + " " + b.z()
-                + " (" + b.worldName() + ")."));
+        plugin.di(p, "viaje", "Ahí está: %x% %y% %z% (%mundo%)",
+                "%x%", String.valueOf(b.x()), "%y%", String.valueOf(b.y()),
+                "%z%", String.valueOf(b.z()), "%mundo%", b.worldName());
     }
 
     private static final int[] PALETA = {

@@ -10,6 +10,7 @@ import org.bukkit.command.CommandSender;
 import org.bukkit.command.TabCompleter;
 import org.bukkit.entity.Player;
 
+import net.ederus.edm.comun.Estilo;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
 import net.kyori.adventure.text.format.TextDecoration;
@@ -32,7 +33,7 @@ public final class ComandoDl implements CommandExecutor, TabCompleter {
     @Override
     public boolean onCommand(CommandSender quien, Command cmd, String etiqueta, String[] args) {
         if (!quien.hasPermission("ederus.dl")) {
-            quien.sendMessage(plugin.aviso("No puedes usar las cajas de mazmorra."));
+            plugin.di(quien, "sin-permiso", "No puedes usar las cajas de mazmorra.");
             return true;
         }
 
@@ -50,7 +51,7 @@ public final class ComandoDl implements CommandExecutor, TabCompleter {
             case "boveda", "bóveda" -> boveda(quien, args);
             case "lista" -> lista(quien);
             case "reload" -> {
-                quien.sendMessage(plugin.aviso("Recargado: " + plugin.recargar()));
+                quien.sendMessage(plugin.texto("recargado", "Recargado: %que%", "%que%", plugin.recargar()));
             }
             default -> ayuda(quien, etiqueta);
         }
@@ -60,62 +61,62 @@ public final class ComandoDl implements CommandExecutor, TabCompleter {
     /** /dl llave <caja> [jugador] [cantidad] — pensado para el botin de un mob. */
     private void llave(CommandSender quien, String[] args) {
         if (args.length < 2) {
-            quien.sendMessage(plugin.aviso("Uso: /dl llave <caja> [jugador] [cantidad]"));
+            quien.sendMessage(plugin.texto("uso-llave", "Uso: /dl llave <caja> [jugador] [cantidad]"));
             return;
         }
         Caja caja = plugin.registro().caja(args[1]);
         if (caja == null) {
-            quien.sendMessage(plugin.aviso("No hay ninguna caja con el id '" + args[1] + "'."));
+            plugin.di(quien, "sin-caja", "No hay ninguna caja con el id %id%", "%id%", args[1]);
             return;
         }
         Player destino = destino(quien, args, 2);
         if (destino == null) {
-            quien.sendMessage(plugin.aviso("Di a qué jugador se la das."));
+            plugin.di(quien, "di-jugador", "Di a qué jugador se la das.");
             return;
         }
         int cantidad = entero(args, 3, 1);
         entregar(destino, caja.llave(plugin.claveLlave(), cantidad));
-        quien.sendMessage(plugin.aviso(Component.text("Entregadas ", NamedTextColor.GRAY)
-                .append(Component.text(cantidad + " llave(s) de ", NamedTextColor.WHITE))
-                .append(caja.nombre())
-                .append(Component.text(" a " + destino.getName() + ".", NamedTextColor.GRAY))));
+        plugin.di(quien, "llaves-enviadas", "Entregadas %cuantas% llave(s) de %caja% a %jugador%",
+                "%cuantas%", String.valueOf(cantidad), "%caja%", caja.display(),
+                "%jugador%", destino.getName());
     }
 
     /** /dl boveda <caja> [jugador] [cantidad] — el bloque, para plantarlo. */
     private void boveda(CommandSender quien, String[] args) {
         if (args.length < 2) {
-            quien.sendMessage(plugin.aviso("Uso: /dl boveda <caja> [jugador] [cantidad]"));
+            quien.sendMessage(plugin.texto("uso-boveda", "Uso: /dl boveda <caja> [jugador] [cantidad]"));
             return;
         }
         Caja caja = plugin.registro().caja(args[1]);
         if (caja == null) {
-            quien.sendMessage(plugin.aviso("No hay ninguna caja con el id '" + args[1] + "'."));
+            plugin.di(quien, "sin-caja", "No hay ninguna caja con el id %id%", "%id%", args[1]);
             return;
         }
         Player destino = destino(quien, args, 2);
         if (destino == null) {
-            quien.sendMessage(plugin.aviso("Di a qué jugador se la das."));
+            plugin.di(quien, "di-jugador", "Di a qué jugador se la das.");
             return;
         }
         int cantidad = entero(args, 3, 1);
         entregar(destino, caja.bloque(plugin.claveCaja(), cantidad));
-        quien.sendMessage(plugin.aviso("Entregada la bóveda de " + caja.display() + "."));
+        plugin.di(quien, "bovedas-enviadas", "Entregada la bóveda de %caja% a %jugador%",
+                "%caja%", caja.display(), "%jugador%", destino.getName());
     }
 
     private void lista(CommandSender quien) {
         List<Caja> cajas = plugin.registro().cajas();
         if (cajas.isEmpty()) {
-            quien.sendMessage(plugin.aviso("Todavía no hay ninguna caja. Créala con /dl."));
+            plugin.di(quien, "lista-vacia", "Todavía no hay ninguna caja. La primera se crea desde /dl");
             return;
         }
-        quien.sendMessage(Component.text("CAJAS DE MAZMORRA", DungeonLootPlugin.MARCA, TextDecoration.BOLD));
+        quien.sendMessage(Estilo.cabecera("BÓVEDAS", "Cajas"));
         for (Caja c : cajas) {
             int plantadas = plugin.registro().bovedasDe(c.id()).size();
-            quien.sendMessage(Component.text("  " + c.id() + "  ", NamedTextColor.DARK_GRAY)
+            quien.sendMessage(Estilo.texto(" " + Estilo.FLECHA + " ", Estilo.APAGADO)
                     .append(c.nombre())
-                    .append(Component.text("  " + c.tipo().display(), c.tipo().color()))
-                    .append(Component.text("  ·  " + Registro.cuantos(c) + " objeto(s)  ·  "
-                            + plantadas + " plantada(s)", NamedTextColor.GRAY)));
+                    .append(Estilo.texto("  " + c.id(), Estilo.APAGADO))
+                    .append(Estilo.texto("  " + Registro.cuantos(c) + " objeto(s)", Estilo.CLARO))
+                    .append(Estilo.texto("  " + plantadas + " plantada(s)", Estilo.APAGADO)));
         }
     }
 
@@ -141,7 +142,7 @@ public final class ComandoDl implements CommandExecutor, TabCompleter {
     }
 
     private void ayuda(CommandSender quien, String etiqueta) {
-        quien.sendMessage(Component.text("CAJAS DE MAZMORRA", DungeonLootPlugin.MARCA, TextDecoration.BOLD));
+        quien.sendMessage(Estilo.cabecera("BÓVEDAS", "Cajas de mazmorra"));
         linea(quien, "/" + etiqueta, "abre el menú: crear cajas, botín y bóvedas");
         linea(quien, "/" + etiqueta + " lista", "las cajas en texto, con su id");
         linea(quien, "/" + etiqueta + " llave <caja> [jugador] [n]", "entrega llaves");
@@ -150,8 +151,7 @@ public final class ComandoDl implements CommandExecutor, TabCompleter {
     }
 
     private void linea(CommandSender quien, String comando, String que) {
-        quien.sendMessage(Component.text("  " + comando + "  ", NamedTextColor.WHITE)
-                .append(Component.text(que, NamedTextColor.GRAY)));
+        quien.sendMessage(Estilo.linea(comando, que, Estilo.APAGADO));
     }
 
     @Override

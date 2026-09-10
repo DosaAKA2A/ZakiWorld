@@ -1,0 +1,55 @@
+# ---------------------------------------------------------------------------
+# Todo lo que las cajas de mazmorra le dicen al jugador por el chat.
+#
+# Codigos de color: &7, &#RRGGBB y el &x&R&R&G&G&B&B de Spigot, los tres.
+#
+# El prefijo sigue el convenio del resto del servidor (EDERUS », MARKET »...).
+# La negrita va SOLO en la palabra del prefijo; en el cuerpo del mensaje, nunca.
+# Para que una linea salga SIN prefijo, empiezala con {sin-prefijo}.
+# ---------------------------------------------------------------------------
+version: 1
+
+prefijo: '&x&0&0&8&3&F&D&lBÓVEDAS &8» &f'
+
+# --- abrir una boveda ---
+# %caja% %jugador% %objeto%
+sin-llave: '&7Necesitas la &x&D&7&F&3&F&Fllave de %caja% &7en la mano.'
+sin-botin: '&7Esta bóveda no tiene botín configurado todavía.'
+unico: '{sin-prefijo}&x&D&7&F&3&F&F%jugador% &7abrió &x&0&0&8&3&F&D%caja% &7y sacó &#91F4FF%objeto%'
+
+# --- montar cajas ---
+pide-nombre: '&fEscribe en el chat el nombre de la caja. &7Escribe cancelar para dejarlo.'
+pide-nombre-nuevo: '&fEscribe en el chat el nombre nuevo. &7Escribe cancelar para dejarlo.'
+caja-creada: '&fCaja creada&8: &x&D&7&F&3&F&F%caja% &8(&7%id%&8)'
+caja-borrada: '&fSe fue la caja &x&D&7&F&3&F&F%caja% &7y sus bóvedas con ella.'
+caja-confirmar: '&#FF5C5CPulsa Q otra vez &7para borrar &x&D&7&F&3&F&F%caja%'
+sin-caja: '&#FF5C5CNo hay ninguna caja con el id &7%id%'
+lista-vacia: '&7Todavía no hay ninguna caja. La primera se crea desde &f/dl'
+
+# --- llaves y bloques ---
+llaves-dadas: '&fTienes &x&D&7&F&3&F&F%cuantas% &fllave(s) de &x&D&7&F&3&F&F%caja%'
+llaves-enviadas: '&fEntregadas &x&D&7&F&3&F&F%cuantas% &fllave(s) de &x&D&7&F&3&F&F%caja% &fa &x&D&7&F&3&F&F%jugador%'
+bovedas-dadas: '&fTienes &x&D&7&F&3&F&F%cuantas% &fbóveda(s) de &x&D&7&F&3&F&F%caja%'
+bovedas-enviadas: '&fEntregada la bóveda de &x&D&7&F&3&F&F%caja% &fa &x&D&7&F&3&F&F%jugador%'
+
+# --- el mundo ---
+plantada: '&fBóveda plantada&8: &x&D&7&F&3&F&F%caja% &8· &7%x% %y% %z%'
+retirada: '&fBóveda retirada. El bloque vuelve a tu inventario.'
+quitada: '&fBóveda quitada del mapa.'
+quitar-confirmar: '&#FF5C5CPulsa Q otra vez &7para quitar esa bóveda.'
+viaje: '&fAhí está&8: &7%x% %y% %z% &8(&7%mundo%&8)'
+mundo-descargado: '&#FF5C5CEl mundo %mundo% no está cargado.'
+huerfana: '&#FF5C5CEsa bóveda apunta a una caja que ya no existe.'
+
+# --- cuando no se puede ---
+sin-permiso: '&#FF5C5CNo puedes usar las cajas de mazmorra.'
+sin-permiso-colocar: '&#FF5C5CNo puedes colocar bóvedas.'
+sin-permiso-romper: '&#FF5C5CEsta bóveda no se puede romper.'
+lista-llena: '&#FF5C5CLa lista está llena&8: &7%tope% objetos.'
+di-jugador: '&#FF5C5CDi a qué jugador se la das.'
+
+# --- respuestas del comando ---
+recargado: '&fRecargado&8: &7%que%'
+uso-llave: '&7Uso&8: &f/dl llave <caja> [jugador] [cantidad]'
+uso-boveda: '&7Uso&8: &f/dl boveda <caja> [jugador] [cantidad]'
+unico-puesto: '&fObjeto único puesto, al &#91F4FF1% &fde probabilidad.'

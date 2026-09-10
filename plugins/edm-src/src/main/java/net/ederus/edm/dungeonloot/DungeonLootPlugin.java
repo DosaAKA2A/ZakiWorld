@@ -1,13 +1,16 @@
 package net.ederus.edm.dungeonloot;
 
+import java.io.File;
+
 import org.bukkit.NamespacedKey;
+import org.bukkit.command.CommandSender;
 
 import net.ederus.edm.EDMPlugin;
 import net.ederus.edm.Module;
+import net.ederus.edm.comun.Estilo;
+import net.ederus.edm.comun.Textos;
 import net.kyori.adventure.text.Component;
-import net.kyori.adventure.text.format.NamedTextColor;
 import net.kyori.adventure.text.format.TextColor;
-import net.kyori.adventure.text.format.TextDecoration;
 
 /**
  * DungeonLoot: las cajas de mazmorra.
@@ -21,8 +24,13 @@ import net.kyori.adventure.text.format.TextDecoration;
  */
 public final class DungeonLootPlugin extends Module {
 
-    public static final TextColor MARCA = TextColor.color(0x8FB8C4);
+    /** El azul de marca de Ederus, el mismo del resto de los menus. */
+    public static final TextColor MARCA = Estilo.MARCA;
+    public static final TextColor CLARO = Estilo.CLARO;
 
+    private static final int MENSAJES_VERSION = 1;
+
+    private final Textos textos = new Textos();
     private Registro registro;
     private Bovedas bovedas;
     private MenuDl menu;
@@ -38,6 +46,8 @@ public final class DungeonLootPlugin extends Module {
     public void onEnable() {
         saveDefaultConfig();
         reloadConfig();
+        migrar("mensajes.yml", MENSAJES_VERSION);
+        textos.cargar(new File(getDataFolder(), "mensajes.yml"));
 
         claveCaja = new NamespacedKey(this, "caja");
         claveLlave = new NamespacedKey(this, "llave");
@@ -67,6 +77,7 @@ public final class DungeonLootPlugin extends Module {
 
     @Override
     public String recargar() {
+        textos.cargar(new File(getDataFolder(), "mensajes.yml"));
         registro.cargar();
         return registro.cajas().size() + " caja(s), " + registro.bovedas().size() + " boveda(s).";
     }
@@ -91,14 +102,16 @@ public final class DungeonLootPlugin extends Module {
         return claveLlave;
     }
 
-    /** Una linea de chat con el prefijo del modulo. */
-    public Component aviso(Component texto) {
-        return Component.text("BÓVEDAS ", MARCA, TextDecoration.BOLD)
-                .append(Component.text("» ", NamedTextColor.DARK_GRAY))
-                .append(texto);
+    public Textos textos() {
+        return textos;
     }
 
-    public Component aviso(String texto) {
-        return aviso(Component.text(texto, NamedTextColor.GRAY));
+    /** Un mensaje de mensajes.yml, ya con su prefijo. */
+    public Component texto(String clave, String respaldo, String... pares) {
+        return textos.de(clave, respaldo, pares);
+    }
+
+    public void di(CommandSender a, String clave, String respaldo, String... pares) {
+        textos.manda(a, clave, respaldo, pares);
     }
 }

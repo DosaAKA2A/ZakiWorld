@@ -1,5 +1,6 @@
 package net.ederus.edm.flex;
 
+import java.io.File;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
@@ -9,6 +10,8 @@ import org.bukkit.scheduler.BukkitTask;
 
 import net.ederus.edm.EDMPlugin;
 import net.ederus.edm.Module;
+import net.ederus.edm.comun.Estilo;
+import net.ederus.edm.comun.Textos;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.event.ClickEvent;
 import net.kyori.adventure.text.event.HoverEvent;
@@ -30,8 +33,19 @@ import net.kyori.adventure.text.format.TextDecoration;
  */
 public final class FlexPlugin extends Module {
 
-    public static final TextColor MARCA = TextColor.color(0xFFD966);
+    /*
+     * El magenta y el carmesi de la vitrina. No son dos colores fuertes: son dos
+     * tonos del mismo lado de la rueda, uno claro y otro profundo, para que el
+     * degradado se lea premium en vez de gritar. El texto normal va en el tono
+     * suave; el degradado entero queda para el prefijo y para el boton.
+     */
+    public static final int MAGENTA = 0xE36BC8;
+    public static final int CARMESI = 0x8F1144;
+    public static final TextColor MARCA = TextColor.color(0xDD92C0);
 
+    private static final int MENSAJES_VERSION = 1;
+
+    private final Textos textos = new Textos();
     private Almacen almacen;
     private MenuFlex menu;
     private BukkitTask volcado;
@@ -47,6 +61,8 @@ public final class FlexPlugin extends Module {
     public void onEnable() {
         saveDefaultConfig();
         reloadConfig();
+        migrar("mensajes.yml", MENSAJES_VERSION);
+        textos.cargar(new File(getDataFolder(), "mensajes.yml"));
 
         almacen = new Almacen(this);
         almacen.cargar();
@@ -77,6 +93,7 @@ public final class FlexPlugin extends Module {
 
     @Override
     public String recargar() {
+        textos.cargar(new File(getDataFolder(), "mensajes.yml"));
         almacen.volcarSiHaceFalta();
         almacen.cargar();
         return almacen.cuantas() + " vitrina(s).";
@@ -105,7 +122,7 @@ public final class FlexPlugin extends Module {
      */
     public void anunciar(Player quien, Vitrina vitrina) {
         if (vitrina.vacia()) {
-            quien.sendMessage(aviso("Tu vitrina está vacía. Pon algo antes de mostrarla."));
+            di(quien, "vacia-para-mostrar", "Tu vitrina está vacía. Pon algo antes de mostrarla.");
             return;
         }
 
@@ -114,28 +131,29 @@ public final class FlexPlugin extends Module {
         long espera = enfriamiento() * 1000L;
         if (!quien.hasPermission("ederus.flex.admin") && ahora - antes < espera) {
             long quedan = (espera - (ahora - antes) + 999) / 1000;
-            quien.sendMessage(aviso("Espera " + quedan + " s para volver a mostrarla."));
+            di(quien, "enfriamiento", "Podrás volver a mostrarla en %segundos% s",
+                    "%segundos%", String.valueOf(quedan));
             return;
         }
         ultimoAnuncio.put(quien.getUniqueId(), ahora);
 
-        Component hover = Component.text("Vitrina de " + vitrina.nombre(), MARCA, TextDecoration.BOLD)
+        Component hover = Estilo.degradado("Vitrina de " + vitrina.nombre(), MAGENTA, CARMESI)
                 .append(Component.newline())
-                .append(Component.text(vitrina.cuantos() + " objeto(s)", NamedTextColor.GRAY))
-                .append(Component.newline());
-        for (Component linea : menu.resumen(vitrina)) {
-            hover = hover.append(Component.newline()).append(linea);
+                .append(Estilo.texto(vitrina.cuantos() + " objeto(s)", Estilo.APAGADO));
+        for (Component fila : menu.resumen(vitrina)) {
+            hover = hover.append(Component.newline()).append(fila);
         }
         hover = hover.append(Component.newline()).append(Component.newline())
-                .append(Component.text("Clic para abrirla", NamedTextColor.YELLOW));
+                .append(Estilo.texto("Clic para abrirla", MARCA));
 
-        Component boton = Component.text("[Ver vitrina]", MARCA, TextDecoration.BOLD)
+        Component boton = Estilo.texto("[", Estilo.APAGADO)
+                .append(Estilo.degradado("Ver vitrina", MAGENTA, CARMESI))
+                .append(Estilo.texto("]", Estilo.APAGADO))
                 .hoverEvent(HoverEvent.showText(hover))
                 .clickEvent(ClickEvent.runCommand("/flex " + vitrina.nombre()));
 
-        Component linea = Component.text(vitrina.nombre(), NamedTextColor.WHITE, TextDecoration.BOLD)
-                .append(Component.text(" ha puesto su vitrina a la vista.  ", NamedTextColor.GRAY))
-                .append(boton);
+        Component linea = texto("anuncio", "%jugador% ha puesto su vitrina a la vista.  ",
+                "%jugador%", vitrina.nombre()).append(boton);
 
         for (Player p : core.getServer().getOnlinePlayers()) {
             p.sendMessage(linea);
@@ -144,13 +162,16 @@ public final class FlexPlugin extends Module {
                 vitrina.nombre() + " mostró su vitrina (" + vitrina.cuantos() + " objetos).");
     }
 
-    public Component aviso(Component texto) {
-        return Component.text("VITRINA ", MARCA, TextDecoration.BOLD)
-                .append(Component.text("» ", NamedTextColor.DARK_GRAY))
-                .append(texto);
+    public Textos textos() {
+        return textos;
     }
 
-    public Component aviso(String texto) {
-        return aviso(Component.text(texto, NamedTextColor.GRAY));
+    /** Un mensaje de mensajes.yml, ya con su prefijo. */
+    public Component texto(String clave, String respaldo, String... pares) {
+        return textos.de(clave, respaldo, pares);
+    }
+
+    public void di(org.bukkit.command.CommandSender a, String clave, String respaldo, String... pares) {
+        textos.manda(a, clave, respaldo, pares);
     }
 }

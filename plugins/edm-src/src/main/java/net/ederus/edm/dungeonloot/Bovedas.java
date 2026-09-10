@@ -72,12 +72,12 @@ public final class Bovedas implements Listener {
         Caja caja = plugin.registro().caja(cajaId);
         if (caja == null) {
             e.setCancelled(true);
-            e.getPlayer().sendMessage(plugin.aviso("Esa bóveda apunta a una caja que ya no existe."));
+            plugin.di(e.getPlayer(), "huerfana", "Esa bóveda apunta a una caja que ya no existe.");
             return;
         }
         if (!e.getPlayer().hasPermission("ederus.dl.admin")) {
             e.setCancelled(true);
-            e.getPlayer().sendMessage(plugin.aviso("No puedes colocar bóvedas."));
+            plugin.di(e.getPlayer(), "sin-permiso-colocar", "No puedes colocar bóvedas.");
             return;
         }
 
@@ -87,10 +87,9 @@ public final class Bovedas implements Listener {
         vestir(b, caja);
         plugin.registro().guardar();
 
-        e.getPlayer().sendMessage(plugin.aviso(Component.text("Bóveda plantada: ", NamedTextColor.GRAY)
-                .append(caja.nombre())
-                .append(Component.text("  ·  " + boveda.x() + " " + boveda.y() + " " + boveda.z(),
-                        NamedTextColor.DARK_GRAY))));
+        plugin.di(e.getPlayer(), "plantada", "Bóveda plantada: %caja%  ·  %x% %y% %z%",
+                "%caja%", caja.display(), "%x%", String.valueOf(boveda.x()),
+                "%y%", String.valueOf(boveda.y()), "%z%", String.valueOf(boveda.z()));
     }
 
     /** Deja el bloque con el aspecto de la caja: ominosa o comun, y siempre activa. */
@@ -161,7 +160,7 @@ public final class Bovedas implements Listener {
 
         if (!caja.lista()) {
             w.playSound(centro, Sound.BLOCK_VAULT_INSERT_ITEM_FAIL, 1f, 1f);
-            quien.sendMessage(plugin.aviso("Esta bóveda todavía no tiene botín configurado."));
+            plugin.di(quien, "sin-botin", "Esta bóveda no tiene botín configurado todavía.");
             return;
         }
 
@@ -169,9 +168,8 @@ public final class Bovedas implements Listener {
         String suya = marca(mano, plugin.claveLlave());
         if (suya == null || !suya.equals(caja.id())) {
             w.playSound(centro, Sound.BLOCK_VAULT_INSERT_ITEM_FAIL, 1f, 1f);
-            quien.sendMessage(plugin.aviso(Component.text("Necesitas la ", NamedTextColor.GRAY)
-                    .append(Component.text("llave de " + caja.display(), caja.color()))
-                    .append(Component.text(" en la mano.", NamedTextColor.GRAY))));
+            plugin.di(quien, "sin-llave", "Necesitas la llave de %caja% en la mano.",
+                    "%caja%", caja.display());
             return;
         }
 
@@ -239,12 +237,11 @@ public final class Bovedas implements Listener {
 
     /** El unico no se saca en silencio: lo ve el servidor entero. */
     private void anunciarUnico(Player quien, Caja caja, ItemStack item) {
-        Component linea = Component.text("", NamedTextColor.GRAY)
-                .append(Component.text(quien.getName(), caja.color(), TextDecoration.BOLD))
-                .append(Component.text(" sacó el objeto único de ", NamedTextColor.GRAY))
-                .append(caja.nombre())
-                .append(Component.text(": ", NamedTextColor.GRAY))
-                .append(DropTable.nameOf(item).colorIfAbsent(NamedTextColor.AQUA));
+        String objeto = net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer
+                .plainText().serialize(DropTable.nameOf(item));
+        Component linea = plugin.texto("unico",
+                "%jugador% abrió %caja% y sacó %objeto%",
+                "%jugador%", quien.getName(), "%caja%", caja.display(), "%objeto%", objeto);
         for (Player p : plugin.core().getServer().getOnlinePlayers()) {
             p.sendMessage(linea);
         }
@@ -304,7 +301,7 @@ public final class Bovedas implements Listener {
 
         if (!e.getPlayer().hasPermission("ederus.dl.admin")) {
             e.setCancelled(true);
-            e.getPlayer().sendMessage(plugin.aviso("Esta bóveda no se puede romper."));
+            plugin.di(e.getPlayer(), "sin-permiso-romper", "Esta bóveda no se puede romper.");
             return;
         }
         Caja caja = plugin.registro().caja(boveda.cajaId());
@@ -315,7 +312,7 @@ public final class Bovedas implements Listener {
             b.getWorld().dropItemNaturally(b.getLocation().add(0.5, 0.5, 0.5),
                     caja.bloque(plugin.claveCaja(), 1));
         }
-        e.getPlayer().sendMessage(plugin.aviso("Bóveda retirada. El bloque vuelve a tu inventario."));
+        plugin.di(e.getPlayer(), "retirada", "Bóveda retirada. El bloque vuelve a tu inventario.");
     }
 
     /* Ni una explosion se lleva una boveda por delante: son parte del decorado

@@ -32,11 +32,11 @@ public final class ComandoFlex implements CommandExecutor, TabCompleter {
     @Override
     public boolean onCommand(CommandSender quien, Command cmd, String etiqueta, String[] args) {
         if (!(quien instanceof Player p)) {
-            quien.sendMessage("Las vitrinas se ven dentro del juego.");
+            quien.sendMessage(plugin.texto("solo-en-juego", "Las vitrinas se ven dentro del juego."));
             return true;
         }
         if (!p.hasPermission("ederus.flex")) {
-            p.sendMessage(plugin.aviso("No puedes usar las vitrinas."));
+            plugin.di(p, "sin-permiso", "No puedes usar las vitrinas.");
             return true;
         }
 
@@ -55,14 +55,14 @@ public final class ComandoFlex implements CommandExecutor, TabCompleter {
             return true;
         }
         if (uno.equals("reload") && p.hasPermission("ederus.flex.admin")) {
-            p.sendMessage(plugin.aviso("Recargado: " + plugin.recargar()));
+            p.sendMessage(plugin.texto("recargado", "Recargado: %que%", "%que%", plugin.recargar()));
             return true;
         }
 
         Vitrina suya = plugin.almacen().porNombre(args[0]);
         if (suya == null || suya.vacia()) {
-            p.sendMessage(plugin.aviso(Component.text(args[0], NamedTextColor.WHITE)
-                    .append(Component.text(" no tiene nada en su vitrina.", NamedTextColor.GRAY))));
+            plugin.di(p, "sin-vitrina", "%jugador% no tiene nada en su vitrina.",
+                    "%jugador%", args[0]);
             return true;
         }
         plugin.menu().abrirAjena(p, suya);
@@ -70,7 +70,8 @@ public final class ComandoFlex implements CommandExecutor, TabCompleter {
     }
 
     private void ayuda(Player p, String etiqueta) {
-        p.sendMessage(Component.text("VITRINA", FlexPlugin.MARCA, TextDecoration.BOLD));
+        p.sendMessage(net.ederus.edm.comun.Estilo.degradado("VITRINA",
+                FlexPlugin.MAGENTA, FlexPlugin.CARMESI));
         linea(p, "/" + etiqueta, "monta la tuya: clic en un objeto y se copia");
         linea(p, "/" + etiqueta + " <jugador>", "mira la de otro");
         linea(p, "/" + etiqueta + " showcase", "la enseña en el chat");

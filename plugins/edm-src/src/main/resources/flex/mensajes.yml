@@ -1,0 +1,33 @@
+# ---------------------------------------------------------------------------
+# Todo lo que la vitrina le dice al jugador por el chat.
+#
+# Codigos de color: &7, &#RRGGBB y el &x&R&R&G&G&B&B de Spigot, los tres.
+#
+# El prefijo es un DEGRADADO de magenta a carmesi, caracter a caracter: es la
+# forma de que se lea premium sin gritar. La negrita va solo ahi, y en el cuerpo
+# del mensaje nunca. Para que una linea salga SIN prefijo, empiezala con
+# {sin-prefijo}.
+# ---------------------------------------------------------------------------
+version: 1
+
+prefijo: '&x&E&3&6&B&C&8&lV&x&D&5&5&C&B&2&lI&x&C&7&4&D&9&C&lT&x&B&9&3&E&8&6&lR&x&A&B&2&F&7&0&lI&x&9&D&2&0&5&A&lN&x&8&F&1&1&4&4&lA &8» &f'
+
+# --- la vitrina ---
+# %jugador% %cuantos%
+llena: '&#FF5C5CLa vitrina está llena. &7Quita algo antes de poner más.'
+vaciada: '&fVitrina vacía.'
+vacia-para-mostrar: '&#FF5C5CTu vitrina está vacía. &7Pon algo antes de mostrarla.'
+sin-vitrina: '&x&D&D&9&2&C&0%jugador% &7no tiene nada en su vitrina.'
+
+# --- el anuncio del chat ---
+# El anuncio va SIN prefijo: es una linea del servidor, no un aviso a uno solo.
+# El boton [Ver vitrina] se compone en el codigo, que es donde vive su clic.
+anuncio: '{sin-prefijo}&x&D&D&9&2&C&0%jugador% &7ha puesto su vitrina a la vista.  '
+enfriamiento: '&7Podrás volver a mostrarla en &x&D&D&9&2&C&0%segundos% s'
+
+# --- cuando no se puede ---
+sin-permiso: '&#FF5C5CNo puedes usar las vitrinas.'
+solo-en-juego: '&7Las vitrinas se ven dentro del juego.'
+
+# --- respuestas del comando ---
+recargado: '&fRecargado&8: &7%que%'
