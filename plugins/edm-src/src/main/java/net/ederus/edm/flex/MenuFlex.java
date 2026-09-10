@@ -141,13 +141,15 @@ public final class MenuFlex implements Listener {
                             Estilo.vacio(),
                             Estilo.accion("Clic para mostrarla", FlexPlugin.MARCA)), false));
         } else {
-            inv.setItem(SLOT_AYUDA, MenuUtil.icon(Material.ITEM_FRAME,
-                    MenuUtil.title(v.nombre(), FlexPlugin.MARCA),
-                    List.of(
-                            Estilo.linea("Objetos", String.valueOf(v.cuantos()), Estilo.CLARO),
-                            Estilo.vacio(),
-                            Estilo.texto("Solo se mira. Lo que hay aquí son copias:", Estilo.APAGADO),
-                            Estilo.texto("los objetos los tiene su dueño.", Estilo.APAGADO)), false));
+            // La ficha del dueno: quien es y poco mas. Explicar aqui que son copias
+            // sobra, porque en una vitrina ajena no hay nada que se pueda tocar.
+            List<Component> ficha = new ArrayList<>();
+            ficha.add(Estilo.linea("Objetos", String.valueOf(v.cuantos()), Estilo.CLARO));
+            if (v.actualizada() > 0) {
+                ficha.add(Estilo.linea("Actualizada", cuando(v.actualizada()), Estilo.APAGADO));
+            }
+            inv.setItem(SLOT_AYUDA, MenuUtil.icon(Material.END_CRYSTAL,
+                    MenuUtil.title(v.nombre(), FlexPlugin.MARCA), ficha, true));
         }
     }
 
@@ -210,6 +212,17 @@ public final class MenuFlex implements Listener {
     @EventHandler
     public void alCerrar(InventoryCloseEvent e) {
         if (e.getInventory().getHolder() instanceof Vista) plugin.almacen().volcarSiHaceFalta();
+    }
+
+    /** Hace cuanto se toco la vitrina, en palabras: "hace 3 h", "hace 2 dias". */
+    private static String cuando(long sello) {
+        long minutos = Math.max(0, (System.currentTimeMillis() - sello) / 60000);
+        if (minutos < 1) return "hace un momento";
+        if (minutos < 60) return "hace " + minutos + " min";
+        long horas = minutos / 60;
+        if (horas < 24) return "hace " + horas + " h";
+        long dias = horas / 24;
+        return dias == 1 ? "hace un día" : "hace " + dias + " días";
     }
 
     /** Que casilla de la vitrina es ese hueco del menu, o -1 si es marco. */
