@@ -185,6 +185,10 @@ public final class MinionRegistry {
     // ---------------------------------------------------------------------- disco
 
     public void load() {
+        // Las carpetas TAMBIEN se vacian. Sin esto, una carpeta borrada del yml
+        // seguia viva en memoria despues de un /esb reload y el menu enseñaba
+        // carpetas fantasma que ya no existian en disco.
+        categories.clear();
         types.clear();
         spawners.clear();
         file = new File(plugin.getDataFolder(), "esbirros.yml");
