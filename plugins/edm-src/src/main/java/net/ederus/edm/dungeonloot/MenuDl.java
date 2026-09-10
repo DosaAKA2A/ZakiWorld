@@ -44,15 +44,17 @@ public final class MenuDl implements Listener {
     private static final int SLOT_UNICO = 13;
     private static final int[] CASILLAS = {19, 20, 21, 22, 23, 24, 25};
 
-    private static final int SLOT_VOLVER = 27;
-    private static final int SLOT_TIRADAS = 31;
-    private static final int SLOT_AYUDA = 35;
+    /* Los botones bajan a la ultima fila y entre medias queda una entera de
+     * cristal: sin ese respiro el boton de al lado parece parte del botin. */
+    private static final int SLOT_VOLVER = 36;
+    private static final int SLOT_TIRADAS = 40;
+    private static final int SLOT_AYUDA = 44;
 
     private static final int[] MARCO = {
             0, 1, 2, 3, 4, 5, 6, 7, 8,
             9, 10, 11, 12, 14, 15, 16, 17,
             18, 26,
-            28, 29, 30, 32, 33, 34};
+            27, 28, 29, 30, 31, 32, 33, 34, 35};
 
     private final DungeonLootPlugin plugin;
 
@@ -107,7 +109,7 @@ public final class MenuDl implements Listener {
         Component titulo = Component.text("✦ ", acento)
                 .append(Component.text("BÓVEDAS", NamedTextColor.WHITE, TextDecoration.BOLD))
                 .append(Component.text("  " + seccion, acento));
-        v.inv = Bukkit.createInventory(v, pantalla == Pantalla.BOTIN ? 36 : 54, titulo);
+        v.inv = Bukkit.createInventory(v, pantalla == Pantalla.BOTIN ? 45 : 54, titulo);
         pintar(v);
         p.openInventory(v.inv);
     }
