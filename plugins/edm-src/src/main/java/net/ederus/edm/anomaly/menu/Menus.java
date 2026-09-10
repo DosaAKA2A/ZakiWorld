@@ -8,8 +8,8 @@ import net.ederus.edm.anomaly.AnomalyPlugin;
 import net.ederus.edm.anomaly.boss.Ability;
 import net.ederus.edm.anomaly.core.ActiveAnomaly;
 import net.ederus.edm.anomaly.core.AnomalyType;
-import net.ederus.edm.anomaly.core.Compat;
-import net.ederus.edm.anomaly.core.Fx;
+import net.ederus.edm.comun.Compat;
+import net.ederus.edm.comun.Fx;
 import net.ederus.edm.anomaly.drops.DropEntry;
 import net.ederus.edm.anomaly.drops.DropTable;
 import net.ederus.edm.anomaly.minions.MinionAbility;
@@ -35,6 +35,7 @@ import org.bukkit.inventory.ItemStack;
 
 import java.util.ArrayList;
 import java.util.List;
+import net.ederus.edm.comun.menu.MenuUtil;
 
 /**
  * Todos los menus del plugin en una sola pantalla de mando.
@@ -102,9 +103,9 @@ public final class Menus implements Listener {
                 .append(Component.text("ANOMALY", NamedTextColor.WHITE, TextDecoration.BOLD));
         String tail = switch (screen) {
             case HUB -> "  Panel";
-            case ANOMALIES -> "  Anomalias";
+            case ANOMALIES -> "  Anomalías";
             case ABILITIES -> "  Habilidades";
-            case DROPS -> placeMode ? "  Botin · colocar" : "  Botin · ajustar";
+            case DROPS -> placeMode ? "  Botín · colocar" : "  Botín · ajustar";
             case SETTINGS -> "  Ajustes";
             case MINION_CATEGORIES -> "  Esbirros";
             case CATEGORY_EDIT -> "  Carpeta";
@@ -191,30 +192,30 @@ public final class Menus implements Listener {
 
         List<Component> tpLore = new ArrayList<>();
         if (live == null) {
-            tpLore.add(MenuUtil.line("Te lleva junto a la anomalia abierta."));
+            tpLore.add(MenuUtil.line("Te lleva junto a la anomalía abierta."));
             tpLore.add(MenuUtil.blank());
             tpLore.add(Component.text("No hay ninguna abierta ahora mismo.", MenuUtil.DIM));
         } else {
-            tpLore.add(MenuUtil.line("Te deja a unos bloques del jefe,"));
+            tpLore.add(MenuUtil.line("Traslada a unos bloques del jefe,"));
             tpLore.add(MenuUtil.line("en suelo firme y mirando hacia el."));
             tpLore.add(MenuUtil.blank());
-            tpLore.add(MenuUtil.field("Anomalia", live.type().display(), live.type().color()));
+            tpLore.add(MenuUtil.field("Anomalía", live.type().display(), live.type().color()));
             tpLore.add(MenuUtil.field("Coordenadas", live.where().getBlockX() + "  "
                     + live.where().getBlockY() + "  " + live.where().getBlockZ(), NamedTextColor.WHITE));
             tpLore.add(MenuUtil.blank());
-            tpLore.add(MenuUtil.action("Click para viajar alli"));
+            tpLore.add(MenuUtil.action("Clic para viajar allí"));
         }
         inv.setItem(13, MenuUtil.icon(live == null ? Material.GRAY_DYE : Material.ENDER_PEARL,
-                MenuUtil.title("Ir a la anomalia", live == null ? MenuUtil.DIM : NamedTextColor.LIGHT_PURPLE),
+                MenuUtil.title("Ir a la anomalía", live == null ? MenuUtil.DIM : NamedTextColor.LIGHT_PURPLE),
                 tpLore, live != null));
 
         Location fixedSpawn = selected == null ? null : plugin.registry().spawnPoint(selected);
         inv.setItem(20, MenuUtil.icon(active ? Material.GRAY_DYE : Material.NETHER_STAR,
-                MenuUtil.title("Iniciar anomalia", active ? MenuUtil.DIM : NamedTextColor.GREEN),
+                MenuUtil.title("Iniciar anomalía", active ? MenuUtil.DIM : NamedTextColor.GREEN),
                 List.of(
                         fixedSpawn == null
-                                ? MenuUtil.line("Abre la anomalia elegida en un punto")
-                                : MenuUtil.line("Abre la anomalia elegida en su punto"),
+                                ? MenuUtil.line("Abre la anomalía elegida en un punto")
+                                : MenuUtil.line("Abre la anomalía elegida en su punto"),
                         fixedSpawn == null
                                 ? MenuUtil.line("valido del mapa y lo anuncia en el chat.")
                                 : MenuUtil.line("marcado y lo anuncia en el chat."),
@@ -227,61 +228,61 @@ public final class Menus implements Listener {
                                 fixedSpawn == null ? MenuUtil.SOFT : NamedTextColor.WHITE),
                         MenuUtil.blank(),
                         active
-                                ? Component.text("Ya hay una anomalia abierta.", NamedTextColor.RED)
-                                : MenuUtil.action("Click para iniciar")),
+                                ? Component.text("Ya hay una anomalía abierta.", NamedTextColor.RED)
+                                : MenuUtil.action("Clic para iniciar")),
                 !active && selected != null));
 
         inv.setItem(15, spawnPointItem(selected, fixedSpawn));
 
         inv.setItem(22, MenuUtil.icon(selected == null ? Material.BARRIER : selected.icon(),
-                MenuUtil.title("Elegir anomalia", MenuUtil.GOLD),
+                MenuUtil.title("Elegir anomalía", MenuUtil.GOLD),
                 List.of(
-                        MenuUtil.line("El catalogo de anomalias del servidor."),
+                        MenuUtil.line("El catálogo de anomalías del servidor."),
                         MenuUtil.blank(),
                         MenuUtil.field("Disponibles", plugin.registry().enabled().size() + " de "
                                 + plugin.registry().all().size(), NamedTextColor.WHITE),
                         MenuUtil.blank(),
-                        MenuUtil.action("Click para abrir el catalogo")),
+                        MenuUtil.action("Clic para abrir el catálogo")),
                 false));
 
         DropTable table = selected == null ? null : plugin.drops().table(selected.id());
         inv.setItem(24, MenuUtil.icon(Material.CHEST,
-                MenuUtil.title("Botin", MenuUtil.LOOT),
+                MenuUtil.title("Botín", MenuUtil.LOOT),
                 List.of(
-                        MenuUtil.line("Que suelta la anomalia al caer."),
+                        MenuUtil.line("Que suelta la anomalía al caer."),
                         MenuUtil.line("Se coloca arrastrando el objeto real,"),
-                        MenuUtil.line("asi valen los items de MMOItems."),
+                        MenuUtil.line("así valen los items de MMOItems."),
                         MenuUtil.blank(),
                         table == null
-                                ? Component.text("Elige una anomalia primero.", MenuUtil.DIM)
+                                ? Component.text("Elige una anomalía primero.", MenuUtil.DIM)
                                 : MenuUtil.field("Objetos", table.entries().size() + " / " + DropTable.CAPACITY,
                                 NamedTextColor.WHITE),
                         MenuUtil.blank(),
-                        table == null ? Component.text("Sin anomalia elegida.", MenuUtil.DIM)
-                                : MenuUtil.action("Click para editar el botin")),
+                        table == null ? Component.text("Sin anomalía elegida.", MenuUtil.DIM)
+                                : MenuUtil.action("Clic para editar el botín")),
                 false));
 
         inv.setItem(29, MenuUtil.icon(Material.COMPARATOR,
                 MenuUtil.title("Ajustes", MenuUtil.GOLD),
                 List.of(
                         MenuUtil.line("Distancias, tiempos, escalado por"),
-                        MenuUtil.line("jugadores y anomalias automaticas."),
+                        MenuUtil.line("jugadores y anomalías automaticas."),
                         MenuUtil.blank(),
                         MenuUtil.field("Automaticas", plugin.settings().autoEnabled()
                                 ? ("cada " + plugin.settings().autoIntervalMinutes() + " min") : "apagadas",
                                 plugin.settings().autoEnabled() ? NamedTextColor.GREEN : MenuUtil.DIM),
                         MenuUtil.blank(),
-                        MenuUtil.action("Click para abrir")),
+                        MenuUtil.action("Clic para abrir")),
                 false));
 
         inv.setItem(31, MenuUtil.icon(active ? Material.BARRIER : Material.GRAY_DYE,
-                MenuUtil.title("Detener anomalia", active ? NamedTextColor.RED : MenuUtil.DIM),
+                MenuUtil.title("Detener anomalía", active ? NamedTextColor.RED : MenuUtil.DIM),
                 List.of(
-                        MenuUtil.line("Cierra la anomalia abierta y borra el jefe,"),
+                        MenuUtil.line("Cierra la anomalía abierta y borra el jefe,"),
                         MenuUtil.line("sus esbirros y toda la decoracion."),
-                        MenuUtil.line("No reparte botin."),
+                        MenuUtil.line("No reparte botín."),
                         MenuUtil.blank(),
-                        active ? MenuUtil.action("Click para cerrarla")
+                        active ? MenuUtil.action("Clic para cerrarla")
                                 : Component.text("No hay ninguna abierta.", MenuUtil.DIM)),
                 false));
 
@@ -297,24 +298,24 @@ public final class Menus implements Listener {
      */
     private ItemStack spawnPointItem(AnomalyType selected, Location fixed) {
         List<Component> lore = new ArrayList<>();
-        lore.add(MenuUtil.line("Donde aparece la anomalia elegida al"));
+        lore.add(MenuUtil.line("Donde aparece la anomalía elegida al"));
         lore.add(MenuUtil.line("pulsar Iniciar: un bloque marcado por ti"));
         lore.add(MenuUtil.line("(tu coliseo) o un sitio aleatorio del mapa."));
         lore.add(MenuUtil.blank());
         if (selected == null) {
-            lore.add(Component.text("Elige una anomalia primero.", MenuUtil.DIM));
+            lore.add(Component.text("Elige una anomalía primero.", MenuUtil.DIM));
         } else if (fixed == null) {
             lore.add(MenuUtil.field("Ahora", "aleatorio, lo busca el plugin", MenuUtil.SOFT));
             lore.add(MenuUtil.blank());
-            lore.add(MenuUtil.action("Click: salir y marcar un bloque a golpe"));
+            lore.add(MenuUtil.action("Clic: salir y marcar un bloque a golpe"));
         } else {
             lore.add(MenuUtil.field("Punto fijo", fixed.getBlockX() + " " + fixed.getBlockY() + " "
                     + fixed.getBlockZ(), NamedTextColor.WHITE));
             lore.add(MenuUtil.field("Mundo", fixed.getWorld() == null ? "?" : fixed.getWorld().getName(),
                     MenuUtil.SOFT));
             lore.add(MenuUtil.blank());
-            lore.add(MenuUtil.action("Click: marcar un bloque nuevo"));
-            lore.add(Component.text("► Click derecho: volver a aleatorio", NamedTextColor.YELLOW));
+            lore.add(MenuUtil.action("Clic: marcar un bloque nuevo"));
+            lore.add(Component.text("► Clic derecho: volver a aleatorio", NamedTextColor.YELLOW));
         }
         return MenuUtil.icon(fixed == null ? Material.COMPASS : Material.LODESTONE,
                 MenuUtil.title("Punto de aparicion", fixed == null ? MenuUtil.GOLD : NamedTextColor.GREEN),
@@ -325,14 +326,14 @@ public final class Menus implements Listener {
         List<Component> lore = new ArrayList<>();
         ActiveAnomaly ev = plugin.manager().current();
         if (ev == null) {
-            lore.add(Component.text("No hay ninguna anomalia abierta.", MenuUtil.DIM));
+            lore.add(Component.text("No hay ninguna anomalía abierta.", MenuUtil.DIM));
             if (plugin.manager().searching()) {
                 lore.add(MenuUtil.blank());
                 lore.add(Component.text("Buscando sitio...", NamedTextColor.YELLOW));
             }
             return lore;
         }
-        lore.add(MenuUtil.field("Anomalia", ev.type().display(), ev.type().color()));
+        lore.add(MenuUtil.field("Anomalía", ev.type().display(), ev.type().color()));
         lore.add(MenuUtil.field("Donde", ev.where().getBlockX() + " " + ev.where().getBlockY()
                 + " " + ev.where().getBlockZ(), NamedTextColor.WHITE));
         lore.add(MenuUtil.field("Mundo", ev.where().getWorld() == null ? "?" : ev.where().getWorld().getName(),
@@ -351,11 +352,11 @@ public final class Menus implements Listener {
     private ItemStack statusItem() {
         ActiveAnomaly ev = plugin.manager().current();
         List<Component> lore = new ArrayList<>();
-        lore.add(Component.text("Panel de anomalias de Ederus", MenuUtil.SOFT));
+        lore.add(Component.text("Panel de anomalías de Ederus", MenuUtil.SOFT));
         lore.add(MenuUtil.blank());
-        lore.add(MenuUtil.field("Estado", ev == null ? "en calma" : "ANOMALIA ABIERTA",
+        lore.add(MenuUtil.field("Estado", ev == null ? "en calma" : "ANOMALÍA ABIERTA",
                 ev == null ? MenuUtil.SOFT : NamedTextColor.RED));
-        lore.add(MenuUtil.field("Catalogo", plugin.registry().all().size() + " anomalias", NamedTextColor.WHITE));
+        lore.add(MenuUtil.field("Catálogo", plugin.registry().all().size() + " anomalías", NamedTextColor.WHITE));
         lore.add(MenuUtil.field("Protecciones", plugin.protection().hasWorldGuard()
                 ? "WorldGuard enganchado" : "solo heuristica",
                 plugin.protection().hasWorldGuard() ? NamedTextColor.GREEN : NamedTextColor.YELLOW));
@@ -403,8 +404,8 @@ public final class Menus implements Listener {
             lore.add(plugin.drops().table(type.id()).summaryLine(MenuUtil.LOOT));
             lore.add(MenuUtil.blank());
             lore.add(chosen ? Component.text("✔ ELEGIDA", NamedTextColor.GREEN, TextDecoration.BOLD)
-                    : MenuUtil.action("Click para elegirla"));
-            lore.add(MenuUtil.actionSecondary("Click derecho: habilidades y vida del jefe"));
+                    : MenuUtil.action("Clic para elegirla"));
+            lore.add(MenuUtil.actionSecondary("Clic derecho: habilidades y vida del jefe"));
             lore.add(Component.text("► Shift + izquierdo: " + (enabled ? "apagarla" : "activarla"),
                     NamedTextColor.GRAY));
             lore.add(Component.text("► Shift + derecho: cambiar de clase", NamedTextColor.GRAY));
@@ -448,16 +449,16 @@ public final class Menus implements Listener {
         }
 
         inv.setItem(48, page > 0 ? MenuUtil.simple(Material.ARROW,
-                Component.text("◀ Pagina anterior", NamedTextColor.YELLOW),
-                List.of(Component.text("Pagina " + page + " de " + pages, MenuUtil.SOFT))) : MenuUtil.pane());
+                Component.text("◀ Página anterior", NamedTextColor.YELLOW),
+                List.of(Component.text("Página " + page + " de " + pages, MenuUtil.SOFT))) : MenuUtil.pane());
         inv.setItem(49, MenuUtil.icon(type.icon(), MenuUtil.title(type.display(), type.color()),
                 List.of(
                         MenuUtil.field("Habilidades", String.valueOf(abilities.size()), NamedTextColor.WHITE),
                         MenuUtil.field("Elemento", type.element().display(), type.element().color()),
-                        MenuUtil.field("Pagina", (page + 1) + " de " + pages, MenuUtil.SOFT)), false));
+                        MenuUtil.field("Página", (page + 1) + " de " + pages, MenuUtil.SOFT)), false));
         inv.setItem(50, page < pages - 1 ? MenuUtil.simple(Material.SPECTRAL_ARROW,
-                Component.text("Pagina siguiente ▶", NamedTextColor.YELLOW),
-                List.of(Component.text("Pagina " + (page + 2) + " de " + pages, MenuUtil.SOFT))) : MenuUtil.pane());
+                Component.text("Página siguiente ▶", NamedTextColor.YELLOW),
+                List.of(Component.text("Página " + (page + 2) + " de " + pages, MenuUtil.SOFT))) : MenuUtil.pane());
 
         // Los dos ajustes de ESTA anomalia. Una casilla cada uno, con izquierda para
         // subir y derecha para bajar, igual que en la pantalla de Ajustes.
@@ -472,29 +473,29 @@ public final class Menus implements Listener {
                                 String.valueOf((int) plugin.registry().scaledHealth(type, 5)), NamedTextColor.WHITE),
                         MenuUtil.blank(),
                         MenuUtil.line("Sube un " + Math.round(plugin.settings().healthPerPlayer() * 100)
-                                + "% por cada jugador de mas. Admite hasta"),
+                                + "% por cada jugador de más. Admite hasta"),
                         MenuUtil.line("x20 largos de la vida original del jefe."),
                         MenuUtil.line("Por encima de 1024 el resto se cobra bajandole"),
-                        MenuUtil.line("el dano que recibe; para quien pelea es igual."),
+                        MenuUtil.line("el daño que recibe; para quien pelea es igual."),
                         MenuUtil.blank(),
-                        MenuUtil.action("Click izquierdo: +500"),
-                        Component.text("► Click derecho: -500", NamedTextColor.YELLOW),
+                        MenuUtil.action("Clic izquierdo: +500"),
+                        Component.text("► Clic derecho: -500", NamedTextColor.YELLOW),
                         Component.text("► Shift para pasos de 5000", NamedTextColor.GRAY)), times >= 2));
 
         double dmg = plugin.registry().damageMultiplier(type);
         inv.setItem(51, MenuUtil.icon(Material.IRON_SWORD,
-                MenuUtil.title("Dano de las habilidades", MenuUtil.GOLD),
+                MenuUtil.title("Daño de las habilidades", MenuUtil.GOLD),
                 List.of(
                         MenuUtil.field("Multiplicador", "x" + dmg + "  (hasta x20)",
                                 dmg > 1.0 ? NamedTextColor.RED
                                         : dmg < 1.0 ? NamedTextColor.GREEN : NamedTextColor.WHITE),
                         MenuUtil.blank(),
                         MenuUtil.line("Afecta a TODAS las habilidades de esta"),
-                        MenuUtil.line("anomalia a la vez. 1.0 es lo de diseno."),
+                        MenuUtil.line("anomalía a la vez. 1.0 es lo de diseno."),
                         MenuUtil.line("No toca el golpe cuerpo a cuerpo normal."),
                         MenuUtil.blank(),
-                        MenuUtil.action("Click izquierdo: +0.1"),
-                        Component.text("► Click derecho: -0.1", NamedTextColor.YELLOW),
+                        MenuUtil.action("Clic izquierdo: +0.1"),
+                        Component.text("► Clic derecho: -0.1", NamedTextColor.YELLOW),
                         Component.text("► Shift para pasos de 1.0", NamedTextColor.GRAY)), dmg != 1.0));
     }
 
@@ -515,7 +516,7 @@ public final class Menus implements Listener {
             }
             List<Component> lore = new ArrayList<>();
             if (entry.unique()) {
-                lore.add(Component.text("✦ OBJETO UNICO", NamedTextColor.AQUA, TextDecoration.BOLD));
+                lore.add(Component.text("✦ OBJETO ÚNICO", NamedTextColor.AQUA, TextDecoration.BOLD));
                 lore.add(Component.text("   Brilla al caer y el chat anuncia quien se lo llevo.", MenuUtil.DIM));
             }
             lore.add(MenuUtil.field("Probabilidad", DropTable.trimChance(entry.chance()) + "%",
@@ -527,18 +528,18 @@ public final class Menus implements Listener {
             }
             lore.add(MenuUtil.blank());
             if (holder.placeMode) {
-                lore.add(MenuUtil.action("Click para quitarlo de la tabla"));
+                lore.add(MenuUtil.action("Clic para quitarlo de la tabla"));
                 lore.add(Component.text("► Con un objeto en el cursor: lo reemplaza", NamedTextColor.GRAY));
-                lore.add(Component.text("► Shift + click: marcarlo como UNICO", NamedTextColor.GRAY));
+                lore.add(Component.text("► Shift + click: marcarlo como ÚNICO", NamedTextColor.GRAY));
             } else {
-                lore.add(MenuUtil.action("Click izquierdo: +5% de probabilidad"));
-                lore.add(Component.text("► Click derecho: -5%", NamedTextColor.YELLOW));
+                lore.add(MenuUtil.action("Clic izquierdo: +5% de probabilidad"));
+                lore.add(Component.text("► Clic derecho: -5%", NamedTextColor.YELLOW));
                 if (!minionTable) {
                     lore.add(Component.text("► Shift + izquierdo: cambiar a quien le toca", NamedTextColor.GRAY));
                 }
                 lore.add(Component.text("► Shift + derecho: cambiar la cantidad", NamedTextColor.GRAY));
-                lore.add(Component.text("► Tecla F (o click central): marcarlo como UNICO", NamedTextColor.GRAY));
-                lore.add(Component.text("► Tecla de tirar (Q): quitarlo", NamedTextColor.GRAY));
+                lore.add(Component.text("► Tecla F (o click central): marcarlo como ÚNICO", NamedTextColor.GRAY));
+                lore.add(Component.text("► Tecla de soltar (Q): quitarlo", NamedTextColor.GRAY));
             }
             // La cantidad se ve desde el propio inventario: el stack pinta el numero
             // que cae de verdad (el maximo de la horquilla), no hay que leer el lore.
@@ -558,7 +559,7 @@ public final class Menus implements Listener {
                                 ? "Se guarda una COPIA: no pierdes tu objeto."
                                 : "El objeto ya colocado no se toca."),
                         MenuUtil.blank(),
-                        MenuUtil.action("Click para cambiar de modo")), false));
+                        MenuUtil.action("Clic para cambiar de modo")), false));
 
         inv.setItem(48, MenuUtil.simple(Material.REDSTONE,
                 Component.text("− Experiencia", NamedTextColor.RED),
@@ -568,7 +569,7 @@ public final class Menus implements Listener {
                 MenuUtil.title("Experiencia", MenuUtil.GOLD),
                 List.of(
                         MenuUtil.field("Da", table.experience() + " puntos", NamedTextColor.GREEN),
-                        MenuUtil.line("A cada participante, aparte del botin."),
+                        MenuUtil.line("A cada participante, aparte del botín."),
                         MenuUtil.line("Admite hasta 1.000.000 por jefe.")), false));
         inv.setItem(50, MenuUtil.simple(Material.GLOWSTONE_DUST,
                 Component.text("+ Experiencia", NamedTextColor.GREEN),
@@ -594,37 +595,37 @@ public final class Menus implements Listener {
         return MenuUtil.simple(Material.LIGHT_GRAY_STAINED_GLASS_PANE,
                 Component.text("Casilla libre", MenuUtil.DIM),
                 List.of(MenuUtil.line("Trae un objeto en el cursor y haz click"),
-                        MenuUtil.line("para copiarlo a la tabla de botin.")));
+                        MenuUtil.line("para copiarlo a la tabla de botín.")));
     }
 
     // -------------------------------------------------------------------- ajustes
 
     private void renderSettings(Inventory inv) {
-        inv.setItem(10, toggle(Material.CLOCK, "Anomalias automaticas", "automatico.activo", false,
-                "Abre una anomalia sola cada cierto tiempo."));
+        inv.setItem(10, toggle(Material.CLOCK, "Anomalías automaticas", "automatico.activo", false,
+                "Abre una anomalía sola cada cierto tiempo."));
         inv.setItem(11, number(Material.REPEATER, "Intervalo", "automatico.intervalo-minutos", 90,
                 " min", "Cada cuanto se intenta abrir una."));
         inv.setItem(12, number(Material.PLAYER_HEAD, "Jugadores minimos", "automatico.jugadores-minimos", 2,
                 "", "Por debajo de esto no se abre ninguna."));
-        inv.setItem(14, number(Material.COMPASS, "Distancia minima", "general.distancia-minima", 200,
-                " bloques", "Lo mas cerca que puede salir de un jugador."));
-        inv.setItem(15, number(Material.RECOVERY_COMPASS, "Distancia maxima", "general.distancia-maxima", 1200,
-                " bloques", "Lo mas lejos que puede salir."));
+        inv.setItem(14, number(Material.COMPASS, "Distancia mínima", "general.distancia-minima", 200,
+                " bloques", "Lo más cerca que puede salir de un jugador."));
+        inv.setItem(15, number(Material.RECOVERY_COMPASS, "Distancia máxima", "general.distancia-maxima", 1200,
+                " bloques", "Lo más lejos que puede salir."));
         inv.setItem(16, number(Material.BEACON, "Lejos del spawn", "general.distancia-minima-spawn", 300,
-                " bloques", "Radio del spawn donde nunca aparecera."));
+                " bloques", "Radio del spawn donde nunca aparecerá."));
 
         inv.setItem(19, toggle(Material.OAK_DOOR, "Evitar bases sin claim", "general.evitar-bases", true,
                 "Descarta sitios con cofres, camas u hornos cerca."));
-        inv.setItem(20, number(Material.IRON_BARS, "Margen de proteccion", "general.margen-proteccion", 24,
+        inv.setItem(20, number(Material.IRON_BARS, "Margen de protección", "general.margen-proteccion", 24,
                 " bloques", "Distancia de respeto al borde de un claim."));
-        inv.setItem(21, number(Material.GRASS_BLOCK, "Desnivel maximo", "general.desnivel-maximo", 4,
+        inv.setItem(21, number(Material.GRASS_BLOCK, "Desnivel máximo", "general.desnivel-maximo", 4,
                 " bloques", "Cuanto puede subir o bajar el terreno."));
-        inv.setItem(23, number(Material.CLOCK, "Limite de combate", "combate.minutos-limite", 15,
+        inv.setItem(23, number(Material.CLOCK, "Límite de combate", "combate.minutos-limite", 15,
                 " min", "Si nadie la mata, se cierra sola."));
         inv.setItem(24, number(Material.TARGET, "Radio de participacion", "combate.radio-participacion", 64,
-                " bloques", "Quien entra aqui ve la barra y cuenta para el botin."));
+                " bloques", "Quien entra aquí ve la barra y cuenta para el botín."));
         inv.setItem(25, percent(Material.GOLDEN_APPLE, "Vida extra por jugador", "combate.vida-extra-por-jugador",
-                0.15, "Cuanto sube la vida del jefe por cada jugador de mas."));
+                0.15, "Cuanto sube la vida del jefe por cada jugador de más."));
 
         inv.setItem(28, toggle(Material.PISTON, "Permitir empuje", "combate.permitir-empuje", true,
                 "Si se apaga, ninguna habilidad movera a nadie."));
@@ -633,11 +634,11 @@ public final class Menus implements Listener {
         inv.setItem(30, toggle(Material.NOTE_BLOCK, "Sonido del anuncio", "anuncio.sonido", true,
                 "Suena a todo el servidor al abrirse."));
         inv.setItem(31, toggle(Material.PAINTING, "Titulo en pantalla", "anuncio.titulo", true,
-                "El cartel grande al abrirse la anomalia."));
-        inv.setItem(32, number(Material.MAP, "Precision de coordenadas", "anuncio.precision-coordenadas", 1,
+                "El cartel grande al abrirse la anomalía."));
+        inv.setItem(32, number(Material.MAP, "Precisión de coordenadas", "anuncio.precision-coordenadas", 1,
                 " bloques", "Redondea el punto anunciado para dar margen."));
         inv.setItem(33, toggle(Material.BEACON, "Pilar de luz", "anuncio.pilar-de-luz", true,
-                "Una columna del color de la anomalia sobre el jefe."));
+                "Una columna del color de la anomalía sobre el jefe."));
     }
 
     private ItemStack toggle(Material material, String name, String path, boolean def, String help) {
@@ -648,7 +649,7 @@ public final class Menus implements Listener {
                         MenuUtil.blank(),
                         MenuUtil.field("Ahora", "", MenuUtil.SOFT).append(MenuUtil.state(value)),
                         MenuUtil.blank(),
-                        MenuUtil.action("Click para cambiar")), value);
+                        MenuUtil.action("Clic para cambiar")), value);
     }
 
     private ItemStack number(Material material, String name, String path, int def, String unit, String help) {
@@ -659,8 +660,8 @@ public final class Menus implements Listener {
                         MenuUtil.blank(),
                         MenuUtil.field("Ahora", value + unit, NamedTextColor.WHITE),
                         MenuUtil.blank(),
-                        MenuUtil.action("Click izquierdo: subir"),
-                        Component.text("► Click derecho: bajar", NamedTextColor.YELLOW),
+                        MenuUtil.action("Clic izquierdo: subir"),
+                        Component.text("► Clic derecho: bajar", NamedTextColor.YELLOW),
                         Component.text("► Shift para pasos de 10", NamedTextColor.GRAY)), false);
     }
 
@@ -672,8 +673,8 @@ public final class Menus implements Listener {
                         MenuUtil.blank(),
                         MenuUtil.field("Ahora", "+" + Math.round(value * 100) + "% por jugador", NamedTextColor.WHITE),
                         MenuUtil.blank(),
-                        MenuUtil.action("Click izquierdo: subir 5%"),
-                        Component.text("► Click derecho: bajar 5%", NamedTextColor.YELLOW)), false);
+                        MenuUtil.action("Clic izquierdo: subir 5%"),
+                        Component.text("► Clic derecho: bajar 5%", NamedTextColor.YELLOW)), false);
     }
 
     // ------------------------------------------------------------------- esbirros
@@ -701,12 +702,12 @@ public final class Menus implements Listener {
                     lore.add(Component.text("· ", MenuUtil.DIM).append(Component.text(t.display(), t.color())));
                 }
                 if (dentro.size() > 5) {
-                    lore.add(Component.text("  y " + (dentro.size() - 5) + " mas", MenuUtil.DIM));
+                    lore.add(Component.text("  y " + (dentro.size() - 5) + " más", MenuUtil.DIM));
                 }
             }
             lore.add(MenuUtil.blank());
-            lore.add(MenuUtil.action("Click para abrir la carpeta"));
-            lore.add(MenuUtil.actionSecondary("Click derecho: icono, color y nombre"));
+            lore.add(MenuUtil.action("Clic para abrir la carpeta"));
+            lore.add(MenuUtil.actionSecondary("Clic derecho: icono, color y nombre"));
 
             inv.setItem(BODY[i], MenuUtil.icon(cat.icon(),
                     MenuUtil.title(cat.display(), cat.color()), lore, false));
@@ -717,10 +718,10 @@ public final class Menus implements Listener {
                 List.of(
                         MenuUtil.line("Una mazmorra o un proposito nuevo:"),
                         MenuUtil.line("Mina, Cripta, Test, lo que sea."),
-                        MenuUtil.line("Se cierra el menu y el nombre se"),
+                        MenuUtil.line("Se cierra el menú y el nombre se"),
                         MenuUtil.line("escribe en el chat."),
                         MenuUtil.blank(),
-                        MenuUtil.action("Click para ponerle nombre")),
+                        MenuUtil.action("Clic para ponerle nombre")),
                 true));
     }
 
@@ -735,10 +736,10 @@ public final class Menus implements Listener {
                 List.of(
                         MenuUtil.field("Ahora", cat.display(), cat.color()),
                         MenuUtil.blank(),
-                        MenuUtil.line("Se cierra el menu y el nombre nuevo"),
-                        MenuUtil.line("se escribe en el chat."),
+                        MenuUtil.line("Cierra el menú para escribir el nombre"),
+                        MenuUtil.line("nuevo en el chat."),
                         MenuUtil.blank(),
-                        MenuUtil.action("Click para renombrar")), false));
+                        MenuUtil.action("Clic para renombrar")), false));
 
         List<Component> ficha = new ArrayList<>();
         ficha.add(MenuUtil.field("Esbirros", String.valueOf(dentro.size()), NamedTextColor.WHITE));
@@ -753,29 +754,29 @@ public final class Menus implements Listener {
                         MenuUtil.blank(),
                         MenuUtil.field("Ahora", nombreBonitoMaterial(cat.icon()), NamedTextColor.WHITE),
                         MenuUtil.blank(),
-                        MenuUtil.action("Coge un objeto y clicka aqui con el"),
-                        Component.text("► Tecla de tirar (Q): escribir el nombre", NamedTextColor.GRAY)), false));
+                        MenuUtil.action("Coge un objeto y clicka aquí con el"),
+                        Component.text("► Tecla de soltar (Q): escribir el nombre", NamedTextColor.GRAY)), false));
 
         inv.setItem(20, MenuUtil.icon(Material.BRUSH,
                 MenuUtil.title("Color", cat.color()),
                 List.of(
-                        Component.text("Asi se ve  ", MenuUtil.LABEL)
+                        Component.text("Vista previa  ", MenuUtil.LABEL)
                                 .append(Component.text(cat.display(), cat.color(), TextDecoration.BOLD)),
                         MenuUtil.blank(),
-                        MenuUtil.line("El color del titulo en los menus."),
+                        MenuUtil.line("El color del titulo en los menús."),
                         MenuUtil.blank(),
-                        MenuUtil.action("Click izquierdo: siguiente color"),
-                        Component.text("► Click derecho: anterior", NamedTextColor.YELLOW)), false));
+                        MenuUtil.action("Clic izquierdo: siguiente color"),
+                        Component.text("► Clic derecho: anterior", NamedTextColor.YELLOW)), false));
 
         inv.setItem(24, MenuUtil.icon(Material.SPAWNER,
                 MenuUtil.title("Abrir la carpeta", NamedTextColor.LIGHT_PURPLE),
                 List.of(
                         MenuUtil.line("Su tropa: crear esbirros, ajustarlos,"),
-                        MenuUtil.line("plantar generadores y su botin."),
+                        MenuUtil.line("plantar generadores y su botín."),
                         MenuUtil.blank(),
                         MenuUtil.field("Dentro", dentro.size() + " esbirro(s)", NamedTextColor.WHITE),
                         MenuUtil.blank(),
-                        MenuUtil.action("Click para abrirla")), false));
+                        MenuUtil.action("Clic para abrirla")), false));
 
         inv.setItem(31, MenuUtil.icon(cat.isGeneral() ? Material.GRAY_DYE : Material.BARRIER,
                 MenuUtil.title("Borrar carpeta", cat.isGeneral() ? MenuUtil.DIM : NamedTextColor.RED),
@@ -788,7 +789,7 @@ public final class Menus implements Listener {
                                 : MenuUtil.line("borran: se mudan a Sin clasificar."),
                         MenuUtil.blank(),
                         cat.isGeneral() ? Component.text("No se puede.", MenuUtil.DIM)
-                                : MenuUtil.action("Tecla de tirar (Q) dos veces: borrarla")), false));
+                                : MenuUtil.action("Tecla de soltar (Q) dos veces: borrarla")), false));
     }
 
     /** El catalogo de una carpeta: su tropa, con la misma gramatica de siempre. */
@@ -805,16 +806,16 @@ public final class Menus implements Listener {
             lore.add(MenuUtil.blank());
             lore.add(MenuUtil.field("Vida", (int) type.baseHealth() + " a Nv. 1  ·  +"
                     + Math.round(type.healthGrowth() * 100) + "% por nivel", NamedTextColor.GREEN));
-            lore.add(MenuUtil.field("Dano", "x" + trim(type.baseDamage()) + "  ·  +"
+            lore.add(MenuUtil.field("Daño", "x" + trim(type.baseDamage()) + "  ·  +"
                     + Math.round(type.damageGrowth() * 100) + "% por nivel", NamedTextColor.RED));
             lore.add(MenuUtil.field("Generadores", String.valueOf(spawners.size()), NamedTextColor.WHITE));
             lore.add(MenuUtil.blank());
             lore.add(Component.text("SUELTA", MenuUtil.LOOT, TextDecoration.BOLD));
             lore.add(plugin.drops().table(type.dropTableId()).summaryLine(MenuUtil.LOOT));
             lore.add(MenuUtil.blank());
-            lore.add(MenuUtil.action("Click para abrir su ficha"));
-            lore.add(MenuUtil.actionSecondary("Click derecho: su botin"));
-            lore.add(Component.text("► Tecla de tirar (Q) dos veces: borrarlo", NamedTextColor.GRAY));
+            lore.add(MenuUtil.action("Clic para abrir su ficha"));
+            lore.add(MenuUtil.actionSecondary("Clic derecho: su botín"));
+            lore.add(Component.text("► Tecla de soltar (Q) dos veces: borrarlo", NamedTextColor.GRAY));
 
             inv.setItem(BODY[i], MenuUtil.icon(type.icon(),
                     MenuUtil.title(type.display(), type.color()), lore, false));
@@ -823,13 +824,13 @@ public final class Menus implements Listener {
         inv.setItem(49, MenuUtil.icon(cat == null ? Material.WRITABLE_BOOK : cat.icon(),
                 MenuUtil.title("Crear esbirro", NamedTextColor.GREEN),
                 List.of(
-                        MenuUtil.line("Un tipo nuevo de tropa. Se cierra el menu"),
+                        MenuUtil.line("Un tipo nuevo de tropa. Se cierra el menú"),
                         MenuUtil.line("y el nombre se escribe en el chat."),
                         MenuUtil.blank(),
                         MenuUtil.field("Carpeta", cat == null ? "Sin clasificar" : cat.display(),
                                 cat == null ? MenuUtil.SOFT : cat.color()),
                         MenuUtil.blank(),
-                        MenuUtil.action("Click para ponerle nombre")),
+                        MenuUtil.action("Clic para ponerle nombre")),
                 true));
     }
 
@@ -843,43 +844,43 @@ public final class Menus implements Listener {
                 List.of(
                         MenuUtil.field("Ahora", nombreBonito(type.entity()), NamedTextColor.WHITE),
                         MenuUtil.blank(),
-                        MenuUtil.line("El bicho de base. Su comportamiento es el"),
-                        MenuUtil.line("de fabrica; el plugin le pone vida, dano"),
-                        MenuUtil.line("y holograma segun el nivel."),
+                        MenuUtil.line("La criatura base. Su comportamiento es el"),
+                        MenuUtil.line("de fábrica; el plugin le pone vida, daño"),
+                        MenuUtil.line("y holograma según el nivel."),
                         MenuUtil.blank(),
-                        MenuUtil.action("Click izquierdo: siguiente"),
-                        Component.text("► Click derecho: anterior", NamedTextColor.YELLOW)), false));
+                        MenuUtil.action("Clic izquierdo: siguiente"),
+                        Component.text("► Clic derecho: anterior", NamedTextColor.YELLOW)), false));
 
         inv.setItem(11, MenuUtil.icon(Material.BRUSH,
                 MenuUtil.title("Color del nombre", type.color()),
                 List.of(
-                        Component.text("Asi se ve  ", MenuUtil.LABEL)
+                        Component.text("Vista previa  ", MenuUtil.LABEL)
                                 .append(Component.text(type.display(), type.color(), TextDecoration.BOLD)),
                         MenuUtil.blank(),
-                        MenuUtil.line("El color del holograma y de los menus."),
+                        MenuUtil.line("El color del holograma y de los menús."),
                         MenuUtil.blank(),
-                        MenuUtil.action("Click izquierdo: siguiente color"),
-                        Component.text("► Click derecho: anterior", NamedTextColor.YELLOW)), false));
+                        MenuUtil.action("Clic izquierdo: siguiente color"),
+                        Component.text("► Clic derecho: anterior", NamedTextColor.YELLOW)), false));
 
         inv.setItem(12, MenuUtil.icon(Material.NAME_TAG,
                 MenuUtil.title("Renombrar", MenuUtil.GOLD),
                 List.of(
                         MenuUtil.field("Ahora", type.display(), type.color()),
                         MenuUtil.blank(),
-                        MenuUtil.line("Se cierra el menu y el nombre nuevo"),
-                        MenuUtil.line("se escribe en el chat."),
+                        MenuUtil.line("Cierra el menú para escribir el nombre"),
+                        MenuUtil.line("nuevo en el chat."),
                         MenuUtil.blank(),
-                        MenuUtil.action("Click para renombrar")), false));
+                        MenuUtil.action("Clic para renombrar")), false));
 
         List<Component> ficha = new ArrayList<>();
         ficha.add(Component.text(nombreBonito(type.entity()), MenuUtil.SOFT));
         ficha.add(MenuUtil.blank());
-        ficha.add(Component.text("ASI ESCALA", NamedTextColor.WHITE, TextDecoration.BOLD));
+        ficha.add(Component.text("ESCALADO", NamedTextColor.WHITE, TextDecoration.BOLD));
         for (int nivel : escalones(type.wandMinLevel(), type.wandMaxLevel())) {
             ficha.add(Component.text("Nv. " + nivel + "  ", MenuUtil.LABEL)
                     .append(Component.text((int) type.healthAt(nivel) + " vida", NamedTextColor.GREEN))
                     .append(Component.text("  ·  ", MenuUtil.DIM))
-                    .append(Component.text("x" + trim(type.damageAt(nivel)) + " dano", NamedTextColor.RED)));
+                    .append(Component.text("x" + trim(type.damageAt(nivel)) + " daño", NamedTextColor.RED)));
         }
         ficha.add(MenuUtil.blank());
         ficha.add(MenuUtil.field("Generadores", String.valueOf(plugin.minions().spawnersOf(type.id()).size()),
@@ -894,21 +895,21 @@ public final class Menus implements Listener {
                         MenuUtil.line("La vida con la que aparece un esbirro"),
                         MenuUtil.line("de nivel 1; el resto sale del crecimiento."),
                         MenuUtil.blank(),
-                        MenuUtil.action("Click izquierdo: +5"),
-                        Component.text("► Click derecho: -5", NamedTextColor.YELLOW),
+                        MenuUtil.action("Clic izquierdo: +5"),
+                        Component.text("► Clic derecho: -5", NamedTextColor.YELLOW),
                         Component.text("► Shift para pasos de 50", NamedTextColor.GRAY)), false));
 
         inv.setItem(15, MenuUtil.icon(Material.IRON_SWORD,
-                MenuUtil.title("Dano base", MenuUtil.GOLD),
+                MenuUtil.title("Daño base", MenuUtil.GOLD),
                 List.of(
-                        MenuUtil.field("A nivel 1", "x" + trim(type.baseDamage()) + " del golpe de fabrica",
+                        MenuUtil.field("A nivel 1", "x" + trim(type.baseDamage()) + " del golpe de fábrica",
                                 NamedTextColor.RED),
                         MenuUtil.blank(),
-                        MenuUtil.line("Multiplica lo que el bicho pegue de serie,"),
-                        MenuUtil.line("valga garra, flecha o explosion."),
+                        MenuUtil.line("Multiplica el daño propio de la criatura:"),
+                        MenuUtil.line("golpe, flecha o explosión."),
                         MenuUtil.blank(),
-                        MenuUtil.action("Click izquierdo: +0.1"),
-                        Component.text("► Click derecho: -0.1", NamedTextColor.YELLOW),
+                        MenuUtil.action("Clic izquierdo: +0.1"),
+                        Component.text("► Clic derecho: -0.1", NamedTextColor.YELLOW),
                         Component.text("► Shift para pasos de 1.0", NamedTextColor.GRAY)), false));
 
         inv.setItem(19, MenuUtil.icon(Material.GLOWSTONE_DUST,
@@ -917,47 +918,47 @@ public final class Menus implements Listener {
                         MenuUtil.field("Por nivel", "+" + Math.round(type.healthGrowth() * 100) + "%",
                                 NamedTextColor.GREEN),
                         MenuUtil.blank(),
-                        MenuUtil.line("Cuanta vida gana por cada nivel por"),
+                        MenuUtil.line("Cuánta vida gana por cada nivel por"),
                         MenuUtil.line("encima del 1, sobre la vida base."),
                         MenuUtil.blank(),
-                        MenuUtil.action("Click izquierdo: +5%"),
-                        Component.text("► Click derecho: -5%", NamedTextColor.YELLOW),
+                        MenuUtil.action("Clic izquierdo: +5%"),
+                        Component.text("► Clic derecho: -5%", NamedTextColor.YELLOW),
                         Component.text("► Shift para pasos de 25%", NamedTextColor.GRAY)), false));
 
         inv.setItem(20, MenuUtil.icon(Material.BLAZE_POWDER,
-                MenuUtil.title("Crecimiento de dano", MenuUtil.GOLD),
+                MenuUtil.title("Crecimiento de daño", MenuUtil.GOLD),
                 List.of(
                         MenuUtil.field("Por nivel", "+" + Math.round(type.damageGrowth() * 100) + "%",
                                 NamedTextColor.RED),
                         MenuUtil.blank(),
-                        MenuUtil.line("Cuanto dano gana por cada nivel por"),
-                        MenuUtil.line("encima del 1, sobre el dano base."),
+                        MenuUtil.line("Cuánto daño gana por cada nivel por"),
+                        MenuUtil.line("encima del 1, sobre el daño base."),
                         MenuUtil.blank(),
-                        MenuUtil.action("Click izquierdo: +5%"),
-                        Component.text("► Click derecho: -5%", NamedTextColor.YELLOW),
+                        MenuUtil.action("Clic izquierdo: +5%"),
+                        Component.text("► Clic derecho: -5%", NamedTextColor.YELLOW),
                         Component.text("► Shift para pasos de 25%", NamedTextColor.GRAY)), false));
 
         inv.setItem(21, MenuUtil.icon(Material.OAK_SLAB,
-                MenuUtil.title("Nivel minimo", MenuUtil.GOLD),
+                MenuUtil.title("Nivel mínimo", MenuUtil.GOLD),
                 List.of(
-                        MenuUtil.field("La vela pone", "Nv. " + type.wandMinLevel(), NamedTextColor.GOLD),
+                        MenuUtil.field("Valor inicial", "Nv. " + type.wandMinLevel(), NamedTextColor.GOLD),
                         MenuUtil.field("Rango entero", "Nv. " + rangoTexto(type.wandMinLevel(), type.wandMaxLevel()),
                                 NamedTextColor.GOLD),
                         MenuUtil.blank(),
-                        MenuUtil.line("El suelo del sorteo de nivel de los"),
-                        MenuUtil.line("generadores que plante la proxima vela."),
+                        MenuUtil.line("Nivel mínimo del rango que usarán los"),
+                        MenuUtil.line("generadores que se coloquen a partir de ahora."),
                         MenuUtil.blank(),
-                        MenuUtil.action("Click izquierdo: +1"),
-                        Component.text("► Click derecho: -1", NamedTextColor.YELLOW),
+                        MenuUtil.action("Clic izquierdo: +1"),
+                        Component.text("► Clic derecho: -1", NamedTextColor.YELLOW),
                         Component.text("► Shift para pasos de 10", NamedTextColor.GRAY),
-                        Component.text("► Tecla de tirar (Q): escribirlo, \"30-60\"", NamedTextColor.GRAY)), false));
+                        Component.text("► Tecla de soltar (Q): escribirlo, \"30-60\"", NamedTextColor.GRAY)), false));
 
         inv.setItem(22, MenuUtil.icon(Material.CANDLE,
-                MenuUtil.title("Dame la vela", NamedTextColor.LIGHT_PURPLE),
+                MenuUtil.title("Obtener generador", NamedTextColor.LIGHT_PURPLE),
                 List.of(
-                        MenuUtil.line("La herramienta de sembrar generadores:"),
-                        MenuUtil.line("click derecho en un bloque y ahi queda."),
-                        MenuUtil.line("No se gasta; sirve para toda una mazmorra."),
+                        MenuUtil.line("Herramienta para colocar generadores:"),
+                        MenuUtil.line("clic derecho sobre un bloque para fijarlo."),
+                        MenuUtil.line("No se consume: sirve para toda la mazmorra."),
                         MenuUtil.blank(),
                         MenuUtil.field("Esbirro", type.display(), type.color()),
                         MenuUtil.field("Nivel", type.wandMinLevel() == type.wandMaxLevel()
@@ -968,59 +969,59 @@ public final class Menus implements Listener {
                         MenuUtil.field("Tope", type.wandMaxAlive() + " vivos  ·  radio "
                                 + type.wandActivationRadius(), NamedTextColor.WHITE),
                         MenuUtil.blank(),
-                        MenuUtil.action("Click para recibirla")), true));
+                        MenuUtil.action("Clic para obtenerla")), true));
 
         inv.setItem(23, MenuUtil.icon(Material.STONE_SLAB,
-                MenuUtil.title("Nivel maximo", MenuUtil.GOLD),
+                MenuUtil.title("Nivel máximo", MenuUtil.GOLD),
                 List.of(
-                        MenuUtil.field("La vela pone", "Nv. " + type.wandMaxLevel(), NamedTextColor.GOLD),
+                        MenuUtil.field("Valor inicial", "Nv. " + type.wandMaxLevel(), NamedTextColor.GOLD),
                         MenuUtil.field("Rango entero", "Nv. " + rangoTexto(type.wandMinLevel(), type.wandMaxLevel()),
                                 NamedTextColor.GOLD),
                         MenuUtil.blank(),
-                        MenuUtil.line("El techo del sorteo. Cada generador se"),
-                        MenuUtil.line("puede retocar luego desde su lista."),
+                        MenuUtil.line("Nivel máximo del rango. Cada generador se"),
+                        MenuUtil.line("puede ajustar después desde su lista."),
                         MenuUtil.blank(),
-                        MenuUtil.action("Click izquierdo: +1"),
-                        Component.text("► Click derecho: -1", NamedTextColor.YELLOW),
+                        MenuUtil.action("Clic izquierdo: +1"),
+                        Component.text("► Clic derecho: -1", NamedTextColor.YELLOW),
                         Component.text("► Shift para pasos de 10", NamedTextColor.GRAY),
-                        Component.text("► Tecla de tirar (Q): escribirlo, \"30-60\"", NamedTextColor.GRAY)), false));
+                        Component.text("► Tecla de soltar (Q): escribirlo, \"30-60\"", NamedTextColor.GRAY)), false));
 
         inv.setItem(24, MenuUtil.icon(Material.CLOCK,
                 MenuUtil.title("Intervalo", MenuUtil.GOLD),
                 List.of(
-                        MenuUtil.field("La vela pone", "cada " + type.wandIntervalSeconds() + "s",
+                        MenuUtil.field("Valor inicial", "cada " + type.wandIntervalSeconds() + "s",
                                 NamedTextColor.WHITE),
                         MenuUtil.blank(),
-                        MenuUtil.line("Cada cuanto repone tropa un generador,"),
-                        MenuUtil.line("mientras no llegue a su tope de vivos."),
+                        MenuUtil.line("Cada cuánto repone unidades el generador,"),
+                        MenuUtil.line("mientras no alcance su límite de vivas."),
                         MenuUtil.blank(),
-                        MenuUtil.action("Click izquierdo: +5s"),
-                        Component.text("► Click derecho: -5s", NamedTextColor.YELLOW),
+                        MenuUtil.action("Clic izquierdo: +5s"),
+                        Component.text("► Clic derecho: -5s", NamedTextColor.YELLOW),
                         Component.text("► Shift para pasos de 30s", NamedTextColor.GRAY)), false));
 
         inv.setItem(25, MenuUtil.icon(Material.ARMOR_STAND,
                 MenuUtil.title("Tope de vivos", MenuUtil.GOLD),
                 List.of(
-                        MenuUtil.field("La vela pone", type.wandMaxAlive() + " a la vez", NamedTextColor.WHITE),
+                        MenuUtil.field("Valor inicial", type.wandMaxAlive() + " a la vez", NamedTextColor.WHITE),
                         MenuUtil.blank(),
-                        MenuUtil.line("Cuantos puede tener vivos cada generador."),
-                        MenuUtil.line("Al morir uno, el reloj repone el hueco."),
+                        MenuUtil.line("Cuántos puede tener vivos cada generador."),
+                        MenuUtil.line("Al morir una, el temporizador repone el hueco."),
                         MenuUtil.blank(),
-                        MenuUtil.action("Click izquierdo: +1"),
-                        Component.text("► Click derecho: -1", NamedTextColor.YELLOW)), false));
+                        MenuUtil.action("Clic izquierdo: +1"),
+                        Component.text("► Clic derecho: -1", NamedTextColor.YELLOW)), false));
 
         inv.setItem(28, MenuUtil.icon(Material.ENDER_EYE,
-                MenuUtil.title("Radio de activacion", MenuUtil.GOLD),
+                MenuUtil.title("Radio de activación", MenuUtil.GOLD),
                 List.of(
-                        MenuUtil.field("La vela pone", type.wandActivationRadius() + " bloques",
+                        MenuUtil.field("Valor inicial", type.wandActivationRadius() + " bloques",
                                 NamedTextColor.WHITE),
                         MenuUtil.blank(),
                         MenuUtil.line("El generador solo trabaja con un jugador"),
                         MenuUtil.line("dentro de este radio: una mazmorra vacia"),
-                        MenuUtil.line("no acumula bichos."),
+                        MenuUtil.line("no acumula criaturas."),
                         MenuUtil.blank(),
-                        MenuUtil.action("Click izquierdo: +4"),
-                        Component.text("► Click derecho: -4", NamedTextColor.YELLOW),
+                        MenuUtil.action("Clic izquierdo: +4"),
+                        Component.text("► Clic derecho: -4", NamedTextColor.YELLOW),
                         Component.text("► Shift para pasos de 16", NamedTextColor.GRAY)), false));
 
         MinionCategory suya = plugin.minions().categoryOf(type);
@@ -1030,28 +1031,28 @@ public final class Menus implements Listener {
                         MenuUtil.field("Ahora", suya.display(), suya.color()),
                         MenuUtil.blank(),
                         MenuUtil.line("En que mazmorra o proposito vive."),
-                        MenuUtil.line("Cambiarla no toca nada de su pelea."),
+                        MenuUtil.line("No afecta a su comportamiento en combate."),
                         MenuUtil.blank(),
-                        MenuUtil.action("Click izquierdo: siguiente carpeta"),
-                        Component.text("► Click derecho: anterior", NamedTextColor.YELLOW)), false));
+                        MenuUtil.action("Clic izquierdo: siguiente carpeta"),
+                        Component.text("► Clic derecho: anterior", NamedTextColor.YELLOW)), false));
 
         inv.setItem(29, MenuUtil.icon(type.bold() ? Material.INK_SAC : Material.GLASS_BOTTLE,
                 MenuUtil.title("Nombre en negrita", MenuUtil.GOLD),
                 List.of(
-                        MenuUtil.line("Como se lee su nombre en el cartel que"),
-                        MenuUtil.line("lleva encima. De serie va en redonda."),
+                        MenuUtil.line("Cómo se muestra su nombre en el cartel"),
+                        MenuUtil.line("que lleva encima. Por omisión, en redonda."),
                         MenuUtil.blank(),
-                        Component.text("Asi se ve  ", MenuUtil.LABEL).append(type.name()),
+                        Component.text("Vista previa  ", MenuUtil.LABEL).append(type.name()),
                         MenuUtil.field("Ahora", "", MenuUtil.SOFT).append(MenuUtil.state(type.bold())),
                         MenuUtil.blank(),
-                        MenuUtil.action("Click para cambiar")), type.bold()));
+                        MenuUtil.action("Clic para cambiar")), type.bold()));
 
         List<Component> habLore = new ArrayList<>();
-        habLore.add(MenuUtil.line("Rasgos que lleva puestos siempre: no hay"));
-        habLore.add(MenuUtil.line("fases ni enfriamientos, se notan peleando."));
+        habLore.add(MenuUtil.line("Rasgos permanentes: no hay fases ni"));
+        habLore.add(MenuUtil.line("enfriamientos, actúan durante todo el combate."));
         habLore.add(MenuUtil.blank());
         if (type.abilities().isEmpty()) {
-            habLore.add(Component.text("Ninguna todavia.", MenuUtil.DIM));
+            habLore.add(Component.text("Ninguna configurada.", MenuUtil.DIM));
         } else {
             for (MinionAbility a : type.abilities()) {
                 habLore.add(Component.text("· ", MenuUtil.DIM)
@@ -1059,7 +1060,7 @@ public final class Menus implements Listener {
             }
         }
         habLore.add(MenuUtil.blank());
-        habLore.add(MenuUtil.action("Click para abrir el catalogo"));
+        habLore.add(MenuUtil.action("Clic para abrir el catálogo"));
         inv.setItem(16, MenuUtil.icon(Material.ENCHANTED_BOOK,
                 MenuUtil.title("Habilidades", MenuUtil.GOLD), habLore, !type.abilities().isEmpty()));
 
@@ -1068,35 +1069,35 @@ public final class Menus implements Listener {
                 MenuUtil.title("Generadores", MenuUtil.GOLD),
                 List.of(
                         MenuUtil.line("Todos los puntos donde aparece este"),
-                        MenuUtil.line("esbirro: donde estan, de que nivel salen,"),
-                        MenuUtil.line("viajar alli, retocarlos o quitarlos."),
+                        MenuUtil.line("esbirro: ubicación, nivel al que salen,"),
+                        MenuUtil.line("traslado, ajuste y retirada."),
                         MenuUtil.blank(),
                         MenuUtil.field("Plantados", String.valueOf(spawners.size()), NamedTextColor.WHITE),
                         MenuUtil.blank(),
-                        spawners.isEmpty() ? Component.text("Planta el primero con la vela.", MenuUtil.DIM)
-                                : MenuUtil.action("Click para ver la lista")), false));
+                        spawners.isEmpty() ? Component.text("Coloca el primero con la herramienta.", MenuUtil.DIM)
+                                : MenuUtil.action("Clic para ver la lista")), false));
 
         DropTable table = plugin.drops().table(type.dropTableId());
         inv.setItem(32, MenuUtil.icon(Material.CHEST,
-                MenuUtil.title("Botin", MenuUtil.LOOT),
+                MenuUtil.title("Botín", MenuUtil.LOOT),
                 List.of(
-                        MenuUtil.line("Que suelta al morir, este al nivel que"),
-                        MenuUtil.line("este. Si la tabla tiene algo, sustituye"),
-                        MenuUtil.line("al botin de fabrica del bicho."),
+                        MenuUtil.line("Lo que suelta al morir, sea cual sea su"),
+                        MenuUtil.line("nivel. Si la tabla tiene contenido, sustituye"),
+                        MenuUtil.line("al botín propio de la criatura."),
                         MenuUtil.blank(),
                         MenuUtil.field("Objetos", table.entries().size() + " / " + DropTable.CAPACITY,
                                 NamedTextColor.WHITE),
                         MenuUtil.blank(),
-                        MenuUtil.action("Click para editar el botin")), false));
+                        MenuUtil.action("Clic para editar el botín")), false));
 
         inv.setItem(34, MenuUtil.icon(Material.EGG,
                 MenuUtil.title("Invocar de prueba", NamedTextColor.AQUA),
                 List.of(
-                        MenuUtil.line("Hace aparecer UNO a tu lado, del nivel"),
-                        MenuUtil.line("minimo de la vela, sin generador: para"),
-                        MenuUtil.line("verlo y pegarle sin salir de la sala."),
+                        MenuUtil.line("Genera una unidad a tu lado, del nivel"),
+                        MenuUtil.line("mínimo configurado y sin generador, para"),
+                        MenuUtil.line("revisarla sin salir de la sala."),
                         MenuUtil.blank(),
-                        MenuUtil.action("Click para invocarlo")), false));
+                        MenuUtil.action("Clic para invocarlo")), false));
     }
 
     /** El catalogo de rasgos: uno por casilla, encendido o apagado. */
@@ -1114,7 +1115,7 @@ public final class Menus implements Listener {
             lore.add(MenuUtil.blank());
             lore.add(MenuUtil.field("Ahora", "", MenuUtil.SOFT).append(MenuUtil.state(on)));
             lore.add(MenuUtil.blank());
-            lore.add(MenuUtil.action(on ? "Click para quitarsela" : "Click para dársela"));
+            lore.add(MenuUtil.action(on ? "Clic para quitarsela" : "Clic para dársela"));
             inv.setItem(BODY[i], MenuUtil.icon(on ? a.icon() : Material.GRAY_DYE,
                     MenuUtil.title(a.display(), on ? a.color() : MenuUtil.DIM), lore, on));
         }
@@ -1124,7 +1125,7 @@ public final class Menus implements Listener {
                                 NamedTextColor.WHITE),
                         MenuUtil.blank(),
                         MenuUtil.line("Se aplican a los que salgan a partir de"),
-                        MenuUtil.line("ahora; los que ya estan vivos no cambian.")), false));
+                        MenuUtil.line("ahora; los que ya están vivos no cambian.")), false));
     }
 
     private void clickMinionAbilities(Player player, InventoryClickEvent event, Holder holder, int slot) {
@@ -1160,7 +1161,7 @@ public final class Menus implements Listener {
             List<Component> lore = new ArrayList<>();
             lore.add(MenuUtil.field("Mundo", s.worldName(), NamedTextColor.WHITE));
             lore.add(MenuUtil.field("Donde", s.x() + "  " + (s.y() + 1) + "  " + s.z(), NamedTextColor.WHITE));
-            lore.add(MenuUtil.field("Region", regions.isEmpty() ? "ninguna" : String.join(", ", regions),
+            lore.add(MenuUtil.field("Región", regions.isEmpty() ? "ninguna" : String.join(", ", regions),
                     regions.isEmpty() ? MenuUtil.DIM : NamedTextColor.AQUA));
             lore.add(MenuUtil.blank());
             lore.add(MenuUtil.field("Nivel", s.levelLabel(), NamedTextColor.GOLD));
@@ -1169,28 +1170,28 @@ public final class Menus implements Listener {
             lore.add(MenuUtil.field("Estado", s.enabled() ? "activo" : "pausado",
                     s.enabled() ? NamedTextColor.GREEN : NamedTextColor.RED));
             lore.add(MenuUtil.blank());
-            lore.add(MenuUtil.action("Click para viajar en frente"));
-            lore.add(MenuUtil.actionSecondary("Click derecho: configurarlo"));
-            lore.add(Component.text("► Tecla de tirar (Q) dos veces: quitarlo", NamedTextColor.GRAY));
+            lore.add(MenuUtil.action("Clic para viajar en frente"));
+            lore.add(MenuUtil.actionSecondary("Clic derecho: configurarlo"));
+            lore.add(Component.text("► Tecla de soltar (Q) dos veces: quitarlo", NamedTextColor.GRAY));
 
             inv.setItem(BODY[i], MenuUtil.icon(s.enabled() ? Material.CANDLE : Material.GRAY_CANDLE,
                     MenuUtil.title("Generador " + s.id(), type.color()), lore, s.enabled() && vivos > 0));
         }
 
         inv.setItem(48, page > 0 ? MenuUtil.simple(Material.ARROW,
-                Component.text("◀ Pagina anterior", NamedTextColor.YELLOW),
-                List.of(Component.text("Pagina " + page + " de " + pages, MenuUtil.SOFT))) : MenuUtil.pane());
+                Component.text("◀ Página anterior", NamedTextColor.YELLOW),
+                List.of(Component.text("Página " + page + " de " + pages, MenuUtil.SOFT))) : MenuUtil.pane());
         inv.setItem(49, MenuUtil.icon(type.icon(), MenuUtil.title(type.display(), type.color()),
                 List.of(
                         MenuUtil.field("Generadores", String.valueOf(spawners.size()), NamedTextColor.WHITE),
-                        MenuUtil.field("Pagina", (page + 1) + " de " + pages, MenuUtil.SOFT),
+                        MenuUtil.field("Página", (page + 1) + " de " + pages, MenuUtil.SOFT),
                         MenuUtil.blank(),
                         MenuUtil.line("Cada generador guarda SU rango de nivel:"),
-                        MenuUtil.line("el mismo esbirro puede ser 5-10 aqui"),
+                        MenuUtil.line("el mismo esbirro puede ser 5-10 aquí"),
                         MenuUtil.line("y 20-30 en la sala del fondo.")), false));
         inv.setItem(50, page < pages - 1 ? MenuUtil.simple(Material.SPECTRAL_ARROW,
-                Component.text("Pagina siguiente ▶", NamedTextColor.YELLOW),
-                List.of(Component.text("Pagina " + (page + 2) + " de " + pages, MenuUtil.SOFT))) : MenuUtil.pane());
+                Component.text("Página siguiente ▶", NamedTextColor.YELLOW),
+                List.of(Component.text("Página " + (page + 2) + " de " + pages, MenuUtil.SOFT))) : MenuUtil.pane());
     }
 
     /** La ficha de un generador concreto: su nivel, su ritmo y sus acciones. */
@@ -1208,22 +1209,22 @@ public final class Menus implements Listener {
                         MenuUtil.field("Esbirro", type.display(), type.color()),
                         MenuUtil.field("Mundo", s.worldName(), NamedTextColor.WHITE),
                         MenuUtil.field("Donde", s.x() + "  " + (s.y() + 1) + "  " + s.z(), NamedTextColor.WHITE),
-                        MenuUtil.field("Region", regions.isEmpty() ? "ninguna" : String.join(", ", regions),
+                        MenuUtil.field("Región", regions.isEmpty() ? "ninguna" : String.join(", ", regions),
                                 regions.isEmpty() ? MenuUtil.DIM : NamedTextColor.AQUA),
                         MenuUtil.field("Vivos ahora", plugin.minionManager().aliveOf(s.id()) + " de " + s.maxAlive(),
                                 NamedTextColor.WHITE)), true));
 
         inv.setItem(19, MenuUtil.icon(Material.ENDER_EYE,
-                MenuUtil.title("Radio de activacion", MenuUtil.GOLD),
+                MenuUtil.title("Radio de activación", MenuUtil.GOLD),
                 List.of(
                         MenuUtil.field("Ahora", s.activationRadius() + " bloques", NamedTextColor.WHITE),
                         MenuUtil.blank(),
-                        MenuUtil.action("Click izquierdo: +4"),
-                        Component.text("► Click derecho: -4", NamedTextColor.YELLOW),
+                        MenuUtil.action("Clic izquierdo: +4"),
+                        Component.text("► Clic derecho: -4", NamedTextColor.YELLOW),
                         Component.text("► Shift para pasos de 16", NamedTextColor.GRAY)), false));
 
         inv.setItem(20, MenuUtil.icon(Material.OAK_SLAB,
-                MenuUtil.title("Nivel minimo", MenuUtil.GOLD),
+                MenuUtil.title("Nivel mínimo", MenuUtil.GOLD),
                 List.of(
                         MenuUtil.field("Ahora", "Nv. " + s.minLevel(), NamedTextColor.GOLD),
                         MenuUtil.field("Rango entero", "Nv. " + rangoTexto(s.minLevel(), s.maxLevel()),
@@ -1232,41 +1233,41 @@ public final class Menus implements Listener {
                         MenuUtil.line("Solo de ESTE generador; los demas"),
                         MenuUtil.line("puntos del esbirro no se tocan."),
                         MenuUtil.blank(),
-                        MenuUtil.action("Click izquierdo: +1"),
-                        Component.text("► Click derecho: -1", NamedTextColor.YELLOW),
+                        MenuUtil.action("Clic izquierdo: +1"),
+                        Component.text("► Clic derecho: -1", NamedTextColor.YELLOW),
                         Component.text("► Shift para pasos de 10", NamedTextColor.GRAY),
-                        Component.text("► Tecla de tirar (Q): escribirlo, \"30-60\"", NamedTextColor.GRAY)), false));
+                        Component.text("► Tecla de soltar (Q): escribirlo, \"30-60\"", NamedTextColor.GRAY)), false));
 
         inv.setItem(21, MenuUtil.icon(Material.STONE_SLAB,
-                MenuUtil.title("Nivel maximo", MenuUtil.GOLD),
+                MenuUtil.title("Nivel máximo", MenuUtil.GOLD),
                 List.of(
                         MenuUtil.field("Ahora", "Nv. " + s.maxLevel(), NamedTextColor.GOLD),
                         MenuUtil.field("Rango entero", "Nv. " + rangoTexto(s.minLevel(), s.maxLevel()),
                                 NamedTextColor.GOLD),
                         MenuUtil.blank(),
-                        MenuUtil.line("De aqui a ese suelo se sortea el nivel"),
+                        MenuUtil.line("De aquí a ese suelo se sortea el nivel"),
                         MenuUtil.line("de cada esbirro que salga del punto."),
                         MenuUtil.blank(),
-                        MenuUtil.action("Click izquierdo: +1"),
-                        Component.text("► Click derecho: -1", NamedTextColor.YELLOW),
+                        MenuUtil.action("Clic izquierdo: +1"),
+                        Component.text("► Clic derecho: -1", NamedTextColor.YELLOW),
                         Component.text("► Shift para pasos de 10", NamedTextColor.GRAY),
-                        Component.text("► Tecla de tirar (Q): escribirlo, \"30-60\"", NamedTextColor.GRAY)), false));
+                        Component.text("► Tecla de soltar (Q): escribirlo, \"30-60\"", NamedTextColor.GRAY)), false));
 
         inv.setItem(22, MenuUtil.icon(Material.ENDER_PEARL,
                 MenuUtil.title("Viajar en frente", NamedTextColor.LIGHT_PURPLE),
                 List.of(
-                        MenuUtil.line("Te deja a un par de bloques del punto,"),
+                        MenuUtil.line("Traslada a dos bloques del punto,"),
                         MenuUtil.line("mirando hacia el."),
                         MenuUtil.blank(),
-                        MenuUtil.action("Click para viajar")), false));
+                        MenuUtil.action("Clic para viajar")), false));
 
         inv.setItem(23, MenuUtil.icon(Material.CLOCK,
                 MenuUtil.title("Intervalo", MenuUtil.GOLD),
                 List.of(
                         MenuUtil.field("Ahora", "cada " + s.intervalSeconds() + "s", NamedTextColor.WHITE),
                         MenuUtil.blank(),
-                        MenuUtil.action("Click izquierdo: +5s"),
-                        Component.text("► Click derecho: -5s", NamedTextColor.YELLOW),
+                        MenuUtil.action("Clic izquierdo: +5s"),
+                        Component.text("► Clic derecho: -5s", NamedTextColor.YELLOW),
                         Component.text("► Shift para pasos de 30s", NamedTextColor.GRAY)), false));
 
         inv.setItem(24, MenuUtil.icon(Material.ARMOR_STAND,
@@ -1274,8 +1275,8 @@ public final class Menus implements Listener {
                 List.of(
                         MenuUtil.field("Ahora", s.maxAlive() + " a la vez", NamedTextColor.WHITE),
                         MenuUtil.blank(),
-                        MenuUtil.action("Click izquierdo: +1"),
-                        Component.text("► Click derecho: -1", NamedTextColor.YELLOW)), false));
+                        MenuUtil.action("Clic izquierdo: +1"),
+                        Component.text("► Clic derecho: -1", NamedTextColor.YELLOW)), false));
 
         inv.setItem(30, MenuUtil.icon(s.enabled() ? Material.LEVER : Material.GRAY_DYE,
                 MenuUtil.title(s.enabled() ? "Activo" : "Pausado",
@@ -1286,7 +1287,7 @@ public final class Menus implements Listener {
                         MenuUtil.blank(),
                         MenuUtil.field("Ahora", "", MenuUtil.SOFT).append(MenuUtil.state(s.enabled())),
                         MenuUtil.blank(),
-                        MenuUtil.action("Click para cambiar")), s.enabled()));
+                        MenuUtil.action("Clic para cambiar")), s.enabled()));
 
         inv.setItem(32, MenuUtil.icon(Material.EGG,
                 MenuUtil.title("Generar ahora", NamedTextColor.AQUA),
@@ -1294,7 +1295,7 @@ public final class Menus implements Listener {
                         MenuUtil.line("Hace aparecer uno al momento, sin"),
                         MenuUtil.line("esperar el reloj (respeta el tope)."),
                         MenuUtil.blank(),
-                        MenuUtil.action("Click para generar")), false));
+                        MenuUtil.action("Clic para generar")), false));
 
         inv.setItem(34, MenuUtil.icon(Material.BARRIER,
                 MenuUtil.title("Quitar generador", NamedTextColor.RED),
@@ -1389,7 +1390,7 @@ public final class Menus implements Listener {
                 }
                 ItemStack cursor = event.getCursor();
                 if (cursor == null || cursor.getType().isAir()) {
-                    deny(player, "Coge antes un objeto con el raton y vuelve a clickar aqui.");
+                    deny(player, "Coge antes un objeto con el ratón y vuelve a clickar aquí.");
                     return;
                 }
                 cat.icon(cursor.getType());
@@ -1505,7 +1506,7 @@ public final class Menus implements Listener {
                 Compat.sound(player.getWorld(), player.getLocation(), "block.amethyst_block.resonate", 0.8f, 1.3f);
                 player.sendMessage(plugin.prefix()
                         .append(Component.text("Vela lista: ", NamedTextColor.GREEN))
-                        .append(Component.text("click derecho en un bloque planta un generador de ", MenuUtil.SOFT))
+                        .append(Component.text("clic derecho sobre un bloque coloca un generador de ", MenuUtil.SOFT))
                         .append(Component.text(type.display(), type.color(), TextDecoration.BOLD))
                         .append(Component.text("  Nv. " + type.wandMinLevel()
                                 + (type.wandMaxLevel() > type.wandMinLevel() ? " - " + type.wandMaxLevel() : ""),
@@ -1716,7 +1717,7 @@ public final class Menus implements Listener {
         });
         player.sendMessage(plugin.prefix().append(Component.text(aviso, NamedTextColor.WHITE)));
         player.sendMessage(plugin.prefix()
-                .append(Component.text("Nadie mas lo vera. Escribe \"cancelar\" para dejarlo estar.",
+                .append(Component.text("Nadie más lo verá. Escribe \"cancelar\" para dejarlo estar.",
                         MenuUtil.SOFT)));
         Compat.sound(player.getWorld(), player.getLocation(), "block.note_block.pling", 0.7f, 1.6f);
     }
@@ -1738,7 +1739,7 @@ public final class Menus implements Listener {
                 .append(Component.text(".", NamedTextColor.WHITE)));
         player.sendMessage(plugin.prefix()
                 .append(Component.text("Ahora esta en Nv. " + rangoTexto(min, max)
-                        + ". Un numero suelto lo deja fijo en ese nivel; \"cancelar\" lo deja como esta.",
+                        + ". Un número suelto lo deja fijo en ese nivel; \"cancelar\" lo deja como esta.",
                         MenuUtil.SOFT)));
         Compat.sound(player.getWorld(), player.getLocation(), "block.note_block.pling", 0.7f, 1.6f);
     }
@@ -1914,7 +1915,7 @@ public final class Menus implements Listener {
         List<Component> lore = new ArrayList<>();
         switch (screen) {
             case HUB -> {
-                lore.add(MenuUtil.line("Todo el plugin se maneja desde aqui."));
+                lore.add(MenuUtil.line("Todo el plugin se maneja desde aquí."));
                 lore.add(MenuUtil.blank());
                 lore.add(MenuUtil.field("Permiso", "anomaly.gui", MenuUtil.GOLD));
                 lore.add(MenuUtil.line("Solo operadores o quien lo tenga."));
@@ -1924,26 +1925,26 @@ public final class Menus implements Listener {
                 lore.add(MenuUtil.line("y apaga las que no quieras que salgan solas."));
                 lore.add(MenuUtil.blank());
                 lore.add(MenuUtil.line("La vida del jefe se ajusta en su ficha:"));
-                lore.add(MenuUtil.line("click derecho sobre la anomalia."));
+                lore.add(MenuUtil.line("clic derecho sobre la anomalía."));
             }
             case ABILITIES -> {
-                lore.add(MenuUtil.line("Todo lo que sabe hacer esta anomalia,"));
+                lore.add(MenuUtil.line("Todo lo que sabe hacer esta anomalía,"));
                 lore.add(MenuUtil.line("y abajo su vida base y el multiplicador"));
-                lore.add(MenuUtil.line("de dano de todas sus habilidades."));
+                lore.add(MenuUtil.line("de daño de todas sus habilidades."));
                 lore.add(MenuUtil.line("Cada habilidad avisa antes de golpear:"));
-                lore.add(MenuUtil.line("la marca en el suelo es la senal."));
+                lore.add(MenuUtil.line("la marca en el suelo es la señal."));
             }
             case DROPS -> {
-                lore.add(MenuUtil.line("El botin se guarda con el objeto entero,"));
-                lore.add(MenuUtil.line("con su NBT, asi que los items de MMOItems"));
+                lore.add(MenuUtil.line("El botín se guarda con el objeto entero,"));
+                lore.add(MenuUtil.line("con su NBT, así que los items de MMOItems"));
                 lore.add(MenuUtil.line("caen exactamente igual que el original."));
                 lore.add(MenuUtil.blank());
-                lore.add(MenuUtil.line("Al caer el jefe, TODO el botin explota de su"));
+                lore.add(MenuUtil.line("Al caer el jefe, TODO el botín explota de su"));
                 lore.add(MenuUtil.line("cuerpo y sale disparado por el suelo. Lo"));
                 lore.add(MenuUtil.line("reservado sale igual pero solo lo recoge"));
-                lore.add(MenuUtil.line("su dueno. El UNICO cae brillando."));
+                lore.add(MenuUtil.line("su dueño. El ÚNICO cae brillando."));
                 lore.add(MenuUtil.blank());
-                lore.add(MenuUtil.line("Se guarda solo al cerrar el menu."));
+                lore.add(MenuUtil.line("Se guarda solo al cerrar el menú."));
             }
             case SETTINGS -> {
                 lore.add(MenuUtil.line("Cada cambio se guarda al momento"));
@@ -1951,7 +1952,7 @@ public final class Menus implements Listener {
             }
             case MINIONS -> {
                 lore.add(MenuUtil.line("La tropa de las mazmorras. Cada tipo se"));
-                lore.add(MenuUtil.line("define una vez y se planta por el mapa"));
+                lore.add(MenuUtil.line("se define una vez y se coloca por el mapa"));
                 lore.add(MenuUtil.line("con la vela, cada punto con su nivel."));
                 lore.add(MenuUtil.blank());
                 lore.add(MenuUtil.line("Todo se guarda al momento en esbirros.yml."));
@@ -1961,26 +1962,26 @@ public final class Menus implements Listener {
                 lore.add(MenuUtil.line("VELA (nivel, ritmo, tope y radio) viajan"));
                 lore.add(MenuUtil.line("grabados en cada vela que pidas: saca una,"));
                 lore.add(MenuUtil.line("cambia el nivel y saca otra para tener"));
-                lore.add(MenuUtil.line("dos siembras distintas del mismo bicho."));
+                lore.add(MenuUtil.line("dos colocaciones distintas de la misma criatura."));
             }
             case MINION_ABILITIES -> {
                 lore.add(MenuUtil.line("Los rasgos de este esbirro. A diferencia"));
                 lore.add(MenuUtil.line("de las habilidades de un jefe, no tienen"));
                 lore.add(MenuUtil.line("fase ni enfriamiento: los lleva siempre."));
                 lore.add(MenuUtil.blank());
-                lore.add(MenuUtil.line("Cambiarlos no toca a los que ya estan"));
+                lore.add(MenuUtil.line("Cambiarlos no toca a los que ya están"));
                 lore.add(MenuUtil.line("vivos, solo a los que salgan luego."));
             }
             case SPAWNERS -> {
                 lore.add(MenuUtil.line("Todos los puntos plantados de este"));
-                lore.add(MenuUtil.line("esbirro, con su mundo y su region."));
+                lore.add(MenuUtil.line("esbirro, con su mundo y su región."));
                 lore.add(MenuUtil.blank());
                 lore.add(MenuUtil.line("Cada generador guarda su propio rango"));
                 lore.add(MenuUtil.line("de nivel, su ritmo y su tope."));
             }
             case SPAWNER_EDIT -> {
                 lore.add(MenuUtil.line("Este generador en concreto. Lo que"));
-                lore.add(MenuUtil.line("cambies aqui no toca a los demas"));
+                lore.add(MenuUtil.line("cambies aquí no toca a los demas"));
                 lore.add(MenuUtil.line("puntos del mismo esbirro."));
             }
         }
@@ -2087,12 +2088,12 @@ public final class Menus implements Listener {
             case 15 -> {
                 AnomalyType type = plugin.selected();
                 if (type == null) {
-                    deny(player, "Elige una anomalia primero.");
+                    deny(player, "Elige una anomalía primero.");
                     return;
                 }
                 if (event.isRightClick()) {
                     if (plugin.registry().spawnPoint(type) == null) {
-                        deny(player, "Esa anomalia ya aparece en sitios aleatorios.");
+                        deny(player, "Esa anomalía ya aparece en sitios aleatorios.");
                         return;
                     }
                     plugin.registry().clearSpawnPoint(type);
@@ -2109,7 +2110,7 @@ public final class Menus implements Listener {
             case 13 -> {
                 ActiveAnomaly live = plugin.manager().current();
                 if (live == null) {
-                    deny(player, "No hay ninguna anomalia abierta.");
+                    deny(player, "No hay ninguna anomalía abierta.");
                     return;
                 }
                 click(player, 1.5f);
@@ -2119,25 +2120,25 @@ public final class Menus implements Listener {
             case 20 -> {
                 AnomalyType type = plugin.selected();
                 if (type == null) {
-                    deny(player, "Elige una anomalia primero.");
+                    deny(player, "Elige una anomalía primero.");
                     return;
                 }
                 if (plugin.manager().active()) {
-                    deny(player, "Ya hay una anomalia abierta.");
+                    deny(player, "Ya hay una anomalía abierta.");
                     return;
                 }
                 click(player, 1.6f);
                 player.sendMessage(plugin.prefix().append(Component.text(
                         plugin.registry().spawnPoint(type) != null
-                                ? "Abriendo la anomalia en su punto marcado..."
-                                : "Buscando un sitio libre para la anomalia...", MenuUtil.SOFT)));
+                                ? "Abriendo la anomalía en su punto marcado..."
+                                : "Buscando un sitio libre para la anomalía...", MenuUtil.SOFT)));
                 // El menu se queda abierto a proposito: en cuanto aparezca, el boton de
                 // viajar esta justo arriba y se quiere poder usar sin volver a abrirlo.
                 plugin.manager().start(type, ok -> {
                     if (!ok) {
                         player.sendMessage(plugin.prefix().append(Component.text(
-                                "No se encontro ningun sitio valido. Prueba a bajar la distancia minima "
-                                        + "o el margen de proteccion en Ajustes.", NamedTextColor.RED)));
+                                "No se encontro ningun sitio valido. Prueba a bajar la distancia mínima "
+                                        + "o el margen de protección en Ajustes.", NamedTextColor.RED)));
                     }
                     if (player.isOnline() && player.getOpenInventory().getTopInventory().getHolder() instanceof Holder h
                             && h.screen == Screen.HUB) {
@@ -2145,7 +2146,7 @@ public final class Menus implements Listener {
                         if (ok) {
                             player.sendMessage(plugin.prefix().append(Component.text(
                                     "Lista. Pulsa ", MenuUtil.SOFT))
-                                    .append(Component.text("Ir a la anomalia", NamedTextColor.LIGHT_PURPLE,
+                                    .append(Component.text("Ir a la anomalía", NamedTextColor.LIGHT_PURPLE,
                                             TextDecoration.BOLD))
                                     .append(Component.text(" para viajar.", MenuUtil.SOFT)));
                         }
@@ -2159,7 +2160,7 @@ public final class Menus implements Listener {
             case 24 -> {
                 AnomalyType type = plugin.selected();
                 if (type == null) {
-                    deny(player, "Elige una anomalia primero.");
+                    deny(player, "Elige una anomalía primero.");
                     return;
                 }
                 click(player, 1.1f);
@@ -2171,7 +2172,7 @@ public final class Menus implements Listener {
             }
             case 31 -> {
                 if (!plugin.manager().active()) {
-                    deny(player, "No hay ninguna anomalia abierta.");
+                    deny(player, "No hay ninguna anomalía abierta.");
                     return;
                 }
                 click(player, 0.7f);
@@ -2213,7 +2214,7 @@ public final class Menus implements Listener {
             plugin.selectedId(type.id());
             click(player, 1.6f);
             player.sendMessage(plugin.prefix()
-                    .append(Component.text("Anomalia elegida  ", NamedTextColor.GREEN))
+                    .append(Component.text("Anomalía elegida  ", NamedTextColor.GREEN))
                     .append(Component.text(type.display(), type.color(), TextDecoration.BOLD)));
         }
         render(event.getInventory(), player, holder);
@@ -2248,7 +2249,7 @@ public final class Menus implements Listener {
             double step = (event.isShiftClick() ? 1.0 : 0.1) * (up ? 1 : -1);
             plugin.registry().setDamageMultiplier(type, plugin.registry().damageMultiplier(type) + step);
             click(player, up ? 1.4f : 0.9f);
-            player.sendActionBar(Component.text("Dano de " + type.display() + "  ", MenuUtil.SOFT)
+            player.sendActionBar(Component.text("Daño de " + type.display() + "  ", MenuUtil.SOFT)
                     .append(Component.text("x" + plugin.registry().damageMultiplier(type),
                             NamedTextColor.GOLD, TextDecoration.BOLD)));
             render(event.getInventory(), player, holder);
@@ -2352,10 +2353,10 @@ public final class Menus implements Listener {
         if (marked) {
             Compat.sound(player.getWorld(), player.getLocation(), "block.amethyst_block.resonate", 0.8f, 1.5f);
             player.sendActionBar(Component.text("✦ ", NamedTextColor.AQUA)
-                    .append(Component.text("OBJETO UNICO", NamedTextColor.AQUA, TextDecoration.BOLD))
+                    .append(Component.text("OBJETO ÚNICO", NamedTextColor.AQUA, TextDecoration.BOLD))
                     .append(Component.text("  queda en super raro; ajusta el % si quieres", MenuUtil.SOFT)));
         } else {
-            player.sendActionBar(Component.text("Ya no es el objeto unico.", MenuUtil.SOFT));
+            player.sendActionBar(Component.text("Ya no es el objeto único.", MenuUtil.SOFT));
         }
     }
 
@@ -2416,7 +2417,7 @@ public final class Menus implements Listener {
         Location target = live.fight() != null && live.fight().alive()
                 ? live.fight().loc() : live.where();
         if (target.getWorld() == null) {
-            deny(player, "El mundo de la anomalia ya no esta cargado.");
+            deny(player, "El mundo de la anomalía ya no esta cargado.");
             return;
         }
 

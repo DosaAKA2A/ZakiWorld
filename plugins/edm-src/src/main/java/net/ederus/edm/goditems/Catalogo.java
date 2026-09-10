@@ -224,7 +224,7 @@ public final class Catalogo {
             if (!ACCIONES.containsKey(n)) out.add("accion " + n);
         }
         for (String n : Condiciones.nombres()) {
-            if (!CONDICIONES.containsKey(n)) out.add("condicion " + n);
+            if (!CONDICIONES.containsKey(n)) out.add("condición " + n);
         }
         return out;
     }
@@ -311,7 +311,7 @@ public final class Catalogo {
     static {
         /* ------------------------------------------------------ vida y daño */
 
-        acc("DANO", "Vida y daño", "Pega el daño que le digas.", "IRON_SWORD",
+        acc("DAÑO", "Vida y daño", "Pega el daño que le digas.", "IRON_SWORD",
                 "@golpeado", null, null,
                 Param.de("cantidad", "Daño", Clase.NUMERO, "1",
                         "En puntos de vida. 2 = un corazón.", "REDSTONE"));
@@ -517,7 +517,7 @@ public final class Catalogo {
                 Param.de("tono", "Tono", Clase.NUMERO, "1.0", "", "NOTE_BLOCK"),
                 Param.de("alto", "Alto sobre el punto", Clase.NUMERO, "0", "", "LADDER"));
 
-        acc("SECUENCIA", "Sonido", "Varios sonidos en capas: así se fabrica uno propio sin pack.",
+        acc("SECUENCIA", "Sonido", "Varios sonidos en capas: así se fábrica uno propio sin pack.",
                 "MUSIC_DISC_PIGSTEP", "@yo",
                 "Lista de sonidos",
                 "clave|volumen|tono|retardo, separados por coma. "
@@ -660,7 +660,7 @@ public final class Catalogo {
 
         con("HORA", "Sitio", "La hora del mundo.", "CLOCK",
                 Forma.COMPARACION, false, "Hora",
-                "`dia`, `noche` o un número de 0 a 24000.", Clase.TEXTO);
+                "`día`, `noche` o un número de 0 a 24000.", Clase.TEXTO);
 
         con("LLUVIA", "Sitio", "Está lloviendo.", "WATER_BUCKET",
                 Forma.VALOR, false, "Clima", "Vacío = lluvia. `tormenta` = tormenta.", Clase.TEXTO);

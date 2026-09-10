@@ -129,7 +129,7 @@ public final class Catalogo {
             nuevoCategorias.put(categoria, n);
         }
 
-        if (problemas.length() > 0) throw new IllegalStateException("catalogo con problemas:" + problemas);
+        if (problemas.length() > 0) throw new IllegalStateException("catálogo con problemas:" + problemas);
 
         /* Solo se pisa el catalogo bueno si el nuevo esta sano: asi un /etienda
          * recargar con el fichero roto deja la tienda funcionando como estaba. */

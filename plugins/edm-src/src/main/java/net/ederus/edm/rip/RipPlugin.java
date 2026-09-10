@@ -56,7 +56,6 @@ import org.bukkit.event.player.PlayerJoinEvent;
 import org.bukkit.event.player.PlayerQuitEvent;
 import org.bukkit.event.player.PlayerRespawnEvent;
 import org.bukkit.plugin.Plugin;
-import org.bukkit.plugin.java.JavaPlugin;
 
 public final class RipPlugin
 extends net.ederus.edm.Module
@@ -241,7 +240,7 @@ implements Listener {
             this.getLogger().info("config.yml actualizado con las claves nuevas: " + String.join((CharSequence)", ", added));
         }
         catch (Throwable ex) {
-            this.getLogger().log(Level.WARNING, "No se pudo anadir las claves nuevas a config.yml; se usan los valores de fabrica", ex);
+            this.getLogger().log(Level.WARNING, "No se pudo anadir las claves nuevas a config.yml; se usan los valores de fábrica", ex);
         }
     }
 
@@ -259,7 +258,7 @@ implements Listener {
             }
         }
         catch (Throwable ex) {
-            this.getLogger().log(Level.WARNING, "No se pudo leer el config.yml de fabrica", ex);
+            this.getLogger().log(Level.WARNING, "No se pudo leer el config.yml de fábrica", ex);
         }
         return out;
     }
@@ -339,7 +338,7 @@ implements Listener {
                     continue;
                 }
                 if (!section.isDouble(id) && !section.isInt(id) && !section.isLong(id)) {
-                    this.getLogger().warning("enfriamientos: valor no numerico en " + type.lower() + "." + id + "; se deja el de fabrica");
+                    this.getLogger().warning("enfriamientos: valor no numerico en " + type.lower() + "." + id + "; se deja el de fábrica");
                     continue;
                 }
                 double seconds = section.getDouble(id);
@@ -351,7 +350,7 @@ implements Listener {
                 if (millis == effect.defaultCooldownMillis()) continue;
                 out.put(effect, Long.valueOf(millis));
                 if (millis >= effect.animationMillis()) continue;
-                this.getLogger().warning("enfriamientos: " + type.lower() + "." + id + " en " + seconds + "s es menos de lo que dura su animacion (" + RipPlugin.formatSeconds(effect.animationMillis()) + "); podran solaparse dos animaciones del mismo jugador");
+                this.getLogger().warning("enfriamientos: " + type.lower() + "." + id + " en " + seconds + "s es menos de lo que dura su animación (" + RipPlugin.formatSeconds(effect.animationMillis()) + "); podrán solaparse dos animaciones del mismo jugador");
             }
         }
         if (!out.isEmpty()) {

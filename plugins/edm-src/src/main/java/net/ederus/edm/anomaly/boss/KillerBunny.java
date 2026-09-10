@@ -7,11 +7,11 @@ import net.kyori.adventure.text.format.TextDecoration;
 import net.kyori.adventure.title.Title;
 import net.ederus.edm.anomaly.AnomalyPlugin;
 import net.ederus.edm.anomaly.core.ActiveAnomaly;
-import net.ederus.edm.anomaly.core.Compat;
-import net.ederus.edm.anomaly.core.Fx;
+import net.ederus.edm.comun.Compat;
+import net.ederus.edm.comun.Fx;
 import net.ederus.edm.anomaly.core.Glow;
 import net.ederus.edm.anomaly.core.Stop;
-import net.ederus.edm.anomaly.core.Tags;
+import net.ederus.edm.comun.Tags;
 import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.block.data.BlockData;
@@ -151,7 +151,7 @@ public final class KillerBunny extends BossFight {
             soundAt(boss.getLocation(), "entity.rabbit.attack", 1.6f, 0.4f);
             for (Player p : Fx.viewersNear(spot, 80)) {
                 p.showTitle(Title.title(
-                        Component.text("✦ ANOMALIA ✦", ACCENT, TextDecoration.BOLD),
+                        Component.text("✦ ANOMALÍA ✦", ACCENT, TextDecoration.BOLD),
                         Component.text("Algo se mueve entre la hierba", NamedTextColor.GRAY),
                         Title.Times.times(Duration.ofMillis(400), Duration.ofMillis(1600), Duration.ofMillis(600))));
             }
@@ -829,7 +829,7 @@ public final class KillerBunny extends BossFight {
         pruneCopies();
         int room = MAX_COPIES - copies.size();
         if (room <= 0) {
-            broadcastNear(Component.text("Ya no le caben mas.", ACCENT));
+            broadcastNear(Component.text("Ya no le caben más.", ACCENT));
             return;
         }
         broadcastNear(Component.text("Se parte entera.", ACCENT));

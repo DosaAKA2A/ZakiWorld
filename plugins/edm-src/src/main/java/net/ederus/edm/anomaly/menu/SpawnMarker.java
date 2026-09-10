@@ -5,8 +5,8 @@ import net.kyori.adventure.text.format.NamedTextColor;
 import net.kyori.adventure.text.format.TextDecoration;
 import net.ederus.edm.anomaly.AnomalyPlugin;
 import net.ederus.edm.anomaly.core.AnomalyType;
-import net.ederus.edm.anomaly.core.Compat;
-import net.ederus.edm.anomaly.core.Fx;
+import net.ederus.edm.comun.Compat;
+import net.ederus.edm.comun.Fx;
 import org.bukkit.Location;
 import org.bukkit.block.Block;
 import org.bukkit.entity.Player;
@@ -62,7 +62,7 @@ public final class SpawnMarker implements Listener {
                 .append(Component.text(type.display(), type.color(), TextDecoration.BOLD))
                 .append(Component.text(".", NamedTextColor.WHITE)));
         player.sendMessage(plugin.prefix()
-                .append(Component.text("Tienes 60 segundos. Para cancelar, vuelve a abrir el menu.",
+                .append(Component.text("Tienes 60 segundos. Para cancelar, vuelve a abrir el menú.",
                         NamedTextColor.GRAY)));
         Compat.sound(player.getWorld(), player.getLocation(), "block.note_block.pling", 0.7f, 1.6f);
     }
@@ -111,14 +111,14 @@ public final class SpawnMarker implements Listener {
         player.sendMessage(plugin.prefix()
                 .append(Component.text("Punto marcado  ", NamedTextColor.GREEN))
                 .append(Component.text(type.display(), type.color(), TextDecoration.BOLD))
-                .append(Component.text("  aparecera en ", NamedTextColor.WHITE))
+                .append(Component.text("  aparecerá en ", NamedTextColor.WHITE))
                 .append(Component.text(block.getX() + " " + (block.getY() + 1) + " " + block.getZ(),
                         NamedTextColor.WHITE, TextDecoration.BOLD))
                 .append(Component.text("  (" + block.getWorld().getName() + ")", NamedTextColor.GRAY)));
         player.sendMessage(plugin.prefix()
-                .append(Component.text("La anomalia se activa como siempre, con el boton ", NamedTextColor.GRAY))
+                .append(Component.text("La anomalía se activa como siempre, con el botón ", NamedTextColor.GRAY))
                 .append(Component.text("Iniciar", NamedTextColor.GREEN, TextDecoration.BOLD))
-                .append(Component.text(" del menu.", NamedTextColor.GRAY)));
+                .append(Component.text(" del menú.", NamedTextColor.GRAY)));
 
         // De vuelta al panel un instante despues, con el punto ya pintado en su boton.
         plugin.getServer().getScheduler().runTaskLater(net.ederus.edm.Module.dueno(plugin), () -> {

@@ -52,17 +52,17 @@ public final class Plantillas {
      */
     public static final List<Campo> CAMPOS = List.of(
             new Campo("nombre", "Nombre", "name", Clase.TEXTO, false),
-            new Campo("lore", "Descripcion", "lore", Clase.LISTA, false),
+            new Campo("lore", "Descripción", "lore", Clase.LISTA, false),
             new Campo("material", "Material", "material", Clase.TEXTO, false),
             new Campo("tier", "Tier", "tier", Clase.TEXTO, false),
             new Campo("set", "Conjunto", "set", Clase.TEXTO, false),
-            new Campo("durabilidad", "Durabilidad maxima", "max-durability", Clase.NUMERO, false),
+            new Campo("durabilidad", "Durabilidad máxima", "max-durability", Clase.NUMERO, false),
             new Campo("dano", "Daño de ataque", "attack-damage", Clase.NUMERO, true),
             new Campo("velocidad", "Velocidad de ataque", "attack-speed", Clase.NUMERO, true),
-            new Campo("critico", "Probabilidad critica", "critical-strike-chance", Clase.NUMERO, true),
-            new Campo("poder-critico", "Poder critico", "critical-strike-power", Clase.NUMERO, true),
+            new Campo("critico", "Probabilidad crítica", "critical-strike-chance", Clase.NUMERO, true),
+            new Campo("poder-critico", "Poder crítico", "critical-strike-power", Clase.NUMERO, true),
             new Campo("armadura", "Armadura", "armor", Clase.NUMERO, true),
-            new Campo("vida", "Vida maxima", "max-health", Clase.NUMERO, true),
+            new Campo("vida", "Vida máxima", "max-health", Clase.NUMERO, true),
             new Campo("nivel", "Nivel requerido", "required-level", Clase.NUMERO, false));
 
     public static Campo campo(String id) {
@@ -136,7 +136,7 @@ public final class Plantillas {
         switch (campo.clase()) {
             case NUMERO -> {
                 double d = Numeros.decimal(valor, Double.NaN);
-                if (Double.isNaN(d)) return "'" + valor + "' no es un numero.";
+                if (Double.isNaN(d)) return "'" + valor + "' no es un número.";
                 /* Si el stat es una estructura, se toca SOLO su `base`: el
                  * resto (scale, spread) es lo que hace que dos ejemplares del
                  * mismo item no salgan identicos. */

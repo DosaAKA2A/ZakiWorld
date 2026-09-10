@@ -7,11 +7,11 @@ import net.kyori.adventure.text.format.TextDecoration;
 import net.kyori.adventure.title.Title;
 import net.ederus.edm.anomaly.AnomalyPlugin;
 import net.ederus.edm.anomaly.core.ActiveAnomaly;
-import net.ederus.edm.anomaly.core.Compat;
-import net.ederus.edm.anomaly.core.Fx;
+import net.ederus.edm.comun.Compat;
+import net.ederus.edm.comun.Fx;
 import net.ederus.edm.anomaly.core.Glow;
 import net.ederus.edm.anomaly.core.Stop;
-import net.ederus.edm.anomaly.core.Tags;
+import net.ederus.edm.comun.Tags;
 import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.entity.Guardian;
@@ -122,7 +122,7 @@ public final class AbyssalChoir extends BossFight {
             summonChoir();
             for (Player p : Fx.viewersNear(spot, 90)) {
                 p.showTitle(Title.title(
-                        Component.text("✦ ANOMALIA ✦", ACCENT, TextDecoration.BOLD),
+                        Component.text("✦ ANOMALÍA ✦", ACCENT, TextDecoration.BOLD),
                         Component.text("Apaga el coro en el orden de sus luces", NamedTextColor.GRAY),
                         Title.Times.times(Duration.ofMillis(400), Duration.ofMillis(2200), Duration.ofMillis(700))));
             }
@@ -350,7 +350,7 @@ public final class AbyssalChoir extends BossFight {
         if (to == 2) {
             damageBonus = 1.2;
             titleNear(Component.text("FASE II", NamedTextColor.GOLD, TextDecoration.BOLD),
-                    Component.text("Los cantores tambien atacan", NamedTextColor.GRAY));
+                    Component.text("Los cantores también atacan", NamedTextColor.GRAY));
         }
         if (to == 3) {
             damageBonus = 1.45;

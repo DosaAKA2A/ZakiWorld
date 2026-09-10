@@ -101,7 +101,7 @@ public final class CoinflipPlugin extends Module {
                 + " a " + Estilo.dinero(mesa.maxima())
                 + " | comision " + mesa.comisionPorCiento() + "%"
                 + " | retos: " + (mesa.retosActivos() ? "si" : "no")
-                + " | animacion: " + (animacion.activa() ? "si" : "no"));
+                + " | animación: " + (animacion.activa() ? "si" : "no"));
     }
 
     @Override
@@ -212,27 +212,4 @@ public final class CoinflipPlugin extends Module {
     public MenuCoinflip menu() { return menu; }
     public Animacion animacion() { return animacion; }
 
-    /**
-     * Igual que en la tienda: saveResource(false) NO sobrescribe, asi que un
-     * fichero de una version anterior se quedaria para siempre. Se detecta por
-     * su 'version', se aparta el viejo con su fecha y se escribe el nuevo.
-     */
-    private void migrar(String nombre, int esperada) {
-        File destino = new File(getDataFolder(), nombre);
-        if (!destino.exists()) { saveResource(nombre, false); return; }
-
-        int suya = org.bukkit.configuration.file.YamlConfiguration
-                .loadConfiguration(destino).getInt("version", 1);
-        if (suya >= esperada) return;
-
-        String base = nombre.replace(".yml", "");
-        File aparte = new File(getDataFolder(), base + "-v" + suya + "-" + java.time.LocalDate.now() + ".yml");
-        if (destino.renameTo(aparte)) {
-            saveResource(nombre, false);
-            getLogger().warning(nombre + " era de la version " + suya + " y se puso al dia. "
-                    + "El tuyo quedo en " + aparte.getName() + " por si le habias cambiado algo.");
-        } else {
-            getLogger().severe("No pude apartar el " + nombre + " viejo; puede quedar desactualizado.");
-        }
-    }
 }

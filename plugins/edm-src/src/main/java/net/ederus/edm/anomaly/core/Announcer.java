@@ -15,11 +15,12 @@ import org.bukkit.entity.Player;
 
 import java.time.Duration;
 import java.util.List;
+import net.ederus.edm.comun.Compat;
 
 /**
  * El anuncio del chat.
  *
- * La palabra "Anomalia" no es texto suelto: al pasar el raton cuenta que anomalia es,
+ * La palabra "Anomalía" no es texto suelto: al pasar el raton cuenta que anomalia es,
  * de donde viene y, en otro color, que suelta. Las coordenadas se copian con un clic.
  */
 public final class Announcer {
@@ -52,7 +53,7 @@ public final class Announcer {
         }
         if (plugin.settings().announceTitle()) {
             Title title = Title.title(
-                    Component.text("✦ ANOMALIA ✦", event.type().color(), TextDecoration.BOLD),
+                    Component.text("✦ ANOMALÍA ✦", event.type().color(), TextDecoration.BOLD),
                     Component.text(event.type().display(), NamedTextColor.GRAY),
                     Title.Times.times(Duration.ofMillis(400), Duration.ofMillis(2000), Duration.ofMillis(800)));
             for (Player p : plugin.getServer().getOnlinePlayers()) p.showTitle(title);
@@ -74,7 +75,7 @@ public final class Announcer {
         int y = l.getBlockY();
         int z = round(l.getBlockZ(), step);
 
-        Component word = Component.text("Anomalia", type.color(), TextDecoration.BOLD)
+        Component word = Component.text("Anomalía", type.color(), TextDecoration.BOLD)
                 .hoverEvent(HoverEvent.showText(dossier(event)));
 
         String coordText = x + " " + y + " " + z;
@@ -140,7 +141,7 @@ public final class Announcer {
     public Component lootBlock(String anomalyId) {
         DropTable table = plugin.drops().table(anomalyId);
         if (table.entries().isEmpty() && table.commands().isEmpty()) {
-            return Component.text("Todavia sin botin configurado.", DIM);
+            return Component.text("Todavía sin botín configurado.", DIM);
         }
         Component c = Component.empty();
         List<DropEntry> entries = table.entries();
@@ -149,7 +150,7 @@ public final class Announcer {
             DropEntry e = entries.get(i);
             c = c.append(Component.text("· ", LOOT));
             if (e.unique()) {
-                c = c.append(Component.text("✦UNICO ", NamedTextColor.AQUA, TextDecoration.BOLD));
+                c = c.append(Component.text("✦ÚNICO ", NamedTextColor.AQUA, TextDecoration.BOLD));
             }
             c = c.append(DropTable.nameOf(e.item()).colorIfAbsent(e.unique() ? NamedTextColor.AQUA : LOOT))
                     .append(Component.text("  x" + e.amountLabel(), TextColor.color(0xC79A3A)))
@@ -158,7 +159,7 @@ public final class Announcer {
                     .append(Component.newline());
         }
         if (entries.size() > shown) {
-            c = c.append(Component.text("  y " + (entries.size() - shown) + " cosa(s) mas", DIM))
+            c = c.append(Component.text("  y " + (entries.size() - shown) + " cosa(s) más", DIM))
                     .append(Component.newline());
         }
         if (!table.commands().isEmpty()) {
@@ -187,7 +188,7 @@ public final class Announcer {
 
         Component who = Component.text("   ", DIM);
         if (event.participants() == 0) {
-            who = who.append(Component.text("Nadie reclamo el botin.", DIM));
+            who = who.append(Component.text("Nadie reclamo el botín.", DIM));
         } else {
             who = who.append(Component.text(event.participants() + " ", NamedTextColor.WHITE))
                     .append(Component.text(event.participants() == 1 ? "jugador se lo llevo" : "jugadores se lo repartieron", NamedTextColor.GRAY))
@@ -206,13 +207,13 @@ public final class Announcer {
             }
         }
         if (!report.isEmpty()) {
-            plugin.getLogger().info("Botin repartido (" + type.id() + "): " + String.join(", ", report));
+            plugin.getLogger().info("Botín repartido (" + type.id() + "): " + String.join(", ", report));
         }
     }
 
     public void expired(ActiveAnomaly event) {
         plugin.getServer().sendMessage(Component.text("✦ ", event.type().color())
-                .append(Component.text("La anomalia se cerro sola. ", NamedTextColor.GRAY))
+                .append(Component.text("La anomalía se cerro sola. ", NamedTextColor.GRAY))
                 .append(Component.text(event.type().display() + " sigue del otro lado.", DIM)));
     }
 

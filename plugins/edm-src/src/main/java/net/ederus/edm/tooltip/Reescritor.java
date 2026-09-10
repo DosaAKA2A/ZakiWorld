@@ -258,7 +258,7 @@ final class Reescritor {
         return b.build();
     }
 
-    /** " · Proteccion III". El nombre va traducible; el numeral, escrito por nosotros. */
+    /** " · Protección III". El nombre va traducible; el numeral, escrito por nosotros. */
     private static Component linea(Enchantment encanto, int nivel, Ajustes a) {
         boolean maldito = encanto.isCursed();
         /* Traducible a proposito: description() devuelve el nombre YA resuelto
@@ -273,7 +273,7 @@ final class Reescritor {
                 .append(nombre);
 
         /* La regla de vanilla: un encantamiento que solo tiene un nivel no
-         * lleva numeral. Por eso "Reparacion" va suelto y "Proteccion" no. */
+         * lleva numeral. Por eso "Reparacion" va suelto y "Protección" no. */
         if (nivel != 1 || encanto.getMaxLevel() != 1) {
             texto = texto.append(Component.text(" " + Numerales.de(nivel, a.tope()),
                     maldito ? a.colorMaldicion() : a.colorDeNivel(nivel)));

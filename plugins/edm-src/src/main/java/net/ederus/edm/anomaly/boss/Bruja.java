@@ -7,11 +7,11 @@ import net.kyori.adventure.text.format.TextDecoration;
 import net.kyori.adventure.title.Title;
 import net.ederus.edm.anomaly.AnomalyPlugin;
 import net.ederus.edm.anomaly.core.ActiveAnomaly;
-import net.ederus.edm.anomaly.core.Compat;
-import net.ederus.edm.anomaly.core.Fx;
+import net.ederus.edm.comun.Compat;
+import net.ederus.edm.comun.Fx;
 import net.ederus.edm.anomaly.core.Glow;
 import net.ederus.edm.anomaly.core.Stop;
-import net.ederus.edm.anomaly.core.Tags;
+import net.ederus.edm.comun.Tags;
 import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.entity.Bat;
@@ -167,7 +167,7 @@ public final class Bruja extends BossFight {
             soundAt(spot, "entity.witch.celebrate", 1.6f, 1.0f);
             for (Player p : Fx.viewersNear(spot, 90)) {
                 p.showTitle(Title.title(
-                        Component.text("✦ ANOMALIA ✦", ACCENT, TextDecoration.BOLD),
+                        Component.text("✦ ANOMALÍA ✦", ACCENT, TextDecoration.BOLD),
                         Component.text("Bruja  ·  el caldero ya esta hirviendo", NamedTextColor.GRAY),
                         Title.Times.times(Duration.ofMillis(400), Duration.ofMillis(1800), Duration.ofMillis(600))));
             }

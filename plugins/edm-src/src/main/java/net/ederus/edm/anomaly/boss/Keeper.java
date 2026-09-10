@@ -7,15 +7,14 @@ import net.kyori.adventure.text.format.TextDecoration;
 import net.kyori.adventure.title.Title;
 import net.ederus.edm.anomaly.AnomalyPlugin;
 import net.ederus.edm.anomaly.core.ActiveAnomaly;
-import net.ederus.edm.anomaly.core.Compat;
-import net.ederus.edm.anomaly.core.Fx;
+import net.ederus.edm.comun.Compat;
+import net.ederus.edm.comun.Fx;
 import net.ederus.edm.anomaly.core.Glow;
 import net.ederus.edm.anomaly.core.Stop;
 import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.entity.ArmorStand;
 import org.bukkit.entity.Entity;
-import org.bukkit.entity.LivingEntity;
 import org.bukkit.entity.Player;
 import org.bukkit.entity.Silverfish;
 import org.bukkit.entity.Warden;
@@ -104,7 +103,7 @@ public final class Keeper extends BossFight {
             w.customName(Component.text("KEEPER", ACCENT, TextDecoration.BOLD));
             w.setCustomNameVisible(false);
         });
-        net.ederus.edm.anomaly.core.Tags.markBoss(boss, ID);
+        net.ederus.edm.comun.Tags.markBoss(boss, ID);
         applyHealth(plugin.registry().scaledHealth(plugin.registry().get(ID), targets(96).size()));
         glowBody(NamedTextColor.AQUA);
 
@@ -688,7 +687,7 @@ public final class Keeper extends BossFight {
                 });
         if (ranked.isEmpty()) return;
         soundAt(loc(), "block.sculk_sensor.clicking", 1.6f, 0.5f);
-        warn(Component.text("Ha memorizado a los que mas le duelen.", ACCENT));
+        warn(Component.text("Ha memorizado a los que más le duelen.", ACCENT));
 
         for (Player m : ranked) {
             m.sendActionBar(Component.text("KEEPER te tiene ubicado.", NamedTextColor.RED, TextDecoration.BOLD));
@@ -1030,7 +1029,7 @@ public final class Keeper extends BossFight {
                 if (still) {
                     hit(p, 6.5);
                     Compat.spawn(world(), Compat.SCULK_SOUL, p.getLocation().add(0, 1, 0), 8, 0.3, 0.5, 0.3, 0.02);
-                    p.sendActionBar(Component.text("No te ha oido.", NamedTextColor.GREEN, TextDecoration.BOLD));
+                    p.sendActionBar(Component.text("No te ha oído.", NamedTextColor.GREEN, TextDecoration.BOLD));
                 } else {
                     hit(p, 26);
                     push(p, p.getLocation().toVector().subtract(loc().toVector()).normalize()
@@ -1137,7 +1136,7 @@ public final class Keeper extends BossFight {
             }
             if (tick % 20 == 0) {
                 warn(Component.text("Soltarlo: " + (int) Math.max(0, 60 - embraceDamage)
-                        + " de dano al jefe", ACCENT));
+                        + " de daño al jefe", ACCENT));
             }
             if (tick == 89) {
                 hit(caught, 18);

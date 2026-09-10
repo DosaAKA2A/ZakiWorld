@@ -141,10 +141,10 @@ public final class Mesa {
 
     public Resultado crear(Player creador, double cantidad, Player retado) {
         if (economia == null) {
-            return Resultado.no(textos.de("no-listo", "&#FF5C5CLas apuestas todavia estan arrancando."));
+            return Resultado.no(textos.de("no-listo", "&#FF5C5CLas apuestas todavía están arrancando."));
         }
         if (retado != null && !retosActivos) {
-            return Resultado.no(textos.de("retos-apagados", "&#FF5C5CLos retos estan desactivados."));
+            return Resultado.no(textos.de("retos-apagados", "&#FF5C5CLos retos están desactivados."));
         }
         if (retado != null && retado.getUniqueId().equals(creador.getUniqueId())) {
             return Resultado.no(textos.de("contra-ti", "&#FF5C5CNo puedes apostar contra ti mismo."));
@@ -156,15 +156,15 @@ public final class Mesa {
          * 0.005 se cuela por el minimo y luego se cobra otra cosa. */
         cantidad = Math.round(cantidad * 100.0) / 100.0;
         if (cantidad < minima) {
-            return Resultado.no(textos.de("minima", "&#FF5C5CLa apuesta minima es %minima%.",
+            return Resultado.no(textos.de("minima", "&#FF5C5CLa apuesta mínima es %mínima%.",
                     "%minima%", Estilo.dinero(minima)));
         }
         if (cantidad > maxima) {
-            return Resultado.no(textos.de("maxima", "&#FF5C5CLa apuesta maxima es %maxima%.",
+            return Resultado.no(textos.de("maxima", "&#FF5C5CLa apuesta máxima es %máxima%.",
                     "%maxima%", Estilo.dinero(maxima)));
         }
         if (deJugador(creador.getUniqueId()).size() >= maximoAbiertas) {
-            return Resultado.no(textos.de("demasiadas", "&#FF5C5CYa tienes %cuantas% apuestas abiertas.",
+            return Resultado.no(textos.de("demasiadas", "&#FF5C5CYa tienes %cuántas% apuestas abiertas.",
                     "%cuantas%", String.valueOf(maximoAbiertas)));
         }
         long espera = esperaRestante(creador.getUniqueId());
@@ -230,7 +230,7 @@ public final class Mesa {
             return Resultado.no(textos.de("ya-tomada", "&#FF5C5CEsa apuesta ya la esta cogiendo alguien."));
         }
         if (!devolver(a, "CANCELA")) {
-            return Resultado.no(textos.de("no-listo", "&#FF5C5CLas apuestas todavia estan arrancando."));
+            return Resultado.no(textos.de("no-listo", "&#FF5C5CLas apuestas todavía están arrancando."));
         }
         return new Resultado(true, textos.de("cancelada",
                 "&fApuesta cancelada. Se te devolvieron &#4FFF55%cantidad%",
@@ -311,7 +311,7 @@ public final class Mesa {
      */
     public Jugada aceptar(Player quien, Apuesta a) {
         if (economia == null) {
-            return Jugada.no(textos.de("no-listo", "&#FF5C5CLas apuestas todavia estan arrancando."));
+            return Jugada.no(textos.de("no-listo", "&#FF5C5CLas apuestas todavía están arrancando."));
         }
         if (a == null || !abiertas.containsKey(a.id())) {
             return Jugada.no(textos.de("no-esta", "&#FF5C5CEsa apuesta ya no esta en la mesa."));

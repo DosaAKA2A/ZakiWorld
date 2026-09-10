@@ -7,11 +7,11 @@ import net.kyori.adventure.text.format.TextDecoration;
 import net.kyori.adventure.title.Title;
 import net.ederus.edm.anomaly.AnomalyPlugin;
 import net.ederus.edm.anomaly.core.ActiveAnomaly;
-import net.ederus.edm.anomaly.core.Compat;
-import net.ederus.edm.anomaly.core.Fx;
+import net.ederus.edm.comun.Compat;
+import net.ederus.edm.comun.Fx;
 import net.ederus.edm.anomaly.core.Glow;
 import net.ederus.edm.anomaly.core.Stop;
-import net.ederus.edm.anomaly.core.Tags;
+import net.ederus.edm.comun.Tags;
 import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.block.Block;
@@ -131,7 +131,7 @@ public final class Aragon extends BossFight {
             soundAt(spot, "entity.spider.ambient", 2.0f, 0.3f);
             for (Player p : Fx.viewersNear(spot, 90)) {
                 p.showTitle(Title.title(
-                        Component.text("✦ ANOMALIA ✦", ACCENT, TextDecoration.BOLD),
+                        Component.text("✦ ANOMALÍA ✦", ACCENT, TextDecoration.BOLD),
                         Component.text("Áragon  ·  ella no corre, corren sus hijas", NamedTextColor.GRAY),
                         Title.Times.times(Duration.ofMillis(400), Duration.ofMillis(1800), Duration.ofMillis(600))));
             }
@@ -494,7 +494,7 @@ public final class Aragon extends BossFight {
         if (to == 2) {
             damageBonus = 1.2;
             titleNear(Component.text("FASE II", NamedTextColor.GOLD, TextDecoration.BOLD),
-                    Component.text("Pone mas huevos", NamedTextColor.GRAY));
+                    Component.text("Pone más huevos", NamedTextColor.GRAY));
             soundAt(loc(), "entity.spider.ambient", 1.6f, 0.5f);
             layEggs();
             brood(24);

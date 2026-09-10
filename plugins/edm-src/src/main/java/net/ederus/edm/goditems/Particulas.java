@@ -131,7 +131,7 @@ public final class Particulas {
         "damage_indicator|Indicador de daño|Combate|REDSTONE",
         "sweep_attack|Barrido|Combate|IRON_SWORD",
         "sonic_boom|Estallido sónico|Combate|ECHO_SHARD",
-        "explosion|Explosión|Combate|TNT",
+        "explosión|Explosión|Combate|TNT",
         "explosion_emitter|Explosión enorme|Combate|TNT",
         "gust|Ráfaga|Combate|WIND_CHARGE",
         "small_gust|Ráfaga pequeña|Combate|WIND_CHARGE",
@@ -364,11 +364,11 @@ public final class Particulas {
             return "";
         }
         if (tipo == null || tipo == Void.class) return "";
-        if (tipo == Particle.DustTransition.class) return "color, color2 y tamano";
-        if (tipo == Particle.DustOptions.class) return "color y tamano";
+        if (tipo == Particle.DustTransition.class) return "color, color2 y tamaño";
+        if (tipo == Particle.DustOptions.class) return "color y tamaño";
         if (tipo == Particle.Spell.class) return "color y fuerza";
-        if (tipo == Particle.Trail.class) return "hacia, color y duracion";
-        if (tipo == Vibration.class) return "hacia y duracion";
+        if (tipo == Particle.Trail.class) return "hacia, color y duración";
+        if (tipo == Vibration.class) return "hacia y duración";
         if (tipo == Color.class) return "color";
         if (org.bukkit.block.data.BlockData.class.isAssignableFrom(tipo)) return "bloque";
         if (ItemStack.class.isAssignableFrom(tipo)) return "item";

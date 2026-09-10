@@ -192,7 +192,7 @@ public final class ComandoTienda implements CommandExecutor, TabCompleter {
             q.sendMessage(Estilo.linea(c + " comprar <artículo> <cuántos>", null, Estilo.COMPRA));
             q.sendMessage(Estilo.linea(c + " precio <artículo>", "a cómo está", Estilo.CLARO));
             q.sendMessage(Estilo.linea(c + " mercado <artículo>", "cuánto ha bajado y por qué", Estilo.CLARO));
-            q.sendMessage(Estilo.linea(c + " rotacion", "los tratos de hoy", Estilo.CLARO));
+            q.sendMessage(Estilo.linea(c + " rotación", "los tratos de hoy", Estilo.CLARO));
             q.sendMessage(Estilo.linea("/venderotodo", "vende todo lo vendible que lleves", Estilo.VENTA));
         }
         if (q.hasPermission("ederus.tienda.admin")) {
@@ -498,7 +498,7 @@ public final class ComandoTienda implements CommandExecutor, TabCompleter {
             int n;
             try { n = Integer.parseInt(args[3]); }
             catch (NumberFormatException e) { cantidadMala(quien); return true; }
-            quien.sendMessage("  si el servidor vendiera " + n + " mas:");
+            quien.sendMessage("  si el servidor vendiera " + n + " más:");
             for (int paso : new int[]{n / 4, n / 2, n, n * 2, n * 4}) {
                 if (paso <= 0) continue;
                 quien.sendMessage("    " + String.format("%,d", paso) + " -> "
@@ -528,7 +528,7 @@ public final class ComandoTienda implements CommandExecutor, TabCompleter {
         }
 
         if (!(quien instanceof Player)) {
-            quien.sendMessage("Rotacion del " + rot.dia()
+            quien.sendMessage("Rotación del " + rot.dia()
                     + " (cambia en " + Motor.duracion(Rotacion.hastaManana()) + ")");
             quien.sendMessage("OFERTAS (baja la compra):");
             for (Rotacion.Trato t : rot.ofertas()) {
@@ -602,21 +602,21 @@ public final class ComandoTienda implements CommandExecutor, TabCompleter {
         Mensajes m = modulo.mensajes();
         if (m == null || !m.hayWebhook()) {
             quien.sendMessage("No hay webhook configurado.");
-            quien.sendMessage("Pon la URL en 'rotacion.webhook' de mensajes.yml y usa /etienda recargar.");
+            quien.sendMessage("Pon la URL en 'rotación.webhook' de mensajes.yml y usa /etienda recargar.");
             return true;
         }
         m.aDiscord(modulo.rotacion(), catalogo);
         quien.sendMessage("Aviso mandado a Discord. Si no aparece, mira la consola:");
-        quien.sendMessage("va por su cuenta, asi que un fallo sale ahi y no aqui.");
+        quien.sendMessage("va por su cuenta, así que un fallo sale ahi y no aquí.");
         return true;
     }
 
     private boolean recargar(CommandSender quien) {
         if (!quien.hasPermission("ederus.tienda.admin")) { quien.sendMessage("No puedes."); return true; }
         if (modulo.cargarCatalogo()) {
-            quien.sendMessage("Catalogo recargado: " + catalogo.total() + " articulos.");
+            quien.sendMessage("Catálogo recargado: " + catalogo.total() + " articulos.");
         } else {
-            quien.sendMessage("El catalogo tiene errores; se mantiene el anterior. Mira la consola.");
+            quien.sendMessage("El catálogo tiene errores; se mantiene el anterior. Mira la consola.");
         }
         return true;
     }

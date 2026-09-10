@@ -111,7 +111,7 @@ public final class Textos {
     }
 
     public static double maxVida(LivingEntity e) {
-        return net.ederus.edm.anomaly.core.Compat.getAttribute(e, "max_health", 20.0);
+        return net.ederus.edm.comun.Compat.getAttribute(e, "max_health", 20.0);
     }
 
     private static String redondo(double d) {

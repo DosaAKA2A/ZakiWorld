@@ -77,12 +77,12 @@ public final class ComandoTroll implements CommandExecutor, TabCompleter {
 
     private void ayuda(CommandSender q) {
         q.sendMessage("Bromas de Ederus");
-        q.sendMessage("/troll                       abre el menu");
+        q.sendMessage("/troll                       abre el menú");
         q.sendMessage("/troll <jugador>             sus bromas");
         q.sendMessage("/troll <jugador> <broma>     directa (azar para una al azar)");
         q.sendMessage("/troll deshacer <jugador>    le quita todo lo que tenga encima");
         q.sendMessage("/troll activas               quien tiene algo puesto");
-        q.sendMessage("/troll lista                 el catalogo entero");
+        q.sendMessage("/troll lista                 el catálogo entero");
         if (q.hasPermission("ederus.troll.admin")) q.sendMessage("/troll recargar");
     }
 
@@ -125,7 +125,7 @@ public final class ComandoTroll implements CommandExecutor, TabCompleter {
             return true;
         }
         int n = modulo.estados().quitarTodo(v.getUniqueId());
-        modulo.textos().manda(q, "deshechas", "&fLe quitaste &x&D&7&F&3&F&F%cuantas% &fbromas a %jugador%",
+        modulo.textos().manda(q, "deshechas", "&fLe quitaste &x&D&7&F&3&F&F%cuántas% &fbromas a %jugador%",
                 "%cuantas%", String.valueOf(n), "%jugador%", v.getName());
         return true;
     }

@@ -124,12 +124,12 @@ public final class DropTable {
     public Component summaryLine(TextColor accent) {
         DropEntry star = headline();
         if (star == null) {
-            return Component.text("Sin botin configurado", NamedTextColor.DARK_GRAY)
+            return Component.text("Sin botín configurado", NamedTextColor.DARK_GRAY)
                     .decoration(TextDecoration.ITALIC, false);
         }
         Component line = Component.text("", accent);
         if (star.unique()) {
-            line = line.append(Component.text("✦UNICO ", NamedTextColor.AQUA, TextDecoration.BOLD));
+            line = line.append(Component.text("✦ÚNICO ", NamedTextColor.AQUA, TextDecoration.BOLD));
         }
         return line
                 .append(nameOf(star.item()).colorIfAbsent(accent))

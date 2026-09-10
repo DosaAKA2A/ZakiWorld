@@ -5,7 +5,7 @@ import net.kyori.adventure.text.format.NamedTextColor;
 import net.kyori.adventure.text.format.TextColor;
 import net.kyori.adventure.text.format.TextDecoration;
 import net.ederus.edm.anomaly.AnomalyPlugin;
-import net.ederus.edm.anomaly.core.Fx;
+import net.ederus.edm.comun.Fx;
 import org.bukkit.Location;
 import org.bukkit.World;
 import org.bukkit.command.Command;
@@ -49,7 +49,7 @@ public final class MinionCommand implements CommandExecutor, TabCompleter {
         if (args.length == 0 || args[0].equalsIgnoreCase("menu")) {
             if (!(sender instanceof Player player)) {
                 sender.sendMessage(plugin.prefix().append(
-                        Component.text("El menu solo se abre desde dentro del juego.", NamedTextColor.RED)));
+                        Component.text("El menú solo se abre desde dentro del juego.", NamedTextColor.RED)));
                 return true;
             }
             plugin.menus().openMinions(player);
@@ -93,7 +93,7 @@ public final class MinionCommand implements CommandExecutor, TabCompleter {
         List<MinionCategory> cats = plugin.minions().categories();
         if (cats.isEmpty()) {
             sender.sendMessage(plugin.prefix().append(Component.text(
-                    "Todavia no hay ninguna carpeta de esbirros.", SOFT)));
+                    "Todavía no hay ninguna carpeta de esbirros.", SOFT)));
             return;
         }
         for (MinionCategory cat : cats) {
@@ -127,7 +127,7 @@ public final class MinionCommand implements CommandExecutor, TabCompleter {
                 level = Math.max(1, Math.min(1000, Integer.parseInt(args[1])));
             } catch (NumberFormatException ex) {
                 sender.sendMessage(plugin.prefix().append(Component.text(
-                        "El nivel tiene que ser un numero.", NamedTextColor.RED)));
+                        "El nivel tiene que ser un número.", NamedTextColor.RED)));
                 return;
             }
         }
@@ -140,7 +140,7 @@ public final class MinionCommand implements CommandExecutor, TabCompleter {
                         Double.parseDouble(args[3]), Double.parseDouble(args[4]) + 0.5);
             } catch (NumberFormatException ex) {
                 sender.sendMessage(plugin.prefix().append(Component.text(
-                        "Las coordenadas tienen que ser numeros.", NamedTextColor.RED)));
+                        "Las coordenadas tienen que ser números.", NamedTextColor.RED)));
                 return;
             }
         } else if (sender instanceof Player player) {
@@ -163,13 +163,13 @@ public final class MinionCommand implements CommandExecutor, TabCompleter {
                 .append(Component.text("Invocado  ", NamedTextColor.GREEN))
                 .append(type.name())
                 .append(Component.text("  Nv. " + level + "  con " + (int) type.healthAt(level)
-                        + " de vida y x" + type.damageAt(level) + " de dano.", SOFT)));
+                        + " de vida y x" + type.damageAt(level) + " de daño.", SOFT)));
     }
 
     private void help(CommandSender sender, String label) {
         sender.sendMessage(plugin.prefix().append(Component.text("Los esbirros de mazmorra", GOLD)));
         line(sender, "/" + label, "las carpetas de esbirros");
-        line(sender, "/" + label + " lista", "el catalogo en texto, por carpetas");
+        line(sender, "/" + label + " lista", "el catálogo en texto, por carpetas");
         line(sender, "/" + label + " reload", "relee esbirros.yml sin reiniciar");
         line(sender, "/" + label + " <id> [nivel] [x y z]", "invoca uno suelto, para verlo");
     }

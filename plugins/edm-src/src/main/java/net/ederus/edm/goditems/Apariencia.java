@@ -118,7 +118,7 @@ public final class Apariencia {
             try {
                 meta.setEnchantmentGlintOverride(Boolean.TRUE);
             } catch (Throwable t) {
-                Enchantment g = net.ederus.edm.anomaly.core.Compat.glow();
+                Enchantment g = net.ederus.edm.comun.Compat.glow();
                 if (g != null) {
                     meta.addEnchant(g, 1, true);
                     meta.addItemFlags(ItemFlag.HIDE_ENCHANTS);
@@ -162,7 +162,7 @@ public final class Apariencia {
                 continue;
             }
             for (Map.Entry<String, Double> a : hueco.getValue().entrySet()) {
-                Attribute atr = net.ederus.edm.anomaly.core.Compat.attribute(
+                Attribute atr = net.ederus.edm.comun.Compat.attribute(
                         a.getKey().toLowerCase(Locale.ROOT));
                 if (atr == null) {
                     modulo.getLogger().warning("Atributo desconocido: " + a.getKey());

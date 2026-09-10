@@ -4,9 +4,9 @@ import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
 import net.kyori.adventure.text.format.TextDecoration;
 import net.ederus.edm.anomaly.AnomalyPlugin;
-import net.ederus.edm.anomaly.core.Compat;
-import net.ederus.edm.anomaly.core.Fx;
-import net.ederus.edm.anomaly.menu.MenuUtil;
+import net.ederus.edm.comun.Compat;
+import net.ederus.edm.comun.Fx;
+import net.ederus.edm.comun.menu.MenuUtil;
 import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.NamespacedKey;
@@ -29,7 +29,7 @@ import java.util.List;
  * La vela: la herramienta de plantar generadores, al estilo del hacha del FAWE.
  *
  * Desde la ficha del esbirro se ajusta nivel, intervalo, tope y radio, y el boton
- * "Dame la vela" entrega una vela que LLEVA esa configuracion grabada. Click
+ * "Obtener generador" entrega una vela que LLEVA esa configuracion grabada. Click
  * derecho sobre un bloque = generador plantado ahi mismo, y la vela sigue en la
  * mano: se pueden sembrar diez salas seguidas sin volver al menu. La vela no se
  * coloca nunca como bloque; para deshacerse de ella basta tirarla.
@@ -71,7 +71,7 @@ public final class MinionWand implements Listener {
                 MenuUtil.field("Tope", type.wandMaxAlive() + " vivos a la vez",
                         NamedTextColor.WHITE).decoration(TextDecoration.ITALIC, false),
                 Component.empty(),
-                MenuUtil.action("Click derecho en un bloque: plantar generador")
+                MenuUtil.action("Clic derecho en un bloque: plantar generador")
                         .decoration(TextDecoration.ITALIC, false),
                 Component.text("La vela no se gasta: siembra todo lo que quieras.", MenuUtil.DIM)
                         .decoration(TextDecoration.ITALIC, false)));
@@ -141,7 +141,7 @@ public final class MinionWand implements Listener {
                         + (regions.isEmpty() ? "" : " · " + String.join(", ", regions)) + ")", MenuUtil.SOFT)));
         player.sendMessage(plugin.prefix().append(Component.text(
                 "Empieza a generar en cuanto alguien entre en su radio. Se administra desde "
-                        + "el menu, en la ficha del esbirro.", MenuUtil.SOFT)));
+                        + "el menú, en la ficha del esbirro.", MenuUtil.SOFT)));
     }
 
     private static int orDefault(Integer v, int def) {

@@ -124,7 +124,7 @@ public final class MenuTroll implements Listener {
             }
         }
         lore.add(Estilo.vacio());
-        lore.add(Estilo.accion("Click para elegir broma", Estilo.ACCION_COMPRA));
+        lore.add(Estilo.accion("Clic para elegir broma", Estilo.ACCION_COMPRA));
 
         ItemStack pila = new ItemStack(Material.PLAYER_HEAD);
         if (pila.getItemMeta() instanceof SkullMeta meta) {
@@ -176,7 +176,7 @@ public final class MenuTroll implements Listener {
 
         inv.setItem(RANURA_FAMILIA, pieza(Material.CHEST,
                 Estilo.texto(familia == null ? "Todas las familias" : familia.nombre(), Estilo.VENTA),
-                List.of(Estilo.accion("Click para cambiar de familia", Estilo.ACCION_COMPRA))));
+                List.of(Estilo.accion("Clic para cambiar de familia", Estilo.ACCION_COMPRA))));
 
         flechas(inv, pagina, paginas);
         inv.setItem(RANURA_VOLVER, pieza(Material.BARRIER,
@@ -198,8 +198,8 @@ public final class MenuTroll implements Listener {
         }
         lore.add(Estilo.vacio());
         lore.add(Estilo.accion(t.destructivo()
-                ? "Click y vuelve a confirmar"
-                : "Click para hacersela a " + victima.getName(),
+                ? "Clic y vuelve a confirmar"
+                : "Clic para hacersela a " + victima.getName(),
                 t.destructivo() ? NamedTextColor.RED : Estilo.ACCION_COMPRA));
 
         return pieza(t.icono(), Estilo.texto(t.nombre(), t.destructivo() ? NamedTextColor.RED : Estilo.CLARO), lore);
@@ -207,9 +207,9 @@ public final class MenuTroll implements Listener {
 
     private void flechas(Inventory inv, int pagina, int paginas) {
         if (pagina > 0) inv.setItem(RANURA_ANTERIOR, pieza(Material.ARROW,
-                Estilo.texto("Pagina anterior", Estilo.CLARO), List.of()));
+                Estilo.texto("Página anterior", Estilo.CLARO), List.of()));
         if (pagina < paginas - 1) inv.setItem(RANURA_SIGUIENTE, pieza(Material.ARROW,
-                Estilo.texto("Pagina siguiente", Estilo.CLARO), List.of()));
+                Estilo.texto("Página siguiente", Estilo.CLARO), List.of()));
     }
 
     // ----------------------------------------------------------------- clics
@@ -251,7 +251,7 @@ public final class MenuTroll implements Listener {
             case RANURA_SIGUIENTE -> { abrirBromas(admin, victima, vista.familia, vista.pagina + 1); return; }
             case RANURA_DESHACER -> {
                 int n = modulo.estados().quitarTodo(victima.getUniqueId());
-                modulo.textos().manda(admin, "deshechas", "&fLe quitaste &x&D&7&F&3&F&F%cuantas% &fbromas a %jugador%",
+                modulo.textos().manda(admin, "deshechas", "&fLe quitaste &x&D&7&F&3&F&F%cuántas% &fbromas a %jugador%",
                         "%cuantas%", String.valueOf(n), "%jugador%", victima.getName());
                 abrirBromas(admin, victima, vista.familia, vista.pagina);
                 return;

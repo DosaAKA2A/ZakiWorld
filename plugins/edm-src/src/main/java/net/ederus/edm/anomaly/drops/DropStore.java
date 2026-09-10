@@ -4,8 +4,8 @@ import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
 import net.kyori.adventure.text.format.TextDecoration;
 import net.ederus.edm.anomaly.core.AnomalyType;
-import net.ederus.edm.anomaly.core.Compat;
-import net.ederus.edm.anomaly.core.Tags;
+import net.ederus.edm.comun.Compat;
+import net.ederus.edm.comun.Tags;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.World;
@@ -104,7 +104,7 @@ public final class DropStore implements Listener {
             }
             tables.put(id, table);
         }
-        plugin.getLogger().info("Tablas de botin cargadas: " + tables.size());
+        plugin.getLogger().info("Tablas de botín cargadas: " + tables.size());
     }
 
     private static int compareNumericKeys(String a, String b) {
@@ -119,16 +119,16 @@ public final class DropStore implements Listener {
         if (file == null) file = new File(plugin.getDataFolder(), "drops.yml");
         YamlConfiguration yml = new YamlConfiguration();
         yml.options().setHeader(List.of(
-                "Tablas de botin de Anomaly.",
-                "Se edita desde el menu (/anomaly menu -> Botin), pero se puede tocar a mano.",
-                "Cada objeto se guarda tal cual, con su NBT, asi que los items de MMOItems",
-                "se pueden arrastrar directamente al menu y caen identicos.",
+                "Tablas de botín de Anomaly.",
+                "Se edita desde el menú (/anomaly menú -> Botín), pero se puede tocar a mano.",
+                "Cada objeto se guarda tal cual, con su NBT, así que los items de MMOItems",
+                "se pueden arrastrar directamente al menú y caen identicos.",
                 "",
-                "unico: true marca el objeto UNICO de la tabla (uno como mucho): sale",
-                "       brillando en la explosion y el chat anuncia quien se lo llevo.",
+                "único: true marca el objeto ÚNICO de la tabla (uno como mucho): sale",
+                "       brillando en la explosión y el chat anuncia quien se lo llevo.",
                 "",
                 "comandos: se ejecutan desde la consola. %jugador% se sustituye por el nombre.",
-                "          [mejor] -> solo para quien mas dano hizo. [35%] -> probabilidad por jugador.",
+                "          [mejor] -> solo para quien más daño hizo. [35%] -> probabilidad por jugador.",
                 "          Se combinan: [mejor] [25%] crates key give %jugador% legendary 1"));
         for (DropTable table : tables.values()) {
             String base = "anomalias." + table.anomalyId();
@@ -194,7 +194,7 @@ public final class DropStore implements Listener {
             if (amount > MAX_POR_ENTRADA) {
                 /* Un cero de mas en drops.yml no puede llenar el suelo de la
                  * arena con miles de items y tirar el tick del servidor. */
-                plugin.getLogger().warning("El botin de " + anomalyId + " pedia " + amount + " x "
+                plugin.getLogger().warning("El botín de " + anomalyId + " pedia " + amount + " x "
                         + entry.item().getType() + "; se recorta a " + MAX_POR_ENTRADA
                         + ". Revisa cantidad-max en drops.yml.");
                 amount = MAX_POR_ENTRADA;
@@ -208,7 +208,7 @@ public final class DropStore implements Listener {
             burst(where, entry, amount, reserved, anomalyId);
             anyBurst = true;
             report.add(amount + "x " + entry.item().getType()
-                    + (entry.unique() ? " [UNICO]" : "")
+                    + (entry.unique() ? " [ÚNICO]" : "")
                     + " -> " + entry.to().name()
                     + (reserved != null ? " (" + reserved.getName() + ")" : ""));
         }
@@ -279,7 +279,7 @@ public final class DropStore implements Listener {
                 try {
                     Bukkit.dispatchCommand(Bukkit.getConsoleSender(), finalCmd);
                 } catch (Throwable t) {
-                    plugin.getLogger().warning("Comando de botin fallido: " + finalCmd + " (" + t.getMessage() + ")");
+                    plugin.getLogger().warning("Comando de botín fallido: " + finalCmd + " (" + t.getMessage() + ")");
                 }
             }
         }
@@ -373,7 +373,7 @@ public final class DropStore implements Listener {
         Component who = Component.text("✦ ", NamedTextColor.AQUA)
                 .append(Component.text(p.getName(), NamedTextColor.WHITE, TextDecoration.BOLD))
                 .append(Component.text(" se llevo el objeto ", NamedTextColor.GRAY))
-                .append(Component.text("UNICO", NamedTextColor.AQUA, TextDecoration.BOLD))
+                .append(Component.text("ÚNICO", NamedTextColor.AQUA, TextDecoration.BOLD))
                 .append(Component.text(" de ", NamedTextColor.GRAY))
                 .append(type == null
                         ? Component.text(anomalyId, NamedTextColor.WHITE)

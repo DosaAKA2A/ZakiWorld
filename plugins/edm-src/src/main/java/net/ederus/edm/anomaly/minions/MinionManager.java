@@ -3,7 +3,7 @@ package net.ederus.edm.anomaly.minions;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
 import net.ederus.edm.anomaly.AnomalyPlugin;
-import net.ederus.edm.anomaly.core.Compat;
+import net.ederus.edm.comun.Compat;
 import net.ederus.edm.anomaly.drops.DropEntry;
 import net.ederus.edm.anomaly.drops.DropTable;
 import org.bukkit.Bukkit;
@@ -622,7 +622,7 @@ public final class MinionManager implements Listener {
                 try {
                     Bukkit.dispatchCommand(Bukkit.getConsoleSender(), finalCmd);
                 } catch (Throwable t) {
-                    plugin.getLogger().warning("Comando de botin de esbirro fallido: " + finalCmd);
+                    plugin.getLogger().warning("Comando de botín de esbirro fallido: " + finalCmd);
                 }
             }
         }

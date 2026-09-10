@@ -6,7 +6,6 @@ import org.bukkit.command.CommandSender;
 import org.bukkit.command.ConsoleCommandSender;
 import org.bukkit.command.TabCompleter;
 import org.bukkit.entity.Player;
-import org.bukkit.plugin.java.JavaPlugin;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -73,7 +72,7 @@ public final class EderusMain extends net.ederus.edm.Module implements TabComple
                 nombres.add(partes[0].trim());
                 niveles.add(max);
             } catch (NumberFormatException e) {
-                getLogger().warning("Nivel maximo invalido en: '" + entrada + "'");
+                getLogger().warning("Nivel máximo invalido en: '" + entrada + "'");
             }
         }
         destruirMin = getConfig().getInt("rotura.minimo", 75);
@@ -109,7 +108,7 @@ public final class EderusMain extends net.ederus.edm.Module implements TabComple
                 sender.sendMessage("§aNucleo recargado. §7Encantamientos: §f" + nombres.size()
                         + " §7| rotura §f" + destruirMin + "-" + destruirMax + "%");
                 sender.sendMessage("§7El aviso de tiendas vuelve a tomar la referencia: "
-                        + "una rotacion en los proximos segundos no se anuncia.");
+                        + "una rotación en los proximos segundos no se anuncia.");
                 return true;
             }
             case "aviso" -> {
@@ -147,7 +146,7 @@ public final class EderusMain extends net.ederus.edm.Module implements TabComple
         sender.sendMessage("§8§m                                        ");
         sender.sendMessage("§6§lNUCLEO DE EDERUS §7v" + VERSION);
         sender.sendMessage("");
-        sender.sendMessage("§6/" + label + " reload §8- §fRecarga la configuracion");
+        sender.sendMessage("§6/" + label + " reload §8- §fRecarga la configuración");
         sender.sendMessage("§6/" + label + " aviso <diaria|boveda> §8- §fLanza el aviso de prueba");
         sender.sendMessage("§6/" + label + " libro <jugador> §8- §fEntrega un libro aleatorio");
         sender.sendMessage("");

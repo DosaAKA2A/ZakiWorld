@@ -173,7 +173,7 @@ public final class MenuTienda implements Listener {
                 /* Esas tres ranuras las atiende el clic antes que a las
                  * secciones: dejar una ahi la pinta pero no la abre nunca. */
                 if (avisoRanuras.add(s.id())) {
-                    modulo.getLogger().warning("La seccion '" + s.id() + "' esta en la ranura "
+                    modulo.getLogger().warning("La sección '" + s.id() + "' esta en la ranura "
                             + s.ranura() + ", que ya usan Ofertas/Demandas/Buscar: no se podra abrir."
                             + " Cambiala en secciones.yml.");
                 }
@@ -302,7 +302,7 @@ public final class MenuTienda implements Listener {
                 secciones.texto("siguiente", "&x&D&7&F&3&F&FPágina siguiente"), List.of()));
         inv.setItem(RANURA_VOLVER, decorarCon(new ItemStack(Material.BARRIER),
                 secciones.texto("volver", "&x&D&7&F&3&F&FVolver"),
-                List.of(secciones.texto("pagina", "&8▸ &fPágina %pagina% de %paginas%",
+                List.of(secciones.texto("pagina", "&8▸ &fPágina %página% de %páginas%",
                         "%pagina%", String.valueOf(pagina + 1), "%paginas%", String.valueOf(paginas)))));
 
         rellenar(inv);
@@ -530,7 +530,7 @@ public final class MenuTienda implements Listener {
             }
             /* Solo si de verdad estan pintadas: con la rotacion apagada esas dos
              * ranuras llevan el panel del borde, y pulsarlas abria una seccion
-             * vacia titulada "Ofertas del dia". */
+             * vacia titulada "Ofertas del día". */
             Rotacion rot = modulo.rotacion();
             boolean hayRotacion = rot != null && rot.activo();
             if (hayRotacion && e.getSlot() == RANURA_OFERTAS) { abrirCategoria(jugador, OFERTAS, 0); return; }
@@ -642,7 +642,7 @@ public final class MenuTienda implements Listener {
             return;
         }
         if (m != null) m.manda(jugador, "buscar-resultados",
-                "&f%cuantos% resultados para &x&D&7&F&3&F&F%texto%",
+                "&f%cuántos% resultados para &x&D&7&F&3&F&F%texto%",
                 "%cuantos%", String.valueOf(res.size()), "%texto%", texto);
         abrirCategoria(jugador, BUSCAR + texto, 0);
     }

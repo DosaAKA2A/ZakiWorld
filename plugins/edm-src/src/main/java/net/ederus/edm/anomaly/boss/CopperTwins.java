@@ -8,11 +8,11 @@ import net.kyori.adventure.text.format.TextDecoration;
 import net.kyori.adventure.title.Title;
 import net.ederus.edm.anomaly.AnomalyPlugin;
 import net.ederus.edm.anomaly.core.ActiveAnomaly;
-import net.ederus.edm.anomaly.core.Compat;
-import net.ederus.edm.anomaly.core.Fx;
+import net.ederus.edm.comun.Compat;
+import net.ederus.edm.comun.Fx;
 import net.ederus.edm.anomaly.core.Glow;
 import net.ederus.edm.anomaly.core.Stop;
-import net.ederus.edm.anomaly.core.Tags;
+import net.ederus.edm.comun.Tags;
 import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.entity.CopperGolem;
@@ -884,7 +884,7 @@ public final class CopperTwins extends BossFight {
         rust.put(p.getUniqueId(), layers);
         p.sendActionBar(Component.text("HERRUMBRE ", TextColor.color(KEM_RGB), TextDecoration.BOLD)
                 .append(Component.text("x" + layers, NamedTextColor.WHITE))
-                .append(Component.text("  (+" + (layers * 12) + "% de dano recibido)", NamedTextColor.GRAY)));
+                .append(Component.text("  (+" + (layers * 12) + "% de daño recibido)", NamedTextColor.GRAY)));
     }
 
     /** 9. Pararrayos: planta un poste que llama al rayo hasta que lo tumben. */

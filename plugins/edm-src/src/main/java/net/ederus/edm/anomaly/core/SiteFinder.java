@@ -12,6 +12,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
 import java.util.function.Consumer;
+import net.ederus.edm.comun.Fx;
 
 /**
  * Busca donde plantar una anomalia. El objetivo es que salga LEJOS de las bases pero

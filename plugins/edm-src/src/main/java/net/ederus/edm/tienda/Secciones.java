@@ -187,7 +187,7 @@ public final class Secciones {
      * El nombre de la categoria en texto pelado, sin colores.
      *
      * Lo necesita el titulo de la ventana, que se arma con marcadores y no con
-     * componentes. Sin esto el menu principal decia "Botin de mobs" y al entrar
+     * componentes. Sin esto el menu principal decia "Botín de mobs" y al entrar
      * la ventana se titulaba "Mobs", que es el id interno.
      */
     public String nombrePlano(String id) {

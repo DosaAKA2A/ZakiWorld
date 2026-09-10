@@ -7,12 +7,11 @@ import net.kyori.adventure.text.format.TextDecoration;
 import net.kyori.adventure.title.Title;
 import net.ederus.edm.anomaly.AnomalyPlugin;
 import net.ederus.edm.anomaly.core.ActiveAnomaly;
-import net.ederus.edm.anomaly.core.Compat;
+import net.ederus.edm.comun.Compat;
 import net.ederus.edm.anomaly.core.Disguises;
-import net.ederus.edm.anomaly.core.Fx;
-import net.ederus.edm.anomaly.core.Glow;
+import net.ederus.edm.comun.Fx;
 import net.ederus.edm.anomaly.core.Stop;
-import net.ederus.edm.anomaly.core.Tags;
+import net.ederus.edm.comun.Tags;
 import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.entity.LivingEntity;
@@ -127,7 +126,7 @@ public final class Rabby extends BossFight {
         // Ni brillo ni pilar: es un vecino cualquiera hasta que deja de serlo.
         for (Player p : Fx.viewersNear(spot, 90)) {
             p.showTitle(Title.title(
-                    Component.text("✦ ANOMALIA ✦", ACCENT, TextDecoration.BOLD),
+                    Component.text("✦ ANOMALÍA ✦", ACCENT, TextDecoration.BOLD),
                     Component.text("Rabby  ·  parece buena gente", NamedTextColor.GRAY),
                     Title.Times.times(Duration.ofMillis(400), Duration.ofMillis(1800), Duration.ofMillis(600))));
         }
@@ -250,7 +249,7 @@ public final class Rabby extends BossFight {
             Compat.setAttribute(boss, "attack_damage", 20);
             Compat.setAttribute(boss, "attack_speed", 3.4);
             titleNear(Component.text("FASE III", NamedTextColor.RED, TextDecoration.BOLD),
-                    Component.text("Se le acabo la paciencia", NamedTextColor.GRAY));
+                    Component.text("Se le acabó la paciencia", NamedTextColor.GRAY));
             concentration();
         }
     }
@@ -329,7 +328,7 @@ public final class Rabby extends BossFight {
             for (Player p : targets(4.0)) {
                 hit(p, 14 * power());
                 // lift() y no setVelocity a pelo: es lo que da permiso de vuelo y evita
-                // que el servidor lo eche por "moverse muy rapido" a mitad del viaje.
+                // que el servidor lo eche por "moverse muy rápido" a mitad del viaje.
                 lift(p, new Vector(0, 1.75, 0));
                 Compat.spawn(world(), Compat.SONIC_BOOM, p.getLocation().add(0, 1, 0), 1);
                 Compat.spawn(world(), Compat.FIREWORK_SPARK, p.getLocation().add(0, 1, 0), 30,
@@ -392,7 +391,7 @@ public final class Rabby extends BossFight {
         if (!alive() || !angry) return;
         int blows = concentrated ? 12 : 8;
         soundAt(loc(), "entity.player.attack.strong", 1.4f, 1.3f);
-        broadcastNear(Component.text("Rafaga.", ACCENT));
+        broadcastNear(Component.text("Ráfaga.", ACCENT));
 
         for (int i = 0; i < blows; i++) {
             later(i * 4, () -> {
@@ -498,7 +497,7 @@ public final class Rabby extends BossFight {
         List<Player> pool = targets(30);
         if (pool.isEmpty()) return;
         soundAt(loc(), "entity.enderman.teleport", 1.4f, 1.0f);
-        broadcastNear(Component.text("Se mueve mas rapido de lo que se ve.", ACCENT));
+        broadcastNear(Component.text("Se mueve más rápido de lo que se ve.", ACCENT));
 
         int jumps = Math.min(4, Math.max(2, pool.size()));
         for (int i = 0; i < jumps; i++) {
@@ -629,7 +628,7 @@ public final class Rabby extends BossFight {
         soundAt(l, "block.beacon.activate", 1.6f, 0.6f);
 
         titleNear(Component.text("CONCENTRACION", NamedTextColor.WHITE, TextDecoration.BOLD),
-                Component.text("Pega cinco veces mas fuerte", NamedTextColor.GRAY));
+                Component.text("Pega cinco veces más fuerte", NamedTextColor.GRAY));
         Compat.apply(boss, "speed", 300, 1);
         Compat.apply(boss, "resistance", 300, 0);
     }
@@ -646,7 +645,7 @@ public final class Rabby extends BossFight {
      * 10. Carga Devastadora: se traga las estelas de media arena y lo suelta todo.
      *
      * Las lineas que convergen son las mismas que salen del dragon al morir —el propio
-     * juego las usa para "esto se esta concentrando aqui"—, y por eso se leen sin que
+     * juego las usa para "esto se esta concentrando aquí"—, y por eso se leen sin que
      * nadie explique nada. Ocho segundos de aviso, un circulo enorme, y quien se quede
      * dentro sin buen equipo no lo cuenta.
      */
@@ -727,7 +726,7 @@ public final class Rabby extends BossFight {
         face(target.getEyeLocation());
         Compat.spawn(world(), Compat.FLASH, behind.clone().add(0, 1, 0), 1);
         soundAt(behind, "entity.enderman.teleport", 1.5f, 0.9f);
-        target.sendActionBar(Component.text("Huir no era una opcion.",
+        target.sendActionBar(Component.text("Huir no era una opción.",
                 NamedTextColor.RED, TextDecoration.BOLD));
 
         later(8, () -> {

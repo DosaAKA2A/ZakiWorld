@@ -11,12 +11,12 @@ import net.ederus.edm.anomaly.core.AnomalyManager;
 import net.ederus.edm.anomaly.core.AnomalyRegistry;
 import net.ederus.edm.anomaly.core.AnomalyType;
 import net.ederus.edm.anomaly.core.Announcer;
-import net.ederus.edm.anomaly.core.Compat;
-import net.ederus.edm.anomaly.core.Fx;
+import net.ederus.edm.comun.Compat;
+import net.ederus.edm.comun.Fx;
 import net.ederus.edm.anomaly.core.Protection;
 import net.ederus.edm.anomaly.core.Settings;
 import net.ederus.edm.anomaly.core.SiteFinder;
-import net.ederus.edm.anomaly.core.Tags;
+import net.ederus.edm.comun.Tags;
 import net.ederus.edm.anomaly.drops.DropStore;
 import net.ederus.edm.anomaly.menu.Menus;
 import org.bukkit.World;
@@ -24,7 +24,6 @@ import org.bukkit.command.CommandSender;
 import org.bukkit.command.PluginCommand;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.Player;
-import org.bukkit.plugin.java.JavaPlugin;
 
 /**
  * ANOMALY  ·  Iris Studio
@@ -100,7 +99,7 @@ public final class AnomalyPlugin extends net.ederus.edm.Module {
         getServer().getPluginManager().registerEvents(manager, this);
         getServer().getPluginManager().registerEvents(menus, this);
         getServer().getPluginManager().registerEvents(spawnMarker, this);
-        // El almacen de botin escucha por el aviso de "quien se llevo el UNICO".
+        // El almacen de botin escucha por el aviso de "quien se llevo el ÚNICO".
         getServer().getPluginManager().registerEvents(drops, this);
         getServer().getPluginManager().registerEvents(minionManager, this);
         getServer().getPluginManager().registerEvents(minionWand, this);
@@ -139,8 +138,8 @@ public final class AnomalyPlugin extends net.ederus.edm.Module {
 
         banner();
         if (Compat.missingParticles() > 0) {
-            getLogger().warning(Compat.missingParticles() + " particula(s) no existen en esta version; "
-                    + "las animaciones que las usen se veran mas pobres.");
+            getLogger().warning(Compat.missingParticles() + " particula(s) no existen en esta versión; "
+                    + "las animaciones que las usen se veran más pobres.");
         }
     }
 
@@ -185,10 +184,10 @@ public final class AnomalyPlugin extends net.ederus.edm.Module {
                 .append(Component.text(" e ", TextColor.color(0x555555)))
                 .append(Component.text("Iris Studio", BRAND, TextDecoration.BOLD)));
         console.sendMessage(Component.empty());
-        console.sendMessage(Component.text("   version  ", TextColor.color(0x404040))
+        console.sendMessage(Component.text("   versión  ", TextColor.color(0x404040))
                 .append(Component.text(VERSION, NamedTextColor.WHITE))
-                .append(Component.text("      catalogo  ", TextColor.color(0x404040)))
-                .append(Component.text(registry.all().size() + " anomalias", NamedTextColor.WHITE))
+                .append(Component.text("      catálogo  ", TextColor.color(0x404040)))
+                .append(Component.text(registry.all().size() + " anomalías", NamedTextColor.WHITE))
                 .append(Component.text("      protecciones  ", TextColor.color(0x404040)))
                 .append(Component.text(protection.hasWorldGuard() ? "WorldGuard" : "heuristica",
                         protection.hasWorldGuard() ? NamedTextColor.GREEN : NamedTextColor.YELLOW)));
@@ -234,7 +233,7 @@ public final class AnomalyPlugin extends net.ederus.edm.Module {
             }
         }
         if (removed > 0) {
-            getLogger().info("Barridas " + removed + " entidad(es) de una anomalia anterior.");
+            getLogger().info("Barridas " + removed + " entidad(es) de una anomalía anterior.");
         }
     }
 

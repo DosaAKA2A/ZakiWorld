@@ -23,7 +23,7 @@ import com.leonardobishop.quests.common.quest.Task;
  * Tarea "ederus_elytra": planear una distancia con elytra.
  *
  * Existe porque la tarea "walking" con mode: elytra de Quests 3.16.1 NO cuenta en
- * este servidor. Quests lee mal la version (escribe "running version 1.1" leyendo
+ * este servidor. Quests lee mal la version (escribe "running versión 1.1" leyendo
  * el 1 de 26.1.2), carga su capa de compatibilidad de 1.8 y ahi isPlayerGliding()
  * es un metodo vacio que siempre devuelve falso. Aqui preguntamos por isGliding()
  * directo a Paper, sin pasar por esa capa.

@@ -161,7 +161,7 @@ public final class PantallaCantidad implements Listener {
                 secciones.texto("cantidad-minimo", "&x&D&7&F&3&F&FPoner 1"), List.of()));
 
         List<Component> loreMax = new ArrayList<>();
-        loreMax.add(secciones.texto("cantidad-maximo-valor", "&8▸ &f%maximo%",
+        loreMax.add(secciones.texto("cantidad-maximo-valor", "&8▸ &f%máximo%",
                 "%maximo%", numero(limite.cantidad())));
         Component porque = motivo(limite.motivo());
         if (porque != null) loreMax.add(porque);
@@ -243,7 +243,7 @@ public final class PantallaCantidad implements Listener {
         }
 
         lore.add(Estilo.vacio());
-        lore.add(secciones.texto("cantidad-maximo-linea", "&8▸ &7Máximo ahora mismo&8: &f%maximo%",
+        lore.add(secciones.texto("cantidad-maximo-linea", "&8▸ &7Máximo ahora mismo&8: &f%máximo%",
                 "%maximo%", numero(limite.cantidad())));
 
         ItemStack icono = Motor.construir(art, 1);

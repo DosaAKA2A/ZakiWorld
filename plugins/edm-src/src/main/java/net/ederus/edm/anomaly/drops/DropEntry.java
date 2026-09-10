@@ -19,8 +19,8 @@ public final class DropEntry {
      */
     public enum Recipient {
         TODOS("Libre para todos", "Explota al suelo: se lo queda quien lo agarre."),
-        MEJOR("Reservado al mejor", "Sale en la explosion, pero solo lo recoge quien mas dano hizo."),
-        ALEATORIO("Reservado a uno al azar", "Solo lo recoge un participante al azar, con peso por dano.");
+        MEJOR("Reservado al mejor", "Sale en la explosión, pero solo lo recoge quien más daño hizo."),
+        ALEATORIO("Reservado a uno al azar", "Solo lo recoge un participante al azar, con peso por daño.");
 
         private final String display;
         private final String help;

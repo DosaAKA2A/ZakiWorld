@@ -24,7 +24,7 @@ import net.ederus.edm.goditems.GodItemsPlugin;
  * completa o se rompe.
  *
  * Se cuenta a mano en vez de preguntarselo a MMOItems porque su calculo de
- * bonus de set es interno y no expone "cuantas piezas lleva este jugador"; y
+ * bonus de set es interno y no expone "cuántas piezas lleva este jugador"; y
  * porque asi la cuenta es la misma con o sin el, que es lo que espera quien
  * escribe el YAML.
  */

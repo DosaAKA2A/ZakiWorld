@@ -53,7 +53,7 @@ public final class Cargador {
             String choca = registro.meter(item);
             if (choca != null) {
                 aviso(f.getName() + ": el enlace " + item.enlace() + " ya lo usaba " + choca
-                        + "; se queda el ultimo (" + item.id() + ").");
+                        + "; se queda el último (" + item.id() + ").");
             }
             n++;
         }
@@ -83,7 +83,7 @@ public final class Cargador {
         ConfigurationSection sec = yml.getConfigurationSection("item");
         if (enlaceTipo != null) {
             if (sec != null) {
-                aviso(nombreFichero + ": es un item ENLAZADO, asi que su bloque 'item:' se ignora."
+                aviso(nombreFichero + ": es un item ENLAZADO, así que su bloque 'item:' se ignora."
                         + " La apariencia la manda MMOItems y escribir encima se perderia"
                         + " en la primera revision de sus plantillas.");
             }
@@ -193,7 +193,7 @@ public final class Cargador {
         for (String linea : s.getStringList("condiciones")) {
             Condicion.Prueba p = Condiciones.leer(this.modulo, linea);
             if (p == null) {
-                aviso(fichero + " [" + a + "]: condicion desconocida -> " + linea);
+                aviso(fichero + " [" + a + "]: condición desconocida -> " + linea);
                 continue;
             }
             condiciones.add(p);
@@ -236,7 +236,7 @@ public final class Cargador {
                 for (Object c : lista(valor(m, "condiciones"))) {
                     Condicion.Prueba pr = Condiciones.leer(this.modulo, String.valueOf(c));
                     if (pr == null) {
-                        aviso(fichero + " [" + donde + "]: condicion desconocida en 'si' -> " + c);
+                        aviso(fichero + " [" + donde + "]: condición desconocida en 'si' -> " + c);
                         continue;
                     }
                     conds.add(pr);

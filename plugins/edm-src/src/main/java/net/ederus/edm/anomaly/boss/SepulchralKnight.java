@@ -7,14 +7,13 @@ import net.kyori.adventure.text.format.TextDecoration;
 import net.kyori.adventure.title.Title;
 import net.ederus.edm.anomaly.AnomalyPlugin;
 import net.ederus.edm.anomaly.core.ActiveAnomaly;
-import net.ederus.edm.anomaly.core.Compat;
-import net.ederus.edm.anomaly.core.Fx;
+import net.ederus.edm.comun.Compat;
+import net.ederus.edm.comun.Fx;
 import net.ederus.edm.anomaly.core.Glow;
 import net.ederus.edm.anomaly.core.Stop;
-import net.ederus.edm.anomaly.core.Tags;
+import net.ederus.edm.comun.Tags;
 import org.bukkit.Location;
 import org.bukkit.Material;
-import org.bukkit.Particle;
 import org.bukkit.block.data.BlockData;
 import org.bukkit.entity.ArmorStand;
 import org.bukkit.entity.Display;
@@ -211,7 +210,7 @@ public final class SepulchralKnight extends BossFight {
             soundAt(spot, "entity.ender_dragon.growl", 1.4f, 0.7f);
             for (Player p : Fx.viewersNear(spot, 80)) {
                 p.showTitle(Title.title(
-                        Component.text("✦ ANOMALIA ✦", ACCENT, TextDecoration.BOLD),
+                        Component.text("✦ ANOMALÍA ✦", ACCENT, TextDecoration.BOLD),
                         Component.text("El Caballero Sepulcral ha cruzado", NamedTextColor.GRAY),
                         Title.Times.times(Duration.ofMillis(400), Duration.ofMillis(1600), Duration.ofMillis(600))));
             }
@@ -410,7 +409,7 @@ public final class SepulchralKnight extends BossFight {
             soundAt(l, "item.shield.break", 1.6f, 0.6f);
             soundAt(l, "block.anvil_destroy", 1.2f, 0.8f);
             titleNear(Component.text("ARMADURA ROTA", NamedTextColor.GREEN, TextDecoration.BOLD),
-                    Component.text("Recibe un 30% mas de dano", NamedTextColor.GRAY));
+                    Component.text("Recibe un 30% más de daño", NamedTextColor.GRAY));
         } else {
             damageBonus = 1.35;
             Compat.setAttribute(boss, "attack_damage", 17);
@@ -418,7 +417,7 @@ public final class SepulchralKnight extends BossFight {
             Compat.spawn(world(), Compat.EXPLOSION_EMITTER, l.clone().add(0, 1, 0), 2);
             soundAt(l, "entity.ender_dragon.growl", 1.6f, 0.5f);
             titleNear(Component.text("SE HA REHECHO", NamedTextColor.RED, TextDecoration.BOLD),
-                    Component.text("Golpea un 35% mas fuerte", NamedTextColor.GRAY));
+                    Component.text("Golpea un 35% más fuerte", NamedTextColor.GRAY));
         }
         soundAt(l, "entity.wither.spawn", 1.4f, 0.9f);
     }
@@ -910,7 +909,7 @@ public final class SepulchralKnight extends BossFight {
                 target.sendActionBar(Component.text("Juramento  ", NamedTextColor.GRAY)
                         .append(Component.text((int) dist + "m", far ? NamedTextColor.RED : NamedTextColor.GREEN,
                                 TextDecoration.BOLD))
-                        .append(Component.text("  ·  limite 16m   " + ((140 - tick) / 20) + "s",
+                        .append(Component.text("  ·  límite 16m   " + ((140 - tick) / 20) + "s",
                                 NamedTextColor.DARK_GRAY)));
                 soundAt(target.getLocation(), far ? "block.note_block.didgeridoo" : "block.note_block.chime",
                         0.8f, far ? 0.6f : 1.5f);

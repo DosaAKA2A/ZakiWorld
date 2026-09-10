@@ -5,7 +5,7 @@ import org.bukkit.Location;
 import org.bukkit.World;
 
 /**
- * Un generador plantado en el mundo: "aqui sale tal esbirro, de tal nivel, cada
+ * Un generador plantado en el mundo: "aquí sale tal esbirro, de tal nivel, cada
  * tanto tiempo". Se coloca con la vela y se administra desde la lista de
  * generadores del menu. El rango de nivel es SUYO: el mismo tipo de esbirro puede
  * tener generadores flojos en una sala y brutales en otra.

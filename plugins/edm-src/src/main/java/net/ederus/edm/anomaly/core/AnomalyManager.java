@@ -29,6 +29,9 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 import java.util.function.Consumer;
+import net.ederus.edm.comun.Fx;
+import net.ederus.edm.comun.Compat;
+import net.ederus.edm.comun.Tags;
 
 /**
  * El director del evento: abre la anomalia, la mantiene viva, reparte el botin y
@@ -122,7 +125,7 @@ public final class AnomalyManager implements Listener {
 
         event.state(ActiveAnomaly.State.ACTIVA);
         plugin.announcer().opened(event);
-        plugin.getLogger().info("Anomalia " + type.id() + " abierta en " + describe(where));
+        plugin.getLogger().info("Anomalía " + type.id() + " abierta en " + describe(where));
 
         ticker = plugin.getServer().getScheduler().runTaskTimer(
                 net.ederus.edm.Module.dueno(plugin), this::tick, 1L, 1L);
@@ -241,7 +244,7 @@ public final class AnomalyManager implements Listener {
         if (event.bars() != null) event.bars().removeAll();
         if (event.fight() != null) event.fight().cleanup();
         if (!silent) {
-            plugin.getServer().sendMessage(Component.text("✦ La anomalia se cerro.", NamedTextColor.GRAY));
+            plugin.getServer().sendMessage(Component.text("✦ La anomalía se cerro.", NamedTextColor.GRAY));
         }
     }
 
@@ -266,7 +269,7 @@ public final class AnomalyManager implements Listener {
         long period = plugin.settings().autoIntervalMinutes() * 60L * 20L;
         autoTask = plugin.getServer().getScheduler().runTaskTimer(
                 net.ederus.edm.Module.dueno(plugin), this::autoTrigger, period, period);
-        plugin.getLogger().info("Anomalias automaticas cada " + plugin.settings().autoIntervalMinutes() + " min.");
+        plugin.getLogger().info("Anomalías automaticas cada " + plugin.settings().autoIntervalMinutes() + " min.");
     }
 
     private void autoTrigger() {
@@ -283,7 +286,7 @@ public final class AnomalyManager implements Listener {
                 : plugin.registry().get(choice);
         if (type == null || !plugin.registry().isEnabled(type)) return;
         start(type, ok -> {
-            if (!ok) plugin.getLogger().info("Anomalia automatica descartada: no habia sitio libre.");
+            if (!ok) plugin.getLogger().info("Anomalía automática descartada: no habia sitio libre.");
         });
     }
 
@@ -333,7 +336,7 @@ public final class AnomalyManager implements Listener {
             try {
                 event.fight().onDamaged(p, e.getFinalDamage());
             } catch (Throwable t) {
-                plugin.getLogger().warning("Fallo al reaccionar al dano recibido: " + t);
+                plugin.getLogger().warning("Fallo al reaccionar al daño recibido: " + t);
             }
 
             double factor = event.fight().damageScale() * event.fight().incomingDamageMultiplier(e.getDamager());
@@ -351,7 +354,7 @@ public final class AnomalyManager implements Listener {
                 try {
                     event.fight().onMinionDamaged(hurtMinion, p, e.getFinalDamage());
                 } catch (Throwable t) {
-                    plugin.getLogger().warning("Fallo al reaccionar al dano de un esbirro: " + t);
+                    plugin.getLogger().warning("Fallo al reaccionar al daño de un esbirro: " + t);
                 }
             }
         }
@@ -499,7 +502,7 @@ public final class AnomalyManager implements Listener {
         try {
             event.fight().onDeath();
         } catch (Throwable t) {
-            plugin.getLogger().warning("Fallo en la animacion de muerte: " + t);
+            plugin.getLogger().warning("Fallo en la animación de muerte: " + t);
         }
 
         // El destello final va SIEMPRE, tenga el jefe animacion propia o no: es lo

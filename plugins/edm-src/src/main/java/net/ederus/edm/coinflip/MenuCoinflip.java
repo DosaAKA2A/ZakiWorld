@@ -81,11 +81,11 @@ public final class MenuCoinflip implements Listener {
 
         if (pagina > 0) {
             inv.setItem(RANURA_ANTERIOR, pieza(Material.ARROW,
-                    Estilo.texto("Pagina anterior", Estilo.CLARO), List.of()));
+                    Estilo.texto("Página anterior", Estilo.CLARO), List.of()));
         }
         if (pagina < paginas - 1) {
             inv.setItem(RANURA_SIGUIENTE, pieza(Material.ARROW,
-                    Estilo.texto("Pagina siguiente", Estilo.CLARO), List.of()));
+                    Estilo.texto("Página siguiente", Estilo.CLARO), List.of()));
         }
 
         inv.setItem(RANURA_CREAR, pieza(Material.EMERALD,
@@ -104,7 +104,7 @@ public final class MenuCoinflip implements Listener {
                         ? List.of(Estilo.texto("No tienes ninguna puesta", Estilo.APAGADO))
                         : List.of(Estilo.valor("Tienes " + mias + " en la mesa"),
                                   Estilo.vacio(),
-                                  Estilo.accion("Click para retirarlas todas", Estilo.ACCION_VENTA))));
+                                  Estilo.accion("Clic para retirarlas todas", Estilo.ACCION_VENTA))));
 
         if (lista.isEmpty()) {
             inv.setItem(22, pieza(Material.GRAY_DYE,
@@ -164,11 +164,11 @@ public final class MenuCoinflip implements Listener {
         }
         lore.add(Estilo.vacio());
         if (mia) {
-            lore.add(Estilo.accion("Click para retirarla", Estilo.ACCION_VENTA));
+            lore.add(Estilo.accion("Clic para retirarla", Estilo.ACCION_VENTA));
         } else if (a.tomada()) {
             lore.add(Estilo.accion("La esta cogiendo alguien", Estilo.APAGADO));
         } else {
-            lore.add(Estilo.accion("Click para jugar", Estilo.ACCION_COMPRA));
+            lore.add(Estilo.accion("Clic para jugar", Estilo.ACCION_COMPRA));
         }
 
         ItemStack pila = new ItemStack(Material.PLAYER_HEAD);
@@ -248,7 +248,7 @@ public final class MenuCoinflip implements Listener {
             if (r.ok()) { vuelto += a.cantidad(); n++; }
         }
         modulo.textos().manda(jugador, "retiradas",
-                "&fRetiraste &x&D&7&F&3&F&F%cuantas% &fapuestas y se te devolvieron &#4FFF55%total%",
+                "&fRetiraste &x&D&7&F&3&F&F%cuántas% &fapuestas y se te devolvieron &#4FFF55%total%",
                 "%cuantas%", String.valueOf(n), "%total%", Estilo.dinero(vuelto));
         abrir(jugador, 0);
     }

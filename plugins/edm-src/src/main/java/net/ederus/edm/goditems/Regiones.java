@@ -36,7 +36,7 @@ public final class Regiones {
 
     private void enganchar() {
         if (this.modulo.core().getServer().getPluginManager().getPlugin("WorldGuard") == null) {
-            this.modulo.getLogger().info("[GodItems] WorldGuard no esta: la condicion REGION siempre dara falso.");
+            this.modulo.getLogger().info("[GodItems] WorldGuard no esta: la condición REGION siempre dará falso.");
             return;
         }
         try {
@@ -62,10 +62,10 @@ public final class Regiones {
             this.getId = Class.forName("com.sk89q.worldguard.protection.regions.ProtectedRegion")
                     .getMethod("getId");
             this.listo = true;
-            this.modulo.getLogger().info("[GodItems] WorldGuard enganchado: la condicion REGION funciona.");
+            this.modulo.getLogger().info("[GodItems] WorldGuard enganchado: la condición REGION funciona.");
         } catch (Throwable t) {
             this.modulo.getLogger().warning("[GodItems] WorldGuard esta pero no se pudo enganchar ("
-                    + t + "): la condicion REGION dara siempre falso.");
+                    + t + "): la condición REGION dará siempre falso.");
         }
     }
 

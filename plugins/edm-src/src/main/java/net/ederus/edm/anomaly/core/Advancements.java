@@ -16,6 +16,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 import java.util.logging.Level;
+import net.ederus.edm.comun.Compat;
 
 /**
  * El arbol de logros de las anomalias.

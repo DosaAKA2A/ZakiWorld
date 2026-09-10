@@ -60,7 +60,7 @@ public final class Trolls {
                  * el daño. El de verdad quema el suelo y mata. */
                 c.v().getWorld().strikeLightningEffect(c.donde())));
 
-        pon(m, Troll.de("explosion", "Explosion", "Suena y revienta, pero no rompe nada",
+        pon(m, Troll.de("explosion", "Explosión", "Suena y revienta, pero no rompe nada",
                 Material.TNT, Familia.SUSTO, c -> {
             c.sonido("entity.generic.explode", 1f);
             c.particulas(Particle.EXPLOSION, 3, 1.5);
@@ -162,7 +162,7 @@ public final class Trolls {
         pon(m, Troll.de("cielo", "Al cielo", "Aparece muy arriba y baja solo",
                 Material.ELYTRA, Familia.MOVIMIENTO, c -> c.subir(60, 20)));
 
-        pon(m, Troll.de("caidalibre", "Caida libre", "Muy arriba del todo",
+        pon(m, Troll.de("caidalibre", "Caída libre", "Muy arriba del todo",
                 Material.FEATHER, Familia.MOVIMIENTO, c -> {
             c.subir(120, 30);
             c.titulo("&c&lARRIBA", "&7mira abajo");
@@ -256,7 +256,7 @@ public final class Trolls {
             c.alAcabar(c.meterEnHuecos(basura, 12));
         }));
 
-        pon(m, Troll.temporal("patata", "Todo patatas", "Lo que rompe suelta ademas una patata",
+        pon(m, Troll.temporal("patata", "Todo patatas", "Lo que rompe suelta además una patata",
                 Material.POTATO, Familia.INVENTARIO, 45, c -> c.marcar(Estados.Marca.PATATA)));
 
         pon(m, Troll.temporal("calabaza", "Calabaza", "Le pone una calabaza en la cabeza",
@@ -323,7 +323,7 @@ public final class Trolls {
                 Material.BARRIER, Familia.FALSO, c ->
                 c.chat("&7Ya no eres operador del servidor.")));
 
-        pon(m, Troll.de("falsoreinicio", "Falso reinicio", "Cuenta atras para un reinicio que no existe",
+        pon(m, Troll.de("falsoreinicio", "Falso reinicio", "Cuenta atrás para un reinicio que no existe",
                 Material.CLOCK, Familia.FALSO, c -> {
             int[] pasos = {30, 20, 10, 5, 4, 3, 2, 1};
             for (int i = 0; i < pasos.length; i++) {
@@ -355,7 +355,7 @@ public final class Trolls {
         pon(m, Troll.de("falsotutorial", "Falso tutorial", "Consejos que no sirven para nada",
                 Material.BOOK, Familia.FALSO, c -> {
             String[] consejos = {
-                "&e[Consejo] &fLos diamantes salen mas si picas mirando arriba.",
+                "&e[Consejo] &fLos diamantes salen más si picas mirando arriba.",
                 "&e[Consejo] &fSi tiras tu espada al agua sale encantada.",
                 "&e[Consejo] &fLos creepers no explotan si les hablas bien.",
                 "&e[Consejo] &fEscribe /gamemode 1 para ver mejor de noche."

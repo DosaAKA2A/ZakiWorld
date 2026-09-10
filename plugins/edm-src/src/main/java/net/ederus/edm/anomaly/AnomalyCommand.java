@@ -7,7 +7,7 @@ import net.kyori.adventure.text.format.TextDecoration;
 import net.ederus.edm.anomaly.boss.Ability;
 import net.ederus.edm.anomaly.core.ActiveAnomaly;
 import net.ederus.edm.anomaly.core.AnomalyType;
-import net.ederus.edm.anomaly.core.Compat;
+import net.ederus.edm.comun.Compat;
 import org.bukkit.Location;
 import org.bukkit.World;
 import org.bukkit.command.Command;
@@ -46,7 +46,7 @@ public final class AnomalyCommand implements CommandExecutor, TabCompleter {
         if (args.length == 0 || args[0].equalsIgnoreCase("menu")) {
             if (!(sender instanceof Player player)) {
                 sender.sendMessage(plugin.prefix().append(
-                        Component.text("El menu solo se abre desde dentro del juego.", NamedTextColor.RED)));
+                        Component.text("El menú solo se abre desde dentro del juego.", NamedTextColor.RED)));
                 return true;
             }
             plugin.menus().openHub(player);
@@ -67,7 +67,7 @@ public final class AnomalyCommand implements CommandExecutor, TabCompleter {
             case "esbirros", "minions" -> {
                 if (!(sender instanceof Player player)) {
                     sender.sendMessage(plugin.prefix().append(
-                            Component.text("El menu solo se abre desde dentro del juego.", NamedTextColor.RED)));
+                            Component.text("El menú solo se abre desde dentro del juego.", NamedTextColor.RED)));
                     return true;
                 }
                 plugin.menus().openMinions(player);
@@ -97,7 +97,7 @@ public final class AnomalyCommand implements CommandExecutor, TabCompleter {
         }
         if (where == null) {
             sender.sendMessage(plugin.prefix().append(Component.text(
-                    "Desde consola hace falta una anomalia abierta para saber donde reventarlo.",
+                    "Desde consola hace falta una anomalía abierta para saber donde reventarlo.",
                     NamedTextColor.RED)));
             return;
         }
@@ -107,7 +107,7 @@ public final class AnomalyCommand implements CommandExecutor, TabCompleter {
                     "La tabla de " + type.display() + " esta vacia.", SOFT)));
         } else {
             sender.sendMessage(plugin.prefix()
-                    .append(Component.text("Botin de ", SOFT))
+                    .append(Component.text("Botín de ", SOFT))
                     .append(Component.text(type.display(), type.color(), TextDecoration.BOLD))
                     .append(Component.text(" reventado: " + lines + " objeto(s), solo para verlo.", SOFT)));
         }
@@ -118,7 +118,7 @@ public final class AnomalyCommand implements CommandExecutor, TabCompleter {
         if (type == null) return;
         if (plugin.manager().active()) {
             sender.sendMessage(plugin.prefix().append(
-                    Component.text("Ya hay una anomalia abierta. Cierrala con /anomaly stop.", NamedTextColor.RED)));
+                    Component.text("Ya hay una anomalía abierta. Cierrala con /anomaly stop.", NamedTextColor.RED)));
             return;
         }
         boolean fixed = plugin.registry().spawnPoint(type) != null;
@@ -128,7 +128,7 @@ public final class AnomalyCommand implements CommandExecutor, TabCompleter {
             if (ok) return;
             sender.sendMessage(plugin.prefix().append(Component.text(
                     "No se encontro ningun sitio valido tras " + plugin.settings().searchAttempts()
-                            + " intentos. Baja la distancia minima o el margen de proteccion.", NamedTextColor.RED)));
+                            + " intentos. Baja la distancia mínima o el margen de protección.", NamedTextColor.RED)));
         });
     }
 
@@ -143,11 +143,11 @@ public final class AnomalyCommand implements CommandExecutor, TabCompleter {
         if (type == null) return;
         if (plugin.manager().active()) {
             sender.sendMessage(plugin.prefix().append(
-                    Component.text("Ya hay una anomalia abierta.", NamedTextColor.RED)));
+                    Component.text("Ya hay una anomalía abierta.", NamedTextColor.RED)));
             return;
         }
         plugin.manager().open(type, player.getLocation());
-        sender.sendMessage(plugin.prefix().append(Component.text("Abierta aqui mismo, sin comprobar protecciones.", SOFT)));
+        sender.sendMessage(plugin.prefix().append(Component.text("Abierta aquí mismo, sin comprobar protecciones.", SOFT)));
     }
 
     /**
@@ -168,7 +168,7 @@ public final class AnomalyCommand implements CommandExecutor, TabCompleter {
             z = Double.parseDouble(args[3]);
         } catch (NumberFormatException ex) {
             sender.sendMessage(plugin.prefix().append(
-                    Component.text("Las coordenadas tienen que ser numeros.", NamedTextColor.RED)));
+                    Component.text("Las coordenadas tienen que ser números.", NamedTextColor.RED)));
             return;
         }
 
@@ -193,13 +193,13 @@ public final class AnomalyCommand implements CommandExecutor, TabCompleter {
         }
         if (world == null) {
             sender.sendMessage(plugin.prefix().append(
-                    Component.text("No se pudo determinar el mundo. Pasalo como ultimo argumento.",
+                    Component.text("No se pudo determinar el mundo. Pasalo como último argumento.",
                             NamedTextColor.RED)));
             return;
         }
         if (plugin.manager().active()) {
             sender.sendMessage(plugin.prefix().append(
-                    Component.text("Ya hay una anomalia abierta.", NamedTextColor.RED)));
+                    Component.text("Ya hay una anomalía abierta.", NamedTextColor.RED)));
             return;
         }
         plugin.manager().open(type, new Location(world, x, y, z));
@@ -211,11 +211,11 @@ public final class AnomalyCommand implements CommandExecutor, TabCompleter {
     private void stop(CommandSender sender) {
         if (!plugin.manager().active()) {
             sender.sendMessage(plugin.prefix().append(
-                    Component.text("No hay ninguna anomalia abierta.", NamedTextColor.RED)));
+                    Component.text("No hay ninguna anomalía abierta.", NamedTextColor.RED)));
             return;
         }
         plugin.manager().stop(false);
-        sender.sendMessage(plugin.prefix().append(Component.text("Anomalia cerrada y escena limpiada.", SOFT)));
+        sender.sendMessage(plugin.prefix().append(Component.text("Anomalía cerrada y escena limpiada.", SOFT)));
     }
 
     private void info(CommandSender sender) {
@@ -224,7 +224,7 @@ public final class AnomalyCommand implements CommandExecutor, TabCompleter {
                 .append(Component.text("ANOMALY ", NamedTextColor.WHITE, TextDecoration.BOLD))
                 .append(Component.text("v" + AnomalyPlugin.VERSION, GOLD))
                 .append(Component.text("   Iris Studio", DIM)));
-        sender.sendMessage(field("Catalogo", plugin.registry().all().size() + " anomalias, "
+        sender.sendMessage(field("Catálogo", plugin.registry().all().size() + " anomalías, "
                 + plugin.registry().enabled().size() + " activas"));
         sender.sendMessage(field("Protecciones", plugin.protection().hasWorldGuard()
                 ? "WorldGuard enganchado" : "sin WorldGuard, solo heuristica"));
@@ -274,7 +274,7 @@ public final class AnomalyCommand implements CommandExecutor, TabCompleter {
         ActiveAnomaly ev = plugin.manager().current();
         if (ev == null || ev.fight() == null) {
             sender.sendMessage(plugin.prefix().append(Component.text(
-                    "Necesitas una anomalia abierta. Usa /anomaly here primero.", NamedTextColor.RED)));
+                    "Necesitas una anomalía abierta. Usa /anomaly here primero.", NamedTextColor.RED)));
             return;
         }
         if (args.length < 2) {
@@ -326,7 +326,7 @@ public final class AnomalyCommand implements CommandExecutor, TabCompleter {
                 amount = Double.parseDouble(args[1]);
             } catch (NumberFormatException ex) {
                 sender.sendMessage(plugin.prefix().append(
-                        Component.text("'" + args[1] + "' no es un numero.", NamedTextColor.RED)));
+                        Component.text("'" + args[1] + "' no es un número.", NamedTextColor.RED)));
                 return;
             }
         }
@@ -353,7 +353,7 @@ public final class AnomalyCommand implements CommandExecutor, TabCompleter {
 
         sender.sendMessage(Component.empty());
         sender.sendMessage(Component.text("✦ ", GOLD)
-                .append(Component.text("Anomalias derrotadas  ", NamedTextColor.WHITE, TextDecoration.BOLD))
+                .append(Component.text("Anomalías derrotadas  ", NamedTextColor.WHITE, TextDecoration.BOLD))
                 .append(Component.text(owned + " / " + total,
                         owned == total ? NamedTextColor.GREEN : GOLD, TextDecoration.BOLD)));
         if (missing.isEmpty()) {
@@ -368,7 +368,7 @@ public final class AnomalyCommand implements CommandExecutor, TabCompleter {
     private void reload(CommandSender sender) {
         plugin.reloadEverything();
         sender.sendMessage(plugin.prefix().append(Component.text(
-                "Recargado: config.yml y drops.yml. La anomalia abierta, si la habia, se cerro.", SOFT)));
+                "Recargado: config.yml y drops.yml. La anomalía abierta, si la habia, se cerro.", SOFT)));
     }
 
     /**
@@ -394,7 +394,7 @@ public final class AnomalyCommand implements CommandExecutor, TabCompleter {
                 level = Math.max(1, Integer.parseInt(args[2]));
             } catch (NumberFormatException ex) {
                 sender.sendMessage(plugin.prefix().append(Component.text(
-                        "El nivel tiene que ser un numero.", NamedTextColor.RED)));
+                        "El nivel tiene que ser un número.", NamedTextColor.RED)));
                 return;
             }
         }
@@ -408,7 +408,7 @@ public final class AnomalyCommand implements CommandExecutor, TabCompleter {
                         Double.parseDouble(args[4]), Double.parseDouble(args[5]) + 0.5);
             } catch (NumberFormatException ex) {
                 sender.sendMessage(plugin.prefix().append(Component.text(
-                        "Las coordenadas tienen que ser numeros.", NamedTextColor.RED)));
+                        "Las coordenadas tienen que ser números.", NamedTextColor.RED)));
                 return;
             }
         } else if (sender instanceof Player p) {
@@ -432,16 +432,16 @@ public final class AnomalyCommand implements CommandExecutor, TabCompleter {
                 .append(Component.text("  Nv. " + level + "  con "
                         + (int) type.healthAt(level) + " de vida y x"
                         + net.ederus.edm.anomaly.drops.DropTable.trimChance(type.damageAt(level))
-                        + " de dano.", SOFT)));
+                        + " de daño.", SOFT)));
     }
 
     private void help(CommandSender sender) {
         sender.sendMessage(Component.empty());
         sender.sendMessage(Component.text("✦ ", GOLD).append(Component.text("ANOMALY", NamedTextColor.WHITE, TextDecoration.BOLD)));
         line(sender, "/anomaly", "abre el panel");
-        line(sender, "/anomaly esbirros", "el catalogo de esbirros de mazmorra");
+        line(sender, "/anomaly esbirros", "el catálogo de esbirros de mazmorra");
         line(sender, "/anomaly esbirro <id> [nivel] [x y z]", "invoca uno suelto, para verlo");
-        line(sender, "/anomaly start [id]", "busca sitio y abre la anomalia");
+        line(sender, "/anomaly start [id]", "busca sitio y abre la anomalía");
         line(sender, "/anomaly here [id]", "la abre donde estas, sin comprobaciones");
         line(sender, "/anomaly at <x> <y> <z> [id]", "la abre en esas coordenadas");
         line(sender, "/anomaly stop", "la cierra y limpia la escena");
@@ -449,9 +449,9 @@ public final class AnomalyCommand implements CommandExecutor, TabCompleter {
         line(sender, "/anomaly abilities [id]", "lista las habilidades");
         line(sender, "/anomaly test <id|all>", "lanza una habilidad ya, para revisarla");
         line(sender, "/anomaly hurt <vida>", "le baja vida a mano, para ver las fases");
-        line(sender, "/anomaly botin [id]", "revienta la tabla aqui mismo, solo para verla");
-        line(sender, "/anomaly logros", "cuantas anomalias llevas derrotadas");
-        line(sender, "/anomaly reload", "recarga la configuracion");
+        line(sender, "/anomaly botín [id]", "revienta la tabla aquí mismo, solo para verla");
+        line(sender, "/anomaly logros", "cuántas anomalías llevas derrotadas");
+        line(sender, "/anomaly reload", "recarga la configuración");
         sender.sendMessage(Component.empty());
     }
 
@@ -469,7 +469,7 @@ public final class AnomalyCommand implements CommandExecutor, TabCompleter {
             AnomalyType type = plugin.registry().get(args[index].toLowerCase(Locale.ROOT));
             if (type == null) {
                 sender.sendMessage(plugin.prefix().append(
-                        Component.text("No existe la anomalia '" + args[index] + "'.", NamedTextColor.RED)));
+                        Component.text("No existe la anomalía '" + args[index] + "'.", NamedTextColor.RED)));
                 return null;
             }
             return type;
@@ -477,7 +477,7 @@ public final class AnomalyCommand implements CommandExecutor, TabCompleter {
         AnomalyType type = plugin.selected();
         if (type == null) {
             sender.sendMessage(plugin.prefix().append(
-                    Component.text("No hay ninguna anomalia elegida. Usa /anomaly start <id>.", NamedTextColor.RED)));
+                    Component.text("No hay ninguna anomalía elegida. Usa /anomaly start <id>.", NamedTextColor.RED)));
         }
         return type;
     }

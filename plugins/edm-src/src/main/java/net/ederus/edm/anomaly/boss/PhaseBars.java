@@ -5,7 +5,7 @@ import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
 import net.kyori.adventure.text.format.TextColor;
 import net.kyori.adventure.text.format.TextDecoration;
-import net.ederus.edm.anomaly.core.Fx;
+import net.ederus.edm.comun.Fx;
 import org.bukkit.Location;
 import org.bukkit.entity.Player;
 
@@ -104,7 +104,7 @@ public final class PhaseBars {
         bars[index].name(title(index));
 
         // Solo se enseña la barra de la fase en curso. Cuando se agota, esa desaparece
-        // y aparece la siguiente debajo: es la sensacion de "otra barra mas" que se pidio,
+        // y aparece la siguiente debajo: es la sensacion de "otra barra más" que se pidio,
         // y ademas no revela de entrada cuantas quedan.
         if (index != shown) {
             for (Player p : viewers) swapTo(p, index);

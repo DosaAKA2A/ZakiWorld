@@ -1,9 +1,9 @@
 package net.ederus.edm.anomaly.core;
 
 import org.bukkit.configuration.file.FileConfiguration;
-import org.bukkit.plugin.java.JavaPlugin;
 
 import java.util.List;
+import net.ederus.edm.comun.Fx;
 
 /**
  * Acceso tipado a config.yml. Todo lo que se puede tocar desde el menu de ajustes

@@ -22,7 +22,7 @@ public interface Condicion {
             try {
                 r = this.condicion.vale(ctx, this.args);
             } catch (Throwable t) {
-                ctx.modulo().getLogger().warning("Condicion '" + this.linea + "' de "
+                ctx.modulo().getLogger().warning("Condición '" + this.linea + "' de "
                         + ctx.definicion().id() + " fallo: " + t);
                 return false;
             }

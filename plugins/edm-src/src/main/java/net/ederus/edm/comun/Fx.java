@@ -1,4 +1,4 @@
-package net.ederus.edm.anomaly.core;
+package net.ederus.edm.comun;
 
 import org.bukkit.Location;
 import org.bukkit.Material;

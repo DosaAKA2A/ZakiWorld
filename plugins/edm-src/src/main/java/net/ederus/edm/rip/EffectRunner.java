@@ -175,7 +175,7 @@ public final class EffectRunner {
                         onEnd.run();
                     }
                     catch (Throwable ex) {
-                        EffectRunner.this.plugin.getLogger().log(Level.WARNING, "Fallo en el cierre de una animacion", ex);
+                        EffectRunner.this.plugin.getLogger().log(Level.WARNING, "Fallo en el cierre de una animación", ex);
                     }
                 }
             }
@@ -191,10 +191,10 @@ public final class EffectRunner {
                 }
                 catch (Throwable ex) {
                     if (++this.errors == 1) {
-                        EffectRunner.this.plugin.getLogger().log(Level.WARNING, "Error en el tick " + current + " de una animacion; la animacion continua", ex);
+                        EffectRunner.this.plugin.getLogger().log(Level.WARNING, "Error en el tick " + current + " de una animación; la animación continua", ex);
                     }
                     if (this.errors >= 5) {
-                        EffectRunner.this.plugin.getLogger().warning("Animacion cancelada tras 5 errores; se limpian sus entidades");
+                        EffectRunner.this.plugin.getLogger().warning("Animación cancelada tras 5 errores; se limpian sus entidades");
                         this.finish();
                     }
                 }

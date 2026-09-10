@@ -48,7 +48,7 @@ public final class Protection {
 
     private void setupWorldGuard() {
         if (plugin.getServer().getPluginManager().getPlugin("WorldGuard") == null) {
-            plugin.getLogger().info("WorldGuard no esta instalado: las anomalias solo evitaran bases por heuristica.");
+            plugin.getLogger().info("WorldGuard no esta instalado: las anomalías solo evitaran bases por heuristica.");
             return;
         }
         try {
@@ -73,7 +73,7 @@ public final class Protection {
             this.regionSetSize = this.getApplicableRegions.getReturnType().getMethod("size");
 
             this.worldGuardReady = true;
-            plugin.getLogger().info("WorldGuard enganchado: las anomalias no apareceran dentro de ninguna region.");
+            plugin.getLogger().info("WorldGuard enganchado: las anomalías no aparecerán dentro de ninguna región.");
         } catch (Throwable t) {
             plugin.getLogger().log(Level.WARNING,
                     "WorldGuard esta instalado pero no se pudo enganchar (" + t + "). Se seguira solo con la heuristica de bases.");

@@ -166,8 +166,8 @@ public final class ComandoGi implements TabExecutor {
             quien.sendMessage(Estilo.linea("Material", def.apariencia().material().name(), Estilo.CLARO));
         }
         quien.sendMessage(Estilo.linea("Usos",
-                (def.usos() < 0 ? "sin limite" : String.valueOf(def.usos()))
-                        + (def.usosPorDia() < 0 ? "" : "  ·  " + def.usosPorDia() + " al dia"),
+                (def.usos() < 0 ? "sin límite" : String.valueOf(def.usos()))
+                        + (def.usosPorDia() < 0 ? "" : "  ·  " + def.usosPorDia() + " al día"),
                 Estilo.CLARO));
         if (!def.mundos().isEmpty()) {
             quien.sendMessage(Estilo.linea("Mundos", String.join(", ", def.mundos()), Estilo.CLARO));
@@ -234,7 +234,7 @@ public final class ComandoGi implements TabExecutor {
             return;
         }
         quien.sendMessage(Estilo.legado("&aImportado &f" + tipo + "." + id + " &acomo &f" + def.id() + "&a."));
-        quien.sendMessage(Estilo.legado("&7Sus stats los sigue teniendo MMOItems; aqui se le pone el comportamiento."));
+        quien.sendMessage(Estilo.legado("&7Sus stats los sigue teniendo MMOItems; aquí se le pone el comportamiento."));
         if (quien instanceof Player p) this.modulo.menu().ficha(p, def.id());
     }
 
@@ -258,13 +258,13 @@ public final class ComandoGi implements TabExecutor {
         }
         if (def.bloque(Activador.DISPARADOR) == null) {
             quien.sendMessage(Estilo.legado("&e" + def.id()
-                    + " no tiene bloque DISPARADOR, asi que no hay nada que lanzar."));
+                    + " no tiene bloque DISPARADOR, así que no hay nada que lanzar."));
             return;
         }
         boolean fue = this.modulo.disparadorManual(destino, def);
         quien.sendMessage(Estilo.legado(fue
                 ? "&aLanzado &f" + def.id() + " &asobre &f" + destino.getName() + "&a."
-                : "&7No se lanzo: cooldown, usos o alguna condicion lo pararon."));
+                : "&7No se lanzo: cooldown, usos o alguna condición lo pararon."));
     }
 
     /**
@@ -284,10 +284,10 @@ public final class ComandoGi implements TabExecutor {
         quien.sendMessage(Estilo.linea("Activadores",
                 String.valueOf(Activador.values().length), Estilo.CLARO));
         quien.sendMessage(Estilo.linea("Particulas",
-                Particulas.cuantas() + " en esta version", Estilo.CLARO));
+                Particulas.cuantas() + " en esta versión", Estilo.CLARO));
         var faltan = Catalogo.sinFicha();
         if (faltan.isEmpty()) {
-            quien.sendMessage(Estilo.nota("todas tienen ficha: el menu las sabe editar"));
+            quien.sendMessage(Estilo.nota("todas tienen ficha: el menú las sabe editar"));
         } else {
             quien.sendMessage(Estilo.nota("sin ficha (solo se editan a mano): "
                     + String.join(", ", faltan)));
@@ -311,8 +311,8 @@ public final class ComandoGi implements TabExecutor {
         quien.sendMessage(Estilo.linea("/gi info [item]", "sin nombre, el de la mano", Estilo.CLARO));
         quien.sendMessage(Estilo.linea("/gi give <item> [jugador] [n]", "entrega un item nativo", Estilo.CLARO));
         quien.sendMessage(Estilo.linea("/gi trigger <item> [jugador]", "lanza su bloque DISPARADOR", Estilo.CLARO));
-        quien.sendMessage(Estilo.linea("/gi particulas", "el catalogo de particulas", Estilo.CLARO));
-        quien.sendMessage(Estilo.linea("/gi catalogo", "cuantas acciones y condiciones hay", Estilo.CLARO));
+        quien.sendMessage(Estilo.linea("/gi particulas", "el catálogo de particulas", Estilo.CLARO));
+        quien.sendMessage(Estilo.linea("/gi catálogo", "cuántas acciones y condiciones hay", Estilo.CLARO));
         quien.sendMessage(Estilo.linea("/gi reload", "vuelve a leer los YAML", Estilo.CLARO));
         quien.sendMessage(Component.empty());
         quien.sendMessage(Estilo.nota("los YAML viven en plugins/EDM/goditems/items/"));

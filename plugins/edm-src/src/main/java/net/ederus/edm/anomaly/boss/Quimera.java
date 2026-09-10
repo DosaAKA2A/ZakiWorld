@@ -7,11 +7,11 @@ import net.kyori.adventure.text.format.TextDecoration;
 import net.kyori.adventure.title.Title;
 import net.ederus.edm.anomaly.AnomalyPlugin;
 import net.ederus.edm.anomaly.core.ActiveAnomaly;
-import net.ederus.edm.anomaly.core.Compat;
-import net.ederus.edm.anomaly.core.Fx;
+import net.ederus.edm.comun.Compat;
+import net.ederus.edm.comun.Fx;
 import net.ederus.edm.anomaly.core.Glow;
 import net.ederus.edm.anomaly.core.Stop;
-import net.ederus.edm.anomaly.core.Tags;
+import net.ederus.edm.comun.Tags;
 import org.bukkit.Color;
 import org.bukkit.Location;
 import org.bukkit.Material;
@@ -161,7 +161,7 @@ public final class Quimera extends BossFight {
             soundAt(spot, "entity.ravager.roar", 1.8f, 0.5f);
             for (Player p : Fx.viewersNear(spot, 90)) {
                 p.showTitle(Title.title(
-                        Component.text("✦ ANOMALIA ✦", ACCENT, TextDecoration.BOLD),
+                        Component.text("✦ ANOMALÍA ✦", ACCENT, TextDecoration.BOLD),
                         Component.text("Quimera  ·  rompe los cinco pilares", NamedTextColor.GRAY),
                         Title.Times.times(Duration.ofMillis(400), Duration.ofMillis(1800), Duration.ofMillis(600))));
             }
@@ -320,7 +320,7 @@ public final class Quimera extends BossFight {
         soundAt(l, "entity.ravager.roar", 1.8f, 0.7f);
         titleNear(Component.text("CAEN LOS PILARES", ACCENT, TextDecoration.BOLD),
                 Component.text("La Quimera ya puede morir", NamedTextColor.GRAY));
-        broadcastNear(Component.text("Se le acabo la piedra que la sostenia.", ACCENT));
+        broadcastNear(Component.text("Se le acabó la piedra que la sostenia.", ACCENT));
     }
 
     // ---------------------------------------------------- LA COLA Y SU MIRADA

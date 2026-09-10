@@ -86,7 +86,7 @@ public final class AvisoTiendas {
         }
 
         if (diaria > 0 && ultimoDiaria > 0 && diaria != ultimoDiaria) {
-            anunciar("tiendas.diaria", "Mercado del Dia", true);
+            anunciar("tiendas.diaria", "Mercado del Día", true);
         }
         if (boveda > 0 && ultimoBoveda > 0 && boveda != ultimoBoveda) {
             anunciar("tiendas.boveda", "La Boveda", true);
@@ -121,7 +121,7 @@ public final class AvisoTiendas {
         boolean diaria = cual.equalsIgnoreCase("diaria");
         String base = diaria ? "tiendas.diaria" : "tiendas.boveda";
         if (plugin.getConfig().getStringList(base + ".chat").isEmpty()) return false;
-        anunciar(base, diaria ? "Mercado del Dia" : "La Boveda", false);
+        anunciar(base, diaria ? "Mercado del Día" : "La Boveda", false);
         return true;
     }
 

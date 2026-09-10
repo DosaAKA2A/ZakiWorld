@@ -7,11 +7,11 @@ import net.kyori.adventure.text.format.TextDecoration;
 import net.kyori.adventure.title.Title;
 import net.ederus.edm.anomaly.AnomalyPlugin;
 import net.ederus.edm.anomaly.core.ActiveAnomaly;
-import net.ederus.edm.anomaly.core.Compat;
-import net.ederus.edm.anomaly.core.Fx;
+import net.ederus.edm.comun.Compat;
+import net.ederus.edm.comun.Fx;
 import net.ederus.edm.anomaly.core.Glow;
 import net.ederus.edm.anomaly.core.Stop;
-import net.ederus.edm.anomaly.core.Tags;
+import net.ederus.edm.comun.Tags;
 import org.bukkit.Location;
 import org.bukkit.entity.Enderman;
 import org.bukkit.entity.Player;
@@ -123,7 +123,7 @@ public final class Darkness extends BossFight {
             soundAt(spot, "entity.enderman.scream", 1.8f, 0.5f);
             for (Player p : Fx.viewersNear(spot, 90)) {
                 p.showTitle(Title.title(
-                        Component.text("✦ ANOMALIA ✦", ACCENT, TextDecoration.BOLD),
+                        Component.text("✦ ANOMALÍA ✦", ACCENT, TextDecoration.BOLD),
                         Component.text("Darkness  ·  no vas a ver casi nada", NamedTextColor.GRAY),
                         Title.Times.times(Duration.ofMillis(400), Duration.ofMillis(2000), Duration.ofMillis(700))));
             }
@@ -716,7 +716,7 @@ public final class Darkness extends BossFight {
         Location c = loc();
         soundAt(c, "entity.enderman.scream", 2.0f, 0.3f);
         titleNear(Component.text("CEGUERA TOTAL", NamedTextColor.DARK_PURPLE, TextDecoration.BOLD),
-                Component.text("Pelea de oido", NamedTextColor.GRAY));
+                Component.text("Pelea de oído", NamedTextColor.GRAY));
 
         animate(100, tick -> {
             if (!alive()) return;

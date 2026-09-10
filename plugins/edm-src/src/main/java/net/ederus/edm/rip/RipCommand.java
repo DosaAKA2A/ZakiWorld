@@ -89,7 +89,7 @@ TabCompleter {
                     return true;
                 }
                 if (!this.plugin.allows(p, e)) {
-                    Component msg = this.plugin.isAdmin(p) ? this.plugin.prefix().append((Component)Component.text((String)"Bloqueado. Requiere ", (TextColor)NamedTextColor.RED)).append((Component)Component.text((String)e.permission(), (TextColor)GOLD)) : this.plugin.prefix().append((Component)Component.text((String)"Todavia no has desbloqueado este efecto.", (TextColor)NamedTextColor.RED));
+                    Component msg = this.plugin.isAdmin(p) ? this.plugin.prefix().append((Component)Component.text((String)"Bloqueado. Requiere ", (TextColor)NamedTextColor.RED)).append((Component)Component.text((String)e.permission(), (TextColor)GOLD)) : this.plugin.prefix().append((Component)Component.text((String)"Todavía no has desbloqueado este efecto.", (TextColor)NamedTextColor.RED));
                     p.sendMessage(msg);
                     return true;
                 }
@@ -178,7 +178,7 @@ TabCompleter {
         sender.sendMessage(((TextComponent)((TextComponent)Component.text((String)"        Creado por ", (TextColor)SOFT).append((Component)Component.text((String)"Dosa", (TextColor)TextColor.color((int)0xFFFFFF), (TextDecoration[])new TextDecoration[]{TextDecoration.BOLD}))).append((Component)Component.text((String)" e ", (TextColor)SOFT))).append((Component)Component.text((String)"Iris Studio", (TextColor)TextColor.color((int)7268320), (TextDecoration[])new TextDecoration[]{TextDecoration.BOLD})).decoration(TextDecoration.ITALIC, false));
         sender.sendMessage((Component)Component.empty());
         sender.sendMessage((Component)Component.text((String)"  Efectos de kill y de muerte. Cada vez que matas", (TextColor)SOFT).decoration(TextDecoration.ITALIC, false));
-        sender.sendMessage((Component)Component.text((String)"  o te matan se dispara la animacion que tengas", (TextColor)SOFT).decoration(TextDecoration.ITALIC, false));
+        sender.sendMessage((Component)Component.text((String)"  o te matan se dispara la animación que tengas", (TextColor)SOFT).decoration(TextDecoration.ITALIC, false));
         sender.sendMessage((Component)Component.text((String)"  equipada, con su propio enfriamiento.", (TextColor)SOFT).decoration(TextDecoration.ITALIC, false));
         sender.sendMessage((Component)Component.empty());
         sender.sendMessage(((TextComponent)Component.text((String)"  Elige la tuya en ", (TextColor)SOFT).append((Component)Component.text((String)"/rip gui", (TextColor)TextColor.color((int)0xFFFFFF), (TextDecoration[])new TextDecoration[]{TextDecoration.BOLD}))).decoration(TextDecoration.ITALIC, false));

@@ -56,8 +56,8 @@ public final class ComandoCoinflip implements CommandExecutor, TabCompleter {
         if (modulo.mesa().retosActivos()) {
             q.sendMessage("/cf retar <jugador> <cantidad>");
         }
-        q.sendMessage("/cf aceptar <numero|jugador>");
-        q.sendMessage("/cf cancelar [numero|todas]");
+        q.sendMessage("/cf aceptar <número|jugador>");
+        q.sendMessage("/cf cancelar [número|todas]");
         q.sendMessage("/cf lista");
         if (q.hasPermission(ADMIN)) {
             q.sendMessage("/cf recargar");
@@ -96,7 +96,7 @@ public final class ComandoCoinflip implements CommandExecutor, TabCompleter {
         if (!(quien instanceof Player j)) { quien.sendMessage("Solo desde el juego."); return true; }
         if (!puede(j)) return true;
         if (!modulo.mesa().retosActivos()) {
-            modulo.textos().manda(j, "retos-apagados", "&#FF5C5CLos retos estan desactivados.");
+            modulo.textos().manda(j, "retos-apagados", "&#FF5C5CLos retos están desactivados.");
             return true;
         }
         if (args.length < 2) { quien.sendMessage("/cf retar <jugador> <cantidad>"); return true; }
@@ -128,7 +128,7 @@ public final class ComandoCoinflip implements CommandExecutor, TabCompleter {
     private boolean aceptar(CommandSender quien, String[] args) {
         if (!(quien instanceof Player j)) { quien.sendMessage("Solo desde el juego."); return true; }
         if (!puede(j)) return true;
-        if (args.length < 2) { quien.sendMessage("/cf aceptar <numero|jugador>"); return true; }
+        if (args.length < 2) { quien.sendMessage("/cf aceptar <número|jugador>"); return true; }
 
         Apuesta a = buscar(args[1], j);
         if (a == null) {
@@ -171,7 +171,7 @@ public final class ComandoCoinflip implements CommandExecutor, TabCompleter {
             if (modulo.mesa().cancelar(j, a).ok()) { vuelto += a.cantidad(); n++; }
         }
         modulo.textos().manda(j, "retiradas",
-                "&fRetiraste &x&D&7&F&3&F&F%cuantas% &fapuestas y se te devolvieron &#4FFF55%total%",
+                "&fRetiraste &x&D&7&F&3&F&F%cuántas% &fapuestas y se te devolvieron &#4FFF55%total%",
                 "%cuantas%", String.valueOf(n), "%total%", Estilo.dinero(vuelto));
         return true;
     }

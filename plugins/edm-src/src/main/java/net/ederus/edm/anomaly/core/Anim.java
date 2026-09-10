@@ -57,7 +57,7 @@ public final class Anim {
                 } catch (Throwable t) {
                     errors++;
                     plugin.getLogger().log(Level.WARNING,
-                            "Animacion con error en el tick " + tick + " (" + errors + "/" + MAX_ERRORS + ")", t);
+                            "Animación con error en el tick " + tick + " (" + errors + "/" + MAX_ERRORS + ")", t);
                     if (errors >= MAX_ERRORS) {
                         finish();
                         return;
@@ -71,7 +71,7 @@ public final class Anim {
                 try {
                     if (onEnd != null) onEnd.run();
                 } catch (Throwable t) {
-                    plugin.getLogger().log(Level.WARNING, "Fallo al cerrar una animacion", t);
+                    plugin.getLogger().log(Level.WARNING, "Fallo al cerrar una animación", t);
                 } finally {
                     cancel();
                 }

@@ -232,7 +232,7 @@ public final class GodItemsPlugin extends Module {
     /** Crea el item de un GodItem nativo, ya marcado. Null si es enlazado. */
     public ItemStack fabricar(GodItem def, int cantidad) {
         if (def.enlazado()) {
-            avisoUnaVez("fab." + def.id(), def.id() + " es ENLAZADO: lo fabrica MMOItems."
+            avisoUnaVez("fab." + def.id(), def.id() + " es ENLAZADO: lo fábrica MMOItems."
                     + " Dalo con su comando (/mi give " + def.enlaceTipo() + " " + def.enlaceId()
                     + "), no con /gi give.");
             return null;

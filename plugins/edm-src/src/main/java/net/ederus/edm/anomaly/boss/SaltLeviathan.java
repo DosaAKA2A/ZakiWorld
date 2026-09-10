@@ -7,11 +7,11 @@ import net.kyori.adventure.text.format.TextDecoration;
 import net.kyori.adventure.title.Title;
 import net.ederus.edm.anomaly.AnomalyPlugin;
 import net.ederus.edm.anomaly.core.ActiveAnomaly;
-import net.ederus.edm.anomaly.core.Compat;
-import net.ederus.edm.anomaly.core.Fx;
+import net.ederus.edm.comun.Compat;
+import net.ederus.edm.comun.Fx;
 import net.ederus.edm.anomaly.core.Glow;
 import net.ederus.edm.anomaly.core.Stop;
-import net.ederus.edm.anomaly.core.Tags;
+import net.ederus.edm.comun.Tags;
 import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.entity.ElderGuardian;
@@ -120,7 +120,7 @@ public final class SaltLeviathan extends BossFight {
             soundAt(spot, "entity.elder_guardian.curse", 1.8f, 0.7f);
             for (Player p : Fx.viewersNear(spot, 90)) {
                 p.showTitle(Title.title(
-                        Component.text("✦ ANOMALIA ✦", ACCENT, TextDecoration.BOLD),
+                        Component.text("✦ ANOMALÍA ✦", ACCENT, TextDecoration.BOLD),
                         Component.text("El abismo te deja respirar. Por ahora.", NamedTextColor.GRAY),
                         Title.Times.times(Duration.ofMillis(400), Duration.ofMillis(2000), Duration.ofMillis(700))));
             }
@@ -220,7 +220,7 @@ public final class SaltLeviathan extends BossFight {
         Location spot = boss.getLocation();
         soundAt(spot, "entity.elder_guardian.curse", 1.8f, 0.4f);
         titleNear(Component.text("DESPIERTA", NamedTextColor.RED, TextDecoration.BOLD),
-                Component.text("Su coraza se abre: pega mas y aguanta menos", NamedTextColor.GRAY));
+                Component.text("Su coraza se abre: pega más y aguanta menos", NamedTextColor.GRAY));
 
         animate(90, tick -> {
             if (!alive()) return;
@@ -503,7 +503,7 @@ public final class SaltLeviathan extends BossFight {
         if (!alive()) return;
         double floorY = Fx.ground(boss.getLocation(), 8).getY();
         soundAt(loc(), "block.conduit.deactivate", 1.4f, 0.5f);
-        broadcastNear(Component.text("La presion sube. No huyan hacia arriba.", ACCENT));
+        broadcastNear(Component.text("La presión sube. No huyan hacia arriba.", ACCENT));
 
         animate(140, tick -> {
             if (tick % 20 != 0) return;
@@ -513,7 +513,7 @@ public final class SaltLeviathan extends BossFight {
                 hit(p, Math.min(14, 4 + height * 0.6) * damageBonus);
                 Compat.apply(p, "slowness", 40, 1);
                 Compat.spawn(world(), Compat.BUBBLE, p.getLocation().add(0, 1, 0), 20, 0.4, 0.6, 0.4, 0.06);
-                p.sendActionBar(Component.text("La presion te aplasta aqui arriba.",
+                p.sendActionBar(Component.text("La presión te aplasta aquí arriba.",
                         NamedTextColor.RED, TextDecoration.BOLD));
                 soundAt(p.getLocation(), "entity.player.hurt_drown", 1.0f, 0.8f);
             }

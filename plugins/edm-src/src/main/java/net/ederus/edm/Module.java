@@ -161,6 +161,37 @@ public abstract class Module implements Plugin {
         }
     }
 
+    /**
+     * Pone al dia un fichero de datos del modulo sin que nadie borre nada a mano.
+     *
+     * saveResource(false) NO sobrescribe, asi que un fichero de una version
+     * anterior se quedaria para siempre y los arreglos del jar no llegarian nunca.
+     * Se detecta por su clave 'version', se aparta el anterior con su fecha y se
+     * escribe el nuevo. Lo usan la tienda, el coinflip y las bromas; vive aqui
+     * porque tres copias del mismo metodo acaban divergiendo en el detalle tonto.
+     */
+    protected final void migrar(String nombre, int esperada) {
+        File destino = new File(this.dataFolder, nombre);
+        if (!destino.exists()) {
+            saveResource(nombre, false);
+            return;
+        }
+
+        int suya = YamlConfiguration.loadConfiguration(destino).getInt("version", 1);
+        if (suya >= esperada) return;
+
+        String base = nombre.replace(".yml", "");
+        File aparte = new File(this.dataFolder,
+                base + "-v" + suya + "-" + java.time.LocalDate.now() + ".yml");
+        if (destino.renameTo(aparte)) {
+            saveResource(nombre, false);
+            getLogger().warning(nombre + " era de la versión " + suya + " y se actualizo. "
+                    + "El anterior quedo en " + aparte.getName() + " por si tenia cambios propios.");
+        } else {
+            getLogger().severe("No se pudo apartar el " + nombre + " anterior; puede quedar desactualizado.");
+        }
+    }
+
     /* --- Todo lo demas es el nucleo --- */
 
     @Override

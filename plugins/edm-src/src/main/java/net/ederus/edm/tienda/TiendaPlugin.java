@@ -182,34 +182,6 @@ public final class TiendaPlugin extends Module {
     private static final int MENSAJES_VERSION = 4;
     private static final int NOMBRES_VERSION = 1;
 
-    /**
-     * Pone al dia secciones.yml sin que nadie tenga que borrar nada a mano.
-     *
-     * saveResource(false) NO sobrescribe, asi que un fichero de una version
-     * anterior se quedaba para siempre y los arreglos del menu no llegaban
-     * nunca. Aqui se detecta por su 'version', se aparta el viejo con su fecha
-     * y se escribe el nuevo.
-     */
-    private void migrar(String nombre, int esperada) {
-        File destino = new File(getDataFolder(), nombre);
-        if (!destino.exists()) { saveResource(nombre, false); return; }
-
-        int suya = org.bukkit.configuration.file.YamlConfiguration
-                .loadConfiguration(destino).getInt("version", 1);
-        if (suya >= esperada) return;
-
-        String base = nombre.replace(".yml", "");
-        File aparte = new File(getDataFolder(),
-                base + "-v" + suya + "-" + java.time.LocalDate.now() + ".yml");
-        if (destino.renameTo(aparte)) {
-            saveResource(nombre, false);
-            getLogger().warning(nombre + " era de la version " + suya + " y se puso al dia. "
-                    + "El tuyo quedo en " + aparte.getName() + " por si le habias cambiado algo.");
-        } else {
-            getLogger().severe("No pude apartar el " + nombre + " viejo; puede quedar desactualizado.");
-        }
-    }
-
     /** Devuelve false y explica el motivo si el catalogo no esta sano. */
     public boolean cargarCatalogo() {
         File fichero = new File(getDataFolder(), "precios.yml");

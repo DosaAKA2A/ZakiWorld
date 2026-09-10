@@ -231,7 +231,7 @@ public final class Rotacion {
             yml.save(fichero);
             sucio = false;
         } catch (IOException e) {
-            throw new IllegalStateException("no pude guardar la rotacion: " + e.getMessage(), e);
+            throw new IllegalStateException("no pude guardar la rotación: " + e.getMessage(), e);
         }
     }
 }

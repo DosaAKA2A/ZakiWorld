@@ -7,12 +7,12 @@ import net.kyori.adventure.text.format.TextDecoration;
 import net.kyori.adventure.title.Title;
 import net.ederus.edm.anomaly.AnomalyPlugin;
 import net.ederus.edm.anomaly.core.ActiveAnomaly;
-import net.ederus.edm.anomaly.core.Compat;
+import net.ederus.edm.comun.Compat;
 import net.ederus.edm.anomaly.core.Disguises;
-import net.ederus.edm.anomaly.core.Fx;
+import net.ederus.edm.comun.Fx;
 import net.ederus.edm.anomaly.core.Glow;
 import net.ederus.edm.anomaly.core.Stop;
-import net.ederus.edm.anomaly.core.Tags;
+import net.ederus.edm.comun.Tags;
 import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.entity.Ageable;
@@ -108,7 +108,7 @@ public final class Mimic extends BossFight {
         spawnFlock();
 
         // Aparicion deliberadamente discreta: un destello y ya. Nada de anillos ni de
-        // pilares que griten "el jefe esta aqui"; el anuncio da las coordenadas y el
+        // pilares que griten "el jefe esta aquí"; el anuncio da las coordenadas y el
         // resto es problema de quien venga.
         Location spot = arena.clone();
         busyFor(40);
@@ -116,7 +116,7 @@ public final class Mimic extends BossFight {
         soundAt(spot, "entity.illusioner.mirror_move", 1.4f, 0.7f);
         for (Player p : Fx.viewersNear(spot, 90)) {
             p.showTitle(Title.title(
-                    Component.text("✦ ANOMALIA ✦", ACCENT, TextDecoration.BOLD),
+                    Component.text("✦ ANOMALÍA ✦", ACCENT, TextDecoration.BOLD),
                     Component.text("Mimic  ·  uno de ellos no es lo que parece", NamedTextColor.GRAY),
                     Title.Times.times(Duration.ofMillis(400), Duration.ofMillis(1800), Duration.ofMillis(600))));
         }
@@ -462,7 +462,7 @@ public final class Mimic extends BossFight {
      * El reclamo de los cinco cofres, IGUAL en todos para no dar pistas.
      *
      * Son las hebras doradas de la boveda de las mazmorras de prueba: es exactamente
-     * la lectura que se busca —"aqui dentro hay algo bueno"— y ademas no se parece a
+     * la lectura que se busca —"aquí dentro hay algo bueno"— y ademas no se parece a
      * ninguna otra cosa que suelte el plugin.
      */
     private void shimmerChests() {
@@ -755,7 +755,7 @@ public final class Mimic extends BossFight {
                     new ItemStack(Material.CHEST));
             Compat.spawn(world(), Compat.EXPLOSION, l, 2, 0.4, 0.4, 0.4, 0);
             soundAt(l, "block.chest.open", 1.8f, 0.3f);
-            broadcastNear(Component.text("Debajo del ultimo disfraz no habia nada.", ACCENT));
+            broadcastNear(Component.text("Debajo del último disfraz no habia nada.", ACCENT));
         });
     }
 

@@ -302,8 +302,8 @@ public final class MenuGi implements Listener {
                 List.of("&7Lo fabricamos nosotros: cetros, llaves,",
                         "&7consumibles... cosas sueltas.",
                         "&8Un nativo NO puede ir en un set de MMOItems.")), "crear");
-        poner(v, R_C, adorno(new ItemStack(Material.FIREWORK_STAR), AZUL + "Catalogo de particulas",
-                List.of("&7Las " + Particulas.cuantas() + " de esta version,",
+        poner(v, R_C, adorno(new ItemStack(Material.FIREWORK_STAR), AZUL + "Catálogo de particulas",
+                List.of("&7Las " + Particulas.cuantas() + " de esta versión,",
                         "&7por grupos y con lo que pide cada una.")), "particulas");
         poner(v, R_D, adorno(new ItemStack(Material.CLOCK), AZUL + "Recargar",
                 List.of("&7Vuelve a leer los YAML.")), "recargar");
@@ -383,16 +383,16 @@ public final class MenuGi implements Listener {
         poner(v, 10, adorno(new ItemStack(def.enlazado() ? Material.ENCHANTED_BOOK : Material.ITEM_FRAME),
                 CLARO + "Aspecto y stats",
                 List.of(def.enlazado()
-                            ? "&8los lleva MMOItems; se editan desde aqui igual"
+                            ? "&8los lleva MMOItems; se editan desde aquí igual"
                             : "&8material, nombre, lore, brillo...",
                         "", AZUL + Estilo.FLECHA + " Abrir")), "aspecto");
         poner(v, 11, adorno(new ItemStack(Material.EXPERIENCE_BOTTLE), CLARO + "Usos",
-                List.of("&7" + (def.usos() < 0 ? "sin limite" : String.valueOf(def.usos())),
+                List.of("&7" + (def.usos() < 0 ? "sin límite" : String.valueOf(def.usos())),
                         "&8" + (def.enlazado() ? "se cuentan en el jugador, no en el item"
                                                : "se cuentan en el propio item"),
                         "", AZUL + Estilo.FLECHA + " Cambiar")), "gi:usos");
-        poner(v, 12, adorno(new ItemStack(Material.CLOCK), CLARO + "Usos por dia",
-                List.of("&7" + (def.usosPorDia() < 0 ? "sin limite" : String.valueOf(def.usosPorDia())),
+        poner(v, 12, adorno(new ItemStack(Material.CLOCK), CLARO + "Usos por día",
+                List.of("&7" + (def.usosPorDia() < 0 ? "sin límite" : String.valueOf(def.usosPorDia())),
                         "", AZUL + Estilo.FLECHA + " Cambiar")), "gi:usos-por-dia");
         poner(v, 13, interruptor("Exclusivo", def.exclusivo(),
                 "Calla la habilidad del set en ese mismo gesto."), "gi:exclusivo");
@@ -400,8 +400,8 @@ public final class MenuGi implements Listener {
                 "Solo responde a quien se lo dieron."), "gi:solo-dueno");
         poner(v, 15, interruptor("Conservar al morir", def.conservarAlMorir(),
                 "Se le devuelve al reaparecer."), "gi:conservar-al-morir");
-        poner(v, 16, adorno(new ItemStack(Material.WRITABLE_BOOK), CLARO + "Lineas de lore propias",
-                List.of("&7" + def.loreExtra().size() + " lineas",
+        poner(v, 16, adorno(new ItemStack(Material.WRITABLE_BOOK), CLARO + "Líneas de lore propias",
+                List.of("&7" + def.loreExtra().size() + " líneas",
                         "&8se añaden al construir el item",
                         "", AZUL + Estilo.FLECHA + " Cambiar")), "gi:lore-extra");
 
@@ -475,7 +475,7 @@ public final class MenuGi implements Listener {
                             : recortar(ap.nombre(), 40)),
                             "", AZUL + Estilo.FLECHA + " Cambiar")), "item:nombre");
             poner(v, 12, adorno(new ItemStack(Material.WRITABLE_BOOK), CLARO + "Lore",
-                    List.of("&7" + (ap == null ? 0 : ap.lore().size()) + " lineas",
+                    List.of("&7" + (ap == null ? 0 : ap.lore().size()) + " líneas",
                             "", AZUL + Estilo.FLECHA + " Cambiar")), "item:lore");
             poner(v, 13, interruptor("Brillo", ap != null && ap.brillo(),
                     "Encantado sin encantamientos."), "item:brillo");
@@ -521,7 +521,7 @@ public final class MenuGi implements Listener {
         poner(v, 10, adorno(new ItemStack(Material.CLOCK), CLARO + "Enfriamiento",
                 List.of("&7" + (b.cooldown() <= 0 ? "ninguno" : Numeros.reloj(b.cooldown())),
                         "", AZUL + Estilo.FLECHA + " Cambiar")), "bloque:cooldown");
-        poner(v, 11, interruptor("Cuenta atras visible", b.cuentaAtras(),
+        poner(v, 11, interruptor("Cuenta atrás visible", b.cuentaAtras(),
                 "En la actionbar mientras enfria."), "bloque:cuenta-atras");
         poner(v, 12, adorno(new ItemStack(Material.PAPER), CLARO + "Mensaje de enfriamiento",
                 List.of("&7" + (b.mensajeCooldown() == null ? "el general del modulo"
@@ -576,7 +576,7 @@ public final class MenuGi implements Listener {
         cabecera(v, acciones ? Material.PAPER : Material.COMPARATOR,
                 (acciones ? VERDE : AMARILLO) + (acciones ? "Acciones" : "Condiciones"),
                 List.of("&8" + s.act.name() + " de " + def.id(),
-                        "&7" + lineas.size() + " lineas",
+                        "&7" + lineas.size() + " líneas",
                         acciones ? "&8se ejecutan de arriba abajo"
                                  : "&8se tienen que cumplir todas"));
 
@@ -588,8 +588,8 @@ public final class MenuGi implements Listener {
                 poner(v, RANURAS[i], adorno(new ItemStack(Material.REPEATER),
                         "&f" + (idx + 1) + ". bloque anidado",
                         List.of("&8si / repetir",
-                                "&8se edita en el YAML, no aqui:",
-                                "&8tocarlo por indice se lo carga entero")), null);
+                                "&8se edita en el YAML, no aquí:",
+                                "&8tocarlo por índice se lo carga entero")), null);
                 continue;
             }
             String nombre = Linea.nombreDe(texto);
@@ -598,11 +598,11 @@ public final class MenuGi implements Listener {
             if (acciones) {
                 Catalogo.Accion ca = Catalogo.accion(nombre);
                 icono = ca == null ? Material.PAPER : ca.icono();
-                desc = ca == null ? "&csin ficha en el catalogo" : "&8" + ca.descripcion();
+                desc = ca == null ? "&csin ficha en el catálogo" : "&8" + ca.descripcion();
             } else {
                 Catalogo.Cond cc = Catalogo.condicion(nombre);
                 icono = cc == null ? Material.COMPARATOR : cc.icono();
-                desc = cc == null ? "&csin ficha en el catalogo" : "&8" + cc.descripcion();
+                desc = cc == null ? "&csin ficha en el catálogo" : "&8" + cc.descripcion();
             }
             poner(v, RANURAS[i], adorno(new ItemStack(icono),
                     "&f" + (idx + 1) + ". " + (acciones ? VERDE : AMARILLO) + nombre,
@@ -612,12 +612,12 @@ public final class MenuGi implements Listener {
         }
         if (lineas.isEmpty()) {
             poner(v, 22, adorno(new ItemStack(Material.GRAY_DYE), "&7Vacio",
-                    List.of("&7Añade la primera con el boton verde.")), null);
+                    List.of("&7Añade la primera con el botón verde.")), null);
         }
 
         poner(v, R_A, adorno(new ItemStack(Material.LIME_DYE),
                 VERDE + "Añadir " + (acciones ? "accion" : "condicion"),
-                List.of("&7Se elige de un catalogo por grupos,",
+                List.of("&7Se elige de un catálogo por grupos,",
                         "&7no hay que escribir nada de memoria.")), "nueva");
         poner(v, R_VOLVER, volver(), "activador");
     }
@@ -643,23 +643,23 @@ public final class MenuGi implements Listener {
                 (conFicha ? VERDE : GRIS) + "Editor por casillas",
                 conFicha ? List.of("&7Un argumento por casilla, con su ayuda.",
                                    "", AZUL + Estilo.FLECHA + " Abrir")
-                         : List.of("&cEsta linea no tiene ficha en el catalogo.",
+                         : List.of("&cEsta línea no tiene ficha en el catálogo.",
                                    "&7Editala como texto.")),
                 conFicha ? "linea-editor" : null);
         poner(v, 12, adorno(new ItemStack(Material.WRITABLE_BOOK), CLARO + "Editar como texto",
-                List.of("&7Se escribe la linea entera por el chat.")), "linea-texto");
+                List.of("&7Se escribe la línea entera por el chat.")), "linea-texto");
         poner(v, 13, adorno(new ItemStack(Material.SPECTRAL_ARROW), CLARO + "Subir",
-                List.of("&7La mueve una posicion arriba.")), "linea-subir");
+                List.of("&7La mueve una posición arriba.")), "linea-subir");
         poner(v, 14, adorno(new ItemStack(Material.ARROW), CLARO + "Bajar",
-                List.of("&7La mueve una posicion abajo.")), "linea-bajar");
+                List.of("&7La mueve una posición abajo.")), "linea-bajar");
         poner(v, 15, adorno(new ItemStack(Material.BOOK), CLARO + "Duplicar",
                 List.of("&7Mete una copia al final de la lista.")), "linea-duplicar");
         if (acciones) {
-            poner(v, 16, adorno(new ItemStack(Material.BLAZE_POWDER), VERDE + "Probar esta linea",
+            poner(v, 16, adorno(new ItemStack(Material.BLAZE_POWDER), VERDE + "Probar esta línea",
                     List.of("&7La ejecuta sobre ti ahora mismo.",
                             "&8sin condiciones ni enfriamiento")), "linea-probar");
         }
-        poner(v, 31, adorno(new ItemStack(Material.BARRIER), "&cBorrar la linea",
+        poner(v, 31, adorno(new ItemStack(Material.BARRIER), "&cBorrar la línea",
                 List.of("&7La quita de la lista.")), "linea-borrar");
         poner(v, R_VOLVER, volver(), "lista");
     }
@@ -710,8 +710,8 @@ public final class MenuGi implements Listener {
         Sesion s = sesion(j);
         boolean acciones = s.lista.equals("acciones");
         cabecera(v, acciones ? Material.PAPER : Material.COMPARATOR,
-                (acciones ? VERDE : AMARILLO) + (acciones ? "Catalogo de acciones"
-                                                          : "Catalogo de condiciones"),
+                (acciones ? VERDE : AMARILLO) + (acciones ? "Catálogo de acciones"
+                                                          : "Catálogo de condiciones"),
                 List.of("&7" + (acciones ? Catalogo.cuantasAcciones() : Catalogo.cuantasCondiciones())
                         + " en total, por grupos"));
         int i = 0;
@@ -814,7 +814,7 @@ public final class MenuGi implements Listener {
             if (a.llevaSelector()) {
                 out.add(new Campo("selector", Material.ENDER_EYE, "Objetivo",
                         l.selector() == null ? "sin poner" : l.selector(),
-                        "A quien apunta la accion.", "gira a la siguiente opcion", true));
+                        "A quien apunta la accion.", "gira a la siguiente opción", true));
             }
             if (a.llevaTexto()) {
                 out.add(new Campo("texto", Material.WRITABLE_BOOK, a.etiquetaTexto(),
@@ -826,7 +826,7 @@ public final class MenuGi implements Listener {
             Catalogo.Cond c = s.cond;
             out.add(new Campo("negada", l.negada() ? Material.REDSTONE_TORCH : Material.LEVER,
                     "Invertida", l.negada() ? "si: se cumple cuando NO pasa" : "no",
-                    "Un '!' delante de la condicion.", "gira", l.negada()));
+                    "Un '!' delante de la condición.", "gira", l.negada()));
             if (c.llevaSelector()) {
                 out.add(new Campo("selector", Material.ENDER_EYE, "Sobre quien",
                         l.selector() == null ? "el portador" : l.selector(),
@@ -869,8 +869,8 @@ public final class MenuGi implements Listener {
         return switch (c) {
             case BOOL -> "gira";
             case OPCIONES -> "gira entre las opciones";
-            case PARTICULA -> "abre el catalogo de particulas";
-            case SONIDO -> "abre el catalogo de sonidos";
+            case PARTICULA -> "abre el catálogo de particulas";
+            case SONIDO -> "abre el catálogo de sonidos";
             case POCION -> "abre la lista de efectos";
             case CRIATURA -> "abre la lista de criaturas";
             case PROYECTIL -> "abre la lista de proyectiles";
@@ -894,11 +894,11 @@ public final class MenuGi implements Listener {
         List<String> loreCab = new ArrayList<>();
         loreCab.add("&8" + desc);
         loreCab.add("");
-        loreCab.add("&7Asi queda la linea:");
+        loreCab.add("&7Asi queda la línea:");
         for (String trozo : partir(linea, 46)) loreCab.add("&f" + trozo);
         loreCab.add("");
         loreCab.add(s.indice < 0 ? "&8se añadira al final"
-                                 : "&8reemplaza la linea " + (s.indice + 1));
+                                 : "&8reemplaza la línea " + (s.indice + 1));
         cabecera(v, acciones ? s.accion.icono() : s.cond.icono(),
                 (acciones ? VERDE : AMARILLO) + s.borrador.nombre(), loreCab);
 
@@ -917,7 +917,7 @@ public final class MenuGi implements Listener {
         }
 
         poner(v, R_A, adorno(new ItemStack(Material.LIME_DYE), VERDE + "Guardar",
-                List.of("&7Escribe la linea en el YAML y recarga.")), "ed-guardar");
+                List.of("&7Escribe la línea en el YAML y recarga.")), "ed-guardar");
         if (acciones) {
             poner(v, R_B, adorno(new ItemStack(Material.BLAZE_POWDER), AZUL + "Probar",
                     List.of("&7La ejecuta sobre ti sin guardarla.")), "ed-probar");
@@ -1013,7 +1013,7 @@ public final class MenuGi implements Listener {
         paginar(v, l.size());
         cabecera(v, Material.CHEST, CLARO + "Elegir " + v.b,
                 List.of("&7" + l.size() + " opciones",
-                        "&8o escribelo tu con el boton de abajo"));
+                        "&8o escribelo tu con el botón de abajo"));
 
         int desde = v.pagina * POR_PAGINA;
         for (int i = 0; i < POR_PAGINA && desde + i < l.size(); i++) {
@@ -1035,7 +1035,7 @@ public final class MenuGi implements Listener {
 
     private void pintarPartGrupos(Player j, Vista v) {
         cabecera(v, Material.FIREWORK_STAR, AZUL + "Particulas",
-                List.of("&7" + Particulas.cuantas() + " en esta version del servidor",
+                List.of("&7" + Particulas.cuantas() + " en esta versión del servidor",
                         "&8la lista sale del propio servidor,",
                         "&8asi que nunca se queda vieja"));
         int i = 0;
@@ -1063,7 +1063,7 @@ public final class MenuGi implements Listener {
                             p.pideDato().isEmpty() ? "&7no pide datos" : "&7pide: &f" + p.pideDato(),
                             "",
                             eligiendo ? VERDE + Estilo.FLECHA + " Usar esta"
-                                      : AZUL + Estilo.FLECHA + " Verla aqui mismo")),
+                                      : AZUL + Estilo.FLECHA + " Verla aquí mismo")),
                     "particula:" + p.yaml());
         }
         poner(v, R_VOLVER, volver(), "part-grupos");
@@ -1074,7 +1074,7 @@ public final class MenuGi implements Listener {
     private void pintarSonFamilias(Vista v) {
         cabecera(v, Material.JUKEBOX, AZUL + "Sonidos",
                 List.of("&7" + Sonidos.cuantos() + " en el servidor",
-                        "&8un clic los suena; el boton verde los guarda"));
+                        "&8un clic los suena; el botón verde los guarda"));
         List<String> fam = Sonidos.familias();
         paginar(v, fam.size());
         int desde = v.pagina * POR_PAGINA;
@@ -1159,8 +1159,8 @@ public final class MenuGi implements Listener {
         try {
             atender(j, v, accion);
         } catch (Throwable t) {
-            j.sendMessage(Estilo.legado("&cAlgo fallo en el menu: " + t));
-            this.modulo.getLogger().warning("[GodItems] menu: " + accion + " -> " + t);
+            j.sendMessage(Estilo.legado("&cAlgo fallo en el menú: " + t));
+            this.modulo.getLogger().warning("[GodItems] menú: " + accion + " -> " + t);
             if (this.modulo.detalle()) t.printStackTrace();
         }
     }
@@ -1370,7 +1370,7 @@ public final class MenuGi implements Listener {
                 }
                 abrir(j, new Vista(Pantalla.LISTA, 0, null, null));
             }
-            case "linea-borrar" -> confirmar(j, "borrar esa linea",
+            case "linea-borrar" -> confirmar(j, "borrar esa línea",
                     () -> {
                         this.modulo.ficha().lineaBorrar(def, s.act, s.lista, s.indice);
                         abrir(j, new Vista(Pantalla.LISTA, 0, null, null));
@@ -1454,8 +1454,8 @@ public final class MenuGi implements Listener {
         Runnable volver = () -> abrir(j, new Vista(Pantalla.ASPECTO, 0, def.id(), null));
         preguntar(j, CLARO + campo.etiqueta() + " &8de " + def.enlace(), actual,
                 switch (campo.clase()) {
-                    case LISTA -> "&8Separa las lineas con &f|&8. Acepta codigos &&.";
-                    case NUMERO -> "&8Escribe un numero.";
+                    case LISTA -> "&8Separa las líneas con &f|&8. Acepta codigos &&.";
+                    case NUMERO -> "&8Escribe un número.";
                     default -> "&8Acepta codigos &&.";
                 },
                 texto -> {
@@ -1486,8 +1486,8 @@ public final class MenuGi implements Listener {
         };
         preguntar(j, CLARO + clave, actual,
                 clave.equals("lore-extra")
-                        ? "&8Separa las lineas con &f|&8. Vacio: escribe &fninguna&8."
-                        : "&8Un numero. &f-1 &8es sin limite.",
+                        ? "&8Separa las líneas con &f|&8. Vacio: escribe &fninguna&8."
+                        : "&8Un número. &f-1 &8es sin límite.",
                 texto -> {
                     if (clave.equals("lore-extra")) {
                         List<String> lineas = new ArrayList<>();
@@ -1558,8 +1558,8 @@ public final class MenuGi implements Listener {
             default -> "";
         };
         String pista = switch (clave) {
-            case "lore" -> "&8Separa las lineas con &f|&8. &fninguna&8 lo vacia.";
-            case "modelo", "cantidad" -> "&8Un numero. &fninguna&8 lo quita.";
+            case "lore" -> "&8Separa las líneas con &f|&8. &fninguna&8 lo vacia.";
+            case "modelo", "cantidad" -> "&8Un número. &fninguna&8 lo quita.";
             case "color" -> "&8Formato &f#RRGGBB&8. &fninguna&8 lo quita.";
             case "cabeza" -> "&8La textura base64 o el nombre. &fninguna&8 lo quita.";
             case "encantos" -> "&8Pares &fnombre:nivel&8 separados por coma. &fninguna&8 los quita.";
@@ -1626,9 +1626,9 @@ public final class MenuGi implements Listener {
             default -> "";
         };
         String pista = switch (clave) {
-            case "piezas" -> "&8Un numero. &f0 &8= las que diga MMOItems.";
+            case "piezas" -> "&8Un número. &f0 &8= las que diga MMOItems.";
             case "probabilidad" -> "&8De 0 a 100.";
-            case "gasta-usos" -> "&8Un numero. &f0 &8= no gasta.";
+            case "gasta-usos" -> "&8Un número. &f0 &8= no gasta.";
             case "mensaje-cooldown" -> "&8Acepta &&. &f%tiempo%&8 se sustituye. "
                     + "&fninguna&8 usa el general.";
             default -> "&8Tiempo: &f30s&8, &f2m&8, &f40t&8.";
@@ -1675,7 +1675,7 @@ public final class MenuGi implements Listener {
         List<?> lineas = this.modulo.ficha().lineas(def, s.act, s.lista);
         String actual = s.indice >= 0 && s.indice < lineas.size()
                 ? String.valueOf(lineas.get(s.indice)) : "";
-        preguntar(j, AZUL + "Editar la linea entera", actual, "&8Escribela tal cual va al YAML.",
+        preguntar(j, AZUL + "Editar la línea entera", actual, "&8Escribela tal cual va al YAML.",
                 texto -> {
                     this.modulo.ficha().lineaPonerOAnadir(def, s.act, s.lista, s.indice, texto);
                     abrir(j, new Vista(Pantalla.LISTA, 0, null, null));
@@ -1782,7 +1782,7 @@ public final class MenuGi implements Listener {
     }
 
     private void pedirValorSuelto(Player j) {
-        preguntar(j, CLARO + "Escribe el valor", null, "&8Tal cual va a la linea.",
+        preguntar(j, CLARO + "Escribe el valor", null, "&8Tal cual va a la línea.",
                 texto -> aplicarElegido(j, texto),
                 () -> abrir(j, new Vista(Pantalla.EDITOR, 0, null, null)));
     }
@@ -1884,7 +1884,7 @@ public final class MenuGi implements Listener {
                 null, EquipmentSlot.HAND, j, j.getLocation());
         j.sendMessage(Estilo.legado(fue
                 ? "&aDisparado &f" + s.act.name() + "&a."
-                : "&eNo se disparo: alguna condicion no se cumple, o no tiene acciones."));
+                : "&eNo se disparo: alguna condición no se cumple, o no tiene acciones."));
     }
 
     private void previsualizarParticula(Player j, String nombre) {
@@ -1897,9 +1897,9 @@ public final class MenuGi implements Listener {
                 .add(j.getEyeLocation().getDirection().multiply(2.5));
         Object dato = Particulas.datos(p, a, donde, j);
         if (dato == null) {
-            net.ederus.edm.anomaly.core.Compat.spawn(j.getWorld(), p, donde, 30, 0.4, 0.4, 0.4, 0.02);
+            net.ederus.edm.comun.Compat.spawn(j.getWorld(), p, donde, 30, 0.4, 0.4, 0.4, 0.02);
         } else {
-            net.ederus.edm.anomaly.core.Compat.spawn(j.getWorld(), p, donde, 30, 0.4, 0.4, 0.4, 0.02, dato);
+            net.ederus.edm.comun.Compat.spawn(j.getWorld(), p, donde, 30, 0.4, 0.4, 0.4, 0.02, dato);
         }
         j.sendMessage(Estilo.legado("&7Pintadas 30 de &f" + (info == null ? nombre : info.nombre())
                 + " &7delante de ti. &8" + p.name()
@@ -1912,7 +1912,7 @@ public final class MenuGi implements Listener {
         Sesion s = sesion(j);
         boolean acciones = s.lista.equals("acciones");
         preguntar(j, AZUL + "Buscar " + (acciones ? "accion" : "condicion"), null,
-                "&8Un trozo del nombre o de la descripcion.",
+                "&8Un trozo del nombre o de la descripción.",
                 texto -> {
                     s.consulta = texto;
                     s.buscandoAcciones = acciones;
@@ -1942,7 +1942,7 @@ public final class MenuGi implements Listener {
                     } else {
                         j.sendMessage(Estilo.legado("&7" + l.size() + " sonidos con &f" + texto + "&7:"));
                         for (String c : l) j.sendMessage(Estilo.legado("&8 " + Estilo.FLECHA + " &f" + c));
-                        j.sendMessage(Estilo.legado("&8Copialo con el boton de escribirlo por chat."));
+                        j.sendMessage(Estilo.legado("&8Copialo con el botón de escribirlo por chat."));
                     }
                     abrir(j, new Vista(Pantalla.SON_FAMILIAS, 0, null, null));
                 },
@@ -1972,7 +1972,7 @@ public final class MenuGi implements Listener {
         }
         j.sendMessage(Estilo.legado("&7Escribelo en el chat, o &fcancelar&7 para dejarlo."));
         if (Plataforma.esBedrock(j)) {
-            j.sendMessage(Estilo.legado("&8Desde Bedrock: abre el chat con el boton del teclado."));
+            j.sendMessage(Estilo.legado("&8Desde Bedrock: abre el chat con el botón del teclado."));
         }
         j.sendMessage(Estilo.regla());
         this.modulo.core().chat().pedir(j, alResponder, alCancelar);

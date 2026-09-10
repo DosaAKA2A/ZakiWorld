@@ -17,47 +17,47 @@ public enum MinionAbility {
 
     FLECHA_PESADA("flecha-pesada", "Flecha pesada", Material.SPECTRAL_ARROW, NamedTextColor.GOLD,
             "Cada tercera flecha que dispara pega el doble.",
-            "Sale brillando y suena distinto: se ve venir."),
+            "Se distingue por su brillo y su sonido."),
 
-    AGIL("agil", "Agil", Material.FEATHER, NamedTextColor.AQUA,
-            "Se mueve un 25% mas rapido de lo normal.",
-            "Cuesta mas dejarlo atras y flanquea antes."),
+    AGIL("agil", "Ágil", Material.FEATHER, NamedTextColor.AQUA,
+            "Se mueve un 25% más rápido de lo normal.",
+            "Cuesta más dejarlo atrás y flanquea antes."),
 
     FLECHA_HELADA("flecha-helada", "Flecha helada", Material.POWDER_SNOW_BUCKET, NamedTextColor.BLUE,
             "Sus flechas dejan lentitud 3 segundos.",
-            "No pega mas, pero te deja a tiro del siguiente."),
+            "No aumenta el daño, pero prepara el siguiente golpe."),
 
     VENENOSO("venenoso", "Venenoso", Material.SPIDER_EYE, NamedTextColor.DARK_GREEN,
             "Cada golpe suyo deja veneno 4 segundos.",
-            "Pelear con tres a la vez te obliga a curarte."),
+            "Con varios a la vez obliga a curarse."),
 
-    IGNEO("igneo", "Igneo", Material.BLAZE_POWDER, NamedTextColor.GOLD,
+    IGNEO("igneo", "Ígneo", Material.BLAZE_POWDER, NamedTextColor.GOLD,
             "Al que golpea lo deja ardiendo 4 segundos.",
-            "Castiga quedarse pegado a el."),
+            "Penaliza el cuerpo a cuerpo prolongado."),
 
     ACORAZADO("acorazado", "Acorazado", Material.NETHERITE_SCRAP, NamedTextColor.GRAY,
-            "Recibe un 35% menos de dano.",
-            "Aguanta el frente mientras los suyos rodean."),
+            "Recibe un 35% menos de daño.",
+            "Sostiene el frente mientras el resto rodea."),
 
     ESPINAS("espinas", "Espinas", Material.CACTUS, NamedTextColor.GREEN,
-            "Devuelve un 25% del dano cuerpo a cuerpo.",
-            "Cambiar golpes con el sale caro."),
+            "Devuelve un 25% del daño cuerpo a cuerpo.",
+            "Intercambiar golpes con él resulta costoso."),
 
     BERSERK("berserk", "Berserk", Material.REDSTONE, NamedTextColor.RED,
-            "Por debajo del 30% de vida pega un 50% mas.",
-            "El ultimo cuarto de la pelea es el peligroso."),
+            "Por debajo del 30% de vida inflige un 50% más.",
+            "El tramo final del combate es el más peligroso."),
 
     CURANDERO("curandero", "Curandero", Material.GLISTERING_MELON_SLICE, NamedTextColor.LIGHT_PURPLE,
-            "Cada 3 segundos cura a los esbirros de alrededor.",
-            "Hay que matarlo a el primero o la sala no baja."),
+            "Cada 3 segundos cura a los esbirros cercanos.",
+            "Conviene eliminarlo primero o la sala no baja."),
 
     ALARMA("alarma", "Alarma", Material.BELL, NamedTextColor.YELLOW,
-            "Al recibir un golpe, la tropa cercana va a por quien se lo dio.",
-            "Se acabo pelear de uno en uno."),
+            "Al recibir un golpe, las unidades cercanas cambian de objetivo.",
+            "Impide pelear de uno en uno."),
 
-    DIVISION("division", "Division", Material.SLIME_BALL, NamedTextColor.AQUA,
-            "Al morir se parte en dos crias de la mitad de nivel.",
-            "Las crias ya no se dividen: la sala no se desborda.");
+    DIVISION("division", "División", Material.SLIME_BALL, NamedTextColor.AQUA,
+            "Al morir se divide en dos crías de la mitad de nivel.",
+            "Las crías no se vuelven a dividir.");
 
     private final String id;
     private final String display;

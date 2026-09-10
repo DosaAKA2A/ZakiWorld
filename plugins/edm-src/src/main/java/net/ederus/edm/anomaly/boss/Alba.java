@@ -2,10 +2,10 @@ package net.ederus.edm.anomaly.boss;
 
 import net.ederus.edm.anomaly.AnomalyPlugin;
 import net.ederus.edm.anomaly.core.ActiveAnomaly;
-import net.ederus.edm.anomaly.core.Compat;
+import net.ederus.edm.comun.Compat;
 import net.ederus.edm.anomaly.core.Disguises;
-import net.ederus.edm.anomaly.core.Fx;
-import net.ederus.edm.anomaly.core.Tags;
+import net.ederus.edm.comun.Fx;
+import net.ederus.edm.comun.Tags;
 
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
@@ -141,7 +141,7 @@ public final class Alba extends BossFight {
 
         for (Player p : Fx.viewersNear(spot, 110)) {
             p.showTitle(Title.title(
-                    Component.text("✦ ANOMALIA DIOS ✦", ORO, TextDecoration.BOLD),
+                    Component.text("✦ ANOMALÍA DIOS ✦", ORO, TextDecoration.BOLD),
                     Component.text("Alba, la Primera Luz", PLATA),
                     Title.Times.times(Duration.ofMillis(500), Duration.ofMillis(2400), Duration.ofMillis(800))));
         }
@@ -379,7 +379,7 @@ public final class Alba extends BossFight {
                 Compat.setAttribute(boss, "movement_speed", 0.34);
             }
             case 4 -> {
-                warn(Component.text("«Se acabo la cortesia.»", ORO, TextDecoration.BOLD));
+                warn(Component.text("«Se acabó la cortesia.»", ORO, TextDecoration.BOLD));
                 remount();
                 Compat.setAttribute(boss, "attack_damage", 13);
             }
@@ -1456,7 +1456,7 @@ public final class Alba extends BossFight {
         World w = world();
         List<Player> ps = targets(36);
         if (ps.isEmpty()) return;
-        warn(Component.text("Cosecha clavada: MUEVANSE de donde estan.", ORO, TextDecoration.BOLD));
+        warn(Component.text("Cosecha clavada: MUEVANSE de donde están.", ORO, TextDecoration.BOLD));
         for (Player p : ps) {
             Location donde = p.getLocation().clone();
             ItemDisplay pl = plantada(donde, goldBlade(), 2.0f);

@@ -115,7 +115,7 @@ public final class Disguises {
                     .build();
             if (profile.dynamic()) {
                 plugin.getLogger().warning("El perfil de la skin " + hash.substring(0, 8)
-                        + " salio DINAMICO: se resolvera online y no se vera la textura pedida.");
+                        + " salio DINAMICO: se resolvera online y no se verá la textura pedida.");
             }
             return profile;
         } catch (Throwable t) {
@@ -206,7 +206,7 @@ public final class Disguises {
                     java.net.http.HttpResponse.BodyHandlers.ofString());
             if (idRes.statusCode() != 200) {
                 plugin.getLogger().warning("La cuenta " + account + " no existe o Mojang no responde ("
-                        + idRes.statusCode() + "); el cuerpo se quedara con la skin de serie.");
+                        + idRes.statusCode() + "); el cuerpo se quedará con la skin de serie.");
                 return null;
             }
             var idJson = gson.fromJson(idRes.body(), com.google.gson.JsonObject.class);
@@ -276,7 +276,7 @@ public final class Disguises {
             // la copia aparece con una skin de serie, que fue justo lo que paso.
             if (!props.isEmpty()) builder.addProperties(props);
             else plugin.getLogger().warning("El perfil de " + player.getName()
-                    + " no trae texturas; la copia saldra con la skin de serie.");
+                    + " no trae texturas; la copia saldrá con la skin de serie.");
             return builder.build();
         } catch (Throwable t) {
             plugin.getLogger().warning("No se pudo copiar el perfil de " + player.getName() + ": " + t);

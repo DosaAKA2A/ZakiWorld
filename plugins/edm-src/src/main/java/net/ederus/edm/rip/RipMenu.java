@@ -101,9 +101,9 @@ implements Listener {
         }
         inv.setItem(45, this.simple(Material.SPRUCE_DOOR, (Component)Component.text((String)"Cerrar", (TextColor)SOFT), List.of()));
         inv.setItem(46, this.randomItem(type, "random".equalsIgnoreCase(selected)));
-        inv.setItem(48, page > 0 ? this.simple(Material.ARROW, (Component)Component.text((String)"\u25c0 Pagina anterior", (TextColor)NamedTextColor.YELLOW), List.<Component>of((Component)Component.text((String)("Pagina " + page + " de " + totalPages), (TextColor)SOFT).decoration(TextDecoration.ITALIC, false))) : filler);
-        inv.setItem(49, this.simple(Material.BARRIER, (Component)Component.text((String)"Quitar efecto", (TextColor)NamedTextColor.RED), List.<Component>of((Component)Component.text((String)("Sin efecto de " + (kill ? "kill" : "muerte") + "."), (TextColor)SOFT).decoration(TextDecoration.ITALIC, false), (Component)Component.empty(), (Component)Component.text((String)"\u25ba Click para desactivar", (TextColor)NamedTextColor.YELLOW).decoration(TextDecoration.ITALIC, false))));
-        inv.setItem(50, page < totalPages - 1 ? this.simple(Material.SPECTRAL_ARROW, (Component)Component.text((String)"Pagina siguiente \u25b6", (TextColor)NamedTextColor.YELLOW), List.<Component>of((Component)Component.text((String)("Pagina " + (page + 2) + " de " + totalPages), (TextColor)SOFT).decoration(TextDecoration.ITALIC, false))) : filler);
+        inv.setItem(48, page > 0 ? this.simple(Material.ARROW, (Component)Component.text((String)"\u25c0 Página anterior", (TextColor)NamedTextColor.YELLOW), List.<Component>of((Component)Component.text((String)("Página " + page + " de " + totalPages), (TextColor)SOFT).decoration(TextDecoration.ITALIC, false))) : filler);
+        inv.setItem(49, this.simple(Material.BARRIER, (Component)Component.text((String)"Quitar efecto", (TextColor)NamedTextColor.RED), List.<Component>of((Component)Component.text((String)("Sin efecto de " + (kill ? "kill" : "muerte") + "."), (TextColor)SOFT).decoration(TextDecoration.ITALIC, false), (Component)Component.empty(), (Component)Component.text((String)"\u25ba Clic para desactivar", (TextColor)NamedTextColor.YELLOW).decoration(TextDecoration.ITALIC, false))));
+        inv.setItem(50, page < totalPages - 1 ? this.simple(Material.SPECTRAL_ARROW, (Component)Component.text((String)"Página siguiente \u25b6", (TextColor)NamedTextColor.YELLOW), List.<Component>of((Component)Component.text((String)("Página " + (page + 2) + " de " + totalPages), (TextColor)SOFT).decoration(TextDecoration.ITALIC, false))) : filler);
         inv.setItem(53, this.legendItem());
     }
 
@@ -120,9 +120,9 @@ implements Listener {
         lore.add(Component.empty());
         if (selected) {
             lore.add(Component.text((String)"\u2714 EQUIPADO", (TextColor)NamedTextColor.GREEN, (TextDecoration[])new TextDecoration[]{TextDecoration.BOLD}).decoration(TextDecoration.ITALIC, false));
-            lore.add(Component.text((String)"\u25ba Click para quitar", (TextColor)NamedTextColor.YELLOW).decoration(TextDecoration.ITALIC, false));
+            lore.add(Component.text((String)"\u25ba Clic para quitar", (TextColor)NamedTextColor.YELLOW).decoration(TextDecoration.ITALIC, false));
         } else {
-            lore.add(Component.text((String)"\u25ba Click para equipar", (TextColor)NamedTextColor.AQUA).decoration(TextDecoration.ITALIC, false));
+            lore.add(Component.text((String)"\u25ba Clic para equipar", (TextColor)NamedTextColor.AQUA).decoration(TextDecoration.ITALIC, false));
         }
         meta.lore(lore);
         if (selected && Compat.glow() != null) {
@@ -166,12 +166,12 @@ implements Listener {
         }
         if (!allowed) {
             lore.add(Component.text((String)"\ud83d\udd12 BLOQUEADO", (TextColor)NamedTextColor.RED, (TextDecoration[])new TextDecoration[]{TextDecoration.BOLD}).decoration(TextDecoration.ITALIC, false));
-            lore.add(Component.text((String)"Todavia no has desbloqueado este efecto.", (TextColor)TextColor.color((int)0x555555)).decoration(TextDecoration.ITALIC, false));
+            lore.add(Component.text((String)"Todavía no has desbloqueado este efecto.", (TextColor)TextColor.color((int)0x555555)).decoration(TextDecoration.ITALIC, false));
         } else if (selected) {
             lore.add(Component.text((String)"\u2714 EQUIPADO", (TextColor)NamedTextColor.GREEN, (TextDecoration[])new TextDecoration[]{TextDecoration.BOLD}).decoration(TextDecoration.ITALIC, false));
-            lore.add(Component.text((String)"\u25ba Click para quitar", (TextColor)NamedTextColor.YELLOW).decoration(TextDecoration.ITALIC, false));
+            lore.add(Component.text((String)"\u25ba Clic para quitar", (TextColor)NamedTextColor.YELLOW).decoration(TextDecoration.ITALIC, false));
         } else {
-            lore.add(Component.text((String)"\u25ba Click para equipar", (TextColor)NamedTextColor.AQUA).decoration(TextDecoration.ITALIC, false));
+            lore.add(Component.text((String)"\u25ba Clic para equipar", (TextColor)NamedTextColor.AQUA).decoration(TextDecoration.ITALIC, false));
         }
         meta.lore(lore);
         if (selected && allowed && Compat.glow() != null) {
@@ -194,9 +194,9 @@ implements Listener {
         ArrayList<Component> lore = new ArrayList<Component>();
         lore.add(Component.text((String)(kill ? "Se reproducen al matar a un jugador." : "Se reproducen cuando tu mueres."), (TextColor)SOFT).decoration(TextDecoration.ITALIC, false));
         lore.add(Component.empty());
-        lore.add(Component.text((String)(RipEffect.count(type) + " efectos \u00b7 " + RipMenu.pages(type) + " paginas"), (TextColor)TextColor.color((int)0x555555)).decoration(TextDecoration.ITALIC, false));
+        lore.add(Component.text((String)(RipEffect.count(type) + " efectos \u00b7 " + RipMenu.pages(type) + " páginas"), (TextColor)TextColor.color((int)0x555555)).decoration(TextDecoration.ITALIC, false));
         lore.add(Component.empty());
-        lore.add(active ? Component.text((String)"\u2714 Pestana activa", (TextColor)NamedTextColor.GREEN).decoration(TextDecoration.ITALIC, false) : Component.text((String)"\u25ba Click para cambiar", (TextColor)NamedTextColor.YELLOW).decoration(TextDecoration.ITALIC, false));
+        lore.add(active ? Component.text((String)"\u2714 Pestana activa", (TextColor)NamedTextColor.GREEN).decoration(TextDecoration.ITALIC, false) : Component.text((String)"\u25ba Clic para cambiar", (TextColor)NamedTextColor.YELLOW).decoration(TextDecoration.ITALIC, false));
         meta.lore(lore);
         if (active && Compat.glow() != null) {
             meta.addEnchant(Compat.glow(), 1, true);
@@ -251,8 +251,8 @@ implements Listener {
             lore.add(r.label());
         }
         lore.add(Component.empty());
-        lore.add(Component.text((String)"A mayor calidad, mas espectacular", (TextColor)SOFT).decoration(TextDecoration.ITALIC, false));
-        lore.add(Component.text((String)"y mas exclusivo el efecto.", (TextColor)SOFT).decoration(TextDecoration.ITALIC, false));
+        lore.add(Component.text((String)"A mayor calidad, más espectacular", (TextColor)SOFT).decoration(TextDecoration.ITALIC, false));
+        lore.add(Component.text((String)"y más exclusivo el efecto.", (TextColor)SOFT).decoration(TextDecoration.ITALIC, false));
         meta.lore(lore);
         RipMenu.hideAll(meta);
         item.setItemMeta(meta);
@@ -334,7 +334,7 @@ implements Listener {
             } else {
                 this.plugin.setChoice(player.getUniqueId(), type, "random");
                 Compat.sound(player.getWorld(), player.getLocation(), "entity.player.levelup", 0.7f, 1.3f);
-                player.sendMessage(this.plugin.prefix().append((Component)Component.text((String)"Equipado  ", (TextColor)NamedTextColor.GREEN)).append((Component)Component.text((String)"\u2684 Aleatorio", (TextColor)TextColor.color((int)7268320), (TextDecoration[])new TextDecoration[]{TextDecoration.BOLD})).append((Component)Component.text((String)("  cada " + (type == RipEffect.Type.KILL ? "kill" : "muerte") + " sera una sorpresa"), (TextColor)TextColor.color((int)0x555555))));
+                player.sendMessage(this.plugin.prefix().append((Component)Component.text((String)"Equipado  ", (TextColor)NamedTextColor.GREEN)).append((Component)Component.text((String)"\u2684 Aleatorio", (TextColor)TextColor.color((int)7268320), (TextDecoration[])new TextDecoration[]{TextDecoration.BOLD})).append((Component)Component.text((String)("  cada " + (type == RipEffect.Type.KILL ? "kill" : "muerte") + " será una sorpresa"), (TextColor)TextColor.color((int)0x555555))));
             }
             this.render(event.getInventory(), player, type, page);
             return;
@@ -358,7 +358,7 @@ implements Listener {
         RipEffect effect = effects.get(effectIndex);
         if (!this.plugin.allows(player, effect)) {
             Compat.sound(player.getWorld(), player.getLocation(), "entity.villager.no", 1.0f, 0.8f);
-            Component msg = this.plugin.isAdmin(player) ? this.plugin.prefix().append((Component)Component.text((String)"Efecto bloqueado. Requiere ", (TextColor)NamedTextColor.RED)).append((Component)Component.text((String)effect.permission(), (TextColor)GOLD)) : this.plugin.prefix().append((Component)Component.text((String)"Todavia no has desbloqueado este efecto.", (TextColor)NamedTextColor.RED));
+            Component msg = this.plugin.isAdmin(player) ? this.plugin.prefix().append((Component)Component.text((String)"Efecto bloqueado. Requiere ", (TextColor)NamedTextColor.RED)).append((Component)Component.text((String)effect.permission(), (TextColor)GOLD)) : this.plugin.prefix().append((Component)Component.text((String)"Todavía no has desbloqueado este efecto.", (TextColor)NamedTextColor.RED));
             player.sendMessage(msg);
             return;
         }

@@ -3,10 +3,10 @@ package net.ederus.edm.anomaly.boss;
 import net.kyori.adventure.text.Component;
 import net.ederus.edm.anomaly.AnomalyPlugin;
 import net.ederus.edm.anomaly.core.Anim;
-import net.ederus.edm.anomaly.core.Compat;
-import net.ederus.edm.anomaly.core.Fx;
+import net.ederus.edm.comun.Compat;
+import net.ederus.edm.comun.Fx;
 import net.ederus.edm.anomaly.core.Glow;
-import net.ederus.edm.anomaly.core.Tags;
+import net.ederus.edm.comun.Tags;
 import net.ederus.edm.anomaly.core.ActiveAnomaly;
 import org.bukkit.Location;
 import org.bukkit.Particle;
@@ -244,7 +244,7 @@ public abstract class BossFight {
         if (ticks - invulnerableSince <= MAX_INVULNERABLE_TICKS) return;
         boss.setInvulnerable(false);
         invulnerableSince = 0;
-        plugin.getLogger().warning("El jefe llevaba mas de " + (MAX_INVULNERABLE_TICKS / 20)
+        plugin.getLogger().warning("El jefe llevaba más de " + (MAX_INVULNERABLE_TICKS / 20)
                 + "s invulnerable; se le ha quitado a la fuerza para que la pelea pueda acabar.");
     }
 
@@ -595,7 +595,7 @@ public abstract class BossFight {
      * animaciones movieran a nadie, y aqui se puede apagar igual sin tocar codigo.
      *
      * Si el empuje tiene componente vertical seria, se le da permiso de vuelo temporal
-     * al jugador. Sin eso el servidor lo expulsa por "volar" o por "moverse muy rapido"
+     * al jugador. Sin eso el servidor lo expulsa por "volar" o por "moverse muy rápido"
      * en cuanto una habilidad lo levanta, que es exactamente lo que pasaba.
      */
     public void push(Player p, Vector velocity) {

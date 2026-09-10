@@ -1,6 +1,5 @@
 package net.ederus.edm.goditems;
 
-import java.util.Locale;
 
 import org.bukkit.NamespacedKey;
 import org.bukkit.inventory.ItemStack;

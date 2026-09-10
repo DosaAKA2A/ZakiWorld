@@ -51,7 +51,7 @@ public final class Ficha {
                 "tier y set viven en plugins/MMOItems/item/" + t.toLowerCase(Locale.ROOT) + ".yml",
                 "y se editan desde /gi o desde /mi indistintamente, porque es el mismo sitio.",
                 "",
-                "Aqui solo va el COMPORTAMIENTO."));
+                "Aquí solo va el COMPORTAMIENTO."));
         yml.set("id", t + "_" + i);
         yml.set("enlace", t + "." + i);
         yml.set("lore-extra", List.of());
@@ -78,7 +78,7 @@ public final class Ficha {
 
         YamlConfiguration yml = new YamlConfiguration();
         yml.options().setHeader(List.of(
-                "GodItem NATIVO: lo fabrica GodItems, no MMOItems.",
+                "GodItem NATIVO: lo fábrica GodItems, no MMOItems.",
                 "",
                 "Un nativo NO puede pertenecer a un set de MMOItems: esa pertenencia",
                 "se lee de las etiquetas que solo MMOItems pone. Si este item necesita",

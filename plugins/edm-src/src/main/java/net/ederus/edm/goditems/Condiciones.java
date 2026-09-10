@@ -12,7 +12,7 @@ import org.bukkit.entity.LivingEntity;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 
-import net.ederus.edm.anomaly.core.Compat;
+import net.ederus.edm.comun.Compat;
 
 /**
  * El catalogo de condiciones.
@@ -249,7 +249,7 @@ public final class Condiciones {
         /*
          * Cuantas piezas del conjunto lleva puestas. El set se saca del propio
          * item si no se dice otro, que es lo que se quiere el 90 % de las veces:
-         * "solo si llevas 3 o mas de MI set".
+         * "solo si llevas 3 o más de MI set".
          */
         reg("PIEZAS_DEL_SET", (ctx, a) -> {
             if (ctx.jugador() == null) return false;

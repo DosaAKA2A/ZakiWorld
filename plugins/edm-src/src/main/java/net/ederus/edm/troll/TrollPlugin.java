@@ -96,7 +96,7 @@ public final class TrollPlugin extends Module {
             }
         }, 20L, 20L);
 
-        getLogger().info("Bromas activas | " + catalogo.size() + " en el catalogo ("
+        getLogger().info("Bromas activas | " + catalogo.size() + " en el catálogo ("
                 + Trolls.sorteables(catalogo).size() + " sin riesgo)"
                 + " | confirmar: " + segundosConfirmar + "s"
                 + " | inmunidad: " + (inmunidadActiva ? "si" : "no, funcionan con todos"));
@@ -235,24 +235,4 @@ public final class TrollPlugin extends Module {
 
     public List<Troll> sorteables() { return Trolls.sorteables(catalogo); }
 
-    /** Igual que en la tienda: saveResource(false) no sobrescribe, asi que un
-     *  fichero viejo se quedaria para siempre. */
-    private void migrar(String nombre, int esperada) {
-        File destino = new File(getDataFolder(), nombre);
-        if (!destino.exists()) { saveResource(nombre, false); return; }
-
-        int suya = org.bukkit.configuration.file.YamlConfiguration
-                .loadConfiguration(destino).getInt("version", 1);
-        if (suya >= esperada) return;
-
-        String base = nombre.replace(".yml", "");
-        File aparte = new File(getDataFolder(), base + "-v" + suya + "-" + java.time.LocalDate.now() + ".yml");
-        if (destino.renameTo(aparte)) {
-            saveResource(nombre, false);
-            getLogger().warning(nombre + " era de la version " + suya + " y se puso al dia. "
-                    + "El tuyo quedo en " + aparte.getName() + ".");
-        } else {
-            getLogger().severe("No pude apartar el " + nombre + " viejo.");
-        }
-    }
 }

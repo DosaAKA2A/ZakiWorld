@@ -7,11 +7,11 @@ import net.kyori.adventure.text.format.TextDecoration;
 import net.kyori.adventure.title.Title;
 import net.ederus.edm.anomaly.AnomalyPlugin;
 import net.ederus.edm.anomaly.core.ActiveAnomaly;
-import net.ederus.edm.anomaly.core.Compat;
-import net.ederus.edm.anomaly.core.Fx;
+import net.ederus.edm.comun.Compat;
+import net.ederus.edm.comun.Fx;
 import net.ederus.edm.anomaly.core.Glow;
 import net.ederus.edm.anomaly.core.Stop;
-import net.ederus.edm.anomaly.core.Tags;
+import net.ederus.edm.comun.Tags;
 import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.block.Block;
@@ -243,7 +243,7 @@ public final class Herbola extends BossFight {
             soundAt(spot, "entity.parrot.imitate.creeper", 1.2f, 1.0f);
             for (Player p : Fx.viewersNear(spot, 90)) {
                 p.showTitle(Title.title(
-                        Component.text("✦ ANOMALIA ✦", ACCENT, TextDecoration.BOLD),
+                        Component.text("✦ ANOMALÍA ✦", ACCENT, TextDecoration.BOLD),
                         Component.text("Herbola  ·  el bosque se le adelanta", NamedTextColor.GRAY),
                         Title.Times.times(Duration.ofMillis(400), Duration.ofMillis(1800), Duration.ofMillis(600))));
             }
@@ -474,7 +474,7 @@ public final class Herbola extends BossFight {
         Location spot = boss.getLocation();
         soundAt(spot, "entity.parrot.imitate.witch", 1.6f, 0.9f);
         titleNear(Component.text("FASE III", NamedTextColor.RED, TextDecoration.BOLD),
-                Component.text("Vienen mas, y estos revientan", NamedTextColor.GRAY));
+                Component.text("Vienen más, y estos revientan", NamedTextColor.GRAY));
 
         animate(80, tick -> {
             if (!alive()) return;
@@ -674,7 +674,7 @@ public final class Herbola extends BossFight {
     private void rootWithRoots(Player p, int ticksHeld) {
         // El amarre en si vive en BossFight: el de aqui usaba jump_boost con amplificador
         // 128, que en las versiones actuales son ciento veintiocho niveles de salto y te
-        // mandaba al cielo, con expulsion por "moverse muy rapido" de regalo.
+        // mandaba al cielo, con expulsion por "moverse muy rápido" de regalo.
         root(p, ticksHeld);
         Compat.spawn(world(), Compat.ITEM_COBWEB, p.getLocation().add(0, 0.4, 0), 4, 0.3, 0.3, 0.3, 0);
         Compat.spawn(world(), Compat.BLOCK, p.getLocation().add(0, 0.4, 0), 12, 0.3, 0.25, 0.3, 0.02,

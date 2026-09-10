@@ -463,7 +463,7 @@ public final class Motor {
         if (compras != null && art.tieneLimiteJugador()) {
             int puede = compras.restante(jugador.getUniqueId(), art);
             if (puede <= 0) {
-                return Resultado.no(msg("maximo-alcanzado", "Ya tienes el máximo de %item% (%limite%).",
+                return Resultado.no(msg("maximo-alcanzado", "Ya tienes el máximo de %item% (%límite%).",
                         "%item%", nombre(art), "%limite%", String.valueOf(art.limiteJugador())));
             }
             pedido = Math.min(pedido, puede);

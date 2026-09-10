@@ -13,7 +13,7 @@ import java.util.concurrent.ConcurrentHashMap;
  * Cuantas unidades lleva compradas cada jugador de cada articulo.
  *
  * Es un tope DE POR VIDA, no una ventana: los spawners de Ederus llevan
- * "Limite personal: 6" y eso significa seis en toda la partida, no seis al dia.
+ * "Límite personal: 6" y eso significa seis en toda la partida, no seis al dia.
  * Por eso no caduca nunca y el fichero solo crece; a razon de ocho articulos
  * con limite, da igual.
  */

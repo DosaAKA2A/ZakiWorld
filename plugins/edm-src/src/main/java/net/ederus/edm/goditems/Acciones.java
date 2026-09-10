@@ -23,8 +23,8 @@ import org.bukkit.potion.PotionEffectType;
 import org.bukkit.util.RayTraceResult;
 import org.bukkit.util.Vector;
 
-import net.ederus.edm.anomaly.core.Compat;
-import net.ederus.edm.anomaly.core.Fx;
+import net.ederus.edm.comun.Compat;
+import net.ederus.edm.comun.Fx;
 import net.ederus.edm.comun.Estilo;
 import net.kyori.adventure.bossbar.BossBar;
 import net.kyori.adventure.text.Component;
@@ -87,7 +87,7 @@ public final class Acciones {
     /* ================================================================ vida */
 
     private static void vidaYDano() {
-        reg("DANO", (ctx, a) -> {
+        reg("DAÑO", (ctx, a) -> {
             double n = a.d("cantidad", 1);
             for (LivingEntity e : Objetivos.vivos(ctx, a.selector() == null ? "@golpeado" : a.selector())) {
                 e.damage(n, ctx.jugador());
@@ -272,7 +272,7 @@ public final class Acciones {
             int nivel = Math.max(1, a.i("nivel", 1));
             PotionEffectType t = Compat.effect(tipo.toLowerCase(Locale.ROOT));
             if (t == null) {
-                ctx.modulo().getLogger().warning("[GodItems] Pocion desconocida: " + tipo);
+                ctx.modulo().getLogger().warning("[GodItems] Poción desconocida: " + tipo);
                 return;
             }
             for (LivingEntity e : Objetivos.vivos(ctx, a.selector())) {
