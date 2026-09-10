@@ -485,6 +485,22 @@ public final class EffectRunner {
                 this.kOrbital(w, base, c);
                 break;
             }
+            case K_PESTE: {
+                this.kPeste(w, base, c, victim);
+                break;
+            }
+            case K_GUERRA: {
+                this.kGuerra(w, base, c, victim);
+                break;
+            }
+            case K_HAMBRE: {
+                this.kHambre(w, base, c, victim);
+                break;
+            }
+            case K_MUERTE: {
+                this.kMuerte(w, base, c, victim);
+                break;
+            }
             case D_SMOKE: {
                 this.dSmoke(w, c);
                 break;
@@ -595,6 +611,18 @@ public final class EffectRunner {
             }
             case D_AGONY: {
                 this.dAgony(w, base, c, victim);
+                break;
+            }
+            case D_SELLO: {
+                this.dSello(w, base, c, victim);
+                break;
+            }
+            case D_TROMPETA: {
+                this.dTrompeta(w, base, c, victim);
+                break;
+            }
+            case D_SILENCIO: {
+                this.dSilencio(w, base, c, victim);
             }
         }
     }
@@ -2075,5 +2103,349 @@ public final class EffectRunner {
     private static interface TickAction {
         public void accept(int var1);
     }
+
+    /*
+     * ------------------------------------------------------------------
+     * EL APOCALIPSIS (EDM 1.27.0)
+     *
+     * Siete efectos de calidad Inmortal que se leen como un solo relato:
+     * los cuatro Jinetes rematan al que mata, y las tres muertes son lo
+     * que le pasa al que cae. Todos van por fases y ninguno mueve al
+     * jugador de su sitio: lo que se mueve son particulas, displays y,
+     * como mucho, un clon congelado de la victima.
+     * ------------------------------------------------------------------
+     */
+
+    /** Peste: la niebla verde llega, se le pega al cuerpo y lo revienta. */
+    private void kPeste(World w, Location base, Location c, Player victim) {
+        Particle.DustOptions verde = new Particle.DustOptions(org.bukkit.Color.fromRGB(106, 168, 44), 1.7f);
+        Particle.DustOptions bilis = new Particle.DustOptions(org.bukkit.Color.fromRGB(58, 92, 20), 2.2f);
+        Compat.sound(w, base, "entity.bee.loop_aggressive", 1.2f, 0.5f);
+        this.animate(100, 1L, t -> {
+            // La niebla se arrastra desde fuera hacia la victima.
+            if (t < 34) {
+                double r = 5.5 - (double) t * 0.14;
+                this.circle(base.clone().add(0.0, 0.12, 0.0), Math.max(0.6, r), 26,
+                        pp -> Compat.spawn(w, Compat.DUST, pp, 1, 0.05, 0.06, 0.05, 0.0, verde));
+                if (t % 4 == 0) {
+                    Compat.spawn(w, Compat.WARPED_SPORE, base.clone().add(0.0, 0.5, 0.0), 12, 2.2, 0.4, 2.2, 0.0);
+                }
+                if (t % 10 == 0) {
+                    Compat.sound(w, base, "block.sculk.spread", 0.9f, 0.6f);
+                }
+            }
+            // Se le pega encima y burbujea.
+            if (t >= 30 && t < 62) {
+                Compat.spawn(w, Compat.SPORE_BLOSSOM_AIR, c, 5, 0.45, 0.6, 0.45, 0.0);
+                Compat.spawn(w, Compat.DUST, c, 6, 0.4, 0.7, 0.4, 0.0, bilis);
+                if (t % 6 == 0) {
+                    Compat.sound(w, c, "entity.slime.squish", 0.8f, 0.5f);
+                }
+            }
+            if (t == 62) {
+                Compat.spawn(w, Compat.EXPLOSION, c, 3, 0.3, 0.3, 0.3, 0.0);
+                Compat.spawn(w, Compat.DUST, c, 90, 1.1, 0.9, 1.1, 0.0, bilis);
+                Compat.spawn(w, Compat.ITEM, c, 40, 0.6, 0.6, 0.6, 0.25,
+                        new ItemStack(Material.ROTTEN_FLESH));
+                Compat.sound(w, c, "entity.zombie_villager.cure", 1.2f, 0.5f);
+                Compat.sound(w, c, "entity.generic.explode", 1.0f, 1.4f);
+            }
+            // El cerco muerto se queda un rato en el suelo.
+            if (t > 62 && t % 3 == 0) {
+                double r = 1.2 + (double) (t - 62) * 0.05;
+                this.circle(base.clone().add(0.0, 0.1, 0.0), r, 22,
+                        pp -> Compat.spawn(w, Compat.ASH, pp, 1, 0.05, 0.02, 0.05, 0.0));
+            }
+        }, null);
+    }
+
+    /** Guerra: el pasillo de espadas, el choque y la onda carmesi. */
+    private void kGuerra(World w, Location base, Location c, Player victim) {
+        Particle.DustOptions carmesi = new Particle.DustOptions(org.bukkit.Color.fromRGB(170, 12, 12), 2.0f);
+        float yaw = base.getYaw();
+        double rad = Math.toRadians(yaw);
+        Vector eje = new Vector(-Math.sin(rad), 0.0, Math.cos(rad)).normalize();
+        Vector lado = new Vector(Math.cos(rad), 0.0, Math.sin(rad)).normalize();
+        ItemStack espada = new ItemStack(Material.NETHERITE_SWORD);
+        Compat.sound(w, base, "entity.ravager.roar", 1.1f, 0.6f);
+        // Seis espadas por banda, clavandose de fuera hacia dentro.
+        for (int i = 0; i < 6; ++i) {
+            final int paso = i;
+            this.later(3L * (long) i, () -> {
+                double avance = 3.2 - (double) paso * 0.55;
+                for (int s2 = -1; s2 <= 1; s2 += 2) {
+                    Location spot = base.clone()
+                            .add(eje.clone().multiply(avance))
+                            .add(lado.clone().multiply(1.15 * (double) s2));
+                    this.fallingItem(w, spot, espada, 1.1f, (float) rad, (float) Math.toRadians(12.0 * (double) s2),
+                            4.5, 0.15, 6);
+                    Compat.spawn(w, Compat.CRIT, spot.clone().add(0.0, 0.3, 0.0), 10, 0.1, 0.2, 0.1, 0.05);
+                }
+                Compat.sound(w, base, "block.anvil_land", 0.7f, 1.6f);
+            });
+        }
+        this.animate(110, 1L, t -> {
+            if (t >= 30 && t < 52 && t % 4 == 0) {
+                Compat.spawn(w, Compat.DUST, c, 14, 0.8, 0.7, 0.8, 0.0, carmesi);
+                Compat.sound(w, c, "item.shield.block", 0.6f, 0.7f);
+            }
+            // El choque: todas las hojas cantan a la vez.
+            if (t == 54) {
+                Compat.spawn(w, Compat.SWEEP_ATTACK, c, 12, 1.4, 0.5, 1.4, 0.0);
+                Compat.spawn(w, Compat.FLASH, c, 1);
+                Compat.sound(w, c, "entity.player.attack.sweep", 1.3f, 0.6f);
+                Compat.sound(w, c, "block.anvil_place", 1.2f, 0.5f);
+            }
+            // La onda barre el suelo.
+            if (t > 54 && t < 96) {
+                double r = (double) (t - 54) * 0.28;
+                this.circle(base.clone().add(0.0, 0.18, 0.0), r, 34,
+                        pp -> Compat.spawn(w, Compat.DUST, pp, 1, 0.03, 0.05, 0.03, 0.0, carmesi));
+                if (t % 8 == 0) {
+                    this.circle(base.clone().add(0.0, 0.25, 0.0), r, 12,
+                            pp -> Compat.spawn(w, Compat.SWEEP_ATTACK, pp, 1, 0.0, 0.0, 0.0, 0.0));
+                }
+            }
+        }, null);
+    }
+
+    /** Hambre: la tierra se seca en anillos y se lo lleva todo al centro. */
+    private void kHambre(World w, Location base, Location c, Player victim) {
+        Particle.DustOptions polvo = new Particle.DustOptions(org.bukkit.Color.fromRGB(120, 96, 52), 1.9f);
+        Compat.sound(w, base, "block.rooted_dirt.break", 1.2f, 0.5f);
+        this.animate(100, 1L, t -> {
+            // Anillos de grietas que se abren hacia fuera.
+            if (t < 40 && t % 3 == 0) {
+                double r = 0.8 + (double) t * 0.12;
+                this.circle(base.clone().add(0.0, 0.12, 0.0), r, 30, pp -> {
+                    Compat.spawn(w, Compat.BLOCK, pp, 2, 0.08, 0.02, 0.08, 0.0,
+                            Material.COARSE_DIRT.createBlockData());
+                    Compat.spawn(w, Compat.DUST, pp, 1, 0.05, 0.03, 0.05, 0.0, polvo);
+                });
+                if (t % 9 == 0) {
+                    Compat.sound(w, base, "block.gravel.break", 0.8f, 0.6f);
+                }
+            }
+            // Y ahora todo vuelve hacia dentro, chupado por el centro.
+            if (t >= 40 && t < 78) {
+                double r = 5.2 - (double) (t - 40) * 0.13;
+                this.circle(base.clone().add(0.0, 0.35, 0.0), Math.max(0.35, r), 26,
+                        pp -> Compat.spawn(w, Compat.ASH, pp, 2, 0.04, 0.1, 0.04, 0.0));
+                Compat.spawn(w, Compat.WHITE_ASH, c, 3, 0.4, 0.5, 0.4, 0.0);
+                if (t % 7 == 0) {
+                    Compat.sound(w, c, "block.bone_block.break", 0.7f, 0.5f);
+                }
+            }
+            // La victima se deshace en polvo.
+            if (t == 78) {
+                Compat.spawn(w, Compat.WHITE_ASH, c, 120, 0.7, 1.0, 0.7, 0.02);
+                Compat.spawn(w, Compat.DUST, c, 70, 0.6, 0.9, 0.6, 0.0, polvo);
+                Compat.spawn(w, Compat.ITEM, c, 30, 0.5, 0.6, 0.5, 0.2, new ItemStack(Material.WHEAT));
+                Compat.sound(w, c, "block.sand.break", 1.4f, 0.5f);
+                Compat.sound(w, c, "entity.player.big_fall", 0.9f, 0.4f);
+            }
+            if (t > 78 && t % 2 == 0) {
+                Compat.spawn(w, Compat.ASH, c.clone().add(0.0, 0.3, 0.0), 6, 0.5, 0.4, 0.5, 0.0);
+            }
+        }, null);
+    }
+
+    /** Muerte: el caballo palido cruza, la guadana pasa y se hace el blanco. */
+    private void kMuerte(World w, Location base, Location c, Player victim) {
+        Particle.DustOptions hueso = new Particle.DustOptions(org.bukkit.Color.fromRGB(226, 226, 214), 1.6f);
+        double rad = Math.toRadians(base.getYaw());
+        Vector cruce = new Vector(Math.cos(rad), 0.0, Math.sin(rad)).normalize();
+        Location desde = base.clone().add(cruce.clone().multiply(-7.0));
+        Location hasta = base.clone().add(cruce.clone().multiply(7.0));
+        Compat.sound(w, base, "entity.horse.gallop", 1.4f, 0.5f);
+        this.animate(90, 1L, t -> {
+            // El galope: una silueta de luz que cruza la escena.
+            if (t < 34) {
+                double p = (double) t / 34.0;
+                Location jinete = desde.clone().add(hasta.clone().subtract(desde).toVector().multiply(p));
+                Compat.spawn(w, Compat.END_ROD, jinete.clone().add(0.0, 0.9, 0.0), 6, 0.25, 0.5, 0.25, 0.0);
+                Compat.spawn(w, Compat.DUST, jinete.clone().add(0.0, 0.5, 0.0), 8, 0.35, 0.4, 0.35, 0.0, hueso);
+                Compat.spawn(w, Compat.SMOKE, jinete, 4, 0.2, 0.05, 0.2, 0.005);
+                if (t % 6 == 0) {
+                    Compat.sound(w, jinete, "entity.horse.step_wood", 0.8f, 0.5f);
+                }
+            }
+            // La guadana: un arco que barre a la altura del pecho.
+            if (t >= 34 && t < 46) {
+                double a = Math.PI * ((double) (t - 34) / 12.0);
+                Location punta = c.clone().add(Math.cos(a) * 1.9, 0.15, Math.sin(a) * 1.9);
+                Compat.spawn(w, Compat.SWEEP_ATTACK, punta, 1, 0.0, 0.0, 0.0, 0.0);
+                Compat.spawn(w, Compat.DUST, punta, 4, 0.05, 0.05, 0.05, 0.0, hueso);
+            }
+            if (t == 40) {
+                Compat.sound(w, c, "entity.player.attack.sweep", 1.2f, 0.5f);
+            }
+            // El blanco: un instante en el que no queda nada.
+            if (t == 48) {
+                Compat.spawn(w, Compat.FLASH, c, 2);
+                Compat.spawn(w, Compat.DUST, c, 140, 0.9, 1.2, 0.9, 0.0, hueso);
+                Compat.sound(w, c, "block.bone_block.break", 1.3f, 0.4f);
+                Compat.sound(w, c, "entity.wither.death", 0.5f, 2.0f);
+            }
+            if (t > 52 && t % 4 == 0) {
+                Compat.spawn(w, Compat.WHITE_ASH, c.clone().add(0.0, 0.4, 0.0), 5, 0.6, 0.5, 0.6, 0.0);
+            }
+        }, null);
+    }
+
+    /** El Sello: el circulo de runas se alza y se parte en siete pedazos. */
+    private void dSello(World w, Location base, Location c, Player victim) {
+        Particle.DustOptions oro = new Particle.DustOptions(org.bukkit.Color.fromRGB(255, 214, 120), 1.5f);
+        Compat.sound(w, base, "block.enchantment_table.use", 1.2f, 0.5f);
+        this.animate(120, 1L, t -> {
+            // Se dibuja: tres anillos concentricos de runas.
+            if (t < 30) {
+                double p = (double) t / 30.0;
+                for (int k = 1; k <= 3; ++k) {
+                    double r = 0.8 * (double) k;
+                    int puntos = (int) (10.0 * (double) k * p) + 4;
+                    this.circle(base.clone().add(0.0, 0.1, 0.0), r, puntos, pp -> {
+                        Compat.spawn(w, Compat.ENCHANT, pp, 1, 0.02, 0.02, 0.02, 0.0);
+                        Compat.spawn(w, Compat.DUST, pp, 1, 0.02, 0.02, 0.02, 0.0, oro);
+                    });
+                }
+            }
+            // Se levanta como una columna de luz.
+            if (t >= 30 && t < 74) {
+                double h = (double) (t - 30) * 0.075;
+                for (int k = 1; k <= 3; ++k) {
+                    this.circle(base.clone().add(0.0, 0.1 + h, 0.0), 0.8 * (double) k, 14,
+                            pp -> Compat.spawn(w, Compat.DUST, pp, 1, 0.02, 0.02, 0.02, 0.0, oro));
+                }
+                if (t % 10 == 0) {
+                    Compat.sound(w, base, "block.beacon.ambient", 0.7f, 1.6f);
+                }
+            }
+            // Y se rompe: siete pedazos que salen disparados.
+            if (t == 74) {
+                Compat.spawn(w, Compat.FLASH, c, 1);
+                Compat.sound(w, c, "block.glass.break", 1.4f, 0.6f);
+                Compat.sound(w, c, "entity.wither.break_block", 0.9f, 0.5f);
+            }
+            if (t >= 74 && t < 110) {
+                double d = (double) (t - 74) * 0.32;
+                for (int i = 0; i < 7; ++i) {
+                    double a = Math.PI * 2 / 7.0 * (double) i;
+                    Location trozo = c.clone().add(Math.cos(a) * d, 0.9 + d * 0.18, Math.sin(a) * d);
+                    Compat.spawn(w, Compat.DUST, trozo, 2, 0.05, 0.05, 0.05, 0.0, oro);
+                    Compat.spawn(w, Compat.ENCHANT, trozo, 1, 0.1, 0.1, 0.1, 0.0);
+                }
+            }
+        }, null);
+    }
+
+    /** La Trompeta: suena la nota, el cielo se abre y el cuerpo sube. */
+    private void dTrompeta(World w, Location base, Location c, Player victim) {
+        ItemStack[] armor = null;
+        ItemStack hand = null;
+        LivingEntity clone = null;
+        if (victim != null) {
+            try {
+                armor = victim.getInventory().getArmorContents();
+                hand = victim.getInventory().getItemInMainHand();
+            } catch (Throwable throwable) {
+                // empty catch block
+            }
+            clone = Clones.spawnFrozenClone(base, victim, armor, hand);
+        }
+        final LivingEntity cuerpo = clone;
+        if (cuerpo != null) {
+            this.tag((Entity) cuerpo);
+        }
+        Compat.sound(w, base, "event.mob_effect.raid_omen", 1.0f, 0.4f);
+        Compat.sound(w, base, "item.goat_horn.sound.0", 1.4f, 0.6f);
+        this.animate(130, 1L, t -> {
+            // Los haces bajan del cielo en anillo, y uno se queda en el centro.
+            if (t >= 10 && t < 90) {
+                int haz = (t - 10) / 8;
+                if ((t - 10) % 8 == 0 && haz < 8) {
+                    double a = Math.PI * 2 / 8.0 * (double) haz;
+                    Location pie = base.clone().add(Math.cos(a) * 3.0, 0.0, Math.sin(a) * 3.0);
+                    this.line(pie.clone().add(0.0, 16.0, 0.0), pie, 0.6,
+                            pp -> Compat.spawn(w, Compat.END_ROD, pp, 1, 0.02, 0.02, 0.02, 0.0));
+                    Compat.sound(w, pie, "block.beacon.activate", 0.5f, 1.8f);
+                }
+                if (t % 3 == 0) {
+                    this.line(c.clone().add(0.0, 14.0, 0.0), c, 0.5,
+                            pp -> Compat.spawn(w, Compat.END_ROD, pp, 1, 0.05, 0.02, 0.05, 0.0));
+                }
+            }
+            // El cuerpo asciende por el haz ancho.
+            if (t >= 30 && t <= 100 && cuerpo != null && cuerpo.isValid()) {
+                double p = (double) (t - 30) / 70.0;
+                double eased = p * p;
+                Location at = base.clone().add(0.0, 6.5 * eased, 0.0);
+                at.setPitch(0.0f);
+                try {
+                    cuerpo.teleport(at);
+                } catch (Throwable throwable) {
+                    // empty catch block
+                }
+                Compat.spawn(w, Compat.GLOW, at.clone().add(0.0, 1.0, 0.0), 4, 0.3, 0.4, 0.3, 0.0);
+            }
+            if (t == 100) {
+                Location alto = base.clone().add(0.0, 6.8, 0.0);
+                Compat.spawn(w, Compat.FLASH, alto, 2);
+                this.firework(w, alto, FireworkEffect.Type.BURST, org.bukkit.Color.WHITE, org.bukkit.Color.fromRGB(255, 214, 120));
+                Compat.sound(w, base, "item.goat_horn.sound.3", 1.4f, 0.7f);
+                Compat.sound(w, base, "entity.lightning_bolt.thunder", 0.8f, 1.4f);
+                this.discard((Entity) cuerpo);
+            }
+            if (t > 100 && t % 3 == 0) {
+                Compat.spawn(w, Compat.WHITE_ASH, base.clone().add(0.0, 5.0, 0.0), 8, 1.2, 1.4, 1.2, 0.0);
+            }
+        }, () -> this.discard((Entity) cuerpo));
+    }
+
+    /** El Silencio: se apaga el mundo, queda una brasa, y se apaga tambien. */
+    private void dSilencio(World w, Location base, Location c, Player victim) {
+        long startTime = w.getTime();
+        Particle.DustOptions ceniza = new Particle.DustOptions(org.bukkit.Color.fromRGB(38, 38, 44), 2.4f);
+        Compat.sound(w, base, "block.sculk_shrieker.shriek", 1.2f, 0.5f);
+        this.animate(150, 1L, t -> {
+            // La noche cae de golpe sobre los que miran.
+            if (t >= 4 && t <= 34) {
+                double p = (double) (t - 4) / 30.0;
+                this.sky(w, startTime + (long) (13000.0 * p));
+            }
+            // La tinta se traga la escena.
+            if (t >= 6 && t < 60) {
+                double r = 6.0 - (double) (t - 6) * 0.09;
+                this.circle(base.clone().add(0.0, 0.4, 0.0), Math.max(0.5, r), 30, pp -> {
+                    Compat.spawn(w, Compat.SQUID_INK, pp, 1, 0.06, 0.25, 0.06, 0.0);
+                    Compat.spawn(w, Compat.DUST, pp, 1, 0.04, 0.2, 0.04, 0.0, ceniza);
+                });
+                if (t % 12 == 0) {
+                    Compat.sound(w, base, "ambient.cave", 0.9f, 0.4f);
+                }
+            }
+            if (t == 60) {
+                Compat.spawn(w, Compat.LARGE_SMOKE, c, 60, 0.8, 0.8, 0.8, 0.01);
+                Compat.sound(w, c, "block.candle.extinguish", 1.2f, 0.5f);
+            }
+            // Queda una sola brasa flotando, subiendo despacio.
+            if (t > 60 && t < 132) {
+                Location brasa = c.clone().add(0.0, (double) (t - 60) * 0.018, 0.0);
+                Compat.spawn(w, Compat.SMALL_FLAME, brasa, 1, 0.02, 0.02, 0.02, 0.0);
+                if (t % 20 == 0) {
+                    Compat.spawn(w, Compat.SMOKE, brasa, 2, 0.05, 0.05, 0.05, 0.0);
+                }
+            }
+            // Y se apaga. Sin fanfarria: ese es el chiste.
+            if (t == 132) {
+                Compat.spawn(w, Compat.SMOKE, c.clone().add(0.0, 1.3, 0.0), 8, 0.08, 0.08, 0.08, 0.005);
+                Compat.sound(w, c, "block.fire.extinguish", 0.7f, 1.6f);
+            }
+            if (t == 146) {
+                this.skyReset();
+            }
+        }, this::skyReset);
+    }
+
 }
 

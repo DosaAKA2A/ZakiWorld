@@ -63,6 +63,9 @@ ocultar-cuerpo:
   - kill.swordfall
   - kill.orbital
   - kill.blastoff
+  - kill.peste
+  - kill.hambre
+  - kill.muerte
   - death.bones
   - death.splat
   - death.dust
@@ -73,6 +76,8 @@ ocultar-cuerpo:
   - death.whirlpool
   - death.angel
   - death.souls
+  - death.trompeta
+  - death.silencio
   - death.phoenix
   - death.implosion
   - death.supernova
@@ -124,9 +129,13 @@ calidades:
     lightning: LEGENDARIO
     blackhole: LEGENDARIO
     laser: LEGENDARIO
-    swordfall: LEGENDARIO
+    swordfall: INMORTAL
     orbital: LEGENDARIO
     blastoff: INMORTAL
+    peste: INMORTAL
+    guerra: INMORTAL
+    hambre: INMORTAL
+    muerte: INMORTAL
   death:
     smoke: COMUN
     bones: COMUN
@@ -156,6 +165,9 @@ calidades:
     requiem: LEGENDARIO
     sixtyseven: INMORTAL
 
+    sello: INMORTAL
+    trompeta: INMORTAL
+    silencio: INMORTAL
 # ---- ENFRIAMIENTOS ----
 # Segundos que ese jugador debe esperar para volver a lanzar ESE efecto. Cada
 # efecto tiene el suyo, independiente del resto. Admite decimales, de 0 a 600
@@ -199,9 +211,13 @@ enfriamientos:
     lightning: 120
     blackhole: 120
     laser: 120
-    swordfall: 120
+    swordfall: 180
     orbital: 120
     blastoff: 180
+    peste: 180
+    guerra: 180
+    hambre: 180
+    muerte: 180
   death:
     smoke: 10
     bones: 10
@@ -230,3 +246,7 @@ enfriamientos:
     pufferfish: 120
     requiem: 120
     sixtyseven: 180
+
+    sello: 180
+    trompeta: 180
+    silencio: 180

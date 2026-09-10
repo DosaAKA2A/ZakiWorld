@@ -36,9 +36,13 @@ public enum RipEffect {
     K_LIGHTNING(Type.KILL, "lightning", "Tormenta Divina", Rarity.LEGENDARIO, Material.LIGHTNING_ROD, "La tormenta se forma, ruge y fulmina tres veces.", 96, false),
     K_BLACKHOLE(Type.KILL, "blackhole", "Agujero Negro", Rarity.LEGENDARIO, Material.OBSIDIAN, "Un disco de acrecion devora la luz y colapsa.", 92, true),
     K_LASER(Type.KILL, "laser", "Canon Laser", Rarity.LEGENDARIO, Material.END_ROD, "Carga, dispara y funde el suelo bajo tu presa.", 84, true),
-    K_SWORDFALL(Type.KILL, "swordfall", "Juicio de Espadas", Rarity.LEGENDARIO, Material.NETHERITE_SWORD, "La victima queda petrificada bajo una lluvia de espadas.", 140, true),
+    K_SWORDFALL(Type.KILL, "swordfall", "Juicio de Espadas", Rarity.INMORTAL, Material.NETHERITE_SWORD, "La victima queda petrificada bajo una lluvia de espadas.", 140, true),
     K_ORBITAL(Type.KILL, "orbital", "Canon Celestial", Rarity.LEGENDARIO, Material.BEACON, "Un pilar de luz orbital aniquila la zona marcada.", 112, true),
     K_BLASTOFF(Type.KILL, "blastoff", "Despegue Estelar", Rarity.INMORTAL, Material.ELYTRA, "La victima sale disparada al cielo... y se apaga con un destello.", 96, true),
+    K_PESTE(Type.KILL, "peste", "Peste", Rarity.INMORTAL, Material.FERMENTED_SPIDER_EYE, "El primer Jinete: la niebla verde se arrastra, la infecta y la revienta.", 100, true),
+    K_GUERRA(Type.KILL, "guerra", "Guerra", Rarity.INMORTAL, Material.RED_BANNER, "El segundo Jinete: dos hileras de espadas se clavan, chocan y barren la zona.", 110, false),
+    K_HAMBRE(Type.KILL, "hambre", "Hambre", Rarity.INMORTAL, Material.DEAD_BUSH, "El tercer Jinete: la tierra se seca en anillos y consume a la victima.", 100, true),
+    K_MUERTE(Type.KILL, "muerte", "Muerte", Rarity.INMORTAL, Material.WITHER_SKELETON_SKULL, "El cuarto Jinete: el caballo palido cruza, la guadana pasa y todo calla.", 90, true),
     D_SMOKE(Type.DEATH, "smoke", "Humo", Rarity.COMUN, Material.CAMPFIRE, "Columna de humo negro.", 14, false),
     D_BONES(Type.DEATH, "bones", "Huesos", Rarity.COMUN, Material.BONE, "Estallas en una nube de huesos.", 0, true),
     D_BLOODPOOL(Type.DEATH, "bloodpool", "Charco de Sangre", Rarity.COMUN, Material.RED_DYE, "Un charco carmesi se extiende.", 14, false),
@@ -66,7 +70,10 @@ public enum RipEffect {
     D_PUFFERFISH(Type.DEATH, "pufferfish", "Peces Globo", Rarity.LEGENDARIO, Material.PUFFERFISH, "Explotas en peces globo que quedan saltando... puff.", 84, true),
     D_REQUIEM(Type.DEATH, "requiem", "Requiem Celestial", Rarity.LEGENDARIO, Material.AMETHYST_CLUSTER, "Un pilar de luz desciende y canta tu funeral.", 112, false),
     D_SIXTYSEVEN(Type.DEATH, "sixtyseven", "SESENTA Y SIETE", Rarity.INMORTAL, Material.GOLD_BLOCK, "El numero prohibido preside tu funeral entre fuegos y fanfarrias. 67.", 130, false),
-    D_AGONY(Type.DEATH, "agony", "Agonia", Rarity.INMORTAL, Material.WITHER_ROSE, "La noche cae de golpe, un dios se alza de tu cadaver y un rayo lo borra del mundo.", 150, true);
+    D_AGONY(Type.DEATH, "agony", "Agonia", Rarity.INMORTAL, Material.WITHER_ROSE, "La noche cae de golpe, un dios se alza de tu cadaver y un rayo lo borra del mundo.", 150, true),
+    D_SELLO(Type.DEATH, "sello", "El Sello", Rarity.INMORTAL, Material.CHISELED_STONE_BRICKS, "Un circulo de runas se dibuja bajo ti, se alza como columna y se parte en siete.", 120, false),
+    D_TROMPETA(Type.DEATH, "trompeta", "La Trompeta", Rarity.INMORTAL, Material.GOAT_HORN, "Suena la nota, el cielo se abre en haces de luz y tu cuerpo sube por el mas ancho.", 130, true),
+    D_SILENCIO(Type.DEATH, "silencio", "El Silencio", Rarity.INMORTAL, Material.SCULK_SHRIEKER, "Se apaga el mundo entero, queda una brasa flotando... y tambien se apaga.", 150, true);
 
     private final Type type;
     private final String id;

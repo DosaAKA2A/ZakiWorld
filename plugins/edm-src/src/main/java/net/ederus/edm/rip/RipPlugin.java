@@ -267,6 +267,9 @@ implements Listener {
     private void reloadSettings() {
         this.cooldownMillis = Math.max(0L, this.getConfig().getLong("cooldown-ms", 250L));
         this.maxConcurrent = Math.max(0, this.getConfig().getInt("max-animaciones-simultaneas", 3));
+        // La migracion va PRIMERO: si corrige el config despues de leerlo, el
+        // enfriamiento viejo se queda en memoria hasta el siguiente arranque.
+        this.migrarJuicioDeEspadas();
         this.hideBody = this.readHideBody();
         this.cooldownOverrides = this.readCooldowns();
         this.applyRarities();
@@ -355,6 +358,29 @@ implements Listener {
             this.getLogger().info("enfriamientos: " + out.size() + " efectos ajustados desde config.yml");
         }
         return out;
+    }
+
+    /*
+     * Juicio de Espadas subio de LEGENDARIO a INMORTAL en la 1.27.0, pero el
+     * config.yml de un servidor que ya existia sigue diciendo lo de antes y
+     * pisa el valor de fabrica. Aqui se corrige UNA vez, y solo si el archivo
+     * conserva exactamente los dos valores viejos: si alguien lo cambio a
+     * proposito, no se le toca nada.
+     */
+    private void migrarJuicioDeEspadas() {
+        boolean tocado = false;
+        if ("LEGENDARIO".equalsIgnoreCase(this.getConfig().getString("calidades.kill.swordfall", ""))) {
+            this.getConfig().set("calidades.kill.swordfall", "INMORTAL");
+            tocado = true;
+        }
+        if (this.getConfig().getInt("enfriamientos.kill.swordfall", -1) == 120) {
+            this.getConfig().set("enfriamientos.kill.swordfall", 180);
+            tocado = true;
+        }
+        if (tocado) {
+            this.saveConfig();
+            this.getLogger().info("Juicio de Espadas pasa a calidad Inmortal (180 s) en config.yml");
+        }
     }
 
     private void applyRarities() {
