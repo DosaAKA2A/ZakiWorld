@@ -104,6 +104,21 @@ public final class Bovedas implements Listener {
     }
 
     /**
+     * Vuelve a pintar el premio de TODAS las bovedas plantadas de una caja.
+     *
+     * Se llama al tocar el botin: si no, el objeto que gira dentro se queda en el
+     * que hubiera cuando se coloco el bloque y el escaparate miente.
+     */
+    public void refrescarPremio(Caja caja) {
+        for (Boveda b : plugin.registro().bovedasDe(caja.id())) {
+            Location sitio = b.sitio();
+            if (sitio == null) continue;
+            if (!sitio.getWorld().isChunkLoaded(b.x() >> 4, b.z() >> 4)) continue;
+            mostrarPremio(sitio.getBlock(), caja);
+        }
+    }
+
+    /**
      * El objeto que gira dentro de la boveda.
      *
      * Se enseña el UNICO si la caja tiene uno; es su escaparate, y es lo que hace

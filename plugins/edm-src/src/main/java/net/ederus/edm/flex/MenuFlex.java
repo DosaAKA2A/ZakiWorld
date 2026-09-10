@@ -33,11 +33,17 @@ import net.kyori.adventure.text.format.TextDecoration;
  */
 public final class MenuFlex implements Listener {
 
-    /** Las 27 casillas de la vitrina, arriba; abajo el marco y los botones. */
-    private static final int TAM = 45;
-    private static final int SLOT_AYUDA = 40;
-    private static final int SLOT_ANUNCIAR = 44;
-    private static final int SLOT_VACIAR = 36;
+    private static final int TAM = 54;
+
+    /** Las casillas de la vitrina: el mismo cuerpo centrado que usa Anomaly. */
+    private static final int[] CASILLAS = {
+            10, 11, 12, 13, 14, 15, 16,
+            19, 20, 21, 22, 23, 24, 25,
+            28, 29, 30, 31, 32, 33, 34};
+
+    private static final int SLOT_VACIAR = 48;
+    private static final int SLOT_AYUDA = 49;
+    private static final int SLOT_ANUNCIAR = 50;
 
     private final FlexPlugin plugin;
 
@@ -88,18 +94,21 @@ public final class MenuFlex implements Listener {
      */
     private Component titulo(String seccion) {
         return Component.text("✦ ", FlexPlugin.MARCA)
-                .append(Estilo.degradado("VITRINA", FlexPlugin.MAGENTA, FlexPlugin.CARMESI))
+                .append(Estilo.degradado("VITRINA", FlexPlugin.MAGENTA, FlexPlugin.CARMESI)
+                        .decoration(TextDecoration.BOLD, true))
                 .append(Estilo.texto("  " + seccion, FlexPlugin.MARCA));
     }
 
     private void pintar(Vista vista, Vitrina v) {
         Inventory inv = vista.inv;
         inv.clear();
-        for (int i = 0; i < Vitrina.CASILLAS; i++) {
-            inv.setItem(i, v.objeto(i));
-        }
-        for (int i = 27; i < TAM; i++) {
+        // Todo cristal y despues se abren los huecos: asi la vitrina queda
+        // enmarcada sin tener que enumerar el marco casilla a casilla.
+        for (int i = 0; i < TAM; i++) {
             inv.setItem(i, MenuUtil.pane());
+        }
+        for (int i = 0; i < CASILLAS.length; i++) {
+            inv.setItem(CASILLAS[i], v.objeto(i));
         }
 
         if (vista.editable) {
@@ -172,9 +181,10 @@ public final class MenuFlex implements Listener {
         }
 
         int slot = e.getSlot();
-        if (slot < Vitrina.CASILLAS) {
-            if (vitrina.objeto(slot) == null) return;
-            vitrina.quitar(slot);
+        int casilla = indiceDe(slot);
+        if (casilla >= 0) {
+            if (vitrina.objeto(casilla) == null) return;
+            vitrina.quitar(casilla);
             plugin.almacen().guardar(vitrina);
             pintar(v, vitrina);
             return;
@@ -200,6 +210,14 @@ public final class MenuFlex implements Listener {
     @EventHandler
     public void alCerrar(InventoryCloseEvent e) {
         if (e.getInventory().getHolder() instanceof Vista) plugin.almacen().volcarSiHaceFalta();
+    }
+
+    /** Que casilla de la vitrina es ese hueco del menu, o -1 si es marco. */
+    private static int indiceDe(int slot) {
+        for (int i = 0; i < CASILLAS.length; i++) {
+            if (CASILLAS[i] == slot) return i;
+        }
+        return -1;
     }
 
     /** Las tres primeras piezas, para el hover del anuncio. */

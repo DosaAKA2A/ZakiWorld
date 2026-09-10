@@ -94,13 +94,6 @@ public final class DropStore implements Listener {
                     entry.unique(e.getBoolean("unico", false));
                     table.entries().add(entry);
                 }
-                // Por si alguien edito el yml a mano y marco dos: solo puede haber uno.
-                boolean seen = false;
-                for (DropEntry e : table.entries()) {
-                    if (!e.unique()) continue;
-                    if (seen) e.unique(false);
-                    seen = true;
-                }
             }
             tables.put(id, table);
         }

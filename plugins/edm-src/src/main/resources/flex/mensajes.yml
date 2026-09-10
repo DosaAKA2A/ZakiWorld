@@ -3,14 +3,14 @@
 #
 # Codigos de color: &7, &#RRGGBB y el &x&R&R&G&G&B&B de Spigot, los tres.
 #
-# El prefijo es un DEGRADADO de magenta a carmesi, caracter a caracter: es la
-# forma de que se lea premium sin gritar. La negrita va solo ahi, y en el cuerpo
-# del mensaje nunca. Para que una linea salga SIN prefijo, empiezala con
-# {sin-prefijo}.
+# En el CHAT el color va plano: el degradado caracter a caracter se ve demasiado
+# fuerte sobre una linea corta. El degradado se queda para el titulo del menu,
+# que es donde luce. La negrita va solo en la palabra del prefijo. Para que una
+# linea salga SIN prefijo, empiezala con {sin-prefijo}.
 # ---------------------------------------------------------------------------
 version: 1
 
-prefijo: '&x&E&3&6&B&C&8&lV&x&D&5&5&C&B&2&lI&x&C&7&4&D&9&C&lT&x&B&9&3&E&8&6&lR&x&A&B&2&F&7&0&lI&x&9&D&2&0&5&A&lN&x&8&F&1&1&4&4&lA &8» &f'
+prefijo: '&x&D&D&9&2&C&0&lVITRINA &8» &f'
 
 # --- la vitrina ---
 # %jugador% %cuantos%
@@ -22,7 +22,7 @@ sin-vitrina: '&x&D&D&9&2&C&0%jugador% &7no tiene nada en su vitrina.'
 # --- el anuncio del chat ---
 # El anuncio va SIN prefijo: es una linea del servidor, no un aviso a uno solo.
 # El boton [Ver vitrina] se compone en el codigo, que es donde vive su clic.
-anuncio: '{sin-prefijo}&x&D&D&9&2&C&0%jugador% &7ha puesto su vitrina a la vista.  '
+anuncio: '{sin-prefijo}&x&D&D&9&2&C&0%jugador% &7ha flexeado su vitrina.  '
 enfriamiento: '&7Podrás volver a mostrarla en &x&D&D&9&2&C&0%segundos% s'
 
 # --- cuando no se puede ---

@@ -52,6 +52,17 @@ public final class Menus implements Listener {
             19, 20, 21, 22, 23, 24, 25,
             28, 29, 30, 31, 32, 33, 34};
 
+    /*
+     * En la pantalla de botin el cuerpo esta partido en dos: la fila de arriba son
+     * los objetos UNICOS y las dos de abajo los corrientes. La zona la decide el
+     * sitio donde se coloca el objeto, no un gesto escondido, para que se vea de
+     * un vistazo cuales son las piezas que importan.
+     */
+    private static final int[] BODY_UNICOS = {10, 11, 12, 13, 14, 15, 16};
+    private static final int[] BODY_COMUNES = {
+            19, 20, 21, 22, 23, 24, 25,
+            28, 29, 30, 31, 32, 33, 34};
+
     private static final int[] FRAME = {
             0, 1, 2, 3, 5, 6, 7, 8,
             9, 17, 18, 26, 27, 35,
@@ -508,16 +519,41 @@ public final class Menus implements Listener {
         boolean minionTable = minionOf(holder.context) != null;
         DropTable table = plugin.drops().table(holder.context);
 
+        // El cartel de cada zona, en el hueco del marco que tiene al lado.
+        inv.setItem(9, MenuUtil.icon(Material.NETHER_STAR,
+                MenuUtil.title("Objetos únicos", NamedTextColor.AQUA),
+                List.of(
+                        MenuUtil.line("La fila de la derecha. Brillan al caer y"),
+                        MenuUtil.line("el chat anuncia quién se los llevó."),
+                        MenuUtil.blank(),
+                        MenuUtil.field("Puestos", table.uniques().size() + " de " + DropTable.UNICOS,
+                                NamedTextColor.AQUA)), true));
+        inv.setItem(18, MenuUtil.icon(Material.CHEST,
+                MenuUtil.title("Objetos corrientes", MenuUtil.LOOT),
+                List.of(
+                        MenuUtil.line("Las dos filas de abajo. Caen sin más"),
+                        MenuUtil.line("ceremonia, cada uno con su probabilidad."),
+                        MenuUtil.blank(),
+                        MenuUtil.field("Puestos", table.commons().size() + " de " + DropTable.COMUNES,
+                                MenuUtil.LOOT)), false));
+
+        List<DropEntry> unicos = table.uniques();
+        List<DropEntry> comunes = table.commons();
         for (int i = 0; i < BODY.length; i++) {
-            DropEntry entry = table.get(i);
+            boolean zonaUnica = i < BODY_UNICOS.length;
+            int dentro = zonaUnica ? i : i - BODY_UNICOS.length;
+            List<DropEntry> lista = zonaUnica ? unicos : comunes;
+            int casilla = zonaUnica ? BODY_UNICOS[dentro] : BODY_COMUNES[dentro];
+            DropEntry entry = dentro < lista.size() ? lista.get(dentro) : null;
             if (entry == null) {
-                inv.setItem(BODY[i], holder.placeMode ? emptySlotHint() : null);
+                inv.setItem(casilla, holder.placeMode ? emptySlotHint(zonaUnica) : null);
                 continue;
             }
             List<Component> lore = new ArrayList<>();
             if (entry.unique()) {
-                lore.add(Component.text("✦ OBJETO ÚNICO", NamedTextColor.AQUA, TextDecoration.BOLD));
-                lore.add(Component.text("   Brilla al caer y el chat anuncia quien se lo llevo.", MenuUtil.DIM));
+                lore.add(Component.text("Objeto único", NamedTextColor.AQUA));
+                lore.add(Component.text("Brilla al caer y se anuncia en el chat.", MenuUtil.DIM));
+                lore.add(MenuUtil.blank());
             }
             lore.add(MenuUtil.field("Probabilidad", DropTable.trimChance(entry.chance()) + "%",
                     entry.chance() >= 100 ? NamedTextColor.GREEN : MenuUtil.LOOT));
@@ -530,7 +566,6 @@ public final class Menus implements Listener {
             if (holder.placeMode) {
                 lore.add(MenuUtil.action("Clic para quitarlo de la tabla"));
                 lore.add(Component.text("► Con un objeto en el cursor: lo reemplaza", NamedTextColor.GRAY));
-                lore.add(Component.text("► Shift + click: marcarlo como ÚNICO", NamedTextColor.GRAY));
             } else {
                 lore.add(MenuUtil.action("Clic izquierdo: +5% de probabilidad"));
                 lore.add(Component.text("► Clic derecho: -5%", NamedTextColor.YELLOW));
@@ -538,14 +573,13 @@ public final class Menus implements Listener {
                     lore.add(Component.text("► Shift + izquierdo: cambiar a quien le toca", NamedTextColor.GRAY));
                 }
                 lore.add(Component.text("► Shift + derecho: cambiar la cantidad", NamedTextColor.GRAY));
-                lore.add(Component.text("► Tecla F (o click central): marcarlo como ÚNICO", NamedTextColor.GRAY));
                 lore.add(Component.text("► Tecla de soltar (Q): quitarlo", NamedTextColor.GRAY));
             }
             // La cantidad se ve desde el propio inventario: el stack pinta el numero
             // que cae de verdad (el maximo de la horquilla), no hay que leer el lore.
             ItemStack shown = entry.item().clone();
             shown.setAmount(Math.max(1, Math.min(64, entry.max())));
-            inv.setItem(BODY[i], MenuUtil.decorate(shown, null, lore, entry.unique()));
+            inv.setItem(casilla, MenuUtil.decorate(shown, null, lore, entry.unique()));
         }
 
         inv.setItem(46, MenuUtil.icon(holder.placeMode ? Material.HOPPER : Material.COMPARATOR,
@@ -592,9 +626,19 @@ public final class Menus implements Listener {
     }
 
     private ItemStack emptySlotHint() {
+        return emptySlotHint(false);
+    }
+
+    private ItemStack emptySlotHint(boolean unica) {
+        if (unica) {
+            return MenuUtil.simple(Material.CYAN_STAINED_GLASS_PANE,
+                    Component.text("Casilla de único", NamedTextColor.AQUA),
+                    List.of(MenuUtil.line("Trae un objeto en el cursor y haz clic"),
+                            MenuUtil.line("para ponerlo aquí. Nace al 1%.")));
+        }
         return MenuUtil.simple(Material.LIGHT_GRAY_STAINED_GLASS_PANE,
                 Component.text("Casilla libre", MenuUtil.DIM),
-                List.of(MenuUtil.line("Trae un objeto en el cursor y haz click"),
+                List.of(MenuUtil.line("Trae un objeto en el cursor y haz clic"),
                         MenuUtil.line("para copiarlo a la tabla de botín.")));
     }
 
@@ -2345,45 +2389,42 @@ public final class Menus implements Listener {
             return;
         }
 
-        int index = indexOf(BODY, slot);
-        if (index < 0) return;
+        // Que zona es y que puesto ocupa dentro de ella: la fila de arriba son los
+        // unicos y las dos de abajo los corrientes.
+        int enUnicos = indexOf(BODY_UNICOS, slot);
+        int enComunes = indexOf(BODY_COMUNES, slot);
+        if (enUnicos < 0 && enComunes < 0) return;
+        boolean zonaUnica = enUnicos >= 0;
+        int dentro = zonaUnica ? enUnicos : enComunes;
+        List<DropEntry> lista = zonaUnica ? table.uniques() : table.commons();
+        DropEntry enCasilla = dentro < lista.size() ? lista.get(dentro) : null;
 
         if (holder.placeMode) {
-            // Shift + click sobre un objeto de la tabla: marcarlo (o desmarcarlo) como
-            // UNICO. Va en shift a proposito: es el unico gesto que Bedrock tambien tiene.
-            if (event.isShiftClick() && table.get(index) != null) {
-                markUnique(player, table, index);
-                plugin.drops().save();
-                render(event.getInventory(), player, holder);
-                return;
-            }
             ItemStack cursor = event.getCursor();
             if (cursor != null && !cursor.getType().isAir()) {
                 // Se guarda una COPIA: el objeto del cursor sigue siendo del jugador.
                 ItemStack copy = cursor.clone();
                 copy.setAmount(1);
-                DropEntry existing = table.get(index);
-                if (existing != null) {
-                    existing.item(copy);
-                    existing.amount(cursor.getAmount(), cursor.getAmount());
-                } else if (!table.add(copy)) {
-                    deny(player, "La tabla ya esta llena.");
+                if (enCasilla != null) {
+                    enCasilla.item(copy);
+                    enCasilla.amount(cursor.getAmount(), cursor.getAmount());
+                } else if (!table.add(copy, zonaUnica)) {
+                    deny(player, zonaUnica
+                            ? "La fila de únicos ya está llena."
+                            : "Las filas de objetos corrientes ya están llenas.");
                     return;
                 }
                 click(player, 1.5f);
             } else {
-                DropEntry existing = table.get(index);
-                if (existing == null) return;
-                table.remove(index);
+                if (enCasilla == null) return;
+                table.remove(enCasilla);
                 click(player, 0.7f);
             }
         } else {
-            DropEntry entry = table.get(index);
+            DropEntry entry = enCasilla;
             if (entry == null) return;
-            if (event.getClick() == ClickType.SWAP_OFFHAND || event.getClick() == ClickType.MIDDLE) {
-                markUnique(player, table, index);
-            } else if (event.getClick() == ClickType.DROP || event.getClick() == ClickType.CONTROL_DROP) {
-                table.remove(index);
+            if (event.getClick() == ClickType.DROP || event.getClick() == ClickType.CONTROL_DROP) {
+                table.remove(entry);
                 click(player, 0.7f);
             } else if (event.isShiftClick() && event.isLeftClick()) {
                 if (minionOf(holder.context) != null) return; // en esbirros no hay "para quien"
@@ -2416,20 +2457,6 @@ public final class Menus implements Listener {
         }
         int[] next = AMOUNTS[(current + 1) % AMOUNTS.length];
         entry.amount(next[0], next[1]);
-    }
-
-    /** Marca o desmarca el UNICO de la tabla, con su sonido y su aviso. */
-    private void markUnique(Player player, DropTable table, int index) {
-        boolean marked = table.markUnique(index);
-        click(player, marked ? 1.8f : 0.8f);
-        if (marked) {
-            Compat.sound(player.getWorld(), player.getLocation(), "block.amethyst_block.resonate", 0.8f, 1.5f);
-            player.sendActionBar(Component.text("✦ ", NamedTextColor.AQUA)
-                    .append(Component.text("OBJETO ÚNICO", NamedTextColor.AQUA, TextDecoration.BOLD))
-                    .append(Component.text("  queda en super raro; ajusta el % si quieres", MenuUtil.SOFT)));
-        } else {
-            player.sendActionBar(Component.text("Ya no es el objeto único.", MenuUtil.SOFT));
-        }
     }
 
     private void clickSettings(Player player, InventoryClickEvent event, Holder holder, int slot) {

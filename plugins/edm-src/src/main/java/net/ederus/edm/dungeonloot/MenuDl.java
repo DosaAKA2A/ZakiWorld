@@ -16,6 +16,7 @@ import org.bukkit.inventory.ItemStack;
 
 import net.ederus.edm.anomaly.drops.DropEntry;
 import net.ederus.edm.anomaly.drops.DropTable;
+import net.ederus.edm.comun.Estilo;
 import net.ederus.edm.comun.menu.MenuUtil;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
@@ -33,20 +34,25 @@ public final class MenuDl implements Listener {
 
     private enum Pantalla { LISTA, CAJA, BOTIN, BOVEDAS }
 
-    /** Las 21 casillas de botin, las tres filas de arriba sin tocar el marco. */
-    private static final int[] CASILLAS = {
-            10, 11, 12, 13, 14, 15, 16,
-            19, 20, 21, 22, 23, 24, 25,
-            28, 29, 30, 31, 32, 33, 34};
+    /*
+     * La pantalla de botin es pequena a proposito: una boveda no lleva veinte
+     * objetos. Arriba, sola y en el centro, la casilla del UNICO; debajo, una
+     * unica fila para los corrientes. Con eso se ve de un vistazo cual es la
+     * pieza que importa, que era lo que no se entendia con todo en la misma
+     * rejilla.
+     */
+    private static final int SLOT_UNICO = 13;
+    private static final int[] CASILLAS = {19, 20, 21, 22, 23, 24, 25};
 
-    private static final int SLOT_UNICO = 40;
-    private static final int SLOT_VOLVER = 45;
-    private static final int SLOT_TIRADAS = 49;
+    private static final int SLOT_VOLVER = 27;
+    private static final int SLOT_TIRADAS = 31;
+    private static final int SLOT_AYUDA = 35;
 
     private static final int[] MARCO = {
             0, 1, 2, 3, 4, 5, 6, 7, 8,
-            9, 17, 18, 26, 27, 35,
-            36, 37, 38, 39, 41, 42, 43, 44};
+            9, 10, 11, 12, 14, 15, 16, 17,
+            18, 26,
+            28, 29, 30, 32, 33, 34};
 
     private final DungeonLootPlugin plugin;
 
@@ -101,7 +107,7 @@ public final class MenuDl implements Listener {
         Component titulo = Component.text("✦ ", acento)
                 .append(Component.text("BÓVEDAS", NamedTextColor.WHITE, TextDecoration.BOLD))
                 .append(Component.text("  " + seccion, acento));
-        v.inv = Bukkit.createInventory(v, 54, titulo);
+        v.inv = Bukkit.createInventory(v, pantalla == Pantalla.BOTIN ? 36 : 54, titulo);
         pintar(v);
         p.openInventory(v.inv);
     }
@@ -110,7 +116,8 @@ public final class MenuDl implements Listener {
         v.inv.clear();
         // La fila de abajo entera, como en Anomaly: da suelo a la ventana y deja
         // los botones de navegacion siempre en el mismo sitio.
-        for (int i = 45; i <= 53; i++) v.inv.setItem(i, MenuUtil.pane());
+        int suelo = v.inv.getSize() - 9;
+        for (int i = suelo; i < v.inv.getSize(); i++) v.inv.setItem(i, MenuUtil.pane());
         switch (v.pantalla) {
             case LISTA -> pintarLista(v.inv);
             case CAJA -> pintarCaja(v.inv, v.contexto);
@@ -262,18 +269,25 @@ public final class MenuDl implements Listener {
 
         for (int i = 0; i < CASILLAS.length; i++) {
             DropEntry e = i < c.tabla().entries().size() ? c.tabla().entries().get(i) : null;
-            inv.setItem(CASILLAS[i], e == null ? null : iconoEntrada(e, false));
+            inv.setItem(CASILLAS[i], e == null
+                    ? MenuUtil.simple(Material.LIGHT_GRAY_STAINED_GLASS_PANE,
+                            Estilo.texto("Casilla libre", Estilo.APAGADO),
+                            List.of(Estilo.texto("Shift + clic en un objeto de tu", Estilo.APAGADO),
+                                    Estilo.texto("inventario para copiarlo aquí.", Estilo.APAGADO)))
+                    : iconoEntrada(e, false));
         }
 
         inv.setItem(SLOT_UNICO, c.unico() == null
-                ? MenuUtil.icon(Material.LIGHT_GRAY_STAINED_GLASS_PANE,
+                ? MenuUtil.icon(Material.NETHER_STAR,
                         MenuUtil.title("Objeto único", NamedTextColor.AQUA),
                         List.of(
-                                MenuUtil.line("La pieza rara de la caja: sale aparte"),
-                                MenuUtil.line("del resto y con su propia probabilidad."),
-                                MenuUtil.line("Es lo que se ve girando dentro."),
-                                MenuUtil.blank(),
-                                MenuUtil.action("Trae un objeto en el cursor y clic")), false)
+                                Estilo.texto("La pieza rara de la caja. Sale aparte", Estilo.APAGADO),
+                                Estilo.texto("de la fila de abajo, con su propia", Estilo.APAGADO),
+                                Estilo.texto("probabilidad, y es lo que se ve girando", Estilo.APAGADO),
+                                Estilo.texto("dentro de la bóveda.", Estilo.APAGADO),
+                                Estilo.vacio(),
+                                Estilo.accion("Shift + clic en un objeto para ponerlo",
+                                        NamedTextColor.AQUA)), false)
                 : iconoEntrada(c.unico(), true));
 
         inv.setItem(SLOT_TIRADAS, MenuUtil.icon(Material.COMPARATOR,
@@ -292,33 +306,37 @@ public final class MenuDl implements Listener {
                 MenuUtil.title("Volver", NamedTextColor.YELLOW),
                 List.of(MenuUtil.line("A la ficha de la caja.")), false));
 
-        inv.setItem(53, MenuUtil.icon(Material.WRITABLE_BOOK,
+        inv.setItem(SLOT_AYUDA, MenuUtil.icon(Material.WRITABLE_BOOK,
                 MenuUtil.title("Cómo se edita", MenuUtil.SOFT),
                 List.of(
-                        MenuUtil.line("Con un objeto en el cursor, clic en un"),
-                        MenuUtil.line("hueco vacío para añadirlo."),
-                        MenuUtil.blank(),
-                        Component.text("► Clic izquierdo: +5% de probabilidad", NamedTextColor.YELLOW),
-                        Component.text("► Clic derecho: -5%", NamedTextColor.YELLOW),
-                        Component.text("► Shift + clic: cantidad máxima ±1", NamedTextColor.GRAY),
-                        Component.text("► Tecla de soltar (Q): quitarlo", NamedTextColor.GRAY)), false));
+                        Estilo.texto("Shift + clic en un objeto de tu inventario", Estilo.APAGADO),
+                        Estilo.texto("y se copia a la fila de abajo. Con la", Estilo.APAGADO),
+                        Estilo.texto("casilla de único vacía, va ahí.", Estilo.APAGADO),
+                        Estilo.vacio(),
+                        Estilo.accion("Clic izquierdo: +5% de probabilidad", NamedTextColor.YELLOW),
+                        Estilo.accion("Clic derecho: -5%", NamedTextColor.YELLOW),
+                        Estilo.accion("Shift + clic: cantidad máxima ±1", Estilo.APAGADO),
+                        Estilo.accion("Tecla de soltar (Q): quitarlo", Estilo.APAGADO)), false));
     }
 
     private ItemStack iconoEntrada(DropEntry e, boolean unico) {
         List<Component> lore = new ArrayList<>();
         if (unico) {
-            lore.add(Component.text("OBJETO ÚNICO", NamedTextColor.AQUA, TextDecoration.BOLD));
-            lore.add(MenuUtil.blank());
+            lore.add(Estilo.texto("Objeto único", NamedTextColor.AQUA));
+            lore.add(Estilo.texto("Es el que gira dentro de la bóveda.", Estilo.APAGADO));
+            lore.add(Estilo.vacio());
         }
-        lore.add(MenuUtil.field("Probabilidad", DropTable.trimChance(e.chance()) + "%",
-                NamedTextColor.GREEN));
-        lore.add(MenuUtil.field("Cantidad", e.amountLabel(), NamedTextColor.WHITE));
-        lore.add(MenuUtil.blank());
-        lore.add(Component.text("► Clic izquierdo: +5%   ", NamedTextColor.YELLOW)
-                .append(Component.text("Clic derecho: -5%", NamedTextColor.YELLOW)));
-        lore.add(Component.text("► Shift + clic: cantidad máxima ±1", NamedTextColor.GRAY));
-        lore.add(Component.text("► Tecla de soltar (Q): quitarlo", NamedTextColor.GRAY));
-        return MenuUtil.decorate(e.item(), null, lore, unico);
+        lore.add(Estilo.linea("Probabilidad", DropTable.trimChance(e.chance()) + "%",
+                unico ? NamedTextColor.AQUA : Estilo.CLARO));
+        lore.add(Estilo.linea("Cantidad", e.amountLabel(), Estilo.CLARO));
+        lore.add(Estilo.vacio());
+        lore.add(Estilo.accion("Clic izquierdo: +5%", NamedTextColor.YELLOW));
+        lore.add(Estilo.accion("Clic derecho: -5%", NamedTextColor.YELLOW));
+        lore.add(Estilo.accion("Shift + clic: cantidad máxima ±1", Estilo.APAGADO));
+        lore.add(Estilo.accion("Tecla de soltar (Q): quitarlo", Estilo.APAGADO));
+        ItemStack visto = e.item().clone();
+        visto.setAmount(Math.max(1, Math.min(64, e.max())));
+        return MenuUtil.decorate(visto, null, lore, unico);
     }
 
     private void pintarBovedas(Inventory inv, String cajaId) {
@@ -404,18 +422,32 @@ public final class MenuDl implements Listener {
         }
     }
 
-    /** Mete una COPIA en la lista: el objeto del jugador no se mueve de su sitio. */
+    /**
+     * Mete una COPIA: el objeto del jugador no se mueve de su sitio.
+     *
+     * Si la casilla del unico esta vacia, va ahi; es lo primero que se configura
+     * de una caja y no tiene sentido obligar a un segundo gesto para ponerlo.
+     */
     private void copiarAlBotin(Player p, Vista v, ItemStack elegido) {
         if (elegido == null || elegido.getType().isAir()) return;
         Caja c = plugin.registro().caja(v.contexto);
         if (c == null) return;
-        if (c.tabla().entries().size() >= DropTable.CAPACITY) {
-            plugin.di(p, "lista-llena", "La lista está llena: %tope% objetos.",
-                    "%tope%", String.valueOf(DropTable.CAPACITY));
-            return;
+
+        if (c.unico() == null) {
+            DropEntry nuevo = DropEntry.of(elegido.clone());
+            nuevo.chance(1.0);
+            c.unico(nuevo);
+            plugin.di(p, "unico-puesto", "Objeto único puesto, al 1% de probabilidad.");
+        } else {
+            if (c.tabla().entries().size() >= CASILLAS.length) {
+                plugin.di(p, "lista-llena", "La lista está llena: %tope% objetos.",
+                        "%tope%", String.valueOf(CASILLAS.length));
+                return;
+            }
+            c.tabla().entries().add(DropEntry.of(elegido.clone()));
         }
-        c.tabla().entries().add(DropEntry.of(elegido.clone()));
         plugin.registro().guardar();
+        plugin.bovedas().refrescarPremio(c);
         pintar(v);
     }
 
@@ -538,6 +570,7 @@ public final class MenuDl implements Listener {
                 nuevo.chance(1.0);
                 c.unico(nuevo);
                 plugin.registro().guardar();
+                plugin.bovedas().refrescarPremio(c);
                 pintar(v);
                 plugin.di(p, "unico-puesto", "Objeto único puesto, al 1% de probabilidad.");
                 return;
@@ -551,9 +584,9 @@ public final class MenuDl implements Listener {
         List<DropEntry> lista = c.tabla().entries();
 
         if (traeAlgo) {
-            if (lista.size() >= DropTable.CAPACITY) {
+            if (lista.size() >= CASILLAS.length) {
                 plugin.di(p, "lista-llena", "La lista está llena: %tope% objetos.",
-                        "%tope%", String.valueOf(DropTable.CAPACITY));
+                        "%tope%", String.valueOf(CASILLAS.length));
                 return;
             }
             lista.add(DropEntry.of(cursor.clone()));
@@ -580,6 +613,7 @@ public final class MenuDl implements Listener {
             entry.chance(Math.max(0.1, Math.min(100, entry.chance() + paso)));
         }
         plugin.registro().guardar();
+        plugin.bovedas().refrescarPremio(c);
         pintar(v);
     }
 

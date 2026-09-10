@@ -17,7 +17,12 @@ import org.bukkit.inventory.ItemStack;
  */
 public final class Vitrina {
 
-    public static final int CASILLAS = 27;
+    /*
+     * Veintiuna: tres filas de siete, centradas y rodeadas de cristal, como el
+     * cuerpo de todos los menus del nucleo. Una vitrina que ocupa la ventana
+     * entera se lee como un cofre; una enmarcada se lee como un escaparate.
+     */
+    public static final int CASILLAS = 21;
 
     private final UUID uuid;
     private String nombre;

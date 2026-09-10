@@ -137,7 +137,7 @@ public final class FlexPlugin extends Module {
         }
         ultimoAnuncio.put(quien.getUniqueId(), ahora);
 
-        Component hover = Estilo.degradado("Vitrina de " + vitrina.nombre(), MAGENTA, CARMESI)
+        Component hover = Estilo.texto("Vitrina de " + vitrina.nombre(), MARCA)
                 .append(Component.newline())
                 .append(Estilo.texto(vitrina.cuantos() + " objeto(s)", Estilo.APAGADO));
         for (Component fila : menu.resumen(vitrina)) {
@@ -146,13 +146,15 @@ public final class FlexPlugin extends Module {
         hover = hover.append(Component.newline()).append(Component.newline())
                 .append(Estilo.texto("Clic para abrirla", MARCA));
 
+        // El boton tambien va plano: en una linea de chat el degradado se come el
+        // texto. El degradado se queda para el titulo del menu, que es donde luce.
         Component boton = Estilo.texto("[", Estilo.APAGADO)
-                .append(Estilo.degradado("Ver vitrina", MAGENTA, CARMESI))
+                .append(Estilo.texto("Ver vitrina", MARCA))
                 .append(Estilo.texto("]", Estilo.APAGADO))
                 .hoverEvent(HoverEvent.showText(hover))
                 .clickEvent(ClickEvent.runCommand("/flex " + vitrina.nombre()));
 
-        Component linea = texto("anuncio", "%jugador% ha puesto su vitrina a la vista.  ",
+        Component linea = texto("anuncio", "%jugador% ha flexeado su vitrina.  ",
                 "%jugador%", vitrina.nombre()).append(boton);
 
         for (Player p : core.getServer().getOnlinePlayers()) {

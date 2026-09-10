@@ -16,6 +16,15 @@ public final class DropTable {
     /** Cuantos objetos distintos caben. Coincide con las casillas editables del menu. */
     public static final int CAPACITY = 21;
 
+    /**
+     * La tabla esta partida en dos zonas y la zona la decide DONDE se coloca el
+     * objeto, no un gesto escondido: la primera fila del menu son los UNICOS y las
+     * de abajo los corrientes. Asi se ve de un vistazo cuales son las piezas que
+     * importan, que es justo lo que no se entendia con una marca invisible.
+     */
+    public static final int UNICOS = 7;
+    public static final int COMUNES = 14;
+
     private final String anomalyId;
     private final List<DropEntry> entries = new ArrayList<>();
     private final List<String> commands = new ArrayList<>();
@@ -53,9 +62,42 @@ public final class DropTable {
     }
 
     public boolean add(ItemStack stack) {
-        if (entries.size() >= CAPACITY) return false;
-        entries.add(DropEntry.of(stack));
+        return add(stack, false);
+    }
+
+    /** Anade a una zona u otra; devuelve false si esa zona ya esta llena. */
+    public boolean add(ItemStack stack, boolean unico) {
+        if (unico ? uniques().size() >= UNICOS : commons().size() >= COMUNES) return false;
+        DropEntry entry = DropEntry.of(stack);
+        entry.unique(unico);
+        // Un unico nace raro: si sale con la misma probabilidad que el resto no es
+        // una pieza especial, es un objeto mas puesto en otra fila.
+        if (unico) entry.chance(1.0);
+        entries.add(entry);
         return true;
+    }
+
+    /** Los de la fila de arriba, en el orden en que se pusieron. */
+    public List<DropEntry> uniques() {
+        List<DropEntry> out = new ArrayList<>();
+        for (DropEntry e : entries) {
+            if (e.unique()) out.add(e);
+        }
+        return out;
+    }
+
+    /** Los corrientes, los de las filas de abajo. */
+    public List<DropEntry> commons() {
+        List<DropEntry> out = new ArrayList<>();
+        for (DropEntry e : entries) {
+            if (!e.unique()) out.add(e);
+        }
+        return out;
+    }
+
+    /** Quita esta entrada exacta, este en la zona que este. */
+    public void remove(DropEntry entry) {
+        entries.remove(entry);
     }
 
     public DropEntry get(int index) {
@@ -66,31 +108,14 @@ public final class DropTable {
         if (index >= 0 && index < entries.size()) entries.remove(index);
     }
 
-    /**
-     * Marca un objeto como el UNICO de la tabla y desmarca cualquier otro: solo
-     * puede haber uno. Marcarlo lo vuelve ademas super raro de serie (1%), aunque la
-     * probabilidad se puede reajustar despues como la de cualquier otro.
-     *
-     * @return true si quedo marcado, false si quedo desmarcado (era el unico y se repitio el toque)
-     */
-    public boolean markUnique(int index) {
-        DropEntry target = get(index);
-        if (target == null) return false;
-        boolean wasUnique = target.unique();
-        for (DropEntry e : entries) e.unique(false);
-        if (!wasUnique) {
-            target.unique(true);
-            if (target.chance() > 5.0) target.chance(1.0);
-        }
-        return !wasUnique;
-    }
-
-    /** El objeto UNICO de la tabla, si el admin marco alguno. */
+    /** El unico mas raro de la tabla, que es el que la representa. */
     public DropEntry uniqueEntry() {
+        DropEntry best = null;
         for (DropEntry e : entries) {
-            if (e.unique()) return e;
+            if (!e.unique()) continue;
+            if (best == null || e.chance() < best.chance()) best = e;
         }
-        return null;
+        return best;
     }
 
     /**
