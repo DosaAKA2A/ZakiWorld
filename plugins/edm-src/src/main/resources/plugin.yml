@@ -53,6 +53,11 @@ commands:
     usage: /dl [lista|llave|boveda|reload]
     aliases: [dungeonloot, cajas]
     permission: ederus.dl
+  flex:
+    description: 'Tu vitrina: pon a la vista tus mejores objetos.'
+    usage: /flex [jugador|showcase]
+    aliases: [vitrina]
+    permission: ederus.flex
   gi:
     description: GodItems - items con activadores, acciones y condiciones
     usage: /gi <give|list|info|reload|trigger>
@@ -69,6 +74,12 @@ permissions:
     default: op
   ederus.dl.admin:
     description: Permite colocar y retirar bovedas del mundo
+    default: op
+  ederus.flex:
+    description: Permite montar una vitrina, verla y mostrarla en el chat
+    default: true
+  ederus.flex.admin:
+    description: Recarga las vitrinas y salta el enfriamiento del anuncio
     default: op
   ederus.goditems:
     description: Permite dar, mirar, disparar y recargar GodItems

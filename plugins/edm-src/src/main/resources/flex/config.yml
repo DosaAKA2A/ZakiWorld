@@ -1,0 +1,14 @@
+# Flex: la vitrina de cada jugador.
+#
+# Un escaparate de 27 objetos que todos pueden mirar y nadie puede tocar. Lo que
+# se guarda son COPIAS: el objeto de verdad no se mueve del inventario de quien
+# lo puso, asi que una vitrina no puede duplicar nada ni resucitar nada con un
+# rollback del mundo.
+#
+# Las vitrinas viven en vitrinas.yml. El dia que haya MariaDB solo cambia la
+# clase Almacen: nadie mas sabe si debajo hay un fichero o una tabla.
+
+anuncio:
+  # Segundos entre dos /flex showcase del mismo jugador. Quien tenga
+  # ederus.flex.admin no espera.
+  enfriamiento-segundos: 300
