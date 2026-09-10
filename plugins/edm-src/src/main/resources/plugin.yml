@@ -1,5 +1,5 @@
 name: EDM
-version: '1.28.0'
+version: '1.29.0'
 main: net.ederus.edm.EDMPlugin
 api-version: '1.20'
 author: Iris Studio
@@ -84,6 +84,17 @@ permissions:
   ederus.goditems:
     description: Permite dar, mirar, disparar y recargar GodItems
     default: op
+  troll.use:
+    description: Permite gastar las bromas normales. Es el permiso corto de ederus.troll.usar
+    default: op
+    children:
+      ederus.troll.usar: true
+  troll.x:
+    description: Permite ademas las bromas destructivas (matar, tirar el inventario, al vacio)
+    default: op
+    children:
+      ederus.troll.usar: true
+      ederus.troll.destructivo: true
   ederus.troll.usar:
     description: Permite gastar bromas a otros jugadores
     default: op

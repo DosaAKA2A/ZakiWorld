@@ -49,6 +49,18 @@ public final class Trolls {
         return m;
     }
 
+    /**
+     * Pone la escala y la devuelve a 1 al terminar.
+     *
+     * El valor se guarda ANTES de tocarlo, por si a la victima ya se la habia
+     * escalado por otra via: al acabar vuelve a lo que tuviera, no a 1 a ciegas.
+     */
+    private static void escala(Contexto c, double cuanto) {
+        double antes = net.ederus.edm.comun.Compat.getAttribute(c.v(), "scale", 1.0);
+        net.ederus.edm.comun.Compat.setAttribute(c.v(), "scale", cuanto);
+        c.alAcabar(() -> net.ederus.edm.comun.Compat.setAttribute(c.v(), "scale", antes));
+    }
+
     private static void pon(Map<String, Troll> m, Troll t) { m.put(t.id(), t); }
 
     // ------------------------------------------------------------- SUSTOS
@@ -152,6 +164,27 @@ public final class Trolls {
     // --------------------------------------------------------- MOVIMIENTO
 
     private static void movimiento(Map<String, Troll> m) {
+        /*
+         * Las dos de escala tocan el atributo 'scale', que cambia el TAMANO de
+         * verdad: la caja de golpe, el alcance y la altura de los ojos van con
+         * el. Por eso son temporales y se deshacen solas dejando la escala en 1:
+         * un jugador que se quede a 0.35 no cabe por su propia puerta ni alcanza
+         * a pegarle a nada.
+         */
+        pon(m, Troll.temporal("gigante", "Gigante", "Se hace enorme durante un rato",
+                Material.PISTON, Familia.MOVIMIENTO, 25, c -> {
+            escala(c, 2.6);
+            c.sonido("entity.ravager.roar", 0.7f);
+            c.titulo("&c&lGIGANTE", "&7no cabes por la puerta");
+        }));
+
+        pon(m, Troll.temporal("enano", "Enano", "Se hace diminuto durante un rato",
+                Material.BUCKET, Familia.MOVIMIENTO, 25, c -> {
+            escala(c, 0.35);
+            c.sonido("entity.silverfish.ambient", 1.8f);
+            c.titulo("&b&lENANO", "&7desde aqui abajo todo es enorme");
+        }));
+
         pon(m, Troll.de("lanzar", "Por los aires", "Un empujon hacia arriba",
                 Material.FIREWORK_ROCKET, Familia.MOVIMIENTO, c -> {
             c.empujar(0, 2.2, 0);
