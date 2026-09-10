@@ -18,6 +18,7 @@ import org.bukkit.plugin.java.JavaPlugin;
 
 import net.ederus.edm.anomaly.AnomalyPlugin;
 import net.ederus.edm.coinflip.CoinflipPlugin;
+import net.ederus.edm.dungeonloot.DungeonLootPlugin;
 import net.ederus.edm.troll.TrollPlugin;
 import net.ederus.edm.comun.EntradaChat;
 import net.ederus.edm.core.EderusMain;
@@ -68,6 +69,7 @@ public final class EDMPlugin extends JavaPlugin {
         arrancar(new CoinflipPlugin(this));
         arrancar(new TrollPlugin(this));
         arrancar(new GodItemsPlugin(this));
+        arrancar(new DungeonLootPlugin(this));
         /* Quests es softdepend: sin el instalado, la clase del modulo de misiones
          * ni siquiera carga (referencia TaskType de Quests) y tumbaba TODO el
          * nucleo en el arranque. En Ederus siempre esta; esto protege cualquier

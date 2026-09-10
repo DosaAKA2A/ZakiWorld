@@ -1,0 +1,8 @@
+# DungeonLoot: las cajas de mazmorra.
+#
+# El diseño de cada caja vive en cajas.yml y el mapa de las plantadas en
+# bovedas.yml; los dos se escriben solos desde /dl. Aqui solo queda lo que no
+# es de una caja concreta.
+
+# Anunciar en el chat a todo el servidor quien saca el objeto unico de una caja.
+anunciar-unico: true

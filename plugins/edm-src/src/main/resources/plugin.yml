@@ -48,6 +48,11 @@ commands:
     usage: /troll [jugador] [broma]
     aliases: [bromas]
     permission: ederus.troll.usar
+  dl:
+    description: 'Cajas de mazmorra: bovedas del Trial Chamber con botin propio.'
+    usage: /dl [lista|llave|boveda|reload]
+    aliases: [dungeonloot, cajas]
+    permission: ederus.dl
   gi:
     description: GodItems - items con activadores, acciones y condiciones
     usage: /gi <give|list|info|reload|trigger>
@@ -59,6 +64,12 @@ commands:
     permission: ederus.libro
 
 permissions:
+  ederus.dl:
+    description: Abre el menu de cajas de mazmorra y entrega llaves y bovedas
+    default: op
+  ederus.dl.admin:
+    description: Permite colocar y retirar bovedas del mundo
+    default: op
   ederus.goditems:
     description: Permite dar, mirar, disparar y recargar GodItems
     default: op
