@@ -217,6 +217,7 @@ public final class MinionRegistry {
                 type.colorRgb(s.getInt("color", 0xFFFFFF));
                 type.bold(s.getBoolean("negrita", false));
                 type.categoryId(s.getString("categoria", MinionCategory.GENERAL));
+                type.tier(s.getInt("tier", 0));
                 try {
                     type.entity(EntityType.valueOf(s.getString("entidad", "ZOMBIE")));
                 } catch (IllegalArgumentException ignored) {
@@ -289,6 +290,10 @@ public final class MinionRegistry {
                 "",
                 "negrita: si el nombre del holograma va en negrita (por defecto, no).",
                 "",
+                "tier: el piso de la mina, del 1 al 5 (0 = no es de la mina). Cada baja sube",
+                "  el contador esbirros_tierN de ServerVariables, que es lo que pide el",
+                "  camino PvE del rankup. Matar en el piso 5 no cuenta para el piso 1.",
+                "",
                 "habilidades: rasgos que se encienden y se apagan desde el menú.",
                 "  flecha-pesada  cada tercera flecha pega el doble",
                 "  ágil           se mueve un 25% más rápido",
@@ -310,6 +315,7 @@ public final class MinionRegistry {
         for (MinionType t : types.values()) {
             String base = "esbirros." + t.id();
             yml.set(base + ".categoria", t.categoryId());
+            yml.set(base + ".tier", t.tier());
             yml.set(base + ".nombre", t.display());
             yml.set(base + ".color", t.colorRgb());
             yml.set(base + ".negrita", t.boldFlag());

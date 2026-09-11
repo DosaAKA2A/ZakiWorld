@@ -417,6 +417,28 @@ public final class MinionManager implements Listener {
     }
 
     /**
+     * Sube el contador del piso al que pertenecia el esbirro.
+     *
+     * Solo cuenta si lo mato un JUGADOR: si se ahoga, se cae o lo revienta otro
+     * mob no hay merito que apuntar. Va por comando de consola con silent:true,
+     * igual que los contadores de las anomalias, y si ServerVariables no esta
+     * instalado el comando falla solo sin tocar nada mas.
+     */
+    private void contarParaElRankup(LivingEntity mob, MinionType type) {
+        if (type == null) return;
+        String variable = type.tierVariable();
+        if (variable == null) return;
+        Player quien = mob.getKiller();
+        if (quien == null || !quien.isOnline()) return;
+        try {
+            plugin.getServer().dispatchCommand(plugin.getServer().getConsoleSender(),
+                    "svar add " + variable + " 1 " + quien.getName() + " silent:true");
+        } catch (Throwable t) {
+            plugin.getLogger().warning("No se pudo subir " + variable + ": " + t);
+        }
+    }
+
+    /**
      * Un warden de tropa no puede enterrarse.
      *
      * El warden vanilla se hunde en el suelo a los 60 segundos sin objetivo, y en
@@ -602,6 +624,7 @@ public final class MinionManager implements Listener {
                 it.remove();
             }
         }
+        contarParaElRankup(mob, typeOf(mob));
         arrowCount.remove(mob.getUniqueId());
         // El contorno vive en un equipo del marcador, y el marcador SI se guarda
         // entre reinicios: sin esto, cada destacado muerto deja su UUID dentro

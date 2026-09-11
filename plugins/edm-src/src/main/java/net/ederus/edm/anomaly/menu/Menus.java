@@ -929,6 +929,8 @@ public final class Menus implements Listener {
         ficha.add(MenuUtil.blank());
         ficha.add(MenuUtil.field("Generadores", String.valueOf(plugin.minions().spawnersOf(type.id()).size()),
                 NamedTextColor.WHITE));
+        ficha.add(MenuUtil.field("Piso de la mina", type.tier() == 0 ? "ninguno" : String.valueOf(type.tier()),
+                type.tier() == 0 ? MenuUtil.DIM : NamedTextColor.AQUA));
         inv.setItem(13, MenuUtil.icon(type.icon(), MenuUtil.title(type.display(), type.color()), ficha, true));
 
         inv.setItem(14, MenuUtil.icon(Material.GOLDEN_APPLE,

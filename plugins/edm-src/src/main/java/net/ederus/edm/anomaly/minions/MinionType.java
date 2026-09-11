@@ -44,6 +44,16 @@ public final class MinionType {
     private String display;
     /** La carpeta en la que vive: mazmorra o proposito. Ver MinionCategory. */
     private String categoryId = MinionCategory.GENERAL;
+
+    /**
+     * El PISO de la mina al que pertenece, del 1 al 5, o 0 si no es de la mina.
+     *
+     * No es lo mismo que la carpeta: la carpeta es como se ordena el menu y el
+     * tier es una propiedad de juego. Cuanto mas hondo, mas dura la criatura, y el
+     * rankup pide bajas por piso: matar en el piso 5 no cuenta para el piso 1.
+     * Cada baja sube el contador 'esbirros_tierN' de ServerVariables.
+     */
+    private int tier = 0;
     private int color = 0xFFFFFF;
     /** El nombre del holograma va en redonda; la negrita solo si se pide a mano. */
     private boolean bold = false;
@@ -107,6 +117,19 @@ public final class MinionType {
 
     public String categoryId() {
         return categoryId;
+    }
+
+    public int tier() {
+        return tier;
+    }
+
+    public void tier(int tier) {
+        this.tier = Math.max(0, Math.min(5, tier));
+    }
+
+    /** La variable de ServerVariables que sube al matar uno de estos. */
+    public String tierVariable() {
+        return tier <= 0 ? null : "esbirros_tier" + tier;
     }
 
     public void categoryId(String categoryId) {
