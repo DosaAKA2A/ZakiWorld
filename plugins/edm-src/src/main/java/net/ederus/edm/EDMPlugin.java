@@ -25,6 +25,7 @@ import net.ederus.edm.comun.EntradaChat;
 import net.ederus.edm.core.EderusMain;
 import net.ederus.edm.goditems.GodItemsPlugin;
 import net.ederus.edm.misiones.MisionesPlugin;
+import net.ederus.edm.pase.PasePlugin;
 import net.ederus.edm.rip.RipPlugin;
 import net.ederus.edm.tienda.TiendaPlugin;
 import net.ederus.edm.tooltip.TooltipPlugin;
@@ -39,7 +40,7 @@ import net.ederus.edm.tooltip.TooltipPlugin;
  */
 public final class EDMPlugin extends JavaPlugin {
 
-    public static final String VERSION = "1.30.0";
+    public static final String VERSION = "1.31.0";
 
     /* id del modulo -> carpeta del plugin viejo de la que se migran los datos */
     private static final Map<String, String> CARPETAS_VIEJAS = Map.of(
@@ -89,6 +90,13 @@ public final class EDMPlugin extends JavaPlugin {
         } else {
             getLogger().info("Quests no esta instalado: el modulo de misiones queda apagado.");
         }
+        /* BattlePass es softdepend por lo mismo: la clase del modulo referencia
+         * sus tipos y sin el jar no llega ni a cargarse. */
+        if (getServer().getPluginManager().getPlugin("BattlePass") != null) {
+            arrancar(new PasePlugin(this));
+        } else {
+            getLogger().info("BattlePass no esta instalado: el modulo bp queda apagado.");
+        }
 
         registrarComando();
         banner();
@@ -105,7 +113,7 @@ public final class EDMPlugin extends JavaPlugin {
     private static final Map<String, String> ALIAS_MODULO = Map.of(
             "shop", "tienda", "tienda", "tienda",
             "cf", "coinflip", "apuestas", "coinflip",
-            "bromas", "troll");
+            "bromas", "troll", "battlepass", "bp");
 
     @Override
     public boolean onCommand(CommandSender quien, Command cmd, String etiqueta, String[] args) {

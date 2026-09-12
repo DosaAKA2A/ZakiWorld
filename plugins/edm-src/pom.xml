@@ -6,7 +6,7 @@
 
   <groupId>net.ederus</groupId>
   <artifactId>EDM</artifactId>
-  <version>1.30.0</version>
+  <version>1.31.0</version>
   <packaging>jar</packaging>
   <name>EDM</name>
   <description>Nucleo de Ederus: Rip + Anomaly + libros y avisos de tiendas</description>
@@ -73,6 +73,15 @@
       <version>1.7.1</version>
       <scope>system</scope>
       <systemPath>${project.basedir}/../../../_toolchain/libs/MythicLib.jar</systemPath>
+    </dependency>
+    <!-- BattlePass (AdvancedPlugins). Jar bajado del propio servidor, en
+         _toolchain/libs, para el modulo del pase de batalla. -->
+    <dependency>
+      <groupId>io.github.battlepass</groupId>
+      <artifactId>BattlePass</artifactId>
+      <version>5.0.12</version>
+      <scope>system</scope>
+      <systemPath>${project.basedir}/../../../_toolchain/libs/BattlePass-5.0.12.jar</systemPath>
     </dependency>
     <dependency>
       <groupId>com.comphenix.protocol</groupId>
