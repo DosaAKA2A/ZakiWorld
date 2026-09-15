@@ -5,7 +5,7 @@
   "minecraft:visual/cloud_color": "#FFB5C94A",
   "minecraft:visual/sky_light_color": "#D8F070",
   "minecraft:visual/sunrise_sunset_color": "#00000000",
-  "minecraft:visual/fog_end_distance": 80,
+  "minecraft:visual/fog_end_distance": 160,
   "minecraft:gameplay/monsters_burn": false,
   "minecraft:visual/ambient_particles": [
    {
