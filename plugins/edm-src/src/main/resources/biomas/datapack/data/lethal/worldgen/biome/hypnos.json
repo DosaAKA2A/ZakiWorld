@@ -1,0 +1,47 @@
+{
+ "attributes": {
+  "minecraft:visual/sky_color": "#8A4FD8",
+  "minecraft:visual/fog_color": "#F2A6E0",
+  "minecraft:gameplay/monsters_burn": false,
+  "minecraft:audio/ambient_sounds": {
+   "loop": "minecraft:ambient.crimson_forest.loop",
+   "mood": {
+    "sound": "minecraft:ambient.crimson_forest.mood",
+    "tick_delay": 6000,
+    "block_search_extent": 8,
+    "offset": 2
+   }
+  }
+ },
+ "temperature": 0.6,
+ "downfall": 0.2,
+ "has_precipitation": false,
+ "carvers": [],
+ "features": [],
+ "spawn_costs": {},
+ "spawners": {
+  "ambient": [],
+  "axolotls": [],
+  "creature": [],
+  "misc": [],
+  "monster": [],
+  "underground_water_creature": [],
+  "water_ambient": [],
+  "water_creature": []
+ },
+ "effects": {
+  "sky_color": 9064408,
+  "fog_color": 15902432,
+  "water_color": 11829224,
+  "water_fog_color": 8015792,
+  "grass_color": 10120150,
+  "foliage_color": 15765456,
+  "dry_foliage_color": 13138888,
+  "mood_sound": {
+   "sound": "minecraft:ambient.crimson_forest.mood",
+   "tick_delay": 6000,
+   "block_search_extent": 8,
+   "offset": 2
+  }
+ }
+}

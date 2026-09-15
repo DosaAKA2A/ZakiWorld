@@ -1,5 +1,5 @@
 name: EDM
-version: '1.31.0'
+version: '1.32.0'
 main: net.ederus.edm.EDMPlugin
 api-version: '1.20'
 author: Iris Studio
@@ -58,6 +58,11 @@ commands:
     usage: /flex [jugador|showcase]
     aliases: [vitrina]
     permission: ederus.flex
+  lbiomes:
+    description: Lethal Biomes - climas por zona sin reiniciar
+    usage: /lbiomes <lista|zonas|zona|pintar|limpiar>
+    aliases: [lethalbiomes, biomas]
+    permission: ederus.biomas
   gi:
     description: GodItems - items con activadores, acciones y condiciones
     usage: /gi <give|list|info|reload|trigger>
@@ -80,6 +85,9 @@ permissions:
     default: true
   ederus.flex.admin:
     description: Recarga las vitrinas y salta el enfriamiento del anuncio
+    default: op
+  ederus.biomas:
+    description: Crea zonas de clima y las pinta con los biomas de Lethal Biomes
     default: op
   ederus.goditems:
     description: Permite dar, mirar, disparar y recargar GodItems

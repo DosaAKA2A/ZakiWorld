@@ -160,7 +160,10 @@ public final class CopperTwins extends BossFight {
         kam = forgeTwin(kamAt, false, each);
         markMinion(kam);
         Glow.apply(kam, NamedTextColor.GREEN);
-        kamMaxHealth = each;
+        /* La vida de la ENTIDAD, no la configurada. Con mas de 1024 por gemelo la
+         * entidad topa en 1024 y la barra de KAM se calculaba contra la vida entera:
+         * nacia con la barra casi vacia y sin reescalar el dano caia de un golpe. */
+        kamMaxHealth = Math.min(each, VANILLA_HEALTH_CAP);
 
         applyHealth(each);
 
@@ -275,6 +278,12 @@ public final class CopperTwins extends BossFight {
      * llegar abajo se queda ABATIDO. Solo cuando KAM esta fuera de la pelea se le deja
      * caer de verdad, y esa muerte es la que cierra el evento.
      */
+    @Override
+    public double partDamageScale(LivingEntity part) {
+        if (kam == null || part == null || !part.getUniqueId().equals(kam.getUniqueId())) return 1.0;
+        return damageScale();
+    }
+
     @Override
     public double survivalFloor() {
         return kamStillInPlay() ? 0.02 : 0;

@@ -66,6 +66,20 @@ combate:
   # asi que cinco jugadores pelean contra un jefe con un 60% mas de vida.
   vida-extra-por-jugador: 0.15
 
+arena:
+  # Zona de Lethal Biomes que hace de arena (/lbiomes zona crear ...). Si una anomalia
+  # abre DENTRO de esa zona, la zona entera toma el clima de la anomalia mientras dure
+  # la pelea y vuelve a su bioma al cerrarse. Vacio = las anomalias no tocan el clima.
+  # El clima de cada una se cambia con /anomaly bioma <id> <clima|ninguno>
+  # (se guarda como anomalias.<id>.bioma).
+  zona: ''
+
+botin:
+  # A que distancia del cuerpo cae cada monton al reventar la tabla. El botin sale
+  # disparado en arco y nadie lo puede recoger hasta que toca el suelo.
+  distancia-minima: 10
+  distancia-maxima: 15
+
 anuncio:
   activo: true
   sonido: true

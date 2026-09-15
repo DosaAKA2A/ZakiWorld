@@ -193,9 +193,10 @@ public final class MenuGi implements Listener {
             case RAIZ -> Estilo.titulo("GODITEMS", this.modulo.registro().cuantos() + " items");
             case TIPOS -> Estilo.titulo("IMPORTAR", "elige tipo");
             case ITEMS_MMO -> Estilo.titulo("IMPORTAR", v.a);
-            case FICHA -> Estilo.titulo("GODITEM", v.a);
-            case ASPECTO -> Estilo.titulo("ASPECTO", v.a);
-            case ACTIVADOR -> Estilo.titulo(s.act == null ? "ACTIVADOR" : s.act.name(), s.itemId);
+            case FICHA -> Estilo.titulo("GODITEM", nombreCorto(v.a));
+            case ASPECTO -> Estilo.titulo("ASPECTO", nombreCorto(v.a));
+            case ACTIVADOR -> Estilo.titulo(s.act == null ? "ACTIVADOR" : humano(s.act).toUpperCase(Locale.ROOT),
+                    nombreCorto(s.itemId));
             case LISTA -> Estilo.titulo(s.lista.toUpperCase(Locale.ROOT),
                     s.act == null ? "" : s.act.name());
             case LINEA -> Estilo.titulo("LINEA", (s.indice + 1) + " de " + s.lista);
@@ -278,14 +279,16 @@ public final class MenuGi implements Listener {
         int desde = v.pagina * POR_PAGINA;
         for (int i = 0; i < POR_PAGINA && desde + i < todos.size(); i++) {
             GodItem def = todos.get(desde + i);
+            /* El item se enseña COMO ES: su nombre, su color y su lore. Antes se le
+             * pisaba el nombre con el id en mayusculas y en la lista solo se leian
+             * cosas como TOTEM_DE_AVALON; el id pasa a ser un dato mas debajo. */
             ItemStack icono = iconoDe(def);
-            int acciones = 0;
-            for (GodItem.Bloque b : def.bloques().values()) acciones += b.pasos().size();
-            adorno(icono, "&f" + def.id(), List.of(
-                    def.enlazado() ? "&8enlazado a &f" + def.enlace() : "&8nativo",
-                    "&7" + def.bloques().size() + " activadores, " + acciones + " acciones",
-                    "",
-                    AZUL + Estilo.FLECHA + " Abrir la ficha"));
+            List<String> extra = new ArrayList<>(recortarLore(icono, 6));
+            extra.addAll(resumen(def));
+            extra.add("");
+            extra.add(AZUL + Estilo.FLECHA + " Abrir la ficha");
+            ponerNombreSiFalta(icono, def);
+            reemplazarLore(icono, extra);
             poner(v, RANURAS[i], icono, "abrir:" + def.id());
         }
         if (todos.isEmpty()) {
@@ -378,7 +381,12 @@ public final class MenuGi implements Listener {
             poner(v, R_VOLVER, volver(), "raiz");
             return;
         }
-        v.inv.setItem(R_CABECERA, iconoDe(def));
+        ItemStack cabeza = iconoDe(def);
+        ponerNombreSiFalta(cabeza, def);
+        List<String> ficha = new ArrayList<>(recortarLore(cabeza, 10));
+        ficha.addAll(resumen(def));
+        reemplazarLore(cabeza, ficha);
+        v.inv.setItem(R_CABECERA, cabeza);
 
         poner(v, 10, adorno(new ItemStack(def.enlazado() ? Material.ENCHANTED_BOOK : Material.ITEM_FRAME),
                 CLARO + "Aspecto y stats",
@@ -412,8 +420,8 @@ public final class MenuGi implements Listener {
             Activador a = activadores.get(i);
             GodItem.Bloque b = def.bloque(a);
             Catalogo.FichaActivador f = Catalogo.ficha(a);
-            poner(v, huecos[i], adorno(new ItemStack(f.icono()), AMARILLO + a.name(),
-                    List.of("&8" + f.descripcion(),
+            poner(v, huecos[i], adorno(new ItemStack(f.icono()), AMARILLO + humano(a),
+                    List.of("&8" + a.name() + " · " + f.descripcion(),
                             "&7" + b.pasos().size() + " acciones, "
                                     + b.condiciones().size() + " condiciones",
                             b.cooldown() > 0 ? "&8enfriamiento " + Numeros.reloj(b.cooldown())
@@ -968,8 +976,9 @@ public final class MenuGi implements Listener {
             }
             case GODITEM -> {
                 for (GodItem d : this.modulo.registro().todos()) {
-                    out.add(new Opcion(d.id(), d.id(), Material.NETHER_STAR,
-                            List.of(d.enlazado() ? "&8enlazado a " + d.enlace() : "&8nativo")));
+                    ItemStack ic = iconoDe(d);
+                    out.add(new Opcion(d.id(), nombrePlano(d), ic.getType().isAir() ? Material.NETHER_STAR : ic.getType(),
+                            List.of("&8" + d.id(), d.enlazado() ? "&8MMOItems " + d.enlace() : "&8nativo")));
                 }
             }
             case COLOR -> {
@@ -2031,6 +2040,99 @@ public final class MenuGi implements Listener {
         }
         ItemStack it = this.modulo.fabricar(def, 1);
         return it == null ? new ItemStack(Material.PAPER) : it;
+    }
+
+    /* ------------------------------------------------------ nombres visibles */
+
+    /** El nombre del item tal y como lo ve un jugador, sin colores. */
+    private String nombrePlano(GodItem def) {
+        if (def == null) return "?";
+        ItemStack it = iconoDe(def);
+        ItemMeta meta = it.getItemMeta();
+        if (meta != null && meta.hasDisplayName() && meta.displayName() != null) {
+            String plano = net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer.plainText()
+                    .serialize(meta.displayName()).trim();
+            if (!plano.isEmpty()) return plano;
+        }
+        String visible = def.nombreVisible();
+        return visible.equals(def.id()) ? humano(def.id()) : visible;
+    }
+
+    /** Para el titulo del cofre, que no admite mucho: el nombre recortado. */
+    private String nombreCorto(String id) {
+        if (id == null) return "";
+        GodItem def = this.modulo.registro().porId(id);
+        return recortar(def == null ? humano(id) : nombrePlano(def), 26);
+    }
+
+    /** TOTEM_DE_AVALON -> Totem de avalon. */
+    private static String humano(String id) {
+        if (id == null || id.isEmpty()) return "";
+        String t = id.replace('_', ' ').replace('-', ' ').toLowerCase(Locale.ROOT).trim();
+        return t.isEmpty() ? id : Character.toUpperCase(t.charAt(0)) + t.substring(1);
+    }
+
+    private static String humano(Activador a) {
+        return humano(a.name());
+    }
+
+    /** Si el item no trae nombre propio (un material a secas), se le pone uno legible. */
+    private void ponerNombreSiFalta(ItemStack it, GodItem def) {
+        ItemMeta meta = it.getItemMeta();
+        if (meta == null || meta.hasDisplayName()) return;
+        meta.displayName(Estilo.legado("&f" + nombrePlano(def)));
+        it.setItemMeta(meta);
+    }
+
+    /** Las primeras lineas del lore propio del item, en el formato de adorno. */
+    private static List<String> recortarLore(ItemStack it, int max) {
+        List<String> out = new ArrayList<>();
+        ItemMeta meta = it.getItemMeta();
+        if (meta == null || meta.lore() == null) return out;
+        List<Component> lore = meta.lore();
+        var legacy = net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer.builder()
+                .character('&').hexColors().build();
+        for (int i = 0; i < lore.size() && i < max; i++) out.add(legacy.serialize(lore.get(i)));
+        if (lore.size() > max) out.add("&8… " + (lore.size() - max) + " líneas más");
+        return out;
+    }
+
+    private static void reemplazarLore(ItemStack it, List<String> lineas) {
+        ItemMeta meta = it.getItemMeta();
+        if (meta == null) return;
+        List<Component> l = new ArrayList<>();
+        for (String s : lineas) l.add(Estilo.legado(s));
+        meta.lore(l);
+        meta.addItemFlags(ItemFlag.values());
+        it.setItemMeta(meta);
+    }
+
+    /** El bloque de datos de GodItems que va debajo del lore del item. */
+    private List<String> resumen(GodItem def) {
+        List<String> out = new ArrayList<>();
+        out.add("");
+        out.add("&#0083FD&lGodItems &8· &7" + def.id());
+        out.add(def.enlazado() ? "&8MMOItems &f" + def.enlace() : "&8Nativo");
+        int acciones = 0;
+        int enfriamiento = 0;
+        List<String> nombres = new ArrayList<>();
+        for (Map.Entry<Activador, GodItem.Bloque> e : def.bloques().entrySet()) {
+            acciones += e.getValue().pasos().size();
+            enfriamiento = (int) Math.max(enfriamiento, e.getValue().cooldown());
+            nombres.add(humano(e.getKey()));
+        }
+        if (nombres.isEmpty()) {
+            out.add("&7Sin activadores");
+        } else {
+            String lista = String.join(", ", nombres.subList(0, Math.min(3, nombres.size())));
+            if (nombres.size() > 3) lista += " +" + (nombres.size() - 3);
+            out.add("&7" + lista);
+            out.add("&8" + acciones + (acciones == 1 ? " acción" : " acciones")
+                    + (enfriamiento > 0 ? " · enfriamiento " + Numeros.reloj(enfriamiento) : ""));
+        }
+        if (def.usos() >= 0) out.add("&8" + def.usos() + " usos");
+        if (def.usosPorDia() >= 0) out.add("&8" + def.usosPorDia() + " usos por día");
+        return out;
     }
 
     private static Material materialDe(Plantillas.Campo c) {

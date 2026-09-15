@@ -124,6 +124,7 @@ public final class AnomalyManager implements Listener {
         }
 
         event.state(ActiveAnomaly.State.ACTIVA);
+        paintArena(type, where);
         plugin.announcer().opened(event);
         plugin.getLogger().info("Anomalía " + type.id() + " abierta en " + describe(where));
 
@@ -227,6 +228,43 @@ public final class AnomalyManager implements Listener {
                         0, 0, 0, 0, dust));
     }
 
+    // ----------------------------------------------------------------------- arena
+
+    /** La zona que se pinto al abrir, para devolverla al cerrar. */
+    private String paintedArena;
+
+    /**
+     * Si la anomalia abre dentro de la zona de la arena, la arena entera toma su
+     * clima (Alba -> Celestial). Fuera de la arena no se toca el mundo.
+     */
+    private void paintArena(AnomalyType type, Location where) {
+        String zona = plugin.settings().arenaZone();
+        String clima = plugin.settings().arenaClimate(type.id());
+        var biomas = net.ederus.edm.biomas.BiomasPlugin.activo();
+        if (zona.isBlank() || clima.isBlank() || biomas == null) return;
+        var z = biomas.zona(zona);
+        if (z == null) {
+            plugin.getLogger().warning("La arena apunta a la zona '" + zona + "', que no existe en Lethal Biomes.");
+            return;
+        }
+        if (!z.contiene(where)) return;
+        String error = biomas.pintar(zona, clima, null);
+        if (error != null) {
+            plugin.getLogger().warning("No se pudo poner el clima de la arena: " + error);
+            return;
+        }
+        paintedArena = zona;
+    }
+
+    private void restoreArena() {
+        String zona = paintedArena;
+        paintedArena = null;
+        var biomas = net.ederus.edm.biomas.BiomasPlugin.activo();
+        if (zona == null || biomas == null) return;
+        String error = biomas.pintar(zona, null, null);
+        if (error != null) plugin.getLogger().warning("No se pudo devolver el clima de la arena: " + error);
+    }
+
     // ---------------------------------------------------------------------- cierre
 
     /** Cierra el evento y borra todo lo que haya quedado. */
@@ -239,6 +277,7 @@ public final class AnomalyManager implements Listener {
         }
         releaseChunks();
         plugin.anchors().clear();
+        restoreArena();
         if (event == null) return;
         event.state(ActiveAnomaly.State.CERRANDO);
         if (event.bars() != null) event.bars().removeAll();
@@ -313,35 +352,34 @@ public final class AnomalyManager implements Listener {
         LivingEntity shell = event.fight().shell();
         if (shell != null && victim.equals(shell)) {
             e.setCancelled(true);
-            Player p = attacker(e.getDamager());
             if (boss == null || !boss.isValid()) return;
+            if (Tags.isOurs(e.getDamager())) return;
             try {
-                if (p != null) {
-                    boss.damage(e.getDamage(), p);
-                } else {
-                    boss.damage(e.getDamage());
-                }
+                /* Siempre CON quien pega. Sin fuente, el golpe llegaba al jefe como
+                 * dano CUSTOM y se saltaba el reescalado de vida: una mascota le
+                 * quitaba a Rabby o a Alba lo que no le quita ningun jugador. */
+                boss.damage(e.getDamage(), e.getDamager());
             } catch (Throwable ignored) {
             }
             return;
         }
 
         if (boss != null && victim.equals(boss)) {
+            if (Tags.isMinion(e.getDamager())) {
+                e.setCancelled(true);
+                return;
+            }
             Player p = attacker(e.getDamager());
             if (p == null) return;
             // El merito se apunta con el dano "real" que hizo el jugador, antes de
             // reescalarlo al tope de vida de la entidad: asi el ranking no depende
-            // de un detalle interno del plugin.
+            // de un detalle interno del plugin. El reescalado va en onFinalDamage.
             event.addDamage(p, e.getFinalDamage());
             try {
                 event.fight().onDamaged(p, e.getFinalDamage());
             } catch (Throwable t) {
                 plugin.getLogger().warning("Fallo al reaccionar al daño recibido: " + t);
             }
-
-            double factor = event.fight().damageScale() * event.fight().incomingDamageMultiplier(e.getDamager());
-            if (factor != 1.0) e.setDamage(e.getDamage() * factor);
-            clampToSurvivalFloor(e, event.fight(), boss);
             return;
         }
 
@@ -375,8 +413,39 @@ public final class AnomalyManager implements Listener {
             e.setCancelled(true);
             return;
         }
-        if (boss != null && victim.equals(boss) && Tags.isMinion(e.getDamager())) {
-            e.setCancelled(true);
+    }
+
+    /**
+     * El reescalado de vida, para CUALQUIER dano que le llegue al jefe.
+     *
+     * La entidad topa en 1024 de vida y el resto de la vida configurada se cobra
+     * reduciendo cada golpe. Antes eso solo se hacia con golpes de jugador: lobos,
+     * golems, criaturas invocadas por cuernos, pociones, espinas o el dano "suelto"
+     * de otros plugins entraban enteros y un perro le quitaba al jefe cientos de
+     * veces lo que un jugador con equipo. De ahi las anomalias que "morian de la nada".
+     *
+     * Va en MONITOR a proposito: los encantamientos que suman dano plano lo hacen en
+     * HIGHEST, y si se reescala antes, ese extra entra sin reducir.
+     */
+    @EventHandler(ignoreCancelled = true, priority = EventPriority.MONITOR)
+    public void onFinalDamage(EntityDamageEvent e) {
+        ActiveAnomaly event = current;
+        if (event == null || event.fight() == null) return;
+        BossFight fight = event.fight();
+        LivingEntity boss = fight.entity();
+        Entity victim = e.getEntity();
+        Entity damager = e instanceof EntityDamageByEntityEvent by ? by.getDamager() : null;
+
+        if (boss != null && victim.equals(boss)) {
+            double factor = fight.damageScale() * fight.incomingDamageMultiplier(damager);
+            if (factor != 1.0) e.setDamage(e.getDamage() * factor);
+            clampToSurvivalFloor(e, fight, boss);
+            return;
+        }
+        // Un segundo cuerpo del jefe (KAM) tiene la misma vida reescalada.
+        if (victim instanceof LivingEntity other) {
+            double factor = fight.partDamageScale(other);
+            if (factor != 1.0) e.setDamage(e.getDamage() * factor);
         }
     }
 
@@ -388,7 +457,7 @@ public final class AnomalyManager implements Listener {
      * queda justo en el umbral, la transicion salta en el tick siguiente y a partir de
      * ahi el suelo baja solo.
      */
-    private void clampToSurvivalFloor(EntityDamageByEntityEvent e, BossFight fight, LivingEntity boss) {
+    private void clampToSurvivalFloor(EntityDamageEvent e, BossFight fight, LivingEntity boss) {
         double floor = fight.survivalFloor();
         if (floor <= 0) return;
         double max = Compat.getAttribute(boss, "max_health", boss.getHealth());
@@ -416,11 +485,16 @@ public final class AnomalyManager implements Listener {
         }
     }
 
+    /** El jugador detras del golpe: el que pega, el que disparo o el dueno de la mascota. */
     private Player attacker(Entity damager) {
         if (damager instanceof Player p) return p;
         if (damager instanceof Projectile proj) {
             ProjectileSource src = proj.getShooter();
             if (src instanceof Player p) return p;
+            if (src instanceof Entity shooter) damager = shooter;
+        }
+        if (damager instanceof org.bukkit.entity.Tameable pet && pet.getOwner() instanceof Player owner) {
+            return owner;
         }
         return null;
     }
@@ -524,6 +598,7 @@ public final class AnomalyManager implements Listener {
                 current = null;
                 releaseChunks();
                 plugin.anchors().clear();
+                restoreArena();
                 event.fight().cleanup();
             }
         });

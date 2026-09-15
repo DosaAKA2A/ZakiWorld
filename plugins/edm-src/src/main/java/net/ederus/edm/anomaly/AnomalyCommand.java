@@ -64,6 +64,8 @@ public final class AnomalyCommand implements CommandExecutor, TabCompleter {
             case "hurt", "danar" -> hurt(sender, args);
             case "logros", "advancements" -> trophies(sender);
             case "botin", "loot" -> lootPreview(sender, args);
+            case "arena" -> arena(sender, args);
+            case "bioma", "clima" -> climate(sender, args);
             case "esbirros", "minions" -> {
                 if (!(sender instanceof Player player)) {
                     sender.sendMessage(plugin.prefix().append(
@@ -111,6 +113,66 @@ public final class AnomalyCommand implements CommandExecutor, TabCompleter {
                     .append(Component.text(type.display(), type.color(), TextDecoration.BOLD))
                     .append(Component.text(" reventado: " + lines + " objeto(s), solo para verlo.", SOFT)));
         }
+    }
+
+    /** /anomaly arena [zona|ninguna]: que zona de Lethal Biomes es la arena. */
+    private void arena(CommandSender sender, String[] args) {
+        var biomas = net.ederus.edm.biomas.BiomasPlugin.activo();
+        if (args.length < 2) {
+            String zona = plugin.settings().arenaZone();
+            sender.sendMessage(plugin.prefix().append(Component.text(zona.isBlank()
+                    ? "No hay arena: las anomalías no cambian el clima. /anomaly arena <zona>"
+                    : "La arena es la zona " + zona + ".", SOFT)));
+            return;
+        }
+        String zona = args[1].toLowerCase(Locale.ROOT);
+        if (zona.equals("ninguna")) {
+            plugin.settings().set("arena.zona", "");
+            sender.sendMessage(plugin.prefix().append(Component.text("Arena quitada: el clima ya no cambia.", SOFT)));
+            return;
+        }
+        if (biomas == null || biomas.zona(zona) == null) {
+            sender.sendMessage(plugin.prefix().append(Component.text(
+                    "No existe la zona " + zona + ". Créala con /lbiomes zona crear " + zona + " region <regionWG> <mundo>",
+                    NamedTextColor.RED)));
+            return;
+        }
+        plugin.settings().set("arena.zona", zona);
+        sender.sendMessage(plugin.prefix().append(Component.text(
+                "La arena es ahora la zona " + zona + ". Cada anomalía que abra dentro pinta su clima.", SOFT)));
+    }
+
+    /** /anomaly bioma <id> [clima|ninguno]: el clima que pinta esa anomalia en la arena. */
+    private void climate(CommandSender sender, String[] args) {
+        if (args.length < 2) {
+            sender.sendMessage(plugin.prefix().append(Component.text("Climas en la arena:", SOFT)));
+            for (AnomalyType t : plugin.registry().all()) {
+                String c = plugin.settings().arenaClimate(t.id());
+                line(sender, t.id(), c.isBlank() ? "ninguno" : c);
+            }
+            return;
+        }
+        AnomalyType type = plugin.registry().get(args[1].toLowerCase(Locale.ROOT));
+        if (type == null) {
+            sender.sendMessage(plugin.prefix().append(Component.text("No existe la anomalía " + args[1] + ".", NamedTextColor.RED)));
+            return;
+        }
+        if (args.length < 3) {
+            String c = plugin.settings().arenaClimate(type.id());
+            sender.sendMessage(plugin.prefix().append(Component.text(
+                    type.display() + " pinta " + (c.isBlank() ? "ningún clima" : c) + " en la arena.", SOFT)));
+            return;
+        }
+        String clima = args[2].toLowerCase(Locale.ROOT);
+        var biomas = net.ederus.edm.biomas.BiomasPlugin.activo();
+        if (!clima.equals("ninguno") && biomas != null && !biomas.climas().contains(clima)) {
+            sender.sendMessage(plugin.prefix().append(Component.text(
+                    "No conozco el clima " + clima + ". Mira /lbiomes lista.", NamedTextColor.RED)));
+            return;
+        }
+        plugin.settings().set("anomalias." + type.id() + ".bioma", clima);
+        sender.sendMessage(plugin.prefix().append(Component.text(
+                type.display() + " pinta ahora " + clima + " en la arena.", SOFT)));
     }
 
     private void start(CommandSender sender, String[] args) {
@@ -450,6 +512,8 @@ public final class AnomalyCommand implements CommandExecutor, TabCompleter {
         line(sender, "/anomaly test <id|all>", "lanza una habilidad ya, para revisarla");
         line(sender, "/anomaly hurt <vida>", "le baja vida a mano, para ver las fases");
         line(sender, "/anomaly botín [id]", "revienta la tabla aquí mismo, solo para verla");
+        line(sender, "/anomaly arena [zona|ninguna]", "la zona de Lethal Biomes que es la arena");
+        line(sender, "/anomaly bioma [id] [clima|ninguno]", "el clima que pinta cada una en la arena");
         line(sender, "/anomaly logros", "cuántas anomalías llevas derrotadas");
         line(sender, "/anomaly reload", "recarga la configuración");
         sender.sendMessage(Component.empty());
@@ -487,7 +551,7 @@ public final class AnomalyCommand implements CommandExecutor, TabCompleter {
         List<String> out = new ArrayList<>();
         if (!plugin.mayUseGui(sender)) return out;
         if (args.length == 1) {
-            for (String s : List.of("menu", "esbirros", "esbirro", "start", "here", "at", "stop", "info", "abilities", "test", "hurt", "botin", "logros", "reload")) {
+            for (String s : List.of("menu", "esbirros", "esbirro", "start", "here", "at", "stop", "info", "abilities", "test", "hurt", "botin", "arena", "bioma", "logros", "reload")) {
                 if (s.startsWith(args[0].toLowerCase(Locale.ROOT))) out.add(s);
             }
             return out;
@@ -498,7 +562,18 @@ public final class AnomalyCommand implements CommandExecutor, TabCompleter {
             }
             return out;
         }
-        if (args.length == 2 && List.of("start", "here", "abilities").contains(args[0].toLowerCase(Locale.ROOT))) {
+        var biomas = net.ederus.edm.biomas.BiomasPlugin.activo();
+        if (biomas != null && args.length == 2 && args[0].equalsIgnoreCase("arena")) {
+            for (var z : biomas.zonas()) if (z.nombre().startsWith(args[1].toLowerCase(Locale.ROOT))) out.add(z.nombre());
+            if ("ninguna".startsWith(args[1].toLowerCase(Locale.ROOT))) out.add("ninguna");
+            return out;
+        }
+        if (biomas != null && args.length == 3 && args[0].equalsIgnoreCase("bioma")) {
+            for (String c : biomas.climas()) if (c.startsWith(args[2].toLowerCase(Locale.ROOT))) out.add(c);
+            if ("ninguno".startsWith(args[2].toLowerCase(Locale.ROOT))) out.add("ninguno");
+            return out;
+        }
+        if (args.length == 2 && List.of("start", "here", "abilities", "bioma").contains(args[0].toLowerCase(Locale.ROOT))) {
             for (AnomalyType t : plugin.registry().all()) {
                 if (t.id().startsWith(args[1].toLowerCase(Locale.ROOT))) out.add(t.id());
             }

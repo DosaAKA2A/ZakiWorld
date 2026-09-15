@@ -331,19 +331,19 @@ public final class DropStore implements Listener {
                 : Math.max(minPiles, Math.min(3 + random.nextInt(3), amount));
         int per = amount / piles;
         int rest = amount % piles;
+        double minD = plugin.settings().lootMinDistance();
+        double maxD = plugin.settings().lootMaxDistance();
         for (int i = 0; i < piles; i++) {
             int n = per + (i < rest ? 1 : 0);
             if (n <= 0) continue;
             ItemStack copy = entry.item().clone();
             copy.setAmount(n);
             Item it = w.dropItem(from, copy);
-            double angle = random.nextDouble() * Math.PI * 2;
-            /* LLUVIA de botin de verdad: los montones salen DISPARADOS lejos del
-             * cuerpo (entre ~3 y ~20 bloques), no gotean a sus pies. Un item con
-             * empuje horizontal v recorre ~22*v bloques antes de frenar. */
-            double push = 0.16 + random.nextDouble() * 0.75;
-            it.setVelocity(new Vector(Math.cos(angle) * push,
-                    0.40 + random.nextDouble() * 0.25, Math.sin(angle) * push));
+            Launch shot = aim(from, minD, maxD);
+            it.setVelocity(shot.velocity());
+            /* Nadie lo levanta en el aire: antes el botin se recogia a los pies del
+             * jefe en el mismo tick en que moria. Se abre al tocar el suelo. */
+            it.setPickupDelay(shot.ticks() + 6);
             it.setInvulnerable(true);
             if (reserved != null) it.setOwner(reserved.getUniqueId());
             if (entry.unique()) {
@@ -351,6 +351,78 @@ public final class DropStore implements Listener {
                 Tags.markUniqueDrop(it, anomalyId);
             }
         }
+    }
+
+    /** Un disparo ya calculado: con que velocidad sale y cuantos ticks tarda en caer. */
+    private record Launch(Vector velocity, int ticks) {
+    }
+
+    /**
+     * Apunta un monton para que CAIGA entre minD y maxD bloques del cuerpo.
+     *
+     * Empujar "a ojo" no vale: con el rozamiento del aire un item recorre mucho menos
+     * de lo que parece y el botin acababa a dos o tres bloques. Aqui se busca el suelo
+     * en el punto de destino, se simula la caida con la fisica del item (gravedad 0.04
+     * y arrastre 0.98 por tick) y se despeja la velocidad horizontal exacta. Si el
+     * destino no tiene suelo (vacio, borde del mapa) o queda por encima del arco, se
+     * prueba otra direccion.
+     */
+    private Launch aim(Location from, double minD, double maxD) {
+        World w = from.getWorld();
+        Launch fallback = null;
+        for (int attempt = 0; attempt < 10; attempt++) {
+            double angle = random.nextDouble() * Math.PI * 2;
+            double d = minD + random.nextDouble() * Math.max(0, maxD - minD);
+            double vy = 0.55 + random.nextDouble() * 0.2;
+            double tx = from.getX() + Math.cos(angle) * d;
+            double tz = from.getZ() + Math.sin(angle) * d;
+            Double groundY = w == null ? null : groundAt(w, tx, from.getY(), tz);
+            double dy = (groundY == null ? from.getY() - 1.6 : groundY) - from.getY();
+            int ticks = flightTicks(vy, dy);
+            // Al tocar suelo todavia resbala casi un bloque: se descuenta.
+            double run = Math.max(0.5, d - 0.8);
+            if (ticks <= 0) {
+                if (fallback == null) fallback = launch(angle, run, vy, flightTicks(vy, -1.6));
+                continue;
+            }
+            Launch shot = launch(angle, run, vy, ticks);
+            if (groundY != null) return shot;
+            if (fallback == null) fallback = shot;
+        }
+        return fallback;
+    }
+
+    private static Launch launch(double angle, double run, double vy, int ticks) {
+        int t = Math.max(1, ticks);
+        double h = run * 0.02 / (1 - Math.pow(0.98, t));
+        return new Launch(new Vector(Math.cos(angle) * h, vy, Math.sin(angle) * h), t);
+    }
+
+    /** Ticks hasta que un item lanzado con vy baja a dy respecto al origen; -1 si no llega. */
+    private static int flightTicks(double vy, double dy) {
+        double y = 0;
+        double v = vy;
+        for (int t = 1; t <= 120; t++) {
+            v -= 0.04;
+            y += v;
+            v *= 0.98;
+            if (v < 0 && y <= dy) return t;
+        }
+        return -1;
+    }
+
+    /** Altura de la cara superior del suelo en esa columna, cerca de la altura dada. */
+    private static Double groundAt(World w, double x, double y, double z) {
+        int bx = (int) Math.floor(x);
+        int bz = (int) Math.floor(z);
+        int top = (int) Math.floor(y) + 6;
+        for (int by = top; by >= top - 30 && by > w.getMinHeight(); by--) {
+            if (w.getBlockAt(bx, by, bz).getType().isSolid()
+                    && !w.getBlockAt(bx, by + 1, bz).getType().isSolid()) {
+                return by + 1.0;
+            }
+        }
+        return null;
     }
 
     /**

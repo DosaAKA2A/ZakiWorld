@@ -1,0 +1,47 @@
+# ============================================================
+#  LETHAL BIOMES  ·  climas por zona
+#
+#  Los biomas son un datapack que EDM instala solo en el mundo principal
+#  (datapacks/lethal_biomes). Minecraft congela la lista de biomas al arrancar:
+#  un bioma NUEVO necesita un reinicio para existir. Pintarlo, cambiarlo o
+#  quitarlo de una zona ya no reinicia nada.
+#
+#  Biomas extra: cualquier .json que se deje en plugins/EDM/biomas/extra/ se
+#  instala en el datapack en el siguiente arranque (id = nombre del fichero).
+#
+#  Zonas: se crean con /lbiomes zona ... y se guardan en zonas.yml.
+# ============================================================
+
+# Lo que el cliente NO puede hacer solo con el bioma y manda el plugin a cada
+# jugador que este dentro de una zona pintada con ese clima.
+#
+#   nombre:           como se ve en los mensajes y en la lista
+#   hora:             hora fija que ve el jugador dentro (18000 = medianoche). -1 = la del mundo
+#   lluvia:           true = dentro siempre llueve para el jugador
+#   rayos:            segundos medios entre rayos (solo visuales, no hacen dano). 0 = sin rayos
+#   cenizas:          SIEMPRE, LLUVIA (solo si el mundo tiene lluvia o tormenta) o NUNCA.
+#                     Con cenizas el agua de la lluvia se quita: llueve ceniza.
+#   gas:              cuantas fumarolas de gas salen del suelo de la zona. 0 = ninguna
+biomas:
+  sandstorm:
+    nombre: 'Tormenta de arena'
+  aether:
+    nombre: 'Aether'
+  hypnos:
+    nombre: 'Cielo morado'
+  storm:
+    nombre: 'Tormenta eléctrica'
+    lluvia: true
+    rayos: 6
+  bloodmoon:
+    nombre: 'Luna de sangre'
+  penumbra:
+    nombre: 'Penumbra'
+    hora: 18000
+    cenizas: LLUVIA
+  celestial:
+    nombre: 'Celestial'
+    hora: 6000
+  radioactive:
+    nombre: 'Radioactivo'
+    gas: 14

@@ -167,6 +167,14 @@ public abstract class BossFight {
         this.damageScale = logicalMax <= 0 ? 1.0 : entityMax / logicalMax;
     }
 
+    /**
+     * Reescalado de vida de una parte del jefe que no es la entidad principal (el
+     * segundo gemelo). 1.0 = la entidad no es del jefe o no tiene vida reescalada.
+     */
+    public double partDamageScale(LivingEntity part) {
+        return 1.0;
+    }
+
     /** Cuanto se multiplica el dano entrante para que la vida efectiva sea la configurada. */
     public double damageScale() {
         return damageScale;

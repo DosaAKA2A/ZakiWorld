@@ -1,0 +1,18 @@
+{
+ "pack": {
+  "description": "Lethal Biomes - climas de EDM (solo tinte, sin shaders)",
+  "pack_format": 81,
+  "supported_formats": [
+   15,
+   81
+  ],
+  "min_format": [
+   15,
+   0
+  ],
+  "max_format": [
+   101,
+   1
+  ]
+ }
+}

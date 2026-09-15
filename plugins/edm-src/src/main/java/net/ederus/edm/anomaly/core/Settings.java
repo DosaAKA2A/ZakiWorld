@@ -107,6 +107,48 @@ public final class Settings {
         return cfg().getDouble("combate.vida-extra-por-jugador", 0.15);
     }
 
+    /** La zona de Lethal Biomes que es la arena. Vacio = las anomalias no tocan el clima. */
+    public String arenaZone() {
+        return cfg().getString("arena.zona", "");
+    }
+
+    /** Clima que pinta cada anomalia sobre la arena si el config no dice otro. */
+    private static final java.util.Map<String, String> CLIMA_DE_SERIE = java.util.Map.ofEntries(
+            java.util.Map.entry("alba", "celestial"),
+            java.util.Map.entry("keeper", "penumbra"),
+            java.util.Map.entry("darkness", "penumbra"),
+            java.util.Map.entry("coro_abisal", "penumbra"),
+            java.util.Map.entry("aragon", "penumbra"),
+            java.util.Map.entry("storm_rider", "storm"),
+            java.util.Map.entry("cabra_gritona", "storm"),
+            java.util.Map.entry("piromante", "sandstorm"),
+            java.util.Map.entry("leviatan_de_sal", "sandstorm"),
+            java.util.Map.entry("caballero_sepulcral", "bloodmoon"),
+            java.util.Map.entry("conejo_asesino", "bloodmoon"),
+            java.util.Map.entry("cazador", "bloodmoon"),
+            java.util.Map.entry("bruja", "hypnos"),
+            java.util.Map.entry("mimic", "hypnos"),
+            java.util.Map.entry("herbola", "aether"),
+            java.util.Map.entry("rabby", "aether"),
+            java.util.Map.entry("quimera", "radioactive"),
+            java.util.Map.entry("gemelos_cobre", "radioactive"));
+
+    /** El clima de una anomalia en la arena; "" = ninguno. */
+    public String arenaClimate(String anomalyId) {
+        String v = cfg().getString("anomalias." + anomalyId + ".bioma", null);
+        if (v == null) return CLIMA_DE_SERIE.getOrDefault(anomalyId, "");
+        return v.equalsIgnoreCase("ninguno") ? "" : v;
+    }
+
+    /** Lo mas cerca que cae un monton de botin respecto al cuerpo del jefe. */
+    public double lootMinDistance() {
+        return Math.max(0, cfg().getDouble("botin.distancia-minima", 10));
+    }
+
+    public double lootMaxDistance() {
+        return Math.max(lootMinDistance(), cfg().getDouble("botin.distancia-maxima", 15));
+    }
+
     public boolean announceEnabled() {
         return cfg().getBoolean("anuncio.activo", true);
     }
