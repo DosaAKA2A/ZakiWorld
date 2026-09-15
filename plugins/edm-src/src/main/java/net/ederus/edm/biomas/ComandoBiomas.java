@@ -51,11 +51,11 @@ final class ComandoBiomas implements TabExecutor {
             return true;
         }
         switch (args[0].toLowerCase(Locale.ROOT)) {
-            case "lista", "list" -> lista(quien);
-            case "zona", "zone" -> zona(quien, args);
-            case "zonas", "zones" -> zonas(quien);
-            case "pintar", "paint" -> pintar(quien, args);
-            case "limpiar", "clear" -> limpiar(quien, args);
+            case "list" -> lista(quien);
+            case "zone" -> zona(quien, args);
+            case "zones" -> zonas(quien);
+            case "paint" -> pintar(quien, args);
+            case "clear" -> limpiar(quien, args);
             default -> ayuda(quien);
         }
         return true;
@@ -63,14 +63,14 @@ final class ComandoBiomas implements TabExecutor {
 
     private void ayuda(CommandSender q) {
         decir(q, "Climas por zona, sin reiniciar.");
-        q.sendMessage(Component.text("  /lbiomes lista", NamedTextColor.WHITE).append(Component.text("  climas disponibles", SUAVE)));
-        q.sendMessage(Component.text("  /lbiomes zonas", NamedTextColor.WHITE).append(Component.text("  zonas creadas y su clima", SUAVE)));
-        q.sendMessage(Component.text("  /lbiomes zona crear <nombre> region <regionWG> [mundo]", NamedTextColor.WHITE));
-        q.sendMessage(Component.text("  /lbiomes zona crear <nombre> aqui <radio>", NamedTextColor.WHITE));
-        q.sendMessage(Component.text("  /lbiomes zona crear <nombre> <x1> <y1> <z1> <x2> <y2> <z2> [mundo]", NamedTextColor.WHITE));
-        q.sendMessage(Component.text("  /lbiomes zona borrar <nombre>", NamedTextColor.WHITE));
-        q.sendMessage(Component.text("  /lbiomes pintar <zona> <clima>", NamedTextColor.WHITE));
-        q.sendMessage(Component.text("  /lbiomes limpiar <zona>", NamedTextColor.WHITE).append(Component.text("  vuelve a su bioma base", SUAVE)));
+        q.sendMessage(Component.text("  /lbiomes list", NamedTextColor.WHITE).append(Component.text("  climas disponibles", SUAVE)));
+        q.sendMessage(Component.text("  /lbiomes zones", NamedTextColor.WHITE).append(Component.text("  zonas creadas y su clima", SUAVE)));
+        q.sendMessage(Component.text("  /lbiomes zone create <name> region <wgRegion> [world]", NamedTextColor.WHITE));
+        q.sendMessage(Component.text("  /lbiomes zone create <name> here <radius>", NamedTextColor.WHITE));
+        q.sendMessage(Component.text("  /lbiomes zone create <name> <x1> <y1> <z1> <x2> <y2> <z2> [world]", NamedTextColor.WHITE));
+        q.sendMessage(Component.text("  /lbiomes zone delete <name>", NamedTextColor.WHITE));
+        q.sendMessage(Component.text("  /lbiomes paint <zone> <biome>", NamedTextColor.WHITE));
+        q.sendMessage(Component.text("  /lbiomes clear <zone>", NamedTextColor.WHITE).append(Component.text("  vuelve a su bioma base", SUAVE)));
     }
 
     private void lista(CommandSender q) {
@@ -87,7 +87,7 @@ final class ComandoBiomas implements TabExecutor {
     private void zonas(CommandSender q) {
         List<Zona> todas = modulo.zonas();
         if (todas.isEmpty()) {
-            decir(q, "No hay zonas. Crea una con /lbiomes zona crear.");
+            decir(q, "No hay zonas. Crea una con /lbiomes zone create.");
             return;
         }
         decir(q, "Zonas:");
@@ -101,12 +101,12 @@ final class ComandoBiomas implements TabExecutor {
     }
 
     private void zona(CommandSender q, String[] args) {
-        if (args.length >= 3 && args[1].equalsIgnoreCase("borrar")) {
+        if (args.length >= 3 && args[1].equalsIgnoreCase("delete")) {
             decir(q, modulo.borrarZona(args[2]) ? "Zona " + args[2] + " borrada. El bioma pintado se queda como esta."
                     : "No existe la zona " + args[2] + ".");
             return;
         }
-        if (args.length < 4 || !args[1].equalsIgnoreCase("crear")) {
+        if (args.length < 4 || !args[1].equalsIgnoreCase("create")) {
             ayuda(q);
             return;
         }
@@ -120,7 +120,7 @@ final class ComandoBiomas implements TabExecutor {
             }
             if (args.length >= 6) mundo = modulo.getServer().getWorld(args[5]);
             if (mundo == null) {
-                decir(q, "Indica el mundo: /lbiomes zona crear " + nombre + " region " + args[4] + " <mundo>");
+                decir(q, "Indica el mundo: /lbiomes zone create " + nombre + " region " + args[4] + " <world>");
                 return;
             }
             int[] c = modulo.regionWorldGuard(mundo.getName(), args[4]);
@@ -130,9 +130,9 @@ final class ComandoBiomas implements TabExecutor {
                 return;
             }
             creada = modulo.crearZona(nombre, mundo, c[0], c[1], c[2], c[3], c[4], c[5]);
-        } else if (args[3].equalsIgnoreCase("aqui")) {
+        } else if (args[3].equalsIgnoreCase("here")) {
             if (!(q instanceof Player p) || args.length < 5) {
-                decir(q, "Desde dentro del juego: /lbiomes zona crear " + nombre + " aqui <radio>");
+                decir(q, "Desde dentro del juego: /lbiomes zone create " + nombre + " here <radius>");
                 return;
             }
             int r = entero(args[4], 32);
@@ -188,17 +188,17 @@ final class ComandoBiomas implements TabExecutor {
     public List<String> onTabComplete(CommandSender q, Command cmd, String etiqueta, String[] args) {
         List<String> op = new ArrayList<>();
         if (args.length == 1) {
-            op.addAll(List.of("lista", "zonas", "zona", "pintar", "limpiar"));
-        } else if (args.length == 2 && args[0].equalsIgnoreCase("zona")) {
-            op.addAll(List.of("crear", "borrar"));
-        } else if (args.length == 2 && (args[0].equalsIgnoreCase("pintar") || args[0].equalsIgnoreCase("limpiar"))) {
+            op.addAll(List.of("list", "zones", "zone", "paint", "clear"));
+        } else if (args.length == 2 && args[0].equalsIgnoreCase("zone")) {
+            op.addAll(List.of("create", "delete"));
+        } else if (args.length == 2 && (args[0].equalsIgnoreCase("paint") || args[0].equalsIgnoreCase("clear"))) {
             for (Zona z : modulo.zonas()) op.add(z.nombre());
-        } else if (args.length == 3 && args[0].equalsIgnoreCase("pintar")) {
+        } else if (args.length == 3 && args[0].equalsIgnoreCase("paint")) {
             op.addAll(modulo.climas());
-        } else if (args.length == 3 && args[0].equalsIgnoreCase("zona") && args[1].equalsIgnoreCase("borrar")) {
+        } else if (args.length == 3 && args[0].equalsIgnoreCase("zone") && args[1].equalsIgnoreCase("delete")) {
             for (Zona z : modulo.zonas()) op.add(z.nombre());
-        } else if (args.length == 4 && args[0].equalsIgnoreCase("zona")) {
-            op.addAll(List.of("region", "aqui"));
+        } else if (args.length == 4 && args[0].equalsIgnoreCase("zone")) {
+            op.addAll(List.of("region", "here"));
         } else if (args.length == 6 && args[3].equalsIgnoreCase("region")) {
             for (World w : modulo.getServer().getWorlds()) op.add(w.getName());
         }

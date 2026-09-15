@@ -67,10 +67,10 @@ combate:
   vida-extra-por-jugador: 0.15
 
 arena:
-  # Zona de Lethal Biomes que hace de arena (/lbiomes zona crear ...). Si una anomalia
+  # Zona de Lethal Biomes que hace de arena (/lbiomes zone create ...). Si una anomalia
   # abre DENTRO de esa zona, la zona entera toma el clima de la anomalia mientras dure
   # la pelea y vuelve a su bioma al cerrarse. Vacio = las anomalias no tocan el clima.
-  # El clima de cada una se cambia con /anomaly bioma <id> <clima|ninguno>
+  # El clima de cada una se cambia con /anomaly biome <id> <biome|none>
   # (se guarda como anomalias.<id>.bioma).
   zona: ''
 

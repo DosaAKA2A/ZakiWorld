@@ -115,10 +115,10 @@ public final class Settings {
     /** Clima que pinta cada anomalia sobre la arena si el config no dice otro. */
     private static final java.util.Map<String, String> CLIMA_DE_SERIE = java.util.Map.ofEntries(
             java.util.Map.entry("alba", "celestial"),
-            java.util.Map.entry("keeper", "penumbra"),
+            java.util.Map.entry("keeper", "ancient"),
             java.util.Map.entry("darkness", "penumbra"),
             java.util.Map.entry("coro_abisal", "penumbra"),
-            java.util.Map.entry("aragon", "penumbra"),
+            java.util.Map.entry("aragon", "ancient"),
             java.util.Map.entry("storm_rider", "storm"),
             java.util.Map.entry("cabra_gritona", "storm"),
             java.util.Map.entry("piromante", "sandstorm"),
@@ -137,7 +137,7 @@ public final class Settings {
     public String arenaClimate(String anomalyId) {
         String v = cfg().getString("anomalias." + anomalyId + ".bioma", null);
         if (v == null) return CLIMA_DE_SERIE.getOrDefault(anomalyId, "");
-        return v.equalsIgnoreCase("ninguno") ? "" : v;
+        return v.equalsIgnoreCase("none") || v.equalsIgnoreCase("ninguno") ? "" : v;
     }
 
     /** Lo mas cerca que cae un monton de botin respecto al cuerpo del jefe. */

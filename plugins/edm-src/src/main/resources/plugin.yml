@@ -1,5 +1,5 @@
 name: EDM
-version: '1.32.0'
+version: '1.32.1'
 main: net.ederus.edm.EDMPlugin
 api-version: '1.20'
 author: Iris Studio
@@ -60,8 +60,8 @@ commands:
     permission: ederus.flex
   lbiomes:
     description: Lethal Biomes - climas por zona sin reiniciar
-    usage: /lbiomes <lista|zonas|zona|pintar|limpiar>
-    aliases: [lethalbiomes, biomas]
+    usage: /lbiomes <list|zones|zone|paint|clear>
+    aliases: [lethalbiomes]
     permission: ederus.biomas
   gi:
     description: GodItems - items con activadores, acciones y condiciones

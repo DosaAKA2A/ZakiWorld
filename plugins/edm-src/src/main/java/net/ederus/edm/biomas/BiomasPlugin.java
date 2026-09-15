@@ -51,7 +51,7 @@ public final class BiomasPlugin extends Module implements Listener {
     public static final String NAMESPACE = "lethal";
     private static final String PACK = "lethal_biomes";
     static final List<String> INCLUIDOS = List.of(
-            "sandstorm", "aether", "hypnos", "storm", "bloodmoon", "penumbra", "celestial", "radioactive");
+            "sandstorm", "aether", "hypnos", "storm", "bloodmoon", "penumbra", "celestial", "radioactive", "ancient");
 
     private static BiomasPlugin instancia;
 
@@ -377,6 +377,31 @@ public final class BiomasPlugin extends Module implements Listener {
             cenizas(w, a, e.getValue());
             rayos(w, z, a, e.getValue());
             gas(w, z, a, e.getValue());
+            ecos(w, a, e.getValue());
+        }
+    }
+
+    private static final Sound[] ECOS = {
+            Sound.ENTITY_WARDEN_HEARTBEAT, Sound.ENTITY_WARDEN_NEARBY_CLOSE, Sound.ENTITY_WARDEN_LISTENING,
+            Sound.ENTITY_WARDEN_AMBIENT, Sound.BLOCK_SCULK_SHRIEKER_SHRIEK, Sound.BLOCK_SCULK_SENSOR_CLICKING};
+
+    /**
+     * El mundo antiguo: algo grande respira lejos. Cada jugador oye de vez en cuando un
+     * eco del warden desde un punto a 12-20 bloques (solo el, no los de al lado) y el
+     * sculk suelta almas a su alrededor. Nada de esto hace dano ni da oscuridad.
+     */
+    private void ecos(World w, ConfigurationSection a, List<Player> jugadores) {
+        double cada = a.getDouble("ecos", 0);
+        if (cada <= 0) return;
+        for (Player p : jugadores) {
+            Location base = p.getLocation();
+            p.spawnParticle(Particle.SCULK_SOUL, base.clone().add(0, 0.2, 0), 2, 7, 0.3, 7, 0.02);
+            if (random.nextDouble() > 5.0 / (cada * 20.0)) continue;
+            double ang = random.nextDouble() * Math.PI * 2;
+            double d = 12 + random.nextDouble() * 8;
+            Location eco = base.clone().add(Math.cos(ang) * d, -2 + random.nextDouble() * 4, Math.sin(ang) * d);
+            p.playSound(eco, ECOS[random.nextInt(ECOS.length)], 0.9f, 0.75f + random.nextFloat() * 0.2f);
+            p.spawnParticle(Particle.SCULK_CHARGE_POP, eco, 12, 1.2, 0.4, 1.2, 0.01);
         }
     }
 
