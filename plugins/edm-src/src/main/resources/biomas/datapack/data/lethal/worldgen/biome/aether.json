@@ -2,7 +2,9 @@
  "attributes": {
   "minecraft:visual/sky_color": "#7FE3D4",
   "minecraft:visual/fog_color": "#D8F7F0",
-  "minecraft:gameplay/monsters_burn": false
+  "minecraft:gameplay/monsters_burn": false,
+  "minecraft:visual/sky_light_color": "#EAFFF8",
+  "minecraft:visual/cloud_color": "#FFF2FFFC"
  },
  "temperature": 0.7,
  "downfall": 0.3,

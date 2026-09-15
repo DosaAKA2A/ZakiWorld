@@ -11,7 +11,9 @@
     "block_search_extent": 8,
     "offset": 2
    }
-  }
+  },
+  "minecraft:visual/sky_light_color": "#F2E2FF",
+  "minecraft:visual/cloud_color": "#FFE8C8F4"
  },
  "temperature": 0.6,
  "downfall": 0.2,

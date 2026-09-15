@@ -1,9 +1,9 @@
 {
  "attributes": {
-  "minecraft:visual/sky_color": "#F4F6FA",
+  "minecraft:visual/sky_color": "#EEF2F8",
   "minecraft:visual/fog_color": "#FFFFFF",
   "minecraft:visual/cloud_color": "#FFFFFFFF",
-  "minecraft:visual/sky_light_color": "#FFF6E0",
+  "minecraft:visual/sky_light_color": "#FFF8EC",
   "minecraft:visual/sunrise_sunset_color": "#00000000",
   "minecraft:gameplay/monsters_burn": false,
   "minecraft:visual/ambient_particles": [
@@ -51,7 +51,7 @@
   "water_creature": []
  },
  "effects": {
-  "sky_color": 16054010,
+  "sky_color": 15659768,
   "fog_color": 16777215,
   "water_color": 13625599,
   "water_fog_color": 11061480,

@@ -1,9 +1,9 @@
 {
  "attributes": {
   "minecraft:visual/sky_color": "#4B5058",
-  "minecraft:visual/fog_color": "#6E747D",
-  "minecraft:visual/cloud_color": "#FF3C4048",
-  "minecraft:visual/sky_light_color": "#9AA3B5",
+  "minecraft:visual/fog_color": "#8A9099",
+  "minecraft:visual/cloud_color": "#FF5A5F68",
+  "minecraft:visual/sky_light_color": "#C8CDD8",
   "minecraft:gameplay/monsters_burn": false,
   "minecraft:audio/ambient_sounds": {
    "loop": "minecraft:weather.rain",
@@ -37,7 +37,7 @@
  },
  "effects": {
   "sky_color": 4935768,
-  "fog_color": 7238781,
+  "fog_color": 9080985,
   "water_color": 5202546,
   "water_fog_color": 3095364,
   "grass_color": 7307114,

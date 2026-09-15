@@ -1,7 +1,7 @@
 {
  "attributes": {
-  "minecraft:visual/sky_color": "#7E1010",
-  "minecraft:visual/fog_color": "#4A0C0C",
+  "minecraft:visual/sky_color": "#6E1A1A",
+  "minecraft:visual/fog_color": "#A8433A",
   "minecraft:gameplay/monsters_burn": false,
   "minecraft:audio/ambient_sounds": {
    "loop": "minecraft:ambient.nether_wastes.loop",
@@ -11,7 +11,9 @@
     "block_search_extent": 8,
     "offset": 2
    }
-  }
+  },
+  "minecraft:visual/sky_light_color": "#FFD0C4",
+  "minecraft:visual/cloud_color": "#FF7A2A2A"
  },
  "temperature": 0.8,
  "downfall": 0,
@@ -30,8 +32,8 @@
   "water_creature": []
  },
  "effects": {
-  "sky_color": 8261648,
-  "fog_color": 4852748,
+  "sky_color": 7215642,
+  "fog_color": 11027258,
   "water_color": 9181979,
   "water_fog_color": 4130824,
   "grass_color": 11546672,
