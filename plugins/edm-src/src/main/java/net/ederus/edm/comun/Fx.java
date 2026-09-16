@@ -9,16 +9,13 @@ import org.bukkit.entity.BlockDisplay;
 import org.bukkit.entity.Display;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.ItemDisplay;
-import org.bukkit.entity.LivingEntity;
 import org.bukkit.entity.Player;
-import org.bukkit.entity.TextDisplay;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.util.Transformation;
 import org.bukkit.util.Vector;
 import org.joml.AxisAngle4f;
 import org.joml.Vector3f;
 
-import net.kyori.adventure.text.Component;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -211,31 +208,6 @@ public final class Fx {
         return d;
     }
 
-    public static TextDisplay textDisplay(World w, Location loc, Component text) {
-        TextDisplay d = w.spawn(loc, TextDisplay.class, e -> {
-            e.text(text);
-            e.setBillboard(Display.Billboard.CENTER);
-            e.setViewRange(3.0f);
-            e.setSeeThrough(true);
-            e.setPersistent(false);
-            e.setBrightness(new Display.Brightness(15, 15));
-        });
-        Tags.markTemporary(d);
-        return d;
-    }
-
-    /** Gira una entidad de dibujo sobre su eje Y con interpolacion suave. */
-    public static void spin(Display d, float yaw, float scale, int interpolation) {
-        Transformation t = new Transformation(
-                d.getTransformation().getTranslation(),
-                new AxisAngle4f(yaw, 0, 1, 0),
-                new Vector3f(scale, scale, scale),
-                new AxisAngle4f(0, 0, 0, 1));
-        d.setInterpolationDelay(0);
-        d.setInterpolationDuration(interpolation);
-        d.setTransformation(t);
-    }
-
     /** Inclina un item para que se vea como una lanza apuntando en una direccion. */
     public static void aim(Display d, Vector dir, float scale, int interpolation) {
         Vector n = dir.clone();
@@ -332,10 +304,6 @@ public final class Fx {
     }
 
     // ----------------------------------------------------------------- utilidades
-
-    public static Location eye(LivingEntity e) {
-        return e.getEyeLocation();
-    }
 
     public static void safeRemove(Entity e) {
         if (e != null && e.isValid()) {

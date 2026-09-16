@@ -49,7 +49,6 @@ public final class Ctx {
     public Activador activador() { return this.activador; }
     public ItemStack item() { return this.item; }
     public EquipmentSlot mano() { return this.mano; }
-    public Event evento() { return this.evento; }
 
     public Entity objetivo() { return this.objetivo; }
 
@@ -67,8 +66,6 @@ public final class Ctx {
         this.lugar = l;
         return this;
     }
-
-    public boolean diferido() { return this.diferido; }
 
     public void marcarDiferido() { this.diferido = true; }
 

@@ -32,8 +32,6 @@ import net.ederus.edm.Module;
 import net.ederus.edm.anomaly.drops.DropEntry;
 import net.ederus.edm.anomaly.drops.DropTable;
 import net.kyori.adventure.text.Component;
-import net.kyori.adventure.text.format.NamedTextColor;
-import net.kyori.adventure.text.format.TextDecoration;
 
 /**
  * Las bovedas, en el mundo: colocarlas, abrirlas y protegerlas.

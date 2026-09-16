@@ -141,8 +141,6 @@ public final class Topes {
         }
     }
 
-    public int jugadoresConVentana() { return datos.size(); }
-
     /** Para las pruebas y para /etienda topes <jugador> reset. */
     public void olvidar(UUID jugador) {
         if (datos.remove(jugador) != null) sucio = true;

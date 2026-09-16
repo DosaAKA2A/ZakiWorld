@@ -57,10 +57,6 @@ public final class EntradaChat implements Listener {
         plugin.getServer().getScheduler().runTask(plugin, () -> jugador.closeInventory());
     }
 
-    public boolean esperando(Player jugador) {
-        return esperando.containsKey(jugador.getUniqueId());
-    }
-
     public void olvidar(Player jugador) {
         esperando.remove(jugador.getUniqueId());
     }

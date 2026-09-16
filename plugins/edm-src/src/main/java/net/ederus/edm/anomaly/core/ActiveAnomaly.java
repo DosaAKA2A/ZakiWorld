@@ -52,10 +52,6 @@ public final class ActiveAnomaly {
         return where.clone();
     }
 
-    public long startedAt() {
-        return startedAt;
-    }
-
     public long elapsedSeconds() {
         return (System.currentTimeMillis() - startedAt) / 1000L;
     }
@@ -102,9 +98,4 @@ public final class ActiveAnomaly {
         return damage.size();
     }
 
-    public double totalDamage() {
-        double total = 0;
-        for (double d : damage.values()) total += d;
-        return total;
-    }
 }

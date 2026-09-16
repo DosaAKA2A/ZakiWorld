@@ -72,11 +72,6 @@ public final class SepulchralKnight extends BossFight {
         return "Caballero Sepulcral";
     }
 
-    /** Cuanto dano extra hace ahora mismo (sube si sobrevive a la resurreccion). */
-    public double damageBonus() {
-        return damageBonus;
-    }
-
     /** Multiplicador de dano RECIBIDO. Sube si le rompen las anclas. */
     @Override
     public double incomingDamageMultiplier() {
@@ -132,7 +127,6 @@ public final class SepulchralKnight extends BossFight {
         boss.setMaximumNoDamageTicks(6);
 
         Tags.markBoss(boss, ID);
-        Tags.markEvent(boss, event.id());
         mount.addPassenger(boss);
 
         // El brillo rojo es la marca de esta anomalia y, en la practica, la forma de

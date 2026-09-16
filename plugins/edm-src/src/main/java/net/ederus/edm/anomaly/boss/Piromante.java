@@ -117,7 +117,6 @@ public final class Piromante extends BossFight {
         boss.setFireTicks(0);
 
         Tags.markBoss(boss, ID);
-        Tags.markEvent(boss, event.id());
         Glow.apply(boss, event.type().glowColor());
 
         arrivalAnimation(spot);
@@ -403,7 +402,6 @@ public final class Piromante extends BossFight {
                     ball.setYield(0);
                     ball.setIsIncendiary(false);
                     Tags.markMinion(ball, ID);
-                    Tags.markEvent(ball, event.id());
                 } catch (Throwable ignored) {
                 }
             }
@@ -430,7 +428,6 @@ public final class Piromante extends BossFight {
                     SmallFireball ball = boss.launchProjectile(SmallFireball.class, dir);
                     ball.setIsIncendiary(false);
                     Tags.markMinion(ball, ID);
-                    Tags.markEvent(ball, event.id());
                 } catch (Throwable ignored) {
                 }
                 Compat.spawn(world(), Compat.SMALL_FLAME, hand, 6, 0.2, 0.2, 0.2, 0.02);

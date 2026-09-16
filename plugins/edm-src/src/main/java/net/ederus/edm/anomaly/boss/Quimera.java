@@ -111,7 +111,6 @@ public final class Quimera extends BossFight {
         boss.setMaximumNoDamageTicks(6);
 
         Tags.markBoss(boss, ID);
-        Tags.markEvent(boss, event.id());
         Glow.apply(boss, event.type().glowColor());
 
         growGoatHead();
@@ -711,7 +710,6 @@ public final class Quimera extends BossFight {
                     spit.setVelocity(victim.getEyeLocation().toVector().subtract(head.toVector())
                             .normalize().multiply(1.8));
                     Tags.markMinion(spit, ID);
-                    Tags.markEvent(spit, event.id());
                 } catch (Throwable ignored) {
                 }
                 Compat.spawn(world(), Compat.SPIT, head, 10, 0.2, 0.2, 0.2, 0.05);

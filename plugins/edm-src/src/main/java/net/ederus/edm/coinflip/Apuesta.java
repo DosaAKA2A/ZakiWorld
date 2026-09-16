@@ -41,7 +41,6 @@ public final class Apuesta {
     public UUID retado() { return retado; }
     public String nombreRetado() { return nombreRetado; }
     public double cantidad() { return cantidad; }
-    public long creada() { return creada; }
 
     public boolean esReto() { return retado != null; }
     public boolean esPara(UUID quien) { return retado != null && retado.equals(quien); }

@@ -142,10 +142,6 @@ public final class AnomalyRegistry {
         return types.get(net.ederus.edm.anomaly.boss.Alba.ID);
     }
 
-    public AnomalyType copperTwins() {
-        return types.get(CopperTwins.ID);
-    }
-
     /**
      * El catalogo entero, ordenado por clase: primero los Monarcas, despues los
      * Generales y al final los Esbirros. Dentro de una clase se respeta el orden de

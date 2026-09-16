@@ -226,11 +226,7 @@ public final class TiendaPlugin extends Module {
 
     public Rotacion rotacion() { return rotacion; }
 
-    public Secciones secciones() { return secciones; }
-
     public Mensajes mensajes() { return mensajes; }
-
-    public PantallaCantidad pantalla() { return pantalla; }
 
     /** null hasta que engancha Vault en el primer tick. */
     public Motor motor() { return motor; }

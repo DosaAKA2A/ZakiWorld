@@ -30,10 +30,6 @@ public final class Regiones {
         enganchar();
     }
 
-    public boolean listo() {
-        return this.listo;
-    }
-
     private void enganchar() {
         if (this.modulo.core().getServer().getPluginManager().getPlugin("WorldGuard") == null) {
             this.modulo.getLogger().info("[GodItems] WorldGuard no esta: la condición REGION siempre dará falso.");

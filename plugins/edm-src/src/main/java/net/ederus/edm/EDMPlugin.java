@@ -1,10 +1,6 @@
 package net.ederus.edm;
 
 import java.io.File;
-import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.StandardCopyOption;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -42,12 +38,6 @@ public final class EDMPlugin extends JavaPlugin {
 
     public static final String VERSION = "1.33.1";
 
-    /* id del modulo -> carpeta del plugin viejo de la que se migran los datos */
-    private static final Map<String, String> CARPETAS_VIEJAS = Map.of(
-            "rip", "Rip",
-            "anomaly", "Anomaly",
-            "core", "EderusMain");
-
     private final Map<String, Module> modulos = new LinkedHashMap<>();
     private final List<String> fallidos = new ArrayList<>();
 
@@ -83,7 +73,6 @@ public final class EDMPlugin extends JavaPlugin {
     @Override
     public void onEnable() {
         saveDefaultConfig();
-        migrarDatosAntiguos();
 
         chat = new EntradaChat(this);
         getServer().getPluginManager().registerEvents(chat, this);
@@ -359,43 +348,6 @@ public final class EDMPlugin extends JavaPlugin {
 
     public boolean activo(String id) {
         return this.modulos.containsKey(id);
-    }
-
-    /*
-     * Primer arranque: copia los datos de plugins/Rip, plugins/Anomaly y
-     * plugins/EderusMain a plugins/EDM/<id>. NO borra nada: si hay que volver
-     * atras, basta con reponer los tres jars viejos.
-     */
-    private void migrarDatosAntiguos() {
-        File plugins = getDataFolder().getParentFile();
-        for (Map.Entry<String, String> e : CARPETAS_VIEJAS.entrySet()) {
-            File destino = new File(getDataFolder(), e.getKey());
-            File origen = new File(plugins, e.getValue());
-            if (destino.exists() || !origen.isDirectory()) {
-                continue;
-            }
-            try {
-                copiarArbol(origen.toPath(), destino.toPath());
-                getLogger().info("Migrado " + e.getValue() + " -> EDM/" + e.getKey()
-                        + " (la carpeta original se conserva intacta).");
-            } catch (IOException ex) {
-                getLogger().severe("No se pudo migrar " + e.getValue() + ": " + ex.getMessage());
-            }
-        }
-    }
-
-    private static void copiarArbol(Path origen, Path destino) throws IOException {
-        try (var rutas = Files.walk(origen)) {
-            for (Path p : rutas.toList()) {
-                Path d = destino.resolve(origen.relativize(p).toString());
-                if (Files.isDirectory(p)) {
-                    Files.createDirectories(d);
-                } else {
-                    Files.createDirectories(d.getParent());
-                    Files.copy(p, d, StandardCopyOption.REPLACE_EXISTING);
-                }
-            }
-        }
     }
 
     /*

@@ -64,7 +64,6 @@ public final class Alba extends BossFight {
     public static final TextColor ORO = TextColor.fromHexString("#FFD700");
     public static final TextColor ORO_PALIDO = TextColor.fromHexString("#FFF3B0");
     public static final TextColor PLATA = TextColor.fromHexString("#E8E8F0");
-    private static final TextColor ACCENT = ORO;
 
     /** El corcel. Vive lo que el combate; en las fases a pie espera aparte. */
     private Horse steed;
@@ -134,7 +133,6 @@ public final class Alba extends BossFight {
         boss.setMaximumNoDamageTicks(6);
 
         Tags.markBoss(boss, ID);
-        Tags.markEvent(boss, event.id());
         glowBody(NamedTextColor.GOLD);
 
         later(2, () -> mount(boss.getLocation()));
@@ -428,11 +426,6 @@ public final class Alba extends BossFight {
     // INTERPOLACION de la traslacion: el cliente la desliza suave.
 
     private ItemStack goldBlade() {
-        return new ItemStack(Material.GOLDEN_SWORD);
-    }
-
-    /** Todo el tesoro es de oro por decision del dueño: nada de hierro. */
-    private ItemStack silverBlade() {
         return new ItemStack(Material.GOLDEN_SWORD);
     }
 

@@ -54,10 +54,6 @@ public final class Almacen {
         return uuid == null ? null : vitrinas.get(uuid);
     }
 
-    public Vitrina existente(UUID uuid) {
-        return vitrinas.get(uuid);
-    }
-
     public List<Vitrina> todas() {
         return new ArrayList<>(vitrinas.values());
     }

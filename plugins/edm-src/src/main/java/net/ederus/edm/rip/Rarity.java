@@ -45,10 +45,6 @@ public enum Rarity {
         return this.color;
     }
 
-    public int level() {
-        return this.level;
-    }
-
     public Component bar() {
         TextComponent out = Component.empty();
         int max = Math.max(5, this.level);

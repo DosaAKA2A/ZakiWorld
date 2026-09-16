@@ -164,7 +164,6 @@ public final class Mimic extends BossFight {
         boss.setMaximumNoDamageTicks(6);
 
         Tags.markBoss(boss, ID);
-        Tags.markEvent(boss, event.id());
         lastHealth = boss.getHealth();
         return boss;
     }

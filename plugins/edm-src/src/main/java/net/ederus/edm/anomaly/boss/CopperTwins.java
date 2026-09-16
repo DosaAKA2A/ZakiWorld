@@ -154,7 +154,6 @@ public final class CopperTwins extends BossFight {
 
         boss = forgeTwin(kemAt, true, each);
         Tags.markBoss(boss, ID);
-        Tags.markEvent(boss, event.id());
         Glow.apply(boss, NamedTextColor.GOLD);
 
         kam = forgeTwin(kamAt, false, each);

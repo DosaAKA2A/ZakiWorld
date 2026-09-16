@@ -886,7 +886,6 @@ public abstract class BossFight {
 
     protected void markMinion(Entity e) {
         Tags.markMinion(e, event.typeId());
-        Tags.markEvent(e, event.id());
         track(e);
     }
 }

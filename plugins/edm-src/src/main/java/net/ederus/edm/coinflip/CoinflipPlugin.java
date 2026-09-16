@@ -210,6 +210,5 @@ public final class CoinflipPlugin extends Module {
     public Mesa mesa() { return mesa; }
     public Textos textos() { return textos; }
     public MenuCoinflip menu() { return menu; }
-    public Animacion animacion() { return animacion; }
 
 }

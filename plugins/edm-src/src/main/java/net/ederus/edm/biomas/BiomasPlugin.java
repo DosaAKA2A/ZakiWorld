@@ -291,12 +291,6 @@ public final class BiomasPlugin extends Module implements Listener {
         return true;
     }
 
-    /** La primera zona que contiene el punto, o null. */
-    public Zona zonaEn(Location l) {
-        for (Zona z : zonas.values()) if (z.contiene(l)) return z;
-        return null;
-    }
-
     /**
      * Lee la caja de una region de WorldGuard de su fichero. Sin la API de WG como
      * dependencia: si no esta instalado, el modulo arranca igual.

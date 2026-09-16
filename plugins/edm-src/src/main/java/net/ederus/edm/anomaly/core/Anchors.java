@@ -34,9 +34,6 @@ public final class Anchors {
             return entity;
         }
 
-        public int hitsLeft() {
-            return hitsLeft;
-        }
     }
 
     private final Map<UUID, Anchor> anchors = new HashMap<>();

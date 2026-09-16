@@ -94,11 +94,6 @@ public final class Plantillas {
         return v == null ? null : String.valueOf(v);
     }
 
-    public List<String> leerLista(String tipo, String id, Campo campo) {
-        ConfigurationSection base = base(tipo, id);
-        return base == null ? List.of() : base.getStringList(campo.ruta());
-    }
-
     private static Object valorCrudo(ConfigurationSection base, Campo campo) {
         if (campo.base() && base.isConfigurationSection(campo.ruta())) {
             return base.get(campo.ruta() + ".base");

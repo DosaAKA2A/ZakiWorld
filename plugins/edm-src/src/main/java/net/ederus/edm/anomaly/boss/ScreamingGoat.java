@@ -93,7 +93,6 @@ public final class ScreamingGoat extends BossFight {
         boss.setMaximumNoDamageTicks(6);
 
         Tags.markBoss(boss, ID);
-        Tags.markEvent(boss, event.id());
         Glow.apply(boss, event.type().glowColor());
 
         arrivalAnimation(spot);

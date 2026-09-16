@@ -15,7 +15,6 @@ public final class Tags {
     private static NamespacedKey BOSS;
     private static NamespacedKey MINION;
     private static NamespacedKey TEMP;
-    private static NamespacedKey EVENT;
     private static NamespacedKey UNIQUE_DROP;
 
     private Tags() {
@@ -25,7 +24,6 @@ public final class Tags {
         BOSS = new NamespacedKey(plugin, "boss");
         MINION = new NamespacedKey(plugin, "minion");
         TEMP = new NamespacedKey(plugin, "temp");
-        EVENT = new NamespacedKey(plugin, "event");
         UNIQUE_DROP = new NamespacedKey(plugin, "unique_drop");
     }
 
@@ -67,16 +65,6 @@ public final class Tags {
         if (!ready() || e == null) return null;
         PersistentDataContainer pdc = e.getPersistentDataContainer();
         return pdc.get(TEMP, PersistentDataType.LONG);
-    }
-
-    public static void markEvent(Entity e, String eventId) {
-        if (!ready() || e == null) return;
-        e.getPersistentDataContainer().set(EVENT, PersistentDataType.STRING, eventId);
-    }
-
-    public static String eventId(Entity e) {
-        if (!ready() || e == null) return null;
-        return e.getPersistentDataContainer().get(EVENT, PersistentDataType.STRING);
     }
 
     /**

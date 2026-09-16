@@ -153,15 +153,6 @@ public enum RipEffect {
         return this.description;
     }
 
-    /*
-     * Cuanto dura la animacion en el mundo. De aqui sale el enfriamiento de
-     * fabrica: no se puede lanzar otra hasta que la anterior haya terminado.
-     * En config.yml se puede poner otro valor.
-     */
-    public int durationTicks() {
-        return this.durationTicks;
-    }
-
     /** Lo que tarda la animacion en terminar. Un enfriamiento por debajo de esto permite solapes. */
     public long animationMillis() {
         return (long)Math.max(MIN_COOLDOWN_TICKS, this.durationTicks) * 50L;

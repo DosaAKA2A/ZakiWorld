@@ -35,38 +35,6 @@ public final class Disguises {
         return plugin.getServer().getPluginManager().getPlugin("LibsDisguises") != null;
     }
 
-    /**
-     * Disfraza a la entidad de jugador.
-     *
-     * @param name nombre que se vera encima
-     * @param skin skin a usar: el nombre de un jugador de verdad, o el valor base64 de
-     *             la propiedad de texturas. Si es null se usa el propio nombre.
-     * @return true si el disfraz se puso
-     */
-    public static boolean asPlayer(Plugin plugin, Entity entity, String name, String skin) {
-        if (entity == null || !available(plugin)) return false;
-        try {
-            Class<?> playerDisguise = Class.forName("me.libraryaddict.disguise.disguisetypes.PlayerDisguise");
-            Object disguise = playerDisguise.getConstructor(String.class).newInstance(name);
-            if (skin != null && !skin.isBlank()) {
-                playerDisguise.getMethod("setSkin", String.class).invoke(disguise, skin);
-            }
-            Class<?> base = Class.forName("me.libraryaddict.disguise.disguisetypes.Disguise");
-            // Que el disfraz no se caiga solo al alejarse el jugador que lo mira.
-            try {
-                base.getMethod("setKeepDisguiseOnPlayerDeath", boolean.class).invoke(disguise, true);
-            } catch (Throwable ignored) {
-            }
-            Class<?> api = Class.forName("me.libraryaddict.disguise.DisguiseAPI");
-            api.getMethod("disguiseEntity", Entity.class, base).invoke(null, entity, disguise);
-            return true;
-        } catch (Throwable t) {
-            plugin.getLogger().info("No se pudo disfrazar de jugador (" + t.getClass().getSimpleName()
-                    + "); se usara la cabeza con skin.");
-            return false;
-        }
-    }
-
     /** Le quita el disfraz, si lo llevaba. */
     public static void clear(Plugin plugin, Entity entity) {
         if (entity == null || !available(plugin)) return;

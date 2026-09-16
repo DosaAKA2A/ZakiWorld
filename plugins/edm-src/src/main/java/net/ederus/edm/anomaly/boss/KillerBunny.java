@@ -103,7 +103,6 @@ public final class KillerBunny extends BossFight {
         boss.setMaximumNoDamageTicks(6);
 
         Tags.markBoss(boss, ID);
-        Tags.markEvent(boss, event.id());
         // Sin Glow.apply a proposito: esta anomalia no se ve venir.
 
         arrivalAnimation(spot);
@@ -262,10 +261,6 @@ public final class KillerBunny extends BossFight {
 
     private void pruneCopies() {
         copies.removeIf(r -> r == null || !r.isValid() || r.isDead());
-    }
-
-    public int copyCount() {
-        return copies.size();
     }
 
     /**

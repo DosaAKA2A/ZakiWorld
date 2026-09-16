@@ -241,7 +241,6 @@ public final class Mercado {
     /** Horas hasta que un item vuelve a su precio de siempre. 0 = sin tope. */
     public long olvidoTotalMs() { return olvidoTotalMs; }
     public double margen() { return margenVentaCompra; }
-    public int itemsMovidos() { return estados.size(); }
 
     // ---------------------------------------------------------- persistencia
 

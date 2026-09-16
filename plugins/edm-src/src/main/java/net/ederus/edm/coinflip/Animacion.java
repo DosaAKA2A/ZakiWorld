@@ -79,11 +79,6 @@ public final class Animacion implements Listener {
         return activa ? vueltas * ticksPorVuelta : 0;
     }
 
-    /** Cuanto dura entera, contando lo que se queda enseñando al ganador. */
-    public int duracionTicks() {
-        return activa ? ticksHastaResultado() + ticksAntesDeCerrar : 0;
-    }
-
     public void jugar(Mesa.Jugada j, Player creador, Player aceptante) {
         if (!activa) return;
 

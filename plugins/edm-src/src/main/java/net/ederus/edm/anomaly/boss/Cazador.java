@@ -103,7 +103,6 @@ public final class Cazador extends BossFight {
         boss.setMaximumNoDamageTicks(6);
 
         Tags.markBoss(boss, ID);
-        Tags.markEvent(boss, event.id());
         Glow.apply(boss, event.type().glowColor());
 
         drawWeapon(Material.CROSSBOW);
@@ -653,7 +652,6 @@ public final class Cazador extends BossFight {
                         arrow.setPersistent(false);
                         arrow.setPickupStatus(AbstractArrow.PickupStatus.DISALLOWED);
                         Tags.markMinion(arrow, ID);
-                        Tags.markEvent(arrow, event.id());
                     } catch (Throwable ignored) {
                     }
                 }
@@ -702,7 +700,6 @@ public final class Cazador extends BossFight {
             arrow.setPersistent(false);
             arrow.setPickupStatus(AbstractArrow.PickupStatus.DISALLOWED);
             Tags.markMinion(arrow, ID);
-            Tags.markEvent(arrow, event.id());
             return arrow;
         } catch (Throwable ignored) {
             return null;

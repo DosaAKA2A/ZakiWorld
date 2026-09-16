@@ -576,11 +576,6 @@ public final class ComandoTienda implements CommandExecutor, TabCompleter {
         quien.sendMessage(Estilo.linea("Se usa así", "/tienda " + resto, Estilo.CLARO));
     }
 
-    private void noConozco(CommandSender quien, String texto) {
-        quien.sendMessage(Estilo.linea("No tengo nada llamado", texto, Estilo.APAGADO));
-        quien.sendMessage(Estilo.nota("prueba a buscarlo: /tienda buscar " + texto));
-    }
-
     private void cantidadMala(CommandSender quien) {
         quien.sendMessage(Estilo.linea("Eso no es una cantidad", null, Estilo.APAGADO));
     }

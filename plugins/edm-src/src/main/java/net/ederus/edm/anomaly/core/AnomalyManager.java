@@ -9,7 +9,6 @@ import net.ederus.edm.anomaly.boss.Keeper;
 import net.ederus.edm.anomaly.boss.PhaseBars;
 import org.bukkit.Chunk;
 import org.bukkit.Location;
-import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.LivingEntity;
 import org.bukkit.entity.Player;
@@ -814,8 +813,4 @@ public final class AnomalyManager implements Listener {
         }
     }
 
-    /** Aviso a un operador de que algo no salio. */
-    public void tell(CommandSender who, Component message) {
-        who.sendMessage(plugin.prefix().append(message));
-    }
 }

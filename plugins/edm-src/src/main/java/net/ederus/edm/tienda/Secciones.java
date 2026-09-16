@@ -112,11 +112,6 @@ public final class Secciones {
         return LEGADO.deserialize(s).decoration(TextDecoration.ITALIC, false);
     }
 
-    public boolean tieneTexto(String clave) {
-        String s = textos.get(clave);
-        return s != null && !s.isEmpty();
-    }
-
     public Seccion de(String id) { return porId.get(id); }
     public Iterable<Seccion> todas() { return porId.values(); }
     public int cuantas() { return porId.size(); }

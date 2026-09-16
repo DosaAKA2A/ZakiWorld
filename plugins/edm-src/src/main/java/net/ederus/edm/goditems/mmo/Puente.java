@@ -212,18 +212,6 @@ public final class Puente {
         }
     }
 
-    public List<String> sets() {
-        if (!this.hay) return List.of();
-        try {
-            List<String> out = new ArrayList<>();
-            for (ItemSet s : MMOItems.plugin.getSets().getAll()) out.add(s.getId());
-            Collections.sort(out);
-            return out;
-        } catch (Throwable t) {
-            return List.of();
-        }
-    }
-
     /* ======================================================= ficheros */
 
     /**

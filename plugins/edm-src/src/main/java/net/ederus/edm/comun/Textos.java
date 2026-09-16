@@ -65,11 +65,5 @@ public class Textos {
         if (!Component.empty().equals(c)) a.sendMessage(c);
     }
 
-    /** Texto plano, para los sitios que aun devuelven String. */
-    public String plano(String clave, String respaldo, String... pares) {
-        return net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer.plainText()
-                .serialize(de(clave, respaldo, pares));
-    }
-
     protected String prefijo() { return prefijo; }
 }

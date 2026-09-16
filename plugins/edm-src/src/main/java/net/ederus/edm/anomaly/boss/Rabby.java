@@ -121,7 +121,6 @@ public final class Rabby extends BossFight {
         boss.setMaximumNoDamageTicks(6);
 
         Tags.markBoss(boss, ID);
-        Tags.markEvent(boss, event.id());
 
         // Ni brillo ni pilar: es un vecino cualquiera hasta que deja de serlo.
         for (Player p : Fx.viewersNear(spot, 90)) {

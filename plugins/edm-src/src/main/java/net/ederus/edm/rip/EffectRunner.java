@@ -129,10 +129,6 @@ public final class EffectRunner {
         }
     }
 
-    public int activeCount() {
-        return this.active.size();
-    }
-
     public boolean isFxEntity(Entity e) {
         return e != null && e.getPersistentDataContainer().has(this.fxKey, PersistentDataType.BYTE);
     }
@@ -350,23 +346,6 @@ public final class EffectRunner {
             }
         }
         this.discard((Entity)display);
-    }
-
-    private void shrinkAndDiscard(ItemDisplay display, int ticks) {
-        if (display == null || !display.isValid()) {
-            this.discard((Entity)display);
-            return;
-        }
-        try {
-            Transformation t = display.getTransformation();
-            display.setInterpolationDelay(0);
-            display.setInterpolationDuration(ticks);
-            display.setTransformation(new Transformation(t.getTranslation(), t.getLeftRotation(), new Vector3f(0.0f, 0.0f, 0.0f), t.getRightRotation()));
-        }
-        catch (Throwable throwable) {
-            // empty catch block
-        }
-        this.later((long)ticks + 1L, () -> this.discard((Entity)display));
     }
 
     public void play(RipEffect effect, Location loc, Player killer, Player victim) {

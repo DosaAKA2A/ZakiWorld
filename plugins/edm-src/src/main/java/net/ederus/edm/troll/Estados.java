@@ -1,11 +1,9 @@
 package net.ederus.edm.troll;
 
-import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
 import org.bukkit.plugin.Plugin;
 
 import java.util.ArrayList;
-import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -161,6 +159,4 @@ public final class Estados {
 
     public Plugin plugin() { return plugin; }
 
-    /** Solo para el aviso de arranque y los mensajes de admin. */
-    public static Player conectado(UUID quien) { return Bukkit.getPlayer(quien); }
 }

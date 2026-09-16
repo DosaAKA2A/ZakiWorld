@@ -35,15 +35,6 @@ implements Listener {
     private static final int[] EFFECT_SLOTS = new int[]{18, 19, 20, 21, 22, 23, 24, 25, 26, 28, 29, 30, 31, 32, 33, 34};
     private static final int[] SEPARATORS = new int[]{9, 10, 11, 12, 13, 14, 15, 16, 17, 36, 37, 38, 39, 40, 41, 42, 43, 44};
     private static final int[] FRAME = new int[]{0, 1, 3, 5, 7, 8, 27, 35, 47, 51, 52};
-    private static final int SLOT_TAB_KILL = 2;
-    private static final int SLOT_PROFILE = 4;
-    private static final int SLOT_TAB_DEATH = 6;
-    private static final int SLOT_CLOSE = 45;
-    private static final int SLOT_RANDOM = 46;
-    private static final int SLOT_PREV = 48;
-    private static final int SLOT_CLEAR = 49;
-    private static final int SLOT_NEXT = 50;
-    private static final int SLOT_LEGEND = 53;
     private static final TextColor KILL_COLOR = TextColor.color((int)0xFF5555);
     private static final TextColor DEATH_COLOR = TextColor.color((int)11829247);
     private static final TextColor GOLD = TextColor.color((int)16766822);
