@@ -10,7 +10,7 @@ import net.kyori.adventure.text.TextComponent;
 import net.kyori.adventure.text.format.NamedTextColor;
 import net.kyori.adventure.text.format.TextColor;
 import net.kyori.adventure.text.format.TextDecoration;
-import net.ederus.edm.rip.Compat;
+import net.ederus.edm.comun.Compat;
 import net.ederus.edm.rip.Rarity;
 import net.ederus.edm.rip.RipEffect;
 import net.ederus.edm.rip.RipPlugin;
@@ -324,7 +324,7 @@ implements Listener {
                 player.sendMessage(this.plugin.prefix().append((Component)Component.text((String)"Modo aleatorio desactivado.", (TextColor)SOFT)));
             } else {
                 this.plugin.setChoice(player.getUniqueId(), type, "random");
-                Compat.sound(player.getWorld(), player.getLocation(), "entity.player.levelup", 0.7f, 1.3f);
+                Compat.soundPlayers(player.getWorld(), player.getLocation(), "entity.player.levelup", 0.7f, 1.3f);
                 player.sendMessage(this.plugin.prefix().append((Component)Component.text((String)"Equipado  ", (TextColor)NamedTextColor.GREEN)).append((Component)Component.text((String)"\u2684 Aleatorio", (TextColor)TextColor.color((int)7268320), (TextDecoration[])new TextDecoration[]{TextDecoration.BOLD})).append((Component)Component.text((String)("  cada " + (type == RipEffect.Type.KILL ? "kill" : "muerte") + " será una sorpresa"), (TextColor)TextColor.color((int)0x555555))));
             }
             this.render(event.getInventory(), player, type, page);
@@ -348,7 +348,7 @@ implements Listener {
         }
         RipEffect effect = effects.get(effectIndex);
         if (!this.plugin.allows(player, effect)) {
-            Compat.sound(player.getWorld(), player.getLocation(), "entity.villager.no", 1.0f, 0.8f);
+            Compat.soundPlayers(player.getWorld(), player.getLocation(), "entity.villager.no", 1.0f, 0.8f);
             Component msg = this.plugin.isAdmin(player) ? this.plugin.prefix().append((Component)Component.text((String)"Efecto bloqueado. Requiere ", (TextColor)NamedTextColor.RED)).append((Component)Component.text((String)effect.permission(), (TextColor)GOLD)) : this.plugin.prefix().append((Component)Component.text((String)"Todavía no has desbloqueado este efecto.", (TextColor)NamedTextColor.RED));
             player.sendMessage(msg);
             return;
@@ -360,7 +360,7 @@ implements Listener {
             player.sendMessage(this.plugin.prefix().append((Component)Component.text((String)(effect.display() + " desequipado."), (TextColor)SOFT)));
         } else {
             this.plugin.setChoice(player.getUniqueId(), type, effect.id());
-            Compat.sound(player.getWorld(), player.getLocation(), "entity.player.levelup", 0.7f, 1.6f);
+            Compat.soundPlayers(player.getWorld(), player.getLocation(), "entity.player.levelup", 0.7f, 1.6f);
             player.sendMessage(this.plugin.prefix().append((Component)Component.text((String)"Equipado  ", (TextColor)NamedTextColor.GREEN)).append((Component)Component.text((String)effect.display(), (TextColor)effect.rarity().color(), (TextDecoration[])new TextDecoration[]{TextDecoration.BOLD})).append((Component)Component.text((String)("  " + effect.rarity().display().toLowerCase()), (TextColor)TextColor.color((int)0x555555))));
         }
         this.render(event.getInventory(), player, type, page);

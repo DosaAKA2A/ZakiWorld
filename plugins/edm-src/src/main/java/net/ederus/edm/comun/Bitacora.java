@@ -31,11 +31,15 @@ import java.util.logging.Logger;
  */
 public final class Bitacora {
 
-    private static final DateTimeFormatter HORA = DateTimeFormatter.ofPattern("HH:mm:ss");
+    /** La fecha ya va en el nombre del fichero: dentro basta la hora. */
+    public static final DateTimeFormatter HORA = DateTimeFormatter.ofPattern("HH:mm:ss");
+    /** Para los registros viejos (tienda, coinflip, bromas), que siempre la llevaron. */
+    public static final DateTimeFormatter FECHA_Y_HORA = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
 
     private final File carpeta;
     private final String nombre;
     private final Logger log;
+    private final DateTimeFormatter marca;
 
     private boolean activa = true;
     private BufferedWriter salida;
@@ -47,9 +51,15 @@ public final class Bitacora {
      * @param nombre  prefijo del fichero, sin fecha ni extension (ej. "anomalias")
      */
     public Bitacora(File carpeta, String nombre, Logger log) {
+        this(carpeta, nombre, log, HORA);
+    }
+
+    /** @param marca como se escribe el momento al principio de cada linea */
+    public Bitacora(File carpeta, String nombre, Logger log, DateTimeFormatter marca) {
         this.carpeta = carpeta;
         this.nombre = nombre;
         this.log = log;
+        this.marca = marca;
     }
 
     /** En false no se escribe nada y no se toca el disco. */
@@ -71,7 +81,7 @@ public final class Bitacora {
         if (!activa || linea == null) return;
         try {
             asegurarDia();
-            salida.write(LocalDateTime.now().format(HORA));
+            salida.write(LocalDateTime.now().format(marca));
             salida.write(" | ");
             salida.write(linea);
             salida.newLine();

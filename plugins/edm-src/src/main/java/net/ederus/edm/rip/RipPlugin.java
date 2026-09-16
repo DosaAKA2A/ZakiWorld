@@ -28,7 +28,7 @@ import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.TextComponent;
 import net.kyori.adventure.text.format.TextColor;
 import net.kyori.adventure.text.format.TextDecoration;
-import net.ederus.edm.rip.Compat;
+import net.ederus.edm.comun.Compat;
 import net.ederus.edm.rip.EffectRunner;
 import net.ederus.edm.rip.HeadCache;
 import net.ederus.edm.rip.MannequinHook;
@@ -528,7 +528,7 @@ implements Listener {
     }
 
     public void click(Player p, float pitch) {
-        Compat.sound(p.getWorld(), p.getLocation(), "ui.button.click", 0.6f, pitch);
+        Compat.soundPlayers(p.getWorld(), p.getLocation(), "ui.button.click", 0.6f, pitch);
     }
 
     public RipEffect resolveEffect(Player p, RipEffect.Type type) {

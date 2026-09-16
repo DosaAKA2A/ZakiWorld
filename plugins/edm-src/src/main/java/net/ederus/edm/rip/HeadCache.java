@@ -10,7 +10,7 @@ import java.io.Reader;
 import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
 import java.util.Map;
-import net.ederus.edm.rip.Compat;
+import net.ederus.edm.comun.Compat;
 import net.ederus.edm.rip.RipEffect;
 import net.ederus.edm.rip.RipPlugin;
 import org.bukkit.configuration.Configuration;

@@ -20,7 +20,7 @@ import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.TextColor;
 import net.kyori.adventure.text.format.TextDecoration;
 import net.ederus.edm.rip.Clones;
-import net.ederus.edm.rip.Compat;
+import net.ederus.edm.comun.Compat;
 import net.ederus.edm.rip.RipEffect;
 import net.ederus.edm.rip.RipPlugin;
 import org.bukkit.Bukkit;
@@ -340,9 +340,9 @@ public final class EffectRunner {
             Compat.spawn(w, Compat.FLASH, at, 1);
             Compat.spawn(w, Compat.END_ROD, at, big ? 40 : 14, big ? 0.5 : 0.18, big ? 0.7 : 0.3, big ? 0.5 : 0.18, big ? 0.12 : 0.05);
             Compat.spawn(w, Compat.ELECTRIC_SPARK, at, big ? 26 : 9, big ? 0.4 : 0.2, big ? 0.6 : 0.3, big ? 0.4 : 0.2, big ? 0.15 : 0.08);
-            Compat.sound(w, at, "block.amethyst_block.chime", big ? 1.2f : 0.6f, big ? 0.8f : (float)EffectRunner.rnd(1.3, 1.8));
+            Compat.soundPlayers(w, at, "block.amethyst_block.chime", big ? 1.2f : 0.6f, big ? 0.8f : (float)EffectRunner.rnd(1.3, 1.8));
             if (big) {
-                Compat.sound(w, at, "entity.illusioner.mirror_move", 1.0f, 0.7f);
+                Compat.soundPlayers(w, at, "entity.illusioner.mirror_move", 1.0f, 0.7f);
             }
         }
         this.discard((Entity)display);
@@ -609,14 +609,14 @@ public final class EffectRunner {
     private void kBlood(World w, Location c) {
         Compat.spawn(w, Compat.BLOCK, c, 60, 0.4, 0.6, 0.4, 0.1, Material.REDSTONE_BLOCK.createBlockData());
         Compat.spawn(w, Compat.DUST, c, 45, 0.5, 0.7, 0.5, 0.0, new Particle.DustOptions(org.bukkit.Color.fromRGB((int)140, (int)0, (int)0), 1.6f));
-        Compat.sound(w, c, "entity.player.attack.crit", 1.0f, 0.7f);
+        Compat.soundPlayers(w, c, "entity.player.attack.crit", 1.0f, 0.7f);
     }
 
     private void kHearts(World w, Location c) {
         this.animate(12, t -> {
             Compat.spawn(w, Compat.HEART, c.clone().add(0.0, (double)t * 0.12, 0.0), 3, 0.5, 0.2, 0.5, 0.0);
             if (t == 0) {
-                Compat.sound(w, c, "entity.villager.yes", 1.0f, 1.4f);
+                Compat.soundPlayers(w, c, "entity.villager.yes", 1.0f, 1.4f);
             }
         });
     }
@@ -625,32 +625,32 @@ public final class EffectRunner {
         this.animate(12, t -> {
             this.circle(c, 1.2 + Math.sin((double)t * 0.4) * 0.3, 12, p -> Compat.spawn(w, Compat.ELECTRIC_SPARK, p, 2, 0.05, 0.05, 0.05, 0.02));
             if (t == 0) {
-                Compat.sound(w, c, "entity.lightning_bolt.impact", 0.5f, 1.9f);
+                Compat.soundPlayers(w, c, "entity.lightning_bolt.impact", 0.5f, 1.9f);
             }
         });
     }
 
     private void kCoins(World w, Location c) {
         Compat.spawn(w, Compat.ITEM, c, 40, 0.4, 0.6, 0.4, 0.25, new ItemStack(Material.GOLD_NUGGET));
-        Compat.sound(w, c, "entity.experience_orb.pickup", 1.0f, 0.7f);
+        Compat.soundPlayers(w, c, "entity.experience_orb.pickup", 1.0f, 0.7f);
     }
 
     private void kPoof(World w, Location c) {
         Compat.spawn(w, Compat.POOF, c, 20, 0.35, 0.5, 0.35, 0.05);
         Compat.spawn(w, Compat.CLOUD, c, 12, 0.3, 0.4, 0.3, 0.02);
-        Compat.sound(w, c, "block.snow.break", 1.0f, 0.7f);
+        Compat.soundPlayers(w, c, "block.snow.break", 1.0f, 0.7f);
     }
 
     private void kFirework(World w, Location c) {
         this.firework(w, c, FireworkEffect.Type.BALL_LARGE, org.bukkit.Color.RED, org.bukkit.Color.ORANGE);
-        Compat.sound(w, c, "entity.firework_rocket.launch", 1.0f, 1.2f);
+        Compat.soundPlayers(w, c, "entity.firework_rocket.launch", 1.0f, 1.2f);
     }
 
     private void kNotes(World w, Location c) {
         this.animate(18, t -> {
             Compat.spawn(w, Compat.NOTE, c.clone().add(0.0, 0.5 + (double)t * 0.08, 0.0), 2, 0.6, 0.2, 0.6, 1.0);
             if (t % 4 == 0) {
-                Compat.sound(w, c, "block.note_block.bit", 1.0f, 0.6f + (float)(t % 12) * 0.1f);
+                Compat.soundPlayers(w, c, "block.note_block.bit", 1.0f, 0.6f + (float)(t % 12) * 0.1f);
             }
         });
     }
@@ -661,7 +661,7 @@ public final class EffectRunner {
             Compat.spawn(w, Compat.SWEEP_ATTACK, p, 1);
             Compat.spawn(w, Compat.CRIT, p, 5, 0.2, 0.2, 0.2, 0.15);
             if (t % 4 == 0) {
-                Compat.sound(w, c, "entity.player.attack.sweep", 1.0f, 1.0f + (float)t * 0.03f);
+                Compat.soundPlayers(w, c, "entity.player.attack.sweep", 1.0f, 1.0f + (float)t * 0.03f);
             }
         });
     }
@@ -673,10 +673,10 @@ public final class EffectRunner {
             }
             Compat.spawn(w, Compat.FIREWORK, c, 2, 0.5, 0.6, 0.5, 0.05);
             if (t == 0) {
-                Compat.sound(w, c, "entity.firework_rocket.twinkle", 1.0f, 1.4f);
+                Compat.soundPlayers(w, c, "entity.firework_rocket.twinkle", 1.0f, 1.4f);
             }
             if (t == 10) {
-                Compat.sound(w, c, "block.note_block.chime", 0.9f, 1.8f);
+                Compat.soundPlayers(w, c, "block.note_block.chime", 0.9f, 1.8f);
             }
         });
     }
@@ -689,11 +689,11 @@ public final class EffectRunner {
                     Compat.spawn(w, Compat.CRIT, p, 2, 0.03, 0.03, 0.03, 0.01);
                     Compat.spawn(w, Compat.END_ROD, p, 1, 0.0, 0.0, 0.0, 0.005);
                 });
-                Compat.sound(w, c, "item.trident.hit", 1.0f, 1.2f);
+                Compat.soundPlayers(w, c, "item.trident.hit", 1.0f, 1.2f);
             }
             if (t == 4) {
                 Compat.spawn(w, Compat.SWEEP_ATTACK, c, 2, 0.2, 0.2, 0.2, 0.0);
-                Compat.sound(w, c, "entity.arrow.hit_player", 1.0f, 0.8f);
+                Compat.soundPlayers(w, c, "entity.arrow.hit_player", 1.0f, 0.8f);
             }
         });
     }
@@ -704,15 +704,15 @@ public final class EffectRunner {
                 Compat.spawn(w, Compat.SMOKE, c.clone().add(0.0, 0.8, 0.0), 3, 0.1, 0.2, 0.1, 0.01);
                 Compat.spawn(w, Compat.FLAME, c.clone().add(0.0, 1.0, 0.0), 1, 0.05, 0.05, 0.05, 0.01);
                 if (t == 0) {
-                    Compat.sound(w, c, "entity.tnt.primed", 1.0f, 1.0f);
+                    Compat.soundPlayers(w, c, "entity.tnt.primed", 1.0f, 1.0f);
                 }
             } else if (t == 10) {
                 Compat.spawn(w, Compat.EXPLOSION_EMITTER, c, 1);
                 Compat.spawn(w, Compat.CLOUD, c, 30, 0.6, 0.4, 0.6, 0.15);
-                Compat.sound(w, c, "entity.generic.explode", 1.0f, 0.9f);
+                Compat.soundPlayers(w, c, "entity.generic.explode", 1.0f, 0.9f);
             } else if (t == 20) {
                 Compat.spawn(w, Compat.LARGE_SMOKE, c, 18, 0.7, 0.5, 0.7, 0.02);
-                Compat.sound(w, c, "block.fire.extinguish", 0.7f, 0.6f);
+                Compat.soundPlayers(w, c, "block.fire.extinguish", 0.7f, 0.6f);
             }
         });
     }
@@ -723,15 +723,15 @@ public final class EffectRunner {
                 Compat.spawn(w, Compat.SNOWFLAKE, c, 6, 0.4, 0.7, 0.4, 0.02);
                 Compat.spawn(w, Compat.BLOCK, c, 5, 0.4, 0.7, 0.4, 0.0, Material.BLUE_ICE.createBlockData());
                 if (t == 0) {
-                    Compat.sound(w, c, "entity.player.hurt_freeze", 1.0f, 0.8f);
+                    Compat.soundPlayers(w, c, "entity.player.hurt_freeze", 1.0f, 0.8f);
                 }
                 if (t == 9) {
-                    Compat.sound(w, c, "block.powder_snow.step", 1.0f, 0.6f);
+                    Compat.soundPlayers(w, c, "block.powder_snow.step", 1.0f, 0.6f);
                 }
             } else if (t == 18) {
                 Compat.spawn(w, Compat.BLOCK, c, 50, 0.4, 0.8, 0.4, 0.15, Material.ICE.createBlockData());
-                Compat.sound(w, c, "block.glass.break", 1.0f, 0.7f);
-                Compat.sound(w, c, "block.amethyst_block.break", 0.8f, 1.6f);
+                Compat.soundPlayers(w, c, "block.glass.break", 1.0f, 0.7f);
+                Compat.soundPlayers(w, c, "block.amethyst_block.break", 0.8f, 1.6f);
             }
         });
     }
@@ -742,14 +742,14 @@ public final class EffectRunner {
                 Compat.spawn(w, Compat.FLAME, c.clone().add(0.0, (double)t * 0.12, 0.0), 8, 0.3, 0.1, 0.3, 0.02);
                 Compat.spawn(w, Compat.LAVA, c, 1, 0.4, 0.3, 0.4, 0.0);
                 if (t == 0) {
-                    Compat.sound(w, c, "item.firecharge.use", 1.0f, 0.8f);
+                    Compat.soundPlayers(w, c, "item.firecharge.use", 1.0f, 0.8f);
                 }
                 if (t == 10) {
-                    Compat.sound(w, c, "block.fire.ambient", 1.0f, 0.7f);
+                    Compat.soundPlayers(w, c, "block.fire.ambient", 1.0f, 0.7f);
                 }
             } else if (t == 20) {
                 this.circle(c.clone().add(0.0, 0.1, 0.0), 1.6, 20, p -> Compat.spawn(w, Compat.FLAME, p, 3, 0.05, 0.15, 0.05, 0.02));
-                Compat.sound(w, c, "entity.blaze.shoot", 1.0f, 0.7f);
+                Compat.soundPlayers(w, c, "entity.blaze.shoot", 1.0f, 0.7f);
             }
         });
     }
@@ -760,10 +760,10 @@ public final class EffectRunner {
             double r = 0.3 + (double)wave * 0.35;
             this.circle(base.clone().add(0.0, 0.1, 0.0), r, (int)(8.0 + r * 5.0), p -> Compat.spawn(w, t < 12 ? Compat.CLOUD : Compat.CRIT, p, 1));
             if (t == 0) {
-                Compat.sound(w, base, "block.anvil.land", 1.0f, 0.6f);
+                Compat.soundPlayers(w, base, "block.anvil.land", 1.0f, 0.6f);
             }
             if (t == 12) {
-                Compat.sound(w, base, "entity.generic.explode", 0.5f, 1.6f);
+                Compat.soundPlayers(w, base, "entity.generic.explode", 0.5f, 1.6f);
             }
         });
     }
@@ -778,17 +778,17 @@ public final class EffectRunner {
                 Compat.spawn(w, Compat.LAVA, p2, 2, 0.2, 0.2, 0.2, 0.0);
                 Compat.spawn(w, Compat.LARGE_SMOKE, p2, 2, 0.15, 0.15, 0.15, 0.01);
                 if (t == 0) {
-                    Compat.sound(w, c, "entity.blaze.shoot", 1.0f, 0.5f);
+                    Compat.soundPlayers(w, c, "entity.blaze.shoot", 1.0f, 0.5f);
                 }
                 if (t == 10) {
-                    Compat.sound(w, c, "entity.ghast.shoot", 0.8f, 0.6f);
+                    Compat.soundPlayers(w, c, "entity.ghast.shoot", 0.8f, 0.6f);
                 }
             } else if (t == 18) {
                 Compat.spawn(w, Compat.EXPLOSION_EMITTER, c, 1);
                 Compat.spawn(w, Compat.LAVA, c, 25, 0.6, 0.3, 0.6, 0.0);
                 this.circle(base.clone().add(0.0, 0.1, 0.0), 1.8, 22, p -> Compat.spawn(w, Compat.FLAME, p, 2, 0.05, 0.1, 0.05, 0.02));
-                Compat.sound(w, c, "entity.generic.explode", 1.0f, 0.7f);
-                Compat.sound(w, c, "block.fire.ambient", 1.0f, 0.5f);
+                Compat.soundPlayers(w, c, "entity.generic.explode", 1.0f, 0.7f);
+                Compat.soundPlayers(w, c, "block.fire.ambient", 1.0f, 0.5f);
             }
         });
     }
@@ -796,7 +796,7 @@ public final class EffectRunner {
     private void kGeyser(World w, Location base, Location c) {
         this.animate(34, t -> {
             if (t == 0) {
-                Compat.sound(w, base, "block.pointed_dripstone.drip_water_into_cauldron", 1.0f, 0.6f);
+                Compat.soundPlayers(w, base, "block.pointed_dripstone.drip_water_into_cauldron", 1.0f, 0.6f);
             }
             if (t < 26) {
                 double h = Math.min(3.0, (double)t * 0.25);
@@ -804,14 +804,14 @@ public final class EffectRunner {
                 Compat.spawn(w, Compat.BUBBLE_POP, base.clone().add(0.0, h * 0.5, 0.0), 4, 0.2, 0.4, 0.2, 0.02);
                 Compat.spawn(w, Compat.CLOUD, base.clone().add(0.0, h, 0.0), 2, 0.15, 0.2, 0.15, 0.03);
                 if (t == 4) {
-                    Compat.sound(w, base, "entity.dolphin.splash", 1.0f, 0.8f);
+                    Compat.soundPlayers(w, base, "entity.dolphin.splash", 1.0f, 0.8f);
                 }
                 if (t == 14) {
-                    Compat.sound(w, base, "entity.generic.splash", 1.0f, 0.7f);
+                    Compat.soundPlayers(w, base, "entity.generic.splash", 1.0f, 0.7f);
                 }
             } else if (t == 26) {
                 Compat.spawn(w, Compat.SPLASH, c.clone().add(0.0, 1.5, 0.0), 30, 0.6, 0.4, 0.6, 0.2);
-                Compat.sound(w, base, "entity.player.splash.high_speed", 1.0f, 0.9f);
+                Compat.soundPlayers(w, base, "entity.player.splash.high_speed", 1.0f, 0.9f);
             }
         });
     }
@@ -823,18 +823,18 @@ public final class EffectRunner {
                 this.circle(c.clone().add(0.0, y, 0.0), Math.max(0.15, 0.9 - y * 0.18), 8, p -> Compat.spawn(w, Compat.SOUL, p, 1, 0.0, 0.0, 0.0, 0.01));
                 Compat.spawn(w, Compat.SOUL_FIRE_FLAME, c, 2, 0.3, 0.5, 0.3, 0.02);
                 if (t == 0) {
-                    Compat.sound(w, c, "particle.soul_escape", 1.5f, 0.8f);
+                    Compat.soundPlayers(w, c, "particle.soul_escape", 1.5f, 0.8f);
                 }
                 if (t == 12) {
-                    Compat.sound(w, c, "block.soul_soil.place", 1.0f, 0.5f);
+                    Compat.soundPlayers(w, c, "block.soul_soil.place", 1.0f, 0.5f);
                 }
             } else if (t == 30) {
-                Compat.sound(w, c, "particle.soul_escape", 1.6f, 0.5f);
+                Compat.soundPlayers(w, c, "particle.soul_escape", 1.6f, 0.5f);
                 if (killer != null && killer.isOnline() && killer.getWorld().equals((Object)w)) {
                     this.line(c.clone().add(0.0, 3.2, 0.0), killer.getEyeLocation(), 0.4, p -> Compat.spawn(w, Compat.SOUL, p, 1, 0.05, 0.05, 0.05, 0.02));
                 }
             } else if (t == 40) {
-                Compat.sound(w, c, "block.amethyst_block.chime", 0.8f, 0.6f);
+                Compat.soundPlayers(w, c, "block.amethyst_block.chime", 0.8f, 0.6f);
             }
         });
     }
@@ -846,16 +846,16 @@ public final class EffectRunner {
                 double angle = (double)t * 0.5;
                 Compat.spawn(w, Compat.PORTAL, c.clone().add(Math.cos(angle) * 1.1, 0.3 + (double)t * 0.05, Math.sin(angle) * 1.1), 3, 0.05, 0.05, 0.05, 0.2);
                 if (t == 0) {
-                    Compat.sound(w, c, "entity.ender_dragon.growl", 0.7f, 1.4f);
+                    Compat.soundPlayers(w, c, "entity.ender_dragon.growl", 0.7f, 1.4f);
                 }
                 if (t == 14) {
-                    Compat.sound(w, c, "entity.ender_dragon.flap", 1.0f, 1.2f);
+                    Compat.soundPlayers(w, c, "entity.ender_dragon.flap", 1.0f, 1.2f);
                 }
             } else if (t == 34) {
                 Compat.spawn(w, Compat.DRAGON_BREATH, c, 45, 0.8, 0.6, 0.8, 0.1);
                 Compat.spawn(w, Compat.SWEEP_ATTACK, c, 3, 0.4, 0.4, 0.4, 0.0);
-                Compat.sound(w, c, "entity.ender_dragon.hurt", 0.7f, 0.8f);
-                Compat.sound(w, c, "entity.generic.eat", 1.0f, 0.6f);
+                Compat.soundPlayers(w, c, "entity.ender_dragon.hurt", 0.7f, 0.8f);
+                Compat.soundPlayers(w, c, "entity.generic.eat", 1.0f, 0.6f);
             }
         });
     }
@@ -864,18 +864,18 @@ public final class EffectRunner {
         this.animate(44, t -> {
             if (t == 0) {
                 Compat.spawn(w, Compat.TOTEM, c, 50, 0.4, 0.6, 0.4, 0.4);
-                Compat.sound(w, c, "item.totem.use", 0.8f, 1.2f);
+                Compat.soundPlayers(w, c, "item.totem.use", 0.8f, 1.2f);
             } else if (t < 30) {
                 double angle = (double)t * 0.55;
                 double y = (double)t * 0.07;
                 Compat.spawn(w, Compat.TOTEM, c.clone().add(Math.cos(angle) * 0.8, y, Math.sin(angle) * 0.8), 2, 0.03, 0.03, 0.03, 0.05);
                 if (t == 15) {
-                    Compat.sound(w, c, "block.note_block.chime", 0.8f, 0.9f);
+                    Compat.soundPlayers(w, c, "block.note_block.chime", 0.8f, 0.9f);
                 }
             } else if (t == 30) {
                 Compat.spawn(w, Compat.TOTEM, c.clone().add(0.0, 2.2, 0.0), 40, 0.8, 0.2, 0.8, 0.15);
-                Compat.sound(w, c, "entity.item.break", 1.0f, 0.6f);
-                Compat.sound(w, c, "entity.villager.no", 1.0f, 0.7f);
+                Compat.soundPlayers(w, c, "entity.item.break", 1.0f, 0.6f);
+                Compat.soundPlayers(w, c, "entity.villager.no", 1.0f, 0.7f);
             }
         });
     }
@@ -888,8 +888,8 @@ public final class EffectRunner {
         }
         this.animate(56, t -> {
             if (t == 0) {
-                Compat.sound(w, base, "block.chain.place", 1.2f, 0.5f);
-                Compat.sound(w, base, "entity.warden.heartbeat", 1.0f, 0.7f);
+                Compat.soundPlayers(w, base, "block.chain.place", 1.2f, 0.5f);
+                Compat.soundPlayers(w, base, "entity.warden.heartbeat", 1.0f, 0.7f);
             }
             if (t < 24) {
                 double progress = (double)t / 24.0;
@@ -900,17 +900,17 @@ public final class EffectRunner {
                     Compat.spawn(w, Compat.SOUL_FIRE_FLAME, p2, 2, 0.04, 0.04, 0.04, 0.005);
                 }
                 if (t % 8 == 0) {
-                    Compat.sound(w, base, "block.chain.step", 1.0f, 0.6f + (float)t * 0.02f);
+                    Compat.soundPlayers(w, base, "block.chain.step", 1.0f, 0.6f + (float)t * 0.02f);
                 }
             } else if (t < 42) {
                 this.circle(c, 0.7 + Math.sin((double)t * 0.5) * 0.15, 10, p -> Compat.spawn(w, Compat.SOUL_FIRE_FLAME, p, 1, 0.02, 0.02, 0.02, 0.003));
                 if (t == 30) {
-                    Compat.sound(w, base, "entity.warden.heartbeat", 1.2f, 0.6f);
+                    Compat.soundPlayers(w, base, "entity.warden.heartbeat", 1.2f, 0.6f);
                 }
             } else if (t == 42) {
                 Compat.spawn(w, Compat.SOUL, c, 25, 0.4, 0.6, 0.4, 0.06);
-                Compat.sound(w, base, "block.chain.break", 1.2f, 0.5f);
-                Compat.sound(w, base, "particle.soul_escape", 1.4f, 0.6f);
+                Compat.soundPlayers(w, base, "block.chain.break", 1.2f, 0.5f);
+                Compat.soundPlayers(w, base, "particle.soul_escape", 1.4f, 0.6f);
             }
         });
     }
@@ -923,16 +923,16 @@ public final class EffectRunner {
                 this.circle(sky, r, 24, p -> Compat.spawn(w, Compat.SQUID_INK, p, 1, 0.03, 0.03, 0.03, 0.0));
                 Compat.spawn(w, Compat.SMOKE, c, 3, 0.6, 0.8, 0.6, 0.01);
                 if (t == 0) {
-                    Compat.sound(w, c, "block.beacon.deactivate", 1.0f, 0.5f);
+                    Compat.soundPlayers(w, c, "block.beacon.deactivate", 1.0f, 0.5f);
                 }
                 if (t == 18) {
-                    Compat.sound(w, c, "entity.wither.ambient", 0.4f, 0.5f);
+                    Compat.soundPlayers(w, c, "entity.wither.ambient", 0.4f, 0.5f);
                 }
             } else if (t == 36) {
                 Compat.spawn(w, Compat.FLASH, sky, 1);
                 this.circle(sky, 1.6, 28, p -> Compat.spawn(w, Compat.END_ROD, p, 1, 0.02, 0.02, 0.02, 0.01));
-                Compat.sound(w, c, "block.beacon.activate", 1.0f, 1.6f);
-                Compat.sound(w, c, "block.amethyst_block.chime", 1.0f, 0.5f);
+                Compat.soundPlayers(w, c, "block.beacon.activate", 1.0f, 1.6f);
+                Compat.soundPlayers(w, c, "block.amethyst_block.chime", 1.0f, 0.5f);
             } else if (t == 48) {
                 Compat.spawn(w, Compat.END_ROD, c, 20, 0.5, 1.0, 0.5, 0.04);
             }
@@ -947,10 +947,10 @@ public final class EffectRunner {
                 this.circle(sky, 2.5 + Math.sin((double)t * 0.3), 20, p -> Compat.spawn(w, Compat.CLOUD, p, 2, 0.2, 0.1, 0.2, 0.0));
                 Compat.spawn(w, Compat.ELECTRIC_SPARK, sky, 3, 1.5, 0.3, 1.5, 0.05);
                 if (t == 0) {
-                    Compat.sound(w, c, "entity.lightning_bolt.thunder", 0.5f, 0.5f);
+                    Compat.soundPlayers(w, c, "entity.lightning_bolt.thunder", 0.5f, 0.5f);
                 }
                 if (t == 18) {
-                    Compat.sound(w, c, "item.trident.thunder", 0.6f, 0.6f);
+                    Compat.soundPlayers(w, c, "item.trident.thunder", 0.6f, 0.6f);
                 }
             } else if (t >= 30 && t < 66 && (t - 30) % 12 == 0) {
                 int i = (t - 30) / 12;
@@ -961,12 +961,12 @@ public final class EffectRunner {
             } else if (t == 70) {
                 w.strikeLightningEffect(base);
                 Compat.spawn(w, Compat.FLASH, c, 1);
-                Compat.sound(w, c, "entity.lightning_bolt.impact", 1.0f, 0.8f);
-                Compat.sound(w, c, "entity.lightning_bolt.thunder", 1.0f, 1.0f);
+                Compat.soundPlayers(w, c, "entity.lightning_bolt.impact", 1.0f, 0.8f);
+                Compat.soundPlayers(w, c, "entity.lightning_bolt.thunder", 1.0f, 1.0f);
             } else if (t == 74) {
                 this.circle(base.clone().add(0.0, 0.1, 0.0), 1.4, 18, p -> Compat.spawn(w, Compat.LARGE_SMOKE, p, 2, 0.05, 0.1, 0.05, 0.01));
                 Compat.spawn(w, Compat.LAVA, base, 10, 0.6, 0.1, 0.6, 0.0);
-                Compat.sound(w, c, "block.fire.extinguish", 1.0f, 0.5f);
+                Compat.soundPlayers(w, c, "block.fire.extinguish", 1.0f, 0.5f);
             }
         });
     }
@@ -985,10 +985,10 @@ public final class EffectRunner {
                 }
                 Compat.spawn(w, Compat.REVERSE_PORTAL, c, 3, 0.15, 0.2, 0.15, 0.03);
                 if (t == 0) {
-                    Compat.sound(w, c, "block.portal.trigger", 0.8f, 0.5f);
+                    Compat.soundPlayers(w, c, "block.portal.trigger", 0.8f, 0.5f);
                 }
                 if (t == 25) {
-                    Compat.sound(w, c, "block.portal.ambient", 0.9f, 0.4f);
+                    Compat.soundPlayers(w, c, "block.portal.ambient", 0.9f, 0.4f);
                 }
             } else if (t < 72) {
                 double r = Math.max(0.1, 2.4 - (double)(t - 50) * 0.11);
@@ -1001,16 +1001,16 @@ public final class EffectRunner {
                     Compat.spawn(w, Compat.REVERSE_PORTAL, p3, 0, v.getX(), v.getY(), v.getZ(), 1.0);
                 }
                 if (t == 60) {
-                    Compat.sound(w, c, "block.beacon.deactivate", 1.0f, 0.4f);
+                    Compat.soundPlayers(w, c, "block.beacon.deactivate", 1.0f, 0.4f);
                 }
             } else if (t == 72) {
                 Compat.spawn(w, Compat.FLASH, c, 1);
                 this.circle(c, 1.8, 26, p -> Compat.spawn(w, Compat.END_ROD, p, 1, 0.02, 0.02, 0.02, 0.04));
-                Compat.sound(w, c, "entity.enderman.teleport", 1.0f, 0.4f);
-                Compat.sound(w, c, "entity.warden.sonic_boom", 0.6f, 0.7f);
+                Compat.soundPlayers(w, c, "entity.enderman.teleport", 1.0f, 0.4f);
+                Compat.soundPlayers(w, c, "entity.warden.sonic_boom", 0.6f, 0.7f);
             } else if (t == 80) {
                 Compat.spawn(w, Compat.PORTAL, c, 30, 0.3, 0.3, 0.3, 0.8);
-                Compat.sound(w, c, "entity.enderman.scream", 0.6f, 0.4f);
+                Compat.soundPlayers(w, c, "entity.enderman.scream", 0.6f, 0.4f);
             }
         });
     }
@@ -1025,10 +1025,10 @@ public final class EffectRunner {
                 double r = Math.max(0.15, 1.2 - (double)t * 0.035);
                 this.circle(from.clone().add(0.0, 0.2, 0.0), r, 12, p -> Compat.spawn(w, Compat.END_ROD, p, 1, 0.0, 0.0, 0.0, 0.005));
                 if (t % 8 == 0) {
-                    Compat.sound(w, from, "block.beacon.ambient", 0.9f, 0.8f + (float)t * 0.03f);
+                    Compat.soundPlayers(w, from, "block.beacon.ambient", 0.9f, 0.8f + (float)t * 0.03f);
                 }
                 if (t == 24) {
-                    Compat.sound(w, from, "block.respawn_anchor.charge", 1.0f, 1.5f);
+                    Compat.soundPlayers(w, from, "block.respawn_anchor.charge", 1.0f, 1.5f);
                 }
             } else if (t < 60) {
                 this.line(from, c, 0.35, p -> {
@@ -1039,10 +1039,10 @@ public final class EffectRunner {
                 });
                 Compat.spawn(w, Compat.LAVA, c, 2, 0.3, 0.2, 0.3, 0.0);
                 if (t == 30) {
-                    Compat.sound(w, c, "entity.guardian.attack", 1.0f, 1.2f);
+                    Compat.soundPlayers(w, c, "entity.guardian.attack", 1.0f, 1.2f);
                 }
                 if (t % 10 == 0) {
-                    Compat.sound(w, c, "block.beacon.deactivate", 0.5f, 1.9f);
+                    Compat.soundPlayers(w, c, "block.beacon.deactivate", 0.5f, 1.9f);
                 }
             } else if (t == 60) {
                 Compat.spawn(w, Compat.EXPLOSION_EMITTER, c, 1);
@@ -1050,8 +1050,8 @@ public final class EffectRunner {
                     Compat.spawn(w, Compat.LAVA, p, 2, 0.05, 0.05, 0.05, 0.0);
                     Compat.spawn(w, Compat.FLAME, p, 2, 0.05, 0.1, 0.05, 0.01);
                 });
-                Compat.sound(w, c, "entity.generic.explode", 1.0f, 0.8f);
-                Compat.sound(w, c, "block.lava.extinguish", 1.0f, 0.6f);
+                Compat.soundPlayers(w, c, "entity.generic.explode", 1.0f, 0.8f);
+                Compat.soundPlayers(w, c, "block.lava.extinguish", 1.0f, 0.6f);
             }
         });
     }
@@ -1063,11 +1063,11 @@ public final class EffectRunner {
                 this.circle(base.clone().add(0.0, 0.1, 0.0), pulse, 24, p -> Compat.spawn(w, Compat.DUST, p, 1, 0.0, 0.0, 0.0, 0.0, new Particle.DustOptions(org.bukkit.Color.fromRGB((int)255, (int)60, (int)60), 1.3f)));
                 this.circle(base.clone().add(0.0, 0.1, 0.0), 0.4, 8, p -> Compat.spawn(w, Compat.DUST, p, 1, 0.0, 0.0, 0.0, 0.0, new Particle.DustOptions(org.bukkit.Color.fromRGB((int)255, (int)200, (int)60), 1.0f)));
                 if (t % 10 == 0) {
-                    Compat.sound(w, base, "block.note_block.bell", 0.8f, 1.7f + (float)t * 0.005f);
+                    Compat.soundPlayers(w, base, "block.note_block.bell", 0.8f, 1.7f + (float)t * 0.005f);
                 }
             } else if (t == 40) {
                 Compat.spawn(w, Compat.FLASH, c.clone().add(0.0, 20.0, 0.0), 1);
-                Compat.sound(w, c, "item.trident.thunder", 1.0f, 1.4f);
+                Compat.soundPlayers(w, c, "item.trident.thunder", 1.0f, 1.4f);
             } else if (t > 44 && t < 84) {
                 double top;
                 for (double y = top = Math.max(0.0, 26.0 - (double)(t - 44) * 1.1); y < 26.0; y += 1.3) {
@@ -1075,18 +1075,18 @@ public final class EffectRunner {
                 }
                 this.circle(base.clone().add(0.0, 0.2, 0.0), 1.2, 14, p -> Compat.spawn(w, Compat.FLAME, p, 1, 0.03, 0.1, 0.03, 0.01));
                 if (t % 8 == 0) {
-                    Compat.sound(w, c, "block.beacon.ambient", 1.0f, 0.5f);
+                    Compat.soundPlayers(w, c, "block.beacon.ambient", 1.0f, 0.5f);
                 }
                 if (t == 64) {
-                    Compat.sound(w, c, "entity.guardian.attack", 1.0f, 0.6f);
+                    Compat.soundPlayers(w, c, "entity.guardian.attack", 1.0f, 0.6f);
                 }
             } else if (t == 84) {
                 Compat.spawn(w, Compat.EXPLOSION_EMITTER, c, 2);
                 Compat.spawn(w, Compat.FLASH, c, 1);
                 Compat.spawn(w, Compat.END_ROD, c, 60, 0.4, 0.4, 0.4, 0.45);
-                Compat.sound(w, c, "entity.generic.explode", 1.0f, 0.5f);
-                Compat.sound(w, c, "entity.warden.sonic_boom", 0.8f, 0.8f);
-                Compat.sound(w, c, "entity.wither.death", 0.25f, 0.5f);
+                Compat.soundPlayers(w, c, "entity.generic.explode", 1.0f, 0.5f);
+                Compat.soundPlayers(w, c, "entity.warden.sonic_boom", 0.8f, 0.8f);
+                Compat.soundPlayers(w, c, "entity.wither.death", 0.25f, 0.5f);
             } else if (t == 96) {
                 Compat.spawn(w, Compat.LARGE_SMOKE, c, 25, 0.9, 0.6, 0.9, 0.02);
             }
@@ -1114,8 +1114,8 @@ public final class EffectRunner {
         Set<ItemDisplay> swords = Collections.synchronizedSet(new LinkedHashSet<ItemDisplay>());
         if (frozen != null) {
             this.circle(base.clone().add(0.0, 0.2, 0.0), 1.0, 14, p -> Compat.spawn(w, Compat.ENCHANT, p, 2, 0.05, 0.3, 0.05, 0.4));
-            Compat.sound(w, base, "block.respawn_anchor.charge", 1.0f, 0.6f);
-            Compat.sound(w, base, "entity.elder_guardian.curse", 0.5f, 1.4f);
+            Compat.soundPlayers(w, base, "block.respawn_anchor.charge", 1.0f, 0.6f);
+            Compat.soundPlayers(w, base, "entity.elder_guardian.curse", 0.5f, 1.4f);
         }
         this.animate(140, 1L, t -> {
             if (t >= 4 && t <= 26 && (t - 4) % 2 == 0) {
@@ -1129,9 +1129,9 @@ public final class EffectRunner {
                     this.later((long)fallTicks + 2L, () -> {
                         Compat.spawn(w, Compat.BLOCK, ground.clone().add(0.0, 0.2, 0.0), 12, 0.15, 0.1, 0.15, 0.05, Material.STONE.createBlockData());
                         Compat.spawn(w, Compat.CRIT, ground.clone().add(0.0, 0.5, 0.0), 6, 0.1, 0.2, 0.1, 0.1);
-                        Compat.sound(w, ground, "entity.player.attack.sweep", 1.0f, (float)EffectRunner.rnd(0.7, 1.3));
-                        Compat.sound(w, ground, "item.trident.hit_ground", 0.8f, (float)EffectRunner.rnd(0.8, 1.2));
-                        Compat.sound(w, ground, "block.bell.use", 0.45f, (float)EffectRunner.rnd(1.4, 1.9));
+                        Compat.soundPlayers(w, ground, "entity.player.attack.sweep", 1.0f, (float)EffectRunner.rnd(0.7, 1.3));
+                        Compat.soundPlayers(w, ground, "item.trident.hit_ground", 0.8f, (float)EffectRunner.rnd(0.8, 1.2));
+                        Compat.soundPlayers(w, ground, "block.bell.use", 0.45f, (float)EffectRunner.rnd(1.4, 1.9));
                     });
                 }
             }
@@ -1139,7 +1139,7 @@ public final class EffectRunner {
                 Compat.spawn(w, Compat.ENCHANT, frozen.getLocation().add(0.0, 1.4, 0.0), 4, 0.35, 0.6, 0.35, 0.3);
             }
             if (t == 36) {
-                Compat.sound(w, c, "entity.lightning_bolt.thunder", 0.6f, 0.5f);
+                Compat.soundPlayers(w, c, "entity.lightning_bolt.thunder", 0.6f, 0.5f);
                 Compat.spawn(w, Compat.FLASH, c.clone().add(0.0, 12.0, 0.0), 1);
             }
             if (t == 40) {
@@ -1158,17 +1158,17 @@ public final class EffectRunner {
                 Compat.spawn(w, Compat.EXPLOSION_EMITTER, base, 1);
                 Compat.spawn(w, Compat.FLASH, c, 1);
                 Compat.spawn(w, Compat.BLOCK, base.clone().add(0.0, 0.3, 0.0), 60, 1.2, 0.3, 1.2, 0.1, Material.DEEPSLATE.createBlockData());
-                Compat.sound(w, base, "block.anvil.land", 1.0f, 0.5f);
-                Compat.sound(w, base, "block.anvil.use", 1.0f, 0.4f);
-                Compat.sound(w, base, "entity.lightning_bolt.impact", 1.0f, 0.7f);
-                Compat.sound(w, base, "item.mace.smash_ground_heavy", 1.0f, 0.6f);
-                Compat.sound(w, base, "block.bell.use", 1.5f, 0.55f);
-                this.later(6L, () -> Compat.sound(w, base, "block.bell.resonate", 1.2f, 0.75f));
-                this.later(16L, () -> Compat.sound(w, base, "block.bell.resonate", 0.8f, 0.6f));
+                Compat.soundPlayers(w, base, "block.anvil.land", 1.0f, 0.5f);
+                Compat.soundPlayers(w, base, "block.anvil.use", 1.0f, 0.4f);
+                Compat.soundPlayers(w, base, "entity.lightning_bolt.impact", 1.0f, 0.7f);
+                Compat.soundPlayers(w, base, "item.mace.smash_ground_heavy", 1.0f, 0.6f);
+                Compat.soundPlayers(w, base, "block.bell.use", 1.5f, 0.55f);
+                this.later(6L, () -> Compat.soundPlayers(w, base, "block.bell.resonate", 1.2f, 0.75f));
+                this.later(16L, () -> Compat.soundPlayers(w, base, "block.bell.resonate", 0.8f, 0.6f));
                 if (frozen != null && frozen.isValid()) {
                     Compat.spawn(w, Compat.POOF, frozen.getLocation().add(0.0, 1.0, 0.0), 20, 0.3, 0.6, 0.3, 0.03);
                     Compat.spawn(w, Compat.SOUL, frozen.getLocation().add(0.0, 1.0, 0.0), 12, 0.25, 0.5, 0.25, 0.05);
-                    Compat.sound(w, base, "entity.enderman.teleport", 0.8f, 0.6f);
+                    Compat.soundPlayers(w, base, "entity.enderman.teleport", 0.8f, 0.6f);
                 }
                 this.discard((Entity)frozen);
             }
@@ -1255,8 +1255,8 @@ public final class EffectRunner {
         }
         long startTime = w.getTime();
         double rise = 2.4;
-        Compat.sound(w, base, "entity.ender_dragon.growl", 1.2f, 0.4f);
-        Compat.sound(w, base, "ambient.cave", 1.0f, 0.5f);
+        Compat.soundPlayers(w, base, "entity.ender_dragon.growl", 1.2f, 0.4f);
+        Compat.soundPlayers(w, base, "ambient.cave", 1.0f, 0.5f);
         this.animate(150, 1L, t -> {
             if (t < 12) {
                 this.circle(base.clone().add(0.0, 0.15, 0.0), 1.6, 18, p -> Compat.spawn(w, Compat.SOUL, p, 1, 0.02, 0.12, 0.02, 0.02));
@@ -1270,8 +1270,8 @@ public final class EffectRunner {
                     // empty catch block
                 }
                 Compat.spawn(w, Compat.FLASH, c, 1);
-                Compat.sound(w, base, "block.portal.trigger", 0.5f, 0.6f);
-                Compat.sound(w, base, "block.respawn_anchor.charge", 1.0f, 0.5f);
+                Compat.soundPlayers(w, base, "block.portal.trigger", 0.5f, 0.6f);
+                Compat.soundPlayers(w, base, "block.respawn_anchor.charge", 1.0f, 0.5f);
             }
             if (t >= 8 && t <= 70 && god != null && god.isValid()) {
                 double p = (double)(t - 8) / 62.0;
@@ -1296,7 +1296,7 @@ public final class EffectRunner {
                 this.sky(w, startTime + (long)(12000.0 * p));
             }
             if (t == 20) {
-                Compat.sound(w, base, "entity.illusioner.prepare_mirror", 1.0f, 0.6f);
+                Compat.soundPlayers(w, base, "entity.illusioner.prepare_mirror", 1.0f, 0.6f);
             }
             if (t > 70 && t < 112 && god != null && god.isValid()) {
                 double bob = Math.sin((double)t * 0.09) * 0.14;
@@ -1310,11 +1310,11 @@ public final class EffectRunner {
                 }
             }
             if (t == 90) {
-                Compat.sound(w, base, "entity.elder_guardian.curse", 0.6f, 0.6f);
-                Compat.sound(w, base, "block.enchantment_table.use", 1.0f, 0.5f);
+                Compat.soundPlayers(w, base, "entity.elder_guardian.curse", 0.6f, 0.6f);
+                Compat.soundPlayers(w, base, "block.enchantment_table.use", 1.0f, 0.5f);
             }
             if (t == 98) {
-                Compat.sound(w, base, "entity.lightning_bolt.thunder", 0.7f, 0.4f);
+                Compat.soundPlayers(w, base, "entity.lightning_bolt.thunder", 0.7f, 0.4f);
                 Compat.spawn(w, Compat.FLASH, c.clone().add(0.0, 24.0, 0.0), 1);
             }
             if (t >= 104 && t < 112 && t % 2 == 0) {
@@ -1330,18 +1330,18 @@ public final class EffectRunner {
                 Compat.spawn(w, Compat.POOF, base.clone().add(0.0, rise + 1.0, 0.0), 40, 0.4, 0.7, 0.4, 0.06);
                 Compat.spawn(w, Compat.SOUL, base.clone().add(0.0, rise + 1.0, 0.0), 24, 0.3, 0.6, 0.3, 0.06);
                 this.circle(base.clone().add(0.0, 0.15, 0.0), 1.6, 18, p -> Compat.spawn(w, Compat.ELECTRIC_SPARK, p, 2, 0.05, 0.15, 0.05, 0.03));
-                Compat.sound(w, base, "entity.lightning_bolt.impact", 1.0f, 0.8f);
-                Compat.sound(w, base, "entity.lightning_bolt.thunder", 1.0f, 0.9f);
-                Compat.sound(w, base, "entity.enderman.teleport", 0.9f, 0.5f);
+                Compat.soundPlayers(w, base, "entity.lightning_bolt.impact", 1.0f, 0.8f);
+                Compat.soundPlayers(w, base, "entity.lightning_bolt.thunder", 1.0f, 0.9f);
+                Compat.soundPlayers(w, base, "entity.enderman.teleport", 0.9f, 0.5f);
                 this.discard((Entity)god);
                 this.skyReset();
             }
             if (t == 118) {
                 Compat.spawn(w, Compat.LARGE_SMOKE, base.clone().add(0.0, 0.6, 0.0), 16, 0.5, 0.4, 0.5, 0.02);
-                Compat.sound(w, base, "block.amethyst_block.chime", 1.0f, 0.6f);
+                Compat.soundPlayers(w, base, "block.amethyst_block.chime", 1.0f, 0.6f);
             }
             if (t == 132) {
-                Compat.sound(w, base, "block.bell.resonate", 0.9f, 0.7f);
+                Compat.soundPlayers(w, base, "block.bell.resonate", 0.9f, 0.7f);
             }
         }, () -> {
             this.skyReset();
@@ -1352,17 +1352,17 @@ public final class EffectRunner {
 
     private void dSmoke(World w, Location c) {
         this.animate(14, t -> {
-            Compat.spawn(w, Compat.CAMPFIRE_SIGNAL, c.clone().add(0.0, (double)t * 0.1, 0.0), 3, 0.3, 0.2, 0.3, 0.01);
+            Compat.spawn(w, Compat.CAMPFIRE_SIGNAL_SMOKE, c.clone().add(0.0, (double)t * 0.1, 0.0), 3, 0.3, 0.2, 0.3, 0.01);
             Compat.spawn(w, Compat.LARGE_SMOKE, c, 2, 0.3, 0.4, 0.3, 0.02);
             if (t == 0) {
-                Compat.sound(w, c, "block.fire.extinguish", 1.0f, 0.7f);
+                Compat.soundPlayers(w, c, "block.fire.extinguish", 1.0f, 0.7f);
             }
         });
     }
 
     private void dBones(World w, Location c) {
         Compat.spawn(w, Compat.ITEM, c, 45, 0.4, 0.7, 0.4, 0.2, new ItemStack(Material.BONE));
-        Compat.sound(w, c, "entity.skeleton.death", 1.0f, 0.8f);
+        Compat.soundPlayers(w, c, "entity.skeleton.death", 1.0f, 0.8f);
     }
 
     private void dBloodpool(World w, Location base) {
@@ -1370,7 +1370,7 @@ public final class EffectRunner {
             double r = 0.3 + (double)t * 0.15;
             this.circle(base.clone().add(0.0, 0.05, 0.0), r, (int)(6.0 + r * 7.0), p -> Compat.spawn(w, Compat.DUST, p, 1, new Particle.DustOptions(org.bukkit.Color.fromRGB((int)120, (int)0, (int)0), 1.8f)));
             if (t == 0) {
-                Compat.sound(w, base, "block.honey_block.fall", 1.0f, 0.5f);
+                Compat.soundPlayers(w, base, "block.honey_block.fall", 1.0f, 0.5f);
             }
         });
     }
@@ -1378,7 +1378,7 @@ public final class EffectRunner {
     private void dSplat(World w, Location c) {
         Compat.spawn(w, Compat.ITEM, c, 40, 0.4, 0.5, 0.4, 0.2, new ItemStack(Material.SLIME_BALL));
         Compat.spawn(w, Compat.SPLASH, c, 15, 0.4, 0.3, 0.4, 0.1);
-        Compat.sound(w, c, "entity.slime.death", 1.0f, 0.7f);
+        Compat.soundPlayers(w, c, "entity.slime.death", 1.0f, 0.7f);
     }
 
     private void dDust(World w, Location base, Location c) {
@@ -1386,24 +1386,24 @@ public final class EffectRunner {
             Compat.spawn(w, Compat.WHITE_ASH, c, 8, 0.4, 0.6, 0.4, 0.01);
             Compat.spawn(w, Compat.ASH, base.clone().add(0.0, 0.2, 0.0), 5, 0.4, 0.1, 0.4, 0.005);
             if (t == 0) {
-                Compat.sound(w, c, "block.sand.break", 1.0f, 0.6f);
+                Compat.soundPlayers(w, c, "block.sand.break", 1.0f, 0.6f);
             }
         });
     }
 
     private void dFirework(World w, Location c) {
         this.firework(w, c, FireworkEffect.Type.STAR, org.bukkit.Color.AQUA, org.bukkit.Color.FUCHSIA, org.bukkit.Color.YELLOW);
-        Compat.sound(w, c, "entity.firework_rocket.launch", 1.0f, 1.0f);
+        Compat.soundPlayers(w, c, "entity.firework_rocket.launch", 1.0f, 1.0f);
     }
 
     private void dCherry(World w, Location c) {
         this.animate(22, t -> {
             Compat.spawn(w, Compat.CHERRY_LEAVES, c.clone().add(0.0, 1.5, 0.0), 3, 0.8, 0.3, 0.8, 0.0);
             if (t == 0) {
-                Compat.sound(w, c, "block.cherry_leaves.place", 1.5f, 0.8f);
+                Compat.soundPlayers(w, c, "block.cherry_leaves.place", 1.5f, 0.8f);
             }
             if (t == 11) {
-                Compat.sound(w, c, "block.cherry_wood.place", 1.0f, 1.4f);
+                Compat.soundPlayers(w, c, "block.cherry_wood.place", 1.0f, 1.4f);
             }
         });
     }
@@ -1414,7 +1414,7 @@ public final class EffectRunner {
             Compat.spawn(w, Compat.CLOUD, cloud, 2, 0.5, 0.1, 0.5, 0.0);
             Compat.spawn(w, Compat.FALLING_WATER, cloud, 4, 0.6, 0.1, 0.6, 0.0);
             if (t % 12 == 0) {
-                Compat.sound(w, c, "weather.rain", 0.6f, 1.0f);
+                Compat.soundPlayers(w, c, "weather.rain", 0.6f, 1.0f);
             }
         });
     }
@@ -1441,10 +1441,10 @@ public final class EffectRunner {
                 a = phase[i] + (double)t * 0.15;
                 p = c.clone().add(Math.cos(a) * 0.8, (double)t * 0.14 + (double)i * 0.1, Math.sin(a) * 0.8);
                 Compat.spawn(w, Compat.DUST, p, 10, 0.15, 0.15, 0.15, 0.0, new Particle.DustOptions(palette[i], 1.0f));
-                Compat.sound(w, p, "entity.chicken.egg", 1.0f, (float)EffectRunner.rnd(0.9, 1.5));
+                Compat.soundPlayers(w, p, "entity.chicken.egg", 1.0f, (float)EffectRunner.rnd(0.9, 1.5));
             }
             if (t == 0) {
-                Compat.sound(w, c, "block.wool.break", 1.0f, 1.3f);
+                Compat.soundPlayers(w, c, "block.wool.break", 1.0f, 1.3f);
             }
         });
     }
@@ -1455,10 +1455,10 @@ public final class EffectRunner {
             Compat.spawn(w, Compat.CRIMSON_SPORE, c, 3, 0.5, 0.5, 0.5, 0.0);
             Compat.spawn(w, Compat.WARPED_SPORE, c, 3, 0.5, 0.5, 0.5, 0.0);
             if (t == 0) {
-                Compat.sound(w, c, "block.fungus.break", 1.0f, 0.7f);
+                Compat.soundPlayers(w, c, "block.fungus.break", 1.0f, 0.7f);
             }
             if (t == 12) {
-                Compat.sound(w, c, "block.moss.step", 1.0f, 0.6f);
+                Compat.soundPlayers(w, c, "block.moss.step", 1.0f, 0.6f);
             }
         });
     }
@@ -1469,14 +1469,14 @@ public final class EffectRunner {
                 Compat.spawn(w, Compat.ASH, base, 10, 0.6, 0.1, 0.6, 0.01);
                 Compat.spawn(w, Compat.SOUL, base.clone().add(0.0, 0.2, 0.0), 2, 0.3, 0.1, 0.3, 0.02);
                 if (t == 0) {
-                    Compat.sound(w, base, "block.soul_sand.break", 1.0f, 0.6f);
+                    Compat.soundPlayers(w, base, "block.soul_sand.break", 1.0f, 0.6f);
                 }
                 if (t == 10) {
-                    Compat.sound(w, base, "entity.vex.ambient", 0.7f, 0.5f);
+                    Compat.soundPlayers(w, base, "entity.vex.ambient", 0.7f, 0.5f);
                 }
             } else if (t == 24) {
                 Compat.spawn(w, Compat.SOUL, c.clone().add(0.0, 1.0, 0.0), 12, 0.3, 0.4, 0.3, 0.03);
-                Compat.sound(w, base, "block.bell.use", 1.0f, 0.5f);
+                Compat.soundPlayers(w, base, "block.bell.use", 1.0f, 0.5f);
             }
         });
     }
@@ -1486,12 +1486,12 @@ public final class EffectRunner {
             if (t < 12) {
                 Compat.spawn(w, Compat.BLOCK, c, 6, 0.35, 0.6, 0.35, 0.0, Material.AMETHYST_BLOCK.createBlockData());
                 if (t == 0) {
-                    Compat.sound(w, c, "block.amethyst_block.place", 1.0f, 0.7f);
+                    Compat.soundPlayers(w, c, "block.amethyst_block.place", 1.0f, 0.7f);
                 }
             } else if (t == 12) {
                 Compat.spawn(w, Compat.ITEM, c, 55, 0.4, 0.7, 0.4, 0.15, new ItemStack(Material.AMETHYST_SHARD));
-                Compat.sound(w, c, "block.amethyst_cluster.break", 1.0f, 0.8f);
-                Compat.sound(w, c, "block.glass.break", 1.0f, 0.9f);
+                Compat.soundPlayers(w, c, "block.amethyst_cluster.break", 1.0f, 0.8f);
+                Compat.soundPlayers(w, c, "block.glass.break", 1.0f, 0.9f);
             }
         });
     }
@@ -1501,10 +1501,10 @@ public final class EffectRunner {
             Compat.spawn(w, Compat.SQUID_INK, c, 6, 0.4, 0.6, 0.4, 0.03);
             Compat.spawn(w, Compat.PORTAL, c, 8, 0.4, 0.6, 0.4, 0.4);
             if (t == 0) {
-                Compat.sound(w, c, "entity.squid.squirt", 1.0f, 0.5f);
+                Compat.soundPlayers(w, c, "entity.squid.squirt", 1.0f, 0.5f);
             }
             if (t == 10) {
-                Compat.sound(w, c, "ambient.cave", 0.8f, 0.6f);
+                Compat.soundPlayers(w, c, "ambient.cave", 0.8f, 0.6f);
             }
             if (t == 20) {
                 this.circle(c, 1.2, 14, p -> Compat.spawn(w, Compat.SQUID_INK, p, 1, 0.02, 0.02, 0.02, 0.01));
@@ -1516,14 +1516,14 @@ public final class EffectRunner {
         this.animate(26, t -> {
             Compat.spawn(w, Compat.PORTAL, c, 15, 0.4, 0.7, 0.4, 0.6);
             if (t == 0) {
-                Compat.sound(w, c, "entity.enderman.teleport", 1.0f, 0.8f);
+                Compat.soundPlayers(w, c, "entity.enderman.teleport", 1.0f, 0.8f);
             }
             if (t == 8) {
-                Compat.sound(w, c, "entity.enderman.scream", 0.6f, 0.6f);
+                Compat.soundPlayers(w, c, "entity.enderman.scream", 0.6f, 0.6f);
             }
             if (t == 18) {
                 Compat.spawn(w, Compat.REVERSE_PORTAL, c, 20, 0.3, 0.5, 0.3, 0.05);
-                Compat.sound(w, c, "entity.enderman.teleport", 0.7f, 0.5f);
+                Compat.soundPlayers(w, c, "entity.enderman.teleport", 0.7f, 0.5f);
             }
         });
     }
@@ -1534,10 +1534,10 @@ public final class EffectRunner {
                 double h = (double)t * 0.12;
                 Compat.spawn(w, Compat.BLOCK, c.clone().add(0.0, h - 0.6, 0.0), 8, 0.3, 0.15, 0.3, 0.0, Material.STONE.createBlockData());
                 if (t == 0) {
-                    Compat.sound(w, c, "block.grindstone.use", 0.8f, 0.5f);
+                    Compat.soundPlayers(w, c, "block.grindstone.use", 0.8f, 0.5f);
                 }
                 if (t == 10) {
-                    Compat.sound(w, c, "block.stone.place", 1.0f, 0.5f);
+                    Compat.soundPlayers(w, c, "block.stone.place", 1.0f, 0.5f);
                 }
             } else if (t < 28) {
                 if (t % 4 == 0) {
@@ -1546,8 +1546,8 @@ public final class EffectRunner {
             } else if (t == 28) {
                 Compat.spawn(w, Compat.BLOCK, c, 60, 0.4, 0.7, 0.4, 0.12, Material.COBBLESTONE.createBlockData());
                 Compat.spawn(w, Compat.SMOKE, c, 15, 0.4, 0.5, 0.4, 0.02);
-                Compat.sound(w, c, "block.stone.break", 1.0f, 0.5f);
-                Compat.sound(w, c, "block.gravel.break", 1.0f, 0.6f);
+                Compat.soundPlayers(w, c, "block.stone.break", 1.0f, 0.5f);
+                Compat.soundPlayers(w, c, "block.gravel.break", 1.0f, 0.6f);
             }
         });
     }
@@ -1564,14 +1564,14 @@ public final class EffectRunner {
                     Compat.spawn(w, Compat.BUBBLE_POP, p, 2, 0.05, 0.05, 0.05, 0.0);
                 }
                 if (t == 0) {
-                    Compat.sound(w, base, "ambient.underwater.enter", 1.0f, 0.7f);
+                    Compat.soundPlayers(w, base, "ambient.underwater.enter", 1.0f, 0.7f);
                 }
                 if (t == 12) {
-                    Compat.sound(w, base, "entity.drowned.ambient_water", 0.8f, 0.6f);
+                    Compat.soundPlayers(w, base, "entity.drowned.ambient_water", 0.8f, 0.6f);
                 }
             } else if (t == 28) {
                 Compat.spawn(w, Compat.BUBBLE_POP, base.clone().add(0.0, 0.3, 0.0), 20, 0.3, 0.2, 0.3, 0.05);
-                Compat.sound(w, base, "item.bucket.fill", 1.0f, 0.6f);
+                Compat.soundPlayers(w, base, "item.bucket.fill", 1.0f, 0.6f);
             }
         });
     }
@@ -1584,16 +1584,16 @@ public final class EffectRunner {
                 Compat.spawn(w, Compat.END_ROD, base.clone().add(Math.cos(angle) * 0.7, y, Math.sin(angle) * 0.7), 1);
                 Compat.spawn(w, Compat.END_ROD, base.clone().add(Math.cos(angle + Math.PI) * 0.7, y, Math.sin(angle + Math.PI) * 0.7), 1);
                 if (t == 0) {
-                    Compat.sound(w, c, "block.beacon.activate", 1.0f, 1.6f);
+                    Compat.soundPlayers(w, c, "block.beacon.activate", 1.0f, 1.6f);
                 }
                 if (t == 14) {
-                    Compat.sound(w, c, "block.amethyst_block.chime", 1.0f, 1.8f);
+                    Compat.soundPlayers(w, c, "block.amethyst_block.chime", 1.0f, 1.8f);
                 }
             } else if (t == 30) {
                 this.circle(base.clone().add(0.0, 4.6, 0.0), 0.9, 18, p -> Compat.spawn(w, Compat.END_ROD, p, 1, 0.01, 0.01, 0.01, 0.005));
                 Compat.spawn(w, Compat.FLASH, base.clone().add(0.0, 4.6, 0.0), 1);
-                Compat.sound(w, c, "block.note_block.chime", 1.0f, 2.0f);
-                Compat.sound(w, c, "block.beacon.power_select", 0.7f, 1.8f);
+                Compat.soundPlayers(w, c, "block.note_block.chime", 1.0f, 2.0f);
+                Compat.soundPlayers(w, c, "block.beacon.power_select", 0.7f, 1.8f);
             } else if (t > 34 && t % 3 == 0) {
                 Compat.spawn(w, Compat.ITEM, c.clone().add(EffectRunner.rnd(-0.8, 0.8), 2.5, EffectRunner.rnd(-0.8, 0.8)), 1, 0.05, 0.1, 0.05, 0.02, new ItemStack(Material.FEATHER));
             }
@@ -1610,14 +1610,14 @@ public final class EffectRunner {
                 Compat.spawn(w, Compat.SOUL, p, 2, 0.05, 0.05, 0.05, 0.005);
                 Compat.spawn(w, Compat.SCULK_SOUL, p, 1, 0.0, 0.0, 0.0, 0.01);
                 if (t == 0) {
-                    Compat.sound(w, c, "particle.soul_escape", 1.6f, 0.6f);
+                    Compat.soundPlayers(w, c, "particle.soul_escape", 1.6f, 0.6f);
                 }
                 if (t == 14) {
-                    Compat.sound(w, c, "block.sculk_shrieker.shriek", 0.5f, 1.4f);
+                    Compat.soundPlayers(w, c, "block.sculk_shrieker.shriek", 0.5f, 1.4f);
                 }
             } else if (t == 34) {
                 Compat.spawn(w, Compat.SCULK_CHARGE_POP, base.clone().add(0.0, 0.3, 0.0), 25, 0.4, 0.3, 0.4, 0.05);
-                Compat.sound(w, base, "block.sculk.spread", 1.0f, 0.5f);
+                Compat.soundPlayers(w, base, "block.sculk.spread", 1.0f, 0.5f);
             }
         });
     }
@@ -1630,12 +1630,12 @@ public final class EffectRunner {
                     Location p = c.clone().add(EffectRunner.rnd(-1.2, 1.2), EffectRunner.rnd(-0.5, 1.5), EffectRunner.rnd(-1.2, 1.2));
                     org.bukkit.Color mono = ThreadLocalRandom.current().nextBoolean() ? org.bukkit.Color.fromRGB((int)90, (int)255, (int)140) : org.bukkit.Color.fromRGB((int)220, (int)70, (int)255);
                     Compat.spawn(w, Compat.DUST, p, 5, 0.12, 0.12, 0.12, 0.0, new Particle.DustOptions(mono, 1.4f));
-                    Compat.sound(w, c, "block.enchantment_table.use", 0.8f, (float)EffectRunner.rnd(0.4, 1.9));
+                    Compat.soundPlayers(w, c, "block.enchantment_table.use", 0.8f, (float)EffectRunner.rnd(0.4, 1.9));
                 }
             } else if (t == 32) {
                 Compat.spawn(w, Compat.FLASH, c, 1);
                 Compat.spawn(w, Compat.ENCHANT, c, 40, 0.8, 1.0, 0.8, 2.0);
-                Compat.sound(w, c, "block.beacon.deactivate", 1.0f, 1.9f);
+                Compat.soundPlayers(w, c, "block.beacon.deactivate", 1.0f, 1.9f);
             }
         });
     }
@@ -1648,10 +1648,10 @@ public final class EffectRunner {
                 Compat.spawn(w, Compat.FLAME, base.clone().add(Math.cos(angle) * 0.8, y, Math.sin(angle) * 0.8), 3, 0.05, 0.05, 0.05, 0.01);
                 Compat.spawn(w, Compat.LAVA, c, 1, 0.3, 0.3, 0.3, 0.0);
                 if (t == 0) {
-                    Compat.sound(w, c, "item.firecharge.use", 1.0f, 0.6f);
+                    Compat.soundPlayers(w, c, "item.firecharge.use", 1.0f, 0.6f);
                 }
                 if (t == 14) {
-                    Compat.sound(w, c, "entity.blaze.ambient", 1.0f, 0.7f);
+                    Compat.soundPlayers(w, c, "entity.blaze.ambient", 1.0f, 0.7f);
                 }
             } else if (t < 46) {
                 if (t % 6 == 0) {
@@ -1663,13 +1663,13 @@ public final class EffectRunner {
                             Compat.spawn(w, Compat.SMALL_FLAME, p, 2, 0.05, 0.05, 0.05, 0.01);
                         }
                     }
-                    Compat.sound(w, c, "entity.ender_dragon.flap", 0.6f, 1.5f);
+                    Compat.soundPlayers(w, c, "entity.ender_dragon.flap", 0.6f, 1.5f);
                 }
             } else if (t == 46) {
                 Compat.spawn(w, Compat.FLAME, c, 45, 0.5, 0.7, 0.5, 0.12);
                 Compat.spawn(w, Compat.LAVA, c, 15, 0.5, 0.5, 0.5, 0.0);
-                Compat.sound(w, c, "entity.blaze.death", 0.6f, 0.5f);
-                Compat.sound(w, c, "entity.generic.explode", 0.5f, 1.4f);
+                Compat.soundPlayers(w, c, "entity.blaze.death", 0.6f, 0.5f);
+                Compat.soundPlayers(w, c, "entity.generic.explode", 0.5f, 1.4f);
             } else if (t > 48 && t % 3 == 0) {
                 Compat.spawn(w, Compat.ASH, c.clone().add(0.0, 1.0, 0.0), 6, 0.7, 0.5, 0.7, 0.01);
             }
@@ -1683,8 +1683,8 @@ public final class EffectRunner {
         }
         this.animate(56, t -> {
             if (t == 0) {
-                Compat.sound(w, c, "particle.soul_escape", 1.4f, 0.5f);
-                Compat.sound(w, c, "entity.vex.charge", 0.9f, 0.6f);
+                Compat.soundPlayers(w, c, "particle.soul_escape", 1.4f, 0.5f);
+                Compat.soundPlayers(w, c, "entity.vex.charge", 0.9f, 0.6f);
             }
             if (t < 40) {
                 double progress = (double)t / 40.0;
@@ -1697,13 +1697,13 @@ public final class EffectRunner {
                     Compat.spawn(w, Compat.GLOW_SQUID_INK, p, 1, 0.04, 0.04, 0.04, 0.0);
                 }
                 if (t == 16) {
-                    Compat.sound(w, c, "entity.vex.ambient", 0.8f, 0.5f);
+                    Compat.soundPlayers(w, c, "entity.vex.ambient", 0.8f, 0.5f);
                 }
                 if (t == 30) {
-                    Compat.sound(w, c, "entity.phantom.ambient", 0.7f, 0.6f);
+                    Compat.soundPlayers(w, c, "entity.phantom.ambient", 0.7f, 0.6f);
                 }
             } else if (t == 40) {
-                Compat.sound(w, c, "entity.ghast.scream", 0.3f, 0.5f);
+                Compat.soundPlayers(w, c, "entity.ghast.scream", 0.3f, 0.5f);
                 Compat.spawn(w, Compat.SOUL, c, 10, 1.5, 0.8, 1.5, 0.02);
             }
         });
@@ -1724,19 +1724,19 @@ public final class EffectRunner {
                 }
                 this.circle(c, Math.max(0.3, r * 0.4), 10, p -> Compat.spawn(w, Compat.SQUID_INK, p, 1, 0.02, 0.02, 0.02, 0.0));
                 if (t == 0) {
-                    Compat.sound(w, c, "block.beacon.deactivate", 0.9f, 0.4f);
+                    Compat.soundPlayers(w, c, "block.beacon.deactivate", 0.9f, 0.4f);
                 }
                 if (t == 24) {
-                    Compat.sound(w, c, "block.portal.ambient", 0.8f, 0.3f);
+                    Compat.soundPlayers(w, c, "block.portal.ambient", 0.8f, 0.3f);
                 }
             } else if (t == 46) {
                 Compat.spawn(w, Compat.FLASH, c, 1);
-                Compat.sound(w, c, "block.respawn_anchor.deplete", 1.0f, 0.5f);
+                Compat.soundPlayers(w, c, "block.respawn_anchor.deplete", 1.0f, 0.5f);
             } else if (t == 62) {
                 Compat.spawn(w, Compat.FLASH, c, 1);
                 Compat.spawn(w, Compat.EXPLOSION_EMITTER, c, 1);
-                Compat.sound(w, c, "entity.warden.sonic_boom", 1.0f, 0.8f);
-                Compat.sound(w, c, "entity.generic.explode", 0.8f, 0.4f);
+                Compat.soundPlayers(w, c, "entity.warden.sonic_boom", 1.0f, 0.8f);
+                Compat.soundPlayers(w, c, "entity.generic.explode", 0.8f, 0.4f);
             } else if (t > 62 && t <= 80) {
                 double r = (double)(t - 62) * 0.4;
                 this.circle(c, r, (int)(10.0 + r * 5.0), p -> Compat.spawn(w, Compat.END_ROD, p, 1, 0.02, 0.02, 0.02, 0.01));
@@ -1752,21 +1752,21 @@ public final class EffectRunner {
                 Compat.spawn(w, Compat.END_ROD, star, 4, size, size, size, 0.01);
                 Compat.spawn(w, Compat.FLAME, star, 2, size * 0.6, size * 0.6, size * 0.6, 0.005);
                 if (t % 10 == 0) {
-                    Compat.sound(w, c, "block.beacon.ambient", 0.9f, 0.6f + (float)t * 0.02f);
+                    Compat.soundPlayers(w, c, "block.beacon.ambient", 0.9f, 0.6f + (float)t * 0.02f);
                 }
             } else if (t < 60) {
                 double size = Math.max(0.05, 1.1 - (double)(t - 44) * 0.07);
                 Compat.spawn(w, Compat.END_ROD, star, 3, size, size, size, 0.0);
                 if (t == 50) {
-                    Compat.sound(w, c, "block.beacon.deactivate", 1.0f, 1.8f);
+                    Compat.soundPlayers(w, c, "block.beacon.deactivate", 1.0f, 1.8f);
                 }
             } else if (t == 60) {
                 Compat.spawn(w, Compat.FLASH, star, 2);
                 Compat.spawn(w, Compat.EXPLOSION_EMITTER, star, 2);
                 Compat.spawn(w, Compat.LAVA, star, 20, 0.4, 0.4, 0.4, 0.0);
-                Compat.sound(w, c, "entity.generic.explode", 1.0f, 0.5f);
-                Compat.sound(w, c, "entity.ender_dragon.death", 0.25f, 0.6f);
-                Compat.sound(w, c, "block.beacon.power_select", 1.0f, 0.5f);
+                Compat.soundPlayers(w, c, "entity.generic.explode", 1.0f, 0.5f);
+                Compat.soundPlayers(w, c, "entity.ender_dragon.death", 0.25f, 0.6f);
+                Compat.soundPlayers(w, c, "block.beacon.power_select", 1.0f, 0.5f);
             } else if (t > 60 && t <= 88 && (t - 60) % 4 == 0) {
                 double r = (double)(t - 60) * 0.28;
                 for (int ring = 0; ring < 3; ++ring) {
@@ -1785,23 +1785,23 @@ public final class EffectRunner {
                 this.circle(sky, 2.8, 18, p -> Compat.spawn(w, Compat.CLOUD, p, 1, 0.25, 0.1, 0.25, 0.0));
                 Compat.spawn(w, Compat.FALLING_WATER, sky, 6, 1.8, 0.1, 1.8, 0.0);
                 if (t == 0) {
-                    Compat.sound(w, c, "entity.lightning_bolt.thunder", 0.4f, 0.4f);
+                    Compat.soundPlayers(w, c, "entity.lightning_bolt.thunder", 0.4f, 0.4f);
                 }
                 if (t == 16) {
-                    Compat.sound(w, c, "weather.rain.above", 0.8f, 0.7f);
+                    Compat.soundPlayers(w, c, "weather.rain.above", 0.8f, 0.7f);
                 }
             } else if (t == 38 || t == 52) {
                 w.strikeLightningEffect(preStrikes[t == 38 ? 0 : 1]);
             } else if (t == 66) {
                 w.strikeLightningEffect(base);
                 Compat.spawn(w, Compat.FLASH, c, 1);
-                Compat.sound(w, c, "entity.lightning_bolt.impact", 1.0f, 0.7f);
+                Compat.soundPlayers(w, c, "entity.lightning_bolt.impact", 1.0f, 0.7f);
             } else if (t == 70) {
                 w.strikeLightningEffect(base);
                 this.circle(base.clone().add(0.0, 0.15, 0.0), 1.5, 16, p -> Compat.spawn(w, Compat.ELECTRIC_SPARK, p, 2, 0.05, 0.15, 0.05, 0.03));
                 Compat.spawn(w, Compat.LARGE_SMOKE, c, 12, 0.5, 0.5, 0.5, 0.02);
-                Compat.sound(w, c, "entity.lightning_bolt.thunder", 1.0f, 0.9f);
-                Compat.sound(w, c, "block.fire.extinguish", 1.0f, 0.5f);
+                Compat.soundPlayers(w, c, "entity.lightning_bolt.thunder", 1.0f, 0.9f);
+                Compat.soundPlayers(w, c, "block.fire.extinguish", 1.0f, 0.5f);
             }
         });
     }
@@ -1809,8 +1809,8 @@ public final class EffectRunner {
     private void dPufferfish(World w, Location c) {
         Compat.spawn(w, Compat.SPLASH, c, 30, 0.4, 0.5, 0.4, 0.2);
         Compat.spawn(w, Compat.BUBBLE_POP, c, 20, 0.4, 0.5, 0.4, 0.1);
-        Compat.sound(w, c, "entity.puffer_fish.blow_up", 1.2f, 0.7f);
-        Compat.sound(w, c, "entity.slime.squish", 1.0f, 0.5f);
+        Compat.soundPlayers(w, c, "entity.puffer_fish.blow_up", 1.2f, 0.7f);
+        Compat.soundPlayers(w, c, "entity.slime.squish", 1.0f, 0.5f);
         Set<PufferFish> school = Collections.synchronizedSet(new HashSet());
         ThreadLocalRandom rng = ThreadLocalRandom.current();
         for (int i = 0; i < 12; ++i) {
@@ -1833,7 +1833,7 @@ public final class EffectRunner {
         }
         this.animate(84, 1L, t -> {
             if (t == 20 || t == 44) {
-                Compat.sound(w, c, "entity.puffer_fish.blow_up", 0.8f, (float)EffectRunner.rnd(0.8, 1.3));
+                Compat.soundPlayers(w, c, "entity.puffer_fish.blow_up", 0.8f, (float)EffectRunner.rnd(0.8, 1.3));
             }
             if (t >= 70 && (t - 70) % 1 == 0) {
                 Set set;
@@ -1845,7 +1845,7 @@ public final class EffectRunner {
                         it.remove();
                         if (fish.isValid()) {
                             Compat.spawn(w, Compat.POOF, fish.getLocation().add(0.0, 0.2, 0.0), 8, 0.15, 0.15, 0.15, 0.02);
-                            Compat.sound(w, fish.getLocation(), "entity.puffer_fish.blow_out", 0.7f, (float)EffectRunner.rnd(0.9, 1.4));
+                            Compat.soundPlayers(w, fish.getLocation(), "entity.puffer_fish.blow_out", 0.7f, (float)EffectRunner.rnd(0.9, 1.4));
                         }
                         this.discard((Entity)fish);
                     }
@@ -1868,7 +1868,7 @@ public final class EffectRunner {
             if (t < 20) {
                 Compat.spawn(w, Compat.END_ROD, c.clone().add(0.0, 8.0 - (double)t * 0.3, 0.0), 3, 0.3, 0.3, 0.3, 0.005);
                 if (t == 0) {
-                    Compat.sound(w, c, "block.beacon.activate", 1.0f, 0.6f);
+                    Compat.soundPlayers(w, c, "block.beacon.activate", 1.0f, 0.6f);
                 }
             } else if (t < 80) {
                 for (double y = 0.0; y < 7.0; y += 0.9) {
@@ -1878,10 +1878,10 @@ public final class EffectRunner {
                 this.circle(base.clone().add(0.0, ringY, 0.0), 1.1, 16, p -> Compat.spawn(w, Compat.WAX_OFF, p, 1, 0.02, 0.02, 0.02, 0.0));
                 if ((t - 20) % 12 == 0) {
                     int step = (t - 20) / 12;
-                    Compat.sound(w, c, "block.note_block.chime", 1.0f, 0.6f + (float)step * 0.2f);
+                    Compat.soundPlayers(w, c, "block.note_block.chime", 1.0f, 0.6f + (float)step * 0.2f);
                 }
                 if (t == 50) {
-                    Compat.sound(w, c, "block.amethyst_block.resonate", 1.0f, 0.7f);
+                    Compat.soundPlayers(w, c, "block.amethyst_block.resonate", 1.0f, 0.7f);
                 }
                 if (t > 40) {
                     Compat.spawn(w, Compat.SOUL, base.clone().add(0.0, (double)(t - 40) * 0.16, 0.0), 2, 0.1, 0.1, 0.1, 0.01);
@@ -1892,10 +1892,10 @@ public final class EffectRunner {
                     double fy = y;
                     this.circle(base.clone().add(0.0, fy, 0.0), 1.8, 20, p -> Compat.spawn(w, Compat.END_ROD, p, 1, 0.03, 0.03, 0.03, 0.03));
                 }
-                Compat.sound(w, c, "block.amethyst_block.chime", 1.0f, 0.5f);
-                Compat.sound(w, c, "block.amethyst_block.chime", 1.0f, 0.75f);
-                Compat.sound(w, c, "block.amethyst_block.chime", 1.0f, 1.0f);
-                Compat.sound(w, c, "block.beacon.power_select", 0.8f, 1.6f);
+                Compat.soundPlayers(w, c, "block.amethyst_block.chime", 1.0f, 0.5f);
+                Compat.soundPlayers(w, c, "block.amethyst_block.chime", 1.0f, 0.75f);
+                Compat.soundPlayers(w, c, "block.amethyst_block.chime", 1.0f, 1.0f);
+                Compat.soundPlayers(w, c, "block.beacon.power_select", 0.8f, 1.6f);
             } else if (t > 84 && t % 4 == 0) {
                 Compat.spawn(w, Compat.WAX_OFF, c.clone().add(0.0, 1.5, 0.0), 6, 0.8, 1.2, 0.8, 0.01);
             }
@@ -1925,7 +1925,7 @@ public final class EffectRunner {
         Vector drift = new Vector(Math.cos(ha), 0.0, Math.sin(ha));
         Location start = base.clone();
         double[] height = new double[]{0.0};
-        Compat.sound(w, base, "entity.creeper.primed", 0.8f, 0.7f);
+        Compat.soundPlayers(w, base, "entity.creeper.primed", 0.8f, 0.7f);
         this.animate(96, 1L, t -> {
             if (t < 14) {
                 Location feet = start.clone().add(EffectRunner.rnd(-0.1, 0.1), 0.05, EffectRunner.rnd(-0.1, 0.1));
@@ -1935,8 +1935,8 @@ public final class EffectRunner {
                 Compat.spawn(w, Compat.SMOKE, feet, 4, 0.2, 0.05, 0.2, 0.01);
                 Compat.spawn(w, Compat.LAVA, feet, 1);
                 if (t == 10) {
-                    Compat.sound(w, start, "entity.firework_rocket.launch", 1.6f, 0.8f);
-                    Compat.sound(w, start, "entity.ghast.shoot", 0.8f, 1.6f);
+                    Compat.soundPlayers(w, start, "entity.firework_rocket.launch", 1.6f, 0.8f);
+                    Compat.soundPlayers(w, start, "entity.ghast.shoot", 0.8f, 1.6f);
                     Compat.spawn(w, Compat.EXPLOSION, start, 1);
                     Compat.spawn(w, Compat.CLOUD, start, 18, 0.6, 0.1, 0.6, 0.08);
                 }
@@ -1960,8 +1960,8 @@ public final class EffectRunner {
                 Compat.spawn(w, Compat.CLOUD, pos.clone().add(0.0, -0.7, 0.0), 3, 0.15, 0.15, 0.15, 0.01);
                 Compat.spawn(w, Compat.FIREWORK, pos, 2, 0.1, 0.1, 0.1, 0.05);
                 if (ft % 8 == 0) {
-                    Compat.sound(w, pos, "block.note_block.pling", 0.9f, (float)(0.7 + (double)ft * 0.016));
-                    Compat.sound(w, pos, "entity.firework_rocket.launch", 0.5f, (float)(1.0 + (double)ft * 0.01));
+                    Compat.soundPlayers(w, pos, "block.note_block.pling", 0.9f, (float)(0.7 + (double)ft * 0.016));
+                    Compat.soundPlayers(w, pos, "entity.firework_rocket.launch", 0.5f, (float)(1.0 + (double)ft * 0.01));
                 }
                 return;
             }
@@ -1973,9 +1973,9 @@ public final class EffectRunner {
                 this.discard((Entity)flyer);
                 Compat.spawn(w, Compat.FLASH, peak, 2);
                 this.firework(w, peak, FireworkEffect.Type.STAR, org.bukkit.Color.WHITE, org.bukkit.Color.fromRGB((int)255, (int)230, (int)120));
-                Compat.sound(w, peak, "entity.firework_rocket.twinkle", 1.6f, 1.2f);
-                Compat.sound(w, peak, "block.note_block.chime", 1.8f, 1.7f);
-                this.later(4L, () -> Compat.sound(w, peak, "block.note_block.chime", 1.4f, 2.0f));
+                Compat.soundPlayers(w, peak, "entity.firework_rocket.twinkle", 1.6f, 1.2f);
+                Compat.soundPlayers(w, peak, "block.note_block.chime", 1.8f, 1.7f);
+                this.later(4L, () -> Compat.soundPlayers(w, peak, "block.note_block.chime", 1.4f, 2.0f));
                 Particle.DustOptions gold = new Particle.DustOptions(org.bukkit.Color.fromRGB((int)255, (int)235, (int)130), 1.5f);
                 for (int i = 0; i < 5; ++i) {
                     double a1 = 1.5707963267948966 + (double)i * 2.5132741228718345;
@@ -2019,12 +2019,12 @@ public final class EffectRunner {
         boolean custom = this.plugin.getConfig().getBoolean("sixtyseven.custom-sound", true);
         String customKey = this.plugin.getConfig().getString("sixtyseven.custom-sound-key", "zakiworld:doot67");
         if (custom && customKey != null && !customKey.isBlank()) {
-            Compat.sound(w, c, customKey, 2.0f, 1.0f);
+            Compat.soundPlayers(w, c, customKey, 2.0f, 1.0f);
         } else {
-            Compat.sound(w, c, "item.goat_horn.sound.1", 1.6f, 0.9f);
-            Compat.sound(w, c, "entity.wither.spawn", 0.5f, 1.8f);
+            Compat.soundPlayers(w, c, "item.goat_horn.sound.1", 1.6f, 0.9f);
+            Compat.soundPlayers(w, c, "entity.wither.spawn", 0.5f, 1.8f);
         }
-        Compat.sound(w, c, "entity.ender_dragon.growl", 0.6f, 1.4f);
+        Compat.soundPlayers(w, c, "entity.ender_dragon.growl", 0.6f, 1.4f);
         Compat.spawn(w, Compat.FLASH, c, 1);
         ThreadLocalRandom rng = ThreadLocalRandom.current();
         this.animate(130, 1L, t -> {
@@ -2054,10 +2054,10 @@ public final class EffectRunner {
                 this.firework(w, fw, rng.nextBoolean() ? FireworkEffect.Type.BALL_LARGE : FireworkEffect.Type.STAR, org.bukkit.Color.fromRGB((int)255, (int)210, (int)74), org.bukkit.Color.fromRGB((int)255, (int)45, (int)149));
             }
             if (t % 26 == 6) {
-                Compat.sound(w, c, "block.note_block.bit", 1.4f, 0.9f);
+                Compat.soundPlayers(w, c, "block.note_block.bit", 1.4f, 0.9f);
             }
             if (t % 26 == 12) {
-                Compat.sound(w, c, "block.note_block.bit", 1.4f, 1.1f);
+                Compat.soundPlayers(w, c, "block.note_block.bit", 1.4f, 1.1f);
             }
             if (t % 14 < 7 && t > 10 && t < 100) {
                 double r = 1.5 + (double)(t % 14) * 0.35;
@@ -2067,8 +2067,8 @@ public final class EffectRunner {
                 Compat.spawn(w, Compat.EXPLOSION_EMITTER, c.clone().add(0.0, 1.5, 0.0), 1);
                 Compat.spawn(w, Compat.FLASH, c.clone().add(0.0, 3.0, 0.0), 2);
                 this.firework(w, c.clone().add(0.0, 4.0, 0.0), FireworkEffect.Type.BALL_LARGE, org.bukkit.Color.fromRGB((int)255, (int)210, (int)74), org.bukkit.Color.WHITE);
-                Compat.sound(w, c, "entity.generic.explode", 1.2f, 0.7f);
-                Compat.sound(w, c, "entity.player.levitate", 1.0f, 0.5f);
+                Compat.soundPlayers(w, c, "entity.generic.explode", 1.2f, 0.7f);
+                Compat.soundPlayers(w, c, "entity.player.levitate", 1.0f, 0.5f);
             }
             if (t > 112 && big != null && big.isValid()) {
                 float shrink = Math.max(0.1f, 9.0f - (float)(t - 112) * 0.6f);
@@ -2099,7 +2099,7 @@ public final class EffectRunner {
     private void kPeste(World w, Location base, Location c, Player victim) {
         Particle.DustOptions verde = new Particle.DustOptions(org.bukkit.Color.fromRGB(106, 168, 44), 1.7f);
         Particle.DustOptions bilis = new Particle.DustOptions(org.bukkit.Color.fromRGB(58, 92, 20), 2.2f);
-        Compat.sound(w, base, "entity.bee.loop_aggressive", 1.2f, 0.5f);
+        Compat.soundPlayers(w, base, "entity.bee.loop_aggressive", 1.2f, 0.5f);
         this.animate(100, 1L, t -> {
             // La niebla se arrastra desde fuera hacia la victima.
             if (t < 34) {
@@ -2110,7 +2110,7 @@ public final class EffectRunner {
                     Compat.spawn(w, Compat.WARPED_SPORE, base.clone().add(0.0, 0.5, 0.0), 12, 2.2, 0.4, 2.2, 0.0);
                 }
                 if (t % 10 == 0) {
-                    Compat.sound(w, base, "block.sculk.spread", 0.9f, 0.6f);
+                    Compat.soundPlayers(w, base, "block.sculk.spread", 0.9f, 0.6f);
                 }
             }
             // Se le pega encima y burbujea.
@@ -2118,7 +2118,7 @@ public final class EffectRunner {
                 Compat.spawn(w, Compat.SPORE_BLOSSOM_AIR, c, 5, 0.45, 0.6, 0.45, 0.0);
                 Compat.spawn(w, Compat.DUST, c, 6, 0.4, 0.7, 0.4, 0.0, bilis);
                 if (t % 6 == 0) {
-                    Compat.sound(w, c, "entity.slime.squish", 0.8f, 0.5f);
+                    Compat.soundPlayers(w, c, "entity.slime.squish", 0.8f, 0.5f);
                 }
             }
             if (t == 62) {
@@ -2126,8 +2126,8 @@ public final class EffectRunner {
                 Compat.spawn(w, Compat.DUST, c, 90, 1.1, 0.9, 1.1, 0.0, bilis);
                 Compat.spawn(w, Compat.ITEM, c, 40, 0.6, 0.6, 0.6, 0.25,
                         new ItemStack(Material.ROTTEN_FLESH));
-                Compat.sound(w, c, "entity.zombie_villager.cure", 1.2f, 0.5f);
-                Compat.sound(w, c, "entity.generic.explode", 1.0f, 1.4f);
+                Compat.soundPlayers(w, c, "entity.zombie_villager.cure", 1.2f, 0.5f);
+                Compat.soundPlayers(w, c, "entity.generic.explode", 1.0f, 1.4f);
             }
             // El cerco muerto se queda un rato en el suelo.
             if (t > 62 && t % 3 == 0) {
@@ -2146,7 +2146,7 @@ public final class EffectRunner {
         Vector eje = new Vector(-Math.sin(rad), 0.0, Math.cos(rad)).normalize();
         Vector lado = new Vector(Math.cos(rad), 0.0, Math.sin(rad)).normalize();
         ItemStack espada = new ItemStack(Material.NETHERITE_SWORD);
-        Compat.sound(w, base, "entity.ravager.roar", 1.1f, 0.6f);
+        Compat.soundPlayers(w, base, "entity.ravager.roar", 1.1f, 0.6f);
         // Seis espadas por banda, clavandose de fuera hacia dentro.
         for (int i = 0; i < 6; ++i) {
             final int paso = i;
@@ -2160,20 +2160,20 @@ public final class EffectRunner {
                             4.5, 0.15, 6);
                     Compat.spawn(w, Compat.CRIT, spot.clone().add(0.0, 0.3, 0.0), 10, 0.1, 0.2, 0.1, 0.05);
                 }
-                Compat.sound(w, base, "block.anvil_land", 0.7f, 1.6f);
+                Compat.soundPlayers(w, base, "block.anvil_land", 0.7f, 1.6f);
             });
         }
         this.animate(110, 1L, t -> {
             if (t >= 30 && t < 52 && t % 4 == 0) {
                 Compat.spawn(w, Compat.DUST, c, 14, 0.8, 0.7, 0.8, 0.0, carmesi);
-                Compat.sound(w, c, "item.shield.block", 0.6f, 0.7f);
+                Compat.soundPlayers(w, c, "item.shield.block", 0.6f, 0.7f);
             }
             // El choque: todas las hojas cantan a la vez.
             if (t == 54) {
                 Compat.spawn(w, Compat.SWEEP_ATTACK, c, 12, 1.4, 0.5, 1.4, 0.0);
                 Compat.spawn(w, Compat.FLASH, c, 1);
-                Compat.sound(w, c, "entity.player.attack.sweep", 1.3f, 0.6f);
-                Compat.sound(w, c, "block.anvil_place", 1.2f, 0.5f);
+                Compat.soundPlayers(w, c, "entity.player.attack.sweep", 1.3f, 0.6f);
+                Compat.soundPlayers(w, c, "block.anvil_place", 1.2f, 0.5f);
             }
             // La onda barre el suelo.
             if (t > 54 && t < 96) {
@@ -2191,7 +2191,7 @@ public final class EffectRunner {
     /** Hambre: la tierra se seca en anillos y se lo lleva todo al centro. */
     private void kHambre(World w, Location base, Location c, Player victim) {
         Particle.DustOptions polvo = new Particle.DustOptions(org.bukkit.Color.fromRGB(120, 96, 52), 1.9f);
-        Compat.sound(w, base, "block.rooted_dirt.break", 1.2f, 0.5f);
+        Compat.soundPlayers(w, base, "block.rooted_dirt.break", 1.2f, 0.5f);
         this.animate(100, 1L, t -> {
             // Anillos de grietas que se abren hacia fuera.
             if (t < 40 && t % 3 == 0) {
@@ -2202,7 +2202,7 @@ public final class EffectRunner {
                     Compat.spawn(w, Compat.DUST, pp, 1, 0.05, 0.03, 0.05, 0.0, polvo);
                 });
                 if (t % 9 == 0) {
-                    Compat.sound(w, base, "block.gravel.break", 0.8f, 0.6f);
+                    Compat.soundPlayers(w, base, "block.gravel.break", 0.8f, 0.6f);
                 }
             }
             // Y ahora todo vuelve hacia dentro, chupado por el centro.
@@ -2212,7 +2212,7 @@ public final class EffectRunner {
                         pp -> Compat.spawn(w, Compat.ASH, pp, 2, 0.04, 0.1, 0.04, 0.0));
                 Compat.spawn(w, Compat.WHITE_ASH, c, 3, 0.4, 0.5, 0.4, 0.0);
                 if (t % 7 == 0) {
-                    Compat.sound(w, c, "block.bone_block.break", 0.7f, 0.5f);
+                    Compat.soundPlayers(w, c, "block.bone_block.break", 0.7f, 0.5f);
                 }
             }
             // La victima se deshace en polvo.
@@ -2220,8 +2220,8 @@ public final class EffectRunner {
                 Compat.spawn(w, Compat.WHITE_ASH, c, 120, 0.7, 1.0, 0.7, 0.02);
                 Compat.spawn(w, Compat.DUST, c, 70, 0.6, 0.9, 0.6, 0.0, polvo);
                 Compat.spawn(w, Compat.ITEM, c, 30, 0.5, 0.6, 0.5, 0.2, new ItemStack(Material.WHEAT));
-                Compat.sound(w, c, "block.sand.break", 1.4f, 0.5f);
-                Compat.sound(w, c, "entity.player.big_fall", 0.9f, 0.4f);
+                Compat.soundPlayers(w, c, "block.sand.break", 1.4f, 0.5f);
+                Compat.soundPlayers(w, c, "entity.player.big_fall", 0.9f, 0.4f);
             }
             if (t > 78 && t % 2 == 0) {
                 Compat.spawn(w, Compat.ASH, c.clone().add(0.0, 0.3, 0.0), 6, 0.5, 0.4, 0.5, 0.0);
@@ -2236,7 +2236,7 @@ public final class EffectRunner {
         Vector cruce = new Vector(Math.cos(rad), 0.0, Math.sin(rad)).normalize();
         Location desde = base.clone().add(cruce.clone().multiply(-7.0));
         Location hasta = base.clone().add(cruce.clone().multiply(7.0));
-        Compat.sound(w, base, "entity.horse.gallop", 1.4f, 0.5f);
+        Compat.soundPlayers(w, base, "entity.horse.gallop", 1.4f, 0.5f);
         this.animate(90, 1L, t -> {
             // El galope: una silueta de luz que cruza la escena.
             if (t < 34) {
@@ -2246,7 +2246,7 @@ public final class EffectRunner {
                 Compat.spawn(w, Compat.DUST, jinete.clone().add(0.0, 0.5, 0.0), 8, 0.35, 0.4, 0.35, 0.0, hueso);
                 Compat.spawn(w, Compat.SMOKE, jinete, 4, 0.2, 0.05, 0.2, 0.005);
                 if (t % 6 == 0) {
-                    Compat.sound(w, jinete, "entity.horse.step_wood", 0.8f, 0.5f);
+                    Compat.soundPlayers(w, jinete, "entity.horse.step_wood", 0.8f, 0.5f);
                 }
             }
             // La guadana: un arco que barre a la altura del pecho.
@@ -2257,14 +2257,14 @@ public final class EffectRunner {
                 Compat.spawn(w, Compat.DUST, punta, 4, 0.05, 0.05, 0.05, 0.0, hueso);
             }
             if (t == 40) {
-                Compat.sound(w, c, "entity.player.attack.sweep", 1.2f, 0.5f);
+                Compat.soundPlayers(w, c, "entity.player.attack.sweep", 1.2f, 0.5f);
             }
             // El blanco: un instante en el que no queda nada.
             if (t == 48) {
                 Compat.spawn(w, Compat.FLASH, c, 2);
                 Compat.spawn(w, Compat.DUST, c, 140, 0.9, 1.2, 0.9, 0.0, hueso);
-                Compat.sound(w, c, "block.bone_block.break", 1.3f, 0.4f);
-                Compat.sound(w, c, "entity.wither.death", 0.5f, 2.0f);
+                Compat.soundPlayers(w, c, "block.bone_block.break", 1.3f, 0.4f);
+                Compat.soundPlayers(w, c, "entity.wither.death", 0.5f, 2.0f);
             }
             if (t > 52 && t % 4 == 0) {
                 Compat.spawn(w, Compat.WHITE_ASH, c.clone().add(0.0, 0.4, 0.0), 5, 0.6, 0.5, 0.6, 0.0);
@@ -2275,7 +2275,7 @@ public final class EffectRunner {
     /** El Sello: el circulo de runas se alza y se parte en siete pedazos. */
     private void dSello(World w, Location base, Location c, Player victim) {
         Particle.DustOptions oro = new Particle.DustOptions(org.bukkit.Color.fromRGB(255, 214, 120), 1.5f);
-        Compat.sound(w, base, "block.enchantment_table.use", 1.2f, 0.5f);
+        Compat.soundPlayers(w, base, "block.enchantment_table.use", 1.2f, 0.5f);
         this.animate(120, 1L, t -> {
             // Se dibuja: tres anillos concentricos de runas.
             if (t < 30) {
@@ -2297,14 +2297,14 @@ public final class EffectRunner {
                             pp -> Compat.spawn(w, Compat.DUST, pp, 1, 0.02, 0.02, 0.02, 0.0, oro));
                 }
                 if (t % 10 == 0) {
-                    Compat.sound(w, base, "block.beacon.ambient", 0.7f, 1.6f);
+                    Compat.soundPlayers(w, base, "block.beacon.ambient", 0.7f, 1.6f);
                 }
             }
             // Y se rompe: siete pedazos que salen disparados.
             if (t == 74) {
                 Compat.spawn(w, Compat.FLASH, c, 1);
-                Compat.sound(w, c, "block.glass.break", 1.4f, 0.6f);
-                Compat.sound(w, c, "entity.wither.break_block", 0.9f, 0.5f);
+                Compat.soundPlayers(w, c, "block.glass.break", 1.4f, 0.6f);
+                Compat.soundPlayers(w, c, "entity.wither.break_block", 0.9f, 0.5f);
             }
             if (t >= 74 && t < 110) {
                 double d = (double) (t - 74) * 0.32;
@@ -2336,8 +2336,8 @@ public final class EffectRunner {
         if (cuerpo != null) {
             this.tag((Entity) cuerpo);
         }
-        Compat.sound(w, base, "event.mob_effect.raid_omen", 1.0f, 0.4f);
-        Compat.sound(w, base, "item.goat_horn.sound.0", 1.4f, 0.6f);
+        Compat.soundPlayers(w, base, "event.mob_effect.raid_omen", 1.0f, 0.4f);
+        Compat.soundPlayers(w, base, "item.goat_horn.sound.0", 1.4f, 0.6f);
         this.animate(130, 1L, t -> {
             // Los haces bajan del cielo en anillo, y uno se queda en el centro.
             if (t >= 10 && t < 90) {
@@ -2347,7 +2347,7 @@ public final class EffectRunner {
                     Location pie = base.clone().add(Math.cos(a) * 3.0, 0.0, Math.sin(a) * 3.0);
                     this.line(pie.clone().add(0.0, 16.0, 0.0), pie, 0.6,
                             pp -> Compat.spawn(w, Compat.END_ROD, pp, 1, 0.02, 0.02, 0.02, 0.0));
-                    Compat.sound(w, pie, "block.beacon.activate", 0.5f, 1.8f);
+                    Compat.soundPlayers(w, pie, "block.beacon.activate", 0.5f, 1.8f);
                 }
                 if (t % 3 == 0) {
                     this.line(c.clone().add(0.0, 14.0, 0.0), c, 0.5,
@@ -2371,8 +2371,8 @@ public final class EffectRunner {
                 Location alto = base.clone().add(0.0, 6.8, 0.0);
                 Compat.spawn(w, Compat.FLASH, alto, 2);
                 this.firework(w, alto, FireworkEffect.Type.BURST, org.bukkit.Color.WHITE, org.bukkit.Color.fromRGB(255, 214, 120));
-                Compat.sound(w, base, "item.goat_horn.sound.3", 1.4f, 0.7f);
-                Compat.sound(w, base, "entity.lightning_bolt.thunder", 0.8f, 1.4f);
+                Compat.soundPlayers(w, base, "item.goat_horn.sound.3", 1.4f, 0.7f);
+                Compat.soundPlayers(w, base, "entity.lightning_bolt.thunder", 0.8f, 1.4f);
                 this.discard((Entity) cuerpo);
             }
             if (t > 100 && t % 3 == 0) {
@@ -2385,7 +2385,7 @@ public final class EffectRunner {
     private void dSilencio(World w, Location base, Location c, Player victim) {
         long startTime = w.getTime();
         Particle.DustOptions ceniza = new Particle.DustOptions(org.bukkit.Color.fromRGB(38, 38, 44), 2.4f);
-        Compat.sound(w, base, "block.sculk_shrieker.shriek", 1.2f, 0.5f);
+        Compat.soundPlayers(w, base, "block.sculk_shrieker.shriek", 1.2f, 0.5f);
         this.animate(150, 1L, t -> {
             // La noche cae de golpe sobre los que miran.
             if (t >= 4 && t <= 34) {
@@ -2400,12 +2400,12 @@ public final class EffectRunner {
                     Compat.spawn(w, Compat.DUST, pp, 1, 0.04, 0.2, 0.04, 0.0, ceniza);
                 });
                 if (t % 12 == 0) {
-                    Compat.sound(w, base, "ambient.cave", 0.9f, 0.4f);
+                    Compat.soundPlayers(w, base, "ambient.cave", 0.9f, 0.4f);
                 }
             }
             if (t == 60) {
                 Compat.spawn(w, Compat.LARGE_SMOKE, c, 60, 0.8, 0.8, 0.8, 0.01);
-                Compat.sound(w, c, "block.candle.extinguish", 1.2f, 0.5f);
+                Compat.soundPlayers(w, c, "block.candle.extinguish", 1.2f, 0.5f);
             }
             // Queda una sola brasa flotando, subiendo despacio.
             if (t > 60 && t < 132) {
@@ -2418,7 +2418,7 @@ public final class EffectRunner {
             // Y se apaga. Sin fanfarria: ese es el chiste.
             if (t == 132) {
                 Compat.spawn(w, Compat.SMOKE, c.clone().add(0.0, 1.3, 0.0), 8, 0.08, 0.08, 0.08, 0.005);
-                Compat.sound(w, c, "block.fire.extinguish", 0.7f, 1.6f);
+                Compat.soundPlayers(w, c, "block.fire.extinguish", 0.7f, 1.6f);
             }
             if (t == 146) {
                 this.skyReset();

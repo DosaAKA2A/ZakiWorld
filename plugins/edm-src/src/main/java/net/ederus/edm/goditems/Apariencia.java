@@ -87,7 +87,7 @@ public final class Apariencia {
     public ItemStack fabricar(GodItemsPlugin modulo) {
         ItemStack item = null;
         if (this.material == Material.PLAYER_HEAD && this.cabeza != null && !this.cabeza.isBlank()) {
-            item = net.ederus.edm.rip.Compat.head(this.cabeza);
+            item = net.ederus.edm.comun.Compat.head(this.cabeza);
             if (item == null) {
                 modulo.getLogger().warning("Textura de cabeza invalida; se usa una cabeza lisa.");
             }

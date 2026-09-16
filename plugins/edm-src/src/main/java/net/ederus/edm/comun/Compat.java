@@ -1,7 +1,9 @@
 package net.ederus.edm.comun;
 
+import org.bukkit.Bukkit;
 import org.bukkit.Color;
 import org.bukkit.Location;
+import org.bukkit.Material;
 import org.bukkit.NamespacedKey;
 import org.bukkit.Particle;
 import org.bukkit.Registry;
@@ -11,10 +13,18 @@ import org.bukkit.attribute.Attribute;
 import org.bukkit.attribute.AttributeInstance;
 import org.bukkit.enchantments.Enchantment;
 import org.bukkit.entity.LivingEntity;
+import org.bukkit.inventory.ItemStack;
+import org.bukkit.inventory.meta.SkullMeta;
 import org.bukkit.potion.PotionEffect;
 import org.bukkit.potion.PotionEffectType;
+import org.bukkit.profile.PlayerProfile;
+import org.bukkit.profile.PlayerTextures;
 
 import java.lang.reflect.Field;
+import java.net.URL;
+import java.nio.charset.StandardCharsets;
+import java.util.Base64;
+import java.util.UUID;
 
 /**
  * Capa de compatibilidad. El servidor de Ederus corre Paper 26.1.x, pero el plugin
@@ -113,6 +123,9 @@ public final class Compat {
     public static final Particle DUST_PLUME = particle("DUST_PLUME", "LARGE_SMOKE");
     public static final Particle FALLING_DUST = particle("FALLING_DUST");
     public static final Particle WAX_OFF = particle("WAX_OFF");
+    public static final Particle FALLING_WATER = particle("FALLING_WATER");
+    public static final Particle CRIMSON_SPORE = particle("CRIMSON_SPORE");
+    public static final Particle WARPED_SPORE = particle("WARPED_SPORE");
 
     private static final Enchantment GLOW_ENCHANT = resolveGlow();
 
@@ -256,6 +269,19 @@ public final class Compat {
         }
     }
 
+    /**
+     * Lo mismo en la categoria de jugadores. Los efectos de kill y muerte de Rip
+     * siempre sonaron ahi: son cosa de jugadores, no de monstruos, y se regulan
+     * con ese deslizador de volumen.
+     */
+    public static void soundPlayers(World w, Location l, String key, float volume, float pitch) {
+        if (w == null || l == null) return;
+        try {
+            w.playSound(l, key, SoundCategory.PLAYERS, volume, pitch);
+        } catch (Throwable ignored) {
+        }
+    }
+
     // ----------------------------------------------------------------- atributos
 
     /**
@@ -340,5 +366,49 @@ public final class Compat {
 
     public static Enchantment glow() {
         return GLOW_ENCHANT;
+    }
+
+    // ------------------------------------------------------------------- cabezas
+
+    /**
+     * Pone una textura de skin en una cabeza. Acepta el hash de textures.minecraft.net
+     * o el valor base64 de la propiedad de texturas (el que empieza por "ey").
+     */
+    public static boolean applyHead(SkullMeta meta, String hashOrValue) {
+        if (hashOrValue == null || hashOrValue.isBlank()) return false;
+        String hash = hashOrValue.trim();
+        if (hash.startsWith("ey")) {
+            try {
+                String json = new String(Base64.getDecoder().decode(hash), StandardCharsets.UTF_8);
+                int i = json.indexOf("texture/");
+                if (i < 0) return false;
+                int start = i + 8;
+                int end = start;
+                while (end < json.length() && Character.isLetterOrDigit(json.charAt(end))) end++;
+                hash = json.substring(start, end);
+            } catch (IllegalArgumentException ex) {
+                return false;
+            }
+        }
+        try {
+            PlayerProfile profile = Bukkit.createPlayerProfile(
+                    UUID.nameUUIDFromBytes(hash.getBytes(StandardCharsets.UTF_8)), null);
+            PlayerTextures textures = profile.getTextures();
+            textures.setSkin(new URL("https://textures.minecraft.net/texture/" + hash));
+            profile.setTextures(textures);
+            meta.setOwnerProfile(profile);
+            return true;
+        } catch (Throwable ex) {
+            return false;
+        }
+    }
+
+    /** Una cabeza con esa textura, o null si la textura no sirve. */
+    public static ItemStack head(String hashOrValue) {
+        ItemStack item = new ItemStack(Material.PLAYER_HEAD);
+        if (!(item.getItemMeta() instanceof SkullMeta meta)) return null;
+        if (!applyHead(meta, hashOrValue)) return null;
+        item.setItemMeta(meta);
+        return item;
     }
 }
