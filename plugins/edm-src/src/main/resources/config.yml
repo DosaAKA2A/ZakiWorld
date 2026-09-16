@@ -20,3 +20,13 @@ modulos:
   coinflip: true
   troll: true
   tooltip: true
+
+# Bitacoras de lectura: un fichero de texto por modulo y por dia en
+# plugins/EDM/logs/, con una linea por suceso y la hora delante. Estan para
+# LEERLAS cuando algo se tuerce y el log del servidor no dice lo suficiente.
+logs:
+  # En false no se escribe ninguna y no se toca el disco.
+  activos: true
+
+  # Se borran solos los ficheros con mas dias que esto. 0 = no borrar nada.
+  dias: 14

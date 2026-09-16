@@ -4,6 +4,7 @@ import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
 import net.ederus.edm.anomaly.AnomalyPlugin;
 import net.ederus.edm.anomaly.boss.BossFight;
+import net.ederus.edm.comun.Bitacora;
 import net.ederus.edm.anomaly.boss.Keeper;
 import net.ederus.edm.anomaly.boss.PhaseBars;
 import org.bukkit.Chunk;
@@ -115,6 +116,18 @@ public final class AnomalyManager implements Listener {
         if (!fight.usesOwnBars()) {
             event.bars(new PhaseBars(type.display(), type.color(), fight.phaseCount()));
         }
+
+        /* El titulo y los ajustes van ANTES de spawn(): la linea "vida" la escribe
+         * spawn() y tiene que caer debajo de su titulo, no colgada de la anterior. */
+        olvidarAnotados();
+        plugin.bitacora().seccion("ABRE " + type.id() + " en " + describe(where));
+        plugin.bitacora().anotar(
+                "ajustes",
+                type.id(),
+                "clase " + plugin.registry().classOf(type).name(),
+                "vida del menu " + Bitacora.num(plugin.registry().health(type)),
+                "extra por jugador x" + Bitacora.num(plugin.settings().healthPerPlayer()),
+                "cuentan para la vida " + Fx.playersNear(where, 96).size() + " jugador(es)");
 
         try {
             fight.spawn();
@@ -271,6 +284,8 @@ public final class AnomalyManager implements Listener {
     /** Cierra el evento y borra todo lo que haya quedado. */
     public void stop(boolean silent) {
         ActiveAnomaly event = current;
+        logClose(event, "cerrada sin morir (a mano, por tiempo o al fallar)");
+        olvidarAnotados();
         current = null;
         if (ticker != null) {
             ticker.cancel();
@@ -375,8 +390,16 @@ public final class AnomalyManager implements Listener {
 
         if (e.isCancelled()) {
             if (!plugin.settings().bypassProtections()) return;
-            if (attacker(e.getDamager()) == null || !isOurFighter(victim)) return;
+            Player desbloqueado = attacker(e.getDamager());
+            if (desbloqueado == null || !isOurFighter(victim)) return;
             e.setCancelled(false);
+            /* Dentro de una region cerrada esto pasa en CADA golpe: se anota solo el
+             * primero de cada jugador, que es lo que dice que la region lo bloqueaba. */
+            if (proteccionAnotada.add(desbloqueado.getUniqueId())) {
+                plugin.bitacora().anotar("proteccion", "golpe devuelto a " + desbloqueado.getName(),
+                        "sobre " + victim.getType(), "en " + describe(victim.getLocation()),
+                        "solo se anota el primero");
+            }
         }
 
         // Los objetivos destructibles no usan la vida vanilla: cada golpe cuenta uno.
@@ -484,6 +507,7 @@ public final class AnomalyManager implements Listener {
             double factor = fight.damageScale() * fight.incomingDamageMultiplier(damager);
             if (factor != 1.0) e.setDamage(e.getDamage() * factor);
             clampToSurvivalFloor(e, fight, boss);
+            logHit(e, event, fight, boss, damager);
             return;
         }
         // Un segundo cuerpo del jefe (KAM) tiene la misma vida reescalada.
@@ -491,6 +515,97 @@ public final class AnomalyManager implements Listener {
             double factor = fight.partDamageScale(other);
             if (factor != 1.0) e.setDamage(e.getDamage() * factor);
         }
+    }
+
+    /**
+     * El resumen del cierre: como acabo, cuanto duro y quien hizo que.
+     *
+     * Es la linea que se mira primero al abrir el fichero, asi que lleva el reparto
+     * entero aunque sea larga: sin ella habria que sumar los golpes a mano.
+     */
+    private void logClose(ActiveAnomaly event, String como) {
+        if (event == null || !plugin.bitacora().activa()) return;
+        /* Una muerte se anota en defeat() y el barrido de despues puede pasar por
+         * stop(): la misma pelea no se resume dos veces. */
+        if (event == cierreAnotado) return;
+        cierreAnotado = event;
+        BossFight fight = event.fight();
+        LivingEntity boss = fight == null ? null : fight.entity();
+        String vida = boss == null || !boss.isValid() ? "sin cuerpo"
+                : Bitacora.num(boss.getHealth()) + "/"
+                        + Bitacora.num(Compat.getAttribute(boss, "max_health", boss.getHealth()));
+        plugin.bitacora().anotar(
+                "cierra",
+                event.typeId(),
+                como,
+                "duro " + event.elapsedSeconds() + "s",
+                "vida al final " + vida,
+                "fase " + (fight == null ? "?" : String.valueOf(fight.phase())),
+                event.participants() + " participante(s)");
+        event.damage().entrySet().stream()
+                .sorted(java.util.Map.Entry.<UUID, Double>comparingByValue().reversed())
+                .forEach(en -> plugin.bitacora().anotar(
+                        "  reparto", event.nameOf(en.getKey()), Bitacora.num(en.getValue()) + " de dano"));
+    }
+
+    /* Quien ya tiene su primer golpe anotado. Se vacia con cada anomalia. */
+    private final java.util.Set<UUID> primerGolpeAnotado = new java.util.HashSet<>();
+    /* Quien ya tiene anotado que una proteccion le tumbaba los golpes. */
+    private final java.util.Set<UUID> proteccionAnotada = new java.util.HashSet<>();
+    /* La ultima pelea cuyo cierre ya se escribio. */
+    private ActiveAnomaly cierreAnotado;
+
+    /** Deja las listas de "ya anotado" limpias para la pelea siguiente. */
+    private void olvidarAnotados() {
+        primerGolpeAnotado.clear();
+        proteccionAnotada.clear();
+    }
+
+    /**
+     * Anota en la bitacora los golpes que EXPLICAN algo, no todos.
+     *
+     * Una pelea de veinte personas son miles de impactos y un fichero ilegible. Se
+     * guardan tres clases de golpe y se callan los demas:
+     *   - los que NO vienen de un jugador (fuego, caida, ahogo, la mascota de
+     *     alguien, otro plugin): son los que explican un jefe que pierde vida sin
+     *     que nadie lo toque,
+     *   - los que se llevan de una el 5% de la barra o mas: los "murio de un golpe",
+     *   - el PRIMERO de cada jugador, para saber quien entro a la pelea y cuando.
+     * El resto del reparto queda igualmente en el resumen del cierre.
+     */
+    private void logHit(EntityDamageEvent e, ActiveAnomaly event, BossFight fight,
+                        LivingEntity boss, Entity damager) {
+        if (!plugin.bitacora().activa()) return;
+        double max = Compat.getAttribute(boss, "max_health", boss.getHealth());
+        double aplicado = e.getFinalDamage();
+        double trozo = max <= 0 ? 0 : aplicado / max;
+
+        Player p = damager == null ? null : attacker(damager);
+        boolean primero = p != null && primerGolpeAnotado.add(p.getUniqueId());
+        boolean gordo = trozo >= 0.05;
+        if (p != null && !primero && !gordo) return;
+
+        String quien = p != null ? p.getName()
+                : damager != null ? "entidad " + damager.getType() + tagDe(damager)
+                : "sin entidad";
+        plugin.bitacora().anotar(
+                "golpe",
+                event.typeId(),
+                quien,
+                "causa " + e.getCause(),
+                "antes de armadura " + Bitacora.num(e.getDamage()),
+                "aplicado " + Bitacora.num(aplicado),
+                "vida " + Bitacora.num(boss.getHealth()) + " -> "
+                        + Bitacora.num(Math.max(0, boss.getHealth() - aplicado)),
+                "barra -" + Math.round(trozo * 1000) / 10.0 + "%",
+                p != null && primero && !gordo ? "primer golpe suyo" : (gordo ? "GOLPE GORDO" : "-"));
+    }
+
+    /** Si la entidad es nuestra, decirlo: cambia por completo como se lee la linea. */
+    private static String tagDe(Entity entity) {
+        if (Tags.isMinion(entity)) return " (esbirro nuestro)";
+        if (Tags.isOurs(entity)) return " (de la anomalia)";
+        return "";
     }
 
     /**
@@ -606,10 +721,29 @@ public final class AnomalyManager implements Listener {
         // El botin del jefe lo decide la tabla, nunca la tabla vanilla del esqueleto.
         e.getDrops().clear();
         e.setDroppedExp(0);
+        logDeath(event, boss);
         defeat(event);
     }
 
+    /** Que lo mato de verdad: la ultima causa de dano que vio el servidor. */
+    private void logDeath(ActiveAnomaly event, LivingEntity boss) {
+        if (!plugin.bitacora().activa()) return;
+        EntityDamageEvent last = boss.getLastDamageCause();
+        Entity killer = last instanceof EntityDamageByEntityEvent by ? by.getDamager() : null;
+        Player p = killer == null ? null : attacker(killer);
+        plugin.bitacora().anotar(
+                "muerte",
+                event.typeId(),
+                "ultima causa " + (last == null ? "desconocida" : last.getCause()),
+                "de " + (p != null ? p.getName()
+                        : killer != null ? "entidad " + killer.getType() + tagDe(killer) : "nadie"),
+                "ultimo golpe " + (last == null ? "?" : Bitacora.num(last.getFinalDamage())),
+                "segundo " + event.elapsedSeconds());
+    }
+
     private void defeat(ActiveAnomaly event) {
+        logClose(event, "jefe muerto");
+        olvidarAnotados();
         event.state(ActiveAnomaly.State.CERRANDO);
         if (ticker != null) {
             ticker.cancel();

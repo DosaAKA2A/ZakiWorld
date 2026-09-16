@@ -64,6 +64,7 @@ public final class AnomalyPlugin extends net.ederus.edm.Module {
     private net.ederus.edm.anomaly.minions.MinionRegistry minions;
     private net.ederus.edm.anomaly.minions.MinionManager minionManager;
     private net.ederus.edm.anomaly.minions.MinionWand minionWand;
+    private net.ederus.edm.comun.Bitacora bitacora;
 
     @Override
     public void onEnable() {
@@ -71,6 +72,7 @@ public final class AnomalyPlugin extends net.ederus.edm.Module {
         migrateConfig();
         Tags.init(this);
 
+        this.bitacora = core.bitacora("anomalias");
         this.settings = new Settings(this);
         this.anchors = new Anchors();
         this.registry = new AnomalyRegistry(this);
@@ -253,6 +255,17 @@ public final class AnomalyPlugin extends net.ederus.edm.Module {
     }
 
     // -------------------------------------------------------------------- servicios
+
+    /**
+     * La bitacora del modulo, en plugins/EDM/logs/anomalias-AAAA-MM-DD.log.
+     *
+     * Lo que se anota esta elegido para responder a "y esto por que paso":
+     * con que vida nace cada jefe y de donde sale ese numero, cada golpe que
+     * recibe y de quien, los cambios de fase y como se cierra. Ver Bitacora.
+     */
+    public net.ederus.edm.comun.Bitacora bitacora() {
+        return bitacora;
+    }
 
     public Settings settings() {
         return settings;

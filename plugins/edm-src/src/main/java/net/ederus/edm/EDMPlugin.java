@@ -40,7 +40,7 @@ import net.ederus.edm.tooltip.TooltipPlugin;
  */
 public final class EDMPlugin extends JavaPlugin {
 
-    public static final String VERSION = "1.32.4";
+    public static final String VERSION = "1.33.1";
 
     /* id del modulo -> carpeta del plugin viejo de la que se migran los datos */
     private static final Map<String, String> CARPETAS_VIEJAS = Map.of(
@@ -55,6 +55,30 @@ public final class EDMPlugin extends JavaPlugin {
      * exacta) y el coinflip (cuanto apuestas). Una sola instancia para todos:
      * con una por modulo, dos preguntas al mismo jugador se pisarian. */
     private EntradaChat chat;
+
+    /* Las bitacoras vivas, para cerrarlas al apagar. Una por modulo que la pida. */
+    private final List<net.ederus.edm.comun.Bitacora> bitacoras = new ArrayList<>();
+
+    /**
+     * La bitacora de un modulo, ya configurada y podada.
+     *
+     * Todas van juntas a plugins/EDM/logs/ a proposito: cuando algo se tuerce se
+     * mira UN sitio, no la carpeta de cada modulo. Se apagan todas de golpe con
+     * logs.activos y se podan con logs.dias.
+     */
+    public synchronized net.ederus.edm.comun.Bitacora bitacora(String nombre) {
+        /* Si un modulo vuelve a arrancar, reusa la suya: dos escritores sobre el
+         * mismo fichero mezclan lineas y el viejo se queda abierto para siempre. */
+        for (net.ederus.edm.comun.Bitacora ya : bitacoras) {
+            if (ya.nombre().equals(nombre)) return ya;
+        }
+        net.ederus.edm.comun.Bitacora b = new net.ederus.edm.comun.Bitacora(
+                new File(getDataFolder(), "logs"), nombre, getLogger());
+        b.activa(getConfig().getBoolean("logs.activos", true));
+        b.podar(getConfig().getInt("logs.dias", 14));
+        bitacoras.add(b);
+        return b;
+    }
 
     @Override
     public void onEnable() {
@@ -163,6 +187,9 @@ public final class EDMPlugin extends JavaPlugin {
         if (args[0].equalsIgnoreCase("reload")) {
             if (!permitido(quien)) return true;
             reloadConfig();
+            for (net.ederus.edm.comun.Bitacora b : bitacoras) {
+                b.activa(getConfig().getBoolean("logs.activos", true));
+            }
             int n = 0;
             for (Module m : this.modulos.values()) {
                 if (recargarUno(quien, m)) n++;
@@ -281,6 +308,13 @@ public final class EDMPlugin extends JavaPlugin {
             HandlerList.unregisterAll(m);
         }
         this.modulos.clear();
+
+        /* activa(false) y no solo cerrar(): una tarea rezagada que anote despues
+         * reabriria el fichero y nadie lo volveria a cerrar. */
+        for (net.ederus.edm.comun.Bitacora b : bitacoras) {
+            b.activa(false);
+        }
+        bitacoras.clear();
 
         /* Lo que es estatico no muere con los modulos. Sin esto, un reload deja
          * atras el cliente HTTP con sus hilos y unos cuantos mapas, y con ellos

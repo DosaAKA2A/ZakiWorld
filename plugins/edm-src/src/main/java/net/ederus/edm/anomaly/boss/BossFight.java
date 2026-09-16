@@ -3,6 +3,7 @@ package net.ederus.edm.anomaly.boss;
 import net.kyori.adventure.text.Component;
 import net.ederus.edm.anomaly.AnomalyPlugin;
 import net.ederus.edm.anomaly.core.Anim;
+import net.ederus.edm.comun.Bitacora;
 import net.ederus.edm.comun.Compat;
 import net.ederus.edm.comun.Fx;
 import net.ederus.edm.anomaly.core.Glow;
@@ -42,6 +43,8 @@ public abstract class BossFight {
     public static final double VANILLA_HEALTH_CAP = 1024;
 
     protected LivingEntity boss;
+    /* Vida del jefe en el tick anterior, para cazar caidas que no pasan por eventos. */
+    private double vidaTickAnterior = -1;
     /** Cuerpo visible con forma de persona, si el jefe lleva uno. Ver wearShell(). */
     protected LivingEntity shell;
     /**
@@ -165,6 +168,17 @@ public abstract class BossFight {
         Compat.setAttribute(boss, "max_health", entityMax);
         boss.setHealth(Math.min(entityMax, Compat.getAttribute(boss, "max_health", entityMax)));
         this.damageScale = logicalMax <= 0 ? 1.0 : entityMax / logicalMax;
+
+        /* La linea mas importante de la bitacora: aqui se ve si la vida que pelea
+         * es la del menu o la que el escalado por jugadores hizo con ella, y cuanto
+         * encoge cada golpe por culpa del tope de 1024. */
+        plugin.bitacora().anotar(
+                "vida",
+                event.typeId(),
+                "pedida " + Bitacora.num(logicalMax),
+                "entidad " + Bitacora.num(entityMax),
+                "vida real " + Bitacora.num(boss.getHealth()),
+                "cada golpe cuenta x" + Bitacora.num(damageScale));
     }
 
     /**
@@ -212,10 +226,19 @@ public abstract class BossFight {
         watchInvulnerability();
         tickAirTime();
         tickShell();
+        vigilarCaidaDeVida();
 
         int newPhase = PhaseBars.currentPhase(healthFraction(), phaseCount());
         if (newPhase != phase) {
             int old = phase;
+            plugin.bitacora().anotar(
+                    "fase",
+                    event.typeId(),
+                    old + " -> " + newPhase + " de " + phaseCount(),
+                    "vida " + Bitacora.num(boss.getHealth()) + "/"
+                            + Bitacora.num(Compat.getAttribute(boss, "max_health", boss.getHealth())),
+                    "barra " + Math.round(healthFraction() * 100) + "%",
+                    "segundo " + (ticks / 20));
             phase = newPhase;
             for (Ability a : abilities) a.reset();
             try {
@@ -230,6 +253,28 @@ public abstract class BossFight {
         if (!busy() && ticks % 10 == 0) {
             tryCast();
         }
+    }
+
+    /**
+     * Anota cuando el jefe pierde de un tick a otro el 5% de la barra o mas.
+     *
+     * Los golpes de verdad ya salen en la bitacora como "golpe" desde el evento de
+     * dano. Esta linea existe para lo que NO pasa por ningun evento: otro plugin que
+     * hace setHealth, un comando, una habilidad que cambia la vida a pelo. Si hay una
+     * "caida" sin un "golpe" encima en el mismo segundo, el culpable no fue un golpe.
+     */
+    private void vigilarCaidaDeVida() {
+        double ahora = boss.getHealth();
+        double max = Compat.getAttribute(boss, "max_health", ahora);
+        if (vidaTickAnterior >= 0 && max > 0 && (vidaTickAnterior - ahora) / max >= 0.05) {
+            plugin.bitacora().anotar(
+                    "caida",
+                    event.typeId(),
+                    "vida " + Bitacora.num(vidaTickAnterior) + " -> " + Bitacora.num(ahora) + " en un tick",
+                    "barra -" + Math.round((vidaTickAnterior - ahora) / max * 1000) / 10.0 + "%",
+                    "segundo " + (ticks / 20));
+        }
+        vidaTickAnterior = ahora;
     }
 
     /**

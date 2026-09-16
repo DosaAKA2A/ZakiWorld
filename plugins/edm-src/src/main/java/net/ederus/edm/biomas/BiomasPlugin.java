@@ -55,6 +55,8 @@ public final class BiomasPlugin extends Module implements Listener {
 
     private static BiomasPlugin instancia;
 
+    private net.ederus.edm.comun.Bitacora bitacora;
+
     private final Map<String, Zona> zonas = new LinkedHashMap<>();
     private final Map<String, List<Location>> fumarolas = new HashMap<>();
     /** Que clima le esta mandando el modulo a cada jugador, para deshacerlo al salir. */
@@ -78,6 +80,7 @@ public final class BiomasPlugin extends Module implements Listener {
     public void onEnable() {
         saveDefaultConfig();
         reloadConfig();
+        this.bitacora = core.bitacora("biomas");
         new File(getDataFolder(), "extra").mkdirs();
         instalarDatapack();
         cargarZonas();
@@ -271,6 +274,12 @@ public final class BiomasPlugin extends Module implements Listener {
         Zona z = new Zona(id, w.getName(), x1, y1, z1, x2, y2, z2, base, null);
         zonas.put(id, z);
         guardarZonas();
+        /* El bioma base se MUESTREA aqui y es al que vuelve "limpiar" para siempre.
+         * Crear la zona con el sitio ya pintado por una anomalia deja el base
+         * equivocado y nadie se entera hasta semanas despues: que quede escrito. */
+        bitacora.anotar("zona creada", id, "mundo " + w.getName(), z.medidas(),
+                "bioma base muestreado: " + base,
+                base.startsWith("lethal:") ? "OJO: el base es un clima nuestro, no el del mundo" : "-");
         return z;
     }
 
@@ -343,6 +352,9 @@ public final class BiomasPlugin extends Module implements Listener {
             String siguiente = pendientes.remove(z.nombre());
             getLogger().info("[Lethal Biomes] Zona " + z.nombre() + " -> " + (nuevo == null ? z.base() : nuevo)
                     + " (" + z.celdas() + " celdas, " + (System.currentTimeMillis() - inicio) + " ms)");
+            bitacora.anotar("pintada", z.nombre(),
+                    (nuevo == null ? "vuelve a su base " + z.base() : "clima " + nuevo),
+                    z.celdas() + " celdas", (System.currentTimeMillis() - inicio) + " ms");
             if (alTerminar != null) alTerminar.run();
             if (siguiente != null) pintar(z.nombre(), siguiente, null);
         });
