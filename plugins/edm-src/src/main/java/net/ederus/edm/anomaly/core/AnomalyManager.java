@@ -21,6 +21,7 @@ import org.bukkit.event.entity.EntityChangeBlockEvent;
 import org.bukkit.event.entity.EntityDamageEvent;
 import org.bukkit.event.entity.EntityDeathEvent;
 import org.bukkit.event.entity.EntityTargetEvent;
+import org.bukkit.event.player.PlayerInteractEntityEvent;
 import org.bukkit.event.player.PlayerQuitEvent;
 import org.bukkit.projectiles.ProjectileSource;
 import org.bukkit.scheduler.BukkitTask;
@@ -331,9 +332,52 @@ public final class AnomalyManager implements Listener {
 
     // -------------------------------------------------------------------- escuchas
 
-    @EventHandler(ignoreCancelled = true, priority = EventPriority.HIGH)
+    /**
+     * Con el jefe no se comercia ni se juega.
+     *
+     * El Piromante es un aldeano de verdad, asi que el clic derecho le abria la mesa
+     * de trueque como a cualquier vendedor del pueblo. Lo mismo valdria para ponerle
+     * una correa, montarlo o esquilarlo segun el cuerpo que use cada anomalia: si es
+     * nuestro, el clic derecho no hace nada.
+     *
+     * Va en LOWEST para llegar antes que el plugin que abra la interfaz.
+     */
+    @EventHandler(ignoreCancelled = true, priority = EventPriority.LOWEST)
+    public void onInteract(PlayerInteractEntityEvent e) {
+        if (isOurFighter(e.getRightClicked())) e.setCancelled(true);
+    }
+
+    /** El jefe, el maniqui que lo representa o uno de sus esbirros. */
+    private boolean isOurFighter(Entity entity) {
+        ActiveAnomaly event = current;
+        if (event == null || event.fight() == null || entity == null) return false;
+        LivingEntity boss = event.fight().entity();
+        LivingEntity shell = event.fight().shell();
+        return entity.equals(boss) || entity.equals(shell) || Tags.isMinion(entity);
+    }
+
+    /**
+     * Va en HIGHEST y SIN ignorar lo cancelado a proposito.
+     *
+     * WorldGuard trata pegarle a un aldeano dentro de una region cerrada como si fuera
+     * construir, y el Piromante ES un aldeano: en el coliseo se volvia intocable. Como
+     * las protecciones cancelan antes (NORMAL/HIGH), aqui llegamos despues y devolvemos
+     * el golpe del jugador contra el jefe, su maniqui o un esbirro. Solo eso: el resto
+     * de la region sigue protegida igual, y se apaga con combate.saltarse-protecciones.
+     *
+     * Tiene que ser este mismo metodo, y no otro aparte, porque el merito para el botin
+     * se apunta aqui: si el desbloqueo viviera en un listener posterior, el golpe
+     * entraria pero no contaria para nadie.
+     */
+    @EventHandler(ignoreCancelled = false, priority = EventPriority.HIGHEST)
     public void onDamage(EntityDamageByEntityEvent e) {
         Entity victim = e.getEntity();
+
+        if (e.isCancelled()) {
+            if (!plugin.settings().bypassProtections()) return;
+            if (attacker(e.getDamager()) == null || !isOurFighter(victim)) return;
+            e.setCancelled(false);
+        }
 
         // Los objetivos destructibles no usan la vida vanilla: cada golpe cuenta uno.
         if (plugin.anchors().isAnchor(victim)) {

@@ -64,7 +64,14 @@ combate:
 
   # Cuanto sube la vida del jefe por cada jugador de mas. 0.15 = +15% por jugador,
   # asi que cinco jugadores pelean contra un jefe con un 60% mas de vida.
+  # En 0 el jefe pelea con la vida que diga el menu y nada mas.
   vida-extra-por-jugador: 0.15
+
+  # Devuelve el golpe de un jugador al jefe cuando una proteccion de terreno lo ha
+  # cancelado. Hace falta para las anomalias de cuerpo pacifico: WorldGuard protege al
+  # Piromante (un aldeano) como si fuera ganado y dentro de una region cerrada no se le
+  # puede pegar. Solo afecta al jefe, a su maniqui y a sus esbirros.
+  saltarse-protecciones: true
 
 arena:
   # Zona de Lethal Biomes que hace de arena (/lbiomes zone create ...). Si una anomalia

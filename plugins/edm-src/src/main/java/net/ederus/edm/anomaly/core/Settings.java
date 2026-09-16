@@ -107,6 +107,19 @@ public final class Settings {
         return cfg().getDouble("combate.vida-extra-por-jugador", 0.15);
     }
 
+    /**
+     * Si los golpes al jefe se saltan las protecciones de terreno.
+     *
+     * Las anomalias con cuerpo pacifico (el Piromante es un aldeano) las protege
+     * WorldGuard como si fueran ganado: dentro de una region cerrada al publico no se
+     * les puede pegar, y el coliseo es justo eso. Con esto puesto, el golpe de un
+     * jugador al jefe, a su maniqui o a un esbirro se vuelve a permitir aunque otro
+     * plugin lo haya cancelado.
+     */
+    public boolean bypassProtections() {
+        return cfg().getBoolean("combate.saltarse-protecciones", true);
+    }
+
     /** La zona de Lethal Biomes que es la arena. Vacio = las anomalias no tocan el clima. */
     public String arenaZone() {
         return cfg().getString("arena.zona", "");
