@@ -76,11 +76,17 @@ final class ComandoBiomas implements TabExecutor {
     private void lista(CommandSender q) {
         decir(q, "Climas:");
         for (String id : modulo.climas()) {
+            if (id.startsWith("bracken:")) continue;
             boolean cargado = Pintor.bioma(id) != null;
             q.sendMessage(Component.text("  " + id, cargado ? NamedTextColor.WHITE : NamedTextColor.GRAY)
                     .append(Component.text("  " + modulo.nombreClima(id), SUAVE))
                     .append(cargado ? Component.empty()
                             : Component.text("  (se carga en el próximo reinicio)", NamedTextColor.GOLD)));
+        }
+        int lw = modulo.biomasDeLethalWorld().size();
+        if (lw > 0) {
+            q.sendMessage(Component.text("  + " + lw + " biomas de Lethal World", NamedTextColor.WHITE)
+                    .append(Component.text("  /lbiomes paint <zona> bracken:... y Tab", SUAVE)));
         }
     }
 

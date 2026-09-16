@@ -193,6 +193,7 @@ public final class BiomasPlugin extends Module implements Listener {
     /** Los climas conocidos: los del jar mas los extra instalados. */
     public List<String> climas() {
         List<String> out = new ArrayList<>(INCLUIDOS);
+        out.addAll(biomasDeLethalWorld());
         File[] extra = new File(getDataFolder(), "extra").listFiles((d, n) -> n.endsWith(".json"));
         if (extra != null) {
             for (File f : extra) {
@@ -200,6 +201,23 @@ public final class BiomasPlugin extends Module implements Listener {
                 if (!out.contains(id)) out.add(id);
             }
         }
+        return out;
+    }
+
+    /**
+     * Los biomas del generador de Lethal World (namespace bracken), con su id completo.
+     * Solo existen si el datapack de Lethal World ya se cargo en un arranque.
+     */
+    public List<String> biomasDeLethalWorld() {
+        List<String> out = new ArrayList<>();
+        try {
+            for (Biome b : io.papermc.paper.registry.RegistryAccess.registryAccess()
+                    .getRegistry(io.papermc.paper.registry.RegistryKey.BIOME)) {
+                if ("bracken".equals(b.getKey().getNamespace())) out.add(b.getKey().asString());
+            }
+        } catch (Throwable ignored) {
+        }
+        out.sort(null);
         return out;
     }
 

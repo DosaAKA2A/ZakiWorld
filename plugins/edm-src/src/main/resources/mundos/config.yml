@@ -1,0 +1,36 @@
+# Lethal World - mundos con el generador de EDM (terreno y estructuras de Bracken, procesados)
+#
+# Los mundos se crean con /lw create <nombre> <generador> y existen tras reiniciar: Paper
+# carga cada uno como la dimension lethal_world:<nombre>. Borrar uno con /lw delete deja
+# de cargarlo, pero su carpeta queda en disco.
+#
+# OJO: todos los mundos comparten la semilla del servidor. Dos mundos con el MISMO
+# generador salen con el terreno identico.
+
+# Nombre que se enseña de cada generador (el id no se toca: es el del datapack).
+generadores:
+  panacea:
+    nombre: "Panacea - junglas, pantanos y bosques"
+  the_faewild:
+    nombre: "Tierras Feéricas - bosques y castillos"
+  pax:
+    nombre: "Pax - jardines en el cielo"
+  the_brine:
+    nombre: "La Salmuera - océano, arrecifes y puertos"
+  glacium:
+    nombre: "Glacium - tierras heladas"
+  sanctum:
+    nombre: "Sanctum - tierra de nadie y ruinas"
+  the_underdark:
+    nombre: "Inframundo - cavernas y calderas"
+  dormis:
+    nombre: "Dormis - bajo un techo de roca"
+  omnidrome:
+    nombre: "Omnidromo - ciudad industrial"
+  varskspace:
+    nombre: "Varskspace - el espacio"
+  void:
+    nombre: "El Vacío"
+
+# Mundos creados. Lo escribe /lw create; tocarlo a mano tambien vale.
+mundos: {}
