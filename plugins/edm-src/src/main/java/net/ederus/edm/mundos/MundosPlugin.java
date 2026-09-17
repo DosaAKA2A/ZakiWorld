@@ -176,8 +176,17 @@ public final class MundosPlugin extends Module {
         return w != null && NAMESPACE.equals(w.getKey().getNamespace());
     }
 
-    /** Crea el mundo: queda escrito y existe tras reiniciar. Devuelve un error o null. */
-    public String crear(String nombre, String generador) {
+    /** La semilla propia de un mundo, o null si usa la del servidor. */
+    public Long semillaDe(String nombre) {
+        String ruta = "mundos." + nombre + ".semilla";
+        return getConfig().isSet(ruta) ? getConfig().getLong(ruta) : null;
+    }
+
+    /**
+     * Crea el mundo: queda escrito y existe tras reiniciar. Con semilla, el terreno y los
+     * biomas salen distintos a los de otro mundo del mismo generador. Devuelve un error o null.
+     */
+    public String crear(String nombre, String generador, Long semilla) {
         nombre = nombre.toLowerCase(Locale.ROOT);
         generador = generador.toLowerCase(Locale.ROOT);
         if (!NOMBRE_VALIDO.matcher(nombre).matches()) {
@@ -185,14 +194,15 @@ public final class MundosPlugin extends Module {
         }
         if (!generadores.contains(generador)) return "No existe el generador '" + generador + "'.";
         if (mundos().containsKey(nombre)) return "Ya existe un mundo llamado '" + nombre + "'.";
-        getConfig().set("mundos." + nombre + ".generador", generador);
-        saveConfig();
         try {
-            escribirDimension(carpetaPack(), nombre, generador);
+            escribirDimension(carpetaPack(), nombre, generador, semilla, new HashSet<>());
         } catch (IOException e) {
             return "No se pudo escribir la dimension: " + e.getMessage();
         }
-        bitacora.anotar("crear", nombre, "generador " + generador);
+        getConfig().set("mundos." + nombre + ".generador", generador);
+        if (semilla != null) getConfig().set("mundos." + nombre + ".semilla", semilla);
+        saveConfig();
+        bitacora.anotar("crear", nombre, "generador " + generador + (semilla != null ? ", semilla " + semilla : ""));
         return null;
     }
 
@@ -210,11 +220,17 @@ public final class MundosPlugin extends Module {
         return null;
     }
 
-    /** Los mundos con el mismo generador salen identicos: comparten la semilla del servidor. */
+    /** Los mundos con el mismo generador salen identicos si tambien comparten semilla. */
     public List<String> mismoGenerador(String generador) {
+        return mismoGenerador(generador, null, false);
+    }
+
+    public List<String> mismoGenerador(String generador, Long semilla, boolean mismaSemilla) {
         List<String> out = new ArrayList<>();
         for (Map.Entry<String, String> e : mundos().entrySet()) {
-            if (e.getValue().equalsIgnoreCase(generador)) out.add(e.getKey());
+            if (!e.getValue().equalsIgnoreCase(generador)) continue;
+            if (mismaSemilla && !java.util.Objects.equals(semillaDe(e.getKey()), semilla)) continue;
+            out.add(e.getKey());
         }
         return out;
     }
@@ -248,8 +264,11 @@ public final class MundosPlugin extends Module {
                             + e.getValue() + "', que ya no existe. No se carga.");
                     continue;
                 }
-                esperados.add("data/" + NAMESPACE + "/dimension/" + e.getKey() + ".json");
-                cambio |= escribirDimension(destino, e.getKey(), e.getValue());
+                try {
+                    cambio |= escribirDimension(destino, e.getKey(), e.getValue(), semillaDe(e.getKey()), esperados);
+                } catch (IOException ex) {
+                    getLogger().warning("[Lethal World] El mundo " + e.getKey() + " no se pudo escribir: " + ex.getMessage());
+                }
             }
             cambio |= podar(destino, destino, esperados);
         } catch (IOException e) {
@@ -260,10 +279,24 @@ public final class MundosPlugin extends Module {
         return cambio;
     }
 
-    private boolean escribirDimension(File pack, String nombre, String generador) throws IOException {
+    private boolean escribirDimension(File pack, String nombre, String generador, Long semilla,
+                                      Set<String> esperados) throws IOException {
         byte[] plantilla = recurso("generadores/" + generador + ".json");
         if (plantilla == null) throw new IOException("falta la plantilla del generador " + generador);
-        return escribir(new File(pack, "data/" + NAMESPACE + "/dimension/" + nombre + ".json"), plantilla);
+        boolean cambio = false;
+        if (semilla != null) {
+            StringBuilder dimension = new StringBuilder();
+            Map<String, byte[]> ficheros = new Resembrador(this::recurso)
+                    .resembrar(new String(plantilla, StandardCharsets.UTF_8), semilla, dimension);
+            for (Map.Entry<String, byte[]> f : ficheros.entrySet()) {
+                esperados.add(f.getKey());
+                cambio |= escribir(new File(pack, f.getKey()), f.getValue());
+            }
+            plantilla = dimension.toString().getBytes(StandardCharsets.UTF_8);
+        }
+        String rel = "data/" + NAMESPACE + "/dimension/" + nombre + ".json";
+        esperados.add(rel);
+        return escribir(new File(pack, rel), plantilla) | cambio;
     }
 
     /** Borra los ficheros del pack que no estan en esperados. */

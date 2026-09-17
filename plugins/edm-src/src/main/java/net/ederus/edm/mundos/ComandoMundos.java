@@ -80,7 +80,7 @@ final class ComandoMundos implements TabExecutor {
         decir(q, "Mundos con el generador de Lethal World.");
         linea(q, "/lw list", "mundos creados y si ya estan cargados");
         linea(q, "/lw generators", "generadores disponibles");
-        linea(q, "/lw create <name> <generator>", "crea el mundo (existe tras reiniciar)");
+        linea(q, "/lw create <name> <generator> [seed]", "crea el mundo (existe tras reiniciar)");
         linea(q, "/lw delete <name>", "lo quita (la carpeta del mundo no se borra)");
         linea(q, "/lw tp <name> [player]", "lleva a un sitio seguro del mundo");
         linea(q, "/lw biomes", "biomas del mundo en el que estás (pulsables)");
@@ -103,7 +103,9 @@ final class ComandoMundos implements TabExecutor {
         for (Map.Entry<String, String> e : mundos.entrySet()) {
             World w = modulo.mundo(e.getKey());
             q.sendMessage(Component.text("  " + e.getKey(), NamedTextColor.WHITE)
-                    .append(Component.text("  " + modulo.nombreGenerador(e.getValue()) + "  ", SUAVE))
+                    .append(Component.text("  " + modulo.nombreGenerador(e.getValue())
+                            + (modulo.semillaDe(e.getKey()) != null ? " · semilla " + modulo.semillaDe(e.getKey()) : "")
+                            + "  ", SUAVE))
                     .append(w != null
                             ? Component.text("cargado (" + w.getName() + ")", NamedTextColor.GREEN)
                             : Component.text("se carga en el próximo reinicio", NamedTextColor.GOLD)));
@@ -123,21 +125,30 @@ final class ComandoMundos implements TabExecutor {
 
     private void crear(CommandSender q, String[] args) {
         if (args.length < 3) {
-            linea(q, "/lw create <name> <generator>", "ver /lw generators");
+            linea(q, "/lw create <name> <generator> [seed]", "ver /lw generators");
             return;
         }
-        List<String> previos = modulo.mismoGenerador(args[2]);
-        String error = modulo.crear(args[1], args[2]);
+        Long semilla = null;
+        if (args.length >= 4) {
+            try {
+                semilla = Long.parseLong(args[3]);
+            } catch (NumberFormatException e) {
+                // Como en vanilla: una semilla de texto vale su hash.
+                semilla = (long) args[3].hashCode();
+            }
+        }
+        List<String> previos = modulo.mismoGenerador(args[2].toLowerCase(Locale.ROOT), semilla, true);
+        String error = modulo.crear(args[1], args[2], semilla);
         if (error != null) {
             decir(q, Component.text(error, NamedTextColor.RED));
             return;
         }
         decir(q, "Mundo " + args[1].toLowerCase(Locale.ROOT) + " creado con "
                 + modulo.nombreGenerador(args[2].toLowerCase(Locale.ROOT))
-                + ". Reinicia el servidor para que exista.");
+                + (semilla != null ? " y semilla " + semilla : "") + ". Reinicia el servidor para que exista.");
         if (!previos.isEmpty()) {
             decir(q, Component.text("Ojo: " + String.join(", ", previos) + " usa el mismo generador y la"
-                    + " misma semilla del servidor, así que el terreno saldrá idéntico.", NamedTextColor.GOLD));
+                    + " misma semilla, así que el terreno saldrá idéntico. Pon otra semilla al final del comando.", NamedTextColor.GOLD));
         }
     }
 
