@@ -419,6 +419,38 @@ PINTURAS = {
 }
 
 
+def pasto_en_la_cienaga(ajustes):
+    """El bloque base de Panacea es musgo y la cienaga no tenia regla de superficie: salia
+    musgo arriba y el musgo no se tine con el color del bioma. Recibe la misma regla que el
+    bosque voraz, con pasto tambien en la capa de debajo."""
+    secuencia = ajustes["surface_rule"]["sequence"]
+    bog = "bracken:panacea/wildflower_bog"
+    if any(bog in json.dumps(r.get("if_true", {})) for r in secuencia):
+        return ajustes
+    for i, regla in enumerate(secuencia):
+        if regla.get("if_true", {}).get("biome_is") == ["bracken:panacea/ravenous_greenwood"]:
+            copia = json.loads(json.dumps(regla))
+            copia["if_true"]["biome_is"] = [bog]
+            # Nada de tierra: donde habia musgo va pasto, tambien en la capa de debajo.
+            texto = json.dumps(copia).replace('"minecraft:dirt"', '"minecraft:grass_block"')
+            copia = json.loads(texto)
+            secuencia.insert(i + 1, copia)
+            return ajustes
+    raise SystemExit("No encuentro la regla de superficie del bosque voraz en Panacea")
+
+
+def orillas_de_pasto(feature):
+    """Las charcas de la cienaga llevaban orilla de musgo: pasa a pasto, que si se tine."""
+    return json.loads(json.dumps(feature).replace('"minecraft:moss_block"', '"minecraft:grass_block"'))
+
+
+PARCHES_JSON = {
+    "data/bracken/worldgen/noise_settings/panacea.json": pasto_en_la_cienaga,
+    "data/bracken/worldgen/configured_feature/panacea/bogwater.json": orillas_de_pasto,
+    "data/bracken/worldgen/configured_feature/panacea/bogwater2.json": orillas_de_pasto,
+}
+
+
 def limpiar_json(ruta_rel: str, datos):
     """Biomas y tipos de dimension: fuera la musica y los sonidos de Bracken, y los
     biomas repintados reciben sus colores."""
@@ -531,6 +563,12 @@ def main() -> None:
         destino.parent.mkdir(parents=True, exist_ok=True)
         if f.suffix == ".json" and ("/worldgen/biome/" in rel or "/dimension_type/" in rel):
             datos = limpiar_json(rel, json.loads(f.read_text(encoding="utf-8")))
+            destino.write_text(json.dumps(datos, ensure_ascii=False, indent=1), encoding="utf-8")
+        elif f.suffix == ".json" and rel in PARCHES_JSON:
+            datos = PARCHES_JSON[rel](json.loads(f.read_text(encoding="utf-8")))
+            if "/worldgen/configured_feature/" in rel:
+                acotar_radios(datos, cuenta)
+            cuenta["ficheros parcheados"] += 1
             destino.write_text(json.dumps(datos, ensure_ascii=False, indent=1), encoding="utf-8")
         elif f.suffix == ".json" and "/worldgen/configured_feature/" in rel:
             datos = json.loads(f.read_text(encoding="utf-8"))

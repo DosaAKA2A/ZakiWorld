@@ -68,7 +68,7 @@ mobs:
     vida-por-nivel: 0.08
     dano-por-nivel: 0.04
 
-  # Adoptados con uno de estos nombres: minijefes, con nivel extra, mucha vida y contorno rojo.
+  # Adoptados con uno de estos nombres: minijefes, con nivel extra y mucha vida.
   minijefes:
     nombres: ["Creeper Gigatón", "Ventiarbusto Latente"]
     extra-nivel: 10

@@ -58,8 +58,9 @@ import net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer;
  * Los mobs de Lethal World. En estos mundos no hay hostil sin nivel:
  *
  *  - Los que aparecen alrededor de cada jugador son tipos de esbirro (los de /esb, en su
- *    carpeta) segun el BIOMA. El spawn natural de hostiles vanilla se cancela y se
- *    sustituye por uno de esos, con el mismo tope por jugador.
+ *    carpeta) segun el BIOMA, uno cada pocos segundos hasta el tope. El spawn natural de
+ *    hostiles vanilla se cancela: si se sustituyera uno a uno, vanilla intenta tantos por
+ *    tick que el tope no llega a frenarlos y salen en manada.
  *  - Los que ya traen las estructuras y los que salen de spawners se ADOPTAN: nivel, cartel
  *    y dano por nivel, sin cambiar la entidad y con su nombre. Los que se llaman como un
  *    minijefe reciben nivel extra y mucha vida.
@@ -244,8 +245,8 @@ final class MobsLethal implements Listener {
 
     /**
      * Hostiles vanilla en un mundo de Lethal World. Los del spawn natural (y las patrullas)
-     * se cambian por un mob del bioma; los de spawners, divisiones y demas se adoptan. Lo
-     * que invoca EDM o un comando (CUSTOM, COMMAND) no se toca.
+     * se cancelan donde el bioma tiene mobs propios; los de spawners, divisiones y demas se
+     * adoptan. Lo que invoca EDM o un comando (CUSTOM, COMMAND) no se toca.
      */
     @EventHandler(priority = EventPriority.HIGH, ignoreCancelled = true)
     public void alAparecer(CreatureSpawnEvent e) {
@@ -259,10 +260,6 @@ final class MobsLethal implements Listener {
                 Location donde = e.getLocation();
                 if (tabla.containsKey(donde.getBlock().getBiome().getKey().asString())) {
                     e.setCancelled(true);
-                    Player p = masCercano(donde, cfg().getDouble("retirar-a", 96));
-                    if (p == null || cerca(p, cfg().getDouble("radio-conteo", 48)) >= cfg().getInt("tope-por-jugador", 6)) return;
-                    Location sitio = donde.clone();
-                    modulo.getServer().getScheduler().runTask(Module.dueno(modulo), () -> invocar(p, sitio));
                     return;
                 }
             }
@@ -335,7 +332,6 @@ final class MobsLethal implements Listener {
         sinQuemarse(mob);
         mob.getPersistentDataContainer().set(clave, PersistentDataType.STRING, minijefe ? "minijefe" : "estructura");
         mm.adoptar(mob, nivel, nombre, dano);
-        if (minijefe) Glow.apply(mob, NamedTextColor.RED);
     }
 
     // ---------------------------------------------------------------- guarniciones
@@ -482,6 +478,7 @@ final class MobsLethal implements Listener {
         if (puesto != null) {
             proximaGuarnicion.put(puesto, System.currentTimeMillis() + cfg().getLong("guarnicion-reaparece-minutos", 20) * 60_000L);
         }
+        // Los minijefes de antes de quitar el contorno aun lo llevan en el marcador.
         if ("minijefe".equals(clase)) Glow.clear(mob);
         Player asesino = mob.getKiller();
         if (asesino == null) return;
@@ -642,6 +639,21 @@ final class MobsLethal implements Listener {
                 guardar = true;
             }
         }
+        // Sin contorno: con varios destacados a la vez brillaban demasiado. Se quita una sola
+        // vez a los ya sembrados; si alguien se lo vuelve a poner en /esb, se respeta.
+        if (!modulo.getConfig().getBoolean("mobs.migraciones.sin-contorno")) {
+            boolean quitado = false;
+            for (Bioma b : PANACEA) {
+                MinionType t = buscar(reg, b.destacado().nombre());
+                if (t != null && t.presence().outline() != null) {
+                    t.presence().outline(null);
+                    quitado = true;
+                }
+            }
+            if (quitado) reg.save();
+            modulo.getConfig().set("mobs.migraciones.sin-contorno", true);
+            guardar = true;
+        }
         if (modulo.getConfig().getStringList("mobs.minijefes.nombres").isEmpty()) {
             modulo.getConfig().set("mobs.minijefes.nombres", List.of("Creeper Gigatón", "Ventiarbusto Latente"));
             guardar = true;
@@ -669,7 +681,6 @@ final class MobsLethal implements Listener {
             t.baseDamage(1.3);
             t.damageGrowth(0.05);
             look.featured(true);
-            look.outline(NamedTextColor.RED);
             look.auraName("DUST");
             look.auraColor(s.color());
         } else {
