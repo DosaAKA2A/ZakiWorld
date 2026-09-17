@@ -171,7 +171,7 @@ public final class PantallaCantidad implements Listener {
                         : secciones.texto("cantidad-maximo-venta", "&#FDFF66Todo lo que llevas"),
                 loreMax));
 
-        inv.setItem(RANURA_CONFIRMAR, botonConfirmar(vista, motor));
+        inv.setItem(RANURA_CONFIRMAR, botonConfirmar(jugador, vista, motor));
         inv.setItem(RANURA_SALDO, saldo(jugador, motor));
         inv.setItem(RANURA_VOLVER, pieza(Material.BARRIER, 1,
                 secciones.texto("cantidad-volver", "&x&D&7&F&3&F&FVolver"), List.of()));
@@ -224,12 +224,12 @@ public final class PantallaCantidad implements Listener {
                     : secciones.texto("cantidad-te-falta", "&#FF5C5C▸ Te faltan %falta%",
                             "%falta%", Estilo.dinero(total - tiene)));
         } else {
-            double total = motor.totalVentaDe(art, n);
+            double total = motor.totalVentaDe(art, n, jugador.getUniqueId());
             lore.add(Estilo.etiqueta("Precio de venta", Estilo.VENTA));
             /* La MEDIA, no el precio de la primera unidad: vender 2.000 cañas
              * hunde el precio por el camino y eso se ve aqui, antes de vender. */
             lore.add(Estilo.valor(Estilo.dinero(total / n) + " por unidad"));
-            int caida = modulo.mercado() != null ? modulo.mercado().caidaPorCiento(art) : 0;
+            int caida = modulo.mercado() != null ? modulo.mercado().caidaPorCiento(art, jugador.getUniqueId()) : 0;
             if (caida > 0) lore.add(Estilo.texto("   -" + caida + "%, sobrevendido", Estilo.APAGADO));
             lore.add(Estilo.vacio());
             lore.add(Estilo.etiqueta("Total", Estilo.VENTA));
@@ -255,10 +255,10 @@ public final class PantallaCantidad implements Listener {
                 "%item%", nombreDe(art), "%cantidad%", numero(n)), lore);
     }
 
-    private ItemStack botonConfirmar(Vista vista, Motor motor) {
+    private ItemStack botonConfirmar(Player jugador, Vista vista, Motor motor) {
         double total = vista.comprando
                 ? motor.totalCompraDe(vista.art, vista.cantidad)
-                : motor.totalVentaDe(vista.art, vista.cantidad);
+                : motor.totalVentaDe(vista.art, vista.cantidad, jugador.getUniqueId());
         return pieza(vista.comprando ? Material.LIME_CONCRETE : Material.YELLOW_CONCRETE, 1,
                 vista.comprando
                         ? secciones.texto("cantidad-confirmar-compra", "&#4FFF55Comprar %cantidad%",

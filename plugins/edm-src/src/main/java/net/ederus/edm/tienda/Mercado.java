@@ -5,18 +5,22 @@ import org.bukkit.configuration.file.YamlConfiguration;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
- * El precio dinamico. GLOBAL: lo que vende todo el servidor hunde el precio para
- * todos, que es lo que obliga a rotar la economia.
+ * El precio dinamico, POR JUGADOR: lo que vende cada uno hunde su propio precio y
+ * no el de los demas. Antes era global y un jugador que vendia 5.000 cañas le
+ * arruinaba la pesca a todo el servidor; ahora cada cual rota su economia.
+ * Sin jugador (la consola) se cotiza con el mercado intacto.
  *
  * LA CURVA
  *
  *   precio = base x (suelo + (1 - suelo) x 2^(-V/H))
  *
- * V es lo vendido en todo el servidor y H cuanto hay que vender para quedarse a
+ * V es lo vendido por ESE jugador y H cuanto hay que vender para quedarse a
  * mitad de camino del suelo. No es lineal a proposito: restar un % por venta
  * tiene un acanti lado al llegar al suelo y castiga igual al que vende 10 que al
  * que vende 10.000. Con la exponencial las primeras ventas casi no mueven el
@@ -47,7 +51,12 @@ public final class Mercado {
         Estado(double vendido, long momento) { this.vendido = vendido; this.momento = momento; }
     }
 
+    /** Clave: uuid del jugador + "|" + clave del articulo. */
     private final Map<String, Estado> estados = new ConcurrentHashMap<>();
+
+    private static String clave(UUID jugador, String articulo) {
+        return jugador + "|" + articulo;
+    }
     private final File fichero;
 
     private boolean activo = true;
@@ -107,7 +116,9 @@ public final class Mercado {
 
     /** Lo vendido que "queda", ya descontado el olvido por el paso del tiempo.
      *  Es una LECTURA: no toca el estado salvo para tirar lo ya olvidado. */
-    private double presion(String clave) {
+    private double presion(UUID jugador, String articulo) {
+        if (jugador == null) return 0;
+        String clave = clave(jugador, articulo);
         Estado e = estados.get(clave);
         if (e == null) return 0;
         double v;
@@ -124,12 +135,12 @@ public final class Mercado {
 
     /** La presion actual de ese articulo, para cotizar un tramo que empieza
      *  donde acabaria otro. Es la misma lectura que usa el precio. */
-    public double presionActual(String clave) { return presion(clave); }
+    public double presionActual(UUID jugador, String clave) { return presion(jugador, clave); }
 
     /** 1.0 = precio intacto; 'suelo' = todo lo bajo que puede llegar. */
-    public double multiplicador(Catalogo.Articulo art) {
+    public double multiplicador(Catalogo.Articulo art, UUID jugador) {
         if (!activo || !art.seVende()) return 1;
-        double v = presion(art.clave());
+        double v = presion(jugador, art.clave());
         if (v <= 0) return 1;
         return suelo + (1 - suelo) * Math.pow(2, -v / mitad(art));
     }
@@ -142,8 +153,8 @@ public final class Mercado {
      * dinero infinito. Se aplica sobre la compra EFECTIVA (la que pagaria el
      * jugador ahora mismo, con Ofertas incluidas), no sobre la del fichero.
      */
-    public double ventaEfectiva(Catalogo.Articulo art, double compraEfectiva) {
-        double precio = art.venta() * multiplicador(art);
+    public double ventaEfectiva(Catalogo.Articulo art, double compraEfectiva, UUID jugador) {
+        double precio = art.venta() * multiplicador(art, jugador);
         if (compraEfectiva > 0) {
             double techo = compraEfectiva * margenVentaCompra;
             if (precio > techo) return techo;
@@ -151,16 +162,16 @@ public final class Mercado {
         return precio;
     }
 
-    public boolean recortado(Catalogo.Articulo art, double compraEfectiva) {
+    public boolean recortado(Catalogo.Articulo art, double compraEfectiva, UUID jugador) {
         return compraEfectiva > 0
-                && art.venta() * multiplicador(art) > compraEfectiva * margenVentaCompra;
+                && art.venta() * multiplicador(art, jugador) > compraEfectiva * margenVentaCompra;
     }
 
     /** Se llama DESPUES de una venta cobrada. */
-    public void anotarVenta(Catalogo.Articulo art, int cantidad) {
-        if (!activo || cantidad <= 0) return;
+    public void anotarVenta(Catalogo.Articulo art, int cantidad, UUID jugador) {
+        if (!activo || cantidad <= 0 || jugador == null) return;
         long ahora = System.currentTimeMillis();
-        estados.compute(art.clave(), (k, e) -> {
+        estados.compute(clave(jugador, art.clave()), (k, e) -> {
             if (e == null) return new Estado(cantidad, ahora);
             synchronized (e) {
                 /* Se suma sobre lo que QUEDA ahora, no sobre lo que habia en la
@@ -174,8 +185,8 @@ public final class Mercado {
     }
 
     /** Cuanto ha caido, en porcentaje, para enseñarlo en el menu. */
-    public int caidaPorCiento(Catalogo.Articulo art) {
-        return (int) Math.round((1 - multiplicador(art)) * 100);
+    public int caidaPorCiento(Catalogo.Articulo art, UUID jugador) {
+        return (int) Math.round((1 - multiplicador(art, jugador)) * 100);
     }
 
     /**
@@ -190,12 +201,12 @@ public final class Mercado {
      * La curva es base x (suelo + (1-suelo) x 2^(-v/H)), asi que su integral
      * entre V y V+n tiene forma cerrada y no hace falta sumar unidad a unidad.
      */
-    public double totalVenta(Catalogo.Articulo art, int cantidad, double compraEfectiva) {
+    public double totalVenta(Catalogo.Articulo art, int cantidad, double compraEfectiva, UUID jugador) {
         if (cantidad <= 0) return 0;
         double techo = compraEfectiva > 0 ? compraEfectiva * margenVentaCompra : Double.MAX_VALUE;
         if (!activo || !art.seVende()) return Math.min(art.venta(), techo) * cantidad;
 
-        double v = presion(art.clave());
+        double v = presion(jugador, art.clave());
         double h = mitad(art);
         double ln2 = Math.log(2);
         double parteFija = suelo * cantidad;
@@ -224,12 +235,11 @@ public final class Mercado {
         return Math.min(total, techo);
     }
 
-    /** Que precio tendria si el servidor vendiera 'extra' unidades mas. Solo
-     *  calcula: no toca el estado. Sirve para afinar los numeros sin probarlos
-     *  en produccion. */
-    public double simular(Catalogo.Articulo art, double extra) {
+    /** Que precio tendria si ese jugador vendiera 'extra' unidades mas (sin jugador,
+     *  partiendo del mercado intacto). Solo calcula: no toca el estado. */
+    public double simular(Catalogo.Articulo art, double extra, UUID jugador) {
         if (!activo || !art.seVende()) return art.venta();
-        double v = presion(art.clave()) + Math.max(0, extra);
+        double v = presion(jugador, art.clave()) + Math.max(0, extra);
         double mult = suelo + (1 - suelo) * Math.pow(2, -v / mitad(art));
         double precio = art.venta() * mult;
         double techo = art.compra() > 0 ? art.compra() * margenVentaCompra : Double.MAX_VALUE;
@@ -248,10 +258,19 @@ public final class Mercado {
         estados.clear();
         if (!fichero.exists()) return;
         YamlConfiguration yml = YamlConfiguration.loadConfiguration(fichero);
-        for (String clave : yml.getKeys(false)) {
-            double v = yml.getDouble(clave + ".vendido", 0);
-            long m = yml.getLong(clave + ".momento", 0);
-            if (v > 0 && m > 0) estados.put(clave, new Estado(v, m));
+        /* El formato viejo era global (una entrada por articulo). Al pasar a por
+         * jugador se descarta: esa presion se olvidaba sola en 24 h de todos modos. */
+        var jugadores = yml.getConfigurationSection("jugadores");
+        if (jugadores != null) {
+            for (String uuid : jugadores.getKeys(false)) {
+                for (Map<?, ?> fila : jugadores.getMapList(uuid)) {
+                    Object c = fila.get("clave"), v = fila.get("vendido"), m = fila.get("momento");
+                    if (c == null || !(v instanceof Number nv) || !(m instanceof Number nm)) continue;
+                    if (nv.doubleValue() > 0 && nm.longValue() > 0) {
+                        estados.put(uuid + "|" + c, new Estado(nv.doubleValue(), nm.longValue()));
+                    }
+                }
+            }
         }
         sucio = false;
     }
@@ -259,15 +278,22 @@ public final class Mercado {
     public void guardar() {
         if (!sucio) return;
         YamlConfiguration yml = new YamlConfiguration();
+        Map<String, List<Map<String, Object>>> porJugador = new java.util.TreeMap<>();
         estados.forEach((clave, e) -> {
             synchronized (e) {
                 /* Lo ya olvidado no se escribe: si no, el fichero se queda con
                  * lineas de items que hace dias que nadie vende. */
                 if (e.vendido * queda(System.currentTimeMillis() - e.momento) < 0.01) return;
-                yml.set(clave + ".vendido", Math.round(e.vendido * 100) / 100d);
-                yml.set(clave + ".momento", e.momento);
+                int sep = clave.indexOf('|');
+                if (sep < 0) return;
+                Map<String, Object> fila = new java.util.LinkedHashMap<>();
+                fila.put("clave", clave.substring(sep + 1));
+                fila.put("vendido", Math.round(e.vendido * 100) / 100d);
+                fila.put("momento", e.momento);
+                porJugador.computeIfAbsent(clave.substring(0, sep), k -> new java.util.ArrayList<>()).add(fila);
             }
         });
+        porJugador.forEach((uuid, filas) -> yml.set("jugadores." + uuid, filas));
         try {
             File padre = fichero.getParentFile();
             if (padre != null) padre.mkdirs();

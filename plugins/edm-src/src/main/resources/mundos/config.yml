@@ -42,7 +42,9 @@ pregen:
   ms-por-tick-objetivo: 40
 
 # Mobs de Lethal World: tipos de esbirro (se editan en /esb, carpeta "Lethal World · Panacea")
-# que aparecen alrededor de cada jugador segun el bioma donde caen.
+# que aparecen alrededor de cada jugador segun el bioma donde caen. El spawn natural de
+# hostiles vanilla se cambia por estos; los de estructuras y spawners se adoptan (nivel y
+# cartel sin cambiar la entidad).
 mobs:
   activos: true
   # Cada cuanto se intenta hacer aparecer uno por jugador (20 ticks = 1 s).
@@ -55,6 +57,31 @@ mobs:
   # Los que quedan a mas de esto de cualquier jugador se retiran.
   retirar-a: 96
   probabilidad-destacado: 0.05
+  # Hostiles sin nivel a esta distancia de un jugador se adoptan.
+  radio-adopcion: 40
+  # Ningun mob por encima de esta escala (los gigantes de las estructuras se encogen).
+  escala-maxima: 2.0
+
+  # Adoptados (estructuras, spawners): vida = max(la suya, vida-minima) x (1 + vida-por-nivel x (nivel-1)).
+  adoptados:
+    vida-minima: 20
+    vida-por-nivel: 0.08
+    dano-por-nivel: 0.04
+
+  # Adoptados con uno de estos nombres: minijefes, con nivel extra, mucha vida y contorno rojo.
+  minijefes:
+    nombres: ["Creeper Gigatón", "Ventiarbusto Latente"]
+    extra-nivel: 10
+    vida-base: 400
+    vida-por-nivel: 0.10
+    dano-base: 1.5
+    dano-por-nivel: 0.05
+
+  # Estructuras que venian vacias: al acercarse alguien aparece su tropa, y vuelve estos
+  # minutos despues de la ultima baja. Se escribe sola la primera vez.
+  guarnicion-radio: 40
+  guarnicion-reaparece-minutos: 20
+  guarniciones: {}
 
   # nivel = rango de rankup x por-rango + poder de AuraSkills / poder-por-nivel, +-variacion.
   # Minimo real: rango 1 sin habilidades = 2. Maximo: rango 20 y poder 1100 = 95 (+10% = 100).
@@ -74,6 +101,7 @@ mobs:
     nivel-divisor: 20
     multiplicador-mundo: 1.5
     multiplicador-destacado: 3.0
+    multiplicador-minijefe: 10.0
 
   # bioma -> tipos. Se escribe sola la primera vez; se puede editar.
   biomas: {}

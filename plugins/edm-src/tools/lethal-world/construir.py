@@ -30,7 +30,7 @@ from collections import Counter
 from pathlib import Path
 
 import nbtlib
-from nbtlib import Compound, Float, List, String
+from nbtlib import Compound, Double, Float, List, String
 
 AQUI = Path(__file__).resolve().parent
 EDM = AQUI.parent.parent
@@ -251,6 +251,15 @@ def limpiar_entidad(en: Compound, textos: Textos, cuenta: Counter) -> bool:
         del en["Offers"]
         cuenta["tratos de aldeano quitados"] += 1
 
+    # nada por encima de escala 2: los gigantes (el husk x5 del organo) no caben ni se ven bien
+    for lista in ("attributes", "Attributes"):
+        for a in en.get(lista) or []:
+            ident = str(a.get("id", a.get("Name", ""))).replace("minecraft:", "").replace("generic.", "")
+            base = "base" if "base" in a else "Base"
+            if ident == "scale" and base in a and float(a[base]) > ESCALA_MAXIMA:
+                a[base] = Double(ESCALA_MAXIMA)
+                cuenta["escalas acotadas a 2"] += 1
+
     if "CustomName" in en:
         nuevo = textos.traducir(en["CustomName"])
         if nuevo is None:
@@ -384,14 +393,50 @@ def acotar_radios(nodo, cuenta: Counter) -> None:
             acotar_radios(v, cuenta)
 
 
+ESCALA_MAXIMA = 2.0
+
+# Biomas repintados. Sin shaders: cielo del color, niebla (horizonte) mas clara y apagada,
+# luz del cielo casi blanca y nubes palidas, o el cielo se ve azul con el horizonte rojo.
+PINTURAS = {
+    "panacea/wildflower_bog": {
+        "attributes": {
+            "minecraft:visual/sky_color": "#8E1010",
+            "minecraft:visual/fog_color": "#B8483F",
+            "minecraft:visual/water_fog_color": "#4A0808",
+            "minecraft:visual/sky_light_color": "#FFD6CC",
+            "minecraft:visual/cloud_color": "#FFE6BDB6",
+        },
+        "effects": {
+            "sky_color": 0x8E1010,
+            "fog_color": 0xB8483F,
+            "water_color": 0xB01818,
+            "water_fog_color": 0x4A0808,
+            "grass_color": 0xB3201F,
+            "foliage_color": 0xA51A1A,
+            "dry_foliage_color": 0x7A1E1E,
+        },
+    },
+}
+
+
 def limpiar_json(ruta_rel: str, datos):
-    """Biomas y tipos de dimension: fuera la musica y los sonidos de Bracken."""
+    """Biomas y tipos de dimension: fuera la musica y los sonidos de Bracken, y los
+    biomas repintados reciben sus colores."""
     if not isinstance(datos, dict):
         return datos
     atributos = datos.get("attributes")
     if isinstance(atributos, dict):
         for k in [k for k, v in atributos.items() if "bracken:" in json.dumps(v) and "audio" in k]:
             del atributos[k]
+    m = re.search(r"/worldgen/biome/(.+)\.json$", ruta_rel)
+    pintura = PINTURAS.get(m.group(1)) if m else None
+    if pintura:
+        atributos = datos.setdefault("attributes", {})
+        for k in list(atributos):
+            if k.replace("minecraft:", "") in {a.replace("minecraft:", "") for a in pintura["attributes"]}:
+                del atributos[k]
+        atributos.update(pintura["attributes"])
+        datos.setdefault("effects", {}).update(pintura["effects"])
     return datos
 
 

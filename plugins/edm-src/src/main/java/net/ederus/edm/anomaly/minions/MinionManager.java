@@ -69,6 +69,13 @@ public final class MinionManager implements Listener {
     private final NamespacedKey keyHeavy;
     /** Una cria de Division: no vuelve a dividirse, o la sala no acaba nunca. */
     private final NamespacedKey keyChild;
+    /* Mobs ADOPTADOS: bichos que ya existian (los de las estructuras de Lethal World) y
+     * reciben nivel y cartel sin volverse esbirros. No llevan keyType a proposito: el
+     * barrido de arranque borra los esbirros y a estos hay que conservarlos. */
+    private final NamespacedKey keyNombre;
+    private final NamespacedKey keyDano;
+    /** Marcas de otros modulos que las crias de Division heredan de su madre. */
+    private final List<NamespacedKey> herencia = new ArrayList<>();
 
     /** Quien esta vivo de cada generador. Se purga en el ticker. */
     private final Map<String, Set<UUID>> alive = new HashMap<>();
@@ -101,6 +108,8 @@ public final class MinionManager implements Listener {
         this.keyHolo = new NamespacedKey(plugin, "esbirro_holo");
         this.keyHeavy = new NamespacedKey(plugin, "esbirro_flecha_pesada");
         this.keyChild = new NamespacedKey(plugin, "esbirro_cria");
+        this.keyNombre = new NamespacedKey(plugin, "esbirro_nombre");
+        this.keyDano = new NamespacedKey(plugin, "esbirro_dano");
     }
 
     // ---------------------------------------------------------------------- ciclo
@@ -329,23 +338,7 @@ public final class MinionManager implements Listener {
         Compat.setAttribute(mob, "max_health", health);
         mob.setHealth(Math.min(health, Compat.getAttribute(mob, "max_health", health)));
 
-        // El cartel va SUELTO y se le teleporta encima cada tick (ver tickHolos):
-        // montarlo como pasajero le comeria la IA al bicho.
-        TextDisplay holo = w.spawn(mob.getLocation().add(0, mob.getHeight() + 0.45, 0), TextDisplay.class, d -> {
-            d.setBillboard(Display.Billboard.CENTER);
-            d.setAlignment(TextDisplay.TextAlignment.CENTER);
-            d.setViewRange(0.6f);
-            d.setSeeThrough(false);
-            d.setPersistent(false);
-            d.setDefaultBackground(false);
-            d.setBackgroundColor(org.bukkit.Color.fromARGB(70, 0, 0, 0));
-            d.setBrightness(new Display.Brightness(15, 15));
-            // Un tick de interpolacion: el cartel sigue al bicho sin dar tirones.
-            d.setTeleportDuration(1);
-            d.getPersistentDataContainer().set(keyHolo, PersistentDataType.STRING, type.id());
-        });
-        updateHolo(holo, mob);
-        escoltas.add(new Escolta(mob, holo));
+        escoltar(mob, type.id());
 
         if (spawnerId != null) {
             alive.computeIfAbsent(spawnerId, k -> new HashSet<>()).add(mob.getUniqueId());
@@ -361,6 +354,57 @@ public final class MinionManager implements Listener {
         Compat.sound(w, spot, "block.respawn_anchor.deplete", 0.4f, 1.6f);
         look.playSpawn(w, spot);
         return mob;
+    }
+
+    /**
+     * Adopta un mob que ya existe: nivel, cartel con su nombre y un multiplicador de dano,
+     * sin cambiarle la entidad. Las marcas van en el propio mob, asi que sobreviven al
+     * reinicio; el cartel no, y se le vuelve a poner con {@link #reescoltar}.
+     */
+    public void adoptar(LivingEntity mob, int level, Component nombre, double dano) {
+        var pdc = mob.getPersistentDataContainer();
+        pdc.set(keyLevel, PersistentDataType.INTEGER, level);
+        pdc.set(keyNombre, PersistentDataType.STRING,
+                net.kyori.adventure.text.serializer.gson.GsonComponentSerializer.gson().serialize(nombre));
+        pdc.set(keyDano, PersistentDataType.DOUBLE, dano);
+        reescoltar(mob);
+    }
+
+    public boolean adoptado(Entity e) {
+        return e != null && e.getPersistentDataContainer().has(keyNombre, PersistentDataType.STRING);
+    }
+
+    /** Le pone el cartel a un adoptado que no lo tenga (chunk recargado, reinicio). */
+    public void reescoltar(LivingEntity mob) {
+        if (!adoptado(mob) || !mob.isValid()) return;
+        for (Escolta e : escoltas) if (e.mob.getUniqueId().equals(mob.getUniqueId())) return;
+        escoltar(mob, "adoptado");
+    }
+
+    /** Las crias de Division copian estas marcas de su madre (texto). */
+    public void heredable(NamespacedKey clave) {
+        if (!herencia.contains(clave)) herencia.add(clave);
+    }
+
+    private void escoltar(LivingEntity mob, String etiqueta) {
+        World w = mob.getWorld();
+        // El cartel va SUELTO y se le teleporta encima cada tick (ver tickHolos):
+        // montarlo como pasajero le comeria la IA al bicho.
+        TextDisplay holo = w.spawn(mob.getLocation().add(0, mob.getHeight() + 0.45, 0), TextDisplay.class, d -> {
+            d.setBillboard(Display.Billboard.CENTER);
+            d.setAlignment(TextDisplay.TextAlignment.CENTER);
+            d.setViewRange(0.6f);
+            d.setSeeThrough(false);
+            d.setPersistent(false);
+            d.setDefaultBackground(false);
+            d.setBackgroundColor(org.bukkit.Color.fromARGB(70, 0, 0, 0));
+            d.setBrightness(new Display.Brightness(15, 15));
+            // Un tick de interpolacion: el cartel sigue al bicho sin dar tirones.
+            d.setTeleportDuration(1);
+            d.getPersistentDataContainer().set(keyHolo, PersistentDataType.STRING, etiqueta);
+        });
+        updateHolo(holo, mob);
+        escoltas.add(new Escolta(mob, holo));
     }
 
     // ------------------------------------------------------------------ holograma
@@ -396,13 +440,21 @@ public final class MinionManager implements Listener {
      */
     private void updateHolo(TextDisplay holo, LivingEntity mob) {
         MinionType type = typeOf(mob);
-        if (type == null) return;
+        Component nombre;
+        if (type != null) {
+            nombre = type.name();
+        } else if (adoptado(mob)) {
+            nombre = net.kyori.adventure.text.serializer.gson.GsonComponentSerializer.gson()
+                    .deserialize(mob.getPersistentDataContainer().get(keyNombre, PersistentDataType.STRING));
+        } else {
+            return;
+        }
         int level = levelOf(mob);
         int hp = (int) Math.ceil(mob.getHealth());
         double max = Compat.getAttribute(mob, "max_health", Math.max(1, hp));
         double left = max <= 0 ? 1 : Math.max(0, Math.min(1, mob.getHealth() / max));
 
-        holo.text(type.name()
+        holo.text(nombre
                 .append(Component.newline())
                 .append(Component.text("Nv. ", HOLO_LABEL))
                 .append(Component.text(level, colorNivel(level)))
@@ -488,6 +540,12 @@ public final class MinionManager implements Listener {
     /** El dano del esbirro escala con su nivel, venga de donde venga el golpe. */
     @EventHandler(ignoreCancelled = true)
     public void onDeal(EntityDamageByEntityEvent e) {
+        LivingEntity adoptado = adoptadoBehind(e.getDamager());
+        if (adoptado != null) {
+            Double dano = adoptado.getPersistentDataContainer().get(keyDano, PersistentDataType.DOUBLE);
+            if (dano != null) e.setDamage(e.getDamage() * dano);
+            return;
+        }
         LivingEntity minion = minionBehind(e.getDamager());
         if (minion == null) return;
         MinionType type = typeOf(minion);
@@ -660,6 +718,10 @@ public final class MinionManager implements Listener {
                 LivingEntity hijo = spawnAt(type, cria, donde, spawnerId);
                 if (hijo != null) {
                     hijo.getPersistentDataContainer().set(keyChild, PersistentDataType.BYTE, (byte) 1);
+                    for (NamespacedKey k : herencia) {
+                        String v = mob.getPersistentDataContainer().get(k, PersistentDataType.STRING);
+                        if (v != null) hijo.getPersistentDataContainer().set(k, PersistentDataType.STRING, v);
+                    }
                     if (mob.getKiller() != null && hijo instanceof Mob m) m.setTarget(mob.getKiller());
                 }
             }
@@ -759,6 +821,15 @@ public final class MinionManager implements Listener {
             if (e != null && !e.isDead()) n++;
         }
         return n;
+    }
+
+    private LivingEntity adoptadoBehind(Entity damager) {
+        if (damager instanceof LivingEntity living && adoptado(living)) return living;
+        if (damager instanceof Projectile projectile
+                && projectile.getShooter() instanceof LivingEntity living && adoptado(living)) {
+            return living;
+        }
+        return null;
     }
 
     /** El esbirro detras de un golpe: el propio bicho o el que disparo el proyectil. */

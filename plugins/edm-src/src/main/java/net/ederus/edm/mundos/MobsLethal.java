@@ -11,6 +11,7 @@ import java.util.Random;
 import java.util.Set;
 import java.util.UUID;
 
+import org.bukkit.Chunk;
 import org.bukkit.GameMode;
 import org.bukkit.HeightMap;
 import org.bukkit.Location;
@@ -21,6 +22,7 @@ import org.bukkit.block.Block;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.entity.AbstractSkeleton;
+import org.bukkit.entity.Enemy;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.EntityType;
 import org.bukkit.entity.LivingEntity;
@@ -30,34 +32,46 @@ import org.bukkit.entity.Zombie;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
+import org.bukkit.event.entity.CreatureSpawnEvent;
 import org.bukkit.event.entity.EntityDeathEvent;
+import org.bukkit.generator.structure.GeneratedStructure;
 import org.bukkit.persistence.PersistentDataType;
 import org.bukkit.scheduler.BukkitTask;
+import org.bukkit.util.BoundingBox;
 
 import net.ederus.edm.Module;
 import net.ederus.edm.anomaly.AnomalyPlugin;
+import net.ederus.edm.anomaly.core.Glow;
 import net.ederus.edm.anomaly.minions.MinionAbility;
 import net.ederus.edm.anomaly.minions.MinionCategory;
 import net.ederus.edm.anomaly.minions.MinionManager;
 import net.ederus.edm.anomaly.minions.MinionPresence;
 import net.ederus.edm.anomaly.minions.MinionRegistry;
 import net.ederus.edm.anomaly.minions.MinionType;
+import net.ederus.edm.comun.Compat;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
 import net.kyori.adventure.text.format.TextColor;
+import net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer;
 
 /**
- * Los mobs de Lethal World: tipos de esbirro (los mismos de /esb, en su propia carpeta) que
- * aparecen alrededor de cada jugador segun el BIOMA donde caen.
+ * Los mobs de Lethal World. En estos mundos no hay hostil sin nivel:
  *
- *  - Nivel = rango de rankup x A + poder de AuraSkills / B, del jugador mas cercano, con una
- *    variacion. Vida y dano escalan con el nivel como cualquier esbirro.
+ *  - Los que aparecen alrededor de cada jugador son tipos de esbirro (los de /esb, en su
+ *    carpeta) segun el BIOMA. El spawn natural de hostiles vanilla se cancela y se
+ *    sustituye por uno de esos, con el mismo tope por jugador.
+ *  - Los que ya traen las estructuras y los que salen de spawners se ADOPTAN: nivel, cartel
+ *    y dano por nivel, sin cambiar la entidad y con su nombre. Los que se llaman como un
+ *    minijefe reciben nivel extra y mucha vida.
+ *  - Las estructuras que venian vacias tienen guarnicion: al acercarse un jugador aparecen
+ *    unos cuantos del tipo que se les asigne, y vuelven un rato despues de caer.
+ *  - Nivel = rango de rankup x A + poder de AuraSkills / B, del jugador mas cercano.
  *  - MobCoins: lo que ese mob paga en el Survival (tabla de UltimateMobCoins) x (1 + nivel / C)
- *    x multiplicador del mundo, y mas si es destacado. Las paga EDM al que lo mata.
- *  - Los que quedan lejos de todo jugador se retiran: no se acumulan en chunks vacios.
+ *    x multiplicador del mundo, y mas si es destacado o minijefe. Las paga EDM.
  *
  * Los tipos se siembran UNA vez en esbirros.yml (si no existen) y a partir de ahi se editan
- * desde /esb como los demas. La tabla bioma -> tipos vive en la config de mundos.
+ * desde /esb como los demas. Las tablas bioma -> tipos y estructura -> guarnicion viven en la
+ * config de mundos.
  */
 final class MobsLethal implements Listener {
 
@@ -67,9 +81,18 @@ final class MobsLethal implements Listener {
     private final Map<String, Double> baseMonedas = new HashMap<>();
     /** bioma -> [comun, comun, destacado?], leido de la config al arrancar. */
     private final Map<String, List<String>> tabla = new HashMap<>();
+    /** estructura -> guarnicion, leido de la config al arrancar. */
+    private final Map<String, Guarnicion> guarniciones = new HashMap<>();
+    /** Cada estructura con guarnicion (mundo + centro) y sus mobs vivos. */
+    private final Map<String, Set<UUID>> ocupadas = new HashMap<>();
+    private final Map<String, Long> proximaGuarnicion = new HashMap<>();
+    private final Map<UUID, String> puestoDe = new HashMap<>();
     private final NamespacedKey clave;
     private BukkitTask aparicion;
     private BukkitTask limpieza;
+
+    private record Guarnicion(String tipo, int minimo, int maximo) {
+    }
 
     MobsLethal(MundosPlugin modulo) {
         this.modulo = modulo;
@@ -94,12 +117,14 @@ final class MobsLethal implements Listener {
         }
         sembrar(a.minions());
         cargarTabla();
+        cargarGuarniciones();
         cargarMonedas();
-        modulo.getServer().getPluginManager().registerEvents(this, Module.dueno(modulo));
+        a.minionManager().heredable(clave);
         if (!cfg().getBoolean("activos", true)) {
             modulo.getLogger().info("[Lethal World] Mobs de Lethal World apagados en la config.");
             return;
         }
+        modulo.getServer().getPluginManager().registerEvents(this, Module.dueno(modulo));
         long cada = Math.max(10, cfg().getLong("cada-ticks", 40));
         aparicion = modulo.getServer().getScheduler().runTaskTimer(Module.dueno(modulo), this::ciclo, cada, cada);
         limpieza = modulo.getServer().getScheduler().runTaskTimer(Module.dueno(modulo), this::retirarLejanos, 100L, 100L);
@@ -113,6 +138,8 @@ final class MobsLethal implements Listener {
             if (e != null) e.remove();
         }
         vivos.clear();
+        ocupadas.clear();
+        puestoDe.clear();
     }
 
     // ------------------------------------------------------------------ aparicion
@@ -120,35 +147,51 @@ final class MobsLethal implements Listener {
     private void ciclo() {
         AnomalyPlugin a = anomaly();
         if (a == null) return;
-        MinionRegistry reg = a.minions();
         MinionManager mm = a.minionManager();
         int tope = cfg().getInt("tope-por-jugador", 6);
         double radioConteo = cfg().getDouble("radio-conteo", 48);
+        double radioAdopcion = cfg().getDouble("radio-adopcion", 40);
         int min = cfg().getInt("distancia-minima", 20), max = cfg().getInt("distancia-maxima", 40);
 
         for (World w : modulo.getServer().getWorlds()) {
             if (!MundosPlugin.esMundo(w)) continue;
             for (Player p : w.getPlayers()) {
                 if (p.getGameMode() == GameMode.SPECTATOR || p.getGameMode() == GameMode.CREATIVE) continue;
+                adoptarCerca(mm, p, radioAdopcion);
+                guarnecer(p);
                 if (cerca(p, radioConteo) >= tope) continue;
                 Location sitio = sitio(p, min, max);
-                if (sitio == null) continue;
-                List<String> candidatos = tiposPara(sitio.getBlock().getBiome().getKey().asString());
-                if (candidatos == null) continue;
-                boolean destacado = candidatos.size() > 2 && random.nextDouble() < cfg().getDouble("probabilidad-destacado", 0.05);
-                String id = destacado ? candidatos.get(2) : candidatos.get(random.nextInt(Math.min(2, candidatos.size())));
-                MinionType tipo = reg.type(id);
-                if (tipo == null) continue;
-                int nivel = nivelPara(p, destacado);
-                LivingEntity mob = mm.spawnAt(tipo, nivel, sitio, null);
-                if (mob == null) continue;
-                mob.getPersistentDataContainer().set(clave, PersistentDataType.STRING, destacado ? "destacado" : "comun");
-                if (mob instanceof Zombie z) z.setShouldBurnInDay(false);
-                if (mob instanceof AbstractSkeleton s) s.setShouldBurnInDay(false);
-                if (mob instanceof Phantom ph) ph.setShouldBurnInDay(false);
-                vivos.add(mob.getUniqueId());
+                if (sitio != null) invocar(p, sitio);
             }
         }
+    }
+
+    /** Un mob del bioma de ese sitio, con el nivel del jugador. Null si el bioma no tiene tabla. */
+    private LivingEntity invocar(Player p, Location sitio) {
+        List<String> candidatos = tabla.get(sitio.getBlock().getBiome().getKey().asString());
+        if (candidatos == null) return null;
+        boolean destacado = candidatos.size() > 2 && random.nextDouble() < cfg().getDouble("probabilidad-destacado", 0.05);
+        String id = destacado ? candidatos.get(2) : candidatos.get(random.nextInt(Math.min(2, candidatos.size())));
+        return invocarTipo(p, id, destacado, sitio);
+    }
+
+    private LivingEntity invocarTipo(Player p, String id, boolean destacado, Location sitio) {
+        AnomalyPlugin a = anomaly();
+        if (a == null) return null;
+        MinionType tipo = a.minions().type(id);
+        if (tipo == null) return null;
+        LivingEntity mob = a.minionManager().spawnAt(tipo, nivelPara(p, destacado), sitio, null);
+        if (mob == null) return null;
+        mob.getPersistentDataContainer().set(clave, PersistentDataType.STRING, destacado ? "destacado" : "comun");
+        sinQuemarse(mob);
+        vivos.add(mob.getUniqueId());
+        return mob;
+    }
+
+    private static void sinQuemarse(LivingEntity mob) {
+        if (mob instanceof Zombie z) z.setShouldBurnInDay(false);
+        if (mob instanceof AbstractSkeleton s) s.setShouldBurnInDay(false);
+        if (mob instanceof Phantom ph) ph.setShouldBurnInDay(false);
     }
 
     private int cerca(Player p, double radio) {
@@ -181,10 +224,6 @@ final class MobsLethal implements Listener {
         return null;
     }
 
-    private List<String> tiposPara(String bioma) {
-        return tabla.get(bioma);
-    }
-
     private void cargarTabla() {
         tabla.clear();
         ConfigurationSection s = cfg().getConfigurationSection("biomas");
@@ -199,6 +238,175 @@ final class MobsLethal implements Listener {
             if (dest != null) out.add(dest);
             tabla.put(b.getString("bioma"), out);
         }
+    }
+
+    // ------------------------------------------------------ spawn natural y adopcion
+
+    /**
+     * Hostiles vanilla en un mundo de Lethal World. Los del spawn natural (y las patrullas)
+     * se cambian por un mob del bioma; los de spawners, divisiones y demas se adoptan. Lo
+     * que invoca EDM o un comando (CUSTOM, COMMAND) no se toca.
+     */
+    @EventHandler(priority = EventPriority.HIGH, ignoreCancelled = true)
+    public void alAparecer(CreatureSpawnEvent e) {
+        LivingEntity mob = e.getEntity();
+        if (!(mob instanceof Enemy) || !MundosPlugin.esMundo(mob.getWorld())) return;
+        switch (e.getSpawnReason()) {
+            case CUSTOM, COMMAND, SPAWNER_EGG, DEFAULT, BUCKET -> {
+                return;
+            }
+            case NATURAL, PATROL -> {
+                Location donde = e.getLocation();
+                if (tabla.containsKey(donde.getBlock().getBiome().getKey().asString())) {
+                    e.setCancelled(true);
+                    Player p = masCercano(donde, cfg().getDouble("retirar-a", 96));
+                    if (p == null || cerca(p, cfg().getDouble("radio-conteo", 48)) >= cfg().getInt("tope-por-jugador", 6)) return;
+                    Location sitio = donde.clone();
+                    modulo.getServer().getScheduler().runTask(Module.dueno(modulo), () -> invocar(p, sitio));
+                    return;
+                }
+            }
+            default -> {
+            }
+        }
+        modulo.getServer().getScheduler().runTask(Module.dueno(modulo), () -> {
+            AnomalyPlugin a = anomaly();
+            Player p = masCercano(mob.getLocation(), 128);
+            if (a != null && p != null && mob.isValid()) adoptar(a.minionManager(), mob, p);
+        });
+    }
+
+    private Player masCercano(Location donde, double radio) {
+        Player mejor = null;
+        double d2 = radio * radio;
+        for (Player p : donde.getWorld().getPlayers()) {
+            if (p.getGameMode() == GameMode.SPECTATOR) continue;
+            double d = p.getLocation().distanceSquared(donde);
+            if (d <= d2) {
+                d2 = d;
+                mejor = p;
+            }
+        }
+        return mejor;
+    }
+
+    /** Los hostiles de alrededor sin nivel (los de las estructuras) se adoptan; a los ya adoptados se les repone el cartel. */
+    private void adoptarCerca(MinionManager mm, Player p, double radio) {
+        for (LivingEntity mob : p.getLocation().getNearbyLivingEntities(radio)) {
+            if (!(mob instanceof Enemy) || mm.isMinion(mob) || mob.isDead()) continue;
+            if (mm.adoptado(mob)) mm.reescoltar(mob);
+            else adoptar(mm, mob, p);
+        }
+    }
+
+    private void adoptar(MinionManager mm, LivingEntity mob, Player p) {
+        if (mm.isMinion(mob) || mm.adoptado(mob) || mob.isInvulnerable()) return;
+        ConfigurationSection s = cfg().getConfigurationSection("adoptados");
+        if (s == null) s = new YamlConfiguration();
+        Component nombre = mob.customName();
+        String plano = nombre == null ? "" : PlainTextComponentSerializer.plainText().serialize(nombre);
+        boolean minijefe = nombre != null && cfg().getStringList("minijefes.nombres").contains(plano);
+
+        int nivel = nivelPara(p, false);
+        double vida, dano;
+        if (minijefe) {
+            nivel = Math.min(cfg().getInt("nivel.maximo", 100), nivel + cfg().getInt("minijefes.extra-nivel", 10));
+            vida = cfg().getDouble("minijefes.vida-base", 400) * (1 + cfg().getDouble("minijefes.vida-por-nivel", 0.10) * (nivel - 1));
+            dano = cfg().getDouble("minijefes.dano-base", 1.5) * (1 + cfg().getDouble("minijefes.dano-por-nivel", 0.05) * (nivel - 1));
+            nombre = nombre.color(NamedTextColor.RED);
+        } else {
+            double original = Compat.getAttribute(mob, "max_health", mob.getHealth());
+            vida = Math.max(original, s.getDouble("vida-minima", 20)) * (1 + s.getDouble("vida-por-nivel", 0.08) * (nivel - 1));
+            dano = 1 + s.getDouble("dano-por-nivel", 0.04) * (nivel - 1);
+            if (nombre == null) nombre = Component.translatable(mob.getType().translationKey());
+        }
+
+        // El nombre pasa al cartel: dejarlo en el mob lo pintaria dos veces. Quitarlo haria
+        // que vanilla lo pudiera despawnear, asi que se fija a mano.
+        if (mob.customName() != null) {
+            mob.customName(null);
+            mob.setCustomNameVisible(false);
+            mob.setRemoveWhenFarAway(false);
+        }
+        double escalaMax = cfg().getDouble("escala-maxima", 2.0);
+        if (Compat.getAttribute(mob, "scale", 1.0) > escalaMax) Compat.setAttribute(mob, "scale", escalaMax);
+        Compat.setAttribute(mob, "max_health", vida);
+        mob.setHealth(Math.min(vida, Compat.getAttribute(mob, "max_health", vida)));
+        sinQuemarse(mob);
+        mob.getPersistentDataContainer().set(clave, PersistentDataType.STRING, minijefe ? "minijefe" : "estructura");
+        mm.adoptar(mob, nivel, nombre, dano);
+        if (minijefe) Glow.apply(mob, NamedTextColor.RED);
+    }
+
+    // ---------------------------------------------------------------- guarniciones
+
+    private void cargarGuarniciones() {
+        guarniciones.clear();
+        ConfigurationSection s = cfg().getConfigurationSection("guarniciones");
+        if (s == null) return;
+        for (String k : s.getKeys(false)) {
+            ConfigurationSection g = s.getConfigurationSection(k);
+            if (g == null || g.getString("estructura") == null || g.getString("tipo") == null) continue;
+            int min = Math.max(1, g.getInt("minimo", 2));
+            guarniciones.put(g.getString("estructura"), new Guarnicion(g.getString("tipo"), min, Math.max(min, g.getInt("maximo", min))));
+        }
+    }
+
+    /** Las estructuras con guarnicion que tiene cerca el jugador reciben su tropa si les toca. */
+    private void guarnecer(Player p) {
+        if (guarniciones.isEmpty()) return;
+        double radio = cfg().getDouble("guarnicion-radio", 40);
+        long ahora = System.currentTimeMillis();
+        Chunk c = p.getLocation().getChunk();
+        World w = p.getWorld();
+        Set<String> vistos = new HashSet<>();
+        for (int dx = -1; dx <= 1; dx++) {
+            for (int dz = -1; dz <= 1; dz++) {
+                if (!w.isChunkLoaded(c.getX() + dx, c.getZ() + dz)) continue;
+                for (GeneratedStructure gs : w.getChunkAt(c.getX() + dx, c.getZ() + dz).getStructures()) {
+                    Guarnicion g = guarniciones.get(gs.getStructure().getKey().asString());
+                    if (g == null) continue;
+                    BoundingBox caja = gs.getBoundingBox();
+                    String puesto = w.getName() + "@" + (int) caja.getCenterX() + "," + (int) caja.getCenterY() + "," + (int) caja.getCenterZ();
+                    if (!vistos.add(puesto)) continue;
+                    if (p.getLocation().toVector().distanceSquared(caja.getCenter()) > radio * radio + caja.getWidthX() * caja.getWidthZ()) continue;
+                    Set<UUID> tropa = ocupadas.computeIfAbsent(puesto, k -> new HashSet<>());
+                    tropa.removeIf(id -> {
+                        Entity e = modulo.getServer().getEntity(id);
+                        return e == null || !e.isValid();
+                    });
+                    if (!tropa.isEmpty() || ahora < proximaGuarnicion.getOrDefault(puesto, 0L)) continue;
+                    int n = g.minimo() + random.nextInt(g.maximo() - g.minimo() + 1);
+                    for (int i = 0; i < n; i++) {
+                        Location sitio = sitioEn(w, caja);
+                        if (sitio == null) continue;
+                        LivingEntity mob = invocarTipo(p, g.tipo(), false, sitio);
+                        if (mob == null) continue;
+                        tropa.add(mob.getUniqueId());
+                        puestoDe.put(mob.getUniqueId(), puesto);
+                    }
+                }
+            }
+        }
+    }
+
+    /** Suelo con dos de aire encima dentro de la caja de la estructura. */
+    private Location sitioEn(World w, BoundingBox caja) {
+        for (int intento = 0; intento < 12; intento++) {
+            int x = (int) Math.floor(caja.getMinX() + 1 + random.nextDouble() * Math.max(1, caja.getWidthX() - 2));
+            int z = (int) Math.floor(caja.getMinZ() + 1 + random.nextDouble() * Math.max(1, caja.getWidthZ() - 2));
+            if (!w.isChunkLoaded(x >> 4, z >> 4)) continue;
+            int techo = Math.min((int) caja.getMaxY(), w.getHighestBlockYAt(x, z, HeightMap.MOTION_BLOCKING_NO_LEAVES));
+            for (int y = techo; y >= (int) caja.getMinY(); y--) {
+                Block suelo = w.getBlockAt(x, y, z);
+                if (!suelo.getType().isSolid()) continue;
+                Block pies = w.getBlockAt(x, y + 1, z), cabeza = w.getBlockAt(x, y + 2, z);
+                if (pies.isPassable() && cabeza.isPassable() && !pies.isLiquid() && !cabeza.isLiquid()) {
+                    return new Location(w, x + 0.5, y + 1, z + 0.5);
+                }
+            }
+        }
+        return null;
     }
 
     // ---------------------------------------------------------------------- nivel
@@ -270,6 +478,11 @@ final class MobsLethal implements Listener {
         String clase = mob.getPersistentDataContainer().get(clave, PersistentDataType.STRING);
         if (clase == null) return;
         vivos.remove(mob.getUniqueId());
+        String puesto = puestoDe.remove(mob.getUniqueId());
+        if (puesto != null) {
+            proximaGuarnicion.put(puesto, System.currentTimeMillis() + cfg().getLong("guarnicion-reaparece-minutos", 20) * 60_000L);
+        }
+        if ("minijefe".equals(clase)) Glow.clear(mob);
         Player asesino = mob.getKiller();
         if (asesino == null) return;
         AnomalyPlugin a = anomaly();
@@ -278,9 +491,13 @@ final class MobsLethal implements Listener {
         if (m == null) m = new YamlConfiguration();
         double base = Math.max(m.getDouble("base-minima", 0.5),
                 baseMonedas.getOrDefault(mob.getType().getKey().getKey(), 0.0));
+        double extra = switch (clase) {
+            case "destacado" -> m.getDouble("multiplicador-destacado", 3.0);
+            case "minijefe" -> m.getDouble("multiplicador-minijefe", 10.0);
+            default -> 1.0;
+        };
         double monedas = base * (1 + nivel / Math.max(1.0, m.getDouble("nivel-divisor", 20)))
-                * m.getDouble("multiplicador-mundo", 1.5)
-                * ("destacado".equals(clase) ? m.getDouble("multiplicador-destacado", 3.0) : 1.0);
+                * m.getDouble("multiplicador-mundo", 1.5) * extra;
         long pago = Math.round(monedas);
         if (pago <= 0) return;
         modulo.getServer().dispatchCommand(modulo.getServer().getConsoleSender(),
@@ -292,9 +509,11 @@ final class MobsLethal implements Listener {
         double r = cfg().getDouble("retirar-a", 96);
         double r2 = r * r;
         for (var it = vivos.iterator(); it.hasNext(); ) {
-            Entity e = modulo.getServer().getEntity(it.next());
+            UUID id = it.next();
+            Entity e = modulo.getServer().getEntity(id);
             if (e == null || !e.isValid()) {
                 it.remove();
+                puestoDe.remove(id);
                 continue;
             }
             boolean alguien = false;
@@ -307,6 +526,7 @@ final class MobsLethal implements Listener {
             if (!alguien) {
                 e.remove();
                 it.remove();
+                puestoDe.remove(id);
             }
         }
     }
@@ -368,7 +588,13 @@ final class MobsLethal implements Listener {
                     c("Chamán del Cónclave", EntityType.WITCH, 0x2E8B57),
                     d("Gran Guacamayo", EntityType.PHANTOM, 0xFF4500, MinionAbility.ALARMA)));
 
-    /** Crea la carpeta y los tipos que falten, y la tabla de biomas si no hay. Nunca pisa lo editado. */
+    /** Estructuras vacias de Panacea: [estructura, tipo que la guarda, minimo, maximo]. */
+    private static final List<Object[]> GUARNICIONES = List.of(
+            new Object[]{"bracken:dweller_drill", "Leñador Condenado", 3, 4},
+            new Object[]{"bracken:outlander_tent", "Espantapájaros", 2, 3},
+            new Object[]{"bracken:panacea_hut", "Caníbal de la Jungla", 2, 3});
+
+    /** Crea la carpeta y los tipos que falten, y las tablas si no hay. Nunca pisa lo editado. */
     private void sembrar(MinionRegistry reg) {
         String nombreCarpeta = "Lethal World · Panacea";
         MinionCategory carpeta = null;
@@ -383,6 +609,7 @@ final class MobsLethal implements Listener {
 
         ConfigurationSection biomas = modulo.getConfig().getConfigurationSection("mobs.biomas");
         boolean escribirTabla = biomas == null || biomas.getKeys(false).isEmpty();
+        boolean guardar = escribirTabla;
         int creados = 0;
         for (Bioma b : PANACEA) {
             List<String> ids = new ArrayList<>();
@@ -402,9 +629,27 @@ final class MobsLethal implements Listener {
                 modulo.getConfig().set(ruta + ".destacado", ids.get(2));
             }
         }
+        ConfigurationSection gs = modulo.getConfig().getConfigurationSection("mobs.guarniciones");
+        if (gs == null || gs.getKeys(false).isEmpty()) {
+            for (Object[] g : GUARNICIONES) {
+                MinionType t = buscar(reg, (String) g[1]);
+                if (t == null) continue;
+                String ruta = "mobs.guarniciones." + ((String) g[0]).substring(((String) g[0]).indexOf(':') + 1);
+                modulo.getConfig().set(ruta + ".estructura", g[0]);
+                modulo.getConfig().set(ruta + ".tipo", t.id());
+                modulo.getConfig().set(ruta + ".minimo", g[2]);
+                modulo.getConfig().set(ruta + ".maximo", g[3]);
+                guardar = true;
+            }
+        }
+        if (modulo.getConfig().getStringList("mobs.minijefes.nombres").isEmpty()) {
+            modulo.getConfig().set("mobs.minijefes.nombres", List.of("Creeper Gigatón", "Ventiarbusto Latente"));
+            guardar = true;
+        }
         if (creados > 0) reg.save();
-        if (escribirTabla) modulo.saveConfig();
-        modulo.getLogger().info("[Lethal World] Mobs: " + PANACEA.size() * 3 + " tipos en /esb (" + creados + " nuevos).");
+        if (guardar) modulo.saveConfig();
+        modulo.getLogger().info("[Lethal World] Mobs: " + PANACEA.size() * 3 + " tipos en /esb (" + creados + " nuevos), "
+                + GUARNICIONES.size() + " estructuras con guarnición.");
     }
 
     private static MinionType buscar(MinionRegistry reg, String nombre) {

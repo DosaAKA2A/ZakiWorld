@@ -373,8 +373,8 @@ public final class MenuTienda implements Listener {
 
         int llevas = 0;
         if (art.seVende()) {
-            double efectiva = motor != null ? motor.ventaEfectiva(art) : art.venta();
-            int caida = modulo.mercado() != null ? modulo.mercado().caidaPorCiento(art) : 0;
+            double efectiva = motor != null ? motor.ventaEfectiva(art, jugador.getUniqueId()) : art.venta();
+            int caida = modulo.mercado() != null ? modulo.mercado().caidaPorCiento(art, jugador.getUniqueId()) : 0;
             lore.add(Estilo.etiqueta("Precio de venta", Estilo.VENTA));
             if (demanda != null) {
                 int pc = (int) Math.round((efectiva / art.venta() - 1) * 100);

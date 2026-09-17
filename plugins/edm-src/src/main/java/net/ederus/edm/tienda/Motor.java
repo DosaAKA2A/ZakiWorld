@@ -143,9 +143,9 @@ public final class Motor {
      * bonus de Demandas si toca, y SIEMPRE recortado contra la compra efectiva.
      * El recorte va el ultimo a proposito: es la ultima palabra.
      */
-    public double ventaEfectiva(Catalogo.Articulo art) {
+    public double ventaEfectiva(Catalogo.Articulo art, java.util.UUID jugador) {
         double compra = compraEfectiva(art);
-        double precio = mercado.ventaEfectiva(art, compra);
+        double precio = mercado.ventaEfectiva(art, compra, jugador);
         if (rotacion != null) {
             Rotacion.Trato t = demandaViva(art);
             if (t != null) {
@@ -273,17 +273,17 @@ public final class Motor {
      * venta. Es a proposito: si cada uno hiciera su cuenta, el dia que cambie la
      * formula uno de los tres se quedaria atras enseñando un numero mentiroso.
      */
-    public double totalVentaDe(Catalogo.Articulo art, int cantidad) {
+    public double totalVentaDe(Catalogo.Articulo art, int cantidad, java.util.UUID jugador) {
         if (art == null || cantidad <= 0) return 0;
         double compra = compraEfectiva(art);
         Rotacion.Trato t = demandaViva(art);
-        if (t == null) return mercado.totalVenta(art, cantidad, compra);
+        if (t == null) return mercado.totalVenta(art, cantidad, compra, jugador);
 
         /* En dos tramos: el cupo del dia se paga con el bonus de la Demanda y
          * lo que sobre se paga al precio regular, en la MISMA venta. Agotar el
          * cupo nunca frena la operacion: solo apaga el extra. */
         int conBonus = Math.min(cantidad, rotacion.restanteHoy(t));
-        double tramoBonus = mercado.totalVenta(art, conBonus, compra) * t.factor();
+        double tramoBonus = mercado.totalVenta(art, conBonus, compra, jugador) * t.factor();
         double techo = compra > 0 ? compra * mercado.margen() * conBonus : Double.MAX_VALUE;
         tramoBonus = Math.min(tramoBonus, techo);
 
@@ -292,7 +292,7 @@ public final class Motor {
         /* El segundo tramo arranca con la presion que dejaria el primero, para
          * que vender de golpe siga pagando lo mismo que vender a trozos. */
         double tramoRegular = mercado.totalVentaDesde(art, aRegular, compra,
-                mercado.presionActual(art.clave()) + conBonus);
+                mercado.presionActual(jugador, art.clave()) + conBonus);
         return tramoBonus + tramoRegular;
     }
 
@@ -399,7 +399,7 @@ public final class Motor {
         /* El total se integra a lo largo de la venta, no se multiplica por el
          * precio de la primera unidad: vender de golpe tiene que pagar lo mismo
          * que vender a trozos. */
-        double total = totalVentaDe(art, quitados);
+        double total = totalVentaDe(art, quitados, jugador.getUniqueId());
         double unitario = total / quitados;
         EconomyResponse resp = economia.depositPlayer(jugador, total);
         if (!resp.transactionSuccess()) {
@@ -409,14 +409,14 @@ public final class Motor {
         }
 
         topes.anotar(jugador.getUniqueId(), art, quitados);
-        mercado.anotarVenta(art, quitados);
+        mercado.anotarVenta(art, quitados, jugador.getUniqueId());
         /* Al cupo del dia solo se le anota el tramo con bonus. */
         if (conBonus > 0) rotacion.anotar(art.clave(), Math.min(conBonus, quitados));
         registro.anotar("VENTA", jugador.getName(), quitados, art.clave(),
                 unitario, total, economia.getBalance(jugador));
         /* Si el recorte contra la compra llego a actuar, queda constancia: es la
          * unica pista de que un precio se habia ido de rango. */
-        if (mercado.recortado(art, compraEfectiva(art))) {
+        if (mercado.recortado(art, compraEfectiva(art), jugador.getUniqueId())) {
             registro.anotar("RECORTE", jugador.getName(), quitados, art.clave(),
                     unitario, total, economia.getBalance(jugador));
         }

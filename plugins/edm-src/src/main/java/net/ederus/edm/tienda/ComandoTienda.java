@@ -376,9 +376,10 @@ public final class ComandoTienda implements CommandExecutor, TabCompleter {
         }
 
         if (a.seVende()) {
-            double ef = motor != null ? motor.ventaEfectiva(a) : a.venta();
+            java.util.UUID yo = quien instanceof org.bukkit.entity.Player p ? p.getUniqueId() : null;
+            double ef = motor != null ? motor.ventaEfectiva(a, yo) : a.venta();
             quien.sendMessage(Estilo.linea("Te pagan", Estilo.dineroCorto(ef), Estilo.VENTA));
-            int caida = modulo.mercado() != null ? modulo.mercado().caidaPorCiento(a) : 0;
+            int caida = modulo.mercado() != null ? modulo.mercado().caidaPorCiento(a, yo) : 0;
             if (caida > 0) {
                 quien.sendMessage(Estilo.nota("normal " + Estilo.dineroCorto(a.venta())
                         + ", -" + caida + "% por sobrevendido"));
@@ -450,8 +451,11 @@ public final class ComandoTienda implements CommandExecutor, TabCompleter {
         if (mk == null) { quien.sendMessage(Estilo.legado("&cEl mercado todavía está arrancando.")); return true; }
         Motor mt = modulo.motor();
         double compra = mt != null ? mt.compraEfectiva(a) : a.compra();
-        double ahora = mk.ventaEfectiva(a, compra);
-        int caida = mk.caidaPorCiento(a);
+        /* La devaluacion es por jugador: la tabla se calcula para quien la pide
+         * (desde la consola, con el mercado intacto). */
+        java.util.UUID yo = quien instanceof org.bukkit.entity.Player p ? p.getUniqueId() : null;
+        double ahora = mk.ventaEfectiva(a, compra, yo);
+        int caida = mk.caidaPorCiento(a, yo);
 
         quien.sendMessage(Estilo.regla());
         quien.sendMessage(Estilo.cabecera("MERCADO", Motor.nombre(a)));
@@ -479,11 +483,11 @@ public final class ComandoTienda implements CommandExecutor, TabCompleter {
             int[] cortes = {1, n / 8, n / 4, n / 2, n};
             for (int c : cortes) {
                 if (c <= 0) continue;
-                double total = mk.totalVenta(a, c, compra);
+                double total = mk.totalVenta(a, c, compra, yo);
                 quien.sendMessage("    " + String.format("%,7d", c) + " -> " + Motor.fmt(total)
                         + "   (" + Motor.fmt(total / c) + " por unidad)");
             }
-            quien.sendMessage("  y si el servidor YA hubiera vendido antes:");
+            quien.sendMessage("  y si YA hubieras vendido antes:");
             /* En long y acotado: con un n grande, n * 100 se sale del entero y
              * la tabla pasaba a enseñar presiones negativas. */
             for (long antes : new long[]{n, n * 5L, n * 25L, n * 100L}) {
@@ -498,11 +502,11 @@ public final class ComandoTienda implements CommandExecutor, TabCompleter {
             int n;
             try { n = Integer.parseInt(args[3]); }
             catch (NumberFormatException e) { cantidadMala(quien); return true; }
-            quien.sendMessage("  si el servidor vendiera " + n + " más:");
+            quien.sendMessage("  si vendieras " + n + " más:");
             for (int paso : new int[]{n / 4, n / 2, n, n * 2, n * 4}) {
                 if (paso <= 0) continue;
                 quien.sendMessage("    " + String.format("%,d", paso) + " -> "
-                        + Motor.fmt(mk.simular(a, paso)));
+                        + Motor.fmt(mk.simular(a, paso, yo)));
             }
         }
         return true;
@@ -543,7 +547,7 @@ public final class ComandoTienda implements CommandExecutor, TabCompleter {
             for (Rotacion.Trato t : rot.demandas()) {
                 Catalogo.Articulo a = catalogo.de(t.clave());
                 if (a == null) continue;
-                String ahora = m != null ? Motor.fmt(m.ventaEfectiva(a)) : Motor.fmt(a.venta() * t.factor());
+                String ahora = m != null ? Motor.fmt(m.ventaEfectiva(a, quien instanceof org.bukkit.entity.Player p ? p.getUniqueId() : null)) : Motor.fmt(a.venta() * t.factor());
                 quien.sendMessage("  " + Motor.nombre(a) + ": " + Motor.fmt(a.venta())
                         + " -> " + ahora + "  (+" + Math.round((t.factor() - 1) * 100) + "%)  quedan " + quedan(rot, t));
             }
