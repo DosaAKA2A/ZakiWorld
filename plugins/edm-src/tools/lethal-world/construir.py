@@ -605,7 +605,7 @@ def construir_ruinas(datapack: Path, cuenta: Counter) -> None:
             "size": 1,
             "start_height": {"absolute": -2},
             "project_start_to_heightmap": "WORLD_SURFACE_WG",
-            "max_distance_from_center": 128,
+            "max_distance_from_center": 116,
             "use_expansion_hack": False,
         }
         conjunto = {
