@@ -361,6 +361,29 @@ def limpiar_estructura(f: Path, textos: Textos, cuenta: Counter) -> bool:
 # ------------------------------------------------------------------ json
 
 
+RADIO_SEGURO = {"xz_radius": 8, "xz_spread": 7}
+
+
+def acotar_radios(nodo, cuenta: Counter) -> None:
+    """Parches de vegetacion y grupos de plantas que se salen del radio que el mundo deja
+    escribir al generar. Paper lo corta y lo registra por CADA bloque: el trigo de Pax
+    (xz_radius 15) llego a escribir 68.000 lineas de error en dos minutos."""
+    if isinstance(nodo, dict):
+        for clave, tope in RADIO_SEGURO.items():
+            v = nodo.get(clave)
+            if isinstance(v, int) and v > tope:
+                nodo[clave] = tope
+                cuenta[f"radios acotados ({clave})"] += 1
+            elif isinstance(v, dict) and "max_inclusive" in v and isinstance(v["max_inclusive"], int) and v["max_inclusive"] > tope:
+                v["max_inclusive"] = tope
+                cuenta[f"radios acotados ({clave})"] += 1
+        for v in nodo.values():
+            acotar_radios(v, cuenta)
+    elif isinstance(nodo, list):
+        for v in nodo:
+            acotar_radios(v, cuenta)
+
+
 def limpiar_json(ruta_rel: str, datos):
     """Biomas y tipos de dimension: fuera la musica y los sonidos de Bracken."""
     if not isinstance(datos, dict):
@@ -463,6 +486,10 @@ def main() -> None:
         destino.parent.mkdir(parents=True, exist_ok=True)
         if f.suffix == ".json" and ("/worldgen/biome/" in rel or "/dimension_type/" in rel):
             datos = limpiar_json(rel, json.loads(f.read_text(encoding="utf-8")))
+            destino.write_text(json.dumps(datos, ensure_ascii=False, indent=1), encoding="utf-8")
+        elif f.suffix == ".json" and "/worldgen/configured_feature/" in rel:
+            datos = json.loads(f.read_text(encoding="utf-8"))
+            acotar_radios(datos, cuenta)
             destino.write_text(json.dumps(datos, ensure_ascii=False, indent=1), encoding="utf-8")
         else:
             shutil.copyfile(f, destino)

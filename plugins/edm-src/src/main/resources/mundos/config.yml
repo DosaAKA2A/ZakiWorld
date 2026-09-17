@@ -32,5 +32,14 @@ generadores:
   void:
     nombre: "El Vacío"
 
+# /lw pregen: pregenerar antes de abrir un mundo, para que explorar no genere en caliente.
+pregen:
+  # Sin radio en el comando se usa el borde del mundo si lo tiene; si no, este (bloques).
+  radio-por-defecto: 4000
+  # Cuantos chunks se generan a la vez como mucho. El numero real lo ajusta solo.
+  en-paralelo-maximo: 48
+  # Si el tick medio pasa de estos ms, frena. 50 ms = 20 TPS justos.
+  ms-por-tick-objetivo: 40
+
 # Mundos creados. Lo escribe /lw create; tocarlo a mano tambien vale.
 mundos: {}

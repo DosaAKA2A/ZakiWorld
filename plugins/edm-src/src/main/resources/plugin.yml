@@ -1,5 +1,5 @@
 name: EDM
-version: '1.35.1'
+version: '1.36.0'
 main: net.ederus.edm.EDMPlugin
 api-version: '1.20'
 author: Iris Studio
@@ -65,7 +65,7 @@ commands:
     permission: ederus.biomas
   lw:
     description: Lethal World - mundos con el generador de EDM
-    usage: /lw <list|generators|create|delete|tp|biomes|biome>
+    usage: /lw <list|generators|create|delete|tp|biomes|biome|pregen>
     aliases: [lethalworld]
     permission: ederus.mundos
   gi:

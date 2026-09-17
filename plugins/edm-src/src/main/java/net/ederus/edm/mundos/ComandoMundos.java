@@ -70,6 +70,7 @@ final class ComandoMundos implements TabExecutor {
             case "tp" -> tp(quien, args);
             case "biomes" -> biomas(quien);
             case "biome" -> irABioma(quien, args);
+            case "pregen" -> pregen(quien, args);
             default -> ayuda(quien);
         }
         return true;
@@ -84,6 +85,8 @@ final class ComandoMundos implements TabExecutor {
         linea(q, "/lw tp <name> [player]", "lleva a un sitio seguro del mundo");
         linea(q, "/lw biomes", "biomas del mundo en el que estás (pulsables)");
         linea(q, "/lw biome <biome> [radius]", "busca el más cercano y te lleva");
+        linea(q, "/lw pregen start <name> [radius]", "pregenera (sin radio: el borde o el de la config)");
+        linea(q, "/lw pregen status|pause|resume|cancel", "");
     }
 
     private static void linea(CommandSender q, String uso, String que) {
@@ -183,6 +186,58 @@ final class ComandoMundos implements TabExecutor {
             objetivo.teleportAsync(destino);
             modulo.bitacora().anotar("tp", objetivo.getName(), w.getName(), seguro ? "suelo" : "caida lenta");
         }));
+    }
+
+    private void pregen(CommandSender q, String[] args) {
+        Pregenerador pg = modulo.pregen();
+        String sub = args.length >= 2 ? args[1].toLowerCase(Locale.ROOT) : "status";
+        switch (sub) {
+            case "start" -> {
+                if (args.length < 3) {
+                    linea(q, "/lw pregen start <name> [radius]", "");
+                    return;
+                }
+                World w = modulo.mundo(args[2]);
+                if (w == null) {
+                    decir(q, Component.text("El mundo '" + args[2] + "' no existe o aún no está cargado.", NamedTextColor.RED));
+                    return;
+                }
+                int radio = pg.radioAutomatico(w);
+                boolean automatico = true;
+                if (args.length >= 4) {
+                    try {
+                        radio = Math.max(16, Math.min(50_000, Integer.parseInt(args[3])));
+                        automatico = false;
+                    } catch (NumberFormatException e) {
+                        decir(q, Component.text("El radio tiene que ser un número de bloques.", NamedTextColor.RED));
+                        return;
+                    }
+                }
+                String error = pg.empezar(w, radio);
+                if (error != null) {
+                    decir(q, Component.text(error, NamedTextColor.RED));
+                    return;
+                }
+                boolean conBorde = w.getWorldBorder().getSize() < 1_000_000;
+                decir(q, "Pregenerando " + args[2] + " en un radio de " + radio + " bloques"
+                        + (automatico ? (conBorde ? " (el del borde del mundo)" : " (el de la config; pon un borde para fijarlo)") : "")
+                        + ". Verás el avance en la barra; /lw pregen status para el detalle.");
+            }
+            case "pause" -> {
+                pg.pausar();
+                decir(q, pg.activo() ? "Pregeneración en pausa. /lw pregen resume para seguir." : pg.estado());
+            }
+            case "resume" -> {
+                pg.reanudar();
+                decir(q, pg.estado());
+            }
+            case "cancel" -> {
+                boolean habia = pg.activo();
+                pg.cancelar();
+                decir(q, habia ? "Pregeneración cancelada. Lo ya generado se queda." : "No había ninguna en marcha.");
+            }
+            default -> decir(q, pg.estado());
+        }
     }
 
     /** Radio por defecto de la busqueda: como el /locate vanilla, pero acotado para no dar tirones. */
@@ -318,7 +373,11 @@ final class ComandoMundos implements TabExecutor {
     public List<String> onTabComplete(CommandSender q, Command cmd, String etiqueta, String[] args) {
         List<String> op = new ArrayList<>();
         if (args.length == 1) {
-            op.addAll(List.of("list", "generators", "create", "delete", "tp", "biomes", "biome"));
+            op.addAll(List.of("list", "generators", "create", "delete", "tp", "biomes", "biome", "pregen"));
+        } else if (args.length == 2 && args[0].equalsIgnoreCase("pregen")) {
+            op.addAll(List.of("start", "status", "pause", "resume", "cancel"));
+        } else if (args.length == 3 && args[0].equalsIgnoreCase("pregen") && args[1].equalsIgnoreCase("start")) {
+            op.addAll(modulo.mundos().keySet());
         } else if (args.length == 2 && args[0].equalsIgnoreCase("biome") && q instanceof Player p) {
             String gen = modulo.generadorDe(p.getWorld());
             if (gen != null) for (String id : modulo.biomasDe(gen)) op.add(id.substring(id.lastIndexOf('/') + 1));

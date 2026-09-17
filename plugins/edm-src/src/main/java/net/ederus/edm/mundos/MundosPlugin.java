@@ -48,6 +48,7 @@ public final class MundosPlugin extends Module {
     private static MundosPlugin instancia;
 
     private Bitacora bitacora;
+    private Pregenerador pregen;
     private final List<String> generadores = new ArrayList<>();
 
     public MundosPlugin(EDMPlugin core) {
@@ -76,6 +77,8 @@ public final class MundosPlugin extends Module {
             getLogger().warning("El comando /lw no esta en el plugin.yml de EDM.");
         }
         instancia = this;
+        pregen = new Pregenerador(this);
+        pregen.cargar();
 
         int cargados = 0;
         Map<String, String> creados = mundos();
@@ -90,6 +93,7 @@ public final class MundosPlugin extends Module {
 
     @Override
     public void onDisable() {
+        if (pregen != null) pregen.apagar();
         instancia = null;
     }
 
@@ -306,5 +310,9 @@ public final class MundosPlugin extends Module {
 
     Bitacora bitacora() {
         return bitacora;
+    }
+
+    Pregenerador pregen() {
+        return pregen;
     }
 }
