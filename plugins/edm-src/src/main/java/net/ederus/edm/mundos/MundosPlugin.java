@@ -15,6 +15,7 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.Properties;
 import java.util.Set;
+import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import org.bukkit.NamespacedKey;
@@ -115,6 +116,27 @@ public final class MundosPlugin extends Module {
 
     public List<String> generadores() {
         return List.copyOf(generadores);
+    }
+
+    private final Map<String, List<String>> biomasPorGenerador = new LinkedHashMap<>();
+
+    /** Los biomas que reparte un generador, en el orden de su plantilla y sin repetir. */
+    public List<String> biomasDe(String generador) {
+        return biomasPorGenerador.computeIfAbsent(generador, g -> {
+            List<String> out = new ArrayList<>();
+            byte[] plantilla = recurso("generadores/" + g + ".json");
+            if (plantilla == null) return out;
+            Matcher m = Pattern.compile("\"biome\"\\s*:\\s*\"([^\"]+)\"")
+                    .matcher(new String(plantilla, StandardCharsets.UTF_8));
+            while (m.find()) if (!out.contains(m.group(1))) out.add(m.group(1));
+            return out;
+        });
+    }
+
+    /** El generador de un mundo de Lethal World ya cargado, o null. */
+    public String generadorDe(World w) {
+        if (!esMundo(w)) return null;
+        return mundos().get(w.getKey().getKey());
     }
 
     public String nombreGenerador(String id) {
