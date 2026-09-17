@@ -61,6 +61,11 @@ public final class MundosPlugin extends Module {
         return instancia;
     }
 
+    /** Los mobs de Lethal World, para consultarlos desde el comando. */
+    MobsLethal mobs() {
+        return mobs;
+    }
+
     @Override
     public void onEnable() {
         saveDefaultConfig();

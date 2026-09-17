@@ -417,20 +417,29 @@ final class MobsLethal implements Listener {
         return (int) Math.max(1, Math.min(n.getInt("maximo", 100), Math.round(base)));
     }
 
-    /** Rango de rankup (fork de NotRanks) por PlaceholderAPI. 0 si no se puede leer. */
-    private int rango(Player p) {
+    /** Lo que responde PlaceholderAPI al marcador del rango, tal cual. "" si no se puede leer. */
+    String rangoCrudo(Player p) {
         try {
             Class<?> papi = Class.forName("me.clip.placeholderapi.PlaceholderAPI");
             Object r = papi.getMethod("setPlaceholders", org.bukkit.OfflinePlayer.class, String.class)
                     .invoke(null, p, cfg().getString("nivel.placeholder-rango", "%notranks_rank_number%"));
-            return Integer.parseInt(String.valueOf(r).replaceAll("[^0-9]", ""));
+            return String.valueOf(r);
         } catch (Throwable t) {
+            return "";
+        }
+    }
+
+    /** Rango de rankup (fork de NotRanks) por PlaceholderAPI. 0 si no se puede leer. */
+    int rango(Player p) {
+        try {
+            return Integer.parseInt(rangoCrudo(p).replaceAll("[^0-9]", ""));
+        } catch (NumberFormatException t) {
             return 0;
         }
     }
 
     /** Poder de AuraSkills (suma de habilidades) por su API. 0 si no esta. */
-    private int poder(Player p) {
+    int poder(Player p) {
         try {
             Class<?> api = Class.forName("dev.aurelium.auraskills.api.AuraSkillsApi");
             Object inst = api.getMethod("get").invoke(null);

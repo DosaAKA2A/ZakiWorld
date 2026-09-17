@@ -71,6 +71,7 @@ final class ComandoMundos implements TabExecutor {
             case "biomes" -> biomas(quien);
             case "biome" -> irABioma(quien, args);
             case "pregen" -> pregen(quien, args);
+            case "level" -> nivel(quien, args);
             default -> ayuda(quien);
         }
         return true;
@@ -87,6 +88,7 @@ final class ComandoMundos implements TabExecutor {
         linea(q, "/lw biome <biome> [radius]", "busca el más cercano y te lleva");
         linea(q, "/lw pregen start <name> [radius]", "pregenera (sin radio: el borde o el de la config)");
         linea(q, "/lw pregen status|pause|resume|cancel", "");
+        linea(q, "/lw level [player]", "de dónde sale el nivel de sus mobs");
     }
 
     private static void linea(CommandSender q, String uso, String que) {
@@ -110,6 +112,39 @@ final class ComandoMundos implements TabExecutor {
                             ? Component.text("cargado (" + w.getName() + ")", NamedTextColor.GREEN)
                             : Component.text("se carga en el próximo reinicio", NamedTextColor.GOLD)));
         }
+    }
+
+    /**
+     * De donde sale el nivel de los mobs para ese jugador: el marcador del rango tal cual lo
+     * devuelve PlaceholderAPI, el poder de AuraSkills y la cuenta con los valores de la config.
+     * Sirve para ver de un vistazo cual de los dos dispara un nivel que no cuadra.
+     */
+    private void nivel(CommandSender q, String[] args) {
+        MobsLethal mobs = modulo.mobs();
+        if (mobs == null) {
+            decir(q, Component.text("Los mobs de Lethal World no están activos.", NamedTextColor.RED));
+            return;
+        }
+        Player p = args.length >= 2 ? modulo.getServer().getPlayerExact(args[1]) : (q instanceof Player j ? j : null);
+        if (p == null) {
+            linea(q, "/lw level [player]", "el jugador tiene que estar conectado");
+            return;
+        }
+        var n = modulo.getConfig().getConfigurationSection("mobs.nivel");
+        double porRango = n == null ? 2.0 : n.getDouble("por-rango", 2.0);
+        double porNivel = Math.max(1.0, n == null ? 20.0 : n.getDouble("poder-por-nivel", 20.0));
+        double variacion = n == null ? 0.10 : n.getDouble("variacion", 0.10);
+        int maximo = n == null ? 100 : n.getInt("maximo", 100);
+        int rango = mobs.rango(p), poder = mobs.poder(p);
+        double base = rango * porRango + poder / porNivel;
+        int bajo = (int) Math.max(1, Math.min(maximo, Math.round(base * (1 - variacion))));
+        int alto = (int) Math.max(1, Math.min(maximo, Math.round(base * (1 + variacion))));
+
+        decir(q, "Nivel de los mobs para " + p.getName() + ":");
+        linea(q, "  rango " + rango, "marcador: «" + mobs.rangoCrudo(p) + "» × " + porRango + " = " + (rango * porRango));
+        linea(q, "  poder " + poder, "AuraSkills ÷ " + porNivel + " = " + Math.round(poder / porNivel * 10) / 10.0);
+        linea(q, "  nivel " + bajo + "-" + alto, "base " + Math.round(base * 10) / 10.0 + ", variación ±"
+                + Math.round(variacion * 100) + " %, tope " + maximo);
     }
 
     private void listaGeneradores(CommandSender q) {
@@ -384,7 +419,7 @@ final class ComandoMundos implements TabExecutor {
     public List<String> onTabComplete(CommandSender q, Command cmd, String etiqueta, String[] args) {
         List<String> op = new ArrayList<>();
         if (args.length == 1) {
-            op.addAll(List.of("list", "generators", "create", "delete", "tp", "biomes", "biome", "pregen"));
+            op.addAll(List.of("list", "generators", "create", "delete", "tp", "biomes", "biome", "pregen", "level"));
         } else if (args.length == 2 && args[0].equalsIgnoreCase("pregen")) {
             op.addAll(List.of("start", "status", "pause", "resume", "cancel"));
         } else if (args.length == 3 && args[0].equalsIgnoreCase("pregen") && args[1].equalsIgnoreCase("start")) {
@@ -397,6 +432,8 @@ final class ComandoMundos implements TabExecutor {
         } else if (args.length == 3 && args[0].equalsIgnoreCase("create")) {
             op.addAll(modulo.generadores());
         } else if (args.length == 3 && args[0].equalsIgnoreCase("tp")) {
+            for (Player p : modulo.getServer().getOnlinePlayers()) op.add(p.getName());
+        } else if (args.length == 2 && args[0].equalsIgnoreCase("level")) {
             for (Player p : modulo.getServer().getOnlinePlayers()) op.add(p.getName());
         }
         String ultimo = args[args.length - 1].toLowerCase(Locale.ROOT);

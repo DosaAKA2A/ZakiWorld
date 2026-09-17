@@ -397,26 +397,7 @@ ESCALA_MAXIMA = 2.0
 
 # Biomas repintados. Sin shaders: cielo del color, niebla (horizonte) mas clara y apagada,
 # luz del cielo casi blanca y nubes palidas, o el cielo se ve azul con el horizonte rojo.
-PINTURAS = {
-    "panacea/wildflower_bog": {
-        "attributes": {
-            "minecraft:visual/sky_color": "#8E1010",
-            "minecraft:visual/fog_color": "#B8483F",
-            "minecraft:visual/water_fog_color": "#4A0808",
-            "minecraft:visual/sky_light_color": "#FFD6CC",
-            "minecraft:visual/cloud_color": "#FFE6BDB6",
-        },
-        "effects": {
-            "sky_color": 0x8E1010,
-            "fog_color": 0xB8483F,
-            "water_color": 0xB01818,
-            "water_fog_color": 0x4A0808,
-            "grass_color": 0xB3201F,
-            "foliage_color": 0xA51A1A,
-            "dry_foliage_color": 0x7A1E1E,
-        },
-    },
-}
+PINTURAS: dict[str, dict] = {}
 
 
 def limpiar_json(ruta_rel: str, datos):
