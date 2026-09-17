@@ -157,7 +157,7 @@ final class MobsLethal implements Listener {
         for (World w : modulo.getServer().getWorlds()) {
             if (!MundosPlugin.esMundo(w)) continue;
             for (Player p : w.getPlayers()) {
-                if (p.getGameMode() == GameMode.SPECTATOR || p.getGameMode() == GameMode.CREATIVE) continue;
+                if (!cuenta(p)) continue;
                 adoptarCerca(mm, p, radioAdopcion);
                 guarnecer(p);
                 if (cerca(p, radioConteo) >= tope) continue;
@@ -273,11 +273,21 @@ final class MobsLethal implements Listener {
         });
     }
 
+    /**
+     * Si un jugador cuenta para los mobs: los suyos aparecen, los de las estructuras se
+     * adoptan con su nivel y el tope se mide contra el. El espectador nunca cuenta; el
+     * creativo tampoco, salvo que se encienda en la config para probar volando.
+     */
+    private boolean cuenta(Player p) {
+        if (p.getGameMode() == GameMode.SPECTATOR) return false;
+        return p.getGameMode() != GameMode.CREATIVE || cfg().getBoolean("contar-creativo", false);
+    }
+
     private Player masCercano(Location donde, double radio) {
         Player mejor = null;
         double d2 = radio * radio;
         for (Player p : donde.getWorld().getPlayers()) {
-            if (p.getGameMode() == GameMode.SPECTATOR) continue;
+            if (!cuenta(p)) continue;
             double d = p.getLocation().distanceSquared(donde);
             if (d <= d2) {
                 d2 = d;
@@ -594,11 +604,14 @@ final class MobsLethal implements Listener {
                     c("Chamán del Cónclave", EntityType.WITCH, 0x2E8B57),
                     d("Gran Guacamayo", EntityType.PHANTOM, 0xFF4500, MinionAbility.ALARMA)));
 
-    /** Estructuras vacias de Panacea: [estructura, tipo que la guarda, minimo, maximo]. */
-    private static final List<Object[]> GUARNICIONES = List.of(
-            new Object[]{"bracken:dweller_drill", "Leñador Condenado", 3, 4},
-            new Object[]{"bracken:outlander_tent", "Espantapájaros", 2, 3},
-            new Object[]{"bracken:panacea_hut", "Caníbal de la Jungla", 2, 3});
+    /** Estructuras vacias de Panacea y la tropa que las guarda. */
+    private record Puesto(String estructura, String tipo, int minimo, int maximo) {
+    }
+
+    private static final List<Puesto> GUARNICIONES = List.of(
+            new Puesto("bracken:dweller_drill", "Leñador Condenado", 3, 4),
+            new Puesto("bracken:outlander_tent", "Espantapájaros", 2, 3),
+            new Puesto("bracken:panacea_hut", "Caníbal de la Jungla", 2, 3));
 
     /** Crea la carpeta y los tipos que falten, y las tablas si no hay. Nunca pisa lo editado. */
     private void sembrar(MinionRegistry reg) {
@@ -637,14 +650,14 @@ final class MobsLethal implements Listener {
         }
         ConfigurationSection gs = modulo.getConfig().getConfigurationSection("mobs.guarniciones");
         if (gs == null || gs.getKeys(false).isEmpty()) {
-            for (Object[] g : GUARNICIONES) {
-                MinionType t = buscar(reg, (String) g[1]);
+            for (Puesto g : GUARNICIONES) {
+                MinionType t = buscar(reg, g.tipo());
                 if (t == null) continue;
-                String ruta = "mobs.guarniciones." + ((String) g[0]).substring(((String) g[0]).indexOf(':') + 1);
-                modulo.getConfig().set(ruta + ".estructura", g[0]);
+                String ruta = "mobs.guarniciones." + g.estructura().substring(g.estructura().indexOf(':') + 1);
+                modulo.getConfig().set(ruta + ".estructura", g.estructura());
                 modulo.getConfig().set(ruta + ".tipo", t.id());
-                modulo.getConfig().set(ruta + ".minimo", g[2]);
-                modulo.getConfig().set(ruta + ".maximo", g[3]);
+                modulo.getConfig().set(ruta + ".minimo", g.minimo());
+                modulo.getConfig().set(ruta + ".maximo", g.maximo());
                 guardar = true;
             }
         }

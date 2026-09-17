@@ -59,6 +59,9 @@ mobs:
   probabilidad-destacado: 0.05
   # Hostiles sin nivel a esta distancia de un jugador se adoptan.
   radio-adopcion: 40
+  # Quien esta en creativo no cuenta: ni salen mobs a su alrededor ni adopta a los de las
+  # estructuras. En true cuenta igual que uno en supervivencia, para probar volando.
+  contar-creativo: false
   # Ningun mob por encima de esta escala (los gigantes de las estructuras se encogen).
   escala-maxima: 2.0
 

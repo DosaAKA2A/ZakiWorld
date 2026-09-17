@@ -170,4 +170,24 @@ public final class Estilo {
     public static Component nota(String t) {
         return texto("   " + t, APAGADO);
     }
+
+    /**
+     * Una linea suelta de respuesta de un comando (/lw, /lbiomes).
+     *
+     * Delante va el mismo triangulito apagado de la tienda y los menus, y nada mas:
+     * ni negrita ni el nombre del modulo repetido en cada renglon. Quien acaba de
+     * escribir el comando ya sabe quien le contesta, y con el nombre en negrita
+     * delante de cada linea el chat se lee a gritos.
+     */
+    public static Component aviso(Component texto) {
+        return Component.text(" " + FLECHA + " ", APAGADO)
+                .decoration(TextDecoration.ITALIC, false)
+                .append(texto);
+    }
+
+    /** La cabecera que abre una respuesta larga: el nombre del modulo, una sola vez. */
+    public static Component cabecera(String modulo, String que, TextColor marca) {
+        Component base = texto(modulo, marca);
+        return que == null || que.isEmpty() ? base : base.append(texto("  " + que, APAGADO));
+    }
 }

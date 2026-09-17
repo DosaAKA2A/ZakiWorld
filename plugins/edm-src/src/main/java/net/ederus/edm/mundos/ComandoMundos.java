@@ -18,6 +18,7 @@ import org.bukkit.potion.PotionEffect;
 import org.bukkit.potion.PotionEffectType;
 
 import net.ederus.edm.Module;
+import net.ederus.edm.comun.Estilo;
 import io.papermc.paper.registry.RegistryAccess;
 import io.papermc.paper.registry.RegistryKey;
 import net.kyori.adventure.text.Component;
@@ -25,7 +26,6 @@ import net.kyori.adventure.text.event.ClickEvent;
 import net.kyori.adventure.text.event.HoverEvent;
 import net.kyori.adventure.text.format.NamedTextColor;
 import net.kyori.adventure.text.format.TextColor;
-import net.kyori.adventure.text.format.TextDecoration;
 
 /**
  * /lw: todo por comando, sin menu, para que desde Bedrock se haga igual.
@@ -43,9 +43,12 @@ final class ComandoMundos implements TabExecutor {
     }
 
     private void decir(CommandSender a, Component texto) {
-        a.sendMessage(Component.text("Lethal World ", MARCA, TextDecoration.BOLD)
-                .append(Component.text("> ", NamedTextColor.DARK_GRAY))
-                .append(texto.colorIfAbsent(SUAVE)));
+        a.sendMessage(Estilo.aviso(texto.colorIfAbsent(SUAVE)));
+    }
+
+    /** El nombre del modulo, una sola vez, para abrir una respuesta larga. */
+    private void cabecera(CommandSender a, String que) {
+        a.sendMessage(Estilo.cabecera("Lethal World", que, MARCA));
     }
 
     private void decir(CommandSender a, String texto) {
@@ -78,7 +81,7 @@ final class ComandoMundos implements TabExecutor {
     }
 
     private void ayuda(CommandSender q) {
-        decir(q, "Mundos con el generador de Lethal World.");
+        cabecera(q, "mundos con el generador de Bracken procesado");
         linea(q, "/lw list", "mundos creados y si ya estan cargados");
         linea(q, "/lw generators", "generadores disponibles");
         linea(q, "/lw create <name> <generator> [seed]", "crea el mundo (existe tras reiniciar)");

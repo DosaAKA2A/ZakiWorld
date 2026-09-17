@@ -11,10 +11,10 @@ import org.bukkit.command.CommandSender;
 import org.bukkit.command.TabExecutor;
 import org.bukkit.entity.Player;
 
+import net.ederus.edm.comun.Estilo;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
 import net.kyori.adventure.text.format.TextColor;
-import net.kyori.adventure.text.format.TextDecoration;
 
 /**
  * /lbiomes: todo por comando, sin menu, para que desde Bedrock se haga igual.
@@ -31,9 +31,12 @@ final class ComandoBiomas implements TabExecutor {
     }
 
     private void decir(CommandSender a, Component texto) {
-        a.sendMessage(Component.text("Lethal Biomes ", MARCA, TextDecoration.BOLD)
-                .append(Component.text("> ", NamedTextColor.DARK_GRAY))
-                .append(texto.colorIfAbsent(SUAVE)));
+        a.sendMessage(Estilo.aviso(texto.colorIfAbsent(SUAVE)));
+    }
+
+    /** El nombre del modulo, una sola vez, para abrir una respuesta larga. */
+    private void cabecera(CommandSender a, String que) {
+        a.sendMessage(Estilo.cabecera("Lethal Biomes", que, MARCA));
     }
 
     private void decir(CommandSender a, String texto) {
@@ -62,7 +65,7 @@ final class ComandoBiomas implements TabExecutor {
     }
 
     private void ayuda(CommandSender q) {
-        decir(q, "Climas por zona, sin reiniciar.");
+        cabecera(q, "climas por zona, sin reiniciar");
         q.sendMessage(Component.text("  /lbiomes list", NamedTextColor.WHITE).append(Component.text("  climas disponibles", SUAVE)));
         q.sendMessage(Component.text("  /lbiomes zones", NamedTextColor.WHITE).append(Component.text("  zonas creadas y su clima", SUAVE)));
         q.sendMessage(Component.text("  /lbiomes zone create <name> region <wgRegion> [world]", NamedTextColor.WHITE));

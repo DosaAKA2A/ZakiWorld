@@ -45,8 +45,6 @@ public final class MundosPlugin extends Module {
     private static final String PACK = "lethal_world";
     private static final Pattern NOMBRE_VALIDO = Pattern.compile("[a-z0-9_]{1,32}");
 
-    private static MundosPlugin instancia;
-
     private Bitacora bitacora;
     private Pregenerador pregen;
     private MobsLethal mobs;
@@ -54,11 +52,6 @@ public final class MundosPlugin extends Module {
 
     public MundosPlugin(EDMPlugin core) {
         super(core, "mundos", "LethalWorld");
-    }
-
-    /** El modulo si esta cargado, o null. */
-    public static MundosPlugin activo() {
-        return instancia;
     }
 
     /** Los mobs de Lethal World, para consultarlos desde el comando. */
@@ -82,7 +75,6 @@ public final class MundosPlugin extends Module {
         } else {
             getLogger().warning("El comando /lw no esta en el plugin.yml de EDM.");
         }
-        instancia = this;
         pregen = new Pregenerador(this);
         pregen.cargar();
         mobs = new MobsLethal(this);
@@ -103,7 +95,6 @@ public final class MundosPlugin extends Module {
     public void onDisable() {
         if (pregen != null) pregen.apagar();
         if (mobs != null) mobs.parar();
-        instancia = null;
     }
 
     @Override
@@ -176,7 +167,7 @@ public final class MundosPlugin extends Module {
         return key == null ? null : core.getServer().getWorld(key);
     }
 
-    /** Si un mundo es de Lethal World. Lo usan los mobs, las MobCoins y los jefes. */
+    /** Si un mundo es de Lethal World: lo mira el ciclo de mobs en cada vuelta. */
     public static boolean esMundo(World w) {
         return w != null && NAMESPACE.equals(w.getKey().getNamespace());
     }
