@@ -21,16 +21,19 @@ bloques vanilla de todo el servidor.
 """
 from __future__ import annotations
 
+import gzip
+import io
 import json
 import os
 import re
 import shutil
 import sys
+import zlib
 from collections import Counter
 from pathlib import Path
 
 import nbtlib
-from nbtlib import Compound, Double, Float, List, String
+from nbtlib import Compound, Double, Float, Int, List, String
 
 AQUI = Path(__file__).resolve().parent
 EDM = AQUI.parent.parent
@@ -440,13 +443,181 @@ def comprobar_referencias(raiz: Path) -> list[str]:
     rotas = []
     for f in raiz.rglob("*.json"):
         texto = f.read_text(encoding="utf-8")
-        for m in re.finditer(r'"#?(bracken:[a-z0-9_./-]+)"', texto):
+        for m in re.finditer(r'"#?((?:bracken|lethal_world):[a-z0-9_./-]+)"', texto):
             if m.group(1) in existentes or m.group(1) in ROTAS_DE_ORIGEN:
                 continue
             if '"sound_id"' in texto[max(0, m.start() - 20):m.start()]:
                 continue
             rotas.append(f"{m.group(1)} en {f.relative_to(raiz).as_posix()}")
     return rotas
+
+
+# ------------------------------------------------------------------ ruinas Valtury
+
+# Pack comprado (ValturyCreations x xdbeshka): 60 formas de ruina, cada una en tres estados
+# (001-060 peladas, 061-120 con musgo, 121-180 con arboles) y en cinco paletas (ver.1..5).
+# Los .bp son blueprints de Axiom. Nada del pack va al repositorio.
+VALTURY = Path(os.environ.get("LW_VALTURY", EXTERNOS / "valtury" / "BP ruins"))
+NS_RUINAS = "lethal_world"
+PALETAS = {1: "piedra", 2: "pizarra", 3: "arenisca", 4: "arenisca_roja", 5: "prismarina"}
+FORMAS = 60
+# bioma de Panacea -> (paleta, peso de pelada, con musgo, con arboles)
+REPARTO_RUINAS: dict[str, tuple[int, int, int, int]] = {
+    "honeybee_biome": (1, 20, 50, 30),
+    "horsetail_tropics": (1, 10, 40, 50),
+    "hungering_jungle": (1, 10, 30, 60),
+    "ravenous_greenwood": (1, 10, 30, 60),
+    "bamboo_valley": (1, 10, 30, 60),
+    "polypore_plains": (1, 20, 50, 30),
+    "condemned_taiga": (2, 40, 45, 15),
+    "creeper_dominion": (2, 40, 45, 15),
+    "conure_conclave": (2, 40, 45, 15),
+    "quicksand_springs": (3, 70, 25, 5),
+    "crimson_organism": (4, 50, 40, 10),
+    "sweltering_swamp": (5, 10, 50, 40),
+    "wildflower_bog": (5, 10, 50, 40),
+}
+# Reticula y minimo en chunks, como los structure_set de Bracken (una ruina cada ~220 bloques).
+RETICULA_RUINAS = (14, 10)
+AIRE = {"minecraft:air", "minecraft:void_air", "minecraft:cave_air", "minecraft:structure_void"}
+
+
+def leer_bp(f: Path) -> Compound:
+    """Los bloques de un blueprint de Axiom: magia, cabecera NBT, miniatura PNG y cuerpo NBT (gzip)."""
+    datos = f.read_bytes()
+    pos = 4
+
+    def trozo() -> bytes:
+        nonlocal pos
+        n = int.from_bytes(datos[pos:pos + 4], "big")
+        pos += 4
+        t = datos[pos:pos + n]
+        pos += n
+        return t
+
+    trozo()  # cabecera: nombre, autor, conteo
+    trozo()  # miniatura
+    cuerpo = trozo()
+    try:
+        cuerpo = gzip.decompress(cuerpo)
+    except OSError:
+        pass
+    return nbtlib.File.parse(io.BytesIO(cuerpo))
+
+
+def desempaquetar(longs, tam_paleta: int) -> list[int]:
+    """Indices de una seccion 16x16x16 empaquetados como en un chunk (sin cruzar longs)."""
+    bits = max(4, (tam_paleta - 1).bit_length())
+    por_long = 64 // bits
+    mascara = (1 << bits) - 1
+    indices: list[int] = []
+    for l in longs:
+        l = int(l) & ((1 << 64) - 1)
+        for i in range(por_long):
+            indices.append((l >> (i * bits)) & mascara)
+            if len(indices) == 4096:
+                return indices
+    return indices
+
+
+def bp_a_estructura(f: Path) -> nbtlib.File:
+    """Plantilla de estructura vanilla con SOLO los bloques solidos de la ruina: el aire no se
+    escribe, asi que al colocarla el terreno alrededor y por dentro queda como estaba."""
+    cuerpo = leer_bp(f)
+    paleta: list[Compound] = []
+    indice_paleta: dict[str, int] = {}
+    bloques: list[tuple[int, int, int, int]] = []
+    for seccion in cuerpo["BlockRegion"]:
+        estados = seccion["BlockStates"]
+        local = list(estados["palette"])
+        datos = estados.get("data")
+        indices = [0] * 4096 if datos is None else desempaquetar(datos, len(local))
+        sx, sy, sz = int(seccion["X"]) * 16, int(seccion["Y"]) * 16, int(seccion["Z"]) * 16
+        global_ = []
+        for c in local:
+            if str(c["Name"]) in AIRE:
+                global_.append(-1)
+                continue
+            clave = str(c)
+            if clave not in indice_paleta:
+                indice_paleta[clave] = len(paleta)
+                paleta.append(Compound({k: c[k] for k in ("Name", "Properties") if k in c}))
+            global_.append(indice_paleta[clave])
+        for i, pi in enumerate(indices):
+            estado = global_[pi]
+            if estado < 0:
+                continue
+            bloques.append((sx + (i & 15), sy + (i >> 8), sz + ((i >> 4) & 15), estado))
+    if not bloques:
+        raise ValueError(f"{f.name} no tiene bloques")
+    mx, my, mz = (min(b[k] for b in bloques) for k in range(3))
+    tam = [max(b[k] for b in bloques) - m + 1 for k, m in enumerate((mx, my, mz))]
+    return nbtlib.File({
+        "size": List[Int]([Int(t) for t in tam]),
+        "palette": List[Compound](paleta),
+        "blocks": List[Compound]([
+            Compound({"pos": List[Int]([Int(x - mx), Int(y - my), Int(z - mz)]), "state": Int(e)})
+            for x, y, z, e in bloques]),
+        "entities": List[Compound]([]),
+        "DataVersion": Int(int(cuerpo["DataVersion"])),
+    })
+
+
+def construir_ruinas(datapack: Path, cuenta: Counter) -> None:
+    """Convierte las ruinas de las paletas que usa algun bioma y escribe, por bioma, su pool,
+    su estructura (jigsaw de una pieza, apoyada en la superficie y hundida dos bloques, con
+    beard_thin: rellena por debajo en pendiente, nunca corta) y su structure_set."""
+    if not VALTURY.is_dir():
+        print(f"AVISO: sin ruinas Valtury, no encuentro {VALTURY}")
+        return
+    base = datapack / "data" / NS_RUINAS
+    usadas = sorted({p for p, *_ in REPARTO_RUINAS.values()})
+    for p in usadas:
+        destino = base / "structure" / "ruinas" / PALETAS[p]
+        destino.mkdir(parents=True, exist_ok=True)
+        for n in range(1, FORMAS * 3 + 1):
+            bp = VALTURY / f"ver.{p}" / f"ruin_{n:03d}.bp"
+            bp_a_estructura(bp).save(destino / f"ruin_{n:03d}.nbt", gzipped=True)
+            cuenta["ruinas convertidas"] += 1
+
+    for carpeta in ("template_pool/ruinas", "structure", "structure_set"):
+        (base / "worldgen" / carpeta).mkdir(parents=True, exist_ok=True)
+    for bioma, (p, *pesos) in REPARTO_RUINAS.items():
+        elementos = []
+        for estado, peso in enumerate(pesos):
+            if peso <= 0:
+                continue
+            for forma in range(1, FORMAS + 1):
+                n = forma + FORMAS * estado
+                elementos.append({"weight": peso, "element": {
+                    "location": f"{NS_RUINAS}:ruinas/{PALETAS[p]}/ruin_{n:03d}",
+                    "processors": "minecraft:empty",
+                    "projection": "rigid",
+                    "element_type": "minecraft:single_pool_element"}})
+        pool = {"name": f"{NS_RUINAS}:ruinas/{bioma}", "fallback": "minecraft:empty", "elements": elementos}
+        estructura = {
+            "type": "minecraft:jigsaw",
+            "biomes": f"bracken:panacea/{bioma}",
+            "step": "surface_structures",
+            "spawn_overrides": {},
+            "terrain_adaptation": "beard_thin",
+            "start_pool": f"{NS_RUINAS}:ruinas/{bioma}",
+            "size": 1,
+            "start_height": {"absolute": -2},
+            "project_start_to_heightmap": "WORLD_SURFACE_WG",
+            "max_distance_from_center": 128,
+            "use_expansion_hack": False,
+        }
+        conjunto = {
+            "structures": [{"structure": f"{NS_RUINAS}:ruinas_{bioma}", "weight": 1}],
+            "placement": {"type": "minecraft:random_spread", "spacing": RETICULA_RUINAS[0],
+                          "separation": RETICULA_RUINAS[1], "salt": zlib.crc32(f"ruinas_{bioma}".encode()) & 0x7FFFFFFF},
+        }
+        for rel, datos in ((f"template_pool/ruinas/{bioma}.json", pool),
+                           (f"structure/ruinas_{bioma}.json", estructura),
+                           (f"structure_set/ruinas_{bioma}.json", conjunto)):
+            (base / "worldgen" / rel).write_text(json.dumps(datos, indent=1), encoding="utf-8")
+        cuenta["biomas con ruinas"] += 1
 
 
 # Piezas que Bracken v129 ya referencia sin incluirlas: Minecraft las salta sin romper nada.
@@ -529,6 +700,8 @@ def main() -> None:
     for f in sorted(datapack.rglob("*.nbt")):
         if limpiar_estructura(f, textos, cuenta):
             tocadas += 1
+
+    construir_ruinas(datapack, cuenta)
 
     # Indices: EDM no puede listar carpetas dentro de su propio jar, asi que sabe que copiar por aqui.
     (SALIDA / "datapack.index").write_text(
