@@ -368,14 +368,25 @@ public final class MinionManager implements Listener {
     /* Los colores del cartel, aparte para que las dos lineas rimen. */
     private static final net.kyori.adventure.text.format.TextColor HOLO_LABEL =
             net.kyori.adventure.text.format.TextColor.color(0x9A9A9A);
-    private static final net.kyori.adventure.text.format.TextColor HOLO_LEVEL =
-            net.kyori.adventure.text.format.TextColor.color(0xFFD966);
     private static final net.kyori.adventure.text.format.TextColor HOLO_FULL =
             net.kyori.adventure.text.format.TextColor.color(0xE8E8E8);
     private static final net.kyori.adventure.text.format.TextColor HOLO_HURT =
             net.kyori.adventure.text.format.TextColor.color(0xFFB347);
     private static final net.kyori.adventure.text.format.TextColor HOLO_LOW =
             net.kyori.adventure.text.format.TextColor.color(0xFF6B6B);
+
+    /**
+     * El color del nivel, por tramos de 20 y en colores clasicos para que Bedrock lo vea
+     * igual: verde, amarillo, naranja, rojo y rojo oscuro al llegar a los 81-100. Lo mismo
+     * que las estrellas de las armas: de un vistazo se sabe si el bicho es de tu liga.
+     */
+    public static NamedTextColor colorNivel(int nivel) {
+        if (nivel <= 20) return NamedTextColor.GREEN;
+        if (nivel <= 40) return NamedTextColor.YELLOW;
+        if (nivel <= 60) return NamedTextColor.GOLD;
+        if (nivel <= 80) return NamedTextColor.RED;
+        return NamedTextColor.DARK_RED;
+    }
 
     /**
      * El cartel: dos lineas cortas y nada mas. Arriba SOLO el nombre en su color
@@ -394,7 +405,7 @@ public final class MinionManager implements Listener {
         holo.text(type.name()
                 .append(Component.newline())
                 .append(Component.text("Nv. ", HOLO_LABEL))
-                .append(Component.text(level, HOLO_LEVEL))
+                .append(Component.text(level, colorNivel(level)))
                 .append(Component.text("  ❤ ", NamedTextColor.RED))
                 .append(Component.text(hp, left > 0.6 ? HOLO_FULL : left > 0.3 ? HOLO_HURT : HOLO_LOW)));
     }

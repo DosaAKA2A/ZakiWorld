@@ -49,6 +49,7 @@ public final class MundosPlugin extends Module {
 
     private Bitacora bitacora;
     private Pregenerador pregen;
+    private MobsLethal mobs;
     private final List<String> generadores = new ArrayList<>();
 
     public MundosPlugin(EDMPlugin core) {
@@ -79,6 +80,8 @@ public final class MundosPlugin extends Module {
         instancia = this;
         pregen = new Pregenerador(this);
         pregen.cargar();
+        mobs = new MobsLethal(this);
+        mobs.arrancar();
 
         int cargados = 0;
         Map<String, String> creados = mundos();
@@ -94,6 +97,7 @@ public final class MundosPlugin extends Module {
     @Override
     public void onDisable() {
         if (pregen != null) pregen.apagar();
+        if (mobs != null) mobs.parar();
         instancia = null;
     }
 

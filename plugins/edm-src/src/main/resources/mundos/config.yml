@@ -41,5 +41,42 @@ pregen:
   # Si el tick medio pasa de estos ms, frena. 50 ms = 20 TPS justos.
   ms-por-tick-objetivo: 40
 
+# Mobs de Lethal World: tipos de esbirro (se editan en /esb, carpeta "Lethal World · Panacea")
+# que aparecen alrededor de cada jugador segun el bioma donde caen.
+mobs:
+  activos: true
+  # Cada cuanto se intenta hacer aparecer uno por jugador (20 ticks = 1 s).
+  cada-ticks: 40
+  # Mobs de Lethal World como mucho alrededor de cada jugador, contados en este radio.
+  tope-por-jugador: 6
+  radio-conteo: 48
+  distancia-minima: 20
+  distancia-maxima: 40
+  # Los que quedan a mas de esto de cualquier jugador se retiran.
+  retirar-a: 96
+  probabilidad-destacado: 0.05
+
+  # nivel = rango de rankup x por-rango + poder de AuraSkills / poder-por-nivel, +-variacion.
+  # Minimo real: rango 1 sin habilidades = 2. Maximo: rango 20 y poder 1100 = 95 (+10% = 100).
+  nivel:
+    placeholder-rango: "%notranks_rank_number%"
+    por-rango: 2.0
+    poder-por-nivel: 20.0
+    variacion: 0.10
+    extra-destacado: 5
+    maximo: 100
+
+  # MobCoins = lo que ese mob paga en el Survival (UltimateMobCoins/mobcoins.yml)
+  #            x (1 + nivel / nivel-divisor) x multiplicador-mundo (x destacado).
+  # Las paga EDM al que lo mata: pon estos mundos en disabled_worlds de UltimateMobCoins.
+  mobcoins:
+    base-minima: 0.5
+    nivel-divisor: 20
+    multiplicador-mundo: 1.5
+    multiplicador-destacado: 3.0
+
+  # bioma -> tipos. Se escribe sola la primera vez; se puede editar.
+  biomas: {}
+
 # Mundos creados. Lo escribe /lw create; tocarlo a mano tambien vale.
 mundos: {}
