@@ -83,7 +83,7 @@ public final class PhaseBars {
             case 2 -> NamedTextColor.RED;
             default -> NamedTextColor.LIGHT_PURPLE;
         };
-        Component name = Component.text(bossName, accent, TextDecoration.BOLD);
+        Component name = Component.text(bossName, accent);
         Component phase = Component.text("FASE " + roman(index), phaseColor);
         Component sep = Component.text("  ·  ", TextColor.color(0x555555));
         return Component.text("✦ ", accent).append(name).append(sep).append(phase)

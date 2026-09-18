@@ -547,10 +547,24 @@ public final class Hardcore implements Listener {
         if (!cfg().getBoolean("dificultad.niebla-de-noche", true)) return;
         long hora = p.getWorld().getTime();
         if (hora < 13000 || hora > 23000) return;
-        p.addPotionEffect(new PotionEffect(PotionEffectType.DARKNESS, 60, 0, true, false, false));
-        if (random.nextInt(4) == 0) {
-            Compat.spawn(p.getWorld(), Compat.ASH, p.getEyeLocation(), 6, 3.0, 2.0, 3.0, 0.005);
-        }
+
+        // La niebla: ceniza densa alrededor. Esto es lo que se ve SIEMPRE de noche,
+        // y no quita visibilidad: cierra el aire, que es lo que se buscaba.
+        Compat.spawn(p.getWorld(), Compat.ASH, p.getEyeLocation(), 14, 4.0, 3.0, 4.0, 0.004);
+
+        /* La oscuridad va a RACHAS, no continua.
+         *
+         * El efecto DARKNESS de vanilla no es niebla: es el apagon del warden, y
+         * puesto todo el rato deja la pantalla negra y el mundo injugable (Dosa lo
+         * probo y no veia nada). Asi que se usa como lo que funciona: un golpe corto
+         * cada tanto, "la niebla se cierra un momento". En 0 no hay oscuridad
+         * ninguna y la noche queda solo con la ceniza. */
+        int cada = cfg().getInt("dificultad.niebla-oscuridad-cada-segundos", 45);
+        int dura = cfg().getInt("dificultad.niebla-oscuridad-segundos", 3);
+        if (cada <= 0 || dura <= 0) return;
+        if (cordura.estado(p).segundosDentro % cada != 0) return;
+        p.addPotionEffect(new PotionEffect(PotionEffectType.DARKNESS, dura * 20, 0, true, false, false));
+        Compat.soundPlayers(p.getWorld(), p.getLocation(), "ambient.cave", 0.7f, 0.5f);
     }
 
     /**

@@ -225,9 +225,14 @@ hardcore:
     oleada-de-entrada: 0
     # 10. Los mobs suben un nivel por cada tantos minutos que lleves dentro. 0 lo apaga.
     nivel-cada-minutos: 5
-    # 11. De noche se cierra la vista. OJO: es un efecto por jugador, NO un bioma
-    #     repintado: Lethal Biomes pinta zonas y Calamity es infinito.
+    # 11. De noche se cierra el aire con ceniza. OJO: es un efecto por jugador, NO un
+    #     bioma repintado: Lethal Biomes pinta zonas y Calamity es infinito.
     niebla-de-noche: true
+    #     La OSCURIDAD va a rachas, no continua: el efecto de vanilla es el apagon del
+    #     warden y puesto todo el rato deja la pantalla negra. Cada cuantos segundos
+    #     llega una racha y cuanto dura. En 0 la noche queda solo con la ceniza.
+    niebla-oscuridad-cada-segundos: 45
+    niebla-oscuridad-segundos: 3
     # 12. Los cofres de las estructuras salen vacios. APAGADA por Dosa el 2026-09-18.
     cofres-vacios: false
     # 14. Os podeis matar entre vosotros.

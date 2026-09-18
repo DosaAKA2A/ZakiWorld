@@ -103,7 +103,7 @@ public final class Announcer {
         AnomalyType type = event.type();
         AnomalyClass clazz = plugin.registry().classOf(type);
         Component c = Component.text("✦ ", type.color())
-                .append(Component.text(type.display(), type.color(), TextDecoration.BOLD))
+                .append(Component.text(type.display(), type.color()))
                 .append(Component.newline())
                 .append(Component.text(type.tagline(), SOFT))
                 .append(Component.newline())

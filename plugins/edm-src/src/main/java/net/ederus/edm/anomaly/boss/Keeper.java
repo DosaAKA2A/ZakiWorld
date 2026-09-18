@@ -104,7 +104,7 @@ public final class Keeper extends BossFight {
             Compat.setAttribute(w, "attack_damage", 14);
             Compat.setAttribute(w, "movement_speed", 0.32);
             Compat.setAttribute(w, "knockback_resistance", 1.0);
-            w.customName(Component.text("KEEPER", ACCENT, TextDecoration.BOLD));
+            w.customName(Component.text("KEEPER", ACCENT));
             w.setCustomNameVisible(false);
         });
         net.ederus.edm.comun.Tags.markBoss(boss, ID);

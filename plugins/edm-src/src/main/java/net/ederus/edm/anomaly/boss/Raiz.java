@@ -162,7 +162,7 @@ public final class Raiz extends BossFight {
             c.setInvulnerable(true);
             c.setCollidable(false);
             Compat.setAttribute(c, "scale", 2.0);
-            c.customName(Component.text("RAIZ, el Corazón Pálido", ACCENT, TextDecoration.BOLD));
+            c.customName(Component.text("RAIZ, el Corazón Pálido", ACCENT));
             c.setCustomNameVisible(false);
         });
         markMinion(cuerpo);
@@ -177,7 +177,7 @@ public final class Raiz extends BossFight {
                 Compat.spawn(world(), Compat.DUST, p, 2, 0.1, 0.1, 0.1, 0, Compat.dust(CORTEZA, 1.9f)));
         soundAt(at, "entity.creaking.spawn", 1.8f, 0.6f);
         soundAt(at, "block.creaking_heart.spawn", 1.6f, 0.7f);
-        titleNear(Component.text("RAÍZ", ACCENT, TextDecoration.BOLD),
+        titleNear(Component.text("RAÍZ", ACCENT),
                 Component.text("El bosque os ha visto", NamedTextColor.GRAY));
     }
 

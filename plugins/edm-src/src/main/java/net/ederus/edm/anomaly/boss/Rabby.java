@@ -98,7 +98,7 @@ public final class Rabby extends BossFight {
             z.setRemoveWhenFarAway(false);
             z.setCanPickupItems(false);
             z.setShouldBurnInDay(false);
-            z.customName(Component.text("Rabby", ACCENT, TextDecoration.BOLD));
+            z.customName(Component.text("Rabby", ACCENT));
             z.setCustomNameVisible(true);
         });
 

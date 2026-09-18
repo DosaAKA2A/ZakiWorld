@@ -618,8 +618,7 @@ public abstract class BossFight {
      */
     public void announce(Component message) {
         Component line = Component.text("✦ ", accent())
-                .append(Component.text(bossName() + "  ", accent(),
-                        net.kyori.adventure.text.format.TextDecoration.BOLD))
+                .append(Component.text(bossName() + "  ", accent()))
                 .append(message.colorIfAbsent(net.kyori.adventure.text.format.NamedTextColor.GRAY));
         for (Player p : Fx.viewersNear(loc(), 90)) p.sendActionBar(line);
     }
