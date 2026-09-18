@@ -30,13 +30,20 @@ import net.kyori.adventure.text.format.TextDecoration;
 public final class MinasPlugin extends Module {
 
     /*
-     * El ambar de las minas: cobre y oro viejo, dos tonos del mismo lado. El
-     * degradado va solo en la palabra MINAS del titulo; el chat usa el tono plano.
+     * El ambar de las minas: cobre y oro viejo, dos tonos del mismo lado.
+     *
+     * Dos juegos de tonos a proposito. MARCA y CLARO van en el chat y en los lores,
+     * que se leen sobre fondo oscuro, y por eso son claros. El titulo de la ventana
+     * se pinta sobre la barra GRIS CLARO del cofre: ahi un ambar claro se lava y
+     * no se lee, asi que el degradado y la seccion del titulo bajan a cobre y
+     * marron oscuro.
      */
     public static final TextColor MARCA = TextColor.color(0xE8A25C);
     public static final TextColor CLARO = TextColor.color(0xF3D2A8);
-    public static final int DESDE = 0xF5C07A;
-    public static final int HASTA = 0x9A4A1C;
+    /** Los del titulo: sobre la barra clara del cofre. */
+    public static final int DESDE = 0xB8651C;
+    public static final int HASTA = 0x6B330E;
+    public static final TextColor TITULO = TextColor.color(0x5E3A1C);
 
     private static final int MENSAJES_VERSION = 1;
 
@@ -151,9 +158,9 @@ public final class MinasPlugin extends Module {
 
     /** El titulo de las ventanas: el rombo, MINAS en degradado y la seccion detras. */
     public Component titulo(String seccion) {
-        return Component.text("✦ ", MARCA)
+        return Component.text("✦ ", TITULO)
                 .append(Estilo.degradado("MINAS", DESDE, HASTA).decoration(TextDecoration.BOLD, true))
-                .append(Estilo.texto("  " + seccion, MARCA));
+                .append(Estilo.texto("  " + seccion, TITULO));
     }
 
     public void anotar(String... campos) {
