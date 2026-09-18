@@ -26,12 +26,15 @@ anuncio:
 # De la vida y del dano solo cuenta lo que pasa de lo normal (20 y 1): si no,
 # todo el mundo empezaria con puntos de regalo.
 # ---------------------------------------------------------------------------
+# La escala: con estos pesos un jugador de rango 9 sin equipo ronda los 2000, y
+# con el Manto de Calamidad entero pasa de 8000. Se eligio asi porque Dosa queria
+# una cifra con cuerpo, no un numero de dos digitos que no dice nada.
 poder:
-  por-rango: 10
-  por-auraskills: 1
-  por-armadura: 4
-  por-dureza: 6
-  por-vida: 2
-  por-dano: 3
+  por-rango: 200
+  por-auraskills: 20
+  por-armadura: 80
+  por-dureza: 120
+  por-vida: 40
+  por-dano: 60
   # El marcador del que sale el rango de rankup.
   placeholder-rango: "%notranks_rank_number%"

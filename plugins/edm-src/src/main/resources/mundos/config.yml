@@ -191,13 +191,14 @@ hardcore:
   # mundo principal. Se pone con /lw hardcore salida estando en el sitio.
   salida: {}
 
-  # La entrada: un sitio del mundo normal que mete a Calamity al pisarlo. Se pone
-  # con /lw hardcore entrada estando dentro del portal que construya Dosa.
-  entrada: {}
+  # Las dos PUERTAS. Ya no son puntos con radio: son CAJAS, porque una esfera no
+  # encaja en un marco construido. Se marcan con la vara (/lw hardcore wand: golpe
+  # = esquina 1, clic derecho = esquina 2) y se guardan con
+  # /lw hardcore define entrada|salida. Las escribe el plugin, no hace falta tocarlo.
+  puertas: {}
+
   # Donde aparece el que entra. Se pone con /lw hardcore llegada dentro de Calamity.
   llegada: {}
-  # Radio en bloques de las dos zonas.
-  radio-zonas: 3
 
   # Las quince reglas, cada una con su propio interruptor. Poner una en false (o en 0
   # las que son numero) la apaga sin tocar el resto.

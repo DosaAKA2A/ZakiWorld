@@ -437,6 +437,35 @@ final class ComandoMundos implements TabExecutor {
         String sub = args.length >= 2 ? args[1].toLowerCase(Locale.ROOT) : "status";
 
         switch (sub) {
+            case "wand", "vara" -> {
+                if (!(q instanceof Player p)) {
+                    decir(q, Component.text("La vara se entrega en el juego.", NamedTextColor.RED));
+                    return;
+                }
+                p.getInventory().addItem(hc.vara().vara());
+                decir(q, Component.text("Vara entregada: ", NamedTextColor.GREEN)
+                        .append(Component.text("golpe = esquina 1, clic derecho = esquina 2.", SUAVE)));
+            }
+            case "define" -> {
+                if (!(q instanceof Player p)) {
+                    decir(q, Component.text("Eso se define en el juego.", NamedTextColor.RED));
+                    return;
+                }
+                String cual = args.length >= 3 ? args[2].toLowerCase(Locale.ROOT) : "";
+                if (!cual.equals("entrada") && !cual.equals("salida")) {
+                    decir(q, Component.text("Dime cuál: ", NamedTextColor.RED)
+                            .append(Component.text("/lw hardcore define entrada|salida", MARCA)));
+                    return;
+                }
+                String hecho = hc.vara().definir(p, cual);
+                if (hecho == null) {
+                    decir(q, Component.text("Marca las dos esquinas con la vara primero.",
+                            NamedTextColor.RED));
+                    return;
+                }
+                decir(q, Component.text("Puerta de " + cual + ": ", NamedTextColor.GREEN)
+                        .append(Component.text(hecho, MARCA)));
+            }
             case "entrada", "llegada", "salida", "puerta-salida" -> {
                 if (!(q instanceof Player p)) {
                     decir(q, Component.text("Ese punto se marca estando en el sitio.", NamedTextColor.RED));
@@ -509,15 +538,18 @@ final class ComandoMundos implements TabExecutor {
             default -> {
                 cabecera(q, "Calamity y los mundos hardcore");
                 linea(q, "Mundos", String.join(", ", hc.mundos()));
-                for (String punto : List.of("entrada", "llegada", "salida", "puerta-salida")) {
+                linea(q, "puerta de entrada", hc.vara().describir("entrada"));
+                linea(q, "puerta de salida", hc.vara().describir("salida"));
+                for (String punto : List.of("llegada", "salida")) {
                     var donde = hc.punto(punto);
-                    linea(q, punto, donde == null ? "sin marcar"
+                    linea(q, punto == "llegada" ? "aparece en" : "vuelve a",
+                            donde == null ? "sin marcar"
                             : donde.getWorld().getKey() + "  " + donde.getBlockX() + " "
                                     + donde.getBlockY() + " " + donde.getBlockZ());
                 }
-                linea(q, "/lw hardcore entrada", "marca aquí la puerta de ida (en el spawn)");
+                linea(q, "/lw hardcore wand", "la vara: dos esquinas marcan la puerta");
+                linea(q, "/lw hardcore define entrada|salida", "guarda esa caja como puerta");
                 linea(q, "/lw hardcore llegada", "marca aquí donde aparece el que entra");
-                linea(q, "/lw hardcore puerta-salida", "marca aquí la puerta de vuelta (dentro)");
                 linea(q, "/lw hardcore salida", "marca aquí a dónde se vuelve");
                 linea(q, "/lw hardcore frasco|cristal|esencia [player]", "entrega uno");
                 linea(q, "/lw hardcore cordura [valor] [player]", "consulta o la fija");
@@ -535,8 +567,11 @@ final class ComandoMundos implements TabExecutor {
             op.addAll(List.of("list", "generators", "create", "delete", "tp", "biomes", "biome",
                     "pregen", "level", "hardcore"));
         } else if (args.length == 2 && args[0].equalsIgnoreCase("hardcore")) {
-            op.addAll(List.of("status", "menu", "entrada", "llegada", "salida", "puerta-salida",
+            op.addAll(List.of("status", "menu", "wand", "define", "llegada", "salida",
                     "frasco", "cristal", "esencia", "cordura", "tiempo"));
+        } else if (args.length == 3 && args[0].equalsIgnoreCase("hardcore")
+                && args[1].equalsIgnoreCase("define")) {
+            op.addAll(List.of("entrada", "salida"));
         } else if (args.length == 3 && args[0].equalsIgnoreCase("hardcore")
                 && List.of("frasco", "cristal", "esencia", "cordura", "tiempo")
                         .contains(args[1].toLowerCase(Locale.ROOT))) {

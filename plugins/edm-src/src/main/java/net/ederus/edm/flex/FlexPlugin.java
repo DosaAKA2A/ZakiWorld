@@ -39,6 +39,9 @@ public final class FlexPlugin extends Module {
      */
     public static final int MAGENTA = 0xE36BC8;
     public static final int CARMESI = 0x8F1144;
+    /** El magenta de las etiquetas de la ficha, mas claro para que se lea sobre el chat. */
+    public static final net.kyori.adventure.text.format.TextColor MAGENTA_CLARO =
+            net.kyori.adventure.text.format.TextColor.color(0xE9A8DA);
     public static final TextColor MARCA = TextColor.color(0xDD92C0);
 
     private static final int MENSAJES_VERSION = 1;
@@ -118,6 +121,35 @@ public final class FlexPlugin extends Module {
      * mismas comprobaciones que si lo escribiera cada uno a mano. No hay una via
      * corta que se salte nada.
      */
+    /**
+     * El anuncio de /flex power: presumir de poder es lo mismo que presumir de vitrina,
+     * asi que comparte enfriamiento y formato. El numero va en el degradado de la
+     * vitrina y en negrita, que es lo que se quiere que se vea desde lejos.
+     */
+    public void anunciarPoder(Player quien, long total) {
+        long ahora = System.currentTimeMillis();
+        long antes = ultimoAnuncio.getOrDefault(quien.getUniqueId(), 0L);
+        long espera = enfriamiento() * 1000L;
+        if (!quien.hasPermission("ederus.flex.admin") && ahora - antes < espera) {
+            long quedan = (espera - (ahora - antes) + 999) / 1000;
+            di(quien, "enfriamiento", "Podrás volver a mostrarlo en %segundos% s",
+                    "%segundos%", String.valueOf(quedan));
+            return;
+        }
+        ultimoAnuncio.put(quien.getUniqueId(), ahora);
+
+        Component cifra = Estilo.degradado(String.valueOf(total), MAGENTA, CARMESI)
+                .decoration(net.kyori.adventure.text.format.TextDecoration.BOLD, true);
+        Component linea = Estilo.texto(quien.getName(), MARCA)
+                .append(Estilo.texto(" ha flexeado sus ", Estilo.APAGADO))
+                .append(cifra)
+                .append(Estilo.texto(" de Poder.", Estilo.APAGADO));
+
+        for (Player p : core.getServer().getOnlinePlayers()) p.sendMessage(linea);
+        core.getServer().getConsoleSender().sendMessage(
+                quien.getName() + " flexeó " + total + " de Poder.");
+    }
+
     public void anunciar(Player quien, Vitrina vitrina) {
         if (vitrina.vacia()) {
             di(quien, "vacia-para-mostrar", "Tu vitrina está vacía. Pon algo antes de mostrarla.");

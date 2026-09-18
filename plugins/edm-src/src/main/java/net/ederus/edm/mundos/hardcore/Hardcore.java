@@ -82,6 +82,7 @@ public final class Hardcore implements Listener {
 
     private BukkitTask reloj;
     private MenuHardcore menu;
+    private VaraPortales vara;
 
     public Hardcore(MundosPlugin modulo) {
         this.modulo = modulo;
@@ -98,6 +99,10 @@ public final class Hardcore implements Listener {
 
     public MenuHardcore menu() {
         return menu;
+    }
+
+    public VaraPortales vara() {
+        return vara;
     }
 
     private ConfigurationSection cfg() {
@@ -130,6 +135,7 @@ public final class Hardcore implements Listener {
         }
         modulo.getServer().getPluginManager().registerEvents(this, Module.dueno(modulo));
         menu = new MenuHardcore(modulo);
+        vara = new VaraPortales(modulo);
         // Un segundo justo: la cordura se cuenta en segundos y la barra tiene que
         // repintarse a ese ritmo o parpadea contra los avisos de otros plugins.
         reloj = modulo.getServer().getScheduler().runTaskTimer(
@@ -189,26 +195,27 @@ public final class Hardcore implements Listener {
      * no cuesta lo que costaria un listener de movimiento.
      */
     private void vigilarZonas() {
-        Location entrada = punto("entrada");
         Location llegada = punto("llegada");
-        if (entrada != null && llegada != null) {
-            for (Player p : entrada.getWorld().getPlayers()) {
-                if (!cuenta(p) || esHardcore(p)) continue;
-                if (!dentroDe(p, entrada)) continue;
-                long espera = cuarentenaRestante(p);
-                if (espera > 0) {
-                    p.sendActionBar(Component.text(
-                            "Aún no. Vuelve en " + (espera / 60_000 + 1) + " min.", NamedTextColor.RED));
-                    continue;
+        if (llegada != null && vara != null) {
+            for (World w : modulo.getServer().getWorlds()) {
+                if (esHardcore(w)) continue;
+                for (Player p : w.getPlayers()) {
+                    if (!cuenta(p) || !vara.dentro(p, "entrada")) continue;
+                    long espera = cuarentenaRestante(p);
+                    if (espera > 0) {
+                        p.sendActionBar(Component.text(
+                                "Aún no. Vuelve en " + (espera / 60_000 + 1) + " min.", NamedTextColor.RED));
+                        continue;
+                    }
+                    meter(p, llegada);
                 }
-                meter(p, llegada);
             }
         }
-        Location vuelta = punto("puerta-salida");
-        if (vuelta != null) {
-            for (Player p : vuelta.getWorld().getPlayers()) {
-                if (!cuenta(p) || !esHardcore(p)) continue;
-                if (dentroDe(p, vuelta)) sacar(p, "Cruzas de vuelta.");
+        if (vara == null) return;
+        for (World w : modulo.getServer().getWorlds()) {
+            if (!esHardcore(w)) continue;
+            for (Player p : w.getPlayers()) {
+                if (cuenta(p) && vara.dentro(p, "salida")) sacar(p, "Cruzas de vuelta.");
             }
         }
     }
@@ -217,10 +224,10 @@ public final class Hardcore implements Listener {
      * Lo que le queda de castigo por haber muerto dentro, en millis. 0 = puede entrar.
      *
      * Existe para que morir duela mas alla del inventario: sin esto, la muerte era
-     * volver a entrar y seguir, y el mundo dejaba de dar respeto.
+     * volver a entrar y seguir. Apagada de serie (muerte.cuarentena-minutos: 0).
      */
     public long cuarentenaRestante(Player p) {
-        int minutos = cfg().getInt("muerte.cuarentena-minutos", 30);
+        int minutos = cfg().getInt("muerte.cuarentena-minutos", 0);
         if (minutos <= 0) return 0;
         Long murio = muertos.get(p.getUniqueId());
         if (murio == null) return 0;
