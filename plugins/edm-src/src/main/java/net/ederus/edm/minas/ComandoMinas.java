@@ -16,11 +16,14 @@ import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
 
 /**
- * /mina: el menu, y unos pocos atajos para quien prefiere escribir.
+ * /mine: el menu, y unos pocos atajos para quien prefiere escribir.
  *
- * Para el jugador, /mina es la lista de minas a las que puede ir y /mina tp
- * <mina> el viaje directo. Para el staff, /mina es el editor entero; wand, crear
+ * Para el jugador, /mine es la lista de minas a las que puede ir y /mine tp
+ * <mina> el viaje directo. Para el staff, /mine es el editor entero; wand, create
  * y reset existen para no tener que abrir el menu por una cosa suelta.
+ *
+ * Los subcomandos van en ingles, como todos los de Ederus; lo que se lee, en
+ * español.
  */
 public final class ComandoMinas implements CommandExecutor, TabCompleter {
 
@@ -49,7 +52,7 @@ public final class ComandoMinas implements CommandExecutor, TabCompleter {
 
         String uno = args[0].toLowerCase(Locale.ROOT);
         switch (uno) {
-            case "tp", "ir" -> {
+            case "tp" -> {
                 if (args.length < 2) {
                     plugin.menu().abrirJugador(p);
                     return true;
@@ -62,11 +65,11 @@ public final class ComandoMinas implements CommandExecutor, TabCompleter {
                 plugin.viajar(p, m);
                 return true;
             }
-            case "lista", "list" -> {
+            case "list" -> {
                 lista(p);
                 return true;
             }
-            case "ayuda", "help" -> {
+            case "help" -> {
                 ayuda(p, etiqueta);
                 return true;
             }
@@ -78,11 +81,11 @@ public final class ComandoMinas implements CommandExecutor, TabCompleter {
             return true;
         }
         switch (uno) {
-            case "wand", "pico" -> {
+            case "wand" -> {
                 p.getInventory().addItem(plugin.varita().crear());
                 plugin.di(p, "pico-entregado", "Tienes el pico de minas. Izquierdo: esquina 1. Derecho: esquina 2.");
             }
-            case "crear", "create", "nueva" -> {
+            case "create" -> {
                 if (args.length < 2) {
                     ayuda(p, etiqueta);
                     return true;
@@ -91,8 +94,8 @@ public final class ComandoMinas implements CommandExecutor, TabCompleter {
                 Mina m = crearConSeleccion(p, nombre);
                 if (m != null) plugin.menu().abrirFicha(p, m.id());
             }
-            case "reset", "reiniciar" -> {
-                if (args.length < 2 || args[1].equalsIgnoreCase("todas") || args[1].equalsIgnoreCase("all")) {
+            case "reset" -> {
+                if (args.length < 2 || args[1].equalsIgnoreCase("all")) {
                     int n = 0;
                     for (Mina m : plugin.minas().todas()) if (plugin.reinicio().reiniciar(m, "comando")) n++;
                     p.sendMessage(Estilo.aviso(Estilo.texto("Reiniciando " + n + " mina(s).", NamedTextColor.WHITE)));
@@ -127,7 +130,7 @@ public final class ComandoMinas implements CommandExecutor, TabCompleter {
     public Mina crearConSeleccion(Player p, String nombre) {
         Varita.Seleccion s = plugin.varita().de(p);
         if (s == null || !s.completa()) {
-            plugin.di(p, "falta-zona", "Primero marca las dos esquinas con el pico. Lo tienes en /mina o con /mina wand.");
+            plugin.di(p, "falta-zona", "Primero marca las dos esquinas con el pico. Lo tienes en /mine o con /mine wand.");
             return null;
         }
         Mina m = plugin.minas().crear(nombre);
@@ -161,11 +164,11 @@ public final class ComandoMinas implements CommandExecutor, TabCompleter {
         p.sendMessage(Estilo.cabecera("MINAS", null, MinasPlugin.MARCA));
         linea(p, "/" + etiqueta, plugin.esAdmin(p) ? "el editor de minas" : "las minas a las que puedes ir");
         linea(p, "/" + etiqueta + " tp <mina>", "viaja a una mina");
-        linea(p, "/" + etiqueta + " lista", "todas, con lo que queda por picar");
+        linea(p, "/" + etiqueta + " list", "todas, con lo que queda por picar");
         if (plugin.esAdmin(p)) {
             linea(p, "/" + etiqueta + " wand", "el pico de selección");
-            linea(p, "/" + etiqueta + " crear <nombre>", "una mina con la zona marcada");
-            linea(p, "/" + etiqueta + " reset [mina|todas]", "rellena ahora");
+            linea(p, "/" + etiqueta + " create <nombre>", "una mina con la zona marcada");
+            linea(p, "/" + etiqueta + " reset [mina|all]", "rellena ahora");
             linea(p, "/" + etiqueta + " reload", "vuelve a leer minas.yml y los mensajes");
         }
     }
@@ -181,8 +184,8 @@ public final class ComandoMinas implements CommandExecutor, TabCompleter {
         if (!(quien instanceof Player p)) return out;
         String pref = args[args.length - 1].toLowerCase(Locale.ROOT);
         if (args.length == 1) {
-            List<String> subs = new ArrayList<>(List.of("tp", "lista", "ayuda"));
-            if (plugin.esAdmin(p)) subs.addAll(List.of("wand", "crear", "reset", "reload"));
+            List<String> subs = new ArrayList<>(List.of("tp", "list", "help"));
+            if (plugin.esAdmin(p)) subs.addAll(List.of("wand", "create", "reset", "reload"));
             for (String s : subs) if (s.startsWith(pref)) out.add(s);
             if (plugin.esAdmin(p)) {
                 for (Mina m : plugin.minas().todas()) if (m.id().startsWith(pref)) out.add(m.id());
@@ -193,7 +196,7 @@ public final class ComandoMinas implements CommandExecutor, TabCompleter {
             for (Mina m : plugin.minas().todas()) {
                 if (m.id().startsWith(pref) && (plugin.esAdmin(p) || plugin.puedeEntrar(p, m))) out.add(m.id());
             }
-            if (args[0].equalsIgnoreCase("reset") && "todas".startsWith(pref)) out.add("todas");
+            if (args[0].equalsIgnoreCase("reset") && "all".startsWith(pref)) out.add("all");
         }
         return out;
     }

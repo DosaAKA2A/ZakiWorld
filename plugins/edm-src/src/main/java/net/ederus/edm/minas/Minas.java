@@ -17,7 +17,7 @@ import org.bukkit.configuration.file.YamlConfiguration;
  *
  * Es un fichero pensado para leerse: cada mina con su nombre, su caja, su mezcla
  * en partes y sus ajustes. Se puede editar a mano y recargar con /mina reload,
- * pero la idea es no tener que hacerlo: todo sale del menu.
+ * pero la idea es no tener que hacerlo: todo sale del menu de /mine.
  */
 public final class Minas {
 
@@ -50,7 +50,7 @@ public final class Minas {
                 "en PARTES (el porcentaje es partes / total), el intervalo en segundos (0 = sin",
                 "temporizador), el umbral de picado que adelanta el reinicio (0 = apagado), el",
                 "permiso de entrada (sin clave = todos) y el punto de salida.",
-                "Lo normal es editarlo desde /mina; si se toca a mano, /mina reload."));
+                "Lo normal es editarlo desde /mine; si se toca a mano, /mine reload."));
         for (Mina m : minas.values()) {
             m.guardarEn(yml.createSection("minas." + m.id()));
         }

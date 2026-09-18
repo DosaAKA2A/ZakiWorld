@@ -2,7 +2,7 @@
 #
 # Una mina es una caja del mundo que se rellena sola con una mezcla de bloques y
 # que cualquiera con acceso puede picar, este o no protegida por WorldGuard. Se
-# crean y se editan desde /mina, con el pico de seleccion; las minas viven en
+# crean y se editan desde /mine, con el pico de seleccion; las minas viven en
 # minas.yml, en esta misma carpeta.
 
 # Lo picado va directo a la mochila. Lo que no cabe, cae al suelo.

@@ -1,5 +1,5 @@
 name: EDM
-version: '1.61.0'
+version: '1.61.1'
 main: net.ederus.edm.EDMPlugin
 api-version: '1.20'
 author: Iris Studio
@@ -58,10 +58,10 @@ commands:
     usage: /flex [jugador|showcase|power|top]
     aliases: [vitrina]
     permission: ederus.flex
-  mina:
+  mine:
     description: 'Minas de prision: zonas que se rellenan solas y se pican sin permiso de nadie.'
-    usage: /mina [wand|crear|tp|reset|lista|reload]
-    aliases: [minas, mine, mines]
+    usage: /mine [wand|create|tp|reset|list|reload]
+    aliases: [mines, mina, minas]
     permission: ederus.minas.usar
   lbiomes:
     description: Lethal Biomes - climas por zona sin reiniciar

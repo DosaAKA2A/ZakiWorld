@@ -173,7 +173,7 @@ public final class MenuMinas implements Listener {
                         Estilo.accion("Clic para reiniciarlas", MinasPlugin.MARCA)), false));
         v.inv.setItem(L_JUGADOR, MenuUtil.icon(Material.SPYGLASS, MenuUtil.title("Como lo ven ellos", MinasPlugin.MARCA),
                 List.of(
-                        Estilo.texto("La lista que abre /mina a un jugador.", Estilo.APAGADO),
+                        Estilo.texto("La lista que abre /mine a un jugador.", Estilo.APAGADO),
                         Estilo.vacio(),
                         Estilo.accion("Clic para verla", MinasPlugin.MARCA)), false));
     }
@@ -219,7 +219,7 @@ public final class MenuMinas implements Listener {
                         Estilo.linea("Id", m.id(), Estilo.APAGADO),
                         Estilo.vacio(),
                         Estilo.texto("El id no cambia: es el de los", Estilo.APAGADO),
-                        Estilo.texto("placeholders y de /mina tp.", Estilo.APAGADO),
+                        Estilo.texto("placeholders y de /mine tp.", Estilo.APAGADO),
                         Estilo.vacio(),
                         Estilo.accion("Clic para cambiarlo por el chat", MinasPlugin.MARCA)), false));
 
@@ -278,7 +278,7 @@ public final class MenuMinas implements Listener {
                         Estilo.linea("Ahora", m.permiso().isEmpty() ? "todos" : m.permiso(), NamedTextColor.WHITE),
                         Estilo.vacio(),
                         Estilo.texto("Un permiso de LuckPerms: solo quien lo", Estilo.APAGADO),
-                        Estilo.texto("tenga entra y pica. Vacío: todos.", Estilo.APAGADO),
+                        Estilo.texto("tenga entra y pica. none: todos.", Estilo.APAGADO),
                         Estilo.vacio(),
                         Estilo.accion("Clic para escribirlo por el chat", MinasPlugin.MARCA)), false));
 
@@ -422,7 +422,7 @@ public final class MenuMinas implements Listener {
             case L_NUEVA -> {
                 Varita.Seleccion s = plugin.varita().de(p);
                 if (s == null || !s.completa()) {
-                    plugin.di(p, "falta-zona", "Primero marca las dos esquinas con el pico. Lo tienes en /mina o con /mina wand.");
+                    plugin.di(p, "falta-zona", "Primero marca las dos esquinas con el pico. Lo tienes en /mine o con /mine wand.");
                     return;
                 }
                 plugin.di(p, "pide-nombre", "Escribe en el chat el nombre de la mina nueva. (cancelar para salir)");
@@ -470,7 +470,7 @@ public final class MenuMinas implements Listener {
                 }
                 Varita.Seleccion s = plugin.varita().de(p);
                 if (s == null || !s.completa()) {
-                    plugin.di(p, "falta-zona", "Primero marca las dos esquinas con el pico. Lo tienes en /mina o con /mina wand.");
+                    plugin.di(p, "falta-zona", "Primero marca las dos esquinas con el pico. Lo tienes en /mine o con /mine wand.");
                     return;
                 }
                 m.zona(s.mundo(), s.a()[0], s.a()[1], s.a()[2], s.b()[0], s.b()[1], s.b()[2]);
@@ -525,10 +525,10 @@ public final class MenuMinas implements Listener {
                 pintarFicha(v, m);
             }
             case F_PERMISO -> {
-                plugin.di(p, "pide-permiso", "Escribe el permiso para entrar, o ninguno. (cancelar para salir)");
+                plugin.di(p, "pide-permiso", "Escribe el permiso para entrar, o none. (cancelar para salir)");
                 plugin.core().chat().pedir(p, texto -> {
                     String t = texto.trim();
-                    m.permiso(t.equalsIgnoreCase("ninguno") || t.equalsIgnoreCase("todos") ? "" : t);
+                    m.permiso(t.equalsIgnoreCase("none") ? "" : t);
                     plugin.minas().guardar();
                     abrirFicha(p, m.id());
                 }, () -> abrirFicha(p, m.id()));

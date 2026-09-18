@@ -29,14 +29,14 @@ no-poner: '{sin-prefijo}&7En una mina no se ponen bloques, solo se pican.'
 pico-entregado: '&7Tienes el pico de minas. &fIzquierdo&7: esquina 1. &fDerecho&7: esquina 2.'
 esquina-1: '&7Esquina &f1&7: &x&E&8&A&2&5&C%x% %y% %z%'
 esquina-2: '&7Esquina &f2&7: &x&E&8&A&2&5&C%x% %y% %z%'
-zona-lista: '&7Zona lista: &f%medidas%&7, &f%bloques% &7bloques. Ahora &f/mina &7y &fNueva mina&7, o &fAplicar zona &7en una ficha.'
-falta-zona: '&#FF5C5CPrimero marca las dos esquinas con el pico. &7Lo tienes en /mina o con /mina wand.'
+zona-lista: '&7Zona lista: &f%medidas%&7, &f%bloques% &7bloques. Ahora &f/mine &7y &fNueva mina&7, o &fAplicar zona &7en una ficha.'
+falta-zona: '&#FF5C5CPrimero marca las dos esquinas con el pico. &7Lo tienes en /mine o con /mine wand.'
 
 # --- editar ---
 # %mina% %id% %que%
 pide-nombre: '&7Escribe en el chat el nombre de la mina nueva. &8(cancelar para salir)'
 pide-nombre-nuevo: '&7Escribe en el chat el nombre nuevo. &8(cancelar para salir)'
-pide-permiso: '&7Escribe el permiso para entrar, o &fninguno&7. &8(cancelar para salir)'
+pide-permiso: '&7Escribe el permiso para entrar, o &fnone&7. &8(cancelar para salir)'
 pide-intervalo: '&7Escribe cada cuántos segundos se reinicia; &f0 &7apaga el temporizador. &8(cancelar para salir)'
 creada: '&fMina creada: &x&E&8&A&2&5&C%mina% &8(%id%)'
 zona-aplicada: '&fZona aplicada a &x&E&8&A&2&5&C%mina%&f: &7%que%'

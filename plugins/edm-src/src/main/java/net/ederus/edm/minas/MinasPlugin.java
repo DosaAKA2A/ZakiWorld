@@ -22,9 +22,9 @@ import net.kyori.adventure.text.format.TextDecoration;
  * Una mina es una caja del mundo que se rellena sola con una mezcla de bloques
  * y que cualquiera con acceso puede picar, aunque este dentro de una region de
  * WorldGuard. Se crean con el pico de seleccion y se editan enteras desde el
- * menu de /mina: la zona, la mezcla, el reloj, el umbral, la salida y el permiso.
+ * menu de /mine: la zona, la mezcla, el reloj, el umbral, la salida y el permiso.
  *
- * El jugador ve otra cosa: /mina le abre la lista de minas a las que puede ir,
+ * El jugador ve otra cosa: /mine le abre la lista de minas a las que puede ir,
  * con cuanto queda por picar y cuanto falta para el reinicio.
  */
 public final class MinasPlugin extends Module {
@@ -74,12 +74,12 @@ public final class MinasPlugin extends Module {
         reinicio.arrancar();
 
         ComandoMinas comando = new ComandoMinas(this);
-        var cmd = core.getCommand("mina");
+        var cmd = core.getCommand("mine");
         if (cmd != null) {
             cmd.setExecutor(comando);
             cmd.setTabCompleter(comando);
         } else {
-            getLogger().warning("El comando /mina no esta en el plugin.yml de EDM.");
+            getLogger().warning("El comando /mine no esta en el plugin.yml de EDM.");
         }
         getLogger().info("Minas: " + minas.cuantas() + " mina(s) cargadas.");
     }

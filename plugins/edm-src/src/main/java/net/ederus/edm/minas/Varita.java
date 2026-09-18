@@ -67,7 +67,7 @@ public final class Varita implements Listener {
                 Estilo.texto("Clic izquierdo en un bloque: esquina 1.", Estilo.APAGADO),
                 Estilo.texto("Clic derecho en otro: esquina 2.", Estilo.APAGADO),
                 Estilo.vacio(),
-                Estilo.texto("Con las dos, en /mina: Nueva mina o", Estilo.APAGADO),
+                Estilo.texto("Con las dos, en /mine: Nueva mina o", Estilo.APAGADO),
                 Estilo.texto("Aplicar zona en la ficha de una mina.", Estilo.APAGADO),
                 Estilo.vacio(),
                 Estilo.texto("No rompe ni coloca nada. Tíralo cuando acabes.", MenuUtil.DIM)));
@@ -116,7 +116,7 @@ public final class Varita implements Listener {
                 "%n%", primera ? "1" : "2",
                 "%x%", String.valueOf(b.getX()), "%y%", String.valueOf(b.getY()), "%z%", String.valueOf(b.getZ()));
         if (ahora.completa()) {
-            plugin.di(p, "zona-lista", "Zona lista: %medidas%, %bloques% bloques. Ahora /mina y Nueva mina, o Aplicar zona en una ficha.",
+            plugin.di(p, "zona-lista", "Zona lista: %medidas%, %bloques% bloques. Ahora /mine y Nueva mina, o Aplicar zona en una ficha.",
                     "%medidas%", ahora.medidas(), "%bloques%", String.format(java.util.Locale.US, "%,d", ahora.volumen()).replace(',', '.'));
         }
         Compat.sound(b.getWorld(), b.getLocation(), "block.note_block.pling", 0.6f, primera ? 1.2f : 1.6f);
