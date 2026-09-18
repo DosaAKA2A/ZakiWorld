@@ -72,6 +72,12 @@ public final class SepulchralKnight extends BossFight {
         return "Caballero Sepulcral";
     }
 
+    /** El color de marca: lo usan announce() y titleNear() de la base. */
+    @Override
+    public TextColor accent() {
+        return ACCENT;
+    }
+
     /** Multiplicador de dano RECIBIDO. Sube si le rompen las anclas. */
     @Override
     public double incomingDamageMultiplier() {
@@ -248,7 +254,7 @@ public final class SepulchralKnight extends BossFight {
         Location spot = boss.getLocation();
         soundAt(spot, "entity.horse.death", 1.5f, 0.6f);
         soundAt(spot, "entity.ender_dragon.flap", 1.2f, 0.5f);
-        broadcastNear(Component.text("La montura se deshace.", ACCENT));
+        announce(Component.text("La montura se deshace.", ACCENT));
 
         animate(90, tick -> {
             if (!alive()) return;
@@ -355,7 +361,7 @@ public final class SepulchralKnight extends BossFight {
                         Compat.spawn(world(), Compat.EXPLOSION, bl.clone().add(0, 1.4, 0), 2, 0.3, 0.3, 0.3, 0);
                         soundAt(bl, "block.bone_block.break", 1.4f, 0.6f);
                         soundAt(bl, "entity.wither.hurt", 1.0f, 1.4f);
-                        broadcastNear(Component.text("Ancla rota  " + broken[0] + "/3", NamedTextColor.GREEN));
+                        announce(Component.text("Ancla rota  " + broken[0] + "/3", NamedTextColor.GREEN));
                     });
         }
 
@@ -470,7 +476,7 @@ public final class SepulchralKnight extends BossFight {
 
         soundAt(start, "entity.horse.angry", 1.4f, 0.7f);
         soundAt(start, "item.trident.riptide_3", 1.2f, 0.6f);
-        broadcastNear(Component.text("Baja la lanza.", ACCENT));
+        announce(Component.text("Baja la lanza.", ACCENT));
 
         // aviso: el pasillo se pinta 25 ticks antes de que arranque
         animate(25, tick -> {
@@ -542,7 +548,7 @@ public final class SepulchralKnight extends BossFight {
         if (!alive()) return;
         Set<UUID> struck = new HashSet<>();
         soundAt(boss.getLocation(), "entity.horse.angry", 1.4f, 0.6f);
-        broadcastNear(Component.text("Encabrita la montura.", ACCENT));
+        announce(Component.text("Encabrita la montura.", ACCENT));
 
         animate(70, tick -> {
             if (!alive()) return;
@@ -601,7 +607,7 @@ public final class SepulchralKnight extends BossFight {
         markMinion(banner);
         soundAt(spot, "block.wool.place", 1.4f, 0.6f);
         soundAt(spot, "event.raid.horn", 0.7f, 1.4f);
-        broadcastNear(Component.text("Planta el estandarte. Derribenlo.", ACCENT));
+        announce(Component.text("Planta el estandarte. Derribenlo.", ACCENT));
 
         final boolean[] down = {false};
         plugin.anchors().register(banner, 8,
@@ -613,7 +619,7 @@ public final class SepulchralKnight extends BossFight {
                 () -> {
                     down[0] = true;
                     soundAt(banner.getLocation(), "entity.item.break", 1.4f, 0.7f);
-                    broadcastNear(Component.text("Estandarte derribado.", NamedTextColor.GREEN));
+                    announce(Component.text("Estandarte derribado.", NamedTextColor.GREEN));
                 });
 
         animate(300, tick -> {
@@ -675,7 +681,7 @@ public final class SepulchralKnight extends BossFight {
         int count = 2 + random.nextInt(3);
         Location c = boss.getLocation();
         soundAt(c, "event.raid.horn", 1.6f, 0.8f);
-        broadcastNear(Component.text("Llama a sus jinetes.", ACCENT));
+        announce(Component.text("Llama a sus jinetes.", ACCENT));
 
         for (int i = 0; i < count; i++) {
             double a = Math.PI * 2 * i / count;
@@ -788,7 +794,7 @@ public final class SepulchralKnight extends BossFight {
         Set<UUID> cleaved = new HashSet<>();
 
         soundAt(origin, "entity.player.attack.strong", 1.4f, 0.6f);
-        broadcastNear(Component.text("Levanta la lanza.", ACCENT));
+        announce(Component.text("Levanta la lanza.", ACCENT));
 
         animate(80, tick -> {
             if (!alive()) return;
@@ -929,7 +935,7 @@ public final class SepulchralKnight extends BossFight {
         if (!alive()) return;
         Location c = Fx.ground(boss.getLocation(), 4);
         soundAt(c, "block.bone_block.place", 1.6f, 0.5f);
-        broadcastNear(Component.text("Levanta el osario. Adentro.", ACCENT));
+        announce(Component.text("Levanta el osario. Adentro.", ACCENT));
 
         animate(120, tick -> {
             double t = tick / 120.0;
@@ -968,7 +974,7 @@ public final class SepulchralKnight extends BossFight {
         boss.setAbsorptionAmount(shield);
         soundAt(c, "item.shield.block", 1.6f, 0.5f);
         soundAt(c, "block.anvil_use", 1.2f, 0.7f);
-        broadcastNear(Component.text("Alza la guardia. Rompanla a golpes.", ACCENT));
+        announce(Component.text("Alza la guardia. Rompanla a golpes.", ACCENT));
 
         animate(160, tick -> {
             if (!alive()) throw Stop.now();
@@ -992,7 +998,7 @@ public final class SepulchralKnight extends BossFight {
                 Compat.spawn(world(), Compat.EXPLOSION, l, 2, 0.5, 0.5, 0.5, 0);
                 soundAt(l, "item.shield.break", 1.6f, 0.7f);
                 soundAt(l, "block.anvil_destroy", 1.2f, 1.0f);
-                broadcastNear(Component.text("Guardia rota.", NamedTextColor.GREEN));
+                announce(Component.text("Guardia rota.", NamedTextColor.GREEN));
                 throw Stop.now();
             }
         }, () -> {
@@ -1008,7 +1014,7 @@ public final class SepulchralKnight extends BossFight {
      */
     public void earthquake() {
         if (!alive()) return;
-        broadcastNear(Component.text("El suelo empieza a partirse.", ACCENT));
+        announce(Component.text("El suelo empieza a partirse.", ACCENT));
         soundAt(loc(), "entity.ravager.roar", 1.3f, 0.6f);
 
         for (int wave = 0; wave < 4; wave++) {
@@ -1055,7 +1061,7 @@ public final class SepulchralKnight extends BossFight {
         Location mark = Fx.ground(target.getLocation(), 4);
 
         soundAt(loc(), "entity.ravager.step", 1.4f, 0.5f);
-        broadcastNear(Component.text("Se agacha para saltar.", ACCENT));
+        announce(Component.text("Se agacha para saltar.", ACCENT));
 
         animate(110, tick -> {
             if (!alive()) return;
@@ -1111,7 +1117,7 @@ public final class SepulchralKnight extends BossFight {
 
         soundAt(start, "entity.skeleton_horse.death", 1.6f, 0.5f);
         soundAt(start, "entity.horse.angry", 1.4f, 0.6f);
-        broadcastNear(Component.text("El fantasma de la montura vuelve.", ACCENT));
+        announce(Component.text("El fantasma de la montura vuelve.", ACCENT));
         titleNear(Component.text("ULTIMA CARGA", NamedTextColor.RED, TextDecoration.BOLD),
                 Component.text("Apartense del pasillo", NamedTextColor.GRAY));
 
@@ -1237,7 +1243,7 @@ public final class SepulchralKnight extends BossFight {
         int count = 3 + random.nextInt(4);
         Location c = boss.getLocation();
         soundAt(c, "entity.wither.shoot", 1.4f, 0.6f);
-        broadcastNear(Component.text("Recluta a los caidos.", ACCENT));
+        announce(Component.text("Recluta a los caidos.", ACCENT));
 
         for (int i = 0; i < count; i++) {
             double a = Math.PI * 2 * i / count + random.nextDouble() * 0.4;
@@ -1292,19 +1298,7 @@ public final class SepulchralKnight extends BossFight {
         return m.createBlockData();
     }
 
-    private void broadcastNear(Component message) {
-        Component line = Component.text("✦ ", ACCENT)
-                .append(Component.text("Caballero Sepulcral  ", ACCENT, TextDecoration.BOLD))
-                .append(message.colorIfAbsent(NamedTextColor.GRAY));
-        for (Player p : Fx.viewersNear(loc(), 80)) p.sendActionBar(line);
-    }
 
-    private void titleNear(Component title, Component subtitle) {
-        for (Player p : Fx.viewersNear(loc(), 80)) {
-            p.showTitle(Title.title(title, subtitle,
-                    Title.Times.times(Duration.ofMillis(200), Duration.ofMillis(1400), Duration.ofMillis(500))));
-        }
-    }
 
     /** Deja a la vista el numero de esbirros, para el /anomaly info. */
     public int minions() {

@@ -239,7 +239,7 @@ public abstract class BossFight {
         vigilarCaidaDeVida();
 
         int newPhase = PhaseBars.currentPhase(healthFraction(), phaseCount());
-        if (newPhase != phase) {
+        if (newPhase != phase && canChangePhase(phase, newPhase)) {
             int old = phase;
             plugin.bitacora().anotar(
                     "fase",
@@ -320,6 +320,18 @@ public abstract class BossFight {
             if (p.getUniqueId().equals(objetivoActual)) return p;
         }
         return null;
+    }
+
+    /**
+     * Si el jefe puede pasar de fase AHORA MISMO.
+     *
+     * Por omision si: la vida manda y en cuanto baja del umbral se cambia. Lo usa
+     * RAIZ, que no cambia de fase por perder vida sino cuando los jugadores curan su
+     * flor: mientras la flor no este, la vida puede bajar lo que quiera y el jefe se
+     * queda en su fase.
+     */
+    protected boolean canChangePhase(int from, int to) {
+        return true;
     }
 
     /**
@@ -590,6 +602,39 @@ public abstract class BossFight {
         return pool.subList(0, Math.min(n, pool.size()));
     }
 
+    /**
+     * El color de marca del jefe. Lo usan los avisos y los titulos; cada jefe lo
+     * sobreescribe con su ACCENT y asi no tiene que repetir el formato del aviso.
+     */
+    public net.kyori.adventure.text.format.TextColor accent() {
+        return net.kyori.adventure.text.format.NamedTextColor.GRAY;
+    }
+
+    /**
+     * El aviso en la barra de accion de todo el que este mirando la pelea.
+     *
+     * Estaba copiado en los quince jefes con el mismo formato y el mismo radio; aqui
+     * se escribe una vez y cada uno solo pone su nombre y su color.
+     */
+    public void announce(Component message) {
+        Component line = Component.text("✦ ", accent())
+                .append(Component.text(bossName() + "  ", accent(),
+                        net.kyori.adventure.text.format.TextDecoration.BOLD))
+                .append(message.colorIfAbsent(net.kyori.adventure.text.format.NamedTextColor.GRAY));
+        for (Player p : Fx.viewersNear(loc(), 90)) p.sendActionBar(line);
+    }
+
+    /** El titulo grande, para lo que no puede pasar desapercibido. */
+    public void titleNear(Component title, Component subtitle) {
+        for (Player p : Fx.viewersNear(loc(), 90)) {
+            p.showTitle(net.kyori.adventure.title.Title.title(title, subtitle,
+                    net.kyori.adventure.title.Title.Times.times(
+                            java.time.Duration.ofMillis(200),
+                            java.time.Duration.ofMillis(1400),
+                            java.time.Duration.ofMillis(500))));
+        }
+    }
+
     public void sound(String key, float volume, float pitch) {
         Compat.sound(world(), loc(), key, volume, pitch);
     }
@@ -616,6 +661,16 @@ public abstract class BossFight {
      */
     public double incomingDamageMultiplier() {
         return 1.0;
+    }
+
+    /**
+     * Aviso de que el jefe acaba de encajar un golpe, con la cifra ya reescalada.
+     *
+     * Por omision no hace nada. Lo usa RAIZ: mientras VENGA, cada golpe que recibe se
+     * guarda para devolverlo entero. Va aparte del multiplicador porque no se trata de
+     * reducir el dano, sino de APUNTARLO.
+     */
+    public void onIncomingDamage(double amount) {
     }
 
     /**

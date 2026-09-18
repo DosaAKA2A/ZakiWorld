@@ -72,6 +72,12 @@ public final class StormRider extends BossFight {
         return "Storm Rider";
     }
 
+    /** El color de marca: lo usan announce() y titleNear() de la base. */
+    @Override
+    public TextColor accent() {
+        return ACCENT;
+    }
+
     // ------------------------------------------------------------------- aparicion
 
     /**
@@ -455,7 +461,7 @@ public final class StormRider extends BossFight {
         if (!alive()) return;
         Location c = boss.getLocation();
         soundAt(c, "entity.phantom.hurt", 1.8f, 0.4f);
-        broadcastNear(Component.text("Chilla desde arriba.", ACCENT));
+        announce(Component.text("Chilla desde arriba.", ACCENT));
 
         animate(70, tick -> {
             if (!alive()) return;
@@ -506,7 +512,7 @@ public final class StormRider extends BossFight {
         Location mark = Fx.ground(target.getLocation(), 4);
 
         soundAt(loc(), "entity.phantom.swoop", 1.6f, 0.7f);
-        broadcastNear(Component.text("Se lanza en picado.", ACCENT));
+        announce(Component.text("Se lanza en picado.", ACCENT));
 
         // Mientras dura el picado el vuelo automatico se aparta: manda la habilidad.
         diving = true;
@@ -540,7 +546,7 @@ public final class StormRider extends BossFight {
         if (!alive()) return;
         Location eye = Fx.ground(arena, 5);
         soundAt(eye, "entity.phantom.ambient", 1.4f, 0.6f);
-        broadcastNear(Component.text("Se levanta el remolino.", ACCENT));
+        announce(Component.text("Se levanta el remolino.", ACCENT));
 
         animate(140, tick -> {
             double radius = 14 - (tick % 40) * 0.15;
@@ -646,7 +652,7 @@ public final class StormRider extends BossFight {
         Set<UUID> soaked = new HashSet<>();
         Location c = Fx.ground(boss.getLocation(), 4);
         soundAt(c, "entity.player.splash.high_speed", 1.6f, 0.6f);
-        broadcastNear(Component.text("Levanta la marea.", ACCENT));
+        announce(Component.text("Levanta la marea.", ACCENT));
 
         animate(70, tick -> {
             if (tick < 20) {
@@ -753,7 +759,7 @@ public final class StormRider extends BossFight {
     public void tridentFrenzy() {
         if (!alive()) return;
         soundAt(loc(), "item.trident.riptide_3", 1.6f, 1.2f);
-        broadcastNear(Component.text("Se le va la cabeza.", ACCENT));
+        announce(Component.text("Se le va la cabeza.", ACCENT));
 
         animate(80, tick -> {
             if (!alive()) return;
@@ -927,17 +933,5 @@ public final class StormRider extends BossFight {
         return m.createBlockData();
     }
 
-    private void broadcastNear(Component message) {
-        Component line = Component.text("✦ ", ACCENT)
-                .append(Component.text("Storm Rider  ", ACCENT, TextDecoration.BOLD))
-                .append(message.colorIfAbsent(NamedTextColor.GRAY));
-        for (Player p : Fx.viewersNear(loc(), 90)) p.sendActionBar(line);
-    }
 
-    private void titleNear(Component title, Component subtitle) {
-        for (Player p : Fx.viewersNear(loc(), 90)) {
-            p.showTitle(Title.title(title, subtitle,
-                    Title.Times.times(Duration.ofMillis(200), Duration.ofMillis(1400), Duration.ofMillis(500))));
-        }
-    }
 }

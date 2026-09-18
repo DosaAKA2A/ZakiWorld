@@ -83,6 +83,12 @@ public final class Herbola extends BossFight {
         return "Herbola";
     }
 
+    /** El color de marca: lo usan announce() y titleNear() de la base. */
+    @Override
+    public TextColor accent() {
+        return ACCENT;
+    }
+
     // ------------------------------------------------------------------- aparicion
 
     @Override
@@ -411,7 +417,7 @@ public final class Herbola extends BossFight {
             boss.teleport(behind);
             Compat.spawn(world(), Compat.COMPOSTER, behind.clone().add(0, 1, 0), 24, 0.5, 0.7, 0.5, 0);
             soundAt(behind, "block.moss.place", 1.3f, 0.7f);
-            broadcastNear(Component.text("El bosque te alcanza.", ACCENT));
+            announce(Component.text("El bosque te alcanza.", ACCENT));
         }
     }
 
@@ -439,7 +445,7 @@ public final class Herbola extends BossFight {
 
         Location spot = boss.getLocation();
         soundAt(spot, "entity.parrot.imitate.ender_dragon", 1.6f, 1.0f);
-        broadcastNear(Component.text("El loro deja de cantar.", ACCENT));
+        announce(Component.text("El loro deja de cantar.", ACCENT));
 
         animate(70, tick -> {
             if (!alive()) return;
@@ -606,7 +612,7 @@ public final class Herbola extends BossFight {
                 parrot = null;
             }
             plugin.getLogger().info("Herbola: el Cantor estallo; el jardin queda.");
-            broadcastNear(Component.text("Donde lloro, crecio un jardin.", ACCENT));
+            announce(Component.text("Donde lloro, crecio un jardin.", ACCENT));
         });
     }
 
@@ -617,7 +623,7 @@ public final class Herbola extends BossFight {
         if (!alive()) return;
         Location c = Fx.ground(boss.getLocation(), 5);
         soundAt(c, "block.moss.place", 1.6f, 0.5f);
-        broadcastNear(Component.text("Extiende el manto.", ACCENT));
+        announce(Component.text("Extiende el manto.", ACCENT));
 
         animate(80, tick -> {
             if (tick % 8 != 0) return;
@@ -640,7 +646,7 @@ public final class Herbola extends BossFight {
         List<Player> victims = targets(14);
         if (victims.isEmpty() || !alive()) return;
         soundAt(loc(), "block.roots.place", 1.5f, 0.6f);
-        broadcastNear(Component.text("El suelo agarra.", ACCENT));
+        announce(Component.text("El suelo agarra.", ACCENT));
 
         for (Player victim : victims) {
             Location mark = Fx.ground(victim.getLocation(), 4);
@@ -685,7 +691,7 @@ public final class Herbola extends BossFight {
         if (!alive()) return;
         Location c = loc();
         soundAt(c, "block.big_dripleaf.tilt_down", 1.5f, 0.6f);
-        broadcastNear(Component.text("Suelta esporas.", ACCENT));
+        announce(Component.text("Suelta esporas.", ACCENT));
 
         animate(140, tick -> {
             double r = Math.min(9, 2 + tick * 0.1);
@@ -742,7 +748,7 @@ public final class Herbola extends BossFight {
     public void parrotSong() {
         if (!alive() || parrotFreed || parrot == null || !parrot.isValid()) return;
         soundAt(parrot.getLocation(), "entity.parrot.imitate.evoker", 1.4f, 1.2f);
-        broadcastNear(Component.text("El loro le canta.", ACCENT));
+        announce(Component.text("El loro le canta.", ACCENT));
 
         animate(120, tick -> {
             if (!alive() || parrot == null || !parrot.isValid()) throw Stop.now();
@@ -811,7 +817,7 @@ public final class Herbola extends BossFight {
         if (target == null || !Fx.isFightable(target)) return;
 
         soundAt(parrot.getLocation(), "entity.parrot.fly", 1.5f, 0.9f);
-        broadcastNear(Component.text("El loro se lanza.", ACCENT));
+        announce(Component.text("El loro se lanza.", ACCENT));
 
         // Mientras dure el picado vuela el solo: la escolta no le toca la posicion.
         // Y vuela a mano, como la bandada: con setVelocity no se movia del sitio.
@@ -854,7 +860,7 @@ public final class Herbola extends BossFight {
         if (!alive()) return;
         Location c = Fx.ground(boss.getLocation(), 5);
         soundAt(c, "block.sweet_berry_bush.place", 1.5f, 0.6f);
-        broadcastNear(Component.text("Levanta el zarzal.", ACCENT));
+        announce(Component.text("Levanta el zarzal.", ACCENT));
 
         animate(140, tick -> {
             double t = tick / 140.0;
@@ -900,7 +906,7 @@ public final class Herbola extends BossFight {
         if (!alive()) return;
         Location c = Fx.ground(boss.getLocation(), 5);
         soundAt(c, "block.azalea_leaves.place", 1.6f, 0.5f);
-        broadcastNear(Component.text("Crece el bosque.", ACCENT));
+        announce(Component.text("Crece el bosque.", ACCENT));
 
         for (int i = 0; i < 6; i++) {
             double a = Math.PI * 2 * i / 6;
@@ -944,7 +950,7 @@ public final class Herbola extends BossFight {
         int count = 4 + random.nextInt(3);
         Location c = boss.getLocation();
         soundAt(c, "entity.parrot.imitate.ghast", 1.6f, 1.0f);
-        broadcastNear(Component.text("Llama a la bandada.", ACCENT));
+        announce(Component.text("Llama a la bandada.", ACCENT));
 
         for (int i = 0; i < count; i++) {
             double a = Math.PI * 2 * i / count;
@@ -1093,7 +1099,7 @@ public final class Herbola extends BossFight {
         if (!alive()) return;
         Location c = Fx.ground(boss.getLocation(), 5);
         soundAt(c, "item.bone_meal.use", 1.5f, 0.8f);
-        broadcastNear(Component.text("Siembra el terreno.", ACCENT));
+        announce(Component.text("Siembra el terreno.", ACCENT));
 
         List<Location> seeds = new ArrayList<>();
         for (int i = 0; i < 8; i++) {
@@ -1122,17 +1128,5 @@ public final class Herbola extends BossFight {
 
     // ------------------------------------------------------------------ mensajeria
 
-    private void broadcastNear(Component message) {
-        Component line = Component.text("✦ ", ACCENT)
-                .append(Component.text("Herbola  ", ACCENT, TextDecoration.BOLD))
-                .append(message.colorIfAbsent(NamedTextColor.GRAY));
-        for (Player p : Fx.viewersNear(loc(), 90)) p.sendActionBar(line);
-    }
 
-    private void titleNear(Component title, Component subtitle) {
-        for (Player p : Fx.viewersNear(loc(), 90)) {
-            p.showTitle(Title.title(title, subtitle,
-                    Title.Times.times(Duration.ofMillis(200), Duration.ofMillis(1400), Duration.ofMillis(500))));
-        }
-    }
 }

@@ -74,6 +74,12 @@ public final class AbyssalChoir extends BossFight {
         return "Coro Abisal";
     }
 
+    /** El color de marca: lo usan announce() y titleNear() de la base. */
+    @Override
+    public TextColor accent() {
+        return ACCENT;
+    }
+
     // ------------------------------------------------------------------- aparicion
 
     @Override
@@ -160,7 +166,7 @@ public final class AbyssalChoir extends BossFight {
         paintOrder();
 
         soundAt(c, "block.amethyst_block.chime", 1.6f, 0.7f);
-        broadcastNear(Component.text("El coro vuelve a cantar. Miren las luces.", ACCENT));
+        announce(Component.text("El coro vuelve a cantar. Miren las luces.", ACCENT));
     }
 
     /**
@@ -219,7 +225,7 @@ public final class AbyssalChoir extends BossFight {
         Compat.spawn(world(), Compat.BUBBLE_POP, l.clone().add(0, 1, 0), 40, 0.6, 0.6, 0.6, 0,
                 Compat.dust(LIGHT, 1.6f));
         soundAt(l, "block.amethyst_block.chime", 1.5f, 0.8f + nextInOrder * 0.3f);
-        broadcastNear(Component.text("Cantor " + ORDER_NAMES[Math.min(nextInOrder - 1, 2)]
+        announce(Component.text("Cantor " + ORDER_NAMES[Math.min(nextInOrder - 1, 2)]
                 + " apagado.", NamedTextColor.GREEN));
 
         if (nextInOrder >= order.size()) openCore();
@@ -280,7 +286,7 @@ public final class AbyssalChoir extends BossFight {
         if (openUntil > 0 && ticks() >= openUntil) {
             openUntil = 0;
             soundAt(loc(), "block.conduit.deactivate", 1.4f, 0.7f);
-            broadcastNear(Component.text("El nucleo se cierra.", ACCENT));
+            announce(Component.text("El nucleo se cierra.", ACCENT));
             summonChoir();
         }
 
@@ -419,7 +425,7 @@ public final class AbyssalChoir extends BossFight {
         nextInOrder = 0;
         paintOrder();
         soundAt(loc(), "block.amethyst_block.chime", 1.6f, 1.4f);
-        broadcastNear(Component.text("Cambia el orden. Vuelvan a mirar.", ACCENT));
+        announce(Component.text("Cambia el orden. Vuelvan a mirar.", ACCENT));
     }
 
     /** 2. Haz del Nucleo: un rayo largo desde el centro. */
@@ -482,7 +488,7 @@ public final class AbyssalChoir extends BossFight {
         if (!alive()) return;
         Location c = loc();
         soundAt(c, "block.bubble_column.whirlpool_ambient", 1.4f, 0.6f);
-        broadcastNear(Component.text("Los arrastra hacia el centro.", ACCENT));
+        announce(Component.text("Los arrastra hacia el centro.", ACCENT));
 
         animate(100, tick -> {
             Fx.ring(c, 12 - (tick % 40) * 0.2, 30, tick * 0.2, p ->
@@ -503,7 +509,7 @@ public final class AbyssalChoir extends BossFight {
     public void counterSong() {
         if (!alive() || singers.isEmpty()) return;
         soundAt(loc(), "block.amethyst_block.chime", 1.5f, 1.1f);
-        broadcastNear(Component.text("Los cantores responden.", ACCENT));
+        announce(Component.text("Los cantores responden.", ACCENT));
 
         for (int i = 0; i < singers.size(); i++) {
             Guardian g = singers.get(i);
@@ -537,7 +543,7 @@ public final class AbyssalChoir extends BossFight {
         if (!alive()) return;
         Location c = loc();
         soundAt(c, "block.amethyst_block.resonate", 1.7f, 0.4f);
-        broadcastNear(Component.text("Desafina a proposito.", ACCENT));
+        announce(Component.text("Desafina a proposito.", ACCENT));
 
         animate(70, tick -> {
             Fx.sphere(c, 3 + tick * 0.12, 30, p ->
@@ -680,7 +686,7 @@ public final class AbyssalChoir extends BossFight {
     public void echo() {
         if (!alive() || singers.size() < 2) return;
         soundAt(loc(), "entity.enderman.teleport", 1.3f, 1.4f);
-        broadcastNear(Component.text("Los cantores se cambian de sitio.", ACCENT));
+        announce(Component.text("Los cantores se cambian de sitio.", ACCENT));
 
         List<Location> spots = new ArrayList<>();
         for (Guardian g : singers) {
@@ -704,7 +710,7 @@ public final class AbyssalChoir extends BossFight {
         if (!alive()) return;
         Location c = loc();
         soundAt(c, "block.conduit.deactivate", 1.5f, 1.2f);
-        broadcastNear(Component.text("Se hace el silencio.", ACCENT));
+        announce(Component.text("Se hace el silencio.", ACCENT));
 
         animate(80, tick -> {
             if (tick < 55) {
@@ -727,17 +733,5 @@ public final class AbyssalChoir extends BossFight {
 
     // ------------------------------------------------------------------ mensajeria
 
-    private void broadcastNear(Component message) {
-        Component line = Component.text("✦ ", ACCENT)
-                .append(Component.text("Coro Abisal  ", ACCENT, TextDecoration.BOLD))
-                .append(message.colorIfAbsent(NamedTextColor.GRAY));
-        for (Player p : Fx.viewersNear(loc(), 90)) p.sendActionBar(line);
-    }
 
-    private void titleNear(Component title, Component subtitle) {
-        for (Player p : Fx.viewersNear(loc(), 90)) {
-            p.showTitle(Title.title(title, subtitle,
-                    Title.Times.times(Duration.ofMillis(200), Duration.ofMillis(1400), Duration.ofMillis(500))));
-        }
-    }
 }

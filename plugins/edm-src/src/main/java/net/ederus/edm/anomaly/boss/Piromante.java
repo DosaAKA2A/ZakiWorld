@@ -68,6 +68,12 @@ public final class Piromante extends BossFight {
         return "El Piromante";
     }
 
+    /** El color de marca: lo usan announce() y titleNear() de la base. */
+    @Override
+    public TextColor accent() {
+        return ACCENT;
+    }
+
     // ------------------------------------------------------------------- aparicion
 
     @Override
@@ -299,7 +305,7 @@ public final class Piromante extends BossFight {
         busyFor(60);
         Location spot = boss.getLocation();
         soundAt(spot, "entity.blaze.shoot", 1.7f, 0.6f);
-        broadcastNear(Component.text("Se envuelve en brasas.", ACCENT));
+        announce(Component.text("Se envuelve en brasas.", ACCENT));
 
         animate(60, tick -> {
             if (!alive()) return;
@@ -366,7 +372,7 @@ public final class Piromante extends BossFight {
             Compat.spawn(world(), Compat.CAMPFIRE_SIGNAL_SMOKE, l.clone().add(0, 1, 0), 30, 0.6, 0.8, 0.6, 0.05);
             soundAt(l, "block.fire.extinguish", 1.8f, 0.4f);
             extinguishAll();
-            broadcastNear(Component.text("Se apaga, y el fuego con el.", ACCENT));
+            announce(Component.text("Se apaga, y el fuego con el.", ACCENT));
         });
     }
 
@@ -379,7 +385,7 @@ public final class Piromante extends BossFight {
         if (pool.isEmpty()) return;
         Player target = pool.get(0);
         soundAt(loc(), "entity.blaze.shoot", 1.6f, 0.7f);
-        broadcastNear(Component.text("Carga una bola.", ACCENT));
+        announce(Component.text("Carga una bola.", ACCENT));
 
         animate(34, tick -> {
             if (!alive()) throw Stop.now();
@@ -441,7 +447,7 @@ public final class Piromante extends BossFight {
         if (!alive()) return;
         Location c = Fx.ground(boss.getLocation(), 5);
         soundAt(c, "item.firecharge.use", 1.8f, 0.4f);
-        broadcastNear(Component.text("Prende el suelo.", ACCENT));
+        announce(Component.text("Prende el suelo.", ACCENT));
 
         animate(70, tick -> {
             if (tick < 20) {
@@ -471,7 +477,7 @@ public final class Piromante extends BossFight {
         List<Player> victims = targets(30);
         if (victims.isEmpty()) return;
         soundAt(loc(), "entity.ghast.warn", 1.6f, 0.7f);
-        broadcastNear(Component.text("Llama al cielo.", ACCENT));
+        announce(Component.text("Llama al cielo.", ACCENT));
 
         int count = 6 + random.nextInt(3);
         for (int i = 0; i < count; i++) {
@@ -524,7 +530,7 @@ public final class Piromante extends BossFight {
         java.util.Set<UUID> burnedSet = new java.util.HashSet<>();
 
         soundAt(loc(), "block.fire.ambient", 1.7f, 0.5f);
-        broadcastNear(Component.text("Levanta un muro.", ACCENT));
+        announce(Component.text("Levanta un muro.", ACCENT));
 
         animate(60, tick -> {
             if (!alive()) throw Stop.now();
@@ -563,7 +569,7 @@ public final class Piromante extends BossFight {
         if (face.lengthSquared() < 0.01) face = new Vector(1, 0, 0);
         final Vector dir = face.normalize();
         soundAt(origin, "entity.ghast.shoot", 1.7f, 0.8f);
-        broadcastNear(Component.text("Escupe fuego.", ACCENT));
+        announce(Component.text("Escupe fuego.", ACCENT));
 
         animate(50, tick -> {
             if (!alive()) throw Stop.now();
@@ -587,7 +593,7 @@ public final class Piromante extends BossFight {
     public void blazeGuard() {
         if (!alive()) return;
         soundAt(loc(), "entity.blaze.ambient", 1.6f, 0.8f);
-        broadcastNear(Component.text("Llama a las brasas.", ACCENT));
+        announce(Component.text("Llama a las brasas.", ACCENT));
 
         for (int i = 0; i < 2; i++) {
             double a = Math.PI * i + random.nextDouble();
@@ -616,7 +622,7 @@ public final class Piromante extends BossFight {
         List<Player> victims = targets(28);
         if (victims.isEmpty()) return;
         soundAt(loc(), "block.fire.ambient", 1.4f, 1.2f);
-        broadcastNear(Component.text("Te marca.", ACCENT));
+        announce(Component.text("Te marca.", ACCENT));
 
         for (Player victim : victims) {
             victim.sendActionBar(Component.text("Te arde una marca encima.",
@@ -647,7 +653,7 @@ public final class Piromante extends BossFight {
         java.util.Set<UUID> outHit = new java.util.HashSet<>();
         java.util.Set<UUID> inHit = new java.util.HashSet<>();
         soundAt(c, "block.campfire.crackle", 1.6f, 0.5f);
-        broadcastNear(Component.text("Cenizas.", ACCENT));
+        announce(Component.text("Cenizas.", ACCENT));
 
         animate(80, tick -> {
             if (tick < 18) {
@@ -756,7 +762,7 @@ public final class Piromante extends BossFight {
     public void emberTrail() {
         if (!alive()) return;
         soundAt(loc(), "block.fire.ambient", 1.3f, 1.1f);
-        broadcastNear(Component.text("Deja brasas por donde pisa.", ACCENT));
+        announce(Component.text("Deja brasas por donde pisa.", ACCENT));
 
         animate(160, tick -> {
             if (!alive()) throw Stop.now();
@@ -770,17 +776,5 @@ public final class Piromante extends BossFight {
 
     // ------------------------------------------------------------------ mensajeria
 
-    private void broadcastNear(Component message) {
-        Component line = Component.text("✦ ", ACCENT)
-                .append(Component.text("El Piromante  ", ACCENT, TextDecoration.BOLD))
-                .append(message.colorIfAbsent(NamedTextColor.GRAY));
-        for (Player p : Fx.viewersNear(loc(), 90)) p.sendActionBar(line);
-    }
 
-    private void titleNear(Component title, Component subtitle) {
-        for (Player p : Fx.viewersNear(loc(), 90)) {
-            p.showTitle(Title.title(title, subtitle,
-                    Title.Times.times(Duration.ofMillis(200), Duration.ofMillis(1400), Duration.ofMillis(500))));
-        }
-    }
 }

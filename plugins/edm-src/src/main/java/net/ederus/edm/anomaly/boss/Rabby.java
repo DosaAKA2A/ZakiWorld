@@ -80,6 +80,12 @@ public final class Rabby extends BossFight {
         return "Rabby";
     }
 
+    /** El color de marca: lo usan announce() y titleNear() de la base. */
+    @Override
+    public TextColor accent() {
+        return ACCENT;
+    }
+
     // ------------------------------------------------------------------- aparicion
 
     @Override
@@ -262,7 +268,7 @@ public final class Rabby extends BossFight {
             Compat.spawn(world(), Compat.FLASH, l.clone().add(0, 1, 0), 1);
             Compat.spawn(world(), Compat.FIREWORK_SPARK, l.clone().add(0, 1, 0), 60, 0.8, 0.8, 0.8, 0.25);
             soundAt(l, "entity.firework_rocket.large_blast", 1.6f, 0.8f);
-            broadcastNear(Component.text("Rabby se levanta el sombrero y se apaga.", ACCENT));
+            announce(Component.text("Rabby se levanta el sombrero y se apaga.", ACCENT));
         });
     }
 
@@ -285,7 +291,7 @@ public final class Rabby extends BossFight {
         java.util.Set<UUID> hitSet = new java.util.HashSet<>();
 
         soundAt(from, "entity.player.attack.sweep", 1.5f, 1.4f);
-        broadcastNear(Component.text("Desaparece del sitio.", ACCENT));
+        announce(Component.text("Desaparece del sitio.", ACCENT));
 
         animate(40, tick -> {
             if (!alive()) throw Stop.now();
@@ -336,7 +342,7 @@ public final class Rabby extends BossFight {
         if (!alive() || !angry) return;
         Location mark = Fx.ground(boss.getLocation(), 4);
         soundAt(mark, "entity.player.attack.strong", 1.5f, 0.8f);
-        broadcastNear(Component.text("Salta.", ACCENT));
+        announce(Component.text("Salta.", ACCENT));
 
         animate(70, tick -> {
             if (!alive()) throw Stop.now();
@@ -382,7 +388,7 @@ public final class Rabby extends BossFight {
         if (!alive() || !angry) return;
         int blows = concentrated ? 12 : 8;
         soundAt(loc(), "entity.player.attack.strong", 1.4f, 1.3f);
-        broadcastNear(Component.text("Ráfaga.", ACCENT));
+        announce(Component.text("Ráfaga.", ACCENT));
 
         for (int i = 0; i < blows; i++) {
             later(i * 4, () -> {
@@ -488,7 +494,7 @@ public final class Rabby extends BossFight {
         List<Player> pool = targets(30);
         if (pool.isEmpty()) return;
         soundAt(loc(), "entity.enderman.teleport", 1.4f, 1.0f);
-        broadcastNear(Component.text("Se mueve más rápido de lo que se ve.", ACCENT));
+        announce(Component.text("Se mueve más rápido de lo que se ve.", ACCENT));
 
         int jumps = Math.min(4, Math.max(2, pool.size()));
         for (int i = 0; i < jumps; i++) {
@@ -528,7 +534,7 @@ public final class Rabby extends BossFight {
         }
         Location mark = Fx.ground(target.getLocation(), 5);
         soundAt(loc(), "item.trident.riptide_3", 1.5f, 0.8f);
-        broadcastNear(Component.text("Se va para arriba.", ACCENT));
+        announce(Component.text("Se va para arriba.", ACCENT));
 
         animate(80, tick -> {
             if (!alive()) throw Stop.now();
@@ -629,7 +635,7 @@ public final class Rabby extends BossFight {
         if (!alive()) return;
         glowBody(null);
         soundAt(loc(), "block.beacon.deactivate", 1.2f, 0.7f);
-        broadcastNear(Component.text("Suelta el aire.", ACCENT));
+        announce(Component.text("Suelta el aire.", ACCENT));
     }
 
     /**
@@ -736,7 +742,7 @@ public final class Rabby extends BossFight {
         if (!alive() || !angry) return;
         Location c = Fx.ground(boss.getLocation(), 4);
         soundAt(c, "entity.player.attack.strong", 1.6f, 0.6f);
-        broadcastNear(Component.text("Parte el suelo de un puñetazo.", ACCENT));
+        announce(Component.text("Parte el suelo de un puñetazo.", ACCENT));
         java.util.Set<UUID> swept = new java.util.HashSet<>();
 
         animate(60, tick -> {
@@ -768,7 +774,7 @@ public final class Rabby extends BossFight {
         if (!alive() || !angry) return;
         Location l = boss.getLocation();
         soundAt(l, "entity.player.attack.nodamage", 1.4f, 1.5f);
-        broadcastNear(Component.text("Se esta riendo de ustedes.", ACCENT));
+        announce(Component.text("Se esta riendo de ustedes.", ACCENT));
         Compat.apply(boss, "speed", 160, 2);
         Compat.apply(boss, "strength", 160, 0);
         Compat.spawn(world(), Compat.FIREWORK_SPARK, l.clone().add(0, 2.2, 0), 14, 0.4, 0.3, 0.4, 0.06);
@@ -783,7 +789,7 @@ public final class Rabby extends BossFight {
     /** 14. Tromba Final: tres embestidas seguidas por toda la arena, sin respirar. */
     public void finalRush() {
         if (!alive() || !angry) return;
-        broadcastNear(Component.text("No piensa parar.", ACCENT));
+        announce(Component.text("No piensa parar.", ACCENT));
         List<Player> pool = new ArrayList<>(targets(30));
         if (pool.isEmpty()) return;
 
@@ -816,17 +822,5 @@ public final class Rabby extends BossFight {
 
     // ------------------------------------------------------------------ mensajeria
 
-    private void broadcastNear(Component message) {
-        Component line = Component.text("✦ ", ACCENT)
-                .append(Component.text("Rabby  ", ACCENT, TextDecoration.BOLD))
-                .append(message.colorIfAbsent(NamedTextColor.GRAY));
-        for (Player p : Fx.viewersNear(loc(), 90)) p.sendActionBar(line);
-    }
 
-    private void titleNear(Component title, Component subtitle) {
-        for (Player p : Fx.viewersNear(loc(), 90)) {
-            p.showTitle(Title.title(title, subtitle,
-                    Title.Times.times(Duration.ofMillis(200), Duration.ofMillis(1400), Duration.ofMillis(500))));
-        }
-    }
 }

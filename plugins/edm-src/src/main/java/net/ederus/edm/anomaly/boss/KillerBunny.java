@@ -75,6 +75,12 @@ public final class KillerBunny extends BossFight {
         return "Conejo Asesino";
     }
 
+    /** El color de marca: lo usan announce() y titleNear() de la base. */
+    @Override
+    public TextColor accent() {
+        return ACCENT;
+    }
+
     // ------------------------------------------------------------------- aparicion
 
     @Override
@@ -293,7 +299,7 @@ public final class KillerBunny extends BossFight {
 
         Location spot = boss.getLocation();
         soundAt(spot, "entity.rabbit.attack", 1.6f, 0.4f);
-        broadcastNear(Component.text("Se le ponen los ojos rojos.", ACCENT));
+        announce(Component.text("Se le ponen los ojos rojos.", ACCENT));
 
         animate(60, tick -> {
             if (!alive()) return;
@@ -396,7 +402,7 @@ public final class KillerBunny extends BossFight {
         if (!alive()) return;
         Location l = boss.getLocation();
         soundAt(l, "entity.rabbit.jump", 1.4f, 0.7f);
-        broadcastNear(Component.text("Se parte en varios.", ACCENT));
+        announce(Component.text("Se parte en varios.", ACCENT));
 
         animate(30, tick -> {
             if (!alive()) return;
@@ -467,7 +473,7 @@ public final class KillerBunny extends BossFight {
         if (target == null || !alive()) return;
 
         soundAt(loc(), "block.rooted_dirt.break", 1.4f, 0.7f);
-        broadcastNear(Component.text("Se mete bajo tierra.", ACCENT));
+        announce(Component.text("Se mete bajo tierra.", ACCENT));
 
         animate(70, tick -> {
             if (!alive()) return;
@@ -585,7 +591,7 @@ public final class KillerBunny extends BossFight {
         // habilidad al resto: ahora la horda se reparte y cada copia caza al suyo.
         List<Player> marks = pickTargets(Math.max(1, copies.size()));
         if (marks.isEmpty()) return;
-        broadcastNear(Component.text("Se reparten la caza.", ACCENT));
+        announce(Component.text("Se reparten la caza.", ACCENT));
         for (Player m : marks) {
             m.sendActionBar(Component.text("Una viene a por ti.", NamedTextColor.RED, TextDecoration.BOLD));
         }
@@ -616,7 +622,7 @@ public final class KillerBunny extends BossFight {
     public void frenzy() {
         if (!alive()) return;
         soundAt(boss.getLocation(), "entity.rabbit.jump", 1.5f, 1.5f);
-        broadcastNear(Component.text("Se aceleran todas.", ACCENT));
+        announce(Component.text("Se aceleran todas.", ACCENT));
 
         animate(120, tick -> {
             if (!alive()) throw Stop.now();
@@ -682,7 +688,7 @@ public final class KillerBunny extends BossFight {
             holes.add(Fx.ground(c.clone().add(Math.cos(a) * d, 0, Math.sin(a) * d), 5));
         }
         soundAt(c, "block.rooted_dirt.break", 1.5f, 0.6f);
-        broadcastNear(Component.text("Agujerea el suelo.", ACCENT));
+        announce(Component.text("Agujerea el suelo.", ACCENT));
 
         animate(160, tick -> {
             for (Location h : holes) {
@@ -738,7 +744,7 @@ public final class KillerBunny extends BossFight {
         if (dir.lengthSquared() < 0.01) return;
         final Vector run = dir.normalize();
 
-        broadcastNear(Component.text("La horda arranca.", ACCENT));
+        announce(Component.text("La horda arranca.", ACCENT));
         soundAt(start, "entity.rabbit.jump", 1.6f, 0.7f);
 
         animate(70, tick -> {
@@ -771,7 +777,7 @@ public final class KillerBunny extends BossFight {
         reveal(6);
         Set<UUID> struck = new HashSet<>();
         soundAt(loc(), "entity.rabbit.jump", 1.6f, 0.5f);
-        broadcastNear(Component.text("Salta hasta perderse de vista.", ACCENT));
+        announce(Component.text("Salta hasta perderse de vista.", ACCENT));
 
         animate(100, tick -> {
             if (!alive()) return;
@@ -824,10 +830,10 @@ public final class KillerBunny extends BossFight {
         pruneCopies();
         int room = MAX_COPIES - copies.size();
         if (room <= 0) {
-            broadcastNear(Component.text("Ya no le caben más.", ACCENT));
+            announce(Component.text("Ya no le caben más.", ACCENT));
             return;
         }
-        broadcastNear(Component.text("Se parte entera.", ACCENT));
+        announce(Component.text("Se parte entera.", ACCENT));
         soundAt(loc(), "entity.rabbit.attack", 1.7f, 0.4f);
 
         animate(60, tick -> {
@@ -881,7 +887,7 @@ public final class KillerBunny extends BossFight {
         if (prey == null || !prey.isValid()) return;
 
         soundAt(loc(), "entity.rabbit.hurt", 1.3f, 0.6f);
-        broadcastNear(Component.text("Se esta comiendo a una de las suyas.", ACCENT));
+        announce(Component.text("Se esta comiendo a una de las suyas.", ACCENT));
 
         animate(50, tick -> {
             if (!alive() || !prey.isValid()) throw Stop.now();
@@ -915,7 +921,7 @@ public final class KillerBunny extends BossFight {
         pruneCopies();
         if (!alive() || copies.isEmpty()) return;
         soundAt(loc(), "entity.rabbit.jump", 1.2f, 1.5f);
-        broadcastNear(Component.text("Se cambian de sitio.", ACCENT));
+        announce(Component.text("Se cambian de sitio.", ACCENT));
 
         animate(60, tick -> {
             if (!alive()) throw Stop.now();
@@ -965,17 +971,5 @@ public final class KillerBunny extends BossFight {
         return m.createBlockData();
     }
 
-    private void broadcastNear(Component message) {
-        Component line = Component.text("✦ ", ACCENT)
-                .append(Component.text("Conejo Asesino  ", ACCENT, TextDecoration.BOLD))
-                .append(message.colorIfAbsent(NamedTextColor.GRAY));
-        for (Player p : Fx.viewersNear(loc(), 80)) p.sendActionBar(line);
-    }
 
-    private void titleNear(Component title, Component subtitle) {
-        for (Player p : Fx.viewersNear(loc(), 80)) {
-            p.showTitle(Title.title(title, subtitle,
-                    Title.Times.times(Duration.ofMillis(200), Duration.ofMillis(1400), Duration.ofMillis(500))));
-        }
-    }
 }

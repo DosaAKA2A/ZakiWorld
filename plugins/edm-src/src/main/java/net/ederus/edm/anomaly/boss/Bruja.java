@@ -62,6 +62,12 @@ public final class Bruja extends BossFight {
         return "Bruja";
     }
 
+    /** El color de marca: lo usan announce() y titleNear() de la base. */
+    @Override
+    public TextColor accent() {
+        return ACCENT;
+    }
+
     // ------------------------------------------------------------------- aparicion
 
     @Override
@@ -265,7 +271,7 @@ public final class Bruja extends BossFight {
 
         Location spot = boss.getLocation();
         soundAt(spot, "entity.witch.hurt", 1.6f, 0.6f);
-        broadcastNear(Component.text("Le suelta la correa al sapo.", ACCENT));
+        announce(Component.text("Le suelta la correa al sapo.", ACCENT));
 
         animate(70, tick -> {
             if (!alive()) return;
@@ -392,7 +398,7 @@ public final class Bruja extends BossFight {
                 spawned.remove(toad);
                 Fx.safeRemove(toad);
                 toad = null;
-                broadcastNear(Component.text("El sapo se marcha solo, dando brincos.", ACCENT));
+                announce(Component.text("El sapo se marcha solo, dando brincos.", ACCENT));
             }
         });
     }
@@ -404,7 +410,7 @@ public final class Bruja extends BossFight {
         List<Player> victims = targets(22);
         if (victims.isEmpty() || !alive()) return;
         soundAt(loc(), "entity.witch.throw", 1.5f, 0.7f);
-        broadcastNear(Component.text("Lanza sus pocimas.", ACCENT));
+        announce(Component.text("Lanza sus pocimas.", ACCENT));
 
         int thrown = 0;
         for (Player victim : victims) {
@@ -442,7 +448,7 @@ public final class Bruja extends BossFight {
         if (!alive()) return;
         Location c = Fx.ground(boss.getLocation(), 5);
         soundAt(c, "block.brewing_stand.brew", 1.6f, 0.4f);
-        broadcastNear(Component.text("Planta el caldero y lo pone a hervir.", ACCENT));
+        announce(Component.text("Planta el caldero y lo pone a hervir.", ACCENT));
         placeCauldron(c.clone().add(1.5, 0, 0), 160);
 
         List<Location> puddles = new ArrayList<>();
@@ -511,7 +517,7 @@ public final class Bruja extends BossFight {
     public void toadSong() {
         if (!alive() || toadFreed || toad == null || !toad.isValid()) return;
         soundAt(toad.getLocation(), "entity.frog.ambient", 1.5f, 0.5f);
-        broadcastNear(Component.text("El sapo le croa.", ACCENT));
+        announce(Component.text("El sapo le croa.", ACCENT));
 
         animate(120, tick -> {
             if (!alive() || toad == null || !toad.isValid()) throw Stop.now();
@@ -532,7 +538,7 @@ public final class Bruja extends BossFight {
         if (face.lengthSquared() < 0.01) face = new Vector(1, 0, 0);
         final Vector dir = face.normalize();
         soundAt(origin, "entity.witch.celebrate", 1.8f, 0.6f);
-        broadcastNear(Component.text("Se rie de ustedes.", ACCENT));
+        announce(Component.text("Se rie de ustedes.", ACCENT));
 
         animate(30, tick -> {
             if (!alive()) throw Stop.now();
@@ -557,7 +563,7 @@ public final class Bruja extends BossFight {
         Location c = Fx.ground(boss.getLocation(), 4);
         java.util.Set<java.util.UUID> scalded = new java.util.HashSet<>();
         soundAt(c, "block.lava.extinguish", 1.4f, 0.7f);
-        broadcastNear(Component.text("El brebaje hierve de golpe.", ACCENT));
+        announce(Component.text("El brebaje hierve de golpe.", ACCENT));
 
         animate(60, tick -> {
             if (tick < 15) {
@@ -591,7 +597,7 @@ public final class Bruja extends BossFight {
         if (target == null) return;
         Location mark = Fx.ground(target.getLocation(), 4);
         soundAt(toad.getLocation(), "entity.frog.ambient", 1.6f, 0.4f);
-        broadcastNear(Component.text("El sapo toma carrerilla.", ACCENT));
+        announce(Component.text("El sapo toma carrerilla.", ACCENT));
 
         animate(60, tick -> {
             if (toad == null || !toad.isValid()) throw Stop.now();
@@ -665,7 +671,7 @@ public final class Bruja extends BossFight {
         List<Player> victims = targets();
         if (victims.isEmpty()) return;
         soundAt(loc(), "entity.witch.throw", 1.5f, 0.5f);
-        broadcastNear(Component.text("Llueven sapos.", ACCENT));
+        announce(Component.text("Llueven sapos.", ACCENT));
 
         int count = 5 + random.nextInt(3);
         for (int i = 0; i < count; i++) {
@@ -712,7 +718,7 @@ public final class Bruja extends BossFight {
         if (!alive()) return;
         Location c = loc();
         soundAt(c, "entity.witch.throw", 1.5f, 0.4f);
-        broadcastNear(Component.text("Suelta el brebaje oscuro.", ACCENT));
+        announce(Component.text("Suelta el brebaje oscuro.", ACCENT));
 
         animate(140, tick -> {
             double r = Math.min(9, 2 + tick * 0.1);
@@ -779,7 +785,7 @@ public final class Bruja extends BossFight {
         if (!alive()) return;
         Location c = boss.getLocation().add(0, 2, 0);
         soundAt(c, "entity.bat.takeoff", 1.6f, 0.6f);
-        broadcastNear(Component.text("Suelta a sus murcielagos.", ACCENT));
+        announce(Component.text("Suelta a sus murcielagos.", ACCENT));
 
         List<Bat> bats = new ArrayList<>();
         for (int i = 0; i < 8; i++) {
@@ -828,7 +834,7 @@ public final class Bruja extends BossFight {
     public void finalBrew() {
         if (!alive()) return;
         soundAt(loc(), "entity.witch.throw", 1.7f, 0.4f);
-        broadcastNear(Component.text("Vacia el caldero entero.", ACCENT));
+        announce(Component.text("Vacia el caldero entero.", ACCENT));
 
         for (int wave = 0; wave < 3; wave++) {
             later(wave * 30, () -> {
@@ -862,7 +868,7 @@ public final class Bruja extends BossFight {
     public void bitterSip() {
         if (!alive()) return;
         soundAt(loc(), "entity.generic.drink", 1.5f, 0.7f);
-        broadcastNear(Component.text("Bebe del caldero.", ACCENT));
+        announce(Component.text("Bebe del caldero.", ACCENT));
 
         animate(40, tick -> {
             if (!alive()) throw Stop.now();
@@ -893,7 +899,7 @@ public final class Bruja extends BossFight {
         List<Player> pool = targets(28);
         if (pool.isEmpty()) return;
         soundAt(loc(), "entity.illusioner.cast_spell", 1.6f, 0.7f);
-        broadcastNear(Component.text("Traza un rayo.", ACCENT));
+        announce(Component.text("Traza un rayo.", ACCENT));
 
         Location from = boss.getEyeLocation();
         java.util.Set<java.util.UUID> chained = new java.util.HashSet<>();
@@ -931,7 +937,7 @@ public final class Bruja extends BossFight {
         if (!alive()) return;
         Location c = Fx.ground(boss.getLocation(), 5);
         soundAt(c, "block.enchantment_table.use", 1.6f, 0.6f);
-        broadcastNear(Component.text("Dibuja runas.", ACCENT));
+        announce(Component.text("Dibuja runas.", ACCENT));
 
         animate(160, tick -> {
             if (tick % 2 == 0) {
@@ -966,7 +972,7 @@ public final class Bruja extends BossFight {
         List<Player> pool = targets(18);
         if (pool.isEmpty()) return;
         soundAt(loc(), "entity.evoker.prepare_attack", 1.5f, 0.8f);
-        broadcastNear(Component.text("Cierra la mano.", ACCENT));
+        announce(Component.text("Cierra la mano.", ACCENT));
 
         for (Player victim : pool) {
             animate(70, tick -> {
@@ -994,17 +1000,5 @@ public final class Bruja extends BossFight {
 
     // ------------------------------------------------------------------ mensajeria
 
-    private void broadcastNear(Component message) {
-        Component line = Component.text("✦ ", ACCENT)
-                .append(Component.text("Bruja  ", ACCENT, TextDecoration.BOLD))
-                .append(message.colorIfAbsent(NamedTextColor.GRAY));
-        for (Player p : Fx.viewersNear(loc(), 90)) p.sendActionBar(line);
-    }
 
-    private void titleNear(Component title, Component subtitle) {
-        for (Player p : Fx.viewersNear(loc(), 90)) {
-            p.showTitle(Title.title(title, subtitle,
-                    Title.Times.times(Duration.ofMillis(200), Duration.ofMillis(1400), Duration.ofMillis(500))));
-        }
-    }
 }

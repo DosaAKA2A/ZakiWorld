@@ -4,7 +4,6 @@ import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
 import net.kyori.adventure.text.format.TextColor;
 import net.kyori.adventure.text.format.TextDecoration;
-import net.kyori.adventure.title.Title;
 import net.ederus.edm.anomaly.AnomalyPlugin;
 import net.ederus.edm.anomaly.core.ActiveAnomaly;
 import net.ederus.edm.comun.Compat;
@@ -22,7 +21,6 @@ import org.bukkit.inventory.EntityEquipment;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.util.Vector;
 
-import java.time.Duration;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -79,6 +77,12 @@ public final class Keeper extends BossFight {
     @Override
     public String bossName() {
         return "KEEPER";
+    }
+
+    /** El color de marca: lo usan announce() y titleNear() de la base. */
+    @Override
+    public TextColor accent() {
+        return ACCENT;
     }
 
     /** El unico Monarca que pelea a CUATRO fases; las barras y el menu le siguen. */
@@ -1289,10 +1293,4 @@ public final class Keeper extends BossFight {
         Fx.safeRemove(stand);
     }
 
-    private void titleNear(Component title, Component subtitle) {
-        for (Player p : Fx.viewersNear(loc(), 90)) {
-            p.showTitle(Title.title(title, subtitle,
-                    Title.Times.times(Duration.ofMillis(200), Duration.ofMillis(1400), Duration.ofMillis(500))));
-        }
-    }
 }

@@ -60,6 +60,12 @@ public final class ScreamingGoat extends BossFight {
         return "Cabra Gritona";
     }
 
+    /** El color de marca: lo usan announce() y titleNear() de la base. */
+    @Override
+    public TextColor accent() {
+        return ACCENT;
+    }
+
     // ------------------------------------------------------------------- aparicion
 
     @Override
@@ -211,7 +217,7 @@ public final class ScreamingGoat extends BossFight {
         Location spot = boss.getLocation();
         soundAt(spot, "entity.goat.horn_break", 1.6f, 0.7f);
         soundAt(spot, "entity.goat.screaming_ambient", 1.4f, 0.6f);
-        broadcastNear(Component.text("Se le parte un cuerno.", ACCENT));
+        announce(Component.text("Se le parte un cuerno.", ACCENT));
 
         animate(80, tick -> {
             if (!alive()) return;
@@ -402,7 +408,7 @@ public final class ScreamingGoat extends BossFight {
 
     /** 1. Grito Atronador: el cono de siempre, con tres rayos sobre quien lo pille. */
     public void thunderScream() {
-        broadcastNear(Component.text("Toma aire.", ACCENT));
+        announce(Component.text("Toma aire.", ACCENT));
         scream(120, 14, 11, 1.1, 3, 26);
     }
 
@@ -417,7 +423,7 @@ public final class ScreamingGoat extends BossFight {
         Set<UUID> rammed = new HashSet<>();
 
         soundAt(start, "entity.goat.prepare_ram", 1.5f, 0.7f);
-        broadcastNear(Component.text("Baja la cabeza.", ACCENT));
+        announce(Component.text("Baja la cabeza.", ACCENT));
 
         animate(70, tick -> {
             if (!alive()) return;
@@ -495,7 +501,7 @@ public final class ScreamingGoat extends BossFight {
         Location mark = Fx.ground(target.getLocation(), 4);
 
         soundAt(loc(), "entity.goat.long_jump", 1.5f, 0.8f);
-        broadcastNear(Component.text("Toma impulso.", ACCENT));
+        announce(Component.text("Toma impulso.", ACCENT));
 
         animate(90, tick -> {
             if (!alive()) return;
@@ -538,7 +544,7 @@ public final class ScreamingGoat extends BossFight {
     /** 6. Tormenta de Balidos: cuatro gritos girando, no hay donde esconderse. */
     public void bleatStorm() {
         if (!alive()) return;
-        broadcastNear(Component.text("Empieza a gritar sin parar.", ACCENT));
+        announce(Component.text("Empieza a gritar sin parar.", ACCENT));
         for (int i = 0; i < 4; i++) {
             final int index = i;
             later(i * 45, () -> {
@@ -556,7 +562,7 @@ public final class ScreamingGoat extends BossFight {
         List<Player> victims = targets();
         if (victims.isEmpty() || !alive()) return;
         int hops = Math.min(4, victims.size());
-        broadcastNear(Component.text("Empieza a rebotar.", ACCENT));
+        announce(Component.text("Empieza a rebotar.", ACCENT));
 
         for (int i = 0; i < hops; i++) {
             final Player victim = victims.get(i);
@@ -588,7 +594,7 @@ public final class ScreamingGoat extends BossFight {
         int count = 3 + random.nextInt(3);
         Location c = boss.getLocation();
         soundAt(c, "item.goat_horn.play", 1.6f, 1.0f);
-        broadcastNear(Component.text("Llama al rebano.", ACCENT));
+        announce(Component.text("Llama al rebano.", ACCENT));
 
         for (int i = 0; i < count; i++) {
             double a = Math.PI * 2 * i / count;
@@ -653,7 +659,7 @@ public final class ScreamingGoat extends BossFight {
     public void whiteCoat() {
         if (!alive()) return;
         soundAt(boss.getLocation(), "block.beacon.activate", 1.2f, 1.4f);
-        broadcastNear(Component.text("Arde en blanco.", ACCENT));
+        announce(Component.text("Arde en blanco.", ACCENT));
 
         animate(140, tick -> {
             if (!alive()) throw Stop.now();
@@ -675,14 +681,14 @@ public final class ScreamingGoat extends BossFight {
 
     /** 11. Grito del Trueno: grito circular con un anillo de rayos alrededor. */
     public void thunderCry() {
-        broadcastNear(Component.text("El cielo se pone del color de la cabra.", ACCENT));
+        announce(Component.text("El cielo se pone del color de la cabra.", ACCENT));
         scream(360, 16, 15, 1.4, 8, 32);
     }
 
     /** 12. Estampida: tres embestidas seguidas por toda la arena. */
     public void stampede() {
         if (!alive()) return;
-        broadcastNear(Component.text("No va a parar.", ACCENT));
+        announce(Component.text("No va a parar.", ACCENT));
         for (int i = 0; i < 3; i++) {
             later(i * 55, this::hornCharge);
         }
@@ -692,7 +698,7 @@ public final class ScreamingGoat extends BossFight {
     public void splitSky() {
         if (!alive()) return;
         soundAt(loc(), "entity.lightning_bolt.thunder", 1.4f, 0.8f);
-        broadcastNear(Component.text("Parte el cielo.", ACCENT));
+        announce(Component.text("Parte el cielo.", ACCENT));
 
         animate(140, tick -> {
             if (tick % 18 != 0) return;
@@ -726,7 +732,7 @@ public final class ScreamingGoat extends BossFight {
     public void stubbornness() {
         if (!alive()) return;
         soundAt(boss.getLocation(), "entity.goat.horn_break", 1.2f, 1.3f);
-        broadcastNear(Component.text("Se planta.", ACCENT));
+        announce(Component.text("Se planta.", ACCENT));
 
         animate(70, tick -> {
             if (!alive()) throw Stop.now();
@@ -753,19 +759,7 @@ public final class ScreamingGoat extends BossFight {
         return m.createBlockData();
     }
 
-    private void broadcastNear(Component message) {
-        Component line = Component.text("✦ ", ACCENT)
-                .append(Component.text("Cabra Gritona  ", ACCENT, TextDecoration.BOLD))
-                .append(message.colorIfAbsent(NamedTextColor.GRAY));
-        for (Player p : Fx.viewersNear(loc(), 80)) p.sendActionBar(line);
-    }
 
-    private void titleNear(Component title, Component subtitle) {
-        for (Player p : Fx.viewersNear(loc(), 80)) {
-            p.showTitle(Title.title(title, subtitle,
-                    Title.Times.times(Duration.ofMillis(200), Duration.ofMillis(1400), Duration.ofMillis(500))));
-        }
-    }
 
     /** Deja a la vista el numero de esbirros vivos, para el /anomaly info. */
     public int minions() {

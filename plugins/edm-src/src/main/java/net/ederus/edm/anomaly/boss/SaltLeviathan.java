@@ -63,6 +63,12 @@ public final class SaltLeviathan extends BossFight {
         return "Leviatan de Sal";
     }
 
+    /** El color de marca: lo usan announce() y titleNear() de la base. */
+    @Override
+    public TextColor accent() {
+        return ACCENT;
+    }
+
     // ------------------------------------------------------------------- aparicion
 
     @Override
@@ -182,7 +188,7 @@ public final class SaltLeviathan extends BossFight {
 
         Location spot = boss.getLocation();
         soundAt(spot, "entity.elder_guardian.hurt", 1.6f, 0.5f);
-        broadcastNear(Component.text("Se hunde y la corriente cambia.", ACCENT));
+        announce(Component.text("Se hunde y la corriente cambia.", ACCENT));
 
         animate(80, tick -> {
             if (!alive()) return;
@@ -318,7 +324,7 @@ public final class SaltLeviathan extends BossFight {
         Location c = Fx.ground(boss.getLocation(), 6);
         Set<UUID> pricked = new HashSet<>();
         soundAt(c, "block.conduit.activate", 1.4f, 0.8f);
-        broadcastNear(Component.text("El fondo se eriza.", ACCENT));
+        announce(Component.text("El fondo se eriza.", ACCENT));
 
         animate(90, tick -> {
             if (tick < 30) {
@@ -350,7 +356,7 @@ public final class SaltLeviathan extends BossFight {
         if (!alive()) return;
         Location eye = boss.getLocation();
         soundAt(eye, "block.conduit.ambient", 1.5f, 0.4f);
-        broadcastNear(Component.text("Abre un remolino.", ACCENT));
+        announce(Component.text("Abre un remolino.", ACCENT));
 
         animate(140, tick -> {
             if (!alive()) return;
@@ -416,7 +422,7 @@ public final class SaltLeviathan extends BossFight {
         List<Player> victims = targets();
         if (victims.isEmpty() || !alive()) return;
         soundAt(loc(), "entity.guardian.attack", 1.5f, 0.7f);
-        broadcastNear(Component.text("El haz va a saltar entre ustedes.", ACCENT));
+        announce(Component.text("El haz va a saltar entre ustedes.", ACCENT));
 
         animate(30 + victims.size() * 14, tick -> {
             if (!alive()) return;
@@ -451,7 +457,7 @@ public final class SaltLeviathan extends BossFight {
         if (!alive()) return;
         Location c = boss.getLocation();
         soundAt(c, "entity.squid.squirt", 1.6f, 0.5f);
-        broadcastNear(Component.text("Suelta tinta.", ACCENT));
+        announce(Component.text("Suelta tinta.", ACCENT));
 
         animate(120, tick -> {
             double radius = Math.min(9, 2 + tick * 0.12);
@@ -474,7 +480,7 @@ public final class SaltLeviathan extends BossFight {
         if (!alive()) return;
         double floorY = Fx.ground(boss.getLocation(), 8).getY();
         soundAt(loc(), "block.conduit.deactivate", 1.4f, 0.5f);
-        broadcastNear(Component.text("La presión sube. No huyan hacia arriba.", ACCENT));
+        announce(Component.text("La presión sube. No huyan hacia arriba.", ACCENT));
 
         animate(140, tick -> {
             if (tick % 20 != 0) return;
@@ -627,7 +633,7 @@ public final class SaltLeviathan extends BossFight {
         if (!alive()) return;
         Location c = loc();
         soundAt(c, "block.bubble_column.whirlpool_ambient", 1.6f, 0.4f);
-        broadcastNear(Component.text("El abismo entero gira.", ACCENT));
+        announce(Component.text("El abismo entero gira.", ACCENT));
 
         animate(160, tick -> {
             if (!alive()) return;
@@ -690,7 +696,7 @@ public final class SaltLeviathan extends BossFight {
         if (!alive()) return;
         Location c = loc();
         soundAt(c, "entity.elder_guardian.curse", 1.7f, 0.6f);
-        broadcastNear(Component.text("Entona el canto.", ACCENT));
+        announce(Component.text("Entona el canto.", ACCENT));
 
         animate(80, tick -> {
             if (!alive()) return;
@@ -712,17 +718,5 @@ public final class SaltLeviathan extends BossFight {
 
     // ------------------------------------------------------------------ mensajeria
 
-    private void broadcastNear(Component message) {
-        Component line = Component.text("✦ ", ACCENT)
-                .append(Component.text("Leviatan de Sal  ", ACCENT, TextDecoration.BOLD))
-                .append(message.colorIfAbsent(NamedTextColor.GRAY));
-        for (Player p : Fx.viewersNear(loc(), 90)) p.sendActionBar(line);
-    }
 
-    private void titleNear(Component title, Component subtitle) {
-        for (Player p : Fx.viewersNear(loc(), 90)) {
-            p.showTitle(Title.title(title, subtitle,
-                    Title.Times.times(Duration.ofMillis(200), Duration.ofMillis(1400), Duration.ofMillis(500))));
-        }
-    }
 }

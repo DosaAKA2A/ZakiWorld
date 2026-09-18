@@ -74,6 +74,12 @@ public final class Cazador extends BossFight {
         return "El Cazador";
     }
 
+    /** El color de marca: lo usan announce() y titleNear() de la base. */
+    @Override
+    public TextColor accent() {
+        return ACCENT;
+    }
+
     // ------------------------------------------------------------------- aparicion
 
     @Override
@@ -237,7 +243,7 @@ public final class Cazador extends BossFight {
         int count = 4 + random.nextInt(3);
         Location c = Fx.ground(boss.getLocation(), 5);
         soundAt(c, "block.tripwire.attach", 1.5f, 0.8f);
-        broadcastNear(Component.text("Siembra el suelo.", ACCENT));
+        announce(Component.text("Siembra el suelo.", ACCENT));
 
         for (int i = 0; i < count; i++) {
             double a = Math.PI * 2 * i / count + random.nextDouble() * 0.7;
@@ -594,7 +600,7 @@ public final class Cazador extends BossFight {
                     new ItemStack(Material.CROSSBOW));
             Compat.spawn(world(), Compat.SMALL_GUST, l.clone().add(0, 1, 0), 12, 0.5, 0.5, 0.5, 0);
             soundAt(l, "item.crossbow.shoot", 1.2f, 0.6f);
-            broadcastNear(Component.text("Se le cae el sombrero.", ACCENT));
+            announce(Component.text("Se le cae el sombrero.", ACCENT));
         });
     }
 
@@ -607,7 +613,7 @@ public final class Cazador extends BossFight {
         if (pool.isEmpty()) return;
         drawWeapon(Material.CROSSBOW);
         soundAt(loc(), "item.crossbow.loading_start", 1.4f, 0.9f);
-        broadcastNear(Component.text("Carga la ballesta.", ACCENT));
+        announce(Component.text("Carga la ballesta.", ACCENT));
 
         // Seis saetas REPARTIDAS entre todos los que tenga a tiro. Vaciar el cargador
         // en una sola cabeza no sirve de nada cuando vienen en grupo.
@@ -632,7 +638,7 @@ public final class Cazador extends BossFight {
         if (victims.isEmpty()) return;
         drawWeapon(Material.BOW);
         soundAt(loc(), "item.crossbow.quick_charge_3", 1.4f, 0.7f);
-        broadcastNear(Component.text("Dispara al cielo.", ACCENT));
+        announce(Component.text("Dispara al cielo.", ACCENT));
 
         for (Player victim : victims) {
             Location mark = Fx.ground(victim.getLocation(), 4);
@@ -719,7 +725,7 @@ public final class Cazador extends BossFight {
         if (victims.isEmpty()) return;
         drawWeapon(Material.TRIPWIRE_HOOK);
         soundAt(loc(), "block.tripwire.attach", 1.4f, 1.0f);
-        broadcastNear(Component.text("Te pone una debajo.", ACCENT));
+        announce(Component.text("Te pone una debajo.", ACCENT));
 
         for (Player victim : victims) {
             Location spot = Fx.ground(victim.getLocation(), 4);
@@ -760,7 +766,7 @@ public final class Cazador extends BossFight {
         java.util.Set<UUID> pierced = new java.util.HashSet<>();
 
         soundAt(loc(), "item.trident.riptide_1", 1.5f, 0.8f);
-        broadcastNear(Component.text("Baja la lanza.", ACCENT));
+        announce(Component.text("Baja la lanza.", ACCENT));
 
         animate(44, tick -> {
             if (!alive()) throw Stop.now();
@@ -822,7 +828,7 @@ public final class Cazador extends BossFight {
         if (!alive()) return;
         drawWeapon(pick("NETHERITE_SWORD", "DIAMOND_SWORD", "IRON_SWORD"));
         soundAt(loc(), "entity.player.attack.sweep", 1.5f, 1.1f);
-        broadcastNear(Component.text("Saca la espada.", ACCENT));
+        announce(Component.text("Saca la espada.", ACCENT));
 
         for (int i = 0; i < 6; i++) {
             later(i * 6, () -> {
@@ -869,7 +875,7 @@ public final class Cazador extends BossFight {
         if (!alive()) return;
         Location c = Fx.ground(boss.getLocation(), 5);
         soundAt(c, "block.chain.place", 1.5f, 0.7f);
-        broadcastNear(Component.text("Cierra el cerco.", ACCENT));
+        announce(Component.text("Cierra el cerco.", ACCENT));
 
         int count = 10;
         for (int i = 0; i < count; i++) {
@@ -893,7 +899,7 @@ public final class Cazador extends BossFight {
                 pick("NETHERITE_SWORD", "IRON_SWORD")};
         weapon = (weapon + 1 + random.nextInt(arsenal.length - 1)) % arsenal.length;
         drawWeapon(arsenal[weapon]);
-        broadcastNear(Component.text("Cambia de arma.", ACCENT));
+        announce(Component.text("Cambia de arma.", ACCENT));
         Compat.spawn(world(), Compat.ENCHANT, boss.getEyeLocation(), 20, 0.4, 0.4, 0.4, 0.6);
     }
 
@@ -914,17 +920,5 @@ public final class Cazador extends BossFight {
 
     // ------------------------------------------------------------------ mensajeria
 
-    private void broadcastNear(Component message) {
-        Component line = Component.text("✦ ", ACCENT)
-                .append(Component.text("El Cazador  ", ACCENT, TextDecoration.BOLD))
-                .append(message.colorIfAbsent(NamedTextColor.GRAY));
-        for (Player p : Fx.viewersNear(loc(), 90)) p.sendActionBar(line);
-    }
 
-    private void titleNear(Component title, Component subtitle) {
-        for (Player p : Fx.viewersNear(loc(), 90)) {
-            p.showTitle(Title.title(title, subtitle,
-                    Title.Times.times(Duration.ofMillis(200), Duration.ofMillis(1400), Duration.ofMillis(500))));
-        }
-    }
 }

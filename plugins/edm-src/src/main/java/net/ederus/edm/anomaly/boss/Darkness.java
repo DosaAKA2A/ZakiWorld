@@ -64,6 +64,12 @@ public final class Darkness extends BossFight {
         return "Darkness";
     }
 
+    /** El color de marca: lo usan announce() y titleNear() de la base. */
+    @Override
+    public TextColor accent() {
+        return ACCENT;
+    }
+
     // ------------------------------------------------------------------- aparicion
 
     @Override
@@ -370,7 +376,7 @@ public final class Darkness extends BossFight {
                     Component.text("Se queda aturdido unos segundos", NamedTextColor.GRAY));
         } else {
             soundAt(l, "entity.enderman.scream", 1.8f, 0.6f);
-            broadcastNear(Component.text("Termino de curarse.", NamedTextColor.RED));
+            announce(Component.text("Termino de curarse.", NamedTextColor.RED));
         }
     }
 
@@ -502,7 +508,7 @@ public final class Darkness extends BossFight {
         if (!alive()) return;
         Location c = loc();
         soundAt(c, "ambient.cave", 1.8f, 0.4f);
-        broadcastNear(Component.text("Apaga la luz.", ACCENT));
+        announce(Component.text("Apaga la luz.", ACCENT));
 
         animate(90, tick -> {
             double r = 3 + tick * 0.18;
@@ -651,7 +657,7 @@ public final class Darkness extends BossFight {
     public void voidRain() {
         if (!alive()) return;
         soundAt(loc(), "ambient.cave", 1.6f, 0.5f);
-        broadcastNear(Component.text("Cae el vacio.", ACCENT));
+        announce(Component.text("Cae el vacio.", ACCENT));
 
         animate(150, tick -> {
             if (tick % 18 != 0) return;
@@ -679,7 +685,7 @@ public final class Darkness extends BossFight {
         if (!alive()) return;
         List<Location> trail = new ArrayList<>();
         soundAt(loc(), "entity.enderman.teleport", 1.2f, 0.4f);
-        broadcastNear(Component.text("Deja rastro.", ACCENT));
+        announce(Component.text("Deja rastro.", ACCENT));
 
         animate(140, tick -> {
             if (!alive()) return;
@@ -897,17 +903,5 @@ public final class Darkness extends BossFight {
 
     // ------------------------------------------------------------------ mensajeria
 
-    private void broadcastNear(Component message) {
-        Component line = Component.text("✦ ", ACCENT)
-                .append(Component.text("Darkness  ", ACCENT, TextDecoration.BOLD))
-                .append(message.colorIfAbsent(NamedTextColor.GRAY));
-        for (Player p : Fx.viewersNear(loc(), 90)) p.sendActionBar(line);
-    }
 
-    private void titleNear(Component title, Component subtitle) {
-        for (Player p : Fx.viewersNear(loc(), 90)) {
-            p.showTitle(Title.title(title, subtitle,
-                    Title.Times.times(Duration.ofMillis(200), Duration.ofMillis(1400), Duration.ofMillis(500))));
-        }
-    }
 }

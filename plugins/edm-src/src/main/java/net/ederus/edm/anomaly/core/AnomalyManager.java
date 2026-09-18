@@ -507,6 +507,7 @@ public final class AnomalyManager implements Listener {
             double factor = fight.damageScale() * fight.incomingDamageMultiplier(damager);
             if (factor != 1.0) e.setDamage(e.getDamage() * factor);
             clampToSurvivalFloor(e, fight, boss);
+            fight.onIncomingDamage(e.getFinalDamage());
             logHit(e, event, fight, boss, damager);
             return;
         }

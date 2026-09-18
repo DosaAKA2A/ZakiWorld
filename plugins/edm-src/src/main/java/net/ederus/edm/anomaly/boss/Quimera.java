@@ -85,6 +85,12 @@ public final class Quimera extends BossFight {
         return "Quimera";
     }
 
+    /** El color de marca: lo usan announce() y titleNear() de la base. */
+    @Override
+    public TextColor accent() {
+        return ACCENT;
+    }
+
     // ------------------------------------------------------------------- aparicion
 
     @Override
@@ -319,7 +325,7 @@ public final class Quimera extends BossFight {
         soundAt(l, "entity.ravager.roar", 1.8f, 0.7f);
         titleNear(Component.text("CAEN LOS PILARES", ACCENT, TextDecoration.BOLD),
                 Component.text("La Quimera ya puede morir", NamedTextColor.GRAY));
-        broadcastNear(Component.text("Se le acabó la piedra que la sostenia.", ACCENT));
+        announce(Component.text("Se le acabó la piedra que la sostenia.", ACCENT));
     }
 
     // ---------------------------------------------------- LA COLA Y SU MIRADA
@@ -488,7 +494,7 @@ public final class Quimera extends BossFight {
         busyFor(70);
         Location spot = boss.getLocation();
         soundAt(spot, "entity.goat.screaming.death", 1.8f, 0.7f);
-        broadcastNear(Component.text("La cabra pierde la cabeza.", ACCENT));
+        announce(Component.text("La cabra pierde la cabeza.", ACCENT));
 
         animate(70, tick -> {
             if (!alive()) return;
@@ -561,7 +567,7 @@ public final class Quimera extends BossFight {
             Compat.spawn(world(), Compat.EXPLOSION_EMITTER, l.clone().add(0, 1, 0), 2);
             Compat.spawn(world(), Compat.DUST_PILLAR, l.clone().add(0, 0.2, 0), 30, 1.0, 0.2, 1.0, 0, stone);
             soundAt(l, "block.stone.break", 1.8f, 0.4f);
-            broadcastNear(Component.text("Se le sueltan las costuras.", ACCENT));
+            announce(Component.text("Se le sueltan las costuras.", ACCENT));
         });
     }
 
@@ -571,7 +577,7 @@ public final class Quimera extends BossFight {
     public void stoneGaze() {
         if (!alive()) return;
         soundAt(loc(), "block.amethyst_block.resonate", 1.6f, 0.5f);
-        broadcastNear(Component.text("La cola busca tus ojos.", ACCENT));
+        announce(Component.text("La cola busca tus ojos.", ACCENT));
 
         animate(50, tick -> {
             if (!alive()) throw Stop.now();
@@ -608,7 +614,7 @@ public final class Quimera extends BossFight {
         java.util.Set<UUID> hitSet = new java.util.HashSet<>();
 
         soundAt(from, "entity.ravager.roar", 1.6f, 0.8f);
-        broadcastNear(Component.text("Baja la cabeza.", ACCENT));
+        announce(Component.text("Baja la cabeza.", ACCENT));
 
         animate(50, tick -> {
             if (!alive()) throw Stop.now();
@@ -639,7 +645,7 @@ public final class Quimera extends BossFight {
         if (face.lengthSquared() < 0.01) face = new Vector(1, 0, 0);
         final Vector dir = face.normalize();
         soundAt(origin, "entity.goat.screaming.ambient", 2.0f, 0.5f);
-        broadcastNear(Component.text("La cabra berrea.", ACCENT));
+        announce(Component.text("La cabra berrea.", ACCENT));
 
         animate(30, tick -> {
             if (!alive()) throw Stop.now();
@@ -667,7 +673,7 @@ public final class Quimera extends BossFight {
         int count = 3 + random.nextInt(3);
         Location c = snakeHead();
         soundAt(c, "entity.cave_spider.ambient", 1.6f, 0.5f);
-        broadcastNear(Component.text("De la cola se descuelgan viboras.", ACCENT));
+        announce(Component.text("De la cola se descuelgan viboras.", ACCENT));
 
         for (int i = 0; i < count; i++) {
             double a = Math.PI * 2 * i / count + random.nextDouble() * 0.4;
@@ -696,7 +702,7 @@ public final class Quimera extends BossFight {
         List<Player> victims = pickTargets(3);
         if (victims.isEmpty()) return;
         soundAt(loc(), "entity.llama.spit", 1.5f, 0.5f);
-        broadcastNear(Component.text("La cola escupe.", ACCENT));
+        announce(Component.text("La cola escupe.", ACCENT));
 
         for (int i = 0; i < victims.size(); i++) {
             Player victim = victims.get(i);
@@ -722,7 +728,7 @@ public final class Quimera extends BossFight {
     public void sweepingGaze() {
         if (!alive()) return;
         soundAt(loc(), "block.amethyst_block.resonate", 1.6f, 0.4f);
-        broadcastNear(Component.text("Barre la arena con la mirada.", ACCENT));
+        announce(Component.text("Barre la arena con la mirada.", ACCENT));
         java.util.Set<UUID> caught = new java.util.HashSet<>();
 
         animate(100, tick -> {
@@ -798,7 +804,7 @@ public final class Quimera extends BossFight {
         List<Player> victims = targets();
         if (victims.isEmpty() || !alive()) return;
         soundAt(loc(), "entity.evoker_fangs.attack", 1.4f, 0.6f);
-        broadcastNear(Component.text("El suelo saca colmillos.", ACCENT));
+        announce(Component.text("El suelo saca colmillos.", ACCENT));
         BlockData deep = Material.DEEPSLATE.createBlockData();
 
         for (Player victim : victims) {
@@ -827,7 +833,7 @@ public final class Quimera extends BossFight {
         Location c = Fx.ground(boss.getLocation(), 4);
         java.util.Set<UUID> burned = new java.util.HashSet<>();
         soundAt(c, "entity.slime.squish", 1.6f, 0.4f);
-        broadcastNear(Component.text("El veneno viejo despierta.", ACCENT));
+        announce(Component.text("El veneno viejo despierta.", ACCENT));
 
         animate(70, tick -> {
             if (tick < 18) {
@@ -888,7 +894,7 @@ public final class Quimera extends BossFight {
         Location c = Fx.ground(boss.getLocation(), 4);
         java.util.Set<UUID> struck = new java.util.HashSet<>();
         soundAt(c, "entity.ravager.step", 1.8f, 0.5f);
-        broadcastNear(Component.text("Se alza.", ACCENT));
+        announce(Component.text("Se alza.", ACCENT));
 
         animate(60, tick -> {
             if (tick < 20) {
@@ -921,7 +927,7 @@ public final class Quimera extends BossFight {
         if (face.lengthSquared() < 0.01) face = new Vector(1, 0, 0);
         final Vector dir = face.normalize();
         soundAt(origin, "entity.cave_spider.ambient", 1.8f, 0.4f);
-        broadcastNear(Component.text("Sisea.", ACCENT));
+        announce(Component.text("Sisea.", ACCENT));
 
         animate(30, tick -> {
             if (!alive()) throw Stop.now();
@@ -943,17 +949,5 @@ public final class Quimera extends BossFight {
 
     // ------------------------------------------------------------------ mensajeria
 
-    private void broadcastNear(Component message) {
-        Component line = Component.text("✦ ", ACCENT)
-                .append(Component.text("Quimera  ", ACCENT, TextDecoration.BOLD))
-                .append(message.colorIfAbsent(NamedTextColor.GRAY));
-        for (Player p : Fx.viewersNear(loc(), 90)) p.sendActionBar(line);
-    }
 
-    private void titleNear(Component title, Component subtitle) {
-        for (Player p : Fx.viewersNear(loc(), 90)) {
-            p.showTitle(Title.title(title, subtitle,
-                    Title.Times.times(Duration.ofMillis(200), Duration.ofMillis(1400), Duration.ofMillis(500))));
-        }
-    }
 }

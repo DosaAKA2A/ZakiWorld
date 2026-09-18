@@ -78,6 +78,12 @@ public final class Aragon extends BossFight {
         return "Áragon";
     }
 
+    /** El color de marca: lo usan announce() y titleNear() de la base. */
+    @Override
+    public TextColor accent() {
+        return ACCENT;
+    }
+
     // ------------------------------------------------------------------- aparicion
 
     @Override
@@ -246,7 +252,7 @@ public final class Aragon extends BossFight {
         int count = 3 + random.nextInt(3);
         Location c = Fx.ground(boss.getLocation(), 5);
         soundAt(c, "entity.spider.ambient", 1.6f, 1.4f);
-        broadcastNear(Component.text("Pone huevos. Rompanlos.", ACCENT));
+        announce(Component.text("Pone huevos. Rompanlos.", ACCENT));
 
         for (int i = 0; i < count; i++) {
             double a = Math.PI * 2 * i / count + random.nextDouble() * 0.6;
@@ -321,7 +327,7 @@ public final class Aragon extends BossFight {
             } catch (Throwable ignored) {
             }
         }
-        broadcastNear(Component.text("Un huevo se ha abierto.", ACCENT));
+        announce(Component.text("Un huevo se ha abierto.", ACCENT));
     }
 
     /** Se puede reventar el huevo a golpes: el cascaron es una entidad marcada. */
@@ -527,7 +533,7 @@ public final class Aragon extends BossFight {
             Compat.spawn(world(), Compat.EGG_CRACK, l.clone().add(0, 1, 0), 40, 1.0, 0.6, 1.0, 0.05);
             soundAt(l, "entity.spider.death", 1.4f, 0.7f);
             clearWebs();
-            broadcastNear(Component.text("La camada se queda sin madre.", ACCENT));
+            announce(Component.text("La camada se queda sin madre.", ACCENT));
         });
     }
 
@@ -536,7 +542,7 @@ public final class Aragon extends BossFight {
     /** 1. Camada: doce crias de golpe. */
     public void spawnBrood() {
         if (!alive()) return;
-        broadcastNear(Component.text("Suelta la camada.", ACCENT));
+        announce(Component.text("Suelta la camada.", ACCENT));
         brood(22);
     }
 
@@ -551,7 +557,7 @@ public final class Aragon extends BossFight {
         List<Player> victims = targets(26);
         if (victims.isEmpty()) return;
         soundAt(loc(), "entity.spider.ambient", 1.4f, 1.2f);
-        broadcastNear(Component.text("Teje.", ACCENT));
+        announce(Component.text("Teje.", ACCENT));
 
         for (Player victim : victims) {
             Location c = victim.getLocation();
@@ -595,7 +601,7 @@ public final class Aragon extends BossFight {
     /** 5. Guardianas: dos aranas grandes que si pegan de verdad. */
     public void summonGuardians() {
         if (!alive()) return;
-        broadcastNear(Component.text("Llama a las guardianas.", ACCENT));
+        announce(Component.text("Llama a las guardianas.", ACCENT));
         guardian();
         guardian();
         soundAt(loc(), "entity.spider.ambient", 1.5f, 0.6f);
@@ -632,7 +638,7 @@ public final class Aragon extends BossFight {
         if (!alive()) return;
         Location c = Fx.ground(boss.getLocation(), 5);
         soundAt(c, "block.wool.place", 1.5f, 0.7f);
-        broadcastNear(Component.text("Cierra la tela.", ACCENT));
+        announce(Component.text("Cierra la tela.", ACCENT));
 
         int points = 26;
         for (int i = 0; i < points; i++) {
@@ -649,7 +655,7 @@ public final class Aragon extends BossFight {
     /** 8. Marea de Crias: tres camadas seguidas por toda la arena. */
     public void broodTide() {
         if (!alive()) return;
-        broadcastNear(Component.text("Vienen todas.", ACCENT));
+        announce(Component.text("Vienen todas.", ACCENT));
         for (int i = 0; i < 3; i++) {
             later(i * 24, () -> {
                 if (!alive()) return;
@@ -692,7 +698,7 @@ public final class Aragon extends BossFight {
         Location c = Fx.ground(boss.getLocation(), 4);
         java.util.Set<UUID> struck = new java.util.HashSet<>();
         soundAt(c, "entity.spider.step", 1.8f, 0.4f);
-        broadcastNear(Component.text("Se alza sobre las patas.", ACCENT));
+        announce(Component.text("Se alza sobre las patas.", ACCENT));
 
         animate(60, tick -> {
             if (tick < 24) {
@@ -719,17 +725,5 @@ public final class Aragon extends BossFight {
 
     // ------------------------------------------------------------------ mensajeria
 
-    private void broadcastNear(Component message) {
-        Component line = Component.text("✦ ", ACCENT)
-                .append(Component.text("Áragon  ", ACCENT, TextDecoration.BOLD))
-                .append(message.colorIfAbsent(NamedTextColor.GRAY));
-        for (Player p : Fx.viewersNear(loc(), 90)) p.sendActionBar(line);
-    }
 
-    private void titleNear(Component title, Component subtitle) {
-        for (Player p : Fx.viewersNear(loc(), 90)) {
-            p.showTitle(Title.title(title, subtitle,
-                    Title.Times.times(Duration.ofMillis(200), Duration.ofMillis(1400), Duration.ofMillis(500))));
-        }
-    }
 }

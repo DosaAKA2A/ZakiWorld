@@ -99,6 +99,12 @@ public final class Mimic extends BossFight {
         return "Mimic";
     }
 
+    /** El color de marca: lo usan announce() y titleNear() de la base. */
+    @Override
+    public TextColor accent() {
+        return ACCENT;
+    }
+
     // ------------------------------------------------------------------- aparicion
 
     @Override
@@ -359,7 +365,7 @@ public final class Mimic extends BossFight {
         for (Player p : Fx.playersNear(l, 5)) {
             push(p, p.getLocation().toVector().subtract(l.toVector()).normalize().multiply(0.7).setY(0.3));
         }
-        broadcastNear(Component.text("¡Ese era!", ACCENT));
+        announce(Component.text("¡Ese era!", ACCENT));
     }
 
     /** El destello: cuerpo nuevo, rebano nuevo y vuelta a no ser nadie. */
@@ -372,7 +378,7 @@ public final class Mimic extends BossFight {
         Compat.spawn(world(), Compat.FLASH, old.clone().add(0, 1, 0), 1);
         Compat.spawn(world(), Compat.POOF, old.clone().add(0, 1, 0), 30, 0.6, 0.8, 0.6, 0.05);
         soundAt(old, "entity.illusioner.mirror_move", 1.6f, 0.8f);
-        broadcastNear(Component.text("Se pierde entre el rebano.", ACCENT));
+        announce(Component.text("Se pierde entre el rebano.", ACCENT));
 
         clearFlock();
         double a = random.nextDouble() * Math.PI * 2;
@@ -454,7 +460,7 @@ public final class Mimic extends BossFight {
             }
         }
         soundAt(center, "block.chest.close", 1.5f, 0.6f);
-        broadcastNear(Component.text("Elige bien: la codicia no espera.", ACCENT));
+        announce(Component.text("Elige bien: la codicia no espera.", ACCENT));
     }
 
     /**
@@ -518,7 +524,7 @@ public final class Mimic extends BossFight {
         Compat.spawn(world(), Compat.FLASH, l.clone().add(0, 1, 0), 1);
         soundAt(l, "block.chest.open", 1.7f, 0.4f);
         soundAt(l, voice("hurt"), 1.6f, 0.5f);
-        if (found) broadcastNear(Component.text("¡Ese cofre estaba VIVO!", ACCENT));
+        if (found) announce(Component.text("¡Ese cofre estaba VIVO!", ACCENT));
         for (Player p : Fx.playersNear(l, 4)) {
             hit(p, 8 * damageBonus);
             push(p, p.getLocation().toVector().subtract(l.toVector()).normalize().multiply(0.8).setY(0.4));
@@ -754,7 +760,7 @@ public final class Mimic extends BossFight {
                     new ItemStack(Material.CHEST));
             Compat.spawn(world(), Compat.EXPLOSION, l, 2, 0.4, 0.4, 0.4, 0);
             soundAt(l, "block.chest.open", 1.8f, 0.3f);
-            broadcastNear(Component.text("Debajo del último disfraz no habia nada.", ACCENT));
+            announce(Component.text("Debajo del último disfraz no habia nada.", ACCENT));
         });
     }
 
@@ -841,7 +847,7 @@ public final class Mimic extends BossFight {
         if (face.lengthSquared() < 0.01) face = new Vector(1, 0, 0);
         final Vector dir = face.normalize();
         soundAt(origin, voice("ambient"), 2.0f, 0.3f);
-        broadcastNear(Component.text("Chilla con una voz que no es suya.", ACCENT));
+        announce(Component.text("Chilla con una voz que no es suya.", ACCENT));
 
         animate(28, tick -> {
             if (!alive()) throw Stop.now();
@@ -865,7 +871,7 @@ public final class Mimic extends BossFight {
     public void decoyStampede() {
         if (!alive() || phase() != 1 || !revealed || decoys.isEmpty()) return;
         soundAt(loc(), "entity.ravager.step", 1.6f, 0.7f);
-        broadcastNear(Component.text("¡El rebano entero embiste!", ACCENT));
+        announce(Component.text("¡El rebano entero embiste!", ACCENT));
 
         for (LivingEntity d : new ArrayList<>(decoys)) {
             if (!d.isValid()) continue;
@@ -976,7 +982,7 @@ public final class Mimic extends BossFight {
         if (!alive() || phase() != 3) return;
         int blows = unleashed ? 8 : 5;
         soundAt(loc(), "entity.ravager.attack", 1.5f, 1.2f);
-        broadcastNear(Component.text("Entra en frenesi.", ACCENT));
+        announce(Component.text("Entra en frenesi.", ACCENT));
 
         for (int i = 0; i < blows; i++) {
             later(i * 6, () -> {
@@ -1031,7 +1037,7 @@ public final class Mimic extends BossFight {
     public void steelWhirlwind() {
         if (!alive() || phase() != 3) return;
         soundAt(loc(), "entity.player.attack.sweep", 1.6f, 0.6f);
-        broadcastNear(Component.text("Gira como un torbellino.", ACCENT));
+        announce(Component.text("Gira como un torbellino.", ACCENT));
 
         for (int wave = 0; wave < 3; wave++) {
             final int w = wave;
@@ -1059,17 +1065,5 @@ public final class Mimic extends BossFight {
 
     // ------------------------------------------------------------------ mensajeria
 
-    private void broadcastNear(Component message) {
-        Component line = Component.text("✦ ", ACCENT)
-                .append(Component.text("Mimic  ", ACCENT, TextDecoration.BOLD))
-                .append(message.colorIfAbsent(NamedTextColor.GRAY));
-        for (Player p : Fx.viewersNear(loc(), 90)) p.sendActionBar(line);
-    }
 
-    private void titleNear(Component title, Component subtitle) {
-        for (Player p : Fx.viewersNear(loc(), 90)) {
-            p.showTitle(Title.title(title, subtitle,
-                    Title.Times.times(Duration.ofMillis(200), Duration.ofMillis(1400), Duration.ofMillis(500))));
-        }
-    }
 }

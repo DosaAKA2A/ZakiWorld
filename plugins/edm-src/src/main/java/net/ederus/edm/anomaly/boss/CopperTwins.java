@@ -128,6 +128,12 @@ public final class CopperTwins extends BossFight {
         return "Kem y Kam";
     }
 
+    /** El color de marca: lo usan announce() y titleNear() de la base. */
+    @Override
+    public TextColor accent() {
+        return ACCENT;
+    }
+
     /** Sin fases: la unica progresion es que caigan los dos. */
     @Override
     public int phaseCount() {
@@ -1450,10 +1456,4 @@ public final class CopperTwins extends BossFight {
         super.cleanup();
     }
 
-    private void titleNear(Component title, Component subtitle) {
-        for (Player p : Fx.viewersNear(loc(), 90)) {
-            p.showTitle(Title.title(title, subtitle,
-                    Title.Times.times(Duration.ofMillis(200), Duration.ofMillis(1500), Duration.ofMillis(500))));
-        }
-    }
 }
