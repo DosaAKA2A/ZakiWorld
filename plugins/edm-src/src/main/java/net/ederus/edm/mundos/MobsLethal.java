@@ -474,13 +474,6 @@ public final class MobsLethal implements Listener {
         if (n == null) n = new YamlConfiguration();
         double base = rango(p) * n.getDouble("por-rango", 2.0)
                 + poder(p) / Math.max(1.0, n.getDouble("poder-por-nivel", 20.0));
-        /* Y el equipo que lleva puesto, via Poder: sin esto un jugador de rango bajo
-         * con el mejor set del servidor se paseaba por mobs de nivel 17. */
-        double porPoder = n.getDouble("poder-total-por-nivel", 0);
-        if (porPoder > 0) {
-            base += net.ederus.edm.comun.Poder
-                    .calcular(modulo, p, rango(p), poder(p)).total() / porPoder;
-        }
         double variacion = n.getDouble("variacion", 0.10);
         base *= 1 + (random.nextDouble() * 2 - 1) * variacion;
         if (destacado) base += n.getInt("extra-destacado", 5);

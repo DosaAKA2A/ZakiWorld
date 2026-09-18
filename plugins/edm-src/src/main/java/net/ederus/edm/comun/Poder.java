@@ -36,6 +36,44 @@ public final class Poder {
     private Poder() {
     }
 
+    /**
+     * Rango de rankup por PlaceholderAPI. 0 si no se puede leer.
+     *
+     * Vive aqui y no en el modulo que lo use: el Poder es del JUGADOR, no de un
+     * mundo ni de una vitrina, y cualquier modulo tiene que poder preguntarlo sin
+     * depender de que otro este cargado.
+     */
+    public static int rango(org.bukkit.plugin.Plugin plugin, Player p) {
+        try {
+            String marcador = cfg(plugin).getString("placeholder-rango", "%notranks_rank_number%");
+            Class<?> papi = Class.forName("me.clip.placeholderapi.PlaceholderAPI");
+            Object r = papi.getMethod("setPlaceholders", org.bukkit.OfflinePlayer.class, String.class)
+                    .invoke(null, p, marcador);
+            return Integer.parseInt(String.valueOf(r).replaceAll("[^0-9]", ""));
+        } catch (Throwable t) {
+            return 0;
+        }
+    }
+
+    /** Poder de AuraSkills (suma de sus habilidades) por su API. 0 si no esta. */
+    public static int auraskills(Player p) {
+        try {
+            Class<?> api = Class.forName("dev.aurelium.auraskills.api.AuraSkillsApi");
+            Object inst = api.getMethod("get").invoke(null);
+            Object user = inst.getClass().getMethod("getUser", java.util.UUID.class)
+                    .invoke(inst, p.getUniqueId());
+            if (user == null) return 0;
+            return (int) user.getClass().getMethod("getPowerLevel").invoke(user);
+        } catch (Throwable t) {
+            return 0;
+        }
+    }
+
+    /** El poder de un jugador leyendo el rango y AuraSkills por su cuenta. */
+    public static Desglose calcular(org.bukkit.plugin.Plugin plugin, Player p) {
+        return calcular(plugin, p, rango(plugin, p), auraskills(p));
+    }
+
     private static ConfigurationSection cfg(org.bukkit.plugin.Plugin plugin) {
         ConfigurationSection s = plugin.getConfig().getConfigurationSection("poder");
         return s == null ? new YamlConfiguration() : s;

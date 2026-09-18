@@ -12,3 +12,26 @@ anuncio:
   # Segundos entre dos /flex showcase del mismo jugador. Quien tenga
   # ederus.flex.admin no espera.
   enfriamiento-segundos: 300
+
+# ---------------------------------------------------------------------------
+# EL PODER
+#
+# /flex power: un solo numero que dice lo fuerte que es un jugador AHORA: lo que ha
+# jugado (rango y habilidades) mas lo que lleva puesto.
+#
+# El equipo se lee por ATRIBUTOS de vanilla, no por la API de MMOItems: asi
+# cuenta igual una pieza de MMOItems, una vanilla encantada o lo que venga
+# manana, porque todas acaban moviendo los mismos atributos.
+#
+# De la vida y del dano solo cuenta lo que pasa de lo normal (20 y 1): si no,
+# todo el mundo empezaria con puntos de regalo.
+# ---------------------------------------------------------------------------
+poder:
+  por-rango: 10
+  por-auraskills: 1
+  por-armadura: 4
+  por-dureza: 6
+  por-vida: 2
+  por-dano: 3
+  # El marcador del que sale el rango de rankup.
+  placeholder-rango: "%notranks_rank_number%"

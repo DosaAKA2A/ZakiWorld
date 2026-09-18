@@ -49,6 +49,10 @@ public final class ComandoFlex implements CommandExecutor, TabCompleter {
             plugin.anunciar(p, plugin.almacen().de(p.getUniqueId(), p.getName()));
             return true;
         }
+        if (uno.equals("power") || uno.equals("poder")) {
+            poder(p, args.length >= 2 ? args[1] : null);
+            return true;
+        }
         if (uno.equals("ayuda") || uno.equals("help")) {
             ayuda(p, etiqueta);
             return true;
@@ -68,11 +72,38 @@ public final class ComandoFlex implements CommandExecutor, TabCompleter {
         return true;
     }
 
+    /**
+     * /flex power: el PODER de un jugador, desglosado.
+     *
+     * Vive en la vitrina y no en Lethal World porque es una cifra del JUGADOR, no de
+     * un mundo: lo que ha jugado (rango y habilidades) mas lo que lleva puesto. Los
+     * pesos de cada parte estan en el config de flex.
+     */
+    private void poder(Player quien, String nombre) {
+        Player de = nombre == null ? quien : plugin.getServer().getPlayer(nombre);
+        if (de == null) {
+            plugin.di(quien, "sin-jugador", "%jugador% no está conectado.", "%jugador%", nombre);
+            return;
+        }
+        var d = net.ederus.edm.comun.Poder.calcular(plugin, de);
+        quien.sendMessage(net.ederus.edm.comun.Estilo.degradado("PODER",
+                FlexPlugin.MAGENTA, FlexPlugin.CARMESI));
+        linea(quien, "Jugador", de.getName());
+        linea(quien, "Rango de rankup", String.valueOf(d.rango()));
+        linea(quien, "AuraSkills", String.format(java.util.Locale.US, "%.0f", d.auraskills()));
+        linea(quien, "Armadura", String.format(java.util.Locale.US, "%.1f", d.armadura()));
+        linea(quien, "Dureza", String.format(java.util.Locale.US, "%.1f", d.dureza()));
+        linea(quien, "Vida de más", String.format(java.util.Locale.US, "%.1f", d.vida()));
+        linea(quien, "Daño de más", String.format(java.util.Locale.US, "%.1f", d.dano()));
+        linea(quien, "TOTAL", String.format(java.util.Locale.US, "%.0f", d.total()));
+    }
+
     private void ayuda(Player p, String etiqueta) {
         p.sendMessage(net.ederus.edm.comun.Estilo.degradado("VITRINA",
                 FlexPlugin.MAGENTA, FlexPlugin.CARMESI));
         linea(p, "/" + etiqueta, "monta la tuya: clic en un objeto y se copia");
         linea(p, "/" + etiqueta + " <jugador>", "mira la de otro");
+        linea(p, "/" + etiqueta + " power [jugador]", "de qué se compone su Poder");
         linea(p, "/" + etiqueta + " showcase", "la enseña en el chat");
         p.sendMessage(Component.text("  De una vitrina no sale nada: lo que se ve son copias.",
                 NamedTextColor.DARK_GRAY));
