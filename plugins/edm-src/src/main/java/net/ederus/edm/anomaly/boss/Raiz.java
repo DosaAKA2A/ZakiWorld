@@ -154,6 +154,10 @@ public final class Raiz extends BossFight {
             Compat.setAttribute(z, "knockback_resistance", 1.0);
             Compat.setAttribute(z, "follow_range", 64);
             if (z.getEquipment() != null) z.getEquipment().clear();
+            /* Con nombre aunque sea invisible: es lo que leen los mensajes de muerte
+             * ("asesinado por RAIZ", no "por un Zombie"). Como Rabby. */
+            z.customName(Component.text("RAÍZ", ACCENT));
+            z.setCustomNameVisible(false);
         });
         net.ederus.edm.comun.Tags.markBoss(boss, ID);
 

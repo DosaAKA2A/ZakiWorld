@@ -359,6 +359,11 @@ public final class MobsLethal implements Listener {
     }
 
     private void adoptar(MinionManager mm, LivingEntity mob, Player p) {
+        /* Ni el jefe de una anomalia, ni su cuerpo visible ni su tropa: son Enemy y
+         * pasaban por aqui como un zombi de estructura. Adoptarlos les reescribia la
+         * vida (de 3400 reescalada a la de un adoptado de nivel 20) y RAIZ moria en
+         * tres golpes y saltaba a la ultima fase. Lo vio Dosa peleando en Calamity. */
+        if (net.ederus.edm.comun.Tags.isOurs(mob)) return;
         if (mm.isMinion(mob) || mm.adoptado(mob) || mob.isInvulnerable()) return;
         ConfigurationSection s = cfg().getConfigurationSection("adoptados");
         if (s == null) s = new YamlConfiguration();
