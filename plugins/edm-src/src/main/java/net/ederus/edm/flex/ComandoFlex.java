@@ -53,6 +53,19 @@ public final class ComandoFlex implements CommandExecutor, TabCompleter {
             poder(p, args.length >= 2 ? args[1] : null);
             return true;
         }
+        if (uno.equals("top")) {
+            if (args.length >= 2 && args[1].equalsIgnoreCase("reset")) {
+                if (!p.hasPermission("ederus.flex.admin")) {
+                    plugin.di(p, "sin-permiso", "No puedes usar las vitrinas.");
+                    return true;
+                }
+                plugin.registroPoder().reiniciar();
+                plugin.di(p, "top-reiniciado", "Top de Poder reiniciado. Los conectados vuelven a contar en un minuto.");
+                return true;
+            }
+            top(p);
+            return true;
+        }
         if (uno.equals("ayuda") || uno.equals("help")) {
             ayuda(p, etiqueta);
             return true;
@@ -89,12 +102,42 @@ public final class ComandoFlex implements CommandExecutor, TabCompleter {
         plugin.menuPoder().abrir(quien, de);
     }
 
+    /** /flex top: los diez primeros por su mejor Poder, y donde queda quien pregunta. */
+    private void top(Player p) {
+        var registro = plugin.registroPoder();
+        registro.anotar(p);
+        p.sendMessage(Component.empty());
+        p.sendMessage(net.ederus.edm.comun.Estilo.cabecera("TOP DE PODER", "lo más alto que se le ha visto a cada uno", FlexPlugin.MARCA));
+        int i = 0;
+        for (var m : registro.top(10)) {
+            i++;
+            boolean yo = m.uuid().equals(p.getUniqueId());
+            p.sendMessage(Component.text("  " + net.ederus.edm.comun.Estilo.FLECHA + " ", net.ederus.edm.comun.Estilo.APAGADO)
+                    .append(Component.text(i + ".  ", net.ederus.edm.comun.Estilo.APAGADO))
+                    .append(Component.text(m.nombre(), yo ? FlexPlugin.MAGENTA_CLARO : NamedTextColor.WHITE))
+                    .append(Component.text("  " + MenuPoder.cifra(m.mejor()), FlexPlugin.MARCA)));
+        }
+        if (i == 0) {
+            p.sendMessage(net.ederus.edm.comun.Estilo.aviso(Component.text("Todavía no hay nadie apuntado.", net.ederus.edm.comun.Estilo.APAGADO)));
+        }
+        int pos = registro.posicion(p.getUniqueId());
+        var mia = registro.de(p.getUniqueId());
+        if (pos > 10 && mia != null) {
+            p.sendMessage(Component.text("  " + net.ederus.edm.comun.Estilo.FLECHA + " ", net.ederus.edm.comun.Estilo.APAGADO)
+                    .append(Component.text(pos + ".  ", net.ederus.edm.comun.Estilo.APAGADO))
+                    .append(Component.text(p.getName(), FlexPlugin.MAGENTA_CLARO))
+                    .append(Component.text("  " + MenuPoder.cifra(mia.mejor()), FlexPlugin.MARCA)));
+        }
+        p.sendMessage(Component.empty());
+    }
+
     private void ayuda(Player p, String etiqueta) {
         p.sendMessage(net.ederus.edm.comun.Estilo.degradado("VITRINA",
                 FlexPlugin.MAGENTA, FlexPlugin.CARMESI));
         linea(p, "/" + etiqueta, "monta la tuya: clic en un objeto y se copia");
         linea(p, "/" + etiqueta + " <jugador>", "mira la de otro");
         linea(p, "/" + etiqueta + " power [jugador]", "de qué se compone su Poder");
+        linea(p, "/" + etiqueta + " top", "los diez con más Poder");
         linea(p, "/" + etiqueta + " showcase", "la enseña en el chat");
         p.sendMessage(Component.text("  De una vitrina no sale nada: lo que se ve son copias.",
                 NamedTextColor.DARK_GRAY));
@@ -112,6 +155,7 @@ public final class ComandoFlex implements CommandExecutor, TabCompleter {
         String pref = args[0].toLowerCase(Locale.ROOT);
         if ("showcase".startsWith(pref)) out.add("showcase");
         if ("power".startsWith(pref)) out.add("power");
+        if ("top".startsWith(pref)) out.add("top");
         for (Vitrina v : plugin.almacen().todas()) {
             if (!v.vacia() && v.nombre().toLowerCase(Locale.ROOT).startsWith(pref)) out.add(v.nombre());
         }

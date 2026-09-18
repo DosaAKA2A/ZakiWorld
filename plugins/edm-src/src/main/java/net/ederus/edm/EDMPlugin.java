@@ -36,7 +36,7 @@ import net.ederus.edm.tooltip.TooltipPlugin;
  */
 public final class EDMPlugin extends JavaPlugin {
 
-    public static final String VERSION = "1.60.0";
+    public static final String VERSION = "1.61.0";
 
     private final Map<String, Module> modulos = new LinkedHashMap<>();
     private final List<String> fallidos = new ArrayList<>();
@@ -88,6 +88,7 @@ public final class EDMPlugin extends JavaPlugin {
         arrancar(new FlexPlugin(this));
         arrancar(new net.ederus.edm.biomas.BiomasPlugin(this));
         arrancar(new net.ederus.edm.mundos.MundosPlugin(this));
+        arrancar(new net.ederus.edm.minas.MinasPlugin(this));
         /* Quests es softdepend: sin el instalado, la clase del modulo de misiones
          * ni siquiera carga (referencia TaskType de Quests) y tumbaba TODO el
          * nucleo en el arranque. En Ederus siempre esta; esto protege cualquier
@@ -114,7 +115,36 @@ public final class EDMPlugin extends JavaPlugin {
         }
 
         registrarComando();
+        registrarPlaceholders();
         banner();
+    }
+
+    /* Los %edm_...% de PlaceholderAPI. La clase Placeholders extiende una suya, asi
+     * que solo se toca si el plugin esta: sin el, ni se carga. */
+    private Object placeholders;
+
+    private void registrarPlaceholders() {
+        if (getServer().getPluginManager().getPlugin("PlaceholderAPI") == null) return;
+        try {
+            Placeholders p = new Placeholders(this);
+            if (p.register()) {
+                placeholders = p;
+                getLogger().info("Placeholders %edm_...% registrados en PlaceholderAPI.");
+            }
+        } catch (Throwable t) {
+            getLogger().warning("No se pudieron registrar los placeholders: " + t);
+        }
+    }
+
+    private void soltarPlaceholders() {
+        if (placeholders instanceof Placeholders p) {
+            try {
+                p.unregister();
+            } catch (Throwable ignored) {
+                // Si PlaceholderAPI ya se fue, no hay nada que soltar.
+            }
+        }
+        placeholders = null;
     }
 
     private void registrarComando() {
@@ -285,6 +315,7 @@ public final class EDMPlugin extends JavaPlugin {
 
     @Override
     public void onDisable() {
+        soltarPlaceholders();
         List<Module> alReves = new ArrayList<>(this.modulos.values());
         java.util.Collections.reverse(alReves);
         for (Module m : alReves) {

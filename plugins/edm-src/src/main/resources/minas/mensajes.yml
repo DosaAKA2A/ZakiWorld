@@ -1,0 +1,57 @@
+# ---------------------------------------------------------------------------
+# Todo lo que las minas le dicen al jugador por el chat.
+#
+# Codigos de color: &7, &#RRGGBB y el &x&R&R&G&G&B&B de Spigot, los tres. Para
+# que una linea salga SIN prefijo, empiezala con {sin-prefijo}.
+# ---------------------------------------------------------------------------
+version: 1
+
+prefijo: '&x&E&8&A&2&5&C&lMINAS &8» &f'
+
+# --- el jugador ---
+# %mina%
+viaje: '&7Estás en &x&E&8&A&2&5&C%mina%&7. Pica lo que quieras: se rellena sola.'
+sin-acceso: '&#FF5C5CNo tienes acceso a la mina &f%mina%&#FF5C5C.'
+sin-minas: '&7Todavía no hay minas abiertas.'
+sin-mina: '&#FF5C5CNo hay ninguna mina llamada &f%mina%&#FF5C5C.'
+sin-zona: '&#FF5C5CLa mina &f%mina% &#FF5C5Ctodavía no tiene zona.'
+sacado: '&7La mina se está reiniciando; te hemos sacado.'
+
+# --- avisos por la barra de accion (van sin prefijo) ---
+# %mina% %segundos%
+aviso-reinicio: '{sin-prefijo}&7La mina &x&E&8&A&2&5&C%mina% &7se reinicia en &f%segundos% s'
+reiniciada: '{sin-prefijo}&x&E&8&A&2&5&C%mina% &7se ha reiniciado.'
+reiniciando: '{sin-prefijo}&7La mina se está reiniciando, espera un momento.'
+no-poner: '{sin-prefijo}&7En una mina no se ponen bloques, solo se pican.'
+
+# --- el pico de seleccion ---
+# %n% %x% %y% %z% %medidas% %bloques%
+pico-entregado: '&7Tienes el pico de minas. &fIzquierdo&7: esquina 1. &fDerecho&7: esquina 2.'
+esquina-1: '&7Esquina &f1&7: &x&E&8&A&2&5&C%x% %y% %z%'
+esquina-2: '&7Esquina &f2&7: &x&E&8&A&2&5&C%x% %y% %z%'
+zona-lista: '&7Zona lista: &f%medidas%&7, &f%bloques% &7bloques. Ahora &f/mina &7y &fNueva mina&7, o &fAplicar zona &7en una ficha.'
+falta-zona: '&#FF5C5CPrimero marca las dos esquinas con el pico. &7Lo tienes en /mina o con /mina wand.'
+
+# --- editar ---
+# %mina% %id% %que%
+pide-nombre: '&7Escribe en el chat el nombre de la mina nueva. &8(cancelar para salir)'
+pide-nombre-nuevo: '&7Escribe en el chat el nombre nuevo. &8(cancelar para salir)'
+pide-permiso: '&7Escribe el permiso para entrar, o &fninguno&7. &8(cancelar para salir)'
+pide-intervalo: '&7Escribe cada cuántos segundos se reinicia; &f0 &7apaga el temporizador. &8(cancelar para salir)'
+creada: '&fMina creada: &x&E&8&A&2&5&C%mina% &8(%id%)'
+zona-aplicada: '&fZona aplicada a &x&E&8&A&2&5&C%mina%&f: &7%que%'
+borrada: '&fMina borrada: &7%mina%. Los bloques se quedan como están.'
+reinicio-lanzado: '&fReiniciando &x&E&8&A&2&5&C%mina%&f.'
+no-se-pudo: '&#FF5C5CNo se pudo reiniciar &f%mina%&#FF5C5C: &7sin zona, sin bloques o ya en marcha.'
+sin-bloques: '&#FF5C5CLa mina no tiene bloques. &7Añade alguno desde su ficha antes de reiniciarla.'
+no-es-bloque: '&#FF5C5CEso no se puede colocar como bloque.'
+numero-malo: '&#FF5C5CEso no es un número.'
+spawn-fijado: '&fSalida fijada &7donde estás.'
+spawn-quitado: '&fSalida quitada&7: ahora se sale encima de la mina.'
+
+# --- cuando no se puede ---
+sin-permiso: '&#FF5C5CNo puedes administrar las minas.'
+solo-en-juego: '&7Las minas se manejan dentro del juego.'
+
+# --- respuestas del comando ---
+recargado: '&fRecargado&8: &7%que%'

@@ -80,6 +80,7 @@ public final class MenuPoder implements Listener {
 
     public void abrir(Player quien, Player de) {
         Poder.Desglose d = Poder.calcular(plugin, de);
+        plugin.registroPoder().anotar(de);
         boolean propia = quien.equals(de);
         Vista vista = new Vista(de.getUniqueId(), propia, Math.round(d.total()));
         vista.inv = Bukkit.createInventory(vista, TAM,

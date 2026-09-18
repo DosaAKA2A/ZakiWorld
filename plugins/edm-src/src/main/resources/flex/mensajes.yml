@@ -28,6 +28,7 @@ enfriamiento: '&7Podrás volver a mostrarla en &x&D&D&9&2&C&0%segundos% s'
 # degradado ni negrita, que en el chat se comian el numero.
 # %jugador% %poder%
 anuncio-poder: '{sin-prefijo}&x&D&D&9&2&C&0%jugador% &7ha flexeado &x&D&D&9&2&C&0%poder% &7de Poder.'
+top-reiniciado: '&fTop de Poder reiniciado. &7Los conectados vuelven a contar en un minuto.'
 sin-jugador: '&x&D&D&9&2&C&0%jugador% &7no está conectado.'
 
 # --- cuando no se puede ---

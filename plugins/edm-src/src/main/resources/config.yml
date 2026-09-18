@@ -29,6 +29,7 @@ modulos:
   flex: true
   biomas: true
   mundos: true
+  minas: true
   # Estos tres solo arrancan si esta su plugin: ProtocolLib, Quests y BattlePass.
   tooltip: true
   misiones: true

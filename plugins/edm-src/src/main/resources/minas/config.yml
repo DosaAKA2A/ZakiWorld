@@ -1,0 +1,27 @@
+# Minas: las minas de prision.
+#
+# Una mina es una caja del mundo que se rellena sola con una mezcla de bloques y
+# que cualquiera con acceso puede picar, este o no protegida por WorldGuard. Se
+# crean y se editan desde /mina, con el pico de seleccion; las minas viven en
+# minas.yml, en esta misma carpeta.
+
+# Lo picado va directo a la mochila. Lo que no cabe, cae al suelo.
+directo-al-inventario: true
+
+relleno:
+  # Bloques que se colocan por tick al reiniciar. Una mina de 30x10x30 (9.000
+  # bloques) tarda 3 ticks con este valor. Subirlo acelera; bajarlo alivia.
+  bloques-por-tick: 3000
+
+avisos:
+  # A cuantos segundos del reinicio se avisa (barra de accion).
+  segundos: [60, 30, 10, 5, 4, 3, 2, 1]
+  # A quien: a quien este dentro de la mina o a este numero de bloques de ella.
+  radio: 48
+  # Ademas de la barra, una linea en el chat.
+  tambien-en-el-chat: false
+
+umbral:
+  # Cuando una mina llega a su umbral de picado, el reinicio se adelanta a
+  # dentro de estos segundos (con sus avisos).
+  espera-segundos: 5

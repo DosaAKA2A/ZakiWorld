@@ -1,10 +1,10 @@
 name: EDM
-version: '1.60.0'
+version: '1.61.0'
 main: net.ederus.edm.EDMPlugin
 api-version: '1.20'
 author: Iris Studio
 description: Nucleo de Ederus - Rip, Anomaly, libros, avisos de tiendas, tienda propia, apuestas, bromas y pase de batalla
-softdepend: [Vault, WorldGuard, ProtectionStones, MMOItems, LibsDisguises, AdvancedEnchantments, UltimateMobCoins, Quests, ProtocolLib, BattlePass]
+softdepend: [Vault, WorldGuard, ProtectionStones, MMOItems, LibsDisguises, AdvancedEnchantments, UltimateMobCoins, Quests, ProtocolLib, BattlePass, PlaceholderAPI]
 
 commands:
   edm:
@@ -55,9 +55,14 @@ commands:
     permission: ederus.dl
   flex:
     description: 'Tu vitrina: pon a la vista tus mejores objetos.'
-    usage: /flex [jugador|showcase]
+    usage: /flex [jugador|showcase|power|top]
     aliases: [vitrina]
     permission: ederus.flex
+  mina:
+    description: 'Minas de prision: zonas que se rellenan solas y se pican sin permiso de nadie.'
+    usage: /mina [wand|crear|tp|reset|lista|reload]
+    aliases: [minas, mine, mines]
+    permission: ederus.minas.usar
   lbiomes:
     description: Lethal Biomes - climas por zona sin reiniciar
     usage: /lbiomes <list|zones|zone|paint|clear>
@@ -89,7 +94,13 @@ permissions:
     description: Permite montar una vitrina, verla y mostrarla en el chat
     default: true
   ederus.flex.admin:
-    description: Recarga las vitrinas y salta el enfriamiento del anuncio
+    description: Recarga las vitrinas, salta el enfriamiento del anuncio y reinicia el top de Poder
+    default: op
+  ederus.minas.usar:
+    description: Abre el menu de minas y viaja a las que tenga permitidas
+    default: true
+  ederus.minas:
+    description: Crea, edita, reinicia y borra minas; construye dentro de ellas
     default: op
   ederus.mundos:
     description: Crea, borra y visita los mundos de Lethal World

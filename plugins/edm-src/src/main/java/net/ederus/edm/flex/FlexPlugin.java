@@ -29,7 +29,7 @@ import net.kyori.adventure.text.format.TextColor;
  * una foto no puede duplicar nada porque no devuelve objetos: de una vitrina no
  * sale un ItemStack por ningun camino del codigo.
  */
-public final class FlexPlugin extends Module {
+public final class FlexPlugin extends Module implements org.bukkit.event.Listener {
 
     /*
      * El magenta y el carmesi de la vitrina. No son dos colores fuertes: son dos
@@ -50,6 +50,8 @@ public final class FlexPlugin extends Module {
     private Almacen almacen;
     private MenuFlex menu;
     private MenuPoder menuPoder;
+    private RegistroPoder registroPoder;
+    private BukkitTask medicion;
     private BukkitTask volcado;
 
     /** Cuando anuncio cada uno por ultima vez, para el enfriamiento del chat. */
@@ -74,6 +76,17 @@ public final class FlexPlugin extends Module {
         menuPoder = new MenuPoder(this);
         core.getServer().getPluginManager().registerEvents(menuPoder, this);
 
+        registroPoder = new RegistroPoder(this);
+        registroPoder.cargar();
+        core.getServer().getPluginManager().registerEvents(this, this);
+        // Cada minuto se mide a los conectados: es lo que mantiene vivo el top
+        // para los que no estan, y lo que pilla el "mejor" cuando alguien se
+        // pone el set bueno.
+        medicion = core.getServer().getScheduler().runTaskTimer(Module.dueno(this), () -> {
+            for (Player p : core.getServer().getOnlinePlayers()) registroPoder.anotar(p);
+            registroPoder.guardarSiHaceFalta();
+        }, 100L, 1200L);
+
         ComandoFlex comando = new ComandoFlex(this);
         var cmd = core.getCommand("flex");
         if (cmd != null) {
@@ -92,7 +105,26 @@ public final class FlexPlugin extends Module {
     @Override
     public void onDisable() {
         if (volcado != null) volcado.cancel();
+        if (medicion != null) medicion.cancel();
         if (almacen != null) almacen.volcar();
+        if (registroPoder != null) {
+            for (Player p : core.getServer().getOnlinePlayers()) registroPoder.anotar(p);
+            registroPoder.guardar();
+        }
+    }
+
+    @org.bukkit.event.EventHandler
+    public void alEntrar(org.bukkit.event.player.PlayerJoinEvent e) {
+        // Un par de segundos despues: al entrar, AuraSkills y el rango aun no
+        // han cargado al jugador y saldria un cero que pisaria el "actual".
+        core.getServer().getScheduler().runTaskLater(Module.dueno(this), () -> {
+            if (e.getPlayer().isOnline()) registroPoder.anotar(e.getPlayer());
+        }, 60L);
+    }
+
+    @org.bukkit.event.EventHandler
+    public void alSalir(org.bukkit.event.player.PlayerQuitEvent e) {
+        registroPoder.anotar(e.getPlayer());
     }
 
     @Override
@@ -100,7 +132,9 @@ public final class FlexPlugin extends Module {
         textos.cargar(new File(getDataFolder(), "mensajes.yml"));
         almacen.volcarSiHaceFalta();
         almacen.cargar();
-        return almacen.cuantas() + " vitrina(s).";
+        registroPoder.guardarSiHaceFalta();
+        registroPoder.cargar();
+        return almacen.cuantas() + " vitrina(s), " + registroPoder.cuantos() + " en el top de Poder.";
     }
 
     public Almacen almacen() {
@@ -113,6 +147,10 @@ public final class FlexPlugin extends Module {
 
     public MenuPoder menuPoder() {
         return menuPoder;
+    }
+
+    public RegistroPoder registroPoder() {
+        return registroPoder;
     }
 
     public int enfriamiento() {
