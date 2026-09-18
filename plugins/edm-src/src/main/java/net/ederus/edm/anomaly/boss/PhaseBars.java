@@ -72,7 +72,9 @@ public final class PhaseBars {
             case 0 -> "I";
             case 1 -> "II";
             case 2 -> "III";
-            default -> "IV";
+            case 3 -> "IV";
+            case 4 -> "V";
+            default -> String.valueOf(index + 1);
         };
     }
 
@@ -81,7 +83,8 @@ public final class PhaseBars {
             case 0 -> NamedTextColor.WHITE;
             case 1 -> NamedTextColor.GOLD;
             case 2 -> NamedTextColor.RED;
-            default -> NamedTextColor.LIGHT_PURPLE;
+            case 3 -> NamedTextColor.LIGHT_PURPLE;
+            default -> NamedTextColor.WHITE;
         };
         Component name = Component.text(bossName, accent);
         Component phase = Component.text("FASE " + roman(index), phaseColor);

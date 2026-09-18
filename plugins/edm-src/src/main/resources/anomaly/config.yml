@@ -103,6 +103,9 @@ anuncio:
   activo: true
   sonido: true
   titulo: true
+  # Como se le dice a la gente que llegue: "ve /warp coliseo". Sale en el titulo
+  # y en el chat (pulsable). Vacio = el titulo lleva las coordenadas.
+  warp: "/warp coliseo"
   # Redondea las coordenadas anunciadas a multiplos de N para dar margen de busqueda.
   # 1 = coordenadas exactas.
   precision-coordenadas: 1

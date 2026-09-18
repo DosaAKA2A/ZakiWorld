@@ -2874,7 +2874,7 @@ public final class AnomalyRegistry {
 
         @Override
         public String display() {
-            return "Alba, la Primera Luz";
+            return "ALBA";
         }
 
         @Override
@@ -2904,7 +2904,7 @@ public final class AnomalyRegistry {
 
         @Override
         public String tagline() {
-            return "La reina que juzga desde su corcel, entre puertas doradas";
+            return "La Primera Luz: la reina que juzga desde su corcel";
         }
 
         @Override
@@ -3082,7 +3082,7 @@ public final class AnomalyRegistry {
 
         @Override
         public String display() {
-            return "RAIZ, el Corazon Palido";
+            return "RAÍZ";
         }
 
         @Override
@@ -3112,7 +3112,7 @@ public final class AnomalyRegistry {
 
         @Override
         public String tagline() {
-            return "El bosque que exige que lo miren";
+            return "El Corazón Pálido: el bosque que exige que lo miren";
         }
 
         @Override

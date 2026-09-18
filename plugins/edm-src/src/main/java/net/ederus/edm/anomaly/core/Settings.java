@@ -205,6 +205,15 @@ public final class Settings {
         return cfg().getBoolean("anuncio.sonido", true);
     }
 
+    /**
+     * El atajo que se le dice a la gente para llegar: "ve /warp coliseo". Vacio = no se
+     * dice nada y el subtitulo lleva las coordenadas. Es texto, no un warp de verdad:
+     * lo que haya escrito es lo que sale, y al clicarlo en el chat se ejecuta.
+     */
+    public String announceWarp() {
+        return cfg().getString("anuncio.warp", "").trim();
+    }
+
     public boolean announceTitle() {
         return cfg().getBoolean("anuncio.titulo", true);
     }

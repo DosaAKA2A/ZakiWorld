@@ -52,10 +52,19 @@ public final class Announcer {
             }
         }
         if (plugin.settings().announceTitle()) {
+            /* El titulo es el NOMBRE, no la palabra "anomalia": lo que la gente tiene que
+             * leer de un vistazo es quien ha salido y como llegar. Con un warp puesto,
+             * el subtitulo es "ve /warp coliseo"; sin el, las coordenadas. */
+            String warp = plugin.settings().announceWarp();
+            Location l = event.where();
+            Component abajo = warp.isEmpty()
+                    ? Component.text(l.getBlockX() + " " + l.getBlockY() + " " + l.getBlockZ(), NamedTextColor.GRAY)
+                    : Component.text("ve ", NamedTextColor.GRAY)
+                            .append(Component.text(warp, NamedTextColor.WHITE));
             Title title = Title.title(
-                    Component.text("✦ ANOMALÍA ✦", event.type().color(), TextDecoration.BOLD),
-                    Component.text(event.type().display(), NamedTextColor.GRAY),
-                    Title.Times.times(Duration.ofMillis(400), Duration.ofMillis(2000), Duration.ofMillis(800)));
+                    Component.text(event.type().display(), event.type().color(), TextDecoration.BOLD),
+                    abajo,
+                    Title.Times.times(Duration.ofMillis(400), Duration.ofMillis(2600), Duration.ofMillis(800)));
             for (Player p : plugin.getServer().getOnlinePlayers()) p.showTitle(title);
         }
     }
@@ -83,11 +92,21 @@ public final class Announcer {
                 .hoverEvent(HoverEvent.showText(Component.text("Clic para copiar", SOFT)))
                 .clickEvent(ClickEvent.copyToClipboard(coordText));
 
-        return Component.text("✦ ", type.color())
+        Component linea = Component.text("✦ ", type.color())
                 .append(Component.text("Una ", NamedTextColor.WHITE))
                 .append(word)
                 .append(Component.text(" ha aparecido en ", NamedTextColor.WHITE))
                 .append(coords);
+
+        // El atajo, pulsable: clic y te lleva. Sin warp configurado no se anade nada.
+        String warp = plugin.settings().announceWarp();
+        if (!warp.isEmpty()) {
+            linea = linea.append(Component.text("  ·  ve ", NamedTextColor.WHITE))
+                    .append(Component.text(warp, type.color(), TextDecoration.BOLD)
+                            .hoverEvent(HoverEvent.showText(Component.text("Clic para ir", SOFT)))
+                            .clickEvent(ClickEvent.runCommand(warp)));
+        }
+        return linea;
     }
 
     private static int round(int value, int step) {
