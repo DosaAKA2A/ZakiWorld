@@ -74,7 +74,7 @@ import net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer;
  * desde /esb como los demas. Las tablas bioma -> tipos y estructura -> guarnicion viven en la
  * config de mundos.
  */
-final class MobsLethal implements Listener {
+public final class MobsLethal implements Listener {
 
     private final MundosPlugin modulo;
     private final Random random = new Random();
@@ -160,7 +160,8 @@ final class MobsLethal implements Listener {
                 if (!cuenta(p)) continue;
                 adoptarCerca(mm, p, radioAdopcion);
                 guarnecer(p);
-                if (cerca(p, radioConteo) >= tope) continue;
+                int topeDelJugador = tope + (modulo.hardcore() == null ? 0 : modulo.hardcore().bonusTope(p));
+                if (cerca(p, radioConteo) >= topeDelJugador) continue;
                 Location sitio = sitio(p, min, max);
                 if (sitio != null) invocar(p, sitio);
             }
@@ -187,6 +188,57 @@ final class MobsLethal implements Listener {
         sinQuemarse(mob);
         vivos.add(mob.getUniqueId());
         return mob;
+    }
+
+    /**
+     * Un minijefe de verdad: el tipo que se diga, con la vida y el dano multiplicados.
+     *
+     * Lo llaman las reglas hardcore cuando a alguien se le acaba la cordura. No es un
+     * esbirro grande: con los multiplicadores de serie aguanta como un jefe pequeno y
+     * pega como para matar de dos golpes, que es justo lo que se busca.
+     */
+    public LivingEntity invocarMinijefe(Player p, String id, double distancia,
+                                        double multiplicadorVida, double multiplicadorDano) {
+        Location sitio = sitio(p, (int) Math.max(8, distancia - 8), (int) Math.max(12, distancia));
+        if (sitio == null) sitio = p.getLocation().add(
+                (random.nextDouble() - 0.5) * distancia, 0, (random.nextDouble() - 0.5) * distancia);
+
+        LivingEntity mob = invocarTipo(p, id, true, sitio);
+        if (mob == null) return null;
+
+        double vida = Compat.getAttribute(mob, "max_health", 20) * Math.max(1, multiplicadorVida);
+        Compat.setAttribute(mob, "max_health", Math.min(1024, vida));
+        mob.setHealth(Math.min(1024, vida));
+        Compat.setAttribute(mob, "attack_damage",
+                Compat.getAttribute(mob, "attack_damage", 3) * Math.max(1, multiplicadorDano));
+        mob.getPersistentDataContainer().set(clave, PersistentDataType.STRING, "minijefe");
+        double escala = escalaDe(id);
+        if (escala > 1) Compat.setAttribute(mob, "scale", Math.min(2.0, escala));
+
+        Component nombre = mob.customName();
+        if (nombre != null) mob.customName(nombre.color(NamedTextColor.DARK_RED));
+        AnomalyPlugin a = anomaly();
+        if (a != null) a.minionManager().reescoltar(mob);
+        return mob;
+    }
+
+    /** La escala con la que se planta cada minijefe, por su nombre. 1 si no es de los cinco. */
+    private double escalaDe(String id) {
+        AnomalyPlugin a = anomaly();
+        MinionType t = a == null ? null : a.minions().type(id);
+        if (t == null) return 1;
+        for (Minijefe m : MINIJEFES) {
+            if (m.nombre().equals(t.display())) return m.escala();
+        }
+        return 1;
+    }
+
+    /** Una tanda de mobs del bioma alrededor de un jugador, para la oleada de entrada. */
+    public void oleada(Player p, int cuantos) {
+        for (int i = 0; i < cuantos; i++) {
+            Location sitio = sitio(p, 12, 26);
+            if (sitio != null) invocar(p, sitio);
+        }
     }
 
     private static void sinQuemarse(LivingEntity mob) {
@@ -424,6 +476,8 @@ final class MobsLethal implements Listener {
         double variacion = n.getDouble("variacion", 0.10);
         base *= 1 + (random.nextDouble() * 2 - 1) * variacion;
         if (destacado) base += n.getInt("extra-destacado", 5);
+        // En los mundos hardcore la cordura y los minutos dentro suben el nivel.
+        if (modulo.hardcore() != null) base += modulo.hardcore().bonusNivel(p);
         return (int) Math.max(1, Math.min(n.getInt("maximo", 100), Math.round(base)));
     }
 
@@ -515,10 +569,7 @@ final class MobsLethal implements Listener {
         double monedas = base * (1 + nivel / Math.max(1.0, m.getDouble("nivel-divisor", 20)))
                 * m.getDouble("multiplicador-mundo", 1.5) * extra;
         long pago = Math.round(monedas);
-        if (pago <= 0) return;
-        modulo.getServer().dispatchCommand(modulo.getServer().getConsoleSender(),
-                "mobcoins give " + asesino.getName() + " " + pago + " --silent");
-        asesino.sendActionBar(Component.text("+" + pago + " MobCoins", TextColor.color(0xFFD35C)));
+        net.ederus.edm.comun.MobCoins.pagar(modulo, asesino, pago);
     }
 
     private void retirarLejanos() {
@@ -562,6 +613,32 @@ final class MobsLethal implements Listener {
     private static Semilla d(String n, EntityType t, int color, MinionAbility... h) {
         return new Semilla(n, t, true, color, h);
     }
+
+    /**
+     * Los cinco minijefes de Calamity.
+     *
+     * No son esbirros grandes: son la recompensa del mundo hardcore, lo que viene a
+     * buscarte cuando se te acaba la cordura. La vida y el dano de verdad se los pone
+     * el multiplicador de la config (hardcore.minijefes), no estos numeros: aqui solo
+     * se define QUE son y como se ven, para que Dosa pueda tocarlos desde /esb.
+     */
+    private record Minijefe(String nombre, EntityType tipo, int color, double escala,
+                            MinionAbility... habilidades) {
+        /* La escala se aplica al invocarlo (Compat "scale"), no en la presencia:
+         * el tamano es cosa de la entidad concreta, no del tipo guardado. */
+    }
+
+    private static final List<Minijefe> MINIJEFES = List.of(
+            new Minijefe("Custodio de las Ruinas", EntityType.IRON_GOLEM, 0x9BA7A0, 1.4,
+                    MinionAbility.ACORAZADO, MinionAbility.ALARMA, MinionAbility.ESPINAS),
+            new Minijefe("Matriarca Tejedora", EntityType.CAVE_SPIDER, 0x6B4A6B, 1.8,
+                    MinionAbility.VENENOSO, MinionAbility.DIVISION, MinionAbility.AGIL),
+            new Minijefe("Heraldo Carmesí", EntityType.RAVAGER, 0xC23B3B, 1.3,
+                    MinionAbility.BERSERK, MinionAbility.IGNEO),
+            new Minijefe("Sanador del Fango", EntityType.EVOKER, 0x6E8C5A, 1.2,
+                    MinionAbility.CURANDERO, MinionAbility.ALARMA, MinionAbility.FLECHA_HELADA),
+            new Minijefe("Centinela de Toba", EntityType.WITHER_SKELETON, 0x7A7268, 1.5,
+                    MinionAbility.FLECHA_PESADA, MinionAbility.ACORAZADO, MinionAbility.BERSERK));
 
     private static final List<Bioma> PANACEA = List.of(
             new Bioma("honeybee_biome", c("Apicultor Picado", EntityType.ZOMBIE, 0xE8B923, MinionAbility.VENENOSO),
@@ -648,6 +725,8 @@ final class MobsLethal implements Listener {
                 modulo.getConfig().set(ruta + ".destacado", ids.get(2));
             }
         }
+        guardar |= sembrarMinijefes(reg);
+
         ConfigurationSection gs = modulo.getConfig().getConfigurationSection("mobs.guarniciones");
         if (gs == null || gs.getKeys(false).isEmpty()) {
             for (Puesto g : GUARNICIONES) {
@@ -689,6 +768,55 @@ final class MobsLethal implements Listener {
     private static MinionType buscar(MinionRegistry reg, String nombre) {
         for (MinionType t : reg.types()) if (t.display().equals(nombre)) return t;
         return null;
+    }
+
+    /**
+     * Crea los cinco minijefes en su propia carpeta y apunta sus ids en la config.
+     *
+     * Los ids los genera el registro a partir del nombre, asi que no se pueden
+     * escribir a mano en el config de fabrica: se escriben aqui la primera vez y a
+     * partir de ahi Dosa los edita en /esb como cualquier otro.
+     */
+    private boolean sembrarMinijefes(MinionRegistry reg) {
+        String nombreCarpeta = "Lethal World · Minijefes";
+        MinionCategory carpeta = null;
+        for (MinionCategory c : reg.categories()) {
+            if (c.display().equals(nombreCarpeta)) carpeta = c;
+        }
+        if (carpeta == null) {
+            carpeta = reg.createCategory(nombreCarpeta);
+            carpeta.icon(Material.WITHER_SKELETON_SKULL);
+            carpeta.colorRgb(0x8B1A1A);
+        }
+
+        List<String> ids = new ArrayList<>();
+        for (Minijefe m : MINIJEFES) {
+            MinionType t = buscar(reg, m.nombre());
+            if (t == null) {
+                t = reg.createType(m.nombre(), carpeta.id());
+                t.entity(m.tipo());
+                t.colorRgb(m.color());
+                t.bold(true);
+                t.baseHealth(120);
+                t.healthGrowth(0.12);
+                t.baseDamage(1.6);
+                t.damageGrowth(0.06);
+                t.mobcoins(150, 400);
+                for (MinionAbility h : m.habilidades()) if (!t.has(h)) t.toggle(h);
+                MinionPresence look = t.presence();
+                look.featured(true);
+                look.auraName("DUST");
+                look.auraColor(m.color());
+            }
+            ids.add(t.id());
+        }
+
+        List<String> yaPuestos = modulo.getConfig().getStringList("hardcore.minijefes.tipos");
+        if (yaPuestos.isEmpty() || reg.type(yaPuestos.get(0)) == null) {
+            modulo.getConfig().set("hardcore.minijefes.tipos", ids);
+            return true;
+        }
+        return false;
     }
 
     private static void configurar(MinionType t, Semilla s) {

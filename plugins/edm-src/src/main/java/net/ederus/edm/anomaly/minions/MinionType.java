@@ -66,6 +66,15 @@ public final class MinionType {
     private double baseDamage = 1.0;
     private double damageGrowth = 0.10;
 
+    /*
+     * MobCoins que paga al morir, sorteadas entre min y max. En 0 no paga nada por
+     * aqui y el mob se queda con lo que le corresponda por otras vias (la tabla de
+     * UltimateMobCoins en el Survival, o la formula por nivel de Lethal World).
+     * Lo pide Dosa para poder decidir el pago esbirro por esbirro desde /esb.
+     */
+    private int mobcoinsMin = 0;
+    private int mobcoinsMax = 0;
+
     /* Los valores que hereda cada vela nueva de este tipo; luego cada generador
      * puede cambiarlos por su cuenta desde la lista de generadores. */
     private int wandMinLevel = 1;
@@ -296,6 +305,35 @@ public final class MinionType {
 
     public void wandActivationRadius(int v) {
         this.wandActivationRadius = Math.max(8, Math.min(128, v));
+    }
+
+    public int mobcoinsMin() {
+        return mobcoinsMin;
+    }
+
+    public int mobcoinsMax() {
+        return mobcoinsMax;
+    }
+
+    public void mobcoinsMin(int v) {
+        this.mobcoinsMin = Math.max(0, Math.min(1000000, v));
+        if (mobcoinsMax < mobcoinsMin) mobcoinsMax = mobcoinsMin;
+    }
+
+    public void mobcoinsMax(int v) {
+        this.mobcoinsMax = Math.max(0, Math.min(1000000, v));
+        if (mobcoinsMin > mobcoinsMax) mobcoinsMin = mobcoinsMax;
+    }
+
+    /** Fija el rango de pago de una vez; se ordena solo si viene del reves. */
+    public void mobcoins(int min, int max) {
+        this.mobcoinsMin = Math.max(0, Math.min(1000000, Math.min(min, max)));
+        this.mobcoinsMax = Math.max(0, Math.min(1000000, Math.max(min, max)));
+    }
+
+    /** True si este esbirro paga MobCoins por su cuenta. */
+    public boolean paysMobcoins() {
+        return mobcoinsMax > 0;
     }
 
     /** El id de su tabla de botin en drops.yml, separado del espacio de los jefes. */

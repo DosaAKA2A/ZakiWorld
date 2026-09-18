@@ -15,7 +15,6 @@ import net.ederus.edm.comun.Tags;
 import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.entity.ElderGuardian;
-import org.bukkit.entity.Guardian;
 import org.bukkit.entity.Player;
 import org.bukkit.util.Vector;
 
@@ -409,33 +408,6 @@ public final class SaltLeviathan extends BossFight {
         }
     }
 
-    /** 5. Banco de Guardianes: llama guardianes menores que hostigan desde los lados. */
-    public void guardianShoal() {
-        if (!alive()) return;
-        int count = 3 + random.nextInt(3);
-        Location c = boss.getLocation();
-        soundAt(c, "entity.guardian.ambient", 1.5f, 0.8f);
-        broadcastNear(Component.text("Llama al banco.", ACCENT));
-
-        for (int i = 0; i < count; i++) {
-            double a = Math.PI * 2 * i / count;
-            Location sl = c.clone().add(Math.cos(a) * 7, 1 + random.nextDouble() * 3, Math.sin(a) * 7);
-            later(i * 8, () -> {
-                if (!alive()) return;
-                Compat.spawn(world(), Compat.NAUTILUS, sl, 24, 0.6, 0.6, 0.6, 0.05);
-                Guardian g = world().spawn(sl, Guardian.class, e -> {
-                    e.setPersistent(false);
-                    Compat.setAttribute(e, "max_health", 30);
-                    Compat.setAttribute(e, "attack_damage", 6);
-                    e.setHealth(30);
-                });
-                g.customName(Component.text("Guardian del Banco", TextColor.color(0x9FD8D2)));
-                markMinion(g);
-                Glow.apply(g, event.type().glowColor());
-                soundAt(sl, "entity.guardian.ambient", 1.1f, 1.2f);
-            });
-        }
-    }
 
     // -------------------------------------------------------- FASE II: la corriente
 

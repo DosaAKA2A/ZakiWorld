@@ -103,6 +103,41 @@ public final class Settings {
         return cfg().getBoolean("combate.permitir-empuje", true);
     }
 
+    /**
+     * Cada cuantos segundos el jefe se busca otro objetivo. 0 lo apaga.
+     *
+     * La IA vanilla se pega al primero que ve y no lo suelta: contra un grupo, eso
+     * convierte la pelea en "uno muere y los demas pegan gratis". Ver rotateTarget().
+     */
+    public int targetRotationSeconds() {
+        return cfg().getInt("combate.rotar-objetivo-segundos", 6);
+    }
+
+    /** Que parte del golpe a un jugador alcanza tambien a los que tiene al lado. */
+    public double splashFraction() {
+        return cfg().getDouble("combate.salpicadura", 0.6);
+    }
+
+    /** Radio en bloques de esa salpicadura. */
+    public double splashRadius() {
+        return cfg().getDouble("combate.radio-salpicadura", 4);
+    }
+
+    /** Bote de MobCoins que reparte esta anomalia al caer. 0 = no paga por aqui. */
+    public int mobcoins(String anomalyId) {
+        return cfg().getInt("anomalias." + anomalyId + ".mobcoins",
+                cfg().getInt("combate.mobcoins-por-defecto", 0));
+    }
+
+    public void mobcoins(String anomalyId, int valor) {
+        set("anomalias." + anomalyId + ".mobcoins", Math.max(0, Math.min(1000000, valor)));
+    }
+
+    /** Suelo por jugador al repartir ese bote, para que el que llego tarde cobre algo. */
+    public double mobcoinsMinimoPorJugador() {
+        return cfg().getDouble("combate.mobcoins-minimo-por-jugador", 5);
+    }
+
     public double healthPerPlayer() {
         return cfg().getDouble("combate.vida-extra-por-jugador", 0.15);
     }

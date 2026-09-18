@@ -76,6 +76,15 @@ public abstract class BossFight {
     /** Jugadores con permiso de vuelo temporal y el tick en que se les retira. */
     private final java.util.Map<java.util.UUID, Long> airTime = new java.util.HashMap<>();
 
+    /* Rotacion de objetivo: a quien pega ahora y cuanto dano habia hecho cada uno
+     * la ultima vez que se cambio, para saber quien mas ha apretado desde entonces. */
+    private java.util.UUID objetivoActual;
+    private long ultimaRotacion;
+    private final java.util.Map<java.util.UUID, Double> danoEnElTurno = new java.util.HashMap<>();
+    /* Un golpe salpicado no vuelve a salpicar: si no, tres jugadores juntos se
+     * reparten el golpe en cadena hasta multiplicarlo por diez. */
+    private boolean salpicando;
+
     /** La animacion guionizada mas larga es la resurreccion (13 s); esto le da margen. */
     private static final int MAX_INVULNERABLE_TICKS = 400;
 
@@ -224,6 +233,7 @@ public abstract class BossFight {
         boss.setRemainingAir(boss.getMaximumAir());
 
         watchInvulnerability();
+        rotateTarget();
         tickAirTime();
         tickShell();
         vigilarCaidaDeVida();
@@ -253,6 +263,63 @@ public abstract class BossFight {
         if (!busy() && ticks % 10 == 0) {
             tryCast();
         }
+    }
+
+    /**
+     * Cada pocos segundos el jefe se busca otro al que perseguir.
+     *
+     * La IA de un mob vanilla se agarra al primer jugador que ve y no lo suelta hasta
+     * que muere. Contra un grupo eso es una pelea regalada: uno aguanta y los demas le
+     * pegan por la espalda sin riesgo. Aqui se le cambia el objetivo a proposito, y se
+     * elige entre el que MAS le ha pegado desde la ultima rotacion (la mitad de las
+     * veces) y cualquier otro al azar, para que ni el que mas pega ni el que se esconde
+     * esten a salvo. Nunca repite al mismo si hay mas gente cerca.
+     */
+    private void rotateTarget() {
+        int cada = plugin.settings().targetRotationSeconds();
+        if (cada <= 0 || !(boss instanceof org.bukkit.entity.Mob mob)) return;
+        if (ticks - ultimaRotacion < cada * 20L) return;
+        ultimaRotacion = ticks;
+
+        List<Player> cerca = targets();
+        if (cerca.isEmpty()) return;
+
+        // Quien mas ha apretado DESDE la ultima rotacion, no en toda la pelea: si no,
+        // el que abrio fuerte al principio se lleva al jefe el resto del combate.
+        Player masPego = null;
+        double mejor = 0;
+        for (Player p : cerca) {
+            double total = event.damage().getOrDefault(p.getUniqueId(), 0.0);
+            double enElTurno = total - danoEnElTurno.getOrDefault(p.getUniqueId(), 0.0);
+            danoEnElTurno.put(p.getUniqueId(), total);
+            if (enElTurno > mejor) {
+                mejor = enElTurno;
+                masPego = p;
+            }
+        }
+
+        List<Player> candidatos = new ArrayList<>(cerca);
+        if (candidatos.size() > 1 && objetivoActual != null) {
+            candidatos.removeIf(p -> p.getUniqueId().equals(objetivoActual));
+        }
+        if (candidatos.isEmpty()) return;
+
+        Player elegido = (masPego != null && mejor > 0 && random.nextBoolean()
+                && candidatos.contains(masPego))
+                ? masPego
+                : candidatos.get(random.nextInt(candidatos.size()));
+
+        objetivoActual = elegido.getUniqueId();
+        mob.setTarget(elegido);
+    }
+
+    /** A quien persigue ahora mismo, para las habilidades que quieran seguirle la pista. */
+    public Player currentTarget() {
+        if (objetivoActual == null) return null;
+        for (Player p : targets()) {
+            if (p.getUniqueId().equals(objetivoActual)) return p;
+        }
+        return null;
     }
 
     /**
@@ -640,6 +707,40 @@ public abstract class BossFight {
                 p.damage(amount);
             }
         } catch (Throwable ignored) {
+        }
+        splash(p, amount);
+    }
+
+    /**
+     * Reparte parte del golpe a los que estan pegados al que lo recibio.
+     *
+     * Una anomalia tiene que matar GRUPOS, no jugadores sueltos. Como la mitad larga
+     * del repertorio apunta a uno solo, en vez de reescribir cien habilidades el golpe
+     * salpica a los vecinos: apinarse deja de ser gratis y el grupo tiene que abrirse.
+     * El golpe salpicado no vuelve a salpicar (ver el campo salpicando).
+     */
+    private void splash(Player centro, double amount) {
+        if (salpicando) return;
+        double fraccion = plugin.settings().splashFraction();
+        double radio = plugin.settings().splashRadius();
+        if (fraccion <= 0 || radio <= 0 || amount <= 0) return;
+
+        salpicando = true;
+        try {
+            for (Player otro : Fx.playersNear(centro.getLocation(), radio)) {
+                if (otro.getUniqueId().equals(centro.getUniqueId())) continue;
+                if (!Fx.isFightable(otro)) continue;
+                try {
+                    if (boss != null && boss.isValid()) {
+                        otro.damage(amount * fraccion, boss);
+                    } else {
+                        otro.damage(amount * fraccion);
+                    }
+                } catch (Throwable ignored) {
+                }
+            }
+        } finally {
+            salpicando = false;
         }
     }
 

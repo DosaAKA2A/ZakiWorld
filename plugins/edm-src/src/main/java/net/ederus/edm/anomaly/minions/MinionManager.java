@@ -730,6 +730,15 @@ public final class MinionManager implements Listener {
             Compat.sound(mob.getWorld(), mob.getLocation(), "entity.slime.squish", 0.9f, 1.3f);
         }
 
+        // MobCoins propias del tipo, si Dosa le ha puesto un rango en /esb. Es lo
+        // primero que se cobra: no depende de que la tabla de botin tenga nada.
+        if (type.paysMobcoins() && mob.getKiller() != null) {
+            int min = type.mobcoinsMin();
+            int max = type.mobcoinsMax();
+            int pago = max > min ? min + random.nextInt(max - min + 1) : max;
+            net.ederus.edm.comun.MobCoins.pagar(net.ederus.edm.Module.dueno(plugin), mob.getKiller(), pago);
+        }
+
         DropTable table = plugin.drops().table(type.dropTableId());
         if (table.entries().isEmpty() && table.experience() <= 0 && table.commands().isEmpty()) return;
 

@@ -226,6 +226,7 @@ public final class MinionRegistry {
                 type.healthGrowth(s.getDouble("vida-por-nivel", 0.35));
                 type.baseDamage(s.getDouble("dano-base", 1.0));
                 type.damageGrowth(s.getDouble("dano-por-nivel", 0.10));
+                type.mobcoins(s.getInt("mobcoins-min", 0), s.getInt("mobcoins-max", 0));
                 type.wandMinLevel(s.getInt("vela.nivel-min", 1));
                 type.wandMaxLevel(s.getInt("vela.nivel-max", 5));
                 type.wandIntervalSeconds(s.getInt("vela.intervalo-segundos", 30));
@@ -324,6 +325,8 @@ public final class MinionRegistry {
             yml.set(base + ".vida-por-nivel", t.healthGrowth());
             yml.set(base + ".dano-base", t.baseDamage());
             yml.set(base + ".dano-por-nivel", t.damageGrowth());
+            yml.set(base + ".mobcoins-min", t.mobcoinsMin());
+            yml.set(base + ".mobcoins-max", t.mobcoinsMax());
             yml.set(base + ".vela.nivel-min", t.wandMinLevel());
             yml.set(base + ".vela.nivel-max", t.wandMaxLevel());
             yml.set(base + ".vela.intervalo-segundos", t.wandIntervalSeconds());

@@ -67,6 +67,18 @@ combate:
   # En 0 el jefe pelea con la vida que diga el menu y nada mas.
   vida-extra-por-jugador: 0.15
 
+  # Cada cuantos segundos el jefe se busca OTRO al que perseguir. La IA vanilla se
+  # agarra al primero que ve y no lo suelta; contra un grupo eso regala la pelea.
+  # Elige entre el que mas le ha pegado desde la ultima rotacion y otro al azar.
+  # En 0 se apaga y el jefe vuelve a comportarse como un mob normal.
+  rotar-objetivo-segundos: 6
+
+  # Que parte del golpe a un jugador alcanza tambien a quien tenga al lado, y en que
+  # radio. Sirve para que las habilidades de un solo objetivo castiguen igual al grupo
+  # apinado sin tener que reescribirlas una por una. En 0 no salpica.
+  salpicadura: 0.6
+  radio-salpicadura: 4
+
   # Devuelve el golpe de un jugador al jefe cuando una proteccion de terreno lo ha
   # cancelado. Hace falta para las anomalias de cuerpo pacifico: WorldGuard protege al
   # Piromante (un aldeano) como si fuera ganado y dentro de una region cerrada no se le

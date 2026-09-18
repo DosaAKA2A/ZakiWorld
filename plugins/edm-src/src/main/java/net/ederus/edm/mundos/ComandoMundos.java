@@ -19,6 +19,8 @@ import org.bukkit.potion.PotionEffectType;
 
 import net.ederus.edm.Module;
 import net.ederus.edm.comun.Estilo;
+import net.ederus.edm.mundos.hardcore.Cordura;
+import net.ederus.edm.mundos.hardcore.Hardcore;
 import io.papermc.paper.registry.RegistryAccess;
 import io.papermc.paper.registry.RegistryKey;
 import net.kyori.adventure.text.Component;
@@ -75,6 +77,7 @@ final class ComandoMundos implements TabExecutor {
             case "biome" -> irABioma(quien, args);
             case "pregen" -> pregen(quien, args);
             case "level" -> nivel(quien, args);
+            case "hardcore" -> hardcore(quien, args);
             default -> ayuda(quien);
         }
         return true;
@@ -92,6 +95,7 @@ final class ComandoMundos implements TabExecutor {
         linea(q, "/lw pregen start <name> [radius]", "pregenera (sin radio: el borde o el de la config)");
         linea(q, "/lw pregen status|pause|resume|cancel", "");
         linea(q, "/lw level [player]", "de dónde sale el nivel de sus mobs");
+        linea(q, "/lw hardcore", "Calamity: portales, objetos y cordura");
     }
 
     private static void linea(CommandSender q, String uso, String que) {
@@ -418,11 +422,99 @@ final class ComandoMundos implements TabExecutor {
         return null;
     }
 
+    /**
+     * /lw hardcore: lo que hace falta para montar Calamity y para probarlo.
+     *
+     * Los cuatro puntos (entrada, llegada, salida y puerta de salida) se marcan
+     * PISANDOLOS, que es la unica forma comoda de hacerlo desde Bedrock y sin menus.
+     */
+    private void hardcore(CommandSender q, String[] args) {
+        Hardcore hc = modulo.hardcore();
+        if (hc == null) {
+            decir(q, Component.text("Las reglas hardcore están apagadas en la config.", NamedTextColor.RED));
+            return;
+        }
+        String sub = args.length >= 2 ? args[1].toLowerCase(Locale.ROOT) : "status";
+
+        switch (sub) {
+            case "entrada", "llegada", "salida", "puerta-salida" -> {
+                if (!(q instanceof Player p)) {
+                    decir(q, Component.text("Ese punto se marca estando en el sitio.", NamedTextColor.RED));
+                    return;
+                }
+                hc.punto(sub, p.getLocation());
+                decir(q, Component.text("Marcado ", NamedTextColor.GREEN)
+                        .append(Component.text(sub, MARCA))
+                        .append(Component.text(" aquí mismo.", SUAVE)));
+            }
+            case "frasco", "cristal", "esencia" -> {
+                Player destino = args.length >= 3
+                        ? modulo.getServer().getPlayer(args[2])
+                        : (q instanceof Player p ? p : null);
+                if (destino == null) {
+                    decir(q, Component.text("No encuentro a ese jugador.", NamedTextColor.RED));
+                    return;
+                }
+                var item = switch (sub) {
+                    case "frasco" -> hc.items().frasco(modulo.getConfig().getInt("hardcore.frasco.usos", 3));
+                    case "cristal" -> hc.items().cristal();
+                    default -> hc.items().esencia(1);
+                };
+                destino.getInventory().addItem(item);
+                decir(q, Component.text("Entregado a " + destino.getName() + ".", NamedTextColor.GREEN));
+            }
+            case "cordura" -> {
+                Player destino = args.length >= 4
+                        ? modulo.getServer().getPlayer(args[3])
+                        : (q instanceof Player p ? p : null);
+                if (destino == null) {
+                    decir(q, Component.text("No encuentro a ese jugador.", NamedTextColor.RED));
+                    return;
+                }
+                if (args.length >= 3) {
+                    try {
+                        hc.cordura().valor(destino, Double.parseDouble(args[2]));
+                    } catch (NumberFormatException e) {
+                        decir(q, Component.text("Eso no es un número.", NamedTextColor.RED));
+                        return;
+                    }
+                }
+                decir(q, Component.text(destino.getName() + " tiene ", SUAVE)
+                        .append(Component.text(Math.round(hc.cordura().valor(destino)) + "%",
+                                Cordura.color(hc.cordura().valor(destino))))
+                        .append(Component.text(" de cordura.", SUAVE)));
+            }
+            default -> {
+                cabecera(q, "Calamity y los mundos hardcore");
+                linea(q, "Mundos", String.join(", ", hc.mundos()));
+                for (String punto : List.of("entrada", "llegada", "salida", "puerta-salida")) {
+                    var donde = hc.punto(punto);
+                    linea(q, punto, donde == null ? "sin marcar"
+                            : donde.getWorld().getKey() + "  " + donde.getBlockX() + " "
+                                    + donde.getBlockY() + " " + donde.getBlockZ());
+                }
+                linea(q, "/lw hardcore entrada", "marca aquí la puerta de ida (en el spawn)");
+                linea(q, "/lw hardcore llegada", "marca aquí donde aparece el que entra");
+                linea(q, "/lw hardcore puerta-salida", "marca aquí la puerta de vuelta (dentro)");
+                linea(q, "/lw hardcore salida", "marca aquí a dónde se vuelve");
+                linea(q, "/lw hardcore frasco|cristal|esencia [player]", "entrega uno");
+                linea(q, "/lw hardcore cordura [valor] [player]", "consulta o la fija");
+            }
+        }
+    }
+
     @Override
     public List<String> onTabComplete(CommandSender q, Command cmd, String etiqueta, String[] args) {
         List<String> op = new ArrayList<>();
         if (args.length == 1) {
-            op.addAll(List.of("list", "generators", "create", "delete", "tp", "biomes", "biome", "pregen", "level"));
+            op.addAll(List.of("list", "generators", "create", "delete", "tp", "biomes", "biome",
+                    "pregen", "level", "hardcore"));
+        } else if (args.length == 2 && args[0].equalsIgnoreCase("hardcore")) {
+            op.addAll(List.of("status", "entrada", "llegada", "salida", "puerta-salida",
+                    "frasco", "cristal", "esencia", "cordura"));
+        } else if (args.length == 3 && args[0].equalsIgnoreCase("hardcore")
+                && List.of("frasco", "cristal", "esencia", "cordura").contains(args[1].toLowerCase(Locale.ROOT))) {
+            for (Player p : modulo.getServer().getOnlinePlayers()) op.add(p.getName());
         } else if (args.length == 2 && args[0].equalsIgnoreCase("pregen")) {
             op.addAll(List.of("start", "status", "pause", "resume", "cancel"));
         } else if (args.length == 3 && args[0].equalsIgnoreCase("pregen") && args[1].equalsIgnoreCase("start")) {

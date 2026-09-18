@@ -111,3 +111,104 @@ mobs:
 
 # Mundos creados. Lo escribe /lw create; tocarlo a mano tambien vale.
 mundos: {}
+
+# ---------------------------------------------------------------------------
+# CALAMITY Y LOS MUNDOS HARDCORE
+#
+# Reglas que SOLO existen en los mundos de esta lista. Fuera de ellos no se
+# enciende nada: cada regla pregunta primero por el mundo.
+# ---------------------------------------------------------------------------
+hardcore:
+  activo: true
+  # Los mundos de Lethal World que se rigen por esto (el nombre corto de /lw list).
+  mundos:
+    - calamity
+  # En true, quien este en creativo tambien pierde cordura y recibe los efectos.
+  contar-creativo: false
+
+  # Cada cuantos segundos se renuevan los efectos del bioma.
+  biomas-cada-segundos: 3
+
+  cordura:
+    # Cuanta cordura se pierde por minuto en condiciones normales. Con 1.0, cien
+    # minutos de expedicion desde la entrada hasta el cero.
+    por-minuto: 1.0
+    # Multiplicadores que se acumulan: de noche, a oscuras y por bioma.
+    factor-noche: 2.0
+    factor-oscuridad: 2.0
+    # Lo que cuesta un susto: un golpe que se lleve un cuarto de tu vida.
+    por-golpe: 5
+    # Por debajo del 50%: mobs de mas alrededor y niveles de mas.
+    mobs-extra: 4
+    nivel-extra: 10
+    # Por debajo del 25%.
+    nivel-extra-critico: 20
+    # A cero.
+    mobs-extra-vacio: 6
+
+  # Con la cordura a cero viene uno de estos, y no mas de uno cada tantos minutos.
+  minijefes:
+    cada-minutos: 10
+    distancia: 30
+    # Multiplicadores sobre el esbirro normal de ese tipo.
+    vida: 15
+    dano: 4
+    # Los rellena el plugin la primera vez con los cinco de la carpeta
+    # "Lethal World · Minijefes" de /esb. A partir de ahi se editan alli.
+    tipos: []
+
+  # El Frasco de Calma: lo unico que devuelve cordura sin salir.
+  frasco:
+    usos: 3
+    cordura: 40
+    # Esencias de Calamidad que cuesta rellenar un trago en el altar.
+    esencias-por-trago: 1
+
+  # El Cristal de Regreso: segundos que hay que aguantar quieto.
+  cristal:
+    segundos: 5
+
+  # A donde se sale (muerte, cristal y portal de salida). Sin esto, al spawn del
+  # mundo principal. Se pone con /lw hardcore salida estando en el sitio.
+  salida: {}
+
+  # La entrada: un sitio del mundo normal que mete a Calamity al pisarlo. Se pone
+  # con /lw hardcore entrada estando dentro del portal que construya Dosa.
+  entrada: {}
+  # Donde aparece el que entra. Se pone con /lw hardcore llegada dentro de Calamity.
+  llegada: {}
+  # Radio en bloques de las dos zonas.
+  radio-zonas: 3
+
+  dificultad:
+    # No se duerme: ni se salta la noche ni se pone punto de reaparicion.
+    sin-camas: true
+    # No se regenera vida sola: pociones y comida encantada.
+    sin-regeneracion: true
+    # Cuanta armadura ignoran los mobs de alli. 0.30 = pegan un 30% mas.
+    penetracion-armadura: 0.30
+    # Mobs que te reciben al entrar, unos segundos despues de llegar.
+    oleada-de-entrada: 5
+    # Los mobs suben un nivel por cada tantos minutos que lleves dentro. 0 lo apaga.
+    nivel-cada-minutos: 5
+
+  # Comandos que no funcionan dentro (quien tenga ederus.mundos se los salta).
+  comandos-prohibidos:
+    - spawn
+    - home
+    - homes
+    - sethome
+    - tpa
+    - tpahere
+    - tpaccept
+    - back
+    - warp
+    - rtp
+    - wild
+    - ec
+    - enderchest
+    - echest
+
+  # La cordura de quien se desconecta dentro, para que volver no la reinicie.
+  # Lo escribe el plugin solo; no hace falta tocarlo.
+  guardado: {}

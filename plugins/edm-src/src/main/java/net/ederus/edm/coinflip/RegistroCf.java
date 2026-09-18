@@ -1,7 +1,6 @@
 package net.ederus.edm.coinflip;
 
 import java.io.File;
-import java.util.Locale;
 import java.util.logging.Logger;
 
 import net.ederus.edm.comun.Bitacora;
@@ -27,10 +26,8 @@ public final class RegistroCf {
     public void anotar(String tipo, String jugador, long id,
                        double apuesta, double premio, String nota) {
         bitacora.anotar(tipo, jugador, "apuesta " + id,
-                "puso " + fmt(apuesta), "cobro " + fmt(premio), nota == null ? "" : nota);
+                "puso " + net.ederus.edm.comun.Bitacora.dec(apuesta), "cobro " + net.ederus.edm.comun.Bitacora.dec(premio), nota == null ? "" : nota);
     }
-
-    private static String fmt(double d) { return String.format(Locale.US, "%.2f", d); }
 
     public void cerrar() {
         bitacora.cerrar();

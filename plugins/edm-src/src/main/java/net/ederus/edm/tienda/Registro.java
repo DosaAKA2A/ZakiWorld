@@ -1,7 +1,6 @@
 package net.ederus.edm.tienda;
 
 import java.io.File;
-import java.util.Locale;
 import java.util.logging.Logger;
 
 import net.ederus.edm.comun.Bitacora;
@@ -25,10 +24,8 @@ public final class Registro {
     public void anotar(String tipo, String jugador, int cantidad, String material,
                        double unitario, double total, double saldo) {
         bitacora.anotar(tipo, jugador, cantidad + " x " + material,
-                "ud " + fmt(unitario), "total " + fmt(total), "saldo " + fmt(saldo));
+                "ud " + net.ederus.edm.comun.Bitacora.dec(unitario), "total " + net.ederus.edm.comun.Bitacora.dec(total), "saldo " + net.ederus.edm.comun.Bitacora.dec(saldo));
     }
-
-    private static String fmt(double d) { return String.format(Locale.US, "%.2f", d); }
 
     public void cerrar() {
         bitacora.cerrar();

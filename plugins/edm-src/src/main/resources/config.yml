@@ -8,6 +8,11 @@
 #   coinflip/ apuestas entre jugadores (/cf)
 #   troll/    bromas de admin (/troll)
 #   tooltip/  como se ven los encantamientos de los items
+#   goditems/ comportamiento de los items (/gi)
+#   dungeonloot/ cajas y llaves de mazmorra (/dl)
+#   flex/     la vitrina de cada jugador (/flex)
+#   biomas/   Lethal Biomes, climas por zona (/lbiomes)
+#   mundos/   Lethal World, mundos de datapack (/lw)
 #
 # Al arrancar por primera vez se copian solos desde las carpetas viejas,
 # que se conservan intactas por si hay que volver atras.
@@ -19,7 +24,15 @@ modulos:
   tienda: true
   coinflip: true
   troll: true
+  goditems: true
+  dungeonloot: true
+  flex: true
+  biomas: true
+  mundos: true
+  # Estos tres solo arrancan si esta su plugin: ProtocolLib, Quests y BattlePass.
   tooltip: true
+  misiones: true
+  bp: true
 
 # Bitacoras de lectura: un fichero de texto por modulo y por dia en
 # plugins/EDM/logs/, con una linea por suceso y la hora delante. Estan para

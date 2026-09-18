@@ -28,6 +28,7 @@ import org.bukkit.scheduler.BukkitTask;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 import java.util.function.Consumer;
 import net.ederus.edm.comun.Fx;
@@ -764,6 +765,7 @@ public final class AnomalyManager implements Listener {
             plugin.getLogger().warning("Fallo en el destello de muerte: " + t);
         }
 
+        pagarMobcoins(event);
         List<String> report = plugin.drops().award(event.typeId(), event.damage(), where);
         plugin.announcer().defeated(event, report);
         contarParaElRankup(event);
@@ -787,6 +789,30 @@ public final class AnomalyManager implements Listener {
         if (event != null && event.bars() != null) event.bars().viewers().remove(e.getPlayer());
     }
 
+
+    /**
+     * Reparte las MobCoins que pague esta anomalia entre los que le hicieron dano.
+     *
+     * El bote va en la config de cada anomalia (anomalias.<id>.mobcoins) y se reparte
+     * EN PROPORCION al dano, con un suelo para que el que llego tarde cobre algo. En 0
+     * no paga nada por aqui y el botin sigue pudiendo dar monedas por comando, como
+     * hasta ahora.
+     */
+    private void pagarMobcoins(ActiveAnomaly event) {
+        int bote = plugin.settings().mobcoins(event.typeId());
+        if (bote <= 0 || event.damage().isEmpty()) return;
+
+        double total = event.damage().values().stream().mapToDouble(Double::doubleValue).sum();
+        if (total <= 0) return;
+        double minimo = plugin.settings().mobcoinsMinimoPorJugador();
+
+        for (Map.Entry<UUID, Double> en : event.damage().entrySet()) {
+            Player p = plugin.getServer().getPlayer(en.getKey());
+            if (p == null || !p.isOnline()) continue;
+            long pago = Math.round(Math.max(minimo, bote * (en.getValue() / total)));
+            net.ederus.edm.comun.MobCoins.pagar(net.ederus.edm.Module.dueno(plugin), p, pago);
+        }
+    }
 
     /**
      * Sube los contadores de ServerVariables que pide el rankup 11-20 (camino PvE):

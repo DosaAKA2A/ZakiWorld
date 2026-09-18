@@ -48,6 +48,7 @@ public final class MundosPlugin extends Module {
     private Bitacora bitacora;
     private Pregenerador pregen;
     private MobsLethal mobs;
+    private net.ederus.edm.mundos.hardcore.Hardcore hardcore;
     private final List<String> generadores = new ArrayList<>();
 
     public MundosPlugin(EDMPlugin core) {
@@ -55,7 +56,8 @@ public final class MundosPlugin extends Module {
     }
 
     /** Los mobs de Lethal World, para consultarlos desde el comando. */
-    MobsLethal mobs() {
+    /** El ciclo de mobs; lo usan tambien las reglas hardcore para invocar por su cuenta. */
+    public MobsLethal mobs() {
         return mobs;
     }
 
@@ -79,6 +81,8 @@ public final class MundosPlugin extends Module {
         pregen.cargar();
         mobs = new MobsLethal(this);
         mobs.arrancar();
+        hardcore = new net.ederus.edm.mundos.hardcore.Hardcore(this);
+        hardcore.arrancar();
 
         int cargados = 0;
         Map<String, String> creados = mundos();
@@ -95,6 +99,7 @@ public final class MundosPlugin extends Module {
     public void onDisable() {
         if (pregen != null) pregen.apagar();
         if (mobs != null) mobs.parar();
+        if (hardcore != null) hardcore.parar();
     }
 
     @Override
@@ -165,6 +170,11 @@ public final class MundosPlugin extends Module {
     public World mundo(String nombre) {
         NamespacedKey key = NamespacedKey.fromString(NAMESPACE + ":" + nombre.toLowerCase(Locale.ROOT));
         return key == null ? null : core.getServer().getWorld(key);
+    }
+
+    /** Las reglas de los mundos hardcore (Calamity). Puede ser null si estan apagadas. */
+    public net.ederus.edm.mundos.hardcore.Hardcore hardcore() {
+        return hardcore;
     }
 
     /** Si un mundo es de Lethal World: lo mira el ciclo de mobs en cada vuelta. */

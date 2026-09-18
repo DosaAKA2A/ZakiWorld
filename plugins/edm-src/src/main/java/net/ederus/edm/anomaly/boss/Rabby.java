@@ -133,14 +133,6 @@ public final class Rabby extends BossFight {
         Compat.spawn(world(), Compat.FIREWORK_SPARK, spot.clone().add(0, 2, 0), 14, 0.5, 0.6, 0.5, 0.05);
     }
 
-    private static ItemStack dyed(Material piece, int rgb) {
-        ItemStack item = new ItemStack(piece);
-        if (item.getItemMeta() instanceof org.bukkit.inventory.meta.LeatherArmorMeta meta) {
-            meta.setColor(org.bukkit.Color.fromRGB(rgb));
-            item.setItemMeta(meta);
-        }
-        return item;
-    }
 
     // -------------------------------------------------------------------- ambiente
 

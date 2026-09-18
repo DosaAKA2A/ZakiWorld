@@ -123,6 +123,11 @@ public final class Bitacora {
      * Nada de "12400.0" ni de "0.08264462809917356": mas decimales cuanto mas
      * pequeno es el numero, y sin ceros de relleno al final.
      */
+    /** Un decimal con dos cifras y punto, para los registros de tienda y coinflip. */
+    public static String dec(double v) {
+        return String.format(java.util.Locale.US, "%.2f", v);
+    }
+
     public static String num(double v) {
         double abs = Math.abs(v);
         String s = abs >= 100 ? String.format(java.util.Locale.US, "%.0f", v)

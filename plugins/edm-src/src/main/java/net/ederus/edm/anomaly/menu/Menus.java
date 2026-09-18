@@ -610,6 +610,36 @@ public final class Menus implements Listener {
                 List.of(MenuUtil.line("Sube 100 puntos."),
                         Component.text("► Con shift: 1000", NamedTextColor.GRAY))));
 
+        MinionType esbirroDeLaTabla = minionOf(holder.context);
+        int boteMonedas = esbirroDeLaTabla != null
+                ? esbirroDeLaTabla.mobcoinsMax()
+                : plugin.settings().mobcoins(holder.context);
+        List<Component> monedasLore = new ArrayList<>();
+        if (esbirroDeLaTabla != null) {
+            monedasLore.add(MenuUtil.field("Paga", esbirroDeLaTabla.paysMobcoins()
+                            ? (esbirroDeLaTabla.mobcoinsMin() == esbirroDeLaTabla.mobcoinsMax()
+                                    ? esbirroDeLaTabla.mobcoinsMax() + " por baja"
+                                    : esbirroDeLaTabla.mobcoinsMin() + " - "
+                                            + esbirroDeLaTabla.mobcoinsMax() + " por baja")
+                            : "nada",
+                    esbirroDeLaTabla.paysMobcoins() ? MenuUtil.GOLD : MenuUtil.DIM));
+            monedasLore.add(MenuUtil.blank());
+            monedasLore.add(MenuUtil.line("Lo cobra quien lo mate."));
+            monedasLore.add(MenuUtil.line("Se ajusta en la ficha del esbirro."));
+        } else {
+            monedasLore.add(MenuUtil.field("Bote", boteMonedas > 0 ? boteMonedas + " MobCoins" : "nada",
+                    boteMonedas > 0 ? MenuUtil.GOLD : MenuUtil.DIM));
+            monedasLore.add(MenuUtil.blank());
+            monedasLore.add(MenuUtil.line("Se reparte entre los que le hicieron daño,"));
+            monedasLore.add(MenuUtil.line("en proporción, con un mínimo por cabeza."));
+            monedasLore.add(MenuUtil.blank());
+            monedasLore.add(MenuUtil.action("Clic izquierdo: +50"));
+            monedasLore.add(Component.text("► Clic derecho: -50", NamedTextColor.YELLOW));
+            monedasLore.add(Component.text("► Shift para pasos de 500", NamedTextColor.GRAY));
+        }
+        inv.setItem(51, MenuUtil.icon(Material.SUNFLOWER,
+                MenuUtil.title("MobCoins", MenuUtil.GOLD), monedasLore, false));
+
         List<Component> cmdLore = new ArrayList<>();
         cmdLore.add(MenuUtil.line("Comandos que corre la consola al caer el jefe."));
         cmdLore.add(MenuUtil.line("Se editan en drops.yml; %jugador% es el nombre."));
@@ -957,6 +987,25 @@ public final class Menus implements Listener {
                         MenuUtil.action("Clic izquierdo: +0.1"),
                         Component.text("► Clic derecho: -0.1", NamedTextColor.YELLOW),
                         Component.text("► Shift para pasos de 1.0", NamedTextColor.GRAY)), false));
+
+        inv.setItem(33, MenuUtil.icon(Material.SUNFLOWER,
+                MenuUtil.title("MobCoins al morir", MenuUtil.GOLD),
+                List.of(
+                        MenuUtil.field("Paga", type.paysMobcoins()
+                                        ? (type.mobcoinsMin() == type.mobcoinsMax()
+                                                ? type.mobcoinsMax() + " por baja"
+                                                : type.mobcoinsMin() + " - " + type.mobcoinsMax() + " por baja")
+                                        : "nada",
+                                type.paysMobcoins() ? MenuUtil.GOLD : MenuUtil.DIM),
+                        MenuUtil.blank(),
+                        MenuUtil.line("Lo que cobra quien lo mate, sorteado"),
+                        MenuUtil.line("entre el mínimo y el máximo."),
+                        MenuUtil.line("En 0 no paga nada por aquí."),
+                        MenuUtil.blank(),
+                        MenuUtil.action("Clic izquierdo: +1"),
+                        Component.text("► Clic derecho: -1", NamedTextColor.YELLOW),
+                        Component.text("► Shift para pasos de 25", NamedTextColor.GRAY),
+                        Component.text("► Tecla de soltar (Q): escribirlo, \"10-40\"", NamedTextColor.GRAY)), false));
 
         inv.setItem(19, MenuUtil.icon(Material.GLOWSTONE_DUST,
                 MenuUtil.title("Crecimiento de vida", MenuUtil.GOLD),
@@ -1600,6 +1649,13 @@ public final class Menus implements Listener {
                     type.wandMinLevel(), type.wandMaxLevel());
             return;
         }
+        if (slot == 33
+                && (event.getClick() == ClickType.DROP || event.getClick() == ClickType.CONTROL_DROP)) {
+            click(player, 1.4f);
+            beginRange(player, PendingInput.Kind.RANGO_MOBCOINS, type.id(),
+                    type.mobcoinsMin(), type.mobcoinsMax());
+            return;
+        }
 
         switch (slot) {
             case 10 -> type.cycleEntity(up);
@@ -1614,6 +1670,10 @@ public final class Menus implements Listener {
             case 15 -> type.baseDamage(type.baseDamage() + (shift ? 1.0 : 0.1) * (up ? 1 : -1));
             case 19 -> type.healthGrowth(type.healthGrowth() + (shift ? 0.25 : 0.05) * (up ? 1 : -1));
             case 20 -> type.damageGrowth(type.damageGrowth() + (shift ? 0.25 : 0.05) * (up ? 1 : -1));
+            case 33 -> {
+                int paso = (shift ? 25 : 1) * (up ? 1 : -1);
+                type.mobcoins(type.mobcoinsMin() + paso, type.mobcoinsMax() + paso);
+            }
             case 21 -> type.wandMinLevel(type.wandMinLevel() + (shift ? 10 : 1) * (up ? 1 : -1));
             case 22 -> {
                 var leftover = player.getInventory().addItem(plugin.minionWand().create(type));
@@ -1821,7 +1881,7 @@ public final class Menus implements Listener {
      */
     private record PendingInput(Kind kind, String context, long expiresAt) {
         enum Kind {TIPO_NUEVO, TIPO_NOMBRE, CARPETA_NUEVA, CARPETA_NOMBRE, CARPETA_ICONO,
-            RANGO_TIPO, RANGO_GENERADOR}
+            RANGO_TIPO, RANGO_GENERADOR, RANGO_MOBCOINS}
     }
 
     private final java.util.Map<java.util.UUID, PendingInput> pendingName = new java.util.HashMap<>();
@@ -1918,7 +1978,7 @@ public final class Menus implements Listener {
             }
             String name = raw.length() > 32 ? raw.substring(0, 32) : raw;
             switch (pending.kind()) {
-                case RANGO_TIPO, RANGO_GENERADOR -> applyRange(player, pending, raw);
+                case RANGO_TIPO, RANGO_GENERADOR, RANGO_MOBCOINS -> applyRange(player, pending, raw);
                 case TIPO_NUEVO -> {
                     MinionType created = plugin.minions().createType(name, pending.context());
                     MinionCategory cat = plugin.minions().categoryOf(created);
@@ -1989,6 +2049,22 @@ public final class Menus implements Listener {
             volver(player, pending);
             return;
         }
+        if (pending.kind() == PendingInput.Kind.RANGO_MOBCOINS) {
+            MinionType type = plugin.minions().type(pending.context());
+            if (type == null) return;
+            type.mobcoins(range[0], range[1]);
+            plugin.minions().save();
+            player.sendMessage(plugin.prefix()
+                    .append(type.name())
+                    .append(Component.text("  paga  ", MenuUtil.SOFT))
+                    .append(Component.text(range[0] == range[1]
+                            ? range[1] + " MobCoins" : range[0] + " - " + range[1] + " MobCoins",
+                            MenuUtil.GOLD))
+                    .append(Component.text("  por baja.", MenuUtil.SOFT)));
+            Compat.sound(player.getWorld(), player.getLocation(), "block.amethyst_block.resonate", 0.7f, 1.4f);
+            volver(player, pending);
+            return;
+        }
         if (pending.kind() == PendingInput.Kind.RANGO_TIPO) {
             MinionType type = plugin.minions().type(pending.context());
             if (type == null) return;
@@ -2020,7 +2096,8 @@ public final class Menus implements Listener {
     /** Devuelve al jugador a la pantalla desde la que salio a escribir. */
     private void volver(Player player, PendingInput pending) {
         switch (pending.kind()) {
-            case RANGO_TIPO, TIPO_NOMBRE -> open(player, Screen.MINION_EDIT, 0, pending.context(), false);
+            case RANGO_TIPO, RANGO_MOBCOINS, TIPO_NOMBRE ->
+                    open(player, Screen.MINION_EDIT, 0, pending.context(), false);
             case RANGO_GENERADOR -> open(player, Screen.SPAWNER_EDIT, 0, pending.context(), false);
             case TIPO_NUEVO -> open(player, Screen.MINIONS, 0, pending.context(), false);
             case CARPETA_NOMBRE, CARPETA_ICONO -> open(player, Screen.CATEGORY_EDIT, 0,
@@ -2380,6 +2457,14 @@ public final class Menus implements Listener {
         if (slot == 46) {
             click(player, 1.2f);
             open(player, Screen.DROPS, 0, holder.context, !holder.placeMode);
+            return;
+        }
+        if (slot == 51 && minionOf(holder.context) == null) {
+            int paso = (event.isShiftClick() ? 500 : 50) * (event.isLeftClick() ? 1 : -1);
+            plugin.settings().mobcoins(holder.context,
+                    plugin.settings().mobcoins(holder.context) + paso);
+            click(player, event.isLeftClick() ? 1.4f : 0.8f);
+            render(event.getInventory(), player, holder);
             return;
         }
         if (slot == 48 || slot == 50) {
