@@ -218,6 +218,15 @@ public abstract class BossFight {
         return ticks < busyUntil;
     }
 
+    /**
+     * Deja de estar ocupado YA. busyFor() solo sabe alargar; esto es para lo que
+     * acaba antes de tiempo (el ritual de RAIZ cuando la flor se completa) y no
+     * tiene por que dejar al jefe pasmado el resto del plazo que pidio.
+     */
+    protected void unbusy() {
+        busyUntil = ticks;
+    }
+
     // ----------------------------------------------------------------------- ciclo
 
     public void tick() {

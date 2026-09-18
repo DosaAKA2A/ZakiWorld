@@ -85,6 +85,8 @@ public final class Raiz extends BossFight {
     // --- odio
     private int odio;
     private long odioHasta;
+    /** El ultimo tick en que el odio subio: una habilidad en area cuenta UNA vez. */
+    private long odioTick = -1;
 
     // --- el ritual de la flor
     /** El ritual esta en marcha: el jefe esta caido y no cambia de fase. */
@@ -93,6 +95,8 @@ public final class Raiz extends BossFight {
     private boolean ritualCumplido;
     /** A que fase se iba cuando empezo el ritual. */
     private int faseDestino;
+    /** Hasta que tick no se abre otro ritual tras uno fallido (o se encadenarian). */
+    private long ritualNoAntesDe;
     /** Dosis de curacion que lleva la flor y las que pide. */
     private int dosis;
     private int dosisPedidas;
@@ -263,6 +267,16 @@ public final class Raiz extends BossFight {
         if (!copias.isEmpty() && ticks() % 4 == 0) moverCopias();
     }
 
+    /**
+     * BossFight le quita la invulnerabilidad a cualquier jefe que la lleve mas de 20 s,
+     * como red de seguridad. El ritual de la flor dura 45 y la Mirada congela todo a
+     * proposito: aqui esas dos son las excepciones, y solo ellas.
+     */
+    @Override
+    protected boolean allowLongInvulnerability() {
+        return ritualActivo || combateCongelado;
+    }
+
     /** Mientras la Mirada congela el combate, ni el jefe recibe ni reparte. */
     @Override
     public double incomingDamageMultiplier() {
@@ -273,9 +287,13 @@ public final class Raiz extends BossFight {
     /** El ODIO se alimenta de aciertos: cada golpe que entra sube el contador. */
     @Override
     public void hit(Player p, double amount) {
+        // Un golpe de cero sigue siendo un golpe (animacion, empujon, evento): mientras
+        // la Mirada congela el combate, no se pega y punto.
+        if (combateCongelado) return;
         double extra = 1 + odio * 0.12;
-        super.hit(p, amount * (combateCongelado ? 0 : extra));
-        if (!combateCongelado && odio > 0 && odio < 12) {
+        super.hit(p, amount * extra);
+        if (odio > 0 && odio < 12 && ticks() != odioTick) {
+            odioTick = ticks();
             odio++;
             odioHasta = ticks() + 120;
             Compat.setAttribute(boss, "attack_speed", Math.min(12, 4.0 + odio * 0.5));
@@ -445,7 +463,9 @@ public final class Raiz extends BossFight {
     @Override
     protected boolean canChangePhase(int from, int to) {
         if (ritualCumplido) return true;
-        if (!ritualActivo) abrirRitual(to);
+        // Tras un ritual fallido se cura un 20%; si un reventon lo habia dejado muy
+        // por debajo del umbral, sin este descanso abriria otro ritual en el acto.
+        if (!ritualActivo && ticks() >= ritualNoAntesDe) abrirRitual(to);
         return false;
     }
 
@@ -544,6 +564,10 @@ public final class Raiz extends BossFight {
         ritualActivo = false;
         boss.setInvulnerable(false);
         if (alive()) boss.setAI(true);
+        // El plazo de 45 s del ritual se pidio con busyFor; si la flor se completo
+        // antes, no hay que esperar el resto sin hacer nada.
+        unbusy();
+        busyFor(30);
 
         if (cumplido) {
             ritualCumplido = true;
@@ -562,6 +586,7 @@ public final class Raiz extends BossFight {
             boss.setHealth(Math.min(max, boss.getHealth() + cura));
             Compat.spawn(world(), Compat.HEART, center().add(0, 1.6, 0), 30, 1.0, 1.0, 1.0, 0.04);
             soundAt(center(), "entity.creaking.activate", 1.8f, 0.5f);
+            ritualNoAntesDe = ticks() + 20 * 30;
             announce(Component.text("La flor se marchitó. Se levanta curado."));
             titleNear(Component.text("SE LEVANTA", TextColor.color(RESINA), TextDecoration.BOLD),
                     Component.text("La flor no aguantó", NamedTextColor.GRAY));

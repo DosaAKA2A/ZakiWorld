@@ -404,6 +404,7 @@ public final class Hardcore implements Listener {
                         cfg().getDouble("minijefes.vida", 15),
                         cfg().getDouble("minijefes.dano", 4));
         if (mob == null) return;
+        marcarPresa(mob, p);
 
         e.ultimoMinijefe = ahora;
         Component nombre = mob.customName() == null
@@ -634,10 +635,10 @@ public final class Hardcore implements Listener {
         if (!esHardcore(p)) return;
         int segundos = cfg().getInt("dificultad.veneno-comida-cruda", 8);
         if (segundos <= 0) return;
-        String id = e.getItem().getType().name();
-        boolean cruda = id.startsWith("RAW_") || id.equals("CHICKEN") || id.equals("BEEF")
-                || id.equals("PORKCHOP") || id.equals("MUTTON") || id.equals("RABBIT")
-                || id.equals("COD") || id.equals("SALMON") || id.equals("ROTTEN_FLESH");
+        boolean cruda = switch (e.getItem().getType()) {
+            case CHICKEN, BEEF, PORKCHOP, MUTTON, RABBIT, COD, SALMON, ROTTEN_FLESH -> true;
+            default -> false;
+        };
         if (!cruda) return;
         p.addPotionEffect(new PotionEffect(PotionEffectType.POISON, segundos * 20, 1, true, false, true));
         p.addPotionEffect(new PotionEffect(PotionEffectType.HUNGER, segundos * 20, 1, true, false, true));
@@ -882,7 +883,9 @@ public final class Hardcore implements Listener {
         nuevo.setAmount(1);
         if (frasco.getAmount() > 1) {
             frasco.setAmount(frasco.getAmount() - 1);
-            p.getInventory().addItem(nuevo);
+            for (ItemStack sobra : p.getInventory().addItem(nuevo).values()) {
+                p.getWorld().dropItemNaturally(p.getLocation(), sobra);
+            }
         } else {
             p.getInventory().setItemInMainHand(nuevo);
         }

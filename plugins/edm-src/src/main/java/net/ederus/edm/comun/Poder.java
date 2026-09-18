@@ -3,7 +3,6 @@ package net.ederus.edm.comun;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.entity.Player;
-import org.bukkit.inventory.ItemStack;
 
 import java.util.Locale;
 
@@ -95,37 +94,18 @@ public final class Poder {
         double vida = Math.max(0, Compat.getAttribute(p, "max_health", 20) - 20);
         double dano = Math.max(0, Compat.getAttribute(p, "attack_damage", 1) - 1);
 
-        double total = rango * c.getDouble("por-rango", 10)
-                + auraskills * c.getDouble("por-auraskills", 1)
-                + armadura * c.getDouble("por-armadura", 4)
-                + dureza * c.getDouble("por-dureza", 6)
-                + vida * c.getDouble("por-vida", 2)
-                + dano * c.getDouble("por-dano", 3);
+        /* Los mismos numeros que el config de serie, A PROPOSITO: en un servidor que
+         * ya tenia flex/config.yml (el Survival) el bloque poder: no se escribe solo,
+         * y con los pesos viejos aqui la cifra saldria veinte veces mas baja sin que
+         * nadie entendiera por que. */
+        double total = rango * c.getDouble("por-rango", 200)
+                + auraskills * c.getDouble("por-auraskills", 20)
+                + armadura * c.getDouble("por-armadura", 80)
+                + dureza * c.getDouble("por-dureza", 120)
+                + vida * c.getDouble("por-vida", 40)
+                + dano * c.getDouble("por-dano", 60);
 
         return new Desglose(rango, auraskills, armadura, dureza, vida, dano, total);
     }
 
-    /**
-     * Cuantas piezas de un mismo set de MMOItems lleva puestas.
-     *
-     * No entra en la cuenta del poder (los bonos del set ya mueven los atributos y se
-     * contarian dos veces); esta para ENSENARLO en la ficha, que es lo que el jugador
-     * quiere saber.
-     */
-    public static int piezasDeSet(Player p, String set) {
-        int n = 0;
-        for (ItemStack it : p.getInventory().getArmorContents()) {
-            if (llevaSet(it, set)) n++;
-        }
-        if (llevaSet(p.getInventory().getItemInMainHand(), set)) n++;
-        return n;
-    }
-
-    private static boolean llevaSet(ItemStack it, String set) {
-        if (it == null || it.getItemMeta() == null) return false;
-        // MMOItems guarda el set en el PersistentDataContainer con su propia clave;
-        // mirar el texto del contenedor es suficiente y no ata EDM a su API.
-        return it.getItemMeta().getPersistentDataContainer().toString()
-                .toUpperCase(Locale.ROOT).contains(set.toUpperCase(Locale.ROOT));
-    }
 }
