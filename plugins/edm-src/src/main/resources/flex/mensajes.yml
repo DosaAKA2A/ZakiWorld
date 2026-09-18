@@ -8,7 +8,7 @@
 # que es donde luce. La negrita va solo en la palabra del prefijo. Para que una
 # linea salga SIN prefijo, empiezala con {sin-prefijo}.
 # ---------------------------------------------------------------------------
-version: 1
+version: 2
 
 prefijo: '&x&D&D&9&2&C&0&lVITRINA &8» &f'
 
@@ -24,6 +24,11 @@ sin-vitrina: '&x&D&D&9&2&C&0%jugador% &7no tiene nada en su vitrina.'
 # El boton [Ver vitrina] se compone en el codigo, que es donde vive su clic.
 anuncio: '{sin-prefijo}&x&D&D&9&2&C&0%jugador% &7ha flexeado su vitrina.  '
 enfriamiento: '&7Podrás volver a mostrarla en &x&D&D&9&2&C&0%segundos% s'
+# El de /flex power, desde el boton del menu: la cifra en el rosa de la marca, sin
+# degradado ni negrita, que en el chat se comian el numero.
+# %jugador% %poder%
+anuncio-poder: '{sin-prefijo}&x&D&D&9&2&C&0%jugador% &7ha flexeado &x&D&D&9&2&C&0%poder% &7de Poder.'
+sin-jugador: '&x&D&D&9&2&C&0%jugador% &7no está conectado.'
 
 # --- cuando no se puede ---
 sin-permiso: '&#FF5C5CNo puedes usar las vitrinas.'

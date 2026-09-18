@@ -11,7 +11,6 @@ import org.bukkit.command.TabCompleter;
 import org.bukkit.entity.Player;
 
 import net.kyori.adventure.text.Component;
-import net.kyori.adventure.text.format.TextDecoration;
 import net.kyori.adventure.text.format.NamedTextColor;
 
 /**
@@ -74,12 +73,12 @@ public final class ComandoFlex implements CommandExecutor, TabCompleter {
     }
 
     /**
-     * /flex power: el PODER de un jugador, presentado como la vitrina.
+     * /flex power: el PODER de un jugador, en un menu.
      *
      * Es una cifra del JUGADOR, no de un mundo: lo que ha jugado (rango y habilidades)
-     * mas lo que lleva puesto. Se ensena desglosado porque un total a secas no dice
-     * que mejorar, y se ANUNCIA al servidor como la vitrina, porque flexear es
-     * justamente eso.
+     * mas lo que lleva puesto. Se ensena en un menu con el equipo delante, porque un
+     * total a secas no dice que mejorar; el chat se reserva para presumir la cifra,
+     * y eso se hace desde el boton del menu.
      */
     private void poder(Player quien, String nombre) {
         Player de = nombre == null ? quien : plugin.getServer().getPlayer(nombre);
@@ -87,44 +86,7 @@ public final class ComandoFlex implements CommandExecutor, TabCompleter {
             plugin.di(quien, "sin-jugador", "%jugador% no está conectado.", "%jugador%", nombre);
             return;
         }
-        var d = net.ederus.edm.comun.Poder.calcular(plugin, de);
-        ficha(quien, de, d);
-        // Mirar el poder de OTRO no se anuncia: lo que se presume es lo propio.
-        if (de.equals(quien)) plugin.anunciarPoder(quien, Math.round(d.total()));
-    }
-
-    /** La ficha del poder, con el mismo aire que el menu de la vitrina. */
-    private void ficha(Player quien, Player de, net.ederus.edm.comun.Poder.Desglose d) {
-        quien.sendMessage(Component.empty());
-        quien.sendMessage(net.ederus.edm.comun.Estilo.degradado("PODER DE " + de.getName().toUpperCase(Locale.ROOT),
-                FlexPlugin.MAGENTA, FlexPlugin.CARMESI));
-        quien.sendMessage(Component.empty());
-        parte(quien, "Rango de rankup", d.rango(), "el camino que llevas andado");
-        parte(quien, "AuraSkills", d.auraskills(), "la suma de tus habilidades");
-        parte(quien, "Armadura", d.armadura(), "lo que llevas puesto");
-        parte(quien, "Dureza", d.dureza(), "lo que aguanta ese equipo");
-        parte(quien, "Vida de más", d.vida(), "corazones por encima de diez");
-        parte(quien, "Daño de más", d.dano(), "golpe por encima del puño");
-        quien.sendMessage(Component.empty());
-
-        // El total, en grande: degradado de la vitrina y en negrita.
-        quien.sendMessage(Component.text("   ", NamedTextColor.DARK_GRAY)
-                .append(net.ederus.edm.comun.Estilo.degradado(
-                        String.format(Locale.US, "%,.0f", d.total()).replace(',', '.'),
-                        FlexPlugin.MAGENTA, FlexPlugin.CARMESI)
-                        .decoration(TextDecoration.BOLD, true))
-                .append(Component.text("  de Poder", net.ederus.edm.comun.Estilo.APAGADO)));
-        quien.sendMessage(Component.empty());
-    }
-
-    /** Una fila del desglose: cuanto aporta esa parte y de donde sale. */
-    private void parte(Player quien, String etiqueta, double valor, String explica) {
-        quien.sendMessage(Component.text("  " + net.ederus.edm.comun.Estilo.FLECHA + " ",
-                        net.ederus.edm.comun.Estilo.APAGADO)
-                .append(Component.text(etiqueta, FlexPlugin.MAGENTA_CLARO))
-                .append(Component.text("  " + String.format(Locale.US, "%.1f", valor),
-                        NamedTextColor.WHITE))
-                .append(Component.text("   " + explica, net.ederus.edm.comun.Estilo.APAGADO)));
+        plugin.menuPoder().abrir(quien, de);
     }
 
     private void ayuda(Player p, String etiqueta) {
@@ -149,6 +111,7 @@ public final class ComandoFlex implements CommandExecutor, TabCompleter {
         if (args.length != 1 || !quien.hasPermission("ederus.flex")) return out;
         String pref = args[0].toLowerCase(Locale.ROOT);
         if ("showcase".startsWith(pref)) out.add("showcase");
+        if ("power".startsWith(pref)) out.add("power");
         for (Vitrina v : plugin.almacen().todas()) {
             if (!v.vacia() && v.nombre().toLowerCase(Locale.ROOT).startsWith(pref)) out.add(v.nombre());
         }

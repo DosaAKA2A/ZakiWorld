@@ -44,11 +44,12 @@ public final class FlexPlugin extends Module {
             net.kyori.adventure.text.format.TextColor.color(0xE9A8DA);
     public static final TextColor MARCA = TextColor.color(0xDD92C0);
 
-    private static final int MENSAJES_VERSION = 1;
+    private static final int MENSAJES_VERSION = 2;
 
     private final Textos textos = new Textos();
     private Almacen almacen;
     private MenuFlex menu;
+    private MenuPoder menuPoder;
     private BukkitTask volcado;
 
     /** Cuando anuncio cada uno por ultima vez, para el enfriamiento del chat. */
@@ -70,6 +71,8 @@ public final class FlexPlugin extends Module {
 
         menu = new MenuFlex(this);
         core.getServer().getPluginManager().registerEvents(menu, this);
+        menuPoder = new MenuPoder(this);
+        core.getServer().getPluginManager().registerEvents(menuPoder, this);
 
         ComandoFlex comando = new ComandoFlex(this);
         var cmd = core.getCommand("flex");
@@ -108,6 +111,10 @@ public final class FlexPlugin extends Module {
         return menu;
     }
 
+    public MenuPoder menuPoder() {
+        return menuPoder;
+    }
+
     public int enfriamiento() {
         return getConfig().getInt("anuncio.enfriamiento-segundos", 300);
     }
@@ -123,8 +130,8 @@ public final class FlexPlugin extends Module {
      */
     /**
      * El anuncio de /flex power: presumir de poder es lo mismo que presumir de vitrina,
-     * asi que comparte enfriamiento y formato. El numero va en el degradado de la
-     * vitrina y en negrita, que es lo que se quiere que se vea desde lejos.
+     * asi que comparte enfriamiento y formato. Una linea plana con la cifra y nada mas:
+     * el degradado en el chat se comia el numero.
      */
     public void anunciarPoder(Player quien, long total) {
         long ahora = System.currentTimeMillis();
@@ -138,13 +145,8 @@ public final class FlexPlugin extends Module {
         }
         ultimoAnuncio.put(quien.getUniqueId(), ahora);
 
-        Component cifra = Estilo.degradado(String.valueOf(total), MAGENTA, CARMESI)
-                .decoration(net.kyori.adventure.text.format.TextDecoration.BOLD, true);
-        Component linea = Estilo.texto(quien.getName(), MARCA)
-                .append(Estilo.texto(" ha flexeado sus ", Estilo.APAGADO))
-                .append(cifra)
-                .append(Estilo.texto(" de Poder.", Estilo.APAGADO));
-
+        Component linea = texto("anuncio-poder", "{sin-prefijo}%jugador% ha flexeado %poder% de Poder.",
+                "%jugador%", quien.getName(), "%poder%", MenuPoder.cifra(total));
         for (Player p : core.getServer().getOnlinePlayers()) p.sendMessage(linea);
         core.getServer().getConsoleSender().sendMessage(
                 quien.getName() + " flexeó " + total + " de Poder.");

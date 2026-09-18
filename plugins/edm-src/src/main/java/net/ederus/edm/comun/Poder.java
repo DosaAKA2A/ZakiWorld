@@ -73,6 +73,11 @@ public final class Poder {
         return calcular(plugin, p, rango(plugin, p), auraskills(p));
     }
 
+    /** El peso de una parte del Poder, el mismo que usa calcular(). */
+    public static double peso(org.bukkit.plugin.Plugin plugin, String clave, double def) {
+        return cfg(plugin).getDouble(clave, def);
+    }
+
     private static ConfigurationSection cfg(org.bukkit.plugin.Plugin plugin) {
         ConfigurationSection s = plugin.getConfig().getConfigurationSection("poder");
         return s == null ? new YamlConfiguration() : s;

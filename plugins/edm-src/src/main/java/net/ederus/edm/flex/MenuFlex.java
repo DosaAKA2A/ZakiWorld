@@ -92,7 +92,7 @@ public final class MenuFlex implements Listener {
      * nombre del panel y la seccion detras. La palabra VITRINA va en degradado, que
      * es la firma del modulo, y es lo unico con peso de toda la ventana.
      */
-    private Component titulo(String seccion) {
+    static Component titulo(String seccion) {
         return Component.text("✦ ", FlexPlugin.MARCA)
                 .append(Estilo.degradado("VITRINA", FlexPlugin.MAGENTA, FlexPlugin.CARMESI)
                         .decoration(TextDecoration.BOLD, true))
