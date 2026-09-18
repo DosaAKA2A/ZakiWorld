@@ -167,6 +167,15 @@ hardcore:
     #     APAGADA por Dosa el 2026-09-18.
     cuarentena-minutos: 0
 
+  # El tag de las 24 horas. La etiqueta en si vive en el tags.yml de AlonsoTags, que
+  # decide quien puede ponersela por un PERMISO: entregarla es dar ese permiso.
+  # Las horas son ACUMULADAS y se guardan en hardcore.tiempo (no se reinician nunca).
+  tag:
+    activo: true
+    horas: 24
+    nombre: "[INSOMNE]"
+    comando: "lp user %jugador% permission set insomne.badge.unlocked true"
+
   # El Frasco de Calma: lo unico que devuelve cordura sin salir.
   frasco:
     usos: 3

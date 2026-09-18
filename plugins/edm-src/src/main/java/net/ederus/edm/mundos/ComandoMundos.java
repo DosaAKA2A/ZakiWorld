@@ -447,6 +447,28 @@ final class ComandoMundos implements TabExecutor {
                         .append(Component.text(sub, MARCA))
                         .append(Component.text(" aquí mismo.", SUAVE)));
             }
+            case "menu" -> {
+                if (!(q instanceof Player p)) {
+                    decir(q, Component.text("El panel se abre desde el juego.", NamedTextColor.RED));
+                    return;
+                }
+                hc.menu().abrir(p);
+            }
+            case "tiempo" -> {
+                Player destino = args.length >= 3
+                        ? modulo.getServer().getPlayer(args[2])
+                        : (q instanceof Player p ? p : null);
+                if (destino == null) {
+                    decir(q, Component.text("No encuentro a ese jugador.", NamedTextColor.RED));
+                    return;
+                }
+                double horas = hc.horasDe(destino);
+                decir(q, Component.text(destino.getName() + " lleva ", SUAVE)
+                        .append(Component.text(String.format(Locale.US, "%.1f h", horas), MARCA))
+                        .append(Component.text(" en Calamity", SUAVE))
+                        .append(Component.text(horas >= 24 ? "  ·  ya tiene el tag." : "  ·  el tag son 24 h.",
+                                NamedTextColor.GRAY)));
+            }
             case "frasco", "cristal", "esencia" -> {
                 Player destino = args.length >= 3
                         ? modulo.getServer().getPlayer(args[2])
@@ -499,6 +521,8 @@ final class ComandoMundos implements TabExecutor {
                 linea(q, "/lw hardcore salida", "marca aquí a dónde se vuelve");
                 linea(q, "/lw hardcore frasco|cristal|esencia [player]", "entrega uno");
                 linea(q, "/lw hardcore cordura [valor] [player]", "consulta o la fija");
+                linea(q, "/lw hardcore tiempo [player]", "horas acumuladas y si tiene el tag");
+                linea(q, "/lw hardcore menu", "panel de las reglas de dificultad");
             }
         }
     }
@@ -510,10 +534,11 @@ final class ComandoMundos implements TabExecutor {
             op.addAll(List.of("list", "generators", "create", "delete", "tp", "biomes", "biome",
                     "pregen", "level", "hardcore"));
         } else if (args.length == 2 && args[0].equalsIgnoreCase("hardcore")) {
-            op.addAll(List.of("status", "entrada", "llegada", "salida", "puerta-salida",
-                    "frasco", "cristal", "esencia", "cordura"));
+            op.addAll(List.of("status", "menu", "entrada", "llegada", "salida", "puerta-salida",
+                    "frasco", "cristal", "esencia", "cordura", "tiempo"));
         } else if (args.length == 3 && args[0].equalsIgnoreCase("hardcore")
-                && List.of("frasco", "cristal", "esencia", "cordura").contains(args[1].toLowerCase(Locale.ROOT))) {
+                && List.of("frasco", "cristal", "esencia", "cordura", "tiempo")
+                        .contains(args[1].toLowerCase(Locale.ROOT))) {
             for (Player p : modulo.getServer().getOnlinePlayers()) op.add(p.getName());
         } else if (args.length == 2 && args[0].equalsIgnoreCase("pregen")) {
             op.addAll(List.of("start", "status", "pause", "resume", "cancel"));

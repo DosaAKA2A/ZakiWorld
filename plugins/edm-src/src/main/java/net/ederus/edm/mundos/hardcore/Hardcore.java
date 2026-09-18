@@ -3,6 +3,7 @@ package net.ederus.edm.mundos.hardcore;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
 import net.kyori.adventure.text.format.TextColor;
+import net.kyori.adventure.text.format.TextDecoration;
 import net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer;
 import net.ederus.edm.Module;
 import net.ederus.edm.comun.Compat;
@@ -80,6 +81,7 @@ public final class Hardcore implements Listener {
     private final Map<UUID, UUID> presas = new HashMap<>();
 
     private BukkitTask reloj;
+    private MenuHardcore menu;
 
     public Hardcore(MundosPlugin modulo) {
         this.modulo = modulo;
@@ -92,6 +94,10 @@ public final class Hardcore implements Listener {
 
     public ItemsCalamity items() {
         return items;
+    }
+
+    public MenuHardcore menu() {
+        return menu;
     }
 
     private ConfigurationSection cfg() {
@@ -123,6 +129,7 @@ public final class Hardcore implements Listener {
             return;
         }
         modulo.getServer().getPluginManager().registerEvents(this, Module.dueno(modulo));
+        menu = new MenuHardcore(modulo);
         // Un segundo justo: la cordura se cuenta en segundos y la barra tiene que
         // repintarse a ese ritmo o parpadea contra los avisos de otros plugins.
         reloj = modulo.getServer().getScheduler().runTaskTimer(
@@ -158,6 +165,7 @@ public final class Hardcore implements Listener {
                 cordura.pintar(p);
                 vigilarCanalizacion(p);
                 nieblaDeNoche(p);
+                contarTiempo(p);
                 if (e.valor <= 0) minijefeSiTocaCordura(p, e);
             }
         }
@@ -461,6 +469,71 @@ public final class Hardcore implements Listener {
         if (porGolpe > 0 && e.getFinalDamage() >= p.getHealth() * 0.25) {
             cordura.sumar(p, -porGolpe);
         }
+    }
+
+    /**
+     * Las horas que lleva cada uno en Calamity, sumadas de verdad.
+     *
+     * El contador de la sesion (segundosDentro) sirve para que los mobs suban de nivel
+     * mientras estas dentro, pero se va al salir. Este es el otro: se guarda en la
+     * config y no se reinicia nunca, porque es lo que se premia con el tag.
+     */
+    private void contarTiempo(Player p) {
+        String ruta = "hardcore.tiempo." + p.getUniqueId();
+        long llevaba = modulo.getConfig().getLong(ruta, 0);
+        long ahora = llevaba + 1;
+        modulo.getConfig().set(ruta, ahora);
+        // Se escribe a disco de vez en cuando, no cada segundo: es un contador, no un
+        // pago, y guardar 60 veces por minuto por jugador no lo merece.
+        if (ahora % 60 == 0) modulo.saveConfig();
+        entregarTag(p, ahora);
+    }
+
+    /** Horas acumuladas de un jugador en los mundos hardcore. */
+    public double horasDe(Player p) {
+        return modulo.getConfig().getLong("hardcore.tiempo." + p.getUniqueId(), 0) / 3600.0;
+    }
+
+    /**
+     * El tag de las veinticuatro horas.
+     *
+     * AlonsoTags decide quien puede ponerse cada etiqueta por un PERMISO, asi que
+     * entregarla es darle ese permiso por LuckPerms; la etiqueta en si vive en el
+     * tags.yml de AlonsoTags y no la toca nadie desde aqui.
+     */
+    private void entregarTag(Player p, long segundos) {
+        ConfigurationSection t = cfg().getConfigurationSection("tag");
+        if (t == null || !t.getBoolean("activo", true)) return;
+        long pide = (long) (t.getDouble("horas", 24) * 3600);
+        if (segundos < pide) return;
+
+        String yaEsta = "hardcore.tag-entregado." + p.getUniqueId();
+        if (modulo.getConfig().getBoolean(yaEsta, false)) return;
+        modulo.getConfig().set(yaEsta, true);
+        modulo.saveConfig();
+
+        String comando = t.getString("comando", "lp user %jugador% permission set insomne.badge.unlocked true");
+        try {
+            modulo.getServer().dispatchCommand(modulo.getServer().getConsoleSender(),
+                    comando.replace("%jugador%", p.getName()));
+        } catch (Throwable e) {
+            modulo.getLogger().warning("[Calamity] No se pudo entregar el tag a " + p.getName() + ": " + e);
+            return;
+        }
+        String nombre = t.getString("nombre", "[INSOMNE]");
+        p.showTitle(net.kyori.adventure.title.Title.title(
+                Component.text(nombre, TextColor.color(0x9FD6A0)),
+                Component.text("Veinticuatro horas ahí dentro", NamedTextColor.GRAY),
+                net.kyori.adventure.title.Title.Times.times(
+                        java.time.Duration.ofMillis(300),
+                        java.time.Duration.ofMillis(2600),
+                        java.time.Duration.ofMillis(700))));
+        Compat.soundPlayers(p.getWorld(), p.getLocation(), "ui.toast.challenge_complete", 1.0f, 1.0f);
+        modulo.getServer().broadcast(Component.text(p.getName(), TextColor.color(0x9FD6A0))
+                .append(Component.text(" lleva 24 horas en Calamity y se ha ganado ", NamedTextColor.GRAY))
+                .append(Component.text(nombre, TextColor.color(0x9FD6A0), TextDecoration.BOLD))
+                .append(Component.text(".", NamedTextColor.GRAY)));
+        modulo.getLogger().info("[Calamity] Tag entregado a " + p.getName() + ".");
     }
 
     /**
