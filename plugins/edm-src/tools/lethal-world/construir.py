@@ -472,8 +472,10 @@ REPARTO_RUINAS: dict[str, tuple[int, int, int, int]] = {
     "condemned_taiga": (2, 40, 45, 15),
     "creeper_dominion": (2, 40, 45, 15),
     "conure_conclave": (2, 40, 45, 15),
-    "quicksand_springs": (3, 70, 25, 5),
-    "crimson_organism": (4, 50, 40, 10),
+    # La arenisca (paletas 3 y 4) no casa con el mapa: la "roja" es arenisca palida
+    # con toques rojos y sobre el suelo carmesi se ve verdosa. Fuera las dos.
+    "quicksand_springs": (1, 70, 25, 5),
+    "crimson_organism": (2, 50, 40, 10),
     "sweltering_swamp": (5, 10, 50, 40),
     "wildflower_bog": (5, 10, 50, 40),
 }
@@ -481,7 +483,7 @@ REPARTO_RUINAS: dict[str, tuple[int, int, int, int]] = {
 # ruina cada ~128 bloques, unas tres veces mas que con 14/10 (Dosa pidio mas
 # frecuencia el 2026-09-18). OJO: solo afecta a chunks NUEVOS; el mundo ya generado
 # conserva la densidad con la que nacio.
-RETICULA_RUINAS = (8, 5)
+RETICULA_RUINAS = (8, 6)
 AIRE = {"minecraft:air", "minecraft:void_air", "minecraft:cave_air", "minecraft:structure_void"}
 
 
@@ -583,9 +585,18 @@ def construir_ruinas(datapack: Path, cuenta: Counter) -> None:
             bp_a_estructura(bp).save(destino / f"ruin_{n:03d}.nbt", gzipped=True)
             cuenta["ruinas convertidas"] += 1
 
-    for carpeta in ("template_pool/ruinas", "structure", "structure_set"):
-        (base / "worldgen" / carpeta).mkdir(parents=True, exist_ok=True)
-    for bioma, (p, *pesos) in REPARTO_RUINAS.items():
+    # Una estructura y una reticula POR PALETA, no por bioma. Con trece reticulas
+    # independientes (una por bioma) las ruinas de biomas vecinos se ignoraban entre
+    # si y salian pegadas; con tres, una etiqueta de biomas por paleta y separacion
+    # 6, cada reticula respeta sus 96 bloques y hay tres en vez de trece.
+    grupos: dict[int, list[str]] = {}
+    for bioma, (p, *_) in REPARTO_RUINAS.items():
+        grupos.setdefault(p, []).append(bioma)
+
+    for p, biomas in sorted(grupos.items()):
+        nombre = PALETAS[p]
+        # Los pesos de vegetacion del grupo: la media de sus biomas.
+        pesos = [round(sum(REPARTO_RUINAS[b][i + 1] for b in biomas) / len(biomas)) for i in range(3)]
         elementos = []
         for estado, peso in enumerate(pesos):
             if peso <= 0:
@@ -593,34 +604,43 @@ def construir_ruinas(datapack: Path, cuenta: Counter) -> None:
             for forma in range(1, FORMAS + 1):
                 n = forma + FORMAS * estado
                 elementos.append({"weight": peso, "element": {
-                    "location": f"{NS_RUINAS}:ruinas/{PALETAS[p]}/ruin_{n:03d}",
+                    "location": f"{NS_RUINAS}:ruinas/{nombre}/ruin_{n:03d}",
                     "processors": "minecraft:empty",
-                    "projection": "rigid",
+                    # terrain_matching: cada columna sigue el suelo. Sin plataforma
+                    # (el beard_thin de antes creaba un plano bajo la pieza y se
+                    # notaba a la legua en las laderas).
+                    "projection": "terrain_matching",
                     "element_type": "minecraft:single_pool_element"}})
-        pool = {"name": f"{NS_RUINAS}:ruinas/{bioma}", "fallback": "minecraft:empty", "elements": elementos}
+        pool = {"name": f"{NS_RUINAS}:ruinas/{nombre}", "fallback": "minecraft:empty", "elements": elementos}
+        etiqueta = {"replace": False, "values": [f"bracken:panacea/{b}" for b in biomas]}
         estructura = {
             "type": "minecraft:jigsaw",
-            "biomes": f"bracken:panacea/{bioma}",
+            "biomes": f"#{NS_RUINAS}:ruinas_{nombre}",
             "step": "surface_structures",
             "spawn_overrides": {},
-            "terrain_adaptation": "beard_thin",
-            "start_pool": f"{NS_RUINAS}:ruinas/{bioma}",
+            "terrain_adaptation": "none",
+            "start_pool": f"{NS_RUINAS}:ruinas/{nombre}",
             "size": 1,
-            "start_height": {"absolute": -2},
+            "start_height": {"absolute": 0},
             "project_start_to_heightmap": "WORLD_SURFACE_WG",
             "max_distance_from_center": 116,
             "use_expansion_hack": False,
         }
         conjunto = {
-            "structures": [{"structure": f"{NS_RUINAS}:ruinas_{bioma}", "weight": 1}],
+            "structures": [{"structure": f"{NS_RUINAS}:ruinas_{nombre}", "weight": 1}],
             "placement": {"type": "minecraft:random_spread", "spacing": RETICULA_RUINAS[0],
-                          "separation": RETICULA_RUINAS[1], "salt": zlib.crc32(f"ruinas_{bioma}".encode()) & 0x7FFFFFFF},
+                          "separation": RETICULA_RUINAS[1],
+                          "salt": zlib.crc32(f"ruinas_{nombre}".encode()) & 0x7FFFFFFF},
         }
-        for rel, datos in ((f"template_pool/ruinas/{bioma}.json", pool),
-                           (f"structure/ruinas_{bioma}.json", estructura),
-                           (f"structure_set/ruinas_{bioma}.json", conjunto)):
-            (base / "worldgen" / rel).write_text(json.dumps(datos, indent=1), encoding="utf-8")
-        cuenta["biomas con ruinas"] += 1
+        for rel, datos in ((f"worldgen/template_pool/ruinas/{nombre}.json", pool),
+                           (f"worldgen/structure/ruinas_{nombre}.json", estructura),
+                           (f"worldgen/structure_set/ruinas_{nombre}.json", conjunto),
+                           (f"tags/worldgen/biome/ruinas_{nombre}.json", etiqueta)):
+            destino = base / rel
+            destino.parent.mkdir(parents=True, exist_ok=True)
+            destino.write_text(json.dumps(datos, indent=1), encoding="utf-8")
+        cuenta["paletas con ruinas"] += 1
+        cuenta["biomas con ruinas"] += len(biomas)
 
 
 # Estructuras que NO se quieren en el mundo. Se quita su structure_set, que es lo
