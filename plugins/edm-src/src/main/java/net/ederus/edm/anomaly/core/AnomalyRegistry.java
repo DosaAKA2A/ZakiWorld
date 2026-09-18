@@ -3082,7 +3082,7 @@ public final class AnomalyRegistry {
 
         @Override
         public String display() {
-            return "RAÍZ";
+            return "ROTTEN";
         }
 
         @Override

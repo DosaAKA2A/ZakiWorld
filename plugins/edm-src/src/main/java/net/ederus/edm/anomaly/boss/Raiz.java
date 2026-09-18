@@ -114,7 +114,7 @@ public final class Raiz extends BossFight {
 
     @Override
     public String bossName() {
-        return "RAIZ";
+        return "ROTTEN";
     }
 
     @Override
@@ -156,7 +156,7 @@ public final class Raiz extends BossFight {
             if (z.getEquipment() != null) z.getEquipment().clear();
             /* Con nombre aunque sea invisible: es lo que leen los mensajes de muerte
              * ("asesinado por RAIZ", no "por un Zombie"). Como Rabby. */
-            z.customName(Component.text("RAÍZ", ACCENT));
+            z.customName(Component.text("ROTTEN", ACCENT));
             z.setCustomNameVisible(false);
         });
         net.ederus.edm.comun.Tags.markBoss(boss, ID);
@@ -170,7 +170,7 @@ public final class Raiz extends BossFight {
             c.setInvulnerable(true);
             c.setCollidable(false);
             Compat.setAttribute(c, "scale", 2.0);
-            c.customName(Component.text("RAIZ, el Corazón Pálido", ACCENT));
+            c.customName(Component.text("ROTTEN", ACCENT));
             c.setCustomNameVisible(false);
         });
         markMinion(cuerpo);
@@ -185,7 +185,7 @@ public final class Raiz extends BossFight {
                 Compat.spawn(world(), Compat.DUST, p, 2, 0.1, 0.1, 0.1, 0, Compat.dust(CORTEZA, 1.9f)));
         soundAt(at, "entity.creaking.spawn", 1.8f, 0.6f);
         soundAt(at, "block.creaking_heart.spawn", 1.6f, 0.7f);
-        titleNear(Component.text("RAÍZ", ACCENT),
+        titleNear(Component.text("ROTTEN", ACCENT),
                 Component.text("El bosque os ha visto", NamedTextColor.GRAY));
     }
 
@@ -377,11 +377,22 @@ public final class Raiz extends BossFight {
     }
 
     /** Si el jugador tiene al jefe delante de verdad (mas o menos en pantalla). */
+    /**
+     * Si el jugador lo tiene EN EL PUNTERO, no solo delante.
+     *
+     * Como provocar a un enderman: la mira tiene que caer sobre el, no basta con
+     * tenerlo en el campo de vision. Se traza un rayo desde el ojo en la direccion en
+     * que mira y se cruza con la caja del cuerpo (el creaking, o el zombi si no hay
+     * cuerpo), un poco agrandada para dar margen. Sin pared de por medio: el juicio es
+     * de puntería, no de línea de vista.
+     */
     private boolean mirandoAlJefe(Player p) {
+        LivingEntity mira = shell != null && shell.isValid() ? shell : boss;
+        if (mira == null || !mira.isValid()) return false;
         Location ojo = p.getEyeLocation();
-        Vector hacia = center().add(0, 1.2, 0).toVector().subtract(ojo.toVector());
-        if (hacia.lengthSquared() < 0.01) return true;
-        return ojo.getDirection().normalize().dot(hacia.normalize()) > 0.55;
+        if (ojo.getWorld() != mira.getWorld()) return false;
+        org.bukkit.util.BoundingBox caja = mira.getBoundingBox().expand(0.7);
+        return caja.rayTrace(ojo.toVector(), ojo.getDirection(), 90) != null;
     }
 
     /**

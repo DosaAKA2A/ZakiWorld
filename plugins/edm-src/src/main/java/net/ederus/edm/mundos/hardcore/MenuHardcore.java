@@ -36,6 +36,16 @@ public final class MenuHardcore implements Listener {
 
     private static final TextColor VERDE = TextColor.color(0x9FD6A0);
 
+    /** Las casillas de las reglas: tres filas de siete, aireadas y centradas. */
+    private static final int[] CASILLAS = {
+            10, 11, 12, 13, 14, 15, 16,
+            19, 20, 21, 22, 23, 24, 25,
+            28, 29, 30, 31, 32, 33, 34};
+    /** Todo lo que no es regla, cabecera (4) ni cerrar (49): cristal negro. */
+    private static final int[] MARCO = {
+            0, 1, 2, 3, 5, 6, 7, 8, 9, 17, 18, 26, 27, 35,
+            36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 50, 51, 52, 53};
+
     /**
      * Una regla del panel.
      *
@@ -119,7 +129,7 @@ public final class MenuHardcore implements Listener {
     }
 
     public void abrir(Player p) {
-        Inventory inv = modulo.getServer().createInventory(new Marca(), 36,
+        Inventory inv = modulo.getServer().createInventory(new Marca(), 54,
                 Component.text("Calamity · dificultad", VERDE, TextDecoration.BOLD));
         pintar(inv);
         p.openInventory(inv);
@@ -142,25 +152,26 @@ public final class MenuHardcore implements Listener {
                         MenuUtil.line("Los portales y los objetos van"),
                         MenuUtil.line("por /lw hardcore.")), true));
 
-        int[] casillas = {9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25};
-        for (int i = 0; i < REGLAS.size() && i < casillas.length; i++) {
+        for (int i = 0; i < REGLAS.size() && i < CASILLAS.length; i++) {
             Regla r = REGLAS.get(i);
             boolean on = r.activa(modulo);
             List<Component> lore = new ArrayList<>();
             for (String l : r.ayuda()) lore.add(MenuUtil.line(l));
             lore.add(MenuUtil.blank());
-            lore.add(MenuUtil.field("Ahora", r.valor(modulo), on ? NamedTextColor.GREEN : MenuUtil.DIM));
-            lore.add(on ? MenuUtil.on() : MenuUtil.off());
+            lore.add(MenuUtil.field("Ahora", r.valor(modulo), on ? NamedTextColor.GREEN : NamedTextColor.RED));
             lore.add(MenuUtil.blank());
-            lore.add(MenuUtil.action("Clic para " + (on ? "apagarla" : "encenderla")));
-            inv.setItem(casillas[i], MenuUtil.icon(on ? r.icono() : Material.GRAY_DYE,
-                    MenuUtil.title(r.nombre(), on ? VERDE : MenuUtil.DIM), lore, on));
+            lore.add(MenuUtil.action("Clic para " + (on ? "desactivarla" : "activarla")));
+            // El icono es SIEMPRE el de la regla, para poder distinguirlas de un
+            // vistazo; el estado se lee por el color del nombre y por el cristal de
+            // fondo, verde o rojo. Antes las apagadas eran todas gris y no se leia nada.
+            Component titulo = Component.text(r.nombre(), on ? VERDE : NamedTextColor.RED)
+                    .decoration(TextDecoration.BOLD, true).decoration(TextDecoration.ITALIC, false);
+            inv.setItem(CASILLAS[i], MenuUtil.icon(r.icono(), titulo, lore, on));
         }
-
-        inv.setItem(31, MenuUtil.icon(Material.BARRIER,
+        inv.setItem(49, MenuUtil.icon(Material.BARRIER,
                 MenuUtil.title("Cerrar", NamedTextColor.RED),
                 List.of(MenuUtil.line("Lo que cambies se guarda solo.")), false));
-        MenuUtil.frame(inv, new int[]{0, 1, 2, 3, 5, 6, 7, 8, 27, 28, 29, 30, 32, 33, 34, 35});
+        MenuUtil.frame(inv, MARCO);
     }
 
     @EventHandler
@@ -171,13 +182,12 @@ public final class MenuHardcore implements Listener {
         int slot = e.getRawSlot();
         if (slot < 0 || slot >= e.getInventory().getSize()) return;
 
-        if (slot == 31) {
+        if (slot == 49) {
             p.closeInventory();
             return;
         }
-        int[] casillas = {9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25};
-        for (int i = 0; i < REGLAS.size() && i < casillas.length; i++) {
-            if (casillas[i] != slot) continue;
+        for (int i = 0; i < REGLAS.size() && i < CASILLAS.length; i++) {
+            if (CASILLAS[i] != slot) continue;
             Regla r = REGLAS.get(i);
             boolean on = r.activa(modulo);
             modulo.getConfig().set("hardcore." + r.clave(), on ? r.apagar() : r.encendido());
