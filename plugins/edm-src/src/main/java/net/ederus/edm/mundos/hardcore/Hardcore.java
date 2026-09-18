@@ -13,6 +13,7 @@ import org.bukkit.Location;
 import org.bukkit.World;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.file.YamlConfiguration;
+import org.bukkit.entity.Entity;
 import org.bukkit.entity.LivingEntity;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
@@ -20,6 +21,13 @@ import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
 import org.bukkit.event.entity.EntityDamageByEntityEvent;
 import org.bukkit.event.entity.EntityDamageEvent;
+import org.bukkit.event.entity.EntityPickupItemEvent;
+import org.bukkit.event.entity.EntityResurrectEvent;
+import org.bukkit.event.entity.FoodLevelChangeEvent;
+import org.bukkit.event.player.PlayerItemConsumeEvent;
+import org.bukkit.event.player.PlayerItemDamageEvent;
+import org.bukkit.event.entity.CreatureSpawnEvent;
+import org.bukkit.event.world.LootGenerateEvent;
 import org.bukkit.event.entity.EntityRegainHealthEvent;
 import org.bukkit.event.entity.PlayerDeathEvent;
 import org.bukkit.event.player.PlayerBedEnterEvent;
@@ -66,6 +74,10 @@ public final class Hardcore implements Listener {
     private final Map<UUID, Long> ultimoEfecto = new HashMap<>();
     /** Segundos que lleva canalizando el cristal cada uno. */
     private final Map<UUID, Integer> cuentaCristal = new HashMap<>();
+    /** Cuando murio cada uno dentro (millis), para la cuarentena de reentrada. */
+    private final Map<UUID, Long> muertos = new HashMap<>();
+    /** Minijefe -> a quien viene siguiendo. Ver marcarPresa(). */
+    private final Map<UUID, UUID> presas = new HashMap<>();
 
     private BukkitTask reloj;
 
@@ -145,10 +157,12 @@ public final class Hardcore implements Listener {
                 efectosDeBioma(p);
                 cordura.pintar(p);
                 vigilarCanalizacion(p);
+                nieblaDeNoche(p);
                 if (e.valor <= 0) minijefeSiTocaCordura(p, e);
             }
         }
         vigilarZonas();
+        vigilarPresas();
         // Quien haya salido del mundo con una canalizacion a medias no se queda colgado.
         canalizando.keySet().removeIf(id -> {
             Player p = modulo.getServer().getPlayer(id);
@@ -172,7 +186,14 @@ public final class Hardcore implements Listener {
         if (entrada != null && llegada != null) {
             for (Player p : entrada.getWorld().getPlayers()) {
                 if (!cuenta(p) || esHardcore(p)) continue;
-                if (dentroDe(p, entrada)) meter(p, llegada);
+                if (!dentroDe(p, entrada)) continue;
+                long espera = cuarentenaRestante(p);
+                if (espera > 0) {
+                    p.sendActionBar(Component.text(
+                            "Aún no. Vuelve en " + (espera / 60_000 + 1) + " min.", NamedTextColor.RED));
+                    continue;
+                }
+                meter(p, llegada);
             }
         }
         Location vuelta = punto("puerta-salida");
@@ -182,6 +203,25 @@ public final class Hardcore implements Listener {
                 if (dentroDe(p, vuelta)) sacar(p, "Cruzas de vuelta.");
             }
         }
+    }
+
+    /**
+     * Lo que le queda de castigo por haber muerto dentro, en millis. 0 = puede entrar.
+     *
+     * Existe para que morir duela mas alla del inventario: sin esto, la muerte era
+     * volver a entrar y seguir, y el mundo dejaba de dar respeto.
+     */
+    public long cuarentenaRestante(Player p) {
+        int minutos = cfg().getInt("muerte.cuarentena-minutos", 30);
+        if (minutos <= 0) return 0;
+        Long murio = muertos.get(p.getUniqueId());
+        if (murio == null) return 0;
+        long queda = murio + minutos * 60_000L - System.currentTimeMillis();
+        if (queda <= 0) {
+            muertos.remove(p.getUniqueId());
+            return 0;
+        }
+        return queda;
     }
 
     private boolean dentroDe(Player p, Location centro) {
@@ -423,6 +463,169 @@ public final class Hardcore implements Listener {
         }
     }
 
+    /**
+     * De noche el bosque se cierra.
+     *
+     * Un bioma de Lethal Biomes se pinta sobre una ZONA, y Calamity es infinito: no hay
+     * forma de repintar el mundo entero. Asi que la niebla se hace por jugador, con el
+     * efecto de oscuridad, que es lo que de verdad cierra la vista en vanilla.
+     */
+    private void nieblaDeNoche(Player p) {
+        if (!cfg().getBoolean("dificultad.niebla-de-noche", true)) return;
+        long hora = p.getWorld().getTime();
+        if (hora < 13000 || hora > 23000) return;
+        p.addPotionEffect(new PotionEffect(PotionEffectType.DARKNESS, 60, 0, true, false, false));
+        if (random.nextInt(4) == 0) {
+            Compat.spawn(p.getWorld(), Compat.ASH, p.getEyeLocation(), 6, 3.0, 2.0, 3.0, 0.005);
+        }
+    }
+
+    /**
+     * Los minijefes no sueltan a su presa: la siguen aunque cambie de bioma, y solo se
+     * acaba cuando cae uno de los dos. Sin esto bastaba con andar veinte bloques.
+     */
+    private void vigilarPresas() {
+        for (UUID idMob : new ArrayList<>(presas.keySet())) {
+            org.bukkit.entity.Entity e = modulo.getServer().getEntity(idMob);
+            if (!(e instanceof org.bukkit.entity.Mob mob) || !mob.isValid()) {
+                presas.remove(idMob);
+                continue;
+            }
+            Player presa = modulo.getServer().getPlayer(presas.get(idMob));
+            if (presa == null || !presa.isOnline() || !esHardcore(presa)) {
+                presas.remove(idMob);
+                continue;
+            }
+            mob.setTarget(presa);
+            // Si se aleja demasiado, el minijefe reaparece cerca: no se le escapa.
+            double lejos = cfg().getDouble("minijefes.distancia-maxima", 60);
+            if (mob.getWorld() == presa.getWorld()
+                    && mob.getLocation().distanceSquared(presa.getLocation()) > lejos * lejos) {
+                mob.teleport(presa.getLocation().add(
+                        (random.nextDouble() - 0.5) * 16, 0, (random.nextDouble() - 0.5) * 16));
+                Compat.spawn(mob.getWorld(), Compat.SMOKE, mob.getLocation(), 20, 0.5, 1.0, 0.5, 0.02);
+            }
+        }
+    }
+
+    /** Apunta que ese minijefe viene a por ese jugador y no lo suelta. */
+    public void marcarPresa(org.bukkit.entity.Entity minijefe, Player presa) {
+        presas.put(minijefe.getUniqueId(), presa.getUniqueId());
+    }
+
+    /** Los mobs de este mundo pueden recoger lo que se cae al suelo. */
+    @EventHandler(ignoreCancelled = true)
+    public void onAparecer(CreatureSpawnEvent e) {
+        if (!esHardcore(e.getEntity().getWorld())) return;
+        if (!cfg().getBoolean("dificultad.mobs-recogen", true)) return;
+        e.getEntity().setCanPickupItems(true);
+    }
+
+    /** Hambre al doble: comer deja de ser un tramite. */
+    @EventHandler(ignoreCancelled = true)
+    public void onHambre(FoodLevelChangeEvent e) {
+        if (!(e.getEntity() instanceof Player p) || !esHardcore(p)) return;
+        double factor = cfg().getDouble("dificultad.hambre", 2.0);
+        if (factor <= 1) return;
+        int antes = p.getFoodLevel();
+        if (e.getFoodLevel() >= antes) return;
+        // Solo se dobla lo que se PIERDE; comer sigue dando lo que da.
+        e.setFoodLevel((int) Math.max(0, antes - (antes - e.getFoodLevel()) * factor));
+    }
+
+    /** La comida cruda sienta peor aqui: veneno y hambre encima. */
+    @EventHandler(ignoreCancelled = true)
+    public void onComer(PlayerItemConsumeEvent e) {
+        Player p = e.getPlayer();
+        if (!esHardcore(p)) return;
+        int segundos = cfg().getInt("dificultad.veneno-comida-cruda", 8);
+        if (segundos <= 0) return;
+        String id = e.getItem().getType().name();
+        boolean cruda = id.startsWith("RAW_") || id.equals("CHICKEN") || id.equals("BEEF")
+                || id.equals("PORKCHOP") || id.equals("MUTTON") || id.equals("RABBIT")
+                || id.equals("COD") || id.equals("SALMON") || id.equals("ROTTEN_FLESH");
+        if (!cruda) return;
+        p.addPotionEffect(new PotionEffect(PotionEffectType.POISON, segundos * 20, 1, true, false, true));
+        p.addPotionEffect(new PotionEffect(PotionEffectType.HUNGER, segundos * 20, 1, true, false, true));
+        p.sendMessage(Component.text("Eso estaba crudo.", NamedTextColor.DARK_GREEN));
+    }
+
+    /**
+     * Caidas y ahogos al doble.
+     *
+     * Va aparte de onGolpe porque esas dos no vienen de ninguna entidad: son del
+     * entorno, y el entorno tambien mata aqui.
+     */
+    @EventHandler(priority = EventPriority.HIGH, ignoreCancelled = true)
+    public void onEntorno(EntityDamageEvent e) {
+        if (!(e.getEntity() instanceof Player p) || !esHardcore(p)) return;
+        double factor = switch (e.getCause()) {
+            case FALL -> cfg().getDouble("dificultad.dano-caida", 2.0);
+            case DROWNING -> cfg().getDouble("dificultad.dano-ahogo", 2.0);
+            default -> 1;
+        };
+        if (factor > 1) e.setDamage(e.getDamage() * factor);
+    }
+
+    /** El equipo se gasta al doble: alli nada dura. */
+    @EventHandler(ignoreCancelled = true)
+    public void onDurabilidad(PlayerItemDamageEvent e) {
+        if (!esHardcore(e.getPlayer())) return;
+        double factor = cfg().getDouble("dificultad.durabilidad", 2.0);
+        if (factor > 1) e.setDamage((int) Math.ceil(e.getDamage() * factor));
+    }
+
+    /**
+     * El totem no salva: se gasta igual y te mueres.
+     *
+     * Es deliberadamente cruel, y por eso se avisa por chat: si desapareciera sin
+     * decir nada pareceria un fallo del servidor.
+     */
+    @EventHandler(ignoreCancelled = true)
+    public void onTotem(EntityResurrectEvent e) {
+        if (!(e.getEntity() instanceof Player p) || !esHardcore(p)) return;
+        if (!cfg().getBoolean("dificultad.sin-totem", true)) return;
+        e.setCancelled(true);
+        p.sendMessage(Component.text("El tótem se deshace sin salvarte.", NamedTextColor.DARK_RED));
+        Compat.spawn(p.getWorld(), Compat.ASH, p.getLocation().add(0, 1, 0), 30, 0.5, 0.8, 0.5, 0.03);
+    }
+
+    /** Aqui los mobs SI recogen lo que se te cae, y se lo quedan. */
+    @EventHandler(ignoreCancelled = true)
+    public void onRecoger(EntityPickupItemEvent e) {
+        if (e.getEntity() instanceof Player) return;
+        if (!esHardcore(e.getEntity().getWorld())) return;
+        if (!cfg().getBoolean("dificultad.mobs-recogen", true)) return;
+        // El evento solo llega si la entidad puede recoger; el permiso se da al
+        // aparecer (ver alAparecer). Aqui solo se deja pasar y se avisa con la chispa.
+        Compat.spawn(e.getEntity().getWorld(), Compat.ANGRY_VILLAGER,
+                e.getEntity().getLocation().add(0, 1.4, 0), 3, 0.2, 0.2, 0.2, 0);
+    }
+
+    /** Los cofres de las estructuras salen VACIOS: el botin se mata, no se encuentra. */
+    @EventHandler(ignoreCancelled = true)
+    public void onBotinDeCofre(LootGenerateEvent e) {
+        if (!esHardcore(e.getWorld())) return;
+        if (!cfg().getBoolean("dificultad.cofres-vacios", true)) return;
+        e.setLoot(java.util.Collections.emptyList());
+    }
+
+    /** Fuego amigo: aqui os podeis matar entre vosotros. */
+    @EventHandler(priority = EventPriority.HIGHEST)
+    public void onFuegoAmigo(EntityDamageByEntityEvent e) {
+        if (!(e.getEntity() instanceof Player victima) || !esHardcore(victima)) return;
+        if (!cfg().getBoolean("dificultad.fuego-amigo", true)) return;
+        Entity quien = e.getDamager();
+        if (quien instanceof org.bukkit.entity.Projectile pr && pr.getShooter() instanceof Entity fuente) {
+            quien = fuente;
+        }
+        // Solo se devuelve el golpe de OTRO jugador: lo demas que lo decidan las
+        // protecciones normales del servidor.
+        if (quien instanceof Player agresor && !agresor.equals(victima) && e.isCancelled()) {
+            e.setCancelled(false);
+        }
+    }
+
     // ---------------------------------------------------------------------- muerte
 
     /**
@@ -448,6 +651,7 @@ public final class Hardcore implements Listener {
         p.getInventory().clear();
 
         cordura.reiniciar(p);
+        muertos.put(p.getUniqueId(), System.currentTimeMillis());
         e.deathMessage(Component.text(p.getName() + " no volvió de Calamity.",
                 TextColor.color(0x8B1A1A)));
 

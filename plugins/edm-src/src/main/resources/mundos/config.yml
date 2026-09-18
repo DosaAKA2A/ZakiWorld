@@ -153,9 +153,19 @@ hardcore:
     # Multiplicadores sobre el esbirro normal de ese tipo.
     vida: 15
     dano: 4
+    # 15. Te marca: te sigue aunque cambies de bioma, y si te alejas mas de esto
+    #     reaparece a tu lado. Solo se acaba cuando cae uno de los dos.
+    distancia-maxima: 60
     # Los rellena el plugin la primera vez con los cinco de la carpeta
     # "Lethal World · Minijefes" de /esb. A partir de ahi se editan alli.
     tipos: []
+
+  muerte:
+    # Al morir se pierde TODO lo que llevabas encima y la experiencia.
+    lo-pierde-todo: true
+    # 13. Minutos de espera para volver a entrar tras morir dentro.
+    #     APAGADA por Dosa el 2026-09-18.
+    cuarentena-minutos: 0
 
   # El Frasco de Calma: lo unico que devuelve cordura sin salir.
   frasco:
@@ -180,17 +190,39 @@ hardcore:
   # Radio en bloques de las dos zonas.
   radio-zonas: 3
 
+  # Las quince reglas, cada una con su propio interruptor. Poner una en false (o en 0
+  # las que son numero) la apaga sin tocar el resto.
   dificultad:
-    # No se duerme: ni se salta la noche ni se pone punto de reaparicion.
+    # 1. No se duerme: ni se salta la noche ni se pone punto de reaparicion.
     sin-camas: true
-    # No se regenera vida sola: pociones y comida encantada.
+    # 2. No se regenera vida sola: pociones y comida encantada.
     sin-regeneracion: true
-    # Cuanta armadura ignoran los mobs de alli. 0.30 = pegan un 30% mas.
+    # 3. Lo que se pierde de hambre se multiplica por esto; comer sigue dando igual.
+    hambre: 2.0
+    #    Segundos de veneno y hambre que deja la comida cruda. 0 lo apaga.
+    veneno-comida-cruda: 8
+    # 4. Caidas y ahogos.
+    dano-caida: 2.0
+    dano-ahogo: 2.0
+    # 5. Cuanta armadura ignoran los mobs de alli. 0.30 = pegan un 30% mas.
     penetracion-armadura: 0.30
-    # Mobs que te reciben al entrar, unos segundos despues de llegar.
-    oleada-de-entrada: 5
-    # Los mobs suben un nivel por cada tantos minutos que lleves dentro. 0 lo apaga.
+    # 6. Lo que se gasta el equipo por uso.
+    durabilidad: 2.0
+    # 7. El totem se consume y NO salva.
+    sin-totem: true
+    # 8. Los mobs recogen lo que se cae al suelo y se lo quedan.
+    mobs-recogen: true
+    # 9. Mobs que te reciben al entrar. APAGADA por Dosa el 2026-09-18.
+    oleada-de-entrada: 0
+    # 10. Los mobs suben un nivel por cada tantos minutos que lleves dentro. 0 lo apaga.
     nivel-cada-minutos: 5
+    # 11. De noche se cierra la vista. OJO: es un efecto por jugador, NO un bioma
+    #     repintado: Lethal Biomes pinta zonas y Calamity es infinito.
+    niebla-de-noche: true
+    # 12. Los cofres de las estructuras salen vacios. APAGADA por Dosa el 2026-09-18.
+    cofres-vacios: false
+    # 14. Os podeis matar entre vosotros.
+    fuego-amigo: true
 
   # Comandos que no funcionan dentro (quien tenga ederus.mundos se los salta).
   comandos-prohibidos:
