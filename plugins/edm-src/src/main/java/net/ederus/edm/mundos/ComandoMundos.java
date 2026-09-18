@@ -77,6 +77,7 @@ final class ComandoMundos implements TabExecutor {
             case "biome" -> irABioma(quien, args);
             case "pregen" -> pregen(quien, args);
             case "level" -> nivel(quien, args);
+            case "poder" -> poder(quien, args);
             case "hardcore" -> hardcore(quien, args);
             default -> ayuda(quien);
         }
@@ -95,6 +96,7 @@ final class ComandoMundos implements TabExecutor {
         linea(q, "/lw pregen start <name> [radius]", "pregenera (sin radio: el borde o el de la config)");
         linea(q, "/lw pregen status|pause|resume|cancel", "");
         linea(q, "/lw level [player]", "de dónde sale el nivel de sus mobs");
+        linea(q, "/lw poder [player]", "de qué se compone su Poder");
         linea(q, "/lw hardcore", "Calamity: portales, objetos y cordura");
     }
 
@@ -527,12 +529,42 @@ final class ComandoMundos implements TabExecutor {
         }
     }
 
+    /**
+     * /lw poder: de que se compone la fuerza de un jugador.
+     *
+     * Es el numero que Dosa pidio para tener UNA cifra comparable: tiempo jugado
+     * (rango y habilidades) mas lo que lleva puesto. Se ensena desglosado porque un
+     * total a secas no dice que mejorar.
+     */
+    private void poder(CommandSender q, String[] args) {
+        Player p = args.length >= 2 ? modulo.getServer().getPlayer(args[1])
+                : (q instanceof Player yo ? yo : null);
+        if (p == null) {
+            decir(q, Component.text("Dime un jugador conectado.", NamedTextColor.RED));
+            return;
+        }
+        var mobs = modulo.mobs();
+        int rango = mobs == null ? 0 : mobs.rango(p);
+        double aura = mobs == null ? 0 : mobs.poder(p);
+        var d = net.ederus.edm.comun.Poder.calcular(modulo, p, rango, aura);
+
+        cabecera(q, "el Poder de " + p.getName());
+        linea(q, "Rango de rankup", String.valueOf(d.rango()));
+        linea(q, "AuraSkills", String.format(Locale.US, "%.0f", d.auraskills()));
+        linea(q, "Armadura", String.format(Locale.US, "%.1f", d.armadura()));
+        linea(q, "Dureza", String.format(Locale.US, "%.1f", d.dureza()));
+        linea(q, "Vida de más", String.format(Locale.US, "%.1f", d.vida()));
+        linea(q, "Daño de más", String.format(Locale.US, "%.1f", d.dano()));
+        q.sendMessage(Estilo.aviso(Component.text("PODER  ", SUAVE)
+                .append(Component.text(String.format(Locale.US, "%.0f", d.total()), MARCA))));
+    }
+
     @Override
     public List<String> onTabComplete(CommandSender q, Command cmd, String etiqueta, String[] args) {
         List<String> op = new ArrayList<>();
         if (args.length == 1) {
             op.addAll(List.of("list", "generators", "create", "delete", "tp", "biomes", "biome",
-                    "pregen", "level", "hardcore"));
+                    "pregen", "level", "poder", "hardcore"));
         } else if (args.length == 2 && args[0].equalsIgnoreCase("hardcore")) {
             op.addAll(List.of("status", "menu", "entrada", "llegada", "salida", "puerta-salida",
                     "frasco", "cristal", "esencia", "cordura", "tiempo"));
@@ -552,6 +584,8 @@ final class ComandoMundos implements TabExecutor {
         } else if (args.length == 3 && args[0].equalsIgnoreCase("create")) {
             op.addAll(modulo.generadores());
         } else if (args.length == 3 && args[0].equalsIgnoreCase("tp")) {
+            for (Player p : modulo.getServer().getOnlinePlayers()) op.add(p.getName());
+        } else if (args.length == 2 && args[0].equalsIgnoreCase("poder")) {
             for (Player p : modulo.getServer().getOnlinePlayers()) op.add(p.getName());
         } else if (args.length == 2 && args[0].equalsIgnoreCase("level")) {
             for (Player p : modulo.getServer().getOnlinePlayers()) op.add(p.getName());

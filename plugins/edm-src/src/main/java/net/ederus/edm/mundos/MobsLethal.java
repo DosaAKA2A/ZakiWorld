@@ -472,7 +472,15 @@ public final class MobsLethal implements Listener {
     int nivelPara(Player p, boolean destacado) {
         ConfigurationSection n = cfg().getConfigurationSection("nivel");
         if (n == null) n = new YamlConfiguration();
-        double base = rango(p) * n.getDouble("por-rango", 2.0) + poder(p) / Math.max(1.0, n.getDouble("poder-por-nivel", 20.0));
+        double base = rango(p) * n.getDouble("por-rango", 2.0)
+                + poder(p) / Math.max(1.0, n.getDouble("poder-por-nivel", 20.0));
+        /* Y el equipo que lleva puesto, via Poder: sin esto un jugador de rango bajo
+         * con el mejor set del servidor se paseaba por mobs de nivel 17. */
+        double porPoder = n.getDouble("poder-total-por-nivel", 0);
+        if (porPoder > 0) {
+            base += net.ederus.edm.comun.Poder
+                    .calcular(modulo, p, rango(p), poder(p)).total() / porPoder;
+        }
         double variacion = n.getDouble("variacion", 0.10);
         base *= 1 + (random.nextDouble() * 2 - 1) * variacion;
         if (destacado) base += n.getInt("extra-destacado", 5);
@@ -494,7 +502,7 @@ public final class MobsLethal implements Listener {
     }
 
     /** Rango de rankup (fork de NotRanks) por PlaceholderAPI. 0 si no se puede leer. */
-    int rango(Player p) {
+    public int rango(Player p) {
         try {
             return Integer.parseInt(rangoCrudo(p).replaceAll("[^0-9]", ""));
         } catch (NumberFormatException t) {
@@ -503,7 +511,7 @@ public final class MobsLethal implements Listener {
     }
 
     /** Poder de AuraSkills (suma de habilidades) por su API. 0 si no esta. */
-    int poder(Player p) {
+    public int poder(Player p) {
         try {
             Class<?> api = Class.forName("dev.aurelium.auraskills.api.AuraSkillsApi");
             Object inst = api.getMethod("get").invoke(null);

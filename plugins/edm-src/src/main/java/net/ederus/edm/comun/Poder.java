@@ -1,0 +1,93 @@
+package net.ederus.edm.comun;
+
+import org.bukkit.configuration.ConfigurationSection;
+import org.bukkit.configuration.file.YamlConfiguration;
+import org.bukkit.entity.Player;
+import org.bukkit.inventory.ItemStack;
+
+import java.util.Locale;
+
+/**
+ * El PODER de un jugador: un solo numero que dice lo fuerte que es ahora mismo.
+ *
+ * Hasta hoy el nivel de los mobs de Lethal World salia solo del rango de rankup y del
+ * poder de AuraSkills, o sea del TIEMPO jugado. Eso deja fuera lo que de verdad decide
+ * una pelea: el equipo que llevas puesto. Un jugador de rango 3 con el Manto de
+ * Calamidad aplasta a uno de rango 9 con hierro, y los mobs no se enteraban.
+ *
+ * Aqui se suma todo: rango, habilidades y lo que llevas encima. Y se lee del jugador
+ * por ATRIBUTOS de vanilla (armadura, dureza, vida, dano), no por la API de MMOItems:
+ * asi cuenta igual una pieza de MMOItems, una vanilla encantada o lo que venga manana,
+ * porque todas acaban moviendo los mismos atributos.
+ *
+ * Los pesos estan en la config para poder afinarlo sin recompilar.
+ */
+public final class Poder {
+
+    /** El desglose, para poder ENSENAR de donde sale cada punto y no solo el total. */
+    public record Desglose(int rango, double auraskills, double armadura, double dureza,
+                           double vida, double dano, double total) {
+
+        public String linea(String etiqueta, double valor, double peso) {
+            return String.format(Locale.US, "%s %.1f x%.1f = %.0f", etiqueta, valor, peso, valor * peso);
+        }
+    }
+
+    private Poder() {
+    }
+
+    private static ConfigurationSection cfg(org.bukkit.plugin.Plugin plugin) {
+        ConfigurationSection s = plugin.getConfig().getConfigurationSection("poder");
+        return s == null ? new YamlConfiguration() : s;
+    }
+
+    /**
+     * Calcula el poder de un jugador.
+     *
+     * De la vida y del dano se cuenta solo lo que pasa de lo normal (20 de vida, 1 de
+     * dano a mano vacia): si no, todo el mundo empezaria con puntos de regalo y el
+     * numero no distinguiria a nadie.
+     */
+    public static Desglose calcular(org.bukkit.plugin.Plugin plugin, Player p,
+                                    int rango, double auraskills) {
+        ConfigurationSection c = cfg(plugin);
+
+        double armadura = Compat.getAttribute(p, "armor", 0);
+        double dureza = Compat.getAttribute(p, "armor_toughness", 0);
+        double vida = Math.max(0, Compat.getAttribute(p, "max_health", 20) - 20);
+        double dano = Math.max(0, Compat.getAttribute(p, "attack_damage", 1) - 1);
+
+        double total = rango * c.getDouble("por-rango", 10)
+                + auraskills * c.getDouble("por-auraskills", 1)
+                + armadura * c.getDouble("por-armadura", 4)
+                + dureza * c.getDouble("por-dureza", 6)
+                + vida * c.getDouble("por-vida", 2)
+                + dano * c.getDouble("por-dano", 3);
+
+        return new Desglose(rango, auraskills, armadura, dureza, vida, dano, total);
+    }
+
+    /**
+     * Cuantas piezas de un mismo set de MMOItems lleva puestas.
+     *
+     * No entra en la cuenta del poder (los bonos del set ya mueven los atributos y se
+     * contarian dos veces); esta para ENSENARLO en la ficha, que es lo que el jugador
+     * quiere saber.
+     */
+    public static int piezasDeSet(Player p, String set) {
+        int n = 0;
+        for (ItemStack it : p.getInventory().getArmorContents()) {
+            if (llevaSet(it, set)) n++;
+        }
+        if (llevaSet(p.getInventory().getItemInMainHand(), set)) n++;
+        return n;
+    }
+
+    private static boolean llevaSet(ItemStack it, String set) {
+        if (it == null || it.getItemMeta() == null) return false;
+        // MMOItems guarda el set en el PersistentDataContainer con su propia clave;
+        // mirar el texto del contenedor es suficiente y no ata EDM a su API.
+        return it.getItemMeta().getPersistentDataContainer().toString()
+                .toUpperCase(Locale.ROOT).contains(set.toUpperCase(Locale.ROOT));
+    }
+}

@@ -620,6 +620,15 @@ def construir_ruinas(datapack: Path, cuenta: Counter) -> None:
         cuenta["biomas con ruinas"] += 1
 
 
+# Estructuras que NO se quieren en el mundo. Se quita su structure_set, que es lo
+# que hace que el generador las intente: la pieza en si se queda, inofensiva, y asi
+# no hay que tocar las referencias de Bracken. Volver a quererla es borrar la linea.
+FUERA = {
+    # La piramide del creeper cargado: a Dosa no le gusta (2026-09-18).
+    "panacea_creeper_pyramid",
+}
+
+
 # Piezas que Bracken v129 ya referencia sin incluirlas: Minecraft las salta sin romper nada.
 ROTAS_DE_ORIGEN = {
     "bracken:omnidrome/omnidrome_palace_fin",
@@ -672,6 +681,11 @@ def main() -> None:
         if m and m.group(1) == "bracken" and m.group(2).startswith("dimension/"):
             destino = generadores / Path(m.group(2)).name
             shutil.copyfile(f, destino)
+            continue
+        # Las estructuras descartadas pierden su structure_set y dejan de generarse.
+        descartada = re.fullmatch(r"worldgen/structure_set/(.+)\.json", m.group(2)) if m else None
+        if descartada and descartada.group(1) in FUERA:
+            cuenta["estructuras descartadas"] += 1
             continue
         conservar = bool(m) and (
             (m.group(1) == "bracken" and m.group(2).startswith(CONSERVAR))
