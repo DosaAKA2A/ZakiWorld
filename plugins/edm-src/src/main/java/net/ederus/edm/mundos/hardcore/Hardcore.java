@@ -79,6 +79,20 @@ public final class Hardcore implements Listener {
     private final Map<UUID, Long> muertos = new HashMap<>();
     /** Minijefe -> a quien viene siguiendo. Ver marcarPresa(). */
     private final Map<UUID, UUID> presas = new HashMap<>();
+    /** Quien acaba de morir dentro y todavia no ha reaparecido. Ver onReaparecer(). */
+    private final java.util.Set<UUID> porReaparecer = new java.util.HashSet<>();
+
+    /*
+     * Lo que el plugin ESCRIBE solo (horas acumuladas, tags entregados y la cordura de
+     * quien se desconecto dentro) vive en datos.yml y no en config.yml. Mientras
+     * estuvo en el config, el guardado de cada minuto volcaba el fichero ENTERO desde
+     * memoria: si Dosa subia un config.yml por el panel con alguien dentro de
+     * Calamity, a los pocos segundos se lo pisaba la version vieja.
+     */
+    private java.io.File archivoDatos;
+    private YamlConfiguration datos = new YamlConfiguration();
+    private boolean datosSucios;
+    private int segundosSinGuardar;
 
     private BukkitTask reloj;
     private MenuHardcore menu;
@@ -128,11 +142,17 @@ public final class Hardcore implements Listener {
 
     // ------------------------------------------------------------------ ciclo vida
 
+    /** Si las reglas estan en marcha. Con hardcore.activo en false no hay panel ni vara. */
+    public boolean activo() {
+        return reloj != null;
+    }
+
     public void arrancar() {
         if (!cfg().getBoolean("activo", true)) {
             modulo.getLogger().info("[Calamity] Reglas hardcore apagadas en la config.");
             return;
         }
+        cargarDatos();
         modulo.getServer().getPluginManager().registerEvents(this, Module.dueno(modulo));
         menu = new MenuHardcore(modulo);
         vara = new VaraPortales(modulo);
@@ -153,8 +173,63 @@ public final class Hardcore implements Listener {
 
     public void parar() {
         if (reloj != null) reloj.cancel();
+        reloj = null;
         MobCoins.aviso(null);
         canalizando.clear();
+        // Al apagar no hay PlayerQuitEvent que valga: la cordura de los que siguen
+        // dentro se apunta aqui, o un reinicio del servidor se la devolveria entera.
+        for (Player p : modulo.getServer().getOnlinePlayers()) {
+            if (esHardcore(p) && cordura.conoce(p)) {
+                datos.set("guardado." + p.getUniqueId(), cordura.valor(p));
+                datosSucios = true;
+            }
+        }
+        guardarDatos();
+    }
+
+    // ----------------------------------------------------------------------- datos
+
+    /**
+     * Lee datos.yml y, la primera vez, se trae lo que las versiones de antes dejaron
+     * dentro del config.yml (hardcore.tiempo, hardcore.tag-entregado y
+     * hardcore.guardado). Es el unico momento en que esto guarda el config, y es
+     * seguro: acaba de leerse del disco, no hay edicion de nadie que pisar.
+     */
+    private void cargarDatos() {
+        archivoDatos = new java.io.File(modulo.getDataFolder(), "hardcore-datos.yml");
+        datos = YamlConfiguration.loadConfiguration(archivoDatos);
+
+        boolean migrado = false;
+        for (String seccion : List.of("tiempo", "tag-entregado", "guardado")) {
+            ConfigurationSection vieja = modulo.getConfig().getConfigurationSection("hardcore." + seccion);
+            if (vieja == null) continue;
+            for (String clave : vieja.getKeys(false)) {
+                // Lo de datos.yml manda: si ya estaba, es mas nuevo que lo del config.
+                if (!datos.isSet(seccion + "." + clave)) {
+                    datos.set(seccion + "." + clave, vieja.get(clave));
+                }
+            }
+            if (modulo.getConfig().isSet("hardcore." + seccion)) {
+                modulo.getConfig().set("hardcore." + seccion, null);
+                migrado = true;
+            }
+        }
+        if (migrado) {
+            datosSucios = true;
+            guardarDatos();
+            modulo.saveConfig();
+            modulo.getLogger().info("[Calamity] Horas, tags y cordura guardada pasan a hardcore-datos.yml.");
+        }
+    }
+
+    private void guardarDatos() {
+        if (!datosSucios || archivoDatos == null) return;
+        try {
+            datos.save(archivoDatos);
+            datosSucios = false;
+        } catch (java.io.IOException e) {
+            modulo.getLogger().warning("[Calamity] No se pudo guardar hardcore-datos.yml: " + e.getMessage());
+        }
     }
 
     // ----------------------------------------------------------------------- reloj
@@ -177,6 +252,11 @@ public final class Hardcore implements Listener {
         }
         vigilarZonas();
         vigilarPresas();
+        // Una vez por minuto, y solo si algo cambio: nadie dentro, nada que escribir.
+        if (++segundosSinGuardar >= 60) {
+            segundosSinGuardar = 0;
+            guardarDatos();
+        }
         // Quien haya salido del mundo con una canalizacion a medias no se queda colgado.
         canalizando.keySet().removeIf(id -> {
             Player p = modulo.getServer().getPlayer(id);
@@ -487,19 +567,18 @@ public final class Hardcore implements Listener {
      * config y no se reinicia nunca, porque es lo que se premia con el tag.
      */
     private void contarTiempo(Player p) {
-        String ruta = "hardcore.tiempo." + p.getUniqueId();
-        long llevaba = modulo.getConfig().getLong(ruta, 0);
-        long ahora = llevaba + 1;
-        modulo.getConfig().set(ruta, ahora);
-        // Se escribe a disco de vez en cuando, no cada segundo: es un contador, no un
-        // pago, y guardar 60 veces por minuto por jugador no lo merece.
-        if (ahora % 60 == 0) modulo.saveConfig();
+        String ruta = "tiempo." + p.getUniqueId();
+        long ahora = datos.getLong(ruta, 0) + 1;
+        datos.set(ruta, ahora);
+        datosSucios = true;
+        // A disco va una vez por minuto (ver tick), no cada segundo: es un contador,
+        // no un pago, y guardar 60 veces por minuto por jugador no lo merece.
         entregarTag(p, ahora);
     }
 
     /** Horas acumuladas de un jugador en los mundos hardcore. */
     public double horasDe(Player p) {
-        return modulo.getConfig().getLong("hardcore.tiempo." + p.getUniqueId(), 0) / 3600.0;
+        return datos.getLong("tiempo." + p.getUniqueId(), 0) / 3600.0;
     }
 
     /**
@@ -515,10 +594,11 @@ public final class Hardcore implements Listener {
         long pide = (long) (t.getDouble("horas", 24) * 3600);
         if (segundos < pide) return;
 
-        String yaEsta = "hardcore.tag-entregado." + p.getUniqueId();
-        if (modulo.getConfig().getBoolean(yaEsta, false)) return;
-        modulo.getConfig().set(yaEsta, true);
-        modulo.saveConfig();
+        String yaEsta = "tag-entregado." + p.getUniqueId();
+        if (datos.getBoolean(yaEsta, false)) return;
+        datos.set(yaEsta, true);
+        datosSucios = true;
+        guardarDatos();
 
         String comando = t.getString("comando", "lp user %jugador% permission set insomne.badge.unlocked true");
         try {
@@ -691,10 +771,28 @@ public final class Hardcore implements Listener {
         if (e.getEntity() instanceof Player) return;
         if (!esHardcore(e.getEntity().getWorld())) return;
         if (!cfg().getBoolean("dificultad.mobs-recogen", true)) return;
-        // El evento solo llega si la entidad puede recoger; el permiso se da al
-        // aparecer (ver alAparecer). Aqui solo se deja pasar y se avisa con la chispa.
-        Compat.spawn(e.getEntity().getWorld(), Compat.ANGRY_VILLAGER,
-                e.getEntity().getLocation().add(0, 1.4, 0), 3, 0.2, 0.2, 0.2, 0);
+        LivingEntity mob = e.getEntity();
+
+        // Ni los jefes de las anomalias ni su tropa: el permiso de recoger se da al
+        // aparecer, cuando todavia no llevan su marca, asi que se les niega aqui. Un
+        // jefe que se equipa la espada que se le cayo a alguien pega y se ve distinto.
+        if (net.ederus.edm.comun.Tags.isOurs(mob)) {
+            e.setCancelled(true);
+            return;
+        }
+
+        /* Vanilla vuelve PERSISTENTE al mob que recoge algo, y un persistente no
+         * despawnea nunca: con esta regla puesta, cada zombi que pisaba carne podrida
+         * se quedaba en el mundo para siempre y Calamity se iba llenando con las horas.
+         * La marca la pone el juego DESPUES de este evento, por eso se deshace un tick
+         * mas tarde, y solo a los que antes si podian despawnear. */
+        if (mob.getRemoveWhenFarAway()) {
+            modulo.getServer().getScheduler().runTask(Module.dueno(modulo), () -> {
+                if (mob.isValid()) mob.setRemoveWhenFarAway(true);
+            });
+        }
+        Compat.spawn(mob.getWorld(), Compat.ANGRY_VILLAGER,
+                mob.getLocation().add(0, 1.4, 0), 3, 0.2, 0.2, 0.2, 0);
     }
 
     /** Los cofres de las estructuras salen VACIOS: el botin se mata, no se encuentra. */
@@ -750,11 +848,30 @@ public final class Hardcore implements Listener {
         e.deathMessage(Component.text(p.getName() + " no volvió de Calamity.",
                 TextColor.color(0x8B1A1A)));
 
-        // El respawn lo decide el servidor; aqui solo nos aseguramos de que no
-        // reaparezca dentro. Se hace un tick despues, cuando ya tiene cuerpo.
-        modulo.getServer().getScheduler().runTaskLater(Module.dueno(modulo), () -> {
-            if (p.isOnline() && esHardcore(p)) sacar(p, "Has muerto allí dentro.");
-        }, 2L);
+        // A donde reaparece se decide en onReaparecer, que es cuando vuelve a tener
+        // cuerpo: dos ticks despues de morir sigue en la pantalla de muerte, y a un
+        // muerto no se le puede teletransportar.
+        porReaparecer.add(p.getUniqueId());
+    }
+
+    /**
+     * Quien murio dentro no reaparece dentro.
+     *
+     * Casi siempre el servidor ya lo manda fuera (sin cama, al spawn del mundo
+     * principal), pero con "sin-camas" apagada desde el panel alguien puede tener la
+     * cama en Calamity, y entonces morir era volver a aparecer alli con las manos
+     * vacias. Si el punto de reaparicion cae en un mundo hardcore, se cambia por la
+     * salida. Va en HIGHEST para tener la ultima palabra sobre otros plugins de spawn.
+     */
+    @EventHandler(priority = EventPriority.HIGHEST)
+    public void onReaparecer(org.bukkit.event.player.PlayerRespawnEvent e) {
+        Player p = e.getPlayer();
+        if (!porReaparecer.remove(p.getUniqueId())) return;
+        if (esHardcore(e.getRespawnLocation().getWorld())) {
+            Location fuera = salida();
+            if (fuera != null) e.setRespawnLocation(fuera);
+        }
+        p.sendMessage(Component.text("Has muerto allí dentro.", NamedTextColor.GRAY));
     }
 
     // --------------------------------------------------------------- entrar/salir
@@ -805,7 +922,7 @@ public final class Hardcore implements Listener {
         // malas no puede ser la forma barata de resetear el reloj.
         Player p = e.getPlayer();
         if (!esHardcore(p)) return;
-        double guardada = modulo.getConfig().getDouble("hardcore.guardado." + p.getUniqueId(), -1);
+        double guardada = datos.getDouble("guardado." + p.getUniqueId(), -1);
         if (guardada >= 0) cordura.valor(p, guardada);
     }
 
@@ -815,12 +932,17 @@ public final class Hardcore implements Listener {
         canalizando.remove(p.getUniqueId());
         cuentaCristal.remove(p.getUniqueId());
         ultimoEfecto.remove(p.getUniqueId());
+        String ruta = "guardado." + p.getUniqueId();
         if (esHardcore(p) && cordura.conoce(p)) {
-            modulo.getConfig().set("hardcore.guardado." + p.getUniqueId(), cordura.valor(p));
-            modulo.saveConfig();
-        } else {
-            modulo.getConfig().set("hardcore.guardado." + p.getUniqueId(), null);
+            datos.set(ruta, cordura.valor(p));
+            datosSucios = true;
+            guardarDatos();
+        } else if (datos.isSet(ruta)) {
+            datos.set(ruta, null);
+            datosSucios = true;
         }
+        // porReaparecer NO se toca: quien se desconecta en la pantalla de muerte
+        // reaparece al volver, y ahi sigue haciendo falta saber que murio dentro.
         cordura.olvidar(p);
     }
 

@@ -332,9 +332,13 @@ public final class Raiz extends BossFight {
                 Component.text("Quien aparte la vista, muere", NamedTextColor.RED));
         soundAt(c, "entity.creaking.activate", 2.0f, 0.5f);
 
+        /* Duran lo que la mirada (120 ticks) y un pelo mas, y se dejan caducar solos.
+         * Antes se quitaban a mano al cerrar, y removePotionEffect se lleva TAMBIEN la
+         * Resistencia que el jugador trajera de antes (un set, un faro): salia de la
+         * mirada sin la suya. Asi la nuestra tapa la suya un momento y luego vuelve. */
         for (Player p : targets(60)) {
-            p.addPotionEffect(new PotionEffect(PotionEffectType.RESISTANCE, 140, 4, true, false, false));
-            p.addPotionEffect(new PotionEffect(PotionEffectType.WEAKNESS, 140, 9, true, false, false));
+            p.addPotionEffect(new PotionEffect(PotionEffectType.RESISTANCE, 130, 4, true, false, false));
+            p.addPotionEffect(new PotionEffect(PotionEffectType.WEAKNESS, 130, 9, true, false, false));
         }
 
         animate(120, tick -> {
@@ -360,8 +364,6 @@ public final class Raiz extends BossFight {
             if (alive()) boss.setAI(true);
             int caidos = 0;
             for (Player p : targets(60)) {
-                p.removePotionEffect(PotionEffectType.RESISTANCE);
-                p.removePotionEffect(PotionEffectType.WEAKNESS);
                 if (mirandoAlJefe(p)) continue;
                 caidos++;
                 // Dano PURO: no lo para la armadura ni la resistencia.
@@ -383,15 +385,22 @@ public final class Raiz extends BossFight {
      * Como provocar a un enderman: la mira tiene que caer sobre el, no basta con
      * tenerlo en el campo de vision. Se traza un rayo desde el ojo en la direccion en
      * que mira y se cruza con la caja del cuerpo (el creaking, o el zombi si no hay
-     * cuerpo), un poco agrandada para dar margen. Sin pared de por medio: el juicio es
-     * de puntería, no de línea de vista.
+     * cuerpo), agrandada para dar margen. Sin pared de por medio: el juicio es de
+     * puntería, no de línea de vista.
+     *
+     * El margen CRECE con la distancia (unos tres grados de tolerancia). Con uno fijo
+     * de 0.7 bloques, a cuarenta bloques el blanco era de un par de grados y fallarlo
+     * son dos mil de daño: con ratón se acierta, pero en Bedrock con pantalla táctil
+     * era morir casi seguro. Así apuntarle cuesta lo mismo de cerca que de lejos.
      */
     private boolean mirandoAlJefe(Player p) {
         LivingEntity mira = shell != null && shell.isValid() ? shell : boss;
         if (mira == null || !mira.isValid()) return false;
         Location ojo = p.getEyeLocation();
         if (ojo.getWorld() != mira.getWorld()) return false;
-        org.bukkit.util.BoundingBox caja = mira.getBoundingBox().expand(0.7);
+        org.bukkit.util.BoundingBox cuerpo = mira.getBoundingBox();
+        double distancia = ojo.toVector().distance(cuerpo.getCenter());
+        org.bukkit.util.BoundingBox caja = cuerpo.clone().expand(0.7 + distancia * 0.05);
         return caja.rayTrace(ojo.toVector(), ojo.getDirection(), 90) != null;
     }
 

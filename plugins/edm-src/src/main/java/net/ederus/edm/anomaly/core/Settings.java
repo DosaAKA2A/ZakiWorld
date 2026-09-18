@@ -209,9 +209,14 @@ public final class Settings {
      * El atajo que se le dice a la gente para llegar: "ve /warp coliseo". Vacio = no se
      * dice nada y el subtitulo lleva las coordenadas. Es texto, no un warp de verdad:
      * lo que haya escrito es lo que sale, y al clicarlo en el chat se ejecuta.
+     *
+     * La barra del principio se pone sola si falta: sin ella el clic del chat no
+     * ejecuta nada (el cliente solo acepta comandos que empiecen por "/") y nadie
+     * se entera de por que.
      */
     public String announceWarp() {
-        return cfg().getString("anuncio.warp", "").trim();
+        String warp = cfg().getString("anuncio.warp", "").trim();
+        return warp.isEmpty() || warp.startsWith("/") ? warp : "/" + warp;
     }
 
     public boolean announceTitle() {

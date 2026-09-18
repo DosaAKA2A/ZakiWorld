@@ -84,7 +84,9 @@ public final class PhaseBars {
             case 1 -> NamedTextColor.GOLD;
             case 2 -> NamedTextColor.RED;
             case 3 -> NamedTextColor.LIGHT_PURPLE;
-            default -> NamedTextColor.WHITE;
+            // La quinta (los Dioses) no puede ir en blanco como la primera: la
+            // escalada de color se perdia justo en la fase final.
+            default -> NamedTextColor.DARK_RED;
         };
         Component name = Component.text(bossName, accent);
         Component phase = Component.text("FASE " + roman(index), phaseColor);

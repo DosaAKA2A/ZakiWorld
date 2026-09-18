@@ -479,7 +479,7 @@ REPARTO_RUINAS: dict[str, tuple[int, int, int, int]] = {
     "sweltering_swamp": (5, 10, 50, 40),
     "wildflower_bog": (5, 10, 50, 40),
 }
-# Reticula y minimo en chunks, como los structure_set de Bracken. Con 8/5 sale una
+# Reticula y minimo en chunks, como los structure_set de Bracken. Con 8/6 sale una
 # ruina cada ~128 bloques, unas tres veces mas que con 14/10 (Dosa pidio mas
 # frecuencia el 2026-09-18). OJO: solo afecta a chunks NUEVOS; el mundo ya generado
 # conserva la densidad con la que nacio.

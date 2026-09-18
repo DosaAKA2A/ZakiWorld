@@ -430,7 +430,9 @@ final class ComandoMundos implements TabExecutor {
      */
     private void hardcore(CommandSender q, String[] args) {
         Hardcore hc = modulo.hardcore();
-        if (hc == null) {
+        // El objeto existe siempre; lo que falta con hardcore.activo en false son el
+        // panel y la vara, y sin ellos casi todo lo de abajo reventaba con un null.
+        if (hc == null || !hc.activo()) {
             decir(q, Component.text("Las reglas hardcore están apagadas en la config.", NamedTextColor.RED));
             return;
         }
