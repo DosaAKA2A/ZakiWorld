@@ -1,5 +1,5 @@
 name: EDM
-version: '1.58.0'
+version: '1.59.0'
 main: net.ederus.edm.EDMPlugin
 api-version: '1.20'
 author: Iris Studio
@@ -23,7 +23,7 @@ commands:
     usage: /rip <gui|kill|death|list|info|test|reload>
   anomaly:
     description: 'Panel de anomalias (jefes): iniciar, elegir, botin y ajustes.'
-    usage: /anomaly <menu|start|here|at|stop|info|abilities|test|hurt|logros|reload>
+    usage: /anomaly <menu|start|here|at|stop|info|abilities|test|hurt|arena|biome|logros|reload>
     aliases: [anomalia, anom]
     permission: anomaly.gui
   esb:

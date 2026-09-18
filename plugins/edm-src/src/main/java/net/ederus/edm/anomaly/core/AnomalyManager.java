@@ -377,8 +377,9 @@ public final class AnomalyManager implements Listener {
      * WorldGuard trata pegarle a un aldeano dentro de una region cerrada como si fuera
      * construir, y el Piromante ES un aldeano: en el coliseo se volvia intocable. Como
      * las protecciones cancelan antes (NORMAL/HIGH), aqui llegamos despues y devolvemos
-     * el golpe del jugador contra el jefe, su maniqui o un esbirro. Solo eso: el resto
-     * de la region sigue protegida igual, y se apaga con combate.saltarse-protecciones.
+     * el golpe del jugador contra lo que sea nuestro (ver ArenaGuard.devolverGolpe, que
+     * ademas lo intenta antes, en NORMAL). Solo eso: el resto de la region sigue
+     * protegida igual, y se apaga con combate.saltarse-protecciones.
      *
      * Tiene que ser este mismo metodo, y no otro aparte, porque el merito para el botin
      * se apunta aqui: si el desbloqueo viviera en un listener posterior, el golpe
@@ -388,19 +389,11 @@ public final class AnomalyManager implements Listener {
     public void onDamage(EntityDamageByEntityEvent e) {
         Entity victim = e.getEntity();
 
-        if (e.isCancelled()) {
-            if (!plugin.settings().bypassProtections()) return;
-            Player desbloqueado = attacker(e.getDamager());
-            if (desbloqueado == null || !isOurFighter(victim)) return;
-            e.setCancelled(false);
-            /* Dentro de una region cerrada esto pasa en CADA golpe: se anota solo el
-             * primero de cada jugador, que es lo que dice que la region lo bloqueaba. */
-            if (proteccionAnotada.add(desbloqueado.getUniqueId())) {
-                plugin.bitacora().anotar("proteccion", "golpe devuelto a " + desbloqueado.getName(),
-                        "sobre " + victim.getType(), "en " + describe(victim.getLocation()),
-                        "solo se anota el primero");
-            }
-        }
+        /* La red de seguridad. Lo normal es que ArenaGuard ya haya devuelto el golpe en
+         * NORMAL, justo detras de WorldGuard; aqui solo llega cancelado lo que tumbo
+         * alguien mas tarde. Que cuenta como "nuestro" lo decide el guardian, y ya no
+         * depende de que haya una anomalia abierta ni deja fuera a los de /esb. */
+        if (e.isCancelled() && !plugin.guard().devolverGolpe(e)) return;
 
         // Los objetivos destructibles no usan la vida vanilla: cada golpe cuenta uno.
         if (plugin.anchors().isAnchor(victim)) {
@@ -551,15 +544,14 @@ public final class AnomalyManager implements Listener {
 
     /* Quien ya tiene su primer golpe anotado. Se vacia con cada anomalia. */
     private final java.util.Set<UUID> primerGolpeAnotado = new java.util.HashSet<>();
-    /* Quien ya tiene anotado que una proteccion le tumbaba los golpes. */
-    private final java.util.Set<UUID> proteccionAnotada = new java.util.HashSet<>();
     /* La ultima pelea cuyo cierre ya se escribio. */
     private ActiveAnomaly cierreAnotado;
 
     /** Deja las listas de "ya anotado" limpias para la pelea siguiente. */
     private void olvidarAnotados() {
         primerGolpeAnotado.clear();
-        proteccionAnotada.clear();
+        // Quien tenia anotado que una proteccion le tumbaba los golpes: lo lleva el guardian.
+        plugin.guard().olvidarAnotados();
     }
 
     /**
@@ -631,8 +623,13 @@ public final class AnomalyManager implements Listener {
     }
 
     /**
-     * Las anomalias que construyen algo de verdad deciden que se puede romper y que no.
-     * Fuera de eso el plugin no toca el minado de nadie.
+     * Aviso a la pelea de cualquier OTRO bloque que se rompa mientras dura.
+     *
+     * Los bloques que levanta la propia anomalia (los pilares de la Quimera, la tela de
+     * Aragon) ya no pasan por aqui: los resuelve ArenaGuard en LOWEST y llegan
+     * cancelados. Era justo lo que fallaba en el coliseo: este aviso ignora lo
+     * cancelado y corre despues de WorldGuard, asi que a la Quimera nunca le llegaba
+     * que le habian picado un pilar.
      */
     @EventHandler(ignoreCancelled = true)
     public void onBlockBreak(org.bukkit.event.block.BlockBreakEvent e) {
@@ -646,7 +643,7 @@ public final class AnomalyManager implements Listener {
     }
 
     /** El jugador detras del golpe: el que pega, el que disparo o el dueno de la mascota. */
-    private Player attacker(Entity damager) {
+    static Player attacker(Entity damager) {
         if (damager instanceof Player p) return p;
         if (damager instanceof Projectile proj) {
             ProjectileSource src = proj.getShooter();

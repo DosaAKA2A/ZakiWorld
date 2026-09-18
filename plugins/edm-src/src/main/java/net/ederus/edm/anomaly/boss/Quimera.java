@@ -260,6 +260,16 @@ public final class Quimera extends BossFight {
         return n;
     }
 
+    /** Los bloques de un pilar en pie son de la pelea: la arena deja que se piquen. */
+    @Override
+    public boolean ownsBlock(Block block) {
+        Location key = block.getLocation();
+        for (Pillar pillar : pillars) {
+            if (pillar.standing && pillar.before.containsKey(key)) return true;
+        }
+        return false;
+    }
+
     /**
      * Solo se puede picar el ladrillo cincelado del centro. Lo demas del pilar se
      * protege: si se pudiera desmontar por abajo, la mecanica se resolveria cavando.

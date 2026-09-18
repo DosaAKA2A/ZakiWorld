@@ -208,6 +208,12 @@ public final class Piromante extends BossFight {
         }
     }
 
+    /** Sus llamas se apagan a manotazos aunque la zona este protegida. */
+    @Override
+    public boolean ownsBlock(org.bukkit.block.Block block) {
+        return block.getType() == Material.FIRE && burned.containsKey(block.getLocation());
+    }
+
     private void extinguishAll() {
         for (Map.Entry<Location, Material> e : burned.entrySet()) {
             try {

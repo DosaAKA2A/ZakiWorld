@@ -79,10 +79,13 @@ combate:
   salpicadura: 0.6
   radio-salpicadura: 4
 
-  # Devuelve el golpe de un jugador al jefe cuando una proteccion de terreno lo ha
-  # cancelado. Hace falta para las anomalias de cuerpo pacifico: WorldGuard protege al
-  # Piromante (un aldeano) como si fuera ganado y dentro de una region cerrada no se le
-  # puede pegar. Solo afecta al jefe, a su maniqui y a sus esbirros.
+  # Devuelve el golpe de un jugador a lo NUESTRO cuando una proteccion de terreno lo ha
+  # cancelado. WorldGuard deja pegar a los monstruos, pero protege como si fueran
+  # ganado o construccion a todo lo demas: un aldeano (el Piromante), un golem, una
+  # cabra, un conejo, un soporte de armadura. Dentro de una region cerrada (el
+  # coliseo, las mazmorras) a esos no se les podia pegar.
+  # Vale para el jefe, su maniqui, sus esbirros, los objetivos destructibles y los
+  # esbirros de /esb, haya o no una anomalia abierta. Nada mas de la region cambia.
   saltarse-protecciones: true
 
 arena:
@@ -92,6 +95,21 @@ arena:
   # El clima de cada una se cambia con /anomaly biome <id> <biome|none>
   # (se guarda como anomalias.<id>.bioma).
   zona: ''
+
+  # La arena como REGION propia: se protege sola, con o sin WorldGuard encima.
+  # Dentro nadie rompe, pone, quema, revienta ni inunda nada, y SOLO se puede romper lo
+  # que levanta la anomalia (los pilares de la Quimera, la tela de Aragon, las llamas
+  # del Piromante). Eso ultimo se rompe siempre, aunque otra proteccion diga que no, y
+  # no suelta nada. Tampoco se abren cofres ni se tocan marcos, cuadros y soportes.
+  # Construye con normalidad quien tenga el permiso anomaly.arena.build (los
+  # operadores lo tienen). Puertas, palancas y demas clics de uso NO se tocan: eso
+  # sigue siendo cosa de WorldGuard si la region se mantiene; las dos conviven.
+  # Se cambia con /anomaly arena protect on|off.
+  proteccion:
+    activa: true
+    # true = de arriba abajo, sin mirar la altura de la zona (que se creo pensando en
+    # el clima y puede dejar fuera el techo o los cimientos). false = la altura justa.
+    columna-entera: true
 
 botin:
   # A que distancia del cuerpo cae cada monton al reventar la tabla. El botin sale

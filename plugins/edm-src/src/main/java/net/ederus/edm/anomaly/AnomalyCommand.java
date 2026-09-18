@@ -115,20 +115,29 @@ public final class AnomalyCommand implements CommandExecutor, TabCompleter {
         }
     }
 
-    /** /anomaly arena [zona|ninguna]: que zona de Lethal Biomes es la arena. */
+    /**
+     * /anomaly arena: la zona de Lethal Biomes que es la arena, y su proteccion.
+     *
+     *   /anomaly arena                 como esta
+     *   /anomaly arena <zone|none>     que zona es
+     *   /anomaly arena protect on|off  si se protege sola (ver ArenaGuard)
+     */
     private void arena(CommandSender sender, String[] args) {
         var biomas = net.ederus.edm.biomas.BiomasPlugin.activo();
         if (args.length < 2) {
-            String zona = plugin.settings().arenaZone();
-            sender.sendMessage(plugin.prefix().append(Component.text(zona.isBlank()
-                    ? "No hay arena: las anomalías no cambian el clima. /anomaly arena <zone>"
-                    : "La arena es la zona " + zona + ".", SOFT)));
+            arenaStatus(sender);
             return;
         }
         String zona = args[1].toLowerCase(Locale.ROOT);
+        if (zona.equals("protect") || zona.equals("proteger")) {
+            arenaProtect(sender, args);
+            return;
+        }
         if (zona.equals("none")) {
             plugin.settings().set("arena.zona", "");
-            sender.sendMessage(plugin.prefix().append(Component.text("Arena quitada: el clima ya no cambia.", SOFT)));
+            plugin.guard().refrescar();
+            sender.sendMessage(plugin.prefix().append(Component.text(
+                    "Arena quitada: el clima ya no cambia y no hay nada que proteger.", SOFT)));
             return;
         }
         if (biomas == null || biomas.zona(zona) == null) {
@@ -138,8 +147,64 @@ public final class AnomalyCommand implements CommandExecutor, TabCompleter {
             return;
         }
         plugin.settings().set("arena.zona", zona);
+        plugin.guard().refrescar();
         sender.sendMessage(plugin.prefix().append(Component.text(
-                "La arena es ahora la zona " + zona + ". Cada anomalía que abra dentro pinta su clima.", SOFT)));
+                "La arena es ahora la zona " + zona + ". Cada anomalía que abra dentro pinta su clima"
+                        + (plugin.settings().arenaProtected() ? ", y queda protegida." : "."), SOFT)));
+    }
+
+    /** Como esta la arena: que zona es, cuanto mide y si se esta protegiendo. */
+    private void arenaStatus(CommandSender sender) {
+        String nombre = plugin.settings().arenaZone();
+        if (nombre.isBlank()) {
+            sender.sendMessage(plugin.prefix().append(Component.text(
+                    "No hay arena: ni clima ni protección. /anomaly arena <zone>", SOFT)));
+            return;
+        }
+        var z = plugin.guard().zona();
+        if (z == null) {
+            sender.sendMessage(plugin.prefix().append(Component.text(
+                    "La arena apunta a la zona " + nombre + ", que no existe en Lethal Biomes.",
+                    NamedTextColor.RED)));
+            return;
+        }
+        boolean protegida = plugin.settings().arenaProtected();
+        sender.sendMessage(plugin.prefix().append(Component.text("La arena", SOFT)));
+        sender.sendMessage(field("zona", z.nombre() + "  ·  " + z.medidas() + " en " + z.mundo()));
+        sender.sendMessage(field("de", z.minX() + " " + z.minY() + " " + z.minZ()
+                + "  a  " + z.maxX() + " " + z.maxY() + " " + z.maxZ()));
+        sender.sendMessage(field("protección", protegida
+                ? "encendida" + (plugin.settings().arenaFullColumn() ? ", de arriba abajo" : ", a la altura de la zona")
+                : "apagada"));
+        if (protegida) {
+            sender.sendMessage(field("se rompe", "solo lo que levanta la anomalía (pilares, telas, llamas)"));
+            sender.sendMessage(field("construye", "quien tenga "
+                    + net.ederus.edm.anomaly.core.ArenaGuard.PERMISO));
+        }
+        line(sender, "/anomaly arena protect on|off", "enciende o apaga la protección");
+    }
+
+    /** /anomaly arena protect [on|off]. Sin mas, la cambia: es lo comodo desde un movil. */
+    private void arenaProtect(CommandSender sender, String[] args) {
+        boolean ahora = plugin.settings().arenaProtected();
+        boolean nueva = !ahora;
+        if (args.length >= 3) {
+            String v = args[2].toLowerCase(Locale.ROOT);
+            if (v.equals("on") || v.equals("si") || v.equals("true")) nueva = true;
+            else if (v.equals("off") || v.equals("no") || v.equals("false")) nueva = false;
+            else {
+                sender.sendMessage(plugin.prefix().append(Component.text(
+                        "Es /anomaly arena protect on o /anomaly arena protect off.", NamedTextColor.RED)));
+                return;
+            }
+        }
+        plugin.settings().set("arena.proteccion.activa", nueva);
+        plugin.guard().refrescar();
+        String cola = plugin.settings().arenaZone().isBlank()
+                ? " Falta decir qué zona es: /anomaly arena <zone>." : "";
+        sender.sendMessage(plugin.prefix().append(Component.text(nueva
+                ? "Arena protegida: dentro solo se rompe lo que levanta la anomalía." + cola
+                : "Protección de la arena apagada. Lo de la anomalía se sigue pudiendo romper.", SOFT)));
     }
 
     /** /anomaly bioma <id> [clima|ninguno]: el clima que pinta esa anomalia en la arena. */
@@ -513,6 +578,7 @@ public final class AnomalyCommand implements CommandExecutor, TabCompleter {
         line(sender, "/anomaly hurt <vida>", "le baja vida a mano, para ver las fases");
         line(sender, "/anomaly botín [id]", "revienta la tabla aquí mismo, solo para verla");
         line(sender, "/anomaly arena [zone|none]", "la zona de Lethal Biomes que es la arena");
+        line(sender, "/anomaly arena protect [on|off]", "la arena se protege sola");
         line(sender, "/anomaly biome [id] [biome|none]", "el clima que pinta cada una en la arena");
         line(sender, "/anomaly logros", "cuántas anomalías llevas derrotadas");
         line(sender, "/anomaly reload", "recarga la configuración");
@@ -566,6 +632,13 @@ public final class AnomalyCommand implements CommandExecutor, TabCompleter {
         if (biomas != null && args.length == 2 && args[0].equalsIgnoreCase("arena")) {
             for (var z : biomas.zonas()) if (z.nombre().startsWith(args[1].toLowerCase(Locale.ROOT))) out.add(z.nombre());
             if ("none".startsWith(args[1].toLowerCase(Locale.ROOT))) out.add("none");
+            if ("protect".startsWith(args[1].toLowerCase(Locale.ROOT))) out.add("protect");
+            return out;
+        }
+        if (args.length == 3 && args[0].equalsIgnoreCase("arena") && args[1].equalsIgnoreCase("protect")) {
+            for (String s : List.of("on", "off")) {
+                if (s.startsWith(args[2].toLowerCase(Locale.ROOT))) out.add(s);
+            }
             return out;
         }
         if (biomas != null && args.length == 3 && args[0].equalsIgnoreCase("biome")) {

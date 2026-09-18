@@ -745,6 +745,20 @@ public abstract class BossFight {
     }
 
     /**
+     * Si ese bloque lo ha puesto ESTA pelea: un pilar, una tela, una llama.
+     *
+     * Es lo unico que se puede romper dentro de la arena protegida, y se rompe
+     * SIEMPRE, aunque haya otra proteccion encima (WorldGuard en el coliseo). Lo
+     * consulta ArenaGuard antes que nadie: si es true, primero pregunta a
+     * onBlockBroken, y si la pelea no resuelve la rotura ella misma, el bloque se
+     * quita sin soltar nada. Un jefe que ponga bloques de verdad y quiera que se
+     * puedan romper tiene que contestar aqui que son suyos.
+     */
+    public boolean ownsBlock(org.bukkit.block.Block block) {
+        return false;
+    }
+
+    /**
      * Si un jefe puede estar invulnerable mucho rato POR DISENO.
      *
      * Por defecto no: el vigilante le quita la invulnerabilidad a la fuerza porque

@@ -337,6 +337,16 @@ public final class Aragon extends BossFight {
     }
 
     /**
+     * La tela que ha tejido ella se corta siempre, tambien dentro de una region
+     * protegida: en el coliseo WorldGuard no dejaba y la gente se quedaba atrapada. No
+     * suelta hilo (la quita ArenaGuard, no el juego), asi que tampoco es una granja.
+     */
+    @Override
+    public boolean ownsBlock(Block block) {
+        return block.getType() == Material.COBWEB && webs.containsKey(block.getLocation());
+    }
+
+    /**
      * Los huevos se rompen pegandoles. La marca es una entidad de dibujo y esas no
      * reciben golpes, asi que se comprueba la cercania cuando alguien pega al aire:
      * es lo que permite "romper el huevo" sin inventarse un bloque nuevo.

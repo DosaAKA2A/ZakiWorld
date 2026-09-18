@@ -60,6 +60,7 @@ public final class AnomalyPlugin extends net.ederus.edm.Module {
     private Menus menus;
     private net.ederus.edm.anomaly.menu.SpawnMarker spawnMarker;
     private Anchors anchors;
+    private net.ederus.edm.anomaly.core.ArenaGuard guard;
     private Advancements advancements;
     private net.ederus.edm.anomaly.minions.MinionRegistry minions;
     private net.ederus.edm.anomaly.minions.MinionManager minionManager;
@@ -81,6 +82,7 @@ public final class AnomalyPlugin extends net.ederus.edm.Module {
         this.protection = new Protection(this);
         this.sites = new SiteFinder(this, protection, settings);
         this.announcer = new Announcer(this);
+        this.guard = new net.ederus.edm.anomaly.core.ArenaGuard(this);
         this.manager = new AnomalyManager(this);
         this.menus = new Menus(this);
         this.spawnMarker = new net.ederus.edm.anomaly.menu.SpawnMarker(this);
@@ -100,6 +102,11 @@ public final class AnomalyPlugin extends net.ederus.edm.Module {
                     + " entradas de brillo que quedaron de un arranque anterior.");
         }
 
+        /* El guardian de la arena va EL PRIMERO. Dentro de una misma prioridad Bukkit
+         * llama por orden de registro, y su pasada en NORMAL tiene que devolver el
+         * golpe antes de que lo vean los esbirros (coraza, espinas, alarma), que
+         * ignoran lo cancelado. */
+        getServer().getPluginManager().registerEvents(guard, this);
         getServer().getPluginManager().registerEvents(manager, this);
         getServer().getPluginManager().registerEvents(menus, this);
         getServer().getPluginManager().registerEvents(spawnMarker, this);
@@ -305,6 +312,11 @@ public final class AnomalyPlugin extends net.ederus.edm.Module {
 
     public Anchors anchors() {
         return anchors;
+    }
+
+    /** La arena como region propia: que se rompe, que se protege y a que se le pega. */
+    public net.ederus.edm.anomaly.core.ArenaGuard guard() {
+        return guard;
     }
 
     public net.ederus.edm.anomaly.minions.MinionRegistry minions() {

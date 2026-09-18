@@ -160,6 +160,23 @@ public final class Settings {
         return cfg().getString("arena.zona", "");
     }
 
+    /**
+     * Si la arena se protege sola: dentro no se rompe ni se pone nada que no sea de la
+     * anomalia. Ver ArenaGuard. Sin zona puesta no hay nada que proteger.
+     */
+    public boolean arenaProtected() {
+        return cfg().getBoolean("arena.proteccion.activa", true);
+    }
+
+    /**
+     * Si la proteccion cubre la columna entera, del fondo del mundo al cielo. La zona
+     * se creo pensando en el clima y su altura puede dejar fuera el techo o los
+     * cimientos del coliseo; en false se respeta la altura de la zona tal cual.
+     */
+    public boolean arenaFullColumn() {
+        return cfg().getBoolean("arena.proteccion.columna-entera", true);
+    }
+
     /** Clima que pinta cada anomalia sobre la arena si el config no dice otro. */
     private static final java.util.Map<String, String> CLIMA_DE_SERIE = java.util.Map.ofEntries(
             java.util.Map.entry("alba", "celestial"),
