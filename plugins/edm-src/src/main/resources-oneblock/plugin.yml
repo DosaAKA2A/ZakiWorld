@@ -1,0 +1,47 @@
+name: EDM
+version: '1.63.0'
+main: net.ederus.edm.EDMOneBlock
+api-version: '1.20'
+author: Iris Studio
+description: Nucleo de Ederus para OneBlock - tienda propia, vitrina y biomas
+softdepend: [Vault, WorldGuard, UltimateMobCoins, PlaceholderAPI]
+
+commands:
+  edm:
+    description: Estado del nucleo de Ederus
+    usage: /edm [reload]
+  sellall:
+    description: Vende todo lo vendible que lleves encima
+    usage: /sellall
+    aliases: [venderotodo]
+  shop:
+    description: 'La tienda de Ederus. Subcomandos en ingles por /shop, en espanol por /tienda'
+    usage: /shop [search|sell|buy|price|limits|market|rotation]
+    aliases: [tienda]
+  flex:
+    description: 'Tu vitrina: pon a la vista tus mejores objetos.'
+    usage: /flex [jugador|showcase|power|top]
+    aliases: [vitrina]
+    permission: ederus.flex
+  lbiomes:
+    description: Lethal Biomes - climas por zona sin reiniciar
+    usage: /lbiomes <list|zones|zone|paint|clear>
+    aliases: [lethalbiomes]
+    permission: ederus.biomas
+
+permissions:
+  ederus.flex:
+    description: Permite montar una vitrina, verla y mostrarla en el chat
+    default: true
+  ederus.flex.admin:
+    description: Recarga las vitrinas, salta el enfriamiento del anuncio y reinicia el top de Poder
+    default: op
+  ederus.biomas:
+    description: Crea zonas de clima y las pinta con los biomas de Lethal Biomes
+    default: op
+  ederus.tienda.usar:
+    description: Permite comprar y vender en la tienda
+    default: true
+  ederus.tienda.admin:
+    description: Permite recargar el catalogo de la tienda
+    default: op

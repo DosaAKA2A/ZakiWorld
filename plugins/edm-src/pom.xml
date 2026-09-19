@@ -6,7 +6,7 @@
 
   <groupId>net.ederus</groupId>
   <artifactId>EDM</artifactId>
-  <version>1.62.0</version>
+  <version>1.63.0</version>
   <packaging>jar</packaging>
   <name>EDM</name>
   <description>Nucleo de Ederus: Rip + Anomaly + libros y avisos de tiendas</description>
@@ -110,4 +110,32 @@
       </resource>
     </resources>
   </build>
+  <profiles>
+    <!-- La build de OneBlock: mvn -o -DskipTests -Poneblock package. Cambia el
+         main (EDMOneBlock), el plugin.yml, el config.yml y el catalogo de
+         precios por los de src/main/resources-oneblock; el resto del jar es
+         el mismo. Borrar target/classes antes de alternar entre perfiles. -->
+    <profile>
+      <id>oneblock</id>
+      <build>
+        <finalName>EDM-OneBlock-${project.version}</finalName>
+        <resources>
+          <resource>
+            <directory>src/main/resources</directory>
+            <filtering>false</filtering>
+            <excludes>
+              <exclude>plugin.yml</exclude>
+              <exclude>config.yml</exclude>
+              <exclude>tienda/precios.yml</exclude>
+              <exclude>tienda/config.yml</exclude>
+            </excludes>
+          </resource>
+          <resource>
+            <directory>src/main/resources-oneblock</directory>
+            <filtering>false</filtering>
+          </resource>
+        </resources>
+      </build>
+    </profile>
+  </profiles>
 </project>

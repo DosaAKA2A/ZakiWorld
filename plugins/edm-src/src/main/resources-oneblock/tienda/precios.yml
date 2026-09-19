@@ -1,0 +1,5205 @@
+# Catalogo de la tienda de OneBlock. Generado por scripts/catalogo-oneblock.js.
+#
+# La tienda solo RECOMPRA materia prima: lo que suelta el bloque, los drops de
+# mob y los cultivos. Los bloques decorativos y crafteados solo se compran, y
+# asi no hay bucle de comprar-craftear-vender. Los precios de venta siguen la
+# curva por fase medida en los JSON de SSBOneBlock (Llanuras ~550$ por cada
+# 1.000 bloques picados, End ~2.900$).
+#
+#   compra:  lo que paga el jugador por una unidad. 0 = la tienda no lo vende.
+#   venta:   lo que cobra el jugador por una unidad. 0 = la tienda no lo compra.
+#   tope:    0 = sin tope (los topes por jugador estan apagados en config.yml).
+categorias:
+  Bloques:
+    items:
+      STONE:
+        compra: 30
+        venta: 0
+        tope: 0
+        ventana: 24h
+      COBBLESTONE:
+        compra: 16
+        venta: 0.2
+        tope: 0
+        ventana: 24h
+      DEEPSLATE:
+        compra: 30
+        venta: 0.3
+        tope: 0
+        ventana: 24h
+      GRANITE:
+        compra: 30
+        venta: 0.3
+        tope: 0
+        ventana: 24h
+      DIORITE:
+        compra: 30
+        venta: 0.3
+        tope: 0
+        ventana: 24h
+      ANDESITE:
+        compra: 30
+        venta: 0.3
+        tope: 0
+        ventana: 24h
+      CALCITE:
+        compra: 50
+        venta: 0.5
+        tope: 0
+        ventana: 24h
+      TUFF:
+        compra: 30
+        venta: 0.3
+        tope: 0
+        ventana: 24h
+      DIRT:
+        compra: 16
+        venta: 0.15
+        tope: 0
+        ventana: 24h
+      GRASS_BLOCK:
+        compra: 50
+        venta: 0
+        tope: 0
+        ventana: 24h
+      PODZOL:
+        compra: 120
+        venta: 0.5
+        tope: 0
+        ventana: 24h
+      MYCELIUM:
+        compra: 200
+        venta: 0.5
+        tope: 0
+        ventana: 24h
+      SAND:
+        compra: 24
+        venta: 0.3
+        tope: 0
+        ventana: 24h
+      GRAVEL:
+        compra: 24
+        venta: 0.3
+        tope: 0
+        ventana: 24h
+      CLAY:
+        compra: 50
+        venta: 0
+        tope: 0
+        ventana: 24h
+      GLASS:
+        compra: 40
+        venta: 0
+        tope: 0
+        ventana: 24h
+      NETHERRACK:
+        compra: 16
+        venta: 0.3
+        tope: 0
+        ventana: 24h
+      SOUL_SAND:
+        compra: 60
+        venta: 0.5
+        tope: 0
+        ventana: 24h
+      END_STONE:
+        compra: 80
+        venta: 0.8
+        tope: 0
+        ventana: 24h
+      OBSIDIAN:
+        compra: 400
+        venta: 8
+        tope: 0
+        ventana: 24h
+      SANDSTONE:
+        compra: 40
+        venta: 0.4
+        tope: 0
+        ventana: 24h
+      BRICKS:
+        compra: 120
+        venta: 0
+        tope: 0
+        ventana: 24h
+      QUARTZ_BLOCK:
+        compra: 360
+        venta: 2
+        tope: 0
+        ventana: 24h
+      GLOWSTONE:
+        compra: 300
+        venta: 0
+        tope: 0
+        ventana: 24h
+      ANDESITE_STAIRS:
+        compra: 46
+        venta: 0
+        tope: 0
+        ventana: 24h
+      ANDESITE_SLAB:
+        compra: 18
+        venta: 0
+        tope: 0
+        ventana: 24h
+      ANDESITE_WALL:
+        compra: 30
+        venta: 0
+        tope: 0
+        ventana: 24h
+      BASALT:
+        compra: 40
+        venta: 0.5
+        tope: 0
+        ventana: 24h
+      BLACKSTONE:
+        compra: 60
+        venta: 0.5
+        tope: 0
+        ventana: 24h
+      BLACKSTONE_STAIRS:
+        compra: 90
+        venta: 0
+        tope: 0
+        ventana: 24h
+      BLACKSTONE_SLAB:
+        compra: 36
+        venta: 0
+        tope: 0
+        ventana: 24h
+      BLACKSTONE_WALL:
+        compra: 60
+        venta: 0
+        tope: 0
+        ventana: 24h
+      BLUE_ICE:
+        compra: 240
+        venta: 3
+        tope: 0
+        ventana: 24h
+      BRICK_STAIRS:
+        compra: 180
+        venta: 0
+        tope: 0
+        ventana: 24h
+      BRICK_SLAB:
+        compra: 72
+        venta: 0
+        tope: 0
+        ventana: 24h
+      BRICK_WALL:
+        compra: 120
+        venta: 0
+        tope: 0
+        ventana: 24h
+      CHISELED_COPPER:
+        compra: 90
+        venta: 0
+        tope: 0
+        ventana: 24h
+      EXPOSED_CHISELED_COPPER:
+        compra: 90
+        venta: 0
+        tope: 0
+        ventana: 24h
+      OXIDIZED_CHISELED_COPPER:
+        compra: 90
+        venta: 0
+        tope: 0
+        ventana: 24h
+      WAXED_CHISELED_COPPER:
+        compra: 90
+        venta: 0
+        tope: 0
+        ventana: 24h
+      WAXED_EXPOSED_CHISELED_COPPER:
+        compra: 90
+        venta: 0
+        tope: 0
+        ventana: 24h
+      WAXED_OXIDIZED_CHISELED_COPPER:
+        compra: 90
+        venta: 0
+        tope: 0
+        ventana: 24h
+      WAXED_WEATHERED_CHISELED_COPPER:
+        compra: 90
+        venta: 0
+        tope: 0
+        ventana: 24h
+      WEATHERED_CHISELED_COPPER:
+        compra: 90
+        venta: 0
+        tope: 0
+        ventana: 24h
+      CHISELED_DEEPSLATE:
+        compra: 40
+        venta: 0
+        tope: 0
+        ventana: 24h
+      CHISELED_NETHER_BRICKS:
+        compra: 80
+        venta: 0
+        tope: 0
+        ventana: 24h
+      CHISELED_POLISHED_BLACKSTONE:
+        compra: 50
+        venta: 0
+        tope: 0
+        ventana: 24h
+      CHISELED_QUARTZ_BLOCK:
+        compra: 360
+        venta: 0
+        tope: 0
+        ventana: 24h
+      CHISELED_RED_SANDSTONE:
+        compra: 50
+        venta: 0
+        tope: 0
+        ventana: 24h
+      CHISELED_RESIN_BRICKS:
+        compra: 120
+        venta: 0
+        tope: 0
+        ventana: 24h
+      CHISELED_SANDSTONE:
+        compra: 40
+        venta: 0
+        tope: 0
+        ventana: 24h
+      CHISELED_STONE_BRICKS:
+        compra: 40
+        venta: 0
+        tope: 0
+        ventana: 24h
+      CHISELED_TUFF_BRICKS:
+        compra: 40
+        venta: 0
+        tope: 0
+        ventana: 24h
+      CHISELED_TUFF:
+        compra: 40
+        venta: 0
+        tope: 0
+        ventana: 24h
+      COARSE_DIRT:
+        compra: 16
+        venta: 0
+        tope: 0
+        ventana: 24h
+      COBBLED_DEEPSLATE:
+        compra: 30
+        venta: 0
+        tope: 0
+        ventana: 24h
+      COBBLED_DEEPSLATE_STAIRS:
+        compra: 46
+        venta: 0
+        tope: 0
+        ventana: 24h
+      COBBLED_DEEPSLATE_SLAB:
+        compra: 18
+        venta: 0
+        tope: 0
+        ventana: 24h
+      COBBLED_DEEPSLATE_WALL:
+        compra: 30
+        venta: 0
+        tope: 0
+        ventana: 24h
+      COBBLESTONE_STAIRS:
+        compra: 24
+        venta: 0
+        tope: 0
+        ventana: 24h
+      COBBLESTONE_SLAB:
+        compra: 10
+        venta: 0
+        tope: 0
+        ventana: 24h
+      COBBLESTONE_WALL:
+        compra: 16
+        venta: 0
+        tope: 0
+        ventana: 24h
+      COPPER_BLOCK:
+        compra: 90
+        venta: 0
+        tope: 0
+        ventana: 24h
+      WAXED_COPPER_BLOCK:
+        compra: 90
+        venta: 0
+        tope: 0
+        ventana: 24h
+      COPPER_GRATE:
+        compra: 90
+        venta: 0
+        tope: 0
+        ventana: 24h
+      EXPOSED_COPPER_GRATE:
+        compra: 90
+        venta: 0
+        tope: 0
+        ventana: 24h
+      OXIDIZED_COPPER_GRATE:
+        compra: 90
+        venta: 0
+        tope: 0
+        ventana: 24h
+      WAXED_COPPER_GRATE:
+        compra: 90
+        venta: 0
+        tope: 0
+        ventana: 24h
+      WAXED_EXPOSED_COPPER_GRATE:
+        compra: 90
+        venta: 0
+        tope: 0
+        ventana: 24h
+      WAXED_OXIDIZED_COPPER_GRATE:
+        compra: 90
+        venta: 0
+        tope: 0
+        ventana: 24h
+      WAXED_WEATHERED_COPPER_GRATE:
+        compra: 90
+        venta: 0
+        tope: 0
+        ventana: 24h
+      WEATHERED_COPPER_GRATE:
+        compra: 90
+        venta: 0
+        tope: 0
+        ventana: 24h
+      EXPOSED_COPPER:
+        compra: 90
+        venta: 0
+        tope: 0
+        ventana: 24h
+      OXIDIZED_COPPER:
+        compra: 90
+        venta: 0
+        tope: 0
+        ventana: 24h
+      WAXED_EXPOSED_COPPER:
+        compra: 90
+        venta: 0
+        tope: 0
+        ventana: 24h
+      WAXED_OXIDIZED_COPPER:
+        compra: 90
+        venta: 0
+        tope: 0
+        ventana: 24h
+      WAXED_WEATHERED_COPPER:
+        compra: 90
+        venta: 0
+        tope: 0
+        ventana: 24h
+      WEATHERED_COPPER:
+        compra: 90
+        venta: 0
+        tope: 0
+        ventana: 24h
+      COPPER_DOOR:
+        compra: 180
+        venta: 0
+        tope: 0
+        ventana: 24h
+      EXPOSED_COPPER_DOOR:
+        compra: 180
+        venta: 0
+        tope: 0
+        ventana: 24h
+      OXIDIZED_COPPER_DOOR:
+        compra: 180
+        venta: 0
+        tope: 0
+        ventana: 24h
+      WAXED_COPPER_DOOR:
+        compra: 180
+        venta: 0
+        tope: 0
+        ventana: 24h
+      WAXED_EXPOSED_COPPER_DOOR:
+        compra: 180
+        venta: 0
+        tope: 0
+        ventana: 24h
+      WAXED_OXIDIZED_COPPER_DOOR:
+        compra: 180
+        venta: 0
+        tope: 0
+        ventana: 24h
+      WAXED_WEATHERED_COPPER_DOOR:
+        compra: 180
+        venta: 0
+        tope: 0
+        ventana: 24h
+      WEATHERED_COPPER_DOOR:
+        compra: 180
+        venta: 0
+        tope: 0
+        ventana: 24h
+      COPPER_TRAPDOOR:
+        compra: 136
+        venta: 0
+        tope: 0
+        ventana: 24h
+      EXPOSED_COPPER_TRAPDOOR:
+        compra: 136
+        venta: 0
+        tope: 0
+        ventana: 24h
+      OXIDIZED_COPPER_TRAPDOOR:
+        compra: 136
+        venta: 0
+        tope: 0
+        ventana: 24h
+      WAXED_COPPER_TRAPDOOR:
+        compra: 136
+        venta: 0
+        tope: 0
+        ventana: 24h
+      WAXED_EXPOSED_COPPER_TRAPDOOR:
+        compra: 136
+        venta: 0
+        tope: 0
+        ventana: 24h
+      WAXED_OXIDIZED_COPPER_TRAPDOOR:
+        compra: 136
+        venta: 0
+        tope: 0
+        ventana: 24h
+      WAXED_WEATHERED_COPPER_TRAPDOOR:
+        compra: 136
+        venta: 0
+        tope: 0
+        ventana: 24h
+      WEATHERED_COPPER_TRAPDOOR:
+        compra: 136
+        venta: 0
+        tope: 0
+        ventana: 24h
+      CRACKED_DEEPSLATE_BRICKS:
+        compra: 50
+        venta: 0
+        tope: 0
+        ventana: 24h
+      CRACKED_DEEPSLATE_TILES:
+        compra: 50
+        venta: 0
+        tope: 0
+        ventana: 24h
+      CRACKED_NETHER_BRICKS:
+        compra: 80
+        venta: 0
+        tope: 0
+        ventana: 24h
+      CRACKED_POLISHED_BLACKSTONE_BRICKS:
+        compra: 50
+        venta: 0
+        tope: 0
+        ventana: 24h
+      CRACKED_STONE_BRICKS:
+        compra: 40
+        venta: 0
+        tope: 0
+        ventana: 24h
+      CRYING_OBSIDIAN:
+        compra: 600
+        venta: 15
+        tope: 0
+        ventana: 24h
+      CUT_COPPER:
+        compra: 90
+        venta: 0
+        tope: 0
+        ventana: 24h
+      EXPOSED_CUT_COPPER:
+        compra: 90
+        venta: 0
+        tope: 0
+        ventana: 24h
+      OXIDIZED_CUT_COPPER:
+        compra: 90
+        venta: 0
+        tope: 0
+        ventana: 24h
+      WAXED_CUT_COPPER:
+        compra: 90
+        venta: 0
+        tope: 0
+        ventana: 24h
+      WAXED_EXPOSED_CUT_COPPER:
+        compra: 90
+        venta: 0
+        tope: 0
+        ventana: 24h
+      WAXED_OXIDIZED_CUT_COPPER:
+        compra: 90
+        venta: 0
+        tope: 0
+        ventana: 24h
+      WAXED_WEATHERED_CUT_COPPER:
+        compra: 90
+        venta: 0
+        tope: 0
+        ventana: 24h
+      WEATHERED_CUT_COPPER:
+        compra: 90
+        venta: 0
+        tope: 0
+        ventana: 24h
+      CUT_COPPER_STAIRS:
+        compra: 136
+        venta: 0
+        tope: 0
+        ventana: 24h
+      EXPOSED_CUT_COPPER_STAIRS:
+        compra: 136
+        venta: 0
+        tope: 0
+        ventana: 24h
+      OXIDIZED_CUT_COPPER_STAIRS:
+        compra: 136
+        venta: 0
+        tope: 0
+        ventana: 24h
+      WAXED_CUT_COPPER_STAIRS:
+        compra: 136
+        venta: 0
+        tope: 0
+        ventana: 24h
+      WAXED_EXPOSED_CUT_COPPER_STAIRS:
+        compra: 136
+        venta: 0
+        tope: 0
+        ventana: 24h
+      WAXED_OXIDIZED_CUT_COPPER_STAIRS:
+        compra: 136
+        venta: 0
+        tope: 0
+        ventana: 24h
+      WAXED_WEATHERED_CUT_COPPER_STAIRS:
+        compra: 136
+        venta: 0
+        tope: 0
+        ventana: 24h
+      WEATHERED_CUT_COPPER_STAIRS:
+        compra: 136
+        venta: 0
+        tope: 0
+        ventana: 24h
+      CUT_COPPER_SLAB:
+        compra: 54
+        venta: 0
+        tope: 0
+        ventana: 24h
+      EXPOSED_CUT_COPPER_SLAB:
+        compra: 54
+        venta: 0
+        tope: 0
+        ventana: 24h
+      OXIDIZED_CUT_COPPER_SLAB:
+        compra: 54
+        venta: 0
+        tope: 0
+        ventana: 24h
+      WAXED_CUT_COPPER_SLAB:
+        compra: 54
+        venta: 0
+        tope: 0
+        ventana: 24h
+      WAXED_EXPOSED_CUT_COPPER_SLAB:
+        compra: 54
+        venta: 0
+        tope: 0
+        ventana: 24h
+      WAXED_OXIDIZED_CUT_COPPER_SLAB:
+        compra: 54
+        venta: 0
+        tope: 0
+        ventana: 24h
+      WAXED_WEATHERED_CUT_COPPER_SLAB:
+        compra: 54
+        venta: 0
+        tope: 0
+        ventana: 24h
+      WEATHERED_CUT_COPPER_SLAB:
+        compra: 54
+        venta: 0
+        tope: 0
+        ventana: 24h
+      CUT_RED_SANDSTONE:
+        compra: 50
+        venta: 0
+        tope: 0
+        ventana: 24h
+      CUT_RED_SANDSTONE_SLAB:
+        compra: 30
+        venta: 0
+        tope: 0
+        ventana: 24h
+      CUT_SANDSTONE:
+        compra: 40
+        venta: 0
+        tope: 0
+        ventana: 24h
+      CUT_SANDSTONE_SLAB:
+        compra: 24
+        venta: 0
+        tope: 0
+        ventana: 24h
+      DARK_PRISMARINE_STAIRS:
+        compra: 166
+        venta: 0
+        tope: 0
+        ventana: 24h
+      DARK_PRISMARINE_SLAB:
+        compra: 66
+        venta: 0
+        tope: 0
+        ventana: 24h
+      DEEPSLATE_BRICK_STAIRS:
+        compra: 76
+        venta: 0
+        tope: 0
+        ventana: 24h
+      DEEPSLATE_BRICK_SLAB:
+        compra: 30
+        venta: 0
+        tope: 0
+        ventana: 24h
+      DEEPSLATE_BRICK_WALL:
+        compra: 50
+        venta: 0
+        tope: 0
+        ventana: 24h
+      DEEPSLATE_BRICKS:
+        compra: 50
+        venta: 0
+        tope: 0
+        ventana: 24h
+      DEEPSLATE_TILE_STAIRS:
+        compra: 76
+        venta: 0
+        tope: 0
+        ventana: 24h
+      DEEPSLATE_TILE_SLAB:
+        compra: 30
+        venta: 0
+        tope: 0
+        ventana: 24h
+      DEEPSLATE_TILE_WALL:
+        compra: 50
+        venta: 0
+        tope: 0
+        ventana: 24h
+      DEEPSLATE_TILES:
+        compra: 50
+        venta: 0
+        tope: 0
+        ventana: 24h
+      DIORITE_STAIRS:
+        compra: 46
+        venta: 0
+        tope: 0
+        ventana: 24h
+      DIORITE_SLAB:
+        compra: 18
+        venta: 0
+        tope: 0
+        ventana: 24h
+      DIORITE_WALL:
+        compra: 30
+        venta: 0
+        tope: 0
+        ventana: 24h
+      DRIPSTONE_BLOCK:
+        compra: 50
+        venta: 0.5
+        tope: 0
+        ventana: 24h
+      END_STONE_BRICK_STAIRS:
+        compra: 136
+        venta: 0
+        tope: 0
+        ventana: 24h
+      END_STONE_BRICK_SLAB:
+        compra: 54
+        venta: 0
+        tope: 0
+        ventana: 24h
+      END_STONE_BRICK_WALL:
+        compra: 90
+        venta: 0
+        tope: 0
+        ventana: 24h
+      END_STONE_BRICKS:
+        compra: 90
+        venta: 1
+        tope: 0
+        ventana: 24h
+      GRANITE_STAIRS:
+        compra: 46
+        venta: 0
+        tope: 0
+        ventana: 24h
+      GRANITE_SLAB:
+        compra: 18
+        venta: 0
+        tope: 0
+        ventana: 24h
+      GRANITE_WALL:
+        compra: 30
+        venta: 0
+        tope: 0
+        ventana: 24h
+      ICE:
+        compra: 60
+        venta: 0
+        tope: 0
+        ventana: 24h
+      IRON_DOOR:
+        compra: 800
+        venta: 0
+        tope: 0
+        ventana: 24h
+      IRON_TRAPDOOR:
+        compra: 600
+        venta: 0
+        tope: 0
+        ventana: 24h
+      MOSSY_COBBLESTONE:
+        compra: 16
+        venta: 0.4
+        tope: 0
+        ventana: 24h
+      MOSSY_COBBLESTONE_STAIRS:
+        compra: 24
+        venta: 0
+        tope: 0
+        ventana: 24h
+      MOSSY_COBBLESTONE_SLAB:
+        compra: 10
+        venta: 0
+        tope: 0
+        ventana: 24h
+      MOSSY_COBBLESTONE_WALL:
+        compra: 16
+        venta: 0
+        tope: 0
+        ventana: 24h
+      MOSSY_STONE_BRICK_STAIRS:
+        compra: 60
+        venta: 0
+        tope: 0
+        ventana: 24h
+      MOSSY_STONE_BRICK_SLAB:
+        compra: 24
+        venta: 0
+        tope: 0
+        ventana: 24h
+      MOSSY_STONE_BRICK_WALL:
+        compra: 40
+        venta: 0
+        tope: 0
+        ventana: 24h
+      MOSSY_STONE_BRICKS:
+        compra: 40
+        venta: 0.4
+        tope: 0
+        ventana: 24h
+      MUD_BRICK_STAIRS:
+        compra: 60
+        venta: 0
+        tope: 0
+        ventana: 24h
+      MUD_BRICK_SLAB:
+        compra: 24
+        venta: 0
+        tope: 0
+        ventana: 24h
+      MUD_BRICK_WALL:
+        compra: 40
+        venta: 0
+        tope: 0
+        ventana: 24h
+      MUD_BRICKS:
+        compra: 40
+        venta: 0
+        tope: 0
+        ventana: 24h
+      MUD:
+        compra: 24
+        venta: 0.3
+        tope: 0
+        ventana: 24h
+      NETHER_BRICK_STAIRS:
+        compra: 120
+        venta: 0
+        tope: 0
+        ventana: 24h
+      NETHER_BRICK_SLAB:
+        compra: 48
+        venta: 0
+        tope: 0
+        ventana: 24h
+      NETHER_BRICK_WALL:
+        compra: 80
+        venta: 0
+        tope: 0
+        ventana: 24h
+      NETHER_BRICK_FENCE:
+        compra: 80
+        venta: 0
+        tope: 0
+        ventana: 24h
+      NETHER_BRICKS:
+        compra: 80
+        venta: 0.5
+        tope: 0
+        ventana: 24h
+      PACKED_ICE:
+        compra: 120
+        venta: 0.6
+        tope: 0
+        ventana: 24h
+      PACKED_MUD:
+        compra: 24
+        venta: 0
+        tope: 0
+        ventana: 24h
+      POINTED_DRIPSTONE:
+        compra: 50
+        venta: 0
+        tope: 0
+        ventana: 24h
+      POLISHED_ANDESITE:
+        compra: 40
+        venta: 0
+        tope: 0
+        ventana: 24h
+      POLISHED_ANDESITE_STAIRS:
+        compra: 60
+        venta: 0
+        tope: 0
+        ventana: 24h
+      POLISHED_ANDESITE_SLAB:
+        compra: 24
+        venta: 0
+        tope: 0
+        ventana: 24h
+      POLISHED_BASALT:
+        compra: 40
+        venta: 0
+        tope: 0
+        ventana: 24h
+      POLISHED_BLACKSTONE_BRICK_STAIRS:
+        compra: 76
+        venta: 0
+        tope: 0
+        ventana: 24h
+      POLISHED_BLACKSTONE_BRICK_SLAB:
+        compra: 30
+        venta: 0
+        tope: 0
+        ventana: 24h
+      POLISHED_BLACKSTONE_BRICK_WALL:
+        compra: 50
+        venta: 0
+        tope: 0
+        ventana: 24h
+      POLISHED_BLACKSTONE_BRICKS:
+        compra: 50
+        venta: 0
+        tope: 0
+        ventana: 24h
+      POLISHED_BLACKSTONE:
+        compra: 60
+        venta: 0
+        tope: 0
+        ventana: 24h
+      POLISHED_BLACKSTONE_STAIRS:
+        compra: 90
+        venta: 0
+        tope: 0
+        ventana: 24h
+      POLISHED_BLACKSTONE_SLAB:
+        compra: 36
+        venta: 0
+        tope: 0
+        ventana: 24h
+      POLISHED_BLACKSTONE_WALL:
+        compra: 60
+        venta: 0
+        tope: 0
+        ventana: 24h
+      POLISHED_BLACKSTONE_BUTTON:
+        compra: 24
+        venta: 0
+        tope: 0
+        ventana: 24h
+      POLISHED_BLACKSTONE_PRESSURE_PLATE:
+        compra: 48
+        venta: 0
+        tope: 0
+        ventana: 24h
+      POLISHED_DEEPSLATE:
+        compra: 40
+        venta: 0
+        tope: 0
+        ventana: 24h
+      POLISHED_DEEPSLATE_STAIRS:
+        compra: 60
+        venta: 0
+        tope: 0
+        ventana: 24h
+      POLISHED_DEEPSLATE_SLAB:
+        compra: 24
+        venta: 0
+        tope: 0
+        ventana: 24h
+      POLISHED_DEEPSLATE_WALL:
+        compra: 40
+        venta: 0
+        tope: 0
+        ventana: 24h
+      POLISHED_DIORITE:
+        compra: 40
+        venta: 0
+        tope: 0
+        ventana: 24h
+      POLISHED_DIORITE_STAIRS:
+        compra: 60
+        venta: 0
+        tope: 0
+        ventana: 24h
+      POLISHED_DIORITE_SLAB:
+        compra: 24
+        venta: 0
+        tope: 0
+        ventana: 24h
+      POLISHED_GRANITE:
+        compra: 40
+        venta: 0
+        tope: 0
+        ventana: 24h
+      POLISHED_GRANITE_STAIRS:
+        compra: 60
+        venta: 0
+        tope: 0
+        ventana: 24h
+      POLISHED_GRANITE_SLAB:
+        compra: 24
+        venta: 0
+        tope: 0
+        ventana: 24h
+      POLISHED_TUFF:
+        compra: 40
+        venta: 0
+        tope: 0
+        ventana: 24h
+      POLISHED_TUFF_STAIRS:
+        compra: 60
+        venta: 0
+        tope: 0
+        ventana: 24h
+      POLISHED_TUFF_SLAB:
+        compra: 24
+        venta: 0
+        tope: 0
+        ventana: 24h
+      POLISHED_TUFF_WALL:
+        compra: 40
+        venta: 0
+        tope: 0
+        ventana: 24h
+      PRISMARINE_BRICK_STAIRS:
+        compra: 150
+        venta: 0
+        tope: 0
+        ventana: 24h
+      PRISMARINE_BRICK_SLAB:
+        compra: 60
+        venta: 0
+        tope: 0
+        ventana: 24h
+      PRISMARINE_STAIRS:
+        compra: 120
+        venta: 0
+        tope: 0
+        ventana: 24h
+      PRISMARINE_SLAB:
+        compra: 48
+        venta: 0
+        tope: 0
+        ventana: 24h
+      PRISMARINE_WALL:
+        compra: 80
+        venta: 0
+        tope: 0
+        ventana: 24h
+      PURPUR_BLOCK:
+        compra: 90
+        venta: 1
+        tope: 0
+        ventana: 24h
+      PURPUR_PILLAR:
+        compra: 90
+        venta: 1
+        tope: 0
+        ventana: 24h
+      PURPUR_STAIRS:
+        compra: 136
+        venta: 0
+        tope: 0
+        ventana: 24h
+      PURPUR_SLAB:
+        compra: 54
+        venta: 0
+        tope: 0
+        ventana: 24h
+      QUARTZ_BRICKS:
+        compra: 80
+        venta: 0
+        tope: 0
+        ventana: 24h
+      QUARTZ_PILLAR:
+        compra: 360
+        venta: 0
+        tope: 0
+        ventana: 24h
+      QUARTZ_STAIRS:
+        compra: 540
+        venta: 0
+        tope: 0
+        ventana: 24h
+      QUARTZ_SLAB:
+        compra: 216
+        venta: 0
+        tope: 0
+        ventana: 24h
+      RED_NETHER_BRICK_STAIRS:
+        compra: 180
+        venta: 0
+        tope: 0
+        ventana: 24h
+      RED_NETHER_BRICK_SLAB:
+        compra: 72
+        venta: 0
+        tope: 0
+        ventana: 24h
+      RED_NETHER_BRICK_WALL:
+        compra: 120
+        venta: 0
+        tope: 0
+        ventana: 24h
+      RED_NETHER_BRICKS:
+        compra: 120
+        venta: 0.8
+        tope: 0
+        ventana: 24h
+      RED_SAND:
+        compra: 24
+        venta: 0.3
+        tope: 0
+        ventana: 24h
+      RED_SANDSTONE:
+        compra: 50
+        venta: 0.4
+        tope: 0
+        ventana: 24h
+      RED_SANDSTONE_STAIRS:
+        compra: 76
+        venta: 0
+        tope: 0
+        ventana: 24h
+      RED_SANDSTONE_SLAB:
+        compra: 30
+        venta: 0
+        tope: 0
+        ventana: 24h
+      RED_SANDSTONE_WALL:
+        compra: 50
+        venta: 0
+        tope: 0
+        ventana: 24h
+      RESIN_BRICK_STAIRS:
+        compra: 180
+        venta: 0
+        tope: 0
+        ventana: 24h
+      RESIN_BRICK_SLAB:
+        compra: 72
+        venta: 0
+        tope: 0
+        ventana: 24h
+      RESIN_BRICK_WALL:
+        compra: 120
+        venta: 0
+        tope: 0
+        ventana: 24h
+      RESIN_BRICKS:
+        compra: 120
+        venta: 0
+        tope: 0
+        ventana: 24h
+      ROOTED_DIRT:
+        compra: 16
+        venta: 0
+        tope: 0
+        ventana: 24h
+      SANDSTONE_STAIRS:
+        compra: 60
+        venta: 0
+        tope: 0
+        ventana: 24h
+      SANDSTONE_SLAB:
+        compra: 24
+        venta: 0
+        tope: 0
+        ventana: 24h
+      SANDSTONE_WALL:
+        compra: 40
+        venta: 0
+        tope: 0
+        ventana: 24h
+      SMOOTH_BASALT:
+        compra: 40
+        venta: 0
+        tope: 0
+        ventana: 24h
+      SMOOTH_QUARTZ:
+        compra: 360
+        venta: 0
+        tope: 0
+        ventana: 24h
+      SMOOTH_QUARTZ_STAIRS:
+        compra: 540
+        venta: 0
+        tope: 0
+        ventana: 24h
+      SMOOTH_QUARTZ_SLAB:
+        compra: 216
+        venta: 0
+        tope: 0
+        ventana: 24h
+      SMOOTH_RED_SANDSTONE:
+        compra: 50
+        venta: 0
+        tope: 0
+        ventana: 24h
+      SMOOTH_RED_SANDSTONE_STAIRS:
+        compra: 76
+        venta: 0
+        tope: 0
+        ventana: 24h
+      SMOOTH_RED_SANDSTONE_SLAB:
+        compra: 30
+        venta: 0
+        tope: 0
+        ventana: 24h
+      SMOOTH_SANDSTONE:
+        compra: 40
+        venta: 0
+        tope: 0
+        ventana: 24h
+      SMOOTH_SANDSTONE_STAIRS:
+        compra: 60
+        venta: 0
+        tope: 0
+        ventana: 24h
+      SMOOTH_SANDSTONE_SLAB:
+        compra: 24
+        venta: 0
+        tope: 0
+        ventana: 24h
+      SMOOTH_STONE:
+        compra: 30
+        venta: 0
+        tope: 0
+        ventana: 24h
+      SMOOTH_STONE_SLAB:
+        compra: 18
+        venta: 0
+        tope: 0
+        ventana: 24h
+      SNOW_BLOCK:
+        compra: 24
+        venta: 0
+        tope: 0
+        ventana: 24h
+      SNOW:
+        compra: 24
+        venta: 0
+        tope: 0
+        ventana: 24h
+      STONE_BRICK_STAIRS:
+        compra: 60
+        venta: 0
+        tope: 0
+        ventana: 24h
+      STONE_BRICK_SLAB:
+        compra: 24
+        venta: 0
+        tope: 0
+        ventana: 24h
+      STONE_BRICK_WALL:
+        compra: 40
+        venta: 0
+        tope: 0
+        ventana: 24h
+      STONE_BRICKS:
+        compra: 40
+        venta: 0.3
+        tope: 0
+        ventana: 24h
+      STONE_STAIRS:
+        compra: 46
+        venta: 0
+        tope: 0
+        ventana: 24h
+      STONE_SLAB:
+        compra: 18
+        venta: 0
+        tope: 0
+        ventana: 24h
+      STONE_PRESSURE_PLATE:
+        compra: 24
+        venta: 0
+        tope: 0
+        ventana: 24h
+      TUFF_BRICK_STAIRS:
+        compra: 60
+        venta: 0
+        tope: 0
+        ventana: 24h
+      TUFF_BRICK_SLAB:
+        compra: 24
+        venta: 0
+        tope: 0
+        ventana: 24h
+      TUFF_BRICK_WALL:
+        compra: 40
+        venta: 0
+        tope: 0
+        ventana: 24h
+      TUFF_BRICKS:
+        compra: 40
+        venta: 0
+        tope: 0
+        ventana: 24h
+      TUFF_STAIRS:
+        compra: 46
+        venta: 0
+        tope: 0
+        ventana: 24h
+      TUFF_SLAB:
+        compra: 18
+        venta: 0
+        tope: 0
+        ventana: 24h
+      TUFF_WALL:
+        compra: 30
+        venta: 0
+        tope: 0
+        ventana: 24h
+      COPPER_BULB:
+        compra: 200
+        venta: 0
+        tope: 0
+        ventana: 24h
+      EXPOSED_COPPER_BULB:
+        compra: 200
+        venta: 0
+        tope: 0
+        ventana: 24h
+      OXIDIZED_COPPER_BULB:
+        compra: 200
+        venta: 0
+        tope: 0
+        ventana: 24h
+      WEATHERED_COPPER_BULB:
+        compra: 200
+        venta: 0
+        tope: 0
+        ventana: 24h
+      WAXED_COPPER_BULB:
+        compra: 200
+        venta: 0
+        tope: 0
+        ventana: 24h
+      WAXED_EXPOSED_COPPER_BULB:
+        compra: 200
+        venta: 0
+        tope: 0
+        ventana: 24h
+      WAXED_OXIDIZED_COPPER_BULB:
+        compra: 200
+        venta: 0
+        tope: 0
+        ventana: 24h
+      WAXED_WEATHERED_COPPER_BULB:
+        compra: 200
+        venta: 0
+        tope: 0
+        ventana: 24h
+      COPPER_CHEST:
+        compra: 340
+        venta: 0
+        tope: 0
+        ventana: 24h
+      EXPOSED_COPPER_CHEST:
+        compra: 340
+        venta: 0
+        tope: 0
+        ventana: 24h
+      OXIDIZED_COPPER_CHEST:
+        compra: 340
+        venta: 0
+        tope: 0
+        ventana: 24h
+      WEATHERED_COPPER_CHEST:
+        compra: 340
+        venta: 0
+        tope: 0
+        ventana: 24h
+      WAXED_COPPER_CHEST:
+        compra: 340
+        venta: 0
+        tope: 0
+        ventana: 24h
+      WAXED_EXPOSED_COPPER_CHEST:
+        compra: 340
+        venta: 0
+        tope: 0
+        ventana: 24h
+      WAXED_OXIDIZED_COPPER_CHEST:
+        compra: 340
+        venta: 0
+        tope: 0
+        ventana: 24h
+      WAXED_WEATHERED_COPPER_CHEST:
+        compra: 340
+        venta: 0
+        tope: 0
+        ventana: 24h
+      COPPER_GOLEM_STATUE:
+        compra: 240
+        venta: 0
+        tope: 0
+        ventana: 24h
+      EXPOSED_COPPER_GOLEM_STATUE:
+        compra: 240
+        venta: 0
+        tope: 0
+        ventana: 24h
+      OXIDIZED_COPPER_GOLEM_STATUE:
+        compra: 240
+        venta: 0
+        tope: 0
+        ventana: 24h
+      WEATHERED_COPPER_GOLEM_STATUE:
+        compra: 240
+        venta: 0
+        tope: 0
+        ventana: 24h
+      WAXED_COPPER_GOLEM_STATUE:
+        compra: 240
+        venta: 0
+        tope: 0
+        ventana: 24h
+      WAXED_EXPOSED_COPPER_GOLEM_STATUE:
+        compra: 240
+        venta: 0
+        tope: 0
+        ventana: 24h
+      WAXED_OXIDIZED_COPPER_GOLEM_STATUE:
+        compra: 240
+        venta: 0
+        tope: 0
+        ventana: 24h
+      WAXED_WEATHERED_COPPER_GOLEM_STATUE:
+        compra: 240
+        venta: 0
+        tope: 0
+        ventana: 24h
+      LIGHTNING_ROD:
+        compra: 100
+        venta: 0
+        tope: 0
+        ventana: 24h
+      EXPOSED_LIGHTNING_ROD:
+        compra: 100
+        venta: 0
+        tope: 0
+        ventana: 24h
+      OXIDIZED_LIGHTNING_ROD:
+        compra: 100
+        venta: 0
+        tope: 0
+        ventana: 24h
+      WEATHERED_LIGHTNING_ROD:
+        compra: 100
+        venta: 0
+        tope: 0
+        ventana: 24h
+      WAXED_LIGHTNING_ROD:
+        compra: 100
+        venta: 0
+        tope: 0
+        ventana: 24h
+      WAXED_EXPOSED_LIGHTNING_ROD:
+        compra: 100
+        venta: 0
+        tope: 0
+        ventana: 24h
+      WAXED_OXIDIZED_LIGHTNING_ROD:
+        compra: 100
+        venta: 0
+        tope: 0
+        ventana: 24h
+      WAXED_WEATHERED_LIGHTNING_ROD:
+        compra: 100
+        venta: 0
+        tope: 0
+        ventana: 24h
+      CREAKING_HEART:
+        compra: 48000
+        venta: 0
+        tope: 0
+        ventana: 24h
+      DRIED_GHAST:
+        compra: 32000
+        venta: 0
+        tope: 0
+        ventana: 24h
+      SOUL_SOIL:
+        compra: 16
+        venta: 0.5
+        tope: 0
+        ventana: 24h
+      MAGMA_BLOCK:
+        compra: 20
+        venta: 1
+        tope: 0
+        ventana: 24h
+      DIRT_PATH:
+        compra: 24
+        venta: 0
+        tope: 0
+        ventana: 24h
+      BONE_BLOCK:
+        compra: 600
+        venta: 10
+        tope: 0
+        ventana: 24h
+      NETHER_WART_BLOCK:
+        compra: 0
+        venta: 1
+        tope: 0
+        ventana: 24h
+      WARPED_WART_BLOCK:
+        compra: 0
+        venta: 1
+        tope: 0
+        ventana: 24h
+      HAY_BLOCK:
+        compra: 0
+        venta: 9
+        tope: 0
+        ventana: 24h
+      DRIED_KELP_BLOCK:
+        compra: 0
+        venta: 3
+        tope: 0
+        ventana: 24h
+      SLIME_BLOCK:
+        compra: 0
+        venta: 27
+        tope: 0
+        ventana: 24h
+  Minerales:
+    items:
+      COAL:
+        compra: 0
+        venta: 3
+        tope: 0
+        ventana: 24h
+      RAW_IRON:
+        compra: 0
+        venta: 5.5
+        tope: 0
+        ventana: 24h
+      RAW_GOLD:
+        compra: 0
+        venta: 11
+        tope: 0
+        ventana: 24h
+      IRON_INGOT:
+        compra: 0
+        venta: 6
+        tope: 0
+        ventana: 24h
+      GOLD_INGOT:
+        compra: 0
+        venta: 12
+        tope: 0
+        ventana: 24h
+      LAPIS_LAZULI:
+        compra: 0
+        venta: 2.5
+        tope: 0
+        ventana: 24h
+      EMERALD:
+        compra: 0
+        venta: 25
+        tope: 0
+        ventana: 24h
+      DIAMOND:
+        compra: 0
+        venta: 60
+        tope: 0
+        ventana: 24h
+      NETHERITE_INGOT:
+        compra: 0
+        venta: 0
+        tope: 0
+        ventana: 24h
+      RAW_COPPER:
+        compra: 0
+        venta: 1.4
+        tope: 0
+        ventana: 24h
+      COPPER_INGOT:
+        compra: 0
+        venta: 1.5
+        tope: 0
+        ventana: 24h
+      QUARTZ:
+        compra: 0
+        venta: 3
+        tope: 0
+        ventana: 24h
+      ANCIENT_DEBRIS:
+        compra: 0
+        venta: 150
+        tope: 0
+        ventana: 24h
+      AMETHYST_SHARD:
+        compra: 0
+        venta: 3
+        tope: 0
+        ventana: 24h
+      GOLD_NUGGET:
+        compra: 0
+        venta: 1.3
+        tope: 0
+        ventana: 24h
+      GLOWSTONE_DUST:
+        compra: 0
+        venta: 1.5
+        tope: 0
+        ventana: 24h
+      IRON_NUGGET:
+        compra: 0
+        venta: 0.6
+        tope: 0
+        ventana: 24h
+  Alimentos:
+    items:
+      COOKED_BEEF:
+        compra: 10
+        venta: 0
+        tope: 0
+        ventana: 24h
+      COOKED_PORKCHOP:
+        compra: 10
+        venta: 0
+        tope: 0
+        ventana: 24h
+      COOKED_MUTTON:
+        compra: 10
+        venta: 0
+        tope: 0
+        ventana: 24h
+      COOKED_CHICKEN:
+        compra: 10
+        venta: 0
+        tope: 0
+        ventana: 24h
+      COOKED_RABBIT:
+        compra: 10
+        venta: 0
+        tope: 0
+        ventana: 24h
+      COOKED_COD:
+        compra: 14
+        venta: 0
+        tope: 0
+        ventana: 24h
+      COOKED_SALMON:
+        compra: 14
+        venta: 0
+        tope: 0
+        ventana: 24h
+      BREAD:
+        compra: 4
+        venta: 0
+        tope: 0
+        ventana: 24h
+      COOKIE:
+        compra: 4
+        venta: 0
+        tope: 0
+        ventana: 24h
+      APPLE:
+        compra: 3
+        venta: 1
+        tope: 0
+        ventana: 24h
+      GOLDEN_APPLE:
+        compra: 800
+        venta: 0
+        tope: 0
+        ventana: 24h
+      ENCHANTED_GOLDEN_APPLE:
+        compra: 24000
+        venta: 0
+        tope: 0
+        ventana: 24h
+      BAKED_POTATO:
+        compra: 2
+        venta: 0
+        tope: 0
+        ventana: 24h
+      MELON_SLICE:
+        compra: 2
+        venta: 0.4
+        tope: 0
+        ventana: 24h
+      DRIED_KELP:
+        compra: 2
+        venta: 0.5
+        tope: 0
+        ventana: 24h
+  Mobs:
+    items:
+      BLAZE_ROD:
+        compra: 4000
+        venta: 12
+        tope: 0
+        ventana: 24h
+      SUGAR:
+        compra: 1200
+        venta: 0
+        tope: 0
+        ventana: 24h
+      LEATHER:
+        compra: 2400
+        venta: 3
+        tope: 0
+        ventana: 24h
+      WITHER_SKELETON_SKULL:
+        compra: 260000
+        venta: 300
+        tope: 0
+        ventana: 24h
+      EGG:
+        compra: 1200
+        venta: 1
+        tope: 0
+        ventana: 24h
+      SLIME_BALL:
+        compra: 12000
+        venta: 3
+        tope: 0
+        ventana: 24h
+      ENDER_PEARL:
+        compra: 4800
+        venta: 8
+        tope: 0
+        ventana: 24h
+      MAGMA_CREAM:
+        compra: 6000
+        venta: 4
+        tope: 0
+        ventana: 24h
+      GUNPOWDER:
+        compra: 22000
+        venta: 5
+        tope: 0
+        ventana: 24h
+      ROTTEN_FLESH:
+        compra: 1200
+        venta: 1.5
+        tope: 0
+        ventana: 24h
+      SPIDER_EYE:
+        compra: 2000
+        venta: 2
+        tope: 0
+        ventana: 24h
+      FEATHER:
+        compra: 1200
+        venta: 1
+        tope: 0
+        ventana: 24h
+      STRING:
+        compra: 2400
+        venta: 2
+        tope: 0
+        ventana: 24h
+      BONE:
+        compra: 1600
+        venta: 2.5
+        tope: 0
+        ventana: 24h
+      GHAST_TEAR:
+        compra: 8000
+        venta: 25
+        tope: 0
+        ventana: 24h
+      PHANTOM_MEMBRANE:
+        compra: 8000
+        venta: 6
+        tope: 0
+        ventana: 24h
+      BEEF:
+        compra: 0
+        venta: 2
+        tope: 0
+        ventana: 24h
+      PORKCHOP:
+        compra: 0
+        venta: 2
+        tope: 0
+        ventana: 24h
+      CHICKEN:
+        compra: 0
+        venta: 2
+        tope: 0
+        ventana: 24h
+      MUTTON:
+        compra: 0
+        venta: 2
+        tope: 0
+        ventana: 24h
+      RABBIT:
+        compra: 0
+        venta: 2
+        tope: 0
+        ventana: 24h
+      RABBIT_HIDE:
+        compra: 0
+        venta: 2
+        tope: 0
+        ventana: 24h
+      RABBIT_FOOT:
+        compra: 0
+        venta: 10
+        tope: 0
+        ventana: 24h
+      ARROW:
+        compra: 0
+        venta: 0.5
+        tope: 0
+        ventana: 24h
+      SHULKER_SHELL:
+        compra: 0
+        venta: 80
+        tope: 0
+        ventana: 24h
+  Decoracion:
+    items:
+      TORCH:
+        compra: 10
+        venta: 0
+        tope: 0
+        ventana: 24h
+      LANTERN:
+        compra: 80
+        venta: 0
+        tope: 0
+        ventana: 24h
+      SOUL_LANTERN:
+        compra: 100
+        venta: 0
+        tope: 0
+        ventana: 24h
+      CANDLE:
+        compra: 50
+        venta: 0
+        tope: 0
+        ventana: 24h
+      ITEM_FRAME:
+        compra: 60
+        venta: 0
+        tope: 0
+        ventana: 24h
+      PAINTING:
+        compra: 80
+        venta: 0
+        tope: 0
+        ventana: 24h
+      FLOWER_POT:
+        compra: 30
+        venta: 0
+        tope: 0
+        ventana: 24h
+      ARMOR_STAND:
+        compra: 120
+        venta: 0
+        tope: 0
+        ventana: 24h
+      BOOKSHELF:
+        compra: 160
+        venta: 0
+        tope: 0
+        ventana: 24h
+      IRON_CHAIN:
+        compra: 70
+        venta: 0
+        tope: 0
+        ventana: 24h
+      BELL:
+        compra: 400
+        venta: 0
+        tope: 0
+        ventana: 24h
+      END_ROD:
+        compra: 120
+        venta: 0
+        tope: 0
+        ventana: 24h
+      SEA_LANTERN:
+        compra: 240
+        venta: 0
+        tope: 0
+        ventana: 24h
+      SHROOMLIGHT:
+        compra: 200
+        venta: 3
+        tope: 0
+        ventana: 24h
+      AMETHYST_BLOCK:
+        compra: 180
+        venta: 0
+        tope: 0
+        ventana: 24h
+      LODESTONE:
+        compra: 800
+        venta: 0
+        tope: 0
+        ventana: 24h
+      SCAFFOLDING:
+        compra: 30
+        venta: 0
+        tope: 0
+        ventana: 24h
+      LADDER:
+        compra: 20
+        venta: 0
+        tope: 0
+        ventana: 24h
+      BARREL:
+        compra: 100
+        venta: 0
+        tope: 0
+        ventana: 24h
+      LECTERN:
+        compra: 120
+        venta: 0
+        tope: 0
+        ventana: 24h
+      CAMPFIRE:
+        compra: 90
+        venta: 0
+        tope: 0
+        ventana: 24h
+      SOUL_CAMPFIRE:
+        compra: 110
+        venta: 0
+        tope: 0
+        ventana: 24h
+      DECORATED_POT:
+        compra: 80
+        venta: 0
+        tope: 0
+        ventana: 24h
+      BLACK_BANNER:
+        compra: 120
+        venta: 0
+        tope: 0
+        ventana: 24h
+      BLACK_CANDLE:
+        compra: 50
+        venta: 0
+        tope: 0
+        ventana: 24h
+      BLUE_BANNER:
+        compra: 120
+        venta: 0
+        tope: 0
+        ventana: 24h
+      BLUE_CANDLE:
+        compra: 50
+        venta: 0
+        tope: 0
+        ventana: 24h
+      BROWN_BANNER:
+        compra: 120
+        venta: 0
+        tope: 0
+        ventana: 24h
+      BROWN_CANDLE:
+        compra: 50
+        venta: 0
+        tope: 0
+        ventana: 24h
+      COBWEB:
+        compra: 80
+        venta: 0.5
+        tope: 0
+        ventana: 24h
+      COPPER_BARS:
+        compra: 90
+        venta: 0
+        tope: 0
+        ventana: 24h
+      EXPOSED_COPPER_BARS:
+        compra: 90
+        venta: 0
+        tope: 0
+        ventana: 24h
+      OXIDIZED_COPPER_BARS:
+        compra: 90
+        venta: 0
+        tope: 0
+        ventana: 24h
+      WAXED_COPPER_BARS:
+        compra: 90
+        venta: 0
+        tope: 0
+        ventana: 24h
+      WAXED_EXPOSED_COPPER_BARS:
+        compra: 90
+        venta: 0
+        tope: 0
+        ventana: 24h
+      WAXED_OXIDIZED_COPPER_BARS:
+        compra: 90
+        venta: 0
+        tope: 0
+        ventana: 24h
+      WAXED_WEATHERED_COPPER_BARS:
+        compra: 90
+        venta: 0
+        tope: 0
+        ventana: 24h
+      WEATHERED_COPPER_BARS:
+        compra: 90
+        venta: 0
+        tope: 0
+        ventana: 24h
+      COPPER_CHAIN:
+        compra: 90
+        venta: 0
+        tope: 0
+        ventana: 24h
+      EXPOSED_COPPER_CHAIN:
+        compra: 90
+        venta: 0
+        tope: 0
+        ventana: 24h
+      OXIDIZED_COPPER_CHAIN:
+        compra: 90
+        venta: 0
+        tope: 0
+        ventana: 24h
+      WAXED_COPPER_CHAIN:
+        compra: 90
+        venta: 0
+        tope: 0
+        ventana: 24h
+      WAXED_EXPOSED_COPPER_CHAIN:
+        compra: 90
+        venta: 0
+        tope: 0
+        ventana: 24h
+      WAXED_OXIDIZED_COPPER_CHAIN:
+        compra: 90
+        venta: 0
+        tope: 0
+        ventana: 24h
+      WAXED_WEATHERED_COPPER_CHAIN:
+        compra: 90
+        venta: 0
+        tope: 0
+        ventana: 24h
+      WEATHERED_COPPER_CHAIN:
+        compra: 90
+        venta: 0
+        tope: 0
+        ventana: 24h
+      COPPER_LANTERN:
+        compra: 100
+        venta: 0
+        tope: 0
+        ventana: 24h
+      EXPOSED_COPPER_LANTERN:
+        compra: 100
+        venta: 0
+        tope: 0
+        ventana: 24h
+      OXIDIZED_COPPER_LANTERN:
+        compra: 100
+        venta: 0
+        tope: 0
+        ventana: 24h
+      WAXED_COPPER_LANTERN:
+        compra: 100
+        venta: 0
+        tope: 0
+        ventana: 24h
+      WAXED_EXPOSED_COPPER_LANTERN:
+        compra: 100
+        venta: 0
+        tope: 0
+        ventana: 24h
+      WAXED_OXIDIZED_COPPER_LANTERN:
+        compra: 100
+        venta: 0
+        tope: 0
+        ventana: 24h
+      WAXED_WEATHERED_COPPER_LANTERN:
+        compra: 100
+        venta: 0
+        tope: 0
+        ventana: 24h
+      WEATHERED_COPPER_LANTERN:
+        compra: 100
+        venta: 0
+        tope: 0
+        ventana: 24h
+      COPPER_TORCH:
+        compra: 16
+        venta: 0
+        tope: 0
+        ventana: 24h
+      CYAN_BANNER:
+        compra: 120
+        venta: 0
+        tope: 0
+        ventana: 24h
+      CYAN_CANDLE:
+        compra: 50
+        venta: 0
+        tope: 0
+        ventana: 24h
+      GRAY_BANNER:
+        compra: 120
+        venta: 0
+        tope: 0
+        ventana: 24h
+      GRAY_CANDLE:
+        compra: 50
+        venta: 0
+        tope: 0
+        ventana: 24h
+      GREEN_BANNER:
+        compra: 120
+        venta: 0
+        tope: 0
+        ventana: 24h
+      GREEN_CANDLE:
+        compra: 50
+        venta: 0
+        tope: 0
+        ventana: 24h
+      IRON_BARS:
+        compra: 50
+        venta: 0
+        tope: 0
+        ventana: 24h
+      LIGHT_BLUE_BANNER:
+        compra: 120
+        venta: 0
+        tope: 0
+        ventana: 24h
+      LIGHT_BLUE_CANDLE:
+        compra: 50
+        venta: 0
+        tope: 0
+        ventana: 24h
+      LIGHT_GRAY_BANNER:
+        compra: 120
+        venta: 0
+        tope: 0
+        ventana: 24h
+      LIGHT_GRAY_CANDLE:
+        compra: 50
+        venta: 0
+        tope: 0
+        ventana: 24h
+      LIME_BANNER:
+        compra: 120
+        venta: 0
+        tope: 0
+        ventana: 24h
+      LIME_CANDLE:
+        compra: 50
+        venta: 0
+        tope: 0
+        ventana: 24h
+      MAGENTA_BANNER:
+        compra: 120
+        venta: 0
+        tope: 0
+        ventana: 24h
+      MAGENTA_CANDLE:
+        compra: 50
+        venta: 0
+        tope: 0
+        ventana: 24h
+      ORANGE_BANNER:
+        compra: 120
+        venta: 0
+        tope: 0
+        ventana: 24h
+      ORANGE_CANDLE:
+        compra: 50
+        venta: 0
+        tope: 0
+        ventana: 24h
+      PINK_BANNER:
+        compra: 120
+        venta: 0
+        tope: 0
+        ventana: 24h
+      PINK_CANDLE:
+        compra: 50
+        venta: 0
+        tope: 0
+        ventana: 24h
+      PURPLE_BANNER:
+        compra: 120
+        venta: 0
+        tope: 0
+        ventana: 24h
+      PURPLE_CANDLE:
+        compra: 50
+        venta: 0
+        tope: 0
+        ventana: 24h
+      RED_BANNER:
+        compra: 120
+        venta: 0
+        tope: 0
+        ventana: 24h
+      RED_CANDLE:
+        compra: 50
+        venta: 0
+        tope: 0
+        ventana: 24h
+      SOUL_TORCH:
+        compra: 10
+        venta: 0
+        tope: 0
+        ventana: 24h
+      WHITE_BANNER:
+        compra: 120
+        venta: 0
+        tope: 0
+        ventana: 24h
+      WHITE_CANDLE:
+        compra: 50
+        venta: 0
+        tope: 0
+        ventana: 24h
+      YELLOW_BANNER:
+        compra: 120
+        venta: 0
+        tope: 0
+        ventana: 24h
+      YELLOW_CANDLE:
+        compra: 50
+        venta: 0
+        tope: 0
+        ventana: 24h
+      WHITE_BED:
+        compra: 300
+        venta: 0
+        tope: 0
+        ventana: 24h
+      ORANGE_BED:
+        compra: 300
+        venta: 0
+        tope: 0
+        ventana: 24h
+      MAGENTA_BED:
+        compra: 300
+        venta: 0
+        tope: 0
+        ventana: 24h
+      LIGHT_BLUE_BED:
+        compra: 300
+        venta: 0
+        tope: 0
+        ventana: 24h
+      YELLOW_BED:
+        compra: 300
+        venta: 0
+        tope: 0
+        ventana: 24h
+      LIME_BED:
+        compra: 300
+        venta: 0
+        tope: 0
+        ventana: 24h
+      PINK_BED:
+        compra: 300
+        venta: 0
+        tope: 0
+        ventana: 24h
+      GRAY_BED:
+        compra: 300
+        venta: 0
+        tope: 0
+        ventana: 24h
+      LIGHT_GRAY_BED:
+        compra: 300
+        venta: 0
+        tope: 0
+        ventana: 24h
+      CYAN_BED:
+        compra: 300
+        venta: 0
+        tope: 0
+        ventana: 24h
+      PURPLE_BED:
+        compra: 300
+        venta: 0
+        tope: 0
+        ventana: 24h
+      BLUE_BED:
+        compra: 300
+        venta: 0
+        tope: 0
+        ventana: 24h
+      BROWN_BED:
+        compra: 300
+        venta: 0
+        tope: 0
+        ventana: 24h
+      GREEN_BED:
+        compra: 300
+        venta: 0
+        tope: 0
+        ventana: 24h
+      RED_BED:
+        compra: 300
+        venta: 0
+        tope: 0
+        ventana: 24h
+      BLACK_BED:
+        compra: 300
+        venta: 0
+        tope: 0
+        ventana: 24h
+  Bloques_Modernos:
+    items:
+      WHITE_CONCRETE:
+        compra: 50
+        venta: 0
+        tope: 0
+        ventana: 24h
+      ORANGE_CONCRETE:
+        compra: 50
+        venta: 0
+        tope: 0
+        ventana: 24h
+      MAGENTA_CONCRETE:
+        compra: 50
+        venta: 0
+        tope: 0
+        ventana: 24h
+      LIGHT_BLUE_CONCRETE:
+        compra: 50
+        venta: 0
+        tope: 0
+        ventana: 24h
+      YELLOW_CONCRETE:
+        compra: 50
+        venta: 0
+        tope: 0
+        ventana: 24h
+      LIME_CONCRETE:
+        compra: 50
+        venta: 0
+        tope: 0
+        ventana: 24h
+      PINK_CONCRETE:
+        compra: 50
+        venta: 0
+        tope: 0
+        ventana: 24h
+      GRAY_CONCRETE:
+        compra: 50
+        venta: 0
+        tope: 0
+        ventana: 24h
+      LIGHT_GRAY_CONCRETE:
+        compra: 50
+        venta: 0
+        tope: 0
+        ventana: 24h
+      CYAN_CONCRETE:
+        compra: 50
+        venta: 0
+        tope: 0
+        ventana: 24h
+      PURPLE_CONCRETE:
+        compra: 50
+        venta: 0
+        tope: 0
+        ventana: 24h
+      BLUE_CONCRETE:
+        compra: 50
+        venta: 0
+        tope: 0
+        ventana: 24h
+      BROWN_CONCRETE:
+        compra: 50
+        venta: 0
+        tope: 0
+        ventana: 24h
+      GREEN_CONCRETE:
+        compra: 50
+        venta: 0
+        tope: 0
+        ventana: 24h
+      RED_CONCRETE:
+        compra: 50
+        venta: 0
+        tope: 0
+        ventana: 24h
+      BLACK_CONCRETE:
+        compra: 50
+        venta: 0
+        tope: 0
+        ventana: 24h
+      WHITE_TERRACOTTA:
+        compra: 40
+        venta: 0
+        tope: 0
+        ventana: 24h
+      ORANGE_TERRACOTTA:
+        compra: 40
+        venta: 0
+        tope: 0
+        ventana: 24h
+      MAGENTA_TERRACOTTA:
+        compra: 40
+        venta: 0
+        tope: 0
+        ventana: 24h
+      LIGHT_BLUE_TERRACOTTA:
+        compra: 40
+        venta: 0
+        tope: 0
+        ventana: 24h
+      YELLOW_TERRACOTTA:
+        compra: 40
+        venta: 0
+        tope: 0
+        ventana: 24h
+      LIME_TERRACOTTA:
+        compra: 40
+        venta: 0
+        tope: 0
+        ventana: 24h
+      PINK_TERRACOTTA:
+        compra: 40
+        venta: 0
+        tope: 0
+        ventana: 24h
+      GRAY_TERRACOTTA:
+        compra: 40
+        venta: 0
+        tope: 0
+        ventana: 24h
+      BLACK_CONCRETE_POWDER:
+        compra: 40
+        venta: 0
+        tope: 0
+        ventana: 24h
+      BLACK_GLAZED_TERRACOTTA:
+        compra: 80
+        venta: 0
+        tope: 0
+        ventana: 24h
+      BLACK_STAINED_GLASS:
+        compra: 40
+        venta: 0
+        tope: 0
+        ventana: 24h
+      BLACK_STAINED_GLASS_PANE:
+        compra: 16
+        venta: 0
+        tope: 0
+        ventana: 24h
+      BLACK_TERRACOTTA:
+        compra: 40
+        venta: 0
+        tope: 0
+        ventana: 24h
+      BLACK_WOOL:
+        compra: 40
+        venta: 0
+        tope: 0
+        ventana: 24h
+      BLACK_CARPET:
+        compra: 20
+        venta: 0
+        tope: 0
+        ventana: 24h
+      BLUE_CONCRETE_POWDER:
+        compra: 40
+        venta: 0
+        tope: 0
+        ventana: 24h
+      BLUE_GLAZED_TERRACOTTA:
+        compra: 80
+        venta: 0
+        tope: 0
+        ventana: 24h
+      BLUE_STAINED_GLASS:
+        compra: 40
+        venta: 0
+        tope: 0
+        ventana: 24h
+      BLUE_STAINED_GLASS_PANE:
+        compra: 16
+        venta: 0
+        tope: 0
+        ventana: 24h
+      BLUE_TERRACOTTA:
+        compra: 40
+        venta: 0
+        tope: 0
+        ventana: 24h
+      BLUE_WOOL:
+        compra: 40
+        venta: 0
+        tope: 0
+        ventana: 24h
+      BLUE_CARPET:
+        compra: 20
+        venta: 0
+        tope: 0
+        ventana: 24h
+      BROWN_CONCRETE_POWDER:
+        compra: 40
+        venta: 0
+        tope: 0
+        ventana: 24h
+      BROWN_GLAZED_TERRACOTTA:
+        compra: 80
+        venta: 0
+        tope: 0
+        ventana: 24h
+      BROWN_STAINED_GLASS:
+        compra: 40
+        venta: 0
+        tope: 0
+        ventana: 24h
+      BROWN_STAINED_GLASS_PANE:
+        compra: 16
+        venta: 0
+        tope: 0
+        ventana: 24h
+      BROWN_TERRACOTTA:
+        compra: 40
+        venta: 0
+        tope: 0
+        ventana: 24h
+      BROWN_WOOL:
+        compra: 40
+        venta: 0
+        tope: 0
+        ventana: 24h
+      BROWN_CARPET:
+        compra: 20
+        venta: 0
+        tope: 0
+        ventana: 24h
+      CYAN_CONCRETE_POWDER:
+        compra: 40
+        venta: 0
+        tope: 0
+        ventana: 24h
+      CYAN_GLAZED_TERRACOTTA:
+        compra: 80
+        venta: 0
+        tope: 0
+        ventana: 24h
+      CYAN_STAINED_GLASS:
+        compra: 40
+        venta: 0
+        tope: 0
+        ventana: 24h
+      CYAN_STAINED_GLASS_PANE:
+        compra: 16
+        venta: 0
+        tope: 0
+        ventana: 24h
+      CYAN_TERRACOTTA:
+        compra: 40
+        venta: 0
+        tope: 0
+        ventana: 24h
+      CYAN_WOOL:
+        compra: 40
+        venta: 0
+        tope: 0
+        ventana: 24h
+      CYAN_CARPET:
+        compra: 20
+        venta: 0
+        tope: 0
+        ventana: 24h
+      GLASS_PANE:
+        compra: 16
+        venta: 0
+        tope: 0
+        ventana: 24h
+      GRAY_CONCRETE_POWDER:
+        compra: 40
+        venta: 0
+        tope: 0
+        ventana: 24h
+      GRAY_GLAZED_TERRACOTTA:
+        compra: 80
+        venta: 0
+        tope: 0
+        ventana: 24h
+      GRAY_STAINED_GLASS:
+        compra: 40
+        venta: 0
+        tope: 0
+        ventana: 24h
+      GRAY_STAINED_GLASS_PANE:
+        compra: 16
+        venta: 0
+        tope: 0
+        ventana: 24h
+      GRAY_WOOL:
+        compra: 40
+        venta: 0
+        tope: 0
+        ventana: 24h
+      GRAY_CARPET:
+        compra: 20
+        venta: 0
+        tope: 0
+        ventana: 24h
+      GREEN_CONCRETE_POWDER:
+        compra: 40
+        venta: 0
+        tope: 0
+        ventana: 24h
+      GREEN_GLAZED_TERRACOTTA:
+        compra: 80
+        venta: 0
+        tope: 0
+        ventana: 24h
+      GREEN_STAINED_GLASS:
+        compra: 40
+        venta: 0
+        tope: 0
+        ventana: 24h
+      GREEN_STAINED_GLASS_PANE:
+        compra: 16
+        venta: 0
+        tope: 0
+        ventana: 24h
+      GREEN_TERRACOTTA:
+        compra: 40
+        venta: 0
+        tope: 0
+        ventana: 24h
+      GREEN_WOOL:
+        compra: 40
+        venta: 0
+        tope: 0
+        ventana: 24h
+      GREEN_CARPET:
+        compra: 20
+        venta: 0
+        tope: 0
+        ventana: 24h
+      LIGHT_BLUE_CONCRETE_POWDER:
+        compra: 40
+        venta: 0
+        tope: 0
+        ventana: 24h
+      LIGHT_BLUE_GLAZED_TERRACOTTA:
+        compra: 80
+        venta: 0
+        tope: 0
+        ventana: 24h
+      LIGHT_BLUE_STAINED_GLASS:
+        compra: 40
+        venta: 0
+        tope: 0
+        ventana: 24h
+      LIGHT_BLUE_STAINED_GLASS_PANE:
+        compra: 16
+        venta: 0
+        tope: 0
+        ventana: 24h
+      LIGHT_BLUE_WOOL:
+        compra: 40
+        venta: 0
+        tope: 0
+        ventana: 24h
+      LIGHT_BLUE_CARPET:
+        compra: 20
+        venta: 0
+        tope: 0
+        ventana: 24h
+      LIGHT_GRAY_CONCRETE_POWDER:
+        compra: 40
+        venta: 0
+        tope: 0
+        ventana: 24h
+      LIGHT_GRAY_GLAZED_TERRACOTTA:
+        compra: 80
+        venta: 0
+        tope: 0
+        ventana: 24h
+      LIGHT_GRAY_STAINED_GLASS:
+        compra: 40
+        venta: 0
+        tope: 0
+        ventana: 24h
+      LIGHT_GRAY_STAINED_GLASS_PANE:
+        compra: 16
+        venta: 0
+        tope: 0
+        ventana: 24h
+      LIGHT_GRAY_TERRACOTTA:
+        compra: 40
+        venta: 0
+        tope: 0
+        ventana: 24h
+      LIGHT_GRAY_WOOL:
+        compra: 40
+        venta: 0
+        tope: 0
+        ventana: 24h
+      LIGHT_GRAY_CARPET:
+        compra: 20
+        venta: 0
+        tope: 0
+        ventana: 24h
+      LIME_CONCRETE_POWDER:
+        compra: 40
+        venta: 0
+        tope: 0
+        ventana: 24h
+      LIME_GLAZED_TERRACOTTA:
+        compra: 80
+        venta: 0
+        tope: 0
+        ventana: 24h
+      LIME_STAINED_GLASS:
+        compra: 40
+        venta: 0
+        tope: 0
+        ventana: 24h
+      LIME_STAINED_GLASS_PANE:
+        compra: 16
+        venta: 0
+        tope: 0
+        ventana: 24h
+      LIME_WOOL:
+        compra: 40
+        venta: 0
+        tope: 0
+        ventana: 24h
+      LIME_CARPET:
+        compra: 20
+        venta: 0
+        tope: 0
+        ventana: 24h
+      MAGENTA_CONCRETE_POWDER:
+        compra: 40
+        venta: 0
+        tope: 0
+        ventana: 24h
+      MAGENTA_GLAZED_TERRACOTTA:
+        compra: 80
+        venta: 0
+        tope: 0
+        ventana: 24h
+      MAGENTA_STAINED_GLASS:
+        compra: 40
+        venta: 0
+        tope: 0
+        ventana: 24h
+      MAGENTA_STAINED_GLASS_PANE:
+        compra: 16
+        venta: 0
+        tope: 0
+        ventana: 24h
+      MAGENTA_WOOL:
+        compra: 40
+        venta: 0
+        tope: 0
+        ventana: 24h
+      MAGENTA_CARPET:
+        compra: 20
+        venta: 0
+        tope: 0
+        ventana: 24h
+      MOSS_CARPET:
+        compra: 20
+        venta: 0
+        tope: 0
+        ventana: 24h
+      ORANGE_CONCRETE_POWDER:
+        compra: 40
+        venta: 0
+        tope: 0
+        ventana: 24h
+      ORANGE_GLAZED_TERRACOTTA:
+        compra: 80
+        venta: 0
+        tope: 0
+        ventana: 24h
+      ORANGE_STAINED_GLASS:
+        compra: 40
+        venta: 0
+        tope: 0
+        ventana: 24h
+      ORANGE_STAINED_GLASS_PANE:
+        compra: 16
+        venta: 0
+        tope: 0
+        ventana: 24h
+      ORANGE_WOOL:
+        compra: 40
+        venta: 0
+        tope: 0
+        ventana: 24h
+      ORANGE_CARPET:
+        compra: 20
+        venta: 0
+        tope: 0
+        ventana: 24h
+      PALE_MOSS_CARPET:
+        compra: 20
+        venta: 0
+        tope: 0
+        ventana: 24h
+      PINK_CONCRETE_POWDER:
+        compra: 40
+        venta: 0
+        tope: 0
+        ventana: 24h
+      PINK_GLAZED_TERRACOTTA:
+        compra: 80
+        venta: 0
+        tope: 0
+        ventana: 24h
+      PINK_STAINED_GLASS:
+        compra: 40
+        venta: 0
+        tope: 0
+        ventana: 24h
+      PINK_STAINED_GLASS_PANE:
+        compra: 16
+        venta: 0
+        tope: 0
+        ventana: 24h
+      PINK_WOOL:
+        compra: 40
+        venta: 0
+        tope: 0
+        ventana: 24h
+      PINK_CARPET:
+        compra: 20
+        venta: 0
+        tope: 0
+        ventana: 24h
+      PURPLE_CONCRETE_POWDER:
+        compra: 40
+        venta: 0
+        tope: 0
+        ventana: 24h
+      PURPLE_GLAZED_TERRACOTTA:
+        compra: 80
+        venta: 0
+        tope: 0
+        ventana: 24h
+      PURPLE_STAINED_GLASS:
+        compra: 40
+        venta: 0
+        tope: 0
+        ventana: 24h
+      PURPLE_STAINED_GLASS_PANE:
+        compra: 16
+        venta: 0
+        tope: 0
+        ventana: 24h
+      PURPLE_TERRACOTTA:
+        compra: 40
+        venta: 0
+        tope: 0
+        ventana: 24h
+      PURPLE_WOOL:
+        compra: 40
+        venta: 0
+        tope: 0
+        ventana: 24h
+      PURPLE_CARPET:
+        compra: 20
+        venta: 0
+        tope: 0
+        ventana: 24h
+      RED_CONCRETE_POWDER:
+        compra: 40
+        venta: 0
+        tope: 0
+        ventana: 24h
+      RED_GLAZED_TERRACOTTA:
+        compra: 80
+        venta: 0
+        tope: 0
+        ventana: 24h
+      RED_STAINED_GLASS:
+        compra: 40
+        venta: 0
+        tope: 0
+        ventana: 24h
+      RED_STAINED_GLASS_PANE:
+        compra: 16
+        venta: 0
+        tope: 0
+        ventana: 24h
+      RED_TERRACOTTA:
+        compra: 40
+        venta: 0
+        tope: 0
+        ventana: 24h
+      RED_WOOL:
+        compra: 40
+        venta: 0
+        tope: 0
+        ventana: 24h
+      RED_CARPET:
+        compra: 20
+        venta: 0
+        tope: 0
+        ventana: 24h
+      TERRACOTTA:
+        compra: 40
+        venta: 0.4
+        tope: 0
+        ventana: 24h
+      TINTED_GLASS:
+        compra: 120
+        venta: 0
+        tope: 0
+        ventana: 24h
+      WHITE_CONCRETE_POWDER:
+        compra: 40
+        venta: 0
+        tope: 0
+        ventana: 24h
+      WHITE_GLAZED_TERRACOTTA:
+        compra: 80
+        venta: 0
+        tope: 0
+        ventana: 24h
+      WHITE_STAINED_GLASS:
+        compra: 40
+        venta: 0
+        tope: 0
+        ventana: 24h
+      WHITE_STAINED_GLASS_PANE:
+        compra: 16
+        venta: 0
+        tope: 0
+        ventana: 24h
+      WHITE_WOOL:
+        compra: 40
+        venta: 1.5
+        tope: 0
+        ventana: 24h
+      WHITE_CARPET:
+        compra: 20
+        venta: 0
+        tope: 0
+        ventana: 24h
+      YELLOW_CONCRETE_POWDER:
+        compra: 40
+        venta: 0
+        tope: 0
+        ventana: 24h
+      YELLOW_GLAZED_TERRACOTTA:
+        compra: 80
+        venta: 0
+        tope: 0
+        ventana: 24h
+      YELLOW_STAINED_GLASS:
+        compra: 40
+        venta: 0
+        tope: 0
+        ventana: 24h
+      YELLOW_STAINED_GLASS_PANE:
+        compra: 16
+        venta: 0
+        tope: 0
+        ventana: 24h
+      YELLOW_WOOL:
+        compra: 40
+        venta: 0
+        tope: 0
+        ventana: 24h
+      YELLOW_CARPET:
+        compra: 20
+        venta: 0
+        tope: 0
+        ventana: 24h
+  Variedad:
+    items:
+      CHEST:
+        compra: 80
+        venta: 0
+        tope: 0
+        ventana: 24h
+      ENDER_CHEST:
+        compra: 1000
+        venta: 0
+        tope: 0
+        ventana: 24h
+      CRAFTING_TABLE:
+        compra: 50
+        venta: 0
+        tope: 0
+        ventana: 24h
+      FURNACE:
+        compra: 60
+        venta: 0
+        tope: 0
+        ventana: 24h
+      BLAST_FURNACE:
+        compra: 180
+        venta: 0
+        tope: 0
+        ventana: 24h
+      SMOKER:
+        compra: 120
+        venta: 0
+        tope: 0
+        ventana: 24h
+      ANVIL:
+        compra: 1200
+        venta: 0
+        tope: 0
+        ventana: 24h
+      ENCHANTING_TABLE:
+        compra: 1600
+        venta: 0
+        tope: 0
+        ventana: 24h
+      HOPPER:
+        compra: 500
+        venta: 0
+        tope: 0
+        ventana: 24h
+      DISPENSER:
+        compra: 240
+        venta: 0
+        tope: 0
+        ventana: 24h
+      DROPPER:
+        compra: 180
+        venta: 0
+        tope: 0
+        ventana: 24h
+      OBSERVER:
+        compra: 200
+        venta: 0
+        tope: 0
+        ventana: 24h
+      PISTON:
+        compra: 180
+        venta: 0
+        tope: 0
+        ventana: 24h
+      STICKY_PISTON:
+        compra: 260
+        venta: 0
+        tope: 0
+        ventana: 24h
+      REDSTONE:
+        compra: 60
+        venta: 2
+        tope: 0
+        ventana: 24h
+      REDSTONE_TORCH:
+        compra: 40
+        venta: 0
+        tope: 0
+        ventana: 24h
+      REPEATER:
+        compra: 120
+        venta: 0
+        tope: 0
+        ventana: 24h
+      COMPARATOR:
+        compra: 140
+        venta: 0
+        tope: 0
+        ventana: 24h
+      LEVER:
+        compra: 30
+        venta: 0
+        tope: 0
+        ventana: 24h
+      STONE_BUTTON:
+        compra: 20
+        venta: 0
+        tope: 0
+        ventana: 24h
+      TRIPWIRE_HOOK:
+        compra: 50
+        venta: 0
+        tope: 0
+        ventana: 24h
+      RAIL:
+        compra: 50
+        venta: 0
+        tope: 0
+        ventana: 24h
+      POWERED_RAIL:
+        compra: 300
+        venta: 0
+        tope: 0
+        ventana: 24h
+      MINECART:
+        compra: 400
+        venta: 0
+        tope: 0
+        ventana: 24h
+      TRAPPED_CHEST:
+        compra: 120
+        venta: 0
+        tope: 0
+        ventana: 24h
+      BREWING_STAND:
+        compra: 1000
+        venta: 0
+        tope: 0
+        ventana: 24h
+      CAULDRON:
+        compra: 320
+        venta: 0
+        tope: 0
+        ventana: 24h
+      COMPOSTER:
+        compra: 200
+        venta: 0
+        tope: 0
+        ventana: 24h
+      GRINDSTONE:
+        compra: 300
+        venta: 0
+        tope: 0
+        ventana: 24h
+      STONECUTTER:
+        compra: 300
+        venta: 0
+        tope: 0
+        ventana: 24h
+      SMITHING_TABLE:
+        compra: 300
+        venta: 0
+        tope: 0
+        ventana: 24h
+      CARTOGRAPHY_TABLE:
+        compra: 200
+        venta: 0
+        tope: 0
+        ventana: 24h
+      FLETCHING_TABLE:
+        compra: 200
+        venta: 0
+        tope: 0
+        ventana: 24h
+      LOOM:
+        compra: 200
+        venta: 0
+        tope: 0
+        ventana: 24h
+      CHISELED_BOOKSHELF:
+        compra: 360
+        venta: 0
+        tope: 0
+        ventana: 24h
+      NOTE_BLOCK:
+        compra: 200
+        venta: 0
+        tope: 0
+        ventana: 24h
+      JUKEBOX:
+        compra: 2000
+        venta: 0
+        tope: 0
+        ventana: 24h
+      TARGET:
+        compra: 320
+        venta: 0
+        tope: 0
+        ventana: 24h
+      DAYLIGHT_DETECTOR:
+        compra: 600
+        venta: 0
+        tope: 0
+        ventana: 24h
+      REDSTONE_LAMP:
+        compra: 720
+        venta: 0
+        tope: 0
+        ventana: 24h
+      DETECTOR_RAIL:
+        compra: 360
+        venta: 0
+        tope: 0
+        ventana: 24h
+      ACTIVATOR_RAIL:
+        compra: 300
+        venta: 0
+        tope: 0
+        ventana: 24h
+      CRAFTER:
+        compra: 2000
+        venta: 0
+        tope: 0
+        ventana: 24h
+      RESPAWN_ANCHOR:
+        compra: 1600
+        venta: 0
+        tope: 0
+        ventana: 24h
+      FLINT:
+        compra: 0
+        venta: 1
+        tope: 0
+        ventana: 24h
+      BOOK:
+        compra: 0
+        venta: 3
+        tope: 0
+        ventana: 24h
+      SNOWBALL:
+        compra: 0
+        venta: 0.1
+        tope: 0
+        ventana: 24h
+      CLAY_BALL:
+        compra: 0
+        venta: 0.25
+        tope: 0
+        ventana: 24h
+  Herramientas:
+    items:
+      WOODEN_SHOVEL:
+        compra: 6
+        venta: 0
+        tope: 0
+        ventana: 24h
+      STONE_SHOVEL:
+        compra: 18
+        venta: 0
+        tope: 0
+        ventana: 24h
+      GOLDEN_SHOVEL:
+        compra: 24
+        venta: 0
+        tope: 0
+        ventana: 24h
+      IRON_SHOVEL:
+        compra: 140
+        venta: 0
+        tope: 0
+        ventana: 24h
+      DIAMOND_SHOVEL:
+        compra: 280
+        venta: 0
+        tope: 0
+        ventana: 24h
+      WOODEN_PICKAXE:
+        compra: 18
+        venta: 0
+        tope: 0
+        ventana: 24h
+      STONE_PICKAXE:
+        compra: 54
+        venta: 0
+        tope: 0
+        ventana: 24h
+      GOLDEN_PICKAXE:
+        compra: 74
+        venta: 0
+        tope: 0
+        ventana: 24h
+      IRON_PICKAXE:
+        compra: 420
+        venta: 0
+        tope: 0
+        ventana: 24h
+      DIAMOND_PICKAXE:
+        compra: 840
+        venta: 0
+        tope: 0
+        ventana: 24h
+      WOODEN_HOE:
+        compra: 12
+        venta: 0
+        tope: 0
+        ventana: 24h
+      STONE_HOE:
+        compra: 36
+        venta: 0
+        tope: 0
+        ventana: 24h
+      GOLDEN_HOE:
+        compra: 50
+        venta: 0
+        tope: 0
+        ventana: 24h
+      IRON_HOE:
+        compra: 280
+        venta: 0
+        tope: 0
+        ventana: 24h
+      DIAMOND_HOE:
+        compra: 560
+        venta: 0
+        tope: 0
+        ventana: 24h
+  Madera:
+    items:
+      OAK_LOG:
+        compra: 100
+        venta: 1
+        tope: 0
+        ventana: 24h
+      SPRUCE_LOG:
+        compra: 100
+        venta: 1
+        tope: 0
+        ventana: 24h
+      BIRCH_LOG:
+        compra: 100
+        venta: 1
+        tope: 0
+        ventana: 24h
+      JUNGLE_LOG:
+        compra: 100
+        venta: 1
+        tope: 0
+        ventana: 24h
+      ACACIA_LOG:
+        compra: 100
+        venta: 1
+        tope: 0
+        ventana: 24h
+      DARK_OAK_LOG:
+        compra: 100
+        venta: 1
+        tope: 0
+        ventana: 24h
+      CHERRY_LOG:
+        compra: 100
+        venta: 1
+        tope: 0
+        ventana: 24h
+      MANGROVE_LOG:
+        compra: 100
+        venta: 1
+        tope: 0
+        ventana: 24h
+      SPRUCE_SAPLING:
+        compra: 50
+        venta: 0
+        tope: 0
+        ventana: 24h
+      BIRCH_SAPLING:
+        compra: 50
+        venta: 0
+        tope: 0
+        ventana: 24h
+      JUNGLE_SAPLING:
+        compra: 50
+        venta: 0
+        tope: 0
+        ventana: 24h
+      ACACIA_SAPLING:
+        compra: 50
+        venta: 0
+        tope: 0
+        ventana: 24h
+      DARK_OAK_SAPLING:
+        compra: 50
+        venta: 0
+        tope: 0
+        ventana: 24h
+      CHERRY_SAPLING:
+        compra: 50
+        venta: 0
+        tope: 0
+        ventana: 24h
+      PALE_OAK_LOG:
+        compra: 100
+        venta: 1
+        tope: 0
+        ventana: 24h
+      CRIMSON_STEM:
+        compra: 100
+        venta: 1
+        tope: 0
+        ventana: 24h
+      WARPED_STEM:
+        compra: 100
+        venta: 1
+        tope: 0
+        ventana: 24h
+      ACACIA_PLANKS:
+        compra: 30
+        venta: 0
+        tope: 0
+        ventana: 24h
+      ACACIA_STAIRS:
+        compra: 46
+        venta: 0
+        tope: 0
+        ventana: 24h
+      ACACIA_SLAB:
+        compra: 18
+        venta: 0
+        tope: 0
+        ventana: 24h
+      ACACIA_FENCE:
+        compra: 30
+        venta: 0
+        tope: 0
+        ventana: 24h
+      ACACIA_FENCE_GATE:
+        compra: 36
+        venta: 0
+        tope: 0
+        ventana: 24h
+      ACACIA_DOOR:
+        compra: 60
+        venta: 0
+        tope: 0
+        ventana: 24h
+      ACACIA_TRAPDOOR:
+        compra: 46
+        venta: 0
+        tope: 0
+        ventana: 24h
+      ACACIA_SIGN:
+        compra: 30
+        venta: 0
+        tope: 0
+        ventana: 24h
+      ACACIA_HANGING_SIGN:
+        compra: 46
+        venta: 0
+        tope: 0
+        ventana: 24h
+      ACACIA_BUTTON:
+        compra: 12
+        venta: 0
+        tope: 0
+        ventana: 24h
+      ACACIA_PRESSURE_PLATE:
+        compra: 24
+        venta: 0
+        tope: 0
+        ventana: 24h
+      BAMBOO_BLOCK:
+        compra: 60
+        venta: 0
+        tope: 0
+        ventana: 24h
+      BAMBOO_MOSAIC:
+        compra: 60
+        venta: 0
+        tope: 0
+        ventana: 24h
+      BAMBOO_MOSAIC_STAIRS:
+        compra: 90
+        venta: 0
+        tope: 0
+        ventana: 24h
+      BAMBOO_MOSAIC_SLAB:
+        compra: 36
+        venta: 0
+        tope: 0
+        ventana: 24h
+      BAMBOO_PLANKS:
+        compra: 30
+        venta: 0
+        tope: 0
+        ventana: 24h
+      BAMBOO_STAIRS:
+        compra: 46
+        venta: 0
+        tope: 0
+        ventana: 24h
+      BAMBOO_SLAB:
+        compra: 18
+        venta: 0
+        tope: 0
+        ventana: 24h
+      BAMBOO_FENCE:
+        compra: 30
+        venta: 0
+        tope: 0
+        ventana: 24h
+      BAMBOO_FENCE_GATE:
+        compra: 36
+        venta: 0
+        tope: 0
+        ventana: 24h
+      BAMBOO_DOOR:
+        compra: 60
+        venta: 0
+        tope: 0
+        ventana: 24h
+      BAMBOO_TRAPDOOR:
+        compra: 46
+        venta: 0
+        tope: 0
+        ventana: 24h
+      BAMBOO_SIGN:
+        compra: 30
+        venta: 0
+        tope: 0
+        ventana: 24h
+      BAMBOO_HANGING_SIGN:
+        compra: 46
+        venta: 0
+        tope: 0
+        ventana: 24h
+      BAMBOO_BUTTON:
+        compra: 12
+        venta: 0
+        tope: 0
+        ventana: 24h
+      BAMBOO_PRESSURE_PLATE:
+        compra: 24
+        venta: 0
+        tope: 0
+        ventana: 24h
+      BIRCH_PLANKS:
+        compra: 30
+        venta: 0
+        tope: 0
+        ventana: 24h
+      BIRCH_STAIRS:
+        compra: 46
+        venta: 0
+        tope: 0
+        ventana: 24h
+      BIRCH_SLAB:
+        compra: 18
+        venta: 0
+        tope: 0
+        ventana: 24h
+      BIRCH_FENCE:
+        compra: 30
+        venta: 0
+        tope: 0
+        ventana: 24h
+      BIRCH_FENCE_GATE:
+        compra: 36
+        venta: 0
+        tope: 0
+        ventana: 24h
+      BIRCH_DOOR:
+        compra: 60
+        venta: 0
+        tope: 0
+        ventana: 24h
+      BIRCH_TRAPDOOR:
+        compra: 46
+        venta: 0
+        tope: 0
+        ventana: 24h
+      BIRCH_SIGN:
+        compra: 30
+        venta: 0
+        tope: 0
+        ventana: 24h
+      BIRCH_HANGING_SIGN:
+        compra: 46
+        venta: 0
+        tope: 0
+        ventana: 24h
+      BIRCH_BUTTON:
+        compra: 12
+        venta: 0
+        tope: 0
+        ventana: 24h
+      BIRCH_PRESSURE_PLATE:
+        compra: 24
+        venta: 0
+        tope: 0
+        ventana: 24h
+      CHERRY_PLANKS:
+        compra: 30
+        venta: 0
+        tope: 0
+        ventana: 24h
+      CHERRY_STAIRS:
+        compra: 46
+        venta: 0
+        tope: 0
+        ventana: 24h
+      CHERRY_SLAB:
+        compra: 18
+        venta: 0
+        tope: 0
+        ventana: 24h
+      CHERRY_FENCE:
+        compra: 30
+        venta: 0
+        tope: 0
+        ventana: 24h
+      CHERRY_FENCE_GATE:
+        compra: 36
+        venta: 0
+        tope: 0
+        ventana: 24h
+      CHERRY_DOOR:
+        compra: 60
+        venta: 0
+        tope: 0
+        ventana: 24h
+      CHERRY_TRAPDOOR:
+        compra: 46
+        venta: 0
+        tope: 0
+        ventana: 24h
+      CHERRY_SIGN:
+        compra: 30
+        venta: 0
+        tope: 0
+        ventana: 24h
+      CHERRY_HANGING_SIGN:
+        compra: 46
+        venta: 0
+        tope: 0
+        ventana: 24h
+      CHERRY_BUTTON:
+        compra: 12
+        venta: 0
+        tope: 0
+        ventana: 24h
+      CHERRY_PRESSURE_PLATE:
+        compra: 24
+        venta: 0
+        tope: 0
+        ventana: 24h
+      CRIMSON_PLANKS:
+        compra: 30
+        venta: 0
+        tope: 0
+        ventana: 24h
+      CRIMSON_STAIRS:
+        compra: 46
+        venta: 0
+        tope: 0
+        ventana: 24h
+      CRIMSON_SLAB:
+        compra: 18
+        venta: 0
+        tope: 0
+        ventana: 24h
+      CRIMSON_FENCE:
+        compra: 30
+        venta: 0
+        tope: 0
+        ventana: 24h
+      CRIMSON_FENCE_GATE:
+        compra: 36
+        venta: 0
+        tope: 0
+        ventana: 24h
+      CRIMSON_DOOR:
+        compra: 60
+        venta: 0
+        tope: 0
+        ventana: 24h
+      CRIMSON_TRAPDOOR:
+        compra: 46
+        venta: 0
+        tope: 0
+        ventana: 24h
+      CRIMSON_SIGN:
+        compra: 30
+        venta: 0
+        tope: 0
+        ventana: 24h
+      CRIMSON_HANGING_SIGN:
+        compra: 46
+        venta: 0
+        tope: 0
+        ventana: 24h
+      CRIMSON_BUTTON:
+        compra: 12
+        venta: 0
+        tope: 0
+        ventana: 24h
+      CRIMSON_PRESSURE_PLATE:
+        compra: 24
+        venta: 0
+        tope: 0
+        ventana: 24h
+      DARK_OAK_PLANKS:
+        compra: 30
+        venta: 0
+        tope: 0
+        ventana: 24h
+      DARK_OAK_STAIRS:
+        compra: 46
+        venta: 0
+        tope: 0
+        ventana: 24h
+      DARK_OAK_SLAB:
+        compra: 18
+        venta: 0
+        tope: 0
+        ventana: 24h
+      DARK_OAK_FENCE:
+        compra: 30
+        venta: 0
+        tope: 0
+        ventana: 24h
+      DARK_OAK_FENCE_GATE:
+        compra: 36
+        venta: 0
+        tope: 0
+        ventana: 24h
+      DARK_OAK_DOOR:
+        compra: 60
+        venta: 0
+        tope: 0
+        ventana: 24h
+      DARK_OAK_TRAPDOOR:
+        compra: 46
+        venta: 0
+        tope: 0
+        ventana: 24h
+      DARK_OAK_SIGN:
+        compra: 30
+        venta: 0
+        tope: 0
+        ventana: 24h
+      DARK_OAK_HANGING_SIGN:
+        compra: 46
+        venta: 0
+        tope: 0
+        ventana: 24h
+      DARK_OAK_BUTTON:
+        compra: 12
+        venta: 0
+        tope: 0
+        ventana: 24h
+      DARK_OAK_PRESSURE_PLATE:
+        compra: 24
+        venta: 0
+        tope: 0
+        ventana: 24h
+      JUNGLE_PLANKS:
+        compra: 30
+        venta: 0
+        tope: 0
+        ventana: 24h
+      JUNGLE_STAIRS:
+        compra: 46
+        venta: 0
+        tope: 0
+        ventana: 24h
+      JUNGLE_SLAB:
+        compra: 18
+        venta: 0
+        tope: 0
+        ventana: 24h
+      JUNGLE_FENCE:
+        compra: 30
+        venta: 0
+        tope: 0
+        ventana: 24h
+      JUNGLE_FENCE_GATE:
+        compra: 36
+        venta: 0
+        tope: 0
+        ventana: 24h
+      JUNGLE_DOOR:
+        compra: 60
+        venta: 0
+        tope: 0
+        ventana: 24h
+      JUNGLE_TRAPDOOR:
+        compra: 46
+        venta: 0
+        tope: 0
+        ventana: 24h
+      JUNGLE_SIGN:
+        compra: 30
+        venta: 0
+        tope: 0
+        ventana: 24h
+      JUNGLE_HANGING_SIGN:
+        compra: 46
+        venta: 0
+        tope: 0
+        ventana: 24h
+      JUNGLE_BUTTON:
+        compra: 12
+        venta: 0
+        tope: 0
+        ventana: 24h
+      JUNGLE_PRESSURE_PLATE:
+        compra: 24
+        venta: 0
+        tope: 0
+        ventana: 24h
+      MANGROVE_PLANKS:
+        compra: 30
+        venta: 0
+        tope: 0
+        ventana: 24h
+      MANGROVE_STAIRS:
+        compra: 46
+        venta: 0
+        tope: 0
+        ventana: 24h
+      MANGROVE_SLAB:
+        compra: 18
+        venta: 0
+        tope: 0
+        ventana: 24h
+      MANGROVE_FENCE:
+        compra: 30
+        venta: 0
+        tope: 0
+        ventana: 24h
+      MANGROVE_FENCE_GATE:
+        compra: 36
+        venta: 0
+        tope: 0
+        ventana: 24h
+      MANGROVE_DOOR:
+        compra: 60
+        venta: 0
+        tope: 0
+        ventana: 24h
+      MANGROVE_TRAPDOOR:
+        compra: 46
+        venta: 0
+        tope: 0
+        ventana: 24h
+      MANGROVE_SIGN:
+        compra: 30
+        venta: 0
+        tope: 0
+        ventana: 24h
+      MANGROVE_HANGING_SIGN:
+        compra: 46
+        venta: 0
+        tope: 0
+        ventana: 24h
+      MANGROVE_BUTTON:
+        compra: 12
+        venta: 0
+        tope: 0
+        ventana: 24h
+      MANGROVE_PRESSURE_PLATE:
+        compra: 24
+        venta: 0
+        tope: 0
+        ventana: 24h
+      OAK_PLANKS:
+        compra: 30
+        venta: 0
+        tope: 0
+        ventana: 24h
+      OAK_STAIRS:
+        compra: 46
+        venta: 0
+        tope: 0
+        ventana: 24h
+      OAK_SLAB:
+        compra: 18
+        venta: 0
+        tope: 0
+        ventana: 24h
+      OAK_FENCE:
+        compra: 30
+        venta: 0
+        tope: 0
+        ventana: 24h
+      OAK_FENCE_GATE:
+        compra: 36
+        venta: 0
+        tope: 0
+        ventana: 24h
+      OAK_DOOR:
+        compra: 60
+        venta: 0
+        tope: 0
+        ventana: 24h
+      OAK_TRAPDOOR:
+        compra: 46
+        venta: 0
+        tope: 0
+        ventana: 24h
+      OAK_SIGN:
+        compra: 30
+        venta: 0
+        tope: 0
+        ventana: 24h
+      OAK_HANGING_SIGN:
+        compra: 46
+        venta: 0
+        tope: 0
+        ventana: 24h
+      OAK_BUTTON:
+        compra: 12
+        venta: 0
+        tope: 0
+        ventana: 24h
+      OAK_PRESSURE_PLATE:
+        compra: 24
+        venta: 0
+        tope: 0
+        ventana: 24h
+      PALE_OAK_PLANKS:
+        compra: 30
+        venta: 0
+        tope: 0
+        ventana: 24h
+      PALE_OAK_STAIRS:
+        compra: 46
+        venta: 0
+        tope: 0
+        ventana: 24h
+      PALE_OAK_SLAB:
+        compra: 18
+        venta: 0
+        tope: 0
+        ventana: 24h
+      PALE_OAK_FENCE:
+        compra: 30
+        venta: 0
+        tope: 0
+        ventana: 24h
+      PALE_OAK_FENCE_GATE:
+        compra: 36
+        venta: 0
+        tope: 0
+        ventana: 24h
+      PALE_OAK_DOOR:
+        compra: 60
+        venta: 0
+        tope: 0
+        ventana: 24h
+      PALE_OAK_TRAPDOOR:
+        compra: 46
+        venta: 0
+        tope: 0
+        ventana: 24h
+      PALE_OAK_SIGN:
+        compra: 30
+        venta: 0
+        tope: 0
+        ventana: 24h
+      PALE_OAK_HANGING_SIGN:
+        compra: 46
+        venta: 0
+        tope: 0
+        ventana: 24h
+      PALE_OAK_BUTTON:
+        compra: 12
+        venta: 0
+        tope: 0
+        ventana: 24h
+      PALE_OAK_PRESSURE_PLATE:
+        compra: 24
+        venta: 0
+        tope: 0
+        ventana: 24h
+      SPRUCE_PLANKS:
+        compra: 30
+        venta: 0
+        tope: 0
+        ventana: 24h
+      SPRUCE_STAIRS:
+        compra: 46
+        venta: 0
+        tope: 0
+        ventana: 24h
+      SPRUCE_SLAB:
+        compra: 18
+        venta: 0
+        tope: 0
+        ventana: 24h
+      SPRUCE_FENCE:
+        compra: 30
+        venta: 0
+        tope: 0
+        ventana: 24h
+      SPRUCE_FENCE_GATE:
+        compra: 36
+        venta: 0
+        tope: 0
+        ventana: 24h
+      SPRUCE_DOOR:
+        compra: 60
+        venta: 0
+        tope: 0
+        ventana: 24h
+      SPRUCE_TRAPDOOR:
+        compra: 46
+        venta: 0
+        tope: 0
+        ventana: 24h
+      SPRUCE_SIGN:
+        compra: 30
+        venta: 0
+        tope: 0
+        ventana: 24h
+      SPRUCE_HANGING_SIGN:
+        compra: 46
+        venta: 0
+        tope: 0
+        ventana: 24h
+      SPRUCE_BUTTON:
+        compra: 12
+        venta: 0
+        tope: 0
+        ventana: 24h
+      SPRUCE_PRESSURE_PLATE:
+        compra: 24
+        venta: 0
+        tope: 0
+        ventana: 24h
+      WARPED_PLANKS:
+        compra: 30
+        venta: 0
+        tope: 0
+        ventana: 24h
+      WARPED_STAIRS:
+        compra: 46
+        venta: 0
+        tope: 0
+        ventana: 24h
+      WARPED_SLAB:
+        compra: 18
+        venta: 0
+        tope: 0
+        ventana: 24h
+      WARPED_FENCE:
+        compra: 30
+        venta: 0
+        tope: 0
+        ventana: 24h
+      WARPED_FENCE_GATE:
+        compra: 36
+        venta: 0
+        tope: 0
+        ventana: 24h
+      WARPED_DOOR:
+        compra: 60
+        venta: 0
+        tope: 0
+        ventana: 24h
+      WARPED_TRAPDOOR:
+        compra: 46
+        venta: 0
+        tope: 0
+        ventana: 24h
+      WARPED_SIGN:
+        compra: 30
+        venta: 0
+        tope: 0
+        ventana: 24h
+      WARPED_HANGING_SIGN:
+        compra: 46
+        venta: 0
+        tope: 0
+        ventana: 24h
+      WARPED_BUTTON:
+        compra: 12
+        venta: 0
+        tope: 0
+        ventana: 24h
+      WARPED_PRESSURE_PLATE:
+        compra: 24
+        venta: 0
+        tope: 0
+        ventana: 24h
+      OAK_SHELF:
+        compra: 300
+        venta: 0
+        tope: 0
+        ventana: 24h
+      SPRUCE_SHELF:
+        compra: 300
+        venta: 0
+        tope: 0
+        ventana: 24h
+      BIRCH_SHELF:
+        compra: 300
+        venta: 0
+        tope: 0
+        ventana: 24h
+      JUNGLE_SHELF:
+        compra: 300
+        venta: 0
+        tope: 0
+        ventana: 24h
+      ACACIA_SHELF:
+        compra: 300
+        venta: 0
+        tope: 0
+        ventana: 24h
+      DARK_OAK_SHELF:
+        compra: 300
+        venta: 0
+        tope: 0
+        ventana: 24h
+      MANGROVE_SHELF:
+        compra: 300
+        venta: 0
+        tope: 0
+        ventana: 24h
+      CHERRY_SHELF:
+        compra: 300
+        venta: 0
+        tope: 0
+        ventana: 24h
+      PALE_OAK_SHELF:
+        compra: 300
+        venta: 0
+        tope: 0
+        ventana: 24h
+      BAMBOO_SHELF:
+        compra: 300
+        venta: 0
+        tope: 0
+        ventana: 24h
+      CRIMSON_SHELF:
+        compra: 300
+        venta: 0
+        tope: 0
+        ventana: 24h
+      WARPED_SHELF:
+        compra: 300
+        venta: 0
+        tope: 0
+        ventana: 24h
+      CHARCOAL:
+        compra: 0
+        venta: 1.5
+        tope: 0
+        ventana: 24h
+  Cultivos:
+    items:
+      WHEAT_SEEDS:
+        compra: 4
+        venta: 0
+        tope: 0
+        ventana: 24h
+      POTATO:
+        compra: 5
+        venta: 1
+        tope: 0
+        ventana: 24h
+      CARROT:
+        compra: 5
+        venta: 1
+        tope: 0
+        ventana: 24h
+      BEETROOT_SEEDS:
+        compra: 4
+        venta: 0
+        tope: 0
+        ventana: 24h
+      MELON_SEEDS:
+        compra: 6
+        venta: 0
+        tope: 0
+        ventana: 24h
+      PUMPKIN_SEEDS:
+        compra: 6
+        venta: 0
+        tope: 0
+        ventana: 24h
+      SUGAR_CANE:
+        compra: 10
+        venta: 1
+        tope: 0
+        ventana: 24h
+      CACTUS:
+        compra: 10
+        venta: 1
+        tope: 0
+        ventana: 24h
+      BAMBOO:
+        compra: 8
+        venta: 0.3
+        tope: 0
+        ventana: 24h
+      COCOA_BEANS:
+        compra: 12
+        venta: 2
+        tope: 0
+        ventana: 24h
+      NETHER_WART:
+        compra: 24
+        venta: 2
+        tope: 0
+        ventana: 24h
+      SWEET_BERRIES:
+        compra: 8
+        venta: 0.5
+        tope: 0
+        ventana: 24h
+      GLOW_BERRIES:
+        compra: 12
+        venta: 1
+        tope: 0
+        ventana: 24h
+      KELP:
+        compra: 6
+        venta: 0.3
+        tope: 0
+        ventana: 24h
+      SEA_PICKLE:
+        compra: 16
+        venta: 1
+        tope: 0
+        ventana: 24h
+      CHORUS_FRUIT:
+        compra: 40
+        venta: 3
+        tope: 0
+        ventana: 24h
+      WHEAT:
+        compra: 6
+        venta: 1
+        tope: 0
+        ventana: 24h
+      BEETROOT:
+        compra: 0
+        venta: 1
+        tope: 0
+        ventana: 24h
+      PUMPKIN:
+        compra: 0
+        venta: 2
+        tope: 0
+        ventana: 24h
+      HONEYCOMB:
+        compra: 0
+        venta: 5
+        tope: 0
+        ventana: 24h
+      HONEY_BOTTLE:
+        compra: 0
+        venta: 8
+        tope: 0
+        ventana: 24h
+  Marinos:
+    items:
+      PRISMARINE:
+        compra: 80
+        venta: 1
+        tope: 0
+        ventana: 24h
+      PRISMARINE_BRICKS:
+        compra: 100
+        venta: 2
+        tope: 0
+        ventana: 24h
+      DARK_PRISMARINE:
+        compra: 110
+        venta: 2
+        tope: 0
+        ventana: 24h
+      SPONGE:
+        compra: 600
+        venta: 12
+        tope: 0
+        ventana: 24h
+      WET_SPONGE:
+        compra: 500
+        venta: 12
+        tope: 0
+        ventana: 24h
+      TUBE_CORAL_BLOCK:
+        compra: 160
+        venta: 0
+        tope: 0
+        ventana: 24h
+      BRAIN_CORAL_BLOCK:
+        compra: 160
+        venta: 0
+        tope: 0
+        ventana: 24h
+      BUBBLE_CORAL_BLOCK:
+        compra: 160
+        venta: 0
+        tope: 0
+        ventana: 24h
+      FIRE_CORAL_BLOCK:
+        compra: 160
+        venta: 0
+        tope: 0
+        ventana: 24h
+      HORN_CORAL_BLOCK:
+        compra: 160
+        venta: 0
+        tope: 0
+        ventana: 24h
+      SEAGRASS:
+        compra: 30
+        venta: 0
+        tope: 0
+        ventana: 24h
+      NAUTILUS_SHELL:
+        compra: 800
+        venta: 40
+        tope: 0
+        ventana: 24h
+      HEART_OF_THE_SEA:
+        compra: 4000
+        venta: 0
+        tope: 0
+        ventana: 24h
+      CONDUIT:
+        compra: 10000
+        venta: 0
+        tope: 0
+        ventana: 24h
+      TURTLE_EGG:
+        compra: 300
+        venta: 0
+        tope: 0
+        ventana: 24h
+      COD:
+        compra: 0
+        venta: 2
+        tope: 0
+        ventana: 24h
+      SALMON:
+        compra: 0
+        venta: 2.5
+        tope: 0
+        ventana: 24h
+      TROPICAL_FISH:
+        compra: 0
+        venta: 3
+        tope: 0
+        ventana: 24h
+      PUFFERFISH:
+        compra: 0
+        venta: 4
+        tope: 0
+        ventana: 24h
+      INK_SAC:
+        compra: 0
+        venta: 2
+        tope: 0
+        ventana: 24h
+      GLOW_INK_SAC:
+        compra: 0
+        venta: 4
+        tope: 0
+        ventana: 24h
+      PRISMARINE_SHARD:
+        compra: 0
+        venta: 4
+        tope: 0
+        ventana: 24h
+      PRISMARINE_CRYSTALS:
+        compra: 0
+        venta: 3
+        tope: 0
+        ventana: 24h
+      TURTLE_SCUTE:
+        compra: 0
+        venta: 30
+        tope: 0
+        ventana: 24h
+  Flora:
+    items:
+      OAK_SAPLING:
+        compra: 50
+        venta: 0
+        tope: 0
+        ventana: 24h
+      DANDELION:
+        compra: 20
+        venta: 0
+        tope: 0
+        ventana: 24h
+      POPPY:
+        compra: 20
+        venta: 0.3
+        tope: 0
+        ventana: 24h
+      BLUE_ORCHID:
+        compra: 40
+        venta: 0
+        tope: 0
+        ventana: 24h
+      ALLIUM:
+        compra: 40
+        venta: 0
+        tope: 0
+        ventana: 24h
+      AZURE_BLUET:
+        compra: 40
+        venta: 0
+        tope: 0
+        ventana: 24h
+      RED_TULIP:
+        compra: 30
+        venta: 0
+        tope: 0
+        ventana: 24h
+      ORANGE_TULIP:
+        compra: 30
+        venta: 0
+        tope: 0
+        ventana: 24h
+      OXEYE_DAISY:
+        compra: 40
+        venta: 0
+        tope: 0
+        ventana: 24h
+      CORNFLOWER:
+        compra: 40
+        venta: 0
+        tope: 0
+        ventana: 24h
+      LILY_OF_THE_VALLEY:
+        compra: 50
+        venta: 0
+        tope: 0
+        ventana: 24h
+      SUNFLOWER:
+        compra: 60
+        venta: 0
+        tope: 0
+        ventana: 24h
+      LILAC:
+        compra: 60
+        venta: 0
+        tope: 0
+        ventana: 24h
+      ROSE_BUSH:
+        compra: 60
+        venta: 0
+        tope: 0
+        ventana: 24h
+      PEONY:
+        compra: 60
+        venta: 0
+        tope: 0
+        ventana: 24h
+      MOSS_BLOCK:
+        compra: 80
+        venta: 0.5
+        tope: 0
+        ventana: 24h
+      ACACIA_LEAVES:
+        compra: 20
+        venta: 0
+        tope: 0
+        ventana: 24h
+      AZALEA_LEAVES:
+        compra: 20
+        venta: 0
+        tope: 0
+        ventana: 24h
+      AZALEA:
+        compra: 60
+        venta: 0
+        tope: 0
+        ventana: 24h
+      BIG_DRIPLEAF:
+        compra: 60
+        venta: 0
+        tope: 0
+        ventana: 24h
+      BIRCH_LEAVES:
+        compra: 20
+        venta: 0
+        tope: 0
+        ventana: 24h
+      BRAIN_CORAL_FAN:
+        compra: 120
+        venta: 0
+        tope: 0
+        ventana: 24h
+      BRAIN_CORAL:
+        compra: 120
+        venta: 0
+        tope: 0
+        ventana: 24h
+      BROWN_MUSHROOM:
+        compra: 40
+        venta: 1
+        tope: 0
+        ventana: 24h
+      BUBBLE_CORAL_FAN:
+        compra: 120
+        venta: 0
+        tope: 0
+        ventana: 24h
+      BUBBLE_CORAL:
+        compra: 120
+        venta: 0
+        tope: 0
+        ventana: 24h
+      BUSH:
+        compra: 30
+        venta: 0
+        tope: 0
+        ventana: 24h
+      CACTUS_FLOWER:
+        compra: 50
+        venta: 0
+        tope: 0
+        ventana: 24h
+      CHERRY_LEAVES:
+        compra: 20
+        venta: 0
+        tope: 0
+        ventana: 24h
+      CLOSED_EYEBLOSSOM:
+        compra: 50
+        venta: 0
+        tope: 0
+        ventana: 24h
+      CRIMSON_FUNGUS:
+        compra: 30
+        venta: 0
+        tope: 0
+        ventana: 24h
+      CRIMSON_NYLIUM:
+        compra: 60
+        venta: 0.5
+        tope: 0
+        ventana: 24h
+      CRIMSON_ROOTS:
+        compra: 30
+        venta: 0
+        tope: 0
+        ventana: 24h
+      DARK_OAK_LEAVES:
+        compra: 20
+        venta: 0
+        tope: 0
+        ventana: 24h
+      DEAD_BRAIN_CORAL_BLOCK:
+        compra: 80
+        venta: 0
+        tope: 0
+        ventana: 24h
+      DEAD_BRAIN_CORAL_FAN:
+        compra: 50
+        venta: 0
+        tope: 0
+        ventana: 24h
+      DEAD_BRAIN_CORAL:
+        compra: 50
+        venta: 0
+        tope: 0
+        ventana: 24h
+      DEAD_BUBBLE_CORAL_BLOCK:
+        compra: 80
+        venta: 0
+        tope: 0
+        ventana: 24h
+      DEAD_BUBBLE_CORAL_FAN:
+        compra: 50
+        venta: 0
+        tope: 0
+        ventana: 24h
+      DEAD_BUBBLE_CORAL:
+        compra: 50
+        venta: 0
+        tope: 0
+        ventana: 24h
+      DEAD_BUSH:
+        compra: 24
+        venta: 0
+        tope: 0
+        ventana: 24h
+      DEAD_FIRE_CORAL_BLOCK:
+        compra: 80
+        venta: 0
+        tope: 0
+        ventana: 24h
+      DEAD_FIRE_CORAL_FAN:
+        compra: 50
+        venta: 0
+        tope: 0
+        ventana: 24h
+      DEAD_FIRE_CORAL:
+        compra: 50
+        venta: 0
+        tope: 0
+        ventana: 24h
+      DEAD_HORN_CORAL_BLOCK:
+        compra: 80
+        venta: 0
+        tope: 0
+        ventana: 24h
+      DEAD_HORN_CORAL_FAN:
+        compra: 50
+        venta: 0
+        tope: 0
+        ventana: 24h
+      DEAD_HORN_CORAL:
+        compra: 50
+        venta: 0
+        tope: 0
+        ventana: 24h
+      DEAD_TUBE_CORAL_BLOCK:
+        compra: 80
+        venta: 0
+        tope: 0
+        ventana: 24h
+      DEAD_TUBE_CORAL_FAN:
+        compra: 50
+        venta: 0
+        tope: 0
+        ventana: 24h
+      DEAD_TUBE_CORAL:
+        compra: 50
+        venta: 0
+        tope: 0
+        ventana: 24h
+      FERN:
+        compra: 30
+        venta: 0
+        tope: 0
+        ventana: 24h
+      FIRE_CORAL_FAN:
+        compra: 120
+        venta: 0
+        tope: 0
+        ventana: 24h
+      FIRE_CORAL:
+        compra: 120
+        venta: 0
+        tope: 0
+        ventana: 24h
+      FIREFLY_BUSH:
+        compra: 50
+        venta: 0
+        tope: 0
+        ventana: 24h
+      FLOWERING_AZALEA_LEAVES:
+        compra: 20
+        venta: 0
+        tope: 0
+        ventana: 24h
+      FLOWERING_AZALEA:
+        compra: 60
+        venta: 0
+        tope: 0
+        ventana: 24h
+      GLOW_LICHEN:
+        compra: 30
+        venta: 0
+        tope: 0
+        ventana: 24h
+      GOLDEN_DANDELION:
+        compra: 50
+        venta: 0
+        tope: 0
+        ventana: 24h
+      HANGING_ROOTS:
+        compra: 30
+        venta: 0
+        tope: 0
+        ventana: 24h
+      HORN_CORAL_FAN:
+        compra: 120
+        venta: 0
+        tope: 0
+        ventana: 24h
+      HORN_CORAL:
+        compra: 120
+        venta: 0
+        tope: 0
+        ventana: 24h
+      JUNGLE_LEAVES:
+        compra: 20
+        venta: 0
+        tope: 0
+        ventana: 24h
+      LARGE_FERN:
+        compra: 30
+        venta: 0
+        tope: 0
+        ventana: 24h
+      LEAF_LITTER:
+        compra: 30
+        venta: 0
+        tope: 0
+        ventana: 24h
+      LILY_PAD:
+        compra: 30
+        venta: 0
+        tope: 0
+        ventana: 24h
+      MANGROVE_LEAVES:
+        compra: 20
+        venta: 0
+        tope: 0
+        ventana: 24h
+      MANGROVE_PROPAGULE:
+        compra: 50
+        venta: 0
+        tope: 0
+        ventana: 24h
+      MANGROVE_ROOTS:
+        compra: 50
+        venta: 0
+        tope: 0
+        ventana: 24h
+      MUDDY_MANGROVE_ROOTS:
+        compra: 50
+        venta: 0
+        tope: 0
+        ventana: 24h
+      NETHER_SPROUTS:
+        compra: 30
+        venta: 0
+        tope: 0
+        ventana: 24h
+      OAK_LEAVES:
+        compra: 20
+        venta: 0
+        tope: 0
+        ventana: 24h
+      OPEN_EYEBLOSSOM:
+        compra: 50
+        venta: 0
+        tope: 0
+        ventana: 24h
+      PALE_HANGING_MOSS:
+        compra: 30
+        venta: 0
+        tope: 0
+        ventana: 24h
+      PALE_MOSS_BLOCK:
+        compra: 80
+        venta: 0
+        tope: 0
+        ventana: 24h
+      PALE_OAK_LEAVES:
+        compra: 20
+        venta: 0
+        tope: 0
+        ventana: 24h
+      PALE_OAK_SAPLING:
+        compra: 50
+        venta: 0
+        tope: 0
+        ventana: 24h
+      PINK_PETALS:
+        compra: 30
+        venta: 0
+        tope: 0
+        ventana: 24h
+      PINK_TULIP:
+        compra: 30
+        venta: 0
+        tope: 0
+        ventana: 24h
+      PITCHER_PLANT:
+        compra: 50
+        venta: 0
+        tope: 0
+        ventana: 24h
+      RED_MUSHROOM:
+        compra: 40
+        venta: 1
+        tope: 0
+        ventana: 24h
+      SCULK_VEIN:
+        compra: 30
+        venta: 0
+        tope: 0
+        ventana: 24h
+      SHORT_DRY_GRASS:
+        compra: 30
+        venta: 0
+        tope: 0
+        ventana: 24h
+      SHORT_GRASS:
+        compra: 30
+        venta: 0
+        tope: 0
+        ventana: 24h
+      SMALL_DRIPLEAF:
+        compra: 60
+        venta: 0
+        tope: 0
+        ventana: 24h
+      SPORE_BLOSSOM:
+        compra: 50
+        venta: 0
+        tope: 0
+        ventana: 24h
+      SPRUCE_LEAVES:
+        compra: 20
+        venta: 0
+        tope: 0
+        ventana: 24h
+      TALL_DRY_GRASS:
+        compra: 30
+        venta: 0
+        tope: 0
+        ventana: 24h
+      TALL_GRASS:
+        compra: 30
+        venta: 0
+        tope: 0
+        ventana: 24h
+      TORCHFLOWER:
+        compra: 50
+        venta: 0
+        tope: 0
+        ventana: 24h
+      TUBE_CORAL_FAN:
+        compra: 120
+        venta: 0
+        tope: 0
+        ventana: 24h
+      TUBE_CORAL:
+        compra: 120
+        venta: 0
+        tope: 0
+        ventana: 24h
+      TWISTING_VINES:
+        compra: 30
+        venta: 0
+        tope: 0
+        ventana: 24h
+      VINE:
+        compra: 30
+        venta: 0
+        tope: 0
+        ventana: 24h
+      WARPED_FUNGUS:
+        compra: 30
+        venta: 0
+        tope: 0
+        ventana: 24h
+      WARPED_NYLIUM:
+        compra: 60
+        venta: 0.5
+        tope: 0
+        ventana: 24h
+      WARPED_ROOTS:
+        compra: 30
+        venta: 0
+        tope: 0
+        ventana: 24h
+      WEEPING_VINES:
+        compra: 30
+        venta: 0
+        tope: 0
+        ventana: 24h
+      WHITE_TULIP:
+        compra: 30
+        venta: 0
+        tope: 0
+        ventana: 24h
+      WILDFLOWERS:
+        compra: 30
+        venta: 0
+        tope: 0
+        ventana: 24h
+      WITHER_ROSE:
+        compra: 50
+        venta: 0
+        tope: 0
+        ventana: 24h
+  Herreria:
+    items:
+      LEATHER_HELMET:
+        compra: 0
+        venta: 0
+        tope: 0
+        ventana: 24h
+      CHAINMAIL_HELMET:
+        compra: 0
+        venta: 0
+        tope: 0
+        ventana: 24h
+      IRON_HELMET:
+        compra: 0
+        venta: 0
+        tope: 0
+        ventana: 24h
+      GOLDEN_HELMET:
+        compra: 0
+        venta: 0
+        tope: 0
+        ventana: 24h
+      DIAMOND_HELMET:
+        compra: 0
+        venta: 0
+        tope: 0
+        ventana: 24h
+      NETHERITE_HELMET:
+        compra: 0
+        venta: 0
+        tope: 0
+        ventana: 24h
+      LEATHER_CHESTPLATE:
+        compra: 0
+        venta: 0
+        tope: 0
+        ventana: 24h
+      CHAINMAIL_CHESTPLATE:
+        compra: 0
+        venta: 0
+        tope: 0
+        ventana: 24h
+      IRON_CHESTPLATE:
+        compra: 0
+        venta: 0
+        tope: 0
+        ventana: 24h
+      GOLDEN_CHESTPLATE:
+        compra: 0
+        venta: 0
+        tope: 0
+        ventana: 24h
+      DIAMOND_CHESTPLATE:
+        compra: 0
+        venta: 0
+        tope: 0
+        ventana: 24h
+      NETHERITE_CHESTPLATE:
+        compra: 0
+        venta: 0
+        tope: 0
+        ventana: 24h
+      LEATHER_LEGGINGS:
+        compra: 0
+        venta: 0
+        tope: 0
+        ventana: 24h
+      CHAINMAIL_LEGGINGS:
+        compra: 0
+        venta: 0
+        tope: 0
+        ventana: 24h
+      IRON_LEGGINGS:
+        compra: 0
+        venta: 0
+        tope: 0
+        ventana: 24h
+      GOLDEN_LEGGINGS:
+        compra: 0
+        venta: 0
+        tope: 0
+        ventana: 24h
+      DIAMOND_LEGGINGS:
+        compra: 0
+        venta: 0
+        tope: 0
+        ventana: 24h
+      NETHERITE_LEGGINGS:
+        compra: 0
+        venta: 0
+        tope: 0
+        ventana: 24h
+      LEATHER_BOOTS:
+        compra: 0
+        venta: 0
+        tope: 0
+        ventana: 24h
+      CHAINMAIL_BOOTS:
+        compra: 0
+        venta: 0
+        tope: 0
+        ventana: 24h
+      IRON_BOOTS:
+        compra: 0
+        venta: 0
+        tope: 0
+        ventana: 24h
+      GOLDEN_BOOTS:
+        compra: 0
+        venta: 0
+        tope: 0
+        ventana: 24h
+      DIAMOND_BOOTS:
+        compra: 0
+        venta: 0
+        tope: 0
+        ventana: 24h
+      NETHERITE_BOOTS:
+        compra: 0
+        venta: 0
+        tope: 0
+        ventana: 24h
+      WOODEN_SWORD:
+        compra: 12
+        venta: 0
+        tope: 0
+        ventana: 24h
+      STONE_SWORD:
+        compra: 36
+        venta: 0
+        tope: 0
+        ventana: 24h
+      GOLDEN_SWORD:
+        compra: 50
+        venta: 0
+        tope: 0
+        ventana: 24h
+      IRON_SWORD:
+        compra: 280
+        venta: 0
+        tope: 0
+        ventana: 24h
+      DIAMOND_SWORD:
+        compra: 560
+        venta: 0
+        tope: 0
+        ventana: 24h
+      WOODEN_AXE:
+        compra: 18
+        venta: 0
+        tope: 0
+        ventana: 24h
+      STONE_AXE:
+        compra: 54
+        venta: 0
+        tope: 0
+        ventana: 24h
+      GOLDEN_AXE:
+        compra: 74
+        venta: 0
+        tope: 0
+        ventana: 24h
+      IRON_AXE:
+        compra: 420
+        venta: 0
+        tope: 0
+        ventana: 24h
+      DIAMOND_AXE:
+        compra: 840
+        venta: 0
+        tope: 0
+        ventana: 24h
+  Spawners:
+    items:
+      'SPAWNER:ZOMBIE':
+        compra: 25000
+        venta: 0
+        tope: 0
+        ventana: 24h
+      'SPAWNER:HUSK':
+        compra: 25000
+        venta: 0
+        tope: 0
+        ventana: 24h
+      'SPAWNER:DROWNED':
+        compra: 35000
+        venta: 0
+        tope: 0
+        ventana: 24h
+      'SPAWNER:SKELETON':
+        compra: 50000
+        venta: 0
+        tope: 0
+        ventana: 24h
+      'SPAWNER:STRAY':
+        compra: 50000
+        venta: 0
+        tope: 0
+        ventana: 24h
+      'SPAWNER:SPIDER':
+        compra: 40000
+        venta: 0
+        tope: 0
+        ventana: 24h
+      'SPAWNER:CAVE_SPIDER':
+        compra: 40000
+        venta: 0
+        tope: 0
+        ventana: 24h
+      'SPAWNER:CREEPER':
+        compra: 70000
+        venta: 0
+        tope: 0
+        ventana: 24h
+      'SPAWNER:ENDERMAN':
+        compra: 60000
+        venta: 0
+        tope: 0
+        ventana: 24h
+      'SPAWNER:BLAZE':
+        compra: 85000
+        venta: 0
+        tope: 0
+        ventana: 24h
+      'SPAWNER:WITHER_SKELETON':
+        compra: 150000
+        venta: 0
+        tope: 0
+        ventana: 24h
+      'SPAWNER:ZOMBIFIED_PIGLIN':
+        compra: 40000
+        venta: 0
+        tope: 0
+        ventana: 24h
+      'SPAWNER:PIGLIN':
+        compra: 80000
+        venta: 0
+        tope: 0
+        ventana: 24h
+      'SPAWNER:PIGLIN_BRUTE':
+        compra: 90000
+        venta: 0
+        tope: 0
+        ventana: 24h
+      'SPAWNER:HOGLIN':
+        compra: 80000
+        venta: 0
+        tope: 0
+        ventana: 24h
+      'SPAWNER:MAGMA_CUBE':
+        compra: 100000
+        venta: 0
+        tope: 0
+        ventana: 24h
+      'SPAWNER:SLIME':
+        compra: 120000
+        venta: 0
+        tope: 0
+        ventana: 24h
+      'SPAWNER:WITCH':
+        compra: 150000
+        venta: 0
+        tope: 0
+        ventana: 24h
+      'SPAWNER:GHAST':
+        compra: 250000
+        venta: 0
+        tope: 0
+        ventana: 24h
+      'SPAWNER:PHANTOM':
+        compra: 45000
+        venta: 0
+        tope: 0
+        ventana: 24h
+      'SPAWNER:GUARDIAN':
+        compra: 120000
+        venta: 0
+        tope: 0
+        ventana: 24h
+      'SPAWNER:SHULKER':
+        compra: 500000
+        venta: 0
+        tope: 0
+        ventana: 24h
+      'SPAWNER:IRON_GOLEM':
+        compra: 350000
+        venta: 0
+        tope: 0
+        ventana: 24h
+      'SPAWNER:PIG':
+        compra: 40000
+        venta: 0
+        tope: 0
+        ventana: 24h
+      'SPAWNER:COW':
+        compra: 60000
+        venta: 0
+        tope: 0
+        ventana: 24h
+      'SPAWNER:MOOSHROOM':
+        compra: 60000
+        venta: 0
+        tope: 0
+        ventana: 24h
+      'SPAWNER:SHEEP':
+        compra: 50000
+        venta: 0
+        tope: 0
+        ventana: 24h
+      'SPAWNER:CHICKEN':
+        compra: 50000
+        venta: 0
+        tope: 0
+        ventana: 24h
+      'SPAWNER:RABBIT':
+        compra: 40000
+        venta: 0
+        tope: 0
+        ventana: 24h
+      'SPAWNER:HORSE':
+        compra: 40000
+        venta: 0
+        tope: 0
+        ventana: 24h
+      'SPAWNER:WOLF':
+        compra: 40000
+        venta: 0
+        tope: 0
+        ventana: 24h
+      'SPAWNER:PANDA':
+        compra: 40000
+        venta: 0
+        tope: 0
+        ventana: 24h
+      'SPAWNER:PARROT':
+        compra: 40000
+        venta: 0
+        tope: 0
+        ventana: 24h
+      'SPAWNER:SQUID':
+        compra: 50000
+        venta: 0
+        tope: 0
+        ventana: 24h

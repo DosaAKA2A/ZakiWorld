@@ -34,9 +34,9 @@ import net.ederus.edm.tooltip.TooltipPlugin;
  * Antes eran tres plugins y un fallo solo se llevaba el suyo; aqui el aislamiento
  * hay que ponerlo a mano o volveriamos atras en fiabilidad.
  */
-public final class EDMPlugin extends JavaPlugin {
+public class EDMPlugin extends JavaPlugin {
 
-    public static final String VERSION = "1.62.0";
+    public static final String VERSION = "1.63.0";
 
     private final Map<String, Module> modulos = new LinkedHashMap<>();
     private final List<String> fallidos = new ArrayList<>();
@@ -77,18 +77,38 @@ public final class EDMPlugin extends JavaPlugin {
         chat = new EntradaChat(this);
         getServer().getPluginManager().registerEvents(chat, this);
 
-        arrancar(new RipPlugin(this));
-        arrancar(new AnomalyPlugin(this));
-        arrancar(new EderusMain(this));
-        arrancar(new TiendaPlugin(this));
-        arrancar(new CoinflipPlugin(this));
-        arrancar(new TrollPlugin(this));
-        arrancar(new GodItemsPlugin(this));
-        arrancar(new DungeonLootPlugin(this));
-        arrancar(new FlexPlugin(this));
-        arrancar(new net.ederus.edm.biomas.BiomasPlugin(this));
-        arrancar(new net.ederus.edm.mundos.MundosPlugin(this));
-        arrancar(new net.ederus.edm.minas.MinasPlugin(this));
+        for (Module m : modulosBase()) arrancar(m);
+        modulosOpcionales();
+
+        registrarComando();
+        registrarPlaceholders();
+        banner();
+    }
+
+    /**
+     * Los modulos que arrancan siempre (si el config no los apaga). La build
+     * de OneBlock (EDMOneBlock, perfil `oneblock` de Maven) lo acorta a la
+     * tienda, la vitrina y los biomas: ese servidor no tiene MMOItems ni el
+     * resto de lo que los demas modulos dan por hecho.
+     */
+    protected List<Module> modulosBase() {
+        return List.of(
+                new RipPlugin(this),
+                new AnomalyPlugin(this),
+                new EderusMain(this),
+                new TiendaPlugin(this),
+                new CoinflipPlugin(this),
+                new TrollPlugin(this),
+                new GodItemsPlugin(this),
+                new DungeonLootPlugin(this),
+                new FlexPlugin(this),
+                new net.ederus.edm.biomas.BiomasPlugin(this),
+                new net.ederus.edm.mundos.MundosPlugin(this),
+                new net.ederus.edm.minas.MinasPlugin(this));
+    }
+
+    /** Los que solo arrancan si esta el plugin del que dependen. */
+    protected void modulosOpcionales() {
         /* Quests es softdepend: sin el instalado, la clase del modulo de misiones
          * ni siquiera carga (referencia TaskType de Quests) y tumbaba TODO el
          * nucleo en el arranque. En Ederus siempre esta; esto protege cualquier
@@ -113,10 +133,6 @@ public final class EDMPlugin extends JavaPlugin {
         } else {
             getLogger().info("BattlePass no esta instalado: el modulo bp queda apagado.");
         }
-
-        registrarComando();
-        registrarPlaceholders();
-        banner();
     }
 
     /* Los %edm_...% de PlaceholderAPI. La clase Placeholders extiende una suya, asi

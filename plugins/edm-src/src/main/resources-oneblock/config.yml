@@ -1,0 +1,24 @@
+# EDM para OneBlock - la build recortada del nucleo de Ederus
+#
+# Solo llevan tres modulos, cada uno con su carpeta y su config en plugins/EDM/:
+#   tienda/   la tienda propia (/shop), con precio por jugador
+#   flex/     la vitrina de cada jugador (/flex)
+#   biomas/   Lethal Biomes, climas por zona (/lbiomes)
+#
+# El resto de modulos de EDM no existen en esta build: no hay Rip, Anomaly,
+# GodItems ni minas, y sus comandos no se registran.
+
+modulos:
+  tienda: true
+  flex: true
+  biomas: true
+
+# Bitacoras de lectura: un fichero de texto por modulo y por dia en
+# plugins/EDM/logs/, con una linea por suceso y la hora delante. Estan para
+# LEERLAS cuando algo se tuerce y el log del servidor no dice lo suficiente.
+logs:
+  # En false no se escribe ninguna y no se toca el disco.
+  activos: true
+
+  # Se borran solos los ficheros con mas dias que esto. 0 = no borrar nada.
+  dias: 14

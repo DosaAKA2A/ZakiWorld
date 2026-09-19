@@ -58,7 +58,10 @@ mercado:
   # cañas de azucar ya bajan el precio un 26%; con 300.000 hacian falta 30.000.
   # Vale para los 968 articulos a la vez y en proporcion: como se mide en
   # dinero, un item caro aguanta pocas unidades y uno barato muchas.
-  presupuesto: 20000
+  # En OneBlock los precios son unas 2,5 veces mas bajos que en Survival y el
+  # presupuesto va a escala: 8.000 son unas 130 unidades de diamante o 8.000
+  # de piedra antes de bajar a mitad de camino del suelo.
+  presupuesto: 8000
 
   # LA RED DE SEGURIDAD. La venta nunca puede pasar de este porcentaje de la
   # compra efectiva del mismo item, pase lo que pase con los multiplicadores.
