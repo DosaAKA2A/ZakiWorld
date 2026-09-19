@@ -50,11 +50,49 @@ public final class MenuMinas implements Listener {
     private static final int F_ICONO = 4, F_NOMBRE = 19, F_ZONA = 20, F_BLOQUES = 21, F_INTERVALO = 22,
             F_UMBRAL = 23, F_SPAWN = 24, F_PERMISO = 25, F_REINICIAR = 31, F_IR = 40, F_VOLVER = 49, F_BORRAR = 53;
     // bloques
-    private static final int B_AYUDA = 45, B_VOLVER = 49;
+    private static final int B_AYUDA = 45, B_VOLVER = 49, B_ANADIR = 53;
+    // catalogo
+    private static final int C_ATRAS = 45, C_ESCRIBIR = 47, C_VOLVER = 49, C_ADELANTE = 53;
+    /** Las 45 casillas de arriba del catalogo: cinco filas enteras. */
+    private static final int C_POR_PAGINA = 45;
+
+    /**
+     * Lo que suele llevar una mina, en orden de "de menos a mas": piedras, tierras,
+     * menas de arriba y de deepslate, menas del Nether y bloques de mineral. Van
+     * como texto y se resuelven al vuelo, para que un bloque que esta version de
+     * Minecraft no conozca se salte sin tumbar el modulo.
+     */
+    private static final String[] CATALOGO = {
+            "STONE", "COBBLESTONE", "DEEPSLATE", "COBBLED_DEEPSLATE", "ANDESITE", "DIORITE", "GRANITE",
+            "TUFF", "CALCITE", "DRIPSTONE_BLOCK", "BASALT", "BLACKSTONE", "NETHERRACK", "END_STONE",
+            "SANDSTONE", "RED_SANDSTONE", "SAND", "RED_SAND", "GRAVEL", "DIRT", "CLAY", "OBSIDIAN",
+            "COAL_ORE", "DEEPSLATE_COAL_ORE", "COPPER_ORE", "DEEPSLATE_COPPER_ORE",
+            "IRON_ORE", "DEEPSLATE_IRON_ORE", "GOLD_ORE", "DEEPSLATE_GOLD_ORE",
+            "REDSTONE_ORE", "DEEPSLATE_REDSTONE_ORE", "LAPIS_ORE", "DEEPSLATE_LAPIS_ORE",
+            "DIAMOND_ORE", "DEEPSLATE_DIAMOND_ORE", "EMERALD_ORE", "DEEPSLATE_EMERALD_ORE",
+            "NETHER_QUARTZ_ORE", "NETHER_GOLD_ORE", "ANCIENT_DEBRIS",
+            "SULFUR_ORE", "CINNABAR_ORE", "DEEPSLATE_SULFUR_ORE", "DEEPSLATE_CINNABAR_ORE",
+            "COAL_BLOCK", "RAW_COPPER_BLOCK", "RAW_IRON_BLOCK", "RAW_GOLD_BLOCK", "COPPER_BLOCK",
+            "IRON_BLOCK", "GOLD_BLOCK", "LAPIS_BLOCK", "REDSTONE_BLOCK", "DIAMOND_BLOCK",
+            "EMERALD_BLOCK", "NETHERITE_BLOCK", "AMETHYST_BLOCK", "QUARTZ_BLOCK",
+            "GLOWSTONE", "SEA_LANTERN", "PRISMARINE", "MAGMA_BLOCK", "SOUL_SAND", "SOUL_SOIL",
+            "ICE", "PACKED_ICE", "BLUE_ICE", "SNOW_BLOCK", "MOSS_BLOCK", "SCULK", "BONE_BLOCK",
+            "OAK_LOG", "SPRUCE_LOG", "DARK_OAK_LOG", "CRIMSON_STEM", "WARPED_STEM",
+            "MUD", "PACKED_MUD", "TERRACOTTA", "HONEYCOMB_BLOCK", "SLIME_BLOCK", "HAY_BLOCK",
+            "MELON", "PUMPKIN", "SPONGE", "BEDROCK"};
+
+    private static List<Material> catalogo() {
+        List<Material> out = new ArrayList<>();
+        for (String n : CATALOGO) {
+            Material m = Material.matchMaterial(n);
+            if (m != null && m.isBlock()) out.add(m);
+        }
+        return out;
+    }
     // jugador
     private static final int J_AYUDA = 49;
 
-    private enum Tipo { LISTA, FICHA, BLOQUES, JUGADOR }
+    private enum Tipo { LISTA, FICHA, BLOQUES, CATALOGO, JUGADOR }
 
     private final MinasPlugin plugin;
 
@@ -66,6 +104,8 @@ public final class MenuMinas implements Listener {
         private final Tipo tipo;
         private final String mina;
         private Inventory inv;
+        /** La pagina del catalogo. */
+        private int pagina;
         /** Que hay en cada casilla del cuerpo: minas (lista, jugador) o bloques (mezcla). */
         private final List<Object> cuerpo = new ArrayList<>();
 
@@ -117,6 +157,20 @@ public final class MenuMinas implements Listener {
         Vista v = new Vista(Tipo.BLOQUES, m.id());
         v.inv = Bukkit.createInventory(v, TAM, plugin.titulo(m.titulo().append(Estilo.texto(" · bloques", MinasPlugin.TITULO))));
         pintarBloques(v, m);
+        p.openInventory(v.inv);
+    }
+
+    /** El catalogo de bloques para añadir a la mezcla. */
+    public void abrirCatalogo(Player p, String id, int pagina) {
+        Mina m = plugin.minas().de(id);
+        if (m == null) {
+            abrirLista(p);
+            return;
+        }
+        Vista v = new Vista(Tipo.CATALOGO, m.id());
+        v.pagina = pagina;
+        v.inv = Bukkit.createInventory(v, TAM, plugin.titulo(m.titulo().append(Estilo.texto(" · añadir bloque", MinasPlugin.TITULO))));
+        pintarCatalogo(v, m);
         p.openInventory(v.inv);
     }
 
@@ -323,12 +377,56 @@ public final class MenuMinas implements Listener {
                 List.of(
                         Estilo.linea("Partes en total", String.valueOf(m.partesTotal()), NamedTextColor.WHITE),
                         Estilo.vacio(),
-                        Estilo.texto("Clic en un bloque de TU inventario y", Estilo.APAGADO),
-                        Estilo.texto("entra en la mezcla con 10 partes. El", Estilo.APAGADO),
+                        Estilo.texto("Cada bloque entra con 10 partes. El", Estilo.APAGADO),
                         Estilo.texto("porcentaje es partes entre el total, así", Estilo.APAGADO),
-                        Estilo.texto("que subir uno no obliga a bajar el resto.", Estilo.APAGADO)), false));
+                        Estilo.texto("que subir uno no obliga a bajar el resto.", Estilo.APAGADO),
+                        Estilo.vacio(),
+                        Estilo.texto("También entra cualquier bloque de TU", Estilo.APAGADO),
+                        Estilo.texto("inventario con un clic sobre él.", Estilo.APAGADO)), false));
         v.inv.setItem(B_VOLVER, MenuUtil.icon(Material.ARROW, MenuUtil.title("Volver", Estilo.APAGADO),
                 List.of(Estilo.texto("A la ficha de " + m.nombrePlano() + ".", Estilo.APAGADO)), false));
+        v.inv.setItem(B_ANADIR, MenuUtil.icon(Material.EMERALD, MenuUtil.title("Añadir bloque", MinasPlugin.MARCA),
+                List.of(
+                        Estilo.texto("Un catálogo con piedras, menas y bloques", Estilo.APAGADO),
+                        Estilo.texto("de mineral; o escribe el nombre de", Estilo.APAGADO),
+                        Estilo.texto("cualquier bloque por el chat.", Estilo.APAGADO),
+                        Estilo.vacio(),
+                        Estilo.accion("Clic para elegir", MinasPlugin.MARCA)), true));
+    }
+
+    private void pintarCatalogo(Vista v, Mina m) {
+        fondo(v.inv);
+        v.cuerpo.clear();
+        List<Material> todos = catalogo();
+        int paginas = Math.max(1, (todos.size() + C_POR_PAGINA - 1) / C_POR_PAGINA);
+        v.pagina = Math.max(0, Math.min(v.pagina, paginas - 1));
+        int desde = v.pagina * C_POR_PAGINA;
+        for (int i = 0; i < C_POR_PAGINA && desde + i < todos.size(); i++) {
+            Material mat = todos.get(desde + i);
+            boolean ya = m.partes().containsKey(mat);
+            v.cuerpo.add(mat);
+            List<Component> lore = ya
+                    ? List.of(Estilo.linea("Ya está", Math.round(m.porcentaje(mat)) + "% de la mina", MinasPlugin.CLARO),
+                            Estilo.vacio(), Estilo.accion("Clic: +10 partes", MinasPlugin.MARCA))
+                    : List.of(Estilo.accion("Clic: entra con 10 partes", MinasPlugin.MARCA));
+            v.inv.setItem(i, MenuUtil.icon(mat, Component.translatable(mat.translationKey(), MinasPlugin.MARCA), lore, ya));
+        }
+        if (v.pagina > 0) {
+            v.inv.setItem(C_ATRAS, MenuUtil.icon(Material.ARROW, MenuUtil.title("Página anterior", Estilo.APAGADO),
+                    List.of(Estilo.texto((v.pagina) + " de " + paginas, Estilo.APAGADO)), false));
+        }
+        if (v.pagina < paginas - 1) {
+            v.inv.setItem(C_ADELANTE, MenuUtil.icon(Material.ARROW, MenuUtil.title("Página siguiente", Estilo.APAGADO),
+                    List.of(Estilo.texto((v.pagina + 2) + " de " + paginas, Estilo.APAGADO)), false));
+        }
+        v.inv.setItem(C_ESCRIBIR, MenuUtil.icon(Material.NAME_TAG, MenuUtil.title("Escribir el nombre", MinasPlugin.MARCA),
+                List.of(
+                        Estilo.texto("Cualquier bloque por su nombre interno:", Estilo.APAGADO),
+                        Estilo.texto("coal_ore, deepslate, amethyst_block...", Estilo.APAGADO),
+                        Estilo.vacio(),
+                        Estilo.accion("Clic para escribirlo por el chat", MinasPlugin.MARCA)), false));
+        v.inv.setItem(C_VOLVER, MenuUtil.icon(Material.ARROW, MenuUtil.title("Volver", Estilo.APAGADO),
+                List.of(Estilo.texto("A la mezcla de " + m.nombrePlano() + ".", Estilo.APAGADO)), false));
     }
 
     /* ---------------------------------------------------------------- textos */
@@ -409,6 +507,7 @@ public final class MenuMinas implements Listener {
             case LISTA -> clicLista(e, v, p);
             case FICHA -> clicFicha(e, v, p);
             case BLOQUES -> clicBloques(e, v, p);
+            case CATALOGO -> clicCatalogo(e, v, p);
             default -> { }
         }
     }
@@ -597,6 +696,10 @@ public final class MenuMinas implements Listener {
             abrirFicha(p, m.id());
             return;
         }
+        if (slot == B_ANADIR) {
+            abrirCatalogo(p, m.id(), 0);
+            return;
+        }
         int i = indiceDe(slot);
         if (i < 0 || i >= v.cuerpo.size()) return;
         Material mat = (Material) v.cuerpo.get(i);
@@ -609,6 +712,47 @@ public final class MenuMinas implements Listener {
         }
         plugin.minas().guardar();
         pintarBloques(v, m);
+    }
+
+    private void clicCatalogo(InventoryClickEvent e, Vista v, Player p) {
+        Mina m = plugin.minas().de(v.mina);
+        if (m == null) {
+            abrirLista(p);
+            return;
+        }
+        if (e.getClickedInventory() != e.getInventory()) return;
+        int slot = e.getSlot();
+        switch (slot) {
+            case C_VOLVER -> abrirBloques(p, m.id());
+            case C_ATRAS -> {
+                v.pagina--;
+                pintarCatalogo(v, m);
+            }
+            case C_ADELANTE -> {
+                v.pagina++;
+                pintarCatalogo(v, m);
+            }
+            case C_ESCRIBIR -> {
+                plugin.di(p, "pide-bloque", "Escribe el nombre del bloque (coal_ore, deepslate...). (cancelar para salir)");
+                plugin.core().chat().pedir(p, texto -> {
+                    Material mat = Material.matchMaterial(texto.trim().toLowerCase(Locale.ROOT).replace(' ', '_'));
+                    if (mat == null || !mat.isBlock()) {
+                        plugin.di(p, "no-es-bloque", "Eso no se puede colocar como bloque.");
+                    } else {
+                        m.poner(mat, m.partes().getOrDefault(mat, 0) + 10);
+                        plugin.minas().guardar();
+                    }
+                    abrirBloques(p, m.id());
+                }, () -> abrirBloques(p, m.id()));
+            }
+            default -> {
+                if (slot < 0 || slot >= v.cuerpo.size()) return;
+                Material mat = (Material) v.cuerpo.get(slot);
+                m.poner(mat, m.partes().getOrDefault(mat, 0) + 10);
+                plugin.minas().guardar();
+                pintarCatalogo(v, m);
+            }
+        }
     }
 
     @EventHandler
