@@ -69,6 +69,15 @@ public final class EntradaChat implements Listener {
         if (System.currentTimeMillis() > p.caduca()) return;
 
         e.setCancelled(true);
+        respondidas.put(e.getPlayer().getUniqueId(), System.currentTimeMillis());
+        /* Cancelar no basta: el plugin de chat del servidor pinta la linea igual
+         * (escucha en su propia prioridad y no mira si esta cancelado). Sin
+         * espectadores no hay a quien pintarsela, y en MONITOR se remata. Si el
+         * conjunto no se dejara tocar, la respuesta tiene que llegar igual. */
+        try {
+            e.viewers().clear();
+        } catch (Throwable ignored) {
+        }
         String texto = PlainTextComponentSerializer.plainText().serialize(e.message()).trim();
         Player jugador = e.getPlayer();
         plugin.getServer().getScheduler().runTask(plugin, () -> {
@@ -81,8 +90,23 @@ public final class EntradaChat implements Listener {
         });
     }
 
+    /** Quien acaba de responder, para que ni un plugin que descancele el evento la muestre. */
+    private final Map<UUID, Long> respondidas = new ConcurrentHashMap<>();
+
+    @EventHandler(priority = EventPriority.MONITOR)
+    public void alRematar(AsyncChatEvent e) {
+        Long cuando = respondidas.remove(e.getPlayer().getUniqueId());
+        if (cuando == null || System.currentTimeMillis() - cuando > 2000) return;
+        e.setCancelled(true);
+        try {
+            e.viewers().clear();
+        } catch (Throwable ignored) {
+        }
+    }
+
     @EventHandler
     public void alSalir(PlayerQuitEvent e) {
         esperando.remove(e.getPlayer().getUniqueId());
+        respondidas.remove(e.getPlayer().getUniqueId());
     }
 }

@@ -3127,11 +3127,11 @@ public final class AnomalyRegistry {
         @Override
         public List<String> threat() {
             return List.of(
-                    "DIOS: pelea a CINCO fases y NO cambia de fase",
-                    "hasta que cureis su flor con pociones. Exige",
-                    "que todos lo miren, devuelve entero el dano",
-                    "que le haceis y cada golpe suyo que entra lo",
-                    "hace pegar mas fuerte. No le deis la espalda.");
+                    "DIOS: flota y no pega; el bosque pega por el.",
+                    "CINCO fases y NO cambia de fase hasta que le",
+                    "tireis pociones de curacion a su flor (la II",
+                    "vale por dos). Exige que todos lo miren y",
+                    "devuelve entero el dano que le haceis.");
         }
 
         @Override
@@ -3201,9 +3201,9 @@ public final class AnomalyRegistry {
             add(list, "rz_latido", "Latido que Empuja", 2, 230, 45, 4,
                     "Tres latidos seguidos que apartan a todo el que esté pegado.",
                     AnomalyRegistry.icon("CREAKING_HEART", "REDSTONE_BLOCK"), f -> raiz(f).latidoQueEmpuja());
-            add(list, "rz_embestida", "Embestida de Corteza", 3, 250, 75, 5,
-                    "Carga recta y encarada; lleva por delante al que no se aparte.",
-                    AnomalyRegistry.icon("PALE_OAK_LOG", "OAK_LOG"), f -> raiz(f).embestidaDeCorteza());
+            add(list, "rz_embestida", "Lanza de Raíz", 3, 250, 40, 5,
+                    "Una raíz recta sale disparada hacia el más cercano; lo que pille en la línea, fuera.",
+                    AnomalyRegistry.icon("PALE_OAK_LOG", "OAK_LOG"), f -> raiz(f).lanzaDeRaiz());
             add(list, "rz_sujetan", "Raíces que Sujetan", 3, 280, 65, 4,
                     "Clava a cuatro en el sitio y les cobra mientras dura.",
                     AnomalyRegistry.icon("HANGING_ROOTS", "CHAIN"), f -> raiz(f).raicesQueSujetan());

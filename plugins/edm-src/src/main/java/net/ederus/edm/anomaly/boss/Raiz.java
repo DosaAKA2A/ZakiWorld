@@ -11,6 +11,7 @@ import net.ederus.edm.comun.Fx;
 import net.ederus.edm.anomaly.core.Glow;
 import org.bukkit.Location;
 import org.bukkit.Material;
+import org.bukkit.entity.BlockDisplay;
 import org.bukkit.entity.Creaking;
 import org.bukkit.entity.Display;
 import org.bukkit.entity.Entity;
@@ -28,6 +29,8 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
+import java.util.HashSet;
 import java.util.UUID;
 
 /**
@@ -57,6 +60,10 @@ import java.util.UUID;
  * El cuerpo que se ve es el creaking; el que pelea es un zombi invisible debajo, como
  * en Rabby y Alba. Un creaking de verdad se queda clavado en cuanto alguien lo mira
  * (es su gracia en vanilla) y eso, en una pelea, seria un jefe que no se mueve.
+ *
+ * ROTTEN NO CAMINA NI PEGA (desde 1.62.0, a peticion de Dosa): flota clavado en su
+ * sitio, sin IA, y todo lo que hace lo hace el bosque por el. Los golpes de contacto
+ * son de sus crujidos, que se mueven y pegan aunque los miren.
  */
 public final class Raiz extends BossFight {
 
@@ -103,6 +110,18 @@ public final class Raiz extends BossFight {
     /** Las piezas de la flor, para limpiarlas cuando acabe. */
     private final List<Entity> flor = new ArrayList<>();
     private Location florEn;
+    /** La corola: cerrada al plantarla, abierta cuando lleva la mitad. */
+    private ItemDisplay florCorola;
+    /** Hasta que tick dura el ritual, para decir cuanto queda. */
+    private long ritualHasta;
+
+    /** Donde flota: el punto del suelo sobre el que oscila. */
+    private Location flotaBase;
+    /** Mientras se hunde (Hundirse y Salir) se queda bajo tierra hasta este tick. */
+    private long hundidoHasta;
+    /** Los crujidos que pelean por el (id -> su golpe): se mueven y pegan aunque los miren. */
+    private final Map<UUID, Double> esbirros = new HashMap<>();
+    private final Map<UUID, Long> esbirroPego = new HashMap<>();
 
     /** Copias del Jardin Falso: se mueven solo cuando nadie las mira. */
     private final Map<UUID, Location> copias = new HashMap<>();
@@ -142,12 +161,19 @@ public final class Raiz extends BossFight {
 
         /* El que pelea: un zombi invisible. El creaking de verdad se congela en
          * cuanto alguien lo mira, asi que no puede ser el cuerpo de combate. */
-        boss = world().spawn(at, Zombie.class, z -> {
+        /* A ras de suelo de verdad: el punto de apertura puede venir a media altura,
+         * y como ya no hay gravedad que lo baje, flotar() lo dejaria ahi toda la pelea. */
+        flotaBase = Fx.ground(at, 8);
+        boss = world().spawn(flotaBase.clone().add(0, 1.4, 0), Zombie.class, z -> {
             z.setPersistent(false);
             z.setShouldBurnInDay(false);
             z.setInvisible(true);
             z.setSilent(true);
             z.setBaby(false);
+            /* Sin IA y sin gravedad: no camina ni pega. Se queda flotando donde nace
+             * y flotar() lo mece; todo su repertorio es magia del bosque. */
+            z.setAI(false);
+            z.setGravity(false);
             Compat.setAttribute(z, "scale", 2.0);
             Compat.setAttribute(z, "attack_damage", 13);
             Compat.setAttribute(z, "movement_speed", 0.27);
@@ -166,6 +192,7 @@ public final class Raiz extends BossFight {
         Creaking cuerpo = world().spawn(at, Creaking.class, c -> {
             c.setPersistent(false);
             c.setAI(false);
+            c.setGravity(false);
             c.setSilent(false);
             c.setInvulnerable(true);
             c.setCollidable(false);
@@ -240,6 +267,8 @@ public final class Raiz extends BossFight {
     @Override
     protected void ambient() {
         if (!alive()) return;
+        flotar();
+        if (!combateCongelado && ticks() % 4 == 0) tickEsbirros();
 
         // Latido del corazon palido: se acelera al perder vida.
         int pulso = 30 + (int) (30 * healthFraction());
@@ -293,7 +322,7 @@ public final class Raiz extends BossFight {
     public void hit(Player p, double amount) {
         // Un golpe de cero sigue siendo un golpe (animacion, empujon, evento): mientras
         // la Mirada congela el combate, no se pega y punto.
-        if (combateCongelado) return;
+        if (combateCongelado || ritualActivo) return;
         double extra = 1 + odio * 0.12;
         super.hit(p, amount * extra);
         if (odio > 0 && odio < 12 && ticks() != odioTick) {
@@ -361,7 +390,6 @@ public final class Raiz extends BossFight {
             }
         }, () -> {
             combateCongelado = false;
-            if (alive()) boss.setAI(true);
             int caidos = 0;
             for (Player p : targets(60)) {
                 if (mirandoAlJefe(p)) continue;
@@ -489,7 +517,8 @@ public final class Raiz extends BossFight {
         if (ritualCumplido) return true;
         // Tras un ritual fallido se cura un 20%; si un reventon lo habia dejado muy
         // por debajo del umbral, sin este descanso abriria otro ritual en el acto.
-        if (!ritualActivo && ticks() >= ritualNoAntesDe) abrirRitual(to);
+        // Tampoco en mitad de la Mirada: la flor distraeria de mirarlo y eso son 2000 de daño.
+        if (!ritualActivo && !combateCongelado && ticks() >= ritualNoAntesDe) abrirRitual(to);
         return false;
     }
 
@@ -499,41 +528,64 @@ public final class Raiz extends BossFight {
         ritualCumplido = false;
         faseDestino = destino;
         dosis = 0;
-        dosisPedidas = 6 + destino * 2;
+        /* Lo que pide la flor depende de cuantos pelean: una pocion, o la mitad de los
+         * presentes redondeando hacia arriba. La de curacion II vale por dos. */
+        int peleando = Math.max(1, targets(40).size());
+        dosisPedidas = Math.max(1, (int) Math.ceil(peleando / 2.0));
 
         boss.setAI(false);
         boss.setInvulnerable(true);
         busyFor(20 * 45);
+        ritualHasta = ticks() + 20 * 45;
 
         Location c = center();
-        florEn = Fx.ground(c.clone().add(3.5, 0, 0), 8);
-        plantarFlor(florEn);
+        /* OJO con el orden: limpiar primero y fijar florEn DESPUES de plantar. La
+         * version anterior lo hacia al reves y limpiarFlor() dejaba florEn en null
+         * nada mas nacer: al tick siguiente el ritual se cerraba como fallido y el
+         * jefe se curaba un 20%. Era "la flor desaparece al instante". */
+        limpiarFlor();
+        Location sitio = Fx.ground(c.clone().add(4.0, 0, 0), 8);
+        plantarFlor(sitio);
+        florEn = sitio;
 
         titleNear(Component.text("LA FLOR", ACCENT, TextDecoration.BOLD),
-                Component.text("Curadla con pociones arrojadizas", NamedTextColor.GRAY));
-        announce(Component.text("Se derrumba. La flor pide " + dosisPedidas + " dosis."));
+                Component.text("Tirad pociones de curación sobre ella", NamedTextColor.GRAY));
+        announce(Component.text("Se derrumba. La flor pide " + dosisPedidas
+                + (dosisPedidas == 1 ? " poción de curación." : " pociones de curación; la de nivel II vale por dos.")));
         soundAt(c, "entity.creaking.deactivate", 2.0f, 0.5f);
-        soundAt(florEn, "block.eyeblossom_open.long", 1.6f, 0.8f);
+        soundAt(sitio, "block.eyeblossom_open.long", 1.6f, 0.8f);
     }
 
-    /** La flor: un tallo de displays y una corola que se abre segun lleve curacion. */
+    /**
+     * La flor: un tallo grueso de roble palido, una corola enorme que brilla y una
+     * columna de luz hasta el cielo. Tiene que verse desde cualquier punto de la
+     * arena, con niebla, con oscuridad o con veinte personas encima.
+     */
     private void plantarFlor(Location donde) {
-        limpiarFlor();
-        for (int i = 0; i < 4; i++) {
-            ItemDisplay tallo = Fx.itemDisplay(world(), donde.clone().add(0, 0.5 + i * 0.7, 0),
-                    new ItemStack(Material.PALE_OAK_LOG), 1.1f);
+        for (int i = 0; i < 6; i++) {
+            ItemDisplay tallo = Fx.itemDisplay(world(), donde.clone().add(0, 0.6 + i * 0.85, 0),
+                    new ItemStack(Material.PALE_OAK_LOG), 1.5f);
             if (tallo != null) {
                 markMinion(tallo);
                 flor.add(tallo);
+                Glow.apply(tallo, NamedTextColor.GREEN);
             }
         }
-        ItemDisplay corola = Fx.itemDisplay(world(), donde.clone().add(0, 3.4, 0),
-                new ItemStack(Material.CLOSED_EYEBLOSSOM), 2.6f);
-        if (corola != null) {
-            markMinion(corola);
-            flor.add(corola);
+        florCorola = Fx.itemDisplay(world(), donde.clone().add(0, 6.2, 0),
+                new ItemStack(Material.CLOSED_EYEBLOSSOM), 6.0f);
+        if (florCorola != null) {
+            /* Una flor es un sprite plano: fija, de lado no se ve. Encarada siempre
+             * al que mira, se ve igual desde cualquier punto de la arena. */
+            florCorola.setBillboard(Display.Billboard.CENTER);
+            markMinion(florCorola);
+            flor.add(florCorola);
+            Glow.apply(florCorola, NamedTextColor.GREEN);
         }
-        Glow.apply(flor.isEmpty() ? null : flor.get(flor.size() - 1), NamedTextColor.GREEN);
+        BlockDisplay luz = Fx.lightColumn(world(), donde.clone(), Material.LIME_STAINED_GLASS, 0.45f, 48f);
+        if (luz != null) {
+            markMinion(luz);
+            flor.add(luz);
+        }
     }
 
     /**
@@ -548,33 +600,45 @@ public final class Raiz extends BossFight {
         // Las pociones arrojadizas que caen cerca cuentan como dosis. Se miran las
         // entidades en vuelo en vez de escuchar el evento: el jefe no tiene listener
         // propio, y asi la flor funciona igual la lance quien la lance.
-        for (Entity e : world().getNearbyEntities(florEn, 3.5, 4.0, 3.5)) {
+        for (Entity e : world().getNearbyEntities(florEn, 4.5, 8.0, 4.5)) {
             if (!(e instanceof ThrownPotion pocion)) continue;
-            if (!cura(pocion.getItem())) continue;
+            int valor = dosisDe(pocion.getItem());
+            if (valor <= 0) continue;
             e.remove();
-            dosis++;
-            Compat.spawn(world(), Compat.HEART, florEn.clone().add(0, 3.4, 0), 14, 0.6, 0.5, 0.6, 0.02);
-            soundAt(florEn, "block.eyeblossom_open.long", 1.2f, 0.9f + dosis * 0.05f);
-            announce(Component.text("La flor: " + dosis + " de " + dosisPedidas + "."));
+            dosis += valor;
+            Compat.spawn(world(), Compat.HEART, florEn.clone().add(0, 6.2, 0), 24, 1.2, 0.8, 1.2, 0.03);
+            Compat.spawn(world(), Compat.HAPPY_VILLAGER, florEn.clone().add(0, 3.0, 0), 30, 0.8, 2.5, 0.8, 0.02);
+            soundAt(florEn, "block.eyeblossom_open.long", 1.4f, 0.9f + dosis * 0.08f);
+            soundAt(florEn, "entity.player.levelup", 0.8f, 1.6f);
+            announce(Component.text("La flor lleva " + Math.min(dosis, dosisPedidas) + " de " + dosisPedidas + "."));
+            if (florCorola != null && florCorola.isValid() && dosis * 2 >= dosisPedidas) {
+                florCorola.setItemStack(new ItemStack(Material.OPEN_EYEBLOSSOM));
+            }
             if (dosis >= dosisPedidas) {
                 cerrarRitual(true);
                 return;
             }
         }
 
-        // Pinta lo que lleva: el aro crece con las dosis.
+        // Se ve desde lejos: el aro del suelo crece con lo que lleva, y por la columna
+        // suben chispas todo el rato.
         if (ticks() % 5 == 0) {
-            double r = 1.0 + 2.5 * (dosis / (double) dosisPedidas);
-            Fx.ring(florEn.clone().add(0, 0.2, 0), r, 20, p ->
-                    Compat.spawn(world(), Compat.DUST, p, 1, 0, 0, 0, 0, Compat.dust(AMBAR, 1.4f)));
-            Compat.spawn(world(), Compat.SPORE_BLOSSOM_AIR, florEn.clone().add(0, 3.4, 0), 3,
-                    0.5, 0.4, 0.5, 0.01);
+            double r = 2.0 + 3.0 * Math.min(1.0, dosis / (double) dosisPedidas);
+            Fx.ring(florEn.clone().add(0, 0.2, 0), r, 26, p ->
+                    Compat.spawn(world(), Compat.DUST, p, 1, 0, 0, 0, 0, Compat.dust(AMBAR, 1.6f)));
+            Compat.spawn(world(), Compat.END_ROD, florEn.clone().add(0, 1 + random.nextDouble() * 9, 0), 3,
+                    0.3, 0.6, 0.3, 0.01);
+            Compat.spawn(world(), Compat.SPORE_BLOSSOM_AIR, florEn.clone().add(0, 6.2, 0), 4,
+                    1.2, 0.8, 1.2, 0.01);
         }
-        if (ticks() % 40 == 0) {
+        if (ticks() % 20 == 0) {
+            int quedan = (int) Math.max(0, (ritualHasta - ticks()) / 20);
             for (Player p : targets(60)) {
-                p.sendActionBar(Component.text("La flor  " + dosis + " / " + dosisPedidas, ACCENT));
+                p.sendActionBar(Component.text("LA FLOR  " + Math.min(dosis, dosisPedidas) + " / " + dosisPedidas, ACCENT)
+                        .append(Component.text("   " + quedan + " s", NamedTextColor.GRAY)));
             }
         }
+        if (ticks() % 40 == 0) soundAt(florEn, "block.creaking_heart.idle", 1.4f, 1.3f);
 
         // Cuarenta y cinco segundos y ni uno mas.
         if (!busy()) cerrarRitual(false);
@@ -587,7 +651,6 @@ public final class Raiz extends BossFight {
     private void cerrarRitual(boolean cumplido) {
         ritualActivo = false;
         boss.setInvulnerable(false);
-        if (alive()) boss.setAI(true);
         // El plazo de 45 s del ritual se pidio con busyFor; si la flor se completo
         // antes, no hay que esperar el resto sin hacer nada.
         unbusy();
@@ -595,7 +658,7 @@ public final class Raiz extends BossFight {
 
         if (cumplido) {
             ritualCumplido = true;
-            Location desde = florEn == null ? center() : florEn.clone().add(0, 3.4, 0);
+            Location desde = florEn == null ? center() : florEn.clone().add(0, 6.2, 0);
             Location hasta = center().add(0, 1.4, 0);
             Fx.beam(desde, hasta, 0.4, p ->
                     Compat.spawn(world(), Compat.DUST, p, 2, 0.05, 0.05, 0.05, 0,
@@ -618,22 +681,103 @@ public final class Raiz extends BossFight {
         limpiarFlor();
     }
 
-    private static boolean cura(ItemStack item) {
-        if (item == null) return false;
-        if (!(item.getItemMeta() instanceof org.bukkit.inventory.meta.PotionMeta pm)) return false;
+    /** Cuanto vale una pocion para la flor: curacion I una dosis, curacion II dos; lo demas nada. */
+    private static int dosisDe(ItemStack item) {
+        if (item == null) return 0;
+        if (!(item.getItemMeta() instanceof org.bukkit.inventory.meta.PotionMeta pm)) return 0;
         String base = pm.getBasePotionType() == null ? "" : pm.getBasePotionType().name();
-        if (base.contains("HEALING") || base.contains("REGEN")) return true;
+        if (base.equals("STRONG_HEALING")) return 2;
+        if (base.contains("HEALING")) return 1;
         for (PotionEffect e : pm.getCustomEffects()) {
-            if (e.getType().equals(PotionEffectType.INSTANT_HEALTH)
-                    || e.getType().equals(PotionEffectType.REGENERATION)) return true;
+            if (e.getType().equals(PotionEffectType.INSTANT_HEALTH)) return e.getAmplifier() >= 1 ? 2 : 1;
         }
-        return false;
+        return 0;
     }
 
     private void limpiarFlor() {
         for (Entity e : flor) Fx.safeRemove(e);
         flor.clear();
+        florCorola = null;
         florEn = null;
+    }
+
+    // ------------------------------------------------------------ flotar y esbirros
+
+    /**
+     * El punto del suelo bajo el jefe. Como flota a 1,4 bloques, todo lo que golpea
+     * el SUELO (barridos, cercos, telegrafias, ondas) se ancla aqui y no en center():
+     * playersNear() mide contra los pies, y desde el cuerpo un radio corto no alcanza
+     * a nadie.
+     */
+    private Location suelo() {
+        return flotaBase != null ? flotaBase.clone() : Fx.ground(loc(), 6);
+    }
+
+    /**
+     * ROTTEN no camina ni pega: flota clavado en su sitio con un vaiven suave y de
+     * cara al mas cercano. Durante el ritual se derrumba hasta el suelo. El creaking
+     * de encima lo sigue solo (tickShell).
+     */
+    private void flotar() {
+        if (flotaBase == null || boss == null || !boss.isValid()) return;
+        double alto = ticks() < hundidoHasta ? -2.6
+                : ritualActivo ? 0.1
+                : 1.4 + Math.sin(ticks() / 14.0) * 0.25;
+        Location l = flotaBase.clone().add(0, alto, 0);
+        Player cerca = ticks() % 5 == 0 ? Fx.nearest(l, 40) : null;
+        if (cerca != null) {
+            Vector d = cerca.getLocation().toVector().subtract(l.toVector());
+            l.setYaw((float) Math.toDegrees(Math.atan2(-d.getX(), d.getZ())));
+        } else {
+            l.setYaw(boss.getLocation().getYaw());
+        }
+        l.setPitch(0);
+        boss.teleport(l);
+        boss.setVelocity(new Vector(0, 0, 0));
+    }
+
+    /**
+     * Los crujidos pelean de verdad. Un creaking de vanilla se clava en cuanto alguien
+     * lo mira, y con cinco jugadores encima no se moveria nunca: aqui se le empuja a
+     * mano hacia el mas cercano y, cuando lo tiene al lado, pega. Cuando nadie lo mira,
+     * su propia IA hace el resto.
+     */
+    private void tickEsbirros() {
+        for (UUID id : new ArrayList<>(esbirros.keySet())) {
+            Entity e = world().getEntity(id);
+            if (!(e instanceof Creaking cr) || !cr.isValid() || cr.isDead()) {
+                esbirros.remove(id);
+                esbirroPego.remove(id);
+                continue;
+            }
+            Player cerca = Fx.nearest(cr.getLocation(), 30);
+            if (cerca == null || !Fx.isFightable(cerca)) continue;
+            Vector paso = cerca.getLocation().toVector().subtract(cr.getLocation().toVector());
+            if (paso.length() <= 2.4) {
+                long ultimo = esbirroPego.getOrDefault(id, -100L);
+                if (ticks() - ultimo >= 24) {
+                    esbirroPego.put(id, ticks());
+                    // Por el padre a proposito: el hit() de ROTTEN se calla durante el
+                    // ritual y no alimenta el ODIO, y el golpe de un crujido es del crujido.
+                    super.hit(cerca, esbirros.get(id));
+                    try {
+                        cr.swingMainHand();
+                    } catch (Throwable ignored) {
+                    }
+                    soundAt(cr.getLocation(), "entity.creaking.attack", 1.3f, 0.8f);
+                }
+                continue;
+            }
+            Location siguiente = Fx.ground(cr.getLocation().add(paso.normalize().multiply(0.8)), 2);
+            siguiente.setYaw((float) Math.toDegrees(Math.atan2(-paso.getX(), paso.getZ())));
+            siguiente.setPitch(0);
+            cr.teleport(siguiente);
+        }
+    }
+
+    /** Apunta a un crujido como esbirro que pelea, con el golpe que da. */
+    private void esbirro(Creaking cr, double golpe) {
+        esbirros.put(cr.getUniqueId(), golpe);
     }
 
     // =========================================================================
@@ -664,7 +808,7 @@ public final class Raiz extends BossFight {
     /** Resina que pega los pies al suelo y no deja correr. */
     public void resinaPegajosa() {
         if (!alive()) return;
-        Location c = center();
+        Location c = suelo();
         announce(Component.text("Suelta resina."));
         animate(60, tick -> {
             if (tick % 10 != 0) return;
@@ -714,7 +858,7 @@ public final class Raiz extends BossFight {
     /** Se planta y golpea el suelo: onda que empuja a todos. */
     public void pisotonDeRaiz() {
         if (!alive()) return;
-        Location c = center();
+        Location c = suelo();
         Fx.telegraph(world(), c, 8, CORTEZA);
         busyFor(35);
         later(30, () -> {
@@ -753,7 +897,7 @@ public final class Raiz extends BossFight {
     /** Llama a dos crujidos menores que pelean por el. */
     public void llamadaDelBosque() {
         if (!alive()) return;
-        Location c = center();
+        Location c = suelo();
         for (int i = 0; i < 2; i++) {
             double a = Math.PI * 2 * i / 2 + random.nextDouble();
             Location sitio = Fx.ground(c.clone().add(Math.cos(a) * 5, 0, Math.sin(a) * 5), 6);
@@ -767,6 +911,7 @@ public final class Raiz extends BossFight {
                 });
                 cria.customName(Component.text("Crujido", ACCENT));
                 markMinion(cria);
+                esbirro(cria, 9);
                 Glow.apply(cria, NamedTextColor.DARK_GREEN);
                 Compat.spawn(world(), Compat.CHERRY_LEAVES, sitio, 30, 0.6, 1.0, 0.6, 0.03);
                 soundAt(sitio, "entity.creaking.spawn", 1.3f, 0.9f);
@@ -797,7 +942,7 @@ public final class Raiz extends BossFight {
     /** Copias de si mismo que solo avanzan cuando nadie las mira. */
     public void jardinFalso() {
         if (!alive()) return;
-        Location c = center();
+        Location c = suelo();
         for (int i = 0; i < 3; i++) {
             double a = Math.PI * 2 * i / 3;
             Location sitio = Fx.ground(c.clone().add(Math.cos(a) * 8, 0, Math.sin(a) * 8), 6);
@@ -863,7 +1008,7 @@ public final class Raiz extends BossFight {
         if (!alive()) return;
         Player objetivo = nearestTargets(1).stream().findFirst().orElse(null);
         if (objetivo == null) return;
-        Location base = center();
+        Location base = suelo();
         Vector dir = objetivo.getLocation().toVector().subtract(base.toVector()).setY(0).normalize();
         Location punta = base.clone().add(dir.clone().multiply(11));
 
@@ -901,7 +1046,7 @@ public final class Raiz extends BossFight {
     /** Cuatro anillos de espinas que se cierran sobre el centro. */
     public void cercoDeEspinas() {
         if (!alive()) return;
-        Location c = center();
+        Location c = suelo();
         busyFor(90);
         for (int i = 0; i < 4; i++) {
             double r = 12 - i * 2.4;
@@ -948,14 +1093,14 @@ public final class Raiz extends BossFight {
     /** Su corazón late fuerte y empuja a todo el que esté pegado. */
     public void latidoQueEmpuja() {
         if (!alive()) return;
-        Location c = center();
+        Location c = suelo();
         for (int i = 0; i < 3; i++) {
             later(i * 14, () -> {
                 if (!alive()) return;
-                Fx.shockwave(world(), center(), 6, Compat.DUST, 3);
+                Fx.shockwave(world(), c, 6, Compat.DUST, 3);
                 for (Player p : targets(6)) {
                     hit(p, 9);
-                    push(p, p.getLocation().toVector().subtract(center().toVector())
+                    push(p, p.getLocation().toVector().subtract(c.toVector())
                             .normalize().multiply(1.4).setY(0.5));
                 }
                 soundAt(c, "block.creaking_heart.idle", 1.8f, 0.5f);
@@ -968,28 +1113,34 @@ public final class Raiz extends BossFight {
     //  FASE III  ·  EL ODIO
     // =========================================================================
 
-    /** Carga recta y encarada: si no te apartas, te lleva por delante. */
-    public void embestidaDeCorteza() {
+    /** Una raiz recta sale disparada hacia el mas cercano: lo que pille en la linea, fuera. */
+    public void lanzaDeRaiz() {
         if (!alive()) return;
         Player objetivo = nearestTargets(1).stream().findFirst().orElse(null);
         if (objetivo == null) return;
-        Vector dir = objetivo.getLocation().toVector().subtract(center().toVector()).setY(0).normalize();
-        busyFor(70);
-        announce(Component.text("Embiste."));
-        soundAt(center(), "entity.creaking.angry", 1.6f, 0.6f);
-
-        animate(50, tick -> {
-            if (!alive()) throw net.ederus.edm.anomaly.core.Stop.now();
-            Location antes = boss.getLocation();
-            boss.setRotation((float) Math.toDegrees(Math.atan2(-dir.getX(), dir.getZ())), 0);
-            boss.teleport(antes.clone().add(dir.clone().multiply(0.55)));
-            Compat.spawn(world(), Compat.DUST, boss.getLocation(), 4, 0.4, 0.3, 0.4, 0,
-                    Compat.dust(CORTEZA, 1.6f));
-            for (Player p : targets(2.6)) {
-                hit(p, 24);
-                push(p, dir.clone().multiply(1.6).setY(0.5));
-            }
-        }, () -> soundAt(center(), "block.pale_oak_wood.hit", 1.5f, 0.6f));
+        Location base = suelo();
+        Vector dir = objetivo.getLocation().toVector().subtract(base.toVector()).setY(0);
+        if (dir.lengthSquared() < 0.01) return;
+        dir.normalize();
+        Location punta = base.clone().add(dir.clone().multiply(14));
+        busyFor(40);
+        announce(Component.text("Apunta con una raíz."));
+        soundAt(base, "entity.creaking.angry", 1.6f, 0.6f);
+        Fx.beam(base.clone().add(0, 0.3, 0), punta.clone().add(0, 0.3, 0), 0.7, p ->
+                Compat.spawn(world(), Compat.DUST, p, 1, 0, 0, 0, 0, Compat.dust(CORTEZA, 1.2f)));
+        later(22, () -> {
+            if (!alive()) return;
+            Set<UUID> ya = new HashSet<>();
+            Fx.beam(base.clone().add(0, 0.8, 0), punta.clone().add(0, 0.8, 0), 0.5, p -> {
+                Compat.spawn(world(), Compat.DUST, p, 3, 0.2, 0.3, 0.2, 0, Compat.dust(CORTEZA, 1.8f));
+                for (Player d : Fx.playersNear(p, 2.2)) {
+                    if (!ya.add(d.getUniqueId())) continue;
+                    hit(d, 24);
+                    push(d, dir.clone().multiply(1.5).setY(0.5));
+                }
+            });
+            soundAt(punta, "block.roots.break", 1.6f, 0.5f);
+        });
     }
 
     /** Clava a cuatro en el sitio y les cobra mientras no se suelten. */
@@ -1014,7 +1165,7 @@ public final class Raiz extends BossFight {
     /** Lluvia de ramas sobre el área entera. */
     public void lluviaDeRamas() {
         if (!alive()) return;
-        Location c = center();
+        Location c = suelo();
         announce(Component.text("Se sacude y caen ramas."));
         busyFor(120);
         animate(110, tick -> {
@@ -1053,7 +1204,7 @@ public final class Raiz extends BossFight {
     /** Una tanda de eyeblossoms por todo el suelo que explotan a la vez. */
     public void campoDeOjos() {
         if (!alive()) return;
-        Location c = center();
+        Location c = suelo();
         List<Location> sitios = new ArrayList<>();
         for (int i = 0; i < 9; i++) {
             double a = Math.PI * 2 * i / 9;
@@ -1125,7 +1276,7 @@ public final class Raiz extends BossFight {
     /** El suelo se seca: quien pise fuera de las manchas vivas se marchita. */
     public void suelaMarchita() {
         if (!alive()) return;
-        Location c = center();
+        Location c = suelo();
         List<Location> seguros = new ArrayList<>();
         for (int i = 0; i < 4; i++) {
             double a = Math.PI * 2 * i / 4 + random.nextDouble();
@@ -1158,7 +1309,7 @@ public final class Raiz extends BossFight {
     /** Se parte en dos mitades que pegan por separado. */
     public void dosMitades() {
         if (!alive()) return;
-        Location c = center();
+        Location c = suelo();
         for (int i = 0; i < 2; i++) {
             double lado = i == 0 ? -6 : 6;
             Location sitio = Fx.ground(c.clone().add(lado, 0, 0), 6);
@@ -1170,8 +1321,9 @@ public final class Raiz extends BossFight {
                     Compat.setAttribute(cr, "scale", 1.4);
                     cr.setHealth(70);
                 });
-                mitad.customName(Component.text("Mitad de Raíz", ACCENT));
+                mitad.customName(Component.text("Mitad de Rotten", ACCENT));
                 markMinion(mitad);
+                esbirro(mitad, 13);
                 Glow.apply(mitad, NamedTextColor.DARK_GREEN);
                 Compat.spawn(world(), Compat.CHERRY_LEAVES, sitio, 40, 0.8, 1.2, 0.8, 0.04);
                 soundAt(sitio, "entity.creaking.spawn", 1.4f, 0.8f);
@@ -1183,7 +1335,7 @@ public final class Raiz extends BossFight {
     /** Un anillo de raíces que no deja salir del área. */
     public void jaulaDeRaices() {
         if (!alive()) return;
-        Location c = center();
+        Location c = suelo();
         double r = 12;
         announce(Component.text("Cierra el jardín."));
         busyFor(200);
@@ -1218,7 +1370,7 @@ public final class Raiz extends BossFight {
     /** Explota en esporas: daño alto y veneno a todo el que esté cerca. */
     public void estallidoDeEsporas() {
         if (!alive()) return;
-        Location c = center();
+        Location c = suelo();
         Fx.telegraph(world(), c, 10, 0x6ECF6E);
         busyFor(60);
         later(50, () -> {
@@ -1274,13 +1426,15 @@ public final class Raiz extends BossFight {
         if (objetivo == null) return;
         Location salida = objetivo.getLocation().clone();
         busyFor(70);
+        hundidoHasta = ticks() + 45;
         Compat.spawn(world(), Compat.CHERRY_LEAVES, center().add(0, 1, 0), 40, 0.8, 1.2, 0.8, 0.05);
         soundAt(center(), "entity.creaking.deactivate", 1.5f, 0.7f);
         announce(Component.text("Se hunde."));
 
         later(45, () -> {
             if (!alive()) return;
-            boss.teleport(salida);
+            flotaBase = Fx.ground(salida, 6);
+            boss.teleport(flotaBase.clone().add(0, 1.4, 0));
             Fx.shockwave(world(), salida, 5, Compat.CHERRY_LEAVES, 4);
             for (Player p : Fx.playersNear(salida, 4)) {
                 hit(p, 24);
@@ -1298,7 +1452,7 @@ public final class Raiz extends BossFight {
     /** La grande del final: oscuridad total y solo se ve lo que él ilumina. */
     public void nochePalida() {
         if (!alive()) return;
-        Location c = center();
+        Location c = suelo();
         titleNear(Component.text("LA NOCHE PÁLIDA", ACCENT, TextDecoration.BOLD),
                 Component.text("Solo se ve lo que él quiere", NamedTextColor.GRAY));
         announce(Component.text("Se hace de noche."));
@@ -1331,7 +1485,7 @@ public final class Raiz extends BossFight {
     /** El jardín entero se cierra sobre el centro: hay que salir del área. */
     public void elJardinSeCierra() {
         if (!alive()) return;
-        Location c = center();
+        Location c = suelo();
         Fx.telegraph(world(), c, 14, RESINA);
         titleNear(Component.empty(), Component.text("FUERA DEL JARDÍN", TextColor.color(RESINA)));
         announce(Component.text("El jardín se cierra. Salid."));
@@ -1351,7 +1505,7 @@ public final class Raiz extends BossFight {
     /** Cinco raíces gigantes que barren el área una detrás de otra. */
     public void barridoDeRaices() {
         if (!alive()) return;
-        Location c = center();
+        Location c = suelo();
         announce(Component.text("Cinco raíces barren."));
         busyFor(150);
         for (int i = 0; i < 5; i++) {
@@ -1374,7 +1528,7 @@ public final class Raiz extends BossFight {
     /** Se lleva la mitad de la vida de todos y se la queda. */
     public void cosechaPalida() {
         if (!alive()) return;
-        Location c = center();
+        Location c = suelo();
         Fx.telegraph(world(), c, 16, AMBAR);
         announce(Component.text("Va a cosechar."));
         busyFor(100);
@@ -1398,7 +1552,7 @@ public final class Raiz extends BossFight {
     /** Llama a cuatro crujidos a la vez: la última guardia. */
     public void ultimaGuardia() {
         if (!alive()) return;
-        Location c = center();
+        Location c = suelo();
         for (int i = 0; i < 4; i++) {
             double a = Math.PI * 2 * i / 4;
             Location sitio = Fx.ground(c.clone().add(Math.cos(a) * 6, 0, Math.sin(a) * 6), 6);
@@ -1412,6 +1566,7 @@ public final class Raiz extends BossFight {
                 });
                 g.customName(Component.text("Guardia Pálida", ACCENT));
                 markMinion(g);
+                esbirro(g, 11);
                 Glow.apply(g, NamedTextColor.DARK_GREEN);
                 soundAt(sitio, "entity.creaking.spawn", 1.4f, 0.7f);
             });
@@ -1484,6 +1639,8 @@ public final class Raiz extends BossFight {
     public void cleanup() {
         borrarCopias();
         limpiarFlor();
+        esbirros.clear();
+        esbirroPego.clear();
         combateCongelado = false;
         vengando = false;
         super.cleanup();
