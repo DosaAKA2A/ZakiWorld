@@ -203,7 +203,8 @@ public final class ComandoTienda implements CommandExecutor, TabCompleter {
             q.sendMessage(Estilo.linea(c + (ingles ? " reload" : " recargar"),
                     ingles ? "reload the catalogue" : "recarga el catálogo", Estilo.APAGADO));
             q.sendMessage(Estilo.linea(c + (ingles ? " edit" : " editar"),
-                    ingles ? "edit prices from the menu" : "edita los precios desde el menú", Estilo.APAGADO));
+                    ingles ? "edit prices and add items from the menu"
+                           : "edita precios y añade artículos desde el menú", Estilo.APAGADO));
             q.sendMessage(Estilo.linea(c + " webhook",
                     ingles ? "test the Discord notice" : "prueba el aviso de Discord", Estilo.APAGADO));
             q.sendMessage(Estilo.linea(c + (ingles ? " market <item> sell <n>" : " mercado <art> vender <n>"),

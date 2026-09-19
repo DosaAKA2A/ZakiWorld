@@ -52,6 +52,9 @@ public final class MenuTienda implements Listener {
     private static final int RANURA_ANTERIOR = 45;
     private static final int RANURA_VOLVER = 49;
     private static final int RANURA_SIGUIENTE = 53;
+    /* Solo en modo editor: el libro de "Añadir artículo", pegado al Volver y
+     * lejos de las flechas de pagina para no pulsarlo por error. */
+    private static final int RANURA_ANADIR = 47;
     /*
      * Una fila por debajo de las categorias, CENTRADAS.
      *
@@ -104,6 +107,7 @@ public final class MenuTienda implements Listener {
     private PantallaCantidad pantalla;
     private EntradaChat chat;
     private EditorPrecio editor;
+    private EditorNuevo nuevo;
 
     /** Que hace el click normal: abrir la pantalla de cantidad o comprar 1. */
     private boolean pantallaAlHacerClick = true;
@@ -128,9 +132,11 @@ public final class MenuTienda implements Listener {
         this.chat = chat;
     }
 
-    public void enlazar(PantallaCantidad pantalla, EntradaChat chat, EditorPrecio editor) {
+    public void enlazar(PantallaCantidad pantalla, EntradaChat chat,
+                        EditorPrecio editor, EditorNuevo nuevo) {
         enlazar(pantalla, chat);
         this.editor = editor;
+        this.nuevo = nuevo;
     }
 
     public void configurar(org.bukkit.configuration.ConfigurationSection cantidad,
@@ -239,6 +245,12 @@ public final class MenuTienda implements Listener {
         secciones.sonar(jugador, "abrir-menu");
     }
 
+    /** Una categoria escrita en precios.yml, no las de pega (dia y buscador). */
+    private static boolean esCategoriaReal(String categoria) {
+        return categoria != null && !OFERTAS.equals(categoria) && !DEMANDAS.equals(categoria)
+                && !categoria.startsWith(BUSCAR);
+    }
+
     /** Las dos secciones del dia no viven en el catalogo: se arman al vuelo. */
     private List<Catalogo.Articulo> articulosDe(String categoria) {
         Rotacion rot = modulo.rotacion();
@@ -328,6 +340,18 @@ public final class MenuTienda implements Listener {
                 secciones.texto("volver", "&x&D&7&F&3&F&FVolver"),
                 List.of(secciones.texto("pagina", "&8▸ &fPágina %página% de %páginas%",
                         "%pagina%", String.valueOf(pagina + 1), "%paginas%", String.valueOf(paginas)))));
+
+        /* El editor puede meter aqui dentro un articulo que no exista todavia.
+         * Solo en las categorias de verdad: Ofertas, Demandas y el buscador no
+         * son sitios de precios.yml donde se pueda escribir nada. */
+        if (editor && nuevo != null && esCategoriaReal(categoria)) {
+            inv.setItem(RANURA_ANADIR, decorarCon(new ItemStack(Material.WRITABLE_BOOK),
+                    secciones.texto("anadir-nombre", "&#FF9E3DAñadir artículo"),
+                    List.of(secciones.texto("anadir-descripcion", "&7Mete un objeto nuevo en &f%categoria%",
+                                    "%categoria%", especial != null ? especial : bonito(categoria)),
+                            Estilo.vacio(),
+                            secciones.texto("anadir-entrar", "&#4FFF55▸ Clic para elegirlo"))));
+        }
 
         rellenar(inv);
         jugador.openInventory(inv);
@@ -573,6 +597,13 @@ public final class MenuTienda implements Listener {
             for (Secciones.Seccion s : secciones.todas()) {
                 if (s.ranura() == e.getSlot()) { abrirCategoria(jugador, s.id(), 0, vista.editor); return; }
             }
+            return;
+        }
+
+        if (vista.editor && e.getSlot() == RANURA_ANADIR && nuevo != null
+                && esCategoriaReal(vista.categoria)) {
+            if (!jugador.hasPermission("ederus.tienda.admin")) { jugador.closeInventory(); return; }
+            nuevo.abrir(jugador, vista.categoria, vista.pagina);
             return;
         }
 

@@ -71,6 +71,49 @@ public final class Nombres {
     }
 
     /**
+     * Al reves: de lo que escribe una persona a los materiales que pueden ser.
+     *
+     * Lo usa el "anadir articulo" del editor. Quien quiere meter la cubeta de
+     * agua escribe "cubeta de agua", no WATER_BUCKET, asi que se busca sobre el
+     * nombre en espanol ADEMAS de sobre el identificador. Se comparan los dos
+     * sin acentos y sin guiones bajos: "lapislazuli" tiene que encontrar el
+     * Lapislazuli igual que "lapis lazuli" encuentra LAPIS_LAZULI.
+     *
+     * El orden importa mas que la lista: primero lo que es exactamente eso,
+     * despues lo que empieza por eso y al final lo que solo lo contiene. Sin
+     * esto, "cubeta" enseñaba veinte cubetas antes que la de agua.
+     */
+    public static java.util.List<Material> buscar(String texto, int tope) {
+        String t = plano(texto);
+        if (t.isEmpty()) return java.util.List.of();
+        java.util.List<Material> exactos = new java.util.ArrayList<>();
+        java.util.List<Material> empiezan = new java.util.ArrayList<>();
+        java.util.List<Material> contienen = new java.util.ArrayList<>();
+        for (Material m : Material.values()) {
+            /* Solo lo que puede estar en un cofre: los bloques que no son item
+             * (el fuego, el agua colocada) no se pueden ni comprar ni vender. */
+            if (m.isLegacy() || m.isAir() || !m.isItem()) continue;
+            String id = plano(m.name());
+            String nombre = plano(de(m));
+            if (id.equals(t) || nombre.equals(t)) exactos.add(m);
+            else if (id.startsWith(t) || nombre.startsWith(t)) empiezan.add(m);
+            else if (id.contains(t) || nombre.contains(t)) contienen.add(m);
+        }
+        java.util.List<Material> out = new java.util.ArrayList<>(exactos);
+        out.addAll(empiezan);
+        out.addAll(contienen);
+        return out.size() > tope ? out.subList(0, tope) : out;
+    }
+
+    /** Minusculas, sin acentos y sin guiones bajos, para comparar a ciegas. */
+    private static String plano(String s) {
+        if (s == null) return "";
+        String n = java.text.Normalizer.normalize(s.trim().toLowerCase(Locale.ROOT),
+                java.text.Normalizer.Form.NFD).replaceAll("\\p{M}", "");
+        return n.replace('_', ' ');
+    }
+
+    /**
      * El respaldo de toda la vida: IRON_INGOT -> "Iron ingot". Sale en ingles,
      * pero es mejor que un hueco, y solo aparece si el material no esta en la
      * tabla (un plugin que anada materiales suyos, o una version mas nueva).

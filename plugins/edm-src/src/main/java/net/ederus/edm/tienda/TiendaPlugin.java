@@ -25,6 +25,7 @@ public final class TiendaPlugin extends Module {
     private Motor motor;
     private MenuTienda menu;
     private EditorPrecio editor;
+    private EditorNuevo nuevo;
     private PantallaCantidad pantalla;
     private EntradaChat chat;
     private final Secciones secciones = new Secciones();
@@ -83,7 +84,10 @@ public final class TiendaPlugin extends Module {
         /* El editor de precios de /shop edit: la misma entrada por chat. */
         editor = new EditorPrecio(this, catalogo, secciones, chat);
         core.getServer().getPluginManager().registerEvents(editor, this);
-        menu.enlazar(pantalla, chat, editor);
+        /* Y el de articulos nuevos, que cuelga del mismo modo editor. */
+        nuevo = new EditorNuevo(this, catalogo, secciones, chat);
+        core.getServer().getPluginManager().registerEvents(nuevo, this);
+        menu.enlazar(pantalla, chat, editor, nuevo);
         aplicarAjustes();
 
         ComandoTienda comando = new ComandoTienda(this, catalogo, topes);
@@ -299,6 +303,126 @@ public final class TiendaPlugin extends Module {
             else if (l.matches("^        venta:.*")) { lineas[i] = "        venta: " + EditorPrecio.numero(venta); vistaVenta = true; }
         }
         if (!vistaCompra || !vistaVenta) return null;
+        return String.join(salto, lineas);
+    }
+
+    /**
+     * Mete en precios.yml un articulo que no estaba y recarga el catalogo.
+     * Devuelve null si quedo guardado, o el motivo por el que no.
+     *
+     * La categoria la elige quien edita (EditorNuevo), no se adivina por el
+     * material: nadie sabe mejor que el si una cubeta va en Herramientas o en
+     * Varios. Las comprobaciones son las MISMAS que hace el catalogo al cargar,
+     * pero hechas antes de escribir, para poder decir por que no se puede en
+     * vez de dejar el fichero roto y que el modulo no recargue.
+     */
+    public String anadirArticulo(String categoria, org.bukkit.Material material,
+                                 org.bukkit.entity.EntityType variante,
+                                 double compra, double venta, int tope) {
+        if (material == null) return "Elige primero el objeto.";
+        if (material.isAir() || !material.isItem()) {
+            return material.name() + " no es un objeto que se pueda tener en el inventario.";
+        }
+        if (variante != null && material != org.bukkit.Material.SPAWNER) {
+            return "Solo los spawners llevan variante.";
+        }
+        if (categoria == null || !catalogo.categorias().containsKey(categoria)) {
+            return "La categoría '" + categoria + "' no está en precios.yml.";
+        }
+        String clave = material.name() + (variante != null ? ":" + variante.name() : "");
+        Catalogo.Articulo ya = catalogo.de(clave);
+        if (ya != null) {
+            return Motor.nombre(ya) + " ya está en la tienda, dentro de '" + ya.categoria() + "'.";
+        }
+        if (compra < 0 || venta < 0) return "El precio no puede ser negativo.";
+        if (compra <= 0 && venta <= 0) {
+            return "Pon al menos un precio: con los dos a 0 el artículo no hace nada.";
+        }
+        if (variante != null && venta > 0) return "Un spawner no se puede recomprar.";
+        if (compra > 0 && venta > 0 && venta >= compra) {
+            return "La venta (" + net.ederus.edm.comun.Estilo.dinero(venta) + ") tiene que quedar por debajo de la compra ("
+                    + net.ederus.edm.comun.Estilo.dinero(compra) + "): si no, comprar y vender da dinero infinito.";
+        }
+        if (tope < 0) tope = 0;
+
+        File fichero = new File(getDataFolder(), "precios.yml");
+        String antes;
+        try {
+            antes = java.nio.file.Files.readString(fichero.toPath(), java.nio.charset.StandardCharsets.UTF_8);
+        } catch (java.io.IOException e) {
+            return "No pude leer precios.yml: " + e.getMessage();
+        }
+        String despues = insertarArticulo(antes, categoria, clave, compra, venta, tope);
+        if (despues == null) {
+            return "No encontré la categoría '" + categoria + "' y sus items en precios.yml.";
+        }
+        try {
+            java.nio.file.Files.writeString(fichero.toPath(), despues, java.nio.charset.StandardCharsets.UTF_8);
+        } catch (java.io.IOException e) {
+            return "No pude escribir precios.yml: " + e.getMessage();
+        }
+        if (!cargarCatalogo()) {
+            try {
+                java.nio.file.Files.writeString(fichero.toPath(), antes, java.nio.charset.StandardCharsets.UTF_8);
+                cargarCatalogo();
+            } catch (java.io.IOException ignored) {
+                // Ya se avisa abajo; peor que esto no puede ir.
+            }
+            return "El catálogo no cargó con ese artículo y se dejó como estaba. Mira la consola.";
+        }
+        getLogger().info("Articulo nuevo: " + clave + " en " + categoria + " compra "
+                + EditorPrecio.numero(compra) + " venta " + EditorPrecio.numero(venta)
+                + " tope " + tope);
+        return null;
+    }
+
+    /**
+     * Escribe el bloque del articulo al FINAL de los items de su categoria y
+     * devuelve el fichero entero. null si no encuentra donde meterlo.
+     *
+     * Al final y no al principio porque el menu pinta los articulos en el orden
+     * del fichero: lo nuevo va detras de lo que ya habia, como si se hubiera
+     * escrito a mano. Se busca la ultima linea que todavia pertenece al bloque
+     * (sangrada seis espacios o mas), asi los comentarios y las lineas en
+     * blanco que separan categorias se quedan donde estaban.
+     */
+    static String insertarArticulo(String texto, String categoria, String clave,
+                                   double compra, double venta, int tope) {
+        String salto = texto.contains("\r\n") ? "\r\n" : "\n";
+        java.util.List<String> lineas =
+                new java.util.ArrayList<>(java.util.Arrays.asList(texto.split("\r?\n", -1)));
+        java.util.regex.Pattern cat = java.util.regex.Pattern.compile("^  " + java.util.regex.Pattern.quote(categoria) + ":\\s*$");
+        java.util.regex.Pattern otraCat = java.util.regex.Pattern.compile("^  [A-Za-z_]+:\\s*$");
+        java.util.regex.Pattern items = java.util.regex.Pattern.compile("^    items:\\s*$");
+
+        int i = 0;
+        while (i < lineas.size() && !cat.matcher(lineas.get(i)).matches()) i++;
+        if (i >= lineas.size()) return null;
+        i++;
+        while (i < lineas.size() && !otraCat.matcher(lineas.get(i)).matches()
+                && !items.matcher(lineas.get(i)).matches()) i++;
+        if (i >= lineas.size() || !items.matcher(lineas.get(i)).matches()) return null;
+
+        /* El final del bloque: la ultima linea con contenido que sigue dentro.
+         * Si la categoria estuviera vacia, esa linea es el propio 'items:'. */
+        int ultima = i;
+        for (int j = i + 1; j < lineas.size(); j++) {
+            String l = lineas.get(j);
+            if (l.isBlank()) continue;
+            if (!l.startsWith("      ")) break;
+            ultima = j;
+        }
+
+        /* Una clave con dos puntos dentro (SPAWNER:PIG) lleva comillas o el
+         * YAML la lee como un mapa. */
+        String escrita = clave.indexOf(':') >= 0 ? "'" + clave + "'" : clave;
+        java.util.List<String> bloque = java.util.List.of(
+                "      " + escrita + ":",
+                "        compra: " + EditorPrecio.numero(compra),
+                "        venta: " + EditorPrecio.numero(venta),
+                "        tope: " + tope,
+                "        ventana: 24h");
+        lineas.addAll(ultima + 1, bloque);
         return String.join(salto, lineas);
     }
 
