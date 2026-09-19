@@ -61,15 +61,32 @@ public final class EntradaChat implements Listener {
         esperando.remove(jugador.getUniqueId());
     }
 
+    /*
+     * Paper dispara DOS eventos por cada linea de chat: el viejo
+     * AsyncPlayerChatEvent (para los plugins que aun lo usan) y el nuevo
+     * AsyncChatEvent. Y el viejo va PRIMERO. AlonsoChat, el chat de OneBlock,
+     * escucha el viejo y manda la linea a todos con sendMessage; cuando llega
+     * nuestro turno en el nuevo, ya la ha visto el servidor entero (2026-09-19,
+     * un "31" de precio en el chat publico). Por eso se escucha en los dos: en
+     * el viejo a LOWEST se cancela antes de que nadie la pinte (AlonsoChat si
+     * mira isCancelled), y en el nuevo se hace lo mismo por si el servidor no
+     * tiene ningun plugin del viejo.
+     */
+    @SuppressWarnings("deprecation")
+    @EventHandler(priority = EventPriority.LOWEST)
+    public void alEscribirLegado(org.bukkit.event.player.AsyncPlayerChatEvent e) {
+        if (!atender(e.getPlayer(), e.getMessage())) return;
+        e.setCancelled(true);
+        try {
+            e.getRecipients().clear();
+        } catch (Throwable ignored) {
+        }
+    }
+
     @EventHandler(priority = EventPriority.LOWEST)
     public void alEscribir(AsyncChatEvent e) {
-        Pregunta p = esperando.remove(e.getPlayer().getUniqueId());
-        if (p == null) return;
-        /* Caducada: la frase vuelve a ser suya y sale por el chat normal. */
-        if (System.currentTimeMillis() > p.caduca()) return;
-
+        if (!atender(e.getPlayer(), PlainTextComponentSerializer.plainText().serialize(e.message()))) return;
         e.setCancelled(true);
-        respondidas.put(e.getPlayer().getUniqueId(), System.currentTimeMillis());
         /* Cancelar no basta: el plugin de chat del servidor pinta la linea igual
          * (escucha en su propia prioridad y no mira si esta cancelado). Sin
          * espectadores no hay a quien pintarsela, y en MONITOR se remata. Si el
@@ -78,8 +95,22 @@ public final class EntradaChat implements Listener {
             e.viewers().clear();
         } catch (Throwable ignored) {
         }
-        String texto = PlainTextComponentSerializer.plainText().serialize(e.message()).trim();
-        Player jugador = e.getPlayer();
+    }
+
+    /**
+     * Si el jugador tenia una pregunta viva, se la queda esta linea: devuelve
+     * true y programa la respuesta en el hilo principal. El primero de los dos
+     * eventos que llegue se la lleva; el segundo ya no encuentra pregunta y la
+     * deja pasar, pero alRematar la sigue cancelando porque quedo anotada.
+     */
+    private boolean atender(Player jugador, String mensaje) {
+        Pregunta p = esperando.remove(jugador.getUniqueId());
+        if (p == null) return respondidas.containsKey(jugador.getUniqueId());
+        /* Caducada: la frase vuelve a ser suya y sale por el chat normal. */
+        if (System.currentTimeMillis() > p.caduca()) return false;
+
+        respondidas.put(jugador.getUniqueId(), System.currentTimeMillis());
+        String texto = mensaje.trim();
         plugin.getServer().getScheduler().runTask(plugin, () -> {
             if (!jugador.isOnline()) return;
             if (texto.isEmpty() || texto.equalsIgnoreCase(CANCELAR)) {
@@ -88,10 +119,25 @@ public final class EntradaChat implements Listener {
             }
             p.respuesta().accept(texto);
         });
+        return true;
     }
 
     /** Quien acaba de responder, para que ni un plugin que descancele el evento la muestre. */
     private final Map<UUID, Long> respondidas = new ConcurrentHashMap<>();
+
+    /* Se quita del mapa en el evento NUEVO, que es el ultimo de los dos: si se
+     * quitara en el viejo, el nuevo llegaria sin nota y la linea saldria. */
+    @SuppressWarnings("deprecation")
+    @EventHandler(priority = EventPriority.MONITOR)
+    public void alRematarLegado(org.bukkit.event.player.AsyncPlayerChatEvent e) {
+        Long cuando = respondidas.get(e.getPlayer().getUniqueId());
+        if (cuando == null || System.currentTimeMillis() - cuando > 2000) return;
+        e.setCancelled(true);
+        try {
+            e.getRecipients().clear();
+        } catch (Throwable ignored) {
+        }
+    }
 
     @EventHandler(priority = EventPriority.MONITOR)
     public void alRematar(AsyncChatEvent e) {

@@ -1,0 +1,15 @@
+name: CrateRotator
+version: 2.1.0
+main: com.ederus.craterotator.CrateRotator
+api-version: '1.21'
+author: Ederus
+description: Gira hologramas tipo item de FancyHolograms usando una entidad nativa (ItemDisplay) para un giro realmente fluido, sin saltos.
+depend: [FancyHolograms]
+commands:
+  craterotator:
+    description: Recarga el rotador de hologramas.
+    aliases: [crot]
+permissions:
+  craterotator.admin:
+    description: Permite recargar CrateRotator.
+    default: op

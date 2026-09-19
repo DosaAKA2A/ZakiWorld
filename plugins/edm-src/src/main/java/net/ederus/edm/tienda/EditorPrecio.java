@@ -96,16 +96,16 @@ public final class EditorPrecio implements Listener {
 
         inv.setItem(RANURA_COMPRA, decorar(new ItemStack(Material.GOLD_INGOT),
                 secciones.texto("editor-compra", "&#91F4FFPrecio de compra"),
-                List.of(Estilo.valor(art.seCompra() ? Estilo.dinero(art.compra()) : "no se vende"),
+                List.of(Estilo.valor(art.seCompra() ? Estilo.dinero(art.compra()) : "No se compra"),
                         Estilo.vacio(),
                         secciones.texto("editor-clic-escribir", "&8▸ &7Clic para escribirlo en el chat"),
                         secciones.texto("editor-clic-quitar", "&8▸ &7Clic derecho para quitarlo"))));
 
         List<Component> loreVenta = new ArrayList<>();
-        loreVenta.add(Estilo.valor(art.seVende() ? Estilo.dinero(art.venta()) : "no se recompra"));
+        loreVenta.add(Estilo.valor(art.seVende() ? Estilo.dinero(art.venta()) : "No se vende"));
         loreVenta.add(Estilo.vacio());
         if (art.esVariante()) {
-            loreVenta.add(secciones.texto("editor-variante", "&8▸ &7Los spawners no se recompran"));
+            loreVenta.add(secciones.texto("editor-variante", "&8▸ &7Los spawners no se venden"));
         } else {
             loreVenta.add(secciones.texto("editor-clic-escribir", "&8▸ &7Clic para escribirlo en el chat"));
             loreVenta.add(secciones.texto("editor-clic-quitar", "&8▸ &7Clic derecho para quitarlo"));
