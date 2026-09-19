@@ -24,6 +24,7 @@ public final class TiendaPlugin extends Module {
     private Registro registro;
     private Motor motor;
     private MenuTienda menu;
+    private EditorPrecio editor;
     private PantallaCantidad pantalla;
     private EntradaChat chat;
     private final Secciones secciones = new Secciones();
@@ -79,7 +80,10 @@ public final class TiendaPlugin extends Module {
         chat = core.chat();
         pantalla = new PantallaCantidad(this, secciones, chat);
         core.getServer().getPluginManager().registerEvents(pantalla, this);
-        menu.enlazar(pantalla, chat);
+        /* El editor de precios de /shop edit: la misma entrada por chat. */
+        editor = new EditorPrecio(this, catalogo, secciones, chat);
+        core.getServer().getPluginManager().registerEvents(editor, this);
+        menu.enlazar(pantalla, chat, editor);
         aplicarAjustes();
 
         ComandoTienda comando = new ComandoTienda(this, catalogo, topes);
@@ -221,6 +225,82 @@ public final class TiendaPlugin extends Module {
     }
 
     public MenuTienda menu() { return menu; }
+
+    /**
+     * Cambia el precio de UN articulo en precios.yml y recarga el catalogo.
+     * Devuelve null si quedo guardado, o el motivo por el que no.
+     *
+     * Se edita el texto del fichero, no se vuelca el YAML entero: asi los
+     * comentarios y el orden se quedan como estan y el diff es de dos lineas.
+     * Si el catalogo nuevo no carga (no deberia: las reglas se miran antes),
+     * se deja el fichero como estaba y la tienda sigue con el catalogo bueno.
+     */
+    public String cambiarPrecio(Catalogo.Articulo art, double compra, double venta) {
+        if (compra < 0 || venta < 0) return "El precio no puede ser negativo.";
+        if (art.esVariante() && venta > 0) return "Un spawner no se puede recomprar.";
+        if (compra > 0 && venta > 0 && venta >= compra) {
+            return "La venta (" + net.ederus.edm.comun.Estilo.dinero(venta) + ") tiene que quedar por debajo de la compra ("
+                    + net.ederus.edm.comun.Estilo.dinero(compra) + "): si no, comprar y vender da dinero infinito.";
+        }
+        File fichero = new File(getDataFolder(), "precios.yml");
+        String antes;
+        try {
+            antes = java.nio.file.Files.readString(fichero.toPath(), java.nio.charset.StandardCharsets.UTF_8);
+        } catch (java.io.IOException e) {
+            return "No pude leer precios.yml: " + e.getMessage();
+        }
+        String despues = reescribirPrecio(antes, art.categoria(), art.clave(), compra, venta);
+        if (despues == null) {
+            return "No encontré " + art.clave() + " dentro de '" + art.categoria() + "' en precios.yml.";
+        }
+        try {
+            java.nio.file.Files.writeString(fichero.toPath(), despues, java.nio.charset.StandardCharsets.UTF_8);
+        } catch (java.io.IOException e) {
+            return "No pude escribir precios.yml: " + e.getMessage();
+        }
+        if (!cargarCatalogo()) {
+            try {
+                java.nio.file.Files.writeString(fichero.toPath(), antes, java.nio.charset.StandardCharsets.UTF_8);
+                cargarCatalogo();
+            } catch (java.io.IOException ignored) {
+                // Ya se avisa abajo; peor que esto no puede ir.
+            }
+            return "El catálogo no cargó con ese precio y se dejó como estaba. Mira la consola.";
+        }
+        getLogger().info("Precio cambiado: " + art.clave() + " (" + art.categoria() + ") compra "
+                + EditorPrecio.numero(compra) + " venta " + EditorPrecio.numero(venta));
+        return null;
+    }
+
+    /**
+     * Localiza el bloque del articulo (la categoria y despues la clave) y
+     * cambia sus lineas compra: y venta:. Devuelve null si no lo encuentra.
+     * Conserva el salto de linea del fichero (CRLF o LF).
+     */
+    static String reescribirPrecio(String texto, String categoria, String clave, double compra, double venta) {
+        String salto = texto.contains("\r\n") ? "\r\n" : "\n";
+        String[] lineas = texto.split("\r?\n", -1);
+        java.util.regex.Pattern cat = java.util.regex.Pattern.compile("^  " + java.util.regex.Pattern.quote(categoria) + ":\\s*$");
+        java.util.regex.Pattern otraCat = java.util.regex.Pattern.compile("^  [A-Za-z_]+:\\s*$");
+        java.util.regex.Pattern item = java.util.regex.Pattern.compile("^      '?" + java.util.regex.Pattern.quote(clave) + "'?:\\s*$");
+        java.util.regex.Pattern otroItem = java.util.regex.Pattern.compile("^      \\S");
+        int i = 0;
+        while (i < lineas.length && !cat.matcher(lineas[i]).matches()) i++;
+        if (i >= lineas.length) return null;
+        i++;
+        while (i < lineas.length && !otraCat.matcher(lineas[i]).matches() && !item.matcher(lineas[i]).matches()) i++;
+        if (i >= lineas.length || !item.matcher(lineas[i]).matches()) return null;
+        i++;
+        boolean vistaCompra = false, vistaVenta = false;
+        for (; i < lineas.length; i++) {
+            String l = lineas[i];
+            if (otroItem.matcher(l).find() || otraCat.matcher(l).matches()) break;
+            if (l.matches("^        compra:.*")) { lineas[i] = "        compra: " + EditorPrecio.numero(compra); vistaCompra = true; }
+            else if (l.matches("^        venta:.*")) { lineas[i] = "        venta: " + EditorPrecio.numero(venta); vistaVenta = true; }
+        }
+        if (!vistaCompra || !vistaVenta) return null;
+        return String.join(salto, lineas);
+    }
 
     public Mercado mercado() { return mercado; }
 

@@ -82,8 +82,15 @@ public final class MenuTienda implements Listener {
          * el catalogo se recarga o rota el dia con el menu abierto, la misma
          * ranura pasa a apuntar a otra cosa y se compra lo que no era. */
         final Map<Integer, String> ranuraAClave = new HashMap<>();
+        /* En modo editor (/shop edit) pulsar un articulo abre el editor de
+         * precios, no la compra. Viaja con la vista para que volver, cambiar
+         * de pagina o de categoria no lo pierdan por el camino. */
+        final boolean editor;
         Inventory inv;
-        Vista(String categoria, int pagina) { this.categoria = categoria; this.pagina = pagina; }
+        Vista(String categoria, int pagina) { this(categoria, pagina, false); }
+        Vista(String categoria, int pagina, boolean editor) {
+            this.categoria = categoria; this.pagina = pagina; this.editor = editor;
+        }
         @Override public Inventory getInventory() { return inv; }
     }
 
@@ -96,6 +103,7 @@ public final class MenuTienda implements Listener {
      * necesita la pantalla, y por el constructor eso no se puede atar. */
     private PantallaCantidad pantalla;
     private EntradaChat chat;
+    private EditorPrecio editor;
 
     /** Que hace el click normal: abrir la pantalla de cantidad o comprar 1. */
     private boolean pantallaAlHacerClick = true;
@@ -118,6 +126,11 @@ public final class MenuTienda implements Listener {
     public void enlazar(PantallaCantidad pantalla, EntradaChat chat) {
         this.pantalla = pantalla;
         this.chat = chat;
+    }
+
+    public void enlazar(PantallaCantidad pantalla, EntradaChat chat, EditorPrecio editor) {
+        enlazar(pantalla, chat);
+        this.editor = editor;
     }
 
     public void configurar(org.bukkit.configuration.ConfigurationSection cantidad,
@@ -159,10 +172,14 @@ public final class MenuTienda implements Listener {
         return pila;
     }
 
-    public void abrirPrincipal(Player jugador) {
-        Vista vista = new Vista(null, 0);
-        Inventory inv = Bukkit.createInventory(vista, 54,
-                secciones.texto("titulo-principal", "&x&0&0&8&3&F&D&lTIENDA &8| &x&D&7&F&3&F&FEderus"));
+    public void abrirPrincipal(Player jugador) { abrirPrincipal(jugador, false); }
+
+    /** Con editor a true es el mismo menu, pero pulsar un articulo lo edita. */
+    public void abrirPrincipal(Player jugador, boolean editor) {
+        Vista vista = new Vista(null, 0, editor);
+        Inventory inv = Bukkit.createInventory(vista, 54, editor
+                ? secciones.texto("titulo-editor", "&x&F&F&9&E&3&D&lEDITOR &8| &x&D&7&F&3&F&FPrecios")
+                : secciones.texto("titulo-principal", "&x&0&0&8&3&F&D&lTIENDA &8| &x&D&7&F&3&F&FEderus"));
         vista.inv = inv;
 
         for (Secciones.Seccion s : secciones.todas()) {
@@ -269,6 +286,7 @@ public final class MenuTienda implements Listener {
                 if (ranura >= inv.getSize()) break;
                 ItemStack pila = pintar(pagina.get(i), jugador);
                 marcarTrato(pila, pagina.get(i), vista.categoria);
+                if (vista.editor) marcarEditor(pila);
                 inv.setItem(ranura, pila);
                 vista.ranuraAClave.put(ranura, pagina.get(i).clave());
             }
@@ -276,18 +294,24 @@ public final class MenuTienda implements Listener {
     }
 
     public void abrirCategoria(Player jugador, String categoria, int pagina) {
+        abrirCategoria(jugador, categoria, pagina, false);
+    }
+
+    public void abrirCategoria(Player jugador, String categoria, int pagina, boolean editor) {
         List<Catalogo.Articulo> items = articulosDe(categoria);
         int paginas = Math.max(1, (int) Math.ceil(items.size() / (double) POR_PAGINA));
         if (pagina < 0) pagina = 0;
         if (pagina >= paginas) pagina = paginas - 1;
 
-        Vista vista = new Vista(categoria, pagina);
+        Vista vista = new Vista(categoria, pagina, editor);
         String especial = tituloDe(categoria);
         /* El nombre de verdad de la categoria, el mismo que se lee en el menu
          * principal. Si no lo tuviera, el id interno como respaldo. */
         if (especial == null) especial = secciones.nombrePlano(categoria);
-        Inventory inv = Bukkit.createInventory(vista, FILAS * 9,
-                secciones.texto("titulo-categoria", "&x&0&0&8&3&F&D&lEDERUS &8| &x&D&7&F&3&F&F%categoria%",
+        Inventory inv = Bukkit.createInventory(vista, FILAS * 9, editor
+                ? secciones.texto("titulo-editor-categoria", "&x&F&F&9&E&3&D&lEDITOR &8| &x&D&7&F&3&F&F%categoria%",
+                        "%categoria%", especial != null ? especial : bonito(categoria))
+                : secciones.texto("titulo-categoria", "&x&0&0&8&3&F&D&lEDERUS &8| &x&D&7&F&3&F&F%categoria%",
                         "%categoria%", especial != null ? especial : bonito(categoria)));
         vista.inv = inv;
 
@@ -345,6 +369,17 @@ public final class MenuTienda implements Listener {
     }
 
     /** Un articulo con su precio, sus topes y lo que se puede hacer con el. */
+    /** En modo editor el lore termina diciendo que el clic edita, no compra. */
+    private void marcarEditor(ItemStack pila) {
+        ItemMeta meta = pila.getItemMeta();
+        if (meta == null) return;
+        List<Component> lore = meta.lore() != null ? new ArrayList<>(meta.lore()) : new ArrayList<>();
+        lore.add(Estilo.vacio());
+        lore.add(secciones.texto("editor-entrar", "&#FF9E3D▸ Clic para editar el precio"));
+        meta.lore(lore);
+        pila.setItemMeta(meta);
+    }
+
     private ItemStack pintar(Catalogo.Articulo art, Player jugador) {
         /* Si el articulo trae su lore escrito a mano (los spawners lo traen),
          * manda el suyo: es lo que le da la ficha de tienda de verdad en vez de
@@ -525,7 +560,7 @@ public final class MenuTienda implements Listener {
 
         if (vista.categoria == null) {
             if (e.getSlot() == RANURA_BUSCAR && buscadorActivo && chat != null) {
-                pedirBusqueda(jugador);
+                pedirBusqueda(jugador, vista.editor);
                 return;
             }
             /* Solo si de verdad estan pintadas: con la rotacion apagada esas dos
@@ -533,20 +568,20 @@ public final class MenuTienda implements Listener {
              * vacia titulada "Ofertas del día". */
             Rotacion rot = modulo.rotacion();
             boolean hayRotacion = rot != null && rot.activo();
-            if (hayRotacion && e.getSlot() == RANURA_OFERTAS) { abrirCategoria(jugador, OFERTAS, 0); return; }
-            if (hayRotacion && e.getSlot() == RANURA_DEMANDAS) { abrirCategoria(jugador, DEMANDAS, 0); return; }
+            if (hayRotacion && e.getSlot() == RANURA_OFERTAS) { abrirCategoria(jugador, OFERTAS, 0, vista.editor); return; }
+            if (hayRotacion && e.getSlot() == RANURA_DEMANDAS) { abrirCategoria(jugador, DEMANDAS, 0, vista.editor); return; }
             for (Secciones.Seccion s : secciones.todas()) {
-                if (s.ranura() == e.getSlot()) { abrirCategoria(jugador, s.id(), 0); return; }
+                if (s.ranura() == e.getSlot()) { abrirCategoria(jugador, s.id(), 0, vista.editor); return; }
             }
             return;
         }
 
         switch (e.getSlot()) {
-            case RANURA_VOLVER -> { secciones.sonar(jugador, "volver"); abrirPrincipal(jugador); return; }
+            case RANURA_VOLVER -> { secciones.sonar(jugador, "volver"); abrirPrincipal(jugador, vista.editor); return; }
             case RANURA_ANTERIOR -> { secciones.sonar(jugador, "cambiar-pagina");
-                                      abrirCategoria(jugador, vista.categoria, vista.pagina - 1); return; }
+                                      abrirCategoria(jugador, vista.categoria, vista.pagina - 1, vista.editor); return; }
             case RANURA_SIGUIENTE -> { secciones.sonar(jugador, "cambiar-pagina");
-                                       abrirCategoria(jugador, vista.categoria, vista.pagina + 1); return; }
+                                       abrirCategoria(jugador, vista.categoria, vista.pagina + 1, vista.editor); return; }
             default -> { /* es un articulo */ }
         }
 
@@ -556,7 +591,15 @@ public final class MenuTienda implements Listener {
         if (art == null) {
             /* Se recargo el catalogo y ese articulo ya no existe: se repinta en
              * vez de operar sobre un precio que ya no esta. */
-            abrirCategoria(jugador, vista.categoria, vista.pagina);
+            abrirCategoria(jugador, vista.categoria, vista.pagina, vista.editor);
+            return;
+        }
+
+        /* Modo editor: el clic no compra ni vende, edita. El permiso se vuelve
+         * a mirar aqui porque la ventana pudo abrirse antes de perderlo. */
+        if (vista.editor) {
+            if (editor == null || !jugador.hasPermission("ederus.tienda.admin")) { jugador.closeInventory(); return; }
+            editor.abrir(jugador, art, vista.categoria, vista.pagina);
             return;
         }
 
@@ -618,12 +661,14 @@ public final class MenuTienda implements Listener {
     // -------------------------------------------------------------- buscador
 
     /** Pide por el chat que buscar y enseña el resultado como una categoria. */
-    public void pedirBusqueda(Player jugador) {
+    public void pedirBusqueda(Player jugador) { pedirBusqueda(jugador, false); }
+
+    public void pedirBusqueda(Player jugador, boolean editor) {
         if (chat == null) return;
         Mensajes m = modulo.mensajes();
         if (m != null) m.manda(jugador, "buscar-pide",
                 "&fEscribe en el chat lo que buscas. &7Escribe cancelar para dejarlo.");
-        chat.pedir(jugador, texto -> abrirBusqueda(jugador, texto), () -> abrirPrincipal(jugador));
+        chat.pedir(jugador, texto -> abrirBusqueda(jugador, texto, editor), () -> abrirPrincipal(jugador, editor));
     }
 
     /**
@@ -631,20 +676,22 @@ public final class MenuTienda implements Listener {
      * y devuelve al menu, que es lo que espera cualquiera que se equivoque
      * escribiendo.
      */
-    public void abrirBusqueda(Player jugador, String texto) {
+    public void abrirBusqueda(Player jugador, String texto) { abrirBusqueda(jugador, texto, false); }
+
+    public void abrirBusqueda(Player jugador, String texto, boolean editor) {
         List<Catalogo.Articulo> res = catalogo.buscar(texto, TOPE_BUSQUEDA);
         Mensajes m = modulo.mensajes();
         if (res.isEmpty()) {
             if (m != null) m.manda(jugador, "buscar-sin-resultados",
                     "&#FF5C5CNo encontré nada con &7%texto%", "%texto%", texto);
             secciones.sonar(jugador, "error");
-            abrirPrincipal(jugador);
+            abrirPrincipal(jugador, editor);
             return;
         }
         if (m != null) m.manda(jugador, "buscar-resultados",
                 "&f%cuántos% resultados para &x&D&7&F&3&F&F%texto%",
                 "%cuantos%", String.valueOf(res.size()), "%texto%", texto);
-        abrirCategoria(jugador, BUSCAR + texto, 0);
+        abrirCategoria(jugador, BUSCAR + texto, 0, editor);
     }
 
     // --------------------------------------------------------------- adornos

@@ -36,7 +36,7 @@ import net.ederus.edm.tooltip.TooltipPlugin;
  */
 public class EDMPlugin extends JavaPlugin {
 
-    public static final String VERSION = "1.63.0";
+    public static final String VERSION = "1.64.0";
 
     private final Map<String, Module> modulos = new LinkedHashMap<>();
     private final List<String> fallidos = new ArrayList<>();

@@ -60,6 +60,7 @@ public final class ComandoTienda implements CommandExecutor, TabCompleter {
             Map.entry("rotación", "rotacion"),
             Map.entry("ayuda", "ayuda"),
             Map.entry("recargar", "recargar"),
+            Map.entry("editar", "editar"),
             Map.entry("webhook", "webhook"));
 
     private static final Map<String, String> VERBOS_EN = Map.ofEntries(
@@ -72,10 +73,11 @@ public final class ComandoTienda implements CommandExecutor, TabCompleter {
             Map.entry("rotation", "rotacion"),
             Map.entry("help", "ayuda"),
             Map.entry("reload", "recargar"),
+            Map.entry("edit", "editar"),
             Map.entry("webhook", "webhook"));
 
     /** Los que no se le sugieren a quien no es staff. */
-    private static final List<String> SOLO_STAFF = List.of("recargar", "reload", "webhook");
+    private static final List<String> SOLO_STAFF = List.of("recargar", "reload", "webhook", "editar", "edit");
 
     /** El alias tal cual se escribio, sin el "edm:" de delante si lo lleva. */
     private static String alias(String etiqueta) {
@@ -156,6 +158,7 @@ public final class ComandoTienda implements CommandExecutor, TabCompleter {
             case "rotacion" -> { return rotacion(quien); }
             case "webhook" -> { return webhook(quien); }
             case "recargar" -> { return recargar(quien); }
+            case "editar" -> { return editar(quien); }
             default -> { ayuda(quien, ingles); return true; }
         }
     }
@@ -199,12 +202,24 @@ public final class ComandoTienda implements CommandExecutor, TabCompleter {
             q.sendMessage(Estilo.regla());
             q.sendMessage(Estilo.linea(c + (ingles ? " reload" : " recargar"),
                     ingles ? "reload the catalogue" : "recarga el catálogo", Estilo.APAGADO));
+            q.sendMessage(Estilo.linea(c + (ingles ? " edit" : " editar"),
+                    ingles ? "edit prices from the menu" : "edita los precios desde el menú", Estilo.APAGADO));
             q.sendMessage(Estilo.linea(c + " webhook",
                     ingles ? "test the Discord notice" : "prueba el aviso de Discord", Estilo.APAGADO));
             q.sendMessage(Estilo.linea(c + (ingles ? " market <item> sell <n>" : " mercado <art> vender <n>"),
                     ingles ? "pressure table" : "la tabla de presión", Estilo.APAGADO));
         }
         q.sendMessage(Estilo.regla());
+    }
+
+    /** El menu de siempre en modo edicion: pulsar un articulo cambia su precio. */
+    private boolean editar(CommandSender quien) {
+        if (!quien.hasPermission("ederus.tienda.admin")) { quien.sendMessage("No puedes."); return true; }
+        if (!(quien instanceof Player jugador)) { quien.sendMessage("Solo desde el juego."); return true; }
+        MenuTienda menu = modulo.menu();
+        if (menu == null) { quien.sendMessage(Estilo.legado("&cLa tienda todavía está arrancando.")); return true; }
+        menu.abrirPrincipal(jugador, true);
+        return true;
     }
 
     private boolean buscar(CommandSender quien, String[] args) {
