@@ -160,7 +160,7 @@ public final class ComandoMinas implements CommandExecutor, TabCompleter {
         for (Mina m : todas) {
             boolean puede = plugin.puedeEntrar(p, m);
             p.sendMessage(Component.text("  " + Estilo.FLECHA + " ", Estilo.APAGADO)
-                    .append(Component.text(m.nombre(), puede ? MinasPlugin.MARCA : Estilo.APAGADO))
+                    .append(puede ? m.titulo() : Component.text(m.nombrePlano(), Estilo.APAGADO))
                     .append(Component.text("  " + Math.round(100 - m.porcentajeMinado()) + "% por picar", NamedTextColor.WHITE))
                     .append(Component.text("  " + (m.segundos() < 0 ? "" : "reinicia en " + m.cuentaAtras()), Estilo.APAGADO))
                     .append(Component.text(puede ? "" : "  sin acceso", Estilo.APAGADO)));

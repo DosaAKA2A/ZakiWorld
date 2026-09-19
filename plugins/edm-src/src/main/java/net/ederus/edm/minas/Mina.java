@@ -68,6 +68,20 @@ public final class Mina {
         this.nombre = n;
     }
 
+    /**
+     * El nombre como se ve: admite codigos & de color ("&cMINA PVP"). Sin color
+     * propio sale en el ambar de las minas. El id no cambia nunca por esto.
+     */
+    public net.kyori.adventure.text.Component titulo() {
+        return net.ederus.edm.comun.Estilo.legado(nombre).colorIfAbsent(MinasPlugin.MARCA);
+    }
+
+    /** El nombre sin codigos de color, para consola, bitacora y placeholders. */
+    public String nombrePlano() {
+        return net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer.plainText()
+                .serialize(net.ederus.edm.comun.Estilo.legado(nombre));
+    }
+
     /* ----------------------------------------------------------------- zona */
 
     public void zona(String mundo, int x1, int y1, int z1, int x2, int y2, int z2) {

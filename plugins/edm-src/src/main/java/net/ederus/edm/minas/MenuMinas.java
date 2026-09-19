@@ -103,7 +103,7 @@ public final class MenuMinas implements Listener {
             return;
         }
         Vista v = new Vista(Tipo.FICHA, m.id());
-        v.inv = Bukkit.createInventory(v, TAM, plugin.titulo(m.nombre()));
+        v.inv = Bukkit.createInventory(v, TAM, plugin.titulo(m.titulo()));
         pintarFicha(v, m);
         p.openInventory(v.inv);
     }
@@ -115,7 +115,7 @@ public final class MenuMinas implements Listener {
             return;
         }
         Vista v = new Vista(Tipo.BLOQUES, m.id());
-        v.inv = Bukkit.createInventory(v, TAM, plugin.titulo(m.nombre() + " · bloques"));
+        v.inv = Bukkit.createInventory(v, TAM, plugin.titulo(m.titulo().append(Estilo.texto(" · bloques", MinasPlugin.TITULO))));
         pintarBloques(v, m);
         p.openInventory(v.inv);
     }
@@ -136,7 +136,7 @@ public final class MenuMinas implements Listener {
             List<Component> lore = ficha(m);
             lore.add(Estilo.vacio());
             lore.add(Estilo.accion("Clic para editarla", MinasPlugin.MARCA));
-            v.inv.setItem(CASILLAS[i], MenuUtil.icon(m.icono(), MenuUtil.title(m.nombre(), MinasPlugin.MARCA), lore, m.reiniciando()));
+            v.inv.setItem(CASILLAS[i], MenuUtil.icon(m.icono(), tituloIcono(m), lore, m.reiniciando()));
         }
 
         v.inv.setItem(L_PICO, MenuUtil.icon(Material.GOLDEN_PICKAXE, MenuUtil.title("Pico de selección", MinasPlugin.MARCA),
@@ -197,8 +197,8 @@ public final class MenuMinas implements Listener {
             if (puede) lore.add(Estilo.accion("Clic para ir", MinasPlugin.MARCA));
             else lore.add(Estilo.texto("Sin acceso todavía.", NamedTextColor.RED));
             ItemStack icono = puede
-                    ? MenuUtil.icon(m.icono(), MenuUtil.title(m.nombre(), MinasPlugin.MARCA), lore, false)
-                    : MenuUtil.icon(Material.GRAY_STAINED_GLASS_PANE, MenuUtil.title(m.nombre(), Estilo.APAGADO), lore, false);
+                    ? MenuUtil.icon(m.icono(), tituloIcono(m), lore, false)
+                    : MenuUtil.icon(Material.GRAY_STAINED_GLASS_PANE, MenuUtil.title(m.nombrePlano(), Estilo.APAGADO), lore, false);
             v.inv.setItem(CASILLAS[i++], icono);
         }
         v.inv.setItem(J_AYUDA, MenuUtil.icon(Material.ITEM_FRAME, MenuUtil.title("Las minas", MinasPlugin.MARCA),
@@ -211,15 +211,16 @@ public final class MenuMinas implements Listener {
     private void pintarFicha(Vista v, Mina m) {
         fondo(v.inv);
         List<Component> cab = ficha(m);
-        v.inv.setItem(F_ICONO, MenuUtil.icon(m.icono(), MenuUtil.title(m.nombre(), MinasPlugin.MARCA), cab, true));
+        v.inv.setItem(F_ICONO, MenuUtil.icon(m.icono(), tituloIcono(m), cab, true));
 
         v.inv.setItem(F_NOMBRE, MenuUtil.icon(Material.NAME_TAG, MenuUtil.title("Nombre", MinasPlugin.MARCA),
                 List.of(
-                        Estilo.linea("Ahora", m.nombre(), NamedTextColor.WHITE),
+                        Estilo.texto(" " + Estilo.FLECHA + " ", Estilo.APAGADO).append(Estilo.texto("Ahora  ", Estilo.CLARO)).append(m.titulo()),
                         Estilo.linea("Id", m.id(), Estilo.APAGADO),
                         Estilo.vacio(),
                         Estilo.texto("El id no cambia: es el de los", Estilo.APAGADO),
                         Estilo.texto("placeholders y de /mine tp.", Estilo.APAGADO),
+                        Estilo.texto("Admite colores con &: &cMINA PVP", Estilo.APAGADO),
                         Estilo.vacio(),
                         Estilo.accion("Clic para cambiarlo por el chat", MinasPlugin.MARCA)), false));
 
@@ -327,7 +328,7 @@ public final class MenuMinas implements Listener {
                         Estilo.texto("porcentaje es partes entre el total, así", Estilo.APAGADO),
                         Estilo.texto("que subir uno no obliga a bajar el resto.", Estilo.APAGADO)), false));
         v.inv.setItem(B_VOLVER, MenuUtil.icon(Material.ARROW, MenuUtil.title("Volver", Estilo.APAGADO),
-                List.of(Estilo.texto("A la ficha de " + m.nombre() + ".", Estilo.APAGADO)), false));
+                List.of(Estilo.texto("A la ficha de " + m.nombrePlano() + ".", Estilo.APAGADO)), false));
     }
 
     /* ---------------------------------------------------------------- textos */
@@ -363,6 +364,12 @@ public final class MenuMinas implements Listener {
                     .append(Estilo.texto("  " + Math.round(m.porcentaje(e.getKey())) + "%", NamedTextColor.WHITE)));
         }
         return out;
+    }
+
+    /** El nombre de la mina como titulo de icono: el rombo y sus colores. */
+    private static Component tituloIcono(Mina m) {
+        return Component.text("✦ ", MinasPlugin.MARCA).decoration(net.kyori.adventure.text.format.TextDecoration.BOLD, true)
+                .append(m.titulo().decoration(net.kyori.adventure.text.format.TextDecoration.BOLD, true));
     }
 
     static String cifra(long n) {

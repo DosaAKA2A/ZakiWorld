@@ -158,9 +158,15 @@ public final class MinasPlugin extends Module {
 
     /** El titulo de las ventanas: el rombo, MINAS en degradado y la seccion detras. */
     public Component titulo(String seccion) {
+        return titulo(Estilo.texto(seccion, TITULO));
+    }
+
+    /** Igual, con la seccion ya compuesta (el nombre de una mina con sus colores). */
+    public Component titulo(Component seccion) {
         return Component.text("✦ ", TITULO)
                 .append(Estilo.degradado("MINAS", DESDE, HASTA).decoration(TextDecoration.BOLD, true))
-                .append(Estilo.texto("  " + seccion, TITULO));
+                .append(Estilo.texto("  ", TITULO))
+                .append(seccion.colorIfAbsent(TITULO).decoration(TextDecoration.ITALIC, false));
     }
 
     public void anotar(String... campos) {

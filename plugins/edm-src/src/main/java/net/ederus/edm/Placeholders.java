@@ -121,7 +121,7 @@ public final class Placeholders extends PlaceholderExpansion {
         Mina m = minas.minas().de(id);
         if (m == null) return "-";
         return switch (que) {
-            case "nombre" -> m.nombre();
+            case "nombre" -> m.nombrePlano();
             case "minado" -> String.valueOf(Math.round(m.porcentajeMinado()));
             case "restante" -> String.valueOf(Math.round(100 - m.porcentajeMinado()));
             case "reinicio" -> m.cuentaAtras();
