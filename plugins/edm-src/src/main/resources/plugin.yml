@@ -1,5 +1,5 @@
 name: EDM
-version: '1.61.2'
+version: '1.61.3'
 main: net.ederus.edm.EDMPlugin
 api-version: '1.20'
 author: Iris Studio
@@ -60,7 +60,7 @@ commands:
     permission: ederus.flex
   mine:
     description: 'Minas de prision: zonas que se rellenan solas y se pican sin permiso de nadie.'
-    usage: /mine [wand|create|tp|reset|list|reload]
+    usage: /mine [wand|create|edit|tp|reset|list|reload]
     aliases: [mines, mina, minas]
     permission: ederus.minas.usar
   lbiomes:

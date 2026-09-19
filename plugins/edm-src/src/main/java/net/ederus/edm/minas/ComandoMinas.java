@@ -112,12 +112,20 @@ public final class ComandoMinas implements CommandExecutor, TabCompleter {
                     plugin.di(p, "no-se-pudo", "No se pudo reiniciar %mina%: sin zona, sin bloques o ya en marcha.", "%mina%", m.nombre());
                 }
             }
-            case "reload" -> p.sendMessage(plugin.texto("recargado", "Recargado: %que%", "%que%", plugin.recargar()));
-            default -> {
-                Mina m = plugin.minas().de(uno);
-                if (m != null) plugin.menu().abrirFicha(p, m.id());
-                else ayuda(p, etiqueta);
+            case "edit" -> {
+                if (args.length < 2) {
+                    plugin.menu().abrirLista(p);
+                    return true;
+                }
+                Mina m = plugin.minas().de(args[1]);
+                if (m == null) {
+                    plugin.di(p, "sin-mina", "No hay ninguna mina llamada %mina%.", "%mina%", args[1]);
+                    return true;
+                }
+                plugin.menu().abrirFicha(p, m.id());
             }
+            case "reload" -> p.sendMessage(plugin.texto("recargado", "Recargado: %que%", "%que%", plugin.recargar()));
+            default -> ayuda(p, etiqueta);
         }
         return true;
     }
@@ -168,6 +176,7 @@ public final class ComandoMinas implements CommandExecutor, TabCompleter {
         if (plugin.esAdmin(p)) {
             linea(p, "/" + etiqueta + " wand", "el pico de selección");
             linea(p, "/" + etiqueta + " create <nombre>", "una mina con la zona marcada");
+            linea(p, "/" + etiqueta + " edit <mina>", "la ficha de una mina");
             linea(p, "/" + etiqueta + " reset [mina|all]", "rellena ahora");
             linea(p, "/" + etiqueta + " reload", "vuelve a leer minas.yml y los mensajes");
         }
@@ -185,18 +194,17 @@ public final class ComandoMinas implements CommandExecutor, TabCompleter {
         String pref = args[args.length - 1].toLowerCase(Locale.ROOT);
         if (args.length == 1) {
             List<String> subs = new ArrayList<>(List.of("tp", "list", "help"));
-            if (plugin.esAdmin(p)) subs.addAll(List.of("wand", "create", "reset", "reload"));
+            if (plugin.esAdmin(p)) subs.addAll(List.of("wand", "create", "edit", "reset", "reload"));
             for (String s : subs) if (s.startsWith(pref)) out.add(s);
-            if (plugin.esAdmin(p)) {
-                for (Mina m : plugin.minas().todas()) if (m.id().startsWith(pref)) out.add(m.id());
-            }
             return out;
         }
-        if (args.length == 2 && (args[0].equalsIgnoreCase("tp") || args[0].equalsIgnoreCase("reset"))) {
+        if (args.length == 2 && (args[0].equalsIgnoreCase("tp") || args[0].equalsIgnoreCase("reset")
+                || args[0].equalsIgnoreCase("edit"))) {
             for (Mina m : plugin.minas().todas()) {
                 if (m.id().startsWith(pref) && (plugin.esAdmin(p) || plugin.puedeEntrar(p, m))) out.add(m.id());
             }
             if (args[0].equalsIgnoreCase("reset") && "all".startsWith(pref)) out.add("all");
+            if (args[0].equalsIgnoreCase("edit") && !plugin.esAdmin(p)) out.clear();
         }
         return out;
     }
