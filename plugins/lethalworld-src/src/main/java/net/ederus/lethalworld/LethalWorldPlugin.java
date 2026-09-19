@@ -1,4 +1,4 @@
-package net.ederus.edm.mundos;
+package net.ederus.lethalworld;
 
 import java.io.File;
 import java.io.IOException;
@@ -22,8 +22,8 @@ import org.bukkit.NamespacedKey;
 import org.bukkit.World;
 import org.bukkit.configuration.ConfigurationSection;
 
-import net.ederus.edm.EDMPlugin;
-import net.ederus.edm.Module;
+import org.bukkit.plugin.java.JavaPlugin;
+
 import net.ederus.edm.comun.Bitacora;
 
 /**
@@ -37,8 +37,12 @@ import net.ederus.edm.comun.Bitacora;
  *
  * Bracken es "All Rights Reserved": el datapack procesado entra en el jar al compilar y
  * nunca se sube al repositorio ni a una release publica. Ver tools/lethal-world.
+ *
+ * Esto vivia dentro de EDM como el modulo "mundos". Salio a plugin propio porque EDM
+ * cambia casi a diario y el datapack pesa 33 MB: subir y borrar ese jar cada vez es
+ * pedir un disgusto. Aqui el jar solo se mueve cuando cambia Lethal World.
  */
-public final class MundosPlugin extends Module {
+public final class LethalWorldPlugin extends JavaPlugin {
 
     /** Namespace de las dimensiones que crea /lw. El mundo sale como lethal_world:<nombre>. */
     public static final String NAMESPACE = "lethal_world";
@@ -48,12 +52,8 @@ public final class MundosPlugin extends Module {
     private Bitacora bitacora;
     private Pregenerador pregen;
     private MobsLethal mobs;
-    private net.ederus.edm.mundos.hardcore.Hardcore hardcore;
+    private net.ederus.lethalworld.hardcore.Hardcore hardcore;
     private final List<String> generadores = new ArrayList<>();
-
-    public MundosPlugin(EDMPlugin core) {
-        super(core, "mundos", "LethalWorld");
-    }
 
     /** Los mobs de Lethal World, para consultarlos desde el comando. */
     /** El ciclo de mobs; lo usan tambien las reglas hardcore para invocar por su cuenta. */
@@ -63,25 +63,27 @@ public final class MundosPlugin extends Module {
 
     @Override
     public void onEnable() {
+        importarDeEDM();
         saveDefaultConfig();
         reloadConfig();
-        this.bitacora = core.bitacora("mundos");
+        this.bitacora = new Bitacora(new File(getDataFolder(), "logs"), "lethal-world", getLogger());
+        this.bitacora.podar(getConfig().getInt("logs.dias", 14));
         cargarGeneradores();
         boolean cambio = instalarDatapack();
 
         ComandoMundos comando = new ComandoMundos(this);
-        var cmd = core.getCommand("lw");
+        var cmd = getCommand("lw");
         if (cmd != null) {
             cmd.setExecutor(comando);
             cmd.setTabCompleter(comando);
         } else {
-            getLogger().warning("El comando /lw no esta en el plugin.yml de EDM.");
+            getLogger().warning("El comando /lw no esta en el plugin.yml.");
         }
         pregen = new Pregenerador(this);
         pregen.cargar();
         mobs = new MobsLethal(this);
         mobs.arrancar();
-        hardcore = new net.ederus.edm.mundos.hardcore.Hardcore(this);
+        hardcore = new net.ederus.lethalworld.hardcore.Hardcore(this);
         hardcore.arrancar();
 
         int cargados = 0;
@@ -100,12 +102,45 @@ public final class MundosPlugin extends Module {
         if (pregen != null) pregen.apagar();
         if (mobs != null) mobs.parar();
         if (hardcore != null) hardcore.parar();
+        if (bitacora != null) bitacora.cerrar();
     }
 
-    @Override
+    /**
+     * Relee el config del disco. Lo llama /lw reload; antes era /edm reload mundos.
+     * No rearranca mobs ni reglas: lo que se lee en cada vuelta (topes, niveles,
+     * puertas) se entera solo; lo que se monta al arrancar necesita reiniciar.
+     */
     public String recargar() {
         reloadConfig();
         return mundos().size() + " mundo(s).";
+    }
+
+    /**
+     * La primera vez: se trae la config que el modulo "mundos" de EDM dejo en
+     * plugins/EDM/mundos. Sin esto, un servidor que ya tenia Calamity montado
+     * (sus mundos, sus puertas, sus horas) arrancaria en blanco y crearia otra vez
+     * las dimensiones. La carpeta vieja NO se borra: queda como copia.
+     */
+    private void importarDeEDM() {
+        File destino = getDataFolder();
+        if (new File(destino, "config.yml").isFile()) return;
+        File vieja = new File(new File(getServer().getPluginsFolder(), "EDM"), "mundos");
+        if (!new File(vieja, "config.yml").isFile()) return;
+        File[] ficheros = vieja.listFiles((d, n) -> n.endsWith(".yml"));
+        if (ficheros == null) return;
+        destino.mkdirs();
+        int copiados = 0;
+        for (File f : ficheros) {
+            try {
+                Files.copy(f.toPath(), new File(destino, f.getName()).toPath());
+                copiados++;
+            } catch (IOException e) {
+                getLogger().warning("No se pudo importar " + f.getName() + ": " + e.getMessage());
+            }
+        }
+        if (copiados > 0) {
+            getLogger().info("Importada la configuracion de plugins/EDM/mundos (" + copiados + " fichero(s)).");
+        }
     }
 
     // ------------------------------------------------------------------ generadores
@@ -169,11 +204,11 @@ public final class MundosPlugin extends Module {
     /** El mundo de Bukkit si ya esta cargado, o null (falta el reinicio). */
     public World mundo(String nombre) {
         NamespacedKey key = NamespacedKey.fromString(NAMESPACE + ":" + nombre.toLowerCase(Locale.ROOT));
-        return key == null ? null : core.getServer().getWorld(key);
+        return key == null ? null : getServer().getWorld(key);
     }
 
     /** Las reglas de los mundos hardcore (Calamity). Puede ser null si estan apagadas. */
-    public net.ederus.edm.mundos.hardcore.Hardcore hardcore() {
+    public net.ederus.lethalworld.hardcore.Hardcore hardcore() {
         return hardcore;
     }
 
@@ -244,7 +279,7 @@ public final class MundosPlugin extends Module {
     // --------------------------------------------------------------------- datapack
 
     private File carpetaPack() {
-        return new File(new File(new File(core.getServer().getWorldContainer(), nivel()), "datapacks"), PACK);
+        return new File(new File(new File(getServer().getWorldContainer(), nivel()), "datapacks"), PACK);
     }
 
     /**
@@ -343,7 +378,7 @@ public final class MundosPlugin extends Module {
 
     private String nivel() {
         Properties props = new Properties();
-        File file = new File(core.getServer().getWorldContainer(), "server.properties");
+        File file = new File(getServer().getWorldContainer(), "server.properties");
         try (Reader r = Files.newBufferedReader(file.toPath())) {
             props.load(r);
         } catch (IOException ignored) {

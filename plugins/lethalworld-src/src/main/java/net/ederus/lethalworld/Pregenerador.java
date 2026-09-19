@@ -1,4 +1,4 @@
-package net.ederus.edm.mundos;
+package net.ederus.lethalworld;
 
 import java.io.File;
 import java.io.IOException;
@@ -14,7 +14,6 @@ import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.entity.Player;
 import org.bukkit.scheduler.BukkitTask;
 
-import net.ederus.edm.Module;
 
 /**
  * Pregenera un mundo de Lethal World antes de abrirlo, para que explorar no genere terreno
@@ -32,7 +31,7 @@ import net.ederus.edm.Module;
  */
 final class Pregenerador {
 
-    private final MundosPlugin modulo;
+    private final LethalWorldPlugin plugin;
     private final File fichero;
 
     private String mundo;
@@ -53,23 +52,23 @@ final class Pregenerador {
     private int tick;
     private int ultimoPorcentaje = -1;
 
-    Pregenerador(MundosPlugin modulo) {
-        this.modulo = modulo;
-        this.fichero = new File(modulo.getDataFolder(), "pregen.yml");
+    Pregenerador(LethalWorldPlugin plugin) {
+        this.plugin = plugin;
+        this.fichero = new File(plugin.getDataFolder(), "pregen.yml");
     }
 
     // ----------------------------------------------------------------------- ajustes
 
     private int msObjetivo() {
-        return modulo.getConfig().getInt("pregen.ms-por-tick-objetivo", 40);
+        return plugin.getConfig().getInt("pregen.ms-por-tick-objetivo", 40);
     }
 
     private int limiteMaximo() {
-        return Math.max(1, modulo.getConfig().getInt("pregen.en-paralelo-maximo", 48));
+        return Math.max(1, plugin.getConfig().getInt("pregen.en-paralelo-maximo", 48));
     }
 
     int radioPorDefecto() {
-        return modulo.getConfig().getInt("pregen.radio-por-defecto", 4000);
+        return plugin.getConfig().getInt("pregen.radio-por-defecto", 4000);
     }
 
     // ------------------------------------------------------------------------ estado
@@ -107,7 +106,7 @@ final class Pregenerador {
         this.generados = this.saltados = this.fallidos = 0;
         this.pausado = false;
         guardar();
-        modulo.bitacora().anotar("pregen", "empieza", mundo, "radio " + radioBloques + " bloques",
+        plugin.bitacora().anotar("pregen", "empieza", mundo, "radio " + radioBloques + " bloques",
                 total + " chunks", "centro " + (centroX << 4) + " " + (centroZ << 4));
         arrancarTarea();
         return null;
@@ -118,7 +117,7 @@ final class Pregenerador {
         pausado = true;
         pararTarea();
         guardar();
-        modulo.bitacora().anotar("pregen", "pausa", mundo, indice + "/" + total);
+        plugin.bitacora().anotar("pregen", "pausa", mundo, indice + "/" + total);
     }
 
     void reanudar() {
@@ -126,18 +125,18 @@ final class Pregenerador {
         pausado = false;
         guardar();
         arrancarTarea();
-        modulo.bitacora().anotar("pregen", "sigue", mundo, indice + "/" + total);
+        plugin.bitacora().anotar("pregen", "sigue", mundo, indice + "/" + total);
     }
 
     void cancelar() {
         if (!activo()) return;
-        modulo.bitacora().anotar("pregen", "cancelada", mundo, indice + "/" + total);
+        plugin.bitacora().anotar("pregen", "cancelada", mundo, indice + "/" + total);
         pararTarea();
         mundo = null;
         if (fichero.isFile()) fichero.delete();
     }
 
-    /** Al arrancar el modulo: si habia una pregeneracion a medias, sigue sola. */
+    /** Al arrancar el plugin: si habia una pregeneracion a medias, sigue sola. */
     void cargar() {
         if (!fichero.isFile()) return;
         YamlConfiguration y = YamlConfiguration.loadConfiguration(fichero);
@@ -153,8 +152,8 @@ final class Pregenerador {
         fallidos = y.getLong("fallidos");
         pausado = y.getBoolean("pausado");
         if (!pausado) {
-            modulo.getServer().getScheduler().runTaskLater(Module.dueno(modulo), this::arrancarTarea, 20L * 10);
-            modulo.getLogger().info("[Lethal World] Pregeneración de " + mundo + " a medias (" + porcentaje()
+            plugin.getServer().getScheduler().runTaskLater(plugin, this::arrancarTarea, 20L * 10);
+            plugin.getLogger().info("[Lethal World] Pregeneración de " + mundo + " a medias (" + porcentaje()
                     + "%): sigue en 10 s.");
         }
     }
@@ -182,7 +181,7 @@ final class Pregenerador {
         try {
             y.save(fichero);
         } catch (IOException e) {
-            modulo.getLogger().warning("[Lethal World] No pude guardar pregen.yml: " + e.getMessage());
+            plugin.getLogger().warning("[Lethal World] No pude guardar pregen.yml: " + e.getMessage());
         }
     }
 
@@ -190,13 +189,13 @@ final class Pregenerador {
 
     private World mundoBukkit() {
         NamespacedKey key = mundo == null ? null : NamespacedKey.fromString(mundo);
-        return key == null ? null : modulo.getServer().getWorld(key);
+        return key == null ? null : plugin.getServer().getWorld(key);
     }
 
     private void arrancarTarea() {
         World w = mundoBukkit();
         if (w == null) {
-            modulo.getLogger().warning("[Lethal World] El mundo " + mundo + " de la pregeneración no está cargado.");
+            plugin.getLogger().warning("[Lethal World] El mundo " + mundo + " de la pregeneración no está cargado.");
             return;
         }
         espiral = new Espiral(radioChunks);
@@ -205,8 +204,8 @@ final class Pregenerador {
         limite = Math.min(8, limiteMaximo());
         inicioMs = System.currentTimeMillis();
         hechosAlEmpezar = indice;
-        if (barra == null) barra = modulo.getServer().createBossBar("", BarColor.RED, BarStyle.SEGMENTED_20);
-        tarea = modulo.getServer().getScheduler().runTaskTimer(Module.dueno(modulo), () -> paso(w), 1L, 1L);
+        if (barra == null) barra = plugin.getServer().createBossBar("", BarColor.RED, BarStyle.SEGMENTED_20);
+        tarea = plugin.getServer().getScheduler().runTaskTimer(plugin, () -> paso(w), 1L, 1L);
     }
 
     private void pararTarea() {
@@ -237,7 +236,7 @@ final class Pregenerador {
             }
             enCurso++;
             w.getChunkAtAsync(x, z, true).whenComplete((chunk, error) ->
-                    modulo.getServer().getScheduler().runTask(Module.dueno(modulo), () -> {
+                    plugin.getServer().getScheduler().runTask(plugin, () -> {
                         enCurso--;
                         if (error != null || chunk == null) fallidos++;
                         else generados++;
@@ -250,7 +249,7 @@ final class Pregenerador {
 
     /** Mas chunks a la vez si sobra tick; menos en cuanto se acerca al objetivo. */
     private void ajustarLimite() {
-        double ms = modulo.getServer().getAverageTickTime();
+        double ms = plugin.getServer().getAverageTickTime();
         int objetivo = msObjetivo();
         if (ms > objetivo) limite = Math.max(1, (int) (limite * 0.7));
         else if (ms < objetivo * 0.6) limite = Math.min(limiteMaximo(), limite + 2);
@@ -260,10 +259,10 @@ final class Pregenerador {
         long segundos = Math.max(1, (System.currentTimeMillis() - inicioMs) / 1000);
         String resumen = "Pregeneración de " + mundo + " terminada: " + generados + " chunks generados, "
                 + saltados + " ya estaban, " + fallidos + " fallidos, en " + formatoTiempo(segundos) + ".";
-        modulo.getLogger().info("[Lethal World] " + resumen);
-        modulo.bitacora().anotar("pregen", "terminada", mundo, generados + " generados", saltados + " saltados",
+        plugin.getLogger().info("[Lethal World] " + resumen);
+        plugin.bitacora().anotar("pregen", "terminada", mundo, generados + " generados", saltados + " saltados",
                 fallidos + " fallidos", formatoTiempo(segundos));
-        for (Player p : modulo.getServer().getOnlinePlayers()) {
+        for (Player p : plugin.getServer().getOnlinePlayers()) {
             if (p.hasPermission("ederus.mundos")) p.sendMessage("§cLethal World §8> §7" + resumen);
         }
         cancelarSinAnotar();
@@ -281,13 +280,13 @@ final class Pregenerador {
         barra.setProgress(Math.max(0, Math.min(1, total == 0 ? 1 : (double) indice / total)));
         barra.setTitle("Pregenerando " + mundo + "  " + pct + "%  ·  " + velocidad() + " chunks/s  ·  quedan "
                 + restante() + "  ·  " + limite + " a la vez");
-        for (Player p : modulo.getServer().getOnlinePlayers()) {
+        for (Player p : plugin.getServer().getOnlinePlayers()) {
             if (p.hasPermission("ederus.mundos")) barra.addPlayer(p);
             else barra.removePlayer(p);
         }
         if (pct / 5 != ultimoPorcentaje / 5) {
             ultimoPorcentaje = pct;
-            modulo.getLogger().info("[Lethal World] Pregen " + mundo + ": " + pct + "% (" + indice + "/" + total
+            plugin.getLogger().info("[Lethal World] Pregen " + mundo + ": " + pct + "% (" + indice + "/" + total
                     + "), " + velocidad() + " chunks/s, quedan " + restante() + ".");
         }
     }

@@ -1,8 +1,9 @@
 plugins/edm-src/target/
+plugins/lethalworld-src/target/
 plugins/ederus-src/*/target/
 plugins/ederus-src/*/scripts/node_modules/
 
 # Lethal World: contenido derivado de The Bracken Pack (All Rights Reserved). NUNCA al repo.
-plugins/edm-src/src/main/resources/mundos/datapack/
-plugins/edm-src/src/main/resources/mundos/generadores/
-plugins/edm-src/src/main/resources/mundos/*.index
+plugins/lethalworld-src/src/main/resources/datapack/
+plugins/lethalworld-src/src/main/resources/generadores/
+plugins/lethalworld-src/src/main/resources/*.index

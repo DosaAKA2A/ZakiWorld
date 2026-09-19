@@ -1,4 +1,4 @@
-package net.ederus.edm.mundos;
+package net.ederus.lethalworld;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -17,10 +17,9 @@ import org.bukkit.entity.Player;
 import org.bukkit.potion.PotionEffect;
 import org.bukkit.potion.PotionEffectType;
 
-import net.ederus.edm.Module;
 import net.ederus.edm.comun.Estilo;
-import net.ederus.edm.mundos.hardcore.Cordura;
-import net.ederus.edm.mundos.hardcore.Hardcore;
+import net.ederus.lethalworld.hardcore.Cordura;
+import net.ederus.lethalworld.hardcore.Hardcore;
 import io.papermc.paper.registry.RegistryAccess;
 import io.papermc.paper.registry.RegistryKey;
 import net.kyori.adventure.text.Component;
@@ -38,17 +37,17 @@ final class ComandoMundos implements TabExecutor {
     private static final TextColor MARCA = TextColor.color(0xE0664A);
     private static final TextColor SUAVE = TextColor.color(0xC9BDB8);
 
-    private final MundosPlugin modulo;
+    private final LethalWorldPlugin plugin;
 
-    ComandoMundos(MundosPlugin modulo) {
-        this.modulo = modulo;
+    ComandoMundos(LethalWorldPlugin plugin) {
+        this.plugin = plugin;
     }
 
     private void decir(CommandSender a, Component texto) {
         a.sendMessage(Estilo.aviso(texto.colorIfAbsent(SUAVE)));
     }
 
-    /** El nombre del modulo, una sola vez, para abrir una respuesta larga. */
+    /** El nombre del plugin, una sola vez, para abrir una respuesta larga. */
     private void cabecera(CommandSender a, String que) {
         a.sendMessage(Estilo.cabecera("Lethal World", que, MARCA));
     }
@@ -78,6 +77,7 @@ final class ComandoMundos implements TabExecutor {
             case "pregen" -> pregen(quien, args);
             case "level" -> nivel(quien, args);
             case "hardcore" -> hardcore(quien, args);
+            case "reload" -> recargar(quien);
             default -> ayuda(quien);
         }
         return true;
@@ -96,6 +96,12 @@ final class ComandoMundos implements TabExecutor {
         linea(q, "/lw pregen status|pause|resume|cancel", "");
         linea(q, "/lw level [player]", "de dónde sale el nivel de sus mobs");
         linea(q, "/lw hardcore", "Calamity: portales, objetos y cordura");
+        linea(q, "/lw reload", "relee el config del disco");
+    }
+
+    /** Relee el config. Antes esto era /edm reload mundos, cuando Lethal World iba dentro. */
+    private void recargar(CommandSender q) {
+        decir(q, "Config releida: " + plugin.recargar());
     }
 
     private static void linea(CommandSender q, String uso, String que) {
@@ -103,17 +109,17 @@ final class ComandoMundos implements TabExecutor {
     }
 
     private void lista(CommandSender q) {
-        Map<String, String> mundos = modulo.mundos();
+        Map<String, String> mundos = plugin.mundos();
         if (mundos.isEmpty()) {
             decir(q, "No hay mundos. Crea uno con /lw create <name> <generator>.");
             return;
         }
         decir(q, "Mundos:");
         for (Map.Entry<String, String> e : mundos.entrySet()) {
-            World w = modulo.mundo(e.getKey());
+            World w = plugin.mundo(e.getKey());
             q.sendMessage(Component.text("  " + e.getKey(), NamedTextColor.WHITE)
-                    .append(Component.text("  " + modulo.nombreGenerador(e.getValue())
-                            + (modulo.semillaDe(e.getKey()) != null ? " · semilla " + modulo.semillaDe(e.getKey()) : "")
+                    .append(Component.text("  " + plugin.nombreGenerador(e.getValue())
+                            + (plugin.semillaDe(e.getKey()) != null ? " · semilla " + plugin.semillaDe(e.getKey()) : "")
                             + "  ", SUAVE))
                     .append(w != null
                             ? Component.text("cargado (" + w.getName() + ")", NamedTextColor.GREEN)
@@ -127,17 +133,17 @@ final class ComandoMundos implements TabExecutor {
      * Sirve para ver de un vistazo cual de los dos dispara un nivel que no cuadra.
      */
     private void nivel(CommandSender q, String[] args) {
-        MobsLethal mobs = modulo.mobs();
+        MobsLethal mobs = plugin.mobs();
         if (mobs == null) {
             decir(q, Component.text("Los mobs de Lethal World no están activos.", NamedTextColor.RED));
             return;
         }
-        Player p = args.length >= 2 ? modulo.getServer().getPlayerExact(args[1]) : (q instanceof Player j ? j : null);
+        Player p = args.length >= 2 ? plugin.getServer().getPlayerExact(args[1]) : (q instanceof Player j ? j : null);
         if (p == null) {
             linea(q, "/lw level [player]", "el jugador tiene que estar conectado");
             return;
         }
-        var n = modulo.getConfig().getConfigurationSection("mobs.nivel");
+        var n = plugin.getConfig().getConfigurationSection("mobs.nivel");
         double porRango = n == null ? 2.0 : n.getDouble("por-rango", 2.0);
         double porNivel = Math.max(1.0, n == null ? 20.0 : n.getDouble("poder-por-nivel", 20.0));
         double variacion = n == null ? 0.10 : n.getDouble("variacion", 0.10);
@@ -156,10 +162,10 @@ final class ComandoMundos implements TabExecutor {
 
     private void listaGeneradores(CommandSender q) {
         decir(q, "Generadores:");
-        for (String id : modulo.generadores()) {
-            List<String> usan = modulo.mismoGenerador(id);
+        for (String id : plugin.generadores()) {
+            List<String> usan = plugin.mismoGenerador(id);
             q.sendMessage(Component.text("  " + id, NamedTextColor.WHITE)
-                    .append(Component.text("  " + modulo.nombreGenerador(id), SUAVE))
+                    .append(Component.text("  " + plugin.nombreGenerador(id), SUAVE))
                     .append(usan.isEmpty() ? Component.empty()
                             : Component.text("  en uso: " + String.join(", ", usan), NamedTextColor.GRAY)));
         }
@@ -179,14 +185,14 @@ final class ComandoMundos implements TabExecutor {
                 semilla = (long) args[3].hashCode();
             }
         }
-        List<String> previos = modulo.mismoGenerador(args[2].toLowerCase(Locale.ROOT), semilla, true);
-        String error = modulo.crear(args[1], args[2], semilla);
+        List<String> previos = plugin.mismoGenerador(args[2].toLowerCase(Locale.ROOT), semilla, true);
+        String error = plugin.crear(args[1], args[2], semilla);
         if (error != null) {
             decir(q, Component.text(error, NamedTextColor.RED));
             return;
         }
         decir(q, "Mundo " + args[1].toLowerCase(Locale.ROOT) + " creado con "
-                + modulo.nombreGenerador(args[2].toLowerCase(Locale.ROOT))
+                + plugin.nombreGenerador(args[2].toLowerCase(Locale.ROOT))
                 + (semilla != null ? " y semilla " + semilla : "") + ". Reinicia el servidor para que exista.");
         if (!previos.isEmpty()) {
             decir(q, Component.text("Ojo: " + String.join(", ", previos) + " usa el mismo generador y la"
@@ -199,7 +205,7 @@ final class ComandoMundos implements TabExecutor {
             linea(q, "/lw delete <name>", "");
             return;
         }
-        String error = modulo.borrar(args[1]);
+        String error = plugin.borrar(args[1]);
         decir(q, error != null ? Component.text(error, NamedTextColor.RED)
                 : Component.text("Mundo " + args[1].toLowerCase(Locale.ROOT) + " quitado. Deja de cargarse al"
                         + " reiniciar; su carpeta sigue en disco."));
@@ -212,7 +218,7 @@ final class ComandoMundos implements TabExecutor {
         }
         Player objetivo;
         if (args.length >= 3) {
-            objetivo = modulo.getServer().getPlayerExact(args[2]);
+            objetivo = plugin.getServer().getPlayerExact(args[2]);
             if (objetivo == null) {
                 decir(q, Component.text("No encuentro al jugador " + args[2] + ".", NamedTextColor.RED));
                 return;
@@ -223,26 +229,26 @@ final class ComandoMundos implements TabExecutor {
             decir(q, "Desde la consola indica el jugador: /lw tp <name> <player>");
             return;
         }
-        World w = modulo.mundo(args[1]);
+        World w = plugin.mundo(args[1]);
         if (w == null) {
-            decir(q, Component.text(modulo.mundos().containsKey(args[1].toLowerCase(Locale.ROOT))
+            decir(q, Component.text(plugin.mundos().containsKey(args[1].toLowerCase(Locale.ROOT))
                     ? "El mundo aún no está cargado: falta reiniciar."
                     : "No existe el mundo '" + args[1] + "'.", NamedTextColor.RED));
             return;
         }
         Location spawn = w.getSpawnLocation();
-        w.getChunkAtAsync(spawn).thenAccept(chunk -> modulo.getServer().getScheduler().runTask(Module.dueno(modulo), () -> {
+        w.getChunkAtAsync(spawn).thenAccept(chunk -> plugin.getServer().getScheduler().runTask(plugin, () -> {
             Location destino = sitioSeguro(w, spawn.getBlockX(), spawn.getBlockZ());
             boolean seguro = destino != null;
             if (!seguro) destino = new Location(w, spawn.getBlockX() + 0.5, Math.min(w.getLogicalHeight() - 2, 200), spawn.getBlockZ() + 0.5);
             if (!seguro) objetivo.addPotionEffect(new PotionEffect(PotionEffectType.SLOW_FALLING, 20 * 30, 1));
             objetivo.teleportAsync(destino);
-            modulo.bitacora().anotar("tp", objetivo.getName(), w.getName(), seguro ? "suelo" : "caida lenta");
+            plugin.bitacora().anotar("tp", objetivo.getName(), w.getName(), seguro ? "suelo" : "caida lenta");
         }));
     }
 
     private void pregen(CommandSender q, String[] args) {
-        Pregenerador pg = modulo.pregen();
+        Pregenerador pg = plugin.pregen();
         String sub = args.length >= 2 ? args[1].toLowerCase(Locale.ROOT) : "status";
         switch (sub) {
             case "start" -> {
@@ -250,7 +256,7 @@ final class ComandoMundos implements TabExecutor {
                     linea(q, "/lw pregen start <name> [radius]", "");
                     return;
                 }
-                World w = modulo.mundo(args[2]);
+                World w = plugin.mundo(args[2]);
                 if (w == null) {
                     decir(q, Component.text("El mundo '" + args[2] + "' no existe o aún no está cargado.", NamedTextColor.RED));
                     return;
@@ -301,13 +307,13 @@ final class ComandoMundos implements TabExecutor {
             decir(q, "Solo desde el juego: lista los biomas del mundo en el que estás.");
             return;
         }
-        String gen = modulo.generadorDe(p.getWorld());
+        String gen = plugin.generadorDe(p.getWorld());
         if (gen == null) {
             decir(q, "No estás en un mundo de Lethal World. Entra con /lw tp <name>.");
             return;
         }
-        List<String> ids = modulo.biomasDe(gen);
-        decir(q, "Biomas de " + modulo.nombreGenerador(gen) + " (" + ids.size() + "). Pulsa uno para ir:");
+        List<String> ids = plugin.biomasDe(gen);
+        decir(q, "Biomas de " + plugin.nombreGenerador(gen) + " (" + ids.size() + "). Pulsa uno para ir:");
         for (String id : ids) {
             String corto = id.substring(id.lastIndexOf('/') + 1);
             q.sendMessage(Component.text("  " + corto.replace('_', ' '), NamedTextColor.WHITE)
@@ -326,8 +332,8 @@ final class ComandoMundos implements TabExecutor {
             return;
         }
         World w = p.getWorld();
-        String gen = modulo.generadorDe(w);
-        Biome bioma = resolverBioma(args[1], gen == null ? List.of() : modulo.biomasDe(gen));
+        String gen = plugin.generadorDe(w);
+        Biome bioma = resolverBioma(args[1], gen == null ? List.of() : plugin.biomasDe(gen));
         if (bioma == null) {
             decir(q, Component.text("No conozco el bioma '" + args[1] + "'. Mira /lw biomes.", NamedTextColor.RED));
             return;
@@ -341,20 +347,20 @@ final class ComandoMundos implements TabExecutor {
         }
         decir(q, "Buscando " + bioma.getKey().asString() + " a menos de " + radio + " bloques...");
         final int r = radio;
-        modulo.getServer().getScheduler().runTask(Module.dueno(modulo), () -> {
+        plugin.getServer().getScheduler().runTask(plugin, () -> {
             long inicio = System.currentTimeMillis();
             var resultado = w.locateNearestBiome(p.getLocation(), r, 32, 64, bioma);
             long ms = System.currentTimeMillis() - inicio;
             if (resultado == null) {
                 decir(q, Component.text("No hay " + bioma.getKey().getKey() + " a menos de " + r
                         + " bloques. Prueba con un radio mayor: /lw biome " + args[1] + " 8000", NamedTextColor.GOLD));
-                modulo.bitacora().anotar("biome", p.getName(), bioma.getKey().asString(), "no encontrado",
+                plugin.bitacora().anotar("biome", p.getName(), bioma.getKey().asString(), "no encontrado",
                         r + " bloques", ms + " ms");
                 return;
             }
             Location hallado = resultado.getLocation();
             int distancia = (int) Math.hypot(hallado.getX() - p.getLocation().getX(), hallado.getZ() - p.getLocation().getZ());
-            w.getChunkAtAsync(hallado).thenAccept(ch -> modulo.getServer().getScheduler().runTask(Module.dueno(modulo), () -> {
+            w.getChunkAtAsync(hallado).thenAccept(ch -> plugin.getServer().getScheduler().runTask(plugin, () -> {
                 Location destino = sitioSeguro(w, hallado.getBlockX(), hallado.getBlockZ(), bioma);
                 boolean seguro = destino != null;
                 if (!seguro) {
@@ -365,7 +371,7 @@ final class ComandoMundos implements TabExecutor {
                 decir(q, "Llegaste a " + bioma.getKey().getKey().replace('/', ' ').replace('_', ' ') + " ("
                         + destino.getBlockX() + " " + destino.getBlockY() + " " + destino.getBlockZ() + ", a "
                         + distancia + " bloques)." + (seguro ? "" : " No encontré suelo: caída lenta."));
-                modulo.bitacora().anotar("biome", p.getName(), bioma.getKey().asString(),
+                plugin.bitacora().anotar("biome", p.getName(), bioma.getKey().asString(),
                         destino.getBlockX() + " " + destino.getBlockY() + " " + destino.getBlockZ(),
                         distancia + " bloques", ms + " ms");
             }));
@@ -429,7 +435,7 @@ final class ComandoMundos implements TabExecutor {
      * PISANDOLOS, que es la unica forma comoda de hacerlo desde Bedrock y sin menus.
      */
     private void hardcore(CommandSender q, String[] args) {
-        Hardcore hc = modulo.hardcore();
+        Hardcore hc = plugin.hardcore();
         // El objeto existe siempre; lo que falta con hardcore.activo en false son el
         // panel y la vara, y sin ellos casi todo lo de abajo reventaba con un null.
         if (hc == null || !hc.activo()) {
@@ -487,7 +493,7 @@ final class ComandoMundos implements TabExecutor {
             }
             case "tiempo" -> {
                 Player destino = args.length >= 3
-                        ? modulo.getServer().getPlayer(args[2])
+                        ? plugin.getServer().getPlayer(args[2])
                         : (q instanceof Player p ? p : null);
                 if (destino == null) {
                     decir(q, Component.text("No encuentro a ese jugador.", NamedTextColor.RED));
@@ -502,14 +508,14 @@ final class ComandoMundos implements TabExecutor {
             }
             case "frasco", "cristal", "esencia" -> {
                 Player destino = args.length >= 3
-                        ? modulo.getServer().getPlayer(args[2])
+                        ? plugin.getServer().getPlayer(args[2])
                         : (q instanceof Player p ? p : null);
                 if (destino == null) {
                     decir(q, Component.text("No encuentro a ese jugador.", NamedTextColor.RED));
                     return;
                 }
                 var item = switch (sub) {
-                    case "frasco" -> hc.items().frasco(modulo.getConfig().getInt("hardcore.frasco.usos", 3));
+                    case "frasco" -> hc.items().frasco(plugin.getConfig().getInt("hardcore.frasco.usos", 3));
                     case "cristal" -> hc.items().cristal();
                     default -> hc.items().esencia(1);
                 };
@@ -518,7 +524,7 @@ final class ComandoMundos implements TabExecutor {
             }
             case "cordura" -> {
                 Player destino = args.length >= 4
-                        ? modulo.getServer().getPlayer(args[3])
+                        ? plugin.getServer().getPlayer(args[3])
                         : (q instanceof Player p ? p : null);
                 if (destino == null) {
                     decir(q, Component.text("No encuentro a ese jugador.", NamedTextColor.RED));
@@ -567,7 +573,7 @@ final class ComandoMundos implements TabExecutor {
         List<String> op = new ArrayList<>();
         if (args.length == 1) {
             op.addAll(List.of("list", "generators", "create", "delete", "tp", "biomes", "biome",
-                    "pregen", "level", "hardcore"));
+                    "pregen", "level", "hardcore", "reload"));
         } else if (args.length == 2 && args[0].equalsIgnoreCase("hardcore")) {
             op.addAll(List.of("status", "menu", "wand", "define", "llegada", "salida",
                     "frasco", "cristal", "esencia", "cordura", "tiempo"));
@@ -577,22 +583,22 @@ final class ComandoMundos implements TabExecutor {
         } else if (args.length == 3 && args[0].equalsIgnoreCase("hardcore")
                 && List.of("frasco", "cristal", "esencia", "cordura", "tiempo")
                         .contains(args[1].toLowerCase(Locale.ROOT))) {
-            for (Player p : modulo.getServer().getOnlinePlayers()) op.add(p.getName());
+            for (Player p : plugin.getServer().getOnlinePlayers()) op.add(p.getName());
         } else if (args.length == 2 && args[0].equalsIgnoreCase("pregen")) {
             op.addAll(List.of("start", "status", "pause", "resume", "cancel"));
         } else if (args.length == 3 && args[0].equalsIgnoreCase("pregen") && args[1].equalsIgnoreCase("start")) {
-            op.addAll(modulo.mundos().keySet());
+            op.addAll(plugin.mundos().keySet());
         } else if (args.length == 2 && args[0].equalsIgnoreCase("biome") && q instanceof Player p) {
-            String gen = modulo.generadorDe(p.getWorld());
-            if (gen != null) for (String id : modulo.biomasDe(gen)) op.add(id.substring(id.lastIndexOf('/') + 1));
+            String gen = plugin.generadorDe(p.getWorld());
+            if (gen != null) for (String id : plugin.biomasDe(gen)) op.add(id.substring(id.lastIndexOf('/') + 1));
         } else if (args.length == 2 && (args[0].equalsIgnoreCase("delete") || args[0].equalsIgnoreCase("tp"))) {
-            op.addAll(modulo.mundos().keySet());
+            op.addAll(plugin.mundos().keySet());
         } else if (args.length == 3 && args[0].equalsIgnoreCase("create")) {
-            op.addAll(modulo.generadores());
+            op.addAll(plugin.generadores());
         } else if (args.length == 3 && args[0].equalsIgnoreCase("tp")) {
-            for (Player p : modulo.getServer().getOnlinePlayers()) op.add(p.getName());
+            for (Player p : plugin.getServer().getOnlinePlayers()) op.add(p.getName());
         } else if (args.length == 2 && args[0].equalsIgnoreCase("level")) {
-            for (Player p : modulo.getServer().getOnlinePlayers()) op.add(p.getName());
+            for (Player p : plugin.getServer().getOnlinePlayers()) op.add(p.getName());
         }
         String ultimo = args[args.length - 1].toLowerCase(Locale.ROOT);
         op.removeIf(s -> !s.toLowerCase(Locale.ROOT).startsWith(ultimo));

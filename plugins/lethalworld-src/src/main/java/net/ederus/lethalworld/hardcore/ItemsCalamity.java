@@ -1,11 +1,10 @@
-package net.ederus.edm.mundos.hardcore;
+package net.ederus.lethalworld.hardcore;
 
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
 import net.kyori.adventure.text.format.TextColor;
 import net.kyori.adventure.text.format.TextDecoration;
-import net.ederus.edm.Module;
-import net.ederus.edm.mundos.MundosPlugin;
+import net.ederus.lethalworld.LethalWorldPlugin;
 import org.bukkit.Material;
 import org.bukkit.NamespacedKey;
 import org.bukkit.inventory.ItemStack;
@@ -28,7 +27,7 @@ public final class ItemsCalamity {
     public static final TextColor VERDE = TextColor.color(0x8FD6A8);
     public static final TextColor MORADO = TextColor.color(0xC792EA);
 
-    private final MundosPlugin modulo;
+    private final LethalWorldPlugin plugin;
     /** Marca del frasco; su valor es cuantos tragos le quedan. */
     private final NamespacedKey claveFrasco;
     /** Marca del cristal de regreso. */
@@ -36,18 +35,21 @@ public final class ItemsCalamity {
     /** Marca de la esencia, la moneda con la que se recarga el frasco. */
     private final NamespacedKey claveEsencia;
 
-    public ItemsCalamity(MundosPlugin modulo) {
-        this.modulo = modulo;
-        this.claveFrasco = new NamespacedKey(Module.dueno(modulo), "frasco_calma");
-        this.claveCristal = new NamespacedKey(Module.dueno(modulo), "cristal_regreso");
-        this.claveEsencia = new NamespacedKey(Module.dueno(modulo), "esencia_calamidad");
+    public ItemsCalamity(LethalWorldPlugin plugin) {
+        this.plugin = plugin;
+        /* Namespace "edm" a mano: estos items ya estan repartidos por el servidor con
+         * esa marca. Aunque Lethal World ya no sea un modulo de EDM, la clave no puede
+         * cambiar o los frascos, cristales y esencias de los cofres dejarian de valer. */
+        this.claveFrasco = new NamespacedKey("edm", "frasco_calma");
+        this.claveCristal = new NamespacedKey("edm", "cristal_regreso");
+        this.claveEsencia = new NamespacedKey("edm", "esencia_calamidad");
     }
 
     // ------------------------------------------------------------------ el frasco
 
     /** El Frasco de Calma con los tragos que se le digan. */
     public ItemStack frasco(int usos) {
-        int max = modulo.getConfig().getInt("hardcore.frasco.usos", 3);
+        int max = plugin.getConfig().getInt("hardcore.frasco.usos", 3);
         int quedan = Math.max(0, Math.min(max, usos));
         ItemStack item = new ItemStack(Material.POTION);
         ItemMeta meta = item.getItemMeta();
@@ -56,7 +58,7 @@ public final class ItemsCalamity {
                     .decoration(TextDecoration.ITALIC, false));
             List<Component> lore = new ArrayList<>();
             lore.add(Component.text("Recupera "
-                    + modulo.getConfig().getInt("hardcore.frasco.cordura", 40)
+                    + plugin.getConfig().getInt("hardcore.frasco.cordura", 40)
                     + " de cordura.", NamedTextColor.GRAY).decoration(TextDecoration.ITALIC, false));
             lore.add(Component.text("Tragos: " + quedan + " de " + max, VERDE)
                     .decoration(TextDecoration.ITALIC, false));
@@ -101,7 +103,7 @@ public final class ItemsCalamity {
                             .decoration(TextDecoration.ITALIC, false),
                     Component.empty(),
                     Component.text("Clic derecho y quédate quieto "
-                            + modulo.getConfig().getInt("hardcore.cristal.segundos", 5) + " s.",
+                            + plugin.getConfig().getInt("hardcore.cristal.segundos", 5) + " s.",
                             NamedTextColor.DARK_GRAY).decoration(TextDecoration.ITALIC, false),
                     Component.text("Se consume al usarlo.", NamedTextColor.DARK_GRAY)
                             .decoration(TextDecoration.ITALIC, false)));

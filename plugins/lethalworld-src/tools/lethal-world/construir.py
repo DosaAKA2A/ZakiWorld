@@ -2,8 +2,8 @@
 
 Bracken es "All Rights Reserved": ni su contenido ni lo que sale de aqui se sube al
 repositorio (que es publico). Este script SI es nuestro. Lee Bracken y el diccionario
-desde fuera del repo y deja el resultado en src/main/resources/mundos/datapack, que
-esta en .gitignore y entra en el jar al compilar.
+desde fuera del repo y deja el resultado en src/main/resources/datapack (del plugin
+LethalWorld), que esta en .gitignore y entra en el jar al compilar.
 
 Uso:
     python construir.py extraer   -> textos visibles que quedan (para traducir)
@@ -36,11 +36,13 @@ import nbtlib
 from nbtlib import Compound, Double, Float, Int, List, String
 
 AQUI = Path(__file__).resolve().parent
-EDM = AQUI.parent.parent
-EXTERNOS = EDM.parents[2] / "_externos" / "datapacks"
+# plugins/lethalworld-src (antes esto vivia en plugins/edm-src, a la misma profundidad).
+PLUGIN = AQUI.parent.parent
+EXTERNOS = PLUGIN.parents[2] / "_externos" / "datapacks"
 BRACKEN = Path(os.environ.get("LW_BRACKEN", EXTERNOS / "bracken"))
 DICCIONARIO = Path(os.environ.get("LW_DICCIONARIO", EXTERNOS / "lethal-world" / "nombres.json"))
-SALIDA = EDM / "src" / "main" / "resources" / "mundos"
+# LethalWorld es un JavaPlugin: sus recursos van a la RAIZ del jar, sin prefijo.
+SALIDA = PLUGIN / "src" / "main" / "resources"
 
 # Carpetas de data/<ns>/ que pasan al datapack
 CONSERVAR = ("worldgen/", "dimension_type/", "structure/", "timeline/", "tags/worldgen/", "tags/timeline/")
@@ -740,7 +742,7 @@ def main() -> None:
 
     construir_ruinas(datapack, cuenta)
 
-    # Indices: EDM no puede listar carpetas dentro de su propio jar, asi que sabe que copiar por aqui.
+    # Indices: el plugin no puede listar carpetas dentro de su propio jar, asi que sabe que copiar por aqui.
     (SALIDA / "datapack.index").write_text(
         "\n".join(sorted(f.relative_to(datapack).as_posix() for f in datapack.rglob("*") if f.is_file())) + "\n",
         encoding="utf-8")

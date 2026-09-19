@@ -1,0 +1,69 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+
+  <groupId>net.ederus</groupId>
+  <artifactId>LethalWorld</artifactId>
+  <version>1.0.0</version>
+  <packaging>jar</packaging>
+  <name>LethalWorld</name>
+  <description>Lethal World: los mundos de datapack de Ederus (/lw)</description>
+
+  <properties>
+    <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+    <maven.compiler.release>25</maven.compiler.release>
+    <!-- La version de EDM contra la que se compila. Al subir EDM, subirla aqui. -->
+    <edm.version>1.67.0</edm.version>
+  </properties>
+
+  <repositories>
+    <repository>
+      <id>papermc</id>
+      <url>https://repo.papermc.io/repository/maven-public/</url>
+    </repository>
+    <repository>
+      <id>jitpack</id>
+      <url>https://jitpack.io</url>
+    </repository>
+  </repositories>
+
+  <dependencies>
+    <dependency>
+      <groupId>io.papermc.paper</groupId>
+      <artifactId>paper-api</artifactId>
+      <version>26.1.2.build.74-stable</version>
+      <scope>provided</scope>
+    </dependency>
+    <!-- EDM: de ahi salen los esbirros (anomaly), las MobCoins, Compat, Estilo y la
+         bitacora. Es el propio jar de al lado, como edm-src hace con los jars de
+         _toolchain/libs.
+
+         OJO: HAY QUE COMPILAR EDM ANTES QUE ESTO. Si el jar de esa version no esta
+         en ../edm-src/target, Maven falla sin explicar gran cosa:
+             cd ../edm-src        ; mvn -o -DskipTests package
+             cd ../lethalworld-src ; mvn -o -DskipTests package
+
+         MythicMobs NO aparece aqui a proposito: no hay jar suyo en _toolchain/libs
+         y solo hace falta para una pregunta, que se hace por reflexion en
+         PuenteMythicMobs. -->
+    <dependency>
+      <groupId>net.ederus</groupId>
+      <artifactId>EDM</artifactId>
+      <version>${edm.version}</version>
+      <scope>system</scope>
+      <systemPath>${project.basedir}/../edm-src/target/EDM-${edm.version}.jar</systemPath>
+    </dependency>
+  </dependencies>
+
+  <build>
+    <finalName>LethalWorld-${project.version}</finalName>
+    <resources>
+      <resource>
+        <directory>src/main/resources</directory>
+        <filtering>false</filtering>
+      </resource>
+    </resources>
+  </build>
+</project>

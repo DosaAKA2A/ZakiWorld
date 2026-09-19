@@ -1,4 +1,4 @@
-package net.ederus.edm.mundos;
+package net.ederus.lethalworld;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -79,7 +79,7 @@ final class Resembrador {
                 p.appendReplacement(sb, Matcher.quoteReplacement(reemplazo));
             }
             p.appendTail(sb);
-            out.put("data/" + MundosPlugin.NAMESPACE + "/worldgen/" + kind + "/" + nuevaRuta(prefijo, id) + ".json",
+            out.put("data/" + LethalWorldPlugin.NAMESPACE + "/worldgen/" + kind + "/" + nuevaRuta(prefijo, id) + ".json",
                     sb.toString().getBytes(StandardCharsets.UTF_8));
         }
 
@@ -96,7 +96,7 @@ final class Resembrador {
     }
 
     private static String nuevoId(String prefijo, String id) {
-        return MundosPlugin.NAMESPACE + ":" + nuevaRuta(prefijo, id);
+        return LethalWorldPlugin.NAMESPACE + ":" + nuevaRuta(prefijo, id);
     }
 
     /** El fichero de worldgen: primero el datapack del jar, luego los datos del servidor. */

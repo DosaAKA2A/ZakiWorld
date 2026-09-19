@@ -12,7 +12,6 @@
 #   dungeonloot/ cajas y llaves de mazmorra (/dl)
 #   flex/     la vitrina de cada jugador (/flex)
 #   biomas/   Lethal Biomes, climas por zona (/lbiomes)
-#   mundos/   Lethal World, mundos de datapack (/lw)
 #
 # Al arrancar por primera vez se copian solos desde las carpetas viejas,
 # que se conservan intactas por si hay que volver atras.
@@ -28,7 +27,6 @@ modulos:
   dungeonloot: true
   flex: true
   biomas: true
-  mundos: true
   minas: true
   # Estos tres solo arrancan si esta su plugin: ProtocolLib, Quests y BattlePass.
   tooltip: true

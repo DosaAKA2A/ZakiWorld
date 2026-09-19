@@ -1,5 +1,5 @@
 name: EDM
-version: '1.66.0'
+version: '1.67.0'
 main: net.ederus.edm.EDMPlugin
 api-version: '1.20'
 author: Iris Studio
@@ -68,11 +68,6 @@ commands:
     usage: /lbiomes <list|zones|zone|paint|clear>
     aliases: [lethalbiomes]
     permission: ederus.biomas
-  lw:
-    description: Lethal World - mundos con el generador de EDM
-    usage: /lw <list|generators|create|delete|tp|biomes|biome|pregen|level>
-    aliases: [lethalworld]
-    permission: ederus.mundos
   gi:
     description: GodItems - items con activadores, acciones y condiciones
     usage: /gi <give|list|info|reload|trigger>
@@ -101,9 +96,6 @@ permissions:
     default: true
   ederus.minas:
     description: Crea, edita, reinicia y borra minas; construye dentro de ellas
-    default: op
-  ederus.mundos:
-    description: Crea, borra y visita los mundos de Lethal World
     default: op
   ederus.biomas:
     description: Crea zonas de clima y las pinta con los biomas de Lethal Biomes

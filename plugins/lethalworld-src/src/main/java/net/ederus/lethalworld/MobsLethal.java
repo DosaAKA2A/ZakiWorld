@@ -1,4 +1,4 @@
-package net.ederus.edm.mundos;
+package net.ederus.lethalworld;
 
 import java.io.File;
 import java.util.ArrayList;
@@ -39,7 +39,7 @@ import org.bukkit.persistence.PersistentDataType;
 import org.bukkit.scheduler.BukkitTask;
 import org.bukkit.util.BoundingBox;
 
-import net.ederus.edm.Module;
+import net.ederus.edm.EDMPlugin;
 import net.ederus.edm.anomaly.AnomalyPlugin;
 import net.ederus.edm.anomaly.core.Glow;
 import net.ederus.edm.anomaly.minions.MinionAbility;
@@ -72,11 +72,11 @@ import net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer;
  *
  * Los tipos se siembran UNA vez en esbirros.yml (si no existen) y a partir de ahi se editan
  * desde /esb como los demas. Las tablas bioma -> tipos y estructura -> guarnicion viven en la
- * config de mundos.
+ * config de este plugin.
  */
 public final class MobsLethal implements Listener {
 
-    private final MundosPlugin modulo;
+    private final LethalWorldPlugin plugin;
     private final Random random = new Random();
     private final Set<UUID> vivos = new HashSet<>();
     private final Map<String, Double> baseMonedas = new HashMap<>();
@@ -95,25 +95,30 @@ public final class MobsLethal implements Listener {
     private record Guarnicion(String tipo, int minimo, int maximo) {
     }
 
-    MobsLethal(MundosPlugin modulo) {
-        this.modulo = modulo;
-        this.clave = new NamespacedKey(Module.dueno(modulo), "lethal_world_mob");
+    MobsLethal(LethalWorldPlugin plugin) {
+        this.plugin = plugin;
+        /* El namespace se escribe a mano y sigue siendo "edm" aunque esto ya no sea
+         * un modulo de EDM: los mobs que hay AHORA en Calamity llevan esta marca en
+         * su PersistentDataContainer. Con lethalworld:... el plugin dejaria de
+         * reconocer a los suyos y los adoptaria otra vez desde cero. */
+        this.clave = new NamespacedKey("edm", "lethal_world_mob");
     }
 
+    /** El modulo anomaly de EDM (los esbirros). Sin EDM o sin ese modulo, no hay mobs. */
     private AnomalyPlugin anomaly() {
-        Module m = modulo.core().modulo("anomaly");
-        return m instanceof AnomalyPlugin a ? a : null;
+        if (!(plugin.getServer().getPluginManager().getPlugin("EDM") instanceof EDMPlugin edm)) return null;
+        return edm.modulo("anomaly") instanceof AnomalyPlugin a ? a : null;
     }
 
     private ConfigurationSection cfg() {
-        ConfigurationSection s = modulo.getConfig().getConfigurationSection("mobs");
+        ConfigurationSection s = plugin.getConfig().getConfigurationSection("mobs");
         return s == null ? new YamlConfiguration() : s;
     }
 
     void arrancar() {
         AnomalyPlugin a = anomaly();
         if (a == null || a.minions() == null || a.minionManager() == null) {
-            modulo.getLogger().warning("[Lethal World] El módulo anomaly (esbirros) no está activo: sin mobs de Lethal World.");
+            plugin.getLogger().warning("[Lethal World] El módulo anomaly (esbirros) no está activo: sin mobs de Lethal World.");
             return;
         }
         sembrar(a.minions());
@@ -122,20 +127,28 @@ public final class MobsLethal implements Listener {
         cargarMonedas();
         a.minionManager().heredable(clave);
         if (!cfg().getBoolean("activos", true)) {
-            modulo.getLogger().info("[Lethal World] Mobs de Lethal World apagados en la config.");
+            plugin.getLogger().info("[Lethal World] Mobs de Lethal World apagados en la config.");
             return;
         }
-        modulo.getServer().getPluginManager().registerEvents(this, Module.dueno(modulo));
+        if (!cfg().getBoolean("adoptados.ignorar-mythicmobs", true)) {
+            plugin.getLogger().warning("[Lethal World] Los MythicMobs SI se adoptan"
+                    + " (mobs.adoptados.ignorar-mythicmobs esta en false): escalan dos veces.");
+        } else if (PuenteMythicMobs.disponible()) {
+            plugin.getLogger().info("[Lethal World] MythicMobs detectado. Los MythicMobs no se adoptan.");
+        } else {
+            plugin.getLogger().info("[Lethal World] MythicMobs no esta instalado.");
+        }
+        plugin.getServer().getPluginManager().registerEvents(this, plugin);
         long cada = Math.max(10, cfg().getLong("cada-ticks", 40));
-        aparicion = modulo.getServer().getScheduler().runTaskTimer(Module.dueno(modulo), this::ciclo, cada, cada);
-        limpieza = modulo.getServer().getScheduler().runTaskTimer(Module.dueno(modulo), this::retirarLejanos, 100L, 100L);
+        aparicion = plugin.getServer().getScheduler().runTaskTimer(plugin, this::ciclo, cada, cada);
+        limpieza = plugin.getServer().getScheduler().runTaskTimer(plugin, this::retirarLejanos, 100L, 100L);
     }
 
     void parar() {
         if (aparicion != null) aparicion.cancel();
         if (limpieza != null) limpieza.cancel();
         for (UUID id : vivos) {
-            Entity e = modulo.getServer().getEntity(id);
+            Entity e = plugin.getServer().getEntity(id);
             if (e != null) e.remove();
         }
         vivos.clear();
@@ -154,13 +167,13 @@ public final class MobsLethal implements Listener {
         double radioAdopcion = cfg().getDouble("radio-adopcion", 40);
         int min = cfg().getInt("distancia-minima", 20), max = cfg().getInt("distancia-maxima", 40);
 
-        for (World w : modulo.getServer().getWorlds()) {
-            if (!MundosPlugin.esMundo(w)) continue;
+        for (World w : plugin.getServer().getWorlds()) {
+            if (!LethalWorldPlugin.esMundo(w)) continue;
             for (Player p : w.getPlayers()) {
                 if (!cuenta(p)) continue;
                 adoptarCerca(mm, p, radioAdopcion);
                 guarnecer(p);
-                int topeDelJugador = tope + (modulo.hardcore() == null ? 0 : modulo.hardcore().bonusTope(p));
+                int topeDelJugador = tope + (plugin.hardcore() == null ? 0 : plugin.hardcore().bonusTope(p));
                 if (cerca(p, radioConteo) >= topeDelJugador) continue;
                 Location sitio = sitio(p, min, max);
                 if (sitio != null) invocar(p, sitio);
@@ -251,7 +264,7 @@ public final class MobsLethal implements Listener {
         int n = 0;
         double r2 = radio * radio;
         for (UUID id : vivos) {
-            Entity e = modulo.getServer().getEntity(id);
+            Entity e = plugin.getServer().getEntity(id);
             if (e != null && e.getWorld().equals(p.getWorld()) && e.getLocation().distanceSquared(p.getLocation()) <= r2) n++;
         }
         return n;
@@ -303,7 +316,7 @@ public final class MobsLethal implements Listener {
     @EventHandler(priority = EventPriority.HIGH, ignoreCancelled = true)
     public void alAparecer(CreatureSpawnEvent e) {
         LivingEntity mob = e.getEntity();
-        if (!(mob instanceof Enemy) || !MundosPlugin.esMundo(mob.getWorld())) return;
+        if (!(mob instanceof Enemy) || !LethalWorldPlugin.esMundo(mob.getWorld())) return;
         switch (e.getSpawnReason()) {
             case CUSTOM, COMMAND, SPAWNER_EGG, DEFAULT, BUCKET -> {
                 return;
@@ -318,7 +331,8 @@ public final class MobsLethal implements Listener {
             default -> {
             }
         }
-        modulo.getServer().getScheduler().runTask(Module.dueno(modulo), () -> {
+        if (esAjeno(mob)) return;
+        plugin.getServer().getScheduler().runTask(plugin, () -> {
             AnomalyPlugin a = anomaly();
             Player p = masCercano(mob.getLocation(), 128);
             if (a != null && p != null && mob.isValid()) adoptar(a.minionManager(), mob, p);
@@ -353,9 +367,23 @@ public final class MobsLethal implements Listener {
     private void adoptarCerca(MinionManager mm, Player p, double radio) {
         for (LivingEntity mob : p.getLocation().getNearbyLivingEntities(radio)) {
             if (!(mob instanceof Enemy) || mm.isMinion(mob) || mob.isDead()) continue;
+            if (esAjeno(mob)) continue;
             if (mm.adoptado(mob)) mm.reescoltar(mob);
             else adoptar(mm, mob, p);
         }
+    }
+
+    /**
+     * Mobs que no son nuestros y que no se tocan: los de MythicMobs.
+     *
+     * Ya vienen con la dificultad que se les puso a mano al crearlos; si ademas se
+     * adoptan, se les reescribe la vida y el dano por nivel y salen imposibles. Los
+     * suyos aparecen con reason CUSTOM, asi que el evento no los ve, pero el barrido
+     * de adoptarCerca si: aqui es donde se paran.
+     */
+    private boolean esAjeno(LivingEntity mob) {
+        if (!cfg().getBoolean("adoptados.ignorar-mythicmobs", true)) return false;
+        return PuenteMythicMobs.esMythicMob(mob);
     }
 
     private void adoptar(MinionManager mm, LivingEntity mob, Player p) {
@@ -364,6 +392,7 @@ public final class MobsLethal implements Listener {
          * vida (de 3400 reescalada a la de un adoptado de nivel 20) y RAIZ moria en
          * tres golpes y saltaba a la ultima fase. Lo vio Dosa peleando en Calamity. */
         if (net.ederus.edm.comun.Tags.isOurs(mob)) return;
+        if (esAjeno(mob)) return;
         if (mm.isMinion(mob) || mm.adoptado(mob) || mob.isInvulnerable()) return;
         ConfigurationSection s = cfg().getConfigurationSection("adoptados");
         if (s == null) s = new YamlConfiguration();
@@ -435,7 +464,7 @@ public final class MobsLethal implements Listener {
                     if (p.getLocation().toVector().distanceSquared(caja.getCenter()) > radio * radio + caja.getWidthX() * caja.getWidthZ()) continue;
                     Set<UUID> tropa = ocupadas.computeIfAbsent(puesto, k -> new HashSet<>());
                     tropa.removeIf(id -> {
-                        Entity e = modulo.getServer().getEntity(id);
+                        Entity e = plugin.getServer().getEntity(id);
                         return e == null || !e.isValid();
                     });
                     if (!tropa.isEmpty() || ahora < proximaGuarnicion.getOrDefault(puesto, 0L)) continue;
@@ -483,7 +512,7 @@ public final class MobsLethal implements Listener {
         base *= 1 + (random.nextDouble() * 2 - 1) * variacion;
         if (destacado) base += n.getInt("extra-destacado", 5);
         // En los mundos hardcore la cordura y los minutos dentro suben el nivel.
-        if (modulo.hardcore() != null) base += modulo.hardcore().bonusNivel(p);
+        if (plugin.hardcore() != null) base += plugin.hardcore().bonusNivel(p);
         return (int) Math.max(1, Math.min(n.getInt("maximo", 100), Math.round(base)));
     }
 
@@ -526,9 +555,9 @@ public final class MobsLethal implements Listener {
     /** Valor esperado por muerte de cada mob en la tabla de UltimateMobCoins del Survival. */
     private void cargarMonedas() {
         baseMonedas.clear();
-        File f = new File(modulo.getServer().getPluginsFolder(), "UltimateMobCoins/mobcoins.yml");
+        File f = new File(plugin.getServer().getPluginsFolder(), "UltimateMobCoins/mobcoins.yml");
         if (!f.isFile()) {
-            modulo.getLogger().warning("[Lethal World] No encuentro UltimateMobCoins/mobcoins.yml: los mobs pagan la base mínima.");
+            plugin.getLogger().warning("[Lethal World] No encuentro UltimateMobCoins/mobcoins.yml: los mobs pagan la base mínima.");
             return;
         }
         ConfigurationSection s = YamlConfiguration.loadConfiguration(f).getConfigurationSection("mobCoinDrops");
@@ -575,7 +604,7 @@ public final class MobsLethal implements Listener {
         double monedas = base * (1 + nivel / Math.max(1.0, m.getDouble("nivel-divisor", 20)))
                 * m.getDouble("multiplicador-mundo", 1.5) * extra;
         long pago = Math.round(monedas);
-        net.ederus.edm.comun.MobCoins.pagar(modulo, asesino, pago);
+        net.ederus.edm.comun.MobCoins.pagar(plugin, asesino, pago);
     }
 
     private void retirarLejanos() {
@@ -583,7 +612,7 @@ public final class MobsLethal implements Listener {
         double r2 = r * r;
         for (var it = vivos.iterator(); it.hasNext(); ) {
             UUID id = it.next();
-            Entity e = modulo.getServer().getEntity(id);
+            Entity e = plugin.getServer().getEntity(id);
             if (e == null || !e.isValid()) {
                 it.remove();
                 puestoDe.remove(id);
@@ -709,7 +738,7 @@ public final class MobsLethal implements Listener {
             carpeta.colorRgb(0xE0664A);
         }
 
-        ConfigurationSection biomas = modulo.getConfig().getConfigurationSection("mobs.biomas");
+        ConfigurationSection biomas = plugin.getConfig().getConfigurationSection("mobs.biomas");
         boolean escribirTabla = biomas == null || biomas.getKeys(false).isEmpty();
         boolean guardar = escribirTabla;
         int creados = 0;
@@ -726,29 +755,29 @@ public final class MobsLethal implements Listener {
             }
             if (escribirTabla) {
                 String ruta = "mobs.biomas.panacea_" + b.id();
-                modulo.getConfig().set(ruta + ".bioma", "bracken:panacea/" + b.id());
-                modulo.getConfig().set(ruta + ".comunes", List.of(ids.get(0), ids.get(1)));
-                modulo.getConfig().set(ruta + ".destacado", ids.get(2));
+                plugin.getConfig().set(ruta + ".bioma", "bracken:panacea/" + b.id());
+                plugin.getConfig().set(ruta + ".comunes", List.of(ids.get(0), ids.get(1)));
+                plugin.getConfig().set(ruta + ".destacado", ids.get(2));
             }
         }
         guardar |= sembrarMinijefes(reg);
 
-        ConfigurationSection gs = modulo.getConfig().getConfigurationSection("mobs.guarniciones");
+        ConfigurationSection gs = plugin.getConfig().getConfigurationSection("mobs.guarniciones");
         if (gs == null || gs.getKeys(false).isEmpty()) {
             for (Puesto g : GUARNICIONES) {
                 MinionType t = buscar(reg, g.tipo());
                 if (t == null) continue;
                 String ruta = "mobs.guarniciones." + g.estructura().substring(g.estructura().indexOf(':') + 1);
-                modulo.getConfig().set(ruta + ".estructura", g.estructura());
-                modulo.getConfig().set(ruta + ".tipo", t.id());
-                modulo.getConfig().set(ruta + ".minimo", g.minimo());
-                modulo.getConfig().set(ruta + ".maximo", g.maximo());
+                plugin.getConfig().set(ruta + ".estructura", g.estructura());
+                plugin.getConfig().set(ruta + ".tipo", t.id());
+                plugin.getConfig().set(ruta + ".minimo", g.minimo());
+                plugin.getConfig().set(ruta + ".maximo", g.maximo());
                 guardar = true;
             }
         }
         // Sin contorno: con varios destacados a la vez brillaban demasiado. Se quita una sola
         // vez a los ya sembrados; si alguien se lo vuelve a poner en /esb, se respeta.
-        if (!modulo.getConfig().getBoolean("mobs.migraciones.sin-contorno")) {
+        if (!plugin.getConfig().getBoolean("mobs.migraciones.sin-contorno")) {
             boolean quitado = false;
             for (Bioma b : PANACEA) {
                 MinionType t = buscar(reg, b.destacado().nombre());
@@ -758,16 +787,16 @@ public final class MobsLethal implements Listener {
                 }
             }
             if (quitado) reg.save();
-            modulo.getConfig().set("mobs.migraciones.sin-contorno", true);
+            plugin.getConfig().set("mobs.migraciones.sin-contorno", true);
             guardar = true;
         }
-        if (modulo.getConfig().getStringList("mobs.minijefes.nombres").isEmpty()) {
-            modulo.getConfig().set("mobs.minijefes.nombres", List.of("Creeper Gigatón", "Ventiarbusto Latente"));
+        if (plugin.getConfig().getStringList("mobs.minijefes.nombres").isEmpty()) {
+            plugin.getConfig().set("mobs.minijefes.nombres", List.of("Creeper Gigatón", "Ventiarbusto Latente"));
             guardar = true;
         }
         if (creados > 0) reg.save();
-        if (guardar) modulo.saveConfig();
-        modulo.getLogger().info("[Lethal World] Mobs: " + PANACEA.size() * 3 + " tipos en /esb (" + creados + " nuevos), "
+        if (guardar) plugin.saveConfig();
+        plugin.getLogger().info("[Lethal World] Mobs: " + PANACEA.size() * 3 + " tipos en /esb (" + creados + " nuevos), "
                 + GUARNICIONES.size() + " estructuras con guarnición.");
     }
 
@@ -817,9 +846,9 @@ public final class MobsLethal implements Listener {
             ids.add(t.id());
         }
 
-        List<String> yaPuestos = modulo.getConfig().getStringList("hardcore.minijefes.tipos");
+        List<String> yaPuestos = plugin.getConfig().getStringList("hardcore.minijefes.tipos");
         if (yaPuestos.isEmpty() || reg.type(yaPuestos.get(0)) == null) {
-            modulo.getConfig().set("hardcore.minijefes.tipos", ids);
+            plugin.getConfig().set("hardcore.minijefes.tipos", ids);
             return true;
         }
         return false;

@@ -1,0 +1,21 @@
+name: LethalWorld
+version: '1.0.0'
+main: net.ederus.lethalworld.LethalWorldPlugin
+api-version: '1.20'
+author: Iris Studio
+description: Lethal World - mundos de datapack con el generador de Bracken procesado
+# Los esbirros, las MobCoins y la bitacora salen de EDM: sin el, esto no arranca.
+depend: [EDM]
+softdepend: [PlaceholderAPI, AuraSkills, UltimateMobCoins, WorldGuard]
+
+commands:
+  lw:
+    description: Lethal World - mundos con el generador de EDM
+    usage: /lw <list|generators|create|delete|tp|biomes|biome|pregen|level|reload>
+    aliases: [lethalworld]
+    permission: ederus.mundos
+
+permissions:
+  ederus.mundos:
+    description: Crea, borra y visita los mundos de Lethal World
+    default: op

@@ -6,6 +6,10 @@
 #
 # OJO: todos los mundos comparten la semilla del servidor. Dos mundos con el MISMO
 # generador salen con el terreno identico.
+#
+# Esto vivia en plugins/EDM/mundos. Al salir a plugin propio, la primera vez que arranca
+# se copia lo que hubiera alli (esta config y hardcore-datos.yml); la carpeta vieja se
+# queda intacta por si hay que volver atras.
 
 # Nombre que se enseña de cada generador (el id no se toca: es el del datapack).
 generadores:
@@ -70,6 +74,10 @@ mobs:
     vida-minima: 20
     vida-por-nivel: 0.08
     dano-por-nivel: 0.04
+    # Los mobs de MythicMobs no se adoptan: ya traen puesta su dificultad al crearlos y
+    # si ademas se les escala la vida y el dano por nivel salen imposibles de matar.
+    # Solo ponlo en false si quieres justamente eso.
+    ignorar-mythicmobs: true
 
   # Adoptados con uno de estos nombres: minijefes, con nivel extra y mucha vida.
   minijefes:

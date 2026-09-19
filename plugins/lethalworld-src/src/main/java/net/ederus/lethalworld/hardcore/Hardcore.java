@@ -1,14 +1,13 @@
-package net.ederus.edm.mundos.hardcore;
+package net.ederus.lethalworld.hardcore;
 
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
 import net.kyori.adventure.text.format.TextColor;
 import net.kyori.adventure.text.format.TextDecoration;
 import net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer;
-import net.ederus.edm.Module;
 import net.ederus.edm.comun.Compat;
 import net.ederus.edm.comun.MobCoins;
-import net.ederus.edm.mundos.MundosPlugin;
+import net.ederus.lethalworld.LethalWorldPlugin;
 import org.bukkit.GameMode;
 import org.bukkit.Location;
 import org.bukkit.World;
@@ -57,14 +56,14 @@ import java.util.UUID;
  * es un reloj que corre desde que entras, el bioma te va desgastando, morir cuesta
  * TODO lo que llevas encima y la unica forma de volver es el portal o un cristal que
  * hay que ganarse. Nada de esto se enciende fuera de esos mundos: cada listener
- * pregunta primero por el mundo, y con la lista vacia el modulo no hace nada.
+ * pregunta primero por el mundo, y con la lista vacia el plugin no hace nada.
  *
  * Lo que decide que un mundo es hardcore esta en la config (hardcore.mundos), no en el
  * codigo: manana Dosa puede montar otro mundo con las mismas reglas sin tocar Java.
  */
 public final class Hardcore implements Listener {
 
-    private final MundosPlugin modulo;
+    private final LethalWorldPlugin plugin;
     private final Cordura cordura = new Cordura();
     private final ItemsCalamity items;
     private final Random random = new Random();
@@ -98,9 +97,9 @@ public final class Hardcore implements Listener {
     private MenuHardcore menu;
     private VaraPortales vara;
 
-    public Hardcore(MundosPlugin modulo) {
-        this.modulo = modulo;
-        this.items = new ItemsCalamity(modulo);
+    public Hardcore(LethalWorldPlugin plugin) {
+        this.plugin = plugin;
+        this.items = new ItemsCalamity(plugin);
     }
 
     public Cordura cordura() {
@@ -120,13 +119,13 @@ public final class Hardcore implements Listener {
     }
 
     private ConfigurationSection cfg() {
-        ConfigurationSection s = modulo.getConfig().getConfigurationSection("hardcore");
+        ConfigurationSection s = plugin.getConfig().getConfigurationSection("hardcore");
         return s == null ? new YamlConfiguration() : s;
     }
 
     /** Si este mundo se rige por las reglas hardcore. */
     public boolean esHardcore(World w) {
-        if (w == null || !MundosPlugin.esMundo(w)) return false;
+        if (w == null || !LethalWorldPlugin.esMundo(w)) return false;
         return cfg().getStringList("mundos").contains(w.getKey().getKey());
     }
 
@@ -149,17 +148,17 @@ public final class Hardcore implements Listener {
 
     public void arrancar() {
         if (!cfg().getBoolean("activo", true)) {
-            modulo.getLogger().info("[Calamity] Reglas hardcore apagadas en la config.");
+            plugin.getLogger().info("[Calamity] Reglas hardcore apagadas en la config.");
             return;
         }
         cargarDatos();
-        modulo.getServer().getPluginManager().registerEvents(this, Module.dueno(modulo));
-        menu = new MenuHardcore(modulo);
-        vara = new VaraPortales(modulo);
+        plugin.getServer().getPluginManager().registerEvents(this, plugin);
+        menu = new MenuHardcore(plugin);
+        vara = new VaraPortales(plugin);
         // Un segundo justo: la cordura se cuenta en segundos y la barra tiene que
         // repintarse a ese ritmo o parpadea contra los avisos de otros plugins.
-        reloj = modulo.getServer().getScheduler().runTaskTimer(
-                Module.dueno(modulo), this::tick, 20L, 20L);
+        reloj = plugin.getServer().getScheduler().runTaskTimer(
+                plugin, this::tick, 20L, 20L);
 
         // Las MobCoins pasan por la barra de la cordura en vez de pisarla.
         MobCoins.aviso((jugador, cantidad) -> {
@@ -167,7 +166,7 @@ public final class Hardcore implements Listener {
             cordura.destello(jugador, Component.text("+" + cantidad + " MobCoins", MobCoins.ORO), 2);
             return true;
         });
-        modulo.getLogger().info("[Calamity] Reglas hardcore activas en: "
+        plugin.getLogger().info("[Calamity] Reglas hardcore activas en: "
                 + String.join(", ", cfg().getStringList("mundos")));
     }
 
@@ -178,7 +177,7 @@ public final class Hardcore implements Listener {
         canalizando.clear();
         // Al apagar no hay PlayerQuitEvent que valga: la cordura de los que siguen
         // dentro se apunta aqui, o un reinicio del servidor se la devolveria entera.
-        for (Player p : modulo.getServer().getOnlinePlayers()) {
+        for (Player p : plugin.getServer().getOnlinePlayers()) {
             if (esHardcore(p) && cordura.conoce(p)) {
                 datos.set("guardado." + p.getUniqueId(), cordura.valor(p));
                 datosSucios = true;
@@ -196,12 +195,12 @@ public final class Hardcore implements Listener {
      * seguro: acaba de leerse del disco, no hay edicion de nadie que pisar.
      */
     private void cargarDatos() {
-        archivoDatos = new java.io.File(modulo.getDataFolder(), "hardcore-datos.yml");
+        archivoDatos = new java.io.File(plugin.getDataFolder(), "hardcore-datos.yml");
         datos = YamlConfiguration.loadConfiguration(archivoDatos);
 
         boolean migrado = false;
         for (String seccion : List.of("tiempo", "tag-entregado", "guardado")) {
-            ConfigurationSection vieja = modulo.getConfig().getConfigurationSection("hardcore." + seccion);
+            ConfigurationSection vieja = plugin.getConfig().getConfigurationSection("hardcore." + seccion);
             if (vieja == null) continue;
             for (String clave : vieja.getKeys(false)) {
                 // Lo de datos.yml manda: si ya estaba, es mas nuevo que lo del config.
@@ -209,16 +208,16 @@ public final class Hardcore implements Listener {
                     datos.set(seccion + "." + clave, vieja.get(clave));
                 }
             }
-            if (modulo.getConfig().isSet("hardcore." + seccion)) {
-                modulo.getConfig().set("hardcore." + seccion, null);
+            if (plugin.getConfig().isSet("hardcore." + seccion)) {
+                plugin.getConfig().set("hardcore." + seccion, null);
                 migrado = true;
             }
         }
         if (migrado) {
             datosSucios = true;
             guardarDatos();
-            modulo.saveConfig();
-            modulo.getLogger().info("[Calamity] Horas, tags y cordura guardada pasan a hardcore-datos.yml.");
+            plugin.saveConfig();
+            plugin.getLogger().info("[Calamity] Horas, tags y cordura guardada pasan a hardcore-datos.yml.");
         }
     }
 
@@ -228,14 +227,14 @@ public final class Hardcore implements Listener {
             datos.save(archivoDatos);
             datosSucios = false;
         } catch (java.io.IOException e) {
-            modulo.getLogger().warning("[Calamity] No se pudo guardar hardcore-datos.yml: " + e.getMessage());
+            plugin.getLogger().warning("[Calamity] No se pudo guardar hardcore-datos.yml: " + e.getMessage());
         }
     }
 
     // ----------------------------------------------------------------------- reloj
 
     private void tick() {
-        for (World w : modulo.getServer().getWorlds()) {
+        for (World w : plugin.getServer().getWorlds()) {
             if (!esHardcore(w)) continue;
             for (Player p : w.getPlayers()) {
                 if (!cuenta(p)) continue;
@@ -259,7 +258,7 @@ public final class Hardcore implements Listener {
         }
         // Quien haya salido del mundo con una canalizacion a medias no se queda colgado.
         canalizando.keySet().removeIf(id -> {
-            Player p = modulo.getServer().getPlayer(id);
+            Player p = plugin.getServer().getPlayer(id);
             boolean fuera = p == null || !p.isOnline() || !esHardcore(p);
             if (fuera) cuentaCristal.remove(id);
             return fuera;
@@ -277,7 +276,7 @@ public final class Hardcore implements Listener {
     private void vigilarZonas() {
         Location llegada = punto("llegada");
         if (llegada != null && vara != null) {
-            for (World w : modulo.getServer().getWorlds()) {
+            for (World w : plugin.getServer().getWorlds()) {
                 if (esHardcore(w)) continue;
                 for (Player p : w.getPlayers()) {
                     if (!cuenta(p) || !vara.dentro(p, "entrada")) continue;
@@ -292,7 +291,7 @@ public final class Hardcore implements Listener {
             }
         }
         if (vara == null) return;
-        for (World w : modulo.getServer().getWorlds()) {
+        for (World w : plugin.getServer().getWorlds()) {
             if (!esHardcore(w)) continue;
             for (Player p : w.getPlayers()) {
                 if (cuenta(p) && vara.dentro(p, "salida")) sacar(p, "Cruzas de vuelta.");
@@ -338,20 +337,20 @@ public final class Hardcore implements Listener {
     /** Guarda un punto donde este el jugador. Lo usa /lw hardcore. */
     public void punto(String nombre, Location donde) {
         String base = "hardcore." + nombre + ".";
-        modulo.getConfig().set(base + "mundo", donde.getWorld().getKey().toString());
-        modulo.getConfig().set(base + "x", donde.getX());
-        modulo.getConfig().set(base + "y", donde.getY());
-        modulo.getConfig().set(base + "z", donde.getZ());
-        modulo.getConfig().set(base + "yaw", donde.getYaw());
-        modulo.getConfig().set(base + "pitch", donde.getPitch());
-        modulo.saveConfig();
+        plugin.getConfig().set(base + "mundo", donde.getWorld().getKey().toString());
+        plugin.getConfig().set(base + "x", donde.getX());
+        plugin.getConfig().set(base + "y", donde.getY());
+        plugin.getConfig().set(base + "z", donde.getZ());
+        plugin.getConfig().set(base + "yaw", donde.getYaw());
+        plugin.getConfig().set(base + "pitch", donde.getPitch());
+        plugin.saveConfig();
     }
 
     /** Busca un mundo por su clave completa (lethal_world:calamity) o por su nombre. */
     private World mundoDe(String id) {
         org.bukkit.NamespacedKey key = org.bukkit.NamespacedKey.fromString(id);
-        World w = key == null ? null : modulo.getServer().getWorld(key);
-        return w != null ? w : modulo.getServer().getWorld(id);
+        World w = key == null ? null : plugin.getServer().getWorld(key);
+        return w != null ? w : plugin.getServer().getWorld(id);
     }
 
     /**
@@ -407,7 +406,7 @@ public final class Hardcore implements Listener {
             String[] partes = linea.split(":");
             PotionEffectType tipo = efecto(partes[0]);
             if (tipo == null) {
-                modulo.getLogger().warning("[Calamity] Efecto desconocido en la config: " + partes[0]);
+                plugin.getLogger().warning("[Calamity] Efecto desconocido en la config: " + partes[0]);
                 continue;
             }
             int nivel = partes.length > 1 ? parse(partes[1], 0) : 0;
@@ -479,8 +478,8 @@ public final class Hardcore implements Listener {
         String id = tipos.get(random.nextInt(tipos.size()));
         double distancia = cfg().getDouble("minijefes.distancia", 30);
 
-        LivingEntity mob = modulo.mobs() == null ? null
-                : modulo.mobs().invocarMinijefe(p, id, distancia,
+        LivingEntity mob = plugin.mobs() == null ? null
+                : plugin.mobs().invocarMinijefe(p, id, distancia,
                         cfg().getDouble("minijefes.vida", 15),
                         cfg().getDouble("minijefes.dano", 4));
         if (mob == null) return;
@@ -602,10 +601,10 @@ public final class Hardcore implements Listener {
 
         String comando = t.getString("comando", "lp user %jugador% permission set insomne.badge.unlocked true");
         try {
-            modulo.getServer().dispatchCommand(modulo.getServer().getConsoleSender(),
+            plugin.getServer().dispatchCommand(plugin.getServer().getConsoleSender(),
                     comando.replace("%jugador%", p.getName()));
         } catch (Throwable e) {
-            modulo.getLogger().warning("[Calamity] No se pudo entregar el tag a " + p.getName() + ": " + e);
+            plugin.getLogger().warning("[Calamity] No se pudo entregar el tag a " + p.getName() + ": " + e);
             return;
         }
         String nombre = t.getString("nombre", "[INSOMNE]");
@@ -617,11 +616,11 @@ public final class Hardcore implements Listener {
                         java.time.Duration.ofMillis(2600),
                         java.time.Duration.ofMillis(700))));
         Compat.soundPlayers(p.getWorld(), p.getLocation(), "ui.toast.challenge_complete", 1.0f, 1.0f);
-        modulo.getServer().broadcast(Component.text(p.getName(), TextColor.color(0x9FD6A0))
+        plugin.getServer().broadcast(Component.text(p.getName(), TextColor.color(0x9FD6A0))
                 .append(Component.text(" lleva 24 horas en Calamity y se ha ganado ", NamedTextColor.GRAY))
                 .append(Component.text(nombre, TextColor.color(0x9FD6A0), TextDecoration.BOLD))
                 .append(Component.text(".", NamedTextColor.GRAY)));
-        modulo.getLogger().info("[Calamity] Tag entregado a " + p.getName() + ".");
+        plugin.getLogger().info("[Calamity] Tag entregado a " + p.getName() + ".");
     }
 
     /**
@@ -661,12 +660,12 @@ public final class Hardcore implements Listener {
      */
     private void vigilarPresas() {
         for (UUID idMob : new ArrayList<>(presas.keySet())) {
-            org.bukkit.entity.Entity e = modulo.getServer().getEntity(idMob);
+            org.bukkit.entity.Entity e = plugin.getServer().getEntity(idMob);
             if (!(e instanceof org.bukkit.entity.Mob mob) || !mob.isValid()) {
                 presas.remove(idMob);
                 continue;
             }
-            Player presa = modulo.getServer().getPlayer(presas.get(idMob));
+            Player presa = plugin.getServer().getPlayer(presas.get(idMob));
             if (presa == null || !presa.isOnline() || !esHardcore(presa)) {
                 presas.remove(idMob);
                 continue;
@@ -787,7 +786,7 @@ public final class Hardcore implements Listener {
          * La marca la pone el juego DESPUES de este evento, por eso se deshace un tick
          * mas tarde, y solo a los que antes si podian despawnear. */
         if (mob.getRemoveWhenFarAway()) {
-            modulo.getServer().getScheduler().runTask(Module.dueno(modulo), () -> {
+            plugin.getServer().getScheduler().runTask(plugin, () -> {
                 if (mob.isValid()) mob.setRemoveWhenFarAway(true);
             });
         }
@@ -880,7 +879,7 @@ public final class Hardcore implements Listener {
     public Location salida() {
         Location guardado = punto("salida");
         if (guardado != null) return guardado;
-        List<World> mundos = modulo.getServer().getWorlds();
+        List<World> mundos = plugin.getServer().getWorlds();
         return mundos.isEmpty() ? null : mundos.get(0).getSpawnLocation();
     }
 
@@ -910,9 +909,9 @@ public final class Hardcore implements Listener {
         Compat.sound(destino.getWorld(), destino, "ambient.cave", 1.2f, 0.5f);
 
         int oleada = cfg().getInt("dificultad.oleada-de-entrada", 5);
-        if (oleada > 0 && modulo.mobs() != null) {
-            modulo.getServer().getScheduler().runTaskLater(Module.dueno(modulo),
-                    () -> modulo.mobs().oleada(p, oleada), 60L);
+        if (oleada > 0 && plugin.mobs() != null) {
+            plugin.getServer().getScheduler().runTaskLater(plugin,
+                    () -> plugin.mobs().oleada(p, oleada), 60L);
         }
     }
 

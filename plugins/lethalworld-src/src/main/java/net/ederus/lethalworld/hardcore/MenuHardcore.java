@@ -1,13 +1,12 @@
-package net.ederus.edm.mundos.hardcore;
+package net.ederus.lethalworld.hardcore;
 
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
 import net.kyori.adventure.text.format.TextColor;
 import net.kyori.adventure.text.format.TextDecoration;
-import net.ederus.edm.Module;
 import net.ederus.edm.comun.Compat;
 import net.ederus.edm.comun.menu.MenuUtil;
-import net.ederus.edm.mundos.MundosPlugin;
+import net.ederus.lethalworld.LethalWorldPlugin;
 import org.bukkit.Material;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
@@ -23,7 +22,7 @@ import java.util.List;
 /**
  * El panel de Calamity: las doce reglas de dificultad, cada una con su interruptor.
  *
- * El resto del modulo va por comando a proposito (Bedrock), pero doce interruptores en
+ * El resto del plugin va por comando a proposito (Bedrock), pero doce interruptores en
  * un YAML es justo lo que nadie quiere tocar en caliente, y equivocarse ahi deja el
  * mundo entero mal. Un cofre con doce casillas se entiende de un vistazo y se cambia
  * sin salir del juego.
@@ -59,14 +58,14 @@ public final class MenuHardcore implements Listener {
     private record Regla(String clave, String nombre, Material icono,
                          Object encendido, Object apagar, List<String> ayuda) {
 
-        boolean activa(MundosPlugin modulo) {
-            Object v = modulo.getConfig().get("hardcore." + clave, apagar);
+        boolean activa(LethalWorldPlugin plugin) {
+            Object v = plugin.getConfig().get("hardcore." + clave, apagar);
             if (encendido instanceof Boolean) return Boolean.TRUE.equals(v);
             return v instanceof Number n && n.doubleValue() > ((Number) apagar).doubleValue();
         }
 
-        String valor(MundosPlugin modulo) {
-            Object v = modulo.getConfig().get("hardcore." + clave, apagar);
+        String valor(LethalWorldPlugin plugin) {
+            Object v = plugin.getConfig().get("hardcore." + clave, apagar);
             if (v instanceof Boolean b) return b ? "sí" : "no";
             if (v instanceof Number n) {
                 double d = n.doubleValue();
@@ -121,15 +120,15 @@ public final class MenuHardcore implements Listener {
         }
     }
 
-    private final MundosPlugin modulo;
+    private final LethalWorldPlugin plugin;
 
-    public MenuHardcore(MundosPlugin modulo) {
-        this.modulo = modulo;
-        modulo.getServer().getPluginManager().registerEvents(this, Module.dueno(modulo));
+    public MenuHardcore(LethalWorldPlugin plugin) {
+        this.plugin = plugin;
+        plugin.getServer().getPluginManager().registerEvents(this, plugin);
     }
 
     public void abrir(Player p) {
-        Inventory inv = modulo.getServer().createInventory(new Marca(), 54,
+        Inventory inv = plugin.getServer().createInventory(new Marca(), 54,
                 Component.text("Calamity · dificultad", VERDE, TextDecoration.BOLD));
         pintar(inv);
         p.openInventory(inv);
@@ -137,7 +136,7 @@ public final class MenuHardcore implements Listener {
     }
 
     private void pintar(Inventory inv) {
-        Hardcore hc = modulo.hardcore();
+        Hardcore hc = plugin.hardcore();
         boolean vivo = hc != null;
 
         inv.setItem(4, MenuUtil.icon(Material.PALE_OAK_LOG,
@@ -154,11 +153,11 @@ public final class MenuHardcore implements Listener {
 
         for (int i = 0; i < REGLAS.size() && i < CASILLAS.length; i++) {
             Regla r = REGLAS.get(i);
-            boolean on = r.activa(modulo);
+            boolean on = r.activa(plugin);
             List<Component> lore = new ArrayList<>();
             for (String l : r.ayuda()) lore.add(MenuUtil.line(l));
             lore.add(MenuUtil.blank());
-            lore.add(MenuUtil.field("Ahora", r.valor(modulo), on ? NamedTextColor.GREEN : NamedTextColor.RED));
+            lore.add(MenuUtil.field("Ahora", r.valor(plugin), on ? NamedTextColor.GREEN : NamedTextColor.RED));
             lore.add(MenuUtil.blank());
             lore.add(MenuUtil.action("Clic para " + (on ? "desactivarla" : "activarla")));
             // El icono es SIEMPRE el de la regla, para poder distinguirlas de un
@@ -189,9 +188,9 @@ public final class MenuHardcore implements Listener {
         for (int i = 0; i < REGLAS.size() && i < CASILLAS.length; i++) {
             if (CASILLAS[i] != slot) continue;
             Regla r = REGLAS.get(i);
-            boolean on = r.activa(modulo);
-            modulo.getConfig().set("hardcore." + r.clave(), on ? r.apagar() : r.encendido());
-            modulo.saveConfig();
+            boolean on = r.activa(plugin);
+            plugin.getConfig().set("hardcore." + r.clave(), on ? r.apagar() : r.encendido());
+            plugin.saveConfig();
             Compat.soundPlayers(p.getWorld(), p.getLocation(),
                     "block.amethyst_block.resonate", 0.8f, on ? 0.7f : 1.4f);
             p.sendMessage(Component.text(r.nombre(), VERDE)

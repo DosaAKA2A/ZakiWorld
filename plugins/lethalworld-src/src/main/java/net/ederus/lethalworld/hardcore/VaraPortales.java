@@ -1,12 +1,11 @@
-package net.ederus.edm.mundos.hardcore;
+package net.ederus.lethalworld.hardcore;
 
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
 import net.kyori.adventure.text.format.TextColor;
 import net.kyori.adventure.text.format.TextDecoration;
-import net.ederus.edm.Module;
 import net.ederus.edm.comun.Compat;
-import net.ederus.edm.mundos.MundosPlugin;
+import net.ederus.lethalworld.LethalWorldPlugin;
 import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.NamespacedKey;
@@ -57,15 +56,17 @@ public final class VaraPortales implements Listener {
         }
     }
 
-    private final MundosPlugin modulo;
+    private final LethalWorldPlugin plugin;
     private final NamespacedKey clave;
     private final Map<UUID, Location> uno = new HashMap<>();
     private final Map<UUID, Location> dos = new HashMap<>();
 
-    public VaraPortales(MundosPlugin modulo) {
-        this.modulo = modulo;
-        this.clave = new NamespacedKey(Module.dueno(modulo), "vara_portal");
-        modulo.getServer().getPluginManager().registerEvents(this, Module.dueno(modulo));
+    public VaraPortales(LethalWorldPlugin plugin) {
+        this.plugin = plugin;
+        /* Namespace "edm" a mano: la vara que ya tiene Dosa en su inventario lleva
+         * esa marca y con otra dejaria de ser una vara. Ver MobsLethal. */
+        this.clave = new NamespacedKey("edm", "vara_portal");
+        plugin.getServer().getPluginManager().registerEvents(this, plugin);
     }
 
     /** La vara. Es un palo con marca: sin la marca, un palo cualquiera no vale. */
@@ -138,24 +139,24 @@ public final class VaraPortales implements Listener {
         }
         String base = "hardcore.puertas." + cual + ".";
         World w = s.uno().getWorld();
-        modulo.getConfig().set(base + "mundo", w.getKey().toString());
-        modulo.getConfig().set(base + "x1", Math.min(s.uno().getBlockX(), s.dos().getBlockX()));
-        modulo.getConfig().set(base + "y1", Math.min(s.uno().getBlockY(), s.dos().getBlockY()));
-        modulo.getConfig().set(base + "z1", Math.min(s.uno().getBlockZ(), s.dos().getBlockZ()));
-        modulo.getConfig().set(base + "x2", Math.max(s.uno().getBlockX(), s.dos().getBlockX()));
-        modulo.getConfig().set(base + "y2", Math.max(s.uno().getBlockY(), s.dos().getBlockY()));
-        modulo.getConfig().set(base + "z2", Math.max(s.uno().getBlockZ(), s.dos().getBlockZ()));
-        modulo.saveConfig();
+        plugin.getConfig().set(base + "mundo", w.getKey().toString());
+        plugin.getConfig().set(base + "x1", Math.min(s.uno().getBlockX(), s.dos().getBlockX()));
+        plugin.getConfig().set(base + "y1", Math.min(s.uno().getBlockY(), s.dos().getBlockY()));
+        plugin.getConfig().set(base + "z1", Math.min(s.uno().getBlockZ(), s.dos().getBlockZ()));
+        plugin.getConfig().set(base + "x2", Math.max(s.uno().getBlockX(), s.dos().getBlockX()));
+        plugin.getConfig().set(base + "y2", Math.max(s.uno().getBlockY(), s.dos().getBlockY()));
+        plugin.getConfig().set(base + "z2", Math.max(s.uno().getBlockZ(), s.dos().getBlockZ()));
+        plugin.saveConfig();
         return s.volumen() + " bloques en " + w.getKey().getKey();
     }
 
     /** Si un jugador esta DENTRO de la puerta que se diga. */
     public boolean dentro(Player p, String cual) {
-        ConfigurationSection c = modulo.getConfig()
+        ConfigurationSection c = plugin.getConfig()
                 .getConfigurationSection("hardcore.puertas." + cual);
         if (c == null || !c.isSet("mundo")) return false;
         NamespacedKey k = NamespacedKey.fromString(c.getString("mundo", ""));
-        World w = k == null ? null : modulo.getServer().getWorld(k);
+        World w = k == null ? null : plugin.getServer().getWorld(k);
         if (w == null || p.getWorld() != w) return false;
         Location l = p.getLocation();
         return l.getBlockX() >= c.getInt("x1") && l.getBlockX() <= c.getInt("x2")
@@ -165,7 +166,7 @@ public final class VaraPortales implements Listener {
 
     /** Descripcion corta de una puerta para el /lw hardcore. */
     public String describir(String cual) {
-        ConfigurationSection c = modulo.getConfig()
+        ConfigurationSection c = plugin.getConfig()
                 .getConfigurationSection("hardcore.puertas." + cual);
         if (c == null || !c.isSet("mundo")) return "sin marcar";
         return c.getString("mundo") + "  " + c.getInt("x1") + " " + c.getInt("y1") + " " + c.getInt("z1")
