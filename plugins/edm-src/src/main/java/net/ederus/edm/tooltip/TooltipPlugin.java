@@ -51,7 +51,7 @@ public final class TooltipPlugin extends Module {
         enganchar(Ajustes.de(getConfig()));
 
         getLogger().info("Modulo tooltip listo: encantamientos en romano hasta el nivel "
-                + getConfig().getInt("romanos-hasta", 20) + ".");
+                + getConfig().getInt("romanos-hasta", 100) + ".");
     }
 
     @Override

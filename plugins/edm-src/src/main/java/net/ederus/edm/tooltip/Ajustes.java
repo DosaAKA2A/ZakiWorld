@@ -44,8 +44,8 @@ record Ajustes(
     }
 
     /**
-     * El color del numeral segun lo fuerte que sea el encantamiento. Hasta 5 va
-     * en gris, que es como se ve de siempre en el juego; a partir de ahi sube.
+     * El color del numeral segun lo fuerte que sea el encantamiento: una decena
+     * por color, del verde al rojo, igual que las estrellas de los tiers.
      */
     TextColor colorDeNivel(int nivel) {
         TextColor ultimo = NamedTextColor.GRAY;
@@ -61,7 +61,7 @@ record Ajustes(
     static Ajustes de(FileConfiguration c) {
         return new Ajustes(
                 c.getString("modo", "clon").toLowerCase(java.util.Locale.ROOT),
-                Math.max(1, c.getInt("romanos-hasta", 20)),
+                Math.max(1, c.getInt("romanos-hasta", 100)),
                 c.getBoolean("solo-los-que-se-rompen", false),
                 c.getBoolean("linea-en-blanco", true),
                 c.getBoolean("linea-en-blanco-antes", true),
@@ -104,11 +104,13 @@ record Ajustes(
         }
         if (fuera.isEmpty()) {
             /* Los mismos tramos que trae el config de fabrica, por si alguien
-             * borra la lista entera: sin esto todo saldria de un solo color. */
-            fuera.add(new Tramo(5, TextColor.fromHexString("#AAAAAA")));
-            fuera.add(new Tramo(10, TextColor.fromHexString("#55FF55")));
-            fuera.add(new Tramo(15, TextColor.fromHexString("#55FFFF")));
-            fuera.add(new Tramo(20, TextColor.fromHexString("#FF6FD8")));
+             * borra la lista entera: sin esto todo saldria de un solo color.
+             * Diez tramos de diez, del verde al rojo, como las estrellas. */
+            int[] hasta = { 10, 20, 30, 40, 50, 60, 70, 80, 90, 100 };
+            String[] color = { "#55FF55", "#8CFF4F", "#C4FF4A", "#F2F545", "#FFD23F", "#FFAE3A", "#FF8C35", "#FF6B30", "#FF4A2B", "#FF2626" };
+            for (int i = 0; i < hasta.length; i++) {
+                fuera.add(new Tramo(hasta[i], TextColor.fromHexString(color[i])));
+            }
         }
         fuera.sort(java.util.Comparator.comparingInt(Tramo::hasta));
         return List.copyOf(fuera);

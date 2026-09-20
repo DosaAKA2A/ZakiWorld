@@ -33,8 +33,8 @@ paquetes:
   - SET_CREATIVE_SLOT
 
 # Hasta que nivel se escribe en numeros romanos.
-# Por encima de este numero se usa la cifra normal, porque un XLVII no se lee.
-romanos-hasta: 20
+# Por encima de este numero se usa la cifra normal.
+romanos-hasta: 100
 
 # Si se pone en true, solo se reescriben los items con algun encantamiento por
 # encima del 10, que son los unicos que salen rotos en vanilla. El resto del
@@ -86,14 +86,27 @@ colores:
 
   # El color del numeral segun el nivel. Cada entrada dice "hasta que nivel" y
   # con que color; la ultima vale tambien para todo lo que se pase de ella.
-  # Hasta 5 en gris a proposito: es el gris de siempre del juego, asi un item
-  # normal se sigue viendo normal y solo destaca lo que de verdad es alto.
+  #
+  # Diez tramos de diez, del verde al rojo, la misma idea que las estrellas de
+  # MMOItems: sin leer el numero ya sabes en que decena anda el encantamiento.
   niveles:
-    - hasta: 5
-      color: '#AAAAAA'
     - hasta: 10
-      color: '#55FF55'
-    - hasta: 15
-      color: '#55FFFF'
+      color: '#55FF55'   # 1-10, verde
     - hasta: 20
-      color: '#FF6FD8'
+      color: '#8CFF4F'   # 11-20, verde lima
+    - hasta: 30
+      color: '#C4FF4A'   # 21-30, lima
+    - hasta: 40
+      color: '#F2F545'   # 31-40, amarillo
+    - hasta: 50
+      color: '#FFD23F'   # 41-50, ambar
+    - hasta: 60
+      color: '#FFAE3A'   # 51-60, naranja
+    - hasta: 70
+      color: '#FF8C35'   # 61-70, naranja fuerte
+    - hasta: 80
+      color: '#FF6B30'   # 71-80, teja
+    - hasta: 90
+      color: '#FF4A2B'   # 81-90, rojo
+    - hasta: 100
+      color: '#FF2626'   # 91-100, rojo intenso
