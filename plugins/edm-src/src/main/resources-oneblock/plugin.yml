@@ -3,7 +3,7 @@ version: '1.0.0'
 main: net.ederus.edm.EDMOneBlock
 api-version: '1.20'
 author: Iris Studio
-description: EDO, Ederus OneBlock - el nucleo del servidor OneBlock: tienda propia, vitrina y biomas
+description: 'EDO, Ederus OneBlock - el nucleo del servidor OneBlock: tienda propia, vitrina y biomas'
 softdepend: [Vault, WorldGuard, UltimateMobCoins, PlaceholderAPI]
 
 commands:
