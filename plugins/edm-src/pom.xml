@@ -117,8 +117,12 @@
          el mismo. Borrar target/classes antes de alternar entre perfiles. -->
     <profile>
       <id>oneblock</id>
+      <properties>
+        <!-- EDO lleva su propia version (tambien en plugin.yml de resources-oneblock y en EDMOneBlock.VERSION_EDO). -->
+        <edo.version>1.0.0</edo.version>
+      </properties>
       <build>
-        <finalName>EDM-OneBlock-${project.version}</finalName>
+        <finalName>EDO-${edo.version}</finalName>
         <resources>
           <resource>
             <directory>src/main/resources</directory>

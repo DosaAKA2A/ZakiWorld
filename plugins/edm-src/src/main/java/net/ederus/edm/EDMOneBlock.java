@@ -18,6 +18,40 @@ import net.ederus.edm.tienda.TiendaPlugin;
  */
 public class EDMOneBlock extends EDMPlugin {
 
+    /** La version de EDO va aparte de la de EDM: pom (perfil oneblock), plugin.yml de resources-oneblock y aqui. */
+    public static final String VERSION_EDO = "1.0.0";
+
+    private String[] arte;
+
+    @Override
+    protected String nombre() {
+        return "EDO";
+    }
+
+    @Override
+    protected String lema() {
+        return "Ederus OneBlock";
+    }
+
+    @Override
+    protected String version() {
+        return VERSION_EDO;
+    }
+
+    /** El arte de EDO vive en banner.txt (resources-oneblock), en braille, tal cual lo dio Dosa. */
+    @Override
+    protected String[] arte() {
+        if (arte == null) {
+            try (var in = getResource("banner.txt")) {
+                arte = in == null ? new String[0]
+                        : new String(in.readAllBytes(), java.nio.charset.StandardCharsets.UTF_8).split("\\r?\\n");
+            } catch (java.io.IOException e) {
+                arte = new String[0];
+            }
+        }
+        return arte;
+    }
+
     @Override
     protected List<Module> modulosBase() {
         return List.of(

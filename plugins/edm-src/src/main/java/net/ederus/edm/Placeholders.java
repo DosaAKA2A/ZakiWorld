@@ -41,7 +41,7 @@ public final class Placeholders extends PlaceholderExpansion {
 
     @Override
     public String getIdentifier() {
-        return "edm";
+        return core.nombre().toLowerCase(java.util.Locale.ROOT);
     }
 
     @Override

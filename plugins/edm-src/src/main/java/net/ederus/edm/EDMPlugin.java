@@ -38,6 +38,24 @@ public class EDMPlugin extends JavaPlugin {
 
     public static final String VERSION = "1.67.0";
 
+    /* La identidad del nucleo. La build de OneBlock (EDMOneBlock) la cambia:
+     * alli se llama EDO, Ederus OneBlock, con su propio arte y su version. */
+    protected String nombre() {
+        return "EDM";
+    }
+
+    protected String lema() {
+        return "Nucleo de Ederus";
+    }
+
+    protected String version() {
+        return VERSION;
+    }
+
+    protected String[] arte() {
+        return ARTE;
+    }
+
     private final Map<String, Module> modulos = new LinkedHashMap<>();
     private final List<String> fallidos = new ArrayList<>();
 
@@ -144,7 +162,7 @@ public class EDMPlugin extends JavaPlugin {
             Placeholders p = new Placeholders(this);
             if (p.register()) {
                 placeholders = p;
-                getLogger().info("Placeholders %edm_...% registrados en PlaceholderAPI.");
+                getLogger().info("Placeholders %" + nombre().toLowerCase(java.util.Locale.ROOT) + "_...% registrados en PlaceholderAPI.");
             }
         } catch (Throwable t) {
             getLogger().warning("No se pudieron registrar los placeholders: " + t);
@@ -163,7 +181,7 @@ public class EDMPlugin extends JavaPlugin {
     }
 
     private void registrarComando() {
-        var cmd = getCommand("edm");
+        var cmd = getCommand(nombre().toLowerCase(java.util.Locale.ROOT));
         if (cmd != null) {
             cmd.setExecutor(this);
         }
@@ -315,17 +333,18 @@ public class EDMPlugin extends JavaPlugin {
      * esta caido: eso es mantenimiento y va en /edm estado, que pide permiso.
      */
     private void ficha(CommandSender quien) {
-        quien.sendMessage(filaLogo(LOGO[0], alLado("EDM", TINTA, true)));
-        quien.sendMessage(filaLogo(LOGO[1], alLado("Núcleo de Ederus", net.ederus.edm.comun.Estilo.CLARO, false)));
+        quien.sendMessage(filaLogo(LOGO[0], alLado(nombre(), TINTA, true)));
+        quien.sendMessage(filaLogo(LOGO[1], alLado(lema(), net.ederus.edm.comun.Estilo.CLARO, false)));
         quien.sendMessage(filaLogo(LOGO[2], alLado("Dosa · IRIS Studio", net.ederus.edm.comun.Estilo.CLARO, false)));
         quien.sendMessage(filaLogo(LOGO[3], null));
-        quien.sendMessage(filaLogo(LOGO[4], alLado("v" + VERSION, net.ederus.edm.comun.Estilo.APAGADO, false)));
+        quien.sendMessage(filaLogo(LOGO[4], alLado("v" + version(), net.ederus.edm.comun.Estilo.APAGADO, false)));
     }
 
     private void estado(CommandSender quien) {
-        quien.sendMessage("EDM v" + VERSION + " | modulos: " + String.join(", ", this.modulos.keySet()));
+        String c = "/" + nombre().toLowerCase(java.util.Locale.ROOT);
+        quien.sendMessage(nombre() + " v" + version() + " | modulos: " + String.join(", ", this.modulos.keySet()));
         if (!this.fallidos.isEmpty()) quien.sendMessage("caidos: " + String.join(", ", this.fallidos));
-        quien.sendMessage("/edm reload  |  /edm <modulo> reload  |  /edm info");
+        quien.sendMessage(c + " reload  |  " + c + " <modulo> reload  |  " + c + " info");
     }
 
     @Override
@@ -419,11 +438,11 @@ public class EDMPlugin extends JavaPlugin {
         var consola = Bukkit.getConsoleSender();
         String cargados = this.modulos.isEmpty() ? "ninguno" : String.join(", ", this.modulos.keySet());
         consola.sendMessage("");
-        for (String linea : ARTE) {
+        for (String linea : arte()) {
             consola.sendMessage("§b" + linea);
         }
         consola.sendMessage("");
-        consola.sendMessage("   §f§lEDM §8· §7Nucleo de Ederus §8· §fv" + VERSION);
+        consola.sendMessage("   §f§l" + nombre() + " §8· §7" + lema() + " §8· §fv" + version());
         consola.sendMessage("   §7Creado por §b§lDosa §r§7e §b§lIRIS Studio");
         consola.sendMessage("   §7Modulos activos §8· §f" + cargados);
         if (!this.fallidos.isEmpty()) {
