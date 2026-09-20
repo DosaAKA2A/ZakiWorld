@@ -222,6 +222,13 @@ public final class CrateRotator extends JavaPlugin {
         // un momento sin caja.
         if (spinner.location.isChunkLoaded()) respawn(spinner);
         data.setVisibility(Visibility.MANUAL);
+        // Cambiar la visibilidad NO se la quita a quien ya la estaba viendo:
+        // FancyHolograms solo la aplica a quien entra despues. Sin esto, los
+        // que estaban conectados al arrancar veian la caja original quieta
+        // debajo de la copia que gira (2.1.1).
+        for (org.bukkit.entity.Player player : Bukkit.getOnlinePlayers()) {
+            hologram.forceHideHologram(player);
+        }
 
         getLogger().info("Giro creado para '" + name + "' en " + location.getWorld().getName()
                 + " (" + location.getBlockX() + ", " + location.getBlockY() + ", " + location.getBlockZ() + ").");
@@ -281,7 +288,12 @@ public final class CrateRotator extends JavaPlugin {
         if (!spinners.isEmpty() && FancyHologramsPlugin.isEnabled()) {
             HologramManager manager = FancyHologramsPlugin.get().getHologramManager();
             for (String name : spinners.keySet()) {
-                manager.getHologram(name).ifPresent(h -> h.getData().setVisibility(Visibility.ALL));
+                manager.getHologram(name).ifPresent(h -> {
+                    h.getData().setVisibility(Visibility.ALL);
+                    for (org.bukkit.entity.Player player : Bukkit.getOnlinePlayers()) {
+                        h.forceUpdateShownStateFor(player);
+                    }
+                });
             }
         }
         for (Spinner spinner : spinners.values()) {
