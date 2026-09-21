@@ -39,13 +39,9 @@ drops:
 
 minions:
   activado: true
-  # LitMinions publica un evento por tipo de minion. El modulo se engancha a los
-  # que existan de esta lista y multiplica lo que el minion acaba de producir; los
-  # que no existan en la version instalada se saltan sin avisar.
+  # LitMinions tiene un unico punto por donde pasa TODO lo que produce cualquier
+  # minion antes de entrar al cofre. Enganchando ese evento valen todos los tipos
+  # (granjero, minero, pescador, lenador, matarife...) sin duplicar nada: los
+  # eventos por tipo multiplicarian otra vez lo ya multiplicado.
   eventos:
-    - me.waterarchery.litminions.models.minion.types.farmer.api.FarmerMinionHarvestEvent
-    - me.waterarchery.litminions.models.minion.types.fisher.api.FisherMinionAsyncFishEvent
-    - me.waterarchery.litminions.models.minion.types.collector.api.CollectorMinionPreCollectEvent
-    - me.waterarchery.litminions.models.minion.types.lumberjack.api.LumberjackMinionPreChopEvent
-    - me.waterarchery.litminions.models.minion.types.miner.api.MinerMinionPreMineEvent
-    - me.waterarchery.litminions.models.minion.types.slayer.api.SlayerMinionKillEvent
+    - me.waterarchery.litminions.api.events.MinionAsyncAddItemToChestEvent
