@@ -1,0 +1,56 @@
+# ---------------------------------------------------------------------------
+# HOJA DEL VERDUGO - el ejemplo del vocabulario de combate.
+#
+# Es NATIVA: la fabrica GodItems. Si quieres esto mismo sobre un arma con stats
+# de MMOItems, borra el bloque "item" y pon en su lugar
+#     enlace: ESPADA.HOJA_DEL_VERDUGO
+# El comportamiento es exactamente el mismo; el item lo sigue fabricando MMOItems.
+# ---------------------------------------------------------------------------
+
+id: HOJA_DEL_VERDUGO
+
+item:
+  material: NETHERITE_SWORD
+  nombre: '&#C8102E&lHoja del Verdugo'
+  lore:
+    - '&8La que no pregunta dos veces.'
+    - ''
+    - '&#C8102ECrítico &7Roba el 20 % del golpe'
+    - '&#C8102ETres golpes seguidos &7Cadena de rayos'
+    - '&#C8102EMatar a un jefe &7Columna de luz'
+  irrompible: true
+  brillo: true
+  ocultar:
+    - ATRIBUTOS
+    - IRROMPIBLE
+
+activadores:
+
+  # Cada crítico roba vida y suena a amatista. El sonido se apila con SECUENCIA:
+  # así se fabrica uno propio sin resource pack.
+  CRITICO:
+    acciones:
+      - 'ROBAR_VIDA @yo cantidad:20'
+      - "SECUENCIA @yo sonidos:'block.amethyst_block.chime|1|1.4|0, block.amethyst_cluster.break|0.8|1.8|2'"
+      - 'PARTICULA @golpeado tipo:ENCHANTED_HIT cantidad:12 ancho:0.4 alto:1'
+
+  # Al tercer golpe seguido al mismo objetivo, la cadena. El COMBO lo lleva el
+  # módulo: tres golpes en menos de dos segundos y sin cambiar de objetivo.
+  # Sin cooldown a propósito: el freno es el propio COMBO_RESET del final. Un
+  # cooldown en GOLPEAR mandaría el mensaje de espera en cada golpe.
+  GOLPEAR:
+    condiciones:
+      - 'COMBO mayor_igual 3'
+    acciones:
+      - 'CADENA @golpeado radio:7 saltos:4 dano:6 tipo:ELECTRIC_SPARK cantidad:2'
+      - 'SONIDO_GLOBAL @golpeado sonido:entity.lightning_bolt.thunder volumen:0.7 tono:1.6'
+      - 'COMBO_RESET'
+
+  # Matar a un jefe: la columna de luz. `vida-minima` decide qué cuenta como
+  # jefe cuando no es un MythicMob.
+  MATAR_JEFE:
+    vida-minima: 150
+    acciones:
+      - 'RAYO_BEACON @golpeado duracion:60 ancho:0.8 funda:RED_STAINED_GLASS nucleo:CRIMSON_NYLIUM'
+      - 'TITULO @yo entrada:5 duracion:30 salida:10 &#C8102EVERDUGO|&7%objetivo% ha caído'
+      - "SECUENCIA @yo sonidos:'entity.wither.spawn|1.2|1.4|0, block.beacon.power_select|1.4|0.6|4'"

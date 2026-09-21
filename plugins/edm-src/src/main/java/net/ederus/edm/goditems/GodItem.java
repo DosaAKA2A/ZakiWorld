@@ -39,6 +39,18 @@ public final class GodItem {
                          /* Solo para SET_COMPLETO: cuantas piezas hacen falta.
                           * 0 = las que MMOItems declare para ese set. */
                          int piezas,
+                         /*
+                          * El acotador del activador, en una sola clave porque
+                          * todos los que lo usan acotan por UN nombre:
+                          * `bloque:` en INTERACTUAR_BLOQUE, `habilidad:` en
+                          * SUBIR_NIVEL, `region:` en ENTRAR_REGION / SALIR_REGION,
+                          * `criatura:` en INTERACTUAR_ENTIDAD. Vacio = cualquiera.
+                          */
+                         String filtro,
+                         /* Solo MATAR_JEFE: desde cuanta vida maxima cuenta como jefe. */
+                         double vidaMinima,
+                         /* Solo RACHA: a las cuantas muertes seguidas salta. */
+                         int racha,
                          List<Condicion.Prueba> condiciones,
                          List<Paso> pasos) { }
 

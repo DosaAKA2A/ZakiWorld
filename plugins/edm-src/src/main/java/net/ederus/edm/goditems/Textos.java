@@ -49,6 +49,28 @@ public final class Textos {
                 s = s.replace("%objetivo_vida%", redondo(le.getHealth()));
             }
         }
+
+        /* Los datos del golpe. Van siempre, tenga o no objetivo, para que un
+         * texto con %dano% no se quede con el placeholder crudo en pantalla
+         * cuando el activador no trae ninguno: ahi vale 0 y se lee. */
+        s = s.replace("%dano%", redondo(ctx.dano()));
+        s = s.replace("%daño%", redondo(ctx.dano()));
+        s = s.replace("%critico%", ctx.critico() ? "1" : "0");
+        s = s.replace("%bloque%", ctx.bloque());
+        s = s.replace("%proyectil%", ctx.proyectil());
+        if (s.contains("%vida_objetivo%")) {
+            s = s.replace("%vida_objetivo%",
+                    o instanceof LivingEntity le ? redondo(le.getHealth()) : "0");
+        }
+        if (s.contains("%distancia%")) {
+            s = s.replace("%distancia%", redondo(distancia(j, o)));
+        }
+        if (j != null && s.contains("%combo%")) {
+            s = s.replace("%combo%", String.valueOf(ctx.modulo().combate().combo(j)));
+        }
+        if (j != null && s.contains("%racha%")) {
+            s = s.replace("%racha%", String.valueOf(ctx.modulo().combate().racha(j)));
+        }
         if (ctx.definicion() != null) {
             s = s.replace("%item%", ctx.definicion().id());
             s = s.replace("%item_nombre%", ctx.definicion().nombreVisible());
@@ -108,6 +130,13 @@ public final class Textos {
         } catch (Throwable t) {
             return s;
         }
+    }
+
+    /** Bloques entre el portador y el objetivo. 0 si falta alguno o no comparten mundo. */
+    public static double distancia(Entity a, Entity b) {
+        if (a == null || b == null) return 0;
+        if (a.getWorld() == null || !a.getWorld().equals(b.getWorld())) return 0;
+        return a.getLocation().distance(b.getLocation());
     }
 
     public static double maxVida(LivingEntity e) {

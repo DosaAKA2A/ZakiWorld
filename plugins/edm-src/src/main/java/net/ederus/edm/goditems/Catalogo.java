@@ -140,6 +140,7 @@ public final class Catalogo {
 
     public static final List<Grupo> GRUPOS_ACCION = List.of(
             new Grupo("Vida y daño", "Pegar, curar, absorción, invulnerabilidad.", Material.RED_DYE),
+            new Grupo("Combate", "Robo de vida, aturdir, desarmar, cadenas y rebotes.", Material.NETHERITE_AXE),
             new Grupo("Movimiento", "Empujar, atraer, dash, saltar, teletransportar.", Material.FEATHER),
             new Grupo("Efectos", "Pociones, fuego, congelación, brillo.", Material.BREWING_STAND),
             new Grupo("Visual", "Partículas, anillos, rayos, explosiones.", Material.FIREWORK_STAR),
@@ -151,6 +152,7 @@ public final class Catalogo {
 
     public static final List<Grupo> GRUPOS_CONDICION = List.of(
             new Grupo("Cuerpo", "Vida y comida del portador.", Material.GOLDEN_APPLE),
+            new Grupo("Combate", "El golpe, el objetivo, el combo y la racha.", Material.NETHERITE_AXE),
             new Grupo("Estado", "Agachado, corriendo, volando, ardiendo...", Material.LEATHER_BOOTS),
             new Grupo("Sitio", "Mundo, región, bioma, luz, altura, hora y clima.", Material.COMPASS),
             new Grupo("Inventario", "Llevar encima un item o un GodItem.", Material.CHEST),
@@ -348,6 +350,53 @@ public final class Catalogo {
                 "@yo", null, null,
                 Param.de("cantidad", "Vida", Clase.NUMERO, "20", "Nunca baja de 0.5.", "RED_DYE"));
 
+        /* ------------------------------------------------------------ combate */
+
+        acc("ROBAR_VIDA", "Combate", "Cura el porcentaje del daño de ese golpe.", "REDSTONE",
+                "@yo", null, null,
+                Param.de("cantidad", "Porcentaje", Clase.NUMERO, "20",
+                        "20 = te curas un quinto de lo que pegaste.", "RED_DYE"));
+
+        acc("MULTIPLICAR_DANO", "Combate", "Multiplica el golpe. Solo donde haya uno.",
+                "DIAMOND_SWORD", null, null, null,
+                Param.de("cantidad", "Factor", Clase.NUMERO, "1.5",
+                        "1.5 = un 50 % más. Va sobre el daño que ya calculó MMOItems.", "REDSTONE"));
+
+        acc("IGNORAR_ARMADURA", "Combate", "Daño puro: ni armadura ni resistencias.", "NETHERITE_SWORD",
+                "@golpeado", null, null,
+                Param.de("cantidad", "Daño", Clase.NUMERO, "4",
+                        "En puntos de vida. 2 = un corazón.", "REDSTONE"));
+
+        acc("ATURDIR", "Combate", "Lo deja quieto, sin saltar y sin poder pegar.", "BELL",
+                "@golpeado", null, null,
+                Param.de("duracion", "Duración", Clase.TICKS, "40",
+                        "Se quita solo al caducar los efectos.", "CLOCK"));
+
+        acc("DESARMAR", "Combate", "Le tira el arma al suelo. Solo él puede recogerla.", "FISHING_ROD",
+                "@golpeado", null, null,
+                Param.de("duracion", "Tiempo sin poder recogerla", Clase.TICKS, "60", "", "CLOCK"));
+
+        acc("MARCAR", "Combate", "Brillo y marca para la condición OBJETIVO_MARCADO.", "GLOWSTONE_DUST",
+                "@golpeado", null, null,
+                Param.de("duracion", "Duración", Clase.TICKS, "100", "", "CLOCK"));
+
+        acc("CADENA", "Combate", "Un relámpago que salta de enemigo en enemigo.", "LIGHTNING_ROD",
+                "@golpeado", null, null, visual(
+                Param.de("radio", "Alcance de cada salto", Clase.NUMERO, "6", "En bloques.", "SPYGLASS"),
+                Param.de("saltos", "Saltos", Clase.NUMERO, "3", "Tope 20.", "CHAIN"),
+                Param.de("dano", "Daño del primer salto", Clase.NUMERO, "4", "", "REDSTONE"),
+                Param.de("merma", "Merma por salto", Clase.NUMERO, "0.15",
+                        "0.15 = cada salto pega un 15 % menos.", "GUNPOWDER"),
+                Param.de("rayo", "Con relámpago", Clase.BOOL, "true",
+                        "Apagado deja solo la línea de partículas.", "LIME_DYE")));
+
+        acc("REBOTE", "Combate", "El proyectil sale otra vez hacia otro enemigo.", "ARROW",
+                null, null, null,
+                Param.de("radio", "A cuánto busca", Clase.NUMERO, "8", "En bloques.", "SPYGLASS"),
+                Param.de("velocidad", "Velocidad", Clase.NUMERO, "1.6", "", "SUGAR"),
+                Param.de("rebotes", "Cuántos rebotes", Clase.NUMERO, "2",
+                        "El corte de la cadena infinita.", "GUNPOWDER"));
+
         /* -------------------------------------------------------- movimiento */
 
         acc("EMPUJAR", "Movimiento", "Lanza lejos del que usa el item.", "PISTON",
@@ -540,6 +589,28 @@ public final class Catalogo {
                 Param.de("duracion", "Que dure", Clase.TICKS, "0", "0 = para siempre.", "CLOCK"),
                 Param.de("nombre", "Nombre encima", Clase.TEXTO, "", "Acepta códigos &.", "NAME_TAG"));
 
+        acc("CLIMA", "Mundo", "Cambia el clima del mundo de verdad, no solo lo que se ve.",
+                "WATER_BUCKET", null, null, null,
+                Param.opciones("clima", "Clima", "lluvia", "", "WATER_BUCKET",
+                        "sol", "lluvia", "tormenta"),
+                Param.de("duracion", "Duración", Clase.TICKS, "0",
+                        "0 = lo deja al ritmo normal del mundo.", "CLOCK"));
+
+        acc("HORA", "Mundo", "Pone la hora del mundo. CIELO solo engaña al cliente.", "CLOCK",
+                null, null, null,
+                Param.de("hora", "Hora", Clase.TEXTO, "dia",
+                        "`dia`, `noche` o un número de 0 a 24000.", "CLOCK"));
+
+        acc("SOLTAR_ITEM", "Mundo", "Tira un item al suelo en el punto.", "DROPPER",
+                "@yo", null, null,
+                Param.de("material", "Item", Clase.MATERIAL, "DIAMOND", "", "DIAMOND"),
+                Param.de("cantidad", "Cuántos", Clase.NUMERO, "1", "Tope 256.", "GUNPOWDER"),
+                Param.de("alto", "Alto sobre el punto", Clase.NUMERO, "0", "", "LADDER"));
+
+        acc("DUPLICAR_DROPS", "Mundo", "Otra tanda de drops. En ROMPER_BLOQUE y MATAR.",
+                "HOPPER", null, null, null,
+                Param.de("veces", "Tandas extra", Clase.NUMERO, "1", "Tope 8.", "GUNPOWDER"));
+
         acc("PROYECTIL", "Mundo", "Dispara un proyectil marcado con este item.", "ARROW",
                 null, null, null,
                 Param.opciones("tipo", "Proyectil", "ARROW", "", "ARROW",
@@ -612,6 +683,20 @@ public final class Catalogo {
                         "En la actionbar.", "LIME_DYE"));
 
         acc("REPONER_USOS", "Flujo", "Devuelve los usos gastados.", "EXPERIENCE_BOTTLE",
+                null, null, null);
+
+        acc("VARIABLE_OBJETIVO", "Flujo", "Igual que VARIABLE, pero la guarda en el otro.",
+                "ENDER_CHEST", "@golpeado", "nombre operación valor",
+                "Solo en el jugador: la variable de item sería la tuya, no la suya.");
+
+        acc("REINICIAR_COOLDOWN", "Flujo", "Quita enfriamientos. `todos` los limpia de golpe.",
+                "CLOCK", "@yo", null, null,
+                Param.de("activador", "Activador", Clase.ACTIVADOR, "todos",
+                        "`todos` limpia todos los del jugador.", "LEVER"),
+                Param.de("item", "De qué GodItem", Clase.GODITEM, "",
+                        "Vacío = este mismo.", "NETHER_STAR"));
+
+        acc("COMBO_RESET", "Flujo", "Pone el combo del portador a cero.", "BARRIER",
                 null, null, null);
 
         /* ========================================================= condiciones */
@@ -696,6 +781,79 @@ public final class Catalogo {
 
         con("SET", "Conjuntos", "El item pertenece a ese set de MMOItems.", "DIAMOND_CHESTPLATE",
                 Forma.VALOR, false, "Sets", "Separados por espacios. Vacío = cualquiera.", Clase.TEXTO);
+
+        /* ------------------------------------------------------------ combate */
+
+        con("ES_CRITICO", "Combate", "El golpe que lo disparó fue crítico.", "AMETHYST_SHARD",
+                Forma.BANDERA, false, null, null, null);
+
+        con("COMBO", "Combate", "Golpes seguidos al mismo objetivo, en menos de 2 s.", "CHAIN",
+                Forma.COMPARACION, false, "Golpes", "Un número.", Clase.NUMERO);
+
+        con("RACHA", "Combate", "Muertes seguidas sin morir tú.", "SKELETON_SKULL",
+                Forma.COMPARACION, false, "Muertes", "Un número.", Clase.NUMERO);
+
+        con("DISTANCIA", "Combate", "Bloques hasta el objetivo.", "SPYGLASS",
+                Forma.COMPARACION, true, "Bloques", "Por omisión, al @golpeado.", Clase.NUMERO);
+
+        con("TIPO_OBJETIVO", "Combate", "Qué es el objetivo.", "ZOMBIE_SPAWN_EGG",
+                Forma.VALOR, true, "Tipos",
+                "`jugador`, `mob` o un ENTITY_TYPE. Varios, separados por espacios.", Clase.TEXTO);
+
+        con("ES_JEFE", "Combate", "El objetivo es un MythicMob o tiene mucha vida.", "DRAGON_HEAD",
+                Forma.BANDERA, true, null, null, null,
+                Param.de("vida", "Vida mínima", Clase.NUMERO, "150",
+                        "Desde cuánta vida máxima cuenta como jefe.", "RED_DYE"));
+
+        con("OBJETIVO_MARCADO", "Combate", "El objetivo lleva una marca de MARCAR.", "GLOWSTONE_DUST",
+                Forma.BANDERA, true, null, null, null);
+
+        con("ARMA_EN_MANO", "Combate", "Qué lleva en la mano principal.", "IRON_SWORD",
+                Forma.VALOR, false, "Arma",
+                "Un material, o un item de MMOItems como `KATANA.MENGUANTE_CARMESI`.", Clase.TEXTO);
+
+        /* ------------------------------------------------------- estado y sitio */
+
+        con("BAJO_AGUA", "Estado", "Tiene la cabeza dentro del agua.", "WATER_BUCKET",
+                Forma.BANDERA, false, null, null, null);
+
+        con("EN_LAVA", "Estado", "Está metido en lava.", "LAVA_BUCKET",
+                Forma.BANDERA, false, null, null, null);
+
+        con("ES_BEDROCK", "Estado", "Está jugando desde Bedrock.", "END_STONE",
+                Forma.BANDERA, false, null, null, null);
+
+        con("SOBRE_BLOQUE", "Sitio", "Qué pisa.", "GRASS_BLOCK",
+                Forma.VALOR, false, "Bloques", "Varios, separados por espacios.", Clase.BLOQUE);
+
+        con("MIRANDO_BLOQUE", "Sitio", "Qué bloque tiene en la mira.", "ENDER_EYE",
+                Forma.VALOR, false, "Bloques", "Varios, separados por espacios.", Clase.BLOQUE,
+                Param.de("alcance", "Alcance", Clase.NUMERO, "30", "En bloques.", "SPYGLASS"));
+
+        con("MUNDO_TIEMPO", "Sitio", "Los ticks totales del mundo, sin dar la vuelta.", "CLOCK",
+                Forma.COMPARACION, false, "Ticks", "HORA es la del día; esta no se reinicia.",
+                Clase.NUMERO);
+
+        con("DIA_SEMANA", "Sitio", "Qué día es hoy en el servidor.", "PAPER",
+                Forma.VALOR, false, "Días",
+                "`lunes` … `domingo`. Varios, separados por espacios.", Clase.TEXTO);
+
+        /* --------------------------------------------------------------- datos */
+
+        con("COOLDOWN_LISTO", "Datos", "Ese activador ya no está en enfriamiento.", "CLOCK",
+                Forma.VALOR, false, "Activador", "Vacío = el que está corriendo.", Clase.ACTIVADOR,
+                Param.de("item", "De qué GodItem", Clase.GODITEM, "",
+                        "Vacío = este mismo.", "NETHER_STAR"));
+
+        con("NIVEL_EXP", "Datos", "El nivel de experiencia de vanilla.", "EXPERIENCE_BOTTLE",
+                Forma.COMPARACION, false, "Nivel", "Un número.", Clase.NUMERO);
+
+        con("DINERO", "Datos", "El saldo de Vault.", "GOLD_INGOT",
+                Forma.COMPARACION, false, "Cantidad", "Un número.", Clase.NUMERO);
+
+        con("NIVEL_HABILIDAD", "Datos", "El nivel de una habilidad de AuraSkills.", "IRON_PICKAXE",
+                Forma.COMPARACION, false, "habilidad y nivel",
+                "Ej: `mining mayor 20`. Sin AuraSkills da siempre falso.", Clase.TEXTO);
     }
 
     /* ============================================================ activadores */
@@ -706,7 +864,8 @@ public final class Catalogo {
     private static final Map<Activador, FichaActivador> ACTIVADORES = new LinkedHashMap<>();
 
     public static final List<String> GRUPOS_ACTIVADOR = List.of(
-            "Gestos", "Combate", "Llevarlo encima", "Conjuntos", "Cada X", "Inventario", "Mundo", "Otros");
+            "Gestos", "Combate", "Cuerpo", "Llevarlo encima", "Conjuntos", "Cada X",
+            "Inventario", "Mundo", "Sesión", "Otros");
 
     static {
         act(Activador.CLIC_DERECHO, "Gestos", "Clic derecho con el item en la mano.", "STICK");
@@ -717,11 +876,33 @@ public final class Catalogo {
         act(Activador.GOLPEAR_JUGADOR, "Combate", "Golpear a un jugador.", "DIAMOND_SWORD");
         act(Activador.CRITICO, "Combate", "Asestar un golpe crítico (de MMOItems o saltando).", "AMETHYST_SHARD");
         act(Activador.RECIBIR_GOLPE, "Combate", "Que te peguen llevándolo.", "SHIELD");
+        act(Activador.RECIBIR_CRITICO, "Combate", "Que te asesten a ti un crítico.", "AMETHYST_CLUSTER");
+        act(Activador.ESQUIVAR, "Combate", "Esquivar un golpe. Necesita MythicLib.", "PHANTOM_MEMBRANE");
+        act(Activador.BLOQUEAR, "Combate", "Bloquear un golpe. Necesita MythicLib.", "SHIELD");
+        act(Activador.PARAR, "Combate",
+                "Parar un golpe (parry de MythicLib). Nada que ver con la acción PARAR.", "NETHERITE_SWORD");
         act(Activador.MATAR, "Combate", "Matar a una criatura.", "BONE");
         act(Activador.MATAR_JUGADOR, "Combate", "Matar a un jugador.", "PLAYER_HEAD");
+        act(Activador.MATAR_JEFE, "Combate",
+                "Matar un MythicMob o algo con mucha vida. Se afina con `vida-minima`.", "DRAGON_HEAD");
+        act(Activador.RACHA, "Combate",
+                "Llegar a N muertes seguidas sin morir. El número, en `racha`.", "WITHER_SKELETON_SKULL");
         act(Activador.ANTES_DE_MORIR, "Combate",
                 "Justo antes de morir. Puede CANCELAR_EVENTO y salvarte.", "TOTEM_OF_UNDYING");
         act(Activador.MORIR, "Combate", "Al morir el portador.", "SKELETON_SKULL");
+        act(Activador.CAER, "Combate", "Daño de caída llevándolo. El golpe, en `%dano%`.", "FEATHER");
+
+        act(Activador.AGACHARSE, "Cuerpo", "Al agacharse.", "LEATHER_BOOTS");
+        act(Activador.LEVANTARSE, "Cuerpo", "Al dejar de estar agachado.", "LEATHER_LEGGINGS");
+        act(Activador.EMPEZAR_CORRER, "Cuerpo", "Al echar a correr.", "SUGAR");
+        act(Activador.PARAR_CORRER, "Cuerpo", "Al dejar de correr.", "COBWEB");
+        act(Activador.SALTAR, "Cuerpo", "Al saltar.", "RABBIT_FOOT");
+        act(Activador.EMPEZAR_PLANEAR, "Cuerpo", "Al abrir los élitros.", "ELYTRA");
+        act(Activador.PARAR_PLANEAR, "Cuerpo", "Al cerrarlos.", "PHANTOM_MEMBRANE");
+        act(Activador.ENTRAR_AGUA, "Cuerpo", "Al meterse en el agua.", "WATER_BUCKET");
+        act(Activador.SALIR_AGUA, "Cuerpo", "Al salir del agua.", "BUCKET");
+        act(Activador.DORMIR, "Cuerpo", "Al meterse en la cama.", "RED_BED");
+        act(Activador.DESPERTAR, "Cuerpo", "Al levantarse de la cama.", "WHITE_BED");
 
         act(Activador.EQUIPAR, "Llevarlo encima", "Al ponértelo (armadura, anillo, colgante).",
                 "IRON_CHESTPLATE");
@@ -736,15 +917,42 @@ public final class Catalogo {
         act(Activador.EN_MANO, "Cada X", "Cada X mientras lo lleves en la mano.", "CLOCK");
         act(Activador.PUESTO, "Cada X", "Cada X mientras lo lleves puesto.", "CLOCK");
         act(Activador.EN_INVENTARIO, "Cada X", "Cada X mientras esté en el inventario.", "CLOCK");
+        act(Activador.TEMPORIZADOR, "Cada X",
+                "Cada `ticks` exactos, con reloj propio. Los otros tres van al compás de "
+                        + "`ticks-de-revision`.", "REPEATER");
 
         act(Activador.CONSUMIR, "Inventario", "Al comérselo o bebérselo.", "COOKED_BEEF");
+        act(Activador.COMER, "Inventario", "Al comerse cualquier cosa llevándolo.", "BREAD");
+        act(Activador.PESCAR, "Inventario", "Al sacar un pez con la caña.", "FISHING_ROD");
         act(Activador.TIRAR, "Inventario", "Al soltarlo al suelo.", "DROPPER");
         act(Activador.RECOGER, "Inventario", "Al recogerlo del suelo.", "HOPPER");
 
         act(Activador.ROMPER_BLOQUE, "Mundo", "Al romper un bloque con él.", "IRON_PICKAXE");
         act(Activador.COLOCAR_BLOQUE, "Mundo", "Al colocar un bloque con él.", "BRICKS");
+        act(Activador.INTERACTUAR_BLOQUE, "Mundo",
+                "Clic derecho en un bloque. Se afina con `bloque`.", "LEVER");
+        act(Activador.INTERACTUAR_ENTIDAD, "Mundo",
+                "Clic derecho en una criatura. Se afina con `criatura`.", "LEAD");
         act(Activador.PROYECTIL_IMPACTA, "Mundo", "Cuando su proyectil impacta.", "ARROW");
+        act(Activador.PROYECTIL_IMPACTA_ENTIDAD, "Mundo",
+                "Solo si el proyectil le da a algo vivo.", "SPECTRAL_ARROW");
+        act(Activador.PROYECTIL_IMPACTA_BLOQUE, "Mundo",
+                "Solo si el proyectil se clava en un bloque.", "TIPPED_ARROW");
+        act(Activador.DISPARAR, "Mundo",
+                "Al soltar una flecha, un tridente, una bola de nieve, un huevo o una perla.", "BOW");
+        act(Activador.CAMBIAR_MUNDO, "Mundo", "Al cambiar de mundo.", "END_PORTAL_FRAME");
+        act(Activador.ENTRAR_REGION, "Mundo",
+                "Al entrar en una región de WorldGuard. Se afina con `region`.", "STONE_BRICKS");
+        act(Activador.SALIR_REGION, "Mundo",
+                "Al salir de una región de WorldGuard. Se afina con `region`.", "CRACKED_STONE_BRICKS");
         act(Activador.REAPARECER, "Mundo", "Al reaparecer tras morir.", "RESPAWN_ANCHOR");
+
+        act(Activador.ENTRAR, "Sesión", "Al conectarse con el item en el inventario.", "OAK_DOOR");
+        act(Activador.SALIR, "Sesión", "Al desconectarse con el item en el inventario.", "IRON_DOOR");
+
+        act(Activador.SUBIR_NIVEL, "Otros",
+                "Al subir de nivel una habilidad de AuraSkills. Se afina con `habilidad`.",
+                "EXPERIENCE_BOTTLE");
 
         act(Activador.DISPARADOR, "Otros",
                 "Solo por `/gi trigger`: lo llaman ConditionalEvents, DeluxeMenus o misiones.",
@@ -756,12 +964,14 @@ public final class Catalogo {
     }
 
     /**
-     * Las dos condiciones que llevan SUJETO delante del operador
-     * (`VARIABLE cargas mayor 0`, `PLACEHOLDER %player_level% mayor 30`). Las
-     * demas comparan algo que ya se sabe cual es y no lo escriben.
+     * Las condiciones que llevan SUJETO delante del operador
+     * (`VARIABLE cargas mayor 0`, `PLACEHOLDER %player_level% mayor 30`,
+     * `NIVEL_HABILIDAD mining mayor 20`). Las demas comparan algo que ya se sabe
+     * cual es y no lo escriben.
      */
     public static boolean llevaSujeto(Cond c) {
-        return c != null && (c.nombre().equals("VARIABLE") || c.nombre().equals("PLACEHOLDER"));
+        return c != null && (c.nombre().equals("VARIABLE") || c.nombre().equals("PLACEHOLDER")
+                || c.nombre().equals("NIVEL_HABILIDAD"));
     }
 
     public static FichaActivador ficha(Activador a) {

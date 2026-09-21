@@ -74,14 +74,264 @@ public final class Acciones {
 
     static {
         vidaYDano();
+        combate();
         movimiento();
         efectos();
         visual();
         textos();
         sonido();
         mundo();
+        mundoDos();
         juego();
         flujo();
+    }
+
+    /* ============================================================= combate */
+
+    private static void combate() {
+        /*
+         * ROBAR_VIDA cura un porcentaje del daño DE ESE GOLPE, no una cantidad
+         * fija: asi escala solo con el arma y con las stats de MMOItems, que es
+         * lo que espera quien pone un robo de vida en una espada.
+         *
+         * El daño lo trae el contexto. En CRITICO es el daño final (esa escucha
+         * va en MONITOR, con las cuentas ya hechas); en GOLPEAR es el que haya
+         * en el evento en ese momento.
+         */
+        reg("ROBAR_VIDA", (ctx, a) -> {
+            Player j = ctx.jugador();
+            if (j == null) return;
+            double pct = a.d("cantidad", a.d("porcentaje", 20)) / 100.0;
+            double cura = ctx.dano() * pct;
+            if (cura <= 0) return;
+            for (LivingEntity e : Objetivos.vivos(ctx, a.selector())) {
+                e.setHealth(Math.max(0, Math.min(Textos.maxVida(e), e.getHealth() + cura)));
+            }
+        });
+
+        /*
+         * MULTIPLICAR_DANO toca el daño DEL EVENTO. Solo tiene sentido en los
+         * activadores que traen uno (GOLPEAR, GOLPEAR_JUGADOR, RECIBIR_GOLPE,
+         * CAER); en los demas no hay nada que multiplicar y se avisa una vez.
+         *
+         * Va sobre el daño que haya ya en el evento, o sea DESPUES de que
+         * MMOItems haya puesto el suyo: multiplica el golpe real, no el base.
+         */
+        reg("MULTIPLICAR_DANO", (ctx, a) -> {
+            double x = a.d("cantidad", a.d("factor", 1.5));
+            if (!(ctx.evento() instanceof org.bukkit.event.entity.EntityDamageEvent d)) {
+                ctx.modulo().avisoUnaVez("muldano." + ctx.definicion().id(),
+                        ctx.definicion().id() + ": MULTIPLICAR_DANO en " + ctx.activador()
+                                + " no hace nada, ese activador no trae ningun golpe."
+                                + " Ponlo en GOLPEAR, RECIBIR_GOLPE o CAER.");
+                return;
+            }
+            d.setDamage(Math.max(0, d.getDamage() * x));
+            ctx.dano(d.getFinalDamage());
+        });
+
+        /*
+         * IGNORAR_ARMADURA baja la vida a pelo: ni armadura, ni encantamientos,
+         * ni resistencias. Por eso no pasa por damage(), que es donde se aplican
+         * todas esas reducciones. La animacion de golpe se pide aparte para que
+         * el jugador vea que le ha dolido.
+         */
+        reg("IGNORAR_ARMADURA", (ctx, a) -> {
+            double n = a.d("cantidad", 4);
+            if (n <= 0) return;
+            for (LivingEntity e : Objetivos.vivos(ctx,
+                    a.selector() == null ? "@golpeado" : a.selector())) {
+                double absorbe = Math.min(e.getAbsorptionAmount(), n);
+                e.setAbsorptionAmount(e.getAbsorptionAmount() - absorbe);
+                double resto = n - absorbe;
+                if (resto > 0) e.setHealth(Math.max(0, e.getHealth() - resto));
+                e.playEffect(org.bukkit.EntityEffect.HURT);
+            }
+        });
+
+        /*
+         * ATURDIR: quieto, sin saltar y sin poder pegar. Se hace con efectos de
+         * pocion extremos y no tocando el movimiento, por lo mismo que ANCLAR:
+         * el cliente corrige el movimiento por su cuenta y en Bedrock da tirones.
+         * Se quita solo porque los efectos caducan; no hay nada que limpiar.
+         */
+        reg("ATURDIR", (ctx, a) -> {
+            int t = a.ticks("duracion", 40);
+            for (LivingEntity e : Objetivos.vivos(ctx,
+                    a.selector() == null ? "@golpeado" : a.selector())) {
+                Compat.apply(e, "slowness", t, 250);
+                Compat.apply(e, "jump_boost", t, 128);
+                Compat.apply(e, "weakness", t, 10);
+                Compat.apply(e, "mining_fatigue", t, 10);
+            }
+        });
+
+        /*
+         * DESARMAR le tira el arma al suelo con dueño.
+         *
+         * El dueño es la VICTIMA, no quien desarma: si no, desarmar seria robar,
+         * y un item que roba armas de MMOItems se retira a la semana. Con el
+         * dueño puesto, nadie mas puede recogerla mientras dure.
+         */
+        reg("DESARMAR", (ctx, a) -> {
+            int t = a.ticks("duracion", 60);
+            for (LivingEntity e : Objetivos.vivos(ctx,
+                    a.selector() == null ? "@golpeado" : a.selector())) {
+                var equipo = e.getEquipment();
+                if (equipo == null) continue;
+                ItemStack arma = equipo.getItemInMainHand();
+                if (arma == null || arma.getType().isAir()) continue;
+                equipo.setItemInMainHand(null);
+                org.bukkit.entity.Item suelo = e.getWorld().dropItemNaturally(
+                        e.getLocation().add(0, 0.5, 0), arma.clone());
+                suelo.setPickupDelay(Math.max(10, Math.min(t, 6000)));
+                try {
+                    suelo.setOwner(e.getUniqueId());
+                } catch (Throwable ignored) {
+                    /* Sin setOwner solo queda el retardo de recogida. */
+                }
+            }
+        });
+
+        /* Brillo + una marca que dura lo mismo, para la condicion OBJETIVO_MARCADO. */
+        reg("MARCAR", (ctx, a) -> {
+            int t = a.ticks("duracion", 100);
+            for (Entity e : Objetivos.resolver(ctx,
+                    a.selector() == null ? "@golpeado" : a.selector())) {
+                ctx.modulo().combate().marcar(e, t);
+                e.setGlowing(true);
+                ctx.modulo().core().getServer().getScheduler().runTaskLater(ctx.modulo().core(),
+                        () -> { if (e.isValid()) e.setGlowing(false); }, Math.max(1, t));
+            }
+        });
+
+        /*
+         * CADENA: un relampago que salta de enemigo en enemigo.
+         *
+         * Cada salto busca el vivo mas cercano al ANTERIOR, no al portador: por
+         * eso la cadena se aleja y dibuja un camino en vez de quedarse pegada a
+         * ti. El daño baja un poco en cada salto para que valga la pena buscar
+         * el grupo y no confiar en que la cadena mate sola.
+         */
+        reg("CADENA", (ctx, a) -> {
+            Location origen = Objetivos.lugar(ctx,
+                    a.selector() == null ? "@golpeado" : a.selector());
+            if (origen == null || origen.getWorld() == null) return;
+            double radio = Math.max(1, Math.min(32, a.d("radio", 6)));
+            int saltos = Math.max(1, Math.min(20, a.i("saltos", 3)));
+            double dano = a.d("dano", 4);
+            double merma = a.d("merma", 0.15);
+            boolean rayo = a.b("rayo", true);
+
+            java.util.Set<java.util.UUID> tocados = new java.util.HashSet<>();
+            Entity primero = Objetivos.uno(ctx, a.selector() == null ? "@golpeado" : a.selector());
+            if (primero != null) tocados.add(primero.getUniqueId());
+            if (ctx.jugador() != null) tocados.add(ctx.jugador().getUniqueId());
+
+            Location desde = origen;
+            for (int i = 0; i < saltos; i++) {
+                LivingEntity siguiente = masCercano(ctx, desde, radio, tocados);
+                if (siguiente == null) break;
+                tocados.add(siguiente.getUniqueId());
+                Location hasta = siguiente.getLocation().add(0, siguiente.getHeight() / 2, 0);
+                Fx.beam(desde.clone().add(0, 1, 0), hasta, 0.4, l -> pintar(ctx, a, l));
+                if (rayo) hasta.getWorld().strikeLightningEffect(siguiente.getLocation());
+                double golpe = dano * Math.pow(1 - merma, i);
+                if (golpe > 0) siguiente.damage(golpe, ctx.jugador());
+                desde = hasta;
+            }
+        });
+
+        /*
+         * REBOTE: el proyectil que acaba de impactar sale otra vez hacia otro
+         * enemigo cercano.
+         *
+         * No se reutiliza la flecha porque en el impacto ya esta clavada o
+         * muerta segun el tipo: se lanza una nueva del mismo tipo desde el punto
+         * del golpe, marcada con el mismo GodItem, asi el rebote conserva el
+         * comportamiento del item. `rebotes` corta la cadena infinita.
+         */
+        reg("REBOTE", (ctx, a) -> {
+            Player j = ctx.jugador();
+            if (j == null) return;
+            if (!(ctx.evento() instanceof org.bukkit.event.entity.ProjectileHitEvent ph)) {
+                ctx.modulo().avisoUnaVez("rebote." + ctx.definicion().id(),
+                        ctx.definicion().id() + ": REBOTE solo vale en los activadores de"
+                                + " proyectil (PROYECTIL_IMPACTA y sus dos subtipos).");
+                return;
+            }
+            Projectile viejo = ph.getEntity();
+            NamespacedKeyRebote.limitar(ctx, viejo, a.i("rebotes", 2));
+            if (NamespacedKeyRebote.agotado(ctx, viejo)) return;
+
+            Location punto = viejo.getLocation();
+            java.util.Set<java.util.UUID> fuera = new java.util.HashSet<>();
+            fuera.add(j.getUniqueId());
+            if (ph.getHitEntity() != null) fuera.add(ph.getHitEntity().getUniqueId());
+            LivingEntity destino = masCercano(ctx, punto, Math.max(1, a.d("radio", 8)), fuera);
+            if (destino == null) return;
+
+            Vector dir = destino.getLocation().add(0, destino.getHeight() / 2, 0)
+                    .toVector().subtract(punto.toVector()).normalize()
+                    .multiply(a.d("velocidad", 1.6));
+            Projectile nuevo = j.launchProjectile(viejo.getClass(), dir);
+            nuevo.teleport(punto);
+            nuevo.setVelocity(dir);
+            nuevo.getPersistentDataContainer().set(ctx.modulo().identidad().clave(),
+                    PersistentDataType.STRING, ctx.definicion().id());
+            NamespacedKeyRebote.heredar(ctx, viejo, nuevo);
+        });
+
+        reg("COMBO_RESET", (ctx, a) -> ctx.modulo().combate().reiniciarCombo(ctx.jugador()));
+    }
+
+    /** El vivo mas cercano a un punto que no este ya en la lista de tocados. */
+    private static LivingEntity masCercano(Ctx ctx, Location desde, double radio,
+                                           java.util.Set<java.util.UUID> fuera) {
+        if (desde.getWorld() == null) return null;
+        LivingEntity mejor = null;
+        double corta = Double.MAX_VALUE;
+        for (Entity e : desde.getWorld().getNearbyEntities(desde, radio, radio, radio)) {
+            if (!(e instanceof LivingEntity le) || le.isDead()) continue;
+            if (fuera.contains(e.getUniqueId())) continue;
+            double d = e.getLocation().distanceSquared(desde);
+            if (d < corta) {
+                corta = d;
+                mejor = le;
+            }
+        }
+        return mejor;
+    }
+
+    /**
+     * La cuenta de rebotes que le queda a un proyectil.
+     *
+     * Vive en el propio proyectil y no en un mapa del plugin porque el proyectil
+     * es lo unico que sobrevive de un rebote al siguiente: en un mapa habria que
+     * limpiarlo a mano cada vez que uno se pierde por un barranco.
+     */
+    private static final class NamespacedKeyRebote {
+
+        private static org.bukkit.NamespacedKey clave(Ctx ctx) {
+            return new org.bukkit.NamespacedKey(ctx.modulo(), "rebotes");
+        }
+
+        static void limitar(Ctx ctx, Projectile p, int tope) {
+            var pdc = p.getPersistentDataContainer();
+            if (pdc.has(clave(ctx), PersistentDataType.INTEGER)) return;
+            pdc.set(clave(ctx), PersistentDataType.INTEGER, Math.max(0, tope));
+        }
+
+        static boolean agotado(Ctx ctx, Projectile p) {
+            Integer n = p.getPersistentDataContainer().get(clave(ctx), PersistentDataType.INTEGER);
+            return n != null && n <= 0;
+        }
+
+        static void heredar(Ctx ctx, Projectile viejo, Projectile nuevo) {
+            Integer n = viejo.getPersistentDataContainer().get(clave(ctx), PersistentDataType.INTEGER);
+            nuevo.getPersistentDataContainer().set(clave(ctx), PersistentDataType.INTEGER,
+                    Math.max(0, (n == null ? 1 : n) - 1));
+        }
     }
 
     /* ================================================================ vida */
@@ -837,6 +1087,142 @@ public final class Acciones {
         });
 
         reg("REPONER_USOS", (ctx, a) -> ctx.modulo().usos().reponer(ctx));
+
+        /*
+         * REINICIAR_COOLDOWN es COOLDOWN_DE con tiempo 0, mas el caso que aquel
+         * no cubre: `todos`, que limpia de golpe todos los enfriamientos del
+         * jugador. Es lo que quiere un item de "tu siguiente habilidad es gratis".
+         */
+        reg("REINICIAR_COOLDOWN", (ctx, a) -> {
+            String quien = a.s("activador", a.texto().trim());
+            for (Player p : Objetivos.jugadores(ctx, a.selector())) {
+                if (quien.isBlank() || quien.equalsIgnoreCase("todos")
+                        || quien.equalsIgnoreCase("all")) {
+                    ctx.modulo().cooldowns().quitarTodo(p);
+                    continue;
+                }
+                Activador act = Activador.porNombre(quien);
+                if (act == null) {
+                    ctx.modulo().avisoUnaVez("recd." + quien,
+                            "REINICIAR_COOLDOWN: no hay ningun activador '" + quien + "'.");
+                    return;
+                }
+                String id = a.tiene("item") ? GodItem.normalizar(a.s("item", ""))
+                        : ctx.definicion().id();
+                ctx.modulo().cooldowns().quitar(p, id, act);
+            }
+        });
+
+        /*
+         * VARIABLE_OBJETIVO es VARIABLE pero escribiendo en el OTRO. Solo existe
+         * el ambito de jugador: una variable "de item" del objetivo no significa
+         * nada, porque el item que corre es el tuyo, no el suyo.
+         */
+        reg("VARIABLE_OBJETIVO", (ctx, a) -> {
+            List<String> p = a.palabras();
+            if (p.isEmpty()) return;
+            String nombre = p.get(0);
+            String op = p.size() > 1 ? p.get(1).toLowerCase(Locale.ROOT) : "poner";
+            String valor = p.size() > 2 ? String.join(" ", p.subList(2, p.size())) : "";
+            for (Player destino : Objetivos.jugadores(ctx,
+                    a.selector() == null ? "@golpeado" : a.selector())) {
+                String actual = ctx.modulo().variables().deJugador(destino, nombre);
+                switch (op) {
+                    case "poner", "set", "=" -> ctx.modulo().variables()
+                            .ponerJugador(destino, nombre, Textos.aplicar(ctx, valor));
+                    case "sumar", "+" -> ctx.modulo().variables().ponerJugador(destino, nombre,
+                            numero(Numeros.decimal(actual, 0) + Numeros.decimal(valor, 0)));
+                    case "restar", "-" -> ctx.modulo().variables().ponerJugador(destino, nombre,
+                            numero(Numeros.decimal(actual, 0) - Numeros.decimal(valor, 0)));
+                    case "multiplicar", "*" -> ctx.modulo().variables().ponerJugador(destino, nombre,
+                            numero(Numeros.decimal(actual, 0) * Numeros.decimal(valor, 1)));
+                    case "borrar", "quitar" -> ctx.modulo().variables()
+                            .ponerJugador(destino, nombre, null);
+                    default -> ctx.modulo().getLogger().warning(
+                            "[GodItems] VARIABLE_OBJETIVO: operacion desconocida '" + op + "'.");
+                }
+            }
+        });
+    }
+
+    /* =============================================================== mundo 2 */
+
+    private static void mundoDos() {
+        /*
+         * CLIMA y HORA cambian el mundo DE VERDAD, no solo lo que ve el cliente
+         * (eso es CIELO). Por eso llevan duracion: un item que deja el mundo en
+         * tormenta para siempre es un item que acaba desactivado.
+         */
+        reg("CLIMA", (ctx, a) -> {
+            Location l = ctx.lugar();
+            if (l == null || l.getWorld() == null) return;
+            World w = l.getWorld();
+            String que = a.s("clima", a.texto().trim()).toLowerCase(Locale.ROOT);
+            int dur = a.ticks("duracion", 0);
+            boolean lluvia = que.startsWith("lluv") || que.startsWith("rain");
+            boolean tormenta = que.startsWith("torm") || que.startsWith("thun");
+            w.setStorm(lluvia || tormenta);
+            w.setThundering(tormenta);
+            if (dur > 0) {
+                w.setWeatherDuration(dur);
+                if (tormenta) w.setThunderDuration(dur);
+            }
+        });
+
+        reg("HORA", (ctx, a) -> {
+            Location l = ctx.lugar();
+            if (l == null || l.getWorld() == null) return;
+            String que = a.s("hora", a.texto().trim()).toLowerCase(Locale.ROOT);
+            long hora;
+            if (que.startsWith("dia") || que.startsWith("día") || que.startsWith("day")) hora = 1000;
+            else if (que.startsWith("noche") || que.startsWith("night")) hora = 13000;
+            else hora = (long) Numeros.decimal(que, 1000);
+            l.getWorld().setTime(hora);
+        });
+
+        /* Tira el item al suelo en el punto, sin pasar por el inventario de nadie. */
+        reg("SOLTAR_ITEM", (ctx, a) -> {
+            Location l = punto(ctx, a);
+            if (l == null || l.getWorld() == null) return;
+            Material m = material(a.s("material", a.texto().trim()), null);
+            if (m == null || m.isAir()) return;
+            int n = Math.max(1, Math.min(256, a.i("cantidad", 1)));
+            l.getWorld().dropItemNaturally(l, new ItemStack(m, n));
+        });
+
+        /*
+         * DUPLICAR_DROPS vale en ROMPER_BLOQUE y en MATAR, que son los dos
+         * unicos sitios donde hay un boton de drops que tocar. En la muerte se
+         * duplica la lista del evento; en el bloque no se puede (el evento no la
+         * expone), asi que se suelta otra tanda a mano en el mismo punto.
+         */
+        reg("DUPLICAR_DROPS", (ctx, a) -> {
+            int veces = Math.max(1, Math.min(8, a.i("veces", 1)));
+            if (ctx.evento() instanceof org.bukkit.event.entity.EntityDeathEvent muerte) {
+                List<ItemStack> copia = new ArrayList<>(muerte.getDrops());
+                for (int i = 0; i < veces; i++) {
+                    for (ItemStack it : copia) {
+                        if (it != null && !it.getType().isAir()) muerte.getDrops().add(it.clone());
+                    }
+                }
+                return;
+            }
+            if (ctx.evento() instanceof org.bukkit.event.block.BlockBreakEvent roto) {
+                Location donde = roto.getBlock().getLocation().add(0.5, 0.5, 0.5);
+                ItemStack mano = ctx.item() == null ? new ItemStack(Material.AIR) : ctx.item();
+                for (int i = 0; i < veces; i++) {
+                    for (ItemStack it : roto.getBlock().getDrops(mano)) {
+                        if (it != null && !it.getType().isAir()) {
+                            donde.getWorld().dropItemNaturally(donde, it.clone());
+                        }
+                    }
+                }
+                return;
+            }
+            ctx.modulo().avisoUnaVez("dup." + ctx.definicion().id(),
+                    ctx.definicion().id() + ": DUPLICAR_DROPS solo hace algo en ROMPER_BLOQUE"
+                            + " y en MATAR; en " + ctx.activador() + " no hay drops que duplicar.");
+        });
     }
 
     private static String numero(double d) {

@@ -187,33 +187,41 @@ public final class MenuGi implements Listener {
         j.openInventory(v.inv);
     }
 
+    /**
+     * El titulo de cada pantalla.
+     *
+     * A la izquierda SIEMPRE `EDERUS`, y la seccion a la derecha en minusculas
+     * con la inicial en mayuscula. Es la forma que tienen la tienda y los menus
+     * de DeluxeMenus, y es lo que hace que al saltar de uno a otro parezcan el
+     * mismo servidor. Antes la izquierda cambiaba en cada pantalla (GODITEMS,
+     * IMPORTAR, SONIDOS...) y cada menu parecia de un plugin distinto.
+     */
     private Component titulo(Player j, Vista v) {
         Sesion s = sesion(j);
-        return switch (v.pantalla) {
-            case RAIZ -> Estilo.titulo("GODITEMS", this.modulo.registro().cuantos() + " items");
-            case TIPOS -> Estilo.titulo("IMPORTAR", "elige tipo");
-            case ITEMS_MMO -> Estilo.titulo("IMPORTAR", v.a);
-            case FICHA -> Estilo.titulo("GODITEM", nombreCorto(v.a));
-            case ASPECTO -> Estilo.titulo("ASPECTO", nombreCorto(v.a));
-            case ACTIVADOR -> Estilo.titulo(s.act == null ? "ACTIVADOR" : humano(s.act).toUpperCase(Locale.ROOT),
-                    nombreCorto(s.itemId));
-            case LISTA -> Estilo.titulo(s.lista.toUpperCase(Locale.ROOT),
-                    s.act == null ? "" : s.act.name());
-            case LINEA -> Estilo.titulo("LINEA", (s.indice + 1) + " de " + s.lista);
-            case ACT_GRUPOS -> Estilo.titulo("ACTIVADORES", "elige grupo");
-            case ACT_LISTA -> Estilo.titulo("ACTIVADORES", v.a);
-            case CAT_GRUPOS -> Estilo.titulo(s.lista.equals("acciones") ? "ACCIONES" : "CONDICIONES",
-                    "elige grupo");
-            case CAT_LISTA -> Estilo.titulo(s.lista.equals("acciones") ? "ACCIONES" : "CONDICIONES", v.a);
-            case EDITOR -> Estilo.titulo("EDITOR", s.borrador == null ? "" : s.borrador.nombre());
-            case ELEGIR -> Estilo.titulo("ELEGIR", v.b);
-            case PART_GRUPOS -> Estilo.titulo("PARTICULAS", Particulas.cuantas() + " en total");
-            case PART_LISTA -> Estilo.titulo("PARTICULAS", v.a);
-            case SON_FAMILIAS -> Estilo.titulo("SONIDOS", Sonidos.cuantos() + " en total");
-            case SON_RAMAS -> Estilo.titulo("SONIDOS", v.a);
-            case SON_LISTA -> Estilo.titulo("SONIDOS", v.a + "." + v.b);
-            case RESULTADOS -> Estilo.titulo("BUSCAR", s.consulta);
-        };
+        return Estilo.titulo("EDERUS", switch (v.pantalla) {
+            case RAIZ -> "GodItems";
+            case TIPOS -> "Importar";
+            case ITEMS_MMO -> "Importar " + humano(v.a);
+            case FICHA -> nombreCorto(v.a);
+            case ASPECTO -> "Aspecto";
+            case ACTIVADOR -> s.act == null ? "Activador" : humano(s.act);
+            case LISTA -> humano(s.lista);
+            case LINEA -> "Línea " + (s.indice + 1);
+            case ACT_GRUPOS -> "Activadores";
+            /* Los nombres de grupo ya vienen escritos como se leen ("Vida y
+             * daño", "Cada X"): pasarlos por humano() los estropearia. */
+            case ACT_LISTA -> "Activadores de " + v.a;
+            case CAT_GRUPOS -> s.lista.equals("acciones") ? "Acciones" : "Condiciones";
+            case CAT_LISTA -> v.a;
+            case EDITOR -> s.borrador == null ? "Editor" : humano(s.borrador.nombre());
+            case ELEGIR -> "Elegir " + humano(v.b);
+            case PART_GRUPOS -> "Partículas";
+            case PART_LISTA -> "Partículas de " + v.a;
+            case SON_FAMILIAS -> "Sonidos";
+            case SON_RAMAS -> "Sonidos de " + v.a;
+            case SON_LISTA -> "Sonidos de " + v.a + "." + v.b;
+            case RESULTADOS -> "Buscar: " + s.consulta;
+        });
     }
 
     /* =============================================================== pintar */
@@ -269,7 +277,9 @@ public final class MenuGi implements Listener {
     private void pintarRaiz(Vista v) {
         List<GodItem> todos = new ArrayList<>(this.modulo.registro().todos());
         paginar(v, todos.size());
-        cabecera(v, Material.NETHER_STAR, "&#0083FD&lGODITEMS", List.of(
+        /* Sin negrita y sin versalitas: la negrita se queda para el titulo del
+         * menu, que es el unico sitio donde la lleva el estilo de Ederus. */
+        cabecera(v, Material.NETHER_STAR, "&#0083FDGodItems", List.of(
                 "&7" + todos.size() + " items definidos",
                 "&8" + Catalogo.cuantasAcciones() + " acciones, "
                         + Catalogo.cuantasCondiciones() + " condiciones",
@@ -2111,7 +2121,7 @@ public final class MenuGi implements Listener {
     private List<String> resumen(GodItem def) {
         List<String> out = new ArrayList<>();
         out.add("");
-        out.add("&#0083FD&lGodItems &8· &7" + def.id());
+        out.add("&#0083FDGodItems &8· &7" + def.id());
         out.add(def.enlazado() ? "&8MMOItems &f" + def.enlace() : "&8Nativo");
         int acciones = 0;
         int enfriamiento = 0;

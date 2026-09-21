@@ -1,0 +1,189 @@
+# ---------------------------------------------------------------------------
+# GUIA DE ACTIVADORES - un ejemplo de cada uno, corto, para copiar y pegar.
+#
+# Esto NO es un item para dar a nadie: es la chuleta. Cada bloque tiene una
+# accion barata para que se vea saltar sin montar nada. Si lo dejas cargado,
+# un palo con esto dentro es la forma mas rapida de probar un activador.
+#
+# Los nombres de activadores, acciones y condiciones van en ESPAÑOL y en
+# mayusculas; los comandos de /gi, en ingles. Lo mismo que en el resto de EDM.
+# ---------------------------------------------------------------------------
+
+id: GUIA_DE_ACTIVADORES
+
+item:
+  material: WRITTEN_BOOK
+  nombre: '&#0083FDGuía de activadores'
+  lore:
+    - '&7Un ejemplo de cada uno.'
+    - '&8Consulta, no item de juego.'
+
+activadores:
+
+  # ----------------------------------------------------------------- combate
+
+  # Que te asesten un crítico a ti. Mismo criterio que CRITICO, del otro lado.
+  RECIBIR_CRITICO:
+    acciones:
+      - 'ACTIONBAR @yo &c%objetivo% te dio un crítico de %dano%'
+
+  # Los tres de mitigación los decide MythicLib con las stats de MMOItems.
+  # Sin MythicLib delante no saltan nunca: no hay equivalente en vanilla.
+  ESQUIVAR:
+    acciones:
+      - 'PARTICULA @yo tipo:CLOUD cantidad:10 ancho:0.4'
+
+  BLOQUEAR:
+    acciones:
+      - 'SONIDO @yo sonido:item.shield.block volumen:1 tono:1.2'
+
+  # PARAR aquí es el parry. Nada que ver con la ACCION PARAR, que corta la lista.
+  PARAR:
+    acciones:
+      - 'SONIDO_GLOBAL @yo sonido:block.anvil.land volumen:0.6 tono:1.8'
+
+  # Matar un MythicMob, o algo con al menos `vida-minima` de vida máxima.
+  MATAR_JEFE:
+    vida-minima: 150
+    acciones:
+      - 'MENSAJE @yo &6Has derribado a %objetivo%'
+
+  # Salta cada `racha` muertes seguidas sin morir tú. Morir la pone a cero.
+  RACHA:
+    racha: 5
+    acciones:
+      - 'TITULO @yo &c%racha% seguidas'
+
+  # El daño de caída llega en %dano%. Aquí no hay a quién apuntar.
+  CAER:
+    acciones:
+      - 'ACTIONBAR @yo &7La caída te costó %dano%'
+
+  # --------------------------------------------------------------- proyectiles
+
+  # Soltar una flecha, un tridente, una bola de nieve, un huevo o una perla.
+  DISPARAR:
+    acciones:
+      - 'PARTICULA @yo tipo:CRIT cantidad:6 ancho:0.2 alto:1.2'
+
+  # Los dos subtipos del impacto. Saltan ADEMÁS de PROYECTIL_IMPACTA.
+  PROYECTIL_IMPACTA_ENTIDAD:
+    acciones:
+      - 'DAÑO @golpeado cantidad:2'
+
+  # %bloque% trae el material donde se clavó. Los %...% van en los TEXTOS (el
+  # mensaje, el título); en las claves de una acción va el valor tal cual.
+  PROYECTIL_IMPACTA_BLOQUE:
+    acciones:
+      - 'ACTIONBAR @yo &7Se clavó en %bloque%'
+
+  # ----------------------------------------------------------------- el mundo
+
+  PESCAR:
+    acciones:
+      - 'EXP @yo cantidad:5'
+
+  # `bloque` acota a un material. Vacío = cualquiera.
+  INTERACTUAR_BLOQUE:
+    bloque: CRAFTING_TABLE
+    acciones:
+      - 'ACTIONBAR @yo &7Mesa de trabajo'
+
+  # `criatura` acota a un ENTITY_TYPE. Vacío = cualquiera.
+  INTERACTUAR_ENTIDAD:
+    criatura: VILLAGER
+    acciones:
+      - 'PARTICULA @golpeado tipo:HAPPY_VILLAGER cantidad:6 ancho:0.4 alto:1'
+
+  CAMBIAR_MUNDO:
+    acciones:
+      - 'ACTIONBAR @yo &7Ahora estás en %mundo%'
+
+  # `region` acota a una región de WorldGuard. Sin WorldGuard no saltan.
+  ENTRAR_REGION:
+    region: spawn
+    acciones:
+      - 'MENSAJE @yo &7Entras al spawn'
+
+  SALIR_REGION:
+    region: spawn
+    acciones:
+      - 'MENSAJE @yo &7Sales del spawn'
+
+  # ------------------------------------------------------------- el cuerpo
+
+  AGACHARSE:
+    acciones:
+      - 'PARTICULA @yo tipo:SMOKE cantidad:4 ancho:0.3'
+
+  LEVANTARSE:
+    acciones:
+      - 'PARTICULA @yo tipo:CLOUD cantidad:4 ancho:0.3'
+
+  EMPEZAR_CORRER:
+    acciones:
+      - 'POCION @yo tipo:speed duracion:40 nivel:1'
+
+  PARAR_CORRER:
+    acciones:
+      - 'QUITAR_POCION @yo tipo:speed'
+
+  SALTAR:
+    acciones:
+      - 'SONIDO @yo sonido:entity.bat.takeoff volumen:0.4 tono:1.6'
+
+  EMPEZAR_PLANEAR:
+    acciones:
+      - 'SONIDO_GLOBAL @yo sonido:item.elytra.flying volumen:0.6 tono:1'
+
+  PARAR_PLANEAR:
+    acciones:
+      - 'PARTICULA @yo tipo:CLOUD cantidad:12 ancho:0.6'
+
+  ENTRAR_AGUA:
+    acciones:
+      - 'SONIDO @yo sonido:entity.player.splash volumen:0.8 tono:1'
+
+  SALIR_AGUA:
+    acciones:
+      - 'APAGAR @yo'
+
+  # COMER es comerse cualquier cosa. CONSUMIR es comerse ESTE item.
+  COMER:
+    acciones:
+      - 'ACTIONBAR @yo &7Comida &f%comida%&7/20'
+
+  DORMIR:
+    acciones:
+      - 'MENSAJE @yo &7Que descanses.'
+
+  DESPERTAR:
+    acciones:
+      - 'POCION @yo tipo:regeneration duracion:100 nivel:1'
+
+  # ------------------------------------------------------------- otros plugins
+
+  # AuraSkills, por reflexión. `habilidad` acota a una; vacío = cualquiera.
+  SUBIR_NIVEL:
+    habilidad: mining
+    acciones:
+      - 'TITULO @yo &aMinería|&7Un nivel más'
+
+  # -------------------------------------------------------------- la sesión
+
+  ENTRAR:
+    acciones:
+      - 'MENSAJE @yo &7Lo llevas encima otra vez.'
+
+  SALIR:
+    acciones:
+      - 'VARIABLE salidas sumar 1'
+
+  # ------------------------------------------------------------ el reloj propio
+
+  # Cada `ticks` exactos, con su propio reloj. EN_INVENTARIO va al compás de
+  # `ticks-de-revision` (10 por defecto) y un `cada: 3` acabaría yendo cada 10.
+  TEMPORIZADOR:
+    ticks: 100
+    acciones:
+      - 'PARTICULA @yo tipo:END_ROD cantidad:2 ancho:0.3 alto:1'

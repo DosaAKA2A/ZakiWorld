@@ -61,7 +61,10 @@ public final class GodItemsPlugin extends Module {
     private NamespacedKey claveDueno;
     private BukkitTask tareaTicks;
     private BukkitTask tareaBarra;
+    private BukkitTask tareaTemporizador;
     private int contador;
+    private int contadorTemporizador;
+    private int pasoTemporizador = 1;
 
     private boolean detalle;
     private boolean hayConjuntos;
@@ -74,9 +77,24 @@ public final class GodItemsPlugin extends Module {
 
     /** Las escuchas de Bukkit; EscuchasMmo les pasa el critico de MythicLib. */
     private Escuchas escuchas;
+    private EscuchasMas escuchasMas;
+    private Combate combate;
+    private Auras auras;
 
     public Escuchas escuchas() {
         return this.escuchas;
+    }
+
+    public EscuchasMas escuchasMas() {
+        return this.escuchasMas;
+    }
+
+    public Combate combate() {
+        return this.combate;
+    }
+
+    public Auras auras() {
+        return this.auras;
     }
 
     public GodItemsPlugin(EDMPlugin core) {
@@ -96,6 +114,8 @@ public final class GodItemsPlugin extends Module {
         this.variables = new Variables(this);
         this.usos = new Usos(this);
         this.cooldowns = new Cooldowns();
+        this.combate = new Combate();
+        this.auras = new Auras(this);
         this.vuelo = new Vuelo();
         this.motor = new Motor(this);
         this.regiones = new Regiones(this);
@@ -110,16 +130,21 @@ public final class GodItemsPlugin extends Module {
         File items = new File(getDataFolder(), "items");
         if (!items.isDirectory()) {
             items.mkdirs();
-            /* El item de ejemplo se copia SOLO la primera vez. Si se
-             * sobrescribiera en cada arranque, cualquiera que lo use de base
-             * perderia sus cambios en el siguiente reinicio. */
+            /* Los ejemplos se copian SOLO la primera vez. Si se sobrescribieran
+             * en cada arranque, cualquiera que los use de base perderia sus
+             * cambios en el siguiente reinicio. */
             saveResource("items/cetro_del_alba.yml", false);
+            saveResource("items/hoja_del_verdugo.yml", false);
+            saveResource("items/guia_de_activadores.yml", false);
         }
         int n = this.cargador.cargarCarpeta(items, this.registro);
 
         this.escuchas = new Escuchas(this);
+        this.escuchasMas = new EscuchasMas(this);
         core.getServer().getPluginManager().registerEvents(this.escuchas, this);
+        core.getServer().getPluginManager().registerEvents(this.escuchasMas, this);
         core.getServer().getPluginManager().registerEvents(this.menu, this);
+        this.auras.enganchar(this);
         /* La clase de escuchas de MMOItems referencia sus tipos: sin su jar
          * delante ni siquiera carga. Por eso se instancia SOLO si esta, igual
          * que se hizo con Quests y ProtocolLib despues de que tumbaran el
@@ -159,15 +184,48 @@ public final class GodItemsPlugin extends Module {
             this.tareaTicks = core.getServer().getScheduler().runTaskTimer(core,
                     this::pasarTicks, this.ticksDeRevision, this.ticksDeRevision);
         }
-        this.tareaBarra = core.getServer().getScheduler().runTaskTimer(core,
-                () -> this.cooldowns.repasar(this), 5L, 5L);
+        this.tareaBarra = core.getServer().getScheduler().runTaskTimer(core, () -> {
+            this.cooldowns.repasar(this);
+            this.combate.repasar();
+        }, 5L, 5L);
+
+        /*
+         * TEMPORIZADOR lleva su propio reloj. El paso es el intervalo MAS CORTO
+         * que pida algun item: asi un item con `ticks: 5` va de verdad cada 5, y
+         * si nadie usa el activador la tarea ni se crea. Encadenarlo a
+         * `ticks-de-revision` como los otros tres seria repetir el problema de
+         * que un `cada: 3` acaba yendo cada 10.
+         */
+        int paso = 0;
+        for (GodItem def : this.registro.todos()) {
+            GodItem.Bloque b = def.bloque(Activador.TEMPORIZADOR);
+            if (b == null) continue;
+            paso = paso == 0 ? b.cada() : Math.min(paso, b.cada());
+        }
+        if (paso > 0) {
+            this.pasoTemporizador = Math.max(1, paso);
+            this.contadorTemporizador = 0;
+            this.tareaTemporizador = core.getServer().getScheduler().runTaskTimer(core,
+                    this::pasarTemporizador, this.pasoTemporizador, this.pasoTemporizador);
+        }
     }
 
     private void pararTareas() {
         if (this.tareaTicks != null) this.tareaTicks.cancel();
         if (this.tareaBarra != null) this.tareaBarra.cancel();
+        if (this.tareaTemporizador != null) this.tareaTemporizador.cancel();
         this.tareaTicks = null;
         this.tareaBarra = null;
+        this.tareaTemporizador = null;
+    }
+
+    private void pasarTemporizador() {
+        this.contadorTemporizador += this.pasoTemporizador;
+        int ahora = this.contadorTemporizador;
+        for (Player j : core.getServer().getOnlinePlayers()) {
+            dispararEnInventario(j, Activador.TEMPORIZADOR, null,
+                    b -> ahora % Math.max(this.pasoTemporizador, b.cada()) < this.pasoTemporizador);
+        }
     }
 
     @Override
@@ -175,6 +233,7 @@ public final class GodItemsPlugin extends Module {
         pararTareas();
         if (this.vuelo != null) this.vuelo.devolverTodo(this);
         if (this.cooldowns != null) this.cooldowns.limpiar();
+        if (this.combate != null) this.combate.limpiar();
         this.guardado.clear();
     }
 
@@ -330,6 +389,61 @@ public final class GodItemsPlugin extends Module {
         return true;
     }
 
+    /**
+     * Dispara un activador para TODO lo que lleve puesto o en las manos.
+     *
+     * Es lo que quieren casi todos los activadores nuevos: agacharse, caer,
+     * esquivar o cambiar de mundo no son gestos "de un arma", los hace el
+     * jugador y responde lo que lleve encima. `filtro` acota por bloque (la
+     * region, la habilidad, el material); null = todos.
+     */
+    public int dispararEnEquipo(Player j, Activador act, Event evento, Entity objetivo,
+                                Location lugar, java.util.function.Predicate<GodItem.Bloque> filtro) {
+        if (j == null) return 0;
+        var inv = j.getInventory();
+        int n = 0;
+        n += unoDelEquipo(j, inv.getItemInMainHand(), EquipmentSlot.HAND, act, evento, objetivo, lugar, filtro);
+        n += unoDelEquipo(j, inv.getItemInOffHand(), EquipmentSlot.OFF_HAND, act, evento, objetivo, lugar, filtro);
+        n += unoDelEquipo(j, inv.getHelmet(), EquipmentSlot.HEAD, act, evento, objetivo, lugar, filtro);
+        n += unoDelEquipo(j, inv.getChestplate(), EquipmentSlot.CHEST, act, evento, objetivo, lugar, filtro);
+        n += unoDelEquipo(j, inv.getLeggings(), EquipmentSlot.LEGS, act, evento, objetivo, lugar, filtro);
+        n += unoDelEquipo(j, inv.getBoots(), EquipmentSlot.FEET, act, evento, objetivo, lugar, filtro);
+        return n;
+    }
+
+    private int unoDelEquipo(Player j, ItemStack item, EquipmentSlot hueco, Activador act,
+                             Event evento, Entity objetivo, Location lugar,
+                             java.util.function.Predicate<GodItem.Bloque> filtro) {
+        if (item == null || item.getType().isAir()) return 0;
+        GodItem def = this.identidad.definicionDe(item);
+        if (def == null) return 0;
+        GodItem.Bloque b = def.bloque(act);
+        if (b == null || (filtro != null && !filtro.test(b))) return 0;
+        return disparar(j, item, def, act, evento, hueco, objetivo, lugar) ? 1 : 0;
+    }
+
+    /**
+     * Igual, pero por el inventario entero y SIN repetir item.
+     *
+     * Lo de no repetir importa: si alguien lleva cinco copias del mismo GodItem
+     * en la mochila, ENTRAR o RACHA tienen que saltar UNA vez, no cinco.
+     */
+    public int dispararEnInventario(Player j, Activador act, Event evento,
+                                    java.util.function.Predicate<GodItem.Bloque> filtro) {
+        if (j == null) return 0;
+        java.util.Set<String> vistos = new java.util.HashSet<>();
+        int n = 0;
+        for (ItemStack it : j.getInventory().getContents()) {
+            if (it == null || it.getType().isAir()) continue;
+            GodItem def = this.identidad.definicionDe(it);
+            if (def == null || !vistos.add(def.id())) continue;
+            GodItem.Bloque b = def.bloque(act);
+            if (b == null || (filtro != null && !filtro.test(b))) continue;
+            if (disparar(j, it, def, act, evento, null, null, null)) n++;
+        }
+        return n;
+    }
+
     private void avisar(Player j, String clave, String pordefecto) {
         String texto = mensaje(clave, pordefecto);
         if (texto.isBlank()) return;
@@ -419,6 +533,7 @@ public final class GodItemsPlugin extends Module {
         this.cooldowns.olvidar(j.getUniqueId());
         this.vuelo.olvidar(j.getUniqueId());
         this.conjuntos.olvidar(j.getUniqueId());
+        this.combate.olvidar(j.getUniqueId());
     }
 
     /* ============================================================ /edm goditems */

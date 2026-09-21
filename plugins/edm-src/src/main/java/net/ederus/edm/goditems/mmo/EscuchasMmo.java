@@ -59,6 +59,45 @@ public final class EscuchasMmo implements Listener {
     public void alCritico(io.lumine.mythic.lib.api.event.PlayerAttackEvent e) {
         if (!e.getDamage().isWeaponCriticalStrike()) return;
         this.modulo.escuchas().critico(e.getPlayer(), e.toBukkit());
+        this.modulo.escuchasMas().recibirCritico(e.toBukkit().getEntity(), e.toBukkit());
+    }
+
+    /*
+     * Esquivar, bloquear y parar.
+     *
+     * No hay nada equivalente en vanilla: son stats de MMOItems (dodge-rating,
+     * block-rating, parry-rating) que MythicLib resuelve en sus propios eventos.
+     * Por eso los tres activadores viven aqui y no en las escuchas de Bukkit: sin
+     * MythicLib delante no existen, igual que el critico de stats.
+     */
+    @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
+    public void alEsquivar(io.lumine.mythic.lib.api.event.mitigation.PlayerDodgeEvent e) {
+        mitigacion(e.getPlayer(), Activador.ESQUIVAR, e, e.getEvent());
+    }
+
+    @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
+    public void alBloquear(io.lumine.mythic.lib.api.event.mitigation.PlayerBlockEvent e) {
+        mitigacion(e.getPlayer(), Activador.BLOQUEAR, e, e.getEvent());
+    }
+
+    @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
+    public void alParar(io.lumine.mythic.lib.api.event.mitigation.PlayerParryEvent e) {
+        mitigacion(e.getPlayer(), Activador.PARAR, e, e.getEvent());
+    }
+
+    /** El que esquiva / bloquea / para es el GOLPEADO; el @golpeado es quien le pegaba. */
+    private void mitigacion(Player j, Activador act, org.bukkit.event.Event evento,
+                            org.bukkit.event.entity.EntityDamageEvent dano) {
+        if (j == null) return;
+        org.bukkit.entity.Entity atacante = null;
+        if (dano instanceof org.bukkit.event.entity.EntityDamageByEntityEvent d) {
+            atacante = d.getDamager();
+            if (atacante instanceof org.bukkit.entity.Projectile pr
+                    && pr.getShooter() instanceof org.bukkit.entity.Entity dueno) {
+                atacante = dueno;
+            }
+        }
+        this.modulo.dispararEnEquipo(j, act, evento, atacante, null, null);
     }
 
     @EventHandler(priority = EventPriority.NORMAL)

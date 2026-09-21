@@ -185,9 +185,15 @@ public final class Cargador {
 
     private GodItem.Bloque bloque(String fichero, Activador a, ConfigurationSection s) {
         int cooldown = Numeros.ticks(s.getString("cooldown"), 0);
-        int cada = Numeros.ticks(s.getString("cada"), 20);
+        /* `ticks:` es el nombre natural en TEMPORIZADOR y `cada:` en los de
+         * tick de toda la vida. Es el mismo dato; se aceptan los dos para no
+         * obligar a nadie a recordar cual toca en cual. */
+        int cada = Numeros.ticks(s.getString("cada", s.getString("ticks")), 20);
         double prob = s.contains("probabilidad") ? s.getDouble("probabilidad", 100) : 100;
         int gasta = s.getInt("gasta-usos", 1);
+        String filtro = primero(s, "bloque", "habilidad", "region", "criatura", "filtro");
+        double vidaMinima = s.getDouble("vida-minima", 150);
+        int racha = Math.max(1, s.getInt("racha", 3));
 
         List<Condicion.Prueba> condiciones = new ArrayList<>();
         for (String linea : s.getStringList("condiciones")) {
@@ -204,7 +210,17 @@ public final class Cargador {
         return new GodItem.Bloque(a, cooldown, s.getString("mensaje-cooldown"),
                 s.getBoolean("cuenta-atras", true), Math.max(1, cada), prob, gasta,
                 Math.max(0, s.getInt("piezas", 0)),
+                filtro, vidaMinima, racha,
                 List.copyOf(condiciones), List.copyOf(pasos));
+    }
+
+    /** La primera de esas claves que este escrita, o "" si no hay ninguna. */
+    private static String primero(ConfigurationSection s, String... claves) {
+        for (String k : claves) {
+            String v = s.getString(k);
+            if (v != null && !v.isBlank()) return v.trim();
+        }
+        return "";
     }
 
     /** Traduce la lista de acciones, con sus `si:` y `repetir:` anidados. */

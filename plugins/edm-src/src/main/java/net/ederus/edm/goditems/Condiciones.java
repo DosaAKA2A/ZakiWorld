@@ -34,6 +34,10 @@ public final class Condiciones {
 
     private static final Map<String, Condicion> CATALOGO = new LinkedHashMap<>();
 
+    /** Lunes primero, como DayOfWeek. Sin tildes: DIA_SEMANA las quita al comparar. */
+    private static final String[] DIAS = {"lunes", "martes", "miercoles", "jueves",
+            "viernes", "sabado", "domingo"};
+
     public static java.util.Set<String> nombres() {
         return CATALOGO.keySet();
     }
@@ -281,6 +285,218 @@ public final class Condiciones {
             if (quiero.startsWith("secun") || quiero.startsWith("off")) return !principal;
             return principal;
         });
+
+        /* ------------------------------------------------------- el golpe */
+
+        /*
+         * ES_CRITICO dentro de GOLPEAR es la alternativa a tener dos bloques con
+         * la misma lista de acciones. El dato lo trae el contexto, que lo saca
+         * del evento o se lo pone la escucha que detecto el critico de MMOItems.
+         */
+        reg("ES_CRITICO", (ctx, a) -> ctx.critico());
+
+        reg("COMBO", (ctx, a) -> {
+            Player j = ctx.jugador();
+            if (j == null) return false;
+            List<String> p = a.palabras();
+            double valor = Numeros.decimal(p.isEmpty() ? "0" : p.get(p.size() - 1), 0);
+            return comparar(ctx.modulo().combate().combo(j), operador(p), valor);
+        });
+
+        reg("RACHA", (ctx, a) -> {
+            Player j = ctx.jugador();
+            if (j == null) return false;
+            List<String> p = a.palabras();
+            double valor = Numeros.decimal(p.isEmpty() ? "0" : p.get(p.size() - 1), 0);
+            return comparar(ctx.modulo().combate().racha(j), operador(p), valor);
+        });
+
+        reg("DISTANCIA", (ctx, a) -> {
+            org.bukkit.entity.Entity o = Objetivos.uno(ctx,
+                    a.selector() == null ? "@golpeado" : a.selector());
+            if (o == null) return false;
+            List<String> p = a.palabras();
+            double valor = Numeros.decimal(p.isEmpty() ? "0" : p.get(p.size() - 1), 0);
+            return comparar(Textos.distancia(ctx.jugador(), o), operador(p), valor);
+        });
+
+        /*
+         * TIPO_OBJETIVO acepta `jugador`, `mob` y cualquier EntityType. Los dos
+         * atajos existen porque son el 90 % de los usos y nadie quiere escribir
+         * la lista entera de criaturas para decir "a un mob".
+         */
+        reg("TIPO_OBJETIVO", (ctx, a) -> {
+            org.bukkit.entity.Entity o = Objetivos.uno(ctx,
+                    a.selector() == null ? "@golpeado" : a.selector());
+            if (o == null) return false;
+            String quiero = a.texto().trim();
+            if (quiero.isEmpty()) return false;
+            for (String t : quiero.split("[,\\s]+")) {
+                if (t.equalsIgnoreCase("jugador") || t.equalsIgnoreCase("player")) {
+                    if (o instanceof Player) return true;
+                } else if (t.equalsIgnoreCase("mob") || t.equalsIgnoreCase("criatura")) {
+                    if (!(o instanceof Player) && o instanceof LivingEntity) return true;
+                } else if (t.equalsIgnoreCase(o.getType().name())) {
+                    return true;
+                }
+            }
+            return false;
+        });
+
+        reg("ES_JEFE", (ctx, a) -> {
+            org.bukkit.entity.Entity o = Objetivos.uno(ctx,
+                    a.selector() == null ? "@golpeado" : a.selector());
+            return Combate.esJefe(o, a.d("vida", 150));
+        });
+
+        reg("OBJETIVO_MARCADO", (ctx, a) -> {
+            org.bukkit.entity.Entity o = Objetivos.uno(ctx,
+                    a.selector() == null ? "@golpeado" : a.selector());
+            return ctx.modulo().combate().marcado(o);
+        });
+
+        /* --------------------------------------------------------- el flujo */
+
+        reg("COOLDOWN_LISTO", (ctx, a) -> {
+            Player j = ctx.jugador();
+            if (j == null) return false;
+            Activador act = Activador.porNombre(
+                    a.texto().isBlank() ? ctx.activador().name() : a.texto().trim());
+            if (act == null) return false;
+            String id = a.tiene("item") ? GodItem.normalizar(a.s("item", "")) : ctx.definicion().id();
+            return ctx.modulo().cooldowns().quedan(j, id, act) <= 0;
+        });
+
+        /* --------------------------------------------------------- el mundo */
+
+        reg("BAJO_AGUA", (ctx, a) -> {
+            Player j = ctx.jugador();
+            return j != null && j.getEyeLocation().getBlock().getType() == Material.WATER;
+        });
+
+        reg("EN_LAVA", (ctx, a) -> {
+            Player j = ctx.jugador();
+            if (j == null) return false;
+            Material m = j.getLocation().getBlock().getType();
+            return m == Material.LAVA || j.getEyeLocation().getBlock().getType() == Material.LAVA;
+        });
+
+        reg("SOBRE_BLOQUE", (ctx, a) -> {
+            Location l = ctx.lugar();
+            if (l == null) return false;
+            Material bajo = l.clone().subtract(0, 0.2, 0).getBlock().getType();
+            return alguno(a.texto(), bajo);
+        });
+
+        /*
+         * MIRANDO_BLOQUE usa el mismo alcance que el selector @mirada: si un
+         * item apunta a 30 bloques, su condicion tiene que mirar igual de lejos
+         * o el item falla justo en el borde.
+         */
+        reg("MIRANDO_BLOQUE", (ctx, a) -> {
+            Player j = ctx.jugador();
+            if (j == null) return false;
+            org.bukkit.util.RayTraceResult r = j.getWorld().rayTraceBlocks(j.getEyeLocation(),
+                    j.getEyeLocation().getDirection(), a.d("alcance", Objetivos.ALCANCE_MIRADA),
+                    org.bukkit.FluidCollisionMode.NEVER, true);
+            if (r == null || r.getHitBlock() == null) return false;
+            return alguno(a.texto(), r.getHitBlock().getType());
+        });
+
+        reg("MUNDO_TIEMPO", (ctx, a) -> {
+            Location l = ctx.lugar();
+            if (l == null || l.getWorld() == null) return false;
+            List<String> p = a.palabras();
+            double valor = Numeros.decimal(p.isEmpty() ? "0" : p.get(p.size() - 1), 0);
+            return comparar(l.getWorld().getFullTime(), operador(p), valor);
+        });
+
+        /* El dia de la semana del servidor, en español y sin tildes obligatorias. */
+        reg("DIA_SEMANA", (ctx, a) -> {
+            String hoy = DIAS[java.time.LocalDate.now().getDayOfWeek().getValue() - 1];
+            for (String d : a.texto().trim().split("[,\\s]+")) {
+                if (sinTildes(d).equalsIgnoreCase(hoy)) return true;
+            }
+            return false;
+        });
+
+        /* --------------------------------------------------------- el equipo */
+
+        /*
+         * ARMA_EN_MANO acepta un material (`NETHERITE_SWORD`) o un item de
+         * MMOItems (`KATANA.MENGUANTE_CARMESI`). El punto es lo que decide: los
+         * materiales de Minecraft no lo llevan nunca.
+         */
+        reg("ARMA_EN_MANO", (ctx, a) -> {
+            Player j = ctx.jugador();
+            if (j == null) return false;
+            ItemStack mano = j.getInventory().getItemInMainHand();
+            if (mano == null || mano.getType().isAir()) return false;
+            String quiero = a.s("material", a.texto().trim());
+            if (quiero.isBlank()) return false;
+            for (String t : quiero.split("[,\\s]+")) {
+                if (t.indexOf('.') > 0) {
+                    String enlace = ctx.modulo().identidad().enlaceDe(mano);
+                    if (enlace != null && enlace.equalsIgnoreCase(t)) return true;
+                } else if (t.equalsIgnoreCase(mano.getType().name())) {
+                    return true;
+                }
+            }
+            return false;
+        });
+
+        /* --------------------------------------------------------- el jugador */
+
+        reg("ES_BEDROCK", (ctx, a) ->
+                net.ederus.edm.comun.Plataforma.esBedrock(ctx.jugador()));
+
+        reg("NIVEL_EXP", (ctx, a) -> {
+            Player j = ctx.jugador();
+            if (j == null) return false;
+            List<String> p = a.palabras();
+            double valor = Numeros.decimal(p.isEmpty() ? "0" : p.get(p.size() - 1), 0);
+            return comparar(j.getLevel(), operador(p), valor);
+        });
+
+        reg("DINERO", (ctx, a) -> {
+            Player j = ctx.jugador();
+            var eco = ctx.modulo().economia();
+            if (j == null || eco == null) return false;
+            List<String> p = a.palabras();
+            double valor = Numeros.decimal(p.isEmpty() ? "0" : p.get(p.size() - 1), 0);
+            return comparar(eco.getBalance(j), operador(p), valor);
+        });
+
+        /*
+         * NIVEL_HABILIDAD <habilidad> <op> <n>. La primera palabra es siempre la
+         * habilidad; el resto, la comparacion. Sin AuraSkills delante devuelve
+         * falso y no se queja: es una condicion, no un fallo.
+         */
+        reg("NIVEL_HABILIDAD", (ctx, a) -> {
+            Player j = ctx.jugador();
+            List<String> p = a.palabras();
+            if (j == null || p.isEmpty()) return false;
+            int nivel = Auras.nivel(j, a.s("habilidad", p.get(0)));
+            if (nivel < 0) return false;
+            List<String> resto = p.subList(1, p.size());
+            double valor = Numeros.decimal(resto.isEmpty() ? "0" : resto.get(resto.size() - 1), 0);
+            return comparar(nivel, operador(resto), valor);
+        });
+    }
+
+    private static String sinTildes(String s) {
+        return java.text.Normalizer.normalize(s == null ? "" : s.trim(),
+                        java.text.Normalizer.Form.NFD)
+                .replaceAll("\\p{M}", "");
+    }
+
+    /** true si el material esta en la lista escrita (separada por comas o espacios). */
+    private static boolean alguno(String lista, Material m) {
+        if (lista == null || lista.isBlank()) return false;
+        for (String t : lista.trim().split("[,\\s]+")) {
+            if (t.equalsIgnoreCase(m.name())) return true;
+        }
+        return false;
     }
 
     private static void reg(String nombre, Condicion c) {
