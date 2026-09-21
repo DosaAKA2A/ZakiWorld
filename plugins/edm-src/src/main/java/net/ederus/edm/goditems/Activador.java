@@ -18,6 +18,12 @@ public enum Activador {
     /* --- combate --- */
     GOLPEAR,
     GOLPEAR_JUGADOR,
+    /**
+     * Un golpe critico con el item en la mano: el de las stats de MMOItems
+     * (critical-strike-chance, lo calcula MythicLib) o el de caer saltando.
+     * Salta una sola vez por golpe aunque coincidan los dos.
+     */
+    CRITICO,
     RECIBIR_GOLPE,
     MATAR,
     MATAR_JUGADOR,

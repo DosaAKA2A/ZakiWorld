@@ -51,6 +51,16 @@ public final class EscuchasMmo implements Listener {
      * en CADA construccion, incluida la que regenera las copias viejas, nunca
      * hay una version del item sin nuestras lineas.
      */
+    /**
+     * El critico de las stats de MMOItems (critical-strike-chance). Lo decide
+     * MythicLib dentro de su propio evento de ataque; en MONITOR ya esta marcado.
+     */
+    @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
+    public void alCritico(io.lumine.mythic.lib.api.event.PlayerAttackEvent e) {
+        if (!e.getDamage().isWeaponCriticalStrike()) return;
+        this.modulo.escuchas().critico(e.getPlayer(), e.toBukkit());
+    }
+
     @EventHandler(priority = EventPriority.NORMAL)
     public void alConstruir(ItemBuildEvent e) {
         ItemStack item = e.getItemStack();

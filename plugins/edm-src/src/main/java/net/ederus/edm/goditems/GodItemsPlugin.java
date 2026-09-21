@@ -72,6 +72,13 @@ public final class GodItemsPlugin extends Module {
     private final Map<UUID, List<ItemStack>> guardado = new HashMap<>();
     private final java.util.Set<String> avisados = java.util.concurrent.ConcurrentHashMap.newKeySet();
 
+    /** Las escuchas de Bukkit; EscuchasMmo les pasa el critico de MythicLib. */
+    private Escuchas escuchas;
+
+    public Escuchas escuchas() {
+        return this.escuchas;
+    }
+
     public GodItemsPlugin(EDMPlugin core) {
         super(core, "goditems", "GodItems");
     }
@@ -110,7 +117,8 @@ public final class GodItemsPlugin extends Module {
         }
         int n = this.cargador.cargarCarpeta(items, this.registro);
 
-        core.getServer().getPluginManager().registerEvents(new Escuchas(this), this);
+        this.escuchas = new Escuchas(this);
+        core.getServer().getPluginManager().registerEvents(this.escuchas, this);
         core.getServer().getPluginManager().registerEvents(this.menu, this);
         /* La clase de escuchas de MMOItems referencia sus tipos: sin su jar
          * delante ni siquiera carga. Por eso se instancia SOLO si esta, igual

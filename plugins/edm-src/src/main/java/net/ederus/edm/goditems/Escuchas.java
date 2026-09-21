@@ -106,6 +106,27 @@ public final class Escuchas implements Listener {
         }
     }
 
+    /**
+     * El critico de salto de vanilla. Va en MONITOR porque es un aviso, no cambia
+     * el golpe: se mira cuando ya esta todo decidido. El de MMOItems llega por
+     * EscuchasMmo; el guardia de Criticos evita que suenen los dos a la vez.
+     */
+    @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
+    public void alCriticoVanilla(EntityDamageByEntityEvent e) {
+        if (!(e.getDamager() instanceof Player j) || !e.isCritical()) return;
+        critico(j, e);
+    }
+
+    /** Dispara CRITICO para lo que lleve en la mano, una vez por golpe. */
+    public void critico(Player j, org.bukkit.event.Event e) {
+        if (!Criticos.primero(j)) return;
+        ItemStack item = j.getInventory().getItemInMainHand();
+        GodItem def = this.modulo.identidad().definicionDe(item);
+        if (def == null) return;
+        Entity golpeado = e instanceof EntityDamageByEntityEvent d ? d.getEntity() : null;
+        this.modulo.disparar(j, item, def, Activador.CRITICO, e, EquipmentSlot.HAND, golpeado, null);
+    }
+
     @EventHandler(priority = EventPriority.NORMAL, ignoreCancelled = true)
     public void alMatar(EntityDeathEvent e) {
         Player j = e.getEntity().getKiller();

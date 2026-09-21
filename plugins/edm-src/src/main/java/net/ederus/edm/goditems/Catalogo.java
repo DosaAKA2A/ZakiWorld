@@ -715,6 +715,7 @@ public final class Catalogo {
 
         act(Activador.GOLPEAR, "Combate", "Golpear a cualquier criatura.", "IRON_SWORD");
         act(Activador.GOLPEAR_JUGADOR, "Combate", "Golpear a un jugador.", "DIAMOND_SWORD");
+        act(Activador.CRITICO, "Combate", "Asestar un golpe crítico (de MMOItems o saltando).", "AMETHYST_SHARD");
         act(Activador.RECIBIR_GOLPE, "Combate", "Que te peguen llevándolo.", "SHIELD");
         act(Activador.MATAR, "Combate", "Matar a una criatura.", "BONE");
         act(Activador.MATAR_JUGADOR, "Combate", "Matar a un jugador.", "PLAYER_HEAD");
