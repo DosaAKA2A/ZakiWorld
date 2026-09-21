@@ -1,0 +1,27 @@
+# ---------------------------------------------------------------------------
+# Todo lo que los boosts le dicen al jugador.
+#
+# Colores: &7, &#RRGGBB y &x&R&R&G&G&B&B. La negrita, solo en la palabra del
+# prefijo. Para que una linea salga sin prefijo, empiezala con {sin-prefijo}.
+# ---------------------------------------------------------------------------
+version: 1
+
+prefijo: '&#5CC8FF&lBOOST &8» &f'
+
+# %tipo% %multiplicador% %tiempo%
+recibido: '&f%tipo% &#5CFF7Ax%multiplicador% &7durante &f%tiempo%&7.'
+por-acabar: '&f%tipo% &7se te acaba en &#FFC64D%tiempo%&7.'
+acabado: '&7Se te acabo el boost de &f%tipo%&7.'
+
+# Globales: los ve todo el servidor, por eso van sin prefijo y con mas aire.
+global-anuncio: '{sin-prefijo}&#5CC8FF%tipo% &#5CFF7Ax%multiplicador% &7para todo el servidor durante &f%tiempo%&7.'
+global-acabado: '{sin-prefijo}&7Se acabo el boost global de &f%tipo%&7.'
+
+# Staff
+dado: '&7Le diste &f%tipos% &7a &f%jugador% &7por &f%tiempo%&7.'
+limpiado: '&7Boosts retirados a &f%jugador%&7.'
+global-puesto: '&7Boost global de &f%tipos% &7por &f%tiempo%&7.'
+sin-permiso: '&#FF5C5CNo puedes usar eso.'
+no-esta: '&#FF5C5CEse jugador no esta conectado.'
+tipo-malo: '&#FF5C5CTipos: &fexp&#FF5C5C, &fdrops&#FF5C5C, &fminions&#FF5C5C o &fall&#FF5C5C.'
+minutos-malos: '&#FF5C5CLos minutos tienen que ser un numero mayor que 0.'

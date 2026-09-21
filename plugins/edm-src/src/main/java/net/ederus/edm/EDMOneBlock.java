@@ -3,6 +3,7 @@ package net.ederus.edm;
 import java.util.List;
 
 import net.ederus.edm.biomas.BiomasPlugin;
+import net.ederus.edm.boost.BoostPlugin;
 import net.ederus.edm.flex.FlexPlugin;
 import net.ederus.edm.tienda.TiendaPlugin;
 
@@ -19,7 +20,7 @@ import net.ederus.edm.tienda.TiendaPlugin;
 public class EDMOneBlock extends EDMPlugin {
 
     /** La version de EDO va aparte de la de EDM: pom (perfil oneblock), plugin.yml de resources-oneblock y aqui. */
-    public static final String VERSION_EDO = "1.0.0";
+    public static final String VERSION_EDO = "1.1.0";
 
     private String[] arte;
 
@@ -57,7 +58,8 @@ public class EDMOneBlock extends EDMPlugin {
         return List.of(
                 new TiendaPlugin(this),
                 new FlexPlugin(this),
-                new BiomasPlugin(this));
+                new BiomasPlugin(this),
+                new BoostPlugin(this));
     }
 
     @Override

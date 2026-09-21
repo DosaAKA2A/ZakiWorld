@@ -1,5 +1,5 @@
 name: EDO
-version: '1.0.0'
+version: '1.1.0'
 main: net.ederus.edm.EDMOneBlock
 api-version: '1.20'
 author: Iris Studio
@@ -23,6 +23,10 @@ commands:
     usage: /flex [jugador|showcase|power|top]
     aliases: [vitrina]
     permission: ederus.flex
+  boost:
+    description: 'Tus boosts temporales de experiencia, drops y minions'
+    usage: /boost [give|clear|global|list]
+    aliases: [boosts]
   lbiomes:
     description: Lethal Biomes - climas por zona sin reiniciar
     usage: /lbiomes <list|zones|zone|paint|clear>
@@ -30,6 +34,9 @@ commands:
     permission: ederus.biomas
 
 permissions:
+  ederus.boost.admin:
+    description: Reparte, retira y pone boosts globales
+    default: op
   ederus.flex:
     description: Permite montar una vitrina, verla y mostrarla en el chat
     default: true

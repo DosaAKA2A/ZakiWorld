@@ -7,6 +7,8 @@ import org.bukkit.OfflinePlayer;
 import org.bukkit.entity.Player;
 
 import me.clip.placeholderapi.expansion.PlaceholderExpansion;
+import net.ederus.edm.boost.BoostPlugin;
+import net.ederus.edm.boost.Tipo;
 import net.ederus.edm.flex.FlexPlugin;
 import net.ederus.edm.flex.MenuPoder;
 import net.ederus.edm.flex.RegistroPoder;
@@ -28,6 +30,12 @@ import net.ederus.edm.minas.MinasPlugin;
  *   %edm_mina_ID_minado%        cuanto se ha picado, en %
  *   %edm_mina_ID_restante%      cuanto queda, en %
  *   %edm_mina_ID_reinicio%      lo que falta para el reinicio, "m:ss" o "-"
+ *
+ * Boosts (modulo boost):
+ *   %edm_boost_TIPO%            el multiplicador que tiene ahora, "x2" o "x1"
+ *   %edm_boost_TIPO_tiempo%     lo que le queda, "12m 30s" o "-"
+ *   %edm_boost_global_TIPO%     el multiplicador del boost global del servidor
+ *   %edm_boost_activo%          si, no
  *
  * Solo se instancia si PlaceholderAPI esta cargado: la clase base viene de su jar.
  */
@@ -64,7 +72,31 @@ public final class Placeholders extends PlaceholderExpansion {
         String p = params.toLowerCase(Locale.ROOT);
         if (p.startsWith("poder")) return poder(quien, p);
         if (p.startsWith("mina_")) return mina(p.substring(5));
+        if (p.startsWith("boost_")) return boost(quien, p.substring(6));
         return null;
+    }
+
+    /* ----------------------------------------------------------------- boost */
+
+    /** boost_exp, boost_exp_tiempo, boost_global_drops, boost_activo. */
+    private String boost(OfflinePlayer quien, String p) {
+        if (!(core.modulo("boost") instanceof BoostPlugin boost)) return "";
+        java.util.UUID id = quien == null ? null : quien.getUniqueId();
+
+        if (p.equals("activo")) {
+            if (id == null) return "no";
+            for (Tipo t : Tipo.values()) if (boost.servicio().activo(id, t)) return "si";
+            return "no";
+        }
+
+        boolean global = p.startsWith("global_");
+        if (global) p = p.substring("global_".length());
+        boolean tiempo = p.endsWith("_tiempo");
+        if (tiempo) p = p.substring(0, p.length() - "_tiempo".length());
+
+        Tipo tipo = Tipo.de(p);
+        if (tipo == null) return null;
+        return boost.placeholder(global ? null : id, tipo, tiempo);
     }
 
     /* ----------------------------------------------------------------- poder */
