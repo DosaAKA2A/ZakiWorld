@@ -24,8 +24,12 @@ import org.bukkit.entity.Player;
  */
 public final class Servicio {
 
-    /** Un boost activo: cuanto multiplica y cuando se acaba. */
-    public record Activo(double multiplicador, long fin) {
+    /**
+     * Un boost activo: cuanto multiplica, cuando empezo y cuando se acaba. El inicio
+     * solo sirve para pintar la barra que se va vaciando; al alargar un boost se
+     * conserva el inicio original, asi la barra crece en vez de reiniciarse.
+     */
+    public record Activo(double multiplicador, long inicio, long fin) {
 
         public long restanteMs() {
             return Math.max(0, fin - System.currentTimeMillis());
@@ -33,6 +37,13 @@ public final class Servicio {
 
         public boolean vivo() {
             return restanteMs() > 0;
+        }
+
+        /** Fraccion de tiempo que queda, de 1 (recien dado) a 0 (acabado). */
+        public double progreso() {
+            long total = fin - inicio;
+            if (total <= 0) return 0;
+            return Math.max(0, Math.min(1, restanteMs() / (double) total));
         }
     }
 
@@ -98,13 +109,15 @@ public final class Servicio {
         long ahora = System.currentTimeMillis();
         long fin;
         double mult = multiplicador;
+        long inicio = ahora;
         if (previo != null && previo.vivo()) {
             fin = previo.fin() + milisegundos;
             mult = Math.max(previo.multiplicador(), multiplicador);
+            inicio = previo.inicio();
         } else {
             fin = ahora + milisegundos;
         }
-        Activo nuevo = new Activo(mult, fin);
+        Activo nuevo = new Activo(mult, inicio, fin);
         suyos.put(tipo, nuevo);
         olvidarAviso(jugador, tipo);
         guardar();
@@ -117,7 +130,8 @@ public final class Servicio {
         long fin = previo != null && previo.vivo() ? previo.fin() + milisegundos : ahora + milisegundos;
         double mult = previo != null && previo.vivo()
                 ? Math.max(previo.multiplicador(), multiplicador) : multiplicador;
-        Activo nuevo = new Activo(mult, fin);
+        long inicio = previo != null && previo.vivo() ? previo.inicio() : ahora;
+        Activo nuevo = new Activo(mult, inicio, fin);
         globales.put(tipo, nuevo);
         guardar();
         return nuevo;
@@ -220,7 +234,8 @@ public final class Servicio {
                     if (t == null) continue;
                     long fin = s.getLong(k + ".fin", 0);
                     double mult = s.getDouble(k + ".multiplicador", 2.0);
-                    if (fin > System.currentTimeMillis()) suyos.put(t, new Activo(mult, fin));
+                    long inicio = s.getLong(k + ".inicio", System.currentTimeMillis());
+                    if (fin > System.currentTimeMillis()) suyos.put(t, new Activo(mult, inicio, fin));
                 }
                 if (!suyos.isEmpty()) personales.put(uuid, suyos);
             }
@@ -232,7 +247,8 @@ public final class Servicio {
                 if (t == null) continue;
                 long fin = glob.getLong(k + ".fin", 0);
                 double mult = glob.getDouble(k + ".multiplicador", 2.0);
-                if (fin > System.currentTimeMillis()) globales.put(t, new Activo(mult, fin));
+                long inicio = glob.getLong(k + ".inicio", System.currentTimeMillis());
+                if (fin > System.currentTimeMillis()) globales.put(t, new Activo(mult, inicio, fin));
             }
         }
     }
@@ -245,18 +261,20 @@ public final class Servicio {
         YamlConfiguration yml = new YamlConfiguration();
         yml.options().setHeader(java.util.List.of(
                 "Boosts activos. Lo escribe el modulo solo; no hace falta tocarlo a mano.",
-                "fin: el instante en que se acaba (epoch en milisegundos)."));
+                "inicio y fin: instantes en epoch ms; el inicio solo pinta la barra."));
         for (Map.Entry<UUID, Map<Tipo, Activo>> e : personales.entrySet()) {
             for (Map.Entry<Tipo, Activo> b : e.getValue().entrySet()) {
                 if (!b.getValue().vivo()) continue;
                 String base = "jugadores." + e.getKey() + "." + b.getKey().id();
                 yml.set(base + ".multiplicador", b.getValue().multiplicador());
+                yml.set(base + ".inicio", b.getValue().inicio());
                 yml.set(base + ".fin", b.getValue().fin());
             }
         }
         for (Map.Entry<Tipo, Activo> b : globales.entrySet()) {
             if (!b.getValue().vivo()) continue;
             yml.set("globales." + b.getKey().id() + ".multiplicador", b.getValue().multiplicador());
+            yml.set("globales." + b.getKey().id() + ".inicio", b.getValue().inicio());
             yml.set("globales." + b.getKey().id() + ".fin", b.getValue().fin());
         }
         try {

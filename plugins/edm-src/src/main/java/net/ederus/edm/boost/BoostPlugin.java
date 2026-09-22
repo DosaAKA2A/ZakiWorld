@@ -20,6 +20,7 @@ import net.ederus.edm.comun.Estilo;
 import net.ederus.edm.comun.Textos;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
+import net.kyori.adventure.text.format.TextDecoration;
 
 /**
  * Boosts temporales: experiencia, drops y minions.
@@ -185,18 +186,32 @@ public final class BoostPlugin extends Module {
         }
     }
 
-    /** "EXP x2 12m 30s · DROPS x2 05m" en la barra de accion, solo si tiene algo. */
+    /** Tramos de la barra que se vacia. Doce para que 1/4, 1/3 y 1/2 caigan justos. */
+    private static final int TRAMOS = 12;
+
+    /**
+     * "✦ EXPERIENCIA ×2 ||||||||||||  12m 30s" en la barra de accion, solo si tiene
+     * algo. La barra de palitos se vacia con el tiempo en el color del boost; el
+     * ultimo palito no se apaga hasta que se acaba, para que no parezca muerto antes
+     * de tiempo. Solo caracteres que Bedrock pinta igual: ✦, × y la barra vertical.
+     */
     private void barra(Player p) {
         Component linea = Component.empty();
         boolean primero = true;
         for (Tipo t : Tipo.values()) {
             Servicio.Activo a = servicio.efectivo(p.getUniqueId(), t);
             if (a == null) continue;
-            if (!primero) linea = linea.append(Estilo.texto("  ", NamedTextColor.DARK_GRAY));
+            if (!primero) linea = linea.append(Estilo.texto("   ", NamedTextColor.DARK_GRAY));
+            int llenos = (int) Math.ceil(a.progreso() * TRAMOS);
+            llenos = Math.max(1, Math.min(TRAMOS, llenos));
             linea = linea
-                    .append(Estilo.texto(t.nombre().toUpperCase(Locale.ROOT) + " ", t.color()))
-                    .append(Estilo.texto("x" + MenuBoost.recorta(a.multiplicador()) + " ", NamedTextColor.WHITE))
-                    .append(Estilo.texto(Servicio.reloj(a.restanteMs()), NamedTextColor.GRAY));
+                    .append(Estilo.texto("✦ ", t.color()))
+                    .append(Estilo.texto(t.nombre().toUpperCase(Locale.ROOT), t.color())
+                            .decorate(TextDecoration.BOLD))
+                    .append(Estilo.texto(" ×" + MenuBoost.recorta(a.multiplicador()) + " ", NamedTextColor.WHITE))
+                    .append(Estilo.texto("|".repeat(llenos), t.color()))
+                    .append(Estilo.texto("|".repeat(TRAMOS - llenos), NamedTextColor.DARK_GRAY))
+                    .append(Estilo.texto("  " + Servicio.reloj(a.restanteMs()), NamedTextColor.GRAY));
             primero = false;
         }
         if (!primero) p.sendActionBar(linea);

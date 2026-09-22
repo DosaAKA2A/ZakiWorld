@@ -119,7 +119,7 @@
       <id>oneblock</id>
       <properties>
         <!-- EDO lleva su propia version (tambien en plugin.yml de resources-oneblock y en EDMOneBlock.VERSION_EDO). -->
-        <edo.version>1.1.0</edo.version>
+        <edo.version>1.1.1</edo.version>
       </properties>
       <build>
         <finalName>EDO-${edo.version}</finalName>
