@@ -12,1514 +12,1514 @@
 categorias:
   Bloques:
     items:
-      STONE:
-        compra: 30
-        venta: 0
-        tope: 0
-        ventana: 24h
-      COBBLESTONE:
-        compra: 16
-        venta: 0.2
-        tope: 0
-        ventana: 24h
-      DEEPSLATE:
-        compra: 30
-        venta: 0.3
-        tope: 0
-        ventana: 24h
-      GRANITE:
-        compra: 30
-        venta: 0.3
-        tope: 0
-        ventana: 24h
-      DIORITE:
-        compra: 30
-        venta: 0.3
-        tope: 0
-        ventana: 24h
-      ANDESITE:
-        compra: 30
-        venta: 0.3
-        tope: 0
-        ventana: 24h
-      CALCITE:
-        compra: 50
-        venta: 0.5
-        tope: 0
-        ventana: 24h
-      TUFF:
-        compra: 30
-        venta: 0.3
-        tope: 0
-        ventana: 24h
       DIRT:
-        compra: 16
-        venta: 0.15
-        tope: 0
-        ventana: 24h
-      GRASS_BLOCK:
-        compra: 50
-        venta: 0
-        tope: 0
-        ventana: 24h
-      PODZOL:
-        compra: 120
-        venta: 0.5
-        tope: 0
-        ventana: 24h
-      MYCELIUM:
         compra: 200
-        venta: 0.5
+        venta: 0.17
         tope: 0
         ventana: 24h
-      SAND:
-        compra: 24
-        venta: 0.3
-        tope: 0
-        ventana: 24h
-      GRAVEL:
-        compra: 24
-        venta: 0.3
-        tope: 0
-        ventana: 24h
-      CLAY:
-        compra: 50
-        venta: 0
-        tope: 0
-        ventana: 24h
-      GLASS:
-        compra: 40
-        venta: 0
-        tope: 0
-        ventana: 24h
-      NETHERRACK:
-        compra: 16
-        venta: 0.3
-        tope: 0
-        ventana: 24h
-      SOUL_SAND:
-        compra: 60
-        venta: 0.5
-        tope: 0
-        ventana: 24h
-      END_STONE:
-        compra: 80
-        venta: 0.8
-        tope: 0
-        ventana: 24h
-      OBSIDIAN:
-        compra: 400
-        venta: 8
-        tope: 0
-        ventana: 24h
-      SANDSTONE:
-        compra: 40
-        venta: 0.4
-        tope: 0
-        ventana: 24h
-      BRICKS:
-        compra: 120
-        venta: 0
-        tope: 0
-        ventana: 24h
-      QUARTZ_BLOCK:
-        compra: 360
-        venta: 2
-        tope: 0
-        ventana: 24h
-      GLOWSTONE:
+      COARSE_DIRT:
         compra: 300
         venta: 0
         tope: 0
         ventana: 24h
-      ANDESITE_STAIRS:
-        compra: 46
+      ROOTED_DIRT:
+        compra: 350
         venta: 0
         tope: 0
         ventana: 24h
-      ANDESITE_SLAB:
-        compra: 18
+      GRASS_BLOCK:
+        compra: 300
         venta: 0
         tope: 0
         ventana: 24h
-      ANDESITE_WALL:
-        compra: 30
-        venta: 0
-        tope: 0
-        ventana: 24h
-      BASALT:
-        compra: 40
-        venta: 0.5
-        tope: 0
-        ventana: 24h
-      BLACKSTONE:
-        compra: 60
-        venta: 0.5
-        tope: 0
-        ventana: 24h
-      BLACKSTONE_STAIRS:
-        compra: 90
-        venta: 0
-        tope: 0
-        ventana: 24h
-      BLACKSTONE_SLAB:
-        compra: 36
-        venta: 0
-        tope: 0
-        ventana: 24h
-      BLACKSTONE_WALL:
-        compra: 60
-        venta: 0
-        tope: 0
-        ventana: 24h
-      BLUE_ICE:
-        compra: 240
-        venta: 3
-        tope: 0
-        ventana: 24h
-      BRICK_STAIRS:
-        compra: 180
-        venta: 0
-        tope: 0
-        ventana: 24h
-      BRICK_SLAB:
-        compra: 72
-        venta: 0
-        tope: 0
-        ventana: 24h
-      BRICK_WALL:
-        compra: 120
-        venta: 0
-        tope: 0
-        ventana: 24h
-      CHISELED_COPPER:
-        compra: 90
-        venta: 0
-        tope: 0
-        ventana: 24h
-      EXPOSED_CHISELED_COPPER:
-        compra: 90
-        venta: 0
-        tope: 0
-        ventana: 24h
-      OXIDIZED_CHISELED_COPPER:
-        compra: 90
-        venta: 0
-        tope: 0
-        ventana: 24h
-      WAXED_CHISELED_COPPER:
-        compra: 90
-        venta: 0
-        tope: 0
-        ventana: 24h
-      WAXED_EXPOSED_CHISELED_COPPER:
-        compra: 90
-        venta: 0
-        tope: 0
-        ventana: 24h
-      WAXED_OXIDIZED_CHISELED_COPPER:
-        compra: 90
-        venta: 0
-        tope: 0
-        ventana: 24h
-      WAXED_WEATHERED_CHISELED_COPPER:
-        compra: 90
-        venta: 0
-        tope: 0
-        ventana: 24h
-      WEATHERED_CHISELED_COPPER:
-        compra: 90
-        venta: 0
-        tope: 0
-        ventana: 24h
-      CHISELED_DEEPSLATE:
-        compra: 40
-        venta: 0
-        tope: 0
-        ventana: 24h
-      CHISELED_NETHER_BRICKS:
-        compra: 80
-        venta: 0
-        tope: 0
-        ventana: 24h
-      CHISELED_POLISHED_BLACKSTONE:
-        compra: 50
-        venta: 0
-        tope: 0
-        ventana: 24h
-      CHISELED_QUARTZ_BLOCK:
-        compra: 360
-        venta: 0
-        tope: 0
-        ventana: 24h
-      CHISELED_RED_SANDSTONE:
-        compra: 50
-        venta: 0
-        tope: 0
-        ventana: 24h
-      CHISELED_RESIN_BRICKS:
-        compra: 120
-        venta: 0
-        tope: 0
-        ventana: 24h
-      CHISELED_SANDSTONE:
-        compra: 40
-        venta: 0
-        tope: 0
-        ventana: 24h
-      CHISELED_STONE_BRICKS:
-        compra: 40
-        venta: 0
-        tope: 0
-        ventana: 24h
-      CHISELED_TUFF_BRICKS:
-        compra: 40
-        venta: 0
-        tope: 0
-        ventana: 24h
-      CHISELED_TUFF:
-        compra: 40
-        venta: 0
-        tope: 0
-        ventana: 24h
-      COARSE_DIRT:
-        compra: 16
-        venta: 0
-        tope: 0
-        ventana: 24h
-      COBBLED_DEEPSLATE:
-        compra: 30
-        venta: 0
-        tope: 0
-        ventana: 24h
-      COBBLED_DEEPSLATE_STAIRS:
-        compra: 46
-        venta: 0
-        tope: 0
-        ventana: 24h
-      COBBLED_DEEPSLATE_SLAB:
-        compra: 18
-        venta: 0
-        tope: 0
-        ventana: 24h
-      COBBLED_DEEPSLATE_WALL:
-        compra: 30
-        venta: 0
-        tope: 0
-        ventana: 24h
-      COBBLESTONE_STAIRS:
-        compra: 24
-        venta: 0
-        tope: 0
-        ventana: 24h
-      COBBLESTONE_SLAB:
-        compra: 10
-        venta: 0
-        tope: 0
-        ventana: 24h
-      COBBLESTONE_WALL:
-        compra: 16
-        venta: 0
-        tope: 0
-        ventana: 24h
-      COPPER_BLOCK:
-        compra: 90
-        venta: 0
-        tope: 0
-        ventana: 24h
-      WAXED_COPPER_BLOCK:
-        compra: 90
-        venta: 0
-        tope: 0
-        ventana: 24h
-      COPPER_GRATE:
-        compra: 90
-        venta: 0
-        tope: 0
-        ventana: 24h
-      EXPOSED_COPPER_GRATE:
-        compra: 90
-        venta: 0
-        tope: 0
-        ventana: 24h
-      OXIDIZED_COPPER_GRATE:
-        compra: 90
-        venta: 0
-        tope: 0
-        ventana: 24h
-      WAXED_COPPER_GRATE:
-        compra: 90
-        venta: 0
-        tope: 0
-        ventana: 24h
-      WAXED_EXPOSED_COPPER_GRATE:
-        compra: 90
-        venta: 0
-        tope: 0
-        ventana: 24h
-      WAXED_OXIDIZED_COPPER_GRATE:
-        compra: 90
-        venta: 0
-        tope: 0
-        ventana: 24h
-      WAXED_WEATHERED_COPPER_GRATE:
-        compra: 90
-        venta: 0
-        tope: 0
-        ventana: 24h
-      WEATHERED_COPPER_GRATE:
-        compra: 90
-        venta: 0
-        tope: 0
-        ventana: 24h
-      EXPOSED_COPPER:
-        compra: 90
-        venta: 0
-        tope: 0
-        ventana: 24h
-      OXIDIZED_COPPER:
-        compra: 90
-        venta: 0
-        tope: 0
-        ventana: 24h
-      WAXED_EXPOSED_COPPER:
-        compra: 90
-        venta: 0
-        tope: 0
-        ventana: 24h
-      WAXED_OXIDIZED_COPPER:
-        compra: 90
-        venta: 0
-        tope: 0
-        ventana: 24h
-      WAXED_WEATHERED_COPPER:
-        compra: 90
-        venta: 0
-        tope: 0
-        ventana: 24h
-      WEATHERED_COPPER:
-        compra: 90
-        venta: 0
-        tope: 0
-        ventana: 24h
-      COPPER_DOOR:
-        compra: 180
-        venta: 0
-        tope: 0
-        ventana: 24h
-      EXPOSED_COPPER_DOOR:
-        compra: 180
-        venta: 0
-        tope: 0
-        ventana: 24h
-      OXIDIZED_COPPER_DOOR:
-        compra: 180
-        venta: 0
-        tope: 0
-        ventana: 24h
-      WAXED_COPPER_DOOR:
-        compra: 180
-        venta: 0
-        tope: 0
-        ventana: 24h
-      WAXED_EXPOSED_COPPER_DOOR:
-        compra: 180
-        venta: 0
-        tope: 0
-        ventana: 24h
-      WAXED_OXIDIZED_COPPER_DOOR:
-        compra: 180
-        venta: 0
-        tope: 0
-        ventana: 24h
-      WAXED_WEATHERED_COPPER_DOOR:
-        compra: 180
-        venta: 0
-        tope: 0
-        ventana: 24h
-      WEATHERED_COPPER_DOOR:
-        compra: 180
-        venta: 0
-        tope: 0
-        ventana: 24h
-      COPPER_TRAPDOOR:
-        compra: 136
-        venta: 0
-        tope: 0
-        ventana: 24h
-      EXPOSED_COPPER_TRAPDOOR:
-        compra: 136
-        venta: 0
-        tope: 0
-        ventana: 24h
-      OXIDIZED_COPPER_TRAPDOOR:
-        compra: 136
-        venta: 0
-        tope: 0
-        ventana: 24h
-      WAXED_COPPER_TRAPDOOR:
-        compra: 136
-        venta: 0
-        tope: 0
-        ventana: 24h
-      WAXED_EXPOSED_COPPER_TRAPDOOR:
-        compra: 136
-        venta: 0
-        tope: 0
-        ventana: 24h
-      WAXED_OXIDIZED_COPPER_TRAPDOOR:
-        compra: 136
-        venta: 0
-        tope: 0
-        ventana: 24h
-      WAXED_WEATHERED_COPPER_TRAPDOOR:
-        compra: 136
-        venta: 0
-        tope: 0
-        ventana: 24h
-      WEATHERED_COPPER_TRAPDOOR:
-        compra: 136
-        venta: 0
+      PODZOL:
+        compra: 400
+        venta: 0.55
         tope: 0
         ventana: 24h
-      CRACKED_DEEPSLATE_BRICKS:
-        compra: 50
-        venta: 0
-        tope: 0
-        ventana: 24h
-      CRACKED_DEEPSLATE_TILES:
-        compra: 50
-        venta: 0
-        tope: 0
-        ventana: 24h
-      CRACKED_NETHER_BRICKS:
-        compra: 80
-        venta: 0
-        tope: 0
-        ventana: 24h
-      CRACKED_POLISHED_BLACKSTONE_BRICKS:
-        compra: 50
-        venta: 0
-        tope: 0
-        ventana: 24h
-      CRACKED_STONE_BRICKS:
-        compra: 40
-        venta: 0
-        tope: 0
-        ventana: 24h
-      CRYING_OBSIDIAN:
-        compra: 600
-        venta: 15
-        tope: 0
-        ventana: 24h
-      CUT_COPPER:
-        compra: 90
-        venta: 0
-        tope: 0
-        ventana: 24h
-      EXPOSED_CUT_COPPER:
-        compra: 90
-        venta: 0
-        tope: 0
-        ventana: 24h
-      OXIDIZED_CUT_COPPER:
-        compra: 90
-        venta: 0
-        tope: 0
-        ventana: 24h
-      WAXED_CUT_COPPER:
-        compra: 90
-        venta: 0
-        tope: 0
-        ventana: 24h
-      WAXED_EXPOSED_CUT_COPPER:
-        compra: 90
-        venta: 0
-        tope: 0
-        ventana: 24h
-      WAXED_OXIDIZED_CUT_COPPER:
-        compra: 90
-        venta: 0
-        tope: 0
-        ventana: 24h
-      WAXED_WEATHERED_CUT_COPPER:
-        compra: 90
-        venta: 0
-        tope: 0
-        ventana: 24h
-      WEATHERED_CUT_COPPER:
-        compra: 90
-        venta: 0
-        tope: 0
-        ventana: 24h
-      CUT_COPPER_STAIRS:
-        compra: 136
-        venta: 0
-        tope: 0
-        ventana: 24h
-      EXPOSED_CUT_COPPER_STAIRS:
-        compra: 136
-        venta: 0
-        tope: 0
-        ventana: 24h
-      OXIDIZED_CUT_COPPER_STAIRS:
-        compra: 136
-        venta: 0
-        tope: 0
-        ventana: 24h
-      WAXED_CUT_COPPER_STAIRS:
-        compra: 136
-        venta: 0
-        tope: 0
-        ventana: 24h
-      WAXED_EXPOSED_CUT_COPPER_STAIRS:
-        compra: 136
-        venta: 0
-        tope: 0
-        ventana: 24h
-      WAXED_OXIDIZED_CUT_COPPER_STAIRS:
-        compra: 136
-        venta: 0
-        tope: 0
-        ventana: 24h
-      WAXED_WEATHERED_CUT_COPPER_STAIRS:
-        compra: 136
-        venta: 0
-        tope: 0
-        ventana: 24h
-      WEATHERED_CUT_COPPER_STAIRS:
-        compra: 136
-        venta: 0
-        tope: 0
-        ventana: 24h
-      CUT_COPPER_SLAB:
-        compra: 54
-        venta: 0
-        tope: 0
-        ventana: 24h
-      EXPOSED_CUT_COPPER_SLAB:
-        compra: 54
-        venta: 0
-        tope: 0
-        ventana: 24h
-      OXIDIZED_CUT_COPPER_SLAB:
-        compra: 54
-        venta: 0
-        tope: 0
-        ventana: 24h
-      WAXED_CUT_COPPER_SLAB:
-        compra: 54
-        venta: 0
-        tope: 0
-        ventana: 24h
-      WAXED_EXPOSED_CUT_COPPER_SLAB:
-        compra: 54
-        venta: 0
-        tope: 0
-        ventana: 24h
-      WAXED_OXIDIZED_CUT_COPPER_SLAB:
-        compra: 54
-        venta: 0
-        tope: 0
-        ventana: 24h
-      WAXED_WEATHERED_CUT_COPPER_SLAB:
-        compra: 54
-        venta: 0
-        tope: 0
-        ventana: 24h
-      WEATHERED_CUT_COPPER_SLAB:
-        compra: 54
-        venta: 0
-        tope: 0
-        ventana: 24h
-      CUT_RED_SANDSTONE:
-        compra: 50
-        venta: 0
-        tope: 0
-        ventana: 24h
-      CUT_RED_SANDSTONE_SLAB:
-        compra: 30
-        venta: 0
-        tope: 0
-        ventana: 24h
-      CUT_SANDSTONE:
-        compra: 40
-        venta: 0
-        tope: 0
-        ventana: 24h
-      CUT_SANDSTONE_SLAB:
-        compra: 24
-        venta: 0
-        tope: 0
-        ventana: 24h
-      DARK_PRISMARINE_STAIRS:
-        compra: 166
-        venta: 0
-        tope: 0
-        ventana: 24h
-      DARK_PRISMARINE_SLAB:
-        compra: 66
-        venta: 0
-        tope: 0
-        ventana: 24h
-      DEEPSLATE_BRICK_STAIRS:
-        compra: 76
-        venta: 0
-        tope: 0
-        ventana: 24h
-      DEEPSLATE_BRICK_SLAB:
-        compra: 30
-        venta: 0
-        tope: 0
-        ventana: 24h
-      DEEPSLATE_BRICK_WALL:
-        compra: 50
-        venta: 0
-        tope: 0
-        ventana: 24h
-      DEEPSLATE_BRICKS:
-        compra: 50
-        venta: 0
-        tope: 0
-        ventana: 24h
-      DEEPSLATE_TILE_STAIRS:
-        compra: 76
-        venta: 0
-        tope: 0
-        ventana: 24h
-      DEEPSLATE_TILE_SLAB:
-        compra: 30
-        venta: 0
-        tope: 0
-        ventana: 24h
-      DEEPSLATE_TILE_WALL:
-        compra: 50
-        venta: 0
-        tope: 0
-        ventana: 24h
-      DEEPSLATE_TILES:
-        compra: 50
-        venta: 0
-        tope: 0
-        ventana: 24h
-      DIORITE_STAIRS:
-        compra: 46
-        venta: 0
-        tope: 0
-        ventana: 24h
-      DIORITE_SLAB:
-        compra: 18
-        venta: 0
-        tope: 0
-        ventana: 24h
-      DIORITE_WALL:
-        compra: 30
-        venta: 0
-        tope: 0
-        ventana: 24h
-      DRIPSTONE_BLOCK:
-        compra: 50
-        venta: 0.5
-        tope: 0
-        ventana: 24h
-      END_STONE_BRICK_STAIRS:
-        compra: 136
-        venta: 0
-        tope: 0
-        ventana: 24h
-      END_STONE_BRICK_SLAB:
-        compra: 54
-        venta: 0
-        tope: 0
-        ventana: 24h
-      END_STONE_BRICK_WALL:
-        compra: 90
-        venta: 0
-        tope: 0
-        ventana: 24h
-      END_STONE_BRICKS:
-        compra: 90
-        venta: 1
-        tope: 0
-        ventana: 24h
-      GRANITE_STAIRS:
-        compra: 46
-        venta: 0
-        tope: 0
-        ventana: 24h
-      GRANITE_SLAB:
-        compra: 18
-        venta: 0
-        tope: 0
-        ventana: 24h
-      GRANITE_WALL:
-        compra: 30
-        venta: 0
-        tope: 0
-        ventana: 24h
-      ICE:
-        compra: 60
-        venta: 0
-        tope: 0
-        ventana: 24h
-      IRON_DOOR:
-        compra: 800
-        venta: 0
-        tope: 0
-        ventana: 24h
-      IRON_TRAPDOOR:
-        compra: 600
-        venta: 0
-        tope: 0
-        ventana: 24h
-      MOSSY_COBBLESTONE:
-        compra: 16
-        venta: 0.4
-        tope: 0
-        ventana: 24h
-      MOSSY_COBBLESTONE_STAIRS:
-        compra: 24
-        venta: 0
-        tope: 0
-        ventana: 24h
-      MOSSY_COBBLESTONE_SLAB:
-        compra: 10
-        venta: 0
-        tope: 0
-        ventana: 24h
-      MOSSY_COBBLESTONE_WALL:
-        compra: 16
-        venta: 0
-        tope: 0
-        ventana: 24h
-      MOSSY_STONE_BRICK_STAIRS:
-        compra: 60
-        venta: 0
-        tope: 0
-        ventana: 24h
-      MOSSY_STONE_BRICK_SLAB:
-        compra: 24
-        venta: 0
-        tope: 0
-        ventana: 24h
-      MOSSY_STONE_BRICK_WALL:
-        compra: 40
-        venta: 0
-        tope: 0
-        ventana: 24h
-      MOSSY_STONE_BRICKS:
-        compra: 40
-        venta: 0.4
-        tope: 0
-        ventana: 24h
-      MUD_BRICK_STAIRS:
-        compra: 60
-        venta: 0
-        tope: 0
-        ventana: 24h
-      MUD_BRICK_SLAB:
-        compra: 24
-        venta: 0
-        tope: 0
-        ventana: 24h
-      MUD_BRICK_WALL:
-        compra: 40
-        venta: 0
+      MYCELIUM:
+        compra: 500
+        venta: 0.55
         tope: 0
         ventana: 24h
-      MUD_BRICKS:
-        compra: 40
+      DIRT_PATH:
+        compra: 400
         venta: 0
         tope: 0
         ventana: 24h
       MUD:
-        compra: 24
-        venta: 0.3
-        tope: 0
-        ventana: 24h
-      NETHER_BRICK_STAIRS:
-        compra: 120
-        venta: 0
-        tope: 0
-        ventana: 24h
-      NETHER_BRICK_SLAB:
-        compra: 48
-        venta: 0
-        tope: 0
-        ventana: 24h
-      NETHER_BRICK_WALL:
-        compra: 80
-        venta: 0
-        tope: 0
-        ventana: 24h
-      NETHER_BRICK_FENCE:
-        compra: 80
-        venta: 0
-        tope: 0
-        ventana: 24h
-      NETHER_BRICKS:
-        compra: 80
-        venta: 0.5
-        tope: 0
-        ventana: 24h
-      PACKED_ICE:
-        compra: 120
-        venta: 0.6
+        compra: 400
+        venta: 0.33
         tope: 0
         ventana: 24h
       PACKED_MUD:
-        compra: 24
+        compra: 300
         venta: 0
         tope: 0
         ventana: 24h
-      POINTED_DRIPSTONE:
-        compra: 50
+      CLAY:
+        compra: 400
         venta: 0
         tope: 0
         ventana: 24h
-      POLISHED_ANDESITE:
-        compra: 40
-        venta: 0
-        tope: 0
-        ventana: 24h
-      POLISHED_ANDESITE_STAIRS:
-        compra: 60
-        venta: 0
-        tope: 0
-        ventana: 24h
-      POLISHED_ANDESITE_SLAB:
-        compra: 24
-        venta: 0
-        tope: 0
-        ventana: 24h
-      POLISHED_BASALT:
-        compra: 40
-        venta: 0
-        tope: 0
-        ventana: 24h
-      POLISHED_BLACKSTONE_BRICK_STAIRS:
-        compra: 76
-        venta: 0
-        tope: 0
-        ventana: 24h
-      POLISHED_BLACKSTONE_BRICK_SLAB:
-        compra: 30
-        venta: 0
-        tope: 0
-        ventana: 24h
-      POLISHED_BLACKSTONE_BRICK_WALL:
-        compra: 50
-        venta: 0
-        tope: 0
-        ventana: 24h
-      POLISHED_BLACKSTONE_BRICKS:
-        compra: 50
-        venta: 0
-        tope: 0
-        ventana: 24h
-      POLISHED_BLACKSTONE:
-        compra: 60
-        venta: 0
-        tope: 0
-        ventana: 24h
-      POLISHED_BLACKSTONE_STAIRS:
-        compra: 90
-        venta: 0
-        tope: 0
-        ventana: 24h
-      POLISHED_BLACKSTONE_SLAB:
-        compra: 36
-        venta: 0
-        tope: 0
-        ventana: 24h
-      POLISHED_BLACKSTONE_WALL:
-        compra: 60
-        venta: 0
-        tope: 0
-        ventana: 24h
-      POLISHED_BLACKSTONE_BUTTON:
-        compra: 24
-        venta: 0
-        tope: 0
-        ventana: 24h
-      POLISHED_BLACKSTONE_PRESSURE_PLATE:
-        compra: 48
-        venta: 0
-        tope: 0
-        ventana: 24h
-      POLISHED_DEEPSLATE:
-        compra: 40
-        venta: 0
-        tope: 0
-        ventana: 24h
-      POLISHED_DEEPSLATE_STAIRS:
-        compra: 60
-        venta: 0
-        tope: 0
-        ventana: 24h
-      POLISHED_DEEPSLATE_SLAB:
-        compra: 24
-        venta: 0
-        tope: 0
-        ventana: 24h
-      POLISHED_DEEPSLATE_WALL:
-        compra: 40
-        venta: 0
-        tope: 0
-        ventana: 24h
-      POLISHED_DIORITE:
-        compra: 40
-        venta: 0
-        tope: 0
-        ventana: 24h
-      POLISHED_DIORITE_STAIRS:
-        compra: 60
-        venta: 0
-        tope: 0
-        ventana: 24h
-      POLISHED_DIORITE_SLAB:
-        compra: 24
-        venta: 0
-        tope: 0
-        ventana: 24h
-      POLISHED_GRANITE:
-        compra: 40
-        venta: 0
-        tope: 0
-        ventana: 24h
-      POLISHED_GRANITE_STAIRS:
-        compra: 60
-        venta: 0
-        tope: 0
-        ventana: 24h
-      POLISHED_GRANITE_SLAB:
-        compra: 24
-        venta: 0
-        tope: 0
-        ventana: 24h
-      POLISHED_TUFF:
-        compra: 40
-        venta: 0
-        tope: 0
-        ventana: 24h
-      POLISHED_TUFF_STAIRS:
-        compra: 60
-        venta: 0
-        tope: 0
-        ventana: 24h
-      POLISHED_TUFF_SLAB:
-        compra: 24
-        venta: 0
-        tope: 0
-        ventana: 24h
-      POLISHED_TUFF_WALL:
-        compra: 40
-        venta: 0
-        tope: 0
-        ventana: 24h
-      PRISMARINE_BRICK_STAIRS:
-        compra: 150
-        venta: 0
-        tope: 0
-        ventana: 24h
-      PRISMARINE_BRICK_SLAB:
-        compra: 60
-        venta: 0
-        tope: 0
-        ventana: 24h
-      PRISMARINE_STAIRS:
-        compra: 120
-        venta: 0
-        tope: 0
-        ventana: 24h
-      PRISMARINE_SLAB:
-        compra: 48
-        venta: 0
-        tope: 0
-        ventana: 24h
-      PRISMARINE_WALL:
-        compra: 80
-        venta: 0
-        tope: 0
-        ventana: 24h
-      PURPUR_BLOCK:
-        compra: 90
-        venta: 1
-        tope: 0
-        ventana: 24h
-      PURPUR_PILLAR:
-        compra: 90
-        venta: 1
-        tope: 0
-        ventana: 24h
-      PURPUR_STAIRS:
-        compra: 136
-        venta: 0
-        tope: 0
-        ventana: 24h
-      PURPUR_SLAB:
-        compra: 54
-        venta: 0
-        tope: 0
-        ventana: 24h
-      QUARTZ_BRICKS:
-        compra: 80
-        venta: 0
-        tope: 0
-        ventana: 24h
-      QUARTZ_PILLAR:
-        compra: 360
-        venta: 0
-        tope: 0
-        ventana: 24h
-      QUARTZ_STAIRS:
-        compra: 540
-        venta: 0
-        tope: 0
-        ventana: 24h
-      QUARTZ_SLAB:
-        compra: 216
-        venta: 0
-        tope: 0
-        ventana: 24h
-      RED_NETHER_BRICK_STAIRS:
-        compra: 180
-        venta: 0
-        tope: 0
-        ventana: 24h
-      RED_NETHER_BRICK_SLAB:
-        compra: 72
-        venta: 0
-        tope: 0
-        ventana: 24h
-      RED_NETHER_BRICK_WALL:
-        compra: 120
-        venta: 0
-        tope: 0
-        ventana: 24h
-      RED_NETHER_BRICKS:
-        compra: 120
-        venta: 0.8
+      SAND:
+        compra: 250
+        venta: 0.33
         tope: 0
         ventana: 24h
       RED_SAND:
-        compra: 24
-        venta: 0.3
+        compra: 300
+        venta: 0.33
         tope: 0
         ventana: 24h
-      RED_SANDSTONE:
-        compra: 50
-        venta: 0.4
+      GRAVEL:
+        compra: 300
+        venta: 0.33
         tope: 0
         ventana: 24h
-      RED_SANDSTONE_STAIRS:
-        compra: 76
-        venta: 0
-        tope: 0
-        ventana: 24h
-      RED_SANDSTONE_SLAB:
-        compra: 30
-        venta: 0
-        tope: 0
-        ventana: 24h
-      RED_SANDSTONE_WALL:
-        compra: 50
-        venta: 0
-        tope: 0
-        ventana: 24h
-      RESIN_BRICK_STAIRS:
-        compra: 180
-        venta: 0
-        tope: 0
-        ventana: 24h
-      RESIN_BRICK_SLAB:
-        compra: 72
-        venta: 0
-        tope: 0
-        ventana: 24h
-      RESIN_BRICK_WALL:
-        compra: 120
-        venta: 0
-        tope: 0
-        ventana: 24h
-      RESIN_BRICKS:
-        compra: 120
-        venta: 0
-        tope: 0
-        ventana: 24h
-      ROOTED_DIRT:
-        compra: 16
-        venta: 0
-        tope: 0
-        ventana: 24h
-      SANDSTONE_STAIRS:
-        compra: 60
-        venta: 0
-        tope: 0
-        ventana: 24h
-      SANDSTONE_SLAB:
-        compra: 24
-        venta: 0
-        tope: 0
-        ventana: 24h
-      SANDSTONE_WALL:
-        compra: 40
-        venta: 0
-        tope: 0
-        ventana: 24h
-      SMOOTH_BASALT:
-        compra: 40
-        venta: 0
-        tope: 0
-        ventana: 24h
-      SMOOTH_QUARTZ:
-        compra: 360
-        venta: 0
-        tope: 0
-        ventana: 24h
-      SMOOTH_QUARTZ_STAIRS:
-        compra: 540
-        venta: 0
-        tope: 0
-        ventana: 24h
-      SMOOTH_QUARTZ_SLAB:
-        compra: 216
-        venta: 0
-        tope: 0
-        ventana: 24h
-      SMOOTH_RED_SANDSTONE:
-        compra: 50
-        venta: 0
-        tope: 0
-        ventana: 24h
-      SMOOTH_RED_SANDSTONE_STAIRS:
-        compra: 76
-        venta: 0
-        tope: 0
-        ventana: 24h
-      SMOOTH_RED_SANDSTONE_SLAB:
-        compra: 30
-        venta: 0
-        tope: 0
-        ventana: 24h
-      SMOOTH_SANDSTONE:
-        compra: 40
-        venta: 0
-        tope: 0
-        ventana: 24h
-      SMOOTH_SANDSTONE_STAIRS:
-        compra: 60
-        venta: 0
-        tope: 0
-        ventana: 24h
-      SMOOTH_SANDSTONE_SLAB:
-        compra: 24
-        venta: 0
-        tope: 0
-        ventana: 24h
-      SMOOTH_STONE:
-        compra: 30
-        venta: 0
-        tope: 0
-        ventana: 24h
-      SMOOTH_STONE_SLAB:
-        compra: 18
+      SNOW:
+        compra: 200
         venta: 0
         tope: 0
         ventana: 24h
       SNOW_BLOCK:
-        compra: 24
+        compra: 400
         venta: 0
         tope: 0
         ventana: 24h
-      SNOW:
-        compra: 24
+      ICE:
+        compra: 300
         venta: 0
         tope: 0
         ventana: 24h
-      STONE_BRICK_STAIRS:
-        compra: 60
-        venta: 0
+      PACKED_ICE:
+        compra: 400
+        venta: 0.66
         tope: 0
         ventana: 24h
-      STONE_BRICK_SLAB:
-        compra: 24
-        venta: 0
+      BLUE_ICE:
+        compra: 300
+        venta: 3.3
         tope: 0
         ventana: 24h
-      STONE_BRICK_WALL:
-        compra: 40
+      STONE:
+        compra: 200
         venta: 0
-        tope: 0
-        ventana: 24h
-      STONE_BRICKS:
-        compra: 40
-        venta: 0.3
         tope: 0
         ventana: 24h
       STONE_STAIRS:
-        compra: 46
+        compra: 300
         venta: 0
         tope: 0
         ventana: 24h
       STONE_SLAB:
-        compra: 18
+        compra: 300
         venta: 0
         tope: 0
         ventana: 24h
       STONE_PRESSURE_PLATE:
-        compra: 24
+        compra: 250
         venta: 0
         tope: 0
         ventana: 24h
-      TUFF_BRICK_STAIRS:
-        compra: 60
+      SMOOTH_STONE:
+        compra: 300
         venta: 0
         tope: 0
         ventana: 24h
-      TUFF_BRICK_SLAB:
-        compra: 24
+      SMOOTH_STONE_SLAB:
+        compra: 250
         venta: 0
         tope: 0
         ventana: 24h
-      TUFF_BRICK_WALL:
-        compra: 40
+      COBBLESTONE:
+        compra: 150
+        venta: 0.22
+        tope: 0
+        ventana: 24h
+      COBBLESTONE_STAIRS:
+        compra: 150
         venta: 0
         tope: 0
         ventana: 24h
-      TUFF_BRICKS:
-        compra: 40
+      COBBLESTONE_SLAB:
+        compra: 150
         venta: 0
+        tope: 0
+        ventana: 24h
+      COBBLESTONE_WALL:
+        compra: 150
+        venta: 0
+        tope: 0
+        ventana: 24h
+      MOSSY_COBBLESTONE:
+        compra: 250
+        venta: 0.44
+        tope: 0
+        ventana: 24h
+      MOSSY_COBBLESTONE_STAIRS:
+        compra: 150
+        venta: 0
+        tope: 0
+        ventana: 24h
+      MOSSY_COBBLESTONE_SLAB:
+        compra: 150
+        venta: 0
+        tope: 0
+        ventana: 24h
+      MOSSY_COBBLESTONE_WALL:
+        compra: 150
+        venta: 0
+        tope: 0
+        ventana: 24h
+      STONE_BRICKS:
+        compra: 400
+        venta: 0.33
+        tope: 0
+        ventana: 24h
+      STONE_BRICK_STAIRS:
+        compra: 300
+        venta: 0
+        tope: 0
+        ventana: 24h
+      STONE_BRICK_SLAB:
+        compra: 300
+        venta: 0
+        tope: 0
+        ventana: 24h
+      STONE_BRICK_WALL:
+        compra: 300
+        venta: 0
+        tope: 0
+        ventana: 24h
+      MOSSY_STONE_BRICKS:
+        compra: 300
+        venta: 0.44
+        tope: 0
+        ventana: 24h
+      MOSSY_STONE_BRICK_STAIRS:
+        compra: 150
+        venta: 0
+        tope: 0
+        ventana: 24h
+      MOSSY_STONE_BRICK_SLAB:
+        compra: 150
+        venta: 0
+        tope: 0
+        ventana: 24h
+      MOSSY_STONE_BRICK_WALL:
+        compra: 150
+        venta: 0
+        tope: 0
+        ventana: 24h
+      CRACKED_STONE_BRICKS:
+        compra: 250
+        venta: 0
+        tope: 0
+        ventana: 24h
+      CHISELED_STONE_BRICKS:
+        compra: 250
+        venta: 0
+        tope: 0
+        ventana: 24h
+      GRANITE:
+        compra: 200
+        venta: 0.33
+        tope: 0
+        ventana: 24h
+      GRANITE_STAIRS:
+        compra: 150
+        venta: 0
+        tope: 0
+        ventana: 24h
+      GRANITE_SLAB:
+        compra: 150
+        venta: 0
+        tope: 0
+        ventana: 24h
+      GRANITE_WALL:
+        compra: 150
+        venta: 0
+        tope: 0
+        ventana: 24h
+      POLISHED_GRANITE:
+        compra: 250
+        venta: 0
+        tope: 0
+        ventana: 24h
+      POLISHED_GRANITE_STAIRS:
+        compra: 150
+        venta: 0
+        tope: 0
+        ventana: 24h
+      POLISHED_GRANITE_SLAB:
+        compra: 150
+        venta: 0
+        tope: 0
+        ventana: 24h
+      DIORITE:
+        compra: 200
+        venta: 0.33
+        tope: 0
+        ventana: 24h
+      DIORITE_STAIRS:
+        compra: 200
+        venta: 0
+        tope: 0
+        ventana: 24h
+      DIORITE_SLAB:
+        compra: 200
+        venta: 0
+        tope: 0
+        ventana: 24h
+      DIORITE_WALL:
+        compra: 200
+        venta: 0
+        tope: 0
+        ventana: 24h
+      POLISHED_DIORITE:
+        compra: 200
+        venta: 0
+        tope: 0
+        ventana: 24h
+      POLISHED_DIORITE_STAIRS:
+        compra: 150
+        venta: 0
+        tope: 0
+        ventana: 24h
+      POLISHED_DIORITE_SLAB:
+        compra: 150
+        venta: 0
+        tope: 0
+        ventana: 24h
+      ANDESITE:
+        compra: 200
+        venta: 0.33
+        tope: 0
+        ventana: 24h
+      ANDESITE_STAIRS:
+        compra: 150
+        venta: 0
+        tope: 0
+        ventana: 24h
+      ANDESITE_SLAB:
+        compra: 150
+        venta: 0
+        tope: 0
+        ventana: 24h
+      ANDESITE_WALL:
+        compra: 150
+        venta: 0
+        tope: 0
+        ventana: 24h
+      POLISHED_ANDESITE:
+        compra: 300
+        venta: 0
+        tope: 0
+        ventana: 24h
+      POLISHED_ANDESITE_STAIRS:
+        compra: 150
+        venta: 0
+        tope: 0
+        ventana: 24h
+      POLISHED_ANDESITE_SLAB:
+        compra: 150
+        venta: 0
+        tope: 0
+        ventana: 24h
+      CALCITE:
+        compra: 300
+        venta: 0.55
+        tope: 0
+        ventana: 24h
+      DRIPSTONE_BLOCK:
+        compra: 150
+        venta: 0.55
+        tope: 0
+        ventana: 24h
+      POINTED_DRIPSTONE:
+        compra: 500
+        venta: 0
+        tope: 0
+        ventana: 24h
+      DEEPSLATE:
+        compra: 300
+        venta: 0.33
+        tope: 0
+        ventana: 24h
+      COBBLED_DEEPSLATE:
+        compra: 200
+        venta: 0
+        tope: 0
+        ventana: 24h
+      COBBLED_DEEPSLATE_STAIRS:
+        compra: 150
+        venta: 0
+        tope: 0
+        ventana: 24h
+      COBBLED_DEEPSLATE_SLAB:
+        compra: 250
+        venta: 0
+        tope: 0
+        ventana: 24h
+      COBBLED_DEEPSLATE_WALL:
+        compra: 150
+        venta: 0
+        tope: 0
+        ventana: 24h
+      POLISHED_DEEPSLATE:
+        compra: 400
+        venta: 0
+        tope: 0
+        ventana: 24h
+      POLISHED_DEEPSLATE_STAIRS:
+        compra: 150
+        venta: 0
+        tope: 0
+        ventana: 24h
+      POLISHED_DEEPSLATE_SLAB:
+        compra: 150
+        venta: 0
+        tope: 0
+        ventana: 24h
+      POLISHED_DEEPSLATE_WALL:
+        compra: 150
+        venta: 0
+        tope: 0
+        ventana: 24h
+      DEEPSLATE_BRICKS:
+        compra: 300
+        venta: 0
+        tope: 0
+        ventana: 24h
+      DEEPSLATE_BRICK_STAIRS:
+        compra: 150
+        venta: 0
+        tope: 0
+        ventana: 24h
+      DEEPSLATE_BRICK_SLAB:
+        compra: 150
+        venta: 0
+        tope: 0
+        ventana: 24h
+      DEEPSLATE_BRICK_WALL:
+        compra: 150
+        venta: 0
+        tope: 0
+        ventana: 24h
+      CRACKED_DEEPSLATE_BRICKS:
+        compra: 300
+        venta: 0
+        tope: 0
+        ventana: 24h
+      DEEPSLATE_TILES:
+        compra: 300
+        venta: 0
+        tope: 0
+        ventana: 24h
+      DEEPSLATE_TILE_STAIRS:
+        compra: 200
+        venta: 0
+        tope: 0
+        ventana: 24h
+      DEEPSLATE_TILE_SLAB:
+        compra: 200
+        venta: 0
+        tope: 0
+        ventana: 24h
+      DEEPSLATE_TILE_WALL:
+        compra: 200
+        venta: 0
+        tope: 0
+        ventana: 24h
+      CRACKED_DEEPSLATE_TILES:
+        compra: 300
+        venta: 0
+        tope: 0
+        ventana: 24h
+      CHISELED_DEEPSLATE:
+        compra: 200
+        venta: 0
+        tope: 0
+        ventana: 24h
+      TUFF:
+        compra: 200
+        venta: 0.33
         tope: 0
         ventana: 24h
       TUFF_STAIRS:
-        compra: 46
+        compra: 200
         venta: 0
         tope: 0
         ventana: 24h
       TUFF_SLAB:
-        compra: 18
+        compra: 200
         venta: 0
         tope: 0
         ventana: 24h
       TUFF_WALL:
-        compra: 30
+        compra: 200
+        venta: 0
+        tope: 0
+        ventana: 24h
+      CHISELED_TUFF:
+        compra: 150
+        venta: 0
+        tope: 0
+        ventana: 24h
+      POLISHED_TUFF:
+        compra: 300
+        venta: 0
+        tope: 0
+        ventana: 24h
+      POLISHED_TUFF_STAIRS:
+        compra: 150
+        venta: 0
+        tope: 0
+        ventana: 24h
+      POLISHED_TUFF_SLAB:
+        compra: 150
+        venta: 0
+        tope: 0
+        ventana: 24h
+      POLISHED_TUFF_WALL:
+        compra: 150
+        venta: 0
+        tope: 0
+        ventana: 24h
+      TUFF_BRICKS:
+        compra: 400
+        venta: 0
+        tope: 0
+        ventana: 24h
+      TUFF_BRICK_STAIRS:
+        compra: 250
+        venta: 0
+        tope: 0
+        ventana: 24h
+      TUFF_BRICK_SLAB:
+        compra: 250
+        venta: 0
+        tope: 0
+        ventana: 24h
+      TUFF_BRICK_WALL:
+        compra: 250
+        venta: 0
+        tope: 0
+        ventana: 24h
+      CHISELED_TUFF_BRICKS:
+        compra: 150
+        venta: 0
+        tope: 0
+        ventana: 24h
+      BRICKS:
+        compra: 200
+        venta: 0
+        tope: 0
+        ventana: 24h
+      BRICK_STAIRS:
+        compra: 250
+        venta: 0
+        tope: 0
+        ventana: 24h
+      BRICK_SLAB:
+        compra: 150
+        venta: 0
+        tope: 0
+        ventana: 24h
+      BRICK_WALL:
+        compra: 150
+        venta: 0
+        tope: 0
+        ventana: 24h
+      MUD_BRICKS:
+        compra: 300
+        venta: 0
+        tope: 0
+        ventana: 24h
+      MUD_BRICK_STAIRS:
+        compra: 150
+        venta: 0
+        tope: 0
+        ventana: 24h
+      MUD_BRICK_SLAB:
+        compra: 150
+        venta: 0
+        tope: 0
+        ventana: 24h
+      MUD_BRICK_WALL:
+        compra: 150
+        venta: 0
+        tope: 0
+        ventana: 24h
+      RESIN_BRICKS:
+        compra: 250
+        venta: 0
+        tope: 0
+        ventana: 24h
+      RESIN_BRICK_STAIRS:
+        compra: 250
+        venta: 0
+        tope: 0
+        ventana: 24h
+      RESIN_BRICK_SLAB:
+        compra: 250
+        venta: 0
+        tope: 0
+        ventana: 24h
+      RESIN_BRICK_WALL:
+        compra: 250
+        venta: 0
+        tope: 0
+        ventana: 24h
+      CHISELED_RESIN_BRICKS:
+        compra: 150
+        venta: 0
+        tope: 0
+        ventana: 24h
+      SANDSTONE:
+        compra: 400
+        venta: 0.44
+        tope: 0
+        ventana: 24h
+      SANDSTONE_STAIRS:
+        compra: 250
+        venta: 0
+        tope: 0
+        ventana: 24h
+      SANDSTONE_SLAB:
+        compra: 250
+        venta: 0
+        tope: 0
+        ventana: 24h
+      SANDSTONE_WALL:
+        compra: 250
+        venta: 0
+        tope: 0
+        ventana: 24h
+      CUT_SANDSTONE:
+        compra: 300
+        venta: 0
+        tope: 0
+        ventana: 24h
+      CUT_SANDSTONE_SLAB:
+        compra: 150
+        venta: 0
+        tope: 0
+        ventana: 24h
+      CHISELED_SANDSTONE:
+        compra: 150
+        venta: 0
+        tope: 0
+        ventana: 24h
+      SMOOTH_SANDSTONE:
+        compra: 300
+        venta: 0
+        tope: 0
+        ventana: 24h
+      SMOOTH_SANDSTONE_STAIRS:
+        compra: 150
+        venta: 0
+        tope: 0
+        ventana: 24h
+      SMOOTH_SANDSTONE_SLAB:
+        compra: 150
+        venta: 0
+        tope: 0
+        ventana: 24h
+      RED_SANDSTONE:
+        compra: 250
+        venta: 0.44
+        tope: 0
+        ventana: 24h
+      RED_SANDSTONE_STAIRS:
+        compra: 250
+        venta: 0
+        tope: 0
+        ventana: 24h
+      RED_SANDSTONE_SLAB:
+        compra: 250
+        venta: 0
+        tope: 0
+        ventana: 24h
+      RED_SANDSTONE_WALL:
+        compra: 250
+        venta: 0
+        tope: 0
+        ventana: 24h
+      CUT_RED_SANDSTONE:
+        compra: 300
+        venta: 0
+        tope: 0
+        ventana: 24h
+      CUT_RED_SANDSTONE_SLAB:
+        compra: 150
+        venta: 0
+        tope: 0
+        ventana: 24h
+      CHISELED_RED_SANDSTONE:
+        compra: 150
+        venta: 0
+        tope: 0
+        ventana: 24h
+      SMOOTH_RED_SANDSTONE:
+        compra: 250
+        venta: 0
+        tope: 0
+        ventana: 24h
+      SMOOTH_RED_SANDSTONE_STAIRS:
+        compra: 250
+        venta: 0
+        tope: 0
+        ventana: 24h
+      SMOOTH_RED_SANDSTONE_SLAB:
+        compra: 250
+        venta: 0
+        tope: 0
+        ventana: 24h
+      GLASS:
+        compra: 500
+        venta: 0
+        tope: 0
+        ventana: 24h
+      GLOWSTONE:
+        compra: 400
+        venta: 0
+        tope: 0
+        ventana: 24h
+      PRISMARINE_STAIRS:
+        compra: 250
+        venta: 0
+        tope: 0
+        ventana: 24h
+      PRISMARINE_SLAB:
+        compra: 250
+        venta: 0
+        tope: 0
+        ventana: 24h
+      PRISMARINE_WALL:
+        compra: 250
+        venta: 0
+        tope: 0
+        ventana: 24h
+      PRISMARINE_BRICK_STAIRS:
+        compra: 250
+        venta: 0
+        tope: 0
+        ventana: 24h
+      PRISMARINE_BRICK_SLAB:
+        compra: 250
+        venta: 0
+        tope: 0
+        ventana: 24h
+      DARK_PRISMARINE_STAIRS:
+        compra: 200
+        venta: 0
+        tope: 0
+        ventana: 24h
+      DARK_PRISMARINE_SLAB:
+        compra: 150
+        venta: 0
+        tope: 0
+        ventana: 24h
+      NETHERRACK:
+        compra: 300
+        venta: 0.33
+        tope: 0
+        ventana: 24h
+      SOUL_SAND:
+        compra: 450
+        venta: 0.55
+        tope: 0
+        ventana: 24h
+      SOUL_SOIL:
+        compra: 500
+        venta: 0.55
+        tope: 0
+        ventana: 24h
+      MAGMA_BLOCK:
+        compra: 500
+        venta: 1.1
+        tope: 0
+        ventana: 24h
+      NETHER_WART_BLOCK:
+        compra: 500
+        venta: 1.1
+        tope: 0
+        ventana: 24h
+      WARPED_WART_BLOCK:
+        compra: 500
+        venta: 1.1
+        tope: 0
+        ventana: 24h
+      BASALT:
+        compra: 200
+        venta: 0.55
+        tope: 0
+        ventana: 24h
+      POLISHED_BASALT:
+        compra: 200
+        venta: 0
+        tope: 0
+        ventana: 24h
+      SMOOTH_BASALT:
+        compra: 200
+        venta: 0
+        tope: 0
+        ventana: 24h
+      NETHER_BRICKS:
+        compra: 400
+        venta: 0.55
+        tope: 0
+        ventana: 24h
+      NETHER_BRICK_STAIRS:
+        compra: 300
+        venta: 0
+        tope: 0
+        ventana: 24h
+      NETHER_BRICK_SLAB:
+        compra: 300
+        venta: 0
+        tope: 0
+        ventana: 24h
+      NETHER_BRICK_WALL:
+        compra: 300
+        venta: 0
+        tope: 0
+        ventana: 24h
+      NETHER_BRICK_FENCE:
+        compra: 300
+        venta: 0
+        tope: 0
+        ventana: 24h
+      CRACKED_NETHER_BRICKS:
+        compra: 300
+        venta: 0
+        tope: 0
+        ventana: 24h
+      CHISELED_NETHER_BRICKS:
+        compra: 150
+        venta: 0
+        tope: 0
+        ventana: 24h
+      RED_NETHER_BRICKS:
+        compra: 600
+        venta: 0.88
+        tope: 0
+        ventana: 24h
+      RED_NETHER_BRICK_STAIRS:
+        compra: 300
+        venta: 0
+        tope: 0
+        ventana: 24h
+      RED_NETHER_BRICK_SLAB:
+        compra: 300
+        venta: 0
+        tope: 0
+        ventana: 24h
+      RED_NETHER_BRICK_WALL:
+        compra: 300
+        venta: 0
+        tope: 0
+        ventana: 24h
+      BLACKSTONE:
+        compra: 300
+        venta: 0.55
+        tope: 0
+        ventana: 24h
+      BLACKSTONE_STAIRS:
+        compra: 350
+        venta: 0
+        tope: 0
+        ventana: 24h
+      BLACKSTONE_SLAB:
+        compra: 350
+        venta: 0
+        tope: 0
+        ventana: 24h
+      BLACKSTONE_WALL:
+        compra: 350
+        venta: 0
+        tope: 0
+        ventana: 24h
+      POLISHED_BLACKSTONE:
+        compra: 400
+        venta: 0
+        tope: 0
+        ventana: 24h
+      POLISHED_BLACKSTONE_STAIRS:
+        compra: 200
+        venta: 0
+        tope: 0
+        ventana: 24h
+      POLISHED_BLACKSTONE_SLAB:
+        compra: 200
+        venta: 0
+        tope: 0
+        ventana: 24h
+      POLISHED_BLACKSTONE_WALL:
+        compra: 200
+        venta: 0
+        tope: 0
+        ventana: 24h
+      POLISHED_BLACKSTONE_BUTTON:
+        compra: 200
+        venta: 0
+        tope: 0
+        ventana: 24h
+      POLISHED_BLACKSTONE_PRESSURE_PLATE:
+        compra: 200
+        venta: 0
+        tope: 0
+        ventana: 24h
+      CHISELED_POLISHED_BLACKSTONE:
+        compra: 200
+        venta: 0
+        tope: 0
+        ventana: 24h
+      POLISHED_BLACKSTONE_BRICKS:
+        compra: 400
+        venta: 0
+        tope: 0
+        ventana: 24h
+      POLISHED_BLACKSTONE_BRICK_STAIRS:
+        compra: 200
+        venta: 0
+        tope: 0
+        ventana: 24h
+      POLISHED_BLACKSTONE_BRICK_SLAB:
+        compra: 200
+        venta: 0
+        tope: 0
+        ventana: 24h
+      POLISHED_BLACKSTONE_BRICK_WALL:
+        compra: 200
+        venta: 0
+        tope: 0
+        ventana: 24h
+      CRACKED_POLISHED_BLACKSTONE_BRICKS:
+        compra: 350
+        venta: 0
+        tope: 0
+        ventana: 24h
+      QUARTZ_BLOCK:
+        compra: 350
+        venta: 2.2
+        tope: 0
+        ventana: 24h
+      QUARTZ_STAIRS:
+        compra: 250
+        venta: 0
+        tope: 0
+        ventana: 24h
+      QUARTZ_SLAB:
+        compra: 250
+        venta: 0
+        tope: 0
+        ventana: 24h
+      CHISELED_QUARTZ_BLOCK:
+        compra: 350
+        venta: 0
+        tope: 0
+        ventana: 24h
+      QUARTZ_PILLAR:
+        compra: 250
+        venta: 0
+        tope: 0
+        ventana: 24h
+      QUARTZ_BRICKS:
+        compra: 250
+        venta: 0
+        tope: 0
+        ventana: 24h
+      SMOOTH_QUARTZ:
+        compra: 400
+        venta: 0
+        tope: 0
+        ventana: 24h
+      SMOOTH_QUARTZ_STAIRS:
+        compra: 200
+        venta: 0
+        tope: 0
+        ventana: 24h
+      SMOOTH_QUARTZ_SLAB:
+        compra: 200
+        venta: 0
+        tope: 0
+        ventana: 24h
+      OBSIDIAN:
+        compra: 400
+        venta: 8.8
+        tope: 0
+        ventana: 24h
+      CRYING_OBSIDIAN:
+        compra: 500
+        venta: 16.5
+        tope: 0
+        ventana: 24h
+      END_STONE:
+        compra: 300
+        venta: 0.88
+        tope: 0
+        ventana: 24h
+      END_STONE_BRICKS:
+        compra: 400
+        venta: 1.1
+        tope: 0
+        ventana: 24h
+      END_STONE_BRICK_STAIRS:
+        compra: 200
+        venta: 0
+        tope: 0
+        ventana: 24h
+      END_STONE_BRICK_SLAB:
+        compra: 200
+        venta: 0
+        tope: 0
+        ventana: 24h
+      END_STONE_BRICK_WALL:
+        compra: 200
+        venta: 0
+        tope: 0
+        ventana: 24h
+      PURPUR_BLOCK:
+        compra: 500
+        venta: 1.1
+        tope: 0
+        ventana: 24h
+      PURPUR_PILLAR:
+        compra: 500
+        venta: 1.1
+        tope: 0
+        ventana: 24h
+      PURPUR_STAIRS:
+        compra: 250
+        venta: 0
+        tope: 0
+        ventana: 24h
+      PURPUR_SLAB:
+        compra: 250
+        venta: 0
+        tope: 0
+        ventana: 24h
+      IRON_DOOR:
+        compra: 500
+        venta: 0
+        tope: 0
+        ventana: 24h
+      IRON_TRAPDOOR:
+        compra: 500
+        venta: 0
+        tope: 0
+        ventana: 24h
+      COPPER_BLOCK:
+        compra: 700
+        venta: 0
+        tope: 0
+        ventana: 24h
+      EXPOSED_COPPER:
+        compra: 400
+        venta: 0
+        tope: 0
+        ventana: 24h
+      WEATHERED_COPPER:
+        compra: 400
+        venta: 0
+        tope: 0
+        ventana: 24h
+      OXIDIZED_COPPER:
+        compra: 400
+        venta: 0
+        tope: 0
+        ventana: 24h
+      WAXED_COPPER_BLOCK:
+        compra: 700
+        venta: 0
+        tope: 0
+        ventana: 24h
+      WAXED_EXPOSED_COPPER:
+        compra: 400
+        venta: 0
+        tope: 0
+        ventana: 24h
+      WAXED_WEATHERED_COPPER:
+        compra: 400
+        venta: 0
+        tope: 0
+        ventana: 24h
+      WAXED_OXIDIZED_COPPER:
+        compra: 400
+        venta: 0
+        tope: 0
+        ventana: 24h
+      CHISELED_COPPER:
+        compra: 150
+        venta: 0
+        tope: 0
+        ventana: 24h
+      EXPOSED_CHISELED_COPPER:
+        compra: 150
+        venta: 0
+        tope: 0
+        ventana: 24h
+      WEATHERED_CHISELED_COPPER:
+        compra: 400
+        venta: 0
+        tope: 0
+        ventana: 24h
+      OXIDIZED_CHISELED_COPPER:
+        compra: 250
+        venta: 0
+        tope: 0
+        ventana: 24h
+      WAXED_CHISELED_COPPER:
+        compra: 300
+        venta: 0
+        tope: 0
+        ventana: 24h
+      WAXED_EXPOSED_CHISELED_COPPER:
+        compra: 300
+        venta: 0
+        tope: 0
+        ventana: 24h
+      WAXED_WEATHERED_CHISELED_COPPER:
+        compra: 400
+        venta: 0
+        tope: 0
+        ventana: 24h
+      WAXED_OXIDIZED_CHISELED_COPPER:
+        compra: 400
+        venta: 0
+        tope: 0
+        ventana: 24h
+      CUT_COPPER:
+        compra: 400
+        venta: 0
+        tope: 0
+        ventana: 24h
+      EXPOSED_CUT_COPPER:
+        compra: 400
+        venta: 0
+        tope: 0
+        ventana: 24h
+      WEATHERED_CUT_COPPER:
+        compra: 500
+        venta: 0
+        tope: 0
+        ventana: 24h
+      OXIDIZED_CUT_COPPER:
+        compra: 500
+        venta: 0
+        tope: 0
+        ventana: 24h
+      WAXED_CUT_COPPER:
+        compra: 400
+        venta: 0
+        tope: 0
+        ventana: 24h
+      WAXED_EXPOSED_CUT_COPPER:
+        compra: 400
+        venta: 0
+        tope: 0
+        ventana: 24h
+      WAXED_WEATHERED_CUT_COPPER:
+        compra: 500
+        venta: 0
+        tope: 0
+        ventana: 24h
+      WAXED_OXIDIZED_CUT_COPPER:
+        compra: 500
+        venta: 0
+        tope: 0
+        ventana: 24h
+      CUT_COPPER_STAIRS:
+        compra: 300
+        venta: 0
+        tope: 0
+        ventana: 24h
+      EXPOSED_CUT_COPPER_STAIRS:
+        compra: 300
+        venta: 0
+        tope: 0
+        ventana: 24h
+      WEATHERED_CUT_COPPER_STAIRS:
+        compra: 500
+        venta: 0
+        tope: 0
+        ventana: 24h
+      OXIDIZED_CUT_COPPER_STAIRS:
+        compra: 400
+        venta: 0
+        tope: 0
+        ventana: 24h
+      WAXED_CUT_COPPER_STAIRS:
+        compra: 300
+        venta: 0
+        tope: 0
+        ventana: 24h
+      WAXED_EXPOSED_CUT_COPPER_STAIRS:
+        compra: 400
+        venta: 0
+        tope: 0
+        ventana: 24h
+      WAXED_WEATHERED_CUT_COPPER_STAIRS:
+        compra: 500
+        venta: 0
+        tope: 0
+        ventana: 24h
+      WAXED_OXIDIZED_CUT_COPPER_STAIRS:
+        compra: 500
+        venta: 0
+        tope: 0
+        ventana: 24h
+      CUT_COPPER_SLAB:
+        compra: 300
+        venta: 0
+        tope: 0
+        ventana: 24h
+      EXPOSED_CUT_COPPER_SLAB:
+        compra: 300
+        venta: 0
+        tope: 0
+        ventana: 24h
+      WEATHERED_CUT_COPPER_SLAB:
+        compra: 400
+        venta: 0
+        tope: 0
+        ventana: 24h
+      OXIDIZED_CUT_COPPER_SLAB:
+        compra: 400
+        venta: 0
+        tope: 0
+        ventana: 24h
+      WAXED_CUT_COPPER_SLAB:
+        compra: 300
+        venta: 0
+        tope: 0
+        ventana: 24h
+      WAXED_EXPOSED_CUT_COPPER_SLAB:
+        compra: 300
+        venta: 0
+        tope: 0
+        ventana: 24h
+      WAXED_WEATHERED_CUT_COPPER_SLAB:
+        compra: 400
+        venta: 0
+        tope: 0
+        ventana: 24h
+      WAXED_OXIDIZED_CUT_COPPER_SLAB:
+        compra: 400
+        venta: 0
+        tope: 0
+        ventana: 24h
+      COPPER_GRATE:
+        compra: 500
+        venta: 0
+        tope: 0
+        ventana: 24h
+      EXPOSED_COPPER_GRATE:
+        compra: 500
+        venta: 0
+        tope: 0
+        ventana: 24h
+      WEATHERED_COPPER_GRATE:
+        compra: 600
+        venta: 0
+        tope: 0
+        ventana: 24h
+      OXIDIZED_COPPER_GRATE:
+        compra: 600
+        venta: 0
+        tope: 0
+        ventana: 24h
+      WAXED_COPPER_GRATE:
+        compra: 500
+        venta: 0
+        tope: 0
+        ventana: 24h
+      WAXED_EXPOSED_COPPER_GRATE:
+        compra: 500
+        venta: 0
+        tope: 0
+        ventana: 24h
+      WAXED_WEATHERED_COPPER_GRATE:
+        compra: 600
+        venta: 0
+        tope: 0
+        ventana: 24h
+      WAXED_OXIDIZED_COPPER_GRATE:
+        compra: 600
         venta: 0
         tope: 0
         ventana: 24h
       COPPER_BULB:
-        compra: 200
+        compra: 300
         venta: 0
         tope: 0
         ventana: 24h
       EXPOSED_COPPER_BULB:
-        compra: 200
-        venta: 0
-        tope: 0
-        ventana: 24h
-      OXIDIZED_COPPER_BULB:
-        compra: 200
+        compra: 300
         venta: 0
         tope: 0
         ventana: 24h
       WEATHERED_COPPER_BULB:
-        compra: 200
+        compra: 400
+        venta: 0
+        tope: 0
+        ventana: 24h
+      OXIDIZED_COPPER_BULB:
+        compra: 400
         venta: 0
         tope: 0
         ventana: 24h
       WAXED_COPPER_BULB:
-        compra: 200
+        compra: 300
         venta: 0
         tope: 0
         ventana: 24h
       WAXED_EXPOSED_COPPER_BULB:
-        compra: 200
-        venta: 0
-        tope: 0
-        ventana: 24h
-      WAXED_OXIDIZED_COPPER_BULB:
-        compra: 200
+        compra: 300
         venta: 0
         tope: 0
         ventana: 24h
       WAXED_WEATHERED_COPPER_BULB:
-        compra: 200
+        compra: 400
+        venta: 0
+        tope: 0
+        ventana: 24h
+      WAXED_OXIDIZED_COPPER_BULB:
+        compra: 400
+        venta: 0
+        tope: 0
+        ventana: 24h
+      COPPER_DOOR:
+        compra: 250
+        venta: 0
+        tope: 0
+        ventana: 24h
+      EXPOSED_COPPER_DOOR:
+        compra: 300
+        venta: 0
+        tope: 0
+        ventana: 24h
+      WEATHERED_COPPER_DOOR:
+        compra: 300
+        venta: 0
+        tope: 0
+        ventana: 24h
+      OXIDIZED_COPPER_DOOR:
+        compra: 300
+        venta: 0
+        tope: 0
+        ventana: 24h
+      WAXED_COPPER_DOOR:
+        compra: 300
+        venta: 0
+        tope: 0
+        ventana: 24h
+      WAXED_EXPOSED_COPPER_DOOR:
+        compra: 400
+        venta: 0
+        tope: 0
+        ventana: 24h
+      WAXED_WEATHERED_COPPER_DOOR:
+        compra: 400
+        venta: 0
+        tope: 0
+        ventana: 24h
+      WAXED_OXIDIZED_COPPER_DOOR:
+        compra: 400
+        venta: 0
+        tope: 0
+        ventana: 24h
+      COPPER_TRAPDOOR:
+        compra: 250
+        venta: 0
+        tope: 0
+        ventana: 24h
+      EXPOSED_COPPER_TRAPDOOR:
+        compra: 250
+        venta: 0
+        tope: 0
+        ventana: 24h
+      WEATHERED_COPPER_TRAPDOOR:
+        compra: 300
+        venta: 0
+        tope: 0
+        ventana: 24h
+      OXIDIZED_COPPER_TRAPDOOR:
+        compra: 300
+        venta: 0
+        tope: 0
+        ventana: 24h
+      WAXED_COPPER_TRAPDOOR:
+        compra: 250
+        venta: 0
+        tope: 0
+        ventana: 24h
+      WAXED_EXPOSED_COPPER_TRAPDOOR:
+        compra: 250
+        venta: 0
+        tope: 0
+        ventana: 24h
+      WAXED_WEATHERED_COPPER_TRAPDOOR:
+        compra: 300
+        venta: 0
+        tope: 0
+        ventana: 24h
+      WAXED_OXIDIZED_COPPER_TRAPDOOR:
+        compra: 300
         venta: 0
         tope: 0
         ventana: 24h
       COPPER_CHEST:
-        compra: 340
+        compra: 400
         venta: 0
         tope: 0
         ventana: 24h
       EXPOSED_COPPER_CHEST:
-        compra: 340
-        venta: 0
-        tope: 0
-        ventana: 24h
-      OXIDIZED_COPPER_CHEST:
-        compra: 340
+        compra: 400
         venta: 0
         tope: 0
         ventana: 24h
       WEATHERED_COPPER_CHEST:
-        compra: 340
+        compra: 500
+        venta: 0
+        tope: 0
+        ventana: 24h
+      OXIDIZED_COPPER_CHEST:
+        compra: 500
         venta: 0
         tope: 0
         ventana: 24h
       WAXED_COPPER_CHEST:
-        compra: 340
+        compra: 400
         venta: 0
         tope: 0
         ventana: 24h
       WAXED_EXPOSED_COPPER_CHEST:
-        compra: 340
-        venta: 0
-        tope: 0
-        ventana: 24h
-      WAXED_OXIDIZED_COPPER_CHEST:
-        compra: 340
+        compra: 400
         venta: 0
         tope: 0
         ventana: 24h
       WAXED_WEATHERED_COPPER_CHEST:
-        compra: 340
+        compra: 500
+        venta: 0
+        tope: 0
+        ventana: 24h
+      WAXED_OXIDIZED_COPPER_CHEST:
+        compra: 500
         venta: 0
         tope: 0
         ventana: 24h
       COPPER_GOLEM_STATUE:
-        compra: 240
+        compra: 1500
         venta: 0
         tope: 0
         ventana: 24h
       EXPOSED_COPPER_GOLEM_STATUE:
-        compra: 240
-        venta: 0
-        tope: 0
-        ventana: 24h
-      OXIDIZED_COPPER_GOLEM_STATUE:
-        compra: 240
+        compra: 1500
         venta: 0
         tope: 0
         ventana: 24h
       WEATHERED_COPPER_GOLEM_STATUE:
-        compra: 240
+        compra: 1500
+        venta: 0
+        tope: 0
+        ventana: 24h
+      OXIDIZED_COPPER_GOLEM_STATUE:
+        compra: 1500
         venta: 0
         tope: 0
         ventana: 24h
       WAXED_COPPER_GOLEM_STATUE:
-        compra: 240
+        compra: 1500
         venta: 0
         tope: 0
         ventana: 24h
       WAXED_EXPOSED_COPPER_GOLEM_STATUE:
-        compra: 240
-        venta: 0
-        tope: 0
-        ventana: 24h
-      WAXED_OXIDIZED_COPPER_GOLEM_STATUE:
-        compra: 240
+        compra: 1500
         venta: 0
         tope: 0
         ventana: 24h
       WAXED_WEATHERED_COPPER_GOLEM_STATUE:
-        compra: 240
+        compra: 1500
+        venta: 0
+        tope: 0
+        ventana: 24h
+      WAXED_OXIDIZED_COPPER_GOLEM_STATUE:
+        compra: 1500
         venta: 0
         tope: 0
         ventana: 24h
       LIGHTNING_ROD:
-        compra: 100
+        compra: 400
         venta: 0
         tope: 0
         ventana: 24h
       EXPOSED_LIGHTNING_ROD:
-        compra: 100
-        venta: 0
-        tope: 0
-        ventana: 24h
-      OXIDIZED_LIGHTNING_ROD:
-        compra: 100
+        compra: 400
         venta: 0
         tope: 0
         ventana: 24h
       WEATHERED_LIGHTNING_ROD:
-        compra: 100
+        compra: 400
+        venta: 0
+        tope: 0
+        ventana: 24h
+      OXIDIZED_LIGHTNING_ROD:
+        compra: 400
         venta: 0
         tope: 0
         ventana: 24h
       WAXED_LIGHTNING_ROD:
-        compra: 100
+        compra: 400
         venta: 0
         tope: 0
         ventana: 24h
       WAXED_EXPOSED_LIGHTNING_ROD:
-        compra: 100
-        venta: 0
-        tope: 0
-        ventana: 24h
-      WAXED_OXIDIZED_LIGHTNING_ROD:
-        compra: 100
+        compra: 400
         venta: 0
         tope: 0
         ventana: 24h
       WAXED_WEATHERED_LIGHTNING_ROD:
-        compra: 100
+        compra: 400
         venta: 0
         tope: 0
         ventana: 24h
-      CREAKING_HEART:
-        compra: 48000
-        venta: 0
-        tope: 0
-        ventana: 24h
-      DRIED_GHAST:
-        compra: 32000
-        venta: 0
-        tope: 0
-        ventana: 24h
-      SOUL_SOIL:
-        compra: 16
-        venta: 0.5
-        tope: 0
-        ventana: 24h
-      MAGMA_BLOCK:
-        compra: 20
-        venta: 1
-        tope: 0
-        ventana: 24h
-      DIRT_PATH:
-        compra: 24
+      WAXED_OXIDIZED_LIGHTNING_ROD:
+        compra: 400
         venta: 0
         tope: 0
         ventana: 24h
       BONE_BLOCK:
         compra: 600
-        venta: 10
-        tope: 0
-        ventana: 24h
-      NETHER_WART_BLOCK:
-        compra: 0
-        venta: 1
-        tope: 0
-        ventana: 24h
-      WARPED_WART_BLOCK:
-        compra: 0
-        venta: 1
+        venta: 11
         tope: 0
         ventana: 24h
       HAY_BLOCK:
-        compra: 0
-        venta: 9
+        compra: 400
+        venta: 9.9
         tope: 0
         ventana: 24h
       DRIED_KELP_BLOCK:
-        compra: 0
-        venta: 3
+        compra: 500
+        venta: 3.3
         tope: 0
         ventana: 24h
       SLIME_BLOCK:
-        compra: 0
-        venta: 27
+        compra: 600
+        venta: 29.7
+        tope: 0
+        ventana: 24h
+      CREAKING_HEART:
+        compra: 1000
+        venta: 0
+        tope: 0
+        ventana: 24h
+      DRIED_GHAST:
+        compra: 10000
+        venta: 0
         tope: 0
         ventana: 24h
   Minerales:
