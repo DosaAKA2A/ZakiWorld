@@ -85,6 +85,9 @@ public final class LethalWorldPlugin extends JavaPlugin {
         mobs.arrancar();
         hardcore = new net.ederus.lethalworld.hardcore.Hardcore(this);
         hardcore.arrancar();
+        RestosBracken restos = new RestosBracken(this);
+        getServer().getPluginManager().registerEvents(restos, this);
+        restos.barrerConectados();
 
         int cargados = 0;
         Map<String, String> creados = mundos();

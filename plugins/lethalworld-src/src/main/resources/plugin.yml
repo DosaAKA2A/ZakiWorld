@@ -1,5 +1,5 @@
 name: LethalWorld
-version: '1.0.0'
+version: '1.0.1'
 main: net.ederus.lethalworld.LethalWorldPlugin
 api-version: '1.20'
 author: Iris Studio
