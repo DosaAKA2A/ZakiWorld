@@ -1027,10 +1027,10 @@ anomalias:
     - '[25%] crates key give %jugador% booster 1'
     - '[mejor] eco give %jugador% 50000'
     # --- la Regalia del Alba: una tirada por pieza, solo al mejor ---
-    - '[mejor] [40%] mi give ARMOR CORONA_DEL_ALBA %jugador%'
-    - '[mejor] [40%] mi give ARMOR CORAZA_DEL_ALBA %jugador%'
-    - '[mejor] [40%] mi give ARMOR FALDARES_DEL_ALBA %jugador%'
-    - '[mejor] [40%] mi give ARMOR SOLERETAS_DEL_ALBA %jugador%'
+    - '[mejor] [40%] mi give ANOMALIA CORONA_DEL_ALBA %jugador%'
+    - '[mejor] [40%] mi give ANOMALIA CORAZA_DEL_ALBA %jugador%'
+    - '[mejor] [40%] mi give ANOMALIA FALDARES_DEL_ALBA %jugador%'
+    - '[mejor] [40%] mi give ANOMALIA SOLERETAS_DEL_ALBA %jugador%'
     - '[mejor] [20%] mi give SPEAR LANZA_DEL_ALBA %jugador%'
     botin:
       '1':
