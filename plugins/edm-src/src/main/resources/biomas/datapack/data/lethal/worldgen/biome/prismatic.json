@@ -1,0 +1,92 @@
+{
+ "attributes": {
+  "minecraft:visual/sky_color": "#B9A6F0",
+  "minecraft:visual/fog_color": "#EADCFF",
+  "minecraft:visual/cloud_color": "#FFFFE0FF",
+  "minecraft:visual/sky_light_color": "#FFF6FF",
+  "minecraft:gameplay/monsters_burn": false,
+  "minecraft:visual/ambient_particles": [
+   {
+    "particle": {
+     "type": "minecraft:dust",
+     "color": 16734858,
+     "scale": 1.0
+    },
+    "probability": 0.003
+   },
+   {
+    "particle": {
+     "type": "minecraft:dust",
+     "color": 5953791,
+     "scale": 1.0
+    },
+    "probability": 0.003
+   },
+   {
+    "particle": {
+     "type": "minecraft:dust",
+     "color": 11861850,
+     "scale": 1.0
+    },
+    "probability": 0.003
+   },
+   {
+    "particle": {
+     "type": "minecraft:dust",
+     "color": 16766810,
+     "scale": 1.0
+    },
+    "probability": 0.003
+   },
+   {
+    "particle": {
+     "type": "minecraft:glow"
+    },
+    "probability": 0.002
+   }
+  ],
+  "minecraft:audio/ambient_sounds": {
+   "additions": {
+    "sound": "minecraft:block.amethyst_block.chime",
+    "tick_chance": 0.008
+   },
+   "mood": {
+    "sound": "minecraft:ambient.cave",
+    "tick_delay": 6000,
+    "block_search_extent": 8,
+    "offset": 2
+   }
+  }
+ },
+ "temperature": 0.7,
+ "downfall": 0.3,
+ "has_precipitation": false,
+ "carvers": [],
+ "features": [],
+ "spawn_costs": {},
+ "spawners": {
+  "ambient": [],
+  "axolotls": [],
+  "creature": [],
+  "misc": [],
+  "monster": [],
+  "underground_water_creature": [],
+  "water_ambient": [],
+  "water_creature": []
+ },
+ "effects": {
+  "sky_color": 12166896,
+  "fog_color": 15391999,
+  "water_color": 8374517,
+  "water_fog_color": 3831984,
+  "grass_color": 11069616,
+  "foliage_color": 13148400,
+  "dry_foliage_color": 14725264,
+  "mood_sound": {
+   "sound": "minecraft:ambient.cave",
+   "tick_delay": 6000,
+   "block_search_extent": 8,
+   "offset": 2
+  }
+ }
+}

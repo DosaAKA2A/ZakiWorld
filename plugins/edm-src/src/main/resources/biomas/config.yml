@@ -23,6 +23,13 @@
 #                     Con cenizas el agua de la lluvia se quita: llueve ceniza.
 #   gas:              cuantas fumarolas de gas salen del suelo de la zona. 0 = ninguna
 #   ecos:             segundos medios entre ecos del warden que oye cada jugador. 0 = sin ecos
+#   sonidos:          sonidos sueltos que cada jugador oye a 4-14 bloques, solo el:
+#                       cada: segundos medios entre uno y otro
+#                       lista: ids de sonido de Minecraft (sin minecraft: delante)
+#                       tono: [minimo, maximo] del tono (1 = normal)
+#                       volumen: 0 a 1
+#
+#  Con lluvia: true en un clima frio (temperatura bajo 0.15 en su .json) lo que cae es nieve.
 biomas:
   sandstorm:
     nombre: 'Tormenta de arena'
@@ -50,3 +57,198 @@ biomas:
     nombre: 'Ciudad antigua'
     hora: 18000
     ecos: 20
+
+# --- climas nuevos (2026-09-23) ---
+  crimson:
+    nombre: 'Carmesí'
+    hora: 12800
+  slimey:
+    nombre: 'Viscoso'
+    sonidos:
+      cada: 8
+      lista: ['entity.slime.squish', 'entity.slime.jump', 'block.slime_block.step']
+  honeycomb:
+    nombre: 'Panal'
+    sonidos:
+      cada: 10
+      lista: ['entity.bee.pollinate', 'block.beehive.enter', 'block.beehive.exit']
+  frostbite:
+    nombre: 'Escarcha'
+    sonidos:
+      cada: 14
+      lista: ['block.glass.hit', 'block.amethyst_cluster.step']
+      volumen: 0.5
+      tono: [1.4, 1.9]
+  blizzard:
+    nombre: 'Ventisca'
+    lluvia: true
+  abyss:
+    nombre: 'Abismo'
+    hora: 18000
+    sonidos:
+      cada: 16
+      lista: ['entity.elder_guardian.ambient', 'entity.guardian.ambient']
+      volumen: 0.5
+      tono: [0.6, 0.8]
+  void:
+    nombre: 'Vacío'
+    hora: 18000
+  aurora:
+    nombre: 'Aurora'
+    hora: 23500
+  ember:
+    nombre: 'Caldera'
+    cenizas: 'SIEMPRE'
+    sonidos:
+      cada: 6
+      lista: ['block.lava.ambient', 'block.fire.ambient']
+      volumen: 0.6
+  spectral:
+    nombre: 'Espectral'
+    hora: 13500
+    sonidos:
+      cada: 14
+      lista: ['entity.phantom.ambient', 'entity.vex.charge', 'entity.allay.ambient_without_item']
+      volumen: 0.5
+      tono: [0.6, 0.9]
+  prismatic:
+    nombre: 'Prismático'
+    sonidos:
+      cada: 9
+      lista: ['block.amethyst_cluster.hit', 'block.amethyst_cluster.step', 'block.note_block.chime']
+      volumen: 0.6
+      tono: [0.9, 1.5]
+  rust:
+    nombre: 'Óxido'
+    sonidos:
+      cada: 10
+      lista: ['block.chain.step', 'block.chain.hit', 'block.grindstone.use', 'entity.iron_golem.repair']
+      volumen: 0.5
+      tono: [0.7, 1.0]
+  fungal:
+    nombre: 'Esporas'
+    sonidos:
+      cada: 12
+      lista: ['entity.sniffer.digging', 'block.moss.step', 'block.sculk.spread']
+      volumen: 0.5
+  glitch:
+    nombre: 'Glitch'
+    hora: 0
+    sonidos:
+      cada: 6
+      lista: ['block.note_block.bit', 'entity.enderman.stare', 'entity.endermite.ambient', 'block.note_block.pling']
+      volumen: 0.6
+      tono: [0.5, 2.0]
+  eclipse:
+    nombre: 'Eclipse'
+    hora: 6000
+    sonidos:
+      cada: 18
+      lista: ['block.respawn_anchor.ambient', 'block.beacon.deactivate']
+      volumen: 0.6
+      tono: [0.5, 0.8]
+  nightmare:
+    nombre: 'Pesadilla'
+    hora: 18000
+    sonidos:
+      cada: 9
+      lista: ['entity.creaking.ambient', 'block.creaking_heart.idle', 'entity.phantom.ambient']
+      volumen: 0.7
+      tono: [0.6, 0.9]
+  blossom:
+    nombre: 'Floración'
+    hora: 1000
+  neon:
+    nombre: 'Neón'
+    hora: 18000
+    sonidos:
+      cada: 7
+      lista: ['block.copper_bulb.turn_on', 'block.copper_bulb.turn_off', 'block.sculk_sensor.clicking', 'block.note_block.bit']
+      volumen: 0.5
+      tono: [1.2, 1.8]
+  ink:
+    nombre: 'Tinta'
+    sonidos:
+      cada: 12
+      lista: ['entity.squid.ambient', 'entity.glow_squid.ambient', 'entity.squid.squirt']
+      volumen: 0.6
+  golden:
+    nombre: 'Hora dorada'
+    hora: 12300
+    sonidos:
+      cada: 16
+      lista: ['entity.allay.ambient_without_item', 'block.note_block.chime']
+      volumen: 0.4
+  plague:
+    nombre: 'Peste'
+    gas: 8
+    sonidos:
+      cada: 12
+      lista: ['entity.zombie.ambient', 'entity.zombie_villager.ambient', 'entity.witch.ambient', 'block.sponge.absorb']
+      volumen: 0.5
+      tono: [0.7, 0.9]
+  quicksilver:
+    nombre: 'Mercurio'
+    sonidos:
+      cada: 12
+      lista: ['block.bell.resonate', 'block.chain.hit', 'block.amethyst_block.hit']
+      volumen: 0.5
+  firefly:
+    nombre: 'Luciérnagas'
+    hora: 18000
+    sonidos:
+      cada: 8
+      lista: ['entity.frog.ambient', 'block.big_dripleaf.tilt_down']
+      volumen: 0.6
+  reef:
+    nombre: 'Arrecife'
+    sonidos:
+      cada: 8
+      lista: ['entity.dolphin.ambient', 'entity.turtle.ambient_land', 'block.bubble_column.upwards_ambient', 'entity.tropical_fish.flop']
+      volumen: 0.6
+  carnival:
+    nombre: 'Feria'
+    hora: 13000
+    sonidos:
+      cada: 6
+      lista: ['entity.firework_rocket.blast', 'entity.firework_rocket.launch', 'entity.villager.celebrate', 'block.note_block.bell']
+      volumen: 0.6
+      tono: [0.9, 1.3]
+  drystorm:
+    nombre: 'Tormenta seca'
+    rayos: 4
+    sonidos:
+      cada: 14
+      lista: ['block.copper_bulb.turn_on']
+      volumen: 0.4
+      tono: [0.5, 0.7]
+  cloudsea:
+    nombre: 'Mar de nubes'
+    sonidos:
+      cada: 10
+      lista: ['entity.breeze.idle_air', 'entity.breeze.whirl', 'entity.happy_ghast.ambient']
+      volumen: 0.5
+  catacomb:
+    nombre: 'Catacumbas'
+    hora: 18000
+    sonidos:
+      cada: 10
+      lista: ['entity.skeleton.ambient', 'block.chain.step', 'block.bone_block.step', 'block.candle.extinguish']
+      volumen: 0.6
+      tono: [0.7, 1.0]
+  dream:
+    nombre: 'Onírico'
+    hora: 23500
+    sonidos:
+      cada: 10
+      lista: ['block.amethyst_block.chime', 'entity.allay.ambient_with_item', 'block.note_block.flute']
+      volumen: 0.4
+      tono: [1.0, 1.6]
+  meteor:
+    nombre: 'Lluvia de estrellas'
+    hora: 18000
+    sonidos:
+      cada: 12
+      lista: ['entity.firework_rocket.launch', 'entity.breeze.deflect']
+      volumen: 0.5
+      tono: [0.6, 0.9]

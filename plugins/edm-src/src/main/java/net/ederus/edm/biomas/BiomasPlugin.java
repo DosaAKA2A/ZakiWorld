@@ -22,6 +22,7 @@ import org.bukkit.Color;
 import org.bukkit.Location;
 import org.bukkit.Particle;
 import org.bukkit.Sound;
+import org.bukkit.SoundCategory;
 import org.bukkit.World;
 import org.bukkit.WeatherType;
 import org.bukkit.block.Biome;
@@ -51,7 +52,11 @@ public final class BiomasPlugin extends Module implements Listener {
     public static final String NAMESPACE = "lethal";
     private static final String PACK = "lethal_biomes";
     static final List<String> INCLUIDOS = List.of(
-            "sandstorm", "aether", "hypnos", "storm", "bloodmoon", "penumbra", "celestial", "radioactive", "ancient");
+            "sandstorm", "aether", "hypnos", "storm", "bloodmoon", "penumbra", "celestial", "radioactive", "ancient",
+            "crimson", "slimey", "honeycomb", "frostbite", "blizzard", "abyss", "void", "aurora", "ember", "spectral",
+            "prismatic", "rust", "fungal", "glitch", "eclipse", "nightmare", "blossom", "neon", "ink", "golden",
+            "plague", "quicksilver", "firefly", "reef", "carnival", "drystorm", "cloudsea", "catacomb", "dream",
+            "meteor");
 
     private static BiomasPlugin instancia;
 
@@ -402,6 +407,33 @@ public final class BiomasPlugin extends Module implements Listener {
             rayos(w, z, a, e.getValue());
             gas(w, z, a, e.getValue());
             ecos(w, a, e.getValue());
+            sonidos(a, e.getValue());
+        }
+    }
+
+    /**
+     * Sonidos sueltos del clima: cada jugador oye de vez en cuando uno de la lista
+     * desde un punto a 4-14 bloques, solo el. Es lo que el bioma no sabe hacer con
+     * su 'additions' (un unico sonido, siempre encima del jugador y sin tono).
+     */
+    private void sonidos(ConfigurationSection a, List<Player> jugadores) {
+        ConfigurationSection s = a.getConfigurationSection("sonidos");
+        if (s == null) return;
+        double cada = s.getDouble("cada", 0);
+        List<String> lista = s.getStringList("lista");
+        if (cada <= 0 || lista.isEmpty()) return;
+        List<Double> tono = s.getDoubleList("tono");
+        float t0 = tono.isEmpty() ? 0.9f : tono.get(0).floatValue();
+        float t1 = tono.size() < 2 ? 1.1f : tono.get(1).floatValue();
+        float volumen = (float) s.getDouble("volumen", 0.8);
+        for (Player p : jugadores) {
+            if (random.nextDouble() > 5.0 / (cada * 20.0)) continue;
+            double ang = random.nextDouble() * Math.PI * 2;
+            double d = 4 + random.nextDouble() * 10;
+            Location desde = p.getLocation().add(Math.cos(ang) * d, -1 + random.nextDouble() * 3, Math.sin(ang) * d);
+            String id = lista.get(random.nextInt(lista.size()));
+            if (!id.contains(":")) id = "minecraft:" + id;
+            p.playSound(desde, id, SoundCategory.AMBIENT, volumen, t0 + random.nextFloat() * (t1 - t0));
         }
     }
 

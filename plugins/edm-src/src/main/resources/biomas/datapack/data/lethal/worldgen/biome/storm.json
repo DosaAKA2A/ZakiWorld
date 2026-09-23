@@ -6,7 +6,6 @@
   "minecraft:visual/sky_light_color": "#C8CDD8",
   "minecraft:gameplay/monsters_burn": false,
   "minecraft:audio/ambient_sounds": {
-   "loop": "minecraft:weather.rain",
    "additions": {
     "sound": "minecraft:entity.lightning_bolt.thunder",
     "tick_chance": 0.0012

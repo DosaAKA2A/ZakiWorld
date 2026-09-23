@@ -1,0 +1,68 @@
+{
+ "attributes": {
+  "minecraft:visual/sky_color": "#0F1F3A",
+  "minecraft:visual/fog_color": "#3E7F7A",
+  "minecraft:visual/cloud_color": "#FF9FE8D8",
+  "minecraft:visual/sky_light_color": "#CFEFE6",
+  "minecraft:visual/sunrise_sunset_color": "#FF7FE0C0",
+  "minecraft:visual/fog_end_distance": 200,
+  "minecraft:gameplay/monsters_burn": false,
+  "minecraft:visual/ambient_particles": [
+   {
+    "particle": {
+     "type": "minecraft:glow"
+    },
+    "probability": 0.004
+   },
+   {
+    "particle": {
+     "type": "minecraft:end_rod"
+    },
+    "probability": 0.001
+   }
+  ],
+  "minecraft:audio/ambient_sounds": {
+   "additions": {
+    "sound": "minecraft:block.amethyst_block.chime",
+    "tick_chance": 0.004
+   },
+   "mood": {
+    "sound": "minecraft:ambient.cave",
+    "tick_delay": 6000,
+    "block_search_extent": 8,
+    "offset": 2
+   }
+  }
+ },
+ "temperature": 0.2,
+ "downfall": 0.3,
+ "has_precipitation": false,
+ "carvers": [],
+ "features": [],
+ "spawn_costs": {},
+ "spawners": {
+  "ambient": [],
+  "axolotls": [],
+  "creature": [],
+  "misc": [],
+  "monster": [],
+  "underground_water_creature": [],
+  "water_ambient": [],
+  "water_creature": []
+ },
+ "effects": {
+  "sky_color": 991034,
+  "fog_color": 4095866,
+  "water_color": 1985116,
+  "water_fog_color": 663080,
+  "grass_color": 5214080,
+  "foliage_color": 4161392,
+  "dry_foliage_color": 4881002,
+  "mood_sound": {
+   "sound": "minecraft:ambient.cave",
+   "tick_delay": 6000,
+   "block_search_extent": 8,
+   "offset": 2
+  }
+ }
+}
