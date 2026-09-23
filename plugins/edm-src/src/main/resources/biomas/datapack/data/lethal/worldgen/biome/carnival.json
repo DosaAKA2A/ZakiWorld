@@ -20,12 +20,6 @@
    },
    {
     "particle": {
-     "type": "minecraft:note"
-    },
-    "probability": 0.004
-   },
-   {
-    "particle": {
      "type": "minecraft:totem_of_undying"
     },
     "probability": 0.001

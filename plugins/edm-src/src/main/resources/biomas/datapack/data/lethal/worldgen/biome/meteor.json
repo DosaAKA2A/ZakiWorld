@@ -12,18 +12,6 @@
     "particle": {
      "type": "minecraft:end_rod"
     },
-    "probability": 0.006
-   },
-   {
-    "particle": {
-     "type": "minecraft:flame"
-    },
-    "probability": 0.002
-   },
-   {
-    "particle": {
-     "type": "minecraft:crit"
-    },
     "probability": 0.002
    }
   ],

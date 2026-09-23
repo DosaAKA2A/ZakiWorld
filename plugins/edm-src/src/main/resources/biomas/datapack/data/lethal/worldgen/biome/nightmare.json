@@ -11,18 +11,6 @@
   "minecraft:visual/ambient_particles": [
    {
     "particle": {
-     "type": "minecraft:soul"
-    },
-    "probability": 0.006
-   },
-   {
-    "particle": {
-     "type": "minecraft:sculk_soul"
-    },
-    "probability": 0.002
-   },
-   {
-    "particle": {
      "type": "minecraft:ash"
     },
     "probability": 0.004

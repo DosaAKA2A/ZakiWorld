@@ -22,12 +22,6 @@
    },
    {
     "particle": {
-     "type": "minecraft:note"
-    },
-    "probability": 0.002
-   },
-   {
-    "particle": {
      "type": "minecraft:crit"
     },
     "probability": 0.002

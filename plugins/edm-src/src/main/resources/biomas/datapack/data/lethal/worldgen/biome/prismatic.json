@@ -5,46 +5,6 @@
   "minecraft:visual/cloud_color": "#FFFFE0FF",
   "minecraft:visual/sky_light_color": "#FFF6FF",
   "minecraft:gameplay/monsters_burn": false,
-  "minecraft:visual/ambient_particles": [
-   {
-    "particle": {
-     "type": "minecraft:dust",
-     "color": 16734858,
-     "scale": 1.0
-    },
-    "probability": 0.003
-   },
-   {
-    "particle": {
-     "type": "minecraft:dust",
-     "color": 5953791,
-     "scale": 1.0
-    },
-    "probability": 0.003
-   },
-   {
-    "particle": {
-     "type": "minecraft:dust",
-     "color": 11861850,
-     "scale": 1.0
-    },
-    "probability": 0.003
-   },
-   {
-    "particle": {
-     "type": "minecraft:dust",
-     "color": 16766810,
-     "scale": 1.0
-    },
-    "probability": 0.003
-   },
-   {
-    "particle": {
-     "type": "minecraft:glow"
-    },
-    "probability": 0.002
-   }
-  ],
   "minecraft:audio/ambient_sounds": {
    "additions": {
     "sound": "minecraft:block.amethyst_block.chime",

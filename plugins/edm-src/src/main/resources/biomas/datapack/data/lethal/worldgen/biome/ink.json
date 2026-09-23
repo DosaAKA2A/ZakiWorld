@@ -6,20 +6,6 @@
   "minecraft:visual/sky_light_color": "#FFFFFF",
   "minecraft:visual/sunrise_sunset_color": "#00000000",
   "minecraft:gameplay/monsters_burn": false,
-  "minecraft:visual/ambient_particles": [
-   {
-    "particle": {
-     "type": "minecraft:squid_ink"
-    },
-    "probability": 0.012
-   },
-   {
-    "particle": {
-     "type": "minecraft:glow_squid_ink"
-    },
-    "probability": 0.002
-   }
-  ],
   "minecraft:audio/ambient_sounds": {
    "additions": {
     "sound": "minecraft:entity.squid.ambient",

@@ -11,21 +11,9 @@
     "particle": {
      "type": "minecraft:dust",
      "color": 9058832,
-     "scale": 1.4
+     "scale": 1.0
     },
-    "probability": 0.006
-   },
-   {
-    "particle": {
-     "type": "minecraft:smoke"
-    },
-    "probability": 0.004
-   },
-   {
-    "particle": {
-     "type": "minecraft:item_cobweb"
-    },
-    "probability": 0.001
+    "probability": 0.0015
    }
   ],
   "minecraft:audio/ambient_sounds": {
