@@ -194,7 +194,10 @@ public final class Raiz extends BossFight {
             c.setAI(false);
             c.setGravity(false);
             c.setSilent(false);
-            c.setInvulnerable(true);
+            /* NUNCA invulnerable: vanilla solo deja pegar a una entidad invulnerable a
+             * los jugadores en creativo, y ni siquiera lanza el evento. En supervivencia
+             * nadie le bajaba vida a ROTTEN. Lo protegen onDamage (redirige el golpe al
+             * jefe) y onEnvironmentalDamage (cancela todo lo demas contra el cuerpo). */
             c.setCollidable(false);
             Compat.setAttribute(c, "scale", 2.0);
             c.customName(Component.text("ROTTEN", ACCENT));

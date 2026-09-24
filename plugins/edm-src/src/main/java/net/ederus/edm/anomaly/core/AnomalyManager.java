@@ -668,6 +668,12 @@ public final class AnomalyManager implements Listener {
         ActiveAnomaly event = current;
         if (event == null || event.fight() == null) return;
         LivingEntity boss = event.fight().entity();
+        // El cuerpo que se ve no tiene vida propia: nada que no sea un golpe lo toca.
+        LivingEntity shell = event.fight().shell();
+        if (shell != null && e.getEntity().equals(shell)) {
+            e.setCancelled(true);
+            return;
+        }
         if (boss == null || !e.getEntity().equals(boss)) {
             if (!Tags.isOurs(e.getEntity())) return;
         }

@@ -1,5 +1,5 @@
 name: EDO
-version: '1.2.1'
+version: '1.2.2'
 main: net.ederus.edm.EDMOneBlock
 api-version: '1.20'
 author: Iris Studio

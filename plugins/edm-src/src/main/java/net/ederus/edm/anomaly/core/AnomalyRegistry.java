@@ -3191,7 +3191,7 @@ public final class AnomalyRegistry {
                     AnomalyRegistry.icon("PALE_HANGING_MOSS", "VINE"), f -> raiz(f).nieblaDeMusgo());
             add(list, "rz_cerco", "Cerco de Espinas", 2, 320, 95, 4,
                     "Cuatro anillos que se cierran sobre el centro.",
-                    AnomalyRegistry.icon("SWEET_BERRY_BUSH", "DEAD_BUSH"), f -> raiz(f).cercoDeEspinas());
+                    AnomalyRegistry.icon("SWEET_BERRIES", "DEAD_BUSH"), f -> raiz(f).cercoDeEspinas());
             add(list, "rz_apagar", "Apagar el Bosque", 2, 280, 25, 3,
                     "Se lleva la luz y solo se ve lo que él ilumina.",
                     AnomalyRegistry.icon("CLOSED_EYEBLOSSOM", "BLACK_DYE"), f -> raiz(f).apagarElBosque());
@@ -3288,11 +3288,12 @@ public final class AnomalyRegistry {
         list.add(new Ability(id, display, description, phase, cooldown, cast, weight, icon, action));
     }
 
-    /** Primer material de la lista que exista en esta version. */
+    /** Primer material de la lista que exista en esta version y se pueda tener en la mano
+     *  (SWEET_BERRY_BUSH existe pero es solo bloque, y el menu de ROTTEN reventaba con el). */
     private static Material icon(String... names) {
         for (String n : names) {
             Material m = Material.matchMaterial(n);
-            if (m != null) return m;
+            if (m != null && m.isItem()) return m;
         }
         return Material.PAPER;
     }

@@ -20,7 +20,7 @@ import net.ederus.edm.tienda.TiendaPlugin;
 public class EDMOneBlock extends EDMPlugin {
 
     /** La version de EDO va aparte de la de EDM: pom (perfil oneblock), plugin.yml de resources-oneblock y aqui. */
-    public static final String VERSION_EDO = "1.2.1";
+    public static final String VERSION_EDO = "1.2.2";
 
     private String[] arte;
 
