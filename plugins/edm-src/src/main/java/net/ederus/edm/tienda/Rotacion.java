@@ -48,6 +48,12 @@ public final class Rotacion {
     private double demandaMin = 0.25, demandaMax = 0.75;
     private int topeOferta = 512, topeDemanda = 512;
     private long semillaFija = 0;
+    /** Articulos que nunca entran en Ofertas ni Demandas: siempre a su precio base.
+     *  Admite '*' como comodin (WAXED_*). De serie, todo lo que funciona como tierra. */
+    private List<String> excluir = List.of(
+            "DIRT", "COARSE_DIRT", "ROOTED_DIRT", "GRASS_BLOCK", "PODZOL", "MYCELIUM",
+            "DIRT_PATH", "FARMLAND", "MUD", "MUDDY_MANGROVE_ROOTS", "MOSS_BLOCK",
+            "PALE_MOSS_BLOCK", "CRIMSON_NYLIUM", "WARPED_NYLIUM");
 
     private volatile LocalDate dia;
     private final Map<String, Trato> ofertas = new LinkedHashMap<>();
@@ -76,6 +82,13 @@ public final class Rotacion {
         topeOferta = Math.max(0, sec.getInt("tope-diario-oferta", topeOferta));
         topeDemanda = Math.max(0, sec.getInt("tope-diario-demanda", topeDemanda));
         semillaFija = sec.getLong("semilla", semillaFija);
+        if (sec.contains("excluir")) {
+            List<String> lista = new ArrayList<>();
+            for (String s : sec.getStringList("excluir")) {
+                if (s != null && !s.isBlank()) lista.add(s.trim().toUpperCase(java.util.Locale.ROOT));
+            }
+            excluir = List.copyOf(lista);
+        }
         reponerTopes();
     }
 
@@ -125,7 +138,7 @@ public final class Rotacion {
         List<Catalogo.Articulo> vendibles = new ArrayList<>();
         for (String clave : catalogo.claves()) {
             Catalogo.Articulo a = catalogo.de(clave);
-            if (a == null) continue;
+            if (a == null || excluido(clave)) continue;
             /* La regla que hace imposible el arbitraje: quien entra en Ofertas
              * no puede venderse, y quien entra en Demandas no puede abaratarse. */
             if (a.seCompra() && !a.seVende()) soloCompra.add(a);
@@ -135,6 +148,15 @@ public final class Rotacion {
         Random azar = new Random(semilla(hoy));
         elegir(soloCompra, cuantasOfertas, azar, ofertaMin, ofertaMax, topeOferta, ofertas, true);
         elegir(vendibles, cuantasDemandas, azar, demandaMin, demandaMax, topeDemanda, demandas, false);
+    }
+
+    private boolean excluido(String clave) {
+        String k = clave.toUpperCase(java.util.Locale.ROOT);
+        for (String patron : excluir) {
+            if (patron.equals(k)) return true;
+            if (patron.contains("*") && k.matches(("\\Q" + patron + "\\E").replace("*", "\\E.*\\Q"))) return true;
+        }
+        return false;
     }
 
     private long semilla(LocalDate hoy) {

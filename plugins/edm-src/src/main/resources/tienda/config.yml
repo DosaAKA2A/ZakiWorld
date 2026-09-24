@@ -104,6 +104,23 @@ rotacion:
 
   # 0 = la semilla sale solo de la fecha. Ponle un numero si quieres otra serie.
   semilla: 0
+  # Nunca entran en Ofertas ni Demandas: siempre a su precio base. Admite * como
+  # comodin (WAXED_*). Por defecto, todo lo que funciona como tierra.
+  excluir:
+    - DIRT
+    - COARSE_DIRT
+    - ROOTED_DIRT
+    - GRASS_BLOCK
+    - PODZOL
+    - MYCELIUM
+    - DIRT_PATH
+    - FARMLAND
+    - MUD
+    - MUDDY_MANGROVE_ROOTS
+    - MOSS_BLOCK
+    - PALE_MOSS_BLOCK
+    - CRIMSON_NYLIUM
+    - WARPED_NYLIUM
 
 # ---------------------------------------------------------------------------
 # LA PANTALLA DE CANTIDAD. La ventana "COMPRANDO -> X" con los botones de mas y
