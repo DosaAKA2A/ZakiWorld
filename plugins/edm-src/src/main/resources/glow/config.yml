@@ -1,0 +1,43 @@
+# ---------------------------------------------------------------------------
+# Brillo (glow): el contorno de color alrededor del jugador.
+#
+# Sustituye a FancyGlow y usa sus mismos permisos:
+#   fancyglow.<color>      un color (red, dark_red, gold, yellow, green, dark_green,
+#                          aqua, dark_aqua, blue, dark_blue, light_purple,
+#                          dark_purple, white, gray, dark_gray, black)
+#   fancyglow.all_colors   los 16
+#   fancyglow.rainbow      el arcoiris (va cambiando de color)
+#   fancyglow.flashing     el parpadeo
+#   fancyglow.admin        todo, y /glow set para otros
+#
+# El color se cambia en el paquete del equipo de TAB que va a cada cliente, sin
+# tocar los equipos (TAB no lo permite). Necesita ProtocolLib.
+# ---------------------------------------------------------------------------
+version: 1
+
+# Cada cuantos ticks cambia de color el arcoiris (20 = un segundo).
+arcoiris-ticks: 10
+# Cada cuantos ticks se enciende o apaga el parpadeo.
+parpadeo-ticks: 10
+
+# Iconos del menu /glow: un material, o head:<base64> para una cabeza con textura.
+iconos:
+  red: 'head:eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvY2JkNjRjNjNlZDQ0MTg3NzIyNTE4ODZjODdiZDEyMmU2NzEyMzdkODEwNTEyNDM2MTdiNjNlNmU1ODc5Zjg1MyJ9fX0='
+  dark_red: 'head:eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvZmVjNTk2M2UxZjc4ZjJmMDU5NDNmNGRkMzIyMjQ2NjEzNzRjMjIwZWNmZGUxZTU0NzU0ZjVlZTFlNTU1ZGQifX19'
+  gold: 'head:eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvN2IyNDNmM2E3NGMyM2RiZTE2ODFjN2RiYjNlOTE2NzkyMjNkNmRhZWY0MTMzZTJjMzY1YzlmNDQ0OTRkIn19fQ=='
+  yellow: 'head:eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvNGYyOTE1ZGE0M2E0ZWY3NjQxZGRjYTJkMzFiYmE1MTVmNmY5ZjQ0OTU1YWUzOTExOGNiZTY0MzdjYjgifX19'
+  green: 'head:eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvNzNlOGQ3NDZlNGJjMWZjMjlkNWUzYmQ1MzIyYjI5ODZjYmFmODZiMDY2ZmE4MzYxOGJmMjQ2ZmRmMzczIn19fQ=='
+  dark_green: 'head:eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvYWMyN2JiZTg1Yzk1MTQzZDFhZDliNDM2NWVhYWE0ZjMyMDgyMDFhODM4MjdiNjY0Mzk2OGM4NTA1Yzk3In19fQ=='
+  aqua: 'head:eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvYWZiOWJlMzg4YzJhNGI4MDNlYjM2ZmFhNmM5Y2FlZGFlZjcyZDlhYWQ0MmIxNzBlZDAwNWY0ZDRhNTMyNjMzYyJ9fX0='
+  dark_aqua: 'head:eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvYjY4ZGVhYjlhNzU2MzRhMWM4MTY0NzRmYzgyNjU5MDgyYjM2MmU5NzM0OTFmZjc3OTRkYmRiNmFkZjEwZTkifX19'
+  blue: 'head:eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvNjU3MDVmM2FjNmFkNjI3NjRlN2FhMzMyNWI3YjQ4ZGRjNTU2NDY4NTExYzMwZDMxODczYTZmNGNkOGVjZjA4MyJ9fX0='
+  dark_blue: 'head:eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvMmFhMDE2M2ZiODAyYWIxOGE5ZWVjZjljOTk2Nzk3NmJiMTc5NDFjMjMxZTU1Y2IyNTZkM2RmNGNlZjlhMSJ9fX0='
+  light_purple: 'head:eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvY2NhZWFmY2M1ZTJlMjg5OTU4Mzk0MTQ1NWEyOTQyYTVmZGMyZmU2ODk3ODJhZjFkN2Q1M2QxYTYyMjE3OGE4MSJ9fX0='
+  dark_purple: 'head:eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvNTFlOGM5NTcwODg0MDJkMTk3NjU0NGQxODRkMTk3NzgwYjQ1MjViOTNlZWE2OWI2NTA4NTJkYWE3MjRjN2EifX19'
+  white: 'head:eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvZmEyMWE2YWQ3MGMwMmJlZDk4ZjQ1NzgxZjFjOTNkNWNhZjM2MWM0MzgxM2NiZTZlODZjZTc5OGMxMzRlOCJ9fX0='
+  gray: 'head:eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvNWQ2NmUyMmZiYjEyY2UzZjRiOGRhNzQxNGYzMzg5NTFjOWY5YjM0Y2E5ZGI0ZmVhZGQwMTdhMDI1NjEwM2EzNCJ9fX0='
+  dark_gray: 'head:eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvZTFkMWEzM2UxOWY1MmNkOTcwNTRmMjQxYzc3NjA3NzExZWJjZjRkOGRiYTZkZjk0NDI4Y2RhNzRjNWU2MmY3In19fQ=='
+  black: 'head:eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvOWRmMjY3ZGQ3YmU4OGM5ZmRhZTU5YWNkMzlhMGFhZWNkMjM3NWIwNjE1MjdjOTZhMmJkNzU2YzRlNTE1YTYifX19'
+  rainbow: 'head:eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvNmZmNmE0YWY4ZmQ2NGE4NzQ0OGU4Mjg3OWExMmZmNTUxOTRjODc0ZDE0ZTQ3MmMyNmQ4ZGU4NmQxMjA4Mjc0ZSJ9fX0='
+  apagar: 'head:eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvNzU4MjMzODViMGMyZTBiZjljM2M3MTU5OWRhZjU2ODI0YTc2YTZmMjQwYjZmNGM0YWQ5Mjc4NzlkOTcwODNkOCJ9fX0='
+  parpadeo: GLOW_INK_SAC

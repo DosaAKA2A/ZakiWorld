@@ -12,6 +12,8 @@ modulos:
   tienda: true
   flex: true
   biomas: true
+  # glow: el brillo, sustituye a FancyGlow (necesita ProtocolLib).
+  glow: true
 
 # Bitacoras de lectura: un fichero de texto por modulo y por dia en
 # plugins/EDO/logs/, con una linea por suceso y la hora delante. Estan para

@@ -1,0 +1,45 @@
+# ---------------------------------------------------------------------------
+# Todo lo que el brillo le dice al jugador. Codigos: &7, &#RRGGBB.
+# Una linea SIN prefijo empieza con {sin-prefijo}.
+# ---------------------------------------------------------------------------
+version: 1
+
+prefijo: ' &#545454▸ '
+
+puesto: '&7Ahora brillas en %color%&7.'
+arcoiris: '&7Ahora brillas en &#FF5555a&#FFAA00r&#FFFF55c&#55FF55o&#55FFFFi&#5555FFr&#FF55FFi&#FF5555s&7.'
+apagado: '&7Ya no brillas.'
+parpadeo-on: '&7Tu brillo ahora parpadea.'
+parpadeo-off: '&7Tu brillo ya no parpadea.'
+sin-brillo: '&7Primero elige un color con &f/glow&7.'
+sin-permiso: '&#FF5C5CTodavía no tienes ese brillo.'
+no-existe: '&#FF5C5CNo conozco el color &f%color%&#FF5C5C. Mira &f/glow list&#FF5C5C.'
+lista: '&7Colores: &f%lista%'
+sin-equipo: '&#FF5C5CTu brillo está puesto, pero no encuentro tu equipo de TAB: saldrá blanco.'
+otro-puesto: '&7%jugador% ahora brilla en %color%&7.'
+otro-apagado: '&7%jugador% ya no brilla.'
+no-jugador: '&#FF5C5CNo encuentro al jugador &f%jugador%&#FF5C5C.'
+recargado: '&7Brillo recargado.'
+uso: '&7Uso: &f/glow &7[color | rainbow | flash | off | list]'
+uso-admin: '&7Admin: &f/glow set <jugador> <color|rainbow|off>&7, &f/glow reload'
+
+# El menu
+titulo-menu: 'Brillo'
+actual: '&#D7F3FFTu brillo'
+actual-ninguno: '&#8A8A8ANo brillas.'
+actual-lore: '&#8A8A8ABrillas en %color%'
+clic-apagar: '&e► Clic para apagarlo'
+muestra: '&#8A8A8AAsí se ve tu contorno.'
+bloqueado: '&#FF5C5CBloqueado'
+en-uso: '&#0083FD✔ En uso'
+clic-usar: '&e► Clic para usarlo'
+arcoiris-nombre: '&#FF5555A&#FFAA00r&#FFFF55c&#55FF55o&#55FFFFí&#5555FFr&#FF55FFi&#FF5555s'
+arcoiris-lore: '&#8A8A8ACambia de color sin parar.'
+parpadeo-nombre: '&#D7F3FFParpadeo'
+parpadeo-lore: '&#8A8A8AEl brillo se enciende y se apaga.'
+activado: '&#0083FD✔ Activado'
+clic-activar: '&e► Clic para activarlo'
+clic-desactivar: '&e► Clic para desactivarlo'
+apagar-nombre: '&#D7F3FFApagar brillo'
+apagar-lore: '&#8A8A8AQuita el contorno.'
+cerrar: '&#8A8A8ACerrar'

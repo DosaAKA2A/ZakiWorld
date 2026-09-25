@@ -20,7 +20,7 @@ import net.ederus.edm.tienda.TiendaPlugin;
 public class EDMOneBlock extends EDMPlugin {
 
     /** La version de EDO va aparte de la de EDM: pom (perfil oneblock), plugin.yml de resources-oneblock y aqui. */
-    public static final String VERSION_EDO = "1.2.3";
+    public static final String VERSION_EDO = "1.3.0";
 
     private String[] arte;
 
@@ -64,6 +64,12 @@ public class EDMOneBlock extends EDMPlugin {
 
     @Override
     protected void modulosOpcionales() {
-        // Tooltip, misiones y bp no van en OneBlock.
+        // Tooltip, misiones y bp no van en OneBlock. El brillo si, y como en EDS
+        // depende de ProtocolLib (sin el, la clase ni se carga).
+        if (getServer().getPluginManager().getPlugin("ProtocolLib") != null) {
+            arrancar(new net.ederus.edm.glow.GlowPlugin(this));
+        } else {
+            getLogger().info("ProtocolLib no esta instalado: el modulo de brillo queda apagado.");
+        }
     }
 }

@@ -32,6 +32,8 @@ modulos:
   tooltip: true
   misiones: true
   bp: true
+  # El brillo (glow), sustituye a FancyGlow. Tambien necesita ProtocolLib.
+  glow: true
 
 # Bitacoras de lectura: un fichero de texto por modulo y por dia en
 # plugins/EDM/logs/, con una linea por suceso y la hora delante. Estan para

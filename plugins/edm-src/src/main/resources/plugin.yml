@@ -1,5 +1,5 @@
 name: EDM
-version: '1.71.3'
+version: '1.72.0'
 main: net.ederus.edm.EDMPlugin
 api-version: '1.20'
 author: Iris Studio
@@ -7,6 +7,10 @@ description: Nucleo de Ederus - Rip, Anomaly, libros, avisos de tiendas, tienda 
 softdepend: [Vault, WorldGuard, ProtectionStones, MMOItems, LibsDisguises, AdvancedEnchantments, UltimateMobCoins, Quests, ProtocolLib, BattlePass, PlaceholderAPI]
 
 commands:
+  glow:
+    description: 'Tu brillo: el contorno de color alrededor tuyo'
+    usage: /glow [color|rainbow|flash|off|list]
+    aliases: [glows]
   edm:
     description: Estado del nucleo de Ederus
     usage: /edm [reload]
@@ -79,6 +83,18 @@ commands:
     permission: ederus.libro
 
 permissions:
+  fancyglow.admin:
+    description: Todos los brillos y /glow set para otros (mismo nodo que FancyGlow)
+    default: op
+  fancyglow.all_colors:
+    description: Los 16 colores de brillo
+    default: false
+  fancyglow.rainbow:
+    description: El brillo arcoiris
+    default: false
+  fancyglow.flashing:
+    description: El brillo que parpadea
+    default: false
   ederus.dl:
     description: Abre el menu de cajas de mazmorra y entrega llaves y bovedas
     default: op
