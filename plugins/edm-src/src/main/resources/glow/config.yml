@@ -10,8 +10,8 @@
 #   fancyglow.flashing     el parpadeo
 #   fancyglow.admin        todo, y /glow set para otros
 #
-# El color se cambia en el paquete del equipo de TAB que va a cada cliente, sin
-# tocar los equipos (TAB no lo permite). Necesita ProtocolLib.
+# El color se lo pide a TAB por su API: añade el codigo de color al final del
+# prefijo del equipo, que no se ve (el nametag es de UnlimitedNameTags). Necesita TAB.
 # ---------------------------------------------------------------------------
 version: 1
 

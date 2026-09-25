@@ -12,7 +12,7 @@ modulos:
   tienda: true
   flex: true
   biomas: true
-  # glow: el brillo, sustituye a FancyGlow (necesita ProtocolLib).
+  # glow: el brillo, sustituye a FancyGlow (necesita TAB).
   glow: true
 
 # Bitacoras de lectura: un fichero de texto por modulo y por dia en

@@ -16,8 +16,6 @@ import org.bukkit.event.player.PlayerQuitEvent;
 import org.bukkit.permissions.Permissible;
 import org.bukkit.scheduler.BukkitTask;
 
-import com.comphenix.protocol.wrappers.EnumWrappers;
-
 import net.ederus.edm.EDMPlugin;
 import net.ederus.edm.Module;
 import net.ederus.edm.comun.Estilo;
@@ -28,8 +26,8 @@ import net.kyori.adventure.text.Component;
  * Brillo: el contorno de color de los jugadores. Sustituye a FancyGlow (y a
  * EderusGlow en el Test), con sus permisos.
  *
- * Va en EDS y en EDO. Necesita ProtocolLib: el color no se puede poner con la
- * API de Bukkit sin pelearse con TAB (ver Equipos).
+ * Va en EDS y en EDO. El color se lo pide a TAB por su API (ver ColorTab): el
+ * contorno siempre sale del color del equipo, y los equipos son de TAB.
  */
 public final class GlowPlugin extends Module implements Listener {
 
@@ -58,7 +56,7 @@ public final class GlowPlugin extends Module implements Listener {
 
     final TextosBrillo textos = new TextosBrillo();
     private Almacen almacen;
-    private Equipos equipos;
+    private ColorTab tab;
     private MenuBrillo menu;
     private BukkitTask arcoiris;
     private BukkitTask parpadeo;
@@ -78,8 +76,7 @@ public final class GlowPlugin extends Module implements Listener {
         textos.cargar(new File(getDataFolder(), "mensajes.yml"));
 
         almacen = new Almacen(new File(getDataFolder(), "jugadores.yml"), getLogger());
-        equipos = new Equipos(core);
-        equipos.registrar();
+        tab = new ColorTab(getLogger());
         menu = new MenuBrillo(this);
 
         core.getServer().getPluginManager().registerEvents(this, this);
@@ -113,14 +110,13 @@ public final class GlowPlugin extends Module implements Listener {
     public void onDisable() {
         if (arcoiris != null) arcoiris.cancel();
         if (parpadeo != null) parpadeo.cancel();
-        if (equipos != null) {
+        if (tab != null) {
             for (Player p : Bukkit.getOnlinePlayers()) {
                 if (almacen.de(p.getUniqueId()) != null) {
                     p.setGlowing(false);
-                    equipos.fijar(p, null);
+                    tab.fijar(p, null);
                 }
             }
-            equipos.soltar();
         }
     }
 
@@ -147,7 +143,7 @@ public final class GlowPlugin extends Module implements Listener {
                 Player p = Bukkit.getPlayer(e.getKey());
                 if (p == null || !puede(p, e.getValue())) continue;
                 /* Solo los 12 colores vivos; el blanco, grises y negro no parecen arcoiris. */
-                equipos.fijar(p, todos[paso % 12].formato);
+                tab.fijar(p, todos[paso % 12].codigo);
             }
         }, ticksArco, ticksArco);
         parpadeo = Bukkit.getScheduler().runTaskTimer(core, () -> {
@@ -174,7 +170,7 @@ public final class GlowPlugin extends Module implements Listener {
 
     @EventHandler
     public void alSalir(PlayerQuitEvent e) {
-        equipos.fijar(e.getPlayer(), null);
+        // TAB olvida al jugador al salir; no hace falta devolverle nada.
     }
 
     /* ---------- lo que hacen el comando y el menu ---------- */
@@ -194,12 +190,18 @@ public final class GlowPlugin extends Module implements Listener {
         Almacen.Eleccion e = almacen.de(p.getUniqueId());
         if (e == null || !puede(p, e)) {
             if (p.isGlowing() && !p.hasPotionEffect(org.bukkit.potion.PotionEffectType.GLOWING)) p.setGlowing(false);
-            equipos.fijar(p, null);
+            tab.fijar(p, null);
             return;
         }
         p.setGlowing(true);
         Brillo b = e.brillo();
-        equipos.fijar(p, e.arcoiris() ? Brillo.RED.formato : b == null ? EnumWrappers.ChatFormatting.WHITE : b.formato);
+        char codigo = e.arcoiris() ? Brillo.RED.codigo : b == null ? 'f' : b.codigo;
+        if (!tab.fijar(p, codigo)) {
+            /* TAB aun no lo tiene cargado (acaba de entrar): otro intento en un segundo. */
+            Bukkit.getScheduler().runTaskLater(core, () -> {
+                if (p.isOnline()) tab.fijar(p, codigo);
+            }, 20L);
+        }
     }
 
     void elegir(Player p, Almacen.Eleccion e) {
@@ -214,7 +216,7 @@ public final class GlowPlugin extends Module implements Listener {
     }
 
     boolean conoceEquipo(Player p) {
-        return equipos.conoceEquipo(p);
+        return ColorTab.instalado();
     }
 
     boolean puede(Permissible p, Almacen.Eleccion e) {

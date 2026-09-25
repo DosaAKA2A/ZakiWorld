@@ -32,7 +32,7 @@ modulos:
   tooltip: true
   misiones: true
   bp: true
-  # El brillo (glow), sustituye a FancyGlow. Tambien necesita ProtocolLib.
+  # El brillo (glow), sustituye a FancyGlow. Necesita TAB.
   glow: true
 
 # Bitacoras de lectura: un fichero de texto por modulo y por dia en
