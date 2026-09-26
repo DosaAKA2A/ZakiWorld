@@ -395,9 +395,12 @@ final class Kit implements Listener {
                 lore = false;
                 continue;
             }
-            Component ultima = l.get(l.size() - 1);
-            if (!LINEA.equals(net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer.plainText().serialize(ultima))) lore = false;
-            for (Component c : l) if (c.decoration(TextDecoration.ITALIC) != TextDecoration.State.FALSE) sinCursiva = false;
+            var plano = net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer.plainText();
+            if (!LINEA.equals(plano.serialize(l.get(l.size() - 1)))) lore = false;
+            // Las lineas en blanco (el hueco del lore del Frasco) no se ven: da igual su cursiva.
+            for (Component c : l) {
+                if (!plano.serialize(c).isEmpty() && c.decoration(TextDecoration.ITALIC) != TextDecoration.State.FALSE) sinCursiva = false;
+            }
         }
         h.ok("todo el kit lleva lethal_world:prestado", todas);
         h.ok("todo el kit lleva la linea de prestado", lore);
