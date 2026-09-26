@@ -81,6 +81,8 @@ final class Tasacion {
         final int[] porGrado = new int[5];
         /** I-II que pasaron el tope del dia, por grado. */
         final int[] exceso = new int[5];
+        /** Apilables (sin UUID) pagadas, por grado: lo unico que cuenta para el tope del dia. */
+        final int[] monton = new int[5];
         final List<String> cobrar = new ArrayList<>();
         final List<String> falsas = new ArrayList<>();
         final List<String> duplicadas = new ArrayList<>();
@@ -106,7 +108,7 @@ final class Tasacion {
         this.hc = hc;
         Autotest.registrar("tasacion", this::autotest);
         Subcomandos.lw().registrar("tasar",
-                "tasar <jugador> <g1> <g2> <g3> [especial:grado:N[:valida|:minijefe] ...]: tasa Reliquias virtuales",
+                "tasar <jugador> <g1> <g2> <g3> [especial:grado:N[:valida|:minijefe] ...] | tasar <jugador> reset: tasa Reliquias virtuales",
                 "ederus.mundos", this::comando, this::tab);
     }
 
@@ -199,10 +201,11 @@ final class Tasacion {
         }
         for (String id : k.caducadas) bit.anotar("reliquia", "caducada", nombre, id);
         for (int g = 1; g <= 2; g++) if (k.exceso[g] > 0) bit.anotar("reliquia", "exceso", nombre, String.valueOf(g), String.valueOf(k.exceso[g]));
-        if (k.porGrado[1] > 0 || k.porGrado[2] > 0 || k.exceso[1] > 0 || k.exceso[2] > 0) {
+        // Solo las apilables: una Campana II o una Lagrima II llevan UUID y no gastan el tope.
+        if (k.monton[1] > 0 || k.monton[2] > 0) {
             hc.datos().set(rutaDia + ".dia", dia);
-            hc.datos().set(rutaDia + ".1", ya1 + k.porGrado[1]);
-            hc.datos().set(rutaDia + ".2", ya2 + k.porGrado[2]);
+            hc.datos().set(rutaDia + ".1", ya1 + k.monton[1]);
+            hc.datos().set(rutaDia + ".2", ya2 + k.monton[2]);
         }
         if (primera) hc.datos().set("primera-extraccion." + u, dia);
         hc.marcarSucio();
@@ -412,6 +415,7 @@ final class Tasacion {
             k.esencias += paga * v.esencias()[g];
             k.mc += paga * v.mc()[g];
             k.porGrado[g] += paga;
+            k.monton[g] += paga;
             k.validas += paga;
             if (paga > 0 && g >= 2) k.dosOMas = true;
         }
@@ -458,6 +462,21 @@ final class Tasacion {
      * a su nombre, sin tocar su inventario. Paga, escribe la C y cuenta los topes del dia.
      */
     private void comando(CommandSender quien, String[] args) {
+        if (args.length == 3 && args[2].equalsIgnoreCase("reset")) {
+            // Solo el tope diario de I-II: para repetir una prueba el mismo dia. La primera
+            // salida del dia no se toca (eso lo pagaria dos veces).
+            OfflinePlayer op = Reliquias.jugador(args[1]);
+            if (op == null) {
+                quien.sendMessage(ComandoCalamity.mensaje("No encuentro a ese jugador."));
+                return;
+            }
+            hc.datos().set("tasacion-dia." + op.getUniqueId(), null);
+            hc.marcarSucio();
+            hc.plugin().bitacora().anotar("tasacion", "reset-tope", Minijefes.nombreDe(op), quien.getName());
+            quien.sendMessage(ComandoCalamity.mensaje("Tope diario de Astillas y Fragmentos de "
+                    + Minijefes.nombreDe(op) + " a cero."));
+            return;
+        }
         if (args.length < 5) {
             quien.sendMessage(ComandoCalamity.mensaje(
                     "Uso: /lw hardcore tasar <jugador> <g1> <g2> <g3> [especial:grado:N[:valida|:minijefe] ...]"));
@@ -512,7 +531,8 @@ final class Tasacion {
 
     private List<String> tab(String[] args) {
         if (args.length == 2) return Reliquias.conectados();
-        if (args.length >= 3 && args.length <= 5) return List.of("0", "1", "5");
+        if (args.length == 3) return List.of("0", "1", "5", "reset");
+        if (args.length <= 5) return List.of("0", "1", "5");
         List<String> op = new ArrayList<>(List.of("campana:3:45", "campana:4:52", "lagrima:4:60:valida", "lagrima:3:30",
                 "eclipsada:3", "mayor"));
         for (String t : Minijefes.TIPOS) op.add("sello:4:" + t);
@@ -548,6 +568,10 @@ final class Tasacion {
         h.igual("70 I con 10 ya tasadas hoy: pagan 50", 50, b2.porGrado[1]);
         Cuenta b3 = contar(List.of(pieza(2, 40)), reg, 0, 25, v, ahora);
         h.igual("40 II con 25 hoy: pagan 5", 5, b3.porGrado[2]);
+        String cam2 = UUID.randomUUID().toString();
+        reg.emitida(cam2, 2, "prueba", ahora);
+        Cuenta b4 = contar(List.of(uuid(2, cam2, Reliquias.CAMPANA, 20, null, false, ahora)), reg, 0, 30, v, ahora);
+        h.ok("una Campana II no gasta ni respeta el tope de las II", b4.porGrado[2] == 1 && b4.monton[2] == 0);
 
         // Aceptacion 3: Campana III N45, Lagrima IV N60 valida, Sello IV del Heraldo.
         String cam = UUID.randomUUID().toString(), lag = UUID.randomUUID().toString(), sel = UUID.randomUUID().toString();
