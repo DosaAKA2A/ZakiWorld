@@ -196,6 +196,32 @@ reiniciar nada.
 Dos cosas que NO se portaron y conviene saber: el "crash" de cliente (tirarle el
 juego a alguien a proposito es otra cosa) y las bromas de chiste grueso.
 
+## El modulo `anomaly`: un fichero por jefe
+
+`plugins/EDM/anomaly/config.yml` (en OneBlock `plugins/EDO/anomaly/`) solo lleva los
+ajustes GENERALES: `general`, `automatico`, `combate`, `arena`, `botin`, `anuncio`,
+`logros` y `menu`. Lo de cada anomalia va en su propio fichero, al estilo MythicMobs:
+
+- **`Anomalias/<id>.yml`**, la ficha: `activa`, `clase`, `nombre`, `vida`, `dano`
+  (multiplicador de todas sus habilidades), `descripcion` y `amenaza` (el hover del
+  anuncio), `spawn` (punto fijo), `bioma` (clima de la arena) y, opcional, `mobcoins`.
+  La lee y escribe `core/AnomalyFiles`: el menu guarda al momento **solo** el fichero de
+  la anomalia que se toca. Una anomalia registrada sin fichero lo recibe con sus valores
+  de diseno, asi que desde el primer arranque estan todas a la vista.
+- **`Skills/Anomalias/<id>.yml`**, los numeros de sus habilidades (`core/SkillSettings`):
+  por cada una `activa`, `fase`, `cooldown` y `cast` (en ticks), `peso` y `dano`. La
+  logica sigue en el codigo (`AnomalyRegistry.xxxAbilities()`); el fichero se genera con
+  los valores del codigo y un comentario con el nombre y que hace cada habilidad. Una
+  habilidad nueva del plugin se añade sola al fichero. El `dano` de una habilidad se
+  aplica en `BossFight.hit()` (y en el `strike()` de los gemelos) mientras dura su
+  `cast`; lo que deje pegando despues cuenta como x1.0.
+
+Las dos cosas se releen con `/anomaly reload`. **Migracion**: si `config.yml` aun trae
+la seccion vieja `anomalias:` y no existe `Anomalias/`, al arrancar se copia el config a
+`config.yml.migrado-<fecha>`, cada `anomalias.<id>` pasa entero a su ficha (claves
+desconocidas incluidas; sin `bioma` se escribe el clima de serie, que era lo que valia)
+y la seccion se borra del config.
+
 ## El modulo `anomaly`: los esbirros (1.24.0, retocados en la 1.25.1 y la 1.26.0)
 
 Anomaly dejo de ser solo un generador de jefes. Desde la **1.26.0** son **dos mandos

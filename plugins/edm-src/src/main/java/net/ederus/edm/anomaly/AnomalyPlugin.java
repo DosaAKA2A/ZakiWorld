@@ -77,6 +77,7 @@ public final class AnomalyPlugin extends net.ederus.edm.Module {
         this.settings = new Settings(this);
         this.anchors = new Anchors();
         this.registry = new AnomalyRegistry(this);
+        this.registry.load(); // fichas (Anomalias/) y habilidades (Skills/Anomalias/)
         this.drops = new DropStore(this);
         this.drops.load();
         this.protection = new Protection(this);
@@ -252,6 +253,7 @@ public final class AnomalyPlugin extends net.ederus.edm.Module {
         manager.stop(true);
         Anim.cancelAll();
         reloadConfig();
+        registry.load();
         drops.load();
         manager.restartScheduler();
         // Los esbirros vivos son del catalogo viejo: fuera y que renazcan del nuevo.

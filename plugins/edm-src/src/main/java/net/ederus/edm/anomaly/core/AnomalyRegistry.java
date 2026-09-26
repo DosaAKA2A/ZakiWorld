@@ -43,9 +43,14 @@ public final class AnomalyRegistry {
     private final AnomalyPlugin plugin;
     private final Map<String, AnomalyType> types = new LinkedHashMap<>();
     private final Random random = new Random();
+    /** Las fichas (Anomalias/<id>.yml) y los numeros de sus habilidades (Skills/Anomalias/). */
+    private final AnomalyFiles fichas;
+    private final SkillSettings skills;
 
     public AnomalyRegistry(AnomalyPlugin plugin) {
         this.plugin = plugin;
+        this.fichas = new AnomalyFiles(plugin);
+        this.skills = new SkillSettings(plugin, fichas);
         register(new KnightType());
         register(new GoatType());
         register(new BunnyType());
@@ -65,6 +70,32 @@ public final class AnomalyRegistry {
         register(new CopperTwinsType());
         register(new AlbaType());
         register(new RaizType());
+    }
+
+    /**
+     * Lee (o relee, en /anomaly reload) las fichas y los ajustes de habilidades. Pide
+     * una vez la lista de cada anomalia para que los ficheros de skills que falten se
+     * generen ya en el arranque y el admin los tenga todos a la vista.
+     */
+    public void load() {
+        fichas.load(types.values());
+        skills.clear();
+        for (AnomalyType t : types.values()) {
+            try {
+                t.abilities();
+            } catch (Throwable ex) {
+                plugin.getLogger().warning("No se pudieron leer las habilidades de " + t.id() + ": " + ex);
+            }
+        }
+    }
+
+    public AnomalyFiles fichas() {
+        return fichas;
+    }
+
+    /** El nombre de la ficha; si no hay, el de diseno. */
+    private String nombre(String id, String def) {
+        return fichas.getString(id, "nombre", def);
     }
 
     public void register(AnomalyType type) {
@@ -171,24 +202,24 @@ public final class AnomalyRegistry {
     // ------------------------------------------------------- ajustes por anomalia
 
     public boolean isEnabled(AnomalyType type) {
-        return plugin.getConfig().getBoolean("anomalias." + type.id() + ".activa", true);
+        return fichas.getBoolean(type.id(), "activa", true);
     }
 
     public void setEnabled(AnomalyType type, boolean value) {
-        plugin.settings().set("anomalias." + type.id() + ".activa", value);
+        fichas.set(type.id(), "activa", value);
     }
 
     /**
-     * La clase de la anomalia (Esbirro, General o Monarca). Se guarda en config.yml
+     * La clase de la anomalia (Esbirro, General o Monarca). Se guarda en su ficha
      * en cuanto se toca desde el menu; si nunca se ha tocado vale la de diseno.
      */
     public AnomalyClass classOf(AnomalyType type) {
-        String raw = plugin.getConfig().getString("anomalias." + type.id() + ".clase", null);
+        String raw = fichas.getString(type.id(), "clase", null);
         return AnomalyClass.parse(raw, type.defaultClass());
     }
 
     public void setClass(AnomalyType type, AnomalyClass clazz) {
-        plugin.settings().set("anomalias." + type.id() + ".clase", clazz.name());
+        fichas.set(type.id(), "clase", clazz.name());
     }
 
     /**
@@ -199,53 +230,51 @@ public final class AnomalyRegistry {
      * vuelve a ser aleatoria sola y el menu lo ensena como tal.
      */
     public Location spawnPoint(AnomalyType type) {
-        String base = "anomalias." + type.id() + ".spawn";
-        var cfg = plugin.getConfig();
-        String worldName = cfg.getString(base + ".mundo", null);
+        String id = type.id();
+        String worldName = fichas.getString(id, "spawn.mundo", null);
         if (worldName == null || worldName.isBlank()) return null;
         org.bukkit.World world = plugin.getServer().getWorld(worldName);
         if (world == null) return null;
-        return new Location(world, cfg.getDouble(base + ".x"), cfg.getDouble(base + ".y"), cfg.getDouble(base + ".z"));
+        return new Location(world, fichas.getDouble(id, "spawn.x", 0), fichas.getDouble(id, "spawn.y", 0),
+                fichas.getDouble(id, "spawn.z", 0));
     }
 
     public void setSpawnPoint(AnomalyType type, Location where) {
         if (where == null || where.getWorld() == null) return;
-        String base = "anomalias." + type.id() + ".spawn";
-        var cfg = plugin.getConfig();
-        cfg.set(base + ".mundo", where.getWorld().getName());
-        cfg.set(base + ".x", where.getX());
-        cfg.set(base + ".y", where.getY());
-        cfg.set(base + ".z", where.getZ());
-        plugin.saveConfig();
+        Map<String, Object> spawn = new LinkedHashMap<>();
+        spawn.put("mundo", where.getWorld().getName());
+        spawn.put("x", where.getX());
+        spawn.put("y", where.getY());
+        spawn.put("z", where.getZ());
+        fichas.setSection(type.id(), "spawn", spawn);
     }
 
     /** Borra la marca: la anomalia vuelve a aparecer en un sitio aleatorio. */
     public void clearSpawnPoint(AnomalyType type) {
-        plugin.getConfig().set("anomalias." + type.id() + ".spawn", null);
-        plugin.saveConfig();
+        fichas.setSection(type.id(), "spawn", Map.of());
     }
 
     /**
      * De donde viene la anomalia, que es lo que cuenta el hover del anuncio.
      *
-     * Se puede reescribir entera desde config.yml sin tocar el plugin: basta con poner
-     * `anomalias.<id>.descripcion` como una lista de lineas. Si no esta, se usa la que
+     * Se puede reescribir entera desde la ficha sin tocar el plugin: basta con poner
+     * `descripcion` en Anomalias/<id>.yml como una lista de lineas. Si no esta, se usa la que
      * trae escrita la anomalia.
      */
     public List<String> origin(AnomalyType type) {
-        List<String> custom = plugin.getConfig().getStringList("anomalias." + type.id() + ".descripcion");
+        List<String> custom = fichas.getStringList(type.id(), "descripcion");
         return custom.isEmpty() ? type.origin() : custom;
     }
 
-    /** Lo mismo para el aviso de peligro: `anomalias.<id>.amenaza`. */
+    /** Lo mismo para el aviso de peligro: `amenaza` en la ficha. */
     public List<String> threat(AnomalyType type) {
-        List<String> custom = plugin.getConfig().getStringList("anomalias." + type.id() + ".amenaza");
+        List<String> custom = fichas.getStringList(type.id(), "amenaza");
         return custom.isEmpty() ? type.threat() : custom;
     }
 
     /** Vida base configurada; si no hay override, la que trae la anomalia. */
     public double health(AnomalyType type) {
-        return plugin.getConfig().getDouble("anomalias." + type.id() + ".vida", type.baseHealth());
+        return fichas.getDouble(type.id(), "vida", type.baseHealth());
     }
 
     /**
@@ -256,7 +285,7 @@ public final class AnomalyRegistry {
     public static final double MAX_HEALTH_SETTING = 400000;
 
     public void setHealth(AnomalyType type, double value) {
-        plugin.settings().set("anomalias." + type.id() + ".vida",
+        fichas.set(type.id(), "vida",
                 Math.round(Fx.clamp(value, 100, MAX_HEALTH_SETTING)));
     }
 
@@ -278,12 +307,12 @@ public final class AnomalyRegistry {
     public static final double MAX_DAMAGE_MULTIPLIER = 20.0;
 
     public double damageMultiplier(AnomalyType type) {
-        return Fx.clamp(plugin.getConfig().getDouble("anomalias." + type.id() + ".dano", 1.0),
+        return Fx.clamp(fichas.getDouble(type.id(), "dano", 1.0),
                 0.1, MAX_DAMAGE_MULTIPLIER);
     }
 
     public void setDamageMultiplier(AnomalyType type, double value) {
-        plugin.settings().set("anomalias." + type.id() + ".dano",
+        fichas.set(type.id(), "dano",
                 Math.round(Fx.clamp(value, 0.1, MAX_DAMAGE_MULTIPLIER) * 10.0) / 10.0);
     }
 
@@ -312,7 +341,7 @@ public final class AnomalyRegistry {
 
         @Override
         public String display() {
-            return plugin.getConfig().getString("anomalias." + id() + ".nombre", "Caballero Sepulcral");
+            return nombre(id(), "Caballero Sepulcral");
         }
 
         @Override
@@ -451,7 +480,7 @@ public final class AnomalyRegistry {
                 "Recluta entre tres y seis caidos que salen del suelo alrededor.",
                 icon("SKELETON_SPAWN_EGG", "BONE_MEAL"), f -> knight(f).boneLevy());
 
-        return list;
+        return skills.aplicar(SepulchralKnight.ID, list);
     }
 
 
@@ -467,7 +496,7 @@ public final class AnomalyRegistry {
 
         @Override
         public String display() {
-            return plugin.getConfig().getString("anomalias." + id() + ".nombre", "Cabra Gritona");
+            return nombre(id(), "Cabra Gritona");
         }
 
         @Override
@@ -595,7 +624,7 @@ public final class AnomalyRegistry {
                 "Se planta, no la mueve nadie, y al soltarse embiste sin avisar.",
                 icon("ANVIL", "IRON_BLOCK"), f -> goat(f).stubbornness());
 
-        return list;
+        return skills.aplicar(ScreamingGoat.ID, list);
     }
 
     private static ScreamingGoat goat(BossFight fight) {
@@ -615,7 +644,7 @@ public final class AnomalyRegistry {
 
         @Override
         public String display() {
-            return plugin.getConfig().getString("anomalias." + id() + ".nombre", "Conejo Asesino");
+            return nombre(id(), "Conejo Asesino");
         }
 
         @Override
@@ -749,7 +778,7 @@ public final class AnomalyRegistry {
                 "Se cambia de sitio con sus copias varias veces; después ya no sabes cual era.",
                 icon("ENDER_PEARL", "SNOWBALL"), f -> bunny(f).swapPlaces());
 
-        return list;
+        return skills.aplicar(KillerBunny.ID, list);
     }
 
     private static KillerBunny bunny(BossFight fight) {
@@ -769,7 +798,7 @@ public final class AnomalyRegistry {
 
         @Override
         public String display() {
-            return plugin.getConfig().getString("anomalias." + id() + ".nombre", "Storm Rider");
+            return nombre(id(), "Storm Rider");
         }
 
         @Override
@@ -898,7 +927,7 @@ public final class AnomalyRegistry {
                 "Marca a tres y a cada uno le cae el rayo donde este seis segundos después.",
                 icon("TARGET", "REDSTONE"), f -> rider(f).guidingBolt());
 
-        return list;
+        return skills.aplicar(StormRider.ID, list);
     }
 
     private static StormRider rider(BossFight fight) {
@@ -918,7 +947,7 @@ public final class AnomalyRegistry {
 
         @Override
         public String display() {
-            return plugin.getConfig().getString("anomalias." + id() + ".nombre", "Leviatan de Sal");
+            return nombre(id(), "Leviatan de Sal");
         }
 
         @Override
@@ -1039,7 +1068,7 @@ public final class AnomalyRegistry {
                 "La maldicion del guardian anciano, esta vez con aviso.",
                 icon("SPONGE", "WET_SPONGE"), f -> leviathan(f).saltSong());
 
-        return list;
+        return skills.aplicar(SaltLeviathan.ID, list);
     }
 
     private static SaltLeviathan leviathan(BossFight fight) {
@@ -1058,7 +1087,7 @@ public final class AnomalyRegistry {
 
         @Override
         public String display() {
-            return plugin.getConfig().getString("anomalias." + id() + ".nombre", "Coro Abisal");
+            return nombre(id(), "Coro Abisal");
         }
 
         @Override
@@ -1174,7 +1203,7 @@ public final class AnomalyRegistry {
                 "Un instante de calma que termina en golpe.",
                 icon("SCULK_SENSOR", "WOOL"), f -> choir(f).silence());
 
-        return list;
+        return skills.aplicar(AbyssalChoir.ID, list);
     }
 
     private static AbyssalChoir choir(BossFight fight) {
@@ -1194,7 +1223,7 @@ public final class AnomalyRegistry {
 
         @Override
         public String display() {
-            return plugin.getConfig().getString("anomalias." + id() + ".nombre", "Darkness");
+            return nombre(id(), "Darkness");
         }
 
         @Override
@@ -1316,7 +1345,7 @@ public final class AnomalyRegistry {
                 "Se encoge en un punto y sale con cuatro anillos de golpe.",
                 icon("NETHER_STAR", "END_CRYSTAL"), f -> darkness(f).singularity());
 
-        return list;
+        return skills.aplicar(Darkness.ID, list);
     }
 
     private static Darkness darkness(BossFight fight) {
@@ -1335,7 +1364,7 @@ public final class AnomalyRegistry {
 
         @Override
         public String display() {
-            return plugin.getConfig().getString("anomalias." + id() + ".nombre", "Herbola");
+            return nombre(id(), "Herbola");
         }
 
         @Override
@@ -1455,7 +1484,7 @@ public final class AnomalyRegistry {
                 "Deja ocho semillas que brotan y agarran a quien pase por encima.",
                 icon("WHEAT_SEEDS", "BONE_MEAL"), f -> herbola(f).sowing());
 
-        return list;
+        return skills.aplicar(Herbola.ID, list);
     }
 
     private static Herbola herbola(BossFight fight) {
@@ -1474,7 +1503,7 @@ public final class AnomalyRegistry {
 
         @Override
         public String display() {
-            return plugin.getConfig().getString("anomalias." + id() + ".nombre", "Quimera");
+            return nombre(id(), "Quimera");
         }
 
         @Override
@@ -1601,7 +1630,7 @@ public final class AnomalyRegistry {
                 "Un cono de siseo que marea, frena y empuja.",
                 icon("SCULK_SENSOR", "NOTE_BLOCK"), f -> quimera(f).hiss());
 
-        return list;
+        return skills.aplicar(Quimera.ID, list);
     }
 
     private static Quimera quimera(BossFight fight) {
@@ -1620,7 +1649,7 @@ public final class AnomalyRegistry {
 
         @Override
         public String display() {
-            return plugin.getConfig().getString("anomalias." + id() + ".nombre", "Bruja");
+            return nombre(id(), "Bruja");
         }
 
         @Override
@@ -1757,7 +1786,7 @@ public final class AnomalyRegistry {
                 "Bebe de su propio caldero: aguanta más un rato y suelta el eructo.",
                 icon("GLASS_BOTTLE", "HONEY_BOTTLE"), f -> bruja(f).bitterSip());
 
-        return list;
+        return skills.aplicar(Bruja.ID, list);
     }
 
     private static Bruja bruja(BossFight fight) {
@@ -1776,7 +1805,7 @@ public final class AnomalyRegistry {
 
         @Override
         public String display() {
-            return plugin.getConfig().getString("anomalias." + id() + ".nombre", "Mimic");
+            return nombre(id(), "Mimic");
         }
 
         @Override
@@ -1897,7 +1926,7 @@ public final class AnomalyRegistry {
                 "Gira repartiendo tajos en tres ondas concentricas.",
                 icon("SHEARS", "IRON_SWORD"), f -> mimic(f).steelWhirlwind());
 
-        return list;
+        return skills.aplicar(Mimic.ID, list);
     }
 
     private static Mimic mimic(BossFight fight) {
@@ -1916,7 +1945,7 @@ public final class AnomalyRegistry {
 
         @Override
         public String display() {
-            return plugin.getConfig().getString("anomalias." + id() + ".nombre", "Rabby");
+            return nombre(id(), "Rabby");
         }
 
         @Override
@@ -2064,7 +2093,7 @@ public final class AnomalyRegistry {
                 "Se rie, se estira y se pone todavía más rápido.",
                 icon("NOTE_BLOCK", "JUKEBOX"), f -> rabby(f).taunt());
 
-        return list;
+        return skills.aplicar(Rabby.ID, list);
     }
 
     private static Rabby rabby(BossFight fight) {
@@ -2083,7 +2112,7 @@ public final class AnomalyRegistry {
 
         @Override
         public String display() {
-            return plugin.getConfig().getString("anomalias." + id() + ".nombre", "El Cazador");
+            return nombre(id(), "El Cazador");
         }
 
         @Override
@@ -2205,7 +2234,7 @@ public final class AnomalyRegistry {
                 "Se replantea la pelea y saca otra cosa del cinto.",
                 icon("SMITHING_TABLE", "ANVIL"), f -> cazador(f).switchWeapon());
 
-        return list;
+        return skills.aplicar(Cazador.ID, list);
     }
 
     private static Cazador cazador(BossFight fight) {
@@ -2224,7 +2253,7 @@ public final class AnomalyRegistry {
 
         @Override
         public String display() {
-            return plugin.getConfig().getString("anomalias." + id() + ".nombre", "Áragon");
+            return nombre(id(), "Áragon");
         }
 
         @Override
@@ -2333,7 +2362,7 @@ public final class AnomalyRegistry {
                 "Se alza sobre las patas y las baja de golpe; la onda barre nueve bloques.",
                 icon("COARSE_DIRT", "DIRT"), f -> aragon(f).legSlam());
 
-        return list;
+        return skills.aplicar(Aragon.ID, list);
     }
 
     private static Aragon aragon(BossFight fight) {
@@ -2352,7 +2381,7 @@ public final class AnomalyRegistry {
 
         @Override
         public String display() {
-            return plugin.getConfig().getString("anomalias." + id() + ".nombre", "El Piromante");
+            return nombre(id(), "El Piromante");
         }
 
         @Override
@@ -2469,7 +2498,7 @@ public final class AnomalyRegistry {
                 "Marca a TODOS a la vez; cada marca estalla donde este su dueño.",
                 icon("TARGET", "FIRE_CHARGE"), f -> piromante(f).burningMark());
 
-        return list;
+        return skills.aplicar(Piromante.ID, list);
     }
 
     // ------------------------------------------------------------------- KEEPER
@@ -2484,7 +2513,7 @@ public final class AnomalyRegistry {
 
         @Override
         public String display() {
-            return plugin.getConfig().getString("anomalias." + id() + ".nombre", "KEEPER");
+            return nombre(id(), "KEEPER");
         }
 
         @Override
@@ -2647,7 +2676,7 @@ public final class AnomalyRegistry {
                 "El zarpazo al que más vibra: el único golpe que reserva para uno.",
                 icon("ECHO_SHARD", "FLINT"), f -> keeper(f).resonantClaw());
 
-        return list;
+        return skills.aplicar(Keeper.ID, list);
     }
 
     // ------------------------------------------------------- KEM y KAM, los gemelos
@@ -2662,7 +2691,7 @@ public final class AnomalyRegistry {
 
         @Override
         public String display() {
-            return plugin.getConfig().getString("anomalias." + id() + ".nombre", "Kem y Kam");
+            return nombre(id(), "Kem y Kam");
         }
 
         @Override
@@ -2836,7 +2865,7 @@ public final class AnomalyRegistry {
                 "Se cambian el sitio: el yunque aparece donde estaba el artillero.",
                 icon("ENDER_PEARL", "COPPER_INGOT"), f -> twins(f).relay());
 
-        return list;
+        return skills.aplicar(CopperTwins.ID, list);
     }
 
     private static Piromante piromante(BossFight fight) {
@@ -2865,7 +2894,7 @@ public final class AnomalyRegistry {
 
 
     // ------------------------------------------------------- AUREA, la Dama Celeste
-    private static final class AlbaType implements AnomalyType {
+    private final class AlbaType implements AnomalyType {
 
         @Override
         public String id() {
@@ -2874,7 +2903,7 @@ public final class AnomalyRegistry {
 
         @Override
         public String display() {
-            return "ALBA";
+            return nombre(id(), "ALBA");
         }
 
         @Override
@@ -3059,7 +3088,7 @@ public final class AnomalyRegistry {
             add(list, "au_rayos", "Rayos del Alba", 5, 460, 90, 4,
                     "Ocho columnas de luz nacen del subsuelo y barren el área en espiral.",
                     AnomalyRegistry.icon("BEACON", "GLOWSTONE"), f -> alba(f).rayosDelAlba());
-            return list;
+            return skills.aplicar(id(), list);
         }
 
         @Override
@@ -3073,7 +3102,7 @@ public final class AnomalyRegistry {
      * RAIZ, el Corazon Palido: el segundo DIOS, y el unico que no cambia de fase por
      * perder vida sino porque los jugadores curan su flor. Ver la clase Raiz.
      */
-    private static final class RaizType implements AnomalyType {
+    private final class RaizType implements AnomalyType {
 
         @Override
         public String id() {
@@ -3082,7 +3111,7 @@ public final class AnomalyRegistry {
 
         @Override
         public String display() {
-            return "ROTTEN";
+            return nombre(id(), "ROTTEN");
         }
 
         @Override
@@ -3273,7 +3302,7 @@ public final class AnomalyRegistry {
             add(list, "rz_comun", "Raíz Común", 5, 300, 30, 3,
                     "Se cura con cada crujido suyo que siga vivo.",
                     AnomalyRegistry.icon("PALE_MOSS_BLOCK", "MOSS_BLOCK"), f -> raiz(f).raizComun());
-            return list;
+            return skills.aplicar(id(), list);
         }
 
         @Override

@@ -72,6 +72,10 @@ public abstract class BossFight {
     private long busyUntil;
     private boolean finished;
     private double damageScale = 1.0;
+    /* El 'dano' propio de la habilidad en curso (Skills/Anomalias/<id>.yml) y hasta
+     * que tick vale. Ver abilityDamage(). */
+    private double abilityDamage = 1.0;
+    private long abilityDamageUntil;
     private long invulnerableSince;
     /** Jugadores con permiso de vuelo temporal y el tick en que se les retira. */
     private final java.util.Map<java.util.UUID, Long> airTime = new java.util.HashMap<>();
@@ -404,6 +408,7 @@ public abstract class BossFight {
             if (!a.id().equalsIgnoreCase(abilityId)) continue;
             a.startCooldown(ticks);
             busyFor(a.castTicks());
+            startAbilityDamage(a);
             try {
                 a.cast(this);
             } catch (Throwable t) {
@@ -430,6 +435,7 @@ public abstract class BossFight {
             if (roll >= 0) continue;
             a.startCooldown(ticks);
             busyFor(a.castTicks());
+            startAbilityDamage(a);
             try {
                 a.cast(this);
             } catch (Throwable t) {
@@ -437,6 +443,24 @@ public abstract class BossFight {
             }
             return;
         }
+    }
+
+    /**
+     * Fija el multiplicador de dano de la habilidad que se acaba de lanzar. Vale
+     * mientras dura su 'cast' y despues vuelve a 1.0.
+     *
+     * Es una aproximacion: lo que la habilidad deje pegando MAS ALLA de su cast
+     * (charcos, marcas que estallan luego, esbirros) cuenta como x1.0, y si el jefe
+     * encadena otra (o KAM lanza la suya a la vez) manda la ultima que se lanzo.
+     */
+    protected void startAbilityDamage(Ability a) {
+        abilityDamage = a.damage();
+        abilityDamageUntil = ticks + Math.max(1, a.castTicks());
+    }
+
+    /** El multiplicador de la habilidad en curso; 1.0 si no hay ninguna. */
+    public double abilityDamage() {
+        return ticks < abilityDamageUntil ? abilityDamage : 1.0;
     }
 
     // -------------------------------------------------------------------- limpieza
@@ -776,7 +800,7 @@ public abstract class BossFight {
      */
     public void hit(Player p, double amount) {
         if (p == null || !Fx.isFightable(p)) return;
-        amount *= plugin.registry().damageMultiplier(event.type());
+        amount *= plugin.registry().damageMultiplier(event.type()) * abilityDamage();
         try {
             if (boss != null && boss.isValid()) {
                 p.damage(amount, boss);

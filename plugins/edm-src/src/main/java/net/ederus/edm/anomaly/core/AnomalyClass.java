@@ -7,7 +7,7 @@ import net.kyori.adventure.text.format.TextColor;
  * La clase de una anomalia: su rango dentro de la jerarquia del catalogo.
  *
  * Los Esbirros son la clase mas baja y los Monarcas la mas alta. La clase se elige
- * desde el menu (shift + click derecho sobre la anomalia), se guarda en config.yml
+ * desde el menu (shift + click derecho sobre la anomalia), se guarda en su ficha
  * y ordena el catalogo: primero los Monarcas, despues los Generales y al final los
  * Esbirros.
  */

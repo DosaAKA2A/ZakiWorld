@@ -562,6 +562,7 @@ public final class CopperTwins extends BossFight {
             if (roll >= 0) continue;
             a.startCooldown(ticks());
             kamBusyUntil = ticks() + a.castTicks();
+            startAbilityDamage(a);
             try {
                 a.cast(this);
             } catch (Throwable t) {
@@ -577,7 +578,7 @@ public final class CopperTwins extends BossFight {
      */
     private void strike(LivingEntity source, Player p, double amount) {
         if (p == null || !Fx.isFightable(p)) return;
-        double dmg = amount * plugin.registry().damageMultiplier(event.type());
+        double dmg = amount * plugin.registry().damageMultiplier(event.type()) * abilityDamage();
         dmg *= 1 + 0.12 * rust.getOrDefault(p.getUniqueId(), 0);
         try {
             if (source != null && source.isValid()) {
@@ -1375,6 +1376,7 @@ public final class CopperTwins extends BossFight {
             if (!a.id().equalsIgnoreCase(abilityId)) continue;
             a.startCooldown(ticks());
             kamBusyUntil = ticks() + a.castTicks();
+            startAbilityDamage(a);
             try {
                 a.cast(this);
             } catch (Throwable t) {

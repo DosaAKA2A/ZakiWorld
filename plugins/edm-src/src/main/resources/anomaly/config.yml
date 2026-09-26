@@ -4,6 +4,20 @@
 #  Todo esto se puede tocar desde el juego con /anomaly (menu Ajustes),
 #  y cada cambio hecho ahi se escribe aqui al momento.
 #  Editar a mano tambien vale: despues, /anomaly reload.
+#
+#  Aqui solo van los ajustes GENERALES. Lo de cada jefe y cada esbirro vive
+#  en su propio fichero, dentro de esta misma carpeta:
+#
+#    Anomalias/<id>.yml          ficha de cada anomalia: activa, clase, nombre,
+#                                vida, dano, textos del anuncio, spawn y clima.
+#    Skills/Anomalias/<id>.yml   numeros de sus habilidades: activa, fase,
+#                                enfriamiento, duracion, peso y dano de cada una.
+#    Esbirros/<carpeta>/         los esbirros, una carpeta por mazmorra.
+#    Skills/Esbirros/<id>.yml    los rasgos de cada esbirro.
+#    Drops/Anomalias/<id>.yml    botin de cada anomalia.
+#    Drops/Esbirros/<id>.yml     botin de cada esbirro.
+#
+#  Los ficheros que falten se crean solos con los valores de diseno.
 # ============================================================
 
 general:
@@ -93,7 +107,7 @@ arena:
   # abre DENTRO de esa zona, la zona entera toma el clima de la anomalia mientras dure
   # la pelea y vuelve a su bioma al cerrarse. Vacio = las anomalias no tocan el clima.
   # El clima de cada una se cambia con /anomaly biome <id> <biome|none>
-  # (se guarda como anomalias.<id>.bioma).
+  # (se guarda como 'bioma' en Anomalias/<id>.yml).
   zona: ''
 
   # La arena como REGION propia: se protege sola, con o sin WorldGuard encima.
@@ -136,137 +150,6 @@ anuncio:
 # los que participaron en la pelea, no solo a quien da el ultimo golpe.
 logros:
   sonido: true
-
-# Ajustes por anomalia. Se rellenan solos al tocarlos desde el menu.
-#
-#   clase:  ESBIRRO, GENERAL o MONARCA. Ordena el catalogo (Monarcas arriba) y se
-#           cambia desde el menu con shift + click derecho sobre la anomalia.
-#   vida:   hasta 400000 (por encima de 1024 el exceso se cobra en reduccion de
-#           dano recibido; la pelea dura exactamente lo configurado).
-#   dano:   multiplicador de TODAS sus habilidades, de 0.1 a 20.0.
-#   spawn:  el punto fijo de aparicion marcado desde el menu (mundo/x/y/z). Si no
-#           esta, la anomalia aparece en un sitio aleatorio valido, como siempre.
-#
-# Ademas, cada anomalia admite DOS LISTAS DE TEXTO opcionales que son
-# exactamente lo que se lee en el hover del anuncio del chat:
-#
-#   descripcion:  de donde viene, su historia. Una linea por renglon.
-#   amenaza:      el aviso de peligro, a que se enfrentan.
-#
-# Si no estan, se usa la que trae escrita el plugin. Ejemplo:
-#
-#   caballero_sepulcral:
-#     descripcion:
-#       - 'Cabalgaba el Paramo de Batalla, en el Aether,'
-#       - 'jurado a una corona que ya no existe.'
-#     amenaza:
-#       - 'Tres fases: montado, a pie y heraldo'
-#       - 'Se enfurece si le fallan'
-anomalias:
-  caballero_sepulcral:
-    activa: true
-    clase: GENERAL
-    vida: 1400
-    dano: 1.0
-    nombre: 'Caballero Sepulcral'
-  cabra_gritona:
-    activa: true
-    clase: GENERAL
-    vida: 1600
-    # Multiplicador del dano de TODAS sus habilidades. 1.0 es lo de diseno.
-    dano: 1.0
-    nombre: 'Cabra Gritona'
-  conejo_asesino:
-    activa: true
-    clase: GENERAL
-    vida: 1500
-    dano: 1.0
-    nombre: 'Conejo Asesino'
-  storm_rider:
-    activa: true
-    clase: GENERAL
-    vida: 1700
-    dano: 1.0
-    nombre: 'Storm Rider'
-  leviatan_de_sal:
-    activa: true
-    clase: GENERAL
-    vida: 1800
-    dano: 1.0
-    nombre: 'Leviatan de Sal'
-  coro_abisal:
-    activa: true
-    clase: GENERAL
-    vida: 1300
-    dano: 1.0
-    nombre: 'Coro Abisal'
-  darkness:
-    activa: true
-    clase: GENERAL
-    vida: 2600
-    dano: 1.0
-    nombre: 'Darkness'
-  herbola:
-    activa: true
-    clase: GENERAL
-    vida: 1600
-    dano: 1.0
-    nombre: 'Herbola'
-  quimera:
-    activa: true
-    clase: GENERAL
-    vida: 1900
-    dano: 1.0
-    nombre: 'Quimera'
-  bruja:
-    activa: true
-    clase: GENERAL
-    vida: 1500
-    dano: 1.0
-    nombre: 'Bruja'
-  mimic:
-    activa: true
-    clase: GENERAL
-    vida: 2000
-    dano: 1.0
-    nombre: 'Mimic'
-  rabby:
-    activa: true
-    clase: GENERAL
-    vida: 2400
-    dano: 1.0
-    nombre: 'Rabby'
-  cazador:
-    activa: true
-    clase: GENERAL
-    vida: 2100
-    dano: 1.0
-    nombre: 'El Cazador'
-  aragon:
-    activa: true
-    clase: GENERAL
-    vida: 2300
-    dano: 1.0
-    nombre: 'Áragon'
-  piromante:
-    activa: true
-    clase: GENERAL
-    vida: 1900
-    dano: 1.0
-    nombre: 'El Piromante'
-  keeper:
-    activa: true
-    clase: MONARCA
-    vida: 3200
-    dano: 1.0
-    nombre: 'KEEPER'
-  gemelos_cobre:
-    activa: true
-    clase: MONARCA
-    # La vida del DUETO: cada gemelo se lleva la mitad.
-    vida: 3600
-    dano: 1.0
-    nombre: 'Kem y Kam'
 
 menu:
   # La anomalia que abre el boton Iniciar del panel.

@@ -22,6 +22,11 @@ public final class Settings {
         return plugin.getConfig();
     }
 
+    /** Las fichas de cada anomalia (Anomalias/<id>.yml): ahi van su bote y su clima. */
+    private AnomalyFiles fichas() {
+        return ((net.ederus.edm.anomaly.AnomalyPlugin) plugin).registry().fichas();
+    }
+
     // ------------------------------------------------------------------ ubicacion
 
     public List<String> allowedWorlds() {
@@ -123,14 +128,14 @@ public final class Settings {
         return cfg().getDouble("combate.radio-salpicadura", 4);
     }
 
-    /** Bote de MobCoins que reparte esta anomalia al caer. 0 = no paga por aqui. */
+    /** Bote de MobCoins que reparte esta anomalia al caer (clave mobcoins de su ficha). 0 = no paga por aqui. */
     public int mobcoins(String anomalyId) {
-        return cfg().getInt("anomalias." + anomalyId + ".mobcoins",
+        return fichas().getInt(anomalyId, "mobcoins",
                 cfg().getInt("combate.mobcoins-por-defecto", 0));
     }
 
     public void mobcoins(String anomalyId, int valor) {
-        set("anomalias." + anomalyId + ".mobcoins", Math.max(0, Math.min(1000000, valor)));
+        fichas().set(anomalyId, "mobcoins", Math.max(0, Math.min(1000000, valor)));
     }
 
     /** Suelo por jugador al repartir ese bote, para que el que llego tarde cobre algo. */
@@ -177,7 +182,7 @@ public final class Settings {
         return cfg().getBoolean("arena.proteccion.columna-entera", true);
     }
 
-    /** Clima que pinta cada anomalia sobre la arena si el config no dice otro. */
+    /** Clima que pinta cada anomalia sobre la arena si su ficha no dice otro. */
     private static final java.util.Map<String, String> CLIMA_DE_SERIE = java.util.Map.ofEntries(
             java.util.Map.entry("alba", "celestial"),
             java.util.Map.entry("keeper", "ancient"),
@@ -198,11 +203,22 @@ public final class Settings {
             java.util.Map.entry("quimera", "radioactive"),
             java.util.Map.entry("gemelos_cobre", "radioactive"));
 
-    /** El clima de una anomalia en la arena; "" = ninguno. */
+    /** El clima de serie de una anomalia; es el que se escribe en su ficha nueva. */
+    public static String climaDeSerie(String anomalyId) {
+        return CLIMA_DE_SERIE.getOrDefault(anomalyId, "");
+    }
+
+    /** El clima de una anomalia en la arena (clave bioma de su ficha); "" = ninguno. */
     public String arenaClimate(String anomalyId) {
-        String v = cfg().getString("anomalias." + anomalyId + ".bioma", null);
-        if (v == null) return CLIMA_DE_SERIE.getOrDefault(anomalyId, "");
+        String v = fichas().getString(anomalyId, "bioma", null);
+        if (v == null) return climaDeSerie(anomalyId);
         return v.equalsIgnoreCase("none") || v.equalsIgnoreCase("ninguno") ? "" : v;
+    }
+
+    /** Cambia ese clima; "none" o "ninguno" lo dejan vacio. */
+    public void arenaClimate(String anomalyId, String clima) {
+        boolean ninguno = clima == null || clima.equalsIgnoreCase("none") || clima.equalsIgnoreCase("ninguno");
+        fichas().set(anomalyId, "bioma", ninguno ? "" : clima);
     }
 
     /** Lo mas cerca que cae un monton de botin respecto al cuerpo del jefe. */

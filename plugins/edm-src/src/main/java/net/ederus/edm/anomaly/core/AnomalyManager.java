@@ -797,7 +797,7 @@ public final class AnomalyManager implements Listener {
     /**
      * Reparte las MobCoins que pague esta anomalia entre los que le hicieron dano.
      *
-     * El bote va en la config de cada anomalia (anomalias.<id>.mobcoins) y se reparte
+     * El bote va en la ficha de cada anomalia (Anomalias/<id>.yml, mobcoins) y se reparte
      * EN PROPORCION al dano, con un suelo para que el que llego tarde cobre algo. En 0
      * no paga nada por aqui y el botin sigue pudiendo dar monedas por comando, como
      * hasta ahora.

@@ -235,7 +235,7 @@ public final class AnomalyCommand implements CommandExecutor, TabCompleter {
                     "No conozco el clima " + clima + ". Mira /lbiomes list.", NamedTextColor.RED)));
             return;
         }
-        plugin.settings().set("anomalias." + type.id() + ".bioma", clima);
+        plugin.settings().arenaClimate(type.id(), clima);
         sender.sendMessage(plugin.prefix().append(Component.text(
                 type.display() + " pinta ahora " + clima + " en la arena.", SOFT)));
     }

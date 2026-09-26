@@ -68,7 +68,7 @@ public interface AnomalyType {
 
     /**
      * Clase de diseno de la anomalia: Esbirro, General o Monarca. Es solo el valor
-     * de arranque; el vivo se guarda en config.yml y se cambia desde el menu con
+     * de arranque; el vivo se guarda en Anomalias/<id>.yml y se cambia desde el menu con
      * shift + click derecho (ver AnomalyRegistry#classOf).
      */
     default AnomalyClass defaultClass() {

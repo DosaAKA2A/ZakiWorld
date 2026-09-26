@@ -21,12 +21,20 @@ public final class Ability {
     private final int weight;
     private final Material icon;
     private final Consumer<BossFight> action;
+    /** Multiplicador de dano solo de esta habilidad (Skills/Anomalias/<id>.yml). */
+    private final double damage;
 
     private long readyAt;
 
     public Ability(String id, String display, String description, int phase,
                    int cooldownTicks, int castTicks, int weight, Material icon,
                    Consumer<BossFight> action) {
+        this(id, display, description, phase, cooldownTicks, castTicks, weight, icon, action, 1.0);
+    }
+
+    public Ability(String id, String display, String description, int phase,
+                   int cooldownTicks, int castTicks, int weight, Material icon,
+                   Consumer<BossFight> action, double damage) {
         this.id = id;
         this.display = display;
         this.description = description;
@@ -36,6 +44,13 @@ public final class Ability {
         this.weight = Math.max(1, weight);
         this.icon = icon;
         this.action = action;
+        this.damage = damage;
+    }
+
+    /** La misma habilidad con los numeros que diga su fichero de skills. */
+    public Ability adjusted(int phase, int cooldownTicks, int castTicks, int weight, double damage) {
+        return new Ability(id, display, description, phase, cooldownTicks, castTicks, weight,
+                icon, action, damage);
     }
 
     public String id() {
@@ -65,6 +80,10 @@ public final class Ability {
 
     public int weight() {
         return weight;
+    }
+
+    public double damage() {
+        return damage;
     }
 
     public Material icon() {
