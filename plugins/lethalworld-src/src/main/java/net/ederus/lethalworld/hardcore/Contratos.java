@@ -28,7 +28,6 @@ import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Random;
 import java.util.Set;
 import java.util.UUID;
 import java.util.function.Predicate;
@@ -93,6 +92,8 @@ final class Contratos implements Listener {
     /** Ultimo destello P-O01 por jugador: con mobs cayendo de dos en dos no se pisa la barra. */
     private final Map<UUID, Long> ultimoDestello = new HashMap<>();
     private final Set<BukkitTask> tareas = new HashSet<>();
+    private Map<String, Def> poolLeido;
+    private long poolLeidoEn;
 
     Contratos(Hardcore hc) {
         this.hc = hc;
@@ -133,8 +134,19 @@ final class Contratos implements Listener {
 
     // ------------------------------------------------------------------ el pool
 
-    /** El pool de la config; si no hay, el de EST sec. 5.9 escrito aqui. */
+    /**
+     * El pool de la config; si no hay, el de EST sec. 5.9 escrito aqui. Se relee como mucho
+     * cada 10 s: lo pide cada mob muerto dentro y un /lw reload se nota igual enseguida.
+     */
     Map<String, Def> pool() {
+        long ahora = System.currentTimeMillis();
+        if (poolLeido != null && ahora - poolLeidoEn < 10_000L) return poolLeido;
+        poolLeido = leerPool();
+        poolLeidoEn = ahora;
+        return poolLeido;
+    }
+
+    private Map<String, Def> leerPool() {
         Map<String, Def> out = new LinkedHashMap<>();
         ConfigurationSection s = hc.cfg().getConfigurationSection("contratos.pool");
         if (s != null) {
@@ -147,7 +159,7 @@ final class Contratos implements Listener {
             }
         }
         if (out.isEmpty()) for (Def d : POR_DEFECTO) out.put(d.id(), d);
-        return out;
+        return java.util.Collections.unmodifiableMap(out);
     }
 
     static final List<Def> POR_DEFECTO = List.of(
@@ -180,7 +192,7 @@ final class Contratos implements Listener {
      * El sorteo del dia: primero los cortos garantizados, luego el resto de todo lo que quede
      * (puede salir otro corto). Sin repetir. Si el pool no llega, salen los que haya.
      */
-    static List<Def> sortear(Collection<Def> pool, int porDia, int cortos, Predicate<Def> disponible, Random azar) {
+    static List<Def> sortear(Collection<Def> pool, int porDia, int cortos, Predicate<Def> disponible, SecureRandom azar) {
         List<Def> libres = new ArrayList<>();
         for (Def d : pool) if (disponible.test(d)) libres.add(d);
         List<Def> out = new ArrayList<>();
@@ -197,7 +209,7 @@ final class Contratos implements Listener {
 
     /** Uno nuevo para un hueco: ninguno de los que ya tiene; corto si hace falta para mantener la garantia. */
     static Def sustituto(Collection<Def> pool, Set<String> yaEstan, boolean hadeSerCorto, Predicate<Def> disponible,
-                         Random azar) {
+                         SecureRandom azar) {
         List<Def> libres = new ArrayList<>();
         for (Def d : pool) {
             if (yaEstan.contains(d.id()) || !disponible.test(d)) continue;
@@ -410,7 +422,7 @@ final class Contratos implements Listener {
      * redimidos cuentan lo que suben desde la foto de la entrada.
      */
     void estadistica(UUID u, String clave) {
-        if (!activo() || u == null || clave == null || !POR_ESTADISTICA.containsValue(clave)) return;
+        if (u == null || clave == null || !POR_ESTADISTICA.containsValue(clave) || !activo()) return;
         Player p = Bukkit.getPlayer(u);
         Estadisticas st = hc.estadisticas();
         if (p == null || st == null || !hc.esHardcore(p)) return;
@@ -710,7 +722,7 @@ final class Contratos implements Listener {
     private List<String> autotest() {
         Autotest.Hoja h = new Autotest.Hoja();
         Map<String, Def> pool = pool();
-        Random r = new SecureRandom();
+        SecureRandom r = new SecureRandom();
 
         boolean siempreCorto = true, tres = true, distintos = true;
         for (int k = 0; k < 300; k++) {

@@ -14,7 +14,6 @@ import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
 import org.bukkit.event.HandlerList;
 import org.bukkit.event.Listener;
-import org.bukkit.event.inventory.ClickType;
 import org.bukkit.event.inventory.InventoryClickEvent;
 import org.bukkit.event.inventory.InventoryDragEvent;
 import org.bukkit.event.inventory.InventoryOpenEvent;
@@ -296,9 +295,9 @@ final class Kit implements Listener {
         if (!ajeno(arriba)) return;
         boolean enArriba = e.getRawSlot() >= 0 && e.getRawSlot() < arriba.getSize();
         if (enArriba) {
+            // Tecla de numero o F (mano secundaria, boton 40): lo que se trae de la barra.
             ItemStack atajo = e.getHotbarButton() >= 0 ? p.getInventory().getItem(e.getHotbarButton()) : null;
-            ItemStack mano2 = e.getClick() == ClickType.SWAP_OFFHAND ? p.getInventory().getItemInOffHand() : null;
-            if (esPrestado(cursor) || esPrestado(atajo) || esPrestado(mano2)) bloquear(e, p);
+            if (esPrestado(cursor) || esPrestado(atajo)) bloquear(e, p);
         } else if (e.isShiftClick() && esPrestado(actual)) {
             bloquear(e, p);
         }
