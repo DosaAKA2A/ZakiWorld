@@ -48,6 +48,11 @@ public final class MinionRegistry {
     private Map<String, File> archivos = new HashMap<>();
     /** Las carpetas que tienen directorio en disco, para quitar las borradas. */
     private final Set<String> carpetasEnDisco = new LinkedHashSet<>();
+    /** Tipos cuya ficha hay que reescribir aunque ellos no se hayan tocado: se les
+     *  quito una vela, que vive dentro de su fichero. */
+    private final Set<String> fichasSucias = new LinkedHashSet<>();
+    /** Ficheros escritos desde que arranco; solo para comprobarlo en pruebas. */
+    int escrituras;
 
     /** El nombre de la ficha de cada carpeta; ningun esbirro puede llamarse asi. */
     private static final String FICHA_CARPETA = "_carpeta.yml";
@@ -219,6 +224,7 @@ public final class MinionRegistry {
 
     public void deleteSpawner(MinionSpawner s) {
         spawners.remove(s.id());
+        fichasSucias.add(s.typeId());
         save();
     }
 
@@ -245,6 +251,7 @@ public final class MinionRegistry {
         spawners.clear();
         archivos = new HashMap<>();
         carpetasEnDisco.clear();
+        fichasSucias.clear();
 
         File dir = carpetaEsbirros();
         File viejo = new File(plugin.getDataFolder(), "esbirros.yml");
@@ -267,7 +274,7 @@ public final class MinionRegistry {
         if (!types.isEmpty() || !categories.isEmpty()) general();
 
         if (migrar) {
-            if (escribir()) {
+            if (escribir(true)) {
                 String base = "esbirros.yml.migrado-" + LocalDate.now();
                 File destino = new File(plugin.getDataFolder(), base);
                 for (int n = 2; destino.exists(); n++) destino = new File(plugin.getDataFolder(), base + "-" + n);
@@ -290,6 +297,12 @@ public final class MinionRegistry {
             for (MinionType t : types.values()) {
                 if (!ficheroSkills(t.id()).exists()) escribirSkills(t);
             }
+            // Lo recien leido ya esta en disco: nada sucio hasta que se toque algo.
+            for (MinionCategory c : categories.values()) {
+                if (carpetasEnDisco.contains(c.id())) c.limpia();
+            }
+            for (MinionType t : types.values()) t.limpio();
+            for (MinionSpawner sp : spawners.values()) sp.limpia();
         }
 
         plugin.getLogger().info("Esbirros cargados: " + categories.size() + " carpeta(s), "
@@ -490,21 +503,31 @@ public final class MinionRegistry {
     }
 
     /**
-     * Escribe todas las fichas (son pocas) y quita del disco lo que ya no toca:
-     * el fichero de un esbirro que cambio de carpeta, el de uno borrado (y sus
-     * rasgos) y la ficha de una carpeta borrada.
+     * Baja a disco SOLO lo que cambio (va en el hilo principal, en cada click del
+     * menu): la ficha de un tipo tocado, movido de carpeta o con una vela tocada,
+     * los rasgos de un tipo al que se le cambio uno, la ficha de una carpeta
+     * tocada. Y quita lo que ya no toca: el fichero de un esbirro que cambio de
+     * carpeta, el de uno borrado (y sus rasgos) y la ficha de una carpeta borrada.
+     * Encender un rasgo desde el menu escribe un fichero.
      */
     public void save() {
-        escribir();
+        escribir(false);
     }
 
-    private boolean escribir() {
+    /** todo = true escribe todos los ficheros, sucios o no (la migracion). */
+    private boolean escribir(boolean todo) {
         boolean ok = true;
         File dir = carpetaEsbirros();
         if (!types.isEmpty()) general();
 
+        // Que tipos tienen una vela sucia: su ficha tambien lo esta.
+        for (MinionSpawner sp : spawners.values()) {
+            if (sp.sucia()) fichasSucias.add(sp.typeId());
+        }
+
         for (MinionCategory c : categories.values()) {
             File cdir = new File(dir, c.id());
+            if (!todo && !c.sucia() && carpetasEnDisco.contains(c.id())) continue;
             cdir.mkdirs();
             YamlConfiguration yml = new YamlConfiguration();
             yml.options().setHeader(List.of(
@@ -518,24 +541,40 @@ public final class MinionRegistry {
             yml.set("nombre", c.display());
             yml.set("icono", c.icon().name());
             yml.set("color", c.colorRgb());
-            ok &= guardar(yml, new File(cdir, FICHA_CARPETA));
+            if (guardar(yml, new File(cdir, FICHA_CARPETA))) c.limpia();
+            else ok = false;
             carpetasEnDisco.add(c.id());
         }
 
         Map<String, File> nuevos = new HashMap<>();
         for (MinionType t : types.values()) {
             File destino = new File(new File(dir, categoryOf(t).id()), t.id() + ".yml");
-            ok &= guardar(fichaDe(t), destino);
-            ok &= escribirSkills(t);
-            nuevos.put(t.id(), destino);
             File antes = archivos.get(t.id());
-            if (antes != null && !antes.getAbsoluteFile().equals(destino.getAbsoluteFile())) borrar(antes);
+            boolean movido = antes == null || !antes.getAbsoluteFile().equals(destino.getAbsoluteFile());
+            boolean ficha = todo || movido || t.fichaSucia() || fichasSucias.contains(t.id());
+            boolean rasgos = todo || t.skillsSucias();
+            boolean bien = true;
+            if (ficha) bien = guardar(fichaDe(t), destino);
+            if (rasgos) bien &= escribirSkills(t);
+            if (bien) {
+                t.limpio();
+                if (ficha) {
+                    fichasSucias.remove(t.id());
+                    for (MinionSpawner sp : spawnersOf(t.id())) sp.limpia();
+                }
+            } else {
+                ok = false;
+            }
+            // Si la ficha nueva no se pudo escribir, la vieja se queda donde estaba.
+            if (movido && antes != null && bien) borrar(antes);
+            nuevos.put(t.id(), bien || antes == null ? destino : antes);
         }
         // Los esbirros borrados: fuera su ficha y sus rasgos. El botin es cosa de Drops/.
         for (Map.Entry<String, File> e : archivos.entrySet()) {
             if (types.containsKey(e.getKey())) continue;
             borrar(e.getValue());
             borrar(ficheroSkills(e.getKey()));
+            fichasSucias.remove(e.getKey());
         }
         archivos = nuevos;
 
@@ -627,6 +666,7 @@ public final class MinionRegistry {
     private boolean guardar(YamlConfiguration yml, File f) {
         try {
             yml.save(f);
+            escrituras++;
             return true;
         } catch (IOException ex) {
             plugin.getLogger().log(Level.SEVERE, "No se pudo guardar " + f.getPath(), ex);

@@ -21,6 +21,17 @@ public final class MinionCategory {
     private Material icon = Material.CHEST;
     private int color = 0xFFD966;
 
+    /** Si su _carpeta.yml tiene cambios sin escribir. Nace sucia. */
+    private boolean sucia = true;
+
+    boolean sucia() {
+        return sucia;
+    }
+
+    void limpia() {
+        sucia = false;
+    }
+
     public MinionCategory(String id, String display) {
         this.id = id;
         this.display = display;
@@ -35,6 +46,7 @@ public final class MinionCategory {
     }
 
     public void display(String display) {
+        sucia = true;
         this.display = display;
     }
 
@@ -43,6 +55,7 @@ public final class MinionCategory {
     }
 
     public void icon(Material icon) {
+        sucia = true;
         if (icon != null && icon.isItem()) this.icon = icon;
     }
 
@@ -55,11 +68,13 @@ public final class MinionCategory {
     }
 
     public void colorRgb(int rgb) {
+        sucia = true;
         this.color = rgb;
     }
 
     /** Avanza (o retrocede) por la misma paleta que usan los esbirros. */
     public void cycleColor(boolean forward) {
+        sucia = true;
         int at = 0;
         for (int i = 0; i < MinionType.PALETA.length; i++) {
             if (MinionType.PALETA[i] == color) {

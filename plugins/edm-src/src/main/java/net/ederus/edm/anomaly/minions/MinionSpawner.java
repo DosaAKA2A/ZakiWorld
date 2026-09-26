@@ -24,6 +24,17 @@ public final class MinionSpawner {
     private int activationRadius;
     private boolean enabled = true;
 
+    /** Si tiene cambios sin escribir en la ficha de su tipo. Nace sucia. */
+    private boolean sucia = true;
+
+    boolean sucia() {
+        return sucia;
+    }
+
+    void limpia() {
+        sucia = false;
+    }
+
     /* Estado vivo, no se guarda: cuando toca el proximo intento de aparicion. */
     private long nextSpawnAt;
 
@@ -72,6 +83,7 @@ public final class MinionSpawner {
     }
 
     public void minLevel(int v) {
+        sucia = true;
         this.minLevel = Math.max(1, Math.min(1000, v));
         if (maxLevel < minLevel) maxLevel = minLevel;
     }
@@ -81,12 +93,14 @@ public final class MinionSpawner {
     }
 
     public void maxLevel(int v) {
+        sucia = true;
         this.maxLevel = Math.max(1, Math.min(1000, v));
         if (minLevel > maxLevel) minLevel = maxLevel;
     }
 
     /** Fija el rango de una vez; se ordena solo si vienen del reves. */
     public void levels(int min, int max) {
+        sucia = true;
         int lo = Math.max(1, Math.min(1000, Math.min(min, max)));
         int hi = Math.max(1, Math.min(1000, Math.max(min, max)));
         this.minLevel = lo;
@@ -102,6 +116,7 @@ public final class MinionSpawner {
     }
 
     public void intervalSeconds(int v) {
+        sucia = true;
         this.intervalSeconds = Math.max(3, Math.min(3600, v));
     }
 
@@ -110,6 +125,7 @@ public final class MinionSpawner {
     }
 
     public void maxAlive(int v) {
+        sucia = true;
         this.maxAlive = Math.max(1, Math.min(30, v));
     }
 
@@ -118,6 +134,7 @@ public final class MinionSpawner {
     }
 
     public void activationRadius(int v) {
+        sucia = true;
         this.activationRadius = Math.max(8, Math.min(128, v));
     }
 
@@ -126,6 +143,7 @@ public final class MinionSpawner {
     }
 
     public void enabled(boolean v) {
+        sucia = true;
         this.enabled = v;
     }
 
