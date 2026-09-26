@@ -1,5 +1,7 @@
 package net.ederus.lethalworld.hardcore;
 
+import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.format.NamedTextColor;
 import org.bukkit.OfflinePlayer;
 import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.entity.Player;
@@ -17,7 +19,7 @@ import java.util.regex.Pattern;
 /**
  * M35 · Monedero: saldo y cobro de MobCoins para la Forja (DIS M35).
  *
- * EDM solo sabe DAR MobCoins (MobCoins.pagar es "mobcoins give") y UltimateMobCoins no tiene
+ * EDM solo sabe DAR MobCoins (su pago es "mobcoins give") y UltimateMobCoins no tiene
  * API: cobrar va por config. monedero.saldo-placeholder se lee por PlaceholderAPI y
  * monedero.cobrar es un comando de consola con %jugador% y %n%. Los dos se rellenan en la
  * Fase 0 de PLAN sec. 9 leyendo produccion; mientras cualquiera de los dos este vacio,
@@ -171,6 +173,18 @@ final class Monedero {
         relecturas.add(tarea[0]);
     }
 
+    /** P-M10: "Te faltan <n> MobCoins." */
+    static Component avisoFaltan(long n) {
+        return ComandoCalamity.mensaje(Component.text("Te faltan ")
+                .append(Component.text(String.valueOf(Math.max(0, n)), NamedTextColor.WHITE))
+                .append(Component.text(" MobCoins.")));
+    }
+
+    /** P-M11: los trueques con MobCoins mientras disponible() sea false. */
+    static Component avisoProximamente() {
+        return ComandoCalamity.mensaje("Esto aún no se puede pagar con MobCoins. Próximamente.");
+    }
+
     /** El cobro del modo prueba, sin Bukkit: descuenta si llega y dice si ha podido. */
     boolean cobrarPrueba(UUID u, long n) {
         String r = "monedero-prueba." + u;
@@ -208,6 +222,19 @@ final class Monedero {
      */
     private List<String> autotest() {
         Autotest.Hoja h = new Autotest.Hoja();
+        probarNucleo(h);
+        String modo = hc.cfg().getString("monedero.modo", "real");
+        boolean vacias = placeholder().isBlank() || comandoCobrar().isBlank();
+        if (!"prueba".equalsIgnoreCase(modo) && vacias) {
+            h.ok("modo real con claves vacias -> no disponible", !disponible());
+        } else {
+            h.sinExcepcion("config actual (" + modo + "): disponible() no revienta", this::disponible);
+        }
+        h.ok("la prueba no toca hardcore-datos.yml", !hc.datos().isSet("monedero-prueba." + Autotest.sintetico(31)));
+        return h.lineas();
+    }
+
+    static void probarNucleo(Autotest.Hoja h) {
         Monedero m = new Monedero(new YamlConfiguration());
         UUID u = Autotest.sintetico(31);
         h.ok("en modo prueba esta disponible", m.disponible());
@@ -221,15 +248,6 @@ final class Monedero {
         h.igual("numero con decimales", 1234L, numero("1234.56"));
         h.igual("numero abreviado no vale", -1L, numero("1.2k"));
         h.igual("texto sin cifras no vale", -1L, numero("n/a"));
-        String modo = hc.cfg().getString("monedero.modo", "real");
-        boolean vacias = placeholder().isBlank() || comandoCobrar().isBlank();
-        if (!"prueba".equalsIgnoreCase(modo) && vacias) {
-            h.ok("modo real con claves vacias -> no disponible", !disponible());
-        } else {
-            h.sinExcepcion("config actual (" + modo + "): disponible() no revienta", this::disponible);
-        }
-        h.ok("la prueba no toca hardcore-datos.yml", !hc.datos().isSet("monedero-prueba." + u));
-        return h.lineas();
     }
 
     void parar() {

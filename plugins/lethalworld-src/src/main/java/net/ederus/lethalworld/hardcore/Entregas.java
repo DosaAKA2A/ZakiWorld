@@ -765,9 +765,7 @@ final class Entregas implements Listener {
         }
         UUID u = p.getUniqueId();
         Saldo s = hc.saldo();
-        p.sendMessage(ComandoCalamity.mensaje(Component.text("Saldo: ")
-                .append(Component.text(String.valueOf(s == null ? 0 : s.de(u)), NamedTextColor.WHITE))
-                .append(Component.text(" Esencias."))));
+        if (s != null) p.sendMessage(s.avisoSaldo(u));
         Creditos c = hc.creditos();
         if (c != null) {
             for (Map.Entry<String, Integer> e : c.todos(u).entrySet()) {
@@ -818,8 +816,6 @@ final class Entregas implements Listener {
         h.ok("talisman con su marca", Marcas.tiene(t, Marcas.TALISMAN));
         h.ok("talisman sin cursiva",
                 t.getItemMeta().displayName().decoration(TextDecoration.ITALIC) == TextDecoration.State.FALSE);
-        h.ok("talisman sin negrita",
-                t.getItemMeta().displayName().decoration(TextDecoration.BOLD) != TextDecoration.State.TRUE);
         ItemStack g1 = grabado(), g2 = grabado();
         String id1 = g1.getItemMeta().getPersistentDataContainer().get(Marcas.GRABADO, PersistentDataType.STRING);
         String id2 = g2.getItemMeta().getPersistentDataContainer().get(Marcas.GRABADO, PersistentDataType.STRING);

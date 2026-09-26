@@ -150,6 +150,22 @@ final class Saldo implements Listener {
         return n;
     }
 
+    /** P-M09 (boton Depositar del Altar): "Has depositado <n> Esencias. Saldo: <s>." */
+    Component avisoDeposito(Player p, int n) {
+        return ComandoCalamity.mensaje(Component.text("Has depositado ")
+                .append(Component.text(String.valueOf(n), NamedTextColor.WHITE))
+                .append(Component.text(" Esencias. Saldo: "))
+                .append(Component.text(String.valueOf(de(p.getUniqueId())), NamedTextColor.WHITE))
+                .append(Component.text(".")));
+    }
+
+    /** P-M08: "Saldo: <n> Esencias." */
+    Component avisoSaldo(UUID jugador) {
+        return ComandoCalamity.mensaje(Component.text("Saldo: ")
+                .append(Component.text(String.valueOf(de(jugador)), NamedTextColor.WHITE))
+                .append(Component.text(" Esencias.")));
+    }
+
     private String encimaTexto(OfflinePlayer jugador) {
         // PlaceholderAPI puede preguntar desde otro hilo: solo se lee, y solo de un conectado.
         Player p = jugador == null ? null : jugador.getPlayer();
@@ -220,6 +236,14 @@ final class Saldo implements Listener {
 
     private List<String> autotest() {
         Autotest.Hoja h = new Autotest.Hoja();
+        probarNucleo(h);
+        h.ok("la prueba no toca hardcore-datos.yml", !hc.datos().isSet("esencias." + Autotest.sintetico(11)));
+        h.igual("placeholder esencias sin jugador", "", PlaceholdersLethal.resolver(null, "esencias"));
+        h.igual("placeholder esencias_encima sin jugador", "0", PlaceholdersLethal.resolver(null, "esencias_encima"));
+        return h.lineas();
+    }
+
+    static void probarNucleo(Autotest.Hoja h) {
         YamlConfiguration memoria = new YamlConfiguration();
         Saldo s = new Saldo(memoria);
         UUID u = Autotest.sintetico(11);
@@ -235,10 +259,6 @@ final class Saldo implements Listener {
         h.ok("restar 0 siempre vale", s.restar(u, 0, "prueba"));
         h.ok("restar negativo no vale", !s.restar(u, -1, "prueba"));
         h.igual("se guarda en esencias.<uuid>", 6L, memoria.getLong("esencias." + u));
-        h.ok("la prueba no toca hardcore-datos.yml", !hc.datos().isSet("esencias." + u));
-        h.igual("placeholder esencias sin jugador", "", PlaceholdersLethal.resolver(null, "esencias"));
-        h.igual("placeholder esencias_encima sin jugador", "0", PlaceholdersLethal.resolver(null, "esencias_encima"));
-        return h.lineas();
     }
 
     void parar() {

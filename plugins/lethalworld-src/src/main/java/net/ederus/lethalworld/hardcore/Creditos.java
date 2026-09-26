@@ -207,6 +207,13 @@ final class Creditos {
 
     private List<String> autotest() {
         Autotest.Hoja h = new Autotest.Hoja();
+        probarNucleo(h);
+        h.ok("la prueba no toca hardcore-datos.yml", !hc.datos().isSet("creditos." + Autotest.sintetico(21)));
+        h.igual("placeholder sello sin jugador", "", PlaceholdersLethal.resolver(null, "sello_heraldo-carmes"));
+        return h.lineas();
+    }
+
+    static void probarNucleo(Autotest.Hoja h) {
         Map<UUID, Double> horas = new java.util.HashMap<>();
         YamlConfiguration memoria = new YamlConfiguration();
         Creditos c = new Creditos(memoria, u -> horas.getOrDefault(u, 0.0));
@@ -237,9 +244,6 @@ final class Creditos {
         c.sumar(u, "marca", -5, "admin", false);
         h.igual("ajuste negativo se queda en 0", 0, c.de(u, "marca"));
         h.ok("todos lista el sello", c.todos(u).containsKey("sello:heraldo-carmes"));
-        h.ok("la prueba no toca hardcore-datos.yml", !hc.datos().isSet("creditos." + u));
-        h.igual("placeholder sello sin jugador", "", PlaceholdersLethal.resolver(null, "sello_heraldo-carmes"));
-        return h.lineas();
     }
 
     void parar() {

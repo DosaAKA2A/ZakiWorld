@@ -143,7 +143,11 @@ final class Aduana {
                 }
             }
         }
-        hc.guardarYa();
+        /* Al minuto y no al momento: los pagos de mob llegan varios por segundo y el fichero
+         * entero no se escribe en cada uno. Lo que es dinero guardado por nosotros (saldo,
+         * premios pendientes) ya se guarda solo al moverse; aqui solo quedan los contadores
+         * de topes, y perder un minuto de contador en una caida no regala nada que importe. */
+        hc.marcarSucio();
 
         String ids = rel.isEmpty() || r.tipoTopado() ? "-" : idsReliquias(rel);
         hc.plugin().bitacora().anotar("pago", nombre, t.isEmpty() ? "-" : t, "e " + pago.esencias(), "mc " + pago.mc(),
@@ -628,6 +632,14 @@ final class Aduana {
     /** WP1 aceptacion 1, en memoria: tramos, Fusible, topes, validez y proxy. */
     private List<String> autotest() {
         Autotest.Hoja h = new Autotest.Hoja();
+        probarCuentas(h);
+        h.ok("la prueba no toca hardcore-datos.yml", !hc.datos().isSet("aduana.dia." + Autotest.sintetico(41))
+                && !hc.datos().isSet("huellas." + Autotest.sintetico(44)));
+        return h.lineas();
+    }
+
+    /** El nucleo de la prueba, sin servidor (lo usa tambien la prueba de fuera del juego). */
+    static void probarCuentas(Autotest.Hoja h) {
         YamlConfiguration datos = new YamlConfiguration();
         MemoryConfiguration c = new MemoryConfiguration();
         c.set("activo", true);
@@ -721,9 +733,5 @@ final class Aduana {
         forzada.set("huella-ip", "no");
         h.ok("huella-ip: no la apaga", !cu.huellaActiva(forzada));
         h.igual("solo se guardan los 20 ultimos", 20, dp.getStringList("aduana.ultimos").size());
-
-        h.ok("la prueba no toca hardcore-datos.yml", !hc.datos().isSet("aduana.dia." + u1)
-                && !hc.datos().isSet("huellas." + a));
-        return h.lineas();
     }
 }
