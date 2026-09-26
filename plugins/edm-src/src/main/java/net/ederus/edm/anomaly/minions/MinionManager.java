@@ -204,7 +204,8 @@ public final class MinionManager implements Listener {
 
     private void tick() {
         long now = System.currentTimeMillis();
-        if (++pulso % 3 == 0) healers();
+        pulso++;
+        healers();
         for (MinionSpawner s : plugin.minions().spawners()) {
             Set<UUID> mine = alive.computeIfAbsent(s.id(), k -> new HashSet<>());
 
@@ -251,8 +252,9 @@ public final class MinionManager implements Listener {
     }
 
     /**
-     * Los curanderos: cada 3 segundos reponen algo de vida a la tropa de alrededor
-     * (a los suyos, no a si mismos, para que no sean inmortales de uno en uno).
+     * Los curanderos: cada pocos segundos (3 de serie) reponen algo de vida a la
+     * tropa de alrededor (a los suyos, no a si mismos, para que no sean inmortales
+     * de uno en uno). Se mira cada segundo y cada tipo cura a su ritmo.
      */
     private void healers() {
         for (Escolta e : escoltas) {
@@ -260,16 +262,20 @@ public final class MinionManager implements Listener {
             if (!medico.isValid() || medico.isDead()) continue;
             MinionType type = typeOf(medico);
             if (type == null || !type.has(MinionAbility.CURANDERO)) continue;
+            int cada = Math.max(1, (int) Math.round(type.param(MinionAbility.CURANDERO, "cada-segundos")));
+            if (pulso % cada != 0) continue;
+            double radio = type.param(MinionAbility.CURANDERO, "radio");
+            double cura = type.param(MinionAbility.CURANDERO, "cura");
 
             boolean curoAlguno = false;
             for (Escolta otro : escoltas) {
                 LivingEntity herido = otro.mob;
                 if (herido == medico || !herido.isValid() || herido.isDead()) continue;
                 if (!herido.getWorld().equals(medico.getWorld())) continue;
-                if (herido.getLocation().distanceSquared(medico.getLocation()) > 64) continue;
+                if (herido.getLocation().distanceSquared(medico.getLocation()) > radio * radio) continue;
                 double max = Compat.getAttribute(herido, "max_health", herido.getHealth());
                 if (herido.getHealth() >= max) continue;
-                herido.setHealth(Math.min(max, herido.getHealth() + max * 0.04));
+                herido.setHealth(Math.min(max, herido.getHealth() + max * cura));
                 curoAlguno = true;
                 Compat.spawn(herido.getWorld(), Compat.HEART,
                         herido.getLocation().add(0, herido.getHeight(), 0), 3, 0.3, 0.2, 0.3, 0.01);
@@ -331,7 +337,8 @@ public final class MinionManager implements Listener {
         // pantalla al jugador de particulas de velocidad.
         if (type.has(MinionAbility.AGIL)) {
             double base = Compat.getAttribute(mob, "movement_speed", 0.23);
-            Compat.setAttribute(mob, "movement_speed", base * 1.25);
+            Compat.setAttribute(mob, "movement_speed",
+                    base * (1 + type.param(MinionAbility.AGIL, "velocidad")));
         }
 
         double health = type.healthAt(level);
@@ -555,17 +562,20 @@ public final class MinionManager implements Listener {
         // Berserk: acorralado pega mas fuerte.
         if (type.has(MinionAbility.BERSERK)) {
             double max = Compat.getAttribute(minion, "max_health", minion.getHealth());
-            if (max > 0 && minion.getHealth() / max < 0.30) e.setDamage(e.getDamage() * 1.5);
+            if (max > 0 && minion.getHealth() / max < type.param(MinionAbility.BERSERK, "umbral-vida")) {
+                e.setDamage(e.getDamage() * (1 + type.param(MinionAbility.BERSERK, "extra")));
+            }
         }
 
         // Venenoso e Igneo castigan el contacto, venga de garra o de flecha.
         if (e.getEntity() instanceof LivingEntity tocado) {
             if (type.has(MinionAbility.VENENOSO)) {
                 var poison = Compat.effect("poison");
-                if (poison != null) tocado.addPotionEffect(new PotionEffect(poison, 80, 0, true, true));
+                if (poison != null) tocado.addPotionEffect(new PotionEffect(poison,
+                        ticks(type, MinionAbility.VENENOSO), nivel(type, MinionAbility.VENENOSO), true, true));
             }
             if (type.has(MinionAbility.IGNEO)) {
-                tocado.setFireTicks(Math.max(tocado.getFireTicks(), 80));
+                tocado.setFireTicks(Math.max(tocado.getFireTicks(), ticks(type, MinionAbility.IGNEO)));
                 Compat.spawn(tocado.getWorld(), Compat.SMALL_FLAME,
                         tocado.getLocation().add(0, 1, 0), 12, 0.3, 0.5, 0.3, 0.02);
             }
@@ -573,7 +583,7 @@ public final class MinionManager implements Listener {
 
         // Flecha pesada: la tercera venia marcada desde el disparo.
         if (e.getDamager().getPersistentDataContainer().has(keyHeavy, PersistentDataType.BYTE)) {
-            e.setDamage(e.getDamage() * 2.0);
+            e.setDamage(e.getDamage() * type.param(MinionAbility.FLECHA_PESADA, "multiplicador"));
             if (e.getEntity().getWorld() != null) {
                 Compat.spawn(e.getEntity().getWorld(), Compat.CRIT,
                         e.getEntity().getLocation().add(0, 1, 0), 14, 0.3, 0.4, 0.3, 0.15);
@@ -586,7 +596,8 @@ public final class MinionManager implements Listener {
         if (type.has(MinionAbility.FLECHA_HELADA) && e.getDamager() instanceof Projectile
                 && e.getEntity() instanceof LivingEntity victima) {
             var slow = Compat.effect("slowness");
-            if (slow != null) victima.addPotionEffect(new PotionEffect(slow, 60, 0, true, true));
+            if (slow != null) victima.addPotionEffect(new PotionEffect(slow,
+                    ticks(type, MinionAbility.FLECHA_HELADA), nivel(type, MinionAbility.FLECHA_HELADA), true, true));
             if (victima.getWorld() != null) {
                 Compat.spawn(victima.getWorld(), Compat.SNOWFLAKE,
                         victima.getLocation().add(0, 1, 0), 18, 0.35, 0.5, 0.35, 0.02);
@@ -605,7 +616,8 @@ public final class MinionManager implements Listener {
         if (type == null) return;
 
         if (type.has(MinionAbility.ACORAZADO)) {
-            e.setDamage(e.getDamage() * 0.65);
+            double reduccion = Math.max(0, Math.min(1, type.param(MinionAbility.ACORAZADO, "reduccion")));
+            e.setDamage(e.getDamage() * (1 - reduccion));
             Compat.spawn(victima.getWorld(), Compat.CRIT,
                     victima.getLocation().add(0, 1, 0), 6, 0.25, 0.35, 0.25, 0.02);
         }
@@ -616,7 +628,7 @@ public final class MinionManager implements Listener {
         // Espinas: se devuelve una parte, con damage() a secas para que el golpe de
         // vuelta no vuelva a pasar por aqui y se enrede en un bucle.
         if (type.has(MinionAbility.ESPINAS) && e.getDamager() instanceof LivingEntity) {
-            double vuelta = e.getFinalDamage() * 0.25;
+            double vuelta = e.getFinalDamage() * type.param(MinionAbility.ESPINAS, "devuelve");
             if (vuelta > 0.1) {
                 agresor.damage(vuelta);
                 Compat.spawn(agresor.getWorld(), Compat.CRIT,
@@ -627,12 +639,13 @@ public final class MinionManager implements Listener {
 
         // Alarma: los de al lado dejan lo que estaban haciendo y van a por el.
         if (type.has(MinionAbility.ALARMA)) {
+            double radio = type.param(MinionAbility.ALARMA, "radio");
             int avisados = 0;
             for (Escolta otro : escoltas) {
                 LivingEntity companero = otro.mob;
                 if (companero.equals(victima) || !companero.isValid() || companero.isDead()) continue;
                 if (!companero.getWorld().equals(victima.getWorld())) continue;
-                if (companero.getLocation().distanceSquared(victima.getLocation()) > 144) continue;
+                if (companero.getLocation().distanceSquared(victima.getLocation()) > radio * radio) continue;
                 if (companero instanceof Mob m) {
                     m.setTarget(agresor);
                     avisados++;
@@ -644,6 +657,16 @@ public final class MinionManager implements Listener {
                         victima.getLocation().add(0, 1.2, 0), 16, 0.4, 0.4, 0.4, 0.03);
             }
         }
+    }
+
+    /** Los segundos de un rasgo pasados a ticks. */
+    private static int ticks(MinionType type, MinionAbility a) {
+        return Math.max(1, (int) Math.round(type.param(a, "segundos") * 20));
+    }
+
+    /** El nivel de pocion de un rasgo como amplificador (Veneno I = 0). */
+    private static int nivel(MinionType type, MinionAbility a) {
+        return Math.max(0, (int) Math.round(type.param(a, "nivel")) - 1);
     }
 
     /** Quien esta detras de un golpe recibido: el que pega o el que disparo. */
@@ -668,7 +691,8 @@ public final class MinionManager implements Listener {
         if (type == null || !type.has(MinionAbility.FLECHA_PESADA)) return;
 
         int shots = arrowCount.merge(shooter.getUniqueId(), 1, Integer::sum);
-        if (shots % 3 != 0) return;
+        int cadaN = Math.max(1, (int) Math.round(type.param(MinionAbility.FLECHA_PESADA, "cada-n")));
+        if (shots % cadaN != 0) return;
 
         Entity arrow = e.getProjectile();
         arrow.getPersistentDataContainer().set(keyHeavy, PersistentDataType.BYTE, (byte) 1);
@@ -712,9 +736,11 @@ public final class MinionManager implements Listener {
         // marca y ya no se dividen, o una sala se llenaria sola hasta reventar.
         if (type.has(MinionAbility.DIVISION)
                 && !mob.getPersistentDataContainer().has(keyChild, PersistentDataType.BYTE)) {
-            int cria = Math.max(1, levelOf(mob) / 2);
-            for (int i = 0; i < 2; i++) {
-                Location donde = mob.getLocation().add((i == 0 ? -0.6 : 0.6), 0, 0);
+            int crias = Math.max(0, Math.min(8, (int) Math.round(type.param(MinionAbility.DIVISION, "crias"))));
+            int cria = Math.max(1, (int) Math.floor(levelOf(mob) * type.param(MinionAbility.DIVISION, "fraccion-nivel")));
+            for (int i = 0; i < crias; i++) {
+                // En fila y centradas en el padre: con dos, a -0.6 y +0.6 como siempre.
+                Location donde = mob.getLocation().add((i - (crias - 1) / 2.0) * 1.2, 0, 0);
                 LivingEntity hijo = spawnAt(type, cria, donde, spawnerId);
                 if (hijo != null) {
                     hijo.getPersistentDataContainer().set(keyChild, PersistentDataType.BYTE, (byte) 1);

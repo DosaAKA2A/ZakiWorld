@@ -9,17 +9,32 @@ import net.kyori.adventure.text.format.NamedTextColor;
 
 import java.io.File;
 import java.io.IOException;
+import java.time.LocalDate;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Comparator;
+import java.util.HashMap;
+import java.util.Iterator;
 import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Set;
 import java.util.logging.Level;
 
 /**
- * El almacen de esbirros: los tipos y sus generadores, todo en esbirros.yml.
- * Se edita desde el menu, pero el yml se puede tocar a mano igual que drops.yml.
- * Vive en plugins/EDM/anomaly/, que es persistente entre despliegues.
+ * El almacen de esbirros: carpetas, tipos y sus generadores (velas). Vive en
+ * plugins/EDM/anomaly/, que es persistente entre despliegues, al estilo de
+ * MythicMobs: un fichero por esbirro.
+ *
+ *   Esbirros/<carpeta>/_carpeta.yml   nombre, icono y color de la carpeta
+ *   Esbirros/<carpeta>/<id>.yml       la ficha del esbirro y sus velas plantadas
+ *   Skills/Esbirros/<id>.yml          sus rasgos: encendido/apagado y sus numeros
+ *
+ * La carpeta de un esbirro es el directorio en el que esta su fichero: moverlo de
+ * directorio y hacer /esb reload lo cambia de carpeta. Se edita desde el menu,
+ * pero todo se puede tocar a mano. El esbirros.yml de antes se migra solo.
  */
 public final class MinionRegistry {
 
@@ -27,7 +42,20 @@ public final class MinionRegistry {
     private final Map<String, MinionCategory> categories = new LinkedHashMap<>();
     private final Map<String, MinionType> types = new LinkedHashMap<>();
     private final Map<String, MinionSpawner> spawners = new LinkedHashMap<>();
-    private File file;
+
+    /** El fichero del que salio (o al que se escribio) cada tipo: si cambia de
+     *  carpeta o se borra, el viejo se quita del disco en el siguiente save(). */
+    private Map<String, File> archivos = new HashMap<>();
+    /** Las carpetas que tienen directorio en disco, para quitar las borradas. */
+    private final Set<String> carpetasEnDisco = new LinkedHashSet<>();
+    /** Tipos cuya ficha hay que reescribir aunque ellos no se hayan tocado: se les
+     *  quito una vela, que vive dentro de su fichero. */
+    private final Set<String> fichasSucias = new LinkedHashSet<>();
+    /** Ficheros escritos desde que arranco; solo para comprobarlo en pruebas. */
+    int escrituras;
+
+    /** El nombre de la ficha de cada carpeta; ningun esbirro puede llamarse asi. */
+    private static final String FICHA_CARPETA = "_carpeta.yml";
 
     public MinionRegistry(AnomalyPlugin plugin) {
         this.plugin = plugin;
@@ -100,8 +128,25 @@ public final class MinionRegistry {
         if (base.isBlank()) base = fallback;
         String id = base;
         int n = 2;
-        while (taken.contains(id)) id = base + "-" + n++;
+        // El id es tambien nombre de fichero: "con" o "nul" no valen en Windows.
+        while (taken.contains(id) || !nombreValido(id)) id = base + "-" + n++;
         return id;
+    }
+
+    private static final Set<String> RESERVADOS_WINDOWS = Set.of(
+            "con", "prn", "aux", "nul",
+            "com1", "com2", "com3", "com4", "com5", "com6", "com7", "com8", "com9",
+            "lpt1", "lpt2", "lpt3", "lpt4", "lpt5", "lpt6", "lpt7", "lpt8", "lpt9");
+
+    /** Si el id sirve tal cual como nombre de fichero o directorio, en Windows y en Linux. */
+    static boolean nombreValido(String id) {
+        if (id == null || id.isBlank() || id.startsWith("_") || id.startsWith(".")) return false;
+        if (id.endsWith(".") || id.endsWith(" ")) return false;
+        for (int i = 0; i < id.length(); i++) {
+            char c = id.charAt(i);
+            if (c < 32 || "\\/:*?\"<>|".indexOf(c) >= 0) return false;
+        }
+        return !RESERVADOS_WINDOWS.contains(id.toLowerCase(Locale.ROOT));
     }
 
     // ---------------------------------------------------------------------- tipos
@@ -179,167 +224,410 @@ public final class MinionRegistry {
 
     public void deleteSpawner(MinionSpawner s) {
         spawners.remove(s.id());
+        fichasSucias.add(s.typeId());
         save();
     }
 
     // ---------------------------------------------------------------------- disco
 
+    private File carpetaEsbirros() {
+        return new File(plugin.getDataFolder(), "Esbirros");
+    }
+
+    private File carpetaSkills() {
+        return new File(new File(plugin.getDataFolder(), "Skills"), "Esbirros");
+    }
+
+    private File ficheroSkills(String typeId) {
+        return new File(carpetaSkills(), typeId + ".yml");
+    }
+
     public void load() {
-        // Las carpetas TAMBIEN se vacian. Sin esto, una carpeta borrada del yml
+        // Las carpetas TAMBIEN se vacian. Sin esto, una carpeta borrada del disco
         // seguia viva en memoria despues de un /esb reload y el menu enseñaba
-        // carpetas fantasma que ya no existian en disco.
+        // carpetas fantasma que ya no existian.
         categories.clear();
         types.clear();
         spawners.clear();
-        file = new File(plugin.getDataFolder(), "esbirros.yml");
-        if (!file.exists()) return;
+        archivos = new HashMap<>();
+        carpetasEnDisco.clear();
+        fichasSucias.clear();
+
+        File dir = carpetaEsbirros();
+        File viejo = new File(plugin.getDataFolder(), "esbirros.yml");
+        boolean migrar = viejo.isFile() && !dir.exists();
+        if (migrar) {
+            cargarViejo(viejo);
+        } else {
+            if (viejo.isFile()) {
+                plugin.getLogger().warning("Hay un esbirros.yml viejo junto a la carpeta Esbirros/: manda la "
+                        + "carpeta y el fichero viejo se ignora. Borralo o renombralo cuando lo hayas revisado.");
+            }
+            if (dir.isDirectory()) cargarCarpetas(dir);
+        }
+
+        // Un esbirro cuya carpeta no existe se muda a la general en vez de
+        // desaparecer del menu.
+        for (MinionType t : types.values()) {
+            if (!categories.containsKey(t.categoryId())) t.categoryId(general().id());
+        }
+        if (!types.isEmpty() || !categories.isEmpty()) general();
+
+        if (migrar) {
+            if (escribir(true)) {
+                String base = "esbirros.yml.migrado-" + LocalDate.now();
+                File destino = new File(plugin.getDataFolder(), base);
+                for (int n = 2; destino.exists(); n++) destino = new File(plugin.getDataFolder(), base + "-" + n);
+                if (viejo.renameTo(destino)) {
+                    plugin.getLogger().info("Migrados " + types.size() + " esbirros en " + categories.size()
+                            + " carpetas a Esbirros/ (" + spawners.size() + " vela(s)); el fichero viejo queda como "
+                            + destino.getName() + ".");
+                } else {
+                    plugin.getLogger().warning("Migrados " + types.size() + " esbirros en " + categories.size()
+                            + " carpetas a Esbirros/, pero no se pudo renombrar esbirros.yml: renombralo a mano"
+                            + " (ya manda la carpeta).");
+                }
+            } else {
+                plugin.getLogger().severe("La migracion de esbirros.yml a Esbirros/ no se completo; revisa los"
+                        + " errores de arriba. El fichero viejo se deja como esta.");
+            }
+        } else {
+            // Un esbirro sin fichero de rasgos (creado a mano) lo recibe ya, con
+            // los numeros de serie, para que se vea todo lo que se puede tocar.
+            for (MinionType t : types.values()) {
+                if (!ficheroSkills(t.id()).exists()) escribirSkills(t);
+            }
+            // Lo recien leido ya esta en disco: nada sucio hasta que se toque algo.
+            for (MinionCategory c : categories.values()) {
+                if (carpetasEnDisco.contains(c.id())) c.limpia();
+            }
+            for (MinionType t : types.values()) t.limpio();
+            for (MinionSpawner sp : spawners.values()) sp.limpia();
+        }
+
+        plugin.getLogger().info("Esbirros cargados: " + categories.size() + " carpeta(s), "
+                + types.size() + " tipo(s), " + spawners.size() + " generador(es).");
+    }
+
+    /** Lee Esbirros/: cada directorio es una carpeta y cada .yml de dentro un esbirro. */
+    private void cargarCarpetas(File dir) {
+        File[] subs = dir.listFiles(File::isDirectory);
+        if (subs != null) {
+            Arrays.sort(subs, Comparator.comparing(File::getName));
+            for (File sub : subs) {
+                String catId = sub.getName();
+                MinionCategory cat = new MinionCategory(catId, catId);
+                File ficha = new File(sub, FICHA_CARPETA);
+                if (ficha.isFile()) {
+                    YamlConfiguration c = YamlConfiguration.loadConfiguration(ficha);
+                    cat.display(c.getString("nombre", catId));
+                    Material icon = Material.matchMaterial(c.getString("icono", "CHEST"));
+                    if (icon != null) cat.icon(icon);
+                    cat.colorRgb(c.getInt("color", 0xFFD966));
+                } else if (cat.isGeneral()) {
+                    cat.display("Sin clasificar");
+                    cat.icon(Material.BARREL);
+                    cat.colorRgb(0xA6ACB9);
+                }
+                categories.put(catId, cat);
+                carpetasEnDisco.add(catId);
+                cargarFichas(sub, catId);
+            }
+        }
+        // Una ficha suelta en Esbirros/, fuera de toda carpeta: va a la general y
+        // el siguiente guardado la mete en Esbirros/general/.
+        cargarFichas(dir, MinionCategory.GENERAL);
+    }
+
+    private void cargarFichas(File dir, String catId) {
+        File[] fichas = dir.listFiles(f -> f.isFile() && f.getName().endsWith(".yml")
+                && !f.getName().equals(FICHA_CARPETA));
+        if (fichas == null) return;
+        Arrays.sort(fichas, Comparator.comparing(File::getName));
+        for (File f : fichas) {
+            String id = f.getName().substring(0, f.getName().length() - ".yml".length());
+            if (types.containsKey(id)) {
+                plugin.getLogger().warning("Esbirro repetido: " + id + " esta en " + archivos.get(id).getPath()
+                        + " y en " + f.getPath() + ". Se usa el primero; quita uno de los dos.");
+                continue;
+            }
+            YamlConfiguration yml = YamlConfiguration.loadConfiguration(f);
+            MinionType type = leerTipo(id, yml);
+            type.categoryId(catId); // el directorio manda, traiga lo que traiga el fichero
+            if (!cargarSkills(type)) {
+                // Sin fichero de rasgos vale la lista de antes escrita a mano en la ficha.
+                for (String raw : yml.getStringList("habilidades")) {
+                    MinionAbility ability = MinionAbility.byId(raw);
+                    if (ability != null) type.abilities().add(ability);
+                }
+            }
+            types.put(id, type);
+            archivos.put(id, f);
+
+            ConfigurationSection velas = yml.getConfigurationSection("velas");
+            if (velas == null) continue;
+            for (String sid : velas.getKeys(false)) {
+                ConfigurationSection v = velas.getConfigurationSection(sid);
+                if (v == null) continue;
+                if (spawners.containsKey(sid)) {
+                    plugin.getLogger().warning("Vela repetida: " + sid + " (en " + f.getName() + "). Se ignora.");
+                    continue;
+                }
+                spawners.put(sid, leerVela(sid, id, v));
+            }
+        }
+    }
+
+    /** Los rasgos de Skills/Esbirros/<id>.yml. False si ese fichero no existe. */
+    private boolean cargarSkills(MinionType type) {
+        File f = ficheroSkills(type.id());
+        if (!f.isFile()) return false;
+        ConfigurationSection rasgos = YamlConfiguration.loadConfiguration(f).getConfigurationSection("rasgos");
+        if (rasgos == null) return true;
+        for (String key : rasgos.getKeys(false)) {
+            MinionAbility a = MinionAbility.byId(key);
+            ConfigurationSection r = rasgos.getConfigurationSection(key);
+            if (a == null || r == null) {
+                plugin.getLogger().warning("Rasgo desconocido '" + key + "' en Skills/Esbirros/"
+                        + f.getName() + ": se ignora.");
+                continue;
+            }
+            if (r.getBoolean("activa", false)) type.abilities().add(a);
+            for (MinionAbility.Param p : a.params()) {
+                if (r.isInt(p.key()) || r.isDouble(p.key()) || r.isLong(p.key())) {
+                    type.setParam(a, p.key(), r.getDouble(p.key()));
+                }
+            }
+        }
+        return true;
+    }
+
+    /**
+     * El formato de antes, todo en un esbirros.yml. Solo se lee para migrarlo; un
+     * id que no sirva como nombre de fichero se arregla (y se avisa).
+     */
+    private void cargarViejo(File file) {
         YamlConfiguration yml = YamlConfiguration.loadConfiguration(file);
 
+        Map<String, String> carpetasRenombradas = new HashMap<>();
         ConfigurationSection csec = yml.getConfigurationSection("categorias");
         if (csec != null) {
-            for (String id : csec.getKeys(false)) {
-                ConfigurationSection c = csec.getConfigurationSection(id);
+            for (String raw : csec.getKeys(false)) {
+                ConfigurationSection c = csec.getConfigurationSection(raw);
                 if (c == null) continue;
-                MinionCategory cat = new MinionCategory(id, c.getString("nombre", id));
-                org.bukkit.Material icon = org.bukkit.Material.matchMaterial(c.getString("icono", "CHEST"));
+                String id = idSeguro(raw, "carpeta", categories.keySet());
+                carpetasRenombradas.put(raw, id);
+                MinionCategory cat = new MinionCategory(id, c.getString("nombre", raw));
+                Material icon = Material.matchMaterial(c.getString("icono", "CHEST"));
                 if (icon != null) cat.icon(icon);
                 cat.colorRgb(c.getInt("color", 0xFFD966));
                 categories.put(id, cat);
             }
         }
 
+        Map<String, String> tiposRenombrados = new HashMap<>();
         ConfigurationSection tsec = yml.getConfigurationSection("esbirros");
         if (tsec != null) {
-            for (String id : tsec.getKeys(false)) {
-                ConfigurationSection s = tsec.getConfigurationSection(id);
+            for (String raw : tsec.getKeys(false)) {
+                ConfigurationSection s = tsec.getConfigurationSection(raw);
                 if (s == null) continue;
-                MinionType type = new MinionType(id, s.getString("nombre", id));
-                type.colorRgb(s.getInt("color", 0xFFFFFF));
-                type.bold(s.getBoolean("negrita", false));
-                type.categoryId(s.getString("categoria", MinionCategory.GENERAL));
-                type.tier(s.getInt("tier", 0));
-                try {
-                    type.entity(EntityType.valueOf(s.getString("entidad", "ZOMBIE")));
-                } catch (IllegalArgumentException ignored) {
-                }
-                type.baseHealth(s.getDouble("vida-base", 20));
-                type.healthGrowth(s.getDouble("vida-por-nivel", 0.35));
-                type.baseDamage(s.getDouble("dano-base", 1.0));
-                type.damageGrowth(s.getDouble("dano-por-nivel", 0.10));
-                type.mobcoins(s.getInt("mobcoins-min", 0), s.getInt("mobcoins-max", 0));
-                type.wandMinLevel(s.getInt("vela.nivel-min", 1));
-                type.wandMaxLevel(s.getInt("vela.nivel-max", 5));
-                type.wandIntervalSeconds(s.getInt("vela.intervalo-segundos", 30));
-                type.wandMaxAlive(s.getInt("vela.tope-vivos", 3));
-                type.wandActivationRadius(s.getInt("vela.radio-activacion", 32));
-                for (String raw : s.getStringList("habilidades")) {
-                    MinionAbility ability = MinionAbility.byId(raw);
+                String id = idSeguro(raw, "esbirro", types.keySet());
+                tiposRenombrados.put(raw, id);
+                MinionType type = leerTipo(id, s);
+                String cat = s.getString("categoria", MinionCategory.GENERAL);
+                type.categoryId(carpetasRenombradas.getOrDefault(cat, cat));
+                for (String h : s.getStringList("habilidades")) {
+                    MinionAbility ability = MinionAbility.byId(h);
                     if (ability != null) type.abilities().add(ability);
                 }
-                cargarPresencia(type, s.getConfigurationSection("presencia"));
                 types.put(id, type);
             }
         }
 
         ConfigurationSection gsec = yml.getConfigurationSection("generadores");
         if (gsec != null) {
-            for (String id : gsec.getKeys(false)) {
-                ConfigurationSection s = gsec.getConfigurationSection(id);
+            for (String sid : gsec.getKeys(false)) {
+                ConfigurationSection s = gsec.getConfigurationSection(sid);
                 if (s == null) continue;
                 String typeId = s.getString("esbirro", "");
+                typeId = tiposRenombrados.getOrDefault(typeId, typeId);
                 if (!types.containsKey(typeId)) continue; // huerfano: su tipo ya no existe
-                MinionSpawner sp = new MinionSpawner(id, typeId,
-                        s.getString("mundo", "world"), s.getInt("x"), s.getInt("y"), s.getInt("z"));
-                sp.minLevel(s.getInt("nivel-min", 1));
-                sp.maxLevel(s.getInt("nivel-max", 5));
-                sp.intervalSeconds(s.getInt("intervalo-segundos", 30));
-                sp.maxAlive(s.getInt("tope-vivos", 3));
-                sp.activationRadius(s.getInt("radio-activacion", 32));
-                sp.enabled(s.getBoolean("activo", true));
-                spawners.put(id, sp);
+                spawners.put(sid, leerVela(sid, typeId, s));
             }
         }
-        // Un esbirro cuya carpeta no existe (borrada a mano en el yml) se muda a la
-        // general en vez de desaparecer del menu.
-        for (MinionType t : types.values()) {
-            if (!categories.containsKey(t.categoryId())) t.categoryId(general().id());
-        }
-        if (!types.isEmpty() || !categories.isEmpty()) general();
-
-        plugin.getLogger().info("Esbirros cargados: " + categories.size() + " carpeta(s), "
-                + types.size() + " tipo(s), " + spawners.size() + " generador(es).");
     }
 
+    /** El id tal cual si vale como nombre de fichero; si no, uno limpio y un aviso. */
+    private String idSeguro(String raw, String fallback, Set<String> taken) {
+        if (nombreValido(raw) && !taken.contains(raw)) return raw;
+        String id = freeId(raw, fallback, taken);
+        plugin.getLogger().warning("El id '" + raw + "' no vale como nombre de fichero: pasa a ser '" + id
+                + "'. Si es un esbirro, su tabla de botin esbirro-" + raw + " hay que renombrarla a mano.");
+        return id;
+    }
+
+    /** La ficha de un esbirro, venga del fichero nuevo o de la seccion del viejo. */
+    private MinionType leerTipo(String id, ConfigurationSection s) {
+        MinionType type = new MinionType(id, s.getString("nombre", id));
+        type.colorRgb(s.getInt("color", 0xFFFFFF));
+        type.bold(s.getBoolean("negrita", false));
+        type.tier(s.getInt("tier", 0));
+        try {
+            type.entity(EntityType.valueOf(s.getString("entidad", "ZOMBIE")));
+        } catch (IllegalArgumentException ignored) {
+        }
+        type.baseHealth(s.getDouble("vida-base", 20));
+        type.healthGrowth(s.getDouble("vida-por-nivel", 0.35));
+        type.baseDamage(s.getDouble("dano-base", 1.0));
+        type.damageGrowth(s.getDouble("dano-por-nivel", 0.10));
+        type.mobcoins(s.getInt("mobcoins-min", 0), s.getInt("mobcoins-max", 0));
+        type.wandMinLevel(s.getInt("vela.nivel-min", 1));
+        type.wandMaxLevel(s.getInt("vela.nivel-max", 5));
+        type.wandIntervalSeconds(s.getInt("vela.intervalo-segundos", 30));
+        type.wandMaxAlive(s.getInt("vela.tope-vivos", 3));
+        type.wandActivationRadius(s.getInt("vela.radio-activacion", 32));
+        cargarPresencia(type, s.getConfigurationSection("presencia"));
+        return type;
+    }
+
+    private MinionSpawner leerVela(String id, String typeId, ConfigurationSection s) {
+        MinionSpawner sp = new MinionSpawner(id, typeId,
+                s.getString("mundo", "world"), s.getInt("x"), s.getInt("y"), s.getInt("z"));
+        sp.minLevel(s.getInt("nivel-min", 1));
+        sp.maxLevel(s.getInt("nivel-max", 5));
+        sp.intervalSeconds(s.getInt("intervalo-segundos", 30));
+        sp.maxAlive(s.getInt("tope-vivos", 3));
+        sp.activationRadius(s.getInt("radio-activacion", 32));
+        sp.enabled(s.getBoolean("activa", s.getBoolean("activo", true)));
+        return sp;
+    }
+
+    /**
+     * Baja a disco SOLO lo que cambio (va en el hilo principal, en cada click del
+     * menu): la ficha de un tipo tocado, movido de carpeta o con una vela tocada,
+     * los rasgos de un tipo al que se le cambio uno, la ficha de una carpeta
+     * tocada. Y quita lo que ya no toca: el fichero de un esbirro que cambio de
+     * carpeta, el de uno borrado (y sus rasgos) y la ficha de una carpeta borrada.
+     * Encender un rasgo desde el menu escribe un fichero.
+     */
     public void save() {
-        if (file == null) file = new File(plugin.getDataFolder(), "esbirros.yml");
+        escribir(false);
+    }
+
+    /** todo = true escribe todos los ficheros, sucios o no (la migracion). */
+    private boolean escribir(boolean todo) {
+        boolean ok = true;
+        File dir = carpetaEsbirros();
+        if (!types.isEmpty()) general();
+
+        // Que tipos tienen una vela sucia: su ficha tambien lo esta.
+        for (MinionSpawner sp : spawners.values()) {
+            if (sp.sucia()) fichasSucias.add(sp.typeId());
+        }
+
+        for (MinionCategory c : categories.values()) {
+            File cdir = new File(dir, c.id());
+            if (!todo && !c.sucia() && carpetasEnDisco.contains(c.id())) continue;
+            cdir.mkdirs();
+            YamlConfiguration yml = new YamlConfiguration();
+            yml.options().setHeader(List.of(
+                    "Carpeta de esbirros: " + c.display() + ".",
+                    "Cada .yml de este directorio es un esbirro de esta carpeta: moverlo a otro",
+                    "directorio (y /esb reload) lo cambia de carpeta. Borrar la carpeta desde el",
+                    "menú no borra su tropa: la muda a general/.",
+                    "",
+                    "nombre: como se ve en /esb.  icono: cualquier objeto (GOLD_ORE...).",
+                    "color: RGB en decimal."));
+            yml.set("nombre", c.display());
+            yml.set("icono", c.icon().name());
+            yml.set("color", c.colorRgb());
+            if (guardar(yml, new File(cdir, FICHA_CARPETA))) c.limpia();
+            else ok = false;
+            carpetasEnDisco.add(c.id());
+        }
+
+        Map<String, File> nuevos = new HashMap<>();
+        for (MinionType t : types.values()) {
+            File destino = new File(new File(dir, categoryOf(t).id()), t.id() + ".yml");
+            File antes = archivos.get(t.id());
+            boolean movido = antes == null || !antes.getAbsoluteFile().equals(destino.getAbsoluteFile());
+            boolean ficha = todo || movido || t.fichaSucia() || fichasSucias.contains(t.id());
+            boolean rasgos = todo || t.skillsSucias();
+            boolean bien = true;
+            if (ficha) bien = guardar(fichaDe(t), destino);
+            if (rasgos) bien &= escribirSkills(t);
+            if (bien) {
+                t.limpio();
+                if (ficha) {
+                    fichasSucias.remove(t.id());
+                    for (MinionSpawner sp : spawnersOf(t.id())) sp.limpia();
+                }
+            } else {
+                ok = false;
+            }
+            // Si la ficha nueva no se pudo escribir, la vieja se queda donde estaba.
+            if (movido && antes != null && bien) borrar(antes);
+            nuevos.put(t.id(), bien || antes == null ? destino : antes);
+        }
+        // Los esbirros borrados: fuera su ficha y sus rasgos. El botin es cosa de Drops/.
+        for (Map.Entry<String, File> e : archivos.entrySet()) {
+            if (types.containsKey(e.getKey())) continue;
+            borrar(e.getValue());
+            borrar(ficheroSkills(e.getKey()));
+            fichasSucias.remove(e.getKey());
+        }
+        archivos = nuevos;
+
+        // Las carpetas borradas: fuera su ficha, y el directorio si se quedo vacio.
+        for (Iterator<String> it = carpetasEnDisco.iterator(); it.hasNext(); ) {
+            String catId = it.next();
+            if (categories.containsKey(catId)) continue;
+            File cdir = new File(dir, catId);
+            borrar(new File(cdir, FICHA_CARPETA));
+            String[] resto = cdir.list();
+            if (resto != null && resto.length == 0) cdir.delete();
+            it.remove();
+        }
+        return ok;
+    }
+
+    private YamlConfiguration fichaDe(MinionType t) {
         YamlConfiguration yml = new YamlConfiguration();
         yml.options().setHeader(List.of(
-                "Esbirros de Anomaly: la tropa que puebla las mazmorras.",
-                "Se edita desde el menú (/anomaly menú -> Esbirros), pero se puede tocar a mano.",
+                "Esbirro " + t.display() + " (id " + t.id() + "). Se edita desde /esb, pero se puede tocar",
+                "a mano y releer con /esb reload. Su carpeta es el directorio en el que está.",
                 "",
                 "La vida a nivel N es  vida-base * (1 + vida-por-nivel * (N - 1)).",
                 "El daño es un multiplicador sobre el golpe de fábrica del bicho:",
-                "  x daño-base * (1 + daño-por-nivel * (N - 1)).",
-                "",
-                "Los esbirros se organizan en CARPETAS (categorias): la mazmorra o el",
-                "proposito al que sirven. Cada una elige icono y color; borrarla no borra",
-                "su tropa, la muda a la carpeta general.",
-                "",
-                "Cada generador tiene SU rango de nivel: el mismo esbirro puede ser 5-10",
-                "en una sala y 20-30 en otra. El botín se configura en drops.yml, en la",
-                "sección 'esbirro-<id>'.",
-                "",
+                "  x dano-base * (1 + dano-por-nivel * (N - 1)).",
                 "negrita: si el nombre del holograma va en negrita (por defecto, no).",
-                "",
                 "tier: el piso de la mina, del 1 al 5 (0 = no es de la mina). Cada baja sube",
-                "  el contador esbirros_tierN de ServerVariables, que es lo que pide el",
-                "  camino PvE del rankup. Matar en el piso 5 no cuenta para el piso 1.",
+                "  el contador esbirros_tierN de ServerVariables (camino PvE del rankup).",
+                "mobcoins-min / mobcoins-max: lo que paga al morir (0 = nada por aquí).",
+                "vela: lo que hereda cada vela nueva que se saque desde el menú.",
+                "velas: los generadores ya plantados de este esbirro, cada uno con SU nivel.",
                 "",
-                "habilidades: rasgos que se encienden y se apagan desde el menú.",
-                "  flecha-pesada  cada tercera flecha pega el doble",
-                "  ágil           se mueve un 25% más rápido",
-                "  flecha-helada  sus flechas dejan lentitud 3 segundos",
-                "  venenoso       sus golpes dejan veneno 4 segundos",
-                "  ígneo          deja ardiendo 4 segundos al que golpea",
-                "  acorazado      recibe un 35% menos de daño",
-                "  espinas        devuelve un 25% del daño cuerpo a cuerpo",
-                "  berserk        bajo el 30% de vida pega un 50% más",
-                "  curandero      cura a los esbirros de alrededor cada 3 s",
-                "  alarma         al ser golpeado manda a los suyos contra el atacante",
-                "  división       al morir se parte en dos crías de la mitad de nivel"));
-        for (MinionCategory c : categories.values()) {
-            String base = "categorias." + c.id();
-            yml.set(base + ".nombre", c.display());
-            yml.set(base + ".icono", c.icon().name());
-            yml.set(base + ".color", c.colorRgb());
-        }
-        for (MinionType t : types.values()) {
-            String base = "esbirros." + t.id();
-            yml.set(base + ".categoria", t.categoryId());
-            yml.set(base + ".tier", t.tier());
-            yml.set(base + ".nombre", t.display());
-            yml.set(base + ".color", t.colorRgb());
-            yml.set(base + ".negrita", t.boldFlag());
-            yml.set(base + ".entidad", t.entity().name());
-            yml.set(base + ".vida-base", t.baseHealth());
-            yml.set(base + ".vida-por-nivel", t.healthGrowth());
-            yml.set(base + ".dano-base", t.baseDamage());
-            yml.set(base + ".dano-por-nivel", t.damageGrowth());
-            yml.set(base + ".mobcoins-min", t.mobcoinsMin());
-            yml.set(base + ".mobcoins-max", t.mobcoinsMax());
-            yml.set(base + ".vela.nivel-min", t.wandMinLevel());
-            yml.set(base + ".vela.nivel-max", t.wandMaxLevel());
-            yml.set(base + ".vela.intervalo-segundos", t.wandIntervalSeconds());
-            yml.set(base + ".vela.tope-vivos", t.wandMaxAlive());
-            yml.set(base + ".vela.radio-activacion", t.wandActivationRadius());
-            List<String> abilities = new ArrayList<>();
-            for (MinionAbility a : t.abilities()) abilities.add(a.id());
-            yml.set(base + ".habilidades", abilities);
-            guardarPresencia(yml, base + ".presencia", t.presence());
-        }
-        for (MinionSpawner s : spawners.values()) {
-            String base = "generadores." + s.id();
-            yml.set(base + ".esbirro", s.typeId());
+                "Sus rasgos están en Skills/Esbirros/" + t.id() + ".yml y su botín en",
+                "Drops/Esbirros/" + t.id() + ".yml."));
+        yml.set("nombre", t.display());
+        yml.set("color", t.colorRgb());
+        yml.set("negrita", t.boldFlag());
+        yml.set("entidad", t.entity().name());
+        yml.set("tier", t.tier());
+        yml.set("vida-base", t.baseHealth());
+        yml.set("vida-por-nivel", t.healthGrowth());
+        yml.set("dano-base", t.baseDamage());
+        yml.set("dano-por-nivel", t.damageGrowth());
+        yml.set("mobcoins-min", t.mobcoinsMin());
+        yml.set("mobcoins-max", t.mobcoinsMax());
+        yml.set("vela.nivel-min", t.wandMinLevel());
+        yml.set("vela.nivel-max", t.wandMaxLevel());
+        yml.set("vela.intervalo-segundos", t.wandIntervalSeconds());
+        yml.set("vela.tope-vivos", t.wandMaxAlive());
+        yml.set("vela.radio-activacion", t.wandActivationRadius());
+        guardarPresencia(yml, "presencia", t.presence());
+        for (MinionSpawner s : spawnersOf(t.id())) {
+            String base = "velas." + s.id();
             yml.set(base + ".mundo", s.worldName());
             yml.set(base + ".x", s.x());
             yml.set(base + ".y", s.y());
@@ -349,12 +637,46 @@ public final class MinionRegistry {
             yml.set(base + ".intervalo-segundos", s.intervalSeconds());
             yml.set(base + ".tope-vivos", s.maxAlive());
             yml.set(base + ".radio-activacion", s.activationRadius());
-            yml.set(base + ".activo", s.enabled());
+            yml.set(base + ".activa", s.enabled());
         }
+        return yml;
+    }
+
+    /** Skills/Esbirros/<id>.yml: todos los rasgos, encendidos o no, con sus numeros. */
+    private boolean escribirSkills(MinionType t) {
+        YamlConfiguration yml = new YamlConfiguration();
+        yml.options().setHeader(List.of(
+                "Rasgos del esbirro " + t.display() + ". Se encienden desde /esb o aquí; los números se editan aquí.",
+                "Tras tocarlo a mano, /esb reload. Los esbirros que ya están vivos no cambian."));
+        for (MinionAbility a : MinionAbility.values()) {
+            String base = "rasgos." + a.id();
+            yml.set(base + ".activa", t.has(a));
+            yml.setComments(base, List.of(a.display() + ": " + a.what()));
+            for (MinionAbility.Param p : a.params()) {
+                double v = t.param(a, p.key());
+                // Los enteros se escriben sin ".0": "segundos: 4", no "segundos: 4.0".
+                Object valor = v == Math.rint(v) && Math.abs(v) < 1e9 ? (Object) (long) v : (Object) v;
+                yml.set(base + "." + p.key(), valor);
+                yml.setInlineComments(base + "." + p.key(), List.of(p.desc()));
+            }
+        }
+        return guardar(yml, ficheroSkills(t.id()));
+    }
+
+    private boolean guardar(YamlConfiguration yml, File f) {
         try {
-            yml.save(file);
+            yml.save(f);
+            escrituras++;
+            return true;
         } catch (IOException ex) {
-            plugin.getLogger().log(Level.SEVERE, "No se pudo guardar esbirros.yml", ex);
+            plugin.getLogger().log(Level.SEVERE, "No se pudo guardar " + f.getPath(), ex);
+            return false;
+        }
+    }
+
+    private void borrar(File f) {
+        if (f.exists() && !f.delete()) {
+            plugin.getLogger().warning("No se pudo borrar " + f.getPath() + ": quitalo a mano.");
         }
     }
 
@@ -391,7 +713,7 @@ public final class MinionRegistry {
     }
 
     /** Solo escribe lo que tiene valor: un esbirro de a pie no ensucia el fichero. */
-    private void guardarPresencia(YamlConfiguration yml, String base, MinionPresence p) {
+    private void guardarPresencia(ConfigurationSection yml, String base, MinionPresence p) {
         if (!p.any()) {
             yml.set(base, null);
             return;

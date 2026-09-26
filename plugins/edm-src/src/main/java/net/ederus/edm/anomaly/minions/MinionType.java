@@ -61,6 +61,9 @@ public final class MinionType {
     private final MinionPresence presence = new MinionPresence();
     private EntityType entity = EntityType.ZOMBIE;
     private final java.util.Set<MinionAbility> abilities = java.util.EnumSet.noneOf(MinionAbility.class);
+    /** Los numeros de cada rasgo que no van de serie. Ver MinionAbility.Param. */
+    private final java.util.Map<MinionAbility, java.util.Map<String, Double>> params =
+            new java.util.EnumMap<>(MinionAbility.class);
     private double baseHealth = 20;
     private double healthGrowth = 0.35;
     private double baseDamage = 1.0;
@@ -83,6 +86,29 @@ public final class MinionType {
     private int wandMaxAlive = 3;
     private int wandActivationRadius = 32;
 
+    /*
+     * Que hay que bajar a disco en el proximo save(): la ficha (Esbirros/...) o
+     * los rasgos (Skills/Esbirros/...). Los marca cada setter, sin que el que
+     * llama (el menu) tenga que acordarse; el registro los consulta y los limpia.
+     * Un tipo recien creado nace sucio, para que se escriba entero.
+     */
+    private boolean fichaSucia = true;
+    private boolean skillsSucias = true;
+
+    boolean fichaSucia() {
+        return fichaSucia;
+    }
+
+    boolean skillsSucias() {
+        return skillsSucias;
+    }
+
+    /** Lo llama el registro despues de escribir (o de cargar) el tipo. */
+    void limpio() {
+        fichaSucia = false;
+        skillsSucias = false;
+    }
+
     public MinionType(String id, String display) {
         this.id = id;
         this.display = display;
@@ -97,6 +123,7 @@ public final class MinionType {
     }
 
     public void display(String display) {
+        fichaSucia = true;
         this.display = display;
     }
 
@@ -109,11 +136,13 @@ public final class MinionType {
     }
 
     public void colorRgb(int rgb) {
+        fichaSucia = true;
         this.color = rgb;
     }
 
     /** Avanza (o retrocede) por la paleta de colores del menu. */
     public void cycleColor(boolean forward) {
+        fichaSucia = true;
         int at = 0;
         for (int i = 0; i < PALETA.length; i++) {
             if (PALETA[i] == color) {
@@ -133,6 +162,7 @@ public final class MinionType {
     }
 
     public void tier(int tier) {
+        fichaSucia = true;
         this.tier = Math.max(0, Math.min(5, tier));
     }
 
@@ -142,6 +172,7 @@ public final class MinionType {
     }
 
     public void categoryId(String categoryId) {
+        fichaSucia = true;
         this.categoryId = categoryId == null || categoryId.isBlank() ? MinionCategory.GENERAL : categoryId;
     }
 
@@ -160,6 +191,7 @@ public final class MinionType {
     }
 
     public void bold(boolean bold) {
+        fichaSucia = true;
         this.bold = bold;
     }
 
@@ -174,11 +206,13 @@ public final class MinionType {
     }
 
     public void entity(EntityType entity) {
+        fichaSucia = true;
         this.entity = entity;
     }
 
     /** Avanza (o retrocede) por el bestiario del menu. */
     public void cycleEntity(boolean forward) {
+        fichaSucia = true;
         int at = 0;
         for (int i = 0; i < BESTIARIO.length; i++) {
             if (BESTIARIO[i] == entity) {
@@ -199,8 +233,32 @@ public final class MinionType {
         return abilities.contains(ability);
     }
 
+    /**
+     * Un numero de un rasgo, el que este esbirro tenga escrito en su fichero de
+     * Skills/Esbirros o, si no, el de serie. MinionManager lee de aqui en vez de
+     * llevar las constantes dentro.
+     */
+    public double param(MinionAbility ability, String key, double def) {
+        java.util.Map<String, Double> mine = params.get(ability);
+        Double v = mine == null ? null : mine.get(key);
+        return v != null ? v : def;
+    }
+
+    /** Igual, pero con el valor de serie que declara el propio rasgo. */
+    public double param(MinionAbility ability, String key) {
+        MinionAbility.Param p = ability.param(key);
+        return param(ability, key, p == null ? 0 : p.def());
+    }
+
+    /** Fija un numero de un rasgo (lo usa la carga de Skills/Esbirros). */
+    public void setParam(MinionAbility ability, String key, double value) {
+        skillsSucias = true;
+        params.computeIfAbsent(ability, k -> new java.util.LinkedHashMap<>()).put(key, value);
+    }
+
     /** Enciende o apaga una habilidad; devuelve como queda. */
     public boolean toggle(MinionAbility ability) {
+        skillsSucias = true;
         if (abilities.contains(ability)) {
             abilities.remove(ability);
             return false;
@@ -220,6 +278,7 @@ public final class MinionType {
     }
 
     public void baseHealth(double value) {
+        fichaSucia = true;
         this.baseHealth = Math.max(1, Math.min(10000, value));
     }
 
@@ -228,6 +287,7 @@ public final class MinionType {
     }
 
     public void healthGrowth(double value) {
+        fichaSucia = true;
         this.healthGrowth = Math.max(0, Math.min(5, value));
     }
 
@@ -236,6 +296,7 @@ public final class MinionType {
     }
 
     public void baseDamage(double value) {
+        fichaSucia = true;
         this.baseDamage = Math.max(0.1, Math.min(20, value));
     }
 
@@ -244,6 +305,7 @@ public final class MinionType {
     }
 
     public void damageGrowth(double value) {
+        fichaSucia = true;
         this.damageGrowth = Math.max(0, Math.min(5, value));
     }
 
@@ -262,6 +324,7 @@ public final class MinionType {
     }
 
     public void wandMinLevel(int v) {
+        fichaSucia = true;
         this.wandMinLevel = Math.max(1, Math.min(1000, v));
         if (wandMaxLevel < wandMinLevel) wandMaxLevel = wandMinLevel;
     }
@@ -271,12 +334,14 @@ public final class MinionType {
     }
 
     public void wandMaxLevel(int v) {
+        fichaSucia = true;
         this.wandMaxLevel = Math.max(1, Math.min(1000, v));
         if (wandMinLevel > wandMaxLevel) wandMinLevel = wandMaxLevel;
     }
 
     /** Fija el rango de la vela de una vez; se ordena solo si vienen del reves. */
     public void wandLevels(int min, int max) {
+        fichaSucia = true;
         int lo = Math.max(1, Math.min(1000, Math.min(min, max)));
         int hi = Math.max(1, Math.min(1000, Math.max(min, max)));
         this.wandMinLevel = lo;
@@ -288,6 +353,7 @@ public final class MinionType {
     }
 
     public void wandIntervalSeconds(int v) {
+        fichaSucia = true;
         this.wandIntervalSeconds = Math.max(3, Math.min(3600, v));
     }
 
@@ -296,6 +362,7 @@ public final class MinionType {
     }
 
     public void wandMaxAlive(int v) {
+        fichaSucia = true;
         this.wandMaxAlive = Math.max(1, Math.min(30, v));
     }
 
@@ -304,6 +371,7 @@ public final class MinionType {
     }
 
     public void wandActivationRadius(int v) {
+        fichaSucia = true;
         this.wandActivationRadius = Math.max(8, Math.min(128, v));
     }
 
@@ -316,17 +384,20 @@ public final class MinionType {
     }
 
     public void mobcoinsMin(int v) {
+        fichaSucia = true;
         this.mobcoinsMin = Math.max(0, Math.min(1000000, v));
         if (mobcoinsMax < mobcoinsMin) mobcoinsMax = mobcoinsMin;
     }
 
     public void mobcoinsMax(int v) {
+        fichaSucia = true;
         this.mobcoinsMax = Math.max(0, Math.min(1000000, v));
         if (mobcoinsMin > mobcoinsMax) mobcoinsMin = mobcoinsMax;
     }
 
     /** Fija el rango de pago de una vez; se ordena solo si viene del reves. */
     public void mobcoins(int min, int max) {
+        fichaSucia = true;
         this.mobcoinsMin = Math.max(0, Math.min(1000000, Math.min(min, max)));
         this.mobcoinsMax = Math.max(0, Math.min(1000000, Math.max(min, max)));
     }

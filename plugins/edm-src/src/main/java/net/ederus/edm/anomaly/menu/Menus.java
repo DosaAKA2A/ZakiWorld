@@ -1410,7 +1410,7 @@ public final class Menus implements Listener {
      * La ficha de presencia de un esbirro: equipo, aura, contorno y sonidos.
      *
      * Es de LECTURA. Esto no se enciende desde el menu: se decide al crear el
-     * tipo, en esbirros.yml, porque es parte de que es ese esbirro y no un
+     * tipo, en su ficha de Esbirros/, porque es parte de que es ese esbirro y no un
      * interruptor que convenga tocar en caliente. Aqui esta para consultarlo.
      */
     private ItemStack presenciaIcono(MinionType type) {
@@ -1421,8 +1421,8 @@ public final class Menus implements Listener {
             lore.add(MenuUtil.line("Tropa de a pie: sin equipo, sin aura y sin"));
             lore.add(MenuUtil.line("contorno. Se distingue por su nombre y su nivel."));
             lore.add(MenuUtil.blank());
-            lore.add(Component.text("Se configura en esbirros.yml, en", MenuUtil.DIM));
-            lore.add(Component.text("esbirros." + type.id() + ".presencia", MenuUtil.DIM));
+            lore.add(Component.text("Se configura en Esbirros/<carpeta>/", MenuUtil.DIM));
+            lore.add(Component.text(type.id() + ".yml, en 'presencia'", MenuUtil.DIM));
             return MenuUtil.icon(Material.ARMOR_STAND, MenuUtil.title("Presencia", MenuUtil.SOFT), lore, false);
         }
 
@@ -1454,7 +1454,7 @@ public final class Menus implements Listener {
             lore.add(MenuUtil.field("Ambiente", look.ambientSound(), MenuUtil.SOFT));
         }
         lore.add(MenuUtil.blank());
-        lore.add(Component.text("Se configura en esbirros.yml.", MenuUtil.DIM));
+        lore.add(Component.text("Se configura en Esbirros/<carpeta>/" + type.id() + ".yml.", MenuUtil.DIM));
 
         Material icono = look.gear().getOrDefault(
                 net.ederus.edm.anomaly.minions.MinionPresence.Slot.MANO,
@@ -2150,7 +2150,7 @@ public final class Menus implements Listener {
                 lore.add(MenuUtil.line("se define una vez y se coloca por el mapa"));
                 lore.add(MenuUtil.line("con la vela, cada punto con su nivel."));
                 lore.add(MenuUtil.blank());
-                lore.add(MenuUtil.line("Todo se guarda al momento en esbirros.yml."));
+                lore.add(MenuUtil.line("Todo se guarda al momento en Esbirros/."));
             }
             case MINION_EDIT -> {
                 lore.add(MenuUtil.line("La ficha del esbirro. Los ajustes de la"));
