@@ -146,10 +146,12 @@ final class Amenazas implements Listener {
             e.setRemoveWhenFarAway(false);
             e.setCanPickupItems(false);
             sinSoltarEquipo(e);
+            sinModificadores(e);
             if (extra != null) extra.accept(e);
         });
         if (mob == null || !mob.isValid()) return null;
         mob.setCanPickupItems(false);
+        sinMontura(mob);
 
         Estado s = new Estado(mob, amenaza);
         s.vidaLogica = Compat.getAttribute(mob, "max_health", mob.getHealth());
@@ -164,6 +166,40 @@ final class Amenazas implements Listener {
         ponerCartel(mob, nivel, nombre == null ? Component.text(amenaza) : nombre);
         asegurarTarea();
         return mob;
+    }
+
+    /**
+     * Fuera los modificadores que vanilla pone al nacer: World#spawn corre finalizeSpawn ANTES
+     * del consumer, y ahi el "lider zombi" multiplica la vida maxima y pide refuerzos, y los
+     * bonus al azar tocan el empuje y el rango. Con ellos la vida logica, la escala y el golpe
+     * de una amenaza no serian los que calcula su modulo (PARCA, Eco), sino eso por un azar.
+     * Va antes de extra: lo que el modulo fije despues se queda.
+     */
+    static void sinModificadores(LivingEntity e) {
+        for (String clave : ATRIBUTOS_SPAWN) {
+            org.bukkit.attribute.Attribute a = Compat.attribute(clave);
+            org.bukkit.attribute.AttributeInstance ai = a == null ? null : e.getAttribute(a);
+            if (ai == null) continue;
+            for (org.bukkit.attribute.AttributeModifier mod : new java.util.ArrayList<>(ai.getModifiers())) {
+                ai.removeModifier(mod);
+            }
+        }
+    }
+
+    /** Lo que finalizeSpawn puede tocar con un modificador (lider, bonus al azar, bebe). */
+    private static final String[] ATRIBUTOS_SPAWN = {"max_health", "attack_damage", "armor", "armor_toughness",
+            "movement_speed", "knockback_resistance", "follow_range", "spawn_reinforcements"};
+
+    /**
+     * El jinete de gallina (y cualquier montura que vanilla le ponga al nacer) sale montado
+     * antes del consumer, cuando aun no lleva la marca y el veto a montar no le alcanza. Una
+     * amenaza montada no tiene IA propia y la montura no es una amenaza: se baja y se borra.
+     */
+    private static void sinMontura(LivingEntity mob) {
+        if (!mob.isInsideVehicle()) return;
+        Entity montura = mob.getVehicle();
+        mob.leaveVehicle();
+        if (montura != null && !(montura instanceof org.bukkit.entity.Player)) montura.remove();
     }
 
     private static void sinSoltarEquipo(LivingEntity e) {

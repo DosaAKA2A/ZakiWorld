@@ -25,6 +25,13 @@ final class ParteDefuncion {
     void cerrar(PlayerDeathEvent e) {
     }
 
+    /**
+     * Combat log (P-D08): Combate.cable lo llama antes de vaciar al que huye, que no pasa por
+     * PlayerDeathEvent y sin esto se iria sin parte.
+     */
+    void cable(Player p) {
+    }
+
     void parar() {
     }
 }

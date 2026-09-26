@@ -1012,6 +1012,14 @@ public final class Hardcore implements Listener {
         }
     }
 
+    /**
+     * Apunta la muerte para la cuarentena de reentrada. Tambien la llama Combate.cable: huir
+     * por el cable cuenta como morir, y sin esto se podia volver a entrar al momento.
+     */
+    void marcarMuerto(UUID u) {
+        muertos.put(u, System.currentTimeMillis());
+    }
+
     /** Apunta que ese minijefe viene a por ese jugador y no lo suelta. */
     public void marcarPresa(org.bukkit.entity.Entity minijefe, Player presa) {
         presas.put(minijefe.getUniqueId(), presa.getUniqueId());
@@ -1205,8 +1213,10 @@ public final class Hardcore implements Listener {
         p.getInventory().clear();
 
         cordura.reiniciar(p);
-        muertos.put(p.getUniqueId(), System.currentTimeMillis());
-        e.deathMessage(Component.text(p.getName() + " no volvió de Calamity.",
+        marcarMuerto(p.getUniqueId());
+        // Quien cae ante un Eco lo dice (P-E12); cualquier otra muerte, la frase de siempre.
+        Component deEco = ecos == null ? null : valor("eco", () -> ecos.mensajeMuerte(p), null);
+        e.deathMessage(deEco != null ? deEco : Component.text(p.getName() + " no volvió de Calamity.",
                 TextColor.color(0x8B1A1A)));
 
         // A donde reaparece se decide en onReaparecer, que es cuando vuelve a tener

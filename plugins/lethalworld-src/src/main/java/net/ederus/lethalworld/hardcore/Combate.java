@@ -329,7 +329,11 @@ final class Combate implements Listener {
         Estadisticas st = hc.estadisticas();
         if (st != null) hc.seguro("estadisticas", () -> st.sumar(u, "muertes", 1));
 
+        ParteDefuncion parte = hc.parte();
+        if (parte != null) hc.seguro("parte", () -> parte.cable(p));
         vaciar(p);
+        // Cuenta como muerte tambien para la cuarentena de reentrada (muerte.cuarentena-minutos).
+        hc.marcarMuerto(u);
         // Sincrono: lo que llevaba ya no existe y el Eco sale de la foto. Si el servidor
         // cae ahora, al volver tiene que seguir constando que huyo.
         hc.datos().set("cable." + u, System.currentTimeMillis());

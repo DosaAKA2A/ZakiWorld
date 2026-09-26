@@ -431,7 +431,7 @@ hardcore:
     reconocer-cordura: 5
     senal-radio: 48
     aviso-dueno-radio: 150
-    voces: {activo: true, radio: 24, minutos: 10, cada-min-segundos: 20, cada-max-segundos: 40}   # P1
+    voces: {activo: false, radio: 24, minutos: 10, cada-min-segundos: 20, cada-max-segundos: 40}   # P1
     cuerpo-jugador: false         # P1: Mannequin con su cara
 
   # ------------------------------------------------------------------ M1. ADUANA
