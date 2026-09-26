@@ -112,6 +112,16 @@ public final class MobsLethal implements Listener {
         return edm.modulo("anomaly") instanceof AnomalyPlugin a ? a : null;
     }
 
+    /**
+     * El gestor de esbirros de EDM (carteles "Nv. X", adoptar), o null sin EDM o sin su
+     * modulo anomaly. Publico para las amenazas de Calamity: asi solo hay un sitio en
+     * Lethal World que va a buscar EDM.
+     */
+    public MinionManager minionManager() {
+        AnomalyPlugin a = anomaly();
+        return a == null ? null : a.minionManager();
+    }
+
     private ConfigurationSection cfg() {
         ConfigurationSection s = plugin.getConfig().getConfigurationSection("mobs");
         return s == null ? new YamlConfiguration() : s;

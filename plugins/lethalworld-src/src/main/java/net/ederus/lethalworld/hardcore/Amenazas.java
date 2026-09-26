@@ -1,7 +1,5 @@
 package net.ederus.lethalworld.hardcore;
 
-import net.ederus.edm.EDMPlugin;
-import net.ederus.edm.anomaly.AnomalyPlugin;
 import net.ederus.edm.anomaly.minions.MinionManager;
 import net.ederus.edm.comun.Compat;
 import net.kyori.adventure.text.Component;
@@ -113,9 +111,10 @@ final class Amenazas implements Listener {
     Amenazas(Hardcore hc) {
         this.hc = hc;
         hc.plugin().getServer().getPluginManager().registerEvents(this, hc.plugin());
-        Subcomandos.lw().registrar("amenazas", "amenazas [contar|limpiar]: las PARCA, Ecos y demas vivas",
+        Subcomandos.lw().registrar("amenazas",
+                "amenazas [contar|limpiar|prueba <x> <y> <z> [vida]]: las PARCA, Ecos y demas vivas",
                 "ederus.mundos", this::comando,
-                args -> args.length == 2 ? List.of("contar", "limpiar") : List.of());
+                args -> args.length == 2 ? List.of("contar", "limpiar", "prueba") : List.of());
     }
 
     // ------------------------------------------------------------------ invocar
@@ -195,8 +194,9 @@ final class Amenazas implements Listener {
 
     /** El gestor de esbirros de EDM (carteles "Nv. X"), o null sin EDM o sin su modulo anomaly. */
     private MinionManager minionManager() {
-        if (!(hc.plugin().getServer().getPluginManager().getPlugin("EDM") instanceof EDMPlugin edm)) return null;
-        return edm.modulo("anomaly") instanceof AnomalyPlugin a ? a.minionManager() : null;
+        // Se pide a MobsLethal, que es quien va a buscar EDM; sin mobs de Lethal World
+        // (EDM sin anomaly) no hay cartel y sale el nombre a pelo.
+        return hc.plugin().mobs() == null ? null : hc.plugin().mobs().minionManager();
     }
 
     private double topeDeConfig(String amenaza) {
@@ -596,9 +596,57 @@ final class Amenazas implements Listener {
                     // Sin bitacora no se pierde nada: ya se dijo por el comando.
                 }
             }
-            default -> quien.sendMessage(Component.text("Uso: /lw hardcore amenazas [contar|limpiar]",
-                    NamedTextColor.RED));
+            case "prueba" -> prueba(quien, args);
+            default -> quien.sendMessage(Component.text(
+                    "Uso: /lw hardcore amenazas [contar|limpiar|prueba <x> <y> <z> [vida]]", NamedTextColor.RED));
         }
+    }
+
+    /**
+     * Una amenaza de prueba (un zombi quieto, tipo "prueba") en el primer mundo hardcore,
+     * para ver la base sin PARCA ni Eco: cartel, vida logica, que /damage sin jugador no
+     * le hace nada, que no persiste. Sin IA: no se mueve ni apunta a nadie.
+     */
+    private void prueba(CommandSender quien, String[] args) {
+        if (args.length < 5) {
+            quien.sendMessage(Component.text("Uso: /lw hardcore amenazas prueba <x> <y> <z> [vida]", NamedTextColor.RED));
+            return;
+        }
+        World w = null;
+        for (String m : hc.mundos()) {
+            for (World x : hc.plugin().getServer().getWorlds()) {
+                if (hc.esHardcore(x) && x.getKey().getKey().equals(m)) w = x;
+            }
+            if (w != null) break;
+        }
+        if (w == null) {
+            quien.sendMessage(Component.text("No hay ningun mundo hardcore cargado.", NamedTextColor.RED));
+            return;
+        }
+        double x, y, z, vida;
+        try {
+            x = Double.parseDouble(args[2]);
+            y = Double.parseDouble(args[3]);
+            z = Double.parseDouble(args[4]);
+            vida = args.length > 5 ? Double.parseDouble(args[5]) : 40;
+        } catch (NumberFormatException e) {
+            quien.sendMessage(Component.text("Coordenadas o vida no validas.", NamedTextColor.RED));
+            return;
+        }
+        Location sitio = new Location(w, x, y, z);
+        org.bukkit.entity.Zombie z0 = invocar(org.bukkit.entity.Zombie.class, sitio, "prueba", 1,
+                Component.text("Amenaza de prueba", NamedTextColor.DARK_RED), e -> {
+                    e.setAI(false);
+                    e.setShouldBurnInDay(false);
+                    e.setAdult();
+                });
+        if (z0 == null) {
+            quien.sendMessage(Component.text("amenazas | prueba | no ha salido (spawn cancelado)", NamedTextColor.RED));
+            return;
+        }
+        vidaLogica(z0, vida);
+        quien.sendMessage(Component.text("amenazas | prueba | " + z0.getUniqueId() + " | vida logica "
+                + vidaLogicaMaxima(z0) + " | entidad " + z0.getHealth() + " | escala " + escala(z0), NamedTextColor.GRAY));
     }
 
     // --------------------------------------------------------------------- parar
