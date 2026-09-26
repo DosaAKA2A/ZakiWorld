@@ -495,7 +495,7 @@ public final class AnomalyCommand implements CommandExecutor, TabCompleter {
     private void reload(CommandSender sender) {
         plugin.reloadEverything();
         sender.sendMessage(plugin.prefix().append(Component.text(
-                "Recargado: config.yml y drops.yml. La anomalía abierta, si la habia, se cerro.", SOFT)));
+                "Recargado: config.yml y Drops/. La anomalía abierta, si la habia, se cerro.", SOFT)));
     }
 
     /**

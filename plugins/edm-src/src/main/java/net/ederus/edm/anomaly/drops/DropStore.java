@@ -21,16 +21,25 @@ import org.bukkit.util.Vector;
 
 import java.io.File;
 import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.nio.charset.StandardCharsets;
+import java.time.LocalDate;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Random;
+import java.util.Set;
 import java.util.UUID;
 import java.util.logging.Level;
 
 /**
- * Guarda y reparte el botin. Cada anomalia tiene su propia tabla en drops.yml,
+ * Guarda y reparte el botin. Cada anomalia y cada esbirro tiene su propia tabla, en
+ * un fichero por entidad dentro de Drops/ (ver la seccion "disco"),
  * y se escribe con la serializacion nativa de Bukkit para que los objetos de MMOItems
  * conserven su contenedor de datos y sigan siendo el mismo item al caer.
  *
@@ -44,7 +53,8 @@ public final class DropStore implements Listener {
     private final net.ederus.edm.anomaly.AnomalyPlugin plugin;
     private final Map<String, DropTable> tables = new HashMap<>();
     private final Random random = new Random();
-    private File file;
+    /** Ficheros que no se pudieron leer: save() no los pisa para no perder lo que tuvieran. */
+    private final Set<File> broken = new HashSet<>();
 
     public DropStore(net.ederus.edm.anomaly.AnomalyPlugin plugin) {
         this.plugin = plugin;
@@ -56,48 +66,94 @@ public final class DropStore implements Listener {
 
     // ---------------------------------------------------------------------- disco
 
+    /*
+     * Un fichero por entidad, como MythicMobs:
+     *   Drops/Anomalias/<id>.yml  la tabla del jefe <id>
+     *   Drops/Esbirros/<id>.yml   la tabla del esbirro <id> (clave interna "esbirro-<id>")
+     * La clave de la tabla en memoria no cambia; solo cambia donde se guarda.
+     */
+    private static final String CARPETA = "Drops";
+    private static final String ANOMALIAS = "Anomalias";
+    private static final String ESBIRROS = "Esbirros";
+    private static final String PREFIJO_ESBIRRO = "esbirro-";
+
+    private File folder() {
+        return new File(plugin.getDataFolder(), CARPETA);
+    }
+
+    /** Donde vive la tabla con esa clave. */
+    private static File fileOf(File root, String tableId) {
+        if (tableId.startsWith(PREFIJO_ESBIRRO)) {
+            return new File(new File(root, ESBIRROS), tableId.substring(PREFIJO_ESBIRRO.length()) + ".yml");
+        }
+        return new File(new File(root, ANOMALIAS), tableId + ".yml");
+    }
+
     public void load() {
         tables.clear();
-        file = new File(plugin.getDataFolder(), "drops.yml");
-        if (!file.exists()) {
-            plugin.saveResource("drops.yml", false);
+        broken.clear();
+        File root = folder();
+        if (!root.isDirectory()) {
+            migrate(root);
+        } else if (new File(plugin.getDataFolder(), "drops.yml").exists()) {
+            plugin.getLogger().warning("Hay un drops.yml y también la carpeta " + CARPETA
+                    + "/: se ignora drops.yml. El botín se lee solo de " + CARPETA + "/.");
         }
-        YamlConfiguration yml = YamlConfiguration.loadConfiguration(file);
-        ConfigurationSection root = yml.getConfigurationSection("anomalias");
-        if (root == null) return;
 
-        for (String id : root.getKeys(false)) {
-            ConfigurationSection sec = root.getConfigurationSection(id);
-            if (sec == null) continue;
-            DropTable table = new DropTable(id);
-            table.experience(sec.getInt("experiencia", 500));
-            table.commands().addAll(sec.getStringList("comandos"));
-
-            ConfigurationSection botin = sec.getConfigurationSection("botin");
-            if (botin != null) {
-                List<String> keys = new ArrayList<>(botin.getKeys(false));
-                keys.sort(DropStore::compareNumericKeys);
-                for (String key : keys) {
-                    ConfigurationSection e = botin.getConfigurationSection(key);
-                    if (e == null) continue;
-                    ItemStack item = e.getItemStack("item");
-                    if (item == null) continue;
-                    DropEntry.Recipient to;
-                    try {
-                        to = DropEntry.Recipient.valueOf(e.getString("para", "TODOS"));
-                    } catch (IllegalArgumentException ex) {
-                        to = DropEntry.Recipient.TODOS;
-                    }
-                    DropEntry entry = new DropEntry(item, e.getDouble("probabilidad", 100), 1, 1, to);
-                    entry.amount(e.getInt("cantidad-min", item.getAmount()), e.getInt("cantidad-max", item.getAmount()));
-                    entry.chance(e.getDouble("probabilidad", 100));
-                    entry.unique(e.getBoolean("unico", false));
-                    table.entries().add(entry);
-                }
-            }
-            tables.put(id, table);
-        }
+        loadFolder(new File(root, ANOMALIAS), "");
+        loadFolder(new File(root, ESBIRROS), PREFIJO_ESBIRRO);
         plugin.getLogger().info("Tablas de botín cargadas: " + tables.size());
+    }
+
+    private void loadFolder(File dir, String prefix) {
+        File[] files = dir.listFiles((d, name) -> name.toLowerCase(Locale.ROOT).endsWith(".yml"));
+        if (files == null) return;
+        Arrays.sort(files);
+        for (File f : files) {
+            String name = f.getName();
+            String id = prefix + name.substring(0, name.length() - 4).toLowerCase(Locale.ROOT);
+            YamlConfiguration yml = new YamlConfiguration();
+            try {
+                yml.load(f);
+            } catch (Exception ex) {
+                // Un fichero roto no tumba el modulo: se avisa, se salta y save() no lo pisa.
+                plugin.getLogger().warning("Botín: " + CARPETA + "/" + dir.getName() + "/" + name
+                        + " no se pudo leer y se salta (" + ex.getMessage() + ")");
+                broken.add(f.getAbsoluteFile());
+                continue;
+            }
+            tables.put(id, readTable(id, yml));
+        }
+    }
+
+    private static DropTable readTable(String id, ConfigurationSection sec) {
+        DropTable table = new DropTable(id);
+        table.experience(sec.getInt("experiencia", 500));
+        table.commands().addAll(sec.getStringList("comandos"));
+
+        ConfigurationSection botin = sec.getConfigurationSection("botin");
+        if (botin != null) {
+            List<String> keys = new ArrayList<>(botin.getKeys(false));
+            keys.sort(DropStore::compareNumericKeys);
+            for (String key : keys) {
+                ConfigurationSection e = botin.getConfigurationSection(key);
+                if (e == null) continue;
+                ItemStack item = e.getItemStack("item");
+                if (item == null) continue;
+                DropEntry.Recipient to;
+                try {
+                    to = DropEntry.Recipient.valueOf(e.getString("para", "TODOS"));
+                } catch (IllegalArgumentException ex) {
+                    to = DropEntry.Recipient.TODOS;
+                }
+                DropEntry entry = new DropEntry(item, e.getDouble("probabilidad", 100), 1, 1, to);
+                entry.amount(e.getInt("cantidad-min", item.getAmount()), e.getInt("cantidad-max", item.getAmount()));
+                entry.chance(e.getDouble("probabilidad", 100));
+                entry.unique(e.getBoolean("unico", false));
+                table.entries().add(entry);
+            }
+        }
+        return table;
     }
 
     private static int compareNumericKeys(String a, String b) {
@@ -108,41 +164,168 @@ public final class DropStore implements Listener {
         }
     }
 
+    /**
+     * Reescribe todas las tablas, cada una en su fichero. Son unas decenas y solo se
+     * llama al tocar el menu o al apagar, asi que no merece la pena llevar "sucias".
+     * Las vacias se guardan igual que antes (experiencia y comandos a secas).
+     *
+     * No borra ficheros: ninguna tabla sale nunca de memoria, asi que un fichero sin
+     * tabla solo puede ser uno roto (que el admin querra arreglar, no perder) o uno
+     * recien puesto a mano (que entra en el proximo reload).
+     */
     public void save() {
-        if (file == null) file = new File(plugin.getDataFolder(), "drops.yml");
-        YamlConfiguration yml = new YamlConfiguration();
-        yml.options().setHeader(List.of(
-                "Tablas de botín de Anomaly.",
-                "Se edita desde el menú (/anomaly menú -> Botín), pero se puede tocar a mano.",
-                "Cada objeto se guarda tal cual, con su NBT, así que los items de MMOItems",
-                "se pueden arrastrar directamente al menú y caen identicos.",
-                "",
-                "único: true marca el objeto ÚNICO de la tabla (uno como mucho): sale",
-                "       brillando en la explosión y el chat anuncia quien se lo llevo.",
-                "",
-                "comandos: se ejecutan desde la consola. %jugador% se sustituye por el nombre.",
-                "          [mejor] -> solo para quien más daño hizo. [35%] -> probabilidad por jugador.",
-                "          Se combinan: [mejor] [25%] crates key give %jugador% legendary 1"));
+        File root = folder();
         for (DropTable table : tables.values()) {
-            String base = "anomalias." + table.anomalyId();
-            yml.set(base + ".experiencia", table.experience());
-            yml.set(base + ".comandos", table.commands());
-            int i = 0;
-            for (DropEntry e : table.entries()) {
-                String p = base + ".botin." + i++;
-                yml.set(p + ".item", e.item());
-                yml.set(p + ".probabilidad", e.chance());
-                yml.set(p + ".cantidad-min", e.min());
-                yml.set(p + ".cantidad-max", e.max());
-                yml.set(p + ".para", e.to().name());
-                if (e.unique()) yml.set(p + ".unico", true);
+            File f = fileOf(root, table.anomalyId());
+            if (broken.contains(f.getAbsoluteFile())) continue;
+            write(table.anomalyId(), toYaml(table), f);
+        }
+    }
+
+    private static YamlConfiguration toYaml(DropTable table) {
+        YamlConfiguration yml = new YamlConfiguration();
+        yml.set("experiencia", table.experience());
+        yml.set("comandos", table.commands());
+        int i = 0;
+        for (DropEntry e : table.entries()) {
+            String p = "botin." + i++;
+            yml.set(p + ".item", e.item());
+            yml.set(p + ".probabilidad", e.chance());
+            yml.set(p + ".cantidad-min", e.min());
+            yml.set(p + ".cantidad-max", e.max());
+            yml.set(p + ".para", e.to().name());
+            if (e.unique()) yml.set(p + ".unico", true);
+        }
+        return yml;
+    }
+
+    /** Guarda un fichero de tabla con su cabecera explicativa. */
+    private boolean write(String tableId, YamlConfiguration yml, File f) {
+        String quien;
+        if (tableId.startsWith(PREFIJO_ESBIRRO)) {
+            quien = "del esbirro " + tableId.substring(PREFIJO_ESBIRRO.length());
+        } else {
+            AnomalyType type = plugin.registry() == null ? null : plugin.registry().get(tableId);
+            quien = "de la anomalía " + (type == null ? tableId : type.display());
+        }
+        yml.options().setHeader(List.of(
+                "Botín " + quien + ".",
+                "Se edita desde el juego (/anomaly -> Botín, arrastrando el objeto real;",
+                "valen los de MMOItems) o a mano y luego /anomaly reload.",
+                "",
+                "experiencia: la que se lleva cada participante.",
+                "",
+                "Formato de cada entrada de botin:",
+                "  item:          el objeto serializado por Bukkit (conserva NBT y nombre)",
+                "  probabilidad:  0.1 a 100",
+                "  cantidad-min / cantidad-max",
+                "  para:          TODOS | MEJOR | ALEATORIO",
+                "  unico: true    marca el objeto ÚNICO de la tabla (uno como mucho): sale",
+                "                 brillando en la explosión y el chat anuncia quien se lo llevo.",
+                "",
+                "comandos: los ejecuta la consola al caer. %jugador% se sustituye por el nombre.",
+                "          [mejor]  -> solo corre para quien más daño hizo.",
+                "          [35%]    -> probabilidad de ese comando, POR JUGADOR.",
+                "          Se combinan: \"[mejor] [25%] crates key give %jugador% legendary 1\""));
+        try {
+            File parent = f.getParentFile();
+            if (parent != null) parent.mkdirs();
+            yml.save(f);
+            return true;
+        } catch (IOException ex) {
+            plugin.getLogger().log(Level.SEVERE, "No se pudo guardar el botín en " + f.getPath(), ex);
+            return false;
+        }
+    }
+
+    /**
+     * Parte el drops.yml de siempre en un fichero por tabla. Si no hay drops.yml
+     * (servidor limpio) se usa el del jar como semilla, leido directamente, para que
+     * el admin no llegue a ver nunca un drops.yml suelto.
+     *
+     * Se escribe primero en una carpeta aparte y se renombra al final: si algo falla
+     * a medias no queda un Drops/ cojo que impida repetir la migracion.
+     */
+    private void migrate(File root) {
+        File old = new File(plugin.getDataFolder(), "drops.yml");
+        boolean seed = !old.exists();
+        YamlConfiguration src = new YamlConfiguration();
+        try {
+            if (seed) {
+                try (InputStream in = plugin.getResource("drops.yml")) {
+                    if (in == null) {
+                        plugin.getLogger().warning("El jar no trae anomaly/drops.yml; el botín empieza vacío.");
+                        return;
+                    }
+                    src.load(new InputStreamReader(in, StandardCharsets.UTF_8));
+                }
+            } else {
+                src.load(old);
+            }
+        } catch (Exception ex) {
+            plugin.getLogger().severe("No se pudo leer " + (seed ? "el drops.yml del jar" : "drops.yml")
+                    + " para migrarlo a " + CARPETA + "/ (" + ex.getMessage() + "). Se deja como está y el"
+                    + " botín arranca vacío; arréglalo y reinicia.");
+            return;
+        }
+
+        File tmp = new File(plugin.getDataFolder(), CARPETA + "-migrando");
+        deleteTree(tmp);
+        ConfigurationSection all = src.getConfigurationSection("anomalias");
+        int n = 0;
+        if (all != null) {
+            for (String id : all.getKeys(false)) {
+                ConfigurationSection sec = all.getConfigurationSection(id);
+                if (sec == null) continue;
+                if (!id.startsWith(PREFIJO_ESBIRRO) && !id.matches("[a-z0-9_]+")) {
+                    plugin.getLogger().warning("Botín: la clave rara '" + id + "' de drops.yml va a "
+                            + CARPETA + "/" + ANOMALIAS + "/" + id + ".yml; revísala.");
+                }
+                // Copia en crudo: lo que hubiera en la seccion pasa tal cual, items incluidos.
+                YamlConfiguration out = new YamlConfiguration();
+                copy(sec, out);
+                if (!write(id, out, fileOf(tmp, id))) {
+                    plugin.getLogger().severe("Migración del botín abortada; drops.yml se queda como estaba.");
+                    deleteTree(tmp);
+                    return;
+                }
+                n++;
             }
         }
-        try {
-            yml.save(file);
-        } catch (IOException ex) {
-            plugin.getLogger().log(Level.SEVERE, "No se pudo guardar drops.yml", ex);
+        tmp.mkdirs();
+        if (!tmp.renameTo(root)) {
+            plugin.getLogger().severe("No se pudo renombrar " + tmp.getName() + " a " + CARPETA
+                    + "/; drops.yml se queda como estaba.");
+            deleteTree(tmp);
+            return;
         }
+        if (seed) {
+            plugin.getLogger().info("Sembradas " + n + " tablas de botín por defecto en " + CARPETA + "/.");
+            return;
+        }
+        String base = "drops.yml.migrado-" + LocalDate.now();
+        File aparte = new File(plugin.getDataFolder(), base);
+        for (int i = 2; aparte.exists(); i++) aparte = new File(plugin.getDataFolder(), base + "-" + i);
+        if (!old.renameTo(aparte)) {
+            plugin.getLogger().warning("No se pudo renombrar drops.yml a " + aparte.getName()
+                    + "; ya no se usa y se puede borrar a mano.");
+        }
+        plugin.getLogger().info("Migradas " + n + " tablas de botín a " + CARPETA + "/ (el viejo quedó como "
+                + aparte.getName() + ").");
+    }
+
+    private static void copy(ConfigurationSection from, ConfigurationSection to) {
+        for (String key : from.getKeys(false)) {
+            Object v = from.get(key);
+            if (v instanceof ConfigurationSection child) copy(child, to.createSection(key));
+            else to.set(key, v);
+        }
+    }
+
+    private static void deleteTree(File f) {
+        File[] kids = f.listFiles();
+        if (kids != null) for (File k : kids) deleteTree(k);
+        f.delete();
     }
 
     // -------------------------------------------------------------------- reparto
@@ -185,11 +368,11 @@ public final class DropStore implements Listener {
             int amount = entry.min() + (entry.max() > entry.min() ? random.nextInt(entry.max() - entry.min() + 1) : 0);
             if (amount <= 0) continue;
             if (amount > MAX_POR_ENTRADA) {
-                /* Un cero de mas en drops.yml no puede llenar el suelo de la
+                /* Un cero de mas en el botín no puede llenar el suelo de la
                  * arena con miles de items y tirar el tick del servidor. */
                 plugin.getLogger().warning("El botín de " + anomalyId + " pedia " + amount + " x "
                         + entry.item().getType() + "; se recorta a " + MAX_POR_ENTRADA
-                        + ". Revisa cantidad-max en drops.yml.");
+                        + ". Revisa cantidad-max en su fichero de Drops/.");
                 amount = MAX_POR_ENTRADA;
             }
 
