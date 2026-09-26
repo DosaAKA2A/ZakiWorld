@@ -118,9 +118,10 @@ final class Telemetria implements Listener {
         this.carpeta = new File(hc.plugin().getDataFolder(), "telemetria");
         int dias = Math.max(1, hc.cfg().getInt("telemetria.dias-a-conservar", 180));
         this.hilo = new Thread(() -> bucle(dias), "LethalWorld-telemetria");
-        // Daemon no: la JVM no puede cortar el hilo con lineas a medio escribir.
-        hilo.setDaemon(false);
-        hilo.start();
+        /* Daemon: si algo impide que parar() llegue (un fallo al arrancar Calamity), un hilo
+         * normal esperando en la cola dejaria colgado el apagado del servidor. Lo que evita
+         * perder lineas es parar(), que Hardcore llama en onDisable y espera al hilo. */
+        hilo.setDaemon(true);
         hc.plugin().getServer().getPluginManager().registerEvents(this, hc.plugin());
         this.stats = new StatsTelemetria(hc, carpeta);
 
@@ -128,6 +129,8 @@ final class Telemetria implements Listener {
         Autotest.registrar("censo", Telemetria::autotestCenso);
         Subcomandos.lw().registrar("telemetria", "telemetria: estado de la cola y fichero del mes", "ederus.mundos",
                 (quien, args) -> estado(quien), null);
+        // Lo ultimo: si algo de arriba revienta, no queda un hilo suelto sin nadie que lo pare.
+        hilo.start();
     }
 
     boolean activa() {
@@ -274,8 +277,9 @@ final class Telemetria implements Listener {
         String mes = YearMonth.from(ahora).toString();
         ultimoMes = mes;
         String linea = Jsonl.escribir(m);
-        if (parado || !hilo.isAlive()) {
-            // Sin hilo (apagado o muerto por un error raro) se escribe aqui mismo: es una linea.
+        if (!hilo.isAlive()) {
+            /* Sin hilo (ya parado, o muerto por un error raro) se escribe aqui mismo: es una
+             * linea. Solo sin hilo: con el vivo, escribir desde aqui cruzaria las lineas. */
             escribirLote(List.of(new Linea(mes, linea)));
             cerrarEscritor();
         } else {
