@@ -284,6 +284,10 @@ public final class Hardcore implements Listener {
      * queda en null y se avisa: sus ganchos fallan dentro de seguro() y el resto sigue.
      */
     private void crearModulos() {
+        // Lo de WP0 primero: /lw hardcore autotest y el placeholder de la cordura. Los
+        // modulos registran sus pruebas, subcomandos y placeholders al nacer, debajo.
+        Autotest.instalar(this);
+        PlaceholdersLethal.registrar("cordura", (jugador, resto) -> corduraTexto(jugador));
         telemetria = crear("telemetria", () -> new Telemetria(this));
         estadisticas = crear("estadisticas", () -> new Estadisticas(this));
         calendario = crear("calendario", () -> new Calendario(this));
@@ -367,6 +371,20 @@ public final class Hardcore implements Listener {
         if (telemetria != null) seguro("telemetria", () -> telemetria.parar());
         Subcomandos.lw().vaciar();
         Subcomandos.calamity().vaciar();
+        Autotest.vaciar();
+    }
+
+    /**
+     * %lethalworld_cordura%: la cordura redondeada, vacia fuera de Calamity (DIS sec. 7).
+     *
+     * PlaceholderAPI puede preguntar desde otro hilo: se lee el mapa de estados sin crear
+     * nada (cordura.valor() crearia la entrada, y eso no se hace fuera del hilo principal).
+     */
+    private String corduraTexto(org.bukkit.OfflinePlayer jugador) {
+        Player p = jugador == null ? null : jugador.getPlayer();
+        if (p == null || !esHardcore(p)) return "";
+        Cordura.Estado e = cordura.todos().get(p.getUniqueId());
+        return e == null ? "" : String.valueOf(Math.round(e.valor));
     }
 
     /**

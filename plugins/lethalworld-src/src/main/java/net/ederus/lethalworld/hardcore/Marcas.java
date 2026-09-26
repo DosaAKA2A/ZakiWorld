@@ -33,6 +33,11 @@ public final class Marcas {
     public static final NamespacedKey ECO_DUENO = clave("eco_dueno");
     /** DOUBLE: dano recibido de jugadores (cuota de M2). */
     public static final NamespacedKey DANO_JUGADOR = clave("dano_jugador");
+    /**
+     * DOUBLE: vida logica de una amenaza con mas de 1024 (Amenazas.vidaLogica). Va en la
+     * entidad para que un Eco que se descarga y vuelve siga sabiendo cuanta vida tiene.
+     */
+    public static final NamespacedKey VIDA_LOGICA = clave("vida_logica");
 
     // ------------------------------------------------------------------ items (sec. 8.5)
     /** BYTE 1: copia visual del equipo de un Eco. Se borra si aparece como item. */
@@ -61,7 +66,7 @@ public final class Marcas {
 
     /** Todas, para el autotest (que ninguna se haya escrito con otro namespace). */
     static List<NamespacedKey> todas() {
-        return List.of(AMENAZA, PRESA, ECO, ECO_DUENO, DANO_JUGADOR, ECO_COPIA, RELIQUIA, RELIQUIA_ID,
+        return List.of(AMENAZA, PRESA, ECO, ECO_DUENO, DANO_JUGADOR, VIDA_LOGICA, ECO_COPIA, RELIQUIA, RELIQUIA_ID,
                 RELIQUIA_ORIGEN, RELIQUIA_NACIO, RELIQUIA_ESPECIAL, RELIQUIA_NIVEL, RELIQUIA_MINIJEFE,
                 RELIQUIA_VALIDA, TROFEO, PRESTADO, LIGADO, TALISMAN, GRABADO, SALVOCONDUCTO);
     }
