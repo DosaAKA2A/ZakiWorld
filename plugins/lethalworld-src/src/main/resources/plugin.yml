@@ -1,12 +1,14 @@
 name: LethalWorld
-version: '1.0.1'
+version: '1.1.0'
 main: net.ederus.lethalworld.LethalWorldPlugin
 api-version: '1.20'
 author: Iris Studio
 description: Lethal World - mundos de datapack con el generador de Bracken procesado
 # Los esbirros, las MobCoins y la bitacora salen de EDM: sin el, esto no arranca.
 depend: [EDM]
-softdepend: [PlaceholderAPI, AuraSkills, UltimateMobCoins, WorldGuard]
+# MMOItems y MythicLib solo se leen por reflexion (PuenteMmo); estar aqui asegura que
+# cargan antes y que Paper deja ver sus clases.
+softdepend: [PlaceholderAPI, AuraSkills, UltimateMobCoins, WorldGuard, MMOItems, MythicLib]
 
 commands:
   lw:
@@ -14,8 +16,22 @@ commands:
     usage: /lw <list|generators|create|delete|tp|biomes|biome|pregen|level|reload>
     aliases: [lethalworld]
     permission: ederus.mundos
+  calamity:
+    description: Calamity - tu saldo, tus Ecos, tus contratos
+    usage: /calamity [eco|saldo|contratos|kit|tablero|encuesta|camino]
+    aliases: [cal]
+    permission: lethalworld.calamity
 
 permissions:
   ederus.mundos:
     description: Crea, borra y visita los mundos de Lethal World
     default: op
+  lethalworld.calamity:
+    description: /calamity para los jugadores
+    default: true
+  lethalworld.parca.exento:
+    description: Staff en vanish - la Huella no cuenta y la Parca no viene
+    default: false
+  lethalworld.aduana.exento:
+    description: Salta la comparacion de huella de IP (hermanos en la misma casa)
+    default: false

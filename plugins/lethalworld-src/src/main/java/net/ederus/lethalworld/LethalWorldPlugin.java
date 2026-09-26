@@ -44,6 +44,9 @@ import net.ederus.edm.comun.Bitacora;
  */
 public final class LethalWorldPlugin extends JavaPlugin {
 
+    /** La version, en el mismo sitio que en EDM. Se sube a la vez que pom.xml y plugin.yml. */
+    public static final String VERSION = "1.1.0";
+
     /** Namespace de las dimensiones que crea /lw. El mundo sale como lethal_world:<nombre>. */
     public static final String NAMESPACE = "lethal_world";
     private static final String PACK = "lethal_world";
@@ -85,6 +88,17 @@ public final class LethalWorldPlugin extends JavaPlugin {
         mobs.arrancar();
         hardcore = new net.ederus.lethalworld.hardcore.Hardcore(this);
         hardcore.arrancar();
+        // /calamity es de los jugadores: va aparte de /lw, que es de staff.
+        var cal = getCommand("calamity");
+        if (cal != null) {
+            var calamity = new net.ederus.lethalworld.hardcore.ComandoCalamity(this);
+            cal.setExecutor(calamity);
+            cal.setTabCompleter(calamity);
+        } else {
+            getLogger().warning("El comando /calamity no esta en el plugin.yml.");
+        }
+        // Despues de arrancar: los modulos registran sus placeholders al nacer.
+        net.ederus.lethalworld.hardcore.PlaceholdersLethal.activar(this);
         RestosBracken restos = new RestosBracken(this);
         getServer().getPluginManager().registerEvents(restos, this);
         restos.barrerConectados();
@@ -105,6 +119,7 @@ public final class LethalWorldPlugin extends JavaPlugin {
         if (pregen != null) pregen.apagar();
         if (mobs != null) mobs.parar();
         if (hardcore != null) hardcore.parar();
+        net.ederus.lethalworld.hardcore.PlaceholdersLethal.desactivar();
         if (bitacora != null) bitacora.cerrar();
     }
 
@@ -389,7 +404,8 @@ public final class LethalWorldPlugin extends JavaPlugin {
         return props.getProperty("level-name", "world");
     }
 
-    Bitacora bitacora() {
+    /** La Bitacora lethal-world. Publica: Calamity anota ahi muertes, Ecos, PARCAs y pagos. */
+    public Bitacora bitacora() {
         return bitacora;
     }
 

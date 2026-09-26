@@ -20,6 +20,7 @@ import org.bukkit.potion.PotionEffectType;
 import net.ederus.edm.comun.Estilo;
 import net.ederus.lethalworld.hardcore.Cordura;
 import net.ederus.lethalworld.hardcore.Hardcore;
+import net.ederus.lethalworld.hardcore.Subcomandos;
 import io.papermc.paper.registry.RegistryAccess;
 import io.papermc.paper.registry.RegistryKey;
 import net.kyori.adventure.text.Component;
@@ -544,6 +545,12 @@ final class ComandoMundos implements TabExecutor {
                         .append(Component.text(" de cordura.", SUAVE)));
             }
             default -> {
+                // Lo que registran los modulos de Calamity (Subcomandos): cada uno trae su
+                // subcomando sin tocar este fichero, que es lo que deja trabajar en paralelo.
+                if (args.length >= 2 && Subcomandos.lw().ejecutar(q,
+                        java.util.Arrays.copyOfRange(args, 1, args.length))) {
+                    return;
+                }
                 cabecera(q, "Calamity y los mundos hardcore");
                 linea(q, "Mundos", String.join(", ", hc.mundos()));
                 linea(q, "puerta de entrada", hc.vara().describir("entrada"));
@@ -563,6 +570,7 @@ final class ComandoMundos implements TabExecutor {
                 linea(q, "/lw hardcore cordura [valor] [player]", "consulta o la fija");
                 linea(q, "/lw hardcore tiempo [player]", "horas acumuladas y si tiene el tag");
                 linea(q, "/lw hardcore menu", "panel de las reglas de dificultad");
+                for (String[] s : Subcomandos.lw().ayuda(q)) linea(q, "/lw hardcore " + s[0], s[1]);
             }
         }
     }
@@ -577,6 +585,10 @@ final class ComandoMundos implements TabExecutor {
         } else if (args.length == 2 && args[0].equalsIgnoreCase("hardcore")) {
             op.addAll(List.of("status", "menu", "wand", "define", "llegada", "salida",
                     "frasco", "cristal", "esencia", "cordura", "tiempo"));
+            op.addAll(Subcomandos.lw().nombres(q));
+        } else if (args.length >= 3 && args[0].equalsIgnoreCase("hardcore")
+                && Subcomandos.lw().nombres(q).contains(args[1].toLowerCase(Locale.ROOT))) {
+            op.addAll(Subcomandos.lw().tab(q, java.util.Arrays.copyOfRange(args, 1, args.length)));
         } else if (args.length == 3 && args[0].equalsIgnoreCase("hardcore")
                 && args[1].equalsIgnoreCase("define")) {
             op.addAll(List.of("entrada", "salida"));

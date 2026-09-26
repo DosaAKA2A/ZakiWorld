@@ -41,13 +41,15 @@ import org.bukkit.potion.PotionEffect;
 import org.bukkit.potion.PotionEffectType;
 import org.bukkit.scheduler.BukkitTask;
 
+import java.security.SecureRandom;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
-import java.util.Random;
 import java.util.UUID;
+import java.util.function.Supplier;
+import java.util.logging.Level;
 
 /**
  * Las reglas que solo existen en los mundos hardcore de Lethal World (hoy, Calamity).
@@ -66,7 +68,10 @@ public final class Hardcore implements Listener {
     private final LethalWorldPlugin plugin;
     private final Cordura cordura = new Cordura();
     private final ItemsCalamity items;
-    private final Random random = new Random();
+    /* SecureRandom y no Random: aqui solo se elige minijefe y un desvio, pero la regla de
+     * la casa para hardcore/ es que nada salga de Random (lo que da botin o dinero no puede
+     * ser predecible) y asi la revision no tiene excepciones que recordar. */
+    private final SecureRandom random = new SecureRandom();
 
     /** Quien esta canalizando el cristal: jugador -> donde estaba al empezar. */
     private final Map<UUID, Location> canalizando = new HashMap<>();
@@ -96,6 +101,52 @@ public final class Hardcore implements Listener {
     private BukkitTask reloj;
     private MenuHardcore menu;
     private VaraPortales vara;
+    private int segundosManto;
+
+    /** Ultimo sitio con suelo firme de cada uno (rescates, Eco). Se limpia en el quit. */
+    private final Map<UUID, Location> ultimoSuelo = new HashMap<>();
+    /** Ultimo aviso de fallo de cada modulo, para no llenar la consola a uno por segundo. */
+    private final Map<String, Long> ultimoFallo = new HashMap<>();
+
+    /*
+     * Los modulos de Calamity (PLAN-IMPLEMENTACION sec. 4). Se crean en arrancar() en este
+     * orden y se paran al reves; cada uno registra su propio listener en su constructor,
+     * como MenuHardcore. Con hardcore.activo en false no existe ninguno.
+     */
+    private Telemetria telemetria;
+    private Estadisticas estadisticas;
+    private Calendario calendario;
+    private Aduana aduana;
+    private Saldo saldo;
+    private Creditos creditos;
+    private Monedero monedero;
+    private Entregas entregas;
+    private Reliquias reliquias;
+    private Tasacion tasacion;
+    private Grifo grifo;
+    private Minijefes minijefes;
+    private Cofres cofres;
+    private Racha racha;
+    private Combate combate;
+    private Sellos sellos;
+    private Ligado ligado;
+    private Amenazas amenazas;
+    private Huella huella;
+    private Parca parca;
+    private Ecos ecos;
+    private ParteDefuncion parte;
+    private Testigos testigos;
+    private Sentidos sentidos;
+    private ObjetosCalamity objetos;
+    private Altar altar;
+    private Horas horas;
+    private Hitos hitos;
+    private Kit kit;
+    private Contratos contratos;
+    private Rankings rankings;
+    private Tablero tablero;
+    private Encuesta encuesta;
+    private Eclipse eclipse;
 
     public Hardcore(LethalWorldPlugin plugin) {
         this.plugin = plugin;
@@ -118,7 +169,47 @@ public final class Hardcore implements Listener {
         return vara;
     }
 
-    private ConfigurationSection cfg() {
+    LethalWorldPlugin plugin() {
+        return plugin;
+    }
+
+    Telemetria telemetria() { return telemetria; }
+    Estadisticas estadisticas() { return estadisticas; }
+    Calendario calendario() { return calendario; }
+    Aduana aduana() { return aduana; }
+    Saldo saldo() { return saldo; }
+    Creditos creditos() { return creditos; }
+    Monedero monedero() { return monedero; }
+    Entregas entregas() { return entregas; }
+    Reliquias reliquias() { return reliquias; }
+    Tasacion tasacion() { return tasacion; }
+    /** Publico: lo llama MobsLethal.alMorir. Null con las reglas apagadas. */
+    public Grifo grifo() { return grifo; }
+    Minijefes minijefes() { return minijefes; }
+    Cofres cofres() { return cofres; }
+    Racha racha() { return racha; }
+    Combate combate() { return combate; }
+    Sellos sellos() { return sellos; }
+    Ligado ligado() { return ligado; }
+    Amenazas amenazas() { return amenazas; }
+    Huella huella() { return huella; }
+    Parca parca() { return parca; }
+    Ecos ecos() { return ecos; }
+    ParteDefuncion parte() { return parte; }
+    Testigos testigos() { return testigos; }
+    Sentidos sentidos() { return sentidos; }
+    ObjetosCalamity objetos() { return objetos; }
+    Altar altar() { return altar; }
+    Horas horas() { return horas; }
+    Hitos hitos() { return hitos; }
+    Kit kit() { return kit; }
+    Contratos contratos() { return contratos; }
+    Rankings rankings() { return rankings; }
+    Tablero tablero() { return tablero; }
+    Encuesta encuesta() { return encuesta; }
+    Eclipse eclipse() { return eclipse; }
+
+    ConfigurationSection cfg() {
         ConfigurationSection s = plugin.getConfig().getConfigurationSection("hardcore");
         return s == null ? new YamlConfiguration() : s;
     }
@@ -134,7 +225,7 @@ public final class Hardcore implements Listener {
     }
 
     /** Un jugador cuenta para las reglas si esta jugando de verdad. */
-    private boolean cuenta(Player p) {
+    boolean cuenta(Player p) {
         return p.getGameMode() != GameMode.SPECTATOR
                 && (p.getGameMode() != GameMode.CREATIVE || cfg().getBoolean("contar-creativo", false));
     }
@@ -155,6 +246,7 @@ public final class Hardcore implements Listener {
         plugin.getServer().getPluginManager().registerEvents(this, plugin);
         menu = new MenuHardcore(plugin);
         vara = new VaraPortales(plugin);
+        crearModulos();
         // Un segundo justo: la cordura se cuenta en segundos y la barra tiene que
         // repintarse a ese ritmo o parpadea contra los avisos de otros plugins.
         reloj = plugin.getServer().getScheduler().runTaskTimer(
@@ -175,6 +267,7 @@ public final class Hardcore implements Listener {
         reloj = null;
         MobCoins.aviso(null);
         canalizando.clear();
+        pararModulos();
         // Al apagar no hay PlayerQuitEvent que valga: la cordura de los que siguen
         // dentro se apunta aqui, o un reinicio del servidor se la devolveria entera.
         for (Player p : plugin.getServer().getOnlinePlayers()) {
@@ -186,7 +279,150 @@ public final class Hardcore implements Listener {
         guardarDatos();
     }
 
+    /**
+     * Crea los modulos en el orden de PLAN-IMPLEMENTACION sec. 4. Si uno revienta al nacer se
+     * queda en null y se avisa: sus ganchos fallan dentro de seguro() y el resto sigue.
+     */
+    private void crearModulos() {
+        telemetria = crear("telemetria", () -> new Telemetria(this));
+        estadisticas = crear("estadisticas", () -> new Estadisticas(this));
+        calendario = crear("calendario", () -> new Calendario(this));
+        aduana = crear("aduana", () -> new Aduana(this));
+        saldo = crear("saldo", () -> new Saldo(this));
+        creditos = crear("creditos", () -> new Creditos(this));
+        monedero = crear("monedero", () -> new Monedero(this));
+        entregas = crear("entregas", () -> new Entregas(this));
+        reliquias = crear("reliquias", () -> new Reliquias(this));
+        tasacion = crear("tasacion", () -> new Tasacion(this));
+        grifo = crear("grifo", () -> new Grifo(this));
+        minijefes = crear("minijefes", () -> new Minijefes(this));
+        cofres = crear("cofres", () -> new Cofres(this));
+        racha = crear("racha", () -> new Racha(this));
+        combate = crear("combate", () -> new Combate(this));
+        sellos = crear("sellos", () -> new Sellos(this));
+        ligado = crear("ligado", () -> new Ligado(this));
+        amenazas = crear("amenazas", () -> new Amenazas(this));
+        huella = crear("huella", () -> new Huella(this));
+        parca = crear("parca", () -> new Parca(this));
+        ecos = crear("ecos", () -> new Ecos(this));
+        parte = crear("parte", () -> new ParteDefuncion(this));
+        testigos = crear("testigos", () -> new Testigos(this));
+        sentidos = crear("sentidos", () -> new Sentidos(this));
+        objetos = crear("objetos", () -> new ObjetosCalamity(this));
+        altar = crear("altar", () -> new Altar(this));
+        horas = crear("horas", () -> new Horas(this));
+        hitos = crear("hitos", () -> new Hitos(this));
+        kit = crear("kit", () -> new Kit(this));
+        contratos = crear("contratos", () -> new Contratos(this));
+        rankings = crear("rankings", () -> new Rankings(this));
+        tablero = crear("tablero", () -> new Tablero(this));
+        encuesta = crear("encuesta", () -> new Encuesta(this));
+        eclipse = crear("eclipse", () -> new Eclipse(this));
+    }
+
+    private <T> T crear(String modulo, Supplier<T> nuevo) {
+        try {
+            return nuevo.get();
+        } catch (Throwable t) {
+            plugin.getLogger().log(Level.SEVERE, "[Calamity] El modulo " + modulo + " no arranca", t);
+            return null;
+        }
+    }
+
+    /** Al reves de como nacieron: los de arriba usan a los de abajo mientras se paran. */
+    private void pararModulos() {
+        if (eclipse != null) seguro("eclipse", () -> eclipse.parar());
+        if (encuesta != null) seguro("encuesta", () -> encuesta.parar());
+        if (tablero != null) seguro("tablero", () -> tablero.parar());
+        if (rankings != null) seguro("rankings", () -> rankings.parar());
+        if (contratos != null) seguro("contratos", () -> contratos.parar());
+        if (kit != null) seguro("kit", () -> kit.parar());
+        if (hitos != null) seguro("hitos", () -> hitos.parar());
+        if (horas != null) seguro("horas", () -> horas.parar());
+        if (altar != null) seguro("altar", () -> altar.parar());
+        if (objetos != null) seguro("objetos", () -> objetos.parar());
+        if (sentidos != null) seguro("sentidos", () -> sentidos.parar());
+        if (testigos != null) seguro("testigos", () -> testigos.parar());
+        if (parte != null) seguro("parte", () -> parte.parar());
+        if (ecos != null) seguro("ecos", () -> ecos.parar());
+        if (parca != null) seguro("parca", () -> parca.parar());
+        if (huella != null) seguro("huella", () -> huella.parar());
+        if (amenazas != null) seguro("amenazas", () -> amenazas.parar());
+        if (ligado != null) seguro("ligado", () -> ligado.parar());
+        if (sellos != null) seguro("sellos", () -> sellos.parar());
+        if (combate != null) seguro("combate", () -> combate.parar());
+        if (racha != null) seguro("racha", () -> racha.parar());
+        if (cofres != null) seguro("cofres", () -> cofres.parar());
+        if (minijefes != null) seguro("minijefes", () -> minijefes.parar());
+        if (grifo != null) seguro("grifo", () -> grifo.parar());
+        if (tasacion != null) seguro("tasacion", () -> tasacion.parar());
+        if (reliquias != null) seguro("reliquias", () -> reliquias.parar());
+        if (entregas != null) seguro("entregas", () -> entregas.parar());
+        if (monedero != null) seguro("monedero", () -> monedero.parar());
+        if (creditos != null) seguro("creditos", () -> creditos.parar());
+        if (saldo != null) seguro("saldo", () -> saldo.parar());
+        if (aduana != null) seguro("aduana", () -> aduana.parar());
+        if (calendario != null) seguro("calendario", () -> calendario.parar());
+        if (estadisticas != null) seguro("estadisticas", () -> estadisticas.parar());
+        if (telemetria != null) seguro("telemetria", () -> telemetria.parar());
+        Subcomandos.lw().vaciar();
+        Subcomandos.calamity().vaciar();
+    }
+
+    /**
+     * Corre un gancho de otro modulo sin dejar que su fallo tumbe lo demas.
+     *
+     * Calamity son una docena de modulos que se mezclan en una noche. Si uno revienta
+     * dentro del reloj, sin esto se para la cordura de todos; y si revienta en onMuerte,
+     * el inventario no se borra y el muerto sale con todo. El aviso sale una vez por minuto
+     * y modulo, con la traza, para que se vea sin inundar la consola.
+     */
+    void seguro(String modulo, Runnable gancho) {
+        try {
+            gancho.run();
+        } catch (Throwable t) {
+            avisarFallo(modulo, t);
+        }
+    }
+
+    /** Lo mismo que seguro() para los ganchos que devuelven algo: con fallo, el defecto. */
+    <T> T valor(String modulo, Supplier<T> gancho, T def) {
+        try {
+            T v = gancho.get();
+            return v == null ? def : v;
+        } catch (Throwable t) {
+            avisarFallo(modulo, t);
+            return def;
+        }
+    }
+
+    private void avisarFallo(String modulo, Throwable t) {
+        long ahora = System.currentTimeMillis();
+        Long antes = ultimoFallo.get(modulo);
+        if (antes != null && ahora - antes < 60_000) return;
+        ultimoFallo.put(modulo, ahora);
+        plugin.getLogger().log(Level.WARNING, "[Calamity] Fallo en el modulo " + modulo, t);
+    }
+
     // ----------------------------------------------------------------------- datos
+
+    /**
+     * hardcore-datos.yml en memoria, para los modulos. Lo que se escriba aqui tiene que ir
+     * seguido de marcarSucio() (se vuelca en el minuto) o de guardarYa() si hay objetos en
+     * juego (Eco, pagos): una caida entre medias no puede ni perderlos ni duplicarlos.
+     */
+    public YamlConfiguration datos() {
+        return datos;
+    }
+
+    public void marcarSucio() {
+        datosSucios = true;
+    }
+
+    public void guardarYa() {
+        datosSucios = true;
+        guardarDatos();
+    }
 
     /**
      * Lee datos.yml y, la primera vez, se trae lo que las versiones de antes dejaron
@@ -240,6 +476,7 @@ public final class Hardcore implements Listener {
                 if (!cuenta(p)) continue;
                 Cordura.Estado e = cordura.estado(p);
                 e.segundosDentro++;
+                seguro("huella", () -> huella.segundo(p));
                 drenar(p, e);
                 efectosDeBioma(p);
                 cordura.pintar(p);
@@ -247,10 +484,23 @@ public final class Hardcore implements Listener {
                 nieblaDeNoche(p);
                 contarTiempo(p);
                 if (e.valor <= 0) minijefeSiTocaCordura(p, e);
+                apuntarSuelo(p);
+                seguro("sentidos", () -> sentidos.latido(p));
+                seguro("ecos", () -> ecos.avisoDistancia(p));
+                seguro("combate", () -> combate.tick(p));
+                seguro("objetos", () -> objetos.tick(p));
             }
         }
         vigilarZonas();
         vigilarPresas();
+        seguro("parca", () -> parca.tick());
+        seguro("ecos", () -> ecos.tick());
+        seguro("aduana", () -> aduana.tick());
+        seguro("eclipse", () -> eclipse.tick());
+        if (++segundosManto >= 30) {
+            segundosManto = 0;
+            seguro("hitos", () -> hitos.tickManto());
+        }
         // Una vez por minuto, y solo si algo cambio: nadie dentro, nada que escribir.
         if (++segundosSinGuardar >= 60) {
             segundosSinGuardar = 0;
@@ -294,9 +544,26 @@ public final class Hardcore implements Listener {
         for (World w : plugin.getServer().getWorlds()) {
             if (!esHardcore(w)) continue;
             for (Player p : w.getPlayers()) {
-                if (cuenta(p) && vara.dentro(p, "salida")) sacar(p, "Cruzas de vuelta.");
+                if (cuenta(p) && vara.dentro(p, "salida")) sacar(p, "puerta", true);
             }
         }
+    }
+
+    /**
+     * Apunta donde pisa suelo firme. Sirve para devolver a alguien (o a una amenaza que se
+     * cae del mapa) a un sitio donde se pueda estar, sin buscarlo en el momento.
+     */
+    private void apuntarSuelo(Player p) {
+        if (p.isInsideVehicle() || p.isInWater() || p.isFlying() || p.isGliding()) return;
+        org.bukkit.block.Block bajo = p.getLocation().getBlock().getRelative(org.bukkit.block.BlockFace.DOWN);
+        if (!bajo.getType().isSolid()) return;
+        ultimoSuelo.put(p.getUniqueId(), p.getLocation().clone());
+    }
+
+    /** El ultimo suelo firme que piso ese jugador dentro, o null. */
+    public Location ultimoSuelo(Player p) {
+        Location l = ultimoSuelo.get(p.getUniqueId());
+        return l == null ? null : l.clone();
     }
 
     /**
@@ -362,16 +629,26 @@ public final class Hardcore implements Listener {
         double porMinuto = cfg().getDouble("cordura.por-minuto", 1.0);
         double factor = 1;
 
-        long hora = p.getWorld().getTime();
-        if (hora >= 13000 && hora <= 23000) factor *= cfg().getDouble("cordura.factor-noche", 2.0);
+        if (esNoche(p)) factor *= cfg().getDouble("cordura.factor-noche", 2.0);
         if (p.getLocation().getBlock().getLightLevel() < 4) {
             factor *= cfg().getDouble("cordura.factor-oscuridad", 2.0);
         }
         factor *= drenajeDelBioma(p);
+        // La PARCA cerca, el Talisman de Vigilia y el Eclipse: cada uno pone su factor.
+        factor *= valor("parca", () -> parca.factorDrenaje(p), 1.0);
+        factor *= valor("objetos", () -> objetos.factorDrenaje(p), 1.0);
+        factor *= valor("eclipse", () -> eclipse.factorCordura(), 1.0);
 
         double antes = e.valor;
         cordura.sumar(p, -(porMinuto * factor) / 60.0);
         anunciarTramo(p, e, antes);
+    }
+
+    /** De noche en su mundo, o durante un Eclipse (que es de noche para todo lo que cuenta). */
+    public boolean esNoche(Player p) {
+        long hora = p.getWorld().getTime();
+        if (hora >= 13000 && hora <= 23000) return true;
+        return eclipse != null && valor("eclipse", () -> eclipse.activo(), false);
     }
 
     /** El multiplicador de drenaje que le pone su bioma, 1 si no tiene nada dicho. */
@@ -469,7 +746,10 @@ public final class Hardcore implements Listener {
      * quedarse a cero sea una condena, no una granja de jefes.
      */
     private void minijefeSiTocaCordura(Player p, Cordura.Estado e) {
-        int cada = cfg().getInt("minijefes.cada-minutos", 10);
+        // Ley 6: una amenaza grande a la vez. Con la PARCA encima no viene nadie mas.
+        if (valor("parca", () -> parca.persigue(p), false)) return;
+        int def = cfg().getInt("minijefes.cada-minutos", 10);
+        int cada = valor("eclipse", () -> eclipse.minutosMinijefe(def), def);
         long ahora = System.currentTimeMillis();
         if (e.ultimoMinijefe != 0 && ahora - e.ultimoMinijefe < cada * 60_000L) return;
 
@@ -514,6 +794,11 @@ public final class Hardcore implements Listener {
         // Y sube con los minutos que lleves dentro: quedarse es cada vez peor idea.
         int porMinutos = cfg().getInt("dificultad.nivel-cada-minutos", 5);
         if (porMinutos > 0) extra += cordura.estado(p).segundosDentro / (porMinutos * 60);
+        // La Racha de Codicia y el Eclipse suben el nivel encima de todo lo anterior.
+        if (activo()) {
+            extra += valor("racha", () -> racha.niveles(p), 0);
+            extra += valor("eclipse", () -> eclipse.nivelesExtra(), 0);
+        }
         return extra;
     }
 
@@ -546,16 +831,40 @@ public final class Hardcore implements Listener {
      */
     @EventHandler(priority = EventPriority.HIGH, ignoreCancelled = true)
     public void onGolpe(EntityDamageByEntityEvent e) {
-        if (!(e.getEntity() instanceof Player p) || !esHardcore(p)) return;
-        double penetracion = cfg().getDouble("dificultad.penetracion-armadura", 0.30);
-        if (penetracion > 0 && e.getDamager() instanceof LivingEntity && !(e.getDamager() instanceof Player)) {
-            e.setDamage(e.getDamage() * (1 + penetracion));
+        if (!esHardcore(e.getEntity().getWorld())) return;
+        Entity quien = autor(e.getDamager());
+        boolean deAmenaza = Marcas.esAmenaza(e.getDamager()) || Marcas.esAmenaza(quien);
+        if (e.getEntity() instanceof Player p) {
+            /* Ni la PARCA ni el Eco llevan la penetracion: sus numeros ya salen hechos (los
+             * del Eco, del equipo del muerto) y un 30 % encima los descuadraria. Tampoco el
+             * golpe letal del dano verdadero, que ya es exacto y no pasa por armadura. */
+            double penetracion = cfg().getDouble("dificultad.penetracion-armadura", 0.30);
+            if (penetracion > 0 && e.getDamager() instanceof LivingEntity && !(e.getDamager() instanceof Player)
+                    && !deAmenaza && !DanoVerdadero.enCurso.contains(p.getUniqueId())) {
+                e.setDamage(e.getDamage() * (1 + penetracion));
+            }
+            // Un golpe fuerte tambien cuesta cordura: el susto se paga.
+            double porGolpe = cfg().getDouble("cordura.por-golpe", 5);
+            if (porGolpe > 0 && e.getFinalDamage() >= p.getHealth() * 0.25) {
+                cordura.sumar(p, -porGolpe);
+            }
+            // El Cristal se corta con un golpe de verdad: el de un jugador o una amenaza.
+            // Un zombi cualquiera no: si no, con un mob pegado nunca se podria salir.
+            if ((deAmenaza || quien instanceof Player) && canalizando.containsKey(p.getUniqueId())) {
+                cortarCristal(p, "Un golpe apaga el cristal.");
+            }
         }
-        // Un golpe fuerte tambien cuesta cordura: el susto se paga.
-        double porGolpe = cfg().getDouble("cordura.por-golpe", 5);
-        if (porGolpe > 0 && e.getFinalDamage() >= p.getHealth() * 0.25) {
-            cordura.sumar(p, -porGolpe);
+        seguro("combate", () -> combate.alGolpe(e));
+        seguro("huella", () -> huella.alGolpe(e));
+        seguro("combate", () -> combate.frenesiMob(e));
+    }
+
+    /** Quien de verdad pega: el que dispara, si es un proyectil. */
+    private static Entity autor(Entity danador) {
+        if (danador instanceof org.bukkit.entity.Projectile pr && pr.getShooter() instanceof Entity fuente) {
+            return fuente;
         }
+        return danador;
     }
 
     /**
@@ -573,6 +882,9 @@ public final class Hardcore implements Listener {
         // A disco va una vez por minuto (ver tick), no cada segundo: es un contador,
         // no un pago, y guardar 60 veces por minuto por jugador no lo merece.
         entregarTag(p, ahora);
+        // Las horas ACTIVAS (M33) van aparte: estas siguen contando como siempre para el
+        // tag de hoy, y aquellas solo suman el minuto en que se ha movido.
+        seguro("horas", () -> horas.segundo(p));
     }
 
     /** Horas acumuladas de un jugador en los mundos hardcore. */
@@ -691,6 +1003,9 @@ public final class Hardcore implements Listener {
     @EventHandler(ignoreCancelled = true)
     public void onAparecer(CreatureSpawnEvent e) {
         if (!esHardcore(e.getEntity().getWorld())) return;
+        // Las amenazas llevan la marca desde el consumer del spawn y no recogen nada: un Eco
+        // que se equipa lo del suelo cambiaria sus numeros. Esto corre DESPUES del consumer.
+        if (Marcas.esAmenaza(e.getEntity())) return;
         if (!cfg().getBoolean("dificultad.mobs-recogen", true)) return;
         e.getEntity().setCanPickupItems(true);
     }
@@ -769,8 +1084,17 @@ public final class Hardcore implements Listener {
     public void onRecoger(EntityPickupItemEvent e) {
         if (e.getEntity() instanceof Player) return;
         if (!esHardcore(e.getEntity().getWorld())) return;
-        if (!cfg().getBoolean("dificultad.mobs-recogen", true)) return;
         LivingEntity mob = e.getEntity();
+        /* Reliquias, Esencias y copias del Eco no las coge ningun mob, este o no la regla
+         * de recoger: el mob que se las lleva las destruye al despawnear, y la copia visual
+         * de un Eco no puede acabar en ningun inventario. Las amenazas tampoco cogen nada. */
+        ItemStack cogido = e.getItem().getItemStack();
+        if (Marcas.esAmenaza(mob) || Marcas.tiene(cogido, Marcas.ECO_COPIA) || items.esEsencia(cogido)
+                || valor("reliquias", () -> reliquias.es(cogido), false)) {
+            e.setCancelled(true);
+            return;
+        }
+        if (!cfg().getBoolean("dificultad.mobs-recogen", true)) return;
 
         // Ni los jefes de las anomalias ni su tropa: el permiso de recoger se da al
         // aparecer, cuando todavia no llevan su marca, asi que se les niega aqui. Un
@@ -798,8 +1122,11 @@ public final class Hardcore implements Listener {
     @EventHandler(ignoreCancelled = true)
     public void onBotinDeCofre(LootGenerateEvent e) {
         if (!esHardcore(e.getWorld())) return;
-        if (!cfg().getBoolean("dificultad.cofres-vacios", true)) return;
-        e.setLoot(java.util.Collections.emptyList());
+        if (cfg().getBoolean("dificultad.cofres-vacios", true)) {
+            e.setLoot(java.util.Collections.emptyList());
+            return;
+        }
+        seguro("cofres", () -> cofres.alGenerar(e));
     }
 
     /** Fuego amigo: aqui os podeis matar entre vosotros. */
@@ -807,14 +1134,14 @@ public final class Hardcore implements Listener {
     public void onFuegoAmigo(EntityDamageByEntityEvent e) {
         if (!(e.getEntity() instanceof Player victima) || !esHardcore(victima)) return;
         if (!cfg().getBoolean("dificultad.fuego-amigo", true)) return;
-        Entity quien = e.getDamager();
-        if (quien instanceof org.bukkit.entity.Projectile pr && pr.getShooter() instanceof Entity fuente) {
-            quien = fuente;
-        }
+        Entity quien = autor(e.getDamager());
         // Solo se devuelve el golpe de OTRO jugador: lo demas que lo decidan las
         // protecciones normales del servidor.
-        if (quien instanceof Player agresor && !agresor.equals(victima) && e.isCancelled()) {
-            e.setCancelled(false);
+        if (quien instanceof Player agresor && !agresor.equals(victima)) {
+            if (e.isCancelled()) e.setCancelled(false);
+            // Llegada protegida, Frenesi, Sangre fresca y Eclipse: despues de descancelar,
+            // para que puedan volver a cancelar o cambiar el dano con la ultima palabra.
+            seguro("combate", () -> combate.alPvp(e));
         }
     }
 
@@ -829,9 +1156,26 @@ public final class Hardcore implements Listener {
      */
     @EventHandler(priority = EventPriority.HIGHEST)
     public void onMuerte(PlayerDeathEvent e) {
+        // Una muerte que otro plugin cancelo no es una muerte: ni parte, ni foto, ni Eco.
+        if (e.isCancelled()) return;
         Player p = e.getEntity();
         if (!esHardcore(p)) return;
-        if (!cfg().getBoolean("muerte.lo-pierde-todo", true)) return;
+        boolean pierde = cfg().getBoolean("muerte.lo-pierde-todo", true);
+
+        /* Todo lo que tiene que ver el equipo o la cordura va ANTES de borrar el inventario
+         * y de reiniciar la cordura (MT sec. 4): es el unico momento en que aun estan. Cada
+         * gancho va en seguro(): si uno falla, el inventario se borra igual, que un fallo
+         * que deja salir al muerto con todo es un duplicador. */
+        seguro("parte", () -> parte.cerrar(e));
+        FotoMuerte foto = pierde ? valor("eco", () -> FotoMuerte.de(p, this), null) : null;
+        if (pierde) seguro("objetos", () -> objetos.alMorir(p, e));
+        seguro("parca", () -> parca.alMorirPresa(p));
+        seguro("testigos", () -> testigos.alMorir(p));
+        seguro("racha", () -> racha.alMorir(p));
+        seguro("telemetria", () -> telemetria.muere(p, foto));
+        seguro("estadisticas", () -> estadisticas.sumar(p.getUniqueId(), "muertes", 1));
+        anotarMuerte(p, e);
+        if (!pierde) return;
 
         e.getDrops().clear();
         e.setDroppedExp(0);
@@ -851,6 +1195,31 @@ public final class Hardcore implements Listener {
         // cuerpo: dos ticks despues de morir sigue en la pantalla de muerte, y a un
         // muerto no se le puede teletransportar.
         porReaparecer.add(p.getUniqueId());
+
+        // El Eco nace de la foto, ya con el inventario borrado: lo que lleva es copia.
+        if (foto != null) seguro("eco", () -> ecos.programar(foto));
+    }
+
+    /** La muerte a la Bitacora: es la unica respuesta a "me han robado". */
+    private void anotarMuerte(Player p, PlayerDeathEvent e) {
+        try {
+            Location l = p.getLocation();
+            String causa;
+            try {
+                causa = e.getDamageSource().getDamageType().getKey().getKey();
+            } catch (Throwable sinTipo) {
+                causa = "?";
+            }
+            Entity quien = e.getDamageSource().getCausingEntity();
+            plugin.bitacora().anotar("muerte", p.getName(),
+                    l.getWorld().getKey().getKey() + " " + l.getBlockX() + " " + l.getBlockY() + " " + l.getBlockZ(),
+                    causa + (quien == null ? "" : " por " + (quien instanceof Player j ? j.getName()
+                            : quien.getType().getKey().getKey())),
+                    "cordura " + Math.round(cordura.valor(p)),
+                    "dentro " + cordura.estado(p).segundosDentro + " s");
+        } catch (Throwable t) {
+            avisarFallo("bitacora", t);
+        }
     }
 
     /**
@@ -871,6 +1240,12 @@ public final class Hardcore implements Listener {
             if (fuera != null) e.setRespawnLocation(fuera);
         }
         p.sendMessage(Component.text("Has muerto allí dentro.", NamedTextColor.GRAY));
+        // Un tick despues ya tiene cuerpo: mensaje del Eco y lo que devuelva el Salvoconducto.
+        plugin.getServer().getScheduler().runTaskLater(plugin, () -> {
+            if (!p.isOnline() || !activo()) return;
+            seguro("eco", () -> ecos.alReaparecer(p));
+            seguro("objetos", () -> objetos.alReaparecer(p));
+        }, 1L);
     }
 
     // --------------------------------------------------------------- entrar/salir
@@ -883,15 +1258,40 @@ public final class Hardcore implements Listener {
         return mundos.isEmpty() ? null : mundos.get(0).getSpawnLocation();
     }
 
-    /** Saca a un jugador del mundo hardcore y le devuelve la cordura entera. */
-    public void sacar(Player p, String motivo) {
+    /**
+     * Saca a un jugador del mundo hardcore y le devuelve la cordura entera.
+     *
+     * @param motivo     clave corta: "puerta", "cristal", "admin" (la reciben tasar y la PARCA)
+     * @param extraccion true si sale VIVO por su pie (puerta o Cristal): solo entonces se
+     *                   tasa lo que lleva. Los comandos de admin pasan false.
+     */
+    public void sacar(Player p, String motivo, boolean extraccion) {
         Location destino = salida();
         if (destino == null) return;
+        if (activo()) {
+            if (extraccion) {
+                // La tasacion va antes del teleport: lo que se tasa es lo que lleva DENTRO.
+                seguro("tasacion", () -> tasacion.tasar(p, motivo));
+                seguro("estadisticas", () -> {
+                    estadisticas.sumar(p.getUniqueId(), "extracciones", 1);
+                    estadisticas.maximo(p.getUniqueId(), "expedicion-max-seg", cordura.estado(p).segundosDentro);
+                });
+            }
+            seguro("huella", () -> huella.reiniciar(p));
+            seguro("parca", () -> parca.alSalir(p, motivo));
+            seguro("kit", () -> kit.borrarPrestado(p));
+            seguro("combate", () -> combate.alSalir(p));
+        }
         p.teleport(destino);
         cordura.reiniciar(p);
         p.sendActionBar(Component.empty());
-        if (motivo != null && !motivo.isEmpty()) {
-            p.sendMessage(Component.text(motivo, NamedTextColor.GRAY));
+        String texto = switch (motivo == null ? "" : motivo) {
+            case "puerta" -> "Cruzas de vuelta.";
+            case "cristal" -> "El cristal te devuelve al spawn.";
+            default -> null;
+        };
+        if (texto != null) {
+            p.sendMessage(Component.text(texto, NamedTextColor.GRAY));
         }
         Compat.soundPlayers(destino.getWorld(), destino, "block.amethyst_block.resonate", 1.0f, 0.8f);
     }
@@ -907,6 +1307,17 @@ public final class Hardcore implements Listener {
         p.sendMessage(Component.text("Calamity", TextColor.color(0x8B1A1A))
                 .append(Component.text("  ·  Lo que traigas, lo pierdes al morir.", NamedTextColor.GRAY)));
         Compat.sound(destino.getWorld(), destino, "ambient.cave", 1.2f, 0.5f);
+        if (activo()) {
+            seguro("huella", () -> huella.reiniciar(p));
+            seguro("combate", () -> combate.llegada(p));
+            seguro("aduana", () -> aduana.alEntrar(p));
+            seguro("ecos", () -> ecos.alEntrar(p));
+            seguro("parca", () -> parca.alEntrar(p));
+            seguro("contratos", () -> contratos.alEntrar(p));
+            seguro("altar", () -> altar.alEntrar(p));
+            seguro("eclipse", () -> eclipse.alEntrar(p));
+            seguro("telemetria", () -> telemetria.entra(p));
+        }
 
         int oleada = cfg().getInt("dificultad.oleada-de-entrada", 5);
         if (oleada > 0 && plugin.mobs() != null) {
@@ -920,6 +1331,11 @@ public final class Hardcore implements Listener {
         // Quien se desconecto dentro vuelve con la cordura que tenia: salir por las
         // malas no puede ser la forma barata de resetear el reloj.
         Player p = e.getPlayer();
+        // Cada modulo mira el mundo por su cuenta: el aviso de un Eco vivo tambien le
+        // interesa a quien entra al servidor fuera de Calamity.
+        seguro("huella", () -> huella.restaurar(p));
+        seguro("parca", () -> parca.alVolver(p));
+        seguro("ecos", () -> ecos.alVolver(p));
         if (!esHardcore(p)) return;
         double guardada = datos.getDouble("guardado." + p.getUniqueId(), -1);
         if (guardada >= 0) cordura.valor(p, guardada);
@@ -928,6 +1344,11 @@ public final class Hardcore implements Listener {
     @EventHandler
     public void onSalir(PlayerQuitEvent e) {
         Player p = e.getPlayer();
+        // El combat log lo primero: todavia esta en el mundo y con su inventario.
+        seguro("combate", () -> combate.alDesconectar(e));
+        seguro("huella", () -> huella.aparcar(p));
+        seguro("parca", () -> parca.alDesconectar(p));
+        ultimoSuelo.remove(p.getUniqueId());
         canalizando.remove(p.getUniqueId());
         cuentaCristal.remove(p.getUniqueId());
         ultimoEfecto.remove(p.getUniqueId());
@@ -1024,6 +1445,12 @@ public final class Hardcore implements Listener {
             return;
         }
         if (canalizando.containsKey(p.getUniqueId())) return;
+        // P-C01: con la etiqueta de combate no se empieza. Si no, el Cristal era la forma
+        // de huir de cualquier pelea a cinco segundos.
+        if (valor("combate", () -> combate.enCombate(p), false)) {
+            cordura.destello(p, Component.text("No con sangre fresca encima.", NamedTextColor.RED), 2);
+            return;
+        }
         canalizando.put(p.getUniqueId(), p.getLocation().clone());
         p.sendMessage(Component.text("El cristal empieza a resonar. No te muevas.",
                 ItemsCalamity.MORADO));
@@ -1044,7 +1471,9 @@ public final class Hardcore implements Listener {
         }
         Compat.spawn(p.getWorld(), Compat.WITCH, p.getLocation().add(0, 1, 0), 12, 0.3, 0.6, 0.3, 0.01);
 
-        int segundos = cfg().getInt("cristal.segundos", 5);
+        int def = cfg().getInt("cristal.segundos", 5);
+        // Con la PARCA cerca el Cristal tarda mas (cristal-segundos-marcado).
+        int segundos = valor("parca", () -> parca.segundosCristal(p, def), def);
         int llevados = cuentaCristal.merge(p.getUniqueId(), 1, Integer::sum);
         if (llevados < segundos) {
             cordura.destello(p, Component.text("Cristal · " + (segundos - llevados) + " s",
@@ -1057,7 +1486,15 @@ public final class Hardcore implements Listener {
         canalizando.remove(p.getUniqueId());
         cuentaCristal.remove(p.getUniqueId());
         if (!gastarCristal(p)) return;
-        sacar(p, "El cristal te devuelve al spawn.");
+        sacar(p, "cristal", true);
+    }
+
+    /** Corta una canalizacion a medias, con el aviso que se diga. */
+    private void cortarCristal(Player p, String aviso) {
+        canalizando.remove(p.getUniqueId());
+        cuentaCristal.remove(p.getUniqueId());
+        p.sendMessage(Component.text(aviso, NamedTextColor.RED));
+        Compat.soundPlayers(p.getWorld(), p.getLocation(), "block.amethyst_block.break", 0.8f, 0.8f);
     }
 
     /** Quita un cristal del inventario. False si ya no lo lleva (lo tiro a mitad). */

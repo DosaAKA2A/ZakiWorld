@@ -164,6 +164,34 @@ public final class VaraPortales implements Listener {
                 && l.getBlockZ() >= c.getInt("z1") && l.getBlockZ() <= c.getInt("z2");
     }
 
+    /**
+     * Distancia en bloques de un punto a la caja de una puerta: 0 dentro, y
+     * Double.MAX_VALUE si la puerta no esta marcada o esta en otro mundo.
+     *
+     * La usa el Eco (DIS sec. 2.3) para no nacer pegado a las puertas: nacer en la salida
+     * seria una emboscada gratis al que vuelve a por el.
+     */
+    public double distancia(Location donde, String puerta) {
+        if (donde == null || donde.getWorld() == null) return Double.MAX_VALUE;
+        ConfigurationSection c = plugin.getConfig()
+                .getConfigurationSection("hardcore.puertas." + puerta);
+        if (c == null || !c.isSet("mundo")) return Double.MAX_VALUE;
+        NamespacedKey k = NamespacedKey.fromString(c.getString("mundo", ""));
+        World w = k == null ? null : plugin.getServer().getWorld(k);
+        if (w == null || donde.getWorld() != w) return Double.MAX_VALUE;
+        // Distancia a la caja: por eje, lo que se sale de [min, max + 1] (los bloques ocupan su celda entera).
+        double dx = fuera(donde.getX(), c.getInt("x1"), c.getInt("x2") + 1);
+        double dy = fuera(donde.getY(), c.getInt("y1"), c.getInt("y2") + 1);
+        double dz = fuera(donde.getZ(), c.getInt("z1"), c.getInt("z2") + 1);
+        return Math.sqrt(dx * dx + dy * dy + dz * dz);
+    }
+
+    private static double fuera(double v, double min, double max) {
+        if (v < min) return min - v;
+        if (v > max) return v - max;
+        return 0;
+    }
+
     /** Descripcion corta de una puerta para el /lw hardcore. */
     public String describir(String cual) {
         ConfigurationSection c = plugin.getConfig()

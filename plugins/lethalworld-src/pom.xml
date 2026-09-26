@@ -6,7 +6,7 @@
 
   <groupId>net.ederus</groupId>
   <artifactId>LethalWorld</artifactId>
-  <version>1.0.1</version>
+  <version>1.1.0</version>
   <packaging>jar</packaging>
   <name>LethalWorld</name>
   <description>Lethal World: los mundos de datapack de Ederus (/lw)</description>
@@ -15,8 +15,26 @@
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <maven.compiler.release>25</maven.compiler.release>
     <!-- La version de EDM contra la que se compila. Al subir EDM, subirla aqui. -->
-    <edm.version>1.67.0</edm.version>
+    <edm.version>1.72.1</edm.version>
+    <!-- Donde estan los jars de terceros (PlaceholderAPI). En el repo es
+         ProyectosGit/_toolchain/libs, tres niveles por encima; en un worktree de
+         ZakiWorld-wt/<paquete> es uno mas arriba, y eso lo arregla el perfil de abajo. -->
+    <toolchain.libs>${project.basedir}/../../../_toolchain/libs</toolchain.libs>
   </properties>
+
+  <profiles>
+    <profile>
+      <id>worktree</id>
+      <activation>
+        <file>
+          <missing>${basedir}/../../../_toolchain/libs/PlaceholderAPI-2.11.6.jar</missing>
+        </file>
+      </activation>
+      <properties>
+        <toolchain.libs>${project.basedir}/../../../../_toolchain/libs</toolchain.libs>
+      </properties>
+    </profile>
+  </profiles>
 
   <repositories>
     <repository>
@@ -54,6 +72,15 @@
       <version>${edm.version}</version>
       <scope>system</scope>
       <systemPath>${project.basedir}/../edm-src/target/EDM-${edm.version}.jar</systemPath>
+    </dependency>
+    <!-- PlaceholderAPI, para los %lethalworld_...%. Solo lo toca ExpansionLethal, que no se
+         carga si el plugin no esta en el servidor (patron de EDM, edm-src/pom.xml). -->
+    <dependency>
+      <groupId>me.clip</groupId>
+      <artifactId>placeholderapi</artifactId>
+      <version>2.11.6</version>
+      <scope>system</scope>
+      <systemPath>${toolchain.libs}/PlaceholderAPI-2.11.6.jar</systemPath>
     </dependency>
   </dependencies>
 

@@ -49,6 +49,8 @@ import net.ederus.edm.anomaly.minions.MinionPresence;
 import net.ederus.edm.anomaly.minions.MinionRegistry;
 import net.ederus.edm.anomaly.minions.MinionType;
 import net.ederus.edm.comun.Compat;
+import net.ederus.lethalworld.hardcore.Hardcore;
+import net.ederus.lethalworld.hardcore.Marcas;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
 import net.kyori.adventure.text.format.TextColor;
@@ -270,8 +272,11 @@ public final class MobsLethal implements Listener {
         return n;
     }
 
-    /** Un punto de suelo firme, fuera del agua, a distancia del jugador y en un chunk ya cargado. */
-    private Location sitio(Player p, int min, int max) {
+    /**
+     * Un punto de suelo firme, fuera del agua, a distancia del jugador y en un chunk ya
+     * cargado, o null. Publico: la PARCA y el Eco buscan sitio igual que los mobs.
+     */
+    public Location sitio(Player p, int min, int max) {
         World w = p.getWorld();
         for (int intento = 0; intento < 4; intento++) {
             double ang = random.nextDouble() * Math.PI * 2;
@@ -367,6 +372,9 @@ public final class MobsLethal implements Listener {
     private void adoptarCerca(MinionManager mm, Player p, double radio) {
         for (LivingEntity mob : p.getLocation().getNearbyLivingEntities(radio)) {
             if (!(mob instanceof Enemy) || mm.isMinion(mob) || mob.isDead()) continue;
+            // Las amenazas de Calamity (PARCA, Eco) ya traen sus numeros: adoptarlas les
+            // reescribiria vida, nombre y dano (MT sec. 0 D).
+            if (Marcas.esAmenaza(mob)) continue;
             if (esAjeno(mob)) continue;
             if (mm.adoptado(mob)) mm.reescoltar(mob);
             else adoptar(mm, mob, p);
@@ -392,6 +400,8 @@ public final class MobsLethal implements Listener {
          * vida (de 3400 reescalada a la de un adoptado de nivel 20) y RAIZ moria en
          * tres golpes y saltaba a la ultima fase. Lo vio Dosa peleando en Calamity. */
         if (net.ederus.edm.comun.Tags.isOurs(mob)) return;
+        // Doble cerrojo con adoptarCerca: alAparecer tambien llega aqui.
+        if (Marcas.esAmenaza(mob)) return;
         if (esAjeno(mob)) return;
         if (mm.isMinion(mob) || mm.adoptado(mob) || mob.isInvulnerable()) return;
         ConfigurationSection s = cfg().getConfigurationSection("adoptados");
@@ -503,17 +513,51 @@ public final class MobsLethal implements Listener {
 
     // ---------------------------------------------------------------------- nivel
 
-    int nivelPara(Player p, boolean destacado) {
+    /**
+     * Nivel de un mob que sale para ese jugador: el nivel base con su variacion al azar,
+     * mas el destacado y lo que sume Calamity. Publico: lo necesita el Eco (MT sec. 0 A).
+     */
+    public int nivelPara(Player p, boolean destacado) {
         ConfigurationSection n = cfg().getConfigurationSection("nivel");
         if (n == null) n = new YamlConfiguration();
-        double base = rango(p) * n.getDouble("por-rango", 2.0)
-                + poder(p) / Math.max(1.0, n.getDouble("poder-por-nivel", 20.0));
+        double base = nivelBase(p);
         double variacion = n.getDouble("variacion", 0.10);
         base *= 1 + (random.nextDouble() * 2 - 1) * variacion;
         if (destacado) base += n.getInt("extra-destacado", 5);
         // En los mundos hardcore la cordura y los minutos dentro suben el nivel.
         if (plugin.hardcore() != null) base += plugin.hardcore().bonusNivel(p);
         return (int) Math.max(1, Math.min(n.getInt("maximo", 100), Math.round(base)));
+    }
+
+    /**
+     * El nivel de un jugador SIN azar: rango x por-rango + poder / poder-por-nivel.
+     *
+     * La PARCA y el Eco fijan su nivel con esto (DIS sec. 0.4): con la variacion de nivelPara
+     * dos llamadas seguidas daban numeros distintos y el mismo Eco saldria con otro nivel
+     * al despertar que al nacer.
+     */
+    public int nivelBase(Player p) {
+        return nivelBase(rango(p), poder(p));
+    }
+
+    /** La formula de nivelBase con los numeros ya leidos. Para el autotest y para /lw level. */
+    public int nivelBase(int rango, int poder) {
+        ConfigurationSection n = cfg().getConfigurationSection("nivel");
+        if (n == null) n = new YamlConfiguration();
+        double base = rango * n.getDouble("por-rango", 2.0)
+                + poder / Math.max(1.0, n.getDouble("poder-por-nivel", 20.0));
+        return (int) Math.round(base);
+    }
+
+    /**
+     * N_C(p) de DIS: el nivel de Calamity de ese jugador, sin azar. nivelBase mas lo que
+     * suman la cordura, los minutos dentro, la Racha y el Eclipse (Hardcore.bonusNivel),
+     * entre 1 y el maximo.
+     */
+    public int nivelCalamity(Player p) {
+        int maximo = cfg().getInt("nivel.maximo", 100);
+        int extra = plugin.hardcore() == null ? 0 : plugin.hardcore().bonusNivel(p);
+        return Math.max(1, Math.min(maximo, nivelBase(p) + extra));
     }
 
     /** Lo que responde PlaceholderAPI al marcador del rango, tal cual. "" si no se puede leer. */
@@ -589,22 +633,55 @@ public final class MobsLethal implements Listener {
         // Los minijefes de antes de quitar el contorno aun lo llevan en el marcador.
         if ("minijefe".equals(clase)) Glow.clear(mob);
         Player asesino = mob.getKiller();
+
+        /* En Calamity lo que da un mob lo decide el Grifo (DIS M2): cosecha de la PARCA,
+         * spawners, cuota de jugador, MobCoins por la Aduana, Esencias y Reliquias. Aqui ya
+         * no se paga nada: si se pagara tambien, cada muerte cobraria dos veces. El Grifo
+         * recibe tambien las muertes sin asesino (el minijefe reparte por dano). */
+        Hardcore hc = plugin.hardcore();
+        if (hc != null && hc.activo() && hc.grifo() != null && hc.esHardcore(mob.getWorld())) {
+            hc.grifo().alMorir(e, asesino, clase);
+            return;
+        }
         if (asesino == null) return;
+        pagarComoHoy(e, asesino, clase);
+    }
+
+    /**
+     * Lo que pagaba un mob de Lethal World hasta la 1.1.0: la tabla de UltimateMobCoins
+     * por nivel y por clase, por MobCoins.pagar de EDM. Sigue siendo el pago fuera de
+     * Calamity; dentro solo lo usa el Grifo mientras sea el esqueleto de WP0.
+     */
+    public void pagarComoHoy(EntityDeathEvent e, Player asesino, String clase) {
+        LivingEntity mob = e.getEntity();
         AnomalyPlugin a = anomaly();
         int nivel = a == null ? 1 : Math.max(1, a.minionManager().levelOf(mob));
+        long pago = mobcoinsDe(mob, clase, nivel);
+        net.ederus.edm.comun.MobCoins.pagar(plugin, asesino, pago);
+    }
+
+    /**
+     * MobCoins de un mob: lo que paga en el Survival x (1 + nivel / divisor) x mundo x clase.
+     * Sin azar. El minijefe con multiplicador-minijefe a 0 (config de la 1.1.0: su pago es
+     * el fijo mobs.mobcoins.minijefe, que reparte el Grifo) vale aqui el punto medio del
+     * fijo, para que fuera de Calamity no pase a pagar cero.
+     */
+    public long mobcoinsDe(LivingEntity mob, String marca, int nivel) {
         ConfigurationSection m = cfg().getConfigurationSection("mobcoins");
         if (m == null) m = new YamlConfiguration();
+        if ("minijefe".equals(marca) && m.getDouble("multiplicador-minijefe", 10.0) <= 0) {
+            return Math.round((m.getDouble("minijefe.min", 80) + m.getDouble("minijefe.max", 120)) / 2.0);
+        }
         double base = Math.max(m.getDouble("base-minima", 0.5),
                 baseMonedas.getOrDefault(mob.getType().getKey().getKey(), 0.0));
-        double extra = switch (clase) {
+        double extra = switch (marca == null ? "" : marca) {
             case "destacado" -> m.getDouble("multiplicador-destacado", 3.0);
             case "minijefe" -> m.getDouble("multiplicador-minijefe", 10.0);
             default -> 1.0;
         };
         double monedas = base * (1 + nivel / Math.max(1.0, m.getDouble("nivel-divisor", 20)))
                 * m.getDouble("multiplicador-mundo", 1.5) * extra;
-        long pago = Math.round(monedas);
-        net.ederus.edm.comun.MobCoins.pagar(plugin, asesino, pago);
+        return Math.round(monedas);
     }
 
     private void retirarLejanos() {
