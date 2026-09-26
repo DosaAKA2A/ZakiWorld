@@ -9,7 +9,6 @@ import org.bukkit.Bukkit;
 import org.bukkit.Material;
 import org.bukkit.OfflinePlayer;
 import org.bukkit.command.CommandSender;
-import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
@@ -395,23 +394,22 @@ final class Entregas implements Listener {
     // ------------------------------------------------------------------ ligar
 
     /**
-     * Liga un objeto a su dueno (M30): lethal_world:ligado = uuid y una linea al final del
-     * lore para que se sepa por que no se deja vender. El listener que lo hace cumplir es
-     * Ligado (WP4); aqui solo se marca.
+     * Liga un objeto a su dueno (M30). La marca la escribe Ligado.ligar, que es quien la hace
+     * cumplir (un solo sitio y un solo formato); aqui se anade la linea del lore, una vez,
+     * para que se sepa por que no se deja vender.
      */
     ItemStack ligar(ItemStack item, UUID dueno) {
-        if (item == null || item.getType().isAir() || dueno == null) return item;
-        ItemMeta meta = item.getItemMeta();
-        if (meta == null) return item;
-        String ya = meta.getPersistentDataContainer().get(Marcas.LIGADO, PersistentDataType.STRING);
-        meta.getPersistentDataContainer().set(Marcas.LIGADO, PersistentDataType.STRING, dueno.toString());
-        if (ya == null) {
+        if (item == null || item.getType().isAir() || dueno == null || item.getItemMeta() == null) return item;
+        boolean ya = Ligado.duenoDe(item) != null;
+        Ligado.ligar(item, dueno);
+        if (!ya) {
+            ItemMeta meta = item.getItemMeta();
             List<Component> lore = meta.lore() == null ? new ArrayList<>() : new ArrayList<>(meta.lore());
             lore.add(Component.text("Ligado a " + nombreDe(dueno) + ".", NamedTextColor.DARK_GRAY)
                     .decoration(TextDecoration.ITALIC, false));
             meta.lore(lore);
+            item.setItemMeta(meta);
         }
-        item.setItemMeta(meta);
         return item;
     }
 

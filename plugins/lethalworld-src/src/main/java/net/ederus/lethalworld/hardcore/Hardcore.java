@@ -867,8 +867,10 @@ public final class Hardcore implements Listener {
                 cordura.sumar(p, -porGolpe);
             }
             // El Cristal se corta con un golpe de verdad: el de un jugador o una amenaza.
-            // Un zombi cualquiera no: si no, con un mob pegado nunca se podria salir.
-            if ((deAmenaza || quien instanceof Player) && canalizando.containsKey(p.getUniqueId())) {
+            // Un zombi cualquiera no: si no, con un mob pegado nunca se podria salir. Con la
+            // PARCA encima, cualquier golpe (sec. 1.8): huir de ella no es cosa de 10 s quieto.
+            if (canalizando.containsKey(p.getUniqueId())
+                    && (deAmenaza || quien instanceof Player || valor("parca", () -> parca.persigue(p), false))) {
                 cortarCristal(p, "Un golpe apaga el cristal.");
             }
         }
@@ -1304,6 +1306,10 @@ public final class Hardcore implements Listener {
                     estadisticas.sumar(p.getUniqueId(), "extracciones", 1);
                     estadisticas.maximo(p.getUniqueId(), "expedicion-max-seg", cordura.estado(p).segundosDentro);
                 });
+            } else if (!"cable".equals(motivo)) {
+                // Una salida sin tasar (admin) tambien cierra la expedicion en la telemetria. El
+                // cable no: ya conto como "muere".
+                seguro("telemetria", () -> telemetria.sale(p, motivo, Map.of()));
             }
             seguro("huella", () -> huella.reiniciar(p));
             seguro("parca", () -> parca.alSalir(p, motivo));
@@ -1504,8 +1510,9 @@ public final class Hardcore implements Listener {
         int segundos = valor("parca", () -> parca.segundosCristal(p, def), def);
         int llevados = cuentaCristal.merge(p.getUniqueId(), 1, Integer::sum);
         if (llevados < segundos) {
-            cordura.destello(p, Component.text("Cristal · " + (segundos - llevados) + " s",
-                    ItemsCalamity.MORADO), 2);
+            // P-31: si tarda mas es por ella, y se dice en la misma barra que la cuenta.
+            String texto = (segundos > def ? "Con ella encima · " : "") + "Cristal · " + (segundos - llevados) + " s";
+            cordura.destello(p, Component.text(texto, ItemsCalamity.MORADO), 2);
             Compat.soundPlayers(p.getWorld(), p.getLocation(), "block.amethyst_block.chime", 0.7f,
                     1.0f + llevados * 0.1f);
             return;
@@ -1515,6 +1522,11 @@ public final class Hardcore implements Listener {
         cuentaCristal.remove(p.getUniqueId());
         if (!gastarCristal(p)) return;
         sacar(p, "cristal", true);
+    }
+
+    /** Si esta canalizando un Cristal: la Huella no cuenta esos segundos quieto. */
+    boolean canalizando(Player p) {
+        return p != null && canalizando.containsKey(p.getUniqueId());
     }
 
     /** Corta una canalizacion a medias, con el aviso que se diga. */

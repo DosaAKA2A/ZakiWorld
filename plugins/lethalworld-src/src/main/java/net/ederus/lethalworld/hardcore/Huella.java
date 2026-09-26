@@ -463,13 +463,13 @@ final class Huella implements Listener {
     /**
      * No cuenta (DIS sec. 1.2.6): permiso de exento (staff en vanish), quien ya tiene una
      * PARCA encima, quien esta en la llegada protegida, la gracia tras una PARCA y los
-     * muertos. Espectador y creativo ya los filtra Hardcore.tick (cuenta).
-     *
-     * Canalizar el Cristal tambien deberia pararlo (DIS), pero ese estado es privado de
-     * Hardcore; son 5-10 s en la misma celda y sacar() reinicia la huella al acabar.
+     * muertos y quien canaliza el Cristal (DIS). Espectador y creativo ya los filtra
+     * Hardcore.tick (cuenta).
      */
     private boolean exento(Player p, Rastro r, long ahora, Ajustes a) {
         if (p.isDead() || ahora < r.graciaHasta) return true;
+        // Canalizando el Cristal se esta quieto a proposito: son 5-10 s y luego sale.
+        if (hc.canalizando(p)) return true;
         if (a.permisoExento() != null && !a.permisoExento().isEmpty() && p.hasPermission(a.permisoExento())) return true;
         if (hc.parca() != null && hc.valor("parca", () -> hc.parca().persigue(p), false)) return true;
         return hc.combate() != null && hc.valor("combate", () -> hc.combate().protegido(p), false);
@@ -614,11 +614,12 @@ final class Huella implements Listener {
     }
 
     private void telemetria(Player p, int quieto, boolean seMovio) {
-        if (hc.telemetria() == null) return;
+        Telemetria t = hc.telemetria();
+        if (t == null) return;
         Map<String, Object> c = new LinkedHashMap<>();
         c.put("segundos_quieto", quieto);
         c.put("se_movio", seMovio);
-        hc.seguro("telemetria", () -> hc.telemetria().suceso("aviso-parca", p, c));
+        hc.seguro("telemetria", () -> t.suceso("aviso-parca", p, c));
     }
 
     // ------------------------------------------------------------ ganchos

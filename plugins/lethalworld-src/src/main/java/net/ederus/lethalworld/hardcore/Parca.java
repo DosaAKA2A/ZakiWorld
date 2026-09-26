@@ -72,8 +72,6 @@ final class Parca implements Listener {
     private final Set<UUID> segadosPorElla = new HashSet<>();
     /** Tierra segada en memoria (se guarda tambien en datos parca.segada). */
     private final List<Segada> segadas = new ArrayList<>();
-    /** Ultimo aviso P-31 por jugador (una vez por canalizacion). Se vacia con las peleas. */
-    private final Map<UUID, Long> avisoCristal = new HashMap<>();
     private Ajustes ajustes;
     private long ajustesLeidos;
     private int segundos;
@@ -374,7 +372,6 @@ final class Parca implements Listener {
     /** Una vez por segundo, desde Hardcore.tick. Las peleas se mueven solas cada 2 ticks. */
     void tick() {
         peleas.removeIf(pe -> pe.estado == PeleaParca.Estado.FIN);
-        if (peleas.isEmpty()) avisoCristal.clear();
         if (++segundos % 60 == 0) podarSegadas();
     }
 
@@ -448,14 +445,7 @@ final class Parca implements Listener {
         if (pe == null || pe.cuerpo == null || pe.cuerpo.getWorld() != p.getWorld()) return def;
         Ajustes a = ajustes();
         if (pe.cuerpo.getLocation().distanceSquared(p.getLocation()) > a.cristalRadio * a.cristalRadio) return def;
-        /* P-31 va por chat y una vez por canalizacion: Hardcore pinta la cuenta del Cristal en
-         * la barra justo despues de preguntar aqui, y un destello se pisaria en el mismo tick. */
-        long ahora = System.currentTimeMillis();
-        Long antes = avisoCristal.get(p.getUniqueId());
-        if (antes == null || ahora - antes > 20_000L) {
-            avisoCristal.put(p.getUniqueId(), ahora);
-            p.sendMessage(ComandoCalamity.mensaje("Con ella encima, el cristal tarda el doble."));
-        }
+        // P-31 lo pinta Hardcore en la cuenta del Cristal ("Con ella encima · Cristal · N s").
         return Math.max(def, a.cristalSegundos);
     }
 
@@ -541,7 +531,9 @@ final class Parca implements Listener {
      */
     void alDesconectar(Player p) {
         PeleaParca pe = de(p.getUniqueId());
-        if (pe == null) return;
+        /* El combat log llega aqui DESPUES de Combate.cable, que ya llamo a alMorirPresa: la
+         * pelea esta en cosecha (o acabada) y no hay nada que esperar ni que dejar pendiente. */
+        if (pe == null || pe.estado == PeleaParca.Estado.COSECHA) return;
         if (!p.getUniqueId().equals(pe.presa)) {
             pe.quitarMarcado(p.getUniqueId(), "desconectado");
             return;
@@ -605,7 +597,6 @@ final class Parca implements Listener {
         for (BukkitTask t : tareas) t.cancel();
         tareas.clear();
         segadosPorElla.clear();
-        avisoCristal.clear();
         hc.marcarSucio();
         HandlerList.unregisterAll(this);
     }
@@ -917,6 +908,10 @@ final class Parca implements Listener {
             if (online != null) {
                 online.sendMessage(ComandoCalamity.mensaje("La Parca te paga: +" + pagadas + " Esencias"
                         + (reliquias.isEmpty() ? "" : ", y una Campana de la Parca") + "."));
+                // Sangre fresca (M12): la cordura por la PARCA, con su tope de la Aduana.
+                Combate cb = hc.combate();
+                String idPelea = pe.cuerpo == null ? String.valueOf(pe.presa) : pe.cuerpo.getUniqueId().toString();
+                if (cb != null) hc.seguro("combate", () -> cb.sangreFresca(online, "parca", "parca:" + idPelea));
             }
             raro(op, a);
         }
@@ -974,7 +969,8 @@ final class Parca implements Listener {
 
     /** Suceso "parca" de la telemetria (MED sec. 3): accion nace/muere/se-va/cosecha. */
     void telemetria(String accion, PeleaParca pe, Map<UUID, Double> dano, List<UUID> campanaPara) {
-        if (hc.telemetria() == null || pe.prueba) return;
+        Telemetria t = hc.telemetria();
+        if (t == null || pe.prueba) return;
         Map<String, Object> c = new LinkedHashMap<>();
         c.put("accion", accion);
         c.put("presa", String.valueOf(pe.presa));
@@ -996,7 +992,7 @@ final class Parca implements Listener {
         if (campanaPara != null) for (UUID u : campanaPara) campanas.add(u.toString());
         c.put("campana_para", campanas);
         OfflinePlayer quien = pe.presa == null ? null : hc.plugin().getServer().getOfflinePlayer(pe.presa);
-        hc.seguro("telemetria", () -> hc.telemetria().suceso("parca", quien, c));
+        hc.seguro("telemetria", () -> t.suceso("parca", quien, c));
     }
 
     // =============================================================== listener

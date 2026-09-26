@@ -1026,7 +1026,7 @@ final class Ecos implements Listener {
         m.put("accion", accion);
         m.put("id", e.id);
         m.put("dueno", e.dueno.toString());
-        m.put("nombre", e.nombre);
+        m.put("dueno_nombre", e.nombre);          // "nombre" es campo comun: el del suceso
         m.put("n_e", e.nivel);
         m.put("reliquias", e.nReliquias());
         m.put("esencias", e.nEsencias);
