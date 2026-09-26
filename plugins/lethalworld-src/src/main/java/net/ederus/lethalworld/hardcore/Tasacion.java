@@ -52,8 +52,7 @@ final class Tasacion {
 
     /** Los numeros de la Tasacion, de la config con los de serie (PLAN sec. 3.1). */
     record Valores(double[] esencias, long[] mc, int[] topeDia, Set<Integer> apilables, long caducaMillis,
-                   int fragmentoNivel, double llaveCampana, double llaveLagrima, int primeraBase, int primeraSiTasa,
-                   int marcasDia, int marcasSemana) {
+                   int fragmentoNivel, double llaveCampana, double llaveLagrima, int primeraBase, int primeraSiTasa) {
 
         static Valores de(ConfigurationSection c) {
             double[] es = {0, c.getDouble("reliquias.grados.1.esencias", 0.2), c.getDouble("reliquias.grados.2.esencias", 1),
@@ -68,8 +67,7 @@ final class Tasacion {
                     c.getDouble("reliquias.especiales.campana-parca.llave-caos-iv", 0.25),
                     c.getDouble("reliquias.especiales.lagrima-eco.llave-caos-iv", 0.20),
                     c.getInt("esencias.primera-extraccion-dia.base", 2),
-                    c.getInt("esencias.primera-extraccion-dia.si-tasa", 1),
-                    c.getInt("eco.marcas.dia", 2), c.getInt("eco.marcas.semana", 8));
+                    c.getInt("esencias.primera-extraccion-dia.si-tasa", 1));
         }
     }
 
@@ -132,7 +130,19 @@ final class Tasacion {
             if (arriba.getType() == InventoryType.CRAFTING) quitar(arriba, rel, recogidas);
             rel.marcarExtraccion(p);
         }
-        procesar(p, p, recogidas, motivo == null ? "?" : motivo, true);
+        procesar(p, p, recogidas, motivo == null ? "?" : motivo, true, true);
+    }
+
+    /**
+     * Reliquias que la Aduana tiene que dar a quien no puede llevarlas: desconectado o fuera de
+     * Calamity (un Eco cerrado con "eco matar ... <jugador>", un cazador que se ha ido). Fuera
+     * no existen, asi que darlas seria perderlas: se tasan en el acto a su nombre y lo que valen
+     * va al saldo y a premios pendientes. Sin la primera salida del dia, que no ha salido.
+     */
+    Resumen tasarAusente(OfflinePlayer p, List<ItemStack> reliquias, String motivo) {
+        hc.plugin().bitacora().anotar("tasacion", "ausente", Minijefes.nombreDe(p), Aduana.idsReliquias(reliquias),
+                motivo == null ? "-" : motivo);
+        return procesar(p, p.getPlayer(), reliquias, motivo == null ? "ausente" : motivo, true, false);
     }
 
     private static void quitar(Inventory inv, Reliquias rel, List<ItemStack> a) {
@@ -146,14 +156,17 @@ final class Tasacion {
 
     /** Lo que pagaria una tasacion con estas Reliquias ahora mismo. No escribe nada. */
     Resumen simular(OfflinePlayer p, List<ItemStack> reliquias) {
-        return procesar(p, null, reliquias == null ? List.of() : reliquias, "simulacion", false);
+        return procesar(p, null, reliquias == null ? List.of() : reliquias, "simulacion", false, true);
     }
 
     /**
      * El cuerpo de la tasacion. online = el jugador conectado (mensajes, censo, saldo fisico,
      * contratos, encuesta, telemetria); null en la tasacion de prueba del comando.
+     * conPrimera: si es una salida (la primera del dia paga mas, telemetria "sale", encuesta);
+     * no lo es la tasacion de ausente.
      */
-    private Resumen procesar(OfflinePlayer op, Player online, List<ItemStack> items, String motivo, boolean real) {
+    private Resumen procesar(OfflinePlayer op, Player online, List<ItemStack> items, String motivo, boolean real,
+                             boolean conPrimera) {
         UUID u = op.getUniqueId();
         String nombre = Minijefes.nombreDe(op);
         ConfigurationSection c = hc.cfg();
@@ -177,7 +190,7 @@ final class Tasacion {
         double factor = racha == null ? 1.0 : racha.factor(u, salida);
         int esencias = (int) Math.floor(k.esencias * factor + 1e-9);
         long mc = Math.round(k.mc * factor);
-        boolean primera = !dia.equals(hc.datos().getString("primera-extraccion." + u, ""));
+        boolean primera = conPrimera && !dia.equals(hc.datos().getString("primera-extraccion." + u, ""));
         int extra = primera ? primera(k.validas, v) : 0;
 
         List<String> lineas = new ArrayList<>();
@@ -227,7 +240,7 @@ final class Tasacion {
         Creditos cr = hc.creditos();
         List<String> ganados = new ArrayList<>();
         for (String tipo : k.creditos) {
-            if (tipo.equals("marca") && !marca(hc.datos(), u, dia, semana(), v.marcasDia(), v.marcasSemana())) {
+            if (tipo.equals("marca") && !marcaPermitida(u, dia)) {
                 bit.anotar("credito", "tope-marcas", nombre, "marca");
                 continue;
             }
@@ -270,7 +283,8 @@ final class Tasacion {
             contratos = hc.valor("contratos", () -> ct.cobrarEnTasacion(online), List.of());
         }
 
-        if (online != null) {
+        // La telemetria "sale", el aviso y la encuesta solo en una salida de verdad, no en la de ausente.
+        if (online != null && conPrimera) {
             Telemetria te = hc.telemetria();
             if (te != null) {
                 Map<String, Object> t = new LinkedHashMap<>();
@@ -287,10 +301,8 @@ final class Tasacion {
                 t.put("sin_valor", k.nulas());
                 t.put("creditos", ganados);
                 t.put("contratos", contratos);
-                Grifo g = hc.grifo();
-                if (g != null) t.putAll(g.expedicion(u));
-                Cofres cf = hc.cofres();
-                t.put("cofres", cf == null ? 0 : cf.expedicion(u));
+                // mobs, destacados, minijefes y cofres los cuenta la propia Telemetria en su
+                // sesion (los mismos para "sale" y "muere"): aqui no se mandan.
                 hc.seguro("telemetria", () -> te.sale(online, motivo, t));
             }
             // Si la Aduana recortara Esencias, el recorte sale primero de la primera salida.
@@ -299,10 +311,6 @@ final class Tasacion {
             Encuesta enc = hc.encuesta();
             if (enc != null) hc.seguro("encuesta", () -> enc.trasTasar(online));
         }
-        Grifo g = hc.grifo();
-        if (g != null) g.reiniciarExpedicion(u);
-        Cofres cf = hc.cofres();
-        if (cf != null) cf.reiniciarExpedicion(u);
         return new Resumen(pagadasE, pagadasMc, lineas);
     }
 
@@ -438,20 +446,18 @@ final class Tasacion {
     }
 
     /**
-     * Tope de Marcas de Eco (2 al dia, 8 a la semana) en marcas.<uuid> = {dia, hoy, semana,
-     * n-semana}. Si cabe, la apunta y devuelve true. La misma seccion la usa el Eco para su
-     * Marca propia (propio-semana), por eso aqui solo se tocan estas cuatro claves.
+     * Tope de Marcas de Eco (2 al dia, 8 a la semana). UNA sola cuenta: la de Ecos
+     * (marcas.<uuid>, que tambien lleva la Marca del Eco propio). Si toca, ya queda apuntada.
+     * Sin Ecos en marcha, la misma regla estatica sobre los mismos datos.
      */
-    static boolean marca(ConfigurationSection datos, UUID jugador, String dia, String semana, int topeDia, int topeSemana) {
-        String b = "marcas." + jugador;
-        int hoy = dia.equals(datos.getString(b + ".dia", "")) ? datos.getInt(b + ".hoy", 0) : 0;
-        int sem = semana.equals(datos.getString(b + ".semana", "")) ? datos.getInt(b + ".n-semana", 0) : 0;
-        if (hoy >= topeDia || sem >= topeSemana) return false;
-        datos.set(b + ".dia", dia);
-        datos.set(b + ".hoy", hoy + 1);
-        datos.set(b + ".semana", semana);
-        datos.set(b + ".n-semana", sem + 1);
-        return true;
+    private boolean marcaPermitida(UUID u, String dia) {
+        Ecos ecos = hc.ecos();
+        if (ecos != null) return hc.valor("ecos", () -> ecos.marcaPermitida(u), false);
+        ConfigurationSection c = hc.cfg();
+        boolean si = Ecos.marca(hc.datos(), u, dia, semana(), c.getInt("eco.marcas.dia", 2),
+                c.getInt("eco.marcas.semana", 8));
+        if (si) hc.marcarSucio();
+        return si;
     }
 
     // ----------------------------------------------------------------- comando
@@ -523,7 +529,7 @@ final class Tasacion {
         for (Reliquias.Espec e : especiales) {
             items.add(rel.crear(e.grado(), "admin", e.especial(), e.nivel(), e.minijefe(), e.valida()));
         }
-        Resumen r = procesar(op, null, items, "tasar-admin", true);
+        Resumen r = procesar(op, null, items, "tasar-admin", true, true);
         quien.sendMessage(ComandoCalamity.mensaje("Tasación de " + Minijefes.nombreDe(op) + ": " + r.esencias()
                 + " Esencias y " + r.mobcoins() + " MobCoins pagadas."));
         for (String l : r.lineas()) quien.sendMessage(Component.text("  " + l, NamedTextColor.GRAY));
@@ -612,20 +618,20 @@ final class Tasacion {
         Cuenta sinId = contar(List.of(new Pieza(3, null, null, 0, 0, null, false, 1)), reg, 0, 0, v, ahora);
         h.ok("una III sin UUID es falsa", sinId.falsas.size() == 1 && sinId.mc == 0);
 
-        // Tope de Marcas de Eco: 2 al dia, 8 a la semana.
+        // Tope de Marcas de Eco: 2 al dia, 8 a la semana (la cuenta es la de Ecos).
         YamlConfiguration datos = new YamlConfiguration();
         UUID u = Autotest.sintetico(1);
-        h.ok("1.a Marca del dia", marca(datos, u, "2026-09-26", "2026-W39", 2, 8));
-        h.ok("2.a Marca del dia", marca(datos, u, "2026-09-26", "2026-W39", 2, 8));
-        h.ok("3.a Marca del dia: sin credito", !marca(datos, u, "2026-09-26", "2026-W39", 2, 8));
+        h.ok("1.a Marca del dia", Ecos.marca(datos, u, "2026-09-26", "2026-W39", 2, 8));
+        h.ok("2.a Marca del dia", Ecos.marca(datos, u, "2026-09-26", "2026-W39", 2, 8));
+        h.ok("3.a Marca del dia: sin credito", !Ecos.marca(datos, u, "2026-09-26", "2026-W39", 2, 8));
         boolean semanaLlena = true;
         for (int dia = 27; dia <= 29; dia++) {
-            semanaLlena &= marca(datos, u, "2026-09-" + dia, "2026-W39", 2, 8);
-            semanaLlena &= marca(datos, u, "2026-09-" + dia, "2026-W39", 2, 8);
+            semanaLlena &= Ecos.marca(datos, u, "2026-09-" + dia, "2026-W39", 2, 8);
+            semanaLlena &= Ecos.marca(datos, u, "2026-09-" + dia, "2026-W39", 2, 8);
         }
         h.ok("hasta 8 en la semana", semanaLlena);
-        h.ok("la 9.a de la semana: sin credito", !marca(datos, u, "2026-09-30", "2026-W39", 2, 8));
-        h.ok("semana nueva: vuelve", marca(datos, u, "2026-10-05", "2026-W41", 2, 8));
+        h.ok("la 9.a de la semana: sin credito", !Ecos.marca(datos, u, "2026-09-30", "2026-W39", 2, 8));
+        h.ok("semana nueva: vuelve", Ecos.marca(datos, u, "2026-10-05", "2026-W41", 2, 8));
         h.ok("las pruebas no tocan hardcore-datos.yml", !hc.datos().isSet("marcas." + u));
         h.igual("num 1.2", "1.2", num(1.2));
         h.igual("num 1", "1", num(1.0));

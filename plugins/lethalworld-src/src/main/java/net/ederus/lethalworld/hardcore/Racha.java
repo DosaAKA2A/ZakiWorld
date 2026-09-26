@@ -140,17 +140,9 @@ final class Racha {
         return nueva;
     }
 
-    /**
-     * Morir la pone a cero (P-K02). Tambien cierra la expedicion del Grifo y de los Cofres:
-     * es el unico gancho de muerte de este paquete, y lo que se conto para la telemetria de
-     * salida no puede pasar a la siguiente expedicion.
-     */
+    /** Morir la pone a cero (P-K02). */
     void alMorir(Player p) {
         UUID u = p.getUniqueId();
-        Grifo g = hc.grifo();
-        if (g != null) g.reiniciarExpedicion(u);
-        Cofres c = hc.cofres();
-        if (c != null) c.reiniciarExpedicion(u);
         int antes = de(u);
         if (antes <= 0) return;
         hc.datos().set(RUTA + u, null);

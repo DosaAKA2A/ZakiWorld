@@ -205,7 +205,6 @@ final class Minijefes {
             if (p.participa()) {
                 Estadisticas st = hc.estadisticas();
                 if (st != null) st.sumar(p.jugador(), "minijefes", 1);
-                if (grifo != null) grifo.minijefeMuerto(p.jugador());
             }
             if (p.asesino() && op.getPlayer() != null) {
                 Contratos ct = hc.contratos();

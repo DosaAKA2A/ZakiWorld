@@ -80,8 +80,6 @@ public final class Grifo implements Listener {
     private final Map<UUID, Map<UUID, Double>> danoMinijefe = new HashMap<>();
     /** Ultimo destello de "La cosecha es suya" por jugador (uno cada 30 s como mucho). */
     private final Map<UUID, Long> ultimaCosecha = new HashMap<>();
-    /** Lo de esta expedicion para la telemetria de salida: mobs, destacados, minijefes. */
-    private final Map<UUID, int[]> expedicion = new HashMap<>();
     private long ultimaPurga;
 
     Grifo(Hardcore hc) {
@@ -94,7 +92,6 @@ public final class Grifo implements Listener {
         esenciasHora.clear();
         danoMinijefe.clear();
         ultimaCosecha.clear();
-        expedicion.clear();
     }
 
     // ------------------------------------------------------------ dano de jugadores
@@ -221,9 +218,6 @@ public final class Grifo implements Listener {
             destelloEsencias(killer, pago.esencias(), pago.mc());
         }
         if (via == Via.NORMAL) {
-            int[] ex = expedicion.computeIfAbsent(killer.getUniqueId(), k -> new int[3]);
-            ex[0]++;
-            if ("destacado".equals(marca)) ex[1]++;
             Contratos ct = hc.contratos();
             if (ct != null) {
                 hc.seguro("contratos", () -> {
@@ -389,7 +383,7 @@ public final class Grifo implements Listener {
         }
     }
 
-    // ------------------------------------------------- decaimiento y expedicion
+    // ------------------------------------------------------------- decaimiento
 
     /** f = max(decae-minimo, 1 - esencias de mobs en la ultima hora / decae-por-hora). */
     double f(UUID jugador) {
@@ -415,25 +409,6 @@ public final class Grifo implements Listener {
     void apuntarEsencias(UUID jugador, int n) {
         if (jugador == null || n <= 0) return;
         esenciasHora.computeIfAbsent(jugador, k -> new ArrayDeque<>()).add(new long[]{System.currentTimeMillis(), n});
-    }
-
-    void minijefeMuerto(UUID jugador) {
-        expedicion.computeIfAbsent(jugador, k -> new int[3])[2]++;
-    }
-
-    /** mobs, destacados y minijefes de esta expedicion (para la telemetria de salida). */
-    Map<String, Object> expedicion(UUID jugador) {
-        int[] ex = expedicion.getOrDefault(jugador, new int[3]);
-        Map<String, Object> m = new LinkedHashMap<>();
-        m.put("mobs", ex[0]);
-        m.put("destacados", ex[1]);
-        m.put("minijefes", ex[2]);
-        return m;
-    }
-
-    /** Al salir vivo o al morir: la expedicion siguiente empieza de cero. */
-    void reiniciarExpedicion(UUID jugador) {
-        expedicion.remove(jugador);
     }
 
     // ----------------------------------------------------------------- autotest

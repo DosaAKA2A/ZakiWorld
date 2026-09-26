@@ -10,7 +10,6 @@ import org.bukkit.inventory.ItemStack;
 import java.security.SecureRandom;
 import java.util.ArrayList;
 import java.util.EnumSet;
-import java.util.HashMap;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -37,8 +36,6 @@ final class Cofres {
 
     private final Hardcore hc;
     private final SecureRandom azar = new SecureRandom();
-    /** Cofres abiertos en esta expedicion (telemetria de salida). */
-    private final Map<UUID, Integer> expedicion = new HashMap<>();
 
     Cofres(Hardcore hc) {
         this.hc = hc;
@@ -46,15 +43,6 @@ final class Cofres {
     }
 
     void parar() {
-        expedicion.clear();
-    }
-
-    int expedicion(UUID jugador) {
-        return expedicion.getOrDefault(jugador, 0);
-    }
-
-    void reiniciarExpedicion(UUID jugador) {
-        expedicion.remove(jugador);
     }
 
     /** Lo llama Hardcore.onBotinDeCofre (LootGenerateEvent) si cofres-vacios esta apagado. */
@@ -76,7 +64,6 @@ final class Cofres {
         String dia = hc.calendario() != null ? hc.calendario().dia() : "";
         int turno = turno(hc.datos(), p.getUniqueId(), dia, c.getInt("cofres.pagados-dia", 10));
         hc.marcarSucio();
-        expedicion.merge(p.getUniqueId(), 1, Integer::sum);
         Contratos ct = hc.contratos();
         if (ct != null) hc.seguro("contratos", () -> ct.progreso(p, "cofre", 1));
 

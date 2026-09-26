@@ -71,6 +71,14 @@ final class Aduana {
      */
     static final Set<String> DE_FUERA = Set.of("tasacion", "contratos", "hito", "ranking", "caja", "encuesta");
 
+    /**
+     * Topes diarios de serie (DIS sec. 4, aduana.topes-diarios) por si la config del servidor
+     * no los trae: sin esto, un tipo nuevo como "sangre" (Sangre fresca, WP4) no tendria tope
+     * en un config.yml viejo y pagaria cordura sin limite.
+     */
+    static final Map<String, Integer> TOPES_DE_SERIE = Map.of("parca", 1, "eco", 5, "sangre", 12, "contratos", 3,
+            "cazas", 3, "encuesta", 2);
+
     private static final long HORA = 3600_000L;
     private static final long DIA = 24 * HORA;
 
@@ -126,7 +134,7 @@ final class Aduana {
         Player online = p.getPlayer();
 
         if (!r.tipoTopado()) {
-            entregar(u, online, t, pago, rel);
+            entregar(p, online, t, pago, rel);
             if (pago.mc() > 0) vigilarGlobal(pago.mc(), ahora);
         }
         if (online != null) {
@@ -169,7 +177,8 @@ final class Aduana {
     }
 
     /** Esencias, MobCoins y Reliquias a su sitio (DIS M1 punto 5). */
-    private void entregar(UUID u, Player online, String tipo, Pago pago, List<ItemStack> reliquias) {
+    private void entregar(OfflinePlayer p, Player online, String tipo, Pago pago, List<ItemStack> reliquias) {
+        UUID u = p.getUniqueId();
         int e = pago.esencias();
         if (e > 0) {
             boolean objeto = online != null && hc.esHardcore(online) && !DE_FUERA.contains(tipo);
@@ -193,14 +202,22 @@ final class Aduana {
                 if (en != null) en.pendienteMc(u, pago.mc(), "pago:" + tipo);
             }
         }
+        /* Las Reliquias no existen fuera (PLAN sec. 2): a quien esta dentro se le dan; a un
+         * desconectado o a quien esta fuera (un Eco cerrado a su nombre por un admin, un cazador
+         * que se ha ido) se le tasan en el acto, y lo que valen va a saldo y premios pendientes.
+         * Perderlas no: una Lagrima valida es la unica fuente de Marcas. */
+        List<ItemStack> ausente = new ArrayList<>();
         for (ItemStack it : reliquias) {
             if (it == null || it.getType().isAir()) continue;
-            if (online != null) {
-                Suelo.dar(hc.plugin(), online, it);
-            } else {
-                // Las Reliquias no existen fuera (PLAN sec. 2): a un desconectado no se le guardan.
-                hc.plugin().bitacora().anotar("pago", "reliquia-perdida", u.toString(), idsReliquias(List.of(it)));
-            }
+            if (online != null && hc.esHardcore(online)) Suelo.dar(hc.plugin(), online, it);
+            else ausente.add(it);
+        }
+        if (ausente.isEmpty()) return;
+        Tasacion ta = hc.tasacion();
+        if (ta != null) {
+            hc.seguro("tasacion", () -> ta.tasarAusente(p, ausente, "pago:" + tipo));
+        } else {
+            hc.plugin().bitacora().anotar("pago", "reliquia-perdida", u.toString(), idsReliquias(ausente));
         }
     }
 
@@ -460,7 +477,7 @@ final class Aduana {
                 apuntar(base, u, tipo, esencias, mc, ahora);
                 return new Resultado(new Pago(esencias, mc, 0, 1.0, false), false, false, false);
             }
-            int tope = conf.getInt("topes-diarios." + tipo, -1);
+            int tope = conf.getInt("topes-diarios." + tipo, TOPES_DE_SERIE.getOrDefault(tipo, -1));
             int hechos = d.getInt(base + ".tipos." + tipo, 0);
             if (!tipo.isEmpty() && tope >= 0 && hechos >= tope) {
                 return new Resultado(new Pago(0, 0, mc, 0, true), true, false, false);
@@ -690,6 +707,19 @@ final class Aduana {
         h.igual("y no paga Esencias", 0, r.pago().esencias());
         r = cu.calcular(c, cal, u3, "mob", 1, 0, t0 + 2000);
         h.igual("otro tipo sigue pagando", 1, r.pago().esencias());
+
+        // Sangre fresca (Combate.sangreFresca): pagos de 0 y 0 que solo cuentan el tope de 12.
+        // Sin la clave en la config vale el de serie.
+        UUID u4 = Autotest.sintetico(47);
+        boolean doce = true;
+        for (int i = 0; i < 12; i++) {
+            Resultado s = cu.calcular(c, cal, u4, "sangre", 0, 0, t0 + i);
+            doce &= !s.tipoTopado() && !s.pago().topado();
+        }
+        h.ok("sangre: 12 al dia sin tope de serie en la config", doce);
+        r = cu.calcular(c, cal, u4, "sangre", 0, 0, t0 + 100);
+        h.ok("sangre: la 13.a topada", r.tipoTopado() && r.pago().topado());
+        h.ok("sangre: al dia siguiente vuelve", !cu.calcular(c, cal, u4, "sangre", 0, 0, t0 + DIA).tipoTopado());
 
         // Tramos viejos (600 x1, 1.500 x0,5, resto x0,25), por si Dosa los vuelve a poner.
         List<double[]> viejos = List.of(new double[]{600, 1}, new double[]{1500, 0.5}, new double[]{999999, 0.25});
