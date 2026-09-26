@@ -149,6 +149,11 @@ anuncio:
 # Los logros se escriben solos como datapack dentro del mundo y se conceden a todos
 # los que participaron en la pelea, no solo a quien da el ultimo golpe.
 logros:
+  # activo: si se escriben y se conceden los logros. Si falta, depende de la build:
+  # encendido en EDM y APAGADO en EDO (OneBlock). Apagado no se escribe el datapack,
+  # no se concede nada y no suena nada; si ya habia un world/datapacks/anomaly_logros
+  # no se borra solo, puede quitarse a mano. Se relee con /anomaly reload.
+  # activo: true
   sonido: true
 
 menu:

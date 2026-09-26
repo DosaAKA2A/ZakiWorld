@@ -43,6 +43,16 @@ public final class Advancements {
         this.plugin = plugin;
     }
 
+    /**
+     * logros.activo. Si no esta en config.yml, depende de la build: encendido en EDM
+     * y apagado en EDO (OneBlock no quiere logros de anomalias). Se lee en cada uso,
+     * asi que /anomaly reload lo recoge sin mas.
+     */
+    public boolean enabled() {
+        return plugin.settings().rawBool("logros.activo",
+                !(plugin.core() instanceof net.ederus.edm.EDMOneBlock));
+    }
+
     // ------------------------------------------------------------- el datapack
 
     /**
@@ -51,6 +61,7 @@ public final class Advancements {
      * @return true si lo ha (re)escrito, o sea que hace falta recargar para verlo
      */
     public boolean install() {
+        if (!enabled()) return false;
         World world = plugin.getServer().getWorlds().isEmpty() ? null : plugin.getServer().getWorlds().get(0);
         if (world == null) return false;
 
@@ -209,6 +220,7 @@ public final class Advancements {
      * reiniciar) simplemente no hay nada que conceder y no pasa nada.
      */
     public void award(Player player, String anomalyId) {
+        if (!enabled()) return;
         if (grant(player, anomalyId) && plugin.settings().rawBool("logros.sonido", true)) {
             Compat.sound(player.getWorld(), player.getLocation(), "ui.toast.challenge_complete", 1.0f, 1.0f);
             Compat.sound(player.getWorld(), player.getLocation(), "entity.player.levelup", 0.7f, 1.4f);

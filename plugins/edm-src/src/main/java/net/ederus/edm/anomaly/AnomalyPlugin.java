@@ -143,7 +143,11 @@ public final class AnomalyPlugin extends net.ederus.edm.Module {
         sweepLeftovers();
         manager.restartScheduler();
 
-        if (advancements.install()) {
+        if (!advancements.enabled()) {
+            // El datapack, si quedo de antes, es del mundo: no se toca desde aqui.
+            getLogger().info("Logros de Anomaly apagados (logros.activo: false). "
+                    + "Si existe world/datapacks/anomaly_logros, puede borrarse.");
+        } else if (advancements.install()) {
             getLogger().info("El arbol de logros es nuevo: hace falta un /minecraft:reload "
                     + "o un reinicio para que el servidor lo cargue.");
         }
@@ -254,6 +258,11 @@ public final class AnomalyPlugin extends net.ederus.edm.Module {
         Anim.cancelAll();
         reloadConfig();
         registry.load();
+        // Por si se acaban de encender los logros (logros.activo): apagados no hace nada.
+        if (advancements.install()) {
+            getLogger().info("El arbol de logros es nuevo: hace falta un /minecraft:reload "
+                    + "o un reinicio para que el servidor lo cargue.");
+        }
         drops.load();
         manager.restartScheduler();
         // Los esbirros vivos son del catalogo viejo: fuera y que renazcan del nuevo.

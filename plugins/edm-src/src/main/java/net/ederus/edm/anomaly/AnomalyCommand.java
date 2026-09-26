@@ -474,6 +474,11 @@ public final class AnomalyCommand implements CommandExecutor, TabCompleter {
                     Component.text("Este subcomando necesita un jugador.", NamedTextColor.RED)));
             return;
         }
+        if (!plugin.advancements().enabled()) {
+            sender.sendMessage(plugin.prefix().append(
+                    Component.text("Los logros de anomalías están apagados en este servidor.", SOFT)));
+            return;
+        }
         int owned = plugin.advancements().owned(player);
         int total = plugin.registry().all().size();
         List<String> missing = plugin.advancements().missing(player);
