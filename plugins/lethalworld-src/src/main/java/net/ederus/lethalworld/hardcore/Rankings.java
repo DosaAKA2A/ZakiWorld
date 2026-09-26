@@ -526,7 +526,9 @@ final class Rankings implements Listener {
         List<Puesto> vacio = reparto(List.of("extraido"), Map.of(), Map.of(), 3, 8, 2, 3);
         h.igual("sin nadie, nada", 0, vacio.size());
         h.igual("premios de serie: 3", 3, premios().size());
-        h.igual("top sin datos: nombre", "—", top("tasado-mc_1_nombre"));
+        // Una clave que nadie tiene: con tasado-mc el resultado dependeria de los datos reales del servidor.
+        h.igual("top sin datos: nombre", "—", top("autotest-sin-datos_1_nombre"));
+        h.igual("top sin datos: valor", "0", top("autotest-sin-datos_1_valor"));
         h.igual("top con n fuera de rango", null, top("tasado-mc_11_valor"));
         h.igual("stat sin jugador", "", PlaceholdersLethal.resolver(null, "stat_parcas"));
         h.ok("autotest no toca stats-semana reales", !hc.datos().isSet("stats-semana." + sem + "." + uno));

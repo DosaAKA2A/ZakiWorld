@@ -173,7 +173,7 @@ final class Altar implements Listener {
         this.menu = new MenuAltar(hc, this);
         hc.plugin().getServer().getPluginManager().registerEvents(this, hc.plugin());
         Subcomandos.lw().registrar("altar",
-                "altar [probar <jugador> <trueque> | abrir [umbral|forja|camino] | info]: sin argumentos marca el bloque que miras",
+                "altar [probar <jugador> <trueque> | reset <jugador> | abrir [umbral|forja|camino] | info]: sin argumentos marca el bloque que miras",
                 "ederus.mundos", this::comando, this::tab);
         Autotest.registrar("altar", this::autotest);
         hc.seguro("altar", this::podar);
@@ -999,6 +999,23 @@ final class Altar implements Listener {
                 }
                 comprar(a, args[3], quien, null);
             }
+            case "reset" -> {
+                /* Cupos de esta semana y de hoy de un jugador (frascos, Ascua, tinturas...). Para el
+                 * staff tras un fallo y para repetir las pruebas en la misma semana. No devuelve
+                 * nada ni toca el saldo, los creditos, la espera de la Forja ni el stock comun. */
+                OfflinePlayer a = args.length >= 3 ? Entregas.buscar(args[2]) : null;
+                if (a == null) {
+                    quien.sendMessage(Component.text("Uso: /lw hardcore altar reset <jugador>", NamedTextColor.RED));
+                    return;
+                }
+                UUID u = a.getUniqueId();
+                Calendario cal = hc.calendario();
+                hc.datos().set("altar.usos." + cal.semana() + "." + u, null);
+                hc.datos().set("altar.usos-dia." + cal.dia() + "." + u, null);
+                hc.guardarYa();
+                hc.plugin().bitacora().anotar("altar", "reset", Entregas.nombre(a), quien.getName());
+                quien.sendMessage(ComandoCalamity.mensaje("Cupos del altar de " + Entregas.nombre(a) + " a cero."));
+            }
             case "abrir" -> {
                 if (!(quien instanceof Player p)) {
                     quien.sendMessage(Component.text("Solo desde el juego.", NamedTextColor.RED));
@@ -1022,7 +1039,7 @@ final class Altar implements Listener {
                 quien.sendMessage(Component.text("  Trueques: " + String.join(", ", ids), NamedTextColor.GRAY));
             }
             default -> quien.sendMessage(Component.text(
-                    "Uso: /lw hardcore altar [probar <jugador> <trueque> | abrir [umbral|forja|camino] | info]", NamedTextColor.RED));
+                    "Uso: /lw hardcore altar [probar <jugador> <trueque> | reset <jugador> | abrir [umbral|forja|camino] | info]", NamedTextColor.RED));
         }
     }
 
@@ -1051,8 +1068,10 @@ final class Altar implements Listener {
     }
 
     private List<String> tab(String[] args) {
-        if (args.length == 2) return List.of("probar", "abrir", "info");
-        if (args.length == 3 && args[1].equalsIgnoreCase("probar")) return Entregas.nombresConectados();
+        if (args.length == 2) return List.of("probar", "reset", "abrir", "info");
+        if (args.length == 3 && (args[1].equalsIgnoreCase("probar") || args[1].equalsIgnoreCase("reset"))) {
+            return Entregas.nombresConectados();
+        }
         if (args.length == 3 && args[1].equalsIgnoreCase("abrir")) return List.of("umbral", "forja", "camino");
         if (args.length == 4 && args[1].equalsIgnoreCase("probar")) {
             List<String> ids = new ArrayList<>();
