@@ -97,8 +97,10 @@ final class Aduana {
         this.hc = hc;
         sal();
         podar(System.currentTimeMillis());
-        Subcomandos.lw().registrar("aduana", "aduana <jugador>: horas, huellas, topes y MC de hoy, Fusible",
-                "ederus.mundos", this::comando, args -> args.length == 2 ? Entregas.nombresConectados() : List.of());
+        Subcomandos.lw().registrar("aduana",
+                "aduana <jugador> [reset]: horas, huellas, topes y MC de hoy, Fusible; reset los pone a cero",
+                "ederus.mundos", this::comando, args -> args.length == 2 ? Entregas.nombresConectados()
+                        : args.length == 3 ? List.of("reset") : List.of());
         Autotest.registrar("aduana", this::autotest);
     }
 
@@ -415,6 +417,18 @@ final class Aduana {
         long ahora = System.currentTimeMillis();
         ConfigurationSection c = conf();
         String nombre = o.getName() == null ? args[1] : o.getName();
+        if (args.length >= 3 && args[2].equalsIgnoreCase("reset")) {
+            /* Contadores de hoy (MC, Esencias, topes por tipo) y la ventana del Fusible. Para el
+             * staff tras un fallo que cobro de mas, y para repetir una prueba el mismo dia. Las
+             * huellas no se tocan: son la defensa contra multicuentas, no un contador. */
+            hc.datos().set("aduana.dia." + u, null);
+            hc.datos().set("aduana.hora." + u, null);
+            avisoFusible.remove(u);
+            hc.guardarYa();
+            hc.plugin().bitacora().anotar("aduana", "reset", nombre, quien.getName());
+            quien.sendMessage(ComandoCalamity.mensaje("Topes de hoy y Fusible de " + nombre + " a cero."));
+            return;
+        }
         quien.sendMessage(ComandoCalamity.mensaje(Component.text("Aduana de ").append(Component.text(nombre, NamedTextColor.WHITE))));
         quien.sendMessage(Component.text(String.format(Locale.ROOT, "  Horas jugadas: %.1f (pide %d para pagos entre jugadores)",
                 horasJugadas(o), c.getInt("horas-minimas", 10)), NamedTextColor.GRAY));
