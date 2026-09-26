@@ -110,7 +110,25 @@ public final class MenuHardcore implements Listener {
             new Regla("dificultad.cofres-vacios", "Cofres vacíos", Material.CHEST, true, false,
                     List.of("Los cofres de estructura salen vacíos:", "todo el botín se mata.")),
             new Regla("muerte.cuarentena-minutos", "Cuarentena", Material.CLOCK, 30, 0,
-                    List.of("Minutos de espera para volver a entrar", "después de morir dentro.")));
+                    List.of("Minutos de espera para volver a entrar", "después de morir dentro.")),
+            /* M22: las seis leyes de legibilidad (DIS sec. 0.2), para que quien lleve Calamity
+             * las tenga delante al tocar cualquier otra regla. Una Regla tiene que tener un
+             * interruptor: el suyo es el parte de defuncion, que es lo que ensena al jugador,
+             * al morir, cual de todas estas cosas le ha matado. Calavera normal y no de wither:
+             * esa ya es la de "Minijefes marcan" y cada casilla tiene que leerse de un vistazo. */
+            new Regla("parte-defuncion.activo", "Lo que te puede matar", Material.SKELETON_SKULL, true, false,
+                    List.of("1. Lo real lleva nivel: su cartel \"Nv. X\".",
+                            "   Las visiones nunca lo llevan.",
+                            "2. La campana siempre es real:",
+                            "   solo la Parca y las muertes.",
+                            "3. Lo falso no hace daño.",
+                            "4. Todo golpe gordo se avisa antes.",
+                            "5. Nada te mata de un golpe",
+                            "   con la vida llena.",
+                            "6. Una amenaza grande a la vez.",
+                            "",
+                            "El interruptor es el parte de defunción:",
+                            "al morir, los últimos golpes y el porqué.")));
 
     /** Marca de nuestro inventario: sin esto, cualquier cofre tragaria los clics. */
     private record Marca() implements InventoryHolder {
