@@ -1,0 +1,369 @@
+# Catalogo comun de recompensas para analizar_demanda.py (MEDICION-INTERES.md sec. 6.4).
+#
+# Cada recompensa canonica junta los ids con los que aparece en cada fuente:
+#   trueque     id del trueque del Altar (suceso trueque / trueque-fallido)
+#   forja       pieza del suceso forja (yelmo, coraza...)
+#   mmo         TIPO.ID de MMOItems (censo de entra/muere, userdata, vitrinas) o VANILLA:<MATERIAL>
+#   deseo       id de la lista de deseos (hardcore.deseos.candidatas o las de serie del plugin)
+#   voto        opcion del Voto del Botin (pregunta "botin")
+#   encuesta    "<pregunta>:<opcion>" de una encuesta que la nombra
+#   umc         articulo de UltimateMobCoins (mobcoins.log y data/*-data.yml)
+#   caja        "<caja>:<premio>" de ExcellentCrates (openings.log); admite comodines * ?
+#   tienda      clave de la tienda de EDM (casi siempre el material)
+#   recompensa  objeto de /lw hardcore dar (suceso recompensa)
+#
+# Los 50 del ranking de calc/ranking.py mas las de Calamity. Los ids de UMC son los de
+# shops/rotating_shop.yml y shop_with_timer.yml (lectura-mobcoins.md sec. 3); las cajas, las
+# 7 de ExcellentCrates mas "caos". El script avisa en alertas.md de todo id visto en los datos
+# que no este aqui: se anade y se vuelve a pasar.
+
+recompensas:
+  # ----------------------------------------------------------------- Calamity
+  manto-calamidad:
+    nombre: Manto de Calamidad
+    ids:
+      trueque: [yelmo-manto, coraza-manto, grebas-manto, soleretas-manto]
+      forja: [yelmo, coraza, grebas, soleretas]
+      mmo: [ARMOR.YELMO_DE_CALAMIDAD, ARMOR.CORAZA_DE_CALAMIDAD, ARMOR.GREBAS_DE_CALAMIDAD, ARMOR.SOLERETAS_DE_CALAMIDAD]
+      deseo: [manto]
+      voto: [piezas-manto]
+  hacha-heraldo:
+    nombre: Hacha del Heraldo
+    ids:
+      trueque: [hacha-heraldo]
+      forja: [hacha]
+      mmo: [AXE.HACHA_DEL_HERALDO]
+  vestigio-eco:
+    nombre: Vestigio del Eco (Máscara y Filo)
+    ids:
+      trueque: [mascara-eco, filo-eco]
+      forja: [mascara, filo]
+      mmo: [ARMOR.MASCARA_DEL_ECO, SWORD.FILO_DEL_ECO]
+  guadana-parca:
+    nombre: Guadaña de la PARCA
+    ids:
+      trueque: [guadana]
+      forja: [guadana]
+      mmo: [SWORD.GUADANA_DE_LA_PARCA]
+  frasco-calma:
+    nombre: Frasco de Calma (y su recarga)
+    ids:
+      trueque: [frasco, recargar]
+      recompensa: [frasco, frasco-1]
+  cristal-regreso:
+    nombre: Cristal de Regreso
+    ids:
+      trueque: [cristal]
+      recompensa: [cristal]
+  esencia-calamidad:
+    nombre: Esencia de Calamidad
+    ids:
+      recompensa: [esencia]
+      tienda: [GHAST_TEAR]
+  tintura-ceniza:
+    nombre: Tintura de Ceniza
+    ids:
+      trueque: [tintura]
+      recompensa: [tintura]
+      mmo: [CONSUMABLE.TINTURA_DE_CENIZA]
+  gema-calamidad:
+    nombre: Gema de Calamidad
+    ids:
+      trueque: [gema]
+      recompensa: [gema]
+      mmo: [GEM_STONE.GEMA_DE_CALAMIDAD]
+  ascua-calamidad:
+    nombre: Ascua de Calamidad
+    ids:
+      trueque: [ascua]
+      recompensa: [ascua]
+      mmo: [CONSUMABLE.ASCUA_DE_CALAMIDAD]
+  talisman-vigilia:
+    nombre: Talismán de Vigilia
+    ids:
+      trueque: [talisman]
+      recompensa: [talisman]
+      deseo: [talisman]
+      voto: [talismanes-gemas]
+  grabado-calamidad:
+    nombre: Grabado de Calamidad
+    ids:
+      trueque: [grabado]
+      recompensa: [grabado]
+  salvoconducto:
+    nombre: Salvoconducto del Insomne
+    ids:
+      trueque: [salvoconducto]
+      recompensa: [salvoconducto]
+      encuesta: ["salvar:casco", "salvar:pechera", "salvar:arma"]
+  llave-caos:
+    nombre: Llave del Caos
+    ids:
+      trueque: [llave]
+      recompensa: [llave, llave-hito]
+      deseo: [llave-caos]
+      voto: [llaves]
+      caja: ["caos:*"]
+  reliquias:
+    nombre: Reliquias (tasación)
+    ids:
+      encuesta: ["salvar:reliquias"]
+
+  # ------------------------------------------------------------ Survival (ranking)
+  libro-fabled:
+    nombre: Libro FABLED (AE)
+    ids:
+      umc: [book_fabled]
+      caja: ["*:*fabled*"]
+  libro-legendary:
+    nombre: Libro LEGENDARY (AE)
+    ids:
+      umc: [book_legendary]
+      caja: ["caos:libro-legendary", "legendary:*legendary*"]
+      recompensa: [libro]
+      deseo: [libro-legendary]
+      voto: [libros-legendary]
+  encantamiento-tope:
+    nombre: Encantamiento sobre el tope vanilla
+    ids:
+      deseo: [encantamientos]
+      voto: [encantamientos]
+      caja: ["*:*sharpness_7*", "*:*filo_vii*"]
+  sets-anomalia:
+    nombre: Sets de anomalía (escalón 18-19)
+    ids:
+      mmo: [ANOMALIA.*]
+  arma-20:
+    nombre: Arma de más de 20 de daño
+    ids:
+      caja: ["*:*excalibur*"]
+  spawner:
+    nombre: Spawner
+    ids:
+      umc: [spawner_key]
+      caja: ["spawner:*"]
+  ampliador-slots:
+    nombre: Ampliador de Slots (AE)
+    ids:
+      umc: [slotincreaser]
+  god-kit:
+    nombre: God Kit sin vía
+    ids: {}
+  llave-legendaria:
+    nombre: Llave Legendaria
+    ids:
+      umc: [legendary_key]
+      caja: ["legendary:*"]
+  llave-koth:
+    nombre: Llave KOTH
+    ids:
+      umc: [koth_key]
+      caja: ["koth:*"]
+  regalia-alba:
+    nombre: Regalia del Alba (escalón 11)
+    ids:
+      mmo: [ARMOR.CORAZA_DEL_ALBA]
+  invocador-dios-dragon:
+    nombre: Invocador del Dios Dragón
+    ids:
+      umc: [dungeon_summon]
+  rip-mitico:
+    nombre: RIP Mítico / Inmortal
+    ids:
+      deseo: [rip]
+      voto: [rip]
+  mascota-rara:
+    nombre: Mascota sin vía
+    ids:
+      deseo: [mascota]
+      voto: [mascotas]
+      caja: ["pets:*"]
+  tag-logro:
+    nombre: Tag de logro (INSOMNE y familia)
+    ids: {}
+  bendicion-dios:
+    nombre: Bendición de Dios (AE)
+    ids:
+      umc: [holyscroll]
+  mobcoins-premio:
+    nombre: MobCoins como premio
+    ids: {}
+  estrella-nether:
+    nombre: Estrella del Nether / faro
+    ids:
+      umc: [star]
+      tienda: [NETHER_STAR, BEACON]
+  bloque-vetado:
+    nombre: Bloque vetado (shulker, faro)
+    ids:
+      tienda: [SHULKER_BOX]
+  utilidad-exclusiva:
+    nombre: Utilidad exclusiva (tipo Super Palo)
+    ids:
+      umc: [super_stick]
+  ingredientes-draconicos:
+    nombre: Ingredientes dracónicos
+    ids: {}
+  gear-8:
+    nombre: Gear escalón 8
+    ids:
+      mmo: [ARMOR.CORAZA_CONQUISTADOR, ARMOR.CORAZA_DIOS_DRAGON]
+  accesorio-talisman:
+    nombre: Accesorio / talismán MMOItems
+    ids: {}
+  elytra:
+    nombre: Elytra
+    ids:
+      umc: [elytra]
+      mmo: [VANILLA:ELYTRA]
+  llave-epica:
+    nombre: Llave Épica
+    ids:
+      umc: [epic_key]
+      caja: ["cajaepica:*"]
+  manzana-encantada:
+    nombre: Manzana dorada encantada
+    ids:
+      umc: [egapple]
+      tienda: [ENCHANTED_GOLDEN_APPLE]
+  libros-elite:
+    nombre: Libros ELITE / ULTIMATE
+    ids:
+      umc: [book_elite, book_ultimate]
+  gear-7:
+    nombre: Gear escalón 7
+    ids: {}
+  boost:
+    nombre: Boost exp/drops
+    ids: {}
+  llave-mazmorra:
+    nombre: Llave de Mazmorra
+    ids:
+      umc: [dungeon_key]
+      caja: ["dungeon:*"]
+  exp-bloque:
+    nombre: EXP en bloque
+    ids:
+      tienda: [EXPERIENCE_BOTTLE]
+  llave-mascotas:
+    nombre: Llave Mascotas
+    ids:
+      umc: [pets_key]
+  mascota-comun:
+    nombre: Mascota común
+    ids: {}
+  rip-comun:
+    nombre: RIP Común a Raro
+    ids: {}
+  llave-rankup:
+    nombre: Llave Rankup
+    ids:
+      caja: ["rankup:*"]
+  manzana-dorada:
+    nombre: Manzana dorada
+    ids:
+      umc: [golden_apple]
+      tienda: [GOLDEN_APPLE]
+  totem:
+    nombre: Tótem
+    ids:
+      umc: [totem]
+      tienda: [TOTEM_OF_UNDYING]
+  llave-vote:
+    nombre: Llave Vote
+    ids:
+      umc: [vote_key]
+      caja: ["vote:*"]
+  dinero-vault:
+    nombre: Dinero Vault
+    ids: {}
+  material-automatizable:
+    nombre: Material automatizable (hierro, carbón, patata)
+    ids:
+      tienda: [IRON_INGOT, COAL, POTATO, SUGAR_CANE]
+  bloques-construccion:
+    nombre: Bloques de construcción
+    ids:
+      umc: [sea, mycelium, itemframe, bell]
+  gear-2-4:
+    nombre: Gear escalón 2-4
+    ids: {}
+  beneficio-rango:
+    nombre: Beneficio temporal de rango
+    ids: {}
+  job-points:
+    nombre: Job Points / puntos de voto
+    ids: {}
+  utilidad-umc:
+    nombre: Utilidades del Mercado del Día (tolvas, yunques, mesa...)
+    ids:
+      umc: [hopper, anvil, table, eye, crystal, rocket, trident, mending, redstone, book, milk]
+  ae-menores:
+    nombre: AE menores (SIMPLE, UNIQUE, polvo, pergamino, gema de almas)
+    ids:
+      umc: [book_simple, book_unique, magic_dust, blackscroll, soulgem]
+
+# Patrones de los logs que aun NO se han leido en produccion ([VERIFICAR] en la Fase 0:
+# leer 20 lineas reales con --muestra y reescribirlos). Grupos obligatorios: fecha, jugador y
+# articulo/precio (mobcoins) o caja/premio (openings). Los de abajo son los del ejemplo
+# sintetico de tests/prod-ejemplo.
+patrones:
+  mobcoins: '^\[(?P<fecha>[\d.\-/]{8,10})[ T][\d:]+\]\s+(?P<jugador>\S+)\s+(?:bought|purchased|compr[oó])\s+(?:\d+\s*x\s*)?(?P<articulo>\S+).*?(?:for|por)\s+(?P<precio>[\d.,]+)'
+  openings: '^\[(?P<fecha>[\d.\-/]{8,10})[ T][\d:]+\]\s+(?P<jugador>\S+)\s+(?:opened|abri[oó])\s+(?:crate\s+)?''?(?P<caja>[\w\-]+)''?.*?(?:won|got|gan[oó]|reward)\s+''?(?P<premio>[^'']+?)''?\s*$'
+
+# Stock con el que arranca cada articulo de UMC (por dia en el Mercado, por mes en la
+# Boveda): lo usa el lector de data/*-data.yml cuando el fichero solo trae lo que queda.
+stock_inicial:
+  milk: 24
+  redstone: 20
+  book: 20
+  bell: 12
+  sea: 16
+  rocket: 16
+  itemframe: 12
+  mycelium: 10
+  eye: 12
+  hopper: 12
+  book_simple: 8
+  golden_apple: 12
+  anvil: 10
+  crystal: 8
+  soulgem: 8
+  vote_key: 10
+  table: 8
+  magic_dust: 6
+  pets_key: 8
+  blackscroll: 5
+  trident: 3
+  book_unique: 5
+  mending: 4
+  star: 3
+  totem: 4
+  egapple: 2
+  book_elite: 3
+  elytra: 4
+  spawner_key: 6
+  koth_key: 5
+  dungeon_key: 4
+  book_ultimate: 3
+  holyscroll: 3
+  legendary_key: 5
+  slotincreaser: 3
+  book_legendary: 4
+  epic_key: 3
+  dungeon_summon: 3
+  book_fabled: 2
+
+# Claves dentro de data/*-data.yml si el fichero trae stock y restante por articulo [VERIFICAR].
+stock_claves: {inicial: stock, restante: remaining}
+
+# Tablas SQLite [VERIFICAR] con .tables / .schema sobre la copia antes de la primera pasada.
+sqlite:
+  umc_saldos: {tabla: mobcoins, columna: coins}
+  crates_llaves: {tabla: excellentcrates_users, columnas: [keys, keysOnHold]}
+
+# Jugadores distintos del Survival en el periodo (para la Participacion). null = sin dato.
+jugadores_survival: null
+
+# PROPUESTA de MED sec. 6.6; se puede afinar sin tocar el script.
+pesos: {pedido: 0.30, comprado: 0.30, frustrado: 0.20, abierto: 0.10, arriesgado: 0.10}

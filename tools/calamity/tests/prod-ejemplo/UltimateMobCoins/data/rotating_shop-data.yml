@@ -1,0 +1,4 @@
+items:
+  star: {stock: 3, remaining: 0}
+  egapple: {stock: 2, remaining: 1}
+  hopper: {stock: 12, remaining: 0}
