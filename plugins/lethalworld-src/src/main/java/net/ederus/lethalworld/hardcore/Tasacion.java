@@ -142,7 +142,8 @@ final class Tasacion {
     Resumen tasarAusente(OfflinePlayer p, List<ItemStack> reliquias, String motivo) {
         hc.plugin().bitacora().anotar("tasacion", "ausente", Minijefes.nombreDe(p), Aduana.idsReliquias(reliquias),
                 motivo == null ? "-" : motivo);
-        return procesar(p, p.getPlayer(), reliquias, motivo == null ? "ausente" : motivo, true, false);
+        // Sin jugador: ni mensajes, ni censo, ni deposito, ni contratos, ni encuesta; no ha salido.
+        return procesar(p, null, reliquias, motivo == null ? "ausente" : motivo, true, false);
     }
 
     private static void quitar(Inventory inv, Reliquias rel, List<ItemStack> a) {
@@ -162,11 +163,11 @@ final class Tasacion {
     /**
      * El cuerpo de la tasacion. online = el jugador conectado (mensajes, censo, saldo fisico,
      * contratos, encuesta, telemetria); null en la tasacion de prueba del comando.
-     * conPrimera: si es una salida (la primera del dia paga mas, telemetria "sale", encuesta);
-     * no lo es la tasacion de ausente.
+     * esSalida: false en la tasacion de ausente, que no es una salida: sin primera del dia y
+     * sin Racha (ni su factor ni subirla), que premian salir vivo.
      */
     private Resumen procesar(OfflinePlayer op, Player online, List<ItemStack> items, String motivo, boolean real,
-                             boolean conPrimera) {
+                             boolean esSalida) {
         UUID u = op.getUniqueId();
         String nombre = Minijefes.nombreDe(op);
         ConfigurationSection c = hc.cfg();
@@ -187,10 +188,10 @@ final class Tasacion {
         Censo.Foto salida = online == null ? null : hc.valor("censo", () -> Censo.de(online), null);
         Racha racha = hc.racha();
         int r = racha == null ? 0 : racha.de(u);
-        double factor = racha == null ? 1.0 : racha.factor(u, salida);
+        double factor = racha == null || !esSalida ? 1.0 : racha.factor(u, salida);
         int esencias = (int) Math.floor(k.esencias * factor + 1e-9);
         long mc = Math.round(k.mc * factor);
-        boolean primera = conPrimera && !dia.equals(hc.datos().getString("primera-extraccion." + u, ""));
+        boolean primera = esSalida && !dia.equals(hc.datos().getString("primera-extraccion." + u, ""));
         int extra = primera ? primera(k.validas, v) : 0;
 
         List<String> lineas = new ArrayList<>();
@@ -266,7 +267,7 @@ final class Tasacion {
         }
 
         int rachaNueva = r;
-        if (k.dosOMas && racha != null) rachaNueva = racha.subir(u, online, salida);
+        if (k.dosOMas && racha != null && esSalida) rachaNueva = racha.subir(u, online, salida);
 
         Estadisticas st = hc.estadisticas();
         if (st != null) {
@@ -283,8 +284,7 @@ final class Tasacion {
             contratos = hc.valor("contratos", () -> ct.cobrarEnTasacion(online), List.of());
         }
 
-        // La telemetria "sale", el aviso y la encuesta solo en una salida de verdad, no en la de ausente.
-        if (online != null && conPrimera) {
+        if (online != null) {
             Telemetria te = hc.telemetria();
             if (te != null) {
                 Map<String, Object> t = new LinkedHashMap<>();
