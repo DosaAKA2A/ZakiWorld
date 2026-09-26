@@ -255,6 +255,8 @@ final class Ligado implements Listener {
     static boolean permitido(InventoryType tipo, Object holder, HumanEntity quien, boolean dentro) {
         if (tipo == InventoryType.CRAFTING || tipo == InventoryType.PLAYER || tipo == InventoryType.CREATIVE) return true;
         if (holder != null && quien != null && holder.equals(quien)) return true;
+        // El cofre ender de un bloque siempre ensena el del que mira; sin holder, es el suyo.
+        if (tipo == InventoryType.ENDER_CHEST && holder == null) return true;
         if (holder instanceof Chest || holder instanceof DoubleChest || holder instanceof Barrel) return true;
         if (holder instanceof ShulkerBox) return !dentro;
         if (holder != null && holder.getClass().getName().startsWith("net.ederus.lethalworld.")) return true;
@@ -347,12 +349,13 @@ final class Ligado implements Listener {
 
     @EventHandler(priority = EventPriority.MONITOR)
     public void onEntrar(PlayerJoinEvent e) {
-        if (activo()) revisar(e.getPlayer());
+        if (activo()) revisar(e.getPlayer(), true);
     }
 
+    /** Al abrir algo solo se mira la marca de cada objeto, sin abrir shulkers: pasa a menudo. */
     @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
     public void onAbrir(InventoryOpenEvent e) {
-        if (activo() && e.getPlayer() instanceof Player p) revisar(p);
+        if (activo() && e.getPlayer() instanceof Player p) revisar(p, false);
     }
 
     @EventHandler
@@ -360,12 +363,12 @@ final class Ligado implements Listener {
         ultimoAviso.remove(e.getPlayer().getUniqueId());
     }
 
-    /** Un recorrido del inventario (41 casillas): solo mira la marca de cada objeto. */
-    private void revisar(Player p) {
+    /** Un recorrido del inventario (41 casillas); con "dentro", tambien bolsas y shulkers. */
+    private void revisar(Player p, boolean dentro) {
         UUID yo = p.getUniqueId();
         for (ItemStack it : p.getInventory().getContents()) {
-            UUID d = ajeno(it, yo);
-            if (d != null) ajenoVisto(p, d, it);
+            UUID d = dentro ? ajeno(it, yo) : duenoDe(it);
+            if (d != null && !d.equals(yo)) ajenoVisto(p, d, it);
         }
     }
 

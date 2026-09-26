@@ -217,6 +217,15 @@ final class Combate implements Listener {
     void alPvp(EntityDamageByEntityEvent e) {
         if (!(e.getEntity() instanceof Player v) || !(autor(e.getDamager()) instanceof Player a)) return;
         if (a.equals(v)) return;
+        /* Ligado.onGolpe (LOWEST) cancela el golpe con un arma ligada de otro, pero
+         * Hardcore.onFuegoAmigo descancela todo el PvP antes de llamar aqui: se repite. */
+        if (e.getDamager() instanceof Player && hc.cfg().getBoolean("ligado.activo", true)) {
+            UUID dueno = Ligado.duenoDe(a.getInventory().getItemInMainHand());
+            if (dueno != null && !dueno.equals(a.getUniqueId())) {
+                e.setCancelled(true);
+                return;
+            }
+        }
         long ahora = System.currentTimeMillis();
         if (activo()) {
             if (relojes.protegido(v.getUniqueId(), ahora)) {
