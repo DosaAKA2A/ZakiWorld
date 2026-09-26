@@ -359,9 +359,16 @@ final class ObjetosCalamity implements Listener {
     static boolean esMmo(ItemStack item) {
         if (item == null || item.getType().isAir()) return false;
         if (PuenteMmo.enlace(item) != null) return true;
+        // Sin MythicLib (o si su API cambia) se mira el NBT del objeto tal cual: MMOItems
+        // guarda MMOITEMS_ITEM_ID en custom_data, y eso sale en las dos formas de texto.
+        ItemMeta meta = item.getItemMeta();
+        if (meta == null) return false;
+        return contieneMarcaMmo(() -> meta.getAsString()) || contieneMarcaMmo(() -> meta.getAsComponentString());
+    }
+
+    private static boolean contieneMarcaMmo(java.util.function.Supplier<String> texto) {
         try {
-            ItemMeta meta = item.getItemMeta();
-            String nbt = meta == null ? "" : meta.getAsString();
+            String nbt = texto.get();
             return nbt != null && (nbt.contains("MMOITEMS_ITEM_ID") || nbt.contains("MMOITEMS_ITEM_TYPE"));
         } catch (Throwable t) {
             return false;
@@ -373,8 +380,17 @@ final class ObjetosCalamity implements Listener {
         if (nombre == null || nombre.isBlank()) return null;
         String id = nombre.trim().toLowerCase(Locale.ROOT);
         NamespacedKey k = NamespacedKey.fromString(id.contains(":") ? id : "minecraft:" + id);
+        if (k == null) return null;
+        // El registro de Paper primero; el de Bukkit (deprecado) por si el de Paper no esta.
         try {
-            return k == null ? null : Registry.ENCHANTMENT.get(k);
+            Enchantment e = io.papermc.paper.registry.RegistryAccess.registryAccess()
+                    .getRegistry(io.papermc.paper.registry.RegistryKey.ENCHANTMENT).get(k);
+            if (e != null) return e;
+        } catch (Throwable ignorado) {
+            // sigue con el de Bukkit
+        }
+        try {
+            return Registry.ENCHANTMENT.get(k);
         } catch (Throwable t) {
             return null;
         }

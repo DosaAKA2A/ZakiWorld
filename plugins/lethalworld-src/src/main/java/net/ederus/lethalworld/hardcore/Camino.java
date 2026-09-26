@@ -265,7 +265,7 @@ final class Camino {
         return MenuUtil.icon(t.icono(), nombre, lore, listo);
     }
 
-    /** Clic en una pieza: se apunta (demanda) y se dice en una linea lo que falta. */
+    /** Clic en una pieza: se apunta en la telemetria (que piezas se miran = demanda antes de comprar). */
     void clic(Player p, String pieza) {
         telemetria(p, pieza);
         Compat.soundPlayers(p.getWorld(), p.getLocation(), "ui.button.click", 0.6f, 1.2f);

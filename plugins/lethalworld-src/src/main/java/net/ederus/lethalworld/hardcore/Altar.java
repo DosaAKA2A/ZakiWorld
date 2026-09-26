@@ -351,7 +351,8 @@ final class Altar implements Listener {
 
     /**
      * Revisa sin tocar nada. El orden importa: primero lo que no depende de lo que tengas
-     * (cupo, stock, requisitos, espera), despues el credito, las Esencias y las MobCoins. Asi
+     * (cupo, stock, requisitos, espera, MobCoins sin verificar), despues el credito, las
+     * Esencias y las MobCoins que tienes. Asi
      * el motivo que se apunta es el que de verdad frena (MED sec. 3.3, interes frustrado).
      */
     static Plan revisar(Caja c, Trueque t, UUID u) {
@@ -376,6 +377,9 @@ final class Altar implements Listener {
                 return new Plan(pr, null, "cupo", dias + "d");
             }
         }
+        // MobCoins sin verificar (Monedero): el trueque esta en gris y eso es lo primero que se
+        // dice, antes que "te faltan Esencias" (no es algo que el jugador pueda arreglar).
+        if (pr.mc() > 0 && (!c.mcDisponible() || c.mc(u) < 0)) return new Plan(pr, null, "mc", "proximamente");
         String usado = null;
         if (pr.credito() != null) {
             Creditos cr = c.creditos();
@@ -394,9 +398,7 @@ final class Altar implements Listener {
         long saldo = c.saldo().de(u);
         if (saldo < pr.esencias()) return new Plan(pr, usado, "esencias", pr.esencias() - saldo);
         if (pr.mc() > 0) {
-            if (!c.mcDisponible()) return new Plan(pr, usado, "mc", "proximamente");
             long tiene = c.mc(u);
-            if (tiene < 0) return new Plan(pr, usado, "mc", "proximamente");
             if (tiene < pr.mc()) return new Plan(pr, usado, "mc", pr.mc() - tiene);
         }
         return new Plan(pr, usado, null, null);
@@ -1300,6 +1302,9 @@ final class Altar implements Listener {
         r = probarEn(c, ts.get("gema"), u);
         h.ok("gema con el Monedero sin verificar -> mc proximamente", "mc".equals(r.motivo()) && "proximamente".equals(r.faltan()));
         h.igual("sin cobrar Esencias", 30L, c.saldo.de(u));
+        UUID pobre = Autotest.sintetico(312);
+        r = probarEn(c, ts.get("gema"), pobre);
+        h.ok("en gris dice mc antes que esencias", "mc".equals(r.motivo()) && "proximamente".equals(r.faltan()));
         c.mcDisponible = true;
         c.mc.put(u, 1000L);
         r = probarEn(c, ts.get("gema"), u);
