@@ -1,0 +1,4 @@
+vitrinas:
+  8f1c0000-0000-4000-8000-000000000001:
+    - {slot: 1, item: "ARMOR.CORAZA_DE_CALAMIDAD"}
+    - {slot: 2, item: "SWORD.ESPADA_ETERNA"}
