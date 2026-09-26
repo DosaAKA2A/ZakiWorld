@@ -209,12 +209,11 @@ cada una con su icono (cualquier objeto del juego), su color y su tropa dentro. 
 icono se pone trayendo el objeto en el cursor y clickando la casilla, o con la tecla de
 tirar (Q) escribiendo su nombre (`GOLD_ORE`). Borrar una carpeta **no borra su tropa**:
 la muda a *Sin clasificar*. En la ficha de cada esbirro hay un boton para cambiarlo de
-carpeta. Todo se guarda en `esbirros.yml`, en `categorias:` y en la clave `categoria`
-de cada esbirro.
+carpeta. Cada carpeta es un **directorio** de `Esbirros/` (ver *Los ficheros*, mas abajo).
 
 `/esb lista` saca el catalogo en texto, por carpetas; `/esb <id> [nivel] [x y z]` invoca
 uno suelto (tambien desde consola, con coordenadas), y `/esb reload` **relee
-esbirros.yml sin reiniciar** el servidor, que es lo que hace falta cuando el fichero se
+`Esbirros/` y `Skills/Esbirros/` sin reiniciar** el servidor, que es lo que hace falta cuando el fichero se
 toca a mano: barre la tropa viva —un esbirro apuntando a un tipo renombrado se quedaria
 sin cartel ni nivel— y sus generadores la reponen en cuanto vuelva a pasar alguien.
 
@@ -260,25 +259,56 @@ bicho; si esta vacia, cae lo vanilla de siempre.
 
 Los esbirros **no se guardan en disco** (`setPersistent(false)`): al descargarse el chunk
 o reiniciar el servidor desaparecen y su generador los repone. Asi nunca queda tropa
-vieja sin holograma ni sin nivel. Todo se guarda en `plugins/EDM/anomaly/esbirros.yml`.
+vieja sin holograma ni sin nivel.
+
+**Los ficheros** (al estilo MythicMobs: uno por esbirro), en `plugins/EDM/anomaly/`:
+
+```
+Esbirros/<carpeta>/_carpeta.yml   nombre, icono y color de la carpeta
+Esbirros/<carpeta>/<id>.yml       la ficha del esbirro y sus velas plantadas
+Skills/Esbirros/<id>.yml          sus rasgos: activa y sus numeros
+```
+
+La carpeta de un esbirro **es el directorio** en el que esta su fichero: moverlo a otro
+directorio y hacer `/esb reload` lo cambia de carpeta (si el fichero trae `categoria:`, se
+ignora). La ficha lleva todo lo del tipo (nombre, color, negrita, entidad, tier, vida y dano
+base y por nivel, mobcoins, `vela:` con lo que hereda cada vela nueva y `presencia:`) y una
+seccion `velas:` con los generadores plantados de ese esbirro (mundo, x/y/z, niveles,
+intervalo, tope, radio y `activa`); los ids de las velas no cambian al recargar, asi que el
+contador de vivos de cada una sigue valiendo. El menu reescribe las fichas en cada cambio y
+**borra** la vieja si el esbirro cambio de carpeta o se borro (sus rasgos tambien); borrar
+una carpeta muda su tropa a `general/`. El id es el nombre del fichero, asi que `freeId`
+evita los nombres reservados de Windows (`con`, `nul`...); la `ñ` vale. Si se mueve un
+fichero a mano, `/esb reload` **antes** de tocar nada en el menu, o el menu lo reescribe
+donde lo tenia.
+
+**Migracion**: si hay un `esbirros.yml` y no hay `Esbirros/`, al arrancar (o en el reload)
+se reparte solo —carpetas a `_carpeta.yml`, tipos a su directorio, generadores dentro de la
+ficha de su tipo, `habilidades` a `Skills/Esbirros/`— y el viejo queda como
+`esbirros.yml.migrado-AAAA-MM-DD` (log: `Migrados N esbirros en M carpetas a Esbirros/`). Si
+existen los dos, manda la carpeta y se avisa del viejo. El botin no cambia de clave
+(`esbirro-<id>`); su fichero es cosa del modulo de drops.
 
 **Las habilidades de un esbirro son RASGOS**, no rutinas por fases: se encienden y se
 apagan desde su ficha, no tienen aviso ni enfriamiento y se notan solas mientras pelea.
-Cambiarlas no toca a los que ya estan vivos. De momento hay tres:
+Cambiarlas no toca a los que ya estan vivos. Se encienden desde la ficha o en
+`Skills/Esbirros/<id>.yml`, que trae **todos** los rasgos (cada uno con `activa` y sus
+numeros, comentados); si falta, se genera con los de serie. Los numeros eran constantes
+del motor y ahora van esbirro por esbirro (entre parentesis, la clave y su valor de serie):
 
 | id | Que hace |
 |----|----------|
-| `flecha-pesada` | Cada tercera flecha que dispara pega el doble; sale brillando y suena distinto |
-| `agil` | Se mueve un 25% mas rapido (por atributo, no por pocion: sin particulas) |
-| `flecha-helada` | Sus flechas dejan lentitud 3 segundos |
-| `venenoso` | Cada golpe suyo deja veneno 4 segundos |
-| `igneo` | Al que golpea lo deja ardiendo 4 segundos |
-| `acorazado` | Recibe un 35% menos de dano |
-| `espinas` | Devuelve un 25% del dano cuerpo a cuerpo (con `damage()` a secas, para no enredarse en un bucle) |
-| `berserk` | Por debajo del 30% de su vida pega un 50% mas |
-| `curandero` | Cada 3 segundos cura un 4% a los esbirros a 8 bloques; a si mismo no |
-| `alarma` | Al recibir un golpe, la tropa a 12 bloques cambia de objetivo al agresor |
-| `division` | Al morir se parte en dos crias de la mitad de nivel; las crias llevan marca y ya no se dividen |
+| `flecha-pesada` | Cada tercera flecha (`cada-n: 3`) pega el doble (`multiplicador: 2.0`); sale brillando y suena distinto |
+| `agil` | Se mueve un 25% mas rapido (`velocidad: 0.25`; por atributo, no por pocion: sin particulas) |
+| `flecha-helada` | Sus flechas dejan lentitud (`segundos: 3`, `nivel: 1`) |
+| `venenoso` | Cada golpe suyo deja veneno (`segundos: 4`, `nivel: 1`) |
+| `igneo` | Al que golpea lo deja ardiendo (`segundos: 4`) |
+| `acorazado` | Recibe menos dano (`reduccion: 0.35`) |
+| `espinas` | Devuelve parte del dano cuerpo a cuerpo (`devuelve: 0.25`; con `damage()` a secas, para no enredarse en un bucle) |
+| `berserk` | Por debajo de `umbral-vida: 0.30` de su vida pega `extra: 0.50` mas |
+| `curandero` | Cada `cada-segundos: 3` cura `cura: 0.04` (de la vida maxima) a los esbirros a `radio: 8` bloques; a si mismo no |
+| `alarma` | Al recibir un golpe, la tropa a `radio: 12` bloques cambia de objetivo al agresor |
+| `division` | Al morir se parte en `crias: 2` de `fraccion-nivel: 0.5` de su nivel; las crias llevan marca y ya no se dividen |
 
 La **Mina** viene montada de serie en el Test (icono: mena de oro): *Minero Perdido*
 (zombi con alarma), *Centinela* (esqueleto con flecha pesada y helada), *Barrenador*

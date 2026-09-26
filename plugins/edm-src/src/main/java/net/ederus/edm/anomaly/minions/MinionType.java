@@ -61,6 +61,9 @@ public final class MinionType {
     private final MinionPresence presence = new MinionPresence();
     private EntityType entity = EntityType.ZOMBIE;
     private final java.util.Set<MinionAbility> abilities = java.util.EnumSet.noneOf(MinionAbility.class);
+    /** Los numeros de cada rasgo que no van de serie. Ver MinionAbility.Param. */
+    private final java.util.Map<MinionAbility, java.util.Map<String, Double>> params =
+            new java.util.EnumMap<>(MinionAbility.class);
     private double baseHealth = 20;
     private double healthGrowth = 0.35;
     private double baseDamage = 1.0;
@@ -197,6 +200,28 @@ public final class MinionType {
 
     public boolean has(MinionAbility ability) {
         return abilities.contains(ability);
+    }
+
+    /**
+     * Un numero de un rasgo, el que este esbirro tenga escrito en su fichero de
+     * Skills/Esbirros o, si no, el de serie. MinionManager lee de aqui en vez de
+     * llevar las constantes dentro.
+     */
+    public double param(MinionAbility ability, String key, double def) {
+        java.util.Map<String, Double> mine = params.get(ability);
+        Double v = mine == null ? null : mine.get(key);
+        return v != null ? v : def;
+    }
+
+    /** Igual, pero con el valor de serie que declara el propio rasgo. */
+    public double param(MinionAbility ability, String key) {
+        MinionAbility.Param p = ability.param(key);
+        return param(ability, key, p == null ? 0 : p.def());
+    }
+
+    /** Fija un numero de un rasgo (lo usa la carga de Skills/Esbirros). */
+    public void setParam(MinionAbility ability, String key, double value) {
+        params.computeIfAbsent(ability, k -> new java.util.LinkedHashMap<>()).put(key, value);
     }
 
     /** Enciende o apaga una habilidad; devuelve como queda. */

@@ -66,7 +66,7 @@ public final class MinionCommand implements CommandExecutor, TabCompleter {
     }
 
     /**
-     * Relee esbirros.yml sin reiniciar el servidor: es lo que hace falta cuando el
+     * Relee Esbirros/ y Skills/Esbirros/ sin reiniciar el servidor: es lo que hace falta cuando el
      * fichero se toca a mano. La tropa viva se barre primero, porque un esbirro que
      * quedara apuntando a un tipo renombrado se quedaria sin cartel ni nivel; sus
      * generadores la reponen en cuanto vuelva a pasar alguien.
@@ -170,7 +170,7 @@ public final class MinionCommand implements CommandExecutor, TabCompleter {
         sender.sendMessage(plugin.prefix().append(Component.text("Los esbirros de mazmorra", GOLD)));
         line(sender, "/" + label, "las carpetas de esbirros");
         line(sender, "/" + label + " lista", "el catálogo en texto, por carpetas");
-        line(sender, "/" + label + " reload", "relee esbirros.yml sin reiniciar");
+        line(sender, "/" + label + " reload", "relee Esbirros/ y sus rasgos sin reiniciar");
         line(sender, "/" + label + " <id> [nivel] [x y z]", "invoca uno suelto, para verlo");
     }
 
