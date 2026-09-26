@@ -271,7 +271,7 @@ final class Ecos implements Listener {
                 continue;
             }
             if (e.desmorona > 0 && ahora >= e.desmorona) {
-                deshacer(e, "desmorona", null);
+                deshacer(e, "desmorona", "hecho");
                 continue;
             }
             if (e.despierto()) {
@@ -326,7 +326,7 @@ final class Ecos implements Listener {
     }
 
     private void dormir(Eco e, String porque) {
-        e.quitarVista(this);
+        e.quitarVista(this, !"chunk".equals(porque));
         e.durmio = System.currentTimeMillis();
         e.elegido = null;
         e.volviendo = false;
@@ -398,6 +398,11 @@ final class Ecos implements Listener {
                 hc.plugin().getLogger().log(Level.WARNING, "[Calamity] Eco " + id + " con el registro roto; se deja como esta", t);
             }
         }
+    }
+
+    /** Copia de los Ecos registrados, en orden de nacimiento (para el Tablero, WP9). */
+    List<Eco> vivos() {
+        return new ArrayList<>(ecos.values());
     }
 
     // ---------------------------------------------------------------- vistas
@@ -1315,7 +1320,9 @@ final class Ecos implements Listener {
             if (!e.dueno.equals(p.getUniqueId())) continue;
             n++;
             Location l = e.anclaje();
-            Component bioma = l == null ? Component.text("?") : Component.translatable(l.getBlock().getBiome().translationKey());
+            // El bioma solo si el chunk esta cargado: un comando de jugador no carga chunks lejanos.
+            Component bioma = l == null || !l.getWorld().isChunkLoaded(l.getBlockX() >> 4, l.getBlockZ() >> 4)
+                    ? Component.text("lejos") : Component.translatable(l.getBlock().getBiome().translationKey());
             long min = Math.max(0, (e.expira - ahora) / 60_000);
             p.sendMessage(ComandoCalamity.mensaje(Component.text(e.errante ? "Eco errante · " : "Tu Eco · ")
                     .append(bioma.color(BLANCO))
@@ -1432,11 +1439,11 @@ final class Ecos implements Listener {
                 .igual("rumbo suroeste", "suroeste", rumbo(-7, 7))
                 .igual("rumbo noroeste", "noroeste", rumbo(-5, -5));
         List<AttributeModifier> mods = List.of(
-                new AttributeModifier(new org.bukkit.NamespacedKey("lethal_world", "test_armadura"), 15, AttributeModifier.Operation.ADD_NUMBER),
+                new AttributeModifier(new org.bukkit.NamespacedKey("autotest", "armadura"), 15, AttributeModifier.Operation.ADD_NUMBER),
                 new AttributeModifier(new org.bukkit.NamespacedKey("bracken", "panacea_armor"), -0.6, AttributeModifier.Operation.MULTIPLY_SCALAR_1));
         h.cerca("sin bracken", 15, FotoMuerte.componer(0, mods), 1e-9);
         List<AttributeModifier> otros = List.of(mods.get(0),
-                new AttributeModifier(new org.bukkit.NamespacedKey("lethal_world", "test_menos"), -0.6, AttributeModifier.Operation.MULTIPLY_SCALAR_1));
+                new AttributeModifier(new org.bukkit.NamespacedKey("autotest", "menos"), -0.6, AttributeModifier.Operation.MULTIPLY_SCALAR_1));
         h.cerca("otro namespace si cuenta", 6, FotoMuerte.componer(0, otros), 1e-9);
 
         // --- copias visuales y arma

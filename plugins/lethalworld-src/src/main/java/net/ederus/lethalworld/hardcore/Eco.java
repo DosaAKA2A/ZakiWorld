@@ -534,14 +534,22 @@ final class Eco {
 
     /** Quita el cuerpo (y el maniqui) guardando la fraccion de vida. */
     void quitarVista(Ecos g) {
+        quitarVista(g, true);
+    }
+
+    /**
+     * @param retirar false cuando el chunk se esta descargando: la entidad no es persistente y
+     *                se va sola con el; quitarla dentro de su propio evento de descarga no hace falta.
+     */
+    void quitarVista(Ecos g, boolean retirar) {
         if (cuerpo != null && cuerpo.isValid() && !cuerpo.isDead()) fraccion = Amenazas.fraccion(cuerpo);
         if (cuerpo != null) {
             g.olvidarVista(cuerpo);
-            if (cuerpo.isValid()) cuerpo.remove();
+            if (retirar && cuerpo.isValid()) cuerpo.remove();
         }
         if (cascara != null) {
             g.olvidarVista(cascara);
-            if (cascara.isValid()) cascara.remove();
+            if (retirar && cascara.isValid()) cascara.remove();
         }
         if (pelea != null) g.hc().amenazas().quitarPelea(pelea);
         cuerpo = null;

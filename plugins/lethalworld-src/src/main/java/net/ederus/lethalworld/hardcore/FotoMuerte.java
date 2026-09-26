@@ -369,14 +369,14 @@ final class FotoMuerte {
 
     /**
      * Donde murio, a ras de suelo; si murio en el vacio, en lava o dentro de un bloque, su
-     * ultimo suelo firme. Y nunca a menos de distancia-puertas de las puertas ni de la
+     * ultimo suelo firme (tambien en el agua: un Eco en el fondo de un lago no se pelea). Y nunca a menos de distancia-puertas de las puertas ni de la
      * llegada: si no, morir en la llegada planta un Eco guardian (X13).
      */
     private static Location anclar(Player p, Hardcore hc, ConfigurationSection c) {
         Location l = p.getLocation().clone();
         World w = l.getWorld();
         boolean malSitio = w == null || l.getY() < w.getMinHeight() + 1
-                || l.getBlock().getType() == Material.LAVA
+                || l.getBlock().isLiquid()
                 || l.getBlock().getType().isSolid()
                 || l.clone().add(0, 1, 0).getBlock().getType().isSolid();
         Location suelo = hc.ultimoSuelo(p);
