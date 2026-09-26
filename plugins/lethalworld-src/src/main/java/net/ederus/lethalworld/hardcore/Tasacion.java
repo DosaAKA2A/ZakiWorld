@@ -230,6 +230,8 @@ final class Tasacion {
             }
             if (cr != null) cr.sumar(u, tipo, 1, "tasacion", false);
             ganados.add(tipo);
+            // La linea de la Tasacion, aparte de la que ponga Creditos: dice de que salida salio.
+            bit.anotar("tasacion", "credito", nombre, tipo + " +1");
             if (online != null) online.sendMessage(ComandoCalamity.mensaje("Tasación: +1 " + nombreCredito(tipo) + "."));
         }
         for (String mj : k.sellos) {

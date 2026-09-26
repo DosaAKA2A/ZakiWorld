@@ -17,6 +17,7 @@ import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
 import org.bukkit.event.entity.EntityDamageByEntityEvent;
+import org.bukkit.event.entity.EntityDamageEvent;
 import org.bukkit.event.entity.EntityDeathEvent;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.persistence.PersistentDataContainer;
@@ -102,13 +103,27 @@ public final class Grifo implements Listener {
      * Apunta el dano que le hacen jugadores a cada mob de Calamity: la cuota (PDC
      * lethal_world:dano_jugador, que viaja con el mob) y, en los minijefes, quien pego cuanto.
      * En MONITOR y sin los cancelados: solo cuenta lo que de verdad le quito vida.
+     *
+     * Ademas del golpe y del proyectil, cuenta el dano que sigue a un arma de jugador (fuego
+     * de Aspecto igneo o de Llama, veneno, wither) si un jugador le pego en los ultimos 5 s
+     * (getKiller de vanilla). Sin esto, matar con una espada de fuego salia "cerrado". La
+     * caida, la lava o la asfixia NO cuentan aunque le haya pegado alguien: son justo las
+     * granjas con remate que la cuota tiene que cerrar.
      */
     @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
-    public void onDano(EntityDamageByEntityEvent e) {
+    public void onDano(EntityDamageEvent e) {
         if (!(e.getEntity() instanceof LivingEntity mob) || mob instanceof Player) return;
         if (!hc.esHardcore(mob.getWorld())) return;
         if (Marcas.esAmenaza(mob)) return;
-        Player p = jugadorDe(e.getDamager());
+        Player p;
+        if (e instanceof EntityDamageByEntityEvent be) {
+            p = jugadorDe(be.getDamager());
+        } else {
+            p = switch (e.getCause()) {
+                case FIRE_TICK, POISON, WITHER -> mob.getKiller();
+                default -> null;
+            };
+        }
         if (p == null) return;
         // Lo que pasa de su vida no cuenta: un golpe de 40 a un mob con 3 no es "40 de 20".
         double dano = Math.min(e.getFinalDamage(), mob.getHealth());
@@ -170,7 +185,8 @@ public final class Grifo implements Listener {
         int nivel = mm == null ? 1 : Math.max(1, mm.levelOf(mob));
 
         if (via == Via.MINIJEFE) {
-            e.setDroppedExp(xp(mobsCfg(), "minijefe"));
+            // Sin asesino jugador vanilla no suelta XP, y 1.500 en el suelo serian de cualquiera.
+            if (killer != null) e.setDroppedExp(xp(mobsCfg(), "minijefe"));
             Minijefes mj = hc.minijefes();
             if (mj != null) {
                 String tipo = null;

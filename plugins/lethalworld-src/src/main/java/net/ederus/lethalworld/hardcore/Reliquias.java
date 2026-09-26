@@ -13,6 +13,7 @@ import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.entity.HumanEntity;
 import org.bukkit.entity.Player;
+import org.bukkit.event.Event;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
@@ -382,11 +383,14 @@ final class Reliquias implements Listener {
         if (es(e.getItemInHand())) e.setCancelled(true);
     }
 
-    /** El Sello es una carga ignea: con clic derecho prenderia fuego. Ninguna se usa. */
+    /**
+     * El Sello es una carga ignea: con clic derecho prenderia fuego. Se niega el USO del
+     * objeto y no el clic entero: con una Astilla en la mano se tiene que poder abrir un cofre.
+     */
     @EventHandler(priority = EventPriority.LOW)
     public void onUsar(PlayerInteractEvent e) {
         if (!e.getAction().isRightClick()) return;
-        if (es(e.getItem())) e.setCancelled(true);
+        if (es(e.getItem())) e.setUseItemInHand(Event.Result.DENY);
     }
 
     @EventHandler
