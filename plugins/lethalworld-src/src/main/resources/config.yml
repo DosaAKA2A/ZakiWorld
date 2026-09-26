@@ -697,7 +697,19 @@ hardcore:
           rip: {icono: SKELETON_SKULL, texto: "Efectos RIP"}
           talismanes-gemas: {icono: EMERALD, texto: "Talismanes y gemas"}
           llaves: {icono: TRIAL_KEY, texto: "Llaves de caja"}
-  deseos: {activo: false, votos-por-jugador: 3, candidatas: {}}
+  deseos:
+    activo: false
+    votos-por-jugador: 3
+    # Lista de deseos (M19): como mucho 7 (una fila). Los ids casan con tools/calamity/catalogo.yml.
+    # Sin ninguna, las de serie del plugin (estas mismas).
+    candidatas:
+      manto: {icono: NETHERITE_CHESTPLATE, nombre: "Pieza del Manto de Calamidad", lore: ["El set de los cinco minijefes."]}
+      libro-legendary: {icono: ENCHANTED_BOOK, nombre: "Libro LEGENDARY", lore: ["Un encantamiento de los buenos."]}
+      encantamientos: {icono: EXPERIENCE_BOTTLE, nombre: "Encantamiento sobre el tope", lore: ["Un nivel más de lo normal."]}
+      mascota: {icono: WOLF_SPAWN_EGG, nombre: "Mascota rara", lore: ["Que te acompañe algo que nadie tiene."]}
+      rip: {icono: SKELETON_SKULL, nombre: "Efecto RIP de Calamity", lore: ["Que se note cómo mueres."]}
+      talisman: {icono: AMETHYST_SHARD, nombre: "Talismán de cordura", lore: ["La cordura baja más despacio."]}
+      llave-caos: {icono: TRIAL_KEY, nombre: "Llave del Caos", lore: ["Una caja que solo da Calamity."]}
 
   # ------------------------------------------------------------------ P2 (apagadas)
   rondador: {activo: false, probabilidad-por-minuto: 0.25, cordura-maxima: 50, luz-maxima: 8, distancia: 24, velocidad-acecho: 0.35, velocidad-huida: 0.3, velocidad-carga: 0.4, enfado-carga: 3, agarre-vida: 0.35, agarre-cordura: 20, vida-base: 60, vida-por-nivel: 0.05, extra-nivel: 5, dura-segundos: 180}
