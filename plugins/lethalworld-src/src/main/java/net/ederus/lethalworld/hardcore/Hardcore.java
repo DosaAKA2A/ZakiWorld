@@ -964,8 +964,8 @@ public final class Hardcore implements Listener {
      */
     private void nieblaDeNoche(Player p) {
         if (!cfg().getBoolean("dificultad.niebla-de-noche", true)) return;
-        long hora = p.getWorld().getTime();
-        if (hora < 13000 || hora > 23000) return;
+        // esNoche y no la hora: un Eclipse de dia tambien trae la ceniza y las rachas.
+        if (!esNoche(p)) return;
 
         // La niebla: ceniza densa alrededor. Esto es lo que se ve SIEMPRE de noche,
         // y no quita visibilidad: cierra el aire, que es lo que se buscaba.

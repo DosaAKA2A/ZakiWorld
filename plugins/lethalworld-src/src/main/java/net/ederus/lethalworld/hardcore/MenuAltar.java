@@ -211,8 +211,12 @@ final class MenuAltar implements Listener {
         m.acciones().put(32, "camino");
 
         // Fila 5: Contratos, Tablero, Encuesta y Voto del Botin, Lista de deseos.
-        boolean contratos = Subcomandos.calamity().nombres(p).contains("contratos");
-        boolean tablero = Subcomandos.calamity().nombres(p).contains("tablero");
+        // Encendido = el modulo existe y su interruptor esta en true; si no, sale en gris y no
+        // se abre un boton que solo contestaria "ahora mismo no".
+        Contratos con = hc.contratos();
+        Tablero tab = hc.tablero();
+        boolean contratos = con != null && hc.valor("contratos", con::activo, false);
+        boolean tablero = tab != null && hc.valor("tablero", tab::activo, false);
         Encuesta enc = hc.encuesta();
         boolean encuesta = enc != null && enc.activo();
         boolean deseos = enc != null && enc.deseos() != null && enc.deseos().activo();
@@ -423,9 +427,15 @@ final class MenuAltar implements Listener {
             }
             case "camino" -> altar.tarea(() -> altar.camino().abrir(p), 1L);
             case "grabar" -> altar.tarea(() -> altar.forja().abrirGrabar(p), 1L);
-            case "contratos", "tablero" -> altar.tarea(() -> {
+            case "contratos" -> altar.tarea(() -> {
+                // Los contratos salen por chat: se cierra el altar para que se lean.
                 p.closeInventory();
-                Subcomandos.calamity().ejecutar(p, new String[]{accion});
+                Contratos con = hc.contratos();
+                if (con != null) hc.seguro("contratos", () -> con.mostrar(p, p));
+            }, 1L);
+            case "tablero" -> altar.tarea(() -> {
+                Tablero tab = hc.tablero();
+                if (tab != null) hc.seguro("tablero", () -> tab.abrir(p));
             }, 1L);
             case "encuesta" -> altar.tarea(() -> {
                 Encuesta enc = hc.encuesta();

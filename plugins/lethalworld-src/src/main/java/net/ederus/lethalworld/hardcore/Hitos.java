@@ -9,14 +9,11 @@ import org.bukkit.command.CommandSender;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.entity.Player;
-import org.bukkit.inventory.ItemStack;
 
 import java.util.ArrayList;
-import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import java.util.UUID;
 import java.util.function.ToDoubleFunction;
 
@@ -200,22 +197,22 @@ final class Hitos {
     }
 
     /**
-     * Cada 30 s: quien lleve dentro las piezas de hitos.manto-ids (el [5] del Manto) gana la
-     * estadistica "manto". Solo se mira a quien aun no lo tiene y solo con MMOItems.
+     * Cada 30 s: quien lleve dentro las cinco piezas del Manto (el [5]) gana la estadistica
+     * "manto". Se cuenta con ObjetosCalamity.piezasManto, el mismo criterio que el aura: si
+     * no, el hito y el aura podrian no estar de acuerdo. Solo con MMOItems.
      */
     void tickManto() {
         if (!activo() || !PuenteMmo.disponible()) return;
         ConfigurationSection hitos = lista();
         if (hitos == null || !hayHitoDe(hitos, MANTO)) return;
-        Set<String> ids = new HashSet<>(hitos.getStringList("manto-ids"));
-        if (ids.isEmpty()) return;
+        ObjetosCalamity obj = hc.objetos();
         Estadisticas st = hc.estadisticas();
-        if (st == null) return;
+        if (obj == null || st == null) return;
         for (World w : hc.plugin().getServer().getWorlds()) {
             if (!hc.esHardcore(w)) continue;
             for (Player p : w.getPlayers()) {
                 if (!hc.cuenta(p) || st.de(p.getUniqueId(), MANTO) > 0) continue;
-                if (lleva(p, ids)) st.maximo(p.getUniqueId(), MANTO, 1);
+                if (hc.valor("objetos", () -> obj.piezasManto(p), 0) >= 5) st.maximo(p.getUniqueId(), MANTO, 1);
             }
         }
     }
@@ -226,21 +223,6 @@ final class Hitos {
             if (h != null && h.getBoolean("activo", true) && estadisticas(h).contains(est)) return true;
         }
         return false;
-    }
-
-    /** Si lleva puestas (armadura y manos) todas las piezas de esos ids de MMOItems. */
-    private static boolean lleva(Player p, Set<String> ids) {
-        Set<String> vistos = new HashSet<>();
-        for (ItemStack it : p.getInventory().getArmorContents()) anotarEnlace(it, ids, vistos);
-        anotarEnlace(p.getInventory().getItemInMainHand(), ids, vistos);
-        anotarEnlace(p.getInventory().getItemInOffHand(), ids, vistos);
-        return vistos.containsAll(ids);
-    }
-
-    private static void anotarEnlace(ItemStack it, Set<String> ids, Set<String> vistos) {
-        if (it == null || it.getType().isAir()) return;
-        String e = PuenteMmo.enlace(it);
-        if (e != null && ids.contains(e)) vistos.add(e);
     }
 
     void parar() {

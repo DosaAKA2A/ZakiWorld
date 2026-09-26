@@ -689,8 +689,10 @@ final class PeleaParca implements Runnable {
             if (d > 0.8 && hacia.normalize().dot(dir) < coseno) continue;
             if (escudo(v)) continue;
             double vidaMax = Compat.getAttribute(v, "max_health", 20);
-            double cantidad = Parca.siegaFraccion(a, factorR, quieta(v)) * vidaMax;
-            DanoVerdadero.aplicar(v, cantidad, a.siegaTope, cuerpo, "Siega");
+            boolean quieta = quieta(v);
+            double cantidad = Parca.siegaFraccion(a, factorR, quieta) * vidaMax;
+            // El parte lee las marcas detras de " · ": asi sabe que el x2 fue por quedarse quieto.
+            DanoVerdadero.aplicar(v, cantidad, a.siegaTope, cuerpo, quieta ? "Siega · quieto" : "Siega");
             if (hc.esHardcore(v)) hc.cordura().sumar(v, -a.siegaCordura);
         }
     }

@@ -83,7 +83,7 @@ final class Tablero implements Listener {
         Autotest.registrar("tablero", this::autotest);
     }
 
-    private boolean activo() {
+    boolean activo() {
         return hc.cfg().getBoolean("tablero.activo", false);
     }
 

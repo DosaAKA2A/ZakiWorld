@@ -263,6 +263,8 @@ final class Ecos implements Listener {
         segundos++;
         long ahora = System.currentTimeMillis();
         ConfigurationSection c = cfg();
+        // Con eclipse despiertan desde mas lejos (M13): se pregunta una vez por segundo, no por Eco.
+        double fEclipse = factorEclipse();
         int vistos = 0;
         for (Eco e : new ArrayList<>(ecos.values())) {
             if (++vistos > Math.max(40, c.getInt("maximo-global", 40) + 10)) break;
@@ -287,7 +289,7 @@ final class Ecos implements Listener {
             Location l = e.anclaje();
             if (l == null) continue;
             List<Player> cuentan = cuentanEn(l.getWorld());
-            double rDesp = c.getDouble("radio-despertar", 32), rSenal = c.getDouble("senal-radio", 48);
+            double rDesp = c.getDouble("radio-despertar", 32) * fEclipse, rSenal = c.getDouble("senal-radio", 48) * fEclipse;
             Player cerca = null;
             boolean senal = false;
             for (Player p : cuentan) {
@@ -302,6 +304,12 @@ final class Ecos implements Listener {
         rehacerResumen();
     }
 
+    /** Multiplicador del radio de despertar y de senal: 1 sin eclipse (o si Eclipse falla). */
+    private double factorEclipse() {
+        Eclipse ecl = hc.eclipse();
+        return ecl == null ? 1.0 : hc.valor("eclipse", ecl::factorDespertarEcos, 1.0);
+    }
+
     /** Crea el cuerpo; la primera vez, con el alzamiento (titulo, chat, testigos). */
     private boolean despertar(Eco e, String quien) {
         boolean alzamiento = !e.alzado;
@@ -313,7 +321,8 @@ final class Ecos implements Listener {
         anotar("despierta", e.id, quien);
         if (alzamiento) {
             Location l = e.cuerpo.getLocation();
-            double r = cfg().getDouble("radio-despertar", 32);
+            // El mismo radio que lo desperto: con eclipse, quien lo alzo desde lejos tambien lo ve.
+            double r = cfg().getDouble("radio-despertar", 32) * factorEclipse();
             for (Player p : l.getWorld().getPlayers()) {
                 if (p.getLocation().distanceSquared(l) > r * r) continue;
                 p.showTitle(Title.title(Component.text("ECO", GRIS), Component.text("de " + e.nombre, NamedTextColor.GRAY)));

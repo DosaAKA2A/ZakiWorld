@@ -59,7 +59,8 @@ final class Vineta {
         double radio = Math.max(16, s.getDouble("radio-borde", 10_000));
         Eclipse eclipse = hc.eclipse();
         boolean enEclipse = eclipse != null && hc.valor("eclipse", eclipse::activo, false);
-        double extra = hc.cfg().getDouble("eclipse.vinheta-extra", 0.2);
+        // El extra lo dice Eclipse (eclipse.vinheta-extra): una sola lectura de la clave.
+        double extra = enEclipse ? hc.valor("eclipse", eclipse::vinetaExtra, 0.0) : 0.0;
         int aviso = aviso(radio, intensidad(porTramo(s), tramo, enEclipse, extra));
         if (aviso <= 0) {
             quitar(p);
