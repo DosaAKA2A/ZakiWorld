@@ -1,10 +1,10 @@
 name: EDO
-version: '1.3.1'
+version: '1.4.0'
 main: net.ederus.edm.EDMOneBlock
 api-version: '1.20'
 author: Iris Studio
-description: 'EDO, Ederus OneBlock - el nucleo del servidor OneBlock: tienda propia, vitrina y biomas'
-softdepend: [Vault, WorldGuard, UltimateMobCoins, PlaceholderAPI, TAB]
+description: 'EDO, Ederus OneBlock - el nucleo del servidor OneBlock: tienda propia, vitrina, biomas, boosts y esbirros'
+softdepend: [Vault, WorldGuard, LibsDisguises, UltimateMobCoins, PlaceholderAPI, TAB]
 
 commands:
   glow:
@@ -31,6 +31,16 @@ commands:
     description: 'Tus boosts temporales de experiencia, drops y minions'
     usage: /boost [give|clear|global|list]
     aliases: [boosts]
+  anomaly:
+    description: 'Panel de anomalias (jefes): iniciar, elegir, botin y ajustes.'
+    usage: /anomaly <menu|start|here|at|stop|info|abilities|test|hurt|arena|biome|logros|reload>
+    aliases: [anomalia, anom]
+    permission: anomaly.gui
+  esb:
+    description: 'Los esbirros de mazmorra, por carpetas: crear, ajustar e invocar.'
+    usage: /esb [lista|reload|<id> [nivel] [x y z]]
+    aliases: [esbirros, esbirro]
+    permission: anomaly.gui
   lbiomes:
     description: Lethal Biomes - climas por zona sin reiniciar
     usage: /lbiomes <list|zones|zone|paint|clear>
@@ -62,6 +72,14 @@ permissions:
   ederus.biomas:
     description: Crea zonas de clima y las pinta con los biomas de Lethal Biomes
     default: op
+  anomaly.gui:
+    description: 'Abre el panel de Anomaly y usa todos sus subcomandos.'
+    default: op
+  anomaly.*:
+    description: 'Todo Anomaly.'
+    default: op
+    children:
+      anomaly.gui: true
   ederus.tienda.usar:
     description: Permite comprar y vender en la tienda
     default: true

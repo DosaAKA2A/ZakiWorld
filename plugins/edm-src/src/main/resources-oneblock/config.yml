@@ -1,17 +1,22 @@
 # EDO, Ederus OneBlock - el nucleo del servidor OneBlock (la build recortada de EDM)
 #
-# Solo llevan tres modulos, cada uno con su carpeta y su config en plugins/EDO/:
+# Estos son sus modulos, cada uno con su carpeta y su config en plugins/EDO/:
 #   tienda/   la tienda propia (/shop), con precio por jugador
 #   flex/     la vitrina de cada jugador (/flex)
 #   biomas/   Lethal Biomes, climas por zona (/lbiomes)
+#   boost/    boosts temporales de exp, drops y minions (/boost)
+#   anomaly/  jefes por fases (/anomaly) y esbirros con nivel (/esb). Desde
+#             EDO 1.4.0: EderusDimensions puebla sus dimensiones con los esbirros.
 #
-# El resto de modulos de EDM no existen en EDO: no hay Rip, Anomaly,
-# GodItems ni minas, y sus comandos no se registran.
+# El resto de modulos de EDM no existen en EDO: no hay Rip, GodItems ni minas,
+# y sus comandos no se registran.
 
 modulos:
   tienda: true
   flex: true
   biomas: true
+  boost: true
+  anomaly: true
   # glow: el brillo, sustituye a FancyGlow (necesita TAB).
   glow: true
 

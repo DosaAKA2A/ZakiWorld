@@ -106,8 +106,8 @@ public class EDMPlugin extends JavaPlugin {
     /**
      * Los modulos que arrancan siempre (si el config no los apaga). La build
      * de OneBlock (EDMOneBlock, perfil `oneblock` de Maven) lo acorta a la
-     * tienda, la vitrina y los biomas: ese servidor no tiene MMOItems ni el
-     * resto de lo que los demas modulos dan por hecho.
+     * tienda, la vitrina, los biomas, los boosts y Anomaly: ese servidor no
+     * tiene MMOItems ni el resto de lo que los demas modulos dan por hecho.
      */
     protected List<Module> modulosBase() {
         return List.of(
