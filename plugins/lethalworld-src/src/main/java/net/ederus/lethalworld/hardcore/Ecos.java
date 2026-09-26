@@ -474,6 +474,7 @@ final class Ecos implements Listener {
             List<ItemStack> rel = lagrima == null ? List.of() : List.of(lagrima);
             Aduana.Pago pago = hc.valor("aduana", () -> hc.aduana().pagar(killer, "eco", nuevas, 0, rel, "eco " + e.id), null);
             pagadas = pago == null ? 0 : pago.esencias();
+            anotar("lagrima", String.valueOf(grado), e.id, killerNombre, lagrima == null ? "sin crear" : "creada");
             apuntarCobro(hc.datos(), killer.getUniqueId(), e.dueno, dia(), ahora);
             hc.seguro("estadisticas", () -> {
                 hc.estadisticas().sumar(killer.getUniqueId(), "cazas-validas", 1);
@@ -1274,9 +1275,15 @@ final class Ecos implements Listener {
             decir(quien, "eco | " + e.id + " | su mundo no esta cargado");
             return;
         }
-        l.getChunk();
-        if (despertar(e, quien.getName())) decir(quien, "eco | " + e.id + " | despierto");
-        else decir(quien, "eco | " + e.id + " | no ha salido (spawn cancelado)");
+        // Con nadie cerca el chunk se descargaria en segundos: se sujeta mientras este despierto.
+        boolean puesto = l.getWorld().addPluginChunkTicket(l.getBlockX() >> 4, l.getBlockZ() >> 4, hc.plugin());
+        if (despertar(e, quien.getName())) {
+            e.ticket = puesto || e.ticket;
+            decir(quien, "eco | " + e.id + " | despierto");
+        } else {
+            if (puesto) l.getWorld().removePluginChunkTicket(l.getBlockX() >> 4, l.getBlockZ() >> 4, hc.plugin());
+            decir(quien, "eco | " + e.id + " | no ha salido (spawn cancelado)");
+        }
     }
 
     /**

@@ -115,6 +115,11 @@ final class Eco {
     long proximaVoz;
     int pulso;
     Location ultimaPos;
+    /**
+     * Ticket de chunk puesto por "eco despertar" (sin nadie cerca el chunk se descargaria en
+     * segundos y el Eco se dormiria antes de verlo). Se quita al quitar la vista.
+     */
+    boolean ticket;
 
     Eco(String id) {
         this.id = id;
@@ -442,6 +447,7 @@ final class Eco {
                 Compat.setAttribute(zz, "spawn_reinforcements", 0);
             }
             if (e instanceof AbstractSkeleton sk) sk.setShouldBurnInDay(false);
+            sinModificadores(e);
             Compat.setAttribute(e, "max_health", vidaEntidad);
             e.setHealth(Math.max(0.5, vidaEntidad * frac));
             Compat.setAttribute(e, "attack_damage", dano);
@@ -454,6 +460,12 @@ final class Eco {
             else vestir(e.getEquipment());
         });
         if (m == null) return false;
+        // El jinete de gallina de vanilla (bebe zombi) nace montado antes del consumer.
+        if (m.isInsideVehicle()) {
+            org.bukkit.entity.Entity montura = m.getVehicle();
+            m.leaveVehicle();
+            if (montura != null && !(montura instanceof Player)) montura.remove();
+        }
         cuerpo = m;
         durmio = 0;
         nadieDesde = ahora;
@@ -480,6 +492,25 @@ final class Eco {
             Compat.sound(w, l, "entity.zombie_villager.cure", 0.8f, 0.5f);
         }
         return true;
+    }
+
+    /** Los atributos que el Eco fija a mano. */
+    private static final String[] ATRIBUTOS = {"max_health", "attack_damage", "armor", "armor_toughness",
+            "movement_speed", "knockback_resistance", "follow_range", "spawn_reinforcements"};
+
+    /**
+     * Fuera los modificadores que vanilla le pone al nacer (World#spawn corre finalizeSpawn
+     * ANTES del consumer): el "lider zombi" multiplica su vida maxima y los bonus al azar tocan
+     * el empuje y el rango. Con ellos la vida logica y la escala de Amenazas no cuadrarian con
+     * la foto, que es lo que tiene que pegar y aguantar.
+     */
+    private static void sinModificadores(LivingEntity e) {
+        for (String clave : ATRIBUTOS) {
+            org.bukkit.attribute.Attribute a = Compat.attribute(clave);
+            org.bukkit.attribute.AttributeInstance ai = a == null ? null : e.getAttribute(a);
+            if (ai == null) continue;
+            for (org.bukkit.attribute.AttributeModifier mod : new ArrayList<>(ai.getModifiers())) ai.removeModifier(mod);
+        }
     }
 
     /** Le pone las copias; drop chance 0 ya lo puso Amenazas.invocar. */
@@ -552,6 +583,11 @@ final class Eco {
             if (retirar && cascara.isValid()) cascara.remove();
         }
         if (pelea != null) g.hc().amenazas().quitarPelea(pelea);
+        if (ticket) {
+            ticket = false;
+            World w = world();
+            if (w != null) w.removePluginChunkTicket((int) Math.floor(x) >> 4, (int) Math.floor(z) >> 4, g.hc().plugin());
+        }
         cuerpo = null;
         cascara = null;
         pelea = null;
