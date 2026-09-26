@@ -15,7 +15,7 @@ import java.util.UUID;
 
 /**
  * Dano verdadero: el que no recortan la armadura, la Proteccion ni la reduccion de
- * MythicLib (Siega, Campanada, el Juicio). DIS sec. 0.4 y sec. 0.3 "Dano verdadero".
+ * MythicLib (Siega, Campanada, la Sentencia). DIS sec. 0.4 y sec. 0.3 "Dano verdadero".
  *
  * Se quita con setHealth, despues de gastar la absorcion, para que no lo toque nadie por
  * el camino. Solo el golpe que mata va por damage(MAGIC) con la fuente puesta: asi la

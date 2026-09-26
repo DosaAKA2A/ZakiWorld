@@ -134,8 +134,10 @@ final class ParteDefuncion implements Listener {
             if (t.equals("quieto")) marcas.add("x2 por quieto");
             else if (!t.isEmpty()) marcas.add(t);
         }
-        // El Juicio es la quinta campanada: quien lo lea tiene que saber de donde vino.
-        if (habilidad.equals("juicio")) marcas.add("campanada");
+        // La Sentencia es la quinta campanada: quien lo lea tiene que saber de donde vino.
+        // "juicio" era su nombre antes (el servidor tiene otro Juicio); se acepta por si acaso.
+        if (habilidad.equals("juicio")) habilidad = "sentencia";
+        if (habilidad.equals("sentencia")) marcas.add("campanada");
         apuntar(v, golpe(v, fuente, habilidad, cantidad, marcas));
     }
 

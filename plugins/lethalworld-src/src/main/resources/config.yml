@@ -513,7 +513,11 @@ hardcore:
   monedero: {modo: real, saldo-placeholder: "", cobrar: ""}   # vacio = trueques con MC en gris (M35)
   salvoconducto: {activo: false, sustituto-esencias: 10}       # visto bueno de Dosa (0.3)
   talisman: {vida: 3, drenaje: 0.80}
-  grabado: {por-semana: 1, encantamientos: [SHARPNESS, PROTECTION, EFFICIENCY, POWER, UNBREAKING, LOOTING, FORTUNE]}
+  grabado:
+    por-semana: 1
+    encantamientos: [SHARPNESS, PROTECTION, EFFICIENCY, POWER, UNBREAKING, LOOTING, FORTUNE]
+    # Nivel final al que puede subir cada uno (PLAN 5.3); uno que no este aqui llega a su maximo vanilla + 1.
+    topes: {SHARPNESS: 7, PROTECTION: 5, EFFICIENCY: 6, POWER: 6, UNBREAKING: 4, LOOTING: 4, FORTUNE: 4}
 
   # ------------------------------------------------------------------ M3. RELIQUIAS
   reliquias:
@@ -588,6 +592,7 @@ hardcore:
   contratos:
     activo: false
     por-dia: 3
+    cordura-limite: 25            # el contrato "al-limite" cuenta los minutos por debajo de esta cordura
     cortos-garantizados: 1
     cambios-gratis: 1
     precio-cambio: 1
@@ -615,6 +620,9 @@ hardcore:
   # gkits son PROVISIONALES: los fija el paquete de configuracion leyendo produccion (Fase 0 de PLAN 9).
   # "manto-ids" no es un hito: las piezas MMOItems (TIPO.ID) que cuentan para el [5] del Manto.
   hitos:
+    # Interruptor de todos los hitos. PROVISIONAL: los nodos de LuckPerms, RIP y gkit de arriba no
+    # estan confirmados en produccion; Dosa decide si lo enciende alli (en el Test va encendido).
+    activo: true
     manto-ids: ["ARMOR.YELMO_DE_CALAMIDAD", "ARMOR.CORAZA_DE_CALAMIDAD", "ARMOR.GREBAS_DE_CALAMIDAD", "ARMOR.SOLERETAS_DE_CALAMIDAD", "AXE.HACHA_DEL_HERALDO"]
     umbral: {estadistica: extracciones-con-reliquia, umbral: 1, nombre: "Umbral", anuncio: false, comandos: ["lw hardcore dar llave-hito %jugador% 1"]}
     desvelado: {estadistica: horas-activas, umbral: 6, nombre: "Desvelado", anuncio: false, comandos: ["lw hardcore dar llave-hito %jugador% 1"]}

@@ -871,7 +871,7 @@ final class PeleaParca implements Runnable {
 
     // ------------------------------------------------------------- Campanada
 
-    /** Cinco toques cada 24 ticks; en el 3.o, aviso a quien este a <= 12; en el 5.o, el Juicio. */
+    /** Cinco toques cada 24 ticks; en el 3.o, aviso a quien este a <= 12; en el 5.o, la Sentencia. */
     private void avanzarCampanada(World w, long t) {
         if (t % 4 == 0) Fx.telegraph(w, origen, a.campRadio, 0x8B1A1A);
         while (toques < a.campToques && t >= (long) (toques + 1) * a.campCada) {
@@ -894,7 +894,7 @@ final class PeleaParca implements Runnable {
         }
     }
 
-    /** El Juicio: dano verdadero (tope 90 %, ley 5) y -25 de cordura a todo jugador a <= radio. */
+    /** La Sentencia (antes "Juicio"; el metodo conserva el nombre): dano verdadero (tope 90 %, ley 5) y -25 de cordura a todo jugador a <= radio. */
     private void juicio() {
         World w = cuerpo.getWorld();
         Compat.spawn(w, Compat.SOUL, origen.clone().add(0, 1, 0), 80, a.campRadio / 2, 1, a.campRadio / 2, 0.05);
@@ -903,7 +903,7 @@ final class PeleaParca implements Runnable {
             double dx = v.getLocation().getX() - origen.getX(), dz = v.getLocation().getZ() - origen.getZ();
             if (dx * dx + dz * dz > r2) continue;
             double vidaMax = Compat.getAttribute(v, "max_health", 20);
-            DanoVerdadero.aplicar(v, Parca.juicioFraccion(a, factorR) * vidaMax, a.campTope, cuerpo, "Juicio");
+            DanoVerdadero.aplicar(v, Parca.juicioFraccion(a, factorR) * vidaMax, a.campTope, cuerpo, "Sentencia");
             if (hc.esHardcore(v)) hc.cordura().sumar(v, -a.campCordura);
         }
     }

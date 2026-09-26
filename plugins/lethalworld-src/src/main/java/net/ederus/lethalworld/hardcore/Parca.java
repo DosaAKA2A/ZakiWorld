@@ -264,7 +264,11 @@ final class Parca implements Listener {
         return Math.min(a.siegaTope, a.siegaVida * r * (quieta ? 2 : 1));
     }
 
-    /** Juicio (5.a campanada): fraccion de la vida maxima, tope 0,90 (ley 5). */
+    /**
+     * Sentencia (5.a campanada; en el codigo sigue llamandose "juicio", pero el nombre visible
+     * es Sentencia: el servidor ya tiene otro sistema llamado Juicio). Fraccion de la vida
+     * maxima, tope 0,90 (ley 5).
+     */
     static double juicioFraccion(Ajustes a, double r) {
         return Math.min(a.campTope, a.campVida * r);
     }
@@ -1323,7 +1327,7 @@ final class Parca implements Listener {
         h.cerca("marcado extra -> vida x1,5", 1380, vidaLogica(a, 14, 0, 1), 1e-6);
         h.cerca("siega a 20 de vida: 4 (quieto 8)", 12, siegaFraccion(a, 1, false) * 20 + siegaFraccion(a, 1, true) * 20, 1e-9);
         h.cerca("siega tope 60 % con R 3 quieto", 0.60, siegaFraccion(a, 3, true), 1e-9);
-        h.cerca("juicio 50 %, tope 90 % con R 2", 1.40, juicioFraccion(a, 1) + juicioFraccion(a, 2), 1e-9);
+        h.cerca("sentencia 50 %, tope 90 % con R 2", 1.40, juicioFraccion(a, 1) + juicioFraccion(a, 2), 1e-9);
         h.igual("esencias presa N 14/52/100", List.of(5, 9, 14),
                 List.of(esenciasPresa(a, 14), esenciasPresa(a, 52), esenciasPresa(a, 100)));
         h.igual("esencias ayudante N 14/52/100", List.of(2, 4, 7),
