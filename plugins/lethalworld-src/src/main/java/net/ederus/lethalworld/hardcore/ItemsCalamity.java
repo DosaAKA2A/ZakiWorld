@@ -122,9 +122,16 @@ public final class ItemsCalamity {
 
     // ----------------------------------------------------------------- la esencia
 
-    /** Esencia de Calamidad: lo que sueltan los mobs y con lo que se recarga el frasco. */
+    /**
+     * Esencia de Calamidad: lo que sueltan los mobs y con lo que se recarga el frasco.
+     *
+     * El material sale de hardcore.esencias.material (DIS M2, "Esencias vendibles"): la
+     * lagrima de ghast se vendia en /shop y, si la tienda compra por material, una Esencia
+     * seria dinero. Cambiarlo solo afecta a las NUEVAS; todas se reconocen por la marca, asi
+     * que las que ya circulan siguen valiendo.
+     */
     public ItemStack esencia(int cantidad) {
-        ItemStack item = new ItemStack(Material.GHAST_TEAR, Math.max(1, Math.min(64, cantidad)));
+        ItemStack item = new ItemStack(materialEsencia(), Math.max(1, Math.min(64, cantidad)));
         ItemMeta meta = item.getItemMeta();
         if (meta != null) {
             meta.displayName(Component.text("Esencia de Calamidad", TextColor.color(0xE8903C))
@@ -140,6 +147,21 @@ public final class ItemsCalamity {
             item.setItemMeta(meta);
         }
         return item;
+    }
+
+    /** Ultimo valor raro de esencias.material ya avisado, para no llenar la consola. */
+    private String materialAvisado;
+
+    private Material materialEsencia() {
+        String nombre = plugin.getConfig().getString("hardcore.esencias.material", "GHAST_TEAR");
+        Material m = nombre == null ? null : Material.matchMaterial(nombre.trim());
+        if (m != null && m.isItem() && !m.isAir()) return m;
+        if (nombre != null && !nombre.equals(materialAvisado)) {
+            materialAvisado = nombre;
+            plugin.getLogger().warning("[Calamity] hardcore.esencias.material \"" + nombre
+                    + "\" no es un objeto; las Esencias salen como GHAST_TEAR.");
+        }
+        return Material.GHAST_TEAR;
     }
 
     public boolean esEsencia(ItemStack item) {
