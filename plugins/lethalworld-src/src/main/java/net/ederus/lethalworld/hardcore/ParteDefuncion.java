@@ -536,13 +536,6 @@ final class ParteDefuncion implements Listener {
         }, 40L);
     }
 
-    /**
-     * Combat log (P-D08): Combate.cable lo llama antes de vaciar al que huye, que no pasa por
-     * PlayerDeathEvent y sin esto se iria sin parte.
-     */
-    void cable(Player p) {
-    }
-
     void parar() {
         anillos.clear();
         pendientes.clear();
