@@ -72,6 +72,8 @@ final class Parca implements Listener {
     private final Set<UUID> segadosPorElla = new HashSet<>();
     /** Tierra segada en memoria (se guarda tambien en datos parca.segada). */
     private final List<Segada> segadas = new ArrayList<>();
+    /** Ultimo aviso P-31 por jugador (una vez por canalizacion). Se vacia con las peleas. */
+    private final Map<UUID, Long> avisoCristal = new HashMap<>();
     private Ajustes ajustes;
     private long ajustesLeidos;
     private int segundos;
@@ -372,6 +374,7 @@ final class Parca implements Listener {
     /** Una vez por segundo, desde Hardcore.tick. Las peleas se mueven solas cada 2 ticks. */
     void tick() {
         peleas.removeIf(pe -> pe.estado == PeleaParca.Estado.FIN);
+        if (peleas.isEmpty()) avisoCristal.clear();
         if (++segundos % 60 == 0) podarSegadas();
     }
 
@@ -383,6 +386,22 @@ final class Parca implements Listener {
             if (pe.cuerpo.getLocation().distanceSquared(p.getLocation()) <= r * r) return true;
         }
         return false;
+    }
+
+    /** Si hay alguna PARCA viva en el servidor (las alucinaciones no hacen figuras ni carreras con ella). */
+    boolean hayViva() {
+        for (PeleaParca pe : peleas) if (pe.vivaParaJugadores()) return true;
+        return false;
+    }
+
+    /** Distancia a la PARCA viva mas cercana en su mundo; Double.MAX_VALUE si no hay (latido a <= 32). */
+    double distancia(Player p) {
+        double mejor = Double.MAX_VALUE;
+        for (PeleaParca pe : peleas) {
+            if (!pe.vivaParaJugadores() || pe.cuerpo.getWorld() != p.getWorld()) continue;
+            mejor = Math.min(mejor, pe.cuerpo.getLocation().distanceSquared(p.getLocation()));
+        }
+        return mejor == Double.MAX_VALUE ? mejor : Math.sqrt(mejor);
     }
 
     /** Si ese jugador esta marcado por una PARCA viva (ley 6: sin minijefe de cordura). */
@@ -429,7 +448,14 @@ final class Parca implements Listener {
         if (pe == null || pe.cuerpo == null || pe.cuerpo.getWorld() != p.getWorld()) return def;
         Ajustes a = ajustes();
         if (pe.cuerpo.getLocation().distanceSquared(p.getLocation()) > a.cristalRadio * a.cristalRadio) return def;
-        hc.cordura().destello(p, Component.text("Con ella encima, el cristal tarda el doble.", NamedTextColor.GRAY), 3);
+        /* P-31 va por chat y una vez por canalizacion: Hardcore pinta la cuenta del Cristal en
+         * la barra justo despues de preguntar aqui, y un destello se pisaria en el mismo tick. */
+        long ahora = System.currentTimeMillis();
+        Long antes = avisoCristal.get(p.getUniqueId());
+        if (antes == null || ahora - antes > 20_000L) {
+            avisoCristal.put(p.getUniqueId(), ahora);
+            p.sendMessage(ComandoCalamity.mensaje("Con ella encima, el cristal tarda el doble."));
+        }
         return Math.max(def, a.cristalSegundos);
     }
 
@@ -557,8 +583,8 @@ final class Parca implements Listener {
      */
     void retirarMinijefes(Player m) {
         for (Entity e : m.getNearbyEntities(64, 32, 64)) {
-            if (!(e instanceof Mob mob) || !Huella.esMinijefe(e)) continue;
-            if (mob.getTarget() != null && !m.equals(mob.getTarget())) continue;
+            // Solo los que van a por el: Hardcore.vigilarPresas les pone el objetivo cada segundo.
+            if (!(e instanceof Mob mob) || !Huella.esMinijefe(e) || !m.equals(mob.getTarget())) continue;
             Compat.spawn(e.getWorld(), Compat.LARGE_SMOKE, e.getLocation().add(0, 1, 0), 30, 0.5, 1, 0.5, 0.02);
             e.remove();
             hc.cordura().destello(m, Component.text("Hasta los grandes se apartan de ella.", NamedTextColor.GRAY), 3);
@@ -579,6 +605,7 @@ final class Parca implements Listener {
         for (BukkitTask t : tareas) t.cancel();
         tareas.clear();
         segadosPorElla.clear();
+        avisoCristal.clear();
         hc.marcarSucio();
         HandlerList.unregisterAll(this);
     }
@@ -1258,7 +1285,8 @@ final class Parca implements Listener {
         }
         Ajustes a = ajustes();
         n = Math.max(1, Math.min(100, n));
-        Location sitio = new Location(w, x, y, z);
+        // A ras de suelo: unas coordenadas a mano suelen caer en el aire o dentro del terreno.
+        Location sitio = Fx.ground(new Location(w, x, y, z), 40);
         // Sin presa: N tal cual (sin el extra-nivel, que ya lo pone quien prueba), r = 0, M = 0.
         PeleaParca pe = PeleaParca.crear(this, a, null, "prueba", List.of(), n, 0, 0, sitio, true, 1.0, 1);
         if (pe == null) {
