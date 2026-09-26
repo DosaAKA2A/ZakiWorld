@@ -254,8 +254,15 @@ nombre** en su color, que ya viene largo de serie; abajo el nivel y **la vida qu
 ambar por debajo del 60%, rojo por debajo del 30%). El nombre va **en redonda**; la negrita
 es un interruptor de la ficha del esbirro (`negrita` en el yml), apagado de serie.
 
-**El botin** reusa las tablas de Anomaly (`drops.yml`, seccion `esbirro-<id>`) con el
-mismo editor de menu. Si la tabla tiene algo, **sustituye** a los drops de fabrica del
+**El botin** vive en `plugins/EDM/anomaly/Drops/`, un fichero por entidad al estilo
+MythicMobs: `Drops/Anomalias/<id>.yml` para cada jefe y `Drops/Esbirros/<id>.yml` para
+cada esbirro (por dentro su tabla sigue llamandose `esbirro-<id>`). Cada fichero lleva
+`experiencia`, `comandos` y `botin.N.{item,probabilidad,cantidad-min,cantidad-max,para,unico}`
+y se edita desde el menu o a mano + `/anomaly reload`; un fichero con el YAML roto se
+avisa en consola y se salta. El `drops.yml` de versiones anteriores se parte solo al
+arrancar (si aun no hay `Drops/`) y queda como `drops.yml.migrado-AAAA-MM-DD`; en un
+servidor limpio las tablas precargadas del jar se siembran directamente en `Drops/`.
+Los esbirros usan el mismo editor de menu que los jefes. Si la tabla tiene algo, **sustituye** a los drops de fabrica del
 bicho; si esta vacia, cae lo vanilla de siempre.
 
 Los esbirros **no se guardan en disco** (`setPersistent(false)`): al descargarse el chunk

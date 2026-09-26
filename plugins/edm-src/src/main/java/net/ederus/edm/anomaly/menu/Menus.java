@@ -642,7 +642,7 @@ public final class Menus implements Listener {
 
         List<Component> cmdLore = new ArrayList<>();
         cmdLore.add(MenuUtil.line("Comandos que corre la consola al caer el jefe."));
-        cmdLore.add(MenuUtil.line("Se editan en drops.yml; %jugador% es el nombre."));
+        cmdLore.add(MenuUtil.line("Se editan en Drops/Anomalias/; %jugador% es el nombre."));
         cmdLore.add(MenuUtil.blank());
         if (table.commands().isEmpty()) {
             cmdLore.add(Component.text("Ninguno configurado.", MenuUtil.DIM));
