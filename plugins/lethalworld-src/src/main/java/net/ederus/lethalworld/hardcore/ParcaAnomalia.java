@@ -444,6 +444,7 @@ final class ParcaAnomalia extends BossFight implements ParcaViva {
         if (f < 1) am.ponerFraccion(ws, f);
         am.ancla(ws, sitioFinal);
         puente.sinBotinEdm();
+        puente.callada(this, encargo != null && !aj.anuncioGlobal);
         desdeAparece = ticks();
         gestor.registrar(this);
         entrada();
@@ -3347,6 +3348,7 @@ final class ParcaAnomalia extends BossFight implements ParcaViva {
 
     /** Lo que es suyo y no de EDM: barra, ambiente, tecnica, efectos, planideras, cadena y el maniqui. */
     private void limpiarPropio() {
+        puente.callada(this, false);
         quitarBarra();
         quitarAmbiente();
         if (actual != null) {

@@ -50,10 +50,12 @@ final class ParcaType implements AnomalyType {
     /**
      * Rojo: el color con nombre mas cerca del coral de la Paleta. El contorno lo lleva el
      * maniqui (CuerpoNpc), que es lo que se ve; el esqueleto de debajo va invisible.
+     * Null mientras pelea la de un AFK callada: EDM no le levanta el pilar de luz (el que la
+     * persigue la ve igual, con su contorno).
      */
     @Override
     public NamedTextColor glowColor() {
-        return NamedTextColor.RED;
+        return puente.hayCallada() ? null : NamedTextColor.RED;
     }
 
     @Override

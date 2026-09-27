@@ -30,8 +30,9 @@ import java.util.UUID;
  *  - deja a cero lo que EDM pagaria por ella (experiencia y MobCoins): el botin de la PARCA lo
  *    paga Calamity por la Aduana y no se cobra dos veces;
  *  - la de un AFK no se anuncia a todo el servidor (titulo y coordenadas a todos los conectados
- *    cada vez que alguien se queda quieto en Calamity): se oye la campana a 128 bloques, como
- *    siempre. parca.anomalia.anuncio-global en true lo devuelve. La abierta a mano se anuncia.
+ *    cada vez que alguien se queda quieto en Calamity) ni levanta el pilar de luz: se oye la
+ *    campana a 128 bloques, como siempre. parca.anomalia.anuncio-global en true lo devuelve.
+ *    La abierta a mano se anuncia y brilla como las demas.
  */
 final class PuenteAnomalia {
 
@@ -46,6 +47,8 @@ final class PuenteAnomalia {
     /** El encargo mientras EDM crea la pelea (dentro de open()); null el resto del tiempo. */
     private Encargo pendiente;
     private boolean vivo = true;
+    /** La pelea de un AFK callada (sin anuncio ni pilar) mientras esta abierta; null si no hay. */
+    private ParcaAnomalia callada;
     /** Lo ultimo avisado del botin de EDM, para no repetirlo cada minuto. */
     private final Set<String> avisados = new HashSet<>();
 
@@ -202,6 +205,18 @@ final class PuenteAnomalia {
     void parar() {
         vivo = false;
         pendiente = null;
+        callada = null;
+    }
+
+    /** La pelea avisa al nacer y al acabar si es de las calladas (ParcaType.glowColor la mira). */
+    void callada(ParcaAnomalia pa, boolean si) {
+        if (si) callada = pa;
+        else if (callada == pa) callada = null;
+    }
+
+    /** Si la abierta ahora es una PARCA de AFK sin anuncio: EDM no le levanta el pilar de luz. */
+    boolean hayCallada() {
+        return callada != null;
     }
 
     /** /lw hardcore parca anomalia: lo que hay en EDM y que saldria ahora. */
