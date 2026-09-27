@@ -2,7 +2,6 @@ package net.ederus.lethalworld.hardcore;
 
 import net.ederus.lethalworld.LethalWorldPlugin;
 import net.kyori.adventure.text.Component;
-import net.kyori.adventure.text.format.NamedTextColor;
 import net.kyori.adventure.text.format.TextColor;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandSender;
@@ -23,9 +22,12 @@ import java.util.Locale;
  */
 public final class ComandoCalamity implements TabExecutor {
 
-    /** El rojo de muerte de Calamity: prefijo de todos los mensajes de sistema. */
-    public static final TextColor ROJO = TextColor.color(0x8B1A1A);
-    private static final TextColor CUERPO = TextColor.color(0xC9C9C9);
+    /**
+     * Antes el rojo de muerte (#8B1A1A) del prefijo; no se leia sobre el chat. Queda como
+     * alias del rojo claro de los avisos para no romper a quien lo use: lo nuevo va por Paleta.
+     */
+    @Deprecated
+    public static final TextColor ROJO = Paleta.AVISO;
 
     private final LethalWorldPlugin plugin;
 
@@ -33,19 +35,19 @@ public final class ComandoCalamity implements TabExecutor {
         this.plugin = plugin;
     }
 
-    /** "Calamity · " en rojo de muerte, sin negrita. */
+    /** "Calamity · " con el degradado de la marca (Paleta.prefijo). */
     public static Component prefijo() {
-        return Component.text("Calamity · ", ROJO);
+        return Paleta.prefijo();
     }
 
-    /** Un mensaje de sistema de Calamity: prefijo y el texto en gris claro. */
+    /** Un mensaje de sistema de Calamity: prefijo y el texto en el color normal de la Paleta. */
     public static Component mensaje(String texto) {
-        return prefijo().append(Component.text(texto, CUERPO));
+        return Paleta.mensaje(texto);
     }
 
-    /** Lo mismo con un cuerpo ya montado (nombres y numeros en blanco, por ejemplo). */
+    /** Lo mismo con un cuerpo ya montado (nombres en DETALLE, cifras en CIFRA...). */
     public static Component mensaje(Component cuerpo) {
-        return prefijo().append(cuerpo.colorIfAbsent(CUERPO));
+        return Paleta.mensaje(cuerpo);
     }
 
     @Override
@@ -64,13 +66,13 @@ public final class ComandoCalamity implements TabExecutor {
         quien.sendMessage(mensaje("Lo que traigas, lo pierdes al morir."));
         List<String[]> subs = Subcomandos.calamity().ayuda(quien);
         if (subs.isEmpty()) {
-            quien.sendMessage(Component.text("  Aún no hay nada que consultar aquí.", NamedTextColor.GRAY));
+            quien.sendMessage(Component.text("  Aún no hay nada que consultar aquí.", Paleta.TENUE));
             return;
         }
         String raiz = "/" + (etiqueta == null || etiqueta.isBlank() ? "calamity" : etiqueta.toLowerCase(Locale.ROOT));
         for (String[] s : subs) {
-            quien.sendMessage(Component.text("  " + raiz + " " + s[0], NamedTextColor.WHITE)
-                    .append(Component.text(s[1].isEmpty() ? "" : "  " + s[1], NamedTextColor.GRAY)));
+            quien.sendMessage(Component.text("  " + raiz + " " + s[0], Paleta.DETALLE)
+                    .append(Component.text(s[1].isEmpty() ? "" : "  " + s[1], Paleta.TENUE)));
         }
     }
 

@@ -1,7 +1,6 @@
 package net.ederus.lethalworld.hardcore;
 
 import net.kyori.adventure.text.Component;
-import net.kyori.adventure.text.format.NamedTextColor;
 import net.kyori.adventure.text.format.TextColor;
 import org.bukkit.entity.Player;
 
@@ -92,7 +91,8 @@ public final class Cordura {
      */
     public void destello(Player p, Component texto, int segundos) {
         Estado e = estado(p);
-        e.destello = texto;
+        // Lo que llegue sin color sale en el normal de la Paleta: el gris de antes se perdia.
+        e.destello = texto == null ? null : texto.colorIfAbsent(Paleta.TEXTO);
         e.destelloHasta = System.currentTimeMillis() + segundos * 1000L;
     }
 
@@ -111,7 +111,8 @@ public final class Cordura {
             case 3 -> TextColor.color(0xE8D45C);
             case 2 -> TextColor.color(0xE8903C);
             case 1 -> TextColor.color(0xD64545);
-            default -> TextColor.color(0x8B1A1A);
+            // Vacia: rojo claro de aviso (el rojo de muerte oscuro no se leia en la barra).
+            default -> Paleta.AVISO;
         };
     }
 
@@ -136,7 +137,7 @@ public final class Cordura {
             if (i < llenas) llena.append('▮');
             else vacia.append('▯');
         }
-        return Component.text("Cordura ", NamedTextColor.GRAY)
+        return Component.text("Cordura ", Paleta.TENUE)
                 .append(Component.text(llena.toString(), tinta))
                 .append(Component.text(vacia.toString(), TextColor.color(0x3A3A3A)))
                 .append(Component.text("  " + (int) Math.round(valor) + "%", tinta));
