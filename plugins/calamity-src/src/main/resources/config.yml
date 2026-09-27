@@ -300,6 +300,8 @@ hardcore:
     celda-horizontal: 2           # lado X/Z de una celda, en bloques
     celda-vertical: 3             # alto de una celda
     max-celdas: 24                # mas celdas distintas que esto = ya no estas quieto
+                                  # (nunca mas de 1 por cada 5 muestras de la ventana: con minutos
+                                  # por debajo de 10, como el 1 del Test, baja solo; 1 min = 2 celdas)
     radio: 1                      # solo modo bloque
     vehiculo-porcentaje: 0.80     # senal de vehiculo: fraccion de muestras montado...
     vehiculo-lado: 128            # ...y caja maxima del recorrido, en bloques

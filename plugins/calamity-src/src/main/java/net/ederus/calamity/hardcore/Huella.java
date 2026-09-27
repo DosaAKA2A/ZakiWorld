@@ -151,7 +151,22 @@ final class Huella implements Listener {
         int tamano() {
             return Math.max(1, limite() / muestra);
         }
+
+        /**
+         * Celdas distintas que puede sumar alguien y seguir contando como quieto: max-celdas, pero
+         * nunca mas de una por cada MUESTRAS_POR_CELDA muestras del anillo (la proporcion de DIS
+         * sec. 4: 24 de 120). Con los 10 minutos de serie es max-celdas tal cual. Sin este tope,
+         * una ventana corta (el SurvivalTest va con minutos: 1, 12 muestras) no puede tener nunca
+         * mas de 24 celdas distintas, asi que "quieto" llegaba al limite a los 60 s aunque el
+         * jugador fuera en linea recta: la PARCA le venia viajando.
+         */
+        int celdasMaximas() {
+            return Math.max(1, Math.min(maxCeldas, tamano() / MUESTRAS_POR_CELDA));
+        }
     }
+
+    /** Como mucho una celda "quieta" por cada tantas muestras del anillo (24 de 120 = 1 de 5). */
+    static final int MUESTRAS_POR_CELDA = 5;
 
     /**
      * El estado de un jugador, sin nada de Bukkit (DIS sec. 1.2 "Estado por jugador").
@@ -166,6 +181,12 @@ final class Huella implements Listener {
         int cabeza;
         int llenas;
         long ultimaTecla;
+        /**
+         * Su cliente ha mandado alguna vez teclas de desplazamiento en esta conexion. Un cliente
+         * anterior a 1.21.2 que entra por ViaVersion no manda nunca adelante/atras/lados andando
+         * (solo existian montado): sin esto, quien viaja a pie con uno de esos repite celda.
+         */
+        boolean conTeclas;
         /** Ultima muestra que conto como activa (tambien la de Bedrock, que no manda teclas). */
         long ultimaActividad;
         boolean ultimaActiva;
@@ -241,9 +262,10 @@ final class Huella implements Listener {
          * Un segundo de reloj para este jugador.
          *
          * @param activo       pulso teclas de desplazamiento en el ultimo rato (lo calcula quien llama)
-         * @param bedrockSuelo Bedrock, en el suelo, sin montar y fuera del agua: vale como activo si
+         * @param bedrockSuelo cliente sin teclas (Bedrock, o uno que no ha mandado ninguna en esta
+         *                     conexion), en el suelo, sin montar y fuera del agua: vale como activo si
          *                     ademas se ha desplazado 0,2 bloques desde la muestra anterior (Geyser
-         *                     puede no reenviar las teclas)
+         *                     y los clientes viejos por ViaVersion pueden no mandar las teclas)
          * @return true si se tomo una muestra
          */
         boolean segundo(long ahora, double x, double y, double z, boolean enVehiculo, boolean activo,
@@ -335,9 +357,10 @@ final class Huella implements Listener {
             Set<Long> vistas = new HashSet<>();
             int recorridas = 0;
             int n = celdas.length;
+            int maximo = a.celdasMaximas();
             for (int i = 0; i < llenas; i++) {
                 vistas.add(celdas[(cabeza - 1 - i + n) % n]);
-                if (vistas.size() > a.maxCeldas()) break;
+                if (vistas.size() > maximo) break;
                 recorridas++;
             }
             int q = recorridas * a.muestra();
@@ -551,7 +574,9 @@ final class Huella implements Listener {
         Player p = e.getPlayer();
         if (!hc.esHardcore(p)) return;
         if (!mueve(e.getInput())) return;
-        rastro(p).ultimaTecla = System.currentTimeMillis();
+        Rastro r = rastro(p);
+        r.ultimaTecla = System.currentTimeMillis();
+        r.conTeclas = true;
     }
 
     private static boolean mueve(Input i) {
@@ -621,8 +646,13 @@ final class Huella implements Listener {
         Location pos = vehiculo != null ? vehiculo.getLocation() : p.getLocation();
         // Quien mantiene W sin soltar no genera eventos: se mira tambien la tecla de ahora.
         boolean activo = ahora - r.ultimaTecla <= a.muestra() * 1000L || mueve(p.getCurrentInput());
+        if (activo) r.conTeclas = true;
+        // Andar por el suelo (sin montar y fuera del agua) vale como moverse para los clientes que
+        // no mandan teclas: Bedrock (Geyser puede no reenviarlas) y los que aun no han mandado
+        // ninguna en esta conexion (versiones viejas por ViaVersion). En cuanto llega una tecla se
+        // vuelve a la regla estricta. El agua, las vagonetas y las burbujas siguen sin contar.
         boolean bedrock = vehiculo == null && p.isOnGround() && !p.isInWater() && !p.isInLava()
-                && Plataforma.esBedrock(p);
+                && (Plataforma.esBedrock(p) || !r.conTeclas);
         boolean volando = vehiculo == null && (p.isFlying() || p.isGliding());
         r.segundo(ahora, pos.getX(), pos.getY(), pos.getZ(), vehiculo != null, activo, bedrock, volando, a);
         avisos(p, r, a);
@@ -887,7 +917,10 @@ final class Huella implements Listener {
     /** Al volver: si es al mismo mundo y antes de que caduque, sigue contando donde lo dejo. */
     void restaurar(Player p) {
         Rastro r = aparcadas.sacar(p.getUniqueId(), p.getWorld().getKey().toString(), System.currentTimeMillis());
-        if (r != null && hc.esHardcore(p)) rastros.put(p.getUniqueId(), r);
+        if (r == null || !hc.esHardcore(p)) return;
+        // Puede volver con otro cliente: lo de las teclas se vuelve a averiguar.
+        r.conTeclas = false;
+        rastros.put(p.getUniqueId(), r);
     }
 
     /** Segundos de quietud segun la Huella. */
@@ -921,6 +954,7 @@ final class Huella implements Listener {
                 + " | montado " + Math.round(r.fraccionMontado() * 100) + " %"
                 + " | pausa " + r.pausaUsada(ahora, a) + "/" + a.pausaMaxima() + " s"
                 + " | por interaccion " + r.muestrasPorInteraccion
+                + " | max celdas " + a.celdasMaximas() + " | teclas " + (r.conTeclas ? "si" : "nunca")
                 + (ahora < r.graciaHasta ? " | gracia " + (r.graciaHasta - ahora) / 1000 + " s" : "")
                 + " | modo " + (a.modoBloque() ? "bloque" : "huella")
                 + (grieta.enSpawn(p) ? " | spawn: limite " + grieta.umbral(p, a).limite() + " s (Grieta)" : "");
@@ -937,10 +971,11 @@ final class Huella implements Listener {
     // ============================================================= autotest
 
     /**
-     * Las 8 secuencias de DIS sec. 1.2 (PLAN WP5, aceptacion 1) y las 3 de 1.1.1 (construir,
-     * autoclicker, volar), sobre Rastro en memoria con los valores de DIS sec. 4 (no la config
-     * del servidor, que en el Test pone minutos: 1). Una linea por secuencia: probar.py espera
-     * "OK 11/11" exacto.
+     * Las 8 secuencias de DIS sec. 1.2 (PLAN WP5, aceptacion 1), las 3 de 1.1.1 (construir,
+     * autoclicker, volar) y las 2 de viajar (ventana corta como la del Test, cliente sin teclas),
+     * sobre Rastro en memoria con los valores de DIS sec. 4 (no la config del servidor, que en el
+     * Test pone minutos: 1; la 12 la reproduce a proposito). Una linea por secuencia: probar.py
+     * espera "OK 13/13" exacto.
      */
     static List<String> autotest() {
         Ajustes a = Ajustes.defecto();
@@ -1100,6 +1135,52 @@ final class Huella implements Listener {
             }
             h.ok("volando desplazandose -> no llega (max " + max + "); quieto en el aire -> llega (" + flota.quieto + ")",
                     max < a.limite() && flota.quieto >= 600);
+        }
+        // 12. La config del SurvivalTest (minutos: 1, avisos 20-50 s): 12 muestras en el anillo.
+        //     Antes cabian siempre en 24 celdas y quien viajaba en linea recta con teclas tenia la
+        //     PARCA a los 60 s. Ahora viajar no da ni el primer aviso; quieto, el vaiven de 2
+        //     bloques y el agua siguen llegando al minuto.
+        {
+            YamlConfiguration yc = new YamlConfiguration();
+            yc.set("minutos", 1);
+            yc.set("avisos", List.of(20, 30, 40, 45, 50));
+            Ajustes t = Ajustes.de(yc);
+            Rastro viaja = new Rastro(t.tamano());
+            Rastro quieto = new Rastro(t.tamano());
+            Rastro vaiven = new Rastro(t.tamano());
+            Rastro agua = new Rastro(t.tamano());
+            int max = 0;
+            for (int s = 1; s <= 300; s++) {
+                long ahora = t0 + s * 1000L;
+                viaja.segundo(ahora, s * 4.3, 64, 0.5, false, true, false, t);
+                quieto.segundo(ahora, 10.5, 64, 10.5, false, false, false, t);
+                vaiven.segundo(ahora, (s % 2 == 0) ? 0.5 : 2.5, 64, 0.5, false, true, false, t);
+                agua.segundo(ahora, s * 0.7, 62, 40, false, false, false, t);
+                if (s > 60) max = Math.max(max, viaja.quieto);
+            }
+            h.ok("minutos 1 (Test): viajando -> no llega (max " + max + " de " + t.limite() + ", primer aviso "
+                            + t.avisos()[0] + "); quieto " + quieto.quieto + ", vaiven " + vaiven.quieto + ", agua " + agua.quieto,
+                    max < t.avisos()[0] && quieto.quieto >= t.limite() && vaiven.quieto >= t.limite()
+                            && agua.quieto >= t.limite() && a.celdasMaximas() == a.maxCeldas());
+        }
+        // 13. Cliente que no manda teclas andando (version vieja por ViaVersion): el desplazamiento
+        //     por el suelo cuenta, asi que viajar a pie no llega; sin esa senal (como antes) llegaba
+        //     a los 10 min aunque recorriera kilometros. Parado en el suelo sigue llegando.
+        {
+            Rastro nueva = new Rastro(a.tamano());
+            Rastro antes = new Rastro(a.tamano());
+            Rastro parado = new Rastro(a.tamano());
+            int max = 0;
+            for (int s = 1; s <= 900; s++) {
+                long ahora = t0 + s * 1000L;
+                nueva.segundo(ahora, s * 4.3, 64, s * 0.5, false, false, true, a);
+                antes.segundo(ahora, s * 4.3, 64, s * 0.5, false, false, false, a);
+                parado.segundo(ahora, 10.5, 64, 10.5, false, false, true, a);
+                max = Math.max(max, nueva.quieto);
+            }
+            h.ok("cliente sin teclas andando -> no llega (max " + max + "; sin la senal " + antes.quieto
+                            + "); parado en el suelo -> llega (" + parado.quieto + ")",
+                    max < a.avisos()[0] && antes.quieto >= 600 && parado.quieto >= 600);
         }
         return h.lineas();
     }
