@@ -10,6 +10,7 @@ import org.bukkit.Material;
 import org.bukkit.NamespacedKey;
 import org.bukkit.OfflinePlayer;
 import org.bukkit.SoundCategory;
+import org.bukkit.block.Block;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.entity.Entity;
@@ -20,7 +21,11 @@ import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
 import org.bukkit.event.HandlerList;
 import org.bukkit.event.Listener;
+import org.bukkit.event.block.BlockBreakEvent;
+import org.bukkit.event.block.BlockDamageEvent;
+import org.bukkit.event.block.BlockPlaceEvent;
 import org.bukkit.event.entity.EntityDamageByEntityEvent;
+import org.bukkit.event.inventory.InventoryOpenEvent;
 import org.bukkit.event.player.PlayerChangedWorldEvent;
 import org.bukkit.event.player.PlayerInputEvent;
 import org.bukkit.inventory.ItemStack;
@@ -45,8 +50,16 @@ import java.util.UUID;
  * burbujas, pistones) no cuenta como moverte tu. Cada 5 s se apunta la celda (2x3x2) en la
  * que estas, pero SOLO si ese rato has pulsado teclas de desplazamiento; si no, se repite
  * la celda anterior. "Quieto" = cuanto tiempo hacia atras cabe en 24 celdas distintas.
- * Girar la camara, clicar, romper, abrir inventarios o chatear no cuenta nada: eso lo
- * fabrica cualquier mod. getIdleDuration() no se usa por lo mismo.
+ * Chatear o girar la camara sin mas no cuenta nada: eso lo fabrica cualquier mod.
+ * getIdleDuration() no se usa por lo mismo.
+ *
+ * 1.1.1, tras la primera prueba (a Dosa le vino la PARCA construyendo y volando, sin estar
+ * AFK): cuentan tambien las interacciones VARIADAS (romper, poner o picar bloques, golpear
+ * entidades y abrir contenedores en sitios distintos, con la camara girando sin patron). Una
+ * muestra con al menos interacciones-minimas de esas se apunta como una "celda" nueva que no
+ * se repite, asi que quien construye en un metro cuadrado no suma quietud. Un autoclicker
+ * repite objetivo y angulo, y eso sigue sin contar. Y volando (creativo, /fly, elitros)
+ * desplazarse cuenta como moverse aunque no llegue el evento de teclas.
  *
  * El nucleo (Rastro, Ajustes, Aparcamiento, congela) no toca Bukkit: recibe posicion,
  * montado, activo y hora. Asi el autotest "huella" prueba las secuencias de la tabla de
@@ -86,7 +99,8 @@ final class Huella implements Listener {
                    int maxCeldas, double radio, double vehiculoPorcentaje, int vehiculoLado,
                    int vehiculoMuestrasMinimas, int congelarSegundos, double congelarDanoMinimo,
                    int pausaMaxima, int pausaVentanaMinutos, int reconexionMinutos, int graciaMinutos,
-                   int[] avisos, double radioCampanaAjena) {
+                   int[] avisos, double radioCampanaAjena, boolean interacciones, int interaccionesMinimas,
+                   double giroMinimo, double vueloMinimo) {
 
         static Ajustes de(ConfigurationSection s) {
             if (s == null) s = new YamlConfiguration();
@@ -113,7 +127,11 @@ final class Huella implements Listener {
                     s.getInt("reconexion-minutos", 30),
                     s.getInt("gracia-minutos", 5),
                     avisos,
-                    s.getDouble("radio-campana-ajena", 48));
+                    s.getDouble("radio-campana-ajena", 48),
+                    s.getBoolean("interacciones", true),
+                    Math.max(1, s.getInt("interacciones-minimas", 2)),
+                    Math.max(0, s.getDouble("giro-minimo", 1.5)),
+                    Math.max(0.1, s.getDouble("vuelo-minimo", 1.0)));
         }
 
         /** Los de DIS sec. 4 tal cual: los usa el autotest para no depender de la config del servidor. */
@@ -139,6 +157,8 @@ final class Huella implements Listener {
     static final class Rastro {
         long[] celdas;
         boolean[] montado;
+        /** La muestra se apunto por interacciones variadas (no es una celda de verdad). */
+        boolean[] novedad;
         /** Donde se escribe la siguiente muestra. */
         int cabeza;
         int llenas;
@@ -162,10 +182,23 @@ final class Huella implements Listener {
         // Bedrock: donde estaba en la muestra anterior
         double bx, bz;
         boolean conBedrock;
+        // Vuelo: donde estaba en la muestra anterior (en 3D)
+        double px, py, pz;
+        boolean conPrevia;
+        // Interacciones variadas: los ultimos objetivos, la camara de la ultima y lo de esta muestra
+        final long[] objetivos = new long[MEMORIA_OBJETIVOS];
+        int nObjetivos, cabezaObjetivos;
+        float yawPrevio, pitchPrevio;
+        double giroPrevio = -1;
+        boolean conCamara;
+        int variadas;
+        long firma;
+        long muestrasPorInteraccion;
 
         Rastro(int tamano) {
             celdas = new long[tamano];
             montado = new boolean[tamano];
+            novedad = new boolean[tamano];
         }
 
         /** Vacia los anillos (meter, sacar, morir, cambiar de mundo, fin de una PARCA). */
@@ -175,6 +208,9 @@ final class Huella implements Listener {
             conCelda = false;
             conOrigen = false;
             conBedrock = false;
+            conPrevia = false;
+            variadas = 0;
+            firma = 0;
             segundos = 0;
             quieto = 0;
             avisoDado = 0;
@@ -209,10 +245,20 @@ final class Huella implements Listener {
          */
         boolean segundo(long ahora, double x, double y, double z, boolean enVehiculo, boolean activo,
                         boolean bedrockSuelo, Ajustes a) {
+            return segundo(ahora, x, y, z, enVehiculo, activo, bedrockSuelo, false, a);
+        }
+
+        /**
+         * @param volando creativo, /fly o elitros: vale como activo si se ha desplazado
+         *                vuelo-minimo desde la muestra anterior, llegue o no el evento de teclas
+         */
+        boolean segundo(long ahora, double x, double y, double z, boolean enVehiculo, boolean activo,
+                        boolean bedrockSuelo, boolean volando, Ajustes a) {
             if (celdas.length != a.tamano()) {
                 // Cambio la config (minutos o muestra): se empieza de cero con el anillo nuevo.
                 celdas = new long[a.tamano()];
                 montado = new boolean[a.tamano()];
+                novedad = new boolean[a.tamano()];
                 vaciar();
             }
             podar(ahora, a);
@@ -247,12 +293,31 @@ final class Huella implements Listener {
             bx = x;
             bz = z;
             conBedrock = true;
+            // Volando no hay agua ni vagoneta que te lleve: si la posicion cambia, te mueves tu.
+            if (volando && conPrevia) {
+                double dx = x - px, dy = y - py, dz = z - pz;
+                if (dx * dx + dy * dy + dz * dz >= a.vueloMinimo() * a.vueloMinimo()) activo = true;
+            }
+            px = x;
+            py = y;
+            pz = z;
+            conPrevia = true;
 
             // El movimiento pasivo no ensancha la huella: sin teclas se repite la celda.
             long celda = activo || !conCelda ? clave(x, y, z, a) : celdaAnterior;
             celdaAnterior = celda;
             conCelda = true;
-            celdas[cabeza] = celda;
+            // Interacciones variadas en esta muestra: se apunta algo que no se repite nunca
+            // (la firma de lo que ha tocado y cuando), asi que suma una "celda" nueva.
+            boolean porInteraccion = a.interacciones() && variadas >= a.interaccionesMinimas();
+            celdas[cabeza] = porInteraccion ? nueva(firma, segundos) : celda;
+            novedad[cabeza] = porInteraccion;
+            variadas = 0;
+            firma = 0;
+            if (porInteraccion) {
+                activo = true;
+                muestrasPorInteraccion++;
+            }
             montado[cabeza] = enVehiculo;
             cabeza = (cabeza + 1) % celdas.length;
             llenas = Math.min(celdas.length, llenas + 1);
@@ -278,6 +343,8 @@ final class Huella implements Listener {
             if (llenas >= a.vehiculoMuestrasMinimas() && fraccionMontado() >= a.vehiculoPorcentaje()) {
                 int minX = Integer.MAX_VALUE, maxX = Integer.MIN_VALUE, minZ = Integer.MAX_VALUE, maxZ = Integer.MIN_VALUE;
                 for (int i = 0; i < llenas; i++) {
+                    // Las de interaccion no son un sitio: no cuentan para la caja del recorrido.
+                    if (novedad[(cabeza - 1 - i + n) % n]) continue;
                     long k = celdas[(cabeza - 1 - i + n) % n];
                     int cx = celdaX(k), cz = celdaZ(k);
                     minX = Math.min(minX, cx);
@@ -307,8 +374,36 @@ final class Huella implements Listener {
         List<Long> celdasUnicas() {
             Set<Long> vistas = new LinkedHashSet<>();
             int n = celdas.length;
-            for (int i = 0; i < llenas; i++) vistas.add(celdas[(cabeza - 1 - i + n) % n]);
+            for (int i = 0; i < llenas; i++) {
+                int k = (cabeza - 1 - i + n) % n;
+                if (!novedad[k]) vistas.add(celdas[k]);
+            }
             return new ArrayList<>(vistas);
+        }
+
+        /**
+         * Una interaccion (romper, poner o picar un bloque, golpear, abrir un contenedor) contra
+         * "objetivo" con la camara en yaw/pitch. Cuenta si es VARIADA: un objetivo que no esta
+         * entre los ultimos MEMORIA_OBJETIVOS, y la camara ha girado al menos giro-minimo grados
+         * desde la anterior sin repetir el mismo giro. Un autoclicker repite objetivo y angulo;
+         * un mod que menea la camara a golpes fijos repite el giro; en una trituradora los mobs
+         * mueren en el mismo bloque (el objetivo es el bloque, no el mob). True si ha contado.
+         */
+        boolean interaccion(long objetivo, float yaw, float pitch, Ajustes a) {
+            double giro = conCamara ? Math.abs(angulo(yaw - yawPrevio)) + Math.abs(pitch - pitchPrevio) : Double.MAX_VALUE;
+            boolean regular = giro != Double.MAX_VALUE && giroPrevio >= 0 && Math.abs(giro - giroPrevio) < GIRO_REGULAR;
+            yawPrevio = yaw;
+            pitchPrevio = pitch;
+            conCamara = true;
+            if (giro != Double.MAX_VALUE) giroPrevio = giro;
+            for (int i = 0; i < nObjetivos; i++) if (objetivos[i] == objetivo) return false;
+            objetivos[cabezaObjetivos] = objetivo;
+            cabezaObjetivos = (cabezaObjetivos + 1) % objetivos.length;
+            nObjetivos = Math.min(objetivos.length, nObjetivos + 1);
+            if (giro < a.giroMinimo() || regular) return false;
+            variadas++;
+            firma = firma * 31 + objetivo;
+            return true;
         }
 
         /** /lw hardcore parca <jugador> [segundos]: llena el anillo con la celda actual. */
@@ -316,8 +411,10 @@ final class Huella implements Listener {
             if (celdas.length != a.tamano()) {
                 celdas = new long[a.tamano()];
                 montado = new boolean[a.tamano()];
+                novedad = new boolean[a.tamano()];
             }
             vaciar();
+            java.util.Arrays.fill(novedad, false);
             long celda = clave(x, y, z, a);
             int muestras = Math.min(celdas.length, Math.max(0, segundosQuieto / a.muestra()));
             for (int i = 0; i < muestras; i++) {
@@ -344,6 +441,36 @@ final class Huella implements Listener {
         long cy = Math.floorDiv((long) Math.floor(y), a.celdaV());
         long cz = Math.floorDiv((long) Math.floor(z), a.celdaH());
         return (cx << 38) | ((cy & 0xFFFL) << 26) | (cz & 0x3FFFFFFL);
+    }
+
+    /** Objetivos recordados para decidir si una interaccion es "otra" (MEMORIA_OBJETIVOS). */
+    static final int MEMORIA_OBJETIVOS = 16;
+    /** Dos giros de camara que se parecen menos que esto son el mismo: un mod con paso fijo. */
+    static final double GIRO_REGULAR = 0.25;
+    /** Tipos de interaccion (parte de la clave del objetivo). */
+    static final int ROMPER = 1, PONER = 2, GOLPEAR = 3, ABRIR = 4, PICAR = 5;
+
+    /** La clave de un objetivo: el tipo y el BLOQUE (de un mob, el bloque donde estaba). */
+    static long objetivo(int tipo, int x, int y, int z) {
+        long h = tipo;
+        h = h * 0x100000001B3L + x;
+        h = h * 0x100000001B3L + y;
+        h = h * 0x100000001B3L + z;
+        return h ^ (h >>> 29);
+    }
+
+    /** Una "celda" de interaccion: la firma de lo tocado mezclada con el segundo. No se repite. */
+    static long nueva(long firma, int segundo) {
+        long h = (firma ^ 0x9E3779B97F4A7C15L) * 0xBF58476D1CE4E5B9L + segundo;
+        return h ^ (h >>> 31);
+    }
+
+    /** Diferencia de yaw en (-180, 180]. */
+    static double angulo(double d) {
+        double r = d % 360;
+        if (r > 180) r -= 360;
+        if (r <= -180) r += 360;
+        return r;
     }
 
     static int celdaX(long k) {
@@ -428,6 +555,46 @@ final class Huella implements Listener {
         return i != null && (i.isForward() || i.isBackward() || i.isLeft() || i.isRight() || i.isJump());
     }
 
+    // ------------------------------------------------- interacciones variadas (1.1.1)
+
+    @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
+    public void onRomper(BlockBreakEvent e) {
+        interaccion(e.getPlayer(), ROMPER, e.getBlock());
+    }
+
+    @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
+    public void onPoner(BlockPlaceEvent e) {
+        interaccion(e.getPlayer(), PONER, e.getBlockPlaced());
+    }
+
+    /** Empezar a picar un bloque (golpear cosas volando, minar): cuenta igual que romperlo. */
+    @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
+    public void onPicar(BlockDamageEvent e) {
+        interaccion(e.getPlayer(), PICAR, e.getBlock());
+    }
+
+    /** Abrir un contenedor de verdad (con sitio en el mundo; los menus no cuentan). */
+    @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
+    public void onAbrir(InventoryOpenEvent e) {
+        if (!(e.getPlayer() instanceof Player p)) return;
+        Location l = e.getInventory().getLocation();
+        if (l == null || l.getWorld() != p.getWorld()) return;
+        interaccion(p, ABRIR, l.getBlockX(), l.getBlockY(), l.getBlockZ());
+    }
+
+    private void interaccion(Player p, int tipo, Block b) {
+        interaccion(p, tipo, b.getX(), b.getY(), b.getZ());
+    }
+
+    /** La lleva al Rastro con la camara de ahora. Lo mas barato primero: el mundo. */
+    private void interaccion(Player p, int tipo, int x, int y, int z) {
+        if (!hc.esHardcore(p)) return;
+        Ajustes a = ajustes();
+        if (!a.activa() || !a.interacciones()) return;
+        Location l = p.getLocation();
+        rastro(p).interaccion(objetivo(tipo, x, y, z), l.getYaw(), l.getPitch(), a);
+    }
+
     /** Salir a un mundo que no es hardcore vacia la huella (DIS sec. 1.2.4). */
     @EventHandler
     public void onCambioMundo(PlayerChangedWorldEvent e) {
@@ -453,7 +620,8 @@ final class Huella implements Listener {
         boolean activo = ahora - r.ultimaTecla <= a.muestra() * 1000L || mueve(p.getCurrentInput());
         boolean bedrock = vehiculo == null && p.isOnGround() && !p.isInWater() && !p.isInLava()
                 && Plataforma.esBedrock(p);
-        r.segundo(ahora, pos.getX(), pos.getY(), pos.getZ(), vehiculo != null, activo, bedrock, a);
+        boolean volando = vehiculo == null && (p.isFlying() || p.isGliding());
+        r.segundo(ahora, pos.getX(), pos.getY(), pos.getZ(), vehiculo != null, activo, bedrock, volando, a);
         avisos(p, r, a);
     }
 
@@ -646,6 +814,12 @@ final class Huella implements Listener {
     /** Desde Hardcore.onGolpe: congela a los jugadores que dan o reciben un golpe que cuenta. */
     void alGolpe(EntityDamageByEntityEvent e) {
         if (!hc.esHardcore(e.getEntity().getWorld())) return;
+        // Golpear algo a mano es una interaccion (el objetivo es el bloque donde esta: los mobs
+        // de una trituradora mueren todos en el mismo sitio y no cuentan como distintos).
+        if (e.getDamager() instanceof Player g) {
+            Location v = e.getEntity().getLocation();
+            interaccion(g, GOLPEAR, v.getBlockX(), v.getBlockY(), v.getBlockZ());
+        }
         Ajustes a = ajustes();
         double fin = e.getFinalDamage();
         if (fin < a.congelarDanoMinimo()) return;
@@ -722,6 +896,7 @@ final class Huella implements Listener {
                 + " | muestras " + r.llenas + " | ultima activa " + (r.ultimaActiva ? "si" : "no")
                 + " | montado " + Math.round(r.fraccionMontado() * 100) + " %"
                 + " | pausa " + r.pausaUsada(ahora, a) + "/" + a.pausaMaxima() + " s"
+                + " | por interaccion " + r.muestrasPorInteraccion
                 + (ahora < r.graciaHasta ? " | gracia " + (r.graciaHasta - ahora) / 1000 + " s" : "")
                 + " | modo " + (a.modoBloque() ? "bloque" : "huella");
     }
@@ -736,9 +911,10 @@ final class Huella implements Listener {
     // ============================================================= autotest
 
     /**
-     * Las 8 secuencias de DIS sec. 1.2 (PLAN WP5, aceptacion 1), sobre Rastro en memoria con
-     * los valores de DIS sec. 4 (no la config del servidor, que en el Test pone minutos: 1).
-     * Una linea por secuencia: probar.py espera "OK 8/8" exacto.
+     * Las 8 secuencias de DIS sec. 1.2 (PLAN WP5, aceptacion 1) y las 3 de 1.1.1 (construir,
+     * autoclicker, volar), sobre Rastro en memoria con los valores de DIS sec. 4 (no la config
+     * del servidor, que en el Test pone minutos: 1). Una linea por secuencia: probar.py espera
+     * "OK 11/11" exacto.
      */
     static List<String> autotest() {
         Ajustes a = Ajustes.defecto();
@@ -845,6 +1021,59 @@ final class Huella implements Listener {
             ap.guardar(u, new Rastro(a.tamano()), "lethal_world:calamity", t0, a.reconexionMinutos());
             boolean caduca = ap.sacar(u, "lethal_world:calamity", t0 + 31 * 60_000L) == null;
             h.ok("desconexion 40 s y vuelta -> sigue contando (" + q + ")", vuelta == r && q >= 600 && caduca);
+        }
+        // 9. Humano que construye 10 min sin salir de dos celdas: pone y rompe un bloque por
+        //    segundo en sitios distintos, con la camara yendo de un lado a otro sin patron, y
+        //    solo pisa teclas cada medio minuto. Era el falso positivo de la primera prueba.
+        {
+            Rastro r = new Rastro(a.tamano());
+            int max = 0;
+            long semilla = 7;
+            for (int s = 1; s <= 600; s++) {
+                semilla = semilla * 6364136223846793005L + 1442695040888963407L;
+                int bx = (int) ((semilla >>> 33) % 7) - 3, by = 64 + (int) ((semilla >>> 20) % 4);
+                int bz = (int) ((semilla >>> 45) % 7) - 3;
+                float yaw = (float) (((semilla >>> 13) % 3600) / 10.0);
+                float pitch = (float) (((semilla >>> 7) % 900) / 10.0 - 45);
+                r.interaccion(objetivo(s % 2 == 0 ? ROMPER : PONER, bx, by, bz), yaw, pitch, a);
+                double x = (s / 30) % 2 == 0 ? 0.5 : 2.5;
+                r.segundo(t0 + s * 1000L, x, 64, 0.5, false, s % 30 == 0, false, a);
+                max = Math.max(max, r.quieto);
+            }
+            h.ok("humano construyendo en 2 celdas -> no llega (max " + max + ")", max < a.limite());
+        }
+        // 10. Autoclicker contra el mismo bloque: con la camara fija, y con un mod que ademas
+        //     menea la camara al azar. Mismo objetivo = no cuenta: llega igual.
+        {
+            Rastro fijo = new Rastro(a.tamano());
+            Rastro meneo = new Rastro(a.tamano());
+            long semilla = 11;
+            for (int s = 1; s <= 600; s++) {
+                for (int k = 0; k < 5; k++) {
+                    semilla = semilla * 6364136223846793005L + 1442695040888963407L;
+                    fijo.interaccion(objetivo(PICAR, 10, 64, 10), 90f, 30f, a);
+                    meneo.interaccion(objetivo(GOLPEAR, 10, 64, 10), (float) ((semilla >>> 40) % 360), 20f, a);
+                }
+                fijo.segundo(t0 + s * 1000L, 10.5, 64, 10.5, false, false, false, a);
+                meneo.segundo(t0 + s * 1000L, 10.5, 64, 10.5, false, false, false, a);
+            }
+            h.ok("autoclicker en el mismo bloque -> llega (" + fijo.quieto + "; meneando la camara " + meneo.quieto + ")",
+                    fijo.quieto >= 600 && meneo.quieto >= 600);
+        }
+        // 11. Volando sin eventos de teclas: desplazandose por un recorrido grande no llega;
+        //     parado en el aire, si.
+        {
+            Rastro vuela = new Rastro(a.tamano());
+            Rastro flota = new Rastro(a.tamano());
+            int max = 0;
+            for (int s = 1; s <= 600; s++) {
+                double[] pos = bucle(s * 1.5, 150);
+                vuela.segundo(t0 + s * 1000L, pos[0], 90, pos[1], false, false, false, true, a);
+                flota.segundo(t0 + s * 1000L, 10.5, 90, 10.5, false, false, false, true, a);
+                max = Math.max(max, vuela.quieto);
+            }
+            h.ok("volando desplazandose -> no llega (max " + max + "); quieto en el aire -> llega (" + flota.quieto + ")",
+                    max < a.limite() && flota.quieto >= 600);
         }
         return h.lineas();
     }

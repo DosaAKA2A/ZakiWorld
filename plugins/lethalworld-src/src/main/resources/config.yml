@@ -329,6 +329,14 @@ hardcore:
     pausa-ventana-minutos: 10     # ...por esta ventana (cierra a los alts que se pegan)
     reconexion-minutos: 30        # la huella se guarda en memoria tras desconectarse
     gracia-minutos: 5             # sin contar tras acabar una Parca
+    # 1.1.1: tambien es moverse interactuar de forma VARIADA: romper, poner o picar bloques,
+    # golpear y abrir contenedores en sitios distintos, con la camara girando sin patron. Un
+    # autoclicker repite objetivo y angulo, y eso sigue sin contar. Y volando (creativo, /fly,
+    # elitros) cuenta desplazarse aunque no lleguen las teclas.
+    interacciones: true           # false = solo teclas, como en 1.1.0
+    interacciones-minimas: 2      # interacciones variadas en una muestra para que cuente
+    giro-minimo: 1.5              # grados que tiene que girar la camara entre dos de ellas
+    vuelo-minimo: 1.0             # bloques desplazados volando entre muestras
     # Exentos de la Huella y la PARCA: ya no por permiso (el comodin de LuckPerms se lo daba
     # a todo el staff), sino a mano con /lw hardcore exento <jugador> parca on.
     avisos: [300, 420, 510, 540, 570]   # segundos de quietud de cada aviso
