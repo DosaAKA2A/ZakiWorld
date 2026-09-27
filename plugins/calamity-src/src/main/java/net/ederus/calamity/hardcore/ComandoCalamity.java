@@ -15,8 +15,8 @@ import java.util.Locale;
  * /calamity (alias /cal): lo que un jugador puede consultar de Calamity (DIS sec. 6).
  *
  * No tiene subcomandos propios: cada modulo registra los suyos en Subcomandos.calamity()
- * (eco, saldo, contratos, kit, tablero, encuesta, camino). Sin argumentos, o con uno que no
- * existe, sale la ayuda corta con lo que haya registrado y el jugador pueda usar.
+ * (eco, saldo, contratos, kit, tablero, encuesta, camino, cronista). Sin argumentos, o con uno
+ * que no existe, sale la ayuda corta con lo que haya registrado y el jugador pueda usar.
  *
  * Todo por comando y texto: desde Bedrock se usa igual.
  */

@@ -753,6 +753,68 @@ hardcore:
       talisman: {icono: AMETHYST_SHARD, nombre: "Talismán de cordura", lore: ["La cordura baja más despacio."]}
       llave-caos: {icono: TRIAL_KEY, nombre: "Llave del Caos", lore: ["Una caja que solo da Calamity."]}
 
+  # ------------------------------------------------------------------ EL CRONISTA (1.2.0)
+  # Los NPCs de la antesala los pone el staff a mano con Citizens; Calamity no los crea. Cada
+  # uno lleva un clic que Citizens ejecuta como CONSOLA (sin -p) y en el que cambia <p> por
+  # quien hace clic; -l -r = los dos botones. Con el NPC seleccionado (/npc select):
+  #   /npc command add -l -r calamidad abrir <p> umbral     Altar, pagina Umbral
+  #   /npc command add -l -r calamidad abrir <p> forja      Altar, pagina Forja
+  #   /npc command add -l -r calamidad abrir <p> tasador    saldo, tasacion y contratos de hoy
+  #   /npc command add -l -r calamidad abrir <p> cronista   los capitulos de abajo
+  #   /npc command add -l -r calamidad abrir <p> cazador    tablas de la semana y el Tablero
+  # El jugador no necesita permiso (/calamidad es de staff y consola) y el Altar solo se abre
+  # desde el NPC o su bloque, nunca a distancia ni dentro de Calamity.
+  cronista:
+    # Los capitulos de /calamity cronista, en este orden (el id tambien vale: /calamity
+    # cronista parca). {ruta} se cambia al leerlo por ese valor de hardcore:, asi las cifras
+    # siguen a la config: {parca.minutos} -> 10. En una lista se entra por el id de sus
+    # elementos ({altar.trueques.cristal.esencias}) o por posicion, desde 0
+    # ({aduana.tramos-mc.0.hasta}). Una ruta que no exista sale tal cual, entre llaves, y
+    # /calamidad autotest npcs la senala. Lineas cortas: cada una tiene que caber en el chat.
+    capitulos:
+      calamity:
+        titulo: "Qué es Calamity"
+        texto:
+          - "Calamity es un mundo hardcore: aquí no gana el mejor equipo, gana quien sabe cuándo salir."
+          - "Si mueres dentro pierdes TODO lo que llevas encima, también la experiencia."
+          - "Se sale vivo por la puerta de salida o con un Cristal de Regreso: {cristal.segundos} s quieto y fuera."
+          - "Lo que sacas vivo se tasa al cruzar. Lo que no sacas, no existe."
+      cordura:
+        titulo: "La cordura"
+        texto:
+          - "Desde que entras, la cordura baja {cordura.por-minuto} por minuto: x{cordura.factor-noche} de noche y x{cordura.factor-oscuridad} a oscuras."
+          - "Un golpe que te quite un cuarto de la vida cuesta {cordura.por-golpe} más."
+          - "Por debajo de la mitad salen más mobs y más fuertes; a cero te sigue un minijefe."
+          - "El Frasco de Calma devuelve {frasco.cordura} por trago ({frasco.usos} tragos). Se rellena en el Altar."
+      parca:
+        titulo: "La PARCA"
+        texto:
+          - "Quédate quieto {parca.minutos} min dentro y viene la PARCA: una anomalía de nivel Dios, en cuatro fases."
+          - "Antes oirás avisos y una campana. Moverte de verdad (explorar, picar, pelear) la aleja; un autoclicker, no."
+          - "En la zona del spawn no espera tanto: a los {parca.spawn.minutos} min se abre una Grieta, te traga y te escupe lejos."
+          - "Allí te encuentra. Tumbarla paga Esencias, y la Campana de la Parca a los {parca.campana.solo-top} que más daño le hagan."
+      eco:
+        titulo: "El Eco"
+        texto:
+          - "Al morir dentro nace tu Eco donde caíste: pelea con tu equipo y guarda tus Reliquias y parte de tus Esencias."
+          - "Dura {eco.horas} h. Mátalo tú y recuperas lo tuyo, y {eco.cordura-dueno} de cordura."
+          - "Si lo cierra otro, se lo lleva todo, y a veces una Lágrima de Eco."
+          - "El Cazador sabe qué Ecos guardan más botín. Sin coordenadas: hay que buscarlos."
+      esencias:
+        titulo: "Esencias, Reliquias y Tasación"
+        texto:
+          - "Las Esencias caen de los mobs de dentro. Al salir pasan a tu saldo: con ellas se paga en el Altar."
+          - "Cada Reliquia sacada viva vale {reliquias.grados.1.esencias} Esencias la Astilla, {reliquias.grados.2.esencias} el Fragmento, {reliquias.grados.3.esencias} el Ámbar y {reliquias.grados.4.esencias} el Ámbar Mayor, más MobCoins."
+          - "La primera salida del día paga {esencias.primera-extraccion-dia.base} Esencias más. Las Reliquias III y IV caducan a los {reliquias.caduca-dias} días."
+          - "La Aduana te paga y pone topes: como mucho {aduana.tramos-mc.0.hasta} MobCoins al día."
+      altar:
+        titulo: "El Altar y la Forja"
+        texto:
+          - "El Guardián del Umbral cambia Esencias por Frascos, Tinturas, la Llave del Caos y el Cristal de Regreso ({altar.trueques.cristal.esencias} Esencias)."
+          - "El Forjador hace el Manto de Calamidad: cada pieza pide Esencias, MobCoins y el Sello de su minijefe."
+          - "El Vestigio del Eco pide Marcas de Eco; la Guadaña, {altar.trueques.guadana.creditos} Fragmentos. Lo forjado va ligado a ti."
+          - "Si pierdes una pieza dentro, reponerla antes de {forja.reposicion-dias} días cuesta la mitad de Esencias."
+
   # ------------------------------------------------------------------ P2 (apagadas)
   rondador: {activo: false, probabilidad-por-minuto: 0.25, cordura-maxima: 50, luz-maxima: 8, distancia: 24, velocidad-acecho: 0.35, velocidad-huida: 0.3, velocidad-carga: 0.4, enfado-carga: 3, agarre-vida: 0.35, agarre-cordura: 20, vida-base: 60, vida-por-nivel: 0.05, extra-nivel: 5, dura-segundos: 180}
   hogueras: {activo: false, radio: 6, radio-sin-mobs: 16, minutos: 4, distancia-minima: 48, quemada-minutos: 30, cooldown-jugador-minutos: 20, coste-esencias: 1, factor-parca: 1.5}

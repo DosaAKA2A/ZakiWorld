@@ -90,7 +90,7 @@ final class Rankings implements Listener {
                 () -> hc.seguro("rankings", this::ciclo), 40L, cada);
     }
 
-    private boolean activo() {
+    boolean activo() {
         return hc.cfg().getBoolean("ranking.activo", false);
     }
 
@@ -186,6 +186,22 @@ final class Rankings implements Listener {
         Map<String, Long> m = copiaStats.get(j.getUniqueId());
         Long v = m == null ? null : m.get(clave);
         return String.valueOf(v == null ? 0 : v);
+    }
+
+    /**
+     * El podio de la semana en curso de cada tabla de ranking.tablas, en su orden, de la cache
+     * que rehace la tarea (puede ir un minuto atrasado). Lo ensena el Cazador de la antesala
+     * (Npcs): es la clasificacion tal cual, sin el reparto de premios de cerrar().
+     */
+    Map<Tabla, List<Fila>> podioSemana(int n) {
+        Map<String, List<Fila>> tops = topsSemana;
+        Map<Tabla, List<Fila>> out = new LinkedHashMap<>();
+        for (String id : tablas()) {
+            Tabla t = tabla(id);
+            List<Fila> l = tops.getOrDefault(t.estadistica(), List.of());
+            out.put(t, l.subList(0, Math.min(Math.max(0, n), l.size())));
+        }
+        return out;
     }
 
     /**

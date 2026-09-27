@@ -6,7 +6,7 @@
 
   <groupId>net.ederus</groupId>
   <artifactId>Calamity</artifactId>
-  <version>1.1.0</version>
+  <version>1.2.0</version>
   <packaging>jar</packaging>
   <name>Calamity</name>
   <description>Calamity: la PARCA, el Eco, la Aduana y las reglas hardcore de los mundos de Lethal World</description>
