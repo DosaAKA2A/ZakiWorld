@@ -125,6 +125,9 @@ final class ObjetosCalamity implements Listener {
         this.hc = hc;
         hc.plugin().getServer().getPluginManager().registerEvents(this, hc.plugin());
         Autotest.registrar("objetos", this::autotest);
+        // Calamity 1.3.3: que cada objeto de MMOItems haga lo que dice su lore (autotest objetos-reales y
+        // /calamidad objetos stats). Sin estado propio: no hay nada que parar.
+        new ObjetosReales(hc);
         // Los que ya estan conectados (recarga del plugin): que el Talisman valga desde ya.
         for (Player p : hc.plugin().getServer().getOnlinePlayers()) talisman(p);
     }

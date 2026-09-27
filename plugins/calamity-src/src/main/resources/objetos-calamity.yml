@@ -1,0 +1,336 @@
+# =============================================================================
+#  Calamity · objetos-calamity.yml (generado por gen_config.py: NO editar a mano)
+#  Lo que cada objeto y set de MMOItems de Calamity tiene que llevar DE VERDAD.
+#  Lo usan /calamidad autotest objetos-reales y /calamidad objetos stats <jugador>.
+#  stats: IDs de MMOItems (MythicLib los guarda en custom_data como MMOITEMS_<ID>).
+#  bonos: por nivel del set, sin acumular (MMOItems suma [2]..[n]).
+#  pieza: la clave de forja.piezas / entregas.mmo; si la config lleva otro TIPO.ID, manda la config.
+# =============================================================================
+
+objetos:
+  ARMOR.YELMO_DE_CALAMIDAD:
+    pieza: yelmo
+    nombre: Yelmo de Calamidad
+    fase: 2
+    material: NETHERITE_HELMET
+    tier: CALAMIDAD
+    set: CALAMIDAD
+    stats:
+      ARMOR: 6
+      ARMOR_TOUGHNESS: 5
+      MAX_HEALTH: 7
+    encantamientos:
+      protection: 8
+      unbreaking: 8
+      mending: 1
+      respiration: 3
+      aqua_affinity: 1
+    efectos-permanentes:
+      night_vision: 1
+    irrompible: true
+    huecos:
+    - Calamidad
+    mejora:
+      plantilla: calamidad
+      referencia: calamidad
+      max: 5
+  ARMOR.CORAZA_DE_CALAMIDAD:
+    pieza: coraza
+    nombre: Coraza de Calamidad
+    fase: 2
+    material: NETHERITE_CHESTPLATE
+    tier: CALAMIDAD
+    set: CALAMIDAD
+    stats:
+      ARMOR: 8
+      ARMOR_TOUGHNESS: 5
+      MAX_HEALTH: 7
+    encantamientos:
+      protection: 8
+      unbreaking: 8
+      mending: 1
+      thorns: 4
+    irrompible: true
+    huecos:
+    - Calamidad
+    mejora:
+      plantilla: calamidad
+      referencia: calamidad
+      max: 5
+  ARMOR.GREBAS_DE_CALAMIDAD:
+    pieza: grebas
+    nombre: Grebas de Calamidad
+    fase: 2
+    material: NETHERITE_LEGGINGS
+    tier: CALAMIDAD
+    set: CALAMIDAD
+    stats:
+      ARMOR: 7
+      ARMOR_TOUGHNESS: 5
+      MAX_HEALTH: 7
+    encantamientos:
+      protection: 8
+      unbreaking: 8
+      mending: 1
+      swift_sneak: 3
+    irrompible: true
+    mejora:
+      plantilla: calamidad
+      referencia: calamidad
+      max: 10
+  ARMOR.SOLERETAS_DE_CALAMIDAD:
+    pieza: soleretas
+    nombre: Soleretas de Calamidad
+    fase: 2
+    material: NETHERITE_BOOTS
+    tier: CALAMIDAD
+    set: CALAMIDAD
+    stats:
+      ARMOR: 5
+      ARMOR_TOUGHNESS: 5
+      MAX_HEALTH: 7
+    encantamientos:
+      protection: 8
+      unbreaking: 8
+      mending: 1
+      feather_falling: 4
+      depth_strider: 3
+    efectos-permanentes:
+      fire_resistance: 1
+    irrompible: true
+    mejora:
+      plantilla: calamidad
+      referencia: calamidad
+      max: 10
+  AXE.HACHA_DEL_HERALDO:
+    pieza: hacha
+    nombre: Hacha del Heraldo
+    fase: 2
+    material: NETHERITE_AXE
+    tier: CALAMIDAD
+    set: CALAMIDAD
+    stats:
+      ATTACK_DAMAGE: 21
+      ATTACK_SPEED: 1.1
+      CRITICAL_STRIKE_CHANCE: 28
+      CRITICAL_STRIKE_POWER: 2
+      PVE_DAMAGE: 12
+    encantamientos:
+      sharpness: 9
+      unbreaking: 8
+      mending: 1
+      fire_aspect: 3
+      looting: 4
+    irrompible: true
+    huecos:
+    - Calamidad
+    mejora:
+      plantilla: calamidad
+      referencia: calamidad
+      max: 5
+  CONSUMABLE.TINTURA_DE_CENIZA:
+    pieza: tintura
+    nombre: Tintura de Ceniza
+    fase: 1
+    material: POTION
+    tier: UMBRAL
+    stats:
+      RESTORE_HEALTH: 8
+      ITEM_COOLDOWN: 20
+    efectos:
+      resistance:
+        nivel: 1
+        segundos: 6
+    apilable: 8
+    sin-receta: true
+  GEM_STONE.GEMA_DE_CALAMIDAD:
+    pieza: gema
+    nombre: Gema de Calamidad
+    fase: 2
+    material: EMERALD
+    tier: BRASA
+    stats:
+      PVE_DAMAGE: 2
+      UNDEAD_DAMAGE: 4
+      MAX_HEALTH: 1
+    color-gema: Calamidad
+    sin-receta: true
+  CONSUMABLE.ASCUA_DE_CALAMIDAD:
+    pieza: ascua
+    nombre: Ascua de Calamidad
+    fase: 2
+    material: BLAZE_POWDER
+    tier: BRASA
+    mejora:
+      referencia: calamidad
+    no-comestible: true
+    sin-receta: true
+  ARMOR.MASCARA_DEL_ECO:
+    pieza: mascara
+    nombre: Máscara del Eco
+    fase: 3
+    material: NETHERITE_HELMET
+    tier: ECO
+    set: VESTIGIO_DEL_ECO
+    stats:
+      ARMOR: 5
+      ARMOR_TOUGHNESS: 4
+      MAX_HEALTH: 6
+      PVP_DAMAGE: 3
+    encantamientos:
+      protection: 8
+      unbreaking: 8
+      mending: 1
+    irrompible: true
+    mejora:
+      plantilla: calamidad
+      referencia: calamidad
+      max: 10
+  SWORD.FILO_DEL_ECO:
+    pieza: filo
+    nombre: Filo del Eco
+    fase: 3
+    material: NETHERITE_SWORD
+    tier: ECO
+    set: VESTIGIO_DEL_ECO
+    stats:
+      ATTACK_DAMAGE: 14.5
+      ATTACK_SPEED: 1.6
+      CRITICAL_STRIKE_CHANCE: 15
+      CRITICAL_STRIKE_POWER: 1.8
+      PVP_DAMAGE: 8
+    encantamientos:
+      sharpness: 8
+      unbreaking: 8
+      mending: 1
+    irrompible: true
+    mejora:
+      plantilla: calamidad
+      referencia: calamidad
+      max: 10
+  SWORD.GUADANA_DE_LA_PARCA:
+    pieza: guadana
+    nombre: Guadaña de la Parca
+    fase: 3
+    material: NETHERITE_HOE
+    tier: PARCA
+    stats:
+      ATTACK_DAMAGE: 24
+      ATTACK_SPEED: 1.2
+      CRITICAL_STRIKE_CHANCE: 20
+      CRITICAL_STRIKE_POWER: 1.8
+      PVE_DAMAGE: 12
+    encantamientos:
+      sharpness: 8
+      unbreaking: 8
+      mending: 1
+    irrompible: true
+    mejora:
+      plantilla: calamidad
+      referencia: calamidad
+      max: 5
+sets:
+  CALAMIDAD:
+    nombre: Manto de Calamidad
+    fase: 2
+    piezas:
+    - ARMOR.YELMO_DE_CALAMIDAD
+    - ARMOR.CORAZA_DE_CALAMIDAD
+    - ARMOR.GREBAS_DE_CALAMIDAD
+    - ARMOR.SOLERETAS_DE_CALAMIDAD
+    - AXE.HACHA_DEL_HERALDO
+    bonos:
+      '2':
+        MAX_HEALTH: 4
+        ARMOR: 2
+      '3':
+        DAMAGE_REDUCTION: 3
+        KNOCKBACK_RESISTANCE: 0.1
+      '4':
+        ATTACK_DAMAGE: 6
+        PVE_DAMAGE: 8
+        MAX_HEALTH: 5
+        CRITICAL_STRIKE_CHANCE: 4
+      '5':
+        UNDEAD_DAMAGE: 15
+        LIFESTEAL: 6
+    habilidades:
+      '5':
+        savia:
+          tipo: GREATER_HEALINGS
+          modo: SHIFT_RIGHT_CLICK
+          heal: 8
+          cooldown: 20
+    promete:
+    - texto: +2 ❤
+      nivel: '2'
+      clave: MAX_HEALTH
+      valor: 4
+    - texto: +2 armadura
+      nivel: '2'
+      clave: ARMOR
+      valor: 2
+    - texto: -3% daño
+      nivel: '3'
+      clave: DAMAGE_REDUCTION
+      valor: 3
+    - texto: +10% anti-empuje
+      nivel: '3'
+      clave: KNOCKBACK_RESISTANCE
+      valor: 0.1
+    - texto: +6 daño
+      nivel: '4'
+      clave: ATTACK_DAMAGE
+      valor: 6
+    - texto: +8% PvE
+      nivel: '4'
+      clave: PVE_DAMAGE
+      valor: 8
+    - texto: +2.5 ❤
+      nivel: '4'
+      clave: MAX_HEALTH
+      valor: 5
+    - texto: +4% crítico
+      nivel: '4'
+      clave: CRITICAL_STRIKE_CHANCE
+      valor: 4
+    - texto: +15% no-muertos
+      nivel: '5'
+      clave: UNDEAD_DAMAGE
+      valor: 15
+    - texto: 6% robo de vida
+      nivel: '5'
+      clave: LIFESTEAL
+      valor: 6
+    - texto: cura 4 ❤
+      nivel: '5'
+      clave: savia.heal
+      valor: 8
+    - texto: cada 20 s
+      nivel: '5'
+      clave: savia.cooldown
+      valor: 20
+  VESTIGIO_DEL_ECO:
+    nombre: Vestigio del Eco
+    fase: 3
+    piezas:
+    - ARMOR.MASCARA_DEL_ECO
+    - SWORD.FILO_DEL_ECO
+    bonos:
+      '2':
+        ATTACK_DAMAGE: 3
+        PVP_DAMAGE: 6
+        MAX_HEALTH: 2
+    promete:
+    - texto: +3 daño
+      nivel: '2'
+      clave: ATTACK_DAMAGE
+      valor: 3
+    - texto: +6% PvP
+      nivel: '2'
+      clave: PVP_DAMAGE
+      valor: 6
+    - texto: +1 ❤
+      nivel: '2'
+      clave: MAX_HEALTH
+      valor: 2
