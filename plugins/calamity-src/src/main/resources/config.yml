@@ -515,6 +515,9 @@ hardcore:
     primera-extraccion-dia: {base: 2, si-tasa: 1}
   altar:
     activo: true
+    # 1.3.0: lo que llegue a estas Esencias pide confirmar en una segunda pantalla (la Forja entera,
+    # y lo que pida MobCoins o un credito, siempre). 0 = en el Umbral nada lo pide.
+    confirmar-desde: 50
     # [alineado] PLAN 4. pagina: umbral|forja. da: frasco|cristal|dar:<objeto>|credito|forja:<pieza>|ofrenda|contrato|depositar|camino
     # limite-dia / limite-semana por jugador; stock-semana global (0 = sin tope); mobcoins por Monedero (M35).
     trueques:
