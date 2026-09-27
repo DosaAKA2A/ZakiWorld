@@ -116,6 +116,8 @@ public final class Hardcore implements Listener {
     private Estadisticas estadisticas;
     private Calendario calendario;
     private Exentos exentos;
+    /** Calamity 1.4: lo que hace cada pieza de MMOItems dentro de Calamity (equipo.yml). */
+    private Equipo equipo;
     private Aduana aduana;
     private Saldo saldo;
     private Creditos creditos;
@@ -183,6 +185,8 @@ public final class Hardcore implements Listener {
     Calendario calendario() { return calendario; }
     /** Exenciones puestas a mano (parca, aduana); null con las reglas apagadas. */
     Exentos exentos() { return exentos; }
+    /** Calamity 1.4: equipo.yml. Null con las reglas apagadas; mejor delEquipo() que esto. */
+    Equipo equipo() { return equipo; }
     Aduana aduana() { return aduana; }
     Saldo saldo() { return saldo; }
     Creditos creditos() { return creditos; }
@@ -325,6 +329,8 @@ public final class Hardcore implements Listener {
         calendario = crear("calendario", () -> new Calendario(this));
         // Antes que la Aduana y la Huella, que la consultan (solo lee datos: no para nada).
         exentos = crear("exentos", () -> new Exentos(this));
+        // 1.4: antes de todo lo que pregunta por el equipo (drenaje, Aduana, Grifo, Cofres...).
+        equipo = crear("equipo", () -> new Equipo(this));
         aduana = crear("aduana", () -> new Aduana(this));
         saldo = crear("saldo", () -> new Saldo(this));
         creditos = crear("creditos", () -> new Creditos(this));
@@ -403,6 +409,7 @@ public final class Hardcore implements Listener {
         if (creditos != null) seguro("creditos", () -> creditos.parar());
         if (saldo != null) seguro("saldo", () -> saldo.parar());
         if (aduana != null) seguro("aduana", () -> aduana.parar());
+        if (equipo != null) seguro("equipo", () -> equipo.parar());
         if (calendario != null) seguro("calendario", () -> calendario.parar());
         if (estadisticas != null) seguro("estadisticas", () -> estadisticas.parar());
         if (telemetria != null) seguro("telemetria", () -> telemetria.parar());
@@ -461,6 +468,34 @@ public final class Hardcore implements Listener {
         if (antes != null && ahora - antes < 60_000) return;
         ultimoFallo.put(modulo, ahora);
         plugin.getLogger().log(Level.WARNING, "[Calamity] Fallo en el modulo " + modulo, t);
+    }
+
+    // ---------------------------------------------------------------------- equipo
+
+    /**
+     * Calamity 1.4: lo que el equipo de ese jugador (equipo.yml) pone en ese efecto, ya topado. 0 sin
+     * equipo, sin el modulo o si falla: con 0 cada regla hace exactamente lo de siempre.
+     */
+    double delEquipo(Player p, Equipo.Efecto efecto) {
+        Equipo eq = equipo;
+        return eq == null || p == null ? 0 : valor("equipo", () -> eq.valor(p, efecto), 0.0);
+    }
+
+    /**
+     * Calamity 1.4: n Esencias de un mob, un minijefe o un cofre con el esencias-bonus de su equipo. Se
+     * llama ANTES de Aduana.pagar, que topa el total como siempre; la Tasacion no pasa por aqui.
+     */
+    int esenciasDelEquipo(Player p, int n) {
+        Equipo eq = equipo;
+        // Solo dentro: un participante de un minijefe que ya ha salido cobra lo suyo, sin el equipo.
+        if (eq == null || p == null || n <= 0 || !esHardcore(p)) return n;
+        return valor("equipo", () -> eq.esencias(p, n), n);
+    }
+
+    /** /calamidad reload relee tambien equipo.yml. Devuelve el resumen, o null con las reglas apagadas. */
+    public String recargarEquipo() {
+        Equipo eq = equipo;
+        return eq == null ? null : valor("equipo", eq::cargar, null);
     }
 
     // ----------------------------------------------------------------------- datos
@@ -730,6 +765,8 @@ public final class Hardcore implements Listener {
         factor *= valor("parca", () -> parca.factorDrenaje(p), 1.0);
         factor *= valor("objetos", () -> objetos.factorDrenaje(p), 1.0);
         factor *= valor("eclipse", () -> eclipse.factorCordura(), 1.0);
+        // 1.4: y el equipo (cordura-drenaje) quita su parte de todo lo anterior.
+        factor = Equipo.menos(factor, delEquipo(p, Equipo.Efecto.CORDURA_DRENAJE));
 
         double antes = e.valor;
         cordura.sumar(p, -(porMinuto * factor) / 60.0);
@@ -1043,9 +1080,13 @@ public final class Hardcore implements Listener {
         // esNoche y no la hora: un Eclipse de dia tambien trae la ceniza y las rachas.
         if (!esNoche(p)) return;
 
+        // 1.4: el equipo (niebla) quita parte de la ceniza y de la oscuridad; sin equipo, 0.
+        double menosNiebla = delEquipo(p, Equipo.Efecto.NIEBLA);
+
         // La niebla: ceniza densa alrededor. Esto es lo que se ve SIEMPRE de noche,
         // y no quita visibilidad: cierra el aire, que es lo que se buscaba.
-        Compat.spawn(p.getWorld(), Compat.ASH, p.getEyeLocation(), 14, 4.0, 3.0, 4.0, 0.004);
+        int ceniza = Equipo.particulasNiebla(14, menosNiebla);
+        if (ceniza > 0) Compat.spawn(p.getWorld(), Compat.ASH, p.getEyeLocation(), ceniza, 4.0, 3.0, 4.0, 0.004);
 
         /* La oscuridad va a RACHAS, no continua.
          *
@@ -1058,7 +1099,9 @@ public final class Hardcore implements Listener {
         int dura = cfg().getInt("dificultad.niebla-oscuridad-segundos", 3);
         if (cada <= 0 || dura <= 0) return;
         if (cordura.estado(p).segundosDentro % cada != 0) return;
-        p.addPotionEffect(new PotionEffect(PotionEffectType.DARKNESS, dura * 20, 0, true, false, false));
+        int ticks = Equipo.ticksOscuridad(dura, menosNiebla);
+        if (ticks <= 0) return;
+        p.addPotionEffect(new PotionEffect(PotionEffectType.DARKNESS, ticks, 0, true, false, false));
         Compat.soundPlayers(p.getWorld(), p.getLocation(), "ambient.cave", 0.7f, 0.5f);
     }
 
@@ -1130,8 +1173,11 @@ public final class Hardcore implements Listener {
         if (factor <= 1) return;
         int antes = p.getFoodLevel();
         if (e.getFoodLevel() >= antes) return;
-        // Solo se dobla lo que se PIERDE; comer sigue dando lo que da.
-        e.setFoodLevel((int) Math.max(0, antes - (antes - e.getFoodLevel()) * factor));
+        // Solo se dobla lo que se PIERDE; comer sigue dando lo que da. El equipo (1.4, hambre) quita parte
+        // del extra; sin equipo, Equipo.hambre es la cuenta de siempre.
+        double menos = delEquipo(p, Equipo.Efecto.HAMBRE);
+        e.setFoodLevel(Equipo.hambre(antes, e.getFoodLevel(), factor, menos,
+                menos == 0 || equipo == null ? null : equipo.restoHambre(p)));
     }
 
     /** La comida cruda sienta peor aqui: veneno y hambre encima. */
@@ -1161,7 +1207,8 @@ public final class Hardcore implements Listener {
     public void onEntorno(EntityDamageEvent e) {
         if (!(e.getEntity() instanceof Player p) || !esHardcore(p)) return;
         double factor = switch (e.getCause()) {
-            case FALL -> cfg().getDouble("dificultad.dano-caida", 2.0);
+            // 1.4: el equipo (caidas) quita parte del extra de las caidas; el ahogo no lo toca.
+            case FALL -> Equipo.castigo(cfg().getDouble("dificultad.dano-caida", 2.0), delEquipo(p, Equipo.Efecto.CAIDAS));
             case DROWNING -> cfg().getDouble("dificultad.dano-ahogo", 2.0);
             default -> 1;
         };
@@ -1173,7 +1220,12 @@ public final class Hardcore implements Listener {
     public void onDurabilidad(PlayerItemDamageEvent e) {
         if (!esHardcore(e.getPlayer())) return;
         double factor = cfg().getDouble("dificultad.durabilidad", 2.0);
-        if (factor > 1) e.setDamage((int) Math.ceil(e.getDamage() * factor));
+        if (factor <= 1) return;
+        // 1.4: el equipo (durabilidad) quita parte del extra; sin equipo, Equipo.durabilidad es el ceil de siempre.
+        Player p = e.getPlayer();
+        double menos = delEquipo(p, Equipo.Efecto.DURABILIDAD);
+        e.setDamage(Equipo.durabilidad(e.getDamage(), factor, menos,
+                menos == 0 || equipo == null ? null : equipo.restoDurabilidad(p)));
     }
 
     /**

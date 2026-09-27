@@ -121,6 +121,8 @@ final class Cofres {
             loot.addAll(alCofre);
             e.setLoot(loot);
         }
+        // 1.4: las de mas del equipo (esencias-bonus) de quien abre, antes de la Aduana, que topa el total.
+        esencias = hc.esenciasDelEquipo(p, esencias);
         Aduana ad = hc.aduana();
         if (ad != null && (esencias > 0 || !reliquias.isEmpty())) {
             Aduana.Pago pago = ad.pagar(p, "cofre", esencias, 0, reliquias, "cofre");

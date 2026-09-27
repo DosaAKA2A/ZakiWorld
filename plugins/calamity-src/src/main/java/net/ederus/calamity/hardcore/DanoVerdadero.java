@@ -25,6 +25,9 @@ import java.util.UUID;
  *
  * Ley 5: ningun golpe quita mas de topeFraccion de la vida maxima. Con la vida llena,
  * nada te mata de un golpe.
+ *
+ * Calamity 1.4: el equipo contra la PARCA (equipo.yml, parca-dano-recibido) se descuenta aqui, despues
+ * del tope; sus golpes normales los recorta Equipo.onDanoParca.
  */
 final class DanoVerdadero {
 
@@ -44,9 +47,13 @@ final class DanoVerdadero {
         if (v == null || !v.isValid() || v.isDead() || cantidad <= 0) return;
         if (v.getGameMode() == GameMode.CREATIVE || v.getGameMode() == GameMode.SPECTATOR) return;
         double vidaMax = Compat.getAttribute(v, "max_health", 20);
-        double quita = recorte(cantidad, topeFraccion, vidaMax);
-        if (quita <= 0) return;
         Hardcore hc = hardcore();
+        /* Calamity 1.4: si pega la PARCA, el equipo (parca-dano-recibido) quita su parte de lo que de verdad
+         * entra, despues del tope de la ley 5. Sin equipo, delEquipo da 0 y queda lo de siempre. */
+        double topado = recorte(cantidad, topeFraccion, vidaMax);
+        double quita = hc != null && Equipo.esDeParca(fuente)
+                ? Equipo.menos(topado, hc.delEquipo(v, Equipo.Efecto.PARCA_DANO_RECIBIDO)) : topado;
+        if (quita <= 0) return;
 
         // El parte antes que el golpe: si este mata, onMuerte cierra el parte en el acto y
         // tiene que encontrarlo ya apuntado (setHealth no genera evento de dano).
