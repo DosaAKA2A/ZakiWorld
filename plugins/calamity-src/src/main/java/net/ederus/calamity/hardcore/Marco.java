@@ -319,14 +319,15 @@ final class Marco {
     }
 
     /**
-     * La banda de una seccion: un cristal de color con el nombre del grupo en ambar y dos lineas
-     * de que es. Va a los dos lados de su fila, en el sitio del marco (ponerBanda), asi que se lee
-     * como el marco que cambia de color en esa fila y no como un articulo mas.
+     * La banda de una seccion: el cristal rojo del marco con el nombre del grupo en ambar y dos
+     * lineas de que es. Va a los dos lados de su fila, en el sitio del marco (ponerBanda).
+     * Dosa (1.3.2): un solo tono, rojo y negro; el color que pida cada menu se ignora a proposito
+     * para que ninguna fila vuelva a salir de colores.
      */
     static ItemStack banda(Material cristal, String nombre, List<String> texto) {
         List<Component> lore = new ArrayList<>();
         for (String l : texto) lore.add(Component.text(l, Paleta.TENUE));
-        return icono(cristal, Component.text(nombre, Paleta.MARCA), lore, false);
+        return icono(Material.RED_STAINED_GLASS_PANE, Component.text(nombre, Paleta.MARCA), lore, false);
     }
 
     /** La banda en la columna 0 y la 8 de la fila que empieza en base. */
