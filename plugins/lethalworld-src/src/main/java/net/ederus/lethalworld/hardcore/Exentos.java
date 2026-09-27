@@ -60,6 +60,8 @@ final class Exentos {
         for (String q : cuales(que)) datos.set(base + "." + q, on ? true : null);
         if (!datos.getBoolean(base + "." + PARCA, false) && !datos.getBoolean(base + "." + ADUANA, false)) {
             datos.set(base, null);
+            ConfigurationSection raiz = datos.getConfigurationSection(RAIZ);
+            if (raiz != null && raiz.getKeys(false).isEmpty()) datos.set(RAIZ, null);
         } else if (nombre != null) {
             datos.set(base + ".nombre", nombre);
         }
@@ -186,7 +188,7 @@ final class Exentos {
         poner(d, a, "Staff", PARCA, false);
         h.ok("parca off -> sigue de la aduana", !es(d, a, PARCA) && es(d, a, ADUANA));
         poner(d, a, "Staff", ADUANA, false);
-        h.ok("sin ninguna -> fuera del fichero", !d.isSet("exentos." + a));
+        h.ok("sin ninguna -> fuera del fichero", !d.isSet("exentos." + a) && !d.isSet("exentos"));
         h.ok("una palabra que no es ninguna no toca nada", cuales("permiso").isEmpty());
         return h.lineas();
     }

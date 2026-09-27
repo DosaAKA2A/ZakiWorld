@@ -77,7 +77,7 @@ public final class Paleta {
     /** "Calamity · " para los mensajes de sistema. */
     public static Component prefijo() {
         return Component.text().append(marca())
-                .append(Component.text(" · ", SEPARADOR).decoration(TextDecoration.BOLD, false))
+                .append(Component.text(" · ", SEPARADOR).decoration(TextDecoration.BOLD, false)) // sin la negrita de la marca
                 .build().decoration(TextDecoration.ITALIC, false);
     }
 
@@ -161,7 +161,7 @@ public final class Paleta {
     public static Component ventanaCalamity(String seccion) {
         return Component.text()
                 .append(ventana("Calamity").decoration(TextDecoration.BOLD, true))
-                .append(Component.text(" · ", TextColor.color(VENTANA_HASTA)).decoration(TextDecoration.BOLD, false))
+                .append(Component.text(" · ", TextColor.color(VENTANA_HASTA)).decoration(TextDecoration.BOLD, false)) // sin la negrita de la marca
                 .append(ventana(seccion))
                 .build().decoration(TextDecoration.ITALIC, false);
     }
