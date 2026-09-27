@@ -143,7 +143,7 @@ public final class MenuHardcore implements Listener {
     public void abrir(Player p) {
         // La marca en negrita con su degradado; el resto sin negrita (Paleta.prefijo).
         Inventory inv = plugin.getServer().createInventory(new Marca(), 54,
-                Paleta.ventanaCalamity("dificultad"));
+                Marco.T_DIFICULTAD.componente());
         pintar(inv);
         p.openInventory(inv);
         Compat.soundPlayers(p.getWorld(), p.getLocation(), "block.creaking_heart.idle", 0.8f, 1.2f);

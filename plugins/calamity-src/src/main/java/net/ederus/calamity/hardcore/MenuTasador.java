@@ -27,26 +27,36 @@ import java.util.Set;
 import java.util.UUID;
 
 /**
- * El menu del Tasador (1.3.0), el NPC de la antesala y la tercera pestana del Altar. Antes
- * escribia seis lineas en el chat; ahora es una pagina del mismo aire que el Altar (Marco):
+ * El menu del Tasador (1.3.0; 1.3.1), el NPC de la antesala. Antes escribia seis lineas en el
+ * chat; ahora es una pagina del mismo aire que el Altar (Marco). Arriba tu saldo (clic: ingresa
+ * las Esencias fisicas, lo que era el boton Depositar del Altar) y Cerrar; cada fila, un grupo
+ * con su banda de color a los lados (en la 1.3.0 era un icono suelto en la columna 0 que no se
+ * entendia):
  *
- *  fila 1, Tus cobros: lo tasado esta semana, si la primera salida de hoy aun paga, los premios
- *          que te esperan (con boton para recogerlos fuera de Calamity) y la Racha si esta encendida;
- *  fila 2, La Aduana de hoy: las MobCoins cobradas hoy y una barra de cristales con lo que queda
- *          en cada tramo (verde al 100 %, amarillo desde el 50 %, naranja por debajo, gris cobrado);
- *  fila 3, Contratos de hoy: los tres encargos con su barra, y el de la semana. Clic en uno para
- *          cambiarlo (pantalla de confirmar: dice si es gratis o lo que cuesta);
- *  fila 4, Reliquias que llevas: cuantas de cada una (en el numero de la pila) y lo que valdrian
- *          si sales ahora, con la cuenta de la Tasacion (Tasacion.simular: Racha y primera salida
- *          incluidas) y lo que la Aduana te pagaria hoy de sus MobCoins.
+ *  fila 1, Tus cobros (amarilla): lo tasado esta semana, si la primera salida de hoy aun paga,
+ *          los premios que te esperan (con boton para recogerlos fuera de Calamity) y la Racha
+ *          si esta encendida;
+ *  fila 2, La Aduana de hoy (blanca): las MobCoins cobradas hoy y una barra de cristales con lo
+ *          que queda en cada tramo (verde al 100 %, amarillo desde el 50 %, naranja por debajo,
+ *          gris cobrado);
+ *  fila 3, Contratos de hoy (azul): los tres encargos con su barra, y el de la semana. Clic en
+ *          uno para cambiarlo (pantalla de confirmar: dice si es gratis o lo que cuesta);
+ *  fila 4, Reliquias que llevas (naranja): cuantas de cada una (en el numero de la pila) y lo que
+ *          valdrian si sales ahora, con la cuenta de la Tasacion (Tasacion.simular: Racha y
+ *          primera salida incluidas) y lo que la Aduana te pagaria hoy de sus MobCoins.
+ * Abajo: "¿Como funciona?", el Altar, la Forja y Tu camino (con las horas activas y el proximo
+ * hito), que en la 1.3.0 estaban en el Altar y no son comprar.
  *
- * No escribe nada salvo lo que ya hacian sus botones (Entregas.pendientes, Contratos.cambiar).
- * Se puede abrir en cualquier sitio: las pestanas Umbral y Forja miran la regla del Altar.
+ * No escribe nada salvo lo que ya hacian sus botones (Entregas.pendientes, Contratos.cambiar,
+ * Altar.depositar). Se puede abrir en cualquier sitio: los enlaces al Altar y a la Forja miran
+ * la regla del Altar y el deposito solo se hace fuera de Calamity.
  */
 final class MenuTasador implements Listener {
 
     private static final long ESPERA_MS = 500;
     private static final int FILA_COBROS = 9, FILA_ADUANA = 18, FILA_CONTRATOS = 27, FILA_RELIQUIAS = 36;
+    /** La fila de abajo: la ayuda, el Altar, la Forja y Tu camino, centrados y con aire. */
+    static final int AYUDA = 46, IR_ALTAR = 48, IR_FORJA = 50, IR_CAMINO = 52;
     /** Trozos de la barra de la Aduana (columnas 2-7; en la 1 va el resumen). */
     private static final int TROZOS = 6;
 
@@ -92,10 +102,10 @@ final class MenuTasador implements Listener {
 
     // ------------------------------------------------------------------ abrir y pintar
 
-    /** conSonido: el del NPC al abrirlo; desde una pestana suena la pestana. */
+    /** conSonido: el del NPC al abrirlo; desde un enlace suena el enlace. */
     void abrir(Player p, boolean conSonido) {
         Vista v = new Vista(Marco.TASADOR, new HashMap<>(), 0);
-        Inventory inv = hc.plugin().getServer().createInventory(v, 54, Paleta.ventanaCalamity("El Tasador"));
+        Inventory inv = hc.plugin().getServer().createInventory(v, 54, Marco.T_TASADOR.componente());
         pintar(inv, p, v);
         p.openInventory(inv);
         if (conSonido) Marco.sonar(p, "item.book.page_turn", 0.8f, 0.8f);
@@ -110,21 +120,53 @@ final class MenuTasador implements Listener {
     private void pintar(Inventory inv, Player p, Vista v) {
         inv.clear();
         v.acciones().clear();
-        Altar altar = hc.altar();
-        Marco.cabecera(inv, v.acciones(), hc, p, altar == null ? List.of() : altar.trueques());
-        Marco.pestanas(inv, v.acciones(), hc, p, Marco.TASADOR);
+        Marco.saldo(inv, v.acciones(), hc, p, Marco.SALDO);
+        inv.setItem(Marco.CERRAR, Marco.cerrar());
+        v.acciones().put(Marco.CERRAR, "cerrar");
         cobros(inv, p, v);
         aduana(inv, p);
         contratos(inv, p, v);
         reliquias(inv, p);
+        enlaces(inv, p, v);
         Marco.rellenar(inv);
     }
 
-    /** Pone n iconos en la fila (columnas de Marco) con su rotulo a la izquierda. */
-    private static void fila(Inventory inv, int base, ItemStack rotulo, List<ItemStack> cosas) {
-        inv.setItem(base, rotulo);
+    /** Pone n iconos en la fila (columnas de Marco) con su banda a los lados. */
+    private static void fila(Inventory inv, int base, ItemStack banda, List<ItemStack> cosas) {
+        Marco.ponerBanda(inv, base, banda);
         int[] cols = Marco.columnas(Math.min(Marco.COLUMNAS, cosas.size()));
         for (int i = 0; i < cols.length; i++) inv.setItem(base + cols[i], cosas.get(i));
+    }
+
+    /**
+     * La fila de abajo: "¿Como funciona?", el Altar y la Forja (en gris si desde aqui no
+     * escuchan) y Tu camino, que es informativo y se abre en cualquier sitio.
+     */
+    private void enlaces(Inventory inv, Player p, Vista v) {
+        boolean altar = Marco.altarAbierto(hc, p);
+        inv.setItem(AYUDA, Marco.ayuda(hc));
+        Marco.enlace(inv, v.acciones(), IR_ALTAR, Marco.UMBRAL, Material.ENCHANTING_TABLE, "Altar del Umbral",
+                List.of("Frascos, cristales, la Llave", "del Caos y la Ofrenda."), altar);
+        Marco.enlace(inv, v.acciones(), IR_FORJA, Marco.FORJA, Material.ANVIL, "La Forja",
+                List.of("El Manto, el Vestigio del Eco,", "la Guadaña y sus mejoras."), altar);
+        Altar a = hc.altar();
+        Camino cam = a == null ? null : a.camino();
+        List<Component> lore = new ArrayList<>();
+        lore.add(Marco.texto("Lo que te falta para cada pieza:"));
+        lore.add(Marco.texto("Sellos, piedad, Marcas y Fragmentos."));
+        if (cam != null) {
+            double h = cam.horas(p.getUniqueId());
+            double hito = cam.proximoHito(h);
+            lore.add(Component.empty());
+            lore.add(Marco.dato("Horas activas", Camino.horasTexto(h)));
+            if (hito > 0) lore.add(Marco.dato("Próximo hito", Camino.horasTexto(hito).replace(",0", "") + " h"));
+            lore.add(Marco.tenue("Solo cuenta el tiempo en que te mueves."));
+        }
+        lore.add(Component.empty());
+        lore.add(cam != null ? Marco.accion("Clic para verlo") : Marco.tenue("Ahora mismo no se puede ver."));
+        inv.setItem(IR_CAMINO, Marco.icono(Material.COMPASS, Component.text("Tu camino", cam != null ? Paleta.DETALLE : Paleta.TENUE),
+                lore, false));
+        if (cam != null) v.acciones().put(IR_CAMINO, "camino");
     }
 
     // ------------------------------------------------------------------ fila 1: tus cobros
@@ -214,8 +256,8 @@ final class MenuTasador implements Listener {
                     .append(Component.text(r, Paleta.CIFRA)), rl, r > 0));
         }
 
-        fila(inv, FILA_COBROS, Marco.rotulo(Material.GOLD_INGOT, "Tus cobros",
-                List.of("Lo que has sacado y lo que", "aún te espera.")), cosas);
+        fila(inv, FILA_COBROS, Marco.banda(Material.YELLOW_STAINED_GLASS_PANE, "Tus cobros",
+                List.of("Lo que has sacado esta semana", "y lo que aún te espera.")), cosas);
         int[] cols = Marco.columnas(cosas.size());
         for (int i = 0; i < cosas.size(); i++) {
             if (cosas.get(i) == cofre && !pend.isEmpty()) v.acciones().put(FILA_COBROS + cols[i], "cobrar");
@@ -281,7 +323,7 @@ final class MenuTasador implements Listener {
     private void aduana(Inventory inv, Player p) {
         Aduana ad = hc.aduana();
         if (ad == null) {
-            fila(inv, FILA_ADUANA, rotuloAduana(), List.of(Marco.icono(Material.GRAY_DYE,
+            fila(inv, FILA_ADUANA, bandaAduana(), List.of(Marco.icono(Material.GRAY_DYE,
                     Component.text("La Aduana no está", Paleta.TENUE), List.of(), false)));
             return;
         }
@@ -310,7 +352,7 @@ final class MenuTasador implements Listener {
         lore.add(Marco.tenue("no tienen tope aquí. Vuelve a cero"));
         lore.add(Marco.tenue("a medianoche."));
 
-        inv.setItem(FILA_ADUANA, rotuloAduana());
+        Marco.ponerBanda(inv, FILA_ADUANA, bandaAduana());
         long libre = 0;
         for (Tramo t : tramos) libre += t.hasta() >= 100_000 ? 0 : t.quedan();
         boolean paga = !tramos.isEmpty() && (escala < 0 || libre > 0);
@@ -338,8 +380,8 @@ final class MenuTasador implements Listener {
         }
     }
 
-    private static ItemStack rotuloAduana() {
-        return Marco.rotulo(Material.IRON_BARS, "La Aduana de hoy", List.of("Lo que Calamity te paga", "en MobCoins cada día."));
+    private static ItemStack bandaAduana() {
+        return Marco.banda(Material.WHITE_STAINED_GLASS_PANE, "La Aduana de hoy", List.of("Lo que Calamity te paga", "en MobCoins cada día."));
     }
 
     private static double factorEn(List<Tramo> tramos, long pos) {
@@ -368,11 +410,11 @@ final class MenuTasador implements Listener {
 
     private void contratos(Inventory inv, Player p, Vista v) {
         UUID u = p.getUniqueId();
-        ItemStack rotulo = Marco.rotulo(Material.WRITABLE_BOOK, "Contratos de hoy",
+        ItemStack banda = Marco.banda(Material.LIGHT_BLUE_STAINED_GLASS_PANE, "Contratos de hoy",
                 List.of("Tres encargos al día. Se cobran", "al salir vivo; morir los pierde."));
         Contratos con = hc.contratos();
         if (con == null || !hc.valor("contratos", con::activo, false)) {
-            fila(inv, FILA_CONTRATOS, rotulo, List.of(Marco.icono(Material.GRAY_DYE,
+            fila(inv, FILA_CONTRATOS, banda, List.of(Marco.icono(Material.GRAY_DYE,
                     Component.text("El Tasador no tiene contratos ahora", Paleta.TENUE), List.of(Marco.tenue("Próximamente.")), false)));
             return;
         }
@@ -420,7 +462,7 @@ final class MenuTasador implements Listener {
                 .append(Component.text(Math.min(semana[0], semana[1]) + "/" + semana[1], Paleta.CIFRA)), sl, semana[0] >= semana[1]));
         acciones.add(null);
 
-        fila(inv, FILA_CONTRATOS, rotulo, cosas);
+        fila(inv, FILA_CONTRATOS, banda, cosas);
         int[] cols = Marco.columnas(cosas.size());
         for (int i = 0; i < cosas.size(); i++) if (acciones.get(i) != null) v.acciones().put(FILA_CONTRATOS + cols[i], acciones.get(i));
     }
@@ -429,8 +471,7 @@ final class MenuTasador implements Listener {
 
     private void reliquias(Inventory inv, Player p) {
         Reliquias rel = hc.reliquias();
-        Material mat = Material.matchMaterial(hc.cfg().getString("reliquias.grados.3.material", "RESIN_CLUMP"));
-        ItemStack rotulo = Marco.rotulo(mat == null ? Material.AMETHYST_SHARD : mat, "Reliquias que llevas",
+        ItemStack banda = Marco.banda(Material.ORANGE_STAINED_GLASS_PANE, "Reliquias que llevas",
                 List.of("Se tasan solas al salir vivo.", "Si mueres dentro, no valen nada."));
         List<ItemStack> encima = new ArrayList<>();
         if (rel != null) {
@@ -438,7 +479,7 @@ final class MenuTasador implements Listener {
             if (rel.es(p.getItemOnCursor())) encima.add(p.getItemOnCursor());
         }
         if (encima.isEmpty()) {
-            fila(inv, FILA_RELIQUIAS, rotulo, List.of(Marco.icono(Material.GRAY_DYE, Component.text("No llevas Reliquias", Paleta.TENUE),
+            fila(inv, FILA_RELIQUIAS, banda, List.of(Marco.icono(Material.GRAY_DYE, Component.text("No llevas Reliquias", Paleta.TENUE),
                     List.of(Marco.tenue("Salen de los mobs, los cofres"), Marco.tenue("y los minijefes de dentro.")), false)));
             return;
         }
@@ -470,7 +511,7 @@ final class MenuTasador implements Listener {
                     List.of(Marco.tenue("Cuentan todas en lo que valdrían.")), false));
         }
         cosas.add(valdrian(p, encima));
-        fila(inv, FILA_RELIQUIAS, rotulo, cosas);
+        fila(inv, FILA_RELIQUIAS, banda, cosas);
     }
 
     /** Lo que valdrian si sale ahora: la cuenta de la Tasacion y lo que la Aduana pagaria hoy de sus MC. */
@@ -522,7 +563,7 @@ final class MenuTasador implements Listener {
             return;
         }
         Vista v = new Vista("cambiar", new HashMap<>(), hueco);
-        Inventory inv = hc.plugin().getServer().createInventory(v, 45, Paleta.ventanaCalamity("¿Cambiar el contrato?"));
+        Inventory inv = hc.plugin().getServer().createInventory(v, 45, Marco.T_CAMBIAR.componente());
         int precio = con.precioCambio(p.getUniqueId());
         inv.setItem(13, Marco.icono(iconoContrato(e.def().evento()), Component.text(e.def().texto(), Paleta.TEXTO),
                 List.of(Marco.barra(e.progreso(), e.def().objetivo()), Marco.tenue("Lo que llevas de este se pierde.")), false));
@@ -575,7 +616,7 @@ final class MenuTasador implements Listener {
             return;
         }
         if (accion.startsWith("no-tab:")) {
-            Marco.pestanaCerrada(p, accion.substring(7));
+            Marco.cerrado(p, accion.substring(7));
             return;
         }
         if (accion.startsWith("c:")) {
@@ -587,6 +628,19 @@ final class MenuTasador implements Listener {
             case "cerrar" -> tarea(() -> {
                 if (p.getOpenInventory().getTopInventory().getHolder() instanceof Vista) p.closeInventory();
             });
+            case "depositar" -> {
+                // El boton Depositar del Altar vive ahora en el saldo: lo mismo, y solo fuera de Calamity.
+                Altar altar = hc.altar();
+                if (altar == null) return;
+                if (hc.esHardcore(p)) {
+                    p.sendMessage(ComandoCalamity.mensaje("Aquí dentro no: las Esencias se ingresan solas al salir vivo."));
+                    Marco.sonidoNo(p);
+                    return;
+                }
+                altar.depositar(p);
+                tarea(() -> repintar(p));
+            }
+            case "camino" -> tarea(() -> Marco.irA(hc, p, Marco.CAMINO));
             case "cobrar" -> {
                 Entregas en = hc.entregas();
                 if (en == null) return;
@@ -646,11 +700,19 @@ final class MenuTasador implements Listener {
         h.cerca("a 2.500 se paga al 25 %", 0.25, factorEn(t, 2500), 1e-9);
         h.igual("sin tope: escala -1", -1L, escala(tramosHoy(0, List.of(new double[]{999999, 1.0}))));
 
-        // La fila de contratos: tres y el de la semana caen en 1, 3, 5 y 7, lejos del rotulo.
+        // La fila de contratos: tres y el de la semana caen en 1, 3, 5 y 7, entre las bandas.
         int[] c = Marco.columnas(4);
         h.igual("contratos en 1, 3, 5 y 7", "1,3,5,7", c[0] + "," + c[1] + "," + c[2] + "," + c[3]);
-        h.ok("filas del Tasador en la columna 0 de las filas 1-4",
+        h.ok("filas del Tasador: bandas en la columna 0 de las filas 1-4",
                 FILA_COBROS == 9 && FILA_ADUANA == 18 && FILA_CONTRATOS == 27 && FILA_RELIQUIAS == 36);
         h.ok("barra de la Aduana: columnas 2-7", 2 + TROZOS - 1 == Marco.COLUMNAS);
+
+        // Lo fijo del Tasador: el saldo y Cerrar arriba, los cuatro enlaces abajo, sin pisarse.
+        List<Integer> fijas = List.of(Marco.SALDO, Marco.CERRAR, AYUDA, IR_ALTAR, IR_FORJA, IR_CAMINO);
+        boolean bien = new HashSet<>(fijas).size() == fijas.size();
+        for (int f : fijas) bien &= f < 9 || f >= 45;
+        h.ok("tasador: saldo, cerrar y enlaces en el marco, sin repetir", bien);
+        h.igual("tasador: enlaces de abajo centrados y con aire (1, 3, 5 y 7)", "46,48,50,52",
+                AYUDA + "," + IR_ALTAR + "," + IR_FORJA + "," + IR_CAMINO);
     }
 }

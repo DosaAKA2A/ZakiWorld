@@ -23,43 +23,49 @@ import java.util.Map;
 import java.util.UUID;
 
 /**
- * Las piezas de los menus de Calamity (1.3.0): el Altar (Umbral y Forja), el Tasador, los
+ * Las piezas de los menus de Calamity: el Altar (portada, categorias y Forja), el Tasador, los
  * rankings del Cazador, el Tablero y Tu camino se ven como una sola cosa.
  *
  * Por que existe: la primera version del Altar era un cofre gris con iconos sueltos y Dosa lo
- * dijo claro, "ni siquiera se entiende como va". Las reglas que se aplican aqui, para que cada
- * menu no tenga que acordarse:
+ * dijo claro, "ni siquiera se entiende como va". La 1.3.0 lo ordeno por filas con un rotulo a la
+ * izquierda, y tampoco: "no se de que va con tantas cosas", "las categorias de la izquierda no
+ * se entienden", y los titulos se salian de la ventana. La 1.3.1 copia la forma de la tienda de
+ * EDM (MenuTienda). Las reglas que se aplican aqui, para que cada menu no tenga que acordarse:
+ *  - pocas cosas por pantalla y cada una evidente: una portada con pocas categorias grandes y,
+ *    al pulsar, la pagina de esa categoria con sus articulos centrados y con aire (rejilla);
  *  - el marco es el del spawn de Calamity: anillo de cristal rojo por fuera, negro por dentro,
  *    y los cristales sin globo (no se abre un recuadro vacio al pasar por encima);
  *  - lo vacio es marco: no quedan huecos que parezcan casillas por rellenar;
- *  - cada fila de contenido lleva a la izquierda su rotulo (que es esa fila) y las cosas
- *    centradas y separadas a su derecha (repartir), que en el movil de Bedrock se tocan mejor;
- *  - fila de arriba: lo que tiene el jugador (Esencias, MobCoins, Sellos, Marcas y Fragmentos),
- *    "Como funciona" en el centro y Cerrar arriba a la derecha; fila de abajo: las pestanas
- *    Umbral, Forja y Tasador, y las flechas de pagina en las esquinas;
+ *  - si una pagina tiene grupos (la Forja, el Tasador), cada fila lleva su banda: un cristal de
+ *    color a cada lado, en el sitio del marco, con el nombre del grupo. Nada de rotulos-icono en
+ *    la columna 0: parecian un articulo mas;
+ *  - arriba en el centro tu saldo (un solo icono, lo demas en su lore) y Cerrar a la derecha;
+ *    abajo, las flechas de pagina en las esquinas y Volver en el centro;
  *  - el coste se lee linea a linea: ✔ verde lo que tienes, ✘ rojo lo que te falta y cuanto;
  *  - la ultima linea de un boton dice siempre que hace el clic, o por que no se puede;
  *  - solo clic izquierdo y nada que haya que descubrir pasando el raton: lo que se puede
  *    comprar ya brilla, las cantidades van en el numero de la pila y las barras son de
- *    cristales de colores (Bedrock no tiene raton y, al tocar, ya hace clic).
+ *    cristales de colores (Bedrock no tiene raton y, al tocar, ya hace clic);
+ *  - el titulo de la ventana cabe en el ancho de un cofre (Titulo, ANCHO_TITULO; el autotest
+ *    "menus" los mide todos).
  *
- * Colores de Paleta y nada de cursiva ni negrita (salvo la marca en el titulo de la ventana).
+ * Colores de Paleta y nada de cursiva ni negrita (salvo el titulo de la ventana).
  */
 final class Marco {
 
     private Marco() {
     }
 
-    /** Filas y columnas de contenido de un menu de 54: filas 1-4, columnas 1-7 (la 0 es el rotulo). */
+    /** Filas y columnas de contenido de un menu de 54: filas 1-4, columnas 1-7 (la 0 y la 8 son marco). */
     static final int FILAS = 4;
     static final int COLUMNAS = 7;
 
-    // La fila de arriba.
-    static final int ESENCIAS = 1, MOBCOINS = 2, AYUDA = 4, SELLOS = 6, MARCAS = 7, CERRAR = 8;
-    // La fila de abajo.
-    static final int ANTERIOR = 45, SIGUIENTE = 53, TAB_UMBRAL = 47, TAB_FORJA = 49, TAB_TASADOR = 51;
+    // La fila de arriba: el saldo en el centro y Cerrar a la derecha.
+    static final int SALDO = 4, CERRAR = 8;
+    // La fila de abajo (54): flechas de pagina en las esquinas y Volver en el centro, como en la tienda.
+    static final int ANTERIOR = 45, VOLVER = 49, SIGUIENTE = 53;
 
-    static final String UMBRAL = "umbral", FORJA = "forja", TASADOR = "tasador";
+    static final String UMBRAL = "umbral", FORJA = "forja", TASADOR = "tasador", CAMINO = "camino";
 
     /**
      * Que columnas (1-7) ocupan n cosas en una fila: centradas y, si caben, con aire entre ellas.
@@ -79,6 +85,98 @@ final class Marco {
     static final TextColor SI = Paleta.BIEN;
     /** Rojo claro de lo que falta (✘ y el por que no). */
     static final TextColor NO = Paleta.AVISO;
+
+    // ------------------------------------------------------------------ titulos
+
+    /**
+     * Lo que cabe en el titulo de un cofre: la ventana mide 176, el texto empieza en el 8 y a
+     * partir de ~160 pisa el borde. 150 deja margen (Bedrock dibuja la fuente algo mas ancha).
+     */
+    static final int ANCHO_TITULO = 150;
+
+    /**
+     * Un titulo de ventana: lo principal en negrita y, si hay, " · detalle" sin ella, todo en el
+     * degradado oscuro de Paleta.ventana (el claro no se lee sobre el gris de la interfaz). Sin
+     * el "Calamity · " de delante: se comia la mitad del ancho y "Rankings de la semana" se salia.
+     */
+    record Titulo(String principal, String detalle) {
+
+        Component componente() {
+            TextComponent.Builder b = Component.text().append(Paleta.ventana(principal).decoration(TextDecoration.BOLD, true));
+            if (detalle != null) {
+                b.append(Component.text(" · ", TextColor.color(Paleta.VENTANA_HASTA)).decoration(TextDecoration.BOLD, false))
+                        .append(Paleta.ventana(detalle));
+            }
+            return b.build().decoration(TextDecoration.ITALIC, false);
+        }
+
+        /** Lo que ocupa en pixeles (la negrita suma uno por letra). */
+        int ancho() {
+            return Marco.ancho(principal, true) + (detalle == null ? 0 : Marco.ancho(" · ", false) + Marco.ancho(detalle, false));
+        }
+
+        String texto() {
+            return detalle == null ? principal : principal + " · " + detalle;
+        }
+    }
+
+    static final Titulo T_ALTAR = new Titulo("Altar del Umbral", null);
+    static final Titulo T_FORJA = new Titulo("La Forja", null);
+    static final Titulo T_COMPRAR = new Titulo("¿Comprarlo?", null);
+    static final Titulo T_FORJAR = new Titulo("¿Forjarlo?", null);
+    static final Titulo T_TASADOR = new Titulo("El Tasador", null);
+    static final Titulo T_CAMBIAR = new Titulo("¿Cambiar contrato?", null);
+    static final Titulo T_RANKINGS = new Titulo("Rankings", "Semana");
+    static final Titulo T_TABLERO = new Titulo("Tablero", null);
+    static final Titulo T_CAMINO = new Titulo("Tu camino", null);
+    static final Titulo T_GRABAR = new Titulo("Grabar", null);
+    static final Titulo T_DESEOS = new Titulo("Lista de deseos", null);
+    static final Titulo T_VOTO = new Titulo("Voto del Botín", null);
+    static final Titulo T_PREGUNTA = new Titulo("Calamity pregunta", null);
+    static final Titulo T_DIFICULTAD = new Titulo("Calamity", "Dificultad");
+    static final Titulo T_SALVOCONDUCTO = new Titulo("¿Qué conservas?", null);
+
+    /** El de una categoria del Altar: "Altar · Para la expedición". */
+    static Titulo categoria(String nombre) {
+        return new Titulo("Altar", nombre);
+    }
+
+    /** Todos los titulos de ventana de Calamity, para que el autotest mida que caben. */
+    static List<Titulo> titulos() {
+        List<Titulo> out = new ArrayList<>(List.of(T_ALTAR, T_FORJA, T_COMPRAR, T_FORJAR, T_TASADOR, T_CAMBIAR, T_RANKINGS,
+                T_TABLERO, T_CAMINO, T_GRABAR, T_DESEOS, T_VOTO, T_PREGUNTA, T_DIFICULTAD, T_SALVOCONDUCTO));
+        for (MenuAltar.Categoria c : MenuAltar.CATEGORIAS) {
+            Titulo t = MenuAltar.titulo(c.id());
+            if (!out.contains(t)) out.add(t);
+        }
+        return out;
+    }
+
+    /**
+     * Ancho en pixeles de un texto con la fuente de Minecraft (la de la interfaz, sin escalar):
+     * la letra normal 6 (5 y el hueco), el espacio 4, las estrechas menos. La negrita suma 1 a
+     * cada letra. Lo que no es latino sale de otra fuente, mas ancha: se cuenta 9 por si acaso.
+     */
+    static int ancho(String texto, boolean negrita) {
+        if (texto == null) return 0;
+        int px = 0;
+        for (int i = 0; i < texto.length(); ) {
+            int c = texto.codePointAt(i);
+            i += Character.charCount(c);
+            px += anchoLetra(c) + (negrita ? 1 : 0);
+        }
+        return px;
+    }
+
+    private static int anchoLetra(int c) {
+        if (c == ' ') return 4;
+        if ("!',.:;|i¡·".indexOf(c) >= 0) return 2;
+        if ("`lí".indexOf(c) >= 0) return 3;
+        if ("\"()*I[]t{}ìîï".indexOf(c) >= 0) return 4;
+        if ("<>fkªº".indexOf(c) >= 0) return 5;
+        if ("@~".indexOf(c) >= 0) return 7;
+        return c < 0x250 ? 6 : 9;
+    }
 
     // ------------------------------------------------------------------ marco
 
@@ -111,8 +209,8 @@ final class Marco {
     // ------------------------------------------------------------------ reparto
 
     /**
-     * Donde cae cada cosa de una pagina con secciones. indice -1 es el rotulo de la seccion (en
-     * la columna 0 de su primera fila en cada hoja); el resto, la cosa n.o indice de la seccion.
+     * Donde cae cada cosa de una pagina. indice -1 es la banda de la seccion (en la columna 0 de
+     * cada fila suya; la de la 8 la pone ponerBanda); el resto, la cosa n.o indice de la seccion.
      */
     record Sitio(int hoja, int casilla, int seccion, int indice) {
     }
@@ -123,10 +221,11 @@ final class Marco {
     }
 
     /**
-     * Reparte secciones de tamanos dados en hojas de FILAS filas. Una seccion ocupa las filas que
-     * pida (de 7 en 7); si no cabe entera en lo que queda de hoja y en una hoja nueva si, empieza
-     * en la siguiente (no se parte sin necesidad). Una seccion mas larga que una hoja entera se
-     * parte y su rotulo se repite arriba en la hoja nueva. Las secciones vacias no salen.
+     * Reparte secciones de tamanos dados en hojas de FILAS filas, una banda por fila. Una seccion
+     * ocupa las filas que pida (de 7 en 7); si no cabe entera en lo que queda de hoja y en una
+     * hoja nueva si, empieza en la siguiente (no se parte sin necesidad). Una seccion mas larga
+     * que una hoja entera se parte y sigue arriba en la hoja nueva, con su banda. Las secciones
+     * vacias no salen.
      */
     static List<Sitio> repartir(List<Integer> tamanos) {
         List<Sitio> out = new ArrayList<>();
@@ -146,10 +245,42 @@ final class Marco {
                     fila = 0;
                 }
                 int base = (fila + 1) * 9;
-                if (f == 0 || fila == 0) out.add(new Sitio(hoja, base, s, -1));
+                out.add(new Sitio(hoja, base, s, -1));
                 int enFila = Math.min(COLUMNAS, n - i);
                 for (int c : columnas(enFila)) out.add(new Sitio(hoja, base + c, s, i++));
                 fila++;
+            }
+        }
+        return out;
+    }
+
+    /**
+     * Donde van n articulos de una categoria, como en la tienda de EDM: centrados en las filas
+     * de contenido y con aire. Hasta 16, filas de 4 como mucho (una columna libre entre cada
+     * dos), repartidas por igual (7 = 4 + 3) y centradas en vertical; con mas, filas de 7 y 28
+     * por hoja, la ultima fila centrada. Sin bandas: seccion 0 y el indice del articulo.
+     */
+    static List<Sitio> rejilla(int n) {
+        List<Sitio> out = new ArrayList<>();
+        if (n <= 0) return out;
+        if (n <= FILAS * 4) {
+            int filas = (n + 3) / 4;
+            int arriba = 1 + (FILAS - filas) / 2;
+            int i = 0;
+            for (int f = 0; f < filas; f++) {
+                int enFila = n / filas + (f < n % filas ? 1 : 0);
+                for (int c : columnas(enFila)) out.add(new Sitio(0, (arriba + f) * 9 + c, 0, i++));
+            }
+            return out;
+        }
+        int porHoja = FILAS * COLUMNAS, i = 0;
+        for (int hoja = 0; i < n; hoja++) {
+            int enHoja = Math.min(porHoja, n - i);
+            int filas = (enHoja + COLUMNAS - 1) / COLUMNAS;
+            int arriba = 1 + (FILAS - filas) / 2;
+            for (int f = 0; f < filas; f++) {
+                int enFila = Math.min(COLUMNAS, enHoja - f * COLUMNAS);
+                for (int c : columnas(enFila)) out.add(new Sitio(hoja, (arriba + f) * 9 + c, 0, i++));
             }
         }
         return out;
@@ -187,11 +318,21 @@ final class Marco {
         return icono(new ItemStack(m), nombre, lore, brillo);
     }
 
-    /** El rotulo de una seccion: el icono que la resume, su nombre en ambar y dos lineas de que es. */
-    static ItemStack rotulo(Material m, String nombre, List<String> texto) {
+    /**
+     * La banda de una seccion: un cristal de color con el nombre del grupo en ambar y dos lineas
+     * de que es. Va a los dos lados de su fila, en el sitio del marco (ponerBanda), asi que se lee
+     * como el marco que cambia de color en esa fila y no como un articulo mas.
+     */
+    static ItemStack banda(Material cristal, String nombre, List<String> texto) {
         List<Component> lore = new ArrayList<>();
         for (String l : texto) lore.add(Component.text(l, Paleta.TENUE));
-        return icono(m, Component.text(nombre, Paleta.MARCA), lore, false);
+        return icono(cristal, Component.text(nombre, Paleta.MARCA), lore, false);
+    }
+
+    /** La banda en la columna 0 y la 8 de la fila que empieza en base. */
+    static void ponerBanda(Inventory inv, int base, ItemStack banda) {
+        inv.setItem(base, banda);
+        inv.setItem(base + 8, banda);
     }
 
     /** Un boton sencillo: nombre, lineas y la accion (o el por que no) al final. */
@@ -212,6 +353,16 @@ final class Marco {
         String n = hacia < 0 ? "◀ Página anterior" : "Página siguiente ▶";
         return icono(hacia < 0 ? Material.ARROW : Material.SPECTRAL_ARROW, Component.text(n, Paleta.DETALLE),
                 List.of(Component.text("Estás en la " + (hoja + 1) + " de " + total + ".", Paleta.TENUE)), false);
+    }
+
+    /** Volver a la portada del Altar (abajo en el centro), con la pagina en la que estas si hay mas de una. */
+    static ItemStack volver(int hoja, int total) {
+        List<Component> lore = new ArrayList<>();
+        lore.add(tenue("A las categorías del Altar."));
+        if (total > 1) lore.add(dato("Página", (hoja + 1) + " de " + total));
+        lore.add(Component.empty());
+        lore.add(accion("Clic para volver"));
+        return icono(Material.ENCHANTING_TABLE, Component.text("◀ Volver al Altar", Paleta.DETALLE), lore, false);
     }
 
     /** La cabeza de un jugador. Conectado, con su perfil (lleva la skin); si no, por su UUID. */
@@ -318,57 +469,50 @@ final class Marco {
         sonar(p, "entity.villager.no", 0.7f, 1.0f);
     }
 
-    // ------------------------------------------------------------------ el Altar y las pestanas
+    // ------------------------------------------------------------------ el Altar y los enlaces
 
     /**
      * La regla del Altar: fuera de Calamity o en su zona spawn (terreno seguro, la puerta de
      * salida al lado). Dentro de verdad no, porque vende el Cristal de Regreso. La miran el NPC,
-     * las pestanas y cada clic del Altar.
+     * los enlaces y cada clic del Altar.
      */
     static boolean puedeAltar(Hardcore hc, Player p) {
         return !hc.esHardcore(p) || hc.enSpawn(p);
     }
 
-    /**
-     * Las tres pestanas de abajo: la activa brilla y dice "Estas aqui"; Umbral y Forja salen en
-     * gris si desde donde esta el jugador el Altar no escucha. Deja en acciones "tab:<id>".
-     */
-    static void pestanas(Inventory inv, Map<Integer, String> acciones, Hardcore hc, Player p, String activa) {
+    /** Si desde donde esta el jugador el Altar (y la Forja) se abre ahora. */
+    static boolean altarAbierto(Hardcore hc, Player p) {
         Altar altar = hc.altar();
-        boolean altarAbierto = altar != null && altar.activo() && puedeAltar(hc, p);
-        boolean tasador = hc.npcs() != null;
-        pestana(inv, acciones, TAB_UMBRAL, UMBRAL, Material.ENCHANTING_TABLE, "Umbral",
-                List.of("Lo que te llevas dentro:", "frascos, cristales y la Llave."), activa, altarAbierto);
-        pestana(inv, acciones, TAB_FORJA, FORJA, Material.ANVIL, "Forja",
-                List.of("El equipo de Calamity: el Manto,", "el Vestigio del Eco y la Guadaña."), activa, altarAbierto);
-        pestana(inv, acciones, TAB_TASADOR, TASADOR, Material.SPYGLASS, "Tasador",
-                List.of("Lo que traes, lo que cobras", "y tus contratos de hoy."), activa, tasador);
+        return altar != null && altar.activo() && puedeAltar(hc, p);
     }
 
-    private static void pestana(Inventory inv, Map<Integer, String> acciones, int casilla, String id, Material m,
-                                String nombre, List<String> texto, String activa, boolean abierta) {
-        boolean aqui = id.equals(activa);
+    /**
+     * Un enlace a otro menu (el Altar, la Forja, el Tasador): icono, nombre, dos lineas y "Clic
+     * para ir"; en gris si ahora no se abre, con el por que (el Altar desde dentro de Calamity).
+     * Deja en acciones "tab:<id>" o "no-tab:<id>".
+     */
+    static void enlace(Inventory inv, Map<Integer, String> acciones, int casilla, String id, Material m, String nombre,
+                       List<String> texto, boolean abierto) {
         List<Component> lore = new ArrayList<>();
         for (String l : texto) lore.add(tenue(l));
         lore.add(Component.empty());
-        if (aqui) lore.add(Component.text("● Estás aquí", Paleta.MARCA));
-        else if (abierta) lore.add(accion("Clic para ir"));
+        if (abierto) lore.add(accion("Clic para ir"));
         else lore.add(porQueNo(id.equals(TASADOR) ? "Ahora mismo no está." : "Solo fuera de Calamity o en su spawn."));
-        TextColor color = aqui ? Paleta.MARCA : abierta ? Paleta.TEXTO : Paleta.TENUE;
-        inv.setItem(casilla, icono(m, Component.text(aqui ? "▸ " + nombre + " ◂" : nombre, color), lore, aqui));
-        if (!aqui) acciones.put(casilla, abierta ? "tab:" + id : "no-tab:" + id);
+        inv.setItem(casilla, icono(m, Component.text(nombre, abierto ? Paleta.DETALLE : Paleta.TENUE), lore, false));
+        acciones.put(casilla, abierto ? "tab:" + id : "no-tab:" + id);
     }
 
-    /** El clic en una pestana en gris: por que no se abre. */
-    static void pestanaCerrada(Player p, String id) {
+    /** El clic en un enlace en gris: por que no se abre. */
+    static void cerrado(Player p, String id) {
         p.sendMessage(ComandoCalamity.mensaje(TASADOR.equals(id) ? "El Tasador no está ahora mismo."
                 : "El altar no escucha desde ahí dentro."));
         sonidoNo(p);
     }
 
     /**
-     * Ir a otra pestana (un tick despues del clic lo programa quien llama). Umbral y Forja vuelven
-     * a mirar la regla del Altar: el menu pudo abrirse en otro sitio.
+     * Ir a otro menu (un tick despues del clic lo programa quien llama). El Altar y la Forja
+     * vuelven a mirar la regla del Altar: el menu pudo abrirse en otro sitio. Tu camino es
+     * informativo y se abre en cualquier sitio.
      */
     static void irA(Hardcore hc, Player p, String id) {
         if (TASADOR.equals(id)) {
@@ -382,6 +526,14 @@ final class Marco {
             return;
         }
         Altar altar = hc.altar();
+        if (CAMINO.equals(id)) {
+            if (altar == null) {
+                sonidoNo(p);
+                return;
+            }
+            altar.camino().abrir(p);
+            return;
+        }
         if (altar == null || !altar.activo()) {
             p.sendMessage(ComandoCalamity.mensaje("El altar está en silencio ahora mismo."));
             sonidoNo(p);
@@ -396,78 +548,53 @@ final class Marco {
         sonidoPestana(p);
     }
 
-    // ------------------------------------------------------------------ la cabecera
+    // ------------------------------------------------------------------ el saldo
 
     /**
-     * La fila de arriba: Esencias, MobCoins, "Como funciona", Sellos, Marcas y Fragmentos y
-     * Cerrar (acciones: "cerrar"). trueques = los del Altar, para decir que pide cada credito.
+     * Tu saldo en un solo icono (en la 1.3.0 eran cinco arriba y no se sabia cual mirar): las
+     * Esencias en el nombre y en el lore las MobCoins (si el altar las puede cobrar) y los
+     * creditos que tengas. Si llevas Esencias fisicas y estas fuera de Calamity brilla y el clic
+     * las ingresa (accion "depositar"): el boton Depositar de antes vive aqui.
      */
-    static void cabecera(Inventory inv, Map<Integer, String> acciones, Hardcore hc, Player p, List<Altar.Trueque> trueques) {
+    static void saldo(Inventory inv, Map<Integer, String> acciones, Hardcore hc, Player p, int casilla) {
         UUID u = p.getUniqueId();
         Saldo s = hc.saldo();
         long saldo = s == null ? 0 : s.de(u);
-        List<Component> es = new ArrayList<>();
-        es.add(texto("Tu saldo fuera de Calamity."));
-        es.add(texto("Se gasta en el Umbral y la Forja."));
-        int encima = s == null ? 0 : s.encima(p);
-        if (encima > 0) {
-            es.add(Component.empty());
-            es.add(Component.text("Llevas " + encima + " físicas encima:", Paleta.CIFRA));
-            es.add(tenue(hc.esHardcore(p) ? "pasan al saldo al salir vivo." : "deposítalas en el Umbral."));
-        }
-        inv.setItem(ESENCIAS, icono(Material.GHAST_TEAR, Component.text("Esencias: ", Paleta.TEXTO)
-                .append(Component.text(Altar.miles(saldo), Paleta.CIFRA)), es, false));
-
+        List<Component> lore = new ArrayList<>();
+        lore.add(tenue("Se gasta en el Altar y la Forja."));
         Monedero mon = hc.monedero();
-        long mc = mon != null && mon.disponible() ? mon.saldo(p) : -1;
-        if (mc >= 0) {
-            inv.setItem(MOBCOINS, icono(Material.SUNFLOWER, Component.text("MobCoins: ", Paleta.TEXTO)
-                    .append(Component.text(Altar.miles(mc), Paleta.CIFRA)), List.of(
-                    texto("Las del Survival. La Forja"), texto("las pide además de Esencias.")), false));
-        } else {
-            inv.setItem(MOBCOINS, icono(Material.SUNFLOWER, Component.text("MobCoins", Paleta.TENUE), List.of(
-                    tenue("El altar aún no puede cobrarlas:"), tenue("lo que las pide sale en gris.")), false));
-        }
-
-        inv.setItem(AYUDA, ayuda(hc));
+        if (mon != null && mon.disponible()) lore.add(dato("MobCoins", Altar.miles(mon.saldo(p))));
 
         Creditos cr = hc.creditos();
-        List<Component> sellos = new ArrayList<>();
-        int nSellos = 0;
         if (cr != null) {
+            List<Component> creditos = new ArrayList<>();
             for (Map.Entry<String, Integer> e : cr.todos(u).entrySet()) {
                 String k = e.getKey();
-                if (!k.startsWith("sello:") && !k.equals(Creditos.ERRANTE)) continue;
-                nSellos += e.getValue();
+                if (e.getValue() <= 0 || (!k.startsWith("sello:") && !k.equals(Creditos.ERRANTE))) continue;
                 String n = k.equals(Creditos.ERRANTE) ? "Sello Errante" : "Sello " + Forja.delMinijefe(k.substring(6));
-                sellos.add(credito(n, e.getValue(), cr.canjeable(u, k), cr));
+                creditos.add(credito(n, e.getValue(), cr.canjeable(u, k), cr));
             }
+            int marcas = cr.de(u, "marca"), fragmentos = cr.de(u, "fragmento");
+            if (marcas > 0) creditos.add(credito("Marcas de Eco", marcas, cr.canjeable(u, "marca"), cr));
+            if (fragmentos > 0) creditos.add(credito("Fragmentos de Guadaña", fragmentos, cr.canjeable(u, "fragmento"), cr));
+            lore.add(Component.empty());
+            if (creditos.isEmpty()) lore.add(tenue("Sin Sellos, Marcas ni Fragmentos."));
+            else lore.addAll(creditos);
         }
-        if (sellos.isEmpty()) {
-            sellos.add(tenue("Ninguno todavía."));
+
+        int encima = s == null ? 0 : s.encima(p);
+        boolean dentro = hc.esHardcore(p);
+        boolean ingresa = encima > 0 && !dentro;
+        if (encima > 0) {
+            lore.add(Component.empty());
+            lore.add(Component.text("Llevas " + esencias(encima) + " encima.", Paleta.CIFRA));
+            // En la zona spawn el Altar vende, pero lo fisico se sigue ingresando al salir vivo:
+            // si no, se guardarian las Esencias a mitad de expedicion sin cruzar la puerta.
+            lore.add(dentro ? tenue("Pasan al saldo al salir vivo.") : accion("Clic para ingresarlas"));
         }
-        sellos.add(Component.empty());
-        sellos.add(tenue("Cada pieza del Manto pide el Sello"));
-        sellos.add(tenue("de su minijefe. No se pierden al morir."));
-        inv.setItem(SELLOS, icono(Material.FIRE_CHARGE, Component.text("Sellos: ", Paleta.TEXTO)
-                .append(Component.text(nSellos, Paleta.CIFRA)), sellos, false));
-
-        int marcas = cr == null ? 0 : cr.de(u, "marca"), fragmentos = cr == null ? 0 : cr.de(u, "fragmento");
-        List<Component> mf = new ArrayList<>();
-        mf.add(credito("Marcas de Eco", marcas, cr == null || marcas == 0 || cr.canjeable(u, "marca"), cr));
-        String piden = quienPide(trueques, "marca");
-        if (!piden.isEmpty()) mf.add(tenue("  " + piden));
-        mf.add(credito("Fragmentos de Guadaña", fragmentos, cr == null || fragmentos == 0 || cr.canjeable(u, "fragmento"), cr));
-        piden = quienPide(trueques, "fragmento");
-        if (!piden.isEmpty()) mf.add(tenue("  " + piden));
-        mf.add(Component.empty());
-        mf.add(tenue("No se pierden al morir."));
-        inv.setItem(MARCAS, icono(Material.ECHO_SHARD, Component.text("Marcas ", Paleta.TEXTO)
-                .append(Component.text(marcas, Paleta.CIFRA)).append(Component.text(" · Fragmentos ", Paleta.TEXTO))
-                .append(Component.text(fragmentos, Paleta.CIFRA)), mf, false));
-
-        inv.setItem(CERRAR, cerrar());
-        acciones.put(CERRAR, "cerrar");
+        inv.setItem(casilla, icono(Material.GHAST_TEAR, Component.text("Tu saldo: ", Paleta.TEXTO)
+                .append(Component.text(esencias(saldo), Paleta.CIFRA)), lore, ingresa));
+        if (ingresa) acciones.put(casilla, "depositar");
     }
 
     private static Component credito(String nombre, int n, boolean canjeable, Creditos cr) {
@@ -476,18 +603,9 @@ final class Marco {
         return c;
     }
 
-    /** "Máscara 5 · Filo 10": las piezas que piden ese credito y cuantos. */
-    static String quienPide(List<Altar.Trueque> trueques, String credito) {
-        List<String> out = new ArrayList<>();
-        for (Altar.Trueque t : trueques) {
-            if (credito.equals(t.credito()) && t.pieza() != null) out.add(Forja.nombreCorto(t.pieza()) + " " + Math.max(1, t.creditos()));
-        }
-        return String.join(" · ", out);
-    }
-
     /**
-     * "¿Como funciona?": de donde sale cada moneda y que se hace en cada pestana, con las cifras
-     * de la config (si Dosa cambia la probabilidad del Sello, aqui cambia sola).
+     * "¿Como funciona?": de donde sale cada moneda y donde se hace cada cosa, con las cifras de
+     * la config (si Dosa cambia la probabilidad del Sello, aqui cambia sola).
      */
     static ItemStack ayuda(Hardcore hc) {
         ConfigurationSection c = hc.cfg();
@@ -507,9 +625,12 @@ final class Marco {
         lore.add(dato("Fragmentos", "Campanas de Parca de nivel " + nivelCampana + "+"));
         lore.add(texto("Solo cuenta lo que sacas vivo."));
         lore.add(Component.empty());
-        lore.add(Component.text("Umbral", Paleta.DETALLE).append(tenue(": lo que te llevas dentro.")));
+        lore.add(Component.text("Altar", Paleta.DETALLE).append(tenue(": lo que te llevas dentro y las llaves.")));
         lore.add(Component.text("Forja", Paleta.DETALLE).append(tenue(": el equipo de Calamity.")));
-        lore.add(Component.text("Tasador", Paleta.DETALLE).append(tenue(": lo que traes y lo que cobras.")));
+        lore.add(Component.text("Tasador", Paleta.DETALLE).append(tenue(": lo que cobras, contratos y tu camino.")));
+        lore.add(Component.text("Cazador", Paleta.DETALLE).append(tenue(": los rankings de la semana.")));
+        lore.add(Component.text("/calamity encuesta", Paleta.DETALLE).append(tenue(" y "))
+                .append(Component.text("/calamity deseos", Paleta.DETALLE)).append(tenue(": tu voto.")));
         return icono(Material.KNOWLEDGE_BOOK, Component.text("¿Cómo funciona?", Paleta.MARCA), lore, false);
     }
 }

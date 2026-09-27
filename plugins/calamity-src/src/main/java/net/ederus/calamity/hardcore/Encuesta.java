@@ -159,7 +159,7 @@ final class Encuesta {
         }, 1L);
     }
 
-    /** /calamity encuesta y el boton del Altar: la pendiente, si no el Botin, si no nada. */
+    /** /calamity encuesta: la pendiente, si no el Botin, si no nada. */
     void abrirPendiente(Player p) {
         if (!activo()) {
             p.sendMessage(ComandoCalamity.mensaje("Ahora mismo no hay nada que votar."));

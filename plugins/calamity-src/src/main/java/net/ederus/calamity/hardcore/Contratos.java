@@ -573,7 +573,7 @@ final class Contratos implements Listener {
 
     // ------------------------------------------------------------------ jugador
 
-    /** /calamity contratos (y el boton del Altar): los tres de hoy y como van. */
+    /** /calamity contratos (en el menu, la fila del Tasador): los tres de hoy y como van. */
     void mostrar(CommandSender a, Player p) {
         if (!activo()) {
             a.sendMessage(ComandoCalamity.mensaje("El Tasador no tiene contratos ahora mismo."));
@@ -648,7 +648,7 @@ final class Contratos implements Listener {
         return new int[]{hechos, objetivo};
     }
 
-    /** /calamity cambiar <1-3> (y el trueque del Altar). True si se cambio. */
+    /** /calamity cambiar <1-3> (y el clic en un contrato del Tasador). True si se cambio. */
     boolean cambiar(Player p, int i) {
         if (!activo()) {
             p.sendMessage(ComandoCalamity.mensaje("El Tasador no tiene contratos ahora mismo."));
