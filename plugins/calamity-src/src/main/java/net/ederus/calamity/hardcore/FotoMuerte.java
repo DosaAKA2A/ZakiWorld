@@ -371,6 +371,11 @@ final class FotoMuerte {
      * Donde murio, a ras de suelo; si murio en el vacio, en lava o dentro de un bloque, su
      * ultimo suelo firme (tambien en el agua: un Eco en el fondo de un lago no se pelea). Y nunca a menos de distancia-puertas de las puertas ni de la
      * llegada: si no, morir en la llegada planta un Eco guardian (X13).
+     *
+     * 1.2: y nunca dentro de la zona spawn. Quien muere alli (una caida, un /kill, un borde sin
+     * WorldGuard) deja el Eco en el sitio seguro mas cercano de fuera, a distancia-puertas del borde:
+     * es lo que ya se hace con las puertas, y asi no se pierde lo que llevaba (un Eco que no nace
+     * se lo llevaria todo) ni queda un guardian dentro del sitio donde nadie puede pelear.
      */
     private static Location anclar(Player p, Hardcore hc, ConfigurationSection c) {
         Location l = p.getLocation().clone();
@@ -382,7 +387,26 @@ final class FotoMuerte {
         Location suelo = hc.ultimoSuelo(p);
         if (malSitio && suelo != null && suelo.getWorld() == w) l = suelo;
         else if (w != null && !malSitio) l = Fx.ground(l, 24);
-        return alejarDePuertas(hc, l, c.getDouble("distancia-puertas", 24));
+        double margen = c.getDouble("distancia-puertas", 24);
+        l = alejarDePuertas(hc, fueraDelSpawn(hc, l, margen), margen);
+        // Si apartarse de una puerta lo ha vuelto a meter en la zona, manda el spawn.
+        return fueraDelSpawn(hc, l, margen);
+    }
+
+    /**
+     * 1.2 · Si el sitio cae en la zona spawn, el punto mas cercano fuera: por el lado mas proximo,
+     * a "margen" bloques del borde (ZonaSpawn.fuera) y a ras de suelo. Si ahi hay roca (murio en
+     * una cueva bajo el spawn: la region de WorldGuard llega hasta abajo), a la superficie.
+     */
+    static Location fueraDelSpawn(Hardcore hc, Location l, double margen) {
+        ZonaSpawn zona = hc.zonaSpawn();
+        double[] xz = zona == null || l == null ? null : zona.fueraDe(l, margen);
+        if (xz == null) return l;
+        World w = l.getWorld();
+        Location g = Fx.ground(new Location(w, xz[0], l.getY() + 4, xz[1], l.getYaw(), l.getPitch()), 32);
+        if (Parca.libre(g, 2) || w.hasCeiling()) return g;
+        g.setY(w.getHighestBlockYAt(g.getBlockX(), g.getBlockZ(), org.bukkit.HeightMap.MOTION_BLOCKING_NO_LEAVES) + 1);
+        return g;
     }
 
     /**

@@ -103,6 +103,16 @@ final class Sentidos implements Listener {
         alucinaciones.olvidar(p);
     }
 
+    /**
+     * 1.2 · Entra en la zona spawn (Hardcore.vigilarSpawn). Dentro no se llama a latido(): ni latido,
+     * ni vineta, ni tiradas, ni minutos de lucidez. Lo que ya estaba puesto se quita aqui: el borde
+     * rojo y la figura o los pasos que tuviera en cola. La lucidez de la expedicion se guarda.
+     */
+    void alEntrarSpawn(Player p) {
+        vineta.quitar(p);
+        alucinaciones.olvidar(p);
+    }
+
     /** Salir vivo: se cobran los minutos de lucidez. */
     private void cobrarLucidez(Player p) {
         Integer seg = lucidez.remove(p.getUniqueId());

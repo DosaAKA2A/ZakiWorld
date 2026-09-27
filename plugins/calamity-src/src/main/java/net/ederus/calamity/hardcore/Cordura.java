@@ -7,6 +7,7 @@ import org.bukkit.entity.Player;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
+import java.util.function.Predicate;
 
 /**
  * La cordura de cada jugador dentro de Calamity, y la barra que la ensena.
@@ -42,6 +43,16 @@ public final class Cordura {
     }
 
     private final Map<UUID, Estado> estados = new HashMap<>();
+    /** Quien no pierde cordura ahora mismo (1.2: el que esta en la zona spawn). Lo pone Hardcore. */
+    private Predicate<Player> aSalvo = p -> false;
+
+    /**
+     * Calamity 1.2: a quien no se le resta cordura, venga de donde venga (drenaje, golpes, testigos,
+     * la PARCA, pegarle a una alucinacion...). Lo que sube, sube: el Frasco sigue valiendo. Null = nadie.
+     */
+    void aSalvo(Predicate<Player> quien) {
+        aSalvo = quien == null ? p -> false : quien;
+    }
 
     public Estado estado(Player p) {
         return estados.computeIfAbsent(p.getUniqueId(), k -> new Estado());
@@ -59,9 +70,10 @@ public final class Cordura {
         estado(p).valor = Math.max(0, Math.min(MAXIMO, v));
     }
 
-    /** Suma (o resta) y devuelve lo que queda. */
+    /** Suma (o resta) y devuelve lo que queda. En la zona spawn no resta (aSalvo). */
     public double sumar(Player p, double delta) {
         Estado e = estado(p);
+        if (delta < 0 && aSalvo.test(p)) return e.valor;
         e.valor = Math.max(0, Math.min(MAXIMO, e.valor + delta));
         return e.valor;
     }

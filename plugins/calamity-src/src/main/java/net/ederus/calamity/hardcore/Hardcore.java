@@ -147,6 +147,10 @@ public final class Hardcore implements Listener {
     private Tablero tablero;
     private Encuesta encuesta;
     private Eclipse eclipse;
+    /** Calamity 1.2: la zona spawn (region de WorldGuard o caja de la vara). Null con las reglas apagadas. */
+    private ZonaSpawn zona;
+    /** Quien estaba en la zona spawn el segundo anterior, para notar cuando entra y cuando sale. */
+    private final java.util.Set<UUID> enZona = new java.util.HashSet<>();
 
     public Hardcore(CalamityPlugin plugin) {
         this.plugin = plugin;
@@ -210,6 +214,7 @@ public final class Hardcore implements Listener {
     Tablero tablero() { return tablero; }
     Encuesta encuesta() { return encuesta; }
     Eclipse eclipse() { return eclipse; }
+    ZonaSpawn zonaSpawn() { return zona; }
 
     ConfigurationSection cfg() {
         ConfigurationSection s = plugin.getConfig().getConfigurationSection("hardcore");
@@ -224,6 +229,24 @@ public final class Hardcore implements Listener {
 
     public boolean esHardcore(Player p) {
         return p != null && esHardcore(p.getWorld());
+    }
+
+    /**
+     * Calamity 1.2: si ese sitio cae en la zona spawn de su mundo hardcore (ZonaSpawn: la region de
+     * WorldGuard, o la caja de la vara). Dentro Calamity no hace nada salvo la Grieta: ni mobs, ni
+     * cordura que baje, ni alucinaciones, ni PARCA. Publico: MobsLethal no invoca ahi.
+     */
+    public boolean enSpawn(Location l) {
+        return zona != null && l != null && zona.dentro(l);
+    }
+
+    public boolean enSpawn(Player p) {
+        return p != null && enSpawn(p.getLocation());
+    }
+
+    /** La zona spawn en uso en cada mundo hardcore, para /calamidad. */
+    public String describirSpawn() {
+        return zona == null ? "sin zona (las reglas no han arrancado)" : valor("zona-spawn", zona::describir, "?");
     }
 
     /** Un jugador cuenta para las reglas si esta jugando de verdad. */
@@ -249,6 +272,8 @@ public final class Hardcore implements Listener {
         menu = new MenuHardcore(plugin);
         vara = new VaraPortales(plugin);
         crearModulos();
+        // En la zona spawn la cordura no baja por nada (drenaje, sustos, testigos, la PARCA...).
+        cordura.aSalvo(this::enSpawn);
         // Un segundo justo: la cordura se cuenta en segundos y la barra tiene que
         // repintarse a ese ritmo o parpadea contra los avisos de otros plugins.
         reloj = plugin.getServer().getScheduler().runTaskTimer(
@@ -290,6 +315,8 @@ public final class Hardcore implements Listener {
         // modulos registran sus pruebas, subcomandos y placeholders al nacer, debajo.
         Autotest.instalar(this);
         PlaceholdersLethal.registrar("cordura", (jugador, resto) -> corduraTexto(jugador));
+        // Lo primero: la Grieta, las amenazas y los mobs preguntan por ella desde que nacen.
+        zona = crear("zona-spawn", () -> new ZonaSpawn(this));
         telemetria = crear("telemetria", () -> new Telemetria(this));
         estadisticas = crear("estadisticas", () -> new Estadisticas(this));
         calendario = crear("calendario", () -> new Calendario(this));
@@ -373,6 +400,10 @@ public final class Hardcore implements Listener {
         if (calendario != null) seguro("calendario", () -> calendario.parar());
         if (estadisticas != null) seguro("estadisticas", () -> estadisticas.parar());
         if (telemetria != null) seguro("telemetria", () -> telemetria.parar());
+        if (zona != null) seguro("zona-spawn", () -> zona.parar());
+        zona = null;
+        enZona.clear();
+        cordura.aSalvo(null);
         Subcomandos.lw().vaciar();
         Subcomandos.calamity().vaciar();
         Autotest.vaciar();
@@ -492,27 +523,38 @@ public final class Hardcore implements Listener {
     // ----------------------------------------------------------------------- reloj
 
     private void tick() {
+        java.util.Set<UUID> vistos = new java.util.HashSet<>();
         for (World w : plugin.getServer().getWorlds()) {
             if (!esHardcore(w)) continue;
             for (Player p : w.getPlayers()) {
                 if (!cuenta(p)) continue;
                 Cordura.Estado e = cordura.estado(p);
                 e.segundosDentro++;
+                vistos.add(p.getUniqueId());
+                /* 1.2: en la zona spawn solo sigue lo que no va contra el: la Huella (que alli es la
+                 * Grieta), la barra, el Cristal, las horas, el suelo, el aviso de su Eco, la etiqueta
+                 * de combate y sus objetos. Ni drenaje, ni bioma, ni niebla, ni minijefe, ni sentidos. */
+                boolean spawn = vigilarSpawn(p);
                 seguro("huella", () -> huella.segundo(p));
-                drenar(p, e);
-                efectosDeBioma(p);
+                if (!spawn) {
+                    drenar(p, e);
+                    efectosDeBioma(p);
+                }
                 cordura.pintar(p);
                 vigilarCanalizacion(p);
-                nieblaDeNoche(p);
+                if (!spawn) nieblaDeNoche(p);
                 contarTiempo(p);
-                if (e.valor <= 0) minijefeSiTocaCordura(p, e);
+                if (!spawn && e.valor <= 0) minijefeSiTocaCordura(p, e);
                 apuntarSuelo(p);
-                seguro("sentidos", () -> sentidos.latido(p));
+                if (!spawn) seguro("sentidos", () -> sentidos.latido(p));
                 seguro("ecos", () -> ecos.avisoDistancia(p));
                 seguro("combate", () -> combate.tick(p));
                 seguro("objetos", () -> objetos.tick(p));
             }
         }
+        // Quien ya no esta dentro (salio, murio, se desconecto) deja de contar como "en el spawn".
+        enZona.retainAll(vistos);
+        if (zona != null) seguro("zona-spawn", () -> zona.tick());
         vigilarZonas();
         vigilarPresas();
         seguro("parca", () -> parca.tick());
@@ -535,6 +577,28 @@ public final class Hardcore implements Listener {
             if (fuera) cuentaCristal.remove(id);
             return fuera;
         });
+    }
+
+    /**
+     * 1.2 · Si esta en la zona spawn, y lo que pasa al cruzar el borde. Al entrar se le apagan la
+     * vineta y las alucinaciones y la PARCA que le perseguia se va a esperarle fuera
+     * (Parca.alEntrarSpawn); en la barra se le dice, para que sepa por que la cordura se para.
+     */
+    private boolean vigilarSpawn(Player p) {
+        boolean dentro = enSpawn(p);
+        UUID u = p.getUniqueId();
+        if (dentro && enZona.add(u)) {
+            seguro("sentidos", () -> sentidos.alEntrarSpawn(p));
+            seguro("parca", () -> parca.alEntrarSpawn(p));
+            cordura.destello(p, Component.text("Spawn", Paleta.DETALLE)
+                    .append(Component.text(" · ", Paleta.SEPARADOR))
+                    .append(Component.text("aquí la cordura no baja", Paleta.TEXTO)), 3);
+        } else if (!dentro && enZona.remove(u)) {
+            cordura.destello(p, Component.text("Sales del spawn", Paleta.TENUE)
+                    .append(Component.text(" · ", Paleta.SEPARADOR))
+                    .append(Component.text("la cordura vuelve a correr", Paleta.TEXTO)), 2);
+        }
+        return dentro;
     }
 
     /**
@@ -1008,6 +1072,14 @@ public final class Hardcore implements Listener {
                 presas.remove(idMob);
                 continue;
             }
+            // 1.2: a la zona spawn no le sigue: se retira en humo, como ante la PARCA (P-10).
+            if (enSpawn(presa)) {
+                presas.remove(idMob);
+                Compat.spawn(mob.getWorld(), Compat.LARGE_SMOKE, mob.getLocation().add(0, 1, 0), 30, 0.5, 1, 0.5, 0.02);
+                mob.remove();
+                plugin.bitacora().anotar("spawn", "minijefe-retirado", presa.getName());
+                continue;
+            }
             mob.setTarget(presa);
             // Si se aleja demasiado, el minijefe reaparece cerca: no se le escapa.
             double lejos = cfg().getDouble("minijefes.distancia-maxima", 60);
@@ -1172,6 +1244,9 @@ public final class Hardcore implements Listener {
         // Solo se devuelve el golpe de OTRO jugador: lo demas que lo decidan las
         // protecciones normales del servidor.
         if (quien instanceof Player agresor && !agresor.equals(victima)) {
+            // 1.2: en la zona spawn Calamity no descancela nada: manda la proteccion del servidor
+            // (la region de WorldGuard del spawn niega el PvP).
+            if (enSpawn(victima) || enSpawn(agresor)) return;
             if (e.isCancelled()) e.setCancelled(false);
             // Llegada protegida, Frenesi, Sangre fresca y Eclipse: despues de descancelar,
             // para que puedan volver a cancelar o cambiar el dano con la ultima palabra.

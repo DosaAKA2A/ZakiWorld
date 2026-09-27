@@ -285,8 +285,12 @@ final class Eclipse implements Listener {
             verBarra(p, ahora);
             // Cada 30 s se vuelve a fijar: otro plugin (o /ptime) puede haberle movido la hora.
             if (!conNoche.contains(u) || segundos % 30 == 0) ponerNoche(p);
-            ceniza(p);
-            if (!hc.cuenta(p) || p.isDead()) continue;
+            /* 1.2: en la zona spawn ve la barra y el cielo (el eclipse es de todo el mundo), pero ni
+             * le cae ceniza ni le cuentan los minutos: la Reliquia Eclipsada es por aguantar fuera,
+             * no por esperar diez minutos en el sitio seguro. */
+            boolean spawn = hc.enSpawn(p);
+            if (!spawn) ceniza(p);
+            if (!hc.cuenta(p) || p.isDead() || spawn) continue;
             cambio = true;
             if (reloj.sumarSegundo(u, minimos)) darReliquia(p);
         }

@@ -138,6 +138,9 @@ final class Amenazas implements Listener {
     <T extends LivingEntity> T invocar(Class<T> tipo, Location sitio, String amenaza, int nivel,
                                        Component nombre, Consumer<T> extra) {
         if (tipo == null || sitio == null || sitio.getWorld() == null || amenaza == null) return null;
+        // 1.2: en la zona spawn no nace ninguna, como si la hubiera cancelado WorldGuard (la prueba
+        // de /lw amenazas si: es de staff y se pone donde se diga).
+        if (!"prueba".equals(amenaza) && hc.enSpawn(sitio)) return null;
         World w = sitio.getWorld();
         T mob = w.spawn(sitio, tipo, e -> {
             e.getPersistentDataContainer().set(Marcas.AMENAZA, PersistentDataType.STRING, amenaza);

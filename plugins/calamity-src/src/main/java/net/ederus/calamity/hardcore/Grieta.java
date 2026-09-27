@@ -6,7 +6,6 @@ import net.kyori.adventure.text.Component;
 import org.bukkit.HeightMap;
 import org.bukkit.Location;
 import org.bukkit.Material;
-import org.bukkit.NamespacedKey;
 import org.bukkit.SoundCategory;
 import org.bukkit.World;
 import org.bukkit.block.Block;
@@ -29,8 +28,8 @@ import java.util.function.Consumer;
 /**
  * La Grieta (Calamity 1.1.0): el AFK en el spawn de Calamity.
  *
- * En la zona spawn (una caja marcada con la vara, /lw hardcore define spawn, guardada como las
- * puertas en hardcore.puertas.spawn) la Huella no espera 10 minutos: con 5 (parca.spawn.minutos)
+ * En la zona spawn (1.2: la de ZonaSpawn, la region de WorldGuard de hardcore.spawn.region o, sin
+ * ella, la caja de la vara de hardcore.puertas.spawn) la Huella no espera 10 minutos: con 5 (parca.spawn.minutos)
  * se abre una grieta bajo el que no se mueve, se lo traga y lo escupe lejos, en un sitio seguro
  * al azar a 600-1500 bloques del spawn; y alli le aparece la PARCA. El spawn no es sitio para
  * aparcar a nadie, y la PARCA en el spawn seria una emboscada para los que acaban de entrar.
@@ -40,8 +39,9 @@ import java.util.function.Consumer;
  *
  * El destino: un punto al azar en el anillo 600-1500 alrededor del centro de la caja, dentro
  * del borde del mundo; su chunk se carga de forma asincrona y se busca suelo firme (ni agua,
- * ni lava, ni magma, ni cactus, dos de aire encima). Hasta intentos puntos; si ninguno vale,
- * la PARCA viene donde esta, como fuera del spawn.
+ * ni lava, ni magma, ni cactus, dos de aire encima). Hasta intentos puntos; si ninguno vale (o el
+ * teleport falla), 1.2: la PARCA ya no viene al spawn, que es zona segura; la grieta se vuelve a
+ * abrir al cabo de PAUSA_MS. Si para entonces se ha movido fuera de la zona, viene donde este.
  *
  * El nucleo (umbral, dentro, punto) es estatico y sin Bukkit: el autotest "grieta" lo prueba.
  */
@@ -72,10 +72,14 @@ final class Grieta {
 
     /** Ticks que dura el desgarro antes de tragarse a nadie. */
     static final int TICKS_DESGARRO = 60;
+    /** 1.2: lo que se espera para volver a abrirla si no pudo llevarselo y sigue en el spawn. */
+    static final long PAUSA_MS = 60_000;
 
     private final Hardcore hc;
     /** Quien esta siendo tragado ahora mismo (la Huella lo pide cada segundo). */
     private final Set<UUID> enCurso = new HashSet<>();
+    /** 1.2: a quien no pudo llevarse, hasta cuando no se le vuelve a abrir (millis). */
+    private final java.util.Map<UUID, Long> pausa = new java.util.HashMap<>();
     private final List<BukkitTask> tareas = new ArrayList<>();
     private Ajustes ajustes;
     private long leidos;
@@ -138,15 +142,9 @@ final class Grieta {
 
     // =============================================================== servidor
 
-    /** La caja del spawn, o null si no esta marcada. */
-    private ConfigurationSection caja() {
-        ConfigurationSection c = hc.plugin().getConfig().getConfigurationSection("hardcore.puertas.spawn");
-        return c == null || !c.isSet("mundo") ? null : c;
-    }
-
-    /** Si esta dentro de la zona spawn (la misma cuenta que las puertas: VaraPortales.dentro). */
+    /** Si esta dentro de la zona spawn (1.2: Hardcore.enSpawn, la misma para todo Calamity). */
     boolean enSpawn(Player p) {
-        return hc.vara() != null && caja() != null && hc.vara().dentro(p, "spawn");
+        return hc.enSpawn(p);
     }
 
     Umbral umbral(Player p, Huella.Ajustes h) {
@@ -192,12 +190,18 @@ final class Grieta {
 
     /**
      * La Huella ha llegado al limite dentro del spawn. True si la grieta ya esta abierta (o se
-     * abre ahora); false si la PARCA no puede venir (apagada o el tope global lleno): la Huella
-     * lo vuelve a pedir el segundo siguiente, como fuera.
+     * abre ahora); false si la PARCA no puede venir (apagada o el tope global lleno) o si la ultima
+     * no pudo llevarselo hace menos de PAUSA_MS: la Huella lo vuelve a pedir el segundo
+     * siguiente, como fuera.
      */
     boolean abrir(Player p, int celdas) {
         UUID id = p.getUniqueId();
         if (enCurso.contains(id)) return true;
+        Long hasta = pausa.get(id);
+        if (hasta != null) {
+            if (System.currentTimeMillis() < hasta) return false;
+            pausa.remove(id);
+        }
         Parca parca = hc.parca();
         if (parca == null) return false;
         Parca.Ajustes a = parca.ajustes();
@@ -231,13 +235,12 @@ final class Grieta {
             }
             hc.seguro("parca", () -> desgarro(w, boca, j, t[0]));
             t[0] += 2;
-            // Espera al destino como mucho 15 s; si no hay, la PARCA viene aqui mismo.
+            // Espera al destino como mucho 15 s; si no hay, no se lo lleva (ver fallo()).
             if (t[0] < TICKS_DESGARRO || (!buscado[0] && t[0] < 300)) return;
             terminar(tarea[0], id);
             if (destino[0] == null) {
-                hc.plugin().bitacora().anotar("parca", "grieta", j.getName(), "sin sitio seguro", "viene aqui");
                 cerrar(w, boca);
-                hc.seguro("parca", () -> reintentar(id, celdas, 30));
+                hc.seguro("parca", () -> fallo(j, celdas, "sin sitio seguro"));
                 return;
             }
             hc.seguro("parca", () -> arrastrar(j, boca, destino[0], celdas));
@@ -250,6 +253,21 @@ final class Grieta {
         if (t != null) t.cancel();
         tareas.remove(t);
         enCurso.remove(id);
+    }
+
+    /**
+     * 1.2 · La grieta no ha podido llevarselo (sin sitio seguro o teleport fallido). Si sigue en la
+     * zona spawn, la PARCA no puede venir (ahi no aparece nunca): se vuelve a abrir en PAUSA_MS.
+     * Si ya esta fuera, viene donde este, como antes.
+     */
+    private void fallo(Player j, int celdas, String porQue) {
+        if (hc.enSpawn(j)) {
+            pausa.put(j.getUniqueId(), System.currentTimeMillis() + PAUSA_MS);
+            hc.plugin().bitacora().anotar("parca", "grieta", j.getName(), porQue, "reabre en " + PAUSA_MS / 1000 + " s");
+            return;
+        }
+        hc.plugin().bitacora().anotar("parca", "grieta", j.getName(), porQue, "viene aqui");
+        reintentar(j.getUniqueId(), celdas, 30);
     }
 
     /**
@@ -270,12 +288,12 @@ final class Grieta {
         return anillo(b.getSize() / 2, Math.hypot(cx - c.getX(), cz - c.getZ()), g);
     }
 
-    /** Centro de la caja del spawn en ese mundo, o donde esta si la caja es de otro mundo. */
+    /** Centro de la zona spawn de ese mundo (su caja), o donde esta si ese mundo no tiene. */
     private double[] centro(World w, Location boca) {
-        ConfigurationSection c = caja();
-        NamespacedKey k = c == null ? null : NamespacedKey.fromString(c.getString("mundo", ""));
-        if (c == null || k == null || !k.equals(w.getKey())) return new double[]{boca.getX(), boca.getZ()};
-        return new double[]{(c.getInt("x1") + c.getInt("x2") + 1) / 2.0, (c.getInt("z1") + c.getInt("z2") + 1) / 2.0};
+        ZonaSpawn zona = hc.zonaSpawn();
+        ZonaSpawn.Zona z = zona == null ? null : zona.de(w);
+        if (z == null) return new double[]{boca.getX(), boca.getZ()};
+        return new double[]{z.centroX(), z.centroZ()};
     }
 
     /**
@@ -336,7 +354,8 @@ final class Grieta {
                         destino.getBlockX() + " " + destino.getBlockY() + " " + destino.getBlockZ(),
                         Math.round(Math.hypot(destino.getX() - boca.getX(), destino.getZ() - boca.getZ())) + " bloques");
             } else {
-                hc.plugin().bitacora().anotar("parca", "grieta", k.getName(), "teleport fallido", "viene aqui");
+                fallo(k, celdas, "teleport fallido");
+                return;
             }
             reintentar(id, celdas, 30);
         }));
@@ -449,6 +468,7 @@ final class Grieta {
         for (BukkitTask t : tareas) t.cancel();
         tareas.clear();
         enCurso.clear();
+        pausa.clear();
     }
 
     // ================================================================ autotest
