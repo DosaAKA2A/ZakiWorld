@@ -254,7 +254,7 @@ objetos:
       cada-segundos: 12
       solo-mobs: true
       lineas:
-      - Al hacer crítico, hiere a todo lo que
+      - Al hacer crítico, hiere a los mobs que
       - tengas a 3 bloques (7 de daño,
       - cada 12 s).
 sets:

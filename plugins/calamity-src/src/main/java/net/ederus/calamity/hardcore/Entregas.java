@@ -438,7 +438,7 @@ final class Entregas implements Listener {
      */
     ItemStack talisman() {
         return objeto(Material.CLOCK, "Talismán de Vigilia", VERDE_PALIDO,
-                List.of("Mantiene la mente despierta en la oscuridad. Esa es la idea.", "Allí dentro, el que cierra los ojos no los vuelve a abrir."),
+                List.of("Mantiene la mente despierta en la oscuridad.", "Allí dentro, el que cierra los ojos no los vuelve a abrir."),
                 List.of("+" + hc.cfg().getInt("talisman.vida", 3) + " de vida máxima.",
                         "La cordura baja un " + Math.round((1 - hc.cfg().getDouble("talisman.drenaje", 0.80)) * 100)
                                 + " % más despacio dentro.",
