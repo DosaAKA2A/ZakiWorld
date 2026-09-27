@@ -1,7 +1,6 @@
 package net.ederus.lethalworld.hardcore;
 
 import net.kyori.adventure.text.Component;
-import net.kyori.adventure.text.format.NamedTextColor;
 import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.block.Barrel;
@@ -332,7 +331,7 @@ final class Sellos implements Listener {
         Long antes = ultimoAviso.get(p.getUniqueId());
         if (antes == null || ahora - antes >= 1000) {
             ultimoAviso.put(p.getUniqueId(), ahora);
-            hc.cordura().destello(p, Component.text(texto, NamedTextColor.RED), 2);
+            hc.cordura().destello(p, Component.text(texto, Paleta.AVISO), 2);
         }
         String clave = p.getUniqueId() + "|" + que;
         Long nota = ultimaNota.get(clave);

@@ -5,7 +5,6 @@ import io.papermc.paper.datacomponent.item.ResolvableProfile;
 import io.papermc.paper.event.player.PrePlayerAttackEntityEvent;
 import net.ederus.edm.comun.Fx;
 import net.kyori.adventure.text.Component;
-import net.kyori.adventure.text.format.NamedTextColor;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.Particle;
@@ -189,7 +188,7 @@ final class Alucinaciones implements Listener {
             case SUSURRO -> {
                 if (muertos.isEmpty()) return false;
                 Testigos.Muerto m = muertos.get(azar.nextInt(muertos.size()));
-                p.sendMessage(Component.text("susurro · " + m.nombre() + ": vuelve", NamedTextColor.DARK_GRAY));
+                p.sendMessage(Component.text("susurro · " + m.nombre() + ": vuelve", Paleta.TENUE));
                 return true;
             }
             case FIGURA -> {
@@ -379,7 +378,7 @@ final class Alucinaciones implements Listener {
         }
         figuras.remove(p.getUniqueId());
         deshacer(f, p);
-        hc.cordura().destello(p, Component.text("No había nada.", NamedTextColor.GRAY), 2);
+        hc.cordura().destello(p, Component.text("No había nada.", Paleta.TEXTO), 2);
         double coste = cfg().getDouble("coste-pegar", 2);
         if (coste > 0 && hc.esHardcore(p)) hc.cordura().sumar(p, -coste);
         try {

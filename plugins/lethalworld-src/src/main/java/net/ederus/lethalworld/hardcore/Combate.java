@@ -3,7 +3,6 @@ package net.ederus.lethalworld.hardcore;
 import net.ederus.edm.comun.Bitacora;
 import net.ederus.edm.comun.Compat;
 import net.kyori.adventure.text.Component;
-import net.kyori.adventure.text.format.NamedTextColor;
 import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.NamespacedKey;
@@ -130,7 +129,7 @@ final class Combate implements Listener {
         if (p == null || !activo() || !hc.esHardcore(p)) return;
         int s = etiquetaSegundos();
         if (relojes.etiquetar(p.getUniqueId(), System.currentTimeMillis(), s)) {
-            hc.cordura().destello(p, Component.text("En combate · " + s + " s", ComandoCalamity.ROJO), 2);
+            hc.cordura().destello(p, Component.text("En combate · ", Paleta.AVISO).append(Component.text(s + " s", Paleta.CIFRA)), 2);
         }
     }
 
@@ -160,10 +159,10 @@ final class Combate implements Listener {
         UUID u = p.getUniqueId();
         long ahora = System.currentTimeMillis();
         if (relojes.acabaCombate(u, ahora)) {
-            hc.cordura().destello(p, Component.text("Fuera de combate", NamedTextColor.GRAY), 2);
+            hc.cordura().destello(p, Component.text("Fuera de combate", Paleta.DETALLE), 2);
         }
         if (relojes.acabaLlegada(u, ahora)) {
-            hc.cordura().destello(p, Component.text("Ya te ven.", ComandoCalamity.ROJO), 2);
+            hc.cordura().destello(p, Component.text("Ya te ven.", Paleta.AVISO), 2);
         } else if (relojes.protegido(u, ahora)) {
             // Suave y poca: que los demas vean que acaba de llegar, no un faro.
             Compat.spawn(p.getWorld(), Particle.END_ROD, p.getLocation().add(0, 1, 0), 3, 0.3, 0.5, 0.3, 0.01);
@@ -176,7 +175,7 @@ final class Combate implements Listener {
         double umbral = hc.cfg().getDouble("frenesi.umbral", 25);
         if (hc.cordura().valor(p) < umbral) {
             if (enFrenesi.add(u)) {
-                hc.cordura().destello(p, Component.text("Frenesí. Pegas más. Te pegan más.", ComandoCalamity.ROJO), 3);
+                hc.cordura().destello(p, Component.text("Frenesí. Pegas más. Te pegan más.", Paleta.AVISO), 3);
             }
             // Cada 2 s y lo ven todos: el frenesi es un aviso para los demas, no un secreto.
             if (hc.cordura().estado(p).segundosDentro % 2 == 0) {
@@ -235,7 +234,7 @@ final class Combate implements Listener {
             // Quien llega y pega elige pelear: pierde la proteccion y su golpe entra.
             if (relojes.protegido(a.getUniqueId(), ahora)) {
                 relojes.perderLlegada(a.getUniqueId());
-                hc.cordura().destello(a, Component.text("Ya te ven.", ComandoCalamity.ROJO), 2);
+                hc.cordura().destello(a, Component.text("Ya te ven.", Paleta.AVISO), 2);
             }
         }
         // El dano verdadero ya es exacto (ley 5): ni frenesi ni eclipse encima.
@@ -345,7 +344,7 @@ final class Combate implements Listener {
                 "cordura " + Math.round(hc.cordura().conoce(p) ? hc.cordura().valor(p) : 0),
                 "dentro " + victima.segundosDentro() + " s");
 
-        Component aviso = ComandoCalamity.mensaje(Component.text(p.getName(), NamedTextColor.WHITE)
+        Component aviso = ComandoCalamity.mensaje(Component.text(p.getName(), Paleta.DETALLE)
                 .append(Component.text(" intentó huir por el cable.")));
         for (World w : hc.plugin().getServer().getWorlds()) {
             if (!hc.esHardcore(w)) continue;

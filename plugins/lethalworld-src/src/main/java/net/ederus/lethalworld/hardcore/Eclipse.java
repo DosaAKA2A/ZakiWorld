@@ -3,7 +3,6 @@ package net.ederus.lethalworld.hardcore;
 import net.ederus.edm.comun.Compat;
 import net.kyori.adventure.bossbar.BossBar;
 import net.kyori.adventure.text.Component;
-import net.kyori.adventure.text.format.NamedTextColor;
 import net.kyori.adventure.title.Title;
 import org.bukkit.Bukkit;
 import org.bukkit.OfflinePlayer;
@@ -64,14 +63,14 @@ import java.util.UUID;
  */
 final class Eclipse implements Listener {
 
-    /** Rojo de la muerte de Calamity: ceniza, barra y titulo. */
+    /** Rojo de la muerte de Calamity para la ceniza (particulas); barra y titulo van por la Paleta. */
     private static final int ROJO_RGB = 0x8B1A1A;
     private static final DateTimeFormatter HORA = DateTimeFormatter.ofPattern("HH:mm");
 
     private final Hardcore hc;
     private final Reloj reloj;
     /** La barra roja de la cuenta atras; una sola para todos los de dentro. */
-    private final BossBar barra = BossBar.bossBar(Component.text("Eclipse de Calamidad", ComandoCalamity.ROJO),
+    private final BossBar barra = BossBar.bossBar(Paleta.muerte("Eclipse de Calamidad"),
             1f, BossBar.Color.RED, BossBar.Overlay.PROGRESS);
     /** Quien ve la barra ahora mismo (para quitarsela al salir o al acabar). */
     private final Set<UUID> conBarra = new HashSet<>();
@@ -375,15 +374,16 @@ final class Eclipse implements Listener {
     private void actualizarBarra(long ahora) {
         long queda = Math.max(0, reloj.hasta() - ahora);
         long total = Math.max(1, reloj.hasta() - reloj.inicio());
-        barra.name(Component.text("Eclipse de Calamidad · " + cuenta(queda / 1000), ComandoCalamity.ROJO));
+        barra.name(Paleta.muerte("Eclipse de Calamidad").append(Component.text(" · ", Paleta.SEPARADOR))
+                .append(Component.text(cuenta(queda / 1000), Paleta.CIFRA)));
         barra.progress((float) Math.max(0.0, Math.min(1.0, (double) queda / total)));
     }
 
     /** P-X02: "ECLIPSE / <n> minutos". */
     private static Title titulo(long quedaMillis) {
         long n = minutosQuedan(quedaMillis);
-        return Title.title(Component.text("ECLIPSE", ComandoCalamity.ROJO),
-                Component.text(n + (n == 1 ? " minuto" : " minutos"), NamedTextColor.GRAY));
+        return Title.title(Paleta.muerte("ECLIPSE"),
+                Component.text(n + (n == 1 ? " minuto" : " minutos"), Paleta.TEXTO));
     }
 
     private static long minutosQuedan(long quedaMillis) {

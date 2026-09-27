@@ -2,7 +2,6 @@ package net.ederus.lethalworld.hardcore;
 
 import com.destroystokyo.paper.profile.ProfileProperty;
 import net.kyori.adventure.text.Component;
-import net.kyori.adventure.text.format.NamedTextColor;
 import org.bukkit.Location;
 import org.bukkit.World;
 import org.bukkit.configuration.ConfigurationSection;
@@ -99,9 +98,9 @@ final class Testigos {
                         ultimoTestigo.get(p.getUniqueId()), ahora, cada)) continue;
                 ultimoTestigo.put(p.getUniqueId(), ahora);
                 if (resta > 0) hc.cordura().sumar(p, -resta);
-                hc.cordura().destello(p, Component.text("Has visto caer a ", NamedTextColor.GRAY)
-                        .append(Component.text(muerto.getName(), NamedTextColor.WHITE))
-                        .append(Component.text(".", NamedTextColor.GRAY)), 3);
+                hc.cordura().destello(p, Component.text("Has visto caer a ", Paleta.TEXTO)
+                        .append(Component.text(muerto.getName(), Paleta.DETALLE))
+                        .append(Component.text(".", Paleta.TEXTO)), 3);
                 vistos.add(p.getName());
                 Telemetria t = hc.telemetria();
                 if (t != null) {
