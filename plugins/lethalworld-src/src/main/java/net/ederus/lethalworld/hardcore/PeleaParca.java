@@ -309,6 +309,15 @@ final class PeleaParca implements Runnable {
                         // Sin descripcion editable se ve la linea: feo, pero la pelea sigue.
                     }
                     mq.setProfile(perfil);
+                    try {
+                        // La cuenta de la skin trae capa y a la Parca no le pega: todas las capas
+                        // de la skin (chaqueta, mangas, sombrero) menos esa.
+                        com.destroystokyo.paper.SkinParts.Mutable partes = com.destroystokyo.paper.SkinParts.allParts();
+                        partes.setCapeEnabled(false);
+                        mq.setSkinParts(partes);
+                    } catch (Throwable ignorado) {
+                        // Sin la API de capas se ve la capa: feo, pero la pelea sigue.
+                    }
                     Compat.setAttribute(mq, "scale", a.cuerpoEscala);
                     // Sin probabilidad de soltarla: eso solo existe en los Mob (el maniqui no lo
                     // es). Si alguien lo mata con /kill, Parca.onMuerte le vacia lo que suelte.
