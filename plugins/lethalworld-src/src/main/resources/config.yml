@@ -428,6 +428,24 @@ hardcore:
     # [alineado] PLAN 3.2: Campana solo al top-3 de dano; +25 % por participante desde el 2.o
     campana: {solo-top: 3}
     grupo: {extra-por-participante: 0.25, maximo-extra: 4}
+    # 1.2.0 · La PARCA es tambien una anomalia DIOS de EDM (/anomaly: menu, start parca, here
+    # parca, test pa_...). Cuando la Huella la llama y EDM esta libre, viene esa: cuatro fases,
+    # quince tecnicas, cambios de fase con escena. Si EDM ya tiene otra anomalia abierta (o no
+    # esta su modulo, o se apaga aqui o en su menu) viene la de reserva, la de 1.1.1.
+    # Vida y golpe salen de las formulas de arriba (N, r, M), no del ajuste de vida de EDM.
+    # El botin es el de arriba, por la Aduana: la experiencia y las MobCoins que EDM daria
+    # por 'parca' se dejan a 0 solas (su tabla de botin tiene que quedarse vacia).
+    anomalia:
+      activa: true                # false = siempre la de reserva
+      nivel-sin-presa: 50         # N de la que se abre a mano sin nadie cerca (con gente: la de ellos + extra-nivel)
+      ambiente: true              # lluvia en la fase III y noche en la IV, solo para quien este a 48
+      anuncio-global: false       # true = la de un AFK se anuncia a todo el servidor como las demas anomalias
+                                  # (titulo y coordenadas a todos); false = solo la campana a 128 bloques
+      dano: 1.0                   # multiplica el dano de sus tecnicas (se suma al "dano" de /anomaly menu)
+      apagadas: []                # tecnicas que no usa: pa_siega, pa_tajos, pa_acecho, pa_acometida, pa_umbral,
+                                  # pa_tiron, pa_cortejo, pa_guadanas, pa_salto, pa_embestida, pa_umbrales,
+                                  # pa_lluvia, pa_muros, pa_anillo, pa_sentencia
+      esperas: {}                 # segundos entre usos por tecnica, p. ej. {pa_lluvia: 20, pa_muros: 30}
 
   # ------------------------------------------------------------------ 2. EL ECO
   eco:

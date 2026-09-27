@@ -257,7 +257,7 @@ final class PeleaParca implements Runnable, ParcaViva {
     }
 
     /** Sin cuerpo de NPC: guadana, ropa de cuero casi negra y, si hay textura, su cabeza. */
-    private static void vestir(WitherSkeleton e, Parca.Ajustes a) {
+    static void vestir(WitherSkeleton e, Parca.Ajustes a) {
         EntityEquipment eq = e.getEquipment();
         if (eq == null) return;
         eq.setItemInMainHand(guadana());

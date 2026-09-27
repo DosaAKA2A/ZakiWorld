@@ -83,6 +83,8 @@ final class Parca implements Listener {
     private Ajustes ajustes;
     private long ajustesLeidos;
     private int segundos;
+    /** 1.2.0: el puente con las anomalias de EDM (la PARCA DIOS); null si EDM no trae las clases. */
+    private final PuenteAnomalia anomalia;
 
     private record Segada(String mundo, double x, double z, long hasta) {
     }
@@ -94,8 +96,10 @@ final class Parca implements Listener {
         Autotest.registrar("parca", Parca::autotest);
         Subcomandos.lw().registrar("parca",
                 "parca <jugador> [segundos] | info <jugador> | vida <0-1> | habilidad <nombre> | retirar [jugador]"
-                        + " | prueba <x> <y> <z> [N]",
+                        + " | prueba <x> <y> <z> [N] | anomalia",
                 "ederus.mundos", this::comando, this::tab);
+        // 1.2.0: la PARCA tambien es una anomalia DIOS de EDM (ParcaType/ParcaAnomalia).
+        anomalia = PuenteAnomalia.crear(this);
     }
 
     // ================================================================= ajustes
@@ -399,6 +403,8 @@ final class Parca implements Listener {
     void tick() {
         peleas.removeIf(pe -> pe.estado() == ParcaViva.Estado.FIN);
         if (++segundos % 60 == 0) podarSegadas();
+        // Si EDM recarga su modulo de anomalias, el catalogo nuevo no la trae: se vuelve a registrar.
+        if (segundos % 60 == 0 && anomalia != null) hc.seguro("parca", anomalia::revisar);
     }
 
     /** Si hay una PARCA a presencia-radio de ese jugador. */
@@ -625,6 +631,7 @@ final class Parca implements Listener {
         for (Entity e : despedidas) Fx.safeRemove(e);
         despedidas.clear();
         segadosPorElla.clear();
+        if (anomalia != null) anomalia.parar();
         hc.marcarSucio();
         HandlerList.unregisterAll(this);
     }
@@ -700,9 +707,9 @@ final class Parca implements Listener {
         int n = nivel(a, n0);
         int m = grupo.size() - 1;
         Location sitio = sitioDetras(p, 6);
-        ParcaViva pe = PeleaParca.crear(this, a, p.getUniqueId(), p.getName(), grupo, n, r, m, sitio, false, 1.0, 1);
+        ParcaViva pe = nueva(a, p, grupo, n, r, m, sitio, 1.0, 1);
         if (pe == null) return false;
-        peleas.add(pe);
+        registrar(pe);
 
         long ahora = System.currentTimeMillis();
         for (Player g : grupo) apuntarHistorial(g.getUniqueId(), ahora);
@@ -710,13 +717,34 @@ final class Parca implements Listener {
         Location l = pe.cuerpo().getLocation();
         hc.plugin().bitacora().anotar("parca", "llega", p.getName(), "N " + n, "r " + r, "M " + m,
                 l.getBlockX() + " " + l.getBlockY() + " " + l.getBlockZ(), "celdas " + celdas,
-                "vehiculo " + (vehiculo ? "si" : "no"));
+                "vehiculo " + (vehiculo ? "si" : "no"), pe.tipo());
         telemetria("nace", pe, null, null);
         Component aviso = ComandoCalamity.mensaje(Component.text("Suena una campana. La Parca ha venido a por ")
                 .append(Component.text(p.getName(), Paleta.DETALLE)).append(Component.text(".")));
         for (Player o : Fx.viewersNear(p.getLocation(), 128)) o.sendMessage(aviso);
         for (Player g : grupo) retirarMinijefes(g);
         return true;
+    }
+
+    /**
+     * 1.2.0: la PARCA de EDM (anomalia DIOS) si EDM esta libre; si no (otra anomalia abierta,
+     * sin el modulo, apagada en su menu o en parca.anomalia.activa), la de reserva de siempre.
+     * Ningun AFK se libra porque EDM este ocupado.
+     */
+    private ParcaViva nueva(Ajustes a, Player p, List<Player> grupo, int n, int r, int m, Location sitio,
+                            double fraccion, int fase) {
+        if (anomalia != null) {
+            PuenteAnomalia.Encargo e = new PuenteAnomalia.Encargo(p.getUniqueId(), p.getName(), grupo, n, r, m,
+                    fraccion, fase);
+            ParcaViva pe = hc.valor("parca", () -> anomalia.abrir(e, sitio), null);
+            if (pe != null) return pe;
+        }
+        return PeleaParca.crear(this, a, p.getUniqueId(), p.getName(), grupo, n, r, m, sitio, false, fraccion, fase);
+    }
+
+    /** Apunta una pelea viva (la anomalia se apunta sola al nacer, tambien la abierta a mano). */
+    void registrar(ParcaViva pe) {
+        if (pe != null && !peleas.contains(pe)) peleas.add(pe);
     }
 
     /** Exento a mano de la PARCA (/lw hardcore exento; ningun permiso lo concede). */
@@ -848,16 +876,15 @@ final class Parca implements Listener {
         Ajustes a = ajustes();
         if (!a.activa || vivas() >= a.maximoSimultaneas) return;   // lo pendiente sigue ahi
         Location sitio = sitioDetras(p, distancia);
-        ParcaViva pe = PeleaParca.crear(this, a, p.getUniqueId(), p.getName(), List.of(p), pd.nivel(), pd.r(), pd.m(),
-                sitio, false, pd.fraccion(), pd.fase());
+        ParcaViva pe = nueva(a, p, List.of(p), pd.nivel(), pd.r(), pd.m(), sitio, pd.fraccion(), pd.fase());
         if (pe == null) return;
-        peleas.add(pe);
+        registrar(pe);
         borrarPendiente(p.getUniqueId());
         p.sendMessage(ComandoCalamity.mensaje(mensaje));
         Location l = pe.cuerpo().getLocation();
         hc.plugin().bitacora().anotar("parca", "vuelve", p.getName(), "N " + pd.nivel(), "r " + pd.r(), "M " + pd.m(),
                 "vida " + Math.round(pd.fraccion() * 100) + " %", pd.motivo(),
-                l.getBlockX() + " " + l.getBlockY() + " " + l.getBlockZ());
+                l.getBlockX() + " " + l.getBlockY() + " " + l.getBlockZ(), pe.tipo());
         retirarMinijefes(p);
     }
 
@@ -1249,7 +1276,7 @@ final class Parca implements Listener {
     private void comando(CommandSender quien, String[] args) {
         if (args.length < 2) {
             quien.sendMessage(Component.text("Uso: /lw hardcore parca <jugador> [segundos] | info <jugador> | vida <0-1>"
-                    + " | habilidad <nombre> | retirar [jugador] | prueba <x> <y> <z> [N]", Paleta.AVISO));
+                    + " | habilidad <nombre> | retirar [jugador] | prueba <x> <y> <z> [N] | anomalia", Paleta.AVISO));
             return;
         }
         String sub = args[1].toLowerCase(Locale.ROOT);
@@ -1259,6 +1286,8 @@ final class Parca implements Listener {
             case "habilidad" -> habilidad(quien, args);
             case "retirar" -> retirar(quien, args);
             case "prueba" -> prueba(quien, args);
+            case "anomalia" -> decir(quien, anomalia == null ? "anomalia | EDM sin las clases de anomalias: siempre la reserva"
+                    : anomalia.estado());
             default -> forzar(quien, args);
         }
     }
@@ -1266,14 +1295,14 @@ final class Parca implements Listener {
     private List<String> tab(String[] args) {
         List<String> out = new ArrayList<>();
         if (args.length == 2) {
-            out.addAll(List.of("info", "vida", "habilidad", "retirar", "prueba"));
+            out.addAll(List.of("info", "vida", "habilidad", "retirar", "prueba", "anomalia"));
             for (Player p : hc.plugin().getServer().getOnlinePlayers()) out.add(p.getName());
         } else if (args.length == 3 && (args[1].equalsIgnoreCase("info") || args[1].equalsIgnoreCase("retirar"))) {
             for (Player p : hc.plugin().getServer().getOnlinePlayers()) out.add(p.getName());
         } else if (args.length == 3 && args[1].equalsIgnoreCase("vida")) {
             out.addAll(List.of("0.5", "0.2"));
         } else if (args.length == 3 && args[1].equalsIgnoreCase("habilidad")) {
-            out.addAll(List.of("siega", "umbral", "tiron", "cortejo", "sentencia"));
+            out.addAll(HabilidadParca.nombres());
         }
         return out;
     }
@@ -1329,7 +1358,7 @@ final class Parca implements Listener {
         long ahora = System.currentTimeMillis();
         ParcaViva pe = de(id);
         decir(quien, "parca | " + nombre + " | r " + repeticiones(id)
-                + " | persigue " + (pe == null ? "no" : (id.equals(pe.presa()) ? "presa" : "marcado") + " N " + pe.nivel()
+                + " | persigue " + (pe == null ? "no" : (id.equals(pe.presa()) ? "presa" : "marcado") + " " + pe.tipo() + " N " + pe.nivel()
                 + " fase " + pe.fase() + " vida " + Math.round(Amenazas.fraccion(pe.cuerpo()) * 100) + " %")
                 + " | pendiente " + (pd == null ? "no" : pd.motivo() + " " + Math.round(pd.fraccion() * 100) + " % hasta "
                 + (pd.hasta() - ahora) / 60_000 + " min")
