@@ -176,11 +176,27 @@ hardcore:
   # = esquina 1, clic derecho = esquina 2) y se guardan con
   # /calamidad define entrada|salida. Las escribe el plugin, no hace falta tocarlo.
   # 1.1.0: aqui va tambien la zona SPAWN (/calamidad define spawn), la caja donde el
-  # AFK dura 5 minutos y acaba en la Grieta (ver parca.spawn).
+  # AFK dura 5 minutos y acaba en la Grieta (ver parca.spawn). 1.2: solo se usa en un
+  # mundo sin la region de WorldGuard de spawn.region (ver spawn, abajo).
   puertas: {}
 
   # Donde aparece el que entra. Se pone con /lw hardcore llegada dentro de Calamity.
   llegada: {}
+
+  # 1.2 · La ZONA SPAWN: donde Calamity no hace nada salvo la Grieta (ver parca.spawn). Dentro
+  # no nace ningun mob de Calamity, la cordura no baja, y no hay alucinaciones, latido, vineta,
+  # niebla, efectos de bioma, minijefe de cordura, Frenesi, testigos, Eco ni PARCA (la que te
+  # persigue se va y te espera fuera, como en la puerta). La puerta de salida, el altar, el
+  # Cristal y la Tasacion siguen igual. Quien muere dentro deja el Eco fuera, en el borde.
+  # Es la region de WorldGuard con este nombre en cada mundo hardcore (la del spawn de
+  # calamity2 se llama "calamity"); si WorldGuard no esta o ese mundo no la tiene, la caja de
+  # la vara (/calamidad define spawn). "" = solo la vara. Se relee cada 5 s: un /rg redefine
+  # o un /calamidad define spawn se notan sin reiniciar. /calamidad dice cual se esta usando.
+  spawn:
+    region: calamity
+    # Los mobs de Calamity que se cuelen (persiguiendo a alguien) se retiran en humo, y
+    # ninguno apunta a quien este dentro. En false se quedan (pero dentro sigue sin nacer ninguno).
+    retirar-mobs: true
 
   # Las quince reglas, cada una con su propio interruptor. Poner una en false (o en 0
   # las que son numero) la apaga sin tocar el resto.
@@ -407,7 +423,7 @@ hardcore:
                                   # pa_tiron, pa_cortejo, pa_guadanas, pa_salto, pa_embestida, pa_umbrales,
                                   # pa_lluvia, pa_muros, pa_anillo, pa_sentencia
       esperas: {}                 # segundos entre usos por tecnica, p. ej. {pa_lluvia: 20, pa_muros: 30}
-    # 1.1.0 · La GRIETA: quieto en la zona spawn (hardcore.puertas.spawn) no se espera a los
+    # 1.1.0 · La GRIETA: quieto en la zona spawn (hardcore.spawn) no se espera a los
     # 10 minutos: a los "minutos" se abre una grieta, se lo traga y lo escupe en un sitio
     # seguro al azar a distancia-min..distancia-max del spawn, y alli le aparece la PARCA.
     # Los avisos previos salen igual, a la misma proporcion, con su propio texto.
@@ -416,7 +432,8 @@ hardcore:
       minutos: 5                  # no puede pasar de "minutos" (la Huella no mide mas)
       distancia-min: 600
       distancia-max: 1500
-      intentos: 12                # puntos al azar que prueba antes de rendirse (entonces viene alli mismo)
+      intentos: 12                # puntos al azar que prueba antes de rendirse (1.2: entonces vuelve a abrirse al minuto;
+                                  # la PARCA no viene nunca a la zona spawn)
 
   # ------------------------------------------------------------------ 2. EL ECO
   eco:
@@ -612,6 +629,7 @@ hardcore:
                 CABALLERO_SEPULCRAL: 18, STORM_RIDER: 18, PRIVILEGIO_FILO: 18, AUREOLA_DEL_ALBA: 19,
                 CORTEZA_DE_ROTTEN: 19, FUNDICION_DE_KEM_Y_KAM: 19, HACHA_DE_ROTTEN: 21, SANGRE: 23, FIRMAMENTO: 40}
     vanilla: {LEATHER: 0, GOLDEN: 1, CHAINMAIL: 1, IRON: 2, DIAMOND: 4, NETHERITE: 6}   # por prefijo de material
+  # tipos.susurro: false apaga solo el susurro ("☠ Oyes la voz de <muerto>, que murió en Calamity hace 2 h: «vuelve…»").
   alucinaciones: {activo: false, por-minuto: [3.0, 2.0, 1.0, 0.5, 0], coste-pegar: 2, tipos: {pasos: true, puerta: true, figura: true, siseo: true, golpe: true, susurro: true, carrera: true}}
 
   # ------------------------------------------------------------------ P1

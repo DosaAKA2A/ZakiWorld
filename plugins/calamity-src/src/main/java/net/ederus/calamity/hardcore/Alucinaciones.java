@@ -188,7 +188,7 @@ final class Alucinaciones implements Listener {
             case SUSURRO -> {
                 if (muertos.isEmpty()) return false;
                 Testigos.Muerto m = muertos.get(azar.nextInt(muertos.size()));
-                p.sendMessage(Component.text("susurro · " + m.nombre() + ": vuelve", Paleta.TENUE));
+                p.sendMessage(susurro(m.nombre(), System.currentTimeMillis() - m.cuando()));
                 return true;
             }
             case FIGURA -> {
@@ -201,6 +201,32 @@ final class Alucinaciones implements Listener {
                 return false;
             }
         }
+    }
+
+    /**
+     * El susurro (1.2). Antes era "susurro · <nombre>: vuelve" en gris, y Dosa lo leyo como un
+     * mensaje de chat de un jugador cualquiera del servidor. Ahora dice que es una voz, de quien y
+     * desde cuando esta muerto, y no tiene la forma "nombre: texto" de un chat: empieza por la
+     * calavera, el nombre va en el gris azulado del Eco (no en el verde de los jugadores) y lo que
+     * dice va entre comillas, en el turquesa de las almas. Sin cursiva, como todo Calamity: el
+     * gris en cursiva es justo como se ve un /msg de verdad.
+     */
+    static Component susurro(String nombre, long haceMs) {
+        return Component.text()
+                .append(Component.text("☠ ", Paleta.ECO))
+                .append(Component.text("Oyes la voz de ", Paleta.TENUE))
+                .append(Component.text(nombre, Paleta.ECO))
+                .append(Component.text(", que murió en Calamity " + hace(haceMs) + ": ", Paleta.TENUE))
+                .append(Component.text("«vuelve…»", Paleta.ALMA))
+                .build();
+    }
+
+    /** "hace un momento", "hace 12 min", "hace 3 h" (hacia abajo: 2 h 59 min son 2 h). */
+    static String hace(long ms) {
+        long min = Math.max(0, ms) / 60_000;
+        if (min < 1) return "hace un momento";
+        if (min < 60) return "hace " + min + " min";
+        return "hace " + min / 60 + " h";
     }
 
     // ----------------------------------------------------------------- figuras
@@ -222,6 +248,8 @@ final class Alucinaciones implements Listener {
         l = Fx.ground(l, 12);
         // Un acantilado o una cueva: una figura flotando o enterrada no asusta, delata.
         if (Math.abs(l.getY() - ojo.getY()) > 10) return false;
+        // 1.2: en la zona spawn no aparece nada, tampoco lo que solo ve el.
+        if (hc.enSpawn(l)) return false;
         l.setDirection(ojo.toVector().subtract(l.toVector()));
 
         LivingEntity cuerpo = null;
@@ -546,6 +574,15 @@ final class Alucinaciones implements Listener {
         h.igual("susurro: ni el mismo, ni conectados, ni de hace mas de 24 h", 1, c.size());
         h.igual("susurro de Ana", "Ana", c.isEmpty() ? null : c.get(0).nombre());
         h.igual("sin nadie, sin susurro", 0, candidatos(List.of(), Set.of(), yo, ahora).size());
+
+        // 1.2: el susurro se entiende (la voz de un muerto de Calamity, y desde cuando) y no parece un chat.
+        String s = Hardcore.plano(susurro("AuthenticShadow", 2 * 3_600_000L + 59 * 60_000L));
+        h.igual("susurro: el texto", "☠ Oyes la voz de AuthenticShadow, que murió en Calamity hace 2 h: «vuelve…»", s);
+        h.ok("susurro: ni empieza por el nombre ni lleva \"nombre:\" (no parece un chat)",
+                !s.startsWith("AuthenticShadow") && !s.contains("AuthenticShadow:"));
+        h.igual("hace: menos de un minuto", "hace un momento", hace(30_000));
+        h.igual("hace: minutos, hacia abajo", "hace 12 min", hace(12 * 60_000L + 59_000));
+        h.igual("hace: horas, hacia abajo", "hace 23 h", hace(23 * 3_600_000L + 59 * 60_000L));
         return h.lineas();
     }
 }

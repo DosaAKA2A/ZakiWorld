@@ -90,7 +90,8 @@ final class Testigos {
             Player asesino = muerto.getKiller();
             ultimoTestigo.values().removeIf(t -> ahora - t > cada);
             for (Player p : w.getPlayers()) {
-                boolean excluido = p.equals(muerto) || p.equals(asesino) || !hc.cuenta(p);
+                // 1.2: desde la zona spawn no se es testigo (alli la cordura no baja).
+                boolean excluido = p.equals(muerto) || p.equals(asesino) || !hc.cuenta(p) || hc.enSpawn(p);
                 if (excluido) continue;
                 double d2 = p.getLocation().distanceSquared(muerto.getLocation());
                 if (d2 > radio * radio) continue;
@@ -130,7 +131,7 @@ final class Testigos {
         ultimoEco.values().removeIf(t -> ahora - t > cada);
         List<String> vistos = new ArrayList<>();
         for (Player p : donde.getWorld().getPlayers()) {
-            if (!hc.cuenta(p)) continue;
+            if (!hc.cuenta(p) || hc.enSpawn(p)) continue;
             double d2 = p.getLocation().distanceSquared(donde);
             if (d2 > radio * radio) continue;
             if (!testigo(d2, radio, p.hasLineOfSight(pecho), false, ultimoEco.get(p.getUniqueId()), ahora, cada)) continue;

@@ -536,24 +536,52 @@ final class Parca implements Listener {
         Pendiente pd = leerPendiente(p.getUniqueId());
         if (pd == null) return;
         boolean conMarca = hc.datos().getLong("parca.marca." + p.getUniqueId(), 0) > System.currentTimeMillis();
-        UUID id = p.getUniqueId();
-        // Se mira cada segundo hasta que se le acabe la proteccion de llegada (como mucho 60 s).
+        volverFuera(p.getUniqueId(), conMarca ? 24 : 6, conMarca
+                ? "Te estaba esperando." : "Te fuiste a mitad. Ella no.");
+    }
+
+    /**
+     * Trae lo pendiente cuando se pueda: se mira cada segundo hasta que se le acabe la proteccion
+     * de llegada (como mucho 60 s) y, 1.2, mientras la zona spawn no la deje venir (esta dentro,
+     * o el unico sitio que hay cae dentro). Eso sin tope: mientras le dure lo pendiente, le espera.
+     */
+    private void volverFuera(UUID id, double distancia, String mensaje) {
         final int[] vueltas = {0};
         BukkitTask[] t = new BukkitTask[1];
         t[0] = hc.plugin().getServer().getScheduler().runTaskTimer(hc.plugin(), () -> {
             Player j = hc.plugin().getServer().getPlayer(id);
-            boolean protegido = j != null && hc.combate() != null
-                    && hc.valor("combate", () -> hc.combate().protegido(j), false);
-            if (j == null || !hc.esHardcore(j) || (!protegido || ++vueltas[0] > 60)) {
-                t[0].cancel();
-                tareas.remove(t[0]);
-                if (j != null && hc.esHardcore(j)) {
-                    hc.seguro("parca", () -> reaparecer(j, conMarca ? 24 : 6, conMarca
-                            ? "Te estaba esperando." : "Te fuiste a mitad. Ella no."));
-                }
+            if (j != null && hc.esHardcore(j)) {
+                boolean protegido = hc.combate() != null && hc.valor("combate", () -> hc.combate().protegido(j), false);
+                if (protegido && ++vueltas[0] <= 60) return;
+                if (!hc.valor("parca", () -> reaparecer(j, distancia, mensaje), true)) return;
             }
+            t[0].cancel();
+            tareas.remove(t[0]);
         }, 20L, 20L);
         tareas.add(t[0]);
+    }
+
+    /**
+     * 1.2 · Entra en la zona spawn con ella encima (Hardcore.vigilarSpawn). Ahi no entra: como en
+     * la puerta, se va sin botin y le espera fuera marca-fuera-minutos con la vida y la fase que
+     * tenia, y en cuanto sale de la zona vuelve a 24 bloques (P-24). Un marcado que no es la presa
+     * solo sale de la lista.
+     */
+    void alEntrarSpawn(Player p) {
+        ParcaViva pe = de(p.getUniqueId());
+        if (pe == null || pe.prueba() || pe.estado() == ParcaViva.Estado.COSECHA) return;
+        if (!p.getUniqueId().equals(pe.presa())) {
+            pe.quitarMarcado(p.getUniqueId(), "spawn");
+            return;
+        }
+        Ajustes a = ajustes();
+        long hasta = System.currentTimeMillis() + a.marcaFuera * 60_000L;
+        guardarPendiente(pe, hasta, "spawn");
+        hc.datos().set("parca.marca." + p.getUniqueId(), hasta);
+        hc.guardarYa();
+        p.sendMessage(ComandoCalamity.mensaje("La Parca no entra en el spawn. Te espera fuera."));
+        pe.irse("spawn", null);
+        volverFuera(p.getUniqueId(), 24, "Te estaba esperando.");
     }
 
     /**
@@ -594,7 +622,10 @@ final class Parca implements Listener {
             tareas.remove(t[0]);
             Player j = hc.plugin().getServer().getPlayer(id);
             if (j != null && hc.esHardcore(j)) {
-                hc.seguro("parca", () -> reaparecer(j, 6, "Te fuiste a mitad. Ella no."));
+                // 1.2: si la zona spawn no la deja venir (vuelve dentro de ella), le espera a que salga.
+                if (!hc.valor("parca", () -> reaparecer(j, 6, "Te fuiste a mitad. Ella no."), true)) {
+                    volverFuera(id, 6, "Te fuiste a mitad. Ella no.");
+                }
             }
         }, Math.max(1, ajustes().reapareceSegundos) * 20L);
         tareas.add(t[0]);
@@ -683,6 +714,8 @@ final class Parca implements Listener {
         Ajustes a = ajustes();
         if (!a.activa || !hc.esHardcore(p)) return false;
         if (persigue(p)) return true;
+        // 1.2: en la zona spawn no aparece nunca; alli el AFK es cosa de la Grieta (que la trae lejos).
+        if (hc.enSpawn(p)) return false;
         // Otro que llega a 600 a <= 32 de una viva no trae otra: entra en esa con M+1.
         for (ParcaViva pe : peleas) {
             if (pe.prueba() || !pe.aceptaMarcados() || pe.cuerpo().getWorld() != p.getWorld()) continue;
@@ -697,7 +730,7 @@ final class Parca implements Listener {
         List<Player> grupo = new ArrayList<>();
         grupo.add(p);
         for (Player o : p.getWorld().getPlayers()) {
-            if (o.equals(p) || !hc.cuenta(o) || persigue(o) || exento(o)) continue;
+            if (o.equals(p) || !hc.cuenta(o) || persigue(o) || exento(o) || hc.enSpawn(o)) continue;
             if (o.getLocation().distanceSquared(p.getLocation()) > a.radioMarcaGrupo * a.radioMarcaGrupo) continue;
             if (hc.huella() != null && hc.huella().quieto(o) >= a.quietoMarcaGrupo) grupo.add(o);
         }
@@ -706,7 +739,8 @@ final class Parca implements Listener {
         for (Player m : grupo) n0 = Math.max(n0, nivelCalamity(m));
         int n = nivel(a, n0);
         int m = grupo.size() - 1;
-        Location sitio = sitioDetras(p, 6);
+        Location sitio = sitioFuera(p, 6);
+        if (sitio == null) return false;   // 1.2: detras y delante cae en la zona spawn; el segundo siguiente
         ParcaViva pe = nueva(a, p, grupo, n, r, m, sitio, 1.0, 1);
         if (pe == null) return false;
         registrar(pe);
@@ -747,6 +781,19 @@ final class Parca implements Listener {
         if (pe != null && !peleas.contains(pe)) peleas.add(pe);
     }
 
+    /**
+     * 1.2 · Donde aparece (sitioDetras) sin caer en la zona spawn: si detras queda la zona (acaba
+     * de salir de ella, o esta en su borde mirando hacia fuera), delante. Null si las dos caen dentro.
+     */
+    private Location sitioFuera(Player p, double distancia) {
+        Location sitio = sitioDetras(p, distancia);
+        if (!hc.enSpawn(sitio)) return sitio;
+        Location girado = p.getLocation();
+        girado.setYaw(girado.getYaw() + 180);
+        sitio = sitioDetras(girado, distancia);
+        return hc.enSpawn(sitio) ? null : sitio;
+    }
+
     /** Exento a mano de la PARCA (/lw hardcore exento; ningun permiso lo concede). */
     boolean exento(Player p) {
         return hc.exentos() != null && hc.exentos().parca(p.getUniqueId());
@@ -784,7 +831,11 @@ final class Parca implements Listener {
      * (Amenazas cancela todo dano que no sea de jugador) y el Paso Umbral la saca.
      */
     static Location sitioDetras(Player p, double distancia) {
-        Location base = p.getLocation();
+        return sitioDetras(p.getLocation(), distancia);
+    }
+
+    /** Lo mismo desde un sitio y una mirada cualesquiera (1.2: sitioFuera la gira). */
+    static Location sitioDetras(Location base, double distancia) {
         Vector atras = base.getDirection().setY(0);
         if (atras.lengthSquared() < 1e-4) atras = new Vector(0, 0, 1);
         atras.normalize().multiply(-1);
@@ -869,15 +920,23 @@ final class Parca implements Listener {
         hc.marcarSucio();
     }
 
-    /** Vuelve lo pendiente: a "distancia" bloques, con la vida, fase, N, r y M que tenia. */
-    private void reaparecer(Player p, double distancia, String mensaje) {
+    /**
+     * Vuelve lo pendiente: a "distancia" bloques, con la vida, fase, N, r y M que tenia.
+     *
+     * 1.2: devuelve false solo si no ha podido por la zona spawn (esta dentro, o detras y delante
+     * cae dentro): entonces volverFuera lo intenta el segundo siguiente. Por lo demas (nada
+     * pendiente, el tope global, apagada) true: como antes, no se insiste.
+     */
+    private boolean reaparecer(Player p, double distancia, String mensaje) {
         Pendiente pd = leerPendiente(p.getUniqueId());
-        if (pd == null || persigue(p) || !p.isOnline() || !hc.esHardcore(p) || !hc.cuenta(p)) return;
+        if (pd == null || persigue(p) || !p.isOnline() || !hc.esHardcore(p) || !hc.cuenta(p)) return true;
+        if (hc.enSpawn(p)) return false;
         Ajustes a = ajustes();
-        if (!a.activa || vivas() >= a.maximoSimultaneas) return;   // lo pendiente sigue ahi
-        Location sitio = sitioDetras(p, distancia);
+        if (!a.activa || vivas() >= a.maximoSimultaneas) return true;   // lo pendiente sigue ahi
+        Location sitio = sitioFuera(p, distancia);
+        if (sitio == null) return false;
         ParcaViva pe = nueva(a, p, List.of(p), pd.nivel(), pd.r(), pd.m(), sitio, pd.fraccion(), pd.fase());
-        if (pe == null) return;
+        if (pe == null) return true;
         registrar(pe);
         borrarPendiente(p.getUniqueId());
         p.sendMessage(ComandoCalamity.mensaje(mensaje));
@@ -886,6 +945,7 @@ final class Parca implements Listener {
                 "vida " + Math.round(pd.fraccion() * 100) + " %", pd.motivo(),
                 l.getBlockX() + " " + l.getBlockY() + " " + l.getBlockZ(), pe.tipo());
         retirarMinijefes(p);
+        return true;
     }
 
     // ================================================================ segada

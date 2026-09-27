@@ -185,6 +185,8 @@ public final class MobsLethal implements Listener {
                 if (!cuenta(p)) continue;
                 adoptarCerca(mm, p, radioAdopcion);
                 guarnecer(p);
+                // Calamity 1.2: a quien esta en la zona spawn no le sale nada alrededor.
+                if (zonaSegura(p.getLocation())) continue;
                 int topeDelJugador = tope + (plugin.hardcore() == null ? 0 : plugin.hardcore().bonusTope(p));
                 if (cerca(p, radioConteo) >= topeDelJugador) continue;
                 Location sitio = sitio(p, min, max);
@@ -203,6 +205,9 @@ public final class MobsLethal implements Listener {
     }
 
     private LivingEntity invocarTipo(Player p, String id, boolean destacado, Location sitio) {
+        // Calamity 1.2: el unico sitio por el que nace un mob de Lethal World (ciclo, oleada,
+        // minijefe y guarnicion), asi que la zona spawn se cierra aqui una vez para todos.
+        if (zonaSegura(sitio)) return null;
         AnomalyPlugin a = anomaly();
         if (a == null) return null;
         MinionType tipo = a.minions().type(id);
@@ -262,6 +267,8 @@ public final class MobsLethal implements Listener {
 
     /** Una tanda de mobs del bioma alrededor de un jugador, para la oleada de entrada. */
     public void oleada(Player p, int cuantos) {
+        // Calamity 1.2: si la llegada cae en la zona spawn, ahi no recibe nadie a nadie.
+        if (zonaSegura(p.getLocation())) return;
         for (int i = 0; i < cuantos; i++) {
             Location sitio = sitio(p, 12, 26);
             if (sitio != null) invocar(p, sitio);
@@ -348,6 +355,12 @@ public final class MobsLethal implements Listener {
             default -> {
             }
         }
+        // Calamity 1.2: en la zona spawn no nace ningun hostil por su cuenta (spawners, refuerzos,
+        // patrullas...). Lo que invoca un plugin o el staff ya ha salido arriba.
+        if (zonaSegura(e.getLocation())) {
+            e.setCancelled(true);
+            return;
+        }
         if (esAjeno(mob)) return;
         plugin.getServer().getScheduler().runTask(plugin, () -> {
             AnomalyPlugin a = anomaly();
@@ -364,6 +377,16 @@ public final class MobsLethal implements Listener {
     private boolean cuenta(Player p) {
         if (p.getGameMode() == GameMode.SPECTATOR) return false;
         return p.getGameMode() != GameMode.CREATIVE || cfg().getBoolean("contar-creativo", false);
+    }
+
+    /**
+     * Calamity 1.2: la zona spawn de un mundo hardcore (Hardcore.enSpawn, la region de WorldGuard o
+     * la caja de la vara). Ahi no nace ni se adopta ningun mob de Lethal World. Fuera de los
+     * mundos hardcore siempre es false.
+     */
+    private boolean zonaSegura(Location l) {
+        Hardcore hc = plugin.hardcore();
+        return hc != null && hc.enSpawn(l);
     }
 
     private Player masCercano(Location donde, double radio) {
@@ -388,6 +411,8 @@ public final class MobsLethal implements Listener {
             // reescribiria vida, nombre y dano (MT sec. 0 D).
             if (Marcas.esAmenaza(mob)) continue;
             if (esAjeno(mob)) continue;
+            // Calamity 1.2: lo que ya esta en la zona spawn no se hace nuestro (no se toca lo ajeno).
+            if (zonaSegura(mob.getLocation())) continue;
             if (mm.adoptado(mob)) mm.reescoltar(mob);
             else adoptar(mm, mob, p);
         }

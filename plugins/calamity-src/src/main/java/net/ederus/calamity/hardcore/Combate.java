@@ -168,7 +168,8 @@ final class Combate implements Listener {
             Compat.spawn(p.getWorld(), Particle.END_ROD, p.getLocation().add(0, 1, 0), 3, 0.3, 0.5, 0.3, 0.01);
         }
 
-        if (!frenesiActivo() || !hc.cordura().conoce(p)) {
+        // 1.2: en la zona spawn no hay Frenesi (ni aviso, ni particulas, ni dano de mas).
+        if (!frenesiActivo() || !hc.cordura().conoce(p) || hc.enSpawn(p)) {
             enFrenesi.remove(u);
             return;
         }
@@ -552,7 +553,7 @@ final class Combate implements Listener {
 
     /** Frenesi de un jugador para "dano-hecho" o "dano-recibido"; 1 si no aplica. */
     private double frenesi(Player p, String clave) {
-        if (!frenesiActivo() || !hc.esHardcore(p) || !hc.cordura().conoce(p)) return 1.0;
+        if (!frenesiActivo() || !hc.esHardcore(p) || !hc.cordura().conoce(p) || hc.enSpawn(p)) return 1.0;
         return factorFrenesi(hc.cordura().valor(p), hc.cfg().getDouble("frenesi.umbral", 25),
                 hc.cfg().getDouble("frenesi." + clave, 0.15));
     }

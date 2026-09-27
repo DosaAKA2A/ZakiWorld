@@ -212,7 +212,7 @@ public final class ComandoCalamidad implements TabExecutor {
         linea(q, "Mundos", String.join(", ", hc.mundos()));
         linea(q, "puerta de entrada", hc.vara().describir("entrada"));
         linea(q, "puerta de salida", hc.vara().describir("salida"));
-        linea(q, "zona spawn (Grieta)", hc.vara().describir("spawn"));
+        linea(q, "zona spawn", hc.describirSpawn());
         for (String punto : List.of("llegada", "salida")) {
             var donde = hc.punto(punto);
             linea(q, punto == "llegada" ? "aparece en" : "vuelve a",

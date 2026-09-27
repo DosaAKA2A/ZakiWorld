@@ -151,7 +151,9 @@ final class Npcs implements Listener {
                     p.sendMessage(ComandoCalamity.mensaje("El altar está en silencio ahora mismo."));
                     return "el altar está apagado";
                 }
-                if (hc.esHardcore(p)) {
+                // En la zona spawn si: es terreno seguro y la puerta de salida esta ahi mismo, asi que
+                // comprar alli un Cristal o un Frasco es lo mismo que comprarlo fuera.
+                if (hc.esHardcore(p) && !hc.enSpawn(p)) {
                     p.sendMessage(ComandoCalamity.mensaje("El altar no escucha desde ahí dentro."));
                     return "está dentro de Calamity";
                 }

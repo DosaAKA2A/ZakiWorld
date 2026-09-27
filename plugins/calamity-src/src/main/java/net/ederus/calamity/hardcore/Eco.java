@@ -671,7 +671,8 @@ final class Eco {
             rojo = cercaRojo;
             ponerNombre(hc);
         }
-        if (duenoP != null && !reconocido && duenoP.getLocation().distanceSquared(pos) <= 24 * 24) {
+        // 1.2: desde la zona spawn no le reconoce (ni titulo, ni sonido, ni cordura).
+        if (duenoP != null && !reconocido && !hc.enSpawn(duenoP) && duenoP.getLocation().distanceSquared(pos) <= 24 * 24) {
             reconocido = true;
             duenoP.playSound(pos, "entity.player.death", 1.0f, 1.0f);
             duenoP.showTitle(Title.title(Component.empty(), Component.text("Te reconoce.", Paleta.AVISO),
@@ -687,6 +688,16 @@ final class Eco {
 
         // --- P1 · voces
         g.voz(this, pos, cuentan, ahora);
+
+        // --- 1.2 · la zona spawn: si se ha colado persiguiendo a alguien, vuelve a su sitio en humo,
+        // como al pasarse de la correa (un Eco viejo que nacio dentro se queda como estaba).
+        if (hc.enSpawn(pos) && !hc.enSpawn(ancla)) {
+            volviendo = false;
+            Compat.spawn(e.getWorld(), Compat.SMOKE, pos.clone().add(0, 1, 0), 20, 0.4, 0.8, 0.4, 0.02);
+            hc.amenazas().teleportar(e, ancla);
+            Compat.spawn(e.getWorld(), Compat.SMOKE, ancla.clone().add(0, 1, 0), 20, 0.4, 0.8, 0.4, 0.02);
+            return true;
+        }
 
         // --- correa: volviendo a casa no persigue a nadie
         double dist = pos.distance(ancla);

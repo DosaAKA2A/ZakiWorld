@@ -293,7 +293,8 @@ final class Ecos implements Listener {
             boolean senal = false;
             for (Player p : cuentan) {
                 double d2 = p.getLocation().distanceSquared(l);
-                if (d2 <= rDesp * rDesp) cerca = p;
+                // 1.2: desde la zona spawn no se despierta a nadie (la senal si se ve).
+                if (d2 <= rDesp * rDesp && !hc.enSpawn(p)) cerca = p;
                 if (d2 <= rSenal * rSenal) senal = true;
             }
             if (cerca != null) despertar(e, cerca.getName());
@@ -932,7 +933,8 @@ final class Ecos implements Listener {
 
     /** Llegada protegida (M5): el Eco no la toca. */
     boolean protegido(Player p) {
-        return hc.valor("combate", () -> hc.combate().protegido(p), false);
+        // 1.2: quien esta en la zona spawn tampoco es objetivo de ningun Eco.
+        return hc.enSpawn(p) || hc.valor("combate", () -> hc.combate().protegido(p), false);
     }
 
     /** Aviso "Tu Eco · d m" cada 20 s a aviso-dueno-radio (lo llama el reloj por jugador). */
