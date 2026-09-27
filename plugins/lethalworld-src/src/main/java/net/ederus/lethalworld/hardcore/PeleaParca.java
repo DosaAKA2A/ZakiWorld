@@ -6,7 +6,6 @@ import net.ederus.edm.comun.Compat;
 import net.ederus.edm.comun.Fx;
 import net.kyori.adventure.bossbar.BossBar;
 import net.kyori.adventure.text.Component;
-import net.kyori.adventure.text.format.TextColor;
 import net.kyori.adventure.title.Title;
 import org.bukkit.Color;
 import org.bukkit.Location;
@@ -70,8 +69,7 @@ final class PeleaParca implements Runnable {
 
     private enum Habilidad { SIEGA, UMBRAL, TIRON, CORTEJO, CAMPANADA }
 
-    /** Colores de la pelea (Paleta): el de la PARCA claro, para que el aviso se lea en el suelo. */
-    static final TextColor HUESO = Paleta.HUESO;
+    /** Colores de las particulas de la pelea: claros, para que el aviso se lea en el suelo. */
     private static final int RGB_PARCA = 0xF26A63;
     private static final int RGB_HUESO = 0xE3DCCE;
     /** La Siega empieza coral y acaba en rojo vivo: el color dice cuanto queda. */
@@ -790,7 +788,7 @@ final class PeleaParca implements Runnable {
      * Devuelve por que no, o null si ha empezado.
      */
     String forzar(String nombre, Player quien) {
-        if (estado != Estado.PELEA && estado != Estado.APARECE) return "no esta peleando";
+        if (estado != Estado.PELEA) return "no esta peleando (si acaba de salir, espera 2 s)";
         Habilidad h = switch (nombre) {
             case "siega" -> Habilidad.SIEGA;
             case "umbral", "paso" -> Habilidad.UMBRAL;
