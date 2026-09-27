@@ -185,8 +185,9 @@ hardcore:
     #     APAGADA por Dosa el 2026-09-18.
     cuarentena-minutos: 0
 
-  # El tag de las 24 horas. La etiqueta en si vive en el tags.yml de AlonsoTags, que
-  # decide quien puede ponersela por un PERMISO: entregarla es dar ese permiso.
+  # El tag de las 24 horas. La etiqueta en si vive en plugins/Tags/tags.yml (el plugin Tags,
+  # que sustituyo a AlonsoTags), que decide quien puede ponersela por un PERMISO: entregarla
+  # es dar ese permiso.
   # Las horas son ACUMULADAS y no se reinician nunca. Se guardan en hardcore-datos.yml,
   # junto a este fichero, y NO aqui: asi el plugin no reescribe este config cada
   # minuto y lo que se edite a mano o se suba por el panel no se pierde.

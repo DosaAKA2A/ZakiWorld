@@ -915,9 +915,9 @@ public final class Hardcore implements Listener {
     /**
      * El tag de las veinticuatro horas.
      *
-     * AlonsoTags decide quien puede ponerse cada etiqueta por un PERMISO, asi que
-     * entregarla es darle ese permiso por LuckPerms; la etiqueta en si vive en el
-     * tags.yml de AlonsoTags y no la toca nadie desde aqui.
+     * El plugin Tags decide quien puede ponerse cada etiqueta por un PERMISO, asi que
+     * entregarla es darle ese permiso por LuckPerms; la etiqueta en si vive en
+     * plugins/Tags/tags.yml y no la toca nadie desde aqui.
      */
     private void entregarTag(Player p, long segundos) {
         ConfigurationSection t = cfg().getConfigurationSection("tag");
