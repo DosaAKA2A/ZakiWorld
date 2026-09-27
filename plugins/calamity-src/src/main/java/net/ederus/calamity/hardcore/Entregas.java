@@ -231,11 +231,13 @@ final class Entregas implements Listener {
     }
 
     /**
-     * Si un objeto se le puede dar ya en la mano: conectado y fuera de Calamity. Si no, espera en
+     * Si un objeto se le puede dar ya en la mano: conectado y fuera de Calamity o en su zona spawn. Si no, espera en
      * premios-pendientes. El menu del Altar lo mira para decirlo en cada trueque.
      */
     boolean recibeYa(Player p) {
-        return p != null && p.isOnline() && !hc.esHardcore(p);
+        // En la zona spawn tambien: los NPCs del Altar estan ahi y lo comprado es para llevarlo
+        // dentro, igual que lo que se trae de fuera por la puerta de entrada.
+        return p != null && p.isOnline() && (!hc.esHardcore(p) || hc.enSpawn(p));
     }
 
     /** Si ese objeto de dar() es un objeto de verdad (va al inventario) y no saldo, credito ni llave. */
