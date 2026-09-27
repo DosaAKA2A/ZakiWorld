@@ -231,12 +231,27 @@ final class Entregas implements Listener {
     }
 
     /**
+     * Si un objeto se le puede dar ya en la mano: conectado y fuera de Calamity. Si no, espera en
+     * premios-pendientes. El menu del Altar lo mira para decirlo en cada trueque.
+     */
+    boolean recibeYa(Player p) {
+        return p != null && p.isOnline() && !hc.esHardcore(p);
+    }
+
+    /** Si ese objeto de dar() es un objeto de verdad (va al inventario) y no saldo, credito ni llave. */
+    static boolean esObjeto(String objeto) {
+        String o = objeto == null ? "" : objeto.toLowerCase(Locale.ROOT);
+        return !o.isEmpty() && !o.equals("ofrenda") && !o.startsWith("llave") && !o.equals("libro")
+                && !o.startsWith("esencia") && !o.startsWith("credito");
+    }
+
+    /**
      * Mete los objetos donde tocan y dice donde: "inventario", "suelo" (no cabia, P-M06) o
      * "pendiente" (desconectado o dentro de Calamity).
      */
     private String entregarObjetos(OfflinePlayer a, String objeto, List<ItemStack> items, String origen) {
         Player p = a.getPlayer();
-        if (p == null || !p.isOnline() || hc.esHardcore(p)) {
+        if (!recibeYa(p)) {
             for (ItemStack it : items) guardarPendiente(a.getUniqueId(), "item", aTexto(it), objeto, origen);
             hc.guardarYa();
             if (p != null && p.isOnline()) {

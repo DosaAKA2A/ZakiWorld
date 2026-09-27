@@ -1,7 +1,6 @@
 package net.ederus.calamity.hardcore;
 
 import net.ederus.edm.comun.Compat;
-import net.ederus.edm.comun.menu.MenuUtil;
 import net.kyori.adventure.text.Component;
 import org.bukkit.Material;
 import org.bukkit.command.CommandSender;
@@ -157,11 +156,15 @@ final class Camino {
 
     // ------------------------------------------------------------------ menu
 
-    /** El menu de "Tu camino": 36 casillas, un icono por pieza y la cabecera con horas e hito. */
+    /**
+     * El menu de "Tu camino": 36 casillas con el marco de Calamity (Marco), la cabecera con horas e
+     * hito, una fila para las piezas con Sello y otra para las de Marcas y Fragmentos, cada una con
+     * su rotulo, y abajo la vuelta al Umbral (si desde ahi el Altar escucha).
+     */
     void abrir(Player p) {
         Map<Integer, String> acciones = new HashMap<>();
         Inventory inv = hc.plugin().getServer().createInventory(new MenuAltar.Marca(MenuAltar.CAMINO, acciones, null), 36,
-                Paleta.ventana("Altar del Umbral · Tu camino"));
+                Paleta.ventanaCalamity("Tu camino"));
         pintar(inv, p, acciones);
         p.openInventory(inv);
         Compat.soundPlayers(p.getWorld(), p.getLocation(), "item.book.page_turn", 1.0f, 1.0f);
@@ -175,7 +178,7 @@ final class Camino {
         double hito = proximoHito(h);
         List<Component> cabeza = new ArrayList<>();
         cabeza.add(dato("Horas activas", horasTexto(h)));
-        cabeza.add(hito > 0 ? dato("Próximo hito", horasTexto(hito).replace(",0", "") + " h") : MenuUtil.line("Ya no quedan hitos de horas."));
+        cabeza.add(hito > 0 ? dato("Próximo hito", horasTexto(hito).replace(",0", "") + " h") : Marco.tenue("Ya no quedan hitos de horas."));
         if (cr != null) {
             int errantes = cr.de(u, Creditos.ERRANTE);
             if (errantes > 0) {
@@ -185,34 +188,40 @@ final class Camino {
         }
         Saldo s = hc.saldo();
         if (s != null) cabeza.add(dato("Saldo", s.de(u) + " Esencias"));
-        cabeza.add(MenuUtil.blank());
-        cabeza.add(MenuUtil.line("Cada pieza, lo que te falta."));
-        inv.setItem(4, MenuUtil.icon(Material.COMPASS, Component.text("Tu camino", Altar.NARANJA), cabeza, false));
+        cabeza.add(Component.empty());
+        cabeza.add(Marco.tenue("Cada pieza, lo que te falta."));
+        inv.setItem(4, Marco.icono(Material.COMPASS, Component.text("Tu camino", Paleta.MARCA), cabeza, false));
+        inv.setItem(Marco.CERRAR, Marco.cerrar());
+        acciones.put(Marco.CERRAR, "cerrar");
 
-        int[] sellos = {10, 11, 12, 13, 14, 15, 16};
-        int[] otros = {20, 22, 24, 19, 21, 23, 25};
-        int is = 0, io = 0;
-        for (Paso paso : pasos()) {
-            boolean deSello = paso.t().credito().startsWith("sello:");
-            int casilla;
-            if (deSello && is < sellos.length) casilla = sellos[is++];
-            else if (!deSello && io < otros.length) casilla = otros[io++];
-            else continue;
-            inv.setItem(casilla, icono(p, paso));
-            acciones.put(casilla, "c:" + paso.pieza());
+        List<Paso> deSello = new ArrayList<>(), otros = new ArrayList<>();
+        for (Paso paso : pasos()) (paso.t().credito().startsWith("sello:") ? deSello : otros).add(paso);
+        fila(inv, acciones, p, 9, Marco.rotulo(Material.FIRE_CHARGE, "Piezas con Sello",
+                List.of("El Sello cae del minijefe; con", "la piedad llena, seguro.")), deSello);
+        fila(inv, acciones, p, 18, Marco.rotulo(Material.ECHO_SHARD, "Marcas y Fragmentos",
+                List.of("El Vestigio del Eco y la", "Guadaña de la Parca.")), otros);
+        if (altar.activo() && Marco.puedeAltar(hc, p)) {
+            inv.setItem(31, Marco.icono(Material.ENCHANTING_TABLE, Component.text("Volver al Umbral", Paleta.DETALLE),
+                    List.of(Marco.tenue("La primera página del Altar."), Component.empty(), Marco.accion("Clic para volver")), false));
+            acciones.put(31, "ir:" + MenuAltar.UMBRAL);
         }
-        if (!hc.esHardcore(p) && altar.activo()) {
-            inv.setItem(27, MenuUtil.icon(Material.LECTERN, Component.text("Volver al altar", Altar.NARANJA),
-                    List.of(MenuUtil.line("Página Umbral.")), false));
-            acciones.put(27, "ir:" + MenuAltar.UMBRAL);
+        Marco.rellenar(inv);
+    }
+
+    /** Una fila del camino: el rotulo y las piezas centradas (como en el Altar), hasta siete. */
+    private void fila(Inventory inv, Map<Integer, String> acciones, Player p, int base, org.bukkit.inventory.ItemStack rotulo,
+                      List<Paso> pasos) {
+        if (pasos.isEmpty()) return;
+        inv.setItem(base, rotulo);
+        int[] cols = Marco.columnas(Math.min(Marco.COLUMNAS, pasos.size()));
+        for (int i = 0; i < cols.length; i++) {
+            inv.setItem(base + cols[i], icono(p, pasos.get(i)));
+            acciones.put(base + cols[i], "c:" + pasos.get(i).pieza());
         }
-        inv.setItem(31, MenuUtil.icon(Material.BARRIER, Component.text("Cerrar", Paleta.AVISO), List.of(), false));
-        acciones.put(31, "cerrar");
-        for (int i = 0; i < inv.getSize(); i++) if (inv.getItem(i) == null) inv.setItem(i, MenuUtil.pane());
     }
 
     private static Component dato(String etiqueta, String valor) {
-        return Component.text(etiqueta + ": ", MenuUtil.SOFT).append(Component.text(valor, Paleta.TEXTO));
+        return Marco.dato(etiqueta, valor);
     }
 
     private org.bukkit.inventory.ItemStack icono(Player p, Paso paso) {
@@ -233,9 +242,9 @@ final class Camino {
             lore.add(dato("Piedad", pied + "/" + piedadMaxima()));
             if (tiene == 0) {
                 int falta = Math.max(1, piedadMaxima() - pied);
-                lore.add(MenuUtil.line("Te faltan " + falta + (falta == 1 ? " muerte" : " muertes") + " de"));
-                lore.add(MenuUtil.line(Minijefes.nombre(id) + " para el Sello seguro."));
-                if (cr != null && cr.de(u, Creditos.ERRANTE) > 0) lore.add(MenuUtil.line("O un Sello Errante."));
+                lore.add(Marco.tenue("Te faltan " + falta + (falta == 1 ? " muerte" : " muertes") + " de"));
+                lore.add(Marco.tenue(Minijefes.nombre(id) + " para el Sello seguro."));
+                if (cr != null && cr.de(u, Creditos.ERRANTE) > 0) lore.add(Marco.tenue("O un Sello Errante."));
             }
         } else {
             int pide = Math.max(1, t.creditos());
@@ -243,9 +252,9 @@ final class Camino {
             nombre = Component.text(quien + " · " + Forja.nombreCorto(paso.pieza()), Altar.AMBAR);
             listo = tiene >= pide;
             lore.add(dato(quien, Math.min(tiene, 999) + "/" + pide));
-            if (!listo) lore.add(MenuUtil.line("Te faltan " + Forja.nombreCredito(c, pide - tiene) + "."));
+            if (!listo) lore.add(Marco.tenue("Te faltan " + Forja.nombreCredito(c, pide - tiene) + "."));
         }
-        lore.add(MenuUtil.blank());
+        lore.add(Component.empty());
         lore.add(dato("Forja", t.esencias() + " Esencias" + (t.mobcoins() > 0 ? " · " + Altar.miles(t.mobcoins()) + " MobCoins" : "")));
         long forjada = hc.datos().getLong("forjas." + u + "." + paso.pieza(), 0);
         int dias = Forja.diasReposicion(hc.datos(), u, paso.pieza(), System.currentTimeMillis(),
@@ -253,15 +262,15 @@ final class Camino {
         if (dias > 0) {
             lore.add(Component.text("Reposición abierta: " + dias + (dias == 1 ? " día" : " días") + ".", Altar.VERDE));
         } else if (forjada > 0) {
-            lore.add(MenuUtil.line("Ya la forjaste una vez."));
+            lore.add(Marco.tenue("Ya la forjaste una vez."));
         }
         if (t.esperaDias() > 0 && forjada > 0) {
             long queda = forjada + t.esperaDias() * 86_400_000L - System.currentTimeMillis();
-            if (queda > 0 && dias == 0) lore.add(MenuUtil.line("Otra nueva en " + ((queda + 86_399_999L) / 86_400_000L) + " días."));
+            if (queda > 0 && dias == 0) lore.add(Marco.tenue("Otra nueva en " + ((queda + 86_399_999L) / 86_400_000L) + " días."));
         }
-        lore.add(MenuUtil.blank());
-        lore.add(Component.text(listo ? "Ya tienes lo que pide." : "Aún no.", listo ? Altar.VERDE : MenuUtil.SOFT));
-        return MenuUtil.icon(t.icono(), nombre, lore, listo);
+        lore.add(Component.empty());
+        lore.add(Component.text(listo ? "Ya tienes lo que pide." : "Aún no.", listo ? Altar.VERDE : Paleta.TENUE));
+        return Marco.icono(t.icono(), nombre, lore, listo);
     }
 
     /** Clic en una pieza: se apunta en la telemetria (que piezas se miran = demanda antes de comprar). */

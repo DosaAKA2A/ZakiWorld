@@ -1,6 +1,5 @@
 package net.ederus.calamity.hardcore;
 
-import net.ederus.edm.comun.Compat;
 import net.kyori.adventure.text.Component;
 import org.bukkit.Bukkit;
 import org.bukkit.command.CommandSender;
@@ -23,8 +22,10 @@ import java.util.UUID;
 
 /**
  * Lo que abren los cinco NPCs de la antesala de Calamity (1.2.0): el Guardian del Umbral y el
- * Forjador (las dos paginas del Altar), el Tasador (saldo, tasacion y contratos del dia), el
- * Cronista (la historia y el tutorial, Cronista) y el Cazador (el Tablero y los rankings).
+ * Forjador (las dos paginas del Altar), el Tasador (su menu, MenuTasador: saldo, tasacion,
+ * Aduana, contratos del dia y Reliquias encima), el Cronista (la historia y el tutorial,
+ * Cronista) y el Cazador (los rankings de la semana, MenuCazador, y desde ahi el Tablero).
+ * Desde 1.3.0 el Tasador y el Cazador ya no escriben en el chat: todo va en su menu.
  *
  * Los NPCs los pone y los cuida el staff a mano con Citizens; Calamity no los crea ni depende
  * de Citizens. Cada uno lleva un comando de clic sin -p, que Citizens ejecuta como CONSOLA
@@ -36,8 +37,9 @@ import java.util.UUID;
  * que es la salida, y abierto dentro de Calamity romperia la extraccion. Por eso no hay un
  * comando de jugador que lo abra: /calamidad abrir pide ederus.mundos, que tienen la consola
  * (el clic del NPC) y el staff, y aqui se repiten las comprobaciones del bloque del Altar
- * (Altar.onTocar): altar encendido y el jugador fuera de Calamity. El menu, ademas, lo vuelve
- * a mirar en cada clic (MenuAltar.accion).
+ * (Altar.onTocar): altar encendido y el jugador fuera de Calamity o en su zona spawn
+ * (Marco.puedeAltar). El menu, ademas, lo vuelve a mirar en cada clic (MenuAltar.accion) y en
+ * las pestanas del Tasador.
  */
 final class Npcs implements Listener {
 
@@ -74,17 +76,21 @@ final class Npcs implements Listener {
 
     /**
      * Un clic cada tanto por jugador. Los dos botones llevan el mismo comando, y un clic
-     * nervioso soltaria el texto del Tasador o del Cronista dos veces.
+     * nervioso soltaria el texto del Cronista dos veces (o abriria el menu dos veces).
      */
     private static final long ESPERA_MS = 1000;
 
     private final Hardcore hc;
     private final Cronista cronista;
+    private final MenuTasador tasador;
+    private final MenuCazador cazador;
     private final Map<UUID, Long> ultimoClic = new HashMap<>();
 
     Npcs(Hardcore hc) {
         this.hc = hc;
         this.cronista = new Cronista(hc);
+        this.tasador = new MenuTasador(hc);
+        this.cazador = new MenuCazador(hc);
         hc.plugin().getServer().getPluginManager().registerEvents(this, hc.plugin());
         Subcomandos.lw().registrar("abrir",
                 "abrir <jugador> <" + String.join("|", Tipo.ids()) + ">: lo que abre cada NPC de la antesala"
@@ -99,8 +105,18 @@ final class Npcs implements Listener {
         Autotest.registrar("npcs", this::autotest);
     }
 
+    MenuTasador tasador() {
+        return tasador;
+    }
+
+    MenuCazador cazador() {
+        return cazador;
+    }
+
     void parar() {
         HandlerList.unregisterAll(this);
+        hc.seguro("tasador", tasador::parar);
+        hc.seguro("cazador", cazador::parar);
         ultimoClic.clear();
     }
 
@@ -153,7 +169,7 @@ final class Npcs implements Listener {
                 }
                 // En la zona spawn si: es terreno seguro y la puerta de salida esta ahi mismo, asi que
                 // comprar alli un Cristal o un Frasco es lo mismo que comprarlo fuera.
-                if (hc.esHardcore(p) && !hc.enSpawn(p)) {
+                if (!Marco.puedeAltar(hc, p)) {
                     p.sendMessage(ComandoCalamity.mensaje("El altar no escucha desde ahí dentro."));
                     return "está dentro de Calamity";
                 }
@@ -167,78 +183,26 @@ final class Npcs implements Listener {
     }
 
     /**
-     * El Tasador: lo de /calamity saldo tal cual (saldo, creditos, premios pendientes), lo tasado
-     * esta semana, si la primera salida de hoy aun paga, y los contratos del dia.
+     * El Tasador: su menu (MenuTasador), con el saldo y los creditos, los premios pendientes, lo
+     * tasado esta semana, la primera salida de hoy, la Aduana, los contratos y las Reliquias que
+     * lleva encima con lo que valdrian. Antes era todo chat.
      *
      * La "ultima tasacion" no sale: no se guarda en ningun sitio (Tasacion paga y se lo dice al
      * jugador en el momento; lo unico que queda son las sumas de Estadisticas y la telemetria),
      * y no se inventa.
      */
     private void tasador(Player p) {
-        UUID u = p.getUniqueId();
-        if (!Subcomandos.calamity().ejecutar(p, new String[]{"saldo"})) {
-            Saldo s = hc.saldo();
-            if (s != null) p.sendMessage(s.avisoSaldo(u));
-        }
-        Estadisticas st = hc.estadisticas();
-        if (st != null) {
-            long e = st.semana(u, "tasado-esencias"), mc = st.semana(u, "tasado-mc");
-            long rel = st.semana(u, "reliquias"), salidas = st.semana(u, "extracciones");
-            if (e + mc + rel + salidas == 0) {
-                p.sendMessage(Component.text("  Esta semana aún no has sacado nada que tasar.", Paleta.TENUE));
-            } else {
-                p.sendMessage(Component.text("  Tasado esta semana: ", Paleta.TEXTO).append(Paleta.cifra(Altar.miles(e)))
-                        .append(Component.text(" Esencias y ", Paleta.TEXTO)).append(Paleta.cifra(Altar.miles(mc)))
-                        .append(Component.text(" MobCoins, de ", Paleta.TEXTO)).append(Paleta.cifra(rel))
-                        .append(Component.text(rel == 1 ? " Reliquia en " : " Reliquias en ", Paleta.TEXTO))
-                        .append(Paleta.cifra(salidas)).append(Component.text(salidas == 1 ? " salida." : " salidas.", Paleta.TEXTO)));
-            }
-        }
-        // La primera salida del dia: Tasacion apunta el dia en primera-extraccion.<uuid>.
-        Tasacion.Valores v = Tasacion.Valores.de(hc.cfg());
-        Calendario cal = hc.calendario();
-        if (v.primeraBase() > 0 && cal != null) {
-            boolean cobrada = cal.dia().equals(hc.datos().getString("primera-extraccion." + u, ""));
-            p.sendMessage(cobrada ? Component.text("  Tu primera salida de hoy ya está cobrada.", Paleta.TENUE)
-                    : Component.text("  Tu primera salida de hoy paga ", Paleta.TEXTO)
-                    .append(Paleta.cifra("+" + v.primeraBase())).append(Component.text(" Esencias", Paleta.TEXTO))
-                    .append(Component.text(v.primeraSiTasa() > 0 ? " (" : ".", Paleta.TEXTO))
-                    .append(v.primeraSiTasa() > 0 ? Paleta.cifra("+" + v.primeraSiTasa()) : Component.empty())
-                    .append(Component.text(v.primeraSiTasa() > 0 ? " si tasas alguna Reliquia)." : "", Paleta.TEXTO)));
-        }
-        Contratos con = hc.contratos();
-        if (con != null) hc.seguro("contratos", () -> con.mostrar(p, p));
-        Compat.soundPlayers(p.getWorld(), p.getLocation(), "item.book.page_turn", 0.7f, 0.8f);
+        hc.seguro("tasador", () -> tasador.abrir(p, true));
     }
 
     /**
-     * El Cazador: las tablas de la semana en el chat (si el ranking esta encendido) y el
-     * Tablero, que es donde estan los Ecos con botin y las PARCAs sueltas.
+     * El Cazador: los rankings de la semana en su menu (MenuCazador), con el podio de cada tabla
+     * y un boton al Tablero. Con los rankings apagados, el Tablero directamente, como antes.
      */
     private void cazador(Player p) {
-        UUID u = p.getUniqueId();
-        Rankings r = hc.rankings();
-        if (r != null && r.activo()) {
-            p.sendMessage(ComandoCalamity.mensaje(Component.text("Tablas de la semana. ")
-                    .append(Component.text("Se pagan el lunes.", Paleta.TENUE))));
-            for (Map.Entry<Rankings.Tabla, List<Rankings.Fila>> e : r.podioSemana(3).entrySet()) {
-                Component linea = Component.text("  " + e.getKey().nombre() + ": ", Paleta.TEXTO);
-                if (e.getValue().isEmpty()) linea = linea.append(Component.text("nadie todavía", Paleta.TENUE));
-                int puesto = 1;
-                for (Rankings.Fila f : e.getValue()) {
-                    if (puesto > 1) linea = linea.append(Component.text(" · ", Paleta.SEPARADOR));
-                    linea = linea.append(Component.text(puesto++ + ". ", Paleta.TENUE))
-                            .append(Component.text(f.nombre(), f.jugador().equals(u) ? Paleta.BIEN : Paleta.DETALLE))
-                            .append(Component.text(" " + valorRanking(e.getKey().estadistica(), f.valor()), Paleta.CIFRA));
-                }
-                p.sendMessage(linea);
-            }
-            Estadisticas st = hc.estadisticas();
-            int minimo = hc.cfg().getInt("ranking.minimo-extracciones", 3);
-            long llevas = st == null ? 0 : st.semana(u, "extracciones");
-            p.sendMessage(Component.text("  Para cobrar hacen falta ", Paleta.TENUE).append(Paleta.cifra(minimo))
-                    .append(Component.text(" salidas en la semana; llevas ", Paleta.TENUE)).append(Paleta.cifra(llevas))
-                    .append(Component.text(".", Paleta.TENUE)));
+        if (cazador.hay()) {
+            hc.seguro("cazador", () -> cazador.abrir(p));
+            return;
         }
         Tablero tab = hc.tablero();
         if (tab != null) hc.seguro("tablero", () -> tab.abrir(p));

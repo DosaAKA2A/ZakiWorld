@@ -1,7 +1,5 @@
 package net.ederus.calamity.hardcore;
 
-import net.ederus.edm.comun.Compat;
-import net.ederus.edm.comun.menu.MenuUtil;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.TextColor;
 import org.bukkit.Location;
@@ -19,6 +17,7 @@ import org.bukkit.event.inventory.InventoryDragEvent;
 import org.bukkit.event.player.PlayerQuitEvent;
 import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.InventoryHolder;
+import org.bukkit.inventory.ItemStack;
 import org.bukkit.scheduler.BukkitTask;
 
 import java.util.ArrayList;
@@ -34,10 +33,11 @@ import java.util.UUID;
  * M18 · Tablero (/calamity tablero y el boton del Altar): con poca gente dentro, lo que hace
  * que se encuentren.
  *
- * Menu de 27, solo clic izquierdo y un clic cada 500 ms. Fila 1: los tablero.ecos (7) Ecos con
- * mas Reliquias, errantes incluidos: dueno, nivel, reliquias, bioma, distancia a la llegada
- * redondeada a tablero.redondeo (50) y horas que le quedan. Fila 2: las PARCAs vivas, a quien
- * siguen y en que bioma. Sin coordenadas: el que quiera el botin tiene que buscarlo.
+ * Menu de 36 con el marco de Calamity (Marco, 1.3.0), solo clic izquierdo y un clic cada 500 ms.
+ * Fila 1: los tablero.ecos (7) Ecos con mas Reliquias, errantes incluidos (las Reliquias en el
+ * numero de la pila): dueno, nivel, bioma, distancia a la llegada redondeada a tablero.redondeo
+ * (50) y horas que le quedan. Fila 2: las PARCAs vivas, a quien siguen y en que bioma. Abajo, los
+ * rankings de la semana si estan abiertos. Sin coordenadas: el que quiera el botin, que lo busque.
  *
  * Lo que se pinta se calcula como mucho cada tablero.cache-segundos (30) y solo cuando alguien
  * lo abre: sin nadie mirando no cuesta nada. El bioma se pide con World.getBiome, que para un
@@ -47,11 +47,11 @@ final class Tablero implements Listener {
 
     static final TextColor VERDE = Paleta.DETALLE;
     static final TextColor AMBAR = TextColor.color(0xE8A33D);
-    private static final int CERRAR = 22;
+    private static final int CABECERA = 4, ECOS = 9, PARCAS = 18, RANKINGS = 31;
     private static final long ESPERA_MS = 500;
 
-    /** Marca de nuestro inventario. */
-    record Marca() implements InventoryHolder {
+    /** Marca de nuestro inventario: casilla -> que hace. */
+    record Marca(Map<Integer, String> acciones) implements InventoryHolder {
         @Override
         public Inventory getInventory() {
             return null;
@@ -145,70 +145,95 @@ final class Tablero implements Listener {
 
     // ------------------------------------------------------------------ menu
 
-    /** /calamity tablero y el boton del Altar. */
+    /** /calamity tablero, el boton del Altar y el de los rankings del Cazador. */
     void abrir(Player p) {
         if (!activo()) {
             p.sendMessage(ComandoCalamity.mensaje("El Tablero no está colgado ahora mismo."));
             return;
         }
         calcular();
-        Inventory inv = hc.plugin().getServer().createInventory(new Marca(), 27, Paleta.ventana("Tablero de Calamity"));
+        Marca m = new Marca(new HashMap<>());
+        Inventory inv = hc.plugin().getServer().createInventory(m, 36, Paleta.ventanaCalamity("Tablero"));
+        int cada = Math.max(1, hc.cfg().getInt("tablero.cache-segundos", 30));
+        inv.setItem(CABECERA, Marco.icono(Material.ITEM_FRAME, Component.text("Tablero de Calamity", Paleta.MARCA), List.of(
+                Marco.texto("Quién guarda botín ahí dentro"), Marco.texto("y dónde siega la Parca."), Component.empty(),
+                Marco.tenue("Sin coordenadas: búscalos."), Marco.tenue("Se actualiza cada " + cada + " s.")), false));
+        inv.setItem(Marco.CERRAR, Marco.cerrar());
+        m.acciones().put(Marco.CERRAR, "cerrar");
 
-        inv.setItem(0, MenuUtil.icon(Material.ECHO_SHARD, Component.text("Ecos con botín", VERDE),
-                List.of(MenuUtil.line("Los que más Reliquias guardan."), MenuUtil.line("Sin coordenadas: búscalos.")), false));
-        if (ecos.isEmpty()) {
-            inv.setItem(1, MenuUtil.icon(Material.GRAY_STAINED_GLASS_PANE, Component.text("Ningún Eco suelto", Paleta.TENUE),
-                    List.of(MenuUtil.line("Nadie ha dejado nada que buscar.")), false));
-        }
-        for (int i = 0; i < ecos.size(); i++) {
-            LineaEco e = ecos.get(i);
+        inv.setItem(ECOS, Marco.rotulo(Material.ECHO_SHARD, "Ecos con botín",
+                List.of("Los que más Reliquias guardan,", "errantes incluidos.")));
+        List<ItemStack> le = new ArrayList<>();
+        for (LineaEco e : ecos) {
             List<Component> lore = new ArrayList<>();
-            lore.add(Component.text("Nivel ", Paleta.TENUE).append(Component.text(e.nivel(), Paleta.CIFRA)));
-            lore.add(Component.text(e.reliquias() + (e.reliquias() == 1 ? " reliquia" : " reliquias"), AMBAR));
+            lore.add(Marco.dato("Nivel", String.valueOf(e.nivel())));
+            lore.add(Marco.dato("Reliquias", String.valueOf(e.reliquias())));
             lore.add(Component.translatable(e.bioma().translationKey(), Paleta.TEXTO));
-            if (e.distancia() >= 0) lore.add(MenuUtil.line("A ~" + e.distancia() + " bloques de la llegada"));
-            lore.add(MenuUtil.line(e.horas() <= 1 ? "Queda menos de 1 h" : "Quedan " + e.horas() + " h"));
+            if (e.distancia() >= 0) lore.add(Marco.tenue("A ~" + e.distancia() + " bloques de la llegada"));
+            lore.add(Marco.tenue(e.horas() <= 1 ? "Queda menos de 1 h" : "Quedan " + e.horas() + " h"));
             if (e.errante()) lore.add(Component.text("Errante", Paleta.AVISO));
-            inv.setItem(1 + i, MenuUtil.icon(Material.ECHO_SHARD, Component.text("Eco de " + e.dueno(), Paleta.ECO), lore,
-                    e.reliquias() > 0));
+            le.add(Marco.icono(new ItemStack(Material.ECHO_SHARD, Math.max(1, Math.min(64, e.reliquias()))),
+                    Component.text("Eco de " + e.dueno(), Paleta.ECO), lore, e.reliquias() > 0));
         }
+        if (le.isEmpty()) {
+            le.add(Marco.icono(Material.GRAY_DYE, Component.text("Ningún Eco suelto", Paleta.TENUE),
+                    List.of(Marco.tenue("Nadie ha dejado nada que buscar.")), false));
+        }
+        poner(inv, ECOS, le);
 
-        inv.setItem(9, MenuUtil.icon(Material.WITHER_SKELETON_SKULL, Component.text("Parcas sueltas", Paleta.PARCA),
-                List.of(MenuUtil.line("Donde siega ahora mismo.")), false));
-        if (parcas.isEmpty()) {
-            inv.setItem(10, MenuUtil.icon(Material.GRAY_STAINED_GLASS_PANE, Component.text("Ninguna Parca", Paleta.TENUE),
-                    List.of(MenuUtil.line("Por ahora nadie se ha quedado quieto.")), false));
-        }
-        for (int i = 0; i < parcas.size(); i++) {
-            LineaParca pa = parcas.get(i);
-            List<Component> lore = new ArrayList<>();
-            lore.add(Component.translatable(pa.bioma().translationKey(), Paleta.TEXTO));
+        inv.setItem(PARCAS, Marco.rotulo(Material.WITHER_SKELETON_SKULL, "Parcas sueltas",
+                List.of("Dónde siega ahora mismo", "y a quién sigue.")));
+        List<ItemStack> lp = new ArrayList<>();
+        for (LineaParca pa : parcas) {
             String titulo = pa.presa() == null ? "Una Parca siega" : "Una Parca siega cerca de " + pa.presa();
-            inv.setItem(10 + i, MenuUtil.icon(Material.WITHER_SKELETON_SKULL, Component.text(titulo, Paleta.PARCA), lore, false));
+            lp.add(Marco.icono(Material.WITHER_SKELETON_SKULL, Component.text(titulo, Paleta.PARCA),
+                    List.of(Component.translatable(pa.bioma().translationKey(), Paleta.TEXTO)), false));
         }
+        if (lp.isEmpty()) {
+            lp.add(Marco.icono(Material.GRAY_DYE, Component.text("Ninguna Parca", Paleta.TENUE),
+                    List.of(Marco.tenue("Por ahora nadie se ha quedado quieto.")), false));
+        }
+        poner(inv, PARCAS, lp);
 
-        inv.setItem(CERRAR, MenuUtil.icon(Material.BARRIER, Component.text("Cerrar", Paleta.AVISO),
-                List.of(MenuUtil.line("Se actualiza cada " + Math.max(1, hc.cfg().getInt("tablero.cache-segundos", 30)) + " s.")), false));
-        for (int s = 0; s < 27; s++) if (inv.getItem(s) == null) inv.setItem(s, MenuUtil.pane());
+        Npcs n = hc.npcs();
+        if (n != null && n.cazador().hay()) {
+            inv.setItem(RANKINGS, Marco.boton(Material.GOLDEN_HELMET, "Rankings de la semana",
+                    List.of("El podio de cada tabla."), "Clic para verlos", true));
+            m.acciones().put(RANKINGS, "rankings");
+        }
+        Marco.rellenar(inv);
         p.openInventory(inv);
-        Compat.soundPlayers(p.getWorld(), p.getLocation(), "item.book.page_turn", 0.8f, 0.9f);
+        Marco.sonar(p, "item.book.page_turn", 0.8f, 0.9f);
+    }
+
+    /** Las cosas de una fila, centradas a la derecha de su rotulo (como en el Altar). */
+    private static void poner(Inventory inv, int base, List<ItemStack> cosas) {
+        int[] cols = Marco.columnas(Math.min(Marco.COLUMNAS, cosas.size()));
+        for (int i = 0; i < cols.length; i++) inv.setItem(base + cols[i], cosas.get(i));
     }
 
     @EventHandler
     public void alClic(InventoryClickEvent e) {
-        if (!(e.getInventory().getHolder() instanceof Marca)) return;
+        if (!(e.getInventory().getHolder() instanceof Marca m)) return;
         e.setCancelled(true);
         if (!(e.getWhoClicked() instanceof Player p) || e.getClick() != ClickType.LEFT) return;
+        String accion = m.acciones().get(e.getRawSlot());
+        if (accion == null) return;
         long ahora = System.currentTimeMillis();
         Long antes = ultimoClic.get(p.getUniqueId());
         if (antes != null && ahora - antes < ESPERA_MS) return;
         ultimoClic.put(p.getUniqueId(), ahora);
-        if (e.getRawSlot() != CERRAR) return;
-        // Cerrar dentro del evento de clic deja objetos fantasma en el cursor: un tick despues.
+        // Cerrar o abrir otro menu dentro del evento de clic deja objetos fantasma en el cursor:
+        // un tick despues.
         final BukkitTask[] t = new BukkitTask[1];
         t[0] = hc.plugin().getServer().getScheduler().runTask(hc.plugin(), () -> {
             tareas.remove(t[0]);
-            if (p.getOpenInventory().getTopInventory().getHolder() instanceof Marca) p.closeInventory();
+            if (accion.equals("rankings")) {
+                Npcs n = hc.npcs();
+                if (n != null) hc.seguro("cazador", () -> n.cazador().abrir(p));
+            } else if (p.getOpenInventory().getTopInventory().getHolder() instanceof Marca) {
+                p.closeInventory();
+            }
         });
         tareas.add(t[0]);
     }

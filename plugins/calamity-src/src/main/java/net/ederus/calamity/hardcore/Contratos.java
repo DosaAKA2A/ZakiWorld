@@ -608,6 +608,46 @@ final class Contratos implements Listener {
                 + " cobrados para la Llave del Caos.", Paleta.TENUE));
     }
 
+    /** Un contrato de hoy tal y como lo pinta el menu del Tasador. */
+    record Estado(int hueco, Def def, int progreso, boolean cumplido, boolean cobrado) {
+    }
+
+    /**
+     * Lo mismo que mostrar() escribe en el chat, para el menu del Tasador: los contratos de hoy
+     * (con el mismo sorteo: fuera de Calamity, si la libreta es de otro dia), sin pagar nada.
+     */
+    List<Estado> estados(Player p) {
+        ConfigurationSection s = libreta(p.getUniqueId(), !hc.esHardcore(p));
+        Map<String, Def> pool = pool();
+        List<Estado> out = new ArrayList<>();
+        for (int i : huecos(s)) {
+            String r = "lista." + i;
+            Def d = pool.get(s.getString(r + ".id", ""));
+            if (d == null) continue;
+            out.add(new Estado(i, d, s.getInt(r + ".progreso", 0), s.getBoolean(r + ".cumplido", false),
+                    s.getBoolean(r + ".cobrado", false)));
+        }
+        return out;
+    }
+
+    /** Cambios gratis que le quedan hoy (los de la libreta ya sorteada). */
+    int cambiosGratis(UUID u) {
+        return Math.max(0, hc.cfg().getInt("contratos.cambios-gratis", 1) - seccion(u).getInt("cambios", 0));
+    }
+
+    /** Lo que cuesta cambiar uno ahora mismo: 0 mientras quede cambio gratis (como en cambiar()). */
+    int precioCambio(UUID u) {
+        return cambiosGratis(u) > 0 ? 0 : Math.max(0, hc.cfg().getInt("contratos.precio-cambio", 1));
+    }
+
+    /** {cobrados esta semana, los que pide el premio de la semana}. */
+    int[] semanaDe(UUID u) {
+        ConfigurationSection s = seccion(u);
+        int objetivo = Math.max(1, hc.cfg().getInt("contratos.semana-objetivo", 12));
+        int hechos = semana().equals(s.getString("semana", "")) ? s.getInt("cobrados-semana", 0) : 0;
+        return new int[]{hechos, objetivo};
+    }
+
     /** /calamity cambiar <1-3> (y el trueque del Altar). True si se cambio. */
     boolean cambiar(Player p, int i) {
         if (!activo()) {

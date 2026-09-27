@@ -118,6 +118,20 @@ final class Aduana {
         return c != null ? c : new Calendario(hc);
     }
 
+    // ------------------------------------------------------------------ para el Tasador
+
+    /** MobCoins que la Aduana le ha pagado hoy (lo que miran los tramos). Solo lee. */
+    long mcHoy(UUID u) {
+        String base = "aduana.dia." + u;
+        return cal().dia(System.currentTimeMillis()).equals(hc.datos().getString(base + ".dia"))
+                ? hc.datos().getLong(base + ".mc", 0) : 0;
+    }
+
+    /** Los tramos de MobCoins del dia, ordenados: {hasta, factor}. Con la Aduana apagada, ninguno. */
+    List<double[]> tramos() {
+        return conf().getBoolean("activo", true) ? Cuentas.listaTramos(conf()) : List.of();
+    }
+
     // ------------------------------------------------------------------ pagar
 
     Pago pagar(OfflinePlayer p, String tipo, int esencias, long mobcoins, List<ItemStack> reliquias, String motivo) {

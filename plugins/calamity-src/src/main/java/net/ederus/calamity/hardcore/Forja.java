@@ -197,7 +197,7 @@ final class Forja {
         Map<Integer, String> acciones = new HashMap<>();
         Inventory menu = hc.plugin().getServer().createInventory(
                 new MenuAltar.Marca(MenuAltar.GRABAR, acciones, mano.clone()), 9,
-                Paleta.ventana("Forja · Grabar"));
+                Paleta.ventanaCalamity("Grabar"));
         menu.setItem(0, MenuUtil.icon(Material.FLINT, Component.text("Grabado de Calamidad", Altar.AMBAR), List.of(
                 MenuUtil.line("Sube un encantamiento un nivel"),
                 MenuUtil.line("por encima de su tope."),
@@ -216,10 +216,10 @@ final class Forja {
             acciones.put(casilla, "g:" + e.getKey().getKey());
             casilla++;
         }
-        menu.setItem(8, MenuUtil.icon(Material.BARRIER, Component.text("Ahora no", Paleta.AVISO),
-                List.of(MenuUtil.line("Vuelve a la Forja.")), false));
+        menu.setItem(8, Marco.icono(Material.ARROW, Component.text("◀ Volver a la Forja", Paleta.DETALLE),
+                List.of(Marco.tenue("Sin grabar nada.")), false));
         acciones.put(8, "ir:" + MenuAltar.FORJA);
-        for (int s = 0; s < 9; s++) if (menu.getItem(s) == null) menu.setItem(s, MenuUtil.pane());
+        for (int s = 0; s < 9; s++) if (menu.getItem(s) == null) menu.setItem(s, Marco.cristal(Material.BLACK_STAINED_GLASS_PANE));
         p.openInventory(menu);
         Compat.soundPlayers(p.getWorld(), p.getLocation(), "block.grindstone.use", 0.7f, 1.2f);
     }
