@@ -1,7 +1,6 @@
 package net.ederus.lethalworld.hardcore;
 
 import net.kyori.adventure.text.Component;
-import net.kyori.adventure.text.format.NamedTextColor;
 import org.bukkit.command.CommandSender;
 import org.bukkit.scheduler.BukkitTask;
 
@@ -65,13 +64,13 @@ final class StatsTelemetria {
             try {
                 dias = Integer.parseInt(args[1]);
             } catch (NumberFormatException e) {
-                quien.sendMessage(Component.text("stats [dias]: los dias son un numero (1-180).", NamedTextColor.RED));
+                quien.sendMessage(Component.text("stats [dias]: los dias son un numero (1-180).", Paleta.AVISO));
                 return;
             }
         }
         final int d = Math.max(1, Math.min(180, dias));
         long desde = System.currentTimeMillis() - d * 86_400_000L;
-        quien.sendMessage(Component.text("Leyendo la telemetria de " + d + " dias...", NamedTextColor.GRAY));
+        quien.sendMessage(Component.text("Leyendo la telemetria de " + d + " dias...", Paleta.TENUE));
         BukkitTask[] propia = new BukkitTask[1];
         propia[0] = hc.plugin().getServer().getScheduler().runTaskAsynchronously(hc.plugin(), () -> {
             List<String> lineas;
@@ -86,7 +85,7 @@ final class StatsTelemetria {
             BukkitTask[] vuelta = new BukkitTask[1];
             vuelta[0] = hc.plugin().getServer().getScheduler().runTask(hc.plugin(), () -> {
                 if (vuelta[0] != null) tareas.remove(vuelta[0]);
-                for (String l : salida) quien.sendMessage(Component.text(l, NamedTextColor.GRAY));
+                for (String l : salida) quien.sendMessage(Component.text(l, Paleta.TENUE));
             });
             tareas.add(vuelta[0]);
         });

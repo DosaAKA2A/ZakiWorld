@@ -2,7 +2,6 @@ package net.ederus.lethalworld.hardcore;
 
 import net.ederus.lethalworld.LethalWorldPlugin;
 import net.kyori.adventure.text.Component;
-import net.kyori.adventure.text.format.NamedTextColor;
 import org.bukkit.command.CommandSender;
 import org.bukkit.plugin.java.JavaPlugin;
 
@@ -79,7 +78,7 @@ public final class Subcomandos {
         Entrada e = entradas.get(args[0].toLowerCase(Locale.ROOT));
         if (e == null) return false;
         if (e.permiso() != null && !quien.hasPermission(e.permiso())) {
-            quien.sendMessage(Component.text("No tienes permiso para eso.", NamedTextColor.RED));
+            quien.sendMessage(Component.text("No tienes permiso para eso.", Paleta.AVISO));
             return true;
         }
         try {
@@ -87,7 +86,7 @@ public final class Subcomandos {
         } catch (Throwable t) {
             // Un modulo que revienta no puede dejar el comando sin respuesta: se dice y se
             // deja la traza en consola para el que lo tenga que arreglar.
-            quien.sendMessage(Component.text(raiz + " " + e.nombre() + " ha fallado: " + t, NamedTextColor.RED));
+            quien.sendMessage(Component.text(raiz + " " + e.nombre() + " ha fallado: " + t, Paleta.AVISO));
             log(Level.WARNING, raiz + " " + e.nombre() + " ha fallado", t);
         }
         return true;

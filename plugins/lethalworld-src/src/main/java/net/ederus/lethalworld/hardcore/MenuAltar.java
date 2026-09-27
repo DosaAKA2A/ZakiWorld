@@ -107,7 +107,7 @@ final class MenuAltar implements Listener {
         String pg = FORJA.equals(pagina) ? FORJA : UMBRAL;
         Marca m = new Marca(pg, new HashMap<>(), null);
         Inventory inv = hc.plugin().getServer().createInventory(m, 54,
-                Component.text("Altar del Umbral · " + (pg.equals(FORJA) ? "Forja" : "Umbral"), Altar.NARANJA));
+                Paleta.calido("Altar del Umbral · " + (pg.equals(FORJA) ? "Forja" : "Umbral")));
         pintar(inv, p, m);
         p.openInventory(inv);
         Compat.soundPlayers(p.getWorld(), p.getLocation(), pg.equals(FORJA) ? "block.anvil.land" : "block.enchantment_table.use",

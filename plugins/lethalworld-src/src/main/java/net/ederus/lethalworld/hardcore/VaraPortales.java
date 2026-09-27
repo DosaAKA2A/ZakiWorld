@@ -116,10 +116,10 @@ public final class VaraPortales implements Listener {
 
         Seleccion s = seleccion(p);
         p.sendMessage(Component.text("Esquina " + (primera ? "1" : "2") + ": ", MARCA)
-                .append(Component.text(b.getX() + " " + b.getY() + " " + b.getZ(), NamedTextColor.WHITE))
+                .append(Component.text(b.getX() + " " + b.getY() + " " + b.getZ(), Paleta.CIFRA))
                 .append(s.completa()
-                        ? Component.text("   ·   " + s.volumen() + " bloques", NamedTextColor.GRAY)
-                        : Component.text("   ·   falta la otra", NamedTextColor.GRAY)));
+                        ? Component.text("   ·   " + s.volumen() + " bloques", Paleta.TENUE)
+                        : Component.text("   ·   falta la otra", Paleta.TENUE)));
         Compat.soundPlayers(p.getWorld(), b.getLocation(),
                 "block.amethyst_block.chime", 0.8f, primera ? 0.9f : 1.3f);
         Compat.spawn(p.getWorld(), Compat.DUST, b.getLocation().add(0.5, 1.1, 0.5), 14,

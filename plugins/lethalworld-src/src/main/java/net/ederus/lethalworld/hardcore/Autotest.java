@@ -2,7 +2,6 @@ package net.ederus.lethalworld.hardcore;
 
 import net.ederus.lethalworld.MobsLethal;
 import net.kyori.adventure.text.Component;
-import net.kyori.adventure.text.format.NamedTextColor;
 import org.bukkit.Material;
 import org.bukkit.NamespacedKey;
 import org.bukkit.command.CommandSender;
@@ -148,7 +147,7 @@ final class Autotest {
     }
 
     private static void decir(Hardcore hc, CommandSender quien, String linea, boolean bien) {
-        quien.sendMessage(Component.text(linea, bien ? NamedTextColor.GREEN : NamedTextColor.RED));
+        quien.sendMessage(Component.text(linea, bien ? Paleta.BIEN : Paleta.AVISO));
         try {
             hc.plugin().bitacora().anotar(linea);
         } catch (Throwable ignorado) {

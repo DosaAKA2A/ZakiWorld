@@ -161,7 +161,7 @@ final class Camino {
     void abrir(Player p) {
         Map<Integer, String> acciones = new HashMap<>();
         Inventory inv = hc.plugin().getServer().createInventory(new MenuAltar.Marca(MenuAltar.CAMINO, acciones, null), 36,
-                Component.text("Altar del Umbral · Tu camino", Altar.NARANJA));
+                Paleta.calido("Altar del Umbral · Tu camino"));
         pintar(inv, p, acciones);
         p.openInventory(inv);
         Compat.soundPlayers(p.getWorld(), p.getLocation(), "item.book.page_turn", 1.0f, 1.0f);

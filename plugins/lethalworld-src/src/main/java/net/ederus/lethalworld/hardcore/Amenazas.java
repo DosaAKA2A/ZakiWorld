@@ -3,7 +3,6 @@ package net.ederus.lethalworld.hardcore;
 import net.ederus.edm.anomaly.minions.MinionManager;
 import net.ederus.edm.comun.Compat;
 import net.kyori.adventure.text.Component;
-import net.kyori.adventure.text.format.NamedTextColor;
 import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.World;
@@ -224,7 +223,7 @@ final class Amenazas implements Listener {
                 // Si EDM cambia adoptar, la amenaza sale igual, con el nombre a pelo.
             }
         }
-        mob.customName(nombre.append(Component.text(" Nv. " + Math.max(1, nivel), NamedTextColor.GRAY)));
+        mob.customName(nombre.append(Component.text(" Nv. " + Math.max(1, nivel), Paleta.TENUE)));
         mob.setCustomNameVisible(true);
     }
 
@@ -618,14 +617,14 @@ final class Amenazas implements Listener {
                 }
                 if (todas.size() > 10) tipos.append(", ...");
                 quien.sendMessage(Component.text("amenazas | " + todas.size()
-                        + (todas.isEmpty() ? "" : " | " + tipos), NamedTextColor.GRAY));
+                        + (todas.isEmpty() ? "" : " | " + tipos), Paleta.TENUE));
             }
             case "limpiar" -> {
                 // Los gestores ven su entidad invalida en su siguiente tick y cierran la pelea.
                 // Los Ecos siguen en hardcore-datos.yml: vuelven a despertar.
                 for (LivingEntity e : todas) e.remove();
                 vivas.clear();
-                quien.sendMessage(Component.text("amenazas | retiradas " + todas.size(), NamedTextColor.GRAY));
+                quien.sendMessage(Component.text("amenazas | retiradas " + todas.size(), Paleta.TENUE));
                 try {
                     hc.plugin().bitacora().anotar("amenazas", "limpiar", quien.getName(), String.valueOf(todas.size()));
                 } catch (Throwable ignorado) {
@@ -634,7 +633,7 @@ final class Amenazas implements Listener {
             }
             case "prueba" -> prueba(quien, args);
             default -> quien.sendMessage(Component.text(
-                    "Uso: /lw hardcore amenazas [contar|limpiar|prueba <x> <y> <z> [vida]]", NamedTextColor.RED));
+                    "Uso: /lw hardcore amenazas [contar|limpiar|prueba <x> <y> <z> [vida]]", Paleta.AVISO));
         }
     }
 
@@ -645,7 +644,7 @@ final class Amenazas implements Listener {
      */
     private void prueba(CommandSender quien, String[] args) {
         if (args.length < 5) {
-            quien.sendMessage(Component.text("Uso: /lw hardcore amenazas prueba <x> <y> <z> [vida]", NamedTextColor.RED));
+            quien.sendMessage(Component.text("Uso: /lw hardcore amenazas prueba <x> <y> <z> [vida]", Paleta.AVISO));
             return;
         }
         World w = null;
@@ -656,7 +655,7 @@ final class Amenazas implements Listener {
             if (w != null) break;
         }
         if (w == null) {
-            quien.sendMessage(Component.text("No hay ningun mundo hardcore cargado.", NamedTextColor.RED));
+            quien.sendMessage(Component.text("No hay ningun mundo hardcore cargado.", Paleta.AVISO));
             return;
         }
         double x, y, z, vida;
@@ -666,23 +665,23 @@ final class Amenazas implements Listener {
             z = Double.parseDouble(args[4]);
             vida = args.length > 5 ? Double.parseDouble(args[5]) : 40;
         } catch (NumberFormatException e) {
-            quien.sendMessage(Component.text("Coordenadas o vida no validas.", NamedTextColor.RED));
+            quien.sendMessage(Component.text("Coordenadas o vida no validas.", Paleta.AVISO));
             return;
         }
         Location sitio = new Location(w, x, y, z);
         org.bukkit.entity.Zombie z0 = invocar(org.bukkit.entity.Zombie.class, sitio, "prueba", 1,
-                Component.text("Amenaza de prueba", NamedTextColor.DARK_RED), e -> {
+                Component.text("Amenaza de prueba", Paleta.AVISO), e -> {
                     e.setAI(false);
                     e.setShouldBurnInDay(false);
                     e.setAdult();
                 });
         if (z0 == null) {
-            quien.sendMessage(Component.text("amenazas | prueba | no ha salido (spawn cancelado)", NamedTextColor.RED));
+            quien.sendMessage(Component.text("amenazas | prueba | no ha salido (spawn cancelado)", Paleta.AVISO));
             return;
         }
         vidaLogica(z0, vida);
         quien.sendMessage(Component.text("amenazas | prueba | " + z0.getUniqueId() + " | vida logica "
-                + vidaLogicaMaxima(z0) + " | entidad " + z0.getHealth() + " | escala " + escala(z0), NamedTextColor.GRAY));
+                + vidaLogicaMaxima(z0) + " | entidad " + z0.getHealth() + " | escala " + escala(z0), Paleta.TENUE));
     }
 
     // --------------------------------------------------------------------- parar
