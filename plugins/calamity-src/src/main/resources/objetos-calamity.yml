@@ -21,6 +21,7 @@ objetos:
       ARMOR: 6
       ARMOR_TOUGHNESS: 5
       MAX_HEALTH: 7
+      KNOCKBACK_RESISTANCE: 0.1
     encantamientos:
       protection: 8
       unbreaking: 8
@@ -48,6 +49,7 @@ objetos:
       ARMOR: 8
       ARMOR_TOUGHNESS: 5
       MAX_HEALTH: 7
+      KNOCKBACK_RESISTANCE: 0.1
     encantamientos:
       protection: 8
       unbreaking: 8
@@ -72,6 +74,7 @@ objetos:
       ARMOR: 7
       ARMOR_TOUGHNESS: 5
       MAX_HEALTH: 7
+      KNOCKBACK_RESISTANCE: 0.1
     encantamientos:
       protection: 8
       unbreaking: 8
@@ -94,6 +97,7 @@ objetos:
       ARMOR: 5
       ARMOR_TOUGHNESS: 5
       MAX_HEALTH: 7
+      KNOCKBACK_RESISTANCE: 0.1
     encantamientos:
       protection: 8
       unbreaking: 8
@@ -186,6 +190,7 @@ objetos:
       ARMOR: 5
       ARMOR_TOUGHNESS: 4
       MAX_HEALTH: 6
+      KNOCKBACK_RESISTANCE: 0.1
       PVP_DAMAGE: 3
     encantamientos:
       protection: 8
@@ -241,6 +246,17 @@ objetos:
       plantilla: calamidad
       referencia: calamidad
       max: 5
+    habilidad-goditems:
+      activador: CRITICO
+      accion: DAÑO
+      radio: 3
+      dano: 7
+      cada-segundos: 12
+      solo-mobs: true
+      lineas:
+      - Al hacer crítico, hiere a todo lo que
+      - tengas a 3 bloques (7 de daño,
+      - cada 12 s).
 sets:
   CALAMIDAD:
     nombre: Manto de Calamidad

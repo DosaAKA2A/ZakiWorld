@@ -4,8 +4,15 @@ import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
+import net.ederus.edm.EDMPlugin;
 import net.ederus.edm.comun.Bitacora;
 import net.ederus.edm.comun.Compat;
+import net.ederus.edm.goditems.Activador;
+import net.ederus.edm.goditems.Args;
+import net.ederus.edm.goditems.Condicion;
+import net.ederus.edm.goditems.GodItem;
+import net.ederus.edm.goditems.GodItemsPlugin;
+import net.ederus.edm.goditems.Paso;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.TextComponent;
 import org.bukkit.Bukkit;
@@ -39,6 +46,8 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 /**
  * Calamity 1.3.3 · Que los objetos de Calamity hagan DE VERDAD lo que promete su lore (auditoria de objetos,
@@ -63,6 +72,8 @@ final class ObjetosReales {
     static final String FICHERO = "objetos-calamity.yml";
     private static final double EPS = 1e-6;
     private static final String OK = "✔ ", MAL = "✘ ";
+    /** El radio de un selector de GodItems: @cerca{r=3,enemigos} o @cerca{3,enemigos}. */
+    private static final Pattern RADIO = Pattern.compile("[{,]\\s*(?:r|radio)?\\s*=?\\s*([0-9]+(?:\\.[0-9]+)?)\\s*[,}]");
 
     /** Las casillas que mira /calamidad objetos stats: su hueco en MythicLib y como se dice. */
     private static final String[][] HUECOS = {{"HEAD", "Cabeza"}, {"CHEST", "Pecho"}, {"LEGS", "Piernas"},
@@ -350,7 +361,81 @@ final class ObjetosReales {
             si(h, LecturaMmo.etiquetaSi(it, "MMOITEMS_DISABLE_CRAFTING"), n + ": no entra en recetas",
                     n + ": entra en recetas vanilla (se gastaria como material)");
         }
+        ConfigurationSection hab = o.getConfigurationSection("habilidad-goditems");
+        if (hab != null) {
+            List<String> mal = fichaGodItems(tipo, iid, hab);
+            si(h, mal.isEmpty(), n + ": su habilidad de GodItems hace lo que dice el lore",
+                    n + ": habilidad de GodItems: " + String.join("; ", mal));
+            String lore = lorePlano(it);
+            List<String> faltan = new ArrayList<>();
+            for (String l : hab.getStringList("lineas")) if (!lore.contains(l)) faltan.add(l);
+            si(h, faltan.isEmpty(), n + ": su lore dice la habilidad", n + ": su lore no dice " + faltan);
+        }
         return it;
+    }
+
+    private static String lorePlano(ItemStack it) {
+        StringBuilder lore = new StringBuilder();
+        List<Component> lineas = it.lore();
+        if (lineas != null) for (Component c : lineas) lore.append(Hardcore.plano(c)).append('\n');
+        return lore.toString();
+    }
+
+    /**
+     * La ficha de EDM GodItems enlazada a un objeto (enlace: TIPO.ID) contra lo que promete su lore: el activador, la
+     * accion, el radio del selector, la cantidad, la espera (COOLDOWN_DE, y que se compruebe con COOLDOWN_LISTO) y, si
+     * el lore lo dice asi, que solo hiera a mobs. Leido en EDM 1.72.1 (el de produccion, contra el que se compila):
+     * GodItemsPlugin.registro().porEnlace/porId, GodItem.bloque(Activador), Bloque.pasos/condiciones. Vacia = todo bien.
+     */
+    static List<String> fichaGodItems(String tipo, String iid, ConfigurationSection hab) {
+        List<String> mal = new ArrayList<>();
+        try {
+            if (!(Bukkit.getPluginManager().getPlugin("EDM") instanceof EDMPlugin edm)) return List.of("EDM no está cargado");
+            if (!(edm.modulo("goditems") instanceof GodItemsPlugin gi)) return List.of("el módulo GodItems de EDM está apagado");
+            String gid = gi.registro().porEnlace(tipo, iid);
+            GodItem g = gid == null ? null : gi.registro().porId(gid);
+            if (g == null) {
+                return List.of("no hay ficha de GodItems con enlace " + tipo + "." + iid + " (subirla a goditems/items y gi reload)");
+            }
+            String activador = hab.getString("activador", "");
+            Activador act = Activador.porNombre(activador);
+            GodItem.Bloque b = act == null ? null : g.bloque(act);
+            if (b == null) return List.of("la ficha " + g.id() + " no reacciona a " + activador);
+            Args accion = null;
+            double espera = b.cooldown() / 20.0;
+            boolean seComprueba = b.cooldown() > 0;
+            for (Paso p : b.pasos()) {
+                if (!(p instanceof Paso.Simple s)) continue;
+                if (accion == null && s.args().nombre().equalsIgnoreCase(hab.getString("accion", ""))) accion = s.args();
+                if (s.args().nombre().equals("COOLDOWN_DE")) espera = s.args().ticks("tiempo", 0) / 20.0;
+            }
+            for (Condicion.Prueba c : b.condiciones()) {
+                if (c.linea() != null && c.linea().toUpperCase(Locale.ROOT).contains("COOLDOWN_LISTO")) seComprueba = true;
+            }
+            if (accion == null) return List.of("la ficha " + g.id() + " no hace " + hab.getString("accion") + " con " + activador);
+            String sel = accion.selector() == null ? "" : accion.selector().toLowerCase(Locale.ROOT);
+            Matcher m = RADIO.matcher(sel);
+            double radio = m.find() ? Double.parseDouble(m.group(1)) : -1;
+            if (Math.abs(radio - hab.getDouble("radio")) > EPS) {
+                mal.add("radio " + (radio < 0 ? "sin radio en " + sel : Bitacora.num(radio)) + " y promete "
+                        + Bitacora.num(hab.getDouble("radio")));
+            }
+            double dano = accion.d("cantidad", 0);
+            if (Math.abs(dano - hab.getDouble("dano")) > EPS) {
+                mal.add("daño " + Bitacora.num(dano) + " y promete " + Bitacora.num(hab.getDouble("dano")));
+            }
+            if (Math.abs(espera - hab.getDouble("cada-segundos")) > EPS) {
+                mal.add("espera " + Bitacora.num(espera) + " s y promete " + Bitacora.num(hab.getDouble("cada-segundos")));
+            } else if (!seComprueba) {
+                mal.add("la espera no se comprueba (sin COOLDOWN_LISTO salta en cada " + activador + ")");
+            }
+            if (hab.getBoolean("solo-mobs", false) && !(sel.contains("enemigos") || sel.contains("mobs"))) {
+                mal.add("hiere también a jugadores (" + sel + ")");
+            }
+        } catch (Throwable t) {
+            return List.of("no se pudo leer GodItems de EDM: " + t);
+        }
+        return mal;
     }
 
     /** Un set: tal cual lo cargo MMOItems, nivel a nivel, contra lo que prometen su lore-tag y sus bonos. */
@@ -421,11 +506,9 @@ final class ObjetosReales {
         for (String clave : s.getStringList("piezas")) {
             ItemStack it = creados.get(clave);
             if (it == null || dice.isEmpty()) continue;
-            StringBuilder lore = new StringBuilder();
-            List<Component> lineas = it.lore();
-            if (lineas != null) for (Component c : lineas) lore.append(Hardcore.plano(c)).append('\n');
+            String lore = lorePlano(it);
             List<String> faltan = new ArrayList<>();
-            for (String d : dice) if (!lore.toString().contains(d)) faltan.add(d);
+            for (String d : dice) if (!lore.contains(d)) faltan.add(d);
             String pieza = objetos.getString(clave + "/nombre", clave);
             si(h, faltan.isEmpty(), n + ": " + pieza + " enseña en su lore lo que da el set",
                     n + ": " + pieza + " no enseña en su lore " + faltan + " (¿el lore-format de MMOItems sin #set#?)");
@@ -659,6 +742,16 @@ final class ObjetosReales {
             return;
         }
         quien.sendMessage(cab);
+        ConfigurationSection hab = o.getConfigurationSection("habilidad-goditems");
+        String id = PuenteMmo.enlace(it);
+        if (hab != null && id != null && id.indexOf('.') > 0) {
+            List<String> mal = fichaGodItems(id.substring(0, id.indexOf('.')), id.substring(id.indexOf('.') + 1), hab);
+            String dice = hab.getString("activador") + " → " + hab.getString("accion") + " a " + Bitacora.num(hab.getDouble("radio"))
+                    + " bloques, " + Bitacora.num(hab.getDouble("dano")) + " de daño, cada " + Bitacora.num(hab.getDouble("cada-segundos"))
+                    + " s";
+            quien.sendMessage(linea("    ", marca(mal.isEmpty()).append(Component.text("habilidad (GodItems): " + dice
+                    + (mal.isEmpty() ? "" : " · " + String.join("; ", mal)), mal.isEmpty() ? Paleta.TEXTO : Paleta.AVISO))));
+        }
         if (st == null) return;
         Component l = Component.text("    ");
         boolean primero = true;
