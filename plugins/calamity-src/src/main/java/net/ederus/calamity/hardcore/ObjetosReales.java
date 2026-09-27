@@ -404,11 +404,15 @@ final class ObjetosReales {
 
     /** Lo que, sin tocar los objetos, puede dejar un bono en nada. */
     private void entorno(Autotest.Hoja h, ConfigurationSection sets) {
-        boolean habilidades = false, robo = false;
+        boolean habilidades = false, robo = false, conShift = false;
         for (String sid : sets.getKeys(false)) {
             ConfigurationSection s = sets.getConfigurationSection(sid);
             if (s == null) continue;
-            if (s.isConfigurationSection("habilidades")) habilidades = true;
+            ConfigurationSection hs = s.getConfigurationSection("habilidades");
+            if (hs != null) {
+                habilidades = true;
+                for (String k : hs.getKeys(true)) if (k.endsWith("/modo") && hs.getString(k, "").toUpperCase(Locale.ROOT).startsWith("SHIFT_")) conShift = true;
+            }
             ConfigurationSection b = s.getConfigurationSection("bonos");
             if (b != null) for (String k : b.getKeys(false)) if (b.isSet(k + "/LIFESTEAL")) robo = true;
         }
@@ -418,6 +422,12 @@ final class ObjetosReales {
                     "MMOItems no pide permiso para las habilidades de los sets (permissions.abilities: false)",
                     "MMOItems pide permiso para las habilidades (permissions.abilities: true): sin "
                             + "mmoitems.ability.greater_healings nadie tiene la Savia Viva");
+        }
+        org.bukkit.plugin.Plugin mythic = Bukkit.getPluginManager().getPlugin("MythicLib");
+        if (conShift && mythic != null) {
+            si(h, !mythic.getConfig().getBoolean("ignore_shift_triggers", false),
+                    "MythicLib atiende Shift + clic (ignore_shift_triggers: false)",
+                    "MythicLib ignora los activadores con Shift (ignore_shift_triggers: true): la Savia Viva no sale nunca");
         }
         File ml = LecturaMmo.carpeta("MythicLib");
         if (ml == null) return;
