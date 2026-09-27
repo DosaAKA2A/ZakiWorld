@@ -53,7 +53,6 @@ import net.ederus.lethalworld.hardcore.Hardcore;
 import net.ederus.lethalworld.hardcore.Marcas;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
-import net.kyori.adventure.text.format.TextColor;
 import net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer;
 
 /**
@@ -241,7 +240,9 @@ public final class MobsLethal implements Listener {
         if (escala > 1) Compat.setAttribute(mob, "scale", Math.min(2.0, escala));
 
         Component nombre = mob.customName();
-        if (nombre != null) mob.customName(nombre.color(NamedTextColor.DARK_RED));
+        // El rojo claro de los avisos de Calamity: el rojo oscuro no se leia en el chat
+        // ("Ha venido a por ti: <nombre>") ni en el cartel.
+        if (nombre != null) mob.customName(nombre.color(net.ederus.lethalworld.hardcore.Paleta.AVISO));
         AnomalyPlugin a = anomaly();
         if (a != null) a.minionManager().reescoltar(mob);
         return mob;

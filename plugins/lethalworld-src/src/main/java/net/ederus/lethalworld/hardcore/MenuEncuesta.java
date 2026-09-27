@@ -38,7 +38,7 @@ import java.util.UUID;
  */
 final class MenuEncuesta implements Listener {
 
-    static final TextColor VERDE = TextColor.color(0x9FD6A0);
+    static final TextColor VERDE = Paleta.DETALLE;
     static final TextColor AMBAR = TextColor.color(0xE8A33D);
     static final int CERRAR = 8;
     private static final long ESPERA_MS = 500;
@@ -91,11 +91,11 @@ final class MenuEncuesta implements Listener {
 
     void abrir(Player p, Encuesta.Pregunta q) {
         if (q == null) return;
-        Component titulo = Component.text(q.fija() ? "¿Qué quieres que dé Calamity?" : "Calamity pregunta", VERDE);
+        Component titulo = Paleta.calido(q.fija() ? "¿Qué quieres que dé Calamity?" : "Calamity pregunta");
         Inventory inv = hc.plugin().getServer().createInventory(new Marca(q.id(), false), 9, titulo);
 
         int premio = Math.max(0, hc.cfg().getInt("encuesta.premio-esencias", 1));
-        List<Component> cabeza = new ArrayList<>(MenuUtil.wrap(q.texto(), 30, TextColor.color(0xE0E0E0)));
+        List<Component> cabeza = new ArrayList<>(MenuUtil.wrap(q.texto(), 30, Paleta.TEXTO));
         cabeza.add(MenuUtil.blank());
         cabeza.add(MenuUtil.line(q.fija() ? "Un voto por semana." : "Una respuesta, un clic."));
         if (premio > 0) cabeza.add(MenuUtil.line("Vale " + premio + (premio == 1 ? " Esencia." : " Esencias.")));
@@ -112,7 +112,7 @@ final class MenuEncuesta implements Listener {
             inv.setItem(7, MenuUtil.icon(Material.NAME_TAG, Component.text("Otra cosa", AMBAR),
                     List.of(MenuUtil.line("Lo escribes en el chat."), MenuUtil.line("60 letras como mucho.")), false));
         }
-        inv.setItem(CERRAR, MenuUtil.icon(Material.BARRIER, Component.text("Ahora no", TextColor.color(0x8B1A1A)),
+        inv.setItem(CERRAR, MenuUtil.icon(Material.BARRIER, Component.text("Ahora no", Paleta.AVISO),
                 List.of(MenuUtil.line("Se cierra sin votar.")), false));
         for (int s = 0; s < 9; s++) if (inv.getItem(s) == null) inv.setItem(s, MenuUtil.pane());
         p.openInventory(inv);

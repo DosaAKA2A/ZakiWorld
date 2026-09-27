@@ -234,7 +234,7 @@ public final class Grifo implements Listener {
         Long antes = ultimaCosecha.get(p.getUniqueId());
         if (antes != null && ahora - antes < 30_000) return;
         ultimaCosecha.put(p.getUniqueId(), ahora);
-        hc.cordura().destello(p, Component.text("La cosecha es suya.", ComandoCalamity.ROJO), 2);
+        hc.cordura().destello(p, Component.text("La cosecha es suya.", Paleta.PARCA), 2);
     }
 
     /** P-M01, con las MobCoins del mismo pago: si no, un destello pisaria al otro. */

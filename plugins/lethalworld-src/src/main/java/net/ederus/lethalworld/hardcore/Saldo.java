@@ -1,7 +1,6 @@
 package net.ederus.lethalworld.hardcore;
 
 import net.kyori.adventure.text.Component;
-import net.kyori.adventure.text.format.NamedTextColor;
 import org.bukkit.Bukkit;
 import org.bukkit.OfflinePlayer;
 import org.bukkit.configuration.file.YamlConfiguration;
@@ -153,16 +152,16 @@ final class Saldo implements Listener {
     /** P-M09 (boton Depositar del Altar): "Has depositado <n> Esencias. Saldo: <s>." */
     Component avisoDeposito(Player p, int n) {
         return ComandoCalamity.mensaje(Component.text("Has depositado ")
-                .append(Component.text(String.valueOf(n), NamedTextColor.WHITE))
+                .append(Component.text(String.valueOf(n), Paleta.CIFRA))
                 .append(Component.text(" Esencias. Saldo: "))
-                .append(Component.text(String.valueOf(de(p.getUniqueId())), NamedTextColor.WHITE))
+                .append(Component.text(String.valueOf(de(p.getUniqueId())), Paleta.CIFRA))
                 .append(Component.text(".")));
     }
 
     /** P-M08: "Saldo: <n> Esencias." */
     Component avisoSaldo(UUID jugador) {
         return ComandoCalamity.mensaje(Component.text("Saldo: ")
-                .append(Component.text(String.valueOf(de(jugador)), NamedTextColor.WHITE))
+                .append(Component.text(String.valueOf(de(jugador)), Paleta.CIFRA))
                 .append(Component.text(" Esencias.")));
     }
 
@@ -180,7 +179,7 @@ final class Saldo implements Listener {
         if (n > 0) {
             p.sendMessage(ComandoCalamity.mensaje(
                     Component.text("Fuera de Calamity las Esencias no pesan: van a tu saldo (")
-                            .append(Component.text("+" + n, NamedTextColor.WHITE))
+                            .append(Component.text("+" + n, Paleta.CIFRA))
                             .append(Component.text(")."))));
         }
     }

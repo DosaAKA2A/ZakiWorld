@@ -1,9 +1,6 @@
 package net.ederus.lethalworld.hardcore;
 
 import net.kyori.adventure.text.Component;
-import net.kyori.adventure.text.format.NamedTextColor;
-import net.kyori.adventure.text.format.TextColor;
-import net.kyori.adventure.text.format.TextDecoration;
 import net.ederus.edm.comun.Compat;
 import net.ederus.edm.comun.menu.MenuUtil;
 import net.ederus.lethalworld.LethalWorldPlugin;
@@ -32,8 +29,6 @@ import java.util.List;
  * apagar y volver a encender. Ver Regla#apagar.
  */
 public final class MenuHardcore implements Listener {
-
-    private static final TextColor VERDE = TextColor.color(0x9FD6A0);
 
     /** Las casillas de las reglas: tres filas de siete, aireadas y centradas. */
     private static final int[] CASILLAS = {
@@ -146,8 +141,9 @@ public final class MenuHardcore implements Listener {
     }
 
     public void abrir(Player p) {
+        // La marca en negrita con su degradado; el resto sin negrita (Paleta.prefijo).
         Inventory inv = plugin.getServer().createInventory(new Marca(), 54,
-                Component.text("Calamity · dificultad", VERDE, TextDecoration.BOLD));
+                Paleta.prefijo().append(Paleta.calido("dificultad")));
         pintar(inv);
         p.openInventory(inv);
         Compat.soundPlayers(p.getWorld(), p.getLocation(), "block.creaking_heart.idle", 0.8f, 1.2f);
@@ -158,10 +154,10 @@ public final class MenuHardcore implements Listener {
         boolean vivo = hc != null;
 
         inv.setItem(4, MenuUtil.icon(Material.PALE_OAK_LOG,
-                MenuUtil.title("Calamity", VERDE),
+                Paleta.marca(),
                 List.of(
                         MenuUtil.field("Reglas", vivo ? "activas" : "apagadas",
-                                vivo ? NamedTextColor.GREEN : NamedTextColor.RED),
+                                vivo ? Paleta.BIEN : Paleta.AVISO),
                         MenuUtil.field("Mundos", vivo ? String.join(", ", hc.mundos()) : "ninguno",
                                 MenuUtil.SOFT),
                         MenuUtil.blank(),
@@ -175,18 +171,18 @@ public final class MenuHardcore implements Listener {
             List<Component> lore = new ArrayList<>();
             for (String l : r.ayuda()) lore.add(MenuUtil.line(l));
             lore.add(MenuUtil.blank());
-            lore.add(MenuUtil.field("Ahora", r.valor(plugin), on ? NamedTextColor.GREEN : NamedTextColor.RED));
+            lore.add(MenuUtil.field("Ahora", r.valor(plugin), on ? Paleta.BIEN : Paleta.AVISO));
             lore.add(MenuUtil.blank());
             lore.add(MenuUtil.action("Clic para " + (on ? "desactivarla" : "activarla")));
             // El icono es SIEMPRE el de la regla, para poder distinguirlas de un
             // vistazo; el estado se lee por el color del nombre y por el cristal de
             // fondo, verde o rojo. Antes las apagadas eran todas gris y no se leia nada.
-            Component titulo = Component.text(r.nombre(), on ? VERDE : NamedTextColor.RED)
-                    .decoration(TextDecoration.BOLD, true).decoration(TextDecoration.ITALIC, false);
+            // Sin negrita: la negrita es solo de la marca.
+            Component titulo = Paleta.nombre(r.nombre(), on ? Paleta.DETALLE : Paleta.AVISO);
             inv.setItem(CASILLAS[i], MenuUtil.icon(r.icono(), titulo, lore, on));
         }
         inv.setItem(49, MenuUtil.icon(Material.BARRIER,
-                MenuUtil.title("Cerrar", NamedTextColor.RED),
+                Paleta.nombre("Cerrar", Paleta.AVISO),
                 List.of(MenuUtil.line("Lo que cambies se guarda solo.")), false));
         MenuUtil.frame(inv, MARCO);
     }
@@ -211,8 +207,8 @@ public final class MenuHardcore implements Listener {
             plugin.saveConfig();
             Compat.soundPlayers(p.getWorld(), p.getLocation(),
                     "block.amethyst_block.resonate", 0.8f, on ? 0.7f : 1.4f);
-            p.sendMessage(Component.text(r.nombre(), VERDE)
-                    .append(Component.text(on ? "  apagada." : "  encendida.", MenuUtil.SOFT)));
+            p.sendMessage(Paleta.mensaje(Component.text(r.nombre(), Paleta.DETALLE)
+                    .append(Component.text(on ? "  apagada." : "  encendida.", on ? Paleta.AVISO : Paleta.BIEN))));
             pintar(e.getInventory());
             return;
         }

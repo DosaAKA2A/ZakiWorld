@@ -1,7 +1,6 @@
 package net.ederus.lethalworld.hardcore;
 
 import net.kyori.adventure.text.Component;
-import net.kyori.adventure.text.format.NamedTextColor;
 import net.kyori.adventure.text.format.TextColor;
 import org.bukkit.Bukkit;
 import org.bukkit.OfflinePlayer;
@@ -66,7 +65,7 @@ import java.util.regex.Pattern;
  */
 final class Contratos implements Listener {
 
-    static final TextColor VERDE_PALIDO = TextColor.color(0x9FD6A0);
+    static final TextColor VERDE_PALIDO = Paleta.DETALLE;
     static final TextColor AMBAR = TextColor.color(0xE8A33D);
 
     /** Lo que emiten otros modulos con otro nombre. */
@@ -365,7 +364,7 @@ final class Contratos implements Listener {
                 tareas.remove(t[0]);
                 if (p.isOnline()) {
                     p.sendMessage(ComandoCalamity.mensaje(Component.text("El Tasador tiene trabajo para ti. ")
-                            .append(Component.text("/calamity contratos", NamedTextColor.WHITE))));
+                            .append(Component.text("/calamity contratos", Paleta.DETALLE))));
                 }
             }, 40L);
             tareas.add(t[0]);
@@ -400,8 +399,8 @@ final class Contratos implements Listener {
         if (d == null) return;
         ultimoDestello.put(p.getUniqueId(), ahora);
         hc.cordura().destello(p, Component.text("Contrato · ", VERDE_PALIDO)
-                .append(Component.text(d.texto() + " ", NamedTextColor.GRAY))
-                .append(Component.text(s.getInt("lista." + i + ".progreso", 0) + "/" + d.objetivo(), NamedTextColor.WHITE)), 2);
+                .append(Component.text(d.texto() + " ", Paleta.TEXTO))
+                .append(Component.text(s.getInt("lista." + i + ".progreso", 0) + "/" + d.objetivo(), Paleta.CIFRA)), 2);
     }
 
     /** Cada segundo dentro (desde Horas.segundo): los contratos de tiempo. */
@@ -512,10 +511,10 @@ final class Contratos implements Listener {
             hc.plugin().bitacora().anotar("contrato", "cobrado", p.getName(), id, "e " + pe, "mc " + pmc);
             telemetria(p, d == null ? new Def(id, id, "", 1, 0, 0, false, "") : d, "cobrado", pe, pmc);
             p.sendMessage(ComandoCalamity.mensaje(Component.text("Contrato cobrado: ")
-                    .append(Component.text(d == null ? id : d.texto(), NamedTextColor.WHITE))
-                    .append(Component.text(". +"))
-                    .append(Component.text(pe, NamedTextColor.WHITE)).append(Component.text(" Esencias, +"))
-                    .append(Component.text(pmc, NamedTextColor.WHITE)).append(Component.text(" MobCoins."))));
+                    .append(Component.text(d == null ? id : d.texto(), Paleta.DETALLE))
+                    .append(Component.text(". "))
+                    .append(Component.text("+" + pe, Paleta.CIFRA)).append(Component.text(" Esencias, "))
+                    .append(Component.text("+" + pmc, Paleta.CIFRA)).append(Component.text(" MobCoins."))));
         }
         premioSemana(p, s, sem);
         return ids;
@@ -543,7 +542,7 @@ final class Contratos implements Listener {
             }
         }
         p.sendMessage(ComandoCalamity.mensaje(Component.text(objetivo + " contratos esta semana. ")
-                .append(Component.text("El Tasador te da una Llave del Caos.", NamedTextColor.WHITE))));
+                .append(Component.text("El Tasador te da una Llave del Caos.", Paleta.DETALLE))));
         telemetria(p, new Def("semana", "semana", "", objetivo, 0, 0, false, ""), "semana", 0, 0);
     }
 
@@ -591,22 +590,22 @@ final class Contratos implements Listener {
             boolean cobrado = s.getBoolean(r + ".cobrado", false), cumplido = s.getBoolean(r + ".cumplido", false);
             Component estado = cobrado ? Component.text("cobrado", VERDE_PALIDO)
                     : cumplido ? Component.text("cumplido, se cobra al salir", AMBAR)
-                    : Component.text(s.getInt(r + ".progreso", 0) + "/" + d.objetivo(), NamedTextColor.WHITE);
-            a.sendMessage(Component.text("  " + i + ". ", NamedTextColor.GRAY)
-                    .append(Component.text(d.texto(), cobrado ? NamedTextColor.DARK_GRAY : NamedTextColor.WHITE))
-                    .append(Component.text(" · ", NamedTextColor.DARK_GRAY)).append(estado)
+                    : Component.text(s.getInt(r + ".progreso", 0) + "/" + d.objetivo(), Paleta.CIFRA);
+            a.sendMessage(Component.text("  " + i + ". ", Paleta.TENUE)
+                    .append(Component.text(d.texto(), cobrado ? Paleta.TENUE : Paleta.TEXTO))
+                    .append(Component.text(" · ", Paleta.SEPARADOR)).append(estado)
                     .append(Component.text(" · " + d.esencias() + " E + " + d.mobcoins() + " MC"
-                            + (d.corto() ? " · corto" : ""), NamedTextColor.GRAY)));
+                            + (d.corto() ? " · corto" : ""), Paleta.TENUE)));
         }
         int gratis = Math.max(0, hc.cfg().getInt("contratos.cambios-gratis", 1) - s.getInt("cambios", 0));
         int precio = Math.max(0, hc.cfg().getInt("contratos.precio-cambio", 1));
         a.sendMessage(Component.text("  " + (gratis > 0 ? "Te queda " + gratis + " cambio gratis hoy."
                 : "Cambiar uno cuesta " + precio + (precio == 1 ? " Esencia." : " Esencias."))
-                + " /calamity cambiar <1-3>", NamedTextColor.GRAY));
+                + " /calamity cambiar <1-3>", Paleta.TENUE));
         int objetivo = Math.max(1, hc.cfg().getInt("contratos.semana-objetivo", 12));
         int hechos = semana().equals(s.getString("semana", "")) ? s.getInt("cobrados-semana", 0) : 0;
         a.sendMessage(Component.text("  Esta semana: " + Math.min(hechos, objetivo) + "/" + objetivo
-                + " cobrados para la Llave del Caos.", NamedTextColor.GRAY));
+                + " cobrados para la Llave del Caos.", Paleta.TENUE));
     }
 
     /** /calamity cambiar <1-3> (y el trueque del Altar). True si se cambio. */
@@ -663,7 +662,7 @@ final class Contratos implements Listener {
         hc.plugin().bitacora().anotar("contrato", "cambio", p.getName(), viejo + " -> " + nuevo.id(), "coste " + precio);
         telemetria(p, nuevo, "cambiado", 0, 0);
         p.sendMessage(ComandoCalamity.mensaje(Component.text("Contrato nuevo: ")
-                .append(Component.text(nuevo.texto(), NamedTextColor.WHITE)).append(Component.text("."))));
+                .append(Component.text(nuevo.texto(), Paleta.DETALLE)).append(Component.text("."))));
         return true;
     }
 
@@ -705,7 +704,7 @@ final class Contratos implements Listener {
             quien.sendMessage(Component.text("  " + i + ". " + s.getString(r + ".id", "?")
                     + (d == null ? "" : " · " + s.getInt(r + ".progreso", 0) + "/" + d.objetivo())
                     + (s.getBoolean(r + ".cumplido", false) ? " · cumplido" : "")
-                    + (s.getBoolean(r + ".cobrado", false) ? " · cobrado" : ""), NamedTextColor.GRAY));
+                    + (s.getBoolean(r + ".cobrado", false) ? " · cobrado" : ""), Paleta.TENUE));
         }
     }
 

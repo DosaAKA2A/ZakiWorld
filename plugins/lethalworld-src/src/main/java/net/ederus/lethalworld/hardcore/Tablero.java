@@ -3,7 +3,6 @@ package net.ederus.lethalworld.hardcore;
 import net.ederus.edm.comun.Compat;
 import net.ederus.edm.comun.menu.MenuUtil;
 import net.kyori.adventure.text.Component;
-import net.kyori.adventure.text.format.NamedTextColor;
 import net.kyori.adventure.text.format.TextColor;
 import org.bukkit.Location;
 import org.bukkit.Material;
@@ -46,7 +45,7 @@ import java.util.UUID;
  */
 final class Tablero implements Listener {
 
-    static final TextColor VERDE = TextColor.color(0x9FD6A0);
+    static final TextColor VERDE = Paleta.DETALLE;
     static final TextColor AMBAR = TextColor.color(0xE8A33D);
     private static final int CERRAR = 22;
     private static final long ESPERA_MS = 500;
@@ -153,42 +152,42 @@ final class Tablero implements Listener {
             return;
         }
         calcular();
-        Inventory inv = hc.plugin().getServer().createInventory(new Marca(), 27, Component.text("Tablero de Calamity", VERDE));
+        Inventory inv = hc.plugin().getServer().createInventory(new Marca(), 27, Paleta.calido("Tablero de Calamity"));
 
         inv.setItem(0, MenuUtil.icon(Material.ECHO_SHARD, Component.text("Ecos con botín", VERDE),
                 List.of(MenuUtil.line("Los que más Reliquias guardan."), MenuUtil.line("Sin coordenadas: búscalos.")), false));
         if (ecos.isEmpty()) {
-            inv.setItem(1, MenuUtil.icon(Material.GRAY_STAINED_GLASS_PANE, Component.text("Ningún Eco suelto", NamedTextColor.GRAY),
+            inv.setItem(1, MenuUtil.icon(Material.GRAY_STAINED_GLASS_PANE, Component.text("Ningún Eco suelto", Paleta.TENUE),
                     List.of(MenuUtil.line("Nadie ha dejado nada que buscar.")), false));
         }
         for (int i = 0; i < ecos.size(); i++) {
             LineaEco e = ecos.get(i);
             List<Component> lore = new ArrayList<>();
-            lore.add(Component.text("Nivel ", NamedTextColor.GRAY).append(Component.text(e.nivel(), NamedTextColor.WHITE)));
+            lore.add(Component.text("Nivel ", Paleta.TENUE).append(Component.text(e.nivel(), Paleta.CIFRA)));
             lore.add(Component.text(e.reliquias() + (e.reliquias() == 1 ? " reliquia" : " reliquias"), AMBAR));
-            lore.add(Component.translatable(e.bioma().translationKey(), NamedTextColor.WHITE));
+            lore.add(Component.translatable(e.bioma().translationKey(), Paleta.TEXTO));
             if (e.distancia() >= 0) lore.add(MenuUtil.line("A ~" + e.distancia() + " bloques de la llegada"));
             lore.add(MenuUtil.line(e.horas() <= 1 ? "Queda menos de 1 h" : "Quedan " + e.horas() + " h"));
-            if (e.errante()) lore.add(Component.text("Errante", ComandoCalamity.ROJO));
-            inv.setItem(1 + i, MenuUtil.icon(Material.ECHO_SHARD, Component.text("Eco de " + e.dueno(), VERDE), lore,
+            if (e.errante()) lore.add(Component.text("Errante", Paleta.AVISO));
+            inv.setItem(1 + i, MenuUtil.icon(Material.ECHO_SHARD, Component.text("Eco de " + e.dueno(), Paleta.ECO), lore,
                     e.reliquias() > 0));
         }
 
-        inv.setItem(9, MenuUtil.icon(Material.WITHER_SKELETON_SKULL, Component.text("Parcas sueltas", ComandoCalamity.ROJO),
+        inv.setItem(9, MenuUtil.icon(Material.WITHER_SKELETON_SKULL, Component.text("Parcas sueltas", Paleta.PARCA),
                 List.of(MenuUtil.line("Donde siega ahora mismo.")), false));
         if (parcas.isEmpty()) {
-            inv.setItem(10, MenuUtil.icon(Material.GRAY_STAINED_GLASS_PANE, Component.text("Ninguna Parca", NamedTextColor.GRAY),
+            inv.setItem(10, MenuUtil.icon(Material.GRAY_STAINED_GLASS_PANE, Component.text("Ninguna Parca", Paleta.TENUE),
                     List.of(MenuUtil.line("Por ahora nadie se ha quedado quieto.")), false));
         }
         for (int i = 0; i < parcas.size(); i++) {
             LineaParca pa = parcas.get(i);
             List<Component> lore = new ArrayList<>();
-            lore.add(Component.translatable(pa.bioma().translationKey(), NamedTextColor.WHITE));
+            lore.add(Component.translatable(pa.bioma().translationKey(), Paleta.TEXTO));
             String titulo = pa.presa() == null ? "Una Parca siega" : "Una Parca siega cerca de " + pa.presa();
-            inv.setItem(10 + i, MenuUtil.icon(Material.WITHER_SKELETON_SKULL, Component.text(titulo, ComandoCalamity.ROJO), lore, false));
+            inv.setItem(10 + i, MenuUtil.icon(Material.WITHER_SKELETON_SKULL, Component.text(titulo, Paleta.PARCA), lore, false));
         }
 
-        inv.setItem(CERRAR, MenuUtil.icon(Material.BARRIER, Component.text("Cerrar", ComandoCalamity.ROJO),
+        inv.setItem(CERRAR, MenuUtil.icon(Material.BARRIER, Component.text("Cerrar", Paleta.AVISO),
                 List.of(MenuUtil.line("Se actualiza cada " + Math.max(1, hc.cfg().getInt("tablero.cache-segundos", 30)) + " s.")), false));
         for (int s = 0; s < 27; s++) if (inv.getItem(s) == null) inv.setItem(s, MenuUtil.pane());
         p.openInventory(inv);

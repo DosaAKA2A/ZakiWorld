@@ -3,7 +3,6 @@ package net.ederus.lethalworld.hardcore;
 import net.ederus.edm.comun.Compat;
 import net.ederus.edm.comun.menu.MenuUtil;
 import net.kyori.adventure.text.Component;
-import net.kyori.adventure.text.format.NamedTextColor;
 import org.bukkit.Material;
 import org.bukkit.command.CommandSender;
 import org.bukkit.configuration.ConfigurationSection;
@@ -162,7 +161,7 @@ final class Camino {
     void abrir(Player p) {
         Map<Integer, String> acciones = new HashMap<>();
         Inventory inv = hc.plugin().getServer().createInventory(new MenuAltar.Marca(MenuAltar.CAMINO, acciones, null), 36,
-                Component.text("Altar del Umbral · Tu camino", Altar.NARANJA));
+                Paleta.calido("Altar del Umbral · Tu camino"));
         pintar(inv, p, acciones);
         p.openInventory(inv);
         Compat.soundPlayers(p.getWorld(), p.getLocation(), "item.book.page_turn", 1.0f, 1.0f);
@@ -207,13 +206,13 @@ final class Camino {
                     List.of(MenuUtil.line("Página Umbral.")), false));
             acciones.put(27, "ir:" + MenuAltar.UMBRAL);
         }
-        inv.setItem(31, MenuUtil.icon(Material.BARRIER, Component.text("Cerrar", ComandoCalamity.ROJO), List.of(), false));
+        inv.setItem(31, MenuUtil.icon(Material.BARRIER, Component.text("Cerrar", Paleta.AVISO), List.of(), false));
         acciones.put(31, "cerrar");
         for (int i = 0; i < inv.getSize(); i++) if (inv.getItem(i) == null) inv.setItem(i, MenuUtil.pane());
     }
 
     private static Component dato(String etiqueta, String valor) {
-        return Component.text(etiqueta + ": ", MenuUtil.SOFT).append(Component.text(valor, NamedTextColor.WHITE));
+        return Component.text(etiqueta + ": ", MenuUtil.SOFT).append(Component.text(valor, Paleta.TEXTO));
     }
 
     private org.bukkit.inventory.ItemStack icono(Player p, Paso paso) {

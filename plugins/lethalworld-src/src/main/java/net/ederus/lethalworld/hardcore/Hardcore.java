@@ -1,8 +1,6 @@
 package net.ederus.lethalworld.hardcore;
 
 import net.kyori.adventure.text.Component;
-import net.kyori.adventure.text.format.NamedTextColor;
-import net.kyori.adventure.text.format.TextColor;
 import net.kyori.adventure.text.format.TextDecoration;
 import net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer;
 import net.ederus.edm.comun.Compat;
@@ -551,7 +549,7 @@ public final class Hardcore implements Listener {
                     long espera = cuarentenaRestante(p);
                     if (espera > 0) {
                         p.sendActionBar(Component.text(
-                                "Aún no. Vuelve en " + (espera / 60_000 + 1) + " min.", NamedTextColor.RED));
+                                "Aún no. Vuelve en " + (espera / 60_000 + 1) + " min.", Paleta.AVISO));
                         continue;
                     }
                     meter(p, llegada);
@@ -786,7 +784,7 @@ public final class Hardcore implements Listener {
         e.ultimoMinijefe = ahora;
         Component nombre = mob.customName() == null
                 ? Component.text("Algo") : mob.customName();
-        p.sendMessage(Component.text("Ha venido a por ti: ", NamedTextColor.DARK_RED).append(nombre));
+        p.sendMessage(Component.text("Ha venido a por ti: ", Paleta.AVISO).append(nombre));
         Compat.sound(p.getWorld(), p.getLocation(), "entity.wither.spawn", 1.0f, 0.6f);
     }
 
@@ -826,7 +824,7 @@ public final class Hardcore implements Listener {
         if (!esHardcore(e.getPlayer())) return;
         if (!cfg().getBoolean("dificultad.sin-camas", true)) return;
         e.setCancelled(true);
-        e.getPlayer().sendMessage(Component.text("Aquí no se duerme.", NamedTextColor.RED));
+        e.getPlayer().sendMessage(Component.text("Aquí no se duerme.", Paleta.AVISO));
     }
 
     /** Sin regeneracion natural: se cura con pociones y comida, no esperando. */
@@ -941,17 +939,19 @@ public final class Hardcore implements Listener {
         }
         String nombre = t.getString("nombre", "[INSOMNE]");
         p.showTitle(net.kyori.adventure.title.Title.title(
-                Component.text(nombre, TextColor.color(0x9FD6A0)),
-                Component.text("Veinticuatro horas ahí dentro", NamedTextColor.GRAY),
+                Paleta.calido(nombre),
+                Component.text("Veinticuatro horas ahí dentro", Paleta.TEXTO),
                 net.kyori.adventure.title.Title.Times.times(
                         java.time.Duration.ofMillis(300),
                         java.time.Duration.ofMillis(2600),
                         java.time.Duration.ofMillis(700))));
         Compat.soundPlayers(p.getWorld(), p.getLocation(), "ui.toast.challenge_complete", 1.0f, 1.0f);
-        plugin.getServer().broadcast(Component.text(p.getName(), TextColor.color(0x9FD6A0))
-                .append(Component.text(" lleva 24 horas en Calamity y se ha ganado ", NamedTextColor.GRAY))
-                .append(Component.text(nombre, TextColor.color(0x9FD6A0), TextDecoration.BOLD))
-                .append(Component.text(".", NamedTextColor.GRAY)));
+        // El tag en negrita a proposito: es una marca que se gana (sale asi en el chat y en
+        // /tags), la unica excepcion a "negrita solo en la marca" junto a Calamity.
+        plugin.getServer().broadcast(Component.text(p.getName(), Paleta.DETALLE)
+                .append(Component.text(" lleva 24 horas en Calamity y se ha ganado ", Paleta.TEXTO))
+                .append(Component.text(nombre, Paleta.MARCA, TextDecoration.BOLD))
+                .append(Component.text(".", Paleta.TEXTO)));
         plugin.getLogger().info("[Calamity] Tag entregado a " + p.getName() + ".");
     }
 
@@ -1064,7 +1064,7 @@ public final class Hardcore implements Listener {
         if (!cruda) return;
         p.addPotionEffect(new PotionEffect(PotionEffectType.POISON, segundos * 20, 1, true, false, true));
         p.addPotionEffect(new PotionEffect(PotionEffectType.HUNGER, segundos * 20, 1, true, false, true));
-        p.sendMessage(Component.text("Eso estaba crudo.", NamedTextColor.DARK_GREEN));
+        p.sendMessage(Component.text("Eso estaba crudo.", Paleta.DETALLE));
     }
 
     /**
@@ -1103,7 +1103,7 @@ public final class Hardcore implements Listener {
         if (!(e.getEntity() instanceof Player p) || !esHardcore(p)) return;
         if (!cfg().getBoolean("dificultad.sin-totem", true)) return;
         e.setCancelled(true);
-        p.sendMessage(Component.text("El tótem se deshace sin salvarte.", NamedTextColor.DARK_RED));
+        p.sendMessage(Component.text("El tótem se deshace sin salvarte.", Paleta.AVISO));
         Compat.spawn(p.getWorld(), Compat.ASH, p.getLocation().add(0, 1, 0), 30, 0.5, 0.8, 0.5, 0.03);
     }
 
@@ -1219,7 +1219,7 @@ public final class Hardcore implements Listener {
         // Quien cae ante un Eco lo dice (P-E12); cualquier otra muerte, la frase de siempre.
         Component deEco = ecos == null ? null : valor("eco", () -> ecos.mensajeMuerte(p), null);
         e.deathMessage(deEco != null ? deEco : Component.text(p.getName() + " no volvió de Calamity.",
-                TextColor.color(0x8B1A1A)));
+                Paleta.AVISO));
 
         // A donde reaparece se decide en onReaparecer, que es cuando vuelve a tener
         // cuerpo: dos ticks despues de morir sigue en la pantalla de muerte, y a un
@@ -1269,7 +1269,7 @@ public final class Hardcore implements Listener {
             Location fuera = salida();
             if (fuera != null) e.setRespawnLocation(fuera);
         }
-        p.sendMessage(Component.text("Has muerto allí dentro.", NamedTextColor.GRAY));
+        p.sendMessage(Component.text("Has muerto allí dentro.", Paleta.TEXTO));
         // Un tick despues ya tiene cuerpo: mensaje del Eco y lo que devuelva el Salvoconducto.
         plugin.getServer().getScheduler().runTaskLater(plugin, () -> {
             if (!p.isOnline() || !activo()) return;
@@ -1325,7 +1325,7 @@ public final class Hardcore implements Listener {
             default -> null;
         };
         if (texto != null) {
-            p.sendMessage(Component.text(texto, NamedTextColor.GRAY));
+            p.sendMessage(Component.text(texto, Paleta.TEXTO));
         }
         Compat.soundPlayers(destino.getWorld(), destino, "block.amethyst_block.resonate", 1.0f, 0.8f);
     }
@@ -1338,8 +1338,7 @@ public final class Hardcore implements Listener {
         if (destino == null) return;
         p.teleport(destino);
         cordura.reiniciar(p);
-        p.sendMessage(Component.text("Calamity", TextColor.color(0x8B1A1A))
-                .append(Component.text("  ·  Lo que traigas, lo pierdes al morir.", NamedTextColor.GRAY)));
+        p.sendMessage(Paleta.mensaje("Lo que traigas, lo pierdes al morir."));
         Compat.sound(destino.getWorld(), destino, "ambient.cave", 1.2f, 0.5f);
         if (activo()) {
             seguro("huella", () -> huella.reiniciar(p));
@@ -1414,7 +1413,7 @@ public final class Hardcore implements Listener {
         if (!cfg().getStringList("comandos-prohibidos").contains(cmd)) return;
         e.setCancelled(true);
         p.sendMessage(Component.text("Aquí no. Se sale por el portal o con un Cristal de Regreso.",
-                NamedTextColor.RED));
+                Paleta.AVISO));
     }
 
     // ----------------------------------------------------------------- los objetos
@@ -1441,13 +1440,13 @@ public final class Hardcore implements Listener {
     /** Un trago del frasco: sube la cordura y gasta un uso. Al quedarse a cero, botella vacia. */
     private void beber(Player p, ItemStack frasco) {
         if (!esHardcore(p)) {
-            p.sendMessage(Component.text("Fuera de Calamity no hace nada.", NamedTextColor.GRAY));
+            p.sendMessage(Component.text("Fuera de Calamity no hace nada.", Paleta.TEXTO));
             return;
         }
         int quedan = items.tragos(frasco);
         if (quedan <= 0) {
             p.sendMessage(Component.text("El frasco está vacío. Recárgalo en el altar del spawn.",
-                    NamedTextColor.GRAY));
+                    Paleta.TEXTO));
             Compat.soundPlayers(p.getWorld(), p.getLocation(), "block.glass.break", 0.6f, 1.4f);
             return;
         }
@@ -1475,14 +1474,14 @@ public final class Hardcore implements Listener {
     private void empezarCristal(Player p) {
         if (!esHardcore(p)) {
             p.sendMessage(Component.text("El cristal solo funciona dentro de Calamity.",
-                    NamedTextColor.GRAY));
+                    Paleta.TEXTO));
             return;
         }
         if (canalizando.containsKey(p.getUniqueId())) return;
         // P-C01: con la etiqueta de combate no se empieza. Si no, el Cristal era la forma
         // de huir de cualquier pelea a cinco segundos.
         if (valor("combate", () -> combate.enCombate(p), false)) {
-            cordura.destello(p, Component.text("No con sangre fresca encima.", NamedTextColor.RED), 2);
+            cordura.destello(p, Component.text("No con sangre fresca encima.", Paleta.AVISO), 2);
             return;
         }
         canalizando.put(p.getUniqueId(), p.getLocation().clone());
@@ -1499,7 +1498,7 @@ public final class Hardcore implements Listener {
         if (inicio.getWorld() != p.getWorld() || inicio.distanceSquared(p.getLocation()) > 4) {
             canalizando.remove(p.getUniqueId());
             cuentaCristal.remove(p.getUniqueId());
-            p.sendMessage(Component.text("Te has movido: el cristal se apaga.", NamedTextColor.RED));
+            p.sendMessage(Component.text("Te has movido: el cristal se apaga.", Paleta.AVISO));
             Compat.soundPlayers(p.getWorld(), p.getLocation(), "block.amethyst_block.break", 0.8f, 0.8f);
             return;
         }
@@ -1533,7 +1532,7 @@ public final class Hardcore implements Listener {
     private void cortarCristal(Player p, String aviso) {
         canalizando.remove(p.getUniqueId());
         cuentaCristal.remove(p.getUniqueId());
-        p.sendMessage(Component.text(aviso, NamedTextColor.RED));
+        p.sendMessage(Component.text(aviso, Paleta.AVISO));
         Compat.soundPlayers(p.getWorld(), p.getLocation(), "block.amethyst_block.break", 0.8f, 0.8f);
     }
 
@@ -1546,7 +1545,7 @@ public final class Hardcore implements Listener {
             else p.getInventory().setItem(i, null);
             return true;
         }
-        p.sendMessage(Component.text("Ya no llevas ningún cristal.", NamedTextColor.RED));
+        p.sendMessage(Component.text("Ya no llevas ningún cristal.", Paleta.AVISO));
         return false;
     }
 

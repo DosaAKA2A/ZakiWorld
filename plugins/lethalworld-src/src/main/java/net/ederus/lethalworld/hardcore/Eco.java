@@ -6,7 +6,6 @@ import net.ederus.edm.anomaly.minions.MinionManager;
 import net.ederus.edm.comun.Compat;
 import net.ederus.edm.comun.Fx;
 import net.kyori.adventure.text.Component;
-import net.kyori.adventure.text.format.NamedTextColor;
 import net.kyori.adventure.text.format.TextColor;
 import net.kyori.adventure.title.Title;
 import org.bukkit.Location;
@@ -49,7 +48,8 @@ import java.util.UUID;
  */
 final class Eco {
 
-    static final TextColor GRIS = TextColor.color(0x9AA7B8);
+    /** El color del Eco: el de la Paleta (el #9AA7B8 de antes se perdia en el chat). */
+    static final TextColor GRIS = Paleta.ECO;
 
     // ------------------------------------------------------ registro (se guarda)
     final String id;
@@ -412,7 +412,7 @@ final class Eco {
     Component nombre(boolean enRojo) {
         int k = nReliquias();
         String texto = "Eco de " + nombre + (k > 0 ? " · " + k + (k == 1 ? " reliquia" : " reliquias") : "");
-        return Component.text(texto, enRojo ? ComandoCalamity.ROJO : GRIS);
+        return Component.text(texto, enRojo ? Paleta.AVISO : GRIS);
     }
 
     // --------------------------------------------------------------------- vista
@@ -674,7 +674,7 @@ final class Eco {
         if (duenoP != null && !reconocido && duenoP.getLocation().distanceSquared(pos) <= 24 * 24) {
             reconocido = true;
             duenoP.playSound(pos, "entity.player.death", 1.0f, 1.0f);
-            duenoP.showTitle(Title.title(Component.empty(), Component.text("Te reconoce.", ComandoCalamity.ROJO),
+            duenoP.showTitle(Title.title(Component.empty(), Component.text("Te reconoce.", Paleta.AVISO),
                     Title.Times.times(Duration.ofMillis(300), Duration.ofMillis(2000), Duration.ofMillis(700))));
             hc.cordura().sumar(duenoP, -c.getDouble("reconocer-cordura", 5));
         }
@@ -786,7 +786,7 @@ final class Eco {
                 // Sin adoptar se pone el nombre a pelo.
             }
         }
-        cuerpo.customName(n.append(Component.text(" Nv. " + nivel, NamedTextColor.GRAY)));
+        cuerpo.customName(n.append(Component.text(" Nv. " + nivel, Paleta.TENUE)));
         cuerpo.setCustomNameVisible(true);
     }
 }

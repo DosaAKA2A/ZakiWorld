@@ -241,7 +241,7 @@ final class Entregas implements Listener {
             hc.guardarYa();
             if (p != null && p.isOnline()) {
                 p.sendMessage(ComandoCalamity.mensaje(Component.text("Te espera fuera: ")
-                        .append(Component.text(objeto + (items.size() > 1 ? " x" + items.size() : ""), NamedTextColor.WHITE))
+                        .append(Component.text(objeto + (items.size() > 1 ? " x" + items.size() : ""), Paleta.DETALLE))
                         .append(Component.text("."))));
             }
             return "pendiente";
@@ -254,11 +254,11 @@ final class Entregas implements Listener {
 
     private void fallo(CommandSender quien, String objeto, OfflinePlayer a, String motivo, String origen) {
         String nombre = a == null ? "?" : nombre(a);
-        Component msg = ComandoCalamity.mensaje(Component.text("No se pudo entregar ")
-                .append(Component.text(objeto.isEmpty() ? "?" : objeto, NamedTextColor.WHITE))
-                .append(Component.text(" a "))
-                .append(Component.text(nombre, NamedTextColor.WHITE))
-                .append(Component.text(": " + motivo + ".")));
+        Component msg = ComandoCalamity.mensaje(Component.text("No se pudo entregar ", Paleta.AVISO)
+                .append(Component.text(objeto.isEmpty() ? "?" : objeto, Paleta.DETALLE))
+                .append(Component.text(" a ", Paleta.AVISO))
+                .append(Component.text(nombre, Paleta.DETALLE))
+                .append(Component.text(": " + motivo + ".", Paleta.AVISO)));
         (quien == null ? Bukkit.getConsoleSender() : quien).sendMessage(msg);
         hc.plugin().bitacora().anotar("entrega", "fallo", objeto.isEmpty() ? "?" : objeto, motivo, nombre, origen);
     }
@@ -529,7 +529,7 @@ final class Entregas implements Listener {
         }
         if (!dados.isEmpty()) {
             p.sendMessage(ComandoCalamity.mensaje(Component.text("Te esperaban premios: ")
-                    .append(Component.text(String.join(", ", dados), NamedTextColor.WHITE))
+                    .append(Component.text(String.join(", ", dados), Paleta.DETALLE))
                     .append(Component.text("."))));
         }
         if (suelo) p.sendMessage(ComandoCalamity.mensaje("No te cabía: lo tienes a tus pies."));
@@ -611,14 +611,14 @@ final class Entregas implements Listener {
 
     private void comandoDar(CommandSender quien, String[] args) {
         if (args.length < 3) {
-            quien.sendMessage(Component.text("Uso: /lw hardcore dar <objeto> <jugador> [n] [origen]", NamedTextColor.RED));
+            quien.sendMessage(Component.text("Uso: /lw hardcore dar <objeto> <jugador> [n] [origen]", Paleta.AVISO));
             quien.sendMessage(Component.text("Objetos: " + String.join(", ", OBJETOS)
-                    + ", credito:<tipo>, credito-caja:<tipo>, forja:<pieza>", NamedTextColor.GRAY));
+                    + ", credito:<tipo>, credito-caja:<tipo>, forja:<pieza>", Paleta.TENUE));
             return;
         }
         OfflinePlayer a = buscar(args[2]);
         if (a == null) {
-            quien.sendMessage(Component.text("No encuentro a ese jugador.", NamedTextColor.RED));
+            quien.sendMessage(Component.text("No encuentro a ese jugador.", Paleta.AVISO));
             return;
         }
         int n = 1;
@@ -626,18 +626,18 @@ final class Entregas implements Listener {
             try {
                 n = Integer.parseInt(args[3]);
             } catch (NumberFormatException e) {
-                quien.sendMessage(Component.text("Eso no es un número.", NamedTextColor.RED));
+                quien.sendMessage(Component.text("Eso no es un número.", Paleta.AVISO));
                 return;
             }
         }
         if (n < 1 || n > 1000) {
-            quien.sendMessage(Component.text("La cantidad va de 1 a 1000.", NamedTextColor.RED));
+            quien.sendMessage(Component.text("La cantidad va de 1 a 1000.", Paleta.AVISO));
             return;
         }
         String origen = args.length >= 5 ? args[4].toLowerCase(Locale.ROOT) : origenDe(quien);
         if (dar(quien, args[1], a, n, origen)) {
             quien.sendMessage(Component.text("Entregado: " + args[1].toLowerCase(Locale.ROOT) + " x" + n + " a "
-                    + nombre(a) + ".", NamedTextColor.GREEN));
+                    + nombre(a) + ".", Paleta.BIEN));
         }
     }
 
@@ -660,13 +660,13 @@ final class Entregas implements Listener {
 
     private void comandoSaldo(CommandSender quien, String[] args) {
         if (args.length < 2) {
-            quien.sendMessage(Component.text("Uso: /lw hardcore saldo <jugador> [+n|-n]", NamedTextColor.RED));
+            quien.sendMessage(Component.text("Uso: /lw hardcore saldo <jugador> [+n|-n]", Paleta.AVISO));
             return;
         }
         OfflinePlayer a = buscar(args[1]);
         Saldo s = hc.saldo();
         if (a == null || s == null) {
-            quien.sendMessage(Component.text("No encuentro a ese jugador.", NamedTextColor.RED));
+            quien.sendMessage(Component.text("No encuentro a ese jugador.", Paleta.AVISO));
             return;
         }
         UUID u = a.getUniqueId();
@@ -675,30 +675,30 @@ final class Entregas implements Listener {
             try {
                 n = Long.parseLong(args[2].startsWith("+") ? args[2].substring(1) : args[2]);
             } catch (NumberFormatException e) {
-                quien.sendMessage(Component.text("Eso no es un número: +n o -n.", NamedTextColor.RED));
+                quien.sendMessage(Component.text("Eso no es un número: +n o -n.", Paleta.AVISO));
                 return;
             }
             String motivo = "admin:" + (quien instanceof Player p ? p.getName() : "consola");
             if (n > 0) s.sumar(u, n, motivo);
             else if (n < 0 && !s.restar(u, -n, motivo)) {
-                quien.sendMessage(Component.text("No le llega: tiene " + s.de(u) + ".", NamedTextColor.RED));
+                quien.sendMessage(Component.text("No le llega: tiene " + s.de(u) + ".", Paleta.AVISO));
                 return;
             }
         }
         quien.sendMessage(ComandoCalamity.mensaje(Component.text("Saldo de " + nombre(a) + ": ")
-                .append(Component.text(String.valueOf(s.de(u)), NamedTextColor.WHITE))
+                .append(Component.text(String.valueOf(s.de(u)), Paleta.CIFRA))
                 .append(Component.text(" Esencias."))));
     }
 
     private void comandoCreditos(CommandSender quien, String[] args) {
         if (args.length < 2) {
-            quien.sendMessage(Component.text("Uso: /lw hardcore creditos <jugador> [tipo +n|-n]", NamedTextColor.RED));
+            quien.sendMessage(Component.text("Uso: /lw hardcore creditos <jugador> [tipo +n|-n]", Paleta.AVISO));
             return;
         }
         OfflinePlayer a = buscar(args[1]);
         Creditos c = hc.creditos();
         if (a == null || c == null) {
-            quien.sendMessage(Component.text("No encuentro a ese jugador.", NamedTextColor.RED));
+            quien.sendMessage(Component.text("No encuentro a ese jugador.", Paleta.AVISO));
             return;
         }
         UUID u = a.getUniqueId();
@@ -707,58 +707,58 @@ final class Entregas implements Listener {
             try {
                 n = Integer.parseInt(args[3].startsWith("+") ? args[3].substring(1) : args[3]);
             } catch (NumberFormatException e) {
-                quien.sendMessage(Component.text("Eso no es un número: +n o -n.", NamedTextColor.RED));
+                quien.sendMessage(Component.text("Eso no es un número: +n o -n.", Paleta.AVISO));
                 return;
             }
             c.sumar(u, args[2], n, "admin:" + (quien instanceof Player p ? p.getName() : "consola"), false);
         } else if (args.length == 3) {
-            quien.sendMessage(Component.text("Falta la cantidad: creditos <jugador> <tipo> +n|-n", NamedTextColor.RED));
+            quien.sendMessage(Component.text("Falta la cantidad: creditos <jugador> <tipo> +n|-n", Paleta.AVISO));
             return;
         }
         Map<String, Integer> todos = c.todos(u);
         quien.sendMessage(ComandoCalamity.mensaje(Component.text("Créditos de " + nombre(a) + ":")));
         if (todos.isEmpty()) {
-            quien.sendMessage(Component.text("  ninguno", NamedTextColor.GRAY));
+            quien.sendMessage(Component.text("  ninguno", Paleta.TENUE));
             return;
         }
         for (Map.Entry<String, Integer> e : todos.entrySet()) {
             int caja = c.deCaja(u, e.getKey());
-            quien.sendMessage(Component.text("  " + e.getKey() + ": ", NamedTextColor.GRAY)
-                    .append(Component.text(String.valueOf(e.getValue()), NamedTextColor.WHITE))
+            quien.sendMessage(Component.text("  " + e.getKey() + ": ", Paleta.TENUE)
+                    .append(Component.text(String.valueOf(e.getValue()), Paleta.CIFRA))
                     .append(Component.text((caja > 0 ? "  (" + caja + " de caja)" : "")
-                            + (c.canjeable(u, e.getKey()) ? "" : "  · aún no se canjea"), NamedTextColor.GRAY)));
+                            + (c.canjeable(u, e.getKey()) ? "" : "  · aún no se canjea"), Paleta.TENUE)));
         }
     }
 
     private void comandoMc(CommandSender quien, String[] args) {
         if (args.length < 3) {
-            quien.sendMessage(Component.text("Uso: /lw hardcore mc <jugador> <n>", NamedTextColor.RED));
+            quien.sendMessage(Component.text("Uso: /lw hardcore mc <jugador> <n>", Paleta.AVISO));
             return;
         }
         OfflinePlayer a = buscar(args[1]);
         Monedero m = hc.monedero();
         if (a == null || m == null) {
-            quien.sendMessage(Component.text("No encuentro a ese jugador.", NamedTextColor.RED));
+            quien.sendMessage(Component.text("No encuentro a ese jugador.", Paleta.AVISO));
             return;
         }
         long n;
         try {
             n = Long.parseLong(args[2]);
         } catch (NumberFormatException e) {
-            quien.sendMessage(Component.text("Eso no es un número.", NamedTextColor.RED));
+            quien.sendMessage(Component.text("Eso no es un número.", Paleta.AVISO));
             return;
         }
         m.ponerPrueba(a.getUniqueId(), n);
         hc.plugin().bitacora().anotar("monedero", "prueba", nombre(a), String.valueOf(Math.max(0, n)));
         boolean prueba = "prueba".equalsIgnoreCase(hc.cfg().getString("monedero.modo", "real"));
         quien.sendMessage(Component.text("MobCoins de prueba de " + nombre(a) + ": " + Math.max(0, n)
-                + (prueba ? "." : "  (ojo: monedero.modo no es prueba, no se usan)"), prueba ? NamedTextColor.GREEN : NamedTextColor.YELLOW));
+                + (prueba ? "." : "  (ojo: monedero.modo no es prueba, no se usan)"), prueba ? Paleta.BIEN : Paleta.CIFRA));
     }
 
     /** /calamity saldo: P-M08 y los creditos, con lo que aun no se puede canjear. */
     private void comandoMiSaldo(CommandSender quien, String[] args) {
         if (!(quien instanceof Player p)) {
-            quien.sendMessage(Component.text("Solo para jugadores: /lw hardcore saldo <jugador>.", NamedTextColor.RED));
+            quien.sendMessage(Component.text("Solo para jugadores: /lw hardcore saldo <jugador>.", Paleta.AVISO));
             return;
         }
         UUID u = p.getUniqueId();
@@ -767,15 +767,16 @@ final class Entregas implements Listener {
         Creditos c = hc.creditos();
         if (c != null) {
             for (Map.Entry<String, Integer> e : c.todos(u).entrySet()) {
-                p.sendMessage(Component.text("  " + nombreCredito(e.getKey()) + ": ", NamedTextColor.GRAY)
-                        .append(Component.text(String.valueOf(e.getValue()), NamedTextColor.WHITE))
+                p.sendMessage(Component.text("  " + nombreCredito(e.getKey()) + ": ", Paleta.TEXTO)
+                        .append(Component.text(String.valueOf(e.getValue()), Paleta.CIFRA))
                         .append(Component.text(c.canjeable(u, e.getKey()) ? ""
-                                : "  · se canjea con " + Math.round(c.horasPedidas()) + " h activas", NamedTextColor.DARK_GRAY)));
+                                : "  · se canjea con " + Math.round(c.horasPedidas()) + " h activas", Paleta.TENUE)));
             }
         }
         int pend = cuantosPendientes(u);
         if (pend > 0) {
-            p.sendMessage(Component.text("  Te esperan " + pend + " premios fuera de Calamity.", NamedTextColor.GRAY));
+            p.sendMessage(Component.text("  Te esperan ", Paleta.TEXTO).append(Paleta.cifra(pend))
+                    .append(Component.text(" premios fuera de Calamity.", Paleta.TEXTO)));
         }
     }
 

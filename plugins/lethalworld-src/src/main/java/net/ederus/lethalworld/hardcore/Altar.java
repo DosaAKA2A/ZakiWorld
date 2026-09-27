@@ -2,7 +2,6 @@ package net.ederus.lethalworld.hardcore;
 
 import net.ederus.edm.comun.Compat;
 import net.kyori.adventure.text.Component;
-import net.kyori.adventure.text.format.NamedTextColor;
 import net.kyori.adventure.text.format.TextColor;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
@@ -720,7 +719,7 @@ final class Altar implements Listener {
             }
             if (quien != null && quien != p) {
                 quien.sendMessage(Component.text("altar probar: " + t.id() + " rechazado (" + r.motivo() + ", faltan "
-                        + r.faltan() + ")", NamedTextColor.YELLOW));
+                        + r.faltan() + ")", Paleta.AVISO));
             }
             return;
         }
@@ -741,7 +740,7 @@ final class Altar implements Listener {
             hc.plugin().bitacora().anotar("trueque", nombre, t.id(), "-" + pr.esencias(), "fallo", "devuelto", r.motivo(),
                     "mc " + pr.mc(), r.creditoUsado() == null ? "-" : r.creditoUsado());
             Component aviso = ComandoCalamity.mensaje(Component.text("El altar no pudo darte ")
-                    .append(Component.text(nombre(t), NamedTextColor.WHITE))
+                    .append(Component.text(nombre(t), Paleta.DETALLE))
                     .append(Component.text(". Te lo devuelve todo.")));
             if (p != null) {
                 p.sendMessage(aviso);
@@ -749,7 +748,7 @@ final class Altar implements Listener {
             }
             if (quien != null && quien != p) {
                 quien.sendMessage(Component.text("altar probar: " + t.id() + " fallo al entregar (" + r.motivo()
-                        + "): devuelto", NamedTextColor.YELLOW));
+                        + "): devuelto", Paleta.AVISO));
             }
             return;
         }
@@ -766,7 +765,7 @@ final class Altar implements Listener {
             Saldo s = hc.saldo();
             quien.sendMessage(Component.text("altar probar: " + t.id() + " ok (-" + pr.esencias() + " E"
                     + (pr.mc() > 0 ? ", -" + pr.mc() + " MC" : "") + (r.creditoUsado() != null ? ", -" + pr.creditos() + " "
-                    + r.creditoUsado() : "") + "; saldo " + (s == null ? "?" : s.de(op.getUniqueId())) + ")", NamedTextColor.GREEN));
+                    + r.creditoUsado() : "") + "; saldo " + (s == null ? "?" : s.de(op.getUniqueId())) + ")", Paleta.BIEN));
         }
     }
 
@@ -778,7 +777,7 @@ final class Altar implements Listener {
         if (pr.credito() != null) coste.add("−" + Forja.nombreCredito(pr.credito(), pr.creditos()));
         String texto = "ofrenda".equals(t.da()) ? "El altar acepta tu Ofrenda" : "Trueque hecho: " + nombre(t);
         return ComandoCalamity.mensaje(Component.text(texto + ".")
-                .append(Component.text(coste.isEmpty() ? "" : " (" + String.join(", ", coste) + ")", NamedTextColor.GRAY)));
+                .append(Component.text(coste.isEmpty() ? "" : " (" + String.join(", ", coste) + ")", Paleta.CIFRA)));
     }
 
     /** El mensaje de cada motivo de rechazo: P-M03, P-M04, P-W01/P-W07, P-M10/P-M11. */
@@ -787,7 +786,7 @@ final class Altar implements Listener {
         Object f = r.faltan();
         return switch (r.motivo()) {
             case "esencias" -> ComandoCalamity.mensaje(Component.text("Te faltan Esencias. ")
-                    .append(Component.text("(" + f + ")", NamedTextColor.WHITE)));
+                    .append(Component.text("(" + f + ")", Paleta.CIFRA)));
             case "cupo" -> {
                 if ("tope-llaves".equals(f)) yield ComandoCalamity.mensaje("Esta semana ya no te caben más Llaves del Caos.");
                 if (f instanceof String s && s.endsWith("d")) {
@@ -800,7 +799,7 @@ final class Altar implements Listener {
             case "credito" -> {
                 if ("horas".equals(f) && hc.creditos() != null) yield hc.creditos().avisoHoras(u);
                 yield ComandoCalamity.mensaje(Component.text("Te falta ")
-                        .append(Component.text(Forja.nombreCredito(String.valueOf(f), r.precio().creditos()), NamedTextColor.WHITE))
+                        .append(Component.text(Forja.nombreCredito(String.valueOf(f), r.precio().creditos()), Paleta.DETALLE))
                         .append(Component.text(" para forjar esto.")));
             }
             case "mc" -> "proximamente".equals(f) ? Monedero.avisoProximamente()
@@ -874,7 +873,7 @@ final class Altar implements Listener {
             long tiene = s == null ? 0 : s.de(p.getUniqueId());
             fallidoServicio(p, id, "esencias", coste - tiene);
             p.sendMessage(ComandoCalamity.mensaje(Component.text("Te faltan Esencias. ")
-                    .append(Component.text("(" + (coste - tiene) + ")", NamedTextColor.WHITE))));
+                    .append(Component.text("(" + (coste - tiene) + ")", Paleta.CIFRA))));
             Compat.soundPlayers(p.getWorld(), p.getLocation(), "block.note_block.bass", 0.8f, 0.6f);
             return;
         }
@@ -906,7 +905,7 @@ final class Altar implements Listener {
             hc.seguro("telemetria", () -> tel.suceso("trueque", p, c));
         }
         p.sendMessage(ComandoCalamity.mensaje(Component.text("El frasco vuelve a estar lleno. ")
-                .append(Component.text("(−" + coste + " Esencias)", NamedTextColor.GRAY))));
+                .append(Component.text("(−" + coste + " Esencias)", Paleta.CIFRA))));
         Compat.soundPlayers(p.getWorld(), p.getLocation(), "item.bottle.fill", 1.0f, 1.0f);
     }
 
@@ -989,12 +988,12 @@ final class Altar implements Listener {
             case "" -> marcar(quien);
             case "probar" -> {
                 if (args.length < 4) {
-                    quien.sendMessage(Component.text("Uso: /lw hardcore altar probar <jugador> <trueque>", NamedTextColor.RED));
+                    quien.sendMessage(Component.text("Uso: /lw hardcore altar probar <jugador> <trueque>", Paleta.AVISO));
                     return;
                 }
                 OfflinePlayer a = Entregas.buscar(args[2]);
                 if (a == null) {
-                    quien.sendMessage(Component.text("No encuentro a ese jugador.", NamedTextColor.RED));
+                    quien.sendMessage(Component.text("No encuentro a ese jugador.", Paleta.AVISO));
                     return;
                 }
                 comprar(a, args[3], quien, null);
@@ -1005,7 +1004,7 @@ final class Altar implements Listener {
                  * nada ni toca el saldo, los creditos, la espera de la Forja ni el stock comun. */
                 OfflinePlayer a = args.length >= 3 ? Entregas.buscar(args[2]) : null;
                 if (a == null) {
-                    quien.sendMessage(Component.text("Uso: /lw hardcore altar reset <jugador>", NamedTextColor.RED));
+                    quien.sendMessage(Component.text("Uso: /lw hardcore altar reset <jugador>", Paleta.AVISO));
                     return;
                 }
                 UUID u = a.getUniqueId();
@@ -1018,7 +1017,7 @@ final class Altar implements Listener {
             }
             case "abrir" -> {
                 if (!(quien instanceof Player p)) {
-                    quien.sendMessage(Component.text("Solo desde el juego.", NamedTextColor.RED));
+                    quien.sendMessage(Component.text("Solo desde el juego.", Paleta.AVISO));
                     return;
                 }
                 if (hc.esHardcore(p)) {
@@ -1036,26 +1035,26 @@ final class Altar implements Listener {
                         + (activo() ? "." : " (apagado).")));
                 List<String> ids = new ArrayList<>();
                 for (Trueque t : trueques()) ids.add(t.id());
-                quien.sendMessage(Component.text("  Trueques: " + String.join(", ", ids), NamedTextColor.GRAY));
+                quien.sendMessage(Component.text("  Trueques: " + String.join(", ", ids), Paleta.TENUE));
             }
             default -> quien.sendMessage(Component.text(
-                    "Uso: /lw hardcore altar [probar <jugador> <trueque> | reset <jugador> | abrir [umbral|forja|camino] | info]", NamedTextColor.RED));
+                    "Uso: /lw hardcore altar [probar <jugador> <trueque> | reset <jugador> | abrir [umbral|forja|camino] | info]", Paleta.AVISO));
         }
     }
 
     /** Marca como altar el bloque que mira (como llegada/salida: lo escribe en config.yml). */
     private void marcar(CommandSender quien) {
         if (!(quien instanceof Player p)) {
-            quien.sendMessage(Component.text("Mira un bloque desde el juego para marcarlo.", NamedTextColor.RED));
+            quien.sendMessage(Component.text("Mira un bloque desde el juego para marcarlo.", Paleta.AVISO));
             return;
         }
         Block b = p.getTargetBlockExact(8);
         if (b == null || b.getType().isAir()) {
-            p.sendMessage(Component.text("Mira el bloque que quieras usar de altar (a 8 bloques como mucho).", NamedTextColor.RED));
+            p.sendMessage(Component.text("Mira el bloque que quieras usar de altar (a 8 bloques como mucho).", Paleta.AVISO));
             return;
         }
         if (hc.esHardcore(b.getWorld())) {
-            p.sendMessage(Component.text("El altar va fuera de Calamity: dentro no escucha.", NamedTextColor.RED));
+            p.sendMessage(Component.text("El altar va fuera de Calamity: dentro no escucha.", Paleta.AVISO));
             return;
         }
         hc.punto("altar", b.getLocation());

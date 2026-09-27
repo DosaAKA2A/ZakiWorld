@@ -3,7 +3,6 @@ package net.ederus.lethalworld.hardcore;
 import net.ederus.edm.anomaly.minions.MinionManager;
 import net.ederus.lethalworld.MobsLethal;
 import net.kyori.adventure.text.Component;
-import net.kyori.adventure.text.format.NamedTextColor;
 import net.kyori.adventure.text.serializer.gson.GsonComponentSerializer;
 import org.bukkit.Bukkit;
 import org.bukkit.NamespacedKey;
@@ -246,21 +245,21 @@ final class ParteDefuncion implements Listener {
 
         List<Component> lineas = new ArrayList<>();
         lineas.add(ComandoCalamity.mensaje("Parte de defunción"));
-        lineas.add(Component.text(" Cordura al morir: ", NamedTextColor.GRAY)
-                .append(Component.text(Math.round(cordura) + " %", ComandoCalamity.ROJO))
-                .append(Component.text("  ·  " + desglose(p), NamedTextColor.GRAY)));
+        lineas.add(Component.text(" Cordura al morir: ", Paleta.TEXTO)
+                .append(Component.text(Math.round(cordura) + " %", Paleta.CIFRA))
+                .append(Component.text("  ·  " + desglose(p), Paleta.TENUE)));
         double total = 0;
         for (Golpe g : golpes) {
             total += g.dano();
-            lineas.add(Component.text(" " + cifra(g.dano()) + "  ", ComandoCalamity.ROJO)
-                    .append(Component.text(texto(g), NamedTextColor.GRAY)));
+            lineas.add(Component.text(" " + cifra(g.dano()) + "  ", Paleta.AVISO)
+                    .append(Component.text(texto(g), Paleta.TEXTO)));
         }
         if (golpes.isEmpty()) {
-            lineas.add(Component.text(" Nada te tocó en los últimos " + (ventanaMs() / 1000) + " s.", NamedTextColor.GRAY));
+            lineas.add(Component.text(" Nada te tocó en los últimos " + (ventanaMs() / 1000) + " s.", Paleta.TENUE));
         }
-        if (porQue != null) lineas.add(Component.text(" " + porQue.texto(), NamedTextColor.WHITE));
+        if (porQue != null) lineas.add(Component.text(" " + porQue.texto(), Paleta.DETALLE));
         String eco = lineaEco(p);
-        if (eco != null) lineas.add(Component.text(" " + eco, NamedTextColor.WHITE));
+        if (eco != null) lineas.add(Component.text(" " + eco, Paleta.ECO));
 
         String id = porQue == null ? "-" : porQue.id();
         try {

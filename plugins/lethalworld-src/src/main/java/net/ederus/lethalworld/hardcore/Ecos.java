@@ -76,7 +76,6 @@ import java.util.logging.Level;
 final class Ecos implements Listener {
 
     private static final TextColor GRIS = Eco.GRIS;
-    private static final TextColor BLANCO = NamedTextColor.WHITE;
     private static final String[] RUMBOS = {"norte", "noreste", "este", "sureste", "sur", "suroeste", "oeste", "noroeste"};
 
     private final Hardcore hc;
@@ -151,7 +150,7 @@ final class Ecos implements Listener {
         Eco e = nacer(foto, false);
         int horas = (int) Math.round(c.getDouble("horas", 12));
         avisarLuego(e.dueno, ComandoCalamity.mensaje(Component.text("Tu Eco se ha levantado donde caíste. Lleva tu armadura, tu arma y ")
-                .append(Component.text(e.nReliquias(), BLANCO))
+                .append(Component.text(e.nReliquias(), Paleta.CIFRA))
                 .append(Component.text(" reliquias. Dura " + horas + " h."))));
         if (e.porParca) avisarLuego(e.dueno, ComandoCalamity.mensaje("Lo que la Parca siega vuelve peor."));
         Player asesino = e.asesino == null ? null : Bukkit.getPlayer(e.asesino);
@@ -325,8 +324,9 @@ final class Ecos implements Listener {
             double r = cfg().getDouble("radio-despertar", 32) * factorEclipse();
             for (Player p : l.getWorld().getPlayers()) {
                 if (p.getLocation().distanceSquared(l) > r * r) continue;
-                p.showTitle(Title.title(Component.text("ECO", GRIS), Component.text("de " + e.nombre, NamedTextColor.GRAY)));
-                p.sendMessage(Component.text("Algo se levanta donde cayó " + e.nombre + ".", NamedTextColor.GRAY));
+                p.showTitle(Title.title(Paleta.degradado("ECO", Paleta.ECO.value(), Paleta.ALMA.value()),
+                        Component.text("de " + e.nombre, Paleta.TEXTO)));
+                p.sendMessage(Component.text("Algo se levanta donde cayó " + e.nombre + ".", GRIS));
             }
             Testigos t = hc.testigos();
             if (t != null) hc.seguro("testigos", () -> t.alAlzarEco(l.clone()));
@@ -360,7 +360,7 @@ final class Ecos implements Listener {
             Fx.shockwave(l.getWorld(), l, 3, Compat.ASH, 24);
             for (Player p : l.getWorld().getPlayers()) {
                 if (p.getLocation().distanceSquared(l) <= 32 * 32) {
-                    p.sendMessage(Component.text("El Eco de " + e.nombre + " se deshace.", NamedTextColor.GRAY));
+                    p.sendMessage(Component.text("El Eco de " + e.nombre + " se deshace.", GRIS));
                 }
             }
         }
@@ -491,7 +491,7 @@ final class Ecos implements Listener {
             });
             hc.guardarYa();
             if (killerP != null) {
-                Component m = Component.text("El Eco te deja +").append(Component.text(pagadas, BLANCO))
+                Component m = Component.text("El Eco te deja ").append(Component.text("+" + pagadas, Paleta.CIFRA))
                         .append(Component.text(" Esencias" + (lagrima != null ? ", y una Lágrima de Eco." : ".")));
                 killerP.sendMessage(ComandoCalamity.mensaje(m));
             }
@@ -512,10 +512,10 @@ final class Ecos implements Listener {
         t.put("cazador", killer.getUniqueId().toString());
         telemetria(killer, t);
         if (!e.prueba) {
-            aTodoCalamity(ComandoCalamity.mensaje(Component.text(killerNombre, BLANCO)
+            aTodoCalamity(ComandoCalamity.mensaje(Component.text(killerNombre, Paleta.DETALLE)
                     .append(Component.text(" ha cerrado el Eco de "))
-                    .append(Component.text(e.nombre, BLANCO)).append(Component.text("."))));
-            avisar(e.dueno, ComandoCalamity.mensaje(Component.text(killerNombre, BLANCO)
+                    .append(Component.text(e.nombre, Paleta.DETALLE)).append(Component.text("."))));
+            avisar(e.dueno, ComandoCalamity.mensaje(Component.text(killerNombre, Paleta.DETALLE)
                     .append(Component.text(" ha cerrado tu Eco y se ha llevado lo que llevabas."))));
         }
     }
@@ -879,7 +879,7 @@ final class Ecos implements Listener {
         e.proximaVoz = ahora + (min + azar.nextInt(max - min + 1)) * 1000L;
         double r = c.getDouble("voces.radio", 24);
         String frase = e.frases.get(azar.nextInt(e.frases.size()));
-        Component m = Component.text("Eco de " + e.nombre + ": " + frase, NamedTextColor.DARK_GRAY);
+        Component m = Component.text("Eco de " + e.nombre + ": " + frase, Paleta.TENUE);
         for (Player p : cuentan) if (p.getLocation().distanceSquared(pos) <= r * r) p.sendMessage(m);
     }
 
@@ -911,7 +911,7 @@ final class Ecos implements Listener {
         }
         Eco e = ecoDe(causa);
         if (e == null) return null;
-        return Component.text(victima.getName() + " cayó ante el Eco de " + e.nombre + ".", ComandoCalamity.ROJO);
+        return Component.text(victima.getName() + " cayó ante el Eco de " + e.nombre + ".", Paleta.AVISO);
     }
 
     // ------------------------------------------------------------ jugadores
@@ -970,7 +970,7 @@ final class Ecos implements Listener {
             double dx = l.getX() - p.getLocation().getX(), dz = l.getZ() - p.getLocation().getZ();
             long d = Math.round(Math.sqrt(dx * dx + dz * dz));
             p.sendMessage(ComandoCalamity.mensaje(Component.text("Tu Eco sigue en pie, a ")
-                    .append(Component.text(d, BLANCO)).append(Component.text(" bloques hacia el " + rumbo(dx, dz) + "."))));
+                    .append(Component.text(d, Paleta.CIFRA)).append(Component.text(" bloques hacia el " + rumbo(dx, dz) + "."))));
             if (++n >= 3) break;
         }
     }
@@ -1099,12 +1099,12 @@ final class Ecos implements Listener {
             case "despertar" -> despertarCmd(quien, args);
             case "matar" -> matar(quien, args);
             default -> quien.sendMessage(Component.text(
-                    "Uso: /lw hardcore eco crear|lista|borrar|tp|prueba|despertar|matar", NamedTextColor.RED));
+                    "Uso: /lw hardcore eco crear|lista|borrar|tp|prueba|despertar|matar", Paleta.AVISO));
         }
     }
 
     private void decir(CommandSender quien, String texto) {
-        quien.sendMessage(Component.text(texto, NamedTextColor.GRAY));
+        quien.sendMessage(Component.text(texto, Paleta.TENUE));
     }
 
     private void lista(CommandSender quien) {
@@ -1341,9 +1341,9 @@ final class Ecos implements Listener {
                     ? Component.text("lejos") : Component.translatable(l.getBlock().getBiome().translationKey());
             long min = Math.max(0, (e.expira - ahora) / 60_000);
             p.sendMessage(ComandoCalamity.mensaje(Component.text(e.errante ? "Eco errante · " : "Tu Eco · ")
-                    .append(bioma.color(BLANCO))
+                    .append(bioma.color(Paleta.DETALLE))
                     .append(Component.text(" · "))
-                    .append(Component.text(Math.round(e.x) + " " + Math.round(e.y) + " " + Math.round(e.z), BLANCO))
+                    .append(Component.text(Math.round(e.x) + " " + Math.round(e.y) + " " + Math.round(e.z), Paleta.CIFRA))
                     .append(Component.text(" · Nv. " + e.nivel + " · " + e.nReliquias() + " reliquias · quedan "
                             + (min / 60) + " h " + (min % 60) + " min"))));
         }

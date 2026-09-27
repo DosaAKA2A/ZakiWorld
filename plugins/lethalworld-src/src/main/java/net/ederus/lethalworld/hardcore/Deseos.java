@@ -3,7 +3,6 @@ package net.ederus.lethalworld.hardcore;
 import net.ederus.edm.comun.Compat;
 import net.ederus.edm.comun.menu.MenuUtil;
 import net.kyori.adventure.text.Component;
-import net.kyori.adventure.text.format.NamedTextColor;
 import org.bukkit.Material;
 import org.bukkit.command.CommandSender;
 import org.bukkit.configuration.ConfigurationSection;
@@ -69,7 +68,7 @@ final class Deseos {
         Subcomandos.calamity().registrar("deseos", "lo que quieres que dé Calamity (3 votos)", "lethalworld.calamity",
                 (quien, args) -> {
                     if (quien instanceof Player p) abrir(p);
-                    else quien.sendMessage(Component.text("Solo desde el juego.", NamedTextColor.RED));
+                    else quien.sendMessage(Component.text("Solo desde el juego.", Paleta.AVISO));
                 }, null);
     }
 
@@ -146,7 +145,7 @@ final class Deseos {
             return;
         }
         Inventory inv = hc.plugin().getServer().createInventory(new MenuEncuesta.Marca(null, true), 9,
-                Component.text("Calamity · deseos", MenuEncuesta.VERDE));
+                Paleta.prefijo().append(Paleta.calido("deseos")));
         pintar(inv, p);
         p.openInventory(inv);
         Compat.soundPlayers(p.getWorld(), p.getLocation(), "block.amethyst_block.chime", 0.8f, 1.1f);
@@ -179,7 +178,7 @@ final class Deseos {
         }
         for (int s = 1 + Math.min(7, cs.size()); s < MenuEncuesta.CERRAR; s++) inv.setItem(s, MenuUtil.pane());
         inv.setItem(MenuEncuesta.CERRAR, MenuUtil.icon(Material.BARRIER,
-                Component.text("Cerrar", ComandoCalamity.ROJO), List.of(MenuUtil.line("Tus deseos se quedan.")), false));
+                Component.text("Cerrar", Paleta.AVISO), List.of(MenuUtil.line("Tus deseos se quedan.")), false));
     }
 
     /** Lo llama MenuEncuesta (ya filtrado: clic izquierdo, 500 ms, casilla de arriba). */
@@ -221,7 +220,7 @@ final class Deseos {
         int total = 0;
         for (int v : r.values()) total += v;
         quien.sendMessage(Component.text("deseos | " + total + " votos activos | " + (activo() ? "abierta" : "deseos.activo: false"),
-                NamedTextColor.GREEN));
+                Paleta.BIEN));
         List<Map.Entry<String, Integer>> filas = new ArrayList<>(r.entrySet());
         filas.sort((a, b) -> Integer.compare(b.getValue(), a.getValue()));
         Map<String, String> nombres = new LinkedHashMap<>();
@@ -229,7 +228,7 @@ final class Deseos {
         for (Map.Entry<String, Integer> e : filas) {
             long pct = total == 0 ? 0 : Math.round(e.getValue() * 100.0 / total);
             quien.sendMessage(Component.text("  " + e.getKey() + " · " + nombres.get(e.getKey()) + " · " + e.getValue()
-                    + " · " + pct + " %", NamedTextColor.GRAY));
+                    + " · " + pct + " %", Paleta.TENUE));
         }
     }
 

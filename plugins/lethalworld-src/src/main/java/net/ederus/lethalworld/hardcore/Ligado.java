@@ -2,7 +2,6 @@ package net.ederus.lethalworld.hardcore;
 
 import io.papermc.paper.event.entity.EntityEquipmentChangedEvent;
 import net.kyori.adventure.text.Component;
-import net.kyori.adventure.text.format.NamedTextColor;
 import org.bukkit.Material;
 import org.bukkit.OfflinePlayer;
 import org.bukkit.Tag;
@@ -207,7 +206,7 @@ final class Ligado implements Listener {
         String raiz = Sellos.raiz(e.getMessage());
         if (!mercado().contains(raiz)) return;
         e.setCancelled(true);
-        avisar(p, Component.text("Esto es tuyo. Nadie más puede llevarlo.", NamedTextColor.RED));
+        avisar(p, Component.text("Esto es tuyo. Nadie más puede llevarlo.", Paleta.AVISO));
         bloqueado(p, cual, "comando:" + raiz);
     }
 
@@ -221,7 +220,7 @@ final class Ligado implements Listener {
         // Un ligado no entra en una bolsa: la bolsa no esta ligada y se venderia con el dentro.
         if ((Sellos.esBolsa(cursor) && duenoDe(actual) != null) || (Sellos.esBolsa(actual) && duenoDe(cursor) != null)) {
             e.setCancelled(true);
-            avisar(p, Component.text("Esto es tuyo. Nadie más puede llevarlo.", NamedTextColor.RED));
+            avisar(p, Component.text("Esto es tuyo. Nadie más puede llevarlo.", Paleta.AVISO));
             bloqueado(p, duenoDe(cursor) != null ? cursor : actual, "gui:bolsa");
             return;
         }
@@ -231,7 +230,7 @@ final class Ligado implements Listener {
         InventoryHolder holder = arriba.getHolder(false);
         if (permitido(arriba.getType(), holder, p, hc.esHardcore(p))) return;
         e.setCancelled(true);
-        avisar(p, Component.text("Esto es tuyo. Nadie más puede llevarlo.", NamedTextColor.RED));
+        avisar(p, Component.text("Esto es tuyo. Nadie más puede llevarlo.", Paleta.AVISO));
         bloqueado(p, entra, "gui:" + nombreHolder(arriba.getType(), holder));
     }
 
@@ -243,7 +242,7 @@ final class Ligado implements Listener {
         InventoryHolder holder = arriba.getHolder(false);
         if (permitido(arriba.getType(), holder, p, hc.esHardcore(p))) return;
         e.setCancelled(true);
-        avisar(p, Component.text("Esto es tuyo. Nadie más puede llevarlo.", NamedTextColor.RED));
+        avisar(p, Component.text("Esto es tuyo. Nadie más puede llevarlo.", Paleta.AVISO));
         bloqueado(p, e.getOldCursor(), "gui:" + nombreHolder(arriba.getType(), holder));
     }
 
@@ -438,7 +437,7 @@ final class Ligado implements Listener {
     private void avisarDueno(Player p, UUID dueno) {
         if (!nota(p.getUniqueId() + "|p-b02", 10_000L)) return;
         p.sendMessage(ComandoCalamity.mensaje(Component.text("Eso lleva el nombre de ")
-                .append(Component.text(nombre(dueno), NamedTextColor.WHITE))
+                .append(Component.text(nombre(dueno), Paleta.DETALLE))
                 .append(Component.text(". No te sirve."))));
     }
 

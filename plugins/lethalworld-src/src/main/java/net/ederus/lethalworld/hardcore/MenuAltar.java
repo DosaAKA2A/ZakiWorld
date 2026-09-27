@@ -3,7 +3,6 @@ package net.ederus.lethalworld.hardcore;
 import net.ederus.edm.comun.Compat;
 import net.ederus.edm.comun.menu.MenuUtil;
 import net.kyori.adventure.text.Component;
-import net.kyori.adventure.text.format.NamedTextColor;
 import net.kyori.adventure.text.format.TextColor;
 import org.bukkit.Material;
 import org.bukkit.entity.Player;
@@ -46,8 +45,9 @@ final class MenuAltar implements Listener {
 
     static final String UMBRAL = "umbral", FORJA = "forja", GRABAR = "grabar", CAMINO = "camino";
     private static final long ESPERA_MS = 500;
-    private static final TextColor GRIS = TextColor.color(0x777777);
-    private static final TextColor ROJO_SUAVE = TextColor.color(0xD06A6A);
+    /* "Proximamente" y lo que no se puede: antes #777777 y #D06A6A, oscuros en el tooltip. */
+    private static final TextColor GRIS = Paleta.TENUE;
+    private static final TextColor ROJO_SUAVE = Paleta.AVISO;
 
     private static final int[] UMBRAL_CASILLAS = {10, 11, 12, 13, 14, 15, 16, 19, 20, 21, 22, 23, 24, 25};
     private static final int[][] FORJA_FILAS = {{10, 11, 12, 13, 14, 15, 16}, {19, 20, 21, 22, 23, 24, 25},
@@ -107,7 +107,7 @@ final class MenuAltar implements Listener {
         String pg = FORJA.equals(pagina) ? FORJA : UMBRAL;
         Marca m = new Marca(pg, new HashMap<>(), null);
         Inventory inv = hc.plugin().getServer().createInventory(m, 54,
-                Component.text("Altar del Umbral · " + (pg.equals(FORJA) ? "Forja" : "Umbral"), Altar.NARANJA));
+                Paleta.calido("Altar del Umbral · " + (pg.equals(FORJA) ? "Forja" : "Umbral")));
         pintar(inv, p, m);
         p.openInventory(inv);
         Compat.soundPlayers(p.getWorld(), p.getLocation(), pg.equals(FORJA) ? "block.anvil.land" : "block.enchantment_table.use",
@@ -229,7 +229,7 @@ final class MenuAltar implements Listener {
         boton(inv, m, 43, Material.NETHER_STAR, "Lista de deseos", List.of("Lo que te gustaría ver en el altar."), deseos, "deseos");
 
         // Fila 6: cerrar y la Forja.
-        inv.setItem(49, MenuUtil.icon(Material.BARRIER, Component.text("Cerrar", ComandoCalamity.ROJO), List.of(), false));
+        inv.setItem(49, MenuUtil.icon(Material.BARRIER, Component.text("Cerrar", Paleta.AVISO), List.of(), false));
         m.acciones().put(49, "cerrar");
         inv.setItem(53, MenuUtil.icon(Material.ANVIL, Component.text("Forja", Altar.AMBAR), List.of(
                 MenuUtil.line("El Manto, el Vestigio, la Guadaña"), MenuUtil.line("y lo que los mejora.")), false));
@@ -259,7 +259,7 @@ final class MenuAltar implements Listener {
         m.acciones().put(45, "ir:" + UMBRAL);
         inv.setItem(47, MenuUtil.icon(Material.FLINT, Component.text("Grabar", Altar.AMBAR), altar.forja().estadoGrabar(p), false));
         m.acciones().put(47, "grabar");
-        inv.setItem(49, MenuUtil.icon(Material.BARRIER, Component.text("Cerrar", ComandoCalamity.ROJO), List.of(), false));
+        inv.setItem(49, MenuUtil.icon(Material.BARRIER, Component.text("Cerrar", Paleta.AVISO), List.of(), false));
         m.acciones().put(49, "cerrar");
     }
 
@@ -274,7 +274,7 @@ final class MenuAltar implements Listener {
     }
 
     private static Component dato(String etiqueta, String valor) {
-        return Component.text(etiqueta + ": ", MenuUtil.SOFT).append(Component.text(valor, NamedTextColor.WHITE));
+        return Component.text(etiqueta + ": ", MenuUtil.SOFT).append(Component.text(valor, Paleta.TEXTO));
     }
 
     /** Un trueque en su casilla: precio, lo que pide, cupo y si se puede comprar ya (o por que no). */

@@ -5,7 +5,6 @@ import net.ederus.edm.comun.menu.MenuUtil;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.event.ClickEvent;
 import net.kyori.adventure.text.event.HoverEvent;
-import net.kyori.adventure.text.format.NamedTextColor;
 import org.bukkit.Material;
 import org.bukkit.OfflinePlayer;
 import org.bukkit.configuration.ConfigurationSection;
@@ -150,7 +149,7 @@ final class Forja {
         }
         // P-W02 a todo el servidor. La reposicion no se anuncia: no es una pieza nueva.
         if (!repos) {
-            hc.plugin().getServer().broadcast(ComandoCalamity.mensaje(Component.text(Entregas.nombre(op), NamedTextColor.WHITE)
+            hc.plugin().getServer().broadcast(ComandoCalamity.mensaje(Component.text(Entregas.nombre(op), Paleta.DETALLE)
                     .append(Component.text(" ha forjado "))
                     .append(Component.text(nombrePieza(pieza), Altar.AMBAR))
                     .append(Component.text("."))));
@@ -160,7 +159,7 @@ final class Forja {
             p.sendMessage(ComandoCalamity.mensaje(Component.text("Tu primera pieza de Calamity. ")
                     .append(Component.text("Enséñala en /flex", Altar.AMBAR)
                             .clickEvent(ClickEvent.runCommand("/flex"))
-                            .hoverEvent(HoverEvent.showText(Component.text("Abre tu vitrina", NamedTextColor.GRAY))))
+                            .hoverEvent(HoverEvent.showText(Component.text("Abre tu vitrina", Paleta.TEXTO))))
                     .append(Component.text("."))));
         }
         if (p != null) Compat.soundPlayers(p.getWorld(), p.getLocation(), "block.anvil.use", 0.8f, 0.8f);
@@ -198,7 +197,7 @@ final class Forja {
         Map<Integer, String> acciones = new HashMap<>();
         Inventory menu = hc.plugin().getServer().createInventory(
                 new MenuAltar.Marca(MenuAltar.GRABAR, acciones, mano.clone()), 9,
-                Component.text("Forja · Grabar", Altar.NARANJA));
+                Paleta.calido("Forja · Grabar"));
         menu.setItem(0, MenuUtil.icon(Material.FLINT, Component.text("Grabado de Calamidad", Altar.AMBAR), List.of(
                 MenuUtil.line("Sube un encantamiento un nivel"),
                 MenuUtil.line("por encima de su tope."),
@@ -217,7 +216,7 @@ final class Forja {
             acciones.put(casilla, "g:" + e.getKey().getKey());
             casilla++;
         }
-        menu.setItem(8, MenuUtil.icon(Material.BARRIER, Component.text("Ahora no", ComandoCalamity.ROJO),
+        menu.setItem(8, MenuUtil.icon(Material.BARRIER, Component.text("Ahora no", Paleta.AVISO),
                 List.of(MenuUtil.line("Vuelve a la Forja.")), false));
         acciones.put(8, "ir:" + MenuAltar.FORJA);
         for (int s = 0; s < 9; s++) if (menu.getItem(s) == null) menu.setItem(s, MenuUtil.pane());
@@ -294,12 +293,12 @@ final class Forja {
         lore.add(MenuUtil.line("Solo equipo sin MMOItems."));
         lore.add(MenuUtil.blank());
         if (obj == null) {
-            lore.add(Component.text("Próximamente.", NamedTextColor.DARK_GRAY));
+            lore.add(Component.text("Próximamente.", Paleta.TENUE));
             return lore;
         }
         int hechos = hc.datos().getInt(ObjetosCalamity.rutaGrabados(altar.calendario().semana(), p.getUniqueId()), 0);
         lore.add(Component.text("Esta semana: ", MenuUtil.SOFT)
-                .append(Component.text(hechos + " de " + obj.porSemana(), NamedTextColor.WHITE)));
+                .append(Component.text(hechos + " de " + obj.porSemana(), Paleta.CIFRA)));
         boolean tiene = ObjetosCalamity.casillaGrabado(p.getInventory().getContents(), p.getUniqueId()) >= 0;
         lore.add(Component.text(tiene ? "Clic izquierdo para grabar." : "No llevas ningún Grabado.",
                 tiene ? Altar.VERDE : MenuUtil.SOFT));

@@ -1,7 +1,6 @@
 package net.ederus.lethalworld.hardcore;
 
 import net.kyori.adventure.text.Component;
-import net.kyori.adventure.text.format.NamedTextColor;
 import org.bukkit.Bukkit;
 import org.bukkit.OfflinePlayer;
 import org.bukkit.World;
@@ -171,14 +170,14 @@ final class Hitos {
         Player p = o.getPlayer();
         if (p != null) {
             p.sendMessage(ComandoCalamity.mensaje(Component.text("Hito: ")
-                    .append(Component.text(titulo, NamedTextColor.WHITE)).append(Component.text("."))));
+                    .append(Component.text(titulo, Paleta.MARCA)).append(Component.text("."))));
         }
         if (h.getBoolean("anuncio", false)) {
             // P-H01. Los que no son tag ([...]) son logros: no se anuncian como tag.
             boolean tag = titulo.startsWith("[");
-            hc.plugin().getServer().broadcast(ComandoCalamity.mensaje(Component.text(nombre, NamedTextColor.WHITE)
+            hc.plugin().getServer().broadcast(ComandoCalamity.mensaje(Component.text(nombre, Paleta.DETALLE)
                     .append(Component.text(tag ? " ha ganado el tag " : " ha ganado el logro "))
-                    .append(Component.text(titulo, NamedTextColor.WHITE))
+                    .append(Component.text(titulo, Paleta.MARCA))
                     .append(Component.text("."))));
         }
     }
@@ -260,9 +259,9 @@ final class Hitos {
             boolean dado = hc.datos().getBoolean("hitos-entregados." + u + "." + id, false);
             String estado = dado ? "entregado" : !h.getBoolean("activo", true) ? "apagado"
                     : net.ederus.edm.comun.Bitacora.num(menor) + " / " + net.ederus.edm.comun.Bitacora.num(h.getDouble("umbral", 1));
-            quien.sendMessage(Component.text("  " + id + " ", NamedTextColor.WHITE)
+            quien.sendMessage(Component.text("  " + id + " ", Paleta.DETALLE)
                     .append(Component.text(h.getString("nombre", id) + " · " + String.join("+", ests) + " · " + estado,
-                            dado ? NamedTextColor.GREEN : NamedTextColor.GRAY)));
+                            dado ? Paleta.BIEN : Paleta.TENUE)));
         }
     }
 

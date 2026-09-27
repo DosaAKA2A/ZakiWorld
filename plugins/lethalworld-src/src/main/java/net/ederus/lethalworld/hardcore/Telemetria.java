@@ -2,7 +2,6 @@ package net.ederus.lethalworld.hardcore;
 
 import net.ederus.lethalworld.MobsLethal;
 import net.kyori.adventure.text.Component;
-import net.kyori.adventure.text.format.NamedTextColor;
 import org.bukkit.Material;
 import org.bukkit.NamespacedKey;
 import org.bukkit.OfflinePlayer;
@@ -418,10 +417,10 @@ final class Telemetria implements Listener {
 
     private void estado(CommandSender quien) {
         String mes = ultimoMes.isEmpty() ? YearMonth.now(zona()).toString() : ultimoMes;
-        quien.sendMessage(Component.text("cola " + enCola() + " · telemetria/" + mes + ".jsonl", NamedTextColor.GREEN));
+        quien.sendMessage(Component.text("cola " + enCola() + " · telemetria/" + mes + ".jsonl", Paleta.BIEN));
         quien.sendMessage(Component.text((activa() ? "activa" : "apagada") + " · escritas " + escritas.get()
                 + " · fallos " + fallos.get() + " · hilo " + (hilo.isAlive() ? "vivo" : "parado")
-                + " · expediciones abiertas " + sesiones.size(), NamedTextColor.GRAY));
+                + " · expediciones abiertas " + sesiones.size(), Paleta.TENUE));
     }
 
     // --------------------------------------------------- datos de los sucesos

@@ -88,7 +88,6 @@ import java.util.function.ToIntFunction;
 final class ObjetosCalamity implements Listener {
 
     static final TextColor AMBAR = TextColor.color(0xE8A33D);
-    static final TextColor ROJO = TextColor.color(0x8B1A1A);
     private static final TextColor PAPEL = TextColor.color(0xE8D9B0);
     private static final long ESPERA_MS = 500;
     private static final double RADIO_AURA = 24;
@@ -508,7 +507,7 @@ final class ObjetosCalamity implements Listener {
     /** P-W08: "Grabado: <encantamiento> <nivel>. Ya es tuyo para siempre." */
     static Component avisoGrabadoHecho(Enchantment e, int nivel) {
         return ComandoCalamity.mensaje(Component.text("Grabado: ")
-                .append(Component.text(nombreEncantamiento(e) + " " + romano(nivel), NamedTextColor.WHITE))
+                .append(Component.text(nombreEncantamiento(e) + " " + romano(nivel), Paleta.DETALLE))
                 .append(Component.text(". Ya es tuyo para siempre.")));
     }
 
@@ -635,7 +634,7 @@ final class ObjetosCalamity implements Listener {
             Component nombre = meta != null && meta.hasDisplayName() && meta.displayName() != null
                     ? meta.displayName() : Component.translatable(it.getType().translationKey());
             p.sendMessage(ComandoCalamity.mensaje(Component.text("El Salvoconducto cumplió: te devuelve ")
-                    .append(nombre.colorIfAbsent(NamedTextColor.WHITE))
+                    .append(nombre.colorIfAbsent(Paleta.DETALLE))
                     .append(Component.text("."))));
             hc.plugin().bitacora().anotar("salvoconducto", "devuelve", p.getName(), descripcion(it));
         }
@@ -675,7 +674,7 @@ final class ObjetosCalamity implements Listener {
         }
         inv.setItem(0, MenuUtil.icon(Material.PAPER, Component.text("Salvoconducto del Insomne", PAPEL),
                 List.of(MenuUtil.line("Sin elegir: la de mayor escalón."), MenuUtil.line("Se gasta al morir.")), false));
-        inv.setItem(8, MenuUtil.icon(Material.BARRIER, Component.text("Cerrar", ROJO), List.of(), false));
+        inv.setItem(8, MenuUtil.icon(Material.BARRIER, Component.text("Cerrar", Paleta.AVISO), List.of(), false));
         for (int s = 0; s < 9; s++) if (inv.getItem(s) == null) inv.setItem(s, MenuUtil.pane());
         p.openInventory(inv);
     }
