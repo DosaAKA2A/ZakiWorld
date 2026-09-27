@@ -213,9 +213,10 @@ final class Grieta {
         for (Player o : Fx.viewersNear(boca, 48)) if (!o.equals(p)) o.sendMessage(ajeno);
 
         // El destino se busca ya, mientras dura el desgarro.
+        double[] anillo = anillo(w, centro[0], centro[1], ajustes());
         Location[] destino = {null};
         boolean[] buscado = {false};
-        buscar(w, centro[0], centro[1], 0, l -> {
+        buscar(w, centro[0], centro[1], anillo[0], anillo[1], 0, l -> {
             destino[0] = l;
             buscado[0] = true;
         });
@@ -249,6 +250,24 @@ final class Grieta {
         if (t != null) t.cancel();
         tareas.remove(t);
         enCurso.remove(id);
+    }
+
+    /**
+     * Las distancias que caben en el mundo: si el borde no deja llegar a distancia-max desde el
+     * spawn, se queda en lo que deje (16 bloques antes del borde) y el minimo baja a la mitad de
+     * eso. Mejor lejos dentro del mundo que ningun sitio.
+     */
+    static double[] anillo(double radioBorde, double desdeCentroBorde, Ajustes g) {
+        double cabe = radioBorde - 16 - desdeCentroBorde;
+        double max = Math.min(g.distanciaMax(), cabe);
+        double min = Math.min(g.distanciaMin(), max / 2);
+        return new double[]{Math.max(0, min), Math.max(0, max)};
+    }
+
+    private static double[] anillo(World w, double cx, double cz, Ajustes g) {
+        org.bukkit.WorldBorder b = w.getWorldBorder();
+        Location c = b.getCenter();
+        return anillo(b.getSize() / 2, Math.hypot(cx - c.getX(), cz - c.getZ()), g);
     }
 
     /** Centro de la caja del spawn en ese mundo, o donde esta si la caja es de otro mundo. */
@@ -345,23 +364,23 @@ final class Grieta {
      * Un sitio seguro al azar en el anillo, con su chunk cargado fuera del hilo principal. Si el
      * punto no vale (agua, lava, fuera del borde) se prueba otro, hasta intentos.
      */
-    private void buscar(World w, double cx, double cz, int intento, Consumer<Location> listo) {
+    private void buscar(World w, double cx, double cz, double min, double max, int intento, Consumer<Location> listo) {
         Ajustes g = ajustes();
-        if (intento >= g.intentos() || !hc.plugin().isEnabled()) {
+        if (intento >= g.intentos() || max < 32 || !hc.plugin().isEnabled()) {
             listo.accept(null);
             return;
         }
         ThreadLocalRandom r = ThreadLocalRandom.current();
-        double[] xz = punto(cx, cz, g.distanciaMin(), g.distanciaMax(), r.nextDouble(), r.nextDouble());
+        double[] xz = punto(cx, cz, min, max, r.nextDouble(), r.nextDouble());
         int x = (int) Math.floor(xz[0]), z = (int) Math.floor(xz[1]);
         if (!w.getWorldBorder().isInside(new Location(w, x + 0.5, w.getMinHeight() + 1, z + 0.5))) {
-            buscar(w, cx, cz, intento + 1, listo);
+            buscar(w, cx, cz, min, max, intento + 1, listo);
             return;
         }
         w.getChunkAtAsync(x >> 4, z >> 4, true).whenComplete((chunk, error) -> enPrincipal(() -> {
             Location l = error == null && chunk != null ? sueloSeguro(w, x, z) : null;
             if (l != null) listo.accept(l);
-            else buscar(w, cx, cz, intento + 1, listo);
+            else buscar(w, cx, cz, min, max, intento + 1, listo);
         }));
     }
 
@@ -486,6 +505,11 @@ final class Grieta {
         h.ok("repartido por area: menos de la mitad en la mitad de dentro (" + cerca + "/2000)", cerca < 1000);
         h.cerca("u 0,0 -> 600 justos al este", 700, punto(100, 0, 600, 1500, 0, 0)[0], 1e-9);
         h.cerca("u 0,1 -> 1500 justos", 1500, Math.hypot(punto(0, 0, 600, 1500, 0.3, 1)[0], punto(0, 0, 600, 1500, 0.3, 1)[1]), 1e-6);
+        double[] grande = anillo(30_000_000, 0, g);
+        double[] chico = anillo(1000, 100, g);
+        h.ok("borde grande: 600-1500 tal cual", grande[0] == 600 && grande[1] == 1500);
+        h.ok("borde de 1000 con el spawn a 100 del centro: 442-884 (" + Math.round(chico[0]) + "-"
+                + Math.round(chico[1]) + ")", chico[1] == 884 && chico[0] == 442);
         return h.lineas();
     }
 }
