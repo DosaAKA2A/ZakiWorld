@@ -22,7 +22,7 @@ import java.util.UUID;
 
 /**
  * Lo que abren los cinco NPCs de la antesala de Calamity (1.2.0): el Guardian del Umbral (la
- * portada del Altar) y el Forjador (la Forja), el Tasador (su menu, MenuTasador: saldo,
+ * portada del Altar) y el Forjador (la Forja), el Mercader (antes el Tasador; su menu, MenuTasador: saldo,
  * tasacion, Aduana, contratos del dia, Reliquias encima y Tu camino), el Cronista (la historia
  * y el tutorial, Cronista) y el Cazador (los rankings de la semana, MenuCazador, y desde ahi el
  * Tablero). Desde 1.3.0 el Tasador y el Cazador ya no escriben en el chat: todo va en su menu.
@@ -34,7 +34,7 @@ import java.util.UUID;
  * de Citizens. Cada uno lleva un comando de clic sin -p, que Citizens ejecuta como CONSOLA
  * y en el que cambia <p> por quien hizo clic (-l -r: los dos botones, tambien con mayusculas):
  *     /npc command add -l -r calamidad abrir <p> umbral
- * (y forja, tasador, cronista, cazador o engarzador en los otros cinco). La receta completa del
+ * (y forja, mercader, cronista, cazador o engarzador en los otros cinco; "tasador" sigue valiendo). La receta completa del
  * Engarzador, con el /npc create, la dice /calamidad engarzador.
  *
  * La regla que no se negocia: el Altar no se abre a distancia. Vende el Cristal de Regreso,
@@ -51,24 +51,29 @@ final class Npcs implements Listener {
     enum Tipo {
         UMBRAL("umbral", "el Guardián del Umbral"),
         FORJA("forja", "el Forjador"),
-        TASADOR("tasador", "el Tasador"),
+        // El Mercader (1.5.0; antes "el Tasador"): su id es "mercader" y "tasador" sigue valiendo
+        // como alias, porque los NPCs de Citizens que ya hay en el servidor llevan ese comando.
+        TASADOR("mercader", "el Mercader", "tasador"),
         CRONISTA("cronista", "el Cronista"),
         CAZADOR("cazador", "el Cazador"),
         ENGARZADOR("engarzador", "el Engarzador");
 
         final String id;
         final String nombre;
+        /** Ids viejos que siguen abriendo lo mismo (no salen en el tab ni en el uso). */
+        final List<String> alias;
 
-        Tipo(String id, String nombre) {
+        Tipo(String id, String nombre, String... alias) {
             this.id = id;
             this.nombre = nombre;
+            this.alias = List.of(alias);
         }
 
         /** Por su id, sin mirar mayusculas ni espacios; null si no es ninguno. */
         static Tipo de(String s) {
             if (s == null) return null;
             String a = s.trim().toLowerCase(Locale.ROOT);
-            for (Tipo t : values()) if (t.id.equals(a)) return t;
+            for (Tipo t : values()) if (t.id.equals(a) || t.alias.contains(a)) return t;
             return null;
         }
 
@@ -240,7 +245,10 @@ final class Npcs implements Listener {
         h.igual("id sin mayusculas ni espacios", Tipo.FORJA, Tipo.de("  FORJA "));
         h.igual("id que no existe", null, Tipo.de("altar"));
         h.igual("id null", null, Tipo.de(null));
-        h.igual("los seis ids", List.of("umbral", "forja", "tasador", "cronista", "cazador", "engarzador"), Tipo.ids());
+        h.igual("los seis ids", List.of("umbral", "forja", "mercader", "cronista", "cazador", "engarzador"), Tipo.ids());
+        h.igual("id mercader", Tipo.TASADOR, Tipo.de("mercader"));
+        h.igual("alias tasador: abre el Mercader (NPCs viejos de Citizens)", Tipo.TASADOR, Tipo.de("Tasador"));
+        h.ok("el alias no sale en el tab", !Tipo.ids().contains("tasador"));
 
         h.igual("ranking en MobCoins", "1.234 MC", valorRanking("tasado-mc", 1234));
         h.igual("ranking de una expedicion larga", "1 h 05 min", valorRanking("expedicion-max-seg", 3900));

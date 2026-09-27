@@ -217,10 +217,10 @@ final class MenuCazador implements Listener {
 
     static String queMide(String id) {
         return switch (id) {
-            case "extraido" -> "MobCoins tasadas en la semana.";
-            case "cazador" -> "Ecos ajenos cazados (válidos).";
-            case "segador" -> "Parcas abatidas.";
-            case "superviviente" -> "Tu expedición más larga.";
+            case "extraido" -> "MobCoins ganadas vendiendo esta semana.";
+            case "cazador" -> "Ecos de otros jugadores cazados esta semana.";
+            case "segador" -> "Parcas abatidas esta semana.";
+            case "superviviente" -> "La expedición más larga de la semana.";
             default -> "Lo que llevas esta semana.";
         };
     }
@@ -251,7 +251,7 @@ final class MenuCazador implements Listener {
         List<Component> lore = new ArrayList<>();
         lore.add(Marco.tenue(queMide(t.id())));
         lore.add(Component.empty());
-        if (top.isEmpty()) lore.add(Marco.tenue("Aún nadie puntúa."));
+        if (top.isEmpty()) lore.add(Marco.tenue("Todavía no hay nadie en el ranking."));
         else lore.add(Marco.dato("Líder", top.get(0).nombre() + " · " + Npcs.valorRanking(t.estadistica(), top.get(0).valor())));
         for (int i = 0; i < top.size(); i++) {
             if (top.get(i).jugador().equals(yo)) lore.add(Component.text("Tu puesto: " + (i + 1) + ".º", Paleta.BIEN));
@@ -276,7 +276,7 @@ final class MenuCazador implements Listener {
 
     private static ItemStack libre(int puesto) {
         return Marco.icono(new ItemStack(Material.SKELETON_SKULL, puesto), Component.text(puesto + ".º  libre", Paleta.TENUE),
-                List.of(Marco.tenue("Nadie todavía: es tuyo si lo quieres.")), false);
+                List.of(Marco.tenue("Este puesto está libre. Puede ser tuyo.")), false);
     }
 
     /** Tu cabeza en ese ranking: tu puesto (si estas en el top 10), tu cifra, lo que te falta para el 3.o y tus salidas. */
@@ -293,14 +293,14 @@ final class MenuCazador implements Listener {
                 long falta = top.get(2).valor() - mio + 1;
                 lore.add(Marco.tenue("Para el 3.º te faltan " + Npcs.valorRanking(t.estadistica(), Math.max(1, falta)) + "."));
             } else {
-                lore.add(Marco.tenue("Con cualquier cifra entras en el podio."));
+                lore.add(Marco.tenue("Con cualquier cantidad entras en el podio."));
             }
         }
         lore.add(Component.empty());
-        lore.add(Marco.dato("Salidas vivo", salidas + " de " + minimo));
+        lore.add(Marco.dato("Salidas con vida", salidas + " de " + minimo));
         lore.add(Marco.barra(salidas, minimo));
-        lore.add(salidas >= minimo ? Marco.tiene("Esta semana puntúas.")
-                : Marco.falta("Aún no puntúas", "te faltan " + (minimo - salidas) + " salidas"));
+        lore.add(salidas >= minimo ? Marco.tiene("Esta semana entras en el ranking.")
+                : Marco.falta("Todavía no entras en el ranking", "te faltan " + (minimo - salidas) + " salidas"));
         ItemStack cabeza = Marco.cabeza(u);
         cabeza.setAmount(Math.max(1, Math.min(64, puesto)));
         Component nombre = Component.text("Tú: ", Paleta.TEXTO).append(puesto > 0
@@ -318,7 +318,7 @@ final class MenuCazador implements Listener {
             lore.add(Component.text((i + 1) + ".º  ", Paleta.TENUE).append(Component.text(f.nombre(), soyYo ? Paleta.BIEN : Paleta.TEXTO))
                     .append(Component.text(" · " + Npcs.valorRanking(t.estadistica(), f.valor()), Paleta.CIFRA)));
         }
-        if (lore.isEmpty()) lore.add(Marco.tenue("Nadie más puntúa todavía."));
+        if (lore.isEmpty()) lore.add(Marco.tenue("Todavía no hay nadie más."));
         return Marco.icono(Material.BOOK, Component.text("Del 4.º al 10.º", Paleta.DETALLE), lore, false);
     }
 
@@ -336,10 +336,10 @@ final class MenuCazador implements Listener {
         lore.add(Marco.texto("Se cierra el lunes a las 00:00."));
         lore.add(Marco.dato("Quedan", hastaCierre(ZonedDateTime.now(zona))));
         lore.add(Component.empty());
-        lore.add(Marco.dato("Para cobrar", c.getInt("ranking.minimo-extracciones", 3) + " salidas vivo en la semana"));
+        lore.add(Marco.dato("Para cobrar", c.getInt("ranking.minimo-extracciones", 3) + " salidas con vida en la semana"));
         lore.add(Marco.tenue("Como mucho cobras en " + Math.max(1, c.getInt("ranking.maximo-tablas", 2)) + " rankings."));
-        lore.add(Marco.tenue("Con menos de " + c.getInt("ranking.minimo-elegibles", 8) + " que puntúen en uno,"));
-        lore.add(Marco.tenue("solo cobra el 1.º."));
+        lore.add(Marco.tenue("Si en un ranking hay menos de " + c.getInt("ranking.minimo-elegibles", 8)));
+        lore.add(Marco.tenue("jugadores, solo cobra el 1.º."));
         return Marco.icono(Material.CHEST, Component.text("Premios de la semana", Paleta.MARCA), lore, false);
     }
 

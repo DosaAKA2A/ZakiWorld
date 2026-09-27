@@ -124,10 +124,10 @@ final class Marco {
     static final Titulo T_FORJA = new Titulo("La Forja", null);
     static final Titulo T_COMPRAR = new Titulo("¿Comprarlo?", null);
     static final Titulo T_FORJAR = new Titulo("¿Forjarlo?", null);
-    static final Titulo T_TASADOR = new Titulo("El Tasador", null);
-    static final Titulo T_TASADOR_DINERO = new Titulo("Tasador", "Tu dinero");
-    static final Titulo T_TASADOR_CONTRATOS = new Titulo("Tasador", "Contratos");
-    static final Titulo T_TASADOR_RELIQUIAS = new Titulo("Tasador", "Tus reliquias");
+    static final Titulo T_TASADOR = new Titulo("El Mercader", null);
+    static final Titulo T_TASADOR_DINERO = new Titulo("Mercader", "Tu dinero");
+    static final Titulo T_TASADOR_CONTRATOS = new Titulo("Mercader", "Contratos");
+    static final Titulo T_TASADOR_RELIQUIAS = new Titulo("Mercader", "Tus reliquias");
     static final Titulo T_CAMBIAR = new Titulo("¿Cambiar contrato?", null);
     static final Titulo T_RANKINGS = new Titulo("Rankings", "Semana");
     static final Titulo T_TABLERO = new Titulo("Tablero", null);
@@ -520,7 +520,7 @@ final class Marco {
 
     /** El clic en un enlace en gris: por que no se abre. */
     static void cerrado(Player p, String id) {
-        p.sendMessage(ComandoCalamity.mensaje(TASADOR.equals(id) ? "El Tasador no está ahora mismo."
+        p.sendMessage(ComandoCalamity.mensaje(TASADOR.equals(id) ? "El Mercader no está ahora mismo."
                 : "El altar no escucha desde ahí dentro."));
         sonidoNo(p);
     }
@@ -643,7 +643,7 @@ final class Marco {
         lore.add(Component.empty());
         lore.add(Component.text("Altar", Paleta.DETALLE).append(tenue(": lo que te llevas dentro y las llaves.")));
         lore.add(Component.text("Forja", Paleta.DETALLE).append(tenue(": el equipo de Calamity.")));
-        lore.add(Component.text("Tasador", Paleta.DETALLE).append(tenue(": lo que cobras, contratos y tu camino.")));
+        lore.add(Component.text("Mercader", Paleta.DETALLE).append(tenue(": tu dinero, tus contratos y tu camino.")));
         lore.add(Component.text("Cazador", Paleta.DETALLE).append(tenue(": los rankings de la semana.")));
         lore.add(Component.text("Engarzador", Paleta.DETALLE).append(tenue(": pone y quita las gemas.")));
         lore.add(Component.text("/calamity encuesta", Paleta.DETALLE).append(tenue(" y "))

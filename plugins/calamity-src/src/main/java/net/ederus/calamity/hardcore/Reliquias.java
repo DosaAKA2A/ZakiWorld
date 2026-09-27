@@ -153,7 +153,7 @@ final class Reliquias implements Listener {
         if (LAGRIMA.equals(esp) && valida) lore.add(texto("Caza válida: da una Marca de Eco.", NamedTextColor.GRAY));
         lore.add(Component.empty());
         lore.add(texto("Solo vale si sales vivo.", AMBAR));
-        lore.add(texto("Se tasa al cruzar la puerta o con un Cristal.", AMBAR));
+        lore.add(texto("Se vende sola al cruzar la puerta o con un Cristal.", AMBAR));
         lore.add(texto("Si mueres, se la queda tu Eco.", AMBAR));
 
         PersistentDataContainer pdc = meta.getPersistentDataContainer();

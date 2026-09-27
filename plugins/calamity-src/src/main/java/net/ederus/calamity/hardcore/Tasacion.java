@@ -105,7 +105,7 @@ final class Tasacion {
         this.hc = hc;
         Autotest.registrar("tasacion", this::autotest);
         Subcomandos.lw().registrar("tasar",
-                "tasar <jugador> <g1> <g2> <g3> [especial:grado:N[:valida|:minijefe] ...] | tasar <jugador> reset: tasa Reliquias virtuales",
+                "tasar <jugador> <g1> <g2> <g3> [especial:grado:N[:valida|:minijefe] ...] | tasar <jugador> reset: vende Reliquias virtuales",
                 "ederus.mundos", this::comando, this::tab);
     }
 
@@ -210,7 +210,7 @@ final class Tasacion {
         for (String id : k.duplicadas) {
             bit.anotar("reliquia", "duplicada", nombre, id);
             hc.plugin().getServer().broadcast(Paleta.aviso(
-                    "Reliquia duplicada en la tasación de " + nombre + " (" + id + ")."), "ederus.mundos");
+                    "Reliquia duplicada en la venta de " + nombre + " (" + id + ")."), "ederus.mundos");
         }
         for (String id : k.caducadas) bit.anotar("reliquia", "caducada", nombre, id);
         for (int g = 1; g <= 2; g++) if (k.exceso[g] > 0) bit.anotar("reliquia", "exceso", nombre, String.valueOf(g), String.valueOf(k.exceso[g]));
@@ -248,7 +248,7 @@ final class Tasacion {
             ganados.add(tipo);
             // La linea de la Tasacion, aparte de la que ponga Creditos: dice de que salida salio.
             bit.anotar("tasacion", "credito", nombre, tipo + " +1");
-            if (online != null) online.sendMessage(ComandoCalamity.mensaje("Tasación: +1 " + nombreCredito(tipo) + "."));
+            if (online != null) online.sendMessage(ComandoCalamity.mensaje("Por la venta: +1 " + nombreCredito(tipo) + "."));
         }
         for (String mj : k.sellos) {
             hc.plugin().getServer().broadcast(ComandoCalamity.mensaje(Component.text(nombre, Paleta.DETALLE)
@@ -317,7 +317,7 @@ final class Tasacion {
     private void avisar(Player p, Cuenta k, int esencias, long mc, double factor, int extra) {
         boolean hubo = k.validas > 0 || k.nulas() > 0 || k.exceso[1] + k.exceso[2] > 0;
         if (hubo) {
-            Component c = Component.text("Tasación: ");
+            Component c = Component.text("Venta: ");
             c = c.append(cifra(k.porGrado[1])).append(Component.text(" astillas, "))
                     .append(cifra(k.porGrado[2])).append(Component.text(" fragmentos, "))
                     .append(cifra(k.porGrado[3])).append(Component.text(" ámbar, "))
@@ -529,7 +529,7 @@ final class Tasacion {
             items.add(rel.crear(e.grado(), "admin", e.especial(), e.nivel(), e.minijefe(), e.valida()));
         }
         Resumen r = procesar(op, null, items, "tasar-admin", true, true);
-        quien.sendMessage(ComandoCalamity.mensaje("Tasación de " + Minijefes.nombreDe(op) + ": " + r.esencias()
+        quien.sendMessage(ComandoCalamity.mensaje("Venta de " + Minijefes.nombreDe(op) + ": " + r.esencias()
                 + " Esencias y " + r.mobcoins() + " MobCoins pagadas."));
         for (String l : r.lineas()) quien.sendMessage(Component.text("  " + l, Paleta.TENUE));
     }

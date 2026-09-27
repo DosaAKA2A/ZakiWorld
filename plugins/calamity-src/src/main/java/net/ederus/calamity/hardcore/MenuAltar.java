@@ -347,7 +347,7 @@ final class MenuAltar implements Listener {
                     List.of(Marco.tenue("Vuelve más tarde.")), false));
         }
         inv.setItem(AYUDA, Marco.ayuda(hc));
-        Marco.enlace(inv, m.acciones(), IR_TASADOR, Marco.TASADOR, Material.SPYGLASS, "El Tasador",
+        Marco.enlace(inv, m.acciones(), IR_TASADOR, Marco.TASADOR, Material.SPYGLASS, "El Mercader",
                 List.of("Lo que traes y lo que cobras,", "tus contratos y tu camino."), hc.npcs() != null);
     }
 

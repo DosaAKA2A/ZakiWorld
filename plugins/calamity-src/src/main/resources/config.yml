@@ -701,7 +701,7 @@ hardcore:
     redimido: {estadistica: ecos-redimidos, umbral: 1, nombre: "Redimido", anuncio: false, comandos: ["lp user %jugador% permission set rip.death.phoenix true"]}
     vestigio: {estadisticas: [forja-mascara, forja-filo], umbral: 1, nombre: "Vestigio", anuncio: false, comandos: ["lp user %jugador% permission set rip.death.glitch true"]}
     guadana: {estadistica: forja-guadana, umbral: 1, nombre: "Guadaña", anuncio: true, comandos: ["lp user %jugador% permission set rip.death.angel true"]}
-    tasador: {estadistica: contratos, umbral: 60, nombre: "Tasador", anuncio: false, comandos: []}
+    tasador: {estadistica: contratos, umbral: 60, nombre: "Mercader", anuncio: false, comandos: []}
   # [alineado] PLAN 7.3: cuatro tablas; llaves por Entregas (tope de 4); con < 8 elegibles solo el 1.o
   ranking: {activo: false, recalcular-segundos: 60, minimo-extracciones: 3, minimo-elegibles: 8, maximo-tablas: 2,
             tablas: [extraido, cazador, segador, superviviente],
@@ -783,7 +783,8 @@ hardcore:
   # quien hace clic; -l -r = los dos botones. Con el NPC seleccionado (/npc select):
   #   /npc command add -l -r calamidad abrir <p> umbral     Altar, pagina Umbral
   #   /npc command add -l -r calamidad abrir <p> forja      Altar, pagina Forja
-  #   /npc command add -l -r calamidad abrir <p> tasador    saldo, tasacion y contratos de hoy
+  #   /npc command add -l -r calamidad abrir <p> mercader   el Mercader: dinero, ventas y contratos de hoy
+  #                                                       ("tasador", su id de antes, sigue valiendo)
   #   /npc command add -l -r calamidad abrir <p> cronista   los capitulos de abajo
   #   /npc command add -l -r calamidad abrir <p> cazador    tablas de la semana y el Tablero
   #   /npc command add -l -r calamidad abrir <p> engarzador pone y quita las Gemas de Calamidad (1.4)
@@ -806,7 +807,7 @@ hardcore:
           - "Calamity es un mundo hardcore: aquí no gana el mejor equipo, gana quien sabe cuándo salir."
           - "Si mueres dentro pierdes TODO lo que llevas encima, también la experiencia."
           - "Se sale vivo por la puerta de salida o con un Cristal de Regreso: {cristal.segundos} s quieto y fuera."
-          - "Lo que sacas vivo se tasa al cruzar. Lo que no sacas, no existe."
+          - "Lo que sacas vivo se vende al cruzar la puerta. Lo que no sacas, no existe."
       cordura:
         titulo: "La cordura"
         texto:
@@ -829,7 +830,7 @@ hardcore:
           - "Si lo cierra otro, se lo lleva todo, y a veces una Lágrima de Eco."
           - "El Cazador sabe qué Ecos guardan más botín. Sin coordenadas: hay que buscarlos."
       esencias:
-        titulo: "Esencias, Reliquias y Tasación"
+        titulo: "Esencias, Reliquias y ventas"
         texto:
           - "Las Esencias caen de los mobs de dentro. Al salir pasan a tu saldo: con ellas se paga en el Altar."
           - "Cada Reliquia sacada viva vale {reliquias.grados.1.esencias} Esencias la Astilla, {reliquias.grados.2.esencias} el Fragmento, {reliquias.grados.3.esencias} el Ámbar y {reliquias.grados.4.esencias} el Ámbar Mayor, más MobCoins."
