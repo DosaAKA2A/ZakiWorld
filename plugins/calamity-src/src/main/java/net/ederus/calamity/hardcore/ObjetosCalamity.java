@@ -125,6 +125,9 @@ final class ObjetosCalamity implements Listener {
         this.hc = hc;
         hc.plugin().getServer().getPluginManager().registerEvents(this, hc.plugin());
         Autotest.registrar("objetos", this::autotest);
+        // Calamity 1.3.3: que cada objeto de MMOItems haga lo que dice su lore (autotest objetos-reales y
+        // /calamidad objetos stats). Sin estado propio: no hay nada que parar.
+        new ObjetosReales(hc);
         // Los que ya estan conectados (recarga del plugin): que el Talisman valga desde ya.
         for (Player p : hc.plugin().getServer().getOnlinePlayers()) talisman(p);
     }
@@ -728,14 +731,14 @@ final class ObjetosCalamity implements Listener {
         ConfigurationSection s = hc.cfg().getConfigurationSection("forja.piezas");
         if (s != null) for (String k : s.getKeys(false)) out.put(k, s.getString(k, ""));
         if (out.isEmpty()) {
-            out.put("yelmo", "ARMOR.YELMO_DE_CALAMIDAD");
-            out.put("coraza", "ARMOR.CORAZA_DE_CALAMIDAD");
-            out.put("grebas", "ARMOR.GREBAS_DE_CALAMIDAD");
-            out.put("soleretas", "ARMOR.SOLERETAS_DE_CALAMIDAD");
-            out.put("hacha", "AXE.HACHA_DEL_HERALDO");
-            out.put("mascara", "ARMOR.MASCARA_DEL_ECO");
-            out.put("filo", "SWORD.FILO_DEL_ECO");
-            out.put("guadana", "SWORD.GUADANA_DE_LA_PARCA");
+            out.put("yelmo", "CALAMITY.YELMO_DE_CALAMIDAD");
+            out.put("coraza", "CALAMITY.CORAZA_DE_CALAMIDAD");
+            out.put("grebas", "CALAMITY.GREBAS_DE_CALAMIDAD");
+            out.put("soleretas", "CALAMITY.SOLERETAS_DE_CALAMIDAD");
+            out.put("hacha", "CALAMITY_ARMAS.HACHA_DEL_HERALDO");
+            out.put("mascara", "CALAMITY.MASCARA_DEL_ECO");
+            out.put("filo", "CALAMITY_ARMAS.FILO_DEL_ECO");
+            out.put("guadana", "CALAMITY_ARMAS.GUADANA_DE_LA_PARCA");
         }
         return out;
     }

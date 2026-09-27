@@ -654,8 +654,8 @@ final class Telemetria implements Listener {
         h.igual("marca copia_eco en el yelmo", Set.of("copia_eco"), f.piezas().get(0).marcas());
         h.igual("casilla de la espada", "mano", f.piezas().get(3).casilla());
 
-        Censo.Pieza manto = Censo.pieza("pechera", "NETHERITE_CHESTPLATE", "ARMOR.CORAZA_DE_CALAMIDAD", "CALAMIDAD", 3, Set.of());
-        Censo.Pieza parca = Censo.pieza("mano", "NETHERITE_SWORD", "SWORD.GUADANA_DE_LA_PARCA", "parca", 1, Set.of());
+        Censo.Pieza manto = Censo.pieza("pechera", "NETHERITE_CHESTPLATE", "CALAMITY.CORAZA_DE_CALAMIDAD", "CALAMIDAD", 3, Set.of());
+        Censo.Pieza parca = Censo.pieza("mano", "NETHERITE_SWORD", "CALAMITY_ARMAS.GUADANA_DE_LA_PARCA", "parca", 1, Set.of());
         Censo.Pieza anomalia = Censo.pieza("yelmo", "NETHERITE_HELMET", "ANOMALIA.X", "KEEPER", 0, Set.of());
         Censo.Pieza nuevo = Censo.pieza("botas", "DIAMOND_BOOTS", "ARMOR.NUEVO", "TIER_QUE_NO_EXISTE", 0, Set.of());
         h.igual("tier CALAMIDAD sintetico = 16", 16, manto.escalon());

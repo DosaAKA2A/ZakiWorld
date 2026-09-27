@@ -93,7 +93,7 @@ final class MenuAltar implements Listener {
             Map.entry("talisman", List.of("+3 de vida. Dentro, la cordura", "baja un 20 % más despacio.")),
             Map.entry("gema", List.of("Se engarza en el Yelmo, la Coraza", "o el Hacha del Heraldo.")),
             Map.entry("grabado", List.of("+1 nivel sobre el tope a un", "encantamiento de equipo vanilla.")),
-            Map.entry("ascua", List.of("+1 nivel de mejora al Manto.")),
+            Map.entry("ascua", List.of("+1 nivel de mejora a una pieza", "del Manto, del Eco o la Guadaña.")),
             Map.entry("mascara-eco", List.of("Casco del Vestigio del Eco.", "Escalón 15.")),
             Map.entry("filo-eco", List.of("Espada del Vestigio del Eco.", "Escalón 15.")),
             Map.entry("guadana", List.of("Escalón 17. La Parca no la soltó:", "se la quitaste.")));
@@ -507,7 +507,7 @@ final class MenuAltar implements Listener {
     private List<String> descripcionPieza(Altar.Trueque t) {
         if (t.pieza() == null) return List.of();
         List<String> out = new ArrayList<>();
-        if (Set.of("yelmo", "coraza", "grebas", "soleretas").contains(t.pieza())) out.add("Pieza del Manto del Umbral.");
+        if (Set.of("yelmo", "coraza", "grebas", "soleretas").contains(t.pieza())) out.add("Pieza del Manto de Calamidad.");
         String c = t.credito() == null ? "" : t.credito();
         if (c.startsWith("sello:")) {
             String de = Forja.delMinijefe(c.substring(6));

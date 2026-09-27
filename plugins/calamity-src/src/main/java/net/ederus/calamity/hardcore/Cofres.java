@@ -92,7 +92,7 @@ final class Cofres {
                         for (int i = 0; i < n; i++) alCofre.add(hc.items().frasco(1));
                     }
                     case "tintura" -> {
-                        String id = c.getString("entregas.mmo.tintura", "CONSUMABLE.TINTURA_DE_CENIZA");
+                        String id = c.getString("entregas.mmo.tintura", "CALAMITY_CONSUMIBLES.TINTURA_DE_CENIZA");
                         ItemStack t = PuenteMmo.crear(id);
                         // Sin MMOItems (servidor de pruebas) esa tirada no da nada.
                         if (t != null) {
