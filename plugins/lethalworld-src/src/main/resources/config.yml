@@ -299,6 +299,10 @@ hardcore:
 
   # ===========================================================================
   # CALAMITY 1.1.0: PARCA, Eco, Aduana, Esencias, Reliquias y lo demas.
+  # 1.1.1 (tras la primera prueba): la PARCA con cuerpo de NPC (parca.cuerpo), mini withers
+  # en el Cortejo (parca.planideras), avisos mas largos y legibles, la Huella cuenta las
+  # interacciones variadas y el vuelo (parca.interacciones...), y las exenciones van a mano
+  # con /lw hardcore exento (ya no por permiso). Los colores de los mensajes, en Paleta.java.
   # Bloque de DISENO-CALAMITY, seccion 4. Las mecanicas P1 van apagadas de serie
   # (activo: false) hasta probarlas; las P2 estan escritas pero no programadas.
   # Lo que el plugin escribe solo va a hardcore-datos.yml, nunca aqui.

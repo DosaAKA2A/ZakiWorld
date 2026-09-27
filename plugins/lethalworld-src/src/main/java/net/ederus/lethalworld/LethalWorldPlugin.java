@@ -45,7 +45,7 @@ import net.ederus.edm.comun.Bitacora;
 public final class LethalWorldPlugin extends JavaPlugin {
 
     /** La version, en el mismo sitio que en EDM. Se sube a la vez que pom.xml y plugin.yml. */
-    public static final String VERSION = "1.1.0";
+    public static final String VERSION = "1.1.1";
 
     /** Namespace de las dimensiones que crea /lw. El mundo sale como lethal_world:<nombre>. */
     public static final String NAMESPACE = "lethal_world";
