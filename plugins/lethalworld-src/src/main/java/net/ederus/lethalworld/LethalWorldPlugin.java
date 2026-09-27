@@ -41,6 +41,11 @@ import net.ederus.edm.comun.Bitacora;
  * Esto vivia dentro de EDM como el modulo "mundos". Salio a plugin propio porque EDM
  * cambia casi a diario y el datapack pesa 33 MB: subir y borrar ese jar cada vez es
  * pedir un disgusto. Aqui el jar solo se mueve cuando cambia Lethal World.
+ *
+ * Por lo mismo, desde la 2.0.0 Calamity (las reglas hardcore, la PARCA, el Eco y los mobs
+ * con nivel) es un plugin aparte que depende de este: aqui quedan solo los mundos. Lo que
+ * Calamity usa de aqui es esMundo y la bitacora; lo demas publico (mundos, generadorDe...)
+ * queda a mano por si algun dia le hace falta.
  */
 public final class LethalWorldPlugin extends JavaPlugin {
 
@@ -54,15 +59,7 @@ public final class LethalWorldPlugin extends JavaPlugin {
 
     private Bitacora bitacora;
     private Pregenerador pregen;
-    private MobsLethal mobs;
-    private net.ederus.lethalworld.hardcore.Hardcore hardcore;
     private final List<String> generadores = new ArrayList<>();
-
-    /** Los mobs de Lethal World, para consultarlos desde el comando. */
-    /** El ciclo de mobs; lo usan tambien las reglas hardcore para invocar por su cuenta. */
-    public MobsLethal mobs() {
-        return mobs;
-    }
 
     @Override
     public void onEnable() {
@@ -84,21 +81,6 @@ public final class LethalWorldPlugin extends JavaPlugin {
         }
         pregen = new Pregenerador(this);
         pregen.cargar();
-        mobs = new MobsLethal(this);
-        mobs.arrancar();
-        hardcore = new net.ederus.lethalworld.hardcore.Hardcore(this);
-        hardcore.arrancar();
-        // /calamity es de los jugadores: va aparte de /lw, que es de staff.
-        var cal = getCommand("calamity");
-        if (cal != null) {
-            var calamity = new net.ederus.lethalworld.hardcore.ComandoCalamity(this);
-            cal.setExecutor(calamity);
-            cal.setTabCompleter(calamity);
-        } else {
-            getLogger().warning("El comando /calamity no esta en el plugin.yml.");
-        }
-        // Despues de arrancar: los modulos registran sus placeholders al nacer.
-        net.ederus.lethalworld.hardcore.PlaceholdersLethal.activar(this);
         RestosBracken restos = new RestosBracken(this);
         getServer().getPluginManager().registerEvents(restos, this);
         restos.barrerConectados();
@@ -117,16 +99,13 @@ public final class LethalWorldPlugin extends JavaPlugin {
     @Override
     public void onDisable() {
         if (pregen != null) pregen.apagar();
-        if (mobs != null) mobs.parar();
-        if (hardcore != null) hardcore.parar();
-        net.ederus.lethalworld.hardcore.PlaceholdersLethal.desactivar();
         if (bitacora != null) bitacora.cerrar();
     }
 
     /**
      * Relee el config del disco. Lo llama /lw reload; antes era /edm reload mundos.
-     * No rearranca mobs ni reglas: lo que se lee en cada vuelta (topes, niveles,
-     * puertas) se entera solo; lo que se monta al arrancar necesita reiniciar.
+     * Solo el de LethalWorld: el de Calamity (mobs y reglas hardcore) va aparte, con
+     * /calamidad reload.
      */
     public String recargar() {
         reloadConfig();
@@ -225,12 +204,7 @@ public final class LethalWorldPlugin extends JavaPlugin {
         return key == null ? null : getServer().getWorld(key);
     }
 
-    /** Las reglas de los mundos hardcore (Calamity). Puede ser null si estan apagadas. */
-    public net.ederus.lethalworld.hardcore.Hardcore hardcore() {
-        return hardcore;
-    }
-
-    /** Si un mundo es de Lethal World: lo mira el ciclo de mobs en cada vuelta. */
+    /** Si un mundo es de Lethal World: lo miran los mobs y las reglas de Calamity en cada vuelta. */
     public static boolean esMundo(World w) {
         return w != null && NAMESPACE.equals(w.getKey().getNamespace());
     }

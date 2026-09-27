@@ -4,31 +4,21 @@ main: net.ederus.lethalworld.LethalWorldPlugin
 api-version: '1.20'
 author: Iris Studio
 description: Lethal World - mundos de datapack con el generador de Bracken procesado
-# Los esbirros, las MobCoins y la bitacora salen de EDM: sin el, esto no arranca.
+# La bitacora y el Estilo de los mensajes salen de EDM: sin el, esto no arranca.
 depend: [EDM]
-# MMOItems y MythicLib solo se leen por reflexion (PuenteMmo); estar aqui asegura que
-# cargan antes y que Paper deja ver sus clases.
-softdepend: [PlaceholderAPI, AuraSkills, UltimateMobCoins, WorldGuard, MMOItems, MythicLib]
+# Sin softdepend desde la 2.0.0: PlaceholderAPI, AuraSkills, MMOItems y demas los usa
+# Calamity, que ya es otro plugin (plugins/calamity-src) y los declara en el suyo.
 
 commands:
   lw:
     description: Lethal World - mundos con el generador de EDM
-    usage: /lw <list|generators|create|delete|tp|biomes|biome|pregen|level|reload>
+    usage: /lw <list|generators|create|delete|tp|biomes|biome|pregen|reload>
     aliases: [lethalworld]
     permission: ederus.mundos
-  calamity:
-    description: Calamity - tu saldo, tus Ecos, tus contratos
-    usage: /calamity [eco|saldo|contratos|kit|tablero|encuesta|camino]
-    aliases: [cal]
-    permission: lethalworld.calamity
 
 permissions:
+  # Tambien lo pide /calamidad, de Calamity, pero se declara SOLO aqui: Bukkit no admite el
+  # mismo nodo de permiso en dos plugin.yml y el segundo plugin falla al registrarlo.
   ederus.mundos:
     description: Crea, borra y visita los mundos de Lethal World
     default: op
-  lethalworld.calamity:
-    description: /calamity para los jugadores
-    default: true
-  # lethalworld.parca.exento y lethalworld.aduana.exento ya no existen (1.1.1): con el
-  # comodin "*" de LuckPerms todo el staff los heredaba. Las exenciones van a mano, una a una:
-  # /lw hardcore exento <jugador> <parca|aduana|todo> <on|off> (se guardan en hardcore-datos.yml).

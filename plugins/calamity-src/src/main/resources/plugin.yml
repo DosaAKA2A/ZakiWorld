@@ -24,9 +24,9 @@ commands:
     permission: ederus.mundos
 
 # OJO: ederus.mundos NO se declara aqui aunque /calamidad lo pida. Ya lo declara el
-# plugin.yml de LethalWorld (default: op), y si dos plugin.yml declaran el mismo nodo de
-# permiso Bukkit revienta el arranque del segundo. Como LethalWorld es depend, el nodo ya
-# existe cuando Calamity carga.
+# plugin.yml de LethalWorld (default: op), y Bukkit no admite el mismo nodo de permiso en
+# dos plugin.yml: el segundo plugin falla al registrarlo. Como LethalWorld es depend, el
+# nodo ya existe cuando Calamity carga.
 permissions:
   # El nodo se sigue llamando lethalworld.calamity aunque el plugin ya sea otro: los
   # grupos de LuckPerms del servidor ya lo tienen puesto.

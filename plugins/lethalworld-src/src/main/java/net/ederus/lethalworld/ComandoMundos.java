@@ -18,9 +18,6 @@ import org.bukkit.potion.PotionEffect;
 import org.bukkit.potion.PotionEffectType;
 
 import net.ederus.edm.comun.Estilo;
-import net.ederus.lethalworld.hardcore.Cordura;
-import net.ederus.lethalworld.hardcore.Hardcore;
-import net.ederus.lethalworld.hardcore.Subcomandos;
 import io.papermc.paper.registry.RegistryAccess;
 import io.papermc.paper.registry.RegistryKey;
 import net.kyori.adventure.text.Component;
@@ -76,8 +73,6 @@ final class ComandoMundos implements TabExecutor {
             case "biomes" -> biomas(quien);
             case "biome" -> irABioma(quien, args);
             case "pregen" -> pregen(quien, args);
-            case "level" -> nivel(quien, args);
-            case "hardcore" -> hardcore(quien, args);
             case "reload" -> recargar(quien);
             default -> ayuda(quien);
         }
@@ -95,9 +90,7 @@ final class ComandoMundos implements TabExecutor {
         linea(q, "/lw biome <biome> [radius]", "busca el más cercano y te lleva");
         linea(q, "/lw pregen start <name> [radius]", "pregenera (sin radio: el borde o el de la config)");
         linea(q, "/lw pregen status|pause|resume|cancel", "");
-        linea(q, "/lw level [player]", "de dónde sale el nivel de sus mobs");
-        linea(q, "/lw hardcore", "Calamity: portales, objetos y cordura");
-        linea(q, "/lw reload", "relee el config del disco");
+        linea(q, "/lw reload", "relee el config del disco (el de Calamity: /calamidad reload)");
     }
 
     /** Relee el config. Antes esto era /edm reload mundos, cuando Lethal World iba dentro. */
@@ -126,39 +119,6 @@ final class ComandoMundos implements TabExecutor {
                             ? Component.text("cargado (" + w.getName() + ")", NamedTextColor.GREEN)
                             : Component.text("se carga en el próximo reinicio", NamedTextColor.GOLD)));
         }
-    }
-
-    /**
-     * De donde sale el nivel de los mobs para ese jugador: el marcador del rango tal cual lo
-     * devuelve PlaceholderAPI, el poder de AuraSkills y la cuenta con los valores de la config.
-     * Sirve para ver de un vistazo cual de los dos dispara un nivel que no cuadra.
-     */
-    private void nivel(CommandSender q, String[] args) {
-        MobsLethal mobs = plugin.mobs();
-        if (mobs == null) {
-            decir(q, Component.text("Los mobs de Lethal World no están activos.", NamedTextColor.RED));
-            return;
-        }
-        Player p = args.length >= 2 ? plugin.getServer().getPlayerExact(args[1]) : (q instanceof Player j ? j : null);
-        if (p == null) {
-            linea(q, "/lw level [player]", "el jugador tiene que estar conectado");
-            return;
-        }
-        var n = plugin.getConfig().getConfigurationSection("mobs.nivel");
-        double porRango = n == null ? 2.0 : n.getDouble("por-rango", 2.0);
-        double porNivel = Math.max(1.0, n == null ? 20.0 : n.getDouble("poder-por-nivel", 20.0));
-        double variacion = n == null ? 0.10 : n.getDouble("variacion", 0.10);
-        int maximo = n == null ? 100 : n.getInt("maximo", 100);
-        int rango = mobs.rango(p), poder = mobs.poder(p);
-        double base = rango * porRango + poder / porNivel;
-        int bajo = (int) Math.max(1, Math.min(maximo, Math.round(base * (1 - variacion))));
-        int alto = (int) Math.max(1, Math.min(maximo, Math.round(base * (1 + variacion))));
-
-        decir(q, "Nivel de los mobs para " + p.getName() + ":");
-        linea(q, "  rango " + rango, "marcador: «" + mobs.rangoCrudo(p) + "» × " + porRango + " = " + (rango * porRango));
-        linea(q, "  poder " + poder, "AuraSkills ÷ " + porNivel + " = " + Math.round(poder / porNivel * 10) / 10.0);
-        linea(q, "  nivel " + bajo + "-" + alto, "base " + Math.round(base * 10) / 10.0 + ", variación ±"
-                + Math.round(variacion * 100) + " %, tope " + maximo);
     }
 
     private void listaGeneradores(CommandSender q) {
@@ -429,173 +389,12 @@ final class ComandoMundos implements TabExecutor {
         return null;
     }
 
-    /**
-     * /lw hardcore: lo que hace falta para montar Calamity y para probarlo.
-     *
-     * Los cuatro puntos (entrada, llegada, salida y puerta de salida) se marcan
-     * PISANDOLOS, que es la unica forma comoda de hacerlo desde Bedrock y sin menus.
-     */
-    private void hardcore(CommandSender q, String[] args) {
-        Hardcore hc = plugin.hardcore();
-        // El objeto existe siempre; lo que falta con hardcore.activo en false son el
-        // panel y la vara, y sin ellos casi todo lo de abajo reventaba con un null.
-        if (hc == null || !hc.activo()) {
-            decir(q, Component.text("Las reglas hardcore están apagadas en la config.", NamedTextColor.RED));
-            return;
-        }
-        String sub = args.length >= 2 ? args[1].toLowerCase(Locale.ROOT) : "status";
-
-        switch (sub) {
-            case "wand", "vara" -> {
-                if (!(q instanceof Player p)) {
-                    decir(q, Component.text("La vara se entrega en el juego.", NamedTextColor.RED));
-                    return;
-                }
-                p.getInventory().addItem(hc.vara().vara());
-                decir(q, Component.text("Vara entregada: ", NamedTextColor.GREEN)
-                        .append(Component.text("golpe = esquina 1, clic derecho = esquina 2.", SUAVE)));
-            }
-            case "define" -> {
-                if (!(q instanceof Player p)) {
-                    decir(q, Component.text("Eso se define en el juego.", NamedTextColor.RED));
-                    return;
-                }
-                String cual = args.length >= 3 ? args[2].toLowerCase(Locale.ROOT) : "";
-                if (!cual.equals("entrada") && !cual.equals("salida")) {
-                    decir(q, Component.text("Dime cuál: ", NamedTextColor.RED)
-                            .append(Component.text("/lw hardcore define entrada|salida", MARCA)));
-                    return;
-                }
-                String hecho = hc.vara().definir(p, cual);
-                if (hecho == null) {
-                    decir(q, Component.text("Marca las dos esquinas con la vara primero.",
-                            NamedTextColor.RED));
-                    return;
-                }
-                decir(q, Component.text("Puerta de " + cual + ": ", NamedTextColor.GREEN)
-                        .append(Component.text(hecho, MARCA)));
-            }
-            case "entrada", "llegada", "salida", "puerta-salida" -> {
-                if (!(q instanceof Player p)) {
-                    decir(q, Component.text("Ese punto se marca estando en el sitio.", NamedTextColor.RED));
-                    return;
-                }
-                hc.punto(sub, p.getLocation());
-                decir(q, Component.text("Marcado ", NamedTextColor.GREEN)
-                        .append(Component.text(sub, MARCA))
-                        .append(Component.text(" aquí mismo.", SUAVE)));
-            }
-            case "menu" -> {
-                if (!(q instanceof Player p)) {
-                    decir(q, Component.text("El panel se abre desde el juego.", NamedTextColor.RED));
-                    return;
-                }
-                hc.menu().abrir(p);
-            }
-            case "tiempo" -> {
-                Player destino = args.length >= 3
-                        ? plugin.getServer().getPlayer(args[2])
-                        : (q instanceof Player p ? p : null);
-                if (destino == null) {
-                    decir(q, Component.text("No encuentro a ese jugador.", NamedTextColor.RED));
-                    return;
-                }
-                double horas = hc.horasDe(destino);
-                decir(q, Component.text(destino.getName() + " lleva ", SUAVE)
-                        .append(Component.text(String.format(Locale.US, "%.1f h", horas), MARCA))
-                        .append(Component.text(" en Calamity", SUAVE))
-                        .append(Component.text(horas >= 24 ? "  ·  ya tiene el tag." : "  ·  el tag son 24 h.",
-                                NamedTextColor.GRAY)));
-            }
-            case "frasco", "cristal", "esencia" -> {
-                Player destino = args.length >= 3
-                        ? plugin.getServer().getPlayer(args[2])
-                        : (q instanceof Player p ? p : null);
-                if (destino == null) {
-                    decir(q, Component.text("No encuentro a ese jugador.", NamedTextColor.RED));
-                    return;
-                }
-                var item = switch (sub) {
-                    case "frasco" -> hc.items().frasco(plugin.getConfig().getInt("hardcore.frasco.usos", 3));
-                    case "cristal" -> hc.items().cristal();
-                    default -> hc.items().esencia(1);
-                };
-                destino.getInventory().addItem(item);
-                decir(q, Component.text("Entregado a " + destino.getName() + ".", NamedTextColor.GREEN));
-            }
-            case "cordura" -> {
-                Player destino = args.length >= 4
-                        ? plugin.getServer().getPlayer(args[3])
-                        : (q instanceof Player p ? p : null);
-                if (destino == null) {
-                    decir(q, Component.text("No encuentro a ese jugador.", NamedTextColor.RED));
-                    return;
-                }
-                if (args.length >= 3) {
-                    try {
-                        hc.cordura().valor(destino, Double.parseDouble(args[2]));
-                    } catch (NumberFormatException e) {
-                        decir(q, Component.text("Eso no es un número.", NamedTextColor.RED));
-                        return;
-                    }
-                }
-                decir(q, Component.text(destino.getName() + " tiene ", SUAVE)
-                        .append(Component.text(Math.round(hc.cordura().valor(destino)) + "%",
-                                Cordura.color(hc.cordura().valor(destino))))
-                        .append(Component.text(" de cordura.", SUAVE)));
-            }
-            default -> {
-                // Lo que registran los modulos de Calamity (Subcomandos): cada uno trae su
-                // subcomando sin tocar este fichero, que es lo que deja trabajar en paralelo.
-                if (args.length >= 2 && Subcomandos.lw().ejecutar(q,
-                        java.util.Arrays.copyOfRange(args, 1, args.length))) {
-                    return;
-                }
-                cabecera(q, "Calamity y los mundos hardcore");
-                linea(q, "Mundos", String.join(", ", hc.mundos()));
-                linea(q, "puerta de entrada", hc.vara().describir("entrada"));
-                linea(q, "puerta de salida", hc.vara().describir("salida"));
-                for (String punto : List.of("llegada", "salida")) {
-                    var donde = hc.punto(punto);
-                    linea(q, punto == "llegada" ? "aparece en" : "vuelve a",
-                            donde == null ? "sin marcar"
-                            : donde.getWorld().getKey() + "  " + donde.getBlockX() + " "
-                                    + donde.getBlockY() + " " + donde.getBlockZ());
-                }
-                linea(q, "/lw hardcore wand", "la vara: dos esquinas marcan la puerta");
-                linea(q, "/lw hardcore define entrada|salida", "guarda esa caja como puerta");
-                linea(q, "/lw hardcore llegada", "marca aquí donde aparece el que entra");
-                linea(q, "/lw hardcore salida", "marca aquí a dónde se vuelve");
-                linea(q, "/lw hardcore frasco|cristal|esencia [player]", "entrega uno");
-                linea(q, "/lw hardcore cordura [valor] [player]", "consulta o la fija");
-                linea(q, "/lw hardcore tiempo [player]", "horas acumuladas y si tiene el tag");
-                linea(q, "/lw hardcore menu", "panel de las reglas de dificultad");
-                for (String[] s : Subcomandos.lw().ayuda(q)) linea(q, "/lw hardcore " + s[0], s[1]);
-            }
-        }
-    }
-
-
     @Override
     public List<String> onTabComplete(CommandSender q, Command cmd, String etiqueta, String[] args) {
         List<String> op = new ArrayList<>();
         if (args.length == 1) {
             op.addAll(List.of("list", "generators", "create", "delete", "tp", "biomes", "biome",
-                    "pregen", "level", "hardcore", "reload"));
-        } else if (args.length == 2 && args[0].equalsIgnoreCase("hardcore")) {
-            op.addAll(List.of("status", "menu", "wand", "define", "llegada", "salida",
-                    "frasco", "cristal", "esencia", "cordura", "tiempo"));
-            op.addAll(Subcomandos.lw().nombres(q));
-        } else if (args.length >= 3 && args[0].equalsIgnoreCase("hardcore")
-                && Subcomandos.lw().nombres(q).contains(args[1].toLowerCase(Locale.ROOT))) {
-            op.addAll(Subcomandos.lw().tab(q, java.util.Arrays.copyOfRange(args, 1, args.length)));
-        } else if (args.length == 3 && args[0].equalsIgnoreCase("hardcore")
-                && args[1].equalsIgnoreCase("define")) {
-            op.addAll(List.of("entrada", "salida"));
-        } else if (args.length == 3 && args[0].equalsIgnoreCase("hardcore")
-                && List.of("frasco", "cristal", "esencia", "cordura", "tiempo")
-                        .contains(args[1].toLowerCase(Locale.ROOT))) {
-            for (Player p : plugin.getServer().getOnlinePlayers()) op.add(p.getName());
+                    "pregen", "reload"));
         } else if (args.length == 2 && args[0].equalsIgnoreCase("pregen")) {
             op.addAll(List.of("start", "status", "pause", "resume", "cancel"));
         } else if (args.length == 3 && args[0].equalsIgnoreCase("pregen") && args[1].equalsIgnoreCase("start")) {
@@ -608,8 +407,6 @@ final class ComandoMundos implements TabExecutor {
         } else if (args.length == 3 && args[0].equalsIgnoreCase("create")) {
             op.addAll(plugin.generadores());
         } else if (args.length == 3 && args[0].equalsIgnoreCase("tp")) {
-            for (Player p : plugin.getServer().getOnlinePlayers()) op.add(p.getName());
-        } else if (args.length == 2 && args[0].equalsIgnoreCase("level")) {
             for (Player p : plugin.getServer().getOnlinePlayers()) op.add(p.getName());
         }
         String ultimo = args[args.length - 1].toLowerCase(Locale.ROOT);

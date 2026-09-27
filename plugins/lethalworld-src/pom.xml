@@ -16,25 +16,9 @@
     <maven.compiler.release>25</maven.compiler.release>
     <!-- La version de EDM contra la que se compila. Al subir EDM, subirla aqui. -->
     <edm.version>1.72.1</edm.version>
-    <!-- Donde estan los jars de terceros (PlaceholderAPI). En el repo es
-         ProyectosGit/_toolchain/libs, tres niveles por encima; en un worktree de
-         ZakiWorld-wt/<paquete> es uno mas arriba, y eso lo arregla el perfil de abajo. -->
-    <toolchain.libs>${project.basedir}/../../../_toolchain/libs</toolchain.libs>
+    <!-- Desde la 2.0.0 no hay jars de _toolchain/libs (PlaceholderAPI ni el perfil worktree
+         que buscaba su ruta): eran de Calamity, que ahora es plugins/calamity-src. -->
   </properties>
-
-  <profiles>
-    <profile>
-      <id>worktree</id>
-      <activation>
-        <file>
-          <missing>${basedir}/../../../_toolchain/libs/PlaceholderAPI-2.11.6.jar</missing>
-        </file>
-      </activation>
-      <properties>
-        <toolchain.libs>${project.basedir}/../../../../_toolchain/libs</toolchain.libs>
-      </properties>
-    </profile>
-  </profiles>
 
   <repositories>
     <repository>
@@ -54,33 +38,21 @@
       <version>26.1.2.build.74-stable</version>
       <scope>provided</scope>
     </dependency>
-    <!-- EDM: de ahi salen los esbirros (anomaly), las MobCoins, Compat, Estilo y la
-         bitacora. Es el propio jar de al lado, como edm-src hace con los jars de
-         _toolchain/libs.
+    <!-- EDM: de ahi salen Estilo y la bitacora (los esbirros, las MobCoins y Compat eran
+         de Calamity, que ya es otro plugin). Es el propio jar de al lado, como edm-src
+         hace con los jars de _toolchain/libs.
 
          OJO: HAY QUE COMPILAR EDM ANTES QUE ESTO. Si el jar de esa version no esta
          en ../edm-src/target, Maven falla sin explicar gran cosa:
              cd ../edm-src        ; mvn -o -DskipTests package
              cd ../lethalworld-src ; mvn -o -DskipTests package
-
-         MythicMobs NO aparece aqui a proposito: no hay jar suyo en _toolchain/libs
-         y solo hace falta para una pregunta, que se hace por reflexion en
-         PuenteMythicMobs. -->
+         Y Calamity (../calamity-src) se compila DESPUES de esto: enlaza contra este jar. -->
     <dependency>
       <groupId>net.ederus</groupId>
       <artifactId>EDM</artifactId>
       <version>${edm.version}</version>
       <scope>system</scope>
       <systemPath>${project.basedir}/../edm-src/target/EDM-${edm.version}.jar</systemPath>
-    </dependency>
-    <!-- PlaceholderAPI, para los %lethalworld_...%. Solo lo toca ExpansionLethal, que no se
-         carga si el plugin no esta en el servidor (patron de EDM, edm-src/pom.xml). -->
-    <dependency>
-      <groupId>me.clip</groupId>
-      <artifactId>placeholderapi</artifactId>
-      <version>2.11.6</version>
-      <scope>system</scope>
-      <systemPath>${toolchain.libs}/PlaceholderAPI-2.11.6.jar</systemPath>
     </dependency>
   </dependencies>
 
