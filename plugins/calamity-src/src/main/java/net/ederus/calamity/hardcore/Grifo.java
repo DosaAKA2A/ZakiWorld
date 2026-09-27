@@ -210,8 +210,10 @@ public final class Grifo implements Listener {
             for (int g : plan.grados()) reliquias.add(r.crear(g, origen, null, nivel, null, false));
         }
         if (plan.xp() >= 0) e.setDroppedExp(plan.xp());
-        if (plan.esencias() == 0 && mc <= 0 && reliquias.isEmpty()) return;
-        Aduana.Pago pago = hc.aduana().pagar(killer, "mob", plan.esencias(), mc, reliquias,
+        // 1.4: las de mas del equipo (esencias-bonus) se suman aqui, antes de la Aduana, que topa el total.
+        int esencias = hc.esenciasDelEquipo(killer, plan.esencias());
+        if (esencias == 0 && mc <= 0 && reliquias.isEmpty()) return;
+        Aduana.Pago pago = hc.aduana().pagar(killer, "mob", esencias, mc, reliquias,
                 via == Via.CERRADO ? "cerrado" : (marca == null ? "comun" : marca));
         if (pago != null && pago.esencias() > 0) {
             apuntarEsencias(killer.getUniqueId(), pago.esencias());

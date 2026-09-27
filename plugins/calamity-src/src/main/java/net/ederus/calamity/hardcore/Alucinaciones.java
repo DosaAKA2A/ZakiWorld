@@ -131,7 +131,8 @@ final class Alucinaciones implements Listener {
     /** Cada 20 s por jugador que cuenta, desde Sentidos.latido. */
     void tirada(Player p, int tramo) {
         if (!activo() || !hc.esHardcore(p)) return;
-        double prob = probabilidad(porMinuto(), tramo);
+        // 1.4: el equipo (cordura-alucinaciones) quita esa fraccion de la probabilidad; sin equipo, igual.
+        double prob = Equipo.menos(probabilidad(porMinuto(), tramo), hc.delEquipo(p, Equipo.Efecto.CORDURA_ALUCINACIONES));
         if (prob <= 0 || azar.nextDouble() >= prob) return;
         boolean parca = parcaViva();
         List<Testigos.Muerto> muertos = candidatos(p);

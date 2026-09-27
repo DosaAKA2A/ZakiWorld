@@ -181,8 +181,10 @@ final class Minijefes {
                 for (int g : p.grados()) items.add(rel.crear(g, "minijefe", null, nivel, null, false));
                 if (p.sello()) items.add(rel.crear(4, "minijefe", Reliquias.SELLO, nivel, t, false));
             }
-            if (ad != null && (p.esencias() > 0 || p.mc() > 0 || !items.isEmpty())) {
-                Aduana.Pago pago = ad.pagar(op, "minijefe", p.esencias(), p.mc(), items,
+            // 1.4: las de mas del equipo (esencias-bonus) de quien siga conectado, antes de la Aduana.
+            int esencias = hc.esenciasDelEquipo(op.getPlayer(), p.esencias());
+            if (ad != null && (esencias > 0 || p.mc() > 0 || !items.isEmpty())) {
+                Aduana.Pago pago = ad.pagar(op, "minijefe", esencias, p.mc(), items,
                         "minijefe " + (t == null ? "?" : t) + " N" + nivel);
                 if (pago != null && grifo != null) {
                     grifo.apuntarEsencias(p.jugador(), pago.esencias());
