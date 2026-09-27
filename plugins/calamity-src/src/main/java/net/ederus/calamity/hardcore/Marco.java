@@ -49,7 +49,7 @@ import java.util.UUID;
  *  - el titulo de la ventana cabe en el ancho de un cofre (Titulo, ANCHO_TITULO; el autotest
  *    "menus" los mide todos).
  *
- * Colores de Paleta y nada de cursiva ni negrita (salvo el titulo de la ventana).
+ * Colores de Paleta y nada de cursiva ni negrita (salvo "CALAMITY" en el titulo de la ventana).
  */
 final class Marco {
 
@@ -94,55 +94,56 @@ final class Marco {
      */
     static final int ANCHO_TITULO = 150;
 
+    /** Lo que va delante de cada titulo de ventana (Paleta.ventana): la marca y la barra. */
+    static final String PREFIJO_TITULO = "CALAMITY | ";
+
     /**
-     * Un titulo de ventana: lo principal en negrita y, si hay, " · detalle" sin ella, todo en el
-     * degradado oscuro de Paleta.ventana (el claro no se lee sobre el gris de la interfaz). Sin
-     * el "Calamity · " de delante: se comia la mitad del ancho y "Rankings de la semana" se salia.
+     * Un titulo de ventana: "CALAMITY | seccion" (Paleta.ventana). La seccion es corta y sin
+     * articulos: con la marca delante le quedan unos 86 px, unas catorce letras.
      */
-    record Titulo(String principal, String detalle) {
+    record Titulo(String seccion) {
 
         Component componente() {
-            TextComponent.Builder b = Component.text().append(Paleta.ventana(principal).decoration(TextDecoration.BOLD, true));
-            if (detalle != null) {
-                b.append(Component.text(" · ", TextColor.color(Paleta.VENTANA_HASTA)).decoration(TextDecoration.BOLD, false))
-                        .append(Paleta.ventana(detalle));
-            }
-            return b.build().decoration(TextDecoration.ITALIC, false);
+            return Paleta.ventana(seccion);
         }
 
-        /** Lo que ocupa en pixeles (la negrita suma uno por letra). */
+        /** Lo que ocupa en pixeles (la negrita de la marca suma uno por letra). */
         int ancho() {
-            return Marco.ancho(principal, true) + (detalle == null ? 0 : Marco.ancho(" · ", false) + Marco.ancho(detalle, false));
+            return Marco.ancho("CALAMITY", true) + Marco.ancho(" | ", false) + Marco.ancho(seccion, false);
         }
 
+        /** El titulo en texto plano, tal cual se ve. */
         String texto() {
-            return detalle == null ? principal : principal + " · " + detalle;
+            return PREFIJO_TITULO + seccion;
         }
     }
 
-    static final Titulo T_ALTAR = new Titulo("Altar del Umbral", null);
-    static final Titulo T_FORJA = new Titulo("La Forja", null);
-    static final Titulo T_COMPRAR = new Titulo("¿Comprarlo?", null);
-    static final Titulo T_FORJAR = new Titulo("¿Forjarlo?", null);
-    static final Titulo T_TASADOR = new Titulo("El Mercader", null);
-    static final Titulo T_TASADOR_DINERO = new Titulo("Mercader", "Tu dinero");
-    static final Titulo T_TASADOR_CONTRATOS = new Titulo("Mercader", "Contratos");
-    static final Titulo T_TASADOR_RELIQUIAS = new Titulo("Mercader", "Tus reliquias");
-    static final Titulo T_CAMBIAR = new Titulo("¿Cambiar contrato?", null);
-    static final Titulo T_RANKINGS = new Titulo("Rankings", "Semana");
-    static final Titulo T_TABLERO = new Titulo("Tablero", null);
-    static final Titulo T_CAMINO = new Titulo("Tu camino", null);
-    static final Titulo T_GRABAR = new Titulo("Grabar", null);
-    static final Titulo T_DESEOS = new Titulo("Lista de deseos", null);
-    static final Titulo T_VOTO = new Titulo("Voto del Botín", null);
-    static final Titulo T_PREGUNTA = new Titulo("Calamity pregunta", null);
-    static final Titulo T_DIFICULTAD = new Titulo("Calamity", "Dificultad");
-    static final Titulo T_SALVOCONDUCTO = new Titulo("¿Qué conservas?", null);
-    static final Titulo T_ENGARZADOR = new Titulo("El Engarzador", null);
+    static final Titulo T_ALTAR = new Titulo("Altar del Umbral");
+    static final Titulo T_FORJA = new Titulo("Forja");
+    static final Titulo T_COMPRAR = new Titulo("¿Comprarlo?");
+    static final Titulo T_FORJAR = new Titulo("¿Forjarlo?");
+    static final Titulo T_TASADOR = new Titulo("Mercader");
+    static final Titulo T_TASADOR_DINERO = new Titulo("Tu dinero");
+    static final Titulo T_TASADOR_CONTRATOS = new Titulo("Contratos");
+    static final Titulo T_TASADOR_RELIQUIAS = new Titulo("Tus reliquias");
+    // "¿Cambiar contrato?" no cabe con la marca delante.
+    static final Titulo T_CAMBIAR = new Titulo("Cambiar contrato");
+    // "Rankings de la semana" no cabe.
+    static final Titulo T_RANKINGS = new Titulo("Ranking semanal");
+    static final Titulo T_TABLERO = new Titulo("Tablero");
+    static final Titulo T_CAMINO = new Titulo("Tu camino");
+    static final Titulo T_GRABAR = new Titulo("Grabar");
+    static final Titulo T_DESEOS = new Titulo("Lista de deseos");
+    static final Titulo T_VOTO = new Titulo("Voto del Botín");
+    static final Titulo T_PREGUNTA = new Titulo("Encuesta");
+    static final Titulo T_DIFICULTAD = new Titulo("Dificultad");
+    // "¿Qué conservas?" no cabe: el menu es el del Salvoconducto y asi se llama el objeto.
+    static final Titulo T_SALVOCONDUCTO = new Titulo("Salvoconducto");
+    static final Titulo T_ENGARZADOR = new Titulo("Engarzador");
 
-    /** El de una categoria del Altar: "Altar · Para la expedición". */
-    static Titulo categoria(String nombre) {
-        return new Titulo("Altar", nombre);
+    /** El de una categoria del Altar: "CALAMITY | Expedición". */
+    static Titulo categoria(String seccion) {
+        return new Titulo(seccion);
     }
 
     /** Todos los titulos de ventana de Calamity, para que el autotest mida que caben. */

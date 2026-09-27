@@ -57,9 +57,14 @@ public final class Paleta {
     public static final int PARCA_HASTA = 0xE8454F;
     /** La PARCA en un solo color (barra de accion, nombre de la guadana). */
     public static final TextColor PARCA = TextColor.color(0xF26A63);
-    /** Titulos de ventana (inventarios): oscuros, porque van sobre el gris claro de la interfaz. */
-    public static final int VENTANA_DESDE = 0x7A3E12;
-    public static final int VENTANA_HASTA = 0x8E2A1F;
+    /*
+     * Titulos de ventana (inventarios): "CALAMITY | Seccion". Colores planos y oscuros, porque van
+     * sobre el gris claro (~#C6C6C6) de la interfaz y sin sombra: el degradado marron rojizo de
+     * antes se leia mal. La marca en rojo intenso, la barra en gris oscuro y la seccion en carbon.
+     */
+    public static final TextColor VENTANA_MARCA = TextColor.color(0xB3261E);
+    public static final TextColor VENTANA_BARRA = TextColor.color(0x555555);
+    public static final TextColor VENTANA_SECCION = TextColor.color(0x3A3A3A);
     /** Hueso de las planideras y de la cadena del Tiron. */
     public static final TextColor HUESO = TextColor.color(0xE3DCCE);
     /** El Eco: gris azulado claro (el de antes, #9AA7B8, se perdia en el chat). */
@@ -149,20 +154,14 @@ public final class Paleta {
     }
 
     /**
-     * Titulo de una ventana (inventario). Ahi el texto se dibuja sobre el gris claro de la
-     * interfaz y sin sombra: los tonos claros de arriba no se leen. Degradado oscuro calido,
-     * del mismo aire que la marca.
+     * Titulo de una ventana (inventario): "CALAMITY" en negrita roja, " | " en gris oscuro y la
+     * seccion en gris carbon, sin negrita. Todos los menus de Calamity lo abren asi (Marco.Titulo).
      */
-    public static Component ventana(String texto) {
-        return degradado(texto, VENTANA_DESDE, VENTANA_HASTA);
-    }
-
-    /** "Calamity · seccion" como titulo de ventana: la marca en negrita, todo en el degradado oscuro. */
-    public static Component ventanaCalamity(String seccion) {
+    public static Component ventana(String seccion) {
         return Component.text()
-                .append(ventana("Calamity").decoration(TextDecoration.BOLD, true))
-                .append(Component.text(" · ", TextColor.color(VENTANA_HASTA)).decoration(TextDecoration.BOLD, false)) // sin la negrita de la marca
-                .append(ventana(seccion))
+                .append(Component.text("CALAMITY", VENTANA_MARCA).decoration(TextDecoration.BOLD, true))
+                .append(Component.text(" | ", VENTANA_BARRA).decoration(TextDecoration.BOLD, false))
+                .append(Component.text(seccion, VENTANA_SECCION).decoration(TextDecoration.BOLD, false))
                 .build().decoration(TextDecoration.ITALIC, false);
     }
 

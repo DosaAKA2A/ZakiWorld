@@ -116,17 +116,20 @@ final class MenuAltar implements Listener {
         }
     }
 
-    /** Una tarjeta de la portada: a que pagina lleva, su icono, su nombre y dos lineas de lo que hay dentro. */
-    record Categoria(String id, Material icono, String nombre, List<String> texto) {
+    /**
+     * Una tarjeta de la portada: a que pagina lleva, su icono, su nombre, dos lineas de lo que hay
+     * dentro y la seccion del titulo de su ventana (corta, para que quepa tras "CALAMITY | ").
+     */
+    record Categoria(String id, Material icono, String nombre, List<String> texto, String seccion) {
     }
 
     static final List<Categoria> CATEGORIAS = List.of(
             new Categoria(EXPEDICION, Material.LANTERN, "Para la expedición",
-                    List.of("Lo que te llevas dentro: frascos,", "cristales de regreso y tinturas.")),
+                    List.of("Lo que te llevas dentro: frascos,", "cristales de regreso y tinturas."), "Expedición"),
             new Categoria(LLAVES, Material.VAULT, "Llaves y ofrendas",
-                    List.of("La Llave del Caos y la Ofrenda", "del mes, a cambio de Esencias.")),
+                    List.of("La Llave del Caos y la Ofrenda", "del mes, a cambio de Esencias."), "Llaves"),
             new Categoria(FORJA, Material.ANVIL, "La Forja",
-                    List.of("El equipo de Calamity (el Manto,", "el Eco y la Guadaña) y sus mejoras.")));
+                    List.of("El equipo de Calamity (el Manto,", "el Eco y la Guadaña) y sus mejoras."), "Forja"));
 
     /** Una cosa de la Forja: un trueque, o el boton Grabar. */
     record Cosa(Altar.Trueque t, String boton) {
@@ -167,12 +170,12 @@ final class MenuAltar implements Listener {
         return UMBRAL;
     }
 
-    /** El titulo de cada pagina: "Altar del Umbral", "La Forja" o "Altar · <categoria>". */
+    /** El titulo de cada pagina: "CALAMITY | Altar del Umbral", "CALAMITY | Forja" o "CALAMITY | <categoria>". */
     static Marco.Titulo titulo(String pagina) {
         String pg = pagina(pagina);
         if (pg.equals(UMBRAL)) return Marco.T_ALTAR;
         if (pg.equals(FORJA)) return Marco.T_FORJA;
-        for (Categoria c : CATEGORIAS) if (c.id().equals(pg)) return Marco.categoria(c.nombre());
+        for (Categoria c : CATEGORIAS) if (c.id().equals(pg)) return Marco.categoria(c.seccion());
         return Marco.T_ALTAR;
     }
 
@@ -1019,8 +1022,10 @@ final class MenuAltar implements Listener {
         // Los titulos de las ventanas: todos caben en el ancho de un cofre.
         h.igual("ancho de 'Altar' en negrita", 30, Marco.ancho("Altar", true));
         h.igual("ancho de 'il.'", 7, Marco.ancho("il.", false));
-        h.ok("el titulo de los rankings de la 1.3.0 no cabia (la medida lo ve)",
-                new Marco.Titulo("Calamity", "Rankings de la semana").ancho() > Marco.ANCHO_TITULO);
+        h.igual("ancho de la marca 'CALAMITY | '", 64, new Marco.Titulo("").ancho());
+        h.igual("texto plano del titulo", "CALAMITY | Mercader", Marco.T_TASADOR.texto());
+        h.ok("'Rankings de la semana' no cabe con la marca (la medida lo ve)",
+                new Marco.Titulo("Rankings de la semana").ancho() > Marco.ANCHO_TITULO);
         for (Marco.Titulo t : Marco.titulos()) {
             h.ok("titulo '" + t.texto() + "' cabe (" + t.ancho() + " de " + Marco.ANCHO_TITULO + " px)", t.ancho() <= Marco.ANCHO_TITULO);
         }
