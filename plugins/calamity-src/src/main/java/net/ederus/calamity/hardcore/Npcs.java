@@ -26,12 +26,16 @@ import java.util.UUID;
  * tasacion, Aduana, contratos del dia, Reliquias encima y Tu camino), el Cronista (la historia
  * y el tutorial, Cronista) y el Cazador (los rankings de la semana, MenuCazador, y desde ahi el
  * Tablero). Desde 1.3.0 el Tasador y el Cazador ya no escriben en el chat: todo va en su menu.
+ * Desde 1.4 hay un sexto, el Engarzador (MenuEngarzador): pone y quita las Gemas de Calamidad,
+ * que antes solo se engarzaban arrastrandolas sobre la pieza, como manda MMOItems, y nadie lo
+ * descubria.
  *
  * Los NPCs los pone y los cuida el staff a mano con Citizens; Calamity no los crea ni depende
  * de Citizens. Cada uno lleva un comando de clic sin -p, que Citizens ejecuta como CONSOLA
  * y en el que cambia <p> por quien hizo clic (-l -r: los dos botones, tambien con mayusculas):
  *     /npc command add -l -r calamidad abrir <p> umbral
- * (y forja, tasador, cronista o cazador en los otros cuatro).
+ * (y forja, tasador, cronista, cazador o engarzador en los otros cinco). La receta completa del
+ * Engarzador, con el /npc create, la dice /calamidad engarzador.
  *
  * La regla que no se negocia: el Altar no se abre a distancia. Vende el Cristal de Regreso,
  * que es la salida, y abierto dentro de Calamity romperia la extraccion. Por eso no hay un
@@ -43,13 +47,14 @@ import java.util.UUID;
  */
 final class Npcs implements Listener {
 
-    /** Los cinco: el id que va en el comando de Citizens y como se llaman para el staff. */
+    /** Los seis: el id que va en el comando de Citizens y como se llaman para el staff. */
     enum Tipo {
         UMBRAL("umbral", "el Guardián del Umbral"),
         FORJA("forja", "el Forjador"),
         TASADOR("tasador", "el Tasador"),
         CRONISTA("cronista", "el Cronista"),
-        CAZADOR("cazador", "el Cazador");
+        CAZADOR("cazador", "el Cazador"),
+        ENGARZADOR("engarzador", "el Engarzador");
 
         final String id;
         final String nombre;
@@ -84,6 +89,7 @@ final class Npcs implements Listener {
     private final Cronista cronista;
     private final MenuTasador tasador;
     private final MenuCazador cazador;
+    private final MenuEngarzador engarzador;
     private final Map<UUID, Long> ultimoClic = new HashMap<>();
 
     Npcs(Hardcore hc) {
@@ -91,6 +97,7 @@ final class Npcs implements Listener {
         this.cronista = new Cronista(hc);
         this.tasador = new MenuTasador(hc);
         this.cazador = new MenuCazador(hc);
+        this.engarzador = new MenuEngarzador(hc);
         hc.plugin().getServer().getPluginManager().registerEvents(this, hc.plugin());
         Subcomandos.lw().registrar("abrir",
                 "abrir <jugador> <" + String.join("|", Tipo.ids()) + ">: lo que abre cada NPC de la antesala"
@@ -117,6 +124,7 @@ final class Npcs implements Listener {
         HandlerList.unregisterAll(this);
         hc.seguro("tasador", tasador::parar);
         hc.seguro("cazador", cazador::parar);
+        hc.seguro("engarzador", engarzador::parar);
         ultimoClic.clear();
     }
 
@@ -178,6 +186,10 @@ final class Npcs implements Listener {
             case TASADOR -> tasador(p);
             case CRONISTA -> cronista.indice(p);
             case CAZADOR -> cazador(p);
+            case ENGARZADOR -> {
+                // Sin MMOItems no hay gemas que engarzar: el menu se lo dice al jugador y no se abre.
+                if (!hc.valor("engarzador", () -> engarzador.abrir(p), false)) return "no se ha abierto (sin MMOItems, o lo ha impedido otro plugin)";
+            }
         }
         return null;
     }
@@ -228,7 +240,7 @@ final class Npcs implements Listener {
         h.igual("id sin mayusculas ni espacios", Tipo.FORJA, Tipo.de("  FORJA "));
         h.igual("id que no existe", null, Tipo.de("altar"));
         h.igual("id null", null, Tipo.de(null));
-        h.igual("los cinco ids", List.of("umbral", "forja", "tasador", "cronista", "cazador"), Tipo.ids());
+        h.igual("los seis ids", List.of("umbral", "forja", "tasador", "cronista", "cazador", "engarzador"), Tipo.ids());
 
         h.igual("ranking en MobCoins", "1.234 MC", valorRanking("tasado-mc", 1234));
         h.igual("ranking de una expedicion larga", "1 h 05 min", valorRanking("expedicion-max-seg", 3900));
@@ -292,7 +304,7 @@ final class Npcs implements Listener {
 
         h.ok("/calamidad abrir registrado", Subcomandos.lw().nombres(null).contains("abrir"));
         h.ok("/calamity cronista registrado", Subcomandos.calamity().nombres(null).contains("cronista"));
-        h.igual("tab de abrir: los cinco", Tipo.ids(), Subcomandos.lw().tab(null, new String[]{"abrir", "Dosa__", ""}));
+        h.igual("tab de abrir: los seis", Tipo.ids(), Subcomandos.lw().tab(null, new String[]{"abrir", "Dosa__", ""}));
         return h.lineas();
     }
 }

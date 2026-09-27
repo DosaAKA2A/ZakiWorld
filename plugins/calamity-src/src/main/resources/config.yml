@@ -784,6 +784,10 @@ hardcore:
   #   /npc command add -l -r calamidad abrir <p> tasador    saldo, tasacion y contratos de hoy
   #   /npc command add -l -r calamidad abrir <p> cronista   los capitulos de abajo
   #   /npc command add -l -r calamidad abrir <p> cazador    tablas de la semana y el Tablero
+  #   /npc command add -l -r calamidad abrir <p> engarzador pone y quita las Gemas de Calamidad (1.4)
+  # El Engarzador (1.4) se crea con "/npc create El Engarzador" y ese clic; /calamidad engarzador
+  # repite la receta. Engarzar es gratis y quitar una gema la rompe. Admite las gemas del tipo de
+  # entregas.mmo.gema (CALAMITY_GEMAS) en las piezas de los tipos de forja.piezas que tengan hueco.
   # El jugador no necesita permiso (/calamidad es de staff y consola) y el Altar solo se abre
   # desde el NPC o su bloque, nunca a distancia ni dentro de Calamity.
   cronista:
