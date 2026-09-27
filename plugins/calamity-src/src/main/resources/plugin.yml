@@ -7,9 +7,10 @@ description: Calamity - la PARCA, el Eco, la Aduana y las reglas hardcore de los
 # Los esbirros, las MobCoins y Compat salen de EDM; los mundos y la bitacora, de LethalWorld.
 # Sin cualquiera de los dos, esto no arranca.
 depend: [EDM, LethalWorld]
-# MMOItems y MythicLib solo se leen por reflexion (PuenteMmo), y MythicMobs igual
-# (PuenteMythicMobs); estar aqui asegura que cargan antes y que Paper deja ver sus clases.
-softdepend: [PlaceholderAPI, AuraSkills, UltimateMobCoins, WorldGuard, MMOItems, MythicLib, LibsDisguises, MythicMobs]
+# MMOItems solo se lee por reflexion (PuenteMmo, que tambien mira MythicLib pero MythicLib
+# no va en esta lista a proposito: MMOItems ya lo trae como dependencia suya), y MythicMobs
+# igual (PuenteMythicMobs); estar aqui asegura que cargan antes y que Paper deja ver sus clases.
+softdepend: [PlaceholderAPI, AuraSkills, UltimateMobCoins, WorldGuard, MMOItems, LibsDisguises, MythicMobs]
 
 commands:
   calamity:
