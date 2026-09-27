@@ -3,6 +3,7 @@ package net.ederus.calamity.hardcore;
 import net.kyori.adventure.text.Component;
 import org.bukkit.Bukkit;
 import org.bukkit.OfflinePlayer;
+import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
@@ -18,7 +19,9 @@ import org.bukkit.event.player.PlayerJoinEvent;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.PlayerInventory;
 
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 /**
@@ -72,6 +75,27 @@ final class Saldo implements Listener {
     long de(UUID jugador) {
         if (jugador == null) return 0;
         return Math.max(0, datos().getLong(ruta(jugador), 0));
+    }
+
+    /**
+     * Todos los saldos por encima de 0, para el top de Esencias (1.3.2): Rankings los copia en su
+     * tarea. Solo en el hilo principal, que lee hardcore-datos.yml.
+     */
+    Map<UUID, Long> todos() {
+        Map<UUID, Long> out = new HashMap<>();
+        ConfigurationSection s = datos().getConfigurationSection("esencias");
+        if (s == null) return out;
+        for (String k : s.getKeys(false)) {
+            UUID u;
+            try {
+                u = UUID.fromString(k);
+            } catch (IllegalArgumentException ignorado) {
+                continue;
+            }
+            long n = s.getLong(k, 0);
+            if (n > 0) out.put(u, n);
+        }
+        return out;
     }
 
     /** Suma n (> 0) al saldo. Se guarda al momento: es dinero y una caida no puede perderlo. */
@@ -259,6 +283,11 @@ final class Saldo implements Listener {
         h.ok("restar 0 siempre vale", s.restar(u, 0, "prueba"));
         h.ok("restar negativo no vale", !s.restar(u, -1, "prueba"));
         h.igual("se guarda en esencias.<uuid>", 6L, memoria.getLong("esencias." + u));
+        UUID vacio = Autotest.sintetico(12);
+        s.sumar(vacio, 3, "prueba");
+        s.restar(vacio, 3, "prueba");
+        memoria.set("esencias.no-es-un-uuid", 99);
+        h.igual("todos: los saldos > 0, sin claves raras", Map.of(u, 6L), s.todos());
     }
 
     void parar() {
