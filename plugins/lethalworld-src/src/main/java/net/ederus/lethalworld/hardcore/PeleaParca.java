@@ -1,5 +1,7 @@
 package net.ederus.lethalworld.hardcore;
 
+import io.papermc.paper.datacomponent.item.ResolvableProfile;
+import net.ederus.edm.anomaly.core.Disguises;
 import net.ederus.edm.comun.Compat;
 import net.ederus.edm.comun.Fx;
 import net.kyori.adventure.bossbar.BossBar;
@@ -15,10 +17,12 @@ import org.bukkit.Particle;
 import org.bukkit.SoundCategory;
 import org.bukkit.World;
 import org.bukkit.entity.Entity;
+import org.bukkit.entity.Mannequin;
 import org.bukkit.entity.Player;
 import org.bukkit.entity.Vex;
 import org.bukkit.entity.WitherSkeleton;
 import org.bukkit.inventory.EntityEquipment;
+import org.bukkit.inventory.EquipmentSlot;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.inventory.meta.LeatherArmorMeta;
@@ -38,6 +42,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
+import java.util.regex.Pattern;
 
 /**
  * Una PARCA viva (DIS sec. 1.4-1.9). La mueve la tarea de 2 ticks de Amenazas: un solo
@@ -49,6 +54,10 @@ import java.util.UUID;
  *
  * Mientras dura un telegraph se queda quieta (velocidad 0): asi el aviso que se ve en el
  * suelo es el sitio real del golpe y no se desplaza con ella.
+ *
+ * Lo que se ve no es el esqueleto: es un cuerpo de persona (Mannequin con la skin de la cuenta
+ * parca.cuerpo.skin), como Rabby en EDM. El esqueleto sigue debajo, invisible y mudo, con su
+ * IA, su caja y su golpe; el maniqui se le pega cada 2 ticks y le pasa los golpes que recibe.
  */
 final class PeleaParca implements Runnable {
 
@@ -60,6 +69,14 @@ final class PeleaParca implements Runnable {
     static final TextColor HUESO = TextColor.color(0xD8D2C4);
     private static final int TICKS_APARICION = 40;
     private static final int TICKS_COSECHA = 60;
+    /**
+     * Alto de un jugador y de un esqueleto wither a escala 1. Con cuerpo de NPC el esqueleto
+     * invisible se escala a cuerpo.escala x 1,8 / 2,4: su caja (la que recibe golpes, choca y
+     * lleva el cartel) mide lo mismo que el maniqui que se ve, ni mas ni menos.
+     */
+    private static final double ALTO_JUGADOR = 1.8, ALTO_ESQUELETO = 2.4;
+    /** Un nombre de cuenta de Minecraft. Lo que no case no se manda a Mojang (va en una URL). */
+    private static final Pattern CUENTA = Pattern.compile("[A-Za-z0-9_]{3,16}");
 
     private final Parca gestor;
     private final Hardcore hc;
@@ -76,6 +93,15 @@ final class PeleaParca implements Runnable {
     int extra;
     private final double factorR;
     WitherSkeleton cuerpo;
+    /** El cuerpo que se ve (Mannequin con skin), o null: entonces se ve el esqueleto vestido. */
+    Mannequin cascara;
+    /**
+     * El perfil que DEBE llevar el maniqui ahora mismo. La resolucion de la skin llega por la
+     * red y puede entrar antes o despues del reintento de los 2 ticks: el reintento pone
+     * siempre este, el vigente, y no el que se capturo al nacer (el fallo que tuvo Rabby).
+     */
+    private ResolvableProfile perfil;
+    private int pulsosCascara;
     private double golpe;
     int extrasGrupo;
     private final Set<UUID> participantes = new HashSet<>();
@@ -151,22 +177,32 @@ final class PeleaParca implements Runnable {
         Location bajo = sitio.clone().subtract(0, 2, 0);
         Amenazas am = pe.hc.amenazas();
         if (am == null) return null;
+        boolean conCuerpo = a.cuerpoActivo && a.cuerpoSkin != null && CUENTA.matcher(a.cuerpoSkin).matches();
         WitherSkeleton ws = am.invocar(WitherSkeleton.class, bajo, "parca", nivel,
-                Component.text("Parca", ROJO), e -> {
+                Paleta.muerte("Parca"), e -> {
                     if (presa != null) e.getPersistentDataContainer().set(Marcas.PRESA, PersistentDataType.STRING, presa.toString());
                     e.setAI(false);
                     e.setInvulnerable(true);
                     e.setSilent(true);
-                    Compat.setAttribute(e, "scale", a.escala);
+                    Compat.setAttribute(e, "scale", conCuerpo ? escalaEsqueleto(a) : a.escala);
                     Compat.setAttribute(e, "knockback_resistance", 1.0);
                     Compat.setAttribute(e, "movement_speed", a.velocidad);
                     Compat.setAttribute(e, "follow_range", 64);
                     Compat.setAttribute(e, "step_height", 1.5);
                     Compat.setAttribute(e, "attack_damage", pe.golpe);
-                    vestir(e, a);
+                    if (conCuerpo) {
+                        // Invisible y desnudo: la invisibilidad no esconde el equipo, y la
+                        // espada de piedra de serie se veria flotando al lado del maniqui.
+                        e.setInvisible(true);
+                        EntityEquipment eq = e.getEquipment();
+                        if (eq != null) eq.clear();
+                    } else {
+                        vestir(e, a);
+                    }
                 });
         if (ws == null) return null;
         pe.cuerpo = ws;
+        if (conCuerpo) pe.ponerCascara(bajo);
         am.vidaLogica(ws, vida);
         if (fraccion < 1) am.ponerFraccion(ws, fraccion);
         am.ancla(ws, sitio);
@@ -181,16 +217,26 @@ final class PeleaParca implements Runnable {
         return pe;
     }
 
-    /** Guadana de netherita con brillo, ropa de cuero casi negra y, si hay textura, su cabeza. */
+    /** Escala del esqueleto invisible para que su caja mida lo que el maniqui (cuerpo.escala). */
+    static double escalaEsqueleto(Parca.Ajustes a) {
+        return a.cuerpoEscala * ALTO_JUGADOR / ALTO_ESQUELETO;
+    }
+
+    /** La guadana: azada de netherita con brillo. La lleva el maniqui o, sin el, el esqueleto. */
+    private static ItemStack guadana() {
+        ItemStack guadana = new ItemStack(Material.NETHERITE_HOE);
+        ItemMeta gm = guadana.getItemMeta();
+        gm.displayName(Paleta.nombre("Guadaña", Paleta.PARCA));
+        gm.setEnchantmentGlintOverride(true);
+        guadana.setItemMeta(gm);
+        return guadana;
+    }
+
+    /** Sin cuerpo de NPC: guadana, ropa de cuero casi negra y, si hay textura, su cabeza. */
     private static void vestir(WitherSkeleton e, Parca.Ajustes a) {
         EntityEquipment eq = e.getEquipment();
         if (eq == null) return;
-        ItemStack guadana = new ItemStack(Material.NETHERITE_HOE);
-        ItemMeta gm = guadana.getItemMeta();
-        gm.displayName(Component.text("Guadaña", ROJO).decoration(TextDecoration.ITALIC, false));
-        gm.setEnchantmentGlintOverride(true);
-        guadana.setItemMeta(gm);
-        eq.setItemInMainHand(guadana);
+        eq.setItemInMainHand(guadana());
         eq.setChestplate(cuero(Material.LEATHER_CHESTPLATE));
         eq.setLeggings(cuero(Material.LEATHER_LEGGINGS));
         eq.setBoots(cuero(Material.LEATHER_BOOTS));
@@ -207,6 +253,117 @@ final class PeleaParca implements Runnable {
             it.setItemMeta(lm);
         }
         return it;
+    }
+
+    /**
+     * El cuerpo de NPC (como Rabby en EDM, BossFight.wearShell): un Mannequin con la skin de la
+     * cuenta cuerpo.skin encima del esqueleto invisible, que es quien pelea; los golpes que
+     * recibe el maniqui se los pasa Parca.onDanoCascara. Sale con el perfil sin resolver (un
+     * instante con la skin de serie) y en cuanto Mojang contesta, fuera del hilo principal, se
+     * le cambia la cara (reskin). Si algo falla, el esqueleto se vuelve visible y se viste: la
+     * PARCA nunca se queda sin cuerpo.
+     */
+    private void ponerCascara(Location l) {
+        perfil = Disguises.profileOfAccount(hc.plugin(), a.cuerpoSkin);
+        if (perfil != null) {
+            try {
+                cascara = l.getWorld().spawn(l, Mannequin.class, mq -> {
+                    mq.getPersistentDataContainer().set(Marcas.CASCARA, PersistentDataType.STRING,
+                            cuerpo.getUniqueId().toString());
+                    // Nada de esto se guarda: un reinicio no deja cuerpos sueltos por el mundo.
+                    mq.setPersistent(false);
+                    mq.setGravity(false);
+                    mq.setCollidable(false);
+                    mq.setSilent(true);
+                    mq.setImmovable(true);
+                    // Sin nombre propio: el cartel "Nv. X" lo pone MinionManager sobre el esqueleto.
+                    mq.setCustomNameVisible(false);
+                    try {
+                        // El maniqui trae de serie una segunda linea "NPC" bajo el nombre. Fuera.
+                        mq.setDescription(Component.empty());
+                    } catch (Throwable ignorado) {
+                        // Sin descripcion editable se ve la linea: feo, pero la pelea sigue.
+                    }
+                    mq.setProfile(perfil);
+                    Compat.setAttribute(mq, "scale", a.cuerpoEscala);
+                    EntityEquipment eq = mq.getEquipment();
+                    eq.setItemInMainHand(guadana());
+                    eq.setDropChance(EquipmentSlot.HAND, 0f);
+                });
+            } catch (Throwable t) {
+                cascara = null;
+            }
+        }
+        if (cascara == null || !cascara.isValid()) {
+            cascara = null;
+            volverAEsqueleto();
+            return;
+        }
+        pulsosCascara = 0;
+        // La skin de verdad sale de Mojang por la red: fuera del hilo principal y cacheada en
+        // EDM (la segunda PARCA desde el arranque ya la tiene al momento).
+        Disguises.resolveAccount(hc.plugin(), a.cuerpoSkin, this::reskin);
+    }
+
+    /** Llega la skin resuelta (hilo principal). La pelea puede haber acabado ya: entonces nada. */
+    private void reskin(ResolvableProfile resuelto) {
+        if (resuelto == null) return;
+        perfil = resuelto;
+        if (cascara != null && cascara.isValid()) cascara.setProfile(resuelto);
+    }
+
+    /** Sin maniqui (no se pudo, o alguien lo borro): el esqueleto se ve, a su escala y vestido. */
+    private void volverAEsqueleto() {
+        if (cuerpo == null || !cuerpo.isValid()) return;
+        cuerpo.setInvisible(false);
+        Compat.setAttribute(cuerpo, "scale", a.escala);
+        vestir(cuerpo, a);
+    }
+
+    /**
+     * Cada 2 ticks: el maniqui se pega al esqueleto. Mira a donde va el golpe durante un aviso
+     * (el cono de la Siega, la cadena) y, si no, a los ojos de su objetivo: que se sienta que
+     * te esta mirando. Si el maniqui ha desaparecido, vuelve el esqueleto.
+     */
+    private void seguirCascara() {
+        if (cascara == null) return;
+        if (!cascara.isValid()) {
+            cascara = null;
+            volverAEsqueleto();
+            return;
+        }
+        Location l = cuerpo.getLocation();
+        Player obj = objetivo();
+        if (actual != null && dir != null && dir.lengthSquared() > 1e-4) {
+            l.setDirection(dir);
+        } else if (obj != null && obj.getWorld() == l.getWorld()) {
+            Vector v = obj.getEyeLocation().toVector().subtract(cuerpo.getEyeLocation().toVector());
+            if (v.lengthSquared() > 1e-4) l.setDirection(v);
+        }
+        l.setPitch(Math.max(-30f, Math.min(30f, l.getPitch())));
+        cascara.teleport(l);
+        // El primer paquete a veces llega sin la skin (BossFight.wearShell): otra vez a los 2 ticks.
+        if (++pulsosCascara == 1 && perfil != null) cascara.setProfile(perfil);
+    }
+
+    /** Blande la guadana: el esqueleto (invisible) y el cuerpo que se ve. */
+    void blandir() {
+        if (cuerpo != null && cuerpo.isValid()) cuerpo.swingMainHand();
+        if (cascara != null && cascara.isValid()) cascara.swingMainHand();
+    }
+
+    /**
+     * Le han hecho dano de verdad (Parca.onDolor, MONITOR): el esqueleto es invisible y mudo,
+     * asi que el estremecimiento y el quejido los pone el cuerpo que se ve.
+     */
+    void dolor() {
+        if (cascara == null || !cascara.isValid()) return;
+        cascara.playHurtAnimation(0f);
+        Compat.sound(cascara.getWorld(), cascara.getLocation(), "entity.wither_skeleton.hurt", 0.9f, 0.55f);
+    }
+
+    boolean esCascara(Entity e) {
+        return e != null && cascara != null && cascara.getUniqueId().equals(e.getUniqueId());
     }
 
     /** Lo que ve un marcado al quedar marcado: titulo P-08; si iba montado, abajo. */
@@ -326,6 +483,7 @@ final class PeleaParca implements Runnable {
             }
         }
         if (estado == Estado.FIN) return;
+        seguirCascara();
         if (estado != Estado.COSECHA) revisarFase();
         presencia();
         if (ticks % 20 == 0) refrescarBarra();
@@ -589,7 +747,7 @@ final class PeleaParca implements Runnable {
         switch (h) {
             case SIEGA -> {
                 habDura = a.siegaAviso;
-                cuerpo.swingMainHand();
+                blandir();
                 Compat.sound(w, origen, "block.respawn_anchor.charge", 1.5f, 0.6f);
             }
             case UMBRAL -> {
@@ -606,7 +764,7 @@ final class PeleaParca implements Runnable {
             }
             case CORTEJO -> {
                 habDura = 30;
-                cuerpo.swingMainHand();
+                blandir();
                 Compat.sound(w, origen, "entity.vex.charge", 1.5f, 0.6f);
                 double base = Math.atan2(dir.getZ(), dir.getX());
                 for (int i = 0; i < 3; i++) {
@@ -1093,11 +1251,13 @@ final class PeleaParca implements Runnable {
         }
     }
 
-    /** Retira todo lo suyo (idempotente): barra, planideras, cuerpo y la pelea de la tarea de 2 ticks. */
+    /** Retira todo lo suyo (idempotente): barra, planideras, maniqui, cuerpo y la pelea de la tarea de 2 ticks. */
     void limpiar() {
         quitarBarra();
         for (Vex v : planideras) Fx.safeRemove(v);
         planideras.clear();
+        Fx.safeRemove(cascara);
+        cascara = null;
         Fx.safeRemove(cuerpo);
         rastro.clear();
         if (hc.amenazas() != null) hc.amenazas().quitarPelea(this);

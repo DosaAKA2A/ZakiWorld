@@ -347,8 +347,16 @@ hardcore:
     repeticiones-maximo: 4        # repeticiones que se cuentan como mucho
     ventana-repeticion-horas: 24
     tope-golpe-fraccion: 0.08     # ningun golpe le quita mas que esto de su vida logica
-    escala: 1.35
+    escala: 1.35                  # escala del esqueleto wither cuando NO lleva cuerpo de NPC
     velocidad: 0.28
+    # Cuerpo de NPC (1.1.1): un Mannequin con la skin de una cuenta real encima del esqueleto,
+    # que se vuelve invisible y sigue peleando debajo (como Rabby en EDM). La skin se pide a
+    # Mojang al invocarla (fuera del hilo principal) y se guarda en memoria: la primera PARCA
+    # tras el arranque sale un instante con la skin de serie. Nunca se guarda en el mundo.
+    cuerpo:
+      activo: true                # false = el esqueleto wither vestido de siempre
+      skin: Leonsaurusrex         # cuenta de Minecraft cuya skin lleva (3-16 letras, numeros o _)
+      escala: 1.4                 # tamano del cuerpo; 1 = un jugador. El esqueleto se ajusta solo
     siega: {espera: 6, espera-fase3: 5, angulo: 100, radio: 5, aviso-ticks: 24, vida: 0.20, tope: 0.60, cordura: 8}
     umbral: {espera: 8, distancia: 12, sin-vision-segundos: 4, sin-golpear-segundos: 5, aviso-ticks: 20}
     tiron: {espera: 12, distancia-minima: 6, distancia-maxima: 18, aviso-ticks: 20, rompe: 0.03, fuerza: 1.6}

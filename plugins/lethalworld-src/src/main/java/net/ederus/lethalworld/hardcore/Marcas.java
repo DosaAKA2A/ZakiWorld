@@ -38,6 +38,11 @@ public final class Marcas {
      * entidad para que un Eco que se descarga y vuelve siga sabiendo cuanta vida tiene.
      */
     public static final NamespacedKey VIDA_LOGICA = clave("vida_logica");
+    /**
+     * STRING uuid: el cuerpo visible (Mannequin con skin) de una amenaza, con el UUID de la
+     * entidad que pelea debajo. No es una amenaza: no recibe dano propio, lo pasa a su dueno.
+     */
+    public static final NamespacedKey CASCARA = clave("cascara");
 
     // ------------------------------------------------------------------ items (sec. 8.5)
     /** BYTE 1: copia visual del equipo de un Eco. Se borra si aparece como item. */
@@ -66,7 +71,7 @@ public final class Marcas {
 
     /** Todas, para el autotest (que ninguna se haya escrito con otro namespace). */
     static List<NamespacedKey> todas() {
-        return List.of(AMENAZA, PRESA, ECO, ECO_DUENO, DANO_JUGADOR, VIDA_LOGICA, ECO_COPIA, RELIQUIA, RELIQUIA_ID,
+        return List.of(AMENAZA, PRESA, ECO, ECO_DUENO, DANO_JUGADOR, VIDA_LOGICA, CASCARA, ECO_COPIA, RELIQUIA, RELIQUIA_ID,
                 RELIQUIA_ORIGEN, RELIQUIA_NACIO, RELIQUIA_ESPECIAL, RELIQUIA_NIVEL, RELIQUIA_MINIJEFE,
                 RELIQUIA_VALIDA, TROFEO, PRESTADO, LIGADO, TALISMAN, GRABADO, SALVOCONDUCTO);
     }

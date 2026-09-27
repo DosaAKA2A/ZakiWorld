@@ -14,6 +14,7 @@ import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.Item;
 import org.bukkit.entity.LivingEntity;
+import org.bukkit.entity.Mannequin;
 import org.bukkit.entity.Mob;
 import org.bukkit.entity.Player;
 import org.bukkit.entity.Projectile;
@@ -29,8 +30,11 @@ import org.bukkit.event.entity.EntityMountEvent;
 import org.bukkit.event.entity.EntityTargetLivingEntityEvent;
 import org.bukkit.event.entity.PlayerDeathEvent;
 import org.bukkit.event.player.PlayerFishEvent;
+import org.bukkit.event.player.PlayerInteractAtEntityEvent;
+import org.bukkit.event.player.PlayerInteractEntityEvent;
 import org.bukkit.event.vehicle.VehicleEnterEvent;
 import org.bukkit.inventory.ItemStack;
+import org.bukkit.persistence.PersistentDataType;
 import org.bukkit.scheduler.BukkitTask;
 import org.bukkit.util.Vector;
 
@@ -119,6 +123,10 @@ final class Parca implements Listener {
         final int cristalSegundos;
         final double cristalRadio;
         final String cabezaTextura, permisoExento;
+        /** Cuerpo de NPC (Mannequin con la skin de una cuenta) sobre el esqueleto invisible. */
+        final boolean cuerpoActivo;
+        final String cuerpoSkin;
+        final double cuerpoEscala;
         final int horasEntreCobros, esenciasBase, esenciasCada, ayudanteBase, ayudanteCada;
         final double participacionMinima, participacionPresa;
         final int gradoIII, gradoIV;
@@ -202,6 +210,9 @@ final class Parca implements Listener {
             cristalSegundos = s.getInt("cristal-segundos-marcado", 10);
             cristalRadio = s.getDouble("cristal-radio-marcado", 24);
             cabezaTextura = s.getString("cabeza-textura", "");
+            cuerpoActivo = s.getBoolean("cuerpo.activo", true);
+            cuerpoSkin = s.getString("cuerpo.skin", "Leonsaurusrex");
+            cuerpoEscala = Math.max(0.5, Math.min(3.0, s.getDouble("cuerpo.escala", 1.4)));
             permisoExento = s.getString("permiso-exento", "lethalworld.parca.exento");
             horasEntreCobros = s.getInt("botin.horas-entre-cobros", 24);
             participacionMinima = s.getDouble("botin.participacion-minima", 0.10);
@@ -350,6 +361,13 @@ final class Parca implements Listener {
     PeleaParca deCuerpo(Entity e) {
         if (e == null) return null;
         for (PeleaParca pe : peleas) if (pe.cuerpo != null && pe.cuerpo.getUniqueId().equals(e.getUniqueId())) return pe;
+        return null;
+    }
+
+    /** La pelea de un cuerpo que se ve (el maniqui con skin), o null. */
+    PeleaParca deCascara(Entity e) {
+        if (e == null) return null;
+        for (PeleaParca pe : peleas) if (pe.esCascara(e)) return pe;
         return null;
     }
 
@@ -1050,10 +1068,59 @@ final class Parca implements Listener {
         PeleaParca da = deCuerpo(autor);
         if (da != null) {
             da.haGolpeado();
+            // El esqueleto que golpea es invisible: el tajo lo tiene que dar el cuerpo que se ve.
+            da.blandir();
             return;
         }
         PeleaParca llora = dePlanidera(autor);
         if (llora != null) hc.cordura().sumar(v, -ajustes().planCordura);
+    }
+
+    /**
+     * El cuerpo que se ve (Mannequin con skin) no recibe dano propio: el golpe de un jugador
+     * pasa al esqueleto invisible con el mismo autor, y ahi Amenazas lo escala, lo topa y lo
+     * apunta para el botin (y onGolpe le aplica las planideras o la campanada). Lo demas
+     * (asfixia al subir del suelo, fuego, caidas, explosiones) se cancela sin mas. /kill pasa:
+     * si un admin lo mata, la pelea sigue con el esqueleto visible.
+     */
+    @EventHandler(priority = EventPriority.LOW, ignoreCancelled = true)
+    public void onDanoCascara(EntityDamageEvent e) {
+        if (!(e.getEntity() instanceof Mannequin mq)) return;
+        if (!mq.getPersistentDataContainer().has(Marcas.CASCARA, PersistentDataType.STRING)) return;
+        if (e.getCause() == EntityDamageEvent.DamageCause.KILL) return;
+        e.setCancelled(true);
+        Entity causa;
+        try {
+            causa = e.getDamageSource().getCausingEntity();
+        } catch (Throwable t) {
+            causa = null;
+        }
+        if (!(causa instanceof Player p)) return;
+        PeleaParca pe = deCascara(mq);
+        if (pe == null || pe.cuerpo == null || !pe.cuerpo.isValid() || pe.cuerpo.isDead()) return;
+        pe.cuerpo.damage(e.getDamage(), p);
+    }
+
+    /** Ni chapas, ni riendas, ni nada con clic derecho sobre el cuerpo que se ve. */
+    @EventHandler(ignoreCancelled = true)
+    public void onTocarCascara(PlayerInteractEntityEvent e) {
+        if (e.getRightClicked() instanceof Mannequin mq
+                && mq.getPersistentDataContainer().has(Marcas.CASCARA, PersistentDataType.STRING)) {
+            e.setCancelled(true);
+        }
+    }
+
+    @EventHandler(ignoreCancelled = true)
+    public void onTocarCascaraEn(PlayerInteractAtEntityEvent e) {
+        onTocarCascara(e);
+    }
+
+    /** Dano de verdad a la PARCA (ya escalado y topado): el cuerpo que se ve se estremece. */
+    @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
+    public void onDolor(EntityDamageEvent e) {
+        if (peleas.isEmpty() || e.getFinalDamage() <= 0 || !Marcas.esAmenaza(e.getEntity())) return;
+        PeleaParca pe = deCuerpo(e.getEntity());
+        if (pe != null) pe.dolor();
     }
 
     /** Los demas pueden pegarle, pero no la desvian: solo apunta a sus marcados (salvo en prueba). */
