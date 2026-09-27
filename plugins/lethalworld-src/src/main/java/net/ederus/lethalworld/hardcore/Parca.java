@@ -3,7 +3,6 @@ package net.ederus.lethalworld.hardcore;
 import net.ederus.edm.comun.Compat;
 import net.ederus.edm.comun.Fx;
 import net.kyori.adventure.text.Component;
-import net.kyori.adventure.text.format.NamedTextColor;
 import org.bukkit.Location;
 import org.bukkit.OfflinePlayer;
 import org.bukkit.World;
@@ -606,7 +605,7 @@ final class Parca implements Listener {
             if (!(e instanceof Mob mob) || !Huella.esMinijefe(e) || !m.equals(mob.getTarget())) continue;
             Compat.spawn(e.getWorld(), Compat.LARGE_SMOKE, e.getLocation().add(0, 1, 0), 30, 0.5, 1, 0.5, 0.02);
             e.remove();
-            hc.cordura().destello(m, Component.text("Hasta los grandes se apartan de ella.", NamedTextColor.GRAY), 3);
+            hc.cordura().destello(m, Component.text("Hasta los grandes se apartan de ella.", Paleta.TEXTO), 3);
             hc.plugin().bitacora().anotar("parca", "minijefe-retirado", m.getName());
         }
     }
@@ -714,7 +713,7 @@ final class Parca implements Listener {
                 "vehiculo " + (vehiculo ? "si" : "no"));
         telemetria("nace", pe, null, null);
         Component aviso = ComandoCalamity.mensaje(Component.text("Suena una campana. La Parca ha venido a por ")
-                .append(Component.text(p.getName(), NamedTextColor.WHITE)).append(Component.text(".")));
+                .append(Component.text(p.getName(), Paleta.DETALLE)).append(Component.text(".")));
         for (Player o : Fx.viewersNear(p.getLocation(), 128)) o.sendMessage(aviso);
         for (Player g : grupo) retirarMinijefes(g);
         return true;
@@ -971,8 +970,10 @@ final class Parca implements Listener {
                     "esencias " + pagadas + (pagadas != c.esencias() ? " (calculadas " + c.esencias() + ")" : ""),
                     "reliquia " + (reliquias.isEmpty() ? "-" : romano(c.grado())), c.id().equals(pe.presa) ? "presa" : "ayudante");
             if (online != null) {
-                online.sendMessage(ComandoCalamity.mensaje("La Parca te paga: +" + pagadas + " Esencias"
-                        + (reliquias.isEmpty() ? "" : ", y una Campana de la Parca") + "."));
+                online.sendMessage(ComandoCalamity.mensaje(Component.text("La Parca te paga: ")
+                        .append(Paleta.cifra("+" + pagadas + " Esencias"))
+                        .append(reliquias.isEmpty() ? Component.text(".")
+                                : Component.text(", y una ").append(Paleta.detalle("Campana de la Parca")).append(Component.text(".")))));
                 // Sangre fresca (M12): la cordura por la PARCA, con su tope de la Aduana.
                 Combate cb = hc.combate();
                 String idPelea = pe.cuerpo == null ? String.valueOf(pe.presa) : pe.cuerpo.getUniqueId().toString();
@@ -984,7 +985,7 @@ final class Parca implements Listener {
 
         if (!nombres.isEmpty()) {
             String quienes = lista(nombres);
-            Component anuncio = ComandoCalamity.mensaje(Component.text(quienes, NamedTextColor.WHITE)
+            Component anuncio = ComandoCalamity.mensaje(Component.text(quienes, Paleta.DETALLE)
                     .append(Component.text(nombres.size() == 1 ? " ha burlado a la Parca." : " han burlado a la Parca.")));
             for (Player o : hc.plugin().getServer().getOnlinePlayers()) {
                 if (primeraDelDia || hc.esHardcore(o)) o.sendMessage(anuncio);
@@ -1091,7 +1092,7 @@ final class Parca implements Listener {
     public void onMuerteJugador(PlayerDeathEvent e) {
         if (!segadosPorElla.remove(e.getEntity().getUniqueId())) return;
         e.deathMessage(Component.text(e.getEntity().getName() + " se quedó quieto en Calamity. La Parca se lo llevó.",
-                ComandoCalamity.ROJO));
+                Paleta.AVISO));
     }
 
     /**
@@ -1200,7 +1201,7 @@ final class Parca implements Listener {
         if (peleas.isEmpty() || !(e.getEntered() instanceof Player p) || !hc.esHardcore(p)) return;
         if (!persigue(p)) return;
         e.setCancelled(true);
-        hc.cordura().destello(p, Component.text("No hay barca que te lleve lejos de esto.", NamedTextColor.GRAY), 2);
+        hc.cordura().destello(p, Component.text("No hay barca que te lleve lejos de esto.", Paleta.TEXTO), 2);
     }
 
     @EventHandler(ignoreCancelled = true)
@@ -1208,7 +1209,7 @@ final class Parca implements Listener {
         if (peleas.isEmpty() || !(e.getEntity() instanceof Player p) || !hc.esHardcore(p)) return;
         if (!persigue(p)) return;
         e.setCancelled(true);
-        hc.cordura().destello(p, Component.text("No hay barca que te lleve lejos de esto.", NamedTextColor.GRAY), 2);
+        hc.cordura().destello(p, Component.text("No hay barca que te lleve lejos de esto.", Paleta.TEXTO), 2);
     }
 
     /** La cosecha es suya: lo que pesca un marcado no sale del agua. */
@@ -1277,17 +1278,17 @@ final class Parca implements Listener {
     }
 
     private void decir(CommandSender quien, String linea) {
-        quien.sendMessage(Component.text(linea, NamedTextColor.GRAY));
+        quien.sendMessage(Component.text(linea, Paleta.TENUE));
     }
 
     private void forzar(CommandSender quien, String[] args) {
         Player p = hc.plugin().getServer().getPlayerExact(args[1]);
         if (p == null) {
-            quien.sendMessage(Component.text("No encuentro a ese jugador.", NamedTextColor.RED));
+            quien.sendMessage(Component.text("No encuentro a ese jugador.", Paleta.AVISO));
             return;
         }
         if (!hc.esHardcore(p)) {
-            quien.sendMessage(Component.text(p.getName() + " no está en un mundo hardcore.", NamedTextColor.RED));
+            quien.sendMessage(Component.text(p.getName() + " no está en un mundo hardcore.", Paleta.AVISO));
             return;
         }
         int limite = hc.huella() == null ? 600 : hc.huella().ajustes().limite();
@@ -1295,11 +1296,11 @@ final class Parca implements Listener {
         try {
             s = args.length > 2 ? Integer.parseInt(args[2]) : limite;
         } catch (NumberFormatException ex) {
-            quien.sendMessage(Component.text("Segundos no válidos.", NamedTextColor.RED));
+            quien.sendMessage(Component.text("Segundos no válidos.", Paleta.AVISO));
             return;
         }
         if (hc.huella() == null) {
-            quien.sendMessage(Component.text("La Huella no está en marcha.", NamedTextColor.RED));
+            quien.sendMessage(Component.text("La Huella no está en marcha.", Paleta.AVISO));
             return;
         }
         hc.huella().forzar(p, Math.max(0, s));
@@ -1310,13 +1311,13 @@ final class Parca implements Listener {
 
     private void info(CommandSender quien, String[] args) {
         if (args.length < 3) {
-            quien.sendMessage(Component.text("Uso: /lw hardcore parca info <jugador>", NamedTextColor.RED));
+            quien.sendMessage(Component.text("Uso: /lw hardcore parca info <jugador>", Paleta.AVISO));
             return;
         }
         OfflinePlayer op = hc.plugin().getServer().getOfflinePlayerIfCached(args[2]);
         Player p = hc.plugin().getServer().getPlayerExact(args[2]);
         if (op == null && p == null) {
-            quien.sendMessage(Component.text("No encuentro a ese jugador.", NamedTextColor.RED));
+            quien.sendMessage(Component.text("No encuentro a ese jugador.", Paleta.AVISO));
             return;
         }
         UUID id = p != null ? p.getUniqueId() : op.getUniqueId();
@@ -1359,12 +1360,12 @@ final class Parca implements Listener {
         try {
             f = Double.parseDouble(args.length > 2 ? args[2] : "x");
         } catch (NumberFormatException ex) {
-            quien.sendMessage(Component.text("Uso: /lw hardcore parca vida <0-1>", NamedTextColor.RED));
+            quien.sendMessage(Component.text("Uso: /lw hardcore parca vida <0-1>", Paleta.AVISO));
             return;
         }
         PeleaParca pe = masCercana(quien);
         if (pe == null) {
-            quien.sendMessage(Component.text("No hay ninguna Parca viva.", NamedTextColor.RED));
+            quien.sendMessage(Component.text("No hay ninguna Parca viva.", Paleta.AVISO));
             return;
         }
         hc.amenazas().ponerFraccion(pe.cuerpo, Math.max(0.01, Math.min(1, f)));
@@ -1394,7 +1395,7 @@ final class Parca implements Listener {
             Player p = hc.plugin().getServer().getPlayerExact(args[2]);
             PeleaParca pe = p == null ? null : de(p.getUniqueId());
             if (pe == null) {
-                quien.sendMessage(Component.text("Ese jugador no tiene ninguna Parca encima.", NamedTextColor.RED));
+                quien.sendMessage(Component.text("Ese jugador no tiene ninguna Parca encima.", Paleta.AVISO));
                 return;
             }
             cuales.add(pe);
@@ -1407,7 +1408,7 @@ final class Parca implements Listener {
 
     private void prueba(CommandSender quien, String[] args) {
         if (args.length < 5) {
-            quien.sendMessage(Component.text("Uso: /lw hardcore parca prueba <x> <y> <z> [N]", NamedTextColor.RED));
+            quien.sendMessage(Component.text("Uso: /lw hardcore parca prueba <x> <y> <z> [N]", Paleta.AVISO));
             return;
         }
         World w = null;
@@ -1418,7 +1419,7 @@ final class Parca implements Listener {
             if (w != null) break;
         }
         if (w == null) {
-            quien.sendMessage(Component.text("No hay ningún mundo hardcore cargado.", NamedTextColor.RED));
+            quien.sendMessage(Component.text("No hay ningún mundo hardcore cargado.", Paleta.AVISO));
             return;
         }
         double x, y, z;
@@ -1429,7 +1430,7 @@ final class Parca implements Listener {
             z = Double.parseDouble(args[4]);
             n = args.length > 5 ? Integer.parseInt(args[5]) : 50;
         } catch (NumberFormatException ex) {
-            quien.sendMessage(Component.text("Coordenadas o nivel no válidos.", NamedTextColor.RED));
+            quien.sendMessage(Component.text("Coordenadas o nivel no válidos.", Paleta.AVISO));
             return;
         }
         Ajustes a = ajustes();
@@ -1439,7 +1440,7 @@ final class Parca implements Listener {
         // Sin presa: N tal cual (sin el extra-nivel, que ya lo pone quien prueba), r = 0, M = 0.
         PeleaParca pe = PeleaParca.crear(this, a, null, "prueba", List.of(), n, 0, 0, sitio, true, 1.0, 1);
         if (pe == null) {
-            quien.sendMessage(Component.text("parca | prueba | no ha salido (spawn cancelado o chunk sin cargar)", NamedTextColor.RED));
+            quien.sendMessage(Component.text("parca | prueba | no ha salido (spawn cancelado o chunk sin cargar)", Paleta.AVISO));
             return;
         }
         peleas.add(pe);

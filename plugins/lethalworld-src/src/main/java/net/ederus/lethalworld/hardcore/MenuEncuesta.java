@@ -91,7 +91,7 @@ final class MenuEncuesta implements Listener {
 
     void abrir(Player p, Encuesta.Pregunta q) {
         if (q == null) return;
-        Component titulo = Paleta.calido(q.fija() ? "¿Qué quieres que dé Calamity?" : "Calamity pregunta");
+        Component titulo = Paleta.ventana(q.fija() ? "¿Qué quieres que dé Calamity?" : "Calamity pregunta");
         Inventory inv = hc.plugin().getServer().createInventory(new Marca(q.id(), false), 9, titulo);
 
         int premio = Math.max(0, hc.cfg().getInt("encuesta.premio-esencias", 1));

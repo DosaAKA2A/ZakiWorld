@@ -4,8 +4,6 @@ import net.ederus.edm.comun.Compat;
 import net.ederus.edm.comun.Fx;
 import net.ederus.edm.comun.Plataforma;
 import net.kyori.adventure.text.Component;
-import net.kyori.adventure.text.format.NamedTextColor;
-import net.kyori.adventure.title.Title;
 import org.bukkit.Input;
 import org.bukkit.Location;
 import org.bukkit.Material;
@@ -504,7 +502,7 @@ final class Huella implements Listener {
         if (nivel < r.avisoDado) {
             // Se ha movido de verdad. Solo se le dice si ya habia oido la segunda campana.
             if (nivel == 0 && r.avisoDado >= 2) {
-                hc.cordura().destello(p, Component.text("Las campanas callan.", NamedTextColor.GRAY), 2);
+                hc.cordura().destello(p, Component.text("Las campanas callan.", Paleta.TEXTO), 2);
                 p.playSound(p.getLocation(), "block.amethyst_block.chime", SoundCategory.HOSTILE, 1f, 1.4f);
                 telemetria(p, q, true);
             }
@@ -525,7 +523,8 @@ final class Huella implements Listener {
         }
         if (nivel >= 5) {
             int queda = Math.max(1, a.limite() - q - (r.segundos % a.muestra()));
-            hc.cordura().destello(p, Component.text("La Parca · " + queda + " s", ComandoCalamity.ROJO), 1);
+            hc.cordura().destello(p, Paleta.muerte("La Parca").append(Component.text(" · ", Paleta.SEPARADOR))
+                    .append(Component.text(queda + " s", Paleta.CIFRA)), 1);
             if (r.segundos % 5 == 0) {
                 double t = Math.max(0, Math.min(1, (q - av[4]) / (double) Math.max(1, a.limite() - av[4])));
                 Compat.sound(p.getWorld(), p.getLocation(), "block.bell.use", 1.2f, (float) (0.9 - 0.4 * t));
@@ -536,11 +535,11 @@ final class Huella implements Listener {
     private void aviso(Player p, Rastro r, int nivel, Ajustes a) {
         switch (nivel) {
             case 1 -> {
-                hc.cordura().destello(p, Component.text("Algo empieza a contar tus respiraciones.", NamedTextColor.GRAY), 3);
+                hc.cordura().destello(p, Component.text("Algo empieza a contar tus respiraciones.", Paleta.TEXTO), 3);
                 p.playSound(p.getLocation(), "block.bell.resonate", SoundCategory.HOSTILE, 0.3f, 0.5f);
             }
             case 2 -> {
-                hc.cordura().destello(p, Component.text("Una campana suena por ti.", NamedTextColor.GRAY), 3);
+                hc.cordura().destello(p, Component.text("Una campana suena por ti.", Paleta.TEXTO), 3);
                 p.playSound(p.getLocation(), "block.bell.resonate", SoundCategory.HOSTILE, 0.5f, 0.5f);
                 p.playSound(p.getLocation(), "block.bell.resonate", SoundCategory.HOSTILE, 0.5f, 0.6f);
             }
@@ -550,9 +549,8 @@ final class Huella implements Listener {
                 pintarHuella(p, r, a);
             }
             case 4 -> {
-                p.showTitle(Title.title(Component.text("Muévete", ComandoCalamity.ROJO),
-                        Component.text("Viene la Parca", NamedTextColor.GRAY),
-                        Title.Times.times(Duration.ofMillis(250), Duration.ofSeconds(3), Duration.ofMillis(750))));
+                p.showTitle(Paleta.titulo(Paleta.muerte("Muévete"), "Viene la Parca",
+                        Duration.ofMillis(250), Duration.ofSeconds(3), Duration.ofMillis(750)));
                 ponerCampana(p);
                 // La oyen los de alrededor (volumen 1 = 16 bloques): el AFK se vuelve presa de los demas.
                 Compat.sound(p.getWorld(), p.getLocation(), "block.bell.use",

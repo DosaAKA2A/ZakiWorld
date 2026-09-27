@@ -152,7 +152,7 @@ final class Tablero implements Listener {
             return;
         }
         calcular();
-        Inventory inv = hc.plugin().getServer().createInventory(new Marca(), 27, Paleta.calido("Tablero de Calamity"));
+        Inventory inv = hc.plugin().getServer().createInventory(new Marca(), 27, Paleta.ventana("Tablero de Calamity"));
 
         inv.setItem(0, MenuUtil.icon(Material.ECHO_SHARD, Component.text("Ecos con botín", VERDE),
                 List.of(MenuUtil.line("Los que más Reliquias guardan."), MenuUtil.line("Sin coordenadas: búscalos.")), false));
