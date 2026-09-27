@@ -29,9 +29,6 @@ permissions:
   lethalworld.calamity:
     description: /calamity para los jugadores
     default: true
-  lethalworld.parca.exento:
-    description: Staff en vanish - la Huella no cuenta y la Parca no viene
-    default: false
-  lethalworld.aduana.exento:
-    description: Salta la comparacion de huella de IP (hermanos en la misma casa)
-    default: false
+  # lethalworld.parca.exento y lethalworld.aduana.exento ya no existen (1.1.1): con el
+  # comodin "*" de LuckPerms todo el staff los heredaba. Las exenciones van a mano, una a una:
+  # /lw hardcore exento <jugador> <parca|aduana|todo> <on|off> (se guardan en hardcore-datos.yml).

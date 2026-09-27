@@ -203,7 +203,8 @@ final class Encuesta {
             return;
         }
         UUID u = p.getUniqueId();
-        String huella = p.hasPermission("lethalworld.aduana.exento") ? "" : huella(p);
+        // Exento de la Aduana a mano (hermanos en la misma casa): vota solo por su UUID.
+        String huella = hc.exentos() != null && hc.exentos().aduana(u) ? "" : huella(p);
         Voto r = registrar(hc.datos(), q, activa(), semana(), opcion, u, huella, haTasado(u), rango(p), texto,
                 System.currentTimeMillis());
         switch (r) {

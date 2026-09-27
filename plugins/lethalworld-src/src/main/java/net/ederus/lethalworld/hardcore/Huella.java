@@ -86,7 +86,7 @@ final class Huella implements Listener {
                    int maxCeldas, double radio, double vehiculoPorcentaje, int vehiculoLado,
                    int vehiculoMuestrasMinimas, int congelarSegundos, double congelarDanoMinimo,
                    int pausaMaxima, int pausaVentanaMinutos, int reconexionMinutos, int graciaMinutos,
-                   String permisoExento, int[] avisos, double radioCampanaAjena) {
+                   int[] avisos, double radioCampanaAjena) {
 
         static Ajustes de(ConfigurationSection s) {
             if (s == null) s = new YamlConfiguration();
@@ -112,7 +112,6 @@ final class Huella implements Listener {
                     Math.max(1, s.getInt("pausa-ventana-minutos", 10)),
                     s.getInt("reconexion-minutos", 30),
                     s.getInt("gracia-minutos", 5),
-                    s.getString("permiso-exento", "lethalworld.parca.exento"),
                     avisos,
                     s.getDouble("radio-campana-ajena", 48));
         }
@@ -459,7 +458,8 @@ final class Huella implements Listener {
     }
 
     /**
-     * No cuenta (DIS sec. 1.2.6): permiso de exento (staff en vanish), quien ya tiene una
+     * No cuenta (DIS sec. 1.2.6): exento a mano (/lw hardcore exento, ya no por permiso: con
+     * el comodin de LuckPerms todo el staff quedaba inmune), quien ya tiene una
      * PARCA encima, quien esta en la llegada protegida, la gracia tras una PARCA y los
      * muertos y quien canaliza el Cristal (DIS). Espectador y creativo ya los filtra
      * Hardcore.tick (cuenta).
@@ -468,7 +468,7 @@ final class Huella implements Listener {
         if (p.isDead() || ahora < r.graciaHasta) return true;
         // Canalizando el Cristal se esta quieto a proposito: son 5-10 s y luego sale.
         if (hc.canalizando(p)) return true;
-        if (a.permisoExento() != null && !a.permisoExento().isEmpty() && p.hasPermission(a.permisoExento())) return true;
+        if (hc.exentos() != null && hc.exentos().parca(p.getUniqueId())) return true;
         if (hc.parca() != null && hc.valor("parca", () -> hc.parca().persigue(p), false)) return true;
         return hc.combate() != null && hc.valor("combate", () -> hc.combate().protegido(p), false);
     }

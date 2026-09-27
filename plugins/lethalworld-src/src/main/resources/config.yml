@@ -329,7 +329,8 @@ hardcore:
     pausa-ventana-minutos: 10     # ...por esta ventana (cierra a los alts que se pegan)
     reconexion-minutos: 30        # la huella se guarda en memoria tras desconectarse
     gracia-minutos: 5             # sin contar tras acabar una Parca
-    permiso-exento: "lethalworld.parca.exento"
+    # Exentos de la Huella y la PARCA: ya no por permiso (el comodin de LuckPerms se lo daba
+    # a todo el staff), sino a mano con /lw hardcore exento <jugador> parca on.
     avisos: [300, 420, 510, 540, 570]   # segundos de quietud de cada aviso
     radio-campana-ajena: 48       # a cuanto oyen los demas la campana del aviso de 540
     radio-marca-grupo: 24         # quien este a esto...

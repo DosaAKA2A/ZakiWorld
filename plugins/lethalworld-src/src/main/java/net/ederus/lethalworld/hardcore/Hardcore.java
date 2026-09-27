@@ -114,6 +114,7 @@ public final class Hardcore implements Listener {
     private Telemetria telemetria;
     private Estadisticas estadisticas;
     private Calendario calendario;
+    private Exentos exentos;
     private Aduana aduana;
     private Saldo saldo;
     private Creditos creditos;
@@ -174,6 +175,8 @@ public final class Hardcore implements Listener {
     Telemetria telemetria() { return telemetria; }
     Estadisticas estadisticas() { return estadisticas; }
     Calendario calendario() { return calendario; }
+    /** Exenciones puestas a mano (parca, aduana); null con las reglas apagadas. */
+    Exentos exentos() { return exentos; }
     Aduana aduana() { return aduana; }
     Saldo saldo() { return saldo; }
     Creditos creditos() { return creditos; }
@@ -289,6 +292,8 @@ public final class Hardcore implements Listener {
         telemetria = crear("telemetria", () -> new Telemetria(this));
         estadisticas = crear("estadisticas", () -> new Estadisticas(this));
         calendario = crear("calendario", () -> new Calendario(this));
+        // Antes que la Aduana y la Huella, que la consultan (solo lee datos: no para nada).
+        exentos = crear("exentos", () -> new Exentos(this));
         aduana = crear("aduana", () -> new Aduana(this));
         saldo = crear("saldo", () -> new Saldo(this));
         creditos = crear("creditos", () -> new Creditos(this));

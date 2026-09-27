@@ -708,8 +708,7 @@ final class PeleaParca implements Runnable {
             Player m = hc.plugin().getServer().getPlayer(id);
             if (m == null) continue;     // desconectado: lo resuelve alDesconectar
             boolean esPresa = id.equals(presa);
-            boolean exento = !hc.cuenta(m) || (a.permisoExento != null && !a.permisoExento.isEmpty()
-                    && m.hasPermission(a.permisoExento));
+            boolean exento = !hc.cuenta(m) || gestor.exento(m);
             if (exento) {
                 if (esPresa) {
                     irse("exento", null);

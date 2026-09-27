@@ -279,9 +279,13 @@ final class Aduana {
         return ComandoCalamity.mensaje("Esa muerte no cuenta: Calamity reconoce a los tuyos.");
     }
 
-    private static boolean exento(OfflinePlayer o) {
-        Player p = o.getPlayer();
-        return p != null && p.hasPermission("lethalworld.aduana.exento");
+    /**
+     * Exento a mano de la comparacion de huella (/lw hardcore exento <jugador> aduana on).
+     * Antes era el permiso lethalworld.aduana.exento, que el comodin de LuckPerms daba a todo
+     * el staff. Vale tambien desconectado.
+     */
+    private boolean exento(OfflinePlayer o) {
+        return hc.exentos() != null && hc.exentos().aduana(o.getUniqueId());
     }
 
     /** Horas jugadas en el servidor (Statistic.PLAY_ONE_MINUTE va en ticks: 72.000 por hora). */
@@ -753,7 +757,7 @@ final class Aduana {
         cu.apuntarEntrada(b, "aaaa000000000001", t0);
         cu.apuntarEntrada(x, "bbbb000000000002", t0);
         h.igual("misma huella -> no vale", "huella", cu.motivo(c, a, b, 20, 20, false, t0));
-        h.igual("con el permiso de exento si vale", "", cu.motivo(c, a, b, 20, 20, true, t0));
+        h.igual("exento a mano si vale", "", cu.motivo(c, a, b, 20, 20, true, t0));
         h.igual("menos de 10 h -> no vale", "horas", cu.motivo(c, a, x, 20, 9.9, false, t0));
         h.igual("distintos y con horas -> vale", "", cu.motivo(c, a, x, 10, 12, false, t0));
         h.igual("la misma cuenta nunca", "misma-cuenta", cu.motivo(c, a, a, 20, 20, false, t0));

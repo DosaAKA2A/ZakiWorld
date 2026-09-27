@@ -130,7 +130,7 @@ final class Parca implements Listener {
         final int tierraSegadaMinutos, marcaFuera, pendienteHoras, esperaDesconexion, reapareceSegundos;
         final int cristalSegundos;
         final double cristalRadio;
-        final String cabezaTextura, permisoExento;
+        final String cabezaTextura;
         /** Cuerpo de NPC (Mannequin con la skin de una cuenta) sobre el esqueleto invisible. */
         final boolean cuerpoActivo;
         final String cuerpoSkin;
@@ -225,7 +225,6 @@ final class Parca implements Listener {
             cuerpoActivo = s.getBoolean("cuerpo.activo", true);
             cuerpoSkin = s.getString("cuerpo.skin", "Leonsaurusrex");
             cuerpoEscala = Math.max(0.5, Math.min(3.0, s.getDouble("cuerpo.escala", 1.4)));
-            permisoExento = s.getString("permiso-exento", "lethalworld.parca.exento");
             horasEntreCobros = s.getInt("botin.horas-entre-cobros", 24);
             participacionMinima = s.getDouble("botin.participacion-minima", 0.10);
             participacionPresa = s.getDouble("botin.participacion-presa", 0.25);
@@ -690,7 +689,7 @@ final class Parca implements Listener {
         List<Player> grupo = new ArrayList<>();
         grupo.add(p);
         for (Player o : p.getWorld().getPlayers()) {
-            if (o.equals(p) || !hc.cuenta(o) || persigue(o) || exento(o, a)) continue;
+            if (o.equals(p) || !hc.cuenta(o) || persigue(o) || exento(o)) continue;
             if (o.getLocation().distanceSquared(p.getLocation()) > a.radioMarcaGrupo * a.radioMarcaGrupo) continue;
             if (hc.huella() != null && hc.huella().quieto(o) >= a.quietoMarcaGrupo) grupo.add(o);
         }
@@ -719,8 +718,9 @@ final class Parca implements Listener {
         return true;
     }
 
-    private boolean exento(Player p, Ajustes a) {
-        return a.permisoExento != null && !a.permisoExento.isEmpty() && p.hasPermission(a.permisoExento);
+    /** Exento a mano de la PARCA (/lw hardcore exento; ningun permiso lo concede). */
+    boolean exento(Player p) {
+        return hc.exentos() != null && hc.exentos().parca(p.getUniqueId());
     }
 
     private int nivelCalamity(Player p) {
