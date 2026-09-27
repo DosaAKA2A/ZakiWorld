@@ -107,9 +107,9 @@ public final class ComandoCalamidad implements TabExecutor {
                     return true;
                 }
                 String cual = args.length >= 2 ? args[1].toLowerCase(Locale.ROOT) : "";
-                if (!cual.equals("entrada") && !cual.equals("salida")) {
+                if (!cual.equals("entrada") && !cual.equals("salida") && !cual.equals("spawn")) {
                     decir(q, Component.text("Dime cuál: ", NamedTextColor.RED)
-                            .append(Component.text("/calamidad define entrada|salida", MARCA)));
+                            .append(Component.text("/calamidad define entrada|salida|spawn", MARCA)));
                     return true;
                 }
                 String hecho = hc.vara().definir(p, cual);
@@ -118,7 +118,8 @@ public final class ComandoCalamidad implements TabExecutor {
                             NamedTextColor.RED));
                     return true;
                 }
-                decir(q, Component.text("Puerta de " + cual + ": ", NamedTextColor.GREEN)
+                decir(q, Component.text(cual.equals("spawn") ? "Zona spawn (Grieta): " : "Puerta de " + cual + ": ",
+                        NamedTextColor.GREEN)
                         .append(Component.text(hecho, MARCA)));
             }
             case "entrada", "llegada", "salida", "puerta-salida" -> {
@@ -211,6 +212,7 @@ public final class ComandoCalamidad implements TabExecutor {
         linea(q, "Mundos", String.join(", ", hc.mundos()));
         linea(q, "puerta de entrada", hc.vara().describir("entrada"));
         linea(q, "puerta de salida", hc.vara().describir("salida"));
+        linea(q, "zona spawn (Grieta)", hc.vara().describir("spawn"));
         for (String punto : List.of("llegada", "salida")) {
             var donde = hc.punto(punto);
             linea(q, punto == "llegada" ? "aparece en" : "vuelve a",
@@ -219,7 +221,7 @@ public final class ComandoCalamidad implements TabExecutor {
                             + donde.getBlockY() + " " + donde.getBlockZ());
         }
         linea(q, "/calamidad wand", "la vara: dos esquinas marcan la puerta");
-        linea(q, "/calamidad define entrada|salida", "guarda esa caja como puerta");
+        linea(q, "/calamidad define entrada|salida|spawn", "guarda esa caja como puerta o como zona spawn");
         linea(q, "/calamidad llegada", "marca aquí donde aparece el que entra");
         linea(q, "/calamidad salida", "marca aquí a dónde se vuelve");
         linea(q, "/calamidad frasco|cristal|esencia [player]", "entrega uno");
@@ -287,7 +289,7 @@ public final class ComandoCalamidad implements TabExecutor {
         } else if (args.length >= 2 && Subcomandos.lw().nombres(q).contains(args[0].toLowerCase(Locale.ROOT))) {
             op.addAll(Subcomandos.lw().tab(q, args));
         } else if (args.length == 2 && args[0].equalsIgnoreCase("define")) {
-            op.addAll(List.of("entrada", "salida"));
+            op.addAll(List.of("entrada", "salida", "spawn"));
         } else if (args.length == 2 && (args[0].equalsIgnoreCase("level")
                 || List.of("frasco", "cristal", "esencia", "cordura", "tiempo")
                         .contains(args[0].toLowerCase(Locale.ROOT)))) {

@@ -174,7 +174,9 @@ hardcore:
   # Las dos PUERTAS. Ya no son puntos con radio: son CAJAS, porque una esfera no
   # encaja en un marco construido. Se marcan con la vara (/lw hardcore wand: golpe
   # = esquina 1, clic derecho = esquina 2) y se guardan con
-  # /lw hardcore define entrada|salida. Las escribe el plugin, no hace falta tocarlo.
+  # /calamidad define entrada|salida. Las escribe el plugin, no hace falta tocarlo.
+  # 1.1.0: aqui va tambien la zona SPAWN (/calamidad define spawn), la caja donde el
+  # AFK dura 5 minutos y acaba en la Grieta (ver parca.spawn).
   puertas: {}
 
   # Donde aparece el que entra. Se pone con /lw hardcore llegada dentro de Calamity.
@@ -328,7 +330,7 @@ hardcore:
     cuerpo:
       activo: true                # false = el esqueleto wither vestido de siempre
       skin: Leonsaurusrex         # cuenta de Minecraft cuya skin lleva (3-16 letras, numeros o _)
-      escala: 1.4                 # tamano del cuerpo; 1 = un jugador. El esqueleto se ajusta solo
+      escala: 1.68                # tamano del cuerpo; 1 = un jugador. El esqueleto (su caja) se ajusta solo
     # aviso-ticks: lo que dura el aviso de cada habilidad antes del golpe (20 ticks = 1 s).
     # 1.1.1 los alarga (Siega 24 -> 30, Paso Umbral y Tiron 20 -> 24): se ven mejor y dan el
     # mismo tiempo de reaccion o mas; bajarlos hace la pelea mas injusta, no mas dificil.
@@ -387,6 +389,34 @@ hardcore:
     # [alineado] PLAN 3.2: Campana solo al top-3 de dano; +25 % por participante desde el 2.o
     campana: {solo-top: 3}
     grupo: {extra-por-participante: 0.25, maximo-extra: 4}
+    # 1.1.0 · La PARCA es tambien una anomalia DIOS de EDM (/anomaly: menu, start parca, here
+    # parca, test pa_...). Cuando la Huella la llama y EDM esta libre, viene esa: cuatro fases,
+    # quince tecnicas, cambios de fase con escena. Si EDM ya tiene otra anomalia abierta (o no
+    # esta su modulo, o se apaga aqui o en su menu) viene la de reserva, la de 1.1.1.
+    # Vida y golpe salen de las formulas de arriba (N, r, M), no del ajuste de vida de EDM.
+    # El botin es el de arriba, por la Aduana: la experiencia y las MobCoins que EDM daria
+    # por 'parca' se dejan a 0 solas (su tabla de botin tiene que quedarse vacia).
+    anomalia:
+      activa: true                # false = siempre la de reserva
+      nivel-sin-presa: 50         # N de la que se abre a mano sin nadie cerca (con gente: la de ellos + extra-nivel)
+      ambiente: true              # lluvia en la fase III y noche en la IV, solo para quien este a 48
+      anuncio-global: false       # true = la de un AFK se anuncia a todo el servidor como las demas anomalias
+                                  # (titulo y coordenadas a todos); false = solo la campana a 128 bloques
+      dano: 1.0                   # multiplica el dano de sus tecnicas (se suma al "dano" de /anomaly menu)
+      apagadas: []                # tecnicas que no usa: pa_siega, pa_tajos, pa_acecho, pa_acometida, pa_umbral,
+                                  # pa_tiron, pa_cortejo, pa_guadanas, pa_salto, pa_embestida, pa_umbrales,
+                                  # pa_lluvia, pa_muros, pa_anillo, pa_sentencia
+      esperas: {}                 # segundos entre usos por tecnica, p. ej. {pa_lluvia: 20, pa_muros: 30}
+    # 1.1.0 · La GRIETA: quieto en la zona spawn (hardcore.puertas.spawn) no se espera a los
+    # 10 minutos: a los "minutos" se abre una grieta, se lo traga y lo escupe en un sitio
+    # seguro al azar a distancia-min..distancia-max del spawn, y alli le aparece la PARCA.
+    # Los avisos previos salen igual, a la misma proporcion, con su propio texto.
+    spawn:
+      activa: true
+      minutos: 5                  # no puede pasar de "minutos" (la Huella no mide mas)
+      distancia-min: 600
+      distancia-max: 1500
+      intentos: 12                # puntos al azar que prueba antes de rendirse (entonces viene alli mismo)
 
   # ------------------------------------------------------------------ 2. EL ECO
   eco:

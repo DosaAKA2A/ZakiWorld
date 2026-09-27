@@ -85,11 +85,14 @@ final class Huella implements Listener {
     private final Map<UUID, ItemDisplay> campanas = new HashMap<>();
     private Ajustes ajustes;
     private long ajustesLeidos;
+    /** Calamity 1.1.0: el AFK en la zona spawn (5 min y la Grieta en vez de 10 y la PARCA alli mismo). */
+    private final Grieta grieta;
 
     Huella(Hardcore hc) {
         this.hc = hc;
         hc.plugin().getServer().getPluginManager().registerEvents(this, hc.plugin());
         Autotest.registrar("huella", Huella::autotest);
+        grieta = new Grieta(hc);
     }
 
     // ================================================================== nucleo
@@ -650,7 +653,17 @@ final class Huella implements Listener {
      */
     private void avisos(Player p, Rastro r, Ajustes a) {
         int q = r.quieto;
-        if (q >= a.limite()) {
+        // Calamity 1.1.0: en la zona spawn el limite y los avisos son los de la Grieta (parca.spawn).
+        Grieta.Umbral u = grieta.umbral(p, a);
+        if (q >= u.limite() && u.spawn()) {
+            boolean abierta = hc.valor("parca", () -> grieta.abrir(p, r.celdasDistintas()), false);
+            if (abierta) {
+                quitarCampana(p.getUniqueId());
+                r.avisoDado = 0;
+            }
+            return;
+        }
+        if (q >= u.limite()) {
             // Llega (sec. 1.4). Si el tope global esta lleno, quieto se queda arriba y se
             // vuelve a intentar cada segundo: la cita no se pierde.
             if (hc.parca() != null) {
@@ -663,7 +676,7 @@ final class Huella implements Listener {
             }
             return;
         }
-        int[] av = a.avisos();
+        int[] av = u.avisos();
         int nivel = 0;
         while (nivel < av.length && q >= av[nivel]) nivel++;
 
@@ -678,7 +691,7 @@ final class Huella implements Listener {
             r.avisoDado = nivel;
         } else if (nivel > r.avisoDado) {
             r.avisoDado = nivel;
-            aviso(p, r, nivel, a);
+            aviso(p, r, nivel, a, u.spawn());
             telemetria(p, q, false);
         }
 
@@ -690,17 +703,24 @@ final class Huella implements Listener {
             }
         }
         if (nivel >= 5) {
-            int queda = Math.max(1, a.limite() - q - (r.segundos % a.muestra()));
-            hc.cordura().destello(p, Paleta.muerte("La Parca").append(Component.text(" · ", Paleta.SEPARADOR))
+            int queda = Math.max(1, u.limite() - q - (r.segundos % a.muestra()));
+            hc.cordura().destello(p, Paleta.muerte(u.spawn() ? "La Grieta" : "La Parca").append(Component.text(" · ", Paleta.SEPARADOR))
                     .append(Component.text(queda + " s", Paleta.CIFRA)), 1);
             if (r.segundos % 5 == 0) {
-                double t = Math.max(0, Math.min(1, (q - av[4]) / (double) Math.max(1, a.limite() - av[4])));
+                double t = Math.max(0, Math.min(1, (q - av[4]) / (double) Math.max(1, u.limite() - av[4])));
                 Compat.sound(p.getWorld(), p.getLocation(), "block.bell.use", 1.2f, (float) (0.9 - 0.4 * t));
             }
         }
     }
 
-    private void aviso(Player p, Rastro r, int nivel, Ajustes a) {
+    private void aviso(Player p, Rastro r, int nivel, Ajustes a, boolean spawn) {
+        if (spawn) {
+            // Calamity 1.1.0: en el spawn los mismos cinco avisos con su propio texto (Grieta.aviso).
+            grieta.aviso(p, nivel, a.radioCampanaAjena());
+            if (nivel == 3) pintarHuella(p, r, a);
+            if (nivel == 4) ponerCampana(p);
+            return;
+        }
         switch (nivel) {
             case 1 -> {
                 hc.cordura().destello(p, Component.text("Algo empieza a contar tus respiraciones.", Paleta.TEXTO), 3);
@@ -880,9 +900,10 @@ final class Huella implements Listener {
         Rastro r = rastro(p);
         r.forzar(segundos, l.getX(), l.getY(), l.getZ(), a);
         r.graciaHasta = 0;
-        // Los avisos ya pasados no se repiten: se dan por dados hasta ese punto.
+        // Los avisos ya pasados no se repiten: se dan por dados hasta ese punto (los del spawn, dentro).
+        int[] av = grieta.umbral(p, a).avisos();
         int nivel = 0;
-        while (nivel < a.avisos().length && r.quieto >= a.avisos()[nivel]) nivel++;
+        while (nivel < av.length && r.quieto >= av[nivel]) nivel++;
         r.avisoDado = nivel;
     }
 
@@ -898,10 +919,12 @@ final class Huella implements Listener {
                 + " | pausa " + r.pausaUsada(ahora, a) + "/" + a.pausaMaxima() + " s"
                 + " | por interaccion " + r.muestrasPorInteraccion
                 + (ahora < r.graciaHasta ? " | gracia " + (r.graciaHasta - ahora) / 1000 + " s" : "")
-                + " | modo " + (a.modoBloque() ? "bloque" : "huella");
+                + " | modo " + (a.modoBloque() ? "bloque" : "huella")
+                + (grieta.enSpawn(p) ? " | spawn: limite " + grieta.umbral(p, a).limite() + " s (Grieta)" : "");
     }
 
     void parar() {
+        grieta.parar();
         for (UUID id : new ArrayList<>(campanas.keySet())) quitarCampana(id);
         rastros.clear();
         aparcadas.vaciar();
