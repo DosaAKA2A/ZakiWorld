@@ -16,7 +16,6 @@ import org.bukkit.scheduler.BukkitTask;
 
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
@@ -25,6 +24,8 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.logging.Level;
 
 /**
  * M17 · Rankings semanales y placeholders (DIS M17, PLAN sec. 7.3).
@@ -43,7 +44,10 @@ import java.util.UUID;
  *
  * Los tops de los placeholders se recalculan en esa misma tarea y se sirven de una cache
  * inmutable: PlaceholderAPI pregunta desde otros hilos y no puede leer hardcore-datos.yml
- * mientras el reloj escribe (DIS M17: "nunca dentro de la peticion").
+ * mientras el reloj escribe (DIS M17: "nunca dentro de la peticion"). Desde 1.3.2 son
+ * clasificaciones enteras (Tops): el top 10 con nombre y el puesto de cualquiera, para los
+ * hologramas, y el total lleva ademas el saldo de Esencias. La tarea solo lee el yml; ordenar
+ * a todos y buscar los nombres va en una tarea asincrona.
  */
 final class Rankings implements Listener {
 
@@ -68,11 +72,12 @@ final class Rankings implements Listener {
     private final Hardcore hc;
     private BukkitTask tarea;
     private final Set<BukkitTask> avisos = new HashSet<>();
-    /** Nombres ya buscados: getOfflinePlayer no es gratis y los tops piden los mismos. */
-    private final Map<UUID, String> nombres = new HashMap<>();
+    /** Nombres ya buscados: getOfflinePlayer no es gratis y los tops piden los mismos. Tambien fuera del hilo principal. */
+    private final Map<UUID, String> nombres = new ConcurrentHashMap<>();
 
-    private volatile Map<String, List<Fila>> topsTotal = Map.of();
-    private volatile Map<String, List<Fila>> topsSemana = Map.of();
+    /** Clave -> clasificacion (Tops). La total lleva tambien el saldo de Esencias. */
+    private volatile Map<String, Tops.Clasificacion> clasTotal = Map.of();
+    private volatile Map<String, Tops.Clasificacion> clasSemana = Map.of();
     private volatile Map<UUID, Map<String, Long>> copiaStats = Map.of();
 
     Rankings(Hardcore hc) {
@@ -83,8 +88,9 @@ final class Rankings implements Listener {
         PlaceholdersLethal.registrar("parcas", (j, r) -> stat(j, "parcas"));
         PlaceholdersLethal.registrar("ecos", (j, r) -> stat(j, "ecos-cerrados"));
         PlaceholdersLethal.registrar("stat", (j, r) -> r == null || r.isEmpty() ? null : stat(j, r.toLowerCase(Locale.ROOT)));
-        PlaceholdersLethal.registrar("top", (j, r) -> top(r));
+        PlaceholdersLethal.registrar("top", this::top);
         Autotest.registrar("ranking", this::autotest);
+        Autotest.registrar("tops", Tops::autotest);
         long cada = Math.max(20L, hc.cfg().getLong("ranking.recalcular-segundos", 60) * 20L);
         tarea = hc.plugin().getServer().getScheduler().runTaskTimer(hc.plugin(),
                 () -> hc.seguro("rankings", this::ciclo), 40L, cada);
@@ -114,7 +120,10 @@ final class Rankings implements Listener {
         return n;
     }
 
-    /** Solo en el hilo principal (la tarea). Deja mapas inmutables para los otros hilos. */
+    /**
+     * Solo en el hilo principal (la tarea): lee hardcore-datos.yml y deja mapas inmutables para
+     * los otros hilos. Las clasificaciones se hacen fuera (clasificar).
+     */
     private void recalcular() {
         Map<UUID, Map<String, Long>> stats = leer(hc.datos().getConfigurationSection("stats"));
         Horas h = hc.horas();
@@ -124,11 +133,31 @@ final class Rankings implements Listener {
             }
         }
         Map<UUID, Map<String, Long>> semana = leer(hc.datos().getConfigurationSection("stats-semana." + cal().semana()));
-        topsTotal = tops(stats);
-        topsSemana = tops(semana);
+        Saldo s = hc.saldo();
+        Map<UUID, Long> esencias = s == null ? Map.of() : s.todos();
         Map<UUID, Map<String, Long>> copia = new HashMap<>();
         for (Map.Entry<UUID, Map<String, Long>> e : stats.entrySet()) copia.put(e.getKey(), Map.copyOf(e.getValue()));
         copiaStats = Map.copyOf(copia);
+        // Ordenar a todos por cada clave son decenas de ms con miles de jugadores, y un nombre que
+        // no esta en la cache puede ir a disco: fuera del hilo principal. Los mapas son los recien
+        // leidos y ya nadie mas los toca.
+        hc.plugin().getServer().getScheduler().runTaskAsynchronously(hc.plugin(), () -> {
+            try {
+                clasificar(stats, semana, esencias);
+            } catch (Throwable t) {
+                hc.plugin().getLogger().log(Level.WARNING, "[Calamity] No se pudieron rehacer los tops", t);
+            }
+        });
+    }
+
+    /** En la tarea asincrona: las clasificaciones de Tops, que se publican de una vez. */
+    private void clasificar(Map<UUID, Map<String, Long>> stats, Map<UUID, Map<String, Long>> semana,
+                            Map<UUID, Long> esencias) {
+        Map<String, Tops.Clasificacion> total = Tops.clasificar(stats, TOP, this::nombre);
+        // El saldo de Esencias de fuera no se apunta por semanas: solo va en el total.
+        total.put(Tops.ESENCIAS, Tops.clasificacion(esencias, TOP, this::nombre));
+        clasTotal = Map.copyOf(total);
+        clasSemana = Map.copyOf(Tops.clasificar(semana, TOP, this::nombre));
     }
 
     private static Map<UUID, Map<String, Long>> leer(ConfigurationSection s) {
@@ -148,28 +177,6 @@ final class Rankings implements Listener {
             out.put(u, m);
         }
         return out;
-    }
-
-    private Map<String, List<Fila>> tops(Map<UUID, Map<String, Long>> stats) {
-        Map<String, List<Fila>> porClave = new HashMap<>();
-        for (Map.Entry<UUID, Map<String, Long>> e : stats.entrySet()) {
-            for (Map.Entry<String, Long> v : e.getValue().entrySet()) {
-                if (v.getValue() <= 0) continue;
-                porClave.computeIfAbsent(v.getKey(), k -> new ArrayList<>()).add(new Fila(e.getKey(), null, v.getValue()));
-            }
-        }
-        Map<String, List<Fila>> out = new HashMap<>();
-        for (Map.Entry<String, List<Fila>> e : porClave.entrySet()) {
-            List<Fila> l = e.getValue();
-            l.sort(Comparator.comparingLong(Fila::valor).reversed().thenComparing(f -> f.jugador().toString()));
-            List<Fila> top = new ArrayList<>();
-            for (int i = 0; i < Math.min(TOP, l.size()); i++) {
-                Fila f = l.get(i);
-                top.add(new Fila(f.jugador(), nombre(f.jugador()), f.valor()));
-            }
-            out.put(e.getKey(), List.copyOf(top));
-        }
-        return Map.copyOf(out);
     }
 
     /** %lethalworld_stat_<clave>%, parcas, ecos. En el hilo principal, al dia; en otro, la cache. */
@@ -194,41 +201,24 @@ final class Rankings implements Listener {
      * (Npcs): es la clasificacion tal cual, sin el reparto de premios de cerrar().
      */
     Map<Tabla, List<Fila>> podioSemana(int n) {
-        Map<String, List<Fila>> tops = topsSemana;
+        Map<String, Tops.Clasificacion> tops = clasSemana;
         Map<Tabla, List<Fila>> out = new LinkedHashMap<>();
         for (String id : tablas()) {
             Tabla t = tabla(id);
-            List<Fila> l = tops.getOrDefault(t.estadistica(), List.of());
+            List<Fila> l = tops.getOrDefault(t.estadistica(), Tops.Clasificacion.VACIA).top();
             out.put(t, l.subList(0, Math.min(Math.max(0, n), l.size())));
         }
         return out;
     }
 
     /**
-     * %lethalworld_top_<clave>_<n>_nombre|valor[_semana]%. La clave puede llevar guiones
-     * (tasado-mc), no guiones bajos: se lee desde el final.
+     * %lethalworld_top_<clave>_<n>_nombre|valor|texto[_semana]%, top_<clave>_pos[_semana] y
+     * top_<clave>_yo[_semana] (Tops). Solo lee la cache: vale desde cualquier hilo.
      */
-    private String top(String resto) {
-        if (resto == null || resto.isEmpty()) return null;
-        String r = resto.toLowerCase(Locale.ROOT);
-        boolean semanal = r.endsWith("_semana");
-        if (semanal) r = r.substring(0, r.length() - "_semana".length());
-        String[] t = r.split("_");
-        if (t.length < 3) return null;
-        String que = t[t.length - 1];
-        int n;
-        try {
-            n = Integer.parseInt(t[t.length - 2]);
-        } catch (NumberFormatException e) {
-            return null;
-        }
-        if (n < 1 || n > TOP || (!que.equals("nombre") && !que.equals("valor"))) return null;
-        String clave = String.join("_", java.util.Arrays.copyOfRange(t, 0, t.length - 2));
-        List<Fila> l = (semanal ? topsSemana : topsTotal).get(clave);
-        if (l == null || l.size() < n) return que.equals("nombre") ? "—" : "0";
-        Fila f = l.get(n - 1);
-        if (que.equals("nombre")) return f.nombre();
-        return String.valueOf(clave.equals("horas-activas") ? f.valor() / 3600 : f.valor());
+    private String top(OfflinePlayer j, String resto) {
+        Tops.Peticion p = Tops.leer(resto, TOP);
+        if (p == null) return null;
+        return Tops.responder(p, p.semana() ? clasSemana : clasTotal, j == null ? null : j.getUniqueId());
     }
 
     // ------------------------------------------------------------------ reparto
@@ -542,9 +532,9 @@ final class Rankings implements Listener {
         h.igual("sin nadie, nada", 0, vacio.size());
         h.igual("premios de serie: 3", 3, premios().size());
         // Una clave que nadie tiene: con tasado-mc el resultado dependeria de los datos reales del servidor.
-        h.igual("top sin datos: nombre", "—", top("autotest-sin-datos_1_nombre"));
-        h.igual("top sin datos: valor", "0", top("autotest-sin-datos_1_valor"));
-        h.igual("top con n fuera de rango", null, top("tasado-mc_11_valor"));
+        h.igual("top sin datos: nombre", "—", top(null, "autotest-sin-datos_1_nombre"));
+        h.igual("top sin datos: valor", "0", top(null, "autotest-sin-datos_1_valor"));
+        h.igual("top con n fuera de rango", null, top(null, "tasado-mc_11_valor"));
         h.igual("stat sin jugador", "", PlaceholdersLethal.resolver(null, "stat_parcas"));
         h.ok("autotest no toca stats-semana reales", !hc.datos().isSet("stats-semana." + sem + "." + uno));
         h.ok("/lw hardcore ranking registrado", Subcomandos.lw().nombres(null).contains("ranking"));
