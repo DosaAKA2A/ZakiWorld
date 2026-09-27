@@ -1,5 +1,6 @@
 plugins/edm-src/target/
 plugins/lethalworld-src/target/
+plugins/calamity-src/target/
 plugins/ederus-src/*/target/
 plugins/ederus-src/*/scripts/node_modules/
 

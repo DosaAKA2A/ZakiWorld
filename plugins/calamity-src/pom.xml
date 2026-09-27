@@ -5,17 +5,20 @@
   <modelVersion>4.0.0</modelVersion>
 
   <groupId>net.ederus</groupId>
-  <artifactId>LethalWorld</artifactId>
-  <version>2.0.0</version>
+  <artifactId>Calamity</artifactId>
+  <version>1.0.0</version>
   <packaging>jar</packaging>
-  <name>LethalWorld</name>
-  <description>Lethal World: los mundos de datapack de Ederus (/lw)</description>
+  <name>Calamity</name>
+  <description>Calamity: la PARCA, el Eco, la Aduana y las reglas hardcore de los mundos de Lethal World</description>
 
   <properties>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <maven.compiler.release>25</maven.compiler.release>
     <!-- La version de EDM contra la que se compila. Al subir EDM, subirla aqui. -->
     <edm.version>1.72.1</edm.version>
+    <!-- La version de LethalWorld contra la que se compila. Al subir LethalWorld, subirla
+         aqui tambien: el jar se busca por su nombre, con la version dentro. -->
+    <lethalworld.version>2.0.0</lethalworld.version>
     <!-- Donde estan los jars de terceros (PlaceholderAPI). En el repo es
          ProyectosGit/_toolchain/libs, tres niveles por encima; en un worktree de
          ZakiWorld-wt/<paquete> es uno mas arriba, y eso lo arregla el perfil de abajo. -->
@@ -55,13 +58,11 @@
       <scope>provided</scope>
     </dependency>
     <!-- EDM: de ahi salen los esbirros (anomaly), las MobCoins, Compat, Estilo y la
-         bitacora. Es el propio jar de al lado, como edm-src hace con los jars de
+         Bitacora. Es el propio jar de al lado, como edm-src hace con los jars de
          _toolchain/libs.
 
          OJO: HAY QUE COMPILAR EDM ANTES QUE ESTO. Si el jar de esa version no esta
-         en ../edm-src/target, Maven falla sin explicar gran cosa:
-             cd ../edm-src        ; mvn -o -DskipTests package
-             cd ../lethalworld-src ; mvn -o -DskipTests package
+         en ../edm-src/target, Maven falla sin explicar gran cosa.
 
          MythicMobs NO aparece aqui a proposito: no hay jar suyo en _toolchain/libs
          y solo hace falta para una pregunta, que se hace por reflexion en
@@ -73,8 +74,26 @@
       <scope>system</scope>
       <systemPath>${project.basedir}/../edm-src/target/EDM-${edm.version}.jar</systemPath>
     </dependency>
+    <!-- LethalWorld: los mundos (LethalWorldPlugin.esMundo) y la Bitacora lethal-world, que
+         Calamity comparte en vez de abrir una suya. Tambien es el jar de al lado.
+
+         OJO: HAY QUE COMPILAR LethalWorld ANTES QUE ESTO, y volver a compilarlo cada vez
+         que cambie: se enlaza contra el jar de ../lethalworld-src/target, no contra sus
+         fuentes. El orden completo:
+             cd ../edm-src         ; mvn -o -DskipTests package
+             cd ../lethalworld-src ; mvn -o -DskipTests package
+             cd ../calamity-src    ; mvn -o -DskipTests package -->
+    <dependency>
+      <groupId>net.ederus</groupId>
+      <artifactId>LethalWorld</artifactId>
+      <version>${lethalworld.version}</version>
+      <scope>system</scope>
+      <systemPath>${project.basedir}/../lethalworld-src/target/LethalWorld-${lethalworld.version}.jar</systemPath>
+    </dependency>
     <!-- PlaceholderAPI, para los %lethalworld_...%. Solo lo toca ExpansionLethal, que no se
-         carga si el plugin no esta en el servidor (patron de EDM, edm-src/pom.xml). -->
+         carga si el plugin no esta en el servidor (patron de EDM, edm-src/pom.xml). El
+         identificador sigue siendo "lethalworld" aunque la expansion la traiga Calamity:
+         los scoreboards y menus del servidor ya lo usan. -->
     <dependency>
       <groupId>me.clip</groupId>
       <artifactId>placeholderapi</artifactId>
@@ -85,7 +104,7 @@
   </dependencies>
 
   <build>
-    <finalName>LethalWorld-${project.version}</finalName>
+    <finalName>Calamity-${project.version}</finalName>
     <resources>
       <resource>
         <directory>src/main/resources</directory>
