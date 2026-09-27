@@ -63,9 +63,9 @@ import java.util.regex.Pattern;
  * parca.cuerpo.skin), como Rabby en EDM. El esqueleto sigue debajo, invisible y mudo, con su
  * IA, su caja y su golpe; el maniqui se le pega cada 2 ticks y le pasa los golpes que recibe.
  */
-final class PeleaParca implements Runnable {
+final class PeleaParca implements Runnable, ParcaViva {
 
-    enum Estado { APARECE, PELEA, ESPERA, COSECHA, FIN }
+    // El Estado es el de ParcaViva (1.2.0): el mismo para la reserva y para la anomalia de EDM.
 
     private enum Habilidad { SIEGA, UMBRAL, TIRON, CORTEJO, CAMPANADA }
 
@@ -247,7 +247,7 @@ final class PeleaParca implements Runnable {
     }
 
     /** La guadana: azada de netherita con brillo. La lleva el maniqui o, sin el, el esqueleto. */
-    private static ItemStack guadana() {
+    static ItemStack guadana() {
         ItemStack guadana = new ItemStack(Material.NETHERITE_HOE);
         ItemMeta gm = guadana.getItemMeta();
         gm.displayName(Paleta.nombre("Guadaña", Paleta.PARCA));
@@ -381,7 +381,7 @@ final class PeleaParca implements Runnable {
     }
 
     /** Blande la guadana: el esqueleto (invisible) y el cuerpo que se ve. */
-    void blandir() {
+    public void blandir() {
         if (cuerpo != null && cuerpo.isValid()) cuerpo.swingMainHand();
         if (cascara != null && cascara.isValid()) cascara.swingMainHand();
     }
@@ -390,13 +390,13 @@ final class PeleaParca implements Runnable {
      * Le han hecho dano de verdad (Parca.onDolor, MONITOR): el esqueleto es invisible y mudo,
      * asi que el estremecimiento y el quejido los pone el cuerpo que se ve.
      */
-    void dolor() {
+    public void dolor() {
         if (cascara == null || !cascara.isValid()) return;
         cascara.playHurtAnimation(0f);
         Compat.sound(cascara.getWorld(), cascara.getLocation(), "entity.wither_skeleton.hurt", 0.9f, 0.55f);
     }
 
-    boolean esCascara(Entity e) {
+    public boolean esCascara(Entity e) {
         return e != null && cascara != null && cascara.getUniqueId().equals(e.getUniqueId());
     }
 
@@ -470,26 +470,26 @@ final class PeleaParca implements Runnable {
     // ================================================================ consultas
 
     /** Viva a efectos de los jugadores (persigue, cosecha, presencia). */
-    boolean vivaParaJugadores() {
+    public boolean vivaParaJugadores() {
         return estado != Estado.FIN && cuerpo != null && cuerpo.isValid() && !cuerpo.isDead();
     }
 
     /** Admite marcados extra (no mientras cosecha, espera o se va). */
-    boolean aceptaMarcados() {
+    public boolean aceptaMarcados() {
         return (estado == Estado.PELEA || estado == Estado.APARECE) && vivaParaJugadores();
     }
 
-    boolean esCuerpo(Entity e) {
+    public boolean esCuerpo(Entity e) {
         return e != null && cuerpo != null && cuerpo.getUniqueId().equals(e.getUniqueId());
     }
 
-    boolean esPlanidera(Entity e) {
+    public boolean esPlanidera(Entity e) {
         if (e == null || planideras.isEmpty()) return false;
         for (Wither v : planideras) if (v.getUniqueId().equals(e.getUniqueId())) return true;
         return false;
     }
 
-    boolean hayMarcadoEnMundo() {
+    public boolean hayMarcadoEnMundo() {
         for (UUID id : marcados) {
             Player m = hc.plugin().getServer().getPlayer(id);
             if (m != null && cuerpo != null && m.getWorld() == cuerpo.getWorld()) return true;
@@ -498,12 +498,12 @@ final class PeleaParca implements Runnable {
     }
 
     /** Vida logica maxima actual (para porcentajes). */
-    double vidaFinal() {
+    public double vidaFinal() {
         return cuerpo == null ? 0 : hc.amenazas().vidaLogicaMaxima(cuerpo);
     }
 
     /** Lo que multiplica el dano que recibe: x0,5 con planideras, +25 % aturdida o tocando. */
-    double factorRecibido() {
+    public double factorRecibido() {
         double f = 1;
         if (!planideras.isEmpty()) f *= a.planReduccion;
         if (ticks < aturdidaHasta) f *= 1 + a.planAturdidaExtra;
@@ -512,7 +512,7 @@ final class PeleaParca implements Runnable {
     }
 
     /** Un jugador le ha pegado. En la de prueba, ese pasa a ser su objetivo. */
-    void golpeadaPor(Player j) {
+    public void golpeadaPor(Player j) {
         if (prueba && (objetivoPrueba == null || !objetivoPrueba.equals(j.getUniqueId()))) {
             objetivoPrueba = j.getUniqueId();
             velocidad();
@@ -520,14 +520,14 @@ final class PeleaParca implements Runnable {
     }
 
     /** Ella ha golpeado a alguien: el reloj de "sin golpear" del Paso Umbral y del atasco. */
-    void haGolpeado() {
+    public void haGolpeado() {
         ultimoGolpe = ticks;
     }
 
     // ============================================================ marcados
 
     /** Otro que llega a 600 cerca: marcado extra, M+1, vida maxima y actual en proporcion. */
-    void agregarMarcado(Player p) {
+    public void agregarMarcado(Player p) {
         if (!marcados.add(p.getUniqueId())) return;
         double f = Amenazas.fraccion(cuerpo);
         extra++;
@@ -540,7 +540,7 @@ final class PeleaParca implements Runnable {
     }
 
     /** Un marcado extra muere o se va: sale de la lista. Sin nadie en el mundo, se va sin botin. */
-    void quitarMarcado(UUID id, String motivo) {
+    public void quitarMarcado(UUID id, String motivo) {
         if (!marcados.remove(id)) return;
         if (!prueba && marcados.isEmpty()) irse("sin-presas:" + motivo, null);
     }
@@ -761,7 +761,7 @@ final class PeleaParca implements Runnable {
     }
 
     /** Fases por fraccion de vida (sec. 1.7): I > 66 %, II > 33 %, III el resto. Solo avanzan. */
-    void revisarFase() {
+    public void revisarFase() {
         if (cuerpo == null || estado == Estado.FIN) return;
         double f = Amenazas.fraccion(cuerpo);
         int nueva = f > 0.66 ? 1 : f > 0.33 ? 2 : 3;
@@ -796,7 +796,7 @@ final class PeleaParca implements Runnable {
      * los golpes con un cliente). Tiron y Paso Umbral necesitan un jugador (quien lo pide).
      * Devuelve por que no, o null si ha empezado.
      */
-    String forzar(String nombre, Player quien) {
+    public String forzar(String nombre, Player quien) {
         if (estado != Estado.PELEA) return "no esta peleando (si acaba de salir, espera 2 s)";
         Habilidad h = switch (nombre) {
             case "siega" -> Habilidad.SIEGA;
@@ -1568,7 +1568,7 @@ final class PeleaParca implements Runnable {
     // =================================================================== fin
 
     /** La presa se desconecta sin etiqueta: se queda quieta espera-desconexion-segundos. */
-    void esperar() {
+    public void esperar() {
         if (estado == Estado.FIN || estado == Estado.COSECHA) return;
         if (actual != null) acabar();
         estado = Estado.ESPERA;
@@ -1582,7 +1582,7 @@ final class PeleaParca implements Runnable {
     }
 
     /** Vuelve la presa mientras ella esperaba: sigue la pelea. */
-    void reanudar() {
+    public void reanudar() {
         if (estado != Estado.ESPERA) return;
         estado = Estado.PELEA;
         cuerpo.setAI(true);
@@ -1596,7 +1596,7 @@ final class PeleaParca implements Runnable {
      * La presa ha muerto (por ella o por lo que sea): 3 s quieta con una helice de almas y una
      * campanada, y se va sin botin (sec. 1.9, "Cosecha").
      */
-    void cosecha(boolean porElla) {
+    public void cosecha(boolean porElla) {
         if (estado == Estado.FIN || estado == Estado.COSECHA) return;
         if (actual != null) acabar();
         estado = Estado.COSECHA;
@@ -1626,7 +1626,7 @@ final class PeleaParca implements Runnable {
     }
 
     /** Ha caido. El botin lo reparte el gestor con el dano logico (se lee aqui, en su EntityDeathEvent). */
-    void alMorir() {
+    public void alMorir() {
         if (pagada || estado == Estado.FIN) return;
         pagada = true;
         Map<UUID, Double> dano = hc.amenazas().danoLogico(cuerpo);
@@ -1659,7 +1659,7 @@ final class PeleaParca implements Runnable {
      *
      * @param aviso mensaje a quien este a <= 48 (P-25), o null
      */
-    void irse(String motivo, Component aviso) {
+    public void irse(String motivo, Component aviso) {
         if (estado == Estado.FIN) return;
         if (cuerpo != null && cuerpo.isValid()) {
             World w = cuerpo.getWorld();
@@ -1686,7 +1686,7 @@ final class PeleaParca implements Runnable {
     }
 
     /** Retira todo lo suyo (idempotente): barra, planideras, maniqui, cuerpo y la pelea de la tarea de 2 ticks. */
-    void limpiar() {
+    public void limpiar() {
         quitarBarra();
         for (Wither v : planideras) Fx.safeRemove(v);
         planideras.clear();
@@ -1697,5 +1697,69 @@ final class PeleaParca implements Runnable {
         rastro.clear();
         if (hc.amenazas() != null) hc.amenazas().quitarPelea(this);
         estado = Estado.FIN;
+    }
+
+    // ============================================================ ParcaViva (1.2.0)
+    // Lo que el gestor lee de la pelea. Los campos siguen ahi (la pelea los usa por dentro);
+    // desde fuera se pasa por estos, que son los mismos que da la anomalia de EDM.
+
+    @Override
+    public Estado estado() {
+        return estado;
+    }
+
+    @Override
+    public boolean prueba() {
+        return prueba;
+    }
+
+    @Override
+    public UUID presa() {
+        return presa;
+    }
+
+    @Override
+    public String presaNombre() {
+        return presaNombre;
+    }
+
+    @Override
+    public Set<UUID> marcados() {
+        return marcados;
+    }
+
+    @Override
+    public LivingEntity cuerpo() {
+        return cuerpo;
+    }
+
+    @Override
+    public int nivel() {
+        return nivel;
+    }
+
+    @Override
+    public int repeticiones() {
+        return repeticiones;
+    }
+
+    @Override
+    public int extra() {
+        return extra;
+    }
+
+    @Override
+    public int fase() {
+        return fase;
+    }
+
+    @Override
+    public int extrasGrupo() {
+        return extrasGrupo;
+    }
+
+    @Override
+    public String tipo() {
+        return "reserva";
     }
 }

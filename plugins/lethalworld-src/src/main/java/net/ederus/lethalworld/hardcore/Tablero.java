@@ -132,10 +132,10 @@ final class Tablero implements Listener {
                 for (WitherSkeleton ws : w.getEntitiesByClass(WitherSkeleton.class)) {
                     if (lp.size() >= 7) break;
                     if (!"parca".equals(Marcas.amenaza(ws))) continue;
-                    PeleaParca pe = parca.deCuerpo(ws);
+                    ParcaViva pe = parca.deCuerpo(ws);
                     if (pe == null || !pe.vivaParaJugadores()) continue;
                     Location l = ws.getLocation();
-                    lp.add(new LineaParca(pe.presaNombre, w.getBiome(l.getBlockX(), l.getBlockY(), l.getBlockZ())));
+                    lp.add(new LineaParca(pe.presaNombre(), w.getBiome(l.getBlockX(), l.getBlockY(), l.getBlockZ())));
                 }
             }
         }

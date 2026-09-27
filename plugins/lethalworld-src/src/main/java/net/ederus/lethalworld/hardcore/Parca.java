@@ -71,7 +71,7 @@ final class Parca implements Listener {
     private static final SecureRandom AZAR = new SecureRandom();
 
     private final Hardcore hc;
-    private final List<PeleaParca> peleas = new ArrayList<>();
+    private final List<ParcaViva> peleas = new ArrayList<>();
     /** Reapariciones programadas (pendiente, marca): se cancelan en parar(). */
     private final List<BukkitTask> tareas = new ArrayList<>();
     /** Quien acaba de morir por una habilidad de la PARCA: su mensaje de muerte es P-19. */
@@ -363,33 +363,33 @@ final class Parca implements Listener {
     // ================================================================= estado
 
     /** La pelea en la que ese jugador esta marcado (presa o extra), o null. */
-    PeleaParca de(UUID jugador) {
-        for (PeleaParca pe : peleas) if (pe.vivaParaJugadores() && pe.marcados.contains(jugador)) return pe;
+    ParcaViva de(UUID jugador) {
+        for (ParcaViva pe : peleas) if (pe.vivaParaJugadores() && pe.marcados().contains(jugador)) return pe;
         return null;
     }
 
     /** La pelea de esa entidad (el cuerpo de la PARCA), o null. */
-    PeleaParca deCuerpo(Entity e) {
+    ParcaViva deCuerpo(Entity e) {
         if (e == null) return null;
-        for (PeleaParca pe : peleas) if (pe.cuerpo != null && pe.cuerpo.getUniqueId().equals(e.getUniqueId())) return pe;
+        for (ParcaViva pe : peleas) if (pe.cuerpo() != null && pe.cuerpo().getUniqueId().equals(e.getUniqueId())) return pe;
         return null;
     }
 
     /** La pelea de un cuerpo que se ve (el maniqui con skin), o null. */
-    PeleaParca deCascara(Entity e) {
+    ParcaViva deCascara(Entity e) {
         if (e == null) return null;
-        for (PeleaParca pe : peleas) if (pe.esCascara(e)) return pe;
+        for (ParcaViva pe : peleas) if (pe.esCascara(e)) return pe;
         return null;
     }
 
     int vivas() {
         int n = 0;
-        for (PeleaParca pe : peleas) if (pe.vivaParaJugadores()) n++;
+        for (ParcaViva pe : peleas) if (pe.vivaParaJugadores()) n++;
         return n;
     }
 
     /** La quita de la lista (la llama la pelea al acabar). */
-    void olvidar(PeleaParca pe) {
+    void olvidar(ParcaViva pe) {
         peleas.remove(pe);
     }
 
@@ -397,32 +397,32 @@ final class Parca implements Listener {
 
     /** Una vez por segundo, desde Hardcore.tick. Las peleas se mueven solas cada 2 ticks. */
     void tick() {
-        peleas.removeIf(pe -> pe.estado == PeleaParca.Estado.FIN);
+        peleas.removeIf(pe -> pe.estado() == ParcaViva.Estado.FIN);
         if (++segundos % 60 == 0) podarSegadas();
     }
 
     /** Si hay una PARCA a presencia-radio de ese jugador. */
     boolean cerca(Player p) {
         double r = ajustes().presenciaRadio;
-        for (PeleaParca pe : peleas) {
-            if (!pe.vivaParaJugadores() || pe.cuerpo == null || pe.cuerpo.getWorld() != p.getWorld()) continue;
-            if (pe.cuerpo.getLocation().distanceSquared(p.getLocation()) <= r * r) return true;
+        for (ParcaViva pe : peleas) {
+            if (!pe.vivaParaJugadores() || pe.cuerpo() == null || pe.cuerpo().getWorld() != p.getWorld()) continue;
+            if (pe.cuerpo().getLocation().distanceSquared(p.getLocation()) <= r * r) return true;
         }
         return false;
     }
 
     /** Si hay alguna PARCA viva en el servidor (las alucinaciones no hacen figuras ni carreras con ella). */
     boolean hayViva() {
-        for (PeleaParca pe : peleas) if (pe.vivaParaJugadores()) return true;
+        for (ParcaViva pe : peleas) if (pe.vivaParaJugadores()) return true;
         return false;
     }
 
     /** Distancia a la PARCA viva mas cercana en su mundo; Double.MAX_VALUE si no hay (latido a <= 32). */
     double distancia(Player p) {
         double mejor = Double.MAX_VALUE;
-        for (PeleaParca pe : peleas) {
-            if (!pe.vivaParaJugadores() || pe.cuerpo.getWorld() != p.getWorld()) continue;
-            mejor = Math.min(mejor, pe.cuerpo.getLocation().distanceSquared(p.getLocation()));
+        for (ParcaViva pe : peleas) {
+            if (!pe.vivaParaJugadores() || pe.cuerpo().getWorld() != p.getWorld()) continue;
+            mejor = Math.min(mejor, pe.cuerpo().getLocation().distanceSquared(p.getLocation()));
         }
         return mejor == Double.MAX_VALUE ? mejor : Math.sqrt(mejor);
     }
@@ -441,10 +441,10 @@ final class Parca implements Listener {
         if (donde == null || donde.getWorld() == null) return false;
         Ajustes a = ajustes();
         double r2 = a.radioCosecha * a.radioCosecha;
-        for (PeleaParca pe : peleas) {
-            if (!pe.vivaParaJugadores() || pe.cuerpo == null || pe.cuerpo.getWorld() != donde.getWorld()) continue;
-            if (pe.cuerpo.getLocation().distanceSquared(donde) <= r2) return true;
-            for (UUID id : pe.marcados) {
+        for (ParcaViva pe : peleas) {
+            if (!pe.vivaParaJugadores() || pe.cuerpo() == null || pe.cuerpo().getWorld() != donde.getWorld()) continue;
+            if (pe.cuerpo().getLocation().distanceSquared(donde) <= r2) return true;
+            for (UUID id : pe.marcados()) {
                 Player m = hc.plugin().getServer().getPlayer(id);
                 if (m != null && m.getWorld() == donde.getWorld() && m.getLocation().distanceSquared(donde) <= r2) return true;
             }
@@ -467,10 +467,10 @@ final class Parca implements Listener {
 
     /** Segundos del Cristal: def, o cristal-segundos-marcado con ella a cristal-radio-marcado (P-31). */
     int segundosCristal(Player p, int def) {
-        PeleaParca pe = de(p.getUniqueId());
-        if (pe == null || pe.cuerpo == null || pe.cuerpo.getWorld() != p.getWorld()) return def;
+        ParcaViva pe = de(p.getUniqueId());
+        if (pe == null || pe.cuerpo() == null || pe.cuerpo().getWorld() != p.getWorld()) return def;
         Ajustes a = ajustes();
-        if (pe.cuerpo.getLocation().distanceSquared(p.getLocation()) > a.cristalRadio * a.cristalRadio) return def;
+        if (pe.cuerpo().getLocation().distanceSquared(p.getLocation()) > a.cristalRadio * a.cristalRadio) return def;
         // P-31 lo pinta Hardcore en la cuenta del Cristal ("Con ella encima · Cristal · N s").
         return Math.max(def, a.cristalSegundos);
     }
@@ -484,7 +484,7 @@ final class Parca implements Listener {
         if (hc.huella() != null) hc.huella().reiniciar(p);
         // Quien muere lo pierde todo: tambien la cita pendiente con ella.
         borrarPendiente(id);
-        PeleaParca pe = de(id);
+        ParcaViva pe = de(id);
         if (pe == null) return;
         boolean porElla = false;
         try {
@@ -494,7 +494,7 @@ final class Parca implements Listener {
         } catch (Throwable ignorado) {
             // Sin causa legible se trata como "por lo que sea": sin tierra segada.
         }
-        if (id.equals(pe.presa)) {
+        if (id.equals(pe.presa())) {
             if (porElla) {
                 segadosPorElla.add(id);
                 segar(p.getLocation());
@@ -507,9 +507,9 @@ final class Parca implements Listener {
 
     /** Sale por la puerta, el Cristal o un admin: se retira y le espera marca-fuera-minutos (P-23). */
     void alSalir(Player p, String motivo) {
-        PeleaParca pe = de(p.getUniqueId());
+        ParcaViva pe = de(p.getUniqueId());
         if (pe == null) return;
-        if (!p.getUniqueId().equals(pe.presa)) {
+        if (!p.getUniqueId().equals(pe.presa())) {
             pe.quitarMarcado(p.getUniqueId(), "salio");
             return;
         }
@@ -556,11 +556,11 @@ final class Parca implements Listener {
      * quieta donde esta y se va guardando lo pendiente.
      */
     void alDesconectar(Player p) {
-        PeleaParca pe = de(p.getUniqueId());
+        ParcaViva pe = de(p.getUniqueId());
         /* El combat log llega aqui DESPUES de Combate.cable, que ya llamo a alMorirPresa: la
          * pelea esta en cosecha (o acabada) y no hay nada que esperar ni que dejar pendiente. */
-        if (pe == null || pe.estado == PeleaParca.Estado.COSECHA) return;
-        if (!p.getUniqueId().equals(pe.presa)) {
+        if (pe == null || pe.estado() == ParcaViva.Estado.COSECHA) return;
+        if (!p.getUniqueId().equals(pe.presa())) {
             pe.quitarMarcado(p.getUniqueId(), "desconectado");
             return;
         }
@@ -575,8 +575,8 @@ final class Parca implements Listener {
     /** Vuelve al servidor: si ella seguia esperando, sigue; si hay algo pendiente y esta dentro, vuelve (P-22). */
     void alVolver(Player p) {
         if (!hc.esHardcore(p)) return;
-        for (PeleaParca pe : peleas) {
-            if (pe.estado == PeleaParca.Estado.ESPERA && p.getUniqueId().equals(pe.presa)) {
+        for (ParcaViva pe : peleas) {
+            if (pe.estado() == ParcaViva.Estado.ESPERA && p.getUniqueId().equals(pe.presa())) {
                 pe.reanudar();
                 return;
             }
@@ -613,8 +613,8 @@ final class Parca implements Listener {
     void parar() {
         // Un reinicio no es culpa de la presa: lo que quedaba se guarda como la desconexion.
         long hasta = System.currentTimeMillis() + ajustes().pendienteHoras * 3_600_000L;
-        for (PeleaParca pe : new ArrayList<>(peleas)) {
-            if (!pe.prueba && pe.vivaParaJugadores() && pe.estado != PeleaParca.Estado.COSECHA) {
+        for (ParcaViva pe : new ArrayList<>(peleas)) {
+            if (!pe.prueba() && pe.vivaParaJugadores() && pe.estado() != ParcaViva.Estado.COSECHA) {
                 hc.seguro("parca", () -> guardarPendiente(pe, hasta, "reinicio"));
             }
             hc.seguro("parca", pe::limpiar);
@@ -677,9 +677,9 @@ final class Parca implements Listener {
         if (!a.activa || !hc.esHardcore(p)) return false;
         if (persigue(p)) return true;
         // Otro que llega a 600 a <= 32 de una viva no trae otra: entra en esa con M+1.
-        for (PeleaParca pe : peleas) {
-            if (pe.prueba || !pe.aceptaMarcados() || pe.cuerpo.getWorld() != p.getWorld()) continue;
-            if (pe.cuerpo.getLocation().distanceSquared(p.getLocation()) <= 32 * 32) {
+        for (ParcaViva pe : peleas) {
+            if (pe.prueba() || !pe.aceptaMarcados() || pe.cuerpo().getWorld() != p.getWorld()) continue;
+            if (pe.cuerpo().getLocation().distanceSquared(p.getLocation()) <= 32 * 32) {
                 pe.agregarMarcado(p);
                 return true;
             }
@@ -700,14 +700,14 @@ final class Parca implements Listener {
         int n = nivel(a, n0);
         int m = grupo.size() - 1;
         Location sitio = sitioDetras(p, 6);
-        PeleaParca pe = PeleaParca.crear(this, a, p.getUniqueId(), p.getName(), grupo, n, r, m, sitio, false, 1.0, 1);
+        ParcaViva pe = PeleaParca.crear(this, a, p.getUniqueId(), p.getName(), grupo, n, r, m, sitio, false, 1.0, 1);
         if (pe == null) return false;
         peleas.add(pe);
 
         long ahora = System.currentTimeMillis();
         for (Player g : grupo) apuntarHistorial(g.getUniqueId(), ahora);
         hc.marcarSucio();
-        Location l = pe.cuerpo.getLocation();
+        Location l = pe.cuerpo().getLocation();
         hc.plugin().bitacora().anotar("parca", "llega", p.getName(), "N " + n, "r " + r, "M " + m,
                 l.getBlockX() + " " + l.getBlockY() + " " + l.getBlockZ(), "celdas " + celdas,
                 "vehiculo " + (vehiculo ? "si" : "no"));
@@ -808,14 +808,14 @@ final class Parca implements Listener {
     }
 
     /** Sincrono (guardarYa): lo pide DIS sec. 8.1 al crearlo. */
-    void guardarPendiente(PeleaParca pe, long hasta, String motivo) {
-        if (pe.prueba || pe.presa == null || pe.cuerpo == null) return;
-        String base = "parca.pendiente." + pe.presa + ".";
-        hc.datos().set(base + "fraccion", Math.max(0.05, Amenazas.fraccion(pe.cuerpo)));
-        hc.datos().set(base + "fase", pe.fase);
-        hc.datos().set(base + "nivel", pe.nivel);
-        hc.datos().set(base + "r", pe.repeticiones);
-        hc.datos().set(base + "m", pe.extra);
+    void guardarPendiente(ParcaViva pe, long hasta, String motivo) {
+        if (pe.prueba() || pe.presa() == null || pe.cuerpo() == null) return;
+        String base = "parca.pendiente." + pe.presa() + ".";
+        hc.datos().set(base + "fraccion", Math.max(0.05, Amenazas.fraccion(pe.cuerpo())));
+        hc.datos().set(base + "fase", pe.fase());
+        hc.datos().set(base + "nivel", pe.nivel());
+        hc.datos().set(base + "r", pe.repeticiones());
+        hc.datos().set(base + "m", pe.extra());
         hc.datos().set(base + "hasta", hasta);
         hc.datos().set(base + "motivo", motivo);
         hc.guardarYa();
@@ -848,13 +848,13 @@ final class Parca implements Listener {
         Ajustes a = ajustes();
         if (!a.activa || vivas() >= a.maximoSimultaneas) return;   // lo pendiente sigue ahi
         Location sitio = sitioDetras(p, distancia);
-        PeleaParca pe = PeleaParca.crear(this, a, p.getUniqueId(), p.getName(), List.of(p), pd.nivel(), pd.r(), pd.m(),
+        ParcaViva pe = PeleaParca.crear(this, a, p.getUniqueId(), p.getName(), List.of(p), pd.nivel(), pd.r(), pd.m(),
                 sitio, false, pd.fraccion(), pd.fase());
         if (pe == null) return;
         peleas.add(pe);
         borrarPendiente(p.getUniqueId());
         p.sendMessage(ComandoCalamity.mensaje(mensaje));
-        Location l = pe.cuerpo.getLocation();
+        Location l = pe.cuerpo().getLocation();
         hc.plugin().bitacora().anotar("parca", "vuelve", p.getName(), "N " + pd.nivel(), "r " + pd.r(), "M " + pd.m(),
                 "vida " + Math.round(pd.fraccion() * 100) + " %", pd.motivo(),
                 l.getBlockX() + " " + l.getBlockY() + " " + l.getBlockZ());
@@ -909,21 +909,21 @@ final class Parca implements Listener {
     // ================================================================= botin
 
     /** La PARCA ha caido: reparto de sec. 1.10 por la Aduana, Bitacora y anuncio (P-20). */
-    void pagar(PeleaParca pe, Map<UUID, Double> dano, double vida, long segundosPelea) {
+    void pagar(ParcaViva pe, Map<UUID, Double> dano, double vida, long segundosPelea) {
         Ajustes a = ajustes();
         StringBuilder partes = new StringBuilder();
         for (Map.Entry<UUID, Double> e : dano.entrySet()) {
             if (partes.length() > 0) partes.append(",");
             partes.append(nombre(e.getKey())).append(":").append(Math.round(vida <= 0 ? 0 : e.getValue() / vida * 100)).append("%");
         }
-        hc.plugin().bitacora().anotar("parca", "fin", pe.presaNombre, "muerta", segundosPelea + " s", partes.toString());
-        if (pe.prueba) {
+        hc.plugin().bitacora().anotar("parca", "fin", pe.presaNombre(), "muerta", segundosPelea + " s", partes.toString());
+        if (pe.prueba()) {
             hc.plugin().bitacora().anotar("parca", "botin", "-", "prueba", "sin botin");
             return;
         }
         long ahora = System.currentTimeMillis();
-        OfflinePlayer presa = hc.plugin().getServer().getOfflinePlayer(pe.presa);
-        List<Cobro> cobros = repartir(a, dano, vida, pe.presa, pe.nivel, pe.repeticiones,
+        OfflinePlayer presa = hc.plugin().getServer().getOfflinePlayer(pe.presa());
+        List<Cobro> cobros = repartir(a, dano, vida, pe.presa(), pe.nivel(), pe.repeticiones(),
                 id -> yaCobro(id, ahora, a),
                 id -> hc.aduana() != null && hc.valor("aduana",
                         () -> hc.aduana().valida(hc.plugin().getServer().getOfflinePlayer(id), presa), false));
@@ -935,7 +935,7 @@ final class Parca implements Listener {
         for (Cobro c : cobros) {
             OfflinePlayer op = hc.plugin().getServer().getOfflinePlayer(c.id());
             Player online = op.getPlayer();
-            boolean cuenta = c.id().equals(pe.presa) ? c.fraccion() >= a.participacionPresa : c.fraccion() >= a.participacionMinima;
+            boolean cuenta = c.id().equals(pe.presa()) ? c.fraccion() >= a.participacionPresa : c.fraccion() >= a.participacionMinima;
             if (cuenta) nombres.add(nombre(c.id()));
             if (c.motivo() != null) {
                 hc.plugin().bitacora().anotar("parca", "botin", nombre(c.id()), "esencias 0", "reliquia -", c.motivo());
@@ -950,7 +950,7 @@ final class Parca implements Listener {
             List<ItemStack> reliquias = new ArrayList<>();
             if (c.grado() > 0 && hc.reliquias() != null) {
                 ItemStack campana = hc.valor("reliquias",
-                        () -> hc.reliquias().crear(c.grado(), "parca", "campana-parca", pe.nivel, null, false), null);
+                        () -> hc.reliquias().crear(c.grado(), "parca", "campana-parca", pe.nivel(), null, false), null);
                 if (campana != null) {
                     reliquias.add(campana);
                     campanaPara.add(c.id());
@@ -963,13 +963,13 @@ final class Parca implements Listener {
                 primeraDelDia = true;
             }
             Aduana.Pago pago = hc.aduana() == null ? null : hc.valor("aduana",
-                    () -> hc.aduana().pagar(op, "parca", c.esencias(), 0L, reliquias, "parca N " + pe.nivel), null);
+                    () -> hc.aduana().pagar(op, "parca", c.esencias(), 0L, reliquias, "parca N " + pe.nivel()), null);
             int pagadas = pago == null ? 0 : pago.esencias();
             hc.datos().set("parca.cobro." + c.id(), ahora);
             if (hc.estadisticas() != null) hc.seguro("estadisticas", () -> hc.estadisticas().sumar(c.id(), "parcas", 1));
             hc.plugin().bitacora().anotar("parca", "botin", nombre(c.id()),
                     "esencias " + pagadas + (pagadas != c.esencias() ? " (calculadas " + c.esencias() + ")" : ""),
-                    "reliquia " + (reliquias.isEmpty() ? "-" : romano(c.grado())), c.id().equals(pe.presa) ? "presa" : "ayudante");
+                    "reliquia " + (reliquias.isEmpty() ? "-" : romano(c.grado())), c.id().equals(pe.presa()) ? "presa" : "ayudante");
             if (online != null) {
                 online.sendMessage(ComandoCalamity.mensaje(Component.text("La Parca te paga: ")
                         .append(Paleta.cifra("+" + pagadas + " Esencias"))
@@ -977,7 +977,7 @@ final class Parca implements Listener {
                                 : Component.text(", y una ").append(Paleta.detalle("Campana de la Parca")).append(Component.text(".")))));
                 // Sangre fresca (M12): la cordura por la PARCA, con su tope de la Aduana.
                 Combate cb = hc.combate();
-                String idPelea = pe.cuerpo == null ? String.valueOf(pe.presa) : pe.cuerpo.getUniqueId().toString();
+                String idPelea = pe.cuerpo() == null ? String.valueOf(pe.presa()) : pe.cuerpo().getUniqueId().toString();
                 if (cb != null) hc.seguro("combate", () -> cb.sangreFresca(online, "parca", "parca:" + idPelea));
             }
             raro(op, a);
@@ -1035,14 +1035,14 @@ final class Parca implements Listener {
     }
 
     /** Suceso "parca" de la telemetria (MED sec. 3): accion nace/muere/se-va/cosecha. */
-    void telemetria(String accion, PeleaParca pe, Map<UUID, Double> dano, List<UUID> campanaPara) {
+    void telemetria(String accion, ParcaViva pe, Map<UUID, Double> dano, List<UUID> campanaPara) {
         Telemetria t = hc.telemetria();
-        if (t == null || pe.prueba) return;
+        if (t == null || pe.prueba()) return;
         Map<String, Object> c = new LinkedHashMap<>();
         c.put("accion", accion);
-        c.put("presa", String.valueOf(pe.presa));
-        c.put("N", pe.nivel);
-        c.put("r", pe.repeticiones);
+        c.put("presa", String.valueOf(pe.presa()));
+        c.put("N", pe.nivel());
+        c.put("r", pe.repeticiones());
         List<Map<String, Object>> parts = new ArrayList<>();
         if (dano != null) {
             double vida = pe.vidaFinal();
@@ -1054,11 +1054,11 @@ final class Parca implements Listener {
             }
         }
         c.put("participantes", parts);
-        c.put("bonus_grupo", pe.extrasGrupo);
+        c.put("bonus_grupo", pe.extrasGrupo());
         List<String> campanas = new ArrayList<>();
         if (campanaPara != null) for (UUID u : campanaPara) campanas.add(u.toString());
         c.put("campana_para", campanas);
-        OfflinePlayer quien = pe.presa == null ? null : hc.plugin().getServer().getOfflinePlayer(pe.presa);
+        OfflinePlayer quien = pe.presa() == null ? null : hc.plugin().getServer().getOfflinePlayer(pe.presa());
         hc.seguro("telemetria", () -> t.suceso("parca", quien, c));
     }
 
@@ -1077,7 +1077,7 @@ final class Parca implements Listener {
             return;
         }
         if (Marcas.esAmenaza(muerto)) {
-            PeleaParca pe = deCuerpo(muerto);
+            ParcaViva pe = deCuerpo(muerto);
             if (pe != null) hc.seguro("parca", pe::alMorir);
             return;
         }
@@ -1108,7 +1108,7 @@ final class Parca implements Listener {
         Entity autor = e.getDamager();
         if (autor instanceof Projectile pr && pr.getShooter() instanceof Entity tirador) autor = tirador;
 
-        PeleaParca recibe = Marcas.esAmenaza(victima) ? deCuerpo(victima) : null;
+        ParcaViva recibe = Marcas.esAmenaza(victima) ? deCuerpo(victima) : null;
         if (recibe != null) {
             double f = recibe.factorRecibido();
             if (f != 1.0) e.setDamage(e.getDamage() * f);
@@ -1116,7 +1116,7 @@ final class Parca implements Listener {
             return;
         }
         if (!(victima instanceof Player v)) return;
-        PeleaParca da = deCuerpo(autor);
+        ParcaViva da = deCuerpo(autor);
         if (da != null) {
             da.haGolpeado();
             // El esqueleto que golpea es invisible: el tajo lo tiene que dar el cuerpo que se ve.
@@ -1160,9 +1160,9 @@ final class Parca implements Listener {
             causa = null;
         }
         if (!(causa instanceof Player p)) return;
-        PeleaParca pe = deCascara(mq);
-        if (pe == null || pe.cuerpo == null || !pe.cuerpo.isValid() || pe.cuerpo.isDead()) return;
-        pe.cuerpo.damage(e.getDamage(), p);
+        ParcaViva pe = deCascara(mq);
+        if (pe == null || pe.cuerpo() == null || !pe.cuerpo().isValid() || pe.cuerpo().isDead()) return;
+        pe.cuerpo().damage(e.getDamage(), p);
     }
 
     /** Ni chapas, ni riendas, ni nada con clic derecho sobre el cuerpo que se ve. */
@@ -1183,7 +1183,7 @@ final class Parca implements Listener {
     @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
     public void onDolor(EntityDamageEvent e) {
         if (peleas.isEmpty() || e.getFinalDamage() <= 0 || !Marcas.esAmenaza(e.getEntity())) return;
-        PeleaParca pe = deCuerpo(e.getEntity());
+        ParcaViva pe = deCuerpo(e.getEntity());
         if (pe != null) pe.dolor();
     }
 
@@ -1191,9 +1191,9 @@ final class Parca implements Listener {
     @EventHandler(ignoreCancelled = true)
     public void onObjetivo(EntityTargetLivingEntityEvent e) {
         if (peleas.isEmpty() || !Marcas.esAmenaza(e.getEntity())) return;
-        PeleaParca pe = deCuerpo(e.getEntity());
-        if (pe == null || pe.prueba || e.getTarget() == null) return;
-        if (!pe.marcados.contains(e.getTarget().getUniqueId()) && pe.hayMarcadoEnMundo()) e.setCancelled(true);
+        ParcaViva pe = deCuerpo(e.getEntity());
+        if (pe == null || pe.prueba() || e.getTarget() == null) return;
+        if (!pe.marcados().contains(e.getTarget().getUniqueId()) && pe.hayMarcadoEnMundo()) e.setCancelled(true);
     }
 
     /** Un marcado no se sube a nada mientras viva (P-11). */
@@ -1229,10 +1229,10 @@ final class Parca implements Listener {
         if (peleas.isEmpty()) return;
         Player p = e.getPlayer();
         if (!hc.esHardcore(p)) return;
-        PeleaParca pe = de(p.getUniqueId());
-        if (pe == null || pe.cuerpo == null || pe.cuerpo.getWorld() != p.getWorld()) return;
+        ParcaViva pe = de(p.getUniqueId());
+        if (pe == null || pe.cuerpo() == null || pe.cuerpo().getWorld() != p.getWorld()) return;
         double r = ajustes().radioCosechaBloques;
-        if (pe.cuerpo.getLocation().distanceSquared(e.getBlock().getLocation()) <= r * r) e.getItems().clear();
+        if (pe.cuerpo().getLocation().distanceSquared(e.getBlock().getLocation()) <= r * r) e.getItems().clear();
     }
 
     // ================================================================ comando
@@ -1327,24 +1327,24 @@ final class Parca implements Listener {
         Pendiente pd = leerPendiente(id);
         long marca = hc.datos().getLong("parca.marca." + id, 0);
         long ahora = System.currentTimeMillis();
-        PeleaParca pe = de(id);
+        ParcaViva pe = de(id);
         decir(quien, "parca | " + nombre + " | r " + repeticiones(id)
-                + " | persigue " + (pe == null ? "no" : (id.equals(pe.presa) ? "presa" : "marcado") + " N " + pe.nivel
-                + " fase " + pe.fase + " vida " + Math.round(Amenazas.fraccion(pe.cuerpo) * 100) + " %")
+                + " | persigue " + (pe == null ? "no" : (id.equals(pe.presa()) ? "presa" : "marcado") + " N " + pe.nivel()
+                + " fase " + pe.fase() + " vida " + Math.round(Amenazas.fraccion(pe.cuerpo()) * 100) + " %")
                 + " | pendiente " + (pd == null ? "no" : pd.motivo() + " " + Math.round(pd.fraccion() * 100) + " % hasta "
                 + (pd.hasta() - ahora) / 60_000 + " min")
                 + " | marca " + (marca > ahora ? (marca - ahora) / 60_000 + " min" : "no")
                 + " | cobro " + (yaCobro(id, ahora, ajustes()) ? "hecho" : "libre"));
     }
 
-    private PeleaParca masCercana(CommandSender quien) {
-        PeleaParca mejor = null;
+    private ParcaViva masCercana(CommandSender quien) {
+        ParcaViva mejor = null;
         double mejorD = Double.MAX_VALUE;
-        for (PeleaParca pe : peleas) {
-            if (!pe.vivaParaJugadores() || pe.cuerpo == null) continue;
+        for (ParcaViva pe : peleas) {
+            if (!pe.vivaParaJugadores() || pe.cuerpo() == null) continue;
             double d = 0;
             if (quien instanceof Player p) {
-                d = p.getWorld() == pe.cuerpo.getWorld() ? p.getLocation().distanceSquared(pe.cuerpo.getLocation())
+                d = p.getWorld() == pe.cuerpo().getWorld() ? p.getLocation().distanceSquared(pe.cuerpo().getLocation())
                         : Double.MAX_VALUE / 2;
             }
             // Desde consola, la ultima invocada.
@@ -1364,18 +1364,18 @@ final class Parca implements Listener {
             quien.sendMessage(Component.text("Uso: /lw hardcore parca vida <0-1>", Paleta.AVISO));
             return;
         }
-        PeleaParca pe = masCercana(quien);
+        ParcaViva pe = masCercana(quien);
         if (pe == null) {
             quien.sendMessage(Component.text("No hay ninguna Parca viva.", Paleta.AVISO));
             return;
         }
-        hc.amenazas().ponerFraccion(pe.cuerpo, Math.max(0.01, Math.min(1, f)));
+        hc.amenazas().ponerFraccion(pe.cuerpo(), Math.max(0.01, Math.min(1, f)));
         pe.revisarFase();
-        decir(quien, "parca | vida " + Math.round(Amenazas.fraccion(pe.cuerpo) * 100) + " % | fase " + pe.fase);
+        decir(quien, "parca | vida " + Math.round(Amenazas.fraccion(pe.cuerpo()) * 100) + " % | fase " + pe.fase());
     }
 
     private void habilidad(CommandSender quien, String[] args) {
-        PeleaParca pe = masCercana(quien);
+        ParcaViva pe = masCercana(quien);
         if (pe == null) {
             quien.sendMessage(Component.text("No hay ninguna Parca viva.", Paleta.AVISO));
             return;
@@ -1386,24 +1386,24 @@ final class Parca implements Listener {
             quien.sendMessage(Component.text("parca | habilidad | " + no, Paleta.AVISO));
             return;
         }
-        decir(quien, "parca | habilidad | " + nombre + " | fase " + pe.fase);
+        decir(quien, "parca | habilidad | " + nombre + " | fase " + pe.fase());
         hc.plugin().bitacora().anotar("parca", "habilidad", nombre, quien.getName());
     }
 
     private void retirar(CommandSender quien, String[] args) {
-        List<PeleaParca> cuales = new ArrayList<>();
+        List<ParcaViva> cuales = new ArrayList<>();
         if (args.length > 2) {
             Player p = hc.plugin().getServer().getPlayerExact(args[2]);
-            PeleaParca pe = p == null ? null : de(p.getUniqueId());
+            ParcaViva pe = p == null ? null : de(p.getUniqueId());
             if (pe == null) {
                 quien.sendMessage(Component.text("Ese jugador no tiene ninguna Parca encima.", Paleta.AVISO));
                 return;
             }
             cuales.add(pe);
         } else {
-            for (PeleaParca pe : peleas) if (pe.vivaParaJugadores()) cuales.add(pe);
+            for (ParcaViva pe : peleas) if (pe.vivaParaJugadores()) cuales.add(pe);
         }
-        for (PeleaParca pe : cuales) pe.irse("admin:" + quien.getName(), null);
+        for (ParcaViva pe : cuales) pe.irse("admin:" + quien.getName(), null);
         decir(quien, "parca | retiradas " + cuales.size());
     }
 
@@ -1439,17 +1439,17 @@ final class Parca implements Listener {
         // A ras de suelo: unas coordenadas a mano suelen caer en el aire o dentro del terreno.
         Location sitio = Fx.ground(new Location(w, x, y, z), 40);
         // Sin presa: N tal cual (sin el extra-nivel, que ya lo pone quien prueba), r = 0, M = 0.
-        PeleaParca pe = PeleaParca.crear(this, a, null, "prueba", List.of(), n, 0, 0, sitio, true, 1.0, 1);
+        ParcaViva pe = PeleaParca.crear(this, a, null, "prueba", List.of(), n, 0, 0, sitio, true, 1.0, 1);
         if (pe == null) {
             quien.sendMessage(Component.text("parca | prueba | no ha salido (spawn cancelado o chunk sin cargar)", Paleta.AVISO));
             return;
         }
         peleas.add(pe);
-        Location l = pe.cuerpo.getLocation();
+        Location l = pe.cuerpo().getLocation();
         hc.plugin().bitacora().anotar("parca", "llega", "prueba", "N " + n, "r 0", "M 0",
                 l.getBlockX() + " " + l.getBlockY() + " " + l.getBlockZ(), "celdas 0", "vehiculo no");
-        decir(quien, "parca | prueba | N " + n + " | vida logica " + Math.round(hc.amenazas().vidaLogicaMaxima(pe.cuerpo))
-                + " | escala " + Math.round(hc.amenazas().escala(pe.cuerpo) * 1000) / 1000.0);
+        decir(quien, "parca | prueba | N " + n + " | vida logica " + Math.round(hc.amenazas().vidaLogicaMaxima(pe.cuerpo()))
+                + " | escala " + Math.round(hc.amenazas().escala(pe.cuerpo()) * 1000) / 1000.0);
     }
 
     // =============================================================== autotest
