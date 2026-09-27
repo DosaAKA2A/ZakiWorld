@@ -369,7 +369,7 @@ hardcore:
     cuerpo:
       activo: true                # false = el esqueleto wither vestido de siempre
       skin: Leonsaurusrex         # cuenta de Minecraft cuya skin lleva (3-16 letras, numeros o _)
-      escala: 1.4                 # tamano del cuerpo; 1 = un jugador. El esqueleto se ajusta solo
+      escala: 1.68                # tamano del cuerpo; 1 = un jugador. El esqueleto (su caja) se ajusta solo
     # aviso-ticks: lo que dura el aviso de cada habilidad antes del golpe (20 ticks = 1 s).
     # 1.1.1 los alarga (Siega 24 -> 30, Paso Umbral y Tiron 20 -> 24): se ven mejor y dan el
     # mismo tiempo de reaccion o mas; bajarlos hace la pelea mas injusta, no mas dificil.

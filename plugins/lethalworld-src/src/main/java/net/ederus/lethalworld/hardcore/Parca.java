@@ -224,7 +224,8 @@ final class Parca implements Listener {
             cabezaTextura = s.getString("cabeza-textura", "");
             cuerpoActivo = s.getBoolean("cuerpo.activo", true);
             cuerpoSkin = s.getString("cuerpo.skin", "Leonsaurusrex");
-            cuerpoEscala = Math.max(0.5, Math.min(3.0, s.getDouble("cuerpo.escala", 1.4)));
+            // 1.2.0: un 20 % mas grande (1,4 -> 1,68); el esqueleto invisible se ajusta solo (escalaEsqueleto).
+            cuerpoEscala = Math.max(0.5, Math.min(3.0, s.getDouble("cuerpo.escala", 1.68)));
             horasEntreCobros = s.getInt("botin.horas-entre-cobros", 24);
             participacionMinima = s.getDouble("botin.participacion-minima", 0.10);
             participacionPresa = s.getDouble("botin.participacion-presa", 0.25);
