@@ -19,10 +19,9 @@ import org.bukkit.World;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.Mannequin;
 import org.bukkit.entity.Player;
-import org.bukkit.entity.Vex;
+import org.bukkit.entity.Wither;
 import org.bukkit.entity.WitherSkeleton;
 import org.bukkit.inventory.EntityEquipment;
-import org.bukkit.inventory.EquipmentSlot;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.inventory.meta.LeatherArmorMeta;
@@ -133,7 +132,10 @@ final class PeleaParca implements Runnable {
     private boolean siegaAlAterrizar;
     private long tironSolto;
 
-    private final List<Vex> planideras = new ArrayList<>();
+    /** Mini withers del Cortejo, que orbitan a la PARCA. */
+    private final List<Wither> planideras = new ArrayList<>();
+    /** Angulo de salida de cada planidera en su orbita (fijo: si cae una, las otras no saltan). */
+    private final Map<UUID, Double> huecos = new HashMap<>();
     private long planNacio;
     private boolean planActivas;
     private boolean planCaducaron;
@@ -286,12 +288,13 @@ final class PeleaParca implements Runnable {
                     }
                     mq.setProfile(perfil);
                     Compat.setAttribute(mq, "scale", a.cuerpoEscala);
-                    EntityEquipment eq = mq.getEquipment();
-                    eq.setItemInMainHand(guadana());
-                    eq.setDropChance(EquipmentSlot.HAND, 0f);
+                    // Sin probabilidad de soltarla: eso solo existe en los Mob (el maniqui no lo
+                    // es). Si alguien lo mata con /kill, Parca.onMuerte le vacia lo que suelte.
+                    mq.getEquipment().setItemInMainHand(guadana());
                 });
             } catch (Throwable t) {
                 cascara = null;
+                hc.plugin().getLogger().warning("[Calamity] No se pudo poner el cuerpo de la Parca: " + t);
             }
         }
         if (cascara == null || !cascara.isValid()) {
@@ -392,7 +395,7 @@ final class PeleaParca implements Runnable {
 
     boolean esPlanidera(Entity e) {
         if (e == null || planideras.isEmpty()) return false;
-        for (Vex v : planideras) if (v.getUniqueId().equals(e.getUniqueId())) return true;
+        for (Wither v : planideras) if (v.getUniqueId().equals(e.getUniqueId())) return true;
         return false;
     }
 
@@ -677,6 +680,35 @@ final class PeleaParca implements Runnable {
         } else if (f == 3) {
             lista.put(Habilidad.CAMPANADA, ticks + 60);
         }
+        // La de prueba sin nadie que le pegue no elige habilidades (no tiene objetivo): al
+        // entrar en fase suelta la suya, para poder ver el cortejo y la Sentencia por RCON.
+        if (prueba && objetivoPrueba == null && actual == null && estado != Estado.COSECHA) {
+            empezar(f == 2 ? Habilidad.CORTEJO : Habilidad.CAMPANADA, null);
+        }
+    }
+
+    /**
+     * /lw hardcore parca habilidad <nombre>: suelta esa habilidad ya (para ver los avisos y
+     * los golpes con un cliente). Tiron y Paso Umbral necesitan un jugador (quien lo pide).
+     * Devuelve por que no, o null si ha empezado.
+     */
+    String forzar(String nombre, Player quien) {
+        if (estado != Estado.PELEA && estado != Estado.APARECE) return "no esta peleando";
+        Habilidad h = switch (nombre) {
+            case "siega" -> Habilidad.SIEGA;
+            case "umbral", "paso" -> Habilidad.UMBRAL;
+            case "tiron" -> Habilidad.TIRON;
+            case "cortejo" -> Habilidad.CORTEJO;
+            case "sentencia", "campanada" -> Habilidad.CAMPANADA;
+            default -> null;
+        };
+        if (h == null) return "habilidades: siega, umbral, tiron, cortejo, sentencia";
+        Player obj = quien != null && quien.getWorld() == cuerpo.getWorld() ? quien : objetivo();
+        if ((h == Habilidad.TIRON || h == Habilidad.UMBRAL) && obj == null) return "necesita un jugador en el mundo";
+        if (h == Habilidad.CORTEJO && !planideras.isEmpty()) return "ya hay planideras";
+        if (actual != null) acabar();
+        empezar(h, obj);
+        return null;
     }
 
     // ========================================================== habilidades
@@ -741,7 +773,10 @@ final class PeleaParca implements Runnable {
         toques = 0;
         puntos.clear();
         origen = cuerpo.getLocation().clone();
-        dir = direccionA(obj, origen).normalize();
+        // Siempre horizontal: sin objetivo sale de donde mira, y con la cabeza inclinada el
+        // cono de la Siega se torcia.
+        Vector d = direccionA(obj, origen).clone().setY(0);
+        dir = d.lengthSquared() < 1e-4 ? new Vector(0, 0, 1) : d.normalize();
         Compat.setAttribute(cuerpo, "movement_speed", 0);
         World w = cuerpo.getWorld();
         switch (h) {
@@ -765,10 +800,12 @@ final class PeleaParca implements Runnable {
             case CORTEJO -> {
                 habDura = 30;
                 blandir();
-                Compat.sound(w, origen, "entity.vex.charge", 1.5f, 0.6f);
+                Compat.sound(w, origen, "entity.wither.ambient", 1.2f, 1.6f);
+                // Un anillo por planidera, donde va a salir cada una (a 4 bloques, repartidas).
+                int n = cuantasPlanideras();
                 double base = Math.atan2(dir.getZ(), dir.getX());
-                for (int i = 0; i < 3; i++) {
-                    double ang = base + i * Math.PI * 2 / 3;
+                for (int i = 0; i < n; i++) {
+                    double ang = base + i * Math.PI * 2 / n;
                     puntos.add(Fx.ground(origen.clone().add(Math.cos(ang) * 4, 0, Math.sin(ang) * 4), 4));
                 }
             }
@@ -956,45 +993,102 @@ final class PeleaParca implements Runnable {
 
     // --------------------------------------------------------------- Cortejo
 
-    /** base + M planideras (tope 6): mientras quede una, la PARCA recibe x0,5. */
+    /** base + M planideras, con tope. */
+    private int cuantasPlanideras() {
+        return Math.max(1, Math.min(a.planTope, a.planBase + extra));
+    }
+
+    /**
+     * base + M planideras (tope 6): mini withers (scale planideras.escala) que salen de los
+     * anillos del aviso y se ponen a orbitar a la PARCA como parte de su cortejo. Sin IA (ni
+     * calaveras, ni bloques rotos, ni regenerarse), sin gravedad, mudas y SIN la barra de jefe
+     * del wither: la unica barra de la pelea es la de la PARCA. No pegan: lloran (lamento, que
+     * quita cordura). Mientras quede una, la PARCA recibe x0,5; se matan a golpes (Amenazas
+     * solo deja que les peguen jugadores). Parca.onDisparo y onExplotar son el doble cerrojo.
+     */
     private void soltarCortejo() {
-        int n = Math.min(a.planTope, a.planBase + extra);
+        int n = Math.min(cuantasPlanideras(), puntos.size());
         double vida = a.planVida * (1 + a.planVidaPorNivel * (nivel - 1));
-        double dano = a.planDano * (1 + a.planDanoPorNivel * (nivel - 1));
-        Player obj = objetivo();
-        for (int i = 0; i < n && !puntos.isEmpty(); i++) {
-            Location l = puntos.get(i % puntos.size()).clone().add(0, 1, 0);
-            Vex vex = hc.amenazas().invocar(Vex.class, l, "planidera", nivel, Component.text("Plañidera", HUESO), e -> {
-                if (presa != null) e.getPersistentDataContainer().set(Marcas.PRESA, PersistentDataType.STRING, presa.toString());
-                Compat.setAttribute(e, "max_health", vida);
-                e.setHealth(Math.max(1, vida));
-                Compat.setAttribute(e, "attack_damage", dano);
-                // Amenazas cancela el dano que no es de jugador, y la vex con vida limitada se
-                // muere asi: la retira esta pelea a los vida-ticks.
-                e.setLimitedLifetime(true);
-                e.setLimitedLifetimeTicks(a.planVidaTicks + 40);
-                e.setSummoner(cuerpo);
-            });
-            if (vex == null) continue;
-            if (obj != null) vex.setTarget(obj);
-            planideras.add(vex);
+        World w = cuerpo.getWorld();
+        Location centro = cuerpo.getLocation();
+        huecos.clear();
+        for (int i = 0; i < n; i++) {
+            Location l = puntos.get(i).clone().add(0, 1, 0);
+            Wither wi = hc.amenazas().invocar(Wither.class, l, "planidera", nivel,
+                    Paleta.nombre("Plañidera", Paleta.HUESO), e -> {
+                        if (presa != null) e.getPersistentDataContainer().set(Marcas.PRESA, PersistentDataType.STRING, presa.toString());
+                        e.setAI(false);
+                        e.setGravity(false);
+                        e.setSilent(true);
+                        // Antes de que nadie la vea: sin esto el cliente pinta la barra morada del wither.
+                        ocultarBarra(e);
+                        Compat.setAttribute(e, "scale", a.planEscala);
+                        Compat.setAttribute(e, "max_health", vida);
+                        e.setHealth(Math.max(1, vida));
+                        Compat.setAttribute(e, "knockback_resistance", 1.0);
+                    });
+            if (wi == null) continue;
+            planideras.add(wi);
+            huecos.put(wi.getUniqueId(), Math.atan2(l.getZ() - centro.getZ(), l.getX() - centro.getX()));
+            Compat.spawn(w, Compat.SOUL, l, 16, 0.3, 0.4, 0.3, 0.04);
+            Compat.spawn(w, Compat.LARGE_SMOKE, l, 8, 0.3, 0.3, 0.3, 0.01);
         }
         if (!planideras.isEmpty()) {
             planNacio = ticks;
             planActivas = true;
             planCaducaron = false;
+            Compat.sound(w, centro, "entity.wither.ambient", 1.4f, 1.8f);
         }
     }
 
     /**
-     * Mantiene las planideras: hilo de almas a la PARCA, caducidad a los vida-ticks y, si
-     * caen todas antes de 40 s, la PARCA queda aturdida 3 s y recibe +25 % (P-15).
+     * La barra de jefe del wither fuera: invisible y sin nadie. Con visible en false, el
+     * servidor no la manda ni a los que empiecen a verla despues (ServerBossEvent.addPlayer).
+     */
+    private static void ocultarBarra(Wither w) {
+        try {
+            org.bukkit.boss.BossBar b = w.getBossBar();
+            if (b == null) return;
+            b.setVisible(false);
+            b.removeAll();
+        } catch (Throwable ignorado) {
+            // Si Paper cambia la API, la barra se veria: feo, pero la pelea sigue.
+        }
+    }
+
+    /**
+     * Donde va la planidera "id" ahora: en circulo alrededor de la PARCA, a la altura del
+     * pecho, subiendo y bajando. El primer segundo se cierra desde los 4 bloques del anillo
+     * en el que salio hasta planideras.radio, sin saltos.
+     */
+    private Location orbita(Wither wi, Location centro, long vida) {
+        double hueco = huecos.getOrDefault(wi.getUniqueId(), 0.0);
+        double ang = hueco + vida * VELOCIDAD_ORBITA;
+        double entra = Math.max(0, 1 - vida / 20.0);
+        double radio = a.planRadio + (4 - a.planRadio) * entra;
+        double alto = a.planAltura * (1 - entra) + entra + 0.3 * Math.sin(vida * 0.12 + hueco * 3);
+        Location l = centro.clone().add(Math.cos(ang) * radio, alto, Math.sin(ang) * radio);
+        // Mirando hacia donde vuela (la tangente del circulo): parece que vuelen solas.
+        l.setDirection(new Vector(-Math.sin(ang), 0, Math.cos(ang)));
+        return l;
+    }
+
+    /** Radianes por tick de la orbita: una vuelta cada 5 s. */
+    private static final double VELOCIDAD_ORBITA = Math.PI * 2 / 100;
+
+    /**
+     * Mantiene las planideras: orbita (cada 2 ticks), hilo de almas a la PARCA, lamento,
+     * caducidad a los vida-ticks y, si caen todas antes de 40 s, la PARCA queda aturdida 3 s
+     * y recibe +25 % (P-15).
      */
     private void planideras() {
         if (!planActivas) return;
         planideras.removeIf(v -> !v.isValid() || v.isDead());
         if (!planideras.isEmpty() && ticks - planNacio >= a.planVidaTicks) {
-            for (Vex v : planideras) Fx.safeRemove(v);
+            for (Wither v : planideras) {
+                Compat.spawn(v.getWorld(), Compat.SOUL, v.getLocation().add(0, 0.5, 0), 10, 0.2, 0.3, 0.2, 0.03);
+                Fx.safeRemove(v);
+            }
             planideras.clear();
             planCaducaron = true;
         }
@@ -1004,16 +1098,42 @@ final class PeleaParca implements Runnable {
             return;
         }
         World w = cuerpo.getWorld();
+        Location centro = cuerpo.getLocation();
+        long vida = ticks - planNacio;
+        for (Wither v : planideras) {
+            if (v.getWorld() == w) hc.amenazas().teleportar(v, orbita(v, centro, vida));
+        }
         if (ticks % 10 == 0) {
-            for (Vex v : planideras) {
+            for (Wither v : planideras) {
                 if (v.getWorld() != w) continue;
-                Fx.beam(v.getLocation().add(0, 0.5, 0), cuerpo.getLocation().add(0, 1.4, 0), 0.5,
+                Fx.beam(v.getLocation().add(0, 0.4, 0), cuerpo.getLocation().add(0, 1.4, 0), 0.5,
                         l -> Compat.spawn(w, Compat.SOUL, l, 1, 0, 0, 0, 0));
             }
         }
-        if (ticks % 20 == 0) {
-            Player obj = objetivo();
-            if (obj != null) for (Vex v : planideras) v.setTarget(obj);
+        // Por si algo le devuelve la barra (otro plugin, un reinicio de la entidad): cada segundo.
+        if (ticks % 20 == 0) for (Wither v : planideras) ocultarBarra(v);
+        lamentos(w, vida);
+    }
+
+    /**
+     * El lamento: cada planidera, cada lamento-segundos (escalonadas para que no suenen a la
+     * vez), llora hacia el objetivo si esta a lamento-radio: un hilo de almas hasta el y
+     * -cordura. No quita vida: las planideras son presion, no dano. La respuesta es matarlas.
+     */
+    private void lamentos(World w, long vida) {
+        long periodo = Math.max(20, a.planLamento * 20L);
+        Player obj = objetivo();
+        if (obj == null || obj.getWorld() != w) return;
+        for (int i = 0; i < planideras.size(); i++) {
+            if (Math.floorMod(vida - 10 - 12L * i, periodo) != 0) continue;
+            Wither v = planideras.get(i);
+            Location desde = v.getLocation().add(0, 0.5, 0);
+            if (desde.distanceSquared(obj.getLocation()) > a.planLamentoRadio * a.planLamentoRadio) continue;
+            Fx.beam(desde, obj.getLocation().add(0, 1.1, 0), 0.35,
+                    l -> Compat.spawn(w, Compat.SOUL, l, 1, 0.02, 0.02, 0.02, 0));
+            Compat.sound(w, desde, "entity.wither.ambient", 0.8f, 1.9f);
+            obj.playSound(obj.getLocation(), "entity.allay.death", SoundCategory.HOSTILE, 0.5f, 0.5f);
+            if (hc.esHardcore(obj)) hc.cordura().sumar(obj, -a.planCordura);
         }
     }
 
@@ -1021,6 +1141,7 @@ final class PeleaParca implements Runnable {
         aturdidaHasta = ticks + a.planAturdir * 20L;
         if (actual != null) acabar();
         cuerpo.setAI(false);
+        huecos.clear();
         Component texto = Component.text("La Parca se tambalea.", NamedTextColor.GRAY);
         for (Player o : Fx.viewersNear(cuerpo.getLocation(), 32)) hc.cordura().destello(o, texto, 2);
         Compat.sound(cuerpo.getWorld(), cuerpo.getLocation(), "entity.wither_skeleton.hurt", 1.5f, 0.5f);
@@ -1151,7 +1272,7 @@ final class PeleaParca implements Runnable {
         esperaHasta = System.currentTimeMillis() + a.esperaDesconexion * 1000L;
         cuerpo.setAI(false);
         cuerpo.setInvulnerable(false);
-        for (Vex v : planideras) Fx.safeRemove(v);
+        for (Wither v : planideras) Fx.safeRemove(v);
         planideras.clear();
         planActivas = false;
         hc.plugin().bitacora().anotar("parca", "espera", presaNombre, a.esperaDesconexion + " s");
@@ -1179,7 +1300,7 @@ final class PeleaParca implements Runnable {
         cosechaDesde = ticks;
         cuerpo.setAI(false);
         cuerpo.setInvulnerable(true);
-        for (Vex v : planideras) Fx.safeRemove(v);
+        for (Wither v : planideras) Fx.safeRemove(v);
         planideras.clear();
         Compat.sound(cuerpo.getWorld(), cuerpo.getLocation(), "block.bell.use", 3f, 0.5f);
         hc.plugin().bitacora().anotar("parca", "cosecha", presaNombre, porElla ? "por ella" : "por otra cosa",
@@ -1254,7 +1375,7 @@ final class PeleaParca implements Runnable {
     /** Retira todo lo suyo (idempotente): barra, planideras, maniqui, cuerpo y la pelea de la tarea de 2 ticks. */
     void limpiar() {
         quitarBarra();
-        for (Vex v : planideras) Fx.safeRemove(v);
+        for (Wither v : planideras) Fx.safeRemove(v);
         planideras.clear();
         Fx.safeRemove(cascara);
         cascara = null;

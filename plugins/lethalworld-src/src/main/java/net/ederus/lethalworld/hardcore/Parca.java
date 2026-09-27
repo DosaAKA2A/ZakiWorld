@@ -28,6 +28,8 @@ import org.bukkit.event.entity.EntityDamageEvent;
 import org.bukkit.event.entity.EntityDeathEvent;
 import org.bukkit.event.entity.EntityMountEvent;
 import org.bukkit.event.entity.EntityTargetLivingEntityEvent;
+import org.bukkit.event.entity.ExplosionPrimeEvent;
+import org.bukkit.event.entity.ProjectileLaunchEvent;
 import org.bukkit.event.entity.PlayerDeathEvent;
 import org.bukkit.event.player.PlayerFishEvent;
 import org.bukkit.event.player.PlayerInteractAtEntityEvent;
@@ -89,7 +91,8 @@ final class Parca implements Listener {
         cargarSegadas();
         Autotest.registrar("parca", Parca::autotest);
         Subcomandos.lw().registrar("parca",
-                "parca <jugador> [segundos] | info <jugador> | vida <0-1> | retirar [jugador] | prueba <x> <y> <z> [N]",
+                "parca <jugador> [segundos] | info <jugador> | vida <0-1> | habilidad <nombre> | retirar [jugador]"
+                        + " | prueba <x> <y> <z> [N]",
                 "ederus.mundos", this::comando, this::tab);
     }
 
@@ -114,7 +117,10 @@ final class Parca implements Listener {
         final int tironEspera, tironAviso;
         final double tironMin, tironMax, tironRompe, tironFuerza;
         final int planBase, planTope, planVidaTicks, planEspera, planAturdir;
-        final double planVida, planVidaPorNivel, planDano, planDanoPorNivel, planCordura, planReduccion, planAturdidaExtra;
+        final double planVida, planVidaPorNivel, planCordura, planReduccion, planAturdidaExtra;
+        /** Mini withers: tamano, orbita alrededor de la PARCA y lamento (cordura, no vida). */
+        final double planEscala, planRadio, planAltura, planLamentoRadio;
+        final int planLamento;
         final int campEspera, campToques, campCada;
         final double campRadio, campVida, campTope, campCordura, campExtra;
         final int furiaMinutos, duracionMaxima, atasco;
@@ -178,8 +184,11 @@ final class Parca implements Listener {
             planTope = s.getInt("planideras.tope", 6);
             planVida = s.getDouble("planideras.vida", 12);
             planVidaPorNivel = s.getDouble("planideras.vida-por-nivel", 0.05);
-            planDano = s.getDouble("planideras.dano", 2);
-            planDanoPorNivel = s.getDouble("planideras.dano-por-nivel", 0.03);
+            planEscala = Math.max(0.15, Math.min(1.0, s.getDouble("planideras.escala", 0.35)));
+            planRadio = Math.max(1.5, s.getDouble("planideras.radio", 3.0));
+            planAltura = s.getDouble("planideras.altura", 1.8);
+            planLamento = Math.max(1, s.getInt("planideras.lamento-segundos", 4));
+            planLamentoRadio = s.getDouble("planideras.lamento-radio", 12);
             planCordura = s.getDouble("planideras.cordura", 3);
             planVidaTicks = s.getInt("planideras.vida-ticks", 800);
             planReduccion = s.getDouble("planideras.reduccion", 0.5);
@@ -368,13 +377,6 @@ final class Parca implements Listener {
     PeleaParca deCascara(Entity e) {
         if (e == null) return null;
         for (PeleaParca pe : peleas) if (pe.esCascara(e)) return pe;
-        return null;
-    }
-
-    /** La pelea de una planidera, o null. */
-    PeleaParca dePlanidera(Entity e) {
-        if (e == null) return null;
-        for (PeleaParca pe : peleas) if (pe.esPlanidera(e)) return pe;
         return null;
     }
 
@@ -1025,6 +1027,12 @@ final class Parca implements Listener {
         LivingEntity muerto = e.getEntity();
         if (!hc.esHardcore(muerto.getWorld())) return;
         if (muerto instanceof Player) return;
+        if (muerto instanceof Mannequin && muerto.getPersistentDataContainer().has(Marcas.CASCARA, PersistentDataType.STRING)) {
+            // El cuerpo que se ve, muerto a mano (/kill): ni guadana ni experiencia en el suelo.
+            e.getDrops().clear();
+            e.setDroppedExp(0);
+            return;
+        }
         if (Marcas.esAmenaza(muerto)) {
             PeleaParca pe = deCuerpo(muerto);
             if (pe != null) hc.seguro("parca", pe::alMorir);
@@ -1047,8 +1055,8 @@ final class Parca implements Listener {
 
     /**
      * Golpes: lo que recibe la PARCA (x0,5 con planideras, +25 % aturdida o tocando la
-     * campanada; Amenazas escala y topa despues, en HIGHEST), lo que da (el reloj del Paso
-     * Umbral y del atasco) y lo que dan las planideras (cordura).
+     * campanada; Amenazas escala y topa despues, en HIGHEST) y lo que da (el reloj del Paso
+     * Umbral y del atasco). Las planideras ya no pegan: lloran (PeleaParca.lamentos).
      */
     @EventHandler(priority = EventPriority.HIGH, ignoreCancelled = true)
     public void onGolpe(EntityDamageByEntityEvent e) {
@@ -1070,10 +1078,23 @@ final class Parca implements Listener {
             da.haGolpeado();
             // El esqueleto que golpea es invisible: el tajo lo tiene que dar el cuerpo que se ve.
             da.blandir();
-            return;
         }
-        PeleaParca llora = dePlanidera(autor);
-        if (llora != null) hc.cordura().sumar(v, -ajustes().planCordura);
+    }
+
+    /**
+     * Las planideras son withers: nada de calaveras. Sin IA no disparan, pero si otro plugin
+     * les devuelve la IA o las usa de tirador, el proyectil no sale.
+     */
+    @EventHandler(ignoreCancelled = true)
+    public void onDisparo(ProjectileLaunchEvent e) {
+        if (peleas.isEmpty()) return;
+        if (e.getEntity().getShooter() instanceof Entity t && "planidera".equals(Marcas.amenaza(t))) e.setCancelled(true);
+    }
+
+    /** Ni la explosion del wither (la de nacer invocado, o la que otro plugin le pida). */
+    @EventHandler(ignoreCancelled = true)
+    public void onExplotar(ExplosionPrimeEvent e) {
+        if (!peleas.isEmpty() && "planidera".equals(Marcas.amenaza(e.getEntity()))) e.setCancelled(true);
     }
 
     /**
@@ -1178,19 +1199,21 @@ final class Parca implements Listener {
      *   parca <jugador> [segundos]    pone su quieto (el limite por defecto = la invoca ya)
      *   parca info <jugador>          lo que sabe la Huella y lo pendiente
      *   parca vida <0-1>              vida de la PARCA mas cercana (probar fases)
+     *   parca habilidad <nombre>      la mas cercana suelta esa habilidad ya (ver los avisos)
      *   parca retirar [jugador]       una o todas, sin botin
      *   parca prueba <x> <y> <z> [N]  en el primer mundo hardcore, sin presa
      */
     private void comando(CommandSender quien, String[] args) {
         if (args.length < 2) {
             quien.sendMessage(Component.text("Uso: /lw hardcore parca <jugador> [segundos] | info <jugador> | vida <0-1>"
-                    + " | retirar [jugador] | prueba <x> <y> <z> [N]", NamedTextColor.RED));
+                    + " | habilidad <nombre> | retirar [jugador] | prueba <x> <y> <z> [N]", Paleta.AVISO));
             return;
         }
         String sub = args[1].toLowerCase(Locale.ROOT);
         switch (sub) {
             case "info" -> info(quien, args);
             case "vida" -> vida(quien, args);
+            case "habilidad" -> habilidad(quien, args);
             case "retirar" -> retirar(quien, args);
             case "prueba" -> prueba(quien, args);
             default -> forzar(quien, args);
@@ -1200,12 +1223,14 @@ final class Parca implements Listener {
     private List<String> tab(String[] args) {
         List<String> out = new ArrayList<>();
         if (args.length == 2) {
-            out.addAll(List.of("info", "vida", "retirar", "prueba"));
+            out.addAll(List.of("info", "vida", "habilidad", "retirar", "prueba"));
             for (Player p : hc.plugin().getServer().getOnlinePlayers()) out.add(p.getName());
         } else if (args.length == 3 && (args[1].equalsIgnoreCase("info") || args[1].equalsIgnoreCase("retirar"))) {
             for (Player p : hc.plugin().getServer().getOnlinePlayers()) out.add(p.getName());
         } else if (args.length == 3 && args[1].equalsIgnoreCase("vida")) {
             out.addAll(List.of("0.5", "0.2"));
+        } else if (args.length == 3 && args[1].equalsIgnoreCase("habilidad")) {
+            out.addAll(List.of("siega", "umbral", "tiron", "cortejo", "sentencia"));
         }
         return out;
     }
@@ -1304,6 +1329,22 @@ final class Parca implements Listener {
         hc.amenazas().ponerFraccion(pe.cuerpo, Math.max(0.01, Math.min(1, f)));
         pe.revisarFase();
         decir(quien, "parca | vida " + Math.round(Amenazas.fraccion(pe.cuerpo) * 100) + " % | fase " + pe.fase);
+    }
+
+    private void habilidad(CommandSender quien, String[] args) {
+        PeleaParca pe = masCercana(quien);
+        if (pe == null) {
+            quien.sendMessage(Component.text("No hay ninguna Parca viva.", Paleta.AVISO));
+            return;
+        }
+        String nombre = args.length > 2 ? args[2].toLowerCase(Locale.ROOT) : "";
+        String no = pe.forzar(nombre, quien instanceof Player p ? p : null);
+        if (no != null) {
+            quien.sendMessage(Component.text("parca | habilidad | " + no, Paleta.AVISO));
+            return;
+        }
+        decir(quien, "parca | habilidad | " + nombre + " | fase " + pe.fase);
+        hc.plugin().bitacora().anotar("parca", "habilidad", nombre, quien.getName());
     }
 
     private void retirar(CommandSender quien, String[] args) {

@@ -360,7 +360,25 @@ hardcore:
     siega: {espera: 6, espera-fase3: 5, angulo: 100, radio: 5, aviso-ticks: 24, vida: 0.20, tope: 0.60, cordura: 8}
     umbral: {espera: 8, distancia: 12, sin-vision-segundos: 4, sin-golpear-segundos: 5, aviso-ticks: 20}
     tiron: {espera: 12, distancia-minima: 6, distancia-maxima: 18, aviso-ticks: 20, rompe: 0.03, fuerza: 1.6}
-    planideras: {base: 3, tope: 6, vida: 12, vida-por-nivel: 0.05, dano: 2, dano-por-nivel: 0.03, cordura: 3, vida-ticks: 800, reduccion: 0.5, espera: 30, aturdir-segundos: 3, aturdida-extra: 0.25}
+    # Cortejo (fase II). Desde 1.1.1 las planideras son mini withers que orbitan a la PARCA:
+    # sin IA ni barra de jefe, no pegan ni disparan; lloran (lamento: -cordura). Mientras
+    # quede una, la PARCA recibe x reduccion; si caen todas antes de 40 s, queda aturdida.
+    planideras:
+      base: 3                     # planideras = base + marcados extra...
+      tope: 6                     # ...con este tope
+      vida: 12                    # vida = vida x (1 + vida-por-nivel x (N-1))
+      vida-por-nivel: 0.05
+      escala: 0.35                # tamano del mini wither (1 = un wither normal)
+      radio: 3.0                  # radio de la orbita alrededor de la PARCA, en bloques
+      altura: 1.8                 # altura de la orbita sobre sus pies
+      lamento-segundos: 4         # cada cuanto llora cada una hacia su objetivo...
+      lamento-radio: 12           # ...si esta a esta distancia...
+      cordura: 3                  # ...y le quita esta cordura (nunca vida)
+      vida-ticks: 800             # se deshacen solas a los 40 s
+      reduccion: 0.5              # dano que recibe la PARCA mientras quede alguna
+      espera: 30                  # segundos entre cortejos
+      aturdir-segundos: 3         # aturdida si caen todas antes de vida-ticks...
+      aturdida-extra: 0.25        # ...y recibe +25 % mientras
     campanada: {espera: 30, toques: 5, cada-ticks: 24, radio: 10, vida: 0.50, tope: 0.90, cordura: 25, dano-extra-recibido: 0.25}
     furia-minutos: 5              # a partir de aqui esperas x0.7 y velocidad x1.2
     duracion-maxima-minutos: 12   # se va sin botin
