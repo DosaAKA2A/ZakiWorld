@@ -17,6 +17,7 @@ import org.bukkit.entity.LivingEntity;
 import org.bukkit.entity.Mannequin;
 import org.bukkit.entity.Mob;
 import org.bukkit.entity.Player;
+import org.bukkit.entity.Pose;
 import org.bukkit.entity.Projectile;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
@@ -76,6 +77,8 @@ final class Parca implements Listener {
     private final List<BukkitTask> tareas = new ArrayList<>();
     /** Quien acaba de morir por una habilidad de la PARCA: su mensaje de muerte es P-19. */
     private final Set<UUID> segadosPorElla = new HashSet<>();
+    /** Cuerpos de PARCAs muertas deshaciendose en almas (despedida); parar() los retira ya. */
+    private final List<Entity> despedidas = new ArrayList<>();
     /** Tierra segada en memoria (se guarda tambien en datos parca.segada). */
     private final List<Segada> segadas = new ArrayList<>();
     private Ajustes ajustes;
@@ -165,7 +168,8 @@ final class Parca implements Listener {
             siegaEsperaF3 = s.getInt("siega.espera-fase3", 5);
             siegaAngulo = s.getDouble("siega.angulo", 100);
             siegaRadio = s.getDouble("siega.radio", 5);
-            siegaAviso = Math.max(2, s.getInt("siega.aviso-ticks", 24));
+            // 1.1.1: avisos algo mas largos (30/24/24 ticks): se ven mas y se leen mejor.
+            siegaAviso = Math.max(2, s.getInt("siega.aviso-ticks", 30));
             siegaVida = s.getDouble("siega.vida", 0.20);
             siegaTope = s.getDouble("siega.tope", 0.60);
             siegaCordura = s.getDouble("siega.cordura", 8);
@@ -173,11 +177,11 @@ final class Parca implements Listener {
             umbralDistancia = s.getDouble("umbral.distancia", 12);
             umbralSinVision = s.getInt("umbral.sin-vision-segundos", 4);
             umbralSinGolpear = s.getInt("umbral.sin-golpear-segundos", 5);
-            umbralAviso = Math.max(2, s.getInt("umbral.aviso-ticks", 20));
+            umbralAviso = Math.max(2, s.getInt("umbral.aviso-ticks", 24));
             tironEspera = s.getInt("tiron.espera", 12);
             tironMin = s.getDouble("tiron.distancia-minima", 6);
             tironMax = s.getDouble("tiron.distancia-maxima", 18);
-            tironAviso = Math.max(2, s.getInt("tiron.aviso-ticks", 20));
+            tironAviso = Math.max(2, s.getInt("tiron.aviso-ticks", 24));
             tironRompe = s.getDouble("tiron.rompe", 0.03);
             tironFuerza = s.getDouble("tiron.fuerza", 1.6);
             planBase = s.getInt("planideras.base", 3);
@@ -285,11 +289,10 @@ final class Parca implements Listener {
     }
 
     /**
-     * Sentencia (5.a campanada; en el codigo sigue llamandose "juicio", pero el nombre visible
-     * es Sentencia: el servidor ya tiene otro sistema llamado Juicio). Fraccion de la vida
-     * maxima, tope 0,90 (ley 5).
+     * Sentencia (5.a campanada; no "Juicio": el servidor ya tiene otro sistema con ese nombre).
+     * Fraccion de la vida maxima, tope 0,90 (ley 5).
      */
-    static double juicioFraccion(Ajustes a, double r) {
+    static double sentenciaFraccion(Ajustes a, double r) {
         return Math.min(a.campTope, a.campVida * r);
     }
 
@@ -620,9 +623,47 @@ final class Parca implements Listener {
         peleas.clear();
         for (BukkitTask t : tareas) t.cancel();
         tareas.clear();
+        for (Entity e : despedidas) Fx.safeRemove(e);
+        despedidas.clear();
         segadosPorElla.clear();
         hc.marcarSucio();
         HandlerList.unregisterAll(this);
+    }
+
+    /**
+     * La PARCA ha caido: el cuerpo que se ve se arrodilla y se deshace en almas en 1,5 s, en
+     * vez de desaparecer de golpe. La tarea va en tareas (parar() la cancela y lo retira).
+     */
+    void despedida(Mannequin m) {
+        try {
+            m.setPose(Pose.SNEAKING, true);
+        } catch (Throwable ignorado) {
+            // Sin esa postura se deshace de pie: igual de claro.
+        }
+        despedidas.add(m);
+        World w = m.getWorld();
+        int[] t = {0};
+        BukkitTask[] tarea = new BukkitTask[1];
+        tarea[0] = hc.plugin().getServer().getScheduler().runTaskTimer(hc.plugin(), () -> {
+            t[0] += 2;
+            boolean fin = !m.isValid() || t[0] >= 30;
+            if (m.isValid()) {
+                Location l = m.getLocation();
+                Compat.spawn(w, Compat.SOUL, l.clone().add(0, 0.8 + t[0] / 15.0, 0), 3, 0.3, 0.5, 0.3, 0.02);
+                Compat.spawn(w, Compat.LARGE_SMOKE, l.clone().add(0, 0.3, 0), 2, 0.3, 0.1, 0.3, 0.01);
+                if (fin) {
+                    Compat.spawn(w, Compat.SOUL, l.clone().add(0, 1, 0), 40, 0.4, 0.8, 0.4, 0.05);
+                    Compat.sound(w, l, "entity.allay.death", 1.2f, 0.5f);
+                }
+            }
+            if (fin) {
+                Fx.safeRemove(m);
+                despedidas.remove(m);
+                tarea[0].cancel();
+                tareas.remove(tarea[0]);
+            }
+        }, 2L, 2L);
+        tareas.add(tarea[0]);
     }
 
     // ================================================================== invocar
@@ -1435,7 +1476,7 @@ final class Parca implements Listener {
         h.cerca("marcado extra -> vida x1,5", 1380, vidaLogica(a, 14, 0, 1), 1e-6);
         h.cerca("siega a 20 de vida: 4 (quieto 8)", 12, siegaFraccion(a, 1, false) * 20 + siegaFraccion(a, 1, true) * 20, 1e-9);
         h.cerca("siega tope 60 % con R 3 quieto", 0.60, siegaFraccion(a, 3, true), 1e-9);
-        h.cerca("sentencia 50 %, tope 90 % con R 2", 1.40, juicioFraccion(a, 1) + juicioFraccion(a, 2), 1e-9);
+        h.cerca("sentencia 50 %, tope 90 % con R 2", 1.40, sentenciaFraccion(a, 1) + sentenciaFraccion(a, 2), 1e-9);
         h.igual("esencias presa N 14/52/100", List.of(5, 9, 14),
                 List.of(esenciasPresa(a, 14), esenciasPresa(a, 52), esenciasPresa(a, 100)));
         h.igual("esencias ayudante N 14/52/100", List.of(2, 4, 7),

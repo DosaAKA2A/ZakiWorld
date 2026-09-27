@@ -357,9 +357,12 @@ hardcore:
       activo: true                # false = el esqueleto wither vestido de siempre
       skin: Leonsaurusrex         # cuenta de Minecraft cuya skin lleva (3-16 letras, numeros o _)
       escala: 1.4                 # tamano del cuerpo; 1 = un jugador. El esqueleto se ajusta solo
-    siega: {espera: 6, espera-fase3: 5, angulo: 100, radio: 5, aviso-ticks: 24, vida: 0.20, tope: 0.60, cordura: 8}
-    umbral: {espera: 8, distancia: 12, sin-vision-segundos: 4, sin-golpear-segundos: 5, aviso-ticks: 20}
-    tiron: {espera: 12, distancia-minima: 6, distancia-maxima: 18, aviso-ticks: 20, rompe: 0.03, fuerza: 1.6}
+    # aviso-ticks: lo que dura el aviso de cada habilidad antes del golpe (20 ticks = 1 s).
+    # 1.1.1 los alarga (Siega 24 -> 30, Paso Umbral y Tiron 20 -> 24): se ven mejor y dan el
+    # mismo tiempo de reaccion o mas; bajarlos hace la pelea mas injusta, no mas dificil.
+    siega: {espera: 6, espera-fase3: 5, angulo: 100, radio: 5, aviso-ticks: 30, vida: 0.20, tope: 0.60, cordura: 8}
+    umbral: {espera: 8, distancia: 12, sin-vision-segundos: 4, sin-golpear-segundos: 5, aviso-ticks: 24}
+    tiron: {espera: 12, distancia-minima: 6, distancia-maxima: 18, aviso-ticks: 24, rompe: 0.03, fuerza: 1.6}
     # Cortejo (fase II). Desde 1.1.1 las planideras son mini withers que orbitan a la PARCA:
     # sin IA ni barra de jefe, no pegan ni disparan; lloran (lamento: -cordura). Mientras
     # quede una, la PARCA recibe x reduccion; si caen todas antes de 40 s, queda aturdida.
@@ -379,6 +382,8 @@ hardcore:
       espera: 30                  # segundos entre cortejos
       aturdir-segundos: 3         # aturdida si caen todas antes de vida-ticks...
       aturdida-extra: 0.25        # ...y recibe +25 % mientras
+    # La Ultima campanada (fase III): cinco toques y, en el ultimo, la Sentencia (dano
+    # verdadero, -cordura y Oscuridad 1,5 s a quien siga dentro del anillo).
     campanada: {espera: 30, toques: 5, cada-ticks: 24, radio: 10, vida: 0.50, tope: 0.90, cordura: 25, dano-extra-recibido: 0.25}
     furia-minutos: 5              # a partir de aqui esperas x0.7 y velocidad x1.2
     duracion-maxima-minutos: 12   # se va sin botin

@@ -6,9 +6,7 @@ import net.ederus.edm.comun.Compat;
 import net.ederus.edm.comun.Fx;
 import net.kyori.adventure.bossbar.BossBar;
 import net.kyori.adventure.text.Component;
-import net.kyori.adventure.text.format.NamedTextColor;
 import net.kyori.adventure.text.format.TextColor;
-import net.kyori.adventure.text.format.TextDecoration;
 import net.kyori.adventure.title.Title;
 import org.bukkit.Color;
 import org.bukkit.Location;
@@ -16,9 +14,13 @@ import org.bukkit.Material;
 import org.bukkit.Particle;
 import org.bukkit.SoundCategory;
 import org.bukkit.World;
+import org.bukkit.entity.BlockDisplay;
+import org.bukkit.entity.Display;
 import org.bukkit.entity.Entity;
+import org.bukkit.entity.LivingEntity;
 import org.bukkit.entity.Mannequin;
 import org.bukkit.entity.Player;
+import org.bukkit.entity.Pose;
 import org.bukkit.entity.Wither;
 import org.bukkit.entity.WitherSkeleton;
 import org.bukkit.inventory.EntityEquipment;
@@ -26,7 +28,10 @@ import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.inventory.meta.LeatherArmorMeta;
 import org.bukkit.persistence.PersistentDataType;
+import org.bukkit.util.Transformation;
 import org.bukkit.util.Vector;
+import org.joml.Quaternionf;
+import org.joml.Vector3f;
 
 import java.time.Duration;
 import java.util.ArrayDeque;
@@ -41,6 +46,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
+import java.util.concurrent.ThreadLocalRandom;
 import java.util.regex.Pattern;
 
 /**
@@ -64,8 +70,16 @@ final class PeleaParca implements Runnable {
 
     private enum Habilidad { SIEGA, UMBRAL, TIRON, CORTEJO, CAMPANADA }
 
-    static final TextColor ROJO = ComandoCalamity.ROJO;
-    static final TextColor HUESO = TextColor.color(0xD8D2C4);
+    /** Colores de la pelea (Paleta): el de la PARCA claro, para que el aviso se lea en el suelo. */
+    static final TextColor HUESO = Paleta.HUESO;
+    private static final int RGB_PARCA = 0xF26A63;
+    private static final int RGB_HUESO = 0xE3DCCE;
+    /** La Siega empieza coral y acaba en rojo vivo: el color dice cuanto queda. */
+    private static final int RGB_SIEGA_DESDE = 0xFF9E80, RGB_SIEGA_HASTA = 0xFF2A2A;
+    /** El anillo de la Sentencia se oscurece con cada campanada. */
+    private static final int RGB_SENTENCIA_DESDE = 0xFF9E80, RGB_SENTENCIA_HASTA = 0x8E1022;
+    /** Largo de cada eslabon de la cadena del Tiron (BlockDisplay de cadena de hierro). */
+    private static final double ESLABON = 1.0;
     private static final int TICKS_APARICION = 40;
     private static final int TICKS_COSECHA = 60;
     /**
@@ -122,6 +136,17 @@ final class PeleaParca implements Runnable {
     private Vector dir;
     private Location destino;
     private final List<Location> puntos = new ArrayList<>();
+    /** El cono de la Siega ya asentado en el suelo (se calcula una vez por aviso, no cada 2 ticks). */
+    private final List<Location> cono = new ArrayList<>();
+    private final List<Location> filo = new ArrayList<>();
+    /** El anillo de la Sentencia en el suelo (exterior e interior), una vez por campanada. */
+    private final List<Location> anillo = new ArrayList<>();
+    private final List<Location> anilloDentro = new ArrayList<>();
+    private long ultimoToque;
+    /** Los eslabones de la cadena del Tiron. */
+    private final List<BlockDisplay> cadena = new ArrayList<>();
+    /** A quien va el Paso Umbral (se le sacude la vista cuando aparece detras). */
+    private UUID victimaPaso;
     private double danoAlEmpezar;
     private UUID victimaTiron;
     private int toques;
@@ -214,8 +239,7 @@ final class PeleaParca implements Runnable {
         am.registrarPelea(pe);
 
         for (Player p : marcados) pe.alMarcar(p);
-        Compat.sound(sitio.getWorld(), sitio, "block.respawn_anchor.deplete", 4f, 0.5f);
-        Compat.sound(sitio.getWorld(), sitio, "block.bell.use", 4f, 0.5f);
+        pe.entrada();
         return pe;
     }
 
@@ -372,9 +396,68 @@ final class PeleaParca implements Runnable {
     /** Lo que ve un marcado al quedar marcado: titulo P-08; si iba montado, abajo. */
     private void alMarcar(Player p) {
         if (p.isInsideVehicle()) p.leaveVehicle();
-        p.showTitle(Title.title(Component.text("PARCA", ROJO),
-                Component.text("Te quedaste demasiado tiempo.", NamedTextColor.GRAY),
-                Title.Times.times(Duration.ofMillis(300), Duration.ofSeconds(3), Duration.ofMillis(800))));
+        p.showTitle(Paleta.titulo(Paleta.muerte("PARCA"), "Te quedaste demasiado tiempo.",
+                Duration.ofMillis(500), Duration.ofSeconds(3), Duration.ofMillis(1000)));
+    }
+
+    /**
+     * La entrada (DIS sec. 1.4, con mas peso desde 1.1.1): quien este a 32 ve apagarse el
+     * cielo (Oscuridad 2 s, que acaba justo cuando ella puede moverse: no roba tiempo de
+     * reaccion), oye campanas graves y algo que sale de la tierra, y ve abrirse una niebla de
+     * almas (aparecer). Los marcados leen P-08; los demas, a que ha venido. Nunca
+     * entity.wither.spawn: es la firma del minijefe.
+     */
+    private void entrada() {
+        World w = sitioFinal.getWorld();
+        Compat.sound(w, sitioFinal, "block.respawn_anchor.deplete", 4f, 0.5f);
+        Compat.sound(w, sitioFinal, "block.bell.use", 4f, 0.5f);
+        Compat.sound(w, sitioFinal, "entity.warden.emerge", 3f, 0.8f);
+        Title ajeno = Paleta.titulo(Paleta.muerte("PARCA"), "Ha venido a buscar a alguien.",
+                Duration.ofMillis(500), Duration.ofMillis(2500), Duration.ofMillis(1000));
+        for (Player p : Fx.viewersNear(sitioFinal, 32)) {
+            if (Fx.isFightable(p)) Compat.apply(p, "darkness", TICKS_APARICION, 0);
+            if (!marcados.contains(p.getUniqueId())) p.showTitle(ajeno);
+        }
+    }
+
+    // ================================================================= miedo
+
+    /** Mezcla dos colores RGB (t de 0 a 1). */
+    static int mezcla(int desde, int hasta, double t) {
+        double k = Math.max(0, Math.min(1, t));
+        int r = (int) Math.round(((desde >> 16) & 0xFF) + (((hasta >> 16) & 0xFF) - ((desde >> 16) & 0xFF)) * k);
+        int g = (int) Math.round(((desde >> 8) & 0xFF) + (((hasta >> 8) & 0xFF) - ((desde >> 8) & 0xFF)) * k);
+        int b = (int) Math.round((desde & 0xFF) + ((hasta & 0xFF) - (desde & 0xFF)) * k);
+        return (r << 16) | (g << 8) | b;
+    }
+
+    /**
+     * Angulo desde el que le llega algo que esta en "desde", como lo pide playHurtAnimation
+     * (0 = de frente, 90 = por la derecha, 180 = por la espalda).
+     */
+    static float ladoDe(Player p, Location desde) {
+        Vector v = desde.toVector().subtract(p.getLocation().toVector());
+        if (v.lengthSquared() < 1e-6) return 0f;
+        double yaw = Math.toDegrees(Math.atan2(-v.getX(), v.getZ()));
+        return (float) Math.floorMod(Math.round(yaw - p.getLocation().getYaw()), 360L);
+    }
+
+    /**
+     * La vista tiembla un instante SIN dano (la animacion de golpe del cliente, desde el lado
+     * del impacto): el golpe se siente aunque lo hayas esquivado. Solo a quien juega.
+     */
+    private static void sacudir(Location desde, double radio) {
+        for (Player p : Fx.playersNear(desde, radio)) p.playHurtAnimation(ladoDe(p, desde));
+    }
+
+    /** Pone la postura del maniqui (agachado aturdida, tumbado al caer). Sin maniqui, nada. */
+    private void postura(Pose pose) {
+        if (cascara == null || !cascara.isValid()) return;
+        try {
+            cascara.setPose(pose, pose != Pose.STANDING);
+        } catch (Throwable ignorado) {
+            // Una postura que el maniqui no admite: se queda de pie, sin mas.
+        }
     }
 
     // ================================================================ consultas
@@ -503,9 +586,23 @@ final class PeleaParca implements Runnable {
             hc.amenazas().teleportar(cuerpo, sube);
             Compat.spawn(w, Compat.SOUL, sitioFinal, 4, 0.5, 0.2, 0.5, 0.02);
             Compat.spawn(w, Compat.SCULK_SOUL, sitioFinal, 2, 0.4, 0.2, 0.4, 0.02);
+            Compat.spawn(w, Compat.SOUL_FIRE_FLAME, sitioFinal.clone().add(0, 0.2, 0), 2, 0.25, 0.1, 0.25, 0.03);
+            // La niebla de almas: un anillo de almas y humo que se abre a ras de suelo.
+            if (ticks % 4 == 0) {
+                double r = 0.6 + 3.4 * ticks / (double) TICKS_APARICION;
+                Fx.ring(sitioFinal, r, (int) (r * 8) + 8, ticks * 0.1, p -> {
+                    Compat.spawn(w, Compat.SOUL, p.clone().add(0, 0.15, 0), 1, 0.05, 0.05, 0.05, 0.01);
+                    Compat.spawn(w, Compat.LARGE_SMOKE, p.clone().add(0, 0.1, 0), 1, 0.1, 0.05, 0.1, 0.005);
+                });
+            }
             if (ticks == 10 || ticks == 20) Compat.sound(w, sitioFinal, "block.bell.use", 4f, 0.5f);
+            if (ticks == 30) Compat.sound(w, sitioFinal, "block.bell.use", 4f, 0.45f);
             return;
         }
+        // Fuera del todo: un grito de sculk y un estallido de almas.
+        Compat.sound(w, sitioFinal, "block.sculk_shrieker.shriek", 2f, 0.6f);
+        Compat.spawn(w, Compat.SOUL, sitioFinal.clone().add(0, 1, 0), 30, 0.6, 1.0, 0.6, 0.04);
+        Compat.spawn(w, Compat.SOUL_FIRE_FLAME, sitioFinal.clone().add(0, 0.5, 0), 20, 0.6, 0.4, 0.6, 0.03);
         Location fin = sitioFinal.clone();
         fin.setDirection(direccionA(objetivo(), fin));
         hc.amenazas().teleportar(cuerpo, fin);
@@ -588,6 +685,7 @@ final class PeleaParca implements Runnable {
         } else if (aturdidaHasta > 0 && ticks >= aturdidaHasta) {
             aturdidaHasta = 0;
             cuerpo.setAI(true);
+            postura(Pose.STANDING);
         }
 
         if (actual != null) {
@@ -672,7 +770,7 @@ final class PeleaParca implements Runnable {
         String texto = f == 2 ? "Las plañideras lloran por ti." : "Cuenta las campanadas.";
         for (UUID id : marcados) {
             Player m = hc.plugin().getServer().getPlayer(id);
-            if (m != null) hc.cordura().destello(m, Component.text(texto, NamedTextColor.GRAY), 3);
+            if (m != null) hc.cordura().destello(m, Component.text(texto, Paleta.TEXTO), 3);
         }
         if (f == 2) {
             lista.put(Habilidad.CORTEJO, ticks);
@@ -783,19 +881,24 @@ final class PeleaParca implements Runnable {
             case SIEGA -> {
                 habDura = a.siegaAviso;
                 blandir();
+                prepararCono();
                 Compat.sound(w, origen, "block.respawn_anchor.charge", 1.5f, 0.6f);
+                Compat.sound(w, origen, "entity.warden.sonic_charge", 1.2f, 1.2f);
             }
             case UMBRAL -> {
                 habDura = a.umbralAviso;
                 destino = detras(obj);
+                victimaPaso = obj.getUniqueId();
                 obj.playSound(obj.getLocation(), "entity.enderman.teleport", SoundCategory.HOSTILE, 1f, 0.5f);
-                hc.cordura().destello(obj, Component.text("Sientes frío en la nuca.", NamedTextColor.GRAY), 2);
+                Compat.sound(w, destino, "block.sculk_catalyst.bloom", 1.5f, 0.6f);
+                hc.cordura().destello(obj, Component.text("Sientes frío en la nuca.", Paleta.TEXTO), 2);
             }
             case TIRON -> {
                 habDura = a.tironAviso;
                 victimaTiron = obj.getUniqueId();
                 danoAlEmpezar = sumaDano();
                 Compat.sound(w, origen, "entity.fishing_bobber.throw", 1.5f, 0.5f);
+                Compat.sound(w, origen, "block.chain.place", 1.5f, 0.5f);
             }
             case CORTEJO -> {
                 habDura = 30;
@@ -809,7 +912,11 @@ final class PeleaParca implements Runnable {
                     puntos.add(Fx.ground(origen.clone().add(Math.cos(ang) * 4, 0, Math.sin(ang) * 4), 4));
                 }
             }
-            case CAMPANADA -> habDura = a.campToques * a.campCada;
+            case CAMPANADA -> {
+                habDura = a.campToques * a.campCada;
+                prepararAnillo();
+                ultimoToque = ticks;
+            }
         }
         nombreBarra();
     }
@@ -819,19 +926,27 @@ final class PeleaParca implements Runnable {
         World w = cuerpo.getWorld();
         switch (actual) {
             case SIEGA -> {
-                if (t % 4 == 0) pintarSiega(w);
+                pintarSiega(w, t);
                 if (t >= habDura) {
                     soltarSiega(w);
                     acabar();
                 }
             }
             case UMBRAL -> {
-                Fx.telegraph(w, destino, 1.2, 0x8B1A1A);
+                Fx.telegraph(w, destino, 1.2, RGB_PARCA);
                 Compat.spawn(w, Compat.SCULK_SOUL, destino.clone().add(0, 0.3, 0), 2, 0.3, 0.1, 0.3, 0.01);
+                Compat.spawn(w, Compat.SOUL_FIRE_FLAME, destino.clone().add(0, 0.2, 0), 2, 0.2, 0.6, 0.2, 0.01);
                 if (t >= habDura) {
                     Compat.spawn(w, Compat.SOUL, cuerpo.getLocation().add(0, 1, 0), 20, 0.4, 0.8, 0.4, 0.02);
+                    Compat.spawn(w, Compat.LARGE_SMOKE, cuerpo.getLocation().add(0, 1, 0), 12, 0.3, 0.8, 0.3, 0.01);
                     hc.amenazas().teleportar(cuerpo, destino);
+                    seguirCascara();
                     Compat.spawn(w, Compat.SOUL, destino.clone().add(0, 1, 0), 20, 0.4, 0.8, 0.4, 0.02);
+                    Compat.spawn(w, Compat.LARGE_SMOKE, destino.clone().add(0, 1, 0), 12, 0.3, 0.8, 0.3, 0.01);
+                    Compat.sound(w, destino, "block.respawn_anchor.deplete", 1.4f, 0.6f);
+                    // Aparece detras: a quien iba, la vista le tiembla desde la espalda.
+                    Player v = victimaPaso == null ? null : hc.plugin().getServer().getPlayer(victimaPaso);
+                    if (v != null && v.getWorld() == w && Fx.isFightable(v)) v.playHurtAnimation(ladoDe(v, destino));
                     ultimoSalto = ticks;
                     acabar();
                 }
@@ -839,7 +954,10 @@ final class PeleaParca implements Runnable {
             case TIRON -> avanzarTiron(w, t);
             case CORTEJO -> {
                 if (t == 2 || t == 6 || t == 10) Compat.sound(w, origen, "block.bell.use", 1.5f, 0.7f);
-                for (Location p : puntos) Fx.telegraph(w, p, 0.8, 0xD8D2C4);
+                for (Location p : puntos) {
+                    Fx.telegraph(w, p, 0.8, RGB_HUESO);
+                    if (t % 4 == 0) Compat.spawn(w, Compat.SOUL, p.clone().add(0, 0.3, 0), 1, 0.2, 0.3, 0.2, 0.02);
+                }
                 if (t >= habDura) {
                     soltarCortejo();
                     acabar();
@@ -853,19 +971,53 @@ final class PeleaParca implements Runnable {
         if (actual != null) lista.put(actual, ticks + espera(actual));
         actual = null;
         destino = null;
+        quitarCadena();
         if (cuerpo != null && cuerpo.isValid()) velocidad();
         nombreBarra();
     }
 
     // ------------------------------------------------------------------ Siega
 
-    private void pintarSiega(World w) {
-        Particle.DustOptions polvo = Compat.dust(0x8B1A1A, 1.4f);
+    /**
+     * El cono de la Siega asentado en el suelo, una vez por aviso: cuatro arcos que lo rellenan,
+     * los dos bordes (para que se lea donde acaba) y el filo exterior. El cono no se mueve
+     * durante el aviso (ella se queda quieta), asi que no hace falta buscar el suelo cada 2 ticks.
+     */
+    private void prepararCono() {
+        cono.clear();
+        filo.clear();
         double spread = Math.toRadians(a.siegaAngulo);
-        Fx.arc(origen, dir, a.siegaRadio / 2, spread, 10, l -> Compat.spawn(w, Compat.DUST,
-                Fx.ground(l, 4).add(0, 0.12, 0), 1, 0, 0, 0, 0, polvo));
-        Fx.arc(origen, dir, a.siegaRadio, spread, 18, l -> Compat.spawn(w, Compat.DUST,
-                Fx.ground(l, 4).add(0, 0.12, 0), 1, 0, 0, 0, 0, polvo));
+        for (double f : new double[]{0.35, 0.6, 0.85}) {
+            double r = a.siegaRadio * f;
+            Fx.arc(origen, dir, r, spread, Math.max(6, (int) (r * spread * 2.2)), l -> cono.add(Fx.ground(l, 4).add(0, 0.12, 0)));
+        }
+        Fx.arc(origen, dir, a.siegaRadio, spread, Math.max(8, (int) (a.siegaRadio * spread * 2.6)),
+                l -> filo.add(Fx.ground(l, 4).add(0, 0.12, 0)));
+        double base = Math.atan2(dir.getZ(), dir.getX());
+        for (int lado = -1; lado <= 1; lado += 2) {
+            double ang = base + lado * spread / 2;
+            for (double d = 0.8; d <= a.siegaRadio; d += 0.5) {
+                cono.add(Fx.ground(origen.clone().add(Math.cos(ang) * d, 0, Math.sin(ang) * d), 4).add(0, 0.12, 0));
+            }
+        }
+    }
+
+    /**
+     * El aviso, cada 2 ticks: el cono entero en polvo que pasa del coral al rojo vivo segun se
+     * acerca el tajo, el filo mas grueso y, en el ultimo tercio, llamas de alma en el filo: ya
+     * no da tiempo a pensar, solo a salir.
+     */
+    private void pintarSiega(World w, long t) {
+        double avance = Math.min(1, t / (double) Math.max(1, habDura));
+        Particle.DustOptions polvo = Compat.dust(mezcla(RGB_SIEGA_DESDE, RGB_SIEGA_HASTA, avance), 1.5f);
+        Particle.DustOptions grueso = Compat.dust(mezcla(RGB_SIEGA_DESDE, RGB_SIEGA_HASTA, avance), 2.2f);
+        for (Location l : cono) Compat.spawn(w, Compat.DUST, l, 1, 0, 0, 0, 0, polvo);
+        for (Location l : filo) Compat.spawn(w, Compat.DUST, l, 1, 0, 0, 0, 0, grueso);
+        if (avance > 0.66 && t % 4 == 0) {
+            for (int i = 0; i < filo.size(); i += 2) {
+                Compat.spawn(w, Compat.SOUL_FIRE_FLAME, filo.get(i).clone().add(0, 0.1, 0), 1, 0.05, 0.1, 0.05, 0.01);
+            }
+        }
     }
 
     /** Dano verdadero a todo jugador dentro del cono (atraviesa paredes). El escudo de cara la anula. */
@@ -873,7 +1025,17 @@ final class PeleaParca implements Runnable {
         double spread = Math.toRadians(a.siegaAngulo);
         Fx.arc(origen, dir, a.siegaRadio * 0.7, spread, 6, l -> Compat.spawn(w, Compat.SWEEP_ATTACK,
                 l.clone().add(0, 1, 0), 1));
+        // El tajo pesa: llamas de alma y humo por todo el filo, almas de sculk en medio.
+        for (Location l : filo) {
+            Compat.spawn(w, Compat.SOUL_FIRE_FLAME, l.clone().add(0, 0.3, 0), 2, 0.1, 0.3, 0.1, 0.04);
+            Compat.spawn(w, Compat.SMOKE, l.clone().add(0, 0.3, 0), 1, 0.1, 0.2, 0.1, 0.02);
+        }
+        Fx.arc(origen, dir, a.siegaRadio * 0.5, spread, 8, l -> Compat.spawn(w, Compat.SCULK_SOUL,
+                l.clone().add(0, 0.6, 0), 1, 0.1, 0.2, 0.1, 0.02));
         Compat.soundPlayers(w, origen, "entity.player.attack.sweep", 1.5f, 0.5f);
+        Compat.sound(w, origen, "entity.warden.attack_impact", 1.6f, 0.6f);
+        Compat.sound(w, origen, "block.respawn_anchor.deplete", 1.2f, 0.8f);
+        sacudir(origen, a.siegaRadio + 4);
         double coseno = Math.cos(spread / 2);
         for (Player v : Fx.playersNear(origen, a.siegaRadio + 0.5)) {
             Vector hacia = v.getLocation().toVector().subtract(origen.toVector());
@@ -967,13 +1129,20 @@ final class PeleaParca implements Runnable {
             acabar();
             return;
         }
-        Particle.DustOptions polvo = Compat.dust(0xD8D2C4, 1.0f);
-        Fx.beam(cuerpo.getEyeLocation().subtract(0, 0.4, 0), v.getLocation().add(0, 1, 0), 0.4,
-                l -> Compat.spawn(w, Compat.DUST, l, 1, 0, 0, 0, 0, polvo));
+        Location desde = mano();
+        Location hasta = v.getLocation().add(0, 1.0, 0);
+        pintarCadena(desde, hasta);
+        if (t % 4 == 0) {
+            Compat.spawn(w, Compat.SOUL_FIRE_FLAME, hasta, 2, 0.15, 0.25, 0.15, 0.0);
+            Particle.DustOptions polvo = Compat.dust(RGB_HUESO, 0.8f);
+            Fx.beam(desde, hasta, 0.9, l -> Compat.spawn(w, Compat.DUST, l, 1, 0.03, 0.03, 0.03, 0, polvo));
+        }
         if (sumaDano() - danoAlEmpezar >= a.tironRompe * vidaFinal()) {
-            Component roto = Component.text("La cadena se rompe.", NamedTextColor.GRAY);
+            Component roto = Component.text("La cadena se rompe.", Paleta.DETALLE);
             for (Player o : Fx.viewersNear(cuerpo.getLocation(), 32)) hc.cordura().destello(o, roto, 2);
             Compat.sound(w, cuerpo.getLocation(), "block.chain.break", 1.5f, 0.6f);
+            Location medio = desde.clone().add(hasta.toVector().subtract(desde.toVector()).multiply(0.5));
+            Compat.spawn(w, Compat.CRIT, medio, 20, 0.4, 0.4, 0.4, 0.2);
             acabar();
             return;
         }
@@ -985,10 +1154,82 @@ final class PeleaParca implements Runnable {
                 v.setVelocity(hacia);
             }
             Compat.apply(v, "slowness", 40, 0);
+            Compat.sound(w, v.getLocation(), "block.chain.hit", 1.5f, 0.5f);
+            Compat.sound(w, v.getLocation(), "entity.warden.attack_impact", 1.0f, 0.8f);
+            v.playHurtAnimation(ladoDe(v, cuerpo.getLocation()));
             siegaAlAterrizar = true;
             tironSolto = ticks;
         }
         acabar();
+    }
+
+    /**
+     * La mano de la guadana, mas o menos: de ahi sale la cadena. Se calcula con el alto del
+     * cuerpo que se ve (el maniqui escalado o el esqueleto) para que salga de la mano y no
+     * del pecho ni de los pies.
+     */
+    private Location mano() {
+        LivingEntity c = cascara != null && cascara.isValid() ? cascara : cuerpo;
+        Location l = c.getLocation();
+        double alto = c.getHeight();
+        Vector frente = l.getDirection().setY(0);
+        if (frente.lengthSquared() < 1e-4) frente = dir == null ? new Vector(0, 0, 1) : dir.clone();
+        frente.normalize();
+        Vector derecha = new Vector(-frente.getZ(), 0, frente.getX());
+        return l.add(0, 0.62 * alto, 0).add(derecha.multiply(0.2 * alto)).add(frente.multiply(0.15 * alto));
+    }
+
+    /**
+     * La cadena del Tiron, de verdad: bloques de cadena de hierro (BlockDisplay) puestos en fila
+     * de la mano a la presa y girados en su direccion, a brillo maximo para que se vea de noche.
+     * Se recoloca cada 2 ticks (interpolado, sin tirones) y se quita al acabar el aviso.
+     */
+    private void pintarCadena(Location desde, Location hasta) {
+        World w = desde.getWorld();
+        Vector d = hasta.toVector().subtract(desde.toVector());
+        double largo = d.length();
+        if (w == null || largo < 0.3) {
+            quitarCadena();
+            return;
+        }
+        int n = (int) Math.max(1, Math.min(24, Math.ceil(largo / ESLABON)));
+        double tramo = largo / n;
+        Vector u = d.multiply(1 / largo);
+        Quaternionf giro = new Quaternionf().rotationTo(new Vector3f(0, 1, 0),
+                new Vector3f((float) u.getX(), (float) u.getY(), (float) u.getZ()));
+        float ancho = 0.9f;
+        // El modelo de la cadena va de 0 a 1 en cada eje: se centra en X y Z antes de girar.
+        Vector3f centrado = giro.transform(new Vector3f(-ancho / 2, 0, -ancho / 2));
+        Transformation tr = new Transformation(centrado, giro, new Vector3f(ancho, (float) tramo, ancho), new Quaternionf());
+        while (cadena.size() > n) Fx.safeRemove(cadena.remove(cadena.size() - 1));
+        for (int i = 0; i < n; i++) {
+            Location en = desde.clone().add(u.clone().multiply(i * tramo));
+            // Sin giro propio: la rotacion va entera en la transformacion.
+            en.setYaw(0);
+            en.setPitch(0);
+            BlockDisplay b = i < cadena.size() ? cadena.get(i) : null;
+            if (b != null && b.isValid()) {
+                b.teleport(en);
+                b.setInterpolationDelay(0);
+                b.setTransformation(tr);
+                continue;
+            }
+            BlockDisplay nuevo = w.spawn(en, BlockDisplay.class, e -> {
+                e.setBlock(Material.IRON_CHAIN.createBlockData());
+                e.setPersistent(false);
+                e.setBrightness(new Display.Brightness(15, 15));
+                e.setTeleportDuration(2);
+                e.setInterpolationDuration(2);
+                e.setTransformation(tr);
+            });
+            if (i < cadena.size()) cadena.set(i, nuevo);
+            else cadena.add(nuevo);
+        }
+    }
+
+    private void quitarCadena() {
+        for (BlockDisplay b : cadena) Fx.safeRemove(b);
+        cadena.clear();
     }
 
     // --------------------------------------------------------------- Cortejo
@@ -1142,69 +1383,124 @@ final class PeleaParca implements Runnable {
         if (actual != null) acabar();
         cuerpo.setAI(false);
         huecos.clear();
-        Component texto = Component.text("La Parca se tambalea.", NamedTextColor.GRAY);
+        // Se dobla: el maniqui se agacha mientras dura (vuelve de pie al acabar, en pelear()).
+        postura(Pose.SNEAKING);
+        Component texto = Component.text("La Parca se tambalea.", Paleta.DETALLE);
         for (Player o : Fx.viewersNear(cuerpo.getLocation(), 32)) hc.cordura().destello(o, texto, 2);
         Compat.sound(cuerpo.getWorld(), cuerpo.getLocation(), "entity.wither_skeleton.hurt", 1.5f, 0.5f);
+        Compat.sound(cuerpo.getWorld(), cuerpo.getLocation(), "block.bell.resonate", 1.2f, 0.7f);
         hc.plugin().bitacora().anotar("parca", "aturdida", presaNombre);
     }
 
     // ------------------------------------------------------------- Campanada
 
-    /** Cinco toques cada 24 ticks; en el 3.o, aviso a quien este a <= 12; en el 5.o, la Sentencia. */
+    /** El anillo de la Sentencia asentado en el suelo, una vez por campanada (ella no se mueve). */
+    private void prepararAnillo() {
+        anillo.clear();
+        anilloDentro.clear();
+        int pts = Math.max(24, (int) (a.campRadio * 10));
+        Fx.ring(origen, a.campRadio, pts, l -> anillo.add(Fx.ground(l, 4).add(0, 0.12, 0)));
+        Fx.ring(origen, a.campRadio * 0.55, Math.max(12, pts / 2), l -> anilloDentro.add(Fx.ground(l, 4).add(0, 0.12, 0)));
+    }
+
+    /**
+     * Cinco toques cada 24 ticks. El anillo late (mas grueso justo despues de cada toque) y se
+     * oscurece del coral al granate con cada campanada; en el 3.o, titulo a quien este a <= 12;
+     * en el 4.o, aviso en la barra a quien siga dentro; en el 5.o, la Sentencia.
+     */
     private void avanzarCampanada(World w, long t) {
-        if (t % 4 == 0) Fx.telegraph(w, origen, a.campRadio, 0x8B1A1A);
+        double oscuro = a.campToques <= 1 ? 1 : toques / (double) a.campToques;
+        double pulso = Math.max(0, 1 - (ticks - ultimoToque) / 12.0);
+        Particle.DustOptions polvo = Compat.dust(mezcla(RGB_SENTENCIA_DESDE, RGB_SENTENCIA_HASTA, oscuro),
+                (float) (1.3 + 1.2 * pulso));
+        for (Location l : anillo) Compat.spawn(w, Compat.DUST, l, 1, 0, 0, 0, 0, polvo);
+        if (t % 4 == 0) for (Location l : anilloDentro) Compat.spawn(w, Compat.DUST, l, 1, 0, 0, 0, 0, polvo);
+        // Humo y almas que suben de dentro del anillo: cuanto mas cerca del final, mas.
+        if (t % 4 == 0 && !anillo.isEmpty()) {
+            ThreadLocalRandom azar = ThreadLocalRandom.current();
+            for (int i = 0; i < 2 + toques * 2; i++) {
+                Location l = anillo.get(azar.nextInt(anillo.size()));
+                Location dentro = origen.clone().add(l.toVector().subtract(origen.toVector()).multiply(azar.nextDouble()));
+                Compat.spawn(w, i % 2 == 0 ? Compat.SMOKE : Compat.SCULK_SOUL, dentro.add(0, 0.3, 0), 1, 0.1, 0.3, 0.1, 0.01);
+            }
+        }
         while (toques < a.campToques && t >= (long) (toques + 1) * a.campCada) {
             toques++;
+            ultimoToque = ticks;
             double avance = a.campToques <= 1 ? 1 : (toques - 1) / (double) (a.campToques - 1);
             Compat.sound(w, origen, "block.bell.use", 2.0f, (float) (0.8 - 0.3 * avance));
+            Compat.sound(w, origen, "entity.warden.heartbeat", 2.0f, (float) (0.7 + 0.3 * avance));
             Fx.shockwave(w, origen, a.campRadio, Compat.SOUL, 6);
             nombreBarra();
             if (toques == 3) {
-                Title titulo = Title.title(Component.text("Aléjate", ROJO),
-                        Component.text("Campanada 3/" + a.campToques, NamedTextColor.GRAY),
-                        Title.Times.times(Duration.ofMillis(100), Duration.ofMillis(1600), Duration.ofMillis(400)));
+                Title titulo = Paleta.titulo(Paleta.muerte("Aléjate"), "Sentencia · 3/" + a.campToques,
+                        Duration.ofMillis(100), Duration.ofMillis(1600), Duration.ofMillis(400));
                 for (Player o : Fx.viewersNear(origen, 12)) o.showTitle(titulo);
             }
+            if (toques == 4) {
+                Component sal = Component.text("Sal del anillo.", Paleta.AVISO);
+                for (Player o : Fx.playersNear(origen, a.campRadio)) hc.cordura().destello(o, sal, 2);
+            }
             if (toques >= a.campToques) {
-                juicio();
+                sentencia();
                 acabar();
                 return;
             }
         }
     }
 
-    /** La Sentencia (antes "Juicio"; el metodo conserva el nombre): dano verdadero (tope 90 %, ley 5) y -25 de cordura a todo jugador a <= radio. */
-    private void juicio() {
+    /**
+     * La Sentencia (la 5.a campanada; no "Juicio": el servidor ya tiene otro sistema con ese
+     * nombre): dano verdadero (tope 90 %, ley 5), -25 de cordura y Oscuridad 1,5 s a todo
+     * jugador a <= radio. Suena y se ve lejos, y a todos los de alrededor les tiembla la vista.
+     */
+    private void sentencia() {
         World w = cuerpo.getWorld();
         Compat.spawn(w, Compat.SOUL, origen.clone().add(0, 1, 0), 80, a.campRadio / 2, 1, a.campRadio / 2, 0.05);
+        Compat.spawn(w, Compat.SCULK_SOUL, origen.clone().add(0, 1, 0), 40, a.campRadio / 2, 0.8, a.campRadio / 2, 0.03);
+        Compat.spawn(w, Compat.LARGE_SMOKE, origen.clone().add(0, 0.5, 0), 50, a.campRadio / 2, 0.5, a.campRadio / 2, 0.02);
+        Compat.spawn(w, Compat.SONIC_BOOM, origen.clone().add(0, 1.2, 0), 1);
+        for (int i = 0; i < anillo.size(); i += 2) {
+            Compat.spawn(w, Compat.SOUL_FIRE_FLAME, anillo.get(i).clone().add(0, 0.2, 0), 2, 0.1, 0.4, 0.1, 0.03);
+        }
+        Compat.sound(w, origen, "entity.warden.sonic_boom", 3f, 0.6f);
+        Compat.sound(w, origen, "block.sculk_shrieker.shriek", 2f, 0.5f);
+        Compat.sound(w, origen, "block.respawn_anchor.deplete", 2f, 0.5f);
         double r2 = a.campRadio * a.campRadio;
         for (Player v : Fx.playersNear(origen, a.campRadio + 1)) {
             double dx = v.getLocation().getX() - origen.getX(), dz = v.getLocation().getZ() - origen.getZ();
             if (dx * dx + dz * dz > r2) continue;
             double vidaMax = Compat.getAttribute(v, "max_health", 20);
-            DanoVerdadero.aplicar(v, Parca.juicioFraccion(a, factorR) * vidaMax, a.campTope, cuerpo, "Sentencia");
+            DanoVerdadero.aplicar(v, Parca.sentenciaFraccion(a, factorR) * vidaMax, a.campTope, cuerpo, "Sentencia");
+            Compat.apply(v, "darkness", 30, 0);
             if (hc.esHardcore(v)) hc.cordura().sumar(v, -a.campCordura);
         }
+        sacudir(origen, a.campRadio + 8);
     }
 
     // =========================================================== barra y aura
 
+    /**
+     * "Parca" con su degradado y, detras, lo que esta haciendo: la barra es tambien un aviso
+     * (Siega, Tiron, Cortejo, Sentencia k/5), en rojo claro mientras dura el golpe que viene.
+     */
     private Component tituloBarra() {
-        String t;
+        Component resto;
         if (actual != null && actual != Habilidad.UMBRAL) {
-            t = switch (actual) {
-                case SIEGA -> "Parca · Siega";
-                case TIRON -> "Parca · Tirón";
-                case CORTEJO -> "Parca · Cortejo";
-                case CAMPANADA -> "Parca · Campanada " + Math.max(1, toques) + "/" + a.campToques;
-                default -> "Parca";
+            String t = switch (actual) {
+                case SIEGA -> "Siega";
+                case TIRON -> "Tirón";
+                case CORTEJO -> "Cortejo";
+                case CAMPANADA -> "Sentencia " + Math.max(1, toques) + "/" + a.campToques;
+                default -> "";
             };
+            resto = Component.text(t, Paleta.AVISO);
         } else if (furia) {
-            t = "Parca · Furia";
+            resto = Component.text("Furia", Paleta.AVISO);
         } else {
-            t = "Parca · Nv. " + nivel;
+            resto = Component.text("Nv. " + nivel, Paleta.TEXTO);
         }
-        return Component.text(t, ROJO);
+        return Paleta.muerte("Parca").append(Component.text(" · ", Paleta.SEPARADOR)).append(resto);
     }
 
     private void nombreBarra() {
@@ -1255,6 +1551,7 @@ final class PeleaParca implements Runnable {
         if (ticks % 10 == 0) {
             Compat.spawn(w, Compat.SOUL, l.clone().add(0, 0.2, 0), 2, 0.4, 0.1, 0.4, 0.01);
             Compat.spawn(w, Compat.ASH, l.clone().add(0, 0.2, 0), 4, 0.6, 0.2, 0.6, 0.01);
+            Compat.spawn(w, Compat.SMOKE, l.clone().add(0, 0.1, 0), 1, 0.3, 0.05, 0.3, 0.005);
             Compat.spawn(w, Compat.SCULK_SOUL, cuerpo.getEyeLocation().add(cuerpo.getLocation().getDirection().multiply(0.6))
                     .subtract(0, 0.6, 0), 1, 0.05, 0.05, 0.05, 0.0);
         }
@@ -1333,7 +1630,17 @@ final class PeleaParca implements Runnable {
         Location l = cuerpo.getLocation();
         Compat.sound(w, l, "block.bell.use", 4f, 0.4f);
         Compat.sound(w, l, "entity.wither_skeleton.death", 1.5f, 0.5f);
+        Compat.sound(w, l, "entity.warden.death", 1.5f, 0.7f);
+        Compat.sound(w, l, "block.respawn_anchor.deplete", 2f, 0.4f);
         Fx.helix(l, 1.0, 3.0, 40, 3, p -> Compat.spawn(w, Compat.SOUL, p, 1, 0, 0, 0, 0.01));
+        Compat.spawn(w, Compat.SOUL_FIRE_FLAME, l.clone().add(0, 1, 0), 40, 0.6, 1.0, 0.6, 0.05);
+        sacudir(l, 16);
+        // El cuerpo que se ve cae y se deshace en almas (Parca.despedida); la limpieza ya no lo toca.
+        if (cascara != null && cascara.isValid()) {
+            Mannequin caido = cascara;
+            cascara = null;
+            gestor.despedida(caido);
+        }
         hc.seguro("parca", () -> gestor.pagar(this, dano, vida, segundos));
         limpiar();
         graciaMarcados();
@@ -1379,6 +1686,7 @@ final class PeleaParca implements Runnable {
         planideras.clear();
         Fx.safeRemove(cascara);
         cascara = null;
+        quitarCadena();
         Fx.safeRemove(cuerpo);
         rastro.clear();
         if (hc.amenazas() != null) hc.amenazas().quitarPelea(this);
