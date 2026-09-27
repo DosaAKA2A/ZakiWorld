@@ -91,7 +91,7 @@ final class MenuAltar implements Listener {
             Map.entry("salvoconducto", List.of("Al morir dentro, conservas una pieza.")),
             Map.entry("ofrenda", List.of("Un punto en la tabla de Ofrendas", "del mes. Nada más, y nada menos.")),
             Map.entry("talisman", List.of("+3 de vida. Dentro, la cordura", "baja un 20 % más despacio.")),
-            Map.entry("gema", List.of("Se engarza en el Yelmo, la Coraza", "o el Hacha del Heraldo.")),
+            Map.entry("gema", List.of("El Engarzador la pone en el Yelmo,", "la Coraza o el Hacha del Heraldo.")),
             Map.entry("grabado", List.of("+1 nivel sobre el tope a un", "encantamiento de equipo vanilla.")),
             Map.entry("ascua", List.of("+1 nivel de mejora a una pieza", "del Manto, del Eco o la Guadaña.")),
             Map.entry("mascara-eco", List.of("Casco del Vestigio del Eco.", "Escalón 15.")),

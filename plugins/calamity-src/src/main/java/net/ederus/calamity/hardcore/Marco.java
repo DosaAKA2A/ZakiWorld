@@ -135,6 +135,7 @@ final class Marco {
     static final Titulo T_PREGUNTA = new Titulo("Calamity pregunta", null);
     static final Titulo T_DIFICULTAD = new Titulo("Calamity", "Dificultad");
     static final Titulo T_SALVOCONDUCTO = new Titulo("¿Qué conservas?", null);
+    static final Titulo T_ENGARZADOR = new Titulo("El Engarzador", null);
 
     /** El de una categoria del Altar: "Altar · Para la expedición". */
     static Titulo categoria(String nombre) {
@@ -144,7 +145,7 @@ final class Marco {
     /** Todos los titulos de ventana de Calamity, para que el autotest mida que caben. */
     static List<Titulo> titulos() {
         List<Titulo> out = new ArrayList<>(List.of(T_ALTAR, T_FORJA, T_COMPRAR, T_FORJAR, T_TASADOR, T_CAMBIAR, T_RANKINGS,
-                T_TABLERO, T_CAMINO, T_GRABAR, T_DESEOS, T_VOTO, T_PREGUNTA, T_DIFICULTAD, T_SALVOCONDUCTO));
+                T_TABLERO, T_CAMINO, T_GRABAR, T_DESEOS, T_VOTO, T_PREGUNTA, T_DIFICULTAD, T_SALVOCONDUCTO, T_ENGARZADOR));
         for (MenuAltar.Categoria c : MenuAltar.CATEGORIAS) {
             Titulo t = MenuAltar.titulo(c.id());
             if (!out.contains(t)) out.add(t);
@@ -630,6 +631,7 @@ final class Marco {
         lore.add(Component.text("Forja", Paleta.DETALLE).append(tenue(": el equipo de Calamity.")));
         lore.add(Component.text("Tasador", Paleta.DETALLE).append(tenue(": lo que cobras, contratos y tu camino.")));
         lore.add(Component.text("Cazador", Paleta.DETALLE).append(tenue(": los rankings de la semana.")));
+        lore.add(Component.text("Engarzador", Paleta.DETALLE).append(tenue(": pone y quita las gemas.")));
         lore.add(Component.text("/calamity encuesta", Paleta.DETALLE).append(tenue(" y "))
                 .append(Component.text("/calamity deseos", Paleta.DETALLE)).append(tenue(": tu voto.")));
         return icono(Material.KNOWLEDGE_BOOK, Component.text("¿Cómo funciona?", Paleta.MARCA), lore, false);

@@ -101,6 +101,25 @@
       <scope>system</scope>
       <systemPath>${toolchain.libs}/PlaceholderAPI-2.11.6.jar</systemPath>
     </dependency>
+    <!-- MMOItems y MythicLib, solo para el Engarzador (EngarceMmo): engarzar y quitar gemas con
+         la API de verdad (GemStone.applyOntoItem, MMOItem.removeGemStone), que por reflexion
+         seria media API a ciegas. Los mismos jars que usa EDM (edm-src/pom.xml). Siguen siendo
+         softdepend: solo EngarceMmo toca sus clases, y nadie la llama sin PuenteMmo.disponible();
+         sin MMOItems en el servidor, Calamity arranca igual. -->
+    <dependency>
+      <groupId>net.Indyuce</groupId>
+      <artifactId>MMOItems</artifactId>
+      <version>6.10.1</version>
+      <scope>system</scope>
+      <systemPath>${toolchain.libs}/MMOItems.jar</systemPath>
+    </dependency>
+    <dependency>
+      <groupId>io.lumine</groupId>
+      <artifactId>MythicLib</artifactId>
+      <version>1.7.1</version>
+      <scope>system</scope>
+      <systemPath>${toolchain.libs}/MythicLib.jar</systemPath>
+    </dependency>
   </dependencies>
 
   <build>
