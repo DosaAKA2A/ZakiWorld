@@ -20,8 +20,9 @@ import java.util.UUID;
  * "Tu camino" (ESTUDIO sec. 5.15, DIS M32): lo que le falta a cada uno para cada pieza, de un
  * vistazo. Un icono por pieza: "Custodio · Yelmo · piedad 5/8 · Sello: no", "Marcas de Eco
  * 3/5 (Mascara)", "Fragmentos 2/7 (Guadana)", y arriba las horas activas y el proximo hito.
- * Sale del boton del Altar y de /calamity camino (informativo: se puede mirar en cualquier
- * sitio). Al entrar en Calamity, la barra de accion ensena el credito mas cercano (P-W03).
+ * Sale del Tasador (1.3.1; antes, del Altar, que ahora es solo tienda) y de /calamity camino
+ * (informativo: se puede mirar en cualquier sitio). Al entrar en Calamity, la barra de accion
+ * ensena el credito mas cercano (P-W03).
  *
  * Existe porque el Manto son semanas de juego y lo que no se ve no se persigue: la encuesta
  * "camino" de MED sec. 4.2 mide si la gente sabe cuanto le falta. La telemetria "camino"
@@ -158,13 +159,13 @@ final class Camino {
 
     /**
      * El menu de "Tu camino": 36 casillas con el marco de Calamity (Marco), la cabecera con horas e
-     * hito, una fila para las piezas con Sello y otra para las de Marcas y Fragmentos, cada una con
-     * su rotulo, y abajo la vuelta al Umbral (si desde ahi el Altar escucha).
+     * hito, una fila para las piezas con Sello (banda naranja) y otra para las de Marcas y
+     * Fragmentos (banda turquesa), y abajo la vuelta al Tasador.
      */
     void abrir(Player p) {
         Map<Integer, String> acciones = new HashMap<>();
         Inventory inv = hc.plugin().getServer().createInventory(new MenuAltar.Marca(MenuAltar.CAMINO, acciones, null), 36,
-                Paleta.ventanaCalamity("Tu camino"));
+                Marco.T_CAMINO.componente());
         pintar(inv, p, acciones);
         p.openInventory(inv);
         Compat.soundPlayers(p.getWorld(), p.getLocation(), "item.book.page_turn", 1.0f, 1.0f);
@@ -179,6 +180,7 @@ final class Camino {
         List<Component> cabeza = new ArrayList<>();
         cabeza.add(dato("Horas activas", horasTexto(h)));
         cabeza.add(hito > 0 ? dato("Próximo hito", horasTexto(hito).replace(",0", "") + " h") : Marco.tenue("Ya no quedan hitos de horas."));
+        cabeza.add(Marco.tenue("Solo cuenta el tiempo en que te mueves."));
         if (cr != null) {
             int errantes = cr.de(u, Creditos.ERRANTE);
             if (errantes > 0) {
@@ -196,23 +198,23 @@ final class Camino {
 
         List<Paso> deSello = new ArrayList<>(), otros = new ArrayList<>();
         for (Paso paso : pasos()) (paso.t().credito().startsWith("sello:") ? deSello : otros).add(paso);
-        fila(inv, acciones, p, 9, Marco.rotulo(Material.FIRE_CHARGE, "Piezas con Sello",
+        fila(inv, acciones, p, 9, Marco.banda(Material.ORANGE_STAINED_GLASS_PANE, "Piezas con Sello",
                 List.of("El Sello cae del minijefe; con", "la piedad llena, seguro.")), deSello);
-        fila(inv, acciones, p, 18, Marco.rotulo(Material.ECHO_SHARD, "Marcas y Fragmentos",
+        fila(inv, acciones, p, 18, Marco.banda(Material.CYAN_STAINED_GLASS_PANE, "Marcas y Fragmentos",
                 List.of("El Vestigio del Eco y la", "Guadaña de la Parca.")), otros);
-        if (altar.activo() && Marco.puedeAltar(hc, p)) {
-            inv.setItem(31, Marco.icono(Material.ENCHANTING_TABLE, Component.text("Volver al Umbral", Paleta.DETALLE),
-                    List.of(Marco.tenue("La primera página del Altar."), Component.empty(), Marco.accion("Clic para volver")), false));
-            acciones.put(31, "ir:" + MenuAltar.UMBRAL);
+        if (hc.npcs() != null) {
+            inv.setItem(31, Marco.icono(Material.SPYGLASS, Component.text("◀ Volver al Tasador", Paleta.DETALLE),
+                    List.of(Marco.tenue("Lo que cobras y tus contratos."), Component.empty(), Marco.accion("Clic para volver")), false));
+            acciones.put(31, "ir:" + Marco.TASADOR);
         }
         Marco.rellenar(inv);
     }
 
-    /** Una fila del camino: el rotulo y las piezas centradas (como en el Altar), hasta siete. */
-    private void fila(Inventory inv, Map<Integer, String> acciones, Player p, int base, org.bukkit.inventory.ItemStack rotulo,
+    /** Una fila del camino: su banda a los lados y las piezas centradas (como en la Forja), hasta siete. */
+    private void fila(Inventory inv, Map<Integer, String> acciones, Player p, int base, org.bukkit.inventory.ItemStack banda,
                       List<Paso> pasos) {
         if (pasos.isEmpty()) return;
-        inv.setItem(base, rotulo);
+        Marco.ponerBanda(inv, base, banda);
         int[] cols = Marco.columnas(Math.min(Marco.COLUMNAS, pasos.size()));
         for (int i = 0; i < cols.length; i++) {
             inv.setItem(base + cols[i], icono(p, pasos.get(i)));

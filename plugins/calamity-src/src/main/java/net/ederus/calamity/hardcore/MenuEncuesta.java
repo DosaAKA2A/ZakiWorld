@@ -91,7 +91,8 @@ final class MenuEncuesta implements Listener {
 
     void abrir(Player p, Encuesta.Pregunta q) {
         if (q == null) return;
-        Component titulo = Paleta.ventana(q.fija() ? "¿Qué quieres que dé Calamity?" : "Calamity pregunta");
+        // El de la fija ("¿Que quieres que de Calamity?") no cabia en la ventana: la pregunta va en el libro.
+        Component titulo = (q.fija() ? Marco.T_VOTO : Marco.T_PREGUNTA).componente();
         Inventory inv = hc.plugin().getServer().createInventory(new Marca(q.id(), false), 9, titulo);
 
         int premio = Math.max(0, hc.cfg().getInt("encuesta.premio-esencias", 1));

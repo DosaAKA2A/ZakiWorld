@@ -197,7 +197,7 @@ final class Forja {
         Map<Integer, String> acciones = new HashMap<>();
         Inventory menu = hc.plugin().getServer().createInventory(
                 new MenuAltar.Marca(MenuAltar.GRABAR, acciones, mano.clone()), 9,
-                Paleta.ventanaCalamity("Grabar"));
+                Marco.T_GRABAR.componente());
         menu.setItem(0, MenuUtil.icon(Material.FLINT, Component.text("Grabado de Calamidad", Altar.AMBAR), List.of(
                 MenuUtil.line("Sube un encantamiento un nivel"),
                 MenuUtil.line("por encima de su tope."),

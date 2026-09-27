@@ -124,8 +124,9 @@ final class Saldo implements Listener {
 
     /**
      * Pasa al saldo las Esencias fisicas que lleve encima y las quita. Devuelve cuantas.
-     * No avisa al jugador: lo llaman la Tasacion (tiene su propio mensaje), el boton
-     * Depositar del Altar (P-M09) y el deposito solo de fuera (P-M12), y cada uno dice lo suyo.
+     * No avisa al jugador: lo llaman la Tasacion (tiene su propio mensaje), el clic en el
+     * saldo del Altar o del Tasador (P-M09) y el deposito solo de fuera (P-M12), y cada uno
+     * dice lo suyo.
      */
     int depositarFisicas(Player p) {
         if (p == null || hc == null) return 0;
@@ -149,7 +150,7 @@ final class Saldo implements Listener {
         return n;
     }
 
-    /** P-M09 (boton Depositar del Altar): "Has depositado <n> Esencias. Saldo: <s>." */
+    /** P-M09 (clic en el saldo del Altar o del Tasador): "Has depositado <n> Esencias. Saldo: <s>." */
     Component avisoDeposito(Player p, int n) {
         return ComandoCalamity.mensaje(Component.text("Has depositado ")
                 .append(Component.text(String.valueOf(n), Paleta.CIFRA))

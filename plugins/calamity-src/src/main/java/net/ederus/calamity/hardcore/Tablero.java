@@ -30,14 +30,16 @@ import java.util.Set;
 import java.util.UUID;
 
 /**
- * M18 · Tablero (/calamity tablero y el boton del Altar): con poca gente dentro, lo que hace
- * que se encuentren.
+ * M18 · Tablero (/calamity tablero y el boton de los rankings del Cazador): con poca gente
+ * dentro, lo que hace que se encuentren.
  *
- * Menu de 36 con el marco de Calamity (Marco, 1.3.0), solo clic izquierdo y un clic cada 500 ms.
- * Fila 1: los tablero.ecos (7) Ecos con mas Reliquias, errantes incluidos (las Reliquias en el
- * numero de la pila): dueno, nivel, bioma, distancia a la llegada redondeada a tablero.redondeo
- * (50) y horas que le quedan. Fila 2: las PARCAs vivas, a quien siguen y en que bioma. Abajo, los
- * rankings de la semana si estan abiertos. Sin coordenadas: el que quiera el botin, que lo busque.
+ * Menu de 36 con el marco de Calamity (Marco), solo clic izquierdo y un clic cada 500 ms. Cada
+ * fila lleva su banda de color a los lados (1.3.1; antes un icono suelto en la columna 0 que se
+ * confundia con un Eco mas). Fila 1, banda turquesa: los tablero.ecos (7) Ecos con mas Reliquias,
+ * errantes incluidos (las Reliquias en el numero de la pila): dueno, nivel, bioma, distancia a la
+ * llegada redondeada a tablero.redondeo (50) y horas que le quedan. Fila 2, banda morada: las
+ * PARCAs vivas, a quien siguen y en que bioma. Abajo, los rankings de la semana si estan
+ * abiertos. Sin coordenadas: el que quiera el botin, que lo busque.
  *
  * Lo que se pinta se calcula como mucho cada tablero.cache-segundos (30) y solo cuando alguien
  * lo abre: sin nadie mirando no cuesta nada. El bioma se pide con World.getBiome, que para un
@@ -145,7 +147,7 @@ final class Tablero implements Listener {
 
     // ------------------------------------------------------------------ menu
 
-    /** /calamity tablero, el boton del Altar y el de los rankings del Cazador. */
+    /** /calamity tablero y el boton de los rankings del Cazador. */
     void abrir(Player p) {
         if (!activo()) {
             p.sendMessage(ComandoCalamity.mensaje("El Tablero no está colgado ahora mismo."));
@@ -153,7 +155,7 @@ final class Tablero implements Listener {
         }
         calcular();
         Marca m = new Marca(new HashMap<>());
-        Inventory inv = hc.plugin().getServer().createInventory(m, 36, Paleta.ventanaCalamity("Tablero"));
+        Inventory inv = hc.plugin().getServer().createInventory(m, 36, Marco.T_TABLERO.componente());
         int cada = Math.max(1, hc.cfg().getInt("tablero.cache-segundos", 30));
         inv.setItem(CABECERA, Marco.icono(Material.ITEM_FRAME, Component.text("Tablero de Calamity", Paleta.MARCA), List.of(
                 Marco.texto("Quién guarda botín ahí dentro"), Marco.texto("y dónde siega la Parca."), Component.empty(),
@@ -161,7 +163,7 @@ final class Tablero implements Listener {
         inv.setItem(Marco.CERRAR, Marco.cerrar());
         m.acciones().put(Marco.CERRAR, "cerrar");
 
-        inv.setItem(ECOS, Marco.rotulo(Material.ECHO_SHARD, "Ecos con botín",
+        Marco.ponerBanda(inv, ECOS, Marco.banda(Material.CYAN_STAINED_GLASS_PANE, "Ecos con botín",
                 List.of("Los que más Reliquias guardan,", "errantes incluidos.")));
         List<ItemStack> le = new ArrayList<>();
         for (LineaEco e : ecos) {
@@ -181,7 +183,7 @@ final class Tablero implements Listener {
         }
         poner(inv, ECOS, le);
 
-        inv.setItem(PARCAS, Marco.rotulo(Material.WITHER_SKELETON_SKULL, "Parcas sueltas",
+        Marco.ponerBanda(inv, PARCAS, Marco.banda(Material.PURPLE_STAINED_GLASS_PANE, "Parcas sueltas",
                 List.of("Dónde siega ahora mismo", "y a quién sigue.")));
         List<ItemStack> lp = new ArrayList<>();
         for (LineaParca pa : parcas) {
@@ -198,7 +200,7 @@ final class Tablero implements Listener {
         Npcs n = hc.npcs();
         if (n != null && n.cazador().hay()) {
             inv.setItem(RANKINGS, Marco.boton(Material.GOLDEN_HELMET, "Rankings de la semana",
-                    List.of("El podio de cada tabla."), "Clic para verlos", true));
+                    List.of("El podio de cada ranking."), "Clic para verlos", true));
             m.acciones().put(RANKINGS, "rankings");
         }
         Marco.rellenar(inv);
@@ -206,7 +208,7 @@ final class Tablero implements Listener {
         Marco.sonar(p, "item.book.page_turn", 0.8f, 0.9f);
     }
 
-    /** Las cosas de una fila, centradas a la derecha de su rotulo (como en el Altar). */
+    /** Las cosas de una fila, centradas entre sus bandas (como en la Forja). */
     private static void poner(Inventory inv, int base, List<ItemStack> cosas) {
         int[] cols = Marco.columnas(Math.min(Marco.COLUMNAS, cosas.size()));
         for (int i = 0; i < cols.length; i++) inv.setItem(base + cols[i], cosas.get(i));

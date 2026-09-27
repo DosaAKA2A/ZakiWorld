@@ -26,16 +26,26 @@ import java.util.Set;
 import java.util.UUID;
 
 /**
- * Los menus del Altar del Umbral (1.3.0): las paginas Umbral y Forja, la pantalla de confirmar,
- * y "Tu camino" y Grabar (que pintan Camino y Forja), todos atendidos aqui (un listener,
- * distingue por el holder).
+ * Los menus del Altar del Umbral (1.3.1): la portada, sus categorias, la Forja y la pantalla de
+ * confirmar, y "Tu camino" y Grabar (que pintan Camino y Forja), todos atendidos aqui (un
+ * listener, distingue por el holder).
  *
- * Como se ve (piezas de Marco): arriba lo que tiene el jugador y "¿Como funciona?"; abajo las
- * pestanas Umbral, Forja y Tasador; en medio, los trueques por secciones con su rotulo a la
- * izquierda. Umbral: Para la expedicion, Llave del Caos y ofrendas, Tu saldo y tu camino, El
- * tablon del Umbral. Forja: Mejoras (con Grabar), El Manto y el Hacha, El Vestigio del Eco, La
- * Guadana de la Parca. Si altar.trueques trae mas de lo que cabe, hay paginas (flechas en las
- * esquinas de abajo).
+ * El Altar es solo tienda y trabaja como la de EDM (MenuTienda), porque la 1.3.0 mezclaba en
+ * una pagina frascos, llaves, depositar, horas, contratos, rankings y encuestas, y Dosa no sabia
+ * "de que va con tantas cosas":
+ *  - la portada (45) tiene tres tarjetas grandes: Para la expedicion, Llaves y ofrendas y La
+ *    Forja, cada una con dos lineas de lo que hay dentro, cuantos articulos y cuantos puedes
+ *    comprar ya (brilla si alguno). Arriba tu saldo y Cerrar; abajo "¿Como funciona?" y el
+ *    enlace al Tasador;
+ *  - una categoria (54) son sus articulos centrados y con aire (Marco.rejilla), con las flechas
+ *    de pagina en las esquinas de abajo y Volver al Altar en el centro;
+ *  - la Forja (54, la que abre el Forjador y la tarjeta de la portada) pone cada grupo en su
+ *    fila con una banda de color a los lados: Mejoras (con Grabar), El Manto y el Hacha, El
+ *    Vestigio del Eco y La Guadana de la Parca. El color y el nombre de la banda dicen que pide.
+ * Lo que no es comprar salio del Altar: depositar va en el icono del saldo (y en el Tasador);
+ * Tu camino y las horas activas, los contratos, en el Tasador; los rankings y el Tablero, en el
+ * Cazador; la encuesta y la lista de deseos, en sus comandos. Los trueques depositar y camino
+ * de altar.trueques siguen valiendo para el motor, pero aqui no salen (FUERA).
  *
  * Cada trueque es el objeto que das (el de MMOItems con su aspecto real) y debajo, corto: que
  * es, el coste linea a linea (✔ lo tienes, ✘ te falta y cuanto), el cupo que queda y el clic;
@@ -56,11 +66,20 @@ import java.util.UUID;
  */
 final class MenuAltar implements Listener {
 
-    static final String UMBRAL = Marco.UMBRAL, FORJA = Marco.FORJA, GRABAR = "grabar", CAMINO = "camino",
-            CONFIRMAR = "confirmar";
+    /** Las paginas: umbral es la portada; expedicion y llaves, sus categorias; forja, la Forja. */
+    static final String UMBRAL = Marco.UMBRAL, FORJA = Marco.FORJA, EXPEDICION = "expedicion", LLAVES = "llaves",
+            GRABAR = "grabar", CAMINO = Marco.CAMINO, CONFIRMAR = "confirmar";
     private static final long ESPERA_MS = 500;
     /** Los iconos de MMOItems se crean una vez cada tanto, no en cada repintado. */
     private static final long ICONOS_MS = 5 * 60_000L;
+
+    /** La portada: 45 casillas, las tarjetas en la fila del medio y abajo la ayuda y el Tasador. */
+    static final int PORTADA = 45, FILA_TARJETAS = 18, AYUDA = 38, IR_TASADOR = 42;
+    /** Donde va "Nada por ahora" en una categoria vacia: el centro. */
+    private static final int CENTRO = 22;
+
+    /** Los servicios de altar.trueques que no son comprar: ya no salen en el Altar (los atiende el Tasador). */
+    static final Set<String> FUERA = Set.of("depositar", "camino");
 
     /** Lo que dice cada trueque de serie en su icono (el lore de la config, si lo hay, manda). */
     private static final Map<String, List<String>> DESCRIPCION = Map.ofEntries(
@@ -81,7 +100,7 @@ final class MenuAltar implements Listener {
 
     /**
      * Marca de nuestros inventarios. acciones: casilla -> que hace. foto: el objeto de la mano
-     * (Grabar). hoja: la pagina de trueques. trueque y volver: en la pantalla de confirmar, que
+     * (Grabar). hoja: la pagina de articulos. trueque y volver: en la pantalla de confirmar, que
      * se confirma y a que pagina se vuelve.
      */
     record Marca(String pagina, Map<Integer, String> acciones, ItemStack foto, int hoja, String trueque, String volver)
@@ -97,12 +116,24 @@ final class MenuAltar implements Listener {
         }
     }
 
-    /** Una cosa de una seccion: un trueque, o un boton (depositar, camino, horas, grabar, contratos...). */
+    /** Una tarjeta de la portada: a que pagina lleva, su icono, su nombre y dos lineas de lo que hay dentro. */
+    record Categoria(String id, Material icono, String nombre, List<String> texto) {
+    }
+
+    static final List<Categoria> CATEGORIAS = List.of(
+            new Categoria(EXPEDICION, Material.LANTERN, "Para la expedición",
+                    List.of("Lo que te llevas dentro: frascos,", "cristales de regreso y tinturas.")),
+            new Categoria(LLAVES, Material.VAULT, "Llaves y ofrendas",
+                    List.of("La Llave del Caos y la Ofrenda", "del mes, a cambio de Esencias.")),
+            new Categoria(FORJA, Material.ANVIL, "La Forja",
+                    List.of("El equipo de Calamity (el Manto,", "el Eco y la Guadaña) y sus mejoras.")));
+
+    /** Una cosa de la Forja: un trueque, o el boton Grabar. */
     record Cosa(Altar.Trueque t, String boton) {
     }
 
-    /** Una seccion de una pagina: su rotulo (icono, nombre, dos lineas) y lo que lleva, en orden. */
-    record Seccion(String id, Material icono, String nombre, List<String> texto, List<Cosa> cosas) {
+    /** Un grupo de la Forja: el color de su banda, su nombre, dos lineas de que pide y lo que lleva. */
+    record Seccion(String id, Material banda, String nombre, List<String> texto, List<Cosa> cosas) {
     }
 
     private final Hardcore hc;
@@ -128,93 +159,99 @@ final class MenuAltar implements Listener {
         iconos.clear();
     }
 
-    // ------------------------------------------------------------------ secciones
+    // ------------------------------------------------------------------ que va en cada pagina
 
-    /** De que seccion es un trueque. */
-    static String seccionDe(Altar.Trueque t) {
-        if (FORJA.equals(t.pagina())) {
-            if (t.pieza() == null) return "mejoras";
-            String c = t.credito() == null ? "" : t.credito();
-            if (c.startsWith("sello:") || c.equals(Creditos.ERRANTE)) return "manto";
-            if (c.equals("marca")) return "eco";
-            if (c.equals("fragmento")) return "guadana";
-            return "piezas";
-        }
-        if (t.da().equals("depositar") || t.da().equals("camino")) return "saldo";
-        if (t.da().equals("recargar") || t.da().equals("frasco") || t.da().equals("cristal")) return "expedicion";
-        String o = t.objeto();
-        if ("tintura".equals(o) || "frasco-1".equals(o) || "cristal".equals(o)) return "expedicion";
-        return "altar";
+    /** La pagina que se pide, o la portada si no es ninguna (umbral o cualquier otra cosa). */
+    static String pagina(String p) {
+        if (FORJA.equals(p) || EXPEDICION.equals(p) || LLAVES.equals(p)) return p;
+        return UMBRAL;
+    }
+
+    /** El titulo de cada pagina: "Altar del Umbral", "La Forja" o "Altar · <categoria>". */
+    static Marco.Titulo titulo(String pagina) {
+        String pg = pagina(pagina);
+        if (pg.equals(UMBRAL)) return Marco.T_ALTAR;
+        if (pg.equals(FORJA)) return Marco.T_FORJA;
+        for (Categoria c : CATEGORIAS) if (c.id().equals(pg)) return Marco.categoria(c.nombre());
+        return Marco.T_ALTAR;
     }
 
     /**
-     * Las secciones de una pagina, con sus trueques en el orden de la config y los botones de
-     * cada una. Sin Bukkit: el autotest la usa con los trueques de serie. salvoconducto: si sale
-     * (apagado no se ensena, DIS M34).
+     * En que pagina sale un trueque: expedicion, llaves o forja. Null si no sale en el Altar
+     * (depositar y camino, o una pagina que no es ni umbral ni forja).
      */
-    static List<Seccion> secciones(String pagina, List<Altar.Trueque> todos, boolean salvoconducto) {
-        Map<String, Seccion> s = new LinkedHashMap<>();
-        if (FORJA.equals(pagina)) {
-            s.put("mejoras", new Seccion("mejoras", Material.SMITHING_TABLE, "Mejoras",
-                    List.of("Para lo que ya llevas: vida,", "gemas, grabados y el Manto."), new ArrayList<>()));
-            s.put("manto", new Seccion("manto", Material.FIRE_CHARGE, "El Manto y el Hacha",
-                    List.of("Cada pieza pide el Sello", "de su minijefe."), new ArrayList<>()));
-            s.put("eco", new Seccion("eco", Material.ECHO_SHARD, "El Vestigio del Eco",
-                    List.of("Piden Marcas de Eco: Lágrimas", "de Eco de cazas válidas."), new ArrayList<>()));
-            s.put("guadana", new Seccion("guadana", Material.BELL, "La Guadaña de la Parca",
-                    List.of("Pide Fragmentos de Guadaña:", "Campanas de Parca."), new ArrayList<>()));
-            s.put("piezas", new Seccion("piezas", Material.NETHERITE_INGOT, "Otras piezas",
-                    List.of("Piden créditos de Calamity."), new ArrayList<>()));
-        } else {
-            s.put("expedicion", new Seccion("expedicion", Material.LANTERN, "Para la expedición",
-                    List.of("Lo que te llevas dentro.", "Si mueres, se queda allí."), new ArrayList<>()));
-            s.put("altar", new Seccion("altar", Material.VAULT, "Llave del Caos y ofrendas",
-                    List.of("Lo que el altar da a cambio", "de las Esencias que ahorras."), new ArrayList<>()));
-            s.put("saldo", new Seccion("saldo", Material.LODESTONE, "Tu saldo y tu camino",
-                    List.of("Ingresa las Esencias que lleves", "y mira cuánto te falta."), new ArrayList<>()));
-            s.put("tablon", new Seccion("tablon", Material.OAK_HANGING_SIGN, "El tablón del Umbral",
-                    List.of("Encargos, rankings y lo que", "se vota para Calamity."), new ArrayList<>()));
-        }
-        boolean depositar = false, camino = false;
+    static String categoriaDe(Altar.Trueque t) {
+        if (FUERA.contains(t.da())) return null;
+        if (FORJA.equals(t.pagina())) return FORJA;
+        if (!UMBRAL.equals(t.pagina())) return null;
+        if (t.da().equals("recargar") || t.da().equals("frasco") || t.da().equals("cristal")) return EXPEDICION;
+        String o = t.objeto();
+        if ("tintura".equals(o) || "frasco-1".equals(o) || "cristal".equals(o)) return EXPEDICION;
+        return LLAVES;
+    }
+
+    /**
+     * Los trueques de una pagina en el orden de la config. Sin Bukkit: el autotest la usa con
+     * los de serie. salvoconducto: si sale (apagado no se ensena, DIS M34).
+     */
+    static List<Altar.Trueque> trueques(String pagina, List<Altar.Trueque> todos, boolean salvoconducto) {
+        List<Altar.Trueque> out = new ArrayList<>();
         for (Altar.Trueque t : todos) {
-            if (!pagina.equals(t.pagina())) continue;
             if ("salvoconducto".equals(t.objeto()) && !salvoconducto) continue;
-            Seccion sec = s.get(seccionDe(t));
-            if (sec == null) continue;
-            if (t.da().equals("depositar")) {
-                depositar = true;
-                sec.cosas().add(new Cosa(t, "depositar"));
-            } else if (t.da().equals("camino")) {
-                camino = true;
-                sec.cosas().add(new Cosa(t, "camino"));
-            } else {
-                sec.cosas().add(new Cosa(t, null));
-            }
+            if (pagina.equals(categoriaDe(t))) out.add(t);
         }
-        if (FORJA.equals(pagina)) {
-            s.get("mejoras").cosas().add(new Cosa(null, "grabar"));
-        } else {
-            // Depositar y Tu camino estan siempre, vengan o no en la config (como antes).
-            List<Cosa> saldo = s.get("saldo").cosas();
-            if (!depositar) saldo.add(0, new Cosa(null, "depositar"));
-            if (!camino) saldo.add(new Cosa(null, "camino"));
-            saldo.add(new Cosa(null, "horas"));
-            for (String b : List.of("contratos", "rankings", "tablero", "encuesta", "deseos")) {
-                s.get("tablon").cosas().add(new Cosa(null, b));
-            }
-        }
+        return out;
+    }
+
+    /** De que grupo de la Forja es un trueque. */
+    static String grupoDe(Altar.Trueque t) {
+        if (t.pieza() == null) return "mejoras";
+        String c = t.credito() == null ? "" : t.credito();
+        if (c.startsWith("sello:") || c.equals(Creditos.ERRANTE)) return "manto";
+        if (c.equals("marca")) return "eco";
+        if (c.equals("fragmento")) return "guadana";
+        return "piezas";
+    }
+
+    /** Los grupos de la Forja con sus trueques y Grabar al final de las mejoras. Los vacios no salen. */
+    static List<Seccion> forja(List<Altar.Trueque> todos, boolean salvoconducto) {
+        Map<String, Seccion> s = new LinkedHashMap<>();
+        s.put("mejoras", new Seccion("mejoras", Material.YELLOW_STAINED_GLASS_PANE, "Mejoras",
+                List.of("Para lo que ya llevas: vida, gemas,", "grabados y la Ascua del Manto."), new ArrayList<>()));
+        s.put("manto", new Seccion("manto", Material.ORANGE_STAINED_GLASS_PANE, "El Manto y el Hacha",
+                List.of("Cada pieza pide el Sello", "de su minijefe."), new ArrayList<>()));
+        s.put("eco", new Seccion("eco", Material.CYAN_STAINED_GLASS_PANE, "El Vestigio del Eco",
+                List.of("Piden Marcas de Eco: Lágrimas", "de Eco de cazas válidas."), new ArrayList<>()));
+        s.put("guadana", new Seccion("guadana", Material.PURPLE_STAINED_GLASS_PANE, "La Guadaña de la Parca",
+                List.of("Pide Fragmentos de Guadaña:", "Campanas de Parca."), new ArrayList<>()));
+        s.put("piezas", new Seccion("piezas", Material.LIGHT_GRAY_STAINED_GLASS_PANE, "Otras piezas",
+                List.of("Piden créditos de Calamity."), new ArrayList<>()));
+        for (Altar.Trueque t : trueques(FORJA, todos, salvoconducto)) s.get(grupoDe(t)).cosas().add(new Cosa(t, null));
+        s.get("mejoras").cosas().add(new Cosa(null, "grabar"));
         List<Seccion> out = new ArrayList<>();
         for (Seccion sec : s.values()) if (!sec.cosas().isEmpty()) out.add(sec);
         return out;
     }
 
-    static List<Marco.Sitio> reparto(List<Seccion> secciones) {
-        return Marco.repartir(tamanos(secciones));
-    }
-
-    private static List<Integer> tamanos(List<Seccion> secs) {
+    static List<Integer> tamanos(List<Seccion> secs) {
         List<Integer> out = new ArrayList<>();
         for (Seccion s : secs) out.add(s.cosas().size());
+        return out;
+    }
+
+    /** Donde cae cada cosa de una pagina: la Forja por grupos con banda, una categoria en rejilla, la portada nada. */
+    static List<Marco.Sitio> sitios(String pagina, List<Altar.Trueque> todos, boolean salvoconducto) {
+        String pg = pagina(pagina);
+        if (pg.equals(UMBRAL)) return List.of();
+        if (pg.equals(FORJA)) return Marco.repartir(tamanos(forja(todos, salvoconducto)));
+        return Marco.rejilla(trueques(pg, todos, salvoconducto).size());
+    }
+
+    /** Las casillas de n tarjetas en la portada: en la fila del medio, centradas y con aire. */
+    static int[] tarjetas(int n) {
+        int[] cols = Marco.columnas(n);
+        int[] out = new int[cols.length];
+        for (int i = 0; i < cols.length; i++) out[i] = FILA_TARJETAS + cols[i];
         return out;
     }
 
@@ -234,20 +271,21 @@ final class MenuAltar implements Listener {
         abrir(p, pagina, 0, true);
     }
 
-    /** Abre una pagina en una hoja. conSonido: el del Altar al abrirlo (cambiar de pestana suena aparte). */
+    /**
+     * Abre una pagina (umbral = la portada, expedicion, llaves o forja) en una hoja. conSonido:
+     * el del Altar al abrirlo desde el NPC o el bloque (cambiar de pagina suena aparte).
+     */
     void abrir(Player p, String pagina, int hoja, boolean conSonido) {
         if (!altar.activo()) {
             p.sendMessage(ComandoCalamity.mensaje("El altar está en silencio ahora mismo."));
             return;
         }
-        String pg = FORJA.equals(pagina) ? FORJA : UMBRAL;
-        List<Seccion> secs = secciones(pg, altar.trueques(), hc.cfg().getBoolean("salvoconducto.activo", false));
-        int total = Marco.hojas(reparto(secs));
+        String pg = pagina(pagina);
+        boolean salvo = hc.cfg().getBoolean("salvoconducto.activo", false);
+        int total = Marco.hojas(sitios(pg, altar.trueques(), salvo));
         int h = Math.max(0, Math.min(hoja, total - 1));
         Marca m = new Marca(pg, new HashMap<>(), null, h, null, null);
-        String titulo = pg.equals(FORJA) ? "La Forja" : "Altar del Umbral";
-        Inventory inv = hc.plugin().getServer().createInventory(m, 54,
-                Paleta.ventanaCalamity(titulo + (total > 1 ? " (" + (h + 1) + "/" + total + ")" : "")));
+        Inventory inv = hc.plugin().getServer().createInventory(m, pg.equals(UMBRAL) ? PORTADA : 54, titulo(pg).componente());
         pintar(inv, p, m);
         p.openInventory(inv);
         if (conSonido) {
@@ -260,7 +298,8 @@ final class MenuAltar implements Listener {
     void repintar(Player p) {
         if (!p.isOnline()) return;
         Inventory top = p.getOpenInventory().getTopInventory();
-        if (top.getHolder() instanceof Marca m && (m.pagina().equals(UMBRAL) || m.pagina().equals(FORJA))) {
+        if (top.getHolder() instanceof Marca m && (m.pagina().equals(UMBRAL) || m.pagina().equals(FORJA)
+                || m.pagina().equals(EXPEDICION) || m.pagina().equals(LLAVES))) {
             pintar(top, p, m);
         }
     }
@@ -269,24 +308,83 @@ final class MenuAltar implements Listener {
         inv.clear();
         m.acciones().clear();
         List<Altar.Trueque> todos = altar.trueques();
-        Marco.cabecera(inv, m.acciones(), hc, p, todos);
-        Marco.pestanas(inv, m.acciones(), hc, p, m.pagina());
+        boolean salvo = hc.cfg().getBoolean("salvoconducto.activo", false);
+        Marco.saldo(inv, m.acciones(), hc, p, Marco.SALDO);
+        inv.setItem(Marco.CERRAR, Marco.cerrar());
+        m.acciones().put(Marco.CERRAR, "cerrar");
+        if (m.pagina().equals(UMBRAL)) portada(inv, p, m, todos, salvo);
+        else if (m.pagina().equals(FORJA)) paginaForja(inv, p, m, todos, salvo);
+        else paginaCategoria(inv, p, m, todos, salvo);
+        Marco.rellenar(inv);
+    }
 
-        List<Seccion> secs = secciones(m.pagina(), todos, hc.cfg().getBoolean("salvoconducto.activo", false));
-        List<Marco.Sitio> sitios = reparto(secs);
-        int total = Marco.hojas(sitios);
+    /** La portada: las tarjetas de las categorias que tengan algo, la ayuda y el Tasador. */
+    private void portada(Inventory inv, Player p, Marca m, List<Altar.Trueque> todos, boolean salvo) {
+        UUID u = p.getUniqueId();
+        Altar.Caja caja = altar.caja();
+        List<Categoria> hay = new ArrayList<>();
+        for (Categoria c : CATEGORIAS) if (!trueques(c.id(), todos, salvo).isEmpty()) hay.add(c);
+        int[] casillas = tarjetas(hay.size());
+        for (int i = 0; i < casillas.length; i++) {
+            Categoria c = hay.get(i);
+            List<Altar.Trueque> ts = trueques(c.id(), todos, salvo);
+            int ya = 0;
+            for (Altar.Trueque t : ts) if (!t.servicio() && Altar.revisar(caja, t, u).motivo() == null) ya++;
+            boolean forja = c.id().equals(FORJA);
+            List<Component> lore = new ArrayList<>();
+            for (String l : c.texto()) lore.add(Marco.texto(l));
+            lore.add(Component.empty());
+            lore.add(Component.text("▸ ", Paleta.SEPARADOR).append(Marco.texto(ts.size() + (ts.size() == 1 ? " artículo" : " artículos"))));
+            if (ya > 0) lore.add(Marco.tiene(ya == 1 ? "1 lo puedes " + (forja ? "forjar" : "comprar") + " ya"
+                    : ya + " los puedes " + (forja ? "forjar" : "comprar") + " ya"));
+            lore.add(Component.empty());
+            lore.add(Marco.accion("Clic para entrar"));
+            inv.setItem(casillas[i], Marco.icono(c.icono(), Component.text(c.nombre(), forja ? Altar.AMBAR : Paleta.DETALLE), lore, ya > 0));
+            m.acciones().put(casillas[i], "cat:" + c.id());
+        }
+        if (hay.isEmpty()) {
+            inv.setItem(FILA_TARJETAS + 4, Marco.icono(Material.GRAY_DYE, Component.text("El altar no tiene nada ahora", Paleta.TENUE),
+                    List.of(Marco.tenue("Vuelve más tarde.")), false));
+        }
+        inv.setItem(AYUDA, Marco.ayuda(hc));
+        Marco.enlace(inv, m.acciones(), IR_TASADOR, Marco.TASADOR, Material.SPYGLASS, "El Tasador",
+                List.of("Lo que traes y lo que cobras,", "tus contratos y tu camino."), hc.npcs() != null);
+    }
+
+    /** Una categoria: sus articulos en rejilla y abajo las flechas y Volver. */
+    private void paginaCategoria(Inventory inv, Player p, Marca m, List<Altar.Trueque> todos, boolean salvo) {
+        List<Altar.Trueque> ts = trueques(m.pagina(), todos, salvo);
+        List<Marco.Sitio> sitios = Marco.rejilla(ts.size());
+        Altar.Caja caja = altar.caja();
+        for (Marco.Sitio s : sitios) if (s.hoja() == m.hoja()) ponerTrueque(inv, p, m, s.casilla(), ts.get(s.indice()), caja);
+        if (ts.isEmpty()) {
+            inv.setItem(CENTRO, Marco.icono(Material.GRAY_DYE, Component.text("Nada por ahora", Paleta.TENUE),
+                    List.of(Marco.tenue("El altar no tiene nada aquí.")), false));
+        }
+        pie(inv, m, Marco.hojas(sitios));
+    }
+
+    /** La Forja: cada grupo en su fila con su banda a los lados. */
+    private void paginaForja(Inventory inv, Player p, Marca m, List<Altar.Trueque> todos, boolean salvo) {
+        List<Seccion> secs = forja(todos, salvo);
+        List<Marco.Sitio> sitios = Marco.repartir(tamanos(secs));
         Altar.Caja caja = altar.caja();
         for (Marco.Sitio s : sitios) {
             if (s.hoja() != m.hoja()) continue;
             Seccion sec = secs.get(s.seccion());
             if (s.indice() < 0) {
-                inv.setItem(s.casilla(), Marco.rotulo(sec.icono(), sec.nombre(), sec.texto()));
+                Marco.ponerBanda(inv, s.casilla(), Marco.banda(sec.banda(), sec.nombre(), sec.texto()));
                 continue;
             }
             Cosa c = sec.cosas().get(s.indice());
-            if (c.boton() != null) boton(inv, p, m, s.casilla(), c);
+            if (c.boton() != null) grabar(inv, p, m, s.casilla());
             else ponerTrueque(inv, p, m, s.casilla(), c.t(), caja);
         }
+        pie(inv, m, Marco.hojas(sitios));
+    }
+
+    /** La fila de abajo de una pagina de articulos: flechas en las esquinas y Volver al Altar en el centro. */
+    private static void pie(Inventory inv, Marca m, int total) {
         if (m.hoja() > 0) {
             inv.setItem(Marco.ANTERIOR, Marco.flecha(-1, m.hoja(), total));
             m.acciones().put(Marco.ANTERIOR, "hoja:" + (m.hoja() - 1));
@@ -295,110 +393,29 @@ final class MenuAltar implements Listener {
             inv.setItem(Marco.SIGUIENTE, Marco.flecha(1, m.hoja(), total));
             m.acciones().put(Marco.SIGUIENTE, "hoja:" + (m.hoja() + 1));
         }
-        Marco.rellenar(inv);
+        inv.setItem(Marco.VOLVER, Marco.volver(m.hoja(), total));
+        m.acciones().put(Marco.VOLVER, "volver");
     }
 
-    // ------------------------------------------------------------------ los botones
-
-    private void boton(Inventory inv, Player p, Marca m, int casilla, Cosa c) {
-        UUID u = p.getUniqueId();
-        switch (c.boton()) {
-            case "depositar" -> {
-                // En la zona spawn el Altar vende, pero lo fisico se sigue ingresando al salir vivo:
-                // si no, se guardarian las Esencias a mitad de expedicion sin cruzar la puerta.
-                Saldo s = hc.saldo();
-                int encima = s == null ? 0 : s.encima(p);
-                boolean dentro = hc.esHardcore(p);
-                Material icono = c.t() != null ? c.t().icono() : Material.GHAST_TEAR;
-                List<Component> lore = new ArrayList<>(List.of(Marco.texto("Las Esencias físicas que lleves"),
-                        Marco.texto("pasan a tu saldo."), Component.empty()));
-                if (dentro) lore.add(Marco.tenue("Aquí dentro se ingresan solas al salir vivo."));
-                else lore.add(encima > 0 ? Marco.accion("Clic para ingresar " + Marco.esencias(encima))
-                        : Marco.tenue("No llevas ninguna encima."));
-                inv.setItem(casilla, Marco.icono(new ItemStack(icono, Math.max(1, Math.min(64, encima))),
-                        Component.text("Depositar Esencias", dentro ? Paleta.TENUE : Paleta.DETALLE), lore, encima > 0 && !dentro));
-                m.acciones().put(casilla, "depositar");
-            }
-            case "camino" -> {
-                Material icono = c.t() != null ? c.t().icono() : Material.COMPASS;
-                inv.setItem(casilla, Marco.icono(icono, Component.text("Tu camino", Paleta.DETALLE), List.of(
-                        Marco.texto("Lo que te falta para cada pieza:"), Marco.texto("Sellos, piedad, Marcas y Fragmentos."),
-                        Component.empty(), Marco.accion("Clic para verlo")), false));
-                m.acciones().put(casilla, "camino");
-            }
-            case "horas" -> {
-                Camino cam = altar.camino();
-                double h = cam.horas(u);
-                double hito = cam.proximoHito(h);
-                List<Component> lore = new ArrayList<>();
-                if (hito > 0) lore.add(Marco.dato("Próximo hito", Camino.horasTexto(hito).replace(",0", "") + " h"));
-                lore.add(Marco.tenue("Solo cuenta el tiempo en que te mueves."));
-                Creditos cr = hc.creditos();
-                if (cr != null) lore.add(Marco.tenue("Los Sellos Errantes piden " + Math.round(cr.horasPedidas()) + " h."));
-                inv.setItem(casilla, Marco.icono(Material.CLOCK, Component.text("Horas activas: ", Paleta.TEXTO)
-                        .append(Component.text(Camino.horasTexto(h), Paleta.CIFRA)), lore, false));
-            }
-            case "grabar" -> {
-                ObjetosCalamity obj = hc.objetos();
-                List<Component> lore = new ArrayList<>(List.of(Marco.texto("Con el objeto en la mano y un"),
-                        Marco.texto("Grabado encima: +1 nivel sobre el"), Marco.texto("tope a un encantamiento."),
-                        Marco.tenue("Solo equipo sin MMOItems."), Component.empty()));
-                boolean tiene = false;
-                if (obj == null) {
-                    lore.add(Marco.tenue("Próximamente."));
-                } else {
-                    int hechos = hc.datos().getInt(ObjetosCalamity.rutaGrabados(altar.calendario().semana(), u), 0);
-                    lore.add(Marco.dato("Esta semana", hechos + " de " + obj.porSemana()));
-                    lore.add(Component.empty());
-                    tiene = ObjetosCalamity.casillaGrabado(p.getInventory().getContents(), u) >= 0;
-                    lore.add(tiene ? Marco.accion("Clic para grabar") : Marco.porQueNo("No llevas ningún Grabado."));
-                }
-                inv.setItem(casilla, Marco.icono(Material.GRINDSTONE,
-                        Component.text("Grabar", obj == null ? Paleta.TENUE : Altar.AMBAR), lore, tiene));
-                m.acciones().put(casilla, obj == null ? "gris" : "grabar");
-            }
-            case "contratos" -> {
-                Contratos con = hc.contratos();
-                boolean activo = con != null && hc.valor("contratos", con::activo, false) && hc.npcs() != null;
-                inv.setItem(casilla, Marco.boton(Material.WRITABLE_BOOK, "Contratos de hoy",
-                        List.of("Tres encargos al día.", "Se cobran al salir vivo."),
-                        activo ? "Clic para verlos en el Tasador" : "Próximamente.", activo));
-                m.acciones().put(casilla, activo ? "contratos" : "gris");
-            }
-            case "rankings" -> {
-                Rankings r = hc.rankings();
-                boolean activo = r != null && r.activo() && hc.npcs() != null;
-                inv.setItem(casilla, Marco.boton(Material.GOLDEN_HELMET, "Rankings de la semana",
-                        List.of("Quién ha sacado más.", "Se pagan el lunes."), activo ? "Clic para verlos" : "Próximamente.", activo));
-                m.acciones().put(casilla, activo ? "rankings" : "gris");
-            }
-            case "tablero" -> {
-                Tablero tab = hc.tablero();
-                boolean activo = tab != null && hc.valor("tablero", tab::activo, false);
-                inv.setItem(casilla, Marco.boton(Material.ITEM_FRAME, "Tablero",
-                        List.of("Ecos con botín y Parcas sueltas.", "Sin coordenadas: búscalos."),
-                        activo ? "Clic para abrirlo" : "Próximamente.", activo));
-                m.acciones().put(casilla, activo ? "tablero" : "gris");
-            }
-            case "encuesta" -> {
-                Encuesta enc = hc.encuesta();
-                boolean activo = enc != null && enc.activo();
-                List<String> texto = new ArrayList<>(List.of("Tu voto decide qué da Calamity."));
-                if (activo && enc.pendiente(u)) texto.add("Tienes una pregunta pendiente.");
-                inv.setItem(casilla, Marco.boton(Material.PAPER, "Encuesta y Voto del Botín", texto,
-                        activo ? "Clic para votar" : "Próximamente.", activo));
-                m.acciones().put(casilla, activo ? "encuesta" : "gris");
-            }
-            case "deseos" -> {
-                Encuesta enc = hc.encuesta();
-                boolean activo = enc != null && enc.deseos() != null && enc.deseos().activo();
-                inv.setItem(casilla, Marco.boton(Material.NETHER_STAR, "Lista de deseos",
-                        List.of("Lo que te gustaría ver", "en el altar."), activo ? "Clic para abrirla" : "Próximamente.", activo));
-                m.acciones().put(casilla, activo ? "deseos" : "gris");
-            }
-            default -> {
-            }
+    /** El boton Grabar de la Forja: lo que hace, cuantos llevas esta semana y si llevas un Grabado. */
+    private void grabar(Inventory inv, Player p, Marca m, int casilla) {
+        ObjetosCalamity obj = hc.objetos();
+        List<Component> lore = new ArrayList<>(List.of(Marco.texto("Con el objeto en la mano y un"),
+                Marco.texto("Grabado encima: +1 nivel sobre el"), Marco.texto("tope a un encantamiento."),
+                Marco.tenue("Solo equipo sin MMOItems."), Component.empty()));
+        boolean tiene = false;
+        if (obj == null) {
+            lore.add(Marco.tenue("Próximamente."));
+        } else {
+            int hechos = hc.datos().getInt(ObjetosCalamity.rutaGrabados(altar.calendario().semana(), p.getUniqueId()), 0);
+            lore.add(Marco.dato("Esta semana", hechos + " de " + obj.porSemana()));
+            lore.add(Component.empty());
+            tiene = ObjetosCalamity.casillaGrabado(p.getInventory().getContents(), p.getUniqueId()) >= 0;
+            lore.add(tiene ? Marco.accion("Clic para grabar") : Marco.porQueNo("No llevas ningún Grabado."));
         }
+        inv.setItem(casilla, Marco.icono(Material.GRINDSTONE,
+                Component.text("Grabar", obj == null ? Paleta.TENUE : Altar.AMBAR), lore, tiene));
+        m.acciones().put(casilla, obj == null ? "gris" : "grabar");
     }
 
     // ------------------------------------------------------------------ los trueques
@@ -641,7 +658,7 @@ final class MenuAltar implements Listener {
         Marca m = new Marca(CONFIRMAR, acciones, null, desde.hoja(), t.id(), desde.pagina());
         boolean forja = FORJA.equals(t.pagina());
         Inventory inv = hc.plugin().getServer().createInventory(m, 45,
-                Paleta.ventanaCalamity(forja ? "¿Forjarlo?" : "¿Comprarlo?"));
+                (forja ? Marco.T_FORJAR : Marco.T_COMPRAR).componente());
 
         // Lo de MMOItems (y los objetos de Calamity) traen su lore: se ensenan tal cual se entregan.
         ItemStack centro = base(t);
@@ -686,7 +703,7 @@ final class MenuAltar implements Listener {
         ItemStack boton = Marco.icono(Material.LIME_CONCRETE,
                 Component.text("✔ " + (forja ? "Forjar " : "Comprar ") + Altar.nombre(t), Marco.SI), si, false);
         ItemStack cancelar = Marco.icono(Material.RED_CONCRETE, Component.text("✘ Cancelar", Marco.NO), List.of(
-                Marco.tenue("Vuelves " + (forja ? "a la Forja" : "al Umbral") + " sin gastar nada.")), false);
+                Marco.tenue("Vuelves " + (forja ? "a la Forja" : "al Altar") + " sin gastar nada.")), false);
         for (int c : new int[]{28, 29, 30}) {
             inv.setItem(c, cancelar);
             acciones.put(c, "no");
@@ -745,13 +762,21 @@ final class MenuAltar implements Listener {
             clicTrueque(p, m, accion.substring(2));
             return;
         }
+        if (accion.startsWith("cat:")) {
+            String c = accion.substring(4);
+            altar.tarea(() -> {
+                abrir(p, c, 0, false);
+                Marco.sonidoPestana(p);
+            }, 1L);
+            return;
+        }
         if (accion.startsWith("tab:") || accion.startsWith("ir:")) {
             String a = accion.substring(accion.indexOf(':') + 1);
             altar.tarea(() -> Marco.irA(hc, p, a), 1L);
             return;
         }
         if (accion.startsWith("no-tab:")) {
-            Marco.pestanaCerrada(p, accion.substring(7));
+            Marco.cerrado(p, accion.substring(7));
             return;
         }
         if (accion.startsWith("hoja:")) {
@@ -777,6 +802,10 @@ final class MenuAltar implements Listener {
                 Marco.sonar(p, "ui.button.click", 0.45f, 0.8f);
                 altar.tarea(() -> abrir(p, m.volver(), m.hoja(), false), 1L);
             }
+            case "volver" -> altar.tarea(() -> {
+                abrir(p, UMBRAL, 0, false);
+                Marco.sonidoPestana(p);
+            }, 1L);
             case "depositar" -> {
                 if (hc.esHardcore(p)) {
                     p.sendMessage(ComandoCalamity.mensaje("Aquí dentro no: las Esencias se ingresan solas al salir vivo."));
@@ -786,25 +815,7 @@ final class MenuAltar implements Listener {
                 altar.depositar(p);
                 repintar(p);
             }
-            case "camino" -> altar.tarea(() -> altar.camino().abrir(p), 1L);
             case "grabar" -> altar.tarea(() -> altar.forja().abrirGrabar(p), 1L);
-            case "contratos" -> altar.tarea(() -> Marco.irA(hc, p, Marco.TASADOR), 1L);
-            case "rankings" -> altar.tarea(() -> {
-                Npcs n = hc.npcs();
-                if (n != null) n.cazador().abrir(p);
-            }, 1L);
-            case "tablero" -> altar.tarea(() -> {
-                Tablero tab = hc.tablero();
-                if (tab != null) hc.seguro("tablero", () -> tab.abrir(p));
-            }, 1L);
-            case "encuesta" -> altar.tarea(() -> {
-                Encuesta enc = hc.encuesta();
-                if (enc != null) enc.abrirPendiente(p);
-            }, 1L);
-            case "deseos" -> altar.tarea(() -> {
-                Encuesta enc = hc.encuesta();
-                if (enc != null && enc.deseos() != null) enc.deseos().abrir(p);
-            }, 1L);
             case "gris" -> {
                 p.sendMessage(ComandoCalamity.mensaje("Eso aún no está abierto. Próximamente."));
                 Marco.sonidoNo(p);
@@ -833,7 +844,7 @@ final class MenuAltar implements Listener {
             }
         }
         altar.comprar(p, id, null, r -> repintar(p));
-        // Recargar y depositar no pasan por el motor: se repinta igual.
+        // Recargar no pasa por el motor: se repinta igual.
         altar.tarea(() -> repintar(p), 1L);
     }
 
@@ -865,7 +876,10 @@ final class MenuAltar implements Listener {
 
     // ------------------------------------------------------------------ autotest
 
-    /** El reparto de casillas de los menus nuevos (Altar, Tasador y Cazador): nada pisado, todo colocado. */
+    /**
+     * El reparto de los menus (Altar, Tasador y Cazador): nada pisado, todo colocado, cada
+     * trueque en su pagina, las hojas y que todos los titulos quepan en la ventana.
+     */
     static List<String> autotest() {
         Autotest.Hoja h = new Autotest.Hoja();
 
@@ -879,77 +893,117 @@ final class MenuAltar implements Listener {
             h.ok("fila de " + n + ": columnas simetricas y sin repetir", bien);
         }
 
-        // Cuatro secciones pequenas: una hoja, los rotulos en la columna 0.
+        // Grupos con banda: una banda en la columna 0 de cada fila.
         List<Marco.Sitio> r = Marco.repartir(List.of(4, 3, 3, 5));
-        h.igual("4 secciones pequenas: una hoja", 1, Marco.hojas(r));
-        h.igual("rotulos en 9, 18, 27 y 36", List.of(9, 18, 27, 36), rotulos(r, 0));
+        h.igual("4 grupos pequenos: una hoja", 1, Marco.hojas(r));
+        h.igual("bandas en 9, 18, 27 y 36", List.of(9, 18, 27, 36), bandas(r, 0));
         h.ok("4+3+3+5: todo colocado una vez", comprobar(r, List.of(4, 3, 3, 5)) == null);
-
-        // Una seccion de 10: dos filas y un solo rotulo.
         r = Marco.repartir(List.of(10));
-        h.igual("10 cosas: dos filas, un rotulo", List.of(9), rotulos(r, 0));
+        h.igual("10 cosas: dos filas, una banda en cada una", List.of(9, 18), bandas(r, 0));
         h.ok("10 cosas: todo colocado una vez", comprobar(r, List.of(10)) == null);
-
-        // Cinco secciones de una fila: la quinta pasa a la segunda hoja.
         r = Marco.repartir(List.of(7, 7, 7, 7, 1));
         h.igual("5 filas: dos hojas", 2, Marco.hojas(r));
-        h.igual("la quinta arriba en la hoja 2", List.of(9), rotulos(r, 1));
+        h.igual("la quinta arriba en la hoja 2", List.of(9), bandas(r, 1));
         h.ok("7+7+7+7+1: todo colocado una vez", comprobar(r, List.of(7, 7, 7, 7, 1)) == null);
-
-        // La que no cabe en lo que queda de hoja pero si en una nueva no se parte.
         r = Marco.repartir(List.of(7, 7, 7, 10));
-        h.igual("la de 10 empieza en la hoja 2", List.of(9), rotulos(r, 1));
+        h.igual("la de 10 empieza en la hoja 2, con sus dos bandas", List.of(9, 18), bandas(r, 1));
         h.ok("7+7+7+10: todo colocado una vez", comprobar(r, List.of(7, 7, 7, 10)) == null);
-
-        // Una seccion mas larga que una hoja se parte y repite el rotulo.
         r = Marco.repartir(List.of(3, 30));
-        int rot = 0;
-        for (Marco.Sitio s : r) if (s.seccion() == 1 && s.indice() < 0) rot++;
-        h.igual("30 cosas: un rotulo en cada hoja", 2, rot);
+        int nb = 0;
+        for (Marco.Sitio s : r) if (s.seccion() == 1 && s.indice() < 0) nb++;
+        h.igual("30 cosas: una banda por fila (5)", 5, nb);
         h.ok("3+30: todo colocado una vez", comprobar(r, List.of(3, 30)) == null);
-        h.igual("secciones vacias no salen", 0, Marco.repartir(List.of(0, 0)).size());
+        h.igual("grupos vacios no salen", 0, Marco.repartir(List.of(0, 0)).size());
 
-        // Los trueques de serie: todos colocados, una hoja por pagina, nada repetido.
+        // La rejilla de una categoria: cada articulo una vez, dentro, sin pisarse y con aire.
+        boolean rejillas = true, aire = true;
+        String fallo = null;
+        for (int n = 1; n <= 60; n++) {
+            List<Marco.Sitio> sr = Marco.rejilla(n);
+            String f = comprobar(sr, List.of(n));
+            if (f != null && fallo == null) fallo = n + ": " + f;
+            rejillas &= f == null;
+            if (n <= Marco.FILAS * 4) {
+                Set<Integer> puestas = new HashSet<>();
+                for (Marco.Sitio s : sr) puestas.add(s.casilla());
+                for (int c : puestas) aire &= !puestas.contains(c + 1) || c % 9 == 8;
+            }
+        }
+        h.ok("rejillas de 1 a 60: todo colocado una vez" + (fallo == null ? "" : " (" + fallo + ")"), rejillas);
+        h.ok("hasta 16 articulos: ninguno pegado a otro en su fila", aire);
+        h.igual("rejilla de 4: una fila en la del medio, con aire", List.of(19, 21, 23, 25), casillas(Marco.rejilla(4)));
+        h.igual("rejilla de 3: 20, 22 y 24", List.of(20, 22, 24), casillas(Marco.rejilla(3)));
+        h.igual("rejilla de 7: 4 arriba y 3 debajo", List.of(19, 21, 23, 25, 29, 31, 33), casillas(Marco.rejilla(7)));
+        h.igual("rejilla de 16: una hoja", 1, Marco.hojas(Marco.rejilla(16)));
+        h.igual("rejilla de 40: dos hojas", 2, Marco.hojas(Marco.rejilla(40)));
+        h.igual("rejilla de 57: tres hojas", 3, Marco.hojas(Marco.rejilla(57)));
+
+        // Los trueques de serie: cada uno en una sola pagina; depositar y camino, fuera del Altar.
         List<Altar.Trueque> serie = Altar.leer(Altar.DEFECTO);
-        for (String pg : List.of(UMBRAL, FORJA)) {
-            for (boolean salvo : List.of(false, true)) {
-                List<Seccion> secs = secciones(pg, serie, salvo);
-                List<Marco.Sitio> sitios = reparto(secs);
-                String nombre = pg + (salvo ? " con" : " sin") + " salvoconducto";
-                h.igual(nombre + ": una hoja", 1, Marco.hojas(sitios));
-                String fallo = comprobar(sitios, tamanos(secs));
-                h.ok(nombre + ": casillas sin repetir" + (fallo == null ? "" : " (" + fallo + ")"), fallo == null);
-                Set<String> puestos = new HashSet<>();
-                for (Seccion s : secs) for (Cosa c : s.cosas()) if (c.t() != null) puestos.add(c.t().id());
-                for (Altar.Trueque t : serie) {
-                    if (!t.pagina().equals(pg)) continue;
-                    boolean debe = salvo || !"salvoconducto".equals(t.objeto());
-                    h.igual(nombre + ": " + t.id() + (debe ? " colocado" : " no sale"), debe, puestos.contains(t.id()));
+        for (boolean salvo : List.of(false, true)) {
+            String nombre = salvo ? "con salvoconducto" : "sin salvoconducto";
+            Map<String, Integer> veces = new HashMap<>();
+            for (Categoria c : CATEGORIAS) {
+                if (c.id().equals(FORJA)) {
+                    for (Seccion s : forja(serie, salvo)) for (Cosa x : s.cosas()) if (x.t() != null) veces.merge(x.t().id(), 1, Integer::sum);
+                } else {
+                    for (Altar.Trueque t : trueques(c.id(), serie, salvo)) veces.merge(t.id(), 1, Integer::sum);
                 }
+                List<Marco.Sitio> ss = sitios(c.id(), serie, salvo);
+                h.igual(nombre + ": " + c.id() + " en una hoja", 1, Marco.hojas(ss));
+                String f = c.id().equals(FORJA) ? comprobar(ss, tamanos(forja(serie, salvo)))
+                        : comprobar(ss, List.of(trueques(c.id(), serie, salvo).size()));
+                h.ok(nombre + ": " + c.id() + " sin casillas repetidas" + (f == null ? "" : " (" + f + ")"), f == null);
+            }
+            for (Altar.Trueque t : serie) {
+                if (FUERA.contains(t.da())) {
+                    h.igual(nombre + ": " + t.id() + " fuera del Altar", 0, veces.getOrDefault(t.id(), 0));
+                    continue;
+                }
+                int debe = salvo || !"salvoconducto".equals(t.objeto()) ? 1 : 0;
+                h.igual(nombre + ": " + t.id() + (debe == 1 ? " colocado una vez" : " no sale"), debe, veces.getOrDefault(t.id(), 0));
             }
         }
         List<String> ids = new ArrayList<>();
-        for (Seccion s : secciones(FORJA, serie, false)) ids.add(s.id());
-        h.igual("secciones de la Forja", List.of("mejoras", "manto", "eco", "guadana"), ids);
+        for (Categoria c : CATEGORIAS) ids.add(c.id());
+        h.igual("tarjetas de la portada", List.of(EXPEDICION, LLAVES, FORJA), ids);
+        h.igual("para la expedicion", List.of("recargar", "frasco", "cristal", "tintura"), idsDe(trueques(EXPEDICION, serie, false)));
+        h.igual("llaves y ofrendas", List.of("llave", "ofrenda"), idsDe(trueques(LLAVES, serie, false)));
+        h.igual("llaves y ofrendas con salvoconducto", List.of("llave", "salvoconducto", "ofrenda"), idsDe(trueques(LLAVES, serie, true)));
         ids = new ArrayList<>();
-        for (Seccion s : secciones(UMBRAL, serie, false)) ids.add(s.id());
-        h.igual("secciones del Umbral", List.of("expedicion", "altar", "saldo", "tablon"), ids);
+        for (Seccion s : forja(serie, false)) ids.add(s.id());
+        h.igual("grupos de la Forja", List.of("mejoras", "manto", "eco", "guadana"), ids);
+        List<Cosa> mejoras = forja(serie, false).get(0).cosas();
+        h.igual("Grabar al final de las mejoras", "grabar", mejoras.get(mejoras.size() - 1).boton());
+        h.igual("pagina que no existe: la portada", UMBRAL, pagina("camino"));
 
-        // Muchos trueques en la config: paginas, y cada uno una vez entre todas.
+        // Muchos trueques en la config: hojas, y cada uno una vez entre todas.
         List<Map<String, Object>> muchos = new ArrayList<>();
         for (int i = 0; i < 40; i++) muchos.add(Map.of("id", "t" + i, "pagina", "forja", "da", "dar:gema", "esencias", 1));
-        List<Seccion> grandes = secciones(FORJA, Altar.leer(muchos), false);
-        List<Marco.Sitio> sg = reparto(grandes);
-        h.ok("40 trueques: mas de una hoja", Marco.hojas(sg) > 1);
-        String fallo = comprobar(sg, tamanos(grandes));
-        h.ok("40 trueques: todos colocados una vez" + (fallo == null ? "" : " (" + fallo + ")"), fallo == null);
+        List<Seccion> grandes = forja(Altar.leer(muchos), false);
+        List<Marco.Sitio> sg = Marco.repartir(tamanos(grandes));
+        h.ok("40 trueques en la Forja: mas de una hoja", Marco.hojas(sg) > 1);
+        fallo = comprobar(sg, tamanos(grandes));
+        h.ok("40 trueques en la Forja: todos colocados una vez" + (fallo == null ? "" : " (" + fallo + ")"), fallo == null);
+        muchos = new ArrayList<>();
+        for (int i = 0; i < 40; i++) muchos.add(Map.of("id", "u" + i, "pagina", "umbral", "da", "dar:llave", "esencias", 1));
+        List<Altar.Trueque> llaves = trueques(LLAVES, Altar.leer(muchos), false);
+        h.igual("40 trueques de llaves: en su categoria", 40, llaves.size());
+        h.igual("40 trueques de llaves: dos hojas", 2, Marco.hojas(sitios(LLAVES, Altar.leer(muchos), false)));
 
-        // Lo fijo de arriba y de abajo: cada uno en su casilla, fuera del contenido.
-        List<Integer> fijas = List.of(Marco.ESENCIAS, Marco.MOBCOINS, Marco.AYUDA, Marco.SELLOS, Marco.MARCAS, Marco.CERRAR,
-                Marco.ANTERIOR, Marco.TAB_UMBRAL, Marco.TAB_FORJA, Marco.TAB_TASADOR, Marco.SIGUIENTE);
+        // Lo fijo: cada uno en su casilla, fuera del contenido; las tarjetas, en la fila del medio.
+        List<Integer> fijas = List.of(Marco.SALDO, Marco.CERRAR, Marco.ANTERIOR, Marco.VOLVER, Marco.SIGUIENTE);
         boolean fuera = new HashSet<>(fijas).size() == fijas.size();
         for (int f : fijas) fuera &= f < 9 || f >= 45;
-        h.ok("cabecera y pestanas: casillas propias, fuera del contenido", fuera);
+        h.ok("saldo, cerrar, flechas y volver: casillas propias, fuera del contenido", fuera);
+        List<Integer> fijasPortada = List.of(Marco.SALDO, Marco.CERRAR, AYUDA, IR_TASADOR);
+        boolean portada = new HashSet<>(fijasPortada).size() == fijasPortada.size();
+        for (int f : fijasPortada) portada &= f < PORTADA && Marco.esBorde(f, PORTADA);
+        for (int n = 1; n <= CATEGORIAS.size(); n++) {
+            for (int c : tarjetas(n)) portada &= c / 9 == 2 && c % 9 >= 1 && c % 9 <= 7 && !fijasPortada.contains(c);
+        }
+        h.ok("portada: tarjetas en la fila del medio, lo fijo en el marco", portada);
+        h.igual("portada: tres tarjetas en 20, 22 y 24", "20,22,24", tarjetas(3)[0] + "," + tarjetas(3)[1] + "," + tarjetas(3)[2]);
 
         // Confirmar: la Forja siempre; en el Umbral, desde 50 Esencias; con 0, solo la Forja.
         Map<String, Altar.Trueque> ts = new HashMap<>();
@@ -962,20 +1016,41 @@ final class MenuAltar implements Listener {
         h.ok("recargar nunca", !pideConfirmar(ts.get("recargar"), cien, 1));
         h.igual("credito como linea", "5 Marcas de Eco", creditoLinea("marca", 5));
 
+        // Los titulos de las ventanas: todos caben en el ancho de un cofre.
+        h.igual("ancho de 'Altar' en negrita", 30, Marco.ancho("Altar", true));
+        h.igual("ancho de 'il.'", 7, Marco.ancho("il.", false));
+        h.ok("el titulo de los rankings de la 1.3.0 no cabia (la medida lo ve)",
+                new Marco.Titulo("Calamity", "Rankings de la semana").ancho() > Marco.ANCHO_TITULO);
+        for (Marco.Titulo t : Marco.titulos()) {
+            h.ok("titulo '" + t.texto() + "' cabe (" + t.ancho() + " de " + Marco.ANCHO_TITULO + " px)", t.ancho() <= Marco.ANCHO_TITULO);
+        }
+
         MenuTasador.autotest(h);
         MenuCazador.autotest(h);
         return h.lineas();
     }
 
-    private static List<Integer> rotulos(List<Marco.Sitio> r, int hoja) {
+    private static List<Integer> bandas(List<Marco.Sitio> r, int hoja) {
         List<Integer> out = new ArrayList<>();
         for (Marco.Sitio s : r) if (s.hoja() == hoja && s.indice() < 0) out.add(s.casilla());
         return out;
     }
 
+    private static List<Integer> casillas(List<Marco.Sitio> r) {
+        List<Integer> out = new ArrayList<>();
+        for (Marco.Sitio s : r) out.add(s.casilla());
+        return out;
+    }
+
+    private static List<String> idsDe(List<Altar.Trueque> ts) {
+        List<String> out = new ArrayList<>();
+        for (Altar.Trueque t : ts) out.add(t.id());
+        return out;
+    }
+
     /**
      * Null si el reparto esta bien: ninguna casilla dos veces en una hoja, todo en las filas de
-     * contenido, rotulos en la columna 0 y cosas en las 1-7, y cada cosa de cada seccion una vez.
+     * contenido, bandas en la columna 0 y cosas en las 1-7, y cada cosa de cada seccion una vez.
      */
     static String comprobar(List<Marco.Sitio> r, List<Integer> tamanos) {
         Set<String> casillas = new HashSet<>();

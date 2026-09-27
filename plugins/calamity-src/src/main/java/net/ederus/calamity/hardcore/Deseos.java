@@ -145,7 +145,7 @@ final class Deseos {
             return;
         }
         Inventory inv = hc.plugin().getServer().createInventory(new MenuEncuesta.Marca(null, true), 9,
-                Paleta.ventanaCalamity("deseos"));
+                Marco.T_DESEOS.componente());
         pintar(inv, p);
         p.openInventory(inv);
         Compat.soundPlayers(p.getWorld(), p.getLocation(), "block.amethyst_block.chime", 0.8f, 1.1f);

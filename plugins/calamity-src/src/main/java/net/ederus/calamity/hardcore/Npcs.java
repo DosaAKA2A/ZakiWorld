@@ -21,11 +21,11 @@ import java.util.Map;
 import java.util.UUID;
 
 /**
- * Lo que abren los cinco NPCs de la antesala de Calamity (1.2.0): el Guardian del Umbral y el
- * Forjador (las dos paginas del Altar), el Tasador (su menu, MenuTasador: saldo, tasacion,
- * Aduana, contratos del dia y Reliquias encima), el Cronista (la historia y el tutorial,
- * Cronista) y el Cazador (los rankings de la semana, MenuCazador, y desde ahi el Tablero).
- * Desde 1.3.0 el Tasador y el Cazador ya no escriben en el chat: todo va en su menu.
+ * Lo que abren los cinco NPCs de la antesala de Calamity (1.2.0): el Guardian del Umbral (la
+ * portada del Altar) y el Forjador (la Forja), el Tasador (su menu, MenuTasador: saldo,
+ * tasacion, Aduana, contratos del dia, Reliquias encima y Tu camino), el Cronista (la historia
+ * y el tutorial, Cronista) y el Cazador (los rankings de la semana, MenuCazador, y desde ahi el
+ * Tablero). Desde 1.3.0 el Tasador y el Cazador ya no escriben en el chat: todo va en su menu.
  *
  * Los NPCs los pone y los cuida el staff a mano con Citizens; Calamity no los crea ni depende
  * de Citizens. Cada uno lleva un comando de clic sin -p, que Citizens ejecuta como CONSOLA
@@ -39,7 +39,7 @@ import java.util.UUID;
  * (el clic del NPC) y el staff, y aqui se repiten las comprobaciones del bloque del Altar
  * (Altar.onTocar): altar encendido y el jugador fuera de Calamity o en su zona spawn
  * (Marco.puedeAltar). El menu, ademas, lo vuelve a mirar en cada clic (MenuAltar.accion) y en
- * las pestanas del Tasador.
+ * los enlaces del Tasador.
  */
 final class Npcs implements Listener {
 

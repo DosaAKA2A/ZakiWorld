@@ -658,7 +658,7 @@ final class ObjetosCalamity implements Listener {
 
     private void abrirEleccion(Player p) {
         Inventory inv = hc.plugin().getServer().createInventory(new MarcaSalvo(), 9,
-                Paleta.ventana("Salvoconducto · qué conservas"));
+                Marco.T_SALVOCONDUCTO.componente());
         String elegida = hc.datos().getString(rutaEleccion(p.getUniqueId()));
         Material[] iconos = {Material.IRON_HELMET, Material.IRON_CHESTPLATE, Material.IRON_LEGGINGS, Material.IRON_BOOTS,
                 Material.IRON_SWORD};
