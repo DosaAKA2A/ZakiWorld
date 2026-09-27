@@ -1,7 +1,6 @@
 package net.ederus.lethalworld.hardcore;
 
 import net.kyori.adventure.text.Component;
-import net.kyori.adventure.text.format.NamedTextColor;
 import org.bukkit.Bukkit;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.file.YamlConfiguration;
@@ -199,7 +198,7 @@ final class Creditos {
     Component avisoHoras(UUID jugador) {
         return ComandoCalamity.mensaje(Component.text("Ese crédito se canjea con "
                         + Math.round(horasPedidas()) + " h activas en Calamity. Llevas ")
-                .append(Component.text(String.format(Locale.ROOT, "%.1f", horasActivas(jugador)), NamedTextColor.WHITE))
+                .append(Component.text(String.format(Locale.ROOT, "%.1f", horasActivas(jugador)), Paleta.CIFRA))
                 .append(Component.text(".")));
     }
 

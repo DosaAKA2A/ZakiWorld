@@ -1,7 +1,6 @@
 package net.ederus.lethalworld.hardcore;
 
 import net.kyori.adventure.text.Component;
-import net.kyori.adventure.text.format.NamedTextColor;
 import org.bukkit.OfflinePlayer;
 import org.bukkit.command.CommandSender;
 import org.bukkit.configuration.ConfigurationSection;
@@ -210,7 +209,7 @@ final class Tasacion {
         for (String id : k.falsas) bit.anotar("reliquia", "falsa", nombre, id);
         for (String id : k.duplicadas) {
             bit.anotar("reliquia", "duplicada", nombre, id);
-            hc.plugin().getServer().broadcast(ComandoCalamity.mensaje(
+            hc.plugin().getServer().broadcast(Paleta.aviso(
                     "Reliquia duplicada en la tasación de " + nombre + " (" + id + ")."), "ederus.mundos");
         }
         for (String id : k.caducadas) bit.anotar("reliquia", "caducada", nombre, id);
@@ -252,9 +251,9 @@ final class Tasacion {
             if (online != null) online.sendMessage(ComandoCalamity.mensaje("Tasación: +1 " + nombreCredito(tipo) + "."));
         }
         for (String mj : k.sellos) {
-            hc.plugin().getServer().broadcast(ComandoCalamity.mensaje(Component.text(nombre, NamedTextColor.WHITE)
+            hc.plugin().getServer().broadcast(ComandoCalamity.mensaje(Component.text(nombre, Paleta.DETALLE)
                     .append(Component.text(" ha sacado vivo un Sello de "))
-                    .append(Component.text(Minijefes.nombre(mj), NamedTextColor.WHITE))
+                    .append(Component.text(Minijefes.nombre(mj), Paleta.DETALLE))
                     .append(Component.text("."))));
         }
 
@@ -319,13 +318,13 @@ final class Tasacion {
         boolean hubo = k.validas > 0 || k.nulas() > 0 || k.exceso[1] + k.exceso[2] > 0;
         if (hubo) {
             Component c = Component.text("Tasación: ");
-            c = c.append(blanco(k.porGrado[1])).append(Component.text(" astillas, "))
-                    .append(blanco(k.porGrado[2])).append(Component.text(" fragmentos, "))
-                    .append(blanco(k.porGrado[3])).append(Component.text(" ámbar, "))
-                    .append(blanco(k.porGrado[4])).append(Component.text(" mayores → "))
-                    .append(blanco(esencias)).append(Component.text(" Esencias y "))
-                    .append(blanco(mc)).append(Component.text(" MobCoins"));
-            if (factor > 1) c = c.append(Component.text(", racha ×")).append(blanco(num(factor)));
+            c = c.append(cifra(k.porGrado[1])).append(Component.text(" astillas, "))
+                    .append(cifra(k.porGrado[2])).append(Component.text(" fragmentos, "))
+                    .append(cifra(k.porGrado[3])).append(Component.text(" ámbar, "))
+                    .append(cifra(k.porGrado[4])).append(Component.text(" mayores → "))
+                    .append(cifra(esencias)).append(Component.text(" Esencias y "))
+                    .append(cifra(mc)).append(Component.text(" MobCoins"));
+            if (factor > 1) c = c.append(Component.text(", racha ×")).append(cifra(num(factor)));
             p.sendMessage(ComandoCalamity.mensaje(c.append(Component.text("."))));
             if (k.nulas() > 0) {
                 p.sendMessage(ComandoCalamity.mensaje(k.nulas() == 1 ? "Una no valía nada."
@@ -337,12 +336,12 @@ final class Tasacion {
         }
         if (extra > 0) {
             p.sendMessage(ComandoCalamity.mensaje(Component.text("La primera salida del día paga más: +")
-                    .append(blanco(extra)).append(Component.text(" Esencias."))));
+                    .append(cifra(extra)).append(Component.text(" Esencias."))));
         }
     }
 
-    private static Component blanco(Object o) {
-        return Component.text(String.valueOf(o), NamedTextColor.WHITE);
+    private static Component cifra(Object o) {
+        return Paleta.cifra(o);
     }
 
     private static String nombreCredito(String tipo) {
@@ -532,7 +531,7 @@ final class Tasacion {
         Resumen r = procesar(op, null, items, "tasar-admin", true, true);
         quien.sendMessage(ComandoCalamity.mensaje("Tasación de " + Minijefes.nombreDe(op) + ": " + r.esencias()
                 + " Esencias y " + r.mobcoins() + " MobCoins pagadas."));
-        for (String l : r.lineas()) quien.sendMessage(Component.text("  " + l, NamedTextColor.GRAY));
+        for (String l : r.lineas()) quien.sendMessage(Component.text("  " + l, Paleta.TENUE));
     }
 
     private List<String> tab(String[] args) {

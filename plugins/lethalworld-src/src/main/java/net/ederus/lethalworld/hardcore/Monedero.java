@@ -1,7 +1,6 @@
 package net.ederus.lethalworld.hardcore;
 
 import net.kyori.adventure.text.Component;
-import net.kyori.adventure.text.format.NamedTextColor;
 import org.bukkit.OfflinePlayer;
 import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.entity.Player;
@@ -176,7 +175,7 @@ final class Monedero {
     /** P-M10: "Te faltan <n> MobCoins." */
     static Component avisoFaltan(long n) {
         return ComandoCalamity.mensaje(Component.text("Te faltan ")
-                .append(Component.text(String.valueOf(Math.max(0, n)), NamedTextColor.WHITE))
+                .append(Component.text(String.valueOf(Math.max(0, n)), Paleta.CIFRA))
                 .append(Component.text(" MobCoins.")));
     }
 

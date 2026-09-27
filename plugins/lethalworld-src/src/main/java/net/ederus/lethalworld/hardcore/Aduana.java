@@ -2,7 +2,6 @@ package net.ederus.lethalworld.hardcore;
 
 import net.ederus.edm.comun.MobCoins;
 import net.kyori.adventure.text.Component;
-import net.kyori.adventure.text.format.NamedTextColor;
 import org.bukkit.Bukkit;
 import org.bukkit.OfflinePlayer;
 import org.bukkit.Statistic;
@@ -250,7 +249,7 @@ final class Aduana {
         ultimoAvisoGlobal = ahora;
         hc.plugin().bitacora().anotar("aduana", "fusible-global", total + " MC en la ultima hora", "limite " + limite);
         hc.plugin().getLogger().warning("[Calamity] Fusible global: " + total + " MC en la ultima hora (limite " + limite + ").");
-        Component aviso = ComandoCalamity.mensaje("Fusible global: Calamity ha pagado " + total
+        Component aviso = Paleta.aviso("Fusible global: Calamity ha pagado " + total
                 + " MobCoins en la última hora. Mira la Bitácora.");
         for (Player s : Bukkit.getOnlinePlayers()) if (s.hasPermission("ederus.mundos")) s.sendMessage(aviso);
     }
@@ -405,12 +404,12 @@ final class Aduana {
 
     private void comando(CommandSender quien, String[] args) {
         if (args.length < 2) {
-            quien.sendMessage(Component.text("Uso: /lw hardcore aduana <jugador>", NamedTextColor.RED));
+            quien.sendMessage(Component.text("Uso: /lw hardcore aduana <jugador>", Paleta.AVISO));
             return;
         }
         OfflinePlayer o = Entregas.buscar(args[1]);
         if (o == null) {
-            quien.sendMessage(Component.text("No encuentro a ese jugador.", NamedTextColor.RED));
+            quien.sendMessage(Component.text("No encuentro a ese jugador.", Paleta.AVISO));
             return;
         }
         UUID u = o.getUniqueId();
@@ -429,21 +428,21 @@ final class Aduana {
             quien.sendMessage(ComandoCalamity.mensaje("Topes de hoy y Fusible de " + nombre + " a cero."));
             return;
         }
-        quien.sendMessage(ComandoCalamity.mensaje(Component.text("Aduana de ").append(Component.text(nombre, NamedTextColor.WHITE))));
+        quien.sendMessage(ComandoCalamity.mensaje(Component.text("Aduana de ").append(Component.text(nombre, Paleta.DETALLE))));
         quien.sendMessage(Component.text(String.format(Locale.ROOT, "  Horas jugadas: %.1f (pide %d para pagos entre jugadores)",
-                horasJugadas(o), c.getInt("horas-minimas", 10)), NamedTextColor.GRAY));
+                horasJugadas(o), c.getInt("horas-minimas", 10)), Paleta.TENUE));
         int huellas = cuentas().huellasDe(u, ahora - c.getLong("huella-dias", 30) * DIA).size();
         quien.sendMessage(Component.text("  Huellas de IP en " + c.getLong("huella-dias", 30) + " días: " + huellas
                 + "  ·  comparación " + (cuentas().huellaActiva(c) ? "encendida" : "apagada")
                 + " (" + c.getString("huella-ip", "auto") + (cuentas().proxy() ? ", proxy detectado" : "") + ")",
-                NamedTextColor.GRAY));
+                Paleta.TENUE));
         String hoy = cal().dia(ahora);
         String base = "aduana.dia." + u;
         boolean esHoy = hoy.equals(hc.datos().getString(base + ".dia"));
         long mcHoy = esHoy ? hc.datos().getLong(base + ".mc", 0) : 0;
         long eHoy = esHoy ? hc.datos().getLong(base + ".esencias", 0) : 0;
         quien.sendMessage(Component.text("  Hoy (" + hoy + "): " + mcHoy + " MC y " + eHoy + " Esencias; tope de MC "
-                + Cuentas.topeTramos(c), NamedTextColor.GRAY));
+                + Cuentas.topeTramos(c), Paleta.TENUE));
         ConfigurationSection tipos = esHoy ? hc.datos().getConfigurationSection(base + ".tipos") : null;
         if (tipos != null && !tipos.getKeys(false).isEmpty()) {
             List<String> partes = new ArrayList<>();
@@ -451,13 +450,13 @@ final class Aduana {
                 int tope = c.getInt("topes-diarios." + t, -1);
                 partes.add(t + " " + tipos.getInt(t) + (tope >= 0 ? "/" + tope : ""));
             }
-            quien.sendMessage(Component.text("  Pagos de hoy: " + String.join(", ", partes), NamedTextColor.GRAY));
+            quien.sendMessage(Component.text("  Pagos de hoy: " + String.join(", ", partes), Paleta.TENUE));
         }
         ConfigurationSection hora = hc.datos().getConfigurationSection("aduana.hora");
         long enHora = hora == null ? 0 : Cuentas.sumaHora(hora, u.toString(), ahora);
         long lim = c.getLong("fusible.mc-jugador-hora", 500);
         quien.sendMessage(Component.text("  Fusible: " + enHora + " de " + lim + " MC en la última hora"
-                + (enHora >= lim ? "  ·  SALTADO (x" + c.getDouble("fusible.recorte", 0.25) + ")" : ""), NamedTextColor.GRAY));
+                + (enHora >= lim ? "  ·  SALTADO (x" + c.getDouble("fusible.recorte", 0.25) + ")" : ""), Paleta.TENUE));
     }
 
     // ------------------------------------------------------------------ nucleo
