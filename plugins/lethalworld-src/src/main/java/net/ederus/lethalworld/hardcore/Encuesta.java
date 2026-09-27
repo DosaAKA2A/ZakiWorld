@@ -3,7 +3,6 @@ package net.ederus.lethalworld.hardcore;
 import net.ederus.edm.comun.EntradaChat;
 import net.ederus.lethalworld.MobsLethal;
 import net.kyori.adventure.text.Component;
-import net.kyori.adventure.text.format.NamedTextColor;
 import org.bukkit.Material;
 import org.bukkit.OfflinePlayer;
 import org.bukkit.command.CommandSender;
@@ -112,7 +111,7 @@ final class Encuesta {
         Subcomandos.calamity().registrar("encuesta", "contesta la pregunta de Calamity", "lethalworld.calamity",
                 (quien, args) -> {
                     if (quien instanceof Player p) abrirPendiente(p);
-                    else quien.sendMessage(Component.text("Solo desde el juego.", NamedTextColor.RED));
+                    else quien.sendMessage(Component.text("Solo desde el juego.", Paleta.AVISO));
                 }, null);
         PlaceholdersLethal.registrar("encuesta", this::placeholder);
         refrescar();
@@ -393,7 +392,7 @@ final class Encuesta {
                 if (a == null) {
                     quien.sendMessage(Component.text("encuesta | ninguna abierta | preguntas: "
                             + String.join(", ", preguntas().keySet()) + (activo() ? "" : " | encuesta.activo: false"),
-                            NamedTextColor.GRAY));
+                            Paleta.TENUE));
                 } else {
                     recuento(quien, a);
                 }
@@ -423,12 +422,12 @@ final class Encuesta {
     private void abrir(CommandSender quien, String id) {
         Pregunta q = preguntas().get(id);
         if (q == null || q.fija()) {
-            quien.sendMessage(Component.text("encuesta abrir <id>: una de " + ids(false) + ".", NamedTextColor.RED));
+            quien.sendMessage(Component.text("encuesta abrir <id>: una de " + ids(false) + ".", Paleta.AVISO));
             return;
         }
         String antes = activa();
         if (id.equals(antes)) {
-            quien.sendMessage(Component.text("encuesta | " + id + " | ya estaba abierta", NamedTextColor.GRAY));
+            quien.sendMessage(Component.text("encuesta | " + id + " | ya estaba abierta", Paleta.TENUE));
             return;
         }
         // Una a la vez: la que hubiera se cierra con su fichero, que no se pierda el recuento.
@@ -440,7 +439,7 @@ final class Encuesta {
         hc.plugin().bitacora().anotar("encuesta", "abrir", id);
         refrescar();
         quien.sendMessage(Component.text("encuesta | " + id + " | abierta" + (activo() ? "" : " (encuesta.activo: false, nadie la vera)"),
-                NamedTextColor.GREEN));
+                Paleta.BIEN));
     }
 
     /** Cierra la activa (o escribe el fichero del Botin, que no se cierra nunca). */
@@ -448,7 +447,7 @@ final class Encuesta {
         boolean botin = BOTIN.equals(id);
         String cual = botin ? BOTIN : activa();
         if (cual == null) {
-            quien.sendMessage(Component.text("encuesta | no hay ninguna abierta", NamedTextColor.RED));
+            quien.sendMessage(Component.text("encuesta | no hay ninguna abierta", Paleta.AVISO));
             return;
         }
         Pregunta q = preguntas().get(cual);
@@ -465,7 +464,7 @@ final class Encuesta {
             y.save(f);
         } catch (IOException e) {
             quien.sendMessage(Component.text("encuesta | " + cual + " | no se pudo escribir " + f.getName() + ": " + e.getMessage(),
-                    NamedTextColor.RED));
+                    Paleta.AVISO));
             return;
         }
         if (!botin) {
@@ -477,7 +476,7 @@ final class Encuesta {
         hc.plugin().bitacora().anotar("encuesta", botin ? "resultados" : "cerrar", cual, "total " + total);
         refrescar();
         quien.sendMessage(Component.text("encuesta | " + cual + " | " + (botin ? "resultados" : "cerrada") + " | total "
-                + total + " | encuestas/" + f.getName(), NamedTextColor.GREEN));
+                + total + " | encuestas/" + f.getName(), Paleta.BIEN));
     }
 
     /**
@@ -489,14 +488,14 @@ final class Encuesta {
         String a = activa();
         Pregunta q = a == null ? null : preguntas().get(a);
         if (q == null) {
-            quien.sendMessage(Component.text("encuesta simular: abre antes una encuesta.", NamedTextColor.RED));
+            quien.sendMessage(Component.text("encuesta simular: abre antes una encuesta.", Paleta.AVISO));
             return;
         }
         int n;
         try {
             n = Math.max(1, Math.min(200, Integer.parseInt(cuantos)));
         } catch (NumberFormatException e) {
-            quien.sendMessage(Component.text("encuesta simular <n>: n es un numero.", NamedTextColor.RED));
+            quien.sendMessage(Component.text("encuesta simular <n>: n es un numero.", Paleta.AVISO));
             return;
         }
         int bien = 0, huella = 0;
@@ -513,30 +512,30 @@ final class Encuesta {
         hc.plugin().bitacora().anotar("encuesta", "simular", a, n + " intentos", bien + " contados", huella + " huella repetida");
         refrescar();
         quien.sendMessage(Component.text("encuesta | " + a + " | simular | " + n + " intentos | " + bien + " contados | "
-                + huella + " huella repetida", NamedTextColor.GREEN));
+                + huella + " huella repetida", Paleta.BIEN));
     }
 
     private void recuento(CommandSender quien, String id) {
         Pregunta q = preguntas().get(id);
         if (q == null) {
-            quien.sendMessage(Component.text("encuesta | no existe \"" + id + "\" | hay: " + ids(true), NamedTextColor.RED));
+            quien.sendMessage(Component.text("encuesta | no existe \"" + id + "\" | hay: " + ids(true), Paleta.AVISO));
             return;
         }
         ConfigurationSection d = hc.datos();
         boolean abierta = q.fija() || q.id().equals(activa());
         quien.sendMessage(Component.text("encuesta | " + q.id() + " | " + q.texto() + " | total " + total(d, q, null)
                 + (q.fija() ? " | siempre abierta" : abierta ? " | abierta " + d.getString("encuestas." + q.id() + ".abierta", "?")
-                : " | cerrada " + d.getString("encuestas." + q.id() + ".cerrada", "-")), NamedTextColor.GREEN));
+                : " | cerrada " + d.getString("encuestas." + q.id() + ".cerrada", "-")), Paleta.BIEN));
         linea(quien, d, q, null);
         if (q.fija()) {
             String s = semana();
-            quien.sendMessage(Component.text("esta semana (" + s + "): total " + total(d, q, s), NamedTextColor.GRAY));
+            quien.sendMessage(Component.text("esta semana (" + s + "): total " + total(d, q, s), Paleta.TENUE));
             linea(quien, d, q, s);
         }
         ConfigurationSection textos = d.getConfigurationSection("encuestas." + q.id() + ".texto");
         if (textos != null && !textos.getKeys(false).isEmpty()) {
             quien.sendMessage(Component.text("  " + textos.getKeys(false).size() + " respuestas libres (en el fichero de resultados)",
-                    NamedTextColor.GRAY));
+                    Paleta.TENUE));
         }
     }
 
@@ -544,7 +543,7 @@ final class Encuesta {
         String base = "encuestas." + q.id() + (semana == null ? "" : "." + semana) + ".votos.";
         for (Map.Entry<String, Double> e : porcentajes(d, q, semana).entrySet()) {
             quien.sendMessage(Component.text("  " + e.getKey() + " · " + q.textoDe(e.getKey()) + " · "
-                    + d.getInt(base + e.getKey(), 0) + " · " + e.getValue() + " %", NamedTextColor.GRAY));
+                    + d.getInt(base + e.getKey(), 0) + " · " + e.getValue() + " %", Paleta.TENUE));
         }
     }
 

@@ -168,7 +168,7 @@ final class Kit implements Listener {
         }
         if ("espera".equals(no)) {
             p.sendMessage(ComandoCalamity.mensaje(Component.text("Aún no puedes pedir otro kit. Vuelve en ")
-                    .append(Component.text(horasQueFaltan(ultimo, ahora, cadaHoras()) + " h", NamedTextColor.WHITE))
+                    .append(Component.text(horasQueFaltan(ultimo, ahora, cadaHoras()) + " h", Paleta.CIFRA))
                     .append(Component.text("."))));
             return;
         }

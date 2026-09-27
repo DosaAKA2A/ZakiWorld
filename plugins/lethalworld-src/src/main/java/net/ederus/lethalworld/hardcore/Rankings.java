@@ -1,7 +1,6 @@
 package net.ederus.lethalworld.hardcore;
 
 import net.kyori.adventure.text.Component;
-import net.kyori.adventure.text.format.NamedTextColor;
 import org.bukkit.Bukkit;
 import org.bukkit.OfflinePlayer;
 import org.bukkit.command.CommandSender;
@@ -381,7 +380,7 @@ final class Rankings implements Listener {
         Player online = op.getPlayer();
         if (online != null) {
             online.sendMessage(ComandoCalamity.mensaje(Component.text("Premio de la semana: ")
-                    .append(Component.text(texto.toString(), NamedTextColor.WHITE)).append(Component.text("."))));
+                    .append(Component.text(texto.toString(), Paleta.DETALLE)).append(Component.text("."))));
         } else {
             List<String> l = new ArrayList<>(hc.datos().getStringList("ranking-avisos." + p.jugador()));
             l.add(texto.toString());
@@ -418,7 +417,7 @@ final class Rankings implements Listener {
             hc.marcarSucio();
             for (String s : l) {
                 p.sendMessage(ComandoCalamity.mensaje(Component.text("Te esperaba un premio de la semana: ")
-                        .append(Component.text(s, NamedTextColor.WHITE)).append(Component.text("."))));
+                        .append(Component.text(s, Paleta.DETALLE)).append(Component.text("."))));
             }
         }, 40L);
         avisos.add(t[0]);
@@ -460,14 +459,14 @@ final class Rankings implements Listener {
     private void listar(CommandSender quien, List<Puesto> res) {
         if (res.isEmpty()) {
             quien.sendMessage(Component.text("  Nadie con premio (hacen falta "
-                    + hc.cfg().getInt("ranking.minimo-extracciones", 3) + " extracciones en la semana).", NamedTextColor.GRAY));
+                    + hc.cfg().getInt("ranking.minimo-extracciones", 3) + " extracciones en la semana).", Paleta.TENUE));
             return;
         }
         for (Puesto p : res) {
             Tabla t = tabla(p.tabla());
             quien.sendMessage(Component.text("  " + (t == null ? p.tabla() : t.nombre()) + " " + p.puesto() + ".º  ",
-                    NamedTextColor.GRAY).append(Component.text(nombre(p.jugador()), NamedTextColor.WHITE))
-                    .append(Component.text("  " + p.valor(), NamedTextColor.GRAY)));
+                    Paleta.TENUE).append(Component.text(nombre(p.jugador()), Paleta.DETALLE))
+                    .append(Component.text("  " + p.valor(), Paleta.CIFRA)));
         }
     }
 
