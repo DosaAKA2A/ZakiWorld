@@ -461,9 +461,10 @@ final class ComandoMundos implements TabExecutor {
                     return;
                 }
                 String cual = args.length >= 3 ? args[2].toLowerCase(Locale.ROOT) : "";
-                if (!cual.equals("entrada") && !cual.equals("salida")) {
+                // 1.2.0: "spawn" es la zona de la Grieta (AFK en el spawn, Grieta.java), guardada como las puertas.
+                if (!cual.equals("entrada") && !cual.equals("salida") && !cual.equals("spawn")) {
                     decir(q, Component.text("Dime cuál: ", NamedTextColor.RED)
-                            .append(Component.text("/lw hardcore define entrada|salida", MARCA)));
+                            .append(Component.text("/lw hardcore define entrada|salida|spawn", MARCA)));
                     return;
                 }
                 String hecho = hc.vara().definir(p, cual);
@@ -472,7 +473,8 @@ final class ComandoMundos implements TabExecutor {
                             NamedTextColor.RED));
                     return;
                 }
-                decir(q, Component.text("Puerta de " + cual + ": ", NamedTextColor.GREEN)
+                decir(q, Component.text(cual.equals("spawn") ? "Zona spawn (Grieta): " : "Puerta de " + cual + ": ",
+                                NamedTextColor.GREEN)
                         .append(Component.text(hecho, MARCA)));
             }
             case "entrada", "llegada", "salida", "puerta-salida" -> {
@@ -555,6 +557,7 @@ final class ComandoMundos implements TabExecutor {
                 linea(q, "Mundos", String.join(", ", hc.mundos()));
                 linea(q, "puerta de entrada", hc.vara().describir("entrada"));
                 linea(q, "puerta de salida", hc.vara().describir("salida"));
+                linea(q, "zona spawn (Grieta)", hc.vara().describir("spawn"));
                 for (String punto : List.of("llegada", "salida")) {
                     var donde = hc.punto(punto);
                     linea(q, punto == "llegada" ? "aparece en" : "vuelve a",
@@ -563,7 +566,7 @@ final class ComandoMundos implements TabExecutor {
                                     + donde.getBlockY() + " " + donde.getBlockZ());
                 }
                 linea(q, "/lw hardcore wand", "la vara: dos esquinas marcan la puerta");
-                linea(q, "/lw hardcore define entrada|salida", "guarda esa caja como puerta");
+                linea(q, "/lw hardcore define entrada|salida|spawn", "guarda esa caja como puerta o zona spawn");
                 linea(q, "/lw hardcore llegada", "marca aquí donde aparece el que entra");
                 linea(q, "/lw hardcore salida", "marca aquí a dónde se vuelve");
                 linea(q, "/lw hardcore frasco|cristal|esencia [player]", "entrega uno");
@@ -591,7 +594,7 @@ final class ComandoMundos implements TabExecutor {
             op.addAll(Subcomandos.lw().tab(q, java.util.Arrays.copyOfRange(args, 1, args.length)));
         } else if (args.length == 3 && args[0].equalsIgnoreCase("hardcore")
                 && args[1].equalsIgnoreCase("define")) {
-            op.addAll(List.of("entrada", "salida"));
+            op.addAll(List.of("entrada", "salida", "spawn"));
         } else if (args.length == 3 && args[0].equalsIgnoreCase("hardcore")
                 && List.of("frasco", "cristal", "esencia", "cordura", "tiempo")
                         .contains(args[1].toLowerCase(Locale.ROOT))) {

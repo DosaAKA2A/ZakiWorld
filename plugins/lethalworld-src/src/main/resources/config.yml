@@ -216,6 +216,8 @@ hardcore:
   # encaja en un marco construido. Se marcan con la vara (/lw hardcore wand: golpe
   # = esquina 1, clic derecho = esquina 2) y se guardan con
   # /lw hardcore define entrada|salida. Las escribe el plugin, no hace falta tocarlo.
+  # 1.2.0: aqui va tambien la zona SPAWN (/lw hardcore define spawn), la caja donde el
+  # AFK dura 5 minutos y acaba en la Grieta (ver parca.spawn).
   puertas: {}
 
   # Donde aparece el que entra. Se pone con /lw hardcore llegada dentro de Calamity.
@@ -446,6 +448,16 @@ hardcore:
                                   # pa_tiron, pa_cortejo, pa_guadanas, pa_salto, pa_embestida, pa_umbrales,
                                   # pa_lluvia, pa_muros, pa_anillo, pa_sentencia
       esperas: {}                 # segundos entre usos por tecnica, p. ej. {pa_lluvia: 20, pa_muros: 30}
+    # 1.2.0 · La GRIETA: quieto en la zona spawn (hardcore.puertas.spawn) no se espera a los
+    # 10 minutos: a los "minutos" se abre una grieta, se lo traga y lo escupe en un sitio
+    # seguro al azar a distancia-min..distancia-max del spawn, y alli le aparece la PARCA.
+    # Los avisos previos salen igual, a la misma proporcion, con su propio texto.
+    spawn:
+      activa: true
+      minutos: 5                  # no puede pasar de "minutos" (la Huella no mide mas)
+      distancia-min: 600
+      distancia-max: 1500
+      intentos: 12                # puntos al azar que prueba antes de rendirse (entonces viene alli mismo)
 
   # ------------------------------------------------------------------ 2. EL ECO
   eco:
