@@ -150,6 +150,23 @@ final class LecturaMmo {
         }
     }
 
+    /** Como se comporta un tipo de MMOItems: su supertipo, su modifier-source y lo que hace al golpear (on-attack). */
+    record Tipo(String supertipo, String fuente, String alAtacar) {
+    }
+
+    /** El tipo tal cual lo cargo MMOItems (Type.getSupertype, getModifierSource, onAttack), o null si no esta. */
+    static Tipo tipo(String id) {
+        try {
+            Object t = llamar(llamar(mmoitems(), "getTypes"), "get", id);
+            if (t == null) return null;
+            Object ataque = llamar(t, "onAttack");
+            return new Tipo(String.valueOf(llamar(llamar(t, "getSupertype"), "getId")), String.valueOf(llamar(t, "getModifierSource")),
+                    ataque == null ? null : String.valueOf(llamar(ataque, "getId")));
+        } catch (Throwable e) {
+            return null;
+        }
+    }
+
     private static Object nbt(ItemStack item) throws ReflectiveOperationException {
         return estatico("io.lumine.mythic.lib.api.item.NBTItem", "get", item);
     }

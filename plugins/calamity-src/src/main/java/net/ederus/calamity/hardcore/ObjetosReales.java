@@ -117,7 +117,7 @@ final class ObjetosReales {
         return leer(texto);
     }
 
-    /** Las claves llevan punto (ARMOR.YELMO_DE_CALAMIDAD): se lee con "/" como separador de rutas. */
+    /** Las claves llevan punto (CALAMITY.YELMO_DE_CALAMIDAD): se lee con "/" como separador de rutas. */
     static YamlConfiguration leer(String texto) {
         if (texto == null) return null;
         YamlConfiguration y = new YamlConfiguration();
@@ -191,6 +191,7 @@ final class ObjetosReales {
             ItemStack it = o == null ? null : objeto(h, idReal(clave, o), o);
             if (it != null) creados.put(clave, it);
         }
+        tipos(h, objetos);
         Set<String> params = parametros(sets);
         for (String sid : sets.getKeys(false)) {
             ConfigurationSection s = sets.getConfigurationSection(sid);
@@ -213,6 +214,35 @@ final class ObjetosReales {
     private static void texto(Autotest.Hoja h, String donde, String que, String promete, String hay) {
         boolean bien = promete == null ? hay == null : promete.equalsIgnoreCase(hay == null ? "" : hay);
         si(h, bien, donde + ": " + que + " " + hay, donde + ": " + que + " es " + hay + " y promete " + promete);
+    }
+
+    /**
+     * Cada tipo propio de Calamity (CALAMITY_ARMAS...) se comporta como su padre: mismo supertipo, que cuenta igual
+     * (modifier-source) y, en las armas, el mismo golpe (on-attack, que MMOItems NO hereda del padre).
+     */
+    private void tipos(Autotest.Hoja h, ConfigurationSection objetos) {
+        Map<String, String> padres = new TreeMap<>();
+        for (String clave : objetos.getKeys(false)) {
+            ConfigurationSection o = objetos.getConfigurationSection(clave);
+            String id = o == null ? null : idReal(clave, o);
+            if (id == null || id.indexOf('.') <= 0 || o.getString("padre") == null) continue;
+            padres.put(id.substring(0, id.indexOf('.')), o.getString("padre"));
+        }
+        for (Map.Entry<String, String> e : padres.entrySet()) {
+            String n = "tipo " + e.getKey();
+            LecturaMmo.Tipo t = LecturaMmo.tipo(e.getKey()), ref = LecturaMmo.tipo(e.getValue());
+            if (t == null) {
+                h.ok(n + ": MMOItems no lo tiene (falta en item-types.yml, o sin unident-item no carga)", false);
+                continue;
+            }
+            if (ref == null) {
+                h.ok(n + ": no se pudo leer su padre " + e.getValue(), false);
+                continue;
+            }
+            texto(h, n, "se comporta como", ref.supertipo(), t.supertipo());
+            texto(h, n, "cuenta como (modifier-source)", ref.fuente(), t.fuente());
+            if (ref.alAtacar() != null || t.alAtacar() != null) texto(h, n, "golpe (on-attack)", ref.alAtacar(), t.alAtacar());
+        }
     }
 
     /** Un objeto: generado con la plantilla real y mirado etiqueta a etiqueta. Devuelve el item, o null si no sale. */

@@ -283,7 +283,7 @@ final class Hitos {
         conf.set("umbral.umbral", 1);
         conf.set("vestigio.estadisticas", List.of("forja-mascara", "forja-filo"));
         conf.set("vestigio.umbral", 1);
-        conf.set("manto-ids", List.of("ARMOR.YELMO_DE_CALAMIDAD"));
+        conf.set("manto-ids", List.of("CALAMITY.YELMO_DE_CALAMIDAD"));
 
         YamlConfiguration entregados = new YamlConfiguration();
         UUID u = Autotest.sintetico(1);

@@ -731,14 +731,14 @@ final class ObjetosCalamity implements Listener {
         ConfigurationSection s = hc.cfg().getConfigurationSection("forja.piezas");
         if (s != null) for (String k : s.getKeys(false)) out.put(k, s.getString(k, ""));
         if (out.isEmpty()) {
-            out.put("yelmo", "ARMOR.YELMO_DE_CALAMIDAD");
-            out.put("coraza", "ARMOR.CORAZA_DE_CALAMIDAD");
-            out.put("grebas", "ARMOR.GREBAS_DE_CALAMIDAD");
-            out.put("soleretas", "ARMOR.SOLERETAS_DE_CALAMIDAD");
-            out.put("hacha", "AXE.HACHA_DEL_HERALDO");
-            out.put("mascara", "ARMOR.MASCARA_DEL_ECO");
-            out.put("filo", "SWORD.FILO_DEL_ECO");
-            out.put("guadana", "SWORD.GUADANA_DE_LA_PARCA");
+            out.put("yelmo", "CALAMITY.YELMO_DE_CALAMIDAD");
+            out.put("coraza", "CALAMITY.CORAZA_DE_CALAMIDAD");
+            out.put("grebas", "CALAMITY.GREBAS_DE_CALAMIDAD");
+            out.put("soleretas", "CALAMITY.SOLERETAS_DE_CALAMIDAD");
+            out.put("hacha", "CALAMITY_ARMAS.HACHA_DEL_HERALDO");
+            out.put("mascara", "CALAMITY.MASCARA_DEL_ECO");
+            out.put("filo", "CALAMITY_ARMAS.FILO_DEL_ECO");
+            out.put("guadana", "CALAMITY_ARMAS.GUADANA_DE_LA_PARCA");
         }
         return out;
     }

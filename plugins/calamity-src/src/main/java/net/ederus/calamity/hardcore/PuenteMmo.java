@@ -90,7 +90,7 @@ final class PuenteMmo {
         }
     }
 
-    /** "TIPO.ID" del item (p. ej. "ARMOR.YELMO_DE_CALAMIDAD"), o null si no es un MMOItem. */
+    /** "TIPO.ID" del item (p. ej. "CALAMITY.YELMO_DE_CALAMIDAD"), o null si no es un MMOItem. */
     static String enlace(ItemStack item) {
         Object n = nbt(item);
         if (n == null) return null;

@@ -211,17 +211,17 @@ final class Entregas implements Listener {
 
     /** Los ids de DIS sec. 4, por si la config del servidor aun no los tiene. */
     private static final Map<String, String> MMO_DEFECTO = Map.ofEntries(
-            Map.entry("tintura", "CONSUMABLE.TINTURA_DE_CENIZA"),
-            Map.entry("gema", "GEM_STONE.GEMA_DE_CALAMIDAD"),
-            Map.entry("ascua", "CONSUMABLE.ASCUA_DE_CALAMIDAD"),
-            Map.entry("yelmo", "ARMOR.YELMO_DE_CALAMIDAD"),
-            Map.entry("coraza", "ARMOR.CORAZA_DE_CALAMIDAD"),
-            Map.entry("grebas", "ARMOR.GREBAS_DE_CALAMIDAD"),
-            Map.entry("soleretas", "ARMOR.SOLERETAS_DE_CALAMIDAD"),
-            Map.entry("hacha", "AXE.HACHA_DEL_HERALDO"),
-            Map.entry("mascara", "ARMOR.MASCARA_DEL_ECO"),
-            Map.entry("filo", "SWORD.FILO_DEL_ECO"),
-            Map.entry("guadana", "SWORD.GUADANA_DE_LA_PARCA"));
+            Map.entry("tintura", "CALAMITY_CONSUMIBLES.TINTURA_DE_CENIZA"),
+            Map.entry("gema", "CALAMITY_GEMAS.GEMA_DE_CALAMIDAD"),
+            Map.entry("ascua", "CALAMITY_CONSUMIBLES.ASCUA_DE_CALAMIDAD"),
+            Map.entry("yelmo", "CALAMITY.YELMO_DE_CALAMIDAD"),
+            Map.entry("coraza", "CALAMITY.CORAZA_DE_CALAMIDAD"),
+            Map.entry("grebas", "CALAMITY.GREBAS_DE_CALAMIDAD"),
+            Map.entry("soleretas", "CALAMITY.SOLERETAS_DE_CALAMIDAD"),
+            Map.entry("hacha", "CALAMITY_ARMAS.HACHA_DEL_HERALDO"),
+            Map.entry("mascara", "CALAMITY.MASCARA_DEL_ECO"),
+            Map.entry("filo", "CALAMITY_ARMAS.FILO_DEL_ECO"),
+            Map.entry("guadana", "CALAMITY_ARMAS.GUADANA_DE_LA_PARCA"));
 
     private String motivoSinObjeto(String o) {
         String id = idMmo(o);
@@ -840,8 +840,8 @@ final class Entregas implements Listener {
         ItemStack f = ligar(hc.items().frasco(3), u);
         ItemStack vuelta = deTexto(aTexto(f));
         h.ok("un pendiente vuelve igual (frasco ligado)", vuelta != null && vuelta.isSimilar(f));
-        h.igual("tintura de entregas.mmo", "CONSUMABLE.TINTURA_DE_CENIZA", idMmo("tintura"));
-        h.igual("pieza de la Forja", "ARMOR.YELMO_DE_CALAMIDAD", idMmo("forja:yelmo"));
+        h.igual("tintura de entregas.mmo", "CALAMITY_CONSUMIBLES.TINTURA_DE_CENIZA", idMmo("tintura"));
+        h.igual("pieza de la Forja", "CALAMITY.YELMO_DE_CALAMIDAD", idMmo("forja:yelmo"));
         h.igual("objeto que no existe", null, idMmo("espada-de-madera"));
         boolean hayMmo = PuenteMmo.disponible();
         h.igual("sin MMOItems no se crea la tintura", hayMmo, crear("tintura") != null);

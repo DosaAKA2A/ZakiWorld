@@ -5,13 +5,15 @@
 #  stats: IDs de MMOItems (MythicLib los guarda en custom_data como MMOITEMS_<ID>).
 #  bonos: por nivel del set, sin acumular (MMOItems suma [2]..[n]).
 #  pieza: la clave de forja.piezas / entregas.mmo; si la config lleva otro TIPO.ID, manda la config.
+#  padre: el tipo de MMOItems cuyo comportamiento hereda su tipo (atacar, engastar, consumir).
 # =============================================================================
 
 objetos:
-  ARMOR.YELMO_DE_CALAMIDAD:
+  CALAMITY.YELMO_DE_CALAMIDAD:
     pieza: yelmo
     nombre: Yelmo de Calamidad
     fase: 2
+    padre: ARMOR
     material: NETHERITE_HELMET
     tier: CALAMIDAD
     set: CALAMIDAD
@@ -34,10 +36,11 @@ objetos:
       plantilla: calamidad
       referencia: calamidad
       max: 5
-  ARMOR.CORAZA_DE_CALAMIDAD:
+  CALAMITY.CORAZA_DE_CALAMIDAD:
     pieza: coraza
     nombre: Coraza de Calamidad
     fase: 2
+    padre: ARMOR
     material: NETHERITE_CHESTPLATE
     tier: CALAMIDAD
     set: CALAMIDAD
@@ -57,10 +60,11 @@ objetos:
       plantilla: calamidad
       referencia: calamidad
       max: 5
-  ARMOR.GREBAS_DE_CALAMIDAD:
+  CALAMITY.GREBAS_DE_CALAMIDAD:
     pieza: grebas
     nombre: Grebas de Calamidad
     fase: 2
+    padre: ARMOR
     material: NETHERITE_LEGGINGS
     tier: CALAMIDAD
     set: CALAMIDAD
@@ -78,10 +82,11 @@ objetos:
       plantilla: calamidad
       referencia: calamidad
       max: 10
-  ARMOR.SOLERETAS_DE_CALAMIDAD:
+  CALAMITY.SOLERETAS_DE_CALAMIDAD:
     pieza: soleretas
     nombre: Soleretas de Calamidad
     fase: 2
+    padre: ARMOR
     material: NETHERITE_BOOTS
     tier: CALAMIDAD
     set: CALAMIDAD
@@ -102,10 +107,11 @@ objetos:
       plantilla: calamidad
       referencia: calamidad
       max: 10
-  AXE.HACHA_DEL_HERALDO:
+  CALAMITY_ARMAS.HACHA_DEL_HERALDO:
     pieza: hacha
     nombre: Hacha del Heraldo
     fase: 2
+    padre: SWORD
     material: NETHERITE_AXE
     tier: CALAMIDAD
     set: CALAMIDAD
@@ -128,10 +134,11 @@ objetos:
       plantilla: calamidad
       referencia: calamidad
       max: 5
-  CONSUMABLE.TINTURA_DE_CENIZA:
+  CALAMITY_CONSUMIBLES.TINTURA_DE_CENIZA:
     pieza: tintura
     nombre: Tintura de Ceniza
     fase: 1
+    padre: CONSUMABLE
     material: POTION
     tier: UMBRAL
     stats:
@@ -143,10 +150,11 @@ objetos:
         segundos: 6
     apilable: 8
     sin-receta: true
-  GEM_STONE.GEMA_DE_CALAMIDAD:
+  CALAMITY_GEMAS.GEMA_DE_CALAMIDAD:
     pieza: gema
     nombre: Gema de Calamidad
     fase: 2
+    padre: GEM_STONE
     material: EMERALD
     tier: BRASA
     stats:
@@ -155,20 +163,22 @@ objetos:
       MAX_HEALTH: 1
     color-gema: Calamidad
     sin-receta: true
-  CONSUMABLE.ASCUA_DE_CALAMIDAD:
+  CALAMITY_CONSUMIBLES.ASCUA_DE_CALAMIDAD:
     pieza: ascua
     nombre: Ascua de Calamidad
     fase: 2
+    padre: CONSUMABLE
     material: BLAZE_POWDER
     tier: BRASA
     mejora:
       referencia: calamidad
     no-comestible: true
     sin-receta: true
-  ARMOR.MASCARA_DEL_ECO:
+  CALAMITY.MASCARA_DEL_ECO:
     pieza: mascara
     nombre: Máscara del Eco
     fase: 3
+    padre: ARMOR
     material: NETHERITE_HELMET
     tier: ECO
     set: VESTIGIO_DEL_ECO
@@ -186,10 +196,11 @@ objetos:
       plantilla: calamidad
       referencia: calamidad
       max: 10
-  SWORD.FILO_DEL_ECO:
+  CALAMITY_ARMAS.FILO_DEL_ECO:
     pieza: filo
     nombre: Filo del Eco
     fase: 3
+    padre: SWORD
     material: NETHERITE_SWORD
     tier: ECO
     set: VESTIGIO_DEL_ECO
@@ -208,10 +219,11 @@ objetos:
       plantilla: calamidad
       referencia: calamidad
       max: 10
-  SWORD.GUADANA_DE_LA_PARCA:
+  CALAMITY_ARMAS.GUADANA_DE_LA_PARCA:
     pieza: guadana
     nombre: Guadaña de la Parca
     fase: 3
+    padre: SWORD
     material: NETHERITE_HOE
     tier: PARCA
     stats:
@@ -234,11 +246,11 @@ sets:
     nombre: Manto de Calamidad
     fase: 2
     piezas:
-    - ARMOR.YELMO_DE_CALAMIDAD
-    - ARMOR.CORAZA_DE_CALAMIDAD
-    - ARMOR.GREBAS_DE_CALAMIDAD
-    - ARMOR.SOLERETAS_DE_CALAMIDAD
-    - AXE.HACHA_DEL_HERALDO
+    - CALAMITY.YELMO_DE_CALAMIDAD
+    - CALAMITY.CORAZA_DE_CALAMIDAD
+    - CALAMITY.GREBAS_DE_CALAMIDAD
+    - CALAMITY.SOLERETAS_DE_CALAMIDAD
+    - CALAMITY_ARMAS.HACHA_DEL_HERALDO
     bonos:
       '2':
         MAX_HEALTH: 4
@@ -314,8 +326,8 @@ sets:
     nombre: Vestigio del Eco
     fase: 3
     piezas:
-    - ARMOR.MASCARA_DEL_ECO
-    - SWORD.FILO_DEL_ECO
+    - CALAMITY.MASCARA_DEL_ECO
+    - CALAMITY_ARMAS.FILO_DEL_ECO
     bonos:
       '2':
         ATTACK_DAMAGE: 3
