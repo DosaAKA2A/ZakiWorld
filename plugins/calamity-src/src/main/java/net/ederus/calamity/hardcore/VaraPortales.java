@@ -82,7 +82,7 @@ public final class VaraPortales implements Listener {
                     Component.text("Clic derecho: esquina 2", NamedTextColor.GRAY)
                             .decoration(TextDecoration.ITALIC, false),
                     Component.empty(),
-                    Component.text("Luego: /lw hardcore define entrada|salida|spawn", NamedTextColor.DARK_GRAY)
+                    Component.text("Luego: /calamidad define entrada|salida|spawn", NamedTextColor.DARK_GRAY)
                             .decoration(TextDecoration.ITALIC, false)));
             meta.setEnchantmentGlintOverride(true);
             meta.getPersistentDataContainer().set(clave, PersistentDataType.BYTE, (byte) 1);

@@ -147,6 +147,7 @@ public final class Hardcore implements Listener {
     private Tablero tablero;
     private Encuesta encuesta;
     private Eclipse eclipse;
+    private Npcs npcs;
 
     public Hardcore(CalamityPlugin plugin) {
         this.plugin = plugin;
@@ -210,6 +211,8 @@ public final class Hardcore implements Listener {
     Tablero tablero() { return tablero; }
     Encuesta encuesta() { return encuesta; }
     Eclipse eclipse() { return eclipse; }
+    /** Lo que abren los NPCs de la antesala (/calamidad abrir) y el Cronista. */
+    Npcs npcs() { return npcs; }
 
     ConfigurationSection cfg() {
         ConfigurationSection s = plugin.getConfig().getConfigurationSection("hardcore");
@@ -326,6 +329,8 @@ public final class Hardcore implements Listener {
         tablero = crear("tablero", () -> new Tablero(this));
         encuesta = crear("encuesta", () -> new Encuesta(this));
         eclipse = crear("eclipse", () -> new Eclipse(this));
+        // Lo ultimo: los NPCs de la antesala solo abren lo que ya existe (Altar, Tablero...).
+        npcs = crear("npcs", () -> new Npcs(this));
     }
 
     private <T> T crear(String modulo, Supplier<T> nuevo) {
@@ -339,6 +344,7 @@ public final class Hardcore implements Listener {
 
     /** Al reves de como nacieron: los de arriba usan a los de abajo mientras se paran. */
     private void pararModulos() {
+        if (npcs != null) seguro("npcs", () -> npcs.parar());
         if (eclipse != null) seguro("eclipse", () -> eclipse.parar());
         if (encuesta != null) seguro("encuesta", () -> encuesta.parar());
         if (tablero != null) seguro("tablero", () -> tablero.parar());
