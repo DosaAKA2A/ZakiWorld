@@ -576,7 +576,8 @@ final class ObjetosReales {
             String set = LecturaMmo.etiqueta(cosas[i], "MMOITEMS_ITEM_SET");
             if (set != null && !set.isBlank() && !aplicado.isEmpty()) piezasSet.merge(set, 1, Integer::sum);
             ConfigurationSection o = porId.get(id);
-            if (o == null) continue;
+            // La Tintura, la Gema o el Ascua en la mano no dan nada puestos: no son equipo.
+            if (o == null || o.isSet("color-gema") || o.isSet("efectos") || o.getBoolean("no-comestible", false)) continue;
             alguna = true;
             pieza(quien, p, HUECOS[i][1], cosas[i], o, aplicado, i >= 4);
         }
