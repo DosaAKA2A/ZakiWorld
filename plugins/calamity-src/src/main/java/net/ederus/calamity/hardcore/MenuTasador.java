@@ -27,40 +27,49 @@ import java.util.Set;
 import java.util.UUID;
 
 /**
- * El menu del Tasador (1.3.0; 1.3.1), el NPC de la antesala. Antes escribia seis lineas en el
- * chat; ahora es una pagina del mismo aire que el Altar (Marco). Arriba tu saldo (clic: ingresa
- * las Esencias fisicas, lo que era el boton Depositar del Altar) y Cerrar; cada fila, un grupo
- * con su banda de color a los lados (en la 1.3.0 era un icono suelto en la columna 0 que no se
- * entendia):
+ * El menu del Tasador, el NPC de la antesala (1.3.0; rehecho en la 1.5.0).
  *
- *  fila 1, Tus cobros (amarilla): lo tasado esta semana, si la primera salida de hoy aun paga,
- *          los premios que te esperan (con boton para recogerlos fuera de Calamity) y la Racha
- *          si esta encendida;
- *  fila 2, La Aduana de hoy (blanca): las MobCoins cobradas hoy y una barra de cristales con lo
- *          que queda en cada tramo (verde al 100 %, amarillo desde el 50 %, naranja por debajo,
- *          gris cobrado);
- *  fila 3, Contratos de hoy (azul): los tres encargos con su barra, y el de la semana. Clic en
- *          uno para cambiarlo (pantalla de confirmar: dice si es gratis o lo que cuesta);
- *  fila 4, Reliquias que llevas (naranja): cuantas de cada una (en el numero de la pila) y lo que
- *          valdrian si sales ahora, con la cuenta de la Tasacion (Tasacion.simular: Racha y
- *          primera salida incluidas) y lo que la Aduana te pagaria hoy de sus MobCoins.
- * Abajo: "¿Como funciona?", el Altar, la Forja y Tu camino (con las horas activas y el proximo
- * hito), que en la 1.3.0 estaban en el Altar y no son comprar.
+ * Por que es asi: la version de antes lo metia todo en una ventana de 54 (saldo arriba, cuatro
+ * filas de grupos con bandas de cristal rojo a los lados, una barra de cristales verdes para la
+ * Aduana y unos catorce iconos), y Dosa lo dijo claro: "Esto no se entiende en absoluto". En
+ * Minecraft el texto solo se ve al pasar el raton (en Bedrock ni eso), asi que un menu lleno de
+ * iconos sin orden es ilegible. Ahora hay una portada con seis botones grandes en una rejilla de
+ * 3 x 2 y, los que tienen mas cosas, abren su subvista con Volver:
+ *
+ *   portada (45)        fila 1:  Tu dinero (11) · Contratos de hoy (13) · Tus reliquias (15)
+ *                       fila 2:  La Aduana de hoy (20) · Tu camino (22) · ¿Como funciona? (24)
+ *                       fila 4:  Altar (38) · Cerrar (40) · Forja (42)
+ *   Tu dinero (45)      fila 1:  saldo (clic: ingresar) · premios pendientes (clic: recoger) ·
+ *                                lo tasado esta semana;  fila 2: primera salida de hoy y Racha
+ *   Contratos (45)      fila 1:  los tres contratos (clic: cambiarlo);  fila 2: los de la semana
+ *   Tus reliquias (45)  fila 1:  cada Reliquia que llevas;  fila 2: lo que valdrian ahora
+ *
+ * Cerrar (portada) y Volver (subvistas) van siempre en la misma casilla, abajo en el centro. El
+ * relleno es un solo cristal gris sin nombre (Marco.rellenarNeutro): nada de filas de colores que
+ * parezcan significar algo. Cada boton dice en su lore las cifras ya calculadas y, en la ultima
+ * linea, lo que hace el clic. Solo clic izquierdo (Bedrock: un toque).
  *
  * No escribe nada salvo lo que ya hacian sus botones (Entregas.pendientes, Contratos.cambiar,
- * Altar.depositar). Se puede abrir en cualquier sitio: los enlaces al Altar y a la Forja miran
- * la regla del Altar y el deposito solo se hace fuera de Calamity.
+ * Altar.depositar). Se puede abrir en cualquier sitio: los enlaces al Altar y a la Forja miran la
+ * regla del Altar y el deposito y la recogida de premios solo se hacen fuera de Calamity. La
+ * "ultima tasacion" no sale porque no se guarda (ver Npcs.tasador).
  */
 final class MenuTasador implements Listener {
 
     private static final long ESPERA_MS = 500;
-    private static final int FILA_COBROS = 9, FILA_ADUANA = 18, FILA_CONTRATOS = 27, FILA_RELIQUIAS = 36;
-    /** La fila de abajo: la ayuda, el Altar, la Forja y Tu camino, centrados y con aire. */
-    static final int AYUDA = 46, IR_ALTAR = 48, IR_FORJA = 50, IR_CAMINO = 52;
-    /** Trozos de la barra de la Aduana (columnas 2-7; en la 1 va el resumen). */
-    private static final int TROZOS = 6;
+    /** Todas las vistas del Tasador (salvo confirmar) miden lo mismo: 5 filas. */
+    static final int TAMANO = 45;
+    /** La portada: dos filas de tres botones, en las columnas 2, 4 y 6. */
+    static final int DINERO = 11, CONTRATOS = 13, RELIQUIAS = 15, ADUANA = 20, CAMINO = 22, AYUDA = 24;
+    /** Abajo: el Altar y la Forja a los lados; en el centro Cerrar (portada) o Volver (subvistas). */
+    static final int IR_ALTAR = 38, SALIR = 40, IR_FORJA = 42;
+    /** Las filas de las subvistas: la de arriba (lo principal) y la de debajo (el resumen). */
+    static final int FILA_A = 9, FILA_B = 18;
 
-    /** Nuestra ventana. pantalla: "tasador" o "cambiar"; hueco: el contrato que se cambia. */
+    static final String PORTADA = Marco.TASADOR, V_DINERO = "dinero", V_CONTRATOS = "contratos",
+            V_RELIQUIAS = "reliquias", V_CAMBIAR = "cambiar";
+
+    /** Nuestra ventana. pantalla: la vista; hueco: el contrato que se cambia (en "cambiar"). */
     record Vista(String pantalla, Map<Integer, String> acciones, int hueco) implements InventoryHolder {
         @Override
         public Inventory getInventory() {
@@ -104,56 +113,199 @@ final class MenuTasador implements Listener {
 
     /** conSonido: el del NPC al abrirlo; desde un enlace suena el enlace. */
     void abrir(Player p, boolean conSonido) {
-        Vista v = new Vista(Marco.TASADOR, new HashMap<>(), 0);
-        Inventory inv = hc.plugin().getServer().createInventory(v, 54, Marco.T_TASADOR.componente());
+        abrirVista(p, PORTADA);
+        if (conSonido) Marco.sonar(p, "item.book.page_turn", 0.8f, 0.8f);
+    }
+
+    private static Marco.Titulo titulo(String pantalla) {
+        return switch (pantalla) {
+            case V_DINERO -> Marco.T_TASADOR_DINERO;
+            case V_CONTRATOS -> Marco.T_TASADOR_CONTRATOS;
+            case V_RELIQUIAS -> Marco.T_TASADOR_RELIQUIAS;
+            default -> Marco.T_TASADOR;
+        };
+    }
+
+    private void abrirVista(Player p, String pantalla) {
+        Vista v = new Vista(pantalla, new HashMap<>(), 0);
+        Inventory inv = hc.plugin().getServer().createInventory(v, TAMANO, titulo(pantalla).componente());
         pintar(inv, p, v);
         p.openInventory(inv);
-        if (conSonido) Marco.sonar(p, "item.book.page_turn", 0.8f, 0.8f);
     }
 
     private void repintar(Player p) {
         if (!p.isOnline()) return;
         Inventory top = p.getOpenInventory().getTopInventory();
-        if (top.getHolder() instanceof Vista v && v.pantalla().equals(Marco.TASADOR)) pintar(top, p, v);
+        if (top.getHolder() instanceof Vista v && !v.pantalla().equals(V_CAMBIAR)) pintar(top, p, v);
     }
 
     private void pintar(Inventory inv, Player p, Vista v) {
         inv.clear();
         v.acciones().clear();
-        Marco.saldo(inv, v.acciones(), hc, p, Marco.SALDO);
-        inv.setItem(Marco.CERRAR, Marco.cerrar());
-        v.acciones().put(Marco.CERRAR, "cerrar");
-        cobros(inv, p, v);
-        aduana(inv, p);
-        contratos(inv, p, v);
-        reliquias(inv, p);
-        enlaces(inv, p, v);
-        Marco.rellenar(inv);
+        switch (v.pantalla()) {
+            case V_DINERO -> vistaDinero(inv, p, v);
+            case V_CONTRATOS -> vistaContratos(inv, p, v);
+            case V_RELIQUIAS -> vistaReliquias(inv, p);
+            default -> portada(inv, p, v);
+        }
+        if (v.pantalla().equals(PORTADA)) {
+            inv.setItem(SALIR, Marco.icono(Material.BARRIER, Component.text("Cerrar", Marco.NO),
+                    List.of(Marco.accion("Clic para cerrar")), false));
+            v.acciones().put(SALIR, "cerrar");
+        } else {
+            inv.setItem(SALIR, Marco.icono(Material.ARROW, Component.text("Volver", Paleta.DETALLE),
+                    List.of(Marco.tenue("Vuelves a la portada del Tasador."), Component.empty(), Marco.accion("Clic para volver")), false));
+            v.acciones().put(SALIR, "volver");
+        }
+        Marco.rellenarNeutro(inv);
     }
 
-    /** Pone n iconos en la fila (columnas de Marco) con su banda a los lados. */
-    private static void fila(Inventory inv, int base, ItemStack banda, List<ItemStack> cosas) {
-        Marco.ponerBanda(inv, base, banda);
+    /** Pone las cosas centradas en la fila que empieza en base (columnas de Marco). */
+    private static void enFila(Inventory inv, int base, List<ItemStack> cosas, List<String> acciones, Map<Integer, String> mapa) {
         int[] cols = Marco.columnas(Math.min(Marco.COLUMNAS, cosas.size()));
-        for (int i = 0; i < cols.length; i++) inv.setItem(base + cols[i], cosas.get(i));
+        for (int i = 0; i < cols.length; i++) {
+            inv.setItem(base + cols[i], cosas.get(i));
+            if (acciones != null && acciones.get(i) != null) mapa.put(base + cols[i], acciones.get(i));
+        }
     }
 
-    /**
-     * La fila de abajo: "¿Como funciona?", el Altar y la Forja (en gris si desde aqui no
-     * escuchan) y Tu camino, que es informativo y se abre en cualquier sitio.
-     */
-    private void enlaces(Inventory inv, Player p, Vista v) {
-        boolean altar = Marco.altarAbierto(hc, p);
+    /** "1 Reliquia", "3 Reliquias". */
+    static String cuantas(long n, String una, String varias) {
+        return Altar.miles(n) + " " + (n == 1 ? una : varias);
+    }
+
+    // ------------------------------------------------------------------ portada
+
+    private void portada(Inventory inv, Player p, Vista v) {
+        botonDinero(inv, p, v);
+        botonContratos(inv, p, v);
+        botonReliquias(inv, p, v);
+        inv.setItem(ADUANA, aduana(p));
+        botonCamino(inv, p, v);
         inv.setItem(AYUDA, Marco.ayuda(hc));
+        boolean altar = Marco.altarAbierto(hc, p);
         Marco.enlace(inv, v.acciones(), IR_ALTAR, Marco.UMBRAL, Material.ENCHANTING_TABLE, "Altar del Umbral",
                 List.of("Frascos, cristales, la Llave", "del Caos y la Ofrenda."), altar);
         Marco.enlace(inv, v.acciones(), IR_FORJA, Marco.FORJA, Material.ANVIL, "La Forja",
                 List.of("El Manto, el Vestigio del Eco,", "la Guadaña y sus mejoras."), altar);
+    }
+
+    /** Tu dinero: el saldo, las MobCoins, los Sellos, Marcas y Fragmentos, los premios y la semana. */
+    private void botonDinero(Inventory inv, Player p, Vista v) {
+        UUID u = p.getUniqueId();
+        List<Component> lore = new ArrayList<>();
+        Saldo s = hc.saldo();
+        lore.add(Marco.dato("Saldo", Marco.esencias(s == null ? 0 : s.de(u))));
+        Monedero mon = hc.monedero();
+        if (mon != null && mon.disponible()) lore.add(Marco.dato("MobCoins", Altar.miles(mon.saldo(p))));
+        Creditos cr = hc.creditos();
+        if (cr != null) {
+            int sellos = 0;
+            for (Map.Entry<String, Integer> e : cr.todos(u).entrySet()) {
+                if (e.getValue() > 0 && (e.getKey().startsWith("sello:") || e.getKey().equals(Creditos.ERRANTE))) sellos += e.getValue();
+            }
+            int marcas = cr.de(u, "marca"), fragmentos = cr.de(u, "fragmento");
+            if (sellos > 0) lore.add(Marco.dato("Sellos", String.valueOf(sellos)));
+            if (marcas > 0) lore.add(Marco.dato("Marcas de Eco", String.valueOf(marcas)));
+            if (fragmentos > 0) lore.add(Marco.dato("Fragmentos de Guadaña", String.valueOf(fragmentos)));
+        }
+        int pend = hc.datos().getMapList("premios-pendientes." + u).size();
+        boolean dentro = hc.esHardcore(p);
+        lore.add(Component.empty());
+        lore.add(pend == 0 ? Marco.tenue("No tienes premios pendientes.")
+                : Component.text("Tienes " + cuantas(pend, "premio pendiente.", "premios pendientes."), Paleta.CIFRA));
+        int encima = s == null ? 0 : s.encima(p);
+        if (encima > 0) lore.add(Component.text("Llevas " + Marco.esencias(encima) + " encima.", Paleta.CIFRA));
+        Estadisticas st = hc.estadisticas();
+        if (st != null) {
+            long e = st.semana(u, "tasado-esencias"), mc = st.semana(u, "tasado-mc");
+            lore.add(Marco.dato("Tasado esta semana", Marco.esencias(e) + " y " + Altar.miles(mc) + " MobCoins"));
+        }
+        Boolean primera = primeraCobrada(u);
+        if (primera != null) lore.add(primera ? Marco.tenue("Ya cobraste la primera salida de hoy.")
+                : Marco.tiene("La primera salida de hoy aún paga."));
+        lore.add(Component.empty());
+        lore.add(Marco.accion("Clic para ver el detalle"));
+        boolean algo = !dentro && (pend > 0 || encima > 0);
+        inv.setItem(DINERO, Marco.icono(Material.GOLD_INGOT, Component.text("Tu dinero", Paleta.CIFRA), lore, algo));
+        v.acciones().put(DINERO, "ver:" + V_DINERO);
+    }
+
+    /** Contratos de hoy: cada uno en una linea con lo que llevas, y los de la semana. */
+    private void botonContratos(Inventory inv, Player p, Vista v) {
+        UUID u = p.getUniqueId();
+        Contratos con = hc.contratos();
+        List<Component> lore = new ArrayList<>();
+        if (con == null || !hc.valor("contratos", con::activo, false)) {
+            lore.add(Marco.tenue("El Tasador no tiene contratos ahora."));
+            inv.setItem(CONTRATOS, Marco.icono(Material.PAPER, Component.text("Contratos de hoy", Paleta.TENUE), lore, false));
+            return;
+        }
+        lore.add(Marco.texto("Encargos del día. Se cobran"));
+        lore.add(Marco.texto("al salir vivo; si mueres, se pierden."));
+        lore.add(Component.empty());
+        List<Contratos.Estado> lista = hc.valor("contratos", () -> con.estados(p), List.of());
+        boolean listo = false;
+        for (Contratos.Estado e : lista) {
+            Contratos.Def d = e.def();
+            Component l = Component.text("· " + d.texto() + "  ", e.cobrado() ? Paleta.TENUE : Paleta.TEXTO);
+            if (e.cobrado()) l = l.append(Component.text("cobrado", Paleta.TENUE));
+            else if (e.cumplido()) l = l.append(Component.text("cumplido", Paleta.BIEN));
+            else l = l.append(Component.text(Math.min(e.progreso(), d.objetivo()) + "/" + d.objetivo(), Paleta.CIFRA));
+            lore.add(l);
+            listo |= e.cumplido() && !e.cobrado();
+        }
+        if (lista.isEmpty()) lore.add(Marco.tenue("Hoy no tienes ninguno."));
+        int[] semana = con.semanaDe(u);
+        lore.add(Marco.dato("Esta semana", Math.min(semana[0], semana[1]) + " de " + semana[1]));
+        lore.add(Component.empty());
+        lore.add(Marco.accion("Clic para verlos o cambiarlos"));
+        inv.setItem(CONTRATOS, Marco.icono(Material.PAPER, Component.text("Contratos de hoy", Paleta.DETALLE), lore, listo));
+        v.acciones().put(CONTRATOS, "ver:" + V_CONTRATOS);
+    }
+
+    /** Tus reliquias: cuantas llevas y lo que valdrian si sales ahora. */
+    private void botonReliquias(Inventory inv, Player p, Vista v) {
+        List<ItemStack> encima = encima(p);
+        List<Component> lore = new ArrayList<>();
+        if (encima.isEmpty()) {
+            lore.add(Marco.tenue("No llevas ninguna."));
+            lore.add(Component.empty());
+            lore.add(Marco.tenue("Salen de los mobs, los cofres"));
+            lore.add(Marco.tenue("y los minijefes de Calamity."));
+            inv.setItem(RELIQUIAS, Marco.icono(Material.BUNDLE, Component.text("Tus reliquias", Paleta.TENUE), lore, false));
+            return;
+        }
+        Reliquias rel = hc.reliquias();
+        int total = 0;
+        ItemStack mejor = encima.get(0);
+        for (ItemStack it : encima) {
+            total += it.getAmount();
+            if (rel.grado(it) > rel.grado(mejor)) mejor = it;
+        }
+        lore.add(Marco.texto("Llevas " + cuantas(total, "Reliquia.", "Reliquias.")));
+        Tasacion.Resumen r = simular(p, encima);
+        if (r != null) {
+            lore.add(Component.empty());
+            lore.add(Marco.texto("Si sales vivo ahora, valdrían:"));
+            lore.add(Marco.dato("Esencias", Altar.miles(r.esencias())));
+            lore.add(Marco.dato("MobCoins", Altar.miles(r.mobcoins())));
+        }
+        lore.add(Marco.tenue("Si mueres dentro, no valen nada."));
+        lore.add(Component.empty());
+        lore.add(Marco.accion("Clic para ver cuáles llevas"));
+        inv.setItem(RELIQUIAS, Marco.icono(new ItemStack(mejor.getType(), Math.max(1, Math.min(64, total))),
+                Component.text("Tus reliquias", Reliquias.AMBAR), lore, false));
+        v.acciones().put(RELIQUIAS, "ver:" + V_RELIQUIAS);
+    }
+
+    /** Tu camino: las horas activas y el proximo hito; el clic abre el menu del Camino. */
+    private void botonCamino(Inventory inv, Player p, Vista v) {
         Altar a = hc.altar();
         Camino cam = a == null ? null : a.camino();
         List<Component> lore = new ArrayList<>();
-        lore.add(Marco.texto("Lo que te falta para cada pieza:"));
-        lore.add(Marco.texto("Sellos, piedad, Marcas y Fragmentos."));
+        lore.add(Marco.texto("Lo que te falta para cada"));
+        lore.add(Marco.texto("pieza de la Forja."));
         if (cam != null) {
             double h = cam.horas(p.getUniqueId());
             double hito = cam.proximoHito(h);
@@ -164,68 +316,132 @@ final class MenuTasador implements Listener {
         }
         lore.add(Component.empty());
         lore.add(cam != null ? Marco.accion("Clic para verlo") : Marco.tenue("Ahora mismo no se puede ver."));
-        inv.setItem(IR_CAMINO, Marco.icono(Material.COMPASS, Component.text("Tu camino", cam != null ? Paleta.DETALLE : Paleta.TENUE),
+        inv.setItem(CAMINO, Marco.icono(Material.COMPASS, Component.text("Tu camino", cam != null ? Paleta.DETALLE : Paleta.TENUE),
                 lore, false));
-        if (cam != null) v.acciones().put(IR_CAMINO, "camino");
+        if (cam != null) v.acciones().put(CAMINO, "camino");
     }
 
-    // ------------------------------------------------------------------ fila 1: tus cobros
+    // ------------------------------------------------------------------ la Aduana (portada)
 
-    private void cobros(Inventory inv, Player p, Vista v) {
-        UUID u = p.getUniqueId();
-        List<ItemStack> cosas = new ArrayList<>();
-
-        // Lo tasado esta semana (Estadisticas).
-        Estadisticas st = hc.estadisticas();
-        List<Component> semana = new ArrayList<>();
-        if (st == null) {
-            semana.add(Marco.tenue("Ahora mismo no se puede saber."));
-        } else {
-            long e = st.semana(u, "tasado-esencias"), mc = st.semana(u, "tasado-mc");
-            long rel = st.semana(u, "reliquias"), salidas = st.semana(u, "extracciones");
-            if (e + mc + rel + salidas == 0) {
-                semana.add(Marco.tenue("Esta semana aún no has sacado"));
-                semana.add(Marco.tenue("nada que tasar."));
-            } else {
-                semana.add(Marco.dato("Esencias", Altar.miles(e)));
-                semana.add(Marco.dato("MobCoins", Altar.miles(mc)));
-                semana.add(Marco.dato("Reliquias", Altar.miles(rel)));
-                semana.add(Marco.dato("Salidas vivo", Altar.miles(salidas)));
-            }
+    /**
+     * Lo que queda hoy en cada tramo que aun paga (factor > 0). yaHoy: las MC que la Aduana ya
+     * le pago hoy (lo mismo que miran los tramos al pagar).
+     */
+    static List<Tramo> tramosHoy(long yaHoy, List<double[]> tramos) {
+        List<Tramo> out = new ArrayList<>();
+        double desde = 0;
+        for (double[] t : tramos) {
+            if (t[1] > 0) out.add(new Tramo(t[1], (long) desde, (long) t[0], (long) Math.max(0, t[0] - Math.max(desde, yaHoy))));
+            desde = t[0];
         }
-        semana.add(Component.empty());
-        semana.add(Marco.tenue("Se tasa solo al cruzar la puerta"));
-        semana.add(Marco.tenue("o al terminar un Cristal de Regreso."));
-        cosas.add(Marco.icono(Material.RAW_GOLD, Component.text("Tasado esta semana", Paleta.DETALLE), semana, false));
+        return out;
+    }
 
-        // La primera salida del dia (Tasacion apunta el dia en primera-extraccion.<uuid>).
+    /** Hasta donde paga el dia: el ultimo tramo que paga y no es "sin tope" (>= 100.000); -1 si no hay. */
+    static long escala(List<Tramo> tramos) {
+        long max = -1;
+        for (Tramo t : tramos) if (t.hasta() < 100_000) max = Math.max(max, t.hasta());
+        return max;
+    }
+
+    private static TextColor colorDe(double factor) {
+        return factor >= 1 ? Paleta.BIEN : factor >= 0.5 ? Paleta.CIFRA : Paleta.MARCA;
+    }
+
+    /** Un solo boton: lo cobrado hoy con su barra, lo que queda en cada tramo y cuando vuelve a cero. */
+    private ItemStack aduana(Player p) {
+        Aduana ad = hc.aduana();
+        if (ad == null) {
+            return Marco.icono(Material.SUNFLOWER, Component.text("La Aduana de hoy", Paleta.TENUE),
+                    List.of(Marco.tenue("Ahora mismo no está.")), false);
+        }
+        long hoy = ad.mcHoy(p.getUniqueId());
+        List<Tramo> tramos = tramosHoy(hoy, ad.tramos());
+        long escala = escala(tramos);
+
+        List<Component> lore = new ArrayList<>();
+        lore.add(Marco.texto("Te paga las MobCoins que sacas,"));
+        lore.add(Marco.texto("pero cada día tiene un tope."));
+        lore.add(Component.empty());
+        if (escala > 0) lore.add(Marco.barra(hoy, escala));
+        lore.add(Marco.dato("Cobradas hoy", Altar.miles(hoy) + " MobCoins"));
+        if (tramos.isEmpty()) lore.add(Marco.tenue("Hoy ya no te paga nada más."));
+        for (Tramo t : tramos) {
+            Component linea = Component.text("Al " + Marco.porcentaje(t.factor()) + ": ", colorDe(t.factor()));
+            if (t.hasta() >= 100_000) linea = linea.append(Component.text("desde " + Altar.miles(t.desde()) + ", sin tope", Paleta.TEXTO));
+            else if (t.quedan() > 0) linea = linea.append(Component.text("te quedan " + Altar.miles(t.quedan()), Paleta.TEXTO));
+            else linea = linea.append(Component.text("ya lo has agotado", Paleta.TENUE));
+            lore.add(linea);
+        }
+        if (escala > 0) lore.add(Marco.tenue("Por encima de " + Altar.miles(escala) + " ya no paga."));
+        lore.add(Component.empty());
+        lore.add(Marco.tenue("Las Esencias no tienen tope."));
+        lore.add(Marco.tenue("Vuelve a cero a medianoche."));
+        long libre = 0;
+        for (Tramo t : tramos) libre += t.hasta() >= 100_000 ? 0 : t.quedan();
+        boolean paga = !tramos.isEmpty() && (escala < 0 || libre > 0);
+        return Marco.icono(Material.SUNFLOWER, Component.text("La Aduana de hoy", Paleta.TEXTO), lore, paga);
+    }
+
+    // ------------------------------------------------------------------ subvista: tu dinero
+
+    /** null si no hay primera salida (apagada o sin calendario); si no, si ya se cobro hoy. */
+    private Boolean primeraCobrada(UUID u) {
         Tasacion.Valores val = Tasacion.Valores.de(hc.cfg());
         Calendario cal = hc.calendario();
-        if (val.primeraBase() > 0 && cal != null) {
-            boolean cobrada = cal.dia().equals(hc.datos().getString("primera-extraccion." + u, ""));
+        if (val.primeraBase() <= 0 || cal == null) return null;
+        return cal.dia().equals(hc.datos().getString("primera-extraccion." + u, ""));
+    }
+
+    private void vistaDinero(Inventory inv, Player p, Vista v) {
+        UUID u = p.getUniqueId();
+        // Fila de arriba: el saldo (clic: ingresar lo fisico), los premios (clic: recogerlos) y la semana.
+        Marco.saldo(inv, v.acciones(), hc, p, FILA_A + 2);
+        inv.setItem(FILA_A + 4, premios(p, v, FILA_A + 4));
+        inv.setItem(FILA_A + 6, semana(u));
+
+        // Fila de abajo: la primera salida de hoy y la Racha, si hay.
+        List<ItemStack> abajo = new ArrayList<>();
+        Tasacion.Valores val = Tasacion.Valores.de(hc.cfg());
+        Boolean cobrada = primeraCobrada(u);
+        if (cobrada != null) {
             List<Component> lore = new ArrayList<>();
             if (cobrada) {
                 lore.add(Marco.tenue("Ya la cobraste hoy."));
                 lore.add(Marco.tenue("Mañana vuelve a pagar."));
             } else {
-                lore.add(Marco.tiene("+" + Marco.esencias(val.primeraBase()) + " al salir vivo"));
-                if (val.primeraSiTasa() > 0) lore.add(Marco.tiene("+" + val.primeraSiTasa() + " más si tasas alguna Reliquia"));
+                lore.add(Marco.tiene(Marco.esencias(val.primeraBase()) + " si sales vivo"));
+                if (val.primeraSiTasa() > 0) lore.add(Marco.tiene(Marco.esencias(val.primeraSiTasa()) + " más si tasas alguna Reliquia"));
                 lore.add(Component.empty());
-                lore.add(Marco.tenue("Solo la primera salida de cada día."));
+                lore.add(Marco.tenue("Solo paga la primera salida de cada día."));
             }
-            cosas.add(Marco.icono(Material.DAYLIGHT_DETECTOR, Component.text(cobrada ? "Primera salida: cobrada" : "Primera salida: aún paga",
+            abajo.add(Marco.icono(Material.CLOCK, Component.text(cobrada ? "Primera salida: ya cobrada" : "Primera salida: aún paga",
                     cobrada ? Paleta.TENUE : Paleta.BIEN), lore, !cobrada));
         }
+        Racha racha = hc.racha();
+        if (racha != null && racha.activa()) {
+            int r = racha.de(u);
+            double porPunto = hc.cfg().getDouble("racha.por-punto", 0.10);
+            String por = "×" + Marco.numero(Math.round(Racha.factor(r, racha.tope(null), porPunto) * 100) / 100.0);
+            List<Component> rl = new ArrayList<>();
+            rl.add(Marco.dato("Lo que tasas vale", por));
+            rl.add(Component.empty());
+            rl.add(Marco.tenue("Sube 1 cada vez que sales con una"));
+            rl.add(Marco.tenue("Reliquia de grado II o más."));
+            rl.add(Marco.tenue("Si mueres, vuelve a 0."));
+            abajo.add(Marco.icono(Material.BLAZE_POWDER, Component.text("Tu racha: ", Paleta.TEXTO)
+                    .append(Component.text(r, Paleta.CIFRA)), rl, r > 0));
+        }
+        enFila(inv, FILA_B, abajo, null, v.acciones());
+    }
 
-        // Premios pendientes (Entregas: premios-pendientes.<uuid>).
+    private ItemStack premios(Player p, Vista v, int casilla) {
+        UUID u = p.getUniqueId();
         List<Map<?, ?>> pend = hc.datos().getMapList("premios-pendientes." + u);
-        List<Component> lore = new ArrayList<>();
         boolean dentro = hc.esHardcore(p);
+        List<Component> lore = new ArrayList<>();
         if (pend.isEmpty()) {
             lore.add(Marco.tenue("No te espera nada."));
-            lore.add(Component.empty());
-            lore.add(Marco.tenue("Lo que no puedes llevar (estás dentro"));
-            lore.add(Marco.tenue("o desconectado) espera aquí."));
         } else {
             int n = 0;
             for (Map<?, ?> m : pend) {
@@ -235,33 +451,43 @@ final class MenuTasador implements Listener {
                 }
                 lore.add(Marco.texto("· " + nombrePendiente(m)));
             }
+        }
+        lore.add(Component.empty());
+        lore.add(Marco.tenue("Lo que ganas mientras estás dentro"));
+        lore.add(Marco.tenue("o desconectado te espera aquí."));
+        if (!pend.isEmpty()) {
             lore.add(Component.empty());
             lore.add(dentro ? Marco.tenue("Te llegan al salir de Calamity.") : Marco.accion("Clic para recogerlos"));
+            v.acciones().put(casilla, "cobrar");
         }
-        ItemStack cofre = Marco.icono(new ItemStack(Material.CHEST, Math.max(1, Math.min(64, pend.size()))),
+        return Marco.icono(new ItemStack(Material.CHEST, Math.max(1, Math.min(64, pend.size()))),
                 Component.text("Premios pendientes: ", Paleta.TEXTO).append(Component.text(pend.size(), Paleta.CIFRA)),
                 lore, !pend.isEmpty() && !dentro);
-        cosas.add(cofre);
+    }
 
-        // La Racha, si esta encendida.
-        Racha racha = hc.racha();
-        if (racha != null && racha.activa()) {
-            int r = racha.de(u);
-            double porPunto = hc.cfg().getDouble("racha.por-punto", 0.10);
-            List<Component> rl = new ArrayList<>();
-            rl.add(Marco.dato("Al tasar", "×" + Marco.numero(Math.round(Racha.factor(r, racha.tope(null), porPunto) * 100) / 100.0)));
-            rl.add(Marco.tenue("Sube 1 por salida con alguna Reliquia"));
-            rl.add(Marco.tenue("de grado II o más; morir la pone a 0."));
-            cosas.add(Marco.icono(Material.BLAZE_ROD, Component.text("Racha: ", Paleta.TEXTO)
-                    .append(Component.text(r, Paleta.CIFRA)), rl, r > 0));
+    private ItemStack semana(UUID u) {
+        Estadisticas st = hc.estadisticas();
+        List<Component> lore = new ArrayList<>();
+        if (st == null) {
+            lore.add(Marco.tenue("Ahora mismo no se puede saber."));
+        } else {
+            long e = st.semana(u, "tasado-esencias"), mc = st.semana(u, "tasado-mc");
+            long rel = st.semana(u, "reliquias"), salidas = st.semana(u, "extracciones");
+            if (e + mc + rel + salidas == 0) {
+                lore.add(Marco.tenue("Esta semana aún no has sacado"));
+                lore.add(Marco.tenue("nada que tasar."));
+            } else {
+                lore.add(Marco.dato("Esencias", Altar.miles(e)));
+                lore.add(Marco.dato("MobCoins", Altar.miles(mc)));
+                lore.add(Marco.dato("Reliquias", Altar.miles(rel)));
+                lore.add(Marco.dato("Salidas con vida", Altar.miles(salidas)));
+            }
         }
-
-        fila(inv, FILA_COBROS, Marco.banda(Material.YELLOW_STAINED_GLASS_PANE, "Tus cobros",
-                List.of("Lo que has sacado esta semana", "y lo que aún te espera.")), cosas);
-        int[] cols = Marco.columnas(cosas.size());
-        for (int i = 0; i < cosas.size(); i++) {
-            if (cosas.get(i) == cofre && !pend.isEmpty()) v.acciones().put(FILA_COBROS + cols[i], "cobrar");
-        }
+        lore.add(Component.empty());
+        lore.add(Marco.tenue("Lo que sacas se tasa al cruzar la"));
+        lore.add(Marco.tenue("puerta o al terminar un Cristal"));
+        lore.add(Marco.tenue("de Regreso."));
+        return Marco.icono(Material.WRITABLE_BOOK, Component.text("Tasado esta semana", Paleta.DETALLE), lore, false);
     }
 
     /** "250 MobCoins", "Frasco de Calma": lo que es un premio pendiente, como se lee. */
@@ -286,110 +512,7 @@ final class MenuTasador implements Listener {
         return String.valueOf(m.get("objeto"));
     }
 
-    // ------------------------------------------------------------------ fila 2: la Aduana
-
-    /**
-     * Lo que queda hoy en cada tramo que aun paga (factor > 0). yaHoy: las MC que la Aduana ya
-     * le pago hoy (lo mismo que miran los tramos al pagar).
-     */
-    static List<Tramo> tramosHoy(long yaHoy, List<double[]> tramos) {
-        List<Tramo> out = new ArrayList<>();
-        double desde = 0;
-        for (double[] t : tramos) {
-            if (t[1] > 0) out.add(new Tramo(t[1], (long) desde, (long) t[0], (long) Math.max(0, t[0] - Math.max(desde, yaHoy))));
-            desde = t[0];
-        }
-        return out;
-    }
-
-    /** Hasta donde llega la barra: el ultimo tramo que paga y no es "sin tope" (>= 100.000); -1 si no hay. */
-    static long escala(List<Tramo> tramos) {
-        long max = -1;
-        for (Tramo t : tramos) if (t.hasta() < 100_000) max = Math.max(max, t.hasta());
-        return max;
-    }
-
-    private static Material cristalDe(double factor) {
-        if (factor >= 1) return Material.LIME_STAINED_GLASS_PANE;
-        if (factor >= 0.5) return Material.YELLOW_STAINED_GLASS_PANE;
-        if (factor > 0) return Material.ORANGE_STAINED_GLASS_PANE;
-        return Material.RED_STAINED_GLASS_PANE;
-    }
-
-    private static TextColor colorDe(double factor) {
-        return factor >= 1 ? Paleta.BIEN : factor >= 0.5 ? Paleta.CIFRA : Paleta.MARCA;
-    }
-
-    private void aduana(Inventory inv, Player p) {
-        Aduana ad = hc.aduana();
-        if (ad == null) {
-            fila(inv, FILA_ADUANA, bandaAduana(), List.of(Marco.icono(Material.GRAY_DYE,
-                    Component.text("La Aduana no está", Paleta.TENUE), List.of(), false)));
-            return;
-        }
-        long hoy = ad.mcHoy(p.getUniqueId());
-        List<Tramo> tramos = tramosHoy(hoy, ad.tramos());
-        long escala = escala(tramos);
-
-        List<Component> lore = new ArrayList<>();
-        lore.add(Marco.dato("Cobradas hoy", Altar.miles(hoy) + " MobCoins"));
-        lore.add(Component.empty());
-        if (tramos.isEmpty()) {
-            lore.add(Marco.tenue("Hoy las MobCoins ya no pagan nada."));
-        }
-        for (Tramo t : tramos) {
-            String cuanto = Marco.porcentaje(t.factor());
-            boolean sinTope = t.hasta() >= 100_000;
-            Component linea = Component.text("Al " + cuanto + ": ", colorDe(t.factor()));
-            if (sinTope) linea = linea.append(Component.text("desde " + Altar.miles(t.desde()) + ", sin tope", Paleta.TEXTO));
-            else if (t.quedan() > 0) linea = linea.append(Component.text("te quedan " + Altar.miles(t.quedan()), Paleta.TEXTO));
-            else linea = linea.append(Component.text("agotado", Paleta.TENUE));
-            lore.add(linea);
-        }
-        if (escala > 0) lore.add(Marco.tenue("Por encima de " + Altar.miles(escala) + ", nada."));
-        lore.add(Component.empty());
-        lore.add(Marco.tenue("Solo cuenta las MobCoins: las Esencias"));
-        lore.add(Marco.tenue("no tienen tope aquí. Vuelve a cero"));
-        lore.add(Marco.tenue("a medianoche."));
-
-        Marco.ponerBanda(inv, FILA_ADUANA, bandaAduana());
-        long libre = 0;
-        for (Tramo t : tramos) libre += t.hasta() >= 100_000 ? 0 : t.quedan();
-        boolean paga = !tramos.isEmpty() && (escala < 0 || libre > 0);
-        inv.setItem(FILA_ADUANA + 1, Marco.icono(Material.SUNFLOWER, Component.text("MobCoins de hoy: ", Paleta.TEXTO)
-                .append(Component.text(Altar.miles(hoy) + (escala > 0 ? " / " + Altar.miles(escala) : ""), Paleta.CIFRA)), lore, paga));
-        // La barra: cada trozo es un sexto de lo que paga el dia; gris lo cobrado, color lo que queda.
-        for (int i = 0; i < TROZOS; i++) {
-            Material m;
-            String nombre;
-            if (escala <= 0) {
-                m = tramos.isEmpty() ? Material.RED_STAINED_GLASS_PANE : cristalDe(tramos.get(tramos.size() - 1).factor());
-                nombre = tramos.isEmpty() ? "Hoy ya no pagan" : "Sin tope";
-            } else {
-                long fin = escala * (i + 1) / TROZOS, ini = escala * i / TROZOS;
-                if (hoy >= fin) {
-                    m = Material.GRAY_STAINED_GLASS_PANE;
-                    nombre = "Cobrado";
-                } else {
-                    double f = factorEn(tramos, Math.max(ini, hoy));
-                    m = cristalDe(f);
-                    nombre = "Paga al " + Marco.porcentaje(f);
-                }
-            }
-            inv.setItem(FILA_ADUANA + 2 + i, Marco.icono(m, Component.text(nombre, Paleta.TEXTO), lore, false));
-        }
-    }
-
-    private static ItemStack bandaAduana() {
-        return Marco.banda(Material.WHITE_STAINED_GLASS_PANE, "La Aduana de hoy", List.of("Lo que Calamity te paga", "en MobCoins cada día."));
-    }
-
-    private static double factorEn(List<Tramo> tramos, long pos) {
-        for (Tramo t : tramos) if (pos >= t.desde() && pos < t.hasta()) return t.factor();
-        return 0;
-    }
-
-    // ------------------------------------------------------------------ fila 3: contratos
+    // ------------------------------------------------------------------ subvista: contratos
 
     /** El icono de un contrato por lo que pide (el evento del pool). */
     private static Material iconoContrato(String evento) {
@@ -408,14 +531,12 @@ final class MenuTasador implements Listener {
         };
     }
 
-    private void contratos(Inventory inv, Player p, Vista v) {
+    private void vistaContratos(Inventory inv, Player p, Vista v) {
         UUID u = p.getUniqueId();
-        ItemStack banda = Marco.banda(Material.LIGHT_BLUE_STAINED_GLASS_PANE, "Contratos de hoy",
-                List.of("Tres encargos al día. Se cobran", "al salir vivo; morir los pierde."));
         Contratos con = hc.contratos();
         if (con == null || !hc.valor("contratos", con::activo, false)) {
-            fila(inv, FILA_CONTRATOS, banda, List.of(Marco.icono(Material.GRAY_DYE,
-                    Component.text("El Tasador no tiene contratos ahora", Paleta.TENUE), List.of(Marco.tenue("Próximamente.")), false)));
+            inv.setItem(FILA_A + 4, Marco.icono(Material.PAPER, Component.text("El Tasador no tiene contratos ahora", Paleta.TENUE),
+                    List.of(Marco.tenue("Vuelve más adelante.")), false));
             return;
         }
         List<Contratos.Estado> lista = hc.valor("contratos", () -> con.estados(p), List.of());
@@ -423,64 +544,68 @@ final class MenuTasador implements Listener {
         List<ItemStack> cosas = new ArrayList<>();
         List<String> acciones = new ArrayList<>();
         for (Contratos.Estado e : lista) {
-            if (cosas.size() >= Marco.COLUMNAS - 1) break;
+            if (cosas.size() >= Marco.COLUMNAS) break;
             Contratos.Def d = e.def();
             List<Component> lore = new ArrayList<>();
             lore.add(Marco.barra(e.progreso(), d.objetivo()));
             lore.add(Marco.dato("Paga", Marco.esencias(d.esencias()) + " y " + Altar.miles(d.mobcoins()) + " MobCoins"));
-            if (d.corto()) lore.add(Marco.tenue("Corto: para una entrada rápida."));
+            if (d.corto()) lore.add(Marco.tenue("Es corto: sirve para una entrada rápida."));
             lore.add(Component.empty());
             String accion = null;
             if (e.cobrado()) {
-                lore.add(Marco.tiene("Cobrado."));
+                lore.add(Marco.tiene("Ya lo cobraste."));
             } else if (e.cumplido()) {
-                lore.add(Component.text("● Cumplido: se cobra al salir vivo.", Paleta.CIFRA));
+                lore.add(Component.text("Cumplido: lo cobras al salir vivo.", Paleta.CIFRA));
             } else {
                 lore.add(Marco.accion(precio == 0 ? "Clic para cambiarlo (gratis)" : "Clic para cambiarlo (" + Marco.esencias(precio) + ")"));
                 accion = "c:" + e.hueco();
             }
             TextColor color = e.cobrado() ? Paleta.TENUE : e.cumplido() ? Paleta.BIEN : Paleta.TEXTO;
             Material icono = e.cobrado() ? Material.MAP : iconoContrato(d.evento());
-            ItemStack it = Marco.icono(icono, Component.text(d.texto(), color), lore, e.cumplido() && !e.cobrado());
-            cosas.add(it);
+            cosas.add(Marco.icono(icono, Component.text(d.texto(), color), lore, e.cumplido() && !e.cobrado()));
             acciones.add(accion);
         }
         if (lista.isEmpty()) {
-            cosas.add(Marco.icono(Material.PAPER, Component.text("Sin contratos hoy", Paleta.TENUE),
+            cosas.add(Marco.icono(Material.PAPER, Component.text("Hoy no tienes contratos", Paleta.TENUE),
                     List.of(Marco.tenue("Vuelve a mirar al salir de Calamity.")), false));
             acciones.add(null);
         }
+        enFila(inv, FILA_A, cosas, acciones, v.acciones());
+
         int[] semana = con.semanaDe(u);
         List<Component> sl = new ArrayList<>();
         sl.add(Marco.barra(semana[0], semana[1]));
-        sl.add(Marco.tenue("Cobra " + semana[1] + " en la semana y el"));
-        sl.add(Marco.tenue("Tasador te da la Llave del Caos."));
+        sl.add(Marco.texto("Si cobras " + semana[1] + " en la semana, el"));
+        sl.add(Marco.texto("Tasador te da la Llave del Caos."));
         sl.add(Component.empty());
-        sl.add(Marco.tenue(gratis > 0 ? "Hoy te queda " + gratis + (gratis == 1 ? " cambio gratis." : " cambios gratis.")
+        sl.add(Marco.tenue(gratis > 0 ? "Hoy te " + (gratis == 1 ? "queda 1 cambio gratis." : "quedan " + gratis + " cambios gratis.")
                 : "Cambiar uno cuesta " + Marco.esencias(precio) + "."));
-        cosas.add(Marco.icono(Material.TRIAL_KEY, Component.text("Contratos de la semana: ", Paleta.TEXTO)
+        inv.setItem(FILA_B + 4, Marco.icono(Material.TRIAL_KEY, Component.text("Contratos de la semana: ", Paleta.TEXTO)
                 .append(Component.text(Math.min(semana[0], semana[1]) + "/" + semana[1], Paleta.CIFRA)), sl, semana[0] >= semana[1]));
-        acciones.add(null);
-
-        fila(inv, FILA_CONTRATOS, banda, cosas);
-        int[] cols = Marco.columnas(cosas.size());
-        for (int i = 0; i < cosas.size(); i++) if (acciones.get(i) != null) v.acciones().put(FILA_CONTRATOS + cols[i], acciones.get(i));
     }
 
-    // ------------------------------------------------------------------ fila 4: reliquias
+    // ------------------------------------------------------------------ subvista: reliquias
 
-    private void reliquias(Inventory inv, Player p) {
+    private List<ItemStack> encima(Player p) {
         Reliquias rel = hc.reliquias();
-        ItemStack banda = Marco.banda(Material.ORANGE_STAINED_GLASS_PANE, "Reliquias que llevas",
-                List.of("Se tasan solas al salir vivo.", "Si mueres dentro, no valen nada."));
-        List<ItemStack> encima = new ArrayList<>();
-        if (rel != null) {
-            for (ItemStack it : p.getInventory().getContents()) if (rel.es(it)) encima.add(it);
-            if (rel.es(p.getItemOnCursor())) encima.add(p.getItemOnCursor());
-        }
+        List<ItemStack> out = new ArrayList<>();
+        if (rel == null) return out;
+        for (ItemStack it : p.getInventory().getContents()) if (rel.es(it)) out.add(it);
+        if (rel.es(p.getItemOnCursor())) out.add(p.getItemOnCursor());
+        return out;
+    }
+
+    private Tasacion.Resumen simular(Player p, List<ItemStack> encima) {
+        Tasacion tas = hc.tasacion();
+        return tas == null ? null : hc.valor("tasacion", () -> tas.simular(p, encima), null);
+    }
+
+    private void vistaReliquias(Inventory inv, Player p) {
+        Reliquias rel = hc.reliquias();
+        List<ItemStack> encima = encima(p);
         if (encima.isEmpty()) {
-            fila(inv, FILA_RELIQUIAS, banda, List.of(Marco.icono(Material.GRAY_DYE, Component.text("No llevas Reliquias", Paleta.TENUE),
-                    List.of(Marco.tenue("Salen de los mobs, los cofres"), Marco.tenue("y los minijefes de dentro.")), false)));
+            inv.setItem(FILA_A + 4, Marco.icono(Material.BUNDLE, Component.text("No llevas Reliquias", Paleta.TENUE),
+                    List.of(Marco.tenue("Salen de los mobs, los cofres"), Marco.tenue("y los minijefes de Calamity.")), false));
             return;
         }
         // Cuantas de cada una, por nombre (grado, especial y minijefe), las altas primero.
@@ -496,56 +621,51 @@ final class MenuTasador implements Listener {
             muestra.putIfAbsent(nombre, it);
         }
         List<ItemStack> cosas = new ArrayList<>();
-        int n = 0;
         for (Map.Entry<String, int[]> e : cuenta.entrySet()) {
-            if (n++ >= Marco.COLUMNAS - 1) break;
-            int g = e.getValue()[0], cuantas = e.getValue()[1];
+            if (cosas.size() >= Marco.COLUMNAS) break;
+            int g = e.getValue()[0], n = e.getValue()[1];
             List<Component> lore = new ArrayList<>();
             lore.add(Marco.dato("Grado", Reliquias.ROMANO[g]));
-            lore.add(Marco.tenue("Cada una: " + Marco.numero(val.esencias()[g]) + " Esencias y " + val.mc()[g] + " MobCoins"));
-            ItemStack icono = new ItemStack(muestra.get(e.getKey()).getType(), Math.max(1, Math.min(64, cuantas)));
-            cosas.add(Marco.icono(icono, Component.text(e.getKey() + " ×" + cuantas, Reliquias.AMBAR), lore, false));
+            lore.add(Marco.dato("Cada una", Marco.numero(val.esencias()[g]) + " Esencias y " + val.mc()[g] + " MobCoins"));
+            ItemStack icono = new ItemStack(muestra.get(e.getKey()).getType(), Math.max(1, Math.min(64, n)));
+            cosas.add(Marco.icono(icono, Component.text(e.getKey() + " ×" + n, Reliquias.AMBAR), lore, false));
         }
-        if (cuenta.size() > Marco.COLUMNAS - 1) {
+        if (cuenta.size() > Marco.COLUMNAS) {
             cosas.set(cosas.size() - 1, Marco.icono(Material.BUNDLE, Component.text("Y más Reliquias", Reliquias.AMBAR),
-                    List.of(Marco.tenue("Cuentan todas en lo que valdrían.")), false));
+                    List.of(Marco.tenue("Todas cuentan en lo que valdrían.")), false));
         }
-        cosas.add(valdrian(p, encima));
-        fila(inv, FILA_RELIQUIAS, banda, cosas);
+        enFila(inv, FILA_A, cosas, null, null);
+        inv.setItem(FILA_B + 4, valdrian(p, encima));
     }
 
     /** Lo que valdrian si sale ahora: la cuenta de la Tasacion y lo que la Aduana pagaria hoy de sus MC. */
     private ItemStack valdrian(Player p, List<ItemStack> encima) {
-        Tasacion tas = hc.tasacion();
-        List<Component> lore = new ArrayList<>();
-        if (tas == null) {
-            lore.add(Marco.tenue("Ahora mismo no se puede saber."));
-            return Marco.icono(Material.GOLD_NUGGET, Component.text("Lo que valdrían", Paleta.TENUE), lore, false);
-        }
-        Tasacion.Resumen r = hc.valor("tasacion", () -> tas.simular(p, encima), null);
+        Tasacion.Resumen r = simular(p, encima);
         if (r == null) {
-            lore.add(Marco.tenue("Ahora mismo no se puede saber."));
-            return Marco.icono(Material.GOLD_NUGGET, Component.text("Lo que valdrían", Paleta.TENUE), lore, false);
+            return Marco.icono(Material.GOLD_NUGGET, Component.text("Lo que valdrían", Paleta.TENUE),
+                    List.of(Marco.tenue("Ahora mismo no se puede saber.")), false);
         }
+        List<Component> lore = new ArrayList<>();
         lore.add(Marco.dato("Esencias", Altar.miles(r.esencias())));
         lore.add(Marco.dato("MobCoins", Altar.miles(r.mobcoins())));
         Aduana ad = hc.aduana();
         if (ad != null && r.mobcoins() > 0) {
             long paga = (long) Math.floor(Aduana.Cuentas.tramos(ad.mcHoy(p.getUniqueId()), r.mobcoins(), ad.tramos()) + 1e-9);
-            if (paga < r.mobcoins()) lore.add(Component.text("La Aduana hoy te pagaría " + Altar.miles(paga) + ".", Paleta.CIFRA));
+            if (paga < r.mobcoins()) lore.add(Component.text("Hoy la Aduana te pagaría " + Altar.miles(paga) + ".", Paleta.CIFRA));
         }
         for (String l : r.lineas()) {
-            if (l.startsWith("primera salida")) lore.add(Marco.tenue("Con la primera salida de hoy."));
-            else if (l.startsWith("exceso")) lore.add(Marco.tenue("Parte pasa del tope del día y no paga."));
+            if (l.startsWith("primera salida")) lore.add(Marco.tenue("Incluye la primera salida de hoy."));
+            else if (l.startsWith("exceso")) lore.add(Marco.tenue("Una parte pasa del tope del día y no paga."));
             else if (l.startsWith("sin valor")) lore.add(Component.text("Alguna no vale nada (caducada o falsa).", Paleta.AVISO));
             else if (l.startsWith("creditos: ")) {
                 for (String c : l.substring(10).split(", ")) lore.add(Marco.tiene("+" + MenuAltar.creditoLinea(c.trim(), 1)));
             }
         }
         lore.add(Component.empty());
-        lore.add(Marco.tenue("Si sales vivo ahora mismo."));
-        return Marco.icono(Material.GOLD_NUGGET, Component.text("Valdrían: ", Paleta.TEXTO)
-                .append(Component.text(Altar.miles(r.esencias()) + " E · " + Altar.miles(r.mobcoins()) + " MC", Paleta.CIFRA)), lore, true);
+        lore.add(Marco.tenue("Es lo que cobrarías si sales vivo"));
+        lore.add(Marco.tenue("ahora mismo. Si mueres, nada."));
+        return Marco.icono(Material.GOLD_NUGGET, Component.text("Si sales ahora: ", Paleta.TEXTO)
+                .append(Component.text(Altar.miles(r.esencias()) + " E y " + Altar.miles(r.mobcoins()) + " MC", Paleta.CIFRA)), lore, true);
     }
 
     // ------------------------------------------------------------------ cambiar un contrato
@@ -559,25 +679,26 @@ final class MenuTasador implements Listener {
             if (x.hueco() == hueco) e = x;
         }
         if (e == null || e.cumplido() || e.cobrado()) {
-            abrir(p, false);
+            abrirVista(p, V_CONTRATOS);
             return;
         }
-        Vista v = new Vista("cambiar", new HashMap<>(), hueco);
-        Inventory inv = hc.plugin().getServer().createInventory(v, 45, Marco.T_CAMBIAR.componente());
+        Vista v = new Vista(V_CAMBIAR, new HashMap<>(), hueco);
+        Inventory inv = hc.plugin().getServer().createInventory(v, TAMANO, Marco.T_CAMBIAR.componente());
         int precio = con.precioCambio(p.getUniqueId());
         inv.setItem(13, Marco.icono(iconoContrato(e.def().evento()), Component.text(e.def().texto(), Paleta.TEXTO),
-                List.of(Marco.barra(e.progreso(), e.def().objetivo()), Marco.tenue("Lo que llevas de este se pierde.")), false));
+                List.of(Marco.barra(e.progreso(), e.def().objetivo()), Marco.tenue("Si lo cambias, pierdes lo que llevas.")), false));
         Saldo s = hc.saldo();
         long saldo = s == null ? 0 : s.de(p.getUniqueId());
         inv.setItem(22, precio == 0
                 ? Marco.icono(Material.LIME_DYE, Component.text("Gratis", Paleta.BIEN), List.of(Marco.tenue("Es tu cambio gratis de hoy.")), false)
-                : Marco.icono(Material.GHAST_TEAR, Component.text("−" + Marco.esencias(precio), Paleta.CIFRA),
-                List.of(Marco.dato("Tienes", Altar.miles(saldo)), Marco.dato("Te quedan", Altar.miles(Math.max(0, saldo - precio)))), false));
-        ItemStack si = Marco.icono(Material.LIME_CONCRETE, Component.text("✔ Cambiarlo", Marco.SI), List.of(
-                Marco.tenue("El Tasador te da otro encargo"), Marco.tenue("para ese hueco."), Component.empty(),
+                : Marco.icono(Material.GHAST_TEAR, Component.text("Cuesta " + Marco.esencias(precio), Paleta.CIFRA),
+                List.of(Marco.dato("Tienes", Altar.miles(saldo)), Marco.dato("Te quedarían", Altar.miles(Math.max(0, saldo - precio)))), false));
+        ItemStack si = Marco.icono(Material.LIME_CONCRETE, Component.text("Sí, cámbialo", Marco.SI), List.of(
+                Marco.tenue("El Tasador te da otro encargo"), Marco.tenue("en su lugar."), Component.empty(),
                 Marco.accion("Clic para cambiarlo")), false);
-        ItemStack no = Marco.icono(Material.RED_CONCRETE, Component.text("✘ Cancelar", Marco.NO),
-                List.of(Marco.tenue("Vuelves al Tasador sin cambiar nada.")), false);
+        ItemStack no = Marco.icono(Material.RED_CONCRETE, Component.text("No, déjalo", Marco.NO),
+                List.of(Marco.tenue("Vuelves a tus contratos sin"), Marco.tenue("cambiar nada."), Component.empty(),
+                        Marco.accion("Clic para volver")), false);
         for (int c : new int[]{28, 29, 30}) {
             inv.setItem(c, no);
             v.acciones().put(c, "no");
@@ -586,7 +707,7 @@ final class MenuTasador implements Listener {
             inv.setItem(c, si);
             v.acciones().put(c, "si");
         }
-        Marco.rellenar(inv);
+        Marco.rellenarNeutro(inv);
         p.openInventory(inv);
         Marco.sonar(p, "block.note_block.hat", 0.5f, 1.3f);
     }
@@ -619,6 +740,12 @@ final class MenuTasador implements Listener {
             Marco.cerrado(p, accion.substring(7));
             return;
         }
+        if (accion.startsWith("ver:")) {
+            String vista = accion.substring(4);
+            Marco.sonidoPestana(p);
+            tarea(() -> abrirVista(p, vista));
+            return;
+        }
         if (accion.startsWith("c:")) {
             int hueco = Integer.parseInt(accion.substring(2));
             tarea(() -> abrirCambiar(p, hueco));
@@ -628,8 +755,12 @@ final class MenuTasador implements Listener {
             case "cerrar" -> tarea(() -> {
                 if (p.getOpenInventory().getTopInventory().getHolder() instanceof Vista) p.closeInventory();
             });
+            case "volver" -> {
+                Marco.sonar(p, "ui.button.click", 0.45f, 0.8f);
+                tarea(() -> abrirVista(p, PORTADA));
+            }
             case "depositar" -> {
-                // El boton Depositar del Altar vive ahora en el saldo: lo mismo, y solo fuera de Calamity.
+                // El boton Depositar del Altar vive en el saldo: lo mismo, y solo fuera de Calamity.
                 Altar altar = hc.altar();
                 if (altar == null) return;
                 if (hc.esHardcore(p)) {
@@ -657,11 +788,11 @@ final class MenuTasador implements Listener {
                 Contratos con = hc.contratos();
                 if (con != null && con.cambiar(p, v.hueco())) Marco.sonar(p, "item.book.page_turn", 0.8f, 1.2f);
                 else Marco.sonidoNo(p);
-                tarea(() -> abrir(p, false));
+                tarea(() -> abrirVista(p, V_CONTRATOS));
             }
             case "no" -> {
                 Marco.sonar(p, "ui.button.click", 0.45f, 0.8f);
-                tarea(() -> abrir(p, false));
+                tarea(() -> abrirVista(p, V_CONTRATOS));
             }
             default -> {
             }
@@ -697,22 +828,33 @@ final class MenuTasador implements Listener {
         h.igual("al 50 % quedan 500", 500L, t.get(1).quedan());
         h.igual("al 25 % quedan 1.000 enteros", 1000L, t.get(2).quedan());
         h.igual("la barra llega a 3.000", 3000L, escala(t));
-        h.cerca("a 2.500 se paga al 25 %", 0.25, factorEn(t, 2500), 1e-9);
         h.igual("sin tope: escala -1", -1L, escala(tramosHoy(0, List.of(new double[]{999999, 1.0}))));
 
-        // La fila de contratos: tres y el de la semana caen en 1, 3, 5 y 7, entre las bandas.
-        int[] c = Marco.columnas(4);
-        h.igual("contratos en 1, 3, 5 y 7", "1,3,5,7", c[0] + "," + c[1] + "," + c[2] + "," + c[3]);
-        h.ok("filas del Tasador: bandas en la columna 0 de las filas 1-4",
-                FILA_COBROS == 9 && FILA_ADUANA == 18 && FILA_CONTRATOS == 27 && FILA_RELIQUIAS == 36);
-        h.ok("barra de la Aduana: columnas 2-7", 2 + TROZOS - 1 == Marco.COLUMNAS);
+        // La portada: seis botones en una rejilla de 3 x 2, en las columnas 2, 4 y 6.
+        List<Integer> botones = List.of(DINERO, CONTRATOS, RELIQUIAS, ADUANA, CAMINO, AYUDA);
+        boolean rejilla = true;
+        for (int i = 0; i < botones.size(); i++) {
+            int b = botones.get(i);
+            rejilla &= b / 9 == 1 + i / 3 && b % 9 == 2 + 2 * (i % 3);
+        }
+        h.ok("filas del Tasador: portada en dos filas de tres (columnas 2, 4 y 6)", rejilla);
+        h.igual("tasador: columnas de tres cosas", "2,4,6", Marco.columnas(3)[0] + "," + Marco.columnas(3)[1] + "," + Marco.columnas(3)[2]);
 
-        // Lo fijo del Tasador: el saldo y Cerrar arriba, los cuatro enlaces abajo, sin pisarse.
-        List<Integer> fijas = List.of(Marco.SALDO, Marco.CERRAR, AYUDA, IR_ALTAR, IR_FORJA, IR_CAMINO);
-        boolean bien = new HashSet<>(fijas).size() == fijas.size();
-        for (int f : fijas) bien &= f < 9 || f >= 45;
-        h.ok("tasador: saldo, cerrar y enlaces en el marco, sin repetir", bien);
-        h.igual("tasador: enlaces de abajo centrados y con aire (1, 3, 5 y 7)", "46,48,50,52",
-                AYUDA + "," + IR_ALTAR + "," + IR_FORJA + "," + IR_CAMINO);
+        // Abajo: Altar y Forja a los lados, Cerrar/Volver en el centro, alineados con la rejilla.
+        h.igual("tasador: abajo Altar, Cerrar/Volver y Forja (38, 40, 42)", "38,40,42", IR_ALTAR + "," + SALIR + "," + IR_FORJA);
+        List<Integer> todas = new ArrayList<>(botones);
+        todas.addAll(List.of(IR_ALTAR, SALIR, IR_FORJA));
+        boolean bien = new HashSet<>(todas).size() == todas.size();
+        for (int c : todas) bien &= c >= 0 && c < TAMANO && c % 9 >= 1 && c % 9 <= 7;
+        h.ok("tasador: botones sin repetir, dentro de la ventana y lejos de los bordes", bien);
+        h.ok("tasador: Cerrar/Volver en la fila de abajo, en el centro", SALIR / 9 == TAMANO / 9 - 1 && SALIR % 9 == 4);
+
+        // Las subvistas: su fila de arriba y la de debajo no pisan el Volver.
+        h.ok("subvistas del Tasador: filas 1 y 2", FILA_A == 9 && FILA_B == 18 && FILA_B + 8 < SALIR);
+        h.igual("cuantas: singular", "1 Reliquia", cuantas(1, "Reliquia", "Reliquias"));
+        h.igual("cuantas: plural con miles", "1.250 Reliquias", cuantas(1250, "Reliquia", "Reliquias"));
+        for (String vista : List.of(PORTADA, V_DINERO, V_CONTRATOS, V_RELIQUIAS)) {
+            h.ok("titulo de la vista '" + vista + "' cabe", titulo(vista).ancho() <= Marco.ANCHO_TITULO);
+        }
     }
 }

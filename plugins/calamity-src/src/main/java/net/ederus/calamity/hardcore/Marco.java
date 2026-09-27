@@ -125,6 +125,9 @@ final class Marco {
     static final Titulo T_COMPRAR = new Titulo("¿Comprarlo?", null);
     static final Titulo T_FORJAR = new Titulo("¿Forjarlo?", null);
     static final Titulo T_TASADOR = new Titulo("El Tasador", null);
+    static final Titulo T_TASADOR_DINERO = new Titulo("Tasador", "Tu dinero");
+    static final Titulo T_TASADOR_CONTRATOS = new Titulo("Tasador", "Contratos");
+    static final Titulo T_TASADOR_RELIQUIAS = new Titulo("Tasador", "Tus reliquias");
     static final Titulo T_CAMBIAR = new Titulo("¿Cambiar contrato?", null);
     static final Titulo T_RANKINGS = new Titulo("Rankings", "Semana");
     static final Titulo T_TABLERO = new Titulo("Tablero", null);
@@ -144,7 +147,8 @@ final class Marco {
 
     /** Todos los titulos de ventana de Calamity, para que el autotest mida que caben. */
     static List<Titulo> titulos() {
-        List<Titulo> out = new ArrayList<>(List.of(T_ALTAR, T_FORJA, T_COMPRAR, T_FORJAR, T_TASADOR, T_CAMBIAR, T_RANKINGS,
+        List<Titulo> out = new ArrayList<>(List.of(T_ALTAR, T_FORJA, T_COMPRAR, T_FORJAR, T_TASADOR, T_TASADOR_DINERO,
+                T_TASADOR_CONTRATOS, T_TASADOR_RELIQUIAS, T_CAMBIAR, T_RANKINGS,
                 T_TABLERO, T_CAMINO, T_GRABAR, T_DESEOS, T_VOTO, T_PREGUNTA, T_DIFICULTAD, T_SALVOCONDUCTO, T_ENGARZADOR));
         for (MenuAltar.Categoria c : MenuAltar.CATEGORIAS) {
             Titulo t = MenuAltar.titulo(c.id());
@@ -205,6 +209,16 @@ final class Marco {
         for (int i = 0; i < n; i++) {
             if (inv.getItem(i) == null) inv.setItem(i, esBorde(i, n) ? rojo : negro);
         }
+    }
+
+    /**
+     * Rellena lo vacio con un solo cristal gris sin nombre, igual en toda la ventana. Lo usa el
+     * Tasador (1.5.0): con el anillo rojo y las bandas, Dosa no distinguia el marco de los
+     * botones ("Esto no se entiende en absoluto"). Un relleno neutro no parece significar nada.
+     */
+    static void rellenarNeutro(Inventory inv) {
+        ItemStack gris = cristal(Material.GRAY_STAINED_GLASS_PANE);
+        for (int i = 0; i < inv.getSize(); i++) if (inv.getItem(i) == null) inv.setItem(i, gris);
     }
 
     // ------------------------------------------------------------------ reparto
