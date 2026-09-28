@@ -1,7 +1,6 @@
 package net.ederus.calamity.hardcore;
 
 import net.kyori.adventure.text.Component;
-import net.kyori.adventure.text.format.NamedTextColor;
 import net.kyori.adventure.text.format.TextDecoration;
 import org.bukkit.Material;
 import org.bukkit.World;
@@ -57,7 +56,7 @@ import java.util.UUID;
  */
 final class Kit implements Listener {
 
-    private static final String LINEA = "Prestado. Se deshace al salir de Calamity.";
+    private static final String LINEA = "Objeto prestado: se deshace al salir de Calamity.";
 
     private final Hardcore hc;
 
@@ -67,7 +66,7 @@ final class Kit implements Listener {
         Subcomandos.calamity().registrar("kit", "Kit de Expedición: fuera de Calamity, sin armadura, cada 20 h",
                 "lethalworld.calamity", (quien, args) -> {
                     if (quien instanceof Player p) pedir(p);
-                    else quien.sendMessage(ComandoCalamity.mensaje("Solo para jugadores."));
+                    else quien.sendMessage(ComandoCalamity.mensaje("Solo se puede usar dentro del juego."));
                 }, null);
         Autotest.registrar("kit", this::autotest);
     }
@@ -106,7 +105,7 @@ final class Kit implements Listener {
         if (meta == null) return it;
         meta.getPersistentDataContainer().set(Marcas.PRESTADO, PersistentDataType.BYTE, (byte) 1);
         List<Component> lore = meta.lore() == null ? new ArrayList<>() : new ArrayList<>(meta.lore());
-        lore.add(Component.text(LINEA, NamedTextColor.DARK_GRAY).decoration(TextDecoration.ITALIC, false));
+        lore.add(Component.text(LINEA, Paleta.TENUE).decoration(TextDecoration.ITALIC, false));
         meta.lore(lore);
         it.setItemMeta(meta);
         return it;
@@ -150,11 +149,11 @@ final class Kit implements Listener {
 
     void pedir(Player p) {
         if (!activo()) {
-            p.sendMessage(ComandoCalamity.mensaje("El Kit de Expedición no se presta ahora mismo."));
+            p.sendMessage(ComandoCalamity.mensaje("El Kit de Expedición no está disponible ahora mismo."));
             return;
         }
         if (hc.esHardcore(p)) {
-            p.sendMessage(ComandoCalamity.mensaje("El kit se pide fuera, antes de entrar."));
+            p.sendMessage(ComandoCalamity.mensaje("El kit se pide fuera de Calamity, antes de entrar."));
             return;
         }
         UUID u = p.getUniqueId();
@@ -163,7 +162,7 @@ final class Kit implements Listener {
         String no = motivo(conArmadura(p.getInventory()), hc.cfg().getBoolean("kit.solo-sin-armadura", true),
                 ultimo, ahora, cadaHoras());
         if ("armadura".equals(no)) {
-            p.sendMessage(ComandoCalamity.mensaje("El kit es para quien vuelve con las manos vacías."));
+            p.sendMessage(ComandoCalamity.mensaje("El kit solo se da si no llevas ninguna armadura puesta."));
             return;
         }
         if ("espera".equals(no)) {
@@ -194,8 +193,8 @@ final class Kit implements Listener {
             else suelo |= Suelo.dar(hc.plugin(), p, it);
         }
         hc.plugin().bitacora().anotar("kit", "presta", p.getName(), piezas.size() + " piezas");
-        p.sendMessage(ComandoCalamity.mensaje("Te prestan lo justo para volver. Se deshace al salir."));
-        if (suelo) p.sendMessage(ComandoCalamity.mensaje("No te cabía: lo tienes a tus pies."));
+        p.sendMessage(ComandoCalamity.mensaje("Te prestan un kit para volver a entrar. Se deshace al salir de Calamity."));
+        if (suelo) p.sendMessage(ComandoCalamity.mensaje("No te cabía en el inventario: lo tienes a tus pies."));
     }
 
     // ------------------------------------------------------------------ deshacer
@@ -318,7 +317,7 @@ final class Kit implements Listener {
 
     private void bloquear(InventoryClickEvent e, HumanEntity p) {
         e.setCancelled(true);
-        p.sendMessage(ComandoCalamity.mensaje("Lo prestado no se guarda ni se funde."));
+        p.sendMessage(ComandoCalamity.mensaje("Los objetos prestados no se pueden guardar ni fundir."));
     }
 
     /** Fuera no se tira: lo cogeria otro. Dentro si (se deshace al salir con quien lo lleve). */

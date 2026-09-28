@@ -206,7 +206,7 @@ final class Ligado implements Listener {
         String raiz = Sellos.raiz(e.getMessage());
         if (!mercado().contains(raiz)) return;
         e.setCancelled(true);
-        avisar(p, Component.text("Esto es tuyo. Nadie más puede llevarlo.", Paleta.AVISO));
+        avisar(p, Component.text("Este objeto está ligado a ti: no se puede vender ni cambiar.", Paleta.AVISO));
         bloqueado(p, cual, "comando:" + raiz);
     }
 
@@ -220,7 +220,7 @@ final class Ligado implements Listener {
         // Un ligado no entra en una bolsa: la bolsa no esta ligada y se venderia con el dentro.
         if ((Sellos.esBolsa(cursor) && duenoDe(actual) != null) || (Sellos.esBolsa(actual) && duenoDe(cursor) != null)) {
             e.setCancelled(true);
-            avisar(p, Component.text("Esto es tuyo. Nadie más puede llevarlo.", Paleta.AVISO));
+            avisar(p, Component.text("Este objeto está ligado a ti: no se puede vender ni cambiar.", Paleta.AVISO));
             bloqueado(p, duenoDe(cursor) != null ? cursor : actual, "gui:bolsa");
             return;
         }
@@ -230,7 +230,7 @@ final class Ligado implements Listener {
         InventoryHolder holder = arriba.getHolder(false);
         if (permitido(arriba.getType(), holder, p, hc.esHardcore(p))) return;
         e.setCancelled(true);
-        avisar(p, Component.text("Esto es tuyo. Nadie más puede llevarlo.", Paleta.AVISO));
+        avisar(p, Component.text("Este objeto está ligado a ti: no se puede vender ni cambiar.", Paleta.AVISO));
         bloqueado(p, entra, "gui:" + nombreHolder(arriba.getType(), holder));
     }
 
@@ -242,7 +242,7 @@ final class Ligado implements Listener {
         InventoryHolder holder = arriba.getHolder(false);
         if (permitido(arriba.getType(), holder, p, hc.esHardcore(p))) return;
         e.setCancelled(true);
-        avisar(p, Component.text("Esto es tuyo. Nadie más puede llevarlo.", Paleta.AVISO));
+        avisar(p, Component.text("Este objeto está ligado a ti: no se puede vender ni cambiar.", Paleta.AVISO));
         bloqueado(p, e.getOldCursor(), "gui:" + nombreHolder(arriba.getType(), holder));
     }
 
@@ -439,9 +439,9 @@ final class Ligado implements Listener {
     /** P-B02 por chat, como mucho una vez cada 10 s (recoger se intenta cada tick). */
     private void avisarDueno(Player p, UUID dueno) {
         if (!nota(p.getUniqueId() + "|p-b02", 10_000L)) return;
-        p.sendMessage(ComandoCalamity.mensaje(Component.text("Eso lleva el nombre de ")
+        p.sendMessage(ComandoCalamity.mensaje(Component.text("Ese objeto está ligado a ")
                 .append(Component.text(nombre(dueno), Paleta.DETALLE))
-                .append(Component.text(". No te sirve."))));
+                .append(Component.text(": a ti no te sirve."))));
     }
 
     private String nombre(UUID u) {
@@ -463,7 +463,7 @@ final class Ligado implements Listener {
      */
     private void comando(CommandSender quien, String[] args) {
         if (!(quien instanceof Player p)) {
-            quien.sendMessage(ComandoCalamity.mensaje("Solo desde el juego: mira el objeto de tu mano."));
+            quien.sendMessage(ComandoCalamity.mensaje("Solo se puede usar dentro del juego: mira el objeto de tu mano."));
             return;
         }
         ItemStack mano = p.getInventory().getItemInMainHand();

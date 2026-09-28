@@ -1,7 +1,6 @@
 package net.ederus.calamity.hardcore;
 
 import net.kyori.adventure.text.Component;
-import net.kyori.adventure.text.format.NamedTextColor;
 import net.kyori.adventure.text.format.TextColor;
 import net.kyori.adventure.text.format.TextDecoration;
 import org.bukkit.Bukkit;
@@ -147,13 +146,22 @@ final class Reliquias implements Listener {
         meta.displayName(texto(nombre(c, g, esp, minijefe), COLOR_GRADO[g]));
 
         List<Component> lore = new ArrayList<>();
-        lore.add(texto("Reliquia de grado " + ROMANO[g], NamedTextColor.GRAY));
-        if (CAMPANA.equals(esp) && nivel > 0) lore.add(texto("De una Parca de nivel " + nivel + ".", NamedTextColor.GRAY));
-        if (LAGRIMA.equals(esp) && nivel > 0) lore.add(texto("De un Eco de nivel " + nivel + ".", NamedTextColor.GRAY));
-        if (LAGRIMA.equals(esp) && valida) lore.add(texto("Caza válida: da una Marca de Eco.", NamedTextColor.GRAY));
+        lore.add(texto("Reliquia de grado " + ROMANO[g], Paleta.TENUE));
+        if (CAMPANA.equals(esp) && nivel > 0) lore.add(texto("Viene de una Parca de nivel " + nivel + ".", Paleta.TENUE));
+        if (LAGRIMA.equals(esp) && nivel > 0) lore.add(texto("Viene de un Eco de nivel " + nivel + ".", Paleta.TENUE));
+        // Lo que da al venderla (Tasacion.extras): la Campana de una Parca de N alto, un Fragmento;
+        // la Lagrima de una caza valida o de grado IV, una Marca; el Sello, su credito para la Forja.
+        if (CAMPANA.equals(esp) && nivel >= c.getInt("reliquias.especiales.campana-parca.fragmento-nivel-minimo", 40)) {
+            lore.add(texto("Al venderla te da un Fragmento de Guadaña.", Paleta.TENUE));
+        }
+        if (LAGRIMA.equals(esp) && (valida || g == 4)) {
+            lore.add(texto("Al venderla te da una Marca de Eco", Paleta.TENUE));
+            lore.add(texto("(como mucho " + c.getInt("eco.marcas.dia", 2) + " al día).", Paleta.TENUE));
+        }
+        if (SELLO.equals(esp)) lore.add(texto("Al venderlo, podrás usarlo en la Forja.", Paleta.TENUE));
         lore.add(Component.empty());
-        lore.add(texto("Solo vale si sales vivo.", AMBAR));
-        lore.add(texto("Se vende sola al cruzar la puerta o con un Cristal.", AMBAR));
+        lore.add(texto("Solo vale si sales vivo: se vende sola", AMBAR));
+        lore.add(texto("al cruzar la puerta o con un Cristal.", AMBAR));
         lore.add(texto("Si mueres, se la queda tu Eco.", AMBAR));
 
         PersistentDataContainer pdc = meta.getPersistentDataContainer();
@@ -172,7 +180,7 @@ final class Reliquias implements Listener {
                 pdc.set(Marcas.RELIQUIA_MINIJEFE, PersistentDataType.STRING, minijefe.trim().toLowerCase(Locale.ROOT));
             }
             if (valida) pdc.set(Marcas.RELIQUIA_VALIDA, PersistentDataType.BYTE, (byte) 1);
-            lore.add(texto("Se deshace el " + fechaCorta(ahora + caducaMillis()) + ".", AMBAR));
+            lore.add(texto("Caduca el " + fechaCorta(ahora + caducaMillis()) + ".", AMBAR));
         }
         meta.lore(lore);
         meta.setEnchantmentGlintOverride(true);
@@ -243,7 +251,8 @@ final class Reliquias implements Listener {
             default -> "Reliquia Eclipsada";
         };
         String n = conTildes(c.getString("reliquias.especiales." + esp + ".nombre", def), def);
-        return n.replace("%minijefe%", Minijefes.nombre(minijefe));
+        // "Sello de %minijefe%" se lee "Sello del Heraldo Carmesí" (o "de la Matriarca Tejedora").
+        return n.replace("de %minijefe%", Forja.delMinijefe(minijefe)).replace("%minijefe%", Minijefes.nombre(minijefe));
     }
 
     /**
@@ -442,7 +451,7 @@ final class Reliquias implements Listener {
         e.setCancelled(true);
         e.setCurrentItem(null);
         HumanEntity quien = e.getWhoClicked();
-        quien.sendMessage(ComandoCalamity.mensaje("Esa reliquia llevaba demasiado aquí: se deshace."));
+        quien.sendMessage(ComandoCalamity.mensaje("Esa Reliquia había caducado y se ha deshecho."));
         hc.plugin().bitacora().anotar("reliquia", "caducada", quien.getName(), String.valueOf(id));
     }
 
@@ -489,7 +498,7 @@ final class Reliquias implements Listener {
         }
         if (abierto != null && abierto != p.getInventory()) n += quitarTodas(abierto);
         if (n <= 0) return;
-        p.sendMessage(ComandoCalamity.mensaje("Tus reliquias se deshacen lejos de Calamity."));
+        p.sendMessage(ComandoCalamity.mensaje("Las Reliquias no existen fuera de Calamity: las que llevabas se han deshecho."));
         hc.plugin().bitacora().anotar("reliquia", "perdida", p.getName(), String.valueOf(n),
                 p.getWorld().getKey().getKey());
     }
@@ -510,7 +519,7 @@ final class Reliquias implements Listener {
     /** /lw hardcore reliquia <1-4> [jugador] [especial]: la emite (origen admin) y la entrega la Aduana. */
     private void comando(CommandSender quien, String[] args) {
         if (args.length < 2) {
-            quien.sendMessage(ComandoCalamity.mensaje("Uso: /lw hardcore reliquia <1-4> [jugador] [especial]"));
+            quien.sendMessage(ComandoCalamity.mensaje("Uso: /calamidad reliquia <1-4> [jugador] [especial]"));
             return;
         }
         int grado;
@@ -533,7 +542,7 @@ final class Reliquias implements Listener {
             esp = espec(args[3], false, grado);
             if (esp == null) {
                 quien.sendMessage(ComandoCalamity.mensaje(
-                        "Especial desconocido: campana[:N], lagrima[:N][:valida], sello:<minijefe>, eclipsada o mayor."));
+                        "No conozco ese especial. Valen: campana[:N], lagrima[:N][:valida], sello:<minijefe>, eclipsada o mayor."));
                 return;
             }
         }
@@ -702,7 +711,8 @@ final class Reliquias implements Listener {
         h.igual("material de la Campana", Material.BELL, material(vacia, 4, CAMPANA));
         h.igual("material de la Lagrima", Material.ECHO_SHARD, material(vacia, 4, LAGRIMA));
         h.igual("material del Sello", Material.FIRE_CHARGE, material(vacia, 4, SELLO));
-        h.igual("nombre del Sello", "Sello de Heraldo Carmesí", nombre(vacia, 4, SELLO, "heraldo-carmes"));
+        h.igual("nombre del Sello", "Sello del Heraldo Carmesí", nombre(vacia, 4, SELLO, "heraldo-carmes"));
+        h.igual("nombre del Sello de la Matriarca", "Sello de la Matriarca Tejedora", nombre(vacia, 4, SELLO, "matriarca-tejedora"));
         h.igual("nombre del IV sin especial", "Ámbar Mayor", nombre(vacia, 4, null, null));
         h.igual("nombre de la config sin tildes", "Ámbar Coagulado", conTildes("Ambar Coagulado", "Ámbar Coagulado"));
         h.igual("nombre cambiado en la config manda", "Ambar Raro", conTildes("Ambar Raro", "Ámbar Coagulado"));

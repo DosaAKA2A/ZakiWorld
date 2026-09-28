@@ -2,7 +2,6 @@ package net.ederus.calamity.hardcore;
 
 import net.ederus.edm.comun.MobCoins;
 import net.kyori.adventure.text.Component;
-import net.kyori.adventure.text.format.NamedTextColor;
 import net.kyori.adventure.text.format.TextColor;
 import net.kyori.adventure.text.format.TextDecoration;
 import org.bukkit.Bukkit;
@@ -69,18 +68,18 @@ final class Entregas implements Listener {
     Entregas(Hardcore hc) {
         this.hc = hc;
         hc.plugin().getServer().getPluginManager().registerEvents(this, hc.plugin());
-        Subcomandos.lw().registrar("dar", "dar <objeto> <jugador> [n] [origen]: entrega un premio ligado (M31)",
+        Subcomandos.lw().registrar("dar", "dar <objeto> <jugador> [n] [origen]: entrega un premio ligado a su dueño",
                 "ederus.mundos", this::comandoDar, this::tabDar);
         Subcomandos.lw().registrar("saldo", "saldo <jugador> [+n|-n]: ver o ajustar el saldo de Esencias",
                 "ederus.mundos", this::comandoSaldo, args -> args.length == 2 ? nombresConectados() : List.of());
-        Subcomandos.lw().registrar("creditos", "creditos <jugador> [tipo +n|-n]: ver o ajustar creditos",
+        Subcomandos.lw().registrar("creditos", "creditos <jugador> [tipo +n|-n]: ver o ajustar sus créditos (Sellos, Marcas, Fragmentos)",
                 "ederus.mundos", this::comandoCreditos, args -> switch (args.length) {
                     case 2 -> nombresConectados();
                     case 3 -> List.of("sello:", Creditos.ERRANTE, "fragmento", "marca");
                     case 4 -> List.of("+1", "-1");
                     default -> List.of();
                 });
-        Subcomandos.lw().registrar("mc", "mc <jugador> <n>: saldo de MobCoins de prueba (monedero.modo: prueba)",
+        Subcomandos.lw().registrar("mc", "mc <jugador> <n>: MobCoins de prueba (solo con monedero.modo: prueba)",
                 "ederus.mundos", this::comandoMc, args -> args.length == 2 ? nombresConectados() : List.of());
         Subcomandos.calamity().registrar("saldo", "tu saldo de Esencias y tus créditos", "lethalworld.calamity",
                 this::comandoMiSaldo, null);
@@ -257,16 +256,30 @@ final class Entregas implements Listener {
             for (ItemStack it : items) guardarPendiente(a.getUniqueId(), "item", aTexto(it), objeto, origen);
             hc.guardarYa();
             if (p != null && p.isOnline()) {
-                p.sendMessage(ComandoCalamity.mensaje(Component.text("Te espera fuera: ")
-                        .append(Component.text(objeto + (items.size() > 1 ? " x" + items.size() : ""), Paleta.DETALLE))
-                        .append(Component.text("."))));
+                String que = items.isEmpty() ? objeto : nombreVisible(items.get(0), objeto);
+                p.sendMessage(ComandoCalamity.mensaje(Component.text("Recibirás ")
+                        .append(Component.text(que + (items.size() > 1 ? " ×" + items.size() : ""), Paleta.DETALLE))
+                        .append(Component.text(" cuando salgas de Calamity."))));
             }
             return "pendiente";
         }
         boolean suelo = false;
         for (ItemStack it : items) suelo |= Suelo.dar(hc.plugin(), p, it);
-        if (suelo) p.sendMessage(ComandoCalamity.mensaje("No te cabía: lo tienes a tus pies."));
+        if (suelo) p.sendMessage(ComandoCalamity.mensaje("No te cabía en el inventario: lo tienes a tus pies."));
         return suelo ? "suelo" : "inventario";
+    }
+
+    /**
+     * El nombre de un objeto tal cual lo ve el jugador ("Talismán de Vigilia", "Yelmo de Calamidad"),
+     * y la cantidad si es un monton. Si no trae nombre, el id de la entrega (no deberia pasar: todo
+     * lo que entrega Calamity lleva nombre).
+     */
+    static String nombreVisible(ItemStack it, String siNo) {
+        if (it == null) return siNo;
+        ItemMeta meta = it.getItemMeta();
+        String nombre = meta != null && meta.hasDisplayName() && meta.displayName() != null
+                ? Hardcore.plano(meta.displayName()) : siNo;
+        return it.getAmount() > 1 ? nombre + " ×" + it.getAmount() : nombre;
     }
 
     private void fallo(CommandSender quien, String objeto, OfflinePlayer a, String motivo, String origen) {
@@ -422,7 +435,7 @@ final class Entregas implements Listener {
         if (!ya) {
             ItemMeta meta = item.getItemMeta();
             List<Component> lore = meta.lore() == null ? new ArrayList<>() : new ArrayList<>(meta.lore());
-            lore.add(Component.text("Ligado a " + nombreDe(dueno) + ".", NamedTextColor.DARK_GRAY)
+            lore.add(Component.text("Ligado a " + nombreDe(dueno) + ": no se vende ni se cambia.", Paleta.TENUE)
                     .decoration(TextDecoration.ITALIC, false));
             meta.lore(lore);
             item.setItemMeta(meta);
@@ -435,33 +448,75 @@ final class Entregas implements Listener {
     /**
      * Talisman de Vigilia (PLAN sec. 5.3): CLOCK con brillo y lethal_world:talisman. Lo que hace
      * (+3 de vida y -20 % de drenaje) lo aplica ObjetosCalamity (WP3), que lo reconoce por la marca.
+     * El +3 de vida vale en cualquier mundo mientras lo lleve encima; el drenaje, donde hay
+     * cordura (Calamity). Las cifras del lore salen de talisman.vida y talisman.drenaje.
      */
     ItemStack talisman() {
         return objeto(Material.CLOCK, "Talismán de Vigilia", VERDE_PALIDO,
-                List.of("Mantiene la mente despierta en la oscuridad.", "Allí dentro, el que cierra los ojos no los vuelve a abrir."),
-                List.of("+" + hc.cfg().getInt("talisman.vida", 3) + " de vida máxima.",
+                List.of("Mantiene la mente despierta", "en la oscuridad."),
+                List.of("+" + hc.cfg().getInt("talisman.vida", 3) + " de vida máxima mientras lo lleves.",
                         "La cordura baja un " + Math.round((1 - hc.cfg().getDouble("talisman.drenaje", 0.80)) * 100)
-                                + " % más despacio dentro.",
-                        "Cuenta uno aunque lleves varios."),
+                                + " % más despacio.",
+                        "Llevar varios no suma: cuenta uno."),
                 Marcas.TALISMAN, null);
     }
 
     /**
      * Grabado de Calamidad: FLINT con brillo y lethal_world:grabado = uuid propio (el objeto
      * grabado recibira el mismo uuid, DIS sec. 8.5). Se aplica en la Forja (WP3).
+     *
+     * El lore dice lo que hace de verdad ObjetosCalamity.grabar: +1 nivel a un encantamiento de
+     * grabado.encantamientos que ya este en su maximo vanilla, uno por objeto y grabado.por-semana
+     * por jugador, nada de MMOItems, y el objeto grabado queda ligado.
      */
     ItemStack grabado() {
+        int porSemana = Math.max(1, hc.cfg().getInt("grabado.por-semana", 1));
+        List<String> reglas = new ArrayList<>(partir("Vale para " + encantamientosGrabado() + ".", 36));
+        reglas.add("Solo en equipo sin MMOItems.");
+        reglas.add("Uno por objeto y " + (porSemana == 1 ? "uno" : String.valueOf(porSemana)) + " por semana.");
+        reglas.add("Se usa en la Forja: botón Grabar.");
+        reglas.add("El objeto grabado queda ligado a ti.");
         return objeto(Material.FLINT, "Grabado de Calamidad", AMBAR,
-                List.of("Grabado con la uña de algo que no quería morir.", "El acero recuerda. Y aprieta un poco más."),
-                List.of("+1 nivel sobre el tope vanilla a un encantamiento.", "Solo equipo sin MMOItems. Se aplica en la Forja."),
-                Marcas.GRABADO, UUID.randomUUID().toString());
+                List.of("Sube de nivel un encantamiento", "que ya esté al máximo."),
+                reglas, Marcas.GRABADO, UUID.randomUUID().toString());
+    }
+
+    /** Los encantamientos que sube un Grabado, dichos para el jugador: "Filo, Protección ... o Fortuna". */
+    private String encantamientosGrabado() {
+        List<String> claves = hc.cfg().getStringList("grabado.encantamientos");
+        if (claves.isEmpty()) claves = ObjetosCalamity.GRABABLES_DE_SERIE;
+        List<String> nombres = new ArrayList<>();
+        for (String c : claves) {
+            org.bukkit.enchantments.Enchantment e = ObjetosCalamity.encantamiento(c);
+            if (e != null) nombres.add(ObjetosCalamity.nombreEncantamiento(e));
+        }
+        if (nombres.isEmpty()) return "los encantamientos de siempre";
+        if (nombres.size() == 1) return nombres.get(0);
+        return String.join(", ", nombres.subList(0, nombres.size() - 1)) + " o " + nombres.get(nombres.size() - 1);
+    }
+
+    /** Corta un texto en lineas de lore de como mucho "ancho" letras, sin partir palabras. */
+    static List<String> partir(String texto, int ancho) {
+        List<String> out = new ArrayList<>();
+        StringBuilder linea = new StringBuilder();
+        for (String palabra : texto.split(" ")) {
+            if (linea.length() > 0 && linea.length() + 1 + palabra.length() > ancho) {
+                out.add(linea.toString());
+                linea.setLength(0);
+            }
+            if (linea.length() > 0) linea.append(' ');
+            linea.append(palabra);
+        }
+        if (linea.length() > 0) out.add(linea.toString());
+        return out;
     }
 
     /** Salvoconducto del Insomne: PAPER con brillo y lethal_world:salvoconducto (M34, apagado de serie). */
     ItemStack salvoconducto() {
         return objeto(Material.PAPER, "Salvoconducto del Insomne", PAPEL,
-                List.of("Firmado por alguien que tampoco dormía.", "Te devuelve una cosa. Elige bien lo que llevas."),
-                List.of("Al morir dentro, conservas una pieza.", "Clic derecho con él en la mano para elegirla."),
+                List.of("Si mueres en Calamity, te devuelve", "una de las piezas que llevabas."),
+                List.of("Clic derecho con él en la mano", "para elegir cuál.",
+                        "Si no eliges, salva la mejor.", "Se gasta al morir."),
                 Marcas.SALVOCONDUCTO, null);
     }
 
@@ -472,11 +527,11 @@ final class Entregas implements Listener {
         if (meta == null) return item;
         meta.displayName(Component.text(nombre, color).decoration(TextDecoration.ITALIC, false));
         List<Component> lore = new ArrayList<>();
-        for (String l : historia) lore.add(Component.text(l, NamedTextColor.WHITE).decoration(TextDecoration.ITALIC, false));
+        for (String l : historia) lore.add(Component.text(l, Paleta.TEXTO).decoration(TextDecoration.ITALIC, false));
         lore.add(Component.empty());
-        for (String l : efecto) lore.add(Component.text(l, NamedTextColor.GRAY).decoration(TextDecoration.ITALIC, false));
+        for (String l : efecto) lore.add(Component.text(l, Paleta.TENUE).decoration(TextDecoration.ITALIC, false));
         lore.add(Component.empty());
-        lore.add(Component.text("Botín de Calamity", NamedTextColor.DARK_GRAY).decoration(TextDecoration.ITALIC, false));
+        lore.add(Component.text("Botín de Calamity", Paleta.TENUE).decoration(TextDecoration.ITALIC, false));
         meta.lore(lore);
         meta.setEnchantmentGlintOverride(true);
         if (valor == null) meta.getPersistentDataContainer().set(marca, PersistentDataType.BYTE, (byte) 1);
@@ -531,12 +586,13 @@ final class Entregas implements Listener {
                 if (tipo.equals("mc")) {
                     long mc = Long.parseLong(dato);
                     MobCoins.pagar(hc.plugin(), p, mc);
-                    dados.add(mc + " MobCoins");
+                    dados.add(Altar.miles(mc) + " MobCoins");
                 } else {
                     ItemStack it = deTexto(dato);
                     if (it == null) throw new IllegalStateException("objeto ilegible");
+                    String nombre = nombreVisible(it, objeto);
                     suelo |= Suelo.dar(hc.plugin(), p, it);
-                    dados.add(objeto);
+                    dados.add(nombre);
                 }
                 hc.plugin().bitacora().anotar("entrega", "pendiente-entregado", objeto, p.getName(), dato.length() > 40 ? "item" : dato, origen);
             } catch (Throwable t) {
@@ -545,11 +601,11 @@ final class Entregas implements Listener {
             }
         }
         if (!dados.isEmpty()) {
-            p.sendMessage(ComandoCalamity.mensaje(Component.text("Te esperaban premios: ")
+            p.sendMessage(ComandoCalamity.mensaje(Component.text(dados.size() == 1 ? "Te esperaba un premio: " : "Te esperaban premios: ")
                     .append(Component.text(String.join(", ", dados), Paleta.DETALLE))
                     .append(Component.text("."))));
         }
-        if (suelo) p.sendMessage(ComandoCalamity.mensaje("No te cabía: lo tienes a tus pies."));
+        if (suelo) p.sendMessage(ComandoCalamity.mensaje("No te cabía en el inventario: lo tienes a tus pies."));
     }
 
     int cuantosPendientes(UUID u) {
@@ -628,7 +684,7 @@ final class Entregas implements Listener {
 
     private void comandoDar(CommandSender quien, String[] args) {
         if (args.length < 3) {
-            quien.sendMessage(Component.text("Uso: /lw hardcore dar <objeto> <jugador> [n] [origen]", Paleta.AVISO));
+            quien.sendMessage(Component.text("Uso: /calamidad dar <objeto> <jugador> [n] [origen]", Paleta.AVISO));
             quien.sendMessage(Component.text("Objetos: " + String.join(", ", OBJETOS)
                     + ", credito:<tipo>, credito-caja:<tipo>, forja:<pieza>", Paleta.TENUE));
             return;
@@ -677,7 +733,7 @@ final class Entregas implements Listener {
 
     private void comandoSaldo(CommandSender quien, String[] args) {
         if (args.length < 2) {
-            quien.sendMessage(Component.text("Uso: /lw hardcore saldo <jugador> [+n|-n]", Paleta.AVISO));
+            quien.sendMessage(Component.text("Uso: /calamidad saldo <jugador> [+n|-n]", Paleta.AVISO));
             return;
         }
         OfflinePlayer a = buscar(args[1]);
@@ -698,7 +754,7 @@ final class Entregas implements Listener {
             String motivo = "admin:" + (quien instanceof Player p ? p.getName() : "consola");
             if (n > 0) s.sumar(u, n, motivo);
             else if (n < 0 && !s.restar(u, -n, motivo)) {
-                quien.sendMessage(Component.text("No le llega: tiene " + s.de(u) + ".", Paleta.AVISO));
+                quien.sendMessage(Component.text("No tiene tantas Esencias: su saldo es de " + s.de(u) + ".", Paleta.AVISO));
                 return;
             }
         }
@@ -709,7 +765,7 @@ final class Entregas implements Listener {
 
     private void comandoCreditos(CommandSender quien, String[] args) {
         if (args.length < 2) {
-            quien.sendMessage(Component.text("Uso: /lw hardcore creditos <jugador> [tipo +n|-n]", Paleta.AVISO));
+            quien.sendMessage(Component.text("Uso: /calamidad creditos <jugador> [tipo +n|-n]", Paleta.AVISO));
             return;
         }
         OfflinePlayer a = buscar(args[1]);
@@ -729,7 +785,7 @@ final class Entregas implements Listener {
             }
             c.sumar(u, args[2], n, "admin:" + (quien instanceof Player p ? p.getName() : "consola"), false);
         } else if (args.length == 3) {
-            quien.sendMessage(Component.text("Falta la cantidad: creditos <jugador> <tipo> +n|-n", Paleta.AVISO));
+            quien.sendMessage(Component.text("Falta la cantidad. Uso: /calamidad creditos <jugador> <tipo> +n|-n", Paleta.AVISO));
             return;
         }
         Map<String, Integer> todos = c.todos(u);
@@ -749,7 +805,7 @@ final class Entregas implements Listener {
 
     private void comandoMc(CommandSender quien, String[] args) {
         if (args.length < 3) {
-            quien.sendMessage(Component.text("Uso: /lw hardcore mc <jugador> <n>", Paleta.AVISO));
+            quien.sendMessage(Component.text("Uso: /calamidad mc <jugador> <n>", Paleta.AVISO));
             return;
         }
         OfflinePlayer a = buscar(args[1]);
@@ -769,13 +825,14 @@ final class Entregas implements Listener {
         hc.plugin().bitacora().anotar("monedero", "prueba", nombre(a), String.valueOf(Math.max(0, n)));
         boolean prueba = "prueba".equalsIgnoreCase(hc.cfg().getString("monedero.modo", "real"));
         quien.sendMessage(Component.text("MobCoins de prueba de " + nombre(a) + ": " + Math.max(0, n)
-                + (prueba ? "." : "  (ojo: monedero.modo no es prueba, no se usan)"), prueba ? Paleta.BIEN : Paleta.CIFRA));
+                + (prueba ? "." : "  (ojo: monedero.modo no es «prueba», así que no se usan)"), prueba ? Paleta.BIEN : Paleta.CIFRA));
     }
 
     /** /calamity saldo: P-M08 y los creditos, con lo que aun no se puede canjear. */
     private void comandoMiSaldo(CommandSender quien, String[] args) {
         if (!(quien instanceof Player p)) {
-            quien.sendMessage(Component.text("Solo para jugadores: /lw hardcore saldo <jugador>.", Paleta.AVISO));
+            quien.sendMessage(Component.text("Solo se puede usar dentro del juego. Para consultar a un jugador: /calamidad saldo <jugador>.",
+                    Paleta.AVISO));
             return;
         }
         UUID u = p.getUniqueId();
@@ -787,18 +844,20 @@ final class Entregas implements Listener {
                 p.sendMessage(Component.text("  " + nombreCredito(e.getKey()) + ": ", Paleta.TEXTO)
                         .append(Component.text(String.valueOf(e.getValue()), Paleta.CIFRA))
                         .append(Component.text(c.canjeable(u, e.getKey()) ? ""
-                                : "  · se canjea con " + Math.round(c.horasPedidas()) + " h activas", Paleta.TENUE)));
+                                : "  (pide " + Math.round(c.horasPedidas()) + " h activas)", Paleta.TENUE)));
             }
         }
         int pend = cuantosPendientes(u);
         if (pend > 0) {
-            p.sendMessage(Component.text("  Te esperan ", Paleta.TEXTO).append(Paleta.cifra(pend))
-                    .append(Component.text(" premios fuera de Calamity.", Paleta.TEXTO)));
+            p.sendMessage(Component.text(pend == 1 ? "  Te espera " : "  Te esperan ", Paleta.TEXTO).append(Paleta.cifra(pend))
+                    .append(Component.text(pend == 1 ? " premio: lo recibirás cuando salgas de Calamity."
+                            : " premios: los recibirás cuando salgas de Calamity.", Paleta.TEXTO)));
         }
     }
 
+    /** "Sello del Custodio de las Ruinas", "Marcas de Eco": el credito como lo lee el jugador. */
     private static String nombreCredito(String tipo) {
-        if (tipo.startsWith("sello:")) return "Sello de " + tipo.substring(6);
+        if (tipo.startsWith("sello:")) return "Sello " + Forja.delMinijefe(tipo.substring(6));
         return switch (tipo) {
             case Creditos.ERRANTE -> "Sello Errante";
             case "fragmento" -> "Fragmentos de Guadaña";

@@ -1,9 +1,7 @@
 package net.ederus.calamity.hardcore;
 
 import net.ederus.edm.comun.Compat;
-import net.ederus.edm.comun.menu.MenuUtil;
 import net.kyori.adventure.text.Component;
-import net.kyori.adventure.text.format.NamedTextColor;
 import net.kyori.adventure.text.format.TextColor;
 import org.bukkit.Bukkit;
 import org.bukkit.Color;
@@ -340,7 +338,8 @@ final class ObjetosCalamity implements Listener {
     private void aura(Player p) {
         if (Compat.DUST == null || !PuenteMmo.disponible()) return;
         Color color;
-        if (empunaGuadana(p)) color = Color.fromRGB(0x8B1A1A);
+        // El rojo claro de la Parca (Paleta): el rojo de muerte oscuro (#8B1A1A) apenas se veia de noche.
+        if (empunaGuadana(p)) color = Color.fromRGB(Paleta.PARCA_HASTA);
         else if (piezasManto(p) >= 5) color = Color.fromRGB(0xE8A33D);
         else return;
         Particle.DustOptions polvo = new Particle.DustOptions(color, 0.8f);
@@ -461,10 +460,14 @@ final class ObjetosCalamity implements Listener {
         return null;
     }
 
+    /** Los que sube un Grabado si la config no trae grabado.encantamientos (el lore del Grabado los nombra). */
+    static final List<String> GRABABLES_DE_SERIE =
+            List.of("SHARPNESS", "PROTECTION", "EFFICIENCY", "POWER", "UNBREAKING", "LOOTING", "FORTUNE");
+
     /** Los encantamientos de grabado.encantamientos (los de serie si la lista no esta). */
     List<Enchantment> permitidos() {
         List<String> nombres = hc.cfg().getStringList("grabado.encantamientos");
-        if (nombres.isEmpty()) nombres = List.of("SHARPNESS", "PROTECTION", "EFFICIENCY", "POWER", "UNBREAKING", "LOOTING", "FORTUNE");
+        if (nombres.isEmpty()) nombres = GRABABLES_DE_SERIE;
         List<Enchantment> out = new ArrayList<>();
         for (String n : nombres) {
             Enchantment e = encantamiento(n);
@@ -498,20 +501,20 @@ final class ObjetosCalamity implements Listener {
     static Component avisoGrabado(String motivo) {
         return ComandoCalamity.mensaje(switch (motivo == null ? "" : motivo) {
             case "vacio" -> "Coge en la mano lo que quieras grabar.";
-            case "mmo" -> "El Grabado solo muerde el acero de siempre, no el de MMOItems.";
-            case "grabado" -> "Eso ya lleva un Grabado. Uno por objeto.";
-            case "semana" -> "Esta semana ya has grabado algo.";
-            case "encantamiento" -> "Ese objeto no tiene ningún encantamiento en su tope.";
+            case "mmo" -> "El Grabado solo sirve en equipo sin MMOItems.";
+            case "grabado" -> "Ese objeto ya está grabado: solo se puede grabar una vez.";
+            case "semana" -> "Esta semana ya has grabado algo. El lunes podrás volver a grabar.";
+            case "encantamiento" -> "Ese objeto no tiene ningún encantamiento al máximo que el Grabado pueda subir.";
             case "sin-grabado" -> "No llevas ningún Grabado de Calamidad.";
             default -> "Eso no se puede grabar.";
         });
     }
 
-    /** P-W08: "Grabado: <encantamiento> <nivel>. Ya es tuyo para siempre." */
+    /** P-W08: "Grabado hecho: <encantamiento> <nivel>. El objeto queda ligado a ti." */
     static Component avisoGrabadoHecho(Enchantment e, int nivel) {
-        return ComandoCalamity.mensaje(Component.text("Grabado: ")
+        return ComandoCalamity.mensaje(Component.text("Grabado hecho: ")
                 .append(Component.text(nombreEncantamiento(e) + " " + romano(nivel), Paleta.DETALLE))
-                .append(Component.text(". Ya es tuyo para siempre.")));
+                .append(Component.text(". El objeto queda ligado a ti.")));
     }
 
     /** La casilla del primer Grabado sin usar que puede gastar ese jugador, o -1. */
@@ -636,7 +639,7 @@ final class ObjetosCalamity implements Listener {
             ItemMeta meta = it.getItemMeta();
             Component nombre = meta != null && meta.hasDisplayName() && meta.displayName() != null
                     ? meta.displayName() : Component.translatable(it.getType().translationKey());
-            p.sendMessage(ComandoCalamity.mensaje(Component.text("El Salvoconducto cumplió: te devuelve ")
+            p.sendMessage(ComandoCalamity.mensaje(Component.text("El Salvoconducto te devuelve ")
                     .append(nombre.colorIfAbsent(Paleta.DETALLE))
                     .append(Component.text("."))));
             hc.plugin().bitacora().anotar("salvoconducto", "devuelve", p.getName(), descripcion(it));
@@ -653,34 +656,56 @@ final class ObjetosCalamity implements Listener {
         e.setCancelled(true);
         Player p = e.getPlayer();
         if (!salvoActivo()) {
-            p.sendMessage(ComandoCalamity.mensaje("El Salvoconducto aún no tiene efecto."));
+            p.sendMessage(ComandoCalamity.mensaje("El Salvoconducto está desactivado ahora mismo."));
             return;
         }
         abrirEleccion(p);
     }
 
+    /**
+     * El menu del Salvoconducto (27, como los demas de Calamity): arriba en el centro que es,
+     * en la fila del medio las cinco casillas que puede salvar y abajo en el centro Cerrar. El
+     * relleno es cristal negro sin globo. Las casillas se guardan por su id (yelmo, pechera,
+     * grebas, botas, arma); aqui solo cambia como se llaman para el jugador.
+     */
+    static final int SALVO_INFO = 4, SALVO_PRIMERA = 11, SALVO_CERRAR = 22;
+
     private void abrirEleccion(Player p) {
-        Inventory inv = hc.plugin().getServer().createInventory(new MarcaSalvo(), 9,
+        Inventory inv = hc.plugin().getServer().createInventory(new MarcaSalvo(), 27,
                 Marco.T_SALVOCONDUCTO.componente());
         String elegida = hc.datos().getString(rutaEleccion(p.getUniqueId()));
         Material[] iconos = {Material.IRON_HELMET, Material.IRON_CHESTPLATE, Material.IRON_LEGGINGS, Material.IRON_BOOTS,
                 Material.IRON_SWORD};
-        String[] nombres = {"El yelmo", "La pechera", "Las grebas", "Las botas", "Lo que lleves en la mano"};
         for (int i = 0; i < 5; i++) {
             boolean es = CASILLAS_SALVO.get(i).equals(elegida);
             List<Component> lore = new ArrayList<>();
-            lore.add(MenuUtil.line("La pieza que lleves ahí al morir."));
-            lore.add(MenuUtil.line("Nunca Reliquias, Esencias ni lo prestado."));
-            lore.add(MenuUtil.blank());
-            lore.add(Component.text(es ? "Elegida." : "Clic izquierdo para elegirla.", es ? AMBAR : NamedTextColor.GRAY));
-            inv.setItem(2 + i, MenuUtil.icon(iconos[i], Component.text(nombres[i], es ? AMBAR : PAPEL), lore, es));
+            lore.add(Marco.texto("Salva lo que lleves " + DONDE_SALVO[i]));
+            lore.add(Marco.texto("cuando mueras."));
+            lore.add(Component.empty());
+            lore.add(es ? Marco.tiene("Es tu elección.") : Marco.accion("Clic para elegirla"));
+            inv.setItem(SALVO_PRIMERA + i, Marco.icono(iconos[i], Component.text(NOMBRES_SALVO[i], es ? AMBAR : PAPEL), lore, es));
         }
-        inv.setItem(0, MenuUtil.icon(Material.PAPER, Component.text("Salvoconducto del Insomne", PAPEL),
-                List.of(MenuUtil.line("Sin elegir: la de mayor escalón."), MenuUtil.line("Se gasta al morir.")), false));
-        inv.setItem(8, MenuUtil.icon(Material.BARRIER, Component.text("Cerrar", Paleta.AVISO), List.of(), false));
-        for (int s = 0; s < 9; s++) if (inv.getItem(s) == null) inv.setItem(s, MenuUtil.pane());
+        inv.setItem(SALVO_INFO, Marco.icono(Material.PAPER, Component.text("Salvoconducto del Insomne", PAPEL), List.of(
+                Marco.texto("Elige qué pieza te devuelve"),
+                Marco.texto("si mueres en Calamity."),
+                Component.empty(),
+                Marco.tenue("Si no eliges, salva la mejor."),
+                Marco.tenue("Nunca salva Reliquias ni Esencias,"),
+                Marco.tenue("ni el equipo prestado del kit,"),
+                Marco.tenue("ni nada más fuerte que la Guadaña."),
+                Marco.tenue("Se gasta al morir.")), false));
+        inv.setItem(SALVO_CERRAR, Marco.cerrar());
+        for (int s = 0; s < inv.getSize(); s++) {
+            if (inv.getItem(s) == null) inv.setItem(s, Marco.cristal(Material.BLACK_STAINED_GLASS_PANE));
+        }
         p.openInventory(inv);
     }
+
+    /** Como se llama para el jugador cada casilla de CASILLAS_SALVO, en su orden. */
+    private static final String[] NOMBRES_SALVO = {"El casco", "La pechera", "Los pantalones", "Las botas",
+            "Lo que lleves en la mano"};
+    private static final String[] DONDE_SALVO = {"en la cabeza", "en el pecho", "en las piernas", "en los pies",
+            "en la mano"};
 
     @EventHandler
     public void onClicSalvo(InventoryClickEvent e) {
@@ -688,26 +713,22 @@ final class ObjetosCalamity implements Listener {
         e.setCancelled(true);
         if (!(e.getWhoClicked() instanceof Player p) || e.getClick() != ClickType.LEFT) return;
         int slot = e.getRawSlot();
-        if (slot < 0 || slot >= 9) return;
+        if (slot < 0 || slot >= e.getInventory().getSize()) return;
         long ahora = System.currentTimeMillis();
         Long antes = ultimoClic.get(p.getUniqueId());
         if (antes != null && ahora - antes < ESPERA_MS) return;
         ultimoClic.put(p.getUniqueId(), ahora);
-        if (slot == 8) {
+        if (slot == SALVO_CERRAR) {
             cerrarSalvo(p);
             return;
         }
-        if (slot < 2 || slot > 6) return;
-        String casilla = CASILLAS_SALVO.get(slot - 2);
+        int i = slot - SALVO_PRIMERA;
+        if (i < 0 || i >= CASILLAS_SALVO.size()) return;
+        String casilla = CASILLAS_SALVO.get(i);
         hc.datos().set(rutaEleccion(p.getUniqueId()), casilla);
         hc.marcarSucio();
-        p.sendMessage(ComandoCalamity.mensaje("El Salvoconducto guardará " + switch (casilla) {
-            case "yelmo" -> "el yelmo";
-            case "pechera" -> "la pechera";
-            case "grebas" -> "las grebas";
-            case "botas" -> "las botas";
-            default -> "lo que lleves en la mano";
-        } + "."));
+        p.sendMessage(ComandoCalamity.mensaje("Si mueres en Calamity, el Salvoconducto te devolverá "
+                + NOMBRES_SALVO[i].substring(0, 1).toLowerCase(Locale.ROOT) + NOMBRES_SALVO[i].substring(1) + "."));
         cerrarSalvo(p);
     }
 

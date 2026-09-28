@@ -1,7 +1,6 @@
 package net.ederus.calamity.hardcore;
 
 import net.kyori.adventure.text.Component;
-import net.kyori.adventure.text.format.NamedTextColor;
 import net.kyori.adventure.text.format.TextColor;
 import net.kyori.adventure.text.format.TextDecoration;
 import net.ederus.calamity.CalamityPlugin;
@@ -57,15 +56,15 @@ public final class ItemsCalamity {
             meta.displayName(Component.text("Frasco de Calma", VERDE)
                     .decoration(TextDecoration.ITALIC, false));
             List<Component> lore = new ArrayList<>();
-            lore.add(Component.text("Recupera "
+            lore.add(Component.text("Cada trago te devuelve "
                     + plugin.getConfig().getInt("hardcore.frasco.cordura", 40)
-                    + " de cordura.", NamedTextColor.GRAY).decoration(TextDecoration.ITALIC, false));
+                    + " de cordura.", Paleta.TEXTO).decoration(TextDecoration.ITALIC, false));
             lore.add(Component.text("Tragos: " + quedan + " de " + max, VERDE)
                     .decoration(TextDecoration.ITALIC, false));
             lore.add(Component.empty());
-            lore.add(Component.text("Clic derecho para beber.", NamedTextColor.DARK_GRAY)
+            lore.add(Component.text("Clic derecho para beber.", Paleta.TENUE)
                     .decoration(TextDecoration.ITALIC, false));
-            lore.add(Component.text("Se recarga en el altar del spawn.", NamedTextColor.DARK_GRAY)
+            lore.add(Component.text("Se recarga en el Altar.", Paleta.TENUE)
                     .decoration(TextDecoration.ITALIC, false));
             meta.lore(lore);
             if (meta instanceof org.bukkit.inventory.meta.PotionMeta pm) {
@@ -99,13 +98,19 @@ public final class ItemsCalamity {
             meta.displayName(Component.text("Cristal de Regreso", MORADO)
                     .decoration(TextDecoration.ITALIC, false));
             meta.lore(List.of(
-                    Component.text("Te devuelve al spawn.", NamedTextColor.GRAY)
+                    Component.text("Te saca vivo de Calamity sin", Paleta.TEXTO)
+                            .decoration(TextDecoration.ITALIC, false),
+                    Component.text("pasar por la puerta de salida.", Paleta.TEXTO)
                             .decoration(TextDecoration.ITALIC, false),
                     Component.empty(),
                     Component.text("Clic derecho y quédate quieto "
                             + plugin.getConfig().getInt("hardcore.cristal.segundos", 5) + " s.",
-                            NamedTextColor.DARK_GRAY).decoration(TextDecoration.ITALIC, false),
-                    Component.text("Se consume al usarlo.", NamedTextColor.DARK_GRAY)
+                            Paleta.TENUE).decoration(TextDecoration.ITALIC, false),
+                    Component.text("Si te mueves, se apaga.", Paleta.TENUE)
+                            .decoration(TextDecoration.ITALIC, false),
+                    Component.text("En combate no funciona.", Paleta.TENUE)
+                            .decoration(TextDecoration.ITALIC, false),
+                    Component.text("Se gasta al usarlo.", Paleta.TENUE)
                             .decoration(TextDecoration.ITALIC, false)));
             meta.setEnchantmentGlintOverride(true);
             meta.getPersistentDataContainer().set(claveCristal, PersistentDataType.BYTE, (byte) 1);
@@ -137,10 +142,16 @@ public final class ItemsCalamity {
             meta.displayName(Component.text("Esencia de Calamidad", TextColor.color(0xE8903C))
                     .decoration(TextDecoration.ITALIC, false));
             meta.lore(List.of(
-                    Component.text("Lo que queda de lo que muere allí.", NamedTextColor.GRAY)
+                    Component.text("La sueltan los mobs y los", Paleta.TEXTO)
+                            .decoration(TextDecoration.ITALIC, false),
+                    Component.text("cofres de Calamity.", Paleta.TEXTO)
                             .decoration(TextDecoration.ITALIC, false),
                     Component.empty(),
-                    Component.text("Recarga el Frasco de Calma en el altar.", NamedTextColor.DARK_GRAY)
+                    Component.text("Si sales vivo, pasa a tu saldo.", Paleta.TENUE)
+                            .decoration(TextDecoration.ITALIC, false),
+                    Component.text("Con el saldo pagas en el Altar", Paleta.TENUE)
+                            .decoration(TextDecoration.ITALIC, false),
+                    Component.text("y en la Forja.", Paleta.TENUE)
                             .decoration(TextDecoration.ITALIC, false)));
             meta.setEnchantmentGlintOverride(true);
             meta.getPersistentDataContainer().set(claveEsencia, PersistentDataType.BYTE, (byte) 1);

@@ -1,7 +1,6 @@
 package net.ederus.calamity.hardcore;
 
 import net.kyori.adventure.text.Component;
-import net.kyori.adventure.text.format.NamedTextColor;
 import net.kyori.adventure.text.format.TextColor;
 import net.kyori.adventure.text.format.TextDecoration;
 import net.ederus.edm.comun.Compat;
@@ -76,13 +75,14 @@ public final class VaraPortales implements Listener {
         if (meta != null) {
             meta.displayName(Component.text("Vara de Portales", MARCA)
                     .decoration(TextDecoration.ITALIC, false));
+            // Colores de la Paleta: el gris oscuro de antes (DARK_GRAY) no se leia en el globo.
             meta.lore(List.of(
-                    Component.text("Golpea un bloque: esquina 1", NamedTextColor.GRAY)
+                    Component.text("Golpea un bloque: esquina 1", Paleta.TEXTO)
                             .decoration(TextDecoration.ITALIC, false),
-                    Component.text("Clic derecho: esquina 2", NamedTextColor.GRAY)
+                    Component.text("Clic derecho: esquina 2", Paleta.TEXTO)
                             .decoration(TextDecoration.ITALIC, false),
                     Component.empty(),
-                    Component.text("Luego: /calamidad define entrada|salida|spawn", NamedTextColor.DARK_GRAY)
+                    Component.text("Luego: /calamidad define entrada|salida|spawn", Paleta.TENUE)
                             .decoration(TextDecoration.ITALIC, false)));
             meta.setEnchantmentGlintOverride(true);
             meta.getPersistentDataContainer().set(clave, PersistentDataType.BYTE, (byte) 1);
@@ -119,7 +119,7 @@ public final class VaraPortales implements Listener {
                 .append(Component.text(b.getX() + " " + b.getY() + " " + b.getZ(), Paleta.CIFRA))
                 .append(s.completa()
                         ? Component.text("   ·   " + s.volumen() + " bloques", Paleta.TENUE)
-                        : Component.text("   ·   falta la otra", Paleta.TENUE)));
+                        : Component.text("   ·   falta la otra esquina", Paleta.TENUE)));
         Compat.soundPlayers(p.getWorld(), b.getLocation(),
                 "block.amethyst_block.chime", 0.8f, primera ? 0.9f : 1.3f);
         Compat.spawn(p.getWorld(), Compat.DUST, b.getLocation().add(0.5, 1.1, 0.5), 14,
