@@ -1,9 +1,9 @@
 name: Calamity
-version: '1.7.2'
+version: '1.7.3'
 main: net.ederus.calamity.CalamityPlugin
 api-version: '1.20'
 author: Iris Studio
-description: Calamity - la PARCA, el Eco, la Aduana y las reglas hardcore de los mundos de Lethal World
+description: "Calamity: la Parca, el Eco, la Aduana y las reglas hardcore de los mundos de Lethal World"
 # Los esbirros, las MobCoins y Compat salen de EDM; los mundos y la bitacora, de LethalWorld.
 # Sin cualquiera de los dos, esto no arranca.
 depend: [EDM, LethalWorld]
@@ -16,13 +16,13 @@ softdepend: [PlaceholderAPI, AuraSkills, UltimateMobCoins, WorldGuard, MMOItems,
 
 commands:
   calamity:
-    description: Calamity - tu saldo, tus Ecos, tus contratos
-    usage: /calamity [eco|saldo|contratos|kit|tablero|encuesta|camino|cronista]
+    description: Calamity para jugadores (tu saldo, tus Ecos, tus contratos y más)
+    usage: /calamity [saldo|eco|contratos|cambiar|camino|cronista|tablero|kit|eclipse|encuesta|deseos]
     aliases: [cal]
     permission: lethalworld.calamity
   calamidad:
-    description: Calamity - administracion (antes /lw hardcore y /lw level)
-    usage: /calamidad <sub>
+    description: Calamity para el staff (antes /lw hardcore y /lw level)
+    usage: /calamidad <subcomando>
     aliases: [cld]
     permission: ederus.mundos
 

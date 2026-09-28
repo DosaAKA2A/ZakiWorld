@@ -48,7 +48,7 @@ import net.ederus.lethalworld.LethalWorldPlugin;
 public final class CalamityPlugin extends JavaPlugin {
 
     /** La version, en el mismo sitio que en LethalWorld. Se sube a la vez que pom.xml y plugin.yml. */
-    public static final String VERSION = "1.7.2";
+    public static final String VERSION = "1.7.3";
 
     private LethalWorldPlugin lethalWorld;
     private MobsLethal mobs;
@@ -104,7 +104,7 @@ public final class CalamityPlugin extends JavaPlugin {
             cal.setExecutor(calamity);
             cal.setTabCompleter(calamity);
         } else {
-            getLogger().warning("El comando /calamity no esta en el plugin.yml.");
+            getLogger().warning("El comando /calamity no está en el plugin.yml.");
         }
         // /calamidad: lo que antes era /lw hardcore y /lw level.
         var cld = getCommand("calamidad");
@@ -113,7 +113,7 @@ public final class CalamityPlugin extends JavaPlugin {
             cld.setExecutor(calamidad);
             cld.setTabCompleter(calamidad);
         } else {
-            getLogger().warning("El comando /calamidad no esta en el plugin.yml.");
+            getLogger().warning("El comando /calamidad no está en el plugin.yml.");
         }
 
         // Despues de arrancar: los modulos registran sus placeholders al nacer.
@@ -183,7 +183,7 @@ public final class CalamityPlugin extends JavaPlugin {
             if (!Files.exists(origen)) continue;
             try {
                 int n = copiar(origen, new File(destino, nombre).toPath());
-                if (Files.isDirectory(origen)) traidos.add(nombre + "/ (" + n + " fichero(s))");
+                if (Files.isDirectory(origen)) traidos.add(nombre + "/ (" + n + (n == 1 ? " fichero)" : " ficheros)"));
                 else traidos.add(n > 0 ? nombre : nombre + " (ya estaba, no se pisa)");
             } catch (IOException | UncheckedIOException e) {
                 getLogger().warning("[Calamity] No se pudo traer " + nombre
@@ -205,7 +205,7 @@ public final class CalamityPlugin extends JavaPlugin {
         // el config de LethalWorld). Releido de disco, el config ya es solo de Calamity.
         reloadConfig();
 
-        getLogger().info("[Calamity] Importada la configuracion de plugins/LethalWorld/config.yml ("
+        getLogger().info("[Calamity] Importada la configuración de plugins/LethalWorld/config.yml ("
                 + String.join(", ", secciones) + ")"
                 + (traidos.isEmpty() ? "" : " y sus datos: " + String.join(", ", traidos))
                 + ". La carpeta de LethalWorld queda como estaba.");
@@ -222,7 +222,7 @@ public final class CalamityPlugin extends JavaPlugin {
         if (!sinTraer.isEmpty()) {
             sinTraer.sort(null);
             getLogger().warning("[Calamity] En plugins/LethalWorld hay cosas que no se reconocen"
-                    + " y no se han traido: " + String.join(", ", sinTraer) + ". Si son de Calamity,"
+                    + " y no se han traído: " + String.join(", ", sinTraer) + ". Si son de Calamity,"
                     + " hay que copiarlas a mano a plugins/Calamity.");
         }
     }

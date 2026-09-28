@@ -211,8 +211,8 @@ hardcore:
     # Cada nivel de distancia con el que nacio un mob sube sus MobCoins esto (0.01 = 1 %,
     # +40 % en el tope). Va aparte de lo que ya paga por tener mas nivel.
     mobcoins-por-nivel: 0.01
-    # Aviso en la barra de accion al cruzar cada tantos niveles ("Te adentras más en la
-    # Calamidad · mobs +10 niveles"). 0 lo apaga. Dentro de la zona spawn no se avisa.
+    # Aviso en la barra de accion al cruzar cada tantos niveles ("Te alejas del spawn ·
+    # mobs +10 niveles"). 0 lo apaga. Dentro de la zona spawn no se avisa.
     aviso-cada-niveles: 5
 
   # Las quince reglas, cada una con su propio interruptor. Poner una en false (o en 0
@@ -690,17 +690,17 @@ hardcore:
     semana-premio: ["lw hardcore dar llave %jugador% 1"]
     pool:
       corto-mobs: {texto: "Mata 10 mobs y sal", evento: mob, objetivo: 10, esencias: 2, mobcoins: 20, corto: true}
-      corto-cofre: {texto: "Abre 1 cofre de estructura y sal", evento: cofre, objetivo: 1, esencias: 2, mobcoins: 20, corto: true, mecanica: cofres.activo}
-      corto-reliquia: {texto: "Saca 1 Reliquia de grado II o más", evento: reliquia-ii, objetivo: 1, esencias: 2, mobcoins: 20, corto: true, mecanica: reliquias.activas}
-      corto-15: {texto: "Sal vivo tras 15 min dentro", evento: minutos, objetivo: 15, esencias: 2, mobcoins: 20, corto: true}
-      extraer-ii: {texto: "Saca 3 Reliquias de grado II o más en una salida", evento: reliquia-ii, objetivo: 3, esencias: 4, mobcoins: 60, mecanica: reliquias.activas}
+      corto-cofre: {texto: "Abre un cofre de estructura y sal", evento: cofre, objetivo: 1, esencias: 2, mobcoins: 20, corto: true, mecanica: cofres.activo}
+      corto-reliquia: {texto: "Saca una Reliquia de grado II o más", evento: reliquia-ii, objetivo: 1, esencias: 2, mobcoins: 20, corto: true, mecanica: reliquias.activas}
+      corto-15: {texto: "Pasa 15 min en Calamity y sal", evento: minutos, objetivo: 15, esencias: 2, mobcoins: 20, corto: true}
+      extraer-ii: {texto: "Saca 3 Reliquias de grado II o más en una sola salida", evento: reliquia-ii, objetivo: 3, esencias: 4, mobcoins: 60, mecanica: reliquias.activas}
       destacados: {texto: "Mata 5 mobs destacados y sal", evento: destacado, objetivo: 5, esencias: 3, mobcoins: 40}
-      eco: {texto: "Cierra un Eco ajeno válido y sal", evento: eco-valido, objetivo: 1, esencias: 5, mobcoins: 80, mecanica: eco.activo}
-      al-limite: {texto: "Aguanta 15 min con cordura por debajo de 25 y sal", evento: minutos-limite, objetivo: 15, esencias: 5, mobcoins: 80}
+      eco: {texto: "Derrota un Eco ajeno válido y sal", evento: eco-valido, objetivo: 1, esencias: 5, mobcoins: 80, mecanica: eco.activo}
+      al-limite: {texto: "Aguanta 15 min con la cordura por debajo de 25 y sal", evento: minutos-limite, objetivo: 15, esencias: 5, mobcoins: 80}
       minijefe: {texto: "Mata un minijefe y sal", evento: minijefe, objetivo: 1, esencias: 6, mobcoins: 100}
-      sin-frasco: {texto: "Pasa 30 min dentro sin beber y sal", evento: minutos-sin-frasco, objetivo: 30, esencias: 4, mobcoins: 60}
+      sin-frasco: {texto: "Pasa 30 min en Calamity sin beber del Frasco y sal", evento: minutos-sin-frasco, objetivo: 30, esencias: 4, mobcoins: 60}
       cofres: {texto: "Abre 3 cofres de estructura y sal", evento: cofre, objetivo: 3, esencias: 3, mobcoins: 40, mecanica: cofres.activo}
-      redimir: {texto: "Redime tu Eco y sal", evento: redimir, objetivo: 1, esencias: 4, mobcoins: 60, mecanica: eco.activo}
+      redimir: {texto: "Derrota a tu propio Eco y sal", evento: redimir, objetivo: 1, esencias: 4, mobcoins: 60, mecanica: eco.activo}
   kit: {activo: false, cada-horas: 20, frasco-tragos: 1, solo-sin-armadura: true}
   # [alineado] Hitos de PLAN 6 / DIS M16. [INSOMNE] de 24 h sigue tambien en "tag" (el de hoy).
   # Cada hito: estadistica (clave de stats, "horas-activas" en horas, o varias en "estadisticas" que
@@ -748,7 +748,7 @@ hardcore:
     premio-esencias: 1
     preguntas:
       freno:
-        texto: "¿Qué te frena de entrar a Calamity?"
+        texto: "¿Qué te frena a la hora de entrar en Calamity?"
         opciones:
           perder: {icono: IRON_CHESTPLATE, texto: "Perder el equipo"}
           premio: {icono: CHEST, texto: "No sé qué gano"}
@@ -756,7 +756,7 @@ hardcore:
           tiempo: {icono: CLOCK, texto: "No tengo tiempo"}
           solo: {icono: PLAYER_HEAD, texto: "Entro solo y me aburro"}
       salvar:
-        texto: "Si solo pudieras salvar una cosa, ¿cuál?"
+        texto: "Si al morir pudieras salvar una sola cosa, ¿cuál sería?"
         opciones:
           casco: {icono: NETHERITE_HELMET, texto: "El casco"}
           pechera: {icono: NETHERITE_CHESTPLATE, texto: "La pechera"}
@@ -780,7 +780,7 @@ hardcore:
       camino:
         texto: "¿Sabes cuánto te falta para tu próxima pieza del Manto?"
         opciones:
-          si: {icono: COMPASS, texto: "Sí, lo miro en el altar"}
+          si: {icono: COMPASS, texto: "Sí, lo miro en Tu camino"}
           mas-o-menos: {icono: MAP, texto: "Más o menos"}
           "no": {icono: BARRIER, texto: "No"}
           no-quiero: {icono: GRAY_DYE, texto: "No voy a por el Manto"}
@@ -802,12 +802,12 @@ hardcore:
     # Sin ninguna, las de serie del plugin (estas mismas).
     candidatas:
       manto: {icono: NETHERITE_CHESTPLATE, nombre: "Pieza del Manto de Calamidad", lore: ["El set de los cinco minijefes."]}
-      libro-legendary: {icono: ENCHANTED_BOOK, nombre: "Libro LEGENDARY", lore: ["Un encantamiento de los buenos."]}
-      encantamientos: {icono: EXPERIENCE_BOTTLE, nombre: "Encantamiento sobre el tope", lore: ["Un nivel más de lo normal."]}
-      mascota: {icono: WOLF_SPAWN_EGG, nombre: "Mascota rara", lore: ["Que te acompañe algo que nadie tiene."]}
-      rip: {icono: SKELETON_SKULL, nombre: "Efecto RIP de Calamity", lore: ["Que se note cómo mueres."]}
-      talisman: {icono: AMETHYST_SHARD, nombre: "Talismán de cordura", lore: ["La cordura baja más despacio."]}
-      llave-caos: {icono: TRIAL_KEY, nombre: "Llave del Caos", lore: ["Una caja que solo da Calamity."]}
+      libro-legendary: {icono: ENCHANTED_BOOK, nombre: "Libro LEGENDARY", lore: ["Un libro con un encantamiento", "de rareza LEGENDARY."]}
+      encantamientos: {icono: EXPERIENCE_BOTTLE, nombre: "Encantamiento sobre el tope", lore: ["Un nivel más del máximo normal."]}
+      mascota: {icono: WOLF_SPAWN_EGG, nombre: "Mascota rara", lore: ["Una mascota que casi nadie tiene."]}
+      rip: {icono: SKELETON_SKULL, nombre: "Efecto RIP de Calamity", lore: ["Un efecto que se ve cuando mueres."]}
+      talisman: {icono: AMETHYST_SHARD, nombre: "Talismán de cordura", lore: ["Hace que la cordura baje", "más despacio."]}
+      llave-caos: {icono: TRIAL_KEY, nombre: "Llave del Caos", lore: ["La llave de la Crate Caos."]}
 
   # ------------------------------------------------------------------ EL CRONISTA (1.2.0)
   # Los NPCs de la antesala los pone el staff a mano con Citizens; Calamity no los crea. Cada
@@ -837,46 +837,49 @@ hardcore:
       calamity:
         titulo: "Qué es Calamity"
         texto:
-          - "Calamity es un mundo hardcore: aquí no gana el mejor equipo, gana quien sabe cuándo salir."
-          - "Si mueres dentro pierdes TODO lo que llevas encima, también la experiencia."
-          - "Se sale vivo por la puerta de salida o con un Cristal de Regreso: {cristal.segundos} s quieto y fuera."
-          - "Lo que sacas vivo se vende al cruzar la puerta. Lo que no sacas, no existe."
+          - "Calamity es un mundo hardcore: entras, consigues botín y solo te lo quedas si sales vivo."
+          - "Si mueres en Calamity, pierdes todo lo que llevas encima y también la experiencia."
+          - "Para salir vivo, cruza la puerta de salida o usa un Cristal de Regreso y quédate quieto {cristal.segundos} s."
+          - "Al salir vivo, tus Reliquias se venden solas y tus Esencias pasan a tu saldo."
       cordura:
         titulo: "La cordura"
         texto:
-          - "Desde que entras, la cordura baja {cordura.por-minuto} por minuto: x{cordura.factor-noche} de noche y x{cordura.factor-oscuridad} a oscuras."
-          - "Un golpe que te quite un cuarto de la vida cuesta {cordura.por-golpe} más."
-          - "Por debajo de la mitad salen más mobs y más fuertes; a cero te sigue un minijefe."
-          - "El Frasco de Calma devuelve {frasco.cordura} por trago ({frasco.usos} tragos). Se rellena en el Altar."
+          - "Desde que entras, tu cordura baja {cordura.por-minuto} por minuto. La noche multiplica ese ritmo por {cordura.factor-noche}, y la oscuridad, por {cordura.factor-oscuridad}."
+          - "Un golpe que te quite al menos un cuarto de la vida que tienes te cuesta {cordura.por-golpe} de cordura."
+          - "Por debajo de la mitad salen más mobs y más fuertes. Si llega a cero, un minijefe viene a por ti."
+          - "El Frasco de Calma te devuelve {frasco.cordura} de cordura por trago y tiene {frasco.usos} tragos. Se recarga en el Altar."
+          - "En el spawn de Calamity la cordura no baja."
       parca:
-        titulo: "La PARCA"
+        titulo: "La Parca"
         texto:
-          - "Quédate quieto {parca.minutos} min dentro y viene la PARCA: una anomalía de nivel Dios, en cuatro fases."
-          - "Antes oirás avisos y una campana. Moverte de verdad (explorar, picar, pelear) la aleja; un autoclicker, no."
-          - "En la zona del spawn no espera tanto: a los {parca.spawn.minutos} min se abre una Grieta, te traga y te escupe lejos."
-          - "Allí te encuentra. Tumbarla paga Esencias, y la Campana de la Parca a los {parca.campana.solo-top} que más daño le hagan."
+          - "Si te quedas quieto {parca.minutos} min en Calamity, viene la Parca: una anomalía de nivel Dios con cuatro fases."
+          - "Antes oirás avisos y una campana. Si te mueves de verdad (exploras, picas o peleas), no viene; con un autoclicker, sí."
+          - "En el spawn de Calamity no espera tanto: a los {parca.spawn.minutos} min se abre una Grieta que te traga y te deja lejos."
+          - "Allí te encuentra. Derrotarla paga Esencias, y los {parca.campana.solo-top} que más daño le hagan (salvo su presa) se llevan una Campana de la Parca."
       eco:
         titulo: "El Eco"
         texto:
-          - "Al morir dentro nace tu Eco donde caíste: pelea con tu equipo y guarda tus Reliquias y parte de tus Esencias."
-          - "Dura {eco.horas} h. Mátalo tú y recuperas lo tuyo, y {eco.cordura-dueno} de cordura."
-          - "Si lo cierra otro, se lo lleva todo, y a veces una Lágrima de Eco."
-          - "Rhen sabe qué Ecos guardan más botín. Sin coordenadas: hay que buscarlos."
+          - "Si mueres en Calamity, nace tu Eco donde caíste: pelea con una copia de tu equipo y guarda tus Reliquias y parte de tus Esencias."
+          - "Dura {eco.horas} h. Si lo derrotas tú, recuperas tus Reliquias y esas Esencias, y {eco.cordura-dueno} de cordura. El equipo no vuelve."
+          - "Si lo derrota otro jugador, se queda con todo eso y a veces también con una Lágrima de Eco."
+          - "Rhen sabe qué Ecos guardan más botín, pero no te da coordenadas: hay que buscarlos."
       esencias:
         titulo: "Esencias, Reliquias y ventas"
         texto:
-          - "Las Esencias caen de los mobs de dentro. Al salir pasan a tu saldo: con ellas se paga en el Altar."
-          - "Tu saldo es tuyo: no caduca ni se reinicia cada día. Solo pierdes las que llevas encima si mueres dentro."
-          - "Cada Reliquia sacada viva vale {reliquias.grados.1.esencias} Esencias la Astilla, {reliquias.grados.2.esencias} el Fragmento, {reliquias.grados.3.esencias} el Ámbar y {reliquias.grados.4.esencias} el Ámbar Mayor, más MobCoins."
-          - "La primera salida del día paga {esencias.primera-extraccion-dia.base} Esencias más. Las Reliquias III y IV caducan a los {reliquias.caduca-dias} días."
-          - "La Aduana te paga y pone topes: como mucho {aduana.tramos-mc.0.hasta} MobCoins al día."
+          - "Las Esencias caen de los mobs de Calamity. Si sales vivo, pasan a tu saldo, y con él pagas en el Altar y la Forja."
+          - "Tu saldo es permanente: no caduca ni se reinicia cada día. Si mueres en Calamity, solo pierdes las Esencias que llevabas encima."
+          - "Cada Reliquia que sacas vivo se vende por Esencias y MobCoins."
+          - "La Astilla vale {reliquias.grados.1.esencias} Esencias; el Fragmento, {reliquias.grados.2.esencias}; el Ámbar, {reliquias.grados.3.esencias}; y el Ámbar Mayor, {reliquias.grados.4.esencias}."
+          - "La primera vez que sales vivo cada día cobras {esencias.primera-extraccion-dia.base} Esencias más. Las Reliquias de grado III y IV caducan a los {reliquias.caduca-dias} días."
+          - "La Aduana te paga las MobCoins, con un tope de {aduana.tramos-mc.0.hasta} al día."
       altar:
         titulo: "El Altar y la Forja"
         texto:
-          - "Sael, en el Altar, cambia Esencias por Frascos, Tinturas, la Llave del Caos y el Cristal de Regreso ({altar.trueques.cristal.esencias} Esencias)."
-          - "Vael hace el Manto de Calamidad en la Forja: cada pieza pide Esencias, MobCoins y el Sello de su minijefe."
-          - "El Vestigio del Eco pide Marcas de Eco; la Guadaña, {altar.trueques.guadana.creditos} Fragmentos. Lo forjado va ligado a ti."
-          - "Si pierdes una pieza dentro, reponerla antes de {forja.reposicion-dias} días cuesta la mitad de Esencias."
+          - "En el Altar, Sael te cambia Esencias por Frascos, Tinturas, Cristales de Regreso ({altar.trueques.cristal.esencias} Esencias) y la Llave del Caos."
+          - "En la Forja, Vael hace el Manto de Calamidad: cada pieza pide Esencias, MobCoins y el Sello de su minijefe."
+          - "El Vestigio del Eco pide Marcas de Eco, y la Guadaña, {altar.trueques.guadana.creditos} Fragmentos de Guadaña. Todo lo forjado queda ligado a ti."
+          - "Si pierdes en Calamity una pieza del Manto y la repones antes de {forja.reposicion-dias} días, te cuesta la mitad de Esencias."
+          - "Lior te engarza gratis las Gemas de Calamidad en las piezas que tienen hueco. Si quitas una gema, se rompe."
 
   # ------------------------------------------------------------------ P2 (apagadas)
   rondador: {activo: false, probabilidad-por-minuto: 0.25, cordura-maxima: 50, luz-maxima: 8, distancia: 24, velocidad-acecho: 0.35, velocidad-huida: 0.3, velocidad-carga: 0.4, enfado-carga: 3, agarre-vida: 0.35, agarre-cordura: 20, vida-base: 60, vida-por-nivel: 0.05, extra-nivel: 5, dura-segundos: 180}
