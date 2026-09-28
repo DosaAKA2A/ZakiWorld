@@ -177,14 +177,14 @@ final class Npcs implements Listener {
             case UMBRAL, FORJA -> {
                 Altar altar = hc.altar();
                 if (altar == null || !altar.activo()) {
-                    p.sendMessage(ComandoCalamity.mensaje("El altar está en silencio ahora mismo."));
-                    return "el altar está apagado";
+                    p.sendMessage(ComandoCalamity.mensaje("El Altar está cerrado ahora mismo."));
+                    return "el Altar está apagado";
                 }
                 // En la zona spawn si: es terreno seguro y la puerta de salida esta ahi mismo, asi que
                 // comprar alli un Cristal o un Frasco es lo mismo que comprarlo fuera.
                 if (!Marco.puedeAltar(hc, p)) {
-                    p.sendMessage(ComandoCalamity.mensaje("El altar no escucha desde ahí dentro."));
-                    return "está dentro de Calamity";
+                    p.sendMessage(ComandoCalamity.mensaje(Marco.ALTAR_FUERA));
+                    return "está en Calamity, fuera del spawn";
                 }
                 altar.menu().abrir(p, t == Tipo.FORJA ? MenuAltar.FORJA : MenuAltar.UMBRAL);
             }
@@ -193,7 +193,7 @@ final class Npcs implements Listener {
             case CAZADOR -> cazador(p);
             case ENGARZADOR -> {
                 // Sin MMOItems no hay gemas que engarzar: el menu se lo dice al jugador y no se abre.
-                if (!hc.valor("engarzador", () -> engarzador.abrir(p), false)) return "no se ha abierto (sin MMOItems, o lo ha impedido otro plugin)";
+                if (!hc.valor("engarzador", () -> engarzador.abrir(p), false)) return "no se ha abierto (falta MMOItems o lo ha impedido otro plugin)";
             }
         }
         return null;
@@ -223,7 +223,7 @@ final class Npcs implements Listener {
         }
         Tablero tab = hc.tablero();
         if (tab != null) hc.seguro("tablero", () -> tab.abrir(p));
-        else p.sendMessage(ComandoCalamity.mensaje("El Tablero no está colgado ahora mismo."));
+        else p.sendMessage(ComandoCalamity.mensaje("El Tablero está cerrado ahora mismo."));
     }
 
     /** Un valor de ranking como se lee: MobCoins con miles, la expedicion en horas y minutos. */

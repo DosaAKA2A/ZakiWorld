@@ -44,10 +44,11 @@ import java.util.UUID;
  *   Contratos (45)      fila 1:  los tres contratos (clic: cambiarlo);  fila 2: los de la semana
  *   Tus reliquias (45)  fila 1:  cada Reliquia que llevas;  fila 2: lo que valdrian ahora
  *
- * Cerrar (portada) y Volver (subvistas) van siempre en la misma casilla, abajo en el centro. El
- * relleno es un solo cristal gris sin nombre (Marco.rellenarNeutro): nada de filas de colores que
- * parezcan significar algo. Cada boton dice en su lore las cifras ya calculadas y, en la ultima
- * linea, lo que hace el clic. Solo clic izquierdo (Bedrock: un toque).
+ * Cerrar (portada) y Volver (subvistas) van siempre en la misma casilla, abajo en el centro, y
+ * asi en todos los menus de Calamity desde 1.7.3. El relleno es cristal negro sin nombre
+ * (Marco.rellenar; en 1.5.0 fue gris y en 1.7.3 negro, como pidio Dosa): nada de filas de
+ * colores que parezcan significar algo. Cada boton dice en su lore las cifras ya calculadas y, en
+ * la ultima linea, lo que hace el clic. Solo clic izquierdo (Bedrock: un toque).
  *
  * No escribe nada salvo lo que ya hacian sus botones (Entregas.pendientes, Contratos.cambiar,
  * Altar.depositar). Se puede abrir en cualquier sitio: los enlaces al Altar y a la Forja miran la
@@ -149,15 +150,13 @@ final class MenuTasador implements Listener {
             default -> portada(inv, p, v);
         }
         if (v.pantalla().equals(PORTADA)) {
-            inv.setItem(SALIR, Marco.icono(Material.BARRIER, Component.text("Cerrar", Marco.NO),
-                    List.of(Marco.accion("Clic para cerrar")), false));
+            inv.setItem(SALIR, Marco.cerrar());
             v.acciones().put(SALIR, "cerrar");
         } else {
-            inv.setItem(SALIR, Marco.icono(Material.ARROW, Component.text("Volver", Paleta.DETALLE),
-                    List.of(Marco.tenue("Vuelves a la portada del mercado."), Component.empty(), Marco.accion("Clic para volver")), false));
+            inv.setItem(SALIR, Marco.volver("al Mercado"));
             v.acciones().put(SALIR, "volver");
         }
-        Marco.rellenarNeutro(inv);
+        Marco.rellenar(inv);
     }
 
     /** Pone las cosas centradas en la fila que empieza en base (columnas de Marco). */
@@ -185,7 +184,7 @@ final class MenuTasador implements Listener {
         inv.setItem(AYUDA, Marco.ayuda(hc));
         boolean altar = Marco.altarAbierto(hc, p);
         Marco.enlace(inv, v.acciones(), IR_ALTAR, Marco.UMBRAL, Material.ENCHANTING_TABLE, "Altar del Umbral",
-                List.of("Frascos, cristales, la Llave", "del Caos y la Ofrenda."), altar);
+                List.of("Frascos, Cristales de Regreso,", "Tinturas y la Llave del Caos."), altar);
         Marco.enlace(inv, v.acciones(), IR_FORJA, Marco.FORJA, Material.ANVIL, "La Forja",
                 List.of("El Manto, el Vestigio del Eco,", "la Guadaña y sus mejoras."), altar);
     }
@@ -238,13 +237,13 @@ final class MenuTasador implements Listener {
         Contratos con = hc.contratos();
         List<Component> lore = new ArrayList<>();
         if (con == null || !hc.valor("contratos", con::activo, false)) {
-            lore.add(Marco.tenue("Oren no tiene contratos ahora."));
+            lore.add(Marco.tenue("Oren no tiene contratos ahora mismo."));
             inv.setItem(CONTRATOS, Marco.icono(Material.PAPER, Component.text("Contratos de hoy", Paleta.TENUE), lore, false));
             return;
         }
-        lore.add(Marco.texto("Encargos que cambian cada día."));
-        lore.add(Marco.texto("Se cobran al salir vivo; si mueres,"));
-        lore.add(Marco.texto("vuelven a empezar."));
+        lore.add(Marco.texto("Encargos de Oren que cambian"));
+        lore.add(Marco.texto("cada día. Se cobran al salir vivo;"));
+        lore.add(Marco.texto("si mueres, vuelven a empezar."));
         lore.add(Marco.tenue("Lo cobrado va a tu saldo y se queda."));
         lore.add(Component.empty());
         List<Contratos.Estado> lista = hc.valor("contratos", () -> con.estados(p), List.of());
@@ -272,11 +271,11 @@ final class MenuTasador implements Listener {
         List<ItemStack> encima = encima(p);
         List<Component> lore = new ArrayList<>();
         if (encima.isEmpty()) {
-            lore.add(Marco.tenue("No llevas ninguna."));
+            lore.add(Marco.tenue("No llevas ninguna Reliquia."));
             lore.add(Component.empty());
             lore.add(Marco.tenue("Salen de los mobs, los cofres"));
             lore.add(Marco.tenue("y los minijefes de Calamity."));
-            inv.setItem(RELIQUIAS, Marco.icono(Material.BUNDLE, Component.text("Tus reliquias", Paleta.TENUE), lore, false));
+            inv.setItem(RELIQUIAS, Marco.icono(Material.BUNDLE, Component.text("Tus Reliquias", Paleta.TENUE), lore, false));
             return;
         }
         Reliquias rel = hc.reliquias();
@@ -294,11 +293,11 @@ final class MenuTasador implements Listener {
             lore.add(Marco.dato("Esencias", Altar.miles(r.esencias())));
             lore.add(Marco.dato("MobCoins", Altar.miles(r.mobcoins())));
         }
-        lore.add(Marco.tenue("Si mueres dentro, no valen nada."));
+        lore.add(Marco.tenue("Si mueres, no cobras nada por ellas."));
         lore.add(Component.empty());
         lore.add(Marco.accion("Clic para ver cuáles llevas"));
         inv.setItem(RELIQUIAS, Marco.icono(new ItemStack(mejor.getType(), Math.max(1, Math.min(64, total))),
-                Component.text("Tus reliquias", Reliquias.AMBAR), lore, false));
+                Component.text("Tus Reliquias", Reliquias.AMBAR), lore, false));
         v.acciones().put(RELIQUIAS, "ver:" + V_RELIQUIAS);
     }
 
@@ -363,8 +362,8 @@ final class MenuTasador implements Listener {
         long escala = escala(tramos);
 
         List<Component> lore = new ArrayList<>();
-        lore.add(Marco.texto("Te paga las MobCoins que sacas,"));
-        lore.add(Marco.texto("pero cada día tiene un tope."));
+        lore.add(Marco.texto("Te paga las MobCoins que ganas"));
+        lore.add(Marco.texto("en Calamity, hasta un tope diario."));
         lore.add(Component.empty());
         if (escala > 0) lore.add(Marco.barra(hoy, escala));
         lore.add(Marco.dato("Cobradas hoy", Altar.miles(hoy) + " MobCoins"));
@@ -379,8 +378,8 @@ final class MenuTasador implements Listener {
         if (escala > 0) lore.add(Marco.tenue("Por encima de " + Altar.miles(escala) + " ya no paga."));
         lore.add(Component.empty());
         lore.add(Marco.tenue("Las Esencias no tienen este tope."));
-        lore.add(Marco.tenue("Lo cobrado hoy vuelve a cero a"));
-        lore.add(Marco.tenue("medianoche. Tu saldo no se toca."));
+        lore.add(Marco.tenue("La cuenta de hoy vuelve a cero a"));
+        lore.add(Marco.tenue("medianoche; tu saldo no cambia."));
         long libre = 0;
         for (Tramo t : tramos) libre += t.hasta() >= 100_000 ? 0 : t.quedan();
         boolean paga = !tramos.isEmpty() && (escala < 0 || libre > 0);
@@ -433,7 +432,7 @@ final class MenuTasador implements Listener {
             rl.add(Marco.tenue("Sube 1 cada vez que sales con una"));
             rl.add(Marco.tenue("Reliquia de grado II o más."));
             rl.add(Marco.tenue("Si mueres, vuelve a 0."));
-            abajo.add(Marco.icono(Material.BLAZE_POWDER, Component.text("Tu racha: ", Paleta.TEXTO)
+            abajo.add(Marco.icono(Material.BLAZE_POWDER, Component.text("Tu Racha de Codicia: ", Paleta.TEXTO)
                     .append(Component.text(r, Paleta.CIFRA)), rl, r > 0));
         }
         enFila(inv, FILA_B, abajo, null, v.acciones());
@@ -457,11 +456,11 @@ final class MenuTasador implements Listener {
             }
         }
         lore.add(Component.empty());
-        lore.add(Marco.tenue("Lo que ganas mientras estás dentro"));
-        lore.add(Marco.tenue("o desconectado te espera aquí."));
+        lore.add(Marco.tenue("Aquí te espera lo que ganas en"));
+        lore.add(Marco.tenue("Calamity o estando desconectado."));
         if (!pend.isEmpty()) {
             lore.add(Component.empty());
-            lore.add(dentro ? Marco.tenue("Te llegan al salir de Calamity.") : Marco.accion("Clic para recogerlos"));
+            lore.add(dentro ? Marco.tenue("Te llegan cuando salgas de Calamity.") : Marco.accion("Clic para recogerlos"));
             v.acciones().put(casilla, "cobrar");
         }
         return Marco.icono(new ItemStack(Material.CHEST, Math.max(1, Math.min(64, pend.size()))),
@@ -488,9 +487,9 @@ final class MenuTasador implements Listener {
             }
         }
         lore.add(Component.empty());
-        lore.add(Marco.tenue("Lo que sacas se vende al cruzar la"));
-        lore.add(Marco.tenue("puerta o al terminar un Cristal"));
-        lore.add(Marco.tenue("de Regreso."));
+        lore.add(Marco.tenue("Lo que sacas se vende solo al"));
+        lore.add(Marco.tenue("cruzar la puerta de salida o al"));
+        lore.add(Marco.tenue("usar un Cristal de Regreso."));
         return Marco.icono(Material.WRITABLE_BOOK, Component.text("Vendido esta semana", Paleta.DETALLE), lore, false);
     }
 
@@ -553,7 +552,7 @@ final class MenuTasador implements Listener {
             List<Component> lore = new ArrayList<>();
             lore.add(Marco.barra(e.progreso(), d.objetivo()));
             lore.add(Marco.dato("Paga", Marco.esencias(d.esencias()) + " y " + Altar.miles(d.mobcoins()) + " MobCoins"));
-            if (d.corto()) lore.add(Marco.tenue("Es corto: sirve para una entrada rápida."));
+            if (d.corto()) lore.add(Marco.tenue("Es corto: se hace en una entrada rápida."));
             lore.add(Component.empty());
             String accion = null;
             if (e.cobrado()) {
@@ -571,7 +570,7 @@ final class MenuTasador implements Listener {
         }
         if (lista.isEmpty()) {
             cosas.add(Marco.icono(Material.PAPER, Component.text("Hoy no tienes contratos", Paleta.TENUE),
-                    List.of(Marco.tenue("Vuelve a mirar al salir de Calamity.")), false));
+                    List.of(Marco.tenue("Vuelve a mirar cuando salgas de Calamity.")), false));
             acciones.add(null);
         }
         enFila(inv, FILA_A, cosas, acciones, v.acciones());
@@ -630,7 +629,9 @@ final class MenuTasador implements Listener {
             int g = e.getValue()[0], n = e.getValue()[1];
             List<Component> lore = new ArrayList<>();
             lore.add(Marco.dato("Grado", Reliquias.ROMANO[g]));
-            lore.add(Marco.dato("Cada una", Marco.numero(val.esencias()[g]) + " Esencias y " + val.mc()[g] + " MobCoins"));
+            double es = val.esencias()[g];
+            lore.add(Marco.dato("Cada una vale", Marco.numero(es) + (es == 1 ? " Esencia y " : " Esencias y ")
+                    + Altar.miles(val.mc()[g]) + " MobCoins"));
             ItemStack icono = new ItemStack(muestra.get(e.getKey()).getType(), Math.max(1, Math.min(64, n)));
             cosas.add(Marco.icono(icono, Component.text(e.getKey() + " ×" + n, Reliquias.AMBAR), lore, false));
         }
@@ -655,11 +656,11 @@ final class MenuTasador implements Listener {
         Aduana ad = hc.aduana();
         if (ad != null && r.mobcoins() > 0) {
             long paga = (long) Math.floor(Aduana.Cuentas.tramos(ad.mcHoy(p.getUniqueId()), r.mobcoins(), ad.tramos()) + 1e-9);
-            if (paga < r.mobcoins()) lore.add(Component.text("Hoy la Aduana te pagaría " + Altar.miles(paga) + ".", Paleta.CIFRA));
+            if (paga < r.mobcoins()) lore.add(Component.text("Hoy la Aduana solo te pagaría " + Altar.miles(paga) + " MobCoins.", Paleta.CIFRA));
         }
         for (String l : r.lineas()) {
             if (l.startsWith("primera salida")) lore.add(Marco.tenue("Incluye la primera salida de hoy."));
-            else if (l.startsWith("exceso")) lore.add(Marco.tenue("Una parte pasa del tope del día y no paga."));
+            else if (l.startsWith("exceso")) lore.add(Marco.tenue("Una parte pasa del tope diario y no se paga."));
             else if (l.startsWith("sin valor")) lore.add(Component.text("Alguna no vale nada (caducada o falsa).", Paleta.AVISO));
             else if (l.startsWith("creditos: ")) {
                 for (String c : l.substring(10).split(", ")) lore.add(Marco.tiene("+" + MenuAltar.creditoLinea(c.trim(), 1)));
@@ -667,7 +668,7 @@ final class MenuTasador implements Listener {
         }
         lore.add(Component.empty());
         lore.add(Marco.tenue("Es lo que cobrarías si sales vivo"));
-        lore.add(Marco.tenue("ahora mismo. Si mueres, nada."));
+        lore.add(Marco.tenue("ahora mismo. Si mueres, no cobras."));
         return Marco.icono(Material.GOLD_NUGGET, Component.text("Si sales ahora: ", Paleta.TEXTO)
                 .append(Component.text(Altar.miles(r.esencias()) + " E y " + Altar.miles(r.mobcoins()) + " MC", Paleta.CIFRA)), lore, true);
     }
@@ -690,7 +691,7 @@ final class MenuTasador implements Listener {
         Inventory inv = hc.plugin().getServer().createInventory(v, TAMANO, Marco.T_CAMBIAR.componente());
         int precio = con.precioCambio(p.getUniqueId());
         inv.setItem(13, Marco.icono(iconoContrato(e.def().evento()), Component.text(e.def().texto(), Paleta.TEXTO),
-                List.of(Marco.barra(e.progreso(), e.def().objetivo()), Marco.tenue("Si lo cambias, pierdes lo que llevas.")), false));
+                List.of(Marco.barra(e.progreso(), e.def().objetivo()), Marco.tenue("Si lo cambias, pierdes lo que llevas hecho.")), false));
         Saldo s = hc.saldo();
         long saldo = s == null ? 0 : s.de(p.getUniqueId());
         inv.setItem(22, precio == 0
@@ -711,7 +712,7 @@ final class MenuTasador implements Listener {
             inv.setItem(c, si);
             v.acciones().put(c, "si");
         }
-        Marco.rellenarNeutro(inv);
+        Marco.rellenar(inv);
         p.openInventory(inv);
         Marco.sonar(p, "block.note_block.hat", 0.5f, 1.3f);
     }
@@ -768,7 +769,7 @@ final class MenuTasador implements Listener {
                 Altar altar = hc.altar();
                 if (altar == null) return;
                 if (hc.esHardcore(p)) {
-                    p.sendMessage(ComandoCalamity.mensaje("Aquí dentro no: las Esencias se ingresan solas al salir vivo."));
+                    p.sendMessage(ComandoCalamity.mensaje("En Calamity no se puede: las Esencias pasan a tu saldo cuando sales vivo."));
                     Marco.sonidoNo(p);
                     return;
                 }
@@ -780,7 +781,7 @@ final class MenuTasador implements Listener {
                 Entregas en = hc.entregas();
                 if (en == null) return;
                 if (hc.esHardcore(p)) {
-                    p.sendMessage(ComandoCalamity.mensaje("Aquí dentro no: te llegan al salir de Calamity."));
+                    p.sendMessage(ComandoCalamity.mensaje("En Calamity no se puede: te llegan cuando salgas."));
                     Marco.sonidoNo(p);
                     return;
                 }

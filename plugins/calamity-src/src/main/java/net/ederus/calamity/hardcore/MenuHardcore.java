@@ -2,7 +2,6 @@ package net.ederus.calamity.hardcore;
 
 import net.kyori.adventure.text.Component;
 import net.ederus.edm.comun.Compat;
-import net.ederus.edm.comun.menu.MenuUtil;
 import net.ederus.calamity.CalamityPlugin;
 import org.bukkit.Material;
 import org.bukkit.entity.Player;
@@ -11,22 +10,25 @@ import org.bukkit.event.Listener;
 import org.bukkit.event.inventory.InventoryClickEvent;
 import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.InventoryHolder;
-import org.bukkit.inventory.ItemStack;
 
 import java.util.ArrayList;
 import java.util.List;
 
 /**
- * El panel de Calamity: las doce reglas de dificultad, cada una con su interruptor.
+ * El panel de Calamity: las reglas de dificultad, cada una con su interruptor.
  *
- * El resto del plugin va por comando a proposito (Bedrock), pero doce interruptores en
- * un YAML es justo lo que nadie quiere tocar en caliente, y equivocarse ahi deja el
- * mundo entero mal. Un cofre con doce casillas se entiende de un vistazo y se cambia
- * sin salir del juego.
+ * El resto del plugin va por comando a proposito (Bedrock), pero una docena larga de
+ * interruptores en un YAML es justo lo que nadie quiere tocar en caliente, y equivocarse ahi
+ * deja el mundo entero mal. Un cofre con una casilla por regla se entiende de un vistazo y se
+ * cambia sin salir del juego.
  *
  * Las reglas que son NUMERO (hambre, caida, durabilidad...) se apagan poniendo su
  * valor neutro, no borrandolas: asi el numero que Dosa haya afinado no se pierde al
  * apagar y volver a encender. Ver Regla#apagar.
+ *
+ * 1.7.3: con las piezas de Marco como los demas menus (marco negro sin huecos, Cerrar abajo en
+ * el centro, "Etiqueta: valor" con los colores de Paleta). Antes usaba las de MenuUtil de EDM,
+ * y su gris de etiqueta (#404040) no se leia sobre el globo.
  */
 public final class MenuHardcore implements Listener {
 
@@ -35,10 +37,8 @@ public final class MenuHardcore implements Listener {
             10, 11, 12, 13, 14, 15, 16,
             19, 20, 21, 22, 23, 24, 25,
             28, 29, 30, 31, 32, 33, 34};
-    /** Todo lo que no es regla, cabecera (4) ni cerrar (49): cristal negro. */
-    private static final int[] MARCO = {
-            0, 1, 2, 3, 5, 6, 7, 8, 9, 17, 18, 26, 27, 35,
-            36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 50, 51, 52, 53};
+    /** Cerrar, abajo en el centro como en todos los menus de Calamity. */
+    private static final int CERRAR = 49;
 
     /**
      * Una regla del panel.
@@ -64,20 +64,20 @@ public final class MenuHardcore implements Listener {
             if (v instanceof Boolean b) return b ? "sí" : "no";
             if (v instanceof Number n) {
                 double d = n.doubleValue();
-                return d == Math.floor(d) ? String.valueOf((long) d) : String.valueOf(d);
+                return d == Math.floor(d) ? String.valueOf((long) d) : String.valueOf(d).replace('.', ',');
             }
             return String.valueOf(v);
         }
     }
 
-    /** Las doce que aprobo Dosa, en el orden en que se leen mejor. */
+    /** Las que aprobo Dosa, en el orden en que se leen mejor. */
     private static final List<Regla> REGLAS = List.of(
             new Regla("dificultad.sin-camas", "Sin camas", Material.RED_BED, true, false,
                     List.of("No se duerme: ni se salta la noche", "ni se pone punto de reaparición.")),
             new Regla("dificultad.sin-regeneracion", "Sin regeneración", Material.GOLDEN_APPLE, true, false,
-                    List.of("La vida no vuelve sola:", "pociones y comida encantada.")),
+                    List.of("La vida no se regenera sola: solo", "curan las pociones y la comida encantada.")),
             new Regla("dificultad.hambre", "Hambre x2", Material.ROTTEN_FLESH, 2.0, 1.0,
-                    List.of("Lo que se gasta de hambre se multiplica.", "Comer sigue dando lo mismo.")),
+                    List.of("El hambre que gastas se multiplica.", "Comer sigue llenando lo mismo.")),
             new Regla("dificultad.veneno-comida-cruda", "Comida cruda", Material.CHICKEN, 8, 0,
                     List.of("Segundos de veneno y hambre", "que deja comer algo crudo.")),
             new Regla("dificultad.dano-caida", "Caída x2", Material.FEATHER, 2.0, 1.0,
@@ -85,27 +85,27 @@ public final class MenuHardcore implements Listener {
             new Regla("dificultad.dano-ahogo", "Ahogo x2", Material.WATER_BUCKET, 2.0, 1.0,
                     List.of("El daño por ahogarse se multiplica.")),
             new Regla("dificultad.penetracion-armadura", "Armadura penetrada", Material.NETHERITE_CHESTPLATE, 0.30, 0.0,
-                    List.of("Cuánta armadura ignoran los mobs.", "0.30 = pegan un 30% más.")),
+                    List.of("Cuánta armadura ignoran los mobs.", "0,30 = pegan un 30 % más.")),
             new Regla("dificultad.durabilidad", "Durabilidad x2", Material.DAMAGED_ANVIL, 2.0, 1.0,
-                    List.of("El equipo se gasta más rápido.", "Allí nada dura.")),
+                    List.of("El equipo se gasta más rápido.")),
             new Regla("dificultad.sin-totem", "Sin tótem", Material.TOTEM_OF_UNDYING, true, false,
-                    List.of("El tótem se consume", "y NO te salva.")),
+                    List.of("El tótem se gasta y no te salva.")),
             new Regla("dificultad.mobs-recogen", "Mobs recogen", Material.HOPPER, true, false,
                     List.of("Los mobs recogen lo que se te cae", "y se lo quedan.")),
             new Regla("dificultad.nivel-cada-minutos", "Nivel por minutos", Material.EXPERIENCE_BOTTLE, 3, 0,
-                    List.of("Los mobs suben un nivel por cada", "tantos minutos que lleves dentro.")),
+                    List.of("Los mobs suben un nivel por cada", "tantos minutos que lleves en Calamity.")),
             new Regla("dificultad.niebla-de-noche", "Niebla de noche", Material.GRAY_STAINED_GLASS, true, false,
-                    List.of("De noche se cierra la vista.", "Es un efecto por jugador, no un bioma.")),
+                    List.of("De noche hay niebla de ceniza y", "rachas de oscuridad.", "Es un efecto por jugador, no un bioma.")),
             new Regla("dificultad.fuego-amigo", "Fuego amigo", Material.IRON_SWORD, true, false,
-                    List.of("Os podéis matar entre vosotros.")),
+                    List.of("Los jugadores pueden matarse", "entre sí.")),
             new Regla("minijefes.distancia-maxima", "Minijefes marcan", Material.WITHER_SKELETON_SKULL, 60, 0,
-                    List.of("Te siguen aunque cambies de bioma.", "Si te alejas más, reaparecen al lado.")),
+                    List.of("El minijefe te sigue entre biomas y,", "si te alejas, reaparece a tu lado.")),
             new Regla("dificultad.oleada-de-entrada", "Oleada de entrada", Material.SPAWNER, 5, 0,
                     List.of("Mobs que te reciben al entrar.")),
             new Regla("dificultad.cofres-vacios", "Cofres vacíos", Material.CHEST, true, false,
-                    List.of("Los cofres de estructura salen vacíos:", "todo el botín se mata.")),
+                    List.of("Los cofres de estructura salen vacíos:", "todo el botín sale de los mobs.")),
             new Regla("muerte.cuarentena-minutos", "Cuarentena", Material.CLOCK, 30, 0,
-                    List.of("Minutos de espera para volver a entrar", "después de morir dentro.")),
+                    List.of("Minutos de espera para volver a entrar", "después de morir en Calamity.")),
             /* M22: las seis leyes de legibilidad (DIS sec. 0.2), para que quien lleve Calamity
              * las tenga delante al tocar cualquier otra regla. Una Regla tiene que tener un
              * interruptor: el suyo es el parte de defuncion, que es lo que ensena al jugador,
@@ -117,7 +117,7 @@ public final class MenuHardcore implements Listener {
                             "2. La campana siempre es real:",
                             "   solo la Parca y las muertes.",
                             "3. Lo falso no hace daño.",
-                            "4. Todo golpe gordo se avisa antes.",
+                            "4. Todo golpe fuerte se avisa antes.",
                             "5. Nada te mata de un golpe",
                             "   con la vida llena.",
                             "6. Una amenaza grande a la vez.",
@@ -141,7 +141,6 @@ public final class MenuHardcore implements Listener {
     }
 
     public void abrir(Player p) {
-        // La marca en negrita con su degradado; el resto sin negrita (Paleta.prefijo).
         Inventory inv = plugin.getServer().createInventory(new Marca(), 54,
                 Marco.T_DIFICULTAD.componente());
         pintar(inv);
@@ -150,41 +149,38 @@ public final class MenuHardcore implements Listener {
     }
 
     private void pintar(Inventory inv) {
+        inv.clear();
         Hardcore hc = plugin.hardcore();
         boolean vivo = hc != null;
 
-        inv.setItem(4, MenuUtil.icon(Material.PALE_OAK_LOG,
-                Paleta.marca(),
-                List.of(
-                        MenuUtil.field("Reglas", vivo ? "activas" : "apagadas",
-                                vivo ? Paleta.BIEN : Paleta.AVISO),
-                        MenuUtil.field("Mundos", vivo ? String.join(", ", hc.mundos()) : "ninguno",
-                                MenuUtil.SOFT),
-                        MenuUtil.blank(),
-                        MenuUtil.line("Cada casilla es una regla."),
-                        MenuUtil.line("Los portales y los objetos van"),
-                        MenuUtil.line("por /lw hardcore.")), true));
+        // La marca "Calamity" en negrita con su degradado: es la unica negrita permitida.
+        inv.setItem(4, Marco.icono(Material.PALE_OAK_LOG, Paleta.marca(), List.of(
+                Component.text("Reglas: ", Paleta.TENUE).append(Component.text(vivo ? "activas" : "apagadas",
+                        vivo ? Paleta.BIEN : Paleta.AVISO)),
+                Marco.dato("Mundos", vivo ? String.join(", ", hc.mundos()) : "ninguno"),
+                Component.empty(),
+                Marco.tenue("Cada casilla es una regla."),
+                Marco.tenue("Los portales y los objetos van"),
+                Marco.tenue("por /calamidad.")), true));
 
         for (int i = 0; i < REGLAS.size() && i < CASILLAS.length; i++) {
             Regla r = REGLAS.get(i);
             boolean on = r.activa(plugin);
             List<Component> lore = new ArrayList<>();
-            for (String l : r.ayuda()) lore.add(MenuUtil.line(l));
-            lore.add(MenuUtil.blank());
-            lore.add(MenuUtil.field("Ahora", r.valor(plugin), on ? Paleta.BIEN : Paleta.AVISO));
-            lore.add(MenuUtil.blank());
-            lore.add(MenuUtil.action("Clic para " + (on ? "desactivarla" : "activarla")));
-            // El icono es SIEMPRE el de la regla, para poder distinguirlas de un
-            // vistazo; el estado se lee por el color del nombre y por el cristal de
-            // fondo, verde o rojo. Antes las apagadas eran todas gris y no se leia nada.
-            // Sin negrita: la negrita es solo de la marca.
+            for (String l : r.ayuda()) lore.add(Marco.tenue(l));
+            lore.add(Component.empty());
+            lore.add(Component.text("Ahora: ", Paleta.TENUE).append(Component.text(r.valor(plugin), on ? Paleta.BIEN : Paleta.AVISO)));
+            lore.add(Component.empty());
+            lore.add(Marco.accion("Clic para " + (on ? "desactivarla" : "activarla")));
+            // El icono es SIEMPRE el de la regla, para poder distinguirlas de un vistazo; el
+            // estado se lee por el color del nombre y por el brillo. Antes las apagadas eran
+            // todas gris y no se leia nada. Sin negrita: la negrita es solo de la marca.
             Component titulo = Paleta.nombre(r.nombre(), on ? Paleta.DETALLE : Paleta.AVISO);
-            inv.setItem(CASILLAS[i], MenuUtil.icon(r.icono(), titulo, lore, on));
+            inv.setItem(CASILLAS[i], Marco.icono(r.icono(), titulo, lore, on));
         }
-        inv.setItem(49, MenuUtil.icon(Material.BARRIER,
-                Paleta.nombre("Cerrar", Paleta.AVISO),
-                List.of(MenuUtil.line("Lo que cambies se guarda solo.")), false));
-        MenuUtil.frame(inv, MARCO);
+        inv.setItem(CERRAR, Marco.icono(Material.BARRIER, Component.text("Cerrar", Marco.NO), List.of(
+                Marco.tenue("Lo que cambies se guarda solo."), Component.empty(), Marco.accion("Clic para cerrar")), false));
+        Marco.rellenar(inv);
     }
 
     @EventHandler
@@ -195,7 +191,7 @@ public final class MenuHardcore implements Listener {
         int slot = e.getRawSlot();
         if (slot < 0 || slot >= e.getInventory().getSize()) return;
 
-        if (slot == 49) {
+        if (slot == CERRAR) {
             p.closeInventory();
             return;
         }
@@ -208,7 +204,7 @@ public final class MenuHardcore implements Listener {
             Compat.soundPlayers(p.getWorld(), p.getLocation(),
                     "block.amethyst_block.resonate", 0.8f, on ? 0.7f : 1.4f);
             p.sendMessage(Paleta.mensaje(Component.text(r.nombre(), Paleta.DETALLE)
-                    .append(Component.text(on ? "  apagada." : "  encendida.", on ? Paleta.AVISO : Paleta.BIEN))));
+                    .append(Component.text(on ? ": apagada." : ": encendida.", on ? Paleta.AVISO : Paleta.BIEN))));
             pintar(e.getInventory());
             return;
         }

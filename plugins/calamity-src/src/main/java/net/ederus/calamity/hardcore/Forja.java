@@ -1,7 +1,6 @@
 package net.ederus.calamity.hardcore;
 
 import net.ederus.edm.comun.Compat;
-import net.ederus.edm.comun.menu.MenuUtil;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.event.ClickEvent;
 import net.kyori.adventure.text.event.HoverEvent;
@@ -45,10 +44,12 @@ final class Forja {
     private static final Map<String, String> CORTAS = new HashMap<>();
 
     static {
-        PIEZAS.put("yelmo", "Yelmo del Manto");
-        PIEZAS.put("coraza", "Coraza del Manto");
-        PIEZAS.put("grebas", "Grebas del Manto");
-        PIEZAS.put("soleretas", "Soleretas del Manto");
+        // Como se llaman los objetos de verdad en MMOItems (objetos-calamity.yml): el set es el
+        // Manto de Calamidad, pero cada pieza es "de Calamidad" (1.7.3; antes "Yelmo del Manto").
+        PIEZAS.put("yelmo", "Yelmo de Calamidad");
+        PIEZAS.put("coraza", "Coraza de Calamidad");
+        PIEZAS.put("grebas", "Grebas de Calamidad");
+        PIEZAS.put("soleretas", "Soleretas de Calamidad");
         PIEZAS.put("hacha", "Hacha del Heraldo");
         PIEZAS.put("mascara", "Máscara del Eco");
         PIEZAS.put("filo", "Filo del Eco");
@@ -156,7 +157,7 @@ final class Forja {
         }
         Player p = op.getPlayer();
         if (p != null && primera && !repos) {
-            p.sendMessage(ComandoCalamity.mensaje(Component.text("Tu primera pieza de Calamity. ")
+            p.sendMessage(ComandoCalamity.mensaje(Component.text("Es tu primera pieza de Calamity. ")
                     .append(Component.text("Enséñala en /flex", Altar.AMBAR)
                             .clickEvent(ClickEvent.runCommand("/flex"))
                             .hoverEvent(HoverEvent.showText(Component.text("Abre tu vitrina", Paleta.TEXTO))))
@@ -195,31 +196,32 @@ final class Forja {
         }
         List<Enchantment> opciones = ObjetosCalamity.grabables(mano, obj.permitidos(), obj.topes());
         Map<Integer, String> acciones = new HashMap<>();
+        // 27 casillas como los demas menus (1.7.3): arriba en el centro que es el Grabado, en la fila
+        // del medio los encantamientos que se pueden subir y abajo en el centro Volver a la Forja.
         Inventory menu = hc.plugin().getServer().createInventory(
-                new MenuAltar.Marca(MenuAltar.GRABAR, acciones, mano.clone()), 9,
+                new MenuAltar.Marca(MenuAltar.GRABAR, acciones, mano.clone()), 27,
                 Marco.T_GRABAR.componente());
-        menu.setItem(0, MenuUtil.icon(Material.FLINT, Component.text("Grabado de Calamidad", Altar.AMBAR), List.of(
-                MenuUtil.line("Sube un encantamiento un nivel"),
-                MenuUtil.line("por encima de su tope."),
-                MenuUtil.blank(),
-                MenuUtil.line("Uno por objeto, uno por semana."),
-                MenuUtil.line("El objeto queda ligado a ti.")), false));
-        int casilla = 2;
-        for (Enchantment e : opciones) {
-            if (casilla > 7) break;
+        menu.setItem(4, Marco.icono(Material.FLINT, Component.text("Grabado de Calamidad", Altar.AMBAR), List.of(
+                Marco.texto("Sube de nivel un encantamiento"),
+                Marco.texto("que ya esté al máximo."),
+                Component.empty(),
+                Marco.tenue("Uno por objeto y uno por semana."),
+                Marco.tenue("El objeto queda ligado a ti.")), false));
+        int[] cols = Marco.columnas(Math.min(Marco.COLUMNAS, opciones.size()));
+        for (int i = 0; i < cols.length; i++) {
+            Enchantment e = opciones.get(i);
+            int casilla = 9 + cols[i];
             int nivel = mano.getEnchantmentLevel(e);
             String n = ObjetosCalamity.nombreEncantamiento(e);
-            menu.setItem(casilla, MenuUtil.icon(Material.ENCHANTED_BOOK,
+            menu.setItem(casilla, Marco.icono(Material.ENCHANTED_BOOK,
                     Component.text(n + " " + ObjetosCalamity.romano(nivel) + " → " + ObjetosCalamity.romano(nivel + 1), Altar.AMBAR),
-                    List.of(MenuUtil.line("Gasta un Grabado."), MenuUtil.blank(),
-                            Component.text("Clic izquierdo para grabarlo.", Altar.VERDE)), true));
+                    List.of(Marco.texto("Gasta un Grabado."), Component.empty(), Marco.accion("Clic para grabarlo")), true));
             acciones.put(casilla, "g:" + e.getKey().getKey());
-            casilla++;
         }
-        menu.setItem(8, Marco.icono(Material.ARROW, Component.text("◀ Volver a la Forja", Paleta.DETALLE),
-                List.of(Marco.tenue("Sin grabar nada.")), false));
-        acciones.put(8, "ir:" + MenuAltar.FORJA);
-        for (int s = 0; s < 9; s++) if (menu.getItem(s) == null) menu.setItem(s, Marco.cristal(Material.BLACK_STAINED_GLASS_PANE));
+        int abajo = Marco.abajo(menu.getSize());
+        menu.setItem(abajo, Marco.volver("a la Forja"));
+        acciones.put(abajo, "ir:" + MenuAltar.FORJA);
+        Marco.rellenar(menu);
         p.openInventory(menu);
         Compat.soundPlayers(p.getWorld(), p.getLocation(), "block.grindstone.use", 0.7f, 1.2f);
     }
@@ -283,25 +285,28 @@ final class Forja {
         Compat.soundPlayers(p.getWorld(), p.getLocation(), "block.smithing_table.use", 1.0f, 0.9f);
     }
 
-    /** El lore del boton Grabar: lo que hace y cuantos lleva esta semana. */
+    /**
+     * El lore del boton Grabar: lo que hace y cuantos lleva esta semana. (Hoy el boton lo pinta
+     * MenuAltar.grabar y esto no lo llama nadie; se deja con los mismos textos por si vuelve.)
+     */
     List<Component> estadoGrabar(Player p) {
         ObjetosCalamity obj = objetos();
         List<Component> lore = new ArrayList<>();
-        lore.add(MenuUtil.line("Con el objeto en la mano y un"));
-        lore.add(MenuUtil.line("Grabado en el inventario: +1 nivel"));
-        lore.add(MenuUtil.line("sobre el tope a un encantamiento."));
-        lore.add(MenuUtil.line("Solo equipo sin MMOItems."));
-        lore.add(MenuUtil.blank());
+        lore.add(Marco.texto("Gasta un Grabado de Calamidad"));
+        lore.add(Marco.texto("para subir de nivel un encantamiento"));
+        lore.add(Marco.texto("que ya esté al máximo."));
+        lore.add(Marco.tenue("Lleva el objeto en la mano. Solo"));
+        lore.add(Marco.tenue("sirve en equipo vanilla."));
+        lore.add(Component.empty());
         if (obj == null) {
-            lore.add(Component.text("Próximamente.", Paleta.TENUE));
+            lore.add(Marco.tenue("Próximamente."));
             return lore;
         }
         int hechos = hc.datos().getInt(ObjetosCalamity.rutaGrabados(altar.calendario().semana(), p.getUniqueId()), 0);
-        lore.add(Component.text("Esta semana: ", MenuUtil.SOFT)
-                .append(Component.text(hechos + " de " + obj.porSemana(), Paleta.CIFRA)));
+        lore.add(Marco.dato("Esta semana", hechos + " de " + obj.porSemana()));
         boolean tiene = ObjetosCalamity.casillaGrabado(p.getInventory().getContents(), p.getUniqueId()) >= 0;
-        lore.add(Component.text(tiene ? "Clic izquierdo para grabar." : "No llevas ningún Grabado.",
-                tiene ? Altar.VERDE : MenuUtil.SOFT));
+        lore.add(Component.empty());
+        lore.add(tiene ? Marco.accion("Clic para grabar") : Marco.porQueNo("No llevas ningún Grabado."));
         return lore;
     }
 }

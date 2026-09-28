@@ -54,7 +54,8 @@ import java.util.UUID;
  * queda libre. El NPC lo pone Dosa a mano con Citizens; aqui solo esta lo que su clic ejecuta
  * como consola, "/calamidad abrir <p> engarzador" (Npcs), y la receta en /calamidad engarzador.
  *
- * El menu (54, marco de Calamity):
+ * El menu (54, marco negro de Calamity):
+ *  - arriba en el centro, la ayuda; abajo en el centro, Cerrar (como en todos los menus, 1.7.3);
  *  - fila del medio: la pieza a la izquierda, Engarzar en el centro y la gema a la derecha;
  *  - fila de abajo: los huecos de la pieza, libres (cristal) y ocupados (la gema de verdad, con
  *    su lore de MMOItems). Tocar un hueco ocupado pide confirmar en la misma ventana, avisando
@@ -73,8 +74,9 @@ import java.util.UUID;
  */
 final class MenuEngarzador implements Listener {
 
-    /** Donde va cada cosa (54). */
-    static final int AYUDA = 4, PIEZA = 20, ENGARZAR = 22, GEMA = 24, FILA_HUECOS = 36, FILA_ENGARCE = 18;
+    /** Donde va cada cosa (54). Cerrar, abajo en el centro como en todos los menus. */
+    static final int AYUDA = 4, PIEZA = 20, ENGARZAR = 22, GEMA = 24, FILA_HUECOS = 36, FILA_ENGARCE = 18,
+            CERRAR = 49;
     /** La pantalla de confirmar (misma ventana): la pieza, la gema que se rompe y los dos botones. */
     static final int C_PIEZA = 13, C_GEMA = 22;
     static final int[] C_NO = {37, 38, 39}, C_SI = {41, 42, 43};
@@ -215,8 +217,8 @@ final class MenuEngarzador implements Listener {
         inv.clear();
         m.acciones.clear();
         inv.setItem(AYUDA, ayuda());
-        inv.setItem(Marco.CERRAR, Marco.cerrar());
-        m.acciones.put(Marco.CERRAR, "cerrar");
+        inv.setItem(CERRAR, Marco.cerrar());
+        m.acciones.put(CERRAR, "cerrar");
 
         Engarce.Ficha fp = m.pieza == null ? null : EngarceMmo.leer(m.pieza);
         Engarce.Ficha fg = m.gema == null ? null : EngarceMmo.leer(m.gema);
@@ -236,8 +238,8 @@ final class MenuEngarzador implements Listener {
         // La pieza.
         if (m.pieza == null) {
             List<Component> lore = new ArrayList<>();
-            lore.add(Marco.texto("Tócala en tu inventario"));
-            lore.add(Marco.texto("y se coloca aquí."));
+            lore.add(Marco.texto("Toca la pieza en tu inventario"));
+            lore.add(Marco.texto("y se colocará aquí."));
             if (!conHuecos.isEmpty()) {
                 lore.add(Component.empty());
                 lore.add(Marco.tenue("Llevan hueco de gema:"));
@@ -267,9 +269,8 @@ final class MenuEngarzador implements Listener {
         String motivo = m.pieza == null ? Engarce.SIN_PIEZA : m.gema == null ? Engarce.SIN_GEMA
                 : Engarce.motivoEngarce(fp, fg, tiposPieza(), tiposGema(), EngarceMmo.sinColor());
         List<Component> lore = new ArrayList<>();
-        lore.add(Marco.texto("La gema entra en un hueco libre"));
-        lore.add(Marco.texto("de su color y lo que da se suma"));
-        lore.add(Marco.texto("a la pieza."));
+        lore.add(Marco.texto("La gema ocupa un hueco libre de su"));
+        lore.add(Marco.texto("color y suma sus bonos a la pieza."));
         lore.add(Component.empty());
         lore.add(Component.text("Es gratis.", Paleta.BIEN));
         lore.add(Component.empty());
@@ -307,7 +308,7 @@ final class MenuEngarzador implements Listener {
                     Marco.tenue("y pulsa Engarzar.")), false);
         }
         List<Component> extra = List.of(
-                Marco.dato("En el hueco", h.color()),
+                Marco.dato("Color del hueco", h.color()),
                 Component.text("Si la quitas, se rompe.", Paleta.AVISO),
                 Component.empty(),
                 Marco.accion("Clic para quitarla"));

@@ -35,13 +35,13 @@ import java.util.UUID;
  * "de que va con tantas cosas":
  *  - la portada (45) tiene tres tarjetas grandes: Para la expedicion, Llaves y ofrendas y La
  *    Forja, cada una con dos lineas de lo que hay dentro, cuantos articulos y cuantos puedes
- *    comprar ya (brilla si alguno). Arriba tu saldo y Cerrar; abajo "¿Como funciona?" y el
- *    enlace al Tasador;
+ *    comprar ya (brilla si alguno). Arriba tu saldo; abajo "¿Como funciona?", Cerrar en el
+ *    centro y el enlace al Mercado de Oren, como la portada del Mercado (1.7.3);
  *  - una categoria (54) son sus articulos centrados y con aire (Marco.rejilla), con las flechas
  *    de pagina en las esquinas de abajo y Volver al Altar en el centro;
- *  - la Forja (54, la que abre el Forjador y la tarjeta de la portada) pone cada grupo en su
- *    fila con una banda de color a los lados: Mejoras (con Grabar), El Manto y el Hacha, El
- *    Vestigio del Eco y La Guadana de la Parca. El color y el nombre de la banda dicen que pide.
+ *  - la Forja (54, la que abre Vael y la tarjeta de la portada) pone cada grupo en su fila con
+ *    una banda a los lados (el cristal negro del marco con el nombre del grupo al pasar por
+ *    encima): Mejoras (con Grabar), El Manto y el Hacha, El Vestigio del Eco y La Guadana.
  * Lo que no es comprar salio del Altar: depositar va en el icono del saldo (y en el Tasador);
  * Tu camino y las horas activas, los contratos, en el Tasador; los rankings y el Tablero, en el
  * Cazador; la encuesta y la lista de deseos, en sus comandos. Los trueques depositar y camino
@@ -73,30 +73,38 @@ final class MenuAltar implements Listener {
     /** Los iconos de MMOItems se crean una vez cada tanto, no en cada repintado. */
     private static final long ICONOS_MS = 5 * 60_000L;
 
-    /** La portada: 45 casillas, las tarjetas en la fila del medio y abajo la ayuda y el Tasador. */
-    static final int PORTADA = 45, FILA_TARJETAS = 18, AYUDA = 38, IR_TASADOR = 42;
+    /**
+     * La portada: 45 casillas, las tarjetas en la fila del medio y abajo la ayuda, Cerrar y el
+     * Mercado (38, 40, 42: los mismos sitios que el Altar, Cerrar y la Forja en el Mercado).
+     */
+    static final int PORTADA = 45, FILA_TARJETAS = 18, AYUDA = 38, CERRAR = 40, IR_TASADOR = 42;
     /** Donde va "Nada por ahora" en una categoria vacia: el centro. */
     private static final int CENTRO = 22;
 
     /** Los servicios de altar.trueques que no son comprar: ya no salen en el Altar (los atiende el Tasador). */
     static final Set<String> FUERA = Set.of("depositar", "camino");
 
-    /** Lo que dice cada trueque de serie en su icono (el lore de la config, si lo hay, manda). */
+    /**
+     * Lo que dice cada trueque de serie en su icono (el lore de la config, si lo hay, manda). Cada
+     * frase dice lo que el objeto hace de verdad (1.7.3): nada de "Escalon 15" ni de frases que
+     * suenan a un efecto que no existe.
+     */
     private static final Map<String, List<String>> DESCRIPCION = Map.ofEntries(
-            Map.entry("recargar", List.of("Llena el frasco que lleves.")),
-            Map.entry("frasco", List.of("Tres tragos. Cada uno, +40 de cordura.")),
-            Map.entry("cristal", List.of("Te saca de Calamity si aguantas", "quieto unos segundos.")),
-            Map.entry("tintura", List.of("Cura 8 de vida y te endurece", "unos segundos. Dos por compra.")),
-            Map.entry("llave", List.of("Una Llave del Caos para la caja", "del spawn. Cuenta en tu tope semanal.")),
-            Map.entry("salvoconducto", List.of("Al morir dentro, conservas una pieza.")),
-            Map.entry("ofrenda", List.of("Un punto en la tabla de Ofrendas", "del mes. Nada más, y nada menos.")),
-            Map.entry("talisman", List.of("+3 de vida. Dentro, la cordura", "baja un 20 % más despacio.")),
-            Map.entry("gema", List.of("Lior la engarza en el Yelmo,", "la Coraza o el Hacha del Heraldo.")),
-            Map.entry("grabado", List.of("+1 nivel sobre el tope a un", "encantamiento de equipo vanilla.")),
-            Map.entry("ascua", List.of("+1 nivel de mejora a una pieza", "del Manto, del Eco o la Guadaña.")),
-            Map.entry("mascara-eco", List.of("Casco del Vestigio del Eco.", "Escalón 15.")),
-            Map.entry("filo-eco", List.of("Espada del Vestigio del Eco.", "Escalón 15.")),
-            Map.entry("guadana", List.of("Escalón 17. La Parca no la soltó:", "se la quitaste.")));
+            Map.entry("recargar", List.of("Rellena el Frasco de Calma", "que lleves encima.")),
+            Map.entry("frasco", List.of("Trae 3 tragos y cada uno te", "devuelve 40 de cordura.")),
+            Map.entry("cristal", List.of("Te saca de Calamity si te", "quedas quieto unos segundos.")),
+            Map.entry("tintura", List.of("Cura 8 de vida y te da", "Resistencia durante 6 s.")),
+            Map.entry("llave", List.of("Abre la Crate Caos del spawn.", "Cuenta para tu tope semanal", "de llaves.")),
+            Map.entry("salvoconducto", List.of("Si mueres en Calamity, conservas", "una pieza de tu equipo.")),
+            Map.entry("ofrenda", List.of("Suma una Ofrenda a tu nombre.", "No da ningún objeto.")),
+            Map.entry("talisman", List.of("+3 de vida. En Calamity, la", "cordura baja un 20 % más despacio.")),
+            Map.entry("gema", List.of("Lior la engarza en el Yelmo, la", "Coraza o el Hacha del Heraldo.")),
+            Map.entry("grabado", List.of("Sube de nivel un encantamiento", "que ya esté al máximo.",
+                    "Solo en equipo vanilla.")),
+            Map.entry("ascua", List.of("Sube un nivel de mejora a una", "pieza del Manto, del Vestigio", "del Eco o a la Guadaña.")),
+            Map.entry("mascara-eco", List.of("Casco del Vestigio del Eco.", "Con el Filo del Eco activa", "el bono del set.")),
+            Map.entry("filo-eco", List.of("Espada del Vestigio del Eco.", "Con la Máscara del Eco activa", "el bono del set.")),
+            Map.entry("guadana", List.of("El arma de la Parca. Se forja", "con Fragmentos de Guadaña.")));
 
     /**
      * Marca de nuestros inventarios. acciones: casilla -> que hace. foto: el objeto de la mano
@@ -125,11 +133,11 @@ final class MenuAltar implements Listener {
 
     static final List<Categoria> CATEGORIAS = List.of(
             new Categoria(EXPEDICION, Material.LANTERN, "Para la expedición",
-                    List.of("Lo que te llevas dentro: frascos,", "cristales de regreso y tinturas."), "Expedición"),
+                    List.of("Frascos de Calma, Cristales de", "Regreso y Tinturas de Ceniza."), "Expedición"),
             new Categoria(LLAVES, Material.VAULT, "Llaves y ofrendas",
-                    List.of("La Llave del Caos y la Ofrenda", "del mes, a cambio de Esencias."), "Llaves"),
+                    List.of("La Llave del Caos y la Ofrenda,", "a cambio de Esencias."), "Llaves"),
             new Categoria(FORJA, Material.ANVIL, "La Forja",
-                    List.of("El equipo de Calamity (el Manto,", "el Eco y la Guadaña) y sus mejoras."), "Forja"));
+                    List.of("El Manto, el Vestigio del Eco,", "la Guadaña y sus mejoras."), "Forja"));
 
     /** Una cosa de la Forja: un trueque, o el boton Grabar. */
     record Cosa(Altar.Trueque t, String boton) {
@@ -220,13 +228,13 @@ final class MenuAltar implements Listener {
     static List<Seccion> forja(List<Altar.Trueque> todos, boolean salvoconducto) {
         Map<String, Seccion> s = new LinkedHashMap<>();
         s.put("mejoras", new Seccion("mejoras", Material.YELLOW_STAINED_GLASS_PANE, "Mejoras",
-                List.of("Para lo que ya llevas: vida, gemas,", "grabados y la Ascua del Manto."), new ArrayList<>()));
+                List.of("Para el equipo que ya tienes:", "talismán, gemas, grabados y ascuas."), new ArrayList<>()));
         s.put("manto", new Seccion("manto", Material.ORANGE_STAINED_GLASS_PANE, "El Manto y el Hacha",
                 List.of("Cada pieza pide el Sello", "de su minijefe."), new ArrayList<>()));
         s.put("eco", new Seccion("eco", Material.CYAN_STAINED_GLASS_PANE, "El Vestigio del Eco",
-                List.of("Piden Marcas de Eco: Lágrimas", "de Eco de cazas válidas."), new ArrayList<>()));
+                List.of("Piden Marcas de Eco, que salen", "de las Lágrimas de Eco."), new ArrayList<>()));
         s.put("guadana", new Seccion("guadana", Material.PURPLE_STAINED_GLASS_PANE, "La Guadaña de la Parca",
-                List.of("Pide Fragmentos de Guadaña:", "Campanas de Parca."), new ArrayList<>()));
+                List.of("Pide Fragmentos de Guadaña, que", "salen de las Campanas de la Parca."), new ArrayList<>()));
         s.put("piezas", new Seccion("piezas", Material.LIGHT_GRAY_STAINED_GLASS_PANE, "Otras piezas",
                 List.of("Piden créditos de Calamity."), new ArrayList<>()));
         for (Altar.Trueque t : trueques(FORJA, todos, salvoconducto)) s.get(grupoDe(t)).cosas().add(new Cosa(t, null));
@@ -280,7 +288,7 @@ final class MenuAltar implements Listener {
      */
     void abrir(Player p, String pagina, int hoja, boolean conSonido) {
         if (!altar.activo()) {
-            p.sendMessage(ComandoCalamity.mensaje("El altar está en silencio ahora mismo."));
+            p.sendMessage(ComandoCalamity.mensaje("El Altar está cerrado ahora mismo."));
             return;
         }
         String pg = pagina(pagina);
@@ -313,8 +321,6 @@ final class MenuAltar implements Listener {
         List<Altar.Trueque> todos = altar.trueques();
         boolean salvo = hc.cfg().getBoolean("salvoconducto.activo", false);
         Marco.saldo(inv, m.acciones(), hc, p, Marco.SALDO);
-        inv.setItem(Marco.CERRAR, Marco.cerrar());
-        m.acciones().put(Marco.CERRAR, "cerrar");
         if (m.pagina().equals(UMBRAL)) portada(inv, p, m, todos, salvo);
         else if (m.pagina().equals(FORJA)) paginaForja(inv, p, m, todos, salvo);
         else paginaCategoria(inv, p, m, todos, salvo);
@@ -337,21 +343,22 @@ final class MenuAltar implements Listener {
             List<Component> lore = new ArrayList<>();
             for (String l : c.texto()) lore.add(Marco.texto(l));
             lore.add(Component.empty());
-            lore.add(Component.text("▸ ", Paleta.SEPARADOR).append(Marco.texto(ts.size() + (ts.size() == 1 ? " artículo" : " artículos"))));
-            if (ya > 0) lore.add(Marco.tiene(ya == 1 ? "1 lo puedes " + (forja ? "forjar" : "comprar") + " ya"
-                    : ya + " los puedes " + (forja ? "forjar" : "comprar") + " ya"));
+            lore.add(Marco.dato("Artículos", String.valueOf(ts.size())));
+            if (ya > 0) lore.add(Marco.tiene("Ya puedes " + (forja ? "forjar " : "comprar ") + ya + "."));
             lore.add(Component.empty());
             lore.add(Marco.accion("Clic para entrar"));
             inv.setItem(casillas[i], Marco.icono(c.icono(), Component.text(c.nombre(), forja ? Altar.AMBAR : Paleta.DETALLE), lore, ya > 0));
             m.acciones().put(casillas[i], "cat:" + c.id());
         }
         if (hay.isEmpty()) {
-            inv.setItem(FILA_TARJETAS + 4, Marco.icono(Material.GRAY_DYE, Component.text("El altar no tiene nada ahora", Paleta.TENUE),
+            inv.setItem(FILA_TARJETAS + 4, Marco.icono(Material.GRAY_DYE, Component.text("El Altar no tiene nada ahora", Paleta.TENUE),
                     List.of(Marco.tenue("Vuelve más tarde.")), false));
         }
         inv.setItem(AYUDA, Marco.ayuda(hc));
-        Marco.enlace(inv, m.acciones(), IR_TASADOR, Marco.TASADOR, Material.SPYGLASS, "Oren, el mercado",
-                List.of("Lo que traes y lo que cobras,", "tus contratos y tu camino."), hc.npcs() != null);
+        inv.setItem(CERRAR, Marco.cerrar());
+        m.acciones().put(CERRAR, "cerrar");
+        Marco.enlace(inv, m.acciones(), IR_TASADOR, Marco.TASADOR, Material.EMERALD, "Mercado de Oren",
+                List.of("Tu dinero, tus contratos", "y tus Reliquias."), hc.npcs() != null);
     }
 
     /** Una categoria: sus articulos en rejilla y abajo las flechas y Volver. */
@@ -362,7 +369,7 @@ final class MenuAltar implements Listener {
         for (Marco.Sitio s : sitios) if (s.hoja() == m.hoja()) ponerTrueque(inv, p, m, s.casilla(), ts.get(s.indice()), caja);
         if (ts.isEmpty()) {
             inv.setItem(CENTRO, Marco.icono(Material.GRAY_DYE, Component.text("Nada por ahora", Paleta.TENUE),
-                    List.of(Marco.tenue("El altar no tiene nada aquí.")), false));
+                    List.of(Marco.tenue("Aquí no hay nada a la venta ahora.")), false));
         }
         pie(inv, m, Marco.hojas(sitios));
     }
@@ -396,16 +403,16 @@ final class MenuAltar implements Listener {
             inv.setItem(Marco.SIGUIENTE, Marco.flecha(1, m.hoja(), total));
             m.acciones().put(Marco.SIGUIENTE, "hoja:" + (m.hoja() + 1));
         }
-        inv.setItem(Marco.VOLVER, Marco.volver(m.hoja(), total));
+        inv.setItem(Marco.VOLVER, Marco.volver("al Altar"));
         m.acciones().put(Marco.VOLVER, "volver");
     }
 
     /** El boton Grabar de la Forja: lo que hace, cuantos llevas esta semana y si llevas un Grabado. */
     private void grabar(Inventory inv, Player p, Marca m, int casilla) {
         ObjetosCalamity obj = hc.objetos();
-        List<Component> lore = new ArrayList<>(List.of(Marco.texto("Con el objeto en la mano y un"),
-                Marco.texto("Grabado encima: +1 nivel sobre el"), Marco.texto("tope a un encantamiento."),
-                Marco.tenue("Solo equipo sin MMOItems."), Component.empty()));
+        List<Component> lore = new ArrayList<>(List.of(Marco.texto("Gasta un Grabado de Calamidad"),
+                Marco.texto("para subir de nivel un encantamiento"), Marco.texto("que ya esté al máximo."),
+                Marco.tenue("Lleva el objeto en la mano. Solo"), Marco.tenue("sirve en equipo vanilla."), Component.empty()));
         boolean tiene = false;
         if (obj == null) {
             lore.add(Marco.tenue("Próximamente."));
@@ -450,10 +457,11 @@ final class MenuAltar implements Listener {
         if (!t.lore().isEmpty()) return t.lore();
         org.bukkit.configuration.ConfigurationSection c = hc.cfg();
         return switch (t.id()) {
-            case "frasco" -> List.of(c.getInt("frasco.usos", 3) + " tragos. Cada uno, +" + c.getInt("frasco.cordura", 40) + " de cordura.");
-            case "cristal" -> List.of("Te saca de Calamity si aguantas", "quieto " + c.getInt("cristal.segundos", 5) + " segundos.");
-            case "talisman" -> List.of("+" + c.getInt("talisman.vida", 3) + " de vida. Dentro, la cordura",
-                    "baja un " + Math.round((1 - c.getDouble("talisman.drenaje", 0.80)) * 100) + " % más despacio.");
+            case "frasco" -> List.of("Trae " + c.getInt("frasco.usos", 3) + " tragos y cada uno te",
+                    "devuelve " + c.getInt("frasco.cordura", 40) + " de cordura.");
+            case "cristal" -> List.of("Te saca de Calamity si te", "quedas quieto " + c.getInt("cristal.segundos", 5) + " segundos.");
+            case "talisman" -> List.of("+" + c.getInt("talisman.vida", 3) + " de vida. En Calamity, la",
+                    "cordura baja un " + Math.round((1 - c.getDouble("talisman.drenaje", 0.80)) * 100) + " % más despacio.");
             default -> DESCRIPCION.getOrDefault(t.id(), descripcionPieza(t));
         };
     }
@@ -477,8 +485,8 @@ final class MenuAltar implements Listener {
         if (pr.reposicion()) {
             int dias = Forja.diasReposicion(hc.datos(), u, t.pieza(), System.currentTimeMillis(),
                     hc.cfg().getInt("forja.reposicion-dias", 14));
-            lore.add(Component.text("Reposición: la perdiste dentro y", Paleta.BIEN));
-            lore.add(Component.text("sale más barata " + dias + (dias == 1 ? " día más." : " días más."), Paleta.BIEN));
+            lore.add(Component.text("La perdiste en Calamity: reponerla", Paleta.BIEN));
+            lore.add(Component.text("sale más barato " + dias + (dias == 1 ? " día más." : " días más."), Paleta.BIEN));
         }
         if (!lore.isEmpty()) lore.add(Component.empty());
         lore.addAll(costes(u, pr, caja));
@@ -492,14 +500,14 @@ final class MenuAltar implements Listener {
         Entregas en = hc.entregas();
         if (en != null && Entregas.esObjeto(t.objeto()) && !en.recibeYa(p)) {
             lore.add(Component.empty());
-            lore.add(Component.text("Aquí dentro te espera fuera:", Paleta.CIFRA));
-            lore.add(Component.text("lo recibes al salir de Calamity.", Paleta.CIFRA));
+            lore.add(Component.text("Estás en Calamity: lo recibirás", Paleta.CIFRA));
+            lore.add(Component.text("cuando salgas.", Paleta.CIFRA));
         }
         lore.add(Component.empty());
         boolean gris = "mc".equals(plan.motivo()) && "proximamente".equals(plan.faltan());
         boolean puede = plan.motivo() == null;
-        if (puede) lore.add(Marco.accion(FORJA.equals(t.pagina()) ? "Clic para forjar" : "Clic para comprarlo"));
-        else if (gris) lore.add(Marco.tenue("Próximamente: el altar aún no cobra MobCoins."));
+        if (puede) lore.add(Marco.accion(FORJA.equals(t.pagina()) ? "Clic para forjarlo" : "Clic para comprarlo"));
+        else if (gris) lore.add(Marco.tenue("Próximamente: el Altar aún no cobra MobCoins."));
         else lore.add(Marco.porQueNo(porQueNo(plan)));
         TextColor color = gris ? Paleta.TENUE : FORJA.equals(t.pagina()) ? Altar.AMBAR : Paleta.DETALLE;
         inv.setItem(casilla, Marco.icono(base(t), Component.text(Altar.nombre(t), color), lore, puede));
@@ -517,7 +525,8 @@ final class MenuAltar implements Listener {
             out.add("Su Sello lo suelta " + (de.startsWith("de la ") ? "la " + de.substring(6) : "el " + de.substring(4)) + ".");
         }
         if (t.conReposicion()) {
-            out.add("Si la pierdes: " + hc.cfg().getInt("forja.reposicion-dias", 14) + " días para reponerla a " + t.reposEsencias() + " E.");
+            out.add("Si la pierdes, durante " + hc.cfg().getInt("forja.reposicion-dias", 14) + " días");
+            out.add("la repones con " + t.reposEsencias() + " Esencias en vez de " + t.esencias() + ".");
         }
         return out;
     }
@@ -544,7 +553,7 @@ final class MenuAltar implements Listener {
             if (cr == null) out.add(Marco.falta(que, null));
             else if (cr.gastables(u, c) >= n) out.add(Marco.tiene(que));
             else if (c.startsWith("sello:") && cr.gastables(u, Creditos.ERRANTE) >= n) {
-                out.add(Marco.tiene(que + "  (con un Sello Errante)"));
+                out.add(Marco.tiene(que + "  (pagas con un Sello Errante)"));
             } else if ("horas".equals(cr.motivoNoGasta(u, c, n))
                     || (c.startsWith("sello:") && "horas".equals(cr.motivoNoGasta(u, Creditos.ERRANTE, n)))) {
                 out.add(Marco.falta(que, "pide " + Math.round(cr.horasPedidas()) + " h activas"));
@@ -582,13 +591,19 @@ final class MenuAltar implements Listener {
             out.add(Marco.dato("Hoy", "te " + (q == 1 ? "queda " : "quedan ") + q + " de " + t.limiteDia()));
         }
         if (t.stock() > 0) {
-            out.add(Marco.dato("En el altar", "quedan " + Math.max(0, t.stock() - Altar.stockUsado(caja, t.id())) + " esta semana"));
+            out.add(Marco.dato("En el Altar", "quedan " + Math.max(0, t.stock() - Altar.stockUsado(caja, t.id())) + " esta semana"));
         }
         if ("tope-llaves".equalsIgnoreCase(t.requisito())) {
             out.add(Marco.dato("Llaves que te caben", String.valueOf(caja.llavesLibres(u))));
         }
-        if (t.incremento() > 0) out.add(Marco.tenue("Sube " + t.incremento() + " Esencias con cada una de la semana."));
-        if (t.esperaDias() > 0) out.add(Marco.tenue("Una nueva cada " + t.esperaDias() + " días; reponerla no espera."));
+        if (t.incremento() > 0) {
+            out.add(Marco.tenue("Cada una de la semana cuesta"));
+            out.add(Marco.tenue(t.incremento() + " Esencias más que la anterior."));
+        }
+        if (t.esperaDias() > 0) {
+            out.add(Marco.tenue("Puedes forjar una nueva cada " + t.esperaDias() + " días."));
+            out.add(Marco.tenue("Reponerla no tiene espera."));
+        }
         return out;
     }
 
@@ -598,13 +613,13 @@ final class MenuAltar implements Listener {
         return switch (plan.motivo()) {
             case "esencias" -> "Te faltan " + f + " Esencias.";
             case "mc" -> "Te faltan " + (f instanceof Number n ? Altar.miles(n.longValue()) : f) + " MobCoins.";
-            case "credito" -> "horas".equals(f) ? "Tu crédito pide horas activas." : "Te falta el crédito que pide.";
+            case "credito" -> "horas".equals(f) ? "Te faltan horas activas para usarlo." : "Aún no tienes lo que pide.";
             case "cupo" -> "tope-llaves".equals(f) ? "Tu tope de llaves está lleno."
-                    : String.valueOf(f).endsWith("d") ? "Otra en " + String.valueOf(f).replace("d", "") + " días."
-                    : "Ya no te queda.";
-            case "stock" -> "Agotado esta semana.";
-            case "requisito" -> String.valueOf(f).contains("insomne") ? "Solo para un [INSOMNE]." : "Aún no se puede.";
-            default -> "Ahora no.";
+                    : String.valueOf(f).endsWith("d") ? "Podrás forjar otra en " + String.valueOf(f).replace("d", "") + " días."
+                    : "Ya has agotado tu cupo.";
+            case "stock" -> "Agotado hasta la semana que viene.";
+            case "requisito" -> String.valueOf(f).contains("insomne") ? "Solo si tienes el tag [INSOMNE]." : "Aún no se puede.";
+            default -> "Ahora no se puede.";
         };
     }
 
@@ -621,10 +636,10 @@ final class MenuAltar implements Listener {
             }
         }
         int porTrago = Math.max(0, hc.cfg().getInt("frasco.esencias-por-trago", 1));
-        lore.add(Marco.tenue(Marco.esencias(porTrago) + " por trago que le falte."));
+        lore.add(Marco.tenue("Cuesta " + Marco.esencias(porTrago) + " por cada trago vacío."));
         lore.add(Component.empty());
         if (frasco == null) {
-            lore.add(Marco.porQueNo("No llevas ningún frasco."));
+            lore.add(Marco.porQueNo("No llevas ningún Frasco de Calma."));
             return false;
         }
         int max = hc.cfg().getInt("frasco.usos", 3);
@@ -632,7 +647,7 @@ final class MenuAltar implements Listener {
         lore.add(Marco.dato("Tu frasco", tragos + " de " + max + " tragos"));
         if (tragos >= max) {
             lore.add(Component.empty());
-            lore.add(Marco.tenue("Ya está lleno."));
+            lore.add(Marco.tenue("Tu frasco ya está lleno."));
             return false;
         }
         int coste = (max - tragos) * porTrago;
@@ -644,7 +659,7 @@ final class MenuAltar implements Listener {
             lore.add(Marco.porQueNo("Te faltan " + (coste - saldo) + " Esencias."));
             return false;
         }
-        lore.add(Marco.accion("Clic para llenarlo"));
+        lore.add(Marco.accion("Clic para rellenarlo"));
         return true;
     }
 
@@ -699,8 +714,8 @@ final class MenuAltar implements Listener {
         List<Component> si = new ArrayList<>();
         si.add(Marco.tenue("Pagas:"));
         for (String r : resumen) si.add(Marco.texto("  " + r));
-        if (resumen.isEmpty()) si.add(Marco.texto("  nada"));
-        if (pr.reposicion()) si.add(Component.text("Precio de reposición.", Paleta.BIEN));
+        if (resumen.isEmpty()) si.add(Marco.texto("  Nada."));
+        if (pr.reposicion()) si.add(Component.text("Es el precio de reposición.", Paleta.BIEN));
         si.add(Component.empty());
         si.add(Marco.accion(forja ? "Clic para forjarlo" : "Clic para comprarlo"));
         ItemStack boton = Marco.icono(Material.LIME_CONCRETE,
@@ -725,7 +740,7 @@ final class MenuAltar implements Listener {
         List<Component> lore = new ArrayList<>();
         if (tiene >= 0) {
             lore.add(Marco.dato("Tienes", Altar.miles(tiene)));
-            lore.add(Marco.dato("Te quedan", Altar.miles(Math.max(0, tiene - cuesta))));
+            lore.add(Marco.dato("Te quedarían", Altar.miles(Math.max(0, tiene - cuesta))));
         }
         return Marco.icono(m, Component.text(nombre, Paleta.CIFRA), lore, false);
     }
@@ -756,7 +771,7 @@ final class MenuAltar implements Listener {
         }
         // Se abrio en un sitio bueno; si entretanto ha salido de la zona spawn a Calamity, nada.
         if (!Marco.puedeAltar(hc, p) && !m.pagina().equals(CAMINO)) {
-            p.sendMessage(ComandoCalamity.mensaje("El altar no escucha desde ahí dentro."));
+            p.sendMessage(ComandoCalamity.mensaje(Marco.ALTAR_FUERA));
             Marco.sonidoNo(p);
             cerrar(p);
             return;
@@ -811,7 +826,7 @@ final class MenuAltar implements Listener {
             }, 1L);
             case "depositar" -> {
                 if (hc.esHardcore(p)) {
-                    p.sendMessage(ComandoCalamity.mensaje("Aquí dentro no: las Esencias se ingresan solas al salir vivo."));
+                    p.sendMessage(ComandoCalamity.mensaje("En Calamity no se puede: las Esencias pasan a tu saldo cuando sales vivo."));
                     Marco.sonidoNo(p);
                     return;
                 }
@@ -820,7 +835,7 @@ final class MenuAltar implements Listener {
             }
             case "grabar" -> altar.tarea(() -> altar.forja().abrirGrabar(p), 1L);
             case "gris" -> {
-                p.sendMessage(ComandoCalamity.mensaje("Eso aún no está abierto. Próximamente."));
+                p.sendMessage(ComandoCalamity.mensaje("Esto aún no está disponible."));
                 Marco.sonidoNo(p);
             }
             default -> {
@@ -995,11 +1010,14 @@ final class MenuAltar implements Listener {
         h.igual("40 trueques de llaves: dos hojas", 2, Marco.hojas(sitios(LLAVES, Altar.leer(muchos), false)));
 
         // Lo fijo: cada uno en su casilla, fuera del contenido; las tarjetas, en la fila del medio.
-        List<Integer> fijas = List.of(Marco.SALDO, Marco.CERRAR, Marco.ANTERIOR, Marco.VOLVER, Marco.SIGUIENTE);
+        List<Integer> fijas = List.of(Marco.SALDO, Marco.ANTERIOR, Marco.VOLVER, Marco.SIGUIENTE);
         boolean fuera = new HashSet<>(fijas).size() == fijas.size();
         for (int f : fijas) fuera &= f < 9 || f >= 45;
-        h.ok("saldo, cerrar, flechas y volver: casillas propias, fuera del contenido", fuera);
-        List<Integer> fijasPortada = List.of(Marco.SALDO, Marco.CERRAR, AYUDA, IR_TASADOR);
+        h.ok("saldo, flechas y volver: casillas propias, fuera del contenido", fuera);
+        // 1.7.3: Cerrar y Volver, abajo en el centro en todos los menus.
+        h.igual("paginas de 54: Volver abajo en el centro", Marco.abajo(54), Marco.VOLVER);
+        h.igual("portada: Cerrar abajo en el centro", Marco.abajo(PORTADA), CERRAR);
+        List<Integer> fijasPortada = List.of(Marco.SALDO, CERRAR, AYUDA, IR_TASADOR);
         boolean portada = new HashSet<>(fijasPortada).size() == fijasPortada.size();
         for (int f : fijasPortada) portada &= f < PORTADA && Marco.esBorde(f, PORTADA);
         for (int n = 1; n <= CATEGORIAS.size(); n++) {

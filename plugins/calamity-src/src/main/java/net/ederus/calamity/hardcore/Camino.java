@@ -18,8 +18,9 @@ import java.util.UUID;
 
 /**
  * "Tu camino" (ESTUDIO sec. 5.15, DIS M32): lo que le falta a cada uno para cada pieza, de un
- * vistazo. Un icono por pieza: "Custodio · Yelmo · piedad 5/8 · Sello: no", "Marcas de Eco
- * 3/5 (Mascara)", "Fragmentos 2/7 (Guadana)", y arriba las horas activas y el proximo hito.
+ * vistazo. Un icono por pieza, con su nombre de verdad ("Yelmo de Calamidad") y lo que pide:
+ * el Sello de su minijefe (y cuantas muertes lleva de las 8 que lo dan seguro), las Marcas de
+ * Eco o los Fragmentos que tiene, y arriba las horas activas y el proximo hito.
  * Sale del Tasador (1.3.1; antes, del Altar, que ahora es solo tienda) y de /calamity camino
  * (informativo: se puede mirar en cualquier sitio). Al entrar en Calamity, la barra de accion
  * ensena el credito mas cercano (P-W03).
@@ -50,7 +51,7 @@ final class Camino {
 
     private void comando(CommandSender quien, String[] args) {
         if (!(quien instanceof Player p)) {
-            quien.sendMessage(ComandoCalamity.mensaje("Solo desde el juego."));
+            quien.sendMessage(ComandoCalamity.mensaje("Solo se puede usar dentro del juego."));
             return;
         }
         abrir(p);
@@ -130,8 +131,8 @@ final class Camino {
                 if (cr.de(u, c) > 0) continue;
                 String id = c.substring(6);
                 falta = Math.max(1, piedadMaxima() - piedad(u, id));
-                frase = "Te faltan " + falta + (falta == 1 ? " muerte " : " muertes ") + "de " + minijefeCorto(id)
-                        + " para el Sello.";
+                frase = "Te faltan " + falta + (falta == 1 ? " muerte " : " muertes ") + Forja.delMinijefe(id)
+                        + " para tener su Sello seguro.";
             } else {
                 int pide = Math.max(1, paso.t().creditos());
                 falta = pide - cr.de(u, c);
@@ -158,9 +159,9 @@ final class Camino {
     // ------------------------------------------------------------------ menu
 
     /**
-     * El menu de "Tu camino": 36 casillas con el marco de Calamity (Marco), la cabecera con horas e
-     * hito, una fila para las piezas con Sello (banda naranja) y otra para las de Marcas y
-     * Fragmentos (banda turquesa), y abajo la vuelta al Tasador.
+     * El menu de "Tu camino": 36 casillas con el marco negro de Calamity (Marco), la cabecera con
+     * horas e hito, una fila para las piezas con Sello y otra para las de Marcas y Fragmentos (cada
+     * una con su banda), y abajo en el centro Volver al Mercado (o Cerrar si no hay Mercado).
      */
     void abrir(Player p) {
         Map<Integer, String> acciones = new HashMap<>();
@@ -185,27 +186,30 @@ final class Camino {
             int errantes = cr.de(u, Creditos.ERRANTE);
             if (errantes > 0) {
                 cabeza.add(dato("Sellos Errantes", errantes + (cr.canjeable(u, Creditos.ERRANTE) ? ""
-                        : "  (con " + Math.round(cr.horasPedidas()) + " h activas)")));
+                        : "  (pide " + Math.round(cr.horasPedidas()) + " h activas)")));
             }
         }
         Saldo s = hc.saldo();
-        if (s != null) cabeza.add(dato("Saldo", s.de(u) + " Esencias"));
+        if (s != null) cabeza.add(dato("Saldo", Marco.esencias(s.de(u))));
         cabeza.add(Component.empty());
-        cabeza.add(Marco.tenue("Cada pieza, lo que te falta."));
+        cabeza.add(Marco.tenue("Debajo tienes lo que te falta"));
+        cabeza.add(Marco.tenue("para cada pieza de la Forja."));
         inv.setItem(4, Marco.icono(Material.COMPASS, Component.text("Tu camino", Paleta.MARCA), cabeza, false));
-        inv.setItem(Marco.CERRAR, Marco.cerrar());
-        acciones.put(Marco.CERRAR, "cerrar");
 
         List<Paso> deSello = new ArrayList<>(), otros = new ArrayList<>();
         for (Paso paso : pasos()) (paso.t().credito().startsWith("sello:") ? deSello : otros).add(paso);
         fila(inv, acciones, p, 9, Marco.banda(Material.ORANGE_STAINED_GLASS_PANE, "Piezas con Sello",
-                List.of("El Sello cae del minijefe; con", "la piedad llena, seguro.")), deSello);
+                List.of("Cada una pide el Sello de su minijefe;", "a las " + piedadMaxima() + " muertes lo tienes seguro.")), deSello);
         fila(inv, acciones, p, 18, Marco.banda(Material.CYAN_STAINED_GLASS_PANE, "Marcas y Fragmentos",
                 List.of("El Vestigio del Eco y la", "Guadaña de la Parca.")), otros);
+        // Abajo en el centro: Volver al Mercado (de donde se viene) o, sin Mercado, Cerrar.
+        int abajo = Marco.abajo(inv.getSize());
         if (hc.npcs() != null) {
-            inv.setItem(31, Marco.icono(Material.SPYGLASS, Component.text("◀ Volver con Oren", Paleta.DETALLE),
-                    List.of(Marco.tenue("Tu dinero y tus contratos."), Component.empty(), Marco.accion("Clic para volver")), false));
-            acciones.put(31, "ir:" + Marco.TASADOR);
+            inv.setItem(abajo, Marco.volver("al Mercado"));
+            acciones.put(abajo, "ir:" + Marco.TASADOR);
+        } else {
+            inv.setItem(abajo, Marco.cerrar());
+            acciones.put(abajo, "cerrar");
         }
         Marco.rellenar(inv);
     }
@@ -233,45 +237,42 @@ final class Camino {
         Creditos cr = hc.creditos();
         int tiene = cr == null ? 0 : cr.de(u, c);
         List<Component> lore = new ArrayList<>();
-        Component nombre;
+        Component nombre = Component.text(Forja.nombrePieza(paso.pieza()), Altar.AMBAR);
         boolean listo;
         if (c.startsWith("sello:")) {
             String id = c.substring(6);
-            nombre = Component.text(minijefeCorto(id) + " · " + Forja.nombreCorto(paso.pieza()), Altar.AMBAR);
             int pied = piedad(u, id);
             listo = tiene > 0;
+            lore.add(Marco.texto("Pide el Sello " + Forja.delMinijefe(id) + "."));
             lore.add(dato("Sello", tiene > 0 ? "sí" + (tiene > 1 ? " (" + tiene + ")" : "") : "no"));
-            lore.add(dato("Piedad", pied + "/" + piedadMaxima()));
             if (tiene == 0) {
-                int falta = Math.max(1, piedadMaxima() - pied);
-                lore.add(Marco.tenue("Te faltan " + falta + (falta == 1 ? " muerte" : " muertes") + " de"));
-                lore.add(Marco.tenue(Minijefes.nombre(id) + " para el Sello seguro."));
-                if (cr != null && cr.de(u, Creditos.ERRANTE) > 0) lore.add(Marco.tenue("O un Sello Errante."));
+                lore.add(dato("Muertes del minijefe", pied + " de " + piedadMaxima()));
+                lore.add(Marco.tenue("A las " + piedadMaxima() + ", el Sello es seguro."));
+                if (cr != null && cr.de(u, Creditos.ERRANTE) > 0) lore.add(Marco.tenue("También vale un Sello Errante."));
             }
         } else {
             int pide = Math.max(1, t.creditos());
-            String quien = c.equals("marca") ? "Marcas de Eco" : c.equals("fragmento") ? "Fragmentos" : c;
-            nombre = Component.text(quien + " · " + Forja.nombreCorto(paso.pieza()), Altar.AMBAR);
             listo = tiene >= pide;
-            lore.add(dato(quien, Math.min(tiene, 999) + "/" + pide));
+            lore.add(Marco.texto("Pide " + Forja.nombreCredito(c, pide) + "."));
+            lore.add(dato("Tienes", Math.min(tiene, 999) + " de " + pide));
             if (!listo) lore.add(Marco.tenue("Te faltan " + Forja.nombreCredito(c, pide - tiene) + "."));
         }
         lore.add(Component.empty());
-        lore.add(dato("Forja", t.esencias() + " Esencias" + (t.mobcoins() > 0 ? " · " + Altar.miles(t.mobcoins()) + " MobCoins" : "")));
+        lore.add(dato("Precio", Marco.esencias(t.esencias()) + (t.mobcoins() > 0 ? " y " + Altar.miles(t.mobcoins()) + " MobCoins" : "")));
         long forjada = hc.datos().getLong("forjas." + u + "." + paso.pieza(), 0);
         int dias = Forja.diasReposicion(hc.datos(), u, paso.pieza(), System.currentTimeMillis(),
                 hc.cfg().getInt("forja.reposicion-dias", 14));
         if (dias > 0) {
-            lore.add(Component.text("Reposición abierta: " + dias + (dias == 1 ? " día" : " días") + ".", Altar.VERDE));
+            lore.add(Component.text("Reponerla sale más barato " + dias + (dias == 1 ? " día más." : " días más."), Altar.VERDE));
         } else if (forjada > 0) {
             lore.add(Marco.tenue("Ya la forjaste una vez."));
         }
         if (t.esperaDias() > 0 && forjada > 0) {
             long queda = forjada + t.esperaDias() * 86_400_000L - System.currentTimeMillis();
-            if (queda > 0 && dias == 0) lore.add(Marco.tenue("Otra nueva en " + ((queda + 86_399_999L) / 86_400_000L) + " días."));
+            if (queda > 0 && dias == 0) lore.add(Marco.tenue("Podrás forjar otra en " + ((queda + 86_399_999L) / 86_400_000L) + " días."));
         }
         lore.add(Component.empty());
-        lore.add(Component.text(listo ? "Ya tienes lo que pide." : "Aún no.", listo ? Altar.VERDE : Paleta.TENUE));
+        lore.add(Component.text(listo ? "Ya tienes lo que pide." : "Todavía no tienes lo que pide.", listo ? Altar.VERDE : Paleta.TENUE));
         return Marco.icono(t.icono(), nombre, lore, listo);
     }
 

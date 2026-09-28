@@ -1,7 +1,6 @@
 package net.ederus.calamity.hardcore;
 
 import net.ederus.edm.comun.Compat;
-import net.ederus.edm.comun.menu.MenuUtil;
 import net.kyori.adventure.text.Component;
 import org.bukkit.Material;
 import org.bukkit.command.CommandSender;
@@ -45,17 +44,17 @@ final class Deseos {
             new Candidata("manto", Material.NETHERITE_CHESTPLATE, "Pieza del Manto de Calamidad",
                     List.of("El set de los cinco minijefes.")),
             new Candidata("libro-legendary", Material.ENCHANTED_BOOK, "Libro LEGENDARY",
-                    List.of("Un encantamiento de los buenos.")),
+                    List.of("Un libro con un encantamiento", "de rareza LEGENDARY.")),
             new Candidata("encantamientos", Material.EXPERIENCE_BOTTLE, "Encantamiento sobre el tope",
-                    List.of("Un nivel más de lo normal.")),
+                    List.of("Un nivel más del máximo normal.")),
             new Candidata("mascota", Material.WOLF_SPAWN_EGG, "Mascota rara",
-                    List.of("Que te acompañe algo que nadie tiene.")),
+                    List.of("Una mascota que casi nadie tiene.")),
             new Candidata("rip", Material.SKELETON_SKULL, "Efecto RIP de Calamity",
-                    List.of("Que se note cómo mueres.")),
+                    List.of("Un efecto que se ve cuando mueres.")),
             new Candidata("talisman", Material.AMETHYST_SHARD, "Talismán de cordura",
-                    List.of("La cordura baja más despacio.")),
+                    List.of("Hace que la cordura baje", "más despacio.")),
             new Candidata("llave-caos", Material.TRIAL_KEY, "Llave del Caos",
-                    List.of("Una caja que solo da Calamity.")));
+                    List.of("La llave de la Crate Caos.")));
 
     private final Hardcore hc;
     private final Encuesta encuesta;
@@ -65,10 +64,10 @@ final class Deseos {
         this.encuesta = encuesta;
         Subcomandos.lw().registrar("deseos", "deseos: recuento de la lista de deseos", "ederus.mundos",
                 (quien, args) -> recuento(quien), null);
-        Subcomandos.calamity().registrar("deseos", "lo que quieres que dé Calamity (3 votos)", "lethalworld.calamity",
+        Subcomandos.calamity().registrar("deseos", "vota lo que quieres que dé Calamity (3 votos)", "lethalworld.calamity",
                 (quien, args) -> {
                     if (quien instanceof Player p) abrir(p);
-                    else quien.sendMessage(Component.text("Solo desde el juego.", Paleta.AVISO));
+                    else quien.sendMessage(Component.text("Solo se puede usar dentro del juego.", Paleta.AVISO));
                 }, null);
     }
 
@@ -144,14 +143,19 @@ final class Deseos {
             p.sendMessage(ComandoCalamity.mensaje("La lista de deseos está cerrada ahora mismo."));
             return;
         }
-        Inventory inv = hc.plugin().getServer().createInventory(new MenuEncuesta.Marca(null, true), 9,
+        Inventory inv = hc.plugin().getServer().createInventory(new MenuEncuesta.Marca(null, true), MenuEncuesta.TAMANO,
                 Marco.T_DESEOS.componente());
         pintar(inv, p);
         p.openInventory(inv);
         Compat.soundPlayers(p.getWorld(), p.getLocation(), "block.amethyst_block.chime", 0.8f, 1.1f);
     }
 
+    /**
+     * Como la encuesta (1.7.3): 27 casillas con marco negro, que es arriba en el centro, las
+     * candidatas centradas en la fila del medio y Cerrar abajo en el centro.
+     */
     private void pintar(Inventory inv, Player p) {
+        inv.clear();
         List<Candidata> cs = candidatas();
         Set<String> validas = ids();
         List<String> mios = new ArrayList<>(hc.datos().getStringList("deseos-votos." + p.getUniqueId()));
@@ -159,26 +163,30 @@ final class Deseos {
         Map<String, Integer> cuenta = recuento(hc.datos(), validas);
         int max = maximo();
 
-        inv.setItem(0, MenuUtil.icon(Material.NETHER_STAR, Component.text("Lo que quieres de Calamity", MenuEncuesta.VERDE),
-                List.of(MenuUtil.line("Marca hasta " + max + "."),
-                        MenuUtil.line("Para cambiar uno, quítalo antes."),
-                        MenuUtil.blank(),
-                        MenuUtil.field("Tus deseos", mios.size() + "/" + max, MenuEncuesta.AMBAR)), false));
-        for (int i = 0; i < cs.size() && i < 7; i++) {
+        inv.setItem(MenuEncuesta.CABECERA, Marco.icono(Material.NETHER_STAR, Component.text("Lo que quieres de Calamity", MenuEncuesta.VERDE),
+                List.of(Marco.texto("Marca hasta " + max + " premios que te"),
+                        Marco.texto("gustaría ganar en Calamity."),
+                        Marco.tenue("Para cambiar uno, quítalo antes."),
+                        Component.empty(),
+                        Marco.dato("Tus deseos", mios.size() + " de " + max)), false));
+        int[] casillas = MenuEncuesta.casillas(Math.min(7, cs.size()));
+        for (int i = 0; i < casillas.length; i++) {
             Candidata c = cs.get(i);
             boolean mio = mios.contains(c.id());
+            int n = cuenta.getOrDefault(c.id(), 0);
             List<Component> lore = new ArrayList<>();
-            for (String l : c.lore()) lore.add(MenuUtil.line(l));
-            lore.add(MenuUtil.blank());
-            lore.add(MenuUtil.field("Lo quieren", String.valueOf(cuenta.getOrDefault(c.id(), 0)), MenuEncuesta.AMBAR));
-            lore.add(MenuUtil.blank());
-            lore.add(MenuUtil.line(mio ? "Clic: ya no lo quiero." : "Clic: lo quiero."));
-            inv.setItem(1 + i, MenuUtil.icon(c.icono(), Component.text(c.nombre(), mio ? MenuEncuesta.AMBAR : MenuEncuesta.VERDE),
+            for (String l : c.lore()) lore.add(Marco.texto(l));
+            lore.add(Component.empty());
+            lore.add(Marco.dato("Lo quieren", n + (n == 1 ? " jugador" : " jugadores")));
+            if (mio) lore.add(Marco.tiene("Lo has marcado."));
+            lore.add(Component.empty());
+            lore.add(Marco.accion(mio ? "Clic para quitarlo" : "Clic para marcarlo"));
+            inv.setItem(casillas[i], Marco.icono(c.icono(), Component.text(c.nombre(), mio ? MenuEncuesta.AMBAR : MenuEncuesta.VERDE),
                     lore, mio));
         }
-        for (int s = 1 + Math.min(7, cs.size()); s < MenuEncuesta.CERRAR; s++) inv.setItem(s, MenuUtil.pane());
-        inv.setItem(MenuEncuesta.CERRAR, MenuUtil.icon(Material.BARRIER,
-                Component.text("Cerrar", Paleta.AVISO), List.of(MenuUtil.line("Tus deseos se quedan.")), false));
+        inv.setItem(MenuEncuesta.CERRAR, Marco.icono(Material.BARRIER, Component.text("Cerrar", Paleta.AVISO),
+                List.of(Marco.tenue("Tus deseos se guardan."), Component.empty(), Marco.accion("Clic para cerrar")), false));
+        Marco.rellenar(inv);
     }
 
     /** Lo llama MenuEncuesta (ya filtrado: clic izquierdo, 500 ms, casilla de arriba). */
@@ -191,8 +199,10 @@ final class Deseos {
         }
         if (!activo()) return;
         List<Candidata> cs = candidatas();
-        int i = slot - 1;
-        if (i < 0 || i >= cs.size() || i >= 7) return;
+        int[] casillas = MenuEncuesta.casillas(Math.min(7, cs.size()));
+        int i = -1;
+        for (int k = 0; k < casillas.length; k++) if (casillas[k] == slot) i = k;
+        if (i < 0 || i >= cs.size()) return;
         String id = cs.get(i).id();
         Resultado r = alternar(hc.datos(), p.getUniqueId(), id, maximo(), ids());
         switch (r) {

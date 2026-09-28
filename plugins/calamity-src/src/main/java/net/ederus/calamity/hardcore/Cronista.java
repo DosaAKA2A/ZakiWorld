@@ -254,7 +254,7 @@ final class Cronista {
         }
         int i = buscar(l, args[1]);
         if (i < 0) {
-            quien.sendMessage(ComandoCalamity.mensaje(Component.text("Ese capítulo no existe. Los tienes en ")
+            quien.sendMessage(ComandoCalamity.mensaje(Component.text("Ese capítulo no existe. Tienes la lista en ")
                     .append(Component.text("/calamity cronista", Paleta.DETALLE)).append(Component.text("."))));
             return;
         }
@@ -272,9 +272,9 @@ final class Cronista {
     }
 
     private void indice(CommandSender quien, List<Capitulo> l) {
-        quien.sendMessage(ComandoCalamity.mensaje(Component.text("Ilen sabe ")
+        quien.sendMessage(ComandoCalamity.mensaje(Component.text("Ilen conoce ")
                 .append(Paleta.cifra(l.size())).append(Component.text(l.size() == 1 ? " historia. " : " historias. "))
-                .append(Component.text("Pulsa la que quieras oír.", Paleta.TENUE))));
+                .append(Component.text("Pulsa la que quieras leer.", Paleta.TENUE))));
         for (int i = 0; i < l.size(); i++) {
             Capitulo c = l.get(i);
             quien.sendMessage(Component.text("  " + (i + 1) + ". ", Paleta.TENUE)

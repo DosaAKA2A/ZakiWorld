@@ -42,14 +42,14 @@ import java.util.function.Function;
  * cofre y pestanas abajo, y Dosa: "Este ranking aun me cuesta muchisimo entenderlo". No se
  * sabia que categoria era cada cosa ni quien iba primero. Ahora todo se lee de un vistazo:
  *
- *   ventana de 45, marco de cristal negro (Marco.rellenarNegro)
+ *   ventana de 45, marco de cristal negro (Marco.rellenar)
  *   fila 0:    informacion (4): semanal o historico, cuando se reinicia y que premios da
  *   fila 1:    las categorias con premio (Extraido, Cazador, Segador, Superviviente)
  *   fila 2:    Esencias ganadas, Reliquias vendidas, salidas con vida y minijefes
  *   fila 3:    contratos (y en el historico, horas activas y saldo de Esencias)
  *   fila 4:    Esta semana / Historico (38) · Cerrar (40) · Tablero (42), como el Mercader
  *
- * Una categoria es un solo objeto: su nombre dice que es ("Mas Parcas abatidas esta semana"),
+ * Una categoria es un solo objeto: su nombre dice que es ("Mas Parcas derrotadas esta semana"),
  * la primera linea del lore que mide, luego el top 10 ("1. Nombre — valor") y al final tu puesto
  * y lo que llevas. Las filas van centradas y con una casilla de aire entre cada dos (Marco
  * .columnas con 4 como mucho). Nada de podios ni numeros de pila.
@@ -101,11 +101,11 @@ final class MenuCazador implements Listener {
                     "Más MobCoins ganadas esta semana", "Más MobCoins ganadas en total",
                     "MobCoins que te pagan al vender lo que sacas."),
             new Categoria("cazador", "cazas-validas", 1, Material.ECHO_SHARD,
-                    "Más Ecos ajenos cazados esta semana", "Más Ecos ajenos cazados en total",
-                    "Ecos de otros jugadores que has cerrado."),
+                    "Más Ecos ajenos derrotados esta semana", "Más Ecos ajenos derrotados en total",
+                    "Ecos de otros jugadores que has derrotado."),
             new Categoria("segador", "parcas", 1, Material.NETHERITE_HOE,
-                    "Más Parcas abatidas esta semana", "Más Parcas abatidas en total",
-                    "Parcas que has ayudado a tumbar."),
+                    "Más Parcas derrotadas esta semana", "Más Parcas derrotadas en total",
+                    "Parcas que has ayudado a derrotar."),
             new Categoria("superviviente", "expedicion-max-seg", 1, Material.TOTEM_OF_UNDYING,
                     "Expedición más larga de la semana", "Expedición más larga de siempre",
                     "Lo que duró tu expedición más larga."),
@@ -119,14 +119,14 @@ final class MenuCazador implements Listener {
                     "Más salidas con vida esta semana", "Más salidas con vida en total",
                     "Veces que has salido vivo de Calamity."),
             new Categoria("minijefes", "minijefes", 2, Material.WITHER_SKELETON_SKULL,
-                    "Más minijefes abatidos esta semana", "Más minijefes abatidos en total",
-                    "Minijefes en cuya muerte has participado."),
+                    "Más minijefes derrotados esta semana", "Más minijefes derrotados en total",
+                    "Minijefes que has ayudado a derrotar."),
             new Categoria("contratos", "contratos", 3, Material.PAPER,
                     "Más contratos cobrados esta semana", "Más contratos cobrados en total",
                     "Contratos de Oren cumplidos y cobrados."),
             new Categoria("horas", "horas-activas", 3, Material.COMPASS,
                     null, "Más horas activas en Calamity",
-                    "Tiempo dentro en el que te has movido."),
+                    "Horas en Calamity en las que te has movido."),
             new Categoria("saldo", Tops.ESENCIAS, 3, Material.ENDER_CHEST,
                     null, "Mayor saldo de Esencias",
                     "Las Esencias que tienes guardadas ahora."));
@@ -354,24 +354,23 @@ final class MenuCazador implements Listener {
             inv.setItem(CAMBIAR, Marco.icono(Material.CLOCK, Component.text("Ver esta semana", Paleta.DETALLE), List.of(
                     Marco.dato("Ahora ves", "el histórico"),
                     Component.empty(),
-                    Marco.tenue("Lo de esta semana, que es"),
-                    Marco.tenue("lo que da premios el lunes."),
+                    Marco.tenue("La clasificación de esta semana,"),
+                    Marco.tenue("la que da premios el lunes."),
                     Component.empty(),
                     Marco.accion("Clic para verlo")), false));
         }
         v.acciones.put(CAMBIAR, v.semana ? "historico" : "semana");
 
-        inv.setItem(CERRAR, Marco.icono(Material.BARRIER, Component.text("Cerrar", Marco.NO),
-                List.of(Marco.accion("Clic para cerrar")), false));
+        inv.setItem(CERRAR, Marco.cerrar());
         v.acciones.put(CERRAR, "cerrar");
 
         Tablero tab = hc.tablero();
         boolean tablero = tab != null && hc.valor("tablero", tab::activo, false);
-        inv.setItem(TABLERO, Marco.boton(Material.ITEM_FRAME, "Tablero", List.of("Ecos con botín y Parcas sueltas.",
-                "Quien caza, sube en Cazador y Segador."), tablero ? "Clic para abrirlo" : "Próximamente.", tablero));
+        inv.setItem(TABLERO, Marco.boton(Material.ITEM_FRAME, "Tablero", List.of("Los Ecos con botín y las Parcas",
+                "que hay ahora en Calamity."), tablero ? "Clic para abrirlo" : "Próximamente.", tablero));
         if (tablero) v.acciones.put(TABLERO, "tablero");
 
-        Marco.rellenarNegro(inv);
+        Marco.rellenar(inv);
     }
 
     /** Arriba, en la semana: que es, cuando se reinicia, los premios de la config y las reglas para cobrar. */
@@ -387,14 +386,9 @@ final class MenuCazador implements Listener {
         lore.add(Marco.dato("Quedan", hastaCierre(ZonedDateTime.now(zona))));
         lore.add(Component.empty());
 
-        List<String> nombres = new ArrayList<>();
-        for (String id : r.tablas()) {
-            Rankings.Tabla t = Rankings.tabla(id);
-            if (t != null) nombres.add(t.nombre());
-        }
         List<Rankings.Premio> premios = r.premios();
-        lore.add(Marco.texto("Premios de " + lista(nombres) + ","));
-        lore.add(Marco.texto("la primera fila, en cada una:"));
+        lore.add(Marco.texto("Premios de cada categoría"));
+        lore.add(Marco.texto("de la primera fila:"));
         for (int i = 0; i < premios.size(); i++) {
             lore.add(Component.text((i + 1) + ".º  ", colorPuesto(i + 1)).append(Marco.texto(premio(premios.get(i)))));
         }
@@ -402,7 +396,7 @@ final class MenuCazador implements Listener {
         int minimo = c.getInt("ranking.minimo-extracciones", 3);
         Estadisticas st = hc.estadisticas();
         long salidas = st == null ? 0 : st.semana(p.getUniqueId(), "extracciones");
-        lore.add(Marco.tenue("Para cobrar hacen falta " + minimo + " salidas"));
+        lore.add(Marco.tenue("Para cobrar necesitas " + minimo + " salidas"));
         lore.add(Marco.tenue("con vida en la semana."));
         lore.add(salidas >= minimo ? Marco.tiene("Llevas " + salidas + ": esta semana cobras.")
                 : Marco.falta("Llevas " + salidas + " de " + minimo, "te faltan " + (minimo - salidas)));
