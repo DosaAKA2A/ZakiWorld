@@ -150,12 +150,12 @@ public final class MobsLethal implements Listener {
             return;
         }
         if (!cfg().getBoolean("adoptados.ignorar-mythicmobs", true)) {
-            plugin.getLogger().warning("[Lethal World] Los MythicMobs SI se adoptan"
-                    + " (mobs.adoptados.ignorar-mythicmobs esta en false): escalan dos veces.");
+            plugin.getLogger().warning("[Lethal World] Los MythicMobs SÍ se adoptan"
+                    + " (mobs.adoptados.ignorar-mythicmobs está en false): escalan dos veces.");
         } else if (PuenteMythicMobs.disponible()) {
             plugin.getLogger().info("[Lethal World] MythicMobs detectado. Los MythicMobs no se adoptan.");
         } else {
-            plugin.getLogger().info("[Lethal World] MythicMobs no esta instalado.");
+            plugin.getLogger().info("[Lethal World] MythicMobs no está instalado.");
         }
         plugin.getServer().getPluginManager().registerEvents(this, plugin);
         long cada = Math.max(10, cfg().getLong("cada-ticks", 40));

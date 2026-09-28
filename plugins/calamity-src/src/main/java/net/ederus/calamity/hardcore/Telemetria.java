@@ -126,7 +126,7 @@ final class Telemetria implements Listener {
 
         Autotest.registrar("telemetria", this::autotest);
         Autotest.registrar("censo", Telemetria::autotestCenso);
-        Subcomandos.lw().registrar("telemetria", "telemetria: estado de la cola y fichero del mes", "ederus.mundos",
+        Subcomandos.lw().registrar("telemetria", "telemetría: estado de la cola y fichero del mes", "ederus.mundos",
                 (quien, args) -> estado(quien), null);
         // Lo ultimo: si algo de arriba revienta, no queda un hilo suelto sin nadie que lo pare.
         hilo.start();
@@ -243,7 +243,7 @@ final class Telemetria implements Listener {
             Thread.currentThread().interrupt();
         }
         if (hilo.isAlive()) {
-            hc.plugin().getLogger().warning("[Calamity] La telemetria no termino de escribir en 10 s; quedan "
+            hc.plugin().getLogger().warning("[Calamity] La telemetría no terminó de escribir en 10 s; quedan "
                     + cola.size() + " sucesos en cola.");
         } else {
             // Lo que llego despues del FIN (otro modulo parando): se escribe aqui, ya sin hilo.
@@ -362,7 +362,7 @@ final class Telemetria implements Listener {
                 escritor.flush();
             } catch (IOException e) {
                 fallos.incrementAndGet();
-                avisar("no se pudo volcar la telemetria", e);
+                avisar("no se pudo volcar la telemetría", e);
                 cerrarEscritor();
             }
         }
@@ -391,7 +391,7 @@ final class Telemetria implements Listener {
             if (!m.matches()) continue;
             try {
                 if (YearMonth.parse(m.group(1)).atEndOfMonth().isBefore(limite) && f.delete()) {
-                    hc.plugin().getLogger().info("[Calamity] Telemetria: borrado " + f.getName() + " (mas de " + dias + " dias).");
+                    hc.plugin().getLogger().info("[Calamity] Telemetría: borrado " + f.getName() + " (más de " + dias + " días).");
                 }
             } catch (Throwable ignorado) {
                 // Un nombre raro que casa con el patron no merece parar la poda del resto.
@@ -403,7 +403,7 @@ final class Telemetria implements Listener {
     private void avisar(String que, Throwable t) {
         if (avisado) return;
         avisado = true;
-        hc.plugin().getLogger().log(Level.WARNING, "[Calamity] Telemetria: " + que + " (se sigue; no se repite el aviso)", t);
+        hc.plugin().getLogger().log(Level.WARNING, "[Calamity] Telemetría: " + que + " (se sigue; no se repite el aviso)", t);
     }
 
     private ZoneId zona() {

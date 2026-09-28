@@ -63,10 +63,10 @@ public final class ComandoCalamity implements TabExecutor {
     }
 
     private void ayuda(CommandSender quien, String etiqueta) {
-        quien.sendMessage(mensaje("Lo que traigas, lo pierdes al morir."));
+        quien.sendMessage(mensaje("Comandos de Calamity:"));
         List<String[]> subs = Subcomandos.calamity().ayuda(quien);
         if (subs.isEmpty()) {
-            quien.sendMessage(Component.text("  Aún no hay nada que consultar aquí.", Paleta.TENUE));
+            quien.sendMessage(Component.text("  Ahora mismo no hay nada que consultar.", Paleta.TENUE));
             return;
         }
         String raiz = "/" + (etiqueta == null || etiqueta.isBlank() ? "calamity" : etiqueta.toLowerCase(Locale.ROOT));

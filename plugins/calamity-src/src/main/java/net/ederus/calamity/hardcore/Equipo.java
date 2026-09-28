@@ -64,7 +64,7 @@ final class Equipo implements Listener {
     enum Efecto {
         CORDURA_DRENAJE("cordura-drenaje", 0.50, "drenaje de cordura"),
         CORDURA_ALUCINACIONES("cordura-alucinaciones", 0.50, "probabilidad de alucinación"),
-        PARCA_DANO_RECIBIDO("parca-dano-recibido", 0.30, "daño recibido de la PARCA"),
+        PARCA_DANO_RECIBIDO("parca-dano-recibido", 0.30, "daño recibido de la Parca"),
         ECO_DANO("eco-dano", 0.50, "daño a los Ecos"),
         ESENCIAS_BONUS("esencias-bonus", 0.25, "Esencias de mobs y cofres"),
         HAMBRE("hambre", 0.50, "castigo extra de hambre"),
@@ -148,8 +148,8 @@ final class Equipo implements Listener {
     String cargar() {
         if (!conApi() && !avisadoSinApi) {
             avisadoSinApi = true;
-            hc.plugin().getLogger().warning("[Calamity] GodItems (EDM 1.72.2 o mas) no esta en marcha:"
-                    + " el equipo no hace nada en Calamity hasta que este.");
+            hc.plugin().getLogger().warning("[Calamity] GodItems (EDM 1.72.2 o más) no está en marcha:"
+                    + " el equipo no hace nada en Calamity hasta que lo esté.");
         }
         File viejo = new File(hc.plugin().getDataFolder(), FICHERO_VIEJO);
         if (viejo.exists() && viejoConPiezas(viejo)) {
@@ -391,8 +391,8 @@ final class Equipo implements Listener {
             quien.sendMessage(Component.text("  " + e.texto + ": " + efectoReal(e, v), Paleta.TENUE));
         }
         if (!hc.esHardcore(p)) {
-            quien.sendMessage(Component.text("  Está fuera de Calamity: todo esto solo cuenta dentro"
-                    + " (menos el daño de la PARCA, que cuenta donde le pegue).", Paleta.TENUE));
+            quien.sendMessage(Component.text("  Está fuera de Calamity: todo esto solo cuenta en Calamity"
+                    + " (menos el daño de la Parca, que cuenta allí donde le pegue).", Paleta.TENUE));
         }
     }
 

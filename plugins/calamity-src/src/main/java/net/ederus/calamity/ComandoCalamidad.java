@@ -81,7 +81,7 @@ public final class ComandoCalamidad implements TabExecutor {
         // El objeto existe siempre; lo que falta con hardcore.activo en false son el
         // panel y la vara, y sin ellos casi todo lo de abajo reventaba con un null.
         if (hc == null || !hc.activo()) {
-            decir(q, Component.text("Las reglas hardcore están apagadas en la config.", NamedTextColor.RED));
+            decir(q, Component.text("Las reglas hardcore están apagadas en la configuración.", NamedTextColor.RED));
             return true;
         }
         // Antes "/lw hardcore" a secas caia en el default (sub = "status").
@@ -103,28 +103,28 @@ public final class ComandoCalamidad implements TabExecutor {
             }
             case "define" -> {
                 if (!(q instanceof Player p)) {
-                    decir(q, Component.text("Eso se define en el juego.", NamedTextColor.RED));
+                    decir(q, Component.text("Eso se hace dentro del juego.", NamedTextColor.RED));
                     return true;
                 }
                 String cual = args.length >= 2 ? args[1].toLowerCase(Locale.ROOT) : "";
                 if (!cual.equals("entrada") && !cual.equals("salida") && !cual.equals("spawn")) {
-                    decir(q, Component.text("Dime cuál: ", NamedTextColor.RED)
+                    decir(q, Component.text("¿Cuál? Usa ", NamedTextColor.RED)
                             .append(Component.text("/calamidad define entrada|salida|spawn", MARCA)));
                     return true;
                 }
                 String hecho = hc.vara().definir(p, cual);
                 if (hecho == null) {
-                    decir(q, Component.text("Marca las dos esquinas con la vara primero.",
+                    decir(q, Component.text("Primero marca las dos esquinas con la vara.",
                             NamedTextColor.RED));
                     return true;
                 }
-                decir(q, Component.text(cual.equals("spawn") ? "Zona spawn (Grieta): " : "Puerta de " + cual + ": ",
+                decir(q, Component.text(cual.equals("spawn") ? "Zona del spawn (Grieta): " : "Puerta de " + cual + ": ",
                         NamedTextColor.GREEN)
                         .append(Component.text(hecho, MARCA)));
             }
             case "entrada", "llegada", "salida", "puerta-salida" -> {
                 if (!(q instanceof Player p)) {
-                    decir(q, Component.text("Ese punto se marca estando en el sitio.", NamedTextColor.RED));
+                    decir(q, Component.text("Ese punto se marca desde el juego, estando en el sitio.", NamedTextColor.RED));
                     return true;
                 }
                 hc.punto(sub, p.getLocation());
@@ -134,7 +134,7 @@ public final class ComandoCalamidad implements TabExecutor {
             }
             case "menu" -> {
                 if (!(q instanceof Player p)) {
-                    decir(q, Component.text("El panel se abre desde el juego.", NamedTextColor.RED));
+                    decir(q, Component.text("El panel solo se abre dentro del juego.", NamedTextColor.RED));
                     return true;
                 }
                 hc.menu().abrir(p);
@@ -151,7 +151,7 @@ public final class ComandoCalamidad implements TabExecutor {
                 decir(q, Component.text(destino.getName() + " lleva ", SUAVE)
                         .append(Component.text(String.format(Locale.US, "%.1f h", horas), MARCA))
                         .append(Component.text(" en Calamity", SUAVE))
-                        .append(Component.text(horas >= 24 ? "  ·  ya tiene el tag." : "  ·  el tag son 24 h.",
+                        .append(Component.text(horas >= 24 ? "  ·  ya tiene el tag." : "  ·  el tag se gana a las 24 h.",
                                 NamedTextColor.GRAY)));
             }
             case "frasco", "cristal", "esencia" -> {
@@ -212,24 +212,24 @@ public final class ComandoCalamidad implements TabExecutor {
         linea(q, "Mundos", String.join(", ", hc.mundos()));
         linea(q, "puerta de entrada", hc.vara().describir("entrada"));
         linea(q, "puerta de salida", hc.vara().describir("salida"));
-        linea(q, "zona spawn", hc.describirSpawn());
+        linea(q, "zona del spawn", hc.describirSpawn());
         for (String punto : List.of("llegada", "salida")) {
             var donde = hc.punto(punto);
-            linea(q, punto == "llegada" ? "aparece en" : "vuelve a",
+            linea(q, "llegada".equals(punto) ? "aparece en" : "vuelve a",
                     donde == null ? "sin marcar"
                     : donde.getWorld().getKey() + "  " + donde.getBlockX() + " "
                             + donde.getBlockY() + " " + donde.getBlockZ());
         }
         linea(q, "/calamidad wand", "la vara: dos esquinas marcan la puerta");
-        linea(q, "/calamidad define entrada|salida|spawn", "guarda esa caja como puerta o como zona spawn");
-        linea(q, "/calamidad llegada", "marca aquí donde aparece el que entra");
-        linea(q, "/calamidad salida", "marca aquí a dónde se vuelve");
-        linea(q, "/calamidad frasco|cristal|esencia [player]", "entrega uno");
-        linea(q, "/calamidad cordura [valor] [player]", "consulta o la fija");
-        linea(q, "/calamidad tiempo [player]", "horas acumuladas y si tiene el tag");
+        linea(q, "/calamidad define entrada|salida|spawn", "guarda esa caja como puerta o como zona del spawn");
+        linea(q, "/calamidad llegada", "marca aquí el punto donde aparece quien entra");
+        linea(q, "/calamidad salida", "marca aquí el punto adonde se vuelve al salir");
+        linea(q, "/calamidad frasco|cristal|esencia [jugador]", "le da uno");
+        linea(q, "/calamidad cordura [valor] [jugador]", "consulta la cordura o la fija");
+        linea(q, "/calamidad tiempo [jugador]", "horas acumuladas y si ya tiene el tag");
         linea(q, "/calamidad menu", "panel de las reglas de dificultad");
-        linea(q, "/calamidad level [player]", "de dónde sale el nivel de sus mobs");
-        linea(q, "/calamidad reload", "relee el config de Calamity del disco (el equipo es de GodItems: /gi reload)");
+        linea(q, "/calamidad level [jugador]", "de dónde sale el nivel de sus mobs");
+        linea(q, "/calamidad reload", "relee la configuración de Calamity (el equipo es de GodItems: /gi reload)");
         for (String[] s : Subcomandos.lw().ayuda(q)) linea(q, "/calamidad " + s[0], s[1]);
     }
 
@@ -248,7 +248,7 @@ public final class ComandoCalamidad implements TabExecutor {
         }
         Player p = args.length >= 2 ? plugin.getServer().getPlayerExact(args[1]) : (q instanceof Player j ? j : null);
         if (p == null) {
-            linea(q, "/calamidad level [player]", "el jugador tiene que estar conectado");
+            linea(q, "/calamidad level [jugador]", "el jugador tiene que estar conectado");
             return;
         }
         var n = plugin.getConfig().getConfigurationSection("mobs.nivel");
@@ -285,8 +285,8 @@ public final class ComandoCalamidad implements TabExecutor {
         plugin.reloadConfig();
         // Calamity 1.6: el equipo ya no se relee aqui (es de GodItems, /gi reload); solo se dice de donde sale.
         String equipo = plugin.hardcore() == null ? null : plugin.hardcore().recargarEquipo();
-        decir(q, "Config de Calamity releída" + (equipo == null ? "" : ". Equipo: " + equipo + " (se relee con /gi reload)")
-                + ". Lo que se monta al arrancar necesita reiniciar.");
+        decir(q, "Configuración de Calamity releída" + (equipo == null ? "" : ". Equipo: " + equipo + " (se relee con /gi reload)")
+                + ". Lo que se carga al arrancar necesita un reinicio.");
     }
 
     @Override

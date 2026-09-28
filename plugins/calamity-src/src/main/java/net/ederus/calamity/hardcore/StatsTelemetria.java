@@ -48,7 +48,7 @@ final class StatsTelemetria {
     StatsTelemetria(Hardcore hc, File carpeta) {
         this.hc = hc;
         this.carpeta = carpeta;
-        Subcomandos.lw().registrar("stats", "stats [dias]: que se entrega, se saca vivo y se pierde (telemetria)",
+        Subcomandos.lw().registrar("stats", "stats [días]: qué se entrega, qué se saca vivo y qué se pierde (telemetría)",
                 "ederus.mundos", this::comando, args -> args.length == 2 ? List.of("1", "7", "30") : List.of());
         Autotest.registrar("stats", StatsTelemetria::autotest);
     }
@@ -64,20 +64,20 @@ final class StatsTelemetria {
             try {
                 dias = Integer.parseInt(args[1]);
             } catch (NumberFormatException e) {
-                quien.sendMessage(Component.text("stats [dias]: los dias son un numero (1-180).", Paleta.AVISO));
+                quien.sendMessage(Component.text("stats [días]: los días son un número (de 1 a 180).", Paleta.AVISO));
                 return;
             }
         }
         final int d = Math.max(1, Math.min(180, dias));
         long desde = System.currentTimeMillis() - d * 86_400_000L;
-        quien.sendMessage(Component.text("Leyendo la telemetria de " + d + " dias...", Paleta.TENUE));
+        quien.sendMessage(Component.text("Leyendo la telemetría de " + d + (d == 1 ? " día..." : " días..."), Paleta.TENUE));
         BukkitTask[] propia = new BukkitTask[1];
         propia[0] = hc.plugin().getServer().getScheduler().runTaskAsynchronously(hc.plugin(), () -> {
             List<String> lineas;
             try {
                 lineas = leer(carpeta, desde).lineas(d);
             } catch (Throwable t) {
-                lineas = List.of("stats | no se pudo leer la telemetria: " + t);
+                lineas = List.of("stats | no se pudo leer la telemetría: " + t);
             }
             final List<String> salida = lineas;
             if (propia[0] != null) tareas.remove(propia[0]);

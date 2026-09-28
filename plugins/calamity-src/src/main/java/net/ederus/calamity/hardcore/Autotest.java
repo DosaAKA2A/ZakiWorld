@@ -75,7 +75,7 @@ final class Autotest {
 
     /** Registra /lw hardcore autotest y las pruebas propias de WP0 (base y mmo). */
     static void instalar(Hardcore hc) {
-        Subcomandos.lw().registrar("autotest", "autotest <modulo|todo>: pruebas sin jugadores", "ederus.mundos",
+        Subcomandos.lw().registrar("autotest", "autotest <módulo|todo>: pruebas sin jugadores", "ederus.mundos",
                 (quien, args) -> comando(hc, quien, args),
                 args -> {
                     if (args.length != 2) return List.of();
@@ -95,7 +95,7 @@ final class Autotest {
 
     private static void comando(Hardcore hc, CommandSender quien, String[] args) {
         if (args.length < 2) {
-            decir(hc, quien, "autotest | uso | /lw hardcore autotest <" + String.join("|", todos()) + "|todo>", true);
+            decir(hc, quien, "autotest | uso | /calamidad autotest <" + String.join("|", todos()) + "|todo>", true);
             return;
         }
         String cual = args[1].toLowerCase(Locale.ROOT);

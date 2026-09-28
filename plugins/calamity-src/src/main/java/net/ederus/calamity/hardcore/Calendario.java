@@ -52,7 +52,7 @@ final class Calendario {
             if (!z.equals(zonaAvisada) && hc != null) {
                 zonaAvisada = z;
                 hc.plugin().getLogger().warning("[Calamity] hardcore.zona \"" + z
-                        + "\" no es una zona valida; uso la del sistema (" + ZoneId.systemDefault() + ").");
+                        + "\" no es una zona válida; se usa la del sistema (" + ZoneId.systemDefault() + ").");
             }
             return ZoneId.systemDefault();
         }

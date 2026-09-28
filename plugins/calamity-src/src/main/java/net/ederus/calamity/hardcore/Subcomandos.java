@@ -36,7 +36,9 @@ public final class Subcomandos {
                            Function<String[], List<String>> tab) {
     }
 
-    private static final Subcomandos LW = new Subcomandos("/lw hardcore");
+    // La raiz solo sale en los avisos ("/calamidad dar ha fallado: ..."): el comando de staff es
+    // /calamidad desde la 1.0 (lo de /lw hardcore lo reescribe RedireccionComandos).
+    private static final Subcomandos LW = new Subcomandos("/calamidad");
     private static final Subcomandos CALAMITY = new Subcomandos("/calamity");
 
     private final String raiz;
@@ -67,7 +69,7 @@ public final class Subcomandos {
                           BiConsumer<CommandSender, String[]> accion, Function<String[], List<String>> tab) {
         String clave = nombre.toLowerCase(Locale.ROOT);
         if (entradas.containsKey(clave)) {
-            log(Level.WARNING, raiz + " " + clave + " se registra dos veces; se queda el ultimo.", null);
+            log(Level.WARNING, raiz + " " + clave + " se registra dos veces; se queda el último.", null);
         }
         entradas.put(clave, new Entrada(clave, ayuda == null ? "" : ayuda, permiso, accion, tab));
     }

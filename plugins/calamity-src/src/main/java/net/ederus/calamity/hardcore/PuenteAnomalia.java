@@ -137,7 +137,7 @@ final class PuenteAnomalia {
                 if (a.settings().mobcoins(ParcaAnomalia.ID) > 0) a.settings().mobcoins(ParcaAnomalia.ID, 0);
             } else if (a.settings().mobcoins(ParcaAnomalia.ID) > 0 && avisados.add("mobcoins")) {
                 gestor.hc().plugin().getLogger().warning("[Calamity] EDM tiene anomalias.parca.mobcoins > 0: la Parca"
-                        + " pagaría MobCoins además de lo de Calamity. Ponlo a 0 en el config de anomalías de EDM.");
+                        + " pagaría MobCoins además de lo de Calamity. Ponlo a 0 en la configuración de anomalías de EDM.");
             }
         } catch (Throwable ignorado) {
             // Un EDM que cambie su API de botin no puede parar a la Parca: se vera en la prueba.
@@ -222,16 +222,16 @@ final class PuenteAnomalia {
     /** /lw hardcore parca anomalia: lo que hay en EDM y que saldria ahora. */
     String estado() {
         AnomalyPlugin a = modulo();
-        if (a == null) return "anomalia | sin el modulo de anomalias de EDM | la siguiente: reserva";
+        if (a == null) return "anomalia | sin el módulo de anomalías de EDM | la siguiente: reserva";
         ActiveAnomaly ev = a.manager().current();
         String abierta = ev == null ? "ninguna"
                 : ev.typeId() + (ev.fight() instanceof ParcaAnomalia ? " (esta)" : "") + " " + ev.elapsedSeconds() + " s";
         DropTable t = a.drops().table(ParcaAnomalia.ID);
-        return "anomalia | registrada " + (a.registry().get(ParcaAnomalia.ID) == tipo ? "si" : "no")
+        return "anomalia | registrada " + (a.registry().get(ParcaAnomalia.ID) == tipo ? "sí" : "no")
                 + " | clase " + a.registry().classOf(tipo).display()
-                + " | activa en el menu " + (a.registry().isEnabled(tipo) ? "si" : "no")
+                + " | activa en el menú " + (a.registry().isEnabled(tipo) ? "sí" : "no")
                 + " | abierta " + abierta
-                + " | la siguiente: " + (decision(a) == Decision.ANOMALIA ? "anomalia" : "reserva")
+                + " | la siguiente: " + (decision(a) == Decision.ANOMALIA ? "anomalía" : "reserva")
                 + " | EDM paga: xp " + t.experience() + ", objetos " + t.entries().size()
                 + ", comandos " + t.commands().size() + ", mobcoins " + a.settings().mobcoins(ParcaAnomalia.ID);
     }

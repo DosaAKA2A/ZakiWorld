@@ -123,7 +123,7 @@ final class Exentos {
             return;
         }
         if (args.length < 4) {
-            quien.sendMessage(Component.text("Uso: /lw hardcore exento [<jugador> <parca|aduana|todo> <on|off>]", Paleta.AVISO));
+            quien.sendMessage(Component.text("Uso: /calamidad exento [<jugador> <parca|aduana|todo> <on|off>]", Paleta.AVISO));
             return;
         }
         OfflinePlayer o = Entregas.buscar(args[1]);
