@@ -26,7 +26,7 @@ import java.util.UUID;
  * Ley 5: ningun golpe quita mas de topeFraccion de la vida maxima. Con la vida llena,
  * nada te mata de un golpe.
  *
- * Calamity 1.4: el equipo contra la PARCA (equipo.yml, parca-dano-recibido) se descuenta aqui, despues
+ * Calamity 1.4: el equipo contra la PARCA (calamity.parca-dano-recibido de GodItems) se descuenta aqui, despues
  * del tope; sus golpes normales los recorta Equipo.onDanoParca.
  */
 final class DanoVerdadero {
