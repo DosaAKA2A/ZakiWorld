@@ -571,7 +571,7 @@ final class ParcaAnomalia extends BossFight implements ParcaViva {
         if (a.duracionMaxima > 0 && vivo >= a.duracionMaxima * 1200L) {
             // Se cansa: se va sin botin y vuelve si la presa entra antes de media hora (P-25).
             gestor.guardarPendiente(this, System.currentTimeMillis() + 30 * 60_000L, "cansada");
-            irse("cansada", ComandoCalamity.mensaje("Se cansa de esperar. Volverá."));
+            irse("cansada", ComandoCalamity.mensaje(Parca.CANSADA));
             return;
         }
 
@@ -594,7 +594,7 @@ final class ParcaAnomalia extends BossFight implements ParcaViva {
             try {
                 fin = tec.paso(w);
             } catch (Throwable t) {
-                hc.plugin().getLogger().warning("[Calamity] Fallo en la tecnica " + tec.rotulo() + " de la Parca: " + t);
+                hc.plugin().getLogger().warning("[Calamity] Fallo en la técnica " + tec.rotulo() + " de la Parca: " + t);
                 fin = true;
             }
             tec.t++;
@@ -832,13 +832,13 @@ final class ParcaAnomalia extends BossFight implements ParcaViva {
      */
     @Override
     public String forzar(String nombre, Player quien) {
-        if (estado != Estado.PELEA) return "no esta peleando (si acaba de salir, espera 2 s)";
-        if (actual instanceof Transicion) return "esta cambiando de fase";
+        if (estado != Estado.PELEA) return "no está peleando (si acaba de salir, espera 2 s)";
+        if (actual instanceof Transicion) return "está cambiando de fase";
         HabilidadParca h = HabilidadParca.buscar(nombre);
         if (h == null) return "habilidades: " + String.join(", ", HabilidadParca.nombres());
         Player obj = quien != null && cuerpo != null && quien.getWorld() == cuerpo.getWorld() ? quien : objetivo();
         if (obj == null) return "necesita un jugador en el mundo";
-        if (h == HabilidadParca.CORTEJO && !planideras.isEmpty()) return "ya hay planideras";
+        if (h == HabilidadParca.CORTEJO && !planideras.isEmpty()) return "ya hay plañideras";
         cortarTecnica();
         empezar(h, obj, ticks());
         return null;
@@ -861,11 +861,7 @@ final class ParcaAnomalia extends BossFight implements ParcaViva {
         siguiente = null;
         actual = new Transicion(to);
         nombreBarra();
-        String texto = switch (to) {
-            case 2 -> "Las plañideras lloran por ti.";
-            case 3 -> "Cruza el umbral, si puedes.";
-            default -> "Cuenta las campanadas.";
-        };
+        String texto = Parca.consejoFase(to);
         for (UUID id : marcados) {
             Player m = hc.plugin().getServer().getPlayer(id);
             if (m != null) hc.cordura().destello(m, Component.text(texto, Paleta.TEXTO), 3);
@@ -1153,7 +1149,7 @@ final class ParcaAnomalia extends BossFight implements ParcaViva {
     /** Lo que ve un marcado al quedar marcado: titulo P-08; si iba montado, abajo. */
     private void alMarcar(Player p) {
         if (p.isInsideVehicle()) p.leaveVehicle();
-        p.showTitle(Paleta.titulo(Paleta.muerte("PARCA"), "Te quedaste demasiado tiempo.",
+        p.showTitle(Paleta.titulo(Paleta.muerte("PARCA"), "Te quedaste quieto demasiado tiempo.",
                 Duration.ofMillis(500), Duration.ofSeconds(3), Duration.ofMillis(1000)));
     }
 
@@ -2009,7 +2005,7 @@ final class ParcaAnomalia extends BossFight implements ParcaViva {
             victima = obj.getUniqueId();
             obj.playSound(obj.getLocation(), "entity.enderman.teleport", SoundCategory.HOSTILE, 1f, 0.5f);
             Compat.sound(obj.getWorld(), destino, "block.sculk_catalyst.bloom", 1.5f, 0.6f);
-            hc.cordura().destello(obj, Component.text("Sientes frío en la nuca.", Paleta.TEXTO), 2);
+            hc.cordura().destello(obj, Component.text("¡Cuidado, detrás de ti!", Paleta.AVISO), 2);
         }
 
         @Override
@@ -2333,7 +2329,7 @@ final class ParcaAnomalia extends BossFight implements ParcaViva {
         cuerpo.setAI(false);
         huecos.clear();
         npc.postura(Pose.SNEAKING);
-        Component texto = Component.text("La Parca se tambalea.", Paleta.DETALLE);
+        Component texto = Component.text("La Parca se tambalea: ahora recibe más daño.", Paleta.DETALLE);
         for (Player o : Fx.viewersNear(cuerpo.getLocation(), 32)) hc.cordura().destello(o, texto, 2);
         Compat.sound(cuerpo.getWorld(), cuerpo.getLocation(), "entity.wither_skeleton.hurt", 1.5f, 0.5f);
         Compat.sound(cuerpo.getWorld(), cuerpo.getLocation(), "block.bell.resonate", 1.2f, 0.7f);
@@ -3052,7 +3048,7 @@ final class ParcaAnomalia extends BossFight implements ParcaViva {
                 Fx.shockwave(w, origen, a.campRadio, Compat.SOUL, 6);
                 nombreBarra();
                 if (toques == 3) {
-                    Title titulo = Paleta.titulo(Paleta.muerte("Aléjate"), "Sentencia · 3/" + a.campToques,
+                    Title titulo = Paleta.titulo(Paleta.muerte("Aléjate"), "Campanada 3 de " + a.campToques + ": sal del anillo",
                             Duration.ofMillis(100), Duration.ofMillis(1600), Duration.ofMillis(400));
                     for (Player o : Fx.viewersNear(origen, 12)) o.showTitle(titulo);
                 }
@@ -3122,11 +3118,7 @@ final class ParcaAnomalia extends BossFight implements ParcaViva {
                 cuerpo.setInvulnerable(true);
                 cuerpo.setAI(false);
                 Title titulo = Paleta.titulo(Paleta.muerte(Parca.romano(fase) + " · " + nombreFase(fase)),
-                        switch (fase) {
-                            case 2 -> "Las plañideras lloran por ti.";
-                            case 3 -> "El umbral se abre.";
-                            default -> "Cuenta las campanadas.";
-                        }, Duration.ofMillis(300), Duration.ofMillis(2200), Duration.ofMillis(700));
+                        Parca.subtituloFase(fase), Duration.ofMillis(300), Duration.ofMillis(2200), Duration.ofMillis(700));
                 for (Player p : Fx.viewersNear(centro, RADIO_AMBIENTE)) p.showTitle(titulo);
                 for (Player p : Fx.playersNear(centro, 32)) Compat.apply(p, "darkness", 40, 0);
                 Compat.sound(w, centro, "block.bell.use", 3f, 0.6f);
@@ -3381,7 +3373,7 @@ final class ParcaAnomalia extends BossFight implements ParcaViva {
                 boolean tiempo = event.elapsedSeconds() >= plugin.settings().timeLimitMinutes() * 60L;
                 if (tiempo && !prueba) {
                     gestor.guardarPendiente(this, System.currentTimeMillis() + 30 * 60_000L, "cansada");
-                    irse("cansada", ComandoCalamity.mensaje("Se cansa de esperar. Volverá."));
+                    irse("cansada", ComandoCalamity.mensaje(Parca.CANSADA));
                 } else {
                     irse("anomalia-cerrada", null);
                 }

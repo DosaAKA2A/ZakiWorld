@@ -111,7 +111,7 @@ final class Amenazas implements Listener {
         this.hc = hc;
         hc.plugin().getServer().getPluginManager().registerEvents(this, hc.plugin());
         Subcomandos.lw().registrar("amenazas",
-                "amenazas [contar|limpiar|prueba <x> <y> <z> [vida]]: las PARCA, Ecos y demas vivas",
+                "amenazas [contar|limpiar|prueba <x> <y> <z> [vida]]: las Parcas, los Ecos y demás amenazas vivas",
                 "ederus.mundos", this::comando,
                 args -> args.length == 2 ? List.of("contar", "limpiar", "prueba") : List.of());
     }
@@ -636,7 +636,7 @@ final class Amenazas implements Listener {
             }
             case "prueba" -> prueba(quien, args);
             default -> quien.sendMessage(Component.text(
-                    "Uso: /lw hardcore amenazas [contar|limpiar|prueba <x> <y> <z> [vida]]", Paleta.AVISO));
+                    "Uso: /calamidad amenazas [contar|limpiar|prueba <x> <y> <z> [vida]]", Paleta.AVISO));
         }
     }
 
@@ -647,7 +647,7 @@ final class Amenazas implements Listener {
      */
     private void prueba(CommandSender quien, String[] args) {
         if (args.length < 5) {
-            quien.sendMessage(Component.text("Uso: /lw hardcore amenazas prueba <x> <y> <z> [vida]", Paleta.AVISO));
+            quien.sendMessage(Component.text("Uso: /calamidad amenazas prueba <x> <y> <z> [vida]", Paleta.AVISO));
             return;
         }
         World w = null;
@@ -658,7 +658,7 @@ final class Amenazas implements Listener {
             if (w != null) break;
         }
         if (w == null) {
-            quien.sendMessage(Component.text("No hay ningun mundo hardcore cargado.", Paleta.AVISO));
+            quien.sendMessage(Component.text("No hay ningún mundo hardcore cargado.", Paleta.AVISO));
             return;
         }
         double x, y, z, vida;
@@ -668,7 +668,7 @@ final class Amenazas implements Listener {
             z = Double.parseDouble(args[4]);
             vida = args.length > 5 ? Double.parseDouble(args[5]) : 40;
         } catch (NumberFormatException e) {
-            quien.sendMessage(Component.text("Coordenadas o vida no validas.", Paleta.AVISO));
+            quien.sendMessage(Component.text("Coordenadas o vida no válidas.", Paleta.AVISO));
             return;
         }
         Location sitio = new Location(w, x, y, z);
@@ -683,7 +683,7 @@ final class Amenazas implements Listener {
             return;
         }
         vidaLogica(z0, vida);
-        quien.sendMessage(Component.text("amenazas | prueba | " + z0.getUniqueId() + " | vida logica "
+        quien.sendMessage(Component.text("amenazas | prueba | " + z0.getUniqueId() + " | vida lógica "
                 + vidaLogicaMaxima(z0) + " | entidad " + z0.getHealth() + " | escala " + escala(z0), Paleta.TENUE));
     }
 

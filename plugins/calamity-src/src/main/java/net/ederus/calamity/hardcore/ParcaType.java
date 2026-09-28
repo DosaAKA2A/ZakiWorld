@@ -75,25 +75,25 @@ final class ParcaType implements AnomalyType {
 
     @Override
     public String tagline() {
-        return "La que viene a por los que se quedan quietos";
+        return "La que viene a por quien se queda quieto";
     }
 
     @Override
     public List<String> origin() {
         return List.of(
                 "Calamity no perdona a quien se queda quieto.",
-                "Cada respiración de más deja una huella,",
-                "y ella la sigue. No corre. Nunca corre.",
-                "Pero siempre llega.");
+                "Si pasas demasiado tiempo sin moverte,",
+                "ella sigue tu rastro hasta encontrarte.");
     }
 
     @Override
     public List<String> threat() {
         return List.of(
-                "DIOS: pelea a CUATRO fases, cada una con su luto.",
-                "Siega, cadenas, plañideras, pasos que cruzan",
-                "el umbral y una Sentencia que se cuenta en",
-                "campanadas. Quien se quede quieto, cae.");
+                "Anomalía DIOS: una pelea en cuatro fases.",
+                "Siega, cadenas, plañideras, apariciones",
+                "a tu espalda y una Sentencia que se",
+                "anuncia con campanadas. La Siega hace",
+                "el doble de daño a quien se queda quieto.");
     }
 
     /**

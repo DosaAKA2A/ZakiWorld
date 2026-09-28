@@ -403,7 +403,7 @@ final class PeleaParca implements Runnable, ParcaViva {
     /** Lo que ve un marcado al quedar marcado: titulo P-08; si iba montado, abajo. */
     private void alMarcar(Player p) {
         if (p.isInsideVehicle()) p.leaveVehicle();
-        p.showTitle(Paleta.titulo(Paleta.muerte("PARCA"), "Te quedaste demasiado tiempo.",
+        p.showTitle(Paleta.titulo(Paleta.muerte("PARCA"), "Te quedaste quieto demasiado tiempo.",
                 Duration.ofMillis(500), Duration.ofSeconds(3), Duration.ofMillis(1000)));
     }
 
@@ -681,7 +681,7 @@ final class PeleaParca implements Runnable, ParcaViva {
         if (a.duracionMaxima > 0 && vivo >= a.duracionMaxima * 1200L) {
             // Se cansa: se va sin botin y vuelve si la presa entra antes de media hora (P-25).
             gestor.guardarPendiente(this, System.currentTimeMillis() + 30 * 60_000L, "cansada");
-            irse("cansada", ComandoCalamity.mensaje("Se cansa de esperar. Volverá."));
+            irse("cansada", ComandoCalamity.mensaje(Parca.CANSADA));
             return;
         }
 
@@ -773,7 +773,8 @@ final class PeleaParca implements Runnable, ParcaViva {
 
     private void entrarFase(int f) {
         hc.plugin().bitacora().anotar("parca", "fase", String.valueOf(f), presaNombre);
-        String texto = f == 2 ? "Las plañideras lloran por ti." : "Cuenta las campanadas.";
+        // La III de la reserva es la de las campanadas: su consejo es el de la IV de la anomalia.
+        String texto = Parca.consejoFase(f == 2 ? 2 : 4);
         for (UUID id : marcados) {
             Player m = hc.plugin().getServer().getPlayer(id);
             if (m != null) hc.cordura().destello(m, Component.text(texto, Paleta.TEXTO), 3);
@@ -797,7 +798,7 @@ final class PeleaParca implements Runnable, ParcaViva {
      * Devuelve por que no, o null si ha empezado.
      */
     public String forzar(String nombre, Player quien) {
-        if (estado != Estado.PELEA) return "no esta peleando (si acaba de salir, espera 2 s)";
+        if (estado != Estado.PELEA) return "no está peleando (si acaba de salir, espera 2 s)";
         Habilidad h = switch (nombre) {
             case "siega" -> Habilidad.SIEGA;
             case "umbral", "paso" -> Habilidad.UMBRAL;
@@ -809,7 +810,7 @@ final class PeleaParca implements Runnable, ParcaViva {
         if (h == null) return "habilidades: siega, umbral, tiron, cortejo, sentencia";
         Player obj = quien != null && quien.getWorld() == cuerpo.getWorld() ? quien : objetivo();
         if ((h == Habilidad.TIRON || h == Habilidad.UMBRAL) && obj == null) return "necesita un jugador en el mundo";
-        if (h == Habilidad.CORTEJO && !planideras.isEmpty()) return "ya hay planideras";
+        if (h == Habilidad.CORTEJO && !planideras.isEmpty()) return "ya hay plañideras";
         if (actual != null) acabar();
         empezar(h, obj);
         return null;
@@ -897,7 +898,7 @@ final class PeleaParca implements Runnable, ParcaViva {
                 victimaPaso = obj.getUniqueId();
                 obj.playSound(obj.getLocation(), "entity.enderman.teleport", SoundCategory.HOSTILE, 1f, 0.5f);
                 Compat.sound(w, destino, "block.sculk_catalyst.bloom", 1.5f, 0.6f);
-                hc.cordura().destello(obj, Component.text("Sientes frío en la nuca.", Paleta.TEXTO), 2);
+                hc.cordura().destello(obj, Component.text("¡Cuidado, detrás de ti!", Paleta.AVISO), 2);
             }
             case TIRON -> {
                 habDura = a.tironAviso;
@@ -1391,7 +1392,7 @@ final class PeleaParca implements Runnable, ParcaViva {
         huecos.clear();
         // Se dobla: el maniqui se agacha mientras dura (vuelve de pie al acabar, en pelear()).
         postura(Pose.SNEAKING);
-        Component texto = Component.text("La Parca se tambalea.", Paleta.DETALLE);
+        Component texto = Component.text("La Parca se tambalea: ahora recibe más daño.", Paleta.DETALLE);
         for (Player o : Fx.viewersNear(cuerpo.getLocation(), 32)) hc.cordura().destello(o, texto, 2);
         Compat.sound(cuerpo.getWorld(), cuerpo.getLocation(), "entity.wither_skeleton.hurt", 1.5f, 0.5f);
         Compat.sound(cuerpo.getWorld(), cuerpo.getLocation(), "block.bell.resonate", 1.2f, 0.7f);
@@ -1439,7 +1440,7 @@ final class PeleaParca implements Runnable, ParcaViva {
             Fx.shockwave(w, origen, a.campRadio, Compat.SOUL, 6);
             nombreBarra();
             if (toques == 3) {
-                Title titulo = Paleta.titulo(Paleta.muerte("Aléjate"), "Sentencia · 3/" + a.campToques,
+                Title titulo = Paleta.titulo(Paleta.muerte("Aléjate"), "Campanada 3 de " + a.campToques + ": sal del anillo",
                         Duration.ofMillis(100), Duration.ofMillis(1600), Duration.ofMillis(400));
                 for (Player o : Fx.viewersNear(origen, 12)) o.showTitle(titulo);
             }

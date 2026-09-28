@@ -174,25 +174,25 @@ final class Grieta {
     void aviso(Player p, int nivel, double radioAjeno) {
         switch (nivel) {
             case 1 -> {
-                hc.cordura().destello(p, Component.text("El suelo del spawn late bajo tus pies.", Paleta.TEXTO), 3);
+                hc.cordura().destello(p, Component.text("Llevas mucho rato quieto. Si no te mueves, el suelo se abrirá.", Paleta.TEXTO), 3);
                 p.playSound(p.getLocation(), "block.sculk_sensor.clicking", SoundCategory.HOSTILE, 0.6f, 0.5f);
             }
             case 2 -> {
-                hc.cordura().destello(p, Component.text("Algo se agrieta debajo de ti.", Paleta.TEXTO), 3);
+                hc.cordura().destello(p, Component.text("El suelo empieza a agrietarse bajo tus pies: muévete.", Paleta.TEXTO), 3);
                 p.playSound(p.getLocation(), "block.deepslate.break", SoundCategory.HOSTILE, 0.8f, 0.5f);
                 p.playSound(p.getLocation(), "block.bell.resonate", SoundCategory.HOSTILE, 0.5f, 0.5f);
             }
             case 3 -> {
-                p.sendMessage(ComandoCalamity.mensaje("En el spawn no se duerme. Muévete o la tierra te tragará."));
+                p.sendMessage(ComandoCalamity.mensaje("Si sigues quieto en el spawn, una grieta te tragará y te dejará lejos, con la Parca detrás. Muévete."));
                 p.playSound(p.getLocation(), "block.bell.use", SoundCategory.HOSTILE, 0.8f, 0.5f);
                 Compat.spawn(p.getWorld(), Compat.REVERSE_PORTAL, p.getLocation().add(0, 0.2, 0), 20, 0.6, 0.1, 0.6, 0.02);
             }
             case 4 -> {
-                p.showTitle(Paleta.titulo(Paleta.muerte("Muévete"), "Se abre una grieta",
+                p.showTitle(Paleta.titulo(Paleta.muerte("Muévete"), "Se va a abrir una grieta",
                         Duration.ofMillis(250), Duration.ofSeconds(3), Duration.ofMillis(750)));
                 Compat.sound(p.getWorld(), p.getLocation(), "block.end_portal_frame.fill",
                         (float) Math.max(1, radioAjeno / 16.0), 0.5f);
-                Component ajeno = ComandoCalamity.mensaje("La tierra cruje bajo alguien que no se mueve.");
+                Component ajeno = ComandoCalamity.mensaje("El suelo cruje bajo alguien que lleva mucho rato sin moverse.");
                 for (Player o : Fx.viewersNear(p.getLocation(), radioAjeno)) {
                     if (!o.equals(p)) o.sendMessage(ajeno);
                 }
@@ -364,7 +364,7 @@ final class Grieta {
                 Compat.spawn(d, Compat.SCULK_SOUL, destino.clone().add(0, 0.3, 0), 20, 0.6, 0.2, 0.6, 0.03);
                 Compat.sound(d, destino, "block.portal.travel", 0.4f, 0.5f);
                 Compat.apply(k, "darkness", 40, 0);
-                k.sendMessage(ComandoCalamity.mensaje("La grieta te escupe lejos del spawn. Algo te ha seguido."));
+                k.sendMessage(ComandoCalamity.mensaje("La grieta te ha escupido lejos del spawn. La Parca viene a por ti."));
                 hc.plugin().bitacora().anotar("parca", "grieta", k.getName(), "arrastrado",
                         destino.getBlockX() + " " + destino.getBlockY() + " " + destino.getBlockZ(),
                         Math.round(Math.hypot(destino.getX() - boca.getX(), destino.getZ() - boca.getZ())) + " bloques");

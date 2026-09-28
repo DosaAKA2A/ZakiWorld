@@ -63,8 +63,11 @@ import java.util.UUID;
  */
 final class Eclipse implements Listener {
 
-    /** Rojo de la muerte de Calamity para la ceniza (particulas); barra y titulo van por la Paleta. */
-    private static final int ROJO_RGB = 0x8B1A1A;
+    /**
+     * Rojo de la ceniza del eclipse (particulas): el de la PARCA de la Paleta. Era el rojo de
+     * muerte oscuro (#8B1A1A), el mismo que no se leia en el chat, y de noche apenas se veia.
+     */
+    private static final int ROJO_RGB = Paleta.PARCA_HASTA;
     private static final DateTimeFormatter HORA = DateTimeFormatter.ofPattern("HH:mm");
 
     private final Hardcore hc;
@@ -264,7 +267,7 @@ final class Eclipse implements Listener {
         }
         conBarra.clear();
         conNoche.clear();
-        Component fin = ComandoCalamity.mensaje("El eclipse pasa. Lo que no hayas sacado sigue sin ser tuyo.");
+        Component fin = ComandoCalamity.mensaje("El eclipse ha terminado. Lo que hayas ganado solo es tuyo si sales vivo de Calamity.");
         for (Player p : dentro()) {
             p.sendMessage(fin);
             p.playSound(p.getLocation(), "minecraft:block.beacon.deactivate", SoundCategory.HOSTILE, 1.0f, 0.6f);
@@ -325,7 +328,7 @@ final class Eclipse implements Listener {
         int grado = Math.max(1, Math.min(4, hc.cfg().getInt("eclipse.reliquia-grado", 3)));
         ItemStack r = rel.crear(grado, "eclipse", Reliquias.ECLIPSADA, 0, null, false);
         ad.pagar(p, "eclipse", 0, 0, List.of(r), "reliquia eclipsada");
-        hc.cordura().destello(p, Component.text("Reliquia Eclipsada · sácala viva", Reliquias.AMBAR), 3);
+        hc.cordura().destello(p, Component.text("Has ganado una Reliquia Eclipsada. Sal vivo para quedártela.", Reliquias.AMBAR), 3);
         p.playSound(p.getLocation(), "minecraft:block.respawn_anchor.charge", SoundCategory.PLAYERS, 0.8f, 0.7f);
         hc.plugin().bitacora().anotar("eclipse", "reliquia", p.getName(), String.valueOf(rel.id(r)));
         suceso("reliquia", p, Map.of("grado", grado));
@@ -341,7 +344,7 @@ final class Eclipse implements Listener {
         int n = avisoToca(proximo - ahora, avisos);
         if (n <= 0 || !avisados.add(proximo + ":" + n)) return;
         Bukkit.broadcast(ComandoCalamity.mensaje("Eclipse de Calamidad en " + n + (n == 1 ? " minuto" : " minutos")
-                + ". Lo que ganes dentro vale el doble. Lo que pierdas, también."));
+                + ". Los mobs soltarán más Esencias y Reliquias, pero serán más fuertes y la cordura bajará más rápido."));
         hc.plugin().bitacora().anotar("eclipse", "aviso", n + " min", "inicio " + hora(proximo));
     }
 
@@ -383,11 +386,11 @@ final class Eclipse implements Listener {
         barra.progress((float) Math.max(0.0, Math.min(1.0, (double) queda / total)));
     }
 
-    /** P-X02: "ECLIPSE / <n> minutos". */
+    /** P-X02: "ECLIPSE / Quedan <n> minutos". */
     private static Title titulo(long quedaMillis) {
         long n = minutosQuedan(quedaMillis);
         return Title.title(Paleta.muerte("ECLIPSE"),
-                Component.text(n + (n == 1 ? " minuto" : " minutos"), Paleta.TEXTO));
+                Component.text(n == 1 ? "Queda 1 minuto" : "Quedan " + n + " minutos", Paleta.TEXTO));
     }
 
     private static long minutosQuedan(long quedaMillis) {
@@ -537,7 +540,7 @@ final class Eclipse implements Listener {
                     try {
                         minutos = Math.max(1, Math.min(240, Integer.parseInt(args[2])));
                     } catch (NumberFormatException e) {
-                        quien.sendMessage(ComandoCalamity.mensaje("Los minutos son un número."));
+                        quien.sendMessage(ComandoCalamity.mensaje("Los minutos tienen que ser un número."));
                         return;
                     }
                 }
@@ -558,12 +561,12 @@ final class Eclipse implements Listener {
                 quien.sendMessage(ComandoCalamity.mensaje(resumen(ahora)));
                 if (reloj.activo(ahora)) {
                     quien.sendMessage(ComandoCalamity.mensaje("En este eclipse: " + reloj.segundosPorJugador().size()
-                            + " jugadores dentro, " + reloj.ganadas().size() + " Reliquias entregadas. Cordura ×"
+                            + " jugadores en Calamity, " + reloj.ganadas().size() + " Reliquias entregadas. Cordura ×"
                             + factorCordura() + ", +" + nivelesExtra() + " niveles, botín ×" + factorBotin()
                             + ", PvP ×" + factorPvp() + "."));
                 }
             }
-            default -> quien.sendMessage(ComandoCalamity.mensaje("Uso: /lw hardcore eclipse iniciar [minutos]|parar|info"));
+            default -> quien.sendMessage(ComandoCalamity.mensaje("Uso: /calamidad eclipse iniciar [minutos]|parar|info"));
         }
     }
 

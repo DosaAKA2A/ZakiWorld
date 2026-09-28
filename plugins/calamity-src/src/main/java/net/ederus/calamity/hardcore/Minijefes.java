@@ -75,7 +75,7 @@ final class Minijefes {
     Minijefes(Hardcore hc) {
         this.hc = hc;
         Subcomandos.lw().registrar("minijefe",
-                "minijefe muerte <tipo> <N> <jugador:fraccion>,...: simula un reparto (el primero es el asesino)",
+                "minijefe muerte <tipo> <N> <jugador:fracción>,...: simula un reparto (el primero es el asesino)",
                 "ederus.mundos", this::comandoMuerte, this::tabMuerte);
         Subcomandos.lw().registrar("piedad", "piedad <jugador> [tipo] [n]: ver o poner la piedad de los Sellos",
                 "ederus.mundos", this::comandoPiedad, args -> switch (args.length) {
@@ -283,7 +283,7 @@ final class Minijefes {
     private void comandoMuerte(CommandSender quien, String[] args) {
         if (args.length < 5 || !args[1].equalsIgnoreCase("muerte")) {
             quien.sendMessage(ComandoCalamity.mensaje(
-                    "Uso: /lw hardcore minijefe muerte <tipo> <N> <jugador:fraccion>,... (el primero es el asesino)"));
+                    "Uso: /calamidad minijefe muerte <tipo> <N> <jugador:fracción>,... (el primero es el asesino)"));
             return;
         }
         String tipo = args[2].toLowerCase(Locale.ROOT);
@@ -300,14 +300,14 @@ final class Minijefes {
             if (trozo.isBlank()) continue;
             String[] kv = trozo.trim().split(":");
             if (kv.length != 2) {
-                quien.sendMessage(ComandoCalamity.mensaje("No entiendo \"" + trozo + "\": jugador:fraccion."));
+                quien.sendMessage(ComandoCalamity.mensaje("No entiendo \"" + trozo + "\": se escribe jugador:fracción."));
                 return;
             }
             double v;
             try {
                 v = Double.parseDouble(kv[1].replace("%", "").replace(',', '.'));
             } catch (NumberFormatException e) {
-                quien.sendMessage(ComandoCalamity.mensaje("Fraccion rara en \"" + trozo + "\"."));
+                quien.sendMessage(ComandoCalamity.mensaje("La fracción de \"" + trozo + "\" no es un número."));
                 return;
             }
             // 0.6 o 60: lo que pasa de 1 se lee como porcentaje.
@@ -345,7 +345,7 @@ final class Minijefes {
     /** piedad <jugador> [tipo] [n] */
     private void comandoPiedad(CommandSender quien, String[] args) {
         if (args.length < 2) {
-            quien.sendMessage(ComandoCalamity.mensaje("Uso: /lw hardcore piedad <jugador> [tipo] [n]"));
+            quien.sendMessage(ComandoCalamity.mensaje("Uso: /calamidad piedad <jugador> [tipo] [n]"));
             return;
         }
         OfflinePlayer op = Reliquias.jugador(args[1]);
@@ -365,7 +365,7 @@ final class Minijefes {
         try {
             n = Integer.parseInt(args[3]);
         } catch (NumberFormatException e) {
-            quien.sendMessage(ComandoCalamity.mensaje("La piedad es un número."));
+            quien.sendMessage(ComandoCalamity.mensaje("La piedad tiene que ser un número."));
             return;
         }
         String t = args[2].toLowerCase(Locale.ROOT);

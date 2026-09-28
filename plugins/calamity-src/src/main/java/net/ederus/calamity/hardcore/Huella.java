@@ -778,7 +778,7 @@ final class Huella implements Listener {
         if (nivel < r.avisoDado) {
             // Se ha movido de verdad. Solo se le dice si ya habia oido la segunda campana.
             if (nivel == 0 && r.avisoDado >= 2) {
-                hc.cordura().destello(p, Component.text("Las campanas callan.", Paleta.TEXTO), 2);
+                hc.cordura().destello(p, Component.text("Te has movido: las campanas callan.", Paleta.TEXTO), 2);
                 p.playSound(p.getLocation(), "block.amethyst_block.chime", SoundCategory.HOSTILE, 1f, 1.4f);
                 telemetria(p, q, true);
             }
@@ -818,16 +818,16 @@ final class Huella implements Listener {
         }
         switch (nivel) {
             case 1 -> {
-                hc.cordura().destello(p, Component.text("Algo empieza a contar tus respiraciones.", Paleta.TEXTO), 3);
+                hc.cordura().destello(p, Component.text("Llevas mucho rato quieto. Si no te mueves, vendrá la Parca.", Paleta.TEXTO), 3);
                 p.playSound(p.getLocation(), "block.bell.resonate", SoundCategory.HOSTILE, 0.3f, 0.5f);
             }
             case 2 -> {
-                hc.cordura().destello(p, Component.text("Una campana suena por ti.", Paleta.TEXTO), 3);
+                hc.cordura().destello(p, Component.text("Suena una campana por ti: muévete o vendrá la Parca.", Paleta.TEXTO), 3);
                 p.playSound(p.getLocation(), "block.bell.resonate", SoundCategory.HOSTILE, 0.5f, 0.5f);
                 p.playSound(p.getLocation(), "block.bell.resonate", SoundCategory.HOSTILE, 0.5f, 0.6f);
             }
             case 3 -> {
-                p.sendMessage(ComandoCalamity.mensaje("La Parca viene a por los que se quedan. Aléjate de aquí."));
+                p.sendMessage(ComandoCalamity.mensaje("La Parca viene a por quien se queda quieto. Sal de la zona que marcan las almas."));
                 p.playSound(p.getLocation(), "block.bell.use", SoundCategory.HOSTILE, 0.8f, 0.5f);
                 pintarHuella(p, r, a);
             }
@@ -838,7 +838,7 @@ final class Huella implements Listener {
                 // La oyen los de alrededor (volumen 1 = 16 bloques): el AFK se vuelve presa de los demas.
                 Compat.sound(p.getWorld(), p.getLocation(), "block.bell.use",
                         (float) Math.max(1, a.radioCampanaAjena() / 16.0), 0.6f);
-                Component ajeno = ComandoCalamity.mensaje("Una campana dobla cerca. Alguien no se ha movido.");
+                Component ajeno = ComandoCalamity.mensaje("Una campana dobla cerca: alguien lleva mucho rato sin moverse.");
                 for (Player o : Fx.viewersNear(p.getLocation(), a.radioCampanaAjena())) {
                     if (!o.equals(p)) o.sendMessage(ajeno);
                 }
@@ -1013,15 +1013,15 @@ final class Huella implements Listener {
         long ahora = System.currentTimeMillis();
         Ajustes a = ajustes();
         return "quieto " + r.quieto + "/" + a.limite() + " s | celdas " + r.celdasDistintas()
-                + " | muestras " + r.llenas + " | ultima activa " + (r.ultimaActiva ? "si" : "no")
+                + " | muestras " + r.llenas + " | última activa " + (r.ultimaActiva ? "sí" : "no")
                 + " | montado " + Math.round(r.fraccionMontado() * 100) + " %"
                 + " | pausa " + r.pausaUsada(ahora, a) + "/" + a.pausaMaxima() + " s"
                 + " | por interaccion " + r.muestrasPorInteraccion
-                + " | max celdas " + a.celdasMaximas() + " | teclas " + (r.conTeclas ? "si" : "nunca")
+                + " | máx. celdas " + a.celdasMaximas() + " | teclas " + (r.conTeclas ? "sí" : "nunca")
                 + (ahora < r.graciaHasta ? " | gracia " + (r.graciaHasta - ahora) / 1000 + " s" : "")
                 + (ahora < r.pescaHasta ? " | pescando " + (r.pescaHasta - ahora) / 1000 + " s" : "")
                 + " | modo " + (a.modoBloque() ? "bloque" : "huella")
-                + (grieta.enSpawn(p) ? " | spawn: limite " + grieta.umbral(p, a).limite() + " s (Grieta)" : "");
+                + (grieta.enSpawn(p) ? " | spawn: límite " + grieta.umbral(p, a).limite() + " s (Grieta)" : "");
     }
 
     void parar() {

@@ -76,6 +76,9 @@ final class Sellos implements Listener {
             "subasta", "trade", "kit", "kits", "gkit", "sell", "pay", "shop", "auctionhouse", "pa", "playerauction",
             "pauction");
 
+    /** El aviso de los contenedores: lo unico que se vigila son las Reliquias y las Esencias (valioso). */
+    private static final String NO_SE_GUARDA = "Las Reliquias y las Esencias no se pueden guardar ahí.";
+
     private final Hardcore hc;
     /** Ultimo aviso por jugador: un clic repetido no llena la barra ni la Bitacora. */
     private final Map<UUID, Long> ultimoAviso = new HashMap<>();
@@ -114,7 +117,7 @@ final class Sellos implements Listener {
         Player p = e.getPlayer();
         if (!sello("portales") || staff(p)) return;
         e.setCancelled(true);
-        avisar(p, "Aquí los portales no llevan a ninguna parte.", "portal", e.getFrom());
+        avisar(p, "Los portales no funcionan en Calamity.", "portal", e.getFrom());
     }
 
     /** Los mobs y los items tampoco: un portal no puede ser una tolva hacia fuera. */
@@ -136,12 +139,12 @@ final class Sellos implements Listener {
         Material m = b.getType();
         if (m == Material.ENDER_CHEST && sello("cofre-ender")) {
             e.setCancelled(true);
-            avisar(p, "Aquí dentro no hay bolsillos seguros.", "cofre-ender", b.getLocation());
+            avisar(p, "En Calamity no puedes usar el cofre de ender.", "cofre-ender", b.getLocation());
             return;
         }
         if (sello("contenedores") && bloqueGuarda(m) && valioso(e.getItem())) {
             e.setCancelled(true);
-            avisar(p, "Eso no se guarda ahí.", "bloque " + m.getKey().getKey(), b.getLocation());
+            avisar(p, NO_SE_GUARDA, "bloque " + m.getKey().getKey(), b.getLocation());
         }
     }
 
@@ -156,7 +159,7 @@ final class Sellos implements Listener {
         if (e.getInventory().getType() != InventoryType.ENDER_CHEST) return;
         if (!(e.getPlayer() instanceof Player p) || !hc.esHardcore(p) || staff(p) || !sello("cofre-ender")) return;
         e.setCancelled(true);
-        avisar(p, "Aquí dentro no hay bolsillos seguros.", "cofre-ender", p.getLocation());
+        avisar(p, "En Calamity no puedes usar el cofre de ender.", "cofre-ender", p.getLocation());
     }
 
     // ------------------------------------------------------------ contenedores
@@ -168,7 +171,7 @@ final class Sellos implements Listener {
         if ((esBolsa(e.getCursor()) && valioso(e.getCurrentItem()))
                 || (esBolsa(e.getCurrentItem()) && valioso(e.getCursor()))) {
             e.setCancelled(true);
-            avisar(p, "Eso no se guarda ahí.", "bolsa", p.getLocation());
+            avisar(p, NO_SE_GUARDA, "bolsa", p.getLocation());
             return;
         }
         ItemStack entra = entraArriba(e);
@@ -176,7 +179,7 @@ final class Sellos implements Listener {
         Inventory arriba = e.getView().getTopInventory();
         if (contenedorPermitido(arriba.getType(), arriba.getHolder(false))) return;
         e.setCancelled(true);
-        avisar(p, "Eso no se guarda ahí.", "contenedor " + arriba.getType().name().toLowerCase(Locale.ROOT),
+        avisar(p, NO_SE_GUARDA, "contenedor " + arriba.getType().name().toLowerCase(Locale.ROOT),
                 p.getLocation());
     }
 
@@ -187,7 +190,7 @@ final class Sellos implements Listener {
         Inventory arriba = e.getView().getTopInventory();
         if (contenedorPermitido(arriba.getType(), arriba.getHolder(false))) return;
         e.setCancelled(true);
-        avisar(p, "Eso no se guarda ahí.", "contenedor " + arriba.getType().name().toLowerCase(Locale.ROOT),
+        avisar(p, NO_SE_GUARDA, "contenedor " + arriba.getType().name().toLowerCase(Locale.ROOT),
                 p.getLocation());
     }
 
@@ -221,7 +224,7 @@ final class Sellos implements Listener {
                 ? p.getInventory().getItemInOffHand() : p.getInventory().getItemInMainHand();
         if (!valioso(mano)) return;
         e.setCancelled(true);
-        avisar(p, "Eso no se guarda ahí.", "entidad " + t.getType().getKey().getKey(), t.getLocation());
+        avisar(p, NO_SE_GUARDA, "entidad " + t.getType().getKey().getKey(), t.getLocation());
     }
 
     @EventHandler(priority = EventPriority.LOWEST, ignoreCancelled = true)
@@ -229,7 +232,7 @@ final class Sellos implements Listener {
         Player p = e.getPlayer();
         if (!hc.esHardcore(p) || staff(p) || !sello("contenedores") || !valioso(e.getPlayerItem())) return;
         e.setCancelled(true);
-        avisar(p, "Eso no se guarda ahí.", "soporte", e.getRightClicked().getLocation());
+        avisar(p, NO_SE_GUARDA, "soporte", e.getRightClicked().getLocation());
     }
 
     // ---------------------------------------------------------------- comandos
@@ -245,7 +248,7 @@ final class Sellos implements Listener {
         String raiz = raiz(e.getMessage());
         if (raiz.isEmpty() || !comandos().contains(raiz)) return;
         e.setCancelled(true);
-        avisar(p, "Aquí dentro no hay bolsillos seguros.", "comando " + raiz, p.getLocation());
+        avisar(p, "En Calamity no puedes usar ese comando.", "comando " + raiz, p.getLocation());
     }
 
     @EventHandler

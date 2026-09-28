@@ -70,6 +70,39 @@ final class Parca implements Listener {
     /** SecureRandom: el botin raro es dinero en potencia (regla de la casa). */
     private static final SecureRandom AZAR = new SecureRandom();
 
+    /**
+     * Lo que se le dice al que vuelve con una Parca pendiente: con la marca de la puerta (salio
+     * y ha vuelto antes de marca-fuera-minutos) o porque la pelea se quedo a medias
+     * (desconexion o reinicio).
+     */
+    private static final String TE_ESPERABA = "La Parca te estaba esperando.";
+    private static final String SIGUE_LA_PELEA = "La pelea con la Parca sigue donde la dejaste.";
+
+    /** Lo que se dice a quien este cerca cuando se va por cansancio (P-25): vuelve si la presa sale y entra. */
+    static final String CANSADA = "La Parca se cansa y se va, pero puede volver a por su presa.";
+
+    /** El subtitulo del cambio de fase de la anomalia (ParcaAnomalia): lo que trae la fase nueva. */
+    static String subtituloFase(int f) {
+        return switch (f) {
+            case 2 -> "Llegan las plañideras.";
+            case 3 -> "Aparece a tu espalda y hace llover almas.";
+            default -> "Suenan las campanadas de la Sentencia.";
+        };
+    }
+
+    /**
+     * Lo que se le dice a cada marcado en la barra al cambiar de fase: que hacer. Aqui y no en
+     * ParcaAnomalia porque tambien lo usa la reserva (PeleaParca), que tiene que cargar sin las
+     * clases de EDM. La reserva tiene tres fases: su III es la de las campanadas (la IV de EDM).
+     */
+    static String consejoFase(int f) {
+        return switch (f) {
+            case 2 -> "Mata a las plañideras: mientras vivan, la Parca recibe menos daño.";
+            case 3 -> "No te quedes quieto: las almas caen donde pisas.";
+            default -> "Cuando suenen las campanadas, sal del anillo antes de la última.";
+        };
+    }
+
     private final Hardcore hc;
     private final List<ParcaViva> peleas = new ArrayList<>();
     /** Reapariciones programadas (pendiente, marca): se cancelan en parar(). */
@@ -524,7 +557,8 @@ final class Parca implements Listener {
         guardarPendiente(pe, hasta, "salida");
         hc.datos().set("parca.marca." + p.getUniqueId(), hasta);
         hc.guardarYa();
-        p.sendMessage(ComandoCalamity.mensaje("La Parca no cruza. Pero no olvida."));
+        p.sendMessage(ComandoCalamity.mensaje("La Parca no te sigue fuera de Calamity, pero si vuelves en menos de "
+                + a.marcaFuera + " min, te estará esperando."));
         pe.irse("salida:" + (motivo == null ? "?" : motivo), null);
     }
 
@@ -536,8 +570,7 @@ final class Parca implements Listener {
         Pendiente pd = leerPendiente(p.getUniqueId());
         if (pd == null) return;
         boolean conMarca = hc.datos().getLong("parca.marca." + p.getUniqueId(), 0) > System.currentTimeMillis();
-        volverFuera(p.getUniqueId(), conMarca ? 24 : 6, conMarca
-                ? "Te estaba esperando." : "Te fuiste a mitad. Ella no.");
+        volverFuera(p.getUniqueId(), conMarca ? 24 : 6, conMarca ? TE_ESPERABA : SIGUE_LA_PELEA);
     }
 
     /**
@@ -579,9 +612,9 @@ final class Parca implements Listener {
         guardarPendiente(pe, hasta, "spawn");
         hc.datos().set("parca.marca." + p.getUniqueId(), hasta);
         hc.guardarYa();
-        p.sendMessage(ComandoCalamity.mensaje("La Parca no entra en el spawn. Te espera fuera."));
+        p.sendMessage(ComandoCalamity.mensaje("La Parca no entra en el spawn: te espera fuera."));
         pe.irse("spawn", null);
-        volverFuera(p.getUniqueId(), 24, "Te estaba esperando.");
+        volverFuera(p.getUniqueId(), 24, TE_ESPERABA);
     }
 
     /**
@@ -623,8 +656,8 @@ final class Parca implements Listener {
             Player j = hc.plugin().getServer().getPlayer(id);
             if (j != null && hc.esHardcore(j)) {
                 // 1.2: si la zona spawn no la deja venir (vuelve dentro de ella), le espera a que salga.
-                if (!hc.valor("parca", () -> reaparecer(j, 6, "Te fuiste a mitad. Ella no."), true)) {
-                    volverFuera(id, 6, "Te fuiste a mitad. Ella no.");
+                if (!hc.valor("parca", () -> reaparecer(j, 6, SIGUE_LA_PELEA), true)) {
+                    volverFuera(id, 6, SIGUE_LA_PELEA);
                 }
             }
         }, Math.max(1, ajustes().reapareceSegundos) * 20L);
@@ -642,7 +675,7 @@ final class Parca implements Listener {
             if (!(e instanceof Mob mob) || !Huella.esMinijefe(e) || !m.equals(mob.getTarget())) continue;
             Compat.spawn(e.getWorld(), Compat.LARGE_SMOKE, e.getLocation().add(0, 1, 0), 30, 0.5, 1, 0.5, 0.02);
             e.remove();
-            hc.cordura().destello(m, Component.text("Hasta los grandes se apartan de ella.", Paleta.TEXTO), 3);
+            hc.cordura().destello(m, Component.text("El minijefe que te seguía se aparta de la Parca.", Paleta.TEXTO), 3);
             hc.plugin().bitacora().anotar("parca", "minijefe-retirado", m.getName());
         }
     }
@@ -1027,9 +1060,17 @@ final class Parca implements Listener {
             if (c.motivo() != null) {
                 hc.plugin().bitacora().anotar("parca", "botin", nombre(c.id()), "esencias 0", "reliquia -", c.motivo());
                 if (online != null) {
-                    if ("ya-cobro".equals(c.motivo())) online.sendMessage(ComandoCalamity.mensaje("La Parca no paga dos veces."));
-                    else if ("invalida".equals(c.motivo())) {
-                        online.sendMessage(ComandoCalamity.mensaje("Esa Parca no cuenta: Calamity reconoce a los tuyos."));
+                    if ("ya-cobro".equals(c.motivo())) {
+                        online.sendMessage(ComandoCalamity.mensaje("Ya cobraste por una Parca en las últimas "
+                                + a.horasEntreCobros + " h: esta no te paga."));
+                    } else if ("invalida".equals(c.motivo())) {
+                        // El mismo motivo que da la Aduana (horas o conexion compartida), dicho con claridad.
+                        String porQue = hc.aduana() == null ? ""
+                                : hc.valor("aduana", () -> hc.aduana().motivoInvalida(op, presa), "");
+                        online.sendMessage(ComandoCalamity.mensaje("horas".equals(porQue)
+                                ? "Esa Parca no te paga: para cobrar ayudando a otro, los dos necesitáis al menos "
+                                + hc.cfg().getInt("aduana.horas-minimas", 10) + " h jugadas."
+                                : "Esa Parca no te paga: la presa y tú compartís conexión."));
                     }
                 }
                 continue;
@@ -1058,10 +1099,10 @@ final class Parca implements Listener {
                     "esencias " + pagadas + (pagadas != c.esencias() ? " (calculadas " + c.esencias() + ")" : ""),
                     "reliquia " + (reliquias.isEmpty() ? "-" : romano(c.grado())), c.id().equals(pe.presa()) ? "presa" : "ayudante");
             if (online != null) {
-                online.sendMessage(ComandoCalamity.mensaje(Component.text("La Parca te paga: ")
-                        .append(Paleta.cifra("+" + pagadas + " Esencias"))
+                online.sendMessage(ComandoCalamity.mensaje(Component.text("Botín de la Parca: ")
+                        .append(Paleta.cifra("+" + pagadas + (pagadas == 1 ? " Esencia" : " Esencias")))
                         .append(reliquias.isEmpty() ? Component.text(".")
-                                : Component.text(", y una ").append(Paleta.detalle("Campana de la Parca")).append(Component.text(".")))));
+                                : Component.text(" y una ").append(Paleta.detalle("Campana de la Parca")).append(Component.text(".")))));
                 // Sangre fresca (M12): la cordura por la PARCA, con su tope de la Aduana.
                 Combate cb = hc.combate();
                 String idPelea = pe.cuerpo() == null ? String.valueOf(pe.presa()) : pe.cuerpo().getUniqueId().toString();
@@ -1074,7 +1115,7 @@ final class Parca implements Listener {
         if (!nombres.isEmpty()) {
             String quienes = lista(nombres);
             Component anuncio = ComandoCalamity.mensaje(Component.text(quienes, Paleta.DETALLE)
-                    .append(Component.text(nombres.size() == 1 ? " ha burlado a la Parca." : " han burlado a la Parca.")));
+                    .append(Component.text(nombres.size() == 1 ? " ha derrotado a la Parca." : " han derrotado a la Parca.")));
             for (Player o : hc.plugin().getServer().getOnlinePlayers()) {
                 if (primeraDelDia || hc.esHardcore(o)) o.sendMessage(anuncio);
             }
@@ -1289,7 +1330,7 @@ final class Parca implements Listener {
         if (peleas.isEmpty() || !(e.getEntered() instanceof Player p) || !hc.esHardcore(p)) return;
         if (!persigue(p)) return;
         e.setCancelled(true);
-        hc.cordura().destello(p, Component.text("No hay barca que te lleve lejos de esto.", Paleta.TEXTO), 2);
+        hc.cordura().destello(p, Component.text("Mientras la Parca te persiga, no puedes subirte a nada.", Paleta.TEXTO), 2);
     }
 
     @EventHandler(ignoreCancelled = true)
@@ -1297,7 +1338,7 @@ final class Parca implements Listener {
         if (peleas.isEmpty() || !(e.getEntity() instanceof Player p) || !hc.esHardcore(p)) return;
         if (!persigue(p)) return;
         e.setCancelled(true);
-        hc.cordura().destello(p, Component.text("No hay barca que te lleve lejos de esto.", Paleta.TEXTO), 2);
+        hc.cordura().destello(p, Component.text("Mientras la Parca te persiga, no puedes subirte a nada.", Paleta.TEXTO), 2);
     }
 
     /** La cosecha es suya: lo que pesca un marcado no sale del agua. */
@@ -1335,7 +1376,7 @@ final class Parca implements Listener {
      */
     private void comando(CommandSender quien, String[] args) {
         if (args.length < 2) {
-            quien.sendMessage(Component.text("Uso: /lw hardcore parca <jugador> [segundos] | info <jugador> | vida <0-1>"
+            quien.sendMessage(Component.text("Uso: /calamidad parca <jugador> [segundos] | info <jugador> | vida <0-1>"
                     + " | habilidad <nombre> | retirar [jugador] | prueba <x> <y> <z> [N] | anomalia", Paleta.AVISO));
             return;
         }
@@ -1346,7 +1387,7 @@ final class Parca implements Listener {
             case "habilidad" -> habilidad(quien, args);
             case "retirar" -> retirar(quien, args);
             case "prueba" -> prueba(quien, args);
-            case "anomalia" -> decir(quien, anomalia == null ? "anomalia | EDM sin las clases de anomalias: siempre la reserva"
+            case "anomalia" -> decir(quien, anomalia == null ? "anomalia | EDM no trae las clases de anomalías: siempre sale la de reserva"
                     : anomalia.estado());
             default -> forzar(quien, args);
         }
@@ -1401,7 +1442,7 @@ final class Parca implements Listener {
 
     private void info(CommandSender quien, String[] args) {
         if (args.length < 3) {
-            quien.sendMessage(Component.text("Uso: /lw hardcore parca info <jugador>", Paleta.AVISO));
+            quien.sendMessage(Component.text("Uso: /calamidad parca info <jugador>", Paleta.AVISO));
             return;
         }
         OfflinePlayer op = hc.plugin().getServer().getOfflinePlayerIfCached(args[2]);
@@ -1450,7 +1491,7 @@ final class Parca implements Listener {
         try {
             f = Double.parseDouble(args.length > 2 ? args[2] : "x");
         } catch (NumberFormatException ex) {
-            quien.sendMessage(Component.text("Uso: /lw hardcore parca vida <0-1>", Paleta.AVISO));
+            quien.sendMessage(Component.text("Uso: /calamidad parca vida <0-1>", Paleta.AVISO));
             return;
         }
         ParcaViva pe = masCercana(quien);
@@ -1498,7 +1539,7 @@ final class Parca implements Listener {
 
     private void prueba(CommandSender quien, String[] args) {
         if (args.length < 5) {
-            quien.sendMessage(Component.text("Uso: /lw hardcore parca prueba <x> <y> <z> [N]", Paleta.AVISO));
+            quien.sendMessage(Component.text("Uso: /calamidad parca prueba <x> <y> <z> [N]", Paleta.AVISO));
             return;
         }
         World w = null;
@@ -1537,7 +1578,7 @@ final class Parca implements Listener {
         Location l = pe.cuerpo().getLocation();
         hc.plugin().bitacora().anotar("parca", "llega", "prueba", "N " + n, "r 0", "M 0",
                 l.getBlockX() + " " + l.getBlockY() + " " + l.getBlockZ(), "celdas 0", "vehiculo no");
-        decir(quien, "parca | prueba | N " + n + " | vida logica " + Math.round(hc.amenazas().vidaLogicaMaxima(pe.cuerpo()))
+        decir(quien, "parca | prueba | N " + n + " | vida lógica " + Math.round(hc.amenazas().vidaLogicaMaxima(pe.cuerpo()))
                 + " | escala " + Math.round(hc.amenazas().escala(pe.cuerpo()) * 1000) / 1000.0);
     }
 
