@@ -57,7 +57,7 @@ final class Horas implements Listener {
                 }
             }
         }
-        Subcomandos.lw().registrar("horas", "horas <jugador> [+h|-h]: horas activas (M33); +h para probar hitos",
+        Subcomandos.lw().registrar("horas", "horas <jugador> [+h|-h]: sus horas activas; +h las sube para probar hitos",
                 "ederus.mundos", this::comando,
                 args -> switch (args.length) {
                     case 2 -> Entregas.nombresConectados();
@@ -134,7 +134,7 @@ final class Horas implements Listener {
 
     private void comando(CommandSender quien, String[] args) {
         if (args.length < 2) {
-            quien.sendMessage(ComandoCalamity.mensaje("Uso: /lw hardcore horas <jugador> [+h|-h]"));
+            quien.sendMessage(ComandoCalamity.mensaje("Uso: /calamidad horas <jugador> [+h|-h]"));
             return;
         }
         OfflinePlayer o = Entregas.buscar(args[1]);
@@ -161,7 +161,7 @@ final class Horas implements Listener {
         long seg = hc.datos().getLong("horas-activas." + u, 0);
         long tiempo = hc.datos().getLong("tiempo." + u, 0);
         quien.sendMessage(ComandoCalamity.mensaje(nombre + ": " + horasTexto(seg) + " activas, "
-                + horasTexto(tiempo) + " dentro en total."));
+                + horasTexto(tiempo) + " en Calamity en total."));
     }
 
     static String horasTexto(long segundos) {

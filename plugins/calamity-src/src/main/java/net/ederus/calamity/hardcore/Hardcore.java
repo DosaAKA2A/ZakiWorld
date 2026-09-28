@@ -389,7 +389,7 @@ public final class Hardcore implements Listener {
         try {
             return nuevo.get();
         } catch (Throwable t) {
-            plugin.getLogger().log(Level.SEVERE, "[Calamity] El modulo " + modulo + " no arranca", t);
+            plugin.getLogger().log(Level.SEVERE, "[Calamity] El módulo " + modulo + " no arranca", t);
             return null;
         }
     }
@@ -487,7 +487,7 @@ public final class Hardcore implements Listener {
         Long antes = ultimoFallo.get(modulo);
         if (antes != null && ahora - antes < 60_000) return;
         ultimoFallo.put(modulo, ahora);
-        plugin.getLogger().log(Level.WARNING, "[Calamity] Fallo en el modulo " + modulo, t);
+        plugin.getLogger().log(Level.WARNING, "[Calamity] Fallo en el módulo " + modulo, t);
     }
 
     // ---------------------------------------------------------------------- equipo
@@ -654,13 +654,11 @@ public final class Hardcore implements Listener {
         if (dentro && enZona.add(u)) {
             seguro("sentidos", () -> sentidos.alEntrarSpawn(p));
             seguro("parca", () -> parca.alEntrarSpawn(p));
-            cordura.destello(p, Component.text("Spawn", Paleta.DETALLE)
-                    .append(Component.text(" · ", Paleta.SEPARADOR))
-                    .append(Component.text("aquí la cordura no baja", Paleta.TEXTO)), 3);
+            cordura.destello(p, Component.text("Estás en el spawn", Paleta.DETALLE)
+                    .append(Component.text(": aquí la cordura no baja.", Paleta.TEXTO)), 3);
         } else if (!dentro && enZona.remove(u)) {
             cordura.destello(p, Component.text("Sales del spawn", Paleta.TENUE)
-                    .append(Component.text(" · ", Paleta.SEPARADOR))
-                    .append(Component.text("la cordura vuelve a correr", Paleta.TEXTO)), 2);
+                    .append(Component.text(": la cordura vuelve a bajar.", Paleta.TEXTO)), 2);
         }
         return dentro;
     }
@@ -683,7 +681,7 @@ public final class Hardcore implements Listener {
                     long espera = cuarentenaRestante(p);
                     if (espera > 0) {
                         barra.fondo(p, Component.text(
-                                "Aún no. Vuelve en " + (espera / 60_000 + 1) + " min.", Paleta.AVISO));
+                                "Aún no puedes volver a entrar. Espera " + (espera / 60_000 + 1) + " min.", Paleta.AVISO));
                         continue;
                     }
                     meter(p, llegada);
@@ -875,11 +873,14 @@ public final class Hardcore implements Listener {
             return;
         }
         e.ultimoTramo = ahora;
+        /* Cada escalon dice lo que cambia de verdad (bonusTope y bonusNivel; el minijefe de
+         * minijefeSiTocaCordura). Las frases de antes ("Algo te sigue con la mirada", "Las voces no
+         * callan") insinuaban cosas que no pasan: las alucinaciones van apagadas de serie. */
         String texto = switch (ahora) {
-            case 3 -> "Algo te sigue con la mirada.";
-            case 2 -> "Ya no estás solo aquí.";
-            case 1 -> "Las voces no callan. Vete.";
-            default -> "Te encontraron.";
+            case 3 -> "Tu cordura baja de 75. A la mitad, los mobs se endurecen.";
+            case 2 -> "Tu cordura baja de 50: salen más mobs y más fuertes.";
+            case 1 -> "Tu cordura baja de 25: los mobs son todavía más fuertes.";
+            default -> "Te has quedado sin cordura: salen aún más mobs y un minijefe puede venir a por ti.";
         };
         p.sendMessage(Component.text(texto, Cordura.color(e.valor)));
         Compat.sound(p.getWorld(), p.getLocation(),
@@ -919,7 +920,7 @@ public final class Hardcore implements Listener {
 
         e.ultimoMinijefe = ahora;
         Component nombre = mob.customName() == null
-                ? Component.text("Algo") : mob.customName();
+                ? Component.text("un minijefe") : mob.customName();
         p.sendMessage(Component.text("Ha venido a por ti: ", Paleta.AVISO).append(nombre));
         Compat.sound(p.getWorld(), p.getLocation(), "entity.wither.spawn", 1.0f, 0.6f);
     }
@@ -1002,11 +1003,11 @@ public final class Hardcore implements Listener {
         int segundos = cordura.estado(p).segundosDentro;
         int cada = cfg().getInt("dificultad.nivel-cada-minutos", 3);
         l.add(new String[]{"minutos +" + Distancia.nivelPorMinutos(segundos, cada),
-                (segundos / 60) + " min dentro" + (cada > 0 ? ", +1 cada " + cada + " min" : ", apagado")});
+                (segundos / 60) + " min en Calamity" + (cada > 0 ? ", +1 cada " + cada + " min" : ", apagado")});
         Distancia.Ajustes a = distancia == null ? null : distancia.ajustes();
         long bloques = Math.round(bloquesAlSpawn(p));
         String como = a == null ? "sin módulo" : !a.activa() ? "apagada"
-                : enSpawn(p) ? "en la zona spawn"
+                : enSpawn(p) ? "en la zona del spawn"
                 : Distancia.miles(bloques) + " bloques del borde del spawn, +1 cada " + a.bloquesPorNivel()
                         + ", tope " + a.tope();
         l.add(new String[]{"distancia +" + bonusDistancia(p), como});
@@ -1031,7 +1032,7 @@ public final class Hardcore implements Listener {
         if (!esHardcore(e.getPlayer())) return;
         if (!cfg().getBoolean("dificultad.sin-camas", true)) return;
         e.setCancelled(true);
-        e.getPlayer().sendMessage(Component.text("Aquí no se duerme.", Paleta.AVISO));
+        e.getPlayer().sendMessage(Component.text("En Calamity no se puede dormir.", Paleta.AVISO));
     }
 
     /** Sin regeneracion natural: se cura con pociones y comida, no esperando. */
@@ -1076,7 +1077,7 @@ public final class Hardcore implements Listener {
             // PARCA encima, cualquier golpe (sec. 1.8): huir de ella no es cosa de 10 s quieto.
             if (canalizando.containsKey(p.getUniqueId())
                     && (deAmenaza || quien instanceof Player || valor("parca", () -> parca.persigue(p), false))) {
-                cortarCristal(p, "Un golpe apaga el cristal.");
+                cortarCristal(p, "Un golpe ha apagado el Cristal.");
             }
         }
         seguro("combate", () -> combate.alGolpe(e));
@@ -1145,9 +1146,12 @@ public final class Hardcore implements Listener {
             return;
         }
         String nombre = t.getString("nombre", "[INSOMNE]");
+        // Las horas que pide la config (tag.horas), no un 24 escrito a mano.
+        String horas = Marco.numero(t.getDouble("horas", 24)) + " horas";
+        // Un hito que se gana una vez: aqui si va un titulo.
         p.showTitle(net.kyori.adventure.title.Title.title(
                 Paleta.calido(nombre),
-                Component.text("Veinticuatro horas ahí dentro", Paleta.TEXTO),
+                Component.text(horas + " en Calamity", Paleta.TEXTO),
                 net.kyori.adventure.title.Title.Times.times(
                         java.time.Duration.ofMillis(300),
                         java.time.Duration.ofMillis(2600),
@@ -1155,10 +1159,10 @@ public final class Hardcore implements Listener {
         Compat.soundPlayers(p.getWorld(), p.getLocation(), "ui.toast.challenge_complete", 1.0f, 1.0f);
         // El tag en negrita a proposito: es una marca que se gana (sale asi en el chat y en
         // /tags), la unica excepcion a "negrita solo en la marca" junto a Calamity.
-        plugin.getServer().broadcast(Component.text(p.getName(), Paleta.DETALLE)
-                .append(Component.text(" lleva 24 horas en Calamity y se ha ganado ", Paleta.TEXTO))
+        plugin.getServer().broadcast(Paleta.mensaje(Component.text(p.getName(), Paleta.DETALLE)
+                .append(Component.text(" lleva " + horas + " en Calamity y se ha ganado ", Paleta.TEXTO))
                 .append(Component.text(nombre, Paleta.MARCA, TextDecoration.BOLD))
-                .append(Component.text(".", Paleta.TEXTO)));
+                .append(Component.text(".", Paleta.TEXTO))));
         plugin.getLogger().info("[Calamity] Tag entregado a " + p.getName() + ".");
     }
 
@@ -1288,7 +1292,7 @@ public final class Hardcore implements Listener {
         if (!cruda) return;
         p.addPotionEffect(new PotionEffect(PotionEffectType.POISON, segundos * 20, 1, true, false, true));
         p.addPotionEffect(new PotionEffect(PotionEffectType.HUNGER, segundos * 20, 1, true, false, true));
-        p.sendMessage(Component.text("Eso estaba crudo.", Paleta.DETALLE));
+        p.sendMessage(Component.text("Eso estaba crudo y te ha sentado mal.", Paleta.AVISO));
     }
 
     /**
@@ -1502,7 +1506,8 @@ public final class Hardcore implements Listener {
             Location fuera = salida();
             if (fuera != null) e.setRespawnLocation(fuera);
         }
-        p.sendMessage(Component.text("Has muerto allí dentro.", Paleta.TEXTO));
+        // Solo llega aqui quien lo ha perdido todo (onMuerte no lo apunta con lo-pierde-todo apagado).
+        p.sendMessage(Component.text("Has muerto en Calamity y has perdido lo que llevabas.", Paleta.TEXTO));
         // Un tick despues ya tiene cuerpo: mensaje del Eco y lo que devuelva el Salvoconducto.
         plugin.getServer().getScheduler().runTaskLater(plugin, () -> {
             if (!p.isOnline() || !activo()) return;
@@ -1555,8 +1560,8 @@ public final class Hardcore implements Listener {
         barra.olvidar(p);
         barra.fondo(p, Component.empty());
         String texto = switch (motivo == null ? "" : motivo) {
-            case "puerta" -> "Cruzas de vuelta.";
-            case "cristal" -> "El cristal te devuelve al spawn.";
+            case "puerta" -> "Has salido de Calamity.";
+            case "cristal" -> "El Cristal de Regreso te saca de Calamity.";
             default -> null;
         };
         if (texto != null) {
@@ -1573,7 +1578,7 @@ public final class Hardcore implements Listener {
         if (destino == null) return;
         p.teleport(destino);
         cordura.reiniciar(p);
-        p.sendMessage(Paleta.mensaje("Lo que traigas, lo pierdes al morir."));
+        p.sendMessage(Paleta.mensaje("Si mueres en Calamity, pierdes todo lo que llevas encima."));
         Compat.sound(destino.getWorld(), destino, "ambient.cave", 1.2f, 0.5f);
         if (activo()) {
             seguro("huella", () -> huella.reiniciar(p));
@@ -1647,7 +1652,7 @@ public final class Hardcore implements Listener {
         if (cmd.contains(":")) cmd = cmd.substring(cmd.indexOf(':') + 1);
         if (!cfg().getStringList("comandos-prohibidos").contains(cmd)) return;
         e.setCancelled(true);
-        p.sendMessage(Component.text("Aquí no. Se sale por el portal o con un Cristal de Regreso.",
+        p.sendMessage(Component.text("En Calamity no puedes usar ese comando. Para salir, usa la puerta de salida o un Cristal de Regreso.",
                 Paleta.AVISO));
     }
 
@@ -1675,12 +1680,12 @@ public final class Hardcore implements Listener {
     /** Un trago del frasco: sube la cordura y gasta un uso. Al quedarse a cero, botella vacia. */
     private void beber(Player p, ItemStack frasco) {
         if (!esHardcore(p)) {
-            p.sendMessage(Component.text("Fuera de Calamity no hace nada.", Paleta.TEXTO));
+            p.sendMessage(Component.text("El Frasco de Calma solo funciona en Calamity.", Paleta.TEXTO));
             return;
         }
         int quedan = items.tragos(frasco);
         if (quedan <= 0) {
-            p.sendMessage(Component.text("El frasco está vacío. Recárgalo en el altar del spawn.",
+            p.sendMessage(Component.text("El Frasco de Calma está vacío. Recárgalo en el Altar.",
                     Paleta.TEXTO));
             Compat.soundPlayers(p.getWorld(), p.getLocation(), "block.glass.break", 0.6f, 1.4f);
             return;
@@ -1708,7 +1713,7 @@ public final class Hardcore implements Listener {
     /** El cristal no es instantaneo: hay que aguantar quieto, y un golpe lo corta. */
     private void empezarCristal(Player p) {
         if (!esHardcore(p)) {
-            p.sendMessage(Component.text("El cristal solo funciona dentro de Calamity.",
+            p.sendMessage(Component.text("El Cristal de Regreso solo funciona en Calamity.",
                     Paleta.TEXTO));
             return;
         }
@@ -1716,11 +1721,11 @@ public final class Hardcore implements Listener {
         // P-C01: con la etiqueta de combate no se empieza. Si no, el Cristal era la forma
         // de huir de cualquier pelea a cinco segundos.
         if (valor("combate", () -> combate.enCombate(p), false)) {
-            cordura.destello(p, Component.text("No con sangre fresca encima.", Paleta.AVISO), 2);
+            cordura.destello(p, Component.text("En combate no puedes usar el Cristal.", Paleta.AVISO), 2);
             return;
         }
         canalizando.put(p.getUniqueId(), p.getLocation().clone());
-        p.sendMessage(Component.text("El cristal empieza a resonar. No te muevas.",
+        p.sendMessage(Component.text("El Cristal empieza a resonar. No te muevas.",
                 ItemsCalamity.MORADO));
         Compat.soundPlayers(p.getWorld(), p.getLocation(), "block.amethyst_block.chime", 1.0f, 0.7f);
     }
@@ -1733,7 +1738,7 @@ public final class Hardcore implements Listener {
         if (inicio.getWorld() != p.getWorld() || inicio.distanceSquared(p.getLocation()) > 4) {
             canalizando.remove(p.getUniqueId());
             cuentaCristal.remove(p.getUniqueId());
-            p.sendMessage(Component.text("Te has movido: el cristal se apaga.", Paleta.AVISO));
+            p.sendMessage(Component.text("Te has movido y el Cristal se ha apagado.", Paleta.AVISO));
             Compat.soundPlayers(p.getWorld(), p.getLocation(), "block.amethyst_block.break", 0.8f, 0.8f);
             return;
         }
@@ -1745,7 +1750,7 @@ public final class Hardcore implements Listener {
         int llevados = cuentaCristal.merge(p.getUniqueId(), 1, Integer::sum);
         if (llevados < segundos) {
             // P-31: si tarda mas es por ella, y se dice en la misma barra que la cuenta.
-            String texto = (segundos > def ? "Con ella encima · " : "") + "Cristal · " + (segundos - llevados) + " s";
+            String texto = "Cristal · " + (segundos - llevados) + " s" + (segundos > def ? " · tarda más con la Parca cerca" : "");
             cordura.destello(p, Component.text(texto, ItemsCalamity.MORADO), 2);
             Compat.soundPlayers(p.getWorld(), p.getLocation(), "block.amethyst_block.chime", 0.7f,
                     1.0f + llevados * 0.1f);
@@ -1780,7 +1785,7 @@ public final class Hardcore implements Listener {
             else p.getInventory().setItem(i, null);
             return true;
         }
-        p.sendMessage(Component.text("Ya no llevas ningún cristal.", Paleta.AVISO));
+        p.sendMessage(Component.text("Ya no llevas ningún Cristal de Regreso.", Paleta.AVISO));
         return false;
     }
 

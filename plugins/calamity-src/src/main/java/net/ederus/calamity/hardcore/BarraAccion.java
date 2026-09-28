@@ -346,8 +346,8 @@ public final class BarraAccion {
         b = new BarraAccion(null);
         f = new Falso();
         f.ajena = t0 + 2500;
-        Component distancia = Component.text("Te adentras más en la Calamidad · mobs +10 niveles");
-        Component otro = Component.text("Ya te ven.");
+        Component distancia = Component.text("Te alejas del spawn · mobs +10 niveles");
+        Component otro = Component.text("Ya no estás en combate.");
         b.aviso(u, f, otro, 2, true, t0);
         b.aviso(u, f, distancia, 3, true, t0 + 200);
         h.ok("aviso con reserva ajena: no sale todavia", f.enviados.isEmpty() && f.propia == 0);

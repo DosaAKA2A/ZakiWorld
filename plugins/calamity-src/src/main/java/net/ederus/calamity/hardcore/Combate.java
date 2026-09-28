@@ -93,7 +93,7 @@ final class Combate implements Listener {
         hc.plugin().getServer().getPluginManager().registerEvents(this, hc.plugin());
         Autotest.registrar("combate", this::autotest);
         Subcomandos.lw().registrar("combate",
-                "combate <info|etiquetar|llegada|cable> <jugador> [borrar]: etiqueta, llegada y combat log",
+                "combate <info|etiquetar|llegada|cable> <jugador> [borrar]: etiqueta, llegada protegida y desconexiones en combate",
                 "ederus.mundos", this::comando, this::tab);
     }
 
@@ -159,10 +159,10 @@ final class Combate implements Listener {
         UUID u = p.getUniqueId();
         long ahora = System.currentTimeMillis();
         if (relojes.acabaCombate(u, ahora)) {
-            hc.cordura().destello(p, Component.text("Fuera de combate", Paleta.DETALLE), 2);
+            hc.cordura().destello(p, Component.text("Ya no estás en combate.", Paleta.DETALLE), 2);
         }
         if (relojes.acabaLlegada(u, ahora)) {
-            hc.cordura().destello(p, Component.text("Ya te ven.", Paleta.AVISO), 2);
+            hc.cordura().destello(p, Component.text("Tu protección de llegada ha terminado.", Paleta.AVISO), 2);
         } else if (relojes.protegido(u, ahora)) {
             // Suave y poca: que los demas vean que acaba de llegar, no un faro.
             Compat.spawn(p.getWorld(), Particle.END_ROD, p.getLocation().add(0, 1, 0), 3, 0.3, 0.5, 0.3, 0.01);
@@ -176,7 +176,7 @@ final class Combate implements Listener {
         double umbral = hc.cfg().getDouble("frenesi.umbral", 25);
         if (hc.cordura().valor(p) < umbral) {
             if (enFrenesi.add(u)) {
-                hc.cordura().destello(p, Component.text("Frenesí. Pegas más. Te pegan más.", Paleta.AVISO), 3);
+                hc.cordura().destello(p, Component.text("Frenesí: haces y recibes más daño.", Paleta.AVISO), 3);
             }
             // Cada 2 s y lo ven todos: el frenesi es un aviso para los demas, no un secreto.
             if (hc.cordura().estado(p).segundosDentro % 2 == 0) {
@@ -235,7 +235,7 @@ final class Combate implements Listener {
             // Quien llega y pega elige pelear: pierde la proteccion y su golpe entra.
             if (relojes.protegido(a.getUniqueId(), ahora)) {
                 relojes.perderLlegada(a.getUniqueId());
-                hc.cordura().destello(a, Component.text("Ya te ven.", Paleta.AVISO), 2);
+                hc.cordura().destello(a, Component.text("Has atacado: pierdes la protección de llegada.", Paleta.AVISO), 2);
             }
         }
         // El dano verdadero ya es exacto (ley 5): ni frenesi ni eclipse encima.
@@ -346,7 +346,7 @@ final class Combate implements Listener {
                 "dentro " + victima.segundosDentro() + " s");
 
         Component aviso = ComandoCalamity.mensaje(Component.text(p.getName(), Paleta.DETALLE)
-                .append(Component.text(" intentó huir por el cable.")));
+                .append(Component.text(" se ha desconectado en pleno combate y lo ha perdido todo.")));
         for (World w : hc.plugin().getServer().getWorlds()) {
             if (!hc.esHardcore(w)) continue;
             for (Player otro : w.getPlayers()) if (!otro.equals(p)) otro.sendMessage(aviso);
@@ -403,7 +403,7 @@ final class Combate implements Listener {
         if (hc.esHardcore(p)) hc.sacar(p, "cable", false);
         Racha racha = hc.racha();
         if (racha != null) hc.seguro("racha", () -> racha.alMorir(p));
-        p.sendMessage(ComandoCalamity.mensaje("Huiste por el cable. Calamity se lo cobró."));
+        p.sendMessage(ComandoCalamity.mensaje("Te desconectaste en pleno combate: cuenta como una muerte y has perdido lo que llevabas."));
         hc.plugin().bitacora().anotar("combate", "cable-vuelta", p.getName());
     }
 
@@ -509,7 +509,7 @@ final class Combate implements Listener {
         if (pago == null || pago.topado()) return;
         sangre.apuntar(u, victima, ahora, ventana);
         hc.cordura().sumar(asesino, n);
-        hc.cordura().destello(asesino, Component.text("+" + n + " de cordura · la sangre calma", ItemsCalamity.VERDE), 2);
+        hc.cordura().destello(asesino, Component.text("+" + n + " de cordura por la victoria", ItemsCalamity.VERDE), 2);
         hc.plugin().bitacora().anotar("combate", "sangre", asesino.getName(), "+" + n, tipo, victima);
     }
 
@@ -681,7 +681,7 @@ final class Combate implements Listener {
     private void comando(CommandSender quien, String[] args) {
         if (args.length < 3) {
             quien.sendMessage(ComandoCalamity.mensaje(
-                    "Uso: /lw hardcore combate <info|etiquetar|llegada|cable> <jugador> [borrar]"));
+                    "Uso: /calamidad combate <info|etiquetar|llegada|cable> <jugador> [borrar]"));
             return;
         }
         String accion = args[1].toLowerCase(Locale.ROOT);
@@ -696,11 +696,11 @@ final class Combate implements Listener {
             if (args.length > 3 && args[3].equalsIgnoreCase("borrar")) {
                 hc.datos().set(ruta, null);
                 hc.marcarSucio();
-                quien.sendMessage(ComandoCalamity.mensaje("Combat log de " + o.getName() + " borrado."));
+                quien.sendMessage(ComandoCalamity.mensaje("Borrada la desconexión en combate pendiente de " + o.getName() + "."));
                 return;
             }
-            quien.sendMessage(ComandoCalamity.mensaje(cuando <= 0 ? o.getName() + " no tiene combat log pendiente."
-                    : o.getName() + " huyó por el cable hace "
+            quien.sendMessage(ComandoCalamity.mensaje(cuando <= 0 ? o.getName() + " no tiene ninguna desconexión en combate pendiente."
+                    : o.getName() + " se desconectó en combate hace "
                     + ((System.currentTimeMillis() - cuando) / 60_000) + " min."));
             return;
         }

@@ -5,7 +5,6 @@ import net.ederus.edm.comun.Bitacora;
 import net.ederus.edm.comun.Compat;
 import net.ederus.edm.comun.Fx;
 import net.kyori.adventure.text.Component;
-import net.kyori.adventure.text.format.NamedTextColor;
 import net.kyori.adventure.text.format.TextColor;
 import net.kyori.adventure.text.format.TextDecoration;
 import net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer;
@@ -108,9 +107,9 @@ final class Ecos implements Listener {
         hc.plugin().getServer().getPluginManager().registerEvents(this, hc.plugin());
         Autotest.registrar("eco", this::autotest);
         Subcomandos.lw().registrar("eco",
-                "eco crear|lista|borrar|tp|prueba|despertar|matar: los Ecos (sec. 2)",
+                "eco crear|lista|borrar|tp|prueba|despertar|matar: gestiona los Ecos",
                 "ederus.mundos", this::comando, this::tab);
-        Subcomandos.calamity().registrar("eco", "tus Ecos: donde estan, nivel y lo que les queda",
+        Subcomandos.calamity().registrar("eco", "tus Ecos: dónde están, su nivel y cuánto les queda",
                 "lethalworld.calamity", this::comandoJugador, null);
         PlaceholdersLethal.registrar("eco", (jugador, resto) -> placeholder(jugador, false));
         PlaceholdersLethal.registrar("eco_reliquias", (jugador, resto) -> placeholder(jugador, true));
@@ -143,18 +142,37 @@ final class Ecos implements Listener {
         if (foto == null || !activo()) return;
         ConfigurationSection c = cfg();
         if (!foto.mereceEco(c.getInt("minimo-piezas", 1))) {
-            avisarLuego(foto.dueno, ComandoCalamity.mensaje("No queda nada de ti que merezca volver."));
+            avisarLuego(foto.dueno, ComandoCalamity.mensaje("No llevabas equipo, Reliquias ni Esencias: esta vez no queda ningún Eco tuyo."));
             return;
         }
         if (foto.anclaje == null || foto.anclaje.getWorld() == null) return;
         Eco e = nacer(foto, false);
-        int horas = (int) Math.round(c.getDouble("horas", 12));
-        avisarLuego(e.dueno, ComandoCalamity.mensaje(Component.text("Tu Eco se ha levantado donde caíste. Lleva tu armadura, tu arma y ")
-                .append(Component.text(e.nReliquias(), Paleta.CIFRA))
-                .append(Component.text(" reliquias. Dura " + horas + " h."))));
-        if (e.porParca) avisarLuego(e.dueno, ComandoCalamity.mensaje("Lo que la Parca siega vuelve peor."));
+        avisarLuego(e.dueno, ComandoCalamity.mensaje(mensajeNacido(e.nReliquias(), e.nEsencias, c.getDouble("horas", 12))));
+        // P-E02: el nivel de mas que le pone la Parca (extra-nivel-si-parca), dicho con su cifra.
+        if (e.porParca) {
+            avisarLuego(e.dueno, ComandoCalamity.mensaje("Te mató la Parca: tu Eco tiene " + c.getInt("extra-nivel-si-parca", 5)
+                    + " niveles más."));
+        }
         Player asesino = e.asesino == null ? null : Bukkit.getPlayer(e.asesino);
         if (asesino != null) asesino.sendMessage(ComandoCalamity.mensaje("Lo que llevaba se lo ha quedado su Eco."));
+    }
+
+    /**
+     * P-E01: "Tu Eco te espera donde caíste. Guarda 2 Reliquias y 5 Esencias, y dura 12 h." Solo
+     * lo que de verdad suelta al morir (Reliquias y las Esencias heredadas): el equipo que lleva
+     * son copias y no vuelve.
+     */
+    static Component mensajeNacido(int reliquias, int esencias, double horas) {
+        Component m = Component.text("Tu Eco te espera donde caíste.");
+        List<Component> botin = new ArrayList<>();
+        if (reliquias > 0) botin.add(Component.text(reliquias, Paleta.CIFRA).append(Component.text(reliquias == 1 ? " Reliquia" : " Reliquias")));
+        if (esencias > 0) botin.add(Component.text(esencias, Paleta.CIFRA).append(Component.text(esencias == 1 ? " Esencia" : " Esencias")));
+        String dura = Marco.numero(horas) + " h";
+        if (botin.isEmpty()) return m.append(Component.text(" Dura " + dura + "."));
+        m = m.append(Component.text(" Guarda ")).append(botin.get(0));
+        if (botin.size() > 1) m = m.append(Component.text(" y ")).append(botin.get(1));
+        // Con dos cosas, la coma separa la segunda "y": "2 Reliquias y 5 Esencias, y dura 12 h".
+        return m.append(Component.text((botin.size() > 1 ? ", y dura " : " y dura ") + dura + "."));
     }
 
     /** Registra un Eco nuevo: sustituye al anterior del dueno, guarda en el acto y respeta el tope. */
@@ -208,7 +226,7 @@ final class Ecos implements Listener {
                 v.elegido = null;
                 guardar(v);
                 anotar("errante", v.id);
-                if (!v.prueba) avisarLuego(dueno, ComandoCalamity.mensaje("Tu Eco anterior vaga sin ti. Lo que llevaba, sigue ahí."));
+                if (!v.prueba) avisarLuego(dueno, ComandoCalamity.mensaje("Tu Eco anterior se queda como Eco errante y conserva lo que guardaba."));
             }
         }
         List<Eco> errantes = new ArrayList<>();
@@ -250,7 +268,7 @@ final class Ecos implements Listener {
         hc.marcarSucio();
         anotar("desmorona", v.id, "en " + cfg().getInt("desmoronar-minutos", 30) + " min");
         if (!v.prueba) {
-            aTodoCalamity(ComandoCalamity.mensaje("El Eco errante de " + v.nombre + " se desmorona. Quedan "
+            aTodoCalamity(ComandoCalamity.mensaje("El Eco errante de " + v.nombre + " se desmorona: desaparecerá en "
                     + cfg().getInt("desmoronar-minutos", 30) + " minutos."));
         }
     }
@@ -325,9 +343,10 @@ final class Ecos implements Listener {
             double r = cfg().getDouble("radio-despertar", 32) * factorEclipse();
             for (Player p : l.getWorld().getPlayers()) {
                 if (p.getLocation().distanceSquared(l) > r * r) continue;
+                // Una vez por Eco (la primera vez que se alza), como la entrada de un jefe: titulo.
                 p.showTitle(Title.title(Paleta.degradado("ECO", Paleta.ECO.value(), Paleta.ALMA.value()),
                         Component.text("de " + e.nombre, Paleta.TEXTO)));
-                p.sendMessage(Component.text("Algo se levanta donde cayó " + e.nombre + ".", GRIS));
+                p.sendMessage(Component.text("El Eco de " + e.nombre + " se levanta donde cayó.", GRIS));
             }
             Testigos t = hc.testigos();
             if (t != null) hc.seguro("testigos", () -> t.alAlzarEco(l.clone()));
@@ -368,7 +387,7 @@ final class Ecos implements Listener {
         quitar(e);
         anotar("caduca", e.id, "reliquias perdidas " + e.idsReliquias());
         telemetria(Bukkit.getOfflinePlayer(e.dueno), campos(e, "caduca"));
-        if (!e.prueba) avisar(e.dueno, ComandoCalamity.mensaje("Tu Eco se ha deshecho. Lo que llevaba, se lo queda Calamity."));
+        if (!e.prueba) avisar(e.dueno, ComandoCalamity.mensaje("Tu Eco ha caducado y lo que guardaba se ha perdido."));
     }
 
     /** Fuera sin botin (sustituido, desmoronado, borrado por un admin). */
@@ -492,12 +511,12 @@ final class Ecos implements Listener {
             });
             hc.guardarYa();
             if (killerP != null) {
-                Component m = Component.text("El Eco te deja ").append(Component.text("+" + pagadas, Paleta.CIFRA))
-                        .append(Component.text(" Esencias" + (lagrima != null ? ", y una Lágrima de Eco." : ".")));
+                Component m = Component.text("Has derrotado el Eco: ").append(Component.text("+" + pagadas, Paleta.CIFRA))
+                        .append(Component.text((pagadas == 1 ? " Esencia" : " Esencias") + (lagrima != null ? " y una Lágrima de Eco." : ".")));
                 killerP.sendMessage(ComandoCalamity.mensaje(m));
             }
         } else if (killerP != null) {
-            killerP.sendMessage(ComandoCalamity.mensaje(textoMotivo(motivo)));
+            killerP.sendMessage(ComandoCalamity.mensaje(textoMotivo(motivo, cfg(), hc.cfg().getDouble("aduana.horas-minimas", 10))));
         }
         // Trofeo: cosmetico, puede salir de Calamity.
         if (azar.nextDouble() < c.getDouble("trofeo-probabilidad", 0.25)) {
@@ -514,25 +533,30 @@ final class Ecos implements Listener {
         telemetria(killer, t);
         if (!e.prueba) {
             aTodoCalamity(ComandoCalamity.mensaje(Component.text(killerNombre, Paleta.DETALLE)
-                    .append(Component.text(" ha cerrado el Eco de "))
+                    .append(Component.text(" ha derrotado el Eco de "))
                     .append(Component.text(e.nombre, Paleta.DETALLE)).append(Component.text("."))));
             avisar(e.dueno, ComandoCalamity.mensaje(Component.text(killerNombre, Paleta.DETALLE)
-                    .append(Component.text(" ha cerrado tu Eco y se ha llevado lo que llevabas."))));
+                    .append(Component.text(" ha derrotado tu Eco y se ha llevado lo que llevabas."))));
         }
     }
 
     /** El dueno mata a su Eco: recupera lo suyo, cordura y (una vez por semana) una Marca. Sin Esencias nuevas ni Lagrima. */
     private void redimido(Eco e, OfflinePlayer dueno, Player duenoP) {
         ConfigurationSection c = cfg();
-        if (duenoP != null && hc.esHardcore(duenoP)) hc.cordura().sumar(duenoP, c.getDouble("cordura-dueno", 30));
+        boolean conCordura = duenoP != null && hc.esHardcore(duenoP);
+        if (conCordura) hc.cordura().sumar(duenoP, c.getDouble("cordura-dueno", 30));
         hc.seguro("estadisticas", () -> hc.estadisticas().sumar(dueno.getUniqueId(), "ecos-redimidos", 1));
-        if (duenoP != null) duenoP.sendMessage(ComandoCalamity.mensaje("Te has redimido."));
+        // Lo que suelta (Reliquias y Esencias) ya esta en el suelo, reservado para el; el equipo eran copias.
+        if (duenoP != null) {
+            duenoP.sendMessage(ComandoCalamity.mensaje("Has derrotado tu propio Eco: suelta lo que guardaba"
+                    + (conCordura ? " y recuperas " + Marco.numero(c.getDouble("cordura-dueno", 30)) + " de cordura." : ".")));
+        }
         anotar("redimido", e.id);
         // Es un credito y no dinero: no abre granja (morir y matarte a ti mismo no paga nada mas).
         if (e.nivel >= c.getInt("marcas.propio.nivel-minimo", 40) && equipoReal(e.escalonMedio, e.piezasMmo, c)
                 && marcaPropia(hc.datos(), dueno.getUniqueId(), semana())) {
             hc.seguro("creditos", () -> hc.creditos().sumar(dueno.getUniqueId(), "marca", 1, "eco-propio", false));
-            if (duenoP != null) duenoP.sendMessage(ComandoCalamity.mensaje("Tu propio Eco te deja una Marca de Eco."));
+            if (duenoP != null) duenoP.sendMessage(ComandoCalamity.mensaje("Tu propio Eco te deja además una Marca de Eco."));
         }
         hc.guardarYa();
         Map<String, Object> t = campos(e, "redimido");
@@ -576,20 +600,29 @@ final class Ecos implements Listener {
                 || (c.getBoolean("caza-valida.o-pieza-mmoitems", true) && piezasMmo > 0);
     }
 
-    private static Component textoMotivo(String motivo) {
+    /**
+     * Por que una caza no paga, dicho claro (antes: "Calamity reconoce a los tuyos", "Calamity aun
+     * no te conoce lo bastante"). Los motivos de la Aduana: huella (misma conexion en huella-dias),
+     * misma-cuenta u horas (alguno con menos de aduana.horas-minimas jugadas).
+     */
+    static Component textoMotivo(String motivo, ConfigurationSection eco, double horasMinimas) {
         String m = motivo.toLowerCase(Locale.ROOT);
+        String porque;
+        // Mismas palabras que el motivo de la Aduana en la Parca (zona P): "compartís conexión" y las horas.
         if (m.contains("huella") || m.contains("ip") || m.contains("misma")) {
-            return Component.text("Esa muerte no cuenta: Calamity reconoce a los tuyos.");
+            porque = "su dueño y tú compartís conexión";
+        } else if (m.contains("hora")) {
+            porque = "para cobrar, los dos necesitáis al menos " + Marco.numero(horasMinimas) + " h jugadas";
+        } else {
+            porque = switch (m) {
+                case "cobros" -> "hoy ya has cobrado el máximo de " + eco.getInt("cobros-dia", 5) + " Ecos";
+                case "equipo" -> "su dueño llevaba muy poco equipo";
+                case "minutos" -> "su dueño apenas llevaba tiempo en Calamity";
+                case "par" -> "ya derrotaste otro Eco suyo hace menos de " + eco.getLong("caza-valida.par-dias", 7) + " días";
+                default -> null;
+            };
         }
-        if (m.contains("hora")) return Component.text("Calamity aún no te conoce lo bastante.");
-        if (m.equals("cobros")) return Component.text("Por hoy, esto ya no paga más.");
-        String porque = switch (m) {
-            case "equipo" -> "llevaba poco encima";
-            case "minutos" -> "apenas había entrado";
-            case "par" -> "ya cerraste un Eco suyo hace poco";
-            default -> "Calamity no lo reconoce";
-        };
-        return Component.text("Ese Eco no paga: " + porque + ".");
+        return Component.text(porque == null ? "Ese Eco no paga." : "Ese Eco no paga: " + porque + ".");
     }
 
     // ----------------------------------------------------- cobros, pares y Marcas
@@ -702,7 +735,7 @@ final class Ecos implements Listener {
                 meta.setOwningPlayer(Bukkit.getOfflinePlayer(e.dueno));
             }
             meta.displayName(Component.text("Cabeza de " + e.nombre, GRIS).decoration(TextDecoration.ITALIC, false));
-            meta.lore(List.of(Component.text("Eco cerrado por " + killerNombre + " · " + fecha, NamedTextColor.GRAY)
+            meta.lore(List.of(Component.text("Eco derrotado por " + killerNombre + " · " + fecha, Paleta.TENUE)
                     .decoration(TextDecoration.ITALIC, false)));
             meta.getPersistentDataContainer().set(Marcas.TROFEO, PersistentDataType.BYTE, (byte) 1);
         });
@@ -958,7 +991,8 @@ final class Ecos implements Listener {
         }
         if (cerca == null) return;
         ultimoAviso.put(p.getUniqueId(), ahora);
-        hc.cordura().destello(p, Component.text("Tu Eco · " + Math.round(Math.sqrt(mejor)) + " m", GRIS), 2);
+        long d = Math.round(Math.sqrt(mejor));
+        hc.cordura().destello(p, Component.text("Tu Eco está a " + d + (d == 1 ? " bloque" : " bloques"), GRIS), 2);
     }
 
     /** Al entrar a Calamity: donde esta cada Eco suyo (rumbo en 8 puntos). */
@@ -1101,7 +1135,7 @@ final class Ecos implements Listener {
             case "despertar" -> despertarCmd(quien, args);
             case "matar" -> matar(quien, args);
             default -> quien.sendMessage(Component.text(
-                    "Uso: /lw hardcore eco crear|lista|borrar|tp|prueba|despertar|matar", Paleta.AVISO));
+                    "Uso: /calamidad eco crear|lista|borrar|tp|prueba|despertar|matar", Paleta.AVISO));
         }
     }
 
@@ -1132,7 +1166,7 @@ final class Ecos implements Listener {
     /** Eco con lo que lleva puesto, sin matarlo (sin Reliquias ni Esencias: no duplica). */
     private void crear(CommandSender quien, String[] args) {
         if (args.length < 3) {
-            decir(quien, "Uso: /lw hardcore eco crear <jugador>");
+            decir(quien, "Uso: /calamidad eco crear <jugador>");
             return;
         }
         Player p = Bukkit.getPlayerExact(args[2]);
@@ -1155,7 +1189,7 @@ final class Ecos implements Listener {
 
     private void borrar(CommandSender quien, String[] args) {
         if (args.length < 3) {
-            decir(quien, "Uso: /lw hardcore eco borrar <id|jugador>");
+            decir(quien, "Uso: /calamidad eco borrar <id|jugador>");
             return;
         }
         List<Eco> fuera = new ArrayList<>();
@@ -1172,7 +1206,7 @@ final class Ecos implements Listener {
 
     private void tp(CommandSender quien, String[] args) {
         if (!(quien instanceof Player p)) {
-            decir(quien, "Solo desde el juego.");
+            decir(quien, "Solo se puede usar dentro del juego.");
             return;
         }
         Eco e = args.length >= 3 ? ecos.get(args[2]) : null;
@@ -1191,12 +1225,12 @@ final class Ecos implements Listener {
      */
     private void prueba(CommandSender quien, String[] args) {
         if (args.length < 6) {
-            decir(quien, "Uso: /lw hardcore eco prueba <nombre> <x> <y> <z> [N] [escalon]");
+            decir(quien, "Uso: /calamidad eco prueba <nombre> <x> <y> <z> [N] [escalón]");
             return;
         }
         World w = primerMundo();
         if (w == null) {
-            decir(quien, "No hay ningun mundo hardcore cargado.");
+            decir(quien, "No hay ningún mundo hardcore cargado.");
             return;
         }
         String nombre = args[2];
@@ -1209,7 +1243,7 @@ final class Ecos implements Listener {
             n = args.length > 6 ? Integer.parseInt(args[6]) : 20;
             escalon = args.length > 7 ? Integer.parseInt(args[7]) : 4;
         } catch (NumberFormatException ex) {
-            decir(quien, "Coordenadas, nivel o escalon no validos.");
+            decir(quien, "Coordenadas, nivel o escalón no válidos.");
             return;
         }
         OfflinePlayer cache = Bukkit.getOfflinePlayerIfCached(nombre);
@@ -1283,7 +1317,7 @@ final class Ecos implements Listener {
         }
         Location l = e.anclaje();
         if (l == null) {
-            decir(quien, "eco | " + e.id + " | su mundo no esta cargado");
+            decir(quien, "eco | " + e.id + " | su mundo no está cargado");
             return;
         }
         // Con nadie cerca el chunk se descargaria en segundos: se sujeta mientras este despierto.
@@ -1329,7 +1363,7 @@ final class Ecos implements Listener {
     /** /calamity eco: tus Ecos, con bioma, sitio, nivel, reliquias y lo que les queda. */
     private void comandoJugador(CommandSender quien, String[] args) {
         if (!(quien instanceof Player p)) {
-            decir(quien, "Solo desde el juego.");
+            decir(quien, "Solo se puede usar dentro del juego.");
             return;
         }
         long ahora = System.currentTimeMillis();
@@ -1342,11 +1376,12 @@ final class Ecos implements Listener {
             Component bioma = l == null || !l.getWorld().isChunkLoaded(l.getBlockX() >> 4, l.getBlockZ() >> 4)
                     ? Component.text("lejos") : Component.translatable(l.getBlock().getBiome().translationKey());
             long min = Math.max(0, (e.expira - ahora) / 60_000);
+            int k = e.nReliquias();
             p.sendMessage(ComandoCalamity.mensaje(Component.text(e.errante ? "Eco errante · " : "Tu Eco · ")
                     .append(bioma.color(Paleta.DETALLE))
                     .append(Component.text(" · "))
                     .append(Component.text(Math.round(e.x) + " " + Math.round(e.y) + " " + Math.round(e.z), Paleta.CIFRA))
-                    .append(Component.text(" · Nv. " + e.nivel + " · " + e.nReliquias() + " reliquias · quedan "
+                    .append(Component.text(" · Nv. " + e.nivel + " · " + k + (k == 1 ? " Reliquia" : " Reliquias") + " · quedan "
                             + (min / 60) + " h " + (min % 60) + " min"))));
         }
         if (n == 0) p.sendMessage(ComandoCalamity.mensaje("No tienes ningún Eco en pie."));
@@ -1448,6 +1483,20 @@ final class Ecos implements Listener {
                 .ok("marca propia 2.a misma semana no", !marcaPropia(d, m, "2026-W39"))
                 .ok("marca propia semana nueva", marcaPropia(d, m, "2026-W40"))
                 .ok("propio N_E 45 con equipo real", equipoReal(6, 0, c) && 45 >= c.getInt("marcas.propio.nivel-minimo", 40));
+
+        // --- los textos de nacer y de una caza que no paga
+        PlainTextComponentSerializer plano = PlainTextComponentSerializer.plainText();
+        h.igual("aviso al nacer con botin", "Tu Eco te espera donde caíste. Guarda 2 Reliquias y 5 Esencias, y dura 12 h.",
+                plano.serialize(mensajeNacido(2, 5, 12)));
+        h.igual("aviso al nacer en singular", "Tu Eco te espera donde caíste. Guarda 1 Reliquia y dura 12 h.",
+                plano.serialize(mensajeNacido(1, 0, 12)));
+        h.igual("aviso al nacer sin botin", "Tu Eco te espera donde caíste. Dura 12 h.", plano.serialize(mensajeNacido(0, 0, 12)));
+        h.igual("caza sin pagar por horas", "Ese Eco no paga: para cobrar, los dos necesitáis al menos 10 h jugadas.",
+                plano.serialize(textoMotivo("horas", c, 10)));
+        h.igual("caza sin pagar por la misma conexion", "Ese Eco no paga: su dueño y tú compartís conexión.",
+                plano.serialize(textoMotivo("huella", c, 10)));
+        h.igual("caza sin pagar por cobros", "Ese Eco no paga: hoy ya has cobrado el máximo de 5 Ecos.",
+                plano.serialize(textoMotivo("cobros", c, 10)));
 
         // --- recomposicion, rumbo, stats sin bracken
         h.cerca("recompone 10 s dormido", 0.7, Eco.recomponer(0.5, t0, t0 - 20_000, t0 + 10_000, 15, 0.02), 1e-9)

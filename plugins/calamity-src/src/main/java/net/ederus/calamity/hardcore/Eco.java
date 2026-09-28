@@ -411,7 +411,7 @@ final class Eco {
 
     Component nombre(boolean enRojo) {
         int k = nReliquias();
-        String texto = "Eco de " + nombre + (k > 0 ? " · " + k + (k == 1 ? " reliquia" : " reliquias") : "");
+        String texto = "Eco de " + nombre + (k > 0 ? " · " + k + (k == 1 ? " Reliquia" : " Reliquias") : "");
         return Component.text(texto, enRojo ? Paleta.AVISO : GRIS);
     }
 
@@ -675,7 +675,8 @@ final class Eco {
         if (duenoP != null && !reconocido && !hc.enSpawn(duenoP) && duenoP.getLocation().distanceSquared(pos) <= 24 * 24) {
             reconocido = true;
             duenoP.playSound(pos, "entity.player.death", 1.0f, 1.0f);
-            duenoP.showTitle(Title.title(Component.empty(), Component.text("Te reconoce.", Paleta.AVISO),
+            // Una vez por Eco: encontrarte con el tuyo es un momento aparte (titulo pequeno) y cuesta cordura.
+            duenoP.showTitle(Title.title(Component.empty(), Component.text("Tu Eco te reconoce.", Paleta.AVISO),
                     Title.Times.times(Duration.ofMillis(300), Duration.ofMillis(2000), Duration.ofMillis(700))));
             hc.cordura().sumar(duenoP, -c.getDouble("reconocer-cordura", 5));
         }

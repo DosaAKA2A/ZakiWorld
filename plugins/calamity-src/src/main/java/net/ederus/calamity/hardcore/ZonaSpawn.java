@@ -210,7 +210,7 @@ final class ZonaSpawn implements Listener {
     private void anunciar(String mundo, Zona z) {
         String texto = z == null ? "sin zona" : z.describir();
         if (texto.equals(dicho.put(mundo, texto))) return;
-        hc.plugin().getLogger().info("[Calamity] Zona spawn de " + mundo + ": " + texto);
+        hc.plugin().getLogger().info("[Calamity] Zona del spawn de " + mundo + ": " + texto);
     }
 
     // ============================================================ WorldGuard (reflexion)

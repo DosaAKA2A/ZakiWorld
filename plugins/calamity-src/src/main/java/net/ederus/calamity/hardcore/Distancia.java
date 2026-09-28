@@ -120,7 +120,7 @@ public final class Distancia {
         avisos.keySet().retainAll(dentro);
     }
 
-    /** "Calamity · Te adentras más en la Calamidad · mobs +10 niveles", con la Paleta. */
+    /** "Calamity · Te alejas del spawn · mobs +10 niveles", con la Paleta. */
     private static Component componente(String que, int niveles, Ajustes a) {
         TextColor cifra = que.equals(Aviso.TOPE) ? Paleta.AVISO : Paleta.CIFRA;
         return Paleta.prefijo()
@@ -129,9 +129,9 @@ public final class Distancia {
                 .append(Component.text(textoNiveles(niveles), cifra));
     }
 
-    /** "mobs +10 niveles", "mobs +1 nivel", "mobs sin nivel de más". */
+    /** "mobs +10 niveles", "mobs +1 nivel", "mobs sin niveles de más". */
     static String textoNiveles(int n) {
-        if (n <= 0) return "mobs sin nivel de más";
+        if (n <= 0) return "mobs sin niveles de más";
         return "mobs +" + n + (n == 1 ? " nivel" : " niveles");
     }
 
@@ -140,9 +140,14 @@ public final class Distancia {
      * por parametro) para que el autotest recorra secuencias enteras.
      */
     static final class Aviso {
-        static final String LEJOS = "Te adentras más en la Calamidad";
-        static final String CERCA = "Te acercas al refugio";
-        static final String TOPE = "Tierra sin retorno";
+        /*
+         * Dicen lo que se mide (la distancia al spawn), no una metafora: "Te acercas al refugio"
+         * hablaba de un refugio que no existe y "Tierra sin retorno" prometia algo falso (se
+         * vuelve igual). En el tope, que mas lejos ya no sube.
+         */
+        static final String LEJOS = "Te alejas del spawn";
+        static final String CERCA = "Te acercas al spawn";
+        static final String TOPE = "Has llegado al máximo";
 
         /** -1 = aun no se sabe (acaba de entrar): la primera medida se apunta sin avisar. */
         int anunciada = -1;

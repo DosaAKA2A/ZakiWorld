@@ -130,7 +130,7 @@ final class ParteDefuncion implements Listener {
         String habilidad = trozos[0].trim().toLowerCase(Locale.ROOT);
         for (int i = 1; i < trozos.length; i++) {
             String t = trozos[i].trim().toLowerCase(Locale.ROOT);
-            if (t.equals("quieto")) marcas.add("x2 por quieto");
+            if (t.equals("quieto")) marcas.add("×2 por estar quieto");
             else if (!t.isEmpty()) marcas.add(t);
         }
         // La Sentencia es la quinta campanada: quien lo lea tiene que saber de donde vino.
@@ -158,10 +158,10 @@ final class ParteDefuncion implements Listener {
             // Sin DamageSource: se queda en la causa.
         }
         List<String> marcas = new ArrayList<>();
-        if (e.getCause() == DamageCause.FALL && hc.cfg().getDouble("dificultad.dano-caida", 2.0) > 1
-                || e.getCause() == DamageCause.DROWNING && hc.cfg().getDouble("dificultad.dano-ahogo", 2.0) > 1) {
-            marcas.add("x2 aquí");
-        }
+        // El multiplicador de verdad de la config ("×2 en Calamity" con el 2.0 de serie).
+        double factor = e.getCause() == DamageCause.FALL ? hc.cfg().getDouble("dificultad.dano-caida", 2.0)
+                : e.getCause() == DamageCause.DROWNING ? hc.cfg().getDouble("dificultad.dano-ahogo", 2.0) : 1;
+        if (factor > 1) marcas.add(marcaEntorno(factor));
         apuntar(v, golpe(v, fuente, nombreCausa(e.getCause()), dano, marcas));
     }
 
@@ -306,25 +306,29 @@ final class ParteDefuncion implements Listener {
      */
     static PorQue porQue(Causas c) {
         if (c == null) return null;
-        if (c.parca()) return new PorQue("P-D01", "Te quedaste en el mismo sitio más de 10 minutos.");
-        if (c.cordura() <= 0) return new PorQue("P-D02", "Tu cordura llegó a 0: los grandes vienen a por ti.");
-        if (c.ecoDe() != null) return new PorQue("P-D03", "Era el Eco de " + c.ecoDe() + ". Pega con su equipo.");
-        if (c.asesino() != null) return new PorQue("P-D04", c.asesino() + " te ha matado. Lo tuyo lo guarda tu Eco.");
+        // P-D01: tambien mata a quien la ayudaba a tumbar, asi que se dice la regla y no "te quedaste quieto".
+        if (c.parca()) return new PorQue("P-D01", "Te ha matado la Parca. Viene a por quien pasa demasiado tiempo quieto.");
+        if (c.cordura() <= 0) return new PorQue("P-D02", "Tu cordura llegó a 0: sin cordura salen más mobs y minijefes.");
+        if (c.ecoDe() != null) {
+            return new PorQue("P-D03", "Te ha matado el Eco de " + c.ecoDe() + ": pelea con el equipo que llevaba al morir.");
+        }
+        // El Eco no se nombra aqui: solo nace si llevabas algo, y eso lo dice la linea de debajo (P-D09).
+        if (c.asesino() != null) return new PorQue("P-D04", "Te ha matado " + c.asesino() + ".");
         if (c.causa() == DamageCause.FALL || c.causa() == DamageCause.DROWNING) {
-            return new PorQue("P-D05", "Aquí las caídas y el agua hacen el doble.");
+            return new PorQue("P-D05", "En Calamity, las caídas y el ahogo hacen el doble de daño.");
         }
-        if (c.causa() == DamageCause.STARVATION) return new PorQue("P-D06", "Aquí el hambre va al doble.");
+        if (c.causa() == DamageCause.STARVATION) return new PorQue("P-D06", "En Calamity, el hambre baja el doble de rápido.");
         if (c.nivelMob() > 0) {
-            return new PorQue("P-D07", "Nv. " + c.nivelMob() + " contra tu nivel " + c.nivelSuyo()
-                    + ". Cuanto más tiempo dentro, más nivel.");
+            return new PorQue("P-D07", "Un mob de Nv. " + c.nivelMob() + " contra tu nivel " + c.nivelSuyo()
+                    + ". Los mobs suben de nivel con el tiempo y con la distancia al spawn.");
         }
-        if (c.cable()) return new PorQue("P-D08", "Huiste por el cable.");
+        if (c.cable()) return new PorQue("P-D08", "Te desconectaste en pleno combate.");
         return null;
     }
 
     /**
-     * "mobs +20 niveles (cordura) +6 (30 min dentro) +12 (a 1.250 bloques del spawn)": el bonusNivel
-     * de Hardcore por partes, mas la distancia (Hardcore.bonusDistancia) donde ha caido.
+     * "mobs +20 niveles (cordura) +6 (30 min en Calamity) +12 (a 1.250 bloques del spawn)": el
+     * bonusNivel de Hardcore por partes, mas la distancia (Hardcore.bonusDistancia) donde ha caido.
      */
     private String desglose(Player p) {
         double v = hc.cordura().conoce(p) ? hc.cordura().valor(p) : Cordura.MAXIMO;
@@ -350,12 +354,12 @@ final class ParteDefuncion implements Listener {
         List<String> partes = new ArrayList<>();
         if (porCordura > 0) partes.add("+" + porCordura + " (cordura)");
         int porMinutos = Distancia.nivelPorMinutos(segundosDentro, cadaMinutos);
-        if (porMinutos > 0) partes.add("+" + porMinutos + " (" + (segundosDentro / 60) + " min dentro)");
+        if (porMinutos > 0) partes.add("+" + porMinutos + " (" + (segundosDentro / 60) + " min en Calamity)");
         if (distancia > 0) partes.add("+" + distancia + " (a " + Distancia.miles(bloques) + " bloques del spawn)");
         if (racha > 0) partes.add("+" + racha + " (racha)");
         if (eclipse > 0) partes.add("+" + eclipse + " (eclipse)");
         if (partes.isEmpty()) return "mobs sin niveles de más";
-        // "niveles" solo en la primera: "+20 niveles (cordura) +6 (30 min dentro)".
+        // "niveles" solo en la primera: "+20 niveles (cordura) +6 (30 min en Calamity)".
         partes.set(0, partes.get(0).replaceFirst(" \\(", " niveles ("));
         return "mobs " + String.join(" ", partes);
     }
@@ -388,13 +392,26 @@ final class ParteDefuncion implements Listener {
         return lineaEco(piezas, reliquias);
     }
 
+    /**
+     * "Tu Eco se alzará donde caíste, con tu equipo y 2 Reliquias." El equipo que lleva son copias
+     * (no vuelve a nadie): se nombra, pero sin contarlo como botin. Singulares y ceros bien dichos.
+     */
     static String lineaEco(int piezas, int reliquias) {
-        return "Tu Eco se alza donde caíste, con " + piezas + " piezas y " + reliquias + " reliquias.";
+        String r = reliquias == 1 ? "1 Reliquia" : reliquias + " Reliquias";
+        if (piezas > 0 && reliquias > 0) return "Tu Eco se alzará donde caíste, con tu equipo y " + r + ".";
+        if (piezas > 0) return "Tu Eco se alzará donde caíste, con tu equipo.";
+        if (reliquias > 0) return "Tu Eco se alzará donde caíste, con " + r + ".";
+        return "Tu Eco se alzará donde caíste.";
     }
 
     // ------------------------------------------------------------------ textos
 
-    /** "Parca Nv. 52 · siega (ignora armadura, x2 por quieto)" o "caída (x2 aquí)". */
+    /** La marca de una caida o un ahogo con el multiplicador de la config: "×2 en Calamity". */
+    static String marcaEntorno(double factor) {
+        return "×" + Marco.numero(factor) + " en Calamity";
+    }
+
+    /** "Parca Nv. 52 · siega (ignora armadura, ×2 por estar quieto)" o "caída (×2 en Calamity)". */
     static String texto(Golpe g) {
         StringBuilder sb = new StringBuilder();
         if (g.atacante() != null) {
@@ -407,9 +424,9 @@ final class ParteDefuncion implements Listener {
         return sb.toString();
     }
 
-    /** "-18.2": un decimal, con punto, sea cual sea el idioma del servidor. */
+    /** "-18,2": un decimal, con la coma del espanol (como el resto de cifras de Calamity), sea cual sea el idioma del servidor. */
     static String cifra(double dano) {
-        return String.format(Locale.ROOT, "-%.1f", Math.max(0, dano));
+        return String.format(Locale.ROOT, "-%.1f", Math.max(0, dano)).replace('.', ',');
     }
 
     static String nombreCausa(DamageCause c) {
@@ -436,11 +453,11 @@ final class ParteDefuncion implements Listener {
             case "LIGHTNING" -> "rayo";
             case "FALLING_BLOCK" -> "bloque que cae";
             case "SONIC_BOOM" -> "estallido sónico";
-            case "CRAMMING" -> "aplastado";
+            case "CRAMMING" -> "aplastamiento";
             case "FLY_INTO_WALL" -> "choque";
-            case "DRAGON_BREATH" -> "aliento";
-            case "WORLD_BORDER" -> "borde";
-            case "KILL" -> "orden de muerte";
+            case "DRAGON_BREATH" -> "aliento de dragón";
+            case "WORLD_BORDER" -> "borde del mundo";
+            case "KILL" -> "comando /kill";
             default -> c.name().toLowerCase(Locale.ROOT).replace('_', ' ');
         };
     }
@@ -589,11 +606,11 @@ final class ParteDefuncion implements Listener {
                 id(porQue(new Causas(false, 0, "Ana", "Beto", DamageCause.FALL, 40, 12, false))));
         h.igual("Eco antes que jugador", "P-D03",
                 id(porQue(new Causas(false, 30, "Ana", "Beto", DamageCause.ENTITY_ATTACK, 0, 12, false))));
-        h.igual("texto del Eco", "Era el Eco de Ana. Pega con su equipo.",
+        h.igual("texto del Eco", "Te ha matado el Eco de Ana: pelea con el equipo que llevaba al morir.",
                 porQue(new Causas(false, 30, "Ana", null, null, 0, 12, false)).texto());
         h.igual("jugador antes que caida", "P-D04",
                 id(porQue(new Causas(false, 30, null, "Beto", DamageCause.FALL, 0, 12, false))));
-        h.igual("texto del jugador", "Beto te ha matado. Lo tuyo lo guarda tu Eco.",
+        h.igual("texto del jugador", "Te ha matado Beto.",
                 porQue(new Causas(false, 30, null, "Beto", null, 0, 12, false)).texto());
         h.igual("caida antes que hambre y nivel", "P-D05",
                 id(porQue(new Causas(false, 30, null, null, DamageCause.FALL, 40, 12, false))));
@@ -602,10 +619,10 @@ final class ParteDefuncion implements Listener {
                 id(porQue(new Causas(false, 30, null, null, DamageCause.STARVATION, 40, 12, false))));
         h.igual("mob con nivel", "P-D07",
                 id(porQue(new Causas(false, 30, null, null, DamageCause.ENTITY_ATTACK, 40, 12, false))));
-        h.igual("texto del nivel", "Nv. 40 contra tu nivel 12. Cuanto más tiempo dentro, más nivel.",
+        h.igual("texto del nivel", "Un mob de Nv. 40 contra tu nivel 12. Los mobs suben de nivel con el tiempo y con la distancia al spawn.",
                 porQue(new Causas(false, 30, null, null, DamageCause.ENTITY_ATTACK, 40, 12, false)).texto());
         h.igual("cable", "P-D08", id(porQue(new Causas(false, 30, null, null, null, 0, 12, true))));
-        h.igual("texto del cable", "Huiste por el cable.",
+        h.igual("texto del cable", "Te desconectaste en pleno combate.",
                 porQue(new Causas(false, 30, null, null, null, 0, 12, true)).texto());
         h.igual("cable pierde contra un jugador", "P-D04",
                 id(porQue(new Causas(false, 30, null, "Beto", null, 0, 12, true))));
@@ -613,23 +630,27 @@ final class ParteDefuncion implements Listener {
         h.igual("cordura 0,4 no es 0", null, id(porQue(new Causas(false, 0.4, null, null, DamageCause.VOID, 0, 12, false))));
 
         // Desglose de niveles y textos de las lineas.
-        h.igual("desglose del ejemplo de DIS M7", "mobs +20 niveles (cordura) +6 (30 min dentro)",
+        h.igual("desglose del ejemplo de DIS M7", "mobs +20 niveles (cordura) +6 (30 min en Calamity)",
                 desglose(20, 1800, 5, 0, 0));
         h.igual("desglose sin nada", "mobs sin niveles de más", desglose(0, 200, 5, 0, 0));
         h.igual("desglose con racha y eclipse", "mobs +3 niveles (racha) +10 (eclipse)", desglose(0, 60, 5, 3, 10));
         h.igual("desglose sin nivel por minutos", "mobs +10 niveles (cordura)", desglose(10, 1800, 0, 0, 0));
-        h.igual("desglose con distancia", "mobs +10 niveles (30 min dentro) +12 (a 1.250 bloques del spawn)",
+        h.igual("desglose con distancia", "mobs +10 niveles (30 min en Calamity) +12 (a 1.250 bloques del spawn)",
                 desglose(0, 1800, 3, 0, 0, 12, 1250));
         h.igual("desglose solo con distancia", "mobs +40 niveles (a 4.310 bloques del spawn)",
                 desglose(0, 60, 3, 0, 0, 40, 4310));
-        h.igual("cifra", "-18.2", cifra(18.2));
-        h.igual("cifra redondea a un decimal", "-4.0", cifra(3.96));
-        h.igual("linea de la siega", "Parca Nv. 52 · siega (ignora armadura, x2 por quieto)",
-                texto(new Golpe(t0, "siega", "Parca", 52, 12, List.of("ignora armadura", "x2 por quieto"), 12,
+        h.igual("cifra", "-18,2", cifra(18.2));
+        h.igual("cifra redondea a un decimal", "-4,0", cifra(3.96));
+        h.igual("linea de la siega", "Parca Nv. 52 · siega (ignora armadura, ×2 por estar quieto)",
+                texto(new Golpe(t0, "siega", "Parca", 52, 12, List.of("ignora armadura", "×2 por estar quieto"), 12,
                         "parca", null, false, false)));
-        h.igual("linea de caida", "caída (x2 aquí)", texto(new Golpe(t0, nombreCausa(DamageCause.FALL), null, 0, 4,
-                List.of("x2 aquí"), 12, null, null, false, false)));
-        h.igual("linea del Eco del ejemplo", "Tu Eco se alza donde caíste, con 4 piezas y 2 reliquias.", lineaEco(4, 2));
+        h.igual("linea de caida", "caída (×2 en Calamity)", texto(new Golpe(t0, nombreCausa(DamageCause.FALL), null, 0, 4,
+                List.of(marcaEntorno(2.0)), 12, null, null, false, false)));
+        h.igual("marca de caida con otro multiplicador", "×1,5 en Calamity", marcaEntorno(1.5));
+        h.igual("linea del Eco del ejemplo", "Tu Eco se alzará donde caíste, con tu equipo y 2 Reliquias.", lineaEco(4, 2));
+        h.igual("linea del Eco en singular", "Tu Eco se alzará donde caíste, con tu equipo y 1 Reliquia.", lineaEco(1, 1));
+        h.igual("linea del Eco sin Reliquias", "Tu Eco se alzará donde caíste, con tu equipo.", lineaEco(3, 0));
+        h.igual("linea del Eco solo con Reliquias", "Tu Eco se alzará donde caíste, con 2 Reliquias.", lineaEco(0, 2));
         h.igual("nombre de un zombi", "Zombi", tipo("zombie"));
         h.ok("el autotest no escribe en hardcore-datos.yml", !hc.datos().isSet("parte"));
         return h.lineas();
