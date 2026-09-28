@@ -130,6 +130,8 @@ final class Marco {
     static final Titulo T_CAMBIAR = new Titulo("Cambiar contrato");
     // "Rankings de la semana" no cabe.
     static final Titulo T_RANKINGS = new Titulo("Ranking semanal");
+    // El mismo menu mirando el total: "CALAMITY | Ranking histórico" mide 149 de 150.
+    static final Titulo T_RANKINGS_HISTORICO = new Titulo("Ranking histórico");
     static final Titulo T_TABLERO = new Titulo("Tablero");
     static final Titulo T_CAMINO = new Titulo("Tu camino");
     static final Titulo T_GRABAR = new Titulo("Grabar");
@@ -149,7 +151,7 @@ final class Marco {
     /** Todos los titulos de ventana de Calamity, para que el autotest mida que caben. */
     static List<Titulo> titulos() {
         List<Titulo> out = new ArrayList<>(List.of(T_ALTAR, T_FORJA, T_COMPRAR, T_FORJAR, T_TASADOR, T_TASADOR_DINERO,
-                T_TASADOR_CONTRATOS, T_TASADOR_RELIQUIAS, T_CAMBIAR, T_RANKINGS,
+                T_TASADOR_CONTRATOS, T_TASADOR_RELIQUIAS, T_CAMBIAR, T_RANKINGS, T_RANKINGS_HISTORICO,
                 T_TABLERO, T_CAMINO, T_GRABAR, T_DESEOS, T_VOTO, T_PREGUNTA, T_DIFICULTAD, T_SALVOCONDUCTO, T_ENGARZADOR));
         for (MenuAltar.Categoria c : MenuAltar.CATEGORIAS) {
             Titulo t = MenuAltar.titulo(c.id());
@@ -220,6 +222,16 @@ final class Marco {
     static void rellenarNeutro(Inventory inv) {
         ItemStack gris = cristal(Material.GRAY_STAINED_GLASS_PANE);
         for (int i = 0; i < inv.getSize(); i++) if (inv.getItem(i) == null) inv.setItem(i, gris);
+    }
+
+    /**
+     * Rellena lo vacio con cristal negro sin nombre, igual en toda la ventana. Lo usa el ranking
+     * de Rhen (1.7.2): Dosa quiere los menus con paneles negros y no de colores, y un marco
+     * de un solo color no se confunde con las categorias.
+     */
+    static void rellenarNegro(Inventory inv) {
+        ItemStack negro = cristal(Material.BLACK_STAINED_GLASS_PANE);
+        for (int i = 0; i < inv.getSize(); i++) if (inv.getItem(i) == null) inv.setItem(i, negro);
     }
 
     // ------------------------------------------------------------------ reparto
@@ -579,6 +591,7 @@ final class Marco {
         long saldo = s == null ? 0 : s.de(u);
         List<Component> lore = new ArrayList<>();
         lore.add(tenue("Se gasta en el Altar y la Forja."));
+        lore.add(tenue("Es tuyo: no caduca ni se reinicia."));
         Monedero mon = hc.monedero();
         if (mon != null && mon.disponible()) lore.add(dato("MobCoins", Altar.miles(mon.saldo(p))));
 
@@ -641,11 +654,12 @@ final class Marco {
         lore.add(dato("Marcas", "Lágrimas de Eco, hasta " + marcasDia + " al día"));
         lore.add(dato("Fragmentos", "Campanas de Parca de nivel " + nivelCampana + "+"));
         lore.add(texto("Solo cuenta lo que sacas vivo."));
+        lore.add(texto("Tu saldo de Esencias no caduca."));
         lore.add(Component.empty());
         lore.add(Component.text("Sael, en el Altar", Paleta.DETALLE).append(tenue(": lo que te llevas dentro y las llaves.")));
         lore.add(Component.text("Vael, en la Forja", Paleta.DETALLE).append(tenue(": el equipo de Calamity.")));
         lore.add(Component.text("Oren, en el mercado", Paleta.DETALLE).append(tenue(": tu dinero, tus contratos y tu camino.")));
-        lore.add(Component.text("Rhen", Paleta.DETALLE).append(tenue(": los rankings de la semana.")));
+        lore.add(Component.text("Rhen", Paleta.DETALLE).append(tenue(": los rankings, de la semana y de siempre.")));
         lore.add(Component.text("Lior", Paleta.DETALLE).append(tenue(": pone y quita las gemas.")));
         lore.add(Component.text("/calamity encuesta", Paleta.DETALLE).append(tenue(" y "))
                 .append(Component.text("/calamity deseos", Paleta.DETALLE)).append(tenue(": tu voto.")));

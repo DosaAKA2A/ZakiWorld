@@ -866,6 +866,7 @@ hardcore:
         titulo: "Esencias, Reliquias y ventas"
         texto:
           - "Las Esencias caen de los mobs de dentro. Al salir pasan a tu saldo: con ellas se paga en el Altar."
+          - "Tu saldo es tuyo: no caduca ni se reinicia cada día. Solo pierdes las que llevas encima si mueres dentro."
           - "Cada Reliquia sacada viva vale {reliquias.grados.1.esencias} Esencias la Astilla, {reliquias.grados.2.esencias} el Fragmento, {reliquias.grados.3.esencias} el Ámbar y {reliquias.grados.4.esencias} el Ámbar Mayor, más MobCoins."
           - "La primera salida del día paga {esencias.primera-extraccion-dia.base} Esencias más. Las Reliquias III y IV caducan a los {reliquias.caduca-dias} días."
           - "La Aduana te paga y pone topes: como mucho {aduana.tramos-mc.0.hasta} MobCoins al día."
