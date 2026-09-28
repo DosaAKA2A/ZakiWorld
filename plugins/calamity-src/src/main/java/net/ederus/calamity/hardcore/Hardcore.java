@@ -116,7 +116,7 @@ public final class Hardcore implements Listener {
     private Estadisticas estadisticas;
     private Calendario calendario;
     private Exentos exentos;
-    /** Calamity 1.4: lo que hace cada pieza de MMOItems dentro de Calamity (equipo.yml). */
+    /** Calamity 1.4: lo que hace cada pieza de MMOItems dentro de Calamity (desde la 1.6, de los efectos de equipo de GodItems). */
     private Equipo equipo;
     private Aduana aduana;
     private Saldo saldo;
@@ -185,7 +185,7 @@ public final class Hardcore implements Listener {
     Calendario calendario() { return calendario; }
     /** Exenciones puestas a mano (parca, aduana); null con las reglas apagadas. */
     Exentos exentos() { return exentos; }
-    /** Calamity 1.4: equipo.yml. Null con las reglas apagadas; mejor delEquipo() que esto. */
+    /** Calamity 1.4 (1.6: via GodItems). Null con las reglas apagadas; mejor delEquipo() que esto. */
     Equipo equipo() { return equipo; }
     Aduana aduana() { return aduana; }
     Saldo saldo() { return saldo; }
@@ -473,7 +473,7 @@ public final class Hardcore implements Listener {
     // ---------------------------------------------------------------------- equipo
 
     /**
-     * Calamity 1.4: lo que el equipo de ese jugador (equipo.yml) pone en ese efecto, ya topado. 0 sin
+     * Calamity 1.4: lo que el equipo de ese jugador (GodItems, calamity.*) pone en ese efecto, ya topado. 0 sin
      * equipo, sin el modulo o si falla: con 0 cada regla hace exactamente lo de siempre.
      */
     double delEquipo(Player p, Equipo.Efecto efecto) {
@@ -492,7 +492,7 @@ public final class Hardcore implements Listener {
         return valor("equipo", () -> eq.esencias(p, n), n);
     }
 
-    /** /calamidad reload relee tambien equipo.yml. Devuelve el resumen, o null con las reglas apagadas. */
+    /** /calamidad reload dice de donde sale el equipo (GodItems). Devuelve el resumen, o null con las reglas apagadas. */
     public String recargarEquipo() {
         Equipo eq = equipo;
         return eq == null ? null : valor("equipo", eq::cargar, null);

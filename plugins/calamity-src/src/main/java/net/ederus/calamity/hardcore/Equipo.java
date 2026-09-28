@@ -1,12 +1,10 @@
 package net.ederus.calamity.hardcore;
 
-import io.papermc.paper.event.entity.EntityEquipmentChangedEvent;
+import net.ederus.edm.goditems.api.EquipoApi;
 import net.kyori.adventure.text.Component;
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
 import org.bukkit.command.CommandSender;
-import org.bukkit.configuration.ConfigurationSection;
-import org.bukkit.configuration.InvalidConfigurationException;
 import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.Player;
@@ -17,58 +15,36 @@ import org.bukkit.event.HandlerList;
 import org.bukkit.event.Listener;
 import org.bukkit.event.entity.EntityDamageByEntityEvent;
 import org.bukkit.event.entity.EntityDamageEvent;
-import org.bukkit.event.entity.EntityPickupItemEvent;
-import org.bukkit.event.inventory.InventoryClickEvent;
-import org.bukkit.event.inventory.InventoryDragEvent;
-import org.bukkit.event.player.PlayerChangedWorldEvent;
-import org.bukkit.event.player.PlayerDropItemEvent;
-import org.bukkit.event.player.PlayerItemBreakEvent;
-import org.bukkit.event.player.PlayerItemHeldEvent;
 import org.bukkit.event.player.PlayerQuitEvent;
-import org.bukkit.event.player.PlayerRespawnEvent;
-import org.bukkit.event.player.PlayerSwapHandItemsEvent;
-import org.bukkit.inventory.EntityEquipment;
 import org.bukkit.inventory.EquipmentSlot;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
-import org.bukkit.persistence.PersistentDataType;
 
 import java.io.File;
-import java.io.IOException;
-import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
 import java.security.SecureRandom;
 import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Collections;
 import java.util.EnumMap;
 import java.util.HashMap;
-import java.util.LinkedHashMap;
-import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
-import java.util.Set;
 import java.util.UUID;
 import java.util.function.DoubleSupplier;
 
 /**
- * Calamity 1.4 · equipo.yml: lo que las piezas de MMOItems hacen DENTRO de Calamity.
+ * Calamity 1.6 · Lo que las piezas de MMOItems hacen DENTRO de Calamity.
  *
- * El reparto que aprobo Dosa: en MMOItems vive el objeto y sus stats normales (armadura, vida, dano,
- * bonos de set de stats, habilidades de MythicLib); aqui viven las funciones propias de Calamity,
- * ligadas al "TIPO.ID" del item. Asi se cambian sin tocar el item de MMOItems y valen al momento
- * (con /calamidad reload) tambien para los items que ya tienen los jugadores. Es el mismo modelo que
- * el gear.yml de PremioPescao, con sus dos fallos ya sabidos: el tipo y el id se leen de la raiz del
- * custom_data y no del PDC (LectorMmo), y el fichero se lee con '/' de separador, porque con el '.'
- * de Bukkit la clave "CALAMITY.YELMO" se partia en una seccion CALAMITY y no se encontraba nada.
+ * Hasta la 1.5 esto se leia de un equipo.yml propio, con su lector de MMOItems (LectorMmo), su cache
+ * y sus topes. Desde la 1.6 lo hace GodItems (modulo de EDM) para todos los plugins a la vez: la
+ * decision de Dosa es que las armaduras se crean en MMOItems y GodItems les da los efectos por pieza y
+ * por set. Aqui ya solo queda:
+ *   - preguntar a GodItems (EquipoApi) cuanto suma cada jugador en las claves "calamity.*", ya
+ *     sumadas (piezas + escalones de set) y TOPADAS: los topes viven en un solo sitio, el YAML de
+ *     GodItems (plugins/EDM/goditems/equipo/calamity.yml);
+ *   - lo que hace cada efecto (las funciones puras de abajo, las mismas de la 1.4) y los dos ganchos
+ *     de dano (PARCA y Ecos).
  *
- * Que cuenta: la armadura puesta y lo que lleve en las dos manos, cada pieza una vez aunque la lleve
- * repetida. Una pieza de ARMADURA en la mano no cuenta (solo puesta): si no, un yelmo en cada mano y
- * otro en la cabeza sumaban tres yelmos. Un set suma su bono con al menos "necesita" de sus piezas.
- *
- * Cada efecto es una fraccion (Efecto) y todo lo del jugador se suma y se topa por efecto (topes: en
- * equipo.yml): el equipo ayuda, pero no puede apagar el modo hardcore. Donde se aplica cada uno:
+ * Donde se aplica cada uno (sin cambios desde la 1.4):
  *   cordura-drenaje        Hardcore.drenar                           el drenaje x (1 - f)
  *   cordura-alucinaciones  Alucinaciones.tirada                      la probabilidad x (1 - f)
  *   parca-dano-recibido    onDanoParca (aqui) y DanoVerdadero.aplicar el dano de la PARCA x (1 - f)
@@ -77,406 +53,140 @@ import java.util.function.DoubleSupplier;
  *   hambre, durabilidad    Hardcore.onHambre / onDurabilidad         el x2 pasa a 1 + (2 - 1) x (1 - f)
  *   caidas                 Hardcore.onEntorno (solo FALL)            lo mismo con dano-caida
  *   niebla                 Hardcore.nieblaDeNoche                    ceniza y oscuridad x (1 - f)
- * Las Esencias de mas NUNCA salen en la Tasacion ni se meten dentro de Aduana.pagar: se suman en el
- * origen (mob, minijefe, cofre) y la Aduana topa el total como siempre, asi que el tope diario sigue
- * mandando.
  *
- * Sin equipo (y de serie, con equipo.yml sin piezas) todo es exactamente lo de antes: cada funcion de
- * abajo con f = 0 devuelve el valor de entrada o la cuenta de siempre, y el autotest "equipo" lo
- * compara contra las formulas de Calamity 1.3.
- *
- * Lo que suma cada jugador se guarda por tick (una muerte o un golpe preguntan varias veces en el
- * mismo) y se tira en cuanto cambia algo de su equipo. Con equipo.yml vacio ni se lee el equipo.
+ * Sin GodItems (un EDM sin la API, o GodItems apagado) Calamity no rompe: todo vale 0 y cada regla
+ * hace exactamente lo de antes; se avisa una vez en consola. Sin equipo, igual: f = 0 devuelve el
+ * valor de entrada, y el autotest "equipo" lo compara contra las formulas de Calamity 1.3.
  */
 final class Equipo implements Listener {
 
-    /** Lo que puede hacer una pieza. Todo en fraccion: 0,10 = un 10 %. */
+    /** Lo que puede hacer una pieza en Calamity. En GodItems es la clave "calamity." + clave. */
     enum Efecto {
-        CORDURA_DRENAJE("cordura-drenaje", 0.50, false, "drenaje de cordura"),
-        CORDURA_ALUCINACIONES("cordura-alucinaciones", 0.50, false, "probabilidad de alucinación"),
-        PARCA_DANO_RECIBIDO("parca-dano-recibido", 0.30, false, "daño recibido de la PARCA"),
-        ECO_DANO("eco-dano", 0.50, true, "daño a los Ecos"),
-        ESENCIAS_BONUS("esencias-bonus", 0.25, true, "Esencias de mobs y cofres"),
-        HAMBRE("hambre", 0.50, false, "castigo extra de hambre"),
-        DURABILIDAD("durabilidad", 0.50, false, "castigo extra de durabilidad"),
-        CAIDAS("caidas", 0.50, false, "castigo extra de caídas"),
-        NIEBLA("niebla", 0.50, false, "niebla y oscuridad de noche");
+        CORDURA_DRENAJE("cordura-drenaje", 0.50, "drenaje de cordura"),
+        CORDURA_ALUCINACIONES("cordura-alucinaciones", 0.50, "probabilidad de alucinación"),
+        PARCA_DANO_RECIBIDO("parca-dano-recibido", 0.30, "daño recibido de la PARCA"),
+        ECO_DANO("eco-dano", 0.50, "daño a los Ecos"),
+        ESENCIAS_BONUS("esencias-bonus", 0.25, "Esencias de mobs y cofres"),
+        HAMBRE("hambre", 0.50, "castigo extra de hambre"),
+        DURABILIDAD("durabilidad", 0.50, "castigo extra de durabilidad"),
+        CAIDAS("caidas", 0.50, "castigo extra de caídas"),
+        NIEBLA("niebla", 0.50, "niebla y oscuridad de noche");
 
         final String clave;
-        /** El tope si equipo.yml no dice otro. */
+        /** El tope que tenia Calamity 1.5 de serie: el calamity.yml de GodItems trae los mismos. */
         final double topeDeSerie;
-        /** True si suma (mas dano, mas Esencias); false si quita (menos drenaje, menos castigo). */
-        final boolean suma;
         final String texto;
 
-        Efecto(String clave, double topeDeSerie, boolean suma, String texto) {
+        Efecto(String clave, double topeDeSerie, String texto) {
             this.clave = clave;
             this.topeDeSerie = topeDeSerie;
-            this.suma = suma;
             this.texto = texto;
         }
 
-        /** El efecto de esa clave de equipo.yml, o null. */
-        static Efecto de(String clave) {
-            if (clave == null) return null;
-            String c = clave.trim().toLowerCase(Locale.ROOT);
-            for (Efecto e : values()) if (e.clave.equals(c)) return e;
-            return null;
-        }
-
-        static List<String> claves() {
-            List<String> out = new ArrayList<>();
-            for (Efecto e : values()) out.add(e.clave);
-            return out;
+        /** La clave en GodItems: "calamity.cordura-drenaje". */
+        String api() {
+            return PREFIJO + clave;
         }
     }
 
-    /** Un set: sus piezas y el bono de llevar al menos "necesita" de ellas. */
-    record Conjunto(String id, List<String> piezas, int necesita, Map<Efecto, Double> bono) {
-    }
+    /** El prefijo de las claves de Calamity en GodItems. */
+    static final String PREFIJO = "calamity.";
+    /** El fichero de antes: si sigue en la carpeta con piezas, se avisa de que ya no se lee. */
+    static final String FICHERO_VIEJO = "equipo.yml";
+    static final String DONDE = "plugins/EDM/goditems/equipo/calamity.yml";
 
-    /** Lo que dice equipo.yml: lo de cada pieza ("TIPO.ID"), los sets, los topes y lo que no se entendio. */
-    record Config(Map<String, Map<Efecto, Double>> piezas, List<Conjunto> sets, Map<Efecto, Double> topes,
-                  List<String> avisos) {
-
-        static final Config VACIA = new Config(Map.of(), List.of(), topesDeSerie(), List.of());
-
-        /** Todos los ids que pueden contar: las piezas y las que nombran los sets. */
-        Set<String> conocidas() {
-            Set<String> out = new LinkedHashSet<>(piezas.keySet());
-            for (Conjunto s : sets) out.addAll(s.piezas());
-            return out;
-        }
-
-        double tope(Efecto e) {
-            Double t = topes.get(e);
-            return t == null ? e.topeDeSerie : t;
-        }
-    }
-
-    /**
-     * Un hueco del jugador tal como se ha leido: el item (null = vacio), su lectura de MMOItems (null =
-     * no es de MMOItems) y si cuenta. porQueNo dice por que no cuenta una pieza que si se lee.
-     */
-    record Hueco(EquipmentSlot slot, ItemStack item, LectorMmo.Lectura lectura, boolean cuenta, String porQueNo) {
-    }
-
-    /** Lo que suma el equipo por efecto: tal cual (bruto) y con su tope (lo que se aplica). */
-    record Total(Map<Efecto, Double> bruto, Map<Efecto, Double> topado) {
-
-        static final Total VACIO = new Total(Map.of(), Map.of());
-
-        /** Lo que se aplica de ese efecto; 0 si nada lo toca. */
-        double de(Efecto e) {
-            Double v = topado.get(e);
-            return v == null ? 0 : v;
-        }
-
-        boolean vacio() {
-            for (double v : topado.values()) if (v != 0) return false;
-            return true;
-        }
-    }
-
-    /** Lo leido de un jugador en un tick. */
-    private record Guardado(int tick, Total total) {
-    }
-
-    /** Se lee con '/' entre partes de la ruta: las claves de las piezas llevan punto (TIPO.ID). */
-    static final char SEPARADOR = '/';
-    static final String FICHERO = "equipo.yml";
-
-    /** Los huecos que cuentan, en el orden en que los ensena /calamidad equipo. */
-    static final EquipmentSlot[] HUECOS = {EquipmentSlot.HEAD, EquipmentSlot.CHEST, EquipmentSlot.LEGS,
-            EquipmentSlot.FEET, EquipmentSlot.HAND, EquipmentSlot.OFF_HAND};
-
-    /**
-     * Los ids de Calamity que trae comentados el equipo.yml del jar (tipos nuevos de MMOItems: CALAMITY,
-     * CALAMITY_ARMAS...). El autotest prueba con uno de ellos si equipo.yml aun no tiene piezas.
-     */
-    static final List<String> EJEMPLOS = List.of("CALAMITY.YELMO_DE_CALAMIDAD", "CALAMITY.CORAZA_DE_CALAMIDAD",
-            "CALAMITY.GREBAS_DE_CALAMIDAD", "CALAMITY.SOLERETAS_DE_CALAMIDAD", "CALAMITY_ARMAS.HACHA_DEL_HERALDO",
-            "CALAMITY.MASCARA_DEL_ECO", "CALAMITY_ARMAS.FILO_DEL_ECO", "CALAMITY_ARMAS.GUADANA_DE_LA_PARCA");
+    /** Si la API de GodItems existe en el EDM instalado. Se mira una vez: un EDM viejo no la trae. */
+    private static final boolean HAY_API = hayApi();
 
     private final Hardcore hc;
     private final SecureRandom azar = new SecureRandom();
-    private Config config = Config.VACIA;
-    /** Config.conocidas() de lo cargado, hecho una vez: cada golpe y cada segundo lo preguntan. */
-    private Set<String> conocidas = Set.of();
-    private final Map<UUID, Guardado> guardado = new HashMap<>();
     /** Lo que quedo por gastar de la ultima perdida de hambre y del ultimo desgaste (ver hambre()). */
     private final Map<UUID, double[]> restoHambre = new HashMap<>();
     private final Map<UUID, double[]> restoDurabilidad = new HashMap<>();
+    private boolean avisadoSinApi;
 
     Equipo(Hardcore hc) {
         this.hc = hc;
         cargar();
         hc.plugin().getServer().getPluginManager().registerEvents(this, hc.plugin());
         Subcomandos.lw().registrar("equipo",
-                "equipo [jugador]: lo que cuenta de su equipo en Calamity (equipo.yml) y lo que suma",
+                "equipo [jugador]: lo que cuenta de su equipo en Calamity (efectos de GodItems) y lo que suma",
                 "ederus.mundos", this::comando, args -> args.length == 2 ? Entregas.nombresConectados() : List.of());
         Autotest.registrar("equipo", this::autotest);
     }
 
     void parar() {
         HandlerList.unregisterAll(this);
-        guardado.clear();
         restoHambre.clear();
         restoDurabilidad.clear();
     }
 
-    // ================================================================ equipo.yml
+    private static boolean hayApi() {
+        try {
+            Class.forName("net.ederus.edm.goditems.api.EquipoApi", false, Equipo.class.getClassLoader());
+            return true;
+        } catch (Throwable t) {
+            return false;
+        }
+    }
+
+    /** True si GodItems esta en marcha y se le puede preguntar. */
+    static boolean conApi() {
+        try {
+            return HAY_API && Api.disponible();
+        } catch (Throwable t) {
+            return false;
+        }
+    }
+
+    // ================================================================ carga
 
     /**
-     * Lee equipo.yml (de la carpeta del plugin; la primera vez se escribe el del jar). Nunca lanza: un
-     * fichero roto es "sin efectos" y se dice en consola. Devuelve el resumen para /calamidad reload.
+     * Ya no hay nada que leer: solo se comprueba que GodItems esta y se avisa si queda el equipo.yml
+     * viejo con piezas o sets (que ya no hacen nada). Devuelve el resumen para /calamidad reload.
      */
     String cargar() {
-        LectorMmo.detectar(hc.plugin().getLogger());
-        File f = new File(hc.plugin().getDataFolder(), FICHERO);
-        if (!f.exists()) {
-            try {
-                hc.plugin().saveResource(FICHERO, false);
-            } catch (IllegalArgumentException sinRecurso) {
-                // Un jar sin equipo.yml: se sigue sin efectos.
-            }
+        if (!conApi() && !avisadoSinApi) {
+            avisadoSinApi = true;
+            hc.plugin().getLogger().warning("[Calamity] GodItems (EDM 1.72.2 o mas) no esta en marcha:"
+                    + " el equipo no hace nada en Calamity hasta que este.");
         }
-        Config c;
-        try {
-            c = f.exists() ? leer(yaml(Files.readString(f.toPath(), StandardCharsets.UTF_8))) : Config.VACIA;
-        } catch (IOException | InvalidConfigurationException | RuntimeException e) {
-            String motivo = e.getMessage() == null ? e.toString() : e.getMessage().replace('\n', ' ').replaceAll(" {2,}", " ");
-            hc.plugin().getLogger().warning("[Calamity] " + FICHERO + " no se puede leer, el equipo no hace nada en Calamity: "
-                    + motivo);
-            c = new Config(Map.of(), List.of(), topesDeSerie(), List.of("no se puede leer: " + motivo));
+        File viejo = new File(hc.plugin().getDataFolder(), FICHERO_VIEJO);
+        if (viejo.exists() && viejoConPiezas(viejo)) {
+            hc.plugin().getLogger().warning("[Calamity] " + FICHERO_VIEJO + " ya no se lee (Calamity 1.6):"
+                    + " pasa sus piezas y sets a " + DONDE + " con las claves calamity.*");
         }
-        // Lo que solo se sabe con el servidor delante: ids mal escritos y plantillas que MMOItems no tiene
-        // (los items de Calamity se estan moviendo a los tipos CALAMITY, CALAMITY_ARMAS...).
-        List<String> avisos = new ArrayList<>(c.avisos());
-        boolean mmo = LectorMmo.conMmoItems();
-        for (String id : c.conocidas()) {
-            if (LectorMmo.partir(id) == null) avisos.add("'" + id + "' no es TIPO.ID: esa pieza no se encuentra nunca");
-            else if (mmo && !LectorMmo.existe(id)) avisos.add("'" + id + "' no existe en MMOItems (¿ha cambiado de tipo?)");
-        }
-        config = new Config(c.piezas(), c.sets(), c.topes(), List.copyOf(avisos));
-        conocidas = Set.copyOf(config.conocidas());
-        guardado.clear();
-        for (String a : avisos) hc.plugin().getLogger().warning("[Calamity] " + FICHERO + ": " + a);
         return resumen();
     }
 
-    /** "3 piezas y 1 set" (y los avisos, si hay). */
+    private static boolean viejoConPiezas(File f) {
+        try {
+            YamlConfiguration y = new YamlConfiguration();
+            y.options().pathSeparator('/');
+            y.load(f);
+            var p = y.getConfigurationSection("piezas");
+            var s = y.getConfigurationSection("sets");
+            return (p != null && !p.getKeys(false).isEmpty()) || (s != null && !s.getKeys(false).isEmpty());
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
     String resumen() {
-        Config c = config;
-        String s = c.piezas().size() + (c.piezas().size() == 1 ? " pieza" : " piezas") + " y " + c.sets().size()
-                + (c.sets().size() == 1 ? " set" : " sets");
-        return c.avisos().isEmpty() ? s : s + ", " + c.avisos().size() + " aviso(s) en consola";
-    }
-
-    /** Un texto YAML leido con '/' de separador (el fichero y las pruebas del autotest). */
-    static YamlConfiguration yaml(String texto) throws InvalidConfigurationException {
-        YamlConfiguration y = new YamlConfiguration();
-        y.options().pathSeparator(SEPARADOR);
-        y.loadFromString(texto == null ? "" : texto);
-        return y;
-    }
-
-    /** equipo.yml ya cargado con '/' a Config. Sin Bukkit alrededor: el autotest le da textos propios. */
-    static Config leer(YamlConfiguration y) {
-        List<String> avisos = new ArrayList<>();
-        Map<Efecto, Double> topes = topesDeSerie();
-        ConfigurationSection t = y.getConfigurationSection("topes");
-        if (t != null) {
-            for (String k : t.getKeys(false)) {
-                Efecto e = Efecto.de(k);
-                if (e == null) {
-                    avisos.add("topes: '" + k + "' no es un efecto (hay: " + String.join(", ", Efecto.claves()) + ")");
-                } else if (!t.isDouble(k) && !t.isInt(k)) {
-                    avisos.add("topes > " + k + ": '" + t.get(k) + "' no es un número");
-                } else {
-                    // Lo que quita no puede pasar de 1 (quitar mas del 100 % no existe); lo que suma, si.
-                    double v = Math.max(0, t.getDouble(k));
-                    topes.put(e, e.suma ? v : Math.min(1, v));
-                }
-            }
-        }
-        Map<String, Map<Efecto, Double>> piezas = new LinkedHashMap<>();
-        ConfigurationSection ps = y.getConfigurationSection("piezas");
-        if (ps != null) {
-            for (String k : ps.getKeys(false)) {
-                String id = k.trim().toUpperCase(Locale.ROOT);
-                ConfigurationSection s = ps.getConfigurationSection(k);
-                if (s == null) {
-                    avisos.add("piezas > " + k + ": no tiene efectos debajo");
-                    continue;
-                }
-                piezas.put(id, efectos(s, "piezas > " + k, avisos));
-            }
-        }
-        List<Conjunto> sets = new ArrayList<>();
-        ConfigurationSection ss = y.getConfigurationSection("sets");
-        if (ss != null) {
-            for (String k : ss.getKeys(false)) {
-                ConfigurationSection s = ss.getConfigurationSection(k);
-                if (s == null) continue;
-                List<String> ids = new ArrayList<>();
-                for (String x : s.getStringList("piezas")) {
-                    String id = x.trim().toUpperCase(Locale.ROOT);
-                    if (!id.isEmpty() && !ids.contains(id)) ids.add(id);
-                }
-                if (ids.isEmpty()) avisos.add("sets > " + k + ": sin piezas, no se completa nunca");
-                int necesita = Math.max(1, s.getInt("necesita", Math.max(1, ids.size())));
-                if (necesita > ids.size() && !ids.isEmpty()) {
-                    avisos.add("sets > " + k + ": necesita " + necesita + " y solo tiene " + ids.size() + " piezas");
-                }
-                ConfigurationSection b = s.getConfigurationSection("bono");
-                sets.add(new Conjunto(k, List.copyOf(ids), necesita,
-                        b == null ? Map.of() : efectos(b, "sets > " + k + " > bono", avisos)));
-            }
-        }
-        return new Config(Collections.unmodifiableMap(piezas), List.copyOf(sets), Collections.unmodifiableMap(topes),
-                List.copyOf(avisos));
-    }
-
-    private static Map<Efecto, Double> efectos(ConfigurationSection s, String donde, List<String> avisos) {
-        Map<Efecto, Double> out = new EnumMap<>(Efecto.class);
-        for (String k : s.getKeys(false)) {
-            Efecto e = Efecto.de(k);
-            if (e == null) {
-                avisos.add(donde + ": '" + k + "' no es un efecto (hay: " + String.join(", ", Efecto.claves()) + ")");
-                continue;
-            }
-            if (!s.isDouble(k) && !s.isInt(k)) {
-                avisos.add(donde + " > " + k + ": '" + s.get(k) + "' no es un número");
-                continue;
-            }
-            out.put(e, s.getDouble(k));
-        }
-        return Collections.unmodifiableMap(out);
-    }
-
-    static Map<Efecto, Double> topesDeSerie() {
-        Map<Efecto, Double> m = new EnumMap<>(Efecto.class);
-        for (Efecto e : Efecto.values()) m.put(e, e.topeDeSerie);
-        return m;
-    }
-
-    Config config() {
-        return config;
+        if (!conApi()) return "sin GodItems: el equipo no hace nada";
+        return "de GodItems (" + Api.resumen() + ")" + (Api.hayClaves() ? "" : ", ninguna pieza da claves calamity.*");
     }
 
     // ================================================================= cuentas
 
-    /** Cuantas piezas de ese set hay entre las puestas. */
-    static int tiene(Conjunto s, Collection<String> puestas) {
-        int n = 0;
-        for (String id : s.piezas()) if (puestas.contains(id)) n++;
-        return n;
-    }
-
-    /**
-     * Lo que suman estas piezas con este equipo.yml: cada pieza, mas el bono de cada set que completan;
-     * y por efecto, con su tope. Lo que baja de -1 se queda en -1 (una maldicion no pasa del 100 %).
-     */
-    static Total total(Config c, Collection<String> puestas) {
-        if (puestas == null || puestas.isEmpty()) return Total.VACIO;
-        Map<Efecto, Double> bruto = new EnumMap<>(Efecto.class);
-        for (String id : puestas) {
-            Map<Efecto, Double> m = c.piezas().get(id);
-            if (m != null) m.forEach((e, v) -> bruto.merge(e, v, Double::sum));
-        }
-        for (Conjunto s : c.sets()) {
-            if (tiene(s, puestas) >= s.necesita()) s.bono().forEach((e, v) -> bruto.merge(e, v, Double::sum));
-        }
-        if (bruto.isEmpty()) return Total.VACIO;
-        Map<Efecto, Double> topado = new EnumMap<>(Efecto.class);
-        bruto.forEach((e, v) -> topado.put(e, Math.max(-1, Math.min(c.tope(e), v))));
-        return new Total(Collections.unmodifiableMap(bruto), Collections.unmodifiableMap(topado));
-    }
-
-    /** Si el item es una pieza de armadura (casco, peto, grebas, botas; no una cabeza ni una calabaza). */
-    static boolean esArmadura(ItemStack item) {
-        return sitio(item) != null;
-    }
-
-    /**
-     * El hueco de armadura de un item, o null si no es armadura. Manda su componente equippable si lo
-     * trae; si no, el material. Los bloques (cabezas, calabazas) no cuentan como armadura: un talisman
-     * con forma de cabeza se lleva en la mano.
-     */
-    static EquipmentSlot sitio(ItemStack item) {
-        if (item == null || item.getType().isAir()) return null;
-        Material m = item.getType();
-        if (m.isBlock()) return null;
-        EquipmentSlot s;
-        ItemMeta meta = item.hasItemMeta() ? item.getItemMeta() : null;
-        try {
-            s = meta != null && meta.hasEquippable() ? meta.getEquippable().getSlot() : m.getEquipmentSlot();
-        } catch (Throwable t) {
-            s = m.getEquipmentSlot();
-        }
-        return s == EquipmentSlot.HEAD || s == EquipmentSlot.CHEST || s == EquipmentSlot.LEGS || s == EquipmentSlot.FEET
-                ? s : null;
-    }
-
-    /** Lo que lleva en cada hueco que cuenta (armadura y manos). */
-    static Map<EquipmentSlot, ItemStack> equipoDe(Player p) {
-        Map<EquipmentSlot, ItemStack> out = new EnumMap<>(EquipmentSlot.class);
-        EntityEquipment eq = p == null ? null : p.getEquipment();
-        if (eq == null) return out;
-        for (EquipmentSlot s : HUECOS) {
-            ItemStack i = eq.getItem(s);
-            if (i != null && !i.getType().isAir()) out.put(s, i);
-        }
-        return out;
-    }
-
-    /** Cada hueco leido, tambien los vacios (para /calamidad equipo). */
-    static List<Hueco> huecos(Map<EquipmentSlot, ItemStack> equipo) {
-        List<Hueco> out = new ArrayList<>();
-        for (EquipmentSlot s : HUECOS) {
-            ItemStack i = equipo.get(s);
-            if (i == null || i.getType().isAir()) {
-                out.add(new Hueco(s, null, null, false, null));
-                continue;
-            }
-            LectorMmo.Lectura l = LectorMmo.leer(i);
-            if (l == null) {
-                out.add(new Hueco(s, i, null, false, "no es de MMOItems"));
-            } else if (s.isHand() && esArmadura(i)) {
-                out.add(new Hueco(s, i, l, false, "armadura en la mano: solo cuenta puesta"));
-            } else {
-                out.add(new Hueco(s, i, l, true, null));
-            }
-        }
-        return out;
-    }
-
-    /** Los ids que cuentan, cada uno una vez. */
-    static Set<String> puestas(List<Hueco> huecos) {
-        Set<String> out = new LinkedHashSet<>();
-        for (Hueco h : huecos) if (h.cuenta()) out.add(h.lectura().id());
-        return out;
-    }
-
-    /** Lo que suma el equipo de este jugador ahora mismo (guardado por tick). */
-    Total total(Player p) {
-        Config c = config;
-        Set<String> conocidas = this.conocidas;
-        if (p == null || conocidas.isEmpty()) return Total.VACIO;
-        int tick = Bukkit.getCurrentTick();
-        Guardado g = guardado.get(p.getUniqueId());
-        if (g != null && g.tick() == tick) return g.total();
-        Set<String> puestas = new LinkedHashSet<>();
-        for (String id : puestas(huecos(equipoDe(p)))) if (conocidas.contains(id)) puestas.add(id);
-        Total t = total(c, puestas);
-        guardado.put(p.getUniqueId(), new Guardado(tick, t));
-        return t;
-    }
-
-    /** Lo que el equipo de ese jugador pone en ese efecto, ya topado; 0 si nada. */
+    /** Lo que el equipo de ese jugador pone en ese efecto, ya topado por GodItems; 0 si nada. */
     double valor(Player p, Efecto e) {
-        return total(p).de(e);
+        if (p == null || !conApi()) return 0;
+        try {
+            return Api.efecto(p, e.api());
+        } catch (Throwable t) {
+            return 0;
+        }
     }
 
     // ============================================ lo que hace cada efecto (puro)
@@ -503,8 +213,7 @@ final class Equipo implements Listener {
     /**
      * La comida que le queda tras perder hambre (Hardcore.onHambre). Con f = 0 es la cuenta de siempre,
      * tal cual. Con equipo, el castigo es fraccionario (1,5 puntos) y la comida va en enteros: lo que no
-     * llega a un punto se guarda en resto y se cobra en la siguiente perdida. Sin eso, 1,5 se redondeaba
-     * a 2 y el efecto no hacia nada.
+     * llega a un punto se guarda en resto y se cobra en la siguiente perdida.
      */
     static int hambre(int antes, int nueva, double factor, double f, double[] resto) {
         if (f == 0 || resto == null) return (int) Math.max(0, antes - (antes - nueva) * factor);
@@ -555,8 +264,7 @@ final class Equipo implements Listener {
 
     /**
      * Escala el dano FINAL (el que de verdad quita, tras armadura y demas) por factor. Bukkit recalcula los
-     * modificadores desde la base y la armadura no es lineal: se corrige hasta clavarlo (dos pasadas
-     * suelen bastar). Sin nada que escalar despues de la absorcion, se escala la base.
+     * modificadores desde la base y la armadura no es lineal: se corrige hasta clavarlo.
      */
     static void escalarFinal(EntityDamageEvent e, double factor) {
         if (factor == 1) return;
@@ -571,6 +279,22 @@ final class Equipo implements Listener {
             if (ahora <= 1e-9 || Math.abs(ahora - deseado) <= 1e-6) break;
             e.setDamage(Math.max(0, e.getDamage() * deseado / ahora));
         }
+    }
+
+    /** El hueco de armadura de un item, o null (no una cabeza ni una calabaza). Igual que en GodItems. */
+    static EquipmentSlot sitio(ItemStack item) {
+        if (item == null || item.getType().isAir()) return null;
+        Material m = item.getType();
+        if (m.isBlock()) return null;
+        EquipmentSlot s;
+        ItemMeta meta = item.hasItemMeta() ? item.getItemMeta() : null;
+        try {
+            s = meta != null && meta.hasEquippable() ? meta.getEquippable().getSlot() : m.getEquipmentSlot();
+        } catch (Throwable t) {
+            s = m.getEquipmentSlot();
+        }
+        return s == EquipmentSlot.HEAD || s == EquipmentSlot.CHEST || s == EquipmentSlot.LEGS || s == EquipmentSlot.FEET
+                ? s : null;
     }
 
     // ================================================== ganchos (desde otros modulos)
@@ -608,101 +332,43 @@ final class Equipo implements Listener {
     }
 
     /**
-     * parca-dano-recibido: lo que pega la PARCA, en sus dos implementaciones (PeleaParca y ParcaAnomalia):
-     * su golpe cuerpo a cuerpo, sus tecnicas (golpear() con ella de fuente) y lo que dispare. El dano
-     * verdadero (Siega, Sentencia) no pasa por aqui: lo recorta DanoVerdadero.aplicar. HIGHEST: se escala
-     * lo que quede despues de armadura y de lo que hayan hecho los demas.
+     * parca-dano-recibido: lo que pega la PARCA, en sus dos implementaciones: su golpe, sus tecnicas y lo
+     * que dispare. El dano verdadero (Siega, Sentencia) lo recorta DanoVerdadero.aplicar. HIGHEST: se
+     * escala lo que quede despues de armadura y de lo que hayan hecho los demas.
      */
     @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
     public void onDanoParca(EntityDamageEvent e) {
-        if (!(e.getEntity() instanceof Player p) || conocidas.isEmpty()) return;
-        // El golpe letal del dano verdadero ya viene recortado: no se toca dos veces.
+        if (!(e.getEntity() instanceof Player p)) return;
         if (DanoVerdadero.enCurso.contains(p.getUniqueId()) || !esDeParca(causa(e))) return;
         double f = hc.valor("equipo", () -> valor(p, Efecto.PARCA_DANO_RECIBIDO), 0.0);
         if (f != 0) escalarFinal(e, 1 - f);
     }
 
     /**
-     * eco-dano: lo que un jugador le hace a un Eco (a mano, con flechas; el golpe al maniqui llega aqui
-     * pasado al cuerpo). HIGH: antes de que Amenazas lo escale a la vida logica y lo tope por golpe en
-     * HIGHEST, asi que el tope por golpe sigue mandando.
+     * eco-dano: lo que un jugador le hace a un Eco. HIGH: antes de que Amenazas lo escale a la vida logica
+     * y lo tope por golpe en HIGHEST, asi que el tope por golpe sigue mandando.
      */
     @EventHandler(priority = EventPriority.HIGH, ignoreCancelled = true)
     public void onDanoEco(EntityDamageEvent e) {
-        if (conocidas.isEmpty() || !"eco".equals(Marcas.amenaza(e.getEntity()))) return;
+        if (!"eco".equals(Marcas.amenaza(e.getEntity()))) return;
         if (!(causa(e) instanceof Player p)) return;
         double f = hc.valor("equipo", () -> valor(p, Efecto.ECO_DANO), 0.0);
         if (f != 0) escalarFinal(e, 1 + f);
     }
 
-    // Lo guardado del tick se tira en cuanto cambia algo del equipo (el cambio puede llegar a mitad de tick).
-
-    private void olvidarTick(Entity e) {
-        if (e instanceof Player p) guardado.remove(p.getUniqueId());
-    }
-
-    /** El de Paper: cualquier hueco (armadura y manos) que cambia, lo cambie quien lo cambie. */
-    @EventHandler(priority = EventPriority.MONITOR)
-    public void onCambioEquipo(EntityEquipmentChangedEvent e) {
-        olvidarTick(e.getEntity());
-    }
-
-    @EventHandler(priority = EventPriority.MONITOR)
-    public void onMano(PlayerItemHeldEvent e) {
-        olvidarTick(e.getPlayer());
-    }
-
-    @EventHandler(priority = EventPriority.MONITOR)
-    public void onCambiarManos(PlayerSwapHandItemsEvent e) {
-        olvidarTick(e.getPlayer());
-    }
-
-    @EventHandler(priority = EventPriority.MONITOR)
-    public void onClic(InventoryClickEvent e) {
-        olvidarTick(e.getWhoClicked());
-    }
-
-    @EventHandler(priority = EventPriority.MONITOR)
-    public void onArrastrar(InventoryDragEvent e) {
-        olvidarTick(e.getWhoClicked());
-    }
-
-    @EventHandler(priority = EventPriority.MONITOR)
-    public void onSoltar(PlayerDropItemEvent e) {
-        olvidarTick(e.getPlayer());
-    }
-
-    @EventHandler(priority = EventPriority.MONITOR)
-    public void onRecoger(EntityPickupItemEvent e) {
-        olvidarTick(e.getEntity());
-    }
-
-    @EventHandler(priority = EventPriority.MONITOR)
-    public void onRomper(PlayerItemBreakEvent e) {
-        olvidarTick(e.getPlayer());
-    }
-
-    @EventHandler(priority = EventPriority.MONITOR)
-    public void onReaparecer(PlayerRespawnEvent e) {
-        olvidarTick(e.getPlayer());
-    }
-
-    @EventHandler(priority = EventPriority.MONITOR)
-    public void onCambiarMundo(PlayerChangedWorldEvent e) {
-        olvidarTick(e.getPlayer());
-    }
-
     @EventHandler(priority = EventPriority.MONITOR)
     public void onSalir(PlayerQuitEvent e) {
         UUID u = e.getPlayer().getUniqueId();
-        guardado.remove(u);
         restoHambre.remove(u);
         restoDurabilidad.remove(u);
     }
 
     // ================================================================== comando
 
-    /** /calamidad equipo [jugador]: cada hueco, por quien se lee, lo que suma cada pieza y el set, y el total. */
+    /**
+     * /calamidad equipo [jugador]: el informe de GodItems acotado a calamity.* (cada hueco, que cuenta y
+     * por que no, los sets y el total con topes) y, para los castigos, en que se queda el x2.
+     */
     private void comando(CommandSender quien, String[] args) {
         Player p = args.length >= 2 ? Bukkit.getPlayerExact(args[1]) : (quien instanceof Player j ? j : null);
         if (p == null) {
@@ -710,103 +376,27 @@ final class Equipo implements Listener {
                     : "Uso: /calamidad equipo <jugador>"));
             return;
         }
-        Config c = config;
-        Set<String> conocidas = this.conocidas;
         quien.sendMessage(Paleta.mensaje(Component.text("Equipo de ").append(Component.text(p.getName(), Paleta.DETALLE))
                 .append(Component.text(" en Calamity"))));
-        quien.sendMessage(Component.text("  " + FICHERO + ": " + resumen() + "  ·  se lee con " + LectorMmo.origen(),
-                Paleta.TENUE));
-        List<Hueco> hs = huecos(equipoDe(p));
-        for (Hueco h : hs) quien.sendMessage(lineaHueco(h, c, conocidas));
-        Set<String> puestas = new LinkedHashSet<>();
-        for (String id : puestas(hs)) if (conocidas.contains(id)) puestas.add(id);
-        for (Conjunto s : c.sets()) {
-            int n = tiene(s, puestas);
-            if (n == 0) continue;
-            boolean activo = n >= s.necesita();
-            Component l = Component.text("  Set " + s.id() + "  ", Paleta.TENUE)
-                    .append(Component.text(n + "/" + s.piezas().size(), Paleta.CIFRA))
-                    .append(Component.text(" (necesita " + s.necesita() + ")  ·  ", Paleta.TENUE));
-            l = activo ? l.append(efectos(s.bono(), "bono sin efectos")) : l.append(Component.text("sin bono aún", Paleta.TENUE));
-            quien.sendMessage(l);
+        if (!conApi()) {
+            quien.sendMessage(Component.text("  GodItems no está en marcha (hace falta EDM 1.72.2 o más): el equipo"
+                    + " no hace nada en Calamity.", Paleta.AVISO));
+            return;
         }
-        Total t = total(c, puestas);
-        if (t.bruto().isEmpty()) {
-            quien.sendMessage(Component.text("  Total: nada. Su equipo no hace nada propio de Calamity.", Paleta.TEXTO));
-        } else {
-            quien.sendMessage(Component.text("  Total, con los topes:", Paleta.TEXTO));
-            for (Efecto e : Efecto.values()) {
-                Double bruto = t.bruto().get(e);
-                if (bruto == null) continue;
-                double v = t.de(e);
-                Component l = Component.text("    ").append(efecto(e, v))
-                        .append(Component.text("  (tope " + porcentaje(c.tope(e))
-                                + (Math.abs(bruto - v) > 1e-9 ? ", sin tope sería " + porcentaje(bruto) : "") + ")"
-                                + efectoReal(e, v), Paleta.TENUE));
-                quien.sendMessage(l);
-            }
+        quien.sendMessage(Component.text("  Los efectos y los topes viven en " + DONDE + " (GodItems).", Paleta.TENUE));
+        for (String l : Api.informe(p)) quien.sendMessage(net.ederus.edm.comun.Estilo.legado(l));
+        for (Efecto e : new Efecto[]{Efecto.HAMBRE, Efecto.DURABILIDAD, Efecto.CAIDAS}) {
+            double v = valor(p, e);
+            if (v == 0) continue;
+            quien.sendMessage(Component.text("  " + e.texto + ": " + efectoReal(e, v), Paleta.TENUE));
         }
         if (!hc.esHardcore(p)) {
             quien.sendMessage(Component.text("  Está fuera de Calamity: todo esto solo cuenta dentro"
                     + " (menos el daño de la PARCA, que cuenta donde le pegue).", Paleta.TENUE));
         }
-        for (String a : c.avisos()) quien.sendMessage(Component.text("  " + FICHERO + ": " + a, Paleta.AVISO));
     }
 
-    private static Component lineaHueco(Hueco h, Config c, Set<String> conocidas) {
-        Component l = Component.text("  " + nombreHueco(h.slot()) + "  ", Paleta.TENUE);
-        if (h.item() == null) return l.append(Component.text("vacío", Paleta.SEPARADOR));
-        if (h.lectura() == null) {
-            return l.append(Component.text(h.item().getType().getKey().getKey(), Paleta.TEXTO))
-                    .append(Component.text("  ·  " + h.porQueNo(), Paleta.SEPARADOR));
-        }
-        String id = h.lectura().id();
-        l = l.append(Component.text(id, Paleta.DETALLE))
-                .append(Component.text("  ·  " + h.lectura().fuente().texto + "  ·  ", Paleta.TENUE));
-        if (!h.cuenta()) return l.append(Component.text("no cuenta: " + h.porQueNo(), Paleta.AVISO));
-        if (!conocidas.contains(id)) return l.append(Component.text("no está en " + FICHERO, Paleta.SEPARADOR));
-        Map<Efecto, Double> propios = c.piezas().get(id);
-        List<String> sets = new ArrayList<>();
-        for (Conjunto s : c.sets()) if (s.piezas().contains(id)) sets.add(s.id());
-        Component e = propios == null || propios.isEmpty()
-                ? Component.text("sin efectos propios", Paleta.TENUE) : efectos(propios, "sin efectos propios");
-        return l.append(e).append(sets.isEmpty() ? Component.empty()
-                : Component.text("  ·  set " + String.join(", ", sets), Paleta.TENUE));
-    }
-
-    private static String nombreHueco(EquipmentSlot s) {
-        return switch (s) {
-            case HEAD -> "Cabeza   ";
-            case CHEST -> "Pecho    ";
-            case LEGS -> "Piernas  ";
-            case FEET -> "Pies     ";
-            case HAND -> "Mano     ";
-            case OFF_HAND -> "Otra mano";
-            default -> s.name();
-        };
-    }
-
-    /** "−10 % drenaje de cordura, +20 % daño a los Ecos". */
-    private static Component efectos(Map<Efecto, Double> m, String siVacio) {
-        if (m.isEmpty()) return Component.text(siVacio, Paleta.TENUE);
-        Component out = Component.empty();
-        boolean primero = true;
-        for (Map.Entry<Efecto, Double> x : m.entrySet()) {
-            if (!primero) out = out.append(Component.text(", ", Paleta.SEPARADOR));
-            out = out.append(efecto(x.getKey(), x.getValue()));
-            primero = false;
-        }
-        return out;
-    }
-
-    /** "−10 % drenaje de cordura" (lo que quita) o "+20 % daño a los Ecos" (lo que suma); al reves si es negativo. */
-    private static Component efecto(Efecto e, double v) {
-        boolean baja = e.suma ? v < 0 : v >= 0;
-        return Component.text((baja ? "−" : "+") + porcentaje(Math.abs(v)), Paleta.CIFRA)
-                .append(Component.text(" " + e.texto, Paleta.TEXTO));
-    }
-
-    /** Para los castigos, en que se queda el x2 de la config con ese valor: " · hambre x2 → x1,5". */
+    /** Para los castigos, en que se queda el x2 de la config con ese valor: "x2 → x1,5". */
     private String efectoReal(Efecto e, double v) {
         String clave = switch (e) {
             case HAMBRE -> "hambre";
@@ -816,7 +406,7 @@ final class Equipo implements Listener {
         };
         if (clave == null) return "";
         double base = hc.cfg().getDouble("dificultad." + clave, 2.0);
-        return "  ·  x" + numero(base) + " → x" + numero(castigo(base, v));
+        return "x" + numero(base) + " → x" + numero(castigo(base, v));
     }
 
     /** 0,125 -> "12,5 %"; 0,1 -> "10 %". */
@@ -834,77 +424,7 @@ final class Equipo implements Listener {
     private List<String> autotest() {
         Autotest.Hoja h = new Autotest.Hoja();
 
-        // 1. Las claves con punto: TIPO.ID entra entero, y en minusculas tambien.
-        String texto = """
-                topes:
-                  eco-dano: 0.30
-                  cordura-drenaje: 0.50
-                piezas:
-                  CALAMITY.YELMO_PRUEBA:
-                    cordura-drenaje: 0.10
-                    eco-dano: 0.20
-                  calamity_armas.hacha_prueba:
-                    eco-dano: 0.15
-                  CALAMITY.CORAZA_PRUEBA:
-                    cordura-drenaje: 0.30
-                    clave-que-no-existe: 1
-                  CALAMITY.MALDITA_PRUEBA:
-                    hambre: -3
-                sets:
-                  prueba:
-                    piezas: [CALAMITY.YELMO_PRUEBA, CALAMITY.CORAZA_PRUEBA, calamity_armas.hacha_prueba]
-                    necesita: 2
-                    bono:
-                      cordura-drenaje: 0.25
-                      parca-dano-recibido: 0.10
-                """;
-        Config c;
-        try {
-            c = leer(yaml(texto));
-        } catch (InvalidConfigurationException e) {
-            return List.of("el texto de prueba no se lee: " + e.getMessage());
-        }
-        h.ok("CALAMITY.YELMO_PRUEBA entra entera, con su punto", c.piezas().containsKey("CALAMITY.YELMO_PRUEBA"));
-        h.ok("no se parte en una seccion CALAMITY", !c.piezas().containsKey("CALAMITY"));
-        h.ok("en minusculas entra en mayusculas: CALAMITY_ARMAS.HACHA_PRUEBA", c.piezas().containsKey("CALAMITY_ARMAS.HACHA_PRUEBA"));
-        h.igual("cuatro piezas", 4, c.piezas().size());
-        h.igual("las piezas del set, en mayusculas", List.of("CALAMITY.YELMO_PRUEBA", "CALAMITY.CORAZA_PRUEBA",
-                "CALAMITY_ARMAS.HACHA_PRUEBA"), c.sets().isEmpty() ? null : c.sets().get(0).piezas());
-        try {
-            YamlConfiguration conPunto = new YamlConfiguration();
-            conPunto.loadFromString(texto);
-            ConfigurationSection ps = conPunto.getConfigurationSection("piezas");
-            h.ok("con el '.' de Bukkit la clave SI se partiria (el fallo de PremioPescao)",
-                    ps != null && ps.getKeys(false).contains("CALAMITY") && !ps.getKeys(false).contains("CALAMITY.YELMO_PRUEBA"));
-        } catch (InvalidConfigurationException e) {
-            h.ok("el texto de prueba con '.': " + e.getMessage(), false);
-        }
-        h.igual("una clave que no es un efecto se avisa", 1L,
-                c.avisos().stream().filter(a -> a.contains("clave-que-no-existe")).count());
-        h.cerca("tope de la config (eco-dano 0,30)", 0.30, c.tope(Efecto.ECO_DANO), 1e-9);
-        h.cerca("tope de serie si la config no lo trae (PARCA 0,30)", Efecto.PARCA_DANO_RECIBIDO.topeDeSerie,
-                c.tope(Efecto.PARCA_DANO_RECIBIDO), 1e-9);
-
-        // 2. Suma de piezas y set, y topes.
-        Total una = total(c, List.of("CALAMITY.YELMO_PRUEBA"));
-        h.cerca("una pieza: su drenaje", 0.10, una.de(Efecto.CORDURA_DRENAJE), 1e-9);
-        h.cerca("una pieza no completa el set: nada de PARCA", 0, una.de(Efecto.PARCA_DANO_RECIBIDO), 1e-9);
-        Total dos = total(c, List.of("CALAMITY.YELMO_PRUEBA", "CALAMITY_ARMAS.HACHA_PRUEBA"));
-        h.cerca("dos piezas suman: eco-dano 0,20 + 0,15 sin tope", 0.35, dos.bruto().get(Efecto.ECO_DANO), 1e-9);
-        h.cerca("y con el tope de 0,30 se queda en 0,30", 0.30, dos.de(Efecto.ECO_DANO), 1e-9);
-        h.cerca("dos del set: su bono de drenaje (0,10 + 0,25)", 0.35, dos.de(Efecto.CORDURA_DRENAJE), 1e-9);
-        h.cerca("dos del set: su bono de PARCA", 0.10, dos.de(Efecto.PARCA_DANO_RECIBIDO), 1e-9);
-        Total tres = total(c, List.of("CALAMITY.YELMO_PRUEBA", "CALAMITY_ARMAS.HACHA_PRUEBA", "CALAMITY.CORAZA_PRUEBA"));
-        h.cerca("tres piezas: drenaje 0,10 + 0,30 + 0,25 sin tope", 0.65, tres.bruto().get(Efecto.CORDURA_DRENAJE), 1e-9);
-        h.cerca("tres piezas: topado a 0,50", 0.50, tres.de(Efecto.CORDURA_DRENAJE), 1e-9);
-        h.cerca("una maldicion (-3) no baja de -1", -1, total(c, List.of("CALAMITY.MALDITA_PRUEBA")).de(Efecto.HAMBRE), 1e-9);
-        h.ok("un id que no esta en equipo.yml no suma nada", total(c, List.of("CALAMITY.OTRA_COSA")).vacio());
-
-        // 3. Sin equipo, todo igual que en Calamity 1.3 (las formulas de entonces, copiadas aqui).
-        Total nada = total(c, List.of());
-        boolean ceros = true;
-        for (Efecto e : Efecto.values()) ceros &= nada.de(e) == 0;
-        h.ok("sin piezas, los nueve efectos a 0", ceros);
+        // 1. Sin equipo, todo igual que en Calamity 1.3 (las formulas de entonces, copiadas aqui).
         h.ok("sin equipo el drenaje no cambia", menos(1.7, 0) == 1.7 && menos(2.0 * 2.0 * 1.3, 0) == 2.0 * 2.0 * 1.3);
         h.ok("sin equipo la probabilidad de alucinar no cambia", menos(2 / 3.0, 0) == 2 / 3.0);
         h.ok("sin equipo el dano de la PARCA no cambia (factor 1)", menos(1.0, 0) == 1.0);
@@ -934,9 +454,8 @@ final class Equipo implements Listener {
         boolean esIgual = true;
         for (int n = 0; n <= 6; n++) esIgual &= esencias(n, 0, () -> 0.0) == n;
         h.ok("sin equipo las Esencias no cambian", esIgual);
-        h.ok("un jugador sin nada puesto no suma nada", total(c, puestas(huecos(Map.of()))).vacio());
 
-        // 4. Con equipo: los castigos fraccionarios se cobran de verdad (no se redondean a x2).
+        // 2. Con equipo: los castigos fraccionarios se cobran de verdad (no se redondean a x2).
         h.cerca("x2 con la mitad quitada: x1,5", 1.5, castigo(2.0, 0.5), 1e-9);
         double[] r = new double[1];
         int comida = 20;
@@ -952,92 +471,109 @@ final class Equipo implements Listener {
         h.igual("oscuridad de 3 s con la mitad: 30 ticks", 30, ticksOscuridad(3, 0.5));
         h.igual("ceniza con la mitad: 7 particulas", 7, particulasNiebla(14, 0.5));
 
-        // 5. Que cuenta: armadura puesta y las dos manos, cada pieza una vez; armadura en la mano, no.
-        ItemStack yelmo = marcado(Material.NETHERITE_HELMET, "CALAMITY", "YELMO_PRUEBA");
-        ItemStack hacha = marcado(Material.NETHERITE_AXE, "CALAMITY_ARMAS", "HACHA_PRUEBA");
-        ItemStack coraza = marcado(Material.NETHERITE_CHESTPLATE, "CALAMITY", "CORAZA_PRUEBA");
-        LectorMmo.Lectura ly = LectorMmo.leer(yelmo);
-        h.igual("un item marcado a mano se lee del PDC", "CALAMITY.YELMO_PRUEBA", ly == null ? null : ly.id());
-        h.igual("y dice que ha sido por el PDC", LectorMmo.Fuente.PDC, ly == null ? null : ly.fuente());
-        h.igual("una espada vanilla no es de MMOItems", null, LectorMmo.leer(new ItemStack(Material.DIAMOND_SWORD)));
-        Map<EquipmentSlot, ItemStack> eq = new EnumMap<>(EquipmentSlot.class);
-        eq.put(EquipmentSlot.HEAD, yelmo);
-        eq.put(EquipmentSlot.HAND, hacha);
-        eq.put(EquipmentSlot.OFF_HAND, coraza);
-        Set<String> p = puestas(huecos(eq));
-        h.ok("el yelmo puesto cuenta", p.contains("CALAMITY.YELMO_PRUEBA"));
-        h.ok("el hacha en la mano cuenta", p.contains("CALAMITY_ARMAS.HACHA_PRUEBA"));
-        h.ok("la coraza en la otra mano NO cuenta (armadura: solo puesta)", !p.contains("CALAMITY.CORAZA_PRUEBA"));
-        eq.clear();
-        eq.put(EquipmentSlot.HAND, hacha);
-        eq.put(EquipmentSlot.OFF_HAND, hacha.clone());
-        h.igual("la misma pieza en las dos manos cuenta una vez", 1, puestas(huecos(eq)).size());
-        h.ok("una cabeza (bloque) no es armadura: cuenta en la mano", !esArmadura(new ItemStack(Material.PLAYER_HEAD)));
-        h.igual("el hueco de un casco", EquipmentSlot.HEAD, sitio(new ItemStack(Material.IRON_HELMET)));
-
-        // 6. El equipo.yml de ahora, tal cual lo tiene el servidor.
-        Config ahora = config;
-        if (ahora.avisos().isEmpty()) {
-            h.ok(FICHERO + " sin avisos (" + resumen() + ")", true);
-        } else {
-            for (String a : ahora.avisos()) h.ok(FICHERO + ": " + a, false);
-        }
-
-        // 7. Items reales: con MMOItems, cada pieza de equipo.yml se genera y se lee (y si no hay
-        //    ninguna, un item de Calamity de los de ejemplo o, en ultimo caso, cualquier plantilla).
-        if (!LectorMmo.conMmoItems()) {
-            h.ok("sin MMOItems no hay items reales que generar (" + LectorMmo.origen() + ")", true);
+        // 3. GodItems: la API y las nueve claves declaradas con sus topes (en un solo sitio, alli).
+        h.ok("el EDM instalado trae la API de equipo de GodItems (EDM 1.72.2 o mas)", HAY_API);
+        if (!conApi()) {
+            h.ok("GodItems en marcha (sin el, el equipo no hace nada en Calamity)", false);
             return h.lineas();
         }
-        Set<String> reales = new LinkedHashSet<>(ahora.conocidas());
-        if (reales.isEmpty()) {
-            List<String> candidatos = new ArrayList<>(EJEMPLOS);
-            ConfigurationSection forja = hc.cfg().getConfigurationSection("forja.piezas");
-            if (forja != null) for (String k : forja.getKeys(false)) candidatos.add(String.valueOf(forja.getString(k)));
-            String elegido = null;
-            for (String id : candidatos) {
-                if (LectorMmo.existe(id)) {
-                    elegido = id.toUpperCase(Locale.ROOT);
-                    break;
-                }
+        h.ok("contrato de la API de GodItems en version 1 o mas", Api.version() >= 1);
+        for (Efecto e : Efecto.values()) {
+            Double tope = Api.tope(e.api());
+            h.ok(e.api() + " declarada en GodItems con tope (" + (tope == null ? "sin tope" : porcentaje(tope)) + ")",
+                    tope != null);
+            if (tope != null && Math.abs(tope - e.topeDeSerie) > 1e-9) {
+                h.ok("nota: " + e.api() + " va con tope " + porcentaje(tope) + " (el de serie era "
+                        + porcentaje(e.topeDeSerie) + ")", true);
             }
-            if (elegido == null) elegido = LectorMmo.algunaPlantilla();
-            if (elegido == null) {
-                h.ok("MMOItems no tiene ninguna plantilla con la que probar", false);
-                return h.lineas();
-            }
-            reales.add(elegido);
         }
-        for (String id : reales) {
-            ItemStack it = LectorMmo.crear(id);
+        File viejo = new File(hc.plugin().getDataFolder(), FICHERO_VIEJO);
+        h.ok(viejo.exists() ? FICHERO_VIEJO + " sigue en la carpeta pero ya no se lee (se puede borrar)"
+                : "no queda " + FICHERO_VIEJO + " viejo", true);
+
+        // 4. Items reales: cada pieza que da calamity.* se genera con MMOItems y, puesta, da lo suyo.
+        List<String> piezas = Api.piezas();
+        if (piezas.isEmpty()) {
+            h.ok("ninguna pieza da calamity.* todavia en " + DONDE + " (nada real que probar)", true);
+            return h.lineas();
+        }
+        for (String id : piezas) {
+            ItemStack it = Api.crear(id);
             h.ok("MMOItems genera " + id, it != null);
             if (it == null) continue;
-            LectorMmo.Lectura l = LectorMmo.leer(it);
-            h.igual("el " + id + " real se lee", id, l == null ? null : l.id());
-            h.igual("el " + id + " real se lee por la API de MMOItems", LectorMmo.Fuente.API, l == null ? null : l.fuente());
-            h.igual("el " + id + " real se lee tambien por NBTItem a mano", id, LectorMmo.porNbt(it));
-            // De punta a punta: con esa pieza en un equipo.yml y puesta donde va, da su efecto.
-            try {
-                Config sola = leer(yaml("piezas:\n  " + id + ":\n    cordura-drenaje: 0.1\n"));
-                EquipmentSlot donde = sitio(it) != null ? sitio(it) : EquipmentSlot.HAND;
-                Map<EquipmentSlot, ItemStack> puesto = new EnumMap<>(EquipmentSlot.class);
-                puesto.put(donde, it);
-                h.cerca("el " + id + " real, en " + donde + ", da su efecto", 0.1,
-                        total(sola, puestas(huecos(puesto))).de(Efecto.CORDURA_DRENAJE), 1e-9);
-            } catch (InvalidConfigurationException e) {
-                h.ok("equipo.yml de prueba con " + id + ": " + e.getMessage(), false);
+            h.igual("el " + id + " real se reconoce", id, Api.identidad(it));
+            EquipmentSlot donde = sitio(it) != null ? sitio(it) : EquipmentSlot.HAND;
+            Map<EquipmentSlot, ItemStack> eq = new EnumMap<>(EquipmentSlot.class);
+            eq.put(donde, it);
+            Map<String, Double> sim = Api.simular(eq);
+            for (Map.Entry<String, Double> x : Api.deLaPieza(id).entrySet()) {
+                double esperado = x.getValue();
+                Double tope = Api.tope(x.getKey());
+                if (tope != null) esperado = Math.min(tope, esperado);
+                h.cerca("el " + id + " real, en " + donde + ", da su " + x.getKey(), esperado,
+                        sim.getOrDefault(x.getKey(), 0.0), 1e-9);
+            }
+            if (sitio(it) != null && !Api.deLaPieza(id).isEmpty()) {
+                Map<EquipmentSlot, ItemStack> mano = new EnumMap<>(EquipmentSlot.class);
+                mano.put(EquipmentSlot.HAND, it);
+                h.ok("el " + id + " (armadura) en la mano no da nada", Api.simular(mano).isEmpty());
             }
         }
         return h.lineas();
     }
 
-    /** Un item vanilla con el tipo y el id de MMOItems en el PDC (como uno marcado a mano). */
-    private static ItemStack marcado(Material m, String tipo, String id) {
-        ItemStack i = new ItemStack(m);
-        i.editMeta(meta -> {
-            meta.getPersistentDataContainer().set(LectorMmo.PDC_TIPO, PersistentDataType.STRING, tipo);
-            meta.getPersistentDataContainer().set(LectorMmo.PDC_ID, PersistentDataType.STRING, id);
-        });
-        return i;
+    /**
+     * Las llamadas a EquipoApi, en una clase aparte: solo se carga si la API existe (HAY_API), asi que
+     * un EDM viejo no tumba Calamity con un NoClassDefFoundError.
+     */
+    private static final class Api {
+
+        static boolean disponible() {
+            return EquipoApi.disponible();
+        }
+
+        static int version() {
+            return EquipoApi.version();
+        }
+
+        static double efecto(Player p, String clave) {
+            return EquipoApi.efecto(p, clave);
+        }
+
+        static Double tope(String clave) {
+            return EquipoApi.tope(clave);
+        }
+
+        static boolean hayClaves() {
+            return EquipoApi.hayClaves(PREFIJO);
+        }
+
+        static String resumen() {
+            return EquipoApi.resumen();
+        }
+
+        static List<String> informe(Player p) {
+            return new ArrayList<>(EquipoApi.informe(p, PREFIJO));
+        }
+
+        static List<String> piezas() {
+            return EquipoApi.piezas(PREFIJO);
+        }
+
+        static ItemStack crear(String id) {
+            return EquipoApi.crear(id.toUpperCase(Locale.ROOT));
+        }
+
+        static String identidad(ItemStack it) {
+            return EquipoApi.identidad(it);
+        }
+
+        static Map<String, Double> simular(Map<EquipmentSlot, ItemStack> eq) {
+            return EquipoApi.simular(eq, PREFIJO);
+        }
+
+        static Map<String, Double> deLaPieza(String id) {
+            return EquipoApi.efectosDePieza(id, PREFIJO);
+        }
     }
 }

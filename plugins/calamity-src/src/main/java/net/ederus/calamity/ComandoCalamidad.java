@@ -229,7 +229,7 @@ public final class ComandoCalamidad implements TabExecutor {
         linea(q, "/calamidad tiempo [player]", "horas acumuladas y si tiene el tag");
         linea(q, "/calamidad menu", "panel de las reglas de dificultad");
         linea(q, "/calamidad level [player]", "de dónde sale el nivel de sus mobs");
-        linea(q, "/calamidad reload", "relee el config de Calamity y equipo.yml del disco");
+        linea(q, "/calamidad reload", "relee el config de Calamity del disco (el equipo es de GodItems: /gi reload)");
         for (String[] s : Subcomandos.lw().ayuda(q)) linea(q, "/calamidad " + s[0], s[1]);
     }
 
@@ -269,16 +269,16 @@ public final class ComandoCalamidad implements TabExecutor {
     }
 
     /**
-     * Relee el config de Calamity (y equipo.yml). Antes lo hacia /lw reload, cuando mobs: y hardcore:
+     * Relee el config de Calamity (el equipo ya no: lo lleva GodItems desde la 1.6). Antes lo hacia /lw reload, cuando mobs: y hardcore:
      * iban en el config de LethalWorld; ahora /lw reload solo relee el de los mundos.
      * No rearranca mobs ni reglas: lo que se lee en cada vuelta (topes, niveles, puertas)
      * se entera solo; lo que se monta al arrancar necesita reiniciar.
      */
     private void recargar(CommandSender q) {
         plugin.reloadConfig();
-        // Calamity 1.4: y equipo.yml, que vale al momento para los items que ya tiene cada uno.
+        // Calamity 1.6: el equipo ya no se relee aqui (es de GodItems, /gi reload); solo se dice de donde sale.
         String equipo = plugin.hardcore() == null ? null : plugin.hardcore().recargarEquipo();
-        decir(q, "Config de Calamity releída" + (equipo == null ? "" : ", y equipo.yml (" + equipo + ")")
+        decir(q, "Config de Calamity releída" + (equipo == null ? "" : ". Equipo: " + equipo + " (se relee con /gi reload)")
                 + ". Lo que se monta al arrancar necesita reiniciar.");
     }
 
