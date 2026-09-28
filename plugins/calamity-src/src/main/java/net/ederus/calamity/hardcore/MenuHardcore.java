@@ -92,7 +92,7 @@ public final class MenuHardcore implements Listener {
                     List.of("El tótem se consume", "y NO te salva.")),
             new Regla("dificultad.mobs-recogen", "Mobs recogen", Material.HOPPER, true, false,
                     List.of("Los mobs recogen lo que se te cae", "y se lo quedan.")),
-            new Regla("dificultad.nivel-cada-minutos", "Nivel por minutos", Material.EXPERIENCE_BOTTLE, 5, 0,
+            new Regla("dificultad.nivel-cada-minutos", "Nivel por minutos", Material.EXPERIENCE_BOTTLE, 3, 0,
                     List.of("Los mobs suben un nivel por cada", "tantos minutos que lleves dentro.")),
             new Regla("dificultad.niebla-de-noche", "Niebla de noche", Material.GRAY_STAINED_GLASS, true, false,
                     List.of("De noche se cierra la vista.", "Es un efecto por jugador, no un bioma.")),

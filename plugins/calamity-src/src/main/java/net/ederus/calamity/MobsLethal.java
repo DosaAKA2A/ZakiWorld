@@ -91,6 +91,11 @@ public final class MobsLethal implements Listener {
     private final Map<String, Long> proximaGuarnicion = new HashMap<>();
     private final Map<UUID, String> puestoDe = new HashMap<>();
     private final NamespacedKey clave;
+    /**
+     * Calamity 1.7: los niveles de distancia al spawn con los que nacio el mob (texto, para que
+     * las crias de Division lo hereden). Al morir sus MobCoins suben por ellos (mobcoinsDe).
+     */
+    private final NamespacedKey claveDistancia;
     private BukkitTask aparicion;
     private BukkitTask limpieza;
 
@@ -104,6 +109,7 @@ public final class MobsLethal implements Listener {
          * su PersistentDataContainer. Con lethalworld:... el plugin dejaria de
          * reconocer a los suyos y los adoptaria otra vez desde cero. */
         this.clave = new NamespacedKey("edm", "lethal_world_mob");
+        this.claveDistancia = new NamespacedKey("edm", "lethal_world_distancia");
     }
 
     /** El modulo anomaly de EDM (los esbirros). Sin EDM o sin ese modulo, no hay mobs. */
@@ -138,6 +144,7 @@ public final class MobsLethal implements Listener {
         cargarGuarniciones();
         cargarMonedas();
         a.minionManager().heredable(clave);
+        a.minionManager().heredable(claveDistancia);
         if (!cfg().getBoolean("activos", true)) {
             plugin.getLogger().info("[Lethal World] Mobs de Lethal World apagados en la config.");
             return;
@@ -212,9 +219,11 @@ public final class MobsLethal implements Listener {
         if (a == null) return null;
         MinionType tipo = a.minions().type(id);
         if (tipo == null) return null;
-        LivingEntity mob = a.minionManager().spawnAt(tipo, nivelPara(p, destacado), sitio, null);
+        int distancia = distanciaDe(p);
+        LivingEntity mob = a.minionManager().spawnAt(tipo, nivelPara(p, destacado, distancia), sitio, null);
         if (mob == null) return null;
         mob.getPersistentDataContainer().set(clave, PersistentDataType.STRING, destacado ? "destacado" : "comun");
+        apuntarDistancia(mob, distancia);
         sinQuemarse(mob);
         vivos.add(mob.getUniqueId());
         return mob;
@@ -447,7 +456,8 @@ public final class MobsLethal implements Listener {
         String plano = nombre == null ? "" : PlainTextComponentSerializer.plainText().serialize(nombre);
         boolean minijefe = nombre != null && cfg().getStringList("minijefes.nombres").contains(plano);
 
-        int nivel = nivelPara(p, false);
+        int distancia = distanciaDe(p);
+        int nivel = nivelPara(p, false, distancia);
         double vida, dano;
         if (minijefe) {
             nivel = Math.min(cfg().getInt("nivel.maximo", 100), nivel + cfg().getInt("minijefes.extra-nivel", 10));
@@ -474,6 +484,7 @@ public final class MobsLethal implements Listener {
         mob.setHealth(Math.min(vida, Compat.getAttribute(mob, "max_health", vida)));
         sinQuemarse(mob);
         mob.getPersistentDataContainer().set(clave, PersistentDataType.STRING, minijefe ? "minijefe" : "estructura");
+        apuntarDistancia(mob, distancia);
         mm.adoptar(mob, nivel, nombre, dano);
     }
 
@@ -555,6 +566,14 @@ public final class MobsLethal implements Listener {
      * mas el destacado y lo que sume Calamity. Publico: lo necesita el Eco (MT sec. 0 A).
      */
     public int nivelPara(Player p, boolean destacado) {
+        return nivelPara(p, destacado, distanciaDe(p));
+    }
+
+    /**
+     * Lo mismo con los niveles de distancia ya medidos (Hardcore.bonusDistancia): quien crea el
+     * mob los mide una vez y los apunta tambien en su PDC, para cobrar con ellos al morir.
+     */
+    private int nivelPara(Player p, boolean destacado, int distancia) {
         ConfigurationSection n = cfg().getConfigurationSection("nivel");
         if (n == null) n = new YamlConfiguration();
         double base = nivelBase(p);
@@ -563,7 +582,30 @@ public final class MobsLethal implements Listener {
         if (destacado) base += n.getInt("extra-destacado", 5);
         // En los mundos hardcore la cordura y los minutos dentro suben el nivel.
         if (plugin.hardcore() != null) base += plugin.hardcore().bonusNivel(p);
+        // 1.7: y lo lejos que este del spawn. Solo aqui: la PARCA y el Eco no pasan por nivelPara.
+        base += Math.max(0, distancia);
         return (int) Math.max(1, Math.min(n.getInt("maximo", 100), Math.round(base)));
+    }
+
+    /** Niveles de distancia al spawn de ese jugador (0 fuera de Calamity). */
+    private int distanciaDe(Player p) {
+        Hardcore hc = plugin.hardcore();
+        return hc == null ? 0 : hc.bonusDistancia(p);
+    }
+
+    private void apuntarDistancia(LivingEntity mob, int distancia) {
+        if (distancia > 0) mob.getPersistentDataContainer().set(claveDistancia, PersistentDataType.STRING, String.valueOf(distancia));
+    }
+
+    /** Los niveles de distancia con los que nacio ese mob (0 si no lleva la marca). */
+    public int distanciaDe(LivingEntity mob) {
+        String v = mob == null ? null : mob.getPersistentDataContainer().get(claveDistancia, PersistentDataType.STRING);
+        if (v == null) return 0;
+        try {
+            return Math.max(0, Integer.parseInt(v.trim()));
+        } catch (NumberFormatException e) {
+            return 0;
+        }
     }
 
     /**
@@ -592,6 +634,7 @@ public final class MobsLethal implements Listener {
      * entre 1 y el maximo.
      */
     public int nivelCalamity(Player p) {
+        // Sin la distancia (Hardcore.bonusDistancia): lo usan la PARCA y la foto del Eco.
         int maximo = cfg().getInt("nivel.maximo", 100);
         int extra = plugin.hardcore() == null ? 0 : plugin.hardcore().bonusNivel(p);
         return Math.max(1, Math.min(maximo, nivelBase(p) + extra));
@@ -698,8 +741,11 @@ public final class MobsLethal implements Listener {
     }
 
     /**
-     * MobCoins de un mob: lo que paga en el Survival x (1 + nivel / divisor) x mundo x clase.
-     * Sin azar. El minijefe con multiplicador-minijefe a 0 (config de la 1.1.0: su pago es
+     * MobCoins de un mob: lo que paga en el Survival x (1 + nivel / divisor) x mundo x clase
+     * x (1 + niveles de distancia x hardcore.distancia.mobcoins-por-nivel). Sin azar.
+     * La distancia es la que el mob apunto al nacer, no la de quien lo mata; con nivel 0 (la via
+     * CERRADO del Grifo: jaulas y mobs sin dano del jugador, que pagan la tabla sin nivel) tampoco
+     * cuenta la distancia. El minijefe con multiplicador-minijefe a 0 (config de la 1.1.0: su pago es
      * el fijo mobs.mobcoins.minijefe, que reparte el Grifo) vale aqui el punto medio del
      * fijo, para que fuera de Calamity no pase a pagar cero.
      */
@@ -716,9 +762,10 @@ public final class MobsLethal implements Listener {
             case "minijefe" -> m.getDouble("multiplicador-minijefe", 10.0);
             default -> 1.0;
         };
-        double monedas = base * (1 + nivel / Math.max(1.0, m.getDouble("nivel-divisor", 20)))
-                * m.getDouble("multiplicador-mundo", 1.5) * extra;
-        return Math.round(monedas);
+        int distancia = nivel > 0 ? distanciaDe(mob) : 0;
+        double porNivel = plugin.hardcore() == null ? 0 : plugin.hardcore().mobcoinsPorNivelDistancia();
+        return net.ederus.calamity.hardcore.Distancia.mobcoins(base, nivel, m.getDouble("nivel-divisor", 20),
+                m.getDouble("multiplicador-mundo", 1.5), extra, distancia, porNivel);
     }
 
     private void retirarLejanos() {

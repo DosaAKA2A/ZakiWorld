@@ -149,6 +149,8 @@ public final class Hardcore implements Listener {
     private Tablero tablero;
     private Encuesta encuesta;
     private Eclipse eclipse;
+    /** Calamity 1.7: los niveles por distancia al spawn y su aviso. */
+    private Distancia distancia;
     private Npcs npcs;
     /** Calamity 1.2: la zona spawn (region de WorldGuard o caja de la vara). Null con las reglas apagadas. */
     private ZonaSpawn zona;
@@ -219,6 +221,7 @@ public final class Hardcore implements Listener {
     Tablero tablero() { return tablero; }
     Encuesta encuesta() { return encuesta; }
     Eclipse eclipse() { return eclipse; }
+    Distancia distancia() { return distancia; }
     /** Lo que abren los NPCs de la antesala (/calamidad abrir) y el Cronista. */
     Npcs npcs() { return npcs; }
     ZonaSpawn zonaSpawn() { return zona; }
@@ -324,6 +327,7 @@ public final class Hardcore implements Listener {
         PlaceholdersLethal.registrar("cordura", (jugador, resto) -> corduraTexto(jugador));
         // Lo primero: la Grieta, las amenazas y los mobs preguntan por ella desde que nacen.
         zona = crear("zona-spawn", () -> new ZonaSpawn(this));
+        distancia = crear("distancia", () -> new Distancia(this));
         telemetria = crear("telemetria", () -> new Telemetria(this));
         estadisticas = crear("estadisticas", () -> new Estadisticas(this));
         calendario = crear("calendario", () -> new Calendario(this));
@@ -415,6 +419,7 @@ public final class Hardcore implements Listener {
         if (telemetria != null) seguro("telemetria", () -> telemetria.parar());
         if (zona != null) seguro("zona-spawn", () -> zona.parar());
         zona = null;
+        distancia = null;
         enZona.clear();
         cordura.aSalvo(null);
         Subcomandos.lw().vaciar();
@@ -581,6 +586,8 @@ public final class Hardcore implements Listener {
                     drenar(p, e);
                     efectosDeBioma(p);
                 }
+                // 1.7: el aviso de franja de distancia, antes de pintar para que salga ya.
+                if (distancia != null) seguro("distancia", () -> distancia.segundo(p, spawn));
                 cordura.pintar(p);
                 vigilarCanalizacion(p);
                 if (!spawn) nieblaDeNoche(p);
@@ -595,6 +602,7 @@ public final class Hardcore implements Listener {
         }
         // Quien ya no esta dentro (salio, murio, se desconecto) deja de contar como "en el spawn".
         enZona.retainAll(vistos);
+        if (distancia != null) distancia.podar(vistos);
         if (zona != null) seguro("zona-spawn", () -> zona.tick());
         vigilarZonas();
         vigilarPresas();
@@ -903,16 +911,34 @@ public final class Hardcore implements Listener {
 
     // ------------------------------------------------------------------ dificultad
 
-    /** Mobs de mas alrededor de un jugador segun lo ida que tenga la cabeza. */
+    /**
+     * Mobs de mas alrededor de un jugador: segun lo ida que tenga la cabeza y, desde la 1.7,
+     * +1 por cada dificultad.mobs-extra-cada-minutos (15) de la sesion, hasta mobs-extra-tope (4).
+     */
     public int bonusTope(Player p) {
         if (!esHardcore(p)) return 0;
+        return mobsExtraCordura(p) + mobsExtraTiempo(p);
+    }
+
+    /** La parte de bonusTope que pone la cordura (por debajo de 50 y a cero). */
+    int mobsExtraCordura(Player p) {
         double v = cordura.valor(p);
         if (v >= 50) return 0;
         return v <= 0 ? cfg().getInt("cordura.mobs-extra-vacio", 6)
                 : cfg().getInt("cordura.mobs-extra", 4);
     }
 
-    /** Niveles de mas para los mobs que salgan alrededor de ese jugador. */
+    /** La parte de bonusTope que pone el tiempo dentro (mismo contador de sesion que el nivel). */
+    int mobsExtraTiempo(Player p) {
+        return Distancia.mobsExtraTiempo(cordura.estado(p).segundosDentro,
+                cfg().getInt("dificultad.mobs-extra-cada-minutos", 15), cfg().getInt("dificultad.mobs-extra-tope", 4));
+    }
+
+    /**
+     * Niveles de mas para los mobs que salgan alrededor de ese jugador: cordura, minutos dentro,
+     * Racha y Eclipse. La distancia al spawn NO va aqui (ver bonusDistancia): esta suma la usan
+     * tambien la PARCA y el Eco, y esos no cambian con la distancia.
+     */
     public int bonusNivel(Player p) {
         if (!esHardcore(p)) return 0;
         int extra = 0;
@@ -921,14 +947,67 @@ public final class Hardcore implements Listener {
         else if (v < 50) extra += cfg().getInt("cordura.nivel-extra", 10);
 
         // Y sube con los minutos que lleves dentro: quedarse es cada vez peor idea.
-        int porMinutos = cfg().getInt("dificultad.nivel-cada-minutos", 5);
-        if (porMinutos > 0) extra += cordura.estado(p).segundosDentro / (porMinutos * 60);
+        extra += Distancia.nivelPorMinutos(cordura.estado(p).segundosDentro,
+                cfg().getInt("dificultad.nivel-cada-minutos", 3));
         // La Racha de Codicia y el Eclipse suben el nivel encima de todo lo anterior.
         if (activo()) {
             extra += valor("racha", () -> racha.niveles(p), 0);
             extra += valor("eclipse", () -> eclipse.nivelesExtra(), 0);
         }
         return extra;
+    }
+
+    /**
+     * 1.7 · Niveles de mas por lo lejos que este ese jugador del borde de la zona spawn
+     * (hardcore.distancia). Lo suma MobsLethal.nivelPara a los esbirros, adoptados, guarniciones
+     * y minijefes que salen para el; la PARCA y el Eco no lo ven. 0 fuera de Calamity.
+     */
+    public int bonusDistancia(Player p) {
+        if (distancia == null || !esHardcore(p)) return 0;
+        return valor("distancia", () -> distancia.niveles(p), 0);
+    }
+
+    /** Bloques del jugador al borde de la zona spawn (o al spawn del mundo), para /calamidad level y el parte. */
+    public double bloquesAlSpawn(Player p) {
+        if (distancia == null || p == null) return 0;
+        return valor("distancia", () -> distancia.bloques(p.getLocation()), 0.0);
+    }
+
+    /**
+     * Para /calamidad level: de donde salen los niveles y los mobs de mas de Calamity para ese
+     * jugador ahora mismo, en pares {que, cuanto}. Vacio si no esta en un mundo hardcore.
+     */
+    public List<String[]> desgloseNivel(Player p) {
+        if (!esHardcore(p)) return List.of();
+        List<String[]> l = new ArrayList<>();
+        double v = cordura.valor(p);
+        int porCordura = v < 25 ? cfg().getInt("cordura.nivel-extra-critico", 20)
+                : v < 50 ? cfg().getInt("cordura.nivel-extra", 10) : 0;
+        l.add(new String[]{"cordura +" + porCordura, "cordura " + Math.round(v) + " %"});
+        int segundos = cordura.estado(p).segundosDentro;
+        int cada = cfg().getInt("dificultad.nivel-cada-minutos", 3);
+        l.add(new String[]{"minutos +" + Distancia.nivelPorMinutos(segundos, cada),
+                (segundos / 60) + " min dentro" + (cada > 0 ? ", +1 cada " + cada + " min" : ", apagado")});
+        Distancia.Ajustes a = distancia == null ? null : distancia.ajustes();
+        long bloques = Math.round(bloquesAlSpawn(p));
+        String como = a == null ? "sin módulo" : !a.activa() ? "apagada"
+                : enSpawn(p) ? "en la zona spawn"
+                : Distancia.miles(bloques) + " bloques del borde del spawn, +1 cada " + a.bloquesPorNivel()
+                        + ", tope " + a.tope();
+        l.add(new String[]{"distancia +" + bonusDistancia(p), como});
+        l.add(new String[]{"racha +" + valor("racha", () -> racha.niveles(p), 0), "Racha de Codicia"});
+        l.add(new String[]{"eclipse +" + valor("eclipse", () -> eclipse.nivelesExtra(), 0), "Eclipse"});
+        int cadaMobs = cfg().getInt("dificultad.mobs-extra-cada-minutos", 15);
+        l.add(new String[]{"mobs +" + mobsExtraTiempo(p) + " por tiempo",
+                cadaMobs > 0 ? "+1 cada " + cadaMobs + " min, tope " + cfg().getInt("dificultad.mobs-extra-tope", 4)
+                        : "apagado"});
+        l.add(new String[]{"mobs +" + mobsExtraCordura(p) + " por cordura", "por debajo del 50 %"});
+        return l;
+    }
+
+    /** hardcore.distancia.mobcoins-por-nivel: lo que sube cada nivel de distancia las MobCoins (0,01 = 1 %). */
+    public double mobcoinsPorNivelDistancia() {
+        return cfg().getDouble("distancia.mobcoins-por-nivel", 0.01);
     }
 
     /** Sin camas: aqui no se salta la noche ni se pone punto de reaparicion. */

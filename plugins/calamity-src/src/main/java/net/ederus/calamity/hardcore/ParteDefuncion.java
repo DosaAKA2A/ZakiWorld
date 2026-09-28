@@ -322,25 +322,36 @@ final class ParteDefuncion implements Listener {
         return null;
     }
 
-    /** "mobs +20 niveles (cordura) +6 (30 min dentro)": el bonusNivel de Hardcore, por partes. */
+    /**
+     * "mobs +20 niveles (cordura) +6 (30 min dentro) +12 (a 1.250 bloques del spawn)": el bonusNivel
+     * de Hardcore por partes, mas la distancia (Hardcore.bonusDistancia) donde ha caido.
+     */
     private String desglose(Player p) {
         double v = hc.cordura().conoce(p) ? hc.cordura().valor(p) : Cordura.MAXIMO;
         int porCordura = v < 25 ? hc.cfg().getInt("cordura.nivel-extra-critico", 20)
                 : v < 50 ? hc.cfg().getInt("cordura.nivel-extra", 10) : 0;
         int segundos = hc.cordura().conoce(p) ? hc.cordura().estado(p).segundosDentro : 0;
-        int cada = hc.cfg().getInt("dificultad.nivel-cada-minutos", 5);
+        int cada = hc.cfg().getInt("dificultad.nivel-cada-minutos", 3);
         Racha racha = hc.racha();
         Eclipse eclipse = hc.eclipse();
         int deRacha = racha == null ? 0 : hc.valor("racha", () -> racha.niveles(p), 0);
         int deEclipse = eclipse == null ? 0 : hc.valor("eclipse", eclipse::nivelesExtra, 0);
-        return desglose(porCordura, segundos, cada, deRacha, deEclipse);
+        int deDistancia = hc.bonusDistancia(p);
+        long bloques = Math.round(hc.bloquesAlSpawn(p));
+        return desglose(porCordura, segundos, cada, deRacha, deEclipse, deDistancia, bloques);
     }
 
     static String desglose(int porCordura, int segundosDentro, int cadaMinutos, int racha, int eclipse) {
+        return desglose(porCordura, segundosDentro, cadaMinutos, racha, eclipse, 0, 0);
+    }
+
+    static String desglose(int porCordura, int segundosDentro, int cadaMinutos, int racha, int eclipse,
+                           int distancia, long bloques) {
         List<String> partes = new ArrayList<>();
         if (porCordura > 0) partes.add("+" + porCordura + " (cordura)");
-        int porMinutos = cadaMinutos > 0 ? segundosDentro / (cadaMinutos * 60) : 0;
+        int porMinutos = Distancia.nivelPorMinutos(segundosDentro, cadaMinutos);
         if (porMinutos > 0) partes.add("+" + porMinutos + " (" + (segundosDentro / 60) + " min dentro)");
+        if (distancia > 0) partes.add("+" + distancia + " (a " + Distancia.miles(bloques) + " bloques del spawn)");
         if (racha > 0) partes.add("+" + racha + " (racha)");
         if (eclipse > 0) partes.add("+" + eclipse + " (eclipse)");
         if (partes.isEmpty()) return "mobs sin niveles de más";
@@ -607,6 +618,10 @@ final class ParteDefuncion implements Listener {
         h.igual("desglose sin nada", "mobs sin niveles de más", desglose(0, 200, 5, 0, 0));
         h.igual("desglose con racha y eclipse", "mobs +3 niveles (racha) +10 (eclipse)", desglose(0, 60, 5, 3, 10));
         h.igual("desglose sin nivel por minutos", "mobs +10 niveles (cordura)", desglose(10, 1800, 0, 0, 0));
+        h.igual("desglose con distancia", "mobs +10 niveles (30 min dentro) +12 (a 1.250 bloques del spawn)",
+                desglose(0, 1800, 3, 0, 0, 12, 1250));
+        h.igual("desglose solo con distancia", "mobs +40 niveles (a 4.310 bloques del spawn)",
+                desglose(0, 60, 3, 0, 0, 40, 4310));
         h.igual("cifra", "-18.2", cifra(18.2));
         h.igual("cifra redondea a un decimal", "-4.0", cifra(3.96));
         h.igual("linea de la siega", "Parca Nv. 52 · siega (ignora armadura, x2 por quieto)",

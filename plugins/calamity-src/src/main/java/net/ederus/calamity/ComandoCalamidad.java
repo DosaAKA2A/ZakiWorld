@@ -266,6 +266,13 @@ public final class ComandoCalamidad implements TabExecutor {
         linea(q, "  poder " + poder, "AuraSkills ÷ " + porNivel + " = " + Math.round(poder / porNivel * 10) / 10.0);
         linea(q, "  nivel " + bajo + "-" + alto, "base " + Math.round(base * 10) / 10.0 + ", variación ±"
                 + Math.round(variacion * 100) + " %, tope " + maximo);
+        // 1.7: dentro de Calamity, lo que se suma encima (cordura, minutos, distancia, racha, eclipse).
+        Hardcore hc = plugin.hardcore();
+        if (hc == null || !hc.activo() || !hc.esHardcore(p)) return;
+        int extra = hc.bonusNivel(p) + hc.bonusDistancia(p);
+        decir(q, "En Calamity, encima de la base: +" + extra + " niveles"
+                + " (nivel " + Math.max(1, Math.min(maximo, Math.round(base) + extra)) + " sin variación)");
+        for (String[] d : hc.desgloseNivel(p)) linea(q, "  " + d[0], d[1]);
     }
 
     /**
