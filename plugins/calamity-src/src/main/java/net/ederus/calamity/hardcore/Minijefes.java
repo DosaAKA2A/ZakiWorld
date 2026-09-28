@@ -1,6 +1,7 @@
 package net.ederus.calamity.hardcore;
 
 import net.ederus.edm.comun.Compat;
+import net.ederus.edm.comun.MobCoins;
 import org.bukkit.OfflinePlayer;
 import org.bukkit.command.CommandSender;
 import org.bukkit.configuration.ConfigurationSection;
@@ -183,8 +184,10 @@ final class Minijefes {
             }
             // 1.4: las de mas del equipo (esencias-bonus) de quien siga conectado, antes de la Aduana.
             int esencias = hc.esenciasDelEquipo(op.getPlayer(), p.esencias());
-            if (ad != null && (esencias > 0 || p.mc() > 0 || !items.isEmpty())) {
-                Aduana.Pago pago = ad.pagar(op, "minijefe", esencias, p.mc(), items,
+            // 1.7.6: y su boost de MobCoins de EDM (desconectado, sin boost), tambien antes de la Aduana.
+            long mc = MobCoins.conBoost(op.getPlayer(), p.mc());
+            if (ad != null && (esencias > 0 || mc > 0 || !items.isEmpty())) {
+                Aduana.Pago pago = ad.pagar(op, "minijefe", esencias, mc, items,
                         "minijefe " + (t == null ? "?" : t) + " N" + nivel);
                 if (pago != null && grifo != null) {
                     grifo.apuntarEsencias(p.jugador(), pago.esencias());

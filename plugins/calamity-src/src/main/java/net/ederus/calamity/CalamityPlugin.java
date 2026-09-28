@@ -48,7 +48,7 @@ import net.ederus.lethalworld.LethalWorldPlugin;
 public final class CalamityPlugin extends JavaPlugin {
 
     /** La version, en el mismo sitio que en LethalWorld. Se sube a la vez que pom.xml y plugin.yml. */
-    public static final String VERSION = "1.7.5";
+    public static final String VERSION = "1.7.6";
 
     private LethalWorldPlugin lethalWorld;
     private MobsLethal mobs;

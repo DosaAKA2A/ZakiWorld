@@ -203,6 +203,11 @@ public final class Grifo implements Listener {
         Plan plan = planificar(via, marca, nivel, f(killer.getUniqueId()), eclipse(), azar::nextDouble,
                 c, mobsCfg());
         long mc = mobs == null ? 0 : mobs.mobcoinsDe(mob, plan.claseMc(), plan.nivelMc());
+        /* 1.7.6: el boost de MobCoins de EDM tambien cuenta en los mobs de Calamity, antes de la
+         * Aduana, que sigue topando el total. Los de jaula o sin cuota (CERRADO) no lo llevan: una
+         * granja de spawners en Calamity no puede rendir mas que la misma granja fuera, y fuera
+         * UltimateMobCoins paga sin boost. */
+        if (via == Via.NORMAL) mc = MobCoins.conBoost(killer, mc);
         List<ItemStack> reliquias = new ArrayList<>();
         Reliquias r = hc.reliquias();
         if (r != null && r.activas()) {

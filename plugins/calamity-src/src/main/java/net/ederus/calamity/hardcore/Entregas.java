@@ -159,6 +159,19 @@ final class Entregas implements Listener {
                     }
                     s.sumar(u, e, "salvoconducto-sustituto:" + org);
                     recompensa(a, "salvoconducto-sustituto", n, org, false);
+                    // 1.7.6: que lo sepa (lo da el hito [INSOMNE] I). Un tick despues, para que salga
+                    // detras del "Has ganado el tag" del hito, que se escribe al acabar sus comandos.
+                    Player p = a.getPlayer();
+                    if (p != null) {
+                        Component aviso = ComandoCalamity.mensaje(Component.text("El ")
+                                .append(Paleta.detalle("Salvoconducto del Insomne"))
+                                .append(Component.text(" no está disponible: en su lugar, recibes "))
+                                .append(Paleta.cifra(Marco.esencias(e)))
+                                .append(Component.text(" en tu saldo.")));
+                        hc.plugin().getServer().getScheduler().runTask(hc.plugin(), () -> {
+                            if (p.isOnline()) p.sendMessage(aviso);
+                        });
+                    }
                     return true;
                 }
             }

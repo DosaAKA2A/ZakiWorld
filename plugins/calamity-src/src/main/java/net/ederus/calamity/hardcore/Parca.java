@@ -397,6 +397,25 @@ final class Parca implements Listener {
         return out;
     }
 
+    /**
+     * 1.7.6: la linea de chat de quien le pego y no cobra (un motivo de repartir), con las cifras
+     * de la config. porQueInvalida: el motivo de la Aduana ("horas", "huella"...) si es "invalida".
+     * Null si el motivo no es ninguno de estos.
+     */
+    static String sinCobro(Ajustes a, String motivo, boolean presa, String porQueInvalida, int horasMinimas) {
+        String porQue = switch (motivo == null ? "" : motivo) {
+            case "poco-dano" -> "tu daño no llegó al mínimo ("
+                    + Marco.porcentaje(presa ? a.participacionPresa : a.participacionMinima) + " de su vida).";
+            case "repeticion" -> "ya te persiguió otra en las últimas " + a.ventanaRepeticionHoras + " h.";
+            case "ya-cobro" -> "ya cobraste por otra en las últimas " + a.horasEntreCobros + " h.";
+            case "invalida" -> "horas".equals(porQueInvalida)
+                    ? "para cobrar ayudando a otro, cada uno necesita al menos " + horasMinimas + " h jugadas."
+                    : "la presa usa tu misma conexión.";
+            default -> null;
+        };
+        return porQue == null ? null : "Esta Parca no te paga: " + porQue;
+    }
+
     // ================================================================= estado
 
     /** La pelea en la que ese jugador esta marcado (presa o extra), o null. */
@@ -1060,18 +1079,13 @@ final class Parca implements Listener {
             if (c.motivo() != null) {
                 hc.plugin().bitacora().anotar("parca", "botin", nombre(c.id()), "esencias 0", "reliquia -", c.motivo());
                 if (online != null) {
-                    if ("ya-cobro".equals(c.motivo())) {
-                        online.sendMessage(ComandoCalamity.mensaje("Ya cobraste por una Parca en las últimas "
-                                + a.horasEntreCobros + " h: esta no te paga."));
-                    } else if ("invalida".equals(c.motivo())) {
-                        // El mismo motivo que da la Aduana (horas o conexion compartida), dicho con claridad.
-                        String porQue = hc.aduana() == null ? ""
-                                : hc.valor("aduana", () -> hc.aduana().motivoInvalida(op, presa), "");
-                        online.sendMessage(ComandoCalamity.mensaje("horas".equals(porQue)
-                                ? "Esa Parca no te paga: para cobrar ayudando a otro, cada uno necesita al menos "
-                                + hc.cfg().getInt("aduana.horas-minimas", 10) + " h jugadas."
-                                : "Esa Parca no te paga: la presa usa tu misma conexión."));
-                    }
+                    // 1.7.6: todo el que no cobra lee por que. En "invalida", el mismo motivo que da la
+                    // Aduana (horas o conexion compartida), dicho con claridad.
+                    String porQue = !"invalida".equals(c.motivo()) || hc.aduana() == null ? ""
+                            : hc.valor("aduana", () -> hc.aduana().motivoInvalida(op, presa), "");
+                    String texto = sinCobro(a, c.motivo(), c.id().equals(pe.presa()), porQue,
+                            hc.cfg().getInt("aduana.horas-minimas", 10));
+                    if (texto != null) online.sendMessage(ComandoCalamity.mensaje(texto));
                 }
                 continue;
             }
@@ -1099,10 +1113,14 @@ final class Parca implements Listener {
                     "esencias " + pagadas + (pagadas != c.esencias() ? " (calculadas " + c.esencias() + ")" : ""),
                     "reliquia " + (reliquias.isEmpty() ? "-" : romano(c.grado())), c.id().equals(pe.presa()) ? "presa" : "ayudante");
             if (online != null) {
-                online.sendMessage(ComandoCalamity.mensaje(Component.text("Botín de la Parca: ")
-                        .append(Paleta.cifra("+" + pagadas + (pagadas == 1 ? " Esencia" : " Esencias")))
-                        .append(reliquias.isEmpty() ? Component.text(".")
-                                : Component.text(" y una ").append(Paleta.detalle("Campana de la Parca")).append(Component.text(".")))));
+                // 1.7.6: si la Aduana no ha pagado por su tope diario, ya le ha dicho por que ("Hoy ya
+                // has cobrado el maximo por esto."): no se anuncia un botin de +0 ni una Campana que no llega.
+                if (pago == null || !pago.topado()) {
+                    online.sendMessage(ComandoCalamity.mensaje(Component.text("Botín de la Parca: ")
+                            .append(Paleta.cifra("+" + pagadas + (pagadas == 1 ? " Esencia" : " Esencias")))
+                            .append(reliquias.isEmpty() ? Component.text(".")
+                                    : Component.text(" y una ").append(Paleta.detalle("Campana de la Parca")).append(Component.text(".")))));
+                }
                 // Sangre fresca (M12): la cordura por la PARCA, con su tope de la Aduana.
                 Combate cb = hc.combate();
                 String idPelea = pe.cuerpo() == null ? String.valueOf(pe.presa()) : pe.cuerpo().getUniqueId().toString();
@@ -1643,6 +1661,13 @@ final class Parca implements Listener {
         List<Cobro> c2 = repartir(a, dano, vida, presa, 52, 1, id -> false, id -> true);
         h.ok("presa con r 1 -> sin Esencias", c2.stream().anyMatch(x -> x.id().equals(presa) && "repeticion".equals(x.motivo())));
         h.ok("orden por dano", c.get(0).id().equals(alt) && c.get(c.size() - 1).id().equals(flojo));
+        // 1.7.6: quien no cobra lee el motivo, con las cifras de la config.
+        h.igual("sin cobro: 5 % de ayudante", "Esta Parca no te paga: tu daño no llegó al mínimo (10 % de su vida).",
+                sinCobro(a, por.get(flojo).motivo(), false, "", 10));
+        h.igual("sin cobro: ya cobro en 24 h", "Esta Parca no te paga: ya cobraste por otra en las últimas 24 h.",
+                sinCobro(a, por.get(repe).motivo(), false, "", 10));
+        h.ok("sin cobro: cada motivo del reparto tiene su linea", java.util.stream.Stream.concat(c.stream(), c2.stream())
+                .allMatch(x -> x.motivo() == null || sinCobro(a, x.motivo(), x.id().equals(presa), "", 10) != null));
         return h.lineas();
     }
 }

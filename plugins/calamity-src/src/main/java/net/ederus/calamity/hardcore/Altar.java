@@ -758,7 +758,7 @@ final class Altar implements Listener {
         if (t.pieza() != null) hc.seguro("altar", () -> forja.trasForjar(op, r));
         if ("ofrenda".equals(t.da())) hc.seguro("altar", () -> ofrenda(op, pr.esencias()));
         if (p != null) {
-            p.sendMessage(avisoHecho(t, pr, r.creditoUsado()));
+            p.sendMessage(avisoHecho(t, pr, r.creditoUsado(), "ofrenda".equals(t.da()) ? ofrendasMes(op.getUniqueId()) : 0));
             Compat.soundPlayers(p.getWorld(), p.getLocation(), "block.amethyst_block.resonate", 1.0f, 1.2f);
         }
         if (quien != null && quien != p) {
@@ -771,9 +771,10 @@ final class Altar implements Listener {
 
     /**
      * "Has comprado: <nombre> (−10 Esencias, −2.000 MobCoins)." usado: el credito que se gasto de
-     * verdad (un Sello Errante puede valer por el Sello que pide la pieza).
+     * verdad (un Sello Errante puede valer por el Sello que pide la pieza). ofrendasMes (1.7.6): en
+     * la Ofrenda, las que lleva este mes contando esta ("Ya llevas 3 este mes."); 0, nada.
      */
-    private static Component avisoHecho(Trueque t, Precio pr, String usado) {
+    private static Component avisoHecho(Trueque t, Precio pr, String usado, int ofrendasMes) {
         List<String> coste = new ArrayList<>();
         if (pr.esencias() > 0) coste.add("−" + miles(pr.esencias()) + (pr.esencias() == 1 ? " Esencia" : " Esencias"));
         if (pr.mc() > 0) coste.add("−" + miles(pr.mc()) + " MobCoins");
@@ -781,9 +782,14 @@ final class Altar implements Listener {
         if (credito != null) coste.add("−" + MenuAltar.creditoLinea(credito, pr.creditos()));
         String texto = "ofrenda".equals(t.da()) ? "El Altar acepta tu Ofrenda"
                 : ("forja".equals(t.pagina()) ? "Has forjado: " : "Has comprado: ") + nombre(t);
-        return ComandoCalamity.mensaje(Component.text(texto)
+        Component cuerpo = Component.text(texto)
                 .append(Component.text(coste.isEmpty() ? "" : " (" + String.join(", ", coste) + ")", Paleta.CIFRA))
-                .append(Component.text(".")));
+                .append(Component.text("."));
+        if ("ofrenda".equals(t.da()) && ofrendasMes > 0) {
+            cuerpo = cuerpo.append(Component.text(" Ya llevas ")).append(Paleta.cifra(ofrendasMes))
+                    .append(Component.text(" este mes."));
+        }
+        return ComandoCalamity.mensaje(cuerpo);
     }
 
     /** El mensaje de cada motivo de rechazo: P-M03, P-M04, P-W01/P-W07, P-M10/P-M11. */
@@ -835,7 +841,7 @@ final class Altar implements Listener {
     /** Ofrenda: 1 punto en la tabla del mes (ofrendas-mes) y stats.ofrendas; sin objeto ni tag. */
     private void ofrenda(OfflinePlayer op, int esencias) {
         UUID u = op.getUniqueId();
-        String r = "ofrendas-mes." + calendario().mes() + "." + u;
+        String r = rutaOfrendasMes(u);
         hc.datos().set(r, hc.datos().getInt(r, 0) + 1);
         hc.marcarSucio();
         Estadisticas st = hc.estadisticas();
@@ -846,6 +852,15 @@ final class Altar implements Listener {
             c.put("cantidad", esencias);
             hc.seguro("telemetria", () -> tel.suceso("ofrenda", op, c));
         }
+    }
+
+    /** 1.7.6: las Ofrendas de ese jugador este mes (la tabla ofrendas-mes), para el menu y el aviso. */
+    int ofrendasMes(UUID u) {
+        return hc.datos().getInt(rutaOfrendasMes(u), 0);
+    }
+
+    private String rutaOfrendasMes(UUID u) {
+        return "ofrendas-mes." + calendario().mes() + "." + u;
     }
 
     // ------------------------------------------------------------ servicios

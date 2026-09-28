@@ -729,15 +729,16 @@ public final class MobsLethal implements Listener {
 
     /**
      * Lo que pagaba un mob de Lethal World hasta la 1.1.0: la tabla de UltimateMobCoins
-     * por nivel y por clase, por MobCoins.pagar de EDM. Sigue siendo el pago fuera de
+     * por nivel y por clase, por MobCoins de EDM. Sigue siendo el pago fuera de
      * Calamity; dentro solo lo usa el Grifo mientras sea el esqueleto de WP0.
+     * 1.7.6: por pagarPorBaja, con el boost de MobCoins de quien lo mata (EDM 1.74.0).
      */
     public void pagarComoHoy(EntityDeathEvent e, Player asesino, String clase) {
         LivingEntity mob = e.getEntity();
         AnomalyPlugin a = anomaly();
         int nivel = a == null ? 1 : Math.max(1, a.minionManager().levelOf(mob));
         long pago = mobcoinsDe(mob, clase, nivel);
-        net.ederus.edm.comun.MobCoins.pagar(plugin, asesino, pago);
+        net.ederus.edm.comun.MobCoins.pagarPorBaja(plugin, asesino, pago);
     }
 
     /**

@@ -492,6 +492,8 @@ final class MenuAltar implements Listener {
         lore.addAll(costes(u, pr, caja));
 
         List<Component> cupo = cupos(t, u, caja);
+        // 1.7.6: la Ofrenda dice cuantas llevas este mes (ofrendas-mes, la tabla que ya las cuenta).
+        if ("ofrenda".equals(t.da())) cupo.add(ofrendasLinea(altar.ofrendasMes(u)));
         if (!cupo.isEmpty()) {
             lore.add(Component.empty());
             lore.addAll(cupo);
@@ -605,6 +607,12 @@ final class MenuAltar implements Listener {
             out.add(Marco.tenue("Reponerla no tiene espera."));
         }
         return out;
+    }
+
+    /** 1.7.6: "Llevas 3 Ofrendas este mes.", con la cifra resaltada como en los cupos. */
+    static Component ofrendasLinea(int n) {
+        return Component.text("Llevas ", Paleta.TENUE).append(Component.text(String.valueOf(n), Paleta.CIFRA))
+                .append(Component.text(n == 1 ? " Ofrenda este mes." : " Ofrendas este mes.", Paleta.TENUE));
     }
 
     /** La razon corta, en el icono. El mensaje completo sale al hacer clic. */

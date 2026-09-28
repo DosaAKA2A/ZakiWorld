@@ -1,11 +1,14 @@
 name: Calamity
-version: '1.7.5'
+version: '1.7.6'
 main: net.ederus.calamity.CalamityPlugin
 api-version: '1.20'
 author: Iris Studio
 description: "Calamity: la Parca, el Eco, la Aduana y las reglas hardcore de los mundos de Lethal World"
 # Los esbirros, las MobCoins y Compat salen de EDM; los mundos y la bitacora, de LethalWorld.
 # Sin cualquiera de los dos, esto no arranca.
+# Desde la 1.7.6 hace falta EDM 1.74.0 o superior: los mobs de Calamity pagan con el boost de
+# MobCoins (MobCoins.pagarPorBaja y conBoost, que no existen antes). plugin.yml no deja pedir
+# una version minima: con un EDM anterior Calamity arranca, pero falla al pagar los mobs.
 depend: [EDM, LethalWorld]
 # MMOItems se lee por reflexion (PuenteMmo, que tambien mira MythicLib pero MythicLib
 # no va en esta lista a proposito: MMOItems ya lo trae como dependencia suya), y MythicMobs
