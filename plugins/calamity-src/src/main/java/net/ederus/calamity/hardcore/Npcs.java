@@ -213,8 +213,8 @@ final class Npcs implements Listener {
     }
 
     /**
-     * El Cazador: los rankings de la semana en su menu (MenuCazador), con el podio de cada tabla
-     * y un boton al Tablero. Con los rankings apagados, el Tablero directamente, como antes.
+     * El Cazador: el ranking en su menu (MenuCazador), una categoria cada vez con su top 10 en
+     * cabezas, y un boton al Tablero. Con los rankings apagados, el Tablero directamente, como antes.
      */
     private void cazador(Player p) {
         if (cazador.hay()) {

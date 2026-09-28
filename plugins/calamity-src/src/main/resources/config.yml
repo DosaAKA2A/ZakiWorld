@@ -735,10 +735,119 @@ hardcore:
     guadana: {estadistica: forja-guadana, umbral: 1, nombre: "Guadaña", anuncio: true, comandos: ["lp user %jugador% permission set rip.death.angel true"]}
     tasador: {estadistica: contratos, umbral: 60, nombre: "Buen cliente de Oren", anuncio: false, comandos: []}
   # [alineado] PLAN 7.3: cuatro tablas; llaves por Entregas (tope de 4); con < 8 elegibles solo el 1.o
-  ranking: {activo: false, recalcular-segundos: 60, minimo-extracciones: 3, minimo-elegibles: 8, maximo-tablas: 2,
-            tablas: [extraido, cazador, segador, superviviente],
-            premios: [{esencias: 30, llaves: 2, comandos: ["lp user %jugador% permission settemp anima.badge.unlocked true 7d"]},
-                      {esencias: 20, llaves: 1}, {esencias: 10, llaves: 1}]}
+  ranking:
+    activo: false
+    recalcular-segundos: 60
+    minimo-extracciones: 3
+    minimo-elegibles: 8
+    maximo-tablas: 2
+    tablas: [extraido, cazador, segador, superviviente]
+    premios:
+      - {esencias: 30, llaves: 2, comandos: ["lp user %jugador% permission settemp anima.badge.unlocked true 7d"]}
+      - {esencias: 20, llaves: 1}
+      - {esencias: 10, llaves: 1}
+    # El menu de Rhen (1.7.4): arriba el libro de la categoria que miras, en medio su top 10 con
+    # las cabezas de los jugadores y abajo una cabeza por categoria para elegir cual ver.
+    # Si el config.yml del servidor no tiene "menu:", se usa este del jar entero. Si lo tiene, manda
+    # el del servidor, y lo que le falte a una categoria con el mismo id se coge de aqui.
+    menu:
+      # El titulo de la ventana dice la categoria ("CALAMITY | Top · MobCoins"). Para cambiar un
+      # titulo, Minecraft vuelve a mandar la ventana y en Bedrock se nota un parpadeo. Con false el
+      # titulo es "Ranking semanal" o "Ranking historico" y cambiar de categoria solo repinta.
+      titulo-por-categoria: true
+      # Las cabezas que no son categorias: "Mas ->" (con mas de 9 categorias en una vista), la de
+      # volver a la primera pagina y la de un puesto del top sin nadie. Texturas de Minecraft-Heads.
+      cabezas:
+        mas: "fcfe8845a8d5e635fb87728ccc93895d42b4fc2e6a53f1ba78c845225822"         # Red Arrow Right
+        anterior: "f84f597131bbe25dc058af888cb29831f79599bc67c95c802925ce4afba332fc"  # Red Arrow Left
+        libre: "89a995928090d842d4afdb2296ffe24f2e944272205ceba848ee4046e01f3168"     # Gray Question Mark
+      # Las categorias, en el orden del selector. Cada una:
+      #   clave: la estadistica (las de stats, como tasado-mc o parcas; horas-activas y esencias,
+      #     que es el saldo guardado, no tienen semana y solo salen en el historico).
+      #   nombre: el de su cabeza, corto. titulo: opcional, lo que dice el titulo si no es el nombre.
+      #   mide: una frase con lo que cuenta. vistas: [semana, historico], o solo una de las dos.
+      #   textura: el hash de textures.minecraft.net; vale tambien la URL entera o el "Value" en
+      #     base64 que da Minecraft-Heads. material: lo que sale si la textura no vale.
+      # Da premio el lunes la que cuente la estadistica de una de ranking.tablas.
+      categorias:
+        mobcoins:
+          clave: tasado-mc
+          nombre: "MobCoins"
+          mide: "MobCoins que te pagan al vender lo que sacas."
+          vistas: [semana, historico]
+          textura: "b856ccab6f72b6f37332840a2779bb42758bbb2c015f54ce53740cb0f1cb4ca1"     # Red Dollar
+          material: GOLD_INGOT
+        ecos:
+          clave: cazas-validas
+          nombre: "Ecos cazados"
+          titulo: "Ecos"
+          mide: "Ecos de otros jugadores que has derrotado."
+          vistas: [semana, historico]
+          textura: "4922e62c441d47aee48ed6c930e66f2daccf69887876a0d1c98ecee92a1e3d56"     # Ghost (encapuchado)
+          material: ECHO_SHARD
+        parcas:
+          clave: parcas
+          nombre: "Parcas"
+          mide: "Parcas que has ayudado a derrotar."
+          vistas: [semana, historico]
+          textura: "f8cb7bbe640b297280a833b8bda5d1626bfb04265c780898d256c830a3aaea35"     # Red Reaper
+          material: NETHERITE_HOE
+        expedicion:
+          clave: expedicion-max-seg
+          nombre: "Expedición"
+          mide: "Lo que duró tu expedición más larga."
+          vistas: [semana, historico]
+          textura: "fb80a871e9939eb1de3b40c9c1f05ccca89dc96547c6e66c65a51bae7a355f89"     # Red Backpack
+          material: TOTEM_OF_UNDYING
+        esencias:
+          clave: tasado-esencias
+          nombre: "Esencias"
+          mide: "Esencias que te pagan al vender lo que sacas."
+          vistas: [semana, historico]
+          textura: "e672959028f274b379d430f068f0f15a4f793eac12afb94ae0b4e50cf895df0f"     # Fine Ruby Gemstone
+          material: GHAST_TEAR
+        reliquias:
+          clave: reliquias
+          nombre: "Reliquias"
+          mide: "Reliquias que has sacado vivo y vendido."
+          vistas: [semana, historico]
+          textura: "b1f868761a5c9139da1fec6726e1655929429a43ab972c8118ba26b9255e7c"       # Red Chest (hierro)
+          material: RESIN_CLUMP
+        salidas:
+          clave: extracciones
+          nombre: "Salidas"
+          mide: "Veces que has salido vivo de Calamity."
+          vistas: [semana, historico]
+          textura: "b837f3db13a40d4979de77179e18af6e0bc3cc39ea6aba518bb080a6f01a40"       # Red Heart
+          material: IRON_DOOR
+        minijefes:
+          clave: minijefes
+          nombre: "Minijefes"
+          mide: "Minijefes que has ayudado a derrotar."
+          vistas: [semana, historico]
+          textura: "c2baf0c589a6b583511d83c268240842d3364774ec9f566d1fd4d349cf42fb"       # Crown
+          material: WITHER_SKELETON_SKULL
+        contratos:
+          clave: contratos
+          nombre: "Contratos"
+          mide: "Contratos de Oren cumplidos y cobrados."
+          vistas: [semana, historico]
+          textura: "b1ed20567068cb0cc072d732f5322d734bf849e688c7fe011a302e1b9473d20c"     # Book
+          material: PAPER
+        horas:
+          clave: horas-activas
+          nombre: "Horas"
+          mide: "Horas en Calamity en las que te has movido."
+          vistas: [historico]
+          textura: "c819adb532b8901f449f940f1785d9b975bff2ed0a5ee893fd26fe371130bcc8"     # Clock (dark red)
+          material: COMPASS
+        saldo:
+          clave: esencias
+          nombre: "Saldo"
+          mide: "Las Esencias que tienes guardadas ahora."
+          vistas: [historico]
+          textura: "d4675158c0767ee508c52d52426cef3a2c2b29b7e487c92953a3823f561d06af"     # Red Chest (dorado)
+          material: ENDER_CHEST
   tablero: {activo: false, ecos: 7, redondeo: 50, cache-segundos: 30}
   # [alineado] Encuesta y Voto del Botin (MED 4). Una pregunta activa a la vez (la abre el staff con
   # /lw hardcore encuesta abrir <id>); "botin" es la fija del Voto del Botin, siempre abierta.
