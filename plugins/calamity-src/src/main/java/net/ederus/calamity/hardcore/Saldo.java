@@ -174,20 +174,21 @@ final class Saldo implements Listener {
         return n;
     }
 
-    /** P-M09 (clic en el saldo del Altar o del Tasador): "Has depositado <n> Esencias. Saldo: <s>." */
+    /** P-M09 (clic en el saldo del Altar o del Mercado): "Has ingresado <n> Esencias en tu saldo. Ahora tienes <s>." */
     Component avisoDeposito(Player p, int n) {
-        return ComandoCalamity.mensaje(Component.text("Has depositado ")
-                .append(Component.text(String.valueOf(n), Paleta.CIFRA))
-                .append(Component.text(" Esencias. Saldo: "))
-                .append(Component.text(String.valueOf(de(p.getUniqueId())), Paleta.CIFRA))
+        return ComandoCalamity.mensaje(Component.text("Has ingresado ")
+                .append(Component.text(Altar.miles(n), Paleta.CIFRA))
+                .append(Component.text(n == 1 ? " Esencia en tu saldo. Ahora tienes " : " Esencias en tu saldo. Ahora tienes "))
+                .append(Component.text(Altar.miles(de(p.getUniqueId())), Paleta.CIFRA))
                 .append(Component.text(".")));
     }
 
-    /** P-M08: "Saldo: <n> Esencias." */
+    /** P-M08: "Tu saldo es de <n> Esencias." */
     Component avisoSaldo(UUID jugador) {
-        return ComandoCalamity.mensaje(Component.text("Saldo: ")
-                .append(Component.text(String.valueOf(de(jugador)), Paleta.CIFRA))
-                .append(Component.text(" Esencias.")));
+        long n = de(jugador);
+        return ComandoCalamity.mensaje(Component.text("Tu saldo es de ")
+                .append(Component.text(Altar.miles(n), Paleta.CIFRA))
+                .append(Component.text(n == 1 ? " Esencia." : " Esencias.")));
     }
 
     private String encimaTexto(OfflinePlayer jugador) {
@@ -203,8 +204,8 @@ final class Saldo implements Listener {
         int n = depositarFisicas(p);
         if (n > 0) {
             p.sendMessage(ComandoCalamity.mensaje(
-                    Component.text("Fuera de Calamity las Esencias no pesan: van a tu saldo (")
-                            .append(Component.text("+" + n, Paleta.CIFRA))
+                    Component.text("Las Esencias que llevabas encima han pasado a tu saldo (")
+                            .append(Component.text("+" + Altar.miles(n), Paleta.CIFRA))
                             .append(Component.text(")."))));
         }
     }

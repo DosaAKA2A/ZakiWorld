@@ -174,14 +174,15 @@ final class Monedero {
 
     /** P-M10: "Te faltan <n> MobCoins." */
     static Component avisoFaltan(long n) {
-        return ComandoCalamity.mensaje(Component.text("Te faltan ")
-                .append(Component.text(String.valueOf(Math.max(0, n)), Paleta.CIFRA))
-                .append(Component.text(" MobCoins.")));
+        long m = Math.max(0, n);
+        return ComandoCalamity.mensaje(Component.text(m == 1 ? "Te falta " : "Te faltan ")
+                .append(Component.text(Altar.miles(m), Paleta.CIFRA))
+                .append(Component.text(m == 1 ? " MobCoin." : " MobCoins.")));
     }
 
     /** P-M11: los trueques con MobCoins mientras disponible() sea false. */
     static Component avisoProximamente() {
-        return ComandoCalamity.mensaje("Esto aún no se puede pagar con MobCoins. Próximamente.");
+        return ComandoCalamity.mensaje("El Altar todavía no cobra MobCoins: estará disponible pronto.");
     }
 
     /** El cobro del modo prueba, sin Bukkit: descuenta si llega y dice si ha podido. */

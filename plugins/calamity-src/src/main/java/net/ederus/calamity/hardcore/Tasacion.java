@@ -248,12 +248,13 @@ final class Tasacion {
             ganados.add(tipo);
             // La linea de la Tasacion, aparte de la que ponga Creditos: dice de que salida salio.
             bit.anotar("tasacion", "credito", nombre, tipo + " +1");
-            if (online != null) online.sendMessage(ComandoCalamity.mensaje("Por la venta: +1 " + nombreCredito(tipo) + "."));
+            if (online != null) online.sendMessage(ComandoCalamity.mensaje(Component.text("Con la venta has ganado ")
+                    .append(Component.text(nombreCredito(tipo), Paleta.DETALLE)).append(Component.text("."))));
         }
         for (String mj : k.sellos) {
             hc.plugin().getServer().broadcast(ComandoCalamity.mensaje(Component.text(nombre, Paleta.DETALLE)
-                    .append(Component.text(" ha sacado vivo un Sello de "))
-                    .append(Component.text(Minijefes.nombre(mj), Paleta.DETALLE))
+                    .append(Component.text(" ha salido de Calamity con el "))
+                    .append(Component.text("Sello " + Forja.delMinijefe(mj), Paleta.DETALLE))
                     .append(Component.text("."))));
         }
 
@@ -313,42 +314,68 @@ final class Tasacion {
         return new Resumen(pagadasE, pagadasMc, lineas);
     }
 
-    /** P-R01 y P-W06. Numeros y nombres en blanco (DIS sec. 5). */
+    /**
+     * P-R01 y P-W06: "Has vendido 7 Reliquias (5 de grado I y 2 de grado II) por 3 Esencias y
+     * 55 MobCoins." Numeros y nombres en su color (DIS sec. 5).
+     */
     private void avisar(Player p, Cuenta k, int esencias, long mc, double factor, int extra) {
-        boolean hubo = k.validas > 0 || k.nulas() > 0 || k.exceso[1] + k.exceso[2] > 0;
-        if (hubo) {
-            Component c = Component.text("Venta: ");
-            c = c.append(cifra(k.porGrado[1])).append(Component.text(" astillas, "))
-                    .append(cifra(k.porGrado[2])).append(Component.text(" fragmentos, "))
-                    .append(cifra(k.porGrado[3])).append(Component.text(" ámbar, "))
-                    .append(cifra(k.porGrado[4])).append(Component.text(" mayores → "))
-                    .append(cifra(esencias)).append(Component.text(" Esencias y "))
-                    .append(cifra(mc)).append(Component.text(" MobCoins"));
-            if (factor > 1) c = c.append(Component.text(", racha ×")).append(cifra(num(factor)));
+        int vendidas = 0;
+        List<String> grados = new ArrayList<>();
+        for (int g = 1; g <= 4; g++) {
+            if (k.porGrado[g] <= 0) continue;
+            vendidas += k.porGrado[g];
+            grados.add(k.porGrado[g] + " de grado " + Reliquias.ROMANO[g]);
+        }
+        if (vendidas > 0) {
+            Component c = Component.text("Has vendido ").append(cifra(vendidas))
+                    .append(Component.text(vendidas == 1 ? " Reliquia" : " Reliquias"));
+            if (grados.size() == 1) c = c.append(Component.text(" de grado " + Reliquias.ROMANO[primerGrado(k)]));
+            else c = c.append(Component.text(" (" + lista(grados) + ")"));
+            c = c.append(Component.text(" por ")).append(cifra(Altar.miles(esencias)))
+                    .append(Component.text(esencias == 1 ? " Esencia y " : " Esencias y "))
+                    .append(cifra(Altar.miles(mc))).append(Component.text(" MobCoins"));
+            if (factor > 1) {
+                c = c.append(Component.text(", con la Racha de Codicia a ×"))
+                        .append(cifra(num(factor).replace('.', ',')));
+            }
             p.sendMessage(ComandoCalamity.mensaje(c.append(Component.text("."))));
-            if (k.nulas() > 0) {
-                p.sendMessage(ComandoCalamity.mensaje(k.nulas() == 1 ? "Una no valía nada."
-                        : k.nulas() + " no valían nada."));
-            }
-            if (k.exceso[1] + k.exceso[2] > 0) {
-                p.sendMessage(ComandoCalamity.mensaje("Por hoy, esto ya no paga más."));
-            }
+        }
+        if (k.nulas() > 0) {
+            p.sendMessage(ComandoCalamity.mensaje(k.nulas() == 1 ? "Una Reliquia no valía nada (caducada o no válida)."
+                    : k.nulas() + " Reliquias no valían nada (caducadas o no válidas)."));
+        }
+        int exceso = k.exceso[1] + k.exceso[2];
+        if (exceso > 0) {
+            p.sendMessage(ComandoCalamity.mensaje("Has llegado al tope diario de Reliquias de grado I y II: "
+                    + (exceso == 1 ? "una no ha pagado nada." : exceso + " no han pagado nada.")));
         }
         if (extra > 0) {
-            p.sendMessage(ComandoCalamity.mensaje(Component.text("La primera salida del día paga más: +")
-                    .append(cifra(extra)).append(Component.text(" Esencias."))));
+            p.sendMessage(ComandoCalamity.mensaje(Component.text("Por ser tu primera salida del día, ganas ")
+                    .append(cifra(extra)).append(Component.text(extra == 1 ? " Esencia más." : " Esencias más."))));
         }
+    }
+
+    private static int primerGrado(Cuenta k) {
+        for (int g = 1; g <= 4; g++) if (k.porGrado[g] > 0) return g;
+        return 1;
+    }
+
+    /** "a", "a y b", "a, b y c". */
+    private static String lista(List<String> cosas) {
+        if (cosas.size() <= 1) return cosas.isEmpty() ? "" : cosas.get(0);
+        return String.join(", ", cosas.subList(0, cosas.size() - 1)) + " y " + cosas.get(cosas.size() - 1);
     }
 
     private static Component cifra(Object o) {
         return Paleta.cifra(o);
     }
 
+    /** El credito ganado, con su articulo: "un Sello del Heraldo Carmesí", "una Marca de Eco". */
     private static String nombreCredito(String tipo) {
-        if (tipo.startsWith("sello:")) return "Sello de " + Minijefes.nombre(tipo.substring(6));
+        if (tipo.startsWith("sello:")) return "un Sello " + Forja.delMinijefe(tipo.substring(6));
         return switch (tipo) {
-            case "fragmento" -> "Fragmento de Guadaña";
-            case "marca" -> "Marca de Eco";
+            case "fragmento" -> "un Fragmento de Guadaña";
+            case "marca" -> "una Marca de Eco";
             default -> tipo;
         };
     }
@@ -479,17 +506,17 @@ final class Tasacion {
             hc.marcarSucio();
             hc.plugin().bitacora().anotar("tasacion", "reset-tope", Minijefes.nombreDe(op), quien.getName());
             quien.sendMessage(ComandoCalamity.mensaje("Tope diario de Astillas y Fragmentos de "
-                    + Minijefes.nombreDe(op) + " a cero."));
+                    + Minijefes.nombreDe(op) + " puesto a cero."));
             return;
         }
         if (args.length < 5) {
             quien.sendMessage(ComandoCalamity.mensaje(
-                    "Uso: /lw hardcore tasar <jugador> <g1> <g2> <g3> [especial:grado:N[:valida|:minijefe] ...]"));
+                    "Uso: /calamidad tasar <jugador> <g1> <g2> <g3> [especial:grado:N[:valida|:minijefe] ...]"));
             return;
         }
         Reliquias rel = hc.reliquias();
         if (rel == null) {
-            quien.sendMessage(ComandoCalamity.mensaje("Las Reliquias no están en marcha."));
+            quien.sendMessage(ComandoCalamity.mensaje("El módulo de Reliquias no está en marcha."));
             return;
         }
         OfflinePlayer op = Reliquias.jugador(args[1]);
@@ -502,7 +529,7 @@ final class Tasacion {
             try {
                 n[g] = Math.max(0, Integer.parseInt(args[1 + g]));
             } catch (NumberFormatException e) {
-                quien.sendMessage(ComandoCalamity.mensaje("g1, g2 y g3 son cantidades: " + args[1 + g] + "?"));
+                quien.sendMessage(ComandoCalamity.mensaje("g1, g2 y g3 tienen que ser cantidades, y «" + args[1 + g] + "» no lo es."));
                 return;
             }
         }
@@ -510,7 +537,8 @@ final class Tasacion {
         for (int i = 5; i < args.length; i++) {
             Reliquias.Espec e = Reliquias.espec(args[i], true, 4);
             if (e == null) {
-                quien.sendMessage(ComandoCalamity.mensaje("No entiendo \"" + args[i] + "\": campana:3:45, lagrima:4:60:valida, sello:4:heraldo-carmes."));
+                quien.sendMessage(ComandoCalamity.mensaje("No entiendo «" + args[i]
+                        + "». Ejemplos: campana:3:45, lagrima:4:60:valida, sello:4:heraldo-carmes."));
                 return;
             }
             especiales.add(e);

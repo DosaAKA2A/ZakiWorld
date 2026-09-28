@@ -650,17 +650,17 @@ final class Altar implements Listener {
             return;
         }
         if (!activo()) {
-            decir(quien, op, ComandoCalamity.mensaje("El altar está en silencio ahora mismo."));
+            decir(quien, op, ComandoCalamity.mensaje("El Altar está cerrado ahora mismo."));
             return;
         }
         if (hc.saldo() == null || hc.creditos() == null) {
-            decir(quien, op, ComandoCalamity.mensaje("El altar no puede cobrar ahora mismo."));
+            decir(quien, op, ComandoCalamity.mensaje("El Altar no puede cobrar ahora mismo."));
             return;
         }
         Player p = op.getPlayer();
         if (t.servicio()) {
             if (p == null) {
-                decir(quien, null, ComandoCalamity.mensaje(nombre(t) + " necesita al jugador conectado."));
+                decir(quien, null, ComandoCalamity.mensaje("«" + nombre(t) + "» necesita que el jugador esté conectado."));
                 return;
             }
             switch (t.da()) {
@@ -672,7 +672,7 @@ final class Altar implements Listener {
         }
         UUID u = op.getUniqueId();
         if (!enCurso.add(u)) {
-            decir(quien, op, ComandoCalamity.mensaje("Espera: el altar aún está con tu trueque anterior."));
+            decir(quien, op, ComandoCalamity.mensaje("Espera: el Altar todavía está terminando tu compra anterior."));
             return;
         }
         try {
@@ -739,9 +739,9 @@ final class Altar implements Listener {
         if (r.devuelto()) {
             hc.plugin().bitacora().anotar("trueque", nombre, t.id(), "-" + pr.esencias(), "fallo", "devuelto", r.motivo(),
                     "mc " + pr.mc(), r.creditoUsado() == null ? "-" : r.creditoUsado());
-            Component aviso = ComandoCalamity.mensaje(Component.text("El altar no pudo darte ")
+            Component aviso = ComandoCalamity.mensaje(Component.text("El Altar no ha podido darte ")
                     .append(Component.text(nombre(t), Paleta.DETALLE))
-                    .append(Component.text(". Te lo devuelve todo.")));
+                    .append(Component.text(". Te ha devuelto todo lo que pagaste.")));
             if (p != null) {
                 p.sendMessage(aviso);
                 Compat.soundPlayers(p.getWorld(), p.getLocation(), "block.note_block.bass", 0.8f, 0.6f);
@@ -758,7 +758,7 @@ final class Altar implements Listener {
         if (t.pieza() != null) hc.seguro("altar", () -> forja.trasForjar(op, r));
         if ("ofrenda".equals(t.da())) hc.seguro("altar", () -> ofrenda(op, pr.esencias()));
         if (p != null) {
-            p.sendMessage(avisoHecho(t, pr));
+            p.sendMessage(avisoHecho(t, pr, r.creditoUsado()));
             Compat.soundPlayers(p.getWorld(), p.getLocation(), "block.amethyst_block.resonate", 1.0f, 1.2f);
         }
         if (quien != null && quien != p) {
@@ -769,15 +769,21 @@ final class Altar implements Listener {
         }
     }
 
-    /** "Trueque hecho: <nombre>. (-10 Esencias, -2.000 MobCoins)". */
-    private static Component avisoHecho(Trueque t, Precio pr) {
+    /**
+     * "Has comprado: <nombre> (−10 Esencias, −2.000 MobCoins)." usado: el credito que se gasto de
+     * verdad (un Sello Errante puede valer por el Sello que pide la pieza).
+     */
+    private static Component avisoHecho(Trueque t, Precio pr, String usado) {
         List<String> coste = new ArrayList<>();
-        if (pr.esencias() > 0) coste.add("−" + pr.esencias() + " Esencias");
+        if (pr.esencias() > 0) coste.add("−" + miles(pr.esencias()) + (pr.esencias() == 1 ? " Esencia" : " Esencias"));
         if (pr.mc() > 0) coste.add("−" + miles(pr.mc()) + " MobCoins");
-        if (pr.credito() != null) coste.add("−" + Forja.nombreCredito(pr.credito(), pr.creditos()));
-        String texto = "ofrenda".equals(t.da()) ? "El altar acepta tu Ofrenda" : "Trueque hecho: " + nombre(t);
-        return ComandoCalamity.mensaje(Component.text(texto + ".")
-                .append(Component.text(coste.isEmpty() ? "" : " (" + String.join(", ", coste) + ")", Paleta.CIFRA)));
+        String credito = usado != null ? usado : pr.credito();
+        if (credito != null) coste.add("−" + MenuAltar.creditoLinea(credito, pr.creditos()));
+        String texto = "ofrenda".equals(t.da()) ? "El Altar acepta tu Ofrenda"
+                : ("forja".equals(t.pagina()) ? "Has forjado: " : "Has comprado: ") + nombre(t);
+        return ComandoCalamity.mensaje(Component.text(texto)
+                .append(Component.text(coste.isEmpty() ? "" : " (" + String.join(", ", coste) + ")", Paleta.CIFRA))
+                .append(Component.text(".")));
     }
 
     /** El mensaje de cada motivo de rechazo: P-M03, P-M04, P-W01/P-W07, P-M10/P-M11. */
@@ -785,31 +791,40 @@ final class Altar implements Listener {
         Trueque t = r.t();
         Object f = r.faltan();
         return switch (r.motivo()) {
-            case "esencias" -> ComandoCalamity.mensaje(Component.text("Te faltan Esencias. ")
-                    .append(Component.text("(" + f + ")", Paleta.CIFRA)));
+            case "esencias" -> {
+                long n = f instanceof Number x ? x.longValue() : 0;
+                yield ComandoCalamity.mensaje(Component.text(n == 1 ? "Te falta " : "Te faltan ")
+                        .append(Component.text(miles(n), Paleta.CIFRA))
+                        .append(Component.text(n == 1 ? " Esencia." : " Esencias.")));
+            }
             case "cupo" -> {
-                if ("tope-llaves".equals(f)) yield ComandoCalamity.mensaje("Esta semana ya no te caben más Llaves del Caos.");
+                if ("tope-llaves".equals(f)) yield ComandoCalamity.mensaje("Esta semana ya has recibido el máximo de Llaves del Caos.");
                 if (f instanceof String s && s.endsWith("d")) {
-                    yield ComandoCalamity.mensaje("La Guadaña aún no ha vuelto a ti. Faltan " + s.substring(0, s.length() - 1) + " días.");
+                    String dias = s.substring(0, s.length() - 1);
+                    yield ComandoCalamity.mensaje("Esta pieza solo se puede forjar una vez cada " + t.esperaDias() + " días. "
+                            + ("1".equals(dias) ? "Te falta 1 día." : "Te faltan " + dias + " días."));
                 }
                 yield ComandoCalamity.mensaje(t.limiteDia() > 0 && t.limiteSemana() <= 0
-                        ? "Este trueque ya no te queda hoy." : "Este trueque ya no te queda esta semana.");
+                        ? "Ya has llegado al límite diario de " + nombre(t) + "."
+                        : "Ya has llegado al límite semanal de " + nombre(t) + ".");
             }
-            case "stock" -> ComandoCalamity.mensaje("Esta semana el altar ya no tiene más de esto.");
+            case "stock" -> ComandoCalamity.mensaje("Esta semana ya no quedan existencias de " + nombre(t) + " en el Altar.");
             case "credito" -> {
                 if ("horas".equals(f) && hc.creditos() != null) yield hc.creditos().avisoHoras(u);
-                yield ComandoCalamity.mensaje(Component.text("Te falta ")
+                yield ComandoCalamity.mensaje(Component.text("Necesitas ")
                         .append(Component.text(Forja.nombreCredito(String.valueOf(f), r.precio().creditos()), Paleta.DETALLE))
-                        .append(Component.text(" para forjar esto.")));
+                        .append(Component.text(" para forjarlo.")));
             }
             case "mc" -> "proximamente".equals(f) ? Monedero.avisoProximamente()
                     : Monedero.avisoFaltan(f instanceof Number n ? n.longValue() : 0);
             case "requisito" -> {
-                if ("apagado".equals(f)) yield ComandoCalamity.mensaje("Esto aún no se puede pedir al altar.");
-                if (String.valueOf(f).contains("insomne")) yield ComandoCalamity.mensaje("Esto solo se le da a un [INSOMNE].");
-                yield ComandoCalamity.mensaje("Aún no cumples lo que pide esto.");
+                if ("apagado".equals(f)) yield ComandoCalamity.mensaje("Esto todavía no está disponible en el Altar.");
+                if (String.valueOf(f).contains("insomne")) {
+                    yield ComandoCalamity.mensaje("Solo pueden comprarlo quienes tienen el tag [INSOMNE].");
+                }
+                yield ComandoCalamity.mensaje("Aún no cumples lo que hace falta para comprarlo.");
             }
-            default -> ComandoCalamity.mensaje("El altar no acepta eso ahora.");
+            default -> ComandoCalamity.mensaje("El Altar no puede venderte eso ahora mismo.");
         };
     }
 
@@ -864,16 +879,18 @@ final class Altar implements Listener {
         int max = hc.cfg().getInt("frasco.usos", 3);
         int faltan = Math.max(0, max - Math.max(0, items.tragos(frasco)));
         if (faltan == 0) {
-            p.sendMessage(ComandoCalamity.mensaje("Ese frasco ya está lleno."));
+            p.sendMessage(ComandoCalamity.mensaje("Tu Frasco de Calma ya está lleno."));
             return;
         }
         int coste = faltan * Math.max(0, hc.cfg().getInt("frasco.esencias-por-trago", 1));
         Saldo s = hc.saldo();
         if (s == null || !s.restar(p.getUniqueId(), coste, "altar:recargar")) {
             long tiene = s == null ? 0 : s.de(p.getUniqueId());
-            fallidoServicio(p, id, "esencias", coste - tiene);
-            p.sendMessage(ComandoCalamity.mensaje(Component.text("Te faltan Esencias. ")
-                    .append(Component.text("(" + (coste - tiene) + ")", Paleta.CIFRA))));
+            long le = coste - tiene;
+            fallidoServicio(p, id, "esencias", le);
+            p.sendMessage(ComandoCalamity.mensaje(Component.text(le == 1 ? "Te falta " : "Te faltan ")
+                    .append(Component.text(miles(le), Paleta.CIFRA))
+                    .append(Component.text(le == 1 ? " Esencia." : " Esencias."))));
             Compat.soundPlayers(p.getWorld(), p.getLocation(), "block.note_block.bass", 0.8f, 0.6f);
             return;
         }
@@ -904,8 +921,9 @@ final class Altar implements Listener {
             c.put("entrega", "ok");
             hc.seguro("telemetria", () -> tel.suceso("trueque", p, c));
         }
-        p.sendMessage(ComandoCalamity.mensaje(Component.text("El frasco vuelve a estar lleno. ")
-                .append(Component.text("(−" + coste + " Esencias)", Paleta.CIFRA))));
+        p.sendMessage(ComandoCalamity.mensaje(Component.text("Tu Frasco de Calma vuelve a estar lleno ")
+                .append(Component.text("(−" + miles(coste) + (coste == 1 ? " Esencia" : " Esencias") + ")", Paleta.CIFRA))
+                .append(Component.text("."))));
         Compat.soundPlayers(p.getWorld(), p.getLocation(), "item.bottle.fill", 1.0f, 1.0f);
     }
 
@@ -965,11 +983,11 @@ final class Altar implements Listener {
         if (e.getHand() != EquipmentSlot.HAND) return;
         Player p = e.getPlayer();
         if (!activo()) {
-            p.sendMessage(ComandoCalamity.mensaje("El altar está en silencio ahora mismo."));
+            p.sendMessage(ComandoCalamity.mensaje("El Altar está cerrado ahora mismo."));
             return;
         }
         if (hc.esHardcore(p)) {
-            p.sendMessage(ComandoCalamity.mensaje("El altar no escucha desde ahí dentro."));
+            p.sendMessage(ComandoCalamity.mensaje("El Altar solo se abre fuera de Calamity o en su spawn."));
             return;
         }
         menu.abrir(p, MenuAltar.UMBRAL);
@@ -988,7 +1006,7 @@ final class Altar implements Listener {
             case "" -> marcar(quien);
             case "probar" -> {
                 if (args.length < 4) {
-                    quien.sendMessage(Component.text("Uso: /lw hardcore altar probar <jugador> <trueque>", Paleta.AVISO));
+                    quien.sendMessage(Component.text("Uso: /calamidad altar probar <jugador> <trueque>", Paleta.AVISO));
                     return;
                 }
                 OfflinePlayer a = Entregas.buscar(args[2]);
@@ -1004,7 +1022,7 @@ final class Altar implements Listener {
                  * nada ni toca el saldo, los creditos, la espera de la Forja ni el stock comun. */
                 OfflinePlayer a = args.length >= 3 ? Entregas.buscar(args[2]) : null;
                 if (a == null) {
-                    quien.sendMessage(Component.text("Uso: /lw hardcore altar reset <jugador>", Paleta.AVISO));
+                    quien.sendMessage(Component.text("Uso: /calamidad altar reset <jugador>", Paleta.AVISO));
                     return;
                 }
                 UUID u = a.getUniqueId();
@@ -1013,15 +1031,15 @@ final class Altar implements Listener {
                 hc.datos().set("altar.usos-dia." + cal.dia() + "." + u, null);
                 hc.guardarYa();
                 hc.plugin().bitacora().anotar("altar", "reset", Entregas.nombre(a), quien.getName());
-                quien.sendMessage(ComandoCalamity.mensaje("Cupos del altar de " + Entregas.nombre(a) + " a cero."));
+                quien.sendMessage(ComandoCalamity.mensaje("Cupos del Altar de " + Entregas.nombre(a) + " puestos a cero."));
             }
             case "abrir" -> {
                 if (!(quien instanceof Player p)) {
-                    quien.sendMessage(Component.text("Solo desde el juego.", Paleta.AVISO));
+                    quien.sendMessage(Component.text("Solo se puede usar dentro del juego.", Paleta.AVISO));
                     return;
                 }
                 if (hc.esHardcore(p)) {
-                    p.sendMessage(ComandoCalamity.mensaje("El altar no escucha desde ahí dentro."));
+                    p.sendMessage(ComandoCalamity.mensaje("El Altar solo se abre fuera de Calamity o en su spawn."));
                     return;
                 }
                 String pagina = args.length >= 3 ? args[2].toLowerCase(Locale.ROOT) : MenuAltar.UMBRAL;
@@ -1030,7 +1048,7 @@ final class Altar implements Listener {
             }
             case "info" -> {
                 Location l = altar();
-                quien.sendMessage(ComandoCalamity.mensaje(l == null ? "El altar no está marcado."
+                quien.sendMessage(ComandoCalamity.mensaje(l == null ? "El Altar no está marcado."
                         : "Altar en " + l.getWorld().getKey() + " " + l.getBlockX() + " " + l.getBlockY() + " " + l.getBlockZ()
                         + (activo() ? "." : " (apagado).")));
                 List<String> ids = new ArrayList<>();
@@ -1038,23 +1056,23 @@ final class Altar implements Listener {
                 quien.sendMessage(Component.text("  Trueques: " + String.join(", ", ids), Paleta.TENUE));
             }
             default -> quien.sendMessage(Component.text(
-                    "Uso: /lw hardcore altar [probar <jugador> <trueque> | reset <jugador> | abrir [umbral|forja|camino] | info]", Paleta.AVISO));
+                    "Uso: /calamidad altar [probar <jugador> <trueque> | reset <jugador> | abrir [umbral|forja|camino] | info]", Paleta.AVISO));
         }
     }
 
     /** Marca como altar el bloque que mira (como llegada/salida: lo escribe en config.yml). */
     private void marcar(CommandSender quien) {
         if (!(quien instanceof Player p)) {
-            quien.sendMessage(Component.text("Mira un bloque desde el juego para marcarlo.", Paleta.AVISO));
+            quien.sendMessage(Component.text("Solo se puede usar dentro del juego, mirando el bloque que quieras marcar.", Paleta.AVISO));
             return;
         }
         Block b = p.getTargetBlockExact(8);
         if (b == null || b.getType().isAir()) {
-            p.sendMessage(Component.text("Mira el bloque que quieras usar de altar (a 8 bloques como mucho).", Paleta.AVISO));
+            p.sendMessage(Component.text("Mira el bloque que quieras usar como Altar (a 8 bloques como mucho).", Paleta.AVISO));
             return;
         }
         if (hc.esHardcore(b.getWorld())) {
-            p.sendMessage(Component.text("El altar va fuera de Calamity: dentro no escucha.", Paleta.AVISO));
+            p.sendMessage(Component.text("El Altar tiene que estar fuera de Calamity.", Paleta.AVISO));
             return;
         }
         hc.punto("altar", b.getLocation());
@@ -1361,7 +1379,7 @@ final class Altar implements Listener {
         h.ok("/lw hardcore altar registrado", Subcomandos.lw().nombres(null).contains("altar"));
         h.ok("/calamity camino registrado", Subcomandos.calamity().nombres(null).contains("camino"));
         h.igual("nombre con tildes", "Talismán de Vigilia", nombre(ts.get("talisman")));
-        h.igual("nombre de una pieza sin nombre", "Yelmo del Manto", nombre(ts.get("yelmo-manto")));
+        h.igual("nombre de una pieza sin nombre", "Yelmo de Calamidad", nombre(ts.get("yelmo-manto")));
         return h.lineas();
     }
 }

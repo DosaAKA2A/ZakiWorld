@@ -36,7 +36,7 @@ final class Racha {
                 (quien, args) -> {
                     OfflinePlayer op = args.length >= 2 ? Reliquias.jugador(args[1]) : null;
                     if (op == null) {
-                        quien.sendMessage(ComandoCalamity.mensaje("Uso: /lw hardcore racha <jugador> [n]"));
+                        quien.sendMessage(ComandoCalamity.mensaje("Uso: /calamidad racha <jugador> [n]"));
                         return;
                     }
                     if (args.length >= 3) {
@@ -44,7 +44,7 @@ final class Racha {
                         try {
                             n = Integer.parseInt(args[2]);
                         } catch (NumberFormatException e) {
-                            quien.sendMessage(ComandoCalamity.mensaje("La racha es un número."));
+                            quien.sendMessage(ComandoCalamity.mensaje("La racha tiene que ser un número."));
                             return;
                         }
                         poner(op, n);
@@ -135,7 +135,7 @@ final class Racha {
         if (st != null) st.maximo(jugador, "racha-max", nueva);
         if (p != null) {
             double f = factor(nueva, nueva, hc.cfg().getDouble("racha.por-punto", 0.10));
-            hc.cordura().destello(p, Component.text("Racha de Codicia ×" + Tasacion.num(f), Reliquias.AMBAR), 2);
+            hc.cordura().destello(p, Component.text("Racha de Codicia ×" + Tasacion.num(f).replace('.', ','), Reliquias.AMBAR), 2);
         }
         return nueva;
     }
@@ -148,7 +148,7 @@ final class Racha {
         hc.datos().set(RUTA + u, null);
         hc.marcarSucio();
         hc.plugin().bitacora().anotar("racha", "pierde", p.getName(), String.valueOf(antes));
-        p.sendMessage(ComandoCalamity.mensaje("Tu racha de codicia se ha ido contigo."));
+        p.sendMessage(ComandoCalamity.mensaje("Has muerto: tu Racha de Codicia vuelve a cero."));
     }
 
     /** Para el admin y las pruebas del coordinador: poner la racha a mano. */

@@ -111,7 +111,7 @@ final class Encuesta {
         Subcomandos.calamity().registrar("encuesta", "contesta la pregunta de Calamity", "lethalworld.calamity",
                 (quien, args) -> {
                     if (quien instanceof Player p) abrirPendiente(p);
-                    else quien.sendMessage(Component.text("Solo desde el juego.", Paleta.AVISO));
+                    else quien.sendMessage(Component.text("Solo se puede usar dentro del juego.", Paleta.AVISO));
                 }, null);
         PlaceholdersLethal.registrar("encuesta", this::placeholder);
         refrescar();
@@ -221,15 +221,17 @@ final class Encuesta {
                 if (texto != null) c.put("texto", texto);
                 telemetria(q.fija() ? "voto" : "encuesta", p, c);
                 hc.plugin().bitacora().anotar("encuesta", "voto", p.getName(), q.id(), opcion);
-                p.sendMessage(ComandoCalamity.mensaje("Gracias. Calamity toma nota."));   // P-V01
+                p.sendMessage(ComandoCalamity.mensaje("Gracias por responder."));   // P-V01
                 refrescar();
             }
             case YA, HUELLA -> {
                 if (r == Voto.HUELLA) hc.plugin().bitacora().anotar("encuesta", "repetido", p.getName(), q.id(), "huella");
-                p.sendMessage(ComandoCalamity.mensaje("Ya has votado esta semana."));      // P-V02
+                // El Voto del Botin es uno por semana; la encuesta, uno para siempre.
+                p.sendMessage(ComandoCalamity.mensaje(q.fija() ? "Ya has votado esta semana."      // P-V02
+                        : "Ya has respondido a esta pregunta."));
             }
             case SIN_TASAR -> p.sendMessage(ComandoCalamity.mensaje(
-                    "Vota cuando hayas sacado algo de Calamity esta semana."));
+                    "Podrás votar cuando hayas salido vivo de Calamity esta semana."));
             case CERRADA -> p.sendMessage(ComandoCalamity.mensaje("Esa pregunta ya está cerrada."));
             case OPCION -> {
                 // Un clic en una casilla vieja: no hay nada que contar.
@@ -239,15 +241,15 @@ final class Encuesta {
 
     /** "Otra cosa": se cierra el menu y se espera una linea por el chat (60 letras). */
     void pedirOtra(Player p, Pregunta q) {
-        p.sendMessage(ComandoCalamity.mensaje("Escríbelo en el chat (60 letras como mucho). \"cancelar\" para salir."));
+        p.sendMessage(ComandoCalamity.mensaje("Escribe tu respuesta en el chat (60 letras como mucho) o «cancelar» para salir."));
         chat.pedir(p, linea -> {
             String limpio = limpiar(linea);
             if (limpio.isEmpty()) {
-                p.sendMessage(ComandoCalamity.mensaje("No he entendido nada. Vuelve a intentarlo con /calamity encuesta."));
+                p.sendMessage(ComandoCalamity.mensaje("No he podido leer tu respuesta. Vuelve a intentarlo con /calamity encuesta."));
                 return;
             }
             votar(p, q, OTRA, limpio);
-        }, () -> p.sendMessage(ComandoCalamity.mensaje("Sin respuesta. Puedes volver con /calamity encuesta.")));
+        }, () -> p.sendMessage(ComandoCalamity.mensaje("Respuesta cancelada. Puedes contestar más tarde con /calamity encuesta.")));
     }
 
     /**
@@ -439,7 +441,7 @@ final class Encuesta {
         hc.guardarYa();
         hc.plugin().bitacora().anotar("encuesta", "abrir", id);
         refrescar();
-        quien.sendMessage(Component.text("encuesta | " + id + " | abierta" + (activo() ? "" : " (encuesta.activo: false, nadie la vera)"),
+        quien.sendMessage(Component.text("encuesta | " + id + " | abierta" + (activo() ? "" : " (encuesta.activo: false, nadie la verá)"),
                 Paleta.BIEN));
     }
 
@@ -496,7 +498,7 @@ final class Encuesta {
         try {
             n = Math.max(1, Math.min(200, Integer.parseInt(cuantos)));
         } catch (NumberFormatException e) {
-            quien.sendMessage(Component.text("encuesta simular <n>: n es un numero.", Paleta.AVISO));
+            quien.sendMessage(Component.text("encuesta simular <n>: n tiene que ser un número.", Paleta.AVISO));
             return;
         }
         int bien = 0, huella = 0;
@@ -684,11 +686,11 @@ final class Encuesta {
     private static final Map<String, Pregunta> PREDETERMINADAS = new LinkedHashMap<>();
 
     static {
-        pre("freno", "¿Qué te frena de entrar a Calamity?", false,
+        pre("freno", "¿Qué te frena a la hora de entrar en Calamity?", false,
                 "perder", "IRON_CHESTPLATE", "Perder el equipo", "premio", "CHEST", "No sé qué gano",
                 "dificil", "WITHER_SKELETON_SKULL", "Es demasiado difícil", "tiempo", "CLOCK", "No tengo tiempo",
                 "solo", "PLAYER_HEAD", "Entro solo y me aburro");
-        pre("salvar", "Si solo pudieras salvar una cosa, ¿cuál?", false,
+        pre("salvar", "Si al morir pudieras salvar una sola cosa, ¿cuál sería?", false,
                 "casco", "NETHERITE_HELMET", "El casco", "pechera", "NETHERITE_CHESTPLATE", "La pechera",
                 "arma", "NETHERITE_SWORD", "El arma", "reliquias", "RESIN_CLUMP", "Mis Reliquias",
                 "nada", "BARRIER", "Nada, entro desnudo");
@@ -699,7 +701,7 @@ final class Encuesta {
                 "15", "CLOCK", "Menos de 15 min", "30", "CLOCK", "15-30 min", "60", "CLOCK", "30-60 min",
                 "mas", "CLOCK", "Más de 1 h");
         pre("camino", "¿Sabes cuánto te falta para tu próxima pieza del Manto?", false,
-                "si", "COMPASS", "Sí, lo miro en el altar", "mas-o-menos", "MAP", "Más o menos",
+                "si", "COMPASS", "Sí, lo miro en Tu camino", "mas-o-menos", "MAP", "Más o menos",
                 "no", "BARRIER", "No", "no-quiero", "GRAY_DYE", "No voy a por el Manto");
         pre(BOTIN, "¿Qué quieres que dé Calamity?", true,
                 "piezas-manto", "NETHERITE_CHESTPLATE", "Piezas del Manto", "libros-legendary", "ENCHANTED_BOOK", "Libros LEGENDARY",
@@ -765,7 +767,7 @@ final class Encuesta {
         if (ops != null) for (String k : ops.getKeys(false)) suma += ops.getDouble(k + ".pct");
         h.cerca("resultados: los pct suman 100", 100.0, suma, 0.5);
         h.ok("resultados: pregunta, cerrada, por_rango y otras",
-                "¿Qué te frena de entrar a Calamity?".equals(res.getString("pregunta"))
+                "¿Qué te frena a la hora de entrar en Calamity?".equals(res.getString("pregunta"))
                         && "2026-10-10".equals(res.getString("cerrada")) && res.isSet("por_rango")
                         && res.getStringList("otras").contains("Más jefes"));
 

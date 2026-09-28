@@ -386,15 +386,17 @@ final class Rankings implements Listener {
         hc.plugin().bitacora().anotar("ranking", "premio", nombre, p.tabla(), p.puesto() + ".o", "valor " + p.valor(),
                 "e " + e, "llaves " + llaves, semana);
 
-        StringBuilder texto = new StringBuilder(tablaNombre + ", " + p.puesto() + ".º: ");
+        // "1.º en Extraído (30 Esencias, 2 Llaves del Caos y [ÁNIMA] 7 días)". Se guarda tal cual para
+        // quien no esta conectado (ranking-avisos) y se le ensena al entrar.
         List<String> partes = new ArrayList<>();
-        if (e > 0) partes.add(e + " Esencias");
+        if (e > 0) partes.add(e + (e == 1 ? " Esencia" : " Esencias"));
         if (pr.llaves() > 0) partes.add(pr.llaves() + (pr.llaves() == 1 ? " Llave del Caos" : " Llaves del Caos"));
         if (!pr.comandos().isEmpty()) partes.add("[ÁNIMA] 7 días");
-        texto.append(partes.isEmpty() ? "tu puesto" : String.join(", ", partes));
+        StringBuilder texto = new StringBuilder(p.puesto() + ".º en " + tablaNombre);
+        if (!partes.isEmpty()) texto.append(" (").append(lista(partes)).append(")");
         Player online = op.getPlayer();
         if (online != null) {
-            online.sendMessage(ComandoCalamity.mensaje(Component.text("Premio de la semana: ")
+            online.sendMessage(ComandoCalamity.mensaje(Component.text("Premio del ranking semanal: ")
                     .append(Component.text(texto.toString(), Paleta.DETALLE)).append(Component.text("."))));
         } else {
             List<String> l = new ArrayList<>(hc.datos().getStringList("ranking-avisos." + p.jugador()));
@@ -402,6 +404,12 @@ final class Rankings implements Listener {
             hc.datos().set("ranking-avisos." + p.jugador(), l);
             hc.marcarSucio();
         }
+    }
+
+    /** "a", "a y b", "a, b y c". */
+    private static String lista(List<String> cosas) {
+        if (cosas.size() <= 1) return cosas.isEmpty() ? "" : cosas.get(0);
+        return String.join(", ", cosas.subList(0, cosas.size() - 1)) + " y " + cosas.get(cosas.size() - 1);
     }
 
     private boolean consola(String plantilla, String nombre) {
@@ -412,7 +420,7 @@ final class Rankings implements Listener {
         try {
             return hc.plugin().getServer().dispatchCommand(hc.plugin().getServer().getConsoleSender(), cmd);
         } catch (Throwable t) {
-            hc.plugin().getLogger().warning("[Calamity] Fallo el comando de ranking \"" + cmd + "\": " + t);
+            hc.plugin().getLogger().warning("[Calamity] Falló el comando de ranking \"" + cmd + "\": " + t);
             return false;
         }
     }
@@ -431,7 +439,7 @@ final class Rankings implements Listener {
             hc.datos().set(ruta, null);
             hc.marcarSucio();
             for (String s : l) {
-                p.sendMessage(ComandoCalamity.mensaje(Component.text("Te esperaba un premio de la semana: ")
+                p.sendMessage(ComandoCalamity.mensaje(Component.text("Te esperaba un premio del ranking semanal: ")
                         .append(Component.text(s, Paleta.DETALLE)).append(Component.text("."))));
             }
         }, 40L);
@@ -452,12 +460,12 @@ final class Rankings implements Listener {
         String sub = args.length > 1 ? args[1].toLowerCase(Locale.ROOT) : "ver";
         Estadisticas st = hc.estadisticas();
         if (st == null) {
-            quien.sendMessage(ComandoCalamity.mensaje("Sin estadisticas: el modulo no arranco."));
+            quien.sendMessage(ComandoCalamity.mensaje("Sin estadísticas: el módulo no arrancó."));
             return;
         }
         String semana = cal().semana();
         if (sub.equals("cerrar")) {
-            if (!activo()) quien.sendMessage(ComandoCalamity.mensaje("ranking.activo esta apagado: se cierra igual porque lo pides a mano."));
+            if (!activo()) quien.sendMessage(ComandoCalamity.mensaje("ranking.activo está apagado, pero se cierra igual porque lo pides a mano."));
             List<Puesto> res = cerrar(semana, "admin");
             quien.sendMessage(ComandoCalamity.mensaje("Semana " + semana + " cerrada: " + res.size() + " premios."));
             listar(quien, res);
@@ -474,7 +482,7 @@ final class Rankings implements Listener {
     private void listar(CommandSender quien, List<Puesto> res) {
         if (res.isEmpty()) {
             quien.sendMessage(Component.text("  Nadie con premio (hacen falta "
-                    + hc.cfg().getInt("ranking.minimo-extracciones", 3) + " extracciones en la semana).", Paleta.TENUE));
+                    + hc.cfg().getInt("ranking.minimo-extracciones", 3) + " salidas con vida en la semana).", Paleta.TENUE));
             return;
         }
         for (Puesto p : res) {

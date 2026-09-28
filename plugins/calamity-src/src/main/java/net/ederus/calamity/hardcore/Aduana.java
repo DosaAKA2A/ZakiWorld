@@ -153,16 +153,17 @@ final class Aduana {
             if (pago.mc() > 0) vigilarGlobal(pago.mc(), ahora);
         }
         if (online != null) {
-            if (r.tipoTopado()) online.sendMessage(ComandoCalamity.mensaje("Por hoy, esto ya no paga más."));
+            if (r.tipoTopado()) online.sendMessage(ComandoCalamity.mensaje("Hoy ya has cobrado el máximo por esto."));
             if (r.avisoTope()) {
                 online.sendMessage(ComandoCalamity.mensaje(
-                        "Hoy ya has sacado todo lo que Calamity paga en MobCoins. Las Esencias siguen."));
+                        "Hoy ya has llegado al tope de MobCoins de Calamity. Las Esencias se siguen pagando."));
             }
             if (r.avisoFusible()) {
                 Long antes = avisoFusible.get(u);
                 if (antes == null || ahora - antes > 10 * 60_000L) {
                     avisoFusible.put(u, ahora);
-                    online.sendMessage(ComandoCalamity.mensaje("Calamity paga menos a los que no paran. Sal un rato."));
+                    online.sendMessage(ComandoCalamity.mensaje(
+                            "Has ganado muchas MobCoins en la última hora: durante un rato pagarán menos."));
                 }
             }
         }
@@ -262,7 +263,7 @@ final class Aduana {
         if (limite <= 0 || total <= limite || ahora - ultimoAvisoGlobal < HORA) return;
         ultimoAvisoGlobal = ahora;
         hc.plugin().bitacora().anotar("aduana", "fusible-global", total + " MC en la ultima hora", "limite " + limite);
-        hc.plugin().getLogger().warning("[Calamity] Fusible global: " + total + " MC en la ultima hora (limite " + limite + ").");
+        hc.plugin().getLogger().warning("[Calamity] Fusible global: " + total + " MC en la última hora (límite " + limite + ").");
         Component aviso = Paleta.aviso("Fusible global: Calamity ha pagado " + total
                 + " MobCoins en la última hora. Mira la Bitácora.");
         for (Player s : Bukkit.getOnlinePlayers()) if (s.hasPermission("ederus.mundos")) s.sendMessage(aviso);
@@ -289,8 +290,11 @@ final class Aduana {
     /** P-A03 (huella o misma cuenta) o P-A04 (horas). Null si el motivo es "". */
     Component avisoInvalida(String motivo) {
         if (motivo == null || motivo.isEmpty()) return null;
-        if (motivo.equals("horas")) return ComandoCalamity.mensaje("Calamity aún no te conoce lo bastante.");
-        return ComandoCalamity.mensaje("Esa muerte no cuenta: Calamity reconoce a los tuyos.");
+        if (motivo.equals("horas")) {
+            return ComandoCalamity.mensaje("Esto no paga: los dos necesitáis al menos "
+                    + conf().getInt("horas-minimas", 10) + " h jugadas en el servidor.");
+        }
+        return ComandoCalamity.mensaje("Esto no paga: los dos compartís conexión.");
     }
 
     /**
@@ -422,7 +426,7 @@ final class Aduana {
 
     private void comando(CommandSender quien, String[] args) {
         if (args.length < 2) {
-            quien.sendMessage(Component.text("Uso: /lw hardcore aduana <jugador>", Paleta.AVISO));
+            quien.sendMessage(Component.text("Uso: /calamidad aduana <jugador> [reset]", Paleta.AVISO));
             return;
         }
         OfflinePlayer o = Entregas.buscar(args[1]);
@@ -443,7 +447,7 @@ final class Aduana {
             avisoFusible.remove(u);
             hc.guardarYa();
             hc.plugin().bitacora().anotar("aduana", "reset", nombre, quien.getName());
-            quien.sendMessage(ComandoCalamity.mensaje("Topes de hoy y Fusible de " + nombre + " a cero."));
+            quien.sendMessage(ComandoCalamity.mensaje("Topes de hoy y Fusible de " + nombre + " puestos a cero."));
             return;
         }
         quien.sendMessage(ComandoCalamity.mensaje(Component.text("Aduana de ").append(Component.text(nombre, Paleta.DETALLE))));

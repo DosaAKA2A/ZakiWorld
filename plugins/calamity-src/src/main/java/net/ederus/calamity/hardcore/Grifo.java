@@ -230,13 +230,16 @@ public final class Grifo implements Listener {
         }
     }
 
-    /** P-18, como mucho cada 30 s por jugador. */
+    /**
+     * P-18, como mucho cada 30 s por jugador: cerca de una Parca (o donde acaba de segar a su
+     * presa) los mobs no sueltan nada, y el jugador tiene que saber por que.
+     */
     private void cosechaSuya(Player p) {
         long ahora = System.currentTimeMillis();
         Long antes = ultimaCosecha.get(p.getUniqueId());
         if (antes != null && ahora - antes < 30_000) return;
         ultimaCosecha.put(p.getUniqueId(), ahora);
-        hc.cordura().destello(p, Component.text("La cosecha es suya.", Paleta.PARCA), 2);
+        hc.cordura().destello(p, Component.text("Aquí siega la Parca: los mobs no sueltan nada.", Paleta.PARCA), 2);
     }
 
     /** P-M01, con las MobCoins del mismo pago: si no, un destello pisaria al otro. */
@@ -244,7 +247,7 @@ public final class Grifo implements Listener {
         if (p == null || !p.isOnline() || !hc.esHardcore(p) || esencias <= 0) return;
         Component t = Component.text("+" + esencias + (esencias == 1 ? " Esencia" : " Esencias")
                 + " de Calamidad", NARANJA);
-        if (mc > 0) t = t.append(Component.text("  ·  +" + mc + " MobCoins", MobCoins.ORO));
+        if (mc > 0) t = t.append(Component.text("  ·  +" + Altar.miles(mc) + " MobCoins", MobCoins.ORO));
         hc.cordura().destello(p, t, 2);
     }
 

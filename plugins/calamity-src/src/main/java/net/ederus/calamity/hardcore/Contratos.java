@@ -107,12 +107,12 @@ final class Contratos implements Listener {
         Subcomandos.calamity().registrar("contratos", "tus contratos de hoy (se cobran al salir vivo)",
                 "lethalworld.calamity", (quien, args) -> {
                     if (quien instanceof Player p) mostrar(p, p);
-                    else quien.sendMessage(ComandoCalamity.mensaje("Solo para jugadores."));
+                    else quien.sendMessage(ComandoCalamity.mensaje("Solo se puede usar dentro del juego."));
                 }, null);
         Subcomandos.calamity().registrar("cambiar", "cambiar <1-3>: cambia un contrato (uno gratis al día)",
                 "lethalworld.calamity", (quien, args) -> {
                     if (!(quien instanceof Player p)) {
-                        quien.sendMessage(ComandoCalamity.mensaje("Solo para jugadores."));
+                        quien.sendMessage(ComandoCalamity.mensaje("Solo se puede usar dentro del juego."));
                         return;
                     }
                     int i;
@@ -163,17 +163,17 @@ final class Contratos implements Listener {
 
     static final List<Def> POR_DEFECTO = List.of(
             new Def("corto-mobs", "Mata 10 mobs y sal", "mob", 10, 2, 20, true, ""),
-            new Def("corto-cofre", "Abre 1 cofre de estructura y sal", "cofre", 1, 2, 20, true, "cofres.activo"),
-            new Def("corto-reliquia", "Saca 1 Reliquia de grado II o más", "reliquia-ii", 1, 2, 20, true, "reliquias.activas"),
-            new Def("corto-15", "Sal vivo tras 15 min dentro", "minutos", 15, 2, 20, true, ""),
-            new Def("extraer-ii", "Saca 3 Reliquias de grado II o más en una salida", "reliquia-ii", 3, 4, 60, false, "reliquias.activas"),
+            new Def("corto-cofre", "Abre un cofre de estructura y sal", "cofre", 1, 2, 20, true, "cofres.activo"),
+            new Def("corto-reliquia", "Saca una Reliquia de grado II o más", "reliquia-ii", 1, 2, 20, true, "reliquias.activas"),
+            new Def("corto-15", "Pasa 15 min en Calamity y sal", "minutos", 15, 2, 20, true, ""),
+            new Def("extraer-ii", "Saca 3 Reliquias de grado II o más en una sola salida", "reliquia-ii", 3, 4, 60, false, "reliquias.activas"),
             new Def("destacados", "Mata 5 mobs destacados y sal", "destacado", 5, 3, 40, false, ""),
-            new Def("eco", "Cierra un Eco ajeno válido y sal", "eco-valido", 1, 5, 80, false, "eco.activo"),
-            new Def("al-limite", "Aguanta 15 min con cordura por debajo de 25 y sal", "minutos-limite", 15, 5, 80, false, ""),
+            new Def("eco", "Derrota un Eco ajeno válido y sal", "eco-valido", 1, 5, 80, false, "eco.activo"),
+            new Def("al-limite", "Aguanta 15 min con la cordura por debajo de 25 y sal", "minutos-limite", 15, 5, 80, false, ""),
             new Def("minijefe", "Mata un minijefe y sal", "minijefe", 1, 6, 100, false, ""),
-            new Def("sin-frasco", "Pasa 30 min dentro sin beber y sal", "minutos-sin-frasco", 30, 4, 60, false, ""),
+            new Def("sin-frasco", "Pasa 30 min en Calamity sin beber del Frasco y sal", "minutos-sin-frasco", 30, 4, 60, false, ""),
             new Def("cofres", "Abre 3 cofres de estructura y sal", "cofre", 3, 3, 40, false, "cofres.activo"),
-            new Def("redimir", "Redime tu Eco y sal", "redimir", 1, 4, 60, false, "eco.activo"));
+            new Def("redimir", "Derrota a tu propio Eco y sal", "redimir", 1, 4, 60, false, "eco.activo"));
 
     /**
      * Si el contrato puede salir: su interruptor (mecanica) encendido y, para los de cofres,
@@ -363,8 +363,8 @@ final class Contratos implements Listener {
             t[0] = hc.plugin().getServer().getScheduler().runTaskLater(hc.plugin(), () -> {
                 tareas.remove(t[0]);
                 if (p.isOnline()) {
-                    p.sendMessage(ComandoCalamity.mensaje(Component.text("Oren tiene trabajo para ti. ")
-                            .append(Component.text("/calamity contratos", Paleta.DETALLE))));
+                    p.sendMessage(ComandoCalamity.mensaje(Component.text("Oren tiene contratos para ti. Míralos con ")
+                            .append(Component.text("/calamity contratos", Paleta.DETALLE)).append(Component.text("."))));
                 }
             }, 40L);
             tareas.add(t[0]);
@@ -383,7 +383,9 @@ final class Contratos implements Listener {
         for (int i : a.cumplidos()) {
             Def d = pool.get(s.getString("lista." + i + ".id", ""));
             if (d == null) continue;
-            p.sendMessage(ComandoCalamity.mensaje("Contrato cumplido. Se cobra al salir."));
+            p.sendMessage(ComandoCalamity.mensaje(Component.text("Contrato cumplido: ")
+                    .append(Component.text(d.texto(), Paleta.DETALLE))
+                    .append(Component.text(". Lo cobras al salir vivo."))));
             hc.plugin().bitacora().anotar("contrato", "cumplido", p.getName(), d.id());
             telemetria(p, d, "cumplido", 0, 0);
         }
@@ -512,9 +514,9 @@ final class Contratos implements Listener {
             telemetria(p, d == null ? new Def(id, id, "", 1, 0, 0, false, "") : d, "cobrado", pe, pmc);
             p.sendMessage(ComandoCalamity.mensaje(Component.text("Contrato cobrado: ")
                     .append(Component.text(d == null ? id : d.texto(), Paleta.DETALLE))
-                    .append(Component.text(". "))
-                    .append(Component.text("+" + pe, Paleta.CIFRA)).append(Component.text(" Esencias, "))
-                    .append(Component.text("+" + pmc, Paleta.CIFRA)).append(Component.text(" MobCoins."))));
+                    .append(Component.text(" ("))
+                    .append(Component.text("+" + Altar.miles(pe), Paleta.CIFRA)).append(Component.text(pe == 1 ? " Esencia y " : " Esencias y "))
+                    .append(Component.text("+" + Altar.miles(pmc), Paleta.CIFRA)).append(Component.text(" MobCoins)."))));
         }
         premioSemana(p, s, sem);
         return ids;
@@ -541,7 +543,7 @@ final class Contratos implements Listener {
                 hc.plugin().bitacora().anotar("contrato", "semana", p.getName(), plantilla, ok ? "ok" : "fallo");
             }
         }
-        p.sendMessage(ComandoCalamity.mensaje(Component.text(objetivo + " contratos esta semana. ")
+        p.sendMessage(ComandoCalamity.mensaje(Component.text("Has cobrado " + objetivo + " contratos esta semana: ")
                 .append(Component.text("Oren te da una Llave del Caos.", Paleta.DETALLE))));
         telemetria(p, new Def("semana", "semana", "", objetivo, 0, 0, false, ""), "semana", 0, 0);
     }
@@ -554,7 +556,7 @@ final class Contratos implements Listener {
         try {
             return hc.plugin().getServer().dispatchCommand(hc.plugin().getServer().getConsoleSender(), cmd);
         } catch (Throwable t) {
-            hc.plugin().getLogger().warning("[Calamity] Fallo el comando de contrato \"" + cmd + "\": " + t);
+            hc.plugin().getLogger().warning("[Calamity] Falló el comando de contrato \"" + cmd + "\": " + t);
             return false;
         }
     }
@@ -582,30 +584,31 @@ final class Contratos implements Listener {
         UUID u = p.getUniqueId();
         ConfigurationSection s = libreta(u, !hc.esHardcore(p));
         Map<String, Def> pool = pool();
-        a.sendMessage(ComandoCalamity.mensaje("Contratos de hoy. Se cobran al salir vivo."));
+        a.sendMessage(ComandoCalamity.mensaje("Tus contratos de hoy (los cobras al salir vivo):"));
         for (int i : huecos(s)) {
             String r = "lista." + i;
             Def d = pool.get(s.getString(r + ".id", ""));
             if (d == null) continue;
             boolean cobrado = s.getBoolean(r + ".cobrado", false), cumplido = s.getBoolean(r + ".cumplido", false);
             Component estado = cobrado ? Component.text("cobrado", VERDE_PALIDO)
-                    : cumplido ? Component.text("cumplido, se cobra al salir", AMBAR)
+                    : cumplido ? Component.text("cumplido: lo cobras al salir", AMBAR)
                     : Component.text(s.getInt(r + ".progreso", 0) + "/" + d.objetivo(), Paleta.CIFRA);
             a.sendMessage(Component.text("  " + i + ". ", Paleta.TENUE)
                     .append(Component.text(d.texto(), cobrado ? Paleta.TENUE : Paleta.TEXTO))
                     .append(Component.text(" · ", Paleta.SEPARADOR)).append(estado)
-                    .append(Component.text(" · " + d.esencias() + " E + " + d.mobcoins() + " MC"
+                    .append(Component.text(" · " + d.esencias() + " E + " + Altar.miles(d.mobcoins()) + " MC"
                             + (d.corto() ? " · corto" : ""), Paleta.TENUE)));
         }
         int gratis = Math.max(0, hc.cfg().getInt("contratos.cambios-gratis", 1) - s.getInt("cambios", 0));
         int precio = Math.max(0, hc.cfg().getInt("contratos.precio-cambio", 1));
-        a.sendMessage(Component.text("  " + (gratis > 0 ? "Te queda " + gratis + " cambio gratis hoy."
-                : "Cambiar uno cuesta " + precio + (precio == 1 ? " Esencia." : " Esencias."))
-                + " /calamity cambiar <1-3>", Paleta.TENUE));
+        a.sendMessage(Component.text("  " + (gratis == 1 ? "Hoy te queda 1 cambio gratis"
+                : gratis > 1 ? "Hoy te quedan " + gratis + " cambios gratis"
+                : "Cambiar uno cuesta " + precio + (precio == 1 ? " Esencia" : " Esencias"))
+                + " (/calamity cambiar <1-3>).", Paleta.TENUE));
         int objetivo = Math.max(1, hc.cfg().getInt("contratos.semana-objetivo", 12));
         int hechos = semana().equals(s.getString("semana", "")) ? s.getInt("cobrados-semana", 0) : 0;
-        a.sendMessage(Component.text("  Esta semana: " + Math.min(hechos, objetivo) + "/" + objetivo
-                + " cobrados para la Llave del Caos.", Paleta.TENUE));
+        a.sendMessage(Component.text("  Esta semana llevas " + Math.min(hechos, objetivo) + " de " + objetivo
+                + " contratos cobrados para la Llave del Caos.", Paleta.TENUE));
     }
 
     /** Un contrato de hoy tal y como lo pinta el menu del Tasador. */
@@ -662,11 +665,11 @@ final class Contratos implements Listener {
             return false;
         }
         if (s.getBoolean(r + ".cobrado", false)) {
-            p.sendMessage(ComandoCalamity.mensaje("Ese ya está cobrado."));
+            p.sendMessage(ComandoCalamity.mensaje("Ese contrato ya está cobrado."));
             return false;
         }
         if (s.getBoolean(r + ".cumplido", false)) {
-            p.sendMessage(ComandoCalamity.mensaje("Ese ya está cumplido. Se cobra al salir."));
+            p.sendMessage(ComandoCalamity.mensaje("Ese contrato ya está cumplido: lo cobras al salir vivo."));
             return false;
         }
         Map<String, Def> pool = pool();
@@ -681,7 +684,7 @@ final class Contratos implements Listener {
         boolean corto = cortosOtros < Math.max(0, hc.cfg().getInt("contratos.cortos-garantizados", 1));
         Def nuevo = sustituto(pool.values(), ya, corto, this::disponible, azar);
         if (nuevo == null) {
-            p.sendMessage(ComandoCalamity.mensaje("Oren no tiene otro encargo para ese hueco."));
+            p.sendMessage(ComandoCalamity.mensaje("Oren no tiene otro contrato que darte en su lugar."));
             return false;
         }
         int cambios = s.getInt("cambios", 0);
@@ -691,7 +694,7 @@ final class Contratos implements Listener {
             Saldo sal = hc.saldo();
             if (sal == null || !sal.restar(u, precio, "contrato:cambio")) {
                 p.sendMessage(ComandoCalamity.mensaje("Cambiarlo cuesta " + precio
-                        + (precio == 1 ? " Esencia" : " Esencias") + " y no te llega."));
+                        + (precio == 1 ? " Esencia" : " Esencias") + " y no te llega el saldo."));
                 return false;
             }
         }
@@ -710,7 +713,7 @@ final class Contratos implements Listener {
 
     private void comandoAdmin(CommandSender quien, String[] args) {
         if (args.length < 2) {
-            quien.sendMessage(ComandoCalamity.mensaje("Uso: /lw hardcore contratos <jugador> [reset]"));
+            quien.sendMessage(ComandoCalamity.mensaje("Uso: /calamidad contratos <jugador> [reset]"));
             return;
         }
         OfflinePlayer o = Entregas.buscar(args[1]);

@@ -167,16 +167,16 @@ final class Hitos {
         Telemetria t = hc.telemetria();
         if (t != null) hc.seguro("telemetria", () -> t.suceso("hito", o, campos));
 
+        // P-H01. Los que no son tag ([...]) son logros: no se anuncian como tag.
+        boolean tag = titulo.startsWith("[");
         Player p = o.getPlayer();
         if (p != null) {
-            p.sendMessage(ComandoCalamity.mensaje(Component.text("Hito: ")
+            p.sendMessage(ComandoCalamity.mensaje(Component.text(tag ? "Has ganado el tag " : "Has conseguido el logro ")
                     .append(Component.text(titulo, Paleta.MARCA)).append(Component.text("."))));
         }
         if (h.getBoolean("anuncio", false)) {
-            // P-H01. Los que no son tag ([...]) son logros: no se anuncian como tag.
-            boolean tag = titulo.startsWith("[");
             hc.plugin().getServer().broadcast(ComandoCalamity.mensaje(Component.text(nombre, Paleta.DETALLE)
-                    .append(Component.text(tag ? " ha ganado el tag " : " ha ganado el logro "))
+                    .append(Component.text(tag ? " ha ganado el tag " : " ha conseguido el logro "))
                     .append(Component.text(titulo, Paleta.MARCA))
                     .append(Component.text("."))));
         }
@@ -190,7 +190,7 @@ final class Hitos {
         try {
             return hc.plugin().getServer().dispatchCommand(hc.plugin().getServer().getConsoleSender(), cmd);
         } catch (Throwable t) {
-            hc.plugin().getLogger().warning("[Calamity] Fallo el comando de hito \"" + cmd + "\": " + t);
+            hc.plugin().getLogger().warning("[Calamity] Falló el comando de hito \"" + cmd + "\": " + t);
             return false;
         }
     }
@@ -231,7 +231,7 @@ final class Hitos {
 
     private void comando(CommandSender quien, String[] args) {
         if (args.length < 2) {
-            quien.sendMessage(ComandoCalamity.mensaje("Uso: /lw hardcore hitos <jugador>"));
+            quien.sendMessage(ComandoCalamity.mensaje("Uso: /calamidad hitos <jugador>"));
             return;
         }
         OfflinePlayer o = Entregas.buscar(args[1]);

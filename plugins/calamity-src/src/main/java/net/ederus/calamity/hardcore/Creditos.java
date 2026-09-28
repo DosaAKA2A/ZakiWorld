@@ -194,12 +194,12 @@ final class Creditos {
         return de(jugador, tipo) >= n ? "horas" : "credito";
     }
 
-    /** P-W07: "Ese credito se canjea con 48 h activas en Calamity. Llevas <h>." */
+    /** P-W07: "Para usar ese crédito necesitas 48 h activas en Calamity y llevas <h> h." */
     Component avisoHoras(UUID jugador) {
-        return ComandoCalamity.mensaje(Component.text("Ese crédito se canjea con "
-                        + Math.round(horasPedidas()) + " h activas en Calamity. Llevas ")
-                .append(Component.text(String.format(Locale.ROOT, "%.1f", horasActivas(jugador)), Paleta.CIFRA))
-                .append(Component.text(".")));
+        return ComandoCalamity.mensaje(Component.text("Para usar ese crédito necesitas "
+                        + Math.round(horasPedidas()) + " h activas en Calamity y llevas ")
+                .append(Component.text(String.format(Locale.ROOT, "%.1f", horasActivas(jugador)).replace('.', ','), Paleta.CIFRA))
+                .append(Component.text(" h.")));
     }
 
     // ------------------------------------------------------------------ pruebas
