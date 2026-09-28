@@ -1,0 +1,112 @@
+# ---------------------------------------------------------------------------
+# GodItems - efectos de equipo: PESCA (lo que lee PremioPescao)
+#
+# Sustituye al gear.yml de PremioPescao (desde EDM 1.72.2). PremioPescao ya no
+# tiene fichero de equipo propio: pregunta a GodItems cuanto suma cada jugador
+# en las claves pesca.* y lo pone encima de su boost de rango.
+#
+# Cada pieza va por su TIPO.ID de MMOItems (lo mismo que /mi give TIPO ID).
+# Cuenta la armadura PUESTA y lo que se lleve en las DOS MANOS; cada pieza una
+# vez, y una pieza de armadura en la mano no cuenta. Los escalones de un set se
+# acumulan (con 5 piezas valen el de 3 y el de 5).
+#
+# El LORE de cada pieza lo escribe GodItems con estas mismas cifras (el texto de
+# cada clave esta en "lore:"), asi que no hay que escribirlo a mano en MMOItems.
+# Tras cambiar algo: /gi reload. Los items ya repartidos cambian el lore cuando
+# MMOItems los regenera (revision de plantilla); los numeros valen al momento.
+#
+# Comprobar: /gi gear <jugador> pesca.   y   /gi selftest   y   /fish gear <jugador>
+# ---------------------------------------------------------------------------
+
+# Cabecera de cada bloque del lore, por grupo.
+grupos:
+  pesca: '<#9BD7FF>Pesca'
+
+# Las claves de pesca. PremioPescao las traduce a su boost:
+#   pesca.cajas                puntos de % de probabilidad de caja (1.5 = +1,5 %)   -> pack-chance-bonus
+#   pesca.suerte-rareza        fraccion de suerte de rareza (0.05 = +5 %)           -> tier-luck 1.05
+#   pesca.mordida              fraccion de espera que se quita (0.05 = 5 % antes)    -> bite-speed
+#   pesca.percances            fraccion de percances de la pesca extrema que QUITA   -> extreme-mishap-reduction
+#   pesca.enfriamiento-extremo fraccion del enfriamiento de la pesca extrema que quita
+#   pesca.tamano               fraccion mas de tamaño de los peces (0.10 = +10 %)   -> size-bonus 1.10
+#   pesca.doble-premio         puntos de % de sacar el premio de la caja dos veces
+#   pesca.venta                fraccion mas de precio en la tienda de peces
+# "tope" es lo maximo que puede sumar un jugador en esa clave (piezas + sets).
+# max-pack-chance de PremioPescao sigue topando la probabilidad final de caja.
+claves:
+  pesca.cajas:
+    nombre: cajas
+    lore: '&7· &f{valor} &7cajas'
+    formato: puntos
+    tope: 20
+  pesca.suerte-rareza:
+    nombre: suerte de rareza
+    lore: '&7· &f{valor} &7suerte'
+    tope: 1.0
+  pesca.mordida:
+    nombre: pican antes
+    lore: '&7· &f{cifra} &7más rápido'
+    tope: 0.9
+    minimo: 0
+  pesca.percances:
+    nombre: peligro en la pesca extrema
+    lore: '&7· &f{valor} &7de peligro'
+    sentido: menos
+    tope: 1.0
+    minimo: 0
+  pesca.enfriamiento-extremo:
+    nombre: espera de la pesca extrema
+    lore: '&7· &f{valor} &7de espera extrema'
+    sentido: menos
+    tope: 1.0
+    minimo: 0
+  pesca.tamano:
+    nombre: tamaño de peces
+    lore: '&7· &f{valor} &7tamaño de peces'
+  pesca.doble-premio:
+    nombre: premio doble
+    lore: '&7· &f{valor} &7premio doble'
+    formato: puntos
+  pesca.venta:
+    nombre: precio de venta
+    lore: '&7· &f{valor} &7al vender peces'
+
+piezas:
+  CALAMITY.MAREA_CELESTE_CAPUCHA:
+    efectos:
+      pesca.cajas: 1.5
+      pesca.percances: 0.08
+  CALAMITY.MAREA_CELESTE_CHAQUETA:
+    efectos:
+      pesca.cajas: 2.0
+      pesca.percances: 0.08
+  CALAMITY.MAREA_CELESTE_PANTALON:
+    efectos:
+      pesca.cajas: 1.5
+      pesca.percances: 0.08
+  CALAMITY.MAREA_CELESTE_BOTAS:
+    efectos:
+      pesca.cajas: 1.0
+      pesca.percances: 0.06
+      pesca.mordida: 0.05
+  CALAMITY.MAREA_CELESTE_CANA:
+    efectos:
+      pesca.cajas: 3.0
+      pesca.suerte-rareza: 0.05
+      pesca.mordida: 0.10
+
+sets:
+  marea-celeste:
+    nombre: Marea Celeste
+    piezas:
+      - CALAMITY.MAREA_CELESTE_CAPUCHA
+      - CALAMITY.MAREA_CELESTE_CHAQUETA
+      - CALAMITY.MAREA_CELESTE_PANTALON
+      - CALAMITY.MAREA_CELESTE_BOTAS
+      - CALAMITY.MAREA_CELESTE_CANA
+    escalones:
+      5:
+        efectos:
+          pesca.suerte-rareza: 0.10
+          pesca.percances: 0.10
+          pesca.tamano: 0.10

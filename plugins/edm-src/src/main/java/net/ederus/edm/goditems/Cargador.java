@@ -223,6 +223,14 @@ public final class Cargador {
         return "";
     }
 
+    /**
+     * Las acciones de un bloque que no es un item (los escalones de un set de
+     * `equipo/`). Mismo idioma y mismos avisos que las de un item.
+     */
+    public List<Paso> pasosSueltos(String fichero, String donde, List<?> crudo) {
+        return List.copyOf(pasos(fichero, donde, crudo));
+    }
+
     /** Traduce la lista de acciones, con sus `si:` y `repetir:` anidados. */
     @SuppressWarnings("unchecked")
     private List<Paso> pasos(String fichero, String donde, List<?> crudo) {

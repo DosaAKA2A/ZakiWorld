@@ -1,0 +1,130 @@
+# ---------------------------------------------------------------------------
+# GodItems - efectos de equipo: CALAMITY (lo que lee el plugin Calamity)
+#
+# Sustituye al equipo.yml de Calamity (desde Calamity 1.6.0 y EDM 1.72.2).
+# Calamity ya no tiene fichero de equipo propio: pregunta a GodItems cuanto
+# suma cada jugador en las claves calamity.* y aqui viven tambien los TOPES,
+# en un solo sitio.
+#
+# Todo en FRACCION (0.10 = un 10 %). Lo de un jugador se suma (piezas + sets) y
+# se topa con "tope" y "minimo" de cada clave, para que el equipo ayude pero no
+# apague el modo hardcore. Un valor negativo empeora (una maldicion), nunca por
+# debajo de -1. Donde lo aplica Calamity:
+#
+#   calamity.cordura-drenaje        el drenaje de cordura por segundo x (1 - f)
+#   calamity.cordura-alucinaciones  la probabilidad de alucinar x (1 - f)
+#   calamity.parca-dano-recibido    el daño de la PARCA (golpes, tecnicas y daño verdadero) x (1 - f)
+#   calamity.eco-dano               el daño a los Ecos x (1 + f); el tope por golpe sigue mandando
+#   calamity.esencias-bonus         Esencias de mobs, minijefes y cofres x (1 + f), antes de la Aduana
+#   calamity.hambre                 quita esa fraccion del castigo extra de hambre (0.5 con x2 = x1,5)
+#   calamity.durabilidad            lo mismo con el desgaste extra
+#   calamity.caidas                 lo mismo con el daño extra de las caidas
+#   calamity.niebla                 menos ceniza y rachas de oscuridad mas cortas de noche
+#
+# Solo cuentan dentro de Calamity (menos el daño de la PARCA, que cuenta donde
+# pegue). Comprobar: /calamidad equipo <jugador> y /calamidad autotest equipo.
+# ---------------------------------------------------------------------------
+
+grupos:
+  calamity: '<#E8A33D>En Calamity'
+
+claves:
+  calamity.cordura-drenaje:
+    nombre: drenaje de cordura
+    lore: '&7· &f{valor} &7drenaje de cordura'
+    sentido: menos
+    tope: 0.50
+    minimo: -1
+  calamity.cordura-alucinaciones:
+    nombre: probabilidad de alucinar
+    lore: '&7· &f{valor} &7alucinaciones'
+    sentido: menos
+    tope: 0.50
+    minimo: -1
+  calamity.parca-dano-recibido:
+    nombre: daño recibido de la PARCA
+    lore: '&7· &f{valor} &7daño de la Parca'
+    sentido: menos
+    tope: 0.30
+    minimo: -1
+  calamity.eco-dano:
+    nombre: daño a los Ecos
+    lore: '&7· &f{valor} &7daño a los Ecos'
+    tope: 0.50
+    minimo: -1
+  calamity.esencias-bonus:
+    nombre: Esencias de mobs y cofres
+    lore: '&7· &f{valor} &7Esencias'
+    tope: 0.25
+    minimo: -1
+  calamity.hambre:
+    nombre: castigo extra de hambre
+    lore: '&7· &f{valor} &7hambre extra'
+    sentido: menos
+    tope: 0.50
+    minimo: -1
+  calamity.durabilidad:
+    nombre: castigo extra de durabilidad
+    lore: '&7· &f{valor} &7desgaste extra'
+    sentido: menos
+    tope: 0.50
+    minimo: -1
+  calamity.caidas:
+    nombre: castigo extra de caídas
+    lore: '&7· &f{valor} &7daño extra por caída'
+    sentido: menos
+    tope: 0.50
+    minimo: -1
+  calamity.niebla:
+    nombre: niebla y oscuridad de noche
+    lore: '&7· &f{valor} &7niebla nocturna'
+    sentido: menos
+    tope: 0.50
+    minimo: -1
+
+# Las piezas. El equipo.yml de Calamity del SurvivalTest no tenia ninguna
+# activa (solo los topes de arriba), asi que se migra igual: vacio. Lo de
+# debajo es el ejemplo que ya traia comentado, con las ids reales de MMOItems
+# (tipo CALAMITY): quitar las # de lo que se quiera dar, /gi reload y listo;
+# el lore de la pieza sale solo.
+#
+#   CALAMITY.YELMO_DE_CALAMIDAD:
+#     efectos:
+#       calamity.cordura-drenaje: 0.05
+#       calamity.niebla: 0.25
+#   CALAMITY.CORAZA_DE_CALAMIDAD:
+#     efectos:
+#       calamity.parca-dano-recibido: 0.05
+#   CALAMITY.GREBAS_DE_CALAMIDAD:
+#     efectos:
+#       calamity.hambre: 0.25
+#   CALAMITY.SOLERETAS_DE_CALAMIDAD:
+#     efectos:
+#       calamity.caidas: 0.25
+#   CALAMITY.MASCARA_DEL_ECO:
+#     efectos:
+#       calamity.cordura-alucinaciones: 0.20
+piezas: {}
+
+# Los sets. Un set puede nombrar sus piezas o, con set-mmoitems, tomar todas las
+# que MMOItems marca con ese set (las del Manto llevan "set: CALAMIDAD"). Ejemplo
+# (quitar las # para usarlo):
+#
+#   manto-de-calamidad:
+#     nombre: Manto de Calamidad
+#     set-mmoitems: CALAMIDAD
+#     total: 5
+#     cabecera: '<#E8A33D>Manto de Calamidad ({n}/{total})'
+#     escalones:
+#       4:
+#         efectos:
+#           calamity.cordura-drenaje: 0.15
+#           calamity.durabilidad: 0.25
+#   vestigio-del-eco:
+#     nombre: Vestigio del Eco
+#     set-mmoitems: VESTIGIO_DEL_ECO
+#     escalones:
+#       2:
+#         efectos:
+#           calamity.eco-dano: 0.10
+sets: {}

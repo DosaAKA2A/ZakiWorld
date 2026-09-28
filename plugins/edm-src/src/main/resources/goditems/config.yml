@@ -29,3 +29,22 @@ mensajes:
   sin-usos: '&cEste objeto ya no tiene usos.'
   sin-usos-hoy: '&cPor hoy no te quedan usos de este objeto.'
   no-es-tuyo: '&cEste objeto no responde en tus manos.'
+
+# Efectos de equipo (plugins/EDM/goditems/equipo/*.yml): como se escribe su lore.
+# Las piezas, los sets y las claves NO van aqui, van en esa carpeta.
+equipo:
+  lore:
+    # Cabecera de los efectos que no son de ningun grupo (pociones, atributos).
+    cabecera-efectos: '&3Efectos'
+    # Cabecera de cada escalon de set. {nombre}, {n} (piezas del escalon) y {total}.
+    # Un set puede traer la suya con "cabecera:".
+    cabecera-set: '<#5FB8FF>Set {nombre} ({n}/{total})'
+    # {nombre} y {nivel} (en romanos).
+    pocion: '&7· &f{nombre} {nivel}'
+    # {valor} (con signo; "10%" si se escribio en porcentaje) y {nombre}.
+    atributo: '&7· &f{valor} &7{nombre}'
+  # Nombres en español de pociones y atributos que no traiga el modulo de serie.
+  # nombres-pociones:
+  #   night_vision: Visión nocturna
+  # nombres-atributos:
+  #   max_health: vida máxima

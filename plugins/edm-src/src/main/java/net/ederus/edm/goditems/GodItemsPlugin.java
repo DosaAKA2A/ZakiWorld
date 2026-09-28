@@ -57,6 +57,8 @@ public final class GodItemsPlugin extends Module {
     private net.ederus.edm.goditems.mmo.Plantillas plantillas;
     private Ficha ficha;
     private net.ederus.edm.goditems.menu.MenuGi menu;
+    /** Los efectos de equipo por pieza y por set (equipo/*.yml) y su API para otros plugins. */
+    private net.ederus.edm.goditems.equipo.Equipo equipo;
 
     private NamespacedKey claveDueno;
     private BukkitTask tareaTicks;
@@ -164,6 +166,13 @@ public final class GodItemsPlugin extends Module {
 
         arrancarTareas();
 
+        /* Despues de los items (sus acciones se leen con el mismo Cargador) y del
+         * puente (necesita MMOItems para reconocer las piezas). */
+        this.equipo = new net.ederus.edm.goditems.equipo.Equipo(this);
+        this.equipo.arrancar();
+        net.ederus.edm.goditems.api.EquipoApi.enganchar(this.equipo);
+        getLogger().info("[GodItems] Efectos de equipo: " + this.equipo.resumen());
+
         getLogger().info("GodItems activo | " + n + " item" + (n == 1 ? "" : "s")
                 + " | " + Acciones.nombres().size() + " acciones, "
                 + Condiciones.nombres().size() + " condiciones, "
@@ -231,6 +240,8 @@ public final class GodItemsPlugin extends Module {
     @Override
     public void onDisable() {
         pararTareas();
+        net.ederus.edm.goditems.api.EquipoApi.enganchar(null);
+        if (this.equipo != null) this.equipo.parar();
         if (this.vuelo != null) this.vuelo.devolverTodo(this);
         if (this.cooldowns != null) this.cooldowns.limpiar();
         if (this.combate != null) this.combate.limpiar();
@@ -243,8 +254,9 @@ public final class GodItemsPlugin extends Module {
         leerAjustes();
         int n = this.cargador.cargarCarpeta(new File(getDataFolder(), "items"), this.registro);
         arrancarTareas();
+        String eq = this.equipo == null ? "" : " | equipo: " + this.equipo.cargar();
         return n + " items" + (this.cargador.avisos().isEmpty()
-                ? "" : " (" + this.cargador.avisos().size() + " avisos en la consola)");
+                ? "" : " (" + this.cargador.avisos().size() + " avisos en la consola)") + eq;
     }
 
     private void leerAjustes() {
@@ -276,6 +288,8 @@ public final class GodItemsPlugin extends Module {
     public Vuelo vuelo() { return this.vuelo; }
     public Regiones regiones() { return this.regiones; }
     public Cargador cargador() { return this.cargador; }
+    public Motor motor() { return this.motor; }
+    public net.ederus.edm.goditems.equipo.Equipo equipo() { return this.equipo; }
     public net.ederus.edm.goditems.mmo.Puente puente() { return this.puente; }
     public net.ederus.edm.goditems.mmo.Conjuntos conjuntos() { return this.conjuntos; }
     public net.ederus.edm.goditems.mmo.Plantillas plantillas() { return this.plantillas; }

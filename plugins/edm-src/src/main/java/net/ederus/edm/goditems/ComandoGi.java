@@ -15,7 +15,7 @@ import net.ederus.edm.comun.Estilo;
 import net.kyori.adventure.text.Component;
 
 /**
- * `/gi give|list|info|reload|trigger`.
+ * `/gi give|list|info|reload|trigger|gear|selftest`.
  *
  * `trigger` es el que abre el modulo al resto del servidor: desde
  * ConditionalEvents, DeluxeMenus o una mision se puede lanzar el
@@ -65,6 +65,8 @@ public final class ComandoGi implements TabExecutor {
             case "catalogo" -> catalogo(quien);
             case "ayuda", "help" -> ayuda(quien);
             case "trigger", "disparar" -> disparar(quien, args);
+            case "gear", "equipo" -> equipo(quien, args);
+            case "selftest", "autotest" -> autotest(quien);
             default -> ayuda(quien);
         }
         return true;
@@ -238,6 +240,46 @@ public final class ComandoGi implements TabExecutor {
         if (quien instanceof Player p) this.modulo.menu().ficha(p, def.id());
     }
 
+    /* -------------------------------------------------------------- equipo */
+
+    /**
+     * /gi gear [jugador]: lo que cuenta de su equipo en equipo/*.yml, que suma
+     * cada pieza y cada set y el total con topes. Mismo texto que devuelve
+     * EquipoApi.informe (y que ensenan /calamidad equipo y /fish gear).
+     */
+    private void equipo(CommandSender quien, String[] args) {
+        if (this.modulo.equipo() == null) {
+            quien.sendMessage(Estilo.legado("&cLos efectos de equipo no estan en marcha."));
+            return;
+        }
+        Player p = args.length >= 2 ? Bukkit.getPlayerExact(args[1]) : (quien instanceof Player j ? j : null);
+        if (p == null) {
+            quien.sendMessage(Estilo.legado(args.length >= 2 ? "&c" + args[1] + " no esta conectado."
+                    : "&7Uso: &f/gi gear <jugador>"));
+            return;
+        }
+        String prefijo = args.length >= 3 ? args[2].toLowerCase(Locale.ROOT) : "";
+        quien.sendMessage(Estilo.cabecera("GODITEMS", "equipo"));
+        for (String l : net.ederus.edm.goditems.equipo.Informe.lineas(this.modulo.equipo(), p, prefijo)) {
+            quien.sendMessage(Estilo.legado(net.ederus.edm.goditems.equipo.Redaccion.colores(l)));
+        }
+    }
+
+    /** /gi selftest: los efectos de equipo con un YAML de prueba y con items reales de MMOItems. */
+    private void autotest(CommandSender quien) {
+        if (this.modulo.equipo() == null) {
+            quien.sendMessage(Estilo.legado("&cLos efectos de equipo no estan en marcha."));
+            return;
+        }
+        var t = new net.ederus.edm.goditems.equipo.AutotestEquipo(this.modulo.equipo()).correr();
+        quien.sendMessage(Estilo.cabecera("GODITEMS", "selftest de equipo"));
+        for (String l : t.lineas()) quien.sendMessage(Estilo.legado(l));
+        long oks = t.lineas().stream().filter(x -> x.startsWith("&aOK")).count();
+        quien.sendMessage(Estilo.legado(t.fallos() == 0 ? "&aTodo bien: " + oks + " comprobaciones."
+                : "&c" + t.fallos() + " fallo(s) de " + (oks + t.fallos()) + "."));
+        this.modulo.getLogger().info("[GodItems] selftest de equipo: " + oks + " OK, " + t.fallos() + " fallos");
+    }
+
     /* ------------------------------------------------------------- trigger */
 
     private void disparar(CommandSender quien, String[] args) {
@@ -313,9 +355,11 @@ public final class ComandoGi implements TabExecutor {
         quien.sendMessage(Estilo.linea("/gi trigger <item> [jugador]", "lanza su bloque DISPARADOR", Estilo.CLARO));
         quien.sendMessage(Estilo.linea("/gi particulas", "el catálogo de particulas", Estilo.CLARO));
         quien.sendMessage(Estilo.linea("/gi catálogo", "cuántas acciones y condiciones hay", Estilo.CLARO));
+        quien.sendMessage(Estilo.linea("/gi gear <jugador> [prefijo]", "que cuenta de su equipo y que suma", Estilo.CLARO));
+        quien.sendMessage(Estilo.linea("/gi selftest", "prueba los efectos de equipo", Estilo.CLARO));
         quien.sendMessage(Estilo.linea("/gi reload", "vuelve a leer los YAML", Estilo.CLARO));
         quien.sendMessage(Component.empty());
-        quien.sendMessage(Estilo.nota("los YAML viven en plugins/EDM/goditems/items/"));
+        quien.sendMessage(Estilo.nota("los YAML viven en plugins/EDM/goditems/items/ y equipo/"));
     }
 
     /* ---------------------------------------------------------- tab-complete */
@@ -326,7 +370,12 @@ public final class ComandoGi implements TabExecutor {
         if (!quien.hasPermission(PERMISO)) return out;
         if (args.length == 1) {
             filtrar(out, args[0], List.of("give", "list", "info", "reload", "trigger", "import", "menu",
-                    "particulas", "catalogo"));
+                    "particulas", "catalogo", "gear", "selftest"));
+        } else if (args.length == 2 && (args[0].equalsIgnoreCase("gear") || args[0].equalsIgnoreCase("equipo"))) {
+            for (Player p : Bukkit.getOnlinePlayers()) out.add(p.getName());
+            filtrar(out, args[1], new ArrayList<>(out));
+        } else if (args.length == 3 && (args[0].equalsIgnoreCase("gear") || args[0].equalsIgnoreCase("equipo"))) {
+            filtrar(out, args[2], List.of("calamity.", "pesca."));
         } else if (args.length == 2 && esDeItem(args[0])) {
             filtrar(out, args[1], this.modulo.registro().ids());
         } else if (args.length == 3 && esDeItem(args[0]) && !args[0].equalsIgnoreCase("info")) {

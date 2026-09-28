@@ -110,16 +110,28 @@ public final class EscuchasMmo implements Listener {
         int punto = enlace.indexOf('.');
         if (punto <= 0) return;
 
+        List<String> extra = new ArrayList<>();
         String id = this.modulo.registro().porEnlace(
                 enlace.substring(0, punto), enlace.substring(punto + 1));
-        if (id == null) return;
-        GodItem def = this.modulo.registro().porId(id);
-        if (def == null || def.loreExtra().isEmpty()) return;
+        GodItem def = id == null ? null : this.modulo.registro().porId(id);
+        if (def != null) extra.addAll(def.loreExtra());
+        /* Y lo que hace como pieza de equipo (equipo/*.yml): sus efectos y los
+         * escalones de sus sets, sacados de la misma config que los aplica. */
+        if (this.modulo.equipo() != null) {
+            try {
+                for (String l : this.modulo.equipo().loreDe(item)) {
+                    extra.add(net.ederus.edm.goditems.equipo.Redaccion.colores(l));
+                }
+            } catch (Throwable t) {
+                this.modulo.avisoUnaVez("lore-equipo", "No se pudo escribir el lore de equipo de " + enlace + ": " + t);
+            }
+        }
+        if (extra.isEmpty()) return;
 
         ItemMeta meta = item.getItemMeta();
         if (meta == null) return;
         List<Component> lore = meta.lore() == null ? new ArrayList<>() : new ArrayList<>(meta.lore());
-        for (String linea : def.loreExtra()) lore.add(Estilo.legado(linea));
+        for (String linea : extra) lore.add(Estilo.legado(linea));
         meta.lore(lore);
         item.setItemMeta(meta);
     }
