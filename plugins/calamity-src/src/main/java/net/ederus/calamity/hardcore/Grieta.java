@@ -43,12 +43,24 @@ import java.util.function.Consumer;
  * teleport falla), 1.2: la PARCA ya no viene al spawn, que es zona segura; la grieta se vuelve a
  * abrir al cabo de PAUSA_MS. Si para entonces se ha movido fuera de la zona, viene donde este.
  *
+ * 1.6.1 · Pescar en la zona spawn cuenta como estar activo ("mientras estoy pescando no deberia
+ * aparecer ninguna grieta", Dosa): cada captura reinicia el reloj de la Grieta durante
+ * pesca-gracia-segundos, y lanzar la caña tambien, pero solo si ha habido una captura en los
+ * ultimos pesca-captura-minutos (un autoclicker que lanza y recoge sin sacar nada no la frena).
+ * Fuera del spawn NO vale para la PARCA: alli una granja de pesca AFK sigue siendo AFK. La
+ * regla vive en Huella.Rastro (pesca y pescaReinicia) y la prueba el autotest "grieta".
+ *
  * El nucleo (umbral, dentro, punto) es estatico y sin Bukkit: el autotest "grieta" lo prueba.
  */
 final class Grieta {
 
-    /** hardcore.parca.spawn. */
-    record Ajustes(boolean activa, int minutos, int distanciaMin, int distanciaMax, int intentos) {
+    /**
+     * hardcore.parca.spawn.
+     *
+     * 1.6.1 · La pesca (pescaCuenta, pescaGraciaSegundos, pescaCapturaMinutos): ver Huella.Rastro.pesca.
+     */
+    record Ajustes(boolean activa, int minutos, int distanciaMin, int distanciaMax, int intentos,
+                   boolean pescaCuenta, int pescaGraciaSegundos, int pescaCapturaMinutos) {
 
         static Ajustes de(ConfigurationSection s) {
             if (s == null) s = new YamlConfiguration();
@@ -58,7 +70,10 @@ final class Grieta {
                     Math.max(1, s.getInt("minutos", 5)),
                     min,
                     Math.max(min, s.getInt("distancia-max", 1500)),
-                    Math.max(1, Math.min(40, s.getInt("intentos", 12))));
+                    Math.max(1, Math.min(40, s.getInt("intentos", 12))),
+                    s.getBoolean("pesca-cuenta", true),
+                    Math.max(0, s.getInt("pesca-gracia-segundos", 90)),
+                    Math.max(0, s.getInt("pesca-captura-minutos", 3)));
         }
 
         static Ajustes defecto() {
@@ -530,6 +545,99 @@ final class Grieta {
         h.ok("borde grande: 600-1500 tal cual", grande[0] == 600 && grande[1] == 1500);
         h.ok("borde de 1000 con el spawn a 100 del centro: 442-884 (" + Math.round(chico[0]) + "-"
                 + Math.round(chico[1]) + ")", chico[1] == 884 && chico[0] == 442);
+
+        // 1.6.1 · Pesca en la zona spawn (en la zona de PremioPescao, quieto en la orilla).
+        YamlConfiguration test = new YamlConfiguration();
+        test.set("minutos", 1);
+        test.set("avisos", List.of(20, 30, 40, 45, 50));
+        Huella.Ajustes haTest = Huella.Ajustes.de(test);
+        YamlConfiguration gTest = new YamlConfiguration();
+        gTest.set("minutos", 1);
+        Ajustes gt = Ajustes.de(gTest);
+        h.ok("pesca: por defecto cuenta, 90 s de gracia, lanzar vale 3 min tras una captura",
+                g.pescaCuenta() && g.pescaGraciaSegundos() == 90 && g.pescaCapturaMinutos() == 3);
+        int[] ultima = {0};
+        // Captura cada 20-40 s (y vuelve a lanzar al momento, con su mordida antes).
+        java.util.function.IntUnaryOperator pescando = capturas(0, Integer.MAX_VALUE, ultima);
+        int llega = simular(ha, g, true, 900, pescando);
+        int llegaTest = simular(haTest, gt, true, 900, capturas(0, Integer.MAX_VALUE, ultima));
+        h.ok("pescando en el spawn (captura cada 20-40 s) -> no llega en 15 min (defecto " + llega
+                + ", Test " + llegaTest + ")", llega < 0 && llegaTest < 0);
+        // Solo lanzando y recogiendo cada 6 s, sin sacar nada nunca: llega como si nada.
+        java.util.function.IntUnaryOperator lanzando = s -> s % 6 == 0 ? LANZA : (s % 6 == 3 ? RECOGE : 0);
+        int soloLanza = simular(ha, g, true, 900, lanzando);
+        int soloLanzaTest = simular(haTest, gt, true, 900, lanzando);
+        h.ok("solo lanzando, sin capturas -> llega a su hora (defecto " + soloLanza + " de " + spawn.limite()
+                        + ", Test " + soloLanzaTest + " de 60)",
+                soloLanza >= spawn.limite() - 5 && soloLanza <= spawn.limite() + 5
+                        && soloLanzaTest >= 55 && soloLanzaTest <= 65);
+        // 5 min pescando de verdad y luego solo lanzando: la gracia dura hasta 3 min tras la
+        // ultima captura (+ 90 s) y a partir de ahi el reloj entero.
+        int despues = simular(ha, g, true, 1500, capturas(0, 300, ultima));
+        int desde = ultima[0] + g.pescaCapturaMinutos() * 60;
+        int hasta = desde + g.pescaGraciaSegundos() + spawn.limite() + 5;
+        h.ok("5 min capturando y luego solo lanzando -> llega pasado el margen (ultima captura " + ultima[0]
+                + " s, llega " + despues + " s, entre " + desde + " y " + hasta + ")", despues > desde && despues <= hasta);
+        // Fuera del spawn nada cambia: ni con la gracia recien renovada frena a la PARCA.
+        int fueraPesca = simular(ha, g, false, 900, capturas(0, Integer.MAX_VALUE, ultima));
+        int fueraNada = simular(ha, g, false, 900, s -> 0);
+        h.ok("fuera del spawn pescando -> la PARCA llega igual (" + fueraPesca + " = " + fueraNada + ")",
+                fueraPesca == fueraNada && fueraNada == fuera.limite());
+        YamlConfiguration sinPesca = new YamlConfiguration();
+        sinPesca.set("pesca-cuenta", false);
+        int apagada2 = simular(ha, Ajustes.de(sinPesca), true, 900, capturas(0, Integer.MAX_VALUE, ultima));
+        h.ok("pesca-cuenta false -> pescando en el spawn llega igual (" + apagada2 + ")",
+                apagada2 >= spawn.limite() - 5 && apagada2 <= spawn.limite() + 5);
         return h.lineas();
+    }
+
+    /** Eventos de pesca de la simulacion. */
+    private static final int LANZA = 1, PICA = 2, RECOGE = 3, CAPTURA = 4;
+
+    /**
+     * Capturas cada 20-40 s (al azar fijo) entre desde y hasta, con la mordida el segundo antes y
+     * el lanzamiento el segundo despues; pasado "hasta", solo lanzar y recoger cada 6 s. Apunta
+     * en ultima[0] el segundo de la ultima captura.
+     */
+    private static java.util.function.IntUnaryOperator capturas(int desde, int hasta, int[] ultima) {
+        long[] semilla = {12345};
+        int[] proxima = {desde + 20};
+        ultima[0] = 0;
+        return s -> {
+            if (s <= hasta) {
+                if (s == proxima[0] - 1) return PICA;
+                if (s == proxima[0]) {
+                    ultima[0] = s;
+                    semilla[0] = semilla[0] * 6364136223846793005L + 1442695040888963407L;
+                    proxima[0] = s + 20 + (int) ((semilla[0] >>> 33) % 21);
+                    return CAPTURA;
+                }
+                return s == ultima[0] + 1 ? LANZA : 0;
+            }
+            return s % 6 == 0 ? LANZA : (s % 6 == 3 ? RECOGE : 0);
+        };
+    }
+
+    /**
+     * Un pescador quieto en la orilla durante "segundos": los eventos de pesca van a Rastro.pesca
+     * y cada segundo pasa por pescaReinicia (con spawn) antes de la Huella. Devuelve el segundo
+     * en que la Huella llega a su limite (la Grieta en el spawn, la PARCA fuera) o -1.
+     */
+    private static int simular(Huella.Ajustes ha, Ajustes g, boolean spawn, int segundos,
+                               java.util.function.IntUnaryOperator eventos) {
+        Huella.Rastro r = new Huella.Rastro(ha.tamano());
+        int limite = umbral(ha, g, spawn).limite();
+        final long t0 = 1_000_000_000L;
+        for (int s = 1; s <= segundos; s++) {
+            long ahora = t0 + s * 1000L;
+            int ev = eventos.applyAsInt(s);
+            // Se apunta tambien fuera (el peor caso: pesco en el spawn y salio con la gracia puesta).
+            if (ev != 0) r.pesca(ahora, ev == CAPTURA, g);
+            if (!r.pescaReinicia(ahora, spawn && g.activa(), g)) {
+                r.segundo(ahora, 280.5, 40, -245.5, false, false, false, ha);
+            }
+            if (r.quieto >= limite) return s;
+        }
+        return -1;
     }
 }

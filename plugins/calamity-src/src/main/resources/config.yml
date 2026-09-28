@@ -436,6 +436,16 @@ hardcore:
       distancia-max: 1500
       intentos: 12                # puntos al azar que prueba antes de rendirse (1.2: entonces vuelve a abrirse al minuto;
                                   # la PARCA no viene nunca a la zona spawn)
+      # 1.6.1 · Pescar en la zona spawn no abre la Grieta. Cada pez (o cosa) que sacas con la
+      # caña pone a cero el reloj de la Grieta y lo tiene parado "pesca-gracia-segundos". Lanzar
+      # la caña, que pique o recogerla también lo alargan, pero solo si has sacado algo en los
+      # últimos "pesca-captura-minutos": quien lanza y recoge sin parar sin pescar nada (un
+      # autoclicker) acaba igual en la Grieta.
+      # Solo vale en la zona spawn: fuera, pescar sin moverse sigue llamando a la PARCA, porque
+      # una granja de pesca AFK sigue siendo estar AFK.
+      pesca-cuenta: true          # false = pescar en el spawn no frena la Grieta
+      pesca-gracia-segundos: 90
+      pesca-captura-minutos: 3
 
   # ------------------------------------------------------------------ 2. EL ECO
   eco:

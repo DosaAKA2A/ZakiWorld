@@ -27,6 +27,7 @@ import org.bukkit.event.block.BlockPlaceEvent;
 import org.bukkit.event.entity.EntityDamageByEntityEvent;
 import org.bukkit.event.inventory.InventoryOpenEvent;
 import org.bukkit.event.player.PlayerChangedWorldEvent;
+import org.bukkit.event.player.PlayerFishEvent;
 import org.bukkit.event.player.PlayerInputEvent;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.persistence.PersistentDataType;
@@ -218,6 +219,11 @@ final class Huella implements Listener {
         int variadas;
         long firma;
         long muestrasPorInteraccion;
+        // 1.6.1 · Pesca en la zona spawn: la ultima captura y hasta cuando dura la gracia. No se
+        // borran en vaciar(): no son parte del anillo.
+        long ultimaCaptura;
+        boolean conCaptura;
+        long pescaHasta;
 
         Rastro(int tamano) {
             celdas = new long[tamano];
@@ -432,6 +438,39 @@ final class Huella implements Listener {
             return true;
         }
 
+        /**
+         * 1.6.1 · Un evento de pesca en la zona spawn (lo filtra quien llama). Una captura
+         * (CAUGHT_FISH, CAUGHT_ENTITY) renueva la gracia siempre. Lanzar, que pique o recoger
+         * (FISHING, BITE, REEL_IN) solo la renuevan si ha habido una captura en los ultimos
+         * pesca-captura-minutos: un autoclicker que lanza y recoge sin sacar nada no frena la
+         * Grieta. True si ha renovado la gracia.
+         */
+        boolean pesca(long ahora, boolean captura, Grieta.Ajustes g) {
+            if (!g.pescaCuenta()) return false;
+            if (captura) {
+                ultimaCaptura = ahora;
+                conCaptura = true;
+            } else if (!conCaptura || ahora - ultimaCaptura > g.pescaCapturaMinutos() * 60_000L) {
+                return false;
+            }
+            pescaHasta = Math.max(pescaHasta, ahora + g.pescaGraciaSegundos() * 1000L);
+            return true;
+        }
+
+        /**
+         * 1.6.1 · Si dentro de la gracia de pesca y en la zona spawn (con la Grieta encendida):
+         * el reloj se reinicia (se vacia el anillo) y este segundo no suma. Fuera del spawn no
+         * hace nada: para la PARCA pescar sigue siendo estar quieto. Los avisos ya dados se
+         * conservan para que la Huella diga "Las campanas callan" y quite la campana.
+         */
+        boolean pescaReinicia(long ahora, boolean spawnGrieta, Grieta.Ajustes g) {
+            if (ahora >= pescaHasta || !spawnGrieta || !g.pescaCuenta()) return false;
+            int dado = avisoDado;
+            vaciar();
+            avisoDado = dado;
+            return true;
+        }
+
         /** /lw hardcore parca <jugador> [segundos]: llena el anillo con la celda actual. */
         void forzar(int segundosQuieto, double x, double y, double z, Ajustes a) {
             if (celdas.length != a.tamano()) {
@@ -623,6 +662,24 @@ final class Huella implements Listener {
         rastro(p).interaccion(objetivo(tipo, x, y, z), l.getYaw(), l.getPitch(), a);
     }
 
+    /**
+     * 1.6.1 · Pescar en la zona spawn frena la Grieta (Rastro.pesca). Sin ignoreCancelled: un
+     * plugin de premios (PremioPescao) puede cancelar la captura para dar la suya, y el jugador
+     * ha pescado igual. Fuera del spawn no se apunta nada: alli la pesca no cuenta.
+     */
+    @EventHandler(priority = EventPriority.MONITOR)
+    public void onPescar(PlayerFishEvent e) {
+        PlayerFishEvent.State s = e.getState();
+        boolean captura = s == PlayerFishEvent.State.CAUGHT_FISH || s == PlayerFishEvent.State.CAUGHT_ENTITY;
+        if (!captura && s != PlayerFishEvent.State.FISHING && s != PlayerFishEvent.State.BITE
+                && s != PlayerFishEvent.State.REEL_IN) return;
+        Player p = e.getPlayer();
+        if (!hc.esHardcore(p)) return;
+        Grieta.Ajustes g = grieta.ajustes();
+        if (!g.activa() || !g.pescaCuenta() || !hc.enSpawn(p)) return;
+        rastro(p).pesca(System.currentTimeMillis(), captura, g);
+    }
+
     /** Salir a un mundo que no es hardcore vacia la huella (DIS sec. 1.2.4). */
     @EventHandler
     public void onCambioMundo(PlayerChangedWorldEvent e) {
@@ -640,6 +697,11 @@ final class Huella implements Listener {
         long ahora = System.currentTimeMillis();
         if (exento(p, r, ahora, a)) {
             quitarCampana(p.getUniqueId());
+            return;
+        }
+        // 1.6.1 · Pescando en la zona spawn: el reloj de la Grieta vuelve a cero (solo en el spawn).
+        if (ahora < r.pescaHasta && r.pescaReinicia(ahora, grieta.umbral(p, a).spawn(), grieta.ajustes())) {
+            avisos(p, r, a);
             return;
         }
         Entity vehiculo = p.getVehicle();
@@ -936,6 +998,7 @@ final class Huella implements Listener {
         Rastro r = rastro(p);
         r.forzar(segundos, l.getX(), l.getY(), l.getZ(), a);
         r.graciaHasta = 0;
+        r.pescaHasta = 0;
         // Los avisos ya pasados no se repiten: se dan por dados hasta ese punto (los del spawn, dentro).
         int[] av = grieta.umbral(p, a).avisos();
         int nivel = 0;
@@ -956,6 +1019,7 @@ final class Huella implements Listener {
                 + " | por interaccion " + r.muestrasPorInteraccion
                 + " | max celdas " + a.celdasMaximas() + " | teclas " + (r.conTeclas ? "si" : "nunca")
                 + (ahora < r.graciaHasta ? " | gracia " + (r.graciaHasta - ahora) / 1000 + " s" : "")
+                + (ahora < r.pescaHasta ? " | pescando " + (r.pescaHasta - ahora) / 1000 + " s" : "")
                 + " | modo " + (a.modoBloque() ? "bloque" : "huella")
                 + (grieta.enSpawn(p) ? " | spawn: limite " + grieta.umbral(p, a).limite() + " s (Grieta)" : "");
     }
