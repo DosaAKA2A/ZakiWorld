@@ -608,11 +608,11 @@ final class Ecos implements Listener {
     static Component textoMotivo(String motivo, ConfigurationSection eco, double horasMinimas) {
         String m = motivo.toLowerCase(Locale.ROOT);
         String porque;
-        // Mismas palabras que el motivo de la Aduana en la Parca (zona P): "compartís conexión" y las horas.
+        // Mismas palabras que el motivo de la Aduana en la Parca (zona P): "misma conexión" y las horas.
         if (m.contains("huella") || m.contains("ip") || m.contains("misma")) {
-            porque = "su dueño y tú compartís conexión";
+            porque = "su dueño usa tu misma conexión";
         } else if (m.contains("hora")) {
-            porque = "para cobrar, los dos necesitáis al menos " + Marco.numero(horasMinimas) + " h jugadas";
+            porque = "para cobrar, cada uno necesita al menos " + Marco.numero(horasMinimas) + " h jugadas";
         } else {
             porque = switch (m) {
                 case "cobros" -> "hoy ya has cobrado el máximo de " + eco.getInt("cobros-dia", 5) + " Ecos";
@@ -1491,9 +1491,9 @@ final class Ecos implements Listener {
         h.igual("aviso al nacer en singular", "Tu Eco te espera donde caíste. Guarda 1 Reliquia y dura 12 h.",
                 plano.serialize(mensajeNacido(1, 0, 12)));
         h.igual("aviso al nacer sin botin", "Tu Eco te espera donde caíste. Dura 12 h.", plano.serialize(mensajeNacido(0, 0, 12)));
-        h.igual("caza sin pagar por horas", "Ese Eco no paga: para cobrar, los dos necesitáis al menos 10 h jugadas.",
+        h.igual("caza sin pagar por horas", "Ese Eco no paga: para cobrar, cada uno necesita al menos 10 h jugadas.",
                 plano.serialize(textoMotivo("horas", c, 10)));
-        h.igual("caza sin pagar por la misma conexion", "Ese Eco no paga: su dueño y tú compartís conexión.",
+        h.igual("caza sin pagar por la misma conexion", "Ese Eco no paga: su dueño usa tu misma conexión.",
                 plano.serialize(textoMotivo("huella", c, 10)));
         h.igual("caza sin pagar por cobros", "Ese Eco no paga: hoy ya has cobrado el máximo de 5 Ecos.",
                 plano.serialize(textoMotivo("cobros", c, 10)));

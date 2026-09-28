@@ -291,10 +291,10 @@ final class Aduana {
     Component avisoInvalida(String motivo) {
         if (motivo == null || motivo.isEmpty()) return null;
         if (motivo.equals("horas")) {
-            return ComandoCalamity.mensaje("Esto no paga: los dos necesitáis al menos "
+            return ComandoCalamity.mensaje("Esto no paga: cada uno necesita al menos "
                     + conf().getInt("horas-minimas", 10) + " h jugadas en el servidor.");
         }
-        return ComandoCalamity.mensaje("Esto no paga: los dos compartís conexión.");
+        return ComandoCalamity.mensaje("Esto no paga: el otro jugador usa tu misma conexión.");
     }
 
     /**

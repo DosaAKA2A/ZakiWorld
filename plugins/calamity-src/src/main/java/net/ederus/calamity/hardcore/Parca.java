@@ -1068,9 +1068,9 @@ final class Parca implements Listener {
                         String porQue = hc.aduana() == null ? ""
                                 : hc.valor("aduana", () -> hc.aduana().motivoInvalida(op, presa), "");
                         online.sendMessage(ComandoCalamity.mensaje("horas".equals(porQue)
-                                ? "Esa Parca no te paga: para cobrar ayudando a otro, los dos necesitáis al menos "
+                                ? "Esa Parca no te paga: para cobrar ayudando a otro, cada uno necesita al menos "
                                 + hc.cfg().getInt("aduana.horas-minimas", 10) + " h jugadas."
-                                : "Esa Parca no te paga: la presa y tú compartís conexión."));
+                                : "Esa Parca no te paga: la presa usa tu misma conexión."));
                     }
                 }
                 continue;
