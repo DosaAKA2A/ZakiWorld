@@ -53,9 +53,25 @@ public final class Servicio {
     /** A quien ya le avise de que se le acaba, para no repetir el aviso cada segundo. */
     private final Map<UUID, Map<Tipo, Boolean>> avisados = new HashMap<>();
 
+    /** Boosts guardados de tipos que ya no existen (drops), descartados al cargar. */
+    private int descartados;
+    private final java.util.logging.Logger log;
+
     public Servicio(File fichero) {
+        this(fichero, null);
+    }
+
+    public Servicio(File fichero, java.util.logging.Logger log) {
         this.fichero = fichero;
+        this.log = log;
         cargar();
+        // Reescribe data.yml sin lo descartado, para no avisar en cada arranque.
+        if (descartados > 0) guardar();
+    }
+
+    /** Cuantos boosts de tipos retirados se tiraron al cargar data.yml. */
+    public int descartados() {
+        return descartados;
     }
 
     /* --------------------------------------------------------------- consultas */
@@ -231,7 +247,10 @@ public final class Servicio {
                 Map<Tipo, Activo> suyos = new EnumMap<>(Tipo.class);
                 for (String k : s.getKeys(false)) {
                     Tipo t = Tipo.de(k);
-                    if (t == null) continue;
+                    if (t == null) {
+                        descartar("jugadores." + id + "." + k, s.getLong(k + ".fin", 0));
+                        continue;
+                    }
                     long fin = s.getLong(k + ".fin", 0);
                     double mult = s.getDouble(k + ".multiplicador", 2.0);
                     long inicio = s.getLong(k + ".inicio", System.currentTimeMillis());
@@ -240,16 +259,34 @@ public final class Servicio {
                 if (!suyos.isEmpty()) personales.put(uuid, suyos);
             }
         }
+
         ConfigurationSection glob = yml.getConfigurationSection("globales");
         if (glob != null) {
             for (String k : glob.getKeys(false)) {
                 Tipo t = Tipo.de(k);
-                if (t == null) continue;
+                if (t == null) {
+                    descartar("globales." + k, glob.getLong(k + ".fin", 0));
+                    continue;
+                }
                 long fin = glob.getLong(k + ".fin", 0);
                 double mult = glob.getDouble(k + ".multiplicador", 2.0);
                 long inicio = glob.getLong(k + ".inicio", System.currentTimeMillis());
                 if (fin > System.currentTimeMillis()) globales.put(t, new Activo(mult, inicio, fin));
             }
+        }
+    }
+
+    /**
+     * Un boost guardado de un tipo que ya no existe. El de drops se quito en EDM 1.74.0
+     * porque se usaba para duplicar: se tira sin mas y se avisa en consola, y el
+     * siguiente guardado ya no lo escribe. Los caducados se tiran en silencio.
+     */
+    private void descartar(String ruta, long fin) {
+        if (fin <= System.currentTimeMillis()) return;
+        descartados++;
+        if (log != null) {
+            log.warning("[Boost] Descartado un boost guardado que ya no existe (" + ruta
+                    + "): el boost de drops se quito para que no se pueda duplicar.");
         }
     }
 

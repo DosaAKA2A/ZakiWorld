@@ -1,14 +1,26 @@
 # ---------------------------------------------------------------------------
-# Boosts temporales de Ederus: experiencia, drops y minions.
+# Boosts temporales de Ederus: experiencia, experiencia de habilidades,
+# suerte de pesca, MobCoins y minions.
 #
-# Los reparten las cajas con un comando, por ejemplo desde ExcellentCrates:
+# Los reparten las cajas y la tienda con un comando de consola, por ejemplo:
 #     boost give %player_name% exp 60
+#     boost give %player_name% pesca 30 1.5
 #     boost give %player_name% all 120
+#     boost global skill_exp 60 2
 #
-# Dos cosas que conviene saber antes de tocar numeros:
+# Formato: boost give <jugador> <tipo|all> <minutos> [multiplicador]
+# Sin multiplicador se usa multiplicador-por-defecto. "all" da todos los tipos
+# disponibles en este servidor.
+#
+# Cosas que conviene saber antes de tocar numeros:
 #   - el multiplicador que se aplica es el MAYOR entre el personal y el global,
 #     nunca el producto: un evento global no dispara la economia;
-#   - dos boosts del mismo tipo SUMAN tiempo, no se pisan.
+#   - dos boosts del mismo tipo SUMAN tiempo, no se pisan;
+#   - cada tipo tiene un tope (multiplicador-maximo): lo que se pida por encima
+#     se queda en el tope, lo pida quien lo pida.
+#
+# El boost de drops ya no existe: se usaba para duplicar objetos. Si tu config
+# aun tiene una seccion drops, no hace nada y puedes borrarla.
 # ---------------------------------------------------------------------------
 
 # Lo que multiplica un boost cuando el comando no dice otra cosa.
@@ -23,25 +35,57 @@ barra-de-accion: true
 # Anunciar en el chat cuando empieza y cuando acaba un boost global.
 anunciar-globales: true
 
-# Mundos donde el boost no hace nada (lobbys, arenas, mazmorras con botin fijo).
+# Mundos donde ningun boost hace nada (lobbys, arenas, mazmorras con botin fijo).
+# Cada tipo tiene ademas sus propios mundos-excluidos.
 mundos-excluidos: []
 
+# Cada tipo:
+#   activado: false lo quita del menu, de "all" y de los placeholders.
+#   multiplicador-maximo: el tope; un "boost give ... 5" se queda en esto.
+#   mundos-excluidos: mundos donde ESTE boost no hace nada.
+
+# Experiencia vanilla (los orbes que recoges).
 exp:
   activado: true
+  multiplicador-maximo: 3.0
+  mundos-excluidos: []
 
-drops:
+# Experiencia de habilidades de AuraSkills. Sin AuraSkills sale como no
+# disponible y no se reparte.
+skill_exp:
   activado: true
-  # Bloques que no se multiplican nunca. Los spawners y los minerales de la mina
-  # se dejan fuera para que un boost no convierta una mina de prision en una
-  # fabrica de dinero.
-  bloques-excluidos:
-    - SPAWNER
+  multiplicador-maximo: 3.0
+  mundos-excluidos: []
 
+# Suerte de pesca de PremioPescao: mejora la rareza de las cajas pescadas, no da
+# mas cajas. Como se traduce el multiplicador a suerte lo decide PremioPescao
+# (config.yml > edm-boost). Sin PremioPescao sale como no disponible.
+pesca:
+  activado: true
+  multiplicador-maximo: 3.0
+  mundos-excluidos: []
+
+# MobCoins que pagan las bajas a traves de EDM: el bote de los jefes de Anomaly
+# y los esbirros con MobCoins propias. No toca las ventas, contratos ni premios
+# (la Aduana de Calamity y sus topes van aparte) ni lo que pague UltimateMobCoins
+# por su cuenta.
+mobcoins:
+  activado: true
+  multiplicador-maximo: 3.0
+  mundos-excluidos: []
+
+# Lo que producen los minions de LitMinions. Sin LitMinions sale como no
+# disponible. Ojo: es el unico boost que multiplica objetos. Si el servidor
+# tiene minions que recogen objetos del suelo o de un cofre (el recolector,
+# por ejemplo), con este boost lo que tira un jugador vuelve multiplicado:
+# revisa que minions hay antes de dejarlo activado.
 minions:
   activado: true
+  multiplicador-maximo: 3.0
+  mundos-excluidos: []
   # LitMinions tiene un unico punto por donde pasa TODO lo que produce cualquier
   # minion antes de entrar al cofre. Enganchando ese evento valen todos los tipos
-  # (granjero, minero, pescador, lenador, matarife...) sin duplicar nada: los
-  # eventos por tipo multiplicarian otra vez lo ya multiplicado.
+  # (granjero, minero, pescador, lenador, matarife...) sin multiplicar dos veces:
+  # los eventos por tipo multiplicarian otra vez lo ya multiplicado.
   eventos:
     - me.waterarchery.litminions.api.events.MinionAsyncAddItemToChestEvent

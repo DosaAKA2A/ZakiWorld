@@ -29,6 +29,7 @@ Dos cosas que el modulo NO delega, y son deliberadas:
 | `tienda` | Tienda propia: compra, venta, topes y registro | `/etienda` (`/etnd`) |
 | `coinflip` | Apuestas cara o cruz entre jugadores | `/cf` (`/coinflip`, `/apuesta`) |
 | `troll` | Bromas de admin sobre un jugador | `/troll` (`/bromas`) |
+| `boost` | Boosts temporales (apagado salvo `modulos.boost: true`) | `/boost` (`/boosts`) |
 
 Se apagan por separado en `plugins/EDM/config.yml` (`modulos.<id>: false`). Si uno
 revienta al arrancar, se anota en consola y los otros siguen: antes eran tres plugins y
@@ -350,3 +351,37 @@ La **Mina** viene montada de serie en el Test (icono: mena de oro): *Minero Perd
 negrita). La carpeta **Test** lleva la *Lepisma*, un silverfish que se divide, corre y
 da la alarma. Los nombres van a **dos palabras como mucho**: en el menu y en el
 holograma, uno largo no cabe.
+
+## El modulo `boost` (1.74.0 en el Survival)
+
+Nacio en OneBlock (EDO) y desde la 1.74.0 tambien va en EDM, **apagado** salvo que
+`plugins/EDM/config.yml` diga `modulos.boost: true`. Configuracion en
+`plugins/EDM/boost/` (`config.yml`, `mensajes.yml`; los boosts vivos en `data.yml`).
+
+| id | Nombre en el juego | Que multiplica | Necesita |
+|----|--------------------|----------------|----------|
+| `exp` | Experiencia | los orbes de experiencia vanilla | - |
+| `skill_exp` | Experiencia de habilidades | la XP de AuraSkills (`XpGainEvent`) | AuraSkills |
+| `pesca` | Suerte de pesca | la rareza de las cajas de PremioPescao (lo lee PremioPescao 2.11.1 por `BoostApi`) | PremioPescao |
+| `mobcoins` | MobCoins | lo que pagan por baja los jefes de Anomaly y los esbirros (`MobCoins.pagarPorBaja`) | - |
+| `minions` | Minions | lo que producen los minions | LitMinions |
+
+- **El boost de drops ya no existe** (se uso para duplicar). No hay clave que lo
+  encienda; un `drops` guardado en `data.yml` se descarta al arrancar con aviso en
+  consola, y `boost give ... drops` contesta que ya no existe.
+- Un tipo sin su plugin sale gris en el menu, no entra en `all` y no se da.
+- Tope por tipo en `<tipo>.multiplicador-maximo` (3 por defecto) y mundos por tipo en
+  `<tipo>.mundos-excluidos`, ademas de los `mundos-excluidos` generales.
+- `MobCoins.pagar()` sigue sin boost a proposito: lo usan la Aduana de Calamity
+  (tasaciones, contratos, topes diarios) y las entregas pendientes.
+- `/boost selftest` comprueba el modulo sin tocar los boosts de nadie.
+
+Comandos (consola, tienda o cajas; permiso `ederus.boost.admin`):
+
+    boost give <jugador> <exp|skill_exp|pesca|mobcoins|minions|all> <minutos> [multiplicador]
+    boost global <tipo|all> <minutos> [multiplicador]
+    boost clear <jugador> [tipo]
+    boost list [jugador]
+
+Placeholders: `%edm_boost_<tipo>%` (x2 / x1), `%edm_boost_<tipo>_tiempo%`,
+`%edm_boost_global_<tipo>%` y `%edm_boost_activo%` (si / no).

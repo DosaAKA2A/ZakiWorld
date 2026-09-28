@@ -50,6 +50,15 @@ public class Textos {
      * come el prefijo, los hex y las negritas, que es justo lo que se configura.
      */
     public Component de(String clave, String respaldo, String... pares) {
+        return pintar(clave, respaldo, false, pares);
+    }
+
+    /** Igual que {@link #de}, pero nunca con prefijo: para el lore de un menu. */
+    public Component linea(String clave, String respaldo, String... pares) {
+        return pintar(clave, respaldo, true, pares);
+    }
+
+    private Component pintar(String clave, String respaldo, boolean nuncaPrefijo, String... pares) {
         String s = textos.getOrDefault(clave, respaldo);
         if (s == null || s.isEmpty()) return Component.empty();
         for (int i = 0; i + 1 < pares.length; i += 2) {
@@ -57,7 +66,7 @@ public class Textos {
         }
         boolean sinPrefijo = s.startsWith(SIN_PREFIJO);
         if (sinPrefijo) s = s.substring(SIN_PREFIJO.length());
-        return Estilo.legado((sinPrefijo ? "" : prefijo) + s);
+        return Estilo.legado((sinPrefijo || nuncaPrefijo ? "" : prefijo) + s);
     }
 
     public void manda(CommandSender a, String clave, String respaldo, String... pares) {

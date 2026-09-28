@@ -3,25 +3,42 @@
 #
 # Colores: &7, &#RRGGBB y &x&R&R&G&G&B&B. La negrita, solo en la palabra del
 # prefijo. Para que una linea salga sin prefijo, empiezala con {sin-prefijo}.
+# Las lineas menu-* son el lore del menu de /boost y nunca llevan prefijo.
 # ---------------------------------------------------------------------------
-version: 1
+version: 2
 
 prefijo: '&#5CC8FF&lBOOST &8» &f'
 
 # %tipo% %multiplicador% %tiempo%
 recibido: '&f%tipo% &#5CFF7Ax%multiplicador% &7durante &f%tiempo%&7.'
-por-acabar: '&f%tipo% &7se te acaba en &#FFC64D%tiempo%&7.'
-acabado: '&7Se te acabo el boost de &f%tipo%&7.'
+por-acabar: '&7Tu boost de &f%tipo% &7se acaba en &#FFC64D%tiempo%&7.'
+acabado: '&7Se te ha acabado el boost de &f%tipo%&7.'
 
 # Globales: los ve todo el servidor, por eso van sin prefijo y con mas aire.
-global-anuncio: '{sin-prefijo}&#5CC8FF%tipo% &#5CFF7Ax%multiplicador% &7para todo el servidor durante &f%tiempo%&7.'
-global-acabado: '{sin-prefijo}&7Se acabo el boost global de &f%tipo%&7.'
+global-anuncio: '{sin-prefijo}&#5CC8FFBoost global: &f%tipo% &#5CFF7Ax%multiplicador% &7para todo el servidor durante &f%tiempo%&7.'
+global-acabado: '{sin-prefijo}&7Se ha acabado el boost global de &f%tipo%&7.'
 
-# Staff
-dado: '&7Le diste &f%tipos% &7a &f%jugador% &7por &f%tiempo%&7.'
+# Menu de /boost
+menu-sin-boost: '&8Ahora mismo no lo tienes.'
+menu-como-conseguir: '&7Sale de las cajas y de la tienda.'
+menu-global: '&7Viene de un boost global del servidor.'
+menu-mundo-excluido: '&#FFB627En este mundo no hace efecto.'
+# %plugin%: el plugin que falta
+menu-no-disponible: '&8No disponible en este servidor.'
+
+# Staff y consola
+dado: '&7Le has dado &f%tipos% &7a &f%jugador% &7durante &f%tiempo%&7.'
 limpiado: '&7Boosts retirados a &f%jugador%&7.'
-global-puesto: '&7Boost global de &f%tipos% &7por &f%tiempo%&7.'
+global-puesto: '&7Boost global de &f%tipos% &7durante &f%tiempo%&7.'
 sin-permiso: '&#FF5C5CNo puedes usar eso.'
-no-esta: '&#FF5C5CEse jugador no esta conectado.'
-tipo-malo: '&#FF5C5CTipos: &fexp&#FF5C5C, &fdrops&#FF5C5C, &fminions&#FF5C5C o &fall&#FF5C5C.'
-minutos-malos: '&#FF5C5CLos minutos tienen que ser un numero mayor que 0.'
+no-esta: '&#FF5C5CEse jugador no está conectado.'
+# %tipos%: la lista de tipos activados
+tipo-malo: '&#FF5C5CEse boost no existe. Tipos: &f%tipos% &#FF5C5Co &fall&#FF5C5C.'
+drops-retirado: '&#FF5C5CEl boost de drops ya no existe: se quitó porque se usaba para duplicar objetos.'
+# %tipo% %plugin%
+no-disponible: '&#FF5C5CEl boost de &f%tipo% &#FF5C5Cno está disponible aquí: falta &f%plugin%&#FF5C5C. No se ha dado nada.'
+desactivado: '&#FF5C5CEl boost de &f%tipo% &#FF5C5Cestá desactivado en boost/config.yml. No se ha dado nada.'
+ninguno-disponible: '&#FF5C5CNo hay ningún boost disponible en este servidor.'
+# %tipo% %pedido% %maximo%
+topado: '&#FFB627%tipo%: se pidió x%pedido% y su tope es x%maximo%; se ha dado x%maximo%.'
+minutos-malos: '&#FF5C5CLos minutos tienen que ser un número mayor que 0.'

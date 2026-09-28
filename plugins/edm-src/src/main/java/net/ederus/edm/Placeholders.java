@@ -31,7 +31,7 @@ import net.ederus.edm.minas.MinasPlugin;
  *   %edm_mina_ID_restante%      cuanto queda, en %
  *   %edm_mina_ID_reinicio%      lo que falta para el reinicio, "m:ss" o "-"
  *
- * Boosts (modulo boost):
+ * Boosts (modulo boost). TIPO: exp, skill_exp, pesca, mobcoins, minions.
  *   %edm_boost_TIPO%            el multiplicador que tiene ahora, "x2" o "x1"
  *   %edm_boost_TIPO_tiempo%     lo que le queda, "12m 30s" o "-"
  *   %edm_boost_global_TIPO%     el multiplicador del boost global del servidor
@@ -78,14 +78,14 @@ public final class Placeholders extends PlaceholderExpansion {
 
     /* ----------------------------------------------------------------- boost */
 
-    /** boost_exp, boost_exp_tiempo, boost_global_drops, boost_activo. */
+    /** boost_exp, boost_exp_tiempo, boost_global_pesca, boost_activo. */
     private String boost(OfflinePlayer quien, String p) {
         if (!(core.modulo("boost") instanceof BoostPlugin boost)) return "";
         java.util.UUID id = quien == null ? null : quien.getUniqueId();
 
         if (p.equals("activo")) {
             if (id == null) return "no";
-            for (Tipo t : Tipo.values()) if (boost.servicio().activo(id, t)) return "si";
+            for (Tipo t : boost.tipos()) if (boost.multiplicadorDe(id, t) > 1.0) return "si";
             return "no";
         }
 

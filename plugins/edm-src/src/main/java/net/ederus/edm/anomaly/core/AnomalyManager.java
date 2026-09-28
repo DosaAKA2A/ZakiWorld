@@ -814,7 +814,7 @@ public final class AnomalyManager implements Listener {
             Player p = plugin.getServer().getPlayer(en.getKey());
             if (p == null || !p.isOnline()) continue;
             long pago = Math.round(Math.max(minimo, bote * (en.getValue() / total)));
-            net.ederus.edm.comun.MobCoins.pagar(net.ederus.edm.Module.dueno(plugin), p, pago);
+            net.ederus.edm.comun.MobCoins.pagarPorBaja(net.ederus.edm.Module.dueno(plugin), p, pago);
         }
     }
 

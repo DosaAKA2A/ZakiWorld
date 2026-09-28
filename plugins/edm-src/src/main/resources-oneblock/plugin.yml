@@ -28,7 +28,7 @@ commands:
     aliases: [vitrina]
     permission: ederus.flex
   boost:
-    description: 'Tus boosts temporales de experiencia, drops y minions'
+    description: 'Tus boosts temporales de experiencia, MobCoins y minions'
     usage: /boost [give|clear|global|list]
     aliases: [boosts]
   anomaly:

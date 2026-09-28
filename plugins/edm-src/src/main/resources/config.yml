@@ -12,6 +12,7 @@
 #   dungeonloot/ cajas y llaves de mazmorra (/dl)
 #   flex/     la vitrina de cada jugador (/flex)
 #   biomas/   Lethal Biomes, climas por zona (/lbiomes)
+#   boost/    boosts temporales de exp, habilidades, pesca, MobCoins y minions (/boost)
 #
 # Al arrancar por primera vez se copian solos desde las carpetas viejas,
 # que se conservan intactas por si hay que volver atras.
@@ -34,6 +35,9 @@ modulos:
   bp: true
   # El brillo (glow), sustituye a FancyGlow. Necesita TAB.
   glow: true
+  # Boosts temporales (/boost). Este es el unico que hay que encender a mano: si
+  # falta la linea, queda apagado.
+  boost: false
 
 # Bitacoras de lectura: un fichero de texto por modulo y por dia en
 # plugins/EDM/logs/, con una linea por suceso y la hora delante. Estan para

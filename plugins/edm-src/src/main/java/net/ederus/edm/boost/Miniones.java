@@ -30,13 +30,13 @@ import org.bukkit.plugin.Plugin;
  */
 final class Miniones implements Listener {
 
-    private final BoostPlugin modulo;
+    private final java.util.function.ToDoubleBiFunction<UUID, Tipo> fuente;
     private final Logger log;
     private final java.util.Set<String> avisadas = new java.util.HashSet<>();
     private int enganchados;
 
-    Miniones(BoostPlugin modulo, Logger log) {
-        this.modulo = modulo;
+    Miniones(java.util.function.ToDoubleBiFunction<UUID, Tipo> fuente, Logger log) {
+        this.fuente = fuente;
         this.log = log;
     }
 
@@ -70,7 +70,7 @@ final class Miniones implements Listener {
         try {
             UUID dueno = dueno(evento);
             if (dueno == null) return;
-            double mult = modulo.servicio().multiplicador(dueno, Tipo.MINIONS);
+            double mult = fuente.applyAsDouble(dueno, Tipo.MINIONS);
             if (mult <= 1.0) return;
             if (!aplicar(evento, mult) && avisadas.add(evento.getClass().getName())) {
                 log.info("[boost] " + evento.getClass().getSimpleName()

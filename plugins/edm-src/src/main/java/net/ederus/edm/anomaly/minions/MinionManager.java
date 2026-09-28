@@ -762,7 +762,7 @@ public final class MinionManager implements Listener {
             int min = type.mobcoinsMin();
             int max = type.mobcoinsMax();
             int pago = max > min ? min + random.nextInt(max - min + 1) : max;
-            net.ederus.edm.comun.MobCoins.pagar(net.ederus.edm.Module.dueno(plugin), mob.getKiller(), pago);
+            net.ederus.edm.comun.MobCoins.pagarPorBaja(net.ederus.edm.Module.dueno(plugin), mob.getKiller(), pago);
         }
 
         DropTable table = plugin.drops().table(type.dropTableId());

@@ -1,12 +1,16 @@
 name: EDM
-version: '1.73.2'
+version: '1.74.0'
 main: net.ederus.edm.EDMPlugin
 api-version: '1.20'
 author: Iris Studio
 description: Nucleo de Ederus - Rip, Anomaly, libros, avisos de tiendas, tienda propia, apuestas, bromas y pase de batalla
-softdepend: [Vault, WorldGuard, ProtectionStones, MMOItems, LibsDisguises, AdvancedEnchantments, UltimateMobCoins, Quests, ProtocolLib, BattlePass, PlaceholderAPI, TAB]
+softdepend: [Vault, WorldGuard, ProtectionStones, MMOItems, LibsDisguises, AdvancedEnchantments, UltimateMobCoins, Quests, ProtocolLib, BattlePass, PlaceholderAPI, TAB, AuraSkills]
 
 commands:
+  boost:
+    description: 'Tus boosts temporales: experiencia, habilidades, pesca, MobCoins y minions'
+    usage: /boost [give|clear|global|list|selftest]
+    aliases: [boosts]
   glow:
     description: 'Tu brillo: el contorno de color alrededor tuyo'
     usage: /glow [color|rainbow|flash|off|list]
@@ -83,6 +87,9 @@ commands:
     permission: ederus.libro
 
 permissions:
+  ederus.boost.admin:
+    description: Reparte, retira y pone boosts globales (/boost give|clear|global|list|selftest)
+    default: op
   fancyglow.admin:
     description: Todos los brillos y /glow set para otros (mismo nodo que FancyGlow)
     default: op

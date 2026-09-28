@@ -39,6 +39,45 @@ public final class MobCoins {
     }
 
     /**
+     * Quien sube lo que paga una baja: el boost de MobCoins (modulo boost). Devuelve la
+     * cantidad final, nunca menos que la que entra.
+     */
+    public interface Boost {
+        long aplicar(Player jugador, long cantidad);
+    }
+
+    private static Boost boost;
+
+    /** Lo pone el modulo de boosts al arrancar y lo quita (null) al parar. */
+    public static void boost(Boost nuevo) {
+        boost = nuevo;
+    }
+
+    /**
+     * Paga lo que suelta un mob o un jefe al morir: igual que {@link #pagar}, pero con
+     * el boost de MobCoins del jugador si lo tiene.
+     *
+     * Va aparte de pagar() a proposito. pagar() lo usan tambien la Aduana de Calamity
+     * (tasaciones, contratos, premios con topes diarios) y las entregas pendientes: un
+     * boost ahi multiplicaria ventas de objetos y se saltaria los topes. Solo las bajas
+     * (jefes de Anomaly y esbirros) pasan por aqui.
+     */
+    public static void pagarPorBaja(Plugin plugin, Player jugador, long cantidad) {
+        pagar(plugin, jugador, conBoost(jugador, cantidad));
+    }
+
+    /** La cantidad que cobraria ese jugador por una baja, con su boost. */
+    public static long conBoost(Player jugador, long cantidad) {
+        Boost b = boost;
+        if (b == null || jugador == null || cantidad <= 0) return cantidad;
+        try {
+            return Math.max(cantidad, b.aplicar(jugador, cantidad));
+        } catch (Throwable t) {
+            return cantidad;                    // un boost roto nunca se lleva el pago
+        }
+    }
+
+    /**
      * Paga y avisa. En silencio para el plugin (--silent) porque el mensaje bueno es
      * el nuestro; si la cantidad no es positiva no se hace nada.
      */

@@ -4,7 +4,7 @@
 #   tienda/   la tienda propia (/shop), con precio por jugador
 #   flex/     la vitrina de cada jugador (/flex)
 #   biomas/   Lethal Biomes, climas por zona (/lbiomes)
-#   boost/    boosts temporales de exp, drops y minions (/boost)
+#   boost/    boosts temporales de exp, MobCoins y minions (/boost)
 #   anomaly/  jefes por fases (/anomaly) y esbirros con nivel (/esb). Desde
 #             EDO 1.4.0: EderusDimensions puebla sus dimensiones con los esbirros.
 #
