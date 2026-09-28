@@ -212,6 +212,15 @@ final class Rankings implements Listener {
     }
 
     /**
+     * La clasificacion de una clave de la semana en curso o de siempre (la total lleva tambien
+     * horas-activas y el saldo de Esencias), de la cache: el menu de Rhen (MenuCazador) pinta
+     * cada categoria con ella. Vacia si nadie tiene esa clave.
+     */
+    Tops.Clasificacion clasificacion(String clave, boolean semana) {
+        return (semana ? clasSemana : clasTotal).getOrDefault(clave, Tops.Clasificacion.VACIA);
+    }
+
+    /**
      * %lethalworld_top_<clave>_<n>_nombre|valor|texto[_semana]%, top_<clave>_pos[_semana] y
      * top_<clave>_yo[_semana] (Tops). Solo lee la cache: vale desde cualquier hilo.
      */
@@ -285,7 +294,7 @@ final class Rankings implements Listener {
     }
 
     /** Las tablas de ranking.tablas que existen, en su orden (define el desempate). */
-    private List<String> tablas() {
+    List<String> tablas() {
         List<String> conf = hc.cfg().getStringList("ranking.tablas");
         List<String> out = new ArrayList<>();
         for (String s : conf.isEmpty() ? List.of("extraido", "cazador", "segador", "superviviente") : conf) {

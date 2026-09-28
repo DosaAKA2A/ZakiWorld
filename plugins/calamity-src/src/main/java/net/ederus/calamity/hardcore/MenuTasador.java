@@ -196,6 +196,7 @@ final class MenuTasador implements Listener {
         List<Component> lore = new ArrayList<>();
         Saldo s = hc.saldo();
         lore.add(Marco.dato("Saldo", Marco.esencias(s == null ? 0 : s.de(u))));
+        lore.add(Marco.tenue("Es tuyo: no caduca ni se reinicia."));
         Monedero mon = hc.monedero();
         if (mon != null && mon.disponible()) lore.add(Marco.dato("MobCoins", Altar.miles(mon.saldo(p))));
         Creditos cr = hc.creditos();
@@ -241,8 +242,10 @@ final class MenuTasador implements Listener {
             inv.setItem(CONTRATOS, Marco.icono(Material.PAPER, Component.text("Contratos de hoy", Paleta.TENUE), lore, false));
             return;
         }
-        lore.add(Marco.texto("Encargos del día. Se cobran"));
-        lore.add(Marco.texto("al salir vivo; si mueres, se pierden."));
+        lore.add(Marco.texto("Encargos que cambian cada día."));
+        lore.add(Marco.texto("Se cobran al salir vivo; si mueres,"));
+        lore.add(Marco.texto("vuelven a empezar."));
+        lore.add(Marco.tenue("Lo cobrado va a tu saldo y se queda."));
         lore.add(Component.empty());
         List<Contratos.Estado> lista = hc.valor("contratos", () -> con.estados(p), List.of());
         boolean listo = false;
@@ -375,8 +378,9 @@ final class MenuTasador implements Listener {
         }
         if (escala > 0) lore.add(Marco.tenue("Por encima de " + Altar.miles(escala) + " ya no paga."));
         lore.add(Component.empty());
-        lore.add(Marco.tenue("Las Esencias no tienen tope."));
-        lore.add(Marco.tenue("Vuelve a cero a medianoche."));
+        lore.add(Marco.tenue("Las Esencias no tienen este tope."));
+        lore.add(Marco.tenue("Lo cobrado hoy vuelve a cero a"));
+        lore.add(Marco.tenue("medianoche. Tu saldo no se toca."));
         long libre = 0;
         for (Tramo t : tramos) libre += t.hasta() >= 100_000 ? 0 : t.quedan();
         boolean paga = !tramos.isEmpty() && (escala < 0 || libre > 0);

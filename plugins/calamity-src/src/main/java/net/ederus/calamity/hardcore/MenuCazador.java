@@ -2,6 +2,7 @@ package net.ederus.calamity.hardcore;
 
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.TextColor;
+import net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer;
 import org.bukkit.Material;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.entity.Player;
@@ -15,7 +16,6 @@ import org.bukkit.event.player.PlayerQuitEvent;
 import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.InventoryHolder;
 import org.bukkit.inventory.ItemStack;
-import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.scheduler.BukkitTask;
 
 import java.time.DayOfWeek;
@@ -26,52 +26,118 @@ import java.time.temporal.TemporalAdjusters;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
+import java.util.function.Function;
 
 /**
- * Los rankings de la semana en un menu (1.3.0; 1.3.1): lo que abre el Cazador de la antesala
- * (antes los escribia en el chat) y el boton del Tablero.
+ * Los rankings de Calamity en un menu: lo que abre Rhen, el Cazador de la antesala, y el boton
+ * del Tablero (1.3.0; rehecho en la 1.7.2).
  *
- * En la 1.3.0 era una fila por ranking con un icono suelto a la izquierda de rotulo (girasol,
- * fragmento de eco, calavera, totem) y Dosa: "las categorias de la izquierda no se entienden".
- * Ahora se ve un ranking cada vez y se entiende solo con mirar:
- *  - abajo, una pestana por ranking (Extraido, Cazador, Segador, Superviviente) con que mide,
- *    quien lo lidera y tu puesto; la que miras brilla y dice "Estas aqui";
- *  - en el medio, el podio de ese ranking con forma de podio: el 1.o arriba en el centro sobre
- *    oro, el 2.o a su izquierda sobre hierro y el 3.o a su derecha sobre cobre (el puesto va en
- *    el numero de la pila y la cifra en el lore);
- *  - arriba, el ranking que miras y que mide; a los lados del podio, Tu (tu puesto, lo que te
- *    falta para el 3.o y tus salidas), del 4.o al 10.o, los premios con lo que falta para el
- *    cierre, y el Tablero.
- * Cambiar de pestana repinta la misma ventana (sin cerrarla: el raton no salta al centro).
+ * Por que es asi: la version de antes ensenaba un ranking cada vez, con un podio de bloques de
+ * oro, hierro y cobre, cabezas con el puesto en el numero de la pila, un libro, un marco, un
+ * cofre y pestanas abajo, y Dosa: "Este ranking aun me cuesta muchisimo entenderlo". No se
+ * sabia que categoria era cada cosa ni quien iba primero. Ahora todo se lee de un vistazo:
  *
- * Es la clasificacion tal cual (Rankings.podioSemana, la cache del minuto), sin el reparto de
- * premios del cierre: el lunes cobra quien cumpla las salidas y no pase de las tablas maximas.
+ *   ventana de 45, marco de cristal negro (Marco.rellenarNegro)
+ *   fila 0:    informacion (4): semanal o historico, cuando se reinicia y que premios da
+ *   fila 1:    las categorias con premio (Extraido, Cazador, Segador, Superviviente)
+ *   fila 2:    Esencias ganadas, Reliquias vendidas, salidas con vida y minijefes
+ *   fila 3:    contratos (y en el historico, horas activas y saldo de Esencias)
+ *   fila 4:    Esta semana / Historico (38) · Cerrar (40) · Tablero (42), como el Mercader
+ *
+ * Una categoria es un solo objeto: su nombre dice que es ("Mas Parcas abatidas esta semana"),
+ * la primera linea del lore que mide, luego el top 10 ("1. Nombre — valor") y al final tu puesto
+ * y lo que llevas. Las filas van centradas y con una casilla de aire entre cada dos (Marco
+ * .columnas con 4 como mucho). Nada de podios ni numeros de pila.
+ *
+ * Los datos son las clasificaciones de Rankings (la cache de Tops que se rehace cada minuto): la
+ * semana en curso (stats-semana) o el total (stats, horas activas y saldo). Es la clasificacion
+ * tal cual, sin el reparto de premios del cierre: el lunes cobra quien cumpla las salidas y no
+ * pase de las tablas maximas, y eso lo explica el objeto de informacion.
  */
 final class MenuCazador implements Listener {
 
     private static final long ESPERA_MS = 500;
-    /** Arriba en el centro: el ranking que miras. */
-    static final int CABECERA = 4;
-    /** El podio: 1.o arriba en el centro, 2.o una fila mas abajo a su izquierda, 3.o otra mas abajo a su derecha. */
-    static final int PRIMERO = 13, SEGUNDO = 21, TERCERO = 32;
-    /** Los pedestales, hasta la fila 4: oro bajo el 1.o, hierro bajo el 2.o y cobre bajo el 3.o. */
-    static final int[] ORO = {22, 31, 40}, PLATA = {30, 39}, BRONCE = {41};
-    /** A los lados del podio: Tu y del 4.o al 10.o a la izquierda; los premios y el Tablero a la derecha. */
-    static final int TU = 19, RESTO = 37, PREMIOS = 25, TABLERO = 43;
-    /** Las pestanas, en la fila de abajo. */
-    static final int FILA_PESTANAS = 45;
+    /** La ventana: 5 filas, como el Mercader. */
+    static final int TAMANO = 45;
+    /** Arriba en el centro: que ranking es, cuando se reinicia y que premios da. */
+    static final int INFO = 4;
+    /** Las filas de las categorias. */
+    static final int[] FILAS = {9, 18, 27};
+    /** Abajo: cambiar de periodo, Cerrar y el Tablero, en las columnas 2, 4 y 6. */
+    static final int CAMBIAR = 38, CERRAR = 40, TABLERO = 42;
+    /** Como mucho cuatro por fila: asi siempre queda una casilla libre entre cada dos. */
+    static final int POR_FILA = 4;
+    /** Cuantos salen con nombre en el lore de cada categoria. */
+    static final int TOP = 10;
 
-    /** Nuestra ventana: lo que hace cada casilla y el ranking que se mira (cambia sin cerrarla). */
+    /**
+     * Una categoria del ranking. clave: la de Estadisticas (o horas-activas / esencias, que solo
+     * tienen total). fila: 1, 2 o 3. nombreSemana es null si esa clave no tiene ranking semanal.
+     */
+    record Categoria(String id, String clave, int fila, Material icono, String nombreSemana, String nombreSiempre,
+                     String mide) {
+
+        boolean semanal() {
+            return nombreSemana != null;
+        }
+
+        String nombre(boolean semana) {
+            return semana ? nombreSemana : nombreSiempre;
+        }
+    }
+
+    /**
+     * Todas, en su orden. Las cuatro de la fila 1 son las tablas de Rankings.TABLAS (mismo id),
+     * las que pagan el lunes. ecos-cerrados no sale: sube a la vez que cazas-validas y seria
+     * Cazador repetido.
+     */
+    static final List<Categoria> CATEGORIAS = List.of(
+            new Categoria("extraido", "tasado-mc", 1, Material.GOLD_INGOT,
+                    "Más MobCoins ganadas esta semana", "Más MobCoins ganadas en total",
+                    "MobCoins que te pagan al vender lo que sacas."),
+            new Categoria("cazador", "cazas-validas", 1, Material.ECHO_SHARD,
+                    "Más Ecos ajenos cazados esta semana", "Más Ecos ajenos cazados en total",
+                    "Ecos de otros jugadores que has cerrado."),
+            new Categoria("segador", "parcas", 1, Material.NETHERITE_HOE,
+                    "Más Parcas abatidas esta semana", "Más Parcas abatidas en total",
+                    "Parcas que has ayudado a tumbar."),
+            new Categoria("superviviente", "expedicion-max-seg", 1, Material.TOTEM_OF_UNDYING,
+                    "Expedición más larga de la semana", "Expedición más larga de siempre",
+                    "Lo que duró tu expedición más larga."),
+            new Categoria("esencias", "tasado-esencias", 2, Material.GHAST_TEAR,
+                    "Más Esencias ganadas esta semana", "Más Esencias ganadas en total",
+                    "Esencias que te pagan al vender lo que sacas."),
+            new Categoria("reliquias", "reliquias", 2, Material.RESIN_CLUMP,
+                    "Más Reliquias vendidas esta semana", "Más Reliquias vendidas en total",
+                    "Reliquias que has sacado vivo y vendido."),
+            new Categoria("extracciones", "extracciones", 2, Material.IRON_DOOR,
+                    "Más salidas con vida esta semana", "Más salidas con vida en total",
+                    "Veces que has salido vivo de Calamity."),
+            new Categoria("minijefes", "minijefes", 2, Material.WITHER_SKELETON_SKULL,
+                    "Más minijefes abatidos esta semana", "Más minijefes abatidos en total",
+                    "Minijefes en cuya muerte has participado."),
+            new Categoria("contratos", "contratos", 3, Material.PAPER,
+                    "Más contratos cobrados esta semana", "Más contratos cobrados en total",
+                    "Contratos de Oren cumplidos y cobrados."),
+            new Categoria("horas", "horas-activas", 3, Material.COMPASS,
+                    null, "Más horas activas en Calamity",
+                    "Tiempo dentro en el que te has movido."),
+            new Categoria("saldo", Tops.ESENCIAS, 3, Material.ENDER_CHEST,
+                    null, "Mayor saldo de Esencias",
+                    "Las Esencias que tienes guardadas ahora."));
+
+    /** Nuestra ventana: lo que hace cada casilla y si se mira la semana o el historico. */
     static final class Vista implements InventoryHolder {
         final Map<Integer, String> acciones = new HashMap<>();
-        String tabla;
+        final boolean semana;
 
-        Vista(String tabla) {
-            this.tabla = tabla;
+        Vista(boolean semana) {
+            this.semana = semana;
         }
 
         @Override
@@ -114,84 +180,98 @@ final class MenuCazador implements Listener {
         return r != null && r.activo();
     }
 
-    // ------------------------------------------------------------------ abrir y pintar
+    // ------------------------------------------------------------------ reparto (sin Bukkit)
 
-    void abrir(Player p) {
-        Rankings r = hc.rankings();
-        if (r == null || !r.activo()) {
-            p.sendMessage(ComandoCalamity.mensaje("Los rankings no están abiertos ahora mismo."));
-            return;
-        }
-        Vista v = new Vista(null);
-        Inventory inv = hc.plugin().getServer().createInventory(v, 54, Marco.T_RANKINGS.componente());
-        pintar(inv, p, v, r);
-        p.openInventory(inv);
-        Marco.sonar(p, "item.book.page_turn", 0.8f, 1.1f);
+    /** Las categorias que salen en ese periodo, en su orden. */
+    static List<Categoria> categorias(boolean semana) {
+        List<Categoria> out = new ArrayList<>();
+        for (Categoria c : CATEGORIAS) if (!semana || c.semanal()) out.add(c);
+        return out;
     }
 
-    private void repintar(Player p) {
-        Rankings r = hc.rankings();
-        if (!p.isOnline() || r == null) return;
-        Inventory top = p.getOpenInventory().getTopInventory();
-        if (top.getHolder() instanceof Vista v) pintar(top, p, v, r);
+    /**
+     * Donde va cada categoria (casilla -> categoria): cada fila centrada con Marco.columnas, con
+     * una casilla libre entre cada dos. Una fila con mas de POR_FILA sigue en la siguiente.
+     */
+    static Map<Integer, Categoria> casillas(boolean semana) {
+        Map<Integer, List<Categoria>> porFila = new LinkedHashMap<>();
+        for (Categoria c : categorias(semana)) porFila.computeIfAbsent(c.fila(), k -> new ArrayList<>()).add(c);
+        List<List<Categoria>> filas = new ArrayList<>();
+        for (List<Categoria> l : porFila.values()) {
+            for (int i = 0; i < l.size(); i += POR_FILA) filas.add(l.subList(i, Math.min(l.size(), i + POR_FILA)));
+        }
+        Map<Integer, Categoria> out = new LinkedHashMap<>();
+        for (int f = 0; f < filas.size() && f < FILAS.length; f++) {
+            List<Categoria> l = filas.get(f);
+            int[] cols = Marco.columnas(l.size());
+            for (int i = 0; i < cols.length; i++) out.put(FILAS[f] + cols[i], l.get(i));
+        }
+        return out;
     }
 
-    private void pintar(Inventory inv, Player p, Vista v, Rankings r) {
-        inv.clear();
-        v.acciones.clear();
-        UUID u = p.getUniqueId();
-        ConfigurationSection c = hc.cfg();
-        int minimo = c.getInt("ranking.minimo-extracciones", 3);
-        Estadisticas st = hc.estadisticas();
-        long salidas = st == null ? 0 : st.semana(u, "extracciones");
+    // ------------------------------------------------------------------ textos (sin Bukkit)
 
-        Map<Rankings.Tabla, List<Rankings.Fila>> podios = r.podioSemana(10);
-        // La que se pide; si no esta (o es la primera vez), la primera de ranking.tablas.
-        Rankings.Tabla t = null;
-        for (Rankings.Tabla x : podios.keySet()) {
-            if (t == null) t = x;
-            if (x.id().equals(v.tabla)) t = x;
+    /** El valor como se lee en el menu, con su unidad: "1.234 MC", "3 Parcas", "1 h 05 min". */
+    static String valor(String clave, long v) {
+        return switch (clave) {
+            case "tasado-mc" -> Altar.miles(v) + " MC";
+            case "expedicion-max-seg", "horas-activas" -> Tops.texto(clave, v);
+            case "tasado-esencias", Tops.ESENCIAS -> Marco.esencias(v);
+            case "cazas-validas" -> Altar.miles(v) + (v == 1 ? " Eco" : " Ecos");
+            case "parcas" -> Altar.miles(v) + (v == 1 ? " Parca" : " Parcas");
+            case "reliquias" -> Altar.miles(v) + (v == 1 ? " Reliquia" : " Reliquias");
+            case "extracciones" -> Altar.miles(v) + (v == 1 ? " salida" : " salidas");
+            case "minijefes" -> Altar.miles(v) + (v == 1 ? " minijefe" : " minijefes");
+            case "contratos" -> Altar.miles(v) + (v == 1 ? " contrato" : " contratos");
+            default -> Altar.miles(v);
+        };
+    }
+
+    /** Oro, plata y bronce en tonos claros (se leen sobre el globo); del 4.o en adelante, apagado. */
+    static TextColor colorPuesto(int puesto) {
+        return switch (puesto) {
+            case 1 -> TextColor.color(0xFFD27A);
+            case 2 -> TextColor.color(0xD8DEE6);
+            case 3 -> TextColor.color(0xE0A878);
+            default -> Paleta.TENUE;
+        };
+    }
+
+    /**
+     * El lore de una categoria: que mide, si da premio, el top 10 ("1. Nombre — valor") y tu
+     * puesto con lo que llevas. conPremio: si es una de las tablas que pagan el lunes (solo en
+     * la semana); puestos: cuantos puestos pagan.
+     */
+    static List<Component> lore(Categoria c, Tops.Clasificacion cl, UUID yo, boolean semana, boolean conPremio, int puestos) {
+        List<Component> lore = new ArrayList<>();
+        lore.add(Marco.tenue(c.mide()));
+        if (semana && conPremio) {
+            lore.add(Component.text(puestos == 1 ? "Da premio al 1.º el lunes." : "Da premio a los " + puestos + " primeros el lunes.",
+                    Paleta.CIFRA));
         }
-        inv.setItem(Marco.CERRAR, Marco.cerrar());
-        v.acciones.put(Marco.CERRAR, "cerrar");
-        if (t == null) {
-            Marco.rellenar(inv);
-            return;
+        lore.add(Component.empty());
+        List<Rankings.Fila> top = cl.top();
+        if (top.isEmpty()) lore.add(Marco.tenue(semana ? "Esta semana aún no hay nadie." : "Todavía no hay nadie."));
+        for (int i = 0; i < top.size() && i < TOP; i++) {
+            Rankings.Fila f = top.get(i);
+            boolean soyYo = f.jugador().equals(yo);
+            lore.add(Component.text((i + 1) + ". ", colorPuesto(i + 1))
+                    .append(Component.text(f.nombre(), soyYo ? Paleta.BIEN : Paleta.TEXTO))
+                    .append(Component.text(" — ", Paleta.SEPARADOR))
+                    .append(Component.text(valor(c.clave(), f.valor()), Paleta.CIFRA)));
         }
-        v.tabla = t.id();
-        List<Rankings.Fila> top = podios.get(t);
-
-        inv.setItem(CABECERA, Marco.icono(iconoTabla(t.id()), Component.text("Ranking: " + t.nombre(), Paleta.MARCA), List.of(
-                Marco.texto(queMide(t.id())),
-                Component.empty(),
-                Marco.tenue("Los tres primeros cobran el lunes."),
-                Marco.tenue("Abajo, los otros rankings.")), false));
-
-        int[] podio = {PRIMERO, SEGUNDO, TERCERO};
-        for (int i = 0; i < podio.length; i++) inv.setItem(podio[i], i < top.size() ? podio(top.get(i), i + 1, t, u) : libre(i + 1));
-        for (int s : ORO) inv.setItem(s, pedestal(Material.GOLD_BLOCK));
-        for (int s : PLATA) inv.setItem(s, pedestal(Material.IRON_BLOCK));
-        for (int s : BRONCE) inv.setItem(s, pedestal(Material.COPPER_BLOCK));
-
-        inv.setItem(TU, tu(p, t, top, salidas, minimo));
-        inv.setItem(RESTO, resto(t, top, u));
-        inv.setItem(PREMIOS, premios(r, c));
-
-        Tablero tab = hc.tablero();
-        boolean tablero = tab != null && hc.valor("tablero", tab::activo, false);
-        inv.setItem(TABLERO, Marco.boton(Material.ITEM_FRAME, "Tablero", List.of("Ecos con botín y Parcas sueltas.",
-                "Quien caza, sube en Cazador y Segador."), tablero ? "Clic para abrirlo" : "Próximamente.", tablero));
-        if (tablero) v.acciones.put(TABLERO, "tablero");
-
-        List<Rankings.Tabla> tablas = new ArrayList<>(podios.keySet());
-        int[] cols = Marco.columnas(tablas.size());
-        for (int i = 0; i < cols.length; i++) {
-            Rankings.Tabla x = tablas.get(i);
-            int casilla = FILA_PESTANAS + cols[i];
-            inv.setItem(casilla, pestana(x, podios.get(x), x.id().equals(t.id()), u));
-            if (!x.id().equals(t.id())) v.acciones.put(casilla, "tabla:" + x.id());
+        lore.add(Component.empty());
+        Integer puesto = yo == null ? null : cl.puestos().get(yo);
+        if (puesto == null) {
+            lore.add(Component.text("Tu puesto: ", Paleta.TENUE).append(Component.text("aún no puntúas", Paleta.TENUE)));
+        } else {
+            long mio = cl.valores().getOrDefault(yo, 0L);
+            lore.add(Component.text("Tu puesto: ", Paleta.TENUE)
+                    .append(Component.text(puesto + ".º", puesto <= 3 ? colorPuesto(puesto) : Paleta.BIEN))
+                    .append(Component.text(" — ", Paleta.SEPARADOR))
+                    .append(Component.text(valor(c.clave(), mio), Paleta.CIFRA)));
         }
-        Marco.rellenar(inv);
+        return lore;
     }
 
     /** "30 Esencias, 2 Llaves del Caos y [ÁNIMA] 7 días": lo mismo que dice el aviso del cierre. */
@@ -201,146 +281,14 @@ final class MenuCazador implements Listener {
         if (pr.llaves() > 0) partes.add(pr.llaves() + (pr.llaves() == 1 ? " Llave del Caos" : " Llaves del Caos"));
         if (!pr.comandos().isEmpty()) partes.add("[ÁNIMA] 7 días");
         if (partes.isEmpty()) return "el puesto";
-        if (partes.size() == 1) return partes.get(0);
-        return String.join(", ", partes.subList(0, partes.size() - 1)) + " y " + partes.get(partes.size() - 1);
+        return lista(partes);
     }
 
-    private static Material iconoTabla(String id) {
-        return switch (id) {
-            case "extraido" -> Material.SUNFLOWER;
-            case "cazador" -> Material.ECHO_SHARD;
-            case "segador" -> Material.WITHER_SKELETON_SKULL;
-            case "superviviente" -> Material.TOTEM_OF_UNDYING;
-            default -> Material.GOLD_INGOT;
-        };
-    }
-
-    static String queMide(String id) {
-        return switch (id) {
-            case "extraido" -> "MobCoins ganadas vendiendo esta semana.";
-            case "cazador" -> "Ecos de otros jugadores cazados esta semana.";
-            case "segador" -> "Parcas abatidas esta semana.";
-            case "superviviente" -> "La expedición más larga de la semana.";
-            default -> "Lo que llevas esta semana.";
-        };
-    }
-
-    /** Oro, plata y bronce en tonos claros (se leen sobre el globo). */
-    static TextColor colorPuesto(int puesto) {
-        return switch (puesto) {
-            case 1 -> TextColor.color(0xFFD27A);
-            case 2 -> TextColor.color(0xD8DEE6);
-            case 3 -> TextColor.color(0xE0A878);
-            default -> Paleta.TEXTO;
-        };
-    }
-
-    /** Un bloque del pedestal: solo forma, sin globo (no es algo que mirar ni que pulsar). */
-    private static ItemStack pedestal(Material m) {
-        ItemStack it = new ItemStack(m);
-        ItemMeta meta = it.getItemMeta();
-        if (meta != null) {
-            meta.setHideTooltip(true);
-            it.setItemMeta(meta);
-        }
-        return it;
-    }
-
-    /** Una pestana de abajo: el ranking, que mide, quien lo lidera y tu puesto; la que miras brilla. */
-    private static ItemStack pestana(Rankings.Tabla t, List<Rankings.Fila> top, boolean aqui, UUID yo) {
-        List<Component> lore = new ArrayList<>();
-        lore.add(Marco.tenue(queMide(t.id())));
-        lore.add(Component.empty());
-        if (top.isEmpty()) lore.add(Marco.tenue("Todavía no hay nadie en el ranking."));
-        else lore.add(Marco.dato("Líder", top.get(0).nombre() + " · " + Npcs.valorRanking(t.estadistica(), top.get(0).valor())));
-        for (int i = 0; i < top.size(); i++) {
-            if (top.get(i).jugador().equals(yo)) lore.add(Component.text("Tu puesto: " + (i + 1) + ".º", Paleta.BIEN));
-        }
-        lore.add(Component.empty());
-        lore.add(aqui ? Component.text("● Estás aquí", Paleta.MARCA) : Marco.accion("Clic para verlo"));
-        TextColor color = aqui ? Paleta.MARCA : Paleta.TEXTO;
-        return Marco.icono(iconoTabla(t.id()), Component.text(aqui ? "▸ " + t.nombre() + " ◂" : t.nombre(), color), lore, aqui);
-    }
-
-    /** Una cabeza del podio: el puesto en la pila, el nombre y la cifra. */
-    private static ItemStack podio(Rankings.Fila f, int puesto, Rankings.Tabla t, UUID yo) {
-        ItemStack cabeza = Marco.cabeza(f.jugador());
-        cabeza.setAmount(puesto);
-        boolean soyYo = f.jugador().equals(yo);
-        List<Component> lore = new ArrayList<>();
-        lore.add(Marco.dato(t.nombre(), Npcs.valorRanking(t.estadistica(), f.valor())));
-        if (soyYo) lore.add(Component.text("● Eres tú.", Paleta.BIEN));
-        return Marco.icono(cabeza, Component.text(puesto + ".º  ", colorPuesto(puesto))
-                .append(Component.text(f.nombre(), soyYo ? Paleta.BIEN : Paleta.TEXTO)), lore, soyYo);
-    }
-
-    private static ItemStack libre(int puesto) {
-        return Marco.icono(new ItemStack(Material.SKELETON_SKULL, puesto), Component.text(puesto + ".º  libre", Paleta.TENUE),
-                List.of(Marco.tenue("Este puesto está libre. Puede ser tuyo.")), false);
-    }
-
-    /** Tu cabeza en ese ranking: tu puesto (si estas en el top 10), tu cifra, lo que te falta para el 3.o y tus salidas. */
-    private ItemStack tu(Player p, Rankings.Tabla t, List<Rankings.Fila> top, long salidas, int minimo) {
-        UUID u = p.getUniqueId();
-        int puesto = 0;
-        for (int i = 0; i < top.size(); i++) if (top.get(i).jugador().equals(u)) puesto = i + 1;
-        Estadisticas st = hc.estadisticas();
-        long mio = st == null ? 0 : st.semana(u, t.estadistica());
-        List<Component> lore = new ArrayList<>();
-        lore.add(Marco.dato("Llevas", Npcs.valorRanking(t.estadistica(), mio)));
-        if (puesto == 0 || puesto > 3) {
-            if (top.size() >= 3) {
-                long falta = top.get(2).valor() - mio + 1;
-                lore.add(Marco.tenue("Para el 3.º te faltan " + Npcs.valorRanking(t.estadistica(), Math.max(1, falta)) + "."));
-            } else {
-                lore.add(Marco.tenue("Con cualquier cantidad entras en el podio."));
-            }
-        }
-        lore.add(Component.empty());
-        lore.add(Marco.dato("Salidas con vida", salidas + " de " + minimo));
-        lore.add(Marco.barra(salidas, minimo));
-        lore.add(salidas >= minimo ? Marco.tiene("Esta semana entras en el ranking.")
-                : Marco.falta("Todavía no entras en el ranking", "te faltan " + (minimo - salidas) + " salidas"));
-        ItemStack cabeza = Marco.cabeza(u);
-        cabeza.setAmount(Math.max(1, Math.min(64, puesto)));
-        Component nombre = Component.text("Tú: ", Paleta.TEXTO).append(puesto > 0
-                ? Component.text(puesto + ".º", colorPuesto(puesto))
-                : Component.text(mio > 0 ? "fuera del top 10" : "sin puesto", Paleta.TENUE));
-        return Marco.icono(cabeza, nombre, lore, puesto > 0 && puesto <= 3);
-    }
-
-    /** Del 4.o al 10.o, una linea cada uno (tu nombre en verde). */
-    private static ItemStack resto(Rankings.Tabla t, List<Rankings.Fila> top, UUID yo) {
-        List<Component> lore = new ArrayList<>();
-        for (int i = 3; i < top.size(); i++) {
-            Rankings.Fila f = top.get(i);
-            boolean soyYo = f.jugador().equals(yo);
-            lore.add(Component.text((i + 1) + ".º  ", Paleta.TENUE).append(Component.text(f.nombre(), soyYo ? Paleta.BIEN : Paleta.TEXTO))
-                    .append(Component.text(" · " + Npcs.valorRanking(t.estadistica(), f.valor()), Paleta.CIFRA)));
-        }
-        if (lore.isEmpty()) lore.add(Marco.tenue("Todavía no hay nadie más."));
-        return Marco.icono(Material.BOOK, Component.text("Del 4.º al 10.º", Paleta.DETALLE), lore, false);
-    }
-
-    /** Los premios de cada puesto, cuando se cierra y las reglas para cobrar. */
-    private ItemStack premios(Rankings r, ConfigurationSection c) {
-        List<Rankings.Premio> premios = r.premios();
-        List<Component> lore = new ArrayList<>();
-        for (int i = 0; i < premios.size(); i++) {
-            lore.add(Component.text((i + 1) + ".º  ", colorPuesto(i + 1)).append(Marco.texto(premio(premios.get(i)))));
-        }
-        lore.add(Marco.tenue("Lo mismo en cada ranking."));
-        lore.add(Component.empty());
-        Calendario cal = hc.calendario();
-        ZoneId zona = cal != null ? cal.zona() : ZoneId.systemDefault();
-        lore.add(Marco.texto("Se cierra el lunes a las 00:00."));
-        lore.add(Marco.dato("Quedan", hastaCierre(ZonedDateTime.now(zona))));
-        lore.add(Component.empty());
-        lore.add(Marco.dato("Para cobrar", c.getInt("ranking.minimo-extracciones", 3) + " salidas con vida en la semana"));
-        lore.add(Marco.tenue("Como mucho cobras en " + Math.max(1, c.getInt("ranking.maximo-tablas", 2)) + " rankings."));
-        lore.add(Marco.tenue("Si en un ranking hay menos de " + c.getInt("ranking.minimo-elegibles", 8)));
-        lore.add(Marco.tenue("jugadores, solo cobra el 1.º."));
-        return Marco.icono(Material.CHEST, Component.text("Premios de la semana", Paleta.MARCA), lore, false);
+    /** "Extraído, Cazador y Segador". */
+    static String lista(List<String> cosas) {
+        if (cosas.isEmpty()) return "";
+        if (cosas.size() == 1) return cosas.get(0);
+        return String.join(", ", cosas.subList(0, cosas.size() - 1)) + " y " + cosas.get(cosas.size() - 1);
     }
 
     /** Lo que falta para el cierre (el proximo lunes a las 00:00 en esa zona): "1 d 5 h", "5 h 12 min", "30 min". */
@@ -351,6 +299,129 @@ final class MenuCazador implements Listener {
         if (d > 0) return d + " d " + h + " h";
         if (h > 0) return h + " h " + m + " min";
         return Math.max(1, m) + " min";
+    }
+
+    // ------------------------------------------------------------------ abrir y pintar
+
+    void abrir(Player p) {
+        abrir(p, true, true);
+    }
+
+    private void abrir(Player p, boolean semana, boolean conSonido) {
+        Rankings r = hc.rankings();
+        if (r == null || !r.activo()) {
+            p.sendMessage(ComandoCalamity.mensaje("Los rankings no están abiertos ahora mismo."));
+            return;
+        }
+        Vista v = new Vista(semana);
+        Marco.Titulo t = semana ? Marco.T_RANKINGS : Marco.T_RANKINGS_HISTORICO;
+        Inventory inv = hc.plugin().getServer().createInventory(v, TAMANO, t.componente());
+        pintar(inv, p, v, r);
+        p.openInventory(inv);
+        if (conSonido) Marco.sonar(p, "item.book.page_turn", 0.8f, 1.1f);
+    }
+
+    private void pintar(Inventory inv, Player p, Vista v, Rankings r) {
+        inv.clear();
+        v.acciones.clear();
+        UUID u = p.getUniqueId();
+        Set<String> conPremio = new HashSet<>(r.tablas());
+        int puestos = Math.max(1, r.premios().size());
+
+        inv.setItem(INFO, v.semana ? infoSemana(p, r) : infoHistorico());
+
+        for (Map.Entry<Integer, Categoria> e : casillas(v.semana).entrySet()) {
+            Categoria c = e.getValue();
+            Tops.Clasificacion cl = r.clasificacion(c.clave(), v.semana);
+            boolean premio = v.semana && conPremio.contains(c.id());
+            Integer puesto = cl.puestos().get(u);
+            // Brilla la categoria en la que vas en puesto de premio: se ve sin pasar el raton.
+            boolean brillo = premio && puesto != null && puesto <= puestos;
+            inv.setItem(e.getKey(), Marco.icono(c.icono(), Component.text(c.nombre(v.semana), premio ? Paleta.MARCA : Paleta.DETALLE),
+                    lore(c, cl, u, v.semana, premio, puestos), brillo));
+        }
+
+        // Abajo: el otro periodo, Cerrar y el Tablero.
+        if (v.semana) {
+            inv.setItem(CAMBIAR, Marco.icono(Material.BOOKSHELF, Component.text("Ver el histórico", Paleta.DETALLE), List.of(
+                    Marco.dato("Ahora ves", "esta semana"),
+                    Component.empty(),
+                    Marco.tenue("Todo lo hecho desde que abrió"),
+                    Marco.tenue("Calamity. No se reinicia."),
+                    Component.empty(),
+                    Marco.accion("Clic para verlo")), false));
+        } else {
+            inv.setItem(CAMBIAR, Marco.icono(Material.CLOCK, Component.text("Ver esta semana", Paleta.DETALLE), List.of(
+                    Marco.dato("Ahora ves", "el histórico"),
+                    Component.empty(),
+                    Marco.tenue("Lo de esta semana, que es"),
+                    Marco.tenue("lo que da premios el lunes."),
+                    Component.empty(),
+                    Marco.accion("Clic para verlo")), false));
+        }
+        v.acciones.put(CAMBIAR, v.semana ? "historico" : "semana");
+
+        inv.setItem(CERRAR, Marco.icono(Material.BARRIER, Component.text("Cerrar", Marco.NO),
+                List.of(Marco.accion("Clic para cerrar")), false));
+        v.acciones.put(CERRAR, "cerrar");
+
+        Tablero tab = hc.tablero();
+        boolean tablero = tab != null && hc.valor("tablero", tab::activo, false);
+        inv.setItem(TABLERO, Marco.boton(Material.ITEM_FRAME, "Tablero", List.of("Ecos con botín y Parcas sueltas.",
+                "Quien caza, sube en Cazador y Segador."), tablero ? "Clic para abrirlo" : "Próximamente.", tablero));
+        if (tablero) v.acciones.put(TABLERO, "tablero");
+
+        Marco.rellenarNegro(inv);
+    }
+
+    /** Arriba, en la semana: que es, cuando se reinicia, los premios de la config y las reglas para cobrar. */
+    private ItemStack infoSemana(Player p, Rankings r) {
+        ConfigurationSection c = hc.cfg();
+        List<Component> lore = new ArrayList<>();
+        lore.add(Marco.texto("Cuenta lo que haces en Calamity"));
+        lore.add(Marco.texto("de lunes a domingo."));
+        lore.add(Component.empty());
+        Calendario cal = hc.calendario();
+        ZoneId zona = cal != null ? cal.zona() : ZoneId.systemDefault();
+        lore.add(Marco.dato("Se reinicia", "el lunes a las 00:00"));
+        lore.add(Marco.dato("Quedan", hastaCierre(ZonedDateTime.now(zona))));
+        lore.add(Component.empty());
+
+        List<String> nombres = new ArrayList<>();
+        for (String id : r.tablas()) {
+            Rankings.Tabla t = Rankings.tabla(id);
+            if (t != null) nombres.add(t.nombre());
+        }
+        List<Rankings.Premio> premios = r.premios();
+        lore.add(Marco.texto("Premios de " + lista(nombres) + ","));
+        lore.add(Marco.texto("la primera fila, en cada una:"));
+        for (int i = 0; i < premios.size(); i++) {
+            lore.add(Component.text((i + 1) + ".º  ", colorPuesto(i + 1)).append(Marco.texto(premio(premios.get(i)))));
+        }
+        lore.add(Component.empty());
+        int minimo = c.getInt("ranking.minimo-extracciones", 3);
+        Estadisticas st = hc.estadisticas();
+        long salidas = st == null ? 0 : st.semana(p.getUniqueId(), "extracciones");
+        lore.add(Marco.tenue("Para cobrar hacen falta " + minimo + " salidas"));
+        lore.add(Marco.tenue("con vida en la semana."));
+        lore.add(salidas >= minimo ? Marco.tiene("Llevas " + salidas + ": esta semana cobras.")
+                : Marco.falta("Llevas " + salidas + " de " + minimo, "te faltan " + (minimo - salidas)));
+        lore.add(Marco.tenue("Como mucho cobras en " + Math.max(1, c.getInt("ranking.maximo-tablas", 2)) + " rankings."));
+        lore.add(Marco.tenue("Con menos de " + c.getInt("ranking.minimo-elegibles", 8) + " jugadores, solo cobra el 1.º."));
+        lore.add(Component.empty());
+        lore.add(Marco.tenue("Las demás categorías no dan premio."));
+        return Marco.icono(Material.KNOWLEDGE_BOOK, Component.text("Ranking semanal", Paleta.MARCA), lore, false);
+    }
+
+    /** Arriba, en el historico: que es y que no da premios. */
+    private static ItemStack infoHistorico() {
+        List<Component> lore = new ArrayList<>();
+        lore.add(Marco.texto("Todo lo hecho en Calamity desde"));
+        lore.add(Marco.texto("que abrió. No se reinicia nunca."));
+        lore.add(Component.empty());
+        lore.add(Marco.tenue("No da premios: los premios son"));
+        lore.add(Marco.tenue("del ranking semanal."));
+        return Marco.icono(Material.KNOWLEDGE_BOOK, Component.text("Ranking histórico", Paleta.MARCA), lore, false);
     }
 
     // ------------------------------------------------------------------ clics
@@ -368,15 +439,12 @@ final class MenuCazador implements Listener {
         Long antes = ultimoClic.get(p.getUniqueId());
         if (antes != null && ahora - antes < ESPERA_MS) return;
         ultimoClic.put(p.getUniqueId(), ahora);
-        if (accion.startsWith("tabla:")) {
-            v.tabla = accion.substring(6);
-            tarea(() -> {
-                repintar(p);
+        switch (accion) {
+            // El titulo cambia (semanal / historico): se abre otra ventana en el mismo sitio.
+            case "semana", "historico" -> tarea(() -> {
+                abrir(p, accion.equals("semana"), false);
                 Marco.sonidoPestana(p);
             });
-            return;
-        }
-        switch (accion) {
             case "cerrar" -> tarea(() -> {
                 if (p.getOpenInventory().getTopInventory().getHolder() instanceof Vista) p.closeInventory();
             });
@@ -403,28 +471,93 @@ final class MenuCazador implements Listener {
     // ------------------------------------------------------------------ autotest (en "menus")
 
     static void autotest(Autotest.Hoja h) {
-        // Nada pisado: cabecera, cerrar, podio, pedestales, lados y pestanas, cada uno en su casilla.
-        List<Integer> todas = new ArrayList<>(List.of(CABECERA, Marco.CERRAR, PRIMERO, SEGUNDO, TERCERO, TU, RESTO, PREMIOS, TABLERO));
-        for (int s : ORO) todas.add(s);
-        for (int s : PLATA) todas.add(s);
-        for (int s : BRONCE) todas.add(s);
-        for (int c : Marco.columnas(Rankings.TABLAS.size())) todas.add(FILA_PESTANAS + c);
-        h.igual("cazador: ninguna casilla usada dos veces", todas.size(), new HashSet<>(todas).size());
-        boolean dentro = true;
-        for (int s : List.of(PRIMERO, SEGUNDO, TERCERO, TU, RESTO, PREMIOS, TABLERO)) dentro &= !Marco.esBorde(s, 54);
-        h.ok("cazador: podio y lados dentro del marco", dentro);
-        boolean abajo = true;
-        for (int c : Marco.columnas(Rankings.TABLAS.size())) abajo &= (FILA_PESTANAS + c) / 9 == 5;
-        h.ok("cazador: las pestanas en la fila de abajo", abajo);
+        // Cada categoria: id y clave unicos, icono, nombre en los periodos en que sale y que mide.
+        Set<String> ids = new HashSet<>(), claves = new HashSet<>();
+        boolean completas = true;
+        for (Categoria c : CATEGORIAS) {
+            completas &= ids.add(c.id()) && claves.add(c.clave()) && c.icono() != null
+                    && c.nombreSiempre() != null && !c.nombreSiempre().isBlank()
+                    && (c.nombreSemana() == null || !c.nombreSemana().isBlank())
+                    && c.mide() != null && !c.mide().isBlank() && c.fila() >= 1 && c.fila() <= FILAS.length;
+        }
+        h.ok("ranking: cada categoria con id, clave, icono, nombre y que mide, sin repetir", completas);
+        Set<Material> iconos = new HashSet<>();
+        for (Categoria c : CATEGORIAS) iconos.add(c.icono());
+        h.igual("ranking: un icono distinto por categoria", CATEGORIAS.size(), iconos.size());
 
-        // La forma de podio: el 1.o mas alto y en el centro, el 2.o a su izquierda, el 3.o a su derecha y mas bajo.
-        h.ok("podio: 1.o en el centro, 2.o a la izquierda y 3.o a la derecha",
-                PRIMERO % 9 == 4 && SEGUNDO % 9 == 3 && TERCERO % 9 == 5);
-        h.ok("podio: 1.o mas alto que el 2.o, y el 2.o que el 3.o", PRIMERO / 9 < SEGUNDO / 9 && SEGUNDO / 9 < TERCERO / 9);
-        h.ok("podio: cada pedestal justo debajo de su cabeza hasta la fila 4",
-                pedestalBien(PRIMERO, ORO) && pedestalBien(SEGUNDO, PLATA) && pedestalBien(TERCERO, BRONCE));
+        // Las tablas con premio de Rankings son categorias de la fila 1, con su mismo id.
+        boolean tablas = true;
+        for (Rankings.Tabla t : Rankings.TABLAS) {
+            Categoria c = null;
+            for (Categoria x : CATEGORIAS) if (x.id().equals(t.id())) c = x;
+            tablas &= c != null && c.clave().equals(t.estadistica()) && c.fila() == 1 && c.semanal();
+        }
+        h.ok("ranking: las 4 tablas con premio arriba, con su estadistica", tablas);
 
-        h.igual("cuatro rankings de serie", 4, Rankings.TABLAS.size());
+        // Las claves semanales existen en Estadisticas (si no, nunca tendrian a nadie).
+        boolean existen = true;
+        for (Categoria c : categorias(true)) existen &= Estadisticas.CLAVES.contains(c.clave());
+        h.ok("ranking: las claves de la semana son de Estadisticas", existen);
+        h.igual("ranking: 9 categorias en la semana", 9, categorias(true).size());
+        h.igual("ranking: 11 categorias en el historico", 11, categorias(false).size());
+
+        for (boolean semana : new boolean[]{true, false}) {
+            String q = semana ? "semana" : "historico";
+            Map<Integer, Categoria> cas = casillas(semana);
+            h.igual("ranking " + q + ": todas las categorias tienen casilla", categorias(semana).size(), cas.size());
+            List<Integer> todas = new ArrayList<>(cas.keySet());
+            todas.addAll(List.of(INFO, CAMBIAR, CERRAR, TABLERO));
+            h.igual("ranking " + q + ": ninguna casilla usada dos veces", todas.size(), new HashSet<>(todas).size());
+            boolean dentro = true;
+            for (int s : cas.keySet()) dentro &= s >= 0 && s < TAMANO && !Marco.esBorde(s, TAMANO);
+            h.ok("ranking " + q + ": las categorias dentro del marco", dentro);
+            // Cada fila centrada (columna primera + ultima = 8) y con el mismo aire (de 2 en 2).
+            Map<Integer, List<Integer>> filas = new HashMap<>();
+            for (int s : cas.keySet()) filas.computeIfAbsent(s / 9, k -> new ArrayList<>()).add(s % 9);
+            boolean centradas = true;
+            for (List<Integer> cols : filas.values()) {
+                cols.sort(Integer::compare);
+                centradas &= cols.get(0) + cols.get(cols.size() - 1) == 8;
+                for (int i = 1; i < cols.size(); i++) centradas &= cols.get(i) - cols.get(i - 1) == 2;
+            }
+            h.ok("ranking " + q + ": filas centradas y con el mismo espaciado", centradas);
+        }
+        h.ok("ranking: informacion arriba en el centro", INFO / 9 == 0 && INFO % 9 == 4);
+        h.ok("ranking: abajo cambiar, Cerrar y Tablero (38, 40, 42) como el Mercader",
+                CAMBIAR == 38 && CERRAR == 40 && TABLERO == 42 && CERRAR / 9 == TAMANO / 9 - 1);
+
+        // El lore: que mide, el top 10 como "1. Nombre — valor", y tu puesto con lo que llevas.
+        Map<UUID, Long> datos = new LinkedHashMap<>();
+        for (int i = 1; i <= 12; i++) datos.put(Autotest.sintetico(100 + i), 1000L - i * 10);
+        Function<UUID, String> nombres = u -> "J" + (u.getLeastSignificantBits() & 0xFFF);
+        Tops.Clasificacion cl = Tops.clasificacion(datos, TOP, nombres);
+        UUID yo = Autotest.sintetico(112);
+        PlainTextComponentSerializer plano = PlainTextComponentSerializer.plainText();
+        boolean loreBien = true;
+        for (Categoria c : CATEGORIAS) {
+            List<String> l = new ArrayList<>();
+            for (Component x : lore(c, cl, yo, c.semanal(), c.fila() == 1, 3)) l.add(plano.serialize(x));
+            loreBien &= l.get(0).equals(c.mide()) && l.stream().filter(s -> s.matches("\\d+\\. .+ — .+")).count() == TOP
+                    && l.get(l.size() - 1).startsWith("Tu puesto: 12.º — ");
+        }
+        h.ok("ranking: cada categoria con que mide, 10 lineas de top y tu puesto", loreBien);
+        Categoria extraido = CATEGORIAS.get(0);
+        List<String> ej = new ArrayList<>();
+        for (Component x : lore(extraido, cl, yo, true, true, 3)) ej.add(plano.serialize(x));
+        h.igual("ranking: la 1.a linea del top", "1. " + nombres.apply(Autotest.sintetico(101)) + " — 990 MC", ej.get(3));
+        h.igual("ranking: premio en las de arriba", "Da premio a los 3 primeros el lunes.", ej.get(1));
+        h.igual("ranking: tu puesto al final", "Tu puesto: 12.º — 880 MC", ej.get(ej.size() - 1));
+        List<String> vacio = new ArrayList<>();
+        for (Component x : lore(extraido, Tops.Clasificacion.VACIA, yo, true, false, 3)) vacio.add(plano.serialize(x));
+        h.ok("ranking: sin nadie lo dice y sin puesto", vacio.contains("Esta semana aún no hay nadie.")
+                && vacio.get(vacio.size() - 1).equals("Tu puesto: aún no puntúas"));
+
+        h.igual("valor con unidad: una Parca", "1 Parca", valor("parcas", 1));
+        h.igual("valor con unidad: esencias", "1.500 Esencias", valor("tasado-esencias", 1500));
+        h.igual("valor con unidad: saldo", "1 Esencia", valor(Tops.ESENCIAS, 1));
+        h.igual("valor con unidad: expedicion", "1 h 05 min", valor("expedicion-max-seg", 3900));
+        h.igual("lista de tablas", "Extraído, Cazador y Segador", lista(List.of("Extraído", "Cazador", "Segador")));
+
         h.igual("premio completo", "30 Esencias, 2 Llaves del Caos y [ÁNIMA] 7 días",
                 premio(new Rankings.Premio(30, 2, List.of("lp user %jugador% ..."))));
         h.igual("premio de una llave", "10 Esencias y 1 Llave del Caos", premio(new Rankings.Premio(10, 1, List.of())));
@@ -436,15 +569,5 @@ final class MenuCazador implements Listener {
         h.igual("cierre desde el domingo a las 23:30", "30 min", hastaCierre(ZonedDateTime.of(2026, 9, 27, 23, 30, 0, 0, madrid)));
         h.igual("cierre desde el domingo a las 18:48", "5 h 12 min", hastaCierre(ZonedDateTime.of(2026, 9, 27, 18, 48, 0, 0, madrid)));
         h.igual("el lunes a las 00:00 empieza otra semana", "7 d 0 h", hastaCierre(ZonedDateTime.of(2026, 9, 28, 0, 0, 0, 0, madrid)));
-    }
-
-    /** Que las casillas del pedestal esten en la columna de la cabeza, seguidas, desde la fila de debajo hasta la 4. */
-    private static boolean pedestalBien(int cabeza, int[] bloques) {
-        int fila = cabeza / 9 + 1;
-        for (int b : bloques) {
-            if (b % 9 != cabeza % 9 || b / 9 != fila) return false;
-            fila++;
-        }
-        return fila == Marco.FILAS + 1;
     }
 }

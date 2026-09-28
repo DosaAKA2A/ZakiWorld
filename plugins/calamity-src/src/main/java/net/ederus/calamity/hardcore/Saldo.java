@@ -288,6 +288,37 @@ final class Saldo implements Listener {
         s.restar(vacio, 3, "prueba");
         memoria.set("esencias.no-es-un-uuid", 99);
         h.igual("todos: los saldos > 0, sin claves raras", Map.of(u, 6L), s.todos());
+        probarCambioDeDia(h);
+    }
+
+    /**
+     * 1.7.2 (Dosa: "no me gusta que la esencia se restablezca cada dia"): el saldo es de por vida.
+     * Lo unico que vuelve a cero a medianoche son los contadores de la Aduana (aduana.dia.<uuid>,
+     * lo cobrado hoy), que viven en otra rama del yml. Se cobra un dia, se cambia de dia y el
+     * saldo sigue entero; el contador de hoy, en cambio, empieza de cero.
+     */
+    static void probarCambioDeDia(Autotest.Hoja h) {
+        YamlConfiguration memoria = new YamlConfiguration();
+        Saldo s = new Saldo(memoria);
+        UUID u = Autotest.sintetico(13);
+        s.sumar(u, 40, "prueba");
+        Calendario madrid = new Calendario(java.time.ZoneId.of("Europe/Madrid"));
+        Aduana.Cuentas cuentas = new Aduana.Cuentas(memoria);
+        org.bukkit.configuration.MemoryConfiguration aduana = new org.bukkit.configuration.MemoryConfiguration();
+        long lunes = java.time.Instant.parse("2026-09-28T20:00:00Z").toEpochMilli();
+        Aduana.Resultado r = cuentas.calcular(aduana, madrid, u, "tasacion", 5, 100, lunes);
+        s.sumar(u, r.pago().esencias(), "prueba");
+        h.igual("cambio de dia: cobra 5 el lunes", 45L, s.de(u));
+        h.igual("cambio de dia: el contador de hoy apunta 5", 5L, memoria.getLong("aduana.dia." + u + ".esencias"));
+        long martes = lunes + 6 * 3600_000L;
+        h.ok("cambio de dia: seis horas despues ya es otro dia en Madrid", !madrid.dia(lunes).equals(madrid.dia(martes)));
+        cuentas.calcular(aduana, madrid, u, "tasacion", 0, 0, martes);
+        h.igual("cambio de dia: el saldo sigue entero", 45L, s.de(u));
+        h.igual("cambio de dia: el contador de la Aduana vuelve a cero", 0L, memoria.getLong("aduana.dia." + u + ".esencias"));
+        long semanaDespues = lunes + 8 * 86_400_000L;
+        cuentas.calcular(aduana, madrid, u, "tasacion", 0, 0, semanaDespues);
+        h.igual("cambio de semana: el saldo sigue entero", 45L, s.de(u));
+        h.igual("el saldo vive en esencias.<uuid>, fuera de lo diario", 45L, memoria.getLong("esencias." + u));
     }
 
     void parar() {
