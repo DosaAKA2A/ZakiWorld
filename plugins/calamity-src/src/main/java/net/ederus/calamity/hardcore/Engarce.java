@@ -130,7 +130,7 @@ final class Engarce {
             case SIN_GEMA -> "Falta la gema: tócala en tu inventario.";
             case NO_MMO -> "Eso no es ni una pieza de Calamity ni una gema.";
             case ES_GEMA -> "Eso es una gema, no una pieza.";
-            case PIEZA_AJENA -> "El Engarzador solo trabaja con piezas de Calamity.";
+            case PIEZA_AJENA -> "Lior solo trabaja con piezas de Calamity.";
             case SIN_HUECOS -> "Esta pieza no admite gemas.";
             case LLENA -> "A esta pieza no le quedan huecos libres.";
             case NO_ES_GEMA -> "Eso no es una gema.";

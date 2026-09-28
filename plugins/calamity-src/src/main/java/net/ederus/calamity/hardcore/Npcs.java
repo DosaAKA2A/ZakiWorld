@@ -49,14 +49,14 @@ final class Npcs implements Listener {
 
     /** Los seis: el id que va en el comando de Citizens y como se llaman para el staff. */
     enum Tipo {
-        UMBRAL("umbral", "el Guardián del Umbral"),
-        FORJA("forja", "el Forjador"),
+        UMBRAL("umbral", "Sael (Altar del Umbral)"),
+        FORJA("forja", "Vael (Forja)"),
         // El Mercader (1.5.0; antes "el Tasador"): su id es "mercader" y "tasador" sigue valiendo
         // como alias, porque los NPCs de Citizens que ya hay en el servidor llevan ese comando.
-        TASADOR("mercader", "el Mercader", "tasador"),
-        CRONISTA("cronista", "el Cronista"),
-        CAZADOR("cazador", "el Cazador"),
-        ENGARZADOR("engarzador", "el Engarzador");
+        TASADOR("mercader", "Oren (mercader)", "tasador"),
+        CRONISTA("cronista", "Ilen (cronista)"),
+        CAZADOR("cazador", "Rhen (cazador)"),
+        ENGARZADOR("engarzador", "Lior (engarzador)");
 
         final String id;
         final String nombre;
@@ -247,8 +247,13 @@ final class Npcs implements Listener {
         h.igual("id null", null, Tipo.de(null));
         h.igual("los seis ids", List.of("umbral", "forja", "mercader", "cronista", "cazador", "engarzador"), Tipo.ids());
         h.igual("id mercader", Tipo.TASADOR, Tipo.de("mercader"));
-        h.igual("alias tasador: abre el Mercader (NPCs viejos de Citizens)", Tipo.TASADOR, Tipo.de("Tasador"));
+        h.igual("alias tasador: abre a Oren (NPCs viejos de Citizens)", Tipo.TASADOR, Tipo.de("Tasador"));
         h.ok("el alias no sale en el tab", !Tipo.ids().contains("tasador"));
+        // 1.5.2: cada NPC tiene nombre propio, sin articulo ni oficio en masculino delante.
+        List<String> nombres = new ArrayList<>();
+        for (Tipo t : Tipo.values()) nombres.add(t.nombre.substring(0, t.nombre.indexOf(' ')));
+        h.igual("los nombres propios", List.of("Sael", "Vael", "Oren", "Ilen", "Rhen", "Lior"), nombres);
+        h.igual("lo que lee el staff", "Oren (mercader)", Tipo.TASADOR.nombre);
 
         h.igual("ranking en MobCoins", "1.234 MC", valorRanking("tasado-mc", 1234));
         h.igual("ranking de una expedicion larga", "1 h 05 min", valorRanking("expedicion-max-seg", 3900));
@@ -290,6 +295,11 @@ final class Npcs implements Listener {
         h.igual("capitulos de serie", List.of("calamity", "cordura", "parca", "eco", "esencias", "altar"), ids);
         for (Cronista.Capitulo c : serie) {
             h.ok("capitulo " + c.id() + " con titulo y texto", !c.titulo().isBlank() && !c.texto().isEmpty());
+            for (String t : c.texto()) {
+                for (String viejo : List.of("Guardián", "Forjador", "Mercader", "Cronista", "Cazador", "Engarzador")) {
+                    h.ok("capitulo " + c.id() + ": sin '" + viejo + "' (los NPCs van por su nombre)", !t.contains(viejo));
+                }
+            }
             for (String t : c.texto()) {
                 List<String> sin = Cronista.sinValor(t, hardcoreFabrica);
                 h.ok("capitulo " + c.id() + ": todas sus cifras salen de la config" + (sin.isEmpty() ? "" : " (falta " + sin + ")"),

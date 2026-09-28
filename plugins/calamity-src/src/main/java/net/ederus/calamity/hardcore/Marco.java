@@ -122,7 +122,7 @@ final class Marco {
     static final Titulo T_FORJA = new Titulo("Forja");
     static final Titulo T_COMPRAR = new Titulo("¿Comprarlo?");
     static final Titulo T_FORJAR = new Titulo("¿Forjarlo?");
-    static final Titulo T_TASADOR = new Titulo("Mercader");
+    static final Titulo T_TASADOR = new Titulo("Mercado");
     static final Titulo T_TASADOR_DINERO = new Titulo("Tu dinero");
     static final Titulo T_TASADOR_CONTRATOS = new Titulo("Contratos");
     static final Titulo T_TASADOR_RELIQUIAS = new Titulo("Tus reliquias");
@@ -139,7 +139,7 @@ final class Marco {
     static final Titulo T_DIFICULTAD = new Titulo("Dificultad");
     // "¿Qué conservas?" no cabe: el menu es el del Salvoconducto y asi se llama el objeto.
     static final Titulo T_SALVOCONDUCTO = new Titulo("Salvoconducto");
-    static final Titulo T_ENGARZADOR = new Titulo("Engarzador");
+    static final Titulo T_ENGARZADOR = new Titulo("Engarce");
 
     /** El de una categoria del Altar: "CALAMITY | Expedición". */
     static Titulo categoria(String seccion) {
@@ -521,7 +521,7 @@ final class Marco {
 
     /** El clic en un enlace en gris: por que no se abre. */
     static void cerrado(Player p, String id) {
-        p.sendMessage(ComandoCalamity.mensaje(TASADOR.equals(id) ? "El Mercader no está ahora mismo."
+        p.sendMessage(ComandoCalamity.mensaje(TASADOR.equals(id) ? "Oren no está ahora mismo."
                 : "El altar no escucha desde ahí dentro."));
         sonidoNo(p);
     }
@@ -642,11 +642,11 @@ final class Marco {
         lore.add(dato("Fragmentos", "Campanas de Parca de nivel " + nivelCampana + "+"));
         lore.add(texto("Solo cuenta lo que sacas vivo."));
         lore.add(Component.empty());
-        lore.add(Component.text("Altar", Paleta.DETALLE).append(tenue(": lo que te llevas dentro y las llaves.")));
-        lore.add(Component.text("Forja", Paleta.DETALLE).append(tenue(": el equipo de Calamity.")));
-        lore.add(Component.text("Mercader", Paleta.DETALLE).append(tenue(": tu dinero, tus contratos y tu camino.")));
-        lore.add(Component.text("Cazador", Paleta.DETALLE).append(tenue(": los rankings de la semana.")));
-        lore.add(Component.text("Engarzador", Paleta.DETALLE).append(tenue(": pone y quita las gemas.")));
+        lore.add(Component.text("Sael, en el Altar", Paleta.DETALLE).append(tenue(": lo que te llevas dentro y las llaves.")));
+        lore.add(Component.text("Vael, en la Forja", Paleta.DETALLE).append(tenue(": el equipo de Calamity.")));
+        lore.add(Component.text("Oren, en el mercado", Paleta.DETALLE).append(tenue(": tu dinero, tus contratos y tu camino.")));
+        lore.add(Component.text("Rhen", Paleta.DETALLE).append(tenue(": los rankings de la semana.")));
+        lore.add(Component.text("Lior", Paleta.DETALLE).append(tenue(": pone y quita las gemas.")));
         lore.add(Component.text("/calamity encuesta", Paleta.DETALLE).append(tenue(" y "))
                 .append(Component.text("/calamity deseos", Paleta.DETALLE)).append(tenue(": tu voto.")));
         return icono(Material.KNOWLEDGE_BOOK, Component.text("¿Cómo funciona?", Paleta.MARCA), lore, false);

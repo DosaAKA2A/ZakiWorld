@@ -701,7 +701,7 @@ hardcore:
     redimido: {estadistica: ecos-redimidos, umbral: 1, nombre: "Redimido", anuncio: false, comandos: ["lp user %jugador% permission set rip.death.phoenix true"]}
     vestigio: {estadisticas: [forja-mascara, forja-filo], umbral: 1, nombre: "Vestigio", anuncio: false, comandos: ["lp user %jugador% permission set rip.death.glitch true"]}
     guadana: {estadistica: forja-guadana, umbral: 1, nombre: "Guadaña", anuncio: true, comandos: ["lp user %jugador% permission set rip.death.angel true"]}
-    tasador: {estadistica: contratos, umbral: 60, nombre: "Mercader", anuncio: false, comandos: []}
+    tasador: {estadistica: contratos, umbral: 60, nombre: "Buen cliente de Oren", anuncio: false, comandos: []}
   # [alineado] PLAN 7.3: cuatro tablas; llaves por Entregas (tope de 4); con < 8 elegibles solo el 1.o
   ranking: {activo: false, recalcular-segundos: 60, minimo-extracciones: 3, minimo-elegibles: 8, maximo-tablas: 2,
             tablas: [extraido, cazador, segador, superviviente],
@@ -780,17 +780,18 @@ hardcore:
   # ------------------------------------------------------------------ EL CRONISTA (1.2.0)
   # Los NPCs de la antesala los pone el staff a mano con Citizens; Calamity no los crea. Cada
   # uno lleva un clic que Citizens ejecuta como CONSOLA (sin -p) y en el que cambia <p> por
-  # quien hace clic; -l -r = los dos botones. Con el NPC seleccionado (/npc select):
-  #   /npc command add -l -r calamidad abrir <p> umbral     Altar, pagina Umbral
-  #   /npc command add -l -r calamidad abrir <p> forja      Altar, pagina Forja
-  #   /npc command add -l -r calamidad abrir <p> mercader   el Mercader: dinero, ventas y contratos de hoy
-  #                                                       ("tasador", su id de antes, sigue valiendo)
-  #   /npc command add -l -r calamidad abrir <p> cronista   los capitulos de abajo
-  #   /npc command add -l -r calamidad abrir <p> cazador    tablas de la semana y el Tablero
-  #   /npc command add -l -r calamidad abrir <p> engarzador pone y quita las Gemas de Calamidad (1.4)
-  # El Engarzador (1.4) se crea con "/npc create El Engarzador" y ese clic; /calamidad engarzador
-  # repite la receta. Engarzar es gratis y quitar una gema la rompe. Admite las gemas del tipo de
-  # entregas.mmo.gema (CALAMITY_GEMAS) en las piezas de los tipos de forja.piezas que tengan hueco.
+  # quien hace clic; -l -r = los dos botones. Cada uno tiene nombre propio (1.5.2), sin
+  # articulo: se crea con "/npc create <Nombre>" y, con el NPC seleccionado (/npc select):
+  #   Sael  /npc command add -l -r calamidad abrir <p> umbral     Altar, pagina Umbral
+  #   Vael  /npc command add -l -r calamidad abrir <p> forja      Altar, pagina Forja
+  #   Oren  /npc command add -l -r calamidad abrir <p> mercader   dinero, ventas y contratos de hoy
+  #                                                             ("tasador", su id de antes, sigue valiendo)
+  #   Ilen  /npc command add -l -r calamidad abrir <p> cronista   los capitulos de abajo
+  #   Rhen  /npc command add -l -r calamidad abrir <p> cazador    tablas de la semana y el Tablero
+  #   Lior  /npc command add -l -r calamidad abrir <p> engarzador pone y quita las Gemas de Calamidad (1.4)
+  # /calamidad engarzador repite la receta de Lior. Engarzar es gratis y quitar una gema la
+  # rompe. Admite las gemas del tipo de entregas.mmo.gema (CALAMITY_GEMAS) en las piezas de los
+  # tipos de forja.piezas que tengan hueco.
   # El jugador no necesita permiso (/calamidad es de staff y consola) y el Altar solo se abre
   # desde el NPC o su bloque, nunca a distancia ni dentro de Calamity.
   cronista:
@@ -828,7 +829,7 @@ hardcore:
           - "Al morir dentro nace tu Eco donde caíste: pelea con tu equipo y guarda tus Reliquias y parte de tus Esencias."
           - "Dura {eco.horas} h. Mátalo tú y recuperas lo tuyo, y {eco.cordura-dueno} de cordura."
           - "Si lo cierra otro, se lo lleva todo, y a veces una Lágrima de Eco."
-          - "El Cazador sabe qué Ecos guardan más botín. Sin coordenadas: hay que buscarlos."
+          - "Rhen sabe qué Ecos guardan más botín. Sin coordenadas: hay que buscarlos."
       esencias:
         titulo: "Esencias, Reliquias y ventas"
         texto:
@@ -839,8 +840,8 @@ hardcore:
       altar:
         titulo: "El Altar y la Forja"
         texto:
-          - "El Guardián del Umbral cambia Esencias por Frascos, Tinturas, la Llave del Caos y el Cristal de Regreso ({altar.trueques.cristal.esencias} Esencias)."
-          - "El Forjador hace el Manto de Calamidad: cada pieza pide Esencias, MobCoins y el Sello de su minijefe."
+          - "Sael, en el Altar, cambia Esencias por Frascos, Tinturas, la Llave del Caos y el Cristal de Regreso ({altar.trueques.cristal.esencias} Esencias)."
+          - "Vael hace el Manto de Calamidad en la Forja: cada pieza pide Esencias, MobCoins y el Sello de su minijefe."
           - "El Vestigio del Eco pide Marcas de Eco; la Guadaña, {altar.trueques.guadana.creditos} Fragmentos. Lo forjado va ligado a ti."
           - "Si pierdes una pieza dentro, reponerla antes de {forja.reposicion-dias} días cuesta la mitad de Esencias."
 

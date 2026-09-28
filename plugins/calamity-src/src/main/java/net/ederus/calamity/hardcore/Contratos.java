@@ -363,7 +363,7 @@ final class Contratos implements Listener {
             t[0] = hc.plugin().getServer().getScheduler().runTaskLater(hc.plugin(), () -> {
                 tareas.remove(t[0]);
                 if (p.isOnline()) {
-                    p.sendMessage(ComandoCalamity.mensaje(Component.text("El Mercader tiene trabajo para ti. ")
+                    p.sendMessage(ComandoCalamity.mensaje(Component.text("Oren tiene trabajo para ti. ")
                             .append(Component.text("/calamity contratos", Paleta.DETALLE))));
                 }
             }, 40L);
@@ -542,7 +542,7 @@ final class Contratos implements Listener {
             }
         }
         p.sendMessage(ComandoCalamity.mensaje(Component.text(objetivo + " contratos esta semana. ")
-                .append(Component.text("El Mercader te da una Llave del Caos.", Paleta.DETALLE))));
+                .append(Component.text("Oren te da una Llave del Caos.", Paleta.DETALLE))));
         telemetria(p, new Def("semana", "semana", "", objetivo, 0, 0, false, ""), "semana", 0, 0);
     }
 
@@ -576,7 +576,7 @@ final class Contratos implements Listener {
     /** /calamity contratos (en el menu, la fila del Tasador): los tres de hoy y como van. */
     void mostrar(CommandSender a, Player p) {
         if (!activo()) {
-            a.sendMessage(ComandoCalamity.mensaje("El Mercader no tiene contratos ahora mismo."));
+            a.sendMessage(ComandoCalamity.mensaje("Oren no tiene contratos ahora mismo."));
             return;
         }
         UUID u = p.getUniqueId();
@@ -651,7 +651,7 @@ final class Contratos implements Listener {
     /** /calamity cambiar <1-3> (y el clic en un contrato del Tasador). True si se cambio. */
     boolean cambiar(Player p, int i) {
         if (!activo()) {
-            p.sendMessage(ComandoCalamity.mensaje("El Mercader no tiene contratos ahora mismo."));
+            p.sendMessage(ComandoCalamity.mensaje("Oren no tiene contratos ahora mismo."));
             return false;
         }
         UUID u = p.getUniqueId();
@@ -681,7 +681,7 @@ final class Contratos implements Listener {
         boolean corto = cortosOtros < Math.max(0, hc.cfg().getInt("contratos.cortos-garantizados", 1));
         Def nuevo = sustituto(pool.values(), ya, corto, this::disponible, azar);
         if (nuevo == null) {
-            p.sendMessage(ComandoCalamity.mensaje("El Mercader no tiene otro encargo para ese hueco."));
+            p.sendMessage(ComandoCalamity.mensaje("Oren no tiene otro encargo para ese hueco."));
             return false;
         }
         int cambios = s.getInt("cambios", 0);

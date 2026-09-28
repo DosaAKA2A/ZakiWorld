@@ -203,7 +203,7 @@ final class Camino {
         fila(inv, acciones, p, 18, Marco.banda(Material.CYAN_STAINED_GLASS_PANE, "Marcas y Fragmentos",
                 List.of("El Vestigio del Eco y la", "Guadaña de la Parca.")), otros);
         if (hc.npcs() != null) {
-            inv.setItem(31, Marco.icono(Material.SPYGLASS, Component.text("◀ Volver al Mercader", Paleta.DETALLE),
+            inv.setItem(31, Marco.icono(Material.SPYGLASS, Component.text("◀ Volver con Oren", Paleta.DETALLE),
                     List.of(Marco.tenue("Tu dinero y tus contratos."), Component.empty(), Marco.accion("Clic para volver")), false));
             acciones.put(31, "ir:" + Marco.TASADOR);
         }

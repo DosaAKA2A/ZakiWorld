@@ -114,7 +114,7 @@ final class MenuEngarzador implements Listener {
         this.hc = hc;
         this.conHuecos = piezasConHuecos(hc);
         hc.plugin().getServer().getPluginManager().registerEvents(this, hc.plugin());
-        Subcomandos.lw().registrar("engarzador", "engarzador: la receta de Citizens del NPC que engarza gemas",
+        Subcomandos.lw().registrar("engarzador", "engarzador: la receta de Citizens de Lior, el NPC que engarza gemas",
                 "ederus.mundos", this::comandoReceta, null);
         Autotest.registrar("engarce", this::autotest);
     }
@@ -195,7 +195,7 @@ final class MenuEngarzador implements Listener {
     /** Lo que abre el NPC. False (y se le dice) si MMOItems no esta. */
     boolean abrir(Player p) {
         if (!PuenteMmo.disponible()) {
-            p.sendMessage(ComandoCalamity.mensaje("El Engarzador no puede trabajar ahora mismo."));
+            p.sendMessage(ComandoCalamity.mensaje("Lior no puede trabajar ahora mismo."));
             Marco.sonidoNo(p);
             return false;
         }
@@ -415,7 +415,7 @@ final class MenuEngarzador implements Listener {
         if (it == null || it.getType().isAir()) return;
         m.confirmar = null;
         if (!PuenteMmo.disponible()) {
-            no(p, "El Engarzador no puede trabajar ahora mismo.");
+            no(p, "Lior no puede trabajar ahora mismo.");
             return;
         }
         Engarce.Ficha f = EngarceMmo.leer(it);
@@ -669,7 +669,7 @@ final class MenuEngarzador implements Listener {
 
     /** /calamidad engarzador: la receta de Citizens, lista para copiar. */
     private void comandoReceta(CommandSender q, String[] args) {
-        q.sendMessage(ComandoCalamity.mensaje("El Engarzador: pone y quita las Gemas de Calamidad."));
+        q.sendMessage(ComandoCalamity.mensaje("Lior (engarzador): pone y quita las Gemas de Calamidad."));
         q.sendMessage(Component.text("Receta de Citizens (el NPC lo pones tú; Calamity no crea NPCs):", Paleta.TENUE));
         for (String l : receta()) q.sendMessage(Component.text("  " + l, NamedTextColor.WHITE));
         q.sendMessage(Component.text("El clic lo ejecuta la consola (sin -p) y cambia <p> por quien hace clic.", Paleta.TENUE));
@@ -680,7 +680,7 @@ final class MenuEngarzador implements Listener {
 
     static List<String> receta() {
         return List.of(
-                "/npc create El Engarzador",
+                "/npc create Lior",
                 "/npc command add -l -r calamidad abrir <p> engarzador");
     }
 
@@ -726,7 +726,9 @@ final class MenuEngarzador implements Listener {
             h.ok("aviso de " + mot + " con frase propia", !t.isBlank() && !t.contains("null") && !t.equals("Ahora mismo no se puede."));
         }
         h.ok("/calamidad engarzador registrado", Subcomandos.lw().nombres(null).contains("engarzador"));
-        h.ok("la receta abre el Engarzador", receta().get(receta().size() - 1).endsWith("calamidad abrir <p> engarzador"));
+        h.ok("la receta abre a Lior", receta().get(receta().size() - 1).endsWith("calamidad abrir <p> engarzador"));
+        h.igual("la receta crea a Lior, por su nombre", "/npc create Lior", receta().get(0));
+        h.igual("el titulo es el del lugar", "CALAMITY | Engarce", Marco.T_ENGARZADOR.texto());
         h.ok("el titulo cabe en la ventana", Marco.T_ENGARZADOR.ancho() <= Marco.ANCHO_TITULO);
 
         if (!PuenteMmo.disponible()) {
@@ -765,7 +767,7 @@ final class MenuEngarzador implements Listener {
             return;
         }
         Engarce.Ficha fg = EngarceMmo.leer(gema);
-        h.ok("la Gema es una gema de Calamity para el Engarzador", fg != null && Engarce.motivoGema(fg, tg) == null);
+        h.ok("la Gema es una gema de Calamity para Lior", fg != null && Engarce.motivoGema(fg, tg) == null);
         Engarce.Ficha fy = EngarceMmo.leer(yelmo);
         h.ok("el Yelmo tiene un hueco libre", fy != null && fy.libres().size() >= 1 && fy.ocupados().isEmpty());
         if (fg == null || fy == null) return;

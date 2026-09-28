@@ -154,7 +154,7 @@ final class MenuTasador implements Listener {
             v.acciones().put(SALIR, "cerrar");
         } else {
             inv.setItem(SALIR, Marco.icono(Material.ARROW, Component.text("Volver", Paleta.DETALLE),
-                    List.of(Marco.tenue("Vuelves a la portada del Mercader."), Component.empty(), Marco.accion("Clic para volver")), false));
+                    List.of(Marco.tenue("Vuelves a la portada del mercado."), Component.empty(), Marco.accion("Clic para volver")), false));
             v.acciones().put(SALIR, "volver");
         }
         Marco.rellenarNeutro(inv);
@@ -237,7 +237,7 @@ final class MenuTasador implements Listener {
         Contratos con = hc.contratos();
         List<Component> lore = new ArrayList<>();
         if (con == null || !hc.valor("contratos", con::activo, false)) {
-            lore.add(Marco.tenue("El Mercader no tiene contratos ahora."));
+            lore.add(Marco.tenue("Oren no tiene contratos ahora."));
             inv.setItem(CONTRATOS, Marco.icono(Material.PAPER, Component.text("Contratos de hoy", Paleta.TENUE), lore, false));
             return;
         }
@@ -535,7 +535,7 @@ final class MenuTasador implements Listener {
         UUID u = p.getUniqueId();
         Contratos con = hc.contratos();
         if (con == null || !hc.valor("contratos", con::activo, false)) {
-            inv.setItem(FILA_A + 4, Marco.icono(Material.PAPER, Component.text("El Mercader no tiene contratos ahora", Paleta.TENUE),
+            inv.setItem(FILA_A + 4, Marco.icono(Material.PAPER, Component.text("Oren no tiene contratos ahora", Paleta.TENUE),
                     List.of(Marco.tenue("Vuelve más adelante.")), false));
             return;
         }
@@ -575,8 +575,8 @@ final class MenuTasador implements Listener {
         int[] semana = con.semanaDe(u);
         List<Component> sl = new ArrayList<>();
         sl.add(Marco.barra(semana[0], semana[1]));
-        sl.add(Marco.texto("Si cobras " + semana[1] + " en la semana, el"));
-        sl.add(Marco.texto("Mercader te da la Llave del Caos."));
+        sl.add(Marco.texto("Si cobras " + semana[1] + " en la semana,"));
+        sl.add(Marco.texto("Oren te da la Llave del Caos."));
         sl.add(Component.empty());
         sl.add(Marco.tenue(gratis > 0 ? "Hoy te " + (gratis == 1 ? "queda 1 cambio gratis." : "quedan " + gratis + " cambios gratis.")
                 : "Cambiar uno cuesta " + Marco.esencias(precio) + "."));
@@ -694,7 +694,7 @@ final class MenuTasador implements Listener {
                 : Marco.icono(Material.GHAST_TEAR, Component.text("Cuesta " + Marco.esencias(precio), Paleta.CIFRA),
                 List.of(Marco.dato("Tienes", Altar.miles(saldo)), Marco.dato("Te quedarían", Altar.miles(Math.max(0, saldo - precio)))), false));
         ItemStack si = Marco.icono(Material.LIME_CONCRETE, Component.text("Sí, cámbialo", Marco.SI), List.of(
-                Marco.tenue("El Mercader te da otro encargo"), Marco.tenue("en su lugar."), Component.empty(),
+                Marco.tenue("Oren te da otro encargo"), Marco.tenue("en su lugar."), Component.empty(),
                 Marco.accion("Clic para cambiarlo")), false);
         ItemStack no = Marco.icono(Material.RED_CONCRETE, Component.text("No, déjalo", Marco.NO),
                 List.of(Marco.tenue("Vuelves a tus contratos sin"), Marco.tenue("cambiar nada."), Component.empty(),
@@ -837,7 +837,7 @@ final class MenuTasador implements Listener {
             int b = botones.get(i);
             rejilla &= b / 9 == 1 + i / 3 && b % 9 == 2 + 2 * (i % 3);
         }
-        h.ok("filas del Mercader: portada en dos filas de tres (columnas 2, 4 y 6)", rejilla);
+        h.ok("filas del mercado: portada en dos filas de tres (columnas 2, 4 y 6)", rejilla);
         h.igual("mercader: columnas de tres cosas", "2,4,6", Marco.columnas(3)[0] + "," + Marco.columnas(3)[1] + "," + Marco.columnas(3)[2]);
 
         // Abajo: Altar y Forja a los lados, Cerrar/Volver en el centro, alineados con la rejilla.
@@ -850,7 +850,7 @@ final class MenuTasador implements Listener {
         h.ok("mercader: Cerrar/Volver en la fila de abajo, en el centro", SALIR / 9 == TAMANO / 9 - 1 && SALIR % 9 == 4);
 
         // Las subvistas: su fila de arriba y la de debajo no pisan el Volver.
-        h.ok("subvistas del Mercader: filas 1 y 2", FILA_A == 9 && FILA_B == 18 && FILA_B + 8 < SALIR);
+        h.ok("subvistas del mercado: filas 1 y 2", FILA_A == 9 && FILA_B == 18 && FILA_B + 8 < SALIR);
         h.igual("cuantas: singular", "1 Reliquia", cuantas(1, "Reliquia", "Reliquias"));
         h.igual("cuantas: plural con miles", "1.250 Reliquias", cuantas(1250, "Reliquia", "Reliquias"));
         for (String vista : List.of(PORTADA, V_DINERO, V_CONTRATOS, V_RELIQUIAS)) {

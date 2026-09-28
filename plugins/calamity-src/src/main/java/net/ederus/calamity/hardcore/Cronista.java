@@ -245,7 +245,7 @@ final class Cronista {
     void comando(CommandSender quien, String[] args) {
         List<Capitulo> l = capitulos();
         if (l.isEmpty()) {
-            quien.sendMessage(ComandoCalamity.mensaje("El Cronista no tiene nada que contar todavía."));
+            quien.sendMessage(ComandoCalamity.mensaje("Ilen no tiene nada que contar todavía."));
             return;
         }
         if (args.length < 2) {
@@ -265,14 +265,14 @@ final class Cronista {
     void indice(CommandSender quien) {
         List<Capitulo> l = capitulos();
         if (l.isEmpty()) {
-            quien.sendMessage(ComandoCalamity.mensaje("El Cronista no tiene nada que contar todavía."));
+            quien.sendMessage(ComandoCalamity.mensaje("Ilen no tiene nada que contar todavía."));
             return;
         }
         indice(quien, l);
     }
 
     private void indice(CommandSender quien, List<Capitulo> l) {
-        quien.sendMessage(ComandoCalamity.mensaje(Component.text("El Cronista sabe ")
+        quien.sendMessage(ComandoCalamity.mensaje(Component.text("Ilen sabe ")
                 .append(Paleta.cifra(l.size())).append(Component.text(l.size() == 1 ? " historia. " : " historias. "))
                 .append(Component.text("Pulsa la que quieras oír.", Paleta.TENUE))));
         for (int i = 0; i < l.size(); i++) {
@@ -286,7 +286,7 @@ final class Cronista {
 
     private void capitulo(CommandSender quien, List<Capitulo> l, int i) {
         Capitulo c = l.get(i);
-        quien.sendMessage(Paleta.prefijo().append(Component.text("Cronista · ", Paleta.TENUE))
+        quien.sendMessage(Paleta.prefijo().append(Component.text("Ilen · ", Paleta.TENUE))
                 .append(Component.text(c.titulo(), Paleta.DETALLE))
                 .append(Component.text("  " + (i + 1) + "/" + l.size(), Paleta.TENUE)));
         ConfigurationSection raiz = hc.cfg();

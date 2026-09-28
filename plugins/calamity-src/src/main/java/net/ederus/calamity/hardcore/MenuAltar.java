@@ -91,7 +91,7 @@ final class MenuAltar implements Listener {
             Map.entry("salvoconducto", List.of("Al morir dentro, conservas una pieza.")),
             Map.entry("ofrenda", List.of("Un punto en la tabla de Ofrendas", "del mes. Nada más, y nada menos.")),
             Map.entry("talisman", List.of("+3 de vida. Dentro, la cordura", "baja un 20 % más despacio.")),
-            Map.entry("gema", List.of("El Engarzador la pone en el Yelmo,", "la Coraza o el Hacha del Heraldo.")),
+            Map.entry("gema", List.of("Lior la engarza en el Yelmo,", "la Coraza o el Hacha del Heraldo.")),
             Map.entry("grabado", List.of("+1 nivel sobre el tope a un", "encantamiento de equipo vanilla.")),
             Map.entry("ascua", List.of("+1 nivel de mejora a una pieza", "del Manto, del Eco o la Guadaña.")),
             Map.entry("mascara-eco", List.of("Casco del Vestigio del Eco.", "Escalón 15.")),
@@ -350,7 +350,7 @@ final class MenuAltar implements Listener {
                     List.of(Marco.tenue("Vuelve más tarde.")), false));
         }
         inv.setItem(AYUDA, Marco.ayuda(hc));
-        Marco.enlace(inv, m.acciones(), IR_TASADOR, Marco.TASADOR, Material.SPYGLASS, "El Mercader",
+        Marco.enlace(inv, m.acciones(), IR_TASADOR, Marco.TASADOR, Material.SPYGLASS, "Oren, el mercado",
                 List.of("Lo que traes y lo que cobras,", "tus contratos y tu camino."), hc.npcs() != null);
     }
 
@@ -1023,7 +1023,7 @@ final class MenuAltar implements Listener {
         h.igual("ancho de 'Altar' en negrita", 30, Marco.ancho("Altar", true));
         h.igual("ancho de 'il.'", 7, Marco.ancho("il.", false));
         h.igual("ancho de la marca 'CALAMITY | '", 64, new Marco.Titulo("").ancho());
-        h.igual("texto plano del titulo", "CALAMITY | Mercader", Marco.T_TASADOR.texto());
+        h.igual("texto plano del titulo", "CALAMITY | Mercado", Marco.T_TASADOR.texto());
         h.ok("'Rankings de la semana' no cabe con la marca (la medida lo ve)",
                 new Marco.Titulo("Rankings de la semana").ancho() > Marco.ANCHO_TITULO);
         for (Marco.Titulo t : Marco.titulos()) {
