@@ -66,6 +66,8 @@ public final class Hardcore implements Listener {
 
     private final CalamityPlugin plugin;
     private final Cordura cordura = new Cordura();
+    /** 1.7.1: todo lo que Calamity escribe en la barra de accion pasa por aqui. */
+    private final BarraAccion barra;
     private final ItemsCalamity items;
     /* SecureRandom y no Random: aqui solo se elige minijefe y un desvio, pero la regla de
      * la casa para hardcore/ es que nada salga de Random (lo que da botin o dinero no puede
@@ -160,10 +162,19 @@ public final class Hardcore implements Listener {
     public Hardcore(CalamityPlugin plugin) {
         this.plugin = plugin;
         this.items = new ItemsCalamity(plugin);
+        this.barra = new BarraAccion(plugin);
+        // Los destellos de la cordura se ven donde se pinta la barra: dentro y contando.
+        barra.dentro(p -> esHardcore(p) && cuenta(p));
+        cordura.salida(barra);
     }
 
     public Cordura cordura() {
         return cordura;
+    }
+
+    /** La barra de accion de Calamity, con el protocolo "ederus_actionbar" (BarraAccion). */
+    public BarraAccion barra() {
+        return barra;
     }
 
     public ItemsCalamity items() {
@@ -288,6 +299,8 @@ public final class Hardcore implements Listener {
         // repintarse a ese ritmo o parpadea contra los avisos de otros plugins.
         reloj = plugin.getServer().getScheduler().runTaskTimer(
                 plugin, this::tick, 20L, 20L);
+        // 1.7.1: los avisos que esperan a que otro plugin suelte la barra salen en cuanto se suelta.
+        barra.arrancar();
 
         // Las MobCoins pasan por la barra de la cordura en vez de pisarla.
         MobCoins.aviso((jugador, cantidad) -> {
@@ -302,6 +315,7 @@ public final class Hardcore implements Listener {
     public void parar() {
         if (reloj != null) reloj.cancel();
         reloj = null;
+        barra.parar();
         MobCoins.aviso(null);
         canalizando.clear();
         pararModulos();
@@ -324,6 +338,7 @@ public final class Hardcore implements Listener {
         // Lo de WP0 primero: /lw hardcore autotest y el placeholder de la cordura. Los
         // modulos registran sus pruebas, subcomandos y placeholders al nacer, debajo.
         Autotest.instalar(this);
+        Autotest.registrar("barra", BarraAccion::autotest);
         PlaceholdersLethal.registrar("cordura", (jugador, resto) -> corduraTexto(jugador));
         // Lo primero: la Grieta, las amenazas y los mobs preguntan por ella desde que nacen.
         zona = crear("zona-spawn", () -> new ZonaSpawn(this));
@@ -667,7 +682,7 @@ public final class Hardcore implements Listener {
                     if (!cuenta(p) || !vara.dentro(p, "entrada")) continue;
                     long espera = cuarentenaRestante(p);
                     if (espera > 0) {
-                        p.sendActionBar(Component.text(
+                        barra.fondo(p, Component.text(
                                 "Aún no. Vuelve en " + (espera / 60_000 + 1) + " min.", Paleta.AVISO));
                         continue;
                     }
@@ -1536,7 +1551,9 @@ public final class Hardcore implements Listener {
         }
         p.teleport(destino);
         cordura.reiniciar(p);
-        p.sendActionBar(Component.empty());
+        // Fuera ya no hay destello que valga: se olvida y la barra se limpia (si es de Calamity).
+        barra.olvidar(p);
+        barra.fondo(p, Component.empty());
         String texto = switch (motivo == null ? "" : motivo) {
             case "puerta" -> "Cruzas de vuelta.";
             case "cristal" -> "El cristal te devuelve al spawn.";

@@ -433,7 +433,7 @@ final class Ligado implements Listener {
         if (antes != null && ahora - antes < 1000) return;
         ultimoAviso.put(p.getUniqueId(), ahora);
         if (hc.esHardcore(p)) hc.cordura().destello(p, texto, 2);
-        else p.sendActionBar(texto);
+        else hc.barra().aviso(p, texto, 2);
     }
 
     /** P-B02 por chat, como mucho una vez cada 10 s (recoger se intenta cada tick). */

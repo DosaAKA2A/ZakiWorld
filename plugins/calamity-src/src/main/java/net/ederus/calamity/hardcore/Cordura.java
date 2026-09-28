@@ -20,6 +20,9 @@ import java.util.function.Predicate;
  * La barra vive en la barra de accion porque es el unico sitio que se ve siempre sin
  * tapar nada. Los avisos que quieran pasar por ahi (las MobCoins) se cuelan como
  * destello temporal en vez de pisarla: ver destello().
+ *
+ * 1.7.1: ni la barra ni los destellos escriben en la barra de accion por su cuenta; pasan
+ * por BarraAccion, que respeta la reserva "ederus_actionbar" de otros plugins (la pesca).
  */
 public final class Cordura {
 
@@ -31,9 +34,6 @@ public final class Cordura {
     /** Lo que sabemos de un jugador dentro del mundo. */
     public static final class Estado {
         double valor = MAXIMO;
-        /** Momento (millis) hasta el que la barra ensena otra cosa. Ver destello(). */
-        long destelloHasta;
-        Component destello;
         /** Ultimo tramo anunciado, para no repetir el aviso cada segundo. */
         int ultimoTramo = 4;
         /** Cuando salio el ultimo minijefe de cordura cero. */
@@ -43,6 +43,8 @@ public final class Cordura {
     }
 
     private final Map<UUID, Estado> estados = new HashMap<>();
+    /** Por donde sale todo a la barra de accion (1.7.1). La pone Hardcore; null = no se pinta. */
+    private BarraAccion salida;
     /** Quien no pierde cordura ahora mismo (1.2: el que esta en la zona spawn). Lo pone Hardcore. */
     private Predicate<Player> aSalvo = p -> false;
 
@@ -52,6 +54,10 @@ public final class Cordura {
      */
     void aSalvo(Predicate<Player> quien) {
         aSalvo = quien == null ? p -> false : quien;
+    }
+
+    void salida(BarraAccion barra) {
+        salida = barra;
     }
 
     public Estado estado(Player p) {
@@ -100,12 +106,14 @@ public final class Cordura {
      *
      * Lo usan las MobCoins y los avisos del mundo: si escribieran en la barra por su
      * cuenta, las dos escrituras se pelearian cada tick y parpadearia.
+     *
+     * 1.7.1: es un aviso puntual de BarraAccion. Reserva la barra mientras dura y, si otro
+     * plugin la tiene reservada (la pesca), espera su turno hasta 5 s. Solo cuenta el ultimo.
      */
     public void destello(Player p, Component texto, int segundos) {
-        Estado e = estado(p);
+        if (salida == null) return;
         // Lo que llegue sin color sale en el normal de la Paleta: el gris de antes se perdia.
-        e.destello = texto == null ? null : texto.colorIfAbsent(Paleta.TEXTO);
-        e.destelloHasta = System.currentTimeMillis() + segundos * 1000L;
+        salida.aviso(p, texto == null ? null : texto.colorIfAbsent(Paleta.TEXTO), segundos, true);
     }
 
     /** El tramo en el que esta: 4 entero, 3 mermado, 2 en rojo, 1 al limite, 0 vacio. */
@@ -128,15 +136,13 @@ public final class Cordura {
         };
     }
 
-    /** Dibuja la barra de este jugador en su barra de accion. */
+    /**
+     * Dibuja la barra de este jugador en su barra de accion (o el destello que toque). Es fondo:
+     * si otro plugin tiene la barra reservada, este segundo no se pinta (BarraAccion).
+     */
     public void pintar(Player p) {
         Estado e = estado(p);
-        if (e.destello != null && System.currentTimeMillis() < e.destelloHasta) {
-            p.sendActionBar(e.destello);
-            return;
-        }
-        e.destello = null;
-        p.sendActionBar(barra(e.valor));
+        if (salida != null) salida.fondo(p, barra(e.valor));
     }
 
     /** La barra tal cual se ve: veinte casillas, el numero detras. */
