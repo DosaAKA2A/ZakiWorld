@@ -55,8 +55,7 @@ import java.util.function.Function;
  *              falta para el reinicio y las reglas para cobrar
  *   filas 1-3: su top 10 en piramide con la cabeza de cada jugador: el 1.o en 13, el 2.o y el 3.o
  *              en 21 y 23, del 4.o al 10.o en 28-34. Un puesto sin nadie, una cabeza gris con "?"
- *   fila 4:    Esta semana / Historico (38) · tu cabeza con tu puesto (40) · Cerrar (42) ·
- *              Tablero (44, a la derecha de Cerrar como antes)
+ *   fila 4:    vacia (Dosa retiro Esta semana/Historico, tu cabeza, Cerrar y Tablero en la 1.7.5)
  *   fila 5:    el selector (45-53): una cabeza por categoria, todas del rojo de Calamity y cada una
  *              con su dibujo. La que miras brilla. Con mas de 9, la ultima casilla es "Mas ->" y
  *              lleva a la pagina siguiente, que empieza con "<- Anteriores".
@@ -476,30 +475,10 @@ final class MenuCazador implements Listener {
                 piezas.put(PIRAMIDE[i], i < top.size() ? delTop(d, top.get(i), i + 1, premio, periodo)
                         : libre(d, i + 1, premio));
             }
-            if (d.yo() != null) piezas.put(TU, tu(d, periodo));
         }
 
-        piezas.put(CAMBIAR, d.semana()
-                ? Pieza.objeto(Material.BOOKSHELF, Component.text("Ver el histórico", Paleta.DETALLE), List.of(
-                        Marco.dato("Ahora ves", "esta semana"), Component.empty(),
-                        Marco.tenue("Todo lo hecho desde que abrió"), Marco.tenue("Calamity. No se reinicia."),
-                        Component.empty(), Marco.accion("Clic para verlo")))
-                : Pieza.objeto(Material.CLOCK, Component.text("Ver esta semana", Paleta.DETALLE), List.of(
-                        Marco.dato("Ahora ves", "el histórico"), Component.empty(),
-                        Marco.tenue("La clasificación de esta semana,"), Marco.tenue("la que da premios el lunes."),
-                        Component.empty(), Marco.accion("Clic para verla"))));
-        acciones.put(CAMBIAR, d.semana() ? "historico" : "semana");
-
-        piezas.put(CERRAR, Pieza.objeto(Material.BARRIER, Component.text("Cerrar", Marco.NO),
-                List.of(Marco.accion("Clic para cerrar"))));
-        acciones.put(CERRAR, "cerrar");
-
-        List<Component> tablero = new ArrayList<>(List.of(Marco.texto("Los Ecos con botín y las Parcas"),
-                Marco.texto("que hay ahora en Calamity."), Component.empty()));
-        tablero.add(d.tablero() ? Marco.accion("Clic para abrirlo") : Marco.tenue("Próximamente."));
-        piezas.put(TABLERO, Pieza.objeto(Material.ITEM_FRAME,
-                Component.text("Tablero", d.tablero() ? Paleta.DETALLE : Paleta.TENUE), tablero));
-        if (d.tablero()) acciones.put(TABLERO, "tablero");
+        // 1.7.4: Dosa retiro la fila 4 entera (Esta semana/Historico, tu cabeza, Cerrar y Tablero).
+        // Queda cristal negro; el menu se cierra con Escape.
 
         List<int[]> ps = paginas(d.visibles().size());
         int pagina = Math.max(0, Math.min(d.pagina(), ps.size() - 1));
@@ -1034,12 +1013,8 @@ final class MenuCazador implements Listener {
                 && lineas(dos.piezas().get(PIRAMIDE[2]), txt).contains("Premio del 3.º el lunes:")
                 && lineas(dos.piezas().get(PIRAMIDE[3]), txt).equals(List.of("Nadie ha llegado aquí todavía.")));
 
-        Pieza tuA = a.piezas().get(TU);
-        h.igual("plano: tu cabeza con tu puesto", "Tu puesto: 12.º", txt.apply(tuA.nombre()));
-        h.igual("plano: tu cifra", List.of("Esta semana: 880 MC", "Para pasar al 11.º te faltan 11 MC."), lineas(tuA, txt));
-        h.igual("plano: tu cabeza es la tuya", yo, tuA.jugador());
-        h.igual("plano: sin puesto lo dice", "Aún no tienes puesto", txt.apply(b.piezas().get(TU).nombre()));
-        h.igual("plano: y lo que llevas", List.of("Esta semana: 0 Parcas"), lineas(b.piezas().get(TU), txt));
+        h.ok("plano: la fila 4 esta vacia (retirada por Dosa)", java.util.stream.IntStream.of(CAMBIAR, TU, CERRAR, TABLERO)
+                .allMatch(s -> a.piezas().get(s) == null && a.acciones().get(s) == null));
 
         List<Integer> brillanA = new ArrayList<>(), brillanB = new ArrayList<>();
         for (int s = SELECTOR; s < SELECTOR + ANCHO_SELECTOR; s++) {
@@ -1058,9 +1033,6 @@ final class MenuCazador implements Listener {
         boolean acc = true;
         for (int i = 0; i < 9; i++) acc &= ("cat:" + semana.get(i).id()).equals(a.acciones().get(SELECTOR + i));
         h.ok("selector: cada cabeza cambia a su categoria", acc);
-        h.igual("plano: abajo, historico, Cerrar y Tablero", List.of("historico", "cerrar", "tablero"),
-                java.util.Arrays.asList(a.acciones().get(CAMBIAR), a.acciones().get(CERRAR), a.acciones().get(TABLERO)));
-        h.igual("plano: Tablero apagado, sin accion", null, b.acciones().get(TABLERO));
 
         Plano hist = plano(new Datos(false, historico, historico.get(0), 0, doce, yo, conPremio, premios, reglas, "1 d 5 h",
                 true, true, MAS, ANTERIOR, LIBRE));
