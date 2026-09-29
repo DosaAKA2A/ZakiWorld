@@ -15,7 +15,8 @@ import java.util.UUID;
  * Claves en uso (las que no esten aqui tambien valen; esta lista es para no inventar dos
  * nombres para lo mismo): extracciones, tasado-mc, tasado-esencias, reliquias,
  * ecos-cerrados, ecos-redimidos, parcas, minijefes, muertes, racha-max, eclipses,
- * contratos, lucidez-min, cazas-validas, expedicion-max-seg, ofrendas, forjas.
+ * contratos, lucidez-min, cazas-validas, expedicion-max-seg, ofrendas, forjas, ambush (1.8.0:
+ * contratos de Ambush vencidos por su presa).
  * Las cuenta Hardcore: muertes, extracciones y expedicion-max-seg. El resto, cada modulo.
  *
  * Cada cambio avisa a los Hitos (hitos.revisar), que son los que entregan tags y premios
@@ -28,7 +29,7 @@ final class Estadisticas {
 
     static final List<String> CLAVES = List.of("extracciones", "tasado-mc", "tasado-esencias", "reliquias",
             "ecos-cerrados", "ecos-redimidos", "parcas", "minijefes", "muertes", "racha-max", "eclipses",
-            "contratos", "lucidez-min", "cazas-validas", "expedicion-max-seg", "ofrendas", "forjas");
+            "contratos", "lucidez-min", "cazas-validas", "expedicion-max-seg", "ofrendas", "forjas", "ambush");
 
     private final Hardcore hc;
     /** Solo en las pruebas: un yml en memoria en vez de hardcore-datos.yml. */

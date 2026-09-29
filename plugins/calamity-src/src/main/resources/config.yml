@@ -469,6 +469,32 @@ hardcore:
       pesca-gracia-segundos: 90
       pesca-captura-minutos: 3
 
+  # ------------------------------------------------------------------ 1b. AMBUSH (1.8.0)
+  # El samurai de los contratos. El NPC de la Sentencia (lo pone el staff con Citizens, como los
+  # demas: /npc command add -l -r calamidad abrir <p> sentencia) lista a quien este ahora en
+  # Calamity fuera del spawn. Pagar su contrato le da 1 minuto para irse (puerta o Cristal de
+  # Regreso); si se queda, Ambush aparece a 12 bloques. Un contrato por presa cada 24 h y como
+  # mucho 2 al dia por pagador, los dos con las horas minimas de la Aduana y sin compartir
+  # conexion. Quien paga no cobra nada. Al caer Ambush, la presa (con el 25 % del dano o mas) se
+  # lleva 1 Fragmento de Masamune (credito para la Forja) y Esencias; quien la ayude (10 % o mas),
+  # Esencias. Si en 8 minutos no cae, se retira. En la Forja: la Masamune y la Crimson Masamune.
+  # Si esta seccion no esta en el config.yml del servidor, valen estos mismos valores.
+  ambush:
+    contrato:
+      esencias: 24                # lo que cuesta un contrato, del saldo del que paga
+    vida-base: 300                # vida logica = base x (1 + por-nivel x (N-1)); N = el de la presa + 10
+    vida-por-nivel: 0.10
+    golpe-base: 7                 # attack_damage = base x (1 + por-nivel x (N-1))
+    golpe-por-nivel: 0.04
+    tope-golpe-fraccion: 0.08     # ningun golpe le quita mas que esto de su vida logica
+    esencias-presa: 6             # presa: esto + 1 cada 10 niveles
+    esencias-ayuda: 2             # quien ayuda: esto + 1 cada 20 niveles
+    # Cuerpo de NPC como la Parca: la skin de una cuenta de Minecraft (3-16 letras, numeros o _).
+    # Al bajar de fase-2-vida de su vida se transforma (fase 2) y pasa a la segunda skin.
+    skin-fase-1: itGuts
+    skin-fase-2: Nagazaki_Yakuza
+    fase-2-vida: 0.5
+
   # ------------------------------------------------------------------ 2. EL ECO
   eco:
     activo: true
@@ -528,7 +554,7 @@ hardcore:
     tramos-mc:                    # [alineado] PLAN 3.3: tope duro de 1.500 MC al dia
       - {hasta: 1500, factor: 1.0}
       - {hasta: 999999, factor: 0.0}
-    topes-diarios: {parca: 1, eco: 5, sangre: 12, contratos: 3, cazas: 3, encuesta: 2}   # [alineado] encuesta + voto
+    topes-diarios: {parca: 1, eco: 5, sangre: 12, contratos: 3, cazas: 3, encuesta: 2, ambush: 1}   # [alineado] encuesta + voto; 1.8.0 ambush
     fusible:
       mc-jugador-hora: 500        # [alineado] era 600. Por encima, el resto de la hora paga x recorte
       recorte: 0.25
@@ -553,6 +579,7 @@ hardcore:
     # y lo que pida MobCoins o un credito, siempre). 0 = en el Umbral nada lo pide.
     confirmar-desde: 50
     # [alineado] PLAN 4. pagina: umbral|forja. da: frasco|cristal|dar:<objeto>|credito|forja:<pieza>|ofrenda|contrato|depositar|camino
+    # 1.8.0: entregar: <pieza> = hay que llevar encima esa pieza de la Forja y se entrega al forjar (la Crimson pide la Masamune).
     # limite-dia / limite-semana por jugador; stock-semana global (0 = sin tope); mobcoins por Monedero (M35).
     trueques:
       - {id: recargar, pagina: umbral, icono: POTION, nombre: "Recargar Frasco", da: recargar}   # precio: hardcore.frasco.esencias-por-trago (ya existe)
@@ -576,6 +603,8 @@ hardcore:
       - {id: mascara-eco, pagina: forja, icono: NETHERITE_HELMET, esencias: 40, mobcoins: 2500, credito: "marca", creditos: 5, da: "forja:mascara"}
       - {id: filo-eco, pagina: forja, icono: NETHERITE_SWORD, esencias: 48, mobcoins: 3000, credito: "marca", creditos: 10, da: "forja:filo"}
       - {id: guadana, pagina: forja, icono: NETHERITE_HOE, esencias: 64, mobcoins: 5000, credito: "fragmento", creditos: 7, da: "forja:guadana", espera-dias: 30}
+      - {id: masamune, pagina: forja, icono: NETHERITE_SWORD, esencias: 64, mobcoins: 5000, credito: "masamune", creditos: 5, da: "forja:masamune"}
+      - {id: crimson-masamune, pagina: forja, icono: COPPER_SWORD, esencias: 96, mobcoins: 8000, credito: "masamune", creditos: 5, entregar: masamune, da: "forja:crimson"}
   # [alineado] M32: que objeto MMOItems es cada pieza (TIPO.ID). Manto y Hacha: ids de Ederus/set-calamidad.yml;
   # Mascara y Filo: ESTUDIO 4.4 f. Tipos propios de Calamity (Dosa, 2026-09-27): armaduras en CALAMITY, armas en
   # CALAMITY_ARMAS, gemas en CALAMITY_GEMAS y consumibles en CALAMITY_CONSUMIBLES; nada en los tipos genericos.
@@ -590,6 +619,8 @@ hardcore:
       mascara: "CALAMITY.MASCARA_DEL_ECO"
       filo: "CALAMITY_ARMAS.FILO_DEL_ECO"
       guadana: "CALAMITY_ARMAS.GUADANA_DE_LA_PARCA"
+      masamune: "CALAMITY_ARMAS.MASAMUNE"               # 1.8.0: las katanas de Ambush
+      crimson: "CALAMITY_ARMAS.CRIMSON_MASAMUNE"
   entregas:   # TINTURA_DE_CENIZA: PLAN 9 paso 2.2. GEMA/ASCUA: ids que crea el paquete MMOItems (WP10)
     mmo: {tintura: "CALAMITY_CONSUMIBLES.TINTURA_DE_CENIZA", gema: "CALAMITY_GEMAS.GEMA_DE_CALAMIDAD", ascua: "CALAMITY_CONSUMIBLES.ASCUA_DE_CALAMIDAD"}
   llave-caos: {tope-semana: 4, sobrante-esencias: 10, comando: "crates key give %jugador% caos %n%"}
@@ -673,7 +704,7 @@ hardcore:
   # ------------------------------------------------------------------ P1
   racha: {activa: false, maximo: 5, maximo-con-equipo: 7, equipo-piezas: 3, equipo-escalon: 12, por-punto: 0.10, niveles-por-punto: 2}   # [alineado]
   frenesi: {activo: false, umbral: 25, dano-hecho: 0.15, dano-recibido: 0.15}
-  sangre-fresca: {activo: false, pvp: 20, eco: 10, minijefe: 15, parca: 40, minutos-misma-victima: 30, piezas-minimas: 2, minutos-dentro-victima: 5}
+  sangre-fresca: {activo: false, pvp: 20, eco: 10, minijefe: 15, parca: 40, ambush: 25, minutos-misma-victima: 30, piezas-minimas: 2, minutos-dentro-victima: 5}
   eclipse: {activo: false, horario: ["18:00", "22:00"], minutos: 20, avisos-minutos: [10, 5, 1], cordura: 2.0, niveles: 10, botin: 2.0, pvp: 1.25, minijefe-cada-minutos: 5, ecos-despertar: 2.0, vinheta-extra: 0.2, minutos-minimos: 10, ventana-despues: 10}
   # [alineado] pool con los 12 contratos de ESTUDIO 5.9 (corto: true en los 4 cortos); semanal = 1 Llave del Caos.
   # Cada contrato: texto, evento que lo hace avanzar (Contratos.progreso), objetivo, premio (esencias y

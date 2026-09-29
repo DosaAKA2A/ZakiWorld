@@ -75,7 +75,7 @@ final class Entregas implements Listener {
         Subcomandos.lw().registrar("creditos", "creditos <jugador> [tipo +n|-n]: ver o ajustar sus créditos (Sellos, Marcas, Fragmentos)",
                 "ederus.mundos", this::comandoCreditos, args -> switch (args.length) {
                     case 2 -> nombresConectados();
-                    case 3 -> List.of("sello:", Creditos.ERRANTE, "fragmento", "marca");
+                    case 3 -> List.of("sello:", Creditos.ERRANTE, "fragmento", "marca", "masamune");
                     case 4 -> List.of("+1", "-1");
                     default -> List.of();
                 });
@@ -233,7 +233,10 @@ final class Entregas implements Listener {
             Map.entry("hacha", "CALAMITY_ARMAS.HACHA_DEL_HERALDO"),
             Map.entry("mascara", "CALAMITY.MASCARA_DEL_ECO"),
             Map.entry("filo", "CALAMITY_ARMAS.FILO_DEL_ECO"),
-            Map.entry("guadana", "CALAMITY_ARMAS.GUADANA_DE_LA_PARCA"));
+            Map.entry("guadana", "CALAMITY_ARMAS.GUADANA_DE_LA_PARCA"),
+            // 1.8.0: las katanas de Ambush.
+            Map.entry("masamune", "CALAMITY_ARMAS.MASAMUNE"),
+            Map.entry("crimson", "CALAMITY_ARMAS.CRIMSON_MASAMUNE"));
 
     private String motivoSinObjeto(String o) {
         String id = idMmo(o);
@@ -257,6 +260,16 @@ final class Entregas implements Listener {
         String o = objeto == null ? "" : objeto.toLowerCase(Locale.ROOT);
         return !o.isEmpty() && !o.equals("ofrenda") && !o.startsWith("llave") && !o.equals("libro")
                 && !o.startsWith("esencia") && !o.startsWith("credito");
+    }
+
+    /**
+     * 1.8.0 · Devuelve una pieza que se le quito para un trueque (la Masamune de la Crimson) si
+     * el trueque falla despues: la misma pieza, ya ligada, por el mismo camino que un premio.
+     */
+    void devolver(OfflinePlayer a, ItemStack it, String origen) {
+        if (a == null || it == null || it.getType().isAir()) return;
+        String donde = entregarObjetos(a, "devolucion", List.of(it), origen);
+        hc.plugin().bitacora().anotar("entrega", "devuelto", nombreVisible(it, "objeto"), nombre(a), origen, donde);
     }
 
     /**
@@ -874,6 +887,7 @@ final class Entregas implements Listener {
         return switch (tipo) {
             case Creditos.ERRANTE -> "Sello Errante";
             case "fragmento" -> "Fragmentos de Guadaña";
+            case "masamune" -> "Fragmentos de Masamune";
             case "marca" -> "Marcas de Eco";
             default -> tipo;
         };

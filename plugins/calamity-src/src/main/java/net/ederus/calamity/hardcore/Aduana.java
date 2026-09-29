@@ -76,7 +76,7 @@ final class Aduana {
      * en un config.yml viejo y pagaria cordura sin limite.
      */
     static final Map<String, Integer> TOPES_DE_SERIE = Map.of("parca", 1, "eco", 5, "sangre", 12, "contratos", 3,
-            "cazas", 3, "encuesta", 2);
+            "cazas", 3, "encuesta", 2, "ambush", 1);
 
     private static final long HORA = 3600_000L;
     private static final long DIA = 24 * HORA;

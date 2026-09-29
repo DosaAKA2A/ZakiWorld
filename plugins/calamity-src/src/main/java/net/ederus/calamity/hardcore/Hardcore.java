@@ -137,6 +137,8 @@ public final class Hardcore implements Listener {
     private Amenazas amenazas;
     private Huella huella;
     private Parca parca;
+    /** Calamity 1.8.0: los contratos de la Sentencia y su samurai. Null con las reglas apagadas. */
+    private Ambush ambush;
     private Ecos ecos;
     private ParteDefuncion parte;
     private Testigos testigos;
@@ -218,6 +220,7 @@ public final class Hardcore implements Listener {
     Amenazas amenazas() { return amenazas; }
     Huella huella() { return huella; }
     Parca parca() { return parca; }
+    Ambush ambush() { return ambush; }
     Ecos ecos() { return ecos; }
     ParteDefuncion parte() { return parte; }
     Testigos testigos() { return testigos; }
@@ -367,6 +370,8 @@ public final class Hardcore implements Listener {
         amenazas = crear("amenazas", () -> new Amenazas(this));
         huella = crear("huella", () -> new Huella(this));
         parca = crear("parca", () -> new Parca(this));
+        // 1.8.0: despues de la Parca, cuyo cuerpo de NPC (CuerpoNpc) y listener de cascaras usa.
+        ambush = crear("ambush", () -> new Ambush(this));
         ecos = crear("ecos", () -> new Ecos(this));
         parte = crear("parte", () -> new ParteDefuncion(this));
         testigos = crear("testigos", () -> new Testigos(this));
@@ -411,6 +416,7 @@ public final class Hardcore implements Listener {
         if (testigos != null) seguro("testigos", () -> testigos.parar());
         if (parte != null) seguro("parte", () -> parte.parar());
         if (ecos != null) seguro("ecos", () -> ecos.parar());
+        if (ambush != null) seguro("ambush", () -> ambush.parar());
         if (parca != null) seguro("parca", () -> parca.parar());
         if (huella != null) seguro("huella", () -> huella.parar());
         if (amenazas != null) seguro("amenazas", () -> amenazas.parar());
@@ -622,6 +628,7 @@ public final class Hardcore implements Listener {
         vigilarZonas();
         vigilarPresas();
         seguro("parca", () -> parca.tick());
+        if (ambush != null) seguro("ambush", () -> ambush.tick());
         seguro("ecos", () -> ecos.tick());
         seguro("aduana", () -> aduana.tick());
         seguro("eclipse", () -> eclipse.tick());

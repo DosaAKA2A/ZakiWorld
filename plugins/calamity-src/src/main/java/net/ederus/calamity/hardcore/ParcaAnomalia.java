@@ -1367,8 +1367,9 @@ final class ParcaAnomalia extends BossFight implements ParcaViva {
     /**
      * Un paso a ras de suelo desde "desde" en "dir": sube o baja escalones de hasta 1,5 bloques.
      * Null si hay pared o precipicio: las tecnicas que la mueven no atraviesan el mundo.
+     * (1.8.0: tambien la usa la acometida de Ambush, por eso no es privada.)
      */
-    private static Location pisar(Location desde, Vector dir, double largo) {
+    static Location pisar(Location desde, Vector dir, double largo) {
         Location c = desde.clone().add(dir.clone().multiply(largo));
         Location g = Fx.ground(c.clone().add(0, 1.5, 0), 4);
         if (Math.abs(g.getY() - desde.getY()) > 1.6) return null;
@@ -1378,7 +1379,7 @@ final class ParcaAnomalia extends BossFight implements ParcaViva {
     }
 
     /** Los puntos (cada 0,5) de una carrera en linea recta, cortada donde haya pared. */
-    private static void trazar(Location desde, Vector dir, double largo, List<Location> ruta) {
+    static void trazar(Location desde, Vector dir, double largo, List<Location> ruta) {
         ruta.clear();
         Location cur = desde.clone();
         cur.setDirection(dir);
