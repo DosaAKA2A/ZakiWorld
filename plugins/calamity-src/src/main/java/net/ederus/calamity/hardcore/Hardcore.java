@@ -292,7 +292,6 @@ public final class Hardcore implements Listener {
             return;
         }
         cargarDatos();
-        migrarParcaCincoMinutos();
         plugin.getServer().getPluginManager().registerEvents(this, plugin);
         menu = new MenuHardcore(plugin);
         vara = new VaraPortales(plugin);
@@ -580,24 +579,11 @@ public final class Hardcore implements Listener {
         }
     }
 
-    /**
-     * 1.8.1: la Parca viene a los 5 minutos quieto. saveDefaultConfig no pisa el config.yml que
-     * ya tiene cada servidor (el Survival con 10, el Test con 1), asi que se cambia aqui una sola
-     * vez: minutos, sus cinco avisos y el marcado en grupo, que tienen que caer antes. Si luego el
-     * staff lo vuelve a tocar, se respeta. Como cargarDatos, justo tras leer el config del disco.
-     */
-    private void migrarParcaCincoMinutos() {
-        String hecho = "hardcore.migraciones.parca-5-minutos";
-        if (plugin.getConfig().getBoolean(hecho)) return;
-        if (plugin.getConfig().contains("hardcore.parca", true)) {
-            plugin.getConfig().set("hardcore.parca.minutos", 5);
-            plugin.getConfig().set("hardcore.parca.avisos", List.of(150, 210, 255, 270, 285));
-            plugin.getConfig().set("hardcore.parca.quieto-marca-grupo", 210);
-        }
-        plugin.getConfig().set(hecho, true);
-        plugin.saveConfig();
-        plugin.getLogger().info("[Calamity] La Parca pasa a venir a los 5 minutos quieto (hardcore.parca.minutos).");
-    }
+    /* 1.8.1: aqui hubo una migracion automatica (migrarParcaCincoMinutos) que ponia la Parca a
+     * 5 minutos y guardaba con plugin.saveConfig(). En el SurvivalTest reescribio config.yml
+     * entero con solo unas pocas secciones (1.529 lineas -> 109) y se perdio el resto. Se retiro:
+     * Calamity NUNCA reescribe la config del servidor; los valores se cambian a mano (regla de
+     * Dosa: "no se regenera ni se reescribe el fichero completo"). */
 
     private void guardarDatos() {
         if (!datosSucios || archivoDatos == null) return;
