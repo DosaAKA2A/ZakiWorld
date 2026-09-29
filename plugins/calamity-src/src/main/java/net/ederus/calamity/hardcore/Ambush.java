@@ -26,6 +26,7 @@ import org.bukkit.event.entity.EntityPotionEffectEvent;
 import org.bukkit.event.entity.EntityTargetLivingEntityEvent;
 import org.bukkit.event.entity.PlayerDeathEvent;
 import org.bukkit.event.player.PlayerQuitEvent;
+import org.bukkit.event.world.WorldUnloadEvent;
 import org.bukkit.persistence.PersistentDataType;
 import org.bukkit.potion.PotionEffect;
 import org.bukkit.potion.PotionEffectType;
@@ -636,10 +637,12 @@ final class Ambush implements Listener {
         return null;
     }
 
-    /** La pelea de un cuerpo que se ve o de una de sus sombras, o null. */
+    /** La pelea de un cuerpo que se ve o de una de sus sombras o clones, o null. */
     private PeleaAmbush deCascara(Entity e) {
         if (e == null) return null;
-        for (PeleaAmbush pe : peleas) if (pe.estado != PeleaAmbush.Estado.FIN && (pe.esCascara(e) || pe.esSombra(e))) return pe;
+        for (PeleaAmbush pe : peleas) {
+            if (pe.estado != PeleaAmbush.Estado.FIN && (pe.esCascara(e) || pe.esSombra(e) || pe.esClon(e))) return pe;
+        }
         return null;
     }
 
@@ -721,9 +724,10 @@ final class Ambush implements Listener {
     }
 
     /**
-     * El cuerpo que se ve y sus sombras no reciben dano propio: el golpe de un jugador al cuerpo se
-     * le pasa al esqueleto que pelea, con el mismo autor (como hace la Parca). Sin ignoreCancelled:
-     * el listener de la Parca, con la misma prioridad, puede haberlo cancelado ya sin pasarlo.
+     * El cuerpo que se ve, sus sombras y sus clones no reciben dano propio: el golpe de un jugador al
+     * cuerpo se le pasa al esqueleto que pelea, con el mismo autor (como hace la Parca), y el golpe
+     * de un jugador a un clon de las Sombras del clan lo disipa. Sin ignoreCancelled: el listener de
+     * la Parca, con la misma prioridad, puede haberlo cancelado ya sin pasarlo.
      */
     @EventHandler(priority = EventPriority.LOW)
     public void onDanoCascara(EntityDamageEvent e) {
@@ -732,12 +736,15 @@ final class Ambush implements Listener {
         PeleaAmbush pe = deCascara(mq);
         if (pe == null) return;
         e.setCancelled(true);
-        if (!pe.esCascara(mq)) return;
         Entity causa;
         try {
             causa = e.getDamageSource().getCausingEntity();
         } catch (Throwable t) {
             causa = null;
+        }
+        if (!pe.esCascara(mq)) {
+            if (causa instanceof Player && pe.esClon(mq)) pe.disiparClon(mq);
+            return;
         }
         if (!(causa instanceof Player p)) return;
         LivingEntity c = pe.cuerpo;
@@ -754,6 +761,15 @@ final class Ambush implements Listener {
         if (c == null) return;
         if (c.pelea != null) hc.seguro("ambush", () -> c.pelea.irse("cumplido", null));
         else consumir(c, "muerta");
+    }
+
+    /** Se descarga el mundo de una pelea: Ambush se va y se lleva todo lo suyo (clones, sombras y hojas). */
+    @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
+    public void onDescargaMundo(WorldUnloadEvent e) {
+        if (peleas.isEmpty()) return;
+        for (PeleaAmbush pe : new ArrayList<>(peleas)) {
+            if (pe.estado != PeleaAmbush.Estado.FIN && pe.enMundo(e.getWorld())) hc.seguro("ambush", () -> pe.irse("mundo", null));
+        }
     }
 
     /** La presa se desconecta: el contrato se consume y, si Ambush ya estaba, se va. */
