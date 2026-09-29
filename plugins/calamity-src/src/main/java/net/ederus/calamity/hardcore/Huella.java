@@ -261,6 +261,16 @@ final class Huella implements Listener {
          */
         int zona = ZONA_NINGUNA;
         boolean salto;
+        /**
+         * 1.8.2 · Segundos contados (sin los pausados ni los exentos) desde que entro en su zona.
+         * No se borra en vaciar(): es de la zona, no del anillo.
+         */
+        int enZona;
+        /**
+         * 1.8.2 · Muestras tomadas fuera desde que salio del spawn por su cuenta (-1 = nada de eso):
+         * la PARCA solo cuenta esas, y el anillo guarda lo de dentro por si vuelve pronto.
+         */
+        int trasSalir = -1;
         /** Los segundos de muestra con los que se lleno el anillo (0 = aun ninguno). */
         int muestraAnillo;
 
@@ -285,31 +295,50 @@ final class Huella implements Listener {
             avisoDado = 0;
             congeladoHasta = 0;
             pausados.clear();
+            trasSalir = -1;
         }
 
         /**
-         * 1.8.2 · Si esta en la zona spawn o fuera. Al cambiar por su cuenta (con teclas, volando,
-         * andando en un cliente que no manda teclas o por un teletransporte) el reloj vuelve a cero
-         * con sus avisos: la Grieta cuenta sus minutos desde que entra en el spawn y la PARCA los
-         * suyos desde que sale. Si lo lleva el agua o una vagoneta no: eso no es moverse, y un AFK
-         * al que el agua mete y saca del spawn no se libraria nunca de ninguna de las dos.
-         * True si ha vuelto a cero.
+         * 1.8.2 · Si esta en la zona spawn o fuera, cuando cambia por su cuenta (con teclas,
+         * volando, andando en un cliente que no manda teclas o por un teletransporte):
+         * - Al entrar, la Grieta cuenta desde cero solo si ha estado fuera al menos "minimoFuera"
+         *   segundos contados (lo que tarda la PARCA: si hubiera estado quieto, ya le habria
+         *   llegado). Si vuelve antes, sigue contando por celdas lo de antes, como siempre.
+         * - Al salir (con la Grieta encendida), la PARCA cuenta desde ahi (trasSalir) y el anillo
+         *   guarda lo de dentro: si vuelve pronto, la Grieta lo tiene en cuenta.
+         * Asi un vaiven con teclas por el borde no vuelve a cero a cada cruce: la Grieta se lo
+         * sigue contando entero. Si lo lleva el agua o una vagoneta no cambia nada: un AFK al que
+         * el agua mete y saca del spawn no se libraria nunca de ninguna de las dos. True si el
+         * reloj ha vuelto a cero (hay que quitarle la campana).
          */
-        boolean cambiarZona(boolean spawn, boolean propio) {
+        boolean cambiarZona(boolean spawn, boolean propio, int minimoFuera, boolean conGrieta) {
             int z = spawn ? ZONA_SPAWN : ZONA_FUERA;
             if (zona == z) return false;
             // Un Rastro sin zona aun esta vacio: se le pone la suya y ya.
             boolean conocida = zona != ZONA_NINGUNA;
+            int estuvo = enZona;
             zona = z;
+            enZona = 0;
+            trasSalir = -1;
             if (!conocida || !propio) return false;
-            vaciar();
+            if (spawn) {
+                if (estuvo < minimoFuera) return false;
+                vaciar();
+                return true;
+            }
+            // Sin Grieta el spawn no cuenta: lo de fuera sigue sumando como si no hubiera entrado.
+            if (!conGrieta) return false;
+            trasSalir = 0;
+            quieto = 0;
+            avisoDado = 0;
             return true;
         }
 
         /**
          * 1.8.2 · El anillo pasa a tener n muestras conservando las mas nuevas que quepan: al
-         * cruzar el borde del spawn sin volver a cero (llevado por el agua) sigue contando con la
-         * ventana de alli. Si cambio la duracion de la muestra, lo apuntado ya no vale: de cero.
+         * cruzar el borde del spawn sin volver a cero (llevado por el agua, o de vuelta al poco)
+         * sigue contando con la ventana de alli. Si cambio la duracion de la muestra, lo apuntado
+         * ya no vale: de cero.
          */
         void redimensionar(int n, int muestra) {
             if (muestraAnillo != 0 && muestraAnillo != muestra) {
@@ -374,10 +403,12 @@ final class Huella implements Listener {
          */
         boolean segundo(long ahora, double x, double y, double z, boolean enVehiculo, boolean activo,
                         boolean bedrockSuelo, boolean volando, Ajustes a) {
-            if (celdas.length != a.tamano() || muestraAnillo != a.muestra()) {
+            // Recien salido del spawn el anillo no encoge: guarda lo de dentro por si vuelve pronto.
+            int n = trasSalir >= 0 ? Math.max(a.tamano(), celdas.length) : a.tamano();
+            if (celdas.length != n || muestraAnillo != a.muestra()) {
                 // Otra ventana (la del spawn o la de fuera, o cambio la config): se guarda lo mas
                 // nuevo que quepa (1.8.2; antes se empezaba de cero). Otra muestra, de cero.
-                redimensionar(a.tamano(), a.muestra());
+                redimensionar(n, a.muestra());
                 if (!a.modoBloque()) quieto = calcular(a);
             }
             podar(ahora, a);
@@ -388,6 +419,7 @@ final class Huella implements Listener {
                 return false;
             }
             segundos++;
+            enZona++;
             if (a.modoBloque()) {
                 // La regla literal de Dosa: se reinicia al alejarse "radio" bloques de donde empezo.
                 double r = a.radio();
@@ -440,6 +472,8 @@ final class Huella implements Listener {
             montado[cabeza] = enVehiculo;
             cabeza = (cabeza + 1) % celdas.length;
             llenas = Math.min(celdas.length, llenas + 1);
+            // Cuando toda la ventana de fuera es de despues de salir, lo de dentro ya no hace falta.
+            if (trasSalir >= 0 && ++trasSalir >= a.tamano()) trasSalir = -1;
             ultimaActiva = activo;
             if (activo) ultimaActividad = ahora;
             quieto = calcular(a);
@@ -452,7 +486,10 @@ final class Huella implements Listener {
             int recorridas = 0;
             int n = celdas.length;
             int maximo = a.celdasMaximas();
-            for (int i = 0; i < llenas; i++) {
+            // 1.8.2 · Las de su ventana; recien salido del spawn, solo las de fuera (trasSalir).
+            int tope = Math.min(llenas, a.tamano());
+            if (trasSalir >= 0) tope = Math.min(tope, trasSalir);
+            for (int i = 0; i < tope; i++) {
                 vistas.add(celdas[(cabeza - 1 - i + n) % n]);
                 if (vistas.size() > maximo) break;
                 recorridas++;
@@ -460,9 +497,9 @@ final class Huella implements Listener {
             int q = recorridas * a.muestra();
             // Senal de vehiculo: casi todo el rato montado y el recorrido cabe en una caja pequena.
             // Caza el bucle de vagoneta con un mod que pulsa W (con W las celdas si cambian).
-            if (llenas >= a.vehiculoMuestrasMinimas() && fraccionMontado() >= a.vehiculoPorcentaje()) {
+            if (tope >= a.vehiculoMuestrasMinimas() && fraccionMontado(tope) >= a.vehiculoPorcentaje()) {
                 int minX = Integer.MAX_VALUE, maxX = Integer.MIN_VALUE, minZ = Integer.MAX_VALUE, maxZ = Integer.MIN_VALUE;
-                for (int i = 0; i < llenas; i++) {
+                for (int i = 0; i < tope; i++) {
                     // Las de interaccion no son un sitio: no cuentan para la caja del recorrido.
                     if (novedad[(cabeza - 1 - i + n) % n]) continue;
                     long k = celdas[(cabeza - 1 - i + n) % n];
@@ -474,16 +511,21 @@ final class Huella implements Listener {
                 }
                 long ladoX = (long) (maxX - minX + 1) * a.celdaH();
                 long ladoZ = (long) (maxZ - minZ + 1) * a.celdaH();
-                if (ladoX <= a.vehiculoLado() && ladoZ <= a.vehiculoLado()) q = Math.max(q, llenas * a.muestra());
+                if (ladoX <= a.vehiculoLado() && ladoZ <= a.vehiculoLado()) q = Math.max(q, tope * a.muestra());
             }
             return q;
         }
 
         double fraccionMontado() {
-            if (llenas == 0) return 0;
+            return fraccionMontado(llenas);
+        }
+
+        /** La parte de las "cuantas" muestras mas nuevas que se tomo montado. */
+        double fraccionMontado(int cuantas) {
+            if (cuantas <= 0) return 0;
             int m = 0, n = celdas.length;
-            for (int i = 0; i < llenas; i++) if (montado[(cabeza - 1 - i + n) % n]) m++;
-            return (double) m / llenas;
+            for (int i = 0; i < cuantas; i++) if (montado[(cabeza - 1 - i + n) % n]) m++;
+            return (double) m / cuantas;
         }
 
         int celdasDistintas() {
@@ -795,11 +837,14 @@ final class Huella implements Listener {
         boolean bedrock = vehiculo == null && p.isOnGround() && !p.isInWater() && !p.isInLava()
                 && (Plataforma.esBedrock(p) || !r.conTeclas);
         boolean volando = vehiculo == null && (p.isFlying() || p.isGliding());
-        // 1.8.2 · Entrar en el spawn o salir de el por su cuenta pone el reloj a cero, tambien con
-        // la gracia o la llegada protegida (antes de exento): la Grieta no hereda la quietud de fuera.
+        // 1.8.2 · Entrar en el spawn por su cuenta tras un rato fuera pone el reloj de la Grieta a
+        // cero, y al salir la PARCA cuenta desde ahi (Rastro.cambiarZona), tambien con la gracia o
+        // la llegada protegida (antes de exento). Un vaiven por el borde no vuelve a cero.
         boolean salto = r.salto;
         r.salto = false;
-        if (r.cambiarZona(hc.enSpawn(p), activo || volando || bedrock || salto)) quitarCampana(p.getUniqueId());
+        if (r.cambiarZona(hc.enSpawn(p), activo || volando || bedrock || salto, a.limite(), grieta.ajustes().activa())) {
+            quitarCampana(p.getUniqueId());
+        }
         if (exento(p, r, ahora, a)) {
             quitarCampana(p.getUniqueId());
             return;
@@ -818,7 +863,7 @@ final class Huella implements Listener {
 
     /**
      * 1.8.2 · Un teletransporte dentro de Calamity (la puerta, /spawn, una perla...) cuenta como
-     * cambiar de sitio por su cuenta: si con el entra en el spawn o sale, la Huella empieza de cero.
+     * cambiar de sitio por su cuenta, para entrar en el spawn o salir de el (Rastro.cambiarZona).
      */
     @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
     public void onTeleport(PlayerTeleportEvent e) {

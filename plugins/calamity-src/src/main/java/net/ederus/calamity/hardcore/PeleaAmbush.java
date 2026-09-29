@@ -619,7 +619,8 @@ final class PeleaAmbush implements Runnable {
      * k veces su golpe. Al pasar junto a su objetivo suena el tajo y le tiembla la vista. Al final
      * se pone de pie. clon = -1 es el propio Ambush; si no, el clon que corre (si lo disipan a
      * medias, la carrera se acaba ahi y su corte ya no llega). Con k 0 (1.8.2, el cambio de lado de
-     * mil cortes) no hiere, no hay tajo ni temblor: solo la carrera y sus sombras.
+     * mil cortes) no hiere, no hay tajo ni temblor: solo la carrera y sus sombras. Encadenadas (mil
+     * cortes, 1.8.2) ni se pone de pie entre una y otra ni repite el arranque: seguida y sigue.
      */
     static final class Carrera {
         static final double ANCHO = 1.4;
@@ -635,6 +636,10 @@ final class PeleaAmbush implements Runnable {
         private final Set<UUID> tocados = new HashSet<>();
         private int indice, marca;
         private boolean arrancada, cruzada, acabada;
+        /** 1.8.2 · Viene justo detras de otra y ya va tumbado: sin postura, destello, riptide ni blandir. */
+        boolean seguida;
+        /** 1.8.2 · Detras viene otra: al acabar se queda tumbado en vez de ponerse de pie. */
+        boolean sigue;
 
         Carrera(List<Location> ruta, Vector dir, int porTick, double k, int sombras, int clon) {
             this.ruta = ruta;
@@ -653,7 +658,7 @@ final class PeleaAmbush implements Runnable {
             return acabada;
         }
 
-        /** Un tick. True al llegar al final (ya de pie) o si el clon que corria ya no esta. */
+        /** Un tick. True al llegar al final (ya de pie, salvo que siga otra) o si el clon que corria ya no esta. */
         boolean paso(Escena e, Sombras sombras, long t) {
             if (acabada) return true;
             Location antes = clon < 0 ? e.pie() : e.clonVivo(clon) ? e.clonPie(clon) : null;
@@ -663,10 +668,12 @@ final class PeleaAmbush implements Runnable {
             }
             if (!arrancada) {
                 arrancada = true;
-                postura(e, Pose.FALL_FLYING);
-                blandir(e);
-                e.sonido(antes, "item.trident.riptide_3", 1.4f, 1.0f);
-                e.particula(Compat.FLASH, antes.clone().add(0, 1.0, 0), 1, 0, 0, 0, 0, FLASH_TENUE);
+                if (!seguida) {
+                    postura(e, Pose.FALL_FLYING);
+                    blandir(e);
+                    e.sonido(antes, "item.trident.riptide_3", 1.4f, 1.0f);
+                    e.particula(Compat.FLASH, antes.clone().add(0, 1.0, 0), 1, 0, 0, 0, 0, FLASH_TENUE);
+                }
             }
             int hasta = Math.min(ruta.size() - 1, indice + porTick);
             if (hasta > indice) {
@@ -689,7 +696,7 @@ final class PeleaAmbush implements Runnable {
             }
             if (indice < ruta.size() - 1) return false;
             acabada = true;
-            postura(e, Pose.STANDING);
+            if (!sigue) postura(e, Pose.STANDING);
             Location fin = ruta.get(ruta.size() - 1);
             if (k > 0) {
                 e.particula(Compat.SWEEP_ATTACK, fin.clone().add(0, 1, 0), 3, 0.6, 0.3, 0.6, 0, null);
@@ -1154,7 +1161,9 @@ final class PeleaAmbush implements Runnable {
      * vuelve igual a donde empezo.
      *
      * 1.8.2: esos cambios de lado eran un desplazamiento de 6 ticks por el borde, de pie y girando
-     * hacia su presa a cada paso: se veia lento y a saltos. Ahora es una carrera como las otras.
+     * hacia su presa a cada paso: se veia lento y a saltos. Ahora es una carrera como las otras, y
+     * todas van seguidas: tumbado de la primera a la ultima, sin ponerse de pie entre una y otra ni
+     * repetir el arranque (el destello y el riptide salen una vez, al empezar).
      */
     static final class MilCortes extends Tecnica {
         static final double MIN = 3, MAX = 10, K = 0.6;
@@ -1167,6 +1176,8 @@ final class PeleaAmbush implements Runnable {
         private int corte = -1;
         /** La carrera del corte en curso, o la acometida corta del cambio de lado (solo una a la vez). */
         private Carrera carrera, cambio;
+        /** Sigue tumbado de la carrera anterior: la siguiente no vuelve a arrancar. */
+        private boolean tumbado;
         private float yawAviso, yawFinal;
         private long finEn = -1;
         private final Sombras sombras = new Sombras();
@@ -1207,12 +1218,14 @@ final class PeleaAmbush implements Runnable {
             if (carrera != null) {
                 e.mirar(carrera.yaw);
                 if (carrera.paso(e, sombras, t)) {
+                    tumbado = carrera.sigue;
                     carrera = null;
                     empezarCambio(e);
                 }
             } else if (cambio != null) {
                 e.mirar(cambio.yaw);
                 if (cambio.paso(e, sombras, t)) {
+                    tumbado = cambio.sigue;
                     cambio = null;
                     llegar(e);
                 }
@@ -1235,6 +1248,9 @@ final class PeleaAmbush implements Runnable {
                 return;
             }
             carrera = new Carrera(ruta, d, porTick, K, SOMBRAS, -1);
+            // Detras siempre va un cambio de lado: se queda tumbado.
+            carrera.seguida = tumbado;
+            carrera.sigue = true;
         }
 
         /**
@@ -1257,6 +1273,9 @@ final class PeleaAmbush implements Runnable {
                 return;
             }
             cambio = new Carrera(ruta, d, porTick, 0, SOMBRAS_CAMBIO, -1);
+            // De pie solo al volver a donde empezo.
+            cambio.seguida = tumbado;
+            cambio.sigue = !vuelta();
         }
 
         /** Al acabar un cambio de lado: el corte siguiente o, tras el ultimo, quieto donde empezo. */
@@ -1264,6 +1283,11 @@ final class PeleaAmbush implements Runnable {
             if (!vuelta()) {
                 empezarCorte(e, corte + 1);
                 return;
+            }
+            // Si el ultimo cambio no pudo correr (una pared), se pone de pie aqui.
+            if (tumbado) {
+                e.postura(Pose.STANDING);
+                tumbado = false;
             }
             // La carrera se queda a menos de medio bloque del sitio (va de 0,5 en 0,5): se ajusta.
             if (distPlano(e.pie(), inicio) > 1e-3) {
@@ -2772,13 +2796,17 @@ final class PeleaAmbush implements Runnable {
         }
         boolean aviso = mc.movimientos == 0 && mc.polvos >= 3 * 13;
         correr(mil, mc, 600);
-        int tumbado = 0;
-        for (Pose p : mc.posturasAmbush) if (p == Pose.FALL_FLYING) tumbado++;
+        int carreras = mc.cuantas(Compat.LARGE_SMOKE);
         h.ok("mil cortes: avisa 0,5 s con una línea roja en cada una de sus tres direcciones", aviso);
         h.igual("mil cortes: tres acometidas a través de su presa", 3, mc.sacudidas);
         h.ok("mil cortes: cambia de lado y vuelve con acometidas cortas, tumbado y sin deslizarse de pie ("
-                + tumbado + " carreras, " + mc.movimientosDePie + " pasos de pie)", tumbado == 3 + MilCortes.CORTES
+                + carreras + " carreras, " + mc.movimientosDePie + " pasos de pie)", carreras == 3 + MilCortes.CORTES
                 && mc.movimientosDePie <= 1);
+        h.ok("mil cortes: de la primera acometida a la última sin ponerse de pie ni volver a arrancar (posturas "
+                        + mc.posturasAmbush + ", " + mc.cuantos("item.trident.riptide_3") + " riptide, "
+                        + mc.cuantas(Compat.FLASH) + " destello)",
+                mc.posturasAmbush.equals(List.of(Pose.FALL_FLYING, Pose.STANDING))
+                        && mc.cuantos("item.trident.riptide_3") == 1 && mc.cuantas(Compat.FLASH) == 1);
         h.igual("mil cortes: cada corte al 60 % de su golpe", List.of(0.6, 0.6, 0.6), mc.golpes);
         h.ok("mil cortes: cada una con sus sombras", mc.sombrasHechas >= 3 * MilCortes.SOMBRAS);
         h.ok("mil cortes: acaba donde empezó", distPlano(mc.pie(), inicio) < 0.01);

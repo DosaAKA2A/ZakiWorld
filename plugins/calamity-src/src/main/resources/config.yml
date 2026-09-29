@@ -456,8 +456,10 @@ hardcore:
     # Los avisos previos salen igual, a la misma proporcion, con su propio texto.
     spawn:
       activa: true
-      minutos: 5                  # quieto en el spawn, contados desde que entra (1.8.2: aunque la Parca
-                                  # de fuera tenga otros "minutos"; al entrar o salir el reloj vuelve a cero)
+      minutos: 5                  # quieto en el spawn (1.8.2: aunque la Parca de fuera tenga otros "minutos").
+                                  # Cuentan desde que entra si ha estado fuera al menos los "minutos" de la
+                                  # Parca; si vuelve antes, sigue con lo que llevaba. Al salir, la Parca
+                                  # cuenta desde que sale
       distancia-min: 600
       distancia-max: 1500
       intentos: 12                # puntos al azar que prueba antes de rendirse (1.2: entonces vuelve a abrirse al minuto;
