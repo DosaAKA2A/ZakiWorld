@@ -791,6 +791,11 @@ hardcore:
       # Panacea (el dia dura 72000 ticks y el cielo rojo va de 63500 a 65000). 0 = no se toca.
       # Durante un Eclipse, o si la Parca le ha cambiado el cielo, manda el de ellos.
       hora: 64250
+      # Lo que dura el dia de Panacea en ticks (el periodo de su timeline). El servidor solo
+      # deja fijar la hora dentro de bloques de 24000, asi que con este valor se calcula cada
+      # segundo la que hay que mandar para que caiga en la 'hora' de arriba. Solo cambiarlo si
+      # cambia el timeline del datapack.
+      periodo-dia: 72000
       # Ocultarle la lluvia a quien esta en el bioma.
       ocultar-lluvia: true
       # Vineta roja en los bordes de la pantalla (0 a 0.95), aunque sentidos.vinheta este

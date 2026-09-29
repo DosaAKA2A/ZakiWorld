@@ -49,7 +49,8 @@ import java.util.UUID;
  * eso el aviso y el margen: quien busca refugio a tiempo no pierde nada.
  *
  * Cielo rojo: se le oculta la lluvia (CLEAR), se le pone la hora del cielo de sangre del ciclo de
- * Panacea y Vineta le suma su borde rojo (vinetaExtra, igual que el Eclipse: nunca un segundo
+ * Panacea (recalculada cada segundo, porque el servidor la fija por bloques de 24000 y el dia de
+ * Panacea dura 72000: ver offsetHora) y Vineta le suma su borde rojo (vinetaExtra, igual que el Eclipse: nunca un segundo
  * borde). La lluvia de verdad del servidor apaga el fuego vanilla, asi que la quemadura se hace a
  * mano: fuego visual y dano de fuego (ON_FIRE) cada segundo. La resistencia al fuego lo para, y es
  * la forma legitima de aguantar alli.
@@ -81,6 +82,14 @@ final class Clima implements Listener {
     static final int ACIDA_OLVIDO = 15;
     /** La hora del cielo de sangre del ciclo de Panacea (dia de 72000 ticks; el rojo va de 63500 a 65000). */
     static final long CIELO_HORA = 64_250L;
+    /** Lo que dura el dia de Panacea: el period_ticks de bracken:timeline/panacea_day. */
+    static final long CIELO_PERIODO = 72_000L;
+    /**
+     * El bloque en el que el servidor fija la hora. Con la hora fija (relative false) no manda el
+     * offset tal cual: ServerPlayer.getPlayerTime devuelve reloj - (reloj % 24000) + offset, y el
+     * cliente lo aplica al reloj de la dimension (minecraft:overworld, el mismo del timeline).
+     */
+    static final long BLOQUE_SERVIDOR = 24_000L;
     static final double CIELO_VINETA = 0.4;
     static final int CIELO_CADA = 20;
     static final int CIELO_ARDE = 4;
@@ -123,6 +132,7 @@ final class Clima implements Listener {
         boolean bajoCielo;
         boolean climaPuesto;
         boolean horaPuesta;
+        /** El offset que le mandamos (no la hora del ciclo: ver offsetHora). */
         long hora;
         boolean fuegoPuesto;
     }
@@ -232,8 +242,11 @@ final class Clima implements Listener {
 
     @EventHandler(priority = EventPriority.MONITOR)
     public void onSalir(PlayerQuitEvent ev) {
-        // La hora, el clima y el fuego visual son de la conexion: al volver no queda nada que quitar.
-        estados.remove(ev.getPlayer().getUniqueId());
+        // El fuego visual NO es de la conexion: Paper lo guarda en el jugador (Paper.FireOverride)
+        // y los datos se guardan despues de este evento, asi que quien se va ardiendo volveria en
+        // llamas para siempre. Se le devuelve todo antes; la hora y el clima no se guardan, pero
+        // soltarlos aqui no cuesta nada.
+        soltar(ev.getPlayer());
     }
 
     // ------------------------------------------------------------ lluvia acida
@@ -322,11 +335,17 @@ final class Clima implements Listener {
 
         long hora = hora(r);
         if (hora > 0 && !deParca && !deEclipse) {
-            if (!e.horaPuesta || e.hora != hora || !esHora(p.isPlayerTimeRelative(), p.getPlayerTimeOffset(), hora)) {
+            // El offset depende del bloque de 24000 en el que va el reloj, asi que se calcula cada
+            // segundo: al pasar al bloque siguiente cambia y se vuelve a mandar (como mucho un
+            // segundo de cielo normal cada 20 minutos). getPlayerTime - offset es el reloj (o ya su
+            // bloque, si la hora esta fija): baseServidor lo redondea igual en los dos casos.
+            long reloj = p.getPlayerTime() - p.getPlayerTimeOffset();
+            long offset = offsetHora(reloj, hora, r.getLong("periodo-dia", CIELO_PERIODO));
+            if (!e.horaPuesta || !esHora(p.isPlayerTimeRelative(), p.getPlayerTimeOffset(), offset)) {
                 // Fija (relative false): el cielo no avanza mientras sigue ahi.
-                p.setPlayerTime(hora, false);
+                p.setPlayerTime(offset, false);
                 e.horaPuesta = true;
-                e.hora = hora;
+                e.hora = offset;
             }
         } else {
             soltarHora(p, e);
@@ -338,7 +357,24 @@ final class Clima implements Listener {
         return Math.max(0L, r.getLong("hora", CIELO_HORA));
     }
 
-    /** Si la hora que tiene puesta es la nuestra (fija y con ese valor). */
+    /**
+     * El offset que hay que mandarle con la hora fija para que vea 'hora' en un dia de 'periodo'
+     * ticks. El servidor le manda base + offset (base = el reloj redondeado hacia abajo a 24000) y
+     * el timeline de Panacea lo lee modulo 72000: con offset = hora fijo, solo uno de cada tres
+     * bloques de 24000 cae en el cielo de sangre. Con este, (base + offset) % periodo = hora siempre.
+     * Un periodo de 0 o menos vale como el de serie.
+     */
+    static long offsetHora(long reloj, long hora, long periodo) {
+        long per = periodo > 0 ? periodo : CIELO_PERIODO;
+        return Math.floorMod(hora - baseServidor(reloj), per);
+    }
+
+    /** La base que suma el servidor a la hora fija: la misma cuenta que ServerPlayer.getPlayerTime. */
+    static long baseServidor(long reloj) {
+        return reloj - (reloj % BLOQUE_SERVIDOR);
+    }
+
+    /** Si la hora que tiene puesta es la nuestra (fija y con ese offset). */
     static boolean esHora(boolean relativa, long offset, long nuestra) {
         return !relativa && offset == nuestra;
     }
@@ -589,6 +625,32 @@ final class Clima implements Listener {
         h.ok("relativa (reseteada): no", !esHora(true, CIELO_HORA, CIELO_HORA));
         h.ok("la noche del Eclipse: no", !esHora(false, 18_000L, CIELO_HORA));
 
+        // El offset: el servidor manda base + offset y el timeline lo lee modulo 72000. Con el reloj
+        // en el bloque k de 24000 (k = 0, 1, 2 y alguno lejano), lo que ve el jugador es el cielo de sangre.
+        long[] relojes = {0L, 5_000L, 23_999L, 24_000L, 30_123L, 47_999L, 48_000L, 60_000L, 71_999L, 72_000L,
+                96_500L, 1_000_000L, 123_456_789L};
+        for (long reloj : relojes) {
+            long off = offsetHora(reloj, CIELO_HORA, CIELO_PERIODO);
+            h.igual("reloj " + reloj + ": ve el cielo de sangre", CIELO_HORA,
+                    Math.floorMod(vistaServidor(reloj, off), CIELO_PERIODO));
+            // Con la hora ya fija, getPlayerTime - offset es la base: da el mismo offset.
+            h.igual("reloj " + reloj + ": estable con la hora fija", off,
+                    offsetHora(vistaServidor(reloj, off) - off, CIELO_HORA, CIELO_PERIODO));
+            h.ok("reloj " + reloj + ": nunca choca con la noche del Eclipse", off != 18_000L);
+            h.ok("reloj " + reloj + ": offset dentro del dia", off >= 0 && off < CIELO_PERIODO);
+        }
+        h.igual("k = 0: offset 64250", 64_250L, offsetHora(10_000L, CIELO_HORA, CIELO_PERIODO));
+        h.igual("k = 1: offset 40250", 40_250L, offsetHora(30_000L, CIELO_HORA, CIELO_PERIODO));
+        h.igual("k = 2: offset 16250", 16_250L, offsetHora(50_000L, CIELO_HORA, CIELO_PERIODO));
+        h.ok("al pasar de bloque cambia el offset (y se repone)",
+                offsetHora(23_999L, CIELO_HORA, CIELO_PERIODO) != offsetHora(24_000L, CIELO_HORA, CIELO_PERIODO));
+        h.ok("el offset viejo ya no es el nuestro tras pasar de bloque",
+                !esHora(false, offsetHora(23_999L, CIELO_HORA, CIELO_PERIODO),
+                        offsetHora(24_000L, CIELO_HORA, CIELO_PERIODO)));
+        h.igual("periodo 0: vale el de serie", offsetHora(30_000L, CIELO_HORA, CIELO_PERIODO),
+                offsetHora(30_000L, CIELO_HORA, 0));
+        h.igual("dia de 24000: la hora dentro del dia de siempre", 6_000L, offsetHora(50_000L, 6_000L, 24_000L));
+
         // Vineta: el cielo rojo suma su parte, sola o encima de la de cordura, con el tope de siempre.
         h.cerca("sin vineta de cordura: la del cielo rojo sola", CIELO_VINETA, Vineta.conExtra(0, CIELO_VINETA), 1e-9);
         h.cerca("encima de la de cordura, con tope", Vineta.INTENSIDAD_MAXIMA, Vineta.conExtra(0.85, CIELO_VINETA), 1e-9);
@@ -628,6 +690,7 @@ final class Clima implements Listener {
             h.igual("jar: cielo-rojo.activo", true, c.getBoolean("cielo-rojo.activo", false));
             h.igual("jar: cielo-rojo.biomas", BIOMAS_ROJOS, c.getStringList("cielo-rojo.biomas"));
             h.igual("jar: cielo-rojo.hora", CIELO_HORA, c.getLong("cielo-rojo.hora", -1));
+            h.igual("jar: cielo-rojo.periodo-dia", CIELO_PERIODO, c.getLong("cielo-rojo.periodo-dia", -1));
             h.igual("jar: cielo-rojo.ocultar-lluvia", true, c.getBoolean("cielo-rojo.ocultar-lluvia", false));
             h.cerca("jar: cielo-rojo.vinheta", CIELO_VINETA, c.getDouble("cielo-rojo.vinheta", -1), 1e-9);
             h.igual("jar: cielo-rojo.arde-cada-segundos", CIELO_CADA, c.getInt("cielo-rojo.arde-cada-segundos", -1));
@@ -638,6 +701,11 @@ final class Clima implements Listener {
             h.igual("jar: cielo-rojo.olvido-segundos", CIELO_OLVIDO, c.getInt("cielo-rojo.olvido-segundos", -1));
         }
         return h.lineas();
+    }
+
+    /** Lo que el servidor le manda al cliente con la hora fija (ServerPlayer.getPlayerTime en 26.1.2). */
+    private static long vistaServidor(long reloj, long offset) {
+        return reloj - (reloj % BLOQUE_SERVIDOR) + offset;
     }
 
     private static List<Integer> golpes(int hasta, int margen, int cada) {
