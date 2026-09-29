@@ -22,6 +22,7 @@ import org.bukkit.World;
 import org.bukkit.block.Block;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.file.YamlConfiguration;
+import org.bukkit.damage.DamageSource;
 import org.bukkit.entity.AbstractSkeleton;
 import org.bukkit.entity.Creaking;
 import org.bukkit.entity.Enemy;
@@ -29,7 +30,9 @@ import org.bukkit.entity.Entity;
 import org.bukkit.entity.EntityType;
 import org.bukkit.entity.Explosive;
 import org.bukkit.entity.Ghast;
+import org.bukkit.entity.LargeFireball;
 import org.bukkit.entity.LivingEntity;
+import org.bukkit.entity.Mob;
 import org.bukkit.entity.Phantom;
 import org.bukkit.entity.Player;
 import org.bukkit.entity.Projectile;
@@ -38,12 +41,14 @@ import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
 import org.bukkit.event.entity.CreatureSpawnEvent;
+import org.bukkit.event.entity.EntityDamageEvent;
 import org.bukkit.event.entity.EntityDeathEvent;
 import org.bukkit.event.entity.EntityExplodeEvent;
 import org.bukkit.event.entity.EntityPotionEffectEvent;
 import org.bukkit.event.entity.ExplosionPrimeEvent;
 import org.bukkit.event.entity.ProjectileLaunchEvent;
 import org.bukkit.generator.structure.GeneratedStructure;
+import org.bukkit.persistence.PersistentDataContainer;
 import org.bukkit.persistence.PersistentDataType;
 import org.bukkit.potion.PotionEffect;
 import org.bukkit.potion.PotionEffectType;
@@ -121,6 +126,12 @@ public final class MobsLethal implements Listener {
      * sus bolas de fuego desde que salen, para que no rompan bloques aunque alguien las devuelva.
      */
     private final NamespacedKey claveEspecial;
+    /**
+     * Calamity 1.8.5: en una bola de fuego que un jugador ha devuelto, el ghast especial al que ya
+     * ha golpeado. La misma bola le pega dos veces en el mismo tick (el impacto y su explosion) y
+     * solo debe contar una (alDevolver).
+     */
+    private final NamespacedKey claveBolaDevuelta;
     private BukkitTask aparicion;
     private BukkitTask limpieza;
     /** Calamity 1.8.4: el cartel de los minijefes con su formato (null sin el modulo anomaly). */
@@ -138,6 +149,7 @@ public final class MobsLethal implements Listener {
         this.clave = new NamespacedKey("edm", "lethal_world_mob");
         this.claveDistancia = new NamespacedKey("edm", "lethal_world_distancia");
         this.claveEspecial = new NamespacedKey(plugin, "especial");
+        this.claveBolaDevuelta = new NamespacedKey(plugin, "bola_devuelta");
     }
 
     /** El modulo anomaly de EDM (los esbirros). Sin EDM o sin ese modulo, no hay mobs. */
@@ -528,6 +540,8 @@ public final class MobsLethal implements Listener {
         }
         // Un ghast solo se fija en jugadores a menos de 4 bloques de su altura (Ghast.registerGoals), y
         // este nace de 8 a 16 por encima del suelo: sin darle el objetivo flotaria sin disparar.
+        // Ese objetivo puesto a mano no se vuelve a elegir, asi que ZonaSpawn.onApuntar nunca lo
+        // corta: si el jugador se mete en la zona spawn lo retiran alDisparar y retirarLejanos.
         if (mob instanceof Ghast g) g.setTarget(p);
         return mob;
     }
@@ -557,6 +571,11 @@ public final class MobsLethal implements Listener {
      * Calamity 1.8.5 · Las bolas de fuego de un especial (el Ghast Carmesi) se marcan al salir y no
      * prenden fuego. La marca va en la bola: si un jugador la devuelve de un golpe, el tirador pasa
      * a ser el, y sin ella volveria a romper bloques.
+     *
+     * Y ninguna sale hacia la zona spawn. El ghast tiene el objetivo puesto a mano y no lo suelta
+     * aunque el jugador entre en el spawn; desde fuera le seguiria tirando bolas (hasta 64 bloques,
+     * con IGNEO encima). Como con los minijefes (Hardcore.vigilarPresas), a la zona spawn no le
+     * sigue: la bola no sale y el especial se retira en humo.
      */
     @EventHandler(priority = EventPriority.HIGH, ignoreCancelled = true)
     public void alDisparar(ProjectileLaunchEvent e) {
@@ -564,8 +583,78 @@ public final class MobsLethal implements Listener {
         if (!(bola.getShooter() instanceof LivingEntity tirador)) return;
         String marca = tirador.getPersistentDataContainer().get(claveEspecial, PersistentDataType.STRING);
         if (marca == null) return;
+        Player enSpawn = objetivoEnSpawn(tirador);
+        if (enSpawn != null) {
+            e.setCancelled(true);
+            ((Mob) tirador).setTarget(null);
+            // Al tick siguiente: ahora esta en mitad de su propio turno de IA.
+            plugin.getServer().getScheduler().runTask(plugin, () -> {
+                if (!tirador.isValid()) return;
+                vivos.remove(tirador.getUniqueId());
+                puestoDe.remove(tirador.getUniqueId());
+                retirarEnHumo(tirador, enSpawn);
+            });
+            return;
+        }
         bola.getPersistentDataContainer().set(claveEspecial, PersistentDataType.STRING, marca);
         if (bola instanceof Explosive ex) ex.setIsIncendiary(false);
+    }
+
+    /**
+     * El jugador al que persigue ese especial si esta en la zona spawn, o null. Solo mira a los
+     * especiales: los demas mobs de Calamity eligen objetivo por su cuenta y ZonaSpawn.onApuntar
+     * ya se lo cancela.
+     */
+    private Player objetivoEnSpawn(Entity e) {
+        if (!(e instanceof Mob m) || !e.getPersistentDataContainer().has(claveEspecial, PersistentDataType.STRING)) return null;
+        return m.getTarget() instanceof Player p && zonaSegura(p.getLocation()) ? p : null;
+    }
+
+    /**
+     * Se deshace en humo y ceniza, como los mobs que se cuelan en el spawn (ZonaSpawn.retirar):
+     * sin muerte, asi que no paga nada. Quien lo llama lo quita de vivos.
+     */
+    private void retirarEnHumo(Entity e, Player objetivo) {
+        World w = e.getWorld();
+        Location l = e.getLocation();
+        Compat.spawn(w, Compat.LARGE_SMOKE, l.clone().add(0, 1, 0), 30, 0.8, 1, 0.8, 0.02);
+        Compat.spawn(w, Compat.ASH, l.clone().add(0, 1, 0), 24, 0.8, 1, 0.8, 0.02);
+        Compat.sound(w, l, "block.fire.extinguish", 0.6f, 1.2f);
+        String marca = e.getPersistentDataContainer().get(claveEspecial, PersistentDataType.STRING);
+        plugin.bitacora().anotar("spawn", "especial-retirado", marca == null ? "?" : marca, objetivo.getName(),
+                l.getBlockX() + " " + l.getBlockY() + " " + l.getBlockZ());
+        e.remove();
+    }
+
+    /**
+     * Calamity 1.8.5 · Una bola devuelta no mata al Ghast Carmesi de un golpe.
+     *
+     * Ghast.hurtServer (Paper 26.1.2) cambia el golpe de una bola grande que le devuelve un jugador
+     * por 1000 fijos: caia de una sola bola fuera del nivel que fuera (a nivel 100 tiene 872 de
+     * vida) y pagaba MobCoins y XP de destacado sin pelea. El 1000 pasa por este evento, asi que
+     * aqui se cambia por la parte de su vida de bola-devuelta (el 15 %). La condicion es la misma
+     * que la de vanilla (isReflectedFireball): la bola como golpe directo y un jugador detras.
+     *
+     * La misma bola le pega dos veces en el mismo tick, el impacto y su explosion, y las dos
+     * valdrian 1000; la segunda se anula para que cada bola devuelta cuente una sola vez.
+     */
+    @EventHandler(priority = EventPriority.HIGH, ignoreCancelled = true)
+    public void alDevolver(EntityDamageEvent e) {
+        if (!(e.getEntity() instanceof Ghast g)) return;
+        String marca = g.getPersistentDataContainer().get(claveEspecial, PersistentDataType.STRING);
+        if (marca == null) return;
+        DamageSource ds = e.getDamageSource();
+        if (!(ds.getDirectEntity() instanceof LargeFireball bola) || !(ds.getCausingEntity() instanceof Player)) return;
+        PersistentDataContainer pdc = bola.getPersistentDataContainer();
+        String quien = g.getUniqueId().toString();
+        if (quien.equals(pdc.get(claveBolaDevuelta, PersistentDataType.STRING))) {
+            e.setCancelled(true);
+            return;
+        }
+        pdc.set(claveBolaDevuelta, PersistentDataType.STRING, quien);
+        Apariciones.Especial esp = especiales.get(marca);
+        double fraccion = esp == null ? Apariciones.BOLA_DEVUELTA : esp.bolaDevuelta();
+        e.setDamage(Apariciones.golpeDevuelto(Compat.getAttribute(g, "max_health", g.getHealth()), fraccion));
     }
 
     /** La explosion de algo de un especial no prende fuego (Paper avisa aqui justo antes de explotar). */
@@ -1073,6 +1162,15 @@ public final class MobsLethal implements Listener {
             UUID id = it.next();
             Entity e = plugin.getServer().getEntity(id);
             if (e == null || !e.isValid()) {
+                it.remove();
+                puestoDe.remove(id);
+                continue;
+            }
+            // Calamity 1.8.5: un especial cuya presa esta en la zona spawn no se queda fuera
+            // esperandola (el ghast la tiene fijada a mano y el guardian la alcanza con su rayo).
+            Player enSpawn = objetivoEnSpawn(e);
+            if (enSpawn != null) {
+                retirarEnHumo(e, enSpawn);
                 it.remove();
                 puestoDe.remove(id);
                 continue;

@@ -98,12 +98,14 @@ public final class Apariciones {
      * @param tope         cuantos como mucho alrededor de cada jugador, contados en radioTope
      * @param hueco        suelo: bloques libres encima; aire y agua: lado del cubo libre
      * @param fatigaSegundos lo que dura la Fatiga minera que reparte (guardian anciano); 0 = vanilla
+     * @param bolaDevuelta parte de su vida maxima que le quita cada bola de fuego que le devuelve un
+     *                     jugador (solo cuenta en los ghasts; ver golpeDevuelto)
      */
     public record Especial(String clave, String nombre, EntityType entidad, Entorno entorno, List<String> biomas,
                            double probabilidad, int tope, double radioTope, int hueco,
                            int alturaMinima, int alturaMaxima, int profundidad,
                            double vidaBase, double vidaPorNivel, double danoBase, double danoPorNivel,
-                           List<String> habilidades, int fatigaSegundos) {
+                           List<String> habilidades, int fatigaSegundos, double bolaDevuelta) {
 
         /**
          * Si puede salir en ese bioma: su clave corta ("panacea/crimson_organism", la de
@@ -173,7 +175,8 @@ public final class Apariciones {
                     e.getDouble("vida-base", 80), e.getDouble("vida-por-nivel", 0.10),
                     e.getDouble("dano-base", 1.3), e.getDouble("dano-por-nivel", 0.05),
                     List.copyOf(habilidades),
-                    Math.max(0, e.getInt("fatiga-minera-segundos", 0))));
+                    Math.max(0, e.getInt("fatiga-minera-segundos", 0)),
+                    fraccionDevuelta(e.getDouble("bola-devuelta", BOLA_DEVUELTA))));
         }
         return out;
     }
@@ -207,6 +210,30 @@ public final class Apariciones {
             case CREAKING, RAVAGER, ENDERMAN, IRON_GOLEM, WARDEN -> 3;
             default -> 2;
         };
+    }
+
+    /**
+     * Lo que le quita a un ghast especial cada bola de fuego que un jugador le devuelve si su
+     * entrada no dice otra cosa: el 15 % de su vida maxima, siete bolas para tumbarlo.
+     */
+    public static final double BOLA_DEVUELTA = 0.15;
+
+    /**
+     * El dano de una bola devuelta a un ghast especial con esa vida maxima.
+     *
+     * En vanilla Ghast.hurtServer cambia el golpe de una bola que le devuelve un jugador por 1000
+     * fijos: un ghast de nivel 100 (872 de vida) caia de una sola bola y pagaba como destacado sin
+     * pelea. Con esto la vida por nivel vuelve a contar: cada bola quita la misma parte de su vida,
+     * sea del nivel que sea. Como poco 1, para que devolverla nunca sea inutil.
+     */
+    public static double golpeDevuelto(double vidaMaxima, double fraccion) {
+        return Math.max(1, Math.max(0, vidaMaxima) * fraccionDevuelta(fraccion));
+    }
+
+    /** La parte de la vida de una bola devuelta, entre el 1 % y el 100 % (una bola, como en vanilla). */
+    static double fraccionDevuelta(double f) {
+        if (Double.isNaN(f)) return BOLA_DEVUELTA;
+        return Math.max(0.01, Math.min(1, f));
     }
 
     /** El hueco que pide cada entorno si la config no dice otro. */
@@ -406,6 +433,15 @@ public final class Apariciones {
             h.ok("guardian es raro", gua.probabilidad() > 0 && gua.probabilidad() <= 0.05);
             h.igual("la Fatiga minera del guardian dura 60 s", 60, gua.fatigaSegundos());
 
+            // Una bola devuelta mataba al ghast de un golpe (1000 fijos de vanilla), fuera del nivel que fuera.
+            h.igual("ghast: cada bola devuelta le quita el 15 % de su vida", 0.15, gha.bolaDevuelta());
+            double vida100 = gha.vidaBase() * (1 + gha.vidaPorNivel() * 99);
+            double golpe100 = golpeDevuelto(vida100, gha.bolaDevuelta());
+            h.ok("ghast de nivel 100: una bola devuelta ya no lo mata (" + Math.round(golpe100) + " de " + Math.round(vida100) + ")",
+                    golpe100 < vida100 && golpe100 < 1000);
+            h.igual("ghast de nivel 1: hacen falta siete bolas", 7, (int) Math.ceil(gha.vidaBase() / golpeDevuelto(gha.vidaBase(), gha.bolaDevuelta()) - 1e-9));
+            h.igual("ghast de nivel 100: tambien siete", 7, (int) Math.ceil(vida100 / golpe100 - 1e-9));
+
             for (Especial e : todos) {
                 h.ok(e.clave() + ": vida y dano positivos", e.vidaBase() > 0 && e.danoBase() > 0
                         && e.vidaPorNivel() >= 0 && e.danoPorNivel() >= 0);
@@ -455,6 +491,12 @@ public final class Apariciones {
             h.igual("tope de serie", 1, bueno.tope());
         }
         h.igual("entorno que no existe", null, Entorno.de("mar"));
+        if (rotos.size() == 1) h.igual("sin bola-devuelta vale la de serie", BOLA_DEVUELTA, rotos.get(0).bolaDevuelta());
+        h.igual("bola devuelta: el 15 % de 400", 60.0, golpeDevuelto(400, 0.15));
+        h.igual("bola devuelta: por debajo del 1 % se sube al 1 %", 4.0, golpeDevuelto(400, 0));
+        h.igual("bola devuelta: por encima del 100 % se queda en una bola", 400.0, golpeDevuelto(400, 3));
+        h.igual("bola devuelta: con la vida rota quita 1", 1.0, golpeDevuelto(-5, 0.15));
+        h.igual("bola devuelta: un NaN en la config vale la de serie", 60.0, golpeDevuelto(400, Double.NaN));
         h.igual("altura de un creaking", 3, altoDe(EntityType.CREAKING));
         h.igual("altura de un zombi", 2, altoDe(EntityType.ZOMBIE));
 
