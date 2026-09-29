@@ -452,6 +452,16 @@ final class Parca implements Listener {
         return null;
     }
 
+    /**
+     * Calamity 1.8.5: si alguna PARCA le tiene puesto su cielo (lluvia o noche de sus fases). Clima
+     * no toca entonces ni el clima ni la hora de ese jugador: la PARCA no los repone si se los pisan.
+     */
+    boolean cieloSobre(Player p) {
+        if (p == null) return false;
+        for (ParcaViva pe : peleas) if (pe.ambienteSobre(p.getUniqueId())) return true;
+        return false;
+    }
+
     int vivas() {
         int n = 0;
         for (ParcaViva pe : peleas) if (pe.vivaParaJugadores()) n++;

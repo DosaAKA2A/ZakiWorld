@@ -153,6 +153,8 @@ public final class Hardcore implements Listener {
     private Tablero tablero;
     private Encuesta encuesta;
     private Eclipse eclipse;
+    /** Calamity 1.8.5: la lluvia acida de los biomas verdes y el cielo rojo. Null con las reglas apagadas. */
+    private Clima clima;
     /** Calamity 1.7: los niveles por distancia al spawn y su aviso. */
     private Distancia distancia;
     private Npcs npcs;
@@ -235,6 +237,8 @@ public final class Hardcore implements Listener {
     Tablero tablero() { return tablero; }
     Encuesta encuesta() { return encuesta; }
     Eclipse eclipse() { return eclipse; }
+    /** Lo leen Vineta (el borde del cielo rojo) y ParteDefuncion (el nombre del golpe). */
+    Clima clima() { return clima; }
     Distancia distancia() { return distancia; }
     /** Lo que abren los NPCs de la antesala (/calamidad abrir) y el Cronista. */
     Npcs npcs() { return npcs; }
@@ -390,6 +394,8 @@ public final class Hardcore implements Listener {
         tablero = crear("tablero", () -> new Tablero(this));
         encuesta = crear("encuesta", () -> new Encuesta(this));
         eclipse = crear("eclipse", () -> new Eclipse(this));
+        // 1.8.5: despues del Eclipse y de la Parca, a los que pregunta si el cielo es suyo.
+        clima = crear("clima", () -> new Clima(this));
         // Lo ultimo: los NPCs de la antesala solo abren lo que ya existe (Altar, Tablero...).
         npcs = crear("npcs", () -> new Npcs(this));
     }
@@ -406,6 +412,8 @@ public final class Hardcore implements Listener {
     /** Al reves de como nacieron: los de arriba usan a los de abajo mientras se paran. */
     private void pararModulos() {
         if (npcs != null) seguro("npcs", () -> npcs.parar());
+        if (clima != null) seguro("clima", () -> clima.parar());
+        clima = null;
         if (eclipse != null) seguro("eclipse", () -> eclipse.parar());
         if (encuesta != null) seguro("encuesta", () -> encuesta.parar());
         if (tablero != null) seguro("tablero", () -> tablero.parar());
@@ -616,6 +624,8 @@ public final class Hardcore implements Listener {
                 if (!spawn) {
                     drenar(p, e);
                     efectosDeBioma(p);
+                    // 1.8.5: lluvia acida y cielo rojo, solo con tormenta de verdad y fuera del spawn.
+                    if (clima != null) seguro("clima", () -> clima.segundo(p));
                 }
                 // 1.7: el aviso de franja de distancia, antes de pintar para que salga ya.
                 if (distancia != null) seguro("distancia", () -> distancia.segundo(p, spawn));
@@ -642,6 +652,8 @@ public final class Hardcore implements Listener {
         seguro("ecos", () -> ecos.tick());
         seguro("aduana", () -> aduana.tick());
         seguro("eclipse", () -> eclipse.tick());
+        // Quien no ha pasado por clima.segundo (spawn, espectador, fuera del mundo) recupera su cielo.
+        if (clima != null) seguro("clima", () -> clima.tick());
         if (++segundosManto >= 30) {
             segundosManto = 0;
             seguro("hitos", () -> hitos.tickManto());

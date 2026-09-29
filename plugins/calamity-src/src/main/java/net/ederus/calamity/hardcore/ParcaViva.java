@@ -114,4 +114,13 @@ interface ParcaViva {
 
     /** Retira todo lo suyo (idempotente). */
     void limpiar();
+
+    /**
+     * Calamity 1.8.5: si le esta poniendo su cielo a ese jugador (la lluvia de la fase III o la
+     * noche de la IV). Lo pregunta Clima para no pisarlo: mientras la PARCA pelea, el cielo es
+     * suyo. La de reserva no toca el cielo de nadie.
+     */
+    default boolean ambienteSobre(UUID jugador) {
+        return false;
+    }
 }

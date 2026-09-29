@@ -71,9 +71,16 @@ final class ParteDefuncion implements Listener {
      * @param nivelMob  nivel del mob que le mato (0 = no era un mob con nivel)
      * @param nivelSuyo su nivel (MobsLethal.nivelBase: rango y poder, sin los extras de dentro)
      * @param cable     se desconecto con la etiqueta de combate (Combate.cable)
+     * @param clima     1.8.5: el golpe que mato fue del clima (Clima.CAUSA_ACIDA o CAUSA_CIELO), o null
      */
     record Causas(boolean parca, double cordura, String ecoDe, String asesino, DamageCause causa,
-                  int nivelMob, int nivelSuyo, boolean cable) {
+                  int nivelMob, int nivelSuyo, boolean cable, String clima) {
+
+        /** Sin clima, como antes de la 1.8.5 (las pruebas de siempre la usan asi). */
+        Causas(boolean parca, double cordura, String ecoDe, String asesino, DamageCause causa,
+               int nivelMob, int nivelSuyo, boolean cable) {
+            this(parca, cordura, ecoDe, asesino, causa, nivelMob, nivelSuyo, cable, null);
+        }
     }
 
     /** El "por que" elegido: su id (P-D0x, para la Bitacora y la telemetria) y el texto. */
@@ -162,7 +169,11 @@ final class ParteDefuncion implements Listener {
         double factor = e.getCause() == DamageCause.FALL ? hc.cfg().getDouble("dificultad.dano-caida", 2.0)
                 : e.getCause() == DamageCause.DROWNING ? hc.cfg().getDouble("dificultad.dano-ahogo", 2.0) : 1;
         if (factor > 1) marcas.add(marcaEntorno(factor));
-        apuntar(v, golpe(v, fuente, nombreCausa(e.getCause()), dano, marcas));
+        // 1.8.5: un golpe del clima se apunta con su nombre ("lluvia ácida") y no como "magia".
+        Clima clima = hc.clima();
+        String deClima = clima == null ? null : clima.golpeEnCurso(v.getUniqueId());
+        if (Clima.CAUSA_CIELO.equals(deClima)) marcas.add("fuego");
+        apuntar(v, golpe(v, fuente, deClima != null ? deClima : nombreCausa(e.getCause()), dano, marcas));
     }
 
     private void apuntar(Player v, Golpe g) {
@@ -297,17 +308,28 @@ final class ParteDefuncion implements Listener {
         else if (quien == null && ultimo != null && ultimo.amenaza() == null && !ultimo.deJugador()) nivelMob = ultimo.nivel();
         MobsLethal mobs = hc.plugin().mobs();
         int suyo = mobs == null ? 0 : hc.valor("parte", () -> mobs.nivelBase(p), 0);
-        return new Causas(parca, cordura, ecoDe, jugador, causa, nivelMob, suyo, cable);
+        // 1.8.5: si el golpe que mato fue la lluvia acida o el cielo rojo, el "por que" lo dice.
+        String clima = Clima.causaDeMuerte(ultimo == null ? null : ultimo.causa(), causa);
+        return new Causas(parca, cordura, ecoDe, jugador, causa, nivelMob, suyo, cable, clima);
     }
 
     /**
-     * La linea de "por que": la PRIMERA que aplica en el orden de DIS M7 (P-D01 a P-D08).
+     * La linea de "por que": la PRIMERA que aplica en el orden de DIS M7 (P-D01 a P-D08), con
+     * las del clima (P-D10 lluvia acida, P-D11 cielo rojo, 1.8.5) justo detras de la PARCA.
      * P-D09 (el Eco) no compite: va debajo cuando hay Eco. Null si no aplica ninguna.
      */
     static PorQue porQue(Causas c) {
         if (c == null) return null;
         // P-D01: tambien mata a quien la ayudaba a tumbar, asi que se dice la regla y no "te quedaste quieto".
         if (c.parca()) return new PorQue("P-D01", "Te ha matado la Parca. Viene a por quien pasa demasiado tiempo quieto.");
+        /* 1.8.5: el clima va antes que la cordura a 0. El golpe que mato fue suyo, y lo que sirve
+         * saber es como evitarlo la proxima vez, no que salian mas mobs. */
+        if (Clima.CAUSA_ACIDA.equals(c.clima())) {
+            return new PorQue("P-D10", "Te ha matado la lluvia ácida. En los biomas verdes quema a quien está a cielo abierto: cuando llueva, busca un techo.");
+        }
+        if (Clima.CAUSA_CIELO.equals(c.clima())) {
+            return new PorQue("P-D11", "Te ha matado el cielo rojo. Cuando llueve en el bioma rojo, arde cada poco: sal de allí o lleva resistencia al fuego.");
+        }
         if (c.cordura() <= 0) return new PorQue("P-D02", "Tu cordura llegó a 0: sin cordura salen más mobs y minijefes.");
         if (c.ecoDe() != null) {
             return new PorQue("P-D03", "Te ha matado el Eco de " + c.ecoDe() + ": pelea con el equipo que llevaba al morir.");
