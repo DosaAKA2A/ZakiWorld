@@ -87,7 +87,89 @@ mobs:
   xp: {comun: 20, destacado: 60, minijefe: 1500}
 
   # bioma -> tipos. Se escribe sola la primera vez; se puede editar.
+  # Cada bioma: comunes (tantos como se quiera, salen al azar) y un destacado aparte.
   biomas: {}
+
+  # Mobs especiales (Calamity 1.8.5): bichos que no salen de la tabla de su bioma porque
+  # necesitan un sitio propio: en el aire (ghast), en el agua (guardian anciano) o con mas
+  # altura que un zombi (creaking). En cada ciclo, ademas del mob normal, cada especial que
+  # toca en el bioma del jugador tira su dado; primero se elige el bicho y luego se le busca
+  # sitio. Como mucho sale un especial por jugador y ciclo. Cada uno tiene su propio tope, asi que
+  # salen aunque tope-por-jugador este lleno; mientras viven cuentan dentro de el y dejan
+  # sitio de menos a los normales.
+  # Cobran como destacados (MobCoins y XP de destacado) y sus bolas de fuego no rompen
+  # bloques ni prenden fuego.
+  #
+  # Sus fichas estan en /esb, carpeta "Lethal World · Especiales": se crean solas si faltan y
+  # se buscan por su nombre visible. La entidad, la vida y el dano los manda esta seccion (se
+  # copian a la ficha al arrancar); el color, el aspecto, las habilidades y el botin se tocan
+  # en /esb. Esta seccion se lee al arrancar el plugin. Si la copias al config.yml del
+  # servidor, manda la tuya entera (las entradas que no copies no salen).
+  #
+  #   nombre          nombre visible de su ficha en /esb
+  #   entidad         tipo de entidad de Minecraft (CREAKING, GHAST, ELDER_GUARDIAN...)
+  #   entorno         suelo | aire | agua: donde se le busca sitio
+  #   biomas          lista de "panacea/<id>"; "*" = cualquier bioma con mobs de Lethal World
+  #   probabilidad    de salir en cada intento (uno por jugador cada cada-ticks)
+  #   tope            como mucho estos vivos alrededor de cada jugador...
+  #   radio-tope      ...contados en este radio (los ghasts se alejan flotando: radio amplio)
+  #   hueco           suelo: bloques libres encima; aire y agua: lado del cubo libre que pide
+  #   altura-minima, altura-maxima   (aire) bloques por encima del suelo
+  #   profundidad     (agua) bloques de agua que ha de tener la columna como minimo
+  #   vida-base, vida-por-nivel      vida = base x (1 + por-nivel x (nivel - 1))
+  #   dano-base, dano-por-nivel      su dano vanilla se multiplica por lo mismo con estos
+  #   habilidades     las de los esbirros de EDM; se ponen al crear la ficha
+  especiales:
+    activos: true
+    crujidor:
+      nombre: "Crujidor Pálido"
+      entidad: CREAKING
+      entorno: suelo
+      biomas: ["panacea/conure_conclave", "panacea/ravenous_greenwood", "panacea/hungering_jungle"]
+      probabilidad: 0.05
+      tope: 2
+      radio-tope: 48
+      hueco: 3                  # mide 2,7 de alto
+      vida-base: 90
+      vida-por-nivel: 0.10
+      dano-base: 1.4
+      dano-por-nivel: 0.05
+      habilidades: [ESPINAS]    # devuelve parte de los golpes cuerpo a cuerpo
+    ghast:
+      nombre: "Ghast Carmesí"
+      entidad: GHAST
+      entorno: aire
+      biomas: ["panacea/crimson_organism", "panacea/condemned_taiga"]
+      probabilidad: 0.03
+      tope: 1
+      radio-tope: 96
+      hueco: 5
+      altura-minima: 8
+      altura-maxima: 16
+      vida-base: 80
+      vida-por-nivel: 0.10
+      dano-base: 1.0            # su bola de fuego ya pega mucho: sube menos que un golpe cuerpo a cuerpo
+      dano-por-nivel: 0.03
+      habilidades: [IGNEO]      # deja ardiendo al que alcanza
+    guardian:
+      nombre: "Guardián Anciano"
+      entidad: ELDER_GUARDIAN
+      entorno: agua
+      biomas: ["*"]
+      probabilidad: 0.02
+      tope: 1
+      radio-tope: 64
+      hueco: 2
+      profundidad: 3
+      vida-base: 110
+      vida-por-nivel: 0.10
+      dano-base: 1.0            # su rayo atraviesa la armadura: se escala menos
+      dano-por-nivel: 0.03
+      habilidades: [ACORAZADO]
+      # En vanilla su Fatiga minera dura 5 minutos y llega a 50 bloques. Aqui dura esto, y el
+      # guardian la renueva cada minuto mientras sigas cerca: se pasa al alejarte o al matarlo.
+      # 0 = como en vanilla.
+      fatiga-minera-segundos: 60
 
 # ---------------------------------------------------------------------------
 # CALAMITY Y LOS MUNDOS HARDCORE

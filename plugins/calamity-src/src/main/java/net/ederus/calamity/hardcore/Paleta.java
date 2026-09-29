@@ -81,6 +81,21 @@ public final class Paleta {
     public static final int MINIJEFE_DESDE = 0xFF7A7A;
     public static final int MINIJEFE_HASTA = 0xE63946;
     /*
+     * Calamity 1.8.5 · Los mobs especiales de Lethal World (Apariciones): el color con el que nace
+     * su ficha en /esb, que es el de su nombre en el cartel. Tonos claros, cada uno con el color del
+     * bicho, para que se lean sobre el mundo (el del ghast, tambien contra el cielo del organismo).
+     */
+    /** Crujidor Palido (creaking): el blanco hueso del roble palido. */
+    public static final int CRUJIDOR = 0xE3DCCB;
+    /** Ghast Carmesi: coral carmesi, lo bastante claro para leerse contra un cielo rojo. */
+    public static final int GHAST_CARMESI = 0xFF7468;
+    /** Guardian Anciano: verde prismarina. */
+    public static final int GUARDIAN_ANCIANO = 0x7FD1C0;
+    /** Un especial que el staff anada en la config con otra entidad: el ambar de las cifras. */
+    public static final int ESPECIAL = 0xFFD27A;
+    /** La carpeta "Lethal World · Especiales" de /esb: lavanda claro. */
+    public static final int CARPETA_ESPECIALES = 0xC7B8E8;
+    /*
      * Titulos de ventana (inventarios): "CALAMITY | Seccion". Colores planos y oscuros, porque van
      * sobre el gris claro (~#C6C6C6) de la interfaz y sin sombra: el degradado marron rojizo de
      * antes se leia mal. La marca en rojo intenso, la barra en gris oscuro y la seccion en carbon.

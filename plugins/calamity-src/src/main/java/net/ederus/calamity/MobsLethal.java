@@ -2,6 +2,7 @@ package net.ederus.calamity;
 
 import java.io.File;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -22,20 +23,30 @@ import org.bukkit.block.Block;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.entity.AbstractSkeleton;
+import org.bukkit.entity.Creaking;
 import org.bukkit.entity.Enemy;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.EntityType;
+import org.bukkit.entity.Explosive;
+import org.bukkit.entity.Ghast;
 import org.bukkit.entity.LivingEntity;
 import org.bukkit.entity.Phantom;
 import org.bukkit.entity.Player;
+import org.bukkit.entity.Projectile;
 import org.bukkit.entity.Zombie;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
 import org.bukkit.event.entity.CreatureSpawnEvent;
 import org.bukkit.event.entity.EntityDeathEvent;
+import org.bukkit.event.entity.EntityExplodeEvent;
+import org.bukkit.event.entity.EntityPotionEffectEvent;
+import org.bukkit.event.entity.ExplosionPrimeEvent;
+import org.bukkit.event.entity.ProjectileLaunchEvent;
 import org.bukkit.generator.structure.GeneratedStructure;
 import org.bukkit.persistence.PersistentDataType;
+import org.bukkit.potion.PotionEffect;
+import org.bukkit.potion.PotionEffectType;
 import org.bukkit.scheduler.BukkitTask;
 import org.bukkit.util.BoundingBox;
 
@@ -49,8 +60,10 @@ import net.ederus.edm.anomaly.minions.MinionPresence;
 import net.ederus.edm.anomaly.minions.MinionRegistry;
 import net.ederus.edm.anomaly.minions.MinionType;
 import net.ederus.edm.comun.Compat;
+import net.ederus.calamity.hardcore.Apariciones;
 import net.ederus.calamity.hardcore.Hardcore;
 import net.ederus.calamity.hardcore.Marcas;
+import net.ederus.calamity.hardcore.Paleta;
 import net.ederus.lethalworld.LethalWorldPlugin;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
@@ -66,6 +79,9 @@ import net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer;
  *  - Los que ya traen las estructuras y los que salen de spawners se ADOPTAN: nivel, cartel
  *    y dano por nivel, sin cambiar la entidad y con su nombre. Los que se llaman como un
  *    minijefe reciben nivel extra y mucha vida.
+ *  - Calamity 1.8.5: los especiales (mobs.especiales: creaking, ghast y guardian anciano) salen
+ *    aparte, cada uno en su sitio (suelo con mas altura, aire o agua) y con su propio tope. Las
+ *    reglas puras (tabla, especiales, busqueda de sitio) estan en hardcore.Apariciones.
  *  - Las estructuras que venian vacias tienen guarnicion: al acercarse un jugador aparecen
  *    unos cuantos del tipo que se les asigne, y vuelven un rato despues de caer.
  *  - Nivel = rango de rankup x A + poder de AuraSkills / B, del jugador mas cercano.
@@ -82,8 +98,12 @@ public final class MobsLethal implements Listener {
     private final Random random = new Random();
     private final Set<UUID> vivos = new HashSet<>();
     private final Map<String, Double> baseMonedas = new HashMap<>();
-    /** bioma -> [comun, comun, destacado?], leido de la config al arrancar. */
-    private final Map<String, List<String>> tabla = new HashMap<>();
+    /** bioma -> lo que sale ahi (comunes y destacado aparte), leido de la config al arrancar. */
+    private final Map<String, Apariciones.Tabla> tabla = new HashMap<>();
+    /** Calamity 1.8.5: los mobs especiales (mobs.especiales), por su clave, leidos al arrancar. */
+    private final Map<String, Apariciones.Especial> especiales = new java.util.LinkedHashMap<>();
+    /** Calamity 1.8.5: clave del especial -> id de su ficha en /esb. */
+    private final Map<String, String> fichaEspecial = new HashMap<>();
     /** estructura -> guarnicion, leido de la config al arrancar. */
     private final Map<String, Guarnicion> guarniciones = new HashMap<>();
     /** Cada estructura con guarnicion (mundo + centro) y sus mobs vivos. */
@@ -96,6 +116,11 @@ public final class MobsLethal implements Listener {
      * las crias de Division lo hereden). Al morir sus MobCoins suben por ellos (mobcoinsDe).
      */
     private final NamespacedKey claveDistancia;
+    /**
+     * Calamity 1.8.5: la marca de un mob especial (su clave en mobs.especiales). La llevan tambien
+     * sus bolas de fuego desde que salen, para que no rompan bloques aunque alguien las devuelva.
+     */
+    private final NamespacedKey claveEspecial;
     private BukkitTask aparicion;
     private BukkitTask limpieza;
     /** Calamity 1.8.4: el cartel de los minijefes con su formato (null sin el modulo anomaly). */
@@ -112,6 +137,7 @@ public final class MobsLethal implements Listener {
          * reconocer a los suyos y los adoptaria otra vez desde cero. */
         this.clave = new NamespacedKey("edm", "lethal_world_mob");
         this.claveDistancia = new NamespacedKey("edm", "lethal_world_distancia");
+        this.claveEspecial = new NamespacedKey(plugin, "especial");
     }
 
     /** El modulo anomaly de EDM (los esbirros). Sin EDM o sin ese modulo, no hay mobs. */
@@ -143,10 +169,13 @@ public final class MobsLethal implements Listener {
         }
         sembrar(a.minions());
         cargarTabla();
+        cargarEspeciales(a.minions());
         cargarGuarniciones();
         cargarMonedas();
         a.minionManager().heredable(clave);
         a.minionManager().heredable(claveDistancia);
+        // Si alguien le pone Division a un especial en /esb, sus crias siguen siendo especiales.
+        a.minionManager().heredable(claveEspecial);
         // Antes de mirar "activos": con los mobs apagados, las reglas hardcore siguen invocando minijefes.
         carteles = new CartelesMinijefe(plugin, a);
         plugin.getServer().getPluginManager().registerEvents(carteles, plugin);
@@ -201,7 +230,11 @@ public final class MobsLethal implements Listener {
                 // Calamity 1.2: a quien esta en la zona spawn no le sale nada alrededor.
                 if (zonaSegura(p.getLocation())) continue;
                 int topeDelJugador = tope + (plugin.hardcore() == null ? 0 : plugin.hardcore().bonusTope(p));
-                if (cerca(p, radioConteo) >= topeDelJugador) continue;
+                int alrededor = cerca(p, radioConteo);
+                // 1.8.5: los especiales van aparte y con su propio tope, para que salgan aunque el
+                // normal este lleno (lo esta casi siempre). Mientras viven cuentan dentro de el.
+                if (intentarEspecial(p, min, max)) alrededor++;
+                if (alrededor >= topeDelJugador) continue;
                 Location sitio = sitio(p, min, max);
                 if (sitio != null) invocar(p, sitio);
             }
@@ -210,11 +243,27 @@ public final class MobsLethal implements Listener {
 
     /** Un mob del bioma de ese sitio, con el nivel del jugador. Null si el bioma no tiene tabla. */
     private LivingEntity invocar(Player p, Location sitio) {
-        List<String> candidatos = tabla.get(sitio.getBlock().getBiome().getKey().asString());
-        if (candidatos == null) return null;
-        boolean destacado = candidatos.size() > 2 && random.nextDouble() < cfg().getDouble("probabilidad-destacado", 0.05);
-        String id = destacado ? candidatos.get(2) : candidatos.get(random.nextInt(Math.min(2, candidatos.size())));
-        return invocarTipo(p, id, destacado, sitio);
+        Apariciones.Tabla t = tabla.get(sitio.getBlock().getBiome().getKey().asString());
+        if (t == null) return null;
+        Apariciones.Eleccion sale = t.elegir(random.nextDouble(), cfg().getDouble("probabilidad-destacado", 0.05),
+                random.nextInt(t.comunes().size()));
+        if (!cabe(sitio, sale.id())) return null;
+        return invocarTipo(p, sale.id(), sale.destacado(), sitio);
+    }
+
+    /**
+     * Calamity 1.8.5: sitio() deja dos bloques libres, y los que pasan de dos de alto (el ravager, o
+     * un creaking que alguien meta en la tabla) nacian con la cabeza dentro del bloque de arriba. Si
+     * al que ha salido no le cabe, este ciclo no sale nada.
+     */
+    private boolean cabe(Location sitio, String id) {
+        AnomalyPlugin a = anomaly();
+        MinionType tipo = a == null ? null : a.minions().type(id);
+        int alto = tipo == null ? 2 : Apariciones.altoDe(tipo.entity());
+        for (int h = 2; h < alto; h++) {
+            if (!sitio.clone().add(0, h, 0).getBlock().isPassable()) return false;
+        }
+        return true;
     }
 
     private LivingEntity invocarTipo(Player p, String id, boolean destacado, Location sitio) {
@@ -321,24 +370,260 @@ public final class MobsLethal implements Listener {
      * cargado, o null. Publico: la PARCA y el Eco buscan sitio igual que los mobs.
      */
     public Location sitio(Player p, int min, int max) {
+        return sitio(p, min, max, 2);
+    }
+
+    /**
+     * Lo mismo con 'alto' bloques libres encima (sin agua ni lava) en vez de dos. Calamity 1.8.5:
+     * el Crujidor Palido (creaking) mide 2,7 y con dos nacia con la cabeza dentro de un bloque.
+     */
+    public Location sitio(Player p, int min, int max, int alto) {
         World w = p.getWorld();
+        Apariciones.Sondeo mundo = sondeo(w);
         for (int intento = 0; intento < 4; intento++) {
-            double ang = random.nextDouble() * Math.PI * 2;
-            double d = min + random.nextDouble() * Math.max(1, max - min);
-            int x = p.getLocation().getBlockX() + (int) Math.round(Math.cos(ang) * d);
-            int z = p.getLocation().getBlockZ() + (int) Math.round(Math.sin(ang) * d);
+            int[] xz = puntoAlrededor(p, min, max);
+            int x = xz[0], z = xz[1];
             if (!w.isChunkLoaded(x >> 4, z >> 4)) continue;
             int y = w.getHighestBlockYAt(x, z, HeightMap.MOTION_BLOCKING_NO_LEAVES);
-            Block suelo = w.getBlockAt(x, y, z);
-            if (!suelo.getType().isSolid() || suelo.isLiquid() || suelo.getType() == Material.LAVA) continue;
-            Block pies = w.getBlockAt(x, y + 1, z), cabeza = w.getBlockAt(x, y + 2, z);
-            if (!pies.isPassable() || !cabeza.isPassable() || pies.isLiquid()) continue;
+            if (!Apariciones.suelo(mundo, x, y, z, alto)) continue;
             if (Math.abs(y - p.getLocation().getBlockY()) > 24) continue;
             return new Location(w, x + 0.5, y + 1, z + 0.5);
         }
         return null;
     }
 
+    /**
+     * Calamity 1.8.5 · Un sitio en el aire para un volador (el ghast): a distancia del jugador, entre
+     * alturaMin y alturaMax bloques sobre lo mas alto de la columna (copas de los arboles incluidas),
+     * con un cubo de aire de 'lado' bloques alrededor. En el suelo, con dos de aire, un ghast (4 x 4 x 4)
+     * se asfixia o se queda atascado entre los arboles.
+     */
+    private Location sitioAire(Player p, int min, int max, int alturaMin, int alturaMax, int lado) {
+        World w = p.getWorld();
+        Apariciones.Sondeo mundo = sondeo(w);
+        for (int intento = 0; intento < 6; intento++) {
+            int[] xz = puntoAlrededor(p, min, max);
+            int x = xz[0], z = xz[1];
+            if (!w.isChunkLoaded(x >> 4, z >> 4)) continue;
+            int suelo = w.getHighestBlockYAt(x, z, HeightMap.MOTION_BLOCKING);
+            // Con el jugador en una cueva, un ghast en el cielo ni le ve ni pinta nada.
+            if (Math.abs(suelo - p.getLocation().getBlockY()) > 24) continue;
+            int altura = alturaMin + random.nextInt(Math.max(1, alturaMax - alturaMin + 1));
+            if (suelo + altura + lado >= w.getMaxHeight()) continue;
+            Integer y = Apariciones.aire(mundo, x, suelo, z, altura, lado);
+            if (y != null) return new Location(w, x + 0.5, y, z + 0.5);
+        }
+        return null;
+    }
+
+    /**
+     * Calamity 1.8.5 · Un sitio en el agua para un nadador (el guardian anciano): una columna que sea
+     * agua desde arriba al menos 'profundidad' bloques y un cubo de agua de 'lado' bloques bajo la
+     * superficie. En Panacea no hay oceanos ni rios como bioma: el agua son lagos de cualquier bioma
+     * (todo lo que queda por debajo de y=43), asi que se mira el bloque y no el bioma. Mas intentos
+     * que en tierra, porque la mayoria de los puntos al azar caen en seco.
+     */
+    private Location sitioAgua(Player p, int min, int max, int profundidad, int lado) {
+        World w = p.getWorld();
+        Apariciones.Sondeo mundo = sondeo(w);
+        for (int intento = 0; intento < 8; intento++) {
+            int[] xz = puntoAlrededor(p, min, max);
+            int x = xz[0], z = xz[1];
+            if (!w.isChunkLoaded(x >> 4, z >> 4)) continue;
+            // Este heightmap cuenta los fluidos: lo mas alto de la columna es la superficie del lago.
+            int superficie = w.getHighestBlockYAt(x, z, HeightMap.MOTION_BLOCKING);
+            if (Math.abs(superficie - p.getLocation().getBlockY()) > 24) continue;
+            Integer y = Apariciones.agua(mundo, x, superficie, z, profundidad, lado);
+            if (y != null) return new Location(w, x + lado / 2.0, y, z + lado / 2.0);
+        }
+        return null;
+    }
+
+    /** Un punto al azar a entre min y max bloques del jugador en horizontal, como {x, z}. */
+    private int[] puntoAlrededor(Player p, int min, int max) {
+        double ang = random.nextDouble() * Math.PI * 2;
+        double d = min + random.nextDouble() * Math.max(1, max - min);
+        int x = p.getLocation().getBlockX() + (int) Math.round(Math.cos(ang) * d);
+        int z = p.getLocation().getBlockZ() + (int) Math.round(Math.sin(ang) * d);
+        return new int[]{x, z};
+    }
+
+    /**
+     * El mundo visto como Apariciones.Celda, bloque a bloque. Un bloque de un chunk sin cargar
+     * cuenta como solido: leerlo lo cargaria de golpe, y un cubo de 5 al borde de un chunk puede
+     * asomar al de al lado.
+     */
+    private static Apariciones.Sondeo sondeo(World w) {
+        return (x, y, z) -> w.isChunkLoaded(x >> 4, z >> 4) ? celda(w.getBlockAt(x, y, z)) : Apariciones.Celda.SOLIDO;
+    }
+
+    private static Apariciones.Celda celda(Block b) {
+        Material m = b.getType();
+        if (m == Material.LAVA) return Apariciones.Celda.LAVA;
+        if (m == Material.WATER || m == Material.BUBBLE_COLUMN || m == Material.KELP || m == Material.KELP_PLANT
+                || m == Material.SEAGRASS || m == Material.TALL_SEAGRASS) {
+            return Apariciones.Celda.AGUA;
+        }
+        if (b.isEmpty()) return Apariciones.Celda.AIRE;
+        if (m.isSolid()) return Apariciones.Celda.SOLIDO;
+        return b.isPassable() && !b.isLiquid() ? Apariciones.Celda.PASABLE : Apariciones.Celda.SOLIDO;
+    }
+
+    // ------------------------------------------------------------ mobs especiales
+
+    /**
+     * Calamity 1.8.5 · Los especiales que tocan en el bioma del jugador, en orden al azar: cada uno
+     * tira su dado y, si sale y aun no llega a su tope, se le busca sitio segun su entorno. Primero
+     * el bicho y luego el sitio, porque un ghast no cabe donde un zombi y un guardian solo nada en
+     * el agua. Sale uno como mucho por jugador y ciclo; true si ha salido.
+     */
+    private boolean intentarEspecial(Player p, int min, int max) {
+        if (especiales.isEmpty()) return false;
+        NamespacedKey aqui = p.getLocation().getBlock().getBiome().getKey();
+        List<Apariciones.Especial> lista = Apariciones.candidatos(List.copyOf(especiales.values()),
+                aqui.getKey(), aqui.asString(), tabla.containsKey(aqui.asString()));
+        if (lista.isEmpty()) return false;
+        Collections.shuffle(lista, random);
+        for (Apariciones.Especial e : lista) {
+            if (random.nextDouble() >= e.probabilidad()) continue;
+            if (especialesCerca(p, e) >= e.tope()) continue;
+            Location sitio = switch (e.entorno()) {
+                case SUELO -> sitio(p, min, max, e.hueco());
+                case AIRE -> sitioAire(p, min, max, e.alturaMinima(), e.alturaMaxima(), e.hueco());
+                case AGUA -> sitioAgua(p, min, max, e.profundidad(), e.hueco());
+            };
+            if (sitio == null) continue;
+            // El sitio cae a 20-40 bloques: puede ser ya otro bioma, y ahi no le toca.
+            NamespacedKey alli = sitio.getBlock().getBiome().getKey();
+            if (!e.valeEn(alli.getKey(), alli.asString(), tabla.containsKey(alli.asString()))) continue;
+            if (invocarEspecial(p, e, sitio) != null) return true;
+        }
+        return false;
+    }
+
+    /**
+     * Un especial en ese sitio: nace por invocarTipo como un destacado (nivel de destacado, marca
+     * "destacado" para que el Grifo le pague MobCoins y XP de destacado, zona segura y lista de
+     * vivos) y ademas lleva la marca de especial con su clave.
+     */
+    private LivingEntity invocarEspecial(Player p, Apariciones.Especial e, Location sitio) {
+        AnomalyPlugin a = anomaly();
+        String id = fichaEspecial.get(e.clave());
+        MinionType tipo = a == null || id == null ? null : a.minions().type(id);
+        // Si alguien le ha cambiado el bicho en /esb desde el arranque, no se planta un zombi en el aire.
+        if (tipo == null || tipo.entity() != e.entidad()) return null;
+        LivingEntity mob = invocarTipo(p, id, true, sitio);
+        if (mob == null) return null;
+        mob.getPersistentDataContainer().set(claveEspecial, PersistentDataType.STRING, e.clave());
+        if (mob instanceof Creaking c) {
+            /* Comprobado en Paper 26.1.2 (Creaking.hurtServer y tick): sin corazon (getHome null) es un
+             * mob normal que se puede matar, y solo se deshace solo si tiene uno. spawnEntity nunca se
+             * lo pone; si algun dia naciera con corazon seria inmortal, y la API no deja quitarselo. */
+            if (c.getHome() != null) {
+                vivos.remove(mob.getUniqueId());
+                mob.remove();
+                return null;
+            }
+            c.activate(p);
+        }
+        // Un ghast solo se fija en jugadores a menos de 4 bloques de su altura (Ghast.registerGoals), y
+        // este nace de 8 a 16 por encima del suelo: sin darle el objetivo flotaria sin disparar.
+        if (mob instanceof Ghast g) g.setTarget(p);
+        return mob;
+    }
+
+    /** Cuantos de ese especial hay vivos a menos de su radio-tope del jugador. */
+    private int especialesCerca(Player p, Apariciones.Especial e) {
+        int n = 0;
+        double r2 = e.radioTope() * e.radioTope();
+        for (UUID id : vivos) {
+            Entity en = plugin.getServer().getEntity(id);
+            if (en == null || !en.getWorld().equals(p.getWorld())) continue;
+            if (!e.clave().equals(en.getPersistentDataContainer().get(claveEspecial, PersistentDataType.STRING))) continue;
+            if (en.getLocation().distanceSquared(p.getLocation()) <= r2) n++;
+        }
+        return n;
+    }
+
+    /** Si ese mob o ese proyectil es de un especial: por su propia marca o por la de quien lo disparo. */
+    private boolean deEspecial(Entity en) {
+        if (en == null) return false;
+        if (en.getPersistentDataContainer().has(claveEspecial, PersistentDataType.STRING)) return true;
+        return en instanceof Projectile pr && pr.getShooter() instanceof LivingEntity tirador
+                && tirador.getPersistentDataContainer().has(claveEspecial, PersistentDataType.STRING);
+    }
+
+    /**
+     * Calamity 1.8.5 · Las bolas de fuego de un especial (el Ghast Carmesi) se marcan al salir y no
+     * prenden fuego. La marca va en la bola: si un jugador la devuelve de un golpe, el tirador pasa
+     * a ser el, y sin ella volveria a romper bloques.
+     */
+    @EventHandler(priority = EventPriority.HIGH, ignoreCancelled = true)
+    public void alDisparar(ProjectileLaunchEvent e) {
+        Projectile bola = e.getEntity();
+        if (!(bola.getShooter() instanceof LivingEntity tirador)) return;
+        String marca = tirador.getPersistentDataContainer().get(claveEspecial, PersistentDataType.STRING);
+        if (marca == null) return;
+        bola.getPersistentDataContainer().set(claveEspecial, PersistentDataType.STRING, marca);
+        if (bola instanceof Explosive ex) ex.setIsIncendiary(false);
+    }
+
+    /** La explosion de algo de un especial no prende fuego (Paper avisa aqui justo antes de explotar). */
+    @EventHandler(priority = EventPriority.HIGH, ignoreCancelled = true)
+    public void alCebar(ExplosionPrimeEvent e) {
+        if (deEspecial(e.getEntity())) e.setFire(false);
+    }
+
+    /**
+     * Ni rompe bloques: la explosion sigue haciendo su dano a quien pille (y EDM lo escala por
+     * nivel), pero el terreno de Calamity no se llena de crateres de ghast.
+     */
+    @EventHandler(priority = EventPriority.HIGH, ignoreCancelled = true)
+    public void alExplotar(EntityExplodeEvent e) {
+        if (!deEspecial(e.getEntity())) return;
+        e.blockList().clear();
+        e.setYield(0);
+    }
+
+    /**
+     * Calamity 1.8.5 · La Fatiga minera del Guardian Anciano. En vanilla dura 5 minutos y llega a 50
+     * bloques: con uno escondido en un lago te quedabas sin picar mucho despues de dejarlo atras.
+     * Aqui dura fatiga-minera-segundos (60). Vanilla la renueva cada minuto mientras sigues cerca, asi
+     * que aprieta igual mientras esta y se pasa enseguida cuando te alejas o lo matas.
+     */
+    @EventHandler(priority = EventPriority.HIGH, ignoreCancelled = true)
+    public void alFatigar(EntityPotionEffectEvent e) {
+        if (!(e.getEntity() instanceof Player p) || e.getCause() != EntityPotionEffectEvent.Cause.ATTACK) return;
+        PotionEffect nueva = e.getNewEffect();
+        if (nueva == null || !PotionEffectType.MINING_FATIGUE.equals(nueva.getType())) return;
+        int tope = fatigaCerca(p) * 20;
+        if (tope <= 0 || nueva.getDuration() <= tope) return;
+        e.setCancelled(true);
+        p.addPotionEffect(nueva.withDuration(tope));
+    }
+
+    /**
+     * Los segundos de Fatiga del especial que la reparte, si hay uno a los 50 bloques del guardian
+     * anciano vanilla (el mas largo si hay varios). 0 si no hay ninguno: la Fatiga viene de otro
+     * sitio y no se toca.
+     */
+    private int fatigaCerca(Player p) {
+        int segundos = 0;
+        for (UUID id : vivos) {
+            Entity en = plugin.getServer().getEntity(id);
+            if (en == null || !en.getWorld().equals(p.getWorld())) continue;
+            if (en.getLocation().distanceSquared(p.getLocation()) > 52 * 52) continue;
+            String marca = en.getPersistentDataContainer().get(claveEspecial, PersistentDataType.STRING);
+            Apariciones.Especial esp = marca == null ? null : especiales.get(marca);
+            if (esp != null && esp.fatigaSegundos() > 0) segundos = Math.max(segundos, esp.fatigaSegundos());
+        }
+        return segundos;
+    }
+
+    /**
+     * Lee mobs.biomas: por bioma, sus comunes (los que sean) y su destacado aparte. Calamity 1.8.5:
+     * antes iba todo en una lista por posicion y un tercer comun se tomaba por el destacado.
+     */
     private void cargarTabla() {
         tabla.clear();
         ConfigurationSection s = cfg().getConfigurationSection("biomas");
@@ -346,12 +631,8 @@ public final class MobsLethal implements Listener {
         for (String k : s.getKeys(false)) {
             ConfigurationSection b = s.getConfigurationSection(k);
             if (b == null || b.getString("bioma") == null) continue;
-            List<String> out = new ArrayList<>(b.getStringList("comunes"));
-            if (out.isEmpty()) continue;
-            while (out.size() < 2) out.add(out.get(0));
-            String dest = b.getString("destacado");
-            if (dest != null) out.add(dest);
-            tabla.put(b.getString("bioma"), out);
+            Apariciones.Tabla t = Apariciones.Tabla.de(b.getStringList("comunes"), b.getString("destacado"));
+            if (t != null) tabla.put(b.getString("bioma"), t);
         }
     }
 
@@ -981,6 +1262,122 @@ public final class MobsLethal implements Listener {
     private static MinionType buscar(MinionRegistry reg, String nombre) {
         for (MinionType t : reg.types()) if (t.display().equals(nombre)) return t;
         return null;
+    }
+
+    /**
+     * Calamity 1.8.5 · Lee mobs.especiales y deja lista la ficha de /esb de cada uno, en la carpeta
+     * "Lethal World · Especiales". La ficha se busca por su nombre visible (el id lo inventa EDM a
+     * partir del nombre) y, si falta, se crea con su color, su aura de destacado y sus habilidades;
+     * a partir de ahi el aspecto, las habilidades y el botin se tocan en /esb.
+     *
+     * La entidad, la vida y el dano, en cambio, los manda la config y se copian a la ficha en cada
+     * arranque: EDM le pisa la vida vanilla al bicho con la de su ficha (un guardian anciano con la
+     * vida de un zombi no asusta a nadie), y desde /esb no se puede volver a elegir un creaking.
+     * La seccion se lee sin crearla (Apariciones.seccion) y solo se guarda el registro de EDM, nunca
+     * el config del servidor.
+     */
+    private void cargarEspeciales(MinionRegistry reg) {
+        especiales.clear();
+        fichaEspecial.clear();
+        ConfigurationSection s = Apariciones.seccion(plugin.getConfig(), "mobs.especiales");
+        if (s == null || !s.getBoolean("activos", true)) {
+            plugin.getLogger().info("[Lethal World] Mobs especiales apagados.");
+            return;
+        }
+        List<String> avisos = new ArrayList<>();
+        List<Apariciones.Especial> leidos = Apariciones.leer(s, avisos);
+        for (String aviso : avisos) plugin.getLogger().warning("[Lethal World] mobs.especiales." + aviso);
+        if (leidos.isEmpty()) return;
+
+        MinionCategory carpeta = carpeta(reg, "Lethal World · Especiales", Material.PALE_OAK_LOG, Paleta.CARPETA_ESPECIALES);
+        int creados = 0;
+        boolean cambios = false;
+        for (Apariciones.Especial e : leidos) {
+            MinionType t = buscar(reg, e.nombre());
+            if (t == null) {
+                t = reg.createType(e.nombre(), carpeta.id());
+                int color = Apariciones.colorDe(e.entidad());
+                t.colorRgb(color);
+                for (String h : e.habilidades()) {
+                    MinionAbility m = habilidad(h);
+                    if (m == null) {
+                        plugin.getLogger().warning("[Lethal World] mobs.especiales." + e.clave()
+                                + ": la habilidad '" + h + "' no existe en EDM.");
+                    } else if (!t.has(m)) {
+                        t.toggle(m);
+                    }
+                }
+                MinionPresence look = t.presence();
+                look.featured(true);
+                look.auraName("DUST");
+                look.auraColor(color);
+                creados++;
+            }
+            cambios |= ajustar(t, e);
+            especiales.put(e.clave(), e);
+            fichaEspecial.put(e.clave(), t.id());
+        }
+        if (creados > 0 || cambios) reg.save();
+        plugin.getLogger().info("[Lethal World] Mobs especiales: " + String.join(", ", nombres(leidos))
+                + " (" + creados + " fichas nuevas en /esb).");
+    }
+
+    private static List<String> nombres(List<Apariciones.Especial> l) {
+        List<String> out = new ArrayList<>();
+        for (Apariciones.Especial e : l) out.add(e.nombre());
+        return out;
+    }
+
+    /** La carpeta de /esb con ese nombre; si no esta, se crea con su icono y su color. */
+    private static MinionCategory carpeta(MinionRegistry reg, String nombre, Material icono, int color) {
+        for (MinionCategory c : reg.categories()) if (c.display().equals(nombre)) return c;
+        MinionCategory c = reg.createCategory(nombre);
+        c.icon(icono);
+        c.colorRgb(color);
+        return c;
+    }
+
+    /** Una habilidad de los esbirros de EDM por su nombre (ESPINAS, igneo...), o null. */
+    private static MinionAbility habilidad(String nombre) {
+        try {
+            return MinionAbility.valueOf(nombre.trim().toUpperCase(Locale.ROOT));
+        } catch (IllegalArgumentException e) {
+            return null;
+        }
+    }
+
+    /** Copia a la ficha la entidad, la vida y el dano de la config. true si ha cambiado algo. */
+    private static boolean ajustar(MinionType t, Apariciones.Especial e) {
+        boolean cambio = false;
+        if (t.entity() != e.entidad()) {
+            t.entity(e.entidad());
+            cambio = true;
+        }
+        if (distinto(t.baseHealth(), e.vidaBase())) {
+            double antes = t.baseHealth();
+            t.baseHealth(e.vidaBase());
+            cambio |= distinto(antes, t.baseHealth());
+        }
+        if (distinto(t.healthGrowth(), e.vidaPorNivel())) {
+            double antes = t.healthGrowth();
+            t.healthGrowth(e.vidaPorNivel());
+            cambio |= distinto(antes, t.healthGrowth());
+        }
+        if (distinto(t.baseDamage(), e.danoBase())) {
+            double antes = t.baseDamage();
+            t.baseDamage(e.danoBase());
+            cambio |= distinto(antes, t.baseDamage());
+        }
+        if (distinto(t.damageGrowth(), e.danoPorNivel())) {
+            double antes = t.damageGrowth();
+            t.damageGrowth(e.danoPorNivel());
+            cambio |= distinto(antes, t.damageGrowth());
+        }
+        return cambio;
+    }
+
+    private static boolean distinto(double a, double b) {
+        return Math.abs(a - b) > 1e-9;
     }
 
     /**
