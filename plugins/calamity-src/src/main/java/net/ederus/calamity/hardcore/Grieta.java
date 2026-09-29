@@ -37,6 +37,12 @@ import java.util.function.Consumer;
  * Los avisos previos salen igual que fuera (cinco, a la misma proporcion del limite: 150, 210,
  * 255, 270 y 285 s con 5 minutos) pero con su propio texto.
  *
+ * 1.8.2 · Los 5 minutos cuentan desde que se entra en el spawn: al cruzar el borde (andando,
+ * volando o por teletransporte) la Huella vuelve a cero con sus avisos, en los dos sentidos, y
+ * dentro cuenta con su propia ventana de parca.spawn.minutos aunque la PARCA de fuera tenga otra
+ * (Huella.Rastro.cambiarZona, Huella.ajustesZona). Antes quien llegaba con la quietud de fuera, o
+ * con la de una estancia anterior, veia abrirse la Grieta al momento.
+ *
  * El destino: un punto al azar en el anillo 600-1500 alrededor del centro de la caja, dentro
  * del borde del mundo; su chunk se carga de forma asincrona y se busca suelo firme (ni agua,
  * ni lava, ni magma, ni cactus, dos de aire encima). Hasta intentos puntos; si ninguno vale (o el
@@ -116,14 +122,17 @@ final class Grieta {
     // ================================================================= nucleo
 
     /**
-     * El umbral de la Huella: el normal fuera del spawn; dentro, minutos*60 (nunca mas que el
-     * normal: el anillo de la Huella no mide mas) y los avisos a la misma proporcion, sin
-     * repetirse y antes del limite.
+     * El umbral de la Huella: el normal fuera del spawn; dentro, parca.spawn.minutos*60 y los
+     * avisos a la misma proporcion, sin repetirse y antes del limite.
+     *
+     * 1.8.2: dentro ya no se recorta al de fuera. Antes era min(normal, minutos*60) porque el
+     * anillo de la Huella no media mas, y en el SurvivalTest (parca.minutos 1) la Grieta salia al
+     * minuto en vez de a los 5. Ahora la Huella cuenta el spawn con su propia ventana (Huella.ajustesZona).
      */
     static Umbral umbral(Huella.Ajustes h, Ajustes g, boolean dentro) {
         int normal = h.limite();
         if (!dentro || !g.activa()) return new Umbral(normal, h.avisos(), false);
-        int limite = Math.max(60, Math.min(normal, g.minutos() * 60));
+        int limite = Math.max(60, g.minutos() * 60);
         double f = limite / (double) normal;
         int[] base = h.avisos();
         int[] av = new int[base.length];
@@ -513,7 +522,7 @@ final class Grieta {
         h.igual("parca.spawn.activa false -> 10 min tambien dentro", 600, umbral(ha, Ajustes.de(apagada), true).limite());
         YamlConfiguration larga = new YamlConfiguration();
         larga.set("minutos", 30);
-        h.igual("mas minutos que fuera -> se queda en los de fuera (la Huella no mide mas)", 600,
+        h.igual("mas minutos que fuera -> los suyos (1.8.2: el spawn cuenta con su propia ventana)", 1800,
                 umbral(ha, Ajustes.de(larga), true).limite());
         // 5 min en la Huella: 60 muestras quieto dentro de la caja llega; 59, no.
         Huella.Rastro r = new Huella.Rastro(ha.tamano());
@@ -588,7 +597,83 @@ final class Grieta {
         int apagada2 = simular(ha, Ajustes.de(sinPesca), true, 900, capturas(0, Integer.MAX_VALUE, ultima));
         h.ok("pesca-cuenta false -> pescando en el spawn llega igual (" + apagada2 + ")",
                 apagada2 >= spawn.limite() - 5 && apagada2 <= spawn.limite() + 5);
+
+        // 1.8.2 · La Grieta cuenta sus 5 minutos desde que se entra en el spawn, y la PARCA los
+        // suyos desde que se sale. Con los ajustes del config.yml del jar (Parca a 5 min).
+        YamlConfiguration jar = jar();
+        h.igual("el config.yml del jar trae parca.spawn.minutos 5", 5,
+                jar == null ? -1 : jar.getInt("hardcore.parca.spawn.minutos", -1));
+        h.igual("y sin la clave en el config tambien son 5", 5, Ajustes.defecto().minutos());
+        Huella.Ajustes hj = Huella.Ajustes.de(jar == null ? null : jar.getConfigurationSection("hardcore.parca"));
+        Ajustes gj = Ajustes.de(jar == null ? null : jar.getConfigurationSection("hardcore.parca.spawn"));
+        int[][] entra = tramos(hj, gj, true, new int[][]{{0, 250}, {1, 400}});
+        h.ok("entra al spawn con 250 s quieto fuera -> empieza de cero y la Grieta espera sus 300 s (quieto al entrar "
+                        + entra[1][1] + ", llega a los " + entra[1][0] + " s)",
+                entra[0][0] < 0 && entra[1][1] == 0 && entra[1][0] == 300);
+        int[][] vuelve = tramos(hj, gj, true, new int[][]{{1, 200}, {0, 30}, {1, 400}});
+        h.ok("sale y vuelve al spawn -> la Grieta no se acuerda de la estancia anterior (llega a los "
+                + vuelve[2][0] + " s de volver)", vuelve[2][1] == 0 && vuelve[2][0] == 300);
+        int[][] sale = tramos(hj, gj, true, new int[][]{{1, 250}, {0, 400}});
+        h.ok("sale del spawn con 250 s quieto -> la Parca cuenta de cero (quieto al salir " + sale[1][1]
+                + ", llega a los " + sale[1][0] + " s)", sale[0][0] < 0 && sale[1][1] == 0 && sale[1][0] == 300);
+        int[][] agua = tramos(hj, gj, false, new int[][]{{0, 250}, {1, 400}});
+        h.ok("llevado al spawn por el agua (sin teclas) no vuelve a cero: llega a los " + agua[1][0] + " s",
+                agua[1][1] >= 245 && agua[1][0] > 0 && agua[1][0] <= 55);
+        int[][] vaiven = new int[200][];
+        for (int i = 0; i < vaiven.length; i++) vaiven[i] = new int[]{i % 2, 3};
+        int[][] borde = tramos(hj, gj, false, vaiven);
+        int llegaBorde = -1;
+        for (int i = 0, antes = 0; i < borde.length; antes += vaiven[i][1], i++) {
+            if (borde[i][0] >= 0) {
+                llegaBorde = antes + borde[i][0];
+                break;
+            }
+        }
+        h.ok("un AFK al que el agua mete y saca del spawn no se libra (llega a los " + llegaBorde + " s)",
+                llegaBorde > 0 && llegaBorde <= 305);
+        // El SurvivalTest: parca.minutos 1 y parca.spawn de serie. La PARCA al minuto fuera, la Grieta a los 5.
+        int[][] enTest = tramos(haTest, Ajustes.defecto(), true, new int[][]{{0, 50}, {1, 400}, {0, 100}});
+        h.ok("con parca.minutos 1 (Test) la Grieta sigue esperando 5 min (llega a los " + enTest[1][0]
+                        + " s) y la Parca fuera, 1 min (" + enTest[2][0] + " s)",
+                enTest[0][0] < 0 && enTest[1][0] == 300 && enTest[2][0] == 60);
         return h.lineas();
+    }
+
+    /** El config.yml que va dentro del jar, o null si no se puede leer. */
+    static YamlConfiguration jar() {
+        try (java.io.InputStream in = Grieta.class.getClassLoader().getResourceAsStream("config.yml")) {
+            if (in == null) return null;
+            return YamlConfiguration.loadConfiguration(new java.io.InputStreamReader(in, java.nio.charset.StandardCharsets.UTF_8));
+        } catch (java.io.IOException | RuntimeException e) {
+            return null;
+        }
+    }
+
+    /**
+     * 1.8.2 · Un jugador quieto que pasa por tramos {1 = zona spawn / 0 = fuera, segundos}, como
+     * en Huella.segundo: al cambiar de tramo, Rastro.cambiarZona (por su cuenta si "propio"; si
+     * no, llevado por el agua), y cada segundo con la ventana de su zona. Por tramo devuelve
+     * {segundo del tramo en que llega a su limite o -1, quieto al empezar el tramo}.
+     */
+    private static int[][] tramos(Huella.Ajustes ha, Ajustes g, boolean propio, int[][] tramos) {
+        Huella.Rastro r = new Huella.Rastro(ha.tamano());
+        int[][] out = new int[tramos.length][];
+        final long t0 = 1_000_000_000L;
+        long ahora = t0;
+        for (int i = 0; i < tramos.length; i++) {
+            boolean dentro = tramos[i][0] == 1;
+            r.cambiarZona(dentro, propio);
+            Umbral u = umbral(ha, g, dentro);
+            Huella.Ajustes az = Huella.ajustesZona(ha, u);
+            int llega = -1, alEmpezar = r.quieto;
+            for (int s = 1; s <= tramos[i][1]; s++) {
+                ahora += 1000L;
+                r.segundo(ahora, dentro ? 15.5 : 815.5, 65, 15.5, false, false, false, az);
+                if (llega < 0 && r.quieto >= u.limite()) llega = s;
+            }
+            out[i] = new int[]{llega, alEmpezar};
+        }
+        return out;
     }
 
     /** Eventos de pesca de la simulacion. */
@@ -625,8 +710,11 @@ final class Grieta {
      */
     private static int simular(Huella.Ajustes ha, Ajustes g, boolean spawn, int segundos,
                                java.util.function.IntUnaryOperator eventos) {
-        Huella.Rastro r = new Huella.Rastro(ha.tamano());
-        int limite = umbral(ha, g, spawn).limite();
+        Umbral u = umbral(ha, g, spawn);
+        // 1.8.2: con la ventana de la zona, como Huella.segundo.
+        Huella.Ajustes az = Huella.ajustesZona(ha, u);
+        Huella.Rastro r = new Huella.Rastro(az.tamano());
+        int limite = u.limite();
         final long t0 = 1_000_000_000L;
         for (int s = 1; s <= segundos; s++) {
             long ahora = t0 + s * 1000L;
@@ -634,7 +722,7 @@ final class Grieta {
             // Se apunta tambien fuera (el peor caso: pesco en el spawn y salio con la gracia puesta).
             if (ev != 0) r.pesca(ahora, ev == CAPTURA, g);
             if (!r.pescaReinicia(ahora, spawn && g.activa(), g)) {
-                r.segundo(ahora, 280.5, 40, -245.5, false, false, false, ha);
+                r.segundo(ahora, 280.5, 40, -245.5, false, false, false, az);
             }
             if (r.quieto >= limite) return s;
         }

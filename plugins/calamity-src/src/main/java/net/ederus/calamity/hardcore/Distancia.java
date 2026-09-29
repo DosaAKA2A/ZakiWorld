@@ -34,7 +34,8 @@ import java.util.UUID;
  * funciones puras de abajo para que el autotest pruebe lo mismo que corre en el servidor.
  *
  * El aviso: cuando el bonus cruza una franja de aviso-cada-niveles (5) niveles, un destello en
- * la barra de accion (nunca un titulo). Se mira en el tick de 1 s de Hardcore, sin tarea propia,
+ * la barra de accion (nunca un titulo) que dura aviso-segundos (5) y respeta la reserva de la barra
+ * (BarraAccion). Se mira en el tick de 1 s de Hardcore, sin tarea propia,
  * y nunca dentro de la zona spawn. Para que quien se pasee por el borde de una franja no llene la
  * barra, entre dos avisos pasan al menos PAUSA_AVISO_MS; si en ese rato vuelve a la franja ya
  * avisada no se dice nada, y si sigue en otra se le dice al acabar la pausa.
@@ -46,22 +47,31 @@ public final class Distancia {
 
     /** Lo minimo entre dos avisos de franja al mismo jugador. */
     static final long PAUSA_AVISO_MS = 8_000;
-    /** Segundos que se queda el aviso en la barra. */
-    static final int SEGUNDOS_AVISO = 3;
+    /**
+     * Segundos que se queda el aviso en la barra si hardcore.distancia.aviso-segundos no dice otra
+     * cosa. 1.8.2: 5 (eran 3 y "duran poquisimo", Dosa).
+     */
+    static final int SEGUNDOS_AVISO = 5;
 
     /** Lo que se lee de hardcore.distancia. */
-    record Ajustes(boolean activa, int bloquesPorNivel, int tope, double mobcoinsPorNivel, int avisoCada) {
+    record Ajustes(boolean activa, int bloquesPorNivel, int tope, double mobcoinsPorNivel, int avisoCada,
+                   int avisoSegundos) {
+
+        /** Sin aviso-segundos: los de serie (el autotest y lo que ya habia). */
+        Ajustes(boolean activa, int bloquesPorNivel, int tope, double mobcoinsPorNivel, int avisoCada) {
+            this(activa, bloquesPorNivel, tope, mobcoinsPorNivel, avisoCada, SEGUNDOS_AVISO);
+        }
 
         static Ajustes de(ConfigurationSection c) {
             if (c == null) return defecto();
             return new Ajustes(c.getBoolean("activa", true), c.getInt("bloques-por-nivel", 100),
                     c.getInt("tope-niveles", 40), c.getDouble("mobcoins-por-nivel", 0.01),
-                    c.getInt("aviso-cada-niveles", 5));
+                    c.getInt("aviso-cada-niveles", 5), Math.max(1, c.getInt("aviso-segundos", SEGUNDOS_AVISO)));
         }
 
         /** Los de serie, los del config.yml del jar. El autotest los usa para no depender del servidor. */
         static Ajustes defecto() {
-            return new Ajustes(true, 100, 40, 0.01, 5);
+            return new Ajustes(true, 100, 40, 0.01, 5, SEGUNDOS_AVISO);
         }
     }
 
@@ -112,7 +122,7 @@ public final class Distancia {
         Aviso av = avisos.computeIfAbsent(p.getUniqueId(), k -> new Aviso());
         String que = av.decidir(n, enSpawn, a, System.currentTimeMillis());
         if (que == null) return;
-        hc.cordura().destello(p, componente(que, n, a), SEGUNDOS_AVISO);
+        hc.cordura().destello(p, componente(que, n, a), a.avisoSegundos());
     }
 
     /** Los que ya no estan dentro se olvidan: al volver se empieza sin avisar. */
@@ -231,6 +241,18 @@ public final class Distancia {
         return Math.round(m);
     }
 
+    /** Un numero del config.yml que va dentro del jar (-1 si no esta o no se puede leer). */
+    static int delJar(String ruta) {
+        try (java.io.InputStream in = Distancia.class.getClassLoader().getResourceAsStream("config.yml")) {
+            if (in == null) return -1;
+            org.bukkit.configuration.file.YamlConfiguration y = org.bukkit.configuration.file.YamlConfiguration.loadConfiguration(
+                    new java.io.InputStreamReader(in, java.nio.charset.StandardCharsets.UTF_8));
+            return y.isInt(ruta) ? y.getInt(ruta) : -1;
+        } catch (java.io.IOException | RuntimeException e) {
+            return -1;
+        }
+    }
+
     /** 1234 -> "1.234". */
     static String miles(long n) {
         String s = Long.toString(Math.abs(n));
@@ -325,6 +347,16 @@ public final class Distancia {
         h.igual("miles", "4.000", miles(4000));
         h.igual("miles de un numero corto", "999", miles(999));
         h.igual("miles de un millon", "1.234.567", miles(1_234_567));
+
+        // 1.8.2 · El aviso dura 5 s de serie y se puede cambiar (hardcore.distancia.aviso-segundos).
+        h.igual("aviso: dura 5 s de serie", 5, a.avisoSegundos());
+        org.bukkit.configuration.file.YamlConfiguration sinClave = new org.bukkit.configuration.file.YamlConfiguration();
+        sinClave.set("activa", true);
+        h.igual("aviso: sin aviso-segundos en el config, 5 s", 5, Ajustes.de(sinClave).avisoSegundos());
+        org.bukkit.configuration.file.YamlConfiguration ocho = new org.bukkit.configuration.file.YamlConfiguration();
+        ocho.set("aviso-segundos", 8);
+        h.igual("aviso: aviso-segundos 8 lo deja 8 s", 8, Ajustes.de(ocho).avisoSegundos());
+        h.igual("aviso: el config.yml del jar trae aviso-segundos 5", 5, delJar("hardcore.distancia.aviso-segundos"));
         return h.lineas();
     }
 }

@@ -1474,7 +1474,7 @@ final class Parca implements Listener {
             quien.sendMessage(Component.text(p.getName() + " no está en un mundo hardcore.", Paleta.AVISO));
             return;
         }
-        int limite = hc.huella() == null ? 600 : hc.huella().ajustes().limite();
+        int limite = hc.huella() == null ? 600 : hc.huella().limite(p);
         int s;
         try {
             s = args.length > 2 ? Integer.parseInt(args[2]) : limite;

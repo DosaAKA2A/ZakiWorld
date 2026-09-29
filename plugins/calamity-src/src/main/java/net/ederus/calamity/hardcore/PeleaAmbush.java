@@ -67,10 +67,10 @@ import java.util.function.Supplier;
  * - el tajo doble: dos cortes girando sobre si mismo;
  * - el paso sombra: se desvanece en humo, rodea a su presa dejando sombras y reaparece a su
  *   espalda con un corte;
- * - el iaijutsu: envaina 1,5 s quieto, balanceandose, dentro de un anillo rojo y corta: el doble
+ * - el iaijutsu: envaina 1,5 s completamente quieto dentro de un anillo rojo y corta: el doble
  *   de dano a quien siga a menos de 4 bloques y de pie;
  * - solo en la fase 2, mil cortes: tres acometidas seguidas a traves de su presa, desde tres lados,
- *   y vuelve a donde empezo;
+ *   cambiando de lado con una acometida corta, y vuelve igual a donde empezo;
  * - solo en la fase 2 y cada 25 s, las Sombras del clan: tres clones a su imagen rodean a su presa
  *   y la atraviesan uno tras otro mientras el espera; un golpe disipa un clon.
  * La hoja que se ve girar en los ataques mide como la katana en la fase 1 y el doble desde la
@@ -83,6 +83,14 @@ import java.util.function.Supplier;
  * Dos relojes, como pide que se vea fluido: la tarea de 2 ticks de Amenazas (registrarPelea) lleva
  * la cabeza (a quien va, que hace, la barra, si la presa sigue) y un animador de 1 tick mueve el
  * cuerpo que se ve, las hojas y los ataques, para que el cliente interpole sin saltos.
+ *
+ * 1.8.2 · Fluidez, como en la 1.8.0: en la 1.8.1 a veces "se quedaba dando vueltas super lentas y
+ * cortadas" (Dosa). Eran los giros a pasitos: el balanceo del iaijutsu, Ambush y los clones de las
+ * Sombras del clan siguiendo a su presa grado a grado mientras esperaban, el paso sombra despues
+ * del corte y el deslizamiento de mil cortes por el borde. Ahora, mientras ataca, el cuerpo que se
+ * ve o no gira o gira de golpe (GIRO_MINIMO grados por tick o mas; el tajo doble, 30 y 36); la
+ * entrada se da la vuelta en 4 ticks y los clones vuelven en 7. Entre ataque y ataque todo sigue
+ * como en la 1.8.0: se mueve su IA y el maniqui mira a los ojos de su objetivo.
  */
 final class PeleaAmbush implements Runnable {
 
@@ -345,6 +353,20 @@ final class PeleaAmbush implements Runnable {
         return (float) (desde + d * Math.max(0, Math.min(1, t)));
     }
 
+    /**
+     * 1.8.2 · Lo menos que gira el cuerpo en un tick cuando gira: por debajo, en el cliente se ve
+     * dar vueltas despacio y a trompicones (lo que vio Dosa en la 1.8.1).
+     */
+    static final double GIRO_MINIMO = 30;
+
+    /**
+     * En cuantos ticks se da un giro de "grados": los mas posibles hasta "tope" sin bajar de
+     * GIRO_MINIMO por tick; uno solo (de golpe) si no llega ni a eso.
+     */
+    static int pasosDeGiro(double grados, int tope) {
+        return (int) Math.max(1, Math.min(tope, Math.floor(Math.abs(grados) / GIRO_MINIMO)));
+    }
+
     /** La direccion en el plano (unitaria) de "desde" a "hacia"; si estan encima, "otra". */
     static Vector plano(Location desde, Location hacia, Vector otra) {
         double dx = hacia.getX() - desde.getX(), dz = hacia.getZ() - desde.getZ();
@@ -596,7 +618,8 @@ final class PeleaAmbush implements Runnable {
      * donde pasa, deja "sombras" sombras repartidas por el camino y quien este en la linea se lleva
      * k veces su golpe. Al pasar junto a su objetivo suena el tajo y le tiembla la vista. Al final
      * se pone de pie. clon = -1 es el propio Ambush; si no, el clon que corre (si lo disipan a
-     * medias, la carrera se acaba ahi y su corte ya no llega).
+     * medias, la carrera se acaba ahi y su corte ya no llega). Con k 0 (1.8.2, el cambio de lado de
+     * mil cortes) no hiere, no hay tajo ni temblor: solo la carrera y sus sombras.
      */
     static final class Carrera {
         static final double ANCHO = 1.4;
@@ -656,20 +679,23 @@ final class PeleaAmbush implements Runnable {
                 destino.setYaw(yaw);
                 destino.setPitch(0);
                 mover(e, destino);
-                e.herirTramo(antes, destino, ANCHO, k, tocados, dir);
+                // k 0: la acometida corta de mil cortes para cambiar de lado, que no hiere ni corta.
+                if (k > 0) e.herirTramo(antes, destino, ANCHO, k, tocados, dir);
                 for (int i = indice + 1; i <= hasta; i++) {
                     e.particula(Compat.CRIT, ruta.get(i).clone().add(0, 0.9, 0), 2, 0.15, 0.2, 0.15, 0.05, null);
                 }
-                cruce(e, antes, destino);
+                if (k > 0) cruce(e, antes, destino);
                 indice = hasta;
             }
             if (indice < ruta.size() - 1) return false;
             acabada = true;
             postura(e, Pose.STANDING);
             Location fin = ruta.get(ruta.size() - 1);
-            e.particula(Compat.SWEEP_ATTACK, fin.clone().add(0, 1, 0), 3, 0.6, 0.3, 0.6, 0, null);
+            if (k > 0) {
+                e.particula(Compat.SWEEP_ATTACK, fin.clone().add(0, 1, 0), 3, 0.6, 0.3, 0.6, 0, null);
+                e.sonido(fin, "entity.player.attack.sweep", 1.3f, 0.9f);
+            }
             e.particula(Compat.LARGE_SMOKE, fin.clone().add(0, 0.3, 0), 8, 0.5, 0.2, 0.5, 0.02, null);
-            e.sonido(fin, "entity.player.attack.sweep", 1.3f, 0.9f);
             return true;
         }
 
@@ -713,15 +739,21 @@ final class PeleaAmbush implements Runnable {
 
     /**
      * La entrada: aparece de pie, de espaldas a su presa y con la mano vacia (1 s, campana grave),
-     * se gira hacia ella y desenvaina (la katana en la mano, un destello y el sonido de la cadena).
+     * se gira hacia ella de golpe (1.8.2: en GIRO ticks como mucho y nunca a menos de GIRO_MINIMO
+     * grados por tick; antes 6 ticks) y desenvaina (la katana en la mano, un destello y el sonido
+     * de la cadena). Ya girado no sigue a su presa a pasitos: se queda mirando a donde se giro.
      */
     static final class Entrada extends Tecnica {
-        static final int QUIETO = 20, GIRO = 6, DESENVAINA = 26, FIN = 30;
+        static final int QUIETO = 20, GIRO = 4, DESENVAINA = QUIETO + GIRO, FIN = DESENVAINA + 4;
         private final float deEspaldas;
+        /** A donde se gira (se fija al empezar el giro) y en cuantos ticks. */
+        private float haciaEl;
+        private int pasos = 1;
 
         Entrada(float deEspaldas) {
             super(null);
             this.deEspaldas = deEspaldas;
+            this.haciaEl = deEspaldas + 180f;
         }
 
         @Override
@@ -739,10 +771,13 @@ final class PeleaAmbush implements Runnable {
                 if (t % 4 == 0) e.particula(Compat.ASH, pie.clone().add(0, 1.2, 0), 6, 0.6, 0.6, 0.6, 0.01, null);
                 return false;
             }
-            Location obj = e.objetivo();
-            float haciaEl = obj == null ? deEspaldas + 180f : yaw(pie, obj);
-            if (t < QUIETO + GIRO) {
-                e.mirar(girar(deEspaldas, haciaEl, (t - QUIETO + 1) / (double) GIRO));
+            if (t == QUIETO) {
+                Location obj = e.objetivo();
+                if (obj != null) haciaEl = yaw(pie, obj);
+                pasos = pasosDeGiro(difYaw(haciaEl, deEspaldas), GIRO);
+            }
+            if (t < QUIETO + pasos) {
+                e.mirar(girar(deEspaldas, haciaEl, (t - QUIETO + 1) / (double) pasos));
                 return false;
             }
             e.mirar(haciaEl);
@@ -938,6 +973,8 @@ final class PeleaAmbush implements Runnable {
         final int cada, respiro;
         private Location centro;
         private double desde, giro;
+        /** A donde mira desde que reaparece (a su presa en ese momento). */
+        private float yawCorte;
         private boolean oculto;
         private long reaparece = Long.MAX_VALUE;
         private final Sombras sombras = new Sombras();
@@ -973,8 +1010,8 @@ final class PeleaAmbush implements Runnable {
                 oculto = false;
                 reaparecer(e);
             } else {
-                Location obj = e.objetivo();
-                if (obj != null) e.mirar(yaw(e.pie(), obj));
+                // 1.8.2: tras el corte se queda mirando a donde corto; no sigue a su presa a pasitos.
+                e.mirar(yawCorte);
             }
             sombras.repasar(e, t);
             return !oculto && t >= reaparece + respiro && sombras.vacia();
@@ -1007,7 +1044,8 @@ final class PeleaAmbush implements Runnable {
                 e.mover(sitio);
             }
             Location aqui = e.pie();
-            e.mirar(yaw(aqui, obj));
+            yawCorte = yaw(aqui, obj);
+            e.mirar(yawCorte);
             e.visible(true);
             e.katana(true);
             e.blandir();
@@ -1031,18 +1069,17 @@ final class PeleaAmbush implements Runnable {
     // ------------------------------------------------------------------ Iaijutsu
 
     /**
-     * Envaina 1,5 s de pie y quieto (la mano vacia, el cuerpo balanceandose BALANCEO grados a cada
-     * lado) dentro de un anillo rojo de 4 bloques, con el sonido de la vaina y un aviso en la barra.
-     * Al soltarlo la katana vuelve a la mano de golpe, destello, y un corte rapido (la hoja gira 90
-     * grados): el doble de su golpe a quien siga a menos de 4 bloques y no este agachado.
+     * Envaina 1,5 s de pie y completamente quieto (la mano vacia; 1.8.2: sin el balanceo de la
+     * 1.8.1 ni seguir a su presa girando, que se veia dar vueltas despacio y a trompicones) dentro
+     * de un anillo rojo de 4 bloques, con el sonido de la vaina y un aviso en la barra. Al soltarlo
+     * la katana vuelve a la mano de golpe, destello, y un corte rapido (la hoja gira 90 grados): el
+     * doble de su golpe a quien siga a menos de 4 bloques y no este agachado.
      */
     static final class Iaijutsu extends Tecnica {
         static final double RADIO = 4, K = 2.0;
         static final int CORTE = 3;
-        /** El balanceo mientras envaina: tantos grados a cada lado, con un vaiven de tantos ticks. */
-        static final float BALANCEO = 8f;
-        static final int VAIVEN = 16;
         final int envaina, respiro;
+        /** A donde mira todo el ataque: a su presa al empezar. */
         private float yaw;
         private int hoja = -1;
         private long quitarEn = -1;
@@ -1052,10 +1089,6 @@ final class PeleaAmbush implements Runnable {
             super(Ataque.IAIJUTSU);
             envaina = Math.max(12, (int) Math.round(30 * ritmo));
             respiro = Math.max(6, (int) Math.round(10 * ritmo));
-        }
-
-        static float balanceo(long t) {
-            return (float) (BALANCEO * Math.sin(2 * Math.PI * t / VAIVEN));
         }
 
         @Override
@@ -1071,9 +1104,7 @@ final class PeleaAmbush implements Runnable {
                 e.avisar("Iaijutsu: agáchate o aléjate.", 16);
             }
             if (t < envaina) {
-                Location obj = e.objetivo();
-                if (obj != null) yaw = yaw(pie, obj);
-                e.mirar(yaw + balanceo(t));
+                e.mirar(yaw);
                 if (t % 2 == 0) {
                     float tam = (float) (1.0 + 0.8 * t / envaina);
                     for (Location l : anillo) e.polvo(l, RGB_AVISO, tam);
@@ -1118,22 +1149,25 @@ final class PeleaAmbush implements Runnable {
     /**
      * Solo en la fase 2. Pinta 0,5 s tres lineas rojas que se cruzan en su presa (a 120 grados una
      * de otra) y las recorre una tras otra: tres carreras a traves de ella, cada una con sus sombras
-     * y su corte a K de su golpe. Entre carrera y carrera se desliza PAUSA ticks por el borde hasta el
-     * principio de la siguiente (dejando una sombra), y tras la tercera vuelve a donde empezo.
+     * y su corte a K de su golpe. Entre carrera y carrera cruza al principio de la siguiente con una
+     * acometida corta (tumbado, con SOMBRAS_CAMBIO sombras y sin herir a nadie), y tras la tercera
+     * vuelve igual a donde empezo.
+     *
+     * 1.8.2: esos cambios de lado eran un desplazamiento de 6 ticks por el borde, de pie y girando
+     * hacia su presa a cada paso: se veia lento y a saltos. Ahora es una carrera como las otras.
      */
     static final class MilCortes extends Tecnica {
         static final double MIN = 3, MAX = 10, K = 0.6;
-        static final int AVISO = 10, PAUSA = 6, CORTES = 3, SOMBRAS = 3;
+        static final int AVISO = 10, CORTES = 3, SOMBRAS = 3, SOMBRAS_CAMBIO = 2;
         final int porTick;
         private Location centro, inicio;
         private double radio;
         private final Vector[] dirs = new Vector[CORTES];
         private final List<List<Location>> lineas = new ArrayList<>();
         private int corte = -1;
-        private Carrera carrera;
-        private long pausaDesde = -1;
-        private double angDesde, angHasta, rDesde, rHasta;
-        private Location pausaFin;
+        /** La carrera del corte en curso, o la acometida corta del cambio de lado (solo una a la vez). */
+        private Carrera carrera, cambio;
+        private float yawAviso, yawFinal;
         private long finEn = -1;
         private final Sombras sombras = new Sombras();
 
@@ -1149,6 +1183,7 @@ final class PeleaAmbush implements Runnable {
                 if (obj == null) return true;
                 centro = obj.clone();
                 inicio = pie.clone();
+                yawAviso = yaw(pie, centro);
                 radio = Math.max(4, Math.min(8, distPlano(pie, obj)));
                 Vector d1 = plano(pie, obj, new Vector(0, 0, 1));
                 for (int i = 0; i < CORTES; i++) {
@@ -1161,7 +1196,7 @@ final class PeleaAmbush implements Runnable {
                 e.sonido(pie, "item.trident.return", 1.2f, 0.5f);
             }
             if (t < AVISO) {
-                e.mirar(yaw(e.pie(), centro));
+                e.mirar(yawAviso);
                 if (t % 2 == 0) {
                     float tam = (float) (1.0 + 0.6 * t / AVISO);
                     for (List<Location> l : lineas) for (Location p : l) e.polvo(p.clone().add(0, 0.15, 0), RGB_AVISO, tam);
@@ -1173,10 +1208,16 @@ final class PeleaAmbush implements Runnable {
                 e.mirar(carrera.yaw);
                 if (carrera.paso(e, sombras, t)) {
                     carrera = null;
-                    empezarPausa(e);
+                    empezarCambio(e);
                 }
-            } else if (pausaDesde >= 0) {
-                deslizar(e);
+            } else if (cambio != null) {
+                e.mirar(cambio.yaw);
+                if (cambio.paso(e, sombras, t)) {
+                    cambio = null;
+                    llegar(e);
+                }
+            } else if (finEn >= 0) {
+                e.mirar(yawFinal);
             }
             sombras.repasar(e, t);
             return finEn >= 0 && sombras.vacia() && t - finEn >= 2;
@@ -1190,54 +1231,62 @@ final class PeleaAmbush implements Runnable {
             Vector d = plano(pie, fin, dirs[i]);
             List<Location> ruta = e.ruta(pie, d, Math.max(2, distPlano(pie, fin)));
             if (ruta.size() < 3) {
-                empezarPausa(e);
+                empezarCambio(e);
                 return;
             }
             carrera = new Carrera(ruta, d, porTick, K, SOMBRAS, -1);
         }
 
-        /** Tras la carrera: por el borde hasta el principio de la siguiente, o de vuelta a donde empezo. */
-        private void empezarPausa(Escena e) {
+        /**
+         * Tras la carrera: una acometida corta hasta el principio de la siguiente, o de vuelta a
+         * donde empezo. Si no hay sitio para correr (una pared), aparece alli directamente.
+         */
+        private void empezarCambio(Escena e) {
             Location pie = e.pie();
-            pausaFin = corte + 1 < CORTES ? centro.clone().add(dirs[corte + 1].clone().multiply(-radio)) : inicio.clone();
-            angDesde = Math.atan2(pie.getZ() - centro.getZ(), pie.getX() - centro.getX());
-            double hasta = Math.atan2(pausaFin.getZ() - centro.getZ(), pausaFin.getX() - centro.getX());
-            angHasta = angDesde + ParcaAnomalia.normalizar(hasta - angDesde);
-            rDesde = distPlano(pie, centro);
-            rHasta = distPlano(pausaFin, centro);
-            pausaDesde = t;
+            Location destino = vuelta() ? inicio.clone() : centro.clone().add(dirs[corte + 1].clone().multiply(-radio));
+            Vector d = plano(pie, destino, dirs[Math.max(0, corte)]);
+            List<Location> ruta = e.ruta(pie, d, distPlano(pie, destino));
+            if (ruta.size() < 3) {
+                Location h = vuelta() ? inicio.clone() : e.hueco(destino);
+                if (h != null) {
+                    h.setYaw(yaw(h, centro));
+                    h.setPitch(0);
+                    e.mover(h);
+                }
+                llegar(e);
+                return;
+            }
+            cambio = new Carrera(ruta, d, porTick, 0, SOMBRAS_CAMBIO, -1);
         }
 
-        private void deslizar(Escena e) {
-            long k = t - pausaDesde;
-            if (k <= 0) return;
-            double f = Math.min(1, k / (double) PAUSA);
-            boolean vuelta = corte + 1 >= CORTES;
-            Location l;
-            if (f >= 1) {
-                l = vuelta ? inicio.clone() : e.hueco(pausaFin);
-            } else {
-                double a = angDesde + (angHasta - angDesde) * f, r = rDesde + (rHasta - rDesde) * f;
-                l = e.hueco(centro.clone().add(Math.cos(a) * r, 0, Math.sin(a) * r));
+        /** Al acabar un cambio de lado: el corte siguiente o, tras el ultimo, quieto donde empezo. */
+        private void llegar(Escena e) {
+            if (!vuelta()) {
+                empezarCorte(e, corte + 1);
+                return;
             }
-            if (l != null) {
+            // La carrera se queda a menos de medio bloque del sitio (va de 0,5 en 0,5): se ajusta.
+            if (distPlano(e.pie(), inicio) > 1e-3) {
+                Location l = inicio.clone();
                 l.setYaw(yaw(l, centro));
                 l.setPitch(0);
                 e.mover(l);
             }
-            Location aqui = e.pie();
-            e.mirar(yaw(aqui, centro));
-            if (k == PAUSA / 2) sombras.poner(e, aqui, yaw(aqui, centro), Pose.STANDING, t, false);
-            if (f < 1) return;
-            pausaDesde = -1;
-            if (vuelta) finEn = t;
-            else empezarCorte(e, corte + 1);
+            yawFinal = yaw(inicio, centro);
+            e.mirar(yawFinal);
+            finEn = t;
+        }
+
+        private boolean vuelta() {
+            return corte + 1 >= CORTES;
         }
 
         @Override
         void cortar(Escena e) {
             if (carrera != null) carrera.cortar(e);
+            if (cambio != null) cambio.cortar(e);
             carrera = null;
+            cambio = null;
             sombras.quitarTodas(e);
             e.postura(Pose.STANDING);
         }
@@ -1252,9 +1301,13 @@ final class PeleaAmbush implements Runnable {
      * desenvaina, marca su linea AVISO ticks y hace la acometida con sombras a traves de ella (K de
      * su golpe). Un golpe de cualquiera disipa un clon: humo, y su corte ya no llega. Al acabar, los
      * que queden vuelven hacia Ambush dejando una estela de sombras y se funden en el con un destello.
+     *
+     * 1.8.2: Ambush mira todo el rato a donde estaba su presa al empezar y los clones que esperan su
+     * turno no se giran (antes la seguian a pasitos, girando despacio); la vuelta de los clones dura
+     * CONVERGE = 7 ticks (antes 10).
      */
     static final class Clan extends Tecnica {
-        static final int CLONES = 3, PREPARA = 16, ENTRE = 12, AVISO = 8, CONVERGE = 10, SOMBRAS = 3;
+        static final int CLONES = 3, PREPARA = 16, ENTRE = 12, AVISO = 8, CONVERGE = 7, SOMBRAS = 3;
         static final double RADIO = 6, K = 0.6, ALCANCE = 20;
         static final String AVISO_TEXTO = "Sombras del clan: golpea a los clones para disiparlos.";
         final int porTick;
@@ -1264,6 +1317,8 @@ final class PeleaAmbush implements Runnable {
         private final boolean[] hecho = new boolean[CLONES];
         private final Map<Integer, Location> origen = new LinkedHashMap<>();
         private long convergeDesde = -1, finEn = -1;
+        /** A donde mira Ambush mientras espera: a su presa al empezar. */
+        private float yawAmbush;
         private final Sombras sombras = new Sombras();
 
         Clan(double ritmo) {
@@ -1278,6 +1333,7 @@ final class PeleaAmbush implements Runnable {
                 Location obj = e.objetivo();
                 if (obj == null) return true;
                 centro = obj.clone();
+                yawAmbush = yaw(pie, obj);
                 e.postura(Pose.STANDING);
                 e.katana(true);
                 // Ninguno encima de el: el primero a 60 grados de su lado, los otros a 120 de ese.
@@ -1297,7 +1353,7 @@ final class PeleaAmbush implements Runnable {
             }
             Location obj = e.objetivo();
             if (obj == null) obj = centro;
-            e.mirar(yaw(pie, obj));
+            e.mirar(yawAmbush);
             boolean todos = true;
             for (int j = 0; j < ids.size(); j++) todos &= turno(e, j, obj);
             if (todos && convergeDesde < 0) convergeDesde = t + 4;
@@ -1317,13 +1373,8 @@ final class PeleaAmbush implements Runnable {
                 return true;
             }
             long s = PREPARA + (long) ENTRE * j;
-            if (t < s) {
-                // Esperando su turno, de pie y mirando a la presa.
-                aqui.setYaw(yaw(aqui, obj));
-                aqui.setPitch(0);
-                e.moverClon(id, aqui);
-                return false;
-            }
+            // Esperando su turno, de pie y quieto, mirando a donde estaba la presa al salir.
+            if (t < s) return false;
             if (t == s) {
                 e.clonKatana(id, true);
                 e.clonBlandir(id);
@@ -1369,7 +1420,7 @@ final class PeleaAmbush implements Runnable {
                 l.setYaw(yaw(desde, destino));
                 l.setPitch(0);
                 e.moverClon(id, l);
-                if (k == 2 || k == 5) sombras.poner(e, l, l.getYaw(), Pose.STANDING, t, false);
+                if (k == 2 || k == 4) sombras.poner(e, l, l.getYaw(), Pose.STANDING, t, false);
             }
             if (f < 1) return;
             boolean alguno = false;
@@ -2302,6 +2353,8 @@ final class PeleaAmbush implements Runnable {
         final List<String> avisos = new ArrayList<>();
         int maxHojas, maxSombras, maxClones, sombrasHechas, sombrasRechazadas, clonesHechos;
         int sacudidas, polvos, movimientos, soltadas;
+        /** Veces que se ha movido de pie (no tumbado en una carrera): lo que antes era deslizarse. */
+        int movimientosDePie;
         private int siguiente;
         String skin;
 
@@ -2312,6 +2365,7 @@ final class PeleaAmbush implements Runnable {
         public void mover(Location l) {
             pie = l.clone();
             movimientos++;
+            if (postura == Pose.STANDING) movimientosDePie++;
         }
 
         @Override public void mirar(float yaw) { miradas.add(yaw); }
@@ -2366,7 +2420,9 @@ final class PeleaAmbush implements Runnable {
         public int clon(Location l, float yaw) {
             if (clones.size() >= MAX_CLONES) return -1;
             int id = ++siguiente;
-            clones.put(id, l.clone());
+            Location en = l.clone();
+            en.setYaw(yaw);
+            clones.put(id, en);
             clonesHechos++;
             maxClones = Math.max(maxClones, clones.size());
             return id;
@@ -2645,7 +2701,7 @@ final class PeleaAmbush implements Runnable {
         h.ok("la entrada: aparece de pie con la mano vacía y desenvaina al girarse", vacia && en.katana
                 && en.postura == Pose.STANDING && en.cuantas(Compat.FLASH) == 1);
 
-        // ---- El iaijutsu: de pie, quieto y con la mano vacia, balanceandose hasta 8 grados.
+        // ---- El iaijutsu: de pie, completamente quieto y con la mano vacia (1.8.2: sin balanceo).
         EscenaPrueba ia = escenaA(2.5);
         Iaijutsu iai = new Iaijutsu(1.0);
         float base = yaw(ia.pie(), ia.objetivo);
@@ -2657,9 +2713,12 @@ final class PeleaAmbush implements Runnable {
             iai.t++;
             for (float y : ia.miradas.subList(antes, ia.miradas.size())) desvio = Math.max(desvio, Math.abs(difYaw(y, base)));
             quieto &= !ia.katana && ia.postura == Pose.STANDING && ia.movimientos == 0;
+            // La presa se mueve mientras envaina: el no la sigue.
+            ia.objetivo = ia.objetivo.clone().add(0, 0, 0.2);
         }
         h.ok("iaijutsu: envaina de pie, quieto y con la mano vacía", quieto);
-        h.ok("iaijutsu: se balancea hasta 8° a cada lado (" + Math.round(desvio * 10) / 10.0 + "°)", desvio > 6 && desvio <= 8.0001);
+        h.ok("iaijutsu: no se balancea ni sigue a su presa girando (desvío " + Math.round(desvio * 10) / 10.0 + "°)",
+                desvio < 1e-3);
         h.ok("iaijutsu: el anillo rojo y el aviso siguen", ia.polvos > 0 && ia.avisos.contains("Iaijutsu: agáchate o aléjate."));
 
         // ---- La hoja de los efectos: como la katana hasta la transformacion.
@@ -2716,7 +2775,10 @@ final class PeleaAmbush implements Runnable {
         int tumbado = 0;
         for (Pose p : mc.posturasAmbush) if (p == Pose.FALL_FLYING) tumbado++;
         h.ok("mil cortes: avisa 0,5 s con una línea roja en cada una de sus tres direcciones", aviso);
-        h.igual("mil cortes: tres acometidas a través de su presa", 3, tumbado);
+        h.igual("mil cortes: tres acometidas a través de su presa", 3, mc.sacudidas);
+        h.ok("mil cortes: cambia de lado y vuelve con acometidas cortas, tumbado y sin deslizarse de pie ("
+                + tumbado + " carreras, " + mc.movimientosDePie + " pasos de pie)", tumbado == 3 + MilCortes.CORTES
+                && mc.movimientosDePie <= 1);
         h.igual("mil cortes: cada corte al 60 % de su golpe", List.of(0.6, 0.6, 0.6), mc.golpes);
         h.ok("mil cortes: cada una con sus sombras", mc.sombrasHechas >= 3 * MilCortes.SOMBRAS);
         h.ok("mil cortes: acaba donde empezó", distPlano(mc.pie(), inicio) < 0.01);
@@ -2799,5 +2861,108 @@ final class PeleaAmbush implements Runnable {
                 && !tocaClan(2, 699, 700) && Ataque.MIL.fase == 2 && Ataque.CLAN.fase == 2);
         h.ok("las esperas de antes, igual (acometida 6 s, tajo 5 s, iaijutsu 10 s)", Ataque.ACOMETIDA.espera == 120
                 && Ataque.TAJO.espera == 100 && Ataque.IAIJUTSU.espera == 200);
+
+        // ---- 1.8.2 · Fluidez: nada de dar vueltas despacio. Con la presa andando de lado, en cada
+        // ataque la mirada del cuerpo que se ve o no cambia o cambia 30 grados o mas de un tick al
+        // siguiente, y ningun giro dura mas de 12 ticks.
+        for (double ritmo : new double[]{1.0, RITMO_FASE2}) {
+            int fase = ritmo < 1 ? 2 : 1;
+            String f = " (fase " + fase + ")";
+            for (Ataque x : Ataque.values()) {
+                if (fase < x.fase) continue;
+                double[] g = giros(nueva(x, ritmo), distanciaPrueba(x));
+                String como = g[1] == 0 ? "no gira nunca" : "paso más corto " + Math.round(g[0]) + "°/tick, giro más largo "
+                        + Math.round(g[1]) + " ticks";
+                h.ok(x.nombre + f + ": no gira a pasitos (" + como + ")", g[0] >= GIRO_MINIMO - 1e-3 && g[1] <= 12);
+            }
+        }
+        h.ok("tajo doble: cada corte gira 30°/tick o más en las dos fases",
+                180.0 / new TajoDoble(1.0).giro >= GIRO_MINIMO && 180.0 / new TajoDoble(RITMO_FASE2).giro >= GIRO_MINIMO);
+
+        // ---- La entrada: de espaldas a mirarle en 4-5 ticks, a 30°/tick o mas, y luego quieto.
+        EscenaPrueba ge = escenaA(8);
+        float haciaEl = yaw(ge.pie(), ge.objetivo);
+        Entrada giro = new Entrada(haciaEl + 180f);
+        List<Double> pasosGiro = new ArrayList<>();
+        Float previa = null;
+        for (int i = 0; i < 100; i++) {
+            int m0 = ge.miradas.size();
+            boolean fin = giro.paso(ge);
+            giro.t++;
+            float y = ge.miradas.size() > m0 ? ge.miradas.get(ge.miradas.size() - 1) : yaw(ge.pie(), ge.objetivo);
+            if (previa != null && Math.abs(difYaw(y, previa)) > 1e-3) pasosGiro.add(Math.abs(difYaw(y, previa)));
+            previa = y;
+            if (fin) break;
+        }
+        double pasoMin = pasosGiro.stream().mapToDouble(Double::doubleValue).min().orElse(0);
+        h.ok("la entrada: se da la vuelta en 4-5 ticks a 30°/tick o más (" + pasosGiro.size() + " ticks, "
+                        + Math.round(pasoMin) + "°/tick) y acaba mirándole",
+                pasosGiro.size() >= 4 && pasosGiro.size() <= 5 && pasoMin >= GIRO_MINIMO - 1e-3
+                        && previa != null && Math.abs(difYaw(previa, haciaEl)) < 1e-3);
+
+        // ---- Los clones vuelven deprisa (6-8 ticks) y sin girar mientras esperan su turno.
+        EscenaPrueba cv = escenaA(8);
+        Clan cvc = new Clan(RITMO_FASE2);
+        cvc.paso(cv);
+        cvc.t++;
+        Map<Integer, Float> yawClon = new HashMap<>();
+        for (Map.Entry<Integer, Location> c : cv.clones.entrySet()) yawClon.put(c.getKey(), c.getValue().getYaw());
+        boolean quietos = true;
+        int moviendose = 0;
+        for (int i = 1; i < 600; i++) {
+            Map<Integer, Location> antes = new HashMap<>();
+            for (Map.Entry<Integer, Location> c : cv.clones.entrySet()) antes.put(c.getKey(), c.getValue().clone());
+            cv.objetivo = cv.objetivo.clone().add(0, 0, 0.15);
+            boolean fin = cvc.paso(cv);
+            cvc.t++;
+            for (int j = 0; j < cvc.ids.size(); j++) {
+                int id = cvc.ids.get(j);
+                Location l = cv.clones.get(id);
+                if (l != null && cvc.t <= Clan.PREPARA + (long) Clan.ENTRE * j) quietos &= l.getYaw() == yawClon.get(id);
+            }
+            if (cvc.convergeDesde >= 0 && cvc.t > cvc.convergeDesde && !antes.isEmpty()) {
+                boolean alguno = false;
+                for (Map.Entry<Integer, Location> c : antes.entrySet()) {
+                    Location l = cv.clones.get(c.getKey());
+                    alguno |= l == null || distPlano(l, c.getValue()) > 1e-6;
+                }
+                if (alguno) moviendose++;
+            }
+            if (fin) break;
+        }
+        h.ok("sombras del clan: los clones vuelven en 6-8 ticks (" + moviendose + ") y no se giran mientras esperan",
+                moviendose >= 6 && moviendose <= 8 && Clan.CONVERGE >= 6 && Clan.CONVERGE <= 8 && quietos);
+    }
+
+    /**
+     * Corre un ataque con su presa andando de lado (0,15 bloques por tick) y mide como gira el
+     * cuerpo que se ve: {el paso mas corto de un tick al siguiente cuando gira, el giro mas largo
+     * en ticks seguidos}. Un tick sin mirada fija cuenta como en el juego (mira a su objetivo); los
+     * ticks escondido (paso sombra) no cuentan. Sin ningun giro, {360, 0}.
+     */
+    static double[] giros(Tecnica tec, double dist) {
+        EscenaPrueba e = escenaA(dist);
+        Location base = e.objetivo.clone();
+        Float antes = null;
+        double minimo = 360;
+        int racha = 0, larga = 0;
+        for (int i = 0; i < 600; i++) {
+            e.objetivo = base.clone().add(0, 0, 0.15 * i);
+            int m0 = e.miradas.size();
+            boolean fin = tec.paso(e);
+            tec.t++;
+            Float ahora = !e.visible ? null
+                    : e.miradas.size() > m0 ? e.miradas.get(e.miradas.size() - 1) : yaw(e.pie(), e.objetivo);
+            double d = ahora == null || antes == null ? 0 : Math.abs(difYaw(ahora, antes));
+            if (d > 1e-3) {
+                minimo = Math.min(minimo, d);
+                larga = Math.max(larga, ++racha);
+            } else {
+                racha = 0;
+            }
+            antes = ahora;
+            if (fin) break;
+        }
+        return new double[]{minimo, larga};
     }
 }

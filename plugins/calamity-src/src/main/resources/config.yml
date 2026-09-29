@@ -214,6 +214,8 @@ hardcore:
     # Aviso en la barra de accion al cruzar cada tantos niveles ("Te alejas del spawn ·
     # mobs +10 niveles"). 0 lo apaga. Dentro de la zona spawn no se avisa.
     aviso-cada-niveles: 5
+    # Segundos que se queda ese aviso en la barra de accion (1.8.2; antes, 3).
+    aviso-segundos: 5
 
   # Las quince reglas, cada una con su propio interruptor. Poner una en false (o en 0
   # las que son numero) la apaga sin tocar el resto.
@@ -454,7 +456,8 @@ hardcore:
     # Los avisos previos salen igual, a la misma proporcion, con su propio texto.
     spawn:
       activa: true
-      minutos: 5                  # no puede pasar de "minutos" (la Huella no mide mas)
+      minutos: 5                  # quieto en el spawn, contados desde que entra (1.8.2: aunque la Parca
+                                  # de fuera tenga otros "minutos"; al entrar o salir el reloj vuelve a cero)
       distancia-min: 600
       distancia-max: 1500
       intentos: 12                # puntos al azar que prueba antes de rendirse (1.2: entonces vuelve a abrirse al minuto;

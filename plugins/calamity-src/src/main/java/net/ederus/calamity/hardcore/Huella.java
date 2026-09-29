@@ -29,6 +29,7 @@ import org.bukkit.event.inventory.InventoryOpenEvent;
 import org.bukkit.event.player.PlayerChangedWorldEvent;
 import org.bukkit.event.player.PlayerFishEvent;
 import org.bukkit.event.player.PlayerInputEvent;
+import org.bukkit.event.player.PlayerTeleportEvent;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.persistence.PersistentDataType;
 
@@ -157,6 +158,14 @@ final class Huella implements Listener {
             return minutos * 60;
         }
 
+        /** Los mismos con otra ventana y sus avisos (1.8.2: la de la Grieta en la zona spawn). */
+        Ajustes ventana(int otrosMinutos, int[] otrosAvisos) {
+            return new Ajustes(activa, modoBloque, Math.max(1, otrosMinutos), muestra, celdaH, celdaV, maxCeldas,
+                    radio, vehiculoPorcentaje, vehiculoLado, vehiculoMuestrasMinimas, congelarSegundos,
+                    congelarDanoMinimo, pausaMaxima, pausaVentanaMinutos, reconexionMinutos, graciaMinutos,
+                    otrosAvisos, radioCampanaAjena, interacciones, interaccionesMinimas, giroMinimo, vueloMinimo);
+        }
+
         /** Muestras del anillo: ventana / muestra (600 / 5 = 120). */
         int tamano() {
             return Math.max(1, limite() / muestra);
@@ -177,6 +186,19 @@ final class Huella implements Listener {
 
     /** Como mucho una celda "quieta" por cada tantas muestras del anillo (24 de 120 = 1 de 5). */
     static final int MUESTRAS_POR_CELDA = 5;
+
+    /** 1.8.2 · Donde cuenta el Rastro: aun no se sabe, fuera del spawn o en la zona spawn. */
+    static final int ZONA_NINGUNA = 0, ZONA_FUERA = 1, ZONA_SPAWN = 2;
+
+    /**
+     * 1.8.2 · Los ajustes con los que cuenta la Huella en cada sitio: fuera, los de parca; en la
+     * zona spawn (con la Grieta), su ventana de parca.spawn.minutos y sus avisos, aunque la PARCA
+     * de fuera tenga otra (el SurvivalTest va con parca.minutos 1 y la Grieta sigue en 5).
+     */
+    static Ajustes ajustesZona(Ajustes a, Grieta.Umbral u) {
+        if (!u.spawn() || (u.limite() == a.limite() && java.util.Arrays.equals(u.avisos(), a.avisos()))) return a;
+        return a.ventana(u.limite() / 60, u.avisos());
+    }
 
     /**
      * El estado de un jugador, sin nada de Bukkit (DIS sec. 1.2 "Estado por jugador").
@@ -233,6 +255,14 @@ final class Huella implements Listener {
         long ultimaCaptura;
         boolean conCaptura;
         long pescaHasta;
+        /**
+         * 1.8.2 · Donde contaba en el ultimo segundo (ZONA_*) y si le han teletransportado desde
+         * entonces. No se borran en vaciar(): no son parte del anillo.
+         */
+        int zona = ZONA_NINGUNA;
+        boolean salto;
+        /** Los segundos de muestra con los que se lleno el anillo (0 = aun ninguno). */
+        int muestraAnillo;
 
         Rastro(int tamano) {
             celdas = new long[tamano];
@@ -255,6 +285,56 @@ final class Huella implements Listener {
             avisoDado = 0;
             congeladoHasta = 0;
             pausados.clear();
+        }
+
+        /**
+         * 1.8.2 · Si esta en la zona spawn o fuera. Al cambiar por su cuenta (con teclas, volando,
+         * andando en un cliente que no manda teclas o por un teletransporte) el reloj vuelve a cero
+         * con sus avisos: la Grieta cuenta sus minutos desde que entra en el spawn y la PARCA los
+         * suyos desde que sale. Si lo lleva el agua o una vagoneta no: eso no es moverse, y un AFK
+         * al que el agua mete y saca del spawn no se libraria nunca de ninguna de las dos.
+         * True si ha vuelto a cero.
+         */
+        boolean cambiarZona(boolean spawn, boolean propio) {
+            int z = spawn ? ZONA_SPAWN : ZONA_FUERA;
+            if (zona == z) return false;
+            // Un Rastro sin zona aun esta vacio: se le pone la suya y ya.
+            boolean conocida = zona != ZONA_NINGUNA;
+            zona = z;
+            if (!conocida || !propio) return false;
+            vaciar();
+            return true;
+        }
+
+        /**
+         * 1.8.2 · El anillo pasa a tener n muestras conservando las mas nuevas que quepan: al
+         * cruzar el borde del spawn sin volver a cero (llevado por el agua) sigue contando con la
+         * ventana de alli. Si cambio la duracion de la muestra, lo apuntado ya no vale: de cero.
+         */
+        void redimensionar(int n, int muestra) {
+            if (muestraAnillo != 0 && muestraAnillo != muestra) {
+                celdas = new long[n];
+                montado = new boolean[n];
+                novedad = new boolean[n];
+                vaciar();
+                muestraAnillo = muestra;
+                return;
+            }
+            int len = celdas.length, guardar = Math.min(llenas, n);
+            long[] c = new long[n];
+            boolean[] m = new boolean[n], nv = new boolean[n];
+            for (int i = 0; i < guardar; i++) {
+                int k = ((cabeza - guardar + i) % len + len) % len;
+                c[i] = celdas[k];
+                m[i] = montado[k];
+                nv[i] = novedad[k];
+            }
+            celdas = c;
+            montado = m;
+            novedad = nv;
+            cabeza = guardar % n;
+            llenas = guardar;
+            muestraAnillo = muestra;
         }
 
         /** Pausa el reloj congelar-segundos: un golpe de amenaza o de un rival valido. */
@@ -294,12 +374,11 @@ final class Huella implements Listener {
          */
         boolean segundo(long ahora, double x, double y, double z, boolean enVehiculo, boolean activo,
                         boolean bedrockSuelo, boolean volando, Ajustes a) {
-            if (celdas.length != a.tamano()) {
-                // Cambio la config (minutos o muestra): se empieza de cero con el anillo nuevo.
-                celdas = new long[a.tamano()];
-                montado = new boolean[a.tamano()];
-                novedad = new boolean[a.tamano()];
-                vaciar();
+            if (celdas.length != a.tamano() || muestraAnillo != a.muestra()) {
+                // Otra ventana (la del spawn o la de fuera, o cambio la config): se guarda lo mas
+                // nuevo que quepa (1.8.2; antes se empezaba de cero). Otra muestra, de cero.
+                redimensionar(a.tamano(), a.muestra());
+                if (!a.modoBloque()) quieto = calcular(a);
             }
             podar(ahora, a);
             // Congelado y con presupuesto: el reloj se para (no se reinicia). Sin presupuesto,
@@ -487,6 +566,7 @@ final class Huella implements Listener {
                 montado = new boolean[a.tamano()];
                 novedad = new boolean[a.tamano()];
             }
+            muestraAnillo = a.muestra();
             vaciar();
             java.util.Arrays.fill(novedad, false);
             long celda = clave(x, y, z, a);
@@ -704,17 +784,7 @@ final class Huella implements Listener {
         if (!a.activa()) return;
         Rastro r = rastro(p);
         long ahora = System.currentTimeMillis();
-        if (exento(p, r, ahora, a)) {
-            quitarCampana(p.getUniqueId());
-            return;
-        }
-        // 1.6.1 · Pescando en la zona spawn: el reloj de la Grieta vuelve a cero (solo en el spawn).
-        if (ahora < r.pescaHasta && r.pescaReinicia(ahora, grieta.umbral(p, a).spawn(), grieta.ajustes())) {
-            avisos(p, r, a);
-            return;
-        }
         Entity vehiculo = p.getVehicle();
-        Location pos = vehiculo != null ? vehiculo.getLocation() : p.getLocation();
         // Quien mantiene W sin soltar no genera eventos: se mira tambien la tecla de ahora.
         boolean activo = ahora - r.ultimaTecla <= a.muestra() * 1000L || mueve(p.getCurrentInput());
         if (activo) r.conTeclas = true;
@@ -725,8 +795,37 @@ final class Huella implements Listener {
         boolean bedrock = vehiculo == null && p.isOnGround() && !p.isInWater() && !p.isInLava()
                 && (Plataforma.esBedrock(p) || !r.conTeclas);
         boolean volando = vehiculo == null && (p.isFlying() || p.isGliding());
-        r.segundo(ahora, pos.getX(), pos.getY(), pos.getZ(), vehiculo != null, activo, bedrock, volando, a);
-        avisos(p, r, a);
+        // 1.8.2 · Entrar en el spawn o salir de el por su cuenta pone el reloj a cero, tambien con
+        // la gracia o la llegada protegida (antes de exento): la Grieta no hereda la quietud de fuera.
+        boolean salto = r.salto;
+        r.salto = false;
+        if (r.cambiarZona(hc.enSpawn(p), activo || volando || bedrock || salto)) quitarCampana(p.getUniqueId());
+        if (exento(p, r, ahora, a)) {
+            quitarCampana(p.getUniqueId());
+            return;
+        }
+        Grieta.Umbral u = grieta.umbral(p, a);
+        Ajustes az = ajustesZona(a, u);
+        // 1.6.1 · Pescando en la zona spawn: el reloj de la Grieta vuelve a cero (solo en el spawn).
+        if (ahora < r.pescaHasta && r.pescaReinicia(ahora, u.spawn(), grieta.ajustes())) {
+            avisos(p, r, az, u);
+            return;
+        }
+        Location pos = vehiculo != null ? vehiculo.getLocation() : p.getLocation();
+        r.segundo(ahora, pos.getX(), pos.getY(), pos.getZ(), vehiculo != null, activo, bedrock, volando, az);
+        avisos(p, r, az, u);
+    }
+
+    /**
+     * 1.8.2 · Un teletransporte dentro de Calamity (la puerta, /spawn, una perla...) cuenta como
+     * cambiar de sitio por su cuenta: si con el entra en el spawn o sale, la Huella empieza de cero.
+     */
+    @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
+    public void onTeleport(PlayerTeleportEvent e) {
+        Location a = e.getTo();
+        if (a == null || !hc.esHardcore(a.getWorld())) return;
+        Rastro r = rastros.get(e.getPlayer().getUniqueId());
+        if (r != null) r.salto = true;
     }
 
     /**
@@ -755,10 +854,9 @@ final class Huella implements Listener {
      * Cordura.destello. La campana sobre la cabeza es a proposito: en un mundo con PvP y
      * perdida total, el AFK se convierte en presa de los demas antes de que llegue la PARCA.
      */
-    private void avisos(Player p, Rastro r, Ajustes a) {
+    private void avisos(Player p, Rastro r, Ajustes a, Grieta.Umbral u) {
         int q = r.quieto;
         // Calamity 1.1.0: en la zona spawn el limite y los avisos son los de la Grieta (parca.spawn).
-        Grieta.Umbral u = grieta.umbral(p, a);
         if (q >= u.limite() && u.spawn()) {
             boolean abierta = hc.valor("parca", () -> grieta.abrir(p, r.celdasDistintas()), false);
             if (abierta) {
@@ -994,6 +1092,11 @@ final class Huella implements Listener {
         rastros.put(p.getUniqueId(), r);
     }
 
+    /** 1.8.2 · Los segundos quieto que llaman a la Grieta (en el spawn) o a la PARCA (fuera) para el. */
+    int limite(Player p) {
+        return grieta.umbral(p, ajustes()).limite();
+    }
+
     /** Segundos de quietud segun la Huella. */
     int quieto(Player p) {
         Rastro r = rastros.get(p.getUniqueId());
@@ -1004,12 +1107,17 @@ final class Huella implements Listener {
     void forzar(Player p, int segundos) {
         Location l = p.getVehicle() != null ? p.getVehicle().getLocation() : p.getLocation();
         Ajustes a = ajustes();
+        Grieta.Umbral u = grieta.umbral(p, a);
         Rastro r = rastro(p);
-        r.forzar(segundos, l.getX(), l.getY(), l.getZ(), a);
+        // En el spawn, con la ventana de la Grieta; y con su zona ya puesta, para que el segundo
+        // siguiente no lo tome por una entrada y lo vuelva a cero.
+        r.forzar(segundos, l.getX(), l.getY(), l.getZ(), ajustesZona(a, u));
+        r.zona = hc.enSpawn(p) ? ZONA_SPAWN : ZONA_FUERA;
+        r.salto = false;
         r.graciaHasta = 0;
         r.pescaHasta = 0;
         // Los avisos ya pasados no se repiten: se dan por dados hasta ese punto (los del spawn, dentro).
-        int[] av = grieta.umbral(p, a).avisos();
+        int[] av = u.avisos();
         int nivel = 0;
         while (nivel < av.length && r.quieto >= av[nivel]) nivel++;
         r.avisoDado = nivel;
@@ -1021,7 +1129,7 @@ final class Huella implements Listener {
         if (r == null) return "sin huella";
         long ahora = System.currentTimeMillis();
         Ajustes a = ajustes();
-        return "quieto " + r.quieto + "/" + a.limite() + " s | celdas " + r.celdasDistintas()
+        return "quieto " + r.quieto + "/" + limite(p) + " s | celdas " + r.celdasDistintas()
                 + " | muestras " + r.llenas + " | última activa " + (r.ultimaActiva ? "sí" : "no")
                 + " | montado " + Math.round(r.fraccionMontado() * 100) + " %"
                 + " | pausa " + r.pausaUsada(ahora, a) + "/" + a.pausaMaxima() + " s"
