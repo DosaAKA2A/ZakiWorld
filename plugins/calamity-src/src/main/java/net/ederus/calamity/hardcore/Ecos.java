@@ -30,12 +30,14 @@ import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
 import org.bukkit.event.HandlerList;
 import org.bukkit.event.Listener;
+import org.bukkit.event.block.BlockShearEntityEvent;
 import org.bukkit.event.entity.EntityDamageByEntityEvent;
 import org.bukkit.event.entity.EntityDamageEvent;
 import org.bukkit.event.entity.EntityDeathEvent;
 import org.bukkit.event.entity.EntityShootBowEvent;
 import org.bukkit.event.entity.EntityTargetEvent;
 import org.bukkit.event.player.PlayerQuitEvent;
+import org.bukkit.event.player.PlayerShearEntityEvent;
 import org.bukkit.event.world.EntitiesLoadEvent;
 import org.bukkit.event.world.EntitiesUnloadEvent;
 import org.bukkit.inventory.EquipmentSlot;
@@ -827,6 +829,20 @@ final class Ecos implements Listener {
         if (e.volviendo || e.elegido == null || !e.elegido.equals(ev.getTarget().getUniqueId())) ev.setCancelled(true);
     }
 
+    /**
+     * El Eco pantanoso (BOGGED) no se esquila, ni a mano ni con un dispensador: sus setas serian
+     * algo que el Eco suelta fuera de su botin, y cada vez que despierta volveria a tenerlas.
+     */
+    @EventHandler(ignoreCancelled = true)
+    public void onEsquilar(PlayerShearEntityEvent ev) {
+        if ("eco".equals(Marcas.amenaza(ev.getEntity()))) ev.setCancelled(true);
+    }
+
+    @EventHandler(ignoreCancelled = true)
+    public void onEsquilarDispensador(BlockShearEntityEvent ev) {
+        if ("eco".equals(Marcas.amenaza(ev.getEntity()))) ev.setCancelled(true);
+    }
+
     /** P1 · el maniqui no recibe dano: el golpe de un jugador pasa al cuerpo, con el mismo autor. */
     @EventHandler(priority = EventPriority.LOW, ignoreCancelled = true)
     public void onDanoCascara(EntityDamageEvent ev) {
@@ -1221,7 +1237,8 @@ final class Ecos implements Listener {
     /**
      * eco prueba <nombre> <x> <y> <z> [N] [escalon]: un Eco sin jugador, en el primer mundo
      * hardcore, con equipo vanilla del escalon (cuero 0 ... netherita 6) y el censo que se
-     * le diga. 20 min "dentro" para que la regla de minutos no estorbe al probar la caza.
+     * le diga. 20 min "dentro" para que la regla de minutos no estorbe al probar la caza. Su
+     * esqueleto es el del bioma de ese sitio, como si alguien hubiera muerto ahi.
      */
     private void prueba(CommandSender quien, String[] args) {
         if (args.length < 6) {
@@ -1255,13 +1272,14 @@ final class Ecos implements Listener {
                 + " | dano " + Bitacora.dec(e.dano) + " | escalon " + escalon);
     }
 
-    /** Foto sintetica de "eco prueba" (y del autotest): equipo del escalon y censo a medida. */
+    /** Foto sintetica de "eco prueba" (y del autotest): equipo del escalon, censo a medida y el bioma del sitio. */
     @SuppressWarnings("deprecation")
     static FotoMuerte fotoDePrueba(UUID u, String nombre, Location donde, int n, int escalon) {
         FotoMuerte f = new FotoMuerte();
         f.dueno = u;
         f.nombre = nombre;
         f.anclaje = donde;
+        f.bioma = FotoMuerte.claveBioma(donde);
         String pre = escalon >= 6 ? "NETHERITE" : escalon >= 4 ? "DIAMOND" : escalon >= 2 ? "IRON" : escalon >= 1 ? "CHAINMAIL" : "LEATHER";
         String arma = escalon >= 6 ? "NETHERITE" : escalon >= 4 ? "DIAMOND" : escalon >= 2 ? "IRON" : escalon >= 1 ? "STONE" : "WOODEN";
         String[] piezas = {"_HELMET", "_CHESTPLATE", "_LEGGINGS", "_BOOTS"};
@@ -1411,8 +1429,8 @@ final class Ecos implements Listener {
     // --------------------------------------------------------------- autotest
 
     /**
-     * /lw hardcore autotest eco: las cuentas de sec. 2.4 y las reglas de caza valida con datos
-     * sinteticos (UUID 00..0N, YamlConfiguration en memoria, config vacia = los defectos).
+     * /lw hardcore autotest eco: las cuentas de sec. 2.4, las reglas de caza valida y el cuerpo por
+     * bioma con datos sinteticos (UUID 00..0N, YamlConfiguration en memoria, config vacia = los defectos).
      */
     private List<String> autotest() {
         Autotest.Hoja h = new Autotest.Hoja();
@@ -1530,6 +1548,9 @@ final class Ecos implements Listener {
             }
         });
 
+        // --- el cuerpo: siempre esqueleto, de la variante del bioma donde murio
+        Eco.probarCuerpo(h);
+
         // --- registro: ida y vuelta por YAML (en memoria)
         World w = primerMundo();
         if (w == null && !hc.plugin().getServer().getWorlds().isEmpty()) w = hc.plugin().getServer().getWorlds().get(0);
@@ -1537,6 +1558,8 @@ final class Ecos implements Listener {
             World mundo = w;
             h.sinExcepcion("registro ida y vuelta", () -> {
                 FotoMuerte f = fotoDePrueba(Autotest.sintetico(8), "Prueba", new Location(mundo, 1, 2, 3), 40, 6);
+                // Con espada y muerto en la taiga condenada: antes zombi, ahora esqueleto glacial.
+                f.bioma = "bracken:panacea/condemned_taiga";
                 Eco e = Eco.deFoto("00000001", f, c, t0);
                 YamlConfiguration y = new YamlConfiguration();
                 e.guardar(y.createSection("ecos.00000001"));
@@ -1544,7 +1567,9 @@ final class Ecos implements Listener {
                 if (v.nivel != 45 || Math.abs(v.vidaMax - e.vidaMax) > 1e-9 || Math.abs(v.dano - e.dano) > 1e-9
                         || v.escalonMedio != 6 || v.equipo[FotoMuerte.HAND] == null
                         || v.equipo[FotoMuerte.HAND].getType() != Material.NETHERITE_SWORD
-                        || !v.dueno.equals(Autotest.sintetico(8)) || v.expira != t0 + 12 * 3_600_000L) {
+                        || !v.dueno.equals(Autotest.sintetico(8)) || v.expira != t0 + 12 * 3_600_000L
+                        || v.variante != Eco.Variante.STRAY || !"STRAY".equals(y.getString("ecos.00000001.base"))
+                        || v.arquero()) {
                     throw new IllegalStateException("el registro no vuelve igual");
                 }
             });

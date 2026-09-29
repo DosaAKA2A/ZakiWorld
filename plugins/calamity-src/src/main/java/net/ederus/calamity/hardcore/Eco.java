@@ -13,22 +13,33 @@ import org.bukkit.Material;
 import org.bukkit.NamespacedKey;
 import org.bukkit.World;
 import org.bukkit.configuration.ConfigurationSection;
+import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.entity.AbstractSkeleton;
+import org.bukkit.entity.Bogged;
 import org.bukkit.entity.LivingEntity;
 import org.bukkit.entity.Mannequin;
 import org.bukkit.entity.Mob;
 import org.bukkit.entity.Player;
 import org.bukkit.entity.Skeleton;
-import org.bukkit.entity.Zombie;
+import org.bukkit.entity.Stray;
+import org.bukkit.entity.WitherSkeleton;
 import org.bukkit.inventory.EntityEquipment;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.persistence.PersistentDataType;
 
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.io.UncheckedIOException;
+import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Base64;
+import java.util.Collection;
 import java.util.List;
+import java.util.Locale;
+import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 
@@ -51,6 +62,36 @@ final class Eco {
     /** El color del Eco: el de la Paleta (el #9AA7B8 de antes se perdia en el chat). */
     static final TextColor GRIS = Paleta.ECO;
 
+    /**
+     * El cuerpo del Eco: siempre un esqueleto, de la variante del bioma donde murio su dueno
+     * (cuerpo.por-bioma). Se guarda en ecos.<id>.base con su nombre.
+     */
+    enum Variante {
+        SKELETON(Skeleton.class), STRAY(Stray.class), BOGGED(Bogged.class), WITHER_SKELETON(WitherSkeleton.class);
+
+        final Class<? extends AbstractSkeleton> clase;
+
+        Variante(Class<? extends AbstractSkeleton> clase) {
+            this.clase = clase;
+        }
+
+        /** Por su nombre, sin mirar mayusculas (wither-skeleton tambien vale); null si no es ninguna. */
+        static Variante de(String nombre) {
+            if (nombre == null || nombre.isBlank()) return null;
+            try {
+                return valueOf(nombre.trim().toUpperCase(Locale.ROOT).replace('-', '_').replace(' ', '_'));
+            } catch (IllegalArgumentException e) {
+                return null;
+            }
+        }
+    }
+
+    /** cuerpo.por-bioma de serie, el mismo que trae config.yml: trozos de la clave del bioma -> variante. */
+    static final List<Map<String, Object>> POR_BIOMA = List.of(
+            Map.of("variante", "STRAY", "trozos", List.of("taiga", "snow", "frozen", "ice", "cold", "grove", "peaks")),
+            Map.of("variante", "BOGGED", "trozos", List.of("swamp", "bog", "mangrove", "polypore", "fango")),
+            Map.of("variante", "WITHER_SKELETON", "trozos", List.of("crimson", "nether", "soul", "warped", "basalt")));
+
     // ------------------------------------------------------ registro (se guarda)
     final String id;
     UUID dueno;
@@ -64,7 +105,8 @@ final class Eco {
     double vidaMax;
     double fraccion = 1;
     double armadura, dureza, dano;
-    boolean esqueleto, escudo;
+    Variante variante = Variante.SKELETON;
+    boolean escudo;
     final ItemStack[] equipo = new ItemStack[6];
     final List<ItemStack> reliquias = new ArrayList<>();
     final List<ItemStack> esencias = new ArrayList<>();
@@ -206,6 +248,31 @@ final class Eco {
         return n;
     }
 
+    /**
+     * La variante por la clave del bioma donde murio (cuerpo.por-bioma): en orden, manda la primera
+     * regla con un trozo contenido en la clave, en minusculas. Si no encaja ninguna, o no se sabe
+     * el bioma, SKELETON. Sin la lista en la config, la de serie; una regla con una variante que
+     * no existe no cuenta.
+     */
+    static Variante variantePorBioma(String claveBioma, ConfigurationSection c) {
+        if (claveBioma == null || claveBioma.isBlank()) return Variante.SKELETON;
+        String clave = claveBioma.toLowerCase(Locale.ROOT);
+        List<?> reglas = c != null && c.isList("cuerpo.por-bioma") ? c.getList("cuerpo.por-bioma") : POR_BIOMA;
+        for (Object o : reglas) {
+            if (!(o instanceof Map<?, ?> regla)) continue;
+            Object nombre = regla.get("variante");
+            Variante v = Variante.de(nombre == null ? null : String.valueOf(nombre));
+            if (v == null) continue;
+            Object t = regla.get("trozos");
+            Collection<?> trozos = t instanceof Collection<?> col ? col : t == null ? List.of() : List.of(t);
+            for (Object trozo : trozos) {
+                String s = trozo == null ? "" : String.valueOf(trozo).trim().toLowerCase(Locale.ROOT);
+                if (!s.isEmpty() && clave.contains(s)) return v;
+            }
+        }
+        return Variante.SKELETON;
+    }
+
     /** Un Eco recien nacido de una foto (sin guardar: lo guarda Ecos). */
     static Eco deFoto(String id, FotoMuerte f, ConfigurationSection c, long ahora) {
         Eco e = new Eco(id);
@@ -224,7 +291,7 @@ final class Eco {
         // Topes de ESC: son atributos BASE del mob (las copias no aportan nada).
         e.armadura = Math.min(30, Math.max(0, f.armadura));
         e.dureza = Math.min(20, Math.max(0, f.dureza));
-        e.esqueleto = f.arquero;
+        e.variante = variantePorBioma(f.bioma, c);
         e.escudo = f.escudo;
         System.arraycopy(f.equipo, 0, e.equipo, 0, 6);
         e.reliquias.addAll(f.reliquias);
@@ -262,7 +329,7 @@ final class Eco {
         s.set("armadura", armadura);
         s.set("dureza", dureza);
         s.set("dano", dano);
-        s.set("base", esqueleto ? "SKELETON" : "ZOMBIE");
+        s.set("base", variante.name());
         s.set("escudo", escudo);
         s.set("equipo", null);
         for (int i = 0; i < 6; i++) {
@@ -307,7 +374,9 @@ final class Eco {
         e.armadura = s.getDouble("armadura");
         e.dureza = s.getDouble("dureza");
         e.dano = s.getDouble("dano", 3);
-        e.esqueleto = "SKELETON".equalsIgnoreCase(s.getString("base", "ZOMBIE"));
+        // Los guardados cuando el Eco aun podia ser zombi dicen ZOMBIE: esos, y lo que no se entienda, SKELETON.
+        Variante v = Variante.de(s.getString("base"));
+        e.variante = v == null ? Variante.SKELETON : v;
         e.escudo = s.getBoolean("escudo");
         for (int i = 0; i < 6; i++) {
             String b = s.getString("equipo." + FotoMuerte.CASILLAS[i]);
@@ -355,6 +424,12 @@ final class Eco {
 
     boolean tieneBotin() {
         return !reliquias.isEmpty() || nEsencias > 0;
+    }
+
+    /** Con arco o ballesta en la foto dispara; si no, pelea a mano. */
+    boolean arquero() {
+        ItemStack mano = equipo[FotoMuerte.HAND];
+        return mano != null && (mano.getType() == Material.BOW || mano.getType() == Material.CROSSBOW);
     }
 
     /** Reliquias que lleva (las I-II se apilan: cuenta unidades). */
@@ -435,18 +510,12 @@ final class Eco {
         boolean conCascara = c.getBoolean("cuerpo-jugador", false) && skinValor != null;
         double vidaEntidad = Math.min(Amenazas.VIDA_MAXIMA_ENTIDAD, vidaMax);
         double frac = Math.max(0.01, Math.min(1, fraccion));
-        Class<? extends Mob> tipo = esqueleto ? Skeleton.class : Zombie.class;
-        Mob m = hc.amenazas().invocar(tipo, l, "eco", nivel, nombre(false), e -> {
+        Mob m = hc.amenazas().invocar(variante.clase, l, "eco", nivel, nombre(false), e -> {
             e.getPersistentDataContainer().set(Marcas.ECO, PersistentDataType.STRING, id);
             e.getPersistentDataContainer().set(Marcas.ECO_DUENO, PersistentDataType.STRING, dueno.toString());
             e.getPersistentDataContainer().set(Marcas.VIDA_LOGICA, PersistentDataType.DOUBLE, vidaMax);
-            e.setSilent(true);   // suena a jugador, no a zombi: los sonidos van a mano
-            if (e instanceof Zombie zz) {
-                zz.setAdult();
-                zz.setShouldBurnInDay(false);
-                Compat.setAttribute(zz, "spawn_reinforcements", 0);
-            }
-            if (e instanceof AbstractSkeleton sk) sk.setShouldBurnInDay(false);
+            e.setSilent(true);   // suena a jugador, no a esqueleto: los sonidos van a mano
+            e.setShouldBurnInDay(false);
             // Los modificadores de vanilla y la montura ya los quita Amenazas.invocar.
             Compat.setAttribute(e, "max_health", vidaEntidad);
             e.setHealth(Math.max(0.5, vidaEntidad * frac));
@@ -456,8 +525,15 @@ final class Eco {
             Compat.setAttribute(e, "movement_speed", c.getDouble("velocidad", 0.26));
             Compat.setAttribute(e, "knockback_resistance", 0.5);
             Compat.setAttribute(e, "follow_range", 32);
-            if (conCascara) e.setInvisible(true);
-            else vestir(e.getEquipment());
+            if (conCascara) {
+                e.setInvisible(true);
+                // Bajo el maniqui va sin vestir, pero vanilla hace nacer a todo esqueleto con un arco y
+                // dispararia: si su foto no lleva arco, se le quita y pelea a mano.
+                EntityEquipment eq = e.getEquipment();
+                if (eq != null && !arquero()) eq.setItemInMainHand(null);
+            } else {
+                vestir(e.getEquipment());
+            }
         });
         if (m == null) return false;
         cuerpo = m;
@@ -497,7 +573,7 @@ final class Eco {
         eq.setBoots(clon(equipo[FotoMuerte.FEET]));
         ItemStack mano = clon(equipo[FotoMuerte.HAND]);
         // Un esqueleto solo dispara con arco: la ballesta se le pone como arco con su nombre.
-        if (esqueleto && mano != null && mano.getType() == Material.CROSSBOW) mano = mano.withType(Material.BOW);
+        if (mano != null && mano.getType() == Material.CROSSBOW) mano = mano.withType(Material.BOW);
         eq.setItemInMainHand(mano);
         eq.setItemInOffHand(clon(equipo[FotoMuerte.OFF_HAND]));
     }
@@ -508,8 +584,8 @@ final class Eco {
 
     /**
      * P1 · cuerpo de jugador (cuerpo-jugador, apagado de serie): un Mannequin con su skin
-     * encima del zombi invisible, teletransportado cada 2 ticks (MT sec. 5.2). Si algo falla,
-     * el zombi se vuelve visible y se viste: el Eco nunca se queda sin cuerpo.
+     * encima del esqueleto invisible, teletransportado cada 2 ticks (MT sec. 5.2). Si algo falla,
+     * el esqueleto se vuelve visible y se viste: el Eco nunca se queda sin cuerpo.
      */
     private void ponerCascara(Ecos g, Location l) {
         try {
@@ -800,5 +876,95 @@ final class Eco {
         }
         cuerpo.customName(n.append(Component.text(" Nv. " + nivel, Paleta.TENUE)));
         cuerpo.setCustomNameVisible(true);
+    }
+
+    // ------------------------------------------------------------------ autotest
+
+    /**
+     * El cuerpo por bioma (cuerpo.por-bioma) y la variante en el registro. Sin mundo ni servidor:
+     * lo usan /calamidad autotest eco y el arnes de fuera.
+     */
+    static void probarCuerpo(Autotest.Hoja h) {
+        // --- la tabla de serie (config sin cuerpo.por-bioma), con los biomas de Bracken de Calamity
+        YamlConfiguration vacia = new YamlConfiguration();
+        h.igual("taiga -> STRAY", Variante.STRAY, variantePorBioma("taiga", vacia))
+                .igual("bog -> BOGGED", Variante.BOGGED, variantePorBioma("bog", vacia))
+                .igual("crimson -> WITHER_SKELETON", Variante.WITHER_SKELETON, variantePorBioma("crimson", vacia))
+                .igual("jungle -> SKELETON", Variante.SKELETON, variantePorBioma("jungle", vacia))
+                .igual("taiga condenada -> STRAY", Variante.STRAY, variantePorBioma("bracken:panacea/condemned_taiga", vacia))
+                .igual("cienaga de flores -> BOGGED", Variante.BOGGED, variantePorBioma("bracken:panacea/wildflower_bog", vacia))
+                .igual("pantano sofocante -> BOGGED", Variante.BOGGED, variantePorBioma("bracken:panacea/sweltering_swamp", vacia))
+                .igual("llanura de poliporos -> BOGGED", Variante.BOGGED, variantePorBioma("bracken:panacea/polypore_plains", vacia))
+                .igual("organismo carmesi -> WITHER_SKELETON", Variante.WITHER_SKELETON,
+                        variantePorBioma("bracken:panacea/crimson_organism", vacia))
+                .igual("jungla hambrienta -> SKELETON", Variante.SKELETON, variantePorBioma("bracken:panacea/hungering_jungle", vacia))
+                .igual("arboleda voraz -> SKELETON", Variante.SKELETON, variantePorBioma("bracken:panacea/ravenous_greenwood", vacia))
+                .igual("nevado vanilla -> STRAY", Variante.STRAY, variantePorBioma("minecraft:snowy_plains", vacia))
+                .igual("valle de almas vanilla -> WITHER_SKELETON", Variante.WITHER_SKELETON,
+                        variantePorBioma("minecraft:soul_sand_valley", vacia))
+                .igual("en mayusculas tambien", Variante.STRAY, variantePorBioma("BRACKEN:PANACEA/CONDEMNED_TAIGA", vacia))
+                .igual("sin bioma -> SKELETON", Variante.SKELETON, variantePorBioma(null, vacia));
+
+        // --- reglas propias: en orden, la primera que encaja; una variante que no existe no cuenta
+        YamlConfiguration propia = new YamlConfiguration();
+        propia.set("cuerpo.por-bioma", List.of(
+                Map.of("variante", "ZOMBIE", "trozos", List.of("taiga")),
+                Map.of("variante", "wither-skeleton", "trozos", "bog"),
+                Map.of("variante", "BOGGED", "trozos", List.of("bog", "taiga"))));
+        h.igual("variante que no existe no cuenta", Variante.BOGGED, variantePorBioma("bracken:panacea/condemned_taiga", propia))
+                .igual("manda la primera que encaja", Variante.WITHER_SKELETON, variantePorBioma("bracken:panacea/wildflower_bog", propia))
+                .igual("ninguna encaja -> SKELETON", Variante.SKELETON, variantePorBioma("minecraft:snowy_plains", propia));
+        YamlConfiguration sinReglas = new YamlConfiguration();
+        sinReglas.set("cuerpo.por-bioma", List.of());
+        h.igual("lista vacia -> SKELETON", Variante.SKELETON, variantePorBioma("bracken:panacea/condemned_taiga", sinReglas));
+
+        // --- config.yml trae la tabla de serie, y un config de servidor sin eco.cuerpo la coge del
+        // jar (los defectos que pone getConfig()); con la suya, manda la suya
+        h.sinExcepcion("config.yml trae la tabla de serie", () -> {
+            List<?> tabla = configDelJar().getList("hardcore.eco.cuerpo.por-bioma");
+            if (!POR_BIOMA.equals(tabla)) throw new IllegalStateException("distinta: " + tabla);
+        });
+        YamlConfiguration jar = new YamlConfiguration();
+        jar.set("hardcore.eco.cuerpo.por-bioma", List.of(Map.of("variante", "BOGGED", "trozos", List.of("taiga"))));
+        YamlConfiguration servidor = new YamlConfiguration();
+        servidor.set("hardcore.eco.activo", true);
+        servidor.setDefaults(jar);
+        h.igual("servidor sin eco.cuerpo -> la del jar", Variante.BOGGED,
+                variantePorBioma("bracken:panacea/condemned_taiga", servidor.getConfigurationSection("hardcore.eco")));
+        servidor.set("hardcore.eco.cuerpo.por-bioma", List.of(Map.of("variante", "WITHER_SKELETON", "trozos", List.of("taiga"))));
+        h.igual("servidor con eco.cuerpo -> la suya", Variante.WITHER_SKELETON,
+                variantePorBioma("bracken:panacea/condemned_taiga", servidor.getConfigurationSection("hardcore.eco")));
+
+        // --- el registro: los ZOMBIE y SKELETON de antes salen SKELETON; la variante va y vuelve
+        YamlConfiguration y = new YamlConfiguration();
+        ConfigurationSection viejo = y.createSection("ecos.viejo");
+        viejo.set("dueno", Autotest.sintetico(9).toString());
+        viejo.set("base", "ZOMBIE");
+        h.igual("base ZOMBIE guardada -> SKELETON", Variante.SKELETON, cargar("viejo", viejo).variante);
+        viejo.set("base", "SKELETON");
+        h.igual("base SKELETON guardada -> SKELETON", Variante.SKELETON, cargar("viejo", viejo).variante);
+        viejo.set("base", null);
+        h.igual("sin base -> SKELETON", Variante.SKELETON, cargar("viejo", viejo).variante);
+        viejo.set("base", "HUSK");
+        h.igual("base desconocida -> SKELETON", Variante.SKELETON, cargar("viejo", viejo).variante);
+        for (Variante v : Variante.values()) {
+            Eco e = new Eco("0000000" + v.ordinal());
+            e.dueno = Autotest.sintetico(10 + v.ordinal());
+            e.variante = v;
+            ConfigurationSection s = y.createSection("ecos." + e.id);
+            e.guardar(s);
+            h.igual("se guarda " + v, v.name(), s.getString("base"))
+                    .igual("y se recupera " + v, v, cargar(e.id, s).variante);
+        }
+    }
+
+    /** El config.yml que trae el jar. */
+    private static YamlConfiguration configDelJar() {
+        try (InputStream in = Eco.class.getResourceAsStream("/config.yml")) {
+            if (in == null) throw new IllegalStateException("el jar no trae config.yml");
+            return YamlConfiguration.loadConfiguration(new InputStreamReader(in, StandardCharsets.UTF_8));
+        } catch (IOException e) {
+            throw new UncheckedIOException(e);
+        }
     }
 }

@@ -518,6 +518,15 @@ hardcore:
     aviso-dueno-radio: 150
     voces: {activo: false, radio: 24, minutos: 10, cada-min-segundos: 20, cada-max-segundos: 40}   # P1
     cuerpo-jugador: false         # P1: Mannequin con su cara
+    # El Eco es siempre un esqueleto, y la variante depende del bioma donde murió su dueño. Cada
+    # regla da su variante si la clave del bioma (bracken:panacea/condemned_taiga, minecraft:swamp...)
+    # contiene alguno de sus trozos. Se miran en orden y manda la primera que encaje; si no encaja
+    # ninguna, SKELETON. Variantes: SKELETON, STRAY, BOGGED y WITHER_SKELETON.
+    cuerpo:
+      por-bioma:
+        - {variante: STRAY, trozos: [taiga, snow, frozen, ice, cold, grove, peaks]}
+        - {variante: BOGGED, trozos: [swamp, bog, mangrove, polypore, fango]}
+        - {variante: WITHER_SKELETON, trozos: [crimson, nether, soul, warped, basalt]}
 
   # ------------------------------------------------------------------ M1. ADUANA
   aduana:

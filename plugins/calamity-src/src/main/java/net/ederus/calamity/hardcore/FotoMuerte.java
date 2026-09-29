@@ -56,8 +56,13 @@ final class FotoMuerte {
     Location anclaje;
     /** Copias visuales (sin encantamientos, sin MMOItems, sin atributos). Huecos = null. */
     final ItemStack[] equipo = new ItemStack[6];
-    /** Arco o ballesta en la mano: el Eco nace esqueleto (un zombi con arco no dispara). */
+    /** Arco o ballesta en la mano: su Eco dispara, y lo que pega sale del arma (sin ella, pelea a mano). */
     boolean arquero;
+    /**
+     * La clave del bioma donde murio (bracken:panacea/condemned_taiga, minecraft:swamp...): de ella
+     * sale la variante de esqueleto de su Eco (eco.cuerpo.por-bioma). Null si no se sabe.
+     */
+    String bioma;
     boolean escudo;
     /** Piezas reales entre armadura y arma: decide si merece Eco (minimo-piezas). */
     int piezas;
@@ -193,7 +198,21 @@ final class FotoMuerte {
 
         f.censo = hc.valor("censo", () -> Censo.de(reales), null);
         f.anclaje = anclar(p, hc, c);
+        // El bioma de donde murio. Caido al vacio no estaba en ningun bioma: vale el de su anclaje (su ultimo suelo).
+        Location muerte = p.getLocation();
+        boolean vacio = muerte.getWorld() == null || muerte.getY() < muerte.getWorld().getMinHeight();
+        f.bioma = claveBioma(vacio ? f.anclaje : muerte);
         return f;
+    }
+
+    /** La clave del bioma de un sitio (minecraft:swamp, bracken:panacea/wildflower_bog...), o null. No carga chunks. */
+    static String claveBioma(Location l) {
+        if (l == null || l.getWorld() == null) return null;
+        try {
+            return l.getWorld().getBiome(l.getBlockX(), l.getBlockY(), l.getBlockZ()).getKey().asString();
+        } catch (Throwable t) {
+            return null;
+        }
     }
 
     /** La foto del equipo (Censo, M10): decide la caza valida y el grado de la Lagrima. */
