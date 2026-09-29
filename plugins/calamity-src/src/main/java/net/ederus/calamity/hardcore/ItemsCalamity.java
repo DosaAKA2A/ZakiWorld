@@ -160,6 +160,37 @@ public final class ItemsCalamity {
         return item;
     }
 
+    // ------------------------------------------------------- el Fragmento de Masamune
+
+    /**
+     * Fragmento de Masamune: lo que deja Ambush a su presa, en fisico (antes era un credito). La
+     * Forja de Vael pide cinco para la Masamune. Chatarra de netherita con el nombre en el gris
+     * acero de la Masamune y la marca lethal_world:fragmento_masamune, que es lo que lo identifica
+     * aunque lo renombren. Se apila; no entra en recetas ni en hornos (ObjetosCalamity) y el
+     * Mercader no lo compra (solo compra Reliquias). Sale sin ligar: lo liga quien lo entrega.
+     */
+    public static ItemStack fragmentoMasamune(int cantidad) {
+        ItemStack item = new ItemStack(Material.NETHERITE_SCRAP, Math.max(1, Math.min(64, cantidad)));
+        ItemMeta meta = item.getItemMeta();
+        if (meta != null) {
+            meta.displayName(Paleta.degradado(FragmentosMasamune.NOMBRE, Paleta.ACERO_DESDE, Paleta.ACERO_HASTA));
+            meta.lore(List.of(
+                    Component.text("Un trozo de la katana de Ambush.", Paleta.TEXTO)
+                            .decoration(TextDecoration.ITALIC, false),
+                    Component.text("Vael forja la Masamune con cinco.", Paleta.TENUE)
+                            .decoration(TextDecoration.ITALIC, false)));
+            meta.setEnchantmentGlintOverride(true);
+            meta.getPersistentDataContainer().set(Marcas.FRAGMENTO_MASAMUNE, PersistentDataType.BYTE, (byte) 1);
+            item.setItemMeta(meta);
+        }
+        return item;
+    }
+
+    /** Si es un Fragmento de Masamune (por la marca: da igual como se llame). */
+    public static boolean esFragmentoMasamune(ItemStack item) {
+        return Marcas.tiene(item, Marcas.FRAGMENTO_MASAMUNE);
+    }
+
     /** Ultimo valor raro de esencias.material ya avisado, para no llenar la consola. */
     private String materialAvisado;
 

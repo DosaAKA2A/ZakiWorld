@@ -60,7 +60,7 @@ final class Entregas implements Listener {
 
     /** Los objetos que entiende dar (ademas de credito:<tipo>, credito-caja:<tipo> y forja:<pieza>). */
     static final List<String> OBJETOS = List.of("esencia", "frasco", "frasco-1", "cristal", "tintura", "gema", "ascua",
-            "talisman", "grabado", "salvoconducto", "libro", "llave", "llave-hito");
+            "talisman", "grabado", "salvoconducto", "libro", "llave", "llave-hito", FragmentosMasamune.OBJETO);
 
     private final Hardcore hc;
     private final Set<BukkitTask> tareas = new HashSet<>();
@@ -75,7 +75,7 @@ final class Entregas implements Listener {
         Subcomandos.lw().registrar("creditos", "creditos <jugador> [tipo +n|-n]: ver o ajustar sus créditos (Sellos, Marcas, Fragmentos)",
                 "ederus.mundos", this::comandoCreditos, args -> switch (args.length) {
                     case 2 -> nombresConectados();
-                    case 3 -> List.of("sello:", Creditos.ERRANTE, "fragmento", "marca", "masamune");
+                    case 3 -> List.of("sello:", Creditos.ERRANTE, "fragmento", "marca");
                     case 4 -> List.of("+1", "-1");
                     default -> List.of();
                 });
@@ -84,6 +84,10 @@ final class Entregas implements Listener {
         Subcomandos.calamity().registrar("saldo", "tu saldo de Esencias y tus créditos", "lethalworld.calamity",
                 this::comandoMiSaldo, null);
         Autotest.registrar("entregas", this::autotest);
+        // Los que ya estan conectados (recarga del plugin): sus Fragmentos de Masamune guardados, ya en fisico.
+        for (Player p : hc.plugin().getServer().getOnlinePlayers()) {
+            if (tieneMasamuneViejo(p.getUniqueId())) luego(p, 40L);
+        }
     }
 
     // ------------------------------------------------------------------ dar
@@ -180,14 +184,19 @@ final class Entregas implements Listener {
         }
 
         List<ItemStack> items = new ArrayList<>();
-        for (int i = 0; i < n; i++) {
-            ItemStack it = crear(o);
-            if (it == null) {
-                String motivo = motivoSinObjeto(o);
-                fallo(quien, o, a, motivo, org);
-                return false;
+        if (o.equals(FragmentosMasamune.OBJETO)) {
+            // Se apilan: en montones de hasta 64, no uno a uno.
+            items.addAll(fragmentos(u, n));
+        } else {
+            for (int i = 0; i < n; i++) {
+                ItemStack it = crear(o);
+                if (it == null) {
+                    String motivo = motivoSinObjeto(o);
+                    fallo(quien, o, a, motivo, org);
+                    return false;
+                }
+                items.add(ligar(it, u));
             }
-            items.add(ligar(it, u));
         }
         String donde = entregarObjetos(a, o, items, org);
         hc.plugin().bitacora().anotar("entrega", "ok", o, nombre(a), String.valueOf(n), org, donde);
@@ -205,6 +214,7 @@ final class Entregas implements Listener {
             case "talisman" -> talisman();
             case "grabado" -> grabado();
             case "salvoconducto" -> salvoconducto();
+            case FragmentosMasamune.OBJETO -> ItemsCalamity.fragmentoMasamune(1);
             default -> {
                 String id = idMmo(o);
                 yield id == null ? null : PuenteMmo.crear(id);
@@ -263,13 +273,31 @@ final class Entregas implements Listener {
     }
 
     /**
-     * 1.8.0 · Devuelve una pieza que se le quito para un trueque (la Masamune de la Crimson) si
-     * el trueque falla despues: la misma pieza, ya ligada, por el mismo camino que un premio.
+     * Devuelve lo que se le quito para un trueque (la Masamune de la Crimson, los Fragmentos de
+     * Masamune) si el trueque falla despues: lo mismo, tal cual, por el mismo camino que un premio.
      */
-    void devolver(OfflinePlayer a, ItemStack it, String origen) {
-        if (a == null || it == null || it.getType().isAir()) return;
-        String donde = entregarObjetos(a, "devolucion", List.of(it), origen);
-        hc.plugin().bitacora().anotar("entrega", "devuelto", nombreVisible(it, "objeto"), nombre(a), origen, donde);
+    void devolver(OfflinePlayer a, List<ItemStack> its, String origen) {
+        if (a == null || its == null) return;
+        List<ItemStack> validos = new ArrayList<>();
+        for (ItemStack it : its) if (it != null && !it.getType().isAir()) validos.add(it);
+        if (validos.isEmpty()) return;
+        String donde = entregarObjetos(a, "devolucion", validos, origen);
+        for (ItemStack it : validos) {
+            hc.plugin().bitacora().anotar("entrega", "devuelto", nombreVisible(it, "objeto"), nombre(a), origen, donde);
+        }
+    }
+
+    /**
+     * Fragmentos de Masamune ligados a su dueno, en montones de hasta 64 (se apilan). Sin marca de
+     * dueno si u es null.
+     */
+    List<ItemStack> fragmentos(UUID u, int n) {
+        List<ItemStack> out = new ArrayList<>();
+        for (int quedan = n; quedan > 0; quedan -= 64) {
+            ItemStack it = ItemsCalamity.fragmentoMasamune(Math.min(64, quedan));
+            out.add(u == null ? it : ligar(it, u));
+        }
+        return out;
     }
 
     /**
@@ -277,11 +305,16 @@ final class Entregas implements Listener {
      * "pendiente" (desconectado o dentro de Calamity).
      */
     private String entregarObjetos(OfflinePlayer a, String objeto, List<ItemStack> items, String origen) {
+        return entregarObjetos(a, objeto, items, origen, true);
+    }
+
+    /** Lo mismo; avisar = false no le dice nada (el que llama lo cuenta a su manera). */
+    private String entregarObjetos(OfflinePlayer a, String objeto, List<ItemStack> items, String origen, boolean avisar) {
         Player p = a.getPlayer();
         if (!recibeYa(p)) {
             for (ItemStack it : items) guardarPendiente(a.getUniqueId(), "item", aTexto(it), objeto, origen);
             hc.guardarYa();
-            if (p != null && p.isOnline()) {
+            if (avisar && p != null && p.isOnline()) {
                 String que = items.isEmpty() ? objeto : nombreVisible(items.get(0), objeto);
                 p.sendMessage(ComandoCalamity.mensaje(Component.text("Recibirás ")
                         .append(Component.text(que + (items.size() > 1 ? " ×" + items.size() : ""), Paleta.DETALLE))
@@ -291,7 +324,7 @@ final class Entregas implements Listener {
         }
         boolean suelo = false;
         for (ItemStack it : items) suelo |= Suelo.dar(hc.plugin(), p, it);
-        if (suelo) p.sendMessage(ComandoCalamity.mensaje("No te cabía en el inventario: lo tienes a tus pies."));
+        if (suelo && avisar) p.sendMessage(ComandoCalamity.mensaje("No te cabía en el inventario: lo tienes a tus pies."));
         return suelo ? "suelo" : "inventario";
     }
 
@@ -653,14 +686,52 @@ final class Entregas implements Listener {
     @EventHandler(priority = EventPriority.MONITOR)
     public void onEntrar(PlayerJoinEvent e) {
         Player p = e.getPlayer();
-        if (cuantosPendientes(p.getUniqueId()) == 0) return;
+        UUID u = p.getUniqueId();
+        if (cuantosPendientes(u) == 0 && !tieneMasamuneViejo(u)) return;
         // Un segundo despues: que el mensaje no se pierda entre los del join.
+        luego(p, 20L);
+    }
+
+    /** Al rato: sus Fragmentos de Masamune guardados, en fisico, y despues lo que le esperaba. */
+    private void luego(Player p, long ticks) {
         final BukkitTask[] t = new BukkitTask[1];
         t[0] = hc.plugin().getServer().getScheduler().runTaskLater(hc.plugin(), () -> {
             tareas.remove(t[0]);
+            if (!p.isOnline()) return;
+            hc.seguro("entregas", () -> convertirMasamune(p));
             hc.seguro("entregas", () -> pendientes(p));
-        }, 20L);
+        }, ticks);
         tareas.add(t[0]);
+    }
+
+    // ------------------------------------------------- Fragmentos de Masamune
+
+    /** Si aun tiene Fragmentos de Masamune del credito de antes ("masamune"). */
+    private boolean tieneMasamuneViejo(UUID u) {
+        Creditos c = hc.creditos();
+        return c != null && c.de(u, FragmentosMasamune.CREDITO_VIEJO) > 0;
+    }
+
+    /**
+     * Los Fragmentos de Masamune eran un credito y ahora son objetos: los que tenga guardados se le
+     * dan en fisico (ligados, como todo lo que entrega Calamity) y el credito queda a cero. Fuera de
+     * Calamity, al inventario (o a sus pies si no cabe); dentro, esperan a que salga, como cualquier
+     * premio (no se los juega en esta expedicion: ya los tenia a salvo). El credito se quita antes de
+     * dar nada y, si no se pudiera dar, vuelve: ni se duplican ni se pierden.
+     */
+    void convertirMasamune(Player p) {
+        Creditos cr = hc.creditos();
+        if (p == null || !p.isOnline() || cr == null) return;
+        UUID u = p.getUniqueId();
+        String[] donde = {null};
+        int n = FragmentosMasamune.convertir(cr, u, k -> {
+            donde[0] = entregarObjetos(p, FragmentosMasamune.OBJETO, fragmentos(u, k), "conversion:masamune", false);
+            return true;
+        });
+        if (n <= 0) return;
+        hc.guardarYa();
+        hc.plugin().bitacora().anotar("entrega", "conversion", FragmentosMasamune.OBJETO, p.getName(), String.valueOf(n), donde[0]);
+        p.sendMessage(FragmentosMasamune.avisoConversion(n, donde[0]));
     }
 
     @EventHandler(priority = EventPriority.MONITOR)
@@ -887,7 +958,6 @@ final class Entregas implements Listener {
         return switch (tipo) {
             case Creditos.ERRANTE -> "Sello Errante";
             case "fragmento" -> "Fragmentos de Guadaña";
-            case "masamune" -> "Fragmentos de Masamune";
             case "marca" -> "Marcas de Eco";
             default -> tipo;
         };

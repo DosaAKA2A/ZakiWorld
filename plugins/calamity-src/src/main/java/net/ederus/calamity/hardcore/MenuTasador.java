@@ -208,8 +208,6 @@ final class MenuTasador implements Listener {
             if (sellos > 0) lore.add(Marco.dato("Sellos", String.valueOf(sellos)));
             if (marcas > 0) lore.add(Marco.dato("Marcas de Eco", String.valueOf(marcas)));
             if (fragmentos > 0) lore.add(Marco.dato("Fragmentos de Guadaña", String.valueOf(fragmentos)));
-            int masamune = cr.de(u, "masamune");
-            if (masamune > 0) lore.add(Marco.dato("Fragmentos de Masamune", String.valueOf(masamune)));
         }
         int pend = hc.datos().getMapList("premios-pendientes." + u).size();
         boolean dentro = hc.esHardcore(p);

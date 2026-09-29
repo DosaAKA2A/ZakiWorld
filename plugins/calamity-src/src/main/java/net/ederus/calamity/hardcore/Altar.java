@@ -53,9 +53,10 @@ import java.util.function.Consumer;
  *   4. se cobran las MC (en modo real, a los 2 ticks tras releer el saldo);
  *   5. se entrega por Entregas (ligado, pendientes, Bitacora). Si falla, se devuelve todo.
  * El tope de 4 Llaves del Caos se mira en el paso 1: con el tope lleno no se cobra nada.
- * 1.8.0: un trueque puede pedir ademas ENTREGAR una pieza de la Forja (la Crimson Masamune pide
- * la Masamune): se mira en el paso 1 que la lleve encima, se le quita en el paso 2 con las
- * Esencias y los creditos, y si algo falla despues se le devuelve con todo lo demas.
+ * Un trueque puede pedir ademas ENTREGAR objetos que lleve encima (entregar): piezas de la Forja
+ * (la Crimson Masamune pide la Masamune) y Fragmentos de Masamune, cada uno con su cantidad. Se
+ * mira en el paso 1 que los lleve todos, se le quitan en el paso 2 con las Esencias y los
+ * creditos, y si algo falla despues se le devuelven con todo lo demas.
  *
  * El motor (revisar/comprar) no toca Bukkit: trabaja contra una Caja, que en el juego son
  * los modulos reales y en el autotest un yml en memoria. Lo que cuenta el jugador por
@@ -77,13 +78,23 @@ final class Altar implements Listener {
      * @param incremento Esencias de mas por cada compra de la semana (la Ascua: 24, 32, 40...)
      * @param credito    tipo de credito que pide (sello:<id>, marca, fragmento) o null
      * @param esperaDias la Guadana: una nueva cada tantos dias (la reposicion no espera)
-     * @param entregar   1.8.0: la pieza de la Forja que hay que entregar para forjarla (la Crimson
-     *                   Masamune pide la Masamune), o null
+     * @param entregar   lo que hay que llevar encima y se entrega al forjarla (la Masamune pide 5
+     *                   Fragmentos de Masamune; la Crimson, la Masamune y 5 Fragmentos). Vacia si nada
      */
     record Trueque(String id, String pagina, Material icono, String nombre, List<String> lore, int esencias,
                    int incremento, long mobcoins, String credito, int creditos, String da, int cantidad,
                    int limiteSemana, int limiteDia, int stock, String requisito, boolean conReposicion,
-                   int reposEsencias, long reposMc, int esperaDias, String entregar) {
+                   int reposEsencias, long reposMc, int esperaDias, List<Entrega> entregar) {
+
+        Trueque {
+            entregar = entregar == null ? List.of() : List.copyOf(entregar);
+        }
+
+        /** Cuantos de ese objeto pide entregar (0 si ninguno). */
+        int pide(String objeto) {
+            for (Entrega e : entregar) if (e.objeto().equals(objeto)) return e.cantidad();
+            return 0;
+        }
 
         /** Lo que se le pide a Entregas ("frasco", "tintura", "forja:yelmo", "ofrenda"), o null si es un servicio. */
         String objeto() {
@@ -99,6 +110,26 @@ final class Altar implements Listener {
 
         boolean servicio() {
             return SERVICIOS.contains(da);
+        }
+    }
+
+    /**
+     * Algo que un trueque pide entregar: una pieza de la Forja ("masamune") o un objeto de Calamity
+     * ("fragmento-masamune"), y cuantos.
+     */
+    record Entrega(String objeto, int cantidad) {
+    }
+
+    /** Lo que falta de una Entrega (el "faltan" del motivo "objeto"): cuantos lleva y cuantos pide. */
+    record Falta(String objeto, int tiene, int pide) {
+
+        int faltan() {
+            return Math.max(0, pide - tiene);
+        }
+
+        @Override
+        public String toString() {
+            return objeto + " " + tiene + "/" + pide;
         }
     }
 
@@ -155,11 +186,17 @@ final class Altar implements Listener {
 
         boolean entregar(UUID u, String objeto, int n, String origen);
 
-        /** 1.8.0: si lleva encima (en la mano o en el inventario) esa pieza de la Forja, suya o sin ligar. */
-        boolean lleva(UUID u, String pieza);
+        /**
+         * Cuantos lleva encima (en la mano o en el inventario) de algo que se entrega: una pieza de la
+         * Forja o los Fragmentos de Masamune, suyos o sin ligar.
+         */
+        int cuantos(UUID u, String objeto);
 
-        /** Le quita una de esas piezas y la devuelve (para poder devolversela), o null si ya no la lleva. */
-        Object quitar(UUID u, String pieza);
+        /**
+         * Le quita n (todos o ninguno) y devuelve lo quitado, para poder devolverselo; null si no
+         * lleva tantos (y entonces no le quita nada).
+         */
+        Object quitar(UUID u, String objeto, int n);
 
         /** Le devuelve lo que se le quito con quitar, si la compra falla despues. */
         void devolver(UUID u, Object quitado);
@@ -278,16 +315,54 @@ final class Altar implements Listener {
         if (m.get("lore") instanceof List<?> l) for (Object o : l) lore.add(String.valueOf(o));
         Map<?, ?> repos = m.get("reposicion") instanceof Map<?, ?> r ? r : null;
         String credito = texto(m, "credito", null);
-        String entregar = texto(m, "entregar", null);
+        credito = credito == null || credito.isBlank() ? null : Creditos.tipo(credito);
+        int creditos = entero(m, "creditos", 1);
+        List<Entrega> entregar = entregas(m.get("entregar"));
+        // El credito "masamune" ya no existe: los Fragmentos son objetos. Un trueque que aun lo pida
+        // (una config sin actualizar) pide esos mismos Fragmentos, en fisico.
+        if (FragmentosMasamune.CREDITO_VIEJO.equals(credito)) {
+            boolean ya = false;
+            for (Entrega e : entregar) ya |= e.objeto().equals(FragmentosMasamune.OBJETO);
+            if (!ya) entregar.add(new Entrega(FragmentosMasamune.OBJETO, Math.max(1, creditos)));
+            credito = null;
+        }
         return new Trueque(id, texto(m, "pagina", "umbral").toLowerCase(Locale.ROOT),
                 icono == null ? Material.PAPER : icono, texto(m, "nombre", null), lore,
                 entero(m, "esencias", 0), entero(m, "esencias-incremento", 0), largo(m, "mobcoins", 0),
-                credito == null || credito.isBlank() ? null : Creditos.tipo(credito), entero(m, "creditos", 1), da,
+                credito, creditos, da,
                 Math.max(1, entero(m, "cantidad", 1)), entero(m, "limite-semana", 0), entero(m, "limite-dia", 0),
                 entero(m, "stock-semana", 0), texto(m, "requisito", null), repos != null,
                 repos == null ? 0 : entero(repos, "esencias", 0), repos == null ? 0 : largo(repos, "mobcoins", 0),
-                entero(m, "espera-dias", 0),
-                entregar == null || entregar.isBlank() ? null : entregar.trim().toLowerCase(Locale.ROOT));
+                entero(m, "espera-dias", 0), entregar);
+    }
+
+    /**
+     * Lo que pide entregar un trueque. Vale el formato de siempre (entregar: masamune, una pieza) y
+     * el de ahora, una lista con cantidades: entregar: [{objeto: fragmento-masamune, cantidad: 5}].
+     * Un objeto repetido suma sus cantidades.
+     */
+    static List<Entrega> entregas(Object v) {
+        List<Entrega> out = new ArrayList<>();
+        if (v == null) return out;
+        List<?> lista = v instanceof List<?> l ? l : List.of(v);
+        for (Object o : lista) {
+            if (o instanceof Map<?, ?> m) anadir(out, texto(m, "objeto", null), entero(m, "cantidad", 1));
+            else if (o instanceof ConfigurationSection s) anadir(out, s.getString("objeto"), s.getInt("cantidad", 1));
+            else if (o != null) anadir(out, String.valueOf(o), 1);
+        }
+        return out;
+    }
+
+    private static void anadir(List<Entrega> out, String objeto, int n) {
+        if (objeto == null || objeto.isBlank()) return;
+        String o = objeto.trim().toLowerCase(Locale.ROOT);
+        int cuantos = Math.max(1, n);
+        for (int i = 0; i < out.size(); i++) {
+            if (!out.get(i).objeto().equals(o)) continue;
+            out.set(i, new Entrega(o, out.get(i).cantidad() + cuantos));
+            return;
+        }
+        out.add(new Entrega(o, cuantos));
     }
 
     private static String texto(Map<?, ?> m, String k, String def) {
@@ -395,8 +470,11 @@ final class Altar implements Listener {
         // MobCoins sin verificar (Monedero): el trueque esta en gris y eso es lo primero que se
         // dice, antes que "te faltan Esencias" (no es algo que el jugador pueda arreglar).
         if (pr.mc() > 0 && (!c.mcDisponible() || c.mc(u) < 0)) return new Plan(pr, null, "mc", "proximamente");
-        // 1.8.0: la pieza que hay que entregar (la Crimson pide la Masamune). Sin ella no se cobra nada.
-        if (t.entregar() != null && !c.lleva(u, t.entregar())) return new Plan(pr, null, "objeto", t.entregar());
+        // Lo que hay que entregar (Fragmentos de Masamune, la Masamune de la Crimson): sin todo, no se cobra nada.
+        for (Entrega en : t.entregar()) {
+            int tiene = c.cuantos(u, en.objeto());
+            if (tiene < en.cantidad()) return new Plan(pr, null, "objeto", new Falta(en.objeto(), tiene, en.cantidad()));
+        }
         String usado = null;
         if (pr.credito() != null) {
             Creditos cr = c.creditos();
@@ -450,7 +528,7 @@ final class Altar implements Listener {
             }
         }
         final int deLaCaja = deCaja;
-        Object[] entregado = {null};
+        List<Object> entregados = new ArrayList<>();
         Runnable devolver = () -> {
             c.saldo().sumar(u, pr.esencias(), "devolucion:" + origen);
             if (cred != null) {
@@ -458,17 +536,20 @@ final class Altar implements Listener {
                 if (normales > 0) c.creditos().sumar(u, cred, normales, "devolucion:" + origen, false);
                 if (deLaCaja > 0) c.creditos().sumar(u, cred, deLaCaja, "devolucion:" + origen, true);
             }
-            if (entregado[0] != null) c.devolver(u, entregado[0]);
+            for (Object q : entregados) c.devolver(u, q);
+            entregados.clear();
         };
-        if (t.entregar() != null) {
-            // 1.8.0: la pieza que se entrega se quita ya, con las Esencias y los creditos.
-            entregado[0] = c.quitar(u, t.entregar());
-            if (entregado[0] == null) {
+        // Lo que se entrega se quita ya, con las Esencias y los creditos: si luego algo falla, vuelve todo.
+        for (Entrega en : t.entregar()) {
+            Object q = c.quitar(u, en.objeto(), en.cantidad());
+            if (q == null) {
+                Falta falta = new Falta(en.objeto(), c.cuantos(u, en.objeto()), en.cantidad());
                 devolver.run();
                 c.guardar();
-                fin.accept(new Resultado(t, false, true, "objeto", t.entregar(), pr, cred));
+                fin.accept(new Resultado(t, false, true, "objeto", falta, pr, cred));
                 return;
             }
+            entregados.add(q);
         }
         String objeto = t.objeto();
         if (objeto != null && !c.creable(objeto)) {
@@ -653,37 +734,58 @@ final class Altar implements Listener {
         }
 
         @Override
-        public boolean lleva(UUID u, String pieza) {
+        public int cuantos(UUID u, String objeto) {
             Player p = Bukkit.getPlayer(u);
-            return p != null && casillaDe(p, pieza) >= 0;
+            if (p == null) return 0;
+            int n = 0;
+            for (int i : casillasDe(p, objeto)) n += p.getInventory().getItem(i).getAmount();
+            return n;
         }
 
         @Override
-        public Object quitar(UUID u, String pieza) {
+        public Object quitar(UUID u, String objeto, int n) {
             Player p = Bukkit.getPlayer(u);
-            int i = p == null ? -1 : casillaDe(p, pieza);
-            if (i < 0) return null;
+            if (p == null || n <= 0) return null;
+            List<Integer> casillas = casillasDe(p, objeto);
             PlayerInventory inv = p.getInventory();
-            ItemStack it = inv.getItem(i);
-            ItemStack una = it.clone();
-            una.setAmount(1);
-            if (it.getAmount() > 1) it.setAmount(it.getAmount() - 1);
-            else inv.setItem(i, null);
-            hc.plugin().bitacora().anotar("trueque", p.getName(), "entrega", pieza);
-            return una;
+            int hay = 0;
+            for (int i : casillas) hay += inv.getItem(i).getAmount();
+            if (hay < n) return null;
+            List<ItemStack> quitado = new ArrayList<>();
+            int falta = n;
+            for (int i : casillas) {
+                if (falta <= 0) break;
+                ItemStack it = inv.getItem(i);
+                int k = Math.min(falta, it.getAmount());
+                ItemStack parte = it.clone();
+                parte.setAmount(k);
+                quitado.add(parte);
+                if (it.getAmount() > k) {
+                    it.setAmount(it.getAmount() - k);
+                    inv.setItem(i, it);
+                } else {
+                    inv.setItem(i, null);
+                }
+                falta -= k;
+            }
+            hc.plugin().bitacora().anotar("trueque", p.getName(), "entrega", objeto, "x" + n);
+            return quitado;
         }
 
         @Override
         public void devolver(UUID u, Object quitado) {
-            if (!(quitado instanceof ItemStack it)) return;
+            List<ItemStack> its = new ArrayList<>();
+            if (quitado instanceof ItemStack it) its.add(it);
+            else if (quitado instanceof List<?> l) for (Object o : l) if (o instanceof ItemStack it) its.add(it);
+            if (its.isEmpty()) return;
             OfflinePlayer op = Bukkit.getOfflinePlayer(u);
             Entregas e = hc.entregas();
             if (e != null) {
-                e.devolver(op, it, "devolucion:altar");
+                e.devolver(op, its, "devolucion:altar");
                 return;
             }
             Player p = op.getPlayer();
-            if (p != null) Suelo.dar(hc.plugin(), p, it);
+            if (p != null) for (ItemStack it : its) Suelo.dar(hc.plugin(), p, it);
         }
 
         @Override
@@ -693,25 +795,33 @@ final class Altar implements Listener {
     }
 
     /**
-     * 1.8.0 · La casilla donde lleva esa pieza de la Forja (su objeto de MMOItems, suyo o sin ligar):
-     * la mano, luego el inventario y la otra mano. -1 si no la lleva o no hay MMOItems.
+     * Las casillas donde lleva algo que se entrega, suyo o sin ligar, en el orden en que se quita: la
+     * mano, luego el inventario y la otra mano. Los Fragmentos de Masamune se reconocen por su marca;
+     * una pieza de la Forja, por su objeto de MMOItems (sin MMOItems, ninguna).
      */
-    private int casillaDe(Player p, String pieza) {
-        Entregas e = hc.entregas();
-        String id = e == null ? null : e.idMmo("forja:" + pieza);
-        if (id == null) return -1;
+    private List<Integer> casillasDe(Player p, String objeto) {
+        java.util.function.Predicate<ItemStack> es;
+        if (FragmentosMasamune.OBJETO.equals(objeto)) {
+            es = ItemsCalamity::esFragmentoMasamune;
+        } else {
+            Entregas e = hc.entregas();
+            String id = e == null ? null : e.idMmo("forja:" + objeto);
+            if (id == null) return List.of();
+            es = it -> id.equals(PuenteMmo.enlace(it));
+        }
         PlayerInventory inv = p.getInventory();
-        List<Integer> orden = new ArrayList<>();
+        Set<Integer> orden = new java.util.LinkedHashSet<>();
         orden.add(inv.getHeldItemSlot());
         for (int i = 0; i < inv.getStorageContents().length; i++) orden.add(i);
         orden.add(40);
+        List<Integer> out = new ArrayList<>();
         for (int i : orden) {
             ItemStack it = inv.getItem(i);
-            if (it == null || it.getType().isAir() || !id.equals(PuenteMmo.enlace(it))) continue;
+            if (it == null || it.getType().isAir() || it.getAmount() <= 0 || !es.test(it)) continue;
             UUID dueno = Ligado.duenoDe(it);
-            if (dueno == null || dueno.equals(p.getUniqueId())) return i;
+            if (dueno == null || dueno.equals(p.getUniqueId())) out.add(i);
         }
-        return -1;
+        return out;
     }
 
     Caja caja() {
@@ -909,9 +1019,7 @@ final class Altar implements Listener {
             }
             case "mc" -> "proximamente".equals(f) ? Monedero.avisoProximamente()
                     : Monedero.avisoFaltan(f instanceof Number n ? n.longValue() : 0);
-            case "objeto" -> ComandoCalamity.mensaje(Component.text("Para forjarla tienes que llevar encima tu ")
-                    .append(Component.text(Forja.nombrePieza(String.valueOf(f)), Paleta.DETALLE))
-                    .append(Component.text(".")));
+            case "objeto" -> avisoObjeto(f instanceof Falta fa ? fa : new Falta(String.valueOf(f), 0, 1));
             case "requisito" -> {
                 if ("apagado".equals(f)) yield ComandoCalamity.mensaje("Esto todavía no está disponible en el Altar.");
                 if (String.valueOf(f).contains("insomne")) {
@@ -921,6 +1029,22 @@ final class Altar implements Listener {
             }
             default -> ComandoCalamity.mensaje("El Altar no puede venderte eso ahora mismo.");
         };
+    }
+
+    /**
+     * Le falta algo que se entrega: "Te faltan 2 Fragmentos de Masamune: llevas 3 de 5." o "Para
+     * forjarla tienes que llevar encima tu Masamune."
+     */
+    static Component avisoObjeto(Falta fa) {
+        if (FragmentosMasamune.OBJETO.equals(fa.objeto())) {
+            int n = Math.max(1, fa.faltan());
+            return ComandoCalamity.mensaje(Component.text(n == 1 ? "Te falta " : "Te faltan ")
+                    .append(Component.text(FragmentosMasamune.nombre(n), Paleta.DETALLE))
+                    .append(Component.text(": llevas " + fa.tiene() + " de " + fa.pide() + ".")));
+        }
+        return ComandoCalamity.mensaje(Component.text("Para forjarla tienes que llevar encima tu ")
+                .append(Component.text(Forja.nombrePieza(fa.objeto()), Paleta.DETALLE))
+                .append(Component.text(".")));
     }
 
     static String miles(long n) {
@@ -1281,11 +1405,12 @@ final class Altar implements Listener {
                     "credito", "marca", "creditos", 10, "da", "forja:filo"),
             t("id", "guadana", "pagina", "forja", "icono", "NETHERITE_HOE", "esencias", 64, "mobcoins", 5000,
                     "credito", "fragmento", "creditos", 7, "da", "forja:guadana", "espera-dias", 30),
-            // 1.8.0: las katanas de Ambush. La Crimson pide ademas entregar la Masamune.
+            // Las katanas de Ambush: piden Fragmentos de Masamune en fisico, y la Crimson ademas la Masamune.
             t("id", "masamune", "pagina", "forja", "icono", "NETHERITE_SWORD", "esencias", 64, "mobcoins", 5000,
-                    "credito", "masamune", "creditos", 5, "da", "forja:masamune"),
+                    "entregar", List.of(t("objeto", FragmentosMasamune.OBJETO, "cantidad", 5)), "da", "forja:masamune"),
             t("id", "crimson-masamune", "pagina", "forja", "icono", "COPPER_SWORD", "esencias", 96, "mobcoins", 8000,
-                    "credito", "masamune", "creditos", 5, "entregar", "masamune", "da", "forja:crimson"));
+                    "entregar", List.of(t("objeto", "masamune", "cantidad", 1), t("objeto", FragmentosMasamune.OBJETO, "cantidad", 5)),
+                    "da", "forja:crimson"));
 
     // ================================================================ pruebas
 
@@ -1339,21 +1464,29 @@ final class Altar implements Listener {
             return true;
         }
 
-        /** Piezas que lleva encima cada uno: "uuid:pieza" -> cuantas. */
+        /** Lo que lleva encima cada uno: "uuid:objeto" -> cuantos (piezas de la Forja, Fragmentos...). */
         final Map<String, Integer> encima = new HashMap<>();
 
-        @Override public boolean lleva(UUID u, String pieza) { return encima.getOrDefault(u + ":" + pieza, 0) > 0; }
-
-        @Override
-        public Object quitar(UUID u, String pieza) {
-            String k = u + ":" + pieza;
-            int n = encima.getOrDefault(k, 0);
-            if (n <= 0) return null;
-            encima.put(k, n - 1);
-            return k;
+        /** Lo quitado por quitar, para devolverlo. */
+        private record Quitado(String clave, int n) {
         }
 
-        @Override public void devolver(UUID u, Object quitado) { if (quitado instanceof String k) encima.merge(k, 1, Integer::sum); }
+        @Override public int cuantos(UUID u, String objeto) { return encima.getOrDefault(u + ":" + objeto, 0); }
+
+        boolean lleva(UUID u, String objeto) {
+            return cuantos(u, objeto) > 0;
+        }
+
+        @Override
+        public Object quitar(UUID u, String objeto, int n) {
+            String k = u + ":" + objeto;
+            int hay = encima.getOrDefault(k, 0);
+            if (n <= 0 || hay < n) return null;
+            encima.put(k, hay - n);
+            return new Quitado(k, n);
+        }
+
+        @Override public void devolver(UUID u, Object quitado) { if (quitado instanceof Quitado q) encima.merge(q.clave(), q.n(), Integer::sum); }
 
         @Override public void guardar() { }
     }

@@ -61,6 +61,8 @@ public final class Marcas {
     public static final NamespacedKey TALISMAN = clave("talisman");
     public static final NamespacedKey GRABADO = clave("grabado");
     public static final NamespacedKey SALVOCONDUCTO = clave("salvoconducto");
+    /** BYTE 1: un Fragmento de Masamune (lo que deja Ambush a su presa; la Forja pide cinco). */
+    public static final NamespacedKey FRAGMENTO_MASAMUNE = clave("fragmento_masamune");
 
     private Marcas() {
     }
@@ -73,7 +75,7 @@ public final class Marcas {
     static List<NamespacedKey> todas() {
         return List.of(AMENAZA, PRESA, ECO, ECO_DUENO, DANO_JUGADOR, VIDA_LOGICA, CASCARA, ECO_COPIA, RELIQUIA, RELIQUIA_ID,
                 RELIQUIA_ORIGEN, RELIQUIA_NACIO, RELIQUIA_ESPECIAL, RELIQUIA_NIVEL, RELIQUIA_MINIJEFE,
-                RELIQUIA_VALIDA, TROFEO, PRESTADO, LIGADO, TALISMAN, GRABADO, SALVOCONDUCTO);
+                RELIQUIA_VALIDA, TROFEO, PRESTADO, LIGADO, TALISMAN, GRABADO, SALVOCONDUCTO, FRAGMENTO_MASAMUNE);
     }
 
     /** Si una entidad es nuestra (PARCA, planidera, Eco...). */

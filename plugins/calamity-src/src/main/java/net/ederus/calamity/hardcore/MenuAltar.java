@@ -223,8 +223,9 @@ final class MenuAltar implements Listener {
         String c = t.credito() == null ? "" : t.credito();
         if (c.startsWith("sello:") || c.equals(Creditos.ERRANTE)) return "manto";
         if (c.equals("marca")) return "eco";
-        // 1.8.0: las Masamune van en la fila de la Guadana (con una quinta fila la Forja no cabria en una hoja).
-        if (c.equals("fragmento") || c.equals("masamune")) return "guadana";
+        // Las Masamune (piden Fragmentos de Masamune) van en la fila de la Guadana: con una quinta fila
+        // la Forja no cabria en una hoja.
+        if (c.equals("fragmento") || t.pide(FragmentosMasamune.OBJETO) > 0) return "guadana";
         return "piezas";
     }
 
@@ -570,13 +571,24 @@ final class MenuAltar implements Listener {
                 out.add(Marco.falta(que, "tienes " + cr.de(u, c)));
             }
         }
-        if (t.entregar() != null) {
-            // 1.8.0: la pieza que se entrega (la Crimson pide la Masamune).
-            String que = "Tu " + Forja.nombrePieza(t.entregar());
-            out.add(caja.lleva(u, t.entregar()) ? Marco.tiene(que + "  (la entregas)") : Marco.falta(que, "no la llevas encima"));
-        }
+        for (Altar.Entrega en : t.entregar()) out.add(entregaLinea(en, caja.cuantos(u, en.objeto())));
         if (out.isEmpty()) out.add(Marco.tiene("Gratis"));
         return out;
+    }
+
+    /**
+     * Lo que se entrega, como linea de coste: "✔ 5 Fragmentos de Masamune  (los entregas)" o "✘ Fragmentos
+     * de Masamune: llevas 3 de 5"; una pieza, "✔ Tu Masamune  (la entregas)" o "✘ Tu Masamune  (no la
+     * llevas encima)". tiene: cuantos lleva encima.
+     */
+    static Component entregaLinea(Altar.Entrega en, int tiene) {
+        if (FragmentosMasamune.OBJETO.equals(en.objeto())) {
+            return tiene >= en.cantidad()
+                    ? Marco.tiene(FragmentosMasamune.nombre(en.cantidad()) + (en.cantidad() == 1 ? "  (lo entregas)" : "  (los entregas)"))
+                    : Marco.falta("Fragmentos de Masamune: llevas " + tiene + " de " + en.cantidad(), null);
+        }
+        String que = "Tu " + Forja.nombrePieza(en.objeto());
+        return tiene >= en.cantidad() ? Marco.tiene(que + "  (la entregas)") : Marco.falta(que, "no la llevas encima");
     }
 
     /** "Sello del Custodio de las Ruinas", "5 Marcas de Eco": el credito como linea de coste. */
@@ -587,7 +599,6 @@ final class MenuAltar implements Listener {
             case Creditos.ERRANTE -> "Sello Errante";
             case "marca" -> n == 1 ? "1 Marca de Eco" : n + " Marcas de Eco";
             case "fragmento" -> n == 1 ? "1 Fragmento de Guadaña" : n + " Fragmentos de Guadaña";
-            case "masamune" -> n == 1 ? "1 Fragmento de Masamune" : n + " Fragmentos de Masamune";
             default -> n + " " + t;
         };
     }
@@ -638,7 +649,13 @@ final class MenuAltar implements Listener {
                     : "Ya has agotado tu cupo.";
             case "stock" -> "Agotado hasta la semana que viene.";
             case "requisito" -> String.valueOf(f).contains("insomne") ? "Solo si tienes el tag [INSOMNE]." : "Aún no se puede.";
-            case "objeto" -> "No llevas encima tu " + Forja.nombrePieza(String.valueOf(f)) + ".";
+            case "objeto" -> {
+                Altar.Falta fa = f instanceof Altar.Falta x ? x : new Altar.Falta(String.valueOf(f), 0, 1);
+                int n = Math.max(1, fa.faltan());
+                yield FragmentosMasamune.OBJETO.equals(fa.objeto())
+                        ? (n == 1 ? "Te falta " : "Te faltan ") + FragmentosMasamune.nombre(n) + "."
+                        : "No llevas encima tu " + Forja.nombrePieza(fa.objeto()) + ".";
+            }
             default -> "Ahora no se puede.";
         };
     }
@@ -724,14 +741,21 @@ final class MenuAltar implements Listener {
             String usado = plan.creditoUsado();
             Creditos cr = hc.creditos();
             Material icono = usado.equals("marca") ? Material.ECHO_SHARD : usado.equals("fragmento") ? Material.BELL
-                    : usado.equals("masamune") ? Material.NETHERITE_SCRAP : Material.FIRE_CHARGE;
+                    : Material.FIRE_CHARGE;
             String que = creditoLinea(usado, pr.creditos());
             pagos.add(pago(icono, "−" + que, cr == null ? -1 : cr.de(u, usado), pr.creditos()));
             resumen.add(usado.equals(Creditos.ERRANTE) ? que + " (vale por el " + creditoLinea(pr.credito(), 1) + ")" : que);
         }
-        if (t.entregar() != null) {
-            // 1.8.0: la pieza que se entrega, sin "tienes/te quedarian": es una y se va.
-            String que = "Tu " + Forja.nombrePieza(t.entregar());
+        for (Altar.Entrega en : t.entregar()) {
+            if (FragmentosMasamune.OBJETO.equals(en.objeto())) {
+                // Los Fragmentos, con los que llevas y los que te quedarian.
+                String que = FragmentosMasamune.nombre(en.cantidad());
+                pagos.add(pago(Material.NETHERITE_SCRAP, "−" + que, altar.caja().cuantos(u, en.objeto()), en.cantidad()));
+                resumen.add(que);
+                continue;
+            }
+            // Una pieza, sin "tienes/te quedarian": es una y se va.
+            String que = "Tu " + Forja.nombrePieza(en.objeto());
             pagos.add(pago(Material.NETHERITE_SWORD, "−" + que, -1, 0));
             resumen.add(que);
         }

@@ -20,7 +20,8 @@ import java.util.UUID;
  * "Tu camino" (ESTUDIO sec. 5.15, DIS M32): lo que le falta a cada uno para cada pieza, de un
  * vistazo. Un icono por pieza, con su nombre de verdad ("Yelmo de Calamidad") y lo que pide:
  * el Sello de su minijefe (y cuantas muertes lleva de las 8 que lo dan seguro), las Marcas de
- * Eco o los Fragmentos que tiene, y arriba las horas activas y el proximo hito.
+ * Eco o los Fragmentos que tiene (los de Masamune son objetos: cuentan los que lleva encima), y
+ * arriba las horas activas y el proximo hito.
  * Sale del Tasador (1.3.1; antes, del Altar, que ahora es solo tienda) y de /calamity camino
  * (informativo: se puede mirar en cualquier sitio). Al entrar en Calamity, la barra de accion
  * ensena el credito mas cercano (P-W03).
@@ -57,13 +58,18 @@ final class Camino {
         abrir(p);
     }
 
-    /** Las piezas con credito de la Forja, en el orden de la lista. */
+    /** Las piezas de la Forja que piden un credito o algo que entregar (los Fragmentos de Masamune), en el orden de la lista. */
     List<Paso> pasos() {
         List<Paso> out = new ArrayList<>();
         for (Altar.Trueque t : altar.trueques()) {
-            if (t.pieza() != null && t.credito() != null) out.add(new Paso(t.pieza(), t));
+            if (t.pieza() != null && (t.credito() != null || t.pide(FragmentosMasamune.OBJETO) > 0)) out.add(new Paso(t.pieza(), t));
         }
         return out;
+    }
+
+    /** Los Fragmentos de Masamune que lleva encima (los que cuentan en la Forja). */
+    private int fragmentos(UUID u) {
+        return altar.caja().cuantos(u, FragmentosMasamune.OBJETO);
     }
 
     int piedadMaxima() {
@@ -127,7 +133,13 @@ final class Camino {
             String c = paso.t().credito();
             int falta;
             String frase;
-            if (c.startsWith("sello:")) {
+            if (c == null) {
+                // Las Masamune: los Fragmentos que lleva encima.
+                falta = paso.t().pide(FragmentosMasamune.OBJETO) - fragmentos(u);
+                if (falta <= 0) continue;
+                frase = (falta == 1 ? "Te falta " : "Te faltan ") + FragmentosMasamune.nombre(falta) + " para "
+                        + articulo(paso.pieza()) + ".";
+            } else if (c.startsWith("sello:")) {
                 if (cr.de(u, c) > 0) continue;
                 String id = c.substring(6);
                 falta = Math.max(1, piedadMaxima() - piedad(u, id));
@@ -197,7 +209,10 @@ final class Camino {
         inv.setItem(4, Marco.icono(Material.COMPASS, Component.text("Tu camino", Paleta.MARCA), cabeza, false));
 
         List<Paso> deSello = new ArrayList<>(), otros = new ArrayList<>();
-        for (Paso paso : pasos()) (paso.t().credito().startsWith("sello:") ? deSello : otros).add(paso);
+        for (Paso paso : pasos()) {
+            String c = paso.t().credito();
+            (c != null && c.startsWith("sello:") ? deSello : otros).add(paso);
+        }
         fila(inv, acciones, p, 9, Marco.banda(Material.ORANGE_STAINED_GLASS_PANE, "Piezas con Sello",
                 List.of("Cada una pide el Sello de su minijefe;", "a las " + piedadMaxima() + " muertes lo tienes seguro.")), deSello);
         fila(inv, acciones, p, 18, Marco.banda(Material.CYAN_STAINED_GLASS_PANE, "Marcas y Fragmentos",
@@ -235,11 +250,12 @@ final class Camino {
         Altar.Trueque t = paso.t();
         String c = t.credito();
         Creditos cr = hc.creditos();
-        int tiene = cr == null ? 0 : cr.de(u, c);
+        int tiene = cr == null || c == null ? 0 : cr.de(u, c);
         List<Component> lore = new ArrayList<>();
         Component nombre = Component.text(Forja.nombrePieza(paso.pieza()), Altar.AMBAR);
-        boolean listo;
-        if (c.startsWith("sello:")) {
+        // Sin credito (las Masamune), lo que pide son cosas que entregar: van debajo.
+        boolean listo = true;
+        if (c != null && c.startsWith("sello:")) {
             String id = c.substring(6);
             int pied = piedad(u, id);
             listo = tiene > 0;
@@ -250,20 +266,32 @@ final class Camino {
                 lore.add(Marco.tenue("A las " + piedadMaxima() + ", el Sello es seguro."));
                 if (cr != null && cr.de(u, Creditos.ERRANTE) > 0) lore.add(Marco.tenue("También vale un Sello Errante."));
             }
-        } else {
+        } else if (c != null) {
             int pide = Math.max(1, t.creditos());
             listo = tiene >= pide;
             lore.add(Marco.texto("Pide " + Forja.nombreCredito(c, pide) + "."));
             lore.add(dato("Tienes", Math.min(tiene, 999) + " de " + pide));
             if (!listo) lore.add(Marco.tenue("Te faltan " + Forja.nombreCredito(c, pide - tiene) + "."));
         }
-        if (t.entregar() != null) {
-            // 1.8.0: la Crimson pide ademas entregar la Masamune, que hay que llevar encima al forjarla.
-            String pieza = Forja.nombrePieza(t.entregar());
-            boolean la = altar.caja().lleva(u, t.entregar());
+        // Lo que se entrega al forjarla: los Fragmentos de Masamune (cuentan los que llevas encima) y, en
+        // la Crimson, la Masamune.
+        int pideFragmentos = t.pide(FragmentosMasamune.OBJETO);
+        if (pideFragmentos > 0) {
+            int llevas = fragmentos(u);
+            listo &= llevas >= pideFragmentos;
+            lore.add(Marco.texto("Pide " + FragmentosMasamune.nombre(pideFragmentos) + "."));
+            lore.add(dato("Fragmentos de Masamune", "llevas " + llevas + " de " + pideFragmentos));
+            lore.add(Marco.tenue("Cuentan los que llevas encima."));
+        }
+        boolean antes = c != null || pideFragmentos > 0;
+        for (Altar.Entrega en : t.entregar()) {
+            if (FragmentosMasamune.OBJETO.equals(en.objeto())) continue;
+            String pieza = Forja.nombrePieza(en.objeto());
+            boolean la = altar.caja().cuantos(u, en.objeto()) >= en.cantidad();
             listo &= la;
-            lore.add(Marco.texto("Y entregar tu " + pieza + "."));
+            lore.add(Marco.texto((antes ? "Y entregar tu " : "Hay que entregar tu ") + pieza + "."));
             lore.add(dato(pieza, la ? "la llevas encima" : "no la llevas encima"));
+            antes = true;
         }
         lore.add(Component.empty());
         lore.add(dato("Precio", Marco.esencias(t.esencias()) + (t.mobcoins() > 0 ? " y " + Altar.miles(t.mobcoins()) + " MobCoins" : "")));

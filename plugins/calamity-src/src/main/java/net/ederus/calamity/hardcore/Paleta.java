@@ -67,6 +67,12 @@ public final class Paleta {
     public static final TextColor AMBUSH = TextColor.color(0xFF6B6B);
     /** El gris acero de la Masamune (el nombre de la katana que lleva Ambush). */
     public static final TextColor ACERO = TextColor.color(0xC9D1D9);
+    /**
+     * El degradado gris acero del nombre de la Masamune en MMOItems (de #E6EBF0 hacia #7B8894), que
+     * llevan tambien sus Fragmentos. Acaba un poco mas claro para que se lea sobre el fondo oscuro.
+     */
+    public static final int ACERO_DESDE = 0xE6EBF0;
+    public static final int ACERO_HASTA = 0x8A96A1;
     /*
      * Titulos de ventana (inventarios): "CALAMITY | Seccion". Colores planos y oscuros, porque van
      * sobre el gris claro (~#C6C6C6) de la interfaz y sin sombra: el degradado marron rojizo de

@@ -26,6 +26,7 @@ import org.bukkit.event.entity.EntityPotionEffectEvent;
 import org.bukkit.event.entity.EntityTargetLivingEntityEvent;
 import org.bukkit.event.entity.PlayerDeathEvent;
 import org.bukkit.event.player.PlayerQuitEvent;
+import org.bukkit.inventory.ItemStack;
 import org.bukkit.persistence.PersistentDataType;
 import org.bukkit.potion.PotionEffect;
 import org.bukkit.potion.PotionEffectType;
@@ -63,11 +64,12 @@ import java.util.function.Predicate;
  * presa cada HORAS_PRESA y como mucho CONTRATOS_DIA al dia por pagador. No hay contratos
  * pendientes: se pagan con la presa dentro o no se pagan. Quien paga no cobra nada.
  *
- * Al caer Ambush, la presa con PARTICIPACION_PRESA del dano o mas se lleva 1 Fragmento de
- * Masamune (el credito "masamune", como los Fragmentos de Guadana) y Esencias; quien la ayude con
- * PARTICIPACION_AYUDA o mas, Esencias. Los mismos topes y motivos que la Parca, por la Aduana
- * (tipo "ambush"). La presa suma la estadistica "ambush" (contratos vencidos) y la Sangre fresca.
- * Los fragmentos se canjean en la Forja de Vael por la Masamune y la Crimson Masamune.
+ * Al caer Ambush, la presa con PARTICIPACION_PRESA del dano o mas se lleva un Fragmento de
+ * Masamune en fisico (ligado a ella, al inventario y, si no cabe, a sus pies; si muere antes de
+ * salir, lo pierde como todo lo demas) y Esencias; quien la ayude con PARTICIPACION_AYUDA o mas,
+ * Esencias. Los mismos topes y motivos que la Parca, por la Aduana (tipo "ambush"). La presa suma
+ * la estadistica "ambush" (contratos vencidos) y la Sangre fresca. Con cinco Fragmentos, la Forja
+ * de Vael da la Masamune; con otros cinco y la Masamune, la Crimson Masamune.
  *
  * En EDM esta registrada como anomalia Monarca (AmbushType): sale en /anomaly y se puede abrir a
  * mano como prueba, sin presa ni botin. La de un contrato no pasa por EDM: no ocupa su unico
@@ -91,8 +93,6 @@ final class Ambush implements Listener {
     static final int CADA_NIVELES_PRESA = 10, CADA_NIVELES_AYUDA = 20;
     /** Tras cobrar por un Ambush, tanto sin cobrar por otro (como la Parca). */
     static final long HORAS_ENTRE_COBROS = 24;
-    /** El credito que deja: los Fragmentos de Masamune. */
-    static final String CREDITO = "masamune";
     /** Si en tanto no ha encontrado sitio para aparecer, el contrato se da por consumido. */
     private static final int INTENTOS = 30;
     private static final long HORA = 3_600_000L;
@@ -538,13 +538,16 @@ final class Ambush implements Listener {
             Aduana.Pago pago = ad == null ? null : hc.valor("aduana",
                     () -> ad.pagar(op, "ambush", c.esencias(), 0L, List.of(), "ambush N " + pe.nivel), null);
             int pagadas = pago == null || pago.topado() ? 0 : pago.esencias();
-            if (c.fragmento() && hc.creditos() != null) hc.creditos().sumar(c.id(), CREDITO, 1, "ambush", false);
+            // El Fragmento de Masamune, en fisico: al inventario y, si no cabe, a sus pies.
+            String fragmento = hc.valor("ambush", () -> darFragmento(c, online == null ? null : mochila(online)), null);
+            if ("pendiente".equals(fragmento)) fragmentoPendiente(op);
             hc.datos().set("ambush.cobro." + c.id(), ahora);
             hc.plugin().bitacora().anotar("ambush", "botin", Saldo.nombre(c.id()), "esencias " + pagadas,
-                    "fragmento " + (c.fragmento() ? "si" : "no"), esPresa ? "presa" : "ayudante");
+                    "fragmento " + (fragmento == null ? "no" : fragmento), esPresa ? "presa" : "ayudante");
             if (online == null) continue;
-            Component linea = mensajeBotin(esPresa, pagadas, c.fragmento());
+            Component linea = mensajeBotin(esPresa, pagadas, fragmento != null);
             if (linea != null) online.sendMessage(linea);
+            if ("suelo".equals(fragmento)) online.sendMessage(ComandoCalamity.mensaje("No te cabía en el inventario: lo tienes a tus pies."));
             if (esPresa) {
                 // Sangre fresca (M12): la cordura de la victoria, con su tope de la Aduana.
                 Combate cb = hc.combate();
@@ -559,14 +562,70 @@ final class Ambush implements Listener {
         return ultimo > 0 && ahora - ultimo < HORAS_ENTRE_COBROS * HORA;
     }
 
-    /** "Has vencido a Ambush: +8 Esencias y 1 Fragmento de Masamune." / "Ambush ha caído: +3 Esencias." */
+    /** El inventario de quien se lleva el Fragmento: en el juego, el suyo; en el autotest, uno en memoria. */
+    interface Mochila {
+        /** Mete n Fragmentos y devuelve cuantos no caben. */
+        int meter(int n);
+
+        /** Deja n a sus pies (solo para el unos segundos, como Suelo). */
+        void soltar(int n);
+    }
+
+    /**
+     * El Fragmento de Masamune de un Cobro, en fisico. Null si no le toca (solo le toca a la presa
+     * que cobra); "pendiente" si no hay mochila (no esta conectada: espera en los premios); si no,
+     * "inventario", o "suelo" si no le cabia y ha quedado a sus pies.
+     */
+    static String darFragmento(Cobro c, Mochila m) {
+        if (c == null || !c.fragmento()) return null;
+        if (m == null) return "pendiente";
+        int sobran = m.meter(1);
+        if (sobran <= 0) return "inventario";
+        m.soltar(sobran);
+        return "suelo";
+    }
+
+    /** La mochila de verdad: su inventario (addItem) y, lo que no quepa, a sus pies a su nombre. */
+    private Mochila mochila(Player p) {
+        UUID u = p.getUniqueId();
+        return new Mochila() {
+            @Override
+            public int meter(int n) {
+                int sobran = 0;
+                for (ItemStack it : fragmentos(u, n)) {
+                    for (ItemStack s : p.getInventory().addItem(it).values()) sobran += s.getAmount();
+                }
+                return sobran;
+            }
+
+            @Override
+            public void soltar(int n) {
+                for (ItemStack it : fragmentos(u, n)) Suelo.soltar(hc.plugin(), p, it);
+            }
+        };
+    }
+
+    /** n Fragmentos de Masamune ligados a u (por Entregas, que pone tambien la linea del lore). */
+    private List<ItemStack> fragmentos(UUID u, int n) {
+        Entregas e = hc.entregas();
+        if (e != null) return e.fragmentos(u, n);
+        return List.of(Ligado.ligar(ItemsCalamity.fragmentoMasamune(n), u));
+    }
+
+    /** Si la presa no esta (no deberia: si se va, Ambush se va con ella), su Fragmento la espera en los premios. */
+    private void fragmentoPendiente(OfflinePlayer op) {
+        Entregas e = hc.entregas();
+        if (e != null) hc.seguro("entregas", () -> e.dar(null, FragmentosMasamune.OBJETO, op, 1, "ambush"));
+    }
+
+    /** "Has vencido a Ambush: +8 Esencias y un Fragmento de Masamune." / "Ambush ha caído: +3 Esencias." */
     static Component mensajeBotin(boolean presa, int esencias, boolean fragmento) {
         Component esen = Paleta.cifra("+" + esencias + (esencias == 1 ? " Esencia" : " Esencias"));
         if (presa) {
             Component cuerpo = Component.text("Has vencido a Ambush: ");
             if (esencias > 0) cuerpo = cuerpo.append(esen);
             if (fragmento) {
-                cuerpo = cuerpo.append(Component.text(esencias > 0 ? " y " : "")).append(Paleta.detalle("1 Fragmento de Masamune"));
+                cuerpo = cuerpo.append(Component.text(esencias > 0 ? " y " : "")).append(Paleta.detalle("un Fragmento de Masamune"));
             }
             return esencias <= 0 && !fragmento ? null : ComandoCalamity.mensaje(cuerpo.append(Component.text(".")));
         }
@@ -1030,31 +1089,33 @@ final class Ambush implements Listener {
         }
         h.igual("la Forja sigue en una hoja", 1,
                 Marco.hojas(MenuAltar.sitios(MenuAltar.FORJA, Altar.leer(Altar.DEFECTO), false)));
-        // La Crimson pide entregar la Masamune: sin ella no se cobra nada; con ella se la queda la Forja.
+        // La Crimson pide entregar la Masamune y 5 Fragmentos: sin la Masamune no se cobra nada; con
+        // todo, la Forja se queda la Masamune y los Fragmentos.
         Altar.Trueque crimson = serie.get("crimson-masamune");
         if (crimson != null) {
             Altar.CajaPrueba c = new Altar.CajaPrueba();
             UUID u = Autotest.sintetico(541);
+            String frag = u + ":" + FragmentosMasamune.OBJETO;
             c.saldo.sumar(u, 200, "prueba");
-            c.creditos.sumar(u, CREDITO, 10, "prueba", false);
+            c.encima.put(frag, 10);
             c.mc.put(u, 20_000L);
             Altar.Resultado r = comprarEn(c, crimson, u);
             h.ok("Crimson sin la Masamune encima: no se cobra nada", "objeto".equals(r.motivo()) && !r.devuelto()
-                    && c.saldo.de(u) == 200 && c.creditos.de(u, CREDITO) == 10 && c.mc(u) == 20_000L);
+                    && c.saldo.de(u) == 200 && c.cuantos(u, FragmentosMasamune.OBJETO) == 10 && c.mc(u) == 20_000L);
             c.encima.put(u + ":masamune", 1);
             r = comprarEn(c, crimson, u);
             h.ok("con la Masamune: se forja y la Masamune se entrega", r.ok() && !c.lleva(u, "masamune")
                     && c.entregados.contains("forja:crimsonx1"));
-            h.ok("cobra 96 Esencias, 5 Fragmentos y 8.000 MobCoins", c.saldo.de(u) == 104 && c.creditos.de(u, CREDITO) == 5
-                    && c.mc(u) == 12_000L);
+            h.ok("cobra 96 Esencias, 5 Fragmentos y 8.000 MobCoins", c.saldo.de(u) == 104
+                    && c.cuantos(u, FragmentosMasamune.OBJETO) == 5 && c.mc(u) == 12_000L);
             c.encima.put(u + ":masamune", 1);
             c.saldo.sumar(u, 96, "prueba");
-            c.creditos.sumar(u, CREDITO, 5, "prueba", false);
+            c.encima.put(frag, 10);
             c.mc.put(u, 8_000L);
             c.entregar = false;
             r = comprarEn(c, crimson, u);
             h.ok("si la entrega falla, le devuelve la Masamune y lo demás", r.devuelto() && c.lleva(u, "masamune")
-                    && c.saldo.de(u) == 200 && c.creditos.de(u, CREDITO) == 10 && c.mc(u) == 8_000L);
+                    && c.saldo.de(u) == 200 && c.cuantos(u, FragmentosMasamune.OBJETO) == 10 && c.mc(u) == 8_000L);
         }
 
         // ---- La fase 2: al 50 % y no antes, y una sola vez.
@@ -1068,15 +1129,17 @@ final class Ambush implements Listener {
         return h.lineas();
     }
 
-    /** Que las dos katanas esten en esos trueques, en la Forja y con sus precios. */
-    private static void katanas(Autotest.Hoja h, String de, Map<String, Altar.Trueque> ts) {
+    /** Que las dos katanas esten en esos trueques, en la Forja y con sus precios (los Fragmentos, en fisico). */
+    static void katanas(Autotest.Hoja h, String de, Map<String, Altar.Trueque> ts) {
         Altar.Trueque m = ts.get("masamune"), c = ts.get("crimson-masamune");
         h.ok(de + ": Masamune en la Forja por 5 Fragmentos de Masamune, 64 Esencias y 5.000 MobCoins", m != null
-                && "forja".equals(m.pagina()) && CREDITO.equals(m.credito()) && m.creditos() == 5 && m.esencias() == 64
-                && m.mobcoins() == 5000 && "forja:masamune".equals(m.da()) && m.entregar() == null);
+                && "forja".equals(m.pagina()) && m.credito() == null && m.esencias() == 64 && m.mobcoins() == 5000
+                && "forja:masamune".equals(m.da())
+                && List.of(new Altar.Entrega(FragmentosMasamune.OBJETO, 5)).equals(m.entregar()));
         h.ok(de + ": Crimson Masamune por la Masamune, 5 Fragmentos, 96 Esencias y 8.000 MobCoins", c != null
-                && "forja".equals(c.pagina()) && CREDITO.equals(c.credito()) && c.creditos() == 5 && c.esencias() == 96
-                && c.mobcoins() == 8000 && "forja:crimson".equals(c.da()) && "masamune".equals(c.entregar()));
+                && "forja".equals(c.pagina()) && c.credito() == null && c.esencias() == 96 && c.mobcoins() == 8000
+                && "forja:crimson".equals(c.da())
+                && List.of(new Altar.Entrega("masamune", 1), new Altar.Entrega(FragmentosMasamune.OBJETO, 5)).equals(c.entregar()));
     }
 
     private static Altar.Resultado comprarEn(Altar.CajaPrueba c, Altar.Trueque t, UUID u) {
