@@ -114,6 +114,8 @@ final class PeleaParca implements Runnable, ParcaViva {
     private ResolvableProfile perfil;
     private int pulsosCascara;
     private double golpe;
+    /** 1.8 · Lo que la endurece segun estaba su presa al llamarla (NEUTRO en las de prueba). */
+    private DificultadAmenaza.Resultado dificultad = DificultadAmenaza.NEUTRO;
     int extrasGrupo;
     private final Set<UUID> participantes = new HashSet<>();
 
@@ -188,16 +190,19 @@ final class PeleaParca implements Runnable, ParcaViva {
      * La invoca: WITHER_SKELETON por Amenazas.invocar, sube del suelo 40 ticks invulnerable
      * y sin IA, y registra la pelea. Null si el spawn lo cancela alguien.
      *
-     * @param fraccion vida con la que sale (1 = llena; lo pendiente trae la suya)
-     * @param fase     fase con la que sale (lo pendiente; 1 si es nueva)
+     * @param fraccion   vida con la que sale (1 = llena; lo pendiente trae la suya)
+     * @param fase       fase con la que sale (lo pendiente; 1 si es nueva)
+     * @param dificultad 1.8: lo que la endurece segun estaba su presa (DificultadAmenaza)
      */
     static PeleaParca crear(Parca gestor, Parca.Ajustes a, UUID presa, String presaNombre, Collection<Player> marcados,
-                            int nivel, int r, int m, Location sitio, boolean prueba, double fraccion, int fase) {
+                            int nivel, int r, int m, Location sitio, boolean prueba, double fraccion, int fase,
+                            DificultadAmenaza.Resultado dificultad) {
         if (sitio == null || sitio.getWorld() == null) return null;
         PeleaParca pe = new PeleaParca(gestor, a, presa, presaNombre, prueba, nivel, r, m);
         for (Player p : marcados) pe.marcados.add(p.getUniqueId());
-        pe.golpe = Parca.golpe(a, nivel, r);
-        double vida = Parca.vidaLogica(a, nivel, r, m);
+        if (dificultad != null) pe.dificultad = dificultad;
+        pe.golpe = Parca.golpe(a, nivel, r, pe.dificultad.dano());
+        double vida = Parca.vidaLogica(a, nivel, r, m, pe.dificultad.vida());
         pe.sitioFinal = sitio.clone();
         Location bajo = sitio.clone().subtract(0, 2, 0);
         Amenazas am = pe.hc.amenazas();
@@ -1747,6 +1752,11 @@ final class PeleaParca implements Runnable, ParcaViva {
     @Override
     public int extra() {
         return extra;
+    }
+
+    @Override
+    public DificultadAmenaza.Resultado dificultad() {
+        return dificultad;
     }
 
     @Override

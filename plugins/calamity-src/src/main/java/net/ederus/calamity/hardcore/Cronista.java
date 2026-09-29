@@ -36,7 +36,7 @@ import java.util.regex.Pattern;
  * los del config.yml del jar.
  *
  * Las cifras no se escriben a mano: {ruta} se cambia al leerlo por ese valor de hardcore:
- * ({parca.minutos} -> 10), asi que al tocar la PARCA o la Tasacion el Cronista no se queda
+ * ({parca.minutos} -> 5), asi que al tocar la PARCA o la Tasacion el Cronista no se queda
  * contando lo de antes. En una lista se entra por posicion (aduana.tramos-mc.0.hasta) o, si
  * sus elementos llevan id, por el id (altar.trueques.cristal.esencias). Lo que no lleve a
  * ningun valor se deja tal cual, con sus llaves, para que se vea (y el autotest lo caza).

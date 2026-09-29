@@ -103,13 +103,22 @@ final class Ambush implements Listener {
         final double vidaBase, vidaPorNivel, golpeBase, golpePorNivel, topeGolpe, fase2;
         final int esenciasPresa, esenciasAyuda;
         final String skin1, skin2;
+        /** La seccion de la que salen (con() la vuelve a leer). */
+        private final ConfigurationSection fuente;
+        /**
+         * 1.8 · La dificultad de su presa (DificultadAmenaza): multiplica vida() y golpe() despues de
+         * la formula por nivel. 1 en los de siempre; solo con() los cambia, en una copia.
+         */
+        private double multDano = 1, multVida = 1;
 
         Ajustes(ConfigurationSection s) {
             if (s == null) s = new YamlConfiguration();
+            fuente = s;
             precio = Math.max(0, s.getInt("contrato.esencias", 24));
             vidaBase = s.getDouble("vida-base", 300);
             vidaPorNivel = s.getDouble("vida-por-nivel", 0.10);
-            golpeBase = s.getDouble("golpe-base", 7);
+            // 1.8: de 7 a 10, "extremadamente dificil, sobre todo por su dano" (Dosa).
+            golpeBase = s.getDouble("golpe-base", 10);
             golpePorNivel = s.getDouble("golpe-por-nivel", 0.04);
             topeGolpe = Math.max(0, s.getDouble("tope-golpe-fraccion", 0.08));
             esenciasPresa = s.getInt("esencias-presa", 6);
@@ -117,6 +126,16 @@ final class Ambush implements Listener {
             skin1 = s.getString("skin-fase-1", "itGuts");
             skin2 = s.getString("skin-fase-2", "Nagazaki_Yakuza");
             fase2 = Math.max(0, Math.min(1, s.getDouble("fase-2-vida", 0.5)));
+        }
+
+        /** Una copia con la dificultad de la presa (NEUTRO o null: los mismos numeros). */
+        Ajustes con(DificultadAmenaza.Resultado d) {
+            Ajustes x = new Ajustes(fuente);
+            if (d != null) {
+                x.multDano = d.dano();
+                x.multVida = d.vida();
+            }
+            return x;
         }
     }
 
@@ -134,6 +153,8 @@ final class Ambush implements Listener {
         boolean avisoSpawn, avisoFuera;
         int intentos;
         PeleaAmbush pelea;
+        /** 1.8 · Lo que endurece a Ambush segun estaba la presa al aparecer (DificultadAmenaza). */
+        DificultadAmenaza.Resultado dificultad;
 
         Contrato(UUID presa, String presaNombre, UUID pagador, String pagadorNombre, long pagado, boolean forzado) {
             this.presa = presa;
@@ -164,6 +185,12 @@ final class Ambush implements Listener {
     private final AmbushType tipo;
     private Ajustes ajustes;
     private long ajustesLeidos;
+    /**
+     * 1.8 · Mientras nace el Ambush de un contrato, sus Ajustes con la dificultad de la presa:
+     * PeleaAmbush toma los suyos de ajustes() al nacer y de ahi saca la vida y el golpe (vida() y
+     * golpe()). Null el resto del tiempo.
+     */
+    private Ajustes naciendo;
     private int segundos;
 
     Ambush(Hardcore hc) {
@@ -188,6 +215,7 @@ final class Ambush implements Listener {
     }
 
     Ajustes ajustes() {
+        if (naciendo != null) return naciendo;
         long ahora = System.currentTimeMillis();
         if (ajustes == null || ahora - ajustesLeidos > 5_000) {
             ajustes = new Ajustes(hc.cfg().getConfigurationSection("ambush"));
@@ -207,13 +235,16 @@ final class Ambush implements Listener {
         return Math.max(1, Math.min(100, n0 + EXTRA_NIVEL));
     }
 
-    /** La de la Parca un poco por debajo: vida-base x (1 + vida-por-nivel x (N-1)). */
+    /**
+     * La de la Parca un poco por debajo: vida-base x (1 + vida-por-nivel x (N-1)), y encima la
+     * dificultad de su presa (1.8, DificultadAmenaza; x1 sin ella).
+     */
     static double vida(Ajustes a, int n) {
-        return a.vidaBase * (1 + a.vidaPorNivel * (n - 1));
+        return a.vidaBase * (1 + a.vidaPorNivel * (n - 1)) * a.multVida;
     }
 
     static double golpe(Ajustes a, int n) {
-        return a.golpeBase * (1 + a.golpePorNivel * (n - 1));
+        return a.golpeBase * (1 + a.golpePorNivel * (n - 1)) * a.multDano;
     }
 
     static int esenciasPresa(Ajustes a, int n) {
@@ -463,7 +494,15 @@ final class Ambush implements Listener {
             int n = nivel(nivelCalamity(p));
             // De espaldas a la presa: mirando de ella hacia donde aparece.
             float deEspaldas = PeleaAmbush.yaw(p.getLocation(), sitio);
-            pe = PeleaAmbush.crear(this, c, n, sitio, deEspaldas);
+            // 1.8: mas fuerte cuanto mas lejos, con menos cordura y mas rato dentro este la presa.
+            c.dificultad = hc.valor("ambush", () -> DificultadAmenaza.para(hc, DificultadAmenaza.foto(hc, p)),
+                    DificultadAmenaza.NEUTRO);
+            naciendo = ajustes().con(c.dificultad);
+            try {
+                pe = PeleaAmbush.crear(this, c, n, sitio, deEspaldas);
+            } finally {
+                naciendo = null;
+            }
         }
         if (pe == null) {
             if (++c.intentos >= INTENTOS) consumir(c, "sin-sitio");
@@ -472,7 +511,8 @@ final class Ambush implements Listener {
         c.pelea = pe;
         Location l = pe.cuerpo.getLocation();
         hc.plugin().bitacora().anotar("ambush", "llega", c.presaNombre, "N " + pe.nivel,
-                l.getBlockX() + " " + l.getBlockY() + " " + l.getBlockZ(), c.forzado ? "forzado" : "pagado por " + c.pagadorNombre);
+                l.getBlockX() + " " + l.getBlockY() + " " + l.getBlockZ(), c.forzado ? "forzado" : "pagado por " + c.pagadorNombre,
+                c.dificultad.texto());
     }
 
     /** Donde aparece: a DISTANCIA por detras de la presa o, si ahi queda la zona spawn, por delante. Null si no hay. */
@@ -825,7 +865,8 @@ final class Ambush implements Listener {
                 estado = queda > 0 ? "cuenta atrás " + queda + " s" : "espera fuera del spawn";
             }
             decir(quien, "ambush | " + c.presaNombre + " | " + (c.forzado ? "forzado" : "pagado")
-                    + (c.pagadorNombre == null ? "" : " por " + c.pagadorNombre) + " | " + estado);
+                    + (c.pagadorNombre == null ? "" : " por " + c.pagadorNombre) + " | " + estado
+                    + (c.pelea != null && c.dificultad != null ? " | " + c.dificultad.texto() : ""));
         }
         for (PeleaAmbush pe : peleas) {
             if (!pe.prueba || pe.estado == PeleaAmbush.Estado.FIN) continue;
@@ -917,8 +958,8 @@ final class Ambush implements Listener {
         h.cerca("vida N 1 = 300", 300, vida(a, 1), 1e-9);
         h.cerca("vida N 14 = 690", 690, vida(a, 14), 1e-9);
         h.cerca("vida N 100 = 3.270", 3270, vida(a, 100), 1e-9);
-        h.cerca("golpe N 14 = 10,64", 10.64, golpe(a, 14), 1e-9);
-        h.cerca("golpe N 100 = 34,72", 34.72, golpe(a, 100), 1e-9);
+        h.cerca("golpe N 14 = 15,2", 15.2, golpe(a, 14), 1e-9);
+        h.cerca("golpe N 100 = 49,6", 49.6, golpe(a, 100), 1e-9);
         Parca.Ajustes pa = new Parca.Ajustes(new YamlConfiguration());
         h.ok("por debajo de la Parca en vida y golpe (N 50)", vida(a, 50) < Parca.vidaLogica(pa, 50, 0, 0)
                 && golpe(a, 50) < Parca.golpe(pa, 50, 0));

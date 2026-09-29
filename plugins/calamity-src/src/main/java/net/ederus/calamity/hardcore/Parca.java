@@ -185,13 +185,15 @@ final class Parca implements Listener {
             activa = s.getBoolean("activa", true);
             maximoSimultaneas = s.getInt("maximo-simultaneas", 3);
             radioMarcaGrupo = s.getDouble("radio-marca-grupo", 24);
-            quietoMarcaGrupo = s.getInt("quieto-marca-grupo", 420);
+            // 1.8: la PARCA llega a los 5 minutos (parca.minutos): el grupo, a los 210 s (el 70 %, como antes 420 de 600).
+            quietoMarcaGrupo = s.getInt("quieto-marca-grupo", 210);
             extraNivel = s.getInt("extra-nivel", 10);
             vidaBase = s.getDouble("vida-base", 400);
             vidaPorNivel = s.getDouble("vida-por-nivel", 0.10);
             vidaPorRepeticion = s.getDouble("vida-por-repeticion", 0.25);
             vidaPorMarcado = s.getDouble("vida-por-marcado", 0.5);
-            golpeBase = s.getDouble("golpe-base", 8);
+            // 1.8: de 8 a 11, "extremadamente dificil, sobre todo por su dano" (Dosa).
+            golpeBase = s.getDouble("golpe-base", 11);
             golpePorNivel = s.getDouble("golpe-por-nivel", 0.04);
             danoPorRepeticion = s.getDouble("dano-por-repeticion", 0.5);
             topeRepeticion = s.getDouble("tope-repeticion", 3.0);
@@ -314,9 +316,21 @@ final class Parca implements Listener {
                 * (1 + a.vidaPorMarcado * Math.max(0, m));
     }
 
-    /** golpe = 8 x (1 + 0,04 x (N-1)) x R, al atributo attack_damage (sin penetracion). */
+    /** golpe = 11 x (1 + 0,04 x (N-1)) x R, al atributo attack_damage (sin penetracion). */
     static double golpe(Ajustes a, int n, int r) {
         return a.golpeBase * (1 + a.golpePorNivel * (n - 1)) * factorR(a, r);
+    }
+
+    /**
+     * 1.8 · Con la dificultad de su presa (DificultadAmenaza: lejos, poca cordura y mucho rato
+     * dentro): el multiplicador va despues de la formula por nivel y de las repeticiones.
+     */
+    static double vidaLogica(Ajustes a, int n, int r, int m, double dificultad) {
+        return vidaLogica(a, n, r, m) * dificultad;
+    }
+
+    static double golpe(Ajustes a, int n, int r, double dificultad) {
+        return golpe(a, n, r) * dificultad;
     }
 
     /** Siega: fraccion de la vida maxima de la victima. x2 si esta quieta, con tope 0,60. */
@@ -793,7 +807,7 @@ final class Parca implements Listener {
         int m = grupo.size() - 1;
         Location sitio = sitioFuera(p, 6);
         if (sitio == null) return false;   // 1.2: detras y delante cae en la zona spawn; el segundo siguiente
-        ParcaViva pe = nueva(a, p, grupo, n, r, m, sitio, 1.0, 1);
+        ParcaViva pe = nueva(a, p, grupo, n, r, m, sitio, 1.0, 1, DificultadAmenaza.foto(hc, p));
         if (pe == null) return false;
         registrar(pe);
 
@@ -803,7 +817,7 @@ final class Parca implements Listener {
         Location l = pe.cuerpo().getLocation();
         hc.plugin().bitacora().anotar("parca", "llega", p.getName(), "N " + n, "r " + r, "M " + m,
                 l.getBlockX() + " " + l.getBlockY() + " " + l.getBlockZ(), "celdas " + celdas,
-                "vehiculo " + (vehiculo ? "si" : "no"), pe.tipo());
+                "vehiculo " + (vehiculo ? "si" : "no"), pe.tipo(), pe.dificultad().texto());
         telemetria("nace", pe, null, null);
         Component aviso = ComandoCalamity.mensaje(Component.text("Suena una campana. La Parca ha venido a por ")
                 .append(Component.text(p.getName(), Paleta.DETALLE)).append(Component.text(".")));
@@ -816,16 +830,20 @@ final class Parca implements Listener {
      * Calamity 1.1.0: la PARCA de EDM (anomalia DIOS) si EDM esta libre; si no (otra anomalia abierta,
      * sin el modulo, apagada en su menu o en parca.anomalia.activa), la de reserva de siempre.
      * Ningun AFK se libra porque EDM este ocupado.
+     *
+     * 1.8: foto = como estaba la presa al llamarla (DificultadAmenaza): lejos, poca cordura y mucho
+     * rato dentro la hacen mas fuerte. La que vuelve de lo pendiente trae la suya.
      */
     private ParcaViva nueva(Ajustes a, Player p, List<Player> grupo, int n, int r, int m, Location sitio,
-                            double fraccion, int fase) {
+                            double fraccion, int fase, DificultadAmenaza.Foto foto) {
+        DificultadAmenaza.Resultado dif = hc.valor("parca", () -> DificultadAmenaza.para(hc, foto), DificultadAmenaza.NEUTRO);
         if (anomalia != null) {
             PuenteAnomalia.Encargo e = new PuenteAnomalia.Encargo(p.getUniqueId(), p.getName(), grupo, n, r, m,
-                    fraccion, fase);
+                    fraccion, fase, dif);
             ParcaViva pe = hc.valor("parca", () -> anomalia.abrir(e, sitio), null);
             if (pe != null) return pe;
         }
-        return PeleaParca.crear(this, a, p.getUniqueId(), p.getName(), grupo, n, r, m, sitio, false, fraccion, fase);
+        return PeleaParca.crear(this, a, p.getUniqueId(), p.getName(), grupo, n, r, m, sitio, false, fraccion, fase, dif);
     }
 
     /** Apunta una pelea viva (la anomalia se apunta sola al nacer, tambien la abierta a mano). */
@@ -934,8 +952,12 @@ final class Parca implements Listener {
 
     // =============================================================== pendiente
 
-    /** Lo que se guarda de una PARCA que se fue a medias (datos parca.pendiente.<uuid>, sec. 8.1). */
-    record Pendiente(double fraccion, int fase, int nivel, int r, int m, long hasta, String motivo) {
+    /**
+     * Lo que se guarda de una PARCA que se fue a medias (datos parca.pendiente.<uuid>, sec. 8.1).
+     * 1.8: foto, la de su dificultad (null en lo guardado antes de la 1.8: entonces, la de ahora).
+     */
+    record Pendiente(double fraccion, int fase, int nivel, int r, int m, long hasta, String motivo,
+                     DificultadAmenaza.Foto foto) {
     }
 
     /** Sincrono (guardarYa): lo pide DIS sec. 8.1 al crearlo. */
@@ -949,6 +971,13 @@ final class Parca implements Listener {
         hc.datos().set(base + "m", pe.extra());
         hc.datos().set(base + "hasta", hasta);
         hc.datos().set(base + "motivo", motivo);
+        DificultadAmenaza.Foto f = pe.dificultad() == null ? null : pe.dificultad().foto();
+        hc.datos().set(base + "dificultad", null);
+        if (f != null) {
+            hc.datos().set(base + "dificultad.bloques", Math.round(f.bloques()));
+            hc.datos().set(base + "dificultad.cordura", f.cordura());
+            hc.datos().set(base + "dificultad.segundos", f.segundosDentro());
+        }
         hc.guardarYa();
     }
 
@@ -960,8 +989,11 @@ final class Parca implements Listener {
             borrarPendiente(id);
             return null;
         }
+        DificultadAmenaza.Foto foto = !s.isSet("dificultad.segundos") ? null
+                : new DificultadAmenaza.Foto(s.getDouble("dificultad.bloques", 0),
+                s.getDouble("dificultad.cordura", Cordura.MAXIMO), s.getInt("dificultad.segundos", 0));
         return new Pendiente(s.getDouble("fraccion", 1), s.getInt("fase", 1), s.getInt("nivel", 1),
-                s.getInt("r", 0), s.getInt("m", 0), hasta, s.getString("motivo", "?"));
+                s.getInt("r", 0), s.getInt("m", 0), hasta, s.getString("motivo", "?"), foto);
     }
 
     void borrarPendiente(UUID id) {
@@ -973,7 +1005,7 @@ final class Parca implements Listener {
     }
 
     /**
-     * Vuelve lo pendiente: a "distancia" bloques, con la vida, fase, N, r y M que tenia.
+     * Vuelve lo pendiente: a "distancia" bloques, con la vida, fase, N, r, M y dificultad que tenia.
      *
      * 1.2: devuelve false solo si no ha podido por la zona spawn (esta dentro, o detras y delante
      * cae dentro): entonces volverFuera lo intenta el segundo siguiente. Por lo demas (nada
@@ -987,7 +1019,9 @@ final class Parca implements Listener {
         if (!a.activa || vivas() >= a.maximoSimultaneas) return true;   // lo pendiente sigue ahi
         Location sitio = sitioFuera(p, distancia);
         if (sitio == null) return false;
-        ParcaViva pe = nueva(a, p, List.of(p), pd.nivel(), pd.r(), pd.m(), sitio, pd.fraccion(), pd.fase());
+        // Con la dificultad con la que se fue: al volver, la cordura y los minutos dentro ya empiezan de cero.
+        ParcaViva pe = nueva(a, p, List.of(p), pd.nivel(), pd.r(), pd.m(), sitio, pd.fraccion(), pd.fase(),
+                pd.foto() != null ? pd.foto() : DificultadAmenaza.foto(hc, p));
         if (pe == null) return true;
         registrar(pe);
         borrarPendiente(p.getUniqueId());
@@ -1483,6 +1517,8 @@ final class Parca implements Listener {
                 + (pd.hasta() - ahora) / 60_000 + " min")
                 + " | marca " + (marca > ahora ? (marca - ahora) / 60_000 + " min" : "no")
                 + " | cobro " + (yaCobro(id, ahora, ajustes()) ? "hecho" : "libre"));
+        // 1.8: lo que la endurece (DificultadAmenaza), con la foto de su presa al aparecer.
+        if (pe != null) decir(quien, "parca | " + nombre + " | dificultad | " + pe.dificultad().texto());
     }
 
     private ParcaViva masCercana(CommandSender quien) {
@@ -1587,7 +1623,8 @@ final class Parca implements Listener {
         // A ras de suelo: unas coordenadas a mano suelen caer en el aire o dentro del terreno.
         Location sitio = Fx.ground(new Location(w, x, y, z), 40);
         // Sin presa: N tal cual (sin el extra-nivel, que ya lo pone quien prueba), r = 0, M = 0.
-        ParcaViva pe = PeleaParca.crear(this, a, null, "prueba", List.of(), n, 0, 0, sitio, true, 1.0, 1);
+        ParcaViva pe = PeleaParca.crear(this, a, null, "prueba", List.of(), n, 0, 0, sitio, true, 1.0, 1,
+                DificultadAmenaza.NEUTRO);
         if (pe == null) {
             quien.sendMessage(Component.text("parca | prueba | no ha salido (spawn cancelado o chunk sin cargar)", Paleta.AVISO));
             return;
@@ -1607,13 +1644,13 @@ final class Parca implements Listener {
         Ajustes a = new Ajustes(new YamlConfiguration());
         Autotest.Hoja h = new Autotest.Hoja();
         h.cerca("N 14 -> vida 920", 920, vidaLogica(a, 14, 0, 0), 1e-6);
-        h.cerca("N 14 -> golpe 12,16", 12.16, golpe(a, 14, 0), 1e-6);
+        h.cerca("N 14 -> golpe 16,72", 16.72, golpe(a, 14, 0), 1e-6);
         double v52 = vidaLogica(a, 52, 0, 0);
         h.cerca("N 52 -> vida 2440", 2440, v52, 1e-6);
         h.cerca("N 52 -> entidad 1024", 1024, Math.min(Amenazas.VIDA_MAXIMA_ENTIDAD, v52), 1e-9);
         h.cerca("N 52 -> escala 0,42", 0.42, Amenazas.escalaPara(v52), 0.005);
         h.cerca("N 100 -> vida 4360", 4360, vidaLogica(a, 100, 0, 0), 1e-6);
-        h.cerca("N 100 -> golpe 39,68", 39.68, golpe(a, 100, 0), 1e-6);
+        h.cerca("N 100 -> golpe 54,56", 54.56, golpe(a, 100, 0), 1e-6);
         h.igual("nivel = N0 + 10, tope 100", List.of(14, 100), List.of(nivel(a, 4), nivel(a, 97)));
         h.ok("2.o participante (ayudante con la presa) -> sube", subeGrupo(2, false, 0, a));
         h.ok("1.er participante o la presa -> no sube", !subeGrupo(1, false, 0, a) && !subeGrupo(2, true, 0, a));
@@ -1621,7 +1658,7 @@ final class Parca implements Listener {
         h.cerca("grupo x1,25 (N 14 -> 1150)", 1150, vidaLogica(a, 14, 0, 0) * (1 + a.grupoExtra), 1e-6);
         h.cerca("tope por golpe 8 % (N 52: 1000 -> 195,2)", 195.2, Amenazas.golpeLogico(1000, a.topeGolpeFraccion, v52), 1e-6);
         h.cerca("repeticion: r 1 -> vida x1,25 (1150)", 1150, vidaLogica(a, 14, 1, 0), 1e-6);
-        h.cerca("repeticion: r 1 -> R 1,5 (golpe 18,24)", 18.24, golpe(a, 14, 1), 1e-6);
+        h.cerca("repeticion: r 1 -> R 1,5 (golpe 25,08)", 25.08, golpe(a, 14, 1), 1e-6);
         h.cerca("R tope 3,0 (r 4 y r 9)", 6.0, factorR(a, 4) + factorR(a, 9), 1e-9);
         h.cerca("marcado extra -> vida x1,5", 1380, vidaLogica(a, 14, 0, 1), 1e-6);
         h.cerca("siega a 20 de vida: 4 (quieto 8)", 12, siegaFraccion(a, 1, false) * 20 + siegaFraccion(a, 1, true) * 20, 1e-9);

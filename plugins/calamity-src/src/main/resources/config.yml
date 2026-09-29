@@ -317,13 +317,13 @@ hardcore:
     # huella = celdas distintas pisadas moviendote tu (caza circuitos y vaivenes).
     # bloque = la regla literal: se reinicia al alejarse "radio" bloques. Solo para pruebas.
     modo: huella
-    minutos: 10                   # tiempo quieto que la llama
+    minutos: 5                    # tiempo quieto que la llama (antes, 10)
     muestra-segundos: 5           # cada cuanto se apunta una celda
     celda-horizontal: 2           # lado X/Z de una celda, en bloques
     celda-vertical: 3             # alto de una celda
     max-celdas: 24                # mas celdas distintas que esto = ya no estas quieto
                                   # (nunca mas de 1 por cada 5 muestras de la ventana: con minutos
-                                  # por debajo de 10, como el 1 del Test, baja solo; 1 min = 2 celdas)
+                                  # por debajo de 10 baja solo; con 5 min = 12 celdas, 1 min = 2)
     radio: 1                      # solo modo bloque
     vehiculo-porcentaje: 0.80     # senal de vehiculo: fraccion de muestras montado...
     vehiculo-lado: 128            # ...y caja maxima del recorrido, en bloques
@@ -344,17 +344,18 @@ hardcore:
     vuelo-minimo: 1.0             # bloques desplazados volando entre muestras
     # Exentos de la Huella y la PARCA: ya no por permiso (el comodin de LuckPerms se lo daba
     # a todo el staff), sino a mano con /lw hardcore exento <jugador> parca on.
-    avisos: [300, 420, 510, 540, 570]   # segundos de quietud de cada aviso
-    radio-campana-ajena: 48       # a cuanto oyen los demas la campana del aviso de 540
+    avisos: [150, 210, 255, 270, 285]   # segundos de quietud de cada aviso, todos antes de minutos x 60
+                                        # (con 10 minutos eran 300, 420, 510, 540 y 570)
+    radio-campana-ajena: 48       # a cuanto oyen los demas la campana del cuarto aviso
     radio-marca-grupo: 24         # quien este a esto...
-    quieto-marca-grupo: 420       # ...y lleve esto quieto, queda marcado tambien
+    quieto-marca-grupo: 210       # ...y lleve esto quieto, queda marcado tambien (menos que minutos x 60)
     maximo-simultaneas: 3         # Parcas vivas a la vez en todo el servidor
     extra-nivel: 10               # N = nivelCalamity + esto (el de los minijefes)
     vida-base: 400                # vida logica = base x (1 + por-nivel x (N-1)) x ...
     vida-por-nivel: 0.10
     vida-por-repeticion: 0.25     # +25 % por cada Parca de ese jugador en 24 h
     vida-por-marcado: 0.5         # +50 % por marcado extra
-    golpe-base: 8                 # attack_damage = base x (1 + por-nivel x (N-1)) x R
+    golpe-base: 11                # attack_damage = base x (1 + por-nivel x (N-1)) x R, y encima dificultad-amenazas
     golpe-por-nivel: 0.04
     dano-por-repeticion: 0.5      # R = 1 + esto x repeticiones: +50 % cada una
     tope-repeticion: 3.0          # R maximo
@@ -447,8 +448,8 @@ hardcore:
                                   # pa_tiron, pa_cortejo, pa_guadanas, pa_salto, pa_embestida, pa_umbrales,
                                   # pa_lluvia, pa_muros, pa_anillo, pa_sentencia
       esperas: {}                 # segundos entre usos por tecnica, p. ej. {pa_lluvia: 20, pa_muros: 30}
-    # 1.1.0 · La GRIETA: quieto en la zona spawn (hardcore.spawn) no se espera a los
-    # 10 minutos: a los "minutos" se abre una grieta, se lo traga y lo escupe en un sitio
+    # 1.1.0 · La GRIETA: quieto en la zona spawn (hardcore.spawn) no viene la PARCA: a los
+    # "minutos" de aqui abajo se abre una grieta, se lo traga y lo escupe en un sitio
     # seguro al azar a distancia-min..distancia-max del spawn, y alli le aparece la PARCA.
     # Los avisos previos salen igual, a la misma proporcion, con su propio texto.
     spawn:
@@ -484,7 +485,7 @@ hardcore:
       esencias: 24                # lo que cuesta un contrato, del saldo del que paga
     vida-base: 300                # vida logica = base x (1 + por-nivel x (N-1)); N = el de la presa + 10
     vida-por-nivel: 0.10
-    golpe-base: 7                 # attack_damage = base x (1 + por-nivel x (N-1))
+    golpe-base: 10                # attack_damage = base x (1 + por-nivel x (N-1)), y encima dificultad-amenazas
     golpe-por-nivel: 0.04
     tope-golpe-fraccion: 0.08     # ningun golpe le quita mas que esto de su vida logica
     esencias-presa: 6             # presa: esto + 1 cada 10 niveles
@@ -494,6 +495,33 @@ hardcore:
     skin-fase-1: itGuts
     skin-fase-2: Nagazaki_Yakuza
     fase-2-vida: 0.5
+
+  # ------------------------------------------------------------------ 1c. LO QUE ENDURECE A LA PARCA Y A AMBUSH
+  # La Parca y Ambush salen más fuertes cuanto peor lo tiene su presa en el momento en que
+  # aparecen: lejos del spawn, con poca cordura y con mucho rato dentro. Cada una de las tres
+  # cosas da un multiplicador de daño y otro de vida, y los tres se multiplican entre sí. Van
+  # después de la fórmula por nivel (y de las repeticiones de la Parca); el tope por golpe que
+  # reciben no cambia. Sin nada de esto, x1. Se miran al aparecer y no cambian en la pelea: la
+  # Parca que vuelve tras una desconexión, la puerta o un reinicio trae los que tenía.
+  # Ejemplo: a 2.000 bloques, con 18 de cordura y 2 horas dentro, daño x1,6 x1,4 x1,6 = x3,58
+  # y vida x1,4 x1,2 x1,4 = x2,35.
+  # /calamidad parca info <jugador> y /calamidad ambush info enseñan lo que lleva cada una.
+  # Si esta sección no está en el config.yml del servidor, valen estos mismos valores.
+  dificultad-amenazas:
+    # Distancia al borde de la zona spawn (la misma medida que hardcore.distancia): cada
+    # cada-bloques suma dano y vida, hasta tope-tramos tramos (8 x 500 = 4.000 bloques).
+    # cada-bloques: 0 lo apaga.
+    distancia: {cada-bloques: 500, dano: 0.15, vida: 0.10, tope-tramos: 8}
+    # Cordura: cuenta solo el tramo más bajo que cumpla (cordura por debajo de por-debajo).
+    # por-debajo: 1 es la cordura vacía. Con cordura: [] no cuenta.
+    cordura:
+      - {por-debajo: 50, dano: 0.20, vida: 0.10}
+      - {por-debajo: 25, dano: 0.40, vida: 0.20}
+      - {por-debajo: 1, dano: 0.60, vida: 0.30}
+    # Tiempo dentro de Calamity en esta visita (el mismo contador que sube el nivel de los mobs:
+    # vuelve a cero al salir, al morir y al desconectarse). Cada cada-minutos suma dano y vida,
+    # hasta tope-tramos tramos (6 x 30 = 3 horas). cada-minutos: 0 lo apaga.
+    tiempo: {cada-minutos: 30, dano: 0.15, vida: 0.10, tope-tramos: 6}
 
   # ------------------------------------------------------------------ 2. EL ECO
   eco:
@@ -978,7 +1006,7 @@ hardcore:
   cronista:
     # Los capitulos de /calamity cronista, en este orden (el id tambien vale: /calamity
     # cronista parca). {ruta} se cambia al leerlo por ese valor de hardcore:, asi las cifras
-    # siguen a la config: {parca.minutos} -> 10. En una lista se entra por el id de sus
+    # siguen a la config: {parca.minutos} -> 5. En una lista se entra por el id de sus
     # elementos ({altar.trueques.cristal.esencias}) o por posicion, desde 0
     # ({aduana.tramos-mc.0.hasta}). Una ruta que no exista sale tal cual, entre llaves, y
     # /calamidad autotest npcs la senala. Lineas cortas: cada una tiene que caber en el chat.
@@ -1003,7 +1031,7 @@ hardcore:
         texto:
           - "Si te quedas quieto {parca.minutos} min en Calamity, viene la Parca: una anomalía de nivel Dios con cuatro fases."
           - "Antes oirás avisos y una campana. Si te mueves de verdad (exploras, picas o peleas), no viene; con un autoclicker, sí."
-          - "En el spawn de Calamity no espera tanto: a los {parca.spawn.minutos} min se abre una Grieta que te traga y te deja lejos."
+          - "En el spawn de Calamity no aparece: a los {parca.spawn.minutos} min quieto se abre una Grieta que te traga y te deja lejos."
           - "Allí te encuentra. Derrotarla paga Esencias, y los {parca.campana.solo-top} que más daño le hagan (salvo su presa) se llevan una Campana de la Parca."
       eco:
         titulo: "El Eco"
