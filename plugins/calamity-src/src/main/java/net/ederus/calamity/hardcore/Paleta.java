@@ -94,6 +94,19 @@ public final class Paleta {
     public static final TextColor ECO = TextColor.color(0xB9C6D8);
     /** Almas: turquesa palido, el color de las particulas SOUL. */
     public static final TextColor ALMA = TextColor.color(0x8FE3DA);
+    /**
+     * Calamity 1.8.5 · La lluvia acida de los biomas verdes: verde lima claro, para el aviso de la
+     * barra y las gotas que le caen alrededor. Mas amarillento que DETALLE para que no se confunda
+     * con un aviso bueno.
+     */
+    public static final TextColor ACIDO = TextColor.color(0xB6E35A);
+    /** Calamity 1.8.5 · El cielo que arde en el bioma rojo: naranja fuego claro (su aviso). */
+    public static final TextColor FUEGO = TextColor.color(0xFFA15C);
+    /**
+     * Calamity 1.8.5 · La ceniza del cielo rojo (particulas): el color del cielo de crimson_organism
+     * en su propio bioma (#DA5955), que se ve de dia y de noche sin llegar al rojo oscuro ilegible.
+     */
+    public static final int CIELO_ROJO = 0xDA5955;
 
     // --------------------------------------------------------------- piezas
 

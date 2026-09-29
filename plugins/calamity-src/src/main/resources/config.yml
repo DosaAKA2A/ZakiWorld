@@ -752,6 +752,61 @@ hardcore:
   frenesi: {activo: false, umbral: 25, dano-hecho: 0.15, dano-recibido: 0.15}
   sangre-fresca: {activo: false, pvp: 20, eco: 10, minijefe: 15, parca: 40, ambush: 25, minutos-misma-victima: 30, piezas-minimas: 2, minutos-dentro-victima: 5}
   eclipse: {activo: false, horario: ["18:00", "22:00"], minutos: 20, avisos-minutos: [10, 5, 1], cordura: 2.0, niveles: 10, botin: 2.0, pvp: 1.25, minijefe-cada-minutos: 5, ecos-despertar: 2.0, vinheta-extra: 0.2, minutos-minimos: 10, ventana-despues: 10}
+
+  # ------------------------------------------------------------------ Clima (1.8.5)
+  # El tiempo de Calamity segun el bioma. Solo actua mientras llueve de verdad en el mundo
+  # y nunca en la zona spawn. Todo pasa en la pantalla de cada jugador: el mundo no se toca.
+  # Los biomas se escriben como "panacea/<id>" (el "bracken:" de delante es opcional).
+  clima:
+    activo: true
+    # En los biomas verdes la lluvia es acida: a cielo abierto quema y bajo techo no pasa nada.
+    # Primero sale un aviso en la barra y hay un margen antes del primer golpe.
+    lluvia-acida:
+      activa: true
+      biomas:
+        - panacea/horsetail_tropics
+        - panacea/creeper_dominion
+        - panacea/polypore_plains
+        - panacea/wildflower_bog
+        - panacea/hungering_jungle
+        - panacea/ravenous_greenwood
+        - panacea/sweltering_swamp
+      # Vida que quita cada golpe (1 = medio corazon). Recuerda que en Calamity no hay
+      # regeneracion natural.
+      dano: 1.0
+      # Cada cuantos segundos quema mientras sigue bajo la lluvia.
+      cada-segundos: 2
+      # Segundos entre el aviso y el primer golpe.
+      margen-segundos: 2
+      # Si pasa este tiempo seguido a cubierto, al volver a la lluvia hay aviso y margen otra
+      # vez. Con menos, la cuenta sigue donde estaba (esconderse un segundo no la reinicia).
+      olvido-segundos: 15
+    # En los biomas rojos no se ve la lluvia: el cielo se oscurece en rojo y cada cierto
+    # tiempo arde. La resistencia al fuego protege de la quemadura.
+    cielo-rojo:
+      activo: true
+      biomas:
+        - panacea/crimson_organism
+      # Hora que se le pone al jugador mientras esta alli: la del cielo de sangre del ciclo de
+      # Panacea (el dia dura 72000 ticks y el cielo rojo va de 63500 a 65000). 0 = no se toca.
+      # Durante un Eclipse, o si la Parca le ha cambiado el cielo, manda el de ellos.
+      hora: 64250
+      # Ocultarle la lluvia a quien esta en el bioma.
+      ocultar-lluvia: true
+      # Vineta roja en los bordes de la pantalla (0 a 0.95), aunque sentidos.vinheta este
+      # apagada. Se suma a la de la cordura si esta encendida. 0 = sin vineta.
+      vinheta: 0.4
+      # Cada cuantos segundos arde, cuantos segundos dura y con cuantos segundos de aviso.
+      arde-cada-segundos: 20
+      arde-segundos: 4
+      aviso-segundos: 2
+      # Vida que quita cada segundo ardiendo (dano de fuego: la resistencia al fuego lo para).
+      dano-por-segundo: 1.0
+      # true: bajo techo no arde. De serie arde igual, techo o no.
+      techo-protege: false
+      # Como en la lluvia acida: tras este tiempo fuera, la cuenta hasta la proxima quemadura
+      # empieza de cero.
+      olvido-segundos: 30
   # [alineado] pool con los 12 contratos de ESTUDIO 5.9 (corto: true en los 4 cortos); semanal = 1 Llave del Caos.
   # Cada contrato: texto, evento que lo hace avanzar (Contratos.progreso), objetivo, premio (esencias y
   # mobcoins, por la Aduana) y "mecanica": el interruptor que tiene que estar encendido para que salga

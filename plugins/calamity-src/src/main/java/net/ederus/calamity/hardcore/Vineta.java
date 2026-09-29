@@ -52,16 +52,25 @@ final class Vineta {
     /** Cada segundo, desde Sentidos.latido. Solo toca al jugador si algo ha cambiado. */
     void segundo(Player p, int tramo) {
         ConfigurationSection s = cfg();
-        if (!s.getBoolean("vinheta", false)) {
+        /* 1.8.5: el cielo rojo de Clima suma su parte aunque la vineta de cordura este apagada. Va
+         * por aqui y no con un borde propio: dos setWorldBorder por jugador se pisarian. */
+        Clima clima = hc.clima();
+        double deClima = clima == null ? 0.0 : hc.valor("clima", () -> clima.vinetaExtra(p), 0.0);
+        boolean deCordura = s.getBoolean("vinheta", false);
+        if (!deCordura && deClima <= 0) {
             quitar(p);
             return;
         }
         double radio = Math.max(16, s.getDouble("radio-borde", 10_000));
-        Eclipse eclipse = hc.eclipse();
-        boolean enEclipse = eclipse != null && hc.valor("eclipse", eclipse::activo, false);
-        // El extra lo dice Eclipse (eclipse.vinheta-extra): una sola lectura de la clave.
-        double extra = enEclipse ? hc.valor("eclipse", eclipse::vinetaExtra, 0.0) : 0.0;
-        int aviso = aviso(radio, intensidad(porTramo(s), tramo, enEclipse, extra));
+        double base = 0.0;
+        if (deCordura) {
+            Eclipse eclipse = hc.eclipse();
+            boolean enEclipse = eclipse != null && hc.valor("eclipse", eclipse::activo, false);
+            // El extra lo dice Eclipse (eclipse.vinheta-extra): una sola lectura de la clave.
+            double extra = enEclipse ? hc.valor("eclipse", eclipse::vinetaExtra, 0.0) : 0.0;
+            base = intensidad(porTramo(s), tramo, enEclipse, extra);
+        }
+        int aviso = aviso(radio, conExtra(base, deClima));
         if (aviso <= 0) {
             quitar(p);
             return;
@@ -122,6 +131,11 @@ final class Vineta {
         double i = porTramo == null || tramo < 0 || tramo >= porTramo.size() ? 0 : porTramo.get(tramo);
         if (eclipse) i += Math.max(0, extra);
         return Math.max(0, Math.min(INTENSIDAD_MAXIMA, i));
+    }
+
+    /** Calamity 1.8.5: la intensidad con un extra de otro modulo (el cielo rojo de Clima), con el mismo tope. */
+    static double conExtra(double base, double extra) {
+        return Math.max(0, Math.min(INTENSIDAD_MAXIMA, base + Math.max(0, extra)));
     }
 
     /** La distancia de aviso que pinta esa intensidad con el jugador en el centro. 0 = sin vineta. */
