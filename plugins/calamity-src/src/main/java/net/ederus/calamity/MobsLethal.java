@@ -1091,6 +1091,11 @@ public final class MobsLethal implements Listener {
         LivingEntity mob = e.getEntity();
         String clase = mob.getPersistentDataContainer().get(clave, PersistentDataType.STRING);
         if (clase == null) return;
+        /* 1.9.0 · Los especiales no sueltan su botin vanilla (Dosa): la esponja y la plantilla de
+         * marea del Guardian Anciano o las lagrimas del ghast, que se confundirian con las Esencias,
+         * serian una fuente de objetos aparte en un mundo de cofres vacios. Se vacia antes del Grifo,
+         * que despues anade lo suyo. */
+        if (mob.getPersistentDataContainer().has(claveEspecial, PersistentDataType.STRING)) e.getDrops().clear();
         vivos.remove(mob.getUniqueId());
         String puesto = puestoDe.remove(mob.getUniqueId());
         if (puesto != null) {
