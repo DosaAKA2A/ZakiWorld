@@ -934,9 +934,9 @@ public final class Hardcore implements Listener {
         marcarPresa(mob, p);
 
         e.ultimoMinijefe = ahora;
-        Component nombre = mob.customName() == null
-                ? Component.text("un minijefe") : mob.customName();
-        p.sendMessage(Component.text("Ha venido a por ti: ", Paleta.AVISO).append(nombre));
+        // 1.8.4: el mismo nombre que su cartel (Paleta.minijefe), con el nivel detras. Antes se leia el
+        // customName, que EDM no pone, y el aviso siempre decia "un minijefe".
+        p.sendMessage(Component.text("Ha venido a por ti: ", Paleta.AVISO).append(plugin.mobs().nombreMinijefe(mob)));
         Compat.sound(p.getWorld(), p.getLocation(), "entity.wither.spawn", 1.0f, 0.6f);
     }
 

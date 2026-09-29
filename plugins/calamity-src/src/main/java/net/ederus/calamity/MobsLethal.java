@@ -98,6 +98,8 @@ public final class MobsLethal implements Listener {
     private final NamespacedKey claveDistancia;
     private BukkitTask aparicion;
     private BukkitTask limpieza;
+    /** Calamity 1.8.4: el cartel de los minijefes con su formato (null sin el modulo anomaly). */
+    private CartelesMinijefe carteles;
 
     private record Guarnicion(String tipo, int minimo, int maximo) {
     }
@@ -145,6 +147,9 @@ public final class MobsLethal implements Listener {
         cargarMonedas();
         a.minionManager().heredable(clave);
         a.minionManager().heredable(claveDistancia);
+        // Antes de mirar "activos": con los mobs apagados, las reglas hardcore siguen invocando minijefes.
+        carteles = new CartelesMinijefe(plugin, a);
+        plugin.getServer().getPluginManager().registerEvents(carteles, plugin);
         if (!cfg().getBoolean("activos", true)) {
             plugin.getLogger().info("[Lethal World] Mobs de Lethal World apagados en la config.");
             return;
@@ -166,6 +171,7 @@ public final class MobsLethal implements Listener {
     void parar() {
         if (aparicion != null) aparicion.cancel();
         if (limpieza != null) limpieza.cancel();
+        if (carteles != null) carteles.parar();
         for (UUID id : vivos) {
             Entity e = plugin.getServer().getEntity(id);
             if (e != null) e.remove();
@@ -254,13 +260,23 @@ public final class MobsLethal implements Listener {
         double escala = escalaDe(id);
         if (escala > 1) Compat.setAttribute(mob, "scale", Math.min(2.0, escala));
 
-        Component nombre = mob.customName();
-        // El rojo claro de los avisos de Calamity: el rojo oscuro no se leia en el chat
-        // ("Ha venido a por ti: <nombre>") ni en el cartel.
-        if (nombre != null) mob.customName(nombre.color(net.ederus.calamity.hardcore.Paleta.AVISO));
-        AnomalyPlugin a = anomaly();
-        if (a != null) a.minionManager().reescoltar(mob);
+        /* Calamity 1.8.4: el nombre ya no se toca en el customName. EDM no le pone ninguno a sus
+         * esbirros (lo que se ve encima es su cartel), asi que el rojo que se le daba aqui no llegaba
+         * a verse y el aviso decia "un minijefe". El cartel lo repinta CartelesMinijefe, ya mismo para
+         * que el primer tick no salga con el de la ficha; el aviso lo pone nombreMinijefe. */
+        if (carteles != null) carteles.repintar();
         return mob;
+    }
+
+    /**
+     * Calamity 1.8.4 · El nombre del minijefe para el aviso "Ha venido a por ti": Paleta.minijefe con
+     * el nombre de su ficha de /esb y su nivel detras (" · Nv. 45"). El cartel usa la misma funcion.
+     */
+    public Component nombreMinijefe(LivingEntity mob) {
+        MinionManager mm = minionManager();
+        MinionType t = mm == null ? null : mm.typeOf(mob);
+        return net.ederus.calamity.hardcore.Paleta.minijefe(t == null ? null : t.display(),
+                mm == null ? 0 : mm.levelOf(mob));
     }
 
     /** La escala con la que se planta cada minijefe, por su nombre. 1 si no es de los cinco. */
@@ -993,7 +1009,7 @@ public final class MobsLethal implements Listener {
                 t = reg.createType(m.nombre(), carpeta.id());
                 t.entity(m.tipo());
                 t.colorRgb(m.color());
-                t.bold(true);
+                // 1.8.4: sin negrita. El cartel lo repinta CartelesMinijefe, pero la ficha nueva ya nace sin ella.
                 t.baseHealth(120);
                 t.healthGrowth(0.12);
                 t.baseDamage(1.6);

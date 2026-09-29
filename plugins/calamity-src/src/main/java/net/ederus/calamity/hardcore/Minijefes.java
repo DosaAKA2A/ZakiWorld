@@ -1,7 +1,13 @@
 package net.ederus.calamity.hardcore;
 
+import net.ederus.calamity.CartelesMinijefe;
 import net.ederus.edm.comun.Compat;
 import net.ederus.edm.comun.MobCoins;
+import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.TextComponent;
+import net.kyori.adventure.text.format.NamedTextColor;
+import net.kyori.adventure.text.format.TextColor;
+import net.kyori.adventure.text.format.TextDecoration;
 import org.bukkit.OfflinePlayer;
 import org.bukkit.command.CommandSender;
 import org.bukkit.configuration.ConfigurationSection;
@@ -422,5 +428,71 @@ final class Minijefes {
         h.igual("N100 con f 1 para Otro: 5 Esencias", 5, n100.get(1).esencias());
         h.igual("nombre del Heraldo", "Heraldo Carmesí", nombre("heraldo-carmes"));
         h.igual("nombre de uno que no conoce", "Rey de prueba", nombre("rey-de-prueba"));
+
+        probarNombreVisible(h);
+    }
+
+    /**
+     * 1.8.4: el nombre que se ve encima del minijefe y en "Ha venido a por ti" (Paleta.minijefe) y
+     * el repintado del cartel de EDM (CartelesMinijefe.repintado). Sin negrita en ningun trozo.
+     */
+    private static void probarNombreVisible(Autotest.Hoja h) {
+        Component solo = Paleta.minijefe("Custodio de las Ruinas", 0);
+        h.igual("nombre de minijefe: calaveras a los lados", "☠ Custodio de las Ruinas ☠", Hardcore.plano(solo));
+        h.ok("nombre de minijefe: sin negrita en ningun trozo", sinNegrita(solo));
+        h.igual("nombre de minijefe: negrita apagada a proposito", TextDecoration.State.FALSE,
+                solo.decoration(TextDecoration.BOLD));
+        List<Map.Entry<String, TextColor>> letras = new ArrayList<>();
+        letras(solo, null, letras);
+        h.igual("nombre de minijefe: calavera en hueso", Paleta.HUESO, letras.get(0).getValue());
+        h.igual("nombre de minijefe: empieza en el rojo de los avisos", TextColor.color(Paleta.MINIJEFE_DESDE),
+                letras.get(1).getValue());
+        h.igual("nombre de minijefe: acaba en el rojo de Ambush", TextColor.color(Paleta.MINIJEFE_HASTA),
+                letras.get(letras.size() - 2).getValue());
+        boolean claros = true;
+        for (Map.Entry<String, TextColor> l : letras) {
+            TextColor c = l.getValue();
+            if (c == null || Math.max(c.red(), Math.max(c.green(), c.blue())) < 0xC8) claros = false;
+        }
+        h.ok("nombre de minijefe: ningun rojo oscuro (#8B1A1A no pasaria)", claros);
+
+        Component aviso = Paleta.minijefe("Custodio de las Ruinas", 45);
+        h.igual("aviso: el nivel detras", "☠ Custodio de las Ruinas ☠ · Nv. 45", Hardcore.plano(aviso));
+        h.ok("aviso: sin negrita", sinNegrita(aviso) && aviso.decoration(TextDecoration.BOLD) == TextDecoration.State.FALSE);
+        h.igual("sin nombre de ficha: Minijefe", "☠ Minijefe ☠", Hardcore.plano(Paleta.minijefe(null, 0)));
+
+        // El cartel tal como lo pinta EDM (MinionManager.updateHolo): la raiz es el nombre de la ficha,
+        // en negrita, y de ella cuelgan el salto, el nivel y la vida.
+        Component edm = Component.text("Heraldo Carmesí", TextColor.color(0xC23B3B)).decoration(TextDecoration.BOLD, true)
+                .append(Component.newline())
+                .append(Component.text("Nv. ", TextColor.color(0x9A9A9A)))
+                .append(Component.text(45, NamedTextColor.YELLOW))
+                .append(Component.text("  ❤ ", NamedTextColor.RED))
+                .append(Component.text(300, TextColor.color(0xE8E8E8)));
+        Component cartel = CartelesMinijefe.repintado(edm);
+        h.ok("cartel de EDM: se repinta", cartel != null);
+        if (cartel == null) return;
+        h.igual("cartel: nombre arriba, nivel y vida debajo", "☠ Heraldo Carmesí ☠\nNv. 45  ❤ 300", Hardcore.plano(cartel));
+        h.igual("cartel: la primera linea es Paleta.minijefe", Paleta.minijefe("Heraldo Carmesí", 0), cartel.children().get(0));
+        h.ok("cartel: sin negrita, tampoco en la linea del nivel", sinNegrita(cartel)
+                && cartel.decoration(TextDecoration.BOLD) == TextDecoration.State.FALSE);
+        h.ok("cartel ya repintado: no se vuelve a tocar", CartelesMinijefe.repintado(cartel) == null);
+        h.ok("cartel sin la forma de EDM: se deja como esta", CartelesMinijefe.repintado(Component.text("Heraldo Carmesí")) == null);
+    }
+
+    /** Que ningun trozo del texto pida negrita (lo que no la fija la hereda, y nadie la pone). */
+    private static boolean sinNegrita(Component c) {
+        if (c.decoration(TextDecoration.BOLD) == TextDecoration.State.TRUE) return false;
+        for (Component hijo : c.children()) if (!sinNegrita(hijo)) return false;
+        return true;
+    }
+
+    /** Los trozos con texto, en orden, con el color con el que se ven (el propio o el heredado). */
+    private static void letras(Component c, TextColor heredado, List<Map.Entry<String, TextColor>> out) {
+        TextColor color = c.color() != null ? c.color() : heredado;
+        if (c instanceof TextComponent t && !t.content().isEmpty()) {
+            out.add(new java.util.AbstractMap.SimpleEntry<>(t.content(), color)); // Map.entry no admite color null
+        }
+        for (Component hijo : c.children()) letras(hijo, color, out);
     }
 }
