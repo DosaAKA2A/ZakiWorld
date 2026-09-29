@@ -292,6 +292,7 @@ public final class Hardcore implements Listener {
             return;
         }
         cargarDatos();
+        migrarParcaCincoMinutos();
         plugin.getServer().getPluginManager().registerEvents(this, plugin);
         menu = new MenuHardcore(plugin);
         vara = new VaraPortales(plugin);
@@ -577,6 +578,25 @@ public final class Hardcore implements Listener {
             plugin.saveConfig();
             plugin.getLogger().info("[Calamity] Horas, tags y cordura guardada pasan a hardcore-datos.yml.");
         }
+    }
+
+    /**
+     * 1.8.1: la Parca viene a los 5 minutos quieto. saveDefaultConfig no pisa el config.yml que
+     * ya tiene cada servidor (el Survival con 10, el Test con 1), asi que se cambia aqui una sola
+     * vez: minutos, sus cinco avisos y el marcado en grupo, que tienen que caer antes. Si luego el
+     * staff lo vuelve a tocar, se respeta. Como cargarDatos, justo tras leer el config del disco.
+     */
+    private void migrarParcaCincoMinutos() {
+        String hecho = "hardcore.migraciones.parca-5-minutos";
+        if (plugin.getConfig().getBoolean(hecho)) return;
+        if (plugin.getConfig().contains("hardcore.parca", true)) {
+            plugin.getConfig().set("hardcore.parca.minutos", 5);
+            plugin.getConfig().set("hardcore.parca.avisos", List.of(150, 210, 255, 270, 285));
+            plugin.getConfig().set("hardcore.parca.quieto-marca-grupo", 210);
+        }
+        plugin.getConfig().set(hecho, true);
+        plugin.saveConfig();
+        plugin.getLogger().info("[Calamity] La Parca pasa a venir a los 5 minutos quieto (hardcore.parca.minutos).");
     }
 
     private void guardarDatos() {

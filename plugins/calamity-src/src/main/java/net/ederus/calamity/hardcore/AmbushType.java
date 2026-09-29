@@ -138,8 +138,10 @@ final class AmbushType implements AnomalyType {
     public List<String> threat() {
         return List.of(
                 "Anomalía Monarca: un duelo en dos fases.",
-                "Acometida, tajo doble e iaijutsu. En la",
-                "segunda fase se transforma y va más rápido.");
+                "Acometida, tajo doble, paso sombra e",
+                "iaijutsu. En la segunda se transforma,",
+                "va más rápido y suma los mil cortes y las",
+                "Sombras del clan: clones que te atraviesan.");
     }
 
     /** Solo para el menu: la vida de verdad sale de la formula de Calamity (Ambush.vida). Esta es la de N 60. */
@@ -153,12 +155,16 @@ final class AmbushType implements AnomalyType {
         return 16;
     }
 
-    /** Una Ability por ataque. La eleccion normal es de la pelea; esto es para el menu y /anomaly test. */
+    /**
+     * Una Ability por ataque. La eleccion normal es de la pelea; esto es para el menu y /anomaly test.
+     * Fase 0 (cualquiera) para los de las dos fases; mil cortes y las Sombras del clan, la 2 (la ultima).
+     */
     @Override
     public List<Ability> abilities() {
         List<Ability> out = new ArrayList<>();
         for (PeleaAmbush.Ataque x : PeleaAmbush.Ataque.values()) {
-            out.add(new Ability(x.id, x.nombre, x.descripcion, 0, x.espera, x.duracion, x.peso, x.icono, f -> {
+            int fase = x.fase > 1 ? x.fase : 0;
+            out.add(new Ability(x.id, x.nombre, x.descripcion, fase, x.espera, x.duracion, x.peso, x.icono, f -> {
                 if (f instanceof AmbushEdm e) e.forzar(x);
             }));
         }

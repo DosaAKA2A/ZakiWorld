@@ -98,7 +98,10 @@ final class Huella implements Listener {
 
     // ================================================================== nucleo
 
-    /** Lo que se lee de hardcore.parca para la Huella (con los valores de DIS sec. 4 por defecto). */
+    /**
+     * Lo que se lee de hardcore.parca para la Huella (con los valores de DIS sec. 4 por defecto,
+     * salvo los minutos y sus avisos: 5 desde la 1.8.1, como el config.yml del jar).
+     */
     record Ajustes(boolean activa, boolean modoBloque, int minutos, int muestra, int celdaH, int celdaV,
                    int maxCeldas, double radio, double vehiculoPorcentaje, int vehiculoLado,
                    int vehiculoMuestrasMinimas, int congelarSegundos, double congelarDanoMinimo,
@@ -111,11 +114,11 @@ final class Huella implements Listener {
             List<Integer> lista = s.getIntegerList("avisos");
             // Cinco avisos o ninguno: cada posicion es un mensaje distinto (P-01 ... P-06).
             int[] avisos = lista.size() == 5 ? lista.stream().mapToInt(Integer::intValue).sorted().toArray()
-                    : new int[]{300, 420, 510, 540, 570};
+                    : new int[]{150, 210, 255, 270, 285};
             return new Ajustes(
                     s.getBoolean("activa", true),
                     "bloque".equalsIgnoreCase(s.getString("modo", "huella")),
-                    Math.max(1, s.getInt("minutos", 10)),
+                    Math.max(1, s.getInt("minutos", 5)),
                     Math.max(1, s.getInt("muestra-segundos", 5)),
                     Math.max(1, s.getInt("celda-horizontal", 2)),
                     Math.max(1, s.getInt("celda-vertical", 3)),
@@ -138,9 +141,15 @@ final class Huella implements Listener {
                     Math.max(0.1, s.getDouble("vuelo-minimo", 1.0)));
         }
 
-        /** Los de DIS sec. 4 tal cual: los usa el autotest para no depender de la config del servidor. */
+        /**
+         * Los de DIS sec. 4 tal cual (10 minutos y sus avisos): los usa el autotest para no
+         * depender de la config del servidor ni de los 5 minutos de serie.
+         */
         static Ajustes defecto() {
-            return de(new YamlConfiguration());
+            YamlConfiguration dis = new YamlConfiguration();
+            dis.set("minutos", 10);
+            dis.set("avisos", List.of(300, 420, 510, 540, 570));
+            return de(dis);
         }
 
         /** Segundos quieto que la llaman. */

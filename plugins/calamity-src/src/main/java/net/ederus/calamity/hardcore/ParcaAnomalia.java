@@ -1689,7 +1689,8 @@ final class ParcaAnomalia extends BossFight implements ParcaViva {
                 if (escudo(v)) continue;
                 double vidaMax = Compat.getAttribute(v, "max_health", 20);
                 boolean quieto = quieta(v);
-                double cantidad = Parca.siegaFraccion(a, factorR, quieto) * vidaMax;
+                // 1.8.1: la dificultad de su presa tambien la endurece (con el tope de siempre).
+                double cantidad = Parca.siegaFraccion(a, factorR * dificultad.dano(), quieto) * vidaMax;
                 // El parte lee las marcas detras de " · ": asi sabe que el x2 fue por quedarse quieto.
                 DanoVerdadero.aplicar(v, cantidad, a.siegaTope, cuerpo, quieto ? "Siega · quieto" : "Siega");
                 if (hc.esHardcore(v)) hc.cordura().sumar(v, -a.siegaCordura);
@@ -3092,7 +3093,7 @@ final class ParcaAnomalia extends BossFight implements ParcaViva {
                 double dx = v.getLocation().getX() - origen.getX(), dz = v.getLocation().getZ() - origen.getZ();
                 if (dx * dx + dz * dz > r2) continue;
                 double vidaMax = Compat.getAttribute(v, "max_health", 20);
-                DanoVerdadero.aplicar(v, Parca.sentenciaFraccion(a, factorR) * vidaMax, a.campTope, cuerpo, "Sentencia");
+                DanoVerdadero.aplicar(v, Parca.sentenciaFraccion(a, factorR * dificultad.dano()) * vidaMax, a.campTope, cuerpo, "Sentencia");
                 ultimoGolpe = ticks();
                 Compat.apply(v, "darkness", 30, 0);
                 if (hc.esHardcore(v)) hc.cordura().sumar(v, -a.campCordura);

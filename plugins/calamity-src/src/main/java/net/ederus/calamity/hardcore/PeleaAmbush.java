@@ -1929,6 +1929,8 @@ final class PeleaAmbush implements Runnable {
 
         @Override
         public void mover(Location l) {
+            // Ambush no entra en el spawn: ningun ataque (paso sombra, mil cortes...) lo mete dentro.
+            if (hc.enSpawn(l)) return;
             hc.amenazas().teleportar(cuerpo, l);
         }
 

@@ -1059,7 +1059,8 @@ final class PeleaParca implements Runnable, ParcaViva {
             if (escudo(v)) continue;
             double vidaMax = Compat.getAttribute(v, "max_health", 20);
             boolean quieta = quieta(v);
-            double cantidad = Parca.siegaFraccion(a, factorR, quieta) * vidaMax;
+            // 1.8.1: la dificultad de su presa tambien la endurece (con el tope de siempre).
+            double cantidad = Parca.siegaFraccion(a, factorR * dificultad.dano(), quieta) * vidaMax;
             // El parte lee las marcas detras de " · ": asi sabe que el x2 fue por quedarse quieto.
             DanoVerdadero.aplicar(v, cantidad, a.siegaTope, cuerpo, quieta ? "Siega · quieto" : "Siega");
             if (hc.esHardcore(v)) hc.cordura().sumar(v, -a.siegaCordura);
@@ -1483,7 +1484,7 @@ final class PeleaParca implements Runnable, ParcaViva {
             double dx = v.getLocation().getX() - origen.getX(), dz = v.getLocation().getZ() - origen.getZ();
             if (dx * dx + dz * dz > r2) continue;
             double vidaMax = Compat.getAttribute(v, "max_health", 20);
-            DanoVerdadero.aplicar(v, Parca.sentenciaFraccion(a, factorR) * vidaMax, a.campTope, cuerpo, "Sentencia");
+            DanoVerdadero.aplicar(v, Parca.sentenciaFraccion(a, factorR * dificultad.dano()) * vidaMax, a.campTope, cuerpo, "Sentencia");
             Compat.apply(v, "darkness", 30, 0);
             if (hc.esHardcore(v)) hc.cordura().sumar(v, -a.campCordura);
         }

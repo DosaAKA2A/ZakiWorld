@@ -506,6 +506,8 @@ hardcore:
   # Parca que vuelve tras una desconexión, la puerta o un reinicio trae los que tenía.
   # Ejemplo: a 2.000 bloques, con 18 de cordura y 2 horas dentro, daño x1,6 x1,4 x1,6 = x3,58
   # y vida x1,4 x1,2 x1,4 = x2,35.
+  # La Siega y la Sentencia de la Parca, que quitan una parte de tu vida, suben con el mismo
+  # multiplicador de daño hasta su tope (parca.siega.tope y parca.campanada.tope).
   # /calamidad parca info <jugador> y /calamidad ambush info enseñan lo que lleva cada una.
   # Si esta sección no está en el config.yml del servidor, valen estos mismos valores.
   dificultad-amenazas:
