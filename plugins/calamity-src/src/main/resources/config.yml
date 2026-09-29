@@ -90,7 +90,7 @@ mobs:
   # Cada bioma: comunes (tantos como se quiera, salen al azar) y un destacado aparte.
   biomas: {}
 
-  # Mobs especiales (Calamity 1.8.5): bichos que no salen de la tabla de su bioma porque
+  # Mobs especiales (Calamity 1.9.0): bichos que no salen de la tabla de su bioma porque
   # necesitan un sitio propio: en el aire (ghast), en el agua (guardian anciano) o con mas
   # altura que un zombi (creaking). En cada ciclo, ademas del mob normal, cada especial que
   # toca en el bioma del jugador tira su dado; primero se elige el bicho y luego se le busca
@@ -839,7 +839,7 @@ hardcore:
   sangre-fresca: {activo: false, pvp: 20, eco: 10, minijefe: 15, parca: 40, ambush: 25, minutos-misma-victima: 30, piezas-minimas: 2, minutos-dentro-victima: 5}
   eclipse: {activo: false, horario: ["18:00", "22:00"], minutos: 20, avisos-minutos: [10, 5, 1], cordura: 2.0, niveles: 10, botin: 2.0, pvp: 1.25, minijefe-cada-minutos: 5, ecos-despertar: 2.0, vinheta-extra: 0.2, minutos-minimos: 10, ventana-despues: 10}
 
-  # ------------------------------------------------------------------ Clima (1.8.5)
+  # ------------------------------------------------------------------ Clima (1.9.0)
   # El tiempo de Calamity segun el bioma. Solo actua mientras llueve de verdad en el mundo
   # y nunca en la zona spawn. Todo pasa en la pantalla de cada jugador: el mundo no se toca.
   # Los biomas se escriben como "panacea/<id>" (el "bracken:" de delante es opcional).

@@ -81,7 +81,7 @@ public final class Paleta {
     public static final int MINIJEFE_DESDE = 0xFF7A7A;
     public static final int MINIJEFE_HASTA = 0xE63946;
     /*
-     * Calamity 1.8.5 · Los mobs especiales de Lethal World (Apariciones): el color con el que nace
+     * Calamity 1.9.0 · Los mobs especiales de Lethal World (Apariciones): el color con el que nace
      * su ficha en /esb, que es el de su nombre en el cartel. Tonos claros, cada uno con el color del
      * bicho, para que se lean sobre el mundo (el del ghast, tambien contra el cielo del organismo).
      */
@@ -110,15 +110,15 @@ public final class Paleta {
     /** Almas: turquesa palido, el color de las particulas SOUL. */
     public static final TextColor ALMA = TextColor.color(0x8FE3DA);
     /**
-     * Calamity 1.8.5 · La lluvia acida de los biomas verdes: verde lima claro, para el aviso de la
+     * Calamity 1.9.0 · La lluvia acida de los biomas verdes: verde lima claro, para el aviso de la
      * barra y las gotas que le caen alrededor. Mas amarillento que DETALLE para que no se confunda
      * con un aviso bueno.
      */
     public static final TextColor ACIDO = TextColor.color(0xB6E35A);
-    /** Calamity 1.8.5 · El cielo que arde en el bioma rojo: naranja fuego claro (su aviso). */
+    /** Calamity 1.9.0 · El cielo que arde en el bioma rojo: naranja fuego claro (su aviso). */
     public static final TextColor FUEGO = TextColor.color(0xFFA15C);
     /**
-     * Calamity 1.8.5 · La ceniza del cielo rojo (particulas): el color del cielo de crimson_organism
+     * Calamity 1.9.0 · La ceniza del cielo rojo (particulas): el color del cielo de crimson_organism
      * en su propio bioma (#DA5955), que se ve de dia y de noche sin llegar al rojo oscuro ilegible.
      */
     public static final int CIELO_ROJO = 0xDA5955;

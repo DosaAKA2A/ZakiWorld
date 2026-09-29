@@ -453,7 +453,7 @@ final class Parca implements Listener {
     }
 
     /**
-     * Calamity 1.8.5: si alguna PARCA le tiene puesto su cielo (lluvia o noche de sus fases). Clima
+     * Calamity 1.9.0: si alguna PARCA le tiene puesto su cielo (lluvia o noche de sus fases). Clima
      * no toca entonces ni el clima ni la hora de ese jugador: la PARCA no los repone si se los pisan.
      */
     boolean cieloSobre(Player p) {

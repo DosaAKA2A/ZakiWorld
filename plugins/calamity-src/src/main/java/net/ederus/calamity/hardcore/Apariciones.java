@@ -15,7 +15,7 @@ import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.entity.EntityType;
 
 /**
- * Calamity 1.8.5 · Las reglas puras de que mob sale y donde, sin mundo ni servidor, para que el
+ * Calamity 1.9.0 · Las reglas puras de que mob sale y donde, sin mundo ni servidor, para que el
  * autotest las pueda probar fuera del juego. Las usa MobsLethal.
  *
  *  - Tabla: lo que sale en cada bioma (mobs.biomas), los comunes y el destacado por separado.

@@ -1275,7 +1275,7 @@ final class ParcaAnomalia extends BossFight implements ParcaViva {
         }
     }
 
-    /** Calamity 1.8.5: lo pregunta Clima (via Parca.cieloSobre) antes de tocarle el cielo a nadie. */
+    /** Calamity 1.9.0: lo pregunta Clima (via Parca.cieloSobre) antes de tocarle el cielo a nadie. */
     @Override
     public boolean ambienteSobre(UUID jugador) {
         return jugador != null && (conLluvia.contains(jugador) || conNoche.contains(jugador));

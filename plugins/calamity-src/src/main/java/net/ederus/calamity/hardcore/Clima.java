@@ -34,7 +34,7 @@ import java.util.Set;
 import java.util.UUID;
 
 /**
- * Calamity 1.8.5 · El clima de Calamity por bioma, solo mientras llueve de verdad en el mundo
+ * Calamity 1.9.0 · El clima de Calamity por bioma, solo mientras llueve de verdad en el mundo
  * (World#hasStorm). Encargo de Dosa: en los biomas verdes la lluvia es acida y hace dano; en los
  * rojos no se ve la lluvia, el cielo se oscurece en rojo y cada cierto tiempo arde.
  *

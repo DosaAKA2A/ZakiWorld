@@ -153,7 +153,7 @@ public final class Hardcore implements Listener {
     private Tablero tablero;
     private Encuesta encuesta;
     private Eclipse eclipse;
-    /** Calamity 1.8.5: la lluvia acida de los biomas verdes y el cielo rojo. Null con las reglas apagadas. */
+    /** Calamity 1.9.0: la lluvia acida de los biomas verdes y el cielo rojo. Null con las reglas apagadas. */
     private Clima clima;
     /** Calamity 1.7: los niveles por distancia al spawn y su aviso. */
     private Distancia distancia;
@@ -348,7 +348,7 @@ public final class Hardcore implements Listener {
         Autotest.registrar("barra", BarraAccion::autotest);
         Autotest.registrar("dificultad-amenazas", DificultadAmenaza::autotest);
         Autotest.registrar("fragmentos", FragmentosMasamune::autotest);
-        // 1.8.5: la tabla de biomas y los mobs especiales (las usa MobsLethal, que no ve Autotest).
+        // 1.9.0: la tabla de biomas y los mobs especiales (las usa MobsLethal, que no ve Autotest).
         Autotest.registrar("apariciones", Apariciones::autotest);
         PlaceholdersLethal.registrar("cordura", (jugador, resto) -> corduraTexto(jugador));
         // Lo primero: la Grieta, las amenazas y los mobs preguntan por ella desde que nacen.
@@ -394,7 +394,7 @@ public final class Hardcore implements Listener {
         tablero = crear("tablero", () -> new Tablero(this));
         encuesta = crear("encuesta", () -> new Encuesta(this));
         eclipse = crear("eclipse", () -> new Eclipse(this));
-        // 1.8.5: despues del Eclipse y de la Parca, a los que pregunta si el cielo es suyo.
+        // 1.9.0: despues del Eclipse y de la Parca, a los que pregunta si el cielo es suyo.
         clima = crear("clima", () -> new Clima(this));
         // Lo ultimo: los NPCs de la antesala solo abren lo que ya existe (Altar, Tablero...).
         npcs = crear("npcs", () -> new Npcs(this));
@@ -624,7 +624,7 @@ public final class Hardcore implements Listener {
                 if (!spawn) {
                     drenar(p, e);
                     efectosDeBioma(p);
-                    // 1.8.5: lluvia acida y cielo rojo, solo con tormenta de verdad y fuera del spawn.
+                    // 1.9.0: lluvia acida y cielo rojo, solo con tormenta de verdad y fuera del spawn.
                     if (clima != null) seguro("clima", () -> clima.segundo(p));
                 }
                 // 1.7: el aviso de franja de distancia, antes de pintar para que salga ya.

@@ -84,7 +84,7 @@ import net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer;
  *  - Los que ya traen las estructuras y los que salen de spawners se ADOPTAN: nivel, cartel
  *    y dano por nivel, sin cambiar la entidad y con su nombre. Los que se llaman como un
  *    minijefe reciben nivel extra y mucha vida.
- *  - Calamity 1.8.5: los especiales (mobs.especiales: creaking, ghast y guardian anciano) salen
+ *  - Calamity 1.9.0: los especiales (mobs.especiales: creaking, ghast y guardian anciano) salen
  *    aparte, cada uno en su sitio (suelo con mas altura, aire o agua) y con su propio tope. Las
  *    reglas puras (tabla, especiales, busqueda de sitio) estan en hardcore.Apariciones.
  *  - Las estructuras que venian vacias tienen guarnicion: al acercarse un jugador aparecen
@@ -105,9 +105,9 @@ public final class MobsLethal implements Listener {
     private final Map<String, Double> baseMonedas = new HashMap<>();
     /** bioma -> lo que sale ahi (comunes y destacado aparte), leido de la config al arrancar. */
     private final Map<String, Apariciones.Tabla> tabla = new HashMap<>();
-    /** Calamity 1.8.5: los mobs especiales (mobs.especiales), por su clave, leidos al arrancar. */
+    /** Calamity 1.9.0: los mobs especiales (mobs.especiales), por su clave, leidos al arrancar. */
     private final Map<String, Apariciones.Especial> especiales = new java.util.LinkedHashMap<>();
-    /** Calamity 1.8.5: clave del especial -> id de su ficha en /esb. */
+    /** Calamity 1.9.0: clave del especial -> id de su ficha en /esb. */
     private final Map<String, String> fichaEspecial = new HashMap<>();
     /** estructura -> guarnicion, leido de la config al arrancar. */
     private final Map<String, Guarnicion> guarniciones = new HashMap<>();
@@ -122,12 +122,12 @@ public final class MobsLethal implements Listener {
      */
     private final NamespacedKey claveDistancia;
     /**
-     * Calamity 1.8.5: la marca de un mob especial (su clave en mobs.especiales). La llevan tambien
+     * Calamity 1.9.0: la marca de un mob especial (su clave en mobs.especiales). La llevan tambien
      * sus bolas de fuego desde que salen, para que no rompan bloques aunque alguien las devuelva.
      */
     private final NamespacedKey claveEspecial;
     /**
-     * Calamity 1.8.5: en una bola de fuego que un jugador ha devuelto, el ghast especial al que ya
+     * Calamity 1.9.0: en una bola de fuego que un jugador ha devuelto, el ghast especial al que ya
      * ha golpeado. La misma bola le pega dos veces en el mismo tick (el impacto y su explosion) y
      * solo debe contar una (alDevolver).
      */
@@ -243,7 +243,7 @@ public final class MobsLethal implements Listener {
                 if (zonaSegura(p.getLocation())) continue;
                 int topeDelJugador = tope + (plugin.hardcore() == null ? 0 : plugin.hardcore().bonusTope(p));
                 int alrededor = cerca(p, radioConteo);
-                // 1.8.5: los especiales van aparte y con su propio tope, para que salgan aunque el
+                // 1.9.0: los especiales van aparte y con su propio tope, para que salgan aunque el
                 // normal este lleno (lo esta casi siempre). Mientras viven cuentan dentro de el.
                 if (intentarEspecial(p, min, max)) alrededor++;
                 if (alrededor >= topeDelJugador) continue;
@@ -264,7 +264,7 @@ public final class MobsLethal implements Listener {
     }
 
     /**
-     * Calamity 1.8.5: sitio() deja dos bloques libres, y los que pasan de dos de alto (el ravager, o
+     * Calamity 1.9.0: sitio() deja dos bloques libres, y los que pasan de dos de alto (el ravager, o
      * un creaking que alguien meta en la tabla) nacian con la cabeza dentro del bloque de arriba. Si
      * al que ha salido no le cabe, este ciclo no sale nada.
      */
@@ -386,7 +386,7 @@ public final class MobsLethal implements Listener {
     }
 
     /**
-     * Lo mismo con 'alto' bloques libres encima (sin agua ni lava) en vez de dos. Calamity 1.8.5:
+     * Lo mismo con 'alto' bloques libres encima (sin agua ni lava) en vez de dos. Calamity 1.9.0:
      * el Crujidor Palido (creaking) mide 2,7 y con dos nacia con la cabeza dentro de un bloque.
      */
     public Location sitio(Player p, int min, int max, int alto) {
@@ -405,7 +405,7 @@ public final class MobsLethal implements Listener {
     }
 
     /**
-     * Calamity 1.8.5 · Un sitio en el aire para un volador (el ghast): a distancia del jugador, entre
+     * Calamity 1.9.0 · Un sitio en el aire para un volador (el ghast): a distancia del jugador, entre
      * alturaMin y alturaMax bloques sobre lo mas alto de la columna (copas de los arboles incluidas),
      * con un cubo de aire de 'lado' bloques alrededor. En el suelo, con dos de aire, un ghast (4 x 4 x 4)
      * se asfixia o se queda atascado entre los arboles.
@@ -429,7 +429,7 @@ public final class MobsLethal implements Listener {
     }
 
     /**
-     * Calamity 1.8.5 · Un sitio en el agua para un nadador (el guardian anciano): una columna que sea
+     * Calamity 1.9.0 · Un sitio en el agua para un nadador (el guardian anciano): una columna que sea
      * agua desde arriba al menos 'profundidad' bloques y un cubo de agua de 'lado' bloques bajo la
      * superficie. En Panacea no hay oceanos ni rios como bioma: el agua son lagos de cualquier bioma
      * (todo lo que queda por debajo de y=43), asi que se mira el bloque y no el bioma. Mas intentos
@@ -484,7 +484,7 @@ public final class MobsLethal implements Listener {
     // ------------------------------------------------------------ mobs especiales
 
     /**
-     * Calamity 1.8.5 · Los especiales que tocan en el bioma del jugador, en orden al azar: cada uno
+     * Calamity 1.9.0 · Los especiales que tocan en el bioma del jugador, en orden al azar: cada uno
      * tira su dado y, si sale y aun no llega a su tope, se le busca sitio segun su entorno. Primero
      * el bicho y luego el sitio, porque un ghast no cabe donde un zombi y un guardian solo nada en
      * el agua. Sale uno como mucho por jugador y ciclo; true si ha salido.
@@ -568,7 +568,7 @@ public final class MobsLethal implements Listener {
     }
 
     /**
-     * Calamity 1.8.5 · Las bolas de fuego de un especial (el Ghast Carmesi) se marcan al salir y no
+     * Calamity 1.9.0 · Las bolas de fuego de un especial (el Ghast Carmesi) se marcan al salir y no
      * prenden fuego. La marca va en la bola: si un jugador la devuelve de un golpe, el tirador pasa
      * a ser el, y sin ella volveria a romper bloques.
      *
@@ -627,7 +627,7 @@ public final class MobsLethal implements Listener {
     }
 
     /**
-     * Calamity 1.8.5 · Una bola devuelta no mata al Ghast Carmesi de un golpe.
+     * Calamity 1.9.0 · Una bola devuelta no mata al Ghast Carmesi de un golpe.
      *
      * Ghast.hurtServer (Paper 26.1.2) cambia el golpe de una bola grande que le devuelve un jugador
      * por 1000 fijos: caia de una sola bola fuera del nivel que fuera (a nivel 100 tiene 872 de
@@ -675,7 +675,7 @@ public final class MobsLethal implements Listener {
     }
 
     /**
-     * Calamity 1.8.5 · La Fatiga minera del Guardian Anciano. En vanilla dura 5 minutos y llega a 50
+     * Calamity 1.9.0 · La Fatiga minera del Guardian Anciano. En vanilla dura 5 minutos y llega a 50
      * bloques: con uno escondido en un lago te quedabas sin picar mucho despues de dejarlo atras.
      * Aqui dura fatiga-minera-segundos (60). Vanilla la renueva cada minuto mientras sigues cerca, asi
      * que aprieta igual mientras esta y se pasa enseguida cuando te alejas o lo matas.
@@ -710,7 +710,7 @@ public final class MobsLethal implements Listener {
     }
 
     /**
-     * Lee mobs.biomas: por bioma, sus comunes (los que sean) y su destacado aparte. Calamity 1.8.5:
+     * Lee mobs.biomas: por bioma, sus comunes (los que sean) y su destacado aparte. Calamity 1.9.0:
      * antes iba todo en una lista por posicion y un tercer comun se tomaba por el destacado.
      */
     private void cargarTabla() {
@@ -1166,7 +1166,7 @@ public final class MobsLethal implements Listener {
                 puestoDe.remove(id);
                 continue;
             }
-            // Calamity 1.8.5: un especial cuya presa esta en la zona spawn no se queda fuera
+            // Calamity 1.9.0: un especial cuya presa esta en la zona spawn no se queda fuera
             // esperandola (el ghast la tiene fijada a mano y el guardian la alcanza con su rayo).
             Player enSpawn = objetivoEnSpawn(e);
             if (enSpawn != null) {
@@ -1363,7 +1363,7 @@ public final class MobsLethal implements Listener {
     }
 
     /**
-     * Calamity 1.8.5 · Lee mobs.especiales y deja lista la ficha de /esb de cada uno, en la carpeta
+     * Calamity 1.9.0 · Lee mobs.especiales y deja lista la ficha de /esb de cada uno, en la carpeta
      * "Lethal World · Especiales". La ficha se busca por su nombre visible (el id lo inventa EDM a
      * partir del nombre) y, si falta, se crea con su color, su aura de destacado y sus habilidades;
      * a partir de ahi el aspecto, las habilidades y el botin se tocan en /esb.

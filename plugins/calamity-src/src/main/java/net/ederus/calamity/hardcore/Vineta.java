@@ -52,7 +52,7 @@ final class Vineta {
     /** Cada segundo, desde Sentidos.latido. Solo toca al jugador si algo ha cambiado. */
     void segundo(Player p, int tramo) {
         ConfigurationSection s = cfg();
-        /* 1.8.5: el cielo rojo de Clima suma su parte aunque la vineta de cordura este apagada. Va
+        /* 1.9.0: el cielo rojo de Clima suma su parte aunque la vineta de cordura este apagada. Va
          * por aqui y no con un borde propio: dos setWorldBorder por jugador se pisarian. */
         Clima clima = hc.clima();
         double deClima = clima == null ? 0.0 : hc.valor("clima", () -> clima.vinetaExtra(p), 0.0);
@@ -133,7 +133,7 @@ final class Vineta {
         return Math.max(0, Math.min(INTENSIDAD_MAXIMA, i));
     }
 
-    /** Calamity 1.8.5: la intensidad con un extra de otro modulo (el cielo rojo de Clima), con el mismo tope. */
+    /** Calamity 1.9.0: la intensidad con un extra de otro modulo (el cielo rojo de Clima), con el mismo tope. */
     static double conExtra(double base, double extra) {
         return Math.max(0, Math.min(INTENSIDAD_MAXIMA, base + Math.max(0, extra)));
     }
