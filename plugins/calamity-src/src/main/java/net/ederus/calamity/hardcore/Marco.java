@@ -609,8 +609,6 @@ final class Marco {
             int marcas = cr.de(u, "marca"), fragmentos = cr.de(u, "fragmento");
             if (marcas > 0) creditos.add(credito("Marcas de Eco", marcas, cr.canjeable(u, "marca"), cr));
             if (fragmentos > 0) creditos.add(credito("Fragmentos de Guadaña", fragmentos, cr.canjeable(u, "fragmento"), cr));
-            int masamune = cr.de(u, "masamune");
-            if (masamune > 0) creditos.add(credito("Fragmentos de Masamune", masamune, cr.canjeable(u, "masamune"), cr));
             lore.add(Component.empty());
             if (creditos.isEmpty()) lore.add(tenue("No tienes Sellos, Marcas ni Fragmentos."));
             else lore.addAll(creditos);

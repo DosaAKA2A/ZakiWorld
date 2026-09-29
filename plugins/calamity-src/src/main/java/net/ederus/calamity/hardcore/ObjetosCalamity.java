@@ -21,6 +21,7 @@ import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
 import org.bukkit.event.HandlerList;
 import org.bukkit.event.Listener;
+import org.bukkit.event.block.BlockCookEvent;
 import org.bukkit.event.entity.EntityPickupItemEvent;
 import org.bukkit.event.entity.PlayerDeathEvent;
 import org.bukkit.event.inventory.ClickType;
@@ -291,15 +292,25 @@ final class ObjetosCalamity implements Listener {
         quitarModificador(p);
     }
 
-    /** Ninguno de los tres entra en una receta (el pedernal, el papel y el reloj tienen varias). */
+    /**
+     * Ninguno entra en una receta: ni los tres de aqui (el pedernal, el papel y el reloj tienen
+     * varias) ni el Fragmento de Masamune (la chatarra de netherita da el lingote).
+     */
     @EventHandler(priority = EventPriority.HIGHEST)
     public void onReceta(PrepareItemCraftEvent e) {
         for (ItemStack it : e.getInventory().getMatrix()) {
-            if (Marcas.tiene(it, Marcas.TALISMAN) || Marcas.tiene(it, Marcas.GRABADO) || Marcas.tiene(it, Marcas.SALVOCONDUCTO)) {
+            if (Marcas.tiene(it, Marcas.TALISMAN) || Marcas.tiene(it, Marcas.GRABADO) || Marcas.tiene(it, Marcas.SALVOCONDUCTO)
+                    || ItemsCalamity.esFragmentoMasamune(it)) {
                 e.getInventory().setResult(null);
                 return;
             }
         }
+    }
+
+    /** El Fragmento de Masamune tampoco se funde (horno, alto horno, ahumador u hoguera). */
+    @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
+    public void onFundir(BlockCookEvent e) {
+        if (ItemsCalamity.esFragmentoMasamune(e.getSource())) e.setCancelled(true);
     }
 
     // =================================================================== Aura

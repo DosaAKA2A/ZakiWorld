@@ -104,7 +104,6 @@ final class Forja {
             case Creditos.ERRANTE -> "un Sello Errante";
             case "marca" -> n == 1 ? "1 Marca de Eco" : n + " Marcas de Eco";
             case "fragmento" -> n == 1 ? "1 Fragmento de Guadaña" : n + " Fragmentos de Guadaña";
-            case "masamune" -> n == 1 ? "1 Fragmento de Masamune" : n + " Fragmentos de Masamune";
             default -> n + " " + t;
         };
     }

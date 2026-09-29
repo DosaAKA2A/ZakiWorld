@@ -343,6 +343,7 @@ public final class Hardcore implements Listener {
         Autotest.instalar(this);
         Autotest.registrar("barra", BarraAccion::autotest);
         Autotest.registrar("dificultad-amenazas", DificultadAmenaza::autotest);
+        Autotest.registrar("fragmentos", FragmentosMasamune::autotest);
         PlaceholdersLethal.registrar("cordura", (jugador, resto) -> corduraTexto(jugador));
         // Lo primero: la Grieta, las amenazas y los mobs preguntan por ella desde que nacen.
         zona = crear("zona-spawn", () -> new ZonaSpawn(this));

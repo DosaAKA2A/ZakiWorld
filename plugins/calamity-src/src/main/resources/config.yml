@@ -477,8 +477,9 @@ hardcore:
   # Regreso); si se queda, Ambush aparece a 12 bloques. Un contrato por presa cada 24 h y como
   # mucho 2 al dia por pagador, los dos con las horas minimas de la Aduana y sin compartir
   # conexion. Quien paga no cobra nada. Al caer Ambush, la presa (con el 25 % del dano o mas) se
-  # lleva 1 Fragmento de Masamune (credito para la Forja) y Esencias; quien la ayude (10 % o mas),
-  # Esencias. Si en 8 minutos no cae, se retira. En la Forja: la Masamune y la Crimson Masamune.
+  # lleva un Fragmento de Masamune en fisico (al inventario o, si no cabe, a sus pies; si muere
+  # dentro, lo pierde) y Esencias; quien la ayude (10 % o mas), Esencias. Si en 8 minutos no cae,
+  # se retira. En la Forja: la Masamune (5 Fragmentos) y la Crimson Masamune (la Masamune y 5 mas).
   # Si esta seccion no esta en el config.yml del servidor, valen estos mismos valores.
   ambush:
     contrato:
@@ -616,7 +617,8 @@ hardcore:
     # y lo que pida MobCoins o un credito, siempre). 0 = en el Umbral nada lo pide.
     confirmar-desde: 50
     # [alineado] PLAN 4. pagina: umbral|forja. da: frasco|cristal|dar:<objeto>|credito|forja:<pieza>|ofrenda|contrato|depositar|camino
-    # 1.8.0: entregar: <pieza> = hay que llevar encima esa pieza de la Forja y se entrega al forjar (la Crimson pide la Masamune).
+    # entregar: lo que hay que llevar encima y se entrega al forjar, con su cantidad: [{objeto: fragmento-masamune, cantidad: 5}].
+    #   objeto: fragmento-masamune o una pieza de forja.piezas (masamune...). Vale tambien lo de antes, entregar: masamune (una pieza).
     # limite-dia / limite-semana por jugador; stock-semana global (0 = sin tope); mobcoins por Monedero (M35).
     trueques:
       - {id: recargar, pagina: umbral, icono: POTION, nombre: "Recargar Frasco", da: recargar}   # precio: hardcore.frasco.esencias-por-trago (ya existe)
@@ -640,8 +642,8 @@ hardcore:
       - {id: mascara-eco, pagina: forja, icono: NETHERITE_HELMET, esencias: 40, mobcoins: 2500, credito: "marca", creditos: 5, da: "forja:mascara"}
       - {id: filo-eco, pagina: forja, icono: NETHERITE_SWORD, esencias: 48, mobcoins: 3000, credito: "marca", creditos: 10, da: "forja:filo"}
       - {id: guadana, pagina: forja, icono: NETHERITE_HOE, esencias: 64, mobcoins: 5000, credito: "fragmento", creditos: 7, da: "forja:guadana", espera-dias: 30}
-      - {id: masamune, pagina: forja, icono: NETHERITE_SWORD, esencias: 64, mobcoins: 5000, credito: "masamune", creditos: 5, da: "forja:masamune"}
-      - {id: crimson-masamune, pagina: forja, icono: COPPER_SWORD, esencias: 96, mobcoins: 8000, credito: "masamune", creditos: 5, entregar: masamune, da: "forja:crimson"}
+      - {id: masamune, pagina: forja, icono: NETHERITE_SWORD, esencias: 64, mobcoins: 5000, entregar: [{objeto: fragmento-masamune, cantidad: 5}], da: "forja:masamune"}
+      - {id: crimson-masamune, pagina: forja, icono: COPPER_SWORD, esencias: 96, mobcoins: 8000, entregar: [{objeto: masamune, cantidad: 1}, {objeto: fragmento-masamune, cantidad: 5}], da: "forja:crimson"}
   # [alineado] M32: que objeto MMOItems es cada pieza (TIPO.ID). Manto y Hacha: ids de Ederus/set-calamidad.yml;
   # Mascara y Filo: ESTUDIO 4.4 f. Tipos propios de Calamity (Dosa, 2026-09-27): armaduras en CALAMITY, armas en
   # CALAMITY_ARMAS, gemas en CALAMITY_GEMAS y consumibles en CALAMITY_CONSUMIBLES; nada en los tipos genericos.
