@@ -45,7 +45,7 @@ final class Camino {
     Camino(Hardcore hc, Altar altar) {
         this.hc = hc;
         this.altar = altar;
-        Subcomandos.calamity().registrar("camino", "lo que te falta para el Manto, el Vestigio y la Guadaña",
+        Subcomandos.calamity().registrar("camino", "lo que te falta para el Manto, el Vestigio, la Guadaña y las Masamune",
                 "lethalworld.calamity", this::comando, null);
     }
 
@@ -150,7 +150,7 @@ final class Camino {
     private static String articulo(String pieza) {
         String n = Forja.nombreCorto(pieza);
         return switch (pieza) {
-            case "coraza", "mascara", "guadana" -> "la " + n;
+            case "coraza", "mascara", "guadana", "masamune", "crimson" -> "la " + n;
             case "grebas", "soleretas" -> "las " + n;
             default -> "el " + n;
         };
@@ -201,7 +201,7 @@ final class Camino {
         fila(inv, acciones, p, 9, Marco.banda(Material.ORANGE_STAINED_GLASS_PANE, "Piezas con Sello",
                 List.of("Cada una pide el Sello de su minijefe;", "a las " + piedadMaxima() + " muertes lo tienes seguro.")), deSello);
         fila(inv, acciones, p, 18, Marco.banda(Material.CYAN_STAINED_GLASS_PANE, "Marcas y Fragmentos",
-                List.of("El Vestigio del Eco y la", "Guadaña de la Parca.")), otros);
+                List.of("El Vestigio del Eco, la Guadaña", "de la Parca y las Masamune.")), otros);
         // Abajo en el centro: Volver al Mercado (de donde se viene) o, sin Mercado, Cerrar.
         int abajo = Marco.abajo(inv.getSize());
         if (hc.npcs() != null) {
@@ -256,6 +256,14 @@ final class Camino {
             lore.add(Marco.texto("Pide " + Forja.nombreCredito(c, pide) + "."));
             lore.add(dato("Tienes", Math.min(tiene, 999) + " de " + pide));
             if (!listo) lore.add(Marco.tenue("Te faltan " + Forja.nombreCredito(c, pide - tiene) + "."));
+        }
+        if (t.entregar() != null) {
+            // 1.8.0: la Crimson pide ademas entregar la Masamune, que hay que llevar encima al forjarla.
+            String pieza = Forja.nombrePieza(t.entregar());
+            boolean la = altar.caja().lleva(u, t.entregar());
+            listo &= la;
+            lore.add(Marco.texto("Y entregar tu " + pieza + "."));
+            lore.add(dato(pieza, la ? "la llevas encima" : "no la llevas encima"));
         }
         lore.add(Component.empty());
         lore.add(dato("Precio", Marco.esencias(t.esencias()) + (t.mobcoins() > 0 ? " y " + Altar.miles(t.mobcoins()) + " MobCoins" : "")));

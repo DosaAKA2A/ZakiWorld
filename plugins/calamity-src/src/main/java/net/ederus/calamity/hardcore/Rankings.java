@@ -87,6 +87,8 @@ final class Rankings implements Listener {
                 "ederus.mundos", this::comando, args -> args.length == 2 ? List.of("ver", "cerrar") : List.of());
         PlaceholdersLethal.registrar("parcas", (j, r) -> stat(j, "parcas"));
         PlaceholdersLethal.registrar("ecos", (j, r) -> stat(j, "ecos-cerrados"));
+        // 1.8.0: contratos de Ambush vencidos (la estadistica "ambush"); no es categoria del ranking.
+        PlaceholdersLethal.registrar("ambush", (j, r) -> stat(j, "ambush"));
         PlaceholdersLethal.registrar("stat", (j, r) -> r == null || r.isEmpty() ? null : stat(j, r.toLowerCase(Locale.ROOT)));
         PlaceholdersLethal.registrar("top", this::top);
         Autotest.registrar("ranking", this::autotest);

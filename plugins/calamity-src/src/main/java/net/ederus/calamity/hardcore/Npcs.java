@@ -28,7 +28,8 @@ import java.util.UUID;
  * Tablero). Desde 1.3.0 el Tasador y el Cazador ya no escriben en el chat: todo va en su menu.
  * Desde 1.4 hay un sexto, el Engarzador (MenuEngarzador): pone y quita las Gemas de Calamidad,
  * que antes solo se engarzaban arrastrandolas sobre la pieza, como manda MMOItems, y nadie lo
- * descubria.
+ * descubria. Desde 1.8.0 hay un septimo, el de la Sentencia (MenuSentencia): alli se pagan los
+ * contratos de Ambush contra quien este en Calamity.
  *
  * Los NPCs los pone y los cuida el staff a mano con Citizens; Calamity no los crea ni depende
  * de Citizens. Cada uno lleva un comando de clic sin -p, que Citizens ejecuta como CONSOLA
@@ -56,7 +57,9 @@ final class Npcs implements Listener {
         TASADOR("mercader", "Oren (mercader)", "tasador"),
         CRONISTA("cronista", "Ilen (cronista)"),
         CAZADOR("cazador", "Rhen (cazador)"),
-        ENGARZADOR("engarzador", "Lior (engarzador)");
+        ENGARZADOR("engarzador", "Lior (engarzador)"),
+        // 1.8.0: el NPC lo pone y lo nombra Dosa; para el staff se llama como su menu.
+        SENTENCIA("sentencia", "Sentencia (contratos de Ambush)");
 
         final String id;
         final String nombre;
@@ -195,6 +198,19 @@ final class Npcs implements Listener {
                 // Sin MMOItems no hay gemas que engarzar: el menu se lo dice al jugador y no se abre.
                 if (!hc.valor("engarzador", () -> engarzador.abrir(p), false)) return "no se ha abierto (falta MMOItems o lo ha impedido otro plugin)";
             }
+            case SENTENCIA -> {
+                Ambush a = hc.ambush();
+                if (a == null) {
+                    p.sendMessage(ComandoCalamity.mensaje("La Sentencia está cerrada ahora mismo."));
+                    return "Ambush no está en marcha";
+                }
+                // Como el Altar: fuera de Calamity o en su zona spawn, que es donde esta el NPC.
+                if (!Marco.puedeAltar(hc, p)) {
+                    p.sendMessage(ComandoCalamity.mensaje(MenuSentencia.FUERA));
+                    return "está en Calamity, fuera del spawn";
+                }
+                hc.seguro("ambush", () -> a.menu().abrir(p));
+            }
         }
         return null;
     }
@@ -245,14 +261,15 @@ final class Npcs implements Listener {
         h.igual("id sin mayusculas ni espacios", Tipo.FORJA, Tipo.de("  FORJA "));
         h.igual("id que no existe", null, Tipo.de("altar"));
         h.igual("id null", null, Tipo.de(null));
-        h.igual("los seis ids", List.of("umbral", "forja", "mercader", "cronista", "cazador", "engarzador"), Tipo.ids());
+        h.igual("los siete ids", List.of("umbral", "forja", "mercader", "cronista", "cazador", "engarzador", "sentencia"),
+                Tipo.ids());
         h.igual("id mercader", Tipo.TASADOR, Tipo.de("mercader"));
         h.igual("alias tasador: abre a Oren (NPCs viejos de Citizens)", Tipo.TASADOR, Tipo.de("Tasador"));
         h.ok("el alias no sale en el tab", !Tipo.ids().contains("tasador"));
         // 1.5.2: cada NPC tiene nombre propio, sin articulo ni oficio en masculino delante.
         List<String> nombres = new ArrayList<>();
         for (Tipo t : Tipo.values()) nombres.add(t.nombre.substring(0, t.nombre.indexOf(' ')));
-        h.igual("los nombres propios", List.of("Sael", "Vael", "Oren", "Ilen", "Rhen", "Lior"), nombres);
+        h.igual("los nombres propios", List.of("Sael", "Vael", "Oren", "Ilen", "Rhen", "Lior", "Sentencia"), nombres);
         h.igual("lo que lee el staff", "Oren (mercader)", Tipo.TASADOR.nombre);
 
         h.igual("ranking en MobCoins", "1.234 MC", valorRanking("tasado-mc", 1234));
@@ -322,7 +339,7 @@ final class Npcs implements Listener {
 
         h.ok("/calamidad abrir registrado", Subcomandos.lw().nombres(null).contains("abrir"));
         h.ok("/calamity cronista registrado", Subcomandos.calamity().nombres(null).contains("cronista"));
-        h.igual("tab de abrir: los seis", Tipo.ids(), Subcomandos.lw().tab(null, new String[]{"abrir", "Dosa__", ""}));
+        h.igual("tab de abrir: los siete", Tipo.ids(), Subcomandos.lw().tab(null, new String[]{"abrir", "Dosa__", ""}));
         return h.lineas();
     }
 }

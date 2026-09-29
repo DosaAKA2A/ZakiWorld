@@ -54,6 +54,9 @@ final class Forja {
         PIEZAS.put("mascara", "Máscara del Eco");
         PIEZAS.put("filo", "Filo del Eco");
         PIEZAS.put("guadana", "Guadaña de la Parca");
+        // 1.8.0: las katanas de Ambush.
+        PIEZAS.put("masamune", "Masamune");
+        PIEZAS.put("crimson", "Crimson Masamune");
         CORTAS.put("yelmo", "Yelmo");
         CORTAS.put("coraza", "Coraza");
         CORTAS.put("grebas", "Grebas");
@@ -62,6 +65,8 @@ final class Forja {
         CORTAS.put("mascara", "Máscara");
         CORTAS.put("filo", "Filo");
         CORTAS.put("guadana", "Guadaña");
+        CORTAS.put("masamune", "Masamune");
+        CORTAS.put("crimson", "Crimson Masamune");
     }
 
     private final Hardcore hc;
@@ -99,6 +104,7 @@ final class Forja {
             case Creditos.ERRANTE -> "un Sello Errante";
             case "marca" -> n == 1 ? "1 Marca de Eco" : n + " Marcas de Eco";
             case "fragmento" -> n == 1 ? "1 Fragmento de Guadaña" : n + " Fragmentos de Guadaña";
+            case "masamune" -> n == 1 ? "1 Fragmento de Masamune" : n + " Fragmentos de Masamune";
             default -> n + " " + t;
         };
     }

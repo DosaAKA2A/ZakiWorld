@@ -485,7 +485,7 @@ final class Combate implements Listener {
      * que cobra). Pasa por la Aduana con el tipo "sangre" (tope diario 12) y como mucho una
      * vez por victima cada minutos-misma-victima.
      *
-     * @param tipo    pvp | eco | minijefe | parca (la clave de sangre-fresca con la cordura)
+     * @param tipo    pvp | eco | minijefe | parca | ambush (la clave de sangre-fresca con la cordura)
      * @param victima identificador estable de la victima (uuid del jugador, "eco:<id>"...)
      */
     void sangreFresca(Player asesino, String tipo, String victima) {
@@ -495,6 +495,7 @@ final class Combate implements Listener {
             case "eco" -> 10;
             case "minijefe" -> 15;
             case "parca" -> 40;
+            case "ambush" -> 25;
             default -> 0;
         });
         if (n <= 0) return;

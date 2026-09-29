@@ -152,6 +152,8 @@ final class Marco {
     // "¿Qué conservas?" no cabe: el menu es el del Salvoconducto y asi se llama el objeto.
     static final Titulo T_SALVOCONDUCTO = new Titulo("Salvoconducto");
     static final Titulo T_ENGARZADOR = new Titulo("Engarce");
+    /** 1.8.0: el menu de los contratos de Ambush ("CALAMITY | Sentencia"). */
+    static final Titulo T_SENTENCIA = new Titulo("Sentencia");
 
     /** El de una categoria del Altar: "CALAMITY | Expedición". */
     static Titulo categoria(String seccion) {
@@ -162,7 +164,8 @@ final class Marco {
     static List<Titulo> titulos() {
         List<Titulo> out = new ArrayList<>(List.of(T_ALTAR, T_FORJA, T_COMPRAR, T_FORJAR, T_TASADOR, T_TASADOR_DINERO,
                 T_TASADOR_CONTRATOS, T_TASADOR_RELIQUIAS, T_CAMBIAR, T_RANKINGS, T_RANKINGS_HISTORICO,
-                T_TABLERO, T_CAMINO, T_GRABAR, T_DESEOS, T_VOTO, T_PREGUNTA, T_DIFICULTAD, T_SALVOCONDUCTO, T_ENGARZADOR));
+                T_TABLERO, T_CAMINO, T_GRABAR, T_DESEOS, T_VOTO, T_PREGUNTA, T_DIFICULTAD, T_SALVOCONDUCTO, T_ENGARZADOR,
+                T_SENTENCIA));
         for (MenuAltar.Categoria c : MenuAltar.CATEGORIAS) {
             Titulo t = MenuAltar.titulo(c.id());
             if (!out.contains(t)) out.add(t);
@@ -606,6 +609,8 @@ final class Marco {
             int marcas = cr.de(u, "marca"), fragmentos = cr.de(u, "fragmento");
             if (marcas > 0) creditos.add(credito("Marcas de Eco", marcas, cr.canjeable(u, "marca"), cr));
             if (fragmentos > 0) creditos.add(credito("Fragmentos de Guadaña", fragmentos, cr.canjeable(u, "fragmento"), cr));
+            int masamune = cr.de(u, "masamune");
+            if (masamune > 0) creditos.add(credito("Fragmentos de Masamune", masamune, cr.canjeable(u, "masamune"), cr));
             lore.add(Component.empty());
             if (creditos.isEmpty()) lore.add(tenue("No tienes Sellos, Marcas ni Fragmentos."));
             else lore.addAll(creditos);

@@ -57,6 +57,16 @@ public final class Paleta {
     public static final int PARCA_HASTA = 0xE8454F;
     /** La PARCA en un solo color (barra de accion, nombre de la guadana). */
     public static final TextColor PARCA = TextColor.color(0xF26A63);
+    /**
+     * Calamity 1.8.0 · Ambush: de gris acero a rojo claro (su nombre, la Sentencia y su barra). El
+     * rojo es el de la Crimson Masamune (#FF6B6B), que es lo que acaba saliendo de el.
+     */
+    public static final int AMBUSH_DESDE = 0xDDE3EA;
+    public static final int AMBUSH_HASTA = 0xFF6B6B;
+    /** Ambush en un solo color (el menu de la Sentencia, la barra de accion). */
+    public static final TextColor AMBUSH = TextColor.color(0xFF6B6B);
+    /** El gris acero de la Masamune (el nombre de la katana que lleva Ambush). */
+    public static final TextColor ACERO = TextColor.color(0xC9D1D9);
     /*
      * Titulos de ventana (inventarios): "CALAMITY | Seccion". Colores planos y oscuros, porque van
      * sobre el gris claro (~#C6C6C6) de la interfaz y sin sombra: el degradado marron rojizo de
@@ -168,6 +178,11 @@ public final class Paleta {
     /** Degradado de la PARCA (su nombre, sus titulos, la barra de jefe). */
     public static Component muerte(String texto) {
         return degradado(texto, PARCA_DESDE, PARCA_HASTA);
+    }
+
+    /** Calamity 1.8.0 · Degradado de Ambush (su nombre, el titulo de la Sentencia, su barra de jefe). */
+    public static Component ambush(String texto) {
+        return degradado(texto, AMBUSH_DESDE, AMBUSH_HASTA);
     }
 
     // --------------------------------------------------------------- titulos

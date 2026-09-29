@@ -104,7 +104,10 @@ final class MenuAltar implements Listener {
             Map.entry("ascua", List.of("Sube un nivel de mejora a una", "pieza del Manto, del Vestigio", "del Eco o a la Guadaña.")),
             Map.entry("mascara-eco", List.of("Casco del Vestigio del Eco.", "Con el Filo del Eco activa", "el bono del set.")),
             Map.entry("filo-eco", List.of("Espada del Vestigio del Eco.", "Con la Máscara del Eco activa", "el bono del set.")),
-            Map.entry("guadana", List.of("El arma de la Parca. Se forja", "con Fragmentos de Guadaña.")));
+            Map.entry("guadana", List.of("El arma de la Parca. Se forja", "con Fragmentos de Guadaña.")),
+            // 1.8.0: las katanas de Ambush.
+            Map.entry("masamune", List.of("La katana de Ambush. Se forja", "con Fragmentos de Masamune.")),
+            Map.entry("crimson-masamune", List.of("La Masamune, templada otra vez.", "Al forjarla entregas tu Masamune.")));
 
     /**
      * Marca de nuestros inventarios. acciones: casilla -> que hace. foto: el objeto de la mano
@@ -137,7 +140,7 @@ final class MenuAltar implements Listener {
             new Categoria(LLAVES, Material.VAULT, "Llaves y ofrendas",
                     List.of("La Llave del Caos y la Ofrenda,", "a cambio de Esencias."), "Llaves"),
             new Categoria(FORJA, Material.ANVIL, "La Forja",
-                    List.of("El Manto, el Vestigio del Eco,", "la Guadaña y sus mejoras."), "Forja"));
+                    List.of("El Manto, el Vestigio del Eco,", "la Guadaña, la Masamune y mejoras."), "Forja"));
 
     /** Una cosa de la Forja: un trueque, o el boton Grabar. */
     record Cosa(Altar.Trueque t, String boton) {
@@ -220,7 +223,8 @@ final class MenuAltar implements Listener {
         String c = t.credito() == null ? "" : t.credito();
         if (c.startsWith("sello:") || c.equals(Creditos.ERRANTE)) return "manto";
         if (c.equals("marca")) return "eco";
-        if (c.equals("fragmento")) return "guadana";
+        // 1.8.0: las Masamune van en la fila de la Guadana (con una quinta fila la Forja no cabria en una hoja).
+        if (c.equals("fragmento") || c.equals("masamune")) return "guadana";
         return "piezas";
     }
 
@@ -233,8 +237,9 @@ final class MenuAltar implements Listener {
                 List.of("Cada pieza pide el Sello", "de su minijefe."), new ArrayList<>()));
         s.put("eco", new Seccion("eco", Material.CYAN_STAINED_GLASS_PANE, "El Vestigio del Eco",
                 List.of("Piden Marcas de Eco, que salen", "de las Lágrimas de Eco."), new ArrayList<>()));
-        s.put("guadana", new Seccion("guadana", Material.PURPLE_STAINED_GLASS_PANE, "La Guadaña de la Parca",
-                List.of("Pide Fragmentos de Guadaña, que", "salen de las Campanas de la Parca."), new ArrayList<>()));
+        s.put("guadana", new Seccion("guadana", Material.PURPLE_STAINED_GLASS_PANE, "La Guadaña y las Masamune",
+                List.of("La Guadaña pide Fragmentos de Guadaña,", "que salen de las Campanas de la Parca.",
+                        "Las Masamune piden Fragmentos de", "Masamune, que salen de vencer a Ambush."), new ArrayList<>()));
         s.put("piezas", new Seccion("piezas", Material.LIGHT_GRAY_STAINED_GLASS_PANE, "Otras piezas",
                 List.of("Piden créditos de Calamity."), new ArrayList<>()));
         for (Altar.Trueque t : trueques(FORJA, todos, salvoconducto)) s.get(grupoDe(t)).cosas().add(new Cosa(t, null));
@@ -489,7 +494,7 @@ final class MenuAltar implements Listener {
             lore.add(Component.text("sale más barato " + dias + (dias == 1 ? " día más." : " días más."), Paleta.BIEN));
         }
         if (!lore.isEmpty()) lore.add(Component.empty());
-        lore.addAll(costes(u, pr, caja));
+        lore.addAll(costes(u, t, pr, caja));
 
         List<Component> cupo = cupos(t, u, caja);
         // 1.7.6: la Ofrenda dice cuantas llevas este mes (ofrendas-mes, la tabla que ya las cuenta).
@@ -534,7 +539,7 @@ final class MenuAltar implements Listener {
     }
 
     /** El coste linea a linea: ✔ lo que tiene, ✘ lo que le falta (y cuanto). */
-    private static List<Component> costes(UUID u, Altar.Precio pr, Altar.Caja caja) {
+    private static List<Component> costes(UUID u, Altar.Trueque t, Altar.Precio pr, Altar.Caja caja) {
         List<Component> out = new ArrayList<>();
         if (pr.esencias() > 0) {
             long saldo = caja.saldo() == null ? 0 : caja.saldo().de(u);
@@ -565,6 +570,11 @@ final class MenuAltar implements Listener {
                 out.add(Marco.falta(que, "tienes " + cr.de(u, c)));
             }
         }
+        if (t.entregar() != null) {
+            // 1.8.0: la pieza que se entrega (la Crimson pide la Masamune).
+            String que = "Tu " + Forja.nombrePieza(t.entregar());
+            out.add(caja.lleva(u, t.entregar()) ? Marco.tiene(que + "  (la entregas)") : Marco.falta(que, "no la llevas encima"));
+        }
         if (out.isEmpty()) out.add(Marco.tiene("Gratis"));
         return out;
     }
@@ -577,6 +587,7 @@ final class MenuAltar implements Listener {
             case Creditos.ERRANTE -> "Sello Errante";
             case "marca" -> n == 1 ? "1 Marca de Eco" : n + " Marcas de Eco";
             case "fragmento" -> n == 1 ? "1 Fragmento de Guadaña" : n + " Fragmentos de Guadaña";
+            case "masamune" -> n == 1 ? "1 Fragmento de Masamune" : n + " Fragmentos de Masamune";
             default -> n + " " + t;
         };
     }
@@ -627,6 +638,7 @@ final class MenuAltar implements Listener {
                     : "Ya has agotado tu cupo.";
             case "stock" -> "Agotado hasta la semana que viene.";
             case "requisito" -> String.valueOf(f).contains("insomne") ? "Solo si tienes el tag [INSOMNE]." : "Aún no se puede.";
+            case "objeto" -> "No llevas encima tu " + Forja.nombrePieza(String.valueOf(f)) + ".";
             default -> "Ahora no se puede.";
         };
     }
@@ -711,10 +723,17 @@ final class MenuAltar implements Listener {
         if (pr.credito() != null && plan.creditoUsado() != null) {
             String usado = plan.creditoUsado();
             Creditos cr = hc.creditos();
-            Material icono = usado.equals("marca") ? Material.ECHO_SHARD : usado.equals("fragmento") ? Material.BELL : Material.FIRE_CHARGE;
+            Material icono = usado.equals("marca") ? Material.ECHO_SHARD : usado.equals("fragmento") ? Material.BELL
+                    : usado.equals("masamune") ? Material.NETHERITE_SCRAP : Material.FIRE_CHARGE;
             String que = creditoLinea(usado, pr.creditos());
             pagos.add(pago(icono, "−" + que, cr == null ? -1 : cr.de(u, usado), pr.creditos()));
             resumen.add(usado.equals(Creditos.ERRANTE) ? que + " (vale por el " + creditoLinea(pr.credito(), 1) + ")" : que);
+        }
+        if (t.entregar() != null) {
+            // 1.8.0: la pieza que se entrega, sin "tienes/te quedarian": es una y se va.
+            String que = "Tu " + Forja.nombrePieza(t.entregar());
+            pagos.add(pago(Material.NETHERITE_SWORD, "−" + que, -1, 0));
+            resumen.add(que);
         }
         int[] cols = Marco.columnas(pagos.size());
         for (int i = 0; i < pagos.size(); i++) inv.setItem(18 + cols[i], pagos.get(i));

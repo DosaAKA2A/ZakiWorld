@@ -12,8 +12,10 @@ import org.bukkit.entity.Entity;
 import org.bukkit.entity.LivingEntity;
 import org.bukkit.entity.Mannequin;
 import org.bukkit.entity.Pose;
+import org.bukkit.inventory.ItemStack;
 import org.bukkit.persistence.PersistentDataType;
 
+import java.util.Set;
 import java.util.regex.Pattern;
 
 /**
@@ -21,6 +23,11 @@ import java.util.regex.Pattern;
  * parca.cuerpo.skin (Leonsaurusrex, sin capa) encima del esqueleto invisible que pelea, como
  * Rabby en EDM. Es lo mismo que PeleaParca.ponerCascara, sacado a su clase para la anomalia;
  * la reserva sigue con el suyo para no tocarla mas de lo justo.
+ *
+ * Calamity 1.8.0: tambien es el cuerpo de Ambush, con su skin, su tamano, su katana y su
+ * quejido. Por eso la cuenta, la escala y lo que lleva en la mano ya no salen de Parca.Ajustes
+ * sino del constructor; la Parca sigue llamando al de siempre. Ambush cambia de skin al pasar
+ * a su fase 2 (cambiarSkin) y suelta y recoge la katana (empunar).
  *
  * Los golpes que recibe el maniqui los pasa Parca.onDanoCascara al esqueleto, con el jugador
  * de verdad como autor (tambien las flechas: el tirador, no la flecha). Por eso NO se usa el
@@ -32,8 +39,22 @@ final class CuerpoNpc {
     /** Un nombre de cuenta de Minecraft. Lo que no case no se manda a Mojang (va en una URL). */
     private static final Pattern CUENTA = Pattern.compile("[A-Za-z0-9_]{3,16}");
 
+    /**
+     * Las posturas que un Mannequin acepta (Paper 26.2, CraftMannequin.setPose): con cualquier
+     * otra lanza IllegalArgumentException. SPIN_ATTACK (el giro del tridente) no esta: el giro del
+     * tajo doble de Ambush se hace girando el cuerpo.
+     */
+    static final Set<Pose> POSTURAS = Set.of(Pose.STANDING, Pose.SNEAKING, Pose.SWIMMING, Pose.FALL_FLYING,
+            Pose.SLEEPING);
+
     private final Hardcore hc;
-    private final Parca.Ajustes a;
+    /** La cuenta cuya skin lleva ahora (Ambush la cambia en su fase 2). */
+    private String skin;
+    /** Tamano del cuerpo; 1 = un jugador. */
+    private final double escala;
+    /** Lo que lleva en la mano al nacer: la guadana de la Parca, la katana de Ambush. */
+    private final ItemStack arma;
+    private final String sonidoDolor;
     private Mannequin mq;
     /**
      * El perfil que DEBE llevar el maniqui ahora mismo. La resolucion de la skin llega por la
@@ -46,13 +67,26 @@ final class CuerpoNpc {
     private boolean brilla;
 
     CuerpoNpc(Hardcore hc, Parca.Ajustes a) {
+        this(hc, a.cuerpoSkin, a.cuerpoEscala, PeleaParca.guadana(), "entity.wither_skeleton.hurt");
+    }
+
+    /** Calamity 1.8.0: un cuerpo con su skin, su tamano, lo que lleva en la mano y su quejido. */
+    CuerpoNpc(Hardcore hc, String skin, double escala, ItemStack arma, String sonidoDolor) {
         this.hc = hc;
-        this.a = a;
+        this.skin = skin;
+        this.escala = escala;
+        this.arma = arma;
+        this.sonidoDolor = sonidoDolor;
     }
 
     /** Si la config pide cuerpo de NPC y la cuenta es valida. */
     static boolean pedido(Parca.Ajustes a) {
-        return a.cuerpoActivo && a.cuerpoSkin != null && CUENTA.matcher(a.cuerpoSkin).matches();
+        return a.cuerpoActivo && cuentaValida(a.cuerpoSkin);
+    }
+
+    /** Si ese nombre puede ser una cuenta de Minecraft (es lo unico que se manda a Mojang). */
+    static boolean cuentaValida(String cuenta) {
+        return cuenta != null && CUENTA.matcher(cuenta).matches();
     }
 
     /**
@@ -63,7 +97,7 @@ final class CuerpoNpc {
      * @param brillo color del contorno (el de la anomalia), o null sin brillo
      */
     boolean poner(LivingEntity dueno, Location l, NamedTextColor brillo) {
-        perfil = Disguises.profileOfAccount(hc.plugin(), a.cuerpoSkin);
+        perfil = Disguises.profileOfAccount(hc.plugin(), skin);
         if (perfil == null || l.getWorld() == null) return false;
         try {
             mq = l.getWorld().spawn(l, Mannequin.class, m -> {
@@ -84,23 +118,15 @@ final class CuerpoNpc {
                     // Sin descripcion editable se ve la linea: feo, pero la pelea sigue.
                 }
                 m.setProfile(perfil);
-                try {
-                    // La cuenta de la skin trae capa y a la Parca no le pega: todas las capas
-                    // de la skin (chaqueta, mangas, sombrero) menos esa.
-                    com.destroystokyo.paper.SkinParts.Mutable partes = com.destroystokyo.paper.SkinParts.allParts();
-                    partes.setCapeEnabled(false);
-                    m.setSkinParts(partes);
-                } catch (Throwable ignorado) {
-                    // Sin la API de capas se ve la capa: feo, pero la pelea sigue.
-                }
-                Compat.setAttribute(m, "scale", a.cuerpoEscala);
+                sinCapa(m);
+                Compat.setAttribute(m, "scale", escala);
                 // Sin probabilidad de soltarla: eso solo existe en los Mob (el maniqui no lo
                 // es). Si alguien lo mata con /kill, Parca.onMuerte le vacia lo que suelte.
-                m.getEquipment().setItemInMainHand(PeleaParca.guadana());
+                if (arma != null) m.getEquipment().setItemInMainHand(arma.clone());
             });
         } catch (Throwable t) {
             mq = null;
-            hc.plugin().getLogger().warning("[Calamity] No se pudo poner el cuerpo de la Parca: " + t);
+            hc.plugin().getLogger().warning("[Calamity] No se pudo poner el cuerpo con la skin de " + skin + ": " + t);
         }
         if (mq == null || !mq.isValid()) {
             mq = null;
@@ -117,8 +143,44 @@ final class CuerpoNpc {
         }
         // La skin de verdad sale de Mojang por la red: fuera del hilo principal y cacheada en
         // EDM (la segunda PARCA desde el arranque ya la tiene al momento).
-        Disguises.resolveAccount(hc.plugin(), a.cuerpoSkin, this::reskin);
+        resolver(skin);
         return true;
+    }
+
+    /**
+     * Todas las capas de la skin (chaqueta, mangas, sombrero) menos la capa: la cuenta de la
+     * Parca trae una y no le pega. Tambien la usan las sombras de Ambush.
+     */
+    static void sinCapa(Mannequin m) {
+        try {
+            com.destroystokyo.paper.SkinParts.Mutable partes = com.destroystokyo.paper.SkinParts.allParts();
+            partes.setCapeEnabled(false);
+            m.setSkinParts(partes);
+        } catch (Throwable ignorado) {
+            // Sin la API de capas se ve la capa: feo, pero la pelea sigue.
+        }
+    }
+
+    /**
+     * Calamity 1.8.0: cambia de skin sin quitar el maniqui (la fase 2 de Ambush). El perfil sin
+     * resolver sale al momento y el bueno en cuanto contesta Mojang, como al nacer.
+     */
+    void cambiarSkin(String cuenta) {
+        if (!cuentaValida(cuenta) || cuenta.equals(skin)) return;
+        skin = cuenta;
+        ResolvableProfile nuevo = Disguises.profileOfAccount(hc.plugin(), cuenta);
+        if (nuevo != null) {
+            perfil = nuevo;
+            if (valido()) mq.setProfile(nuevo);
+        }
+        resolver(cuenta);
+    }
+
+    /** Pide la skin de esa cuenta; si cuando llega ya se lleva otra (cambio de fase), no se pone. */
+    private void resolver(String cuenta) {
+        Disguises.resolveAccount(hc.plugin(), cuenta, resuelto -> {
+            if (cuenta.equals(skin)) reskin(resuelto);
+        });
     }
 
     /** Llega la skin resuelta (hilo principal). La pelea puede haber acabado ya: entonces nada. */
@@ -126,6 +188,15 @@ final class CuerpoNpc {
         if (resuelto == null) return;
         perfil = resuelto;
         if (mq != null && mq.isValid()) mq.setProfile(resuelto);
+    }
+
+    /** El perfil que lleva ahora, para las copias visuales (las sombras de Ambush). Null sin maniqui. */
+    ResolvableProfile perfil() {
+        return perfil;
+    }
+
+    double escala() {
+        return escala;
     }
 
     /**
@@ -168,16 +239,24 @@ final class CuerpoNpc {
         if (valido()) mq.swingOffHand();
     }
 
+    /** Lo que lleva en la mano (Ambush: la katana, o nada mientras envaina). */
+    void empunar(ItemStack item) {
+        if (valido()) mq.getEquipment().setItemInMainHand(item == null ? null : item.clone());
+    }
+
     /** El estremecimiento y el quejido de un golpe que ha entrado. */
     void dolor() {
         if (!valido()) return;
         mq.playHurtAnimation(0f);
-        Compat.sound(mq.getWorld(), mq.getLocation(), "entity.wither_skeleton.hurt", 0.9f, 0.55f);
+        Compat.sound(mq.getWorld(), mq.getLocation(), sonidoDolor, 0.9f, 0.55f);
     }
 
-    /** Agachado aturdida o cargando un salto, girando en las guadanas, de pie el resto. */
+    /**
+     * Agachado aturdida o cargando un salto, tumbado en una acometida, de pie el resto. Una
+     * postura que el maniqui no admite (fuera de POSTURAS) no se intenta: se queda como estaba.
+     */
     void postura(Pose pose) {
-        if (!valido()) return;
+        if (!valido() || pose == null || !POSTURAS.contains(pose)) return;
         try {
             mq.setPose(pose, pose != Pose.STANDING);
         } catch (Throwable ignorado) {
