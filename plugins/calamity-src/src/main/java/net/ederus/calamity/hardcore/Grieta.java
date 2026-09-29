@@ -29,7 +29,7 @@ import java.util.function.Consumer;
  * La Grieta (Calamity 1.1.0): el AFK en el spawn de Calamity.
  *
  * En la zona spawn (1.2: la de ZonaSpawn, la region de WorldGuard de hardcore.spawn.region o, sin
- * ella, la caja de la vara de hardcore.puertas.spawn) la Huella no espera 10 minutos: con 5 (parca.spawn.minutos)
+ * ella, la caja de la vara de hardcore.puertas.spawn) no viene la PARCA: a los parca.spawn.minutos (5)
  * se abre una grieta bajo el que no se mueve, se lo traga y lo escupe lejos, en un sitio seguro
  * al azar a 600-1500 bloques del spawn; y alli le aparece la PARCA. El spawn no es sitio para
  * aparcar a nadie, y la PARCA en el spawn seria una emboscada para los que acaban de entrar.

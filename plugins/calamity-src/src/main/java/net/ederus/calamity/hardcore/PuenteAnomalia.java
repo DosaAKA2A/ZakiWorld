@@ -36,8 +36,12 @@ import java.util.UUID;
  */
 final class PuenteAnomalia {
 
-    /** Lo que la Huella le pide a la anomalia: la presa, su grupo y los numeros de Calamity. */
-    record Encargo(UUID presa, String nombre, List<Player> grupo, int nivel, int r, int m, double fraccion, int fase) {
+    /**
+     * Lo que la Huella le pide a la anomalia: la presa, su grupo y los numeros de Calamity.
+     * 1.8: dificultad, lo que la endurece segun estaba la presa al llamarla (DificultadAmenaza).
+     */
+    record Encargo(UUID presa, String nombre, List<Player> grupo, int nivel, int r, int m, double fraccion, int fase,
+                   DificultadAmenaza.Resultado dificultad) {
     }
 
     enum Decision { ANOMALIA, RESERVA }
@@ -295,10 +299,12 @@ final class PuenteAnomalia {
         }
         h.ok("ningun golpe sin aviso de al menos 10 ticks (minimo " + aviso + ": " + cual + ")", aviso >= 10);
 
-        h.cerca("vida N 14 = la de Calamity (920)", 920, ParcaAnomalia.vidaInicial(a, 14, 0, 0), 1e-6);
-        h.cerca("vida N 52 (2440)", 2440, ParcaAnomalia.vidaInicial(a, 52, 0, 0), 1e-6);
-        h.cerca("vida r 1 x1,25 y M 1 x1,5 (N 14: 1725)", 1725, ParcaAnomalia.vidaInicial(a, 14, 1, 1), 1e-6);
-        h.cerca("golpe N 100 (39,68)", 39.68, ParcaAnomalia.golpeInicial(a, 100, 0), 1e-6);
+        h.cerca("vida N 14 = la de Calamity (920)", 920, ParcaAnomalia.vidaInicial(a, 14, 0, 0, 1), 1e-6);
+        h.cerca("vida N 52 (2440)", 2440, ParcaAnomalia.vidaInicial(a, 52, 0, 0, 1), 1e-6);
+        h.cerca("vida r 1 x1,25 y M 1 x1,5 (N 14: 1725)", 1725, ParcaAnomalia.vidaInicial(a, 14, 1, 1, 1), 1e-6);
+        h.cerca("golpe N 100 (54,56)", 54.56, ParcaAnomalia.golpeInicial(a, 100, 0, 1), 1e-6);
+        h.cerca("con la dificultad de la presa: golpe x3,584 y vida x2,352 (N 14: 59,92 y 2.163,84)", 59.92448 + 2163.84,
+                ParcaAnomalia.golpeInicial(a, 14, 0, 3.584) + ParcaAnomalia.vidaInicial(a, 14, 0, 0, 2.352), 1e-6);
         h.igual("fases por vida 80/60/40/20 %", List.of(1, 2, 3, 4), List.of(PhaseBars.currentPhase(0.8, 4),
                 PhaseBars.currentPhase(0.6, 4), PhaseBars.currentPhase(0.4, 4), PhaseBars.currentPhase(0.2, 4)));
 

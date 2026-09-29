@@ -342,6 +342,7 @@ public final class Hardcore implements Listener {
         // modulos registran sus pruebas, subcomandos y placeholders al nacer, debajo.
         Autotest.instalar(this);
         Autotest.registrar("barra", BarraAccion::autotest);
+        Autotest.registrar("dificultad-amenazas", DificultadAmenaza::autotest);
         PlaceholdersLethal.registrar("cordura", (jugador, resto) -> corduraTexto(jugador));
         // Lo primero: la Grieta, las amenazas y los mobs preguntan por ella desde que nacen.
         zona = crear("zona-spawn", () -> new ZonaSpawn(this));

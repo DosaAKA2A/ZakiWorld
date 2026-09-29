@@ -161,6 +161,8 @@ final class ParcaAnomalia extends BossFight implements ParcaViva {
     private int extra;
     private final double factorR;
     private double golpe;
+    /** 1.8 · Lo que la endurece segun estaba su presa al llamarla (NEUTRO la abierta a mano). */
+    private final DificultadAmenaza.Resultado dificultad;
     private int extrasGrupo;
     private final Set<UUID> participantes = new HashSet<>();
 
@@ -230,6 +232,7 @@ final class ParcaAnomalia extends BossFight implements ParcaViva {
         this.extra = encargo == null ? 0 : encargo.m();
         this.nivel = encargo == null ? 1 : encargo.nivel();
         this.factorR = Parca.factorR(a, repeticiones);
+        this.dificultad = encargo == null || encargo.dificultad() == null ? DificultadAmenaza.NEUTRO : encargo.dificultad();
         this.npc = new CuerpoNpc(hc, a);
         if (encargo != null) for (Player p : encargo.grupo()) marcados.add(p.getUniqueId());
         // Para el menu y /anomaly test: la eleccion normal no pasa por EDM (ver ambient()).
@@ -242,13 +245,16 @@ final class ParcaAnomalia extends BossFight implements ParcaViva {
 
     // ================================================================ numeros
 
-    /** La vida logica con la que nace: la formula de Calamity (DIS sec. 1.6), no la del menu de EDM. */
-    static double vidaInicial(Parca.Ajustes a, int n, int r, int m) {
-        return Parca.vidaLogica(a, n, r, m);
+    /**
+     * La vida logica con la que nace: la formula de Calamity (DIS sec. 1.6), no la del menu de EDM,
+     * por la dificultad de su presa (1.8, DificultadAmenaza; 1 = sin nada).
+     */
+    static double vidaInicial(Parca.Ajustes a, int n, int r, int m, double dificultad) {
+        return Parca.vidaLogica(a, n, r, m, dificultad);
     }
 
-    static double golpeInicial(Parca.Ajustes a, int n, int r) {
-        return Parca.golpe(a, n, r);
+    static double golpeInicial(Parca.Ajustes a, int n, int r, double dificultad) {
+        return Parca.golpe(a, n, r, dificultad);
     }
 
     /** Aviso de cada corte de los Tajos: mas corto en cada fase; el ultimo, 4 ticks mas. */
@@ -406,8 +412,8 @@ final class ParcaAnomalia extends BossFight implements ParcaViva {
             sitioFinal = encima != null ? Parca.sitioDetras(encima, 6) : Fx.ground(arena.clone(), 12);
             nivel = nivelSinPresa();
         }
-        golpe = golpeInicial(a, nivel, repeticiones);
-        double vida = vidaInicial(a, nivel, repeticiones, extra);
+        golpe = golpeInicial(a, nivel, repeticiones, dificultad.dano());
+        double vida = vidaInicial(a, nivel, repeticiones, extra, dificultad.vida());
         Location bajo = sitioFinal.clone().subtract(0, 2, 0);
         conNpc = CuerpoNpc.pedido(a);
         final boolean npcPedido = conNpc;
@@ -931,6 +937,11 @@ final class ParcaAnomalia extends BossFight implements ParcaViva {
     @Override
     public int extra() {
         return extra;
+    }
+
+    @Override
+    public DificultadAmenaza.Resultado dificultad() {
+        return dificultad;
     }
 
     @Override

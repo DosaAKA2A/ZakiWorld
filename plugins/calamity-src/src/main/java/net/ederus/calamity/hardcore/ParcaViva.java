@@ -44,6 +44,9 @@ interface ParcaViva {
     /** M: marcados extra. */
     int extra();
 
+    /** 1.8 · Lo que la endurece segun estaba su presa al aparecer (DificultadAmenaza.NEUTRO en las de prueba). */
+    DificultadAmenaza.Resultado dificultad();
+
     int fase();
 
     int extrasGrupo();
