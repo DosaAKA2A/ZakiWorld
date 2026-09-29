@@ -64,7 +64,8 @@ import java.util.function.Supplier;
  * ataques, todos del estilo de la carrera que deja sombras atras:
  * - la acometida: una linea roja en el suelo y la recorre de golpe tumbado como una estocada,
  *   dejando cinco sombras (cada una con su barrido y su anillo rojo);
- * - el tajo doble: dos cortes girando sobre si mismo;
+ * - el tajo doble: plantado y mirando a su presa, su katana traza dos medias lunas rojas en cruz,
+ *   una de ida y otra de vuelta;
  * - el paso sombra: se desvanece en humo, rodea a su presa dejando sombras y reaparece a su
  *   espalda con un corte;
  * - el iaijutsu: envaina 1,5 s completamente quieto dentro de un anillo rojo y corta: el doble
@@ -88,9 +89,13 @@ import java.util.function.Supplier;
  * cortadas" (Dosa). Eran los giros a pasitos: el balanceo del iaijutsu, Ambush y los clones de las
  * Sombras del clan siguiendo a su presa grado a grado mientras esperaban, el paso sombra despues
  * del corte y el deslizamiento de mil cortes por el borde. Ahora, mientras ataca, el cuerpo que se
- * ve o no gira o gira de golpe (GIRO_MINIMO grados por tick o mas; el tajo doble, 30 y 36); la
- * entrada se da la vuelta en 4 ticks y los clones vuelven en 7. Entre ataque y ataque todo sigue
- * como en la 1.8.0: se mueve su IA y el maniqui mira a los ojos de su objetivo.
+ * ve o no gira o gira de golpe (GIRO_MINIMO grados por tick o mas); la entrada se da la vuelta en
+ * 4 ticks y los clones vuelven en 7. Entre ataque y ataque todo sigue como en la 1.8.0: se mueve
+ * su IA y el maniqui mira a los ojos de su objetivo.
+ *
+ * 1.8.3 · El tajo doble ya no gira el cuerpo: las dos medias vueltas del maniqui se veian a saltos
+ * y pobres (Dosa). Ahora se queda plantado mirando a su presa y lo que barre es la hoja, paso a
+ * paso con la interpolacion del display, en dos medias lunas que se cruzan y dejan un rastro rojo.
  */
 final class PeleaAmbush implements Runnable {
 
@@ -100,7 +105,7 @@ final class PeleaAmbush implements Runnable {
     enum Ataque {
         ACOMETIDA("am_acometida", "Acometida", "Marca una línea en el suelo y la recorre de golpe, tumbado como una estocada.",
                 120, 36, 4, Material.TRIDENT, 1),
-        TAJO("am_tajo", "Tajo doble", "Dos cortes seguidos girando sobre sí mismo a quien tenga cerca.",
+        TAJO("am_tajo", "Tajo doble", "Sin moverse del sitio, su katana traza dos medias lunas rojas, una de ida y otra de vuelta, y corta a quien tenga cerca.",
                 100, 34, 5, Material.NETHERITE_SWORD, 1),
         PASO("am_paso", "Paso sombra", "Se desvanece en humo, rodea a su presa dejando sombras y reaparece a su espalda con un corte.",
                 160, 22, 4, Material.ENDER_PEARL, 1),
@@ -151,6 +156,8 @@ final class PeleaAmbush implements Runnable {
 
     /** Tamano del cuerpo que se ve: algo mayor que un jugador (la Parca es 1,68). */
     static final double ESCALA = 1.3;
+    /** A que altura de sus pies va su pecho: de ahi salen las hojas y sus rastros. */
+    static final double PECHO = 1.0 * ESCALA;
     private static final double ALTO_JUGADOR = 1.8, ALTO_ESQUELETO = 2.4;
     private static final double VELOCIDAD = 0.32;
     /** La fase 2 va un 25 % mas rapida: sus tiempos x0,8. */
@@ -392,10 +399,35 @@ final class PeleaAmbush implements Runnable {
      * se gira 45 grados para ponerlo derecho, 90 para tumbarlo y el yaw para orientarlo.
      */
     static Transformation hojaEn(float yaw, double radio, float escala) {
-        float r = (float) -Math.toRadians(yaw);
-        Quaternionf giro = new Quaternionf().rotationY(r).rotateX((float) (Math.PI / 2)).rotateZ((float) (Math.PI / 4));
-        Vector3f t = new Quaternionf().rotationY(r).transform(new Vector3f(0, 0, (float) radio));
+        return hojaEn(yaw, 0f, 0f, radio, escala);
+    }
+
+    /**
+     * 1.8.3 · La hoja en el plano de un corte (planoCorte), igual de tumbada dentro de el: con el
+     * mango hacia Ambush, la punta hacia fuera y su centro a "radio" de su pecho.
+     */
+    static Transformation hojaEn(float frente, float angulo, float inclina, double radio, float escala) {
+        Quaternionf plano = planoCorte(frente, angulo, inclina);
+        Quaternionf giro = new Quaternionf(plano).rotateX((float) (Math.PI / 2)).rotateZ((float) (Math.PI / 4));
+        Vector3f t = plano.transform(new Vector3f(0, 0, (float) radio));
         return new Transformation(t, giro, new Vector3f(escala, escala, escala), new Quaternionf());
+    }
+
+    /**
+     * 1.8.3 · El giro del plano de un corte: el del yaw "frente", ladeado "inclina" grados alrededor
+     * de ese frente (positivo: su izquierda arriba y su derecha abajo) y, dentro de ese plano,
+     * "angulo" grados desde el frente (negativo: hacia su izquierda). Con inclina y angulo 0 es el
+     * yaw sin mas, como la hoja de siempre.
+     */
+    static Quaternionf planoCorte(float frente, float angulo, float inclina) {
+        return new Quaternionf().rotationY((float) -Math.toRadians(frente)).rotateZ((float) Math.toRadians(inclina))
+                .rotateY((float) -Math.toRadians(angulo));
+    }
+
+    /** El punto a "radio" de su pecho en el plano de un corte: por donde pasa la hoja (o su punta). */
+    static Vector enCorte(float frente, float angulo, float inclina, double radio) {
+        Vector3f p = planoCorte(frente, angulo, inclina).transform(new Vector3f(0, 0, (float) radio));
+        return new Vector(p.x, p.y, p.z);
     }
 
     // ================================================================ la escena
@@ -428,10 +460,26 @@ final class PeleaAmbush implements Runnable {
         void visible(boolean si);
 
         /** Una hoja (la katana en un ItemDisplay) girando a su alrededor. -1 si ya hay MAX_HOJAS. */
-        int hoja(float yaw);
+        default int hoja(float yaw) {
+            return hojaLadeada(yaw, 0f, 0f);
+        }
 
         /** Gira esa hoja hasta el yaw, interpolado en "ticks". */
-        void hoja(int id, float yaw, int ticks);
+        default void hoja(int id, float yaw, int ticks) {
+            hojaLadeada(id, yaw, 0f, 0f, ticks);
+        }
+
+        /**
+         * 1.8.3 · Una hoja en el plano de un corte (planoCorte): a "angulo" grados de "frente", en
+         * un plano ladeado "inclina" grados. -1 si ya hay MAX_HOJAS.
+         */
+        int hojaLadeada(float frente, float angulo, float inclina);
+
+        /** 1.8.3 · Lleva esa hoja a ese punto del plano de un corte, interpolado en "ticks". */
+        void hojaLadeada(int id, float frente, float angulo, float inclina, int ticks);
+
+        /** Lo que mide ahora la hoja (escalaHoja de su fase): los rastros siguen su punta. */
+        float tamanoHoja();
 
         void quitarHoja(int id);
 
@@ -902,14 +950,39 @@ final class PeleaAmbush implements Runnable {
     // ---------------------------------------------------------------- Tajo doble
 
     /**
-     * Dos cortes seguidos girando sobre si mismo: la hoja aparece a su lado (el aviso), y en cada
-     * corte el cuerpo y la hoja dan media vuelta (360 grados entre los dos). Cada corte hiere a quien
-     * este a RADIO. El maniqui no admite la postura del giro del tridente: el giro es el del cuerpo.
+     * Dos cortes en cruz sin moverse del sitio (1.8.3). Al empezar se queda de pie mirando a su
+     * presa y ya no se gira en todo el tajo: lo que se mueve es la hoja. Sale a su izquierda, algo
+     * alta, y durante el aviso se echa hacia atras (ARMADO grados). En el primer corte barre de un
+     * tiron una media luna de ARCO grados por delante de el, de su izquierda (arriba) a su derecha
+     * (abajo); en la pausa sube por la derecha y en el segundo corte vuelve al reves, de su derecha
+     * (arriba) a su izquierda (abajo), asi que las dos medias lunas se cruzan delante de su pecho.
+     *
+     * La hoja avanza ARCO / giro grados cada tick (33 en la fase 1, 40 en la 2) y el display
+     * interpola cada paso en MOVIMIENTO ticks: en el cliente se ve un barrido seguido, sin saltos.
+     * Detras deja un rastro de polvo con forma de media luna (el filo carmesi por fuera, ancho en
+     * medio y fino en las puntas) y chispas de critico en la punta. En cada corte, el brazo y el
+     * sonido del barrido al arrancar y, a mitad, el barrido de siempre y el golpe: K de su golpe a
+     * quien este a RADIO, alrededor de el. Los tiempos y el dano son los de antes.
+     *
+     * Hasta la 1.8.2 el cuerpo daba media vuelta en cada corte junto con la hoja y en el cliente se
+     * veia a saltos. El maniqui no admite la postura del giro del tridente.
      */
     static final class TajoDoble extends Tecnica {
         static final double RADIO = 3.8, K = 0.9;
+        /** Lo que barre cada corte, repartido a partes iguales a los dos lados de su frente. */
+        static final float ARCO = 200f;
+        /** Lo ladeado del plano de cada corte (el primero, izquierda arriba; el segundo, al reves). */
+        static final float INCLINA = 20f;
+        /** Lo que se echa atras la hoja durante el aviso, antes del primer corte. */
+        static final float ARMADO = 30f;
+        /** En cuantos ticks interpola el display cada paso de la hoja. */
+        static final int MOVIMIENTO = 2;
+        /** Cada cuanto (en bloques, a lo largo de la punta) cae un punto del rastro. */
+        static final double PASO_RASTRO = 0.25;
         final int aviso, giro, pausa, respiro;
-        private float base;
+        /** A donde mira todo el tajo: a su presa al empezar. */
+        private float frente;
+        private float escala = 1f;
         private int hoja = -1;
 
         TajoDoble(double ritmo) {
@@ -925,37 +998,81 @@ final class PeleaAmbush implements Runnable {
             Location pie = e.pie();
             if (t == 0) {
                 Location obj = e.objetivo();
-                // Empieza por su izquierda: el primer corte le pasa por delante de lado a lado.
-                base = (obj == null ? 0f : yaw(pie, obj)) - 90f;
+                frente = obj == null ? pie.getYaw() : yaw(pie, obj);
+                escala = e.tamanoHoja();
+                e.postura(Pose.STANDING);
                 e.katana(true);
-                hoja = e.hoja(base);
+                hoja = e.hojaLadeada(frente, -ARCO / 2 + ARMADO, INCLINA);
                 e.sonido(pie, "item.trident.return", 1.2f, 0.7f);
             }
+            // El cuerpo no gira: todo el tajo mirando a donde estaba su presa al empezar.
+            e.mirar(frente);
             long c2 = aviso + giro + pausa, fin = c2 + giro + respiro;
             if (t < aviso) {
-                e.mirar(base);
+                // Un display recien puesto no anima su primer movimiento: se echa atras desde el tick 2.
+                if (t == 2 && hoja >= 0) e.hojaLadeada(hoja, frente, -ARCO / 2, INCLINA, aviso - 2);
                 return false;
             }
             int corte = t < c2 ? 0 : 1;
             long dt = t - (corte == 0 ? aviso : c2);
+            float inclina = corte == 0 ? INCLINA : -INCLINA;
             if (dt < giro) {
-                float angulo = base + 180f * corte + 180f * (dt + 1) / giro;
-                e.mirar(angulo);
-                if (hoja >= 0) e.hoja(hoja, angulo, 2);
+                if (hoja >= 0) e.hojaLadeada(hoja, frente, angulo(corte, dt + 1), inclina, MOVIMIENTO);
                 if (dt == 0) {
                     e.blandir();
                     e.sonido(pie, "entity.player.attack.sweep", 1.4f, 0.8f + 0.2f * corte);
-                    barrido(e, pie, 2.2);
                 }
-                if (dt == giro / 2) e.herirCerca(pie, RADIO, K, false);
-                return false;
+                if (dt == giro / 2) {
+                    barrido(e, pie, 2.2);
+                    e.herirCerca(pie, RADIO, K, false);
+                }
             }
-            e.mirar(base + 180f * (corte + 1));
+            // Interpolado en MOVIMIENTO ticks, en el cliente la hoja va un paso por detras del que se
+            // le pide: el rastro pinta el tramo que esta cruzando ahora (y el ultimo, al tick siguiente).
+            if (dt >= 1 && dt <= giro) rastro(e, pie, angulo(corte, dt - 1), angulo(corte, dt), inclina);
+            // En la pausa, ya al final del primer corte, sube por su derecha para el segundo.
+            if (corte == 0 && dt == giro + 1 && hoja >= 0) {
+                e.hojaLadeada(hoja, frente, ARCO / 2, -INCLINA, Math.max(1, pausa - 1));
+            }
             if (t < fin) return false;
             if (hoja >= 0) e.quitarHoja(hoja);
             hoja = -1;
             e.postura(Pose.STANDING);
             return true;
+        }
+
+        /**
+         * Hacia donde apunta la hoja tras "k" de los "giro" pasos de ese corte (0: donde empieza), en
+         * grados desde su frente: el primero va de su izquierda a su derecha y el segundo al reves.
+         */
+        float angulo(int corte, long k) {
+            float a = -ARCO / 2 + ARCO * k / giro;
+            return corte == 0 ? a : -a;
+        }
+
+        /**
+         * El rastro de la hoja entre dos puntos del corte: polvo rojo a lo largo de la punta, con el
+         * filo carmesi por fuera y mas ancho hacia dentro cuanto mas cerca del centro de la media
+         * luna, y unas chispas de critico donde llega la punta.
+         */
+        private void rastro(Escena e, Location pie, float desde, float hasta, float inclina) {
+            Location pecho = pie.clone().add(0, PECHO, 0);
+            double punta = radioHoja(escala) + 0.55 * escala;
+            double grosor = 0.3 + 0.5 * escala;
+            int puntos = Math.max(3, (int) Math.ceil(Math.toRadians(Math.abs(hasta - desde)) * punta / PASO_RASTRO));
+            for (int i = 1; i <= puntos; i++) {
+                float a = desde + (hasta - desde) * i / puntos;
+                // 0 en las puntas de la media luna y 1 delante de el.
+                double medio = Math.sin(Math.PI * Math.max(0, Math.min(1, (a + ARCO / 2) / ARCO)));
+                double ancho = grosor * medio;
+                int capas = 1 + (int) Math.round(ancho / 0.3);
+                for (int c = 0; c < capas; c++) {
+                    double r = punta - (capas == 1 ? 0 : ancho * c / (capas - 1));
+                    e.polvo(pecho.clone().add(enCorte(frente, a, inclina, r)), c == 0 ? RGB_CRIMSON : RGB_AVISO,
+                            c == 0 ? 1.4f : 1.1f);
+                }
+            }
+            e.particula(Compat.CRIT, pecho.clone().add(enCorte(frente, hasta, inclina, punta)), 2, 0.1, 0.1, 0.1, 0.05, null);
         }
 
         @Override
@@ -2043,14 +2160,19 @@ final class PeleaAmbush implements Runnable {
         }
 
         private Location pecho() {
-            Location c = cuerpo.getLocation().add(0, 1.0 * ESCALA, 0);
+            Location c = cuerpo.getLocation().add(0, PECHO, 0);
             c.setYaw(0);
             c.setPitch(0);
             return c;
         }
 
         @Override
-        public int hoja(float yaw) {
+        public float tamanoHoja() {
+            return escalaHoja(fase);
+        }
+
+        @Override
+        public int hojaLadeada(float frente, float angulo, float inclina) {
             if (hojas.size() >= MAX_HOJAS) return -1;
             Location c = pecho();
             float esc = escalaHoja(fase);
@@ -2065,7 +2187,7 @@ final class PeleaAmbush implements Runnable {
                     e.setTeleportDuration(2);
                     e.setInterpolationDelay(0);
                     e.setInterpolationDuration(0);
-                    e.setTransformation(hojaEn(yaw, radioHoja(esc), esc));
+                    e.setTransformation(hojaEn(frente, angulo, inclina, radioHoja(esc), esc));
                 });
             } catch (Throwable t) {
                 return -1;
@@ -2076,7 +2198,7 @@ final class PeleaAmbush implements Runnable {
         }
 
         @Override
-        public void hoja(int id, float yaw, int ticks) {
+        public void hojaLadeada(int id, float frente, float angulo, float inclina, int ticks) {
             ItemDisplay d = hojas.get(id);
             if (d == null || !d.isValid()) return;
             Location c = pecho();
@@ -2084,7 +2206,7 @@ final class PeleaAmbush implements Runnable {
             float esc = escalaHoja(fase);
             d.setInterpolationDelay(0);
             d.setInterpolationDuration(Math.max(1, ticks));
-            d.setTransformation(hojaEn(yaw, radioHoja(esc), esc));
+            d.setTransformation(hojaEn(frente, angulo, inclina, radioHoja(esc), esc));
         }
 
         @Override
@@ -2375,6 +2497,12 @@ final class PeleaAmbush implements Runnable {
         final List<Object> destellos = new ArrayList<>();
         final List<Double> golpes = new ArrayList<>();
         final List<String> avisos = new ArrayList<>();
+        /** Donde ha caido cada punto de polvo. */
+        final List<Location> polvosEn = new ArrayList<>();
+        /** Cada vez que se mueve una hoja: {frente, angulo, inclina, ticks}. */
+        final List<float[]> hojaMovida = new ArrayList<>();
+        /** La fase de la hoja que se ve (1: como la katana; 2: el doble). */
+        int fase = 1;
         int maxHojas, maxSombras, maxClones, sombrasHechas, sombrasRechazadas, clonesHechos;
         int sacudidas, polvos, movimientos, soltadas;
         /** Veces que se ha movido de pie (no tumbado en una carrera): lo que antes era deslizarse. */
@@ -2412,7 +2540,7 @@ final class PeleaAmbush implements Runnable {
         @Override public void visible(boolean si) { visible = si; }
 
         @Override
-        public int hoja(float yaw) {
+        public int hojaLadeada(float frente, float angulo, float inclina) {
             if (hojas.size() >= MAX_HOJAS) return -1;
             int id = ++siguiente;
             hojas.add(id);
@@ -2420,8 +2548,13 @@ final class PeleaAmbush implements Runnable {
             return id;
         }
 
-        @Override public void hoja(int id, float yaw, int ticks) { }
+        @Override
+        public void hojaLadeada(int id, float frente, float angulo, float inclina, int ticks) {
+            if (hojas.contains(id)) hojaMovida.add(new float[]{frente, angulo, inclina, ticks});
+        }
+
         @Override public void quitarHoja(int id) { hojas.remove(id); }
+        @Override public float tamanoHoja() { return escalaHoja(fase); }
 
         @Override
         public int sombra(Location l, float yaw, Pose pose) {
@@ -2497,7 +2630,11 @@ final class PeleaAmbush implements Runnable {
 
         @Override public Location suelo(Location l) { return l; }
         @Override public Location hueco(Location l) { return l == null ? null : l.clone(); }
-        @Override public void polvo(Location l, int rgb, float tam) { polvos++; }
+        @Override
+        public void polvo(Location l, int rgb, float tam) {
+            polvos++;
+            polvosEn.add(l.clone());
+        }
 
         @Override
         public void particula(Particle p, Location l, int n, double dx, double dy, double dz, double v, Object datos) {
@@ -2904,8 +3041,9 @@ final class PeleaAmbush implements Runnable {
                 h.ok(x.nombre + f + ": no gira a pasitos (" + como + ")", g[0] >= GIRO_MINIMO - 1e-3 && g[1] <= 12);
             }
         }
-        h.ok("tajo doble: cada corte gira 30°/tick o más en las dos fases",
-                180.0 / new TajoDoble(1.0).giro >= GIRO_MINIMO && 180.0 / new TajoDoble(RITMO_FASE2).giro >= GIRO_MINIMO);
+        // ---- 1.8.3 · El tajo doble: el cuerpo quieto y la hoja barriendo, de ida y de vuelta y en cruz.
+        autotestTajo(h, 1.0);
+        autotestTajo(h, RITMO_FASE2);
 
         // ---- La entrada: de espaldas a mirarle en 4-5 ticks, a 30°/tick o mas, y luego quieto.
         EscenaPrueba ge = escenaA(8);
@@ -2960,6 +3098,105 @@ final class PeleaAmbush implements Runnable {
         }
         h.ok("sombras del clan: los clones vuelven en 6-8 ticks (" + moviendose + ") y no se giran mientras esperan",
                 moviendose >= 6 && moviendose <= 8 && Clan.CONVERGE >= 6 && Clan.CONVERGE <= 8 && quietos);
+    }
+
+    /**
+     * 1.8.3 · El tajo doble en la fase de ese ritmo, con su presa andando de lado: el cuerpo no gira
+     * ni se mueve (mira todo el rato a donde estaba ella al empezar); en cada corte la hoja barre ARCO
+     * grados a pasos de 30 a 45 por tick, el primero de su izquierda a su derecha y el segundo al
+     * reves, en planos ladeados al contrario; cada corte deja delante de el su media luna de polvo, y
+     * las dos se cruzan; y el golpe, los tiempos y el sonido siguen como antes.
+     */
+    static void autotestTajo(Autotest.Hoja h, double ritmo) {
+        int fase = ritmo < 1 ? 2 : 1;
+        String f = " (fase " + fase + ")";
+        EscenaPrueba e = escenaA(distanciaPrueba(Ataque.TAJO));
+        e.fase = fase;
+        TajoDoble tajo = new TajoDoble(ritmo);
+        float frente = yaw(e.pie(), e.objetivo);
+        Location base = e.objetivo.clone();
+        long[] empieza = {tajo.aviso, tajo.aviso + tajo.giro + tajo.pausa};
+        long fin = empieza[1] + tajo.giro + tajo.respiro;
+        // Por corte: los pasos que se le piden a la hoja y el polvo que deja.
+        List<List<float[]>> pasos = List.of(new ArrayList<>(), new ArrayList<>());
+        List<List<Location>> polvo = List.of(new ArrayList<>(), new ArrayList<>());
+        List<Long> golpesEn = new ArrayList<>();
+        boolean acabo = false;
+        int dura = 0;
+        while (dura < 200 && !acabo) {
+            // Anda de lado lo bastante despacio para seguir a su alcance en los dos golpes.
+            e.objetivo = base.clone().add(0, 0, 0.05 * dura);
+            long t = tajo.t;
+            int g0 = e.golpes.size(), m0 = e.hojaMovida.size(), p0 = e.polvosEn.size();
+            acabo = tajo.paso(e);
+            tajo.t++;
+            dura++;
+            if (e.golpes.size() > g0) golpesEn.add(t);
+            for (int c = 0; c < 2; c++) {
+                long dt = t - empieza[c];
+                if (dt >= 0 && dt < tajo.giro) pasos.get(c).addAll(e.hojaMovida.subList(m0, e.hojaMovida.size()));
+                if (dt >= 0 && dt <= tajo.giro) polvo.get(c).addAll(e.polvosEn.subList(p0, e.polvosEn.size()));
+            }
+        }
+
+        double desvio = 0;
+        for (float y : e.miradas) desvio = Math.max(desvio, Math.abs(difYaw(y, frente)));
+        h.ok("tajo doble" + f + ": el cuerpo no gira ni se mueve, mira fijo a su presa aunque ella ande (desvío "
+                        + Math.round(desvio * 10) / 10.0 + "°, mirada fija " + e.miradas.size() + " de " + dura + " ticks)",
+                acabo && desvio < 1e-3 && e.miradas.size() == dura && e.movimientos == 0);
+
+        // Los pasos de cada corte, desde donde espera la hoja (tras echarse atras, o tras subir en la pausa).
+        boolean barre = e.hojaMovida.size() == 2 * tajo.giro + 2 && TajoDoble.INCLINA > 0;
+        StringBuilder como = new StringBuilder();
+        for (int c = 0; c < 2; c++) {
+            float sentido = c == 0 ? 1f : -1f;
+            float previo = -sentido * TajoDoble.ARCO / 2;
+            double menor = 360, mayor = 0;
+            for (float[] p : pasos.get(c)) {
+                double paso = (p[1] - previo) * sentido;
+                menor = Math.min(menor, paso);
+                mayor = Math.max(mayor, paso);
+                barre &= Math.abs(difYaw(p[0], frente)) < 1e-3 && p[2] == sentido * TajoDoble.INCLINA && p[3] >= 1;
+                previo = p[1];
+            }
+            barre &= pasos.get(c).size() == tajo.giro && Math.abs(previo - sentido * TajoDoble.ARCO / 2) < 1e-3
+                    && menor >= GIRO_MINIMO - 1e-3 && mayor <= 45 + 1e-3;
+            como.append(c == 0 ? "" : "; ").append(pasos.get(c).size()).append(" pasos de ").append(Math.round(menor))
+                    .append(" a ").append(Math.round(mayor)).append("°");
+        }
+        h.ok("tajo doble" + f + ": la hoja barre " + Math.round(TajoDoble.ARCO) + "° de su izquierda a su derecha y luego"
+                + " al revés, a 30-45° por tick y en planos ladeados al contrario (" + como + ")", barre);
+
+        // Cada media luna, alrededor de su pecho y de lado a lado por delante de el: el primer corte,
+        // alto por su izquierda y bajo por su derecha; el segundo, al reves (se cruzan delante).
+        Location pecho = e.pie().add(0, PECHO, 0);
+        double alcance = radioHoja(escalaHoja(fase)) + escalaHoja(fase);
+        boolean lunas = e.cuantas(Compat.CRIT) >= 2 * tajo.giro;
+        StringBuilder puntos = new StringBuilder();
+        for (int c = 0; c < 2; c++) {
+            double izquierda = 0, derecha = 0;
+            for (Location p : polvo.get(c)) {
+                double d = p.toVector().distance(pecho.toVector());
+                double rel = difYaw(yaw(pecho, p), frente);
+                double sube = p.getY() - pecho.getY();
+                lunas &= d >= 0.5 && d <= alcance;
+                izquierda = Math.min(izquierda, rel);
+                derecha = Math.max(derecha, rel);
+                if (Math.abs(rel) > 45) lunas &= (rel < 0) == (c == 0) ? sube > 0 : sube < 0;
+            }
+            lunas &= polvo.get(c).size() >= 10 * tajo.giro && izquierda < -80 && derecha > 80;
+            puntos.append(c == 0 ? "" : " y ").append(polvo.get(c).size());
+        }
+        h.ok("tajo doble" + f + ": cada corte deja su media luna de polvo rojo por delante, y las dos se cruzan ("
+                + puntos + " puntos)", lunas);
+
+        List<Integer> tiempos = fase == 1 ? List.of(10, 6, 4, 6) : List.of(8, 5, 3, 5);
+        h.ok("tajo doble" + f + ": el golpe y los tiempos de antes (dos golpes al " + Math.round(TajoDoble.K * 100)
+                        + " %, a mitad de cada corte; " + dura + " ticks)",
+                e.golpes.equals(List.of(TajoDoble.K, TajoDoble.K)) && TajoDoble.RADIO == 3.8
+                        && golpesEn.equals(List.of(empieza[0] + tajo.giro / 2, empieza[1] + tajo.giro / 2))
+                        && dura == fin + 1 && tiempos.equals(List.of(tajo.aviso, tajo.giro, tajo.pausa, tajo.respiro))
+                        && e.cuantos("entity.player.attack.sweep") == 2 && e.maxHojas == 1);
     }
 
     /**

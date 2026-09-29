@@ -41,8 +41,8 @@ final class CuerpoNpc {
 
     /**
      * Las posturas que un Mannequin acepta (Paper 26.2, CraftMannequin.setPose): con cualquier
-     * otra lanza IllegalArgumentException. SPIN_ATTACK (el giro del tridente) no esta: el giro del
-     * tajo doble de Ambush se hace girando el cuerpo.
+     * otra lanza IllegalArgumentException. SPIN_ATTACK (el giro del tridente) no esta: en el tajo
+     * doble de Ambush el cuerpo se queda quieto y lo que barre es la hoja (1.8.3).
      */
     static final Set<Pose> POSTURAS = Set.of(Pose.STANDING, Pose.SNEAKING, Pose.SWIMMING, Pose.FALL_FLYING,
             Pose.SLEEPING);
