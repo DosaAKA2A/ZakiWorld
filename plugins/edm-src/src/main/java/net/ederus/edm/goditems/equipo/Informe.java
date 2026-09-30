@@ -37,6 +37,14 @@ public final class Informe {
                 + " &8· &7" + equipo.resumen());
         List<Hueco> huecos = r.huecos().isEmpty() ? vacios() : r.huecos();
         for (Hueco h : huecos) out.add(linea(c, red, h, prefijo));
+        if (r.carnada() != null) {
+            String ef = efectos(c, red, r.carnada().efectos(), prefijo);
+            out.add("  &7Carnada: &f" + r.carnada().nombre() + " &8(" + r.carnadaUsos() + " pescas) &8· "
+                    + (ef.isEmpty() ? "&7sin efectos" : ef));
+        } else {
+            var marca = Calculo.carnadaDe(Calculo.canaEnUso(Calculo.equipoDe(p)));
+            if (marca != null) out.add("  &7Carnada: &e'" + marca.getKey() + "' no está en equipo/ &8· no cuenta");
+        }
         for (Conjunto s : c.sets()) {
             Integer n = r.piezasPorSet().get(s.id());
             if (n == null || n == 0) continue;

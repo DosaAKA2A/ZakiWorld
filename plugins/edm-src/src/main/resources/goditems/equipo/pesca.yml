@@ -95,6 +95,24 @@ piezas:
       pesca.suerte-rareza: 0.05
       pesca.mordida: 0.10
 
+  # Las cañas de la tienda de PremioPescao (tipo PESCA de MMOItems, desde EDM 1.75.0).
+  # Sus encantamientos los pone MMOItems; lo que hacen en el agua va aqui.
+  # La TI no da nada extra: es la caña de entrada, solo encantamientos.
+  PESCA.CANA_TII:
+    efectos:
+      pesca.cajas: 3.0
+      pesca.suerte-rareza: 0.05
+  PESCA.CANA_TIII:
+    efectos:
+      pesca.cajas: 6.0
+      pesca.suerte-rareza: 0.10
+      pesca.mordida: 0.10
+  PESCA.CANA_TIV:
+    efectos:
+      pesca.cajas: 9.0
+      pesca.suerte-rareza: 0.15
+      pesca.mordida: 0.15
+
 sets:
   marea-celeste:
     nombre: Marea Celeste
@@ -110,3 +128,24 @@ sets:
           pesca.suerte-rareza: 0.10
           pesca.percances: 0.10
           pesca.tamano: 0.10
+
+# ---------------------------------------------------------------------------
+# Carnadas (EDM 1.75.0). Las vende PremioPescao (shop.yml > baits, con el mismo
+# id) y se ponen sobre CUALQUIER caña: clic con la carnada sobre la caña en el
+# inventario (Java), o carnada en la mano y caña en la otra (Bedrock).
+# Mientras la caña que se usa lleve carnada con pescas por gastar, sus efectos
+# suman como una pieza mas, con los mismos topes. Cada pesca en una zona de
+# PremioPescao gasta una; al llegar a 0 se borra sola de la caña.
+# Aqui solo va lo que hace; el item, el precio y las pescas, en shop.yml.
+# ---------------------------------------------------------------------------
+carnadas:
+  basica:
+    nombre: Carnada básica
+    efectos:
+      pesca.cajas: 1.5
+      pesca.suerte-rareza: 0.05
+  intermedia:
+    nombre: Carnada intermedia
+    efectos:
+      pesca.cajas: 3.0
+      pesca.suerte-rareza: 0.12

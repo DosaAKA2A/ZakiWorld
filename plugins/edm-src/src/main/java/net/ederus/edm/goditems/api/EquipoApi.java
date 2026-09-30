@@ -42,8 +42,8 @@ import net.ederus.edm.goditems.equipo.Informe;
  */
 public final class EquipoApi {
 
-    /** La version del contrato. 1 = la primera (EDM 1.72.2). */
-    public static final int VERSION = 1;
+    /** La version del contrato. 1 = la primera (EDM 1.72.2); 2 = carnadas de pesca (EDM 1.75.0). */
+    public static final int VERSION = 2;
 
     private static volatile Equipo equipo;
 
@@ -258,6 +258,39 @@ public final class EquipoApi {
         if (e == null || tipoId == null) return Map.of();
         Pieza p = e.config().piezas().get(tipoId.toUpperCase(Locale.ROOT));
         return p == null ? Map.of() : filtrar(p.efectos().claves(), prefijo);
+    }
+
+    /* =========================================================== carnadas */
+
+    /** Los ids de las carnadas declaradas (en minusculas, en el orden de los YAML). Desde VERSION 2. */
+    public static List<String> carnadas() {
+        Equipo e = equipo;
+        return e == null ? List.of() : List.copyOf(e.config().carnadas().keySet());
+    }
+
+    /** El nombre de una carnada ("Carnada basica"), o null si no esta declarada. */
+    public static String nombreCarnada(String id) {
+        Equipo e = equipo;
+        var c = e == null ? null : e.config().carnada(id);
+        return c == null ? null : c.nombre();
+    }
+
+    /** Lo que da una carnada por si sola (sin topes) en las claves con ese prefijo. */
+    public static Map<String, Double> efectosDeCarnada(String id, String prefijo) {
+        Equipo e = equipo;
+        var c = e == null ? null : e.config().carnada(id);
+        return c == null ? Map.of() : filtrar(c.efectos().claves(), prefijo);
+    }
+
+    /** La linea de lore de una clave con ese valor, como la escribe GodItems en las piezas ("" = no sale). */
+    public static String loreDeClave(String clave, double valor) {
+        Equipo e = equipo;
+        if (e == null || clave == null) return "";
+        try {
+            return net.ederus.edm.goditems.equipo.Redaccion.lineaClave(e.config(), clave.toLowerCase(Locale.ROOT), valor);
+        } catch (Throwable t) {
+            return "";
+        }
     }
 
     /** Un item nuevo de MMOItems ("TIPO.ID"), o null sin MMOItems o si no existe. */
