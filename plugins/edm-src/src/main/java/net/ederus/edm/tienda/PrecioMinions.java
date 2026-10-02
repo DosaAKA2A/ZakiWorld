@@ -2,8 +2,6 @@ package net.ederus.edm.tienda;
 
 import java.lang.reflect.InvocationHandler;
 import java.lang.reflect.Proxy;
-import java.nio.charset.StandardCharsets;
-import java.util.UUID;
 import java.util.logging.Logger;
 
 import org.bukkit.Bukkit;
@@ -12,8 +10,7 @@ import org.bukkit.inventory.ItemStack;
 import org.bukkit.plugin.Plugin;
 
 /**
- * El minion Vendedor de AxMinions vende con los precios de esta tienda
- * (EDM 1.76.0), fluctuacion incluida.
+ * El minion Vendedor de AxMinions vende con los precios de esta tienda (EDM 1.76.0).
  *
  * AxMinions deja poner un proveedor de precios propio: con `hooks.prices:
  * custom` en su config.yml no engancha ninguno y usa el que se le registre por
@@ -23,21 +20,12 @@ import org.bukkit.plugin.Plugin;
  * cobra despues. Se habla con el por reflexion (un Proxy de su interfaz) para
  * que EDM compile y arranque igual sin AxMinions.
  *
- * Lo que NO dice AxMinions al pedir el precio es de quien es el minion. Por eso
- * los minions no usan el mercado de cada jugador sino uno COMUN a todos ellos
- * (un jugador ficticio): cada pila vendida lo llena y baja el precio para todos
- * los minions, y se vacia solo con la misma recuperacion que el de la tienda.
- * Asi un minion no se salta la caida de precio que tiene un jugador en /shop.
- *
- * Reglas, las mismas que vender en /shop: solo lo que la tienda compra
- * (venta > 0) y solo items "a pelo" (Motor.esLimpio). Las Demandas del dia no
- * cuentan para los minions: su cupo es de servidor y un minion lo gastaria
- * entero antes de que llegue nadie.
+ * Decision de Dosa (2026-10-02): el minion vende al precio NORMAL de la tienda
+ * (el `venta` de precios.yml), sin fluctuacion y sin tocar el mercado de nadie.
+ * Ya cobra menos por el porcentaje de su nivel. Las Ofertas y Demandas del dia
+ * tampoco le cuentan. Solo lo que la tienda compra (venta > 0) y "a pelo".
  */
 final class PrecioMinions {
-
-    /** El "jugador" del mercado comun de los minions. */
-    static final UUID MINIONS = UUID.nameUUIDFromBytes("edm:tienda:minions".getBytes(StandardCharsets.UTF_8));
 
     private static final String API = "com.artillexstudios.axminions.api.AxMinionsAPI";
     private static final String INTEGRATIONS = "com.artillexstudios.axminions.api.integrations.Integrations";
@@ -47,7 +35,6 @@ final class PrecioMinions {
     private final TiendaPlugin modulo;
     private final Logger log;
     private volatile boolean activo = true;
-    private volatile boolean fluctuacion = true;
     private boolean enganchado;
 
     PrecioMinions(TiendaPlugin modulo, Logger log) {
@@ -55,10 +42,9 @@ final class PrecioMinions {
         this.log = log;
     }
 
-    /** config.yml > minions (activo, fluctuacion). Sin la seccion: todo encendido. */
+    /** config.yml > minions.activo. Sin la seccion: encendido. */
     void configurar(ConfigurationSection sec) {
         this.activo = sec == null || sec.getBoolean("activo", true);
-        this.fluctuacion = sec == null || sec.getBoolean("fluctuacion", true);
     }
 
     boolean enganchado() {
@@ -100,27 +86,16 @@ final class PrecioMinions {
         }
     }
 
-    /**
-     * Lo que vale una pila para un minion: el total de la tienda para esa
-     * cantidad, integrado a lo largo de la venta como en /shop, y anotado en el
-     * mercado comun. 0 = no se vende (el minion la deja en el cofre).
-     */
+    /** Lo que vale una pila para un minion: precio normal de venta x cantidad. 0 = no se vende (se queda en el cofre). */
     double precio(ItemStack pila) {
         try {
             if (!activo || pila == null || pila.getType().isAir() || pila.getAmount() <= 0) return 0;
-            Motor motor = modulo.motor();
             Catalogo catalogo = modulo.catalogo();
-            if (motor == null || catalogo == null) return 0;
+            if (catalogo == null) return 0;
             Catalogo.Articulo art = catalogo.de(pila.getType());
             if (art == null || !art.seVende() || !Motor.esLimpio(pila, pila.getType())) return 0;
             int n = pila.getAmount();
-            double total;
-            if (fluctuacion) {
-                total = motor.mercado().totalVenta(art, n, motor.compraEfectiva(art), MINIONS);
-                motor.mercado().anotarVenta(art, n, MINIONS);
-            } else {
-                total = art.venta() * n;
-            }
+            double total = art.venta() * n;
             if (!(total > 0) || Double.isInfinite(total)) return 0;
             modulo.anotarMinion(n, art.clave(), total / n, total);
             return total;
