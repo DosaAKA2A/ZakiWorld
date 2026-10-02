@@ -748,8 +748,15 @@ def carmesi_sin_musgo(datapack: Path, cuenta: Counter) -> None:
                 rid = f"{NS_RUINAS}:carmesi/roca"
                 c = ruta(rid, "configured_feature")
                 c.parent.mkdir(parents=True, exist_ok=True)
-                c.write_text(json.dumps({"type": "minecraft:forest_rock",
-                                         "config": {"state": {"Name": ROJO}}}, indent=1), encoding="utf-8")
+                # En 26.x la roca del bosque ya no es "minecraft:forest_rock" con solo
+                # "state": es un block_blob que dice sobre que puede apoyarse (asi lo
+                # escribe Bracken en su meat_rock). Con el formato viejo el registro no
+                # carga y el servidor NO arranca (paso en el dev el 2026-10-02).
+                c.write_text(json.dumps({"type": "minecraft:block_blob", "config": {
+                    "can_place_on": {"type": "matching_blocks",
+                                     "blocks": ["grass_block", "crimson_nylium", "moss_block",
+                                                "dirt", "podzol", "netherrack"]},
+                    "state": {"Name": ROJO}}}, indent=1), encoding="utf-8")
                 p = ruta(rid, "placed_feature")
                 p.parent.mkdir(parents=True, exist_ok=True)
                 p.write_text(json.dumps({"feature": rid, "placement": ROCA_VANILLA}, indent=1), encoding="utf-8")
