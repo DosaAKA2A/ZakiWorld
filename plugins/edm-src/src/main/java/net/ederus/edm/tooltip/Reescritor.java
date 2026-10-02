@@ -154,7 +154,7 @@ final class Reescritor {
         if (encantosInteresan(item)) {
             return true;
         }
-        if (!this.ajustes.estadisticas().activo() || !item.hasData(DataComponentTypes.LORE)) {
+        if (!this.ajustes.hayBloques() || !item.hasData(DataComponentTypes.LORE)) {
             return false;
         }
         TooltipDisplay display = item.getData(DataComponentTypes.TOOLTIP_DISPLAY);
@@ -211,10 +211,25 @@ final class Reescritor {
      * se deja tal cual. null si el lore no trae esa cabecera.
      */
     private static List<Component> bloqueEstadisticas(List<Component> lore, Ajustes a) {
-        Ajustes.Estadisticas e = a.estadisticas();
+        List<Component> actual = lore;
+        boolean cambio = false;
+        for (Ajustes.Estadisticas e : a.bloques()) {
+            List<Component> r = bloque(actual, e, a);
+            if (r != null) {
+                actual = r;
+                cambio = true;
+            }
+        }
+        return cambio ? actual : null;
+    }
+
+    /** Un bloque: termina en el primer renglon en blanco o en la cabecera de otro bloque. */
+    private static List<Component> bloque(List<Component> lore, Ajustes.Estadisticas e, Ajustes a) {
         if (!e.activo() || lore.isEmpty()) {
             return null;
         }
+        java.util.Set<String> cabeceras = new java.util.HashSet<>();
+        for (Ajustes.Estadisticas otro : a.bloques()) cabeceras.add(otro.cabecera());
         var plano = PlainTextComponentSerializer.plainText();
         int cab = -1;
         for (int i = 0; i < lore.size(); i++) {
@@ -235,11 +250,11 @@ final class Reescritor {
         for (; i < lore.size(); i++) {
             Component l = lore.get(i);
             String texto = plano.serialize(l);
-            if (texto.isBlank()) {
+            if (texto.isBlank() || cabeceras.contains(texto.trim())) {
                 break;
             }
             var m = e.linea().matcher(texto);
-            if (!m.matches() || m.groupCount() < 3) {
+            if (!m.matches() || m.groupCount() < 2) {
                 fuera.add(l);
                 continue;
             }
@@ -248,8 +263,10 @@ final class Reescritor {
             if (e.conservarIcono()) {
                 nueva = nueva.append(Component.text(m.group(1) + " ", a.colorNombre()));
             }
-            nueva = nueva.append(Component.text(m.group(2).trim(), a.colorNombre()))
-                    .append(Component.text(" " + m.group(3).trim(), e.colorValor()));
+            nueva = nueva.append(Component.text(m.group(2).trim(), a.colorNombre()));
+            if (m.groupCount() >= 3 && m.group(3) != null && !m.group(3).isBlank()) {
+                nueva = nueva.append(Component.text(" " + m.group(3).trim(), e.colorValor()));
+            }
             fuera.add(nueva);
         }
         fuera.addAll(lore.subList(i, lore.size()));

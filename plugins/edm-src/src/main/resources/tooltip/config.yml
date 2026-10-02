@@ -111,8 +111,9 @@ colores:
     - hasta: 100
       color: '#FF2626'   # 91-100, rojo intenso
 
-# El bloque de estadisticas de MMOItems (EDM 1.77.0), con la misma forma que los
-# encantamientos. MMOItems escribe ese bloque DENTRO del item al crearlo, asi que
+# Los bloques de MMOItems (EDM 1.77.0), con la misma forma que los encantamientos:
+# "estadisticas" (Características) y "efectos" (Efectos Activos). Cada bloque va
+# desde su cabecera hasta el primer renglon en blanco o la cabecera del siguiente. MMOItems escribe ese bloque DENTRO del item al crearlo, asi que
 # cambiar su lore-format solo afectaria a los items nuevos; aqui se cambia en el
 # paquete y se ve en TODOS a la vez, sin tocar ningun item.
 estadisticas:
@@ -127,4 +128,14 @@ estadisticas:
   conservar-icono: false
   color-valor: '#FFFFFF'
   # Un renglon en blanco encima de la cabecera, si no lo hay ya.
+  linea-en-blanco-antes: true
+
+# Los Efectos Activos de MMOItems (perm-effects): "✦ Visión Nocturna I" pasa a
+# " · Visión Nocturna I". Sin valor aparte: el patron solo tiene icono y nombre.
+efectos:
+  activo: true
+  cabecera: '─── ✦ Efectos Activos ───'
+  encabezado: '&#57D3FF▎ Efectos Activos:'
+  linea: '^\s*(\S+)\s+(.+)$'
+  conservar-icono: false
   linea-en-blanco-antes: true
