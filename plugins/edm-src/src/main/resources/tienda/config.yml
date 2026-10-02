@@ -156,3 +156,13 @@ cantidad:
 # ---------------------------------------------------------------------------
 buscador:
   activo: true
+
+# El minion Vendedor de AxMinions vende con los precios de esta tienda (EDM 1.76.0).
+# En AxMinions/config.yml hay que poner hooks.prices: custom (si no, usa el suyo).
+# Solo vende lo que la tienda compra, "a pelo", a su precio de venta; luego el minion
+# aplica el porcentaje de su nivel.
+minions:
+  activo: true
+  # true: los minions comparten un mercado propio que baja con lo que venden y se
+  # recupera con el tiempo, como el de la tienda (mercado.*). false: precio base fijo.
+  fluctuacion: true
