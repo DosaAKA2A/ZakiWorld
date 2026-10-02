@@ -6,7 +6,7 @@
 
   <groupId>net.ederus</groupId>
   <artifactId>LethalWorld</artifactId>
-  <version>2.0.2</version>
+  <version>2.0.3</version>
   <packaging>jar</packaging>
   <name>LethalWorld</name>
   <description>Lethal World: los mundos de datapack de Ederus (/lw)</description>

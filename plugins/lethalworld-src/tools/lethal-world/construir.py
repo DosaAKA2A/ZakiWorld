@@ -738,6 +738,26 @@ def carmesi_sin_musgo(datapack: Path, cuenta: Counter) -> None:
             return copia(nodo, "placed_feature")
         return nodo
 
+    def solo_en_su_bioma(pid: str) -> str:
+        """Bracken coloca casi todas sus decoraciones SIN el filtro de bioma, asi que en
+        los chunks del borde las del rojo se cuelan en el verde de al lado (verruga,
+        cuarzo, nylium). Con minecraft:biome solo se colocan donde el bioma es el rojo.
+        Las vanilla ya lo llevan; las de Bracken se copian con el filtro."""
+        f = ruta(pid, "placed_feature")
+        if pid.startswith("minecraft:") or not f.is_file():
+            return pid
+        datos = json.loads(f.read_text(encoding="utf-8"))
+        tipos = {str(x.get("type", "")).removeprefix("minecraft:") for x in datos.get("placement", [])}
+        if "biome" in tipos:
+            return pid
+        datos["placement"] = list(datos.get("placement", [])) + [{"type": "minecraft:biome"}]
+        nid = pid if pid.startswith(f"{NS_RUINAS}:") else f"{NS_RUINAS}:carmesi/{pid.split(':', 1)[1].replace('/', '_')}"
+        destino = ruta(nid, "placed_feature")
+        destino.parent.mkdir(parents=True, exist_ok=True)
+        destino.write_text(json.dumps(datos, ensure_ascii=False, indent=1), encoding="utf-8")
+        cuenta["carmesi: decoraciones atadas a su bioma"] += 1
+        return nid
+
     fbioma = ruta(f"bracken:{BIOMA_CARMESI}", "biome")
     bioma = json.loads(fbioma.read_text(encoding="utf-8"))
     pasos = []
@@ -763,7 +783,8 @@ def carmesi_sin_musgo(datapack: Path, cuenta: Counter) -> None:
                 cuenta["carmesi: rocas de musgo -> verruga"] += 1
                 nuevos.append(rid)
             else:
-                nuevos.append(copia(pid, "placed_feature") if ruta(pid, "placed_feature").is_file() else pid)
+                nid = copia(pid, "placed_feature") if ruta(pid, "placed_feature").is_file() else pid
+                nuevos.append(solo_en_su_bioma(nid))
         pasos.append(nuevos)
     bioma["features"] = pasos
     fbioma.write_text(json.dumps(bioma, ensure_ascii=False, indent=1), encoding="utf-8")
@@ -789,6 +810,65 @@ def carmesi_sin_musgo(datapack: Path, cuenta: Counter) -> None:
     quedan = [pid for paso in pasos for pid in paso if alcanza_musgo(pid, "placed_feature", vistos)]
     if quedan:
         sys.exit(f"El bioma carmesi sigue llegando a piedra musgosa por: {quedan}")
+
+
+# El bioma verde que traia piedras de mena de cuarzo (bracken:panacea/meat_rock): en su
+# lugar, manchas de musgo con su vegetacion (Dosa, 2026-10-02: "musgo con flores").
+# OJO con los ids: cada bloque, etiqueta y tipo de aqui se comprobo antes en el propio
+# Bracken (que carga en 26.2). Un id que no exista tumba el arranque, como paso con la roca.
+BIOMA_VERDE_CUARZO = "panacea/creeper_dominion"
+MANCHA_MUSGO = {
+    "type": "minecraft:vegetation_patch",
+    "config": {
+        "surface": "floor",
+        "depth": 1,
+        "vertical_range": 3,
+        "extra_bottom_block_chance": 0,
+        "extra_edge_column_chance": 0.3,
+        "vegetation_chance": 0.6,
+        "xz_radius": 2,
+        "replaceable": "#minecraft:lush_ground_replaceable",
+        "ground_state": {"type": "minecraft:simple_state_provider", "state": {"Name": "minecraft:moss_block"}},
+        "vegetation_feature": {
+            "feature": {"type": "minecraft:simple_block", "config": {"to_place": {
+                "type": "minecraft:weighted_state_provider",
+                "entries": [
+                    {"data": {"Name": "minecraft:moss_carpet"}, "weight": 10},
+                    {"data": {"Name": "minecraft:pink_petals"}, "weight": 6},
+                    {"data": {"Name": "minecraft:azalea"}, "weight": 2},
+                    {"data": {"Name": "minecraft:flowering_azalea"}, "weight": 2},
+                ]}}},
+            "placement": [],
+        },
+    },
+}
+
+
+def verde_con_musgo(datapack: Path, cuenta: Counter) -> None:
+    wg = datapack / "data"
+    fbioma = wg / "bracken" / "worldgen" / "biome" / f"{BIOMA_VERDE_CUARZO}.json"
+    bioma = json.loads(fbioma.read_text(encoding="utf-8"))
+    mid = f"{NS_RUINAS}:verde/musgo"
+    cambios = 0
+    for paso in bioma.get("features", []):
+        for i, pid in enumerate(paso):
+            if pid == "bracken:panacea/meat_rock":
+                paso[i] = mid
+                cambios += 1
+    if not cambios:
+        sys.exit(f"{BIOMA_VERDE_CUARZO} ya no trae meat_rock: revisar el paso verde_con_musgo")
+    base = wg / NS_RUINAS / "worldgen"
+    for clase, datos in (("configured_feature", MANCHA_MUSGO),
+                         ("placed_feature", {"feature": mid, "placement": [
+                             {"type": "minecraft:count", "count": 1},
+                             {"type": "minecraft:in_square"},
+                             {"type": "minecraft:heightmap", "heightmap": "WORLD_SURFACE_WG"},
+                             {"type": "minecraft:biome"}]})):
+        f = base / clase / "verde" / "musgo.json"
+        f.parent.mkdir(parents=True, exist_ok=True)
+        f.write_text(json.dumps(datos, ensure_ascii=False, indent=1), encoding="utf-8")
+    fbioma.write_text(json.dumps(bioma, ensure_ascii=False, indent=1), encoding="utf-8")
+    cuenta["verde: cuarzo -> manchas de musgo"] += cambios
 
 
 # Piezas que Bracken v129 ya referencia sin incluirlas: Minecraft las salta sin romper nada.
@@ -878,6 +958,7 @@ def main() -> None:
             tocadas += 1
 
     carmesi_sin_musgo(datapack, cuenta)
+    verde_con_musgo(datapack, cuenta)
     construir_ruinas(datapack, cuenta)
 
     # Indices: el plugin no puede listar carpetas dentro de su propio jar, asi que sabe que copiar por aqui.
