@@ -50,7 +50,7 @@ import net.ederus.edm.comun.Bitacora;
 public final class LethalWorldPlugin extends JavaPlugin {
 
     /** La version, en el mismo sitio que en EDM. Se sube a la vez que pom.xml y plugin.yml. */
-    public static final String VERSION = "2.0.0";
+    public static final String VERSION = "2.1.0";
 
     /** Namespace de las dimensiones que crea /lw. El mundo sale como lethal_world:<nombre>. */
     public static final String NAMESPACE = "lethal_world";
@@ -90,6 +90,9 @@ public final class LethalWorldPlugin extends JavaPlugin {
         for (String nombre : creados.keySet()) if (mundo(nombre) != null) cargados++;
         getLogger().info("[Lethal World] " + generadores.size() + " generadores, " + creados.size()
                 + " mundo(s) creados, " + cargados + " cargados.");
+        // El bioma elegido en el centro de los mundos que lo piden (mundos.<nombre>.centro).
+        // Antes de que nadie genere un chunk: los mundos de datapack ya estan cargados aqui.
+        new CentroForzado(this).aplicarATodos();
         if (cambio) {
             getLogger().warning("[Lethal World] Datapack instalado o actualizado. Hace falta reiniciar"
                     + " para que los mundos nuevos existan.");
