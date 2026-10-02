@@ -34,7 +34,27 @@ record Ajustes(
         TextColor colorMaldicion,
         List<String> paquetes,
         List<Tramo> tramos,
-        List<Pattern> absorber) {
+        List<Pattern> absorber,
+        Estadisticas estadisticas) {
+
+    /**
+     * El bloque de estadisticas de MMOItems (EDM 1.77.0), redibujado con la misma
+     * forma que los encantamientos. MMOItems lo escribe DENTRO del item al crearlo,
+     * asi que cambiar su lore-format solo afectaria a los items nuevos; aqui se
+     * cambia en el paquete y se ve en todos a la vez, viejos y nuevos.
+     *
+     * @param cabecera  el texto plano (sin colores) de la cabecera que pone MMOItems
+     * @param linea     una linea del bloque: grupo 1 el icono, 2 el nombre, 3 el valor
+     */
+    record Estadisticas(boolean activo, String cabecera, String encabezado, Pattern linea,
+                        boolean conservarIcono, TextColor colorValor, boolean lineaEnBlancoAntes) {
+
+        static final Estadisticas APAGADO = new Estadisticas(false, "", "", null, false, null, false);
+
+        Component encabezadoComponente() {
+            return Estilo.legado(encabezado);
+        }
+    }
 
     /** "hasta este nivel, este color". El ultimo vale para todo lo que se pase. */
     record Tramo(int hasta, TextColor color) { }
@@ -74,7 +94,29 @@ record Ajustes(
                 color(c.getString("colores.maldicion"), NamedTextColor.RED),
                 paquetes(c),
                 tramos(c),
-                patrones(c));
+                patrones(c),
+                estadisticas(c));
+    }
+
+    private static Estadisticas estadisticas(FileConfiguration c) {
+        /* Un config.yml de antes de 1.77.0 no trae la seccion (saveDefaultConfig no
+         * la añade a un fichero que ya existe): entonces valen los de fabrica. */
+        var sec = c.getConfigurationSection("estadisticas");
+        if (sec == null) sec = new org.bukkit.configuration.MemoryConfiguration();
+        if (!sec.getBoolean("activo", true)) return Estadisticas.APAGADO;
+        Pattern linea;
+        try {
+            linea = Pattern.compile(sec.getString("linea", "^\\s*(\\S+)\\s+(.+?):\\s+(.+)$"));
+        } catch (PatternSyntaxException e) {
+            return Estadisticas.APAGADO;
+        }
+        String cabecera = sec.getString("cabecera", "─── ⚔ Características ───").trim();
+        if (cabecera.isEmpty()) return Estadisticas.APAGADO;
+        return new Estadisticas(true, cabecera,
+                sec.getString("encabezado", "&#FFA500▎ Características:"), linea,
+                sec.getBoolean("conservar-icono", false),
+                color(sec.getString("color-valor"), TextColor.fromHexString("#FFFFFF")),
+                sec.getBoolean("linea-en-blanco-antes", true));
     }
 
     /*

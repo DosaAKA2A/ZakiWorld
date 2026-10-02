@@ -110,3 +110,21 @@ colores:
       color: '#FF4A2B'   # 81-90, rojo
     - hasta: 100
       color: '#FF2626'   # 91-100, rojo intenso
+
+# El bloque de estadisticas de MMOItems (EDM 1.77.0), con la misma forma que los
+# encantamientos. MMOItems escribe ese bloque DENTRO del item al crearlo, asi que
+# cambiar su lore-format solo afectaria a los items nuevos; aqui se cambia en el
+# paquete y se ve en TODOS a la vez, sin tocar ningun item.
+estadisticas:
+  activo: true
+  # La cabecera que pone MMOItems (language/lore-format.yml), en texto plano.
+  cabecera: '─── ⚔ Características ───'
+  # Como queda.
+  encabezado: '&#FFA500▎ Características:'
+  # Cada linea del bloque, hasta el primer renglon en blanco: icono, nombre y valor.
+  # Lo que no encaje se deja como estaba.
+  linea: '^\s*(\S+)\s+(.+?):\s+(.+)$'
+  conservar-icono: false
+  color-valor: '#FFFFFF'
+  # Un renglon en blanco encima de la cabecera, si no lo hay ya.
+  linea-en-blanco-antes: true

@@ -59,6 +59,11 @@ final class Reescritor {
         }
     };
 
+    /** En la cache: "este item se miro y no habia nada que cambiar". Desde 1.77.0
+     * se miran tambien items sin encantamientos (el bloque de MMOItems), y sin
+     * esto un item con lore cualquiera se volveria a leer en cada paquete. */
+    private static final ItemStack NADA = ItemStack.empty();
+
     private Ajustes ajustes;
 
     Reescritor(Ajustes ajustes) {
@@ -91,6 +96,9 @@ final class Reescritor {
         }
         synchronized (this.cache) {
             ItemStack hecho = this.cache.get(original);
+            if (hecho == NADA) {
+                return null;
+            }
             if (hecho != null) {
                 return hecho.clone();
             }
@@ -109,13 +117,33 @@ final class Reescritor {
          */
         byte[] bytes = original.serializeAsBytes();
         ItemStack copia = construir(ItemStack.deserializeBytes(bytes));
-        if (copia == null) {
+        synchronized (this.cache) {
+            this.cache.put(ItemStack.deserializeBytes(bytes), copia == null ? NADA : copia);
+        }
+        return copia == null ? null : copia.clone();
+    }
+
+    /**
+     * El eco del creativo, al reves: si un item que llega del cliente es uno de
+     * los que dibujamos, devuelve el original (con la cantidad que trae). Es lo
+     * que impide que el bloque de estadisticas redibujado acabe guardado dentro
+     * del item cuando un admin lo toca en creativo. null si no es nuestro.
+     */
+    ItemStack original(ItemStack dibujado) {
+        if (dibujado == null || dibujado.isEmpty() || !dibujado.hasData(DataComponentTypes.LORE)) {
             return null;
         }
         synchronized (this.cache) {
-            this.cache.put(ItemStack.deserializeBytes(bytes), copia);
+            for (Map.Entry<ItemStack, ItemStack> e : this.cache.entrySet()) {
+                ItemStack hecho = e.getValue();
+                if (hecho != NADA && hecho.isSimilar(dibujado)) {
+                    ItemStack o = e.getKey().clone();
+                    o.setAmount(dibujado.getAmount());
+                    return o;
+                }
+            }
         }
-        return copia.clone();
+        return null;
     }
 
     /*
@@ -123,6 +151,17 @@ final class Reescritor {
      * unico que puede hacer es mirar componentes; nada de construir texto.
      */
     private boolean interesa(ItemStack item) {
+        if (encantosInteresan(item)) {
+            return true;
+        }
+        if (!this.ajustes.estadisticas().activo() || !item.hasData(DataComponentTypes.LORE)) {
+            return false;
+        }
+        TooltipDisplay display = item.getData(DataComponentTypes.TOOLTIP_DISPLAY);
+        return display == null || !display.hideTooltip();
+    }
+
+    private boolean encantosInteresan(ItemStack item) {
         if (!item.hasData(DataComponentTypes.ENCHANTMENTS)
                 && !item.hasData(DataComponentTypes.STORED_ENCHANTMENTS)) {
             return false;
@@ -142,12 +181,87 @@ final class Reescritor {
         return !niveles(item).isEmpty();
     }
 
+    /**
+     * La copia dibujada: el bloque de encantamientos (si toca) y despues el de
+     * estadisticas de MMOItems (si lo trae). null si no habia nada que cambiar.
+     */
     private ItemStack construir(ItemStack base) {
+        Ajustes a = this.ajustes;
+        List<Component> conEncantos = encantosInteresan(base) ? bloqueEncantos(base, a) : null;
+        ItemLore loreViejo = base.getData(DataComponentTypes.LORE);
+        List<Component> sobre = conEncantos != null ? conEncantos
+                : (loreViejo == null ? List.of() : loreViejo.lines());
+        List<Component> conStats = bloqueEstadisticas(sobre, a);
+        if (conEncantos == null && conStats == null) {
+            return null;
+        }
+        ItemStack copia = base.clone();
+        copia.setData(DataComponentTypes.LORE, ItemLore.lore(conStats != null ? conStats : conEncantos));
+        if (conEncantos != null) {
+            copia.setData(DataComponentTypes.TOOLTIP_DISPLAY, ocultarEncantamientos(base));
+        }
+        return copia;
+    }
+
+    /**
+     * El bloque de estadisticas de MMOItems con la forma de los encantamientos:
+     * la cabecera "─── ⚔ Características ───" pasa a "▎ Características:" y cada
+     * linea "icono Nombre: valor" a " · Nombre valor". Solo se toca desde la
+     * cabecera hasta el primer renglon en blanco; lo que no encaja con el patron
+     * se deja tal cual. null si el lore no trae esa cabecera.
+     */
+    private static List<Component> bloqueEstadisticas(List<Component> lore, Ajustes a) {
+        Ajustes.Estadisticas e = a.estadisticas();
+        if (!e.activo() || lore.isEmpty()) {
+            return null;
+        }
+        var plano = PlainTextComponentSerializer.plainText();
+        int cab = -1;
+        for (int i = 0; i < lore.size(); i++) {
+            if (plano.serialize(lore.get(i)).trim().equals(e.cabecera())) {
+                cab = i;
+                break;
+            }
+        }
+        if (cab < 0) {
+            return null;
+        }
+        List<Component> fuera = new ArrayList<>(lore.subList(0, cab));
+        if (e.lineaEnBlancoAntes() && cab > 0 && !plano.serialize(lore.get(cab - 1)).isBlank()) {
+            fuera.add(Component.empty().decoration(TextDecoration.ITALIC, false));
+        }
+        fuera.add(e.encabezadoComponente().decoration(TextDecoration.ITALIC, false));
+        int i = cab + 1;
+        for (; i < lore.size(); i++) {
+            Component l = lore.get(i);
+            String texto = plano.serialize(l);
+            if (texto.isBlank()) {
+                break;
+            }
+            var m = e.linea().matcher(texto);
+            if (!m.matches() || m.groupCount() < 3) {
+                fuera.add(l);
+                continue;
+            }
+            Component nueva = Component.empty().decoration(TextDecoration.ITALIC, false)
+                    .append(Component.text(a.vineta(), a.colorVineta()));
+            if (e.conservarIcono()) {
+                nueva = nueva.append(Component.text(m.group(1) + " ", a.colorNombre()));
+            }
+            nueva = nueva.append(Component.text(m.group(2).trim(), a.colorNombre()))
+                    .append(Component.text(" " + m.group(3).trim(), e.colorValor()));
+            fuera.add(nueva);
+        }
+        fuera.addAll(lore.subList(i, lore.size()));
+        return fuera;
+    }
+
+    /** El lore con el bloque de encantamientos delante, o null si no toca (solo-los-que-se-rompen). */
+    private List<Component> bloqueEncantos(ItemStack base, Ajustes a) {
         List<Map.Entry<Enchantment, Integer>> encantos = niveles(base);
         if (encantos.isEmpty()) {
             return null;
         }
-        Ajustes a = this.ajustes;
 
         /* Solo los que se rompen, si asi se ha pedido. Sirve para estrenar esto
          * sin cambiarle el aspecto a todo el servidor de golpe. */
@@ -188,11 +302,7 @@ final class Reescritor {
             lineas.add(Component.empty().decoration(TextDecoration.ITALIC, false));
         }
         lineas.addAll(resto);
-
-        ItemStack copia = base.clone();
-        copia.setData(DataComponentTypes.LORE, ItemLore.lore(lineas));
-        copia.setData(DataComponentTypes.TOOLTIP_DISPLAY, ocultarEncantamientos(base));
-        return copia;
+        return lineas;
     }
 
     /*
