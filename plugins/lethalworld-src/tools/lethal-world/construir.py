@@ -476,8 +476,8 @@ REPARTO_RUINAS: dict[str, tuple[int, int, int, int]] = {
     "conure_conclave": (2, 40, 45, 15),
     # La arenisca (paletas 3 y 4) no casa con el mapa: la "roja" es arenisca palida
     # con toques rojos y sobre el suelo carmesi se ve verdosa. Fuera las dos.
-    "quicksand_springs": (1, 70, 25, 5),
-    "crimson_organism": (2, 50, 40, 10),
+    # 2026-10-02 (Dosa): las ruinas solo en biomas verdes. Fuera quicksand_springs
+    # (arena movediza) y crimson_organism (el rojo).
     "sweltering_swamp": (5, 10, 50, 40),
     "wildflower_bog": (5, 10, 50, 40),
 }
@@ -651,7 +651,137 @@ def construir_ruinas(datapack: Path, cuenta: Counter) -> None:
 FUERA = {
     # La piramide del creeper cargado: a Dosa no le gusta (2026-09-18).
     "panacea_creeper_pyramid",
+    # El organo del bioma rojo (ojos de terracota, columnas de hueso y un husk
+    # gigante escondido): fuera entero (Dosa, 2026-10-02).
+    "panacea_organ",
 }
+
+
+# El bioma rojo de Panacea sin musgo (Dosa, 2026-10-02): las rocas de piedra con
+# musgo (minecraft:forest_rock) y la piedra musgosa de sus decoraciones sueltas
+# pasan a bloque de verruga del Nether, que casa con un "organismo". Las
+# decoraciones de Bracken se comparten con biomas verdes, asi que no se tocan:
+# se hace una COPIA roja solo para este bioma y el bioma apunta a la copia.
+BIOMA_CARMESI = "panacea/crimson_organism"
+MUSGO = "minecraft:mossy_cobblestone"
+ROJO = "minecraft:nether_wart_block"
+# La roca vanilla (minecraft:forest_rock), tal cual la coloca el juego.
+ROCA_VANILLA = [
+    {"type": "minecraft:count", "count": 2},
+    {"type": "minecraft:in_square"},
+    {"type": "minecraft:heightmap", "heightmap": "MOTION_BLOCKING"},
+    {"type": "minecraft:biome"},
+]
+
+
+def carmesi_sin_musgo(datapack: Path, cuenta: Counter) -> None:
+    """Copia roja de todo lo que pone piedra musgosa en el bioma carmesi."""
+    wg = datapack / "data"
+
+    def ruta(ident: str, clase: str) -> Path:
+        ns, nombre = ident.split(":", 1)
+        return wg / ns / "worldgen" / clase / f"{nombre}.json"
+
+    hechos: dict[tuple[str, str], str] = {}
+
+    def lleva_musgo(nodo) -> bool:
+        return MUSGO in json.dumps(nodo)
+
+    def copia(ident: str, clase: str) -> str:
+        """El id de la copia roja de un placed/configured feature (o el mismo si no lleva musgo)."""
+        if (ident, clase) in hechos:
+            return hechos[(ident, clase)]
+        f = ruta(ident, clase)
+        if not f.is_file():
+            hechos[(ident, clase)] = ident
+            return ident
+        datos = json.loads(f.read_text(encoding="utf-8"))
+        if clase == "placed_feature" and isinstance(datos.get("feature"), str):
+            # En un placed_feature, "feature" es SIEMPRE un configured (Bracken usa el
+            # mismo nombre para los dos, asi que no se puede adivinar por el fichero).
+            nuevo = dict(datos)
+            nuevo["feature"] = copia(datos["feature"], "configured_feature")
+            nuevo["placement"] = rehacer(datos.get("placement", []))
+        else:
+            nuevo = rehacer(datos)
+        if nuevo == datos:
+            hechos[(ident, clase)] = ident
+            return ident
+        nid = f"{NS_RUINAS}:carmesi/{ident.split(':', 1)[1].replace('/', '_')}"
+        destino = ruta(nid, clase)
+        destino.parent.mkdir(parents=True, exist_ok=True)
+        destino.write_text(json.dumps(nuevo, ensure_ascii=False, indent=1), encoding="utf-8")
+        cuenta[f"carmesi: copias rojas ({clase})"] += 1
+        hechos[(ident, clase)] = nid
+        return nid
+
+    def rehacer(nodo):
+        """Cambia el musgo por verruga dentro del nodo; las referencias por id a otros
+        features con musgo pasan a su copia roja."""
+        if isinstance(nodo, dict):
+            out = {}
+            for k, v in nodo.items():
+                if k == "Name" and v == MUSGO:
+                    out[k] = ROJO
+                    cuenta["carmesi: musgo -> verruga"] += 1
+                elif k == "feature" and isinstance(v, str) and ":" in v:
+                    # Dentro de un placed_feature, "feature" es un configured; dentro de un
+                    # selector, un placed. Se prueba primero como placed.
+                    clase = "placed_feature" if ruta(v, "placed_feature").is_file() else "configured_feature"
+                    out[k] = copia(v, clase)
+                else:
+                    out[k] = rehacer(v)
+            return out
+        if isinstance(nodo, list):
+            return [rehacer(x) for x in nodo]
+        if isinstance(nodo, str) and nodo.startswith(("bracken:", "minecraft:")) and ruta(nodo, "placed_feature").is_file():
+            return copia(nodo, "placed_feature")
+        return nodo
+
+    fbioma = ruta(f"bracken:{BIOMA_CARMESI}", "biome")
+    bioma = json.loads(fbioma.read_text(encoding="utf-8"))
+    pasos = []
+    for paso in bioma.get("features", []):
+        nuevos = []
+        for pid in paso:
+            if pid == "minecraft:forest_rock":
+                rid = f"{NS_RUINAS}:carmesi/roca"
+                c = ruta(rid, "configured_feature")
+                c.parent.mkdir(parents=True, exist_ok=True)
+                c.write_text(json.dumps({"type": "minecraft:forest_rock",
+                                         "config": {"state": {"Name": ROJO}}}, indent=1), encoding="utf-8")
+                p = ruta(rid, "placed_feature")
+                p.parent.mkdir(parents=True, exist_ok=True)
+                p.write_text(json.dumps({"feature": rid, "placement": ROCA_VANILLA}, indent=1), encoding="utf-8")
+                cuenta["carmesi: rocas de musgo -> verruga"] += 1
+                nuevos.append(rid)
+            else:
+                nuevos.append(copia(pid, "placed_feature") if ruta(pid, "placed_feature").is_file() else pid)
+        pasos.append(nuevos)
+    bioma["features"] = pasos
+    fbioma.write_text(json.dumps(bioma, ensure_ascii=False, indent=1), encoding="utf-8")
+
+    # Comprobacion: desde el bioma no se llega a ningun musgo.
+    def alcanza_musgo(ident: str, clase: str, vistos: set) -> bool:
+        if (ident, clase) in vistos:
+            return False
+        vistos.add((ident, clase))
+        f = ruta(ident, clase)
+        if not f.is_file():
+            return False
+        texto = f.read_text(encoding="utf-8")
+        if MUSGO in texto:
+            return True
+        for ref in re.findall(r'"((?:bracken|lethal_world|minecraft):[a-z0-9_/]+)"', texto):
+            for cl in ("placed_feature", "configured_feature"):
+                if alcanza_musgo(ref, cl, vistos):
+                    return True
+        return False
+
+    vistos: set = set()
+    quedan = [pid for paso in pasos for pid in paso if alcanza_musgo(pid, "placed_feature", vistos)]
+    if quedan:
+        sys.exit(f"El bioma carmesi sigue llegando a piedra musgosa por: {quedan}")
 
 
 # Piezas que Bracken v129 ya referencia sin incluirlas: Minecraft las salta sin romper nada.
@@ -740,6 +870,7 @@ def main() -> None:
         if limpiar_estructura(f, textos, cuenta):
             tocadas += 1
 
+    carmesi_sin_musgo(datapack, cuenta)
     construir_ruinas(datapack, cuenta)
 
     # Indices: el plugin no puede listar carpetas dentro de su propio jar, asi que sabe que copiar por aqui.
