@@ -20,6 +20,7 @@ import org.bukkit.potion.PotionEffectType;
 import net.ederus.edm.goditems.Cargador;
 import net.ederus.edm.goditems.Paso;
 import net.ederus.edm.goditems.equipo.Definicion.Atributo;
+import net.ederus.edm.goditems.equipo.Definicion.Carnada;
 import net.ederus.edm.goditems.equipo.Definicion.Clave;
 import net.ederus.edm.goditems.equipo.Definicion.Config;
 import net.ederus.edm.goditems.equipo.Definicion.Conjunto;
@@ -89,6 +90,7 @@ public final class LectorEquipo {
         Map<String, String> grupos = new LinkedHashMap<>();
         Map<String, Pieza> piezas = new LinkedHashMap<>();
         Map<String, Conjunto> sets = new LinkedHashMap<>();
+        Map<String, Carnada> carnadas = new LinkedHashMap<>();
 
         /* Primero las claves y los grupos de TODOS los ficheros: una pieza de
          * pesca.yml puede usar una clave que se declara en otro fichero. */
@@ -140,9 +142,26 @@ public final class LectorEquipo {
                     sets.put(c.id(), c);
                 }
             }
+            ConfigurationSection cs = y.getConfigurationSection("carnadas");
+            if (cs != null) {
+                for (String k : cs.getKeys(false)) {
+                    String id = k.trim().toLowerCase(Locale.ROOT);
+                    ConfigurationSection s = cs.getConfigurationSection(k);
+                    if (s == null) {
+                        aviso(f + " > carnadas > " + k + ": no tiene nada debajo");
+                        continue;
+                    }
+                    if (carnadas.containsKey(id)) aviso(f + " > carnadas > " + k + ": ya la definia "
+                            + carnadas.get(id).fichero() + "; manda esta");
+                    Efectos ef = efectos(f + " > carnadas > " + k, s, claves);
+                    if (ef.vacio()) aviso(f + " > carnadas > " + k + ": no tiene efectos, no da nada");
+                    carnadas.put(id, new Carnada(id, s.getString("nombre", k), ef, f));
+                }
+            }
         }
         return new Config(Collections.unmodifiableMap(claves), Collections.unmodifiableMap(grupos),
-                Collections.unmodifiableMap(piezas), List.copyOf(sets.values()), List.copyOf(this.avisos));
+                Collections.unmodifiableMap(piezas), List.copyOf(sets.values()),
+                Collections.unmodifiableMap(carnadas), List.copyOf(this.avisos));
     }
 
     public List<String> avisos() {

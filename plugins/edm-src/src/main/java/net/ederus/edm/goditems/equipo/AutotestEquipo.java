@@ -117,6 +117,12 @@ public final class AutotestEquipo {
                   3:
                     efectos:
                       prueba.c: 2
+            carnadas:
+              cebo:
+                nombre: Cebo
+                efectos:
+                  prueba.c: 3
+                  prueba.a: 0.05
             """;
 
     public AutotestEquipo correr() {
@@ -186,6 +192,26 @@ public final class AutotestEquipo {
         ok("una cabeza (bloque) no es armadura", !Calculo.esArmadura(new ItemStack(Material.PLAYER_HEAD)));
         ok("sin nada puesto no suma nada", cuenta(c, Map.of()).topado().isEmpty());
 
+        /* Carnadas (EDM 1.75.0): en la caña que se usa, sea de MMOItems o no. */
+        igual("se lee la carnada", "Cebo", c.carnada("CEBO") == null ? null : c.carnada("CEBO").nombre());
+        ItemStack cana = conCarnada(new ItemStack(Material.FISHING_ROD), "cebo", 7);
+        Resultado cebo = cuenta(c, Map.of(EquipmentSlot.HAND, cana));
+        cerca("la carnada de una caña vanilla suma", 3, cebo.de("prueba.c"));
+        igual("y dice cuántas pescas le quedan", 7, cebo.carnadaUsos());
+        Resultado conSet = cuenta(c, Map.of(EquipmentSlot.HEAD, yelmo, EquipmentSlot.CHEST, coraza,
+                EquipmentSlot.OFF_HAND, conCarnada(new ItemStack(Material.FISHING_ROD), "cebo", 1)));
+        cerca("en la otra mano cuenta y se suma a las piezas (1,5 + 3)", 4.5, conSet.de("prueba.c"));
+        cerca("y respeta el tope (0,20 + 0,05 < 0,30)", 0.25, conSet.de("prueba.a"));
+        ok("la firma cambia con la carnada", !conSet.firma().equals(cuenta(c, Map.of(EquipmentSlot.HEAD, yelmo,
+                EquipmentSlot.CHEST, coraza)).firma()));
+        ok("sin pescas no cuenta", cuenta(c, Map.of(EquipmentSlot.HAND,
+                conCarnada(new ItemStack(Material.FISHING_ROD), "cebo", 0))).carnada() == null);
+        ok("una carnada que no está declarada no cuenta", cuenta(c, Map.of(EquipmentSlot.HAND,
+                conCarnada(new ItemStack(Material.FISHING_ROD), "otra", 5))).topado().isEmpty());
+        ok("solo cuenta la caña que se usa (la de la mano principal)", cuenta(c, Map.of(
+                EquipmentSlot.HAND, new ItemStack(Material.FISHING_ROD),
+                EquipmentSlot.OFF_HAND, conCarnada(new ItemStack(Material.FISHING_ROD), "cebo", 5))).carnada() == null);
+
         List<String> lore = Redaccion.DE_SERIE.lore(c, "PRUEBA.YELMO", null, s -> 0);
         igual("lore generado del yelmo", List.of("", "&3Prueba", "&7· &f+20% &7cosa A", "&7· &f-10% &7peligro",
                 "", "<#5FB8FF>Set Prueba (2/3)", "&7· &f-25% &7peligro",
@@ -198,6 +224,14 @@ public final class AutotestEquipo {
 
     private static Resultado cuenta(Config c, Map<EquipmentSlot, ItemStack> eq) {
         return Calculo.calcular(c, eq, Puente::enlacePorPdc, it -> null);
+    }
+
+    private static ItemStack conCarnada(ItemStack cana, String id, int usos) {
+        cana.editMeta(meta -> {
+            meta.getPersistentDataContainer().set(Calculo.CARNADA, PersistentDataType.STRING, id);
+            meta.getPersistentDataContainer().set(Calculo.CARNADA_USOS, PersistentDataType.INTEGER, usos);
+        });
+        return cana;
     }
 
     private static ItemStack marcado(Material m, String tipo, String id) {

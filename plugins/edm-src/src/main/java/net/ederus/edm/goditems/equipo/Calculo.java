@@ -12,6 +12,9 @@ import java.util.TreeSet;
 import java.util.function.Function;
 
 import org.bukkit.Material;
+import org.bukkit.NamespacedKey;
+import org.bukkit.persistence.PersistentDataContainer;
+import org.bukkit.persistence.PersistentDataType;
 import org.bukkit.attribute.AttributeModifier;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.EntityEquipment;
@@ -20,6 +23,7 @@ import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
 
 import net.ederus.edm.goditems.equipo.Definicion.Atributo;
+import net.ederus.edm.goditems.equipo.Definicion.Carnada;
 import net.ederus.edm.goditems.equipo.Definicion.Clave;
 import net.ederus.edm.goditems.equipo.Definicion.Config;
 import net.ederus.edm.goditems.equipo.Definicion.Conjunto;
@@ -63,15 +67,17 @@ public final class Calculo {
      *
      * @param piezasPorSet id del set -> cuantas de sus piezas cuentan (solo los que tienen alguna)
      * @param activos      id del set -> escalones alcanzados
+     * @param carnada      la carnada que cuenta (la de la caña que se usa), o null
+     * @param carnadaUsos  las pescas que le quedan a esa carnada (0 sin carnada)
      * @param firma        cambia si y solo si cambia lo que cuenta: sirve para saber si hay que reaplicar
      */
     public record Resultado(List<Hueco> huecos, Set<String> contadas, Map<String, Integer> piezasPorSet,
                             Map<String, List<Escalon>> activos, Map<String, Double> bruto,
                             Map<String, Double> topado, List<Pocion> pociones, List<AtributoTotal> atributos,
-                            String firma) {
+                            Carnada carnada, int carnadaUsos, String firma) {
 
         public static final Resultado VACIO = new Resultado(List.of(), Set.of(), Map.of(), Map.of(), Map.of(),
-                Map.of(), List.of(), List.of(), "");
+                Map.of(), List.of(), List.of(), null, 0, "");
 
         public double de(String clave) {
             Double v = this.topado.get(clave);
@@ -175,6 +181,20 @@ public final class Calculo {
             }
             if (!alcanzados.isEmpty()) activos.put(s.id(), List.copyOf(alcanzados));
         }
+        /* La carnada de la caña que se usa: suma como una pieza mas, sea la caña
+         * de MMOItems o no. Los usos no entran en la firma (cambian en cada
+         * pesca y no cambian lo que se aplica), el id si. */
+        Carnada carnada = null;
+        int usos = 0;
+        Map.Entry<String, Integer> marca = carnadaDe(canaEnUso(equipo));
+        if (marca != null) {
+            carnada = c.carnada(marca.getKey());
+            if (carnada != null) {
+                usos = marca.getValue();
+                sumar(carnada.efectos(), bruto, pociones, atributos);
+                firma.add("~carnada:" + carnada.id());
+            }
+        }
         Map<String, Double> topado = new LinkedHashMap<>();
         for (Map.Entry<String, Double> e : bruto.entrySet()) {
             Clave k = c.claves().get(e.getKey());
@@ -185,7 +205,37 @@ public final class Calculo {
         return new Resultado(List.copyOf(huecos), contadas, Collections.unmodifiableMap(porSet),
                 Collections.unmodifiableMap(activos), Collections.unmodifiableMap(bruto),
                 Collections.unmodifiableMap(topado), List.copyOf(ps), List.copyOf(atributos.values()),
-                String.join(",", firma));
+                carnada, carnada == null ? 0 : usos, String.join(",", firma));
+    }
+
+    /* ------------------------------------------------------------ carnadas */
+
+    /**
+     * Las marcas que PremioPescao deja en una caña con carnada. Namespace fijo
+     * ("pescao", no el del plugin) para que se lean igual desde aqui.
+     */
+    public static final NamespacedKey CARNADA = new NamespacedKey("pescao", "carnada");
+    public static final NamespacedKey CARNADA_USOS = new NamespacedKey("pescao", "carnada_usos");
+
+    /**
+     * La caña que se usa para pescar: la de la mano principal y, si ahi no hay
+     * caña, la de la otra mano (es lo mismo que decide el juego al lanzar).
+     */
+    public static ItemStack canaEnUso(Map<EquipmentSlot, ItemStack> equipo) {
+        ItemStack main = equipo.get(EquipmentSlot.HAND);
+        if (main != null && main.getType() == Material.FISHING_ROD) return main;
+        ItemStack off = equipo.get(EquipmentSlot.OFF_HAND);
+        return off != null && off.getType() == Material.FISHING_ROD ? off : null;
+    }
+
+    /** El id de carnada de una caña y sus usos, o null si no lleva (o no le quedan). */
+    public static Map.Entry<String, Integer> carnadaDe(ItemStack cana) {
+        if (cana == null || !cana.hasItemMeta()) return null;
+        PersistentDataContainer pdc = cana.getItemMeta().getPersistentDataContainer();
+        String id = pdc.get(CARNADA, PersistentDataType.STRING);
+        Integer usos = pdc.get(CARNADA_USOS, PersistentDataType.INTEGER);
+        if (id == null || id.isBlank() || usos == null || usos <= 0) return null;
+        return Map.entry(id.toLowerCase(java.util.Locale.ROOT), usos);
     }
 
     private static void sumar(Efectos ef, Map<String, Double> bruto,

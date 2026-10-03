@@ -34,7 +34,33 @@ record Ajustes(
         TextColor colorMaldicion,
         List<String> paquetes,
         List<Tramo> tramos,
-        List<Pattern> absorber) {
+        List<Pattern> absorber,
+        List<Estadisticas> bloques) {
+
+    /** True si hay algun bloque de MMOItems que redibujar. */
+    boolean hayBloques() {
+        return !this.bloques.isEmpty();
+    }
+
+    /**
+     * El bloque de estadisticas de MMOItems (EDM 1.77.0), redibujado con la misma
+     * forma que los encantamientos. MMOItems lo escribe DENTRO del item al crearlo,
+     * asi que cambiar su lore-format solo afectaria a los items nuevos; aqui se
+     * cambia en el paquete y se ve en todos a la vez, viejos y nuevos.
+     *
+     * @param cabecera  el texto plano (sin colores) de la cabecera que pone MMOItems
+     * @param linea     una linea del bloque: grupo 1 el icono, 2 el nombre y, si lo
+     *                  hay, 3 el valor (los Efectos Activos no llevan valor aparte)
+     */
+    record Estadisticas(boolean activo, String cabecera, String encabezado, Pattern linea,
+                        boolean conservarIcono, TextColor colorValor, boolean lineaEnBlancoAntes) {
+
+        static final Estadisticas APAGADO = new Estadisticas(false, "", "", null, false, null, false);
+
+        Component encabezadoComponente() {
+            return Estilo.legado(encabezado);
+        }
+    }
 
     /** "hasta este nivel, este color". El ultimo vale para todo lo que se pase. */
     record Tramo(int hasta, TextColor color) { }
@@ -74,7 +100,46 @@ record Ajustes(
                 color(c.getString("colores.maldicion"), NamedTextColor.RED),
                 paquetes(c),
                 tramos(c),
-                patrones(c));
+                patrones(c),
+                bloques(c));
+    }
+
+    /**
+     * Los bloques de MMOItems que se redibujan: `estadisticas` (Características)
+     * y `efectos` (Efectos Activos). Un config.yml de antes no trae las secciones
+     * (saveDefaultConfig no las añade a un fichero que ya existe): entonces valen
+     * los de fabrica, encendidos.
+     */
+    private static List<Estadisticas> bloques(FileConfiguration c) {
+        List<Estadisticas> out = new ArrayList<>();
+        Estadisticas e = bloque(c.getConfigurationSection("estadisticas"),
+                "─── ⚔ Características ───", "&#FFA500▎ Características:",
+                "^\\s*(\\S+)\\s+(.+?):\\s+(.+)$");
+        if (e.activo()) out.add(e);
+        Estadisticas f = bloque(c.getConfigurationSection("efectos"),
+                "─── ✦ Efectos Activos ───", "&#57D3FF▎ Efectos Activos:",
+                "^\\s*(\\S+)\\s+(.+)$");
+        if (f.activo()) out.add(f);
+        return List.copyOf(out);
+    }
+
+    private static Estadisticas bloque(org.bukkit.configuration.ConfigurationSection sec,
+                                       String cabeceraDeFabrica, String encabezadoDeFabrica, String lineaDeFabrica) {
+        if (sec == null) sec = new org.bukkit.configuration.MemoryConfiguration();
+        if (!sec.getBoolean("activo", true)) return Estadisticas.APAGADO;
+        Pattern linea;
+        try {
+            linea = Pattern.compile(sec.getString("linea", lineaDeFabrica));
+        } catch (PatternSyntaxException e) {
+            return Estadisticas.APAGADO;
+        }
+        String cabecera = sec.getString("cabecera", cabeceraDeFabrica).trim();
+        if (cabecera.isEmpty()) return Estadisticas.APAGADO;
+        return new Estadisticas(true, cabecera,
+                sec.getString("encabezado", encabezadoDeFabrica), linea,
+                sec.getBoolean("conservar-icono", false),
+                color(sec.getString("color-valor"), TextColor.fromHexString("#FFFFFF")),
+                sec.getBoolean("linea-en-blanco-antes", true));
     }
 
     /*

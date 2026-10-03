@@ -104,14 +104,26 @@ public final class Definicion {
         }
     }
 
+    /**
+     * Una carnada de pesca (EDM 1.75.0). No se lleva puesta: la vende y la pone
+     * PremioPescao sobre una caña, que guarda en su PDC `pescao:carnada` (el id)
+     * y `pescao:carnada_usos` (las pescas que le quedan). Mientras esa caña este
+     * en una mano y le queden usos, sus efectos suman como los de una pieza mas.
+     */
+    public record Carnada(String id, String nombre, Efectos efectos, String fichero) { }
+
     /** Todo lo leido de la carpeta. */
     public record Config(Map<String, Clave> claves, Map<String, String> grupos, Map<String, Pieza> piezas,
-                         List<Conjunto> sets, List<String> avisos) {
+                         List<Conjunto> sets, Map<String, Carnada> carnadas, List<String> avisos) {
 
-        public static final Config VACIA = new Config(Map.of(), Map.of(), Map.of(), List.of(), List.of());
+        public static final Config VACIA = new Config(Map.of(), Map.of(), Map.of(), List.of(), Map.of(), List.of());
 
         public boolean vacia() {
-            return this.piezas.isEmpty() && this.sets.isEmpty();
+            return this.piezas.isEmpty() && this.sets.isEmpty() && this.carnadas.isEmpty();
+        }
+
+        public Carnada carnada(String id) {
+            return id == null ? null : this.carnadas.get(id.toLowerCase(java.util.Locale.ROOT));
         }
 
         /** Todos los TIPO.ID que nombra algo (piezas y listas de los sets). */

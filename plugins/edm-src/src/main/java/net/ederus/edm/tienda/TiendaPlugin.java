@@ -22,6 +22,7 @@ public final class TiendaPlugin extends Module {
     private final Catalogo catalogo = new Catalogo();
     private Topes topes;
     private Registro registro;
+    private PrecioMinions minions;
     private Motor motor;
     private MenuTienda menu;
     private EditorPrecio editor;
@@ -124,6 +125,7 @@ public final class TiendaPlugin extends Module {
             motor.compras(compras);
             motor.mensajes(mensajes);
             getLogger().info("Economia enganchada: " + economia.getName());
+            engancharMinions();
         });
 
         long cada = Math.max(20L * 30, getConfig().getLong("guardado-segundos", 120) * 20L);
@@ -225,6 +227,7 @@ public final class TiendaPlugin extends Module {
         if (mercado != null) mercado.configurar(getConfig().getConfigurationSection("mercado"));
         if (topes != null) topes.configurar(getConfig().getConfigurationSection("topes"));
         if (!cargarCatalogo()) return "el precios.yml tiene errores; se mantiene el anterior";
+        if (motor != null) engancharMinions();
         return catalogo.total() + " articulos en " + catalogo.categorias().size() + " categorias";
     }
 
@@ -434,4 +437,27 @@ public final class TiendaPlugin extends Module {
 
     /** null hasta que engancha Vault en el primer tick. */
     public Motor motor() { return motor; }
+
+    Catalogo catalogo() { return catalogo; }
+
+    /** Lo que vendio un minion, en el registro de transacciones (sin jugador: es el mercado comun). */
+    void anotarMinion(int cantidad, String clave, double unitario, double total) {
+        if (registro != null) registro.anotar("MINION", "minions", cantidad, clave, unitario, total, 0);
+    }
+
+    /**
+     * El minion Vendedor de AxMinions con los precios de la tienda. Se repite en
+     * cada recarga: lee minions.* del config.yml y vuelve a registrarse.
+     */
+    private void engancharMinions() {
+        if (minions == null) minions = new PrecioMinions(this, getLogger());
+        minions.configurar(getConfig().getConfigurationSection("minions"));
+        String no = minions.enganchar();
+        if (no == null) {
+            getLogger().info("Minion Vendedor enganchado: vende con los precios de la tienda"
+                    + " (pon hooks.prices: custom en AxMinions/config.yml)");
+        } else if (core.getServer().getPluginManager().getPlugin("AxMinions") != null) {
+            getLogger().warning("Minion Vendedor sin enganchar: " + no);
+        }
+    }
 }

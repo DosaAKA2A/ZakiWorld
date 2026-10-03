@@ -100,6 +100,13 @@ final class EscuchaPaquetes extends PacketAdapter {
                 if (item == null || item.isEmpty()) {
                     continue;
                 }
+                /* Primero, si es una de nuestras copias dibujadas, vuelve el
+                 * original entero (encantamientos y estadisticas de MMOItems). */
+                ItemStack original = this.reescritor.original(item);
+                if (original != null) {
+                    mod.write(i, original);
+                    continue;
+                }
                 if (Limpiador.limpiarItem(item, this.reescritor.ajustesActuales())) {
                     mod.write(i, item);
                 }

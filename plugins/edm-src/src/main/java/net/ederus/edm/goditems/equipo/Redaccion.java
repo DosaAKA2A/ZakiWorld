@@ -153,6 +153,12 @@ public final class Redaccion {
         return k.lore().replace("{valor}", valor(k, v)).replace("{cifra}", cifra(k, v));
     }
 
+    /** La linea de lore de una clave por su id, con los colores `<#RRGGBB>` ya en `&#RRGGBB`; "" si no sale. */
+    public static String lineaClave(Config c, String clave, double v) {
+        String l = c == null ? null : linea(c.claves().get(clave), v);
+        return l == null ? "" : colores(l);
+    }
+
     public String linea(Pocion p) {
         String n = this.pociones.getOrDefault(p.tipo().getKey().getKey(), bonito(p.tipo().getKey().getKey()));
         return this.lineaPocion.replace("{nombre}", n).replace("{nivel}", romano(p.nivel() + 1)).trim();

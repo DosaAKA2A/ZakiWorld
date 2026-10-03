@@ -159,7 +159,7 @@ public final class Equipo implements Listener {
                 }
             }
         }
-        this.config = new Config(c.claves(), c.grupos(), c.piezas(), c.sets(), List.copyOf(avisos));
+        this.config = new Config(c.claves(), c.grupos(), c.piezas(), c.sets(), c.carnadas(), List.copyOf(avisos));
         this.sinteticos.clear();
         for (Conjunto s : c.sets()) {
             this.sinteticos.put(s.id(), new GodItem(null, "equipo:" + s.id(), null, null, null, -1, -1,
@@ -175,7 +175,8 @@ public final class Equipo implements Listener {
     public String resumen() {
         Config c = this.config;
         String s = c.piezas().size() + (c.piezas().size() == 1 ? " pieza" : " piezas") + ", "
-                + c.sets().size() + (c.sets().size() == 1 ? " set" : " sets") + " y "
+                + c.sets().size() + (c.sets().size() == 1 ? " set" : " sets") + ", "
+                + c.carnadas().size() + (c.carnadas().size() == 1 ? " carnada" : " carnadas") + " y "
                 + c.claves().size() + (c.claves().size() == 1 ? " clave" : " claves");
         return c.avisos().isEmpty() ? s : s + ", " + c.avisos().size() + " aviso(s) en consola";
     }
