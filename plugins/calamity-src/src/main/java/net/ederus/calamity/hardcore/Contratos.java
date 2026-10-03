@@ -801,9 +801,12 @@ final class Contratos implements Listener {
      * 1.10: en la zona spawn el reloj de los tres se para. Alli no baja la cordura ni hay mobs ni PvP,
      * y desde que el contrato se cobra en la mano al cumplirlo, "pasa 15 min" esperando en la plaza era
      * un premio sin riesgo a un paso de la puerta. Los minutos ya contados no se pierden.
+     *
+     * Revision 1.10: en la pantalla de muerte tampoco cuenta (sigue en el mundo hasta reaparecer, y con
+     * lo-pierde-todo en false el papel sobrevive a la muerte).
      */
     void segundo(Player p) {
-        if (!activo()) return;
+        if (!activo() || p.isDead()) return;
         UUID u = p.getUniqueId();
         int[] c = reloj.computeIfAbsent(u, k -> new int[4]);
         // El cuarto contador es solo el reloj de la barra (cada 15 s): ese si corre en el spawn.

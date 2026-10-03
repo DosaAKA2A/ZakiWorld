@@ -827,6 +827,10 @@ final class Ambush implements Listener {
      * cuerpo se le pasa al esqueleto que pelea, con el mismo autor (como hace la Parca), y el golpe
      * de un jugador a un clon de las Sombras del clan lo disipa. Sin ignoreCancelled: el listener de
      * la Parca, con la misma prioridad, puede haberlo cancelado ya sin pasarlo.
+     *
+     * Revision 1.10: por eso mismo un golpe desde dentro de la zona spawn llegaba aqui y disipaba el
+     * clon; ahora se mira a mano con la regla de ZonaSpawn (golpeDesdeDentro). Al cuerpo no hace falta:
+     * su golpe pasa por damage() y ese segundo golpe ya lo cancela ZonaSpawn.onDanoDesdeDentro.
      */
     @EventHandler(priority = EventPriority.LOW)
     public void onDanoCascara(EntityDamageEvent e) {
@@ -842,13 +846,19 @@ final class Ambush implements Listener {
             causa = null;
         }
         if (!pe.esCascara(mq)) {
-            if (causa instanceof Player && pe.esClon(mq)) pe.disiparClon(mq);
+            if (causa instanceof Player jugador && pe.esClon(mq) && !golpeaDesdeDentro(jugador)) pe.disiparClon(mq);
             return;
         }
         if (!(causa instanceof Player p)) return;
         LivingEntity c = pe.cuerpo;
         if (c == null || !c.isValid() || c.isDead()) return;
         c.damage(e.getDamage(), p);
+    }
+
+    /** Si ese jugador pega desde dentro de la zona spawn con sin-dano-desde-dentro encendido (y se le avisa). */
+    private boolean golpeaDesdeDentro(Player p) {
+        ZonaSpawn z = hc.zonaSpawn();
+        return z != null && hc.valor("zona-spawn", () -> z.golpeDesdeDentro(p), false);
     }
 
     /** La presa muere: si Ambush ya estaba, se va (el contrato se ha cumplido); si no, se consume. */

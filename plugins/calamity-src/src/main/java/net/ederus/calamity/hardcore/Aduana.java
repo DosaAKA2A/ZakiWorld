@@ -98,6 +98,12 @@ final class Aduana {
     private long ultimoAvisoGlobal;
     /** Ultimo P-A02 por jugador, para no repetirlo en cada mob. */
     private final Map<UUID, Long> avisoFusible = new HashMap<>();
+    /**
+     * Revision 1.10 · Ultimo "las Esencias han caido a tus pies" por jugador: con el inventario lleno,
+     * matando mobs, una linea cada AVISO_SUELO_MS y no una por mob.
+     */
+    private final Map<UUID, Long> avisoSuelo = new HashMap<>();
+    private static final long AVISO_SUELO_MS = 10_000;
     private String diaAvisoProxy;
     private int segundos;
 
@@ -235,9 +241,12 @@ final class Aduana {
             boolean objeto = comoObjeto(online != null, online != null && hc.esHardcore(online), tipo, objetoSiDentro,
                     hc.cfg().getBoolean("esencias.saldo", true));
             if (objeto) {
+                boolean suelo = false;
                 for (int quedan = e; quedan > 0; quedan -= 64) {
-                    Suelo.dar(hc.plugin(), online, hc.items().esencia(Math.min(64, quedan)));
+                    suelo |= Suelo.dar(hc.plugin(), online, hc.items().esencia(Math.min(64, quedan)));
                 }
+                // Revision 1.10: lo que no cabe cae a sus pies (a su nombre 10 s); que lo sepa.
+                if (suelo) avisarSuelo(online);
             } else {
                 Saldo s = hc.saldo();
                 if (s != null) s.sumar(u, e, "pago:" + tipo);
@@ -447,12 +456,23 @@ final class Aduana {
             }
         }
         avisoFusible.values().removeIf(t -> ahora - t > HORA);
+        avisoSuelo.values().removeIf(t -> ahora - t > AVISO_SUELO_MS);
         if (cambio) hc.marcarSucio();
+    }
+
+    /** "No te caben: las Esencias han caido a tus pies.", una linea y como mucho una cada AVISO_SUELO_MS. */
+    private void avisarSuelo(Player p) {
+        long ahora = System.currentTimeMillis();
+        Long antes = avisoSuelo.get(p.getUniqueId());
+        if (antes != null && ahora - antes < AVISO_SUELO_MS) return;
+        avisoSuelo.put(p.getUniqueId(), ahora);
+        p.sendMessage(ComandoCalamity.mensaje("No te caben: las Esencias han caído a tus pies."));
     }
 
     void parar() {
         global.clear();
         avisoFusible.clear();
+        avisoSuelo.clear();
         Suelo.parar();
     }
 

@@ -19,6 +19,7 @@ import org.bukkit.scheduler.BukkitTask;
 
 import com.destroystokyo.paper.event.entity.EntityAddToWorldEvent;
 
+import net.ederus.calamity.hardcore.Hardcore;
 import net.ederus.calamity.hardcore.Paleta;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.TextComponent;
@@ -31,8 +32,9 @@ import net.kyori.adventure.text.format.TextDecoration;
  * Es el cartel de MinionManager, un TextDisplay suelto (marca anomaly:esbirro_holo = id del tipo)
  * con dos lineas: el nombre de la ficha de /esb (MinionType.name(), que en los cinco minijefes se
  * sembro en negrita) y "Nv. X  ❤ vida". EDM lo reescribe entero cada vez que cambia la vida, asi
- * que no basta con cambiarlo una vez: aqui se siguen los carteles de los tipos de
- * hardcore.minijefes.tipos y, cada vez que EDM los reescribe, se cambia la primera linea por
+ * que no basta con cambiarlo una vez: aqui se siguen los carteles de los minijefes de Calamity (los
+ * de hardcore.minijefes.tipos y, desde la 1.10, tambien los de hardcore.minijefes.por-bioma:
+ * Hardcore.esTipoMinijefe) y, cada vez que EDM los reescribe, se cambia la primera linea por
  * Paleta.minijefe y la segunda se deja como la pinta EDM.
  *
  * Por que no se llega a ver el cartel de EDM: el planificador de Paper corre por orden de creacion
@@ -61,7 +63,8 @@ public final class CartelesMinijefe implements Listener {
     public void alEntrar(EntityAddToWorldEvent e) {
         if (!(e.getEntity() instanceof TextDisplay d)) return;
         String tipo = d.getPersistentDataContainer().get(claveCartel, PersistentDataType.STRING);
-        if (tipo == null || !plugin.getConfig().getStringList("hardcore.minijefes.tipos").contains(tipo)) return;
+        // 1.10: los minijefes que conoce Calamity (tipos y la tabla de biomas), no solo minijefes.tipos.
+        if (tipo == null || !Hardcore.esTipoMinijefe(plugin.getConfig(), tipo)) return;
         carteles.add(d.getUniqueId());
         if (tarea == null) tarea = plugin.getServer().getScheduler().runTaskTimer(plugin, this::repintar, 1L, 1L);
     }

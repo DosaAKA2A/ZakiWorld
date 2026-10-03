@@ -80,6 +80,11 @@ final class Pergaminos implements Listener {
     static final int CASILLAS = 10;
     /** La "casilla" del cursor en lo que devuelve revisar(). */
     static final int CURSOR = -1;
+    /**
+     * Revision 1.10 · Las "casillas" de la rejilla de crafteo en lo que devuelve revisar(): la i de la
+     * rejilla abierta (1-4 en la 2x2 del inventario, 1-9 en una mesa) es REJILLA - i.
+     */
+    static final int REJILLA = -10;
 
     /** Lo que lleva escrito la marca: "uuid;dia;hueco;id" (el id va al final: es lo unico que viene de la config). */
     record Sello(UUID dueno, String dia, int hueco, String id) {
@@ -238,8 +243,9 @@ final class Pergaminos implements Listener {
     // ------------------------------------------------------------------ en el inventario
 
     /**
-     * Los pergaminos que lleva (inventario entero y cursor) mirados contra su libreta: hueco -> casilla
-     * (0-40, o CURSOR) de los que valen. Los inertes se borran aqui mismo: "se borra en cuanto se ve".
+     * Los pergaminos que lleva (inventario entero, cursor y, desde la revision de la 1.10, la rejilla de
+     * crafteo que tenga abierta) mirados contra su libreta: hueco -> casilla (0-40, CURSOR o REJILLA - i)
+     * de los que valen. Los inertes se borran aqui mismo: "se borra en cuanto se ve".
      */
     Map<Integer, Integer> revisar(Player p, ConfigurationSection libreta) {
         return mirar(p, libreta, true);
@@ -252,43 +258,51 @@ final class Pergaminos implements Listener {
 
     private Map<Integer, Integer> mirar(Player p, ConfigurationSection libreta, boolean borrar) {
         Map<Integer, Integer> out = new LinkedHashMap<>();
-        UUID u = p.getUniqueId();
         PlayerInventory inv = p.getInventory();
         for (int i = 0; i < inv.getSize(); i++) {
-            ItemStack it = inv.getItem(i);
-            if (!es(it)) continue;
-            Sello s = sello(it);
-            String no = motivoInerte(s, u, libreta);
-            if (no == null && out.containsKey(s.hueco())) no = "repetido";
-            if (no == null) {
-                out.put(s.hueco(), i);
-                // Un monton de dos (de antes del tope de 1, o de creativo) es un repetido: se queda uno.
-                if (borrar && it.getAmount() > 1) {
-                    inv.setItem(i, it.asOne());
-                    anotar(p, "repetido", s);
-                }
-            } else if (borrar) {
-                inv.setItem(i, null);
-                anotar(p, no, s);
-            }
+            int casilla = i;
+            mirarUno(p, inv.getItem(i), casilla, libreta, borrar, out, nuevo -> inv.setItem(casilla, nuevo));
         }
-        ItemStack cursor = p.getItemOnCursor();
-        if (es(cursor)) {
-            Sello s = sello(cursor);
-            String no = motivoInerte(s, u, libreta);
-            if (no == null && out.containsKey(s.hueco())) no = "repetido";
-            if (no == null) {
-                out.put(s.hueco(), CURSOR);
-                if (borrar && cursor.getAmount() > 1) {
-                    p.setItemOnCursor(cursor.asOne());
-                    anotar(p, "repetido", s);
-                }
-            } else if (borrar) {
-                p.setItemOnCursor(null);
-                anotar(p, no, s);
+        mirarUno(p, p.getItemOnCursor(), CURSOR, libreta, borrar, out, p::setItemOnCursor);
+        // Revision 1.10: la rejilla de crafteo (la 2x2 de su inventario, o una mesa). Un papel aparcado ahi
+        // sigue siendo suyo: cuenta para el contrato, y Oren no le da otro. La casilla 0 es el resultado.
+        Inventory rej = rejilla(p);
+        if (rej != null) {
+            for (int i = 1; i < rej.getSize(); i++) {
+                int casilla = i;
+                mirarUno(p, rej.getItem(i), REJILLA - i, libreta, borrar, out, nuevo -> rej.setItem(casilla, nuevo));
             }
         }
         return out;
+    }
+
+    /**
+     * Un papel de mirar(): si vale, se apunta con su casilla; si es inerte o repetido y toca borrar, se quita
+     * con "poner" (null). Un monton de dos (de antes del tope de 1, o de creativo) es un repetido: se queda uno.
+     */
+    private void mirarUno(Player p, ItemStack it, int casilla, ConfigurationSection libreta, boolean borrar,
+                          Map<Integer, Integer> out, java.util.function.Consumer<ItemStack> poner) {
+        if (!es(it)) return;
+        Sello s = sello(it);
+        String no = motivoInerte(s, p.getUniqueId(), libreta);
+        if (no == null && out.containsKey(s.hueco())) no = "repetido";
+        if (no == null) {
+            out.put(s.hueco(), casilla);
+            if (borrar && it.getAmount() > 1) {
+                poner.accept(it.asOne());
+                anotar(p, "repetido", s);
+            }
+        } else if (borrar) {
+            poner.accept(null);
+            anotar(p, no, s);
+        }
+    }
+
+    /** La rejilla de crafteo que tiene abierta (la 2x2 de su inventario, o una mesa), o null. */
+    private static Inventory rejilla(Player p) {
+        Inventory arriba = p.getOpenInventory().getTopInventory();
+        InventoryType t = arriba.getType();
+        return t == InventoryType.CRAFTING || t == InventoryType.WORKBENCH ? arriba : null;
     }
 
     private void anotar(Player p, String motivo, Sello s) {
@@ -305,7 +319,11 @@ final class Pergaminos implements Listener {
      * cuando cambia el progreso, nunca por tick. False si ya no esta ahi.
      */
     boolean redibujar(Player p, int casilla, int hueco, Contratos.Def d, int progreso) {
-        ItemStack it = casilla == CURSOR ? p.getItemOnCursor() : p.getInventory().getItem(casilla);
+        Inventory rej = casilla <= REJILLA ? rejilla(p) : null;
+        int enRejilla = REJILLA - casilla;
+        if (casilla <= REJILLA && (rej == null || enRejilla >= rej.getSize())) return false;
+        ItemStack it = casilla == CURSOR ? p.getItemOnCursor() : rej != null ? rej.getItem(enRejilla)
+                : p.getInventory().getItem(casilla);
         Sello s = sello(it);
         if (s == null || s.hueco() != hueco || !s.dueno().equals(p.getUniqueId())) return false;
         ItemStack nuevo = it.clone();
@@ -314,6 +332,7 @@ final class Pergaminos implements Listener {
             m.lore(lore(d, progreso));
         });
         if (casilla == CURSOR) p.setItemOnCursor(nuevo);
+        else if (rej != null) rej.setItem(enRejilla, nuevo);
         else p.getInventory().setItem(casilla, nuevo);
         return true;
     }

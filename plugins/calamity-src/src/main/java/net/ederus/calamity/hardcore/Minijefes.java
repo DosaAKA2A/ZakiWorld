@@ -49,7 +49,8 @@ import java.util.function.Predicate;
  * - 1.10 · El botin extra de minijefes.botin (Botin): lo comun a los cinco y lo de cada tipo (un
  *   libro LEGENDARY, el huevo de su mascota...), cada entrada a quien diga su "para", con su
  *   probabilidad y su propia piedad (piedad-botin.<uuid>.<tipo>.<id>). Lo que se da pasa por
- *   Entregas: el libro con su tope del mes, los comandos con el nombre validado.
+ *   Entregas: el libro con su tope del mes, los comandos con el nombre validado. El sustituto del
+ *   libro, con el tope lleno, lo paga la Aduana (entregarBotin).
  *
  * 1.10 · Cada minijefe vive en sus biomas (minijefes.por-bioma, Habitat): el de cordura cero
  * (Hardcore.minijefeSiTocaCordura) es el del bioma donde estas, y el Reclamo (Reclamo, que nace y
@@ -327,6 +328,19 @@ final class Minijefes {
         if (tipos != null) for (String t : tipos) if (t != null && !t.isBlank()) out.add(t.trim());
         if (out.isEmpty() && porBioma != null) out.addAll(porBioma.keySet());
         return out;
+    }
+
+    /**
+     * Revision 1.10 · Si ese tipo es un minijefe de Calamity: esta en minijefes.tipos o tiene sitio en la
+     * tabla de biomas (sin mirar mayusculas). Para el cartel con el nombre de Calamity
+     * (CartelesMinijefe, via Hardcore.esTipoMinijefe), que antes solo miraba minijefes.tipos. Quien puede
+     * venir lo sigue diciendo conocidos().
+     */
+    static boolean tipoConocido(List<String> tipos, Map<String, Habitat> porBioma, String tipo) {
+        if (tipo == null || tipo.isBlank()) return false;
+        String t = tipo.trim();
+        if (tipos != null) for (String x : tipos) if (x != null && x.trim().equalsIgnoreCase(t)) return true;
+        return porBioma != null && porBioma.containsKey(t.toLowerCase(Locale.ROOT));
     }
 
     /**
@@ -732,20 +746,35 @@ final class Minijefes {
     }
 
     /**
-     * Da una entrada que ha caido: un objeto por Entregas.dar (el libro con su tope del mes y su
-     * sustituto en Esencias, que es cosa de Entregas) o su comando por Entregas.comando, que valida el
-     * nombre. Si no llega, la piedad vuelve a donde estaria sin esta caida y se dice. Bitacora,
-     * telemetria (minijefe-botin), el aviso al jugador y, si la entrada lo pide, el anuncio.
+     * Da una entrada que ha caido: un objeto por Entregas.dar (el libro con su tope del mes) o su
+     * comando por Entregas.comando, que valida el nombre. Si no llega, la piedad vuelve a donde estaria
+     * sin esta caida y se dice. Bitacora, telemetria (minijefe-botin), el aviso al jugador y, si la
+     * entrada lo pide, el anuncio.
+     *
+     * Revision 1.10: con el tope de libros del mes lleno, su sustituto en Esencias
+     * (caja.libro-sustituto-esencias) se paga por la Aduana como el resto del minijefe (tipo minijefe) y
+     * no por Entregas.libro, que lo mete en el saldo: dentro de Calamity llega como objeto (si muere antes
+     * de salir, lo pierde, como cualquier botin), cuenta en los topes y en lo que decae por hora (Grifo).
+     * El libro de las cajas sigue por Entregas.
      */
     private void entregarBotin(Caida c, OfflinePlayer op, String t, int nivel) {
         Botin b = c.botin();
         Entregas ent = hc.entregas();
         boolean sustituto = false;
+        int esencias = 0;
         boolean ok;
         if (ent == null) {
             ok = false;
+        } else if (b.objeto().equals("libro") && !ent.libroLibre()) {
+            sustituto = true;
+            Aduana ad = hc.aduana();
+            Aduana.Pago pago = ad == null ? null : ad.pagar(op, "minijefe", hc.cfg().getInt("caja.libro-sustituto-esencias", 20),
+                    0, List.of(), "minijefe " + t + " N" + nivel + " botin:" + b.id() + " sustituto");
+            ok = pago != null;
+            esencias = pago == null ? 0 : pago.esencias();
+            Grifo grifo = hc.grifo();
+            if (grifo != null) grifo.apuntarEsencias(op.getUniqueId(), esencias);
         } else if (!b.objeto().isEmpty()) {
-            sustituto = b.objeto().equals("libro") && !ent.libroLibre();
             ok = ent.dar(null, b.objeto(), op, 1, "minijefe:" + t + ":" + b.id());
         } else {
             ok = ent.comando(b.comando(), op.getName(), 1);
@@ -776,9 +805,11 @@ final class Minijefes {
                         .append(Component.text("."))));
                 if (b.anuncio()) Compat.soundPlayers(p.getWorld(), p.getLocation(), "ui.toast.challenge_complete", 0.8f, 1.1f);
             } else if (resultado.equals("sustituto")) {
-                int e = hc.cfg().getInt("caja.libro-sustituto-esencias", 20);
-                p.sendMessage(ComandoCalamity.mensaje(quienDeja.append(Paleta.cifra(Marco.esencias(e)))
-                        .append(Component.text(" en lugar de " + b.nombre() + ": este mes ya no quedan."))));
+                // Las que paga de verdad la Aduana; con su tope del dia lleno ya lo dice ella.
+                if (esencias > 0) {
+                    p.sendMessage(ComandoCalamity.mensaje(quienDeja.append(Paleta.cifra(Marco.esencias(esencias)))
+                            .append(Component.text(" en lugar de " + b.nombre() + ": este mes ya no quedan."))));
+                }
             } else {
                 p.sendMessage(ComandoCalamity.mensaje(quienDeja.append(Component.text(b.nombre(), Paleta.MARCA))
                         .append(Component.text(", pero no se ha podido entregar. Avisa al staff.", Paleta.AVISO))));
@@ -1034,6 +1065,14 @@ final class Minijefes {
         h.ok("por-bioma: {} a proposito apaga los biomas", porBioma(vacia).isEmpty());
         h.igual("con articulo: la Matriarca", "la Matriarca Tejedora", elMinijefe("matriarca-tejedora"));
         h.igual("con articulo y mayuscula: el Heraldo", "El Heraldo Carmesí", mayuscula(elMinijefe("heraldo-carmes")));
+
+        // Revision 1.10: a que carteles pone Calamity su nombre (CartelesMinijefe): tipos y la tabla de biomas.
+        h.ok("cartel: uno de tipos, sin mirar mayusculas", tipoConocido(List.of("Custodio-De-Las-Ruinas"), Map.of(),
+                "custodio-de-las-ruinas"));
+        h.ok("cartel: con tipos vacio, uno de la tabla de biomas", tipoConocido(List.of(), serie, "heraldo-carmes"));
+        h.ok("cartel: uno de la tabla aunque tipos traiga otros", tipoConocido(List.of("otro"), serie, "sanador-del-fango"));
+        h.ok("cartel: un esbirro cualquiera no", !tipoConocido(cinco, serie, "zombi-podrido"));
+        h.ok("cartel: sin tipo no", !tipoConocido(cinco, serie, null) && !tipoConocido(cinco, serie, " "));
     }
 
     /** El botin extra: la tabla de serie, quien tira segun "para", la piedad, los desconectados y la lectura. */

@@ -25,6 +25,7 @@ import org.bukkit.event.HandlerList;
 import org.bukkit.event.Listener;
 import org.bukkit.event.entity.AreaEffectCloudApplyEvent;
 import org.bukkit.event.entity.EntityDamageByEntityEvent;
+import org.bukkit.event.entity.EntityDamageEvent;
 import org.bukkit.event.entity.EntityTargetLivingEntityEvent;
 import org.bukkit.event.entity.PotionSplashEvent;
 import org.bukkit.persistence.PersistentDataType;
@@ -79,8 +80,19 @@ import java.util.UUID;
  * se le podria matar sin riesgo. Igual con las amenazas. El PvP no se toca aqui: lo decide
  * WorldGuard (y Hardcore.onFuegoAmigo).
  *
+ * Lo que decidio el coordinador tras la revision de la 1.10 (lo aplica Hardcore, aqui va el nucleo):
+ *  - un minijefe sin presa viva que se saca al borde (mato a su presa, la presa se fue sin que el la
+ *    esperase, o es de guarnicion) lleva el reloj de espera-segundos desde la primera vez y al
+ *    cumplirlo se va; si se aleja de la franja pegada a la zona, el reloj se olvida (sinPresa,
+ *    alejado). Sin esto se quedaba de guardia en la puerta para siempre;
+ *  - el que espera a su presa no busca pelea: solo apunta a quien le pego desde fuera hace menos de
+ *    REPRESALIA_MS (represalia);
+ *  - a los dos se les cancela el dano que no trae un ser vivo detras (bloqueaDanoEnEspera): con lava,
+ *    fuego o un dispensador puestos desde dentro se les podia rematar sin riesgo.
+ *
  * El nucleo (Zona, enPoligono, elegir, deVara, fuera, alColarse, referencia, alBorde, espera,
- * seCansa, lejos) es estatico y sin Bukkit: el autotest "zona-spawn" lo prueba.
+ * seCansa, lejos, sinPresa, alejado, represalia, bloqueaDanoEnEspera) es estatico y sin Bukkit: el
+ * autotest "zona-spawn" lo prueba.
  */
 final class ZonaSpawn implements Listener {
 
@@ -94,6 +106,13 @@ final class ZonaSpawn implements Listener {
     static final double MARGEN_ESPERA = 4;
     /** Calamity 1.10 · Como mucho un "Desde el spawn no puedes atacar" cada tanto a cada uno. */
     static final long AVISO_ATAQUE_MS = 3_000;
+    /**
+     * Calamity 1.10 · La franja pegada a la zona: un minijefe sin presa que se aleja de la caja mas de
+     * esto (en horizontal) ya no esta de guardia en la puerta, y su reloj se olvida (sinPresa).
+     */
+    static final double FRANJA_SIN_PRESA = 16;
+    /** Calamity 1.10 · El que espera a su presa solo apunta a quien le pego hace menos de esto (represalia). */
+    static final long REPRESALIA_MS = 10_000;
 
     /** Calamity 1.10 · Lo que se hace con un mob de Calamity que esta dentro de la zona (alColarse). */
     enum Accion {
@@ -120,6 +139,16 @@ final class ZonaSpawn implements Listener {
         VUELVE,
         /** spawn.minijefes.esperan en false: se retira en humo en cuanto ella entra, como hasta la 1.9. */
         SE_RETIRA
+    }
+
+    /** Calamity 1.10 · Lo que toca cada segundo a un minijefe sin presa que se saco al borde (sinPresa). */
+    enum SinPresa {
+        /** Sigue cerca de la zona y aun no ha cumplido su espera. */
+        SIGUE,
+        /** Ya no es asunto de la zona: tiene presa otra vez o se ha alejado por su cuenta. Su reloj se olvida. */
+        OLVIDA,
+        /** Ha cumplido espera-segundos pegado a la zona: se va sin dejar nada. */
+        SE_VA
     }
 
     /*
@@ -464,6 +493,8 @@ final class ZonaSpawn implements Listener {
             return;
         }
         hc.plugin().bitacora().anotar("spawn", "minijefe-sacado", e.getType().getKey().getKey(), bloque(desde), bloque(a));
+        // Si no tiene presa viva, desde aqui lleva el reloj de espera (Hardcore.vigilarSinPresa).
+        hc.sacadoAlBorde(e);
     }
 
     /**
@@ -586,6 +617,33 @@ final class ZonaSpawn implements Listener {
         }
         if (causa == null) causa = autor(e.getDamager());
         return causa instanceof Player p ? p : null;
+    }
+
+    /**
+     * Calamity 1.10 · El ser vivo detras de un dano (el jugador que dispara, el lobo que muerde, el mob
+     * que explota...), o null si no hay ninguno: lava, fuego, caidas, cactus, un dispensador, TNT sin
+     * dueno. Lo usan la represalia y bloqueaDanoEnEspera de los minijefes que esperan (Hardcore).
+     */
+    static LivingEntity causanteVivo(EntityDamageEvent e) {
+        Entity causa;
+        try {
+            causa = e.getDamageSource().getCausingEntity();
+        } catch (Throwable sinFuente) {
+            causa = null;
+        }
+        if (causa == null && e instanceof EntityDamageByEntityEvent be) causa = autor(be.getDamager());
+        return causa instanceof LivingEntity vivo ? vivo : null;
+    }
+
+    /**
+     * Calamity 1.10 · Si ese jugador pega desde dentro con sin-dano-desde-dentro encendido (y se le
+     * avisa, como en onDanoDesdeDentro). Para lo que no pasa por un EntityDamageByEntityEvent propio:
+     * las Sombras del clan de Ambush, que se disipan en su onDanoCascara aunque el golpe llegue cancelado.
+     */
+    boolean golpeDesdeDentro(Player p) {
+        if (p == null || !sinDanoDesdeDentro() || !dentro(p.getLocation())) return false;
+        avisarAtaque(p);
+        return true;
     }
 
     /**
@@ -793,12 +851,55 @@ final class ZonaSpawn implements Listener {
         return correa > 0 && dx * dx + dz * dz > correa * correa;
     }
 
+    /**
+     * Calamity 1.10 · El paso de cada segundo de un minijefe sin presa que se saco al borde
+     * (Hardcore.vigilarSinPresa). Con presa viva otra vez, o alejado de la caja mas que la franja
+     * (FRANJA_SIN_PRESA), su reloj se olvida: ya no esta de guardia en la puerta. Si no, cuando lleva
+     * MAS de espera-segundos desde que se le saco la primera vez, se va (seCansa: con 0, nunca).
+     */
+    static SinPresa sinPresa(boolean conPresa, double alejado, long esperadoMs, int limiteSegundos) {
+        if (conPresa || alejado > FRANJA_SIN_PRESA) return SinPresa.OLVIDA;
+        return seCansa(esperadoMs, limiteSegundos) ? SinPresa.SE_VA : SinPresa.SIGUE;
+    }
+
+    /**
+     * Calamity 1.10 · Lo que esta (x, z) fuera de la caja de la zona, en horizontal: 0 dentro de ella
+     * (con un poligono, dentro de su caja) y, fuera, la distancia al borde mas cercano.
+     */
+    static double alejado(Zona zona, double x, double z) {
+        double dx = x < zona.x1() ? zona.x1() - x : x >= zona.x2() + 1 ? x - (zona.x2() + 1) : 0;
+        double dz = z < zona.z1() ? zona.z1() - z : z >= zona.z2() + 1 ? z - (zona.z2() + 1) : 0;
+        return Math.hypot(dx, dz);
+    }
+
+    /**
+     * Calamity 1.10 · Si el minijefe que espera a su presa puede apuntar a ese objetivo: solo si le pego
+     * hace REPRESALIA_MS o menos (ultimoGolpe, null = nunca) y esta fuera de la zona. No busca pelea,
+     * pero se defiende: sin esto, mientras esperaba atacaba a cualquiera que saliera por la puerta.
+     */
+    static boolean represalia(Long ultimoGolpe, long ahora, boolean objetivoDentro) {
+        return ultimoGolpe != null && !objetivoDentro && ahora - ultimoGolpe <= REPRESALIA_MS;
+    }
+
+    /**
+     * Calamity 1.10 · Si al minijefe que espera (o al sin presa del borde) se le cancela este dano: el
+     * que no trae un ser vivo detras (lava, fuego, caidas, asfixia, cactus, un dispensador, TNT sin
+     * dueno). Con eso se le podia rematar sin riesgo desde dentro de la zona, donde a el no se le puede
+     * alcanzar. /kill, el vacio y el borde del mundo pasan siempre.
+     */
+    static boolean bloqueaDanoEnEspera(EntityDamageEvent.DamageCause causa, boolean deUnSerVivo) {
+        if (deUnSerVivo) return false;
+        return causa != EntityDamageEvent.DamageCause.KILL && causa != EntityDamageEvent.DamageCause.VOID
+                && causa != EntityDamageEvent.DamageCause.WORLD_BORDER;
+    }
+
     // ================================================================== autotest
 
     /**
      * "zona-spawn": dentro/fuera de la caja de la region, el poligono, la prioridad y la salida del Eco.
      * 1.10: que se hace con cada clase que se cuela, por que lado sale el minijefe colado, la espera de
-     * los minijefes y su correa.
+     * los minijefes y su correa; y, tras la revision, el reloj del minijefe sin presa, la represalia
+     * del que espera y el dano que se le cancela.
      */
     static List<String> autotest() {
         Autotest.Hoja h = new Autotest.Hoja();
@@ -923,6 +1024,46 @@ final class ZonaSpawn implements Listener {
         h.ok("correa 32: a 30,-20 (36 bloques) si", lejos(30, -20, 32));
         h.ok("correa 32: a 32 justos no", !lejos(32, 0, 32));
         h.ok("correa 0: nunca", !lejos(500, 500, 0));
+
+        // --- Revision 1.10: lo alejado de la caja, en horizontal (la caja de r va de x 215 a 319 y de z -278 a -173).
+        h.cerca("alejado: dentro de la caja, 0", 0, alejado(r, 266.5, -226.5), 1e-9);
+        h.cerca("alejado: 10 al este", 10, alejado(r, 329, -226.5), 1e-9);
+        h.cerca("alejado: en diagonal (3 al este y 4 al sur), 5", 5, alejado(r, 322, -169), 1e-9);
+        h.cerca("alejado: el sacado queda a 3,5 del borde", 3.5, alejado(r, 215 - MARGEN_SACAR - 0.5, -226.5), 1e-9);
+
+        // --- Revision 1.10: el reloj del minijefe sin presa sacado al borde (Hardcore.vigilarSinPresa).
+        h.igual("sin presa a 3,5 del borde a los 120 s: sigue", SinPresa.SIGUE, sinPresa(false, 3.5, 120_000, 300));
+        h.igual("sin presa a los 300 s justos: aun sigue", SinPresa.SIGUE, sinPresa(false, 3.5, 300_000, 300));
+        h.igual("sin presa pasados los 300 s pegado a la zona: se va", SinPresa.SE_VA, sinPresa(false, 3.5, 301_000, 300));
+        h.igual("en el limite de la franja (16) sigue contando", SinPresa.SE_VA, sinPresa(false, FRANJA_SIN_PRESA, 301_000, 300));
+        h.igual("fuera de la franja (16,5): el reloj se olvida", SinPresa.OLVIDA, sinPresa(false, 16.5, 301_000, 300));
+        h.igual("con presa viva otra vez: el reloj se olvida", SinPresa.OLVIDA, sinPresa(true, 0, 36_000_000, 300));
+        h.igual("espera-segundos 0: no se va nunca (10 h)", SinPresa.SIGUE, sinPresa(false, 3.5, 36_000_000, 0));
+
+        // --- Revision 1.10: la represalia del que espera a su presa.
+        long t0 = 1_790_000_000_000L;
+        h.ok("represalia: nadie le ha pegado, no apunta", !represalia(null, t0, false));
+        h.ok("represalia: le pego hace 3 s desde fuera, apunta", represalia(t0 - 3_000, t0, false));
+        h.ok("represalia: a los 10 s justos aun", represalia(t0 - REPRESALIA_MS, t0, false));
+        h.ok("represalia: pasados los 10 s, ya no", !represalia(t0 - REPRESALIA_MS - 1, t0, false));
+        h.ok("represalia: si el que le pego esta dentro, no", !represalia(t0 - 1_000, t0, true));
+
+        // --- Revision 1.10: el dano que se le cancela mientras espera (o sin presa en el borde).
+        EntityDamageEvent.DamageCause[] entorno = {EntityDamageEvent.DamageCause.LAVA, EntityDamageEvent.DamageCause.FIRE,
+                EntityDamageEvent.DamageCause.FIRE_TICK, EntityDamageEvent.DamageCause.FALL,
+                EntityDamageEvent.DamageCause.SUFFOCATION, EntityDamageEvent.DamageCause.CONTACT,
+                EntityDamageEvent.DamageCause.HOT_FLOOR, EntityDamageEvent.DamageCause.DROWNING};
+        boolean todos = true;
+        for (EntityDamageEvent.DamageCause dc : entorno) todos &= bloqueaDanoEnEspera(dc, false);
+        h.ok("dano de entorno (lava, fuego, caida, asfixia, cactus...): cancelado", todos);
+        h.ok("flecha de un dispensador o TNT sin dueno (sin ser vivo detras): cancelado",
+                bloqueaDanoEnEspera(EntityDamageEvent.DamageCause.PROJECTILE, false)
+                        && bloqueaDanoEnEspera(EntityDamageEvent.DamageCause.ENTITY_EXPLOSION, false));
+        h.ok("golpe o flecha de un ser vivo: pasa", !bloqueaDanoEnEspera(EntityDamageEvent.DamageCause.ENTITY_ATTACK, true)
+                && !bloqueaDanoEnEspera(EntityDamageEvent.DamageCause.PROJECTILE, true));
+        h.ok("/kill, el vacio y el borde del mundo: pasan", !bloqueaDanoEnEspera(EntityDamageEvent.DamageCause.KILL, false)
+                && !bloqueaDanoEnEspera(EntityDamageEvent.DamageCause.VOID, false)
+                && !bloqueaDanoEnEspera(EntityDamageEvent.DamageCause.WORLD_BORDER, false));
         return h.lineas();
     }
 }

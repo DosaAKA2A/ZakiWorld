@@ -39,10 +39,11 @@ import java.util.UUID;
  *  - que este en Calamity (un mundo hardcore) y fuera de su zona spawn;
  *  - que el bioma tenga minijefe (Minijefes.delBioma);
  *  - Ley 6: con la Parca detras no viene nadie; y tampoco si ya tiene un minijefe vivo detras;
- *  - el descanso del minijefe de cordura cero (Hardcore.minutosMinijefe desde Estado.ultimoMinijefe),
- *    que es compartido: el Reclamo lo pide y lo apunta. Ademas el Reclamo guarda su ultima llamada en
- *    hardcore-datos (reclamo.ultimo): el Estado se olvida al salir de Calamity y al desconectarse, y
- *    sin esto salir y volver a entrar era un Reclamo detras de otro;
+ *  - el descanso entre minijefes (Hardcore.minutosMinijefe desde Hardcore.ultimoMinijefe), compartido
+ *    con el de cordura cero: el Reclamo lo pide y, al traer al suyo, lo apunta Hardcore.traerMinijefe.
+ *    Desde la revision de la 1.10 la ultima llegada se guarda en hardcore-datos para los dos
+ *    (Hardcore.RUTA_ULTIMO_MINIJEFE): el Estado se olvida al salir de Calamity, al desconectarse y al
+ *    morir, y sin esto salir y volver era un minijefe detras de otro;
  *  - el tope del dia por jugador (minijefes.reclamo.tope-dia, el dia de hardcore.zona).
  * Si pasa, se gasta uno y a los minijefes.reclamo.segundos (3) llega por la misma ruta que el de
  * cordura cero (Hardcore.traerMinijefe). En esa espera se mira cada segundo que siga conectado, vivo,
@@ -60,8 +61,11 @@ final class Reclamo implements Listener {
 
     /** Un clic cada medio segundo como mucho: Bedrock repite el uso mientras se mantiene pulsado. */
     private static final long ESPERA_MS = 500;
-    /** Donde se apunta en hardcore-datos lo gastado hoy y la ultima llamada que trajo minijefe. */
-    static final String RUTA_DIA = "reclamo.dia", RUTA_ULTIMO = "reclamo.ultimo";
+    /**
+     * Donde se apunta en hardcore-datos lo gastado hoy. La ultima llegada de un minijefe (el descanso) ya
+     * no va aparte en reclamo.ultimo: es la comun de Hardcore (RUTA_ULTIMO_MINIJEFE).
+     */
+    static final String RUTA_DIA = "reclamo.dia";
     /** El cuerno "Call" (llamada) del vanilla: el que suena al usarlo. */
     private static final String SONIDO = "item.goat_horn.sound.5";
 
@@ -221,7 +225,7 @@ final class Reclamo implements Listener {
         String tipo = Minijefes.delBioma(bioma, Minijefes.porBioma(hc.plugin().getConfig()),
                 hc.cfg().getStringList("minijefes.tipos"));
         long ahora = System.currentTimeMillis();
-        long ultimo = ultimoMinijefe(p);
+        long ultimo = hc.ultimoMinijefe(p);
         int cada = hc.minutosMinijefe();
         int usados = usadosHoy(p.getUniqueId(), calendario().dia(ahora));
         int tope = topeDia();
@@ -272,29 +276,21 @@ final class Reclamo implements Listener {
         return parca != null && hc.valor("parca", () -> parca.persigue(p), false);
     }
 
-    /** El ultimo minijefe de ese jugador: el del Estado (cordura cero o Reclamo) o el ultimo Reclamo guardado. */
-    private long ultimoMinijefe(Player p) {
-        long enMemoria = hc.cordura().estado(p).ultimoMinijefe;
-        return Math.max(enMemoria, hc.datos().getLong(RUTA_ULTIMO + "." + p.getUniqueId(), 0));
-    }
-
     int usadosHoy(UUID u, String dia) {
         return hc.datos().getInt(RUTA_DIA + "." + dia + "." + u, 0);
     }
 
-    /** Uno mas hoy y la hora de esta llamada. De paso se borran los dias pasados y las horas de hace mas de un dia. */
+    /**
+     * Uno mas hoy; de paso se borran los dias pasados. La hora de la llegada (el descanso) ya la ha
+     * guardado Hardcore.traerMinijefe, para este y para el de cordura cero.
+     */
     private int apuntar(UUID u, long ahora) {
         YamlConfiguration d = hc.datos();
         String dia = calendario().dia(ahora);
         ConfigurationSection dias = d.getConfigurationSection(RUTA_DIA);
         if (dias != null) for (String k : dias.getKeys(false)) if (!k.equals(dia)) dias.set(k, null);
-        ConfigurationSection ultimos = d.getConfigurationSection(RUTA_ULTIMO);
-        if (ultimos != null) {
-            for (String k : ultimos.getKeys(false)) if (ahora - ultimos.getLong(k, 0) > 86_400_000L) ultimos.set(k, null);
-        }
         int usados = usadosHoy(u, dia) + 1;
         d.set(RUTA_DIA + "." + dia + "." + u, usados);
-        d.set(RUTA_ULTIMO + "." + u, ahora);
         return usados;
     }
 
@@ -486,6 +482,7 @@ final class Reclamo implements Listener {
         h.ok("aviso del tope con el tope", aviso("tope", 0, 6).contains("6 Reclamos"));
         h.igual("aviso del spawn", "Aquí no responde nadie. Aléjate del spawn.", aviso("spawn", 0, 6));
         h.igual("aviso sin minijefe", "En este bioma no vive ningún minijefe.", aviso("bioma", 0, 6));
+        probarDescanso(h);
 
         ItemStack r = ItemsCalamity.reclamo();
         h.ok("el Reclamo lleva su marca", ItemsCalamity.esReclamo(r));
@@ -504,7 +501,26 @@ final class Reclamo implements Listener {
             h.ok("en premios pendientes vuelve igual", vuelta != null && vuelta.isSimilar(l)
                     && !vuelta.hasData(DataComponentTypes.INSTRUMENT));
         }
-        h.ok("la prueba no toca hardcore-datos.yml", !hc.datos().isSet(RUTA_ULTIMO + "." + Autotest.sintetico(611)));
+        h.ok("la prueba no toca hardcore-datos.yml", !hc.datos().isSet(Hardcore.RUTA_ULTIMO_MINIJEFE + "." + Autotest.sintetico(611)));
         return h.lineas();
+    }
+
+    /**
+     * Revision 1.10, sin Bukkit: el descanso entre minijefes se mira contra la ultima llegada guardada
+     * (Hardcore.ultimoMinijefe), y no solo contra la del Estado, que se pone a 0 al salir, al reconectar y
+     * al morir. Lo mismo para el de cordura cero (Hardcore.minijefeSiTocaCordura usa faltanMinutos).
+     */
+    static void probarDescanso(Autotest.Hoja h) {
+        long ahora = 1_790_000_000_000L, hace3 = ahora - 180_000L;
+        h.igual("descanso guardado: el Estado a 0 (salir, reconectar, morir) no lo borra", 7L,
+                faltanMinutos(Hardcore.ultimoMinijefe(0, hace3), ahora, 10));
+        h.igual("descanso guardado: manda la llegada mas reciente de las dos", hace3,
+                Hardcore.ultimoMinijefe(ahora - 900_000L, hace3));
+        h.igual("descanso guardado: y si el Estado es mas reciente, el Estado", hace3,
+                Hardcore.ultimoMinijefe(hace3, ahora - 900_000L));
+        h.igual("descanso guardado: sin ninguna llegada, sin descanso", 0L,
+                faltanMinutos(Hardcore.ultimoMinijefe(0, 0), ahora, 10));
+        h.igual("descanso guardado: tras un minijefe de cordura cero, el Reclamo tambien espera", "descanso",
+                motivo(true, false, "custodio-de-las-ruinas", false, false, Hardcore.ultimoMinijefe(0, hace3), ahora, 10, 0, 6));
     }
 }

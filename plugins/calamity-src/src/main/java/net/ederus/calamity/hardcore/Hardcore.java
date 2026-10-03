@@ -87,6 +87,16 @@ public final class Hardcore implements Listener {
     private final Map<UUID, UUID> presas = new HashMap<>();
     /** Calamity 1.10 · Minijefe -> desde cuando (millis) espera fuera de la zona spawn a su presa. Ver vigilarPresas(). */
     private final Map<UUID, Long> esperando = new HashMap<>();
+    /**
+     * Calamity 1.10 · Minijefe que espera -> quien le ha pegado desde fuera -> cuando (millis): a esos, y
+     * solo durante ZonaSpawn.REPRESALIA_MS, les puede apuntar (onApuntarAlQueEspera). Se vacia con el
+     * resto de la espera (soltarPresa, VUELVE, parar).
+     */
+    private final Map<UUID, Map<UUID, Long>> represalias = new HashMap<>();
+    /** Calamity 1.10 · Minijefe sin presa viva sacado al borde -> desde cuando (millis). Ver vigilarSinPresa(). */
+    private final Map<UUID, Long> sinPresa = new HashMap<>();
+    /** Calamity 1.10 · La ultima llegada de un minijefe por cada jugador (millis), en hardcore-datos. Ver ultimoMinijefe(). */
+    static final String RUTA_ULTIMO_MINIJEFE = "minijefe-ultimo";
     /** Quien acaba de morir dentro y todavia no ha reaparecido. Ver onReaparecer(). */
     private final java.util.Set<UUID> porReaparecer = new java.util.HashSet<>();
     /** 1.10: quien acaba de entrar por meter(); onCambiarMundo no repite su llegada. Dura un tick. */
@@ -332,6 +342,8 @@ public final class Hardcore implements Listener {
         canalizando.clear();
         // 1.10: sin reloj nadie espera a nadie; al volver a arrancar, el que siga ahi empieza de cero.
         esperando.clear();
+        represalias.clear();
+        sinPresa.clear();
         recienMetidos.clear();
         pararModulos();
         // Al apagar no hay PlayerQuitEvent que valga: la cordura de los que siguen
@@ -655,6 +667,8 @@ public final class Hardcore implements Listener {
         if (zona != null) seguro("zona-spawn", () -> zona.tick());
         vigilarZonas();
         vigilarPresas();
+        // Revision 1.10: los minijefes sin presa que se sacaron al borde (despues de zona.tick, que los saca).
+        seguro("zona-spawn", this::vigilarSinPresa);
         seguro("parca", () -> parca.tick());
         if (ambush != null) seguro("ambush", () -> ambush.tick());
         seguro("ecos", () -> ecos.tick());
@@ -936,13 +950,14 @@ public final class Hardcore implements Listener {
      * Minijefes.elegir). En un bioma sin dueno, o sin tabla, viene uno al azar de minijefes.tipos,
      * como hasta la 1.9. No sale uno por segundo: hay un descanso (minutosMinijefe) entre
      * apariciones para que quedarse a cero sea una condena, no una granja de jefes. Es el mismo
-     * descanso que pide el Reclamo, que trae al suyo por la misma ruta (traerMinijefe).
+     * descanso que pide el Reclamo, que trae al suyo por la misma ruta (traerMinijefe), y se mira
+     * contra la ultima llegada guardada (ultimoMinijefe): salir y volver, reconectar o morir no lo borran.
      */
     private void minijefeSiTocaCordura(Player p, Cordura.Estado e) {
         // Ley 6: una amenaza grande a la vez. Con la PARCA encima no viene nadie mas.
         if (valor("parca", () -> parca.persigue(p), false)) return;
         long ahora = System.currentTimeMillis();
-        if (e.ultimoMinijefe != 0 && ahora - e.ultimoMinijefe < minutosMinijefe() * 60_000L) return;
+        if (Reclamo.faltanMinutos(ultimoMinijefe(p), ahora, minutosMinijefe()) > 0) return;
 
         String id = Minijefes.elegir(Minijefes.bioma(p.getLocation()), Minijefes.porBioma(plugin.getConfig()),
                 cfg().getStringList("minijefes.tipos"), random::nextInt);
@@ -953,8 +968,9 @@ public final class Hardcore implements Listener {
 
     /**
      * Calamity 1.10 · Trae ese minijefe por ese jugador: lo invoca (MobsLethal.invocarMinijefe), lo
-     * marca como presa, apunta el descanso en su Estado y le avisa. Es la ruta del de cordura cero y la
-     * del Reclamo. Null si no ha encontrado sitio, y entonces no apunta nada.
+     * marca como presa, apunta el descanso en su Estado y en hardcore-datos (apuntarUltimoMinijefe) y
+     * le avisa. Es la ruta del de cordura cero y la del Reclamo. Null si no ha encontrado sitio, y
+     * entonces no apunta nada.
      */
     LivingEntity traerMinijefe(Player p, String tipo, Cordura.Estado e) {
         if (plugin.mobs() == null || tipo == null) return null;
@@ -963,7 +979,9 @@ public final class Hardcore implements Listener {
         if (mob == null) return null;
         marcarPresa(mob, p);
 
-        e.ultimoMinijefe = System.currentTimeMillis();
+        long ahora = System.currentTimeMillis();
+        e.ultimoMinijefe = ahora;
+        apuntarUltimoMinijefe(p.getUniqueId(), ahora);
         // 1.8.4: el mismo nombre que su cartel (Paleta.minijefe), con el nivel detras. Antes se leia el
         // customName, que EDM no pone, y el aviso siempre decia "un minijefe".
         p.sendMessage(Component.text("Ha venido por ti: ", Paleta.AVISO).append(plugin.mobs().nombreMinijefe(mob)));
@@ -971,11 +989,51 @@ public final class Hardcore implements Listener {
         return mob;
     }
 
+    /**
+     * Calamity 1.10 · La ultima vez que vino un minijefe por ese jugador (cordura cero o Reclamo), o 0: la
+     * de su Estado o la guardada en hardcore-datos, la mas reciente. La guardada es la que manda: el
+     * Estado se olvida al salir de Calamity, al desconectarse y al morir, y con solo el, salir y volver
+     * era un minijefe detras de otro. La miran el de cordura cero y el Reclamo.
+     */
+    long ultimoMinijefe(Player p) {
+        return ultimoMinijefe(cordura.estado(p).ultimoMinijefe,
+                datos.getLong(RUTA_ULTIMO_MINIJEFE + "." + p.getUniqueId(), 0));
+    }
+
+    /** La mas reciente de las dos (0 = ninguna). Sin Bukkit: lo prueba el autotest del Reclamo. */
+    static long ultimoMinijefe(long enMemoria, long guardado) {
+        return Math.max(enMemoria, guardado);
+    }
+
+    /**
+     * La ultima llegada, a hardcore-datos (se escribe en el minuto, o al parar). De paso se borran las de
+     * hace mas de un dia: ningun descanso entre minijefes dura tanto.
+     */
+    private void apuntarUltimoMinijefe(UUID u, long ahora) {
+        ConfigurationSection s = datos.getConfigurationSection(RUTA_ULTIMO_MINIJEFE);
+        if (s != null) {
+            for (String k : s.getKeys(false)) if (ahora - s.getLong(k, 0) > 86_400_000L) s.set(k, null);
+        }
+        datos.set(RUTA_ULTIMO_MINIJEFE + "." + u, ahora);
+        datosSucios = true;
+    }
+
     /** Minutos entre dos minijefes del mismo jugador: minijefes.cada-minutos, o los del Eclipse si hay uno. */
     int minutosMinijefe() {
         int def = cfg().getInt("minijefes.cada-minutos", 10);
         Eclipse ec = eclipse;
         return ec == null ? def : valor("eclipse", () -> ec.minutosMinijefe(def), def);
+    }
+
+    /**
+     * Revision 1.10 · Si ese tipo de /esb es uno de los minijefes de Calamity: los de
+     * hardcore.minijefes.tipos y los de hardcore.minijefes.por-bioma (Minijefes.tipoConocido). Publico y
+     * sin las reglas en marcha: lo usa CartelesMinijefe, de otro paquete, para saber a que carteles poner
+     * el nombre de Calamity.
+     */
+    public static boolean esTipoMinijefe(org.bukkit.configuration.Configuration raiz, String tipo) {
+        if (raiz == null || tipo == null) return false;
+        return Minijefes.tipoConocido(raiz.getStringList("hardcore.minijefes.tipos"), Minijefes.porBioma(raiz), tipo);
     }
 
     /**
@@ -1278,9 +1336,10 @@ public final class Hardcore implements Listener {
      * humo en cuanto ella entraba, y la plaza era la forma de quitarse un minijefe de encima sin pelear
      * (Dosa: "que esto no pase con minijefes"). Ahora la esperan fuera; el paso de cada segundo lo
      * decide ZonaSpawn.espera:
-     *  - mientras ella esta dentro no se les pone de objetivo ni se les borra el que tengan, asi que si
-     *    alguien de fuera les pega se defienden con su IA de siempre. Solo se suelta un objetivo que
-     *    este dentro (ella, al entrar): a los de dentro no pueden apuntar (ZonaSpawn.onApuntar);
+     *  - mientras ella esta dentro no buscan pelea: solo pueden apuntar a quien les pego desde fuera hace
+     *    menos de ZonaSpawn.REPRESALIA_MS (onApuntarAlQueEspera); cualquier otro objetivo, ella al
+     *    entrar incluida, se les quita. Y no les hace dano lo que no trae un ser vivo detras, ni arden
+     *    (onDanoEnEspera);
      *  - se quedan cerca del sitio por donde ella saldria (ZonaSpawn.acercarAlBorde), nunca junto a
      *    ella: distancia-maxima no cuenta mientras esperan;
      *  - si ella sale, vuelven por ella con lo de siempre; si pasan espera-segundos seguidos, se van sin
@@ -1327,7 +1386,12 @@ public final class Hardcore implements Listener {
                                 .append(Component.text(" te espera fuera del spawn.", Paleta.TEXTO)).build(), 4);
                         plugin.bitacora().anotar("spawn", "minijefe-espera", presa.getName());
                     }
-                    if (mob.getTarget() instanceof Player t && enSpawn(t)) mob.setTarget(null);
+                    // Revision 1.10: no busca pelea. Solo conserva el objetivo si es una represalia; a
+                    // cualquier otro (ella al entrar, quien pase por la puerta) se le suelta.
+                    LivingEntity objetivo = mob.getTarget();
+                    if (objetivo != null && !puedeApuntar(idMob, objetivo, ahora)) mob.setTarget(null);
+                    podarRepresalias(idMob, ahora);
+                    if (mob.getFireTicks() > 0) mob.setFireTicks(0);
                     seguro("zona-spawn", () -> z.acercarAlBorde(mob, presa));
                     continue;
                 }
@@ -1341,6 +1405,7 @@ public final class Hardcore implements Listener {
                 }
                 case VUELVE -> {
                     esperando.remove(idMob);
+                    represalias.remove(idMob);
                     // Ley 6: si la PARCA la esperaba fuera y ha vuelto antes que este segundo, el minijefe se
                     // va. Parca.retirarMinijefes solo ve a los que la tienen de objetivo, y este no la tenia.
                     if (valor("parca", () -> parca.persigue(presa), false)) {
@@ -1388,21 +1453,137 @@ public final class Hardcore implements Listener {
         return id == null ? null : plugin.getServer().getPlayer(id);
     }
 
-    /** Calamity 1.10 · Olvida a ese minijefe: ni a quien sigue ni si la estaba esperando. */
+    /**
+     * Calamity 1.10 · Olvida a ese minijefe: ni a quien sigue, ni si la estaba esperando, ni a quien le
+     * pego mientras. El reloj de sin presa (sinPresa) no: lo lleva justo el que se queda sin presa, y lo
+     * poda vigilarSinPresa.
+     */
     private void soltarPresa(UUID idMob) {
         presas.remove(idMob);
         esperando.remove(idMob);
+        represalias.remove(idMob);
     }
 
     /**
-     * Calamity 1.10 · Un minijefe de cordura cero que se va: en humo y sin muerte (no paga ni suelta
-     * nada), olvidado (soltarPresa) y con su linea en la Bitacora.
+     * Calamity 1.10 · Un minijefe que se va (de cordura cero o sin presa en el borde): en humo y sin
+     * muerte (no paga ni suelta nada), olvidado del todo y con su linea en la Bitacora.
      */
     private void retirarMinijefe(UUID idMob, org.bukkit.entity.Mob mob, String... bitacora) {
         soltarPresa(idMob);
+        sinPresa.remove(idMob);
         Compat.spawn(mob.getWorld(), Compat.LARGE_SMOKE, mob.getLocation().add(0, 1, 0), 30, 0.5, 1, 0.5, 0.02);
         mob.remove();
         plugin.bitacora().anotar(bitacora);
+    }
+
+    /**
+     * Revision 1.10 · Si el minijefe que espera puede apuntar a ese objetivo: solo como represalia contra
+     * quien le pego desde fuera hace poco (ZonaSpawn.represalia).
+     */
+    private boolean puedeApuntar(UUID idMob, Entity objetivo, long ahora) {
+        Map<UUID, Long> golpes = represalias.get(idMob);
+        return ZonaSpawn.represalia(golpes == null ? null : golpes.get(objetivo.getUniqueId()), ahora,
+                enSpawn(objetivo.getLocation()));
+    }
+
+    /** Los golpes que ya no dan derecho a represalia se olvidan (una vez por segundo, desde vigilarPresas). */
+    private void podarRepresalias(UUID idMob, long ahora) {
+        Map<UUID, Long> golpes = represalias.get(idMob);
+        if (golpes == null) return;
+        golpes.values().removeIf(t -> ahora - t > ZonaSpawn.REPRESALIA_MS);
+        if (golpes.isEmpty()) represalias.remove(idMob);
+    }
+
+    /**
+     * Revision 1.10 · Lo llama ZonaSpawn.sacar con cada minijefe que saca al borde: si no tiene presa viva
+     * (mato a su presa, ella se fue sin que el la esperase, o es de guarnicion), desde la primera vez lleva
+     * el reloj de espera (vigilarSinPresa). Las siguientes no lo reinician.
+     */
+    void sacadoAlBorde(Entity mob) {
+        if (mob == null || presaViva(mob.getUniqueId()) != null) return;
+        sinPresa.putIfAbsent(mob.getUniqueId(), System.currentTimeMillis());
+    }
+
+    /** La presa de ese minijefe si esta viva y en Calamity (conectada, sin morir y en un mundo hardcore), o null. */
+    private Player presaViva(UUID idMob) {
+        Player p = presaDe(idMob);
+        return p != null && p.isOnline() && !p.isDead() && esHardcore(p) ? p : null;
+    }
+
+    /**
+     * Revision 1.10 · Una vez por segundo, los minijefes sin presa que se sacaron al borde (sacadoAlBorde).
+     * Si cumplen spawn.minijefes.espera-segundos pegados a la zona se van en humo sin dejar nada, como el
+     * que se cansa de esperar; si vuelven a tener presa viva o se alejan de la franja
+     * (ZonaSpawn.FRANJA_SIN_PRESA), el reloj se olvida. Sin esto, el que mataba a su presa junto a la plaza
+     * (o uno de guarnicion que se colaba) se quedaba de guardia en la puerta mientras el chunk siguiera
+     * cargado: los esbirros de EDM no se despawnean solos. Mientras tanto no arde (onDanoEnEspera).
+     */
+    private void vigilarSinPresa() {
+        if (sinPresa.isEmpty()) return;
+        ZonaSpawn z = zona;
+        long ahora = System.currentTimeMillis();
+        int limite = z == null ? 0 : z.esperaSegundos();
+        for (UUID idMob : new ArrayList<>(sinPresa.keySet())) {
+            Entity e = plugin.getServer().getEntity(idMob);
+            ZonaSpawn.Zona caja = z == null || e == null ? null : z.de(e.getWorld());
+            if (!(e instanceof org.bukkit.entity.Mob mob) || !mob.isValid() || caja == null) {
+                sinPresa.remove(idMob);
+                continue;
+            }
+            Location l = mob.getLocation();
+            long desde = sinPresa.get(idMob);
+            switch (ZonaSpawn.sinPresa(presaViva(idMob) != null, ZonaSpawn.alejado(caja, l.getX(), l.getZ()),
+                    ahora - desde, limite)) {
+                case OLVIDA -> sinPresa.remove(idMob);
+                case SE_VA -> retirarMinijefe(idMob, mob, "spawn", "minijefe-se-va", mob.getType().getKey().getKey(),
+                        "sin presa", "espera " + (ahora - desde) / 1000 + " s",
+                        l.getBlockX() + " " + l.getBlockY() + " " + l.getBlockZ());
+                case SIGUE -> {
+                    if (mob.getFireTicks() > 0) mob.setFireTicks(0);
+                }
+            }
+        }
+    }
+
+    /**
+     * Revision 1.10 · El minijefe que espera a su presa no busca pelea (vigilarPresas): no se le deja
+     * apuntar a nadie salvo, como represalia, a quien le pego desde fuera hace menos de
+     * ZonaSpawn.REPRESALIA_MS. Sin esto atacaba a cualquiera que saliera por la puerta: espera-segundos de
+     * jefe de guardia, y con el Reclamo a voluntad. Quien le pego puede ser un jugador o lo que le ataca
+     * por el (un lobo, un golem): sin represalia contra ellos, un lobo lo mataria sin respuesta y su dueno
+     * cobraria como asesino sin riesgo. EntityTargetEvent recibe tambien EntityTargetLivingEntityEvent.
+     */
+    @EventHandler(priority = EventPriority.HIGH, ignoreCancelled = true)
+    public void onApuntarAlQueEspera(org.bukkit.event.entity.EntityTargetEvent e) {
+        if (esperando.isEmpty() || e.getTarget() == null || !esperando.containsKey(e.getEntity().getUniqueId())) return;
+        if (!puedeApuntar(e.getEntity().getUniqueId(), e.getTarget(), System.currentTimeMillis())) e.setCancelled(true);
+    }
+
+    /** Revision 1.10 · Quien le pega de verdad desde fuera al que espera (MONITOR: el golpe ha entrado): su represalia. */
+    @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
+    public void onGolpeAlQueEspera(EntityDamageEvent e) {
+        if (esperando.isEmpty() || !esperando.containsKey(e.getEntity().getUniqueId())) return;
+        LivingEntity quien = ZonaSpawn.causanteVivo(e);
+        if (quien == null || quien.equals(e.getEntity()) || enSpawn(quien.getLocation())) return;
+        represalias.computeIfAbsent(e.getEntity().getUniqueId(), k -> new HashMap<>())
+                .put(quien.getUniqueId(), System.currentTimeMillis());
+    }
+
+    /**
+     * Revision 1.10 · Al minijefe que espera a su presa, y al sin presa del borde, no se le hace el dano que
+     * no trae un ser vivo detras (ZonaSpawn.bloqueaDanoEnEspera: lava, fuego, caidas, asfixia, cactus, un
+     * dispensador, TNT sin dueno), y si arde se le apaga. Por que: desde dentro de la zona no se le puede
+     * pegar, pero si poner lava o fuego (o activar un dispensador) en un bloque de fuera, y quien ya le
+     * habia hecho su parte fuera lo remataba sin ningun riesgo y cobraba el reparto.
+     */
+    @EventHandler(priority = EventPriority.LOW, ignoreCancelled = true)
+    public void onDanoEnEspera(EntityDamageEvent e) {
+        if (esperando.isEmpty() && sinPresa.isEmpty()) return;
+        UUID id = e.getEntity().getUniqueId();
+        if (!esperando.containsKey(id) && !sinPresa.containsKey(id)) return;
+        if (!ZonaSpawn.bloqueaDanoEnEspera(e.getCause(), ZonaSpawn.causanteVivo(e) != null)) return;
+        e.setCancelled(true);
+        if (e.getEntity().getFireTicks() > 0) e.getEntity().setFireTicks(0);
     }
 
     /** Calamity 1.10 · El nombre de un minijefe en los avisos, el mismo de su cartel (MobsLethal.nombreMinijefe). */

@@ -213,7 +213,7 @@ hardcore:
   # dueño, uno de "tipos" al azar), y no más de uno cada tantos minutos.
   minijefes:
     # Descanso entre dos minijefes del mismo jugador. Lo comparten el de la cordura a cero y el
-    # del Reclamo (el Eclipse lo acorta).
+    # del Reclamo (el Eclipse lo acorta), y se guarda: salir y volver, reconectar o morir no lo borran.
     cada-minutos: 10
     distancia: 30
     # Multiplicadores sobre el esbirro normal de ese tipo.
@@ -223,9 +223,12 @@ hardcore:
     #     reaparece a tu lado. Solo se acaba cuando cae uno de los dos.
     #     Calamity 1.10: mientras te espera fuera de la zona spawn no cuenta (ver spawn.minijefes).
     distancia-maxima: 60
-    # Los rellena el plugin la primera vez con los cinco de la carpeta
-    # "Lethal World · Minijefes" de /esb. A partir de ahi se editan alli. 1.10: un tipo que no
-    # esté aquí no viene, tampoco en su bioma; con la lista vacía valen los de por-bioma.
+    # Los ids de /esb de los minijefes que pueden venir. Al arrancar, el plugin crea en /esb los
+    # cinco que falten (carpeta "Lethal World · Minijefes") y, si esta lista está vacía o su primer
+    # id ya no existe allí, escribe aquí sus ids y guarda el config (MobsLethal); sus fichas se
+    # editan en /esb. 1.10: un tipo que no esté aquí no viene, tampoco en su bioma ni con el
+    # Reclamo; con la lista vacía valen los de por-bioma. El cartel con el nombre de Calamity se
+    # pinta a los de aquí y a los de por-bioma.
     tipos: []
     # Calamity 1.10 · Dónde vive cada minijefe. El de la cordura a cero es el del bioma donde
     # estás, y el Reclamo llama a ese mismo. Las claves son los ids de "tipos"; "biomas", los de
@@ -263,7 +266,8 @@ hardcore:
       #   anuncio       true = se anuncia a todo el servidor
       # participacion-minima es la de esencias.minijefe (0.10). La piedad sube a cada participante
       # al que no le cae y vuelve a 0 al caerle; llena, le cae aunque no le toque tirar (como el
-      # Sello). El libro pasa por el tope del mes (caja.libro-tope-mes; pasado, sus Esencias). El
+      # Sello). El libro pasa por el tope del mes (caja.libro-tope-mes; pasado, sus Esencias, que
+      # paga la Aduana como las del minijefe: dentro de Calamity, en la mano). El
       # libro y los comandos se dan al momento por consola: quien no está conectado ni tira ni
       # pierde su piedad. Sin objeto ni comando (las gemas, hasta que llegue su lote), no hace nada.
       todos:
