@@ -130,6 +130,8 @@ final class Entregas {
         Ficha f = pe.ficha;
         if (f.dueno() == null && f.duenoNombre() != null && f.duenoNombre().equalsIgnoreCase(p.getName())) {
             f = f.conDueno(p.getUniqueId(), p.getName());   // entregada por nombre: ya sabemos su UUID
+        } else if (p.getUniqueId().equals(f.dueno()) && !p.getName().equals(f.duenoNombre())) {
+            f = f.conDueno(p.getUniqueId(), p.getName());   // es suya y se cambio el nombre
         }
         ItemStack it = plugin.objeto().crear(f, pe.material);
         Map<Integer, ItemStack> sobra = p.getInventory().addItem(it);
@@ -220,8 +222,15 @@ final class Entregas {
                     "%tipo%", f.tipo());
             return false;
         }
-        if (plugin.mundoExcluido(donde.getWorld().getName())) {
-            plugin.textos().manda(p, "colocar-mundo", "&#FF5C5CEn este mundo no se pueden colocar Super Beacons.");
+        String mundo = donde.getWorld().getName();
+        if (!plugin.mundoPermitido(mundo)) {
+            if (plugin.mundoExcluido(mundo) || plugin.mundosPermitidos().isEmpty()) {
+                plugin.textos().manda(p, "colocar-mundo", "&#FF5C5CEn este mundo no se pueden colocar Super Beacons.");
+            } else {
+                plugin.textos().manda(p, "colocar-mundo-permitido",
+                        "&#FF5C5CEn este mundo no se pueden colocar Super Beacons. &7Solo en: &f%mundos%&7.",
+                        "%mundos%", String.join(", ", plugin.mundosPermitidos()));
+            }
             return false;
         }
         if (plugin.enMina(donde)) {
@@ -279,8 +288,9 @@ final class Entregas {
 
     /**
      * La coloca de verdad: se llama en BlockPlaceEvent MONITOR, cuando ya nadie la va a
-     * cancelar. Fija el dueño si no lo tenia (transferible: pasa a ser de quien la coloca)
-     * y el clan del dueño si el tipo es de clan y no venia fijado.
+     * cancelar. Fija el dueño si no lo tenia (transferible: pasa a ser de quien la coloca).
+     * El clan NO se fija: solo viaja el del give; sin el, beneficia al clan actual del dueño
+     * (Motor.clanDe), que aqui se apunta ya como cache.
      */
     void colocar(Player p, Ficha f, Block bl) {
         TipoBaliza t = plugin.tipo(f.tipo());
@@ -302,11 +312,10 @@ final class Entregas {
             dueno = p.getUniqueId();
             duenoNombre = p.getName();
         }
-        String clan = f.clan();
-        if (clan == null && t.beneficia == TipoBaliza.Beneficia.CLAN && dueno != null) clan = plugin.clanes().de(dueno);
-
-        Ficha fija = new Ficha(f.id(), f.tipo(), dueno, duenoNombre, clan, f.vence(), plugin.normalizados(f.elegidos(), t));
+        Ficha fija = new Ficha(f.id(), f.tipo(), dueno, duenoNombre, f.clan(), f.vence(),
+                plugin.normalizados(f.elegidos(), t));
         Baliza b = new Baliza(fija, bl.getWorld().getName(), bl.getX(), bl.getY(), bl.getZ(), bl.getType(), ahora);
+        if (b.clan == null && t.beneficia == TipoBaliza.Beneficia.CLAN) plugin.motor().clanDe(b);
         if (!registro().poner(b)) {
             // No deberia pasar (se comprobo en HIGH). Si pasa, la baliza no se pierde: vuelve
             // como pendiente y el bloque, que ya no tiene baliza detras, se quita.
@@ -349,8 +358,15 @@ final class Entregas {
     /**
      * Recoger (menu) o picar el bloque: el objeto vuelve al inventario de quien la recoge
      * con todo su estado. Si no le cabe, no se recoge. true si se recogio.
+     *
+     * Si quien recoge no es su dueño (el staff, desde el menu), no se la lleva: vuelve a su
+     * dueño como con /superbeacon remove, y al staff se le dice a donde fue.
      */
     boolean recoger(Player quien, Baliza b) {
+        if (!b.esDe(quien.getUniqueId())) {
+            retirar(quien, b);
+            return true;
+        }
         if (!enCurso.add(b.id)) return false;
         try {
             if (registro().porId(b.id) != b) {
@@ -392,16 +408,23 @@ final class Entregas {
     /* ======================================================= quitar del mundo */
 
     /**
-     * /superbeacon remove: fuera del mundo y de vuelta a su dueño (pendiente si no esta o
-     * no le cabe). Este si carga el chunk si hace falta: es una orden puntual del staff, y
-     * dejar el bloque puesto sin baliza detras regalaria un faro vanilla.
+     * /superbeacon remove (y "Recoger" del staff): fuera del mundo y de vuelta a su dueño
+     * (pendiente si no esta o no le cabe). Este si carga el chunk si hace falta: es una orden
+     * puntual del staff, y dejar el bloque puesto sin baliza detras regalaria un faro
+     * vanilla. Con el mundo sin cargar no se hace nada: el bloque se quedaria ahi.
      */
     void retirar(CommandSender quien, Baliza b) {
+        if (Bukkit.getWorld(b.mundo) == null) {
+            plugin.textos().manda(quien, "remove-sin-mundo",
+                    "&#FF5C5CEl mundo &f%mundo% &#FF5C5Cno está cargado: no se hizo nada y el Super Beacon sigue ahí."
+                            + " &7Carga ese mundo e inténtalo de nuevo.",
+                    "%mundo%", b.mundo);
+            return;
+        }
         if (!enCurso.add(b.id)) return;
         try {
             if (registro().porId(b.id) != b) return;
             Pendiente pe = devolver(b, "retirada");
-            boolean mundo = Bukkit.getWorld(b.mundo) != null;
             sacarDelMundo(b);
             Player d = b.dueno == null ? null : Bukkit.getPlayer(b.dueno);
             boolean dado = d != null && entregar(d, pe, false);
@@ -412,11 +435,6 @@ final class Entregas {
             plugin.textos().manda(quien, "retirado", "&fRetirado %nombre% &fde &7%donde%&f. &7%destino%",
                     "%nombre%", nombreDe(b.tipo), "%donde%", b.donde(),
                     "%destino%", destino.replace("%dueno%", b.duenoTexto()));
-            if (!mundo) {
-                plugin.textos().manda(quien, "retirado-sin-mundo",
-                        "&#FFB627El mundo &f%mundo% &#FFB627no está cargado: su bloque se queda ahí, sin efectos.",
-                        "%mundo%", b.mundo);
-            }
             plugin.anotar("retirada", b.id.toString(), b.tipo, b.duenoTexto(), b.donde(), "por " + quien.getName(),
                     dado ? "devuelta" : "pendiente");
         } finally {
@@ -476,6 +494,42 @@ final class Entregas {
         } finally {
             enCurso.remove(b.id);
         }
+    }
+
+    /**
+     * Un Super Beacon tirado en el suelo se perdio de verdad (cayo al vacio, un /kill...;
+     * ver GuardiaObjeto.Perdidas): pasa a pendiente de su dueño o, si aun no tiene, de quien
+     * lo tiro. Si ya existe en otra casa (colocado o pendiente: era una copia), no se crea otro.
+     */
+    void perdidaEnElSuelo(Ficha f, Material material, UUID tiro, String causa, String donde) {
+        UUID id = f.id();
+        if (registro().porId(id) != null || registro().pendiente(id) != null) {
+            plugin.anotar("perdida-ignorada", id.toString(), f.tipo(), causa, donde, "ya existe en otro sitio");
+            return;
+        }
+        UUID para = f.ligada() ? f.dueno() : tiro;
+        String paraNombre = f.ligada() ? f.duenoNombre()
+                : tiro == null ? null : Bukkit.getOfflinePlayer(tiro).getName();
+        if (para == null && paraNombre == null) {
+            plugin.getLogger().warning("[SuperBeacon] Se perdio en el suelo el Super Beacon " + id.toString().substring(0, 8)
+                    + " (" + f.tipo() + ", " + causa + ", " + donde + ") sin dueño ni quien lo tirara: no hay a quien"
+                    + " devolverlo. Esta en la bitacora por si hay que reponerlo a mano.");
+            plugin.anotar("perdida-sin-dueno", id.toString(), f.tipo(), causa, donde);
+            return;
+        }
+        Pendiente pe = new Pendiente(f, material, para, paraNombre, "perdida", System.currentTimeMillis());
+        registro().pendiente(pe);
+        registro().guardar();
+        plugin.getLogger().info("[SuperBeacon] El Super Beacon " + id.toString().substring(0, 8) + " (" + f.tipo()
+                + ") se perdio en el suelo (" + causa + ", " + donde + "); pasa a pendiente de " + pe.paraTexto() + ".");
+        plugin.anotar("perdida", id.toString(), f.tipo(), pe.paraTexto(), causa, donde);
+        Player d = para != null ? Bukkit.getPlayer(para) : Bukkit.getPlayerExact(paraNombre);
+        if (d != null) {
+            plugin.textos().manda(d, "perdido-devuelto",
+                    "&7Tu %nombre% &7se perdió en el suelo: &fvuelve a ti &7en unos segundos.", "%nombre%", nombreDe(f.tipo()));
+        }
+        // La entrega la hace la revision de cada 5 s (repartir): nunca dentro del evento que
+        // quita la entidad del mundo.
     }
 
     /** Vencida y de las que se destruyen, con su chunk cargado: fuera del mundo y aviso al dueño. */

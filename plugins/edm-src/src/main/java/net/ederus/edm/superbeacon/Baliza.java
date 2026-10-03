@@ -10,10 +10,10 @@ import org.bukkit.Material;
 /**
  * Un Super Beacon colocado en el mundo: su {@link Ficha} y el sitio donde esta.
  *
- * El dueño, el clan y la caducidad no cambian mientras esta colocado: se fijan al
- * colocarlo y viajan con el objeto al recogerlo. Lo unico que se toca en caliente es la
- * eleccion de efectos, desde su menu. (Y el UUID del dueño en un caso: si se entrego por
- * nombre a alguien que aun no habia entrado y el staff la coloco, se rellena cuando entra.)
+ * El dueño, el clan fijado (el del give) y la caducidad no cambian mientras esta colocado
+ * y viajan con el objeto al recogerlo. Lo que se toca en caliente: la eleccion de efectos
+ * (su menu), el UUID del dueño si se entrego por nombre a quien aun no habia entrado (se
+ * rellena cuando entra), su nombre si se lo cambio, y la cache del clan de su dueño.
  *
  * El material se guarda tal cual quedo en el mundo, no el del tipo: si manana alguien
  * cambia el bloque de un tipo en el config, las balizas que ya estaban siguen siendo de
@@ -24,8 +24,16 @@ final class Baliza {
     final UUID id;
     final String tipo;
     UUID dueno;
-    final String duenoNombre;
+    /** Se pone al dia al entrar su dueño (Registro.ligar): con UUID estable, el nombre puede cambiar. */
+    String duenoNombre;
+    /** El clan fijado en el give (el trofeo): manda siempre y viaja con el objeto. null si no hay. */
     final String clan;
+    /**
+     * Sin clan fijado, el que beneficia es el clan ACTUAL de su dueño (ver Motor.clanDe). Esto
+     * es solo su cache para cuando no esta conectado: se guarda en data.yml y NUNCA se escribe
+     * en el objeto, asi que si el dueño cambia de clan, su baliza cambia con el.
+     */
+    String clanDueno;
     final long vence;
     final LinkedHashSet<String> elegidos;
 

@@ -12,10 +12,11 @@ version: 1
 prefijo: '&x&0&0&8&3&F&D&lBEACON &8» &f'
 
 # --- colocar ---
-# %nombre% %radio% %elegibles% %max% %tipo% %dueno% %fecha%
+# %nombre% %radio% %elegibles% %max% %tipo% %dueno% %fecha% %mundos%
 colocado: '&fColocaste %nombre%&f. &7Alcance de &f%radio% &7bloques.'
 colocado-elige: '&7Úsalo para elegir sus &f%elegibles% &7efectos.'
 colocar-mundo: '&#FF5C5CEn este mundo no se pueden colocar Super Beacons.'
+colocar-mundo-permitido: '&#FF5C5CEn este mundo no se pueden colocar Super Beacons. &7Solo en: &f%mundos%&7.'
 colocar-mina: '&#FF5C5CNo se pueden colocar Super Beacons dentro de una mina.'
 colocar-maximo: '&#FF5C5CYa tienes &f%max% &#FF5C5CSuper Beacons colocados. &7Recoge uno antes de poner otro.'
 colocar-tipo: '&#FF5C5CEste Super Beacon es de un tipo que ya no existe (&f%tipo%&#FF5C5C). &7Avisa al staff.'
@@ -30,7 +31,7 @@ ajeno: '&7Este Super Beacon es de &f%dueno%&7.'
 ajeno-clan: '&7Este Super Beacon es de &f%dueno% &7y beneficia al clan &f%clan%&7.'
 romper-ajeno: '&#FF5C5CEste Super Beacon es de &f%dueno%&#FF5C5C: solo su dueño puede recogerlo.'
 # Al staff que pica uno ajeno (no se lo lleva). %dueno% %id%
-romper-staff: '&#FFB627Este Super Beacon es de &f%dueno%&#FFB627: picarlo no lo recoge. &7Úsalo y elige Recoger, o escribe &f/superbeacon remove %id%&7.'
+romper-staff: '&#FFB627Este Super Beacon es de &f%dueno%&#FFB627: picarlo no lo recoge. &7Para devolvérselo, úsalo y elige Recoger, o escribe &f/superbeacon remove %id%&7.'
 recogido: '&fRecogiste %nombre%&f. &7Conserva sus efectos, su dueño y su vencimiento.'
 sin-espacio: '&#FF5C5CNo tienes espacio en el inventario. &7Libera una casilla e inténtalo de nuevo.'
 ya-no-esta: '&#FF5C5CEse Super Beacon ya no está ahí.'
@@ -48,6 +49,8 @@ efecto-no-disponible: '&#FF5C5C%efecto% no está disponible: &7%motivo%.'
 vuelo-saliendo: '&#FFB627Saliste del alcance del Super Beacon: &fen 5 segundos &#FFB627dejas de volar.'
 vuelo-perdido: '&7Ya no puedes volar.'
 vuelo-perdido-aire: '&7Ya no puedes volar. &fCaes despacio &7durante unos segundos.'
+# Al pegar o recibir un golpe de otro jugador (vuelo.sin-vuelo-en-combate-segundos). %segundos%
+vuelo-combate: '&#FFB627En combate: &fsin vuelo del Super Beacon &#FFB627durante %segundos% segundos.'
 
 # --- vencimiento ---
 # %nombre%
@@ -60,6 +63,8 @@ entregado: '&fRecibiste %nombre%&f.'
 pendientes: '&7Tienes &f%n% &7Super Beacon(s) esperándote. Libera espacio en el inventario para recibirlos.'
 devuelto: '&7Tu %nombre% &7volvió a tu inventario.'
 devuelto-pendiente: '&7Tu %nombre% &7te espera: te llega cuando tengas una casilla libre.'
+# Se perdio tirado en el suelo (cayo al vacio...) y vuelve como pendiente.
+perdido-devuelto: '&7Tu %nombre% &7se perdió en el suelo: &fvuelve a ti &7en unos segundos.'
 
 # --- /superbeacon ---
 # %n% %nombre% %donde% %estado%
@@ -145,6 +150,10 @@ menu-recoger: '&fRecoger'
 menu-recoger-lore:
   - '&#8A8A8AVuelve a tu inventario con todo su estado:'
   - '&#8A8A8Aefectos, dueño, clan y vencimiento.'
+# El mismo boton visto por el staff en uno que no es suyo.
+menu-recoger-staff-lore:
+  - '&#8A8A8ANo es tuyo: vuelve a su dueño, como con'
+  - '&#8A8A8A/superbeacon remove.'
 menu-cerrar: '&fCerrar'
 
 # --- lo que hace cada clase de efecto (lore del menu) ---
@@ -155,6 +164,8 @@ detalle-boost: '&#8A8A8A%boost% x%multiplicador% en su alcance.'
 detalle-boost-mayor: '&#8A8A8ANo se suma con otros boosts: se aplica el mayor.'
 detalle-vuelo: '&#8A8A8APuedes volar dentro de su alcance.'
 detalle-vuelo-gracia: '&#8A8A8AAl salir tienes 5 segundos antes de caer.'
+# Solo sale si vuelo.sin-vuelo-en-combate-segundos no es 0. %segundos%
+detalle-vuelo-combate: '&#8A8A8ASi peleas con otro jugador, %segundos% segundos sin vuelo.'
 detalle-cultivos: '&#8A8A8AHace crecer los cultivos de su alcance.'
 detalle-sin-mobs: '&#8A8A8ANo aparecen monstruos de forma natural en su alcance.'
 # Por que un efecto no esta disponible. %plugin%
@@ -200,5 +211,5 @@ ambiguo: '&#FF5C5CHay varios Super Beacons que empiezan por &f%id%&#FF5C5C: escr
 retirado: '&fRetirado %nombre% &fde &7%donde%&f. &7%destino%'
 retirado-devuelto: 'Volvió al inventario de %dueno%.'
 retirado-pendiente: 'Le espera a %dueno% hasta que se conecte o tenga espacio.'
-retirado-sin-mundo: '&#FFB627El mundo &f%mundo% &#FFB627no está cargado: su bloque se queda ahí, sin efectos.'
+remove-sin-mundo: '&#FF5C5CEl mundo &f%mundo% &#FF5C5Cno está cargado: no se hizo nada y el Super Beacon sigue ahí. &7Carga ese mundo e inténtalo de nuevo.'
 recargado: '&fRecargado&8: &7%que%'

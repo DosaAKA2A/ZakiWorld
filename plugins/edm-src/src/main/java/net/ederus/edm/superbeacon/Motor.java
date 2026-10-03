@@ -168,9 +168,27 @@ final class Motor {
         };
     }
 
-    /** El clan que manda en la baliza: el fijado, o el de su dueño ahora si no se fijo ninguno. */
+    /**
+     * El clan que manda en la baliza: el fijado en el give si lo hay; si no, el clan ACTUAL de
+     * su dueño. Con el dueño conectado se pregunta (PlaceholderAPI, con la cache de 30 s de
+     * Clanes) y se apunta en la baliza; desconectado se usa lo ultimo apuntado, porque el
+     * placeholder de clan no siempre responde por un jugador que no esta.
+     */
     String clanDe(Baliza b) {
-        return b.clan != null ? b.clan : plugin.clanes().de(b.dueno);
+        if (b.clan != null || b.dueno == null) return clanBeneficiario(b.clan, false, null, b.clanDueno);
+        boolean conectado = Bukkit.getPlayer(b.dueno) != null;
+        String clan = clanBeneficiario(null, conectado, conectado ? plugin.clanes().de(b.dueno) : null, b.clanDueno);
+        if (conectado && !java.util.Objects.equals(clan, b.clanDueno)) {
+            b.clanDueno = clan;
+            plugin.registro().marcar();
+        }
+        return clan;
+    }
+
+    /** La regla, sin estado, para el selftest: el fijado manda; si no, el actual o, sin conexion, la cache. */
+    static String clanBeneficiario(String fijado, boolean duenoConectado, String clanActual, String cache) {
+        if (fijado != null) return fijado;
+        return duenoConectado ? clanActual : cache;
     }
 
     /* ============================================================ ciclo de zona */

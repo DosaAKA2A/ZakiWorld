@@ -7,6 +7,7 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -111,6 +112,8 @@ public final class SuperBeaconPlugin extends Module {
     private volatile boolean detenido;
 
     private final Set<String> mundosExcluidos = new HashSet<>();
+    /** Si no esta vacia, solo en estos se puede colocar (las ya colocadas en otros siguen). */
+    private final Set<String> mundosPermitidos = new LinkedHashSet<>();
     private int maximoPorJugador = 3;
     private double holoAltura = 1.6;
     private int holoDistancia = 32;
@@ -148,6 +151,15 @@ public final class SuperBeaconPlugin extends Module {
 
         var pm = core.getServer().getPluginManager();
         pm.registerEvents(new Guardia(this), this);
+        pm.registerEvents(new GuardiaObjeto(this), this);
+        try {
+            // EntityRemoveEvent es API interna de Paper (aunque Paper 26.2 la lanza): si un dia
+            // desaparece, solo se pierde recuperar lo que cae al vacio; el modulo sigue.
+            pm.registerEvents(new GuardiaObjeto.Perdidas(this), this);
+        } catch (Throwable t) {
+            getLogger().warning("[SuperBeacon] Sin EntityRemoveEvent en esta version (" + t + "): un Super Beacon"
+                    + " que caiga al vacio no volvera solo a su dueño.");
+        }
         pm.registerEvents(menu, this);
         for (ClaseEfecto c : clases.values()) {
             if (c instanceof Listener l) pm.registerEvents(l, this);
@@ -236,7 +248,12 @@ public final class SuperBeaconPlugin extends Module {
         FileConfiguration c = getConfig();
         mundosExcluidos.clear();
         for (String m : c.getStringList("mundos-excluidos")) mundosExcluidos.add(m.toLowerCase(Locale.ROOT));
+        mundosPermitidos.clear();
+        for (String m : c.getStringList("mundos-permitidos")) {
+            if (m != null && !m.isBlank()) mundosPermitidos.add(m.trim().toLowerCase(Locale.ROOT));
+        }
         maximoPorJugador = Math.max(0, c.getInt("maximo-por-jugador", 3));
+        vuelo.configurar(c.getInt("vuelo.sin-vuelo-en-combate-segundos", 15), c.getInt("vuelo.reintento-segundos", 30));
         holoAltura = c.getDouble("holograma.altura", 1.6);
         holoDistancia = Math.max(4, Math.min(256, c.getInt("holograma.distancia", 32)));
         holoRefresco = Math.max(5, Math.min(600, c.getInt("holograma.refresco-segundos", 30)));
@@ -289,8 +306,9 @@ public final class SuperBeaconPlugin extends Module {
     }
 
     /**
-     * Cada 5 s: vencimientos, bloques que desaparecieron (solo con el chunk cargado),
-     * entregas pendientes de los conectados y lo que haya que guardar.
+     * Cada 5 s: vencimientos, bloques que desaparecieron (solo con el chunk cargado), la
+     * cache del clan de los dueños conectados, los huecos vigilados, entregas pendientes de
+     * los conectados y lo que haya que guardar.
      */
     private void revision() {
         if (detenido) return;
@@ -298,10 +316,60 @@ public final class SuperBeaconPlugin extends Module {
         for (Baliza b : new ArrayList<>(registro.todas())) {
             if (b.vencida(ahora)) vencida(b);
             revisar(b, false);
+            if (registro.porId(b.id) == b) refrescarClan(b);
         }
+        registro.podarVaciadas(ahora);
+        for (Registro.Vaciada v : registro.vaciadas()) revisarVaciada(v);
+        vuelo.podar(ahora);
         entregas.repartir();
         registro.guardarSiHaceFalta();
         clanes.podar();
+    }
+
+    /**
+     * Sin clan fijado, la baliza de clan apunta el clan de su dueño mientras esta conectado
+     * (Motor.clanDe lo hace al preguntar). Aqui se le pregunta aunque nadie este cerca, para
+     * que la cache no se quede vieja si cambia de clan y se va.
+     */
+    private void refrescarClan(Baliza b) {
+        if (b.clan != null || b.dueno == null || Bukkit.getPlayer(b.dueno) == null) return;
+        TipoBaliza t = tipo(b.tipo);
+        if (t != null && t.beneficia == TipoBaliza.Beneficia.CLAN) motor.clanDe(b);
+    }
+
+    /** Las de ese dueño, al irse: se quedan con su clan de ahora (ver Guardia.alSalir). */
+    void refrescarClanes(UUID dueno) {
+        for (Baliza b : registro.de(dueno)) refrescarClan(b);
+    }
+
+    /**
+     * Un hueco vigilado (ver Registro, vaciadas) con su chunk cargado: si ha reaparecido el
+     * bloque de la baliza que se fue y no hay baliza registrada ahi, es un faro vanilla de
+     * regalo (un //undo, un rollback, un reinicio que no guardo el aire) y se quita. Nunca
+     * carga chunks.
+     */
+    void revisarVaciada(Registro.Vaciada v) {
+        World w = Bukkit.getWorld(v.mundo());
+        if (w == null || !w.isChunkLoaded(v.x() >> 4, v.z() >> 4)) return;
+        org.bukkit.block.Block bloque = w.getBlockAt(v.x(), v.y(), v.z());
+        if (!Registro.huerfano(bloque.getType(), v, registro.en(bloque) != null)) return;
+        bloque.setType(Material.AIR);
+        getLogger().warning("[SuperBeacon] En " + v.mundo() + " " + v.x() + " " + v.y() + " " + v.z() + " habia un "
+                + v.material() + " sin baliza donde estuvo el Super Beacon " + v.id().toString().substring(0, 8)
+                + " (un //undo, un rollback o un reinicio a mitad); se quito.");
+        anotar("faro-huerfano", v.id().toString(), v.mundo() + " " + v.x() + " " + v.y() + " " + v.z(),
+                v.material().name());
+    }
+
+    /**
+     * La regla de donde se puede colocar, sin estado, para el selftest: nunca en un mundo
+     * excluido; y si hay lista de permitidos, solo en esos. Sin mayusculas que importen.
+     */
+    static boolean mundoPermitido(String mundo, Set<String> permitidos, Set<String> excluidos) {
+        if (mundo == null) return false;
+        String m = mundo.toLowerCase(Locale.ROOT);
+        if (excluidos.contains(m)) return false;
+        return permitidos.isEmpty() || permitidos.contains(m);
     }
 
     /**
@@ -445,6 +513,15 @@ public final class SuperBeaconPlugin extends Module {
 
     boolean mundoExcluido(String mundo) {
         return mundo != null && mundosExcluidos.contains(mundo.toLowerCase(Locale.ROOT));
+    }
+
+    /** Si ahi se puede COLOCAR (mundos-permitidos y mundos-excluidos). Lo ya colocado sigue igual. */
+    boolean mundoPermitido(String mundo) {
+        return mundoPermitido(mundo, mundosPermitidos, mundosExcluidos);
+    }
+
+    Set<String> mundosPermitidos() {
+        return Collections.unmodifiableSet(mundosPermitidos);
     }
 
     /** Si ese bloque cae dentro de una mina del modulo minas (si esta en marcha). */

@@ -8,7 +8,11 @@ import java.util.UUID;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.block.Block;
+import org.bukkit.entity.AreaEffectCloud;
+import org.bukkit.entity.Entity;
 import org.bukkit.entity.Player;
+import org.bukkit.entity.Projectile;
+import org.bukkit.entity.TNTPrimed;
 import org.bukkit.event.Event;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
@@ -25,10 +29,12 @@ import org.bukkit.event.block.BlockPistonRetractEvent;
 import org.bukkit.event.block.BlockPlaceEvent;
 import org.bukkit.event.block.LeavesDecayEvent;
 import org.bukkit.event.entity.EntityChangeBlockEvent;
+import org.bukkit.event.entity.EntityDamageByEntityEvent;
 import org.bukkit.event.entity.EntityExplodeEvent;
 import org.bukkit.event.inventory.InventoryOpenEvent;
 import org.bukkit.event.inventory.InventoryType;
 import org.bukkit.event.player.PlayerChangedWorldEvent;
+import org.bukkit.event.player.PlayerGameModeChangeEvent;
 import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.event.player.PlayerJoinEvent;
 import org.bukkit.event.player.PlayerQuitEvent;
@@ -97,6 +103,9 @@ final class Guardia implements Listener {
     @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
     public void alQuedarColocado(BlockPlaceEvent e) {
         if (!e.canBuild()) return;
+        // Un jugador pone algo en un hueco vigilado (ver Registro, vaciadas): lo que haya ahi
+        // desde ahora es suyo y legitimo, aunque sea un faro.
+        plugin.registro().olvidarVaciada(e.getBlockPlaced());
         Ficha f = plugin.objeto().leer(e.getItemInHand());
         if (f == null) return;
         plugin.entregas().colocar(e.getPlayer(), f, e.getBlockPlaced());
@@ -200,8 +209,8 @@ final class Guardia implements Listener {
         avisados.put(p.getUniqueId(), ahora);
         if (alPicar && plugin.esAdmin(p)) {
             plugin.textos().manda(p, "romper-staff",
-                    "&#FFB627Este Super Beacon es de &f%dueno%&#FFB627: picarlo no lo recoge. &7Úsalo y elige"
-                            + " Recoger, o escribe &f/superbeacon remove %id%&7.",
+                    "&#FFB627Este Super Beacon es de &f%dueno%&#FFB627: picarlo no lo recoge. &7Para devolvérselo,"
+                            + " úsalo y elige Recoger, o escribe &f/superbeacon remove %id%&7.",
                     "%dueno%", b.duenoTexto(), "%id%", b.idCorto());
             return;
         }
@@ -295,14 +304,21 @@ final class Guardia implements Listener {
 
     /* ================================================================== chunks */
 
-    /** Un tick despues: se mira si su bloque sigue y se le pone el holograma. */
+    /**
+     * Un tick despues: se mira si su bloque sigue y se le pone el holograma, y si en un hueco
+     * vigilado de este chunk ha reaparecido un faro sin baliza (ver revisarVaciada).
+     */
     @EventHandler(priority = EventPriority.MONITOR)
     public void alCargarChunk(ChunkLoadEvent e) {
-        List<Baliza> aqui = plugin.registro().enChunk(e.getWorld().getName(), e.getChunk().getX(), e.getChunk().getZ());
-        if (aqui.isEmpty()) return;
+        String mundo = e.getWorld().getName();
+        int cx = e.getChunk().getX(), cz = e.getChunk().getZ();
+        List<Baliza> aqui = plugin.registro().enChunk(mundo, cx, cz);
+        List<Registro.Vaciada> huecos = plugin.registro().vaciadasEnChunk(mundo, cx, cz);
+        if (aqui.isEmpty() && huecos.isEmpty()) return;
         Bukkit.getScheduler().runTask(plugin.core(), () -> {
             if (plugin.detenido()) return;
             for (Baliza b : aqui) plugin.revisar(b, true);
+            for (Registro.Vaciada v : huecos) plugin.revisarVaciada(v);
         });
     }
 
@@ -332,7 +348,12 @@ final class Guardia implements Listener {
                         + " modificador(es) superbeacon: de antes; quitados.");
             }
             if (plugin.vuelo().apuntado(p)) plugin.motor().sembrar(p, plugin.vuelo().marcador);
-            if (plugin.registro().ligar(p) > 0) plugin.motor().reindexar();
+            // Sus balizas por nombre ya tienen UUID, y las suyas su nombre de ahora.
+            List<Baliza> tocadas = plugin.registro().ligar(p);
+            if (!tocadas.isEmpty()) {
+                plugin.motor().reindexar();
+                for (Baliza b : tocadas) plugin.hologramas().refrescar(b);
+            }
         }, 1L);
         Bukkit.getScheduler().runTaskLater(plugin.core(), () -> {
             if (p.isOnline() && !plugin.detenido()) plugin.entregas().entregarTodo(p);
@@ -344,15 +365,50 @@ final class Guardia implements Listener {
         Player p = e.getPlayer();
         plugin.motor().olvidar(p);
         plugin.contorno().parar(p.getUniqueId());
+        // Aun esta conectado: sus balizas de clan se quedan apuntado su clan de ahora mismo
+        // (lo que usaran mientras no este; ver Motor.clanDe).
         plugin.clanes().olvidar(p.getUniqueId());
+        plugin.refrescarClanes(p.getUniqueId());
         plugin.entregas().olvidarAviso(p.getUniqueId());
         avisados.remove(p.getUniqueId());
     }
 
-    /** Tras reaparecer, el siguiente ciclo vuelve a poner los atributos aunque no hayan cambiado. */
+    /**
+     * Tras reaparecer, el siguiente ciclo vuelve a poner los atributos aunque no hayan
+     * cambiado. Y si tenia vuelo nuestro, el juego se lo quito al morir: no es otro plugin.
+     */
     @EventHandler(priority = EventPriority.MONITOR)
     public void alReaparecer(PlayerRespawnEvent e) {
         plugin.atributos().olvidar(e.getPlayer().getUniqueId());
+        plugin.vuelo().reseteadoPorElJuego(e.getPlayer());
+    }
+
+    /** Cambiar de modo (supervivencia y aventura incluidos) tambien le quita el vuelo el juego. */
+    @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
+    public void alCambiarDeModo(PlayerGameModeChangeEvent e) {
+        plugin.vuelo().reseteadoPorElJuego(e.getPlayer());
+    }
+
+    /**
+     * PvP de verdad (sin cancelar): quien pega y quien recibe pierden el vuelo de un Super
+     * Beacon un rato (vuelo.sin-vuelo-en-combate-segundos; ver ClaseVuelo.combatir).
+     */
+    @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
+    public void alGolpear(EntityDamageByEntityEvent e) {
+        if (!(e.getEntity() instanceof Player victima)) return;
+        Player atacante = atacante(e.getDamager());
+        if (atacante == null || atacante.equals(victima)) return;
+        plugin.vuelo().combatir(victima);
+        plugin.vuelo().combatir(atacante);
+    }
+
+    /** El jugador detras de un golpe: el mismo, quien disparo, quien encendio la dinamita o lanzo la nube. */
+    static Player atacante(Entity e) {
+        if (e instanceof Player p) return p;
+        if (e instanceof Projectile pr && pr.getShooter() instanceof Player p) return p;
+        if (e instanceof TNTPrimed t && t.getSource() instanceof Player p) return p;
+        if (e instanceof AreaEffectCloud n && n.getSource() instanceof Player p) return p;
+        return null;
     }
 
     /**

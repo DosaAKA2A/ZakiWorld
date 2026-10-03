@@ -210,8 +210,9 @@ final class ComandoSuperBeacon implements CommandExecutor, TabCompleter {
         linea(p, "Id", b.id.toString());
         linea(p, "Tipo", b.tipo + (t == null ? " (ya no existe)" : ""));
         linea(p, "Dueño", b.duenoTexto() + (b.dueno == null ? "" : " (" + b.dueno + ")"));
-        linea(p, "Clan", b.clan != null ? b.clan : "sin fijar" + (t != null && t.beneficia == TipoBaliza.Beneficia.CLAN
-                ? ", el de su dueño: " + valor(plugin.motor().clanDe(b)) : ""));
+        linea(p, "Clan", b.clan != null ? b.clan + " (fijado al darlo)"
+                : "sin fijar" + (t != null && t.beneficia == TipoBaliza.Beneficia.CLAN
+                        ? ", el actual de su dueño: " + valor(plugin.motor().clanDe(b)) : ""));
         linea(p, "Sitio", b.donde() + " · " + b.material.name());
         linea(p, "Colocado", Tiempo.fecha(b.colocada, plugin.zona()));
         linea(p, "Vence", b.vence <= 0 ? "no caduca" : Tiempo.fecha(b.vence, plugin.zona()) + " · " + plugin.restante(b, ahora));

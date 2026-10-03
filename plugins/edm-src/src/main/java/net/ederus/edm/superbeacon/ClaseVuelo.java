@@ -1,8 +1,11 @@
 package net.ederus.edm.superbeacon;
 
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 import java.util.function.Consumer;
 
@@ -34,6 +37,14 @@ import org.bukkit.potion.PotionEffectType;
  * al volver caeria; se queda apuntado y lo resuelve el ciclo cuando entre (en el suelo si
  * se le quita, ver alSalir). Al parar el modulo se quita a todos al momento, con caida
  * lenta.
+ *
+ * Y dos frenos, sin depender de ningun plugin:
+ *   - combate: quien da o recibe un golpe PvP pierde nuestro vuelo durante
+ *     vuelo.sin-vuelo-en-combate-segundos (cada golpe renueva la cuenta), con caida segura;
+ *   - respeto: si OTRO plugin le quita el vuelo que le dimos (una region sin vuelo, un plugin
+ *     de combate, /fly) mientras sigue en el alcance, no se lo devolvemos hasta pasados
+ *     vuelo.reintento-segundos. Lo que le quita el propio juego (reaparecer, cambiar de modo)
+ *     no cuenta: eso se le devuelve en el siguiente ciclo.
  */
 final class ClaseVuelo extends ClaseEfecto {
 
@@ -78,9 +89,23 @@ final class ClaseVuelo extends ClaseEfecto {
     private int turno;
     /** jugador -> hasta cuando (ms) se le renueva la caida lenta mientras siga en el aire. */
     private final Map<UUID, Long> cayendo = new HashMap<>();
+    /** jugador -> hasta cuando (ms) no puede tener nuestro vuelo por pelear. Sobrevive a salir y entrar. */
+    private final Map<UUID, Long> combate = new HashMap<>();
+    /** jugador -> hasta cuando (ms) no se le devuelve: otro plugin se lo quito. */
+    private final Map<UUID, Long> reintento = new HashMap<>();
+    /** Apuntados a los que el propio juego les quito el vuelo (reaparecer, cambiar de modo). */
+    private final Set<UUID> reseteados = new HashSet<>();
+    private int combateSegundos = 15;
+    private int reintentoSegundos = 30;
 
     ClaseVuelo(SuperBeaconPlugin plugin) {
         super(plugin, "vuelo");
+    }
+
+    /** vuelo.sin-vuelo-en-combate-segundos y vuelo.reintento-segundos del config; 0 apaga cada uno. */
+    void configurar(int combateSegundos, int reintentoSegundos) {
+        this.combateSegundos = Math.max(0, combateSegundos);
+        this.reintentoSegundos = Math.max(0, reintentoSegundos);
     }
 
     @Override
@@ -100,9 +125,15 @@ final class ClaseVuelo extends ClaseEfecto {
 
     @Override
     List<String> detalle(Efecto e) {
-        return List.of(
+        List<String> out = new ArrayList<>(List.of(
                 plugin.textos().crudo("detalle-vuelo", "&#8A8A8APuedes volar dentro de su alcance."),
-                plugin.textos().crudo("detalle-vuelo-gracia", "&#8A8A8AAl salir tienes 5 segundos antes de caer."));
+                plugin.textos().crudo("detalle-vuelo-gracia", "&#8A8A8AAl salir tienes 5 segundos antes de caer.")));
+        if (combateSegundos > 0) {
+            out.add(plugin.textos().crudo("detalle-vuelo-combate",
+                    "&#8A8A8ASi peleas con otro jugador, %segundos% segundos sin vuelo.")
+                    .replace("%segundos%", String.valueOf(combateSegundos)));
+        }
+        return out;
     }
 
     /** Supervivencia o aventura: los otros modos ya deciden el vuelo por su cuenta. */
@@ -115,11 +146,26 @@ final class ClaseVuelo extends ClaseEfecto {
     void aplicar(Player p, Efecto e) {
         UUID id = p.getUniqueId();
         gracia.remove(id);
+        boolean delJuego = reseteados.remove(id);
         if (!nuestroModo(p)) {
             // En creativo o espectador el juego manda; si era nuestro, deja de serlo.
             plugin.registro().vuelo(id, false);
             return;
         }
+        long ahora = System.currentTimeMillis();
+        boolean apuntado = plugin.registro().vuelos().contains(id);
+        if (apuntado && !p.getAllowFlight()) {
+            // Se lo quitaron sin pasar por aqui. El juego, se le devuelve; otro plugin, se respeta.
+            if (quitadoPorOtro(true, false, delJuego)) {
+                long hasta = marca(ahora, reintentoSegundos);
+                if (hasta > 0) reintento.put(id, hasta);
+            }
+            plugin.registro().vuelo(id, false);
+            // Si le pillo en el aire (al entrar, un cambio de modo, otro plugin), que no se mate:
+            // la caida lenta tambien borra lo que ya llevara cayendo.
+            if (enElAire(p)) caerDespacio(p);
+        }
+        if (bloqueado(ahora, combate.get(id)) || bloqueado(ahora, reintento.get(id))) return;
         if (!p.getAllowFlight()) {
             p.setAllowFlight(true);
             plugin.registro().vuelo(id, true);
@@ -127,13 +173,59 @@ final class ClaseVuelo extends ClaseEfecto {
         // Si ya podia volar y no esta apuntado, el vuelo es de otro: ni se apunta ni se toca.
     }
 
+    /**
+     * Pelea PvP: sin nuestro vuelo durante vuelo.sin-vuelo-en-combate-segundos (cada golpe
+     * renueva la cuenta). Si volaba con el nuestro, se le quita ya, con caida segura.
+     */
+    void combatir(Player p) {
+        long hasta = marca(System.currentTimeMillis(), combateSegundos);
+        if (hasta <= 0) return;
+        combate.put(p.getUniqueId(), hasta);
+        if (apuntado(p) && nuestroModo(p) && p.getAllowFlight()) {
+            quitarYa(p, false);
+            plugin.textos().manda(p, "vuelo-combate",
+                    "&#FFB627En combate: &fsin vuelo del Super Beacon &#FFB627durante %segundos% segundos.",
+                    "%segundos%", String.valueOf(combateSegundos));
+        }
+    }
+
+    /** El juego le quito el vuelo (reaparecer, cambiar de modo): no es otro plugin, no se espera. */
+    void reseteadoPorElJuego(Player p) {
+        if (apuntado(p)) reseteados.add(p.getUniqueId());
+    }
+
+    /** Cada 5 s: fuera las marcas ya cumplidas. */
+    void podar(long ahora) {
+        combate.values().removeIf(h -> !bloqueado(ahora, h));
+        reintento.values().removeIf(h -> !bloqueado(ahora, h));
+    }
+
+    /* ------------------------------------------- reglas puras (selftest) */
+
+    /** Hasta cuando dura una marca de esos segundos; 0 si esta apagada (0 segundos o menos). */
+    static long marca(long ahora, int segundos) {
+        return segundos <= 0 ? 0L : ahora + segundos * 1000L;
+    }
+
+    /** Si una marca sigue en pie. */
+    static boolean bloqueado(long ahora, Long hasta) {
+        return hasta != null && hasta > ahora;
+    }
+
+    /** Era nuestro, ya no puede volar y no fue el juego: se lo quito otro plugin. */
+    static boolean quitadoPorOtro(boolean apuntado, boolean puedeVolar, boolean reseteoDelJuego) {
+        return apuntado && !puedeVolar && !reseteoDelJuego;
+    }
+
     @Override
     void quitar(Player p, Efecto e) {
         UUID id = p.getUniqueId();
+        reseteados.remove(id);
         if (!plugin.registro().vuelos().contains(id)) return;
         if (!nuestroModo(p) || !p.getAllowFlight()) {
-            // Nada que quitar: el juego u otro plugin ya se lo quito.
+            // Nada que quitar: el juego u otro plugin ya se lo quito. Si fue en el aire, caida segura.
             plugin.registro().vuelo(id, false);
+            if (nuestroModo(p) && enElAire(p)) caerDespacio(p);
             return;
         }
         if (gracia.containsKey(id)) return;
@@ -227,6 +319,11 @@ final class ClaseVuelo extends ClaseEfecto {
         });
     }
 
+    /** Sin suelo debajo (y sin volar: a quien se lo quitaron ya no vuela). */
+    private static boolean enElAire(Player p) {
+        return !p.isOnGround() && p.getLocation().subtract(0, 0.2, 0).getBlock().isPassable();
+    }
+
     /** Si tiene vuelo nuestro apuntado (de antes de un reinicio o de otra sesion). */
     boolean apuntado(Player p) {
         return plugin.registro().vuelos().contains(p.getUniqueId());
@@ -237,6 +334,8 @@ final class ClaseVuelo extends ClaseEfecto {
         UUID id = p.getUniqueId();
         gracia.remove(id);
         cayendo.remove(id);   // la caida lenta que tenga se guarda con el y le protege al volver
+        reseteados.remove(id);
+        // La marca de combate (y la de reintento) se quedan: salir y entrar no las borra.
         // En el suelo se le quita ya: no hay caida posible, y asi no queda nadie con el vuelo
         // guardado en su ficha si el modulo no vuelve a arrancar (modulos.superbeacon: false).
         // En el aire se queda apuntado a proposito (ver arriba) y lo resuelve el ciclo al volver.
@@ -253,5 +352,8 @@ final class ClaseVuelo extends ClaseEfecto {
         }
         gracia.clear();
         cayendo.clear();
+        combate.clear();
+        reintento.clear();
+        reseteados.clear();
     }
 }

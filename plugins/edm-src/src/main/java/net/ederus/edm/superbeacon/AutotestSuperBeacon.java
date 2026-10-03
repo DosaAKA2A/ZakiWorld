@@ -26,7 +26,11 @@ import org.bukkit.inventory.ItemStack;
  *   - la caducidad y los textos de tiempo;
  *   - a quien beneficia, con y sin clan (y sin PlaceholderAPI);
  *   - el alcance y su indice por chunks;
- *   - la limpieza del clan que devuelve PlaceholderAPI.
+ *   - la limpieza del clan que devuelve PlaceholderAPI;
+ *   - el clan que manda: el fijado en el give frente al actual del dueño (y su cache);
+ *   - el vuelo: la marca de combate y la espera cuando otro plugin lo quita;
+ *   - los huecos vigilados (posiciones vaciadas) sobre un data.yml temporal;
+ *   - en que mundos se puede colocar, y el nombre del dueño al dia.
  * Y dentro del servidor (modulo en marcha):
  *   - leer tipos de un config con errores, y que el config de serie no tenga ninguno;
  *   - la ida y vuelta del objeto: crear, leer el PDC y que salga lo mismo.
@@ -69,6 +73,11 @@ final class AutotestSuperBeacon {
             t.beneficio();
             t.alcance();
             t.clanes();
+            t.clanActual();
+            t.vuelo();
+            t.vaciadas();
+            t.mundos();
+            t.nombres();
             if (modulo != null) {
                 t.lectura(modulo);
                 t.objeto(modulo);
@@ -239,6 +248,142 @@ final class AutotestSuperBeacon {
         igual("null nunca es el mismo clan", false, Clanes.mismoClan(null, null));
     }
 
+    /* ============================================================ clan actual */
+
+    private void clanActual() {
+        igual("clan fijado en el give: manda aunque el dueño este en otro", "ABC",
+                Motor.clanBeneficiario("ABC", true, "XYZ", "XYZ"));
+        igual("sin fijar y el dueño conectado: su clan de ahora", "XYZ",
+                Motor.clanBeneficiario(null, true, "XYZ", "ABC"));
+        igual("sin fijar y el dueño desconectado: el ultimo apuntado", "ABC",
+                Motor.clanBeneficiario(null, false, null, "ABC"));
+        igual("conectado y ya sin clan: ninguno, aunque antes tuviera", null,
+                Motor.clanBeneficiario(null, true, null, "ABC"));
+        Baliza b = new Baliza(new Ficha(UUID.randomUUID(), "t", UUID.randomUUID(), "x", null, 0, List.of()),
+                "w", 0, 64, 0, Material.BEACON, 0);
+        b.clanDueno = "ABC";
+        igual("el clan del dueño no viaja con el objeto", null, b.ficha().clan());
+        Baliza trofeo = new Baliza(new Ficha(UUID.randomUUID(), "t", UUID.randomUUID(), "x", "ABC", 0, List.of()),
+                "w", 0, 64, 0, Material.BEACON, 0);
+        igual("el fijado en el give si viaja", "ABC", trofeo.ficha().clan());
+    }
+
+    /* ================================================================= vuelo */
+
+    private void vuelo() {
+        long t0 = 1_000_000L;
+        long combate = ClaseVuelo.marca(t0, 15);
+        igual("la marca de combate dura sus 15 s", t0 + 15_000L, combate);
+        igual("dentro de la marca no se vuela", true, ClaseVuelo.bloqueado(t0 + 14_999L, combate));
+        igual("cumplida, se vuelve a volar", false, ClaseVuelo.bloqueado(t0 + 15_000L, combate));
+        igual("con 0 segundos no hay marca", 0L, ClaseVuelo.marca(t0, 0));
+        igual("y una marca apagada no bloquea", false, ClaseVuelo.bloqueado(t0, ClaseVuelo.marca(t0, 0)));
+        igual("sin marca no bloquea", false, ClaseVuelo.bloqueado(t0, null));
+        igual("era nuestro, ya no vuela y no fue el juego: se lo quito otro plugin", true,
+                ClaseVuelo.quitadoPorOtro(true, false, false));
+        igual("si fue el juego (reaparecer, cambiar de modo), no", false, ClaseVuelo.quitadoPorOtro(true, false, true));
+        igual("si aun puede volar, nadie se lo quito", false, ClaseVuelo.quitadoPorOtro(true, true, false));
+        igual("si no era nuestro, no es cosa nuestra", false, ClaseVuelo.quitadoPorOtro(false, false, false));
+        long reintento = ClaseVuelo.marca(t0, 30);
+        igual("quitado por otro plugin: 30 s sin devolverselo", true, ClaseVuelo.bloqueado(t0 + 29_000L, reintento));
+        igual("pasados los 30 s, se le devuelve", false, ClaseVuelo.bloqueado(t0 + 30_001L, reintento));
+    }
+
+    /* ============================================================== vaciadas */
+
+    private static java.util.logging.Logger silencioso() {
+        java.util.logging.Logger l = java.util.logging.Logger.getAnonymousLogger();
+        l.setUseParentHandlers(false);
+        return l;
+    }
+
+    private void vaciadas() throws Exception {
+        java.io.File tmp = java.io.File.createTempFile("superbeacon-selftest", ".yml");
+        try {
+            tmp.delete();
+            Registro r = new Registro(tmp, silencioso());
+            UUID id = UUID.randomUUID();
+            Baliza b = new Baliza(new Ficha(id, "t", UUID.randomUUID(), "x", null, 0, List.of()),
+                    "w", 10, 64, -5, Material.BEACON, 0);
+            r.poner(b);
+            igual("colocada: su sitio no es un hueco", null, r.vaciadaEn("w", 10, 64, -5));
+            r.quitar(b);
+            Registro.Vaciada v = r.vaciadaEn("w", 10, 64, -5);
+            ok("recogida: su sitio queda vigilado, con su id", v != null && v.id().equals(id));
+            igual("un faro sin baliza en el hueco es un huerfano", true, Registro.huerfano(Material.BEACON, v, false));
+            igual("con una baliza registrada ahi, no", false, Registro.huerfano(Material.BEACON, v, true));
+            igual("otro bloque en el hueco, no", false, Registro.huerfano(Material.STONE, v, false));
+            igual("el hueco se encuentra por su chunk", 1, r.vaciadasEnChunk("w", 0, -1).size());
+            igual("y no en otro chunk", 0, r.vaciadasEnChunk("w", 1, -1).size());
+
+            r.guardar();
+            Registro r2 = new Registro(tmp, silencioso());
+            r2.cargar();
+            ok("el hueco sobrevive a un reinicio (data.yml)", r2.vaciadaEn("w", 10, 64, -5) != null);
+            igual("a los 7 dias se olvida", 1,
+                    r2.podarVaciadas(System.currentTimeMillis() + Registro.VACIADA_VIDA_MS + 60_000L));
+            igual("y ya no se vigila", null, r2.vaciadaEn("w", 10, 64, -5));
+
+            ok("si un jugador coloca algo en el hueco, se olvida",
+                    r.olvidarVaciada("w", 10, 64, -5) && r.vaciadaEn("w", 10, 64, -5) == null);
+            r.poner(b);
+            r.quitar(b);
+            Baliza otra = new Baliza(new Ficha(UUID.randomUUID(), "t", UUID.randomUUID(), "y", null, 0, List.of()),
+                    "w", 10, 64, -5, Material.BEACON, 0);
+            r.poner(otra);
+            igual("una baliza nueva en el hueco tambien lo borra", null, r.vaciadaEn("w", 10, 64, -5));
+        } finally {
+            tmp.delete();
+            new java.io.File(tmp.getPath() + ".tmp").delete();
+        }
+    }
+
+    /* ================================================================ mundos */
+
+    private void mundos() {
+        Set<String> ninguno = Set.of(), soloWorld = Set.of("world");
+        igual("sin lista de permitidos: en cualquiera", true, SuperBeaconPlugin.mundoPermitido("lethal", ninguno, ninguno));
+        igual("con [world]: en world si", true, SuperBeaconPlugin.mundoPermitido("world", soloWorld, ninguno));
+        igual("sin mirar mayusculas", true, SuperBeaconPlugin.mundoPermitido("World", soloWorld, ninguno));
+        igual("con [world]: en otro mundo no", false, SuperBeaconPlugin.mundoPermitido("calamity", soloWorld, ninguno));
+        igual("los excluidos mandan sobre los permitidos", false,
+                SuperBeaconPlugin.mundoPermitido("world", soloWorld, Set.of("world")));
+        igual("sin permitidos, un excluido sigue sin valer", false,
+                SuperBeaconPlugin.mundoPermitido("calamity", ninguno, Set.of("calamity")));
+    }
+
+    /* =============================================================== nombres */
+
+    /** Un jugador de mentira: solo su UUID y su nombre, que es lo que mira Registro.ligar. */
+    private static org.bukkit.entity.Player jugador(UUID id, String nombre) {
+        return (org.bukkit.entity.Player) java.lang.reflect.Proxy.newProxyInstance(
+                org.bukkit.entity.Player.class.getClassLoader(), new Class<?>[]{org.bukkit.entity.Player.class},
+                (px, m, args) -> switch (m.getName()) {
+                    case "getUniqueId" -> id;
+                    case "getName" -> nombre;
+                    case "hashCode" -> id.hashCode();
+                    case "equals" -> px == args[0];
+                    case "toString" -> "jugador de prueba " + nombre;
+                    default -> m.getReturnType() == boolean.class ? Boolean.FALSE : null;
+                });
+    }
+
+    private void nombres() {
+        Registro r = new Registro(new java.io.File("superbeacon-selftest-no-se-escribe.yml"), silencioso());
+        UUID u = UUID.randomUUID();
+        Baliza suya = new Baliza(new Ficha(UUID.randomUUID(), "t", u, "Viejo", null, 0, List.of()),
+                "w", 0, 64, 0, Material.BEACON, 0);
+        Baliza porNombre = new Baliza(new Ficha(UUID.randomUUID(), "t", null, "Pepe", null, 0, List.of()),
+                "w", 40, 64, 40, Material.BEACON, 0);
+        r.poner(suya);
+        r.poner(porNombre);
+        igual("al entrar con otro nombre, toca su baliza", 1, r.ligar(jugador(u, "Nuevo")).size());
+        igual("y su baliza apunta el nombre nuevo", "Nuevo", suya.duenoNombre);
+        UUID pepe = UUID.randomUUID();
+        r.ligar(jugador(pepe, "pepe"));
+        igual("la entregada por nombre queda ligada a su UUID", pepe, porNombre.dueno);
+    }
+
     /* ======================================================= dentro del server */
 
     private static final String CONFIG_CON_ERRORES = String.join("\n",
@@ -311,11 +456,27 @@ final class AutotestSuperBeacon {
                 erroresSerie);
         ok("el config de serie no tiene errores" + (erroresSerie.isEmpty() ? "" : ": " + erroresSerie.get(0)),
                 erroresSerie.isEmpty());
-        igual("y trae los cuatro tipos", List.of("hogar", "granja", "guerra", "trofeo"), new ArrayList<>(deSerie.keySet()));
+        igual("y trae los cinco tipos", List.of("hogar", "granja", "guerra", "fortuna", "trofeo"),
+                new ArrayList<>(deSerie.keySet()));
         TipoBaliza trofeo = deSerie.get("trofeo");
         ok("el trofeo: 30 dias, de clan, no transferible, todos activos, no cuenta en el maximo",
                 trofeo != null && trofeo.duracionDias == 30 && trofeo.beneficia == TipoBaliza.Beneficia.CLAN
                         && !trofeo.transferible && trofeo.fijo() && !trofeo.cuentaEnElMaximo);
+        // Un multiplicador permanente pegado a un sitio infla la economia: solo en los que caducan.
+        List<String> permanentesConBoost = new ArrayList<>();
+        for (TipoBaliza t : deSerie.values()) {
+            if (t.duracionDias > 0) continue;
+            for (Efecto e : t.efectos.values()) {
+                if (e instanceof ClaseBoost.Multi) permanentesConBoost.add(t.id + "." + e.clave());
+            }
+        }
+        igual("ningun tipo permanente de serie trae boosts", List.of(), permanentesConBoost);
+        TipoBaliza fortuna = deSerie.get("fortuna");
+        ok("la Fortuna: 7 dias, se destruye, de su dueño, elige 2 de 4 boosts",
+                fortuna != null && fortuna.duracionDias == 7 && fortuna.alCaducar == TipoBaliza.AlCaducar.DESTRUIR
+                        && fortuna.beneficia == TipoBaliza.Beneficia.DUENO && fortuna.elegibles == 2
+                        && fortuna.efectos.size() == 4
+                        && fortuna.efectos.values().stream().allMatch(e -> e instanceof ClaseBoost.Multi));
     }
 
     private static boolean contiene(List<String> errores, String trozo) {

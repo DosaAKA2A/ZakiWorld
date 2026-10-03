@@ -38,12 +38,26 @@ import org.bukkit.entity.Player;
  *
  * El fichero se escribe entero y de golpe (a un .tmp y luego se cambia por el bueno): es
  * pequeño, y asi una caida a mitad de escritura no deja un data.yml cortado. Lo que no
- * puede esperar (colocar, recoger, entregar) se guarda al momento; lo que si (la eleccion
- * de efectos, la lista de vuelos) se marca y se guarda en la revision de cada 5 s.
+ * puede esperar (colocar, recoger, entregar, la lista de vuelos) se guarda al momento; lo
+ * que si (la eleccion de efectos, la cache del clan) se marca y se guarda en la revision
+ * de cada 5 s.
+ *
+ * Ademas guarda las posiciones VACIADAS: donde habia una baliza que se fue (recogida,
+ * devuelta, destruida o desaparecida), con su id, su material y cuando. Si en una de ellas
+ * reaparece un bloque de ese material sin baliza detras (un //undo de WorldEdit, un
+ * rollback, un reinicio que no llego a guardar el aire), es un faro vanilla de regalo y
+ * SuperBeaconPlugin.revisarVaciada lo quita. Se olvidan a los 7 dias o cuando un jugador
+ * coloca algo ahi (entonces el bloque es suyo).
  */
 final class Registro {
 
     static final int VERSION = 1;
+    /** Cuanto se recuerda una posicion vaciada. */
+    static final long VACIADA_VIDA_MS = 7L * 24 * 60 * 60 * 1000;
+
+    /** Donde estuvo una baliza y ya no esta. */
+    record Vaciada(UUID id, String mundo, int x, int y, int z, Material material, long desde) {
+    }
 
     private final File fichero;
     private final Logger log;
@@ -54,6 +68,8 @@ final class Registro {
     private final Map<UUID, Pendiente> pendientes = new LinkedHashMap<>();
     /** A quien le dimos vuelo nosotros (ver ClaseVuelo). */
     private final Set<UUID> vuelos = new LinkedHashSet<>();
+    /** Posiciones vaciadas, por mundo y bloque. Pocas: las balizas movidas en la ultima semana. */
+    private final Map<String, Map<Long, Vaciada>> vaciadas = new HashMap<>();
 
     /** Cuantas tiene colocadas cada dueño, para %edm_superbeacon_count% (puede leerse fuera del hilo). */
     private volatile Map<UUID, Integer> cuentas = Map.of();
@@ -130,27 +146,32 @@ final class Registro {
     }
 
     /**
-     * Rellena el UUID de las balizas que el staff coloco a nombre de alguien que aun no
-     * habia entrado nunca (se entregaron por nombre). Devuelve cuantas eran suyas.
+     * Al entrar un jugador: rellena el UUID de las balizas que el staff coloco a nombre de
+     * alguien que aun no habia entrado nunca (se entregaron por nombre), y pone al dia el
+     * nombre de las suyas si se lo cambio (el UUID es el mismo). Devuelve las que toco.
      */
-    int ligar(Player p) {
-        int n = 0;
+    List<Baliza> ligar(Player p) {
+        List<Baliza> tocadas = new ArrayList<>();
+        boolean ligadas = false;
         for (Baliza b : porId.values()) {
             if (b.dueno == null && b.duenoNombre != null && b.duenoNombre.equalsIgnoreCase(p.getName())) {
                 b.dueno = p.getUniqueId();
-                n++;
+                ligadas = true;
+                tocadas.add(b);
+            } else if (b.esDe(p.getUniqueId()) && !p.getName().equals(b.duenoNombre)) {
+                b.duenoNombre = p.getName();
+                tocadas.add(b);
             }
         }
-        if (n > 0) {
-            recontar();
-            sucio = true;
-        }
-        return n;
+        if (ligadas) recontar();
+        if (!tocadas.isEmpty()) sucio = true;
+        return tocadas;
     }
 
     /** Devuelve false si ese id o ese bloque ya estaban ocupados (no se pone). */
     boolean poner(Baliza b) {
         if (porId.containsKey(b.id) || en(b.mundo, b.x, b.y, b.z) != null) return false;
+        olvidarVaciada(b.mundo, b.x, b.y, b.z);
         porId.put(b.id, b);
         porBloque.computeIfAbsent(b.mundo, k -> new HashMap<>()).put(claveBloque(b.x, b.y, b.z), b);
         porChunk.computeIfAbsent(b.mundo, k -> new HashMap<>())
@@ -177,7 +198,72 @@ final class Registro {
             }
             if (c.isEmpty()) porChunk.remove(b.mundo);
         }
+        // Se va de ese sitio (recogida, devuelta, destruida o desaparecida): se apunta el hueco.
+        vaciadas.computeIfAbsent(b.mundo, k -> new HashMap<>()).put(claveBloque(b.x, b.y, b.z),
+                new Vaciada(b.id, b.mundo, b.x, b.y, b.z, b.material, System.currentTimeMillis()));
         recontar();
+    }
+
+    /* ================================================================ vaciadas */
+
+    Vaciada vaciadaEn(String mundo, int x, int y, int z) {
+        Map<Long, Vaciada> m = vaciadas.get(mundo);
+        return m == null ? null : m.get(claveBloque(x, y, z));
+    }
+
+    /** Un jugador puso algo ahi (o una baliza nueva): el hueco deja de vigilarse. */
+    boolean olvidarVaciada(String mundo, int x, int y, int z) {
+        Map<Long, Vaciada> m = vaciadas.get(mundo);
+        if (m == null || m.remove(claveBloque(x, y, z)) == null) return false;
+        if (m.isEmpty()) vaciadas.remove(mundo);
+        sucio = true;
+        return true;
+    }
+
+    boolean olvidarVaciada(Block b) {
+        return b != null && olvidarVaciada(b.getWorld().getName(), b.getX(), b.getY(), b.getZ());
+    }
+
+    /** Las de ese chunk; vacia casi siempre. Se llama en cada carga de chunk. */
+    List<Vaciada> vaciadasEnChunk(String mundo, int chunkX, int chunkZ) {
+        Map<Long, Vaciada> m = vaciadas.get(mundo);
+        if (m == null || m.isEmpty()) return List.of();
+        List<Vaciada> out = new ArrayList<>();
+        for (Vaciada v : m.values()) {
+            if (v.x() >> 4 == chunkX && v.z() >> 4 == chunkZ) out.add(v);
+        }
+        return out;
+    }
+
+    List<Vaciada> vaciadas() {
+        List<Vaciada> out = new ArrayList<>();
+        for (Map<Long, Vaciada> m : vaciadas.values()) out.addAll(m.values());
+        return out;
+    }
+
+    /** Fuera las de hace mas de 7 dias. Devuelve cuantas se olvidaron. */
+    int podarVaciadas(long ahora) {
+        int n = 0;
+        for (Map<Long, Vaciada> m : vaciadas.values()) {
+            int antes = m.size();
+            m.values().removeIf(v -> caducada(v, ahora));
+            n += antes - m.size();
+        }
+        vaciadas.values().removeIf(Map::isEmpty);
+        if (n > 0) sucio = true;
+        return n;
+    }
+
+    static boolean caducada(Vaciada v, long ahora) {
+        return ahora - v.desde() > VACIADA_VIDA_MS;
+    }
+
+    /**
+     * La regla, sin estado, para el selftest: en un hueco vigilado hay un faro huerfano si
+     * hay un bloque del material de la baliza que se fue y ninguna baliza registrada ahi.
+     */
+    static boolean huerfano(Material hay, Vaciada v, boolean hayBaliza) {
+        return v != null && !hayBaliza && hay == v.material();
     }
 
     private void recontar() {
@@ -219,9 +305,13 @@ final class Registro {
         return Collections.unmodifiableSet(vuelos);
     }
 
+    /**
+     * Se guarda en el acto, al dar y al quitar: si el servidor cae con el vuelo ya guardado
+     * en la ficha del jugador y esta lista sin guardar, al volver nadie se lo quitaria.
+     */
     void vuelo(UUID jugador, boolean dado) {
         boolean cambio = dado ? vuelos.add(jugador) : vuelos.remove(jugador);
-        if (cambio) sucio = true;
+        if (cambio) guardar();
     }
 
     /* ================================================================= disco */
@@ -251,6 +341,7 @@ final class Registro {
         porChunk.clear();
         pendientes.clear();
         vuelos.clear();
+        vaciadas.clear();
         if (!fichero.exists()) {
             recontar();
             return;
@@ -290,6 +381,8 @@ final class Registro {
                 Baliza b = new Baliza(f, mundo, s.getInt("x"), s.getInt("y"), s.getInt("z"),
                         material(s.getString("bloque"), k), s.getLong("colocada", System.currentTimeMillis()));
                 b.avisoVencida = s.getBoolean("aviso-vencida", false);
+                String clanDueno = s.getString("clan-dueno");
+                b.clanDueno = clanDueno == null || clanDueno.isBlank() ? null : clanDueno;
                 if (!poner(b)) {
                     duplicadas++;
                     pendientes.put(id, new Pendiente(f, b.material, f.dueno(), f.duenoNombre(), "duplicada",
@@ -321,6 +414,13 @@ final class Registro {
             UUID u = uuid(v);
             if (u != null) vuelos.add(u);
         }
+        long ahora = System.currentTimeMillis();
+        for (Map<?, ?> m : yml.getMapList("vaciadas")) {
+            Vaciada v = vaciada(m);
+            // Una que no se entiende o ya caducada no se guarda mas: es solo una vigilancia.
+            if (v == null || caducada(v, ahora) || en(v.mundo(), v.x(), v.y(), v.z()) != null) continue;
+            vaciadas.computeIfAbsent(v.mundo(), k -> new HashMap<>()).put(claveBloque(v.x(), v.y(), v.z()), v);
+        }
         recontar();
         if (saltadas > 0) {
             File aparte = apartar(saltadas + " entrada(s) que no se entienden");
@@ -347,6 +447,21 @@ final class Registro {
                     + e.getMessage() + "); el modulo no arranca para no pisarlo", e);
         }
         return aparte;
+    }
+
+    /** Una posicion vaciada de data.yml, o null si le falta algo. */
+    private static Vaciada vaciada(Map<?, ?> m) {
+        try {
+            UUID id = uuid(String.valueOf(m.get("id")));
+            Object mundo = m.get("mundo");
+            Material mat = m.get("bloque") == null ? null : Material.matchMaterial(String.valueOf(m.get("bloque")));
+            if (id == null || mundo == null || mat == null) return null;
+            return new Vaciada(id, String.valueOf(mundo), ((Number) m.get("x")).intValue(),
+                    ((Number) m.get("y")).intValue(), ((Number) m.get("z")).intValue(), mat,
+                    ((Number) m.get("desde")).longValue());
+        } catch (RuntimeException e) {
+            return null;
+        }
     }
 
     private static Ficha ficha(UUID id, ConfigurationSection s) {
@@ -389,6 +504,8 @@ final class Registro {
             yml.set(r + ".bloque", b.material.name());
             yml.set(r + ".colocada", b.colocada);
             if (b.avisoVencida) yml.set(r + ".aviso-vencida", true);
+            // Solo cache (ver Baliza.clanDueno): va aparte de "clan", que es el fijado y viaja.
+            if (b.clanDueno != null) yml.set(r + ".clan-dueno", b.clanDueno);
         }
         for (Pendiente p : pendientes.values()) {
             String r = "pendientes." + p.ficha.id();
@@ -402,6 +519,19 @@ final class Registro {
         List<String> v = new ArrayList<>();
         for (UUID u : vuelos) v.add(u.toString());
         yml.set("vuelos", v);
+        List<Map<String, Object>> huecos = new ArrayList<>();
+        for (Vaciada h : vaciadas()) {
+            Map<String, Object> m = new LinkedHashMap<>();
+            m.put("id", h.id().toString());
+            m.put("mundo", h.mundo());
+            m.put("x", h.x());
+            m.put("y", h.y());
+            m.put("z", h.z());
+            m.put("bloque", h.material().name());
+            m.put("desde", h.desde());
+            huecos.add(m);
+        }
+        yml.set("vaciadas", huecos);
 
         try {
             File padre = fichero.getParentFile();

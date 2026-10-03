@@ -133,9 +133,14 @@ final class MenuBaliza implements Listener {
                         "&#8A8A8A10 segundos. Solo lo ves tú.")), tx.crudo("menu-accion-ver", "verlo")));
         inv.setItem(CERRAR, boton(p, Material.SPRUCE_DOOR, tx.crudo("menu-cerrar", "&fCerrar"), List.of(),
                 tx.crudo("menu-accion-salir", "salir")));
-        inv.setItem(RECOGER, boton(p, Material.BUNDLE, tx.crudo("menu-recoger", "&fRecoger"),
-                tx.lista("menu-recoger-lore", List.of("&#8A8A8AVuelve a tu inventario con todo su estado:",
-                        "&#8A8A8Aefectos, dueño, clan y vencimiento.")), tx.crudo("menu-accion-recoger", "recogerlo")));
+        // Al staff (no es suyo) no se le lleva: vuelve a su dueño, y el boton lo dice.
+        List<String> loreRecoger = b.esDe(p.getUniqueId())
+                ? tx.lista("menu-recoger-lore", List.of("&#8A8A8AVuelve a tu inventario con todo su estado:",
+                        "&#8A8A8Aefectos, dueño, clan y vencimiento."))
+                : tx.lista("menu-recoger-staff-lore", List.of("&#8A8A8ANo es tuyo: vuelve a su dueño, como con",
+                        "&#8A8A8A/superbeacon remove."));
+        inv.setItem(RECOGER, boton(p, Material.BUNDLE, tx.crudo("menu-recoger", "&fRecoger"), loreRecoger,
+                tx.crudo("menu-accion-recoger", "recogerlo")));
     }
 
     /** La ficha de arriba: lo que es la baliza y cuanto le queda. */
@@ -355,7 +360,8 @@ final class MenuBaliza implements Listener {
                         "%radio%", String.valueOf(t.radio));
             }
             case RECOGER -> {
-                if (p.getInventory().firstEmpty() == -1) {
+                // El hueco solo hace falta si es suyo: al staff no se le da (va a su dueño).
+                if (b.esDe(p.getUniqueId()) && p.getInventory().firstEmpty() == -1) {
                     plugin.textos().manda(p, "sin-espacio",
                             "&#FF5C5CNo tienes espacio en el inventario. &7Libera una casilla e inténtalo de nuevo.");
                     p.playSound(p.getLocation(), Sound.ENTITY_VILLAGER_NO, 0.6f, 1f);

@@ -1210,13 +1210,21 @@ public final class Acciones {
             if (ctx.evento() instanceof org.bukkit.event.block.BlockBreakEvent roto) {
                 Location donde = roto.getBlock().getLocation().add(0.5, 0.5, 0.5);
                 ItemStack mano = ctx.item() == null ? new ItemStack(Material.AIR) : ctx.item();
-                for (int i = 0; i < veces; i++) {
-                    for (ItemStack it : roto.getBlock().getDrops(mano)) {
-                        if (it != null && !it.getType().isAir()) {
-                            donde.getWorld().dropItemNaturally(donde, it.clone());
+                // Los drops se miran ahora, con el bloque aun puesto; las copias se sueltan un
+                // tick despues y SOLO si el evento acabo sin cancelar. Esta accion corre en
+                // NORMAL: una proteccion o un Super Beacon lo cancelan despues, y antes la copia
+                // salia igual (un faro vanilla por golpe a una baliza, que ni se rompia).
+                List<ItemStack> drops = new ArrayList<>(roto.getBlock().getDrops(mano));
+                ctx.modulo().core().getServer().getScheduler().runTask(ctx.modulo().core(), () -> {
+                    if (roto.isCancelled()) return;
+                    for (int i = 0; i < veces; i++) {
+                        for (ItemStack it : drops) {
+                            if (it != null && !it.getType().isAir()) {
+                                donde.getWorld().dropItemNaturally(donde, it.clone());
+                            }
                         }
                     }
-                }
+                });
                 return;
             }
             ctx.modulo().avisoUnaVez("dup." + ctx.definicion().id(),

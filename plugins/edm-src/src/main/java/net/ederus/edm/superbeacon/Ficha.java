@@ -18,7 +18,9 @@ import java.util.UUID;
  * @param dueno       null si todavia no tiene (transferible y sin colocar nunca)
  * @param duenoNombre el nombre con el que se le conoce; puede ir sin UUID si se entrego
  *                    por nombre a alguien que aun no habia entrado al servidor
- * @param clan        el clan que recibe sus efectos, si se fijo al entregarlo o colocarlo
+ * @param clan        el clan fijado al entregarlo (/superbeacon give ... clan): manda
+ *                    siempre. Sin el, los tipos "clan" benefician al clan actual de su
+ *                    dueño, que no se guarda aqui (ver Baliza.clanDueno)
  * @param vence       instante de caducidad en epoch ms; 0, no caduca
  * @param elegidos    los efectos elegidos en su menu (claves del tipo)
  */

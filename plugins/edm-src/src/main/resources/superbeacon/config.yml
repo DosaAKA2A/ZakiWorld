@@ -9,7 +9,9 @@
 # Formato: superbeacon give <jugador> <tipo> [dias|-] [clan]
 #   dias  sustituye a duracion-dias del tipo (0 = no caduca; - = los del tipo).
 #         Admite decimales para probar: 0.01 son unos 14 minutos.
-#   clan  fija el clan que recibe sus efectos (en los tipos "clan").
+#   clan  fija el clan que recibe sus efectos (en los tipos "clan"). Ese manda
+#         siempre y viaja con el objeto; sin el, beneficia al clan ACTUAL de
+#         su dueño (si cambia de clan, su baliza cambia con el).
 #
 # Cosas que conviene saber antes de tocar numeros:
 #   - si dos balizas alcanzan al mismo jugador, de cada efecto se aplica el MAYOR;
@@ -24,7 +26,11 @@
 # ---------------------------------------------------------------------------
 version: 1
 
-# Mundos donde no se pueden colocar (nombres de mundo, sin mayusculas que importen).
+# Donde se pueden colocar (nombres de mundo, sin mayusculas que importen). Con
+# mundos-permitidos no vacio, SOLO en esos; vacio ([]), en todos menos los
+# excluidos. Los excluidos mandan sobre los permitidos. Las balizas que ya estan
+# colocadas en un mundo que deja de valer siguen funcionando.
+mundos-permitidos: [world]
 mundos-excluidos: []
 
 # Cuantas balizas puede tener colocadas a la vez cada jugador. Los tipos con
@@ -43,6 +49,16 @@ holograma:
   distancia: 32
   # Cada cuanto se repinta (el tiempo que queda cambia solo).
   refresco-segundos: 30
+
+vuelo:
+  # Quien da o recibe un golpe de otro jugador se queda sin el vuelo de los Super
+  # Beacons estos segundos (cada golpe renueva la cuenta; si estaba en el aire,
+  # cae despacio). 0 lo apaga.
+  sin-vuelo-en-combate-segundos: 15
+  # Si otro plugin le quita el vuelo que le dio un Super Beacon (una region sin
+  # vuelo, un plugin de combate, /fly), no se lo devolvemos hasta pasados estos
+  # segundos. 0 lo apaga (se le devuelve en el siguiente ciclo, cada 2 s).
+  reintento-segundos: 30
 
 clan:
   # De donde sale el clan de un jugador (UltimateClans, por PlaceholderAPI). Se le
@@ -78,7 +94,10 @@ clan:
 #               attack_damage, luck, block_interaction_range,
 #               entity_interaction_range, safe_fall_distance,
 #               mining_efficiency, oxygen_bonus) y valor (se suma).
-#     boost     boost (exp, skill_exp, pesca, mobcoins) y multiplicador.
+#     boost     boost (exp, skill_exp, pesca, mobcoins) y multiplicador. SOLO en
+#               tipos que caducan: un multiplicador permanente pegado a un sitio,
+#               junto a una granja, infla la economia sin fin. Por eso la Granja y
+#               la Guerra no traen boosts y la Fortuna, que si, dura 7 dias.
 #     vuelo     volar dentro del alcance; al salir, 5 s de gracia y caida lenta.
 #     cultivos  intentos (12), cada-segundos (5) y altura (4, bloques arriba y
 #               abajo de la baliza): hace crecer cultivos al azar en el alcance.
@@ -117,9 +136,9 @@ tipos:
     descripcion: ["Para los que viven de la tierra.", "Elige dos."]
     efectos:
       cultivos:   {tipo: cultivos, intentos: 12, cada-segundos: 5, icono: WHEAT, nombre: "Cultivos más rápidos"}
-      pesca:      {tipo: boost, boost: pesca, multiplicador: 1.25, icono: FISHING_ROD, nombre: "Suerte de pesca x1,25"}
       saturacion: {tipo: pocion, efecto: SATURATION, nivel: 1, icono: COOKED_BEEF, nombre: "Saturación"}
       prisa:      {tipo: pocion, efecto: HASTE, nivel: 2, icono: GOLDEN_HOE, nombre: "Prisa II"}
+      sin-mobs:   {tipo: sin-mobs, icono: SHIELD, nombre: "Sin mobs hostiles"}
 
   guerra:
     nombre: "&#FF7B6BSuper Beacon de Guerra"
@@ -136,7 +155,25 @@ tipos:
       fuerza:      {tipo: pocion, efecto: STRENGTH, nivel: 2, icono: BLAZE_POWDER, nombre: "Fuerza II"}
       resistencia: {tipo: pocion, efecto: RESISTANCE, nivel: 1, icono: IRON_CHESTPLATE, nombre: "Resistencia I"}
       vida:        {tipo: atributo, atributo: max_health, valor: 8, icono: GOLDEN_APPLE, nombre: "+4 corazones"}
+      velocidad:   {tipo: pocion, efecto: SPEED, nivel: 2, icono: SUGAR, nombre: "Velocidad II"}
+      sin-mobs:    {tipo: sin-mobs, icono: SHIELD, nombre: "Sin mobs hostiles"}
+
+  # Los boosts van aqui: caduca a los 7 dias y desaparece (ver "boost" arriba).
+  fortuna:
+    nombre: "&#FFD35CSuper Beacon de la Fortuna"
+    bloque: BEACON
+    radio: 24
+    duracion-dias: 7
+    al-caducar: destruir
+    beneficia: dueno
+    transferible: true
+    cuenta-en-el-maximo: true
+    elegibles: 2
+    descripcion: ["Multiplica lo que ganas durante una semana.", "Elige dos."]
+    efectos:
       experiencia: {tipo: boost, boost: exp, multiplicador: 1.5, icono: EXPERIENCE_BOTTLE, nombre: "Experiencia x1,5"}
+      habilidades: {tipo: boost, boost: skill_exp, multiplicador: 1.25, icono: ENCHANTED_BOOK, nombre: "Experiencia de habilidades x1,25"}
+      pesca:       {tipo: boost, boost: pesca, multiplicador: 1.25, icono: FISHING_ROD, nombre: "Suerte de pesca x1,25"}
       mobcoins:    {tipo: boost, boost: mobcoins, multiplicador: 1.25, icono: SUNFLOWER, nombre: "MobCoins x1,25"}
 
   trofeo:
