@@ -61,6 +61,7 @@ clan:
 #   radio: alcance en bloques (1 a 128).
 #   duracion-dias: 0 = no caduca. Mas de 0: vence a los N dias desde que se
 #           ENTREGA (fecha fija; corre aunque este guardado en un cofre).
+#           Admite decimales: 0.5 son 12 horas.
 #   al-caducar: apagar (se queda de adorno, sin efectos) | destruir.
 #   beneficia: dueno | clan | todos. El dueño recibe siempre.
 #   transferible: true = el dueño se fija al COLOCARLO por primera vez (antes se

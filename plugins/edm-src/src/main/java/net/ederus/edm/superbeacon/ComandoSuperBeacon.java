@@ -119,7 +119,10 @@ final class ComandoSuperBeacon implements CommandExecutor, TabCompleter {
                 return;
             }
         }
-        String clan = args.length > 4 ? String.join(" ", Arrays.copyOfRange(args, 4, args.length)).trim() : null;
+        // Limpio igual que el clan que sale de PlaceholderAPI (Clanes.limpiar): si el ranking
+        // pasa el tag con colores ("&#FF0000ABC", el mismo %uclans_tag_color%), sin esto no
+        // coincidiria nunca con el de los jugadores y el trofeo no le daria nada a su clan.
+        String clan = args.length > 4 ? Clanes.limpiar(String.join(" ", Arrays.copyOfRange(args, 4, args.length))) : null;
         if (clan != null && clan.isEmpty()) clan = null;
         plugin.entregas().dar(quien, args[1], t, dias, clan);
     }
@@ -129,7 +132,8 @@ final class ComandoSuperBeacon implements CommandExecutor, TabCompleter {
     private void tipos(CommandSender quien) {
         tx().manda(quien, "tipos-cabecera", "&7Tipos de Super Beacon: &f%n%", "%n%", String.valueOf(plugin.tipos().size()));
         for (TipoBaliza t : plugin.tipos().values()) {
-            String duracion = t.duracionDias > 0 ? t.duracionDias + " d" : tx().crudo("permanente", "Permanente");
+            String duracion = t.duracionDias > 0 ? Numeros.decimal(t.duracionDias) + " d"
+                    : tx().crudo("permanente", "Permanente");
             String efectos = t.fijo() ? t.efectos.size() + " efectos, todos" : t.elegibles + " de " + t.efectos.size() + " efectos";
             tx().manda(quien, "tipos-linea",
                     "{sin-prefijo} &#545454▸ &f%id% &8· %nombre% &#8A8A8A· radio %radio% · %beneficia% · %duracion% · %efectos%",

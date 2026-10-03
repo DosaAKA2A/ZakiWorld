@@ -23,6 +23,7 @@ import java.util.logging.Logger;
 import org.bukkit.Material;
 import org.bukkit.block.Block;
 import org.bukkit.configuration.ConfigurationSection;
+import org.bukkit.configuration.InvalidConfigurationException;
 import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.entity.Player;
 
@@ -238,6 +239,11 @@ final class Registro {
      * Lee data.yml. Lo que no se entiende se avisa y se salta, nunca tumba el modulo. Dos
      * balizas apuntadas en el mismo bloque (no deberia pasar nunca) no pueden estar las
      * dos: la segunda pasa a pendiente de devolver a su dueño.
+     *
+     * Lo que se salta NO se puede perder: el siguiente guardado escribe solo lo que hay en
+     * memoria, asi que un data.yml roto (un YAML mal editado a mano) o con entradas que no
+     * se entienden se aparta antes tal cual (data.yml.roto-<instante>) para recuperarlo.
+     * Si ni siquiera se puede apartar, el modulo no arranca: mejor caido que pisarlo.
      */
     void cargar() {
         porId.clear();
@@ -249,8 +255,21 @@ final class Registro {
             recontar();
             return;
         }
-        YamlConfiguration yml = YamlConfiguration.loadConfiguration(fichero);
+        YamlConfiguration yml = new YamlConfiguration();
+        try {
+            yml.load(fichero);
+        } catch (IOException | InvalidConfigurationException e) {
+            // loadConfiguration() lo daria por vacio sin mas, y el guardado del apagado
+            // borraria todas las balizas colocadas y pendientes.
+            File aparte = apartar("no se puede leer: " + e.getMessage());
+            log.severe("[SuperBeacon] data.yml no se puede leer. El modulo arranca SIN balizas registradas; la copia"
+                    + " intacta esta en " + aparte.getName() + ": arreglala y vuelve a ponerla como data.yml con el"
+                    + " servidor apagado.");
+            recontar();
+            return;
+        }
         int duplicadas = 0;
+        int saltadas = 0;
         ConfigurationSection bs = yml.getConfigurationSection("balizas");
         if (bs != null) {
             for (String k : bs.getKeys(false)) {
@@ -258,12 +277,14 @@ final class Registro {
                 UUID id = uuid(k);
                 if (s == null || id == null) {
                     log.warning("[SuperBeacon] data.yml: balizas." + k + " no se entiende; se salta.");
+                    saltadas++;
                     continue;
                 }
                 Ficha f = ficha(id, s);
                 String mundo = s.getString("mundo");
                 if (f.tipo() == null || mundo == null) {
                     log.warning("[SuperBeacon] data.yml: balizas." + k + " no tiene tipo o mundo; se salta.");
+                    saltadas++;
                     continue;
                 }
                 Baliza b = new Baliza(f, mundo, s.getInt("x"), s.getInt("y"), s.getInt("z"),
@@ -283,6 +304,7 @@ final class Registro {
                 UUID id = uuid(k);
                 if (s == null || id == null || s.getString("tipo") == null) {
                     log.warning("[SuperBeacon] data.yml: pendientes." + k + " no se entiende; se salta.");
+                    saltadas++;
                     continue;
                 }
                 if (porId.containsKey(id)) {
@@ -300,10 +322,31 @@ final class Registro {
             if (u != null) vuelos.add(u);
         }
         recontar();
+        if (saltadas > 0) {
+            File aparte = apartar(saltadas + " entrada(s) que no se entienden");
+            log.severe("[SuperBeacon] data.yml: " + saltadas + " entrada(s) no se entienden y no se cargan. El"
+                    + " fichero tal cual estaba queda en " + aparte.getName() + " para recuperarlas a mano.");
+        }
         if (duplicadas > 0) {
             log.warning("[SuperBeacon] " + duplicadas + " baliza(s) repetida(s) en el mismo bloque pasan a pendiente de devolver.");
             guardar();
         }
+    }
+
+    /**
+     * Copia data.yml tal cual esta junto a el, con el instante en el nombre. Si no se
+     * puede, el modulo no debe seguir (lanza): el siguiente guardado pisaria lo unico que
+     * queda de esas balizas.
+     */
+    private File apartar(String motivo) {
+        File aparte = new File(fichero.getParentFile(), fichero.getName() + ".roto-" + System.currentTimeMillis());
+        try {
+            Files.copy(fichero.toPath(), aparte.toPath(), StandardCopyOption.REPLACE_EXISTING);
+        } catch (IOException e) {
+            throw new IllegalStateException("data.yml de Super Beacon " + motivo + " y no se pudo apartar ("
+                    + e.getMessage() + "); el modulo no arranca para no pisarlo", e);
+        }
+        return aparte;
     }
 
     private static Ficha ficha(UUID id, ConfigurationSection s) {

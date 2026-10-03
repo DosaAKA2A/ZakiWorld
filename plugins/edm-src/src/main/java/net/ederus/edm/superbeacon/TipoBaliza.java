@@ -29,7 +29,8 @@ final class TipoBaliza {
     final String nombre;
     final Material bloque;
     final int radio;
-    final int duracionDias;
+    /** Con decimales (0.5 = 12 h), como el [days] de /superbeacon give; 0 = no caduca. */
+    final double duracionDias;
     final AlCaducar alCaducar;
     final Beneficia beneficia;
     final boolean transferible;
@@ -44,7 +45,7 @@ final class TipoBaliza {
     final int particulaCantidad;
     final int particulaCada;
 
-    TipoBaliza(String id, String nombre, Material bloque, int radio, int duracionDias, AlCaducar alCaducar,
+    TipoBaliza(String id, String nombre, Material bloque, int radio, double duracionDias, AlCaducar alCaducar,
                Beneficia beneficia, boolean transferible, boolean cuentaEnElMaximo, int elegibles,
                List<String> descripcion, Map<String, Efecto> efectos, Particle particula,
                int particulaCantidad, int particulaCada) {

@@ -28,6 +28,7 @@ import org.bukkit.event.entity.EntityChangeBlockEvent;
 import org.bukkit.event.entity.EntityExplodeEvent;
 import org.bukkit.event.inventory.InventoryOpenEvent;
 import org.bukkit.event.inventory.InventoryType;
+import org.bukkit.event.player.PlayerChangedWorldEvent;
 import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.event.player.PlayerJoinEvent;
 import org.bukkit.event.player.PlayerQuitEvent;
@@ -48,9 +49,10 @@ import com.destroystokyo.paper.event.block.BlockDestroyEvent;
  * MONITOR, cuando ya nadie lo va a cancelar. Apuntarlo antes dejaria una baliza registrada
  * sin bloque si otro plugin cancela despues.
  *
- * Picar: solo quien puede gestionarla. El evento se cancela SIEMPRE y la recogida la hace
- * el modulo: asi el bloque nunca suelta su drop vanilla y ningun plugin posterior que
- * des-cancele el evento puede sacar un faro y un Super Beacon de la misma baliza.
+ * Picar: solo su dueño la recoge asi (el staff, desde el menu o con remove). El evento se
+ * cancela SIEMPRE y la recogida la hace el modulo: asi el bloque nunca suelta su drop
+ * vanilla y ningun plugin posterior que des-cancele el evento puede sacar un faro y un
+ * Super Beacon de la misma baliza. Dentro de una mina eso no basta (ver alRomper).
  *
  * Proteger: explosiones, pistones, agua y lava, fuego, desgaste y entidades que cambian
  * bloques. Lo que se escape por una via que no controlamos (WorldEdit, un plugin que pone
@@ -146,13 +148,29 @@ final class Guardia implements Listener {
 
     /* ================================================================= picar */
 
-    @EventHandler(priority = EventPriority.HIGH, ignoreCancelled = true)
+    /**
+     * Sin ignoreCancelled a proposito: dentro de una mina hay que actuar aunque una
+     * proteccion (WorldGuard en NORMAL) ya lo haya cancelado, porque el modulo minas lo
+     * descancela en HIGHEST y mete los drops del bloque directo en el inventario: el MONITOR
+     * de abajo ya no lo arregla. Fuera de las minas, cancelado antes = no se mira nada.
+     *
+     * Solo el DUEÑO la recoge picandola. El staff que pica una ajena no se la lleva: en
+     * creativo un clic la rompe sin querer y acabaria en SU inventario (y de ahi a la
+     * papelera del creativo). Para eso estan el menu (Recoger) y /superbeacon remove.
+     */
+    @EventHandler(priority = EventPriority.HIGH)
     public void alRomper(BlockBreakEvent e) {
         Baliza b = en(e.getBlock());
         if (b == null) return;
+        boolean negado = e.isCancelled();
         e.setCancelled(true);
+        if (plugin.enMina(e.getBlock())) {
+            plugin.entregas().sacarDeMina(b);
+            return;
+        }
+        if (negado) return;
         Player p = e.getPlayer();
-        if (!plugin.puedeGestionar(p, b)) {
+        if (!b.esDe(p.getUniqueId())) {
             ajeno(p, b, true);
             return;
         }
@@ -180,6 +198,13 @@ final class Guardia implements Listener {
         Long antes = avisados.get(p.getUniqueId());
         if (antes != null && ahora - antes < 2000) return;
         avisados.put(p.getUniqueId(), ahora);
+        if (alPicar && plugin.esAdmin(p)) {
+            plugin.textos().manda(p, "romper-staff",
+                    "&#FFB627Este Super Beacon es de &f%dueno%&#FFB627: picarlo no lo recoge. &7Úsalo y elige"
+                            + " Recoger, o escribe &f/superbeacon remove %id%&7.",
+                    "%dueno%", b.duenoTexto(), "%id%", b.idCorto());
+            return;
+        }
         if (alPicar) {
             plugin.textos().manda(p, "romper-ajeno",
                     "&#FF5C5CEste Super Beacon es de &f%dueno%&#FF5C5C: solo su dueño puede recogerlo.",
@@ -328,5 +353,17 @@ final class Guardia implements Listener {
     @EventHandler(priority = EventPriority.MONITOR)
     public void alReaparecer(PlayerRespawnEvent e) {
         plugin.atributos().olvidar(e.getPlayer().getUniqueId());
+    }
+
+    /**
+     * Cambio de mundo: el vuelo de un Super Beacon no viaja con el jugador. Sin esto se
+     * quedaba volando en el mundo nuevo lo que tarda el ciclo mas los 5 s de gracia (por
+     * ejemplo al entrar en un mundo hardcore). Si alli tambien esta dentro de una baliza
+     * con vuelo, el siguiente ciclo se lo devuelve.
+     */
+    @EventHandler(priority = EventPriority.MONITOR)
+    public void alCambiarDeMundo(PlayerChangedWorldEvent e) {
+        Player p = e.getPlayer();
+        if (plugin.vuelo().apuntado(p)) plugin.vuelo().quitarYa(p, true);
     }
 }

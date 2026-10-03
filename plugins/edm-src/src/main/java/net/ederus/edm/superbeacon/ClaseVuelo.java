@@ -8,7 +8,10 @@ import java.util.function.Consumer;
 
 import org.bukkit.Bukkit;
 import org.bukkit.GameMode;
+import org.bukkit.Location;
 import org.bukkit.Material;
+import org.bukkit.World;
+import org.bukkit.block.Block;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.entity.Player;
 import org.bukkit.potion.PotionEffect;
@@ -25,15 +28,22 @@ import org.bukkit.potion.PotionEffectType;
  *     en el alcance, sigue volando; si no, lo pierde con su aviso y su caida lenta.
  *
  * Al salir del alcance hay 5 s de gracia (volver a entrar la cancela). Despues se quita y,
- * si esta en el aire, cae despacio 10 s para que no se mate. Lo mismo cuando la baliza se
- * recoge o vence (el jugador deja de recibir el efecto). Al desconectarse no se le quita:
- * se le quitaria en pleno vuelo y al volver caeria; se queda apuntado y lo resuelve el
- * ciclo cuando entre. Al parar el modulo se quita a todos al momento, con caida lenta.
+ * si esta en el aire, cae despacio hasta tocar suelo para que no se mate (ver
+ * caerDespacio). Lo mismo cuando la baliza se recoge o vence (el jugador deja de recibir
+ * el efecto). Al desconectarse en el aire no se le quita: se le quitaria en pleno vuelo y
+ * al volver caeria; se queda apuntado y lo resuelve el ciclo cuando entre (en el suelo si
+ * se le quita, ver alSalir). Al parar el modulo se quita a todos al momento, con caida
+ * lenta.
  */
 final class ClaseVuelo extends ClaseEfecto {
 
     static final long GRACIA_TICKS = 100L;
+    /** Lo minimo de caida lenta al quedarse sin vuelo en el aire. */
     static final int CAIDA_LENTA_TICKS = 200;
+    /** Lo maximo: del techo del mundo (320) al fondo (-64) se cae en unos 40 s. */
+    static final int CAIDA_LENTA_MAX_TICKS = 1200;
+    /** Velocidad maxima con caida lenta, en bloques por tick (gravedad 0,01 con rozamiento 0,98). */
+    static final double VELOCIDAD_CAIDA_LENTA = 0.49;
     static final String GRUPO = "vuelo";
 
     static final class Alas extends Efecto {
@@ -66,6 +76,8 @@ final class ClaseVuelo extends ClaseEfecto {
     /** jugador -> turno de su gracia en marcha. Otro turno (o ninguno) la anula. */
     private final Map<UUID, Integer> gracia = new HashMap<>();
     private int turno;
+    /** jugador -> hasta cuando (ms) se le renueva la caida lenta mientras siga en el aire. */
+    private final Map<UUID, Long> cayendo = new HashMap<>();
 
     ClaseVuelo(SuperBeaconPlugin plugin) {
         super(plugin, "vuelo");
@@ -147,9 +159,7 @@ final class ClaseVuelo extends ClaseEfecto {
         boolean enAire = p.isFlying() || p.getLocation().subtract(0, 0.2, 0).getBlock().isPassable();
         p.setFlying(false);
         p.setAllowFlight(false);
-        if (enAire) {
-            p.addPotionEffect(new PotionEffect(PotionEffectType.SLOW_FALLING, CAIDA_LENTA_TICKS, 0, false, false, true));
-        }
+        if (enAire) caerDespacio(p);
         if (avisar) {
             if (enAire) {
                 plugin.textos().manda(p, "vuelo-perdido-aire",
@@ -160,6 +170,63 @@ final class ClaseVuelo extends ClaseEfecto {
         }
     }
 
+    /**
+     * Caida lenta hasta el suelo. Con 10 s fijos no bastaba: el alcance no tiene techo, y
+     * quien se queda sin vuelo a 250 bloques del suelo recorre unos 75 despacio y el resto
+     * a plomo, y se mata. Ahora dura lo que tarda en bajar hasta el suelo que tiene debajo
+     * (con margen), y vigilarCaidas() se la renueva mientras siga en el aire, por si cae
+     * por un barranco. La duracion inicial ya cubre la bajada entera: si el servidor se
+     * para a mitad, el efecto se guarda con el jugador y le sigue protegiendo al volver.
+     */
+    private void caerDespacio(Player p) {
+        int ticks = Math.max(CAIDA_LENTA_TICKS, Math.min(CAIDA_LENTA_MAX_TICKS, ticksHastaElSuelo(p)));
+        p.addPotionEffect(new PotionEffect(PotionEffectType.SLOW_FALLING, ticks, 0, false, false, true));
+        cayendo.put(p.getUniqueId(), System.currentTimeMillis() + CAIDA_LENTA_MAX_TICKS * 50L);
+    }
+
+    /**
+     * Lo que tarda en bajar con caida lenta hasta el primer bloque que le pare (o el agua),
+     * mirando la columna de debajo; sin nada debajo, hasta el fondo del mundo. Se suman 5 s
+     * por lo que tarda en coger velocidad y de margen. Solo se llama al quitar el vuelo.
+     */
+    static int ticksHastaElSuelo(Player p) {
+        Location l = p.getLocation();
+        World w = l.getWorld();
+        if (w == null) return CAIDA_LENTA_MAX_TICKS;
+        int x = l.getBlockX(), z = l.getBlockZ();
+        int suelo = w.getMinHeight();
+        for (int y = Math.min(l.getBlockY(), w.getMaxHeight() - 1); y >= w.getMinHeight(); y--) {
+            Block b = w.getBlockAt(x, y, z);
+            if (!b.isPassable() || b.isLiquid()) {
+                suelo = y + 1;
+                break;
+            }
+        }
+        double altura = Math.max(0, l.getY() - suelo);
+        return (int) Math.ceil(altura / VELOCIDAD_CAIDA_LENTA) + 100;
+    }
+
+    /**
+     * Cada segundo: a quien se quedo sin vuelo en el aire se le renueva la caida lenta
+     * mientras no toque suelo ni agua. Al aterrizar, al volver a volar, al cambiar a
+     * creativo o pasado el tope se le deja de vigilar; lo que le quede de efecto se acaba
+     * solo (no se le quita: podria ser de una pocion suya).
+     */
+    void vigilarCaidas() {
+        if (cayendo.isEmpty()) return;
+        long ahora = System.currentTimeMillis();
+        cayendo.entrySet().removeIf(en -> {
+            Player p = Bukkit.getPlayer(en.getKey());
+            if (p == null || ahora > en.getValue() || !nuestroModo(p) || p.getAllowFlight()) return true;
+            if (p.isOnGround() || p.isInWater() || p.isInLava()) return true;
+            PotionEffect actual = p.getPotionEffect(PotionEffectType.SLOW_FALLING);
+            if (actual == null || (!actual.isInfinite() && actual.getDuration() < 60)) {
+                p.addPotionEffect(new PotionEffect(PotionEffectType.SLOW_FALLING, 100, 0, false, false, true));
+            }
+            return false;
+        });
+    }
+
     /** Si tiene vuelo nuestro apuntado (de antes de un reinicio o de otra sesion). */
     boolean apuntado(Player p) {
         return plugin.registro().vuelos().contains(p.getUniqueId());
@@ -167,8 +234,16 @@ final class ClaseVuelo extends ClaseEfecto {
 
     @Override
     void alSalir(Player p) {
-        // Se queda apuntado a proposito (ver arriba); solo se olvida la gracia en marcha.
-        gracia.remove(p.getUniqueId());
+        UUID id = p.getUniqueId();
+        gracia.remove(id);
+        cayendo.remove(id);   // la caida lenta que tenga se guarda con el y le protege al volver
+        // En el suelo se le quita ya: no hay caida posible, y asi no queda nadie con el vuelo
+        // guardado en su ficha si el modulo no vuelve a arrancar (modulos.superbeacon: false).
+        // En el aire se queda apuntado a proposito (ver arriba) y lo resuelve el ciclo al volver.
+        if (apuntado(p) && nuestroModo(p) && p.getAllowFlight() && !p.isFlying() && p.isOnGround()) {
+            p.setAllowFlight(false);
+            plugin.registro().vuelo(id, false);
+        }
     }
 
     @Override
@@ -177,5 +252,6 @@ final class ClaseVuelo extends ClaseEfecto {
             if (apuntado(p)) quitarYa(p, false);
         }
         gracia.clear();
+        cayendo.clear();
     }
 }

@@ -94,7 +94,8 @@ final class MenuBaliza implements Listener {
         v.inv = Bukkit.createInventory(v, TAM, Estilo.titulo("EDERUS",
                 plugin.textos().crudo("menu-titulo", "Super Beacon"), SuperBeaconPlugin.SECCION));
         pintar(v, b, t, p);
-        p.openInventory(v.inv);
+        // null si otro plugin cancelo la apertura: esa vista no se apunta (se quedaria para siempre).
+        if (p.openInventory(v.inv) == null) return;
         abiertas.add(v);
         p.playSound(p.getLocation(), Sound.BLOCK_AMETHYST_BLOCK_CHIME, 0.7f, 1.2f);
     }

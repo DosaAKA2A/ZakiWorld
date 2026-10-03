@@ -282,6 +282,8 @@ public final class SuperBeaconPlugin extends Module {
 
     private void cadaSegundo() {
         if (detenido) return;
+        // La primera: que un fallo del menu o de una zona no deje sin caida lenta a nadie.
+        vuelo.vigilarCaidas();
         motor.zona();
         menu.tic();
     }
@@ -304,15 +306,22 @@ public final class SuperBeaconPlugin extends Module {
 
     /**
      * Mira una baliza si su chunk esta cargado (nunca lo carga): si su bloque sigue
-     * siendo el suyo, si toca destruirla por vencida y, si se pide, su holograma.
+     * siendo el suyo, si ha quedado dentro de una mina, si toca destruirla por vencida y,
+     * si se pide, su holograma.
      */
     void revisar(Baliza b, boolean holograma) {
         if (registro.porId(b.id) != b) return;
         World w = Bukkit.getWorld(b.mundo);
         if (w == null || !w.isChunkLoaded(b.x >> 4, b.z >> 4)) return;
-        Material hay = w.getBlockAt(b.x, b.y, b.z).getType();
+        org.bukkit.block.Block bloque = w.getBlockAt(b.x, b.y, b.z);
+        Material hay = bloque.getType();
         if (hay != b.material) {
             entregas.desaparecida(b, hay);
+            return;
+        }
+        if (enMina(bloque)) {
+            // Una mina marcada encima despues de colocarla (ver Entregas.sacarDeMina).
+            entregas.sacarDeMina(b);
             return;
         }
         TipoBaliza t = tipo(b.tipo);

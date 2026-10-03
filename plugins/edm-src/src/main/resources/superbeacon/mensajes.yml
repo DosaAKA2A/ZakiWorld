@@ -29,6 +29,8 @@ colocar-vencido: '&#FF5C5CEste Super Beacon venció el &f%fecha%&#FF5C5C.'
 ajeno: '&7Este Super Beacon es de &f%dueno%&7.'
 ajeno-clan: '&7Este Super Beacon es de &f%dueno% &7y beneficia al clan &f%clan%&7.'
 romper-ajeno: '&#FF5C5CEste Super Beacon es de &f%dueno%&#FF5C5C: solo su dueño puede recogerlo.'
+# Al staff que pica uno ajeno (no se lo lleva). %dueno% %id%
+romper-staff: '&#FFB627Este Super Beacon es de &f%dueno%&#FFB627: picarlo no lo recoge. &7Úsalo y elige Recoger, o escribe &f/superbeacon remove %id%&7.'
 recogido: '&fRecogiste %nombre%&f. &7Conserva sus efectos, su dueño y su vencimiento.'
 sin-espacio: '&#FF5C5CNo tienes espacio en el inventario. &7Libera una casilla e inténtalo de nuevo.'
 ya-no-esta: '&#FF5C5CEse Super Beacon ya no está ahí.'

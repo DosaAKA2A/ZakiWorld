@@ -190,7 +190,7 @@ final class Entregas {
         if (!forzar && !avisados.add(p.getUniqueId())) return;
         avisados.add(p.getUniqueId());
         plugin.textos().manda(p, "pendientes",
-                "&7Tienes &f%n% &7Super Beacon(s) esperándote. &7Libera espacio en el inventario para recibirlos.",
+                "&7Tienes &f%n% &7Super Beacon(s) esperándote. Libera espacio en el inventario para recibirlos.",
                 "%n%", String.valueOf(n));
     }
 
@@ -448,6 +448,29 @@ final class Entregas {
                     + ", de " + b.duenoTexto() + ") en " + b.donde() + " ya no esta (hay " + encontrado
                     + "). Pasa a pendiente de devolver a su dueño.");
             plugin.anotar("desaparecida", b.id.toString(), b.tipo, b.duenoTexto(), b.donde(), "habia " + encontrado);
+            Player d = b.dueno == null ? null : Bukkit.getPlayer(b.dueno);
+            if (d != null) avisarDevuelta(d, b, entregar(d, pe, false));
+        } finally {
+            enCurso.remove(b.id);
+        }
+    }
+
+    /**
+     * Una baliza que ha quedado dentro de una mina (el staff marco o agrando la mina encima
+     * de ella; colocarla ahi no se puede). No puede quedarse: el modulo minas descancela el
+     * picar en HIGHEST y mete los drops del bloque directo en el inventario, asi que cada
+     * golpe de cualquiera regalaria un faro vanilla aunque el MONITOR vuelva a cancelar.
+     * Vuelve a su dueño como con /superbeacon remove, con el bloque en aire.
+     */
+    void sacarDeMina(Baliza b) {
+        if (!enCurso.add(b.id)) return;
+        try {
+            if (registro().porId(b.id) != b) return;
+            Pendiente pe = devolver(b, "en-mina");
+            sacarDelMundo(b);
+            plugin.getLogger().warning("[SuperBeacon] El Super Beacon " + b.idCorto() + " (" + b.tipo + ", de "
+                    + b.duenoTexto() + ") en " + b.donde() + " esta dentro de una mina; vuelve a su dueño.");
+            plugin.anotar("en-mina", b.id.toString(), b.tipo, b.duenoTexto(), b.donde());
             Player d = b.dueno == null ? null : Bukkit.getPlayer(b.dueno);
             if (d != null) avisarDevuelta(d, b, entregar(d, pe, false));
         } finally {

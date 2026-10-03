@@ -265,14 +265,24 @@ final class AutotestSuperBeacon {
             "    efectos:",
             "      v: {tipo: vuelo}",
             "  'Con Espacios':",
-            "    bloque: BEACON");
+            "    bloque: BEACON",
+            "  medio:",
+            "    bloque: BEACON",
+            "    duracion-dias: 0.5",
+            "  textual:",
+            "    bloque: BEACON",
+            "    duracion-dias: 30d");
 
     private void lectura(SuperBeaconPlugin modulo) throws Exception {
         YamlConfiguration yml = new YamlConfiguration();
         yml.loadFromString(CONFIG_CON_ERRORES);
         List<String> errores = new ArrayList<>();
         Map<String, TipoBaliza> tipos = LectorTipos.leer(yml.getConfigurationSection("tipos"), modulo.clasesPorId(), errores);
-        igual("con errores se cargan los dos tipos sanos", List.of("bueno", "grande"), new ArrayList<>(tipos.keySet()));
+        igual("con errores se cargan los tipos sanos", List.of("bueno", "grande", "medio"), new ArrayList<>(tipos.keySet()));
+        TipoBaliza medio = tipos.get("medio");
+        igual("duracion-dias con decimales: 0.5 son 12 h, no \"no caduca\"", 0.5, medio == null ? null : medio.duracionDias);
+        ok("una duracion que no es un numero deja el tipo fuera y avisa",
+                !tipos.containsKey("textual") && contiene(errores, "textual.duracion-dias"));
         TipoBaliza bueno = tipos.get("bueno");
         igual("de \"bueno\" quedan prisa, vida y raro", List.of("prisa", "vida", "raro"),
                 bueno == null ? null : new ArrayList<>(bueno.efectos.keySet()));

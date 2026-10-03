@@ -84,9 +84,17 @@ final class LectorTipos {
             radio = arreglado;
         }
 
-        int dias = s.getInt("duracion-dias", 0);
-        if (dias < 0) {
-            errores.add(donde + ".duracion-dias: " + dias + " es negativo; se usa 0 (no caduca)");
+        // getInt() se comia los decimales sin avisar: un "0.5" (12 h de prueba) quedaba en 0,
+        // que es "no caduca", y un "30d" tambien. Una duracion que no es un numero deja el tipo
+        // fuera: mejor que /superbeacon give falle a que reparta permanentes por un error.
+        Object diasTxt = s.get("duracion-dias");
+        if (diasTxt != null && !(diasTxt instanceof Number)) {
+            errores.add(donde + ".duracion-dias: '" + diasTxt + "' no es un numero de dias; el tipo no se carga");
+            return null;
+        }
+        double dias = s.getDouble("duracion-dias", 0);
+        if (dias < 0 || Double.isNaN(dias) || Double.isInfinite(dias)) {
+            errores.add(donde + ".duracion-dias: " + diasTxt + " no sirve; se usa 0 (no caduca)");
             dias = 0;
         }
 
