@@ -84,6 +84,8 @@ public final class Hardcore implements Listener {
     private final Map<UUID, Long> muertos = new HashMap<>();
     /** Minijefe -> a quien viene siguiendo. Ver marcarPresa(). */
     private final Map<UUID, UUID> presas = new HashMap<>();
+    /** Calamity 1.10 · Minijefe -> desde cuando (millis) espera fuera de la zona spawn a su presa. Ver vigilarPresas(). */
+    private final Map<UUID, Long> esperando = new HashMap<>();
     /** Quien acaba de morir dentro y todavia no ha reaparecido. Ver onReaparecer(). */
     private final java.util.Set<UUID> porReaparecer = new java.util.HashSet<>();
 
@@ -325,6 +327,8 @@ public final class Hardcore implements Listener {
         barra.parar();
         MobCoins.aviso(null);
         canalizando.clear();
+        // 1.10: sin reloj nadie espera a nadie; al volver a arrancar, el que siga ahi empieza de cero.
+        esperando.clear();
         pararModulos();
         // Al apagar no hay PlayerQuitEvent que valga: la cordura de los que siguen
         // dentro se apunta aqui, o un reinicio del servidor se la devolveria entera.
@@ -1235,26 +1239,86 @@ public final class Hardcore implements Listener {
     /**
      * Los minijefes no sueltan a su presa: la siguen aunque cambie de bioma, y solo se
      * acaba cuando cae uno de los dos. Sin esto bastaba con andar veinte bloques.
+     *
+     * Calamity 1.10: tampoco la sueltan porque se meta en la zona spawn. Hasta la 1.9 se retiraban en
+     * humo en cuanto ella entraba, y la plaza era la forma de quitarse un minijefe de encima sin pelear
+     * (Dosa: "que esto no pase con minijefes"). Ahora la esperan fuera; el paso de cada segundo lo
+     * decide ZonaSpawn.espera:
+     *  - mientras ella esta dentro no se les pone de objetivo ni se les borra el que tengan, asi que si
+     *    alguien de fuera les pega se defienden con su IA de siempre. Solo se suelta un objetivo que
+     *    este dentro (ella, al entrar): a los de dentro no pueden apuntar (ZonaSpawn.onApuntar);
+     *  - se quedan cerca del sitio por donde ella saldria (ZonaSpawn.acercarAlBorde), nunca junto a
+     *    ella: distancia-maxima no cuenta mientras esperan;
+     *  - si ella sale, vuelven por ella con lo de siempre; si pasan espera-segundos seguidos, se van sin
+     *    dejar nada; y si ella se desconecta o se va de Calamity, tambien: suelto junto a la plaza seria
+     *    un jefe de guardia para el siguiente que saliera (antes ni habria llegado a estar ahi).
+     * Desde dentro no se les puede pegar (ZonaSpawn.onDanoDesdeDentro). Con spawn.minijefes.esperan en
+     * false, como hasta la 1.9.
      */
     private void vigilarPresas() {
+        ZonaSpawn z = zona;
+        long ahora = System.currentTimeMillis();
         for (UUID idMob : new ArrayList<>(presas.keySet())) {
             org.bukkit.entity.Entity e = plugin.getServer().getEntity(idMob);
             if (!(e instanceof org.bukkit.entity.Mob mob) || !mob.isValid()) {
-                presas.remove(idMob);
+                soltarPresa(idMob);
                 continue;
             }
-            Player presa = plugin.getServer().getPlayer(presas.get(idMob));
+            UUID idPresa = presas.get(idMob);
+            Player presa = plugin.getServer().getPlayer(idPresa);
             if (presa == null || !presa.isOnline() || !esHardcore(presa)) {
-                presas.remove(idMob);
+                // 1.10: el que la esperaba en el borde ya no espera a nadie (ver arriba).
+                if (esperando.containsKey(idMob)) {
+                    retirarMinijefe(idMob, mob, "spawn", "minijefe-se-va",
+                            presa == null ? idPresa.toString() : presa.getName(), "sin presa");
+                } else {
+                    soltarPresa(idMob);
+                }
                 continue;
             }
-            // 1.2: a la zona spawn no le sigue: se retira en humo, como ante la PARCA (P-10).
-            if (enSpawn(presa)) {
-                presas.remove(idMob);
-                Compat.spawn(mob.getWorld(), Compat.LARGE_SMOKE, mob.getLocation().add(0, 1, 0), 30, 0.5, 1, 0.5, 0.02);
-                mob.remove();
-                plugin.bitacora().anotar("spawn", "minijefe-retirado", presa.getName());
-                continue;
+            Long desde = esperando.get(idMob);
+            ZonaSpawn.Espera paso = ZonaSpawn.espera(enSpawn(presa), desde != null, z != null && z.minijefesEsperan(),
+                    desde == null ? 0 : ahora - desde, z == null ? 0 : z.esperaSegundos());
+            switch (paso) {
+                case SE_RETIRA -> {
+                    // 1.2: a la zona spawn no le sigue: se retira en humo, como ante la PARCA (P-10).
+                    // 1.10: solo con spawn.minijefes.esperan en false.
+                    retirarMinijefe(idMob, mob, "spawn", "minijefe-retirado", presa.getName());
+                    continue;
+                }
+                case EMPIEZA, ESPERA -> {
+                    if (paso == ZonaSpawn.Espera.EMPIEZA) {
+                        esperando.put(idMob, ahora);
+                        cordura.destello(presa, Component.text().append(nombreMinijefe(mob))
+                                .append(Component.text(" te espera fuera del spawn.", Paleta.TEXTO)).build(), 4);
+                        plugin.bitacora().anotar("spawn", "minijefe-espera", presa.getName());
+                    }
+                    if (mob.getTarget() instanceof Player t && enSpawn(t)) mob.setTarget(null);
+                    seguro("zona-spawn", () -> z.acercarAlBorde(mob, presa));
+                    continue;
+                }
+                case SE_CANSA -> {
+                    Component nombre = nombreMinijefe(mob);
+                    retirarMinijefe(idMob, mob, "spawn", "minijefe-se-va", presa.getName(),
+                            "espera " + (ahora - desde) / 1000 + " s");
+                    presa.sendMessage(ComandoCalamity.mensaje(Component.text().append(nombre)
+                            .append(Component.text(" se ha cansado de esperar y se ha ido.")).build()));
+                    continue;
+                }
+                case VUELVE -> {
+                    esperando.remove(idMob);
+                    // Ley 6: si la PARCA la esperaba fuera y ha vuelto antes que este segundo, el minijefe se
+                    // va. Parca.retirarMinijefes solo ve a los que la tienen de objetivo, y este no la tenia.
+                    if (valor("parca", () -> parca.persigue(presa), false)) {
+                        retirarMinijefe(idMob, mob, "spawn", "minijefe-se-va", presa.getName(), "parca");
+                        continue;
+                    }
+                    cordura.destello(presa, Component.text().append(nombreMinijefe(mob))
+                            .append(Component.text(" vuelve por ti.", Paleta.AVISO)).build(), 3);
+                }
+                case SIGUE -> {
+                    // Lo de siempre, aqui debajo.
+                }
             }
             mob.setTarget(presa);
             // Si se aleja demasiado, el minijefe reaparece cerca: no se le escapa.
@@ -1279,6 +1343,38 @@ public final class Hardcore implements Listener {
     /** Apunta que ese minijefe viene a por ese jugador y no lo suelta. */
     public void marcarPresa(org.bukkit.entity.Entity minijefe, Player presa) {
         presas.put(minijefe.getUniqueId(), presa.getUniqueId());
+    }
+
+    /**
+     * Calamity 1.10 · La presa de ese minijefe (marcarPresa) si esta conectada, o null. Solo lectura:
+     * la usa ZonaSpawn.sacar para sacarlo por el lado de ella.
+     */
+    Player presaDe(UUID idMob) {
+        UUID id = presas.get(idMob);
+        return id == null ? null : plugin.getServer().getPlayer(id);
+    }
+
+    /** Calamity 1.10 · Olvida a ese minijefe: ni a quien sigue ni si la estaba esperando. */
+    private void soltarPresa(UUID idMob) {
+        presas.remove(idMob);
+        esperando.remove(idMob);
+    }
+
+    /**
+     * Calamity 1.10 · Un minijefe de cordura cero que se va: en humo y sin muerte (no paga ni suelta
+     * nada), olvidado (soltarPresa) y con su linea en la Bitacora.
+     */
+    private void retirarMinijefe(UUID idMob, org.bukkit.entity.Mob mob, String... bitacora) {
+        soltarPresa(idMob);
+        Compat.spawn(mob.getWorld(), Compat.LARGE_SMOKE, mob.getLocation().add(0, 1, 0), 30, 0.5, 1, 0.5, 0.02);
+        mob.remove();
+        plugin.bitacora().anotar(bitacora);
+    }
+
+    /** Calamity 1.10 · El nombre de un minijefe en los avisos, el mismo de su cartel (MobsLethal.nombreMinijefe). */
+    private Component nombreMinijefe(LivingEntity mob) {
+        Component porDefecto = Paleta.minijefe(null, 0);
+        return plugin.mobs() == null ? porDefecto : valor("minijefes", () -> plugin.mobs().nombreMinijefe(mob), porDefecto);
     }
 
     /** Los mobs de este mundo pueden recoger lo que se cae al suelo. */

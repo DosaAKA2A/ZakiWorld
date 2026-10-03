@@ -218,6 +218,7 @@ hardcore:
     dano: 4
     # 15. Te marca: te sigue aunque cambies de bioma, y si te alejas mas de esto
     #     reaparece a tu lado. Solo se acaba cuando cae uno de los dos.
+    #     Calamity 1.10: mientras te espera fuera de la zona spawn no cuenta (ver spawn.minijefes).
     distancia-maxima: 60
     # Los rellena el plugin la primera vez con los cinco de la carpeta
     # "Lethal World · Minijefes" de /esb. A partir de ahi se editan alli.
@@ -283,6 +284,34 @@ hardcore:
     # Los mobs de Calamity que se cuelen (persiguiendo a alguien) se retiran en humo, y
     # ninguno apunta a quien este dentro. En false se quedan (pero dentro sigue sin nacer ninguno).
     retirar-mobs: true
+    # Calamity 1.10 · Los minijefes de Calamity ya no se borran por la zona spawn. Hasta la 1.9,
+    # meterse en la plaza con uno detras (o arrastrarlo hasta ella) lo deshacia en humo: era la
+    # forma de quitarselo de encima sin pelear. Ahora, en true:
+    #  - el que se cuela (con retirar-mobs en true) se saca al borde, a 3 bloques de la zona y con
+    #    un poco de humo: por el lado de su objetivo o de su presa si persigue a alguien de fuera
+    #    (asi no rebota al cruzar la plaza) y, si no, por el mas cercano; los demas mobs se siguen
+    #    retirando como siempre;
+    #  - el de cordura cero cuya presa entra deja de perseguirla y la espera fuera, cerca del sitio
+    #    por donde ella saldria. Mientras espera no la busca, pero si alguien de fuera le pega se
+    #    defiende. Cuando ella sale, vuelve por ella. Si ella se va de Calamity o se desconecta
+    #    mientras tanto, se va.
+    # En false, como hasta la 1.9: se retiran en humo.
+    minijefes:
+      esperan: true
+      # Segundos seguidos que espera. Pasados, se va sin dejar nada y se le avisa a ella por el
+      # chat. Si sale antes, la cuenta vuelve a empezar la proxima vez que entre. 0 = no se cansa.
+      espera-segundos: 300
+      # Si el que espera se aleja mas de esto (en horizontal) del sitio por donde saldria su
+      # presa, porque se fue tras alguien de fuera o porque ella ha cruzado la plaza, se le trae
+      # de vuelta al borde. 0 = se queda donde este.
+      correa: 32
+    # Calamity 1.10 · Desde dentro de la zona no se hace dano a los mobs de Calamity ni a las
+    # amenazas (Parca, Eco, Ambush), esten donde esten: ni a mano, ni con arco o tridente, ni con
+    # pociones arrojadizas o persistentes. Ellos no pueden apuntar a quien esta dentro, asi que
+    # pegarles desde ahi era una pelea en la que solo pegaba uno (y con un minijefe esperando en
+    # el borde, matarlo sin riesgo). Cuenta donde esta quien ataca. El PvP no cambia: lo decide
+    # WorldGuard. En false, como hasta la 1.9.
+    sin-dano-desde-dentro: true
 
   # Calamity 1.7: cuanto mas lejos del spawn, mas fuertes los mobs.
   # Se mide en horizontal desde el BORDE de la zona spawn de ese mundo (dentro, nada); si el
