@@ -63,6 +63,12 @@ public final class Marcas {
     public static final NamespacedKey SALVOCONDUCTO = clave("salvoconducto");
     /** BYTE 1: un Fragmento de Masamune (lo que deja Ambush a su presa; la Forja pide cinco). */
     public static final NamespacedKey FRAGMENTO_MASAMUNE = clave("fragmento_masamune");
+    /**
+     * STRING "uuid;dia;hueco;id": el pergamino de un contrato de Oren (Calamity 1.10, Pergaminos). Dice
+     * de quien es, de que dia, que hueco y que contrato; la verdad sigue en contratos.<uuid>, y un papel
+     * que no cuadra con ella es inerte y se borra.
+     */
+    public static final NamespacedKey PERGAMINO = clave("pergamino");
 
     private Marcas() {
     }
@@ -75,7 +81,8 @@ public final class Marcas {
     static List<NamespacedKey> todas() {
         return List.of(AMENAZA, PRESA, ECO, ECO_DUENO, DANO_JUGADOR, VIDA_LOGICA, CASCARA, ECO_COPIA, RELIQUIA, RELIQUIA_ID,
                 RELIQUIA_ORIGEN, RELIQUIA_NACIO, RELIQUIA_ESPECIAL, RELIQUIA_NIVEL, RELIQUIA_MINIJEFE,
-                RELIQUIA_VALIDA, TROFEO, PRESTADO, LIGADO, TALISMAN, GRABADO, SALVOCONDUCTO, FRAGMENTO_MASAMUNE);
+                RELIQUIA_VALIDA, TROFEO, PRESTADO, LIGADO, TALISMAN, GRABADO, SALVOCONDUCTO, FRAGMENTO_MASAMUNE,
+                PERGAMINO);
     }
 
     /** Si una entidad es nuestra (PARCA, planidera, Eco...). */

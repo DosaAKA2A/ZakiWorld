@@ -30,6 +30,7 @@ import org.bukkit.event.world.LootGenerateEvent;
 import org.bukkit.event.entity.EntityRegainHealthEvent;
 import org.bukkit.event.entity.PlayerDeathEvent;
 import org.bukkit.event.player.PlayerBedEnterEvent;
+import org.bukkit.event.player.PlayerChangedWorldEvent;
 import org.bukkit.event.player.PlayerCommandPreprocessEvent;
 import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.event.player.PlayerJoinEvent;
@@ -86,6 +87,8 @@ public final class Hardcore implements Listener {
     private final Map<UUID, UUID> presas = new HashMap<>();
     /** Quien acaba de morir dentro y todavia no ha reaparecido. Ver onReaparecer(). */
     private final java.util.Set<UUID> porReaparecer = new java.util.HashSet<>();
+    /** 1.10: quien acaba de entrar por meter(); onCambiarMundo no repite su llegada. Dura un tick. */
+    private final java.util.Set<UUID> recienMetidos = new java.util.HashSet<>();
 
     /*
      * Lo que el plugin ESCRIBE solo (horas acumuladas, tags entregados y la cordura de
@@ -325,6 +328,7 @@ public final class Hardcore implements Listener {
         barra.parar();
         MobCoins.aviso(null);
         canalizando.clear();
+        recienMetidos.clear();
         pararModulos();
         // Al apagar no hay PlayerQuitEvent que valga: la cordura de los que siguen
         // dentro se apunta aqui, o un reinicio del servidor se la devolveria entera.
@@ -1581,6 +1585,8 @@ public final class Hardcore implements Listener {
             seguro("huella", () -> huella.reiniciar(p));
             seguro("parca", () -> parca.alSalir(p, motivo));
             seguro("kit", () -> kit.borrarPrestado(p));
+            // 1.10: los pergaminos de los contratos tampoco salen (los de la Tasacion ya se rompieron al cobrarlos).
+            seguro("contratos", () -> contratos.borrarPergaminos(p));
             seguro("combate", () -> combate.alSalir(p));
         }
         p.teleport(destino);
@@ -1599,13 +1605,28 @@ public final class Hardcore implements Listener {
         Compat.soundPlayers(destino.getWorld(), destino, "block.amethyst_block.resonate", 1.0f, 0.8f);
     }
 
-    /**
-     * Mete a un jugador. La oleada de bienvenida es una de las reglas de dificultad:
-     * el mundo no te deja llegar y mirar, te recibe con algo encima.
-     */
+    /** Mete a un jugador por la puerta: el teleport y la llegada (alLlegar). */
     public void meter(Player p, Location destino) {
         if (destino == null) return;
+        // 1.10: la marca va ANTES del teleport, porque el cambio de mundo salta dentro de el
+        // (onCambiarMundo, que la consume) y la llegada ya la hace esta llamada. Si el teleport no
+        // cambia de mundo o falla, se quita sola al tick siguiente.
+        UUID u = p.getUniqueId();
+        recienMetidos.add(u);
+        plugin.getServer().getScheduler().runTask(plugin, () -> recienMetidos.remove(u));
         p.teleport(destino);
+        alLlegar(p);
+    }
+
+    /**
+     * Lo que pasa al llegar a Calamity, venga por la puerta (meter) o por cualquier otra via: un /warp,
+     * un /tp o el portal de otro plugin (onCambiarMundo, Calamity 1.10). Antes solo corria con la
+     * puerta, y quien entraba por /warp se quedaba sin contratos, sin huella en la Aduana y sin "entra"
+     * en la telemetria. La oleada de bienvenida es una de las reglas de dificultad: el mundo no te deja
+     * llegar y mirar, te recibe con algo encima.
+     */
+    void alLlegar(Player p) {
+        Location destino = p.getLocation();
         cordura.reiniciar(p);
         p.sendMessage(Paleta.mensaje("Si mueres en Calamity, pierdes todo lo que llevas encima."));
         Compat.sound(destino.getWorld(), destino, "ambient.cave", 1.2f, 0.5f);
@@ -1626,6 +1647,19 @@ public final class Hardcore implements Listener {
             plugin.getServer().getScheduler().runTaskLater(plugin,
                     () -> plugin.mobs().oleada(p, oleada), 60L);
         }
+    }
+
+    /**
+     * Calamity 1.10 · La llegada por otra via que no es la puerta: de un mundo que no es hardcore a uno
+     * que si, contando (como la puerta: ni espectadores ni creativos) y sin haber pasado por meter().
+     * Quien se conecta estando dentro no cambia de mundo: sigue su expedicion (onEntrar).
+     */
+    @EventHandler(priority = EventPriority.MONITOR)
+    public void onCambiarMundo(PlayerChangedWorldEvent e) {
+        Player p = e.getPlayer();
+        // El cambio de mundo de la puerta consume su marca: la llegada ya la hace meter().
+        if (recienMetidos.remove(p.getUniqueId()) || esHardcore(e.getFrom()) || !esHardcore(p) || !cuenta(p)) return;
+        alLlegar(p);
     }
 
     @EventHandler

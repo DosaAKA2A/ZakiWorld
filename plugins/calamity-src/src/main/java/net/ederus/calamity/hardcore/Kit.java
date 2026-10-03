@@ -33,6 +33,7 @@ import org.bukkit.persistence.PersistentDataType;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
+import java.util.function.Predicate;
 
 /**
  * M15 · Kit de Expedicion (DIS M15, PLAN sec. 7.2): perderlo todo es la primera causa de
@@ -280,39 +281,46 @@ final class Kit implements Listener {
         return t != InventoryType.CRAFTING && t != InventoryType.PLAYER && t != InventoryType.CREATIVE;
     }
 
-    @EventHandler(priority = EventPriority.LOW, ignoreCancelled = true)
-    public void alClic(InventoryClickEvent e) {
-        if (!(e.getWhoClicked() instanceof Player p)) return;
+    /**
+     * Si ese clic mete en otro sitio algo que cumple "es": en un saco (con ello en el cursor sobre el
+     * saco, o el saco sobre ello: saldria dentro) o en un inventario que no es el del jugador (ajeno),
+     * con el cursor, con una tecla de numero o la F, o con mayusculas desde abajo.
+     *
+     * Calamity 1.10: lo comparten lo prestado (alClic) y los pergaminos de los contratos (Pergaminos):
+     * las mismas vias cerradas, cada uno con su aviso.
+     */
+    static boolean meteFuera(InventoryClickEvent e, Predicate<ItemStack> es) {
         ItemStack cursor = e.getCursor();
         ItemStack actual = e.getCurrentItem();
-        // Meter lo prestado en un saco (o el saco sobre lo prestado): saldria dentro del saco.
-        if ((esPrestado(cursor) && esSaco(actual)) || (esPrestado(actual) && esSaco(cursor))) {
-            bloquear(e, p);
-            return;
-        }
+        if ((es.test(cursor) && esSaco(actual)) || (es.test(actual) && esSaco(cursor))) return true;
         Inventory arriba = e.getView().getTopInventory();
-        if (!ajeno(arriba)) return;
+        if (!ajeno(arriba)) return false;
         boolean enArriba = e.getRawSlot() >= 0 && e.getRawSlot() < arriba.getSize();
         if (enArriba) {
             // Tecla de numero o F (mano secundaria, boton 40): lo que se trae de la barra.
-            ItemStack atajo = e.getHotbarButton() >= 0 ? p.getInventory().getItem(e.getHotbarButton()) : null;
-            if (esPrestado(cursor) || esPrestado(atajo)) bloquear(e, p);
-        } else if (e.isShiftClick() && esPrestado(actual)) {
-            bloquear(e, p);
+            ItemStack atajo = e.getHotbarButton() >= 0 ? e.getWhoClicked().getInventory().getItem(e.getHotbarButton()) : null;
+            return es.test(cursor) || es.test(atajo);
         }
+        return e.isShiftClick() && es.test(actual);
+    }
+
+    /** Lo mismo para un arrastre: si deja algo que cumple "es" en alguna casilla de un inventario ajeno. */
+    static boolean arrastraFuera(InventoryDragEvent e, Predicate<ItemStack> es) {
+        if (!es.test(e.getOldCursor())) return false;
+        Inventory arriba = e.getView().getTopInventory();
+        if (!ajeno(arriba)) return false;
+        for (int s : e.getRawSlots()) if (s < arriba.getSize()) return true;
+        return false;
+    }
+
+    @EventHandler(priority = EventPriority.LOW, ignoreCancelled = true)
+    public void alClic(InventoryClickEvent e) {
+        if (e.getWhoClicked() instanceof Player p && meteFuera(e, Kit::esPrestado)) bloquear(e, p);
     }
 
     @EventHandler(priority = EventPriority.LOW, ignoreCancelled = true)
     public void alArrastrar(InventoryDragEvent e) {
-        if (!esPrestado(e.getOldCursor())) return;
-        Inventory arriba = e.getView().getTopInventory();
-        if (!ajeno(arriba)) return;
-        for (int s : e.getRawSlots()) {
-            if (s < arriba.getSize()) {
-                e.setCancelled(true);
-                return;
-            }
-        }
+        if (arrastraFuera(e, Kit::esPrestado)) e.setCancelled(true);
     }
 
     private void bloquear(InventoryClickEvent e, HumanEntity p) {

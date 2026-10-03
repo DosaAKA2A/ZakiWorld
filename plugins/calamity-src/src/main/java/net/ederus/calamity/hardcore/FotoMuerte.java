@@ -241,7 +241,8 @@ final class FotoMuerte {
     }
 
     private static ItemStack pieza(ItemStack it) {
-        return it == null || it.getType().isAir() ? null : it;
+        // Calamity 1.10: el pergamino de un contrato no se copia (ni aunque alguien se lo ponga en la cabeza).
+        return it == null || it.getType().isAir() || Marcas.tiene(it, Marcas.PERGAMINO) ? null : it;
     }
 
     static boolean esArma(Material m) {

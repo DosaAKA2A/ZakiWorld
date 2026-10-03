@@ -7,6 +7,7 @@ import org.bukkit.entity.Player;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
+import java.util.function.Function;
 import java.util.function.Predicate;
 
 /**
@@ -47,6 +48,11 @@ public final class Cordura {
     private BarraAccion salida;
     /** Quien no pierde cordura ahora mismo (1.2: el que esta en la zona spawn). Lo pone Hardcore. */
     private Predicate<Player> aSalvo = p -> false;
+    /**
+     * Calamity 1.10: lo que va a la derecha de la barra, en la misma linea (el contrato de Contratos:
+     * "Mobs 6/10"). Null = nada. Lo pone Contratos; tiene que ser barato y no fallar: corre cada segundo.
+     */
+    private Function<Player, Component> extra = p -> null;
 
     /**
      * Calamity 1.2: a quien no se le resta cordura, venga de donde venga (drenaje, golpes, testigos,
@@ -58,6 +64,11 @@ public final class Cordura {
 
     void salida(BarraAccion barra) {
         salida = barra;
+    }
+
+    /** Calamity 1.10: lo que se pega a la derecha de la barra (null = nada). */
+    void extra(Function<Player, Component> f) {
+        extra = f == null ? p -> null : f;
     }
 
     public Estado estado(Player p) {
@@ -138,11 +149,15 @@ public final class Cordura {
 
     /**
      * Dibuja la barra de este jugador en su barra de accion (o el destello que toque). Es fondo:
-     * si otro plugin tiene la barra reservada, este segundo no se pinta (BarraAccion).
+     * si otro plugin tiene la barra reservada, este segundo no se pinta (BarraAccion). Desde la 1.10
+     * lleva detras, en la misma linea, lo que diga extra (un contrato): un solo envio, sin parpadeo.
      */
     public void pintar(Player p) {
         Estado e = estado(p);
-        if (salida != null) salida.fondo(p, barra(e.valor));
+        if (salida == null) return;
+        Component c = barra(e.valor);
+        Component mas = extra.apply(p);
+        salida.fondo(p, mas == null ? c : c.append(mas));
     }
 
     /** La barra tal cual se ve: veinte casillas, el numero detras. */

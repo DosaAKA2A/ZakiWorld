@@ -900,8 +900,19 @@ hardcore:
       olvido-segundos: 30
   # [alineado] pool con los 12 contratos de ESTUDIO 5.9 (corto: true en los 4 cortos); semanal = 1 Llave del Caos.
   # Cada contrato: texto, evento que lo hace avanzar (Contratos.progreso), objetivo, premio (esencias y
-  # mobcoins, por la Aduana) y "mecanica": el interruptor que tiene que estar encendido para que salga
-  # en el sorteo (vacio = siempre).
+  # mobcoins, por la Aduana), "mecanica": el interruptor que tiene que estar encendido para que salga
+  # en el sorteo (vacio = siempre) y "etiqueta" (Calamity 1.10): el nombre corto con el que sale en la
+  # barra de accion. Sin etiqueta vale la de serie del mismo id o, si no hay, las dos primeras palabras
+  # del texto.
+  #
+  # Calamity 1.10 · Pergaminos: cada contrato pendiente es un pergamino (papel con su objetivo, su
+  # progreso y su premio). Oren los deja al entrar a Calamity, por la puerta o por cualquier otra via, y
+  # en su menu da el que falte. Sin su pergamino el contrato no avanza. Lo que se cumple dentro se cobra
+  # al momento: el pergamino se rompe y la Aduana paga con las Esencias en la mano, como las de un mob
+  # (si no caben, a tus pies; si mueres antes de salir, las pierdes), y las MobCoins como siempre. Los de
+  # Reliquias se cumplen y se cobran al salir vivo, al saldo, como antes. Los pergaminos no salen de
+  # Calamity ni se guardan, se dan o se tiran (se rompen y Oren da otro). Lo cobrado no vuelve a empezar
+  # aunque mueras; lo que no, si.
   contratos:
     activo: false
     por-dia: 3
@@ -911,19 +922,27 @@ hardcore:
     precio-cambio: 1
     semana-objetivo: 12
     semana-premio: ["lw hardcore dar llave %jugador% 1"]
+    pergamino:
+      activo: true                # false: como antes de la 1.10 (sin papel; todo se cobra al salir vivo)
+      entregar-al-entrar: true    # false: Oren no los deja solos al entrar; hay que pedirselos en su menu
+    # El contrato que va en la barra de accion, a la derecha de la cordura ("Mobs 6/10"): el ultimo que
+    # avanzo o, si ninguno, el primero cuyo pergamino llevas. Nunca mas de uno.
+    #   modo: siempre | avance (solo "segundos" despues de avanzar) | nunca (la barra como antes, con el
+    #         aviso de cada avance)
+    barra: {modo: siempre, segundos: 6}
     pool:
-      corto-mobs: {texto: "Mata 10 mobs y sal", evento: mob, objetivo: 10, esencias: 2, mobcoins: 20, corto: true}
-      corto-cofre: {texto: "Abre un cofre de estructura y sal", evento: cofre, objetivo: 1, esencias: 2, mobcoins: 20, corto: true, mecanica: cofres.activo}
-      corto-reliquia: {texto: "Saca una Reliquia de grado II o más", evento: reliquia-ii, objetivo: 1, esencias: 2, mobcoins: 20, corto: true, mecanica: reliquias.activas}
-      corto-15: {texto: "Pasa 15 min en Calamity y sal", evento: minutos, objetivo: 15, esencias: 2, mobcoins: 20, corto: true}
-      extraer-ii: {texto: "Saca 3 Reliquias de grado II o más en una sola salida", evento: reliquia-ii, objetivo: 3, esencias: 4, mobcoins: 60, mecanica: reliquias.activas}
-      destacados: {texto: "Mata 5 mobs destacados y sal", evento: destacado, objetivo: 5, esencias: 3, mobcoins: 40}
-      eco: {texto: "Derrota un Eco ajeno válido y sal", evento: eco-valido, objetivo: 1, esencias: 5, mobcoins: 80, mecanica: eco.activo}
-      al-limite: {texto: "Aguanta 15 min con la cordura por debajo de 25 y sal", evento: minutos-limite, objetivo: 15, esencias: 5, mobcoins: 80}
-      minijefe: {texto: "Mata un minijefe y sal", evento: minijefe, objetivo: 1, esencias: 6, mobcoins: 100}
-      sin-frasco: {texto: "Pasa 30 min en Calamity sin beber del Frasco y sal", evento: minutos-sin-frasco, objetivo: 30, esencias: 4, mobcoins: 60}
-      cofres: {texto: "Abre 3 cofres de estructura y sal", evento: cofre, objetivo: 3, esencias: 3, mobcoins: 40, mecanica: cofres.activo}
-      redimir: {texto: "Derrota a tu propio Eco y sal", evento: redimir, objetivo: 1, esencias: 4, mobcoins: 60, mecanica: eco.activo}
+      corto-mobs: {texto: "Mata 10 mobs", etiqueta: "Mobs", evento: mob, objetivo: 10, esencias: 2, mobcoins: 20, corto: true}
+      corto-cofre: {texto: "Abre un cofre de estructura", etiqueta: "Cofre", evento: cofre, objetivo: 1, esencias: 2, mobcoins: 20, corto: true, mecanica: cofres.activo}
+      corto-reliquia: {texto: "Saca una Reliquia de grado II o más", etiqueta: "Reliquia", evento: reliquia-ii, objetivo: 1, esencias: 2, mobcoins: 20, corto: true, mecanica: reliquias.activas}
+      corto-15: {texto: "Pasa 15 min en Calamity", etiqueta: "Minutos", evento: minutos, objetivo: 15, esencias: 2, mobcoins: 20, corto: true}
+      extraer-ii: {texto: "Saca 3 Reliquias de grado II o más en una sola salida", etiqueta: "Reliquias", evento: reliquia-ii, objetivo: 3, esencias: 4, mobcoins: 60, mecanica: reliquias.activas}
+      destacados: {texto: "Mata 5 mobs destacados", etiqueta: "Destacados", evento: destacado, objetivo: 5, esencias: 3, mobcoins: 40}
+      eco: {texto: "Derrota un Eco ajeno válido", etiqueta: "Eco", evento: eco-valido, objetivo: 1, esencias: 5, mobcoins: 80, mecanica: eco.activo}
+      al-limite: {texto: "Aguanta 15 min con la cordura por debajo de 25", etiqueta: "Al límite", evento: minutos-limite, objetivo: 15, esencias: 5, mobcoins: 80}
+      minijefe: {texto: "Mata un minijefe", etiqueta: "Minijefe", evento: minijefe, objetivo: 1, esencias: 6, mobcoins: 100}
+      sin-frasco: {texto: "Pasa 30 min en Calamity sin beber del Frasco", etiqueta: "Sin frasco", evento: minutos-sin-frasco, objetivo: 30, esencias: 4, mobcoins: 60}
+      cofres: {texto: "Abre 3 cofres de estructura", etiqueta: "Cofres", evento: cofre, objetivo: 3, esencias: 3, mobcoins: 40, mecanica: cofres.activo}
+      redimir: {texto: "Derrota a tu propio Eco", etiqueta: "Tu Eco", evento: redimir, objetivo: 1, esencias: 4, mobcoins: 60, mecanica: eco.activo}
   kit: {activo: false, cada-horas: 20, frasco-tragos: 1, solo-sin-armadura: true}
   # [alineado] Hitos de PLAN 6 / DIS M16. [INSOMNE] de 24 h sigue tambien en "tag" (el de hoy).
   # Cada hito: estadistica (clave de stats, "horas-activas" en horas, o varias en "estadisticas" que
