@@ -371,7 +371,7 @@ final class MenuEngarzador implements Listener {
         List<Component> lore = new ArrayList<>();
         lore.add(Marco.texto("1. Toca la pieza en tu inventario."));
         lore.add(Marco.texto("2. Toca la Gema de Calamidad."));
-        lore.add(Marco.texto("3. Pulsa Engarzar. Es gratis."));
+        lore.add(Marco.texto("3. Toca Engarzar. Es gratis."));
         lore.add(Component.empty());
         lore.add(Marco.tenue("Para quitar una gema, toca su hueco."));
         lore.add(Marco.tenue("Se rompe al quitarla y el hueco"));

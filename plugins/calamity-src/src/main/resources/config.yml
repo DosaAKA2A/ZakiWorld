@@ -370,7 +370,9 @@ hardcore:
     # pociones arrojadizas o persistentes. Ellos no pueden apuntar a quien esta dentro, asi que
     # pegarles desde ahi era una pelea en la que solo pegaba uno (y con un minijefe esperando en
     # el borde, matarlo sin riesgo). Cuenta donde esta quien ataca. El PvP no cambia: lo decide
-    # WorldGuard. En false, como hasta la 1.9.
+    # WorldGuard. Con retirar-mobs en false los mobs de Calamity si pueden apuntar a quien esta
+    # dentro, y entonces a ellos si se les puede pegar desde dentro (a las amenazas, no). En
+    # false, como hasta la 1.9.
     sin-dano-desde-dentro: true
 
   # Calamity 1.7: cuanto mas lejos del spawn, mas fuertes los mobs.

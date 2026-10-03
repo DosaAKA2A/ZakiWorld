@@ -1740,7 +1740,13 @@ public final class Hardcore implements Listener {
         UUID u = p.getUniqueId();
         recienMetidos.add(u);
         plugin.getServer().getScheduler().runTask(plugin, () -> recienMetidos.remove(u));
-        p.teleport(destino);
+        // Si el teleport no llega a Calamity (otro plugin lo cancela, como uno de combate, o lo
+        // desvia), no hay llegada: sin esto se repetia cada segundo en la puerta, fuera de Calamity
+        // (aviso, oleada, "entra" en la telemetria y los pergaminos de los contratos en la mano).
+        if (!p.teleport(destino) || !esHardcore(p)) {
+            recienMetidos.remove(u);
+            return;
+        }
         alLlegar(p);
     }
 

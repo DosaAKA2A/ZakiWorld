@@ -551,6 +551,16 @@ final class ZonaSpawn implements Listener {
     }
 
     /**
+     * protegido() con la config de ahora: los mobs de Calamity, solo con retirar-mobs en true. En false
+     * se quedan dentro y SI apuntan a quien esta en la zona (onApuntar no los frena), y sin poder
+     * pegarles desde ella quien estuviera dentro no podria defenderse. Las amenazas, siempre: su salida
+     * del spawn es suya (Parca.alEntrarSpawn, Eco, Ambush) y no depende de retirar-mobs.
+     */
+    private boolean protegidoAhora(Entity e) {
+        return protegido(e) && (Marcas.esAmenaza(e) || retirarMobs());
+    }
+
+    /**
      * Quien esta detras de lo que pega: el que dispara un proyectil (flecha, tridente, pocion), el que
      * lanzo la nube de una pocion persistente o el que encendio la TNT. Va aparte de Hardcore.autor,
      * que solo mira proyectiles, a proposito: aquel decide quien cuenta como agresor en el PvP
@@ -579,8 +589,8 @@ final class ZonaSpawn implements Listener {
     }
 
     /**
-     * Calamity 1.10 · Desde dentro de la zona no se dana a lo de Calamity (protegido), este donde este.
-     * Sus mobs no pueden apuntar a quien esta dentro (onApuntar), asi que pegarles desde ahi era una
+     * Calamity 1.10 · Desde dentro de la zona no se dana a lo de Calamity (protegidoAhora), este donde
+     * este. Sus mobs no pueden apuntar a quien esta dentro (onApuntar), asi que pegarles desde ahi era una
      * pelea en la que solo pegaba uno; y con un minijefe esperando en el borde (Hardcore.vigilarPresas)
      * se le podria matar sin riesgo. Cuenta donde esta quien pega, no la victima.
      *
@@ -589,7 +599,7 @@ final class ZonaSpawn implements Listener {
      */
     @EventHandler(priority = EventPriority.LOW, ignoreCancelled = true)
     public void onDanoDesdeDentro(EntityDamageByEntityEvent e) {
-        if (!protegido(e.getEntity())) return;
+        if (!protegidoAhora(e.getEntity())) return;
         Player p = responsable(e);
         if (p == null || !sinDanoDesdeDentro() || !dentro(p.getLocation())) return;
         e.setCancelled(true);
@@ -609,7 +619,7 @@ final class ZonaSpawn implements Listener {
         }
         boolean alguno = false;
         for (LivingEntity le : e.getAffectedEntities()) {
-            if (!protegido(le)) continue;
+            if (!protegidoAhora(le)) continue;
             e.setIntensity(le, 0);
             alguno = true;
         }
@@ -626,7 +636,7 @@ final class ZonaSpawn implements Listener {
         if (!(e.getEntity().getSource() instanceof Player p) || !sinDanoDesdeDentro() || !dentro(p.getLocation())) {
             return;
         }
-        if (e.getAffectedEntities().removeIf(ZonaSpawn::protegido)) avisarAtaque(p);
+        if (e.getAffectedEntities().removeIf(this::protegidoAhora)) avisarAtaque(p);
     }
 
     /** "Desde el spawn no puedes atacar." en su barra de accion, como mucho uno cada AVISO_ATAQUE_MS. */

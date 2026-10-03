@@ -131,7 +131,7 @@ final class MenuSentencia implements Listener {
     private ItemStack cabecera(Player p, int precio) {
         Saldo s = hc.saldo();
         List<Component> lore = new ArrayList<>();
-        lore.add(Marco.texto("Paga para que Ambush vaya a por"));
+        lore.add(Marco.texto("Paga para que Ambush vaya por"));
         lore.add(Marco.texto("alguien que esté ahora en Calamity."));
         lore.add(Component.empty());
         lore.add(Marco.tenue("Tiene 1 minuto para irse por la puerta"));

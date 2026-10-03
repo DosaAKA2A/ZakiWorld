@@ -154,6 +154,9 @@ final class Contratos implements Listener {
         this.pergaminos = new Pergaminos(hc, this);
         // 1.10: un contrato a la derecha de la cordura. En valor(): pintar corre en el reloj de todos.
         hc.cordura().extra(p -> hc.valor("contratos", () -> sufijoBarra(p), null));
+        // El pool leido ya aqui, en el hilo principal: asi el placeholder (otro hilo) nunca lee la config
+        // (getConfigurationSection puede crear una seccion vacia si solo esta en el config del jar).
+        pool();
         PlaceholdersLethal.registrar("contrato", this::placeholder);
         Subcomandos.lw().registrar("contratos", "contratos <jugador> [reset]: ver o volver a sortear sus contratos (M14)",
                 "ederus.mundos", this::comandoAdmin,

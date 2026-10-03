@@ -102,7 +102,8 @@ final class Reclamo implements Listener {
         HandlerList.unregisterAll(this);
         for (Llamada ll : new ArrayList<>(sonando.values())) {
             terminar(ll);
-            devolver(ll, "parada", false);
+            // Cada uno aparte: si devolver uno falla, los demas se devuelven igual (si no, se perderian).
+            hc.seguro("reclamo", () -> devolver(ll, "parada", false));
         }
         sonando.clear();
         ultimoClic.clear();
