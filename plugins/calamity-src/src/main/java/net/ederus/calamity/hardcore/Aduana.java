@@ -48,7 +48,8 @@ import java.util.UUID;
  *   4. Fusible global: si todo Calamity crea mas de 6.000 MC en una hora, aviso al staff
  *      (no corta: puede ser un evento sano);
  *   5. entrega: dentro de un mundo hardcore las Esencias son objeto; fuera, o en un pago de
- *      fuera (tasacion, contratos, hito, ranking, caja, encuesta), van al saldo. Las MC por
+ *      fuera (tasacion, contratos, hito, ranking, caja, encuesta), van al saldo, salvo que quien
+ *      paga pida objeto (1.10: el contrato cumplido dentro; ver DE_FUERA). Las MC por
  *      MobCoins.pagar; desconectado, a premios-pendientes (Entregas);
  *   6. Bitacora "pago | ..." y telemetria "pago".
  *
@@ -67,6 +68,14 @@ final class Aduana {
     /**
      * Pagos que se cobran fuera aunque el jugador siga dentro (la Tasacion se hace antes del
      * teleport de salida): sus Esencias van al saldo, nunca como objeto.
+     *
+     * Calamity 1.10: la unica excepcion la pide quien paga (pagar con objetoSiDentro) y es el contrato
+     * cumplido DENTRO de Calamity. Se cobra en el acto y sus Esencias llegan a la mano, como las de un
+     * mob: si muere antes de salir, las pierde (lo aprobo Dosa: cobras al momento, pero te lo juegas
+     * hasta la puerta). Sigue siendo tipo "contratos", con el mismo tope diario y la misma Bitacora y
+     * telemetria. Los contratos de Reliquias, que se cobran en la Tasacion justo antes del teleport,
+     * siguen yendo al saldo: como objeto, con el inventario lleno caerian al suelo de Calamity justo
+     * cuando el jugador se va.
      */
     static final Set<String> DE_FUERA = Set.of("tasacion", "contratos", "hito", "ranking", "caja", "encuesta");
 
@@ -134,7 +143,19 @@ final class Aduana {
 
     // ------------------------------------------------------------------ pagar
 
+    /** Un pago con la regla de siempre: las Esencias de un tipo de DE_FUERA van al saldo (comoObjeto). */
     Pago pagar(OfflinePlayer p, String tipo, int esencias, long mobcoins, List<ItemStack> reliquias, String motivo) {
+        return pagar(p, tipo, esencias, mobcoins, reliquias, motivo, false);
+    }
+
+    /**
+     * El pago, con objetoSiDentro (Calamity 1.10): aunque el tipo sea de DE_FUERA, si el jugador esta
+     * conectado y dentro de un mundo hardcore, sus Esencias se le dan como objeto y lo que no quepa va
+     * a sus pies (Suelo.dar), como en cualquier pago de dentro. Lo pide Contratos al cobrar un contrato
+     * cumplido dentro. Topes, Bitacora y telemetria no cambian: son los del tipo.
+     */
+    Pago pagar(OfflinePlayer p, String tipo, int esencias, long mobcoins, List<ItemStack> reliquias, String motivo,
+               boolean objetoSiDentro) {
         if (p == null) return new Pago(0, 0, Math.max(0, mobcoins), 0, true);
         String t = tipo == null ? "" : tipo.toLowerCase(Locale.ROOT);
         int e = Math.max(0, esencias);
@@ -149,7 +170,7 @@ final class Aduana {
         Player online = p.getPlayer();
 
         if (!r.tipoTopado()) {
-            entregar(p, online, t, pago, rel);
+            entregar(p, online, t, pago, rel, objetoSiDentro);
             if (pago.mc() > 0) vigilarGlobal(pago.mc(), ahora);
         }
         if (online != null) {
@@ -192,14 +213,27 @@ final class Aduana {
         return pago;
     }
 
+    /**
+     * DIS M1 punto 5: si las Esencias de un pago van como objeto (true) o al saldo (false). Dentro de un
+     * mundo hardcore, objeto, salvo los tipos de DE_FUERA, que van al saldo aunque siga dentro; y esos
+     * tambien como objeto si quien paga lo pide (objetoSiDentro, 1.10: el contrato cumplido dentro). Con
+     * el saldo apagado (esencias.saldo: false) vuelve lo de antes: objeto a quien este conectado. A un
+     * desconectado, nunca. Sin Bukkit: lo prueba el autotest.
+     */
+    static boolean comoObjeto(boolean conectado, boolean dentro, String tipo, boolean objetoSiDentro, boolean saldo) {
+        if (!conectado) return false;
+        if (dentro && (objetoSiDentro || !DE_FUERA.contains(tipo))) return true;
+        return !saldo;
+    }
+
     /** Esencias, MobCoins y Reliquias a su sitio (DIS M1 punto 5). */
-    private void entregar(OfflinePlayer p, Player online, String tipo, Pago pago, List<ItemStack> reliquias) {
+    private void entregar(OfflinePlayer p, Player online, String tipo, Pago pago, List<ItemStack> reliquias,
+                          boolean objetoSiDentro) {
         UUID u = p.getUniqueId();
         int e = pago.esencias();
         if (e > 0) {
-            boolean objeto = online != null && hc.esHardcore(online) && !DE_FUERA.contains(tipo);
-            // Con el saldo apagado (esencias.saldo: false) vuelve lo de antes: objeto a quien este.
-            if (!objeto && online != null && !hc.cfg().getBoolean("esencias.saldo", true)) objeto = true;
+            boolean objeto = comoObjeto(online != null, online != null && hc.esHardcore(online), tipo, objetoSiDentro,
+                    hc.cfg().getBoolean("esencias.saldo", true));
             if (objeto) {
                 for (int quedan = e; quedan > 0; quedan -= 64) {
                     Suelo.dar(hc.plugin(), online, hc.items().esencia(Math.min(64, quedan)));
@@ -755,6 +789,15 @@ final class Aduana {
         r = cu.calcular(c, cal, u4, "sangre", 0, 0, t0 + 100);
         h.ok("sangre: la 13.a topada", r.tipoTopado() && r.pago().topado());
         h.ok("sangre: al dia siguiente vuelve", !cu.calcular(c, cal, u4, "sangre", 0, 0, t0 + DIA).tipoTopado());
+
+        // A donde van las Esencias (punto 5). 1.10: el contrato cumplido dentro pide objeto; la Tasacion, no.
+        h.ok("entrega: un mob dentro, objeto", comoObjeto(true, true, "mob", false, true));
+        h.ok("entrega: la tasacion dentro, al saldo", !comoObjeto(true, true, "tasacion", false, true));
+        h.ok("entrega: contratos sin pedir objeto (los de la Tasacion), al saldo", !comoObjeto(true, true, "contratos", false, true));
+        h.ok("entrega: contratos pidiendo objeto y dentro (cumplido dentro), objeto", comoObjeto(true, true, "contratos", true, true));
+        h.ok("entrega: pedir objeto fuera de Calamity no sirve: al saldo", !comoObjeto(true, false, "contratos", true, true));
+        h.ok("entrega: a un desconectado nunca objeto", !comoObjeto(false, true, "contratos", true, true));
+        h.ok("entrega: con el saldo apagado, objeto a quien este", comoObjeto(true, false, "tasacion", false, false));
 
         // Tramos viejos (600 x1, 1.500 x0,5, resto x0,25), por si Dosa los vuelve a poner.
         List<double[]> viejos = List.of(new double[]{600, 1}, new double[]{1500, 0.5}, new double[]{999999, 0.25});

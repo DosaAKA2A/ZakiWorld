@@ -145,6 +145,8 @@ final class Censo {
     /** La pieza de una casilla, o null si esta vacia o no es equipo. */
     static Pieza pieza(String casilla, ItemStack item) {
         if (item == null || item.getType().isAir()) return null;
+        // Calamity 1.10: el pergamino de un contrato no es equipo ni se arriesga (vive solo dentro).
+        if (Marcas.tiene(item, Marcas.PERGAMINO)) return null;
         String mmo = PuenteMmo.enlace(item);
         Material m = item.getType();
         /* Lo que se lleva en la mano no siempre es equipo: una antorcha o un filete en la

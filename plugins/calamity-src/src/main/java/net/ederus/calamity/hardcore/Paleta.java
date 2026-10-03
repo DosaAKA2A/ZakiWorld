@@ -51,6 +51,10 @@ public final class Paleta {
     public static final TextColor CIFRA = TextColor.color(0xFFD27A);
     /** Lo que va bien (pagos, logros): el mismo verde de los detalles, un punto mas vivo. */
     public static final TextColor BIEN = TextColor.color(0x8EE39A);
+    /** Calamity 1.10 · Las lineas finas que enmarcan el lore de un pergamino de contrato: gris oscuro. */
+    public static final TextColor FILETE = TextColor.color(0x555555);
+    /** Las casillas vacias de una barra de progreso: el gris de las de la barra de cordura. */
+    public static final TextColor CASILLA_VACIA = TextColor.color(0x3A3A3A);
 
     /** La PARCA: degradado de su nombre y de sus titulos (coral a rojo, claro para que se lea). */
     public static final int PARCA_DESDE = 0xFF9E80;
