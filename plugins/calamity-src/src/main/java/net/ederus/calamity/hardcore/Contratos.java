@@ -616,7 +616,7 @@ final class Contratos implements Listener {
         s.set("ultimo", null);
         s.set("sin-pergamino", null);
         avanceHasta.remove(u);
-        reloj.put(u, new int[3]);
+        reloj.put(u, new int[4]);
         hc.marcarSucio();
 
         String dia = hoy();
@@ -792,11 +792,23 @@ final class Contratos implements Listener {
                 .append(Component.text(s.getInt("lista." + i + ".progreso", 0) + "/" + d.objetivo(), Paleta.CIFRA)), 2);
     }
 
-    /** Cada segundo dentro (desde Horas.segundo): los contratos de tiempo. */
+    /**
+     * Cada segundo dentro (desde Horas.segundo): los contratos de tiempo.
+     *
+     * 1.10: en la zona spawn el reloj de los tres se para. Alli no baja la cordura ni hay mobs ni PvP,
+     * y desde que el contrato se cobra en la mano al cumplirlo, "pasa 15 min" esperando en la plaza era
+     * un premio sin riesgo a un paso de la puerta. Los minutos ya contados no se pierden.
+     */
     void segundo(Player p) {
         if (!activo()) return;
         UUID u = p.getUniqueId();
-        int[] c = reloj.computeIfAbsent(u, k -> new int[3]);
+        int[] c = reloj.computeIfAbsent(u, k -> new int[4]);
+        // El cuarto contador es solo el reloj de la barra (cada 15 s): ese si corre en el spawn.
+        boolean barra = ++c[3] % 15 == 0 && !"nunca".equals(modoBarra());
+        if (hc.enSpawn(p)) {
+            if (barra) refrescarBarra(p);
+            return;
+        }
         if (++c[0] % 60 == 0) progreso(p, "minutos", 1);
         Cordura.Estado e = hc.cordura().todos().get(u);
         if (e != null && e.valor < hc.cfg().getDouble("contratos.cordura-limite", 25) && ++c[1] % 60 == 0) {
@@ -805,7 +817,7 @@ final class Contratos implements Listener {
         if (++c[2] % 60 == 0) progreso(p, "minutos-sin-frasco", 1);
         // 1.10: cada 15 s se miran sus pergaminos, por si alguno se fue por una via que no avisa (un /clear
         // del staff): la barra no ensena un contrato que ya no lleva. Todo lo demas la cambia al momento.
-        if (c[0] % 15 == 0 && !"nunca".equals(modoBarra())) refrescarBarra(p);
+        if (barra) refrescarBarra(p);
     }
 
     /**

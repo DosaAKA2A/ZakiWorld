@@ -917,7 +917,7 @@ public final class Hardcore implements Listener {
             case 3 -> "Tu cordura baja de 75. A la mitad, los mobs se endurecen.";
             case 2 -> "Tu cordura baja de 50: salen más mobs y más fuertes.";
             case 1 -> "Tu cordura baja de 25: los mobs son todavía más fuertes.";
-            default -> "Te has quedado sin cordura: salen aún más mobs y un minijefe puede venir a por ti.";
+            default -> "Te has quedado sin cordura: salen aún más mobs y un minijefe puede venir por ti.";
         };
         p.sendMessage(Component.text(texto, Cordura.color(e.valor)));
         Compat.sound(p.getWorld(), p.getLocation(),
@@ -952,7 +952,7 @@ public final class Hardcore implements Listener {
     }
 
     /**
-     * Calamity 1.10 · Trae ese minijefe a por ese jugador: lo invoca (MobsLethal.invocarMinijefe), lo
+     * Calamity 1.10 · Trae ese minijefe por ese jugador: lo invoca (MobsLethal.invocarMinijefe), lo
      * marca como presa, apunta el descanso en su Estado y le avisa. Es la ruta del de cordura cero y la
      * del Reclamo. Null si no ha encontrado sitio, y entonces no apunta nada.
      */
@@ -966,7 +966,7 @@ public final class Hardcore implements Listener {
         e.ultimoMinijefe = System.currentTimeMillis();
         // 1.8.4: el mismo nombre que su cartel (Paleta.minijefe), con el nivel detras. Antes se leia el
         // customName, que EDM no pone, y el aviso siempre decia "un minijefe".
-        p.sendMessage(Component.text("Ha venido a por ti: ", Paleta.AVISO).append(plugin.mobs().nombreMinijefe(mob)));
+        p.sendMessage(Component.text("Ha venido por ti: ", Paleta.AVISO).append(plugin.mobs().nombreMinijefe(mob)));
         Compat.sound(p.getWorld(), p.getLocation(), "entity.wither.spawn", 1.0f, 0.6f);
         return mob;
     }
@@ -979,7 +979,7 @@ public final class Hardcore implements Listener {
     }
 
     /**
-     * Calamity 1.10 · Si algun minijefe vivo viene ya a por ese jugador (marcarPresa). Lo pregunta el
+     * Calamity 1.10 · Si algun minijefe vivo viene ya por ese jugador (marcarPresa). Lo pregunta el
      * Reclamo: uno detras de otro no. Los que ya no existen no cuentan (vigilarPresas los poda).
      */
     boolean tieneMinijefe(Player p) {
@@ -1374,7 +1374,7 @@ public final class Hardcore implements Listener {
         muertos.put(u, System.currentTimeMillis());
     }
 
-    /** Apunta que ese minijefe viene a por ese jugador y no lo suelta. */
+    /** Apunta que ese minijefe viene por ese jugador y no lo suelta. */
     public void marcarPresa(org.bukkit.entity.Entity minijefe, Player presa) {
         presas.put(minijefe.getUniqueId(), presa.getUniqueId());
     }

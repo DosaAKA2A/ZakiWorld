@@ -261,7 +261,7 @@ final class Camino {
             int pied = piedad(u, id);
             listo = tiene > 0;
             lore.add(Marco.texto("Pide el Sello " + Forja.delMinijefe(id) + "."));
-            // 1.10: donde ir a por el (minijefes.por-bioma) y que se le puede llamar. Dos lineas como mucho.
+            // 1.10: donde ir por el (minijefes.por-bioma) y que se le puede llamar. Dos lineas como mucho.
             String donde = Minijefes.donde(Minijefes.porBioma(hc.plugin().getConfig()), id);
             if (donde != null) lore.add(Marco.tenue("Vive en " + donde + "."));
             if (hc.cfg().getBoolean("minijefes.reclamo.activo", true)) lore.add(Marco.tenue("Se le puede llamar con un Reclamo."));

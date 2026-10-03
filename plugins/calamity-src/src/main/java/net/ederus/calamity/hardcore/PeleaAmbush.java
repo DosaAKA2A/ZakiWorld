@@ -1687,7 +1687,7 @@ final class PeleaAmbush implements Runnable {
         return true;
     }
 
-    /** Se queda quieto fuera del spawn (su presa esta dentro) o vuelve a por ella cuando sale. */
+    /** Se queda quieto fuera del spawn (su presa esta dentro) o vuelve por ella cuando sale. */
     private void esperar(boolean si) {
         quieto = si;
         if (si) {

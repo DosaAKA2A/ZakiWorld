@@ -979,7 +979,7 @@ final class Huella implements Listener {
                 p.playSound(p.getLocation(), "block.bell.resonate", SoundCategory.HOSTILE, 0.5f, 0.6f);
             }
             case 3 -> {
-                p.sendMessage(ComandoCalamity.mensaje("La Parca viene a por quien se queda quieto. Sal de la zona que marcan las almas."));
+                p.sendMessage(ComandoCalamity.mensaje("La Parca viene por quien se queda quieto. Sal de la zona que marcan las almas."));
                 p.playSound(p.getLocation(), "block.bell.use", SoundCategory.HOSTILE, 0.8f, 0.5f);
                 pintarHuella(p, r, a);
             }

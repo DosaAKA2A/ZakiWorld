@@ -169,7 +169,7 @@ public final class VaraPortales implements Listener {
      * Double.MAX_VALUE si la puerta no esta marcada o esta en otro mundo.
      *
      * La usa el Eco (DIS sec. 2.3) para no nacer pegado a las puertas: nacer en la salida
-     * seria una emboscada gratis al que vuelve a por el.
+     * seria una emboscada gratis al que vuelve por el.
      */
     public double distancia(Location donde, String puerta) {
         if (donde == null || donde.getWorld() == null) return Double.MAX_VALUE;

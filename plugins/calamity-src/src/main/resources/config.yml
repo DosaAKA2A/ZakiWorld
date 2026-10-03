@@ -1224,7 +1224,7 @@ hardcore:
           si: {icono: COMPASS, texto: "Sí, lo miro en Tu camino"}
           mas-o-menos: {icono: MAP, texto: "Más o menos"}
           "no": {icono: BARRIER, texto: "No"}
-          no-quiero: {icono: GRAY_DYE, texto: "No voy a por el Manto"}
+          no-quiero: {icono: GRAY_DYE, texto: "No voy por el Manto"}
       botin:
         texto: "¿Qué quieres que dé Calamity?"
         fija: true
@@ -1287,7 +1287,7 @@ hardcore:
         texto:
           - "Desde que entras, tu cordura baja {cordura.por-minuto} por minuto. La noche multiplica ese ritmo por {cordura.factor-noche}, y la oscuridad, por {cordura.factor-oscuridad}."
           - "Un golpe que te quite al menos un cuarto de la vida que tienes te cuesta {cordura.por-golpe} de cordura."
-          - "Por debajo de la mitad salen más mobs y más fuertes. Si llega a cero, viene a por ti el minijefe del bioma donde estás."
+          - "Por debajo de la mitad salen más mobs y más fuertes. Si llega a cero, viene por ti el minijefe del bioma donde estás."
           - "El Frasco de Calma te devuelve {frasco.cordura} de cordura por trago y tiene {frasco.usos} tragos. Se recarga en el Altar."
           - "En el spawn de Calamity la cordura no baja."
       parca:

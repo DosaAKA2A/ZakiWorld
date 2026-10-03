@@ -374,7 +374,7 @@ final class Grieta {
                 Compat.spawn(d, Compat.SCULK_SOUL, destino.clone().add(0, 0.3, 0), 20, 0.6, 0.2, 0.6, 0.03);
                 Compat.sound(d, destino, "block.portal.travel", 0.4f, 0.5f);
                 Compat.apply(k, "darkness", 40, 0);
-                k.sendMessage(ComandoCalamity.mensaje("La grieta te ha escupido lejos del spawn. La Parca viene a por ti."));
+                k.sendMessage(ComandoCalamity.mensaje("La grieta te ha escupido lejos del spawn. La Parca viene por ti."));
                 hc.plugin().bitacora().anotar("parca", "grieta", k.getName(), "arrastrado",
                         destino.getBlockX() + " " + destino.getBlockY() + " " + destino.getBlockZ(),
                         Math.round(Math.hypot(destino.getX() - boca.getX(), destino.getZ() - boca.getZ())) + " bloques");
@@ -387,7 +387,7 @@ final class Grieta {
     }
 
     /**
-     * La PARCA a por el, ya. Si no puede (el tope global lleno), se reintenta cada segundo
+     * La PARCA por el, ya. Si no puede (el tope global lleno), se reintenta cada segundo
      * hasta "veces": la Huella no cuenta nada mientras tanto porque ya esta fuera del spawn.
      */
     private void reintentar(UUID id, int celdas, int veces) {

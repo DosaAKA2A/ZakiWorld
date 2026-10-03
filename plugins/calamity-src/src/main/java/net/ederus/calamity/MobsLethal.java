@@ -330,7 +330,7 @@ public final class MobsLethal implements Listener {
     }
 
     /**
-     * Calamity 1.8.4 · El nombre del minijefe para el aviso "Ha venido a por ti": Paleta.minijefe con
+     * Calamity 1.8.4 · El nombre del minijefe para el aviso "Ha venido por ti": Paleta.minijefe con
      * el nombre de su ficha de /esb y su nivel detras (" · Nv. 45"). El cartel usa la misma funcion.
      */
     public Component nombreMinijefe(LivingEntity mob) {

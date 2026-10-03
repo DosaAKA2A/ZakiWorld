@@ -234,7 +234,7 @@ public final class Paleta {
      * Calamity 1.8.4 · El nombre de un minijefe (Custodio, Matriarca, Heraldo, Sanador, Centinela):
      * "☠ Custodio de las Ruinas ☠", con las calaveras en hueso y el nombre en el degradado de
      * MINIJEFE_DESDE a MINIJEFE_HASTA. Es el mismo en su cartel (CartelesMinijefe) y en el aviso
-     * "Ha venido a por ti".
+     * "Ha venido por ti".
      *
      * Sin negrita, y apagada a proposito en cada trozo: la ficha de /esb de los cinco la traia
      * puesta y a Dosa no le gustaba (2026-09-29). Asi tampoco la hereda si se engancha a un texto

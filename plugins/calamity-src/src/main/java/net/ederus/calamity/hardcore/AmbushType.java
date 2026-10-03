@@ -131,7 +131,7 @@ final class AmbushType implements AnomalyType {
         return List.of(
                 "Alguien paga en la Sentencia por la",
                 "cabeza de otro. Si la presa no sale de",
-                "Calamity en un minuto, Ambush va a por ella.");
+                "Calamity en un minuto, Ambush va por ella.");
     }
 
     @Override

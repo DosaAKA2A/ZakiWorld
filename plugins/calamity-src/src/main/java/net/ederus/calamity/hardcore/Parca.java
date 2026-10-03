@@ -79,7 +79,7 @@ final class Parca implements Listener {
     private static final String SIGUE_LA_PELEA = "La pelea con la Parca sigue donde la dejaste.";
 
     /** Lo que se dice a quien este cerca cuando se va por cansancio (P-25): vuelve si la presa sale y entra. */
-    static final String CANSADA = "La Parca se cansa y se va, pero puede volver a por su presa.";
+    static final String CANSADA = "La Parca se cansa y se va, pero puede volver por su presa.";
 
     /** El subtitulo del cambio de fase de la anomalia (ParcaAnomalia): lo que trae la fase nueva. */
     static String subtituloFase(int f) {
@@ -714,7 +714,7 @@ final class Parca implements Listener {
      */
     void retirarMinijefes(Player m) {
         for (Entity e : m.getNearbyEntities(64, 32, 64)) {
-            // Solo los que van a por el: Hardcore.vigilarPresas les pone el objetivo cada segundo.
+            // Solo los que van por el: Hardcore.vigilarPresas les pone el objetivo cada segundo.
             if (!(e instanceof Mob mob) || !Huella.esMinijefe(e) || !m.equals(mob.getTarget())) continue;
             Compat.spawn(e.getWorld(), Compat.LARGE_SMOKE, e.getLocation().add(0, 1, 0), 30, 0.5, 1, 0.5, 0.02);
             e.remove();
@@ -829,7 +829,7 @@ final class Parca implements Listener {
                 l.getBlockX() + " " + l.getBlockY() + " " + l.getBlockZ(), "celdas " + celdas,
                 "vehiculo " + (vehiculo ? "si" : "no"), pe.tipo(), pe.dificultad().texto());
         telemetria("nace", pe, null, null);
-        Component aviso = ComandoCalamity.mensaje(Component.text("Suena una campana. La Parca ha venido a por ")
+        Component aviso = ComandoCalamity.mensaje(Component.text("Suena una campana. La Parca ha venido por ")
                 .append(Component.text(p.getName(), Paleta.DETALLE)).append(Component.text(".")));
         for (Player o : Fx.viewersNear(p.getLocation(), 128)) o.sendMessage(aviso);
         for (Player g : grupo) retirarMinijefes(g);

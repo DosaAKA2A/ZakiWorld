@@ -75,7 +75,7 @@ final class ParcaType implements AnomalyType {
 
     @Override
     public String tagline() {
-        return "La que viene a por quien se queda quieto";
+        return "La que viene por quien se queda quieto";
     }
 
     @Override

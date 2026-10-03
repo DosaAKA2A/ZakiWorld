@@ -426,11 +426,11 @@ final class Ambush implements Listener {
                 Duration.ofMillis(300), Duration.ofMillis(3500), Duration.ofMillis(800)));
         presa.playSound(presa.getLocation(), "block.anvil.land", SoundCategory.HOSTILE, 0.9f, 0.5f);
         presa.playSound(presa.getLocation(), "entity.warden.heartbeat", SoundCategory.HOSTILE, 1.0f, 0.6f);
-        presa.sendMessage(ComandoCalamity.mensaje("Usa un Cristal de Regreso o la puerta para irte. Si te quedas, Ambush vendrá a por ti."));
+        presa.sendMessage(ComandoCalamity.mensaje("Usa un Cristal de Regreso o la puerta para irte. Si te quedas, Ambush vendrá por ti."));
         hc.barra().aviso(presa, textoCuenta(SEGUNDOS), 3);
         c.marca = siguienteMarca(SEGUNDOS);
         if (pagador != null) {
-            pagador.sendMessage(ComandoCalamity.mensaje(Component.text("Contrato pagado. Ambush irá a por ")
+            pagador.sendMessage(ComandoCalamity.mensaje(Component.text("Contrato pagado. Ambush irá por ")
                     .append(Component.text(c.presaNombre, Paleta.DETALLE)).append(Component.text(" en 1 minuto."))));
         }
     }

@@ -54,7 +54,7 @@ import java.util.function.Predicate;
  * 1.10 · Cada minijefe vive en sus biomas (minijefes.por-bioma, Habitat): el de cordura cero
  * (Hardcore.minijefeSiTocaCordura) es el del bioma donde estas, y el Reclamo (Reclamo, que nace y
  * se para aqui) llama a ese mismo. Hasta la 1.9 salia uno de los cinco al azar en cualquier sitio y
- * no habia forma de ir a por el Sello que faltaba.
+ * no habia forma de ir por el Sello que faltaba.
  *
  * Los cinco tipos se reconocen por el id de su ficha de /esb (MinionManager.typeOf), que son
  * los nombres de fichero de Esbirros/lethal-world-minijefes.
@@ -1158,7 +1158,7 @@ final class Minijefes {
     }
 
     /**
-     * 1.8.4: el nombre que se ve encima del minijefe y en "Ha venido a por ti" (Paleta.minijefe) y
+     * 1.8.4: el nombre que se ve encima del minijefe y en "Ha venido por ti" (Paleta.minijefe) y
      * el repintado del cartel de EDM (CartelesMinijefe.repintado). Sin negrita en ningun trozo.
      */
     private static void probarNombreVisible(Autotest.Hoja h) {

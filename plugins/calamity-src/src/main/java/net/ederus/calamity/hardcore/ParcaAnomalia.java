@@ -52,7 +52,7 @@ import java.util.concurrent.ThreadLocalRandom;
 
 /**
  * La PARCA como anomalia DIOS de EDM (Calamity 1.1.0). Sale en /anomaly como las demas (menu, start,
- * here, test) y es la que llega a por un AFK cuando EDM esta libre; si no, sale la de reserva
+ * here, test) y es la que llega por un AFK cuando EDM esta libre; si no, sale la de reserva
  * (PeleaParca). Para el gestor es una ParcaViva mas: marca, cosecha, pendiente, botin por la
  * Aduana y exencion van igual.
  *

@@ -702,7 +702,7 @@ final class Encuesta {
                 "mas", "CLOCK", "Más de 1 h");
         pre("camino", "¿Sabes cuánto te falta para tu próxima pieza del Manto?", false,
                 "si", "COMPASS", "Sí, lo miro en Tu camino", "mas-o-menos", "MAP", "Más o menos",
-                "no", "BARRIER", "No", "no-quiero", "GRAY_DYE", "No voy a por el Manto");
+                "no", "BARRIER", "No", "no-quiero", "GRAY_DYE", "No voy por el Manto");
         pre(BOTIN, "¿Qué quieres que dé Calamity?", true,
                 "piezas-manto", "NETHERITE_CHESTPLATE", "Piezas del Manto", "libros-legendary", "ENCHANTED_BOOK", "Libros LEGENDARY",
                 "encantamientos", "EXPERIENCE_BOTTLE", "Encantamientos sobre el tope", "mascotas", "WOLF_SPAWN_EGG", "Mascotas raras",

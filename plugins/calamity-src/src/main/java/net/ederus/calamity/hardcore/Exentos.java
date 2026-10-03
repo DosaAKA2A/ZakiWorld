@@ -21,7 +21,7 @@ import java.util.UUID;
  *
  * Antes eran los permisos lethalworld.parca.exento y lethalworld.aduana.exento, y con el
  * comodin "*" de LuckPerms todo el staff los heredaba sin que nadie lo decidiera: inmunes a
- * la PARCA y sin la comparacion de IP (la PARCA de la primera prueba no vino a por nadie del
+ * la PARCA y sin la comparacion de IP (la PARCA de la primera prueba no vino por nadie del
  * staff por eso). Ahora es un interruptor por jugador en hardcore-datos.yml, en
  * exentos.<uuid>.{nombre, parca, aduana}, que se pone con /lw hardcore exento y queda en la
  * Bitacora. Ningun permiso lo concede.
@@ -114,7 +114,7 @@ final class Exentos {
         if (args.length == 1) {
             List<String> l = lista(hc.datos());
             if (l.isEmpty()) {
-                quien.sendMessage(Paleta.mensaje("Nadie está exento. La Parca viene a por todos."));
+                quien.sendMessage(Paleta.mensaje("Nadie está exento. La Parca viene por todos."));
                 return;
             }
             quien.sendMessage(Paleta.mensaje(Component.text("Exentos (").append(Paleta.cifra(l.size()))

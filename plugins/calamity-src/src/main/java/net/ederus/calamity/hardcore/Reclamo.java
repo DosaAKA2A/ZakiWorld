@@ -316,7 +316,7 @@ final class Reclamo implements Listener {
         llegar(ll);
     }
 
-    /** Por que ya no puede venir a por el: desconectado, muerto, fuera del mundo o en el spawn. Null si sigue. */
+    /** Por que ya no puede venir por el: desconectado, muerto, fuera del mundo o en el spawn. Null si sigue. */
     private String fuera(Llamada ll) {
         Player p = ll.p;
         if (!p.isOnline()) return "desconecta";

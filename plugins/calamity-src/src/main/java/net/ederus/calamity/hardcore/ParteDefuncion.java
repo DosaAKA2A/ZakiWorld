@@ -321,7 +321,7 @@ final class ParteDefuncion implements Listener {
     static PorQue porQue(Causas c) {
         if (c == null) return null;
         // P-D01: tambien mata a quien la ayudaba a tumbar, asi que se dice la regla y no "te quedaste quieto".
-        if (c.parca()) return new PorQue("P-D01", "Te ha matado la Parca. Viene a por quien pasa demasiado tiempo quieto.");
+        if (c.parca()) return new PorQue("P-D01", "Te ha matado la Parca. Viene por quien pasa demasiado tiempo quieto.");
         /* 1.9.0: el clima va antes que la cordura a 0. El golpe que mato fue suyo, y lo que sirve
          * saber es como evitarlo la proxima vez, no que salian mas mobs. */
         if (Clima.CAUSA_ACIDA.equals(c.clima())) {

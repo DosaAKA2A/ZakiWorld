@@ -234,7 +234,7 @@ final class MenuEngarzador implements Listener {
         }
 
         Marco.ponerBanda(inv, FILA_ENGARCE, Marco.banda(Material.RED_STAINED_GLASS_PANE, "El engarce",
-                List.of("La pieza a la izquierda, la gema", "a la derecha, y pulsa Engarzar.")));
+                List.of("La pieza a la izquierda, la gema", "a la derecha, y toca Engarzar.")));
         // La pieza.
         if (m.pieza == null) {
             List<Component> lore = new ArrayList<>();
@@ -305,7 +305,7 @@ final class MenuEngarzador implements Listener {
                     Marco.dato("Color", h.color()),
                     Component.empty(),
                     Marco.tenue("Pon una gema de este color"),
-                    Marco.tenue("y pulsa Engarzar.")), false);
+                    Marco.tenue("y toca Engarzar.")), false);
         }
         List<Component> extra = List.of(
                 Marco.dato("Color del hueco", h.color()),
