@@ -15,7 +15,7 @@
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <maven.compiler.release>25</maven.compiler.release>
     <!-- La version de EDM contra la que se compila. Al subir EDM, subirla aqui. -->
-    <edm.version>1.77.1</edm.version>
+    <edm.version>1.78.0</edm.version>
     <!-- Desde la 2.0.0 no hay jars de _toolchain/libs (PlaceholderAPI ni el perfil worktree
          que buscaba su ruta): eran de Calamity, que ahora es plugins/calamity-src. -->
   </properties>
