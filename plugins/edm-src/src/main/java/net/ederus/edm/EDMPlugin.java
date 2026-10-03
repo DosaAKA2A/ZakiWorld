@@ -36,7 +36,7 @@ import net.ederus.edm.tooltip.TooltipPlugin;
  */
 public class EDMPlugin extends JavaPlugin {
 
-    public static final String VERSION = "1.74.0";
+    public static final String VERSION = "1.78.0";
 
     /* La identidad del nucleo. La build de OneBlock (EDMOneBlock) la cambia:
      * alli se llama EDO, Ederus OneBlock, con su propio arte y su version. */
@@ -121,7 +121,10 @@ public class EDMPlugin extends JavaPlugin {
                 new DungeonLootPlugin(this),
                 new FlexPlugin(this),
                 new net.ederus.edm.biomas.BiomasPlugin(this),
-                new net.ederus.edm.minas.MinasPlugin(this));
+                new net.ederus.edm.minas.MinasPlugin(this),
+                /* Arranca antes que boost (que va en los opcionales): por eso sus efectos
+                 * de boost preguntan por el modulo al usarse, no al arrancar. */
+                new net.ederus.edm.superbeacon.SuperBeaconPlugin(this));
     }
 
     /** Los que solo arrancan si esta el plugin del que dependen. */

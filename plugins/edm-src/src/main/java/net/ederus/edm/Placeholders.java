@@ -14,6 +14,7 @@ import net.ederus.edm.flex.MenuPoder;
 import net.ederus.edm.flex.RegistroPoder;
 import net.ederus.edm.minas.Mina;
 import net.ederus.edm.minas.MinasPlugin;
+import net.ederus.edm.superbeacon.SuperBeaconPlugin;
 
 /**
  * Los marcadores de EDM para PlaceholderAPI, todos bajo %edm_...%.
@@ -36,6 +37,10 @@ import net.ederus.edm.minas.MinasPlugin;
  *   %edm_boost_TIPO_tiempo%     lo que le queda, "12m 30s" o "-"
  *   %edm_boost_global_TIPO%     el multiplicador del boost global del servidor
  *   %edm_boost_activo%          si, no
+ *
+ * Super Beacons (modulo superbeacon):
+ *   %edm_superbeacon_count%     cuantos tiene colocados
+ *   %edm_superbeacon_buffs%     lo que recibe ahora, "Prisa III, Velocidad II"; vacio si nada
  *
  * Solo se instancia si PlaceholderAPI esta cargado: la clase base viene de su jar.
  */
@@ -73,7 +78,21 @@ public final class Placeholders extends PlaceholderExpansion {
         if (p.startsWith("poder")) return poder(quien, p);
         if (p.startsWith("mina_")) return mina(p.substring(5));
         if (p.startsWith("boost_")) return boost(quien, p.substring(6));
+        if (p.startsWith("superbeacon_")) return superbeacon(quien, p.substring("superbeacon_".length()));
         return null;
+    }
+
+    /* ----------------------------------------------------------- superbeacon */
+
+    /** superbeacon_count, superbeacon_buffs. Se leen de mapas que aguantan otros hilos. */
+    private String superbeacon(OfflinePlayer quien, String p) {
+        if (!(core.modulo("superbeacon") instanceof SuperBeaconPlugin sb)) return "";
+        if (quien == null) return "";
+        return switch (p) {
+            case "count" -> String.valueOf(sb.colocadasDe(quien.getUniqueId()));
+            case "buffs" -> sb.buffsDe(quien.getUniqueId());
+            default -> null;
+        };
     }
 
     /* ----------------------------------------------------------------- boost */

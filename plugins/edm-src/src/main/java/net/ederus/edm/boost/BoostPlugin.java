@@ -203,11 +203,16 @@ public final class BoostPlugin extends Module {
         return calcular(servicio, jugador, tipo, disponible(tipo), false, maximo(tipo));
     }
 
-    /** Lo mismo mirando donde esta: en un mundo excluido (general o del tipo), 1.0. */
+    /**
+     * Lo mismo mirando donde esta: en un mundo excluido (general o del tipo), 1.0. Aqui
+     * entran tambien las zonas de {@link BoostApi.FuenteZona} (los Super Beacon), porque
+     * una zona solo tiene sentido sabiendo donde esta el jugador.
+     */
     public double multiplicadorEn(Player jugador, Tipo tipo) {
         if (jugador == null) return 1.0;
         return calcular(servicio, jugador.getUniqueId(), tipo, disponible(tipo),
-                mundoExcluido(jugador.getWorld().getName(), tipo), maximo(tipo));
+                mundoExcluido(jugador.getWorld().getName(), tipo), maximo(tipo),
+                BoostApi.zona(jugador, tipo));
     }
 
     /**
@@ -217,8 +222,18 @@ public final class BoostPlugin extends Module {
      */
     static double calcular(Servicio s, UUID jugador, Tipo tipo, boolean disponible, boolean excluido,
                            double maximo) {
+        return calcular(s, jugador, tipo, disponible, excluido, maximo, 1.0);
+    }
+
+    /**
+     * Con una zona: el MAYOR de personal, global y zona, recortado al tope. Una zona de
+     * x1.5 con un personal de x2 deja x2: ni se suman ni se multiplican, la misma regla
+     * que entre personal y global. Con zona 1.0 es exactamente la regla de siempre.
+     */
+    static double calcular(Servicio s, UUID jugador, Tipo tipo, boolean disponible, boolean excluido,
+                           double maximo, double zona) {
         if (s == null || jugador == null || !disponible || excluido) return 1.0;
-        return recortar(s.multiplicador(jugador, tipo), maximo);
+        return recortar(Math.max(s.multiplicador(jugador, tipo), zona), maximo);
     }
 
     static double recortar(double mult, double maximo) {

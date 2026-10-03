@@ -1,0 +1,202 @@
+# ---------------------------------------------------------------------------
+# Todo lo que los Super Beacons le dicen al jugador: chat, holograma, objeto y
+# menu.
+#
+# Codigos de color: &7, &#RRGGBB y el &x&R&R&G&G&B&B de Spigot, los tres. La
+# negrita va SOLO en la palabra del prefijo. Para que una linea de chat salga
+# SIN prefijo, empiezala con {sin-prefijo}. Las lineas de holograma, objeto y
+# menu nunca llevan prefijo.
+# ---------------------------------------------------------------------------
+version: 1
+
+prefijo: '&x&0&0&8&3&F&D&lBEACON &8» &f'
+
+# --- colocar ---
+# %nombre% %radio% %elegibles% %max% %tipo% %dueno% %fecha%
+colocado: '&fColocaste %nombre%&f. &7Alcance de &f%radio% &7bloques.'
+colocado-elige: '&7Úsalo para elegir sus &f%elegibles% &7efectos.'
+colocar-mundo: '&#FF5C5CEn este mundo no se pueden colocar Super Beacons.'
+colocar-mina: '&#FF5C5CNo se pueden colocar Super Beacons dentro de una mina.'
+colocar-maximo: '&#FF5C5CYa tienes &f%max% &#FF5C5CSuper Beacons colocados. &7Recoge uno antes de poner otro.'
+colocar-tipo: '&#FF5C5CEste Super Beacon es de un tipo que ya no existe (&f%tipo%&#FF5C5C). &7Avisa al staff.'
+colocar-repetido: '&#FF5C5CEste Super Beacon ya está colocado en otro lugar.'
+colocar-ajeno: '&#FF5C5CEste Super Beacon es de &f%dueno%&#FF5C5C: solo su dueño puede colocarlo.'
+colocar-reservado: '&#FF5C5CEste Super Beacon está reservado para otro jugador.'
+colocar-vencido: '&#FF5C5CEste Super Beacon venció el &f%fecha%&#FF5C5C.'
+
+# --- usarlo, picarlo y recogerlo ---
+# %dueno% %clan% %nombre% %radio%
+ajeno: '&7Este Super Beacon es de &f%dueno%&7.'
+ajeno-clan: '&7Este Super Beacon es de &f%dueno% &7y beneficia al clan &f%clan%&7.'
+romper-ajeno: '&#FF5C5CEste Super Beacon es de &f%dueno%&#FF5C5C: solo su dueño puede recogerlo.'
+recogido: '&fRecogiste %nombre%&f. &7Conserva sus efectos, su dueño y su vencimiento.'
+sin-espacio: '&#FF5C5CNo tienes espacio en el inventario. &7Libera una casilla e inténtalo de nuevo.'
+ya-no-esta: '&#FF5C5CEse Super Beacon ya no está ahí.'
+alcance: '&7Este es su alcance: &f%radio% &7bloques. Lo verás durante 10 segundos.'
+
+# --- elegir efectos desde el menu ---
+# %efecto% %elegidos% %elegibles% %motivo%
+efecto-activado: '&fActivaste &#5CFF7A%efecto%&f. &7(%elegidos% de %elegibles%)'
+efecto-desactivado: '&7Desactivaste &f%efecto%&7. (%elegidos% de %elegibles%)'
+efecto-tope: '&#FFB627Ya tienes &f%elegibles% &#FFB627efectos activos. &7Desactiva uno para elegir otro.'
+efecto-fijo: '&7Este Super Beacon lleva todos sus efectos activos siempre.'
+efecto-no-disponible: '&#FF5C5C%efecto% no está disponible: &7%motivo%.'
+
+# --- vuelo ---
+vuelo-saliendo: '&#FFB627Saliste del alcance del Super Beacon: &fen 5 segundos &#FFB627dejas de volar.'
+vuelo-perdido: '&7Ya no puedes volar.'
+vuelo-perdido-aire: '&7Ya no puedes volar. &fCaes despacio &7durante unos segundos.'
+
+# --- vencimiento ---
+# %nombre%
+vencido-apagado: '&7Tu %nombre% &7venció: se queda apagado, como recuerdo.'
+vencido-destruido: '&7Tu %nombre% &7venció y desapareció.'
+
+# --- entregas ---
+# %nombre% %n%
+entregado: '&fRecibiste %nombre%&f.'
+pendientes: '&7Tienes &f%n% &7Super Beacon(s) esperándote. Libera espacio en el inventario para recibirlos.'
+devuelto: '&7Tu %nombre% &7volvió a tu inventario.'
+devuelto-pendiente: '&7Tu %nombre% &7te espera: te llega cuando tengas una casilla libre.'
+
+# --- /superbeacon ---
+# %n% %nombre% %donde% %estado%
+lista-cabecera: '&7Tus Super Beacons colocados: &f%n%'
+lista-linea: '{sin-prefijo} &#545454▸ %nombre% &#8A8A8A%donde% &8· &f%estado%'
+lista-vacia: '&7No tienes Super Beacons colocados.'
+sin-permiso: '&#FF5C5CNo puedes usar eso.'
+solo-en-juego: '&7Eso se usa dentro del juego.'
+
+# --- el tiempo (holograma, menu y listas) ---
+# %tiempo%: "12 d 4 h", "4 h 12 min"...
+restante: 'Quedan %tiempo%'
+permanente: 'Permanente'
+apagado: 'Apagado'
+
+# --- a quien beneficia ---
+beneficia-dueno: 'solo a su dueño'
+beneficia-clan: 'a su clan'
+beneficia-todos: 'a todos'
+sin-clan: 'sin clan'
+
+# --- el holograma ---
+# Una linea por elemento. Marcadores: %nombre% %dueno% %clan% %de% %restante% %efectos%
+#   %de%        "del clan X" si beneficia a un clan y lo tiene; si no, "de <dueño>"
+#   %restante%  "Quedan 12 d 4 h", "Permanente" o "Apagado"
+#   %efectos%   los efectos activos, separados por coma
+# Una linea con %restante% solo sale si el Super Beacon caduca (o ya se apagó);
+# una linea que se queda vacia no sale.
+holograma:
+  - '%nombre%'
+  - '&#8A8A8A%de%'
+  - '&#D7F3FF%restante%'
+holograma-de-dueno: 'de %dueno%'
+holograma-de-clan: 'del clan %clan%'
+
+# --- el objeto (lore) ---
+# %radio% %beneficia% %dueno% %clan% %fecha% %efecto% %elegibles% %tipo%
+objeto-efectos: '&#D7F3FFEfectos'
+objeto-efecto-activo: '&#5CFF7A✦ &f%efecto%'
+objeto-efecto-inactivo: '&#545454✦ &#8A8A8A%efecto%'
+objeto-alcance: '&#545454▸ &#D7F3FFAlcance  &f%radio% bloques'
+objeto-beneficia: '&#545454▸ &#D7F3FFBeneficia  &f%beneficia%'
+objeto-dueno: '&#545454▸ &#D7F3FFDueño  &f%dueno%'
+objeto-clan: '&#545454▸ &#D7F3FFClan  &f%clan%'
+objeto-vence: '&#545454▸ &#D7F3FFVence  &f%fecha%'
+objeto-vencio: '&#545454▸ &#D7F3FFVenció  &#FF5C5C%fecha%'
+objeto-permanente: '&#545454▸ &#D7F3FFDuración  &fpermanente'
+objeto-sin-dueno: '&#8A8A8ASe vuelve tuyo al colocarlo por primera vez.'
+objeto-ligado: '&#8A8A8ASolo su dueño puede colocarlo.'
+objeto-elige: '&#8A8A8AElige %elegibles% efectos en su menú.'
+objeto-todos: '&#8A8A8ATodos sus efectos van activos a la vez.'
+objeto-uso: '&#8A8A8AColócalo y úsalo para abrir su menú.'
+objeto-tipo-perdido: '&#FF5C5CSu tipo (%tipo%) ya no existe. Avisa al staff.'
+
+# --- el menu ---
+# El titulo es "EDERUS | <menu-titulo>". La ultima linea de cada boton dice que
+# hace el clic: menu-clic en Java, menu-toque en Bedrock (alli no hay clic).
+menu-titulo: 'Super Beacon'
+menu-clic: 'Clic para %accion%'
+menu-toque: 'Toca para %accion%'
+menu-accion-activar: 'activarlo'
+menu-accion-desactivar: 'desactivarlo'
+menu-accion-ver: 'verlo'
+menu-accion-recoger: 'recogerlo'
+menu-accion-salir: 'salir'
+# %elegidos% %elegibles% %tiempo% %fecha% %motivo%
+menu-elegidos: '&#545454▸ &#D7F3FFEfectos  &f%elegidos% de %elegibles% elegidos'
+menu-todos: '&#545454▸ &#D7F3FFEfectos  &ftodos activos'
+menu-quedan: '&#D7F3FFQuedan &f%tiempo%'
+menu-apagado: '&#FF5C5CApagado &#8A8A8A· venció el %fecha%'
+menu-staff: '&#FFB627Lo estás viendo como staff.'
+menu-efecto-activo: '&#5CFF7AActivo'
+menu-efecto-inactivo: '&#8A8A8AInactivo'
+menu-efecto-no-disponible: '&#FF5C5CNo disponible (%motivo%)'
+menu-efecto-fijo: '&#8A8A8ASiempre activo en este Super Beacon.'
+menu-efecto-tope: '&#8A8A8AYa elegiste %elegibles%: desactiva uno para cambiarlo.'
+menu-efecto-apagado: '&#FF5C5CApagado: este Super Beacon ya venció.'
+menu-alcance: '&fVer alcance'
+menu-alcance-lore:
+  - '&#8A8A8ADibuja el borde de su alcance durante'
+  - '&#8A8A8A10 segundos. Solo lo ves tú.'
+menu-recoger: '&fRecoger'
+menu-recoger-lore:
+  - '&#8A8A8AVuelve a tu inventario con todo su estado:'
+  - '&#8A8A8Aefectos, dueño, clan y vencimiento.'
+menu-cerrar: '&fCerrar'
+
+# --- lo que hace cada clase de efecto (lore del menu) ---
+# %valor% %atributo% %boost% %multiplicador%
+detalle-pocion: '&#8A8A8AEfecto de poción mientras estés en su alcance.'
+detalle-atributo: '&#8A8A8A%valor% de %atributo% mientras estés en su alcance.'
+detalle-boost: '&#8A8A8A%boost% x%multiplicador% en su alcance.'
+detalle-boost-mayor: '&#8A8A8ANo se suma con otros boosts: se aplica el mayor.'
+detalle-vuelo: '&#8A8A8APuedes volar dentro de su alcance.'
+detalle-vuelo-gracia: '&#8A8A8AAl salir tienes 5 segundos antes de caer.'
+detalle-cultivos: '&#8A8A8AHace crecer los cultivos de su alcance.'
+detalle-sin-mobs: '&#8A8A8ANo aparecen monstruos de forma natural en su alcance.'
+# Por que un efecto no esta disponible. %plugin%
+falta-boosts: 'boosts apagados'
+falta-boost-desactivado: 'desactivado en boost/config.yml'
+falta-plugin: 'falta %plugin%'
+falta-atributo: 'atributo desconocido'
+# Como se llama cada atributo en %atributo%
+atributo-max_health: 'vida máxima'
+atributo-armor: 'armadura'
+atributo-armor_toughness: 'dureza de armadura'
+atributo-movement_speed: 'velocidad'
+atributo-attack_damage: 'daño de ataque'
+atributo-luck: 'suerte'
+atributo-block_interaction_range: 'alcance con bloques'
+atributo-entity_interaction_range: 'alcance con criaturas'
+atributo-safe_fall_distance: 'caída sin daño'
+atributo-mining_efficiency: 'eficiencia al minar'
+atributo-oxygen_bonus: 'oxígeno bajo el agua'
+
+# --- staff (tambien salen en la consola) ---
+# %nombre% %jugador% %id% %vence% %clan% %motivo% %tipos% %comando% %donde%
+# %destino% %mundo% %que% %n% %de% %dueno% %estado% %radio% %beneficia%
+# %duracion% %efectos% %para%
+give-entregado: '&fEntregado %nombre% &fa &#D7F3FF%jugador%&f. &7id %id% · %vence%%clan%'
+give-pendiente: '&f%nombre% &fpara &#D7F3FF%jugador% &7queda pendiente (%motivo%). id %id% · %vence%%clan%'
+give-uso: '&7Uso: &f/%comando% give <player> <type> [days|-] [clan]'
+motivo-desconectado: 'no está conectado'
+motivo-lleno: 'no tiene espacio'
+tipo-malo: '&#FF5C5CEse tipo no existe. &7Tipos: &f%tipos%'
+dias-malos: '&#FF5C5CLos días tienen que ser un número, 0 o más (o - para los del tipo).'
+tipos-cabecera: '&7Tipos de Super Beacon: &f%n%'
+tipos-linea: '{sin-prefijo} &#545454▸ &f%id% &8· %nombre% &#8A8A8A· radio %radio% · %beneficia% · %duracion% · %efectos%'
+admin-cabecera: '&7Super Beacons colocados%de%: &f%n%'
+admin-linea: '{sin-prefijo} &#545454▸ &#8A8A8A%id% %nombre% &#8A8A8A%dueno% · %donde% &8· &f%estado%'
+admin-mas: '{sin-prefijo} &#8A8A8A... y %n% más.'
+admin-pendientes: '&7Pendientes de entregar: &f%n%'
+admin-pendiente: '{sin-prefijo} &#545454▸ &#8A8A8A%id% %nombre% &#8A8A8Apara %para% · %motivo%'
+info-nada: '&7No estás mirando ningún Super Beacon.'
+remove-uso: '&7Uso: &f/%comando% remove <id>'
+no-encontrado: '&#FF5C5CNo hay ningún Super Beacon colocado con el id &f%id%&#FF5C5C.'
+ambiguo: '&#FF5C5CHay varios Super Beacons que empiezan por &f%id%&#FF5C5C: escribe más letras.'
+retirado: '&fRetirado %nombre% &fde &7%donde%&f. &7%destino%'
+retirado-devuelto: 'Volvió al inventario de %dueno%.'
+retirado-pendiente: 'Le espera a %dueno% hasta que se conecte o tenga espacio.'
+retirado-sin-mundo: '&#FFB627El mundo &f%mundo% &#FFB627no está cargado: su bloque se queda ahí, sin efectos.'
+recargado: '&fRecargado&8: &7%que%'
