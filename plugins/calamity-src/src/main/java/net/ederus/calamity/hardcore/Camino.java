@@ -21,7 +21,8 @@ import java.util.UUID;
  * vistazo. Un icono por pieza, con su nombre de verdad ("Yelmo de Calamidad") y lo que pide:
  * el Sello de su minijefe (y cuantas muertes lleva de las 8 que lo dan seguro), las Marcas de
  * Eco o los Fragmentos que tiene (los de Masamune son objetos: cuentan los que lleva encima), y
- * arriba las horas activas y el proximo hito.
+ * arriba las horas activas y el proximo hito. 1.10: en las piezas con Sello, tambien donde vive su
+ * minijefe (minijefes.por-bioma) y que se le puede llamar con un Reclamo.
  * Sale del Tasador (1.3.1; antes, del Altar, que ahora es solo tienda) y de /calamity camino
  * (informativo: se puede mirar en cualquier sitio). Al entrar en Calamity, la barra de accion
  * ensena el credito mas cercano (P-W03).
@@ -260,6 +261,10 @@ final class Camino {
             int pied = piedad(u, id);
             listo = tiene > 0;
             lore.add(Marco.texto("Pide el Sello " + Forja.delMinijefe(id) + "."));
+            // 1.10: donde ir a por el (minijefes.por-bioma) y que se le puede llamar. Dos lineas como mucho.
+            String donde = Minijefes.donde(Minijefes.porBioma(hc.plugin().getConfig()), id);
+            if (donde != null) lore.add(Marco.tenue("Vive en " + donde + "."));
+            if (hc.cfg().getBoolean("minijefes.reclamo.activo", true)) lore.add(Marco.tenue("Se le puede llamar con un Reclamo."));
             lore.add(dato("Sello", tiene > 0 ? "sí" + (tiene > 1 ? " (" + tiene + ")" : "") : "no"));
             if (tiene == 0) {
                 lore.add(dato("Muertes del minijefe", pied + " de " + piedadMaxima()));

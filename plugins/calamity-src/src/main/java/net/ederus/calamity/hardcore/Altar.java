@@ -1374,6 +1374,9 @@ final class Altar implements Listener {
                     "da", "cristal", "limite-semana", 5),
             t("id", "tintura", "pagina", "umbral", "icono", "POTION", "nombre", "Tintura de Ceniza x2", "esencias", 3,
                     "da", "dar:tintura", "cantidad", 2, "limite-dia", 5),
+            // 1.10: el Reclamo, que llama al minijefe del bioma (Reclamo).
+            t("id", "reclamo", "pagina", "umbral", "icono", "GOAT_HORN", "nombre", "Reclamo", "esencias", 6,
+                    "da", "dar:reclamo", "limite-dia", 3),
             t("id", "llave", "pagina", "umbral", "icono", "TRIAL_KEY", "nombre", "Llave del Caos", "esencias", 40,
                     "da", "dar:llave", "limite-semana", 1, "requisito", "tope-llaves"),
             t("id", "salvoconducto", "pagina", "umbral", "icono", "PAPER", "nombre", "Salvoconducto del Insomne", "esencias", 64,
@@ -1502,7 +1505,7 @@ final class Altar implements Listener {
         Autotest.Hoja h = new Autotest.Hoja();
         Map<String, Trueque> ts = new HashMap<>();
         for (Trueque t : leer(DEFECTO)) ts.put(t.id(), t);
-        h.igual("trueques de serie", 23, ts.size());
+        h.igual("trueques de serie", 24, ts.size());
         UUID u = Autotest.sintetico(311);
         CajaPrueba c = new CajaPrueba();
 
@@ -1631,6 +1634,14 @@ final class Altar implements Listener {
         r = probarEn(c, ts.get("guadana"), u);
         h.ok("reponer la Guadana no espera", r.ok() && r.precio().reposicion());
         h.igual("y gasta los 7 Fragmentos", 0, c.creditos.de(u, "fragmento"));
+
+        // 1.10: el Reclamo, tres al dia por 6 Esencias cada uno.
+        c.saldo.sumar(u, 30, "prueba");
+        long antesReclamos = c.saldo.de(u);
+        for (int i = 0; i < 3; i++) probarEn(c, ts.get("reclamo"), u);
+        h.igual("tres Reclamos: 18 Esencias", antesReclamos - 18, c.saldo.de(u));
+        h.igual("y se entregan por dar:reclamo", "reclamox1", c.entregados.get(c.entregados.size() - 1));
+        h.igual("4.o Reclamo del dia -> cupo", "cupo", probarEn(c, ts.get("reclamo"), u).motivo());
 
         h.ok("la prueba no toca hardcore-datos.yml", !hc.datos().isSet("altar.usos.2026-W39." + u)
                 && !hc.datos().isSet("esencias." + u));

@@ -1,5 +1,6 @@
 package net.ederus.calamity.hardcore;
 
+import io.papermc.paper.datacomponent.DataComponentTypes;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.TextColor;
 import net.kyori.adventure.text.format.TextDecoration;
@@ -19,7 +20,7 @@ import java.util.List;
  * Nada de resource pack (esta prohibido en Ederus): son objetos vanilla con nombre,
  * brillo y una marca en el PersistentDataContainer, que es lo que de verdad los
  * identifica. Un jugador puede renombrar una botella como quiera; sin la marca no
- * funciona.
+ * funciona. Aqui viven tambien la Esencia, el Fragmento de Masamune y (1.10) el Reclamo.
  */
 public final class ItemsCalamity {
 
@@ -189,6 +190,51 @@ public final class ItemsCalamity {
     /** Si es un Fragmento de Masamune (por la marca: da igual como se llame). */
     public static boolean esFragmentoMasamune(ItemStack item) {
         return Marcas.tiene(item, Marcas.FRAGMENTO_MASAMUNE);
+    }
+
+    // ------------------------------------------------------------------- el Reclamo
+
+    /**
+     * Calamity 1.10 · El Reclamo: un cuerno de cabra que llama al minijefe del bioma donde suena
+     * (Reclamo, que lo atiende). Se reconoce por la marca lethal_world:reclamo, como el Cristal por
+     * la suya, y el nombre lleva el degradado de los minijefes (Paleta.minijefe).
+     *
+     * Sale SIN instrumento a proposito. En 26.x el cuerno trae uno de serie (componente
+     * minecraft:instrument), y con el el cliente lo haria sonar por su cuenta al pulsar, antes de que
+     * el servidor diga nada, y le pondria el enfriamiento del cuerno de verdad (7 s). Sin instrumento
+     * el uso vanilla no hace nada en ningun lado y el sonido lo pone Reclamo. Quitarlo es un parche
+     * del objeto: sobrevive a ligarlo y a guardarlo en los premios pendientes (ItemMeta lo conserva).
+     */
+    public static ItemStack reclamo() {
+        ItemStack item = new ItemStack(Material.GOAT_HORN);
+        ItemMeta meta = item.getItemMeta();
+        if (meta != null) {
+            meta.displayName(Paleta.degradado("Reclamo", Paleta.MINIJEFE_DESDE, Paleta.MINIJEFE_HASTA));
+            meta.lore(List.of(
+                    Component.text("Llama al minijefe del bioma donde estás.", Paleta.TEXTO)
+                            .decoration(TextDecoration.ITALIC, false),
+                    Component.text("Solo funciona en Calamity, fuera del spawn.", Paleta.TEXTO)
+                            .decoration(TextDecoration.ITALIC, false),
+                    Component.empty(),
+                    Component.text("Clic derecho para hacerlo sonar.", Paleta.TENUE)
+                            .decoration(TextDecoration.ITALIC, false),
+                    Component.text("Se gasta al usarlo.", Paleta.TENUE)
+                            .decoration(TextDecoration.ITALIC, false)));
+            meta.setEnchantmentGlintOverride(true);
+            meta.getPersistentDataContainer().set(Marcas.RECLAMO, PersistentDataType.BYTE, (byte) 1);
+            item.setItemMeta(meta);
+        }
+        try {
+            item.unsetData(DataComponentTypes.INSTRUMENT);
+        } catch (Throwable sinApi) {
+            // Sin la API de componentes el Reclamo sigue valiendo: Reclamo cancela el uso vanilla igual.
+        }
+        return item;
+    }
+
+    /** Si es un Reclamo (por la marca: da igual como se llame). */
+    public static boolean esReclamo(ItemStack item) {
+        return Marcas.tiene(item, Marcas.RECLAMO);
     }
 
     /** Ultimo valor raro de esencias.material ya avisado, para no llenar la consola. */

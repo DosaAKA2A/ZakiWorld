@@ -209,8 +209,11 @@ hardcore:
     # A cero.
     mobs-extra-vacio: 6
 
-  # Con la cordura a cero viene uno de estos, y no mas de uno cada tantos minutos.
+  # Con la cordura a cero viene el minijefe del bioma donde estás (Calamity 1.10; en un bioma sin
+  # dueño, uno de "tipos" al azar), y no más de uno cada tantos minutos.
   minijefes:
+    # Descanso entre dos minijefes del mismo jugador. Lo comparten el de la cordura a cero y el
+    # del Reclamo (el Eclipse lo acorta).
     cada-minutos: 10
     distancia: 30
     # Multiplicadores sobre el esbirro normal de ese tipo.
@@ -221,8 +224,65 @@ hardcore:
     #     Calamity 1.10: mientras te espera fuera de la zona spawn no cuenta (ver spawn.minijefes).
     distancia-maxima: 60
     # Los rellena el plugin la primera vez con los cinco de la carpeta
-    # "Lethal World · Minijefes" de /esb. A partir de ahi se editan alli.
+    # "Lethal World · Minijefes" de /esb. A partir de ahi se editan alli. 1.10: un tipo que no
+    # esté aquí no viene, tampoco en su bioma; con la lista vacía valen los de por-bioma.
     tipos: []
+    # Calamity 1.10 · Dónde vive cada minijefe. El de la cordura a cero es el del bioma donde
+    # estás, y el Reclamo llama a ese mismo. Las claves son los ids de "tipos"; "biomas", los de
+    # Panacea como "panacea/<id>" (vale también con "bracken:" delante); "donde", cómo se le dice
+    # al jugador en Tu camino ("Vive en ..."). Si el config no trae esta sección, vale esta misma
+    # tabla; "por-bioma: {}" la apaga (todo al azar, como antes, y el Reclamo no llama a nadie).
+    por-bioma:
+      custodio-de-las-ruinas: {donde: "las llanuras de hongos, el trópico y el valle de bambú", biomas: ["panacea/polypore_plains", "panacea/horsetail_tropics", "panacea/bamboo_valley"]}
+      matriarca-tejedora:     {donde: "las junglas y el colmenar", biomas: ["panacea/hungering_jungle", "panacea/ravenous_greenwood", "panacea/honeybee_biome"]}
+      sanador-del-fango:      {donde: "los pantanos", biomas: ["panacea/sweltering_swamp", "panacea/wildflower_bog"]}
+      centinela-de-toba:      {donde: "la taiga condenada, el dominio creeper y el cónclave", biomas: ["panacea/condemned_taiga", "panacea/creeper_dominion", "panacea/conure_conclave"]}
+      heraldo-carmes:         {donde: "el organismo carmesí y los manantiales de arena", biomas: ["panacea/crimson_organism", "panacea/quicksand_springs"]}
+    # Calamity 1.10 · El Reclamo (se compra en el Altar): un cuerno que llama al minijefe del
+    # bioma donde estás, sin esperar a la cordura. Solo en Calamity y fuera del spawn, sin la
+    # Parca ni otro minijefe detrás y con el descanso de cada-minutos cumplido. Llega a los
+    # "segundos" de sonar; si en ese rato sales, mueres o entras al spawn, o no encuentra sitio,
+    # te devuelve el Reclamo. Solo cuenta para el tope y el descanso el que trae minijefe.
+    reclamo:
+      activo: true
+      # Los que traen minijefe por jugador y día (el día de hardcore.zona). 0 = sin tope.
+      tope-dia: 6
+      segundos: 3
+    # Calamity 1.10 · Botín extra, además de las MobCoins, las Esencias, las Reliquias y el Sello.
+    # Si el config no trae esta sección, vale esta misma; si la trae, manda entera (un tipo que no
+    # aparece no tiene entradas propias). Se tira con SecureRandom y todo pasa por Entregas.
+    botin:
+      # Entradas comunes a los cinco, y luego las propias de cada tipo. Cada entrada:
+      #   id            nombre corto, único dentro del tipo (para la piedad y los topes)
+      #   prob          0..1
+      #   para          mejor (el que más daño hizo) | asesino | participantes (cada uno con >= participacion-minima tira por separado)
+      #   piedad        opcional: a la N-ésima muerte de ese tipo sin que le caiga, le toca seguro (por jugador, tipo e id)
+      #   objeto        opcional: un objeto de Entregas (libro, gema..., lo que acepte Entregas.dar)
+      #   comando       opcional: comando de consola con %jugador% (nombre validado); se usa si no hay objeto
+      #   nombre        cómo se le dice al jugador ("un libro LEGENDARY")
+      #   anuncio       true = se anuncia a todo el servidor
+      # participacion-minima es la de esencias.minijefe (0.10). La piedad sube a cada participante
+      # al que no le cae y vuelve a 0 al caerle; llena, le cae aunque no le toque tirar (como el
+      # Sello). El libro pasa por el tope del mes (caja.libro-tope-mes; pasado, sus Esencias). El
+      # libro y los comandos se dan al momento por consola: quien no está conectado ni tira ni
+      # pierde su piedad. Sin objeto ni comando (las gemas, hasta que llegue su lote), no hace nada.
+      todos:
+        - {id: libro, prob: 0.08, para: mejor, objeto: libro, nombre: "un libro LEGENDARY", anuncio: false}
+      custodio-de-las-ruinas:
+        - {id: mascota, prob: 0.03, piedad: 30, para: mejor, comando: "pets egg unique iron_golem %jugador%", nombre: "el huevo del Gólem de hierro", anuncio: true}
+        - {id: gema, prob: 0.25, para: mejor, objeto: "", nombre: "la Gema del Custodio", anuncio: false}
+      matriarca-tejedora:
+        - {id: mascota, prob: 0.03, piedad: 30, para: mejor, comando: "pets egg unique cave_spider %jugador%", nombre: "el huevo de la Araña de cueva", anuncio: true}
+        - {id: gema, prob: 0.25, para: mejor, objeto: "", nombre: "la Gema de la Matriarca", anuncio: false}
+      sanador-del-fango:
+        - {id: mascota, prob: 0.03, piedad: 30, para: mejor, comando: "pets egg unique evoker %jugador%", nombre: "el huevo del Invocador", anuncio: true}
+        - {id: gema, prob: 0.25, para: mejor, objeto: "", nombre: "la Gema del Sanador", anuncio: false}
+      centinela-de-toba:
+        - {id: mascota, prob: 0.03, piedad: 30, para: mejor, comando: "pets egg unique wither_skeleton %jugador%", nombre: "el huevo del Esqueleto wither", anuncio: true}
+        - {id: gema, prob: 0.25, para: mejor, objeto: "", nombre: "la Gema del Centinela", anuncio: false}
+      heraldo-carmes:
+        - {id: mascota, prob: 0.03, piedad: 30, para: mejor, comando: "pets egg unique ravager %jugador%", nombre: "el huevo del Devastador", anuncio: true}
+        - {id: gema, prob: 0.25, para: mejor, objeto: "", nombre: "la Gema del Heraldo", anuncio: false}
 
   muerte:
     # Al morir se pierde TODO lo que llevabas encima y la experiencia.
@@ -747,6 +807,7 @@ hardcore:
       - {id: frasco, pagina: umbral, icono: POTION, nombre: "Frasco de Calma", esencias: 10, da: frasco, limite-semana: 3}
       - {id: cristal, pagina: umbral, icono: AMETHYST_SHARD, nombre: "Cristal de Regreso", esencias: 16, da: cristal, limite-semana: 5}
       - {id: tintura, pagina: umbral, icono: POTION, nombre: "Tintura de Ceniza x2", esencias: 3, da: "dar:tintura", cantidad: 2, limite-dia: 5}
+      - {id: reclamo, pagina: umbral, icono: GOAT_HORN, nombre: "Reclamo", esencias: 6, da: "dar:reclamo", limite-dia: 3}   # 1.10: llama al minijefe del bioma (minijefes.reclamo)
       - {id: llave, pagina: umbral, icono: TRIAL_KEY, nombre: "Llave del Caos", esencias: 40, da: "dar:llave", limite-semana: 1, requisito: "tope-llaves"}   # no cobra si el tope de 4 esta lleno
       - {id: salvoconducto, pagina: umbral, icono: PAPER, nombre: "Salvoconducto del Insomne", esencias: 64, da: "dar:salvoconducto", limite-semana: 1, requisito: "permiso:insomne.badge.unlocked"}
       - {id: ofrenda, pagina: umbral, icono: BLAZE_POWDER, nombre: "Ofrenda", esencias: 100, da: ofrenda}
@@ -1207,7 +1268,7 @@ hardcore:
         texto:
           - "Desde que entras, tu cordura baja {cordura.por-minuto} por minuto. La noche multiplica ese ritmo por {cordura.factor-noche}, y la oscuridad, por {cordura.factor-oscuridad}."
           - "Un golpe que te quite al menos un cuarto de la vida que tienes te cuesta {cordura.por-golpe} de cordura."
-          - "Por debajo de la mitad salen más mobs y más fuertes. Si llega a cero, un minijefe viene a por ti."
+          - "Por debajo de la mitad salen más mobs y más fuertes. Si llega a cero, viene a por ti el minijefe del bioma donde estás."
           - "El Frasco de Calma te devuelve {frasco.cordura} de cordura por trago y tiene {frasco.usos} tragos. Se recarga en el Altar."
           - "En el spawn de Calamity la cordura no baja."
       parca:
@@ -1237,6 +1298,7 @@ hardcore:
         titulo: "El Altar y la Forja"
         texto:
           - "En el Altar, Sael te cambia Esencias por Frascos, Tinturas, Cristales de Regreso ({altar.trueques.cristal.esencias} Esencias) y la Llave del Caos."
+          - "Con un Reclamo llamas al minijefe del bioma donde estás, sin esperar a la cordura."
           - "En la Forja, Vael hace el Manto de Calamidad: cada pieza pide Esencias, MobCoins y el Sello de su minijefe."
           - "El Vestigio del Eco pide Marcas de Eco, y la Guadaña, {altar.trueques.guadana.creditos} Fragmentos de Guadaña. Todo lo forjado queda ligado a ti."
           - "Si pierdes en Calamity una pieza del Manto y la repones antes de {forja.reposicion-dias} días, te cuesta la mitad de Esencias."

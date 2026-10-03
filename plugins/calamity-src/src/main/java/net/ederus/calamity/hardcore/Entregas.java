@@ -58,9 +58,9 @@ final class Entregas implements Listener {
     private static final TextColor AMBAR = TextColor.color(0xE8A33D);
     private static final TextColor PAPEL = TextColor.color(0xE8D9B0);
 
-    /** Los objetos que entiende dar (ademas de credito:<tipo>, credito-caja:<tipo> y forja:<pieza>). */
+    /** Los objetos que entiende dar (ademas de credito:<tipo>, credito-caja:<tipo> y forja:<pieza>). 1.10: el Reclamo. */
     static final List<String> OBJETOS = List.of("esencia", "frasco", "frasco-1", "cristal", "tintura", "gema", "ascua",
-            "talisman", "grabado", "salvoconducto", "libro", "llave", "llave-hito", FragmentosMasamune.OBJETO);
+            "talisman", "grabado", "salvoconducto", "libro", "llave", "llave-hito", FragmentosMasamune.OBJETO, "reclamo");
 
     private final Hardcore hc;
     private final Set<BukkitTask> tareas = new HashSet<>();
@@ -215,6 +215,8 @@ final class Entregas implements Listener {
             case "grabado" -> grabado();
             case "salvoconducto" -> salvoconducto();
             case FragmentosMasamune.OBJETO -> ItemsCalamity.fragmentoMasamune(1);
+            // 1.10: lo llama Reclamo (Altar, dar:reclamo; /calamidad dar reclamo <jugador> <n>).
+            case "reclamo" -> ItemsCalamity.reclamo();
             default -> {
                 String id = idMmo(o);
                 yield id == null ? null : PuenteMmo.crear(id);
@@ -427,7 +429,7 @@ final class Entregas implements Listener {
      */
     private boolean libro(OfflinePlayer a, String origen) {
         Calendario cal = hc.calendario() != null ? hc.calendario() : new Calendario(hc);
-        String ruta = "libros-caja." + cal.mes();
+        String ruta = rutaLibros(cal.mes());
         int tope = hc.cfg().getInt("caja.libro-tope-mes", 2);
         int total = hc.datos().getInt(ruta, 0);
         String nombre = nombre(a);
@@ -462,11 +464,26 @@ final class Entregas implements Listener {
         return totalMes < tope;
     }
 
+    private static String rutaLibros(String mes) {
+        return "libros-caja." + mes;
+    }
+
+    /**
+     * Calamity 1.10 · Si el proximo libro LEGENDARY aun cabe en el tope del mes (si no, libro() paga
+     * su sustituto en Esencias). No cambia nada: el botin de los minijefes lo mira antes de dar("libro")
+     * para decirle al jugador si le ha tocado el libro o las Esencias.
+     */
+    boolean libroLibre() {
+        Calendario cal = hc.calendario() != null ? hc.calendario() : new Calendario(hc);
+        return libroCabe(hc.datos().getInt(rutaLibros(cal.mes()), 0), hc.cfg().getInt("caja.libro-tope-mes", 2));
+    }
+
     /**
      * Un comando de consola de la config con %jugador% y %n%. El nombre se valida antes: de
-     * un nombre raro en un comando de consola puede salir otro comando.
+     * un nombre raro en un comando de consola puede salir otro comando. 1.10: lo usa tambien el
+     * botin de los minijefes (Minijefes), para no repetir esta validacion en otro sitio.
      */
-    private boolean comando(String plantilla, String jugador, int n) {
+    boolean comando(String plantilla, String jugador, int n) {
         if (plantilla == null || plantilla.isBlank() || jugador == null || !NOMBRE_VALIDO.matcher(jugador).matches()) {
             return false;
         }

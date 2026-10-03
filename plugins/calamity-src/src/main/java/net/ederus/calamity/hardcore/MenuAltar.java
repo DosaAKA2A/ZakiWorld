@@ -94,6 +94,8 @@ final class MenuAltar implements Listener {
             Map.entry("frasco", List.of("Trae 3 tragos y cada uno te", "devuelve 40 de cordura.")),
             Map.entry("cristal", List.of("Te saca de Calamity si te", "quedas quieto unos segundos.")),
             Map.entry("tintura", List.of("Cura 8 de vida y te da", "Resistencia durante 6 s.")),
+            // 1.10: el cuerno que llama al minijefe (Reclamo).
+            Map.entry("reclamo", List.of("Hazlo sonar en Calamity y vendrá", "el minijefe del bioma donde estés.")),
             Map.entry("llave", List.of("Abre la Crate Caos del spawn.", "Cuenta para tu tope semanal", "de llaves.")),
             Map.entry("salvoconducto", List.of("Si mueres en Calamity, conservas", "una pieza de tu equipo.")),
             Map.entry("ofrenda", List.of("Suma una Ofrenda a tu nombre.", "No da ningún objeto.")),
@@ -136,7 +138,7 @@ final class MenuAltar implements Listener {
 
     static final List<Categoria> CATEGORIAS = List.of(
             new Categoria(EXPEDICION, Material.LANTERN, "Para la expedición",
-                    List.of("Frascos de Calma, Cristales de", "Regreso y Tinturas de Ceniza."), "Expedición"),
+                    List.of("Frascos de Calma, Cristales de", "Regreso, Tinturas y Reclamos."), "Expedición"),
             new Categoria(LLAVES, Material.VAULT, "Llaves y ofrendas",
                     List.of("La Llave del Caos y la Ofrenda,", "a cambio de Esencias."), "Llaves"),
             new Categoria(FORJA, Material.ANVIL, "La Forja",
@@ -200,7 +202,8 @@ final class MenuAltar implements Listener {
         if (!UMBRAL.equals(t.pagina())) return null;
         if (t.da().equals("recargar") || t.da().equals("frasco") || t.da().equals("cristal")) return EXPEDICION;
         String o = t.objeto();
-        if ("tintura".equals(o) || "frasco-1".equals(o) || "cristal".equals(o)) return EXPEDICION;
+        // 1.10: el Reclamo es para usarlo dentro, como el Cristal: va con lo de la expedicion.
+        if ("tintura".equals(o) || "frasco-1".equals(o) || "cristal".equals(o) || "reclamo".equals(o)) return EXPEDICION;
         return LLAVES;
     }
 
@@ -1036,7 +1039,11 @@ final class MenuAltar implements Listener {
         List<String> ids = new ArrayList<>();
         for (Categoria c : CATEGORIAS) ids.add(c.id());
         h.igual("tarjetas de la portada", List.of(EXPEDICION, LLAVES, FORJA), ids);
-        h.igual("para la expedicion", List.of("recargar", "frasco", "cristal", "tintura"), idsDe(trueques(EXPEDICION, serie, false)));
+        h.igual("para la expedicion", List.of("recargar", "frasco", "cristal", "tintura", "reclamo"),
+                idsDe(trueques(EXPEDICION, serie, false)));
+        // 1.10: con el Reclamo son cinco: 3 arriba y 2 debajo, centrados y con aire.
+        h.igual("expedicion con el Reclamo: 20, 22, 24, 30 y 32", List.of(20, 22, 24, 30, 32),
+                casillas(sitios(EXPEDICION, serie, false)));
         h.igual("llaves y ofrendas", List.of("llave", "ofrenda"), idsDe(trueques(LLAVES, serie, false)));
         h.igual("llaves y ofrendas con salvoconducto", List.of("llave", "salvoconducto", "ofrenda"), idsDe(trueques(LLAVES, serie, true)));
         ids = new ArrayList<>();

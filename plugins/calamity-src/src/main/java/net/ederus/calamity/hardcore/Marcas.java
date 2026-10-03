@@ -63,6 +63,8 @@ public final class Marcas {
     public static final NamespacedKey SALVOCONDUCTO = clave("salvoconducto");
     /** BYTE 1: un Fragmento de Masamune (lo que deja Ambush a su presa; la Forja pide cinco). */
     public static final NamespacedKey FRAGMENTO_MASAMUNE = clave("fragmento_masamune");
+    /** BYTE 1: un Reclamo (Calamity 1.10), el cuerno que llama al minijefe del bioma donde suena. */
+    public static final NamespacedKey RECLAMO = clave("reclamo");
 
     private Marcas() {
     }
@@ -75,7 +77,7 @@ public final class Marcas {
     static List<NamespacedKey> todas() {
         return List.of(AMENAZA, PRESA, ECO, ECO_DUENO, DANO_JUGADOR, VIDA_LOGICA, CASCARA, ECO_COPIA, RELIQUIA, RELIQUIA_ID,
                 RELIQUIA_ORIGEN, RELIQUIA_NACIO, RELIQUIA_ESPECIAL, RELIQUIA_NIVEL, RELIQUIA_MINIJEFE,
-                RELIQUIA_VALIDA, TROFEO, PRESTADO, LIGADO, TALISMAN, GRABADO, SALVOCONDUCTO, FRAGMENTO_MASAMUNE);
+                RELIQUIA_VALIDA, TROFEO, PRESTADO, LIGADO, TALISMAN, GRABADO, SALVOCONDUCTO, FRAGMENTO_MASAMUNE, RECLAMO);
     }
 
     /** Si una entidad es nuestra (PARCA, planidera, Eco...). */
