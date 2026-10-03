@@ -36,7 +36,7 @@ import net.ederus.edm.tooltip.TooltipPlugin;
  */
 public class EDMPlugin extends JavaPlugin {
 
-    public static final String VERSION = "1.74.0";
+    public static final String VERSION = "1.78.0";
 
     /* La identidad del nucleo. La build de OneBlock (EDMOneBlock) la cambia:
      * alli se llama EDO, Ederus OneBlock, con su propio arte y su version. */
@@ -99,8 +99,35 @@ public class EDMPlugin extends JavaPlugin {
         modulosOpcionales();
 
         registrarComando();
+        reservaSuperBeacon();
         registrarPlaceholders();
         banner();
+    }
+
+    /**
+     * /superbeacon con su modulo apagado o caido. Sin ejecutor propio, Bukkit le pasa el
+     * comando a ESTE plugin, que lo toma por /edm y solo imprime el estado: la tienda y las
+     * cajas lo dan por bueno y la compra se pierde en silencio. Aqui contesta con un error
+     * claro y deja una linea SEVERE con el comando entero, para poder entregarlo a mano.
+     * (EDO no declara el comando: getCommand da null y no se hace nada.)
+     */
+    private void reservaSuperBeacon() {
+        if (activo("superbeacon")) return;
+        var cmd = getCommand("superbeacon");
+        if (cmd == null) return;
+        String porque = fallidos.contains("superbeacon")
+                ? "no arranco (mira el error del arranque en la consola)"
+                : "esta apagado (modulos.superbeacon: false en el config de EDM)";
+        cmd.setExecutor((quien, comando, etiqueta, args) -> {
+            String linea = "/" + etiqueta + (args.length == 0 ? "" : " " + String.join(" ", args));
+            getLogger().severe("[SuperBeacon] NO se ejecuto \"" + linea + "\" (de " + quien.getName()
+                    + "): el modulo superbeacon " + porque + ". Si era una entrega de la tienda o de una caja,"
+                    + " hay que hacerla a mano cuando el modulo vuelva a estar en marcha.");
+            quien.sendMessage(net.ederus.edm.comun.Estilo.legado(
+                    "&#FF5C5CLos Super Beacons no están disponibles ahora mismo: no se hizo nada. &7Avisa al staff."));
+            return true;
+        });
+        cmd.setTabCompleter((quien, comando, etiqueta, args) -> List.of());
     }
 
     /**
@@ -121,7 +148,10 @@ public class EDMPlugin extends JavaPlugin {
                 new DungeonLootPlugin(this),
                 new FlexPlugin(this),
                 new net.ederus.edm.biomas.BiomasPlugin(this),
-                new net.ederus.edm.minas.MinasPlugin(this));
+                new net.ederus.edm.minas.MinasPlugin(this),
+                /* Arranca antes que boost (que va en los opcionales): por eso sus efectos
+                 * de boost preguntan por el modulo al usarse, no al arrancar. */
+                new net.ederus.edm.superbeacon.SuperBeaconPlugin(this));
     }
 
     /** Los que solo arrancan si esta el plugin del que dependen. */

@@ -1,0 +1,195 @@
+# ---------------------------------------------------------------------------
+# Super Beacons de Ederus: balizas propias, independientes del faro vanilla,
+# con efectos de area. Se reparten por consola (tienda, cajas, el ranking de
+# clanes):
+#     superbeacon give %player_name% granja
+#     superbeacon give %player_name% trofeo 30 ABC
+#     superbeacon give %player_name% guerra - ABC
+#
+# Formato: superbeacon give <jugador> <tipo> [dias|-] [clan]
+#   dias  sustituye a duracion-dias del tipo (0 = no caduca; - = los del tipo).
+#         Admite decimales para probar: 0.01 son unos 14 minutos.
+#   clan  fija el clan que recibe sus efectos (en los tipos "clan"). Ese manda
+#         siempre y viaja con el objeto; sin el, beneficia al clan ACTUAL de
+#         su dueño (si cambia de clan, su baliza cambia con el).
+#
+# Cosas que conviene saber antes de tocar numeros:
+#   - si dos balizas alcanzan al mismo jugador, de cada efecto se aplica el MAYOR;
+#     nunca se suman (dos de Prisa II no dan Prisa IV);
+#   - los efectos de tipo boost no multiplican por su cuenta: el modulo boost se
+#     queda con el mayor entre el boost comprado, el global y la baliza, y con su
+#     tope (boost/config.yml). Sin modulos.boost: true no hacen nada;
+#   - el alcance es un circulo de "radio" bloques alrededor del bloque, desde
+#     "radio" bloques por debajo hasta el cielo, como el haz de un faro;
+#   - tocar un tipo (alcance, efectos) cambia tambien las balizas ya colocadas
+#     de ese tipo al hacer /superbeacon reload.
+# ---------------------------------------------------------------------------
+version: 1
+
+# Donde se pueden colocar (nombres de mundo, sin mayusculas que importen). Con
+# mundos-permitidos no vacio, SOLO en esos; vacio ([]), en todos menos los
+# excluidos. Los excluidos mandan sobre los permitidos. Las balizas que ya estan
+# colocadas en un mundo que deja de valer siguen funcionando.
+mundos-permitidos: [world]
+mundos-excluidos: []
+
+# Cuantas balizas puede tener colocadas a la vez cada jugador. Los tipos con
+# cuenta-en-el-maximo: false no cuentan. 0 = sin limite. El staff no tiene limite.
+maximo-por-jugador: 3
+
+# Zona horaria de las fechas de vencimiento ("Vence: 03/11/2026 18:00").
+# Vacia, la del servidor. Ejemplos: America/Lima, America/Santiago,
+# America/Argentina/Buenos_Aires, America/Mexico_City.
+zona-horaria: ""
+
+holograma:
+  # Altura del texto sobre la base del bloque, en bloques.
+  altura: 1.6
+  # Desde cuantos bloques se ve.
+  distancia: 32
+  # Cada cuanto se repinta (el tiempo que queda cambia solo).
+  refresco-segundos: 30
+
+vuelo:
+  # Quien da o recibe un golpe de otro jugador se queda sin el vuelo de los Super
+  # Beacons estos segundos (cada golpe renueva la cuenta; si estaba en el aire,
+  # cae despacio). 0 lo apaga.
+  sin-vuelo-en-combate-segundos: 15
+  # Si otro plugin le quita el vuelo que le dio un Super Beacon (una region sin
+  # vuelo, un plugin de combate, /fly), no se lo devolvemos hasta pasados estos
+  # segundos. 0 lo apaga (se le devuelve en el siguiente ciclo, cada 2 s).
+  reintento-segundos: 30
+
+clan:
+  # De donde sale el clan de un jugador (UltimateClans, por PlaceholderAPI). Se le
+  # quitan los colores y se compara sin mayusculas. Sin PlaceholderAPI, los tipos
+  # "clan" benefician solo a su dueño.
+  placeholder: "%uclans_tag_color%"
+  # Lo que el placeholder devuelve cuando el jugador NO tiene clan.
+  sin-clan: ["", "Sin clan", "N/A", "-"]
+
+# ---------------------------------------------------------------------------
+# Los tipos. Cada uno:
+#   nombre: con colores &#RRGGBB. Sin negrita salvo que la quieras en el nombre.
+#   bloque: el bloque que se coloca. Uno de una sola pieza que no cambie solo
+#           (faro, bloques de mineral...): un bloque que se oxida o se derrite
+#           dejaria de ser "su" bloque.
+#   radio: alcance en bloques (1 a 128).
+#   duracion-dias: 0 = no caduca. Mas de 0: vence a los N dias desde que se
+#           ENTREGA (fecha fija; corre aunque este guardado en un cofre).
+#           Admite decimales: 0.5 son 12 horas.
+#   al-caducar: apagar (se queda de adorno, sin efectos) | destruir.
+#   beneficia: dueno | clan | todos. El dueño recibe siempre.
+#   transferible: true = el dueño se fija al COLOCARLO por primera vez (antes se
+#           puede comerciar); false = al entregarlo.
+#   cuenta-en-el-maximo: si cuenta para maximo-por-jugador.
+#   elegibles: cuantos efectos a la vez, elegidos en su menu. 0 = todos activos.
+#   descripcion: lineas del lore.
+#   particula: (opcional, por defecto ninguna) {tipo: END_ROD, cantidad: 1,
+#           cada-segundos: 4}. La nota musical no se acepta.
+#   efectos: cada uno con su clase en "tipo", su icono y su nombre:
+#     pocion    efecto (HASTE, SPEED...) y nivel (1 = I). Ambiente, sin
+#               particulas; no pisa un efecto mas fuerte que ya tenga.
+#     atributo  atributo (max_health, armor, armor_toughness, movement_speed,
+#               attack_damage, luck, block_interaction_range,
+#               entity_interaction_range, safe_fall_distance,
+#               mining_efficiency, oxygen_bonus) y valor (se suma).
+#     boost     boost (exp, skill_exp, pesca, mobcoins) y multiplicador. SOLO en
+#               tipos que caducan: un multiplicador permanente pegado a un sitio,
+#               junto a una granja, infla la economia sin fin. Por eso la Granja y
+#               la Guerra no traen boosts y la Fortuna, que si, dura 7 dias.
+#     vuelo     volar dentro del alcance; al salir, 5 s de gracia y caida lenta.
+#     cultivos  intentos (12), cada-segundos (5) y altura (4, bloques arriba y
+#               abajo de la baliza): hace crecer cultivos al azar en el alcance.
+#     sin-mobs  no aparecen monstruos de forma natural en el alcance.
+# ---------------------------------------------------------------------------
+tipos:
+  hogar:
+    nombre: "&#7EC8FFSuper Beacon del Hogar"
+    bloque: BEACON
+    radio: 24
+    duracion-dias: 0
+    al-caducar: apagar
+    beneficia: dueno
+    transferible: true
+    cuenta-en-el-maximo: true
+    elegibles: 2
+    descripcion: ["Buffs para tu base.", "Elige dos."]
+    efectos:
+      prisa:        {tipo: pocion, efecto: HASTE, nivel: 3, icono: GOLDEN_PICKAXE, nombre: "Prisa III"}
+      velocidad:    {tipo: pocion, efecto: SPEED, nivel: 2, icono: SUGAR, nombre: "Velocidad II"}
+      regeneracion: {tipo: pocion, efecto: REGENERATION, nivel: 1, icono: GHAST_TEAR, nombre: "Regeneración I"}
+      vision:       {tipo: pocion, efecto: NIGHT_VISION, nivel: 1, icono: ENDER_EYE, nombre: "Visión nocturna"}
+      vida:         {tipo: atributo, atributo: max_health, valor: 4, icono: GOLDEN_APPLE, nombre: "+2 corazones"}
+      sin-mobs:     {tipo: sin-mobs, icono: SHIELD, nombre: "Sin mobs hostiles"}
+
+  granja:
+    nombre: "&#8EE06ASuper Beacon de la Granja"
+    bloque: BEACON
+    radio: 32
+    duracion-dias: 0
+    al-caducar: apagar
+    beneficia: dueno
+    transferible: true
+    cuenta-en-el-maximo: true
+    elegibles: 2
+    descripcion: ["Para los que viven de la tierra.", "Elige dos."]
+    efectos:
+      cultivos:   {tipo: cultivos, intentos: 12, cada-segundos: 5, icono: WHEAT, nombre: "Cultivos más rápidos"}
+      saturacion: {tipo: pocion, efecto: SATURATION, nivel: 1, icono: COOKED_BEEF, nombre: "Saturación"}
+      prisa:      {tipo: pocion, efecto: HASTE, nivel: 2, icono: GOLDEN_HOE, nombre: "Prisa II"}
+      sin-mobs:   {tipo: sin-mobs, icono: SHIELD, nombre: "Sin mobs hostiles"}
+
+  guerra:
+    nombre: "&#FF7B6BSuper Beacon de Guerra"
+    bloque: BEACON
+    radio: 24
+    duracion-dias: 0
+    al-caducar: apagar
+    beneficia: clan
+    transferible: true
+    cuenta-en-el-maximo: true
+    elegibles: 3
+    descripcion: ["Para tu clan, en la base o en el frente.", "Elige tres."]
+    efectos:
+      fuerza:      {tipo: pocion, efecto: STRENGTH, nivel: 2, icono: BLAZE_POWDER, nombre: "Fuerza II"}
+      resistencia: {tipo: pocion, efecto: RESISTANCE, nivel: 1, icono: IRON_CHESTPLATE, nombre: "Resistencia I"}
+      vida:        {tipo: atributo, atributo: max_health, valor: 8, icono: GOLDEN_APPLE, nombre: "+4 corazones"}
+      velocidad:   {tipo: pocion, efecto: SPEED, nivel: 2, icono: SUGAR, nombre: "Velocidad II"}
+      sin-mobs:    {tipo: sin-mobs, icono: SHIELD, nombre: "Sin mobs hostiles"}
+
+  # Los boosts van aqui: caduca a los 7 dias y desaparece (ver "boost" arriba).
+  fortuna:
+    nombre: "&#FFD35CSuper Beacon de la Fortuna"
+    bloque: BEACON
+    radio: 24
+    duracion-dias: 7
+    al-caducar: destruir
+    beneficia: dueno
+    transferible: true
+    cuenta-en-el-maximo: true
+    elegibles: 2
+    descripcion: ["Multiplica lo que ganas durante una semana.", "Elige dos."]
+    efectos:
+      experiencia: {tipo: boost, boost: exp, multiplicador: 1.5, icono: EXPERIENCE_BOTTLE, nombre: "Experiencia x1,5"}
+      habilidades: {tipo: boost, boost: skill_exp, multiplicador: 1.25, icono: ENCHANTED_BOOK, nombre: "Experiencia de habilidades x1,25"}
+      pesca:       {tipo: boost, boost: pesca, multiplicador: 1.25, icono: FISHING_ROD, nombre: "Suerte de pesca x1,25"}
+      mobcoins:    {tipo: boost, boost: mobcoins, multiplicador: 1.25, icono: SUNFLOWER, nombre: "MobCoins x1,25"}
+
+  trofeo:
+    nombre: "&#FFC857Trofeo de Temporada"
+    bloque: BEACON
+    radio: 48
+    duracion-dias: 30
+    al-caducar: apagar
+    beneficia: clan
+    transferible: false
+    cuenta-en-el-maximo: false
+    elegibles: 0
+    descripcion: ["Para el clan más fuerte de la temporada."]
+    efectos:
+      prisa:       {tipo: pocion, efecto: HASTE, nivel: 4, icono: GOLDEN_PICKAXE, nombre: "Prisa IV"}
+      vida:        {tipo: atributo, atributo: max_health, valor: 12, icono: GOLDEN_APPLE, nombre: "+6 corazones"}
+      habilidades: {tipo: boost, boost: skill_exp, multiplicador: 1.5, icono: ENCHANTED_BOOK, nombre: "Experiencia de habilidades x1,5"}
+      mobcoins:    {tipo: boost, boost: mobcoins, multiplicador: 1.5, icono: SUNFLOWER, nombre: "MobCoins x1,5"}
+      vuelo:       {tipo: vuelo, icono: ELYTRA, nombre: "Vuelo dentro del radio"}

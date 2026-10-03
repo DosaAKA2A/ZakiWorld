@@ -31,7 +31,8 @@ import net.ederus.edm.comun.MobCoins;
  *   - que EXP multiplica la experiencia de verdad (el mismo listener del servidor);
  *   - que SKILL_EXP sin AuraSkills no revienta y sale como no disponible;
  *   - que PESCA se lee por la API con el tope y los mundos excluidos;
- *   - que MOBCOINS sube lo que paga una baja y nada mas.
+ *   - que MOBCOINS sube lo que paga una baja y nada mas;
+ *   - que las zonas (Super Beacon) dan el mayor, nunca el producto, y sin ellas nada cambia.
  */
 public final class AutotestBoost {
 
@@ -72,6 +73,7 @@ public final class AutotestBoost {
             t.skillExp(modulo);
             t.pesca(tmp, modulo);
             t.mobcoins(tmp);
+            t.zonas(tmp);
         } catch (Throwable e) {
             t.ok("el selftest no deberia reventar: " + e, false);
         } finally {
@@ -229,6 +231,49 @@ public final class AutotestBoost {
         s.dar(a, Tipo.EXP, 60_000L, 3.0);
         igual("el boost de EXP no sube las MobCoins", 2.0,
                 BoostPlugin.calcular(s, a, Tipo.MOBCOINS, true, false, 3.0));
+    }
+
+    /* ------------------------------------------------------------------ zonas */
+
+    /**
+     * Las fuentes de zona (Super Beacon): el mayor de personal, global y zona, nunca el
+     * producto, con el tope del tipo; y sin fuentes, todo exactamente igual que antes.
+     */
+    private void zonas(File tmp) throws Exception {
+        tmp.delete();
+        Servicio s = new Servicio(tmp);
+        UUID a = UUID.randomUUID(), b = UUID.randomUUID();
+        s.dar(a, Tipo.EXP, 60_000L, 2.0);
+        igual("zona x1.5 sin boost propio: x1.5", 1.5, BoostPlugin.calcular(s, b, Tipo.EXP, true, false, 3.0, 1.5));
+        igual("zona x1.5 con personal x2: manda el x2, no x3", 2.0,
+                BoostPlugin.calcular(s, a, Tipo.EXP, true, false, 3.0, 1.5));
+        igual("zona x2.5 con personal x2: manda la zona", 2.5,
+                BoostPlugin.calcular(s, a, Tipo.EXP, true, false, 3.0, 2.5));
+        igual("una zona x5 se queda en el tope x3", 3.0, BoostPlugin.calcular(s, b, Tipo.EXP, true, false, 3.0, 5.0));
+        igual("en un mundo excluido la zona tampoco cuenta", 1.0,
+                BoostPlugin.calcular(s, b, Tipo.EXP, true, true, 3.0, 2.0));
+        igual("sin el tipo disponible la zona tampoco cuenta", 1.0,
+                BoostPlugin.calcular(s, b, Tipo.EXP, false, false, 3.0, 2.0));
+        igual("zona 1.0 es la regla de siempre", BoostPlugin.calcular(s, a, Tipo.EXP, true, false, 3.0),
+                BoostPlugin.calcular(s, a, Tipo.EXP, true, false, 3.0, 1.0));
+
+        // La API de verdad: dos fuentes a la vez, una rota, y nada al quitarlas.
+        String f1 = "selftest-zona-1-" + UUID.randomUUID(), f2 = "selftest-zona-2-" + UUID.randomUUID();
+        Player pb = jugador(b, "world");
+        try {
+            BoostApi.registrarZona(f1, (p, tipo) -> tipo == Tipo.MOBCOINS ? 1.25 : 1.0);
+            BoostApi.registrarZona(f2, (p, tipo) -> {
+                throw new IllegalStateException("fuente rota a proposito");
+            });
+            igual("dos fuentes, una rota: cuenta la sana (x1.25)", 1.25, BoostApi.zona(pb, Tipo.MOBCOINS));
+            igual("la fuente no toca otros tipos", 1.0, BoostApi.zona(pb, Tipo.EXP));
+        } finally {
+            BoostApi.quitarZona(f1);
+            BoostApi.quitarZona(f2);
+        }
+        // El jugador de mentira no esta en ningun Super Beacon: aunque haya fuentes de
+        // verdad apuntadas, a el no le dan nada.
+        igual("quitadas las de prueba, la zona vuelve a x1", 1.0, BoostApi.zona(pb, Tipo.MOBCOINS));
     }
 
     /* ---------------------------------------------------------------- ayudas */

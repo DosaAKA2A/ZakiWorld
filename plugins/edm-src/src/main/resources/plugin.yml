@@ -1,5 +1,5 @@
 name: EDM
-version: '1.77.1'
+version: '1.78.0'
 main: net.ederus.edm.EDMPlugin
 api-version: '1.20'
 author: Iris Studio
@@ -15,6 +15,10 @@ commands:
     description: 'Tu brillo: el contorno de color alrededor tuyo'
     usage: /glow [color|rainbow|flash|off|list]
     aliases: [glows]
+  superbeacon:
+    description: 'Super Beacons: tus balizas colocadas; el staff las reparte y las gestiona'
+    usage: /superbeacon [give|types|list|info|remove|reload|selftest]
+    aliases: [sbeacon]
   edm:
     description: Estado del nucleo de Ederus
     usage: /edm [reload]
@@ -89,6 +93,9 @@ commands:
 permissions:
   ederus.boost.admin:
     description: Reparte, retira y pone boosts globales (/boost give|clear|global|list|selftest)
+    default: op
+  ederus.superbeacon.admin:
+    description: Reparte, lista, mira, quita y recarga Super Beacons; gestiona y recoge los de cualquiera
     default: op
   fancyglow.admin:
     description: Todos los brillos y /glow set para otros (mismo nodo que FancyGlow)

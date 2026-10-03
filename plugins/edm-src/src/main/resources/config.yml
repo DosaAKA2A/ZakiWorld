@@ -13,6 +13,7 @@
 #   flex/     la vitrina de cada jugador (/flex)
 #   biomas/   Lethal Biomes, climas por zona (/lbiomes)
 #   boost/    boosts temporales de exp, habilidades, pesca, MobCoins y minions (/boost)
+#   superbeacon/ Super Beacons: balizas propias con efectos de area (/superbeacon)
 #
 # Al arrancar por primera vez se copian solos desde las carpetas viejas,
 # que se conservan intactas por si hay que volver atras.
@@ -29,6 +30,8 @@ modulos:
   flex: true
   biomas: true
   minas: true
+  # Super Beacons. Sus efectos de tipo boost necesitan ademas boost: true.
+  superbeacon: true
   # Estos tres solo arrancan si esta su plugin: ProtocolLib, Quests y BattlePass.
   tooltip: true
   misiones: true

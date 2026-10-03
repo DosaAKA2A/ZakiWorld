@@ -42,6 +42,18 @@ public final class Estilo {
 
     /** "TIENDA | Ederus" y "EDERUS | Minerales", con el corte en gris como el suyo. */
     public static Component titulo(String izquierda, String derecha) {
+        return titulo(izquierda, derecha, CLARO);
+    }
+
+    /**
+     * Lo mismo con la seccion en otro color.
+     *
+     * El titulo de una ventana se pinta sobre la barra GRIS CLARO del cofre, no sobre
+     * fondo oscuro como el chat: ahi el CLARO de siempre apenas se lee. Los menus nuevos
+     * pasan un tono oscuro (el gris carbon #3A3A3A de los titulos de Calamity se lee bien).
+     * El azul de EDERUS es saturado y se lee en los dos fondos, asi que no cambia.
+     */
+    public static Component titulo(String izquierda, String derecha, TextColor colorDerecha) {
         /* Ojo: en Adventure los hijos HEREDAN el estilo del padre. Si la
          * negrita se pone en el componente raiz, se la lleva tambien el
          * separador y el nombre. En el titulo original solo va en la primera
@@ -54,7 +66,8 @@ public final class Estilo {
                 .decoration(TextDecoration.ITALIC, false)
                 .append(izq)
                 .append(texto(" | ", NamedTextColor.DARK_GRAY).decoration(TextDecoration.BOLD, false))
-                .append(texto(derecha, CLARO).decoration(TextDecoration.BOLD, false));
+                .append(texto(derecha, colorDerecha == null ? CLARO : colorDerecha)
+                        .decoration(TextDecoration.BOLD, false));
     }
 
     /** Un dato con su etiqueta encima, que es como lo presentan ellos. */
