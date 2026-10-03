@@ -922,36 +922,66 @@ public final class Hardcore implements Listener {
     // ------------------------------------------------------------------ minijefes
 
     /**
-     * Con la cordura a cero viene a buscarte uno de los grandes.
+     * Con la cordura a cero viene a buscarte el minijefe del bioma donde estas.
      *
-     * No sale uno por segundo: hay un descanso configurado entre apariciones para que
-     * quedarse a cero sea una condena, no una granja de jefes.
+     * Calamity 1.10: cada uno de los cinco vive en sus biomas (hardcore.minijefes.por-bioma,
+     * Minijefes.elegir). En un bioma sin dueno, o sin tabla, viene uno al azar de minijefes.tipos,
+     * como hasta la 1.9. No sale uno por segundo: hay un descanso (minutosMinijefe) entre
+     * apariciones para que quedarse a cero sea una condena, no una granja de jefes. Es el mismo
+     * descanso que pide el Reclamo, que trae al suyo por la misma ruta (traerMinijefe).
      */
     private void minijefeSiTocaCordura(Player p, Cordura.Estado e) {
         // Ley 6: una amenaza grande a la vez. Con la PARCA encima no viene nadie mas.
         if (valor("parca", () -> parca.persigue(p), false)) return;
-        int def = cfg().getInt("minijefes.cada-minutos", 10);
-        int cada = valor("eclipse", () -> eclipse.minutosMinijefe(def), def);
         long ahora = System.currentTimeMillis();
-        if (e.ultimoMinijefe != 0 && ahora - e.ultimoMinijefe < cada * 60_000L) return;
+        if (e.ultimoMinijefe != 0 && ahora - e.ultimoMinijefe < minutosMinijefe() * 60_000L) return;
 
-        List<String> tipos = cfg().getStringList("minijefes.tipos");
-        if (tipos.isEmpty()) return;
-        String id = tipos.get(random.nextInt(tipos.size()));
-        double distancia = cfg().getDouble("minijefes.distancia", 30);
+        String id = Minijefes.elegir(Minijefes.bioma(p.getLocation()), Minijefes.porBioma(plugin.getConfig()),
+                cfg().getStringList("minijefes.tipos"), random::nextInt);
+        if (id == null) return;
+        // Si no encuentra sitio no apunta nada: lo vuelve a intentar al segundo siguiente.
+        traerMinijefe(p, id, e);
+    }
 
-        LivingEntity mob = plugin.mobs() == null ? null
-                : plugin.mobs().invocarMinijefe(p, id, distancia,
-                        cfg().getDouble("minijefes.vida", 15),
-                        cfg().getDouble("minijefes.dano", 4));
-        if (mob == null) return;
+    /**
+     * Calamity 1.10 · Trae ese minijefe a por ese jugador: lo invoca (MobsLethal.invocarMinijefe), lo
+     * marca como presa, apunta el descanso en su Estado y le avisa. Es la ruta del de cordura cero y la
+     * del Reclamo. Null si no ha encontrado sitio, y entonces no apunta nada.
+     */
+    LivingEntity traerMinijefe(Player p, String tipo, Cordura.Estado e) {
+        if (plugin.mobs() == null || tipo == null) return null;
+        LivingEntity mob = plugin.mobs().invocarMinijefe(p, tipo, cfg().getDouble("minijefes.distancia", 30),
+                cfg().getDouble("minijefes.vida", 15), cfg().getDouble("minijefes.dano", 4));
+        if (mob == null) return null;
         marcarPresa(mob, p);
 
-        e.ultimoMinijefe = ahora;
+        e.ultimoMinijefe = System.currentTimeMillis();
         // 1.8.4: el mismo nombre que su cartel (Paleta.minijefe), con el nivel detras. Antes se leia el
         // customName, que EDM no pone, y el aviso siempre decia "un minijefe".
         p.sendMessage(Component.text("Ha venido a por ti: ", Paleta.AVISO).append(plugin.mobs().nombreMinijefe(mob)));
         Compat.sound(p.getWorld(), p.getLocation(), "entity.wither.spawn", 1.0f, 0.6f);
+        return mob;
+    }
+
+    /** Minutos entre dos minijefes del mismo jugador: minijefes.cada-minutos, o los del Eclipse si hay uno. */
+    int minutosMinijefe() {
+        int def = cfg().getInt("minijefes.cada-minutos", 10);
+        Eclipse ec = eclipse;
+        return ec == null ? def : valor("eclipse", () -> ec.minutosMinijefe(def), def);
+    }
+
+    /**
+     * Calamity 1.10 · Si algun minijefe vivo viene ya a por ese jugador (marcarPresa). Lo pregunta el
+     * Reclamo: uno detras de otro no. Los que ya no existen no cuentan (vigilarPresas los poda).
+     */
+    boolean tieneMinijefe(Player p) {
+        if (p == null) return false;
+        for (Map.Entry<UUID, UUID> e : presas.entrySet()) {
+            if (!e.getValue().equals(p.getUniqueId())) continue;
+            Entity mob = plugin.getServer().getEntity(e.getKey());
+            if (mob != null && mob.isValid()) return true;
+        }
+        return false;
     }
 
     // ------------------------------------------------------------------ dificultad
