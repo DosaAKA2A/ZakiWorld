@@ -437,6 +437,8 @@ final class Ficha {
         todas.put("esencia", ItemsCalamity.fichaEsencia());
         todas.put("fragmento", ItemsCalamity.fichaFragmento(c));
         todas.put("reclamo", ItemsCalamity.fichaReclamo(c));
+        todas.put("llave-umbral", PuenteBovedas.ficha(PuenteBovedas.LLAVE_UMBRAL));
+        todas.put("llave-ominosa", PuenteBovedas.ficha(PuenteBovedas.LLAVE_OMINOSA));
         todas.put("talisman", Entregas.fichaTalisman(c));
         todas.put("grabado", Entregas.fichaGrabado(c, "Filo, Protección, Eficiencia, Poder, Irrompibilidad, Botín o Fortuna"));
         todas.put("salvoconducto", Entregas.fichaSalvoconducto());

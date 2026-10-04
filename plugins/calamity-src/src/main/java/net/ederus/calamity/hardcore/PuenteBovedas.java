@@ -8,6 +8,8 @@ import org.bukkit.OfflinePlayer;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
+import org.bukkit.inventory.meta.ItemMeta;
+import net.kyori.adventure.text.format.TextColor;
 
 import java.security.SecureRandom;
 import java.util.LinkedHashMap;
@@ -79,7 +81,33 @@ final class PuenteBovedas {
         String caja = cajaDe(objeto);
         DungeonLootPlugin d = modulo();
         if (caja == null || d == null) return null;
-        return d.llave(caja, Math.max(1, Math.min(64, n)));
+        ItemStack k = d.llave(caja, Math.max(1, Math.min(64, n)));
+        // El lore generico de /dl ("Bóveda común", "Abre", "Se gasta") se leia raro: dentro de Calamity
+        // la llave lleva la plantilla de los demas objetos. Fijo y sin cifras, para que todas se apilen.
+        ItemMeta meta = k == null ? null : k.getItemMeta();
+        if (meta != null) {
+            meta.lore(ficha(objeto).lore());
+            k.setItemMeta(meta);
+        }
+        return k;
+    }
+
+    /** El lore de cada llave, con el color de su boveda de acento. */
+    static Ficha ficha(String objeto) {
+        if (CAJA_RUINAS.equals(cajaDe(objeto))) {
+            return new Ficha(TextColor.color(0x9FC9D6)).tipo("Llave de Calamity · Bóvedas").filete()
+                    .historia("Solo gira en las cerraduras que dejaron las ruinas.").filete()
+                    .texto("Abre una {Bóveda de Ruinas}.")
+                    .texto("Cada bóveda la abres una sola vez.").filete()
+                    .accion("Clic derecho sobre la bóveda.")
+                    .nota("Se queda en la cerradura al usarla.");
+        }
+        return new Ficha(TextColor.color(0xC7A6E8)).tipo("Llave de Calamity · Bóvedas").filete()
+                .historia("Late como algo vivo. Pesa más de lo que debería.").filete()
+                .texto("Abre la {Bóveda Caída}.")
+                .texto("Lo de dentro es solo para el primero que llega.").filete()
+                .accion("Clic derecho sobre la bóveda.")
+                .nota("Se queda en la cerradura al usarla.");
     }
 
     /** Si ese objeto es una llave de ese objeto de Entregas (por la marca de EDM, no por el material). */
