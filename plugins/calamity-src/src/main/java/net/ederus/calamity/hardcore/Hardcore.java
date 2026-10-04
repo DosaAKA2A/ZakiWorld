@@ -675,6 +675,9 @@ public final class Hardcore implements Listener {
                     efectosDeBioma(p);
                     // 1.9.0: lluvia acida y cielo rojo, solo con tormenta de verdad y fuera del spawn.
                     if (clima != null) seguro("clima", () -> clima.segundo(p));
+                } else if (clima != null) {
+                    // 1.11: en el spawn no llueve (en su pantalla).
+                    seguro("clima", () -> clima.enSpawn(p));
                 }
                 // 1.7: el aviso de franja de distancia, antes de pintar para que salga ya.
                 if (distancia != null) seguro("distancia", () -> distancia.segundo(p, spawn));

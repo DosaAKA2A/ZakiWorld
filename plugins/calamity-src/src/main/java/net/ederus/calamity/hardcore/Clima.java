@@ -134,6 +134,8 @@ final class Clima implements Listener {
         final Episodio rojo = new Episodio();
         /** Bajo el cielo rojo ahora mismo: Vineta le suma su parte mientras dure. */
         boolean bajoCielo;
+        /** 1.11: en un bioma de lluvia acida mientras llueve (se le oculta la lluvia azul y caen gotas verdes). */
+        boolean bajoAcida;
         boolean climaPuesto;
         boolean horaPuesta;
         /** El offset que le mandamos (no la hora del ciclo: ver offsetHora). */
@@ -196,8 +198,38 @@ final class Clima implements Listener {
         vistos.add(u);
         lluviaAcida(p, e, tipo == Tipo.ACIDA && p.isInRain(), seccion(c, "lluvia-acida"));
         cieloRojo(p, e, tipo == Tipo.ROJO, seccion(c, "cielo-rojo"));
+        cieloAcido(p, e, tipo == Tipo.ACIDA, seccion(c, "lluvia-acida"));
         // Sin nada puesto y con las dos cuentas olvidadas, no hace falta seguir acordandose de el.
-        if (e.acida.dentro == 0 && e.rojo.dentro == 0 && !e.bajoCielo && estados.get(u) == e) estados.remove(u);
+        if (e.acida.dentro == 0 && e.rojo.dentro == 0 && !e.bajoCielo && !e.bajoAcida && !e.climaPuesto
+                && estados.get(u) == e) {
+            estados.remove(u);
+        }
+    }
+
+    /**
+     * 1.11 · Encargo de Dosa: en la zona spawn no llueve. Hardcore.tick lo llama alli en vez de
+     * segundo(): mientras el mundo llueve se le oculta la lluvia (solo en su pantalla) y nada de lo de
+     * fuera (cielo rojo, gotas, fuego) le sigue dentro. Al salir, segundo() se la devuelve.
+     */
+    void enSpawn(Player p) {
+        ConfigurationSection c = cfg();
+        if (!c.getBoolean("activo", true) || !c.getBoolean("spawn-sin-lluvia", true) || p.isDead()) return;
+        UUID u = p.getUniqueId();
+        boolean llueve = p.getWorld().hasStorm();
+        Estado e = estados.get(u);
+        if (e == null) {
+            if (!llueve) return;
+            e = new Estado();
+            estados.put(u, e);
+        }
+        vistos.add(u);
+        e.bajoCielo = false;
+        e.bajoAcida = false;
+        soltarHora(p, e);
+        quitarFuego(p, e);
+        if (llueve) ocultarLluvia(p, e);
+        else soltarClima(p, e);
+        if (!e.climaPuesto && e.acida.dentro == 0 && e.rojo.dentro == 0 && estados.get(u) == e) estados.remove(u);
     }
 
     /** Una vez por segundo, despues de los jugadores: quien no se ha visto recupera su cielo. */
@@ -271,7 +303,7 @@ final class Clima implements Listener {
         e.acida.paso(bajo, a.getInt("olvido-segundos", ACIDA_OLVIDO));
         if (!bajo) return;
         int s = e.acida.dentro;
-        gotas(p);
+        salpicadura(p);
         if (avisaAcida(s)) {
             hc.cordura().destello(p, Component.text("Lluvia ácida", Paleta.ACIDO)
                     .append(Component.text(": busca un techo, que quema.", Paleta.TEXTO)), 3);
@@ -294,12 +326,46 @@ final class Clima implements Listener {
         return segundo >= primero && (segundo - primero) % Math.max(1, cada) == 0;
     }
 
+    /**
+     * 1.11 · Encargo de Dosa: la lluvia azul de Minecraft no pega con la lluvia acida. En un bioma
+     * verde, mientras llueve, se le oculta la lluvia (como en el cielo rojo) y en su lugar caen las
+     * gotas verdes a su alrededor. La lluvia del servidor sigue ahi: isInRain y el dano no cambian.
+     */
+    private void cieloAcido(Player p, Estado e, boolean dentro, ConfigurationSection a) {
+        e.bajoAcida = dentro;
+        if (dentro) {
+            gotas(p);
+            if (a.getBoolean("ocultar-lluvia", true)) {
+                ocultarLluvia(p, e);
+                return;
+            }
+        }
+        // Sin acido, la lluvia solo se devuelve si el cielo rojo no la esta ocultando.
+        if (!e.bajoCielo) soltarClima(p, e);
+    }
+
+    /** Le quita la lluvia de la pantalla, salvo que el cielo sea de la PARCA (el suyo manda entero). */
+    private void ocultarLluvia(Player p, Estado e) {
+        Parca parca = hc.parca();
+        if (parca != null && hc.valor("parca", () -> parca.cieloSobre(p), false)) {
+            soltarClima(p, e);
+            return;
+        }
+        if (!e.climaPuesto || p.getPlayerWeather() != WeatherType.CLEAR) {
+            p.setPlayerWeather(WeatherType.CLEAR);
+            e.climaPuesto = true;
+        }
+    }
+
     // --------------------------------------------------------------- cielo rojo
 
     private void cieloRojo(Player p, Estado e, boolean dentro, ConfigurationSection r) {
         e.rojo.paso(dentro, r.getInt("olvido-segundos", CIELO_OLVIDO));
         if (!dentro) {
-            soltarCielo(p, e);
+            // 1.11: la lluvia no se toca aqui; la devuelve cieloAcido, que sabe si el acido la quiere oculta.
+            e.bajoCielo = false;
+            soltarHora(p, e);
+            quitarFuego(p, e);
             return;
         }
         e.bajoCielo = true;
@@ -516,9 +582,16 @@ final class Clima implements Listener {
 
     // --------------------------------------------------------------- efectos
 
-    /** Gotas de acido cayendo a su alrededor; solo las ve el. */
+    /**
+     * La lluvia acida que ve: gotas verdes cayendo alrededor, en lugar de la lluvia azul que se le
+     * oculta (1.11: mas y mas repartidas, porque ahora son toda la lluvia que hay). Solo las ve el.
+     */
     private void gotas(Player p) {
-        particula(p, Compat.FALLING_DUST, p.getLocation().add(0, 4.5, 0), 14, 3.5, 1.2, 3.5, polvoAcido);
+        particula(p, Compat.FALLING_DUST, p.getLocation().add(0, 6, 0), 40, 7, 2.5, 7, polvoAcido);
+    }
+
+    /** El acido sobre el: lo que se ve cuando le esta cayendo encima. */
+    private void salpicadura(Player p) {
         particula(p, Compat.DUST, p.getLocation().add(0, 1.2, 0), 5, 0.5, 0.7, 0.5,
                 Compat.dust(Paleta.ACIDO.value(), 0.9f));
     }

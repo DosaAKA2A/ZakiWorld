@@ -1080,10 +1080,14 @@ hardcore:
       # Segundos antes de cada lluvia en los que se avisa a quien este dentro ("Se acerca la lluvia",
       # "Se acerca una tormenta" o, segun el bioma, "Se acerca lluvia ácida"). 0 = sin aviso.
       aviso-segundos: 60
+    # 1.11: en la zona spawn no se ve la lluvia (solo en la pantalla de cada jugador).
+    spawn-sin-lluvia: true
     # En los biomas verdes la lluvia es acida: a cielo abierto quema y bajo techo no pasa nada.
     # Primero sale un aviso en la barra y hay un margen antes del primer golpe.
     lluvia-acida:
       activa: true
+      # 1.11: oculta la lluvia azul de Minecraft en estos biomas; en su lugar caen gotas verdes.
+      ocultar-lluvia: true
       biomas:
         - panacea/horsetail_tropics
         - panacea/creeper_dominion
