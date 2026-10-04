@@ -44,11 +44,24 @@ final class TipoBaliza {
     final Particle particula;
     final int particulaCantidad;
     final int particulaCada;
+    /**
+     * Premio semanal (el trofeo): al darlo se apunta la semana que acaba de cerrar y el
+     * lore la enseña. Clave semanal: del config; sin ella, solo el tipo "trofeo".
+     */
+    final boolean semanal;
 
     TipoBaliza(String id, String nombre, Material bloque, int radio, double duracionDias, AlCaducar alCaducar,
                Beneficia beneficia, boolean transferible, boolean cuentaEnElMaximo, int elegibles,
                List<String> descripcion, Map<String, Efecto> efectos, Particle particula,
                int particulaCantidad, int particulaCada) {
+        this(id, nombre, bloque, radio, duracionDias, alCaducar, beneficia, transferible, cuentaEnElMaximo, elegibles,
+                descripcion, efectos, particula, particulaCantidad, particulaCada, false);
+    }
+
+    TipoBaliza(String id, String nombre, Material bloque, int radio, double duracionDias, AlCaducar alCaducar,
+               Beneficia beneficia, boolean transferible, boolean cuentaEnElMaximo, int elegibles,
+               List<String> descripcion, Map<String, Efecto> efectos, Particle particula,
+               int particulaCantidad, int particulaCada, boolean semanal) {
         this.id = id;
         this.nombre = nombre;
         this.bloque = bloque;
@@ -64,6 +77,7 @@ final class TipoBaliza {
         this.particula = particula;
         this.particulaCantidad = particulaCantidad;
         this.particulaCada = particulaCada;
+        this.semanal = semanal;
     }
 
     /** Todos sus efectos van activos y el menu no deja elegir. */

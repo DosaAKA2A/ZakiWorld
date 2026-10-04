@@ -7,7 +7,7 @@
 # SIN prefijo, empiezala con {sin-prefijo}. Las lineas de holograma, objeto y
 # menu nunca llevan prefijo.
 # ---------------------------------------------------------------------------
-version: 1
+version: 2
 
 prefijo: '&x&0&0&8&3&F&D&lBEACON &8» &f'
 
@@ -84,45 +84,69 @@ apagado: 'Apagado'
 beneficia-dueno: 'solo a su dueño'
 beneficia-clan: 'a su clan'
 beneficia-todos: 'a todos'
-sin-clan: 'sin clan'
+
+# --- colores ---
+# El color de cada tipo (el primero de su nombre en config.yml) es el UNICO acento:
+# va en %acento% y se usa para el nombre, los simbolos y las cifras clave. Etiquetas
+# en gris (&#8A8A8A), texto en blanco o gris claro (&#C4C4C4), rayas en gris oscuro
+# (&#4E4E4E). Mejor no meter colores nuevos: el conjunto se ve ordenado por eso.
 
 # --- el holograma ---
-# Una linea por elemento. Marcadores: %nombre% %dueno% %clan% %de% %restante% %efectos%
-#   %de%        "del clan X" si beneficia a un clan y lo tiene; si no, "de <dueño>"
+# Una linea por elemento; una linea que se queda vacia no sale.
+# Marcadores: %nombre% %acento% %dueno% %clan% %de% %restante% %efectos%
+#   %de%        "de <dueño>"; en los de clan, "Clan [X] · líder <dueño>"
 #   %restante%  "Quedan 12 d 4 h", "Permanente" o "Apagado"
 #   %efectos%   los efectos activos, separados por coma
-# Una linea con %restante% solo sale si el Super Beacon caduca (o ya se apagó);
-# una linea que se queda vacia no sale.
+# El tamaño, la altura y la cabeza que gira van en config.yml (holograma).
 holograma:
   - '%nombre%'
-  - '&#8A8A8A%de%'
-  - '&#D7F3FF%restante%'
-holograma-de-dueno: 'de %dueno%'
-holograma-de-clan: 'del clan %clan%'
+  - '%de%'
+  - '&#C4C4C4%restante%'
+holograma-de-dueno: '&#8A8A8Ade &f%dueno%'
+holograma-de-clan: '&#8A8A8AClan &f[%clan%] &#8A8A8A· líder &f%dueno%'
+# De clan, pero su dueño no tiene clan ahora mismo.
+holograma-de-lider: '&#8A8A8Alíder &f%dueno%'
 
 # --- el objeto (lore) ---
-# %radio% %beneficia% %dueno% %clan% %fecha% %efecto% %elegibles% %tipo%
-objeto-efectos: '&#D7F3FFEfectos'
-objeto-efecto-activo: '&#5CFF7A✦ &f%efecto%'
-objeto-efecto-inactivo: '&#545454✦ &#8A8A8A%efecto%'
-objeto-alcance: '&#545454▸ &#D7F3FFAlcance  &f%radio% bloques'
-objeto-beneficia: '&#545454▸ &#D7F3FFBeneficia  &f%beneficia%'
-objeto-dueno: '&#545454▸ &#D7F3FFDueño  &f%dueno%'
-objeto-clan: '&#545454▸ &#D7F3FFClan  &f%clan%'
-objeto-vence: '&#545454▸ &#D7F3FFVence  &f%fecha%'
-objeto-vencio: '&#545454▸ &#D7F3FFVenció  &#FF5C5C%fecha%'
-objeto-permanente: '&#545454▸ &#D7F3FFDuración  &fpermanente'
-objeto-sin-dueno: '&#8A8A8ASe vuelve tuyo al colocarlo por primera vez.'
-objeto-ligado: '&#8A8A8ASolo su dueño puede colocarlo.'
-objeto-elige: '&#8A8A8AElige %elegibles% efectos en su menú.'
-objeto-todos: '&#8A8A8ATodos sus efectos van activos a la vez.'
-objeto-uso: '&#8A8A8AColócalo y úsalo para abrir su menú.'
+# Bloques separados por lore-raya: que es; a quien y que da; de quien y hasta
+# cuando; como se usa. Lineas de 38 caracteres como mucho.
+# %acento% %texto% %radio% %elige% %elegibles% %efecto% %simbolo% %dueno% %fecha%
+# %clan% %desde% %hasta% %tipo%
+lore-raya: '&#4E4E4E────────────────'
+# Bajo el nombre. En el trofeo: el clan y la semana que gano; en el resto, la
+# primera linea de su descripcion (config.yml) sin el punto.
+lore-subtitulo: '%acento%◆ &#C4C4C4%texto%'
+lore-subtitulo-sigue: '  &#C4C4C4%texto%'
+lore-clan: 'Clan [%clan%]'
+lore-semana: 'semana %desde% al %hasta%'
+# Cabecera de los efectos, segun a quien beneficia. %elige% sale solo si se eligen.
+lore-para-dueno: '&#C4C4C4Para ti, en %radio% bloques%elige%:'
+lore-para-clan: '&#C4C4C4A tu clan, en %radio% bloques%elige%:'
+lore-para-todos: '&#C4C4C4Para todos, en %radio% bloques%elige%:'
+lore-elige: '. Elige %elegibles%'
+# Cada efecto. %simbolo%: ❤ vida y defensa, ▸ movimiento y mineria, ✦ boosts.
+lore-efecto: ' %acento%%simbolo% &f%efecto%'
+lore-efecto-elegido: ' %acento%● &f%efecto%'
+lore-efecto-libre: ' &#4E4E4E○ &#8A8A8A%efecto%'
+lore-dueno: '&#8A8A8ADueño · &f%dueno%'
+lore-lider: '&#8A8A8ALíder · &f%dueno%'
+lore-dueno-libre: '&#8A8A8ADueño · &fquien lo coloque primero'
+lore-lider-libre: '&#8A8A8ALíder · &fquien lo coloque primero'
+# %fecha%: "domingo 11/10, 22:55" (con el año si no es el actual)
+lore-vence: '&#8A8A8AVence · &f%fecha%'
+lore-vencio: '&#8A8A8AVenció · &f%fecha%'
+lore-permanente: '&#8A8A8ADuración · &fpermanente'
+lore-uso: '&#8A8A8AColócalo y úsalo para abrir su menú.'
+lore-regla-libre: '&#8A8A8ASe vuelve tuyo al colocarlo.'
+lore-regla-dueno: '&#8A8A8ASolo su dueño lo coloca o lo recoge.'
+lore-regla-lider: '&#8A8A8ASolo el líder lo coloca o lo recoge.'
 objeto-tipo-perdido: '&#FF5C5CSu tipo (%tipo%) ya no existe. Avisa al staff.'
 
 # --- el menu ---
 # El titulo es "EDERUS | <menu-titulo>". La ultima linea de cada boton dice que
-# hace el clic: menu-clic en Java, menu-toque en Bedrock (alli no hay clic).
+# hace el clic (menu-accion): menu-clic en Java, menu-toque en Bedrock.
 menu-titulo: 'Super Beacon'
+menu-accion: '%acento%▸ &f%frase%'
 menu-clic: 'Clic para %accion%'
 menu-toque: 'Toca para %accion%'
 menu-accion-activar: 'activarlo'
@@ -130,44 +154,149 @@ menu-accion-desactivar: 'desactivarlo'
 menu-accion-ver: 'verlo'
 menu-accion-recoger: 'recogerlo'
 menu-accion-salir: 'salir'
-# %elegidos% %elegibles% %tiempo% %fecha% %motivo%
-menu-elegidos: '&#545454▸ &#D7F3FFEfectos  &f%elegidos% de %elegibles% elegidos'
-menu-todos: '&#545454▸ &#D7F3FFEfectos  &ftodos activos'
-menu-quedan: '&#D7F3FFQuedan &f%tiempo%'
-menu-apagado: '&#FF5C5CApagado &#8A8A8A· venció el %fecha%'
-menu-staff: '&#FFB627Lo estás viendo como staff.'
-menu-efecto-activo: '&#5CFF7AActivo'
-menu-efecto-inactivo: '&#8A8A8AInactivo'
-menu-efecto-no-disponible: '&#FF5C5CNo disponible (%motivo%)'
-menu-efecto-fijo: '&#8A8A8ASiempre activo en este Super Beacon.'
-menu-efecto-tope: '&#8A8A8AYa elegiste %elegibles%: desactiva uno para cambiarlo.'
-menu-efecto-apagado: '&#FF5C5CApagado: este Super Beacon ya venció.'
+# La ficha de arriba. %acento% %dueno% %clan% %desde% %hasta% %radio% %para%
+# %elegidos% %elegibles% %tiempo% %fecha%
+menu-de-dueno: '%acento%◆ &#C4C4C4De %dueno%'
+menu-de-clan: '%acento%◆ &#C4C4C4Clan [%clan%] · líder %dueno%'
+menu-de-lider: '%acento%◆ &#C4C4C4Líder %dueno% · sin clan'
+menu-semana: '%acento%◆ &#C4C4C4Semana del %desde% al %hasta%'
+menu-ficha-alcance: '&#8A8A8AAlcance · &f%radio% bloques'
+menu-ficha-para: '&#8A8A8APara · &f%para%'
+menu-ficha-todos: '&#8A8A8AEfectos · &ftodos activos'
+menu-ficha-elegidos: '&#8A8A8AEfectos · &f%elegidos% de %elegibles% elegidos'
+menu-ficha-permanente: '&#8A8A8ADuración · &fpermanente'
+menu-ficha-quedan: '&#8A8A8AQuedan · %acento%%tiempo%'
+menu-ficha-vence: '&#8A8A8AVence · &f%fecha%'
+menu-ficha-apagado: '&#8A8A8AEstado · &fapagado'
+menu-ficha-vencio: '&#8A8A8AVenció · &f%fecha%'
+# Se parte sola en lineas de 38 caracteres.
+menu-ficha-regla: '&#8A8A8AVarios Super Beacons no suman el mismo efecto: se aplica el mayor.'
+menu-staff: '&#8A8A8ALo estás viendo como staff.'
+# Para quien es (Para · ...). Los -ajeno, cuando lo mira el staff.
+menu-para-dueno: 'ti'
+menu-para-dueno-ajeno: 'su dueño'
+menu-para-clan: 'tu clan'
+menu-para-clan-ajeno: 'su clan'
+menu-para-todos: 'todos'
+# Cultivos y sin-mobs actuan sobre la zona, no sobre jugadores.
+menu-para-zona: 'toda la zona'
+# El estado de cada efecto. %acento% %elegidos% %elegibles% %motivo%
+menu-estado-activo: '&#8A8A8AEstado · %acento%● &fActivo  &#8A8A8A(%elegidos% de %elegibles% elegidos)'
+menu-estado-inactivo: '&#8A8A8AEstado · &#4E4E4E○ &#C4C4C4Inactivo  &#8A8A8A(%elegidos% de %elegibles% elegidos)'
+menu-estado-fijo: '&#8A8A8AEstado · %acento%● &fSiempre activo'
+menu-estado-no-disponible: '&#8A8A8AEstado · &#4E4E4E○ &fNo disponible'
+menu-estado-apagado: '&#8A8A8AEstado · &#4E4E4E○ &fApagado, ya venció'
+menu-motivo: '&#8A8A8AMotivo · &f%motivo%'
+# En lugar de "Clic para activarlo" cuando ya se eligieron todos los que caben.
+menu-efecto-tope: 'Desactiva otro para elegir este'
 menu-alcance: '&fVer alcance'
 menu-alcance-lore:
-  - '&#8A8A8ADibuja el borde de su alcance durante'
-  - '&#8A8A8A10 segundos. Solo lo ves tú.'
+  - '&#C4C4C4Dibuja el borde de su alcance durante'
+  - '&#C4C4C410 segundos. Solo lo ves tú.'
 menu-recoger: '&fRecoger'
 menu-recoger-lore:
-  - '&#8A8A8AVuelve a tu inventario con todo su estado:'
-  - '&#8A8A8Aefectos, dueño, clan y vencimiento.'
+  - '&#C4C4C4Vuelve a tu inventario con todo:'
+  - '&#C4C4C4efectos, dueño, clan y vencimiento.'
 # El mismo boton visto por el staff en uno que no es suyo.
 menu-recoger-staff-lore:
-  - '&#8A8A8ANo es tuyo: vuelve a su dueño, como con'
-  - '&#8A8A8A/superbeacon remove.'
+  - '&#C4C4C4No es tuyo: vuelve a su dueño, como'
+  - '&#C4C4C4con /superbeacon remove.'
 menu-cerrar: '&fCerrar'
 
-# --- lo que hace cada clase de efecto (lore del menu) ---
-# %valor% %atributo% %boost% %multiplicador%
-detalle-pocion: '&#8A8A8AEfecto de poción mientras estés en su alcance.'
-detalle-atributo: '&#8A8A8A%valor% de %atributo% mientras estés en su alcance.'
-detalle-boost: '&#8A8A8A%boost% x%multiplicador% en su alcance.'
-detalle-boost-mayor: '&#8A8A8ANo se suma con otros boosts: se aplica el mayor.'
-detalle-vuelo: '&#8A8A8APuedes volar dentro de su alcance.'
-detalle-vuelo-gracia: '&#8A8A8AAl salir tienes 5 segundos antes de caer.'
-# Solo sale si vuelo.sin-vuelo-en-combate-segundos no es 0. %segundos%
-detalle-vuelo-combate: '&#8A8A8ASi peleas con otro jugador, %segundos% segundos sin vuelo.'
-detalle-cultivos: '&#8A8A8AHace crecer los cultivos de su alcance.'
-detalle-sin-mobs: '&#8A8A8ANo aparecen monstruos de forma natural en su alcance.'
+# --- que ganas con cada efecto (lore del menu) ---
+# Una frase sin colores; el menu la pinta en gris claro y la parte en lineas.
+# Se generan con los datos del efecto, asi valen para cualquier efecto del config.
+#
+# pocion. %efecto% es el nombre traducido con su nivel ("Prisa III"); el
+# nombre ya va en el titulo del icono, por eso detalle-pocion no lo repite.
+# %que% sale de pocion-que-<efecto>; si no hay, se usa detalle-pocion-generico.
+detalle-pocion: '%que% mientras estés en su alcance.'
+detalle-pocion-generico: 'Tienes %efecto% mientras estés en su alcance.'
+pocion-que-haste: 'Picas y talas más rápido'
+pocion-que-speed: 'Te mueves más rápido'
+pocion-que-regeneration: 'Recuperas vida poco a poco'
+pocion-que-resistance: 'Recibes menos daño'
+pocion-que-strength: 'Tus golpes hacen más daño'
+pocion-que-night_vision: 'Ves en la oscuridad'
+pocion-que-saturation: 'No pasas hambre'
+pocion-que-fire_resistance: 'El fuego y la lava no te queman'
+pocion-que-water_breathing: 'Respiras bajo el agua'
+pocion-que-jump_boost: 'Saltas más alto'
+pocion-que-slow_falling: 'Caes despacio'
+pocion-que-health_boost: 'Tienes más vida máxima'
+pocion-que-absorption: 'Tienes corazones extra de absorción'
+pocion-que-luck: 'Mejor botín en cofres y pesca'
+pocion-que-conduit_power: 'Respiras y picas mejor bajo el agua'
+pocion-que-dolphins_grace: 'Nadas más rápido'
+# El nombre de cada efecto de pocion (pocion-<efecto>).
+pocion-speed: 'Velocidad'
+pocion-slowness: 'Lentitud'
+pocion-haste: 'Prisa'
+pocion-mining_fatigue: 'Fatiga minera'
+pocion-strength: 'Fuerza'
+pocion-instant_health: 'Curación instantánea'
+pocion-instant_damage: 'Daño instantáneo'
+pocion-jump_boost: 'Supersalto'
+pocion-nausea: 'Náuseas'
+pocion-regeneration: 'Regeneración'
+pocion-resistance: 'Resistencia'
+pocion-fire_resistance: 'Resistencia al fuego'
+pocion-water_breathing: 'Respiración acuática'
+pocion-invisibility: 'Invisibilidad'
+pocion-blindness: 'Ceguera'
+pocion-night_vision: 'Visión nocturna'
+pocion-hunger: 'Hambre'
+pocion-weakness: 'Debilidad'
+pocion-poison: 'Veneno'
+pocion-wither: 'Descomposición'
+pocion-health_boost: 'Vida extra'
+pocion-absorption: 'Absorción'
+pocion-saturation: 'Saturación'
+pocion-glowing: 'Brillo'
+pocion-levitation: 'Levitación'
+pocion-luck: 'Suerte'
+pocion-unluck: 'Mala suerte'
+pocion-slow_falling: 'Caída lenta'
+pocion-conduit_power: 'Poder del conducto'
+pocion-dolphins_grace: 'Gracia de delfín'
+pocion-bad_omen: 'Mal presagio'
+pocion-hero_of_the_village: 'Héroe de la aldea'
+pocion-darkness: 'Oscuridad'
+pocion-trial_omen: 'Presagio de desafío'
+pocion-raid_omen: 'Presagio de invasión'
+pocion-wind_charged: 'Carga de viento'
+pocion-weaving: 'Tejido'
+pocion-oozing: 'Supuración'
+pocion-infested: 'Infestación'
+#
+# atributo. %valor% (sin signo) %signo% (+ o -) %mas% (más o menos)
+# %corazones% ("6 corazones") %porcentaje% (de la velocidad base) %atributo%
+# detalle-atributo-<atributo> si existe; si no, detalle-atributo.
+detalle-atributo: 'Tienes %signo%%valor% de %atributo% mientras estés en su alcance.'
+detalle-atributo-max_health: 'Tienes %corazones% %mas% de vida máxima mientras estés en su alcance.'
+detalle-atributo-movement_speed: 'Te mueves un %porcentaje% %mas% rápido mientras estés en su alcance.'
+detalle-atributo-attack_damage: 'Tus golpes quitan %corazones% %mas% mientras estés en su alcance.'
+detalle-atributo-block_interaction_range: 'Llegas %valor% bloques %mas% lejos al picar y construir en su alcance.'
+detalle-atributo-entity_interaction_range: 'Llegas %valor% bloques %mas% lejos al golpear en su alcance.'
+detalle-atributo-safe_fall_distance: 'Caes %valor% bloques %mas% sin hacerte daño en su alcance.'
+palabra-mas: 'más'
+palabra-menos: 'menos'
+#
+# boost. %porcentaje% ("50 %") %multiplicador% ("1,5") %boost%
+# detalle-boost-<boost> si existe; si no, detalle-boost.
+detalle-boost: 'Ganas un %porcentaje% más de %boost% mientras estés en su alcance.'
+detalle-boost-exp: 'Recoges un %porcentaje% más de experiencia mientras estés en su alcance.'
+detalle-boost-skill_exp: 'Tus habilidades ganan un %porcentaje% más de experiencia mientras estés en su alcance.'
+detalle-boost-pesca: 'Tu suerte de pesca sube un %porcentaje% mientras estés en su alcance.'
+detalle-boost-mobcoins: 'Los jefes y esbirros te pagan un %porcentaje% más de MobCoins mientras estés en su alcance.'
+#
+# vuelo. detalle-vuelo-combate solo sale si vuelo.sin-vuelo-en-combate-segundos
+# no es 0. %segundos%
+detalle-vuelo: 'Puedes volar dentro de su alcance. Al salir tienes 5 segundos antes de caer despacio.'
+detalle-vuelo-combate: 'Si peleas con otro jugador, pierdes el vuelo %segundos% segundos.'
+# cultivos. %segundos% %intentos%
+detalle-cultivos: 'Los cultivos de su alcance crecen más rápido: cada %segundos% s, hasta %intentos% suben un paso.'
+detalle-sin-mobs: 'No aparecen monstruos de forma natural dentro de su alcance.'
 # Por que un efecto no esta disponible. %plugin%
 falta-boosts: 'boosts apagados'
 falta-boost-desactivado: 'desactivado en boost/config.yml'

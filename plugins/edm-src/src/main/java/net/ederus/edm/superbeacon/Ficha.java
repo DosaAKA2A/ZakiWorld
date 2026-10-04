@@ -23,11 +23,19 @@ import java.util.UUID;
  *                    dueño, que no se guarda aqui (ver Baliza.clanDueno)
  * @param vence       instante de caducidad en epoch ms; 0, no caduca
  * @param elegidos    los efectos elegidos en su menu (claves del tipo)
+ * @param semana      el trofeo: la semana que gano, como el dia (epoch day) de su lunes;
+ *                    0 si no es un premio semanal o se entrego antes de guardarse
  */
 record Ficha(UUID id, String tipo, UUID dueno, String duenoNombre, String clan, long vence,
-             List<String> elegidos) {
+             List<String> elegidos, long semana) {
+
+    /** Sin semana: todo lo que no es un premio semanal. */
+    Ficha(UUID id, String tipo, UUID dueno, String duenoNombre, String clan, long vence, List<String> elegidos) {
+        this(id, tipo, dueno, duenoNombre, clan, vence, elegidos, 0L);
+    }
 
     Ficha {
+        semana = Math.max(0L, semana);
         elegidos = elegidos == null ? List.of() : List.copyOf(elegidos);
         duenoNombre = vacio(duenoNombre);
         clan = vacio(clan);
@@ -51,11 +59,11 @@ record Ficha(UUID id, String tipo, UUID dueno, String duenoNombre, String clan, 
     }
 
     Ficha conDueno(UUID uuid, String nombre) {
-        return new Ficha(id, tipo, uuid, nombre, clan, vence, elegidos);
+        return new Ficha(id, tipo, uuid, nombre, clan, vence, elegidos, semana);
     }
 
     Ficha conElegidos(Collection<String> nuevos) {
-        return new Ficha(id, tipo, dueno, duenoNombre, clan, vence, List.copyOf(nuevos));
+        return new Ficha(id, tipo, dueno, duenoNombre, clan, vence, List.copyOf(nuevos), semana);
     }
 
     /** El dueño como se le nombra en un texto: su nombre, o el principio de su UUID. */

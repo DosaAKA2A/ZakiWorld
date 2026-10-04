@@ -3,7 +3,7 @@
 # con efectos de area. Se reparten por consola (tienda, cajas, el ranking de
 # clanes):
 #     superbeacon give %player_name% granja
-#     superbeacon give %player_name% trofeo 30 ABC
+#     superbeacon give %player_name% trofeo - ABC
 #     superbeacon give %player_name% guerra - ABC
 #
 # Formato: superbeacon give <jugador> <tipo> [dias|-] [clan]
@@ -45,6 +45,12 @@ zona-horaria: ""
 holograma:
   # Altura del texto sobre la base del bloque, en bloques.
   altura: 1.6
+  # Tamaño del texto (1 = el de un nombre flotante normal). 0.7 se lee bien a
+  # 8-12 bloques sin tapar la base.
+  escala: 0.7
+  # Encima del texto, la cabeza del dueño (en los de clan, la del lider) girando
+  # despacio. false la quita.
+  cabeza: true
   # Desde cuantos bloques se ve.
   distancia: 32
   # Cada cuanto se repinta (el tiempo que queda cambia solo).
@@ -84,7 +90,11 @@ clan:
 #           puede comerciar); false = al entregarlo.
 #   cuenta-en-el-maximo: si cuenta para maximo-por-jugador.
 #   elegibles: cuantos efectos a la vez, elegidos en su menu. 0 = todos activos.
-#   descripcion: lineas del lore.
+#   descripcion: la primera linea es la frase corta que sale bajo el nombre en
+#           el objeto ("Para tu base"); el lore ya cuenta solo lo demas.
+#   semanal: (opcional) premio semanal: al darlo se apunta la semana que acaba
+#           de cerrar (lunes a domingo; un domingo cuenta la de ese domingo) y el
+#           lore la enseña con el clan. De serie solo en el trofeo.
 #   particula: (opcional, por defecto ninguna) {tipo: END_ROD, cantidad: 1,
 #           cada-segundos: 4}. La nota musical no se acepta.
 #   efectos: cada uno con su clase en "tipo", su icono y su nombre:
@@ -114,7 +124,7 @@ tipos:
     transferible: true
     cuenta-en-el-maximo: true
     elegibles: 2
-    descripcion: ["Buffs para tu base.", "Elige dos."]
+    descripcion: ["Para tu base"]
     efectos:
       prisa:        {tipo: pocion, efecto: HASTE, nivel: 3, icono: GOLDEN_PICKAXE, nombre: "Prisa III"}
       velocidad:    {tipo: pocion, efecto: SPEED, nivel: 2, icono: SUGAR, nombre: "Velocidad II"}
@@ -133,7 +143,7 @@ tipos:
     transferible: true
     cuenta-en-el-maximo: true
     elegibles: 2
-    descripcion: ["Para los que viven de la tierra.", "Elige dos."]
+    descripcion: ["Para tu granja"]
     efectos:
       cultivos:   {tipo: cultivos, intentos: 12, cada-segundos: 5, icono: WHEAT, nombre: "Cultivos más rápidos"}
       saturacion: {tipo: pocion, efecto: SATURATION, nivel: 1, icono: COOKED_BEEF, nombre: "Saturación"}
@@ -150,7 +160,7 @@ tipos:
     transferible: true
     cuenta-en-el-maximo: true
     elegibles: 3
-    descripcion: ["Para tu clan, en la base o en el frente.", "Elige tres."]
+    descripcion: ["Para tu clan, en la base o en el frente"]
     efectos:
       fuerza:      {tipo: pocion, efecto: STRENGTH, nivel: 2, icono: BLAZE_POWDER, nombre: "Fuerza II"}
       resistencia: {tipo: pocion, efecto: RESISTANCE, nivel: 1, icono: IRON_CHESTPLATE, nombre: "Resistencia I"}
@@ -169,24 +179,27 @@ tipos:
     transferible: true
     cuenta-en-el-maximo: true
     elegibles: 2
-    descripcion: ["Multiplica lo que ganas durante una semana.", "Elige dos."]
+    descripcion: ["Multiplica lo que ganas por una semana"]
     efectos:
       experiencia: {tipo: boost, boost: exp, multiplicador: 1.5, icono: EXPERIENCE_BOTTLE, nombre: "Experiencia x1,5"}
       habilidades: {tipo: boost, boost: skill_exp, multiplicador: 1.25, icono: ENCHANTED_BOOK, nombre: "Experiencia de habilidades x1,25"}
       pesca:       {tipo: boost, boost: pesca, multiplicador: 1.25, icono: FISHING_ROD, nombre: "Suerte de pesca x1,25"}
       mobcoins:    {tipo: boost, boost: mobcoins, multiplicador: 1.25, icono: SUNFLOWER, nombre: "MobCoins x1,25"}
 
+  # El premio del ranking semanal de clanes: dura una semana, la que tarda en
+  # salir el siguiente.
   trofeo:
     nombre: "&#FFC857Trofeo de Temporada"
     bloque: BEACON
     radio: 48
-    duracion-dias: 30
+    duracion-dias: 7
     al-caducar: apagar
     beneficia: clan
     transferible: false
     cuenta-en-el-maximo: false
     elegibles: 0
-    descripcion: ["Para el clan más fuerte de la temporada."]
+    descripcion: ["Para el clan más fuerte de la semana"]
+    semanal: true
     efectos:
       prisa:       {tipo: pocion, efecto: HASTE, nivel: 4, icono: GOLDEN_PICKAXE, nombre: "Prisa IV"}
       vida:        {tipo: atributo, atributo: max_health, valor: 12, icono: GOLDEN_APPLE, nombre: "+6 corazones"}

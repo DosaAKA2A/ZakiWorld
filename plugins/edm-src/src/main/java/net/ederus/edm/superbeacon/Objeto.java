@@ -29,8 +29,8 @@ import net.kyori.adventure.text.format.TextDecoration;
  *
  * Un objeto del mismo material sin nuestro PDC no es nuestro: un faro vanilla sigue siendo
  * un faro vanilla. Las claves son superbeacon:id, :tipo, :dueno, :dueno_nombre, :clan,
- * :vence, :efectos y :version; no se renombran nunca, o los objetos ya repartidos dejarian
- * de reconocerse.
+ * :vence, :efectos, :semana (solo el trofeo) y :version; no se renombran nunca, o los
+ * objetos ya repartidos dejarian de reconocerse.
  */
 final class Objeto {
 
@@ -44,6 +44,7 @@ final class Objeto {
     private final NamespacedKey kClan;
     private final NamespacedKey kVence;
     private final NamespacedKey kEfectos;
+    private final NamespacedKey kSemana;
     private final NamespacedKey kVersion;
 
     Objeto(SuperBeaconPlugin plugin) {
@@ -55,6 +56,7 @@ final class Objeto {
         this.kClan = new NamespacedKey(plugin, "clan");
         this.kVence = new NamespacedKey(plugin, "vence");
         this.kEfectos = new NamespacedKey(plugin, "efectos");
+        this.kSemana = new NamespacedKey(plugin, "semana");
         this.kVersion = new NamespacedKey(plugin, "version");
     }
 
@@ -91,6 +93,7 @@ final class Objeto {
         if (f.clan() != null) pdc.set(kClan, PersistentDataType.STRING, f.clan());
         pdc.set(kVence, PersistentDataType.LONG, f.vence());
         pdc.set(kEfectos, PersistentDataType.STRING, String.join(",", f.elegidos()));
+        if (f.semana() > 0) pdc.set(kSemana, PersistentDataType.LONG, f.semana());
         pdc.set(kVersion, PersistentDataType.INTEGER, VERSION);
         it.setItemMeta(meta);
         return it;
@@ -118,9 +121,10 @@ final class Objeto {
             if (!e.isBlank()) elegidos.add(e.trim());
         }
         Long vence = pdc.getOrDefault(kVence, PersistentDataType.LONG, 0L);
+        Long semana = pdc.getOrDefault(kSemana, PersistentDataType.LONG, 0L);
         return new Ficha(id, tipo, uuid(pdc.get(kDueno, PersistentDataType.STRING)),
                 pdc.get(kDuenoNombre, PersistentDataType.STRING), pdc.get(kClan, PersistentDataType.STRING),
-                vence == null ? 0L : vence, elegidos);
+                vence == null ? 0L : vence, elegidos, semana == null ? 0L : semana);
     }
 
     private static UUID uuid(String s) {
@@ -141,9 +145,15 @@ final class Objeto {
     }
 
     /**
-     * El lore: lo que es, lo que da, a quien y hasta cuando. Con FECHA de vencimiento y
-     * no cuenta atras: un lore no se repinta dentro de un inventario. Si ya vencio, dice
-     * "Venció" y queda de recuerdo.
+     * El lore, en cuatro bloques separados por una raya:
+     *   - bajo el nombre, que es: el clan y la semana ganada (el trofeo) o la frase corta de
+     *     su descripcion ("Para tu base");
+     *   - a quien da y en cuantos bloques, y sus efectos agrupados (vida y defensa, movimiento
+     *     y mineria, boosts). Si se eligen, el elegido con ● y el resto con ○;
+     *   - de quien es (Dueño, o Líder si es de clan) y cuando vence, con su dia de la semana;
+     *   - como se usa, en dos lineas.
+     * El color del tipo es el unico acento. Con FECHA y no cuenta atras: un lore no se
+     * repinta dentro de un inventario.
      */
     List<Component> lore(Ficha f, TipoBaliza t) {
         SuperBeaconPlugin.TextosBaliza tx = plugin.textos();
@@ -153,54 +163,112 @@ final class Objeto {
                     "%tipo%", f.tipo()));
             return out;
         }
-        for (String d : t.descripcion) out.add(Estilo.legado(d.contains("&") ? d : "&#8A8A8A" + d));
-        if (!t.descripcion.isEmpty()) out.add(Estilo.vacio());
-
-        if (!t.efectos.isEmpty()) {
-            out.add(tx.linea("objeto-efectos", "&#D7F3FFEfectos"));
-            List<Efecto> activos = t.activos(f.elegidos());
-            for (Efecto e : t.efectos.values()) {
-                boolean on = activos.contains(e);
-                out.add(tx.linea(on ? "objeto-efecto-activo" : "objeto-efecto-inactivo",
-                        on ? "&#5CFF7A✦ &f%efecto%" : "&#545454✦ &#8A8A8A%efecto%", "%efecto%", e.nombre()));
-            }
-            out.add(Estilo.vacio());
-        }
-
-        out.add(tx.linea("objeto-alcance", "&#545454▸ &#D7F3FFAlcance  &f%radio% bloques",
-                "%radio%", String.valueOf(t.radio)));
-        out.add(tx.linea("objeto-beneficia", "&#545454▸ &#D7F3FFBeneficia  &f%beneficia%",
-                "%beneficia%", plugin.beneficiaTexto(t.beneficia)));
-        if (f.ligada()) {
-            out.add(tx.linea("objeto-dueno", "&#545454▸ &#D7F3FFDueño  &f%dueno%", "%dueno%", f.duenoTexto()));
-        }
-        if (f.clan() != null) {
-            out.add(tx.linea("objeto-clan", "&#545454▸ &#D7F3FFClan  &f%clan%", "%clan%", f.clan()));
-        }
         long ahora = System.currentTimeMillis();
-        if (!f.caduca()) {
-            out.add(tx.linea("objeto-permanente", "&#545454▸ &#D7F3FFDuración  &fpermanente"));
-        } else if (f.vencida(ahora)) {
-            out.add(tx.linea("objeto-vencio", "&#545454▸ &#D7F3FFVenció  &#FF5C5C%fecha%",
-                    "%fecha%", Tiempo.fecha(f.vence(), plugin.zona())));
-        } else {
-            out.add(tx.linea("objeto-vence", "&#545454▸ &#D7F3FFVence  &f%fecha%",
-                    "%fecha%", Tiempo.fecha(f.vence(), plugin.zona())));
-        }
+        String ac = Presentacion.hex(t.color());
+        boolean deClan = t.beneficia == TipoBaliza.Beneficia.CLAN;
 
-        out.add(Estilo.vacio());
+        // 1. Que es.
+        List<String> sub = subtitulo(t, f.clan(), f.semana());
+        for (int i = 0; i < sub.size(); i++) {
+            out.add(tx.linea(i == 0 ? "lore-subtitulo" : "lore-subtitulo-sigue",
+                    i == 0 ? "%acento%◆ &#C4C4C4%texto%" : "  &#C4C4C4%texto%", "%acento%", ac, "%texto%", sub.get(i)));
+        }
+        if (!sub.isEmpty()) out.add(raya(tx));
+
+        // 2. A quien, donde y que.
+        String elige = t.fijo() ? "" : tx.crudo("lore-elige", ". Elige %elegibles%")
+                .replace("%elegibles%", String.valueOf(t.elegibles));
+        String para = switch (t.beneficia) {
+            case CLAN -> "lore-para-clan";
+            case TODOS -> "lore-para-todos";
+            default -> "lore-para-dueno";
+        };
+        String paraRespaldo = switch (t.beneficia) {
+            case CLAN -> "&#C4C4C4A tu clan, en %radio% bloques%elige%:";
+            case TODOS -> "&#C4C4C4Para todos, en %radio% bloques%elige%:";
+            default -> "&#C4C4C4Para ti, en %radio% bloques%elige%:";
+        };
+        out.add(tx.linea(para, paraRespaldo, "%radio%", String.valueOf(t.radio), "%elige%", elige, "%acento%", ac));
+        List<Efecto> activos = t.activos(f.elegidos());
+        for (Efecto e : Presentacion.agrupados(t.efectos.values())) {
+            String nombre = e.nombrePlano();
+            if (t.fijo()) {
+                out.add(tx.linea("lore-efecto", " %acento%%simbolo% &f%efecto%", "%acento%", ac,
+                        "%simbolo%", Presentacion.simbolo(Presentacion.seccion(e)), "%efecto%", nombre));
+            } else if (activos.contains(e)) {
+                out.add(tx.linea("lore-efecto-elegido", " %acento%● &f%efecto%", "%acento%", ac, "%efecto%", nombre));
+            } else {
+                out.add(tx.linea("lore-efecto-libre", " &#4E4E4E○ &#8A8A8A%efecto%", "%acento%", ac, "%efecto%", nombre));
+            }
+        }
+        out.add(raya(tx));
+
+        // 3. De quien y hasta cuando.
+        if (f.ligada()) {
+            out.add(tx.linea(deClan ? "lore-lider" : "lore-dueno",
+                    deClan ? "&#8A8A8ALíder · &f%dueno%" : "&#8A8A8ADueño · &f%dueno%", "%dueno%", f.duenoTexto()));
+        } else {
+            out.add(tx.linea(deClan ? "lore-lider-libre" : "lore-dueno-libre",
+                    deClan ? "&#8A8A8ALíder · &fquien lo coloque primero" : "&#8A8A8ADueño · &fquien lo coloque primero"));
+        }
+        if (!f.caduca()) {
+            out.add(tx.linea("lore-permanente", "&#8A8A8ADuración · &fpermanente"));
+        } else {
+            String fecha = Presentacion.fecha(f.vence(), plugin.zona(), ahora);
+            out.add(f.vencida(ahora)
+                    ? tx.linea("lore-vencio", "&#8A8A8AVenció · &f%fecha%", "%fecha%", fecha)
+                    : tx.linea("lore-vence", "&#8A8A8AVence · &f%fecha%", "%fecha%", fecha));
+        }
+        out.add(raya(tx));
+
+        // 4. Como se usa: dos lineas como mucho.
+        out.add(tx.linea("lore-uso", "&#8A8A8AColócalo y úsalo para abrir su menú."));
         if (!f.ligada()) {
-            out.add(tx.linea("objeto-sin-dueno", "&#8A8A8ASe vuelve tuyo al colocarlo por primera vez."));
+            out.add(tx.linea("lore-regla-libre", "&#8A8A8ASe vuelve tuyo al colocarlo."));
+        } else if (deClan) {
+            out.add(tx.linea("lore-regla-lider", "&#8A8A8ASolo el líder lo coloca o lo recoge."));
         } else {
-            out.add(tx.linea("objeto-ligado", "&#8A8A8ASolo su dueño puede colocarlo."));
+            out.add(tx.linea("lore-regla-dueno", "&#8A8A8ASolo su dueño lo coloca o lo recoge."));
         }
-        if (t.fijo()) {
-            out.add(tx.linea("objeto-todos", "&#8A8A8ATodos sus efectos van activos a la vez."));
-        } else {
-            out.add(tx.linea("objeto-elige", "&#8A8A8AElige %elegibles% efectos en su menú.",
-                    "%elegibles%", String.valueOf(t.elegibles)));
-        }
-        out.add(tx.linea("objeto-uso", "&#8A8A8AColócalo y úsalo para abrir su menú."));
         return out;
+    }
+
+    private static Component raya(SuperBeaconPlugin.TextosBaliza tx) {
+        return tx.linea("lore-raya", Presentacion.OSCURO + Presentacion.RAYA);
+    }
+
+    /**
+     * La frase bajo el nombre, ya partida: "Clan [ABC] · semana del 28/09 al 04/10" si tiene
+     * clan fijado o semana ganada; si no, la primera linea de su descripcion sin el punto
+     * ("Para tu base"). Vacia si no hay nada que decir.
+     */
+    List<String> subtitulo(TipoBaliza t, String clan, long semana) {
+        SuperBeaconPlugin.TextosBaliza tx = plugin.textos();
+        List<String> partes = new ArrayList<>();
+        if (clan != null) partes.add(tx.crudo("lore-clan", "Clan [%clan%]").replace("%clan%", clan));
+        if (semana > 0) {
+            String[] s = Presentacion.semana(semana);
+            partes.add(tx.crudo("lore-semana", "semana %desde% al %hasta%")
+                    .replace("%desde%", s[0]).replace("%hasta%", s[1]));
+        }
+        String texto;
+        if (!partes.isEmpty()) {
+            // Si no cabe en una linea, se corta por el punto medio, no a mitad de la fecha.
+            String junto = Presentacion.mayuscula(String.join(" · ", partes));
+            if (Presentacion.largo(junto) <= Presentacion.ANCHO - 2 || partes.size() == 1) {
+                return Presentacion.partir(junto, Presentacion.ANCHO - 2);
+            }
+            List<String> out = new ArrayList<>();
+            for (int i = 0; i < partes.size(); i++) {
+                String p = i == 0 ? Presentacion.mayuscula(partes.get(i)) : partes.get(i);
+                out.add(i < partes.size() - 1 ? p + " ·" : p);
+            }
+            return out;
+        } else if (!t.descripcion.isEmpty() && !t.descripcion.get(0).isBlank()) {
+            texto = Presentacion.sinPunto(Presentacion.plano(t.descripcion.get(0)));
+        } else {
+            return List.of();
+        }
+        return Presentacion.partir(texto, Presentacion.ANCHO - 2);
     }
 }

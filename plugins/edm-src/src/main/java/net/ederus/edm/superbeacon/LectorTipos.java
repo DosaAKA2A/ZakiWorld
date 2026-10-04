@@ -155,7 +155,8 @@ final class LectorTipos {
 
         return new TipoBaliza(id, nombre, bloque, radio, dias, alCaducar, beneficia,
                 s.getBoolean("transferible", true), s.getBoolean("cuenta-en-el-maximo", true), elegibles,
-                s.getStringList("descripcion"), efectos, particula, cantidad, cada);
+                s.getStringList("descripcion"), efectos, particula, cantidad, cada,
+                s.getBoolean("semanal", id.equals("trofeo")));
     }
 
     private static Efecto efecto(String donde, String clave, ConfigurationSection e, Map<String, ClaseEfecto> clases,

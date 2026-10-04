@@ -30,34 +30,33 @@ import net.kyori.adventure.text.format.TextColor;
 import net.kyori.adventure.text.format.TextDecoration;
 
 /**
- * El menu de un Super Beacon: "EDERUS | Super Beacon", 45 casillas, marco negro.
+ * El menu de un Super Beacon: "EDERUS | Super Beacon", marco negro, tan alto como haga
+ * falta y no mas:
  *
- *   - arriba al centro, la ficha: tipo, dueño, clan, alcance, a quien beneficia y, si
- *     caduca, la cuenta atras (se repinta cada segundo con el menu abierto) y la fecha;
- *   - la fila del medio, un icono por efecto, centrados y sin huecos; con mas de siete,
- *     sigue en la fila de abajo;
- *   - abajo, Ver alcance, Cerrar en el centro y Recoger.
+ *   - 27 casillas con hasta siete efectos, 36 con mas (hasta catorce);
+ *   - arriba al centro, la ficha: de quien es, su clan, alcance, para quien, cuanto le
+ *     queda y, UNA vez, la regla de que los efectos no se suman (se aplica el mayor);
+ *   - debajo, un icono por efecto, centrados y sin huecos. Cada uno dice que ganas y
+ *     donde, su alcance, para quien y su estado; el activo lleva el color del tipo y brilla;
+ *   - en la ultima fila, Ver alcance, Cerrar en el centro y Recoger.
  *
- * TODO va con clic izquierdo suelto: Bedrock no tiene clic derecho ni shift dentro de un
- * menu. El derecho y el shift de Java hacen lo mismo que el izquierdo, nada distinto. El
- * doble clic se ignora, que si no activaba y desactivaba el mismo efecto de un golpe.
- * Las acciones van un tick despues del clic (cerrar un inventario dentro de su propio
- * evento da problemas) y vuelven a comprobar que la baliza sigue alli y que quien hace clic
- * puede gestionarla: entre el clic y la accion otro pudo picarla.
+ * El color del tipo (el de su nombre) es el unico acento; etiquetas en gris y texto en
+ * blanco. TODO va con clic izquierdo suelto: Bedrock no tiene clic derecho ni shift dentro
+ * de un menu. El derecho y el shift de Java hacen lo mismo que el izquierdo. El doble clic
+ * se ignora, que si no activaba y desactivaba el mismo efecto de un golpe. Las acciones
+ * van un tick despues del clic (cerrar un inventario dentro de su propio evento da
+ * problemas) y vuelven a comprobar que la baliza sigue alli y que quien hace clic puede
+ * gestionarla: entre el clic y la accion otro pudo picarla.
  */
 final class MenuBaliza implements Listener {
 
-    static final int TAM = 45;
     static final int FICHA = 4;
-    static final int ALCANCE = 38;
-    static final int CERRAR = 40;
-    static final int RECOGER = 42;
 
     /** Columnas de una fila (sin las del marco) para n iconos, centrados y simetricos. */
     private static final int[][] FILAS = {
             {}, {4}, {3, 5}, {2, 4, 6}, {1, 3, 5, 7}, {2, 3, 4, 5, 6}, {1, 2, 3, 5, 6, 7}, {1, 2, 3, 4, 5, 6, 7}};
 
-    private static final TextColor VERDE = TextColor.color(0x5CFF7A);
+    private static final TextColor GRIS = TextColor.color(0x8A8A8A);
 
     /** Lo que pasa al hacer clic en un efecto. */
     enum Resultado { ACTIVADO, DESACTIVADO, TOPE, NO_DISPONIBLE, FIJO }
@@ -65,6 +64,10 @@ final class MenuBaliza implements Listener {
     static final class Vista implements InventoryHolder {
         final UUID baliza;
         Inventory inv;
+        /** Casillas de los botones de abajo; dependen del alto del menu. */
+        int alcance;
+        int cerrar;
+        int recoger;
         /** casilla -> clave del efecto. */
         final Map<Integer, String> efectos = new HashMap<>();
 
@@ -91,7 +94,12 @@ final class MenuBaliza implements Listener {
         TipoBaliza t = plugin.tipo(b.tipo);
         if (t != null) plugin.normalizar(b, t);
         Vista v = new Vista(b.id);
-        v.inv = Bukkit.createInventory(v, TAM, Estilo.titulo("EDERUS",
+        int tam = tamano(t == null ? 0 : t.efectos.size());
+        int abajo = tam - 9;
+        v.alcance = abajo + 2;
+        v.cerrar = abajo + 4;
+        v.recoger = abajo + 6;
+        v.inv = Bukkit.createInventory(v, tam, Estilo.titulo("EDERUS",
                 plugin.textos().crudo("menu-titulo", "Super Beacon"), SuperBeaconPlugin.SECCION));
         pintar(v, b, t, p);
         // null si otro plugin cancelo la apertura: esa vista no se apunta (se quedaria para siempre).
@@ -100,13 +108,18 @@ final class MenuBaliza implements Listener {
         p.playSound(p.getLocation(), Sound.BLOCK_AMETHYST_BLOCK_CHIME, 0.7f, 1.2f);
     }
 
-    /** Las casillas de los efectos: la fila del medio y, con mas de siete, la siguiente. */
+    /** 27 casillas con hasta siete efectos (una fila); 36 con mas (dos). */
+    static int tamano(int efectos) {
+        return efectos > 7 ? 36 : 27;
+    }
+
+    /** Las casillas de los efectos: la segunda fila y, con mas de siete, la tercera. */
     static int[] casillas(int n) {
         n = Math.max(0, Math.min(14, n));
-        int arriba = Math.min(7, n), abajo = n - arriba;
+        int arriba = n > 7 ? (n + 1) / 2 : n, abajo = n - arriba;
         int[] out = new int[n];
-        for (int i = 0; i < arriba; i++) out[i] = 18 + FILAS[arriba][i];
-        for (int i = 0; i < abajo; i++) out[arriba + i] = 27 + FILAS[abajo][i];
+        for (int i = 0; i < arriba; i++) out[i] = 9 + FILAS[arriba][i];
+        for (int i = 0; i < abajo; i++) out[arriba + i] = 18 + FILAS[abajo][i];
         return out;
     }
 
@@ -114,36 +127,41 @@ final class MenuBaliza implements Listener {
 
     private void pintar(Vista v, Baliza b, TipoBaliza t, Player p) {
         Inventory inv = v.inv;
-        for (int i = 0; i < TAM; i++) inv.setItem(i, MenuUtil.pane());
+        for (int i = 0; i < inv.getSize(); i++) inv.setItem(i, MenuUtil.pane());
         v.efectos.clear();
         inv.setItem(FICHA, ficha(b, t, p));
+        String ac = t == null ? "&#D7F3FF" : Presentacion.hex(t.color());
         if (t != null) {
             List<Efecto> lista = new ArrayList<>(t.efectos.values());
-            int[] huecos = casillas(lista.size());
+            // Un reload que añade efectos con el menu abierto no los saca del marco.
+            int[] huecos = casillas(Math.min(lista.size(), tamano(lista.size()) == inv.getSize() ? 14 : 7));
             List<Efecto> activos = plugin.motor().activos(b, t);
             for (int i = 0; i < huecos.length; i++) {
                 Efecto e = lista.get(i);
-                inv.setItem(huecos[i], icono(p, b, t, e, activos.contains(e)));
+                inv.setItem(huecos[i], icono(p, b, t, e, activos.contains(e), activos.size()));
                 v.efectos.put(huecos[i], e.clave());
             }
         }
         SuperBeaconPlugin.TextosBaliza tx = plugin.textos();
-        inv.setItem(ALCANCE, boton(p, Material.SPYGLASS, tx.crudo("menu-alcance", "&fVer alcance"),
-                tx.lista("menu-alcance-lore", List.of("&#8A8A8ADibuja el borde de su alcance durante",
-                        "&#8A8A8A10 segundos. Solo lo ves tú.")), tx.crudo("menu-accion-ver", "verlo")));
-        inv.setItem(CERRAR, boton(p, Material.SPRUCE_DOOR, tx.crudo("menu-cerrar", "&fCerrar"), List.of(),
+        inv.setItem(v.alcance, boton(p, ac, Material.SPYGLASS, tx.crudo("menu-alcance", "&fVer alcance"),
+                tx.lista("menu-alcance-lore", List.of("&#C4C4C4Dibuja el borde de su alcance durante",
+                        "&#C4C4C410 segundos. Solo lo ves tú.")), tx.crudo("menu-accion-ver", "verlo")));
+        inv.setItem(v.cerrar, boton(p, ac, Material.SPRUCE_DOOR, tx.crudo("menu-cerrar", "&fCerrar"), List.of(),
                 tx.crudo("menu-accion-salir", "salir")));
         // Al staff (no es suyo) no se le lleva: vuelve a su dueño, y el boton lo dice.
         List<String> loreRecoger = b.esDe(p.getUniqueId())
-                ? tx.lista("menu-recoger-lore", List.of("&#8A8A8AVuelve a tu inventario con todo su estado:",
-                        "&#8A8A8Aefectos, dueño, clan y vencimiento."))
-                : tx.lista("menu-recoger-staff-lore", List.of("&#8A8A8ANo es tuyo: vuelve a su dueño, como con",
-                        "&#8A8A8A/superbeacon remove."));
-        inv.setItem(RECOGER, boton(p, Material.BUNDLE, tx.crudo("menu-recoger", "&fRecoger"), loreRecoger,
+                ? tx.lista("menu-recoger-lore", List.of("&#C4C4C4Vuelve a tu inventario con todo:",
+                        "&#C4C4C4efectos, dueño, clan y vencimiento."))
+                : tx.lista("menu-recoger-staff-lore", List.of("&#C4C4C4No es tuyo: vuelve a su dueño, como",
+                        "&#C4C4C4con /superbeacon remove."));
+        inv.setItem(v.recoger, boton(p, ac, Material.BUNDLE, tx.crudo("menu-recoger", "&fRecoger"), loreRecoger,
                 tx.crudo("menu-accion-recoger", "recogerlo")));
     }
 
-    /** La ficha de arriba: lo que es la baliza y cuanto le queda. */
+    /**
+     * La ficha de arriba: de quien es, para quien, cuanto le queda y la regla de que los
+     * efectos no se suman, que vale para todos y por eso va aqui y no en cada efecto.
+     */
     ItemStack ficha(Baliza b, TipoBaliza t, Player p) {
         SuperBeaconPlugin.TextosBaliza tx = plugin.textos();
         List<Component> lore = new ArrayList<>();
@@ -153,100 +171,146 @@ final class MenuBaliza implements Listener {
                     "%tipo%", b.tipo));
             return MenuUtil.icon(icono, Estilo.legado("&#D7F3FFSuper Beacon"), lore, false);
         }
-        for (String d : t.descripcion) lore.add(Estilo.legado(d.contains("&") ? d : "&#8A8A8A" + d));
-        if (!t.descripcion.isEmpty()) lore.add(Estilo.vacio());
-        lore.add(tx.linea("objeto-dueno", "&#545454▸ &#D7F3FFDueño  &f%dueno%", "%dueno%", b.duenoTexto()));
-        if (t.beneficia == TipoBaliza.Beneficia.CLAN || b.clan != null) {
+        String ac = Presentacion.hex(t.color());
+        boolean suya = b.esDe(p.getUniqueId());
+        long ahora = System.currentTimeMillis();
+
+        if (t.beneficia == TipoBaliza.Beneficia.CLAN) {
             String clan = plugin.motor().clanDe(b);
-            lore.add(tx.linea("objeto-clan", "&#545454▸ &#D7F3FFClan  &f%clan%", "%clan%",
-                    clan == null ? tx.crudo("sin-clan", "sin clan") : clan));
-        }
-        lore.add(tx.linea("objeto-alcance", "&#545454▸ &#D7F3FFAlcance  &f%radio% bloques",
-                "%radio%", String.valueOf(t.radio)));
-        lore.add(tx.linea("objeto-beneficia", "&#545454▸ &#D7F3FFBeneficia  &f%beneficia%",
-                "%beneficia%", plugin.beneficiaTexto(t.beneficia)));
-        if (t.fijo()) {
-            lore.add(tx.linea("menu-todos", "&#545454▸ &#D7F3FFEfectos  &ftodos activos"));
+            lore.add(clan != null
+                    ? tx.linea("menu-de-clan", "%acento%◆ &#C4C4C4Clan [%clan%] · líder %dueno%",
+                            "%acento%", ac, "%clan%", clan, "%dueno%", b.duenoTexto())
+                    : tx.linea("menu-de-lider", "%acento%◆ &#C4C4C4Líder %dueno% · sin clan",
+                            "%acento%", ac, "%dueno%", b.duenoTexto()));
         } else {
-            lore.add(tx.linea("menu-elegidos", "&#545454▸ &#D7F3FFEfectos  &f%elegidos% de %elegibles% elegidos",
+            lore.add(tx.linea("menu-de-dueno", "%acento%◆ &#C4C4C4De %dueno%", "%acento%", ac, "%dueno%", b.duenoTexto()));
+        }
+        if (b.semana > 0) {
+            String[] s = Presentacion.semana(b.semana);
+            lore.add(tx.linea("menu-semana", "%acento%◆ &#C4C4C4Semana del %desde% al %hasta%",
+                    "%acento%", ac, "%desde%", s[0], "%hasta%", s[1]));
+        }
+        lore.add(raya(tx));
+        lore.add(tx.linea("menu-ficha-alcance", "&#8A8A8AAlcance · &f%radio% bloques", "%radio%", String.valueOf(t.radio)));
+        lore.add(tx.linea("menu-ficha-para", "&#8A8A8APara · &f%para%", "%para%", para(t.beneficia, suya)));
+        if (t.fijo()) {
+            lore.add(tx.linea("menu-ficha-todos", "&#8A8A8AEfectos · &ftodos activos"));
+        } else {
+            lore.add(tx.linea("menu-ficha-elegidos", "&#8A8A8AEfectos · &f%elegidos% de %elegibles% elegidos",
                     "%elegidos%", String.valueOf(plugin.motor().activos(b, t).size()),
                     "%elegibles%", String.valueOf(t.elegibles)));
         }
-        lore.add(Estilo.vacio());
-        long ahora = System.currentTimeMillis();
         if (b.vence <= 0) {
-            lore.add(tx.linea("objeto-permanente", "&#545454▸ &#D7F3FFDuración  &fpermanente"));
-        } else if (b.vencida(ahora)) {
-            lore.add(tx.linea("menu-apagado", "&#FF5C5CApagado &#8A8A8A· venció el %fecha%",
-                    "%fecha%", Tiempo.fecha(b.vence, plugin.zona())));
+            lore.add(tx.linea("menu-ficha-permanente", "&#8A8A8ADuración · &fpermanente"));
         } else {
-            lore.add(tx.linea("menu-quedan", "&#D7F3FFQuedan &f%tiempo%", "%tiempo%", Tiempo.restante(b.vence - ahora)));
-            lore.add(tx.linea("objeto-vence", "&#545454▸ &#D7F3FFVence  &f%fecha%",
-                    "%fecha%", Tiempo.fecha(b.vence, plugin.zona())));
+            String fecha = Presentacion.fecha(b.vence, plugin.zona(), ahora);
+            if (b.vencida(ahora)) {
+                lore.add(tx.linea("menu-ficha-apagado", "&#8A8A8AEstado · &fapagado"));
+                lore.add(tx.linea("menu-ficha-vencio", "&#8A8A8AVenció · &f%fecha%", "%fecha%", fecha));
+            } else {
+                lore.add(tx.linea("menu-ficha-quedan", "&#8A8A8AQuedan · %acento%%tiempo%",
+                        "%acento%", ac, "%tiempo%", Tiempo.restante(b.vence - ahora)));
+                lore.add(tx.linea("menu-ficha-vence", "&#8A8A8AVence · &f%fecha%", "%fecha%", fecha));
+            }
         }
-        if (!b.esDe(p.getUniqueId())) {
-            lore.add(Estilo.vacio());
-            lore.add(tx.linea("menu-staff", "&#FFB627Lo estás viendo como staff."));
+        lore.add(raya(tx));
+        for (String l : Presentacion.partir(tx.crudo("menu-ficha-regla",
+                "&#8A8A8AVarios Super Beacons no suman el mismo efecto: se aplica el mayor."),
+                Presentacion.ANCHO)) {
+            lore.add(Estilo.legado(l));
         }
+        if (!suya) lore.add(tx.linea("menu-staff", "&#8A8A8ALo estás viendo como staff."));
         return MenuUtil.icon(icono, Estilo.legado(t.nombre).decoration(TextDecoration.ITALIC, false), lore, true);
     }
 
-    /** Un efecto: verde y brillando si esta activo, gris si no, apagado y con el motivo si no se puede usar. */
-    private ItemStack icono(Player p, Baliza b, TipoBaliza t, Efecto e, boolean activo) {
+    /** "ti", "tu clan", "todos" (o "su dueño", "su clan" si lo mira el staff). */
+    private String para(TipoBaliza.Beneficia b, boolean suya) {
         SuperBeaconPlugin.TextosBaliza tx = plugin.textos();
-        String falta = e.falta();
-        List<Component> lore = new ArrayList<>();
-        for (String d : e.detalle()) lore.add(Estilo.legado(d));
-        lore.add(Estilo.vacio());
-        boolean elegido = b.elegidos.contains(e.clave());
-        if (falta != null) {
-            lore.add(tx.linea("menu-efecto-no-disponible", "&#FF5C5CNo disponible (%motivo%)", "%motivo%", falta));
-            if (elegido && !t.fijo()) {
-                lore.add(Estilo.vacio());
-                lore.add(accion(p, tx.crudo("menu-accion-desactivar", "desactivarlo")));
-            }
-        } else if (t.fijo()) {
-            lore.add(tx.linea("menu-efecto-activo", "&#5CFF7AActivo"));
-            lore.add(Estilo.vacio());
-            lore.add(tx.linea("menu-efecto-fijo", "&#8A8A8ASiempre activo en este Super Beacon."));
-        } else if (activo) {
-            lore.add(tx.linea("menu-efecto-activo", "&#5CFF7AActivo"));
-            lore.add(Estilo.vacio());
-            lore.add(accion(p, tx.crudo("menu-accion-desactivar", "desactivarlo")));
-        } else {
-            lore.add(tx.linea("menu-efecto-inactivo", "&#8A8A8AInactivo"));
-            if (plugin.motor().activos(b, t).size() >= t.elegibles) {
-                lore.add(tx.linea("menu-efecto-tope", "&#8A8A8AYa elegiste %elegibles%: desactiva uno para cambiarlo.",
-                        "%elegibles%", String.valueOf(t.elegibles)));
-            }
-            lore.add(Estilo.vacio());
-            lore.add(accion(p, tx.crudo("menu-accion-activar", "activarlo")));
-        }
-        // Vencida y apagada: la eleccion se conserva (viaja con el objeto), pero nada brilla.
-        boolean apagada = b.vencida(System.currentTimeMillis());
-        if (apagada) {
-            lore.add(0, tx.linea("menu-efecto-apagado", "&#FF5C5CApagado: este Super Beacon ya venció."));
-        }
-        boolean encendido = falta == null && activo && !apagada;
-        Material material = falta != null ? Material.GRAY_DYE : e.icono();
-        TextColor color = encendido ? VERDE : falta != null ? MenuUtil.DIM : MenuUtil.SOFT;
-        return MenuUtil.icon(material, Estilo.texto(e.nombrePlano(), color), lore, encendido);
+        return switch (b) {
+            case CLAN -> suya ? tx.crudo("menu-para-clan", "tu clan") : tx.crudo("menu-para-clan-ajeno", "su clan");
+            case TODOS -> tx.crudo("menu-para-todos", "todos");
+            default -> suya ? tx.crudo("menu-para-dueno", "ti") : tx.crudo("menu-para-dueno-ajeno", "su dueño");
+        };
     }
 
-    private ItemStack boton(Player p, Material material, String nombre, List<String> lineas, String verbo) {
+    /**
+     * Un efecto: que ganas y donde, su alcance, para quien y su estado. Activo, con el color
+     * del tipo y brillando; inactivo, en gris; no disponible, apagado y con el motivo.
+     */
+    private ItemStack icono(Player p, Baliza b, TipoBaliza t, Efecto e, boolean activo, int nActivos) {
+        SuperBeaconPlugin.TextosBaliza tx = plugin.textos();
+        String ac = Presentacion.hex(t.color());
+        String falta = e.falta();
+        boolean apagada = b.vencida(System.currentTimeMillis());
+        boolean elegido = b.elegidos.contains(e.clave());
+        String elegidos = String.valueOf(nActivos), elegibles = String.valueOf(t.elegibles);
+        List<Component> lore = new ArrayList<>();
+
+        for (String l : Presentacion.partir(Presentacion.PROSA + e.que(), Presentacion.ANCHO)) lore.add(Estilo.legado(l));
+        lore.add(raya(tx));
+        lore.add(tx.linea("menu-ficha-alcance", "&#8A8A8AAlcance · &f%radio% bloques", "%radio%", String.valueOf(t.radio)));
+        String para = e.clase() != null && !e.clase().porJugador()
+                ? tx.crudo("menu-para-zona", "toda la zona") : para(t.beneficia, b.esDe(p.getUniqueId()));
+        lore.add(tx.linea("menu-ficha-para", "&#8A8A8APara · &f%para%", "%para%", para));
+
+        String accion = null;
+        if (apagada) {
+            lore.add(tx.linea("menu-estado-apagado", "&#8A8A8AEstado · &#4E4E4E○ &fApagado, ya venció"));
+        } else if (falta != null) {
+            lore.add(tx.linea("menu-estado-no-disponible", "&#8A8A8AEstado · &#4E4E4E○ &fNo disponible"));
+            lore.add(tx.linea("menu-motivo", "&#8A8A8AMotivo · &f%motivo%", "%motivo%", falta));
+        } else if (t.fijo()) {
+            lore.add(tx.linea("menu-estado-fijo", "&#8A8A8AEstado · %acento%● &fSiempre activo", "%acento%", ac));
+        } else if (activo) {
+            lore.add(tx.linea("menu-estado-activo",
+                    "&#8A8A8AEstado · %acento%● &fActivo  &#8A8A8A(%elegidos% de %elegibles% elegidos)",
+                    "%acento%", ac, "%elegidos%", elegidos, "%elegibles%", elegibles));
+        } else {
+            lore.add(tx.linea("menu-estado-inactivo",
+                    "&#8A8A8AEstado · &#4E4E4E○ &#C4C4C4Inactivo  &#8A8A8A(%elegidos% de %elegibles% elegidos)",
+                    "%acento%", ac, "%elegidos%", elegidos, "%elegibles%", elegibles));
+        }
+        // Lo que hace el clic. Lo fijo no se toca; lo no disponible solo se puede quitar.
+        if (!t.fijo()) {
+            if (elegido) {
+                accion = frase(p, tx.crudo("menu-accion-desactivar", "desactivarlo"));
+            } else if (falta == null) {
+                accion = nActivos >= t.elegibles
+                        ? tx.crudo("menu-efecto-tope", "Desactiva otro para elegir este")
+                        : frase(p, tx.crudo("menu-accion-activar", "activarlo"));
+            }
+        }
+        if (accion != null) {
+            lore.add(raya(tx));
+            lore.add(tx.linea("menu-accion", "%acento%▸ &f%frase%", "%acento%", ac, "%frase%", accion));
+        }
+
+        boolean encendido = falta == null && activo && !apagada;
+        Material material = falta != null ? Material.GRAY_DYE : e.icono();
+        Component nombre = encendido ? Estilo.legado(ac + e.nombrePlano())
+                : Estilo.texto(e.nombrePlano(), falta != null ? MenuUtil.DIM : GRIS);
+        return MenuUtil.icon(material, nombre.decoration(TextDecoration.ITALIC, false), lore, encendido);
+    }
+
+    private ItemStack boton(Player p, String ac, Material material, String nombre, List<String> lineas, String verbo) {
+        SuperBeaconPlugin.TextosBaliza tx = plugin.textos();
         List<Component> lore = new ArrayList<>();
         for (String l : lineas) lore.add(Estilo.legado(l));
-        if (!lore.isEmpty()) lore.add(Estilo.vacio());
-        lore.add(accion(p, verbo));
+        if (!lore.isEmpty()) lore.add(raya(tx));
+        lore.add(tx.linea("menu-accion", "%acento%▸ &f%frase%", "%acento%", ac, "%frase%", frase(p, verbo)));
         return MenuUtil.icon(material, Estilo.legado(nombre), lore, false);
     }
 
-    /** La ultima linea, en amarillo: "Clic para..." en Java, "Toca para..." en Bedrock. */
-    private Component accion(Player p, String verbo) {
+    /** "Clic para..." en Java, "Toca para..." en Bedrock. */
+    private String frase(Player p, String verbo) {
         SuperBeaconPlugin.TextosBaliza tx = plugin.textos();
         String frase = Plataforma.esBedrock(p) ? tx.crudo("menu-toque", "Toca para %accion%")
                 : tx.crudo("menu-clic", "Clic para %accion%");
-        return MenuUtil.action(frase.replace("%accion%", verbo));
+        return frase.replace("%accion%", verbo);
+    }
+
+    private static Component raya(SuperBeaconPlugin.TextosBaliza tx) {
+        return tx.linea("lore-raya", Presentacion.OSCURO + Presentacion.RAYA);
     }
 
     /* ============================================================ al dia */
@@ -349,31 +413,28 @@ final class MenuBaliza implements Listener {
             return;
         }
         TipoBaliza t = plugin.tipo(b.tipo);
-        switch (slot) {
-            case CERRAR -> p.closeInventory();
-            case ALCANCE -> {
-                if (t == null) return;
-                p.closeInventory();
-                plugin.contorno().mostrar(p, b, t);
-                plugin.textos().manda(p, "alcance",
-                        "&7Este es su alcance: &f%radio% &7bloques. Lo verás durante 10 segundos.",
-                        "%radio%", String.valueOf(t.radio));
+        if (slot == v.cerrar) {
+            p.closeInventory();
+        } else if (slot == v.alcance) {
+            if (t == null) return;
+            p.closeInventory();
+            plugin.contorno().mostrar(p, b, t);
+            plugin.textos().manda(p, "alcance",
+                    "&7Este es su alcance: &f%radio% &7bloques. Lo verás durante 10 segundos.",
+                    "%radio%", String.valueOf(t.radio));
+        } else if (slot == v.recoger) {
+            // El hueco solo hace falta si es suyo: al staff no se le da (va a su dueño).
+            if (b.esDe(p.getUniqueId()) && p.getInventory().firstEmpty() == -1) {
+                plugin.textos().manda(p, "sin-espacio",
+                        "&#FF5C5CNo tienes espacio en el inventario. &7Libera una casilla e inténtalo de nuevo.");
+                p.playSound(p.getLocation(), Sound.ENTITY_VILLAGER_NO, 0.6f, 1f);
+                return;
             }
-            case RECOGER -> {
-                // El hueco solo hace falta si es suyo: al staff no se le da (va a su dueño).
-                if (b.esDe(p.getUniqueId()) && p.getInventory().firstEmpty() == -1) {
-                    plugin.textos().manda(p, "sin-espacio",
-                            "&#FF5C5CNo tienes espacio en el inventario. &7Libera una casilla e inténtalo de nuevo.");
-                    p.playSound(p.getLocation(), Sound.ENTITY_VILLAGER_NO, 0.6f, 1f);
-                    return;
-                }
-                p.closeInventory();
-                plugin.entregas().recoger(p, b);
-            }
-            default -> {
-                String clave = v.efectos.get(slot);
-                if (clave != null && t != null) elegir(p, b, t, clave);
-            }
+            p.closeInventory();
+            plugin.entregas().recoger(p, b);
+        } else {
+            String clave = v.efectos.get(slot);
+            if (clave != null && t != null) elegir(p, b, t, clave);
         }
     }
 

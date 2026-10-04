@@ -77,8 +77,10 @@ final class Entregas {
         double d = dias != null ? dias : t.duracionDias;
         long vence = d > 0 ? ahora + Math.max(1000L, Math.round(d * Tiempo.DIA)) : 0L;
         // Transferible: sin dueño hasta que alguien la coloque. Si no, de quien la recibe.
+        // Premio semanal (el trofeo): se apunta la semana que acaba de cerrar, la que gano.
+        long semana = t.semanal ? Presentacion.semanaCerrada(ahora, plugin.zona()) : 0L;
         Ficha f = new Ficha(UUID.randomUUID(), t.id, t.transferible ? null : uuid,
-                t.transferible ? null : nombreReal, clan, vence, List.of());
+                t.transferible ? null : nombreReal, clan, vence, List.of(), semana);
         Pendiente pe = new Pendiente(f, t.bloque, uuid, nombreReal, "give", ahora);
         registro().pendiente(pe);
         registro().guardar();
@@ -313,7 +315,7 @@ final class Entregas {
             duenoNombre = p.getName();
         }
         Ficha fija = new Ficha(f.id(), f.tipo(), dueno, duenoNombre, f.clan(), f.vence(),
-                plugin.normalizados(f.elegidos(), t));
+                plugin.normalizados(f.elegidos(), t), f.semana());
         Baliza b = new Baliza(fija, bl.getWorld().getName(), bl.getX(), bl.getY(), bl.getZ(), bl.getType(), ahora);
         if (b.clan == null && t.beneficia == TipoBaliza.Beneficia.CLAN) plugin.motor().clanDe(b);
         if (!registro().poner(b)) {

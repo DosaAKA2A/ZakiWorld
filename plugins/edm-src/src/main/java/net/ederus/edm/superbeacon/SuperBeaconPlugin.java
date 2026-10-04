@@ -58,7 +58,7 @@ public final class SuperBeaconPlugin extends Module {
     static final TextColor SECCION = TextColor.color(0x3A3A3A);
 
     private static final int CONFIG_VERSION = 1;
-    private static final int MENSAJES_VERSION = 1;
+    private static final int MENSAJES_VERSION = 2;
 
     /** Textos con acceso a las lineas sin prefijo y a las listas (holograma, lores). */
     static final class TextosBaliza extends Textos {
@@ -109,6 +109,7 @@ public final class SuperBeaconPlugin extends Module {
     private BukkitTask tareaSegundo;
     private BukkitTask tareaRevision;
     private BukkitTask tareaHologramas;
+    private BukkitTask tareaGiro;
     private volatile boolean detenido;
 
     private final Set<String> mundosExcluidos = new HashSet<>();
@@ -118,6 +119,8 @@ public final class SuperBeaconPlugin extends Module {
     private double holoAltura = 1.6;
     private int holoDistancia = 32;
     private int holoRefresco = 30;
+    private float holoEscala = 0.7f;
+    private boolean holoCabeza = true;
     private ZoneId zona = ZoneId.systemDefault();
 
     public SuperBeaconPlugin(EDMPlugin core) {
@@ -206,7 +209,7 @@ public final class SuperBeaconPlugin extends Module {
     @Override
     public void onDisable() {
         detenido = true;
-        for (BukkitTask t : new BukkitTask[]{tareaEfectos, tareaSegundo, tareaRevision, tareaHologramas}) {
+        for (BukkitTask t : new BukkitTask[]{tareaEfectos, tareaSegundo, tareaRevision, tareaHologramas, tareaGiro}) {
             if (t != null) t.cancel();
         }
         if (menu != null) menu.cerrarTodos();
@@ -257,6 +260,8 @@ public final class SuperBeaconPlugin extends Module {
         holoAltura = c.getDouble("holograma.altura", 1.6);
         holoDistancia = Math.max(4, Math.min(256, c.getInt("holograma.distancia", 32)));
         holoRefresco = Math.max(5, Math.min(600, c.getInt("holograma.refresco-segundos", 30)));
+        holoEscala = (float) Math.max(0.3, Math.min(2.0, c.getDouble("holograma.escala", 0.7)));
+        holoCabeza = c.getBoolean("holograma.cabeza", true);
         ZoneId z = Tiempo.zona(c.getString("zona-horaria", ""));
         if (z == null) {
             getLogger().warning("[SuperBeacon] zona-horaria \"" + c.getString("zona-horaria")
@@ -293,6 +298,11 @@ public final class SuperBeaconPlugin extends Module {
         tareaHologramas = core.getServer().getScheduler().runTaskTimer(core, () -> {
             if (!detenido) hologramas.refrescarTodos();
         }, cada, cada);
+        if (tareaGiro != null) tareaGiro.cancel();
+        // La cabeza gira por interpolacion: un cuarto de vuelta cada GIRO_TICKS, que anima el cliente.
+        tareaGiro = core.getServer().getScheduler().runTaskTimer(core, () -> {
+            if (!detenido) hologramas.girar();
+        }, Hologramas.GIRO_TICKS, Hologramas.GIRO_TICKS);
     }
 
     /* ============================================================ las tareas */
@@ -505,6 +515,14 @@ public final class SuperBeaconPlugin extends Module {
 
     int holoDistancia() {
         return holoDistancia;
+    }
+
+    float holoEscala() {
+        return holoEscala;
+    }
+
+    boolean holoCabeza() {
+        return holoCabeza;
     }
 
     int maximoPorJugador() {

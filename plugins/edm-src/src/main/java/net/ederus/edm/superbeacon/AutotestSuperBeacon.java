@@ -30,10 +30,13 @@ import org.bukkit.inventory.ItemStack;
  *   - el clan que manda: el fijado en el give frente al actual del dueño (y su cache);
  *   - el vuelo: la marca de combate y la espera cuando otro plugin lo quita;
  *   - los huecos vigilados (posiciones vaciadas) sobre un data.yml temporal;
- *   - en que mundos se puede colocar, y el nombre del dueño al dia.
+ *   - en que mundos se puede colocar, y el nombre del dueño al dia;
+ *   - la presentacion: la semana del trofeo, las fechas, los numeros, el corte de
+ *     lineas a 38 caracteres y el alto del menu.
  * Y dentro del servidor (modulo en marcha):
  *   - leer tipos de un config con errores, y que el config de serie no tenga ninguno;
- *   - la ida y vuelta del objeto: crear, leer el PDC y que salga lo mismo.
+ *   - la ida y vuelta del objeto: crear, leer el PDC y que salga lo mismo (semana incluida);
+ *   - que ningun lore de serie pase de 38 caracteres y que cada efecto explique que da.
  */
 final class AutotestSuperBeacon {
 
@@ -78,6 +81,7 @@ final class AutotestSuperBeacon {
             t.vaciadas();
             t.mundos();
             t.nombres();
+            t.presentacion();
             if (modulo != null) {
                 t.lectura(modulo);
                 t.objeto(modulo);
@@ -418,6 +422,74 @@ final class AutotestSuperBeacon {
             "    bloque: BEACON",
             "    duracion-dias: 30d");
 
+    /* =========================================================== presentacion */
+
+    private void presentacion() {
+        igual("el acento en codigo &", "&#FFC857", Presentacion.hex(0xFFC857));
+        igual("romanos", "IV", Presentacion.romano(4));
+        igual("x1,5 es un 50 %", "50 %", Presentacion.porcentaje(1.5));
+        igual("x1,25 es un 25 %", "25 %", Presentacion.porcentaje(1.25));
+        igual("12 de vida son 6 corazones", "6 corazones", Presentacion.corazones(12));
+        igual("2 de vida es 1 corazón", "1 corazón", Presentacion.corazones(2));
+        igual("1 de vida es medio", "0,5 corazones", Presentacion.corazones(1));
+
+        ZoneId utc = ZoneId.of("UTC");
+        long lunes = java.time.LocalDate.of(2026, 9, 28).toEpochDay();
+        // domingo 04/10/2026 22:55 UTC: el ranking acaba de cerrar esa misma semana
+        long domingo = java.time.ZonedDateTime.of(2026, 10, 4, 22, 55, 0, 0, utc).toInstant().toEpochMilli();
+        igual("un domingo cuenta la semana de ese domingo", lunes, Presentacion.semanaCerrada(domingo, utc));
+        igual("el lunes siguiente, la que acaba de cerrar", lunes, Presentacion.semanaCerrada(domingo + Tiempo.HORA * 2, utc));
+        igual("y el sabado, todavia esa", lunes, Presentacion.semanaCerrada(domingo + 6 * Tiempo.DIA - Tiempo.HORA, utc));
+        igual("el domingo siguiente ya es la nueva", lunes + 7, Presentacion.semanaCerrada(domingo + 7 * Tiempo.DIA, utc));
+        igual("la semana se escribe de lunes a domingo", List.of("28/09", "04/10"), List.of(Presentacion.semana(lunes)));
+        igual("fecha con dia de la semana", "domingo 11/10, 22:55",
+                Presentacion.fecha(domingo + 7 * Tiempo.DIA, utc, domingo));
+        igual("con el año si no es el de ahora", "domingo 03/01/2027, 22:55",
+                Presentacion.fecha(java.time.ZonedDateTime.of(2027, 1, 3, 22, 55, 0, 0, utc).toInstant().toEpochMilli(),
+                        utc, domingo));
+
+        igual("los codigos no cuentan como letras", 4, Presentacion.largo("&#FFFFFFab&7c&x&1&2&3&4&5&6d"));
+        igual("mayuscula saltando el color", "&#C4C4C4Semana", Presentacion.mayuscula("&#C4C4C4semana"));
+        igual("el subtitulo va sin punto", "Para tu base", Presentacion.sinPunto("Para tu base."));
+        List<String> partes = Presentacion.partir(
+                "&#C4C4C4Los jefes y esbirros te pagan un 50 % más de MobCoins mientras estés en su alcance.", 38);
+        boolean caben = !partes.isEmpty();
+        for (String l : partes) caben &= Presentacion.largo(l) <= 38 && l.startsWith("&#C4C4C4");
+        ok("partir: lineas de 38 como mucho y cada una con su color (" + partes.size() + " lineas)",
+                caben && partes.size() == 3);
+        igual("partir no pierde palabras",
+                "Los jefes y esbirros te pagan un 50 % más de MobCoins mientras estés en su alcance.",
+                String.join(" ", partes).replace("&#C4C4C4", ""));
+
+        igual("menu de 27 con siete efectos", 27, MenuBaliza.tamano(7));
+        igual("menu de 36 con ocho", 36, MenuBaliza.tamano(8));
+        boolean dentro = true;
+        for (int n = 0; n <= 14; n++) {
+            int tam = MenuBaliza.tamano(n);
+            Set<Integer> vistas = new java.util.HashSet<>();
+            for (int c : MenuBaliza.casillas(n)) {
+                dentro &= c >= 9 && c < tam - 9 && c % 9 != 0 && c % 9 != 8 && vistas.add(c);
+            }
+        }
+        ok("los efectos caben entre la ficha y los botones, sin tocar el marco ni repetirse", dentro);
+        igual("cinco efectos centrados en la segunda fila", List.of(11, 12, 13, 14, 15), lista(MenuBaliza.casillas(5)));
+        igual("ocho: cuatro y cuatro", List.of(10, 12, 14, 16, 19, 21, 23, 25), lista(MenuBaliza.casillas(8)));
+
+        Ficha vieja = new Ficha(UUID.randomUUID(), "t", null, null, null, 0, List.of());
+        igual("una ficha sin semana (objetos viejos) queda en 0", 0L, vieja.semana());
+        Ficha conSemana = new Ficha(UUID.randomUUID(), "t", UUID.randomUUID(), "x", "ABC", 1, List.of(), lunes);
+        igual("la semana sobrevive a cambiar el dueño", lunes, conSemana.conDueno(UUID.randomUUID(), "y").semana());
+        igual("y a elegir efectos", lunes, conSemana.conElegidos(List.of("a")).semana());
+        igual("y pasa por la baliza colocada", lunes,
+                new Baliza(conSemana, "w", 0, 64, 0, Material.BEACON, 0).ficha().semana());
+    }
+
+    private static List<Integer> lista(int[] a) {
+        List<Integer> out = new ArrayList<>();
+        for (int x : a) out.add(x);
+        return out;
+    }
+
     private void lectura(SuperBeaconPlugin modulo) throws Exception {
         YamlConfiguration yml = new YamlConfiguration();
         yml.loadFromString(CONFIG_CON_ERRORES);
@@ -459,9 +531,29 @@ final class AutotestSuperBeacon {
         igual("y trae los cinco tipos", List.of("hogar", "granja", "guerra", "fortuna", "trofeo"),
                 new ArrayList<>(deSerie.keySet()));
         TipoBaliza trofeo = deSerie.get("trofeo");
-        ok("el trofeo: 30 dias, de clan, no transferible, todos activos, no cuenta en el maximo",
-                trofeo != null && trofeo.duracionDias == 30 && trofeo.beneficia == TipoBaliza.Beneficia.CLAN
-                        && !trofeo.transferible && trofeo.fijo() && !trofeo.cuentaEnElMaximo);
+        ok("el trofeo: 7 dias, de clan, no transferible, todos activos, no cuenta en el maximo, semanal",
+                trofeo != null && trofeo.duracionDias == 7 && trofeo.beneficia == TipoBaliza.Beneficia.CLAN
+                        && !trofeo.transferible && trofeo.fijo() && !trofeo.cuentaEnElMaximo && trofeo.semanal);
+        ok("solo el trofeo es semanal", deSerie.values().stream().filter(x -> x.semanal).count() == 1);
+        if (trofeo != null) {
+            List<String> orden = new ArrayList<>();
+            for (Efecto e : Presentacion.agrupados(trofeo.efectos.values())) orden.add(e.clave());
+            igual("el lore agrupa: vida, movimiento (prisa, vuelo), boosts",
+                    List.of("vida", "prisa", "vuelo", "habilidades", "mobcoins"), orden);
+        }
+        List<String> sinFrase = new ArrayList<>();
+        List<String> anchas = new ArrayList<>();
+        for (TipoBaliza t : deSerie.values()) {
+            for (Efecto e : t.efectos.values()) {
+                String que = e.que();
+                if (que == null || que.isBlank()) sinFrase.add(t.id + "." + e.clave());
+                for (String l : Presentacion.partir(Presentacion.PROSA + que, Presentacion.ANCHO)) {
+                    if (Presentacion.largo(l) > Presentacion.ANCHO) anchas.add(t.id + "." + e.clave());
+                }
+            }
+        }
+        igual("cada efecto de serie dice que da", List.of(), sinFrase);
+        igual("y su frase cabe en 38 caracteres por linea", List.of(), anchas);
         // Un multiplicador permanente pegado a un sitio infla la economia: solo en los que caducan.
         List<String> permanentesConBoost = new ArrayList<>();
         for (TipoBaliza t : deSerie.values()) {
@@ -506,6 +598,25 @@ final class AutotestSuperBeacon {
         igual("el id se lee solo", f.id(), o.id(it));
         igual("el material es el del tipo", t.bloque, it.getType());
         igual("no se apila", 1, it.getMaxStackSize());
+
+        Ficha trofeo = new Ficha(UUID.randomUUID(), t.id, UUID.randomUUID(), "Prueba", "ABC",
+                System.currentTimeMillis() + 7 * Tiempo.DIA, List.of(), 20_724L);
+        igual("la semana del trofeo viaja en el PDC", trofeo, o.leer(o.crear(trofeo, Material.BEACON)));
+
+        List<String> anchas = new ArrayList<>();
+        for (TipoBaliza x : modulo.tipos().values()) {
+            for (Ficha fx : List.of(
+                    new Ficha(UUID.randomUUID(), x.id, UUID.randomUUID(), "Dosa__", "ABC",
+                            System.currentTimeMillis() + 7 * Tiempo.DIA, List.copyOf(x.efectos.keySet()), 20_724L),
+                    new Ficha(UUID.randomUUID(), x.id, null, null, null, 0, List.of()))) {
+                for (net.kyori.adventure.text.Component c : o.lore(fx, x)) {
+                    String plano = net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer
+                            .plainText().serialize(c);
+                    if (plano.length() > Presentacion.ANCHO) anchas.add(x.id + ": " + plano);
+                }
+            }
+        }
+        igual("ninguna linea de lore de los tipos cargados pasa de 38", List.of(), anchas);
 
         Ficha libre = new Ficha(UUID.randomUUID(), t.id, null, null, null, 0, List.of());
         igual("sin dueño, sin clan y permanente tambien vuelve igual", libre, o.leer(o.crear(libre, Material.BEACON)));

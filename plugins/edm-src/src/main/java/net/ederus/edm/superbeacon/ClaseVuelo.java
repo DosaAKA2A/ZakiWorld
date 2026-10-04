@@ -124,16 +124,15 @@ final class ClaseVuelo extends ClaseEfecto {
     }
 
     @Override
-    List<String> detalle(Efecto e) {
-        List<String> out = new ArrayList<>(List.of(
-                plugin.textos().crudo("detalle-vuelo", "&#8A8A8APuedes volar dentro de su alcance."),
-                plugin.textos().crudo("detalle-vuelo-gracia", "&#8A8A8AAl salir tienes 5 segundos antes de caer.")));
+    String que(Efecto e) {
+        String s = plugin.textos().crudo("detalle-vuelo",
+                "Puedes volar dentro de su alcance. Al salir tienes 5 segundos antes de caer despacio.");
         if (combateSegundos > 0) {
-            out.add(plugin.textos().crudo("detalle-vuelo-combate",
-                    "&#8A8A8ASi peleas con otro jugador, %segundos% segundos sin vuelo.")
-                    .replace("%segundos%", String.valueOf(combateSegundos)));
+            s += " " + plugin.textos().crudo("detalle-vuelo-combate",
+                    "Si peleas con otro jugador, pierdes el vuelo %segundos% segundos.")
+                    .replace("%segundos%", String.valueOf(combateSegundos));
         }
-        return out;
+        return s;
     }
 
     /** Supervivencia o aventura: los otros modos ya deciden el vuelo por su cuenta. */
