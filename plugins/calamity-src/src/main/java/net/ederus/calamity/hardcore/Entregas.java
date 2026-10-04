@@ -244,6 +244,8 @@ final class Entregas implements Listener {
         } else {
             donde = entregarObjetos(a, o, items, org);
         }
+        // Como en dar: que /calamidad dar no diga "Entregado" a una llave que se queda pendiente.
+        ultimoDonde = donde;
         hc.plugin().bitacora().anotar("entrega", "ok", o, nombre(a), String.valueOf(n), org, donde);
         recompensa(a, o, n, org, !enCampo);
         return true;

@@ -620,6 +620,7 @@ public final class SuperBeaconPlugin extends Module {
         for (Baliza b : new ArrayList<>(registro.todas())) {
             if (!delClan(b.clan, b.tipo, clan, tipo)) continue;
             b.vence = venceRenovado(b.vence, ahora, dias);
+            b.semana = semanaRenovada(b.tipo, b.semana, ahora);
             b.vistaVencida = false;
             b.avisoVencida = false;
             b.olvidarCache();
@@ -632,7 +633,7 @@ public final class SuperBeaconPlugin extends Module {
             Ficha f = pe.ficha;
             if (!delClan(f.clan(), f.tipo(), clan, tipo)) continue;
             Ficha nueva = new Ficha(f.id(), f.tipo(), f.dueno(), f.duenoNombre(), f.clan(),
-                    venceRenovado(f.vence(), ahora, dias), f.elegidos());
+                    venceRenovado(f.vence(), ahora, dias), f.elegidos(), semanaRenovada(f.tipo(), f.semana(), ahora));
             registro.pendiente(new Pendiente(nueva, pe.material, pe.para, pe.paraNombre, pe.motivo, pe.desde));
             anotar("renovada", f.id().toString(), f.tipo(), f.clan(), "pendiente", Tiempo.fecha(nueva.vence(), zona()), motivo);
             n++;
@@ -645,7 +646,7 @@ public final class SuperBeaconPlugin extends Module {
                     Ficha f = objeto.leer(it);
                     if (f == null || !delClan(f.clan(), f.tipo(), clan, tipo)) continue;
                     Ficha nueva = new Ficha(f.id(), f.tipo(), f.dueno(), f.duenoNombre(), f.clan(),
-                            venceRenovado(f.vence(), ahora, dias), f.elegidos());
+                            venceRenovado(f.vence(), ahora, dias), f.elegidos(), semanaRenovada(f.tipo(), f.semana(), ahora));
                     inv.setItem(i, objeto.crear(nueva, it.getType()));
                     anotar("renovada", f.id().toString(), f.tipo(), f.clan(), "objeto de " + p.getName(),
                             Tiempo.fecha(nueva.vence(), zona()), motivo);
@@ -658,6 +659,17 @@ public final class SuperBeaconPlugin extends Module {
             registro.guardarSiHaceFalta();
         }
         return n;
+    }
+
+    /**
+     * La semana del trofeo tras renovarlo: la que acaba de cerrar, la que el clan volvio a ganar,
+     * igual que en el give (Entregas.dar). Sin esto la ficha de pendientes y objetos se rehacia
+     * con el constructor sin semana (la perdia) y la colocada seguia ensenando la semana vieja.
+     * Un tipo que no es semanal conserva la suya.
+     */
+    long semanaRenovada(String tipo, long actual, long ahora) {
+        TipoBaliza t = tipo(tipo);
+        return t != null && t.semanal ? Presentacion.semanaCerrada(ahora, zona()) : actual;
     }
 
     /** Si una baliza (su clan fijado y su tipo) es de ese clan y, si se pide, de ese tipo. Sin colores ni mayusculas. */

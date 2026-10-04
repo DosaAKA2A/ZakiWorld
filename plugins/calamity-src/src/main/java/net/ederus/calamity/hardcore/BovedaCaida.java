@@ -214,6 +214,13 @@ final class BovedaCaida implements Listener {
             retirarActiva("caduca");
             return;
         }
+        // Abierta y sin BovedaVaciadaEvent (un reinicio o un /calamidad reload a mitad de soltar, o EDM que
+        // corto la apertura): sin esto se quedaba activa para siempre y no volvia a caer ninguna. EDM suelta
+        // todo en unos segundos; pasado un minuto, se quita igual. Sin abierta-en (datos de antes), ya.
+        if (abierta && ahora - datos().getLong(RUTA + ".activa.abierta-en", 0) >= 60_000L) {
+            retirarActiva("abierta");
+            return;
+        }
         long hazHasta = datos().getLong(RUTA + ".activa.haz-hasta", 0);
         if (ahora < hazHasta) {
             if (segundos % 2 == 0) columna(l);
@@ -635,6 +642,7 @@ final class BovedaCaida implements Listener {
         // Lo primero, y guardado: desde aqui nadie mas la abre, pase lo que pase con el botin.
         datos().set(RUTA + ".activa.abierta", true);
         datos().set(RUTA + ".activa.abierta-por", p.getName());
+        datos().set(RUTA + ".activa.abierta-en", System.currentTimeMillis());
         hc.guardarYa();
         ConfigurationSection c = cfg();
         List<BotinCalamity.Tirada> t = BotinCalamity.tirar(BotinCalamity.filas(c, "botin", BOTIN_DE_SERIE), 0, 0, 0,

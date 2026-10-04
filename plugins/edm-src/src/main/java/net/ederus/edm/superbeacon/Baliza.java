@@ -36,8 +36,11 @@ final class Baliza {
     String clanDueno;
     /** 1.78.1: ya no es final; la renueva SuperBeaconPlugin.renovar (el trofeo del clan que repite). */
     long vence;
-    /** La semana que gano (el trofeo); 0 si no aplica. Viaja con el objeto. */
-    final long semana;
+    /**
+     * La semana que gano (el trofeo); 0 si no aplica. Viaja con el objeto. No es final: al
+     * renovar el trofeo del clan que repite pasa a la semana nueva (SuperBeaconPlugin.renovar).
+     */
+    long semana;
     final LinkedHashSet<String> elegidos;
 
     final String mundo;
