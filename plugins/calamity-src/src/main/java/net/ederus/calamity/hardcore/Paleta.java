@@ -232,7 +232,7 @@ public final class Paleta {
 
     /**
      * Calamity 1.8.4 · El nombre de un minijefe (Custodio, Matriarca, Heraldo, Sanador, Centinela):
-     * "☠ Custodio de las Ruinas ☠", con las calaveras en hueso y el nombre en el degradado de
+     * "☠ Custodio de las Ruinas", con la calavera en hueso y el nombre en el degradado de
      * MINIJEFE_DESDE a MINIJEFE_HASTA. Es el mismo en su cartel (CartelesMinijefe) y en el aviso
      * "Ha venido por ti".
      *
@@ -242,13 +242,16 @@ public final class Paleta {
      *
      * Con nivel > 0 le sigue " · Nv. 45" en tenue (el aviso del chat). El cartel lo pide con 0,
      * porque el nivel ya va en su segunda linea.
+     *
+     * Calamity 1.11 · Una sola calavera, delante: "☠ Custodio de las Ruinas" (Dosa, 2026-10-04). Sigue
+     * sin negrita en ningun trozo: si se ve en negrita es la ficha de /esb (negrita: true) en algun sitio
+     * que no pasa por aqui.
      */
     public static Component minijefe(String nombre, int nivel) {
         String n = nombre == null || nombre.isBlank() ? "Minijefe" : nombre;
         TextComponent.Builder out = Component.text()
-                .append(Component.text("☠ ", HUESO))
-                .append(degradado(n, MINIJEFE_DESDE, MINIJEFE_HASTA).decoration(TextDecoration.BOLD, false))
-                .append(Component.text(" ☠", HUESO));
+                .append(Component.text("☠ ", HUESO).decoration(TextDecoration.BOLD, false))
+                .append(degradado(n, MINIJEFE_DESDE, MINIJEFE_HASTA).decoration(TextDecoration.BOLD, false));
         if (nivel > 0) {
             out.append(Component.text(" · ", SEPARADOR)).append(Component.text("Nv. " + nivel, TENUE));
         }

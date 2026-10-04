@@ -411,6 +411,24 @@ public final class ArenaGuard implements Listener {
     }
 
     /**
+     * Golpes que otro plugin ha cancelado a proposito y que devolverGolpe tiene que respetar.
+     * Por identidad (Event no redefine equals) y debiles: el evento se olvida solo al acabar.
+     * Solo hilo principal, como los eventos de dano.
+     */
+    private static final Set<EntityDamageByEntityEvent> VETADOS =
+            java.util.Collections.newSetFromMap(new java.util.WeakHashMap<>());
+
+    /**
+     * Calamity 1.11 · Un golpe que NO se devuelve aunque la victima sea nuestra. Lo usa Calamity
+     * para su zona spawn: desde dentro no se dana a sus mobs, y como sus minijefes son esbirros de
+     * /esb, devolverGolpe les descancelaba el golpe y se les podia matar sin riesgo desde la plaza.
+     * Hay que llamarlo antes de NORMAL (Calamity lo hace en LOWEST) y con el golpe ya cancelado.
+     */
+    public static void vetar(EntityDamageByEntityEvent e) {
+        if (e != null) VETADOS.add(e);
+    }
+
+    /**
      * Devuelve el golpe de un jugador a una entidad nuestra si alguien lo cancelo.
      *
      * No mira la arena ni si hay anomalia abierta, a proposito: los esbirros de /esb
@@ -419,10 +437,13 @@ public final class ArenaGuard implements Listener {
      * solo conocia la marca de los esbirros de jefe, asi que a un golem de mazmorra no
      * se le podia pegar nunca y a uno de anomalia solo mientras durara la pelea.
      *
+     * Un golpe vetado (vetar) no se devuelve nunca.
+     *
      * @return true si el golpe estaba cancelado y se ha devuelto
      */
     public boolean devolverGolpe(EntityDamageByEntityEvent e) {
         if (!e.isCancelled() || !plugin.settings().bypassProtections()) return false;
+        if (VETADOS.contains(e)) return false;
         Entity victima = e.getEntity();
         if (!esNuestra(victima)) return false;
         Player p = AnomalyManager.attacker(e.getDamager());

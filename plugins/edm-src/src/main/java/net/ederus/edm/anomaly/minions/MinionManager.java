@@ -74,6 +74,11 @@ public final class MinionManager implements Listener {
      * barrido de arranque borra los esbirros y a estos hay que conservarlos. */
     private final NamespacedKey keyNombre;
     private final NamespacedKey keyDano;
+    /**
+     * Calamity 1.11 · La vida "de verdad" de un esbirro cuya vida no cabe en la entidad (vanilla topa
+     * max_health en 1024): el cartel la pinta en proporcion a la de la entidad. Ver vidaLogica.
+     */
+    private final NamespacedKey keyVidaLogica;
     /** Marcas de otros modulos que las crias de Division heredan de su madre. */
     private final List<NamespacedKey> herencia = new ArrayList<>();
 
@@ -110,6 +115,7 @@ public final class MinionManager implements Listener {
         this.keyChild = new NamespacedKey(plugin, "esbirro_cria");
         this.keyNombre = new NamespacedKey(plugin, "esbirro_nombre");
         this.keyDano = new NamespacedKey(plugin, "esbirro_dano");
+        this.keyVidaLogica = new NamespacedKey(plugin, "esbirro_vida_logica");
     }
 
     // ---------------------------------------------------------------------- ciclo
@@ -157,7 +163,7 @@ public final class MinionManager implements Listener {
                 continue;
             }
             e.holo.teleport(e.mob.getLocation().add(0, e.mob.getHeight() + 0.45, 0));
-            int hp = (int) Math.ceil(e.mob.getHealth());
+            int hp = vidaVisible(e.mob);
             if (hp != e.lastHealth) {
                 e.lastHealth = hp;
                 updateHolo(e.holo, e.mob);
@@ -388,6 +394,34 @@ public final class MinionManager implements Listener {
         escoltar(mob, "adoptado");
     }
 
+    /**
+     * Calamity 1.11 · La vida logica de un esbirro: la que tendria si vanilla no topara max_health en 1024.
+     * Quien la pone (los minijefes de Calamity) escala el dano que recibe para que la vida de la entidad
+     * baje en la misma proporcion; aqui solo se usa para pintar el cartel (vidaVisible). 0 o menos la quita.
+     */
+    public void vidaLogica(LivingEntity mob, double vida) {
+        if (mob == null) return;
+        if (vida > 0) mob.getPersistentDataContainer().set(keyVidaLogica, PersistentDataType.DOUBLE, vida);
+        else mob.getPersistentDataContainer().remove(keyVidaLogica);
+        // Que el cartel se repinte en el proximo tick aunque la vida de la entidad no cambie.
+        for (Escolta e : escoltas) if (e.mob.getUniqueId().equals(mob.getUniqueId())) e.lastHealth = -1;
+    }
+
+    /**
+     * La vida que se pinta en el cartel: la de la entidad o, con vida logica, esa en la misma proporcion
+     * (la entidad a 512 de 1024 con 3.000 de vida logica pinta 1.500). Redondeada hacia arriba, como
+     * siempre, con un margen para que la vida llena no salga con uno de mas por el redondeo.
+     */
+    public int vidaVisible(LivingEntity mob) {
+        double hp = mob.getHealth();
+        Double logica = mob.getPersistentDataContainer().get(keyVidaLogica, PersistentDataType.DOUBLE);
+        if (logica != null && logica > 0) {
+            double max = Compat.getAttribute(mob, "max_health", 0);
+            if (max > 0) hp = hp / max * logica;
+        }
+        return (int) Math.ceil(hp - 1e-6);
+    }
+
     /** Las crias de Division copian estas marcas de su madre (texto). */
     public void heredable(NamespacedKey clave) {
         if (!herencia.contains(clave)) herencia.add(clave);
@@ -457,7 +491,7 @@ public final class MinionManager implements Listener {
             return;
         }
         int level = levelOf(mob);
-        int hp = (int) Math.ceil(mob.getHealth());
+        int hp = vidaVisible(mob);
         double max = Compat.getAttribute(mob, "max_health", Math.max(1, hp));
         double left = max <= 0 ? 1 : Math.max(0, Math.min(1, mob.getHealth() / max));
 

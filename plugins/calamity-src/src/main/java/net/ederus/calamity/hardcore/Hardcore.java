@@ -81,6 +81,8 @@ public final class Hardcore implements Listener {
     private final Map<UUID, Long> ultimoEfecto = new HashMap<>();
     /** Segundos que lleva canalizando el cristal cada uno. */
     private final Map<UUID, Integer> cuentaCristal = new HashMap<>();
+    /** Calamity 1.11 · Tick del servidor del ultimo uso del Frasco o el Cristal de cada uno (onUsar). */
+    private final Map<UUID, Integer> ultimoUso = new HashMap<>();
     /** Cuando murio cada uno dentro (millis), para la cuarentena de reentrada. */
     private final Map<UUID, Long> muertos = new HashMap<>();
     /** Minijefe -> a quien viene siguiendo. Ver marcarPresa(). */
@@ -374,6 +376,9 @@ public final class Hardcore implements Listener {
         Autotest.registrar("fragmentos", FragmentosMasamune::autotest);
         // 1.9.0: la tabla de biomas y los mobs especiales (las usa MobsLethal, que no ve Autotest).
         Autotest.registrar("apariciones", Apariciones::autotest);
+        // 1.11: la salida completa a mano, para el staff (en ingles, como todos los comandos nuevos).
+        Subcomandos.lw().registrar("extract", "extract <jugador>: lo saca de Calamity como si cruzara la puerta, con Tasación",
+                "ederus.mundos", this::comandoExtract, args -> args.length == 2 ? Entregas.nombresConectados() : List.of());
         PlaceholdersLethal.registrar("cordura", (jugador, resto) -> corduraTexto(jugador));
         // Lo primero: la Grieta, las amenazas y los mobs preguntan por ella desde que nacen.
         zona = crear("zona-spawn", () -> new ZonaSpawn(this));
@@ -715,6 +720,8 @@ public final class Hardcore implements Listener {
         if (dentro && enZona.add(u)) {
             seguro("sentidos", () -> sentidos.alEntrarSpawn(p));
             seguro("parca", () -> parca.alEntrarSpawn(p));
+            // 1.11: los premios pendientes se entregan solos en la zona spawn (Entregas.recibeYa), como fuera.
+            if (entregas != null) seguro("entregas", () -> entregas.pendientes(p));
             cordura.destello(p, Component.text("Estás en el spawn", Paleta.DETALLE)
                     .append(Component.text(": aquí la cordura no baja.", Paleta.TEXTO)), 3);
         } else if (!dentro && enZona.remove(u)) {
@@ -1914,12 +1921,56 @@ public final class Hardcore implements Listener {
         String texto = switch (motivo == null ? "" : motivo) {
             case "puerta" -> "Has salido de Calamity.";
             case "cristal" -> "El Cristal de Regreso te saca de Calamity.";
+            case "admin" -> "El staff te ha sacado de Calamity.";
             default -> null;
         };
         if (texto != null) {
             p.sendMessage(Component.text(texto, Paleta.TEXTO));
         }
         Compat.soundPlayers(destino.getWorld(), destino, "block.amethyst_block.resonate", 1.0f, 0.8f);
+    }
+
+    /**
+     * Calamity 1.11 · /calamidad extract <jugador>: la salida completa a mano. Es la de la puerta
+     * (sacar con extraccion): Tasacion de lo que lleva (y con ella los contratos de la Tasacion, la
+     * Racha y la telemetria "sale" con motivo "admin"), pergaminos y Frasco prestado fuera, la PARCA
+     * le espera como a cualquiera que sale, y cordura entera. Para sacar a alguien atascado o en
+     * pruebas sin que pierda lo que lleva. Si estaba canalizando un Cristal, se le apaga (no lo gasta).
+     */
+    private void comandoExtract(org.bukkit.command.CommandSender quien, String[] args) {
+        if (args.length < 2) {
+            quien.sendMessage(Component.text("Uso: /calamidad extract <jugador>", Paleta.AVISO));
+            return;
+        }
+        Player p = plugin.getServer().getPlayerExact(args[1]);
+        if (p == null) {
+            quien.sendMessage(Component.text("No encuentro a ese jugador conectado.", Paleta.AVISO));
+            return;
+        }
+        if (!esHardcore(p)) {
+            quien.sendMessage(Component.text(p.getName() + " no está en Calamity.", Paleta.AVISO));
+            return;
+        }
+        if (p.isDead()) {
+            quien.sendMessage(Component.text(p.getName() + " está muerto: sale al reaparecer.", Paleta.AVISO));
+            return;
+        }
+        if (salida() == null) {
+            quien.sendMessage(Component.text("No hay punto de salida: márcalo con /calamidad salida.", Paleta.AVISO));
+            return;
+        }
+        canalizando.remove(p.getUniqueId());
+        cuentaCristal.remove(p.getUniqueId());
+        String staff = quien instanceof Player s ? s.getName() : "consola";
+        plugin.bitacora().anotar("extract", p.getName(), "por " + staff);
+        sacar(p, "admin", true);
+        if (esHardcore(p)) {
+            // Otro plugin (uno de combate, por ejemplo) ha frenado el teleport: la Tasacion ya se hizo.
+            quien.sendMessage(Component.text("Se ha tasado a " + p.getName() + ", pero algo ha frenado el teleport: "
+                    + "sigue en Calamity.", Paleta.AVISO));
+            return;
+        }
+        quien.sendMessage(Component.text(p.getName() + " ha salido de Calamity con su Tasación.", Paleta.BIEN));
     }
 
     /** Mete a un jugador por la puerta: el teleport y la llegada (alLlegar). */
@@ -2013,6 +2064,7 @@ public final class Hardcore implements Listener {
         canalizando.remove(p.getUniqueId());
         cuentaCristal.remove(p.getUniqueId());
         ultimoEfecto.remove(p.getUniqueId());
+        ultimoUso.remove(p.getUniqueId());
         String ruta = "guardado." + p.getUniqueId();
         if (esHardcore(p) && cordura.conoce(p)) {
             datos.set(ruta, cordura.valor(p));
@@ -2046,13 +2098,30 @@ public final class Hardcore implements Listener {
 
     // ----------------------------------------------------------------- los objetos
 
-    @EventHandler(ignoreCancelled = true)
+    /**
+     * Calamity 1.11 · Sin ignoreCancelled: Paper entrega el clic al aire (RIGHT_CLICK_AIR) ya marcado
+     * como cancelado, porque no hay bloque que usar (useInteractedBlock = DENY), y con ignoreCancelled
+     * el Frasco y el Cristal solo respondian apuntando a un bloque. Bedrock manda SIEMPRE el uso de un
+     * objeto como clic al aire. Lo que cuenta es si alguien ha negado el uso del OBJETO (una proteccion
+     * que cancela el clic entero lo niega tambien): solo entonces no se hace nada.
+     *
+     * Un uso por tick y jugador: si llegan el clic al bloque y el del aire en el mismo tick (Paper ya
+     * los junta, pero por si un cliente los manda sueltos), solo cuenta el primero.
+     */
+    @EventHandler
     public void onUsar(PlayerInteractEvent e) {
+        if (e.useItemInHand() == org.bukkit.event.Event.Result.DENY) return;
         if (e.getHand() != EquipmentSlot.HAND) return;
         if (!e.getAction().isRightClick()) return;
         Player p = e.getPlayer();
         ItemStack mano = e.getItem();
-        if (mano == null) return;
+        if (mano == null || (!items.esFrasco(mano) && !items.esCristal(mano))) return;
+        int tick = plugin.getServer().getCurrentTick();
+        Integer antes = ultimoUso.put(p.getUniqueId(), tick);
+        if (antes != null && antes == tick) {
+            e.setCancelled(true);
+            return;
+        }
 
         if (items.esFrasco(mano)) {
             e.setCancelled(true);

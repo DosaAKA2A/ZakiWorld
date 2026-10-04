@@ -655,7 +655,9 @@ final class Contratos implements Listener {
      * se le reponen los pergaminos que falten de contratos pendientes, sin tocar el progreso.
      */
     void alVolver(Player p) {
-        if (!activo() || !pergaminoActivo() || p == null || !hc.esHardcore(p)) return;
+        if (!activo() || p == null || !hc.esHardcore(p)) return;
+        // 1.11: con la libreta de otro dia y nada a medias, la de hoy (y sus pergaminos) antes que nada.
+        if (renovar(p) || !pergaminoActivo()) return;
         ConfigurationSection s = libreta(p.getUniqueId(), false);
         Map<Integer, Integer> lleva = pergaminos.revisar(p, s);
         redibujarTodos(p, s, lleva);
@@ -666,6 +668,72 @@ final class Contratos implements Listener {
             avisoEntrega(p, r);
         }
         refrescarBarra(p, s, tiene);
+    }
+
+    /**
+     * Calamity 1.11 · Si la libreta de quien sigue en Calamity hay que cambiarla por la de hoy: es de otro
+     * dia (o no tiene) y no lleva ningun contrato a medias, con progreso y sin cobrar (eso incluye uno
+     * cumplido que espera a la Tasacion). Uno a medias se respeta hasta que salga: sale de Calamity y
+     * a la proxima entrada, la de hoy. Estatica para el autotest.
+     */
+    static boolean caducada(ConfigurationSection s, String hoy) {
+        if (s == null) return true;
+        if (hoy.equals(s.getString("dia", ""))) return false;
+        for (int i : huecos(s)) {
+            String r = "lista." + i;
+            if (s.getInt(r + ".progreso", 0) > 0 && !s.getBoolean(r + ".cobrado", false)) return false;
+        }
+        return true;
+    }
+
+    /**
+     * Calamity 1.11 · La libreta de otro dia de quien sigue dentro. El sorteo solo pasaba al LLEGAR a
+     * Calamity (alEntrar), y quien se quedaba en el mundo (reconecta dentro, /warp calamity desde el mismo
+     * mundo) seguia con la de otro dia: caso real, la del 27 de septiembre usada el 4 de octubre. Lo
+     * llaman alVolver (al conectarse dentro) y el menu de Oren (MenuTasador.abrir) dentro de Calamity.
+     *
+     * Si caducada(): se borran sus pergaminos (los de otro dia ya son inertes), se sortea la de hoy con
+     * el mismo sorteo (libreta, Bitacora "contrato | sorteo"), la expedicion cuenta desde aqui (como en
+     * alEntrar, sin tocar nada cobrado) y Oren le deja los pergaminos nuevos. True si la ha cambiado.
+     */
+    boolean renovar(Player p) {
+        if (!activo() || p == null || !hc.esHardcore(p)) return false;
+        UUID u = p.getUniqueId();
+        ConfigurationSection vieja = hc.datos().getConfigurationSection("contratos." + u);
+        String hoy = hoy();
+        if (!caducada(vieja, hoy)) return false;
+        String diaViejo = vieja == null ? "" : vieja.getString("dia", "");
+        int borrados = pergaminoActivo() ? pergaminos.borrarTodos(p) : 0;
+        ConfigurationSection s = seccion(u);
+        // Sin dia de hoy, libreta(..., true) sortea siempre.
+        s.set("dia", null);
+        s = libreta(u, true);
+        Estadisticas st = hc.estadisticas();
+        s.set("base", null);
+        if (st != null) for (String clave : POR_ESTADISTICA.values()) s.set("base." + clave, st.de(u, clave));
+        s.set("ultimo", null);
+        s.set("sin-pergamino", null);
+        avanceHasta.remove(u);
+        reloj.put(u, new int[4]);
+        hc.marcarSucio();
+        hc.plugin().bitacora().anotar("contrato", "renovada", p.getName(), "de " + (diaViejo.isEmpty() ? "?" : diaViejo),
+                "a " + hoy, "pergaminos viejos " + borrados);
+        if (!pergaminoActivo()) {
+            luego(p, 40L, () -> p.sendMessage(ComandoCalamity.mensaje(Component.text("Oren tiene contratos nuevos para ti. Míralos con ")
+                    .append(Component.text("/calamity contratos", Paleta.DETALLE)).append(Component.text(".")))));
+            return true;
+        }
+        Set<Integer> tiene = new HashSet<>();
+        if (entregarAlEntrar()) {
+            Entrega r = entregar(p, s, Set.of());
+            tiene.addAll(r.dados());
+            avisoEntrega(p, r);
+        } else {
+            luego(p, 40L, () -> p.sendMessage(ComandoCalamity.mensaje(
+                    "Oren tiene contratos nuevos para ti: pídele sus pergaminos para que cuenten.")));
+        }
+        refrescarBarra(p, s, tiene);
+        return true;
     }
 
     /** 1.10: los pergaminos de los huecos pendientes (sin cumplir ni cobrar) que no lleva. Lo que no cabe, no se da. */
@@ -849,9 +917,13 @@ final class Contratos implements Listener {
     /**
      * Beber del Frasco rompe el "sin beber". LOWEST y sin cancelar: se mira lo mismo que mira
      * Hardcore.onUsar antes de dar el trago (mano principal, clic derecho, frasco con tragos).
+     *
+     * Calamity 1.11 · Sin ignoreCancelled, como Hardcore.onUsar: el clic al aire (el de Bedrock siempre)
+     * llega ya cancelado y con el se bebia sin romper el contrato. Solo se ignora un uso del objeto negado.
      */
-    @EventHandler(priority = EventPriority.LOWEST, ignoreCancelled = true)
+    @EventHandler(priority = EventPriority.LOWEST)
     public void alBeber(PlayerInteractEvent e) {
+        if (e.useItemInHand() == org.bukkit.event.Event.Result.DENY) return;
         if (e.getHand() != EquipmentSlot.HAND || !e.getAction().isRightClick()) return;
         ItemStack it = e.getItem();
         if (it == null || !activo()) return;
@@ -1360,8 +1432,32 @@ final class Contratos implements Listener {
 
     // ------------------------------------------------------------------ autotest
 
+    /** Calamity 1.11 · Cuando se cambia la libreta de quien sigue dentro (caducada). */
+    static void probarCaducada(Autotest.Hoja h) {
+        String hoy = "2026-10-04";
+        YamlConfiguration y = new YamlConfiguration();
+        h.ok("sin libreta: se sortea", caducada(null, hoy) && caducada(y, hoy));
+        ConfigurationSection s = y.createSection("contratos.x");
+        s.set("dia", "2026-09-27");
+        ponerEn(s, 1, "corto-mobs");
+        ponerEn(s, 2, "minutos");
+        ponerEn(s, 3, "reliquia-ii");
+        h.ok("la del 27 de septiembre sin empezar: se cambia el 4 de octubre", caducada(s, hoy));
+        s.set("dia", hoy);
+        h.ok("la de hoy: no se toca", !caducada(s, hoy));
+        s.set("dia", "2026-09-27");
+        s.set("lista.2.progreso", 7);
+        h.ok("una a medias (progreso sin cobrar): se respeta", !caducada(s, hoy));
+        s.set("lista.2.cobrado", true);
+        h.ok("con progreso pero ya cobrada: se cambia", caducada(s, hoy));
+        s.set("lista.3.progreso", 1);
+        s.set("lista.3.cumplido", true);
+        h.ok("cumplida esperando a la Tasacion: se respeta", !caducada(s, hoy));
+    }
+
     private List<String> autotest() {
         Autotest.Hoja h = new Autotest.Hoja();
+        probarCaducada(h);
         Map<String, Def> pool = pool();
         SecureRandom r = new SecureRandom();
 

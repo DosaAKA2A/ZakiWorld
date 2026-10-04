@@ -797,7 +797,8 @@ final class Minijefes {
 
         Player p = op.getPlayer();
         // La raiz sin color: lo que no lo lleva sale en el normal (Paleta.mensaje) y no en el del minijefe.
-        Component quienDeja = Component.text().append(Component.text(mayuscula(elMinijefe(t)), Paleta.DETALLE))
+        // 1.11: con el nombre de su cartel (Paleta.minijefe: "☠ Custodio de las Ruinas"), sin articulo.
+        Component quienDeja = Component.text().append(Paleta.minijefe(nombre(t), 0))
                 .append(Component.text(" te ha dejado ")).build();
         if (p != null) {
             if (resultado.equals("entregado")) {
@@ -820,7 +821,9 @@ final class Minijefes {
                     .append(Component.text(nombreDe(op), Paleta.DETALLE))
                     .append(Component.text(" ha conseguido "))
                     .append(Component.text(b.nombre(), Paleta.MARCA))
-                    .append(Component.text(" " + Forja.delMinijefe(t) + ".")).build()));
+                    .append(Component.text(" al vencer a "))
+                    .append(Paleta.minijefe(nombre(t), 0))
+                    .append(Component.text(".")).build()));
         }
     }
 
@@ -968,6 +971,28 @@ final class Minijefes {
         h.igual("nombre de uno que no conoce", "Rey de prueba", nombre("rey-de-prueba"));
 
         probarNombreVisible(h);
+        probarVidaLogica(h);
+    }
+
+    /**
+     * 1.11 · La vida logica de los minijefes (MobsLethal.vidaMinijefe): sin el tope de 1024 y con el dano
+     * escalado, la fraccion que reparte el Grifo (dano en la entidad / su vida maxima) es la logica.
+     */
+    static void probarVidaLogica(Autotest.Hoja h) {
+        double vida = net.ederus.calamity.MobsLethal.vidaLogicaMinijefe(200, 15);
+        h.cerca("ficha de 200 por minijefes.vida 15: 3000, sin tope", 3000, vida, 1e-9);
+        h.cerca("multiplicador por debajo de 1: cuenta 1", 200,
+                net.ederus.calamity.MobsLethal.vidaLogicaMinijefe(200, 0.5), 1e-9);
+        double escala = net.ederus.calamity.MobsLethal.escalaDanoMinijefe(vida);
+        h.cerca("3000 de vida: cada golpe entra a 1024/3000", 1024.0 / 3000, escala, 1e-12);
+        h.cerca("hasta 1024 no se escala", 1.0, net.ederus.calamity.MobsLethal.escalaDanoMinijefe(1024), 1e-12);
+        h.cerca("con 800 tampoco", 1.0, net.ederus.calamity.MobsLethal.escalaDanoMinijefe(800), 1e-12);
+        // Un golpe de 300 logicos a uno de 3000: en la entidad 300 x escala; su fraccion, la logica (10 %).
+        double enEntidad = 300 * escala;
+        h.cerca("la fraccion del reparto es la logica", 0.10,
+                enEntidad / net.ederus.calamity.MobsLethal.VIDA_MAXIMA_ENTIDAD, 1e-12);
+        h.ok("vida por encima de 1024: ya no se queda en 1024 justos",
+                vida > net.ederus.calamity.MobsLethal.VIDA_MAXIMA_ENTIDAD);
     }
 
     /**
@@ -1199,10 +1224,11 @@ final class Minijefes {
     /**
      * 1.8.4: el nombre que se ve encima del minijefe y en "Ha venido por ti" (Paleta.minijefe) y
      * el repintado del cartel de EDM (CartelesMinijefe.repintado). Sin negrita en ningun trozo.
+     * 1.11: una sola calavera, delante.
      */
     private static void probarNombreVisible(Autotest.Hoja h) {
         Component solo = Paleta.minijefe("Custodio de las Ruinas", 0);
-        h.igual("nombre de minijefe: calaveras a los lados", "☠ Custodio de las Ruinas ☠", Hardcore.plano(solo));
+        h.igual("nombre de minijefe: una calavera delante", "☠ Custodio de las Ruinas", Hardcore.plano(solo));
         h.ok("nombre de minijefe: sin negrita en ningun trozo", sinNegrita(solo));
         h.igual("nombre de minijefe: negrita apagada a proposito", TextDecoration.State.FALSE,
                 solo.decoration(TextDecoration.BOLD));
@@ -1212,7 +1238,7 @@ final class Minijefes {
         h.igual("nombre de minijefe: empieza en el rojo de los avisos", TextColor.color(Paleta.MINIJEFE_DESDE),
                 letras.get(1).getValue());
         h.igual("nombre de minijefe: acaba en el rojo de Ambush", TextColor.color(Paleta.MINIJEFE_HASTA),
-                letras.get(letras.size() - 2).getValue());
+                letras.get(letras.size() - 1).getValue());
         boolean claros = true;
         for (Map.Entry<String, TextColor> l : letras) {
             TextColor c = l.getValue();
@@ -1221,9 +1247,9 @@ final class Minijefes {
         h.ok("nombre de minijefe: ningun rojo oscuro (#8B1A1A no pasaria)", claros);
 
         Component aviso = Paleta.minijefe("Custodio de las Ruinas", 45);
-        h.igual("aviso: el nivel detras", "☠ Custodio de las Ruinas ☠ · Nv. 45", Hardcore.plano(aviso));
+        h.igual("aviso: el nivel detras", "☠ Custodio de las Ruinas · Nv. 45", Hardcore.plano(aviso));
         h.ok("aviso: sin negrita", sinNegrita(aviso) && aviso.decoration(TextDecoration.BOLD) == TextDecoration.State.FALSE);
-        h.igual("sin nombre de ficha: Minijefe", "☠ Minijefe ☠", Hardcore.plano(Paleta.minijefe(null, 0)));
+        h.igual("sin nombre de ficha: Minijefe", "☠ Minijefe", Hardcore.plano(Paleta.minijefe(null, 0)));
 
         // El cartel tal como lo pinta EDM (MinionManager.updateHolo): la raiz es el nombre de la ficha,
         // en negrita, y de ella cuelgan el salto, el nivel y la vida.
@@ -1236,7 +1262,7 @@ final class Minijefes {
         Component cartel = CartelesMinijefe.repintado(edm);
         h.ok("cartel de EDM: se repinta", cartel != null);
         if (cartel == null) return;
-        h.igual("cartel: nombre arriba, nivel y vida debajo", "☠ Heraldo Carmesí ☠\nNv. 45  ❤ 300", Hardcore.plano(cartel));
+        h.igual("cartel: nombre arriba, nivel y vida debajo", "☠ Heraldo Carmesí\nNv. 45  ❤ 300", Hardcore.plano(cartel));
         h.igual("cartel: la primera linea es Paleta.minijefe", Paleta.minijefe("Heraldo Carmesí", 0), cartel.children().get(0));
         h.ok("cartel: sin negrita, tampoco en la linea del nivel", sinNegrita(cartel)
                 && cartel.decoration(TextDecoration.BOLD) == TextDecoration.State.FALSE);

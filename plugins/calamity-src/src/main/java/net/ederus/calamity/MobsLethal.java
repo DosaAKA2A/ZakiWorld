@@ -312,9 +312,13 @@ public final class MobsLethal implements Listener {
         LivingEntity mob = invocarTipo(p, id, true, sitio);
         if (mob == null) return null;
 
-        double vida = Compat.getAttribute(mob, "max_health", 20) * Math.max(1, multiplicadorVida);
-        Compat.setAttribute(mob, "max_health", Math.min(1024, vida));
-        mob.setHealth(Math.min(1024, vida));
+        /* Calamity 1.11: la vida de la ficha a su nivel (healthAt), no la de la entidad, que vanilla ya topa
+         * en 1024; y por encima de 1024 va como vida logica (vidaMinijefe). Antes un Heraldo N25 salia con
+         * 1024 justos y ni el nivel ni la distancia le subian la vida. */
+        MinionManager mm = minionManager();
+        MinionType tipo = mm == null ? null : mm.typeOf(mob);
+        double base = tipo != null ? tipo.healthAt(mm.levelOf(mob)) : Compat.getAttribute(mob, "max_health", 20);
+        vidaMinijefe(mob, vidaLogicaMinijefe(base, multiplicadorVida));
         Compat.setAttribute(mob, "attack_damage",
                 Compat.getAttribute(mob, "attack_damage", 3) * Math.max(1, multiplicadorDano));
         mob.getPersistentDataContainer().set(clave, PersistentDataType.STRING, "minijefe");
@@ -327,6 +331,64 @@ public final class MobsLethal implements Listener {
          * que el primer tick no salga con el de la ficha; el aviso lo pone nombreMinijefe. */
         if (carteles != null) carteles.repintar();
         return mob;
+    }
+
+    /** Calamity 1.11 · Lo que vanilla deja de max_health: por encima, la vida de un minijefe es logica. */
+    public static final double VIDA_MAXIMA_ENTIDAD = 1024;
+
+    /** Calamity 1.11 · La vida entera de un minijefe: la de su ficha por minijefes.vida (al menos x1), sin tope. */
+    public static double vidaLogicaMinijefe(double base, double multiplicador) {
+        return Math.max(1, base) * Math.max(1, multiplicador);
+    }
+
+    /**
+     * Calamity 1.11 · Lo que multiplica el dano que recibe un minijefe con esa vida logica: 1 si cabe en
+     * la entidad, 1024 / vida si no. Es la cuenta de la PARCA y del Eco (Amenazas.escalaPara): la entidad
+     * se queda en 1024 y cada golpe le quita la parte que le quitaria a la vida entera, asi que la
+     * fraccion de vida de la entidad ES la fraccion de vida logica.
+     */
+    public static double escalaDanoMinijefe(double vidaLogica) {
+        return vidaLogica > VIDA_MAXIMA_ENTIDAD ? VIDA_MAXIMA_ENTIDAD / vidaLogica : 1.0;
+    }
+
+    /**
+     * Calamity 1.11 · Le pone esa vida a un minijefe, llena. Hasta 1024, la de la entidad y nada mas; por
+     * encima, la entidad se queda en 1024, la vida logica va en lethal_world:vida_logica (la lee
+     * alDanarMinijefe) y se le pasa a EDM para que su cartel pinte "❤ 3000" y no la de la entidad.
+     *
+     * El reparto (Grifo.onDano, Minijefes.alMorir) no cambia: cuenta lo que entra en la entidad y lo
+     * divide entre su vida maxima, y con el dano escalado esa fraccion es la misma que la logica.
+     */
+    void vidaMinijefe(LivingEntity mob, double vida) {
+        double real = Math.min(VIDA_MAXIMA_ENTIDAD, vida);
+        Compat.setAttribute(mob, "max_health", real);
+        mob.setHealth(Math.min(real, Compat.getAttribute(mob, "max_health", real)));
+        boolean logica = vida > real;
+        if (logica) mob.getPersistentDataContainer().set(Marcas.VIDA_LOGICA, PersistentDataType.DOUBLE, vida);
+        else mob.getPersistentDataContainer().remove(Marcas.VIDA_LOGICA);
+        MinionManager mm = minionManager();
+        if (mm == null) return;
+        try {
+            mm.vidaLogica(mob, logica ? vida : 0);
+        } catch (LinkageError edmViejo) {
+            // Un EDM sin vidaLogica pinta la vida de la entidad; la pelea es la misma.
+        }
+    }
+
+    /**
+     * Calamity 1.11 · El dano que recibe un minijefe con vida logica se escala (escalaDanoMinijefe), venga
+     * de quien venga, como el de la PARCA (Amenazas.onDano). En HIGHEST, despues de todo lo que lo cambia
+     * (armas, encantamientos, la coraza de EDM) y antes de que MONITOR lo apunte. setDamage mueve la base
+     * y Bukkit escala los modificadores (armadura...) en la misma proporcion.
+     */
+    @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
+    public void alDanarMinijefe(EntityDamageEvent e) {
+        if (!(e.getEntity() instanceof LivingEntity mob) || mob instanceof Player) return;
+        PersistentDataContainer pdc = mob.getPersistentDataContainer();
+        Double vida = pdc.get(Marcas.VIDA_LOGICA, PersistentDataType.DOUBLE);
+        if (vida == null || !"minijefe".equals(pdc.get(clave, PersistentDataType.STRING))) return;
+        double escala = escalaDanoMinijefe(vida);
+        if (escala < 1 && e.getDamage() > 0) e.setDamage(e.getDamage() * escala);
     }
 
     /**
@@ -866,8 +928,13 @@ public final class MobsLethal implements Listener {
         }
         double escalaMax = cfg().getDouble("escala-maxima", 2.0);
         if (Compat.getAttribute(mob, "scale", 1.0) > escalaMax) Compat.setAttribute(mob, "scale", escalaMax);
-        Compat.setAttribute(mob, "max_health", vida);
-        mob.setHealth(Math.min(vida, Compat.getAttribute(mob, "max_health", vida)));
+        // 1.11: el minijefe de estructura tambien pasa de 1024 con vida logica (vidaMinijefe), como el de /esb.
+        if (minijefe) {
+            vidaMinijefe(mob, vida);
+        } else {
+            Compat.setAttribute(mob, "max_health", vida);
+            mob.setHealth(Math.min(vida, Compat.getAttribute(mob, "max_health", vida)));
+        }
         sinQuemarse(mob);
         mob.getPersistentDataContainer().set(clave, PersistentDataType.STRING, minijefe ? "minijefe" : "estructura");
         apuntarDistancia(mob, distancia);
