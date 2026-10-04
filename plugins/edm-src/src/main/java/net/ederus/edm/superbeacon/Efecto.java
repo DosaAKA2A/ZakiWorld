@@ -1,6 +1,5 @@
 package net.ederus.edm.superbeacon;
 
-import java.util.List;
 import java.util.Map;
 
 import org.bukkit.Material;
@@ -59,9 +58,9 @@ abstract class Efecto {
         return clase().falta(this);
     }
 
-    /** Lo que hace, en lineas de lore ya con color. */
-    List<String> detalle() {
-        return clase().detalle(this);
+    /** Lo que ganas y donde, en una frase (ver ClaseEfecto.que). */
+    String que() {
+        return clase() == null ? "" : clase().que(this);
     }
 
     /**

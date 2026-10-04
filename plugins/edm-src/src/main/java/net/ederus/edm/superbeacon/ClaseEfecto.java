@@ -1,7 +1,6 @@
 package net.ederus.edm.superbeacon;
 
 import java.util.Collection;
-import java.util.List;
 import java.util.function.Consumer;
 
 import org.bukkit.Material;
@@ -57,9 +56,18 @@ abstract class ClaseEfecto {
         return null;
     }
 
-    /** Lo que hace, para el menu. */
-    List<String> detalle(Efecto e) {
-        return List.of();
+    /**
+     * Lo que ganas y donde, en una frase para el menu (sin color: el menu le pone el suyo y
+     * la parte en lineas). Se genera con los datos del efecto, asi vale para cualquier
+     * efecto del config y no solo para los de serie.
+     */
+    String que(Efecto e) {
+        return "";
+    }
+
+    /** En que seccion va en el lore: Presentacion.VIDA, MOVIMIENTO o BOOST. */
+    int seccion(Efecto e) {
+        return Presentacion.MOVIMIENTO;
     }
 
     /* ---------------------------------------------------- las de jugador */

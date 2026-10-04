@@ -1,7 +1,8 @@
 package net.ederus.edm.superbeacon;
 
-import java.util.List;
 import java.util.Locale;
+import java.util.Map;
+import java.util.Set;
 import java.util.function.Consumer;
 
 import org.bukkit.Material;
@@ -98,9 +99,67 @@ final class ClasePocion extends ClaseEfecto {
         return true;
     }
 
+    /** El nombre en español de cada efecto de pocion (el del juego en es_MX). Respaldo de pocion-<clave>. */
+    static final Map<String, String> NOMBRES = Map.ofEntries(
+            Map.entry("speed", "Velocidad"), Map.entry("slowness", "Lentitud"), Map.entry("haste", "Prisa"),
+            Map.entry("mining_fatigue", "Fatiga minera"), Map.entry("strength", "Fuerza"),
+            Map.entry("instant_health", "Curación instantánea"), Map.entry("instant_damage", "Daño instantáneo"),
+            Map.entry("jump_boost", "Supersalto"), Map.entry("nausea", "Náuseas"),
+            Map.entry("regeneration", "Regeneración"), Map.entry("resistance", "Resistencia"),
+            Map.entry("fire_resistance", "Resistencia al fuego"), Map.entry("water_breathing", "Respiración acuática"),
+            Map.entry("invisibility", "Invisibilidad"), Map.entry("blindness", "Ceguera"),
+            Map.entry("night_vision", "Visión nocturna"), Map.entry("hunger", "Hambre"),
+            Map.entry("weakness", "Debilidad"), Map.entry("poison", "Veneno"), Map.entry("wither", "Descomposición"),
+            Map.entry("health_boost", "Vida extra"), Map.entry("absorption", "Absorción"),
+            Map.entry("saturation", "Saturación"), Map.entry("glowing", "Brillo"), Map.entry("levitation", "Levitación"),
+            Map.entry("luck", "Suerte"), Map.entry("unluck", "Mala suerte"), Map.entry("slow_falling", "Caída lenta"),
+            Map.entry("conduit_power", "Poder del conducto"), Map.entry("dolphins_grace", "Gracia de delfín"),
+            Map.entry("bad_omen", "Mal presagio"), Map.entry("hero_of_the_village", "Héroe de la aldea"),
+            Map.entry("darkness", "Oscuridad"), Map.entry("trial_omen", "Presagio de desafío"),
+            Map.entry("raid_omen", "Presagio de invasión"), Map.entry("wind_charged", "Carga de viento"),
+            Map.entry("weaving", "Tejido"), Map.entry("oozing", "Supuración"), Map.entry("infested", "Infestación"));
+
+    /** Lo que se nota con cada uno, para la frase del menu. Respaldo de pocion-que-<clave>. */
+    static final Map<String, String> QUE = Map.ofEntries(
+            Map.entry("haste", "Picas y talas más rápido"), Map.entry("speed", "Te mueves más rápido"),
+            Map.entry("regeneration", "Recuperas vida poco a poco"), Map.entry("resistance", "Recibes menos daño"),
+            Map.entry("strength", "Tus golpes hacen más daño"), Map.entry("night_vision", "Ves en la oscuridad"),
+            Map.entry("saturation", "No pasas hambre"), Map.entry("fire_resistance", "El fuego y la lava no te queman"),
+            Map.entry("water_breathing", "Respiras bajo el agua"), Map.entry("jump_boost", "Saltas más alto"),
+            Map.entry("slow_falling", "Caes despacio"), Map.entry("health_boost", "Tienes más vida máxima"),
+            Map.entry("absorption", "Tienes corazones extra de absorción"),
+            Map.entry("luck", "Mejor botín en cofres y pesca"),
+            Map.entry("conduit_power", "Respiras y picas mejor bajo el agua"),
+            Map.entry("dolphins_grace", "Nadas más rápido"));
+
+    /** Los que cuidan la vida: van con el corazon en el lore. */
+    private static final Set<String> DE_VIDA = Set.of("regeneration", "resistance", "absorption", "health_boost",
+            "fire_resistance", "instant_health", "water_breathing", "saturation");
+
+    /** "Prisa III", "Visión nocturna" (el nivel I no se escribe, como en el juego). */
+    String nombreConNivel(Pocion x) {
+        String porDefecto = NOMBRES.getOrDefault(x.clavePocion,
+                Character.toUpperCase(x.clavePocion.charAt(0)) + x.clavePocion.substring(1).replace('_', ' '));
+        String n = plugin.textos().crudo("pocion-" + x.clavePocion, porDefecto);
+        return x.nivel > 1 ? n + " " + Presentacion.romano(x.nivel) : n;
+    }
+
     @Override
-    List<String> detalle(Efecto e) {
-        return List.of(plugin.textos().crudo("detalle-pocion", "&#8A8A8AEfecto de poción mientras estés en su alcance."));
+    String que(Efecto e) {
+        Pocion x = (Pocion) e;
+        String nombre = nombreConNivel(x);
+        String que = plugin.textos().crudo("pocion-que-" + x.clavePocion, QUE.get(x.clavePocion));
+        if (que == null || que.isBlank()) {
+            return plugin.textos().crudo("detalle-pocion-generico", "Tienes %efecto% mientras estés en su alcance.")
+                    .replace("%efecto%", nombre);
+        }
+        return plugin.textos().crudo("detalle-pocion", "%que% mientras estés en su alcance.")
+                .replace("%que%", que).replace("%efecto%", nombre);
+    }
+
+    @Override
+    int seccion(Efecto e) {
+        return DE_VIDA.contains(((Pocion) e).clavePocion) ? Presentacion.VIDA : Presentacion.MOVIMIENTO;
     }
 
     @Override

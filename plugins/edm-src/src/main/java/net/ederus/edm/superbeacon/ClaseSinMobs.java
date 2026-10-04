@@ -81,9 +81,13 @@ final class ClaseSinMobs extends ClaseEfecto implements Listener {
     }
 
     @Override
-    List<String> detalle(Efecto e) {
-        return List.of(plugin.textos().crudo("detalle-sin-mobs",
-                "&#8A8A8ANo aparecen monstruos de forma natural en su alcance."));
+    String que(Efecto e) {
+        return plugin.textos().crudo("detalle-sin-mobs", "No aparecen monstruos de forma natural dentro de su alcance.");
+    }
+
+    @Override
+    int seccion(Efecto e) {
+        return Presentacion.VIDA;
     }
 
     @Override

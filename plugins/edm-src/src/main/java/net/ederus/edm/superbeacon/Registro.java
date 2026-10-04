@@ -466,7 +466,7 @@ final class Registro {
 
     private static Ficha ficha(UUID id, ConfigurationSection s) {
         return new Ficha(id, s.getString("tipo"), uuid(s.getString("dueno")), s.getString("dueno-nombre"),
-                s.getString("clan"), s.getLong("vence", 0), s.getStringList("elegidos"));
+                s.getString("clan"), s.getLong("vence", 0), s.getStringList("elegidos"), s.getLong("semana", 0));
     }
 
     private Material material(String nombre, String donde) {
@@ -563,5 +563,6 @@ final class Registro {
         yml.set(r + ".clan", f.clan());
         yml.set(r + ".vence", f.vence());
         yml.set(r + ".elegidos", new ArrayList<>(f.elegidos()));
+        if (f.semana() > 0) yml.set(r + ".semana", f.semana());
     }
 }

@@ -27,7 +27,7 @@ import net.kyori.adventure.text.format.NamedTextColor;
  * la consola: la tienda, las cajas y el futuro ranking de clanes llaman a
  *
  *     superbeacon give %player_name% granja
- *     superbeacon give %player_name% trofeo 30 ABC
+ *     superbeacon give %player_name% trofeo - ABC
  *     superbeacon give %player_name% guerra - ABC      (- = los dias del tipo)
  */
 final class ComandoSuperBeacon implements CommandExecutor, TabCompleter {

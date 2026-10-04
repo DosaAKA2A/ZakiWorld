@@ -35,6 +35,8 @@ final class Baliza {
      */
     String clanDueno;
     final long vence;
+    /** La semana que gano (el trofeo); 0 si no aplica. Viaja con el objeto. */
+    final long semana;
     final LinkedHashSet<String> elegidos;
 
     final String mundo;
@@ -64,6 +66,7 @@ final class Baliza {
         this.duenoNombre = f.duenoNombre();
         this.clan = f.clan();
         this.vence = f.vence();
+        this.semana = f.semana();
         this.elegidos = new LinkedHashSet<>(f.elegidos());
         this.mundo = mundo;
         this.x = x;
@@ -75,7 +78,7 @@ final class Baliza {
 
     /** Lo que se escribe en el objeto al recogerla o devolverla. */
     Ficha ficha() {
-        return new Ficha(id, tipo, dueno, duenoNombre, clan, vence, List.copyOf(elegidos));
+        return new Ficha(id, tipo, dueno, duenoNombre, clan, vence, List.copyOf(elegidos), semana);
     }
 
     boolean vencida(long ahora) {

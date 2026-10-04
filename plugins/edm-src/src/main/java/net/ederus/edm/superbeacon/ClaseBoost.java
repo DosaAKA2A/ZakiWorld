@@ -1,7 +1,6 @@
 package net.ederus.edm.superbeacon;
 
 import java.util.EnumMap;
-import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
@@ -112,14 +111,29 @@ final class ClaseBoost extends ClaseEfecto {
         return null;
     }
 
+    /** La frase de cada boost. Respaldo de detalle-boost-<boost>. */
+    static final Map<String, String> QUE = Map.of(
+            "exp", "Recoges un %porcentaje% más de experiencia mientras estés en su alcance.",
+            "skill_exp", "Tus habilidades ganan un %porcentaje% más de experiencia mientras estés en su alcance.",
+            "pesca", "Tu suerte de pesca sube un %porcentaje% mientras estés en su alcance.",
+            "mobcoins", "Los jefes y esbirros te pagan un %porcentaje% más de MobCoins mientras estés en su alcance.");
+
     @Override
-    List<String> detalle(Efecto e) {
+    String que(Efecto e) {
         Multi m = (Multi) e;
-        return List.of(
-                plugin.textos().crudo("detalle-boost", "&#8A8A8A%boost% x%multiplicador% en su alcance.")
-                        .replace("%boost%", m.tipo.nombre())
-                        .replace("%multiplicador%", Numeros.decimal(m.multiplicador)),
-                plugin.textos().crudo("detalle-boost-mayor", "&#8A8A8ANo se suma con otros boosts: se aplica el mayor."));
+        String plantilla = plugin.textos().crudo("detalle-boost-" + m.tipo.id(), QUE.get(m.tipo.id()));
+        if (plantilla == null || plantilla.isBlank()) {
+            plantilla = plugin.textos().crudo("detalle-boost",
+                    "Ganas un %porcentaje% más de %boost% mientras estés en su alcance.");
+        }
+        return plantilla.replace("%porcentaje%", Presentacion.porcentaje(m.multiplicador))
+                .replace("%multiplicador%", Numeros.decimal(m.multiplicador))
+                .replace("%boost%", m.tipo.nombre().toLowerCase(java.util.Locale.ROOT));
+    }
+
+    @Override
+    int seccion(Efecto e) {
+        return Presentacion.BOOST;
     }
 
     @Override

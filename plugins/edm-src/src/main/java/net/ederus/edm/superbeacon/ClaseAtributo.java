@@ -125,14 +125,44 @@ final class ClaseAtributo extends ClaseEfecto {
         return ((Mod) e).attr == null ? plugin.textos().crudo("falta-atributo", "atributo desconocido") : null;
     }
 
+    /** La frase de cada atributo conocido. Respaldo de detalle-atributo-<atributo>. */
+    static final Map<String, String> QUE = Map.of(
+            "max_health", "Tienes %corazones% %mas% de vida máxima mientras estés en su alcance.",
+            "movement_speed", "Te mueves un %porcentaje% %mas% rápido mientras estés en su alcance.",
+            "attack_damage", "Tus golpes quitan %corazones% %mas% mientras estés en su alcance.",
+            "block_interaction_range", "Llegas %valor% bloques %mas% lejos al picar y construir en su alcance.",
+            "entity_interaction_range", "Llegas %valor% bloques %mas% lejos al golpear en su alcance.",
+            "safe_fall_distance", "Caes %valor% bloques %mas% sin hacerte daño en su alcance.");
+
+    /** Velocidad base de un jugador: +0,02 es un 20 % mas. */
+    static final double VELOCIDAD_BASE = 0.1;
+
+    private static final java.util.Set<String> DE_VIDA = java.util.Set.of("max_health", "armor", "armor_toughness",
+            "knockback_resistance", "safe_fall_distance", "oxygen_bonus");
+
     @Override
-    List<String> detalle(Efecto e) {
+    String que(Efecto e) {
         Mod m = (Mod) e;
         String nombre = plugin.textos().crudo("atributo-" + m.atributo, m.atributo.replace('_', ' '));
-        String valor = (m.valor > 0 ? "+" : "") + Numeros.decimal(m.valor);
-        return List.of(plugin.textos().crudo("detalle-atributo",
-                "&#8A8A8A%valor% de %atributo% mientras estés en su alcance.")
-                .replace("%valor%", valor).replace("%atributo%", nombre));
+        String mas = m.valor > 0 ? plugin.textos().crudo("palabra-mas", "más")
+                : plugin.textos().crudo("palabra-menos", "menos");
+        double abs = Math.abs(m.valor);
+        String plantilla = plugin.textos().crudo("detalle-atributo-" + m.atributo, QUE.get(m.atributo));
+        if (plantilla == null || plantilla.isBlank()) {
+            plantilla = plugin.textos().crudo("detalle-atributo",
+                    "Tienes %signo%%valor% de %atributo% mientras estés en su alcance.");
+        }
+        return plantilla.replace("%signo%", m.valor > 0 ? "+" : "-")
+                .replace("%valor%", Numeros.decimal(abs))
+                .replace("%mas%", mas)
+                .replace("%corazones%", Presentacion.corazones(abs))
+                .replace("%porcentaje%", Numeros.decimal(abs / VELOCIDAD_BASE * 100.0) + " %")
+                .replace("%atributo%", nombre);
+    }
+
+    @Override
+    int seccion(Efecto e) {
+        return DE_VIDA.contains(((Mod) e).atributo) ? Presentacion.VIDA : Presentacion.MOVIMIENTO;
     }
 
     NamespacedKey clave(String atributo) {

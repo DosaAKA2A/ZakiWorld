@@ -112,8 +112,16 @@ final class ClaseCultivos extends ClaseEfecto {
     }
 
     @Override
-    List<String> detalle(Efecto e) {
-        return List.of(plugin.textos().crudo("detalle-cultivos", "&#8A8A8AHace crecer los cultivos de su alcance."));
+    String que(Efecto e) {
+        Riego r = (Riego) e;
+        return plugin.textos().crudo("detalle-cultivos",
+                        "Los cultivos de su alcance crecen más rápido: cada %segundos% s, hasta %intentos% suben un paso.")
+                .replace("%segundos%", String.valueOf(r.cadaSegundos)).replace("%intentos%", String.valueOf(r.intentos));
+    }
+
+    @Override
+    int seccion(Efecto e) {
+        return Presentacion.BOOST;
     }
 
     @Override
