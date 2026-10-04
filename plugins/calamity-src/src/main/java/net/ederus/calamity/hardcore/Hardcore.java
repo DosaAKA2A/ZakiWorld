@@ -2241,7 +2241,24 @@ public final class Hardcore implements Listener {
         canalizando.remove(p.getUniqueId());
         cuentaCristal.remove(p.getUniqueId());
         if (!gastarCristal(p)) return;
-        sacar(p, "cristal", true);
+        volverAlSpawn(p);
+    }
+
+    /**
+     * 1.11 · Dosa (2026-10-04): el Cristal ya no saca de Calamity, devuelve al spawn de Calamity (el punto
+     * llegada). Para salir de verdad, con la Tasacion, hay que cruzar el portal de salida del spawn. Sin
+     * llegada marcada en un mundo de Calamity, saca como antes, para no dejar a nadie sin salida.
+     */
+    private void volverAlSpawn(Player p) {
+        Location destino = punto("llegada");
+        if (destino == null || destino.getWorld() == null || !esHardcore(destino.getWorld())) {
+            sacar(p, "cristal", true);
+            return;
+        }
+        p.teleport(destino);
+        p.sendMessage(Component.text("El Cristal de Regreso te devuelve al spawn de Calamity. Para salir, cruza el portal.",
+                Paleta.TEXTO));
+        Compat.soundPlayers(destino.getWorld(), destino, "block.amethyst_block.resonate", 1.0f, 0.8f);
     }
 
     /** Si esta canalizando un Cristal: la Huella no cuenta esos segundos quieto. */

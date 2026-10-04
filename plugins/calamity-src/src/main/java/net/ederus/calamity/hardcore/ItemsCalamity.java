@@ -218,7 +218,7 @@ public final class ItemsCalamity {
     static Ficha fichaCristal(ConfigurationSection c) {
         return new Ficha(MORADO).tipo("Objeto de Calamity · Salida").filete()
                 .historia("Vibra en el mismo tono que la puerta. Quien lo escucha quieto vuelve a casa.").filete()
-                .texto("Te saca vivo de Calamity y vende tus Reliquias, como la puerta.")
+                .texto("Te devuelve al spawn de Calamity. Para salir, cruza el portal.")
                 .texto("Quieto {" + c.getInt("cristal.segundos", 5) + "} s: si te mueves, se apaga.")
                 .texto("En combate no funciona.").filete()
                 .accion("Clic derecho y quédate quieto.")

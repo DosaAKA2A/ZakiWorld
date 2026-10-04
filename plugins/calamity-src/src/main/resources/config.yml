@@ -1434,7 +1434,7 @@ hardcore:
         texto:
           - "Calamity es un mundo hardcore: entras, consigues botín y solo te lo quedas si sales vivo."
           - "Si mueres en Calamity, pierdes todo lo que llevas encima y también la experiencia."
-          - "Para salir vivo, cruza la puerta de salida o usa un Cristal de Regreso y quédate quieto {cristal.segundos} s."
+          - "Para salir vivo, cruza el portal del spawn. Un Cristal de Regreso te lleva al spawn si te quedas quieto {cristal.segundos} s."
           - "Al salir vivo, tus Reliquias se venden solas y tus Esencias pasan a tu saldo."
       cordura:
         titulo: "La cordura"

@@ -15,6 +15,7 @@ import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.block.Action;
+import org.bukkit.event.block.BlockFromToEvent;
 import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.inventory.EquipmentSlot;
 import org.bukkit.inventory.ItemStack;
@@ -147,7 +148,60 @@ public final class VaraPortales implements Listener {
         plugin.getConfig().set(base + "y2", Math.max(s.uno().getBlockY(), s.dos().getBlockY()));
         plugin.getConfig().set(base + "z2", Math.max(s.uno().getBlockZ(), s.dos().getBlockZ()));
         plugin.saveConfig();
-        return s.volumen() + " bloques en " + w.getKey().getKey();
+        String texto = s.volumen() + " bloques en " + w.getKey().getKey();
+        // 1.11 · Dosa: el portal se crea con agua dentro. Solo los dos portales (spawn es la zona, no un portal).
+        if (cual.equals("entrada") || cual.equals("salida")) {
+            int agua = llenarDeAgua(cual);
+            if (agua > 0) texto += ", " + agua + " con agua";
+        }
+        return texto;
+    }
+
+    /** Lo mas grande que se llena de agua de una vez: un portal, no medio spawn por un clic de mas. */
+    static final int AGUA_MAXIMO = 4096;
+
+    /**
+     * Llena de agua quieta los huecos de aire de la caja de un portal (el marco no se toca). El agua
+     * no corre: onFluir para la que sale de un portal, asi que vale un marco abierto por los lados.
+     */
+    int llenarDeAgua(String cual) {
+        ConfigurationSection c = plugin.getConfig().getConfigurationSection("hardcore.puertas." + cual);
+        if (c == null || !c.isSet("mundo")) return 0;
+        NamespacedKey k = NamespacedKey.fromString(c.getString("mundo", ""));
+        World w = k == null ? null : plugin.getServer().getWorld(k);
+        if (w == null) return 0;
+        int x1 = c.getInt("x1"), y1 = c.getInt("y1"), z1 = c.getInt("z1");
+        int x2 = c.getInt("x2"), y2 = c.getInt("y2"), z2 = c.getInt("z2");
+        long volumen = (long) (x2 - x1 + 1) * (y2 - y1 + 1) * (z2 - z1 + 1);
+        if (volumen > AGUA_MAXIMO) return 0;
+        int n = 0;
+        for (int x = x1; x <= x2; x++) {
+            for (int y = y1; y <= y2; y++) {
+                for (int z = z1; z <= z2; z++) {
+                    Block b = w.getBlockAt(x, y, z);
+                    if (!b.getType().isAir()) continue;
+                    b.setType(Material.WATER, false);
+                    n++;
+                }
+            }
+        }
+        return n;
+    }
+
+    /** El agua de un portal no se derrama: ni fuera de la caja ni dentro (se queda como se puso). */
+    @EventHandler(ignoreCancelled = true)
+    public void onFluir(BlockFromToEvent ev) {
+        Block b = ev.getBlock();
+        if (b.getType() != Material.WATER) return;
+        if (enCaja(b, "entrada") || enCaja(b, "salida")) ev.setCancelled(true);
+    }
+
+    private boolean enCaja(Block b, String cual) {
+        ConfigurationSection c = plugin.getConfig().getConfigurationSection("hardcore.puertas." + cual);
+        if (c == null || !b.getWorld().getKey().toString().equals(c.getString("mundo"))) return false;
+        return b.getX() >= c.getInt("x1") && b.getX() <= c.getInt("x2")
+                && b.getY() >= c.getInt("y1") && b.getY() <= c.getInt("y2")
+                && b.getZ() >= c.getInt("z1") && b.getZ() <= c.getInt("z2");
     }
 
     /** Si un jugador esta DENTRO de la puerta que se diga. */
