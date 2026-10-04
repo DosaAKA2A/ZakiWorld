@@ -662,8 +662,9 @@ public final class Hardcore implements Listener {
             if (!esHardcore(w)) continue;
             for (Player p : w.getPlayers()) {
                 if (!cuenta(p)) {
-                    // 1.11: en el spawn no llueve para nadie, tambien para quien no cuenta (creativo, vanish).
-                    if (clima != null && enSpawn(p)) seguro("clima", () -> clima.enSpawn(p));
+                    // 1.11: quien no cuenta (creativo, vanish) ve el mismo clima, sin dano: sin lluvia en el spawn y,
+                    // fuera, el cielo rojo y la lluvia acida en lugar de la lluvia azul.
+                    if (clima != null) seguro("clima", () -> clima.soloVista(p, enSpawn(p)));
                     continue;
                 }
                 Cordura.Estado e = cordura.estado(p);

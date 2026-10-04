@@ -212,10 +212,23 @@ final class Clima implements Listener {
      * fuera (cielo rojo, gotas, fuego) le sigue dentro. Al salir, segundo() se la devuelve.
      */
     void enSpawn(Player p) {
+        soloVista(p, true);
+    }
+
+    /**
+     * 1.11 · Lo que se VE del clima, sin dano ni avisos: en la zona spawn (para todos) y fuera para quien
+     * no cuenta (creativo, vanish), que tambien tiene que ver el Calamity de verdad. Dosa (2026-10-04): la
+     * lluvia azul no se tiene que ver ni en el spawn ni bajo el cielo rojo o la lluvia acida.
+     * En el spawn: sin lluvia y, en el bioma rojo, su cielo de sangre y su ceniza. Fuera: lo mismo que ve
+     * quien cuenta (cielo rojo, gotas verdes), pero sin fuego, sin vineta y sin quitar vida.
+     */
+    void soloVista(Player p, boolean spawn) {
         ConfigurationSection c = cfg();
-        if (!c.getBoolean("activo", true) || !c.getBoolean("spawn-sin-lluvia", true) || p.isDead()) return;
+        if (!c.getBoolean("activo", true) || p.isDead()) return;
+        if (spawn && !c.getBoolean("spawn-sin-lluvia", true)) return;
         UUID u = p.getUniqueId();
         boolean llueve = p.getWorld().hasStorm();
+        Tipo tipo = llueve ? tipo(bioma(p), c) : Tipo.NINGUNO;
         Estado e = estados.get(u);
         if (e == null) {
             if (!llueve) return;
@@ -224,12 +237,10 @@ final class Clima implements Listener {
         }
         vistos.add(u);
         e.bajoCielo = false;
-        e.bajoAcida = false;
         quitarFuego(p, e);
-        // Encargo de Dosa: que el spawn se vea como fuera. En el bioma rojo, mientras llueve, el mismo
-        // cielo de sangre y la misma ceniza, pero sin fuego, sin dano y sin la vineta (es zona segura).
         ConfigurationSection r = seccion(c, "cielo-rojo");
-        boolean rojo = llueve && r.getBoolean("en-spawn", true) && tipo(bioma(p), c) == Tipo.ROJO;
+        ConfigurationSection a = seccion(c, "lluvia-acida");
+        boolean rojo = tipo == Tipo.ROJO && (!spawn || r.getBoolean("en-spawn", true));
         if (rojo) {
             Parca parca = hc.parca();
             boolean deParca = parca != null && hc.valor("parca", () -> parca.cieloSobre(p), false);
@@ -240,7 +251,12 @@ final class Clima implements Listener {
         } else {
             soltarHora(p, e);
         }
-        if (llueve) ocultarLluvia(p, e);
+        boolean acida = !spawn && tipo == Tipo.ACIDA;
+        e.bajoAcida = acida;
+        if (acida) gotas(p);
+        boolean ocultar = spawn ? llueve
+                : (rojo && r.getBoolean("ocultar-lluvia", true)) || (acida && a.getBoolean("ocultar-lluvia", true));
+        if (ocultar) ocultarLluvia(p, e);
         else soltarClima(p, e);
         if (!e.climaPuesto && !e.horaPuesta && e.acida.dentro == 0 && e.rojo.dentro == 0 && estados.get(u) == e) {
             estados.remove(u);
