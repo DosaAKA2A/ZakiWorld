@@ -279,6 +279,9 @@ hardcore:
       # pierde su piedad. Sin objeto ni comando (las gemas, hasta que llegue su lote), no hace nada.
       todos:
         - {id: libro, prob: 0.08, para: mejor, objeto: libro, nombre: "un libro LEGENDARY", anuncio: false}
+        # Calamity 1.11: las llaves de las bóvedas (EDM, /dl). Dentro de Calamity llegan a la mano, sin ligar.
+        - {id: llave-umbral, prob: 0.25, para: mejor, objeto: llave-umbral, nombre: "una Llave del Umbral", anuncio: false}
+        - {id: llave-ominosa, prob: 0.03, para: mejor, objeto: llave-ominosa, nombre: "una Llave Ominosa", anuncio: false}
       custodio-de-las-ruinas:
         - {id: mascota, prob: 0.03, piedad: 30, para: mejor, comando: "pets egg unique iron_golem %jugador%", nombre: "el huevo del Gólem de hierro", anuncio: true}
         - {id: gema, prob: 0.25, para: mejor, objeto: "", nombre: "la Gema del Custodio", anuncio: false}
@@ -821,6 +824,10 @@ hardcore:
       - {id: cristal, pagina: umbral, icono: AMETHYST_SHARD, nombre: "Cristal de Regreso", esencias: 16, da: cristal, limite-semana: 5}
       - {id: tintura, pagina: umbral, icono: POTION, nombre: "Tintura de Ceniza x2", esencias: 3, da: "dar:tintura", cantidad: 2, limite-dia: 5}
       - {id: reclamo, pagina: umbral, icono: GOAT_HORN, nombre: "Reclamo", esencias: 6, da: "dar:reclamo", limite-dia: 3}   # 1.10: llama al minijefe del bioma (minijefes.reclamo)
+      # Calamity 1.11: las llaves de las bóvedas. La del Umbral cuesta lo que vale de media una Bóveda de Ruinas
+      # (unas 8-10 Esencias): comprarla es comodidad, no negocio. La Ominosa pide entregar 5 del Umbral.
+      - {id: llave-umbral, pagina: umbral, icono: TRIAL_KEY, nombre: "Llave del Umbral", esencias: 10, da: "dar:llave-umbral", limite-dia: 2}
+      - {id: llave-ominosa, pagina: umbral, icono: OMINOUS_TRIAL_KEY, nombre: "Llave Ominosa", esencias: 40, entregar: [{objeto: llave-umbral, cantidad: 5}], da: "dar:llave-ominosa", limite-semana: 1}
       - {id: llave, pagina: umbral, icono: TRIAL_KEY, nombre: "Llave del Caos", esencias: 40, da: "dar:llave", limite-semana: 1, requisito: "tope-llaves"}   # no cobra si el tope de 4 esta lleno
       - {id: salvoconducto, pagina: umbral, icono: PAPER, nombre: "Salvoconducto del Insomne", esencias: 64, da: "dar:salvoconducto", limite-semana: 1, requisito: "permiso:insomne.badge.unlocked"}
       - {id: ofrenda, pagina: umbral, icono: BLAZE_POWDER, nombre: "Ofrenda", esencias: 100, da: ofrenda}
@@ -918,6 +925,114 @@ hardcore:
       - {objeto: cristal, prob: 0.05, min: 1, max: 1}
       - {objeto: tintura, prob: 0.10, min: 1, max: 2}
       - {objeto: frasco-1, prob: 0.03, min: 1, max: 1}
+
+  # ------------------------------------------------------------------ Calamity 1.11: ruinas, bóvedas y clanes
+  # Cofres y Bóvedas de Ruinas en las ruinas de Lethal World (Ruinas.java). Se ponen al pasar: alrededor de
+  # cada jugador fuera del spawn se miran los chunks cargados (nunca se carga ninguno) y, por cada ruina, se
+  # decide UNA vez con la semilla y la posición de la ruina (da igual quién llegue primero). Lo puesto se
+  # apunta en plugins/Calamity/ruinas-datos.yml. Nada en la zona spawn ni en excluir-regiones.
+  ruinas:
+    estructuras: ["lethal_world:ruinas_"]   # prefijos de los ids de estructura que cuentan como ruina
+    semilla: 6660
+    radio-chunks: 5                          # cuántos chunks alrededor del jugador se miran (sus vecinos a 2 tienen que estar cargados)
+    chunks-por-segundo: 4                    # como mucho, por jugador
+    excluir-regiones: [calamity_exterior]    # regiones de WorldGuard donde no se pone nada
+    cofres:
+      activo: true
+      probabilidad: 0.35
+      # Vacío, se vuelve a sellar (botín nuevo al abrirlo) pasados estos minutos, con alguien a reponer-radio.
+      reponer-minutos: 90
+      reponer-radio: 32
+      # Cada tantos bloques del borde del spawn es un escalón (hasta extra.tope): cada escalón multiplica la
+      # probabilidad de cada fila por (1 + extra.prob) y sube su máximo en extra.cantidad.
+      distancia-cada: 500
+      extra: {prob: 0.15, cantidad: 0.5, tope: 6}
+      biomas: {}                             # factor por bioma sobre la probabilidad: {crimson_organism: 1.25}
+      # Pasa por el tope de cofres.pagados-dia (el mismo contador) y por cofres.solo-con-jugador.
+      # Esencias y Reliquias van a quien abre por la Aduana; lo demás, al cofre. "material:X" es vanilla.
+      botin:
+        - {objeto: esencia, prob: 0.45, min: 1, max: 2}
+        - {objeto: reliquia-1, prob: 0.55, min: 1, max: 3}
+        - {objeto: reliquia-2, prob: 0.25, min: 1, max: 1}
+        - {objeto: reliquia-3, prob: 0.05, min: 1, max: 1}
+        - {objeto: tintura, prob: 0.15, min: 1, max: 2}
+        - {objeto: cristal, prob: 0.04, min: 1, max: 1}
+        - {objeto: frasco-1, prob: 0.04, min: 1, max: 1}
+        - {objeto: llave-umbral, prob: 0.05, min: 1, max: 1}
+        - {objeto: "material:BREAD", prob: 0.40, min: 1, max: 3}
+        - {objeto: "material:ARROW", prob: 0.30, min: 4, max: 10}
+    # La Bóveda de Ruinas: la caja calamity_ruinas de EDM (se crea sola), común, una apertura por jugador,
+    # con la Llave del Umbral.
+    bovedas:
+      activo: true
+      probabilidad: 0.12
+      distancia-cada: 500
+      extra: {prob: 0.10, cantidad: 0.5, tope: 6}
+      biomas: {}
+      botin:
+        - {objeto: esencia, prob: 1.0, min: 2, max: 4}
+        - {objeto: reliquia-2, prob: 0.60, min: 1, max: 2}
+        - {objeto: reliquia-3, prob: 0.20, min: 1, max: 1}
+        - {objeto: reliquia-4, prob: 0.03, min: 1, max: 1}
+        - {objeto: tintura, prob: 0.30, min: 1, max: 2}
+        - {objeto: cristal, prob: 0.15, min: 1, max: 1}
+        - {objeto: frasco-1, prob: 0.15, min: 1, max: 1}
+        - {objeto: llave-ominosa, prob: 0.02, min: 1, max: 1}
+
+  # La Bóveda Caída (BovedaCaida.java): cada cada-minutos (+-variacion) con minimo-jugadores fuera del spawn,
+  # cae una bóveda ominosa (caja calamity_caida de EDM, Llave Ominosa) entre distancia-min y distancia-max del
+  # centro del spawn. Solo la abre el primero; abierta, o a los vida-minutos, desaparece. Se anuncia el bioma,
+  # la distancia redondeada a 100 y el rumbo (nunca las coordenadas) y se ve un haz durante haz-minutos.
+  # /calamidad vault drop [random] la fuerza (cerca de ti, o en el anillo), vault info y vault clear.
+  boveda-caida:
+    activo: true
+    cada-minutos: 150
+    variacion: 0.20
+    minimo-jugadores: 3
+    distancia-min: 600
+    distancia-max: 1500
+    intentos: 8
+    haz-minutos: 5
+    vida-minutos: 30
+    excluir-regiones: [calamity_exterior]
+    # Al llegar el primero a radio bloques: mobs del bioma alrededor y, con esa probabilidad, el minijefe del bioma.
+    guardia: {activo: true, radio: 40, mobs: 6, distancia: 10, minijefe: 0.25}
+    nombres-biomas: {}                       # cómo se dice cada bioma en el aviso: {bamboo_valley: "el valle de bambú"}
+    botin:
+      - {objeto: esencia, prob: 1.0, min: 8, max: 14}
+      - {objeto: reliquia-3, prob: 0.80, min: 1, max: 2}
+      - {objeto: reliquia-4, prob: 0.25, min: 1, max: 1}
+      - {objeto: cristal, prob: 0.50, min: 1, max: 1}
+      - {objeto: frasco-1, prob: 0.50, min: 1, max: 2}
+      - {objeto: tintura, prob: 0.60, min: 2, max: 3}
+      - {objeto: llave-umbral, prob: 0.50, min: 1, max: 2}
+
+  # Las llaves de las bóvedas que sueltan los mobs (las de los minijefes van en minijefes.botin, las del
+  # Altar en altar.trueques, la del contrato semanal en contratos.semana-premio y la del ranking en
+  # ranking.premios). Destacado: al suelo con lo demás. Parca: a cada uno que cobra, por Entregas.
+  llaves-boveda:
+    activo: true
+    destacado: {llave-umbral: 0.03}
+    parca: {llave-ominosa: 0.25}
+
+  # El ranking semanal de clanes (ClanesCalamity.java). El clan sale de PlaceholderAPI (UltimateClans) sin
+  # colores; el líder, de placeholder-lider sobre un miembro conectado (si no se puede leer, el miembro que
+  # más puntos dio). Cierra el lunes 00:00 en hardcore.zona: el clan con más puntos (empate: el que llegó
+  # antes) recibe trofeo.comando; si repite y su trofeo sigue existiendo, se renueva (EDM 1.78.1).
+  # /calamidad clans (top), clans close (cierra ya), clans holo here|off (el holograma, uno solo).
+  clanes:
+    activo: true
+    placeholder: "%uclans_tag_color%"
+    placeholder-lider: "%uclans_leader%"
+    sin-clan: ["", "Sin clan", "N/A", "-"]
+    tope-dia-miembro: 300                    # puntos por miembro y día (0 = sin tope)
+    minimo-puntos: 1
+    # esencia y reliquia: por cada Esencia que saca vivo y por cada Esencia que valen sus Reliquias en la Tasación.
+    # minijefe: por la parte del daño (30 x 0,5 = 15). parca: por cada uno que cobra. boveda-caida: quien la abre.
+    pesos: {esencia: 1, reliquia: 1, minijefe: 30, parca: 40, boveda-caida: 60}
+    trofeo: {tipo: trofeo, dias: 7, renovar: true, comando: "superbeacon give %lider% %tipo% %dias% %tag%"}
+    menu: true                               # la categoría Clanes en el menú de Rhen
+    holograma: {activo: false, top: 5}
 
   # ------------------------------------------------------------------ M7-M10, M20-M21
   parte-defuncion: {activo: true, golpes: 8, segundos: 15}
@@ -1041,7 +1156,8 @@ hardcore:
     cambios-gratis: 1
     precio-cambio: 1
     semana-objetivo: 12
-    semana-premio: ["lw hardcore dar llave %jugador% 1"]
+    # Calamity 1.11: y una Llave del Umbral (ligada, por Entregas).
+    semana-premio: ["lw hardcore dar llave %jugador% 1", "lw hardcore dar llave-umbral %jugador% 1 contratos"]
     pergamino:
       activo: true                # false: como antes de la 1.10 (sin papel; todo se cobra al salir vivo)
       entregar-al-entrar: true    # false: Oren no los deja solos al entrar; hay que pedirselos en su menu
@@ -1104,8 +1220,9 @@ hardcore:
     minimo-elegibles: 8
     maximo-tablas: 2
     tablas: [extraido, cazador, segador, superviviente]
+    # objetos (Calamity 1.11): objetos de Entregas que se dan ademas, uno de cada (la Llave Ominosa al 1.o).
     premios:
-      - {esencias: 30, llaves: 2, comandos: ["lp user %jugador% permission settemp anima.badge.unlocked true 7d"]}
+      - {esencias: 30, llaves: 2, comandos: ["lp user %jugador% permission settemp anima.badge.unlocked true 7d"], objetos: [llave-ominosa]}
       - {esencias: 20, llaves: 1}
       - {esencias: 10, llaves: 1}
     # El menu de Rhen (1.7.4): arriba el libro de la categoria que miras, en medio su top 10 con

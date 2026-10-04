@@ -148,7 +148,10 @@ final class Minijefes {
 
     static {
         Map<String, List<Botin>> m = new LinkedHashMap<>();
-        m.put("todos", List.of(new Botin("libro", 0.08, "mejor", 0, "libro", "", "un libro LEGENDARY", false)));
+        // Calamity 1.11: las llaves de las bovedas (Llave del Umbral 25 %, Llave Ominosa 3 %), al que mas dano hizo.
+        m.put("todos", List.of(new Botin("libro", 0.08, "mejor", 0, "libro", "", "un libro LEGENDARY", false),
+                new Botin(PuenteBovedas.LLAVE_UMBRAL, 0.25, "mejor", 0, PuenteBovedas.LLAVE_UMBRAL, "", "una Llave del Umbral", false),
+                new Botin(PuenteBovedas.LLAVE_OMINOSA, 0.03, "mejor", 0, PuenteBovedas.LLAVE_OMINOSA, "", "una Llave Ominosa", false)));
         m.put("custodio-de-las-ruinas", List.of(mascota("iron_golem", "el huevo del Gólem de hierro"),
                 gemaSinLote("la Gema del Custodio")));
         m.put("matriarca-tejedora", List.of(mascota("cave_spider", "el huevo de la Araña de cueva"),
@@ -464,6 +467,9 @@ final class Minijefes {
             if (p.participa()) {
                 Estadisticas st = hc.estadisticas();
                 if (st != null) st.sumar(p.jugador(), "minijefes", 1);
+                // Calamity 1.11: puntos de su clan, por la parte del dano que hizo.
+                ClanesCalamity cl = hc.clanes();
+                if (cl != null) hc.seguro("clanes", () -> cl.sumar(op, "minijefe", p.fraccion()));
             }
             if (p.asesino() && op.getPlayer() != null) {
                 Contratos ct = hc.contratos();
@@ -1105,7 +1111,8 @@ final class Minijefes {
     static void probarBotin(Autotest.Hoja h) {
         List<String> avisos = new ArrayList<>();
         List<Botin> custodio = leerBotin(null, "custodio-de-las-ruinas", avisos);
-        h.igual("botin de serie del Custodio: libro, mascota y gema", List.of("libro", "mascota", "gema"), ids(custodio));
+        h.igual("botin de serie del Custodio: libro, llaves, mascota y gema",
+                List.of("libro", PuenteBovedas.LLAVE_UMBRAL, PuenteBovedas.LLAVE_OMINOSA, "mascota", "gema"), ids(custodio));
         h.igual("botin de serie sin avisos", List.of(), avisos);
         boolean cincoConMascota = true;
         for (String t : TIPOS) {
@@ -1114,8 +1121,10 @@ final class Minijefes {
             cincoConMascota &= m != null && m.comando().contains("%jugador%") && m.piedad() == 30 && m.anuncio();
         }
         h.ok("botin de serie: los cinco con su huevo (piedad 30, anuncio)", cincoConMascota);
-        if (custodio.size() < 3) return;
-        Botin libro = custodio.get(0), mascota = custodio.get(1), gema = custodio.get(2);
+        if (custodio.size() < 5) return;
+        Botin libro = custodio.get(0), mascota = custodio.get(3), gema = custodio.get(4);
+        h.ok("1.11: las llaves de boveda van por Entregas (objeto), no por consola",
+                custodio.get(1).entregable() && !custodio.get(1).porConsola() && custodio.get(2).entregable());
         h.ok("la gema aun no se entrega (sin objeto ni comando)", !gema.entregable());
         h.ok("el libro y la mascota van por consola", libro.porConsola() && mascota.porConsola());
 

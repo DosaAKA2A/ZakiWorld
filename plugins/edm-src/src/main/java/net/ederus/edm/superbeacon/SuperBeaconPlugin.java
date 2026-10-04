@@ -600,6 +600,80 @@ public final class SuperBeaconPlugin extends Module {
         return buenos;
     }
 
+    /* ======================================================== renovar (1.78.1) */
+
+    /**
+     * Renueva la caducidad de las balizas de un clan fijado (las del give con clan: el trofeo de
+     * temporada), esten donde esten: colocadas, pendientes de entregar o como objeto en el
+     * inventario de alguien conectado. Vencen dentro de dias desde ahora (0 = ya no caducan); una
+     * que venciera mas tarde no se acorta. Las colocadas y apagadas por vencidas se vuelven a
+     * encender. tipo null o vacio = cualquier tipo. Devuelve cuantas se renovaron; 0 = ese clan no
+     * tiene ninguna, y quien llama (el ranking de Calamity) da una nueva.
+     *
+     * Lo que no ve: un objeto en un cofre o en el inventario de alguien desconectado. Esa se queda
+     * como estaba.
+     */
+    public int renovar(String clan, String tipo, double dias, String motivo) {
+        if (registro == null || clan == null || clan.isBlank() || dias < 0 || Double.isNaN(dias)) return 0;
+        long ahora = System.currentTimeMillis();
+        int n = 0;
+        for (Baliza b : new ArrayList<>(registro.todas())) {
+            if (!delClan(b.clan, b.tipo, clan, tipo)) continue;
+            b.vence = venceRenovado(b.vence, ahora, dias);
+            b.vistaVencida = false;
+            b.avisoVencida = false;
+            b.olvidarCache();
+            if (hologramas != null) hologramas.refrescar(b);
+            if (menu != null) menu.refrescar(b.id);
+            anotar("renovada", b.id.toString(), b.tipo, b.clan, "colocada", Tiempo.fecha(b.vence, zona()), motivo);
+            n++;
+        }
+        for (Pendiente pe : new ArrayList<>(registro.pendientes())) {
+            Ficha f = pe.ficha;
+            if (!delClan(f.clan(), f.tipo(), clan, tipo)) continue;
+            Ficha nueva = new Ficha(f.id(), f.tipo(), f.dueno(), f.duenoNombre(), f.clan(),
+                    venceRenovado(f.vence(), ahora, dias), f.elegidos());
+            registro.pendiente(new Pendiente(nueva, pe.material, pe.para, pe.paraNombre, pe.motivo, pe.desde));
+            anotar("renovada", f.id().toString(), f.tipo(), f.clan(), "pendiente", Tiempo.fecha(nueva.vence(), zona()), motivo);
+            n++;
+        }
+        if (objeto != null) {
+            for (Player p : Bukkit.getOnlinePlayers()) {
+                var inv = p.getInventory();
+                for (int i = 0; i < inv.getSize(); i++) {
+                    org.bukkit.inventory.ItemStack it = inv.getItem(i);
+                    Ficha f = objeto.leer(it);
+                    if (f == null || !delClan(f.clan(), f.tipo(), clan, tipo)) continue;
+                    Ficha nueva = new Ficha(f.id(), f.tipo(), f.dueno(), f.duenoNombre(), f.clan(),
+                            venceRenovado(f.vence(), ahora, dias), f.elegidos());
+                    inv.setItem(i, objeto.crear(nueva, it.getType()));
+                    anotar("renovada", f.id().toString(), f.tipo(), f.clan(), "objeto de " + p.getName(),
+                            Tiempo.fecha(nueva.vence(), zona()), motivo);
+                    n++;
+                }
+            }
+        }
+        if (n > 0) {
+            registro.marcar();
+            registro.guardarSiHaceFalta();
+        }
+        return n;
+    }
+
+    /** Si una baliza (su clan fijado y su tipo) es de ese clan y, si se pide, de ese tipo. Sin colores ni mayusculas. */
+    static boolean delClan(String clanBaliza, String tipoBaliza, String clan, String tipo) {
+        if (clanBaliza == null || clan == null) return false;
+        if (!Clanes.mismoClan(Clanes.limpiar(clanBaliza), Clanes.limpiar(clan))) return false;
+        return tipo == null || tipo.isBlank() || tipo.equalsIgnoreCase(tipoBaliza);
+    }
+
+    /** La caducidad renovada: dias desde ahora (0 = no caduca), sin acortar una que ya llegara mas lejos. */
+    static long venceRenovado(long actual, long ahora, double dias) {
+        // 0 es "no caduca": pedirlo, o que ya lo fuera, se queda asi.
+        if (dias <= 0 || actual == 0) return 0L;
+        return Math.max(actual, ahora + Math.max(1000L, Math.round(dias * Tiempo.DIA)));
+    }
+
     void anotar(String... campos) {
         if (bitacora != null) bitacora.anotar(campos);
     }

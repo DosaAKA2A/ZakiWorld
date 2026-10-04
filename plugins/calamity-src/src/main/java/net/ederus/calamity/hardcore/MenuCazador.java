@@ -116,6 +116,15 @@ final class MenuCazador implements Listener {
         }
     }
 
+    /**
+     * Calamity 1.11 · La categoria de los clanes (ClanesCalamity): va siempre al final y no esta en
+     * ranking.menu.categorias, asi que sale aunque el servidor tenga su propia lista. Solo semanal.
+     */
+    static final String CLAVE_CLANES = "clanes";
+    static final Categoria CLANES = new Categoria("clanes", CLAVE_CLANES, "Clanes", "Clanes",
+            "Puntos de cada clan esta semana: lo que sus miembros sacan vivos, minijefes, Parcas y Bóvedas Caídas.",
+            true, false, "", Material.RED_BANNER);
+
     /** Que es cada objeto del menu: uno normal, una cabeza de dibujo o la cabeza de un jugador. */
     enum Tipo { OBJETO, TEXTURA, JUGADOR }
 
@@ -351,6 +360,7 @@ final class MenuCazador implements Listener {
             case "extracciones" -> Altar.miles(v) + (v == 1 ? " salida" : " salidas");
             case "minijefes" -> Altar.miles(v) + (v == 1 ? " minijefe" : " minijefes");
             case "contratos" -> Altar.miles(v) + (v == 1 ? " contrato" : " contratos");
+            case CLAVE_CLANES -> Altar.miles(v) + (v == 1 ? " punto" : " puntos");
             default -> Altar.miles(v);
         };
     }
@@ -371,6 +381,7 @@ final class MenuCazador implements Listener {
         if (pr.esencias() > 0) partes.add(pr.esencias() + (pr.esencias() == 1 ? " Esencia" : " Esencias"));
         if (pr.llaves() > 0) partes.add(pr.llaves() + (pr.llaves() == 1 ? " Llave del Caos" : " Llaves del Caos"));
         if (!pr.comandos().isEmpty()) partes.add("[ÁNIMA] 7 días");
+        for (String o : pr.objetos()) if (PuenteBovedas.esLlave(o)) partes.add("una " + PuenteBovedas.nombre(o, 1));
         return partes;
     }
 
@@ -521,6 +532,16 @@ final class MenuCazador implements Listener {
             lore.add(Marco.texto("y no da premios."));
             lore.add(Marco.tenue("Los premios son los del"));
             lore.add(Marco.tenue("ranking semanal."));
+        } else if (CLAVE_CLANES.equals(c.clave())) {
+            lore.add(Marco.texto("Premio del lunes:"));
+            lore.add(Component.text("1.º  ", colorPuesto(1)).append(Marco.texto("Trofeo de Temporada")));
+            lore.add(Marco.tenue("      para el líder del clan"));
+            lore.add(Component.empty());
+            lore.add(Marco.dato("Se reinicia", "el lunes a las 00:00"));
+            lore.add(Marco.dato("Quedan", d.quedan()));
+            lore.add(Component.empty());
+            lore.add(Marco.tenue("Cada miembro suma como mucho"));
+            lore.add(Marco.tenue("unos puntos al día."));
         } else {
             if (premio) {
                 lore.add(Marco.texto("Premios del lunes:"));
@@ -559,6 +580,11 @@ final class MenuCazador implements Listener {
 
     /** "Premio del 2.º el lunes:" y el premio, si la categoria paga y ese puesto cobra. */
     private static List<Component> premioDelPuesto(Datos d, int puesto, boolean premio) {
+        if (d.actual() != null && CLAVE_CLANES.equals(d.actual().clave())) {
+            if (!d.semana() || puesto != 1) return List.of();
+            return List.of(Component.empty(), Marco.tenue("Premio del 1.º el lunes:"),
+                    Component.text("Trofeo de Temporada", Paleta.CIFRA));
+        }
         if (!premio || puesto > d.premios().size()) return List.of();
         List<Component> out = new ArrayList<>();
         out.add(Component.empty());
@@ -577,7 +603,7 @@ final class MenuCazador implements Listener {
         lore.addAll(premioDelPuesto(d, puesto, premio));
         if (soyYo) {
             lore.add(Component.empty());
-            lore.add(Component.text("Eres tú.", Paleta.BIEN));
+            lore.add(Component.text(CLAVE_CLANES.equals(d.actual().clave()) ? "Es tu clan." : "Eres tú.", Paleta.BIEN));
         }
         return Pieza.jugador(f.jugador(), nombre, lore);
     }
@@ -620,7 +646,7 @@ final class MenuCazador implements Listener {
     /** Una cabeza del selector: el nombre, que mide, si da premio y si es la que miras. */
     private static Pieza enSelector(Datos d, Categoria c) {
         boolean vista = d.actual() != null && c.id().equals(d.actual().id());
-        boolean daPremio = d.semana() && d.conPremio().contains(c.clave());
+        boolean daPremio = d.semana() && (d.conPremio().contains(c.clave()) || CLAVE_CLANES.equals(c.clave()));
         List<Component> lore = new ArrayList<>();
         for (String l : partir(c.mide(), ANCHO_LORE)) lore.add(Marco.tenue(l));
         lore.add(daPremio ? Component.text("Da premio el lunes.", Paleta.CIFRA) : Marco.tenue("No da premio."));
@@ -645,9 +671,38 @@ final class MenuCazador implements Listener {
 
     /** Las categorias del servidor; si alli no hay ninguna valida, las del jar. */
     private List<Categoria> categorias() {
-        List<Categoria> l = leer(Cronista.seccion(menu(), "categorias"));
-        if (!l.isEmpty()) return l;
-        return leer(Cronista.seccion(Cronista.fabrica(hc.plugin()), "hardcore." + RUTA + ".categorias"));
+        List<Categoria> l = new ArrayList<>(leer(Cronista.seccion(menu(), "categorias")));
+        if (l.isEmpty()) l.addAll(leer(Cronista.seccion(Cronista.fabrica(hc.plugin()), "hardcore." + RUTA + ".categorias")));
+        // 1.11: los clanes, al final, si el ranking de clanes esta en marcha y la lista no los trae ya.
+        ClanesCalamity cl = hc.clanes();
+        boolean ya = false;
+        for (Categoria c : l) ya |= CLAVE_CLANES.equals(c.clave());
+        if (!ya && cl != null && cl.activo() && hc.cfg().getBoolean("clanes.menu", true)) l.add(CLANES);
+        return l;
+    }
+
+    /**
+     * 1.11 · La clasificacion de los clanes como la de los jugadores: cada clan con la cabeza del miembro
+     * que mas puntos le dio esta semana y su tag entre corchetes. Y quien es "yo": la cara de tu clan.
+     */
+    private Object[] clasificacionClanes(Player p) {
+        ClanesCalamity cl = hc.clanes();
+        List<ClanesCalamity.Fila> filas = cl == null ? List.of() : cl.top();
+        List<Rankings.Fila> top = new ArrayList<>();
+        Map<UUID, Integer> puestos = new LinkedHashMap<>();
+        Map<UUID, Long> valores = new LinkedHashMap<>();
+        String mio = cl == null ? null : cl.claveDe(p.getUniqueId());
+        UUID yo = p.getUniqueId();
+        for (int i = 0; i < filas.size(); i++) {
+            ClanesCalamity.Fila f = filas.get(i);
+            UUID cara = f.cara() != null ? f.cara()
+                    : UUID.nameUUIDFromBytes(("clan:" + f.clave()).getBytes(java.nio.charset.StandardCharsets.UTF_8));
+            if (i < TOP) top.add(new Rankings.Fila(cara, "[" + f.tag() + "]", f.puntos()));
+            puestos.put(cara, i + 1);
+            valores.put(cara, f.puntos());
+            if (f.clave().equals(mio)) yo = cara;
+        }
+        return new Object[]{new Tops.Clasificacion(top, puestos, valores), yo};
     }
 
     /** Las estadisticas de las tablas que pagan el lunes (ranking.tablas). */
@@ -711,6 +766,12 @@ final class MenuCazador implements Listener {
         ConfigurationSection c = hc.cfg();
         ConfigurationSection m = menu();
         Tops.Clasificacion cl = actual == null ? Tops.Clasificacion.VACIA : r.clasificacion(actual.clave(), semana);
+        UUID yo = p.getUniqueId();
+        if (actual != null && CLAVE_CLANES.equals(actual.clave())) {
+            Object[] cc = clasificacionClanes(p);
+            cl = (Tops.Clasificacion) cc[0];
+            yo = (UUID) cc[1];
+        }
         Estadisticas st = hc.estadisticas();
         Reglas reglas = new Reglas(c.getInt("ranking.minimo-extracciones", 3), Math.max(1, c.getInt("ranking.maximo-tablas", 2)),
                 c.getInt("ranking.minimo-elegibles", 8), st == null ? 0 : st.semana(p.getUniqueId(), "extracciones"));
@@ -718,7 +779,7 @@ final class MenuCazador implements Listener {
         ZoneId zona = cal != null ? cal.zona() : ZoneId.systemDefault();
         Tablero tab = hc.tablero();
         boolean tablero = tab != null && hc.valor("tablero", tab::activo, false);
-        return new Datos(semana, visibles, actual, pagina, cl, p.getUniqueId(), pagan, r.premios(), reglas,
+        return new Datos(semana, visibles, actual, pagina, cl, yo, pagan, r.premios(), reglas,
                 hastaCierre(ZonedDateTime.now(zona)), tablero, m.getBoolean("titulo-por-categoria", true),
                 cabeza(m, "mas", MAS), cabeza(m, "anterior", ANTERIOR), cabeza(m, "libre", LIBRE));
     }

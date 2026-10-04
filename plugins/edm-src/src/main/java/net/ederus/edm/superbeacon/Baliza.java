@@ -34,7 +34,8 @@ final class Baliza {
      * en el objeto, asi que si el dueño cambia de clan, su baliza cambia con el.
      */
     String clanDueno;
-    final long vence;
+    /** 1.78.1: ya no es final; la renueva SuperBeaconPlugin.renovar (el trofeo del clan que repite). */
+    long vence;
     /** La semana que gano (el trofeo); 0 si no aplica. Viaja con el objeto. */
     final long semana;
     final LinkedHashSet<String> elegidos;

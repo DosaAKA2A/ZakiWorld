@@ -1066,8 +1066,12 @@ final class Contratos implements Listener {
         s.set("premio-semana", sem);
         hc.guardarYa();
         List<String> premio = hc.cfg().getStringList("contratos.semana-premio");
-        if (premio.isEmpty() && !hc.cfg().isSet("contratos.semana-premio")) premio = List.of("lw hardcore dar llave %jugador% 1");
+        if (premio.isEmpty() && !hc.cfg().isSet("contratos.semana-premio")) {
+            premio = List.of("lw hardcore dar llave %jugador% 1", "lw hardcore dar llave-umbral %jugador% 1 contratos");
+        }
+        boolean umbral = false;
         for (String plantilla : premio) {
+            umbral |= plantilla.contains(" " + PuenteBovedas.LLAVE_UMBRAL + " ");
             Matcher m = LLAVE.matcher(plantilla.trim());
             if (m.matches()) {
                 // Por Entregas y no por el comando: asi la llave cuenta en el tope con origen "contratos".
@@ -1081,7 +1085,8 @@ final class Contratos implements Listener {
             }
         }
         p.sendMessage(ComandoCalamity.mensaje(Component.text("Has cobrado " + objetivo + " contratos esta semana: ")
-                .append(Component.text("Oren te da una Llave del Caos.", Paleta.DETALLE))));
+                .append(Component.text(umbral ? "Oren te da una Llave del Caos y una Llave del Umbral."
+                        : "Oren te da una Llave del Caos.", Paleta.DETALLE))));
         telemetria(p, new Def("semana", "semana", "", objetivo, 0, 0, false, "", "semana"), "semana", 0, 0);
     }
 

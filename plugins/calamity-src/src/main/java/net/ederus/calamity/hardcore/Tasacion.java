@@ -223,9 +223,11 @@ final class Tasacion {
         if (primera) hc.datos().set("primera-extraccion." + u, dia);
         hc.marcarSucio();
 
+        // 1.11: cuantas Esencias fisicas saca, para los puntos de su clan.
+        int[] fisicas = {0};
         if (online != null) {
             Saldo s = hc.saldo();
-            if (s != null) hc.seguro("saldo", () -> s.depositarFisicas(online));
+            if (s != null) hc.seguro("saldo", () -> fisicas[0] = s.depositarFisicas(online));
         }
 
         Aduana ad = hc.aduana();
@@ -235,6 +237,13 @@ final class Tasacion {
         }
         int pagadasE = pago == null ? 0 : pago.esencias();
         long pagadasMc = pago == null ? 0 : pago.mc();
+        // Calamity 1.11: lo que saca vivo suma para su clan (las Esencias que lleva y lo que valen sus Reliquias,
+        // sin el extra de la primera salida del dia). Solo en una salida de verdad.
+        ClanesCalamity clanes = hc.clanes();
+        if (online != null && esSalida && clanes != null) {
+            int deReliquias = Math.max(0, pagadasE - Math.min(pagadasE, extra));
+            hc.seguro("clanes", () -> clanes.alTasar(online, fisicas[0], deReliquias));
+        }
 
         // Creditos de las IV (la Marca con su tope de dia y semana).
         Creditos cr = hc.creditos();
