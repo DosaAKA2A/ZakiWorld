@@ -737,11 +737,18 @@ final class Ecos implements Listener {
                 meta.setOwningPlayer(Bukkit.getOfflinePlayer(e.dueno));
             }
             meta.displayName(Component.text("Cabeza de " + e.nombre, GRIS).decoration(TextDecoration.ITALIC, false));
-            meta.lore(List.of(Component.text("Eco derrotado por " + killerNombre + " · " + fecha, Paleta.TENUE)
-                    .decoration(TextDecoration.ITALIC, false)));
+            meta.lore(fichaTrofeo(killerNombre, fecha).lore());
             meta.getPersistentDataContainer().set(Marcas.TROFEO, PersistentDataType.BYTE, (byte) 1);
         });
         return h;
+    }
+
+    /** 1.10 (lores): el lore de la cabeza de un Eco, con la plantilla comun (Ficha). */
+    static Ficha fichaTrofeo(String cazador, String fecha) {
+        return new Ficha(GRIS).tipo("Trofeo · Eco derrotado").filete()
+                .historia("Lo que queda de alguien que se negó a irse del todo.").filete()
+                .texto("Lo derrotó {" + cazador + "}")
+                .nota("El " + fecha);
     }
 
     // --------------------------------------------------------------- listener

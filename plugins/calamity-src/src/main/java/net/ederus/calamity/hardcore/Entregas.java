@@ -6,6 +6,7 @@ import net.kyori.adventure.text.format.TextColor;
 import net.kyori.adventure.text.format.TextDecoration;
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
+import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.OfflinePlayer;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
@@ -522,8 +523,8 @@ final class Entregas implements Listener {
         if (!ya) {
             ItemMeta meta = item.getItemMeta();
             List<Component> lore = meta.lore() == null ? new ArrayList<>() : new ArrayList<>(meta.lore());
-            lore.add(Component.text("Ligado a " + nombreDe(dueno) + ": no se vende ni se cambia.", Paleta.TENUE)
-                    .decoration(TextDecoration.ITALIC, false));
+            // 1.10: en el gris de las notas de la plantilla (Ficha), cortada a 38 si el nombre es largo.
+            lore.addAll(new Ficha(null).nota("Ligado a " + nombreDe(dueno) + " · no se vende ni se cambia").lore());
             meta.lore(lore);
             item.setItemMeta(meta);
         }
@@ -539,13 +540,7 @@ final class Entregas implements Listener {
      * cordura (Calamity). Las cifras del lore salen de talisman.vida y talisman.drenaje.
      */
     ItemStack talisman() {
-        return objeto(Material.CLOCK, "Talismán de Vigilia", VERDE_PALIDO,
-                List.of("Mantiene la mente despierta", "en la oscuridad."),
-                List.of("+" + hc.cfg().getInt("talisman.vida", 3) + " de vida máxima mientras lo lleves.",
-                        "La cordura baja un " + Math.round((1 - hc.cfg().getDouble("talisman.drenaje", 0.80)) * 100)
-                                + " % más despacio.",
-                        "Llevar varios no suma: cuenta uno."),
-                Marcas.TALISMAN, null);
+        return objeto(Material.CLOCK, "Talismán de Vigilia", VERDE_PALIDO, fichaTalisman(hc.cfg()), Marcas.TALISMAN, null);
     }
 
     /**
@@ -557,15 +552,41 @@ final class Entregas implements Listener {
      * por jugador, nada de MMOItems, y el objeto grabado queda ligado.
      */
     ItemStack grabado() {
-        int porSemana = Math.max(1, hc.cfg().getInt("grabado.por-semana", 1));
-        List<String> reglas = new ArrayList<>(partir("Vale para " + encantamientosGrabado() + ".", 36));
-        reglas.add("Solo en equipo sin MMOItems.");
-        reglas.add("Uno por objeto y " + (porSemana == 1 ? "uno" : String.valueOf(porSemana)) + " por semana.");
-        reglas.add("Se usa en la Forja: botón Grabar.");
-        reglas.add("El objeto grabado queda ligado a ti.");
-        return objeto(Material.FLINT, "Grabado de Calamidad", AMBAR,
-                List.of("Sube de nivel un encantamiento", "que ya esté al máximo."),
-                reglas, Marcas.GRABADO, UUID.randomUUID().toString());
+        return objeto(Material.FLINT, "Grabado de Calamidad", AMBAR, fichaGrabado(hc.cfg(), encantamientosGrabado()),
+                Marcas.GRABADO, UUID.randomUUID().toString());
+    }
+
+    // 1.10 · Los lores con la plantilla comun (Ficha), cifras de la config viva. Puros: los prueba "fichas".
+
+    static Ficha fichaTalisman(ConfigurationSection c) {
+        return new Ficha(VERDE_PALIDO).tipo("Objeto de Calamity · Amuleto").filete()
+                .historia("Un reloj que nunca se detiene. Mantiene la mente despierta.").filete()
+                .texto("{+" + c.getInt("talisman.vida", 3) + "} de vida máxima mientras lo lleves.")
+                .texto("La cordura baja un {" + Math.round((1 - c.getDouble("talisman.drenaje", 0.80)) * 100)
+                        + " %} más despacio.")
+                .texto("Llevar varios no suma: cuenta uno.").filete()
+                .accion("Basta con llevarlo en el inventario.");
+    }
+
+    static Ficha fichaGrabado(ConfigurationSection c, String encantamientos) {
+        int porSemana = Math.max(1, c.getInt("grabado.por-semana", 1));
+        return new Ficha(AMBAR).tipo("Objeto de Calamity · Forja").filete()
+                .historia("Pedernal con runas de la Forja. Despierta lo que el acero calla.").filete()
+                .texto("Sube {+1} nivel un encantamiento que ya esté al máximo.")
+                .texto("Vale para " + encantamientos + ".")
+                .texto("Solo en equipo sin MMOItems.")
+                .texto("Uno por objeto · {" + porSemana + "} por semana.").filete()
+                .accion("Úsalo en la Forja de Vael, botón Grabar.")
+                .nota("El objeto grabado queda ligado a ti.");
+    }
+
+    static Ficha fichaSalvoconducto() {
+        return new Ficha(PAPEL).tipo("Objeto de Calamity · Seguro").filete()
+                .historia("Firmado por alguien que lleva días sin dormir. La Parca respeta esa firma.").filete()
+                .texto("Si mueres en Calamity, te devuelve una de las piezas que llevabas.")
+                .texto("Si no eliges, salva la mejor.").filete()
+                .accion("Clic derecho para elegir qué salva.")
+                .nota("Se gasta al morir.");
     }
 
     /** Los encantamientos que sube un Grabado, dichos para el jugador: "Filo, Protección ... o Fortuna". */
@@ -600,26 +621,16 @@ final class Entregas implements Listener {
 
     /** Salvoconducto del Insomne: PAPER con brillo y lethal_world:salvoconducto (M34, apagado de serie). */
     ItemStack salvoconducto() {
-        return objeto(Material.PAPER, "Salvoconducto del Insomne", PAPEL,
-                List.of("Si mueres en Calamity, te devuelve", "una de las piezas que llevabas."),
-                List.of("Clic derecho con él en la mano", "para elegir cuál.",
-                        "Si no eliges, salva la mejor.", "Se gasta al morir."),
-                Marcas.SALVOCONDUCTO, null);
+        return objeto(Material.PAPER, "Salvoconducto del Insomne", PAPEL, fichaSalvoconducto(), Marcas.SALVOCONDUCTO, null);
     }
 
-    private static ItemStack objeto(Material m, String nombre, TextColor color, List<String> historia, List<String> efecto,
+    private static ItemStack objeto(Material m, String nombre, TextColor color, Ficha ficha,
                                     org.bukkit.NamespacedKey marca, String valor) {
         ItemStack item = new ItemStack(m);
         ItemMeta meta = item.getItemMeta();
         if (meta == null) return item;
         meta.displayName(Component.text(nombre, color).decoration(TextDecoration.ITALIC, false));
-        List<Component> lore = new ArrayList<>();
-        for (String l : historia) lore.add(Component.text(l, Paleta.TEXTO).decoration(TextDecoration.ITALIC, false));
-        lore.add(Component.empty());
-        for (String l : efecto) lore.add(Component.text(l, Paleta.TENUE).decoration(TextDecoration.ITALIC, false));
-        lore.add(Component.empty());
-        lore.add(Component.text("Botín de Calamity", Paleta.TENUE).decoration(TextDecoration.ITALIC, false));
-        meta.lore(lore);
+        meta.lore(ficha.lore());
         meta.setEnchantmentGlintOverride(true);
         if (valor == null) meta.getPersistentDataContainer().set(marca, PersistentDataType.BYTE, (byte) 1);
         else meta.getPersistentDataContainer().set(marca, PersistentDataType.STRING, valor);

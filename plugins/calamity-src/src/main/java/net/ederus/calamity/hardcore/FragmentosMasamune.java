@@ -336,7 +336,8 @@ final class FragmentosMasamune {
         h.igual("se llama Fragmento de Masamune", NOMBRE, meta == null ? null : Hardcore.plano(meta.displayName()));
         List<String> lore = new ArrayList<>();
         if (meta != null && meta.lore() != null) for (Component l : meta.lore()) lore.add(Hardcore.plano(l));
-        h.igual("su lore, dos lineas", List.of("Un trozo de la katana de Ambush.", "Vael forja la Masamune con cinco."), lore);
+        // 1.10 (lores): la plantilla comun, con lo que pide la Forja leido de altar.trueques.
+        h.igual("su lore es el de la plantilla", ItemsCalamity.fichaFragmento(Ficha.cfg()).lineas(), lore);
         h.igual("se apila hasta 64", 64, f.getMaxStackSize());
         ItemStack renombrado = f.clone();
         ItemMeta rm = renombrado.getItemMeta();
