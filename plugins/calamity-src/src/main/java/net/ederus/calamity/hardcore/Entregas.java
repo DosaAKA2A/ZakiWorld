@@ -64,6 +64,12 @@ final class Entregas implements Listener {
 
     private final Hardcore hc;
     private final Set<BukkitTask> tareas = new HashSet<>();
+    /**
+     * Calamity 1.11 · Donde acabo el objeto del ultimo dar() (inventario, suelo o pendiente), o null si no
+     * era un objeto o no se dio. Lo lee comandoDar para no decir "Entregado" a lo que queda pendiente.
+     * Solo hilo principal, y se lee justo despues de llamar a dar().
+     */
+    private String ultimoDonde;
 
     Entregas(Hardcore hc) {
         this.hc = hc;
@@ -103,6 +109,7 @@ final class Entregas implements Listener {
     boolean dar(CommandSender quien, String objeto, OfflinePlayer a, int n, String origen) {
         String o = objeto == null ? "" : objeto.trim().toLowerCase(Locale.ROOT);
         String org = origen == null || origen.isBlank() ? "dar" : origen;
+        ultimoDonde = null;
         if (a == null || n <= 0 || o.isEmpty()) {
             fallo(quien, o, a, "faltan datos", org);
             return false;
@@ -199,6 +206,7 @@ final class Entregas implements Listener {
             }
         }
         String donde = entregarObjetos(a, o, items, org);
+        ultimoDonde = donde;
         hc.plugin().bitacora().anotar("entrega", "ok", o, nombre(a), String.valueOf(n), org, donde);
         recompensa(a, o, n, org, true);
         return true;
@@ -317,10 +325,13 @@ final class Entregas implements Listener {
             for (ItemStack it : items) guardarPendiente(a.getUniqueId(), "item", aTexto(it), objeto, origen);
             hc.guardarYa();
             if (avisar && p != null && p.isOnline()) {
+                // 1.11: y donde recogerlo. Al volver a la zona spawn se le entrega solo (Hardcore.vigilarSpawn).
                 String que = items.isEmpty() ? objeto : nombreVisible(items.get(0), objeto);
                 p.sendMessage(ComandoCalamity.mensaje(Component.text("Recibirás ")
                         .append(Component.text(que + (items.size() > 1 ? " ×" + items.size() : ""), Paleta.DETALLE))
-                        .append(Component.text(" cuando salgas de Calamity."))));
+                        .append(Component.text(" al volver al spawn o al salir de Calamity. Mientras, lo verás en "))
+                        .append(Component.text("Oren > Tu dinero > Premios pendientes", Paleta.DETALLE))
+                        .append(Component.text("."))));
             }
             return "pendiente";
         }
@@ -643,9 +654,13 @@ final class Entregas implements Listener {
      * Entrega lo que le esperaba: al conectarse o al salir de Calamity (dentro no, que lo
      * perderia al morir). Se borra de los datos ANTES de dar nada y se guarda: una caida a
      * mitad puede perder un premio, nunca duplicarlo.
+     *
+     * Calamity 1.11 · Y en la zona spawn (recibeYa, la misma regla que entregarObjetos): antes miraba
+     * solo esHardcore, asi que en el spawn el boton de Oren decia que no y nada llegaba hasta salir,
+     * aunque lo nuevo ya se entregaba ahi en mano. Hardcore.vigilarSpawn lo llama al entrar en la zona.
      */
     void pendientes(Player p) {
-        if (p == null || !p.isOnline() || hc.esHardcore(p)) return;
+        if (!recibeYa(p)) return;
         String ruta = "premios-pendientes." + p.getUniqueId();
         List<Map<?, ?>> lista = hc.datos().getMapList(ruta);
         if (lista.isEmpty()) return;
@@ -823,9 +838,27 @@ final class Entregas implements Listener {
         }
         String origen = args.length >= 5 ? args[4].toLowerCase(Locale.ROOT) : origenDe(quien);
         if (dar(quien, args[1], a, n, origen)) {
-            quien.sendMessage(Component.text("Entregado: " + args[1].toLowerCase(Locale.ROOT) + " x" + n + " a "
-                    + nombre(a) + ".", Paleta.BIEN));
+            // 1.11: lo que se queda en premios pendientes no es "Entregado".
+            String donde = ultimoDonde;
+            quien.sendMessage(Component.text(respuestaDar(args[1].toLowerCase(Locale.ROOT), n, nombre(a), donde,
+                    a.getPlayer() != null), "pendiente".equals(donde) ? Paleta.AVISO : Paleta.BIEN));
         }
+    }
+
+    /**
+     * Calamity 1.11 · Lo que se le contesta al staff tras un /calamidad dar que ha ido bien, segun donde
+     * acabo el objeto (ultimoDonde: inventario, suelo, pendiente, o null si no era un objeto). Antes
+     * decia "Entregado" aunque se quedara en premios pendientes. Estatica para el autotest.
+     */
+    static String respuestaDar(String objeto, int n, String jugador, String donde, boolean conectado) {
+        String que = objeto + " x" + n + " a " + jugador;
+        if ("pendiente".equals(donde)) {
+            return "Queda pendiente: " + que + (conectado
+                    ? ". Lo recibe al volver al spawn o al salir de Calamity."
+                    : ". No está conectado: lo recibe al entrar, fuera de Calamity o en su spawn.");
+        }
+        if ("suelo".equals(donde)) return "Entregado: " + que + ", a sus pies (no le cabía).";
+        return "Entregado: " + que + ".";
     }
 
     private List<String> tabDar(String[] args) {
@@ -982,8 +1015,24 @@ final class Entregas implements Listener {
 
     // ------------------------------------------------------------------ pruebas
 
+    /** Calamity 1.11 · La respuesta de /calamidad dar segun donde acaba el objeto. */
+    static void probarRespuesta(Autotest.Hoja h) {
+        h.igual("dar en mano: Entregado", "Entregado: cristal x1 a Dosa__.",
+                respuestaDar("cristal", 1, "Dosa__", "inventario", true));
+        h.igual("dar sin objeto (Esencias): Entregado", "Entregado: esencia x5 a Dosa__.",
+                respuestaDar("esencia", 5, "Dosa__", null, true));
+        h.igual("dar a sus pies", "Entregado: cristal x2 a Dosa__, a sus pies (no le cabía).",
+                respuestaDar("cristal", 2, "Dosa__", "suelo", true));
+        h.igual("dar dentro de Calamity: queda pendiente",
+                "Queda pendiente: cristal x1 a Dosa__. Lo recibe al volver al spawn o al salir de Calamity.",
+                respuestaDar("cristal", 1, "Dosa__", "pendiente", true));
+        h.ok("dar a un desconectado: pendiente y lo dice", respuestaDar("cristal", 1, "Dosa__", "pendiente", false)
+                .startsWith("Queda pendiente: cristal x1 a Dosa__. No está conectado"));
+    }
+
     private List<String> autotest() {
         Autotest.Hoja h = new Autotest.Hoja();
+        probarRespuesta(h);
         int[] r = repartoLlaves(0, 5, 4, true);
         h.igual("5 llaves con el tope vacio: 4 y sobra 1", "4/1", r[0] + "/" + r[1]);
         r = repartoLlaves(3, 2, 4, true);

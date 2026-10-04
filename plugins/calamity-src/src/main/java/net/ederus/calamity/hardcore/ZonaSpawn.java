@@ -207,6 +207,14 @@ final class ZonaSpawn implements Listener {
     private final java.util.Set<String> fallosAvisados = new java.util.HashSet<>();
     /** Calamity 1.10 · Ultimo "Desde el spawn no puedes atacar" a cada uno (millis). Se poda en tick(). */
     private final Map<UUID, Long> avisosAtaque = new HashMap<>();
+    /**
+     * Calamity 1.11 · Los golpes que onDanoDesdeDentro ha cancelado, para volver a cancelarlos en HIGHEST si
+     * alguien los descancela (onDanoVetado). Por identidad y debiles: cada evento se olvida solo.
+     */
+    private final java.util.Set<EntityDamageByEntityEvent> vetados =
+            java.util.Collections.newSetFromMap(new java.util.WeakHashMap<>());
+    /** Calamity 1.11 · False si el EDM instalado no tiene ArenaGuard.vetar (anterior a esta version). */
+    private boolean vetoEdm = true;
 
     ZonaSpawn(Hardcore hc) {
         this.hc = hc;
@@ -654,15 +662,46 @@ final class ZonaSpawn implements Listener {
      *
      * En LOW, antes de que nadie apunte el golpe (Combate, Huella, Amenazas, el reparto). La flecha se
      * borra: con el golpe cancelado rebotaria. El tridente no, que es el arma de alguien.
+     *
+     * Calamity 1.11 · Caso real: un Heraldo Carmesi esperando en el borde murio en 7 s a manos de un
+     * jugador que seguia dentro de la region. La cuenta de dentro() estaba bien; lo que pasaba es que
+     * los minijefes son esbirros de /esb y EDM devuelve el golpe de un jugador a sus esbirros si alguien
+     * lo cancela (ArenaGuard.devolverGolpe, en NORMAL y otra vez en HIGHEST desde AnomalyManager: es lo
+     * que deja pegarles dentro de las mazmorras de WorldGuard). Le descancelaba este golpe y entraba
+     * entero. Ahora:
+     *   - va en LOWEST, lo primero de todo;
+     *   - se le dice a EDM que este golpe no se devuelve (ArenaGuard.vetar; un EDM anterior a ese
+     *     metodo no lo tiene y se sigue sin el);
+     *   - y en HIGHEST (onDanoVetado) se vuelve a cancelar si alguien lo ha descancelado igualmente.
+     *     Calamity carga despues que EDM, asi que su HIGHEST corre detras del de EDM.
      */
-    @EventHandler(priority = EventPriority.LOW, ignoreCancelled = true)
+    @EventHandler(priority = EventPriority.LOWEST, ignoreCancelled = true)
     public void onDanoDesdeDentro(EntityDamageByEntityEvent e) {
         if (!protegidoAhora(e.getEntity())) return;
         Player p = responsable(e);
         if (p == null || !sinDanoDesdeDentro() || !dentro(p.getLocation())) return;
         e.setCancelled(true);
+        vetados.add(e);
+        if (vetoEdm) {
+            try {
+                net.ederus.edm.anomaly.core.ArenaGuard.vetar(e);
+            } catch (LinkageError edmViejo) {
+                // EDM sin ArenaGuard.vetar: queda onDanoVetado, y no se vuelve a intentar.
+                vetoEdm = false;
+            }
+        }
         if (e.getDamager() instanceof AbstractArrow flecha && !(flecha instanceof Trident)) flecha.remove();
         avisarAtaque(p);
+    }
+
+    /**
+     * Calamity 1.11 · La red de seguridad de onDanoDesdeDentro: el golpe que se cancelo ahi y alguien ha
+     * vuelto a dejar pasar (EDM sin el veto, otro plugin) se cancela otra vez, lo ultimo de todo. Sin
+     * ignoreCancelled, claro; lo que no esta en vetados ni se mira.
+     */
+    @EventHandler(priority = EventPriority.HIGHEST)
+    public void onDanoVetado(EntityDamageByEntityEvent e) {
+        if (!e.isCancelled() && vetados.contains(e)) e.setCancelled(true);
     }
 
     /**
@@ -914,6 +953,14 @@ final class ZonaSpawn implements Listener {
                         && !r.dentro(266, 383.0, -226) && !r.dentro(266, 70, -173.0) && !r.dentro(266, 70, -278.01));
         h.cerca("centro x", 267.0, r.centroX(), 1e-9);
         h.cerca("centro z", -225.5, r.centroZ(), 1e-9);
+
+        // 1.11: el caso real del Heraldo muerto desde dentro, en la region "calamity" (-51 -64 -52 a 52 382 52).
+        // El jugador si estaba dentro (el fallo era que EDM descancelaba el golpe) y el minijefe fuera.
+        Zona cal = Zona.caja(REGION, "calamity", "calamity", -51, -64, -52, 52, 382, 52);
+        h.ok("caso Heraldo: el jugador en (1.06, 52, -51.25) esta dentro", cal.dentro(1.06, 52, -51.25));
+        h.ok("caso Heraldo: el minijefe en (1, 50, -56) esta fuera", !cal.dentro(1, 50, -56));
+        h.ok("caso Heraldo: el borde norte (z -52) cuenta dentro y -52,01 ya no", cal.dentro(1, 52, -52.0)
+                && !cal.dentro(1, 52, -52.01));
 
         // Un poligono en L: (0,0) (10,0) (10,4) (4,4) (4,10) (0,10).
         int[] px = {0, 10, 10, 4, 4, 0}, pz = {0, 0, 4, 4, 10, 10};

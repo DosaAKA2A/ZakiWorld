@@ -139,6 +139,11 @@ final class MenuTasador implements Listener {
     }
 
     private void abrirVista(Player p, String pantalla) {
+        // Calamity 1.11: dentro de Calamity, con la libreta de otro dia y nada a medias, Oren da la de hoy
+        // (Contratos.renovar). Aqui y no en abrir(): los enlaces abren las vistas directamente. Sin libreta
+        // caducada es mirar una seccion y sus tres huecos.
+        Contratos con = hc.contratos();
+        if (con != null && hc.esHardcore(p)) hc.seguro("contratos", () -> con.renovar(p));
         Vista v = new Vista(pantalla, new HashMap<>(), 0);
         Inventory inv = hc.plugin().getServer().createInventory(v, TAMANO, titulo(pantalla).componente());
         pintar(inv, p, v);
@@ -465,7 +470,9 @@ final class MenuTasador implements Listener {
     private ItemStack premios(Player p, Vista v, int casilla) {
         UUID u = p.getUniqueId();
         List<Map<?, ?>> pend = hc.datos().getMapList("premios-pendientes." + u);
-        boolean dentro = hc.esHardcore(p);
+        // Calamity 1.11: en la zona spawn tambien se recogen (Entregas.recibeYa), como fuera.
+        Entregas en = hc.entregas();
+        boolean dentro = en == null ? hc.esHardcore(p) : !en.recibeYa(p);
         List<Component> lore = new ArrayList<>();
         if (pend.isEmpty()) {
             lore.add(Marco.tenue("No te espera nada."));
@@ -484,7 +491,7 @@ final class MenuTasador implements Listener {
         lore.add(Marco.tenue("Calamity o estando desconectado."));
         if (!pend.isEmpty()) {
             lore.add(Component.empty());
-            lore.add(dentro ? Marco.tenue("Te llegan cuando salgas de Calamity.") : Marco.accion("Clic para recogerlos"));
+            lore.add(dentro ? Marco.tenue("Te llegan en el spawn o al salir de Calamity.") : Marco.accion("Clic para recogerlos"));
             v.acciones().put(casilla, "cobrar");
         }
         return Marco.icono(new ItemStack(Material.CHEST, Math.max(1, Math.min(64, pend.size()))),
@@ -843,8 +850,9 @@ final class MenuTasador implements Listener {
             case "cobrar" -> {
                 Entregas en = hc.entregas();
                 if (en == null) return;
-                if (hc.esHardcore(p)) {
-                    p.sendMessage(ComandoCalamity.mensaje("En Calamity no se puede: te llegan cuando salgas."));
+                // 1.11: en la zona spawn si (recibeYa), como el Altar.
+                if (!en.recibeYa(p)) {
+                    p.sendMessage(ComandoCalamity.mensaje("Aquí no se puede: te llegan en el spawn o al salir de Calamity."));
                     Marco.sonidoNo(p);
                     return;
                 }
