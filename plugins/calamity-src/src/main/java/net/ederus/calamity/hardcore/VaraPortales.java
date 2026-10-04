@@ -16,6 +16,9 @@ import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.block.Action;
 import org.bukkit.event.block.BlockFromToEvent;
+import org.bukkit.event.block.FluidLevelChangeEvent;
+import org.bukkit.block.data.BlockData;
+import org.bukkit.block.data.Levelled;
 import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.inventory.EquipmentSlot;
 import org.bukkit.inventory.ItemStack;
@@ -179,13 +182,35 @@ public final class VaraPortales implements Listener {
             for (int y = y1; y <= y2; y++) {
                 for (int z = z1; z <= z2; z++) {
                     Block b = w.getBlockAt(x, y, z);
+                    if (y == y2 && b.getType() == Material.WATER) {
+                        cayendo(b);
+                        continue;
+                    }
                     if (!b.getType().isAir()) continue;
-                    b.setType(Material.WATER, false);
+                    if (y == y2) cayendo(b);
+                    else b.setType(Material.WATER, false);
                     n++;
                 }
             }
         }
         return n;
+    }
+
+    /**
+     * La fila de arriba va como agua que cae (level 8): el agua quieta se dibuja a 8/9 de bloque y bajo
+     * el marco quedaba una franja vacia (Dosa, 2026-10-04); la que cae llena el bloque entero.
+     */
+    private static void cayendo(Block b) {
+        BlockData d = Material.WATER.createBlockData();
+        if (d instanceof Levelled l) l.setLevel(8);
+        b.setBlockData(d, false);
+    }
+
+    /** El agua que cae se secaria sin una fuente encima: dentro de un portal se queda como esta. */
+    @EventHandler(ignoreCancelled = true)
+    public void onNivel(FluidLevelChangeEvent ev) {
+        Block b = ev.getBlock();
+        if (enCaja(b, "entrada") || enCaja(b, "salida")) ev.setCancelled(true);
     }
 
     /** El agua de un portal no se derrama: ni fuera de la caja ni dentro (se queda como se puso). */
