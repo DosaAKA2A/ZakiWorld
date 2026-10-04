@@ -462,7 +462,7 @@ final class CicloClima {
             h.cerca("jar: variacion", VARIACION, c.getDouble("variacion", -1), 1e-9);
             h.igual("jar: tormenta-cada", TORMENTA_CADA, c.getInt("tormenta-cada", -1));
             h.igual("jar: aviso-segundos", AVISO_SEGUNDOS, c.getInt("aviso-segundos", -1));
-            h.igual("jar: cordura.pantalla", "bossbar", jar.getString("hardcore.cordura.pantalla"));
+            h.igual("jar: cordura.pantalla", "actionbar", jar.getString("hardcore.cordura.pantalla"));
         }
         return h.lineas();
     }

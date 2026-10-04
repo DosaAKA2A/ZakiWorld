@@ -655,7 +655,7 @@ public final class Hardcore implements Listener {
     private void tick() {
         java.util.Set<UUID> vistos = new java.util.HashSet<>();
         // 1.11: BossBar (de serie) o la barra de accion de la 1.10. Se lee cada segundo: vale tras un reload.
-        boolean bossbar = MedidorCordura.enBossBar(cfg().getString("cordura.pantalla", "bossbar"));
+        boolean bossbar = MedidorCordura.enBossBar(cfg().getString("cordura.pantalla", "actionbar"));
         cordura.pantalla(bossbar);
         barra.limpiarAlAcabar(bossbar);
         for (World w : plugin.getServer().getWorlds()) {

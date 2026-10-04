@@ -214,7 +214,8 @@ hardcore:
     #             solo para los avisos cortos.
     #   actionbar como en la 1.10, en la barra de accion (la tapan los corazones de absorcion). Por si
     #             la BossBar da problemas en algun cliente (Bedrock).
-    pantalla: bossbar
+    # Dosa (2026-10-04) prefiere la barra de accion: de serie, actionbar.
+    pantalla: actionbar
 
   # Con la cordura a cero viene el minijefe del bioma donde estás (Calamity 1.10; en un bioma sin
   # dueño, uno de "tipos" al azar), y no más de uno cada tantos minutos.
