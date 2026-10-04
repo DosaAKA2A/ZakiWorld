@@ -258,11 +258,33 @@ final class CicloClima {
         }
     }
 
-    private String resumen(String mundo, long ahora) {
+    /**
+     * "Cielo despejado durante 14 min más. Después, tormenta.": frase entera, las fases en el color
+     * normal, el tiempo en el de las cifras y el resto en gris. El mundo solo se nombra si hay varios.
+     */
+    private Component resumen(String mundo, long ahora) {
+        Component antes = mundos.size() > 1
+                ? Paleta.tenue(Character.toUpperCase(mundo.charAt(0)) + mundo.substring(1) + " · ") : Component.empty();
         Estado e = estados.get(mundo);
-        if (e == null) return mundo + ": el reloj del clima aún no ha empezado.";
+        if (e == null) return antes.append(Paleta.tenue("El reloj del clima aún no ha empezado."));
         String proximo = siguiente(e.fase(), e.lluvias(), cfg().getInt("tormenta-cada", TORMENTA_CADA));
-        return mundo + ": " + e.fase() + ", quedan " + restante(e.hasta() - ahora) + ". Después: " + proximo + ".";
+        return antes.append(Paleta.texto(nombreFase(e.fase(), true)))
+                .append(Paleta.tenue(" durante "))
+                .append(Paleta.cifra(restante(e.hasta() - ahora) + " más"))
+                .append(Paleta.tenue(". Después, "))
+                .append(Paleta.texto(nombreFase(proximo, false)))
+                .append(Paleta.tenue("."));
+    }
+
+    /** Como se dice cada fase en una frase: "Cielo despejado", "lluvia", "tormenta". */
+    static String nombreFase(String fase, boolean inicio) {
+        String n = switch (fase == null ? "" : fase) {
+            case DESPEJADO -> "cielo despejado";
+            case LLUVIA -> "lluvia";
+            case TORMENTA -> "tormenta";
+            default -> String.valueOf(fase);
+        };
+        return inicio ? Character.toUpperCase(n.charAt(0)) + n.substring(1) : n;
     }
 
     /** %lethalworld_clima%, %lethalworld_clima_restante% y %lethalworld_clima_proximo%. Solo lee: otro hilo. */
