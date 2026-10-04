@@ -162,6 +162,16 @@ final class Aduana {
      */
     Pago pagar(OfflinePlayer p, String tipo, int esencias, long mobcoins, List<ItemStack> reliquias, String motivo,
                boolean objetoSiDentro) {
+        return pagar(p, tipo, esencias, mobcoins, reliquias, motivo, objetoSiDentro, null);
+    }
+
+    /**
+     * 1.11 · Con 'recoger': si el jugador esta dentro, sus Esencias (como objeto) y sus Reliquias no van
+     * a su inventario sino a esa lista, para que salgan del cofre o de la boveda que las paga (Dosa abrio
+     * una boveda y no vio salir nada: se le habian metido en el bolsillo). Topes y registro, los de siempre.
+     */
+    Pago pagar(OfflinePlayer p, String tipo, int esencias, long mobcoins, List<ItemStack> reliquias, String motivo,
+               boolean objetoSiDentro, List<ItemStack> recoger) {
         if (p == null) return new Pago(0, 0, Math.max(0, mobcoins), 0, true);
         String t = tipo == null ? "" : tipo.toLowerCase(Locale.ROOT);
         int e = Math.max(0, esencias);
@@ -176,7 +186,7 @@ final class Aduana {
         Player online = p.getPlayer();
 
         if (!r.tipoTopado()) {
-            entregar(p, online, t, pago, rel, objetoSiDentro);
+            entregar(p, online, t, pago, rel, objetoSiDentro, recoger);
             if (pago.mc() > 0) vigilarGlobal(pago.mc(), ahora);
         }
         if (online != null) {
@@ -234,10 +244,13 @@ final class Aduana {
 
     /** Esencias, MobCoins y Reliquias a su sitio (DIS M1 punto 5). */
     private void entregar(OfflinePlayer p, Player online, String tipo, Pago pago, List<ItemStack> reliquias,
-                          boolean objetoSiDentro) {
+                          boolean objetoSiDentro, List<ItemStack> recoger) {
         UUID u = p.getUniqueId();
         int e = pago.esencias();
-        if (e > 0) {
+        boolean aMano = recoger != null && online != null && hc.esHardcore(online);
+        if (e > 0 && aMano) {
+            for (int quedan = e; quedan > 0; quedan -= 64) recoger.add(hc.items().esencia(Math.min(64, quedan)));
+        } else if (e > 0) {
             boolean objeto = comoObjeto(online != null, online != null && hc.esHardcore(online), tipo, objetoSiDentro,
                     hc.cfg().getBoolean("esencias.saldo", true));
             if (objeto) {
@@ -268,7 +281,8 @@ final class Aduana {
         List<ItemStack> ausente = new ArrayList<>();
         for (ItemStack it : reliquias) {
             if (it == null || it.getType().isAir()) continue;
-            if (online != null && hc.esHardcore(online)) Suelo.dar(hc.plugin(), online, it);
+            if (aMano) recoger.add(it);
+            else if (online != null && hc.esHardcore(online)) Suelo.dar(hc.plugin(), online, it);
             else ausente.add(it);
         }
         if (ausente.isEmpty()) return;

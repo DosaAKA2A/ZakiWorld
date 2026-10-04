@@ -470,6 +470,8 @@ final class Ruinas implements Listener {
         double factor = BotinCalamity.factorBioma(c.getConfigurationSection("cofres.biomas"), Minijefes.bioma(bloque.getLocation()));
         List<BotinCalamity.Tirada> t = BotinCalamity.tirar(BotinCalamity.filas(c, "cofres.botin", COFRE_DE_SERIE), esc,
                 c.getDouble("cofres.extra.prob", 0.15), c.getDouble("cofres.extra.cantidad", 0.5), factor, azar::nextDouble);
+        // Dosa abrio un cofre vacio (fallaron todas las tiradas): como poco, una Esencia.
+        if (t.isEmpty()) t = List.of(new BotinCalamity.Tirada("esencia", 1));
         BotinCalamity.Entrega en = BotinCalamity.entregar(hc, p, t, "cofre", "ruina");
         Inventory inv = bloque.getState(false) instanceof Chest vivo ? vivo.getBlockInventory() : null;
         for (ItemStack it : en.objetos()) {

@@ -73,7 +73,8 @@ final class BotinCalamity {
     }
 
     /**
-     * Hace los objetos y paga: Esencias y Reliquias por Aduana.pagar(tipo) a quien abre; el resto
+     * Hace los objetos y paga: Esencias y Reliquias por Aduana.pagar(tipo) a quien abre (1.11: si esta dentro, como
+     * objetos en la lista, para que salgan del cofre o de la boveda); el resto
      * (cristal, frasco, tintura, llaves, vanilla) vuelve en la lista para que quien llama lo meta en
      * el cofre o en la boveda. origen va a la Reliquia y a la Bitacora.
      */
@@ -143,7 +144,8 @@ final class BotinCalamity {
         int pagadas = 0;
         Aduana ad = hc.aduana();
         if (ad != null && (esencias > 0 || !reliquias.isEmpty())) {
-            Aduana.Pago pago = ad.pagar(p, tipoAduana, esencias, 0, reliquias, origen);
+            // 1.11: las Esencias y Reliquias tambien salen del cofre o de la boveda (van con los demas objetos).
+            Aduana.Pago pago = ad.pagar(p, tipoAduana, esencias, 0, reliquias, origen, false, objetos);
             pagadas = pago == null ? 0 : pago.esencias();
             Grifo g = hc.grifo();
             if (pago != null && g != null) g.destelloEsencias(p, pago.esencias(), 0);
