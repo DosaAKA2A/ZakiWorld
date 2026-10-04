@@ -432,7 +432,8 @@ final class Minijefes {
 
             List<ItemStack> items = new ArrayList<>();
             if (hayReliquias) {
-                for (int g : p.grados()) items.add(rel.crear(g, "minijefe", null, nivel, null, false));
+                // 1.10: con el tipo, para que su lore diga de quien cayo ("Cayó del Heraldo Carmesí").
+                for (int g : p.grados()) items.add(rel.crear(g, "minijefe", null, nivel, t, false));
                 if (p.sello()) items.add(rel.crear(4, "minijefe", Reliquias.SELLO, nivel, t, false));
             }
             // 1.4: las de mas del equipo (esencias-bonus) de quien siga conectado, antes de la Aduana.

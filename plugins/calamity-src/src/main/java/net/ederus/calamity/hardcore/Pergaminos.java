@@ -1,8 +1,10 @@
 package net.ederus.calamity.hardcore;
 
+import io.papermc.paper.datacomponent.DataComponentTypes;
+import io.papermc.paper.datacomponent.item.TooltipDisplay;
+import com.destroystokyo.paper.event.inventory.PrepareResultEvent;
+import io.papermc.paper.event.player.PlayerLoomPatternSelectEvent;
 import net.kyori.adventure.text.Component;
-import net.kyori.adventure.text.TextComponent;
-import net.kyori.adventure.text.format.TextColor;
 import net.kyori.adventure.text.format.TextDecoration;
 import org.bukkit.Material;
 import org.bukkit.block.Block;
@@ -30,6 +32,7 @@ import org.bukkit.event.player.PlayerInteractEntityEvent;
 import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.event.player.PlayerQuitEvent;
 import org.bukkit.inventory.Inventory;
+import org.bukkit.inventory.LoomInventory;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.PlayerInventory;
 import org.bukkit.persistence.PersistentDataType;
@@ -46,7 +49,7 @@ import java.util.function.Predicate;
 
 /**
  * Calamity 1.10 · Los pergaminos de los contratos de Oren: cada contrato que queda por cumplir es un
- * papel en el inventario, con su objetivo, su progreso y su premio escritos en el lore.
+ * pergamino (un diseño de estandarte, uno por clase de contrato) en el inventario, con su objetivo, su progreso y su premio escritos en el lore.
  *
  * Por que: Dosa lo pidio asi, "entregar por mision o contrato un pergamino, que lleve el lore y tambien
  * los placeholders del contrato, bien ordenado y encuadrado, que al terminar el contrato se destruya y le
@@ -61,16 +64,13 @@ import java.util.function.Predicate;
  * Vive solo dentro de Calamity, como lo prestado del Kit, y con las mismas barreras (Kit.meteFuera):
  *   - se borra al salir (Hardcore.sacar, el cambio a un mundo que no es hardcore, entrar al servidor fuera);
  *   - no entra en ningun inventario que no sea el del jugador (cofres, tolvas, menus de otros plugins,
- *     aldeanos...), ni en un saco, un marco, un soporte, un allay, un jarron o un estante, ni en una receta;
+ *     aldeanos, el telar...), ni en un saco, un marco, un soporte, un allay, un jarron o un estante, ni en una receta;
  *   - tirado al suelo se rompe: no llega a caer, asi nadie mas puede cogerlo, y Oren da otro;
  *   - al morir se va con el inventario, y si por lo que sea iba a caer, no cae.
  * El Eco no lo copia ni el Censo lo cuenta: es papel, y los dos lo saltan ademas por la marca.
  */
 final class Pergaminos implements Listener {
 
-    /** Las lineas finas de arriba y de abajo miden esto como poco: mas si el nombre o una linea son mas anchos. */
-    static final int FILETE_MINIMO = 24;
-    static final String RAYA = "─";
     /**
      * Como se cobra lo que se cumple dentro: el premio llega en el acto y sus Esencias, como objeto
      * (Aduana.pagar con objetoSiDentro). Lo dicen el pergamino y el menu de Oren con las mismas palabras.
@@ -106,10 +106,6 @@ final class Pergaminos implements Listener {
         }
     }
 
-    /** Un trozo de una linea del lore. Lo plano y lo pintado salen de los mismos trozos: no se desalinean. */
-    private record Trozo(String texto, TextColor color) {
-    }
-
     private final Hardcore hc;
     private final Contratos contratos;
     /** Ultimo aviso de "es personal" por jugador: un clic repetido no llena la barra. */
@@ -128,9 +124,16 @@ final class Pergaminos implements Listener {
 
     // ------------------------------------------------------------------ el objeto
 
-    /** El pergamino de ese hueco, con el progreso que lleve. Uno por hueco: no se apila. */
+    /**
+     * El pergamino de ese hueco, con el progreso que lleve. Uno por hueco: no se apila.
+     *
+     * Calamity 1.10 (lores) · Ya no es papel: es un diseño de estandarte, que en el juego se ve como un
+     * pergamino con un simbolo, uno por clase de contrato (material). Se reconoce por la marca, no por el
+     * material, asi que los de papel que ya circulan siguen valiendo hasta que se cobran o caducan.
+     * Lo que el juego anade solo a un diseño de estandarte se oculta con TooltipDisplay (ocultarDiseno).
+     */
     static ItemStack crear(Sello s, Contratos.Def d, int progreso) {
-        ItemStack it = new ItemStack(Material.PAPER);
+        ItemStack it = new ItemStack(material(d));
         it.editMeta(meta -> {
             meta.displayName(nombre(d));
             meta.lore(lore(d, progreso));
@@ -138,22 +141,52 @@ final class Pergaminos implements Listener {
             meta.setMaxStackSize(1);
             meta.getPersistentDataContainer().set(Marcas.PERGAMINO, PersistentDataType.STRING, s.texto());
         });
+        ocultarDiseno(it);
         return it;
     }
 
-    /** "Contrato · Mata 10 mobs", en el ambar de los contratos, sin cursiva ni negrita. */
+    /** El diseño de estandarte de cada clase de contrato (por su evento). */
+    static Material material(Contratos.Def d) {
+        String ev = d == null || d.evento() == null ? "" : d.evento();
+        return switch (ev) {
+            case "mob", "destacado" -> Material.SKULL_BANNER_PATTERN;
+            case "cofre" -> Material.GLOBE_BANNER_PATTERN;
+            case "minijefe" -> Material.CREEPER_BANNER_PATTERN;
+            case "minutos", "minutos-limite", "minutos-sin-frasco" -> Material.FLOWER_BANNER_PATTERN;
+            case "eco-valido", "redimir" -> Material.FLOW_BANNER_PATTERN;
+            case "reliquia-ii", "tasa-ii" -> Material.FIELD_MASONED_BANNER_PATTERN;
+            default -> Material.MOJANG_BANNER_PATTERN;
+        };
+    }
+
+    /**
+     * Oculta lo que el juego anade solo a un diseño de estandarte (el componente provides_banner_patterns),
+     * para que el globo diga solo lo nuestro. Sin la API de componentes, el pergamino vale igual.
+     */
+    static void ocultarDiseno(ItemStack it) {
+        try {
+            it.setData(DataComponentTypes.TOOLTIP_DISPLAY, TooltipDisplay.tooltipDisplay()
+                    .addHiddenComponents(DataComponentTypes.PROVIDES_BANNER_PATTERNS).build());
+        } catch (Throwable sinApi) {
+            // Se veria la linea del diseño: nada mas.
+        }
+    }
+
+    /** "Contrato · Mobs", en el ambar de los contratos, sin cursiva ni negrita. El objetivo va en el lore. */
     static Component nombre(Contratos.Def d) {
         return Component.text(titulo(d), Contratos.AMBAR)
                 .decoration(TextDecoration.ITALIC, false).decoration(TextDecoration.BOLD, false);
     }
 
+    /** "Contrato · " y la etiqueta (la misma de la barra de accion): corto, cabe siempre en una linea. */
     static String titulo(Contratos.Def d) {
-        return "Contrato · " + d.texto();
+        String e = d.etiqueta() == null || d.etiqueta().isBlank() ? d.texto() : d.etiqueta();
+        return "Contrato · " + e;
     }
 
-    /** Si es un pergamino de contrato (por la marca: da igual como se llame). */
+    /** Si es un pergamino de contrato (por la marca: da igual el material y como se llame). */
     static boolean es(ItemStack it) {
-        return it != null && it.getType() == Material.PAPER && it.getPersistentDataContainer().has(Marcas.PERGAMINO);
+        return it != null && !it.getType().isAir() && it.getPersistentDataContainer().has(Marcas.PERGAMINO);
     }
 
     /** Su marca, o null si no es un pergamino o la marca no se entiende. */
@@ -190,54 +223,65 @@ final class Pergaminos implements Listener {
         return Math.max(1, Math.min(CASILLAS - 1, hecho * CASILLAS / objetivo));
     }
 
+    /** La linea de historia de cada clase de contrato (por su evento). */
+    static String historia(Contratos.Def d) {
+        String ev = d == null || d.evento() == null ? "" : d.evento();
+        return switch (ev) {
+            case "mob" -> "Oren paga por cada criatura que no vuelva a levantarse.";
+            case "destacado" -> "Las marcadas valen más. Oren las quiere muertas.";
+            case "cofre" -> "Lo que guardaron los que no volvieron todavía espera dueño.";
+            case "minijefe" -> "Algunos de aquí tienen nombre. Oren quiere que dejen de tenerlo.";
+            case "minutos" -> "Quedarse ya es una hazaña. Oren lo sabe.";
+            case "minutos-limite" -> "Al borde de la locura, Calamity habla más claro.";
+            case "minutos-sin-frasco" -> "Sin el Frasco, solo te sostiene tu cabeza.";
+            case "eco-valido" -> "Los Ecos ajenos no descansan hasta que alguien los calla.";
+            case "redimir" -> "Tu Eco te espera donde caíste. Dale descanso.";
+            case "reliquia-ii", "tasa-ii" -> "Encontrarla no vale nada: lo que vale es salir vivo con ella.";
+            default -> "Oren paga, y Oren no olvida.";
+        };
+    }
+
+    /** "{2} Esencias · {20} MobCoins": el premio con las cifras marcadas para el acento. */
+    static String premioMarcado(Contratos.Def d) {
+        if (d.esencias() <= 0 && d.mobcoins() <= 0) return "Sin premio";
+        return Ficha.valor(d.esencias(), d.mobcoins());
+    }
+
     /**
-     * El lore por trozos: filete, Objetivo, Progreso, Premio, filete, como se cobra y que el progreso es
-     * de la expedicion. Etiquetas apagadas y valores claros. El filete mide lo que lo mas ancho (el nombre
-     * incluido, con las medidas de Marco.ancho): asi enmarca el globo de lado a lado.
+     * Calamity 1.10 (lores) · El lore con la plantilla comun (Ficha): la clase de contrato, su historia,
+     * Objetivo, Progreso (la barra con las casillas llenas en el acento) y Premio, como se cobra y que el
+     * avance es de esta expedicion. Lineas de 38 como mucho y filete fijo.
      */
-    private static List<List<Trozo>> trozos(Contratos.Def d, int progreso) {
+    static Ficha ficha(Contratos.Def d, int progreso) {
         int objetivo = Math.max(1, d.objetivo());
         int hecho = Math.max(0, Math.min(progreso, objetivo));
         int llenas = llenas(hecho, objetivo);
-        List<Trozo> obj = List.of(new Trozo("Objetivo: ", Paleta.TENUE), new Trozo(d.texto(), Paleta.TEXTO));
-        List<Trozo> prog = List.of(new Trozo("Progreso: ", Paleta.TENUE),
-                new Trozo("▮".repeat(llenas), Contratos.VERDE_PALIDO),
-                new Trozo("▯".repeat(CASILLAS - llenas), Paleta.CASILLA_VACIA),
-                new Trozo(" " + hecho + "/" + objetivo, Paleta.CIFRA));
-        List<Trozo> premio = List.of(new Trozo("Premio: ", Paleta.TENUE), new Trozo(Contratos.premio(d), Paleta.TEXTO));
-        // Cumplido dentro, las Esencias llegan a la mano (y se pierden si mueres antes de salir).
-        List<Trozo> cobro = List.of(new Trozo(Contratos.seCobraAlSalir(d) ? "Se cobra al salir vivo." : COBRO_DENTRO,
-                Paleta.TENUE));
-        List<Trozo> expedicion = List.of(new Trozo("El progreso es de esta expedición.", Paleta.TENUE));
-        int px = Marco.ancho(titulo(d), false);
-        for (List<Trozo> l : List.of(obj, prog, premio, cobro, expedicion)) px = Math.max(px, Marco.ancho(plano(l), false));
-        int raya = Math.max(1, Marco.ancho(RAYA, false));
-        List<Trozo> filete = List.of(new Trozo(RAYA.repeat(Math.max(FILETE_MINIMO, (px + raya - 1) / raya)), Paleta.FILETE));
-        return List.of(filete, obj, prog, premio, filete, cobro, expedicion);
+        return new Ficha(Contratos.AMBAR).tipo(d.corto() ? "Contrato de Oren · Corto" : "Contrato de Oren").filete()
+                .historia(historia(d)).filete()
+                .etiqueta("Objetivo").dato(d.texto())
+                .etiqueta("Progreso").dato(barra(llenas) + " {" + hecho + "/" + objetivo + "}")
+                .etiqueta("Premio").dato(premioMarcado(d)).filete()
+                .accion(Contratos.seCobraAlSalir(d) ? "Se cobra al salir vivo de Calamity." : COBRO_DENTRO)
+                .nota("Si mueres, el avance vuelve a cero.");
+    }
+
+    /** Las llenas entre llaves (acento); las vacias se repintan en gris oscuro en lore(). */
+    private static String barra(int llenas) {
+        return (llenas > 0 ? "{" + "▮".repeat(llenas) + "}" : "") + "▯".repeat(CASILLAS - llenas);
     }
 
     /** El lore en texto plano, linea a linea (sin Bukkit: el autotest lo compara tal cual). */
     static List<String> lineas(Contratos.Def d, int progreso) {
-        List<String> out = new ArrayList<>();
-        for (List<Trozo> l : trozos(d, progreso)) out.add(plano(l));
-        return out;
+        return ficha(d, progreso).lineas();
     }
 
-    /** El lore pintado, sin cursiva. */
+    /** El lore pintado, sin cursiva; las casillas vacias de la barra en el gris de la de cordura. */
     static List<Component> lore(Contratos.Def d, int progreso) {
         List<Component> out = new ArrayList<>();
-        for (List<Trozo> l : trozos(d, progreso)) {
-            TextComponent.Builder b = Component.text();
-            for (Trozo t : l) if (!t.texto().isEmpty()) b.append(Component.text(t.texto(), t.color()));
-            out.add(b.build().decoration(TextDecoration.ITALIC, false));
+        for (Component c : ficha(d, progreso).lore()) {
+            out.add(c.replaceText(b -> b.matchLiteral("▯").replacement(m -> m.color(Paleta.CASILLA_VACIA))));
         }
         return out;
-    }
-
-    private static String plano(List<Trozo> l) {
-        StringBuilder sb = new StringBuilder();
-        for (Trozo t : l) sb.append(t.texto());
-        return sb.toString();
     }
 
     // ------------------------------------------------------------------ en el inventario
@@ -483,6 +527,28 @@ final class Pergaminos implements Listener {
                 return;
             }
         }
+    }
+
+    /**
+     * Calamity 1.10 (lores) · El telar: el pergamino es un diseño de estandarte y el telar los acepta. Meterlo
+     * ya lo cierra alClic (el telar es un inventario ajeno); esto es la segunda llave: si aun asi hay uno en
+     * el telar, no sale estandarte ni se puede elegir el diseño.
+     */
+    @EventHandler(priority = EventPriority.HIGHEST)
+    public void alTelar(PrepareResultEvent e) {
+        if (e.getInventory() instanceof LoomInventory telar && hay(telar)) e.setResult(null);
+    }
+
+    @EventHandler(priority = EventPriority.LOW, ignoreCancelled = true)
+    public void alElegirDiseno(PlayerLoomPatternSelectEvent e) {
+        if (!hay(e.getLoomInventory())) return;
+        e.setCancelled(true);
+        avisar(e.getPlayer());
+    }
+
+    private static boolean hay(Inventory inv) {
+        for (ItemStack it : inv.getContents()) if (es(it)) return true;
+        return false;
     }
 
     @EventHandler

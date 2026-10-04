@@ -1433,7 +1433,7 @@ final class Contratos implements Listener {
         ItemMeta meta = papel.getItemMeta();
         h.ok("pergamino: se reconoce por la marca", Pergaminos.es(papel));
         h.igual("pergamino: lleva su sello", sello, Pergaminos.sello(papel));
-        h.igual("pergamino: el nombre", "Contrato · Mata 10 mobs", meta == null ? null : plano(meta.displayName()));
+        h.igual("pergamino: el nombre", "Contrato · Mobs", meta == null ? null : plano(meta.displayName()));
         h.ok("pergamino: nombre sin cursiva ni negrita", meta != null && meta.displayName() != null
                 && meta.displayName().decoration(TextDecoration.ITALIC) == TextDecoration.State.FALSE
                 && meta.displayName().decoration(TextDecoration.BOLD) == TextDecoration.State.FALSE);
@@ -1441,6 +1441,16 @@ final class Contratos implements Listener {
                 meta == null || meta.lore() == null ? null : planos(meta.lore()));
         h.igual("pergamino: no se apila", 1, papel.getMaxStackSize());
         h.ok("un papel cualquiera no es un pergamino", !Pergaminos.es(new ItemStack(Material.PAPER)));
+        // 1.10 (lores): un diseño de estandarte por clase de contrato, reconocido por la marca y no por el material.
+        h.igual("pergamino de mobs: diseño de calavera", Material.SKULL_BANNER_PATTERN, papel.getType());
+        h.ok("un diseño de estandarte cualquiera no es un pergamino", !Pergaminos.es(new ItemStack(Material.SKULL_BANNER_PATTERN)));
+        ItemStack viejo = new ItemStack(Material.PAPER);
+        viejo.editMeta(m -> m.getPersistentDataContainer().set(Marcas.PERGAMINO, org.bukkit.persistence.PersistentDataType.STRING, sello.texto()));
+        h.ok("un pergamino de papel de antes se sigue reconociendo", Pergaminos.es(viejo) && sello.equals(Pergaminos.sello(viejo)));
+        io.papermc.paper.datacomponent.item.TooltipDisplay td =
+                papel.getData(io.papermc.paper.datacomponent.DataComponentTypes.TOOLTIP_DISPLAY);
+        h.ok("pergamino: oculta la linea propia del diseño", td != null && td.hiddenComponents()
+                .contains(io.papermc.paper.datacomponent.DataComponentTypes.PROVIDES_BANNER_PATTERNS));
         h.ok("barra: el modo es uno de los tres", MODOS_BARRA.contains(modoBarra()));
 
         h.ok("autotest no toca contratos reales", !hc.datos().isSet("contratos." + Autotest.sintetico(1))
@@ -1458,13 +1468,15 @@ final class Contratos implements Listener {
      */
     static void probarPergaminos(Autotest.Hoja h, Map<String, Def> base) {
         Def mobs = base.get("corto-mobs"), reliquia = base.get("corto-reliquia");
-        String raya = "─".repeat(Pergaminos.FILETE_MINIMO);
-        List<String> esperadas = List.of(raya, "Objetivo: Mata 10 mobs", "Progreso: ▮▮▮▮▮▮▯▯▯▯ 6/10",
-                "Premio: 2 Esencias y 20 MobCoins", raya, "Al cumplirlo recibes el premio en la mano.",
-                "El progreso es de esta expedición.");
+        // 1.10 (lores): la plantilla comun (Ficha), con lineas de 38 como mucho y filete fijo.
+        String raya = Ficha.RAYA.repeat(Ficha.RAYAS);
+        List<String> esperadas = List.of("Contrato de Oren · Corto", raya, "Oren paga por cada criatura que no",
+                "vuelva a levantarse.", raya, "Objetivo", " Mata 10 mobs", "Progreso", " ▮▮▮▮▮▮▯▯▯▯ 6/10", "Premio",
+                " 2 Esencias · 20 MobCoins", raya, "▸ Al cumplirlo recibes el premio en", "  la mano.",
+                "Si mueres, el avance vuelve a cero.");
         h.igual("pergamino: lore a 6/10", esperadas, Pergaminos.lineas(mobs, 6));
-        h.igual("pergamino: a 0/10 la barra vacia", "Progreso: ▯▯▯▯▯▯▯▯▯▯ 0/10", Pergaminos.lineas(mobs, 0).get(2));
-        h.igual("pergamino: el progreso no pasa del objetivo", "Progreso: ▮▮▮▮▮▮▮▮▮▮ 10/10", Pergaminos.lineas(mobs, 14).get(2));
+        h.igual("pergamino: a 0/10 la barra vacia", " ▯▯▯▯▯▯▯▯▯▯ 0/10", tras(Pergaminos.lineas(mobs, 0), "Progreso"));
+        h.igual("pergamino: el progreso no pasa del objetivo", " ▮▮▮▮▮▮▮▮▮▮ 10/10", tras(Pergaminos.lineas(mobs, 14), "Progreso"));
         h.igual("pergamino: 1 de 30 ya pinta una casilla", 1, Pergaminos.llenas(1, 30));
         h.igual("pergamino: 29 de 30 aun no llena la barra", 9, Pergaminos.llenas(29, 30));
         h.igual("pergamino: lo pintado dice lo mismo que lo plano", esperadas, planos(Pergaminos.lore(mobs, 6)));
@@ -1472,11 +1484,18 @@ final class Contratos implements Listener {
         for (Component c : Pergaminos.lore(mobs, 6)) sinCursiva &= c.decoration(TextDecoration.ITALIC) == TextDecoration.State.FALSE;
         h.ok("pergamino: lore sin cursiva", sinCursiva);
         List<String> rl = Pergaminos.lineas(reliquia, 0);
-        h.igual("pergamino de Reliquias: se cobra al salir", "Se cobra al salir vivo.", rl.get(5));
-        boolean enmarca = rl.get(0).length() > Pergaminos.FILETE_MINIMO
-                && Marco.ancho(rl.get(0), false) >= Marco.ancho(Pergaminos.titulo(reliquia), false);
-        for (String l : rl) enmarca &= Marco.ancho(l, false) <= Marco.ancho(rl.get(0), false);
-        h.ok("pergamino largo: el filete crece y nada pasa de el (ni el nombre)", enmarca);
+        h.ok("pergamino de Reliquias: se cobra al salir", rl.contains("▸ Se cobra al salir vivo de Calamity."));
+        List<String> largas = new ArrayList<>();
+        for (Def d : base.values()) {
+            largas.addAll(Ficha.largas(Pergaminos.lineas(d, 0)));
+            largas.addAll(Ficha.largas(List.of(Pergaminos.titulo(d))));
+        }
+        h.igual("pergaminos: ninguna linea ni nombre pasa de 38", List.of(), largas);
+        h.igual("pergamino de minijefe: diseño de creeper", Material.CREEPER_BANNER_PATTERN, Pergaminos.material(base.get("minijefe")));
+        h.igual("pergamino de minutos: diseño de flor", Material.FLOWER_BANNER_PATTERN, Pergaminos.material(base.get("sin-frasco")));
+        h.igual("pergamino de Reliquias: diseño de ladrillo", Material.FIELD_MASONED_BANNER_PATTERN, Pergaminos.material(reliquia));
+        h.igual("pergamino de Eco: diseño de espiral", Material.FLOW_BANNER_PATTERN, Pergaminos.material(base.get("eco")));
+        h.igual("pergamino de cofres: diseño de globo", Material.GLOBE_BANNER_PATTERN, Pergaminos.material(base.get("cofres")));
 
         UUID yo = Autotest.sintetico(61), otro = Autotest.sintetico(62);
         Pergaminos.Sello sello = new Pergaminos.Sello(yo, "2026-09-26", 1, "corto-mobs");
@@ -1559,6 +1578,12 @@ final class Contratos implements Listener {
 
     private static String plano(Component c) {
         return c == null ? null : PlainTextComponentSerializer.plainText().serialize(c);
+    }
+
+    /** La linea que sigue a "etiqueta" (el dato de un bloque del pergamino), o null. */
+    private static String tras(List<String> l, String etiqueta) {
+        int i = l.indexOf(etiqueta);
+        return i < 0 || i + 1 >= l.size() ? null : l.get(i + 1);
     }
 
     private static List<String> planos(List<Component> l) {

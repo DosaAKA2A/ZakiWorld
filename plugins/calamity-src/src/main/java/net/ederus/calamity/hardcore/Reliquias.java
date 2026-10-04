@@ -102,6 +102,8 @@ final class Reliquias implements Listener {
                 hc.plugin().getLogger());
         hc.plugin().getServer().getPluginManager().registerEvents(this, hc.plugin());
         Autotest.registrar("reliquias", this::autotest);
+        // 1.10 (lores): la plantilla comun y el lore de cada objeto propio, con la config viva.
+        Autotest.registrar("fichas", () -> Ficha.autotestObjetos(hc.cfg()));
         Subcomandos.lw().registrar("reliquia",
                 "reliquia <1-4> [jugador] [especial[:N][:valida|:minijefe]]: emite una Reliquia (origen admin)",
                 "ederus.mundos", this::comando, this::tab);
@@ -145,25 +147,6 @@ final class Reliquias implements Listener {
         if (meta == null) return item;
         meta.displayName(texto(nombre(c, g, esp, minijefe), COLOR_GRADO[g]));
 
-        List<Component> lore = new ArrayList<>();
-        lore.add(texto("Reliquia de grado " + ROMANO[g], Paleta.TENUE));
-        if (CAMPANA.equals(esp) && nivel > 0) lore.add(texto("Viene de una Parca de nivel " + nivel + ".", Paleta.TENUE));
-        if (LAGRIMA.equals(esp) && nivel > 0) lore.add(texto("Viene de un Eco de nivel " + nivel + ".", Paleta.TENUE));
-        // Lo que da al venderla (Tasacion.extras): la Campana de una Parca de N alto, un Fragmento;
-        // la Lagrima de una caza valida o de grado IV, una Marca; el Sello, su credito para la Forja.
-        if (CAMPANA.equals(esp) && nivel >= c.getInt("reliquias.especiales.campana-parca.fragmento-nivel-minimo", 40)) {
-            lore.add(texto("Al venderla te da un Fragmento de Guadaña.", Paleta.TENUE));
-        }
-        if (LAGRIMA.equals(esp) && (valida || g == 4)) {
-            lore.add(texto("Al venderla te da una Marca de Eco", Paleta.TENUE));
-            lore.add(texto("(como mucho " + c.getInt("eco.marcas.dia", 2) + " al día).", Paleta.TENUE));
-        }
-        if (SELLO.equals(esp)) lore.add(texto("Al venderlo, podrás usarlo en la Forja.", Paleta.TENUE));
-        lore.add(Component.empty());
-        lore.add(texto("Solo vale si sales vivo: se vende sola", AMBAR));
-        lore.add(texto("al cruzar la puerta o con un Cristal.", AMBAR));
-        lore.add(texto("Si mueres, se la queda tu Eco.", AMBAR));
-
         PersistentDataContainer pdc = meta.getPersistentDataContainer();
         pdc.set(Marcas.RELIQUIA, PersistentDataType.INTEGER, g);
         long ahora = System.currentTimeMillis();
@@ -180,9 +163,11 @@ final class Reliquias implements Listener {
                 pdc.set(Marcas.RELIQUIA_MINIJEFE, PersistentDataType.STRING, minijefe.trim().toLowerCase(Locale.ROOT));
             }
             if (valida) pdc.set(Marcas.RELIQUIA_VALIDA, PersistentDataType.BYTE, (byte) 1);
-            lore.add(texto("Caduca el " + fechaCorta(ahora + caducaMillis()) + ".", AMBAR));
         }
-        meta.lore(lore);
+        // 1.10: la plantilla comun (Ficha). El origen solo en las que lo guardan (III, IV y especiales): en
+        // las de monton partiria los montones (una Astilla de cofre no se apilaria con una de mob).
+        meta.lore(ficha(c, g, esp, nivel, minijefe, valida, apilable ? null : o, !apilable,
+                apilable ? null : fechaCorta(ahora + caducaMillis())).lore());
         meta.setEnchantmentGlintOverride(true);
         item.setItemMeta(meta);
         if (id != null) registro.emitida(id, g, o, ahora);
@@ -202,6 +187,119 @@ final class Reliquias implements Listener {
     private static Component texto(String s, TextColor color) {
         return Component.text(s, color).decoration(TextDecoration.ITALIC, false);
     }
+
+    // ------------------------------------------------------------------- lore
+
+    /** El color del nombre de una Reliquia de ese grado: el acento de todo su lore. */
+    static TextColor color(int grado) {
+        return COLOR_GRADO[Math.max(1, Math.min(4, grado))];
+    }
+
+    /** La linea de historia de cada clase de Reliquia. */
+    static String historia(int g, String esp) {
+        if (esp != null) {
+            return switch (esp) {
+                case CAMPANA -> "Tañe sola cuando la Parca está cerca. Esta ya no tiene a quién avisar.";
+                case LAGRIMA -> "Lo último que lloró un Eco antes de callar para siempre.";
+                case SELLO -> "Lacre del minijefe caído. Todavía quema al tacto.";
+                default -> "Nació a la sombra del Eclipse. Su brillo no es de este cielo.";
+            };
+        }
+        return switch (g) {
+            case 1 -> "Esquirla del umbral. Se quiebra cada vez que alguien no vuelve.";
+            case 2 -> "Aún tararea la nana que Bracken cantaba antes de pudrirse.";
+            case 3 -> "Resina que el bosque lloró sobre los que no volvieron.";
+            default -> "Lleva algo atrapado dentro. A veces se mueve.";
+        };
+    }
+
+    /**
+     * De donde salio, dicho para el jugador ("Cayó del Heraldo Carmesí"), o null si no se sabe o no
+     * importa (admin). Lo que guarda RELIQUIA_ORIGEN: mob, destacado, minijefe, cofre, eco, parca, eclipse.
+     */
+    static String origen(String origen, int nivel, String minijefe) {
+        if (origen == null) return null;
+        String nv = nivel > 0 ? " de nivel {" + nivel + "}" : "";
+        return switch (origen) {
+            case "mob" -> "La soltó una criatura" + (nivel > 0 ? nv : " de Calamity");
+            case "destacado" -> "La soltó una criatura destacada" + nv;
+            case "minijefe" -> minijefe == null || minijefe.isBlank() ? "Cayó de un minijefe" + nv
+                    : "Cayó " + Forja.delMinijefe(minijefe);
+            case "cofre" -> "Estaba en un cofre de Calamity";
+            case "eco" -> "La soltó un Eco" + nv;
+            case "parca" -> "Cayó de una Parca" + nv;
+            case "eclipse" -> "Cayó durante un Eclipse";
+            default -> null;
+        };
+    }
+
+    /**
+     * El lore de una Reliquia con la plantilla comun (Ficha): grado en estrellas, historia, origen, lo que
+     * vale al salir vivo (reliquias.grados.N de la config viva), lo que da de mas y para que sirve (los
+     * especiales, de la Tasacion y de altar.trueques), si es pieza unica y cuando caduca. Pura: la prueba
+     * el autotest "fichas".
+     *
+     * @param origen null para no decirlo (las de monton, que no lo guardan)
+     * @param caduca "18/10" o null (las de monton no caducan)
+     */
+    static Ficha ficha(ConfigurationSection c, int grado, String esp, int nivel, String minijefe, boolean valida,
+                       String origen, boolean unica, String caduca) {
+        int g = Math.max(1, Math.min(4, grado));
+        boolean masculino = SELLO.equals(esp);
+        Ficha f = new Ficha(color(g)).tipo("Reliquia · Grado " + ROMANO[g] + " " + Ficha.estrellas(g)).filete()
+                .historia(historia(g, esp));
+        f.texto(origen(origen, nivel, minijefe));
+        f.filete().etiqueta(unica ? "Valor al salir vivo" : "Valor de cada una al salir vivo");
+        f.dato(Ficha.valor(c.getDouble("reliquias.grados." + g + ".esencias", ESENCIAS_SERIE[g]),
+                c.getLong("reliquias.grados." + g + ".mobcoins", MC_SERIE[g])));
+
+        int minimo = c.getInt("reliquias.especiales.campana-parca.fragmento-nivel-minimo", 40);
+        if (CAMPANA.equals(esp)) {
+            boolean fragmento = nivel >= minimo;
+            if (fragmento) f.dato("+ {1} Fragmento de Guadaña");
+            if (g == 4) f.dato("+ " + Ficha.probabilidad(c.getDouble("reliquias.especiales.campana-parca.llave-caos-iv", 0.25))
+                    + " de ganar una Llave del Caos");
+            if (fragmento) {
+                usos(f, Ficha.usosDeCredito(c, "fragmento"), "Fragmento", "Fragmentos");
+            } else {
+                f.nota("Solo la de una Parca de nivel {" + minimo + "} o más da un Fragmento de Guadaña.");
+            }
+        } else if (LAGRIMA.equals(esp)) {
+            boolean marca = valida || g == 4;
+            if (marca) f.dato("+ {1} Marca de Eco (máximo {" + c.getInt("eco.marcas.dia", 2) + "} al día)");
+            if (g == 4) f.dato("+ " + Ficha.probabilidad(c.getDouble("reliquias.especiales.lagrima-eco.llave-caos-iv", 0.20))
+                    + " de ganar una Llave del Caos");
+            if (marca) usos(f, Ficha.usosDeCredito(c, "marca"), "Marca", "Marcas");
+            else f.nota("Solo la de una caza válida da Marca de Eco.");
+        } else if (SELLO.equals(esp)) {
+            List<Ficha.Uso> u = minijefe == null || minijefe.isBlank() ? List.of()
+                    : Ficha.usosDeCredito(c, "sello:" + minijefe.trim().toLowerCase(Locale.ROOT));
+            if (u.isEmpty()) {
+                f.etiqueta("Para qué sirve").dato("Vale como crédito en la Forja de Vael.");
+            } else {
+                f.etiqueta("Desbloquea en la Forja de Vael");
+                for (Ficha.Uso x : u) f.dato("{" + x.da() + "}");
+            }
+        }
+
+        if (unica) f.nota("Pieza única · no se apila");
+        else f.nota("Se pagan hasta {" + c.getInt("reliquias.tope-dia." + g, g == 1 ? 60 : 30) + "} al día");
+        if (caduca != null) f.nota("Caduca el {" + caduca + "}");
+        return f.filete()
+                .accion((masculino ? "Se vende solo" : "Se vende sola") + " al salir de Calamity por la puerta o con un Cristal.")
+                .nota(masculino ? "Si mueres antes de salir, lo pierdes." : "Si mueres antes de salir, la pierdes.");
+    }
+
+    /** "Para qué sirve" y una linea por pieza: " 7 Fragmentos · Guadaña de la Parca". */
+    private static void usos(Ficha f, List<Ficha.Uso> usos, String uno, String varios) {
+        if (usos.isEmpty()) return;
+        f.etiqueta("Para qué sirve");
+        for (Ficha.Uso u : usos) f.dato(Ficha.cantidad(u.cantidad(), uno, varios) + " · " + u.da());
+    }
+
+    /** Los valores de serie de la Tasacion (Tasacion.Valores), por si la config no trae el grado. */
+    private static final double[] ESENCIAS_SERIE = {0, 0.2, 1, 3, 6};
+    private static final long[] MC_SERIE = {0, 5, 15, 40, 100};
 
     static Set<Integer> apilables(ConfigurationSection c) {
         if (!c.isList("reliquias.apilables")) return Set.of(1, 2);

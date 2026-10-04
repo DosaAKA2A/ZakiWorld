@@ -7,11 +7,14 @@ import net.kyori.adventure.text.format.TextDecoration;
 import net.ederus.calamity.CalamityPlugin;
 import org.bukkit.Material;
 import org.bukkit.NamespacedKey;
+import org.bukkit.configuration.ConfigurationSection;
+import org.bukkit.configuration.file.YamlConfiguration;
+import org.bukkit.configuration.ConfigurationSection;
+import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.persistence.PersistentDataType;
 
-import java.util.ArrayList;
 import java.util.List;
 
 /**
@@ -56,18 +59,7 @@ public final class ItemsCalamity {
         if (meta != null) {
             meta.displayName(Component.text("Frasco de Calma", VERDE)
                     .decoration(TextDecoration.ITALIC, false));
-            List<Component> lore = new ArrayList<>();
-            lore.add(Component.text("Cada trago te devuelve "
-                    + plugin.getConfig().getInt("hardcore.frasco.cordura", 40)
-                    + " de cordura.", Paleta.TEXTO).decoration(TextDecoration.ITALIC, false));
-            lore.add(Component.text("Tragos: " + quedan + " de " + max, VERDE)
-                    .decoration(TextDecoration.ITALIC, false));
-            lore.add(Component.empty());
-            lore.add(Component.text("Clic derecho para beber.", Paleta.TENUE)
-                    .decoration(TextDecoration.ITALIC, false));
-            lore.add(Component.text("Se recarga en el Altar.", Paleta.TENUE)
-                    .decoration(TextDecoration.ITALIC, false));
-            meta.lore(lore);
+            meta.lore(fichaFrasco(hardcore(), quedan).lore());
             if (meta instanceof org.bukkit.inventory.meta.PotionMeta pm) {
                 pm.setColor(org.bukkit.Color.fromRGB(0x8FD6A8));
             }
@@ -98,21 +90,7 @@ public final class ItemsCalamity {
         if (meta != null) {
             meta.displayName(Component.text("Cristal de Regreso", MORADO)
                     .decoration(TextDecoration.ITALIC, false));
-            meta.lore(List.of(
-                    Component.text("Te saca vivo de Calamity sin", Paleta.TEXTO)
-                            .decoration(TextDecoration.ITALIC, false),
-                    Component.text("pasar por la puerta de salida.", Paleta.TEXTO)
-                            .decoration(TextDecoration.ITALIC, false),
-                    Component.empty(),
-                    Component.text("Clic derecho y quédate quieto "
-                            + plugin.getConfig().getInt("hardcore.cristal.segundos", 5) + " s.",
-                            Paleta.TENUE).decoration(TextDecoration.ITALIC, false),
-                    Component.text("Si te mueves, se apaga.", Paleta.TENUE)
-                            .decoration(TextDecoration.ITALIC, false),
-                    Component.text("En combate no funciona.", Paleta.TENUE)
-                            .decoration(TextDecoration.ITALIC, false),
-                    Component.text("Se gasta al usarlo.", Paleta.TENUE)
-                            .decoration(TextDecoration.ITALIC, false)));
+            meta.lore(fichaCristal(hardcore()).lore());
             meta.setEnchantmentGlintOverride(true);
             meta.getPersistentDataContainer().set(claveCristal, PersistentDataType.BYTE, (byte) 1);
             item.setItemMeta(meta);
@@ -140,20 +118,9 @@ public final class ItemsCalamity {
         ItemStack item = new ItemStack(materialEsencia(), Math.max(1, Math.min(64, cantidad)));
         ItemMeta meta = item.getItemMeta();
         if (meta != null) {
-            meta.displayName(Component.text("Esencia de Calamidad", TextColor.color(0xE8903C))
+            meta.displayName(Component.text("Esencia de Calamidad", NARANJA_ESENCIA)
                     .decoration(TextDecoration.ITALIC, false));
-            meta.lore(List.of(
-                    Component.text("La sueltan los mobs y los", Paleta.TEXTO)
-                            .decoration(TextDecoration.ITALIC, false),
-                    Component.text("cofres de Calamity.", Paleta.TEXTO)
-                            .decoration(TextDecoration.ITALIC, false),
-                    Component.empty(),
-                    Component.text("Si sales vivo, pasa a tu saldo.", Paleta.TENUE)
-                            .decoration(TextDecoration.ITALIC, false),
-                    Component.text("Con el saldo pagas en el Altar", Paleta.TENUE)
-                            .decoration(TextDecoration.ITALIC, false),
-                    Component.text("y en la Forja.", Paleta.TENUE)
-                            .decoration(TextDecoration.ITALIC, false)));
+            meta.lore(fichaEsencia().lore());
             meta.setEnchantmentGlintOverride(true);
             meta.getPersistentDataContainer().set(claveEsencia, PersistentDataType.BYTE, (byte) 1);
             item.setItemMeta(meta);
@@ -175,11 +142,7 @@ public final class ItemsCalamity {
         ItemMeta meta = item.getItemMeta();
         if (meta != null) {
             meta.displayName(Paleta.degradado(FragmentosMasamune.NOMBRE, Paleta.ACERO_DESDE, Paleta.ACERO_HASTA));
-            meta.lore(List.of(
-                    Component.text("Un trozo de la katana de Ambush.", Paleta.TEXTO)
-                            .decoration(TextDecoration.ITALIC, false),
-                    Component.text("Vael forja la Masamune con cinco.", Paleta.TENUE)
-                            .decoration(TextDecoration.ITALIC, false)));
+            meta.lore(fichaFragmento(Ficha.cfg()).lore());
             meta.setEnchantmentGlintOverride(true);
             meta.getPersistentDataContainer().set(Marcas.FRAGMENTO_MASAMUNE, PersistentDataType.BYTE, (byte) 1);
             item.setItemMeta(meta);
@@ -210,16 +173,7 @@ public final class ItemsCalamity {
         ItemMeta meta = item.getItemMeta();
         if (meta != null) {
             meta.displayName(Paleta.degradado("Reclamo", Paleta.MINIJEFE_DESDE, Paleta.MINIJEFE_HASTA));
-            meta.lore(List.of(
-                    Component.text("Llama al minijefe del bioma donde estás.", Paleta.TEXTO)
-                            .decoration(TextDecoration.ITALIC, false),
-                    Component.text("Solo funciona en Calamity, fuera del spawn.", Paleta.TEXTO)
-                            .decoration(TextDecoration.ITALIC, false),
-                    Component.empty(),
-                    Component.text("Clic derecho para hacerlo sonar.", Paleta.TENUE)
-                            .decoration(TextDecoration.ITALIC, false),
-                    Component.text("Se gasta al usarlo.", Paleta.TENUE)
-                            .decoration(TextDecoration.ITALIC, false)));
+            meta.lore(fichaReclamo(Ficha.cfg()).lore());
             meta.setEnchantmentGlintOverride(true);
             meta.getPersistentDataContainer().set(Marcas.RECLAMO, PersistentDataType.BYTE, (byte) 1);
             item.setItemMeta(meta);
@@ -236,6 +190,80 @@ public final class ItemsCalamity {
     public static boolean esReclamo(ItemStack item) {
         return Marcas.tiene(item, Marcas.RECLAMO);
     }
+
+    // ------------------------------------------------------- los lores (Ficha)
+
+    /*
+     * Calamity 1.10 · El lore de cada objeto, con la plantilla comun (Ficha) y las cifras leidas de la
+     * config viva (la seccion hardcore). Puros: el autotest "fichas" los compara sin servidor.
+     */
+
+    private ConfigurationSection hardcore() {
+        ConfigurationSection s = plugin.getConfig().getConfigurationSection("hardcore");
+        return s == null ? new YamlConfiguration() : s;
+    }
+
+    static Ficha fichaFrasco(ConfigurationSection c, int quedan) {
+        int max = c.getInt("frasco.usos", 3);
+        int q = Math.max(0, Math.min(max, quedan));
+        int precio = Math.max(0, c.getInt("frasco.esencias-por-trago", 1));
+        Ficha f = new Ficha(VERDE).tipo("Objeto de Calamity · Cordura").filete()
+                .historia("Agua del último manantial limpio de Bracken. Sabe a algo que ya no existe.").filete()
+                .texto((q == 1 ? "Le queda {1} de {" : "Le quedan {" + q + "} de {") + max + "} tragos")
+                .texto("Cada trago devuelve {" + c.getInt("frasco.cordura", 40) + "} de cordura");
+        if (precio > 0) f.texto("Recargar un trago: " + Ficha.cantidad(precio, "Esencia", "Esencias"));
+        return f.filete().accion("Clic derecho para beber.").nota("Se recarga en el Altar.");
+    }
+
+    static Ficha fichaCristal(ConfigurationSection c) {
+        return new Ficha(MORADO).tipo("Objeto de Calamity · Salida").filete()
+                .historia("Vibra en el mismo tono que la puerta. Quien lo escucha quieto vuelve a casa.").filete()
+                .texto("Te saca vivo de Calamity y vende tus Reliquias, como la puerta.")
+                .texto("Quieto {" + c.getInt("cristal.segundos", 5) + "} s: si te mueves, se apaga.")
+                .texto("En combate no funciona.").filete()
+                .accion("Clic derecho y quédate quieto.")
+                .nota("Se gasta al usarlo.");
+    }
+
+    /** Sin cifras de la config a proposito: todas las Esencias nuevas llevan el mismo lore y se apilan. */
+    static Ficha fichaEsencia() {
+        return new Ficha(NARANJA_ESENCIA).tipo("Moneda de Calamity").filete()
+                .historia("Lo que queda de algo de Calamity cuando muere de verdad.").filete()
+                .texto("La sueltan los mobs y los cofres.")
+                .texto("Al salir vivo pasa a tu saldo. Con el saldo pagas en el Altar y en la Forja.").filete()
+                .nota("Si mueres antes de salir, la pierdes.");
+    }
+
+    static Ficha fichaFragmento(ConfigurationSection c) {
+        Ficha f = new Ficha(Paleta.ACERO).tipo("Objeto de Calamity · Forja").filete()
+                .historia("Un trozo de la katana de Ambush. Todavía corta a quien lo aprieta.").filete();
+        List<Ficha.Uso> usos = Ficha.usosDeEntrega(c, FragmentosMasamune.OBJETO);
+        if (usos.isEmpty()) usos = List.of(new Ficha.Uso("Masamune", 5, ""));
+        f.etiqueta("Para qué sirve");
+        for (Ficha.Uso u : usos) {
+            f.dato(u.da() + ": {" + u.cantidad() + "}" + (u.con().isEmpty()
+                    ? (u.cantidad() == 1 ? " Fragmento" : " Fragmentos") : " y " + u.con()));
+        }
+        return f.filete().accion("Llévalos a la Forja de Vael.")
+                .nota("Si mueres en Calamity, lo pierdes.");
+    }
+
+    static Ficha fichaReclamo(ConfigurationSection c) {
+        int segundos = Math.max(0, Math.min(30, c.getInt("minijefes.reclamo.segundos", 3)));
+        int tope = c.getInt("minijefes.reclamo.tope-dia", 6);
+        int descanso = c.getInt("minijefes.cada-minutos", 10);
+        Ficha f = new Ficha(TextColor.color(Paleta.MINIJEFE_DESDE)).tipo("Objeto de Calamity · Llamada").filete()
+                .historia("Cuerno de cabra tallado en hueso. Lo que manda en el bioma lo oye y viene.").filete()
+                .texto("Llama al minijefe del bioma donde estás. Llega a los {" + segundos + "} s.");
+        if (descanso > 0) f.texto("Descanso de {" + descanso + "} min entre minijefes.");
+        if (tope > 0) f.texto("Hasta {" + tope + "} al día.");
+        return f.texto("No responde con la Parca detrás.").filete()
+                .accion("Clic derecho para hacerlo sonar, lejos del spawn de Calamity.")
+                .nota("Solo se gasta si el minijefe llega.");
+    }
+
+    /** El naranja del nombre de la Esencia. */
+    static final TextColor NARANJA_ESENCIA = TextColor.color(0xE8903C);
 
     /** Ultimo valor raro de esencias.material ya avisado, para no llenar la consola. */
     private String materialAvisado;
