@@ -212,7 +212,7 @@ public final class VaraPortales implements Listener {
     private static final double RADIO_VISTA = 32;
     private int vueltas;
 
-    /** Polvo rojo flotando dentro de cada portal y, de vez en cuando, unas chispas que suben. Sobrio. */
+    /** Polvo rojo flotando dentro de cada portal y esporas carmesi. Sobrio y todo en rojo. */
     private void particulas() {
         vueltas++;
         for (String cual : List.of("entrada", "salida")) {
@@ -237,8 +237,9 @@ public final class VaraPortales implements Listener {
                 double ox = (x2 - x1) / 2 * 0.8, oy = (y2 - y1) / 2 * 0.8, oz = (z2 - z1) / 2 * 0.8;
                 int n = (int) Math.min(10, Math.max(3, (x2 - x1) * (y2 - y1) * (z2 - z1)));
                 Compat.spawn(w, Compat.DUST, centro, n, ox, oy, oz, 0, Compat.dust(ROJO_PORTAL, 1.1f));
-                if (vueltas % 4 == 0) {
-                    Compat.spawn(w, Compat.REVERSE_PORTAL, centro.clone().add(0, -oy, 0), 3, ox, 0.2, oz, 0.02);
+                // Dosa: nada de morado (REVERSE_PORTAL lo era). Esporas carmesi, las del bioma del spawn.
+                if (vueltas % 2 == 0) {
+                    Compat.spawn(w, org.bukkit.Particle.CRIMSON_SPORE, centro, 4, ox, oy, oz, 0);
                 }
             } catch (Throwable ignorado) {
                 // Una particula que falle no puede tumbar la tarea.
