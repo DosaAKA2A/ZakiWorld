@@ -70,6 +70,8 @@ public final class VaraPortales implements Listener {
          * esa marca y con otra dejaria de ser una vara. Ver MobsLethal. */
         this.clave = new NamespacedKey("edm", "vara_portal");
         plugin.getServer().getPluginManager().registerEvents(this, plugin);
+        // 1.11 · Dosa: particulas en los portales. Cada 5 ticks, solo con alguien a menos de RADIO_VISTA.
+        plugin.getServer().getScheduler().runTaskTimer(plugin, this::particulas, 40L, 5L);
     }
 
     /** La vara. Es un palo con marca: sin la marca, un palo cualquiera no vale. */
@@ -204,6 +206,44 @@ public final class VaraPortales implements Listener {
         BlockData d = Material.WATER.createBlockData();
         if (d instanceof Levelled l) l.setLevel(8);
         b.setBlockData(d, false);
+    }
+
+    private static final int ROJO_PORTAL = 0xD02A26;
+    private static final double RADIO_VISTA = 32;
+    private int vueltas;
+
+    /** Polvo rojo flotando dentro de cada portal y, de vez en cuando, unas chispas que suben. Sobrio. */
+    private void particulas() {
+        vueltas++;
+        for (String cual : List.of("entrada", "salida")) {
+            try {
+                ConfigurationSection c = plugin.getConfig().getConfigurationSection("hardcore.puertas." + cual);
+                if (c == null || !c.isSet("mundo")) continue;
+                NamespacedKey k = NamespacedKey.fromString(c.getString("mundo", ""));
+                World w = k == null ? null : plugin.getServer().getWorld(k);
+                if (w == null) continue;
+                double x1 = c.getInt("x1"), y1 = c.getInt("y1"), z1 = c.getInt("z1");
+                double x2 = c.getInt("x2") + 1, y2 = c.getInt("y2") + 1, z2 = c.getInt("z2") + 1;
+                Location centro = new Location(w, (x1 + x2) / 2, (y1 + y2) / 2, (z1 + z2) / 2);
+                if (!w.isChunkLoaded(centro.getBlockX() >> 4, centro.getBlockZ() >> 4)) continue;
+                boolean alguien = false;
+                for (Player p : w.getPlayers()) {
+                    if (p.getLocation().distanceSquared(centro) <= RADIO_VISTA * RADIO_VISTA) {
+                        alguien = true;
+                        break;
+                    }
+                }
+                if (!alguien) continue;
+                double ox = (x2 - x1) / 2 * 0.8, oy = (y2 - y1) / 2 * 0.8, oz = (z2 - z1) / 2 * 0.8;
+                int n = (int) Math.min(10, Math.max(3, (x2 - x1) * (y2 - y1) * (z2 - z1)));
+                Compat.spawn(w, Compat.DUST, centro, n, ox, oy, oz, 0, Compat.dust(ROJO_PORTAL, 1.1f));
+                if (vueltas % 4 == 0) {
+                    Compat.spawn(w, Compat.REVERSE_PORTAL, centro.clone().add(0, -oy, 0), 3, ox, 0.2, oz, 0.02);
+                }
+            } catch (Throwable ignorado) {
+                // Una particula que falle no puede tumbar la tarea.
+            }
+        }
     }
 
     /** El agua que cae se secaria sin una fuente encima: dentro de un portal se queda como esta. */
