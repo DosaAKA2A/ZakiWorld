@@ -661,7 +661,11 @@ public final class Hardcore implements Listener {
         for (World w : plugin.getServer().getWorlds()) {
             if (!esHardcore(w)) continue;
             for (Player p : w.getPlayers()) {
-                if (!cuenta(p)) continue;
+                if (!cuenta(p)) {
+                    // 1.11: en el spawn no llueve para nadie, tambien para quien no cuenta (creativo, vanish).
+                    if (clima != null && enSpawn(p)) seguro("clima", () -> clima.enSpawn(p));
+                    continue;
+                }
                 Cordura.Estado e = cordura.estado(p);
                 e.segundosDentro++;
                 vistos.add(p.getUniqueId());
