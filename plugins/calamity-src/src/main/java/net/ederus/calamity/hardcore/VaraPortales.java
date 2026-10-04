@@ -234,6 +234,9 @@ public final class VaraPortales implements Listener {
                     }
                 }
                 if (!alguien) continue;
+                // Dosa (2026-10-04): las dos esquinas marcadas con la vara se quedaban sin agua (habia un bloque al
+                // definir que luego se rompio). Cada 2 s, con alguien cerca, se rellena el aire que quede.
+                if (vueltas % 8 == 0) llenarDeAgua(cual);
                 double ox = (x2 - x1) / 2 * 0.8, oy = (y2 - y1) / 2 * 0.8, oz = (z2 - z1) / 2 * 0.8;
                 int n = (int) Math.min(10, Math.max(3, (x2 - x1) * (y2 - y1) * (z2 - z1)));
                 Compat.spawn(w, Compat.DUST, centro, n, ox, oy, oz, 0, Compat.dust(ROJO_PORTAL, 1.1f));
