@@ -208,6 +208,13 @@ hardcore:
     nivel-extra-critico: 20
     # A cero.
     mobs-extra-vacio: 6
+    # Calamity 1.11 · Donde se ve la cordura:
+    #   bossbar   arriba de la pantalla, con el contrato al lado ("Cordura 74%   ·   Mobs 6/10"). Verde
+    #             de 50 para arriba, amarillo de 25 a 50 y rojo por debajo. La barra de accion queda
+    #             solo para los avisos cortos.
+    #   actionbar como en la 1.10, en la barra de accion (la tapan los corazones de absorcion). Por si
+    #             la BossBar da problemas en algun cliente (Bedrock).
+    pantalla: bossbar
 
   # Con la cordura a cero viene el minijefe del bioma donde estás (Calamity 1.10; en un bioma sin
   # dueño, uno de "tipos" al azar), y no más de uno cada tantos minutos.
@@ -941,6 +948,23 @@ hardcore:
   # Los biomas se escriben como "panacea/<id>" (el "bracken:" de delante es opcional).
   clima:
     activo: true
+    # Calamity 1.11 · Cuando llueve lo decide Calamity, no el ciclo al azar de Minecraft: en sus mundos
+    # se apaga la regla del ciclo de clima y se alterna despejado y lluvia con estas duraciones (en
+    # tiempo real; un reinicio no lo reinicia). /calamidad weather [rain|storm|clear] [minutos] lo fuerza
+    # y, sin nada, dice como va. Placeholders: %lethalworld_clima% (despejado|lluvia|tormenta),
+    # %lethalworld_clima_restante% ("12 min", "45 s") y %lethalworld_clima_proximo% (la fase que viene).
+    ciclo:
+      # false: vuelve el ciclo de clima de Minecraft (se reactiva la regla).
+      activo: true
+      despejado-minutos: 20
+      lluvia-minutos: 5
+      # Cada fase dura eso +- este tanto (0.2 = +-20 %).
+      variacion: 0.2
+      # Una de cada tantas lluvias es tormenta electrica (0 = nunca).
+      tormenta-cada: 4
+      # Segundos antes de cada lluvia en los que se avisa a quien este dentro ("Se acerca la lluvia",
+      # "Se acerca una tormenta" o, segun el bioma, "Se acerca lluvia ácida"). 0 = sin aviso.
+      aviso-segundos: 60
     # En los biomas verdes la lluvia es acida: a cielo abierto quema y bajo techo no pasa nada.
     # Primero sale un aviso en la barra y hay un margen antes del primer golpe.
     lluvia-acida:
@@ -1021,7 +1045,7 @@ hardcore:
     pergamino:
       activo: true                # false: como antes de la 1.10 (sin papel; todo se cobra al salir vivo)
       entregar-al-entrar: true    # false: Oren no los deja solos al entrar; hay que pedirselos en su menu
-    # El contrato que va en la barra de accion, a la derecha de la cordura ("Mobs 6/10"): el ultimo que
+    # El contrato que va a la derecha de la cordura ("Mobs 6/10"; en la BossBar desde la 1.11): el ultimo que
     # avanzo o, si ninguno, el primero cuyo pergamino llevas. Nunca mas de uno.
     #   modo: siempre | avance (solo "segundos" despues de avanzar) | nunca (la barra como antes, con el
     #         aviso de cada avance)

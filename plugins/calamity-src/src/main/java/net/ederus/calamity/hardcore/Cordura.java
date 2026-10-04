@@ -18,9 +18,11 @@ import java.util.function.Predicate;
  * peleando (salvo golpes gordos), se pierde ESTANDO, asi que la unica forma de estirar
  * una expedicion es el Frasco de Calma o salir por el portal.
  *
- * La barra vive en la barra de accion porque es el unico sitio que se ve siempre sin
- * tapar nada. Los avisos que quieran pasar por ahi (las MobCoins) se cuelan como
- * destello temporal en vez de pisarla: ver destello().
+ * Calamity 1.11: la barra va en una BossBar arriba de la pantalla (MedidorCordura), porque en la
+ * barra de accion la tapaban las filas de vida y armadura en cuanto habia corazones de absorcion.
+ * La barra de accion queda solo para los destellos cortos (destello(): las MobCoins, los avisos del
+ * mundo). Con hardcore.cordura.pantalla: actionbar vuelve lo de la 1.10: la barra en la barra de
+ * accion y los destellos encima mientras duran.
  *
  * 1.7.1: ni la barra ni los destellos escriben en la barra de accion por su cuenta; pasan
  * por BarraAccion, que respeta la reserva "ederus_actionbar" de otros plugins (la pesca).
@@ -53,6 +55,10 @@ public final class Cordura {
      * "Mobs 6/10"). Null = nada. Lo pone Contratos; tiene que ser barato y no fallar: corre cada segundo.
      */
     private Function<Player, Component> extra = p -> null;
+    /** Calamity 1.11: la BossBar de cada jugador. Se usa con pantalla = bossbar (la de serie). */
+    private final MedidorCordura medidor = new MedidorCordura();
+    /** Calamity 1.11: true = BossBar; false = la barra de accion de la 1.10. Lo pone Hardcore cada segundo. */
+    private boolean enBossBar = true;
 
     /**
      * Calamity 1.2: a quien no se le resta cordura, venga de donde venga (drenaje, golpes, testigos,
@@ -106,6 +112,35 @@ public final class Cordura {
 
     public void olvidar(Player p) {
         estados.remove(p.getUniqueId());
+        medidor.ocultar(p);
+    }
+
+    /**
+     * Calamity 1.11: donde se pinta (hardcore.cordura.pantalla, lo lee Hardcore cada segundo). Al pasar
+     * a la barra de accion se quitan todas las BossBars; al volver, el siguiente pintar() las crea.
+     */
+    void pantalla(boolean bossbar) {
+        if (enBossBar && !bossbar) medidor.parar();
+        enBossBar = bossbar;
+    }
+
+    boolean enBossBar() {
+        return enBossBar;
+    }
+
+    /** Quita la BossBar a quien no este en 'vistos' (los que se han pintado este segundo). */
+    void podarPantalla(java.util.Set<UUID> vistos) {
+        medidor.podar(vistos);
+    }
+
+    /** Quita la BossBar a ese jugador (al cambiar a un mundo que no es hardcore). */
+    void ocultarPantalla(Player p) {
+        medidor.ocultar(p);
+    }
+
+    /** Quita todas las BossBars (al parar las reglas). */
+    void pararPantalla() {
+        medidor.parar();
     }
 
     public Map<UUID, Estado> todos() {
@@ -113,10 +148,11 @@ public final class Cordura {
     }
 
     /**
-     * Pone un mensaje en la barra durante unos segundos, en vez de la cordura.
+     * Pone un mensaje corto en la barra de accion durante unos segundos (con la cordura en la barra
+     * de accion, en vez de ella; con la BossBar, solo, y al acabar se borra).
      *
      * Lo usan las MobCoins y los avisos del mundo: si escribieran en la barra por su
-     * cuenta, las dos escrituras se pelearian cada tick y parpadearia.
+     * cuenta, las escrituras se pelearian cada tick y parpadearia.
      *
      * 1.7.1: es un aviso puntual de BarraAccion. Reserva la barra mientras dura y, si otro
      * plugin la tiene reservada (la pesca), espera su turno hasta 5 s. Solo cuenta el ultimo.
@@ -148,19 +184,31 @@ public final class Cordura {
     }
 
     /**
-     * Dibuja la barra de este jugador en su barra de accion (o el destello que toque). Es fondo:
-     * si otro plugin tiene la barra reservada, este segundo no se pinta (BarraAccion). Desde la 1.10
-     * lleva detras, en la misma linea, lo que diga extra (un contrato): un solo envio, sin parpadeo.
+     * Pinta la cordura de este jugador; lo llama Hardcore una vez por segundo a quien esta dentro y cuenta.
+     *
+     * Con la BossBar (1.11, la de serie): la pone al dia (MedidorCordura solo toca lo que cambio) y en
+     * la barra de accion solo se repinta el destello que este en pantalla, para que no se apague antes
+     * de tiempo. Muerto (en la pantalla de muerte) no se le ensena.
+     *
+     * Con pantalla: actionbar, lo de la 1.10: la barra en su barra de accion (o el destello que toque).
+     * Es fondo: si otro plugin tiene la barra reservada, este segundo no se pinta (BarraAccion). Lleva
+     * detras, en la misma linea, lo que diga extra (un contrato): un solo envio, sin parpadeo.
      */
     public void pintar(Player p) {
         Estado e = estado(p);
+        if (enBossBar) {
+            if (p.isDead()) medidor.ocultar(p);
+            else medidor.mostrar(p, e.valor, extra.apply(p));
+            if (salida != null) salida.repintar(p);
+            return;
+        }
         if (salida == null) return;
         Component c = barra(e.valor);
         Component mas = extra.apply(p);
         salida.fondo(p, mas == null ? c : c.append(mas));
     }
 
-    /** La barra tal cual se ve: veinte casillas, el numero detras. */
+    /** La barra tal cual se ve en la barra de accion (pantalla: actionbar): veinte casillas, el numero detras. */
     public static Component barra(double valor) {
         int llenas = (int) Math.round(valor / MAXIMO * CASILLAS);
         TextColor tinta = color(valor);

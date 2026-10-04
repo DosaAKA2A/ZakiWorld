@@ -338,6 +338,8 @@ public final class Hardcore implements Listener {
         if (reloj != null) reloj.cancel();
         reloj = null;
         barra.parar();
+        // 1.11: ninguna BossBar de la cordura se queda colgada.
+        cordura.pararPantalla();
         MobCoins.aviso(null);
         canalizando.clear();
         // 1.10: sin reloj nadie espera a nadie; al volver a arrancar, el que siga ahi empieza de cero.
@@ -366,6 +368,8 @@ public final class Hardcore implements Listener {
         // modulos registran sus pruebas, subcomandos y placeholders al nacer, debajo.
         Autotest.instalar(this);
         Autotest.registrar("barra", BarraAccion::autotest);
+        // 1.11: la BossBar de la cordura.
+        Autotest.registrar("medidor-cordura", MedidorCordura::autotest);
         Autotest.registrar("dificultad-amenazas", DificultadAmenaza::autotest);
         Autotest.registrar("fragmentos", FragmentosMasamune::autotest);
         // 1.9.0: la tabla de biomas y los mobs especiales (las usa MobsLethal, que no ve Autotest).
@@ -629,6 +633,10 @@ public final class Hardcore implements Listener {
 
     private void tick() {
         java.util.Set<UUID> vistos = new java.util.HashSet<>();
+        // 1.11: BossBar (de serie) o la barra de accion de la 1.10. Se lee cada segundo: vale tras un reload.
+        boolean bossbar = MedidorCordura.enBossBar(cfg().getString("cordura.pantalla", "bossbar"));
+        cordura.pantalla(bossbar);
+        barra.limpiarAlAcabar(bossbar);
         for (World w : plugin.getServer().getWorlds()) {
             if (!esHardcore(w)) continue;
             for (Player p : w.getPlayers()) {
@@ -663,6 +671,8 @@ public final class Hardcore implements Listener {
         }
         // Quien ya no esta dentro (salio, murio, se desconecto) deja de contar como "en el spawn".
         enZona.retainAll(vistos);
+        // 1.11: la BossBar de la cordura solo la tiene quien se acaba de pintar (dentro y contando).
+        cordura.podarPantalla(vistos);
         if (distancia != null) distancia.podar(vistos);
         if (zona != null) seguro("zona-spawn", () -> zona.tick());
         vigilarZonas();
@@ -1970,6 +1980,8 @@ public final class Hardcore implements Listener {
     @EventHandler(priority = EventPriority.MONITOR)
     public void onCambiarMundo(PlayerChangedWorldEvent e) {
         Player p = e.getPlayer();
+        // 1.11: fuera de Calamity la BossBar de la cordura se quita ya, sin esperar al segundo.
+        if (!esHardcore(p)) cordura.ocultarPantalla(p);
         // El cambio de mundo de la puerta consume su marca: la llegada ya la hace meter().
         if (recienMetidos.remove(p.getUniqueId()) || esHardcore(e.getFrom()) || !esHardcore(p) || !cuenta(p)) return;
         alLlegar(p);

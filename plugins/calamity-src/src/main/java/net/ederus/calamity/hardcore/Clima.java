@@ -61,6 +61,10 @@ import java.util.UUID;
  * puede resetear la hora o el clima sin preguntar: cada segundo se mira si sigue puesto y, si no,
  * se repone. En una zona pintada con /lbiomes el bioma deja de ser de Panacea, asi que ahi este
  * modulo no hace nada y no se pelea con EDM.
+ *
+ * Calamity 1.11: cuando llueve lo decide el plugin (CicloClima, hardcore.clima.ciclo): apaga el ciclo
+ * vanilla en el mundo y pone la lluvia con setStorm, asi que World#hasStorm sigue siendo la fuente de
+ * verdad de este modulo. CicloClima vive aqui dentro: nace, late (tick) y se para con Clima.
  */
 final class Clima implements Listener {
 
@@ -146,12 +150,15 @@ final class Clima implements Listener {
     /** El polvo que cae (FALLING_DUST toma el color del bloque). Aqui y no estatico: sin servidor no hay BlockData. */
     private final BlockData polvoAcido;
     private final BlockData polvoRojo;
+    /** 1.11: el reloj del clima (cuando llueve). */
+    private final CicloClima ciclo;
 
     Clima(Hardcore hc) {
         this.hc = hc;
         this.polvoAcido = Material.LIME_CONCRETE_POWDER.createBlockData();
         this.polvoRojo = Material.RED_CONCRETE_POWDER.createBlockData();
         hc.plugin().getServer().getPluginManager().registerEvents(this, hc.plugin());
+        this.ciclo = new CicloClima(hc);
         Autotest.registrar("clima", () -> autotest(hc.plugin().getConfig().getDefaults()));
     }
 
@@ -195,6 +202,8 @@ final class Clima implements Listener {
 
     /** Una vez por segundo, despues de los jugadores: quien no se ha visto recupera su cielo. */
     void tick() {
+        // 1.11: primero el reloj del clima, que decide si llueve (lo vera el segundo siguiente de cada jugador).
+        hc.seguro("ciclo-clima", ciclo::tick);
         if (!estados.isEmpty()) {
             for (UUID u : new ArrayList<>(estados.keySet())) {
                 if (vistos.contains(u)) continue;
@@ -204,6 +213,12 @@ final class Clima implements Listener {
             }
         }
         vistos.clear();
+    }
+
+    /** 1.11: lo que le toca al bioma en el que esta ahora (para el aviso de CicloClima), con los interruptores. */
+    Tipo tipoAhora(Player p) {
+        ConfigurationSection c = cfg();
+        return c.getBoolean("activo", true) ? tipo(bioma(p), c) : Tipo.NINGUNO;
     }
 
     /** Lo que Vineta le suma a su intensidad: la del cielo rojo mientras esta debajo, si no 0. */
@@ -220,6 +235,7 @@ final class Clima implements Listener {
 
     void parar() {
         HandlerList.unregisterAll(this);
+        hc.seguro("ciclo-clima", ciclo::parar);
         for (UUID u : new ArrayList<>(estados.keySet())) {
             Estado e = estados.remove(u);
             Player p = Bukkit.getPlayer(u);

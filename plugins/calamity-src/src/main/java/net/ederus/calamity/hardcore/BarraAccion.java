@@ -16,8 +16,14 @@ import java.util.function.Predicate;
 
 /**
  * Calamity 1.7.1: el UNICO sitio de Calamity que escribe en la barra de accion. Nadie mas
- * llama a sendActionBar: la barra de cordura, sus destellos, el aviso de la cuarentena y
- * los de Ligado pasan todos por aqui, para que el protocolo de abajo no se olvide en ninguno.
+ * llama a sendActionBar: los destellos de la cordura, el aviso de la cuarentena y los de Ligado
+ * pasan todos por aqui, para que el protocolo de abajo no se olvide en ninguno.
+ *
+ * Calamity 1.11: la cordura ya no se pinta aqui de fondo sino en una BossBar (MedidorCordura); la
+ * barra de accion queda para los destellos cortos. Cordura.pintar llama cada segundo a repintar()
+ * en vez de a fondo(): solo se repinta el destello que este en pantalla (la barra de accion se apaga
+ * sola a los ~3 s) y, con limpiarAlAcabar, al terminar se borra con un texto vacio, porque ya no hay
+ * una cordura que lo tape. Con hardcore.cordura.pantalla: actionbar todo sigue como en la 1.10.
  *
  * <h2>El protocolo "ederus_actionbar" (compartido con PremioPescao y el que venga)</h2>
  * <ol>
@@ -89,6 +95,8 @@ public final class BarraAccion {
     private final Map<UUID, Aviso> avisos = new HashMap<>();
     private Predicate<Player> dentro = p -> true;
     private BukkitTask repaso;
+    /** 1.11: borrar la barra cuando acaba un aviso propio (con la cordura en la BossBar no hay fondo que lo tape). */
+    private boolean limpiar;
 
     /** Plugin null solo en el autotest: ahi se usan los metodos con Destino. */
     BarraAccion(Plugin plugin) {
@@ -98,6 +106,11 @@ public final class BarraAccion {
     /** Quien ve los destellos de la cordura (lo pone Hardcore: dentro de Calamity y contando). */
     void dentro(Predicate<Player> quien) {
         dentro = quien == null ? p -> true : quien;
+    }
+
+    /** 1.11: si al acabar un aviso propio se borra la barra (lo pone Hardcore: true con la BossBar). */
+    void limpiarAlAcabar(boolean si) {
+        limpiar = si;
     }
 
     /** Arranca el repaso de la cola: los avisos que esperaban salen en cuanto la barra queda libre. */
@@ -125,6 +138,15 @@ public final class BarraAccion {
     public void fondo(Player p, Component texto) {
         if (p == null || texto == null) return;
         fondo(p.getUniqueId(), destino(p), texto, System.currentTimeMillis());
+    }
+
+    /**
+     * 1.11 · Sin fondo (la cordura va en la BossBar): repinta el aviso propio que este en pantalla o
+     * saca el que esperaba, y nada mas. Lo llama Cordura.pintar cada segundo.
+     */
+    void repintar(Player p) {
+        if (p == null) return;
+        repintar(p.getUniqueId(), destino(p), System.currentTimeMillis());
     }
 
     /** Un aviso puntual de "segundos": reserva la barra mientras dura, o espera su turno. */
@@ -230,6 +252,8 @@ public final class BarraAccion {
         if (a.hasta > 0) {
             if (ahora < a.hasta) return true;
             avisos.remove(u);
+            // 1.11: sin cordura de fondo, el aviso se borra al acabar (si la barra no es de otro plugin).
+            if (limpiar && d.reservaAjena() <= ahora) d.enviar(Component.empty());
             return false;
         }
         if (ahora - a.pedido > ESPERA_MAXIMA_MS) {
@@ -256,6 +280,16 @@ public final class BarraAccion {
         if (d.reservaAjena() > ahora) return false;
         d.enviar(texto);
         return true;
+    }
+
+    /** El repintar con el reloj a mano. Devuelve true si la barra es ahora de un aviso propio. */
+    boolean repintar(UUID u, Destino d, long ahora) {
+        Aviso a = avisos.get(u);
+        if (a != null && a.hasta > 0 && ahora < a.hasta) {
+            if (d.reservaAjena() <= ahora) d.enviar(a.texto);
+            return true;
+        }
+        return repasar(u, d, ahora);
     }
 
     void olvidar(UUID u, Destino d) {
@@ -381,6 +415,37 @@ public final class BarraAccion {
         h.ok("aviso suelto (Ligado) fuera de Calamity: sale", List.of(otro).equals(f.enviados));
         b.olvidar(u, f);
         h.ok("olvidar suelta la reserva", f.propia == 0);
+
+        // 1.11: con la cordura en la BossBar no hay fondo; repintar solo mantiene el destello.
+        b = new BarraAccion(null);
+        b.limpiarAlAcabar(true);
+        f = new Falso();
+        h.ok("bossbar: sin aviso, repintar no manda nada", !b.repintar(u, f, t0) && f.enviados.isEmpty());
+        b.aviso(u, f, distancia, 3, true, t0);
+        h.igual("bossbar: el destello sale", List.of(distancia), f.enviados);
+        h.ok("bossbar: al segundo se repinta", b.repintar(u, f, t0 + 1000) && distancia.equals(f.ultimo())
+                && f.enviados.size() == 2);
+        h.ok("bossbar: nunca se pinta la cordura", f.enviados.stream().noneMatch(cordura::equals));
+        h.ok("bossbar: al acabar se borra", !b.repintar(u, f, t0 + 3000)
+                && Component.empty().equals(f.ultimo()) && f.enviados.size() == 3);
+        h.ok("bossbar: despues ya no manda nada", !b.repintar(u, f, t0 + 4000) && f.enviados.size() == 3);
+        f = new Falso();
+        b.aviso(u, f, otro, 2, true, t0);
+        f.ajena = t0 + 9000;
+        h.ok("bossbar: con la barra de otro plugin no se repinta", b.repintar(u, f, t0 + 1000) && f.enviados.size() == 1);
+        b.repasar(u, f, t0 + 2000);
+        h.ok("bossbar: ni se borra lo del otro plugin al acabar", f.enviados.size() == 1);
+        b = new BarraAccion(null);
+        f = new Falso();
+        b.aviso(u, f, otro, 2, true, t0);
+        b.repasar(u, f, t0 + 2000);
+        h.ok("actionbar (1.10): al acabar no se borra, lo tapa la cordura", f.enviados.size() == 1);
+        f = new Falso();
+        f.ajena = t0 + 2500;
+        b.limpiarAlAcabar(true);
+        b.aviso(u, f, distancia, 3, true, t0);
+        h.ok("bossbar: aviso en cola, sale al soltar la otra", !b.repintar(u, f, t0 + 1000) && b.repintar(u, f, t0 + 2500)
+                && List.of(distancia).equals(f.enviados));
         return h.lineas();
     }
 }
