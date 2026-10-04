@@ -88,6 +88,19 @@ public final class Caja {
     /** Nombre propio de la llave; vacio = se compone con el de la caja. */
     private String nombreLlave = "";
 
+    /**
+     * 1.78.1 · Como la boveda de fabrica: cada jugador la abre UNA vez por boveda plantada (se
+     * apunta quien en bovedas.yml). Apagado, tantas veces como llaves tengas.
+     */
+    private boolean unaPorJugador;
+
+    /**
+     * 1.78.1 · El botin lo pone otro plugin (escucha BovedaAbiertaEvent y paga por su cuenta, como
+     * Calamity con la Aduana). Con esto la caja se puede abrir aunque su lista este vacia; lo que haya
+     * en la lista sale igual, ademas.
+     */
+    private boolean botinExterno;
+
     public Caja(String id, String display) {
         this.id = id;
         this.display = display;
@@ -155,12 +168,28 @@ public final class Caja {
         this.nombreLlave = s == null ? "" : s;
     }
 
+    public boolean unaPorJugador() {
+        return unaPorJugador;
+    }
+
+    public void unaPorJugador(boolean si) {
+        this.unaPorJugador = si;
+    }
+
+    public boolean botinExterno() {
+        return botinExterno;
+    }
+
+    public void botinExterno(boolean si) {
+        this.botinExterno = si;
+    }
+
     public Component nombre() {
         return Estilo.texto(display, color());
     }
 
     public boolean lista() {
-        return !tabla.entries().isEmpty() || unico != null;
+        return botinExterno || !tabla.entries().isEmpty() || unico != null;
     }
 
     /* ------------------------------------------------------------- los objetos */

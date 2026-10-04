@@ -125,6 +125,8 @@ public final class Bovedas implements Listener {
     private void mostrarPremio(Block b, Caja caja) {
         ItemStack premio = caja.unico() != null ? caja.unico().item()
                 : (caja.tabla().entries().isEmpty() ? null : caja.tabla().entries().get(0).item());
+        // 1.78.1: con botin externo y la lista vacia, se ensena su propia llave.
+        if (premio == null && caja.botinExterno()) premio = caja.llave(plugin.claveLlave(), 1);
         BlockState st = b.getState();
         if (premio != null && st instanceof org.bukkit.block.Vault tile) {
             tile.setDisplayedItem(premio.clone());
@@ -186,6 +188,21 @@ public final class Bovedas implements Listener {
             return;
         }
 
+        // 1.78.1: como la de fabrica, una vez por jugador (si la caja lo pide).
+        if (caja.unaPorJugador() && boveda.abiertaPor(quien.getUniqueId())) {
+            w.playSound(centro, Sound.BLOCK_VAULT_INSERT_ITEM_FAIL, 1f, 1f);
+            plugin.di(quien, "ya-abierta", "Ya abriste esta bóveda. Busca otra.");
+            return;
+        }
+        // 1.78.1: otro plugin puede decir que no (Calamity: la Boveda Caida, solo el primero).
+        BovedaAbrirEvent antes = new BovedaAbrirEvent(quien, caja, boveda, b);
+        plugin.core().getServer().getPluginManager().callEvent(antes);
+        if (antes.isCancelled()) {
+            w.playSound(centro, Sound.BLOCK_VAULT_INSERT_ITEM_FAIL, 1f, 1f);
+            if (antes.motivo() != null) quien.sendMessage(antes.motivo());
+            return;
+        }
+
         // Se cobra ANTES de soltar nada. Si algo fallara despues, el jugador ha
         // perdido una llave; al reves habria una boveda que paga sin cobrar.
         mano.setAmount(mano.getAmount() - 1);
@@ -193,10 +210,21 @@ public final class Bovedas implements Listener {
 
         abriendo.add(boveda.clave());
         boveda.sumarApertura();
+        if (caja.unaPorJugador()) boveda.marcarAbierta(quien.getUniqueId());
         estado(b, Vault.State.UNLOCKING);
         w.playSound(centro, Sound.BLOCK_VAULT_INSERT_ITEM, 1f, 1f);
 
         List<ItemStack> premio = tirar(caja);
+        // 1.78.1: quien pone el botin por su cuenta (botin-externo) lo hace aqui; lo que meta en la
+        // lista sale por la boveda. Un fallo suyo no se lleva la apertura: la llave ya esta cobrada.
+        try {
+            plugin.core().getServer().getPluginManager().callEvent(new BovedaAbiertaEvent(quien, caja, boveda, b, premio));
+        } catch (Throwable t) {
+            plugin.getLogger().warning("DungeonLoot: fallo al avisar de la apertura de " + boveda.id() + ": " + t);
+        }
+        premio.removeIf(i -> i == null || i.getType().isAir() || i.getAmount() <= 0);
+        // Guardado ya: quien abrio (una por jugador) no puede depender de que la apertura acabe.
+        plugin.registro().guardar();
 
         plugin.core().getServer().getScheduler().runTaskLater(Module.dueno(plugin), () -> {
             if (!esNuestra(b, boveda)) {
@@ -229,6 +257,8 @@ public final class Bovedas implements Listener {
                 }
                 abriendo.remove(boveda.clave());
                 plugin.registro().guardar();
+                // 1.78.1: ya ha salido todo; quien la quiera quitar (un solo uso) puede hacerlo ahora.
+                plugin.core().getServer().getPluginManager().callEvent(new BovedaVaciadaEvent(quien, caja, boveda, b));
             }, 10L);
             return;
         }

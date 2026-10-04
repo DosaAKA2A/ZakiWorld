@@ -60,7 +60,8 @@ final class Entregas implements Listener {
 
     /** Los objetos que entiende dar (ademas de credito:<tipo>, credito-caja:<tipo> y forja:<pieza>). 1.10: el Reclamo. */
     static final List<String> OBJETOS = List.of("esencia", "frasco", "frasco-1", "cristal", "tintura", "gema", "ascua",
-            "talisman", "grabado", "salvoconducto", "libro", "llave", "llave-hito", FragmentosMasamune.OBJETO, "reclamo");
+            "talisman", "grabado", "salvoconducto", "libro", "llave", "llave-hito", FragmentosMasamune.OBJETO, "reclamo",
+            PuenteBovedas.LLAVE_UMBRAL, PuenteBovedas.LLAVE_OMINOSA);
 
     private final Hardcore hc;
     private final Set<BukkitTask> tareas = new HashSet<>();
@@ -131,6 +132,8 @@ final class Entregas implements Listener {
             recompensa(a, "credito:" + tipo, n, org, false);
             return true;
         }
+        // Calamity 1.11: las llaves de las bovedas (EDM), a la mano tambien dentro de Calamity.
+        if (PuenteBovedas.esLlave(o)) return llaveBoveda(quien, o, a, n, org);
         switch (o) {
             case "llave", "llave-hito" -> {
                 int pedidas = n;
@@ -201,6 +204,39 @@ final class Entregas implements Listener {
         String donde = entregarObjetos(a, o, items, org);
         hc.plugin().bitacora().anotar("entrega", "ok", o, nombre(a), String.valueOf(n), org, donde);
         recompensa(a, o, n, org, true);
+        return true;
+    }
+
+    /**
+     * Calamity 1.11 · Llaves de boveda (llave-umbral, llave-ominosa): son para usarlas DENTRO, asi que no
+     * esperan a que salga. Si esta en Calamity fuera del spawn (un minijefe, la Parca), van a la mano sin
+     * ligar: son botin de dentro, se pierden al morir y se pueden robar, como el resto. Fuera o en el
+     * spawn (el Altar, un contrato, el ranking), ligadas a su dueño y por el camino de siempre
+     * (inventario, o pendiente si no esta).
+     */
+    private boolean llaveBoveda(CommandSender quien, String o, OfflinePlayer a, int n, String org) {
+        if (PuenteBovedas.llave(o, 1) == null) {
+            fallo(quien, o, a, "sin el módulo de bóvedas de EDM", org);
+            return false;
+        }
+        Player p = a.getPlayer();
+        boolean enCampo = p != null && p.isOnline() && hc.esHardcore(p) && !hc.enSpawn(p);
+        List<ItemStack> items = new ArrayList<>();
+        for (int quedan = n; quedan > 0; quedan -= 64) {
+            ItemStack k = PuenteBovedas.llave(o, Math.min(64, quedan));
+            items.add(enCampo ? k : ligar(k, a.getUniqueId()));
+        }
+        String donde;
+        if (enCampo) {
+            boolean suelo = false;
+            for (ItemStack k : items) suelo |= Suelo.dar(hc.plugin(), p, k);
+            if (suelo) p.sendMessage(ComandoCalamity.mensaje("No te cabía en el inventario: lo tienes a tus pies."));
+            donde = suelo ? "suelo" : "inventario";
+        } else {
+            donde = entregarObjetos(a, o, items, org);
+        }
+        hc.plugin().bitacora().anotar("entrega", "ok", o, nombre(a), String.valueOf(n), org, donde);
+        recompensa(a, o, n, org, !enCampo);
         return true;
     }
 

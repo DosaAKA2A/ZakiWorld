@@ -33,7 +33,7 @@ import net.kyori.adventure.text.format.NamedTextColor;
 final class ComandoSuperBeacon implements CommandExecutor, TabCompleter {
 
     private static final List<String> SUBCOMANDOS =
-            List.of("give", "types", "list", "info", "remove", "reload", "selftest", "help");
+            List.of("give", "renew", "types", "list", "info", "remove", "reload", "selftest", "help");
 
     private final SuperBeaconPlugin plugin;
 
@@ -63,6 +63,7 @@ final class ComandoSuperBeacon implements CommandExecutor, TabCompleter {
         }
         switch (sub) {
             case "give" -> dar(quien, args, etiqueta);
+            case "renew" -> renovar(quien, args, etiqueta);
             case "types" -> tipos(quien);
             case "list" -> listar(quien, args);
             case "info" -> info(quien);
@@ -125,6 +126,37 @@ final class ComandoSuperBeacon implements CommandExecutor, TabCompleter {
         String clan = args.length > 4 ? Clanes.limpiar(String.join(" ", Arrays.copyOfRange(args, 4, args.length))) : null;
         if (clan != null && clan.isEmpty()) clan = null;
         plugin.entregas().dar(quien, args[1], t, dias, clan);
+    }
+
+    /* =============================================================== renew */
+
+    /**
+     * 1.78.1 · /superbeacon renew <clan> <days> [type]: renueva la caducidad de las balizas con ese
+     * clan fijado (el trofeo del clan que vuelve a ganar). Lo llama el ranking de clanes de Calamity.
+     */
+    private void renovar(CommandSender quien, String[] args, String etiqueta) {
+        if (args.length < 3) {
+            tx().manda(quien, "renew-uso", "&7Uso: &f/%comando% renew <clan> <days> [type]", "%comando%", etiqueta);
+            return;
+        }
+        double dias;
+        try {
+            dias = Double.parseDouble(args[2].replace(',', '.'));
+        } catch (NumberFormatException e) {
+            dias = -1;
+        }
+        if (dias < 0 || Double.isNaN(dias) || Double.isInfinite(dias) || dias > 36_500) {
+            tx().manda(quien, "dias-malos", "&#FF5C5CLos días tienen que ser un número, 0 o más (o - para los del tipo).");
+            return;
+        }
+        String tipo = args.length > 3 ? args[3].toLowerCase(Locale.ROOT) : null;
+        int n = plugin.renovar(args[1], tipo, dias, "comando");
+        if (n == 0) {
+            tx().manda(quien, "renew-nada", "&7El clan &f%clan% &7no tiene ningún Super Beacon que renovar.", "%clan%", args[1]);
+        } else {
+            tx().manda(quien, "renew-hecho", "&fRenovados &#D7F3FF%n% &fSuper Beacon(s) del clan &#D7F3FF%clan%&f.",
+                    "%n%", String.valueOf(n), "%clan%", args[1]);
+        }
     }
 
     /* ======================================================= types y list */
@@ -275,6 +307,7 @@ final class ComandoSuperBeacon implements CommandExecutor, TabCompleter {
                 .append(Estilo.texto("tus Super Beacons colocados", NamedTextColor.GRAY)));
         if (!plugin.esAdmin(quien)) return;
         quien.sendMessage(uso(etiqueta + " give <player> <type> [days|-] [clan]"));
+        quien.sendMessage(uso(etiqueta + " renew <clan> <days> [type]"));
         quien.sendMessage(uso(etiqueta + " types"));
         quien.sendMessage(uso(etiqueta + " list [player]"));
         quien.sendMessage(uso(etiqueta + " info"));
@@ -315,6 +348,14 @@ final class ComandoSuperBeacon implements CommandExecutor, TabCompleter {
             return out;
         }
         if (sub.equals("give") && args.length == 3) {
+            for (String t : plugin.tipos().keySet()) if (t.startsWith(ultimo)) out.add(t);
+            return out;
+        }
+        if (sub.equals("renew") && args.length == 3) {
+            for (String s : List.of("7", "30")) if (s.startsWith(ultimo)) out.add(s);
+            return out;
+        }
+        if (sub.equals("renew") && args.length == 4) {
             for (String t : plugin.tipos().keySet()) if (t.startsWith(ultimo)) out.add(t);
             return out;
         }

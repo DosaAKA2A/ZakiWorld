@@ -1,5 +1,10 @@
 package net.ederus.edm.dungeonloot;
 
+import java.util.Collections;
+import java.util.LinkedHashSet;
+import java.util.Set;
+import java.util.UUID;
+
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.World;
@@ -20,6 +25,9 @@ public final class Boveda {
 
     /** Cuantas veces se ha abierto. Solo para la ficha; no cambia nada. */
     private int aperturas;
+
+    /** 1.78.1 · Quien la ha abierto ya, para las cajas de una apertura por jugador. */
+    private final Set<UUID> abiertaPor = new LinkedHashSet<>();
 
     public Boveda(String id, String cajaId, String worldName, int x, int y, int z) {
         this.id = id;
@@ -64,6 +72,18 @@ public final class Boveda {
 
     public void sumarApertura() {
         this.aperturas++;
+    }
+
+    public boolean abiertaPor(UUID jugador) {
+        return jugador != null && abiertaPor.contains(jugador);
+    }
+
+    public void marcarAbierta(UUID jugador) {
+        if (jugador != null) abiertaPor.add(jugador);
+    }
+
+    public Set<UUID> abiertaPor() {
+        return Collections.unmodifiableSet(abiertaPor);
     }
 
     /** La clave con la que se busca una boveda a partir de un bloque. */

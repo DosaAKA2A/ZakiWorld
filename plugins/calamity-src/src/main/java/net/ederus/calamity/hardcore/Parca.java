@@ -1171,6 +1171,10 @@ final class Parca implements Listener {
                 if (cb != null) hc.seguro("combate", () -> cb.sangreFresca(online, "parca", "parca:" + idPelea));
             }
             raro(op, a);
+            // Calamity 1.11: la Llave Ominosa (llaves-boveda.parca) y los puntos de su clan.
+            hc.seguro("bovedas", () -> PuenteBovedas.alCobrarParca(hc, op));
+            ClanesCalamity cl = hc.clanes();
+            if (cl != null) hc.seguro("clanes", () -> cl.sumar(op, "parca", 1));
         }
         hc.guardarYa();
 

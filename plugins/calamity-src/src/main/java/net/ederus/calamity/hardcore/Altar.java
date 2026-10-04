@@ -803,6 +803,9 @@ final class Altar implements Listener {
         java.util.function.Predicate<ItemStack> es;
         if (FragmentosMasamune.OBJETO.equals(objeto)) {
             es = ItemsCalamity::esFragmentoMasamune;
+        } else if (PuenteBovedas.esLlave(objeto)) {
+            // Calamity 1.11: las Llaves del Umbral que pide la Llave Ominosa, por la marca de EDM.
+            es = it -> PuenteBovedas.es(it, objeto);
         } else {
             Entregas e = hc.entregas();
             String id = e == null ? null : e.idMmo("forja:" + objeto);
@@ -1040,6 +1043,12 @@ final class Altar implements Listener {
             int n = Math.max(1, fa.faltan());
             return ComandoCalamity.mensaje(Component.text(n == 1 ? "Te falta " : "Te faltan ")
                     .append(Component.text(FragmentosMasamune.nombre(n), Paleta.DETALLE))
+                    .append(Component.text(": llevas " + fa.tiene() + " de " + fa.pide() + ".")));
+        }
+        if (PuenteBovedas.esLlave(fa.objeto())) {
+            int n = Math.max(1, fa.faltan());
+            return ComandoCalamity.mensaje(Component.text(n == 1 ? "Te falta " : "Te faltan ")
+                    .append(Component.text(n == 1 ? "una " + PuenteBovedas.nombre(fa.objeto(), 1) : PuenteBovedas.nombre(fa.objeto(), n), Paleta.DETALLE))
                     .append(Component.text(": llevas " + fa.tiene() + " de " + fa.pide() + ".")));
         }
         return ComandoCalamity.mensaje(Component.text("Para forjarla tienes que llevar encima tu ")
@@ -1377,6 +1386,12 @@ final class Altar implements Listener {
             // 1.10: el Reclamo, que llama al minijefe del bioma (Reclamo).
             t("id", "reclamo", "pagina", "umbral", "icono", "GOAT_HORN", "nombre", "Reclamo", "esencias", 6,
                     "da", "dar:reclamo", "limite-dia", 3),
+            // 1.11: las llaves de las bovedas. La del Umbral, por Esencias con tope diario; la Ominosa, cambiando
+            // cinco del Umbral y Esencias, una por semana.
+            t("id", "llave-umbral", "pagina", "umbral", "icono", "TRIAL_KEY", "nombre", "Llave del Umbral", "esencias", 10,
+                    "da", "dar:llave-umbral", "limite-dia", 2),
+            t("id", "llave-ominosa", "pagina", "umbral", "icono", "OMINOUS_TRIAL_KEY", "nombre", "Llave Ominosa", "esencias", 40,
+                    "entregar", List.of(t("objeto", "llave-umbral", "cantidad", 5)), "da", "dar:llave-ominosa", "limite-semana", 1),
             t("id", "llave", "pagina", "umbral", "icono", "TRIAL_KEY", "nombre", "Llave del Caos", "esencias", 40,
                     "da", "dar:llave", "limite-semana", 1, "requisito", "tope-llaves"),
             t("id", "salvoconducto", "pagina", "umbral", "icono", "PAPER", "nombre", "Salvoconducto del Insomne", "esencias", 64,
@@ -1505,7 +1520,10 @@ final class Altar implements Listener {
         Autotest.Hoja h = new Autotest.Hoja();
         Map<String, Trueque> ts = new HashMap<>();
         for (Trueque t : leer(DEFECTO)) ts.put(t.id(), t);
-        h.igual("trueques de serie", 24, ts.size());
+        h.igual("trueques de serie", 26, ts.size());
+        Trueque ominosa = ts.get("llave-ominosa");
+        h.ok("1.11: la Llave Ominosa pide entregar 5 Llaves del Umbral",
+                ominosa != null && ominosa.pide("llave-umbral") == 5 && "llave-ominosa".equals(ominosa.objeto()));
         UUID u = Autotest.sintetico(311);
         CajaPrueba c = new CajaPrueba();
 

@@ -173,6 +173,10 @@ public final class Hardcore implements Listener {
     /** Calamity 1.7: los niveles por distancia al spawn y su aviso. */
     private Distancia distancia;
     private Npcs npcs;
+    /** Calamity 1.11: cofres y Bovedas de Ruinas, la Boveda Caida y el ranking de clanes. */
+    private Ruinas ruinas;
+    private BovedaCaida bovedaCaida;
+    private ClanesCalamity clanes;
     /** Calamity 1.2: la zona spawn (region de WorldGuard o caja de la vara). Null con las reglas apagadas. */
     private ZonaSpawn zona;
     /** Quien estaba en la zona spawn el segundo anterior, para notar cuando entra y cuando sale. */
@@ -258,6 +262,8 @@ public final class Hardcore implements Listener {
     /** Lo que abren los NPCs de la antesala (/calamidad abrir) y el Cronista. */
     Npcs npcs() { return npcs; }
     ZonaSpawn zonaSpawn() { return zona; }
+    Ruinas ruinas() { return ruinas; }
+    ClanesCalamity clanes() { return clanes; }
 
     ConfigurationSection cfg() {
         ConfigurationSection s = plugin.getConfig().getConfigurationSection("hardcore");
@@ -416,6 +422,10 @@ public final class Hardcore implements Listener {
         eclipse = crear("eclipse", () -> new Eclipse(this));
         // 1.9.0: despues del Eclipse y de la Parca, a los que pregunta si el cielo es suyo.
         clima = crear("clima", () -> new Clima(this));
+        // Calamity 1.11: los cofres y las Bovedas de Ruinas, la Boveda Caida y el ranking de clanes.
+        ruinas = crear("ruinas", () -> new Ruinas(this));
+        bovedaCaida = crear("boveda-caida", () -> new BovedaCaida(this));
+        clanes = crear("clanes", () -> new ClanesCalamity(this));
         // Lo ultimo: los NPCs de la antesala solo abren lo que ya existe (Altar, Tablero...).
         npcs = crear("npcs", () -> new Npcs(this));
     }
@@ -432,6 +442,12 @@ public final class Hardcore implements Listener {
     /** Al reves de como nacieron: los de arriba usan a los de abajo mientras se paran. */
     private void pararModulos() {
         if (npcs != null) seguro("npcs", () -> npcs.parar());
+        if (clanes != null) seguro("clanes", () -> clanes.parar());
+        if (bovedaCaida != null) seguro("boveda-caida", () -> bovedaCaida.parar());
+        if (ruinas != null) seguro("ruinas", () -> ruinas.parar());
+        clanes = null;
+        bovedaCaida = null;
+        ruinas = null;
         if (clima != null) seguro("clima", () -> clima.parar());
         clima = null;
         if (eclipse != null) seguro("eclipse", () -> eclipse.parar());

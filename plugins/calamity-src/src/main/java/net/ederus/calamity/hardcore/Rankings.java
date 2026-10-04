@@ -310,7 +310,20 @@ final class Rankings implements Listener {
         return null;
     }
 
-    record Premio(int esencias, int llaves, List<String> comandos) {
+    /**
+     * objetos (Calamity 1.11): objetos de Entregas que se dan ademas, uno de cada ("llave-ominosa" al
+     * 1.o de cada tabla).
+     */
+    record Premio(int esencias, int llaves, List<String> comandos, List<String> objetos) {
+
+        Premio {
+            comandos = comandos == null ? List.of() : List.copyOf(comandos);
+            objetos = objetos == null ? List.of() : List.copyOf(objetos);
+        }
+
+        Premio(int esencias, int llaves, List<String> comandos) {
+            this(esencias, llaves, comandos, List.of());
+        }
     }
 
     List<Premio> premios() {
@@ -318,10 +331,13 @@ final class Rankings implements Listener {
         for (Map<?, ?> m : hc.cfg().getMapList("ranking.premios")) {
             List<String> cmds = new ArrayList<>();
             if (m.get("comandos") instanceof Collection<?> c) for (Object o : c) cmds.add(String.valueOf(o));
-            out.add(new Premio(entero(m.get("esencias")), entero(m.get("llaves")), cmds));
+            List<String> objs = new ArrayList<>();
+            if (m.get("objetos") instanceof Collection<?> c) for (Object o : c) objs.add(String.valueOf(o).trim().toLowerCase(Locale.ROOT));
+            out.add(new Premio(entero(m.get("esencias")), entero(m.get("llaves")), cmds, objs));
         }
         if (out.isEmpty()) {
-            out.add(new Premio(30, 2, List.of("lp user %jugador% permission settemp anima.badge.unlocked true 7d")));
+            out.add(new Premio(30, 2, List.of("lp user %jugador% permission settemp anima.badge.unlocked true 7d"),
+                    List.of(PuenteBovedas.LLAVE_OMINOSA)));
             out.add(new Premio(20, 1, List.of()));
             out.add(new Premio(10, 1, List.of()));
         }
@@ -385,6 +401,12 @@ final class Rankings implements Listener {
             llaves = en == null ? -1 : en.llave(op, pr.llaves(), "ranking", true);
         }
         for (String plantilla : pr.comandos()) consola(plantilla, nombre);
+        // 1.11: los objetos de Entregas (la Llave Ominosa del 1.o), ligados y por el camino de siempre.
+        List<String> objetosDados = new ArrayList<>();
+        Entregas ent = hc.entregas();
+        for (String o : pr.objetos()) {
+            if (ent != null && ent.dar(null, o, op, 1, "ranking:" + p.tabla() + ":" + p.puesto() + ":" + semana)) objetosDados.add(o);
+        }
         hc.plugin().bitacora().anotar("ranking", "premio", nombre, p.tabla(), p.puesto() + ".o", "valor " + p.valor(),
                 "e " + e, "llaves " + llaves, semana);
 
@@ -394,6 +416,7 @@ final class Rankings implements Listener {
         if (e > 0) partes.add(e + (e == 1 ? " Esencia" : " Esencias"));
         if (pr.llaves() > 0) partes.add(pr.llaves() + (pr.llaves() == 1 ? " Llave del Caos" : " Llaves del Caos"));
         if (!pr.comandos().isEmpty()) partes.add("[ÁNIMA] 7 días");
+        for (String o : objetosDados) partes.add(PuenteBovedas.esLlave(o) ? "una " + PuenteBovedas.nombre(o, 1) : o);
         StringBuilder texto = new StringBuilder(p.puesto() + ".º en " + tablaNombre);
         if (!partes.isEmpty()) texto.append(" (").append(lista(partes)).append(")");
         Player online = op.getPlayer();

@@ -590,6 +590,13 @@ final class MenuAltar implements Listener {
                     ? Marco.tiene(FragmentosMasamune.nombre(en.cantidad()) + (en.cantidad() == 1 ? "  (lo entregas)" : "  (los entregas)"))
                     : Marco.falta("Fragmentos de Masamune: llevas " + tiene + " de " + en.cantidad(), null);
         }
+        if (PuenteBovedas.esLlave(en.objeto())) {
+            // Calamity 1.11: las Llaves del Umbral que pide la Llave Ominosa.
+            String llaves = PuenteBovedas.nombre(en.objeto(), en.cantidad());
+            return tiene >= en.cantidad()
+                    ? Marco.tiene(llaves + (en.cantidad() == 1 ? "  (la entregas)" : "  (las entregas)"))
+                    : Marco.falta(PuenteBovedas.nombre(en.objeto(), 2).replaceFirst("^2 ", "") + ": llevas " + tiene + " de " + en.cantidad(), null);
+        }
         String que = "Tu " + Forja.nombrePieza(en.objeto());
         return tiene >= en.cantidad() ? Marco.tiene(que + "  (la entregas)") : Marco.falta(que, "no la llevas encima");
     }
@@ -655,6 +662,9 @@ final class MenuAltar implements Listener {
             case "objeto" -> {
                 Altar.Falta fa = f instanceof Altar.Falta x ? x : new Altar.Falta(String.valueOf(f), 0, 1);
                 int n = Math.max(1, fa.faltan());
+                if (PuenteBovedas.esLlave(fa.objeto())) {
+                    yield (n == 1 ? "Te falta una " : "Te faltan ") + PuenteBovedas.nombre(fa.objeto(), n) + ".";
+                }
                 yield FragmentosMasamune.OBJETO.equals(fa.objeto())
                         ? (n == 1 ? "Te falta " : "Te faltan ") + FragmentosMasamune.nombre(n) + "."
                         : "No llevas encima tu " + Forja.nombrePieza(fa.objeto()) + ".";
@@ -755,6 +765,13 @@ final class MenuAltar implements Listener {
                 String que = FragmentosMasamune.nombre(en.cantidad());
                 pagos.add(pago(Material.NETHERITE_SCRAP, "−" + que, altar.caja().cuantos(u, en.objeto()), en.cantidad()));
                 resumen.add(que);
+                continue;
+            }
+            if (PuenteBovedas.esLlave(en.objeto())) {
+                // Calamity 1.11: las Llaves del Umbral, como los Fragmentos.
+                String llaves = PuenteBovedas.nombre(en.objeto(), en.cantidad());
+                pagos.add(pago(Material.TRIAL_KEY, "−" + llaves, altar.caja().cuantos(u, en.objeto()), en.cantidad()));
+                resumen.add(llaves);
                 continue;
             }
             // Una pieza, sin "tienes/te quedarian": es una y se va.
@@ -1044,8 +1061,10 @@ final class MenuAltar implements Listener {
         // 1.10: con el Reclamo son cinco: 3 arriba y 2 debajo, centrados y con aire.
         h.igual("expedicion con el Reclamo: 20, 22, 24, 30 y 32", List.of(20, 22, 24, 30, 32),
                 casillas(sitios(EXPEDICION, serie, false)));
-        h.igual("llaves y ofrendas", List.of("llave", "ofrenda"), idsDe(trueques(LLAVES, serie, false)));
-        h.igual("llaves y ofrendas con salvoconducto", List.of("llave", "salvoconducto", "ofrenda"), idsDe(trueques(LLAVES, serie, true)));
+        // 1.11: con las llaves de las bovedas delante de la del Caos.
+        h.igual("llaves y ofrendas", List.of("llave-umbral", "llave-ominosa", "llave", "ofrenda"), idsDe(trueques(LLAVES, serie, false)));
+        h.igual("llaves y ofrendas con salvoconducto", List.of("llave-umbral", "llave-ominosa", "llave", "salvoconducto", "ofrenda"),
+                idsDe(trueques(LLAVES, serie, true)));
         ids = new ArrayList<>();
         for (Seccion s : forja(serie, false)) ids.add(s.id());
         h.igual("grupos de la Forja", List.of("mejoras", "manto", "eco", "guadana"), ids);

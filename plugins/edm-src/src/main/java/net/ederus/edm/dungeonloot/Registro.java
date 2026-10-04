@@ -90,6 +90,22 @@ public final class Registro {
         return c;
     }
 
+    /**
+     * 1.78.1 · Una caja con un id fijo, para las que crea otro plugin por codigo (Calamity). Si ya
+     * existe, la devuelve tal cual. null si el id no vale.
+     */
+    public Caja crearConId(String id, String nombre, Caja.Tipo tipo) {
+        String k = id == null ? "" : id.trim().toLowerCase(Locale.ROOT);
+        if (k.isEmpty() || !k.matches("[a-z0-9_-]+")) return null;
+        Caja ya = cajas.get(k);
+        if (ya != null) return ya;
+        Caja c = new Caja(k, nombre == null || nombre.isBlank() ? k : nombre);
+        c.tipo(tipo == null ? Caja.Tipo.COMUN : tipo);
+        c.colorRgb(c.tipo() == Caja.Tipo.OMINOSA ? 0xC792EA : 0x8FB8C4);
+        cajas.put(k, c);
+        return c;
+    }
+
     /** Borra la caja Y sus bovedas: dejar bovedas huerfanas es peor que borrarlas. */
     public void borrar(Caja caja) {
         cajas.remove(caja.id());
@@ -99,6 +115,9 @@ public final class Registro {
     public Boveda plantar(Caja caja, String world, int x, int y, int z) {
         String id = caja.id() + "-" + (bovedasDe(caja.id()).size() + 1) + "-" + Integer.toHexString(
                 (world + x + ":" + y + ":" + z).hashCode() & 0xFFFF);
+        // 1.78.1: con bovedas que se quitan y se ponen solas (Calamity), el numero se repite; que el id no pise otra.
+        String base = id;
+        for (int i = 2; bovedas.containsKey(id); i++) id = base + "-" + i;
         Boveda b = new Boveda(id, caja.id(), world, x, y, z);
         bovedas.put(id, b);
         porClave.put(b.clave(), b);
@@ -141,6 +160,8 @@ public final class Registro {
             c.colorRgb(s.getInt("color", 0x8FB8C4));
             c.tiradas(s.getInt("tiradas", 3));
             c.nombreLlave(s.getString("nombre-llave", ""));
+            c.unaPorJugador(s.getBoolean("una-por-jugador", false));
+            c.botinExterno(s.getBoolean("botin-externo", false));
 
             ConfigurationSection botin = s.getConfigurationSection("botin");
             if (botin != null) {
@@ -197,6 +218,13 @@ public final class Registro {
             Boveda b = new Boveda(id, cajaId, s.getString("mundo", "world"),
                     s.getInt("x"), s.getInt("y"), s.getInt("z"));
             b.aperturas(s.getInt("aperturas", 0));
+            for (String u : s.getStringList("abierta-por")) {
+                try {
+                    b.marcarAbierta(java.util.UUID.fromString(u));
+                } catch (IllegalArgumentException ignored) {
+                    // una linea rota no tumba la boveda
+                }
+            }
             bovedas.put(id, b);
             porClave.put(b.clave(), b);
         }
@@ -225,6 +253,8 @@ public final class Registro {
             yml.set(base + ".color", c.colorRgb());
             yml.set(base + ".tiradas", c.tiradas());
             yml.set(base + ".nombre-llave", c.nombreLlave().isEmpty() ? null : c.nombreLlave());
+            yml.set(base + ".una-por-jugador", c.unaPorJugador() ? true : null);
+            yml.set(base + ".botin-externo", c.botinExterno() ? true : null);
             yml.set(base + ".botin", null);
             int i = 1;
             for (DropEntry e : c.tabla().entries()) {
@@ -256,6 +286,11 @@ public final class Registro {
             yml.set(base + ".y", b.y());
             yml.set(base + ".z", b.z());
             yml.set(base + ".aperturas", b.aperturas());
+            if (!b.abiertaPor().isEmpty()) {
+                List<String> quien = new ArrayList<>();
+                for (java.util.UUID u : b.abiertaPor()) quien.add(u.toString());
+                yml.set(base + ".abierta-por", quien);
+            }
         }
         escribir(yml, "bovedas.yml");
     }

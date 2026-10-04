@@ -351,6 +351,22 @@ public final class MobsLethal implements Listener {
         return 1;
     }
 
+    /**
+     * Calamity 1.11 · La guardia de la Boveda Caida: hasta cuantos mobs del bioma alrededor de centro (a
+     * radio bloques, en suelo firme de chunks cargados), con el nivel de p, que es quien llega. Devuelve
+     * cuantos nacieron. Nada en la zona spawn.
+     */
+    public int guardia(Player p, Location centro, int cuantos, int radio) {
+        if (p == null || centro == null || centro.getWorld() == null || zonaSegura(centro)) return 0;
+        BoundingBox caja = BoundingBox.of(centro, Math.max(3, radio), 8, Math.max(3, radio));
+        int n = 0;
+        for (int i = 0; i < cuantos; i++) {
+            Location sitio = sitioEn(centro.getWorld(), caja);
+            if (sitio != null && invocar(p, sitio) != null) n++;
+        }
+        return n;
+    }
+
     /** Una tanda de mobs del bioma alrededor de un jugador, para la oleada de entrada. */
     public void oleada(Player p, int cuantos) {
         // Calamity 1.2: si la llegada cae en la zona spawn, ahi no recibe nadie a nadie.

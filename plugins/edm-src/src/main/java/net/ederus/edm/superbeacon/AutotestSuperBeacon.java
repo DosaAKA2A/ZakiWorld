@@ -78,6 +78,7 @@ final class AutotestSuperBeacon {
             t.vaciadas();
             t.mundos();
             t.nombres();
+            t.renovar();
             if (modulo != null) {
                 t.lectura(modulo);
                 t.objeto(modulo);
@@ -86,6 +87,26 @@ final class AutotestSuperBeacon {
             t.ok("el selftest no deberia reventar: " + e, false);
         }
         return t;
+    }
+
+    /* ======================================================= renovar (1.78.1) */
+
+    private void renovar() {
+        long ahora = 1_000_000_000L;
+        long dia = Tiempo.DIA;
+        igual("renovar: vencida hace un dia, 7 dias desde ahora", ahora + 7 * dia,
+                SuperBeaconPlugin.venceRenovado(ahora - dia, ahora, 7));
+        igual("renovar: con 3 dias por delante, pasa a 7 desde ahora", ahora + 7 * dia,
+                SuperBeaconPlugin.venceRenovado(ahora + 3 * dia, ahora, 7));
+        igual("renovar: no acorta una que vence mas lejos", ahora + 20 * dia,
+                SuperBeaconPlugin.venceRenovado(ahora + 20 * dia, ahora, 7));
+        igual("renovar: una que no caducaba sigue sin caducar", 0L, SuperBeaconPlugin.venceRenovado(0L, ahora, 7));
+        igual("renovar: 0 dias = ya no caduca", 0L, SuperBeaconPlugin.venceRenovado(ahora + dia, ahora, 0));
+        ok("renovar: mismo clan sin colores ni mayusculas", SuperBeaconPlugin.delClan("ABC", "trofeo", "&#FF0000abc", "trofeo"));
+        ok("renovar: cualquier tipo si no se pide", SuperBeaconPlugin.delClan("ABC", "guerra", "abc", null));
+        ok("renovar: otro tipo no", !SuperBeaconPlugin.delClan("ABC", "guerra", "abc", "trofeo"));
+        ok("renovar: otro clan no", !SuperBeaconPlugin.delClan("ABD", "trofeo", "abc", "trofeo"));
+        ok("renovar: sin clan fijado no", !SuperBeaconPlugin.delClan(null, "trofeo", "abc", "trofeo"));
     }
 
     /* ================================================================ fusion */

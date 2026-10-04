@@ -215,6 +215,10 @@ public final class Grifo implements Listener {
             for (int g : plan.grados()) reliquias.add(r.crear(g, origen, null, nivel, null, false));
         }
         if (plan.xp() >= 0) e.setDroppedExp(plan.xp());
+        // Calamity 1.11: la Llave del Umbral de los destacados (llaves-boveda.destacado), al suelo con lo demas.
+        if (via == Via.NORMAL && "destacado".equals(marca)) {
+            hc.seguro("bovedas", () -> PuenteBovedas.alMorirDestacado(hc, killer, e.getDrops()));
+        }
         // 1.4: las de mas del equipo (esencias-bonus) se suman aqui, antes de la Aduana, que topa el total.
         int esencias = hc.esenciasDelEquipo(killer, plan.esencias());
         if (esencias == 0 && mc <= 0 && reliquias.isEmpty()) return;
