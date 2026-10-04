@@ -1123,6 +1123,8 @@ hardcore:
       periodo-dia: 72000
       # Ocultarle la lluvia a quien esta en el bioma.
       ocultar-lluvia: true
+      # 1.11: en la zona spawn, si es de este bioma, el mismo cielo y la misma ceniza (sin fuego ni dano).
+      en-spawn: true
       # Vineta roja en los bordes de la pantalla (0 a 0.95), aunque sentidos.vinheta este
       # apagada. Se suma a la de la cordura si esta encendida. 0 = sin vineta.
       vinheta: 0.4

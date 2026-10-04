@@ -201,7 +201,7 @@ final class Clima implements Listener {
         cieloAcido(p, e, tipo == Tipo.ACIDA, seccion(c, "lluvia-acida"));
         // Sin nada puesto y con las dos cuentas olvidadas, no hace falta seguir acordandose de el.
         if (e.acida.dentro == 0 && e.rojo.dentro == 0 && !e.bajoCielo && !e.bajoAcida && !e.climaPuesto
-                && estados.get(u) == e) {
+                && !e.horaPuesta && estados.get(u) == e) {
             estados.remove(u);
         }
     }
@@ -225,11 +225,26 @@ final class Clima implements Listener {
         vistos.add(u);
         e.bajoCielo = false;
         e.bajoAcida = false;
-        soltarHora(p, e);
         quitarFuego(p, e);
+        // Encargo de Dosa: que el spawn se vea como fuera. En el bioma rojo, mientras llueve, el mismo
+        // cielo de sangre y la misma ceniza, pero sin fuego, sin dano y sin la vineta (es zona segura).
+        ConfigurationSection r = seccion(c, "cielo-rojo");
+        boolean rojo = llueve && r.getBoolean("en-spawn", true) && tipo(bioma(p), c) == Tipo.ROJO;
+        if (rojo) {
+            Parca parca = hc.parca();
+            boolean deParca = parca != null && hc.valor("parca", () -> parca.cieloSobre(p), false);
+            Eclipse eclipse = hc.eclipse();
+            boolean deEclipse = eclipse != null && hc.valor("eclipse", eclipse::activo, false);
+            ponerHora(p, e, r, deParca, deEclipse);
+            if (p.isInRain()) ceniza(p);
+        } else {
+            soltarHora(p, e);
+        }
         if (llueve) ocultarLluvia(p, e);
         else soltarClima(p, e);
-        if (!e.climaPuesto && e.acida.dentro == 0 && e.rojo.dentro == 0 && estados.get(u) == e) estados.remove(u);
+        if (!e.climaPuesto && !e.horaPuesta && e.acida.dentro == 0 && e.rojo.dentro == 0 && estados.get(u) == e) {
+            estados.remove(u);
+        }
     }
 
     /** Una vez por segundo, despues de los jugadores: quien no se ha visto recupera su cielo. */
@@ -414,7 +429,11 @@ final class Clima implements Listener {
         } else {
             soltarClima(p, e);
         }
+        ponerHora(p, e, r, deParca, deEclipse);
+    }
 
+    /** La hora del cielo de sangre (sin tocar la lluvia): la del cielo rojo y, 1.11, la del spawn. */
+    private void ponerHora(Player p, Estado e, ConfigurationSection r, boolean deParca, boolean deEclipse) {
         long hora = hora(r);
         if (hora > 0 && !deParca && !deEclipse) {
             // El offset depende del bloque de 24000 en el que va el reloj, asi que se calcula cada
