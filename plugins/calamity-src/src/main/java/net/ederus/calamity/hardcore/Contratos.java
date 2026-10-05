@@ -275,7 +275,7 @@ final class Contratos implements Listener {
             new Def("al-limite", "Aguanta 15 min con la cordura por debajo de 25", "minutos-limite", 15, 5, 80, false, "",
                     "Al límite"),
             new Def("minijefe", "Mata un minijefe", "minijefe", 1, 6, 100, false, "", "Minijefe"),
-            new Def("sin-frasco", "Pasa 30 min en Calamity sin beber del Frasco", "minutos-sin-frasco", 30, 4, 60, false, "",
+            new Def("sin-frasco", "Pasa 30 min en Calamity sin beber de un Frasco", "minutos-sin-frasco", 30, 4, 60, false, "",
                     "Sin frasco"),
             new Def("cofres", "Abre 3 cofres de estructura", "cofre", 3, 3, 40, false, "cofres.activo", "Cofres"),
             new Def("redimir", "Derrota a tu propio Eco", "redimir", 1, 4, 60, false, "eco.activo", "Tu Eco"));

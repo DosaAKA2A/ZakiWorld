@@ -1183,7 +1183,7 @@ hardcore:
       eco: {texto: "Derrota un Eco ajeno válido", etiqueta: "Eco", evento: eco-valido, objetivo: 1, esencias: 5, mobcoins: 80, mecanica: eco.activo}
       al-limite: {texto: "Aguanta 15 min con la cordura por debajo de 25", etiqueta: "Al límite", evento: minutos-limite, objetivo: 15, esencias: 5, mobcoins: 80}
       minijefe: {texto: "Mata un minijefe", etiqueta: "Minijefe", evento: minijefe, objetivo: 1, esencias: 6, mobcoins: 100}
-      sin-frasco: {texto: "Pasa 30 min en Calamity sin beber del Frasco", etiqueta: "Sin frasco", evento: minutos-sin-frasco, objetivo: 30, esencias: 4, mobcoins: 60}
+      sin-frasco: {texto: "Pasa 30 min en Calamity sin beber de un Frasco", etiqueta: "Sin frasco", evento: minutos-sin-frasco, objetivo: 30, esencias: 4, mobcoins: 60}
       cofres: {texto: "Abre 3 cofres de estructura", etiqueta: "Cofres", evento: cofre, objetivo: 3, esencias: 3, mobcoins: 40, mecanica: cofres.activo}
       redimir: {texto: "Derrota a tu propio Eco", etiqueta: "Tu Eco", evento: redimir, objetivo: 1, esencias: 4, mobcoins: 60, mecanica: eco.activo}
   kit: {activo: false, cada-horas: 20, frasco-tragos: 1, solo-sin-armadura: true}
