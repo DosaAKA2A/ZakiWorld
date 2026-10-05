@@ -385,3 +385,61 @@ Comandos (consola, tienda o cajas; permiso `ederus.boost.admin`):
 
 Placeholders: `%edm_boost_<tipo>%` (x2 / x1), `%edm_boost_<tipo>_tiempo%`,
 `%edm_boost_global_<tipo>%` y `%edm_boost_activo%` (si / no).
+
+## El modulo `minas`: eventos para otros plugins (1.80.0)
+
+Tres eventos de Bukkit en `net.ederus.edm.minas.api`, pensados para que EDungeons
+monte sus eventos de minas (doble mineral, prisa minera) sin tocar EDM. Se
+escuchan como cualquier evento, con `EDM` en `depend` o `softdepend`.
+
+**`MineDropsEvent`** (extiende `PlayerEvent`): alguien pico un bloque de una mina.
+Sale en el `BlockBreakEvent` en prioridad MONITOR, con el bloque todavia puesto,
+y solo si la rotura es definitiva (nadie la cancelo), la mina no se esta
+rellenando, hay acceso y no es creativo.
+
+| Metodo | Que da |
+|---|---|
+| `getMineId()` | el id de la mina (`/mine tp <id>`) |
+| `getPlayer()` | quien pico |
+| `getBlockLocation()` | donde estaba el bloque (copia) |
+| `getOriginalBlockType()` | el bloque antes de romperse |
+| `getDrops()` | la lista REAL de drops, con la fortuna ya aplicada; editable |
+
+Lo que quede en `getDrops()` es lo que se entrega: a la mochila con
+`directo-al-inventario: true` (lo que no cabe cae) o al suelo con `false`. Desde
+la 1.80.0 el modulo entrega siempre los drops de las minas, tambien con `false`,
+para que el evento los vea; por eso dentro de una mina ya no sale el
+`BlockDropItemEvent` de Bukkit.
+
+**`MineResetStartEvent`** y **`MineResetCompleteEvent`** (los dos extienden
+`MineResetEvent`): una mina empieza a rellenarse y termina de rellenarse.
+
+| Metodo | Que da |
+|---|---|
+| `getMineId()`, `getWorld()` | la mina y su mundo |
+| `getMinX()` ... `getMaxZ()` | los limites en bloques, incluidos |
+| `getBoundingBox()` | la misma caja en coordenadas de mundo |
+| `getCycleId()` | un `UUID` por relleno: el mismo en el inicio y en el final |
+| `getReason()` | `TIMER`, `THRESHOLD` (umbral de picado), `COMMAND` (`/mine reset`) o `MENU` |
+| `getBlocksPlaced()`, `getDurationMillis()` | solo en el Complete |
+
+- El Start sale cuando ya se saco a la gente y antes del primer bloque.
+- El Complete sale solo al poner el ultimo bloque, ya con la mina abierta para
+  picar. Si el relleno se corta (se apaga o recarga el modulo, la mina se borra o
+  cambia de zona, o el mundo se descarga) se para ahi, la bitacora apunta
+  `relleno-cortado` y el Complete no sale: ese cycleId se queda sin final.
+- Un `/mine reload` a medias no corta el relleno: sigue con la mina recargada,
+  mientras tenga el mismo id y la misma zona.
+- Nunca hay dos rellenos a la vez de la misma mina.
+- `MineResetEvent` es solo la base comun: hay que escuchar `MineResetStartEvent`
+  y `MineResetCompleteEvent` por separado (Bukkit no deja registrar la base).
+
+Ejemplo de doble mineral:
+
+    @EventHandler
+    public void alPicar(MineDropsEvent e) {
+        if (!dobleActivo(e.getMineId())) return;
+        List<ItemStack> extra = new ArrayList<>();
+        for (ItemStack d : e.getDrops()) extra.add(d.clone());
+        e.getDrops().addAll(extra);
+    }

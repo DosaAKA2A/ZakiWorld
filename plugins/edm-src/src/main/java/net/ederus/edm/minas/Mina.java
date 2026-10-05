@@ -48,6 +48,8 @@ public final class Mina {
     private long minados;
     private boolean reiniciando;
     private int ultimoAviso = -1;
+    /** 1.80.0 · Por que se adelanto el proximo reinicio (el umbral); null = es el reloj de siempre. */
+    private net.ederus.edm.minas.api.MineResetReason motivoProgramado;
 
     public Mina(String id, String nombre) {
         this.id = id;
@@ -190,6 +192,15 @@ public final class Mina {
         // El reloj arranca de nuevo con el valor nuevo, no con el resto del viejo.
         proximo = intervalo > 0 ? System.currentTimeMillis() + intervalo * 1000L : 0;
         ultimoAviso = -1;
+        motivoProgramado = null;
+    }
+
+    public net.ederus.edm.minas.api.MineResetReason motivoProgramado() {
+        return motivoProgramado;
+    }
+
+    public void motivoProgramado(net.ederus.edm.minas.api.MineResetReason motivo) {
+        this.motivoProgramado = motivo;
     }
 
     public int umbral() {
