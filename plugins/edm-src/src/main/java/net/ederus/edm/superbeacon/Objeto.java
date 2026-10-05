@@ -31,7 +31,7 @@ import net.kyori.adventure.text.format.TextDecoration;
  * un faro vanilla. Las claves son superbeacon:id, :tipo, :dueno, :dueno_nombre, :clan,
  * :vence, :efectos, :semana (solo el trofeo) y :version; no se renombran nunca, o los
  * objetos ya repartidos dejarian de reconocerse. superbeacon:lore es solo la huella del lore
- * con que se pinto, para repintar los viejos al entrar o al abrir un cofre (renovar).
+ * con que se pinto, para repintar los viejos al entrar, al abrir un contenedor o al pasar a su inventario (renovar).
  */
 final class Objeto {
 
