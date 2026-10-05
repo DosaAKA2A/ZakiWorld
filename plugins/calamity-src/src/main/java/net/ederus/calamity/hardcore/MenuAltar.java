@@ -378,7 +378,8 @@ final class MenuAltar implements Listener {
         Kit kit = hc.kit();
         boolean conKit = kit != null && hc.valor("kit", kit::activo, false);
         int[] casillas = tarjetas(hay.size() + (conKit ? 1 : 0));
-        for (int i = 0; i < casillas.length; i++) {
+        // Las categorias van primero; la ultima casilla, con el Kit, es la suya (no hay categoria para ella).
+        for (int i = 0; i < hay.size() && i < casillas.length; i++) {
             Categoria c = hay.get(i);
             List<Altar.Trueque> ts = trueques(c.id(), todos, salvo);
             int ya = 0;
@@ -949,6 +950,8 @@ final class MenuAltar implements Listener {
             // El Kit: lo mismo que "calamity open <p> kit" (Kit.pedir dice en el chat si no se puede).
             // Un tick despues: pone la armadura y repinta la tarjeta, que pasa a "Vuelve en 20 h".
             case "kit" -> altar.tarea(() -> {
+                // En ese tick puede haberse ido o haber cerrado el menu: sin el menu del Altar abierto, nada.
+                if (!p.isOnline() || !(p.getOpenInventory().getTopInventory().getHolder() instanceof Marca)) return;
                 Kit kit = hc.kit();
                 if (kit == null || !kit.activo()) {
                     p.sendMessage(ComandoCalamity.mensaje("El Kit de Expedición no está disponible ahora mismo."));

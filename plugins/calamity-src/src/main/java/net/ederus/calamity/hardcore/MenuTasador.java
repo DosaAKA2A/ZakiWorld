@@ -683,7 +683,8 @@ final class MenuTasador implements Listener {
             rl.add(Component.empty());
             rl.add(Marco.tenue("Sube 1 la primera vez que le vendes"));
             rl.add(Marco.tenue("a Oren una Reliquia de grado II o"));
-            rl.add(Marco.tenue("más en cada entrada a Calamity."));
+            rl.add(Marco.tenue("más conseguida en esa misma"));
+            rl.add(Marco.tenue("entrada a Calamity."));
             rl.add(Marco.tenue("Si mueres, vuelve a 0."));
             abajo.add(Marco.icono(Material.BLAZE_POWDER, Component.text("Tu Racha de Codicia: ", Paleta.TEXTO)
                     .append(Component.text(r, Paleta.CIFRA)), rl, r > 0));

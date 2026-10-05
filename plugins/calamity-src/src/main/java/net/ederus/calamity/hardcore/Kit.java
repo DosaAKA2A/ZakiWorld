@@ -157,9 +157,14 @@ final class Kit implements Listener {
         if (hc.esHardcore(p)) return new Estado("dentro", 0);
         long ahora = System.currentTimeMillis();
         long ultimo = hc.datos().getLong("kit." + p.getUniqueId(), 0);
+        // La espera antes que la armadura: recien pedido lleva puesto el hierro del kit, y la tarjeta
+        // tiene que decir "Vuelve en 20 h", no "Quitate la armadura" (quitarsela no serviria de nada).
+        if ("espera".equals(motivo(false, false, ultimo, ahora, cadaHoras()))) {
+            return new Estado("espera", horasQueFaltan(ultimo, ahora, cadaHoras()));
+        }
         String no = motivo(conArmadura(p.getInventory()), hc.cfg().getBoolean("kit.solo-sin-armadura", true),
                 ultimo, ahora, cadaHoras());
-        return new Estado(no, "espera".equals(no) ? horasQueFaltan(ultimo, ahora, cadaHoras()) : 0);
+        return new Estado(no, 0);
     }
 
     /** Los tragos del Frasco que se presta (0: sin Frasco), para el boton del Altar. */
