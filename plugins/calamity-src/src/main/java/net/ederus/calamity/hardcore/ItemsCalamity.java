@@ -68,6 +68,23 @@ public final class ItemsCalamity {
         return item;
     }
 
+    /**
+     * Ese mismo frasco (una unidad) con otros tragos: conserva todo lo que ya llevaba (ligado, prestado, sus
+     * marcas) y rehace el nombre y el lore con Ficha.renovar, que guarda las lineas de ligado y de prestado.
+     * Lo usan beber (Hardcore) y recargar (Altar): antes hacian uno nuevo con frasco(n) y el de un Kit dejaba de
+     * ser prestado al primer trago. Si no es un frasco, uno nuevo.
+     */
+    public ItemStack conTragos(ItemStack frasco, int usos) {
+        if (!esFrasco(frasco)) return frasco(usos);
+        int max = plugin.getConfig().getInt("hardcore.frasco.usos", 3);
+        int quedan = Math.max(0, Math.min(max, usos));
+        ItemStack it = frasco.clone();
+        it.setAmount(1);
+        it.editMeta(m -> m.getPersistentDataContainer().set(claveFrasco, PersistentDataType.INTEGER, quedan));
+        ItemStack r = Ficha.renovar(it, Ficha.tono("frasco").nombre(NOMBRE_FRASCO), fichaFrasco(hardcore(), quedan).lore());
+        return r == null ? it : r;
+    }
+
     /** Tragos que le quedan al frasco, o -1 si el objeto no es un frasco. */
     public int tragos(ItemStack item) {
         if (item == null || item.getItemMeta() == null) return -1;

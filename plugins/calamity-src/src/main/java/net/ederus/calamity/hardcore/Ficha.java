@@ -58,7 +58,7 @@ final class Ficha {
     /** Lo secundario y las notas del final: gris. */
     static final TextColor GRIS = Paleta.LORE_GRIS;
     /** Las casillas vacias de una barra de progreso: un gris mas oscuro que el de las notas. */
-    static final TextColor VACIA = TextColor.color(0x4A4A4A);
+    static final TextColor VACIA = Paleta.CASILLA_VACIA;
     static final String ROMBO = "◆";
     static final String ESTRELLA = "★";
     static final String CASILLA = "■";

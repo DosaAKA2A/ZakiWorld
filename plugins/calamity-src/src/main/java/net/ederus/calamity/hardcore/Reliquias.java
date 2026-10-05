@@ -12,7 +12,7 @@ import org.bukkit.OfflinePlayer;
 import org.bukkit.command.CommandSender;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.file.YamlConfiguration;
-import org.bukkit.entity.Animals;
+import org.bukkit.entity.Allay;
 import org.bukkit.entity.HumanEntity;
 import org.bukkit.entity.Player;
 import org.bukkit.event.Event;
@@ -22,6 +22,7 @@ import org.bukkit.event.Listener;
 import org.bukkit.event.block.BlockDispenseEvent;
 import org.bukkit.event.block.BlockPlaceEvent;
 import org.bukkit.event.block.CrafterCraftEvent;
+import org.bukkit.event.entity.EntityPickupItemEvent;
 import org.bukkit.event.inventory.BrewEvent;
 import org.bukkit.event.inventory.FurnaceBurnEvent;
 import org.bukkit.event.inventory.FurnaceSmeltEvent;
@@ -573,7 +574,23 @@ final class Reliquias implements Listener {
         if (!e.getAction().isRightClick()) return;
         if (!es(e.getItem())) return;
         e.setUseItemInHand(Event.Result.DENY);
-        if (e.getClickedBlock() != null && seLaQueda(e.getClickedBlock().getType())) e.setUseInteractedBlock(Event.Result.DENY);
+        if (e.getClickedBlock() != null && meteria(e.getClickedBlock())) e.setUseInteractedBlock(Event.Result.DENY);
+    }
+
+    /**
+     * Si un clic con la Reliquia en la mano la meteria en ese bloque. Sacar lo que ya tiene si se puede: el
+     * disco del tocadiscos, la flor de la maceta y el polvo de hueso de la compostadora llena (con algo en la
+     * mano que no entra, vanilla hace lo mismo que con la mano vacia).
+     */
+    static boolean meteria(org.bukkit.block.Block b) {
+        Material m = b.getType();
+        if (!seLaQueda(m)) return false;
+        if (m.name().startsWith("POTTED_")) return false;
+        if (m == Material.JUKEBOX) return !(b.getState(false) instanceof org.bukkit.block.Jukebox j && j.hasRecord());
+        if (m == Material.COMPOSTER) {
+            return !(b.getBlockData() instanceof org.bukkit.block.data.Levelled l && l.getLevel() >= l.getMaximumLevel());
+        }
+        return true;
     }
 
     /** Bloques que se quedan (o gastan) el objeto de la mano al hacerles clic derecho. */
@@ -589,11 +606,35 @@ final class Reliquias implements Listener {
         if (e.isPlacing() && es(e.getItem())) e.setCancelled(true);
     }
 
-    /** Ni alimentar ni criar con ella (ni darsela a ningun animal), salvo a un NPC (Oren puede ser uno). */
+    /**
+     * Un allay se queda lo que le das y luego recoge del suelo todo lo que se le parezca: ni una Reliquia ni una
+     * Esencia, en ningun mundo y tampoco el staff (Sellos lo corta solo con su sello y no al staff). Con los
+     * animales no hace falta nada: ningun material de Reliquia es comida, y montar o sentar a uno con una en la
+     * mano tiene que funcionar.
+     */
     @EventHandler(priority = EventPriority.LOW, ignoreCancelled = true)
-    public void onAnimal(PlayerInteractEntityEvent e) {
-        if (!(e.getRightClicked() instanceof Animals) || e.getRightClicked().hasMetadata("NPC")) return;
-        if (es(e.getPlayer().getInventory().getItem(e.getHand()))) e.setCancelled(true);
+    public void onAllay(PlayerInteractEntityEvent e) {
+        if (!(e.getRightClicked() instanceof Allay)) return;
+        if (valioso(e.getPlayer().getInventory().getItem(e.getHand()))) e.setCancelled(true);
+    }
+
+    /**
+     * Ninguna entidad que no sea un jugador recoge una Reliquia o una Esencia del suelo, dentro ni fuera de
+     * Calamity: piglins (la sandia y la campana les encantan), zorros, allays, mobs que recogen cosas, tolvas
+     * aparte (eso es Sellos). Dentro ya lo cortaba Hardcore.onRecoger; fuera solo con el sello de fuera.
+     */
+    @EventHandler(priority = EventPriority.LOWEST, ignoreCancelled = true)
+    public void onRecogerMob(EntityPickupItemEvent e) {
+        if (e.getEntity() instanceof Player) return;
+        if (valioso(e.getItem().getItemStack())) e.setCancelled(true);
+    }
+
+    /** Reliquia o Esencia. */
+    private boolean valioso(ItemStack it) {
+        if (it == null || it.getType().isAir()) return false;
+        if (es(it)) return true;
+        ItemsCalamity items = hc.items();
+        return items != null && items.esEsencia(it);
     }
 
     @EventHandler
@@ -1122,6 +1163,17 @@ final class Reliquias implements Listener {
             h.ok("Frasco de antes: lore de hoy, conserva tragos y la linea de ligado", frascoNuevo != null
                     && items.tragos(frascoNuevo) == 2 && "Dosa".equals(Ficha.ligadoDe(frascoNuevo.getItemMeta().lore()))
                     && Ficha.faltas(frascoNuevo.getItemMeta().lore()).isEmpty());
+            // Beber y recargar: el mismo frasco con otros tragos, sin perder lo prestado ni el ligado.
+            UUID duenoPrueba = Autotest.sintetico(53);
+            ItemStack delKit = Kit.prestar(Ligado.ligar(items.frasco(3), duenoPrueba));
+            delKit.setAmount(2);
+            ItemStack bebido = items.conTragos(delKit, 2), lleno = items.conTragos(bebido, 3);
+            List<Component> lb = bebido.getItemMeta().lore();
+            h.ok("frasco bebido: un trago menos, una unidad, sigue prestado y ligado", items.tragos(bebido) == 2
+                    && bebido.getAmount() == 1 && Kit.esPrestado(bebido) && duenoPrueba.equals(Ligado.duenoDe(bebido))
+                    && lb != null && "Se deshace al salir de Calamity.".equals(Hardcore.plano(lb.get(lb.size() - 1))));
+            h.ok("frasco recargado: lleno, sigue prestado y ligado", items.tragos(lleno) == 3 && Kit.esPrestado(lleno)
+                    && duenoPrueba.equals(Ligado.duenoDe(lleno)) && delKit.getAmount() == 2);
         }
         ItemStack cabeza = new ItemStack(Material.PLAYER_HEAD);
         cabeza.editMeta(mm -> {

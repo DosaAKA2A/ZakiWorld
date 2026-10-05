@@ -2180,8 +2180,8 @@ public final class Hardcore implements Listener {
         cordura.sumar(p, sube);
         cordura.estado(p).ultimoTramo = Cordura.tramo(cordura.valor(p));
 
-        ItemStack nuevo = items.frasco(quedan - 1);
-        nuevo.setAmount(1);
+        // El mismo frasco con un trago menos: si era prestado o estaba ligado, lo sigue estando.
+        ItemStack nuevo = items.conTragos(frasco, quedan - 1);
         if (frasco.getAmount() > 1) {
             frasco.setAmount(frasco.getAmount() - 1);
             for (ItemStack sobra : p.getInventory().addItem(nuevo).values()) {
