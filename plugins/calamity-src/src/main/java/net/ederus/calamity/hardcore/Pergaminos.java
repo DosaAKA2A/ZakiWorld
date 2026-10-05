@@ -443,7 +443,7 @@ final class Pergaminos implements Listener {
         Player p = e.getPlayer();
         Sello s = sello(e.getItemDrop().getItemStack());
         e.getItemDrop().remove();
-        p.sendMessage(ComandoCalamity.mensaje("Rompiste el pergamino. Oren puede darte otro."));
+        p.sendMessage(ComandoCalamity.mensaje("Rompiste el pergamino. Oren te da otro si se lo pides en el spawn."));
         Marco.sonar(p, "item.book.page_turn", 0.6f, 0.6f);
         hc.plugin().bitacora().anotar("contrato", "pergamino-roto", p.getName(), s == null ? "?" : s.id());
         // Un tick despues el inventario ya no lo tiene en ninguna via (Q, cursor fuera de la ventana).

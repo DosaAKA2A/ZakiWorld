@@ -377,7 +377,8 @@ final class Tasacion {
     /** El grupo de un objeto: el de su Reliquia, ESENCIAS o null si Oren no lo compra. */
     String clave(ItemStack it) {
         if (it == null || it.getType().isAir()) return null;
-        if (hc.items().esEsencia(it)) return ESENCIAS;
+        ItemsCalamity items = hc.items();
+        if (items != null && items.esEsencia(it)) return ESENCIAS;
         Reliquias rel = hc.reliquias();
         if (rel == null || !rel.es(it)) return null;
         return clave(rel.grado(it), rel.especial(it), rel.minijefe(it));

@@ -29,57 +29,53 @@ import java.util.Set;
 import java.util.UUID;
 
 /**
- * El menu de Oren, el mercader del spawn de Calamity (1.3.0; rehecho en la 1.5.0 y en la rama
- * venta-oren).
+ * El menu de Oren, el mercader del spawn de Calamity (1.3.0; rehecho en la 1.5.0, en la rama
+ * venta-oren y en la 1.12.1).
  *
- * Rama venta-oren · Dosa: "un NPC que detecte todos los items de Calamity en el inventario y los venda
- * dentro de una interfaz" y "arregla toda su interfaz, que sea como el fish shop, pero con la info
- * necesaria". Salir de Calamity ya no vende nada (Tasacion.alSalir): lo vende Oren. Su portada es su
- * tienda, con la forma de la pescaderia de PremioPescao: arriba, lo que llevas, agrupado por tipo, y un
- * clic vende ese tipo; debajo, "Vender todo" con el resumen de lo que recibes y una confirmacion. Cada
- * tipo dice que es, cuantas llevas, cuanto da cada una y todas (Esencias y MobCoins, con la Racha), lo
- * que te queda del tope de hoy, los extras que puede dar y cuando caduca.
+ * Calamity 1.12.1 · Dosa vio la tienda de 6 filas y dijo: "Esta interfaz es terrible, todo desordenado.
+ * Minimiza, es muy molesto ver tantas cosas". Ahora todas las vistas miden 3 filas, con el marco de
+ * cristal negro y nada suelto:
  *
- *   portada (54)   filas 1-2: un boton por tipo (Reliquias de grado alto primero, Esencias al final)
- *                  fila 3:    Topes de hoy (29) · Vender todo (31) · ¿Como funciona? (33)
- *                  fila 4:    Tu dinero (38) · Contratos de hoy (40) · Tu camino (42)
- *                  fila 5:    Altar (47) · Cerrar (49) · Forja (51)
- *   Tu dinero (45)      fila 1: saldo (clic: ingresar) · premios pendientes (clic: recoger) ·
- *                       lo vendido esta semana;  fila 2: primera salida de hoy y Racha
- *   Contratos (45)      fila 1: los tres contratos (clic, en Calamity: recibir su pergamino);
- *                       fila 2: "Cambiar contrato" debajo de cada uno;  fila 3: los de la semana
- *   Vender todo (45)    lo que vendes (13) y lo que recibes (22); No (28-30) y Si (32-34)
+ *   portada (27)       fila 1: los tipos que llevas, centrados y en orden (grado I a IV, especiales,
+ *                      Esencias); un clic vende ese tipo. Si no caben (mas de 7), los de mas valor y
+ *                      "Y N tipos mas". Sin nada, un papel en el centro.
+ *                      fila 2: Contratos (20) · Vender todo (22, con el resumen y los topes de hoy) ·
+ *                      Tu dinero (24)
+ *   Vender todo (27)   No (11) · lo que vendes y lo que recibes (13) · Si (15)
+ *   Tu dinero (27)     fila 1: saldo, premios, lo vendido, primera salida, Racha y Tu camino; Volver (22)
+ *   Contratos (27)     fila 1: los contratos de hoy (un clic acepta una oferta o pide otra copia del
+ *                      pergamino perdido); fila 2: la semana (20) · Volver (22) · Cambiar uno (24)
+ *   Cambiar (27)       elegir: los que se pueden cambiar en la fila 1 y Volver; confirmar: No (11) ·
+ *                      el contrato y lo que cuesta (13) · Si (15)
  *
- * Reglas de los menus de Calamity (Marco): titulo "CALAMITY | seccion", marco de cristal negro, Cerrar
- * o Volver abajo en el centro, una paleta corta (el color del objeto en su nombre, gris para las
- * etiquetas y blanco para los valores), la ultima linea dice que hace el clic, y solo clic izquierdo
+ * Fuera quedan el Altar, la Forja, la ayuda, Tu camino y Cerrar como botones sueltos: el Altar y la Forja
+ * tienen sus NPCs, Tu camino va en Tu dinero y la ventana se cierra con Esc.
+ *
+ * Reglas de los menus de Calamity (Marco): titulo "CALAMITY | seccion", marco de cristal negro, Volver
+ * abajo en el centro, una paleta corta, la ultima linea dice que hace el clic, y solo clic izquierdo
  * (Bedrock: un toque). Oren solo compra fuera de Calamity o en su spawn (Tasacion.puedeVender): si el
  * menu se abriera en otro sitio, los botones de vender lo dicen y no hacen nada.
  */
 final class MenuTasador implements Listener {
 
     private static final long ESPERA_MS = 500;
-    /** Las subvistas miden 5 filas; la portada, la tienda, 6. */
-    static final int TAMANO = 45;
-    static final int TAMANO_PORTADA = 54;
-    /** Portada: las dos filas de lo que llevas. */
-    static final int FILA_VENTA = 9, MAX_GRUPOS = 14;
-    /** Portada, fila 3: los topes, vender todo y la ayuda. */
-    static final int TOPES = 29, VENDER_TODO = 31, AYUDA = 33;
-    /** Portada, fila 4: las otras secciones de Oren. */
-    static final int DINERO = 38, CONTRATOS = 40, CAMINO = 42;
-    /** Portada, abajo: el Altar y la Forja a los lados; Cerrar en el centro. */
-    static final int IR_ALTAR = 47, CERRAR = 49, IR_FORJA = 51;
-    /** Subvistas: Volver abajo en el centro. */
-    static final int SALIR = 40;
-    /**
-     * Las filas de las subvistas: la de arriba (lo principal) y la de debajo (el resumen). En Contratos
-     * la de debajo lleva los botones de cambiar y el resumen baja a la tercera (FILA_C).
-     */
-    static final int FILA_A = 9, FILA_B = 18, FILA_C = 27;
+    /** Todas las vistas: 3 filas. */
+    static final int TAMANO = 27;
+    /** La fila del medio: lo que se ensena (tipos, contratos, tu dinero). */
+    static final int FILA = 9;
+    /** Como mucho, tipos en la fila: las 7 columnas de dentro del marco. */
+    static final int MAX_TIPOS = Marco.COLUMNAS;
+    /** Portada, abajo: Contratos a la izquierda, Vender todo en el centro y Tu dinero a la derecha. */
+    static final int CONTRATOS = 20, VENDER_TODO = 22, DINERO = 24;
+    /** Subvistas: Volver abajo en el centro (Marco.abajo). */
+    static final int SALIR = 22;
+    /** Contratos, abajo: la semana y Cambiar a los lados de Volver. */
+    static final int SEMANA = 20, CAMBIAR = 24;
+    /** Confirmaciones: No, lo que se confirma y Si, en la fila del medio. */
+    static final int NO = 11, CENTRO = 13, SI = 15;
 
     static final String PORTADA = Marco.TASADOR, V_DINERO = "dinero", V_CONTRATOS = "contratos",
-            V_CAMBIAR = "cambiar", V_TODO = "todo";
+            V_ELEGIR = "elegir", V_CAMBIAR = "cambiar", V_TODO = "todo";
 
     /** Nuestra ventana. pantalla: la vista; hueco: el contrato que se cambia (en "cambiar"). */
     record Vista(String pantalla, Map<Integer, String> acciones, int hueco) implements InventoryHolder {
@@ -136,13 +132,14 @@ final class MenuTasador implements Listener {
         return switch (pantalla) {
             case V_DINERO -> Marco.T_TASADOR_DINERO;
             case V_CONTRATOS -> Marco.T_TASADOR_CONTRATOS;
+            case V_ELEGIR, V_CAMBIAR -> Marco.T_CAMBIAR;
             case V_TODO -> Marco.T_VENDER_TODO;
             default -> Marco.T_TASADOR;
         };
     }
 
     private static int tamano(String pantalla) {
-        return PORTADA.equals(pantalla) ? TAMANO_PORTADA : TAMANO;
+        return TAMANO;
     }
 
     private void abrirVista(Player p, String pantalla) {
@@ -169,41 +166,65 @@ final class MenuTasador implements Listener {
         switch (v.pantalla()) {
             case V_DINERO -> vistaDinero(inv, p, v);
             case V_CONTRATOS -> vistaContratos(inv, p, v);
+            case V_ELEGIR -> vistaElegir(inv, p, v);
             case V_TODO -> vistaTodo(inv, p, v);
             default -> portada(inv, p, v);
         }
-        if (v.pantalla().equals(PORTADA)) {
-            inv.setItem(CERRAR, Marco.cerrar());
-            v.acciones().put(CERRAR, "cerrar");
-        } else if (!v.pantalla().equals(V_TODO)) {
+        // 1.12.1: sin Cerrar en la portada (Esc cierra); Volver en las subvistas que no confirman nada.
+        if (v.pantalla().equals(V_DINERO) || v.pantalla().equals(V_CONTRATOS)) {
             inv.setItem(SALIR, Marco.volver("al Mercado"));
             v.acciones().put(SALIR, "volver");
+        } else if (v.pantalla().equals(V_ELEGIR)) {
+            inv.setItem(SALIR, Marco.volver("a tus contratos"));
+            v.acciones().put(SALIR, "volver-contratos");
         }
         Marco.rellenar(inv);
     }
 
-    /** Pone las cosas centradas en la fila que empieza en base (columnas de Marco). */
-    private static void enFila(Inventory inv, int base, List<ItemStack> cosas, List<String> acciones, Map<Integer, String> mapa) {
-        int[] cols = Marco.columnas(Math.min(Marco.COLUMNAS, cosas.size()));
-        for (int i = 0; i < cols.length; i++) {
-            inv.setItem(base + cols[i], cosas.get(i));
-            if (acciones != null && acciones.get(i) != null) mapa.put(base + cols[i], acciones.get(i));
-        }
+    /** Las casillas de n cosas en la fila del medio, centradas (columnas de Marco). */
+    static int[] casillasFila(int n) {
+        int[] cols = Marco.columnas(Math.min(Marco.COLUMNAS, Math.max(0, n)));
+        int[] out = new int[cols.length];
+        for (int i = 0; i < cols.length; i++) out[i] = FILA + cols[i];
+        return out;
     }
 
     /**
-     * Las casillas de n tipos en las filas de venta, como la rejilla de la pescaderia: de 7 en 7 y la
-     * ultima fila centrada (con aire si caben pocos: Marco.columnas). Hasta MAX_GRUPOS.
+     * Calamity 1.12.1 · Un tipo de lo que llevas, reducido a lo que decide donde va: su grado, su especial,
+     * si son las Esencias y lo que vale (en Esencias, con las MobCoins como desempate).
      */
-    static int[] casillasVenta(int n) {
-        int total = Math.max(0, Math.min(MAX_GRUPOS, n));
-        int[] out = new int[total];
-        int k = 0;
-        for (int fila = 0; k < total; fila++) {
-            int enFila = Math.min(Marco.COLUMNAS, total - k);
-            for (int c : Marco.columnas(enFila)) out[k++] = FILA_VENTA + fila * 9 + c;
+    record Tipo(int grado, String especial, boolean esencias, double valor, long mc) {
+    }
+
+    /** El orden de la fila: grado I a IV, luego las especiales (Campana, Lagrima, Sello, Eclipsada), luego las Esencias. */
+    static int orden(Tipo t) {
+        if (t.esencias()) return 100;
+        if (t.especial() != null) {
+            int i = List.of(Reliquias.CAMPANA, Reliquias.LAGRIMA, Reliquias.SELLO, Reliquias.ECLIPSADA).indexOf(t.especial());
+            return 10 + (i < 0 ? 9 : i) * 5 + t.grado();
         }
-        return out;
+        return t.grado();
+    }
+
+    /**
+     * Que tipos salen en la fila y en que orden (indices de "tipos"). Si caben todos (7), todos, en orden. Si
+     * no, los de mas valor (los 6 primeros: la septima casilla dice cuantos faltan), en orden. Puro.
+     */
+    static List<Integer> visibles(List<Tipo> tipos) {
+        List<Integer> idx = new ArrayList<>();
+        for (int i = 0; i < tipos.size(); i++) idx.add(i);
+        if (tipos.size() > MAX_TIPOS) {
+            idx.sort((a, b) -> {
+                int c = Double.compare(tipos.get(b).valor(), tipos.get(a).valor());
+                return c != 0 ? c : Long.compare(tipos.get(b).mc(), tipos.get(a).mc());
+            });
+            idx = new ArrayList<>(idx.subList(0, MAX_TIPOS - 1));
+        }
+        idx.sort((a, b) -> {
+            int c = Integer.compare(orden(tipos.get(a)), orden(tipos.get(b)));
+            return c != 0 ? c : Integer.compare(a, b);
+        });
+        return idx;
     }
 
     /** "1 Reliquia", "3 Reliquias". */
@@ -229,40 +250,55 @@ final class MenuTasador implements Listener {
 
     private void portada(Inventory inv, Player p, Vista v) {
         Tasacion tas = hc.tasacion();
-        Tasacion.Oferta o = tas == null ? null : hc.valor("tasacion", () -> tas.oferta(p), null);
+        Tasacion.Oferta o = null;
+        boolean fallo = false;
+        if (tas != null) {
+            try {
+                o = tas.oferta(p);
+            } catch (Throwable t) {
+                // 1.12.1: antes un fallo aqui se veia como "No llevas nada que Oren compre" (Dosa, con seis
+                // Reliquias encima). Ahora se dice y queda en el log.
+                fallo = true;
+                hc.plugin().getLogger().log(java.util.logging.Level.WARNING,
+                        "[Calamity] Oren no pudo mirar el inventario de " + p.getName(), t);
+            }
+        }
         boolean puede = tas != null && tas.puedeVender(p);
-        if (o == null || o.vacia()) {
-            inv.setItem(FILA_VENTA + 4, Marco.icono(Material.BUNDLE, Component.text("No llevas nada que Oren compre", Paleta.TENUE),
-                    List.of(Marco.tenue("Oren compra las Reliquias y las"), Marco.tenue("Esencias que sacas de Calamity."),
-                            Component.empty(), Marco.tenue("Salen de los mobs, los cofres"),
-                            Marco.tenue("y los minijefes.")), false));
+        if (fallo || tas == null) {
+            inv.setItem(CENTRO, Marco.icono(Material.BARRIER, Component.text("Oren no puede tasar ahora", Paleta.AVISO),
+                    List.of(Marco.tenue("No ha podido mirar lo que llevas."), Marco.tenue("Avisa al staff.")), false));
+        } else if (o == null || o.vacia()) {
+            boolean sinCompra = tas.reliquiasEncima(p).size() > 0;
+            inv.setItem(CENTRO, Marco.icono(Material.PAPER, Component.text(sinCompra ? "Oren no compra Reliquias ahora"
+                            : "No llevas nada que Oren compre", Paleta.TENUE),
+                    sinCompra ? List.of(Marco.tenue("Las Reliquias están apagadas."), Marco.tenue("Guárdalas para más tarde."))
+                            : List.of(Marco.tenue("Oren compra las Reliquias y las"), Marco.tenue("Esencias que sacas de Calamity.")),
+                    false));
         } else {
             List<Tasacion.Grupo> grupos = o.grupos();
-            int[] casillas = casillasVenta(grupos.size());
-            for (int i = 0; i < casillas.length; i++) {
-                Tasacion.Grupo g = grupos.get(i);
-                boolean ultimoDeMas = i == casillas.length - 1 && grupos.size() > MAX_GRUPOS;
-                if (ultimoDeMas) {
-                    inv.setItem(casillas[i], Marco.icono(Material.BUNDLE, Component.text("Y " + (grupos.size() - i) + " tipos más",
-                            Reliquias.AMBAR), List.of(Marco.tenue("No caben aquí: se venden"), Marco.tenue("con Vender todo.")), false));
-                    continue;
-                }
+            List<Tipo> tipos = new ArrayList<>();
+            for (Tasacion.Grupo g : grupos) {
+                Tasacion.Cuenta k = g.cuenta();
+                tipos.add(new Tipo(g.grado(), g.especial(), g.esencias(), k == null ? g.cantidad() : k.esencias, k == null ? 0 : k.mc));
+            }
+            List<Integer> ver = visibles(tipos);
+            boolean faltan = ver.size() < grupos.size();
+            int[] casillas = casillasFila(ver.size() + (faltan ? 1 : 0));
+            for (int i = 0; i < ver.size(); i++) {
+                Tasacion.Grupo g = grupos.get(ver.get(i));
                 inv.setItem(casillas[i], botonGrupo(g, o, puede));
                 // 1.12: si hoy no se lleva ninguna (tope lleno), el clic no hace nada.
                 if (puede && g.compra() > 0) v.acciones().put(casillas[i], "vender:" + g.clave());
             }
+            if (faltan) {
+                inv.setItem(casillas[casillas.length - 1], Marco.icono(Material.BUNDLE, Component.text("Y "
+                                + (grupos.size() - ver.size()) + " tipos más", Paleta.TEXTO),
+                        List.of(Marco.tenue("No caben aquí: se venden"), Marco.tenue("con Vender todo.")), false));
+            }
         }
-        inv.setItem(TOPES, topes(p, o));
-        botonTodo(inv, o, puede, v);
-        inv.setItem(AYUDA, Marco.ayuda(hc));
-        botonDinero(inv, p, v);
         botonContratos(inv, p, v);
-        botonCamino(inv, p, v);
-        boolean altar = Marco.altarAbierto(hc, p);
-        Marco.enlace(inv, v.acciones(), IR_ALTAR, Marco.UMBRAL, Material.ENCHANTING_TABLE, "Altar del Umbral",
-                List.of("Frascos, Cristales de Regreso,", "Tinturas y la Llave del Caos."), altar);
-        Marco.enlace(inv, v.acciones(), IR_FORJA, Marco.FORJA, Material.ANVIL, "La Forja",
-                List.of("El Manto, el Vestigio del Eco,", "la Guadaña y sus mejoras."), altar);
+        botonTodo(inv, p, o, puede, v);
+        botonDinero(inv, p, v);
     }
 
     /**
@@ -341,18 +377,20 @@ final class MenuTasador implements Listener {
         return DateTimeFormatter.ofPattern("dd/MM").format(Instant.ofEpochMilli(millis).atZone(zona));
     }
 
-    /** Vender todo: el total, lo que la Aduana pagaria hoy y los extras; el clic abre la confirmacion. */
-    private void botonTodo(Inventory inv, Tasacion.Oferta o, boolean puede, Vista v) {
+    /**
+     * Vender todo: el total, lo que la Aduana pagaria hoy y los extras, y debajo los topes de hoy (1.12.1:
+     * antes eran un boton aparte); el clic abre la confirmacion.
+     */
+    private void botonTodo(Inventory inv, Player p, Tasacion.Oferta o, boolean puede, Vista v) {
         List<Component> lore = new ArrayList<>();
-        if (o == null || o.vacia()) {
-            lore.add(Marco.tenue("No llevas nada que Oren compre."));
-            inv.setItem(VENDER_TODO, Marco.icono(Material.EMERALD, Component.text("Vender todo", Paleta.TENUE), lore, false));
-            return;
-        }
-        lore.addAll(resumen(o, null));
+        boolean compra = o != null && !o.vacia() && o.compra() > 0;
+        if (o == null || o.vacia()) lore.add(Marco.tenue("No llevas nada que Oren compre."));
+        else lore.addAll(resumen(o, null));
         lore.add(Component.empty());
-        boolean compra = o.compra() > 0;
-        if (!puede) lore.add(Marco.porQueNo("Oren solo compra en el spawn."));
+        lore.addAll(topes(p, o));
+        lore.add(Component.empty());
+        if (o == null || o.vacia()) lore.add(Marco.tenue("Tráele Reliquias o Esencias."));
+        else if (!puede) lore.add(Marco.porQueNo("Oren solo compra en el spawn."));
         else if (!compra) lore.add(Marco.porQueNo("Hoy ya no te compra nada más."));
         else lore.add(Marco.accion("Clic para ver el resumen"));
         inv.setItem(VENDER_TODO, Marco.icono(Material.EMERALD, Component.text("Vender todo", puede && compra ? Marco.SI : Paleta.TENUE),
@@ -391,8 +429,8 @@ final class MenuTasador implements Listener {
         return lore;
     }
 
-    /** Topes de hoy: las Astillas y Fragmentos que aun pagan y la Aduana de las MobCoins. */
-    private ItemStack topes(Player p, Tasacion.Oferta o) {
+    /** Topes de hoy, en lineas para el lore de Vender todo: las Astillas y Fragmentos que aun paga y la Aduana. */
+    private List<Component> topes(Player p, Tasacion.Oferta o) {
         Tasacion.Valores val = Tasacion.Valores.de(hc.cfg());
         Reliquias rel = hc.reliquias();
         int ya1 = o == null ? 0 : o.ya1(), ya2 = o == null ? 0 : o.ya2();
@@ -405,33 +443,22 @@ final class MenuTasador implements Listener {
             }
         }
         List<Component> lore = new ArrayList<>();
-        lore.add(Marco.tenue("Lo que Oren aún te paga hoy."));
-        lore.add(Component.empty());
+        lore.add(Marco.tenue("Topes de hoy:"));
         String n1 = rel == null ? "Astilla del Umbral" : rel.nombreDe(1, null, null);
         String n2 = rel == null ? "Fragmento de Nana" : rel.nombreDe(2, null, null);
-        lore.add(fila(n1 + " (I)", "te quedan " + Math.max(0, val.topeDia()[1] - ya1) + " de " + val.topeDia()[1]));
-        lore.add(fila(n2 + " (II)", "te quedan " + Math.max(0, val.topeDia()[2] - ya2) + " de " + val.topeDia()[2]));
-        lore.add(Marco.tenue("Las de grado III y IV no tienen tope."));
-        boolean queda = ya1 < val.topeDia()[1] || ya2 < val.topeDia()[2];
+        lore.add(fila(" " + n1, "te quedan " + Math.max(0, val.topeDia()[1] - ya1) + " de " + val.topeDia()[1]));
+        lore.add(fila(" " + n2, "te quedan " + Math.max(0, val.topeDia()[2] - ya2) + " de " + val.topeDia()[2]));
         Aduana ad = hc.aduana();
         if (ad != null) {
             long hoy = ad.mcHoy(p.getUniqueId());
             List<Tramo> tramos = tramosHoy(hoy, ad.tramos());
             long escala = escala(tramos);
-            lore.add(Component.empty());
-            lore.add(Marco.tenue("MobCoins (la Aduana):"));
-            lore.add(fila(" Cobradas hoy", Altar.miles(hoy) + (escala > 0 ? " de " + Altar.miles(escala) : "")));
-            if (tramos.isEmpty()) lore.add(Component.text(" Hoy ya no te paga más.", Paleta.AVISO));
-            for (Tramo t : tramos) {
-                String que = t.hasta() >= 100_000 ? "desde " + Altar.miles(t.desde()) + ", sin tope"
-                        : t.quedan() > 0 ? "te quedan " + Altar.miles(t.quedan()) : "agotado";
-                lore.add(fila(" Al " + Marco.porcentaje(t.factor()), que));
-            }
+            lore.add(fila(" MobCoins cobradas", Altar.miles(hoy) + (escala > 0 ? " de " + Altar.miles(escala) : "")));
+            if (tramos.isEmpty()) lore.add(Component.text(" Hoy la Aduana ya no paga más.", Paleta.AVISO));
         }
-        lore.add(Component.empty());
-        lore.add(Marco.tenue("Las Esencias no tienen tope."));
+        lore.add(Marco.tenue("Grado III y IV y Esencias, sin tope."));
         lore.add(Marco.tenue("Todo vuelve a cero a medianoche."));
-        return Marco.icono(Material.CLOCK, Component.text("Topes de hoy", Paleta.DETALLE), lore, queda);
+        return lore;
     }
 
     /** Tu dinero: el saldo, las MobCoins, los Sellos, Marcas y Fragmentos, los premios y la semana. */
@@ -473,56 +500,45 @@ final class MenuTasador implements Listener {
         v.acciones().put(DINERO, "ver:" + V_DINERO);
     }
 
-    /** Contratos de hoy: cada uno en una linea con lo que llevas, y los de la semana. */
+    /** Contratos de hoy: cada uno en una linea con como va, los activos y los de la semana. */
     private void botonContratos(Inventory inv, Player p, Vista v) {
         UUID u = p.getUniqueId();
         Contratos con = hc.contratos();
         List<Component> lore = new ArrayList<>();
         if (con == null || !hc.valor("contratos", con::activo, false)) {
             lore.add(Marco.tenue("Oren no tiene contratos ahora mismo."));
-            inv.setItem(CONTRATOS, Marco.icono(Material.PAPER, Component.text("Contratos de hoy", Paleta.TENUE), lore, false));
+            inv.setItem(CONTRATOS, Marco.icono(Material.PAPER, Component.text("Contratos", Paleta.TENUE), lore, false));
             return;
         }
         boolean papel = hc.valor("contratos", con::pergaminoActivo, false);
-        if (papel) {
-            // 1.10: cada contrato es un pergamino que se lleva dentro y se cobra al cumplirlo.
-            lore.add(Marco.texto("Encargos de Oren que cambian"));
-            lore.add(Marco.texto("cada día. Lleva su pergamino en"));
-            lore.add(Marco.texto("Calamity y se cobra al cumplirlo."));
-            lore.add(Marco.tenue("Si mueres, vuelve a empezar."));
-        } else {
-            lore.add(Marco.texto("Encargos de Oren que cambian"));
-            lore.add(Marco.texto("cada día. Se cobran al salir vivo;"));
-            lore.add(Marco.texto("si mueres, vuelven a empezar."));
-            lore.add(Marco.tenue("Lo cobrado va a tu saldo y se queda."));
-        }
+        lore.add(Marco.texto("Encargos de Oren que cambian"));
+        lore.add(Marco.texto(papel ? "cada día. Acepta los que quieras." : "cada día. Se cobran al salir vivo."));
         lore.add(Component.empty());
         List<Contratos.Estado> lista = hc.valor("contratos", () -> con.estados(p), List.of());
-        // Dentro, un contrato sin su pergamino es algo que hacer ya: el boton brilla.
-        Set<Integer> lleva = papel ? hc.valor("contratos", () -> con.llevados(p), Set.<Integer>of()) : Set.of();
-        boolean dentro = hc.esHardcore(p);
         boolean listo = false;
         for (Contratos.Estado e : lista) {
             Contratos.Def d = e.def();
             Component l = Component.text("· " + d.texto() + "  ", e.cobrado() ? Paleta.TENUE : Paleta.TEXTO);
             if (e.cobrado()) l = l.append(Component.text("cobrado", Paleta.TENUE));
             else if (e.cumplido()) l = l.append(Component.text("cumplido", Paleta.BIEN));
+            else if (papel && e.oferta()) l = l.append(Component.text("oferta", Paleta.DETALLE));
             else l = l.append(Component.text(Math.min(e.progreso(), d.objetivo()) + "/" + d.objetivo(), Paleta.CIFRA));
             lore.add(l);
             listo |= e.cumplido() && !e.cobrado();
-            listo |= papel && dentro && !e.cumplido() && !e.cobrado() && !lleva.contains(e.hueco());
+            listo |= papel && e.oferta();
         }
         if (lista.isEmpty()) lore.add(Marco.tenue("Hoy no tienes ninguno."));
+        if (papel) lore.add(fila("Activos", hc.valor("contratos", () -> con.activosDe(p), 0) + " de " + con.activosMax()));
         int[] semana = con.semanaDe(u);
         lore.add(fila("Esta semana", Math.min(semana[0], semana[1]) + " de " + semana[1]));
         lore.add(Component.empty());
-        lore.add(Marco.accion("Clic para verlos o cambiarlos"));
-        inv.setItem(CONTRATOS, Marco.icono(Material.PAPER, Component.text("Contratos de hoy", Paleta.DETALLE), lore, listo));
+        lore.add(Marco.accion(papel ? "Clic para verlos y aceptarlos" : "Clic para verlos o cambiarlos"));
+        inv.setItem(CONTRATOS, Marco.icono(Material.PAPER, Component.text("Contratos", Paleta.DETALLE), lore, listo));
         v.acciones().put(CONTRATOS, "ver:" + V_CONTRATOS);
     }
 
-    /** Tu camino: las horas activas y el proximo hito; el clic abre el menu del Camino. */
-    private void botonCamino(Inventory inv, Player p, Vista v) {
+    /** Tu camino (en Tu dinero desde la 1.12.1): las horas activas y el proximo hito; el clic abre el Camino. */
+    private ItemStack camino(Player p, Vista v, int casilla) {
         Altar a = hc.altar();
         Camino cam = a == null ? null : a.camino();
         List<Component> lore = new ArrayList<>();
@@ -538,43 +554,41 @@ final class MenuTasador implements Listener {
         }
         lore.add(Component.empty());
         lore.add(cam != null ? Marco.accion("Clic para verlo") : Marco.tenue("Ahora mismo no se puede ver."));
-        inv.setItem(CAMINO, Marco.icono(Material.COMPASS, Component.text("Tu camino", cam != null ? Paleta.DETALLE : Paleta.TENUE),
-                lore, false));
-        if (cam != null) v.acciones().put(CAMINO, "camino");
+        if (cam != null) v.acciones().put(casilla, "camino");
+        return Marco.icono(Material.COMPASS, Component.text("Tu camino", cam != null ? Paleta.DETALLE : Paleta.TENUE), lore, false);
     }
 
     // ------------------------------------------------------------------ vender todo: confirmar
 
-    /** Lo que vendes (13) y lo que recibes (22); No a la izquierda y Si a la derecha, como Cambiar contrato. */
+    /** Lo que vendes y lo que recibes en el centro (13); No a la izquierda (11) y Si a la derecha (15). */
     private void vistaTodo(Inventory inv, Player p, Vista v) {
         Tasacion tas = hc.tasacion();
         Tasacion.Oferta o = tas == null ? null : hc.valor("tasacion", () -> tas.oferta(p), null);
         if (o == null || o.vacia()) {
-            inv.setItem(13, Marco.icono(Material.BUNDLE, Component.text("Ya no llevas nada que vender", Paleta.TENUE),
+            inv.setItem(CENTRO, Marco.icono(Material.PAPER, Component.text("Ya no llevas nada que vender", Paleta.TENUE),
                     List.of(Marco.tenue("Vuelve al Mercado.")), false));
         } else {
             List<Component> que = new ArrayList<>();
+            que.add(Marco.tenue("Le vendes a Oren:"));
             int n = 0;
             for (Tasacion.Grupo g : o.grupos()) {
-                if (n++ >= 10) {
-                    que.add(Marco.tenue("y " + (o.grupos().size() - 10) + " tipos más"));
+                if (n++ >= 8) {
+                    que.add(Marco.tenue("y " + (o.grupos().size() - 8) + " tipos más"));
                     break;
                 }
                 que.add(lineaTodo(g));
             }
-            inv.setItem(13, Marco.icono(Material.CHEST, Component.text("Le vendes a Oren", Paleta.TEXTO), que, false));
-            inv.setItem(22, Marco.icono(Material.EMERALD, Component.text("Recibes: ", Paleta.TEXTO)
-                    .append(Component.text(paga((long) o.pagaEsencias() + o.esencias(), o.pagaMc()), Marco.SI)), resumen(o, p), true));
+            que.add(Component.empty());
+            que.addAll(resumen(o, p));
+            inv.setItem(CENTRO, Marco.icono(Material.CHEST, Component.text("Recibes: ", Paleta.TEXTO)
+                    .append(Component.text(paga((long) o.pagaEsencias() + o.esencias(), o.pagaMc()), Marco.SI)), que, false));
         }
-        ItemStack no = Marco.icono(Material.RED_CONCRETE, Component.text("No, déjalo", Marco.NO),
+        inv.setItem(NO, Marco.icono(Material.RED_CONCRETE, Component.text("No, déjalo", Marco.NO),
                 List.of(Marco.tenue("Vuelves al Mercado sin"), Marco.tenue("vender nada."), Component.empty(),
-                        Marco.accion("Clic para volver")), false);
-        for (int c : new int[]{28, 29, 30}) {
-            inv.setItem(c, no);
-            v.acciones().put(c, "no-todo");
-        }
+                        Marco.accion("Clic para volver")), false));
+        v.acciones().put(NO, "no-todo");
         if (o != null && !o.vacia() && o.compra() > 0) {
-            List<Component> siLore = new ArrayList<>(List.of(Marco.tenue("Oren se queda lo de arriba"),
+            List<Component> siLore = new ArrayList<>(List.of(Marco.tenue("Oren se queda lo del centro"),
                     Marco.tenue("y te paga al momento.")));
             if (o.quedan() > 0) {
                 siLore.add(Marco.tenue("Lo que pasa del tope de hoy"));
@@ -582,13 +596,9 @@ final class MenuTasador implements Listener {
             }
             siLore.add(Component.empty());
             siLore.add(Marco.accion("Clic para vender"));
-            ItemStack si = Marco.icono(Material.LIME_CONCRETE, Component.text("Sí, véndeselo todo", Marco.SI), siLore, false);
             // Lo que se ensena va en la accion: si al confirmar ya no es lo mismo, no se vende a ciegas.
-            String firma = firma(o);
-            for (int c : new int[]{32, 33, 34}) {
-                inv.setItem(c, si);
-                v.acciones().put(c, "si-todo:" + firma);
-            }
+            inv.setItem(SI, Marco.icono(Material.LIME_CONCRETE, Component.text("Sí, véndeselo todo", Marco.SI), siLore, false));
+            v.acciones().put(SI, "si-todo:" + firma(o));
         }
     }
 
@@ -645,17 +655,20 @@ final class MenuTasador implements Listener {
         return cal.dia().equals(hc.datos().getString("primera-extraccion." + u, ""));
     }
 
+    /** 1.12.1: una sola fila, centrada: saldo, premios, lo vendido, primera salida, Racha y Tu camino. */
     private void vistaDinero(Inventory inv, Player p, Vista v) {
         UUID u = p.getUniqueId();
-        // Fila de arriba: el saldo (clic: ingresar lo fisico), los premios (clic: recogerlos) y la semana.
-        Marco.saldo(inv, v.acciones(), hc, p, FILA_A + 2);
-        inv.setItem(FILA_A + 4, premios(p, v, FILA_A + 4));
-        inv.setItem(FILA_A + 6, semana(u));
-
-        // Fila de abajo: la primera salida de hoy y la Racha, si hay.
-        List<ItemStack> abajo = new ArrayList<>();
         Tasacion.Valores val = Tasacion.Valores.de(hc.cfg());
         Boolean cobrada = primeraCobrada(u);
+        Racha racha = hc.racha();
+        boolean conRacha = racha != null && racha.activa();
+        int n = 4 + (cobrada != null ? 1 : 0) + (conRacha ? 1 : 0);
+        int[] c = casillasFila(n);
+        int k = 0;
+        Marco.saldo(inv, v.acciones(), hc, p, c[k++]);
+        int cp = c[k++];
+        inv.setItem(cp, premios(p, v, cp));
+        inv.setItem(c[k++], semana(u));
         if (cobrada != null) {
             List<Component> lore = new ArrayList<>();
             if (cobrada) {
@@ -670,11 +683,10 @@ final class MenuTasador implements Listener {
                 lore.add(Component.empty());
                 lore.add(Marco.tenue("Solo paga la primera salida de cada día."));
             }
-            abajo.add(Marco.icono(Material.CLOCK, Component.text(cobrada ? "Primera salida: ya cobrada" : "Primera salida: aún paga",
+            inv.setItem(c[k++], Marco.icono(Material.CLOCK, Component.text(cobrada ? "Primera salida: ya cobrada" : "Primera salida: aún paga",
                     cobrada ? Paleta.TENUE : Paleta.BIEN), lore, !cobrada));
         }
-        Racha racha = hc.racha();
-        if (racha != null && racha.activa()) {
+        if (conRacha) {
             int r = racha.de(u);
             double porPunto = hc.cfg().getDouble("racha.por-punto", 0.10);
             String por = "×" + Marco.numero(Math.round(Racha.factor(r, racha.tope(null), porPunto) * 100) / 100.0);
@@ -686,10 +698,11 @@ final class MenuTasador implements Listener {
             rl.add(Marco.tenue("más conseguida en esa misma"));
             rl.add(Marco.tenue("entrada a Calamity."));
             rl.add(Marco.tenue("Si mueres, vuelve a 0."));
-            abajo.add(Marco.icono(Material.BLAZE_POWDER, Component.text("Tu Racha de Codicia: ", Paleta.TEXTO)
+            inv.setItem(c[k++], Marco.icono(Material.BLAZE_POWDER, Component.text("Tu Racha de Codicia: ", Paleta.TEXTO)
                     .append(Component.text(r, Paleta.CIFRA)), rl, r > 0));
         }
-        enFila(inv, FILA_B, abajo, null, v.acciones());
+        int cc = c[k];
+        inv.setItem(cc, camino(p, v, cc));
     }
 
     private ItemStack premios(Player p, Vista v, int casilla) {
@@ -789,28 +802,36 @@ final class MenuTasador implements Listener {
         };
     }
 
+    /**
+     * Calamity 1.12.1 · Los contratos de hoy en la fila del medio. Una oferta se acepta con un clic (y llega
+     * su pergamino); uno aceptado cuyo pergamino no llevas, con un clic Oren te da otra copia; todo en el
+     * spawn de Calamity. Abajo: la semana, Volver y Cambiar uno (con su confirmacion: un toque en un contrato
+     * nunca lo cambia).
+     */
     private void vistaContratos(Inventory inv, Player p, Vista v) {
         UUID u = p.getUniqueId();
         Contratos con = hc.contratos();
         if (con == null || !hc.valor("contratos", con::activo, false)) {
-            inv.setItem(FILA_A + 4, Marco.icono(Material.PAPER, Component.text("Oren no tiene contratos ahora", Paleta.TENUE),
+            inv.setItem(CENTRO, Marco.icono(Material.PAPER, Component.text("Oren no tiene contratos ahora", Paleta.TENUE),
                     List.of(Marco.tenue("Vuelve más adelante.")), false));
             return;
         }
         List<Contratos.Estado> lista = hc.valor("contratos", () -> con.estados(p), List.of());
         int precio = con.precioCambio(u), gratis = con.cambiosGratis(u);
         boolean papel = hc.valor("contratos", con::pergaminoActivo, false);
-        boolean dentro = hc.esHardcore(p);
+        boolean lugar = hc.valor("contratos", () -> con.lugarParaAceptar(p), false);
+        int activos = hc.valor("contratos", () -> con.activosDe(p), 0), max = con.activosMax();
         Set<Integer> lleva = papel ? hc.valor("contratos", () -> con.llevados(p), Set.<Integer>of()) : Set.of();
-        int n = Math.min(Marco.COLUMNAS, lista.size());
-        int[] cols = Marco.columnas(n);
-        for (int k = 0; k < n; k++) {
+        int[] casillas = casillasFila(lista.size());
+        boolean hayCambiable = false;
+        for (int k = 0; k < casillas.length; k++) {
             Contratos.Estado e = lista.get(k);
             Contratos.Def d = e.def();
-            boolean pendiente = !e.cumplido() && !e.cobrado();
+            hayCambiable |= !e.cumplido() && !e.cobrado();
             List<Component> lore = new ArrayList<>();
-            lore.add(Marco.barra(e.progreso(), d.objetivo()));
+            if (!e.oferta() || !papel) lore.add(Marco.barra(e.progreso(), d.objetivo()));
             lore.add(fila("Paga", Contratos.premio(d)));
+            lore.add(fila("Dura", "hasta la medianoche"));
             if (d.corto()) lore.add(Marco.tenue("Es corto: se hace en una entrada rápida."));
             lore.add(Marco.tenue(!papel ? "Se cobra al salir vivo." : Contratos.seCobraAlSalir(d) ? Pergaminos.COBRO_VENTA
                     : Pergaminos.COBRO_DENTRO));
@@ -820,35 +841,40 @@ final class MenuTasador implements Listener {
             if (e.cobrado()) {
                 lore.add(Marco.tiene("Ya lo cobraste."));
             } else if (e.cumplido()) {
-                lore.add(Component.text("Cumplido: lo cobras al salir vivo.", Paleta.CIFRA));
+                lore.add(Component.text("Cumplido: se cobra al venderlas.", Paleta.CIFRA));
             } else if (!papel) {
                 lore.add(Marco.tenue("Si mueres, vuelve a empezar."));
-            } else if (!dentro) {
-                lore.add(Marco.tenue("Los pergaminos se entregan en Calamity."));
+            } else if (e.oferta()) {
+                lore.add(Marco.tenue("Al aceptarlo te da su pergamino:"));
+                lore.add(Marco.tenue("llévalo encima para que cuente."));
+                if (!lugar) lore.add(Marco.porQueNo("Se acepta con Oren, en el spawn."));
+                else if (activos >= max) lore.add(Marco.porQueNo("Ya llevas " + max + " activos."));
+                else {
+                    lore.add(Marco.accion("Clic para aceptarlo"));
+                    accion = "p:" + e.hueco();
+                }
             } else if (lleva.contains(e.hueco())) {
-                lore.add(Marco.tiene("Llevas su pergamino."));
+                lore.add(Marco.tiene("Aceptado: llevas su pergamino."));
+            } else if (!con.recuperarPerdido()) {
+                lore.add(Component.text("Perdiste su pergamino.", Paleta.AVISO));
+                lore.add(Marco.tenue("Oren no da otro: puedes cambiarlo."));
+            } else if (!lugar) {
+                lore.add(Component.text("No llevas su pergamino.", Paleta.AVISO));
+                lore.add(Marco.tenue("Oren te da otro en el spawn."));
             } else {
-                lore.add(Marco.accion("Clic para recibir su pergamino"));
+                lore.add(Component.text("No llevas su pergamino.", Paleta.AVISO));
+                lore.add(Marco.accion("Clic para pedirle otro"));
                 accion = "p:" + e.hueco();
             }
-            TextColor color = e.cobrado() ? Paleta.TENUE : e.cumplido() ? Paleta.BIEN : Paleta.TEXTO;
+            TextColor color = e.cobrado() ? Paleta.TENUE : e.cumplido() ? Paleta.BIEN : e.oferta() ? Paleta.TEXTO : Paleta.DETALLE;
             Material icono = e.cobrado() ? Material.MAP : iconoContrato(d.evento());
-            inv.setItem(FILA_A + cols[k], Marco.icono(icono, Component.text(d.texto(), color), lore,
+            inv.setItem(casillas[k], Marco.icono(icono, Component.text(d.texto(), color), lore,
                     (e.cumplido() && !e.cobrado()) || accion != null));
-            if (accion != null) v.acciones().put(FILA_A + cols[k], accion);
-            // Cambiar va aparte, justo debajo: un toque en el contrato nunca lo cambia sin querer.
-            if (pendiente) {
-                inv.setItem(FILA_B + cols[k], Marco.icono(Material.FEATHER, Component.text("Cambiar contrato", Paleta.DETALLE),
-                        List.of(Marco.tenue("Oren te da otro encargo"), Marco.tenue("en su lugar. Pierdes lo que"),
-                                Marco.tenue("llevas hecho de este."), Component.empty(),
-                                Marco.accion(precio == 0 ? "Clic para cambiarlo (gratis)"
-                                        : "Clic para cambiarlo (" + Marco.esencias(precio) + ")")), false));
-                v.acciones().put(FILA_B + cols[k], "c:" + e.hueco());
-            }
+            if (accion != null) v.acciones().put(casillas[k], accion);
         }
         if (lista.isEmpty()) {
-            inv.setItem(FILA_A + 4, Marco.icono(Material.PAPER, Component.text("Hoy no tienes contratos", Paleta.TENUE),
-                    List.of(Marco.tenue("Vuelve a mirar cuando salgas de Calamity.")), false));
+            inv.setItem(CENTRO, Marco.icono(Material.PAPER, Component.text("Hoy no tienes contratos", Paleta.TENUE),
+                    List.of(Marco.tenue("Vuelve a mirar mañana.")), false));
         }
 
         int[] semana = con.semanaDe(u);
@@ -856,16 +882,54 @@ final class MenuTasador implements Listener {
         sl.add(Marco.barra(semana[0], semana[1]));
         sl.add(Marco.texto("Si cobras " + semana[1] + " en la semana,"));
         sl.add(Marco.texto("Oren te da la Llave del Caos."));
-        sl.add(Component.empty());
-        sl.add(Marco.tenue(gratis > 0 ? "Hoy te " + (gratis == 1 ? "queda 1 cambio gratis." : "quedan " + gratis + " cambios gratis.")
-                : "Cambiar uno cuesta " + Marco.esencias(precio) + "."));
-        inv.setItem(FILA_C + 4, Marco.icono(Material.TRIAL_KEY, Component.text("Contratos de la semana: ", Paleta.TEXTO)
+        if (papel) {
+            sl.add(Component.empty());
+            sl.add(fila("Activos", activos + " de " + max));
+            sl.add(Marco.tenue("Un aceptado ocupa su sitio hasta"));
+            sl.add(Marco.tenue("cobrarlo, aunque pierdas el papel."));
+        }
+        inv.setItem(SEMANA, Marco.icono(Material.TRIAL_KEY, Component.text("Esta semana: ", Paleta.TEXTO)
                 .append(Component.text(Math.min(semana[0], semana[1]) + "/" + semana[1], Paleta.CIFRA)), sl, semana[0] >= semana[1]));
+
+        List<Component> cl = new ArrayList<>();
+        cl.add(Marco.tenue("Oren te da otro encargo en lugar"));
+        cl.add(Marco.tenue("de uno de estos. Pierdes lo que"));
+        cl.add(Marco.tenue("llevas hecho de ese."));
+        cl.add(Component.empty());
+        cl.add(Marco.tenue(gratis > 0 ? "Hoy te " + (gratis == 1 ? "queda 1 cambio gratis." : "quedan " + gratis + " cambios gratis.")
+                : "Cambiar uno cuesta " + Marco.esencias(precio) + "."));
+        cl.add(hayCambiable ? Marco.accion("Clic para elegir cuál") : Marco.tenue("Ahora no hay ninguno que cambiar."));
+        inv.setItem(CAMBIAR, Marco.icono(Material.FEATHER, Component.text("Cambiar un contrato", hayCambiable ? Paleta.DETALLE : Paleta.TENUE),
+                cl, false));
+        if (hayCambiable) v.acciones().put(CAMBIAR, "ver:" + V_ELEGIR);
+    }
+
+    /** Cambiar un contrato, paso 1: los que se pueden cambiar en la fila del medio; un clic abre la confirmacion. */
+    private void vistaElegir(Inventory inv, Player p, Vista v) {
+        Contratos con = hc.contratos();
+        List<Contratos.Estado> lista = new ArrayList<>();
+        if (con != null) {
+            for (Contratos.Estado e : hc.valor("contratos", () -> con.estados(p), List.<Contratos.Estado>of())) {
+                if (!e.cumplido() && !e.cobrado()) lista.add(e);
+            }
+        }
+        if (lista.isEmpty()) {
+            inv.setItem(CENTRO, Marco.icono(Material.PAPER, Component.text("No hay ninguno que cambiar", Paleta.TENUE),
+                    List.of(Marco.tenue("Los cumplidos y cobrados no se cambian.")), false));
+            return;
+        }
+        int[] casillas = casillasFila(lista.size());
+        for (int k = 0; k < casillas.length; k++) {
+            Contratos.Estado e = lista.get(k);
+            inv.setItem(casillas[k], Marco.icono(iconoContrato(e.def().evento()), Component.text(e.def().texto(), Paleta.TEXTO),
+                    List.of(Marco.barra(e.progreso(), e.def().objetivo()), Component.empty(), Marco.accion("Clic para cambiar este")), false));
+            v.acciones().put(casillas[k], "c:" + e.hueco());
+        }
     }
 
     // ------------------------------------------------------------------ cambiar un contrato
 
-    /** Confirmar el cambio de un contrato: dice que se pierde, si es gratis o lo que cuesta. */
+    /** Confirmar el cambio de un contrato: No (11), el contrato con lo que cuesta (13) y Si (15). */
     private void abrirCambiar(Player p, int hueco) {
         Contratos con = hc.contratos();
         if (con == null) return;
@@ -880,28 +944,27 @@ final class MenuTasador implements Listener {
         Vista v = new Vista(V_CAMBIAR, new HashMap<>(), hueco);
         Inventory inv = hc.plugin().getServer().createInventory(v, TAMANO, Marco.T_CAMBIAR.componente());
         int precio = con.precioCambio(p.getUniqueId());
-        inv.setItem(13, Marco.icono(iconoContrato(e.def().evento()), Component.text(e.def().texto(), Paleta.TEXTO),
-                List.of(Marco.barra(e.progreso(), e.def().objetivo()), Marco.tenue("Si lo cambias, pierdes lo que llevas hecho.")), false));
         Saldo s = hc.saldo();
         long saldo = s == null ? 0 : s.de(p.getUniqueId());
-        inv.setItem(22, precio == 0
-                ? Marco.icono(Material.LIME_DYE, Component.text("Gratis", Paleta.BIEN), List.of(Marco.tenue("Es tu cambio gratis de hoy.")), false)
-                : Marco.icono(Material.GHAST_TEAR, Component.text("Cuesta " + Marco.esencias(precio), Paleta.CIFRA),
-                List.of(fila("Tienes", Altar.miles(saldo)), fila("Te quedarían", Altar.miles(Math.max(0, saldo - precio)))), false));
-        ItemStack si = Marco.icono(Material.LIME_CONCRETE, Component.text("Sí, cámbialo", Marco.SI), List.of(
-                Marco.tenue("Oren te da otro encargo"), Marco.tenue("en su lugar."), Component.empty(),
-                Marco.accion("Clic para cambiarlo")), false);
-        ItemStack no = Marco.icono(Material.RED_CONCRETE, Component.text("No, déjalo", Marco.NO),
+        List<Component> lore = new ArrayList<>();
+        lore.add(Marco.barra(e.progreso(), e.def().objetivo()));
+        lore.add(Marco.tenue("Si lo cambias, pierdes lo que llevas."));
+        lore.add(Component.empty());
+        if (precio == 0) lore.add(Marco.tiene("Gratis: es tu cambio gratis de hoy."));
+        else {
+            lore.add(fila("Cuesta", Marco.esencias(precio)));
+            lore.add(fila("Tienes", Altar.miles(saldo)));
+            lore.add(fila("Te quedarían", Altar.miles(Math.max(0, saldo - precio))));
+        }
+        inv.setItem(CENTRO, Marco.icono(iconoContrato(e.def().evento()), Component.text(e.def().texto(), Paleta.TEXTO), lore, false));
+        inv.setItem(NO, Marco.icono(Material.RED_CONCRETE, Component.text("No, déjalo", Marco.NO),
                 List.of(Marco.tenue("Vuelves a tus contratos sin"), Marco.tenue("cambiar nada."), Component.empty(),
-                        Marco.accion("Clic para volver")), false);
-        for (int c : new int[]{28, 29, 30}) {
-            inv.setItem(c, no);
-            v.acciones().put(c, "no");
-        }
-        for (int c : new int[]{32, 33, 34}) {
-            inv.setItem(c, si);
-            v.acciones().put(c, "si");
-        }
+                        Marco.accion("Clic para volver")), false));
+        v.acciones().put(NO, "no");
+        inv.setItem(SI, Marco.icono(Material.LIME_CONCRETE, Component.text("Sí, cámbialo", Marco.SI), List.of(
+                Marco.tenue("Oren te da otro encargo en su"), Marco.tenue("lugar, como oferta: si lo quieres,"),
+                Marco.tenue("lo aceptas."), Component.empty(), Marco.accion("Clic para cambiarlo")), false));
+        v.acciones().put(SI, "si");
         Marco.rellenar(inv);
         p.openInventory(inv);
         Marco.sonar(p, "block.note_block.hat", 0.5f, 1.3f);
@@ -976,13 +1039,13 @@ final class MenuTasador implements Listener {
             return;
         }
         if (accion.startsWith("p:")) {
-            // 1.10: el pergamino de ese contrato. Si no se puede (lleno, fuera...), se le dice por que.
+            // 1.12.1: aceptar la oferta (o pedir otra copia del pergamino perdido). Si no, se le dice por que.
             int hueco = Integer.parseInt(accion.substring(2));
             Contratos con = hc.contratos();
             if (con == null) return;
-            // valor() cambia un null por el defecto: "" es "dado" y el defecto, un fallo del modulo.
+            // valor() cambia un null por el defecto: "" es "hecho" y el defecto, un fallo del modulo.
             String no = hc.valor("contratos", () -> {
-                String r = con.darDesdeMenu(p, hueco);
+                String r = con.pedirDesdeMenu(p, hueco);
                 return r == null ? "" : r;
             }, "Ahora mismo Oren no puede darte el pergamino.");
             if (no.isEmpty()) {
@@ -1001,6 +1064,10 @@ final class MenuTasador implements Listener {
             case "volver", "no-todo" -> {
                 Marco.sonar(p, "ui.button.click", 0.45f, 0.8f);
                 tarea(() -> abrirVista(p, PORTADA));
+            }
+            case "volver-contratos" -> {
+                Marco.sonar(p, "ui.button.click", 0.45f, 0.8f);
+                tarea(() -> abrirVista(p, V_CONTRATOS));
             }
             case "depositar" -> {
                 // El boton Depositar del Altar vive en el saldo: lo mismo, y solo fuera de Calamity.
@@ -1061,6 +1128,12 @@ final class MenuTasador implements Listener {
         return out;
     }
 
+    private static List<Integer> lista(int[] a) {
+        List<Integer> out = new ArrayList<>();
+        for (int x : a) out.add(x);
+        return out;
+    }
+
     static void autotest(Autotest.Hoja h) {
         List<double[]> serie = List.of(new double[]{1500, 1.0}, new double[]{999999, 0.0});
         List<Tramo> t = tramosHoy(300, serie);
@@ -1080,33 +1153,42 @@ final class MenuTasador implements Listener {
         h.igual("la barra llega a 3.000", 3000L, escala(t));
         h.igual("sin tope: escala -1", -1L, escala(tramosHoy(0, List.of(new double[]{999999, 1.0}))));
 
-        // Rama venta-oren: la portada es la tienda (54): dos filas de tipos, la de vender y la de secciones.
-        h.igual("tienda: un tipo va en el centro de la fila 1", 13, casillasVenta(1)[0]);
-        h.igual("tienda: tres tipos con aire (columnas 2, 4 y 6)", "11,13,15",
-                casillasVenta(3)[0] + "," + casillasVenta(3)[1] + "," + casillasVenta(3)[2]);
-        int[] ocho = casillasVenta(8);
-        h.ok("tienda: con 8, siete arriba y el octavo centrado debajo", ocho.length == 8 && ocho[6] == 16 && ocho[7] == 22);
-        h.igual("tienda: como mucho 14 tipos", MAX_GRUPOS, casillasVenta(40).length);
-        boolean dentroFilas = true;
-        for (int c : casillasVenta(MAX_GRUPOS)) dentroFilas &= c / 9 >= 1 && c / 9 <= 2 && c % 9 >= 1 && c % 9 <= 7;
-        h.ok("tienda: los tipos, en las filas 1 y 2 y lejos de los bordes", dentroFilas);
-        h.ok("tienda: Vender todo en el centro de la fila 3", VENDER_TODO / 9 == 3 && VENDER_TODO % 9 == 4);
-        h.ok("tienda: topes y ayuda a sus lados", TOPES == VENDER_TODO - 2 && AYUDA == VENDER_TODO + 2);
-        h.ok("tienda: secciones en la fila 4 (columnas 2, 4 y 6)", DINERO == 38 && CONTRATOS == 40 && CAMINO == 42);
-        h.ok("tienda: Cerrar abajo en el centro", CERRAR == Marco.abajo(TAMANO_PORTADA));
-        h.ok("tienda: Altar y Forja a los lados de Cerrar", IR_ALTAR == CERRAR - 2 && IR_FORJA == CERRAR + 2);
-        List<Integer> todas = new ArrayList<>(List.of(TOPES, VENDER_TODO, AYUDA, DINERO, CONTRATOS, CAMINO, IR_ALTAR, CERRAR, IR_FORJA));
-        for (int c : casillasVenta(MAX_GRUPOS)) todas.add(c);
-        boolean bien = new HashSet<>(todas).size() == todas.size();
-        for (int c : todas) bien &= c >= 0 && c < TAMANO_PORTADA;
-        h.ok("tienda: ninguna casilla repetida ni fuera de la ventana", bien);
-
-        // Las subvistas: Volver abajo en el centro y sus filas no lo pisan.
+        // 1.12.1: todo en 3 filas; la fila del medio para lo que se ensena y tres botones abajo.
+        h.igual("tienda: 27 casillas", 27, TAMANO);
+        h.igual("tienda: un tipo va en el centro", List.of(13), lista(casillasFila(1)));
+        h.igual("tienda: tres tipos con aire (11, 13 y 15)", List.of(11, 13, 15), lista(casillasFila(3)));
+        h.igual("tienda: siete tipos llenan la fila", List.of(10, 11, 12, 13, 14, 15, 16), lista(casillasFila(7)));
+        h.igual("tienda: nunca mas de 7", 7, casillasFila(20).length);
+        boolean enFila = true;
+        for (int n = 1; n <= 7; n++) for (int c : casillasFila(n)) enFila &= c / 9 == 1 && c % 9 >= 1 && c % 9 <= 7;
+        h.ok("tienda: los tipos, en la fila del medio y lejos de los bordes", enFila);
+        h.ok("tienda: Vender todo abajo en el centro", VENDER_TODO == Marco.abajo(TAMANO));
+        h.ok("tienda: Contratos a la izquierda y Tu dinero a la derecha", CONTRATOS == VENDER_TODO - 2 && DINERO == VENDER_TODO + 2
+                && CONTRATOS / 9 == 2 && DINERO / 9 == 2);
         h.ok("subvistas: Volver abajo en el centro", SALIR == Marco.abajo(TAMANO));
-        h.ok("subvistas del mercado: filas 1 y 2", FILA_A == 9 && FILA_B == 18 && FILA_B + 8 < SALIR);
-        // 1.10: en Contratos, Cambiar debajo de cada contrato (misma columna) y la semana en la fila 3.
-        h.ok("contratos: Cambiar justo debajo y la semana en la fila 3, encima de Volver",
-                FILA_B == FILA_A + 9 && FILA_C == FILA_B + 9 && FILA_C / 9 == SALIR / 9 - 1 && (FILA_C + 4) % 9 == SALIR % 9);
+        h.ok("contratos: la semana y Cambiar a los lados de Volver", SEMANA == SALIR - 2 && CAMBIAR == SALIR + 2);
+        h.ok("confirmar: No, lo confirmado y Si en la fila del medio", NO == 11 && CENTRO == 13 && SI == 15);
+        List<Integer> todas = new ArrayList<>(List.of(CONTRATOS, VENDER_TODO, DINERO));
+        for (int c : casillasFila(7)) todas.add(c);
+        boolean bien = new HashSet<>(todas).size() == todas.size();
+        for (int c : todas) bien &= c >= 0 && c < TAMANO && c / 9 >= 1;
+        h.ok("tienda: ninguna casilla repetida, fuera de la ventana ni en la fila de arriba", bien);
+
+        // Que tipos salen y en que orden: I a IV, especiales, Esencias; con mas de 7, los de mas valor.
+        List<Tipo> tipos = List.of(new Tipo(4, null, false, 6, 100), new Tipo(0, null, true, 12, 0),
+                new Tipo(1, null, false, 2, 50), new Tipo(4, Reliquias.CAMPANA, false, 6, 100), new Tipo(3, null, false, 3, 40),
+                new Tipo(2, null, false, 1, 15));
+        h.igual("tipos: I, II, III, IV, Campana y Esencias", List.of(2, 5, 4, 0, 3, 1), visibles(tipos));
+        List<Tipo> muchos = new ArrayList<>();
+        for (int i = 0; i < 9; i++) muchos.add(new Tipo(1 + i % 4, i >= 4 ? Reliquias.SELLO : null, false, i, 0));
+        List<Integer> vis = visibles(muchos);
+        h.igual("tipos: con 9, salen 6 y la septima casilla dice cuantos faltan", 6, vis.size());
+        h.ok("tipos: con 9, se quedan fuera los de menos valor", !vis.contains(0) && !vis.contains(1) && !vis.contains(2));
+        boolean ordenados = true;
+        for (int i = 1; i < vis.size(); i++) ordenados &= orden(muchos.get(vis.get(i - 1))) <= orden(muchos.get(vis.get(i)));
+        h.ok("tipos: con 9, los que salen van en orden", ordenados);
+        h.ok("tipos: la Eclipsada va detras del Sello", orden(new Tipo(3, Reliquias.ECLIPSADA, false, 0, 0))
+                > orden(new Tipo(4, Reliquias.SELLO, false, 0, 0)));
         h.igual("cuantas: singular", "1 Reliquia", cuantas(1, "Reliquia", "Reliquias"));
         h.igual("cuantas: plural con miles", "1.250 Reliquias", cuantas(1250, "Reliquia", "Reliquias"));
         h.igual("paga: los dos", "12 Esencias y 300 MobCoins", paga(12, 300));
@@ -1127,7 +1209,7 @@ final class MenuTasador implements Listener {
         boolean cortas = true;
         for (String l : plano(lineasTope(1_250, 1_250, 1_250))) cortas &= l.length() <= 38;
         h.ok("tope: las lineas caben en un lore", cortas);
-        for (String vista : List.of(PORTADA, V_DINERO, V_CONTRATOS, V_TODO)) {
+        for (String vista : List.of(PORTADA, V_DINERO, V_CONTRATOS, V_ELEGIR, V_TODO)) {
             h.ok("titulo de la vista '" + vista + "' cabe", titulo(vista).ancho() <= Marco.ANCHO_TITULO);
         }
     }

@@ -52,10 +52,19 @@ import java.util.regex.Pattern;
  * Calamity 1.10 · Pergaminos (contratos.pergamino.activo, de serie encendido). Dosa: "podemos entregar
  * por mision o contrato un pergamino, que lleve el lore y tambien los placeholders del contrato, bien
  * ordenado y encuadrado, que al terminar el contrato se destruya y le entregue las recompensas". Asi:
- *   - cada contrato pendiente es un papel (Pergaminos) que Oren deja al entrar a Calamity (por la puerta
- *     o por cualquier otra via: Hardcore.alLlegar) o que da en su menu (darDesdeMenu). Para el jugador el
- *     pergamino ES el contrato: sin el no avanza (y se le dice, una vez por expedicion). La verdad sigue
- *     en los datos de abajo; un papel que no cuadra con ellos es inerte y se borra;
+ *   - cada contrato es un papel (Pergaminos) que Oren da en su menu cuando el jugador lo ACEPTA
+ *     (pedirDesdeMenu). Para el jugador el pergamino ES el contrato: sin el no avanza (y se le dice, una
+ *     vez por expedicion). La verdad sigue en los datos de abajo; un papel que no cuadra con ellos es
+ *     inerte y se borra;
+ *   - Calamity 1.12.1 · Dosa: "se puede abusar" de que Oren los dejara solos al entrar. Ahora al entrar no
+ *     se da nada: los de hoy son OFERTAS hasta que el jugador acepta cada una con un clic en el menu de
+ *     Oren, en el spawn de Calamity (lugarParaAceptar). Aceptar apunta lista.N.aceptado: la misma oferta
+ *     no se acepta dos veces, cuenta como activa (contratos.pergamino.activos-max) aunque se pierda el
+ *     papel y nada la vuelve a dar sola. Si se pierde (morir, tirarlo, salir de Calamity), Oren da otra
+ *     copia del mismo contrato solo si se le pide, en el spawn (contratos.pergamino.recuperar-perdido); la
+ *     copia no da nada de mas porque el progreso es del hueco, no del papel. Cambiar un contrato lo deja
+ *     otra vez como oferta. Los que ya se repartieron antes de esto siguen valiendo: el papel que se ve
+ *     encima cuenta como aceptado (marcarAceptados);
  *   - lo que se cumple DENTRO se cobra en el acto (cobrar): cumplido y cobrado, guardado ANTES de pagar,
  *     el pergamino se rompe y paga la Aduana (tipo contratos) con las Esencias A LA MANO (Aduana.pagar
  *     con objetoSiDentro; si no caben, a sus pies). Como las de un mob, si muere antes de salir las
@@ -87,7 +96,7 @@ import java.util.regex.Pattern;
  *   eco-valido         stats.cazas-validas que suben durante la expedicion
  *   redimir            stats.ecos-redimidos que suben durante la expedicion
  *
- * Datos: contratos.<uuid> = {dia, lista.<1-3> = {id, progreso, cumplido, cobrado}, cambios,
+ * Datos: contratos.<uuid> = {dia, lista.<1-3> = {id, progreso, cumplido, cobrado, aceptado (1.12.1)}, cambios,
  * base.<clave>, semana, cobrados-semana, premio-semana, avisado, ultimo (1.10: el hueco que avanzo
  * el ultimo en esta expedicion), sin-pergamino (1.10: ya se le dijo en esta expedicion que sin
  * pergamino no cuenta)}.
@@ -129,10 +138,6 @@ final class Contratos implements Listener {
      * Esencias van a la mano (enLaMano: cumplido dentro) o al saldo (la Tasacion).
      */
     record Cobro(int hueco, String id, int esencias, long mobcoins, boolean enLaMano) {
-    }
-
-    /** Lo que dejo Oren al entrar o al volver: los huecos cuyo pergamino dio y cuantos no cupieron. */
-    private record Entrega(List<Integer> dados, int sinSitio) {
     }
 
     private final Hardcore hc;
@@ -201,9 +206,28 @@ final class Contratos implements Listener {
         return hc.cfg().getBoolean("contratos.pergamino.activo", true);
     }
 
-    /** 1.10: Oren deja los pergaminos solo al entrar (false: hay que pedirselos en su menu). */
-    private boolean entregarAlEntrar() {
-        return hc.cfg().getBoolean("contratos.pergamino.entregar-al-entrar", true);
+    /*
+     * Calamity 1.12.1 · contratos.pergamino.entregar-al-entrar ya no se lee: Oren no deja nada al entrar,
+     * se aceptan en su menu. Un config.yml viejo que lo traiga en true no cambia nada.
+     */
+
+    /** 1.12.1: cuantos contratos aceptados y sin cobrar puede llevar a la vez (de serie, los del dia). */
+    int activosMax() {
+        return Math.max(1, hc.cfg().getInt("contratos.pergamino.activos-max",
+                Math.max(1, hc.cfg().getInt("contratos.por-dia", 3))));
+    }
+
+    /** 1.12.1: si Oren da otra copia del pergamino de un contrato aceptado que se perdio (en el spawn). */
+    boolean recuperarPerdido() {
+        return hc.cfg().getBoolean("contratos.pergamino.recuperar-perdido", true);
+    }
+
+    /**
+     * 1.12.1: donde se aceptan (y se recuperan) los contratos: en el spawn de Calamity, donde esta Oren. Fuera
+     * de Calamity el pergamino se borraria al momento, y dentro lejos del spawn seria un premio sin volver.
+     */
+    boolean lugarParaAceptar(Player p) {
+        return hc.esHardcore(p) && hc.enSpawn(p);
     }
 
     /** 1.10: siempre | avance | nunca. Sin pergaminos, nunca: la barra como antes. */
@@ -369,6 +393,8 @@ final class Contratos implements Listener {
         s.set(r + ".progreso", 0);
         s.set(r + ".cumplido", false);
         s.set(r + ".cobrado", false);
+        // 1.12.1: un contrato nuevo en el hueco (sorteo o cambio) vuelve a ser una oferta.
+        s.set(r + ".aceptado", null);
     }
 
     static List<Integer> huecos(ConfigurationSection s) {
@@ -508,9 +534,62 @@ final class Contratos implements Listener {
             Def d = pool.get(s.getString(r + ".id", ""));
             if (d == null) continue;
             out.add(new Estado(i, d, s.getInt(r + ".progreso", 0), s.getBoolean(r + ".cumplido", false),
-                    s.getBoolean(r + ".cobrado", false)));
+                    s.getBoolean(r + ".cobrado", false), aceptado(s, i)));
         }
         return out;
+    }
+
+    // ------------------------------------------------------------ aceptar (1.12.1, nucleo)
+
+    /** Si el contrato de ese hueco esta aceptado. */
+    static boolean aceptado(ConfigurationSection s, int i) {
+        return s != null && s.getBoolean("lista." + i + ".aceptado", false);
+    }
+
+    /** Los aceptados sin cobrar: los que ocupan sitio (tambien uno cumplido que espera a la venta, o perdido). */
+    static int activos(ConfigurationSection s) {
+        int n = 0;
+        if (s == null) return 0;
+        for (int i : huecos(s)) if (aceptado(s, i) && !s.getBoolean("lista." + i + ".cobrado", false)) n++;
+        return n;
+    }
+
+    /**
+     * Por que no se puede aceptar la oferta de ese hueco, o null si se puede: "no-existe" (hueco vacio o fuera
+     * del pool), "aceptado" (ya lo acepto: nunca dos veces), "hecho" (cumplido o cobrado) o "lleno" (ya lleva
+     * max contratos activos). Puro: lo prueba el autotest.
+     */
+    static String motivoNoAceptar(ConfigurationSection s, Map<String, Def> pool, int i, int max) {
+        String r = "lista." + i;
+        if (s == null || pool.get(s.getString(r + ".id", "")) == null) return "no-existe";
+        if (aceptado(s, i)) return "aceptado";
+        if (s.getBoolean(r + ".cumplido", false) || s.getBoolean(r + ".cobrado", false)) return "hecho";
+        if (activos(s) >= max) return "lleno";
+        return null;
+    }
+
+    /** El texto para el jugador de un motivoNoAceptar. */
+    static String porQueNoAceptar(String motivo, int max) {
+        return switch (motivo) {
+            case "aceptado" -> "Ya aceptaste ese contrato.";
+            case "hecho" -> "Ese contrato ya está hecho.";
+            case "lleno" -> "Ya llevas " + max + (max == 1 ? " contrato activo." : " contratos activos.") + " Cumple o cambia alguno.";
+            default -> "Ese contrato ya no está.";
+        };
+    }
+
+    /**
+     * Los contratos ya repartidos antes de la 1.12.1 (Oren los dejaba al entrar) siguen valiendo: un pergamino
+     * valido que lleva encima marca su hueco como aceptado. True si marco alguno.
+     */
+    static boolean marcarAceptados(ConfigurationSection s, Collection<Integer> lleva) {
+        boolean cambio = false;
+        for (int i : lleva) {
+            if (s == null || aceptado(s, i)) continue;
+            s.set("lista." + i + ".aceptado", true);
+            cambio = true;
+        }
+        return cambio;
     }
 
     /**
@@ -631,20 +710,15 @@ final class Contratos implements Listener {
         boolean queda = false;
         for (int i : huecos(s)) if (!s.getBoolean("lista." + i + ".cobrado", false)) queda = true;
         if (pergaminoActivo()) {
-            Map<Integer, Integer> lleva = pergaminos.revisar(p, s);
+            Map<Integer, Integer> lleva = revisar(p, s);
             // Lo que traiga (no deberia: se borran al salir) vuelve a decir lo de esta expedicion.
             redibujarTodos(p, s, lleva);
-            Set<Integer> tiene = new HashSet<>(lleva.keySet());
-            if (entregarAlEntrar()) {
-                Entrega r = entregar(p, s, lleva.keySet());
-                tiene.addAll(r.dados());
-                avisoEntrega(p, r);
-            } else if (queda && !dia.equals(s.getString("avisado", ""))) {
+            // 1.12.1: al entrar no se da nada. Una vez al dia, que Oren tiene contratos que aceptar.
+            if (queda && !dia.equals(s.getString("avisado", ""))) {
                 s.set("avisado", dia);
-                luego(p, 40L, () -> p.sendMessage(ComandoCalamity.mensaje(
-                        "Oren tiene contratos para ti: pídele sus pergaminos para que cuenten.")));
+                luego(p, 40L, () -> p.sendMessage(ComandoCalamity.mensaje(AVISO_OFERTAS)));
             }
-            refrescarBarra(p, s, tiene);
+            refrescarBarra(p, s, new HashSet<>(lleva.keySet()));
             return;
         }
         if (queda && !dia.equals(s.getString("avisado", ""))) {
@@ -656,23 +730,18 @@ final class Contratos implements Listener {
     }
 
     /**
-     * 1.10: quien se conecta estando dentro sigue su expedicion (Hardcore.onEntrar no la toca): aqui solo
-     * se le reponen los pergaminos que falten de contratos pendientes, sin tocar el progreso.
+     * 1.10: quien se conecta estando dentro sigue su expedicion (Hardcore.onEntrar no la toca): aqui se
+     * revisan sus pergaminos y la barra, sin tocar el progreso. Desde la 1.12.1 no se le repone ninguno.
      */
     void alVolver(Player p) {
         if (!activo() || p == null || !hc.esHardcore(p)) return;
         // 1.11: con la libreta de otro dia y nada a medias, la de hoy (y sus pergaminos) antes que nada.
         if (renovar(p) || !pergaminoActivo()) return;
         ConfigurationSection s = libreta(p.getUniqueId(), false);
-        Map<Integer, Integer> lleva = pergaminos.revisar(p, s);
+        Map<Integer, Integer> lleva = revisar(p, s);
         redibujarTodos(p, s, lleva);
-        Set<Integer> tiene = new HashSet<>(lleva.keySet());
-        if (entregarAlEntrar()) {
-            Entrega r = entregar(p, s, lleva.keySet());
-            tiene.addAll(r.dados());
-            avisoEntrega(p, r);
-        }
-        refrescarBarra(p, s, tiene);
+        // 1.12.1: no se repone nada solo; lo que falte se le pide a Oren.
+        refrescarBarra(p, s, new HashSet<>(lleva.keySet()));
     }
 
     /**
@@ -699,7 +768,7 @@ final class Contratos implements Listener {
      *
      * Si caducada(): se borran sus pergaminos (los de otro dia ya son inertes), se sortea la de hoy con
      * el mismo sorteo (libreta, Bitacora "contrato | sorteo"), la expedicion cuenta desde aqui (como en
-     * alEntrar, sin tocar nada cobrado) y Oren le deja los pergaminos nuevos. True si la ha cambiado.
+     * alEntrar, sin tocar nada cobrado) y se le avisa de que Oren tiene ofertas nuevas. True si la ha cambiado.
      */
     boolean renovar(Player p) {
         if (!activo() || p == null || !hc.esHardcore(p)) return false;
@@ -728,50 +797,25 @@ final class Contratos implements Listener {
                     .append(Component.text("Habla con él en la antesala para verlos.", Paleta.DETALLE)))));
             return true;
         }
-        Set<Integer> tiene = new HashSet<>();
-        if (entregarAlEntrar()) {
-            Entrega r = entregar(p, s, Set.of());
-            tiene.addAll(r.dados());
-            avisoEntrega(p, r);
-        } else {
-            luego(p, 40L, () -> p.sendMessage(ComandoCalamity.mensaje(
-                    "Oren tiene contratos nuevos para ti: pídele sus pergaminos para que cuenten.")));
-        }
-        refrescarBarra(p, s, tiene);
+        // 1.12.1: los nuevos son ofertas; se aceptan con Oren.
+        s.set("avisado", hoy);
+        luego(p, 40L, () -> p.sendMessage(ComandoCalamity.mensaje(AVISO_OFERTAS_NUEVAS)));
+        refrescarBarra(p, s, Set.of());
         return true;
     }
 
-    /** 1.10: los pergaminos de los huecos pendientes (sin cumplir ni cobrar) que no lleva. Lo que no cabe, no se da. */
-    private Entrega entregar(Player p, ConfigurationSection s, Set<Integer> ya) {
-        Map<String, Def> pool = pool();
-        String dia = s.getString("dia", "");
-        List<Integer> dados = new ArrayList<>();
-        int sinSitio = 0;
-        for (int i : huecos(s)) {
-            String r = "lista." + i;
-            Def d = pool.get(s.getString(r + ".id", ""));
-            if (d == null || ya.contains(i) || s.getBoolean(r + ".cumplido", false) || s.getBoolean(r + ".cobrado", false)) continue;
-            if (pergaminos.dar(p, new Pergaminos.Sello(p.getUniqueId(), dia, i, d.id()), d, s.getInt(r + ".progreso", 0))) {
-                dados.add(i);
-            } else {
-                sinSitio++;
-            }
-        }
-        if (!dados.isEmpty() || sinSitio > 0) {
-            hc.plugin().bitacora().anotar("contrato", "pergaminos", p.getName(), "dados " + dados.size(), "sin sitio " + sinSitio);
-        }
-        return new Entrega(dados, sinSitio);
-    }
+    /** 1.12.1: el aviso de que hay ofertas, una vez al dia al entrar (antes: "Oren te ha dejado tus contratos"). */
+    static final String AVISO_OFERTAS = "Oren tiene contratos para ti: acéptalos en su menú, en el spawn.";
+    static final String AVISO_OFERTAS_NUEVAS = "Oren tiene contratos nuevos para ti: acéptalos en su menú, en el spawn.";
 
-    /** P-O04 con pergaminos, dos segundos despues: al entrar llueven mensajes (bienvenida, Ecos, altar). */
-    private void avisoEntrega(Player p, Entrega r) {
-        if (r.dados().isEmpty() && r.sinSitio() == 0) return;
-        luego(p, 40L, () -> {
-            if (!r.dados().isEmpty()) p.sendMessage(ComandoCalamity.mensaje("Oren te ha dejado tus contratos de hoy."));
-            if (r.sinSitio() > 0) {
-                p.sendMessage(ComandoCalamity.mensaje("No tienes espacio para todos tus contratos. Pídeselos a Oren."));
-            }
-        });
+    /**
+     * Los pergaminos que lleva (pergaminos.revisar: borra lo inerte) y, 1.12.1, los que valen cuentan como
+     * aceptados (los repartidos antes de que hubiera que aceptarlos).
+     */
+    private Map<Integer, Integer> revisar(Player p, ConfigurationSection s) {
+        Map<Integer, Integer> lleva = pergaminos.revisar(p, s);
+        if (marcarAceptados(s, lleva.keySet())) hc.marcarSucio();
+        return lleva;
     }
 
     /** Los pergaminos que lleva (hueco -> casilla, de revisar) vuelven a decir lo que dice la libreta. */
@@ -805,7 +849,7 @@ final class Contratos implements Listener {
             // Antes de mirar el inventario: un mob que no le toca a ningun contrato no cuesta nada.
             List<Integer> tocan = pendientesDe(s, pool, ev);
             if (tocan.isEmpty()) return;
-            lleva = pergaminos.revisar(p, s);
+            lleva = revisar(p, s);
             if (!lleva.keySet().containsAll(tocan)) avisarSinPergamino(p, s);
         }
         Avance a = avanzar(s, pool, ev, n, lleva == null ? null : lleva.keySet());
@@ -852,7 +896,7 @@ final class Contratos implements Listener {
         if (s.getBoolean("sin-pergamino", false)) return;
         s.set("sin-pergamino", true);
         hc.marcarSucio();
-        p.sendMessage(ComandoCalamity.mensaje("Pídele tus contratos a Oren para que cuenten."));
+        p.sendMessage(ComandoCalamity.mensaje("Sin su pergamino, un contrato no cuenta: acéptalo con Oren, en el spawn."));
     }
 
     /** P-O01, como mucho uno cada 2 s. */
@@ -943,7 +987,7 @@ final class Contratos implements Listener {
         hc.marcarSucio();
         // 1.10: su pergamino vuelve a cero con el.
         if (rotos.isEmpty() || !pergaminoActivo()) return;
-        Map<Integer, Integer> lleva = pergaminos.revisar(p, s);
+        Map<Integer, Integer> lleva = revisar(p, s);
         for (int i : rotos) {
             Integer casilla = lleva.get(i);
             Def d = pool.get(s.getString("lista." + i + ".id", ""));
@@ -1162,7 +1206,7 @@ final class Contratos implements Listener {
             enBarra.remove(u);
             return;
         }
-        refrescarBarra(p, s, pergaminos.revisar(p, s).keySet());
+        refrescarBarra(p, s, revisar(p, s).keySet());
     }
 
     /** Un tick despues (Pergaminos.alTirar): para entonces el pergamino ya no esta en ninguna via. */
@@ -1224,15 +1268,18 @@ final class Contratos implements Listener {
                     .append(Component.text(" · ", Paleta.SEPARADOR)).append(estado)
                     .append(Component.text(" · " + d.esencias() + " E + " + Altar.miles(d.mobcoins()) + " MC"
                             + (d.corto() ? " · corto" : ""), Paleta.TENUE));
-            // 1.10: dentro, el que no avanza porque le falta el papel lo dice.
-            if (papel && dentro && !cobrado && !cumplido && !lleva.contains(i)) {
+            // 1.10: dentro, el que no avanza porque le falta el papel lo dice. 1.12.1: o que aun es una oferta.
+            if (papel && !cobrado && !cumplido && !aceptado(s, i)) {
+                linea = linea.append(Component.text(" · sin aceptar", Paleta.TENUE));
+            } else if (papel && dentro && !cobrado && !cumplido && !lleva.contains(i)) {
                 linea = linea.append(Component.text(" · sin pergamino", Paleta.AVISO));
             }
             a.sendMessage(linea);
         }
         if (papel) {
-            a.sendMessage(Component.text("  Cada contrato es un pergamino de Oren: llévalo encima en Calamity para que cuente.",
+            a.sendMessage(Component.text("  Acéptalos con Oren, en el spawn de Calamity: cada uno es un pergamino",
                     Paleta.TENUE));
+            a.sendMessage(Component.text("  que tienes que llevar encima para que cuente.", Paleta.TENUE));
         }
         int gratis = Math.max(0, hc.cfg().getInt("contratos.cambios-gratis", 1) - s.getInt("cambios", 0));
         int precio = Math.max(0, hc.cfg().getInt("contratos.precio-cambio", 1));
@@ -1247,7 +1294,12 @@ final class Contratos implements Listener {
     }
 
     /** Un contrato de hoy tal y como lo pinta el menu del Tasador. */
-    record Estado(int hueco, Def def, int progreso, boolean cumplido, boolean cobrado) {
+    record Estado(int hueco, Def def, int progreso, boolean cumplido, boolean cobrado, boolean aceptado) {
+
+        /** 1.12.1: una oferta: ni aceptada ni hecha. */
+        boolean oferta() {
+            return !aceptado && !cumplido && !cobrado;
+        }
     }
 
     /**
@@ -1265,26 +1317,44 @@ final class Contratos implements Listener {
         return s == null ? Set.of() : pergaminos.validos(p, s);
     }
 
+    /** 1.12.1: cuantos contratos activos (aceptados sin cobrar) lleva hoy, para el menu de Oren. */
+    int activosDe(Player p) {
+        return activos(hc.datos().getConfigurationSection("contratos." + p.getUniqueId()));
+    }
+
     /**
-     * 1.10 · El clic en un contrato del menu de Oren: le da su pergamino si no lo lleva. Solo dentro de
-     * Calamity. Null si se lo dio; si no, por que no (para el chat).
+     * Calamity 1.12.1 · El clic en un contrato del menu de Oren. Una oferta: la acepta y le da su pergamino.
+     * Uno ya aceptado cuyo pergamino no lleva (lo perdio, murio, salio de Calamity): otra copia, si
+     * contratos.pergamino.recuperar-perdido. Solo en el spawn de Calamity (lugarParaAceptar). Si el pergamino
+     * no cabe, no se acepta nada. Null si se hizo; si no, por que no (para el chat).
      */
-    String darDesdeMenu(Player p, int hueco) {
+    String pedirDesdeMenu(Player p, int hueco) {
         if (!activo() || !pergaminoActivo()) return "Oren no tiene contratos ahora mismo.";
-        if (!hc.esHardcore(p)) return "Los pergaminos se entregan en Calamity.";
-        ConfigurationSection s = libreta(p.getUniqueId(), false);
+        if (!lugarParaAceptar(p)) return "Los contratos se aceptan con Oren, en el spawn de Calamity.";
+        UUID u = p.getUniqueId();
+        ConfigurationSection s = libreta(u, false);
         String r = "lista." + hueco;
         Def d = pool().get(s.getString(r + ".id", ""));
-        if (d == null || s.getBoolean(r + ".cumplido", false) || s.getBoolean(r + ".cobrado", false)) {
-            return "Ese contrato ya no está pendiente.";
+        Map<Integer, Integer> lleva = revisar(p, s);
+        boolean recuperar = aceptado(s, hueco);
+        if (recuperar) {
+            if (d == null || s.getBoolean(r + ".cumplido", false) || s.getBoolean(r + ".cobrado", false)) {
+                return "Ese contrato ya no está pendiente.";
+            }
+            if (lleva.containsKey(hueco)) return "Ya llevas ese pergamino.";
+            if (!recuperarPerdido()) return "Ese pergamino se perdió: Oren no da otro. Puedes cambiar el contrato.";
+        } else {
+            String no = motivoNoAceptar(s, pool(), hueco, activosMax());
+            if (no != null) return porQueNoAceptar(no, activosMax());
         }
-        Map<Integer, Integer> lleva = pergaminos.revisar(p, s);
-        if (lleva.containsKey(hueco)) return "Ya llevas ese pergamino.";
-        if (!pergaminos.dar(p, new Pergaminos.Sello(p.getUniqueId(), s.getString("dia", ""), hueco, d.id()), d,
+        if (!pergaminos.dar(p, new Pergaminos.Sello(u, s.getString("dia", ""), hueco, d.id()), d,
                 s.getInt(r + ".progreso", 0))) {
             return "No tienes espacio en el inventario.";
         }
-        hc.plugin().bitacora().anotar("contrato", "pergamino", p.getName(), d.id());
+        if (!recuperar) s.set(r + ".aceptado", true);
+        hc.marcarSucio();
+        hc.plugin().bitacora().anotar("contrato", recuperar ? "copia" : "aceptado", p.getName(), d.id());
+        if (!recuperar) telemetria(p, d, "aceptado", 0, 0);
         Set<Integer> tiene = new HashSet<>(lleva.keySet());
         tiene.add(hueco);
         refrescarBarra(p, s, tiene);
@@ -1311,7 +1381,8 @@ final class Contratos implements Listener {
 
     /**
      * El boton Cambiar contrato del Tasador (y "calamity open <player> reroll <1-3>"). True si se cambio. Dentro de
-     * Calamity y con pergaminos (1.10), el viejo deja de valer y, si lo llevaba, Oren le da el nuevo.
+     * Calamity y con pergaminos (1.10), el viejo deja de valer; desde la 1.12.1 el nuevo es una oferta que
+     * hay que aceptar (y deja libre el sitio del viejo si estaba aceptado).
      */
     boolean cambiar(Player p, int i) {
         if (!activo()) {
@@ -1360,7 +1431,6 @@ final class Contratos implements Listener {
             }
         }
         boolean papel = pergaminoActivo() && hc.esHardcore(p);
-        boolean loLlevaba = papel && pergaminos.validos(p, s).contains(i);
         String viejo = s.getString(r + ".id", "?");
         ponerEn(s, i, nuevo.id());
         s.set("cambios", cambios + 1);
@@ -1370,15 +1440,13 @@ final class Contratos implements Listener {
         telemetria(p, nuevo, "cambiado", 0, 0);
         p.sendMessage(ComandoCalamity.mensaje(Component.text("Contrato nuevo: ")
                 .append(Component.text(nuevo.texto(), Paleta.DETALLE)).append(Component.text("."))));
+        if (pergaminoActivo()) {
+            // 1.12.1: el nuevo es una oferta (ponerEn quita el aceptado): se acepta con Oren, como los demas.
+            p.sendMessage(ComandoCalamity.mensaje("Acéptalo con Oren, en el spawn, para que cuente."));
+        }
         if (papel) {
             // El viejo ya no cuadra con la libreta (otro contrato en su hueco): revisar lo borra.
-            Map<Integer, Integer> lleva = pergaminos.revisar(p, s);
-            Set<Integer> tiene = new HashSet<>(lleva.keySet());
-            if (loLlevaba) {
-                if (pergaminos.dar(p, new Pergaminos.Sello(u, s.getString("dia", ""), i, nuevo.id()), nuevo, 0)) tiene.add(i);
-                else p.sendMessage(ComandoCalamity.mensaje("No tienes espacio para su pergamino. Pídeselo a Oren."));
-            }
-            refrescarBarra(p, s, tiene);
+            refrescarBarra(p, s, new HashSet<>(revisar(p, s).keySet()));
         }
         return true;
     }
@@ -1409,7 +1477,7 @@ final class Contratos implements Listener {
             s.set("sin-pergamino", null);
             hc.marcarSucio();
             hc.plugin().bitacora().anotar("contrato", "reset", Entregas.nombre(o), "admin");
-            // 1.10: dentro, sus pergaminos viejos ya no valen; se le dan los del sorteo nuevo.
+            // 1.10: dentro, sus pergaminos viejos ya no valen (alVolver los borra). 1.12.1: los nuevos, a aceptar.
             if (online != null && hc.esHardcore(online)) hc.seguro("contratos", () -> alVolver(online));
         }
         if (online != null) {
@@ -1464,6 +1532,43 @@ final class Contratos implements Listener {
         s.set("lista.3.progreso", 1);
         s.set("lista.3.cumplido", true);
         h.ok("cumplida esperando a la Tasacion: se respeta", !caducada(s, hoy));
+    }
+
+    /** Calamity 1.12.1 · Aceptar ofertas: una vez, con limite, el perdido ocupa sitio, cambiar libera. */
+    static void probarAceptar(Autotest.Hoja h, Map<String, Def> base) {
+        YamlConfiguration y = new YamlConfiguration();
+        ConfigurationSection s = y.createSection("a");
+        escribirLista(s, "2026-10-05", List.of(base.get("corto-mobs"), base.get("minijefe"), base.get("sin-frasco")));
+        h.igual("aceptar: al empezar el dia, ninguno aceptado", 0, activos(s));
+        h.ok("aceptar: los tres son ofertas", estadosDe(s, base).stream().allMatch(Estado::oferta));
+        h.igual("aceptar: la oferta 1 se puede aceptar", null, motivoNoAceptar(s, base, 1, 2));
+        s.set("lista.1.aceptado", true);
+        h.igual("aceptar: la misma oferta no se acepta dos veces", "aceptado", motivoNoAceptar(s, base, 1, 2));
+        h.igual("aceptar: un hueco que no existe", "no-existe", motivoNoAceptar(s, base, 7, 2));
+        s.set("lista.2.aceptado", true);
+        h.igual("aceptar: con 2 activos y tope 2, la tercera no", "lleno", motivoNoAceptar(s, base, 3, 2));
+        h.igual("aceptar: el aceptado cuenta como activo aunque no lleve el papel", 2, activos(s));
+        s.set("lista.1.cumplido", true);
+        s.set("lista.1.cobrado", true);
+        h.igual("aceptar: cobrado deja sitio", 1, activos(s));
+        h.igual("aceptar: y entonces la tercera si", null, motivoNoAceptar(s, base, 3, 2));
+        h.igual("aceptar: lo cobrado no se vuelve a aceptar", "aceptado", motivoNoAceptar(s, base, 1, 3));
+        s.set("lista.3.cumplido", true);
+        h.igual("aceptar: una oferta ya cumplida (de antes) no", "hecho", motivoNoAceptar(s, base, 3, 3));
+        s.set("lista.3.cumplido", false);
+        reiniciarExpedicion(s);
+        h.ok("aceptar: morir no quita lo aceptado (no hay que volver a aceptarlo)", aceptado(s, 2));
+        ponerEn(s, 2, "cofres");
+        h.ok("aceptar: cambiar el contrato lo deja como oferta y libera el sitio", !aceptado(s, 2) && activos(s) == 0);
+        h.ok("aceptar: lo repartido antes de la 1.12.1 (el papel encima) cuenta como aceptado",
+                marcarAceptados(s, List.of(3)) && aceptado(s, 3) && !marcarAceptados(s, List.of(3)));
+        escribirLista(s, "2026-10-06", List.of(base.get("corto-mobs")));
+        h.ok("aceptar: el sorteo del dia nuevo empieza sin aceptar", !aceptado(s, 1) && activos(s) == 0);
+        h.ok("aceptar: textos del porque", porQueNoAceptar("lleno", 2).startsWith("Ya llevas 2 contratos activos")
+                && porQueNoAceptar("lleno", 1).startsWith("Ya llevas 1 contrato activo.")
+                && porQueNoAceptar("aceptado", 2).equals("Ya aceptaste ese contrato."));
+        h.ok("aceptar: el aviso al entrar ya no dice que Oren los deja", !AVISO_OFERTAS.contains("dejado")
+                && AVISO_OFERTAS.contains("acéptalos"));
     }
 
     private List<String> autotest() {
@@ -1532,6 +1637,8 @@ final class Contratos implements Listener {
         h.ok("cambiar el unico corto da otro corto", otro != null && otro.corto() && !otro.id().equals("corto-mobs"));
 
         probarPergaminos(h, base);
+        probarAceptar(h, base);
+        h.ok("aceptar: el tope de activos es al menos 1", activosMax() >= 1);
 
         // El objeto de verdad (con el servidor): marca, nombre, lore y que no se apila.
         Def mobs = base.get("corto-mobs");
@@ -1541,9 +1648,9 @@ final class Contratos implements Listener {
         h.ok("pergamino: se reconoce por la marca", Pergaminos.es(papel));
         h.igual("pergamino: lleva su sello", sello, Pergaminos.sello(papel));
         h.igual("pergamino: el nombre", "Contrato: Mobs", meta == null ? null : plano(meta.displayName()));
-        h.ok("pergamino: nombre sin cursiva ni negrita", meta != null && meta.displayName() != null
+        h.ok("pergamino: nombre sin cursiva y en negrita", meta != null && meta.displayName() != null
                 && meta.displayName().decoration(TextDecoration.ITALIC) == TextDecoration.State.FALSE
-                && meta.displayName().decoration(TextDecoration.BOLD) == TextDecoration.State.FALSE);
+                && meta.displayName().decoration(TextDecoration.BOLD) == TextDecoration.State.TRUE);
         h.igual("pergamino: el lore del objeto es el de lineas()", Pergaminos.lineas(mobs, 6),
                 meta == null || meta.lore() == null ? null : planos(meta.lore()));
         h.igual("pergamino: no se apila", 1, papel.getMaxStackSize());

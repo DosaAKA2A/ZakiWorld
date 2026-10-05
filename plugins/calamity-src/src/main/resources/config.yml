@@ -1392,13 +1392,16 @@ hardcore:
   # barra de accion. Sin etiqueta vale la de serie del mismo id o, si no hay, las dos primeras palabras
   # del texto.
   #
-  # Calamity 1.10 · Pergaminos: cada contrato pendiente es un pergamino (papel con su objetivo, su
-  # progreso y su premio). Oren los deja al entrar a Calamity, por la puerta o por cualquier otra via, y
-  # en su menu da el que falte. Sin su pergamino el contrato no avanza. Lo que se cumple dentro se cobra
+  # Calamity 1.10 · Pergaminos: cada contrato es un pergamino (papel con su objetivo, su progreso y su
+  # premio). 1.12.1: al entrar no se da nada; los de hoy son ofertas que se aceptan una a una con un clic
+  # en el menu de Oren, en el spawn de Calamity, y solo entonces llega el pergamino. Una oferta aceptada
+  # no se vuelve a aceptar, ocupa sitio (activos-max) aunque se pierda el papel y nada la repone sola: si
+  # se pierde, Oren da otra copia si se le pide en el spawn (recuperar-perdido). Cambiar un contrato lo
+  # deja otra vez como oferta. Sin su pergamino el contrato no avanza. Lo que se cumple dentro se cobra
   # al momento: el pergamino se rompe y la Aduana paga con las Esencias en la mano, como las de un mob
   # (si no caben, a tus pies; si mueres antes de salir, las pierdes), y las MobCoins como siempre. Los de
   # Reliquias se cumplen y se cobran al vendérselas a Oren en su tienda, al saldo. Los pergaminos no salen de
-  # Calamity ni se guardan, se dan o se tiran (se rompen y Oren da otro). Lo cobrado no vuelve a empezar
+  # Calamity ni se guardan, se dan o se tiran (se rompen). Lo cobrado no vuelve a empezar
   # aunque mueras; lo que no, si.
   contratos:
     activo: false
@@ -1412,7 +1415,9 @@ hardcore:
     semana-premio: ["calamity give llave %jugador% 1", "calamity give llave-umbral %jugador% 1 contratos"]
     pergamino:
       activo: true                # false: como antes de la 1.10 (sin papel; todo se cobra al salir vivo)
-      entregar-al-entrar: true    # false: Oren no los deja solos al entrar; hay que pedirselos en su menu
+      # entregar-al-entrar ya no existe (1.12.1): Oren no deja nada al entrar, se aceptan en su menu.
+      activos-max: 3              # contratos aceptados y sin cobrar a la vez (un perdido tambien cuenta)
+      recuperar-perdido: true     # false: un pergamino aceptado que se pierde no se repone; queda cambiarlo
     # El contrato que va a la derecha de la cordura ("Mobs 6/10"; en la BossBar desde la 1.11): el ultimo que
     # avanzo o, si ninguno, el primero cuyo pergamino llevas. Nunca mas de uno.
     #   modo: siempre | avance (solo "segundos" despues de avanzar) | nunca (la barra como antes, con el
