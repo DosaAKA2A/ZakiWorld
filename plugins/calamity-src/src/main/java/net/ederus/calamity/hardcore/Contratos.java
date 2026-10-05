@@ -1076,7 +1076,8 @@ final class Contratos implements Listener {
         boolean umbral = false;
         for (String plantilla : premio) {
             umbral |= plantilla.contains(" " + PuenteBovedas.LLAVE_UMBRAL + " ");
-            Matcher m = LLAVE.matcher(plantilla.trim());
+            // Lo viejo (lw hardcore, el alias corto, el prefijo...) se pasa antes a la forma de ahora.
+            Matcher m = LLAVE.matcher(ComandosViejos.traducir(plantilla.trim()));
             if (m.matches()) {
                 // Por Entregas y no por el comando: asi la llave cuenta en el tope con origen "contratos".
                 Entregas en = hc.entregas();

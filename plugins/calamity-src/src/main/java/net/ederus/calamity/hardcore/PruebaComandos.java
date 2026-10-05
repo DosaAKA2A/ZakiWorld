@@ -85,8 +85,20 @@ final class PruebaComandos {
                 hc.plugin().getDescription().getPermissions().stream().noneMatch(p -> p.getName().equals("lethalworld.calamity")));
 
         // --- los subcomandos: nombre, permiso, uso y tab.
-        Set<String> conectados = new HashSet<>();
-        for (Player p : Bukkit.getOnlinePlayers()) conectados.add(p.getName().toLowerCase(Locale.ROOT));
+        // Lo que sale en el tab y no es una palabra de comando: los jugadores conectados y los ids de
+        // datos, que no se traducen (las habilidades de la Parca, "reaper ability umbral|sentencia", y
+        // las preguntas de la encuesta, "poll open camino").
+        Set<String> saltar = new HashSet<>();
+        for (Player p : Bukkit.getOnlinePlayers()) saltar.add(p.getName().toLowerCase(Locale.ROOT));
+        for (String a : HabilidadParca.nombres()) saltar.add(a.toLowerCase(Locale.ROOT));
+        Encuesta enc = hc.encuesta();
+        if (enc != null) {
+            try {
+                for (String id : enc.preguntas().keySet()) saltar.add(id.toLowerCase(Locale.ROOT));
+            } catch (Throwable ignorado) {
+                // Sin preguntas legibles no hay nada que saltar.
+            }
+        }
         List<String> todos = new ArrayList<>(ComandoRaiz.PROPIOS);
         todos.addAll(Subcomandos.staff().nombres(null));
         for (String s : todos) nombreIngles(h, "subcomando " + s, s);
@@ -95,10 +107,10 @@ final class PruebaComandos {
             usoIngles(h, "/calamity " + s, Subcomandos.staff().ayuda(s));
             List<String> fijos = Subcomandos.staff().tab(null, new String[]{s, ""});
             for (String f : fijos) {
-                if (conectados.contains(f.toLowerCase(Locale.ROOT))) continue;
+                if (saltar.contains(f.toLowerCase(Locale.ROOT))) continue;
                 h.ok("tab de /calamity " + s + ": '" + f + "' no es de antes", !ARGS_VIEJOS.contains(f.toLowerCase(Locale.ROOT)));
                 for (String g : Subcomandos.staff().tab(null, new String[]{s, f, ""})) {
-                    if (conectados.contains(g.toLowerCase(Locale.ROOT))) continue;
+                    if (saltar.contains(g.toLowerCase(Locale.ROOT))) continue;
                     h.ok("tab de /calamity " + s + " " + f + ": '" + g + "' no es de antes",
                             !ARGS_VIEJOS.contains(g.toLowerCase(Locale.ROOT)));
                 }
