@@ -58,7 +58,7 @@ public final class SuperBeaconPlugin extends Module {
     static final TextColor SECCION = TextColor.color(0x3A3A3A);
 
     private static final int CONFIG_VERSION = 1;
-    private static final int MENSAJES_VERSION = 2;
+    private static final int MENSAJES_VERSION = 3;
 
     /** Textos con acceso a las lineas sin prefijo y a las listas (holograma, lores). */
     static final class TextosBaliza extends Textos {
@@ -231,6 +231,11 @@ public final class SuperBeaconPlugin extends Module {
         hologramas.quitarTodos();
         for (Baliza b : new ArrayList<>(registro.todas())) revisar(b, true);
         menu.refrescarTodos();
+        // Los que llevan encima los conectados, con los textos y tipos recien leidos.
+        for (org.bukkit.entity.Player p : core.getServer().getOnlinePlayers()) {
+            objeto.renovar(p.getInventory());
+            objeto.renovar(p.getEnderChest());
+        }
         return tipos.size() + " tipo(s), " + registro.cuantas() + " colocado(s)"
                 + (errores.isEmpty() ? "." : "; " + errores.size() + " aviso(s) del config en la consola.");
     }

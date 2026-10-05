@@ -90,8 +90,8 @@ clan:
 #           puede comerciar); false = al entregarlo.
 #   cuenta-en-el-maximo: si cuenta para maximo-por-jugador.
 #   elegibles: cuantos efectos a la vez, elegidos en su menu. 0 = todos activos.
-#   descripcion: la primera linea es la frase corta que sale bajo el nombre en
-#           el objeto ("Para tu base"); el lore ya cuenta solo lo demas.
+#   descripcion: de que va, en una frase. Sale entre comillas en el lore del
+#           objeto si mensajes.yml no trae una frase-<tipo> para el.
 #   semanal: (opcional) premio semanal: al darlo se apunta la semana que acaba
 #           de cerrar (lunes a domingo; un domingo cuenta la de ese domingo) y el
 #           lore la enseña con el clan. De serie solo en el trofeo.

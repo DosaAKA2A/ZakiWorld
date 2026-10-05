@@ -41,6 +41,8 @@ final class Presentacion {
     private static final DateTimeFormatter DIA_MES = DateTimeFormatter.ofPattern("dd/MM", ES);
     private static final DateTimeFormatter LARGA = DateTimeFormatter.ofPattern("EEEE dd/MM, HH:mm", ES);
     private static final DateTimeFormatter LARGA_ANO = DateTimeFormatter.ofPattern("EEEE dd/MM/yyyy, HH:mm", ES);
+    private static final DateTimeFormatter LORE = DateTimeFormatter.ofPattern("EEEE dd/MM 'a las' HH:mm", ES);
+    private static final DateTimeFormatter LORE_ANO = DateTimeFormatter.ofPattern("EEEE dd/MM/yyyy 'a las' HH:mm", ES);
 
     private static final Pattern CODIGO = Pattern.compile("(?i)&#[0-9a-f]{6}|&x(?:&[0-9a-f]){6}|&[0-9a-fk-or]");
 
@@ -52,13 +54,25 @@ final class Presentacion {
         return String.format(Locale.ROOT, "&#%06X", rgb & 0xFFFFFF);
     }
 
-    /** El simbolo de cada seccion. */
-    static String simbolo(int seccion) {
-        return switch (seccion) {
-            case VIDA -> "❤";
-            case BOOST -> "✦";
-            default -> "▸";
-        };
+    /** De a hacia b: t = 0 es a, t = 1 es b. Por canal, redondeado. */
+    static int mezcla(int a, int b, double t) {
+        int r = (int) Math.round(((a >> 16) & 0xFF) + ((((b >> 16) & 0xFF) - ((a >> 16) & 0xFF)) * t));
+        int g = (int) Math.round(((a >> 8) & 0xFF) + ((((b >> 8) & 0xFF) - ((a >> 8) & 0xFF)) * t));
+        int bl = (int) Math.round((a & 0xFF) + (((b & 0xFF) - (a & 0xFF)) * t));
+        return (r << 16) | (g << 8) | bl;
+    }
+
+    /** Un texto sin codigos en degradado de desde a hasta, letra a letra (los espacios no se tinen). */
+    static String degradado(String plano, int desde, int hasta) {
+        if (plano == null || plano.isEmpty()) return "";
+        StringBuilder sb = new StringBuilder();
+        int n = Math.max(1, plano.length() - 1);
+        for (int i = 0; i < plano.length(); i++) {
+            char ch = plano.charAt(i);
+            if (ch != ' ') sb.append(hex(mezcla(desde, hasta, (double) i / n)));
+            sb.append(ch);
+        }
+        return sb.toString();
     }
 
     /** La seccion de un efecto; uno sin clase (o de una clase que no dice) va a movimiento. */
@@ -116,6 +130,14 @@ final class Presentacion {
         ZonedDateTime f = Instant.ofEpochMilli(epochMs).atZone(z);
         boolean otroAno = f.getYear() != Instant.ofEpochMilli(ahora).atZone(z).getYear();
         return (otroAno ? LARGA_ANO : LARGA).format(f);
+    }
+
+    /** "domingo 11/10 a las 22:55"; con el año si no es el de ahora. Para el lore del objeto. */
+    static String fechaLore(long epochMs, ZoneId zona, long ahora) {
+        ZoneId z = zona == null ? ZoneId.systemDefault() : zona;
+        ZonedDateTime f = Instant.ofEpochMilli(epochMs).atZone(z);
+        boolean otroAno = f.getYear() != Instant.ofEpochMilli(ahora).atZone(z).getYear();
+        return (otroAno ? LORE_ANO : LORE).format(f);
     }
 
     /* ================================================================ lineas */

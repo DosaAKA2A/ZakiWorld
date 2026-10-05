@@ -62,6 +62,17 @@ final class GuardiaObjeto implements Listener {
 
     /* ============================================================== en el suelo */
 
+    /**
+     * Al abrir un cofre (o cualquier inventario con casillas: barril, shulker, ender...), los
+     * Super Beacons que haya dentro se repintan con el lore de ahora. Solo cambia nombre y
+     * lore; el PDC, que es la verdad, no se toca.
+     */
+    @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
+    public void alAbrir(org.bukkit.event.inventory.InventoryOpenEvent e) {
+        if (plugin.detenido()) return;
+        plugin.objeto().renovar(e.getView().getTopInventory());
+    }
+
     @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
     public void alTirarse(ItemSpawnEvent e) {
         if (nuestro(e.getEntity().getItemStack())) e.getEntity().setUnlimitedLifetime(true);

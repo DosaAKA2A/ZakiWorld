@@ -348,6 +348,9 @@ final class Guardia implements Listener {
                         + " modificador(es) superbeacon: de antes; quitados.");
             }
             if (plugin.vuelo().apuntado(p)) plugin.motor().sembrar(p, plugin.vuelo().marcador);
+            // Los Super Beacons que lleva, con el lore de ahora (los repartidos con otros textos o ya vencidos).
+            plugin.objeto().renovar(p.getInventory());
+            plugin.objeto().renovar(p.getEnderChest());
             // Sus balizas por nombre ya tienen UUID, y las suyas su nombre de ahora.
             List<Baliza> tocadas = plugin.registro().ligar(p);
             if (!tocadas.isEmpty()) {
