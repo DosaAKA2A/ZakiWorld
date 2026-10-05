@@ -1048,7 +1048,7 @@ final class MenuCazador implements Listener {
         h.igual("plano: y cambia con ella", "Parcas · esta semana", txt.apply(b.piezas().get(INFO).nombre()));
         List<String> libro = lineas(a.piezas().get(INFO), txt);
         h.ok("plano: el libro dice que mide, el premio, el reinicio y las reglas",
-                libro.get(0).startsWith("MobCoins que te pagan") && libro.contains("Premios del lunes:")
+                libro.get(0).startsWith("MobCoins que te paga Oren") && libro.contains("Premios del lunes:")
                         && libro.contains("1.º  30 Esencias, 2 Llaves del Caos") && libro.contains("      y [ÁNIMA] 7 días")
                         && libro.contains("2.º  20 Esencias y 1 Llave del Caos") && libro.contains("Quedan: 1 d 5 h")
                         && libro.contains("✘ 3 salidas con vida  (llevas 1)") && libro.contains("Como mucho cobras en 2 rankings.")

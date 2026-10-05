@@ -74,6 +74,7 @@ final class Autotest {
             Map.entry("saldo", "balance"), Map.entry("sellos", "seals"), Map.entry("sentidos", "senses"),
             Map.entry("stats", "stats"), Map.entry("tablero", "board"), Map.entry("tasacion", "appraisal"),
             Map.entry("telemetria", "telemetry"), Map.entry("testigos", "witnesses"), Map.entry("tops", "tops"),
+            Map.entry("venta", "sale"),
             Map.entry("zona-spawn", "spawn-zone"));
 
     /** El nombre en ingles de un modulo (el id interno si aun no tiene). */
