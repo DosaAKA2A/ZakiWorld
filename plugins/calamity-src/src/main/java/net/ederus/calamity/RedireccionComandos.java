@@ -19,6 +19,10 @@ import org.bukkit.event.player.PlayerCommandPreprocessEvent;
 import org.bukkit.event.server.ServerCommandEvent;
 
 import net.ederus.calamity.hardcore.ComandosViejos;
+import net.ederus.calamity.hardcore.Paleta;
+import net.ederus.calamity.hardcore.Subcomandos;
+import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.event.ClickEvent;
 
 /**
  * Lo viejo sigue funcionando un tiempo: /lw hardcore, /lw level y el comando de staff en espanol de
@@ -26,7 +30,9 @@ import net.ederus.calamity.hardcore.ComandosViejos;
  *
  * Un comando llega por tres caminos, y los tres se cubren:
  *  - lo escribe un jugador: PlayerCommandPreprocessEvent. Solo /lw hardcore y /lw level (los
- *    escribe el staff por costumbre); el comando en espanol ya no existe para los jugadores;
+ *    escribe el staff por costumbre); el comando en espanol ya no existe para los jugadores. Al
+ *    staff (calamity.admin) que lo escribe por costumbre no se le ejecuta: se le dice la forma
+ *    nueva (pista); a los demas, el "comando desconocido" de siempre;
  *  - lo escribe la consola (o RCON, o un bloque de comandos): ServerCommandEvent;
  *  - lo lanza un plugin con dispatchCommand (Citizens con el clic de un NPC, las crates, los
  *    premios de la config): ahi no salta NINGUN evento. Para /lw se envuelve su ejecutor
@@ -58,7 +64,17 @@ public final class RedireccionComandos implements Listener {
         String mensaje = e.getMessage();
         if (!mensaje.startsWith("/")) return;
         String linea = mensaje.substring(1);
-        // El comando en espanol no se le traduce a un jugador: para el ya no existe.
+        // El comando en espanol no se le traduce a un jugador: para el ya no existe. Al staff se le
+        // dice como es ahora, sin ejecutarlo (que lo escriba bien la proxima vez).
+        String pista = pista(linea, propias);
+        if (pista != null) {
+            if (!e.getPlayer().hasPermission(Subcomandos.PERMISO)) return;
+            e.setCancelled(true);
+            e.getPlayer().sendMessage(Paleta.mensaje(Component.text("Ese comando cambió. Ahora es ")
+                    .append(Component.text("/" + pista, Paleta.CIFRA).clickEvent(ClickEvent.suggestCommand("/" + pista)))
+                    .append(Component.text("."))));
+            return;
+        }
         if (!esDeLw(linea)) return;
         String nuevo = ComandosViejos.viejo(linea);
         if (nuevo != null) e.setMessage("/" + nuevo);
@@ -82,6 +98,20 @@ public final class RedireccionComandos implements Listener {
         return ComandosViejos.RAICES_LW.contains(raiz);
     }
 
+    /**
+     * La forma nueva de una linea del comando oculto (sin barra), o null si no es suyo: su raiz
+     * (calamidad, cld y las dos con "calamity:") tiene que estar en propias, los nombres que el
+     * comando oculto consiguio para si. Si otro plugin tiene /cld, "/cld ..." es de ese plugin.
+     */
+    public static String pista(String linea, Set<String> propias) {
+        if (linea == null) return null;
+        String l = linea.strip();
+        int espacio = l.indexOf(' ');
+        String raiz = (espacio < 0 ? l : l.substring(0, espacio)).toLowerCase(Locale.ROOT);
+        if (!propias.contains(raiz) || !ComandosViejos.RAICES.contains(raiz)) return null;
+        return ComandosViejos.traducir(l);
+    }
+
     /** Una vez por linea distinta y por arranque: "comando viejo: X, ahora es Y". */
     static void avisar(String viejo, String nuevo) {
         if (plugin == null || !avisadas.add(viejo)) return;
@@ -95,6 +125,8 @@ public final class RedireccionComandos implements Listener {
     private static CommandExecutor original;
     private static CommandExecutor puente;
     private static final List<Command> ocultos = new ArrayList<>();
+    /** Las raices del comando oculto que son nuestras: las que se registraron sin chocar y las de "calamity:". */
+    private static final Set<String> propias = new HashSet<>();
 
     /**
      * Envuelve el ejecutor de /lw (el ComandoMundos de LethalWorld): si le llega hardcore o
@@ -128,7 +160,8 @@ public final class RedireccionComandos implements Listener {
      * El comando de staff de la 1.11, solo para la consola y sin dejarse ver: lo usan los NPCs de
      * Citizens, las crates y las recompensas que aun no se han cambiado. testPermissionSilent dice
      * que no a cualquier jugador, y Paper no manda al cliente (ni al tab ni a /help) lo que no pasa
-     * esa prueba; si un jugador lo escribe igual, ve el "comando desconocido" de siempre.
+     * esa prueba; si un jugador lo escribe igual, ve el "comando desconocido" de siempre (y el staff,
+     * la pista de alEscribirJugador, que lo para antes).
      */
     static void registrarOculto(CalamityPlugin plugin) {
         CommandMap mapa = plugin.getServer().getCommandMap();
@@ -159,6 +192,8 @@ public final class RedireccionComandos implements Listener {
             c.setDescription("Calamity: forma vieja, solo consola (temporal)");
             boolean suyo = mapa.register(nombre, "calamity", c);
             ocultos.add(c);
+            propias.add("calamity:" + nombre);
+            if (suyo) propias.add(nombre);
             if (!suyo) plugin.getLogger().warning("[Calamity] Otro plugin ya usa /" + nombre
                     + ": la forma vieja solo se traduce cuando la escribe la consola.");
         }
@@ -178,6 +213,7 @@ public final class RedireccionComandos implements Listener {
             }
         }
         ocultos.clear();
+        propias.clear();
         avisadas.clear();
     }
 }

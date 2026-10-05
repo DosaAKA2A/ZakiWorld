@@ -186,6 +186,11 @@ final class Aduana {
         Player online = p.getPlayer();
 
         if (!r.tipoTopado()) {
+            // 1.12: lo que se consigue dentro lleva la entrada (la Racha solo sube con lo de esta entrada).
+            if (online != null && hc.esHardcore(online)) {
+                String entrada = Tasacion.entrada(hc, u);
+                for (ItemStack it : rel) Tasacion.marcarEntrada(it, entrada);
+            }
             entregar(p, online, t, pago, rel, objetoSiDentro, recoger);
             if (pago.mc() > 0) vigilarGlobal(pago.mc(), ahora);
         }
@@ -323,7 +328,7 @@ final class Aduana {
         hc.plugin().getLogger().warning("[Calamity] Fusible global: " + total + " MC en la última hora (límite " + limite + ").");
         Component aviso = Paleta.aviso("Fusible global: Calamity ha pagado " + total
                 + " MobCoins en la última hora. Mira la Bitácora.");
-        for (Player s : Bukkit.getOnlinePlayers()) if (s.hasPermission("ederus.mundos")) s.sendMessage(aviso);
+        for (Player s : Bukkit.getOnlinePlayers()) if (s.hasPermission(Subcomandos.PERMISO)) s.sendMessage(aviso);
     }
 
     // ---------------------------------------------------------------- validez

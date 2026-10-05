@@ -36,7 +36,9 @@ import java.util.UUID;
  *  - la portada (45) tiene tres tarjetas grandes: Para la expedicion, Llaves y ofrendas y La
  *    Forja, cada una con dos lineas de lo que hay dentro, cuantos articulos y cuantos puedes
  *    comprar ya (brilla si alguno). Arriba tu saldo; abajo "¿Como funciona?", Cerrar en el
- *    centro y el enlace al Mercado de Oren, como la portada del Mercado (1.7.3);
+ *    centro y el enlace al Mercado de Oren, como la portada del Mercado (1.7.3). 1.12: con el
+ *    Kit de Expedicion en marcha (kit.activo), una cuarta tarjeta al final que lo pide (no se
+ *    compra: es el "calamity open <p> kit" de siempre, ahora con boton en Sael);
  *  - una categoria (54) son sus articulos centrados y con aire (Marco.rejilla), con las flechas
  *    de pagina en las esquinas de abajo y Volver al Altar en el centro;
  *  - la Forja (54, la que abre Vael y la tarjeta de la portada) pone cada grupo en su fila con
@@ -143,6 +145,36 @@ final class MenuAltar implements Listener {
                     List.of("La Llave del Caos y la Ofrenda,", "a cambio de Esencias."), "Llaves"),
             new Categoria(FORJA, Material.ANVIL, "La Forja",
                     List.of("El Manto, el Vestigio del Eco,", "la Guadaña, la Masamune y mejoras."), "Forja"));
+
+    /** La tarjeta del Kit de Expedicion en la portada: nombre, lore y si brilla (se puede pedir ya). */
+    record Tarjeta(Component nombre, List<Component> lore, boolean brillo) {
+    }
+
+    /**
+     * La tarjeta del Kit, sin Bukkit: lo que presta, cada cuanto y si se puede pedir ya (o por
+     * que no, con las mismas razones que Kit.pedir). tragos 0: sin Frasco.
+     */
+    static Tarjeta tarjetaKit(Kit.Estado e, int tragos, double cadaHoras) {
+        boolean puede = e.motivo() == null;
+        List<Component> lore = new ArrayList<>();
+        lore.add(Marco.texto(tragos > 0 ? "Hierro completo, espada de piedra," : "Hierro completo, espada de piedra"));
+        lore.add(Marco.texto(tragos > 0 ? "8 panes y un Frasco de Calma." : "y 8 panes."));
+        lore.add(Marco.tenue("Es prestado: se deshace al"));
+        lore.add(Marco.tenue("salir de Calamity."));
+        lore.add(Component.empty());
+        String cada = cadaHoras == Math.rint(cadaHoras) ? String.valueOf((long) cadaHoras)
+                : String.valueOf(cadaHoras).replace('.', ',');
+        lore.add(Marco.dato("Uno cada", cada + " h"));
+        lore.add(Component.empty());
+        lore.add(switch (e.motivo() == null ? "" : e.motivo()) {
+            case "" -> Marco.accion("Clic para pedirlo");
+            case "dentro" -> Marco.porQueNo("Se pide fuera de Calamity.");
+            case "armadura" -> Marco.porQueNo("Quítate la armadura para pedirlo.");
+            case "espera" -> Marco.porQueNo("Vuelve en " + Math.max(1, e.horas()) + " h.");
+            default -> Marco.porQueNo("Ahora no se puede pedir.");
+        });
+        return new Tarjeta(Component.text("Kit de Expedición", puede ? Paleta.DETALLE : Paleta.TENUE), lore, puede);
+    }
 
     /** Una cosa de la Forja: un trueque, o el boton Grabar. */
     record Cosa(Altar.Trueque t, String boton) {
@@ -342,7 +374,10 @@ final class MenuAltar implements Listener {
         Altar.Caja caja = altar.caja();
         List<Categoria> hay = new ArrayList<>();
         for (Categoria c : CATEGORIAS) if (!trueques(c.id(), todos, salvo).isEmpty()) hay.add(c);
-        int[] casillas = tarjetas(hay.size());
+        // 1.12: el Kit de Expedicion, al final, solo si esta en marcha.
+        Kit kit = hc.kit();
+        boolean conKit = kit != null && hc.valor("kit", kit::activo, false);
+        int[] casillas = tarjetas(hay.size() + (conKit ? 1 : 0));
         for (int i = 0; i < casillas.length; i++) {
             Categoria c = hay.get(i);
             List<Altar.Trueque> ts = trueques(c.id(), todos, salvo);
@@ -359,7 +394,13 @@ final class MenuAltar implements Listener {
             inv.setItem(casillas[i], Marco.icono(c.icono(), Component.text(c.nombre(), forja ? Altar.AMBAR : Paleta.DETALLE), lore, ya > 0));
             m.acciones().put(casillas[i], "cat:" + c.id());
         }
-        if (hay.isEmpty()) {
+        if (conKit) {
+            int c = casillas[casillas.length - 1];
+            Tarjeta t = tarjetaKit(kit.estado(p), kit.tragos(), kit.cadaHoras());
+            inv.setItem(c, Marco.icono(Material.IRON_CHESTPLATE, t.nombre(), t.lore(), t.brillo()));
+            m.acciones().put(c, "kit");
+        }
+        if (hay.isEmpty() && !conKit) {
             inv.setItem(FILA_TARJETAS + 4, Marco.icono(Material.GRAY_DYE, Component.text("El Altar no tiene nada ahora", Paleta.TENUE),
                     List.of(Marco.tenue("Vuelve más tarde.")), false));
         }
@@ -905,6 +946,22 @@ final class MenuAltar implements Listener {
                 repintar(p);
             }
             case "grabar" -> altar.tarea(() -> altar.forja().abrirGrabar(p), 1L);
+            // El Kit: lo mismo que "calamity open <p> kit" (Kit.pedir dice en el chat si no se puede).
+            // Un tick despues: pone la armadura y repinta la tarjeta, que pasa a "Vuelve en 20 h".
+            case "kit" -> altar.tarea(() -> {
+                Kit kit = hc.kit();
+                if (kit == null || !kit.activo()) {
+                    p.sendMessage(ComandoCalamity.mensaje("El Kit de Expedición no está disponible ahora mismo."));
+                    Marco.sonidoNo(p);
+                    repintar(p);
+                    return;
+                }
+                boolean puede = kit.estado(p).motivo() == null;
+                kit.pedir(p);
+                if (puede) Marco.sonar(p, "item.armor.equip_iron", 0.8f, 1.0f);
+                else Marco.sonidoNo(p);
+                repintar(p);
+            }, 1L);
             case "gris" -> {
                 p.sendMessage(ComandoCalamity.mensaje("Esto aún no está disponible."));
                 Marco.sonidoNo(p);
@@ -1097,11 +1154,40 @@ final class MenuAltar implements Listener {
         List<Integer> fijasPortada = List.of(Marco.SALDO, CERRAR, AYUDA, IR_TASADOR);
         boolean portada = new HashSet<>(fijasPortada).size() == fijasPortada.size();
         for (int f : fijasPortada) portada &= f < PORTADA && Marco.esBorde(f, PORTADA);
-        for (int n = 1; n <= CATEGORIAS.size(); n++) {
+        // 1.12: con el Kit de Expedicion, una tarjeta mas.
+        for (int n = 1; n <= CATEGORIAS.size() + 1; n++) {
             for (int c : tarjetas(n)) portada &= c / 9 == 2 && c % 9 >= 1 && c % 9 <= 7 && !fijasPortada.contains(c);
         }
         h.ok("portada: tarjetas en la fila del medio, lo fijo en el marco", portada);
         h.igual("portada: tres tarjetas en 20, 22 y 24", "20,22,24", tarjetas(3)[0] + "," + tarjetas(3)[1] + "," + tarjetas(3)[2]);
+        h.igual("portada: con el Kit, cuatro en 19, 21, 23 y 25", List.of(19, 21, 23, 25),
+                java.util.Arrays.stream(tarjetas(4)).boxed().toList());
+
+        // 1.12: la tarjeta del Kit de Expedicion, con cada estado.
+        var plano = net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer.plainText();
+        Tarjeta kitSi = tarjetaKit(new Kit.Estado(null, 0), 1, 20);
+        List<String> lKit = new ArrayList<>();
+        for (Component c : kitSi.lore()) lKit.add(plano.serialize(c));
+        h.igual("kit: el nombre", "Kit de Expedición", plano.serialize(kitSi.nombre()));
+        h.ok("kit: se puede pedir, brilla y lo dice", kitSi.brillo() && "▸ Clic para pedirlo".equals(lKit.get(lKit.size() - 1)));
+        h.ok("kit: dice lo que presta y cada cuanto", lKit.contains("8 panes y un Frasco de Calma.")
+                && lKit.contains("Uno cada: 20 h") && lKit.contains("salir de Calamity."));
+        Tarjeta sinFrasco = tarjetaKit(new Kit.Estado(null, 0), 0, 12.5);
+        List<String> lSin = new ArrayList<>();
+        for (Component c : sinFrasco.lore()) lSin.add(plano.serialize(c));
+        h.ok("kit: sin Frasco y con media hora", lSin.contains("y 8 panes.") && lSin.contains("Uno cada: 12,5 h"));
+        Map<String, String> motivos = new LinkedHashMap<>();
+        motivos.put("dentro", "✘ Se pide fuera de Calamity.");
+        motivos.put("armadura", "✘ Quítate la armadura para pedirlo.");
+        motivos.put("espera", "✘ Vuelve en 7 h.");
+        for (Map.Entry<String, String> e : motivos.entrySet()) {
+            Tarjeta t = tarjetaKit(new Kit.Estado(e.getKey(), 7), 1, 20);
+            String ultima = plano.serialize(t.lore().get(t.lore().size() - 1));
+            h.ok("kit: " + e.getKey() + " no brilla y dice por que (" + ultima + ")", !t.brillo() && e.getValue().equals(ultima));
+        }
+        boolean kitCorto = true;
+        for (String l : lKit) kitCorto &= l.length() <= 36;
+        h.ok("kit: lineas cortas", kitCorto);
 
         // Confirmar: la Forja siempre; en el Umbral, desde 50 Esencias; con 0, solo la Forja.
         Map<String, Altar.Trueque> ts = new HashMap<>();

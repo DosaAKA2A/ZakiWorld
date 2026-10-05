@@ -46,7 +46,7 @@ permissions:
   # una a una: /calamity exempt <player> <reaper|customs|all> <on|off> (se guardan en
   # hardcore-datos.yml).
   # Rama venta-oren: el staff que puede usar /ec y /pv dentro de Calamity y guardar Reliquias y
-  # Esencias fuera (Sellos). ederus.mundos y calamity.admin (hijo) tambien se lo saltan.
+  # Esencias fuera (Sellos). calamity.admin lo lleva de hijo.
   calamity.bypass.storage:
     description: Saltarse los sellos de almacen de Calamity (/ec y /pv dentro; guardar Reliquias y Esencias fuera)
     default: op

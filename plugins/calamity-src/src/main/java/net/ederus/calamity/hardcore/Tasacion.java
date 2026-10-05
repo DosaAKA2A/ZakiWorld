@@ -41,7 +41,11 @@ import java.util.UUID;
  * dia (sus Esencias de mas), los contratos ya cumplidos que se cobran al salir vivo, la telemetria "sale"
  * y la encuesta. La Racha de Codicia sube con la venta, una vez por entrada a Calamity (subeRacha): asi
  * no se puede subir saliendo y entrando con la misma Reliquia, y vender por partes tampoco la sube dos
- * veces.
+ * veces. Calamity 1.12: y solo con Reliquias de grado II o mas CONSEGUIDAS en esa misma entrada. Antes
+ * bastaba la primera venta de cada entrada, y se inflaba guardando Reliquias fuera y entrando, vendiendo
+ * y saliendo. Ahora la Aduana marca cada Reliquia de grado II o mas que da dentro de Calamity con la
+ * entrada del jugador (marcarEntrada, lethal_world:reliquia_entrada) y la venta solo la sube si alguna de
+ * las que paga lleva la entrada de ahora (Cuenta.deLaEntrada).
  *
  * Una Reliquia con UUID solo paga si esta emitida en reliquias.log y no esta cobrada: la falsa y la
  * duplicada se quitan igual y se apuntan (la duplicada avisa al staff). Las I-II no llevan UUID; las
@@ -57,7 +61,12 @@ final class Tasacion {
 
     /** Una Reliquia leida del objeto (cantidad = unidades del monton). */
     record Pieza(int grado, String especial, String id, long nacio, int nivel, String minijefe, boolean valida,
-                 int cantidad) {
+                 int cantidad, String entrada) {
+
+        /** Sin entrada apuntada (la de antes de la 1.12 y la de los autotests). */
+        Pieza(int grado, String especial, String id, long nacio, int nivel, String minijefe, boolean valida, int cantidad) {
+            this(grado, especial, id, nacio, nivel, minijefe, valida, cantidad, null);
+        }
     }
 
     /** Los numeros de la venta, de la config con los de serie (PLAN sec. 3.1). */
@@ -103,6 +112,11 @@ final class Tasacion {
         final List<Object[]> llaves = new ArrayList<>();
         int validas;
         boolean dosOMas;
+        /**
+         * 1.12: si entre lo que se paga hay alguna de grado II o mas conseguida en la entrada que se pidio
+         * a contar (Pieza.entrada igual y no vacia). Es lo que sube la Racha.
+         */
+        boolean deLaEntrada;
 
         int nulas() {
             return falsas.size() + duplicadas.size() + caducadas.size();
@@ -192,7 +206,32 @@ final class Tasacion {
     }
 
     private String expedicion(UUID u) {
+        return entrada(hc, u);
+    }
+
+    /** La entrada a Calamity en la que esta (o estuvo por ultima vez) el jugador: los millis de alEntrar. */
+    static String entrada(Hardcore hc, UUID u) {
         return hc.datos().getString("expedicion." + u, "");
+    }
+
+    /**
+     * 1.12 · Apunta en una Reliquia de grado II o mas la entrada en la que se consigue (la llama la Aduana
+     * al darla dentro de Calamity). Las de grado I no: no suben la Racha y asi los montones de Astillas
+     * siguen apilando entre entradas. Sin entrada (vacia) no apunta nada.
+     */
+    static void marcarEntrada(ItemStack it, String entrada) {
+        if (it == null || entrada == null || entrada.isEmpty() || !it.hasItemMeta()) return;
+        ItemMeta meta = it.getItemMeta();
+        Integer g = meta.getPersistentDataContainer().get(Marcas.RELIQUIA, PersistentDataType.INTEGER);
+        if (g == null || g < 2) return;
+        meta.getPersistentDataContainer().set(Marcas.RELIQUIA_ENTRADA, PersistentDataType.STRING, entrada);
+        it.setItemMeta(meta);
+    }
+
+    /** La entrada apuntada en una Reliquia, o null. */
+    static String entradaDe(ItemStack it) {
+        if (it == null || !it.hasItemMeta()) return null;
+        return it.getItemMeta().getPersistentDataContainer().get(Marcas.RELIQUIA_ENTRADA, PersistentDataType.STRING);
     }
 
     /**
@@ -522,7 +561,7 @@ final class Tasacion {
         if (rel != null) for (ItemStack it : items) if (rel.es(it)) piezas.add(leer(rel, it));
         String rutaDia = "tasacion-dia." + u;
         int[] ya = yaHoy(u);
-        Cuenta k = contar(piezas, reg, ya[1], ya[2], v, ahora);
+        Cuenta k = contar(piezas, reg, ya[1], ya[2], v, ahora, expedicion(u));
 
         Censo.Foto foto = online == null ? null : hc.valor("censo", () -> Censo.de(online), null);
         Racha racha = hc.racha();
@@ -546,7 +585,7 @@ final class Tasacion {
         for (String id : k.duplicadas) {
             bit.anotar("reliquia", "duplicada", nombre, id);
             hc.plugin().getServer().broadcast(Paleta.aviso(
-                    "Reliquia duplicada en la venta de " + nombre + " (" + id + ")."), "ederus.mundos");
+                    "Reliquia duplicada en la venta de " + nombre + " (" + id + ")."), Subcomandos.PERMISO);
         }
         for (String id : k.caducadas) bit.anotar("reliquia", "caducada", nombre, id);
         for (int g = 1; g <= 2; g++) if (k.exceso[g] > 0) bit.anotar("reliquia", "exceso", nombre, String.valueOf(g), String.valueOf(k.exceso[g]));
@@ -603,11 +642,12 @@ final class Tasacion {
             if (sale && en != null) en.llave(op, 1, "tasacion", true);
         }
 
-        // La Racha: una vez por entrada a Calamity, con una venta que lleve grado II o mas.
+        // La Racha: una vez por entrada a Calamity, con una venta que lleve grado II o mas conseguida en esa
+        // misma entrada (1.12: las guardadas de otra entrada ya no la suben).
         int rachaNueva = racha == null ? 0 : racha.de(u);
         if (racha != null && conRacha && online != null) {
             String exp = expedicion(u);
-            if (subeRacha(exp, hc.datos().getString("racha-venta." + u), k.dosOMas)) {
+            if (subeRacha(exp, hc.datos().getString("racha-venta." + u), k.deLaEntrada)) {
                 rachaNueva = racha.subir(u, online, foto);
                 hc.datos().set("racha-venta." + u, exp);
                 hc.marcarSucio();
@@ -728,7 +768,7 @@ final class Tasacion {
 
     Pieza leer(Reliquias rel, ItemStack it) {
         return new Pieza(rel.grado(it), rel.especial(it), rel.id(it), rel.nacio(it), rel.nivel(it), rel.minijefe(it),
-                rel.valida(it), Math.max(1, it.getAmount()));
+                rel.valida(it), Math.max(1, it.getAmount()), entradaDe(it));
     }
 
     /**
@@ -739,7 +779,10 @@ final class Tasacion {
         return v.primeraBase() + (validasEncima > 0 || vendioEnEstaEntrada ? v.primeraSiTasa() : 0);
     }
 
-    /** Si una venta sube la Racha: con grado II o mas y si en esta entrada aun no la subio ninguna. */
+    /**
+     * Si una venta sube la Racha: con grado II o mas conseguido en esta entrada (Cuenta.deLaEntrada desde
+     * la 1.12) y si en esta entrada aun no la subio ninguna.
+     */
     static boolean subeRacha(String entrada, String yaSubioEn, boolean dosOMas) {
         return dosOMas && !(entrada == null ? "" : entrada).equals(yaSubioEn);
     }
@@ -749,14 +792,26 @@ final class Tasacion {
      * llama (y solo si de verdad paga).
      */
     static Cuenta contar(List<Pieza> piezas, Reliquias.Registro reg, int ya1, int ya2, Valores v, long ahora) {
+        return contar(piezas, reg, ya1, ya2, v, ahora, null);
+    }
+
+    /**
+     * Lo mismo, mirando ademas que piezas son de la entrada (1.12, Cuenta.deLaEntrada). En un monton de
+     * I-II que pasa del tope, solo cuenta si por fuerza se paga alguna de la entrada: Oren se lleva las
+     * que caben en el orden del inventario y aqui no se sabe cuales son.
+     */
+    static Cuenta contar(List<Pieza> piezas, Reliquias.Registro reg, int ya1, int ya2, Valores v, long ahora,
+                         String entrada) {
         Cuenta k = new Cuenta();
         int[] monton = new int[5];
+        int[] montonEntrada = new int[5];
         Set<String> vistas = new HashSet<>();
         for (Pieza p : piezas) {
             int g = Math.max(1, Math.min(4, p.grado()));
             if (p.id() == null) {
                 if (p.especial() == null && v.apilables().contains(g)) {
                     monton[g] += p.cantidad();
+                    if (deEntrada(p, entrada)) montonEntrada[g] += p.cantidad();
                 } else {
                     // Un III o un especial sin UUID no lo ha hecho el plugin: NBT a mano.
                     for (int i = 0; i < p.cantidad(); i++) k.falsas.add("sin-id");
@@ -777,6 +832,7 @@ final class Tasacion {
                     k.porGrado[g]++;
                     k.validas++;
                     if (g >= 2) k.dosOMas = true;
+                    if (g >= 2 && deEntrada(p, entrada)) k.deLaEntrada = true;
                     extras(k, p, g, v);
                 }
             }
@@ -793,8 +849,14 @@ final class Tasacion {
             k.monton[g] += paga;
             k.validas += paga;
             if (paga > 0 && g >= 2) k.dosOMas = true;
+            if (g >= 2 && paga > monton[g] - montonEntrada[g]) k.deLaEntrada = true;
         }
         return k;
+    }
+
+    /** Si la pieza se consiguio en esa entrada (las dos apuntadas y iguales). */
+    private static boolean deEntrada(Pieza p, String entrada) {
+        return entrada != null && !entrada.isEmpty() && entrada.equals(p.entrada());
     }
 
     private static void extras(Cuenta k, Pieza p, int g, Valores v) {
@@ -1087,6 +1149,43 @@ final class Tasacion {
         h.ok("racha: solo Astillas no la sube", !subeRacha("200", "100", false));
         h.ok("racha: sin entrada apuntada sube una vez", subeRacha("", null, true) && !subeRacha("", "", true));
 
+        // 1.12: solo cuenta lo conseguido en esta entrada. Guardar Reliquias fuera y entrar a venderlas no la sube.
+        String e1 = "1000", e2 = "2000";
+        String ii = UUID.randomUUID().toString(), iii = UUID.randomUUID().toString(), vieja = UUID.randomUUID().toString();
+        reg.emitida(ii, 2, "prueba", ahora);
+        reg.emitida(iii, 3, "prueba", ahora);
+        reg.emitida(vieja, 3, "prueba", ahora);
+        Pieza deE2 = new Pieza(3, null, iii, ahora, 0, null, false, 1, e2);
+        Pieza deE1 = new Pieza(3, null, vieja, ahora, 0, null, false, 1, e1);
+        h.ok("racha: una III de esta entrada cuenta", contar(List.of(deE2), reg, 0, 0, v, ahora, e2).deLaEntrada);
+        h.ok("racha: una III guardada de otra entrada no", !contar(List.of(deE1), reg, 0, 0, v, ahora, e2).deLaEntrada);
+        h.ok("racha: pero sigue pagando (dosOMas)", contar(List.of(deE1), reg, 0, 0, v, ahora, e2).dosOMas);
+        h.ok("racha: una sin entrada apuntada (de antes) no",
+                !contar(List.of(uuid(3, iii, null, 0, null, false, ahora)), reg, 0, 0, v, ahora, e2).deLaEntrada);
+        h.ok("racha: sin entrada del jugador, nada cuenta",
+                !contar(List.of(new Pieza(3, null, iii, ahora, 0, null, false, 1, "")), reg, 0, 0, v, ahora, "").deLaEntrada);
+        h.ok("racha: vieja y nueva juntas, cuenta la nueva", contar(List.of(deE1, deE2), reg, 0, 0, v, ahora, e2).deLaEntrada);
+        h.ok("racha: una I de esta entrada no", !contar(List.of(new Pieza(1, null, null, 0, 0, null, false, 5, e2)),
+                reg, 0, 0, v, ahora, e2).deLaEntrada);
+        Pieza montonE2 = new Pieza(2, null, null, 0, 0, null, false, 3, e2);
+        Pieza montonE1 = new Pieza(2, null, null, 0, 0, null, false, 10, e1);
+        h.ok("racha: un monton de II de esta entrada cuenta", contar(List.of(montonE2), reg, 0, 0, v, ahora, e2).deLaEntrada);
+        h.ok("racha: un monton de II de otra entrada no", !contar(List.of(montonE1), reg, 0, 0, v, ahora, e2).deLaEntrada);
+        h.ok("racha: con el tope casi lleno, las II viejas pueden ser las pagadas: no cuenta",
+                !contar(List.of(montonE1, montonE2), reg, 0, 25, v, ahora, e2).deLaEntrada);
+        h.ok("racha: si se paga mas que las viejas, alguna es nueva: cuenta",
+                contar(List.of(montonE1, montonE2), reg, 0, 18, v, ahora, e2).deLaEntrada);
+        h.ok("racha: con el tope lleno no se paga nada y no cuenta",
+                !contar(List.of(montonE2), reg, 0, 30, v, ahora, e2).deLaEntrada);
+        h.ok("racha: una II con UUID de esta entrada (Campana) cuenta", contar(List.of(new Pieza(2, Reliquias.CAMPANA, ii,
+                ahora, 10, null, false, 1, e2)), reg, 0, 0, v, ahora, e2).deLaEntrada);
+        h.igual("racha: contar sin entrada es lo de siempre", contar(List.of(deE2), reg, 0, 0, v, ahora).dosOMas,
+                contar(List.of(deE2), reg, 0, 0, v, ahora, null).dosOMas);
+        String dup = UUID.randomUUID().toString();
+        reg.emitida(dup, 3, "prueba", ahora);
+        h.ok("racha: una ya cobrada (duplicada) de esta entrada no cuenta", !contar(List.of(new Pieza(3, null, dup, ahora,
+                0, null, false, 1, e2)), cobradaYa(reg, dup, ahora), 0, 0, v, ahora, e2).deLaEntrada);
+
         // Extras, como se leen en el menu.
         String cam = UUID.randomUUID().toString(), lag = UUID.randomUUID().toString();
         reg.emitida(cam, 4, "prueba", ahora);
@@ -1171,6 +1270,12 @@ final class Tasacion {
                 .replaceAll("\\s+", " ");
         return s.contains("se vende sol") || s.contains("se venden sol") || s.contains("pasan a tu saldo")
                 || s.contains("pasa a tu saldo") || s.contains("valor al salir") || s.contains("cada reliquia que sacas vivo");
+    }
+
+    /** El registro con esa Reliquia ya cobrada (para probar la duplicada). */
+    private static Reliquias.Registro cobradaYa(Reliquias.Registro reg, String id, long ahora) {
+        reg.cobrada(id, "prueba", ahora);
+        return reg;
     }
 
     private static Pieza pieza(int grado, int cantidad) {

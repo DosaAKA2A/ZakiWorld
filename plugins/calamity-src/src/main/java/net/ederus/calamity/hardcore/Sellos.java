@@ -87,7 +87,7 @@ import java.util.UUID;
  * - el suelo: se pueden tirar (son tuyas), pero solo las recoge quien las tiro, y ningun mob;
  * - morir fuera de Calamity no las suelta: se quedan en tu inventario (si no, matarte seria pasarlas).
  *
- * Quien tiene ederus.mundos, calamity.bypass.storage o calamity.admin (staff) no esta sellado. Cada sello tiene su
+ * Quien tiene calamity.admin (staff) no esta sellado; calamity.bypass.storage solo se salta los de almacen. Cada sello tiene su
  * interruptor en hardcore.sellos. Los mobs que recogen dentro (X14) ya los cierra Hardcore.onRecoger.
  */
 final class Sellos implements Listener {
@@ -149,16 +149,16 @@ final class Sellos implements Listener {
     }
 
     private static boolean staff(Player p) {
-        return p.hasPermission("ederus.mundos");
+        return p.hasPermission(Subcomandos.PERMISO);
     }
 
     /**
-     * Staff para los sellos de almacen: ederus.mundos, el permiso propio de BYPASS o el de staff de
-     * /calamity (calamity.admin, que en el plugin.yml ya lleva BYPASS de hijo; se mira tambien aqui
-     * por si un grupo de LuckPerms lo da sin heredar los hijos).
+     * Staff para los sellos de almacen: el permiso propio de BYPASS o el de staff de /calamity
+     * (calamity.admin, que en el plugin.yml ya lleva BYPASS de hijo; se mira tambien aqui por si un
+     * grupo de LuckPerms lo da sin heredar los hijos).
      */
     static boolean exento(Player p) {
-        return p.hasPermission("ederus.mundos") || p.hasPermission(BYPASS) || p.hasPermission(Subcomandos.PERMISO);
+        return p.hasPermission(BYPASS) || p.hasPermission(Subcomandos.PERMISO);
     }
 
     private List<String> comandos() {

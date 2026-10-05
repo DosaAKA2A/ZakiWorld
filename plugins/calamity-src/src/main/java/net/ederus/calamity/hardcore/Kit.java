@@ -72,11 +72,11 @@ final class Kit implements Listener {
         Autotest.registrar("kit", this::autotest);
     }
 
-    private boolean activo() {
+    boolean activo() {
         return hc.cfg().getBoolean("kit.activo", false);
     }
 
-    private double cadaHoras() {
+    double cadaHoras() {
         return Math.max(0, hc.cfg().getDouble("kit.cada-horas", 20));
     }
 
@@ -120,7 +120,7 @@ final class Kit implements Listener {
             out.add(prestar(new ItemStack(m)));
         }
         out.add(prestar(new ItemStack(Material.BREAD, 8)));
-        int tragos = Math.max(0, hc.cfg().getInt("kit.frasco-tragos", 1));
+        int tragos = tragos();
         if (tragos > 0) out.add(prestar(hc.items().frasco(tragos)));
         return out;
     }
@@ -147,6 +147,25 @@ final class Kit implements Listener {
     }
 
     // ------------------------------------------------------------------ pedir
+
+    /** Como esta el kit para p ahora: el motivo de motivo() o "dentro" (en Calamity); y las horas si espera. */
+    record Estado(String motivo, long horas) {
+    }
+
+    /** Lo que mira el boton del Altar (MenuAltar.tarjetaKit): lo mismo que pedir(), sin dar nada. */
+    Estado estado(Player p) {
+        if (hc.esHardcore(p)) return new Estado("dentro", 0);
+        long ahora = System.currentTimeMillis();
+        long ultimo = hc.datos().getLong("kit." + p.getUniqueId(), 0);
+        String no = motivo(conArmadura(p.getInventory()), hc.cfg().getBoolean("kit.solo-sin-armadura", true),
+                ultimo, ahora, cadaHoras());
+        return new Estado(no, "espera".equals(no) ? horasQueFaltan(ultimo, ahora, cadaHoras()) : 0);
+    }
+
+    /** Los tragos del Frasco que se presta (0: sin Frasco), para el boton del Altar. */
+    int tragos() {
+        return Math.max(0, hc.cfg().getInt("kit.frasco-tragos", 1));
+    }
 
     void pedir(Player p) {
         if (!activo()) {

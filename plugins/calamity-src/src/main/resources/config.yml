@@ -453,7 +453,7 @@ hardcore:
     # 14. Os podeis matar entre vosotros.
     fuego-amigo: true
 
-  # Comandos que no funcionan dentro (quien tenga ederus.mundos se los salta).
+  # Comandos que no funcionan dentro (el staff con calamity.admin se los salta).
   comandos-prohibidos:
     - spawn
     - home
@@ -924,7 +924,7 @@ hardcore:
   # inventario del jugador: ni cofres, barriles, shulkers, bolsas, cofre ender (/ec), /pv, /ah, /trade,
   # mesas, aldeanos, tolvas, marcos, soportes ni menus de otros plugins. Bolsas y shulkers, tampoco
   # dentro. Se pueden tirar al suelo, pero solo las recoge quien las tiro; al morir fuera no se sueltan.
-  # El staff con ederus.mundos, calamity.bypass.storage o calamity.admin no esta sellado.
+  # El staff con calamity.admin no esta sellado; calamity.bypass.storage solo se salta los de almacen.
   sellos:
     activo: true
     portales: true

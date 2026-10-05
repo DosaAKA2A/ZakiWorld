@@ -1,6 +1,7 @@
 package net.ederus.calamity.hardcore;
 
 import net.ederus.calamity.ComandoRaiz;
+import net.ederus.calamity.RedireccionComandos;
 import org.bukkit.Bukkit;
 import org.bukkit.command.PluginCommand;
 import org.bukkit.entity.Player;
@@ -157,7 +158,55 @@ final class PruebaComandos {
         for (Map.Entry<String, String> e : ComandosViejos.SUBS.entrySet()) {
             h.ok("viejo " + e.getKey() + " lleva a un subcomando que existe (" + e.getValue() + ")", existen.contains(e.getValue()));
         }
+        pistas(h);
+        permisos(h);
         return h.lineas();
+    }
+
+    /**
+     * 1.12 · La pista al staff que escribe /calamidad o /cld en el juego: la forma nueva, solo para
+     * las raices del comando oculto que son nuestras (RedireccionComandos.pista).
+     */
+    static void pistas(Autotest.Hoja h) {
+        Set<String> nuestras = Set.of("calamidad", "cld", "calamity:calamidad", "calamity:cld");
+        h.igual("pista: /calamidad tasar", "calamity appraise Dosa__ reset",
+                RedireccionComandos.pista("calamidad tasar Dosa__ reset", nuestras));
+        h.igual("pista: /cld con mayusculas", "calamity selftest all", RedireccionComandos.pista("CLD autotest todo", nuestras));
+        h.igual("pista: con el prefijo", "calamity open Dosa__ merchant",
+                RedireccionComandos.pista("calamity:calamidad abrir Dosa__ mercader", nuestras));
+        h.igual("pista: la raiz sola", "calamity", RedireccionComandos.pista("calamidad", nuestras));
+        h.igual("pista: /calamity no es viejo", null, RedireccionComandos.pista("calamity give esencia Dosa__ 1", nuestras));
+        h.igual("pista: /lw hardcore va por su lado", null, RedireccionComandos.pista("lw hardcore dar x", nuestras));
+        h.igual("pista: otro comando que empieza igual", null, RedireccionComandos.pista("cldx algo", nuestras));
+        h.igual("pista: si otro plugin tiene /cld, no se toca", null,
+                RedireccionComandos.pista("cld autotest", Set.of("calamidad", "calamity:calamidad", "calamity:cld")));
+    }
+
+    /**
+     * 1.12 · Un solo permiso de staff: lo que antes miraba ederus.mundos (de LethalWorld) mira
+     * calamity.admin. Con jugadores de mentira que solo tienen los permisos que se digan.
+     */
+    static void permisos(Autotest.Hoja h) {
+        h.ok("sellos de almacen: calamity.admin se los salta", Sellos.exento(conPermisos(Subcomandos.PERMISO)));
+        h.ok("sellos de almacen: calamity.bypass.storage se los salta", Sellos.exento(conPermisos(Sellos.BYPASS)));
+        h.ok("sellos de almacen: ederus.mundos solo ya no", !Sellos.exento(conPermisos("ederus.mundos")));
+        h.ok("sellos de almacen: un jugador sin permisos no", !Sellos.exento(conPermisos()));
+    }
+
+    /** Un Player de mentira: hasPermission dice si con los de la lista y todo lo demas da lo neutro. */
+    static Player conPermisos(String... permisos) {
+        Set<String> tiene = Set.of(permisos);
+        return (Player) java.lang.reflect.Proxy.newProxyInstance(Player.class.getClassLoader(), new Class<?>[]{Player.class},
+                (yo, m, args) -> {
+                    if (m.getName().equals("hasPermission") && args != null && args[0] instanceof String s) return tiene.contains(s);
+                    Class<?> r = m.getReturnType();
+                    if (r == boolean.class) return false;
+                    if (r == int.class) return 0;
+                    if (r == long.class) return 0L;
+                    if (r == double.class) return 0d;
+                    if (r == float.class) return 0f;
+                    return null;
+                });
     }
 
     private static void nombreIngles(Autotest.Hoja h, String que, String nombre) {

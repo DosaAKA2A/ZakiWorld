@@ -55,6 +55,11 @@ public final class Marcas {
     public static final NamespacedKey RELIQUIA_NIVEL = clave("reliquia_nivel");
     public static final NamespacedKey RELIQUIA_MINIJEFE = clave("reliquia_minijefe");
     public static final NamespacedKey RELIQUIA_VALIDA = clave("reliquia_valida");
+    /**
+     * STRING: la entrada a Calamity (los millis de Tasacion.alEntrar) en la que se consiguio una Reliquia
+     * de grado II o mas (1.12). Solo sube la Racha de Codicia si es la entrada de ahora.
+     */
+    public static final NamespacedKey RELIQUIA_ENTRADA = clave("reliquia_entrada");
     public static final NamespacedKey TROFEO = clave("trofeo");
     public static final NamespacedKey PRESTADO = clave("prestado");
     public static final NamespacedKey LIGADO = clave("ligado");
@@ -83,7 +88,7 @@ public final class Marcas {
     static List<NamespacedKey> todas() {
         return List.of(AMENAZA, PRESA, ECO, ECO_DUENO, DANO_JUGADOR, VIDA_LOGICA, CASCARA, ECO_COPIA, RELIQUIA, RELIQUIA_ID,
                 RELIQUIA_ORIGEN, RELIQUIA_NACIO, RELIQUIA_ESPECIAL, RELIQUIA_NIVEL, RELIQUIA_MINIJEFE,
-                RELIQUIA_VALIDA, TROFEO, PRESTADO, LIGADO, TALISMAN, GRABADO, SALVOCONDUCTO, FRAGMENTO_MASAMUNE, RECLAMO,
+                RELIQUIA_VALIDA, RELIQUIA_ENTRADA, TROFEO, PRESTADO, LIGADO, TALISMAN, GRABADO, SALVOCONDUCTO, FRAGMENTO_MASAMUNE, RECLAMO,
                 PERGAMINO);
     }
 

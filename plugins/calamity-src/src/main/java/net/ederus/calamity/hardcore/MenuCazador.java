@@ -55,7 +55,9 @@ import java.util.function.Function;
  *              falta para el reinicio y las reglas para cobrar
  *   filas 1-3: su top 10 en piramide con la cabeza de cada jugador: el 1.o en 13, el 2.o y el 3.o
  *              en 21 y 23, del 4.o al 10.o en 28-34. Un puesto sin nadie, una cabeza gris con "?"
- *   fila 4:    vacia (Dosa retiro Esta semana/Historico, tu cabeza, Cerrar y Tablero en la 1.7.5)
+ *   fila 4:    el Tablero (40) en el centro, si el Tablero esta en marcha (1.12). Dosa retiro la
+ *              fila entera en la 1.7.5 (Esta semana/Historico, tu cabeza, Cerrar y Tablero) y en la
+ *              1.12 aprobo que el Tablero vuelva: sin el, Rhen solo lo abria con los rankings apagados
  *   fila 5:    el selector (45-53): una cabeza por categoria, todas del rojo de Calamity y cada una
  *              con su dibujo. La que miras brilla. Con mas de 9, la ultima casilla es "Mas ->" y
  *              lleva a la pagina siguiente, que empieza con "<- Anteriores".
@@ -88,8 +90,8 @@ final class MenuCazador implements Listener {
     static final int[] PIRAMIDE = {13, 21, 23, 28, 29, 30, 31, 32, 33, 34};
     /** Cuantos salen con cabeza. */
     static final int TOP = PIRAMIDE.length;
-    /** La fila 4: cambiar de periodo, tu cabeza, Cerrar y el Tablero. */
-    static final int CAMBIAR = 38, TU = 40, CERRAR = 42, TABLERO = 44;
+    /** La fila 4: solo el Tablero, en el centro (1.12). */
+    static final int TABLERO = 40;
     /** La fila 5, el selector de categorias: de la 45 a la 53. */
     static final int SELECTOR = 45, ANCHO_SELECTOR = 9;
     /** Largo de las lineas del lore (en letras), para que el globo no ocupe media pantalla. */
@@ -488,8 +490,14 @@ final class MenuCazador implements Listener {
             }
         }
 
-        // 1.7.4: Dosa retiro la fila 4 entera (Esta semana/Historico, tu cabeza, Cerrar y Tablero).
-        // Queda cristal negro; el menu se cierra con Escape.
+        // 1.7.5: Dosa retiro la fila 4 entera (Esta semana/Historico, tu cabeza, Cerrar y Tablero);
+        // el menu se cierra con Escape. 1.12: vuelve el Tablero, solo, en el centro, si esta en marcha.
+        if (d.tablero()) {
+            piezas.put(TABLERO, Pieza.objeto(Material.ITEM_FRAME, Component.text("Tablero", Paleta.DETALLE), List.of(
+                    Marco.texto("Los Ecos con botín y las Parcas"), Marco.texto("que hay ahora en Calamity."),
+                    Component.empty(), Marco.accion("Clic para abrirlo"))));
+            acciones.put(TABLERO, "tablero");
+        }
 
         List<int[]> ps = paginas(d.visibles().size());
         int pagina = Math.max(0, Math.min(d.pagina(), ps.size() - 1));
@@ -904,13 +912,14 @@ final class MenuCazador implements Listener {
         // ---- Las casillas: la piramide donde dice el diseno y nada repetido.
         h.igual("ranking: la piramide en 13, 21, 23 y 28-34", List.of(13, 21, 23, 28, 29, 30, 31, 32, 33, 34),
                 java.util.Arrays.stream(PIRAMIDE).boxed().toList());
-        List<Integer> fijas = new ArrayList<>(List.of(INFO, CAMBIAR, TU, CERRAR, TABLERO));
+        List<Integer> fijas = new ArrayList<>(List.of(INFO, TABLERO));
         for (int s : PIRAMIDE) fijas.add(s);
         for (int s = SELECTOR; s < SELECTOR + ANCHO_SELECTOR; s++) fijas.add(s);
         h.igual("ranking: ninguna casilla usada dos veces", fijas.size(), new HashSet<>(fijas).size());
         h.ok("ranking: todo dentro de la ventana de 54", fijas.stream().allMatch(s -> s >= 0 && s < TAMANO));
         h.ok("ranking: el libro arriba en el centro y el selector en la ultima fila",
-                INFO == 4 && SELECTOR / 9 == TAMANO / 9 - 1 && CAMBIAR / 9 == 4 && TU == 40 && CERRAR == 42);
+                INFO == 4 && SELECTOR / 9 == TAMANO / 9 - 1);
+        h.igual("ranking: el Tablero en la fila 4, en el centro", 40, TABLERO);
 
         // ---- Las categorias de serie (el config.yml del jar).
         ConfigurationSection serie = deSerie();
@@ -1074,8 +1083,14 @@ final class MenuCazador implements Listener {
                 && lineas(dos.piezas().get(PIRAMIDE[2]), txt).contains("Premio del 3.º el lunes:")
                 && lineas(dos.piezas().get(PIRAMIDE[3]), txt).equals(List.of("Nadie ha llegado aquí todavía.")));
 
-        h.ok("plano: la fila 4 esta vacia (retirada por Dosa)", java.util.stream.IntStream.of(CAMBIAR, TU, CERRAR, TABLERO)
-                .allMatch(s -> a.piezas().get(s) == null && a.acciones().get(s) == null));
+        h.igual("plano: el Tablero en la fila 4 con su accion", "tablero", a.acciones().get(TABLERO));
+        h.igual("plano: el Tablero se llama asi", "Tablero", txt.apply(a.piezas().get(TABLERO).nombre()));
+        h.igual("plano: el Tablero, clic para abrirlo", "▸ Clic para abrirlo",
+                lineas(a.piezas().get(TABLERO), txt).get(lineas(a.piezas().get(TABLERO), txt).size() - 1));
+        h.ok("plano: con el Tablero apagado no sale", b.piezas().get(TABLERO) == null && b.acciones().get(TABLERO) == null);
+        boolean filaSola = true;
+        for (int s = 36; s < 45; s++) if (s != TABLERO) filaSola &= a.piezas().get(s) == null && a.acciones().get(s) == null;
+        h.ok("plano: en la fila 4 solo el Tablero", filaSola);
 
         List<Integer> brillanA = new ArrayList<>(), brillanB = new ArrayList<>();
         for (int s = SELECTOR; s < SELECTOR + ANCHO_SELECTOR; s++) {

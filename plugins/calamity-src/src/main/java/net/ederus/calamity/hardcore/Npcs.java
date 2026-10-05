@@ -284,7 +284,8 @@ final class Npcs implements Listener {
 
     /**
      * El Cazador: el ranking en su menu (MenuCazador), una categoria cada vez con su top 10 en
-     * cabezas, y un boton al Tablero. Con los rankings apagados, el Tablero directamente, como antes.
+     * cabezas, y el boton del Tablero abajo en el centro (1.12, siempre que el Tablero este en marcha).
+     * Con los rankings apagados, el Tablero directamente, como antes.
      */
     private void cazador(Player p) {
         if (cazador.hay()) {
@@ -394,6 +395,12 @@ final class Npcs implements Listener {
 
         h.ok("/calamity open registrado", Subcomandos.staff().nombres(null).contains("open"));
         h.ok("/calamity npcs registrado", Subcomandos.staff().nombres(null).contains("npcs"));
+        // 1.12: el Kit sale en la portada de Sael y el Tablero en el menu de Rhen; los dos se siguen
+        // abriendo tambien con "calamity open <p> kit|board" (un NPC propio, si alguien lo quiere).
+        h.ok("open kit y open board siguen existiendo", destinos().containsAll(List.of("kit", "board")));
+        h.igual("Rhen: el Tablero en su fila 4, en el centro", 40, MenuCazador.TABLERO);
+        h.igual("Sael: con el Kit, cuatro tarjetas en la fila del medio", List.of(19, 21, 23, 25),
+                java.util.Arrays.stream(MenuAltar.tarjetas(4)).boxed().toList());
         h.igual("tab de open: los siete NPCs y lo de los jugadores", destinos(),
                 Subcomandos.staff().tab(null, new String[]{"open", "Dosa__", ""}));
         h.ok("tab de open empieza por los NPCs", destinos().subList(0, Tipo.values().length).equals(Tipo.ids()));

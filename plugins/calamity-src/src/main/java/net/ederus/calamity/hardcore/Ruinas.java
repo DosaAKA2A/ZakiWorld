@@ -559,7 +559,7 @@ final class Ruinas implements Listener {
     public void alRomper(BlockBreakEvent e) {
         if (e.getBlock().getType() != Material.CHEST || !hc.esHardcore(e.getBlock().getWorld())) return;
         if (!(e.getBlock().getState(false) instanceof Chest ch) || !ch.getPersistentDataContainer().has(kRuina, PersistentDataType.STRING)) return;
-        if (e.getPlayer().hasPermission("ederus.mundos")) {
+        if (e.getPlayer().hasPermission(Subcomandos.PERMISO)) {
             desindexar(e.getBlock().getWorld().getName(), new int[]{e.getBlock().getX(), e.getBlock().getY(), e.getBlock().getZ()});
             return;
         }

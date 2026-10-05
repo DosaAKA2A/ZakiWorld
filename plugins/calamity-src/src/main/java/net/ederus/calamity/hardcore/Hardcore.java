@@ -2112,7 +2112,7 @@ public final class Hardcore implements Listener {
     @EventHandler(ignoreCancelled = true)
     public void onComando(PlayerCommandPreprocessEvent e) {
         Player p = e.getPlayer();
-        if (!esHardcore(p) || p.hasPermission("ederus.mundos")) return;
+        if (!esHardcore(p) || p.hasPermission(Subcomandos.PERMISO)) return;
         String cmd = e.getMessage().toLowerCase(Locale.ROOT).split(" ")[0];
         if (cmd.startsWith("/")) cmd = cmd.substring(1);
         if (cmd.contains(":")) cmd = cmd.substring(cmd.indexOf(':') + 1);
