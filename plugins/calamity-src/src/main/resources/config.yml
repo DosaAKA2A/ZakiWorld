@@ -1119,7 +1119,7 @@ hardcore:
     tormenta:
       densidad: 1.5
       sonidos:
-        - {sonido: "minecraft:entity.lightning_bolt.thunder", cada: 17, volumen: 0.3, tono: 0.8, distancia: 30}
+        - {sonido: "minecraft:entity.lightning_bolt.thunder", cada: 17, volumen: 0.45, tono: 0.8, distancia: 10}
     #
     # Cada clima: nombre y aviso (la linea de la barra al exponerse: "Nombre: aviso"; vacio = sin linea),
     # inicio (lo de aviso-inicio), hojas-protegen (si las hojas cuentan como techo), particulas y sonidos.

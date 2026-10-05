@@ -1377,11 +1377,17 @@ final class Clima implements Listener {
                     + PRESUPUESTO_SEGUNDO + ")", maximo <= PRESUPUESTO_SEGUNDO);
             List<Sonido> sons = sonidos(s.getMapList("sonidos"));
             h.ok("jar: " + t.id + " tiene sonidos", !sons.isEmpty());
-            for (Sonido so : sons) {
-                h.ok("jar: " + t.id + ": " + so.sonido() + " no es la lluvia de Minecraft",
-                        !so.sonido().contains("weather.rain"));
-            }
+            for (Sonido so : sons) audible(h, t.id, so);
         }
+        for (Sonido so : sonidos(seccion(c, "tormenta").getMapList("sonidos"))) audible(h, "tormenta", so);
+    }
+
+    /** Que no sea la lluvia de Minecraft y que se oiga: con volumen 1 o menos el cliente lo apaga a 16 bloques. */
+    private static void audible(Autotest.Hoja h, String de, Sonido so) {
+        h.ok("jar: " + de + ": " + so.sonido() + " no es la lluvia de Minecraft", !so.sonido().contains("weather.rain"));
+        double alcance = 16.0 * Math.max(1.0, so.volumen());
+        h.ok("jar: " + de + ": " + so.sonido() + " se oye (distancia " + so.distancia() + " < " + alcance + ")",
+                so.distancia() < alcance * 0.75 && so.volumen() > 0);
     }
 
     private static boolean existe(String particula) {
