@@ -349,7 +349,7 @@ hardcore:
   # no nace ningun mob de Calamity, la cordura no baja, y no hay alucinaciones, latido, vineta,
   # niebla, efectos de bioma, minijefe de cordura, Frenesi, testigos, Eco ni PARCA (la que te
   # persigue se va y te espera fuera, como en la puerta). La puerta de salida, el altar, el
-  # Cristal y la Tasacion siguen igual. Quien muere dentro deja el Eco fuera, en el borde.
+  # Cristal y Oren (que compra aqui) siguen igual. Quien muere dentro deja el Eco fuera, en el borde.
   # Es la region de WorldGuard con este nombre en cada mundo hardcore (la del spawn de
   # calamity2 se llama "calamity"); si WorldGuard no esta o ese mundo no la tiene, la caja de
   # la vara (/calamidad define spawn). "" = solo la vara. Se relee cada 5 s: un /rg redefine
@@ -469,8 +469,10 @@ hardcore:
     - ec
     - enderchest
     - echest
-    # Bancos y grifos a mitad de expedicion (DIS M4): se sacaria lo de dentro sin Tasacion.
-    # Comprobar los alias reales en el panel antes de subirlo.
+    # Bancos y grifos a mitad de expedicion (DIS M4): se guardaria lo de dentro sin salir.
+    # Comprobar los alias reales en el panel antes de subirlo. El cofre ender y los vaults, con
+    # todos sus alias, los bloquea tambien hardcore.sellos.comandos-almacen (con el permiso
+    # calamity.bypass.storage el staff si puede).
     - pv
     - playervault
     - playervaults
@@ -809,6 +811,11 @@ hardcore:
     # [alineado] PLAN 3.2: 1 + floor(N/25) a cada participante con >= 10 % del dano
     minijefe: {base: 1, cada-niveles: 25, participacion-minima: 0.10}
     saldo: true                   # [alineado] fuera de Calamity las Esencias son saldo (M31)
+    # Rama venta-oren: las fisicas ya no pasan solas al saldo al salir; las ingresa Oren (o el boton del
+    # saldo del Altar, fuera). true: como antes, fuera se ingresan solas al cambiar de mundo o abrir algo.
+    deposito-automatico: false
+    # La primera salida con vida de cada dia por el portal: base, y si-tasa mas si sales con alguna
+    # Reliquia que vale o si en esa entrada ya le vendiste alguna a Oren.
     primera-extraccion-dia: {base: 2, si-tasa: 1}
   altar:
     activo: true
@@ -886,7 +893,9 @@ hardcore:
   reliquias:
     activas: true
     caduca-dias: 14               # solo las que llevan UUID (III, IV y especiales)
-    # [alineado] PLAN 3.1: valores de la Tasacion. esencias 0.2 = 1 por cada 5 (floor del total).
+    # [alineado] PLAN 3.1: lo que paga Oren por cada una. esencias 0.2 = 1 por cada 5 (floor del total).
+    # Rama venta-oren: salir de Calamity ya no vende nada; las Reliquias se le venden a Oren, en su menu
+    # (el NPC "mercader"), con estos valores, el tope del dia y la caducidad de siempre.
     grados:
       1: {nombre: "Astilla del Umbral", material: PRISMARINE_SHARD, esencias: 0.2, mobcoins: 5}
       2: {nombre: "Fragmento de Nana", material: DISC_FRAGMENT_5, esencias: 1, mobcoins: 15}
@@ -910,7 +919,46 @@ hardcore:
       - {nivel: 75, de: 3, a: 4, prob: 0.05}
 
   # ------------------------------------------------------------------ M4-M6
-  sellos: {activo: true, portales: true, cofre-ender: true, contenedores: true}
+  # M4 · Sellos. Dentro: portales, cofre ender, contenedores que no son del mundo y comandos.
+  # Rama venta-oren · fuera: las Reliquias y las Esencias (lo que compra Oren) solo pueden ir en el
+  # inventario del jugador: ni cofres, barriles, shulkers, bolsas, cofre ender (/ec), /pv, /ah, /trade,
+  # mesas, aldeanos, tolvas, marcos, soportes ni menus de otros plugins. Bolsas y shulkers, tampoco
+  # dentro. Se pueden tirar al suelo, pero solo las recoge quien las tiro; al morir fuera no se sueltan.
+  # El staff con ederus.mundos o calamity.bypass.storage no esta sellado.
+  sellos:
+    activo: true
+    portales: true
+    cofre-ender: true
+    contenedores: true
+    fuera: true                   # false: fuera de Calamity se pueden guardar donde sea (como antes)
+    # El cofre ender y los vaults: no funcionan en Calamity (mundos de hardcore.mundos). Essentials:
+    # enderchest y sus alias; AxVaults: axvaults y los alias de su config.yml (command-aliases).
+    comandos-almacen: [ec, eec, echest, eechest, enderchest, eenderchest, endersee, eendersee, pv, pvs, vault, vaults,
+                       playervault, playervaults, axvaults, axvault, axv, pvault, bovedas, boveda]
+    # Fuera de Calamity: no se usan con una Reliquia o Esencia en la mano (/ah sell pone en venta lo de la mano)...
+    comandos-mercado-mano: [ah, auction, auctionhouse, auctions, pa, playerauction, playerauctions, pauction,
+                            subasta, subastas, trade, tradear, intercambio, sellhand]
+    # ...y estos, que venden el inventario entero, no se usan si llevas alguna.
+    comandos-mercado-inventario: [sell, sellall, vender]
+    # Los avisos (en el chat). Vacio = el de serie.
+    mensajes:
+      no-se-guarda: "Las Reliquias y las Esencias no se pueden guardar ahí."
+      no-se-guarda-fuera: "Fuera de Calamity, las Reliquias y las Esencias solo pueden ir en tu inventario. Véndeselas a Oren."
+      bolsa: "Las Reliquias y las Esencias no se pueden meter en una bolsa."
+      cofre-ender: "En Calamity no puedes usar el cofre de ender."
+      comando-almacen: "En Calamity no puedes usar el cofre de ender ni los vaults."
+      comando-mercado: "Las Reliquias y las Esencias no se venden ahí: véndeselas a Oren, en el spawn de Calamity."
+      ajena: "Esa Reliquia no es tuya: solo la puede recoger quien la tiró."
+
+  # Rama venta-oren · La venta a Oren (MenuTasador). Salir de Calamity ya no vende nada: el jugador se
+  # lleva lo que lleva y Oren, en su menu, le compra las Reliquias (reliquias.grados) y le ingresa las
+  # Esencias en el saldo. Solo compra en el spawn de Calamity o fuera de Calamity, nunca en plena
+  # expedicion. Los avisos del chat (vacio = el de serie):
+  venta:
+    mensajes:
+      salir-con-objetos: "Te llevas Reliquias o Esencias sin vender. Oren te las compra en el spawn de Calamity; fuera no se pueden guardar."
+      solo-en-el-spawn: "Oren solo compra en el spawn de Calamity o fuera de Calamity."
+      nada-que-vender: "No llevas nada que Oren te compre."
   combate: {activo: true, etiqueta-segundos: 15, combat-log: true, contar-timeout: true, llegada-segundos: 20}
   # [alineado] PLAN 3.2: la clave "ruinas" pasa a llamarse "cofres" (la usa ESTUDIO Anexo A)
   cofres:
@@ -1028,7 +1076,7 @@ hardcore:
     sin-clan: ["", "Sin clan", "N/A", "-"]
     tope-dia-miembro: 300                    # puntos por miembro y día (0 = sin tope)
     minimo-puntos: 1
-    # esencia y reliquia: por cada Esencia que saca vivo y por cada Esencia que valen sus Reliquias en la Tasación.
+    # esencia y reliquia: por cada Esencia que ingresa con Oren y por cada Esencia que valen las Reliquias que le vende.
     # minijefe: por la parte del daño (30 x 0,5 = 15). parca: por cada uno que cobra. boveda-caida: quien la abre.
     pesos: {esencia: 1, reliquia: 1, minijefe: 30, parca: 40, boveda-caida: 60}
     trofeo: {tipo: trofeo, dias: 7, renovar: true, comando: "superbeacon give %lider% %tipo% %dias% %tag%"}
@@ -1152,7 +1200,7 @@ hardcore:
   # en su menu da el que falte. Sin su pergamino el contrato no avanza. Lo que se cumple dentro se cobra
   # al momento: el pergamino se rompe y la Aduana paga con las Esencias en la mano, como las de un mob
   # (si no caben, a tus pies; si mueres antes de salir, las pierdes), y las MobCoins como siempre. Los de
-  # Reliquias se cumplen y se cobran al salir vivo, al saldo, como antes. Los pergaminos no salen de
+  # Reliquias se cumplen y se cobran al vendérselas a Oren en su tienda, al saldo. Los pergaminos no salen de
   # Calamity ni se guardan, se dan o se tiran (se rompen y Oren da otro). Lo cobrado no vuelve a empezar
   # aunque mueras; lo que no, si.
   contratos:
@@ -1176,9 +1224,9 @@ hardcore:
     pool:
       corto-mobs: {texto: "Mata 10 mobs", etiqueta: "Mobs", evento: mob, objetivo: 10, esencias: 2, mobcoins: 20, corto: true}
       corto-cofre: {texto: "Abre un cofre de estructura", etiqueta: "Cofre", evento: cofre, objetivo: 1, esencias: 2, mobcoins: 20, corto: true, mecanica: cofres.activo}
-      corto-reliquia: {texto: "Saca una Reliquia de grado II o más", etiqueta: "Reliquia", evento: reliquia-ii, objetivo: 1, esencias: 2, mobcoins: 20, corto: true, mecanica: reliquias.activas}
+      corto-reliquia: {texto: "Véndele a Oren una Reliquia de grado II o más", etiqueta: "Reliquia", evento: reliquia-ii, objetivo: 1, esencias: 2, mobcoins: 20, corto: true, mecanica: reliquias.activas}
       corto-15: {texto: "Pasa 15 min en Calamity", etiqueta: "Minutos", evento: minutos, objetivo: 15, esencias: 2, mobcoins: 20, corto: true}
-      extraer-ii: {texto: "Saca 3 Reliquias de grado II o más en una sola salida", etiqueta: "Reliquias", evento: reliquia-ii, objetivo: 3, esencias: 4, mobcoins: 60, mecanica: reliquias.activas}
+      extraer-ii: {texto: "Véndele a Oren 3 Reliquias de grado II o más", etiqueta: "Reliquias", evento: reliquia-ii, objetivo: 3, esencias: 4, mobcoins: 60, mecanica: reliquias.activas}
       destacados: {texto: "Mata 5 mobs destacados", etiqueta: "Destacados", evento: destacado, objetivo: 5, esencias: 3, mobcoins: 40}
       eco: {texto: "Derrota un Eco ajeno válido", etiqueta: "Eco", evento: eco-valido, objetivo: 1, esencias: 5, mobcoins: 80, mecanica: eco.activo}
       al-limite: {texto: "Aguanta 15 min con la cordura por debajo de 25", etiqueta: "Al límite", evento: minutos-limite, objetivo: 15, esencias: 5, mobcoins: 80}
@@ -1259,7 +1307,7 @@ hardcore:
         mobcoins:
           clave: tasado-mc
           nombre: "MobCoins"
-          mide: "MobCoins que te pagan al vender lo que sacas."
+          mide: "MobCoins que te paga Oren por lo que le vendes."
           vistas: [semana, historico]
           textura: "b856ccab6f72b6f37332840a2779bb42758bbb2c015f54ce53740cb0f1cb4ca1"     # Red Dollar
           material: GOLD_INGOT
@@ -1288,7 +1336,7 @@ hardcore:
         esencias:
           clave: tasado-esencias
           nombre: "Esencias"
-          mide: "Esencias que te pagan al vender lo que sacas."
+          mide: "Esencias que te paga Oren por lo que le vendes."
           vistas: [semana, historico]
           textura: "e672959028f274b379d430f068f0f15a4f793eac12afb94ae0b4e50cf895df0f"     # Fine Ruby Gemstone
           material: GHAST_TEAR
@@ -1411,7 +1459,7 @@ hardcore:
   # articulo: se crea con "/npc create <Nombre>" y, con el NPC seleccionado (/npc select):
   #   Sael  /npc command add -l -r calamidad abrir <p> umbral     Altar, pagina Umbral
   #   Vael  /npc command add -l -r calamidad abrir <p> forja      Altar, pagina Forja
-  #   Oren  /npc command add -l -r calamidad abrir <p> mercader   dinero, ventas y contratos de hoy
+  #   Oren  /npc command add -l -r calamidad abrir <p> mercader   compra Reliquias y Esencias; dinero y contratos
   #                                                             ("tasador", su id de antes, sigue valiendo)
   #   Ilen  /npc command add -l -r calamidad abrir <p> cronista   los capitulos de abajo
   #   Rhen  /npc command add -l -r calamidad abrir <p> cazador    tablas de la semana y el Tablero
@@ -1432,10 +1480,10 @@ hardcore:
       calamity:
         titulo: "Qué es Calamity"
         texto:
-          - "Calamity es un mundo hardcore: entras, consigues botín y solo te lo quedas si sales vivo."
+          - "Calamity es un mundo hardcore: entras, consigues botín y solo te lo quedas si vuelves vivo al spawn."
           - "Si mueres en Calamity, pierdes todo lo que llevas encima y también la experiencia."
           - "Para salir vivo, cruza el portal del spawn. Un Cristal de Regreso te lleva al spawn si te quedas quieto {cristal.segundos} s."
-          - "Al salir vivo, tus Reliquias se venden solas y tus Esencias pasan a tu saldo."
+          - "Las Reliquias y las Esencias se las vendes a Oren, en el spawn de Calamity. Fuera no se pueden guardar."
       cordura:
         titulo: "La cordura"
         texto:
@@ -1461,9 +1509,9 @@ hardcore:
       esencias:
         titulo: "Esencias, Reliquias y ventas"
         texto:
-          - "Las Esencias caen de los mobs de Calamity. Si sales vivo, pasan a tu saldo, y con él pagas en el Altar y la Forja."
+          - "Las Esencias caen de los mobs de Calamity. Oren te las ingresa en tu saldo, y con él pagas en el Altar y la Forja."
           - "Tu saldo es permanente: no caduca ni se reinicia cada día. Si mueres en Calamity, solo pierdes las Esencias que llevabas encima."
-          - "Cada Reliquia que sacas vivo se vende por Esencias y MobCoins."
+          - "Las Reliquias se las vendes a Oren por Esencias y MobCoins: su menú dice cuánto paga por cada una."
           - "La Astilla vale {reliquias.grados.1.esencias} Esencias; el Fragmento, {reliquias.grados.2.esencias}; el Ámbar, {reliquias.grados.3.esencias}; y el Ámbar Mayor, {reliquias.grados.4.esencias}."
           - "La primera vez que sales vivo cada día cobras {esencias.primera-extraccion-dia.base} Esencias más. Las Reliquias de grado III y IV caducan a los {reliquias.caduca-dias} días."
           - "La Aduana te paga las MobCoins, con un tope de {aduana.tramos-mc.0.hasta} al día."
