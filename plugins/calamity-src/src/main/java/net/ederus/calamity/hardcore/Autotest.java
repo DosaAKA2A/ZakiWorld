@@ -55,7 +55,7 @@ final class Autotest {
     static final Map<String, String> NOMBRES = Map.ofEntries(
             Map.entry("aduana", "customs"), Map.entry("altar", "altar"), Map.entry("alucinaciones", "hallucinations"),
             Map.entry("ambush", "ambush"), Map.entry("apariciones", "spawns"), Map.entry("barra", "actionbar"),
-            Map.entry("base", "base"), Map.entry("botin-calamity", "loot"), Map.entry("boveda-caida", "fallen-vault"),
+            Map.entry("barometro", "barometer"), Map.entry("base", "base"), Map.entry("botin-calamity", "loot"), Map.entry("boveda-caida", "fallen-vault"),
             Map.entry("censo", "census"), Map.entry("ciclo-clima", "weather-cycle"), Map.entry("clanes", "clans"),
             Map.entry("clima", "climate"), Map.entry("cofres", "chests"), Map.entry("combate", "combat"),
             Map.entry("comandos", "commands"), Map.entry("contratos", "contracts"), Map.entry("creditos", "credits"),

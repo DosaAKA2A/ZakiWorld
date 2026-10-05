@@ -1381,6 +1381,9 @@ final class Altar implements Listener {
             // 1.10: el Reclamo, que llama al minijefe del bioma (Reclamo).
             t("id", "reclamo", "pagina", "umbral", "icono", "GOAT_HORN", "nombre", "Reclamo", "esencias", 6,
                     "da", "dar:reclamo", "limite-dia", 3),
+            // 1.12.2: el Barometro, que dice cuanto falta para el cambio de clima y que trae (no se gasta).
+            t("id", "barometro", "pagina", "umbral", "icono", "COMPASS", "nombre", "Barómetro", "esencias", 15,
+                    "da", "dar:" + Barometro.OBJETO, "limite-dia", 1),
             // 1.11: las llaves de las bovedas. La del Umbral, por Esencias con tope diario; la Ominosa, cambiando
             // cinco del Umbral y Esencias, una por semana.
             t("id", "llave-umbral", "pagina", "umbral", "icono", "TRIAL_KEY", "nombre", "Llave del Umbral", "esencias", 10,
@@ -1515,7 +1518,7 @@ final class Altar implements Listener {
         Autotest.Hoja h = new Autotest.Hoja();
         Map<String, Trueque> ts = new HashMap<>();
         for (Trueque t : leer(DEFECTO)) ts.put(t.id(), t);
-        h.igual("trueques de serie", 26, ts.size());
+        h.igual("trueques de serie (1.12.2: con el Barometro)", 27, ts.size());
         Trueque ominosa = ts.get("llave-ominosa");
         h.ok("1.11: la Llave Ominosa pide entregar 5 Llaves del Umbral",
                 ominosa != null && ominosa.pide("llave-umbral") == 5 && "llave-ominosa".equals(ominosa.objeto()));
@@ -1655,6 +1658,14 @@ final class Altar implements Listener {
         h.igual("tres Reclamos: 18 Esencias", antesReclamos - 18, c.saldo.de(u));
         h.igual("y se entregan por dar:reclamo", "reclamox1", c.entregados.get(c.entregados.size() - 1));
         h.igual("4.o Reclamo del dia -> cupo", "cupo", probarEn(c, ts.get("reclamo"), u).motivo());
+
+        // 1.12.2: el Barometro, uno al dia por 15 Esencias.
+        c.saldo.sumar(u, 30, "prueba");
+        long antesBarometro = c.saldo.de(u);
+        h.ok("el Barometro se compra", probarEn(c, ts.get("barometro"), u).ok());
+        h.igual("cuesta 15 Esencias", antesBarometro - 15, c.saldo.de(u));
+        h.igual("y se entrega por dar:barometer", Barometro.OBJETO + "x1", c.entregados.get(c.entregados.size() - 1));
+        h.igual("2.o Barometro del dia -> cupo", "cupo", probarEn(c, ts.get("barometro"), u).motivo());
 
         h.ok("la prueba no toca hardcore-datos.yml", !hc.datos().isSet("altar.usos.2026-W39." + u)
                 && !hc.datos().isSet("esencias." + u));

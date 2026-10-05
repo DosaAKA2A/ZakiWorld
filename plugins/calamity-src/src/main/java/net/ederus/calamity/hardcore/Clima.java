@@ -620,6 +620,11 @@ final class Clima implements Listener {
         vistos.clear();
     }
 
+    /** Calamity 1.12.2 · El reloj del clima (lo lee el Barometro). */
+    CicloClima ciclo() {
+        return ciclo;
+    }
+
     /** 1.11: lo que le toca al bioma en el que esta ahora (para el aviso de CicloClima), con los interruptores. */
     Tipo tipoAhora(Player p) {
         ConfigurationSection c = cfg();

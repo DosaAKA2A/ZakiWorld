@@ -832,6 +832,8 @@ hardcore:
       - {id: cristal, pagina: umbral, icono: AMETHYST_SHARD, nombre: "Cristal de Regreso", esencias: 16, da: cristal, limite-semana: 5}
       - {id: tintura, pagina: umbral, icono: POTION, nombre: "Tintura de Ceniza x2", esencias: 3, da: "dar:tintura", cantidad: 2, limite-dia: 5}
       - {id: reclamo, pagina: umbral, icono: GOAT_HORN, nombre: "Reclamo", esencias: 6, da: "dar:reclamo", limite-dia: 3}   # 1.10: llama al minijefe del bioma (minijefes.reclamo)
+      # Calamity 1.12.2: el Barómetro (hardcore.barometro). No se gasta: uno al día basta para reponer el que se pierda.
+      - {id: barometro, pagina: umbral, icono: COMPASS, nombre: "Barómetro", esencias: 15, da: "dar:barometer", limite-dia: 1}
       # Calamity 1.11: las llaves de las bóvedas. La del Umbral cuesta lo que vale de media una Bóveda de Ruinas
       # (unas 8-10 Esencias): comprarla es comodidad, no negocio. La Ominosa pide entregar 5 del Umbral.
       - {id: llave-umbral, pagina: umbral, icono: TRIAL_KEY, nombre: "Llave del Umbral", esencias: 10, da: "dar:llave-umbral", limite-dia: 2}
@@ -883,6 +885,30 @@ hardcore:
   monedero: {modo: real, saldo-placeholder: "", cobrar: ""}   # vacio = trueques con MC en gris (M35)
   salvoconducto: {activo: false, sustituto-esencias: 10}       # visto bueno de Dosa (0.3)
   talisman: {vida: 3, drenaje: 0.80}
+  # Calamity 1.12.2 · El Barómetro: con clic derecho dice el clima del bioma donde estás y cuánto falta para
+  # el próximo cambio ("Barómetro · Despejado. Lluvia ácida en 4 min."). Solo LEE el reloj de clima.ciclo y
+  # la tabla clima.por-bioma: no cambia nada. No se gasta y se puede sacar de Calamity. Se compra en el
+  # Altar (trueque barometro) o con /calamity give barometer <player>.
+  barometro:
+    # Segundos entre una consulta y la siguiente (los clics de en medio no hacen nada). 0 = sin espera.
+    enfriamiento-segundos: 3
+    # Donde sale la lectura: en el chat y/o como aviso en la barra de acción.
+    chat: true
+    barra: true
+    # {ahora}: el clima de ahora; {proximo}: el que viene; {tiempo}: "4 min", "45 s".
+    textos:
+      despejado: "Despejado"
+      lluvia: "Lluvia"
+      tormenta: "Tormenta"
+      lluvia-acida: "Lluvia ácida"
+      cielo-rojo: "Cielo rojo"
+      esporas: "Esporas"
+      polinizacion: "Polinización"
+      ceniza: "Ceniza"
+      llega: "{ahora}. {proximo} en {tiempo}."
+      escampa: "{ahora}. Escampa en {tiempo}."
+      sin-clima: "{ahora}. En este bioma no cambia el tiempo."
+      fuera: "Aquí no marca nada."
   grabado:
     por-semana: 1
     encantamientos: [SHARPNESS, PROTECTION, EFFICIENCY, POWER, UNBREAKING, LOOTING, FORTUNE]
@@ -890,9 +916,11 @@ hardcore:
     topes: {SHARPNESS: 7, PROTECTION: 5, EFFICIENCY: 6, POWER: 6, UNBREAKING: 4, LOOTING: 4, FORTUNE: 4}
 
   # ------------------------------------------------------------------ LORES DE LOS OBJETOS
-  # Rama lore-items: cada familia de objeto tiene su color. El nombre lleva un degradado del primero
-  # (claro) al segundo (fuerte); el lore usa el fuerte para la categoria, los titulos y lo destacado, y
-  # el primero aclarado para la historia y los nombres de monedas. Si falta una, vale la de serie.
+  # Rama lore-items: cada familia de objeto tiene su color. Calamity 1.12.2: tres pesos, sin negrita. El
+  # nombre lleva el degradado del primero (claro) al segundo (fuerte, encendido): es lo unico con el color
+  # pleno. El tono medio (entre el nombre y el texto) va en la categoria, los titulos, las cifras y lo
+  # destacado; el texto es el fuerte aclarado hacia blanco y algo apagado, y las notas un paso mas apagadas.
+  # Si falta una, vale la de serie.
   lores:
     tonos:
       contrato: "#FFE27A #FF8A2B"        # pergaminos de contrato de Oren
@@ -916,6 +944,7 @@ hardcore:
       trofeo: "#E3EBFA #8EA6D6"          # cabeza de un Eco derrotado
       llave-umbral: "#E2F4FA #7FB8CC"    # el color de la Boveda de Ruinas
       llave-ominosa: "#EEDFFF #A97FDD"   # el color de la Boveda Caida
+      barometro: "#D4E1F2 #4E7DB8"       # azul tormenta (1.12.2)
 
   # ------------------------------------------------------------------ M3. RELIQUIAS
   reliquias:

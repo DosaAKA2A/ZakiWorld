@@ -172,6 +172,8 @@ public final class Hardcore implements Listener {
     private Eclipse eclipse;
     /** Calamity 1.9.0: la lluvia acida de los biomas verdes y el cielo rojo. Null con las reglas apagadas. */
     private Clima clima;
+    /** Calamity 1.12.2 · El Barometro: lee el reloj del clima (Clima.ciclo) y la tabla por bioma. */
+    private Barometro barometro;
     /** Calamity 1.7: los niveles por distancia al spawn y su aviso. */
     private Distancia distancia;
     private Npcs npcs;
@@ -431,6 +433,7 @@ public final class Hardcore implements Listener {
         eclipse = crear("eclipse", () -> new Eclipse(this));
         // 1.9.0: despues del Eclipse y de la Parca, a los que pregunta si el cielo es suyo.
         clima = crear("clima", () -> new Clima(this));
+        barometro = crear("barometro", () -> new Barometro(this));
         // Calamity 1.11: los cofres y las Bovedas de Ruinas, la Boveda Caida y el ranking de clanes.
         ruinas = crear("ruinas", () -> new Ruinas(this));
         bovedaCaida = crear("boveda-caida", () -> new BovedaCaida(this));
@@ -457,6 +460,8 @@ public final class Hardcore implements Listener {
         clanes = null;
         bovedaCaida = null;
         ruinas = null;
+        if (barometro != null) seguro("barometro", () -> barometro.parar());
+        barometro = null;
         if (clima != null) seguro("clima", () -> clima.parar());
         clima = null;
         if (eclipse != null) seguro("eclipse", () -> eclipse.parar());

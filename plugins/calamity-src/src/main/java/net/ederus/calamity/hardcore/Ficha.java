@@ -680,6 +680,7 @@ final class Ficha {
         todas.put("grabado", Entregas.fichaGrabado(c, "Filo, Protección, Eficiencia, Poder, Irrompibilidad, Botín o Fortuna"));
         todas.put("salvoconducto", Entregas.fichaSalvoconducto());
         todas.put("trofeo", Ecos.fichaTrofeo("Dosa", "04/10/2026"));
+        todas.put("barometro", Barometro.ficha(c));
         return todas;
     }
 

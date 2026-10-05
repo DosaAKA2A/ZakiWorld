@@ -245,6 +245,12 @@ public final class Paleta {
     /** Llave Ominosa: lila, el color de la Boveda Caida (#C7A6E8). */
     public static final Tono T_LLAVE_OMINOSA = new Tono(0xEEDFFF, 0xA97FDD);
 
+    /**
+     * Calamity 1.12.2 · Barometro: azul tormenta, un acero azulado de cielo cargado. Menos saturado que la Nana
+     * (#4A8DFF) y mas que el Trofeo (#8EA6D6); el gris azul es lo que se ve antes de que llueva.
+     */
+    public static final Tono T_BAROMETRO = new Tono(0xD4E1F2, 0x4E7DB8);
+
     /** Los tonos por su nombre en hardcore.lores.tonos (Ficha.tono). */
     public static final java.util.Map<String, Tono> TONOS = java.util.Map.ofEntries(
             java.util.Map.entry("contrato", T_CONTRATO), java.util.Map.entry("grado-1", T_GRADO_I),
@@ -257,7 +263,7 @@ public final class Paleta {
             java.util.Map.entry("grabado", T_GRABADO), java.util.Map.entry("salvoconducto", T_SALVOCONDUCTO),
             java.util.Map.entry("masamune", T_MASAMUNE), java.util.Map.entry("kit", T_KIT),
             java.util.Map.entry("trofeo", T_TROFEO), java.util.Map.entry("llave-umbral", T_LLAVE_UMBRAL),
-            java.util.Map.entry("llave-ominosa", T_LLAVE_OMINOSA));
+            java.util.Map.entry("llave-ominosa", T_LLAVE_OMINOSA), java.util.Map.entry("barometro", T_BAROMETRO));
 
     /** Las cifras de los lores: blanco. */
     public static final TextColor LORE_BLANCO = TextColor.color(0xF4F4F4);

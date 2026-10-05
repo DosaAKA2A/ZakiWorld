@@ -98,6 +98,8 @@ final class MenuAltar implements Listener {
             Map.entry("tintura", List.of("Cura 8 de vida y te da", "Resistencia durante 6 s.")),
             // 1.10: el cuerno que llama al minijefe (Reclamo).
             Map.entry("reclamo", List.of("Hazlo sonar en Calamity y vendrá", "el minijefe del bioma donde estés.")),
+            // 1.12.2: el Barometro.
+            Map.entry("barometro", List.of("Dice qué clima viene a tu bioma", "y cuánto falta. No se gasta.")),
             Map.entry("llave", List.of("Abre la Crate Caos del spawn.", "Cuenta para tu tope semanal", "de llaves.")),
             Map.entry("salvoconducto", List.of("Si mueres en Calamity, conservas", "una pieza de tu equipo.")),
             Map.entry("ofrenda", List.of("Suma una Ofrenda a tu nombre.", "No da ningún objeto.")),
@@ -235,7 +237,8 @@ final class MenuAltar implements Listener {
         if (t.da().equals("recargar") || t.da().equals("frasco") || t.da().equals("cristal")) return EXPEDICION;
         String o = t.objeto();
         // 1.10: el Reclamo es para usarlo dentro, como el Cristal: va con lo de la expedicion.
-        if ("tintura".equals(o) || "frasco-1".equals(o) || "cristal".equals(o) || "reclamo".equals(o)) return EXPEDICION;
+        if ("tintura".equals(o) || "frasco-1".equals(o) || "cristal".equals(o) || "reclamo".equals(o)
+                || Barometro.OBJETO.equals(o)) return EXPEDICION;
         return LLAVES;
     }
 
@@ -1116,10 +1119,10 @@ final class MenuAltar implements Listener {
         List<String> ids = new ArrayList<>();
         for (Categoria c : CATEGORIAS) ids.add(c.id());
         h.igual("tarjetas de la portada", List.of(EXPEDICION, LLAVES, FORJA), ids);
-        h.igual("para la expedicion", List.of("recargar", "frasco", "cristal", "tintura", "reclamo"),
+        h.igual("para la expedicion", List.of("recargar", "frasco", "cristal", "tintura", "reclamo", "barometro"),
                 idsDe(trueques(EXPEDICION, serie, false)));
-        // 1.10: con el Reclamo son cinco: 3 arriba y 2 debajo, centrados y con aire.
-        h.igual("expedicion con el Reclamo: 20, 22, 24, 30 y 32", List.of(20, 22, 24, 30, 32),
+        // 1.12.2: con el Barometro son seis: 3 arriba y 3 debajo, con aire.
+        h.igual("expedicion con el Barometro: 20, 22, 24, 29, 31 y 33", List.of(20, 22, 24, 29, 31, 33),
                 casillas(sitios(EXPEDICION, serie, false)));
         // 1.11: con las llaves de las bovedas delante de la del Caos.
         h.igual("llaves y ofrendas", List.of("llave-umbral", "llave-ominosa", "llave", "ofrenda"), idsDe(trueques(LLAVES, serie, false)));

@@ -77,6 +77,8 @@ public final class Marcas {
      * que no cuadra con ella es inerte y se borra.
      */
     public static final NamespacedKey PERGAMINO = clave("pergamino");
+    /** BYTE 1: un Barometro (Calamity 1.12.2), la brujula que lee el reloj del clima (Barometro). */
+    public static final NamespacedKey BAROMETRO = clave("barometro");
 
     private Marcas() {
     }
@@ -90,7 +92,7 @@ public final class Marcas {
         return List.of(AMENAZA, PRESA, ECO, ECO_DUENO, DANO_JUGADOR, VIDA_LOGICA, CASCARA, ECO_COPIA, RELIQUIA, RELIQUIA_ID,
                 RELIQUIA_ORIGEN, RELIQUIA_NACIO, RELIQUIA_ESPECIAL, RELIQUIA_NIVEL, RELIQUIA_MINIJEFE,
                 RELIQUIA_VALIDA, RELIQUIA_ENTRADA, TROFEO, PRESTADO, LIGADO, TALISMAN, GRABADO, SALVOCONDUCTO, FRAGMENTO_MASAMUNE, RECLAMO,
-                PERGAMINO);
+                PERGAMINO, BAROMETRO);
     }
 
     /** Si una entidad es nuestra (PARCA, planidera, Eco...). */

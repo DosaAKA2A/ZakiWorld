@@ -303,6 +303,7 @@ public final class ItemsCalamity {
             return Ficha.renovar(it, Ficha.tono("masamune").nombre(FragmentosMasamune.NOMBRE), fichaFragmento(c).lore());
         }
         if (esReclamo(it)) return Ficha.renovar(it, Ficha.tono("reclamo").nombre(NOMBRE_RECLAMO), fichaReclamo(c).lore());
+        if (Barometro.es(it)) return Barometro.renovado(it);
         return null;
     }
     /** Ultimo valor raro de esencias.material ya avisado, para no llenar la consola. */

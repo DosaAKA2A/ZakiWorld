@@ -62,7 +62,7 @@ final class Entregas implements Listener {
     /** Los objetos que entiende dar (ademas de credito:<tipo>, credito-caja:<tipo> y forja:<pieza>). 1.10: el Reclamo. */
     static final List<String> OBJETOS = List.of("esencia", "frasco", "frasco-1", "cristal", "tintura", "gema", "ascua",
             "talisman", "grabado", "salvoconducto", "libro", "llave", "llave-hito", FragmentosMasamune.OBJETO, "reclamo",
-            PuenteBovedas.LLAVE_UMBRAL, PuenteBovedas.LLAVE_OMINOSA);
+            PuenteBovedas.LLAVE_UMBRAL, PuenteBovedas.LLAVE_OMINOSA, Barometro.OBJETO);
 
     private final Hardcore hc;
     private final Set<BukkitTask> tareas = new HashSet<>();
@@ -264,6 +264,8 @@ final class Entregas implements Listener {
             case FragmentosMasamune.OBJETO -> ItemsCalamity.fragmentoMasamune(1);
             // 1.10: lo llama Reclamo (Altar, dar:reclamo; /calamity give reclamo <player> <n>).
             case "reclamo" -> ItemsCalamity.reclamo();
+            // 1.12.2: el Barometro (Altar, dar:barometer; /calamity give barometer <player>).
+            case Barometro.OBJETO -> Barometro.crear();
             default -> {
                 String id = idMmo(o);
                 yield id == null ? null : PuenteMmo.crear(id);
@@ -1124,6 +1126,17 @@ final class Entregas implements Listener {
         h.ok("talisman con su marca", Marcas.tiene(t, Marcas.TALISMAN));
         h.ok("talisman sin cursiva",
                 t.getItemMeta().displayName().decoration(TextDecoration.ITALIC) == TextDecoration.State.FALSE);
+        // 1.12.2: el Barometro, una brujula marcada con la aguja sin destino; ligado, sin negrita, y se renueva.
+        ItemStack bar = crear(Barometro.OBJETO);
+        h.ok("give barometer: brujula con su marca", bar != null && bar.getType() == org.bukkit.Material.COMPASS
+                && Barometro.es(bar) && OBJETOS.contains(Barometro.OBJETO));
+        h.ok("barometro: la aguja sin destino", bar != null && bar.hasData(io.papermc.paper.datacomponent.DataComponentTypes.LODESTONE_TRACKER)
+                && bar.getData(io.papermc.paper.datacomponent.DataComponentTypes.LODESTONE_TRACKER).location() == null);
+        h.ok("barometro: nombre y lore sin negrita", bar != null
+                && Ficha.faltas(bar.getItemMeta().displayName(), bar.getItemMeta().lore()).isEmpty());
+        ItemStack barLigado = ligar(crear(Barometro.OBJETO), u);
+        h.ok("barometro ligado: al renovarlo no cambia nada", Barometro.renovado(barLigado) == null
+                && Ficha.ligadoDe(barLigado.getItemMeta().lore()) != null);
         ItemStack g1 = grabado(), g2 = grabado();
         String id1 = g1.getItemMeta().getPersistentDataContainer().get(Marcas.GRABADO, PersistentDataType.STRING);
         String id2 = g2.getItemMeta().getPersistentDataContainer().get(Marcas.GRABADO, PersistentDataType.STRING);

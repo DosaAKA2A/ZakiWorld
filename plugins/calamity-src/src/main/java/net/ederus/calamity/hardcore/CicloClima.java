@@ -68,6 +68,10 @@ final class CicloClima {
     record Estado(String fase, long hasta, int lluvias, boolean avisado) {
     }
 
+    /** Calamity 1.12.2 · Lo que lee el Barometro: la fase, cuando acaba (millis) y la que viene. */
+    record Lectura(String fase, long hasta, String proxima) {
+    }
+
     private final Hardcore hc;
     /** Por mundo (la clave corta, "calamity"). Concurrente: lo leen los placeholders. */
     private final Map<String, Estado> estados = new ConcurrentHashMap<>();
@@ -209,6 +213,17 @@ final class CicloClima {
     /** Si esa fase es clima de Calamity (lluvia o tormenta): lo que mira Clima. */
     static boolean llueveEnFase(String fase) {
         return LLUVIA.equals(fase) || TORMENTA.equals(fase);
+    }
+
+    /**
+     * Calamity 1.12.2 · Como va el reloj de ese mundo, para el Barometro: solo lee, no cambia nada. Null si el ciclo
+     * esta apagado o ese mundo aun no tiene reloj.
+     */
+    Lectura lectura(World w) {
+        if (w == null || !activo()) return null;
+        Estado e = estados.get(w.getKey().getKey());
+        if (e == null) return null;
+        return new Lectura(e.fase(), e.hasta(), siguiente(e.fase(), e.lluvias(), tormentaCada));
     }
 
     /** Si el ciclo de Calamity manda (hardcore.clima.ciclo.activo). */
