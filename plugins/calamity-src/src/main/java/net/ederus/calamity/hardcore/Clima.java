@@ -28,6 +28,7 @@ import org.bukkit.event.entity.EntityDamageEvent.DamageCause;
 import org.bukkit.event.entity.PlayerDeathEvent;
 import org.bukkit.event.player.PlayerChangedWorldEvent;
 import org.bukkit.event.player.PlayerQuitEvent;
+import org.bukkit.event.player.PlayerTeleportEvent;
 import org.bukkit.event.weather.ThunderChangeEvent;
 import org.bukkit.event.weather.WeatherChangeEvent;
 import org.bukkit.event.world.WorldLoadEvent;
@@ -86,6 +87,21 @@ import java.util.concurrent.ThreadLocalRandom;
  * Esporas, polinizacion y ceniza: a cielo abierto (de serie las hojas no tapan las esporas ni el polen,
  * que flotan) quitan cordura-por-segundo y/o ponen efecto (Lentitud en el polen), con un aviso en la
  * barra la primera vez de cada episodio.
+ *
+ * Temporal (1.12, tipo generico): lo que ve cualquier bioma de Panacea sin clima propio ("panacea/*" en la
+ * tabla) mientras llueve en el ciclo: lluvia oscura (FALLING_DUST gris, nunca la azul de Minecraft), rachas
+ * de viento (particulas empujadas en la direccion del viento del mundo) y truenos lejanos; en la tormenta,
+ * ademas, rayos en el horizonte (tormenta.rayos). Sin dano. Lo de fuera de Panacea ("*") sigue sin nada.
+ *
+ * Tormenta de la PARCA (1.12, seccion tormenta-parca): la que ve quien esta cerca de ella desde la fase III,
+ * en cualquier bioma y fase del ciclo. La pinta este modulo a peticion de ParcaAnomalia (segundoParca,
+ * pulsoParca); mientras dura, el clima de su bioma ni se pinta ni hace nada (Parca.lluviaSobre). Con
+ * hardcore.clima.activo en false tampoco hay tormenta de la PARCA.
+ *
+ * Paso de hora (1.12): el cielo rojo fija la hora del jugador. Entrar o salir de el andando, volando o
+ * porque escampa ya no es un salto: un barrido de cielo-rojo.transicion-ticks lleva su cielo por el camino
+ * corto del dia de Panacea. Morir, cambiar de mundo, desconectarse, apagar el plugin o teletransportarse
+ * lejos son cortes: ahi se le devuelve la hora en el acto, nunca queda fijada.
  *
  * Convivencia: solo se devuelve lo que puso este modulo, y solo si sigue siendo lo suyo. El cielo de la
  * PARCA manda (Parca.cieloSobre) y la hora del Eclipse tambien. En una zona pintada con /lbiomes el bioma
@@ -147,6 +163,16 @@ final class Clima implements Listener {
     /** Las particulas que son la lluvia de Minecraft (azules): ningun tipo puede usarlas. */
     static final Set<String> PARTICULAS_DE_LLUVIA = Set.of("RAIN", "FALLING_WATER", "DRIPPING_WATER", "SPLASH",
             "FALLING_DRIPSTONE_WATER", "DRIPPING_DRIPSTONE_WATER", "BUBBLE", "BUBBLE_POP");
+    /** 1.12 · Tope de particulas por pulso y jugador (efectos.tope-por-pulso): si la config pide mas, se reparte. */
+    static final int TOPE_PULSO = 60;
+    /** 1.12 · La seccion de la tormenta de la PARCA (fase III en adelante): hardcore.clima.tormenta-parca. */
+    static final String PARCA = "tormenta-parca";
+    /** 1.12 · Ticks que tarda el cielo en pasar del rojo al suyo, y al reves (cielo-rojo.transicion-ticks). */
+    static final int CIELO_TRANSICION = 40;
+    /** Lo mas lejos que el cliente pinta una particula que no es de largo alcance (32 bloques), con margen. */
+    static final double ALCANCE_PARTICULAS = 30.0;
+    /** Un teletransporte de mas de tantos bloques es un corte: el cielo no se barre, se decide ya. */
+    static final double SALTO_TELEPORT = 16.0;
 
     /** Lo que le toca al bioma en el que esta. El id es tambien el nombre de su seccion en la config. */
     enum Tipo {
@@ -155,7 +181,9 @@ final class Clima implements Listener {
         ROJO("cielo-rojo"),
         ESPORAS("esporas"),
         POLEN("polinizacion"),
-        CENIZA("ceniza");
+        CENIZA("ceniza"),
+        /** 1.12 · El temporal de los biomas sin clima propio: lluvia oscura, viento y truenos; sin dano. */
+        GENERICO("generico");
 
         final String id;
 
@@ -173,12 +201,13 @@ final class Clima implements Listener {
                 case "esporas", "espora" -> ESPORAS;
                 case "polinizacion", "polinización", "polen" -> POLEN;
                 case "ceniza", "cenizas" -> CENIZA;
+                case "generico", "genérico", "temporal" -> GENERICO;
                 default -> null;
             };
         }
 
         /** Los que pasan por exposicion(): cordura y/o efecto a cielo abierto. */
-        boolean generico() {
+        boolean porExposicion() {
             return this == ESPORAS || this == POLEN || this == CENIZA;
         }
     }
@@ -195,6 +224,7 @@ final class Clima implements Listener {
         m.put("panacea/honeybee_biome", "polinizacion");
         m.put("panacea/condemned_taiga", "ceniza");
         m.put("panacea/crimson_organism", "cielo-rojo");
+        m.put("panacea/*", "generico");
         m.put("*", "ninguno");
         return m;
     }
@@ -216,6 +246,7 @@ final class Clima implements Listener {
             case ESPORAS -> "Esporas";
             case POLEN -> "Polinización";
             case CENIZA -> "Ceniza";
+            case GENERICO -> "Temporal";
             default -> "";
         };
     }
@@ -227,8 +258,14 @@ final class Clima implements Listener {
             case ESPORAS -> "Se levantan las esporas";
             case POLEN -> "Llega la polinización";
             case CENIZA -> "Empieza a caer ceniza";
+            case GENERICO -> "Empieza a llover";
             default -> "";
         };
+    }
+
+    /** El anuncio si empieza a verlo en la fase de tormenta (inicio-tormenta); sin el suyo, el de inicio. */
+    static String inicioTormentaDeSerie(Tipo t) {
+        return t == Tipo.GENERICO ? "Estalla la tormenta" : inicioDeSerie(t);
     }
 
     static String avisoDeSerie(Tipo t) {
@@ -256,6 +293,7 @@ final class Clima implements Listener {
             case ESPORAS -> Paleta.ESPORAS;
             case POLEN -> Paleta.POLEN;
             case CENIZA -> Paleta.CENIZA;
+            case GENERICO -> Paleta.TEMPORAL;
             default -> Paleta.TEXTO;
         };
     }
@@ -289,40 +327,73 @@ final class Clima implements Listener {
         }
     }
 
+    /**
+     * 1.12 · Lo que hace falta para pintarle una lluvia a un jugador: lo mide el segundo y lo lee el pulso.
+     * Lo usa tambien la tormenta de la PARCA (ParcaAnomalia lleva uno por jugador).
+     */
+    static class Cielo {
+        /** Segundos seguidos con esta lluvia (el ritmo de los sonidos y de las rachas). */
+        int segundos;
+        /** A cielo abierto para esta lluvia (con o sin hojas segun hojas-protegen). */
+        boolean expuesto;
+        /** Muy bajo tierra: ni particulas ni sonidos. */
+        boolean profundo;
+        /** El segundo en el que cae el proximo rayo (0 = aun sin sortear). */
+        int proximoRayo;
+    }
+
     /** Lo de cada jugador. Lo "puesto" es lo que este modulo le ha cambiado y tiene que devolverle. */
-    private static final class Estado {
+    private static final class Estado extends Cielo {
         final Episodio acida = new Episodio();
         final Episodio rojo = new Episodio();
         /** 1.12: esporas, polinizacion y ceniza (uno a la vez: al cambiar de tipo se olvida). */
         final Episodio expo = new Episodio();
         /** 1.12: el clima que ve ahora; lo pinta el pulso de particulas. */
         Tipo tipo = Tipo.NINGUNO;
-        /** Segundos seguidos con este tipo (el ritmo de los sonidos). */
-        int segundos;
         boolean tormenta;
-        /** A cielo abierto para este tipo (con o sin hojas segun hojas-protegen). */
-        boolean expuesto;
-        /** Muy bajo tierra: ni particulas ni sonidos. */
-        boolean profundo;
+        /** 1.12: le cae la tormenta de la PARCA; el clima del bioma se calla (ni particulas ni sonidos). */
+        boolean deParca;
         /** Bajo el cielo rojo ahora mismo: Vineta le suma su parte mientras dure. */
         boolean bajoCielo;
+        /** La hora es nuestra: la del cielo rojo, o la de un barrido hacia el. */
         boolean horaPuesta;
         /** El offset que le mandamos (no la hora del ciclo: ver offsetHora). */
         long hora;
+        /** La hora del cielo rojo y el dia de Panacea con los que se calculo (para reponerla cada tick). */
+        long horaDestino = CIELO_HORA;
+        long periodoDestino;
         boolean fuegoPuesto;
     }
 
-    /** Una capa de particulas de un tipo (hardcore.clima.<tipo>.particulas), por pulso. */
+    /**
+     * 1.12 · Una capa de particulas de un clima (hardcore.clima.<tipo>.particulas), por pulso. viento: cada
+     * particula sale empujada en la direccion del viento del mundo (una por paquete: usarlas con poca
+     * cantidad). racha-cada / racha-dura: la capa solo se pinta 'dura' segundos de cada 'cada' (las rachas).
+     */
     record Capa(String particula, int cantidad, double radio, double altura, double espesor, double velocidad,
-                int color, int color2, float tam, String bloque, boolean techo) {
+                int color, int color2, float tam, String bloque, boolean techo, boolean viento, int rachaCada,
+                int rachaDura) {
 
         static Capa de(Map<?, ?> m) {
             return new Capa(texto(m, "particula", "").trim().toUpperCase(Locale.ROOT),
                     (int) Math.round(numero(m, "cantidad", 0)), numero(m, "radio", 6), numero(m, "altura", 2),
                     numero(m, "espesor", 1.5), numero(m, "velocidad", 0), colorDe(m.get("color"), 0xFFFFFF),
                     colorDe(m.get("color2"), colorDe(m.get("color"), 0xFFFFFF)), (float) numero(m, "tam", 1.0),
-                    texto(m, "bloque", ""), Boolean.parseBoolean(texto(m, "techo", "false")));
+                    texto(m, "bloque", ""), Boolean.parseBoolean(texto(m, "techo", "false")),
+                    Boolean.parseBoolean(texto(m, "viento", "false")), (int) Math.round(numero(m, "racha-cada", 0)),
+                    (int) Math.round(numero(m, "racha-dura", 0)));
         }
+
+        /** Si este segundo toca pintarla: sin rachas siempre; con rachas, los 'dura' primeros de cada 'cada'. */
+        boolean toca(int segundo) {
+            return enRacha(segundo, rachaCada, rachaDura);
+        }
+    }
+
+    /** Las rachas: con cada <= 0 siempre; si no, los max(1, dura) primeros segundos de cada 'cada'. */
+    static boolean enRacha(int segundo, int cada, int dura) {
+        if (cada <= 0) return true;
+        return Math.floorMod(segundo, cada) < Math.max(1, Math.min(cada, dura));
     }
 
     /** Un sonido de un tipo: cada 'cada' segundos, a 'distancia' bloques de el como mucho. */
@@ -334,8 +405,75 @@ final class Clima implements Listener {
         }
     }
 
-    /** Lo ya leido de un tipo: sus capas (con los datos de particula hechos) y sus sonidos. */
-    private record Receta(List<Capa> capas, List<Particle> particulas, List<Object> datos, List<Sonido> sonidos) {
+    /**
+     * 1.12 · Los rayos de una tormenta (hardcore.clima.<seccion>.rayos): uno cada 'cada' segundos (+-40 %), a
+     * 'distancia' bloques y bajando desde 'altura' sobre el, con su trueno. Solo a cielo abierto.
+     */
+    record Rayo(int cada, int color, float tam, double distancia, double altura, String sonido, float volumen,
+                float tono) {
+
+        /**
+         * Null si no hay seccion o cada es 0 o menos (sin rayos). Se lee sin valor por defecto explicito
+         * (s.get(k)): asi, en un config.yml del servidor anterior a la 1.12 (sin 'rayos'), valen los del jar.
+         * Con getInt("cada", 0) Bukkit no mira los del jar y la tormenta se quedaba sin rayos.
+         */
+        static Rayo de(ConfigurationSection s) {
+            if (s == null) return null;
+            int cada = (int) Math.round(num(s, "cada", 0));
+            if (cada <= 0) return null;
+            Object son = s.get("sonido");
+            return new Rayo(cada, colorDe(s.get("color"), 0xE6E1F5), (float) num(s, "tam", 1.6),
+                    Math.max(4, num(s, "distancia", 20)), Math.max(4, num(s, "altura", 18)),
+                    son == null ? "minecraft:entity.lightning_bolt.thunder" : String.valueOf(son),
+                    (float) num(s, "volumen", 0.6), (float) num(s, "tono", 1.0));
+        }
+
+        /** Un numero de la seccion, o del jar si el servidor no lo tiene, o 'def'. */
+        private static double num(ConfigurationSection s, String k, double def) {
+            Object v = s.get(k);
+            return v instanceof Number n ? n.doubleValue() : def;
+        }
+
+        /** Lo mas lejos que queda la punta del rayo de sus ojos (la distancia con su variacion y la altura). */
+        double alcance() {
+            double d = Math.min(distancia * 1.1, ALCANCE_PARTICULAS);
+            return Math.sqrt(d * d + altura * altura);
+        }
+    }
+
+    /** Lo ya leido de un clima: sus capas (con los datos de particula hechos), sus sonidos y sus rayos. */
+    private record Receta(List<Capa> capas, List<Particle> particulas, List<Object> datos, List<Sonido> sonidos,
+                          Rayo rayo) {
+    }
+
+    /**
+     * 1.12 · El paso suave de la hora: del cielo rojo al suyo (haciaRojo false) o al reves. Cada tick se le
+     * manda una hora fija un poco mas cerca del destino por el camino corto del dia de Panacea; al acabar
+     * se le devuelve su hora (resetPlayerTime) o se le fija la del cielo rojo. 'ultimo' es el offset que se
+     * le puso el tick anterior: si ya no lo tiene, otro (Eclipse, PARCA) le ha cambiado la hora y se deja.
+     */
+    private static final class Barrido {
+        final UUID mundo;
+        final boolean haciaRojo;
+        final long hora;
+        final long periodo;
+        /** El estado del cielo rojo al que se llega (solo haciaRojo): ahi se apunta el offset de cada tick. */
+        final Estado estado;
+        double visto;
+        int quedan;
+        long ultimo;
+
+        Barrido(UUID mundo, boolean haciaRojo, long hora, long periodo, Estado estado, double visto, int quedan,
+                long ultimo) {
+            this.mundo = mundo;
+            this.haciaRojo = haciaRojo;
+            this.hora = hora;
+            this.periodo = periodo;
+            this.estado = estado;
+            this.visto = visto;
+            this.quedan = quedan;
+            this.ultimo = ultimo;
+        }
     }
 
     private final Hardcore hc;
@@ -346,14 +484,20 @@ final class Clima implements Listener {
     private final Map<UUID, String> enCurso = new HashMap<>();
     /** 1.12: cuando se le anuncio cada tipo por ultima vez (aviso-inicio-espera). */
     private final Map<UUID, Map<Tipo, Long>> anuncios = new HashMap<>();
-    /** 1.12: lo leido de la config, por tipo; se rehace si cambia la seccion (reload). */
-    private final Map<Tipo, Receta> recetas = new EnumMap<>(Tipo.class);
+    /** 1.12: los pasos de hora en curso (cielo rojo <-> el suyo), uno por jugador. */
+    private final Map<UUID, Barrido> barridos = new HashMap<>();
+    /** 1.12: lo leido de la config, por seccion (el id del tipo o tormenta-parca); se rehace si cambia (reload). */
+    private final Map<String, Receta> recetas = new HashMap<>();
     private ConfigurationSection recetasDe;
     private ConfigurationSection tablaDe;
     private Map<String, Tipo> tabla = Map.of();
     /** 1.11: el reloj del clima (cuando llueve). */
     private final CicloClima ciclo;
     private final BukkitTask pulso;
+    /** Cada cuantos ticks le toca su pulso de particulas a cada jugador (efectos.cada-ticks). */
+    private final int cada;
+    /** Ticks desde que arranco: el pulso de cada jugador cae en su tick (repartidos, no todos a la vez). */
+    private long ticks;
 
     Clima(Hardcore hc) {
         this.hc = hc;
@@ -362,9 +506,10 @@ final class Clima implements Listener {
         hc.plugin().getServer().getPluginManager().registerEvents(this, hc.plugin());
         // Un mundo que se guardo lloviendo (1.11 ponia setStorm(true)) se despeja ya, no al primer segundo.
         for (World w : hc.plugin().getServer().getWorlds()) hc.seguro("ciclo-clima", () -> ciclo.despejar(w));
-        int cada = Math.max(1, Math.min(20, cfg().getInt("efectos.cada-ticks", EFECTOS_CADA_TICKS)));
+        this.cada = Math.max(1, Math.min(20, cfg().getInt("efectos.cada-ticks", EFECTOS_CADA_TICKS)));
+        // Cada tick: el paso de hora suave y el pulso de los jugadores a los que les toca este tick.
         this.pulso = hc.plugin().getServer().getScheduler().runTaskTimer(hc.plugin(),
-                () -> hc.seguro("clima", this::pulso), 20L, cada);
+                () -> hc.seguro("clima", this::pulso), 20L, 1L);
         Autotest.registrar("clima", () -> autotest(hc.plugin().getConfig().getDefaults()));
     }
 
@@ -424,27 +569,34 @@ final class Clima implements Listener {
             estados.put(u, e);
         }
         vistos.add(u);
+        boolean tormenta = tipo != Tipo.NINGUNO && ciclo.tormenta(p.getWorld());
         if (tipo != e.tipo) {
             e.segundos = 0;
+            e.proximoRayo = 0;
             e.expo.olvidar();
-            if (tipo != Tipo.NINGUNO) anunciar(p, tipo, c);
+            if (tipo != Tipo.NINGUNO) anunciar(p, tipo, tormenta, c);
         }
         e.tipo = tipo;
         e.segundos++;
         ConfigurationSection s = seccion(c, tipo.id);
+        e.tormenta = tormenta;
         if (tipo != Tipo.NINGUNO) {
-            e.tormenta = ciclo.tormenta(p.getWorld());
             medirCielo(p, e, s.getBoolean("hojas-protegen", hojasDeSerie(tipo)),
                     c.getInt("efectos.profundidad", PROFUNDIDAD));
+            // La tormenta de la PARCA manda sobre lo que se ve del bioma (el dano, si lo hay, sigue).
+            Parca parca = hc.parca();
+            e.deParca = parca != null && hc.valor("parca", () -> parca.lluviaSobre(p), false);
         } else {
-            e.tormenta = false;
             e.expuesto = false;
             e.profundo = false;
+            e.deParca = false;
         }
-        boolean fuera = !spawn && danino;
+        // Encargo de Dosa (2026-10-05): bajo la tormenta de la PARCA el clima del bioma no se ve, asi que tampoco
+        // hace nada (ni acida, ni quemadura, ni cordura, ni efecto): nada que dane sin verse. La hora roja sigue.
+        boolean fuera = !spawn && danino && !e.deParca;
         lluviaAcida(p, e, fuera && tipo == Tipo.ACIDA && e.expuesto, seccion(c, "lluvia-acida"));
         cieloRojo(p, e, tipo == Tipo.ROJO, fuera, r);
-        exposicion(p, e, tipo, fuera && tipo.generico() && e.expuesto, s);
+        exposicion(p, e, tipo, fuera && tipo.porExposicion() && e.expuesto, s);
         sonidos(p, e, c);
         // Sin nada puesto y con las cuentas olvidadas, no hace falta seguir acordandose de el.
         if (e.tipo == Tipo.NINGUNO && e.acida.dentro == 0 && e.rojo.dentro == 0 && e.expo.dentro == 0
@@ -495,6 +647,12 @@ final class Clima implements Listener {
             Player p = Bukkit.getPlayer(u);
             if (p != null && e != null) soltarCielo(p, e);
         }
+        // Los pasos de hora a medias: la suya ya, sin barrido (el plugin se apaga).
+        for (UUID u : new ArrayList<>(barridos.keySet())) {
+            Player p = Bukkit.getPlayer(u);
+            if (p != null) soltarHora(p, null);
+        }
+        barridos.clear();
         estados.clear();
         vistos.clear();
         enCurso.clear();
@@ -518,6 +676,62 @@ final class Clima implements Listener {
         // llamas para siempre. Se le devuelve todo antes.
         soltar(ev.getPlayer());
         anuncios.remove(ev.getPlayer().getUniqueId());
+    }
+
+    /**
+     * 1.12 · Un teletransporte largo dentro del mismo mundo (el Cristal, /spawn, un /tp) es un corte de
+     * escena: el cielo no se barre. Al tick siguiente, ya en el destino, si alli no toca el cielo rojo se le
+     * devuelve su hora de golpe (no un segundo de cielo rojo donde no lo hay, ni medio barrido colgado);
+     * si toca, se queda como esta y el segundo sigue. El cambio de mundo lo hace onCambiarMundo.
+     */
+    @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
+    public void onTeleport(PlayerTeleportEvent ev) {
+        Player p = ev.getPlayer();
+        Location de = ev.getFrom(), a = ev.getTo();
+        if (a == null || de.getWorld() == null || !de.getWorld().equals(a.getWorld())) return;
+        if (!esSalto(de.distanceSquared(a))) return;
+        UUID u = p.getUniqueId();
+        Estado e = estados.get(u);
+        if (!barridos.containsKey(u) && (e == null || !e.horaPuesta)) return;
+        hc.plugin().getServer().getScheduler().runTask(hc.plugin(), () -> hc.seguro("clima", () -> trasSalto(p)));
+    }
+
+    private void trasSalto(Player p) {
+        if (!p.isOnline()) return;
+        UUID u = p.getUniqueId();
+        Estado e = estados.get(u);
+        if (e != null && sigueRojo(p)) {
+            // Alli tambien es cielo rojo. Ya fijado: nada. A medio barrido: el rojo ya, sin acabarlo.
+            Barrido b = barridos.get(u);
+            if (b == null) return;
+            barridos.remove(u);
+            if (!esHora(p.isPlayerTimeRelative(), p.getPlayerTimeOffset(), b.ultimo)) return;
+            ConfigurationSection r = seccion(cfg(), "cielo-rojo");
+            long periodo = r.getLong("periodo-dia", CIELO_PERIODO);
+            long off = offsetHora(p.getWorld().getFullTime(), hora(r), periodo);
+            p.setPlayerTime(off, false);
+            e.horaPuesta = true;
+            e.hora = off;
+            // Para que repasarHora la reponga al cambiar de bloque de 24000 (un estado recien hecho los tiene a 0).
+            e.horaDestino = hora(r);
+            e.periodoDestino = periodo;
+            return;
+        }
+        soltarHora(p, e);
+    }
+
+    /** Si un teletransporte de esa distancia (al cuadrado) es un corte de escena. */
+    static boolean esSalto(double distancia2) {
+        return distancia2 > SALTO_TELEPORT * SALTO_TELEPORT;
+    }
+
+    /** Si donde esta ahora le toca el cielo rojo con su hora (lo mismo que decide pasar + ponerHora). */
+    private boolean sigueRojo(Player p) {
+        ConfigurationSection c = cfg();
+        if (!c.getBoolean("activo", true) || p.isDead() || !hc.esHardcore(p)) return false;
+        ConfigurationSection r = seccion(c, "cielo-rojo");
+        if (hora(r) <= 0 || !ciclo.llueve(p.getWorld()) || tipo(bioma(p), c) != Tipo.ROJO) return false;
+        return !hc.enSpawn(p) || r.getBoolean("en-spawn", true);
     }
 
     /**
@@ -562,7 +776,7 @@ final class Clima implements Listener {
      * tierra. Dos lecturas del mapa de alturas por jugador y segundo: es lo que hacia isInRain, que ya no
      * sirve (el mundo no llueve).
      */
-    private static void medirCielo(Player p, Estado e, boolean hojas, int profundidad) {
+    private static void medirCielo(Player p, Cielo e, boolean hojas, int profundidad) {
         Location l = p.getLocation();
         World w = p.getWorld();
         int ojo = (int) Math.floor(p.getEyeLocation().getY());
@@ -642,9 +856,12 @@ final class Clima implements Listener {
      * una vez cada aviso-inicio-espera segundos por tipo (pasear por la linea entre dos biomas no lo repite).
      * En Bedrock el subtitulo solo no siempre sale: alli va en la barra.
      */
-    private void anunciar(Player p, Tipo tipo, ConfigurationSection c) {
+    private void anunciar(Player p, Tipo tipo, boolean tormenta, ConfigurationSection c) {
         if (!c.getBoolean("aviso-inicio", AVISO_INICIO)) return;
-        String texto = seccion(c, tipo.id).getString("inicio", inicioDeSerie(tipo));
+        ConfigurationSection s = seccion(c, tipo.id);
+        String texto = s.getString("inicio", inicioDeSerie(tipo));
+        // 1.12: en la fase de tormenta, su anuncio propio si lo tiene ("Estalla la tormenta" en el temporal).
+        if (tormenta) texto = s.getString("inicio-tormenta", tipo == Tipo.GENERICO ? inicioTormentaDeSerie(tipo) : texto);
         if (texto == null || texto.isBlank()) return;
         long ahora = System.currentTimeMillis();
         Map<Tipo, Long> m = anuncios.computeIfAbsent(p.getUniqueId(), k -> new EnumMap<>(Tipo.class));
@@ -671,7 +888,8 @@ final class Clima implements Listener {
         e.rojo.paso(dentro && danino, r.getInt("olvido-segundos", CIELO_OLVIDO));
         if (!dentro) {
             e.bajoCielo = false;
-            soltarHora(p, e);
+            // 1.12: sale del cielo rojo andando, volando o porque escampa: su hora vuelve barriendo, no de golpe.
+            soltarHoraSuave(p, e, r);
             quitarFuego(p, e);
             return;
         }
@@ -708,22 +926,37 @@ final class Clima implements Listener {
         if (dano > 0) herir(p, dano, DamageType.ON_FIRE, CAUSA_CIELO);
     }
 
-    /** La hora del cielo de sangre. El de la PARCA manda entero; la hora del Eclipse, tambien. */
+    /**
+     * La hora del cielo de sangre. El de la PARCA manda entero; la hora del Eclipse, tambien.
+     *
+     * 1.12: al entrar no se fija de golpe: un barrido de transicion-ticks lleva su cielo hasta el rojo por el
+     * camino corto del dia de Panacea (ver Barrido). Mientras barre, aqui no se toca nada.
+     */
     private void ponerHora(Player p, Estado e, ConfigurationSection r, boolean deParca, boolean deEclipse) {
         long hora = hora(r);
         if (hora > 0 && !deParca && !deEclipse) {
-            // El offset depende del bloque de 24000 en el que va el reloj, asi que se calcula cada
-            // segundo: al pasar al bloque siguiente cambia y se vuelve a mandar (como mucho un
-            // segundo de cielo normal cada 20 minutos). getPlayerTime - offset es el reloj (o ya su
-            // bloque, si la hora esta fija): baseServidor lo redondea igual en los dos casos.
-            long reloj = p.getPlayerTime() - p.getPlayerTimeOffset();
-            long offset = offsetHora(reloj, hora, r.getLong("periodo-dia", CIELO_PERIODO));
-            if (!e.horaPuesta || !esHora(p.isPlayerTimeRelative(), p.getPlayerTimeOffset(), offset)) {
+            Barrido b = barridos.get(p.getUniqueId());
+            if (b != null && b.haciaRojo) return;
+            // El offset depende del bloque de 24000 en el que va el reloj: lo repone cada tick el pulso
+            // (repasarHora) y aqui se mira cada segundo por si otro le ha cambiado la hora.
+            long periodo = r.getLong("periodo-dia", CIELO_PERIODO);
+            long offset = offsetHora(p.getWorld().getFullTime(), hora, periodo);
+            e.horaDestino = hora;
+            e.periodoDestino = periodo;
+            if (b == null && e.horaPuesta && esHora(p.isPlayerTimeRelative(), p.getPlayerTimeOffset(), offset)) return;
+            int ticks = r.getInt("transicion-ticks", CIELO_TRANSICION);
+            // Ya era nuestra (otro bloque de 24000) o sin transicion: fija ya. Si no, barrido desde lo que ve.
+            boolean nuestra = b == null && e.horaPuesta
+                    && esHora(p.isPlayerTimeRelative(), p.getPlayerTimeOffset(), e.hora);
+            if (nuestra || ticks <= 0) {
                 // Fija (relative false): el cielo no avanza mientras sigue ahi.
+                barridos.remove(p.getUniqueId());
                 p.setPlayerTime(offset, false);
                 e.horaPuesta = true;
                 e.hora = offset;
+                return;
             }
+            barrer(p, e, true, hora, periodo, ticks, b);
         } else {
             soltarHora(p, e);
         }
@@ -776,24 +1009,157 @@ final class Clima implements Listener {
 
     // -------------------------------------------------------------- devolver
 
-    /** Todo lo suyo fuera y el estado olvidado (cambio de mundo, muerte). */
+    /** Todo lo suyo fuera y el estado olvidado (cambio de mundo, muerte, salida). */
     private void soltar(Player p) {
         Estado e = estados.remove(p.getUniqueId());
         if (e != null) soltarCielo(p, e);
+        else soltarHora(p, null);
     }
 
-    private static void soltarCielo(Player p, Estado e) {
+    private void soltarCielo(Player p, Estado e) {
         e.bajoCielo = false;
         e.tipo = Tipo.NINGUNO;
         soltarHora(p, e);
         quitarFuego(p, e);
     }
 
-    /** Devuelve la hora solo si sigue la nuestra: la noche del Eclipse o de la PARCA no se toca. */
-    private static void soltarHora(Player p, Estado e) {
+    /**
+     * Devuelve la hora YA, solo si sigue la nuestra (la fija del cielo rojo o la del barrido en curso): la
+     * noche del Eclipse o de la PARCA no se toca. Corta el barrido que hubiera. Para muerte, cambio de
+     * mundo, salida, apagado, teletransporte largo y cuando el Eclipse o la PARCA toman el cielo.
+     */
+    private void soltarHora(Player p, Estado e) {
+        boolean puesta = e != null && e.horaPuesta;
+        long nuestra = e == null ? 0 : e.hora;
+        if (e != null) e.horaPuesta = false;
+        Barrido b = barridos.remove(p.getUniqueId());
+        if (!p.isOnline()) return;
+        boolean rel = p.isPlayerTimeRelative();
+        long off = p.getPlayerTimeOffset();
+        if ((puesta && esHora(rel, off, nuestra)) || (b != null && esHora(rel, off, b.ultimo))) p.resetPlayerTime();
+    }
+
+    /**
+     * 1.12 · Sale del cielo rojo sin corte de escena (andando, volando, porque escampa): en vez de devolverle
+     * la hora de golpe, un barrido de transicion-ticks lleva el cielo hasta su hora y entonces se le devuelve.
+     */
+    private void soltarHoraSuave(Player p, Estado e, ConfigurationSection r) {
+        Barrido b = barridos.get(p.getUniqueId());
+        if (b != null && !b.haciaRojo) {
+            // Ya esta volviendo a su hora.
+            e.horaPuesta = false;
+            return;
+        }
         if (!e.horaPuesta) return;
+        int ticks = r.getInt("transicion-ticks", CIELO_TRANSICION);
+        boolean nuestra = p.isOnline() && (b != null ? esHora(p.isPlayerTimeRelative(), p.getPlayerTimeOffset(), b.ultimo)
+                : esHora(p.isPlayerTimeRelative(), p.getPlayerTimeOffset(), e.hora));
+        if (!nuestra || ticks <= 0 || p.isDead()) {
+            soltarHora(p, e);
+            return;
+        }
         e.horaPuesta = false;
-        if (p.isOnline() && esHora(p.isPlayerTimeRelative(), p.getPlayerTimeOffset(), e.hora)) p.resetPlayerTime();
+        barrer(p, null, false, e.horaDestino, e.periodoDestino, ticks, b);
+    }
+
+    /**
+     * Empieza (o da la vuelta a) un barrido desde lo que ve ahora. 'antes' es el barrido que hubiera: su
+     * ultimo offset es el que tiene puesto el jugador.
+     */
+    private void barrer(Player p, Estado e, boolean haciaRojo, long hora, long periodo, int ticks, Barrido antes) {
+        // El offset que tiene ahora pasa a ser nuestro: el del barrido anterior, o el fijo que tenga (la hora
+        // roja, u otra que se pisa como se pisaba antes), o ninguno si va con su hora (relativa).
+        long ultimo = antes != null ? antes.ultimo : p.isPlayerTimeRelative() ? SIN_OFFSET : p.getPlayerTimeOffset();
+        Barrido b = new Barrido(p.getWorld().getUID(), haciaRojo, hora, periodo > 0 ? periodo : CIELO_PERIODO, e,
+                p.getPlayerTime(), Math.max(1, ticks), ultimo);
+        barridos.put(p.getUniqueId(), b);
+        if (e != null) {
+            // La hora es nuestra mientras barre: si muere o se va, soltarHora la devuelve.
+            e.horaPuesta = true;
+            e.hora = b.ultimo;
+        }
+    }
+
+    /** Marca de "aun no le hemos puesto ningun offset" (empieza con su hora relativa). */
+    private static final long SIN_OFFSET = Long.MIN_VALUE;
+
+    /** Un tick de todos los barridos en curso (desde el pulso). */
+    private void pasoBarridos() {
+        for (java.util.Iterator<Map.Entry<UUID, Barrido>> it = barridos.entrySet().iterator(); it.hasNext(); ) {
+            Map.Entry<UUID, Barrido> en = it.next();
+            Barrido b = en.getValue();
+            Player p = Bukkit.getPlayer(en.getKey());
+            if (p == null || !p.isOnline() || p.isDead() || !p.getWorld().getUID().equals(b.mundo)) {
+                // Se fue, murio o cambio de mundo: lo devuelven soltar() y los oyentes. Por si alguno no llego
+                // (un evento cancelado, otro orden), si sigue en linea con nuestra hora se le devuelve aqui.
+                it.remove();
+                if (p != null && p.isOnline() && esHora(p.isPlayerTimeRelative(), p.getPlayerTimeOffset(), b.ultimo)) {
+                    p.resetPlayerTime();
+                }
+                if (b.estado != null) b.estado.horaPuesta = false;
+                continue;
+            }
+            boolean rel = p.isPlayerTimeRelative();
+            boolean suya = b.ultimo == SIN_OFFSET ? rel : esHora(rel, p.getPlayerTimeOffset(), b.ultimo);
+            if (!suya) {
+                // Otro (Eclipse, PARCA, un plugin) le ha puesto su hora: es suya, no se toca.
+                it.remove();
+                if (b.estado != null && b.estado.hora == b.ultimo) b.estado.horaPuesta = false;
+                continue;
+            }
+            long reloj = p.getWorld().getFullTime();
+            double destino = b.haciaRojo ? b.hora : reloj;
+            b.visto = pasoHacia(b.visto, destino, b.quedan, b.periodo);
+            b.quedan--;
+            long off;
+            if (b.quedan <= 0) {
+                it.remove();
+                if (!b.haciaRojo) {
+                    p.resetPlayerTime();
+                    continue;
+                }
+                off = offsetHora(reloj, b.hora, b.periodo);
+            } else {
+                off = Math.round(b.visto) - baseServidor(reloj);
+            }
+            p.setPlayerTime(off, false);
+            b.ultimo = off;
+            if (b.estado != null) b.estado.hora = off;
+        }
+    }
+
+    /**
+     * Cada tick, a quien tiene el cielo rojo fijo: al pasar el reloj al bloque de 24000 siguiente el offset
+     * cambia (ver offsetHora) y se repone en ese mismo tick, no hasta un segundo despues con el cielo saltado.
+     */
+    private void repasarHora() {
+        for (Map.Entry<UUID, Estado> en : estados.entrySet()) {
+            Estado e = en.getValue();
+            if (!e.horaPuesta || e.periodoDestino <= 0 || barridos.containsKey(en.getKey())) continue;
+            Player p = Bukkit.getPlayer(en.getKey());
+            if (p == null || !p.isOnline()) continue;
+            long off = offsetHora(p.getWorld().getFullTime(), e.horaDestino, e.periodoDestino);
+            if (off == e.hora || !esHora(p.isPlayerTimeRelative(), p.getPlayerTimeOffset(), e.hora)) continue;
+            p.setPlayerTime(off, false);
+            e.hora = off;
+        }
+    }
+
+    /**
+     * El camino corto (con signo) de 'desde' a 'hasta' en un dia de 'periodo' ticks: entre -periodo/2 y
+     * +periodo/2. Lo que importa es lo que se ve, que se repite cada periodo.
+     */
+    static double arco(double desde, double hasta, long periodo) {
+        double per = periodo > 0 ? periodo : CIELO_PERIODO;
+        double d = (hasta - desde) % per;
+        if (d > per / 2) d -= per;
+        if (d <= -per / 2) d += per;
+        return d;
+    }
+
+    /** Un tick de barrido: lo que queda hasta el destino repartido entre los ticks que quedan. */
+    static double pasoHacia(double visto, double destino, int quedan, long periodo) {
+        return visto + arco(visto, destino, periodo) / Math.max(1, quedan);
     }
 
     private static void ponerFuego(Player p, Estado e) {
@@ -908,32 +1274,91 @@ final class Clima implements Listener {
     // --------------------------------------------------------------- efectos
 
     /**
-     * 1.12 · El pulso (cada efectos.cada-ticks): las capas de particulas del clima que ve cada jugador, solo
-     * para el. Un paquete por capa y jugador; el cliente reparte las 'cantidad' particulas por el radio.
+     * 1.12 · El pulso, cada tick: primero los pasos de hora en curso (barridos) y la hora roja que cambia de
+     * bloque; despues las particulas, a cada jugador cada efectos.cada-ticks y en su propio tick (repartidos,
+     * no todos en el mismo). Un paquete por capa y jugador (el cliente reparte las particulas por el radio),
+     * salvo las capas de viento, que van de una en una; con tope por pulso.
      */
     private void pulso() {
+        long t = ++ticks;
+        if (!barridos.isEmpty()) pasoBarridos();
         if (estados.isEmpty()) return;
+        repasarHora();
         ConfigurationSection c = cfg();
         if (!c.getBoolean("activo", true)) return;
         double densidad = Math.max(0.0, c.getDouble("efectos.densidad", DENSIDAD));
         double tormenta = Math.max(0.0, c.getDouble("tormenta.densidad", TORMENTA_DENSIDAD));
+        int tope = c.getInt("efectos.tope-por-pulso", TOPE_PULSO);
         for (Map.Entry<UUID, Estado> en : estados.entrySet()) {
             Estado e = en.getValue();
-            if (e.tipo == Tipo.NINGUNO || e.profundo) continue;
+            if (e.tipo == Tipo.NINGUNO || e.profundo || e.deParca) continue;
+            if (!tocaPulso(en.getKey().hashCode(), t, cada)) continue;
             Player p = Bukkit.getPlayer(en.getKey());
             if (p == null || p.isDead()) continue;
-            Receta r = receta(e.tipo, c);
-            double f = densidad * (e.tormenta ? tormenta : 1.0);
-            Location base = p.getLocation();
-            for (int i = 0; i < r.capas().size(); i++) {
-                Capa k = r.capas().get(i);
-                if (!k.techo() && !e.expuesto) continue;
-                int n = cantidad(k.cantidad(), f);
-                if (n <= 0) continue;
-                particula(p, r.particulas().get(i), base.clone().add(0, k.altura(), 0), n, k.radio(), k.espesor(),
-                        k.radio(), k.velocidad(), r.datos().get(i));
+            pintar(p, receta(e.tipo.id, c), e, densidad * (e.tormenta ? tormenta : 1.0), tope);
+        }
+    }
+
+    /** Si en ese tick le toca el pulso a ese jugador (por su hash: cada uno en su tick, uno de cada 'cada'). */
+    static boolean tocaPulso(int hash, long tick, int cada) {
+        return Math.floorMod(hash + tick, (long) Math.max(1, cada)) == 0;
+    }
+
+    /** Las capas de una receta para ese jugador: las de techo siempre, el resto a cielo abierto; con tope. */
+    private void pintar(Player p, Receta r, Cielo k, double factor, int tope) {
+        int total = 0;
+        for (Capa capa : r.capas()) {
+            if (capa.toca(k.segundos) && (capa.techo() || k.expuesto)) total += cantidad(capa.cantidad(), factor);
+        }
+        if (total <= 0) return;
+        double f = factor * escalaTope(total, tope);
+        Location base = p.getLocation();
+        for (int i = 0; i < r.capas().size(); i++) {
+            Capa capa = r.capas().get(i);
+            if (!capa.toca(k.segundos) || (!capa.techo() && !k.expuesto)) continue;
+            int n = cantidad(capa.cantidad(), f);
+            if (n <= 0) continue;
+            if (capa.viento()) {
+                viento(p, r.particulas().get(i), base, capa, n, r.datos().get(i));
+            } else {
+                particula(p, r.particulas().get(i), base.clone().add(0, capa.altura(), 0), n, capa.radio(),
+                        capa.espesor(), capa.radio(), capa.velocidad(), r.datos().get(i));
             }
         }
+    }
+
+    /** Lo que se multiplica la densidad para no pasar del tope por pulso (tope 0 o menos = sin tope). */
+    static double escalaTope(int total, int tope) {
+        return tope > 0 && total > tope ? tope / (double) total : 1.0;
+    }
+
+    /**
+     * 1.12 · Una capa de viento: cada particula sale con velocidad en la direccion del viento del mundo, desde
+     * un punto al azar del radio corrido a barlovento (para que crucen a su alrededor y no salgan de el).
+     */
+    private static void viento(Player p, Particle tipo, Location base, Capa k, int n, Object datos) {
+        double ang = direccionViento(System.currentTimeMillis(), p.getWorld().getUID().getLeastSignificantBits());
+        double dx = Math.cos(ang), dz = Math.sin(ang);
+        double vel = Math.max(0.05, k.velocidad());
+        ThreadLocalRandom azar = ThreadLocalRandom.current();
+        for (int i = 0; i < n; i++) {
+            double a = azar.nextDouble(Math.PI * 2);
+            double d = azar.nextDouble(Math.max(0.5, k.radio()));
+            double alto = k.espesor() > 0 ? azar.nextDouble(-k.espesor(), k.espesor()) : 0;
+            Location l = base.clone().add(Math.cos(a) * d - dx * k.radio() * 0.5, k.altura() + alto,
+                    Math.sin(a) * d - dz * k.radio() * 0.5);
+            // Cantidad 0: el desplazamiento es la direccion y 'velocidad' su rapidez.
+            particula(p, tipo, l, 0, dx, azar.nextDouble(-0.08, 0.03), dz, vel, datos);
+        }
+    }
+
+    /**
+     * La direccion del viento de un mundo (radianes): da una vuelta cada media hora con un vaiven lento, asi
+     * que de un segundo al siguiente apenas cambia. 'semilla' la hace distinta por mundo.
+     */
+    static double direccionViento(long ms, long semilla) {
+        double seg = ms / 1000.0;
+        return Math.floorMod(semilla, 360L) * Math.PI / 180.0 + seg * (Math.PI * 2 / 1800.0) + 0.5 * Math.sin(seg / 97.0);
     }
 
     /** Las particulas de una capa con la densidad aplicada (redondeo normal; nunca negativo). */
@@ -943,26 +1368,63 @@ final class Clima implements Listener {
 
     /** Los sonidos del tipo (y los de la tormenta), a su ritmo; mas bajos a cubierto, ninguno muy bajo tierra. */
     private void sonidos(Player p, Estado e, ConfigurationSection c) {
-        if (e.tipo == Tipo.NINGUNO || e.profundo) return;
-        float factor = e.expuesto ? 1f : (float) Math.max(0, c.getDouble("efectos.volumen-a-cubierto", VOLUMEN_CUBIERTO));
-        if (factor <= 0) return;
-        for (Sonido s : receta(e.tipo, c).sonidos()) sonar(p, e, s, factor);
-        if (e.tormenta) for (Sonido s : sonidosTormenta(c)) sonar(p, e, s, factor);
+        if (e.tipo == Tipo.NINGUNO || e.profundo || e.deParca) return;
+        Receta r = receta(e.tipo.id, c);
+        // Los rayos: los del clima si tiene; si no, en la tormenta los de hardcore.clima.tormenta.rayos.
+        Rayo rayo = r.rayo() != null ? r.rayo() : e.tormenta ? rayoTormenta(c) : null;
+        sonar(p, e, r.sonidos(), e.tormenta ? sonidosTormenta(c) : List.of(), rayo, c);
     }
 
     private List<Sonido> tormentaSonidos;
+    private Rayo tormentaRayo;
     private ConfigurationSection tormentaDe;
 
     private List<Sonido> sonidosTormenta(ConfigurationSection c) {
-        if (c != tormentaDe || tormentaSonidos == null) {
-            tormentaSonidos = sonidos(seccion(c, "tormenta").getMapList("sonidos"));
-            tormentaDe = c;
-        }
+        leerTormenta(c);
         return tormentaSonidos;
     }
 
-    private static void sonar(Player p, Estado e, Sonido s, float factor) {
-        if (s.sonido().isBlank() || e.segundos % s.cada() != 0) return;
+    private Rayo rayoTormenta(ConfigurationSection c) {
+        leerTormenta(c);
+        return tormentaRayo;
+    }
+
+    private void leerTormenta(ConfigurationSection c) {
+        if (c == tormentaDe && tormentaSonidos != null) return;
+        ConfigurationSection t = seccion(c, "tormenta");
+        tormentaSonidos = sonidos(t.getMapList("sonidos"));
+        tormentaRayo = Rayo.de(t.getConfigurationSection("rayos"));
+        tormentaDe = c;
+    }
+
+    /** Los sonidos de este segundo y, a cielo abierto, el rayo si le toca (ver esperaRayo). */
+    private void sonar(Player p, Cielo k, List<Sonido> propios, List<Sonido> extra, Rayo rayo, ConfigurationSection c) {
+        float factor = k.expuesto ? 1f : (float) Math.max(0, c.getDouble("efectos.volumen-a-cubierto", VOLUMEN_CUBIERTO));
+        if (factor > 0) {
+            for (Sonido s : propios) sonar(p, k, s, factor);
+            for (Sonido s : extra) sonar(p, k, s, factor);
+        }
+        if (rayo == null) {
+            k.proximoRayo = 0;
+            return;
+        }
+        if (k.proximoRayo <= 0) {
+            k.proximoRayo = k.segundos + esperaRayo(rayo.cada(), ThreadLocalRandom.current().nextDouble());
+        } else if (k.segundos >= k.proximoRayo) {
+            // Bajo techo no se ve: el siguiente se sortea igual (el trueno de la tormenta ya suena aparte).
+            if (k.expuesto) rayo(p, rayo);
+            k.proximoRayo = k.segundos + esperaRayo(rayo.cada(), ThreadLocalRandom.current().nextDouble());
+        }
+    }
+
+    /** Segundos hasta el proximo rayo: 'cada' +-40 % segun azar (0 a 1), y nunca menos de 2. */
+    static int esperaRayo(int cada, double azar) {
+        double a = Math.max(0, Math.min(1, azar));
+        return Math.max(2, (int) Math.round(Math.max(1, cada) * (0.6 + 0.8 * a)));
+    }
+
+    private static void sonar(Player p, Cielo k, Sonido s, float factor) {
+        if (s.sonido().isBlank() || k.segundos % s.cada() != 0) return;
         ThreadLocalRandom azar = ThreadLocalRandom.current();
         double ang = azar.nextDouble(Math.PI * 2);
         double d = s.distancia() <= 0 ? 0 : azar.nextDouble(s.distancia() * 0.4, s.distancia());
@@ -975,14 +1437,83 @@ final class Clima implements Listener {
         }
     }
 
-    /** Lo leido de la config para un tipo (capas validas con sus datos, y sonidos). */
-    private Receta receta(Tipo tipo, ConfigurationSection c) {
+    /**
+     * 1.12 · Un rayo solo para el: una linea quebrada de DUST que baja desde 'altura' sobre el hasta el suelo, a
+     * 'distancia' bloques en una direccion al azar (dentro de los 32 en los que el cliente pinta particulas),
+     * y su trueno desde ese lado, a no mas de 8 bloques (con volumen 1 o menos el cliente lo apaga a 16).
+     */
+    private static void rayo(Player p, Rayo r) {
+        ThreadLocalRandom azar = ThreadLocalRandom.current();
+        double ang = azar.nextDouble(Math.PI * 2);
+        double d = Math.min(r.distancia() * (0.8 + azar.nextDouble() * 0.3), ALCANCE_PARTICULAS);
+        Location pie = p.getLocation();
+        double x = pie.getX() + Math.cos(ang) * d, z = pie.getZ() + Math.sin(ang) * d;
+        double arriba = pie.getY() + r.altura(), abajo = pie.getY() - 2;
+        Object datos = Compat.dust(r.color(), Math.max(0.1f, r.tam()));
+        int tramos = 8;
+        double alto = (arriba - abajo) / tramos;
+        for (int i = 0; i <= tramos; i++) {
+            double y = arriba - alto * i;
+            particula(p, Compat.DUST, new Location(p.getWorld(), x, y, z), 3, 0.1, alto / 3, 0.1, 0, datos);
+            x += azar.nextDouble(-1.2, 1.2);
+            z += azar.nextDouble(-1.2, 1.2);
+        }
+        if (r.sonido() == null || r.sonido().isBlank()) return;
+        double ds = Math.min(d, 8);
+        Location l = pie.clone().add(Math.cos(ang) * ds, 2, Math.sin(ang) * ds);
+        float tono = (float) Math.max(0.5, Math.min(2.0, r.tono() * (0.9 + azar.nextDouble() * 0.2)));
+        try {
+            p.playSound(l, r.sonido(), SoundCategory.WEATHER, r.volumen(), tono);
+        } catch (Throwable ignorado) {
+            // Un sonido con mal nombre no puede cortar el rayo.
+        }
+    }
+
+    // ------------------------------------------------------- tormenta de la PARCA
+
+    /** Cada cuantos ticks le toca el pulso de particulas a cada jugador (efectos.cada-ticks). */
+    int cadaTicks() {
+        return cada;
+    }
+
+    /**
+     * 1.12 · El segundo de la tormenta de la PARCA para un jugador (lo llama ParcaAnomalia cada segundo a
+     * quien esta cerca en la fase III o IV): mide su cielo y suena; a cielo abierto, rayos. Solo particulas y
+     * sonidos suyos: el mundo y su clima no se tocan. Con tormenta-parca.activa o hardcore.clima.activo en false, nada.
+     */
+    void segundoParca(Player p, Cielo k) {
+        ConfigurationSection c = cfg();
+        ConfigurationSection s = seccion(c, PARCA);
+        if (!c.getBoolean("activo", true) || !encendido(s) || p.isDead()) return;
+        k.segundos++;
+        medirCielo(p, k, s.getBoolean("hojas-protegen", true), c.getInt("efectos.profundidad", PROFUNDIDAD));
+        if (k.profundo) return;
+        Receta r = receta(PARCA, c);
+        sonar(p, k, r.sonidos(), List.of(), r.rayo(), c);
+    }
+
+    /** 1.12 · Un pulso de particulas de la tormenta de la PARCA para ese jugador (desde su tick). */
+    void pulsoParca(Player p, Cielo k) {
+        if (k.profundo || k.segundos <= 0) return;
+        ConfigurationSection c = cfg();
+        if (!c.getBoolean("activo", true) || !encendido(seccion(c, PARCA))) return;
+        pintar(p, receta(PARCA, c), k, Math.max(0.0, c.getDouble("efectos.densidad", DENSIDAD)),
+                c.getInt("efectos.tope-por-pulso", TOPE_PULSO));
+    }
+
+    /** Si en ese tick le toca el pulso de la tormenta de la PARCA (el mismo reparto que el del clima). */
+    boolean tocaPulso(UUID jugador, long tick) {
+        return tocaPulso(jugador.hashCode(), tick, cada);
+    }
+
+    /** Lo leido de la config para una seccion (capas validas con sus datos, sonidos y rayos). */
+    private Receta receta(String id, ConfigurationSection c) {
         if (c != recetasDe) {
             recetas.clear();
             recetasDe = c;
         }
-        return recetas.computeIfAbsent(tipo, t -> {
-            ConfigurationSection s = seccion(c, t.id);
+        return recetas.computeIfAbsent(id, t -> {
+            ConfigurationSection s = seccion(c, t);
             List<Capa> capas = new ArrayList<>();
             List<Particle> parts = new ArrayList<>();
             List<Object> datos = new ArrayList<>();
@@ -995,7 +1526,8 @@ final class Clima implements Listener {
                 parts.add(pt);
                 datos.add(d);
             }
-            return new Receta(capas, parts, datos, sonidos(s.getMapList("sonidos")));
+            return new Receta(capas, parts, datos, sonidos(s.getMapList("sonidos")),
+                    Rayo.de(s.getConfigurationSection("rayos")));
         });
     }
 
@@ -1121,10 +1653,29 @@ final class Clima implements Listener {
         h.igual("condemned_taiga: ceniza", Tipo.CENIZA, tipo("panacea/condemned_taiga", serie, vacia));
         h.igual("crimson_organism: cielo rojo", Tipo.ROJO, tipo("panacea/crimson_organism", serie, vacia));
         h.igual("con namespace tambien", Tipo.ROJO, tipo("bracken:panacea/crimson_organism", serie, vacia));
-        h.igual("bamboo_valley: nada", Tipo.NINGUNO, tipo("panacea/bamboo_valley", serie, vacia));
+        h.igual("bamboo_valley (Panacea sin clima propio): temporal", Tipo.GENERICO,
+                tipo("panacea/bamboo_valley", serie, vacia));
+        h.igual("quicksand_springs: temporal", Tipo.GENERICO, tipo("bracken:panacea/quicksand_springs", serie, vacia));
         h.igual("un clima de /lbiomes: nada", Tipo.NINGUNO, tipo("lethal:crimson", serie, vacia));
+        h.igual("un bioma de Minecraft: nada", Tipo.NINGUNO, tipo("minecraft:plains", serie, vacia));
         h.igual("sin bioma, nada", Tipo.NINGUNO, tipo(null, serie, vacia));
-        h.igual("la tabla de serie tiene sus 11 entradas", 11, serie.size());
+        h.igual("la tabla de serie tiene sus 12 entradas", 12, serie.size());
+        h.igual("texto: generico", Tipo.GENERICO, Tipo.deTexto("Genérico"));
+        h.igual("texto: temporal", Tipo.GENERICO, Tipo.deTexto("temporal"));
+        YamlConfiguration sinTemporal = new YamlConfiguration();
+        sinTemporal.set("generico.activo", false);
+        h.igual("temporal apagado: nada", Tipo.NINGUNO, tipo("panacea/bamboo_valley", serie, sinTemporal));
+        h.igual("y la lluvia acida sigue", Tipo.ACIDA, tipo("panacea/creeper_dominion", serie, sinTemporal));
+        YamlConfiguration todo = new YamlConfiguration();
+        todo.set("por-bioma.*", "generico");
+        h.igual("por-bioma \"*\": generico lo lleva a todo", Tipo.GENERICO, tipo("minecraft:plains", tabla(todo), todo));
+        // El temporal no hace dano: ni golpe, ni cordura, ni efecto, ni aviso en la barra.
+        h.ok("temporal: no pasa por la exposicion", !Tipo.GENERICO.porExposicion());
+        h.ok("temporal: sin cordura ni efecto ni aviso", corduraDeSerie(Tipo.GENERICO) == 0
+                && efectoDeSerie(Tipo.GENERICO).isEmpty() && avisoDeSerie(Tipo.GENERICO).isEmpty());
+        h.ok("temporal: las hojas tapan como un techo", hojasDeSerie(Tipo.GENERICO));
+        h.igual("temporal en tormenta: su anuncio", "Estalla la tormenta", inicioTormentaDeSerie(Tipo.GENERICO));
+        h.igual("los demas en tormenta: el de siempre", inicioDeSerie(Tipo.ACIDA), inicioTormentaDeSerie(Tipo.ACIDA));
 
         // Tipos por texto.
         h.igual("texto: acida", Tipo.ACIDA, Tipo.deTexto(" Acida "));
@@ -1215,6 +1766,63 @@ final class Clima implements Listener {
         h.ok("capa: techo y cantidad", capa.techo() && capa.cantidad() == 14 && capa.radio() == 8);
         Sonido son = Sonido.de(Map.of("sonido", "minecraft:entity.bee.loop", "cada", 0));
         h.igual("sonido: cada 0 se trata como 1", 1, son.cada());
+
+        // 1.12: rachas, reparto del pulso, tope, viento y rayos.
+        h.ok("sin rachas: siempre", enRacha(1, 0, 0) && enRacha(5, 0, 2));
+        List<Integer> racha = new ArrayList<>();
+        for (int seg = 0; seg < 15; seg++) if (enRacha(seg, 7, 2)) racha.add(seg);
+        h.igual("racha de 2 s cada 7", List.of(0, 1, 7, 8, 14), racha);
+        h.ok("racha-dura 0 vale 1", enRacha(7, 7, 0) && !enRacha(8, 7, 0));
+        h.ok("racha-dura mayor que cada: siempre", enRacha(3, 4, 9));
+        boolean cadaUno = true;
+        Map<Long, Integer> porTick = new HashMap<>();
+        for (int j = 0; j < 40; j++) {
+            int hash = UUID.nameUUIDFromBytes(("jugador" + j).getBytes()).hashCode();
+            int veces = 0;
+            for (long tk = 0; tk < 20; tk++) {
+                if (!tocaPulso(hash, tk, EFECTOS_CADA_TICKS)) continue;
+                veces++;
+                porTick.merge(tk % EFECTOS_CADA_TICKS, 1, Integer::sum);
+            }
+            cadaUno &= veces == 20 / EFECTOS_CADA_TICKS;
+        }
+        h.ok("pulso: cada jugador 5 veces por segundo", cadaUno);
+        h.ok("pulso: repartidos en los 4 ticks, no todos en el mismo", porTick.size() == EFECTOS_CADA_TICKS
+                && porTick.values().stream().allMatch(v -> v < 40 * 5));
+        h.ok("pulso: cada 1 = todos los ticks", tocaPulso(12345, 7, 1) && tocaPulso(-3, 8, 0));
+        h.cerca("tope: por debajo no toca", 1.0, escalaTope(40, 60), 1e-9);
+        h.cerca("tope: por encima rebaja", 0.5, escalaTope(120, 60), 1e-9);
+        h.cerca("tope 0: sin tope", 1.0, escalaTope(500, 0), 1e-9);
+        double maxCambio = 0;
+        for (long ms = 0; ms < 3_600_000L; ms += 1000) {
+            maxCambio = Math.max(maxCambio, Math.abs(direccionViento(ms + 1000, 7) - direccionViento(ms, 7)));
+        }
+        h.ok("viento: de un segundo al siguiente casi no cambia (" + Math.round(maxCambio * 1000) / 1000.0 + " rad)",
+                maxCambio < 0.02);
+        h.ok("viento: en media hora da la vuelta", Math.abs(direccionViento(1_800_000L, 0) - direccionViento(0, 0)
+                - Math.PI * 2) < 1.0);
+        h.ok("viento: cada mundo el suyo", direccionViento(0, 1) != direccionViento(0, 90));
+        int menor = Integer.MAX_VALUE, mayor = 0;
+        for (int i = 0; i <= 10; i++) {
+            menor = Math.min(menor, esperaRayo(13, i / 10.0));
+            mayor = Math.max(mayor, esperaRayo(13, i / 10.0));
+        }
+        h.ok("rayo: entre 8 y 18 s con cada 13 (" + menor + "-" + mayor + ")", menor == 8 && mayor == 18);
+        h.ok("rayo: nunca menos de 2 s", esperaRayo(1, 0) == 2 && esperaRayo(0, 0.5) == 2);
+        h.ok("rayo: sin seccion o con cada 0, no hay", Rayo.de(null) == null && Rayo.de(vacia) == null);
+        YamlConfiguration lejos = new YamlConfiguration();
+        lejos.set("cada", 10);
+        lejos.set("distancia", 200);
+        lejos.set("altura", 10);
+        h.ok("rayo: la distancia se queda en los 30 que pinta el cliente", Rayo.de(lejos).alcance() < 32);
+        h.ok("teletransporte de 20 bloques: corte", esSalto(20 * 20));
+        h.ok("una perla de 10 bloques: no es corte (barre)", !esSalto(10 * 10));
+        Capa viento = Capa.de(Map.of("particula", "cloud", "viento", true, "racha-cada", 7, "racha-dura", 2,
+                "velocidad", 0.35));
+        h.ok("capa de viento leida", viento.viento() && viento.rachaCada() == 7 && viento.toca(1) && !viento.toca(3));
+
+        // 1.12: el paso de hora (barrido) del cielo rojo al suyo y al reves.
+        autotestBarrido(h);
 
         // Lluvia acida de serie: aviso el primer segundo, primer golpe 2 s despues y luego cada 2 s.
         h.ok("segundo 1: aviso", avisaAcida(1));
@@ -1330,6 +1938,60 @@ final class Clima implements Listener {
         return h.lineas();
     }
 
+    /**
+     * 1.12 · El barrido de la hora, simulado tick a tick como lo hace pasoBarridos: el reloj avanza 1 por tick,
+     * lo que ve el cliente es base(reloj) + offset, y al acabar no hay salto (ni al soltarle la hora ni al
+     * fijarle la roja). Por el camino corto, en los ticks pedidos y sin pasos gordos.
+     */
+    private static void autotestBarrido(Autotest.Hoja h) {
+        h.cerca("arco: adelante", 1_000, arco(10_000, 11_000, CIELO_PERIODO), 1e-9);
+        h.cerca("arco: atras", -1_000, arco(11_000, 10_000, CIELO_PERIODO), 1e-9);
+        h.cerca("arco: por el final del dia", 2_000, arco(71_000, 1_000, CIELO_PERIODO), 1e-9);
+        h.cerca("arco: un dia entero es nada", 0, arco(5_000, 77_000, CIELO_PERIODO), 1e-9);
+        h.ok("arco: nunca mas de medio dia", Math.abs(arco(0, 36_001, CIELO_PERIODO)) <= 36_000);
+        h.cerca("paso: en el ultimo tick llega", 11_000, pasoHacia(10_000, 11_000, 1, CIELO_PERIODO), 1e-9);
+        h.cerca("paso: quedan 0 vale 1", 11_000, pasoHacia(10_000, 11_000, 0, CIELO_PERIODO), 1e-9);
+        long[] relojes = {5_000L, 23_990L, 30_123L, 47_995L, 63_000L, 71_990L, 1_000_000L};
+        boolean salida = true, entrada = true, cortos = true, enTicks = true;
+        for (long reloj0 : relojes) {
+            // Salida: tenia el cielo rojo fijo; tras CIELO_TRANSICION ticks se le suelta y ve su reloj.
+            long reloj = reloj0;
+            long off = offsetHora(reloj, CIELO_HORA, CIELO_PERIODO);
+            double visto = baseServidor(reloj) + off;
+            double antes = visto;
+            int quedan = CIELO_TRANSICION, pasos = 0;
+            double total = Math.abs(arco(visto, reloj + CIELO_TRANSICION, CIELO_PERIODO));
+            while (quedan > 0) {
+                reloj++;
+                visto = pasoHacia(visto, reloj, quedan, CIELO_PERIODO);
+                quedan--;
+                pasos++;
+                long enviado = baseServidor(reloj) + (Math.round(visto) - baseServidor(reloj));
+                cortos &= Math.abs(arco(antes, enviado, CIELO_PERIODO)) <= total / CIELO_TRANSICION * 2 + 2;
+                antes = enviado;
+            }
+            salida &= Math.abs(arco(visto, reloj, CIELO_PERIODO)) <= 1.0;
+            enTicks &= pasos == CIELO_TRANSICION;
+            // Entrada: con su hora (relativa) hasta el rojo; el ultimo paso fija el offset de offsetHora.
+            reloj = reloj0;
+            visto = reloj;
+            quedan = CIELO_TRANSICION;
+            while (quedan > 0) {
+                reloj++;
+                visto = pasoHacia(visto, CIELO_HORA, quedan, CIELO_PERIODO);
+                quedan--;
+            }
+            long fija = baseServidor(reloj) + offsetHora(reloj, CIELO_HORA, CIELO_PERIODO);
+            entrada &= Math.abs(arco(visto, fija, CIELO_PERIODO)) <= 1.0
+                    && Math.floorMod(fija, CIELO_PERIODO) == CIELO_HORA;
+        }
+        h.ok("barrido de salida: acaba en su reloj, sin salto al soltarle la hora", salida);
+        h.ok("barrido de entrada: acaba en el cielo de sangre, sin salto al fijarlo", entrada);
+        h.ok("barrido: dura justo transicion-ticks", enTicks);
+        h.ok("barrido: pasos parejos, ninguno gordo", cortos);
+        h.ok("de serie: 2 s de transicion", CIELO_TRANSICION == 40);
+    }
+
     /** hardcore.clima del jar contra el codigo, y sus particulas y sonidos. */
     private static void autotestJar(Autotest.Hoja h, ConfigurationSection c) {
         h.igual("jar: activo", true, c.getBoolean("activo", false));
@@ -1363,13 +2025,22 @@ final class Clima implements Listener {
         h.cerca("jar: cielo-rojo.dano-por-segundo", CIELO_DANO, c.getDouble("cielo-rojo.dano-por-segundo", -1), 1e-9);
         h.igual("jar: cielo-rojo.techo-protege", false, c.getBoolean("cielo-rojo.techo-protege", true));
         h.igual("jar: cielo-rojo.olvido-segundos", CIELO_OLVIDO, c.getInt("cielo-rojo.olvido-segundos", -1));
+        h.igual("jar: cielo-rojo.transicion-ticks", CIELO_TRANSICION, c.getInt("cielo-rojo.transicion-ticks", -1));
+        h.igual("jar: efectos.tope-por-pulso", TOPE_PULSO, c.getInt("efectos.tope-por-pulso", -1));
+        h.igual("jar: generico.activo", true, c.getBoolean("generico.activo", false));
+        h.igual("jar: generico.inicio-tormenta", inicioTormentaDeSerie(Tipo.GENERICO), c.getString("generico.inicio-tormenta"));
+        h.ok("jar: el temporal no hace dano (ni dano, ni cordura, ni efecto)", !c.isSet("generico.dano")
+                && c.getDouble("generico.cordura-por-segundo", 0) == 0 && c.getString("generico.efecto.tipo", "").isEmpty());
+        h.igual("jar: tormenta-parca.activa", true, c.getBoolean(PARCA + ".activa", false));
+        Rayo rayoTormenta = Rayo.de(c.getConfigurationSection("tormenta.rayos"));
+        h.ok("jar: la tormenta trae rayos", rayoTormenta != null);
+        if (rayoTormenta != null) autotestRayo(h, "tormenta", rayoTormenta);
         h.cerca("jar: esporas.cordura-por-segundo", ESPORAS_CORDURA, c.getDouble("esporas.cordura-por-segundo", -1), 1e-9);
         h.igual("jar: polinizacion.efecto.tipo", POLEN_EFECTO, c.getString("polinizacion.efecto.tipo"));
         h.igual("jar: polinizacion.efecto.nivel", POLEN_NIVEL, c.getInt("polinizacion.efecto.nivel", -1));
         h.igual("jar: ceniza.efecto.tipo", "", c.getString("ceniza.efecto.tipo", "?"));
 
-        int cada = Math.max(1, c.getInt("efectos.cada-ticks", EFECTOS_CADA_TICKS));
-        double pulsos = 20.0 / cada;
+        double tormenta = Math.max(1.0, c.getDouble("tormenta.densidad", TORMENTA_DENSIDAD));
         for (Tipo t : Tipo.values()) {
             if (t == Tipo.NINGUNO) continue;
             ConfigurationSection s = seccion(c, t.id);
@@ -1377,29 +2048,72 @@ final class Clima implements Listener {
             h.igual("jar: " + t.id + ".inicio", inicioDeSerie(t), s.getString("inicio"));
             h.igual("jar: " + t.id + ".aviso", avisoDeSerie(t), s.getString("aviso", ""));
             h.igual("jar: " + t.id + ".hojas-protegen", hojasDeSerie(t), s.getBoolean("hojas-protegen", !hojasDeSerie(t)));
-            List<Capa> capas = capas(s.getMapList("particulas"));
-            h.ok("jar: " + t.id + " tiene particulas", !capas.isEmpty());
-            h.ok("jar: " + t.id + " tiene al menos una capa que se ve a cubierto o una a cielo abierto",
-                    capas.stream().anyMatch(k -> k.cantidad() > 0));
-            double porSegundo = 0;
-            boolean conDust = false;
-            for (Capa k : capas) {
-                h.ok("jar: " + t.id + ": " + k.particula() + " no es lluvia de Minecraft",
-                        !PARTICULAS_DE_LLUVIA.contains(k.particula()));
-                h.ok("jar: " + t.id + ": " + k.particula() + " existe", existe(k.particula()));
-                h.ok("jar: " + t.id + ": " + k.particula() + " radio entre 1 y 16", k.radio() >= 1 && k.radio() <= 16);
-                porSegundo += k.cantidad() * pulsos;
-                conDust |= k.particula().equals("DUST");
-            }
-            h.ok("jar: " + t.id + " lleva DUST (la que Bedrock pinta seguro)", conDust);
-            double maximo = porSegundo * Math.max(1.0, c.getDouble("tormenta.densidad", TORMENTA_DENSIDAD));
-            h.ok("jar: " + t.id + ": " + Math.round(maximo) + " particulas/s por jugador con tormenta (tope "
-                    + PRESUPUESTO_SEGUNDO + ")", maximo <= PRESUPUESTO_SEGUNDO);
-            List<Sonido> sons = sonidos(s.getMapList("sonidos"));
-            h.ok("jar: " + t.id + " tiene sonidos", !sons.isEmpty());
-            for (Sonido so : sons) audible(h, t.id, so);
+            autotestSeccion(h, c, t.id, tormenta);
+        }
+        // La tormenta de la PARCA: con la densidad normal (no lleva la de la tormenta del ciclo encima).
+        h.ok("jar: " + PARCA + ".hojas-protegen", seccion(c, PARCA).getBoolean("hojas-protegen", false));
+        autotestSeccion(h, c, PARCA, 1.0);
+        Rayo rayoParca = Rayo.de(seccion(c, PARCA).getConfigurationSection("rayos"));
+        h.ok("jar: la tormenta de la PARCA trae rayos", rayoParca != null);
+        if (rayoParca != null) autotestRayo(h, PARCA, rayoParca);
+        // Un config.yml del servidor de antes de la 1.12 (sin tormenta-parca ni tormenta.rayos): valen los rayos del jar.
+        if (c.getRoot() != null) {
+            YamlConfiguration viejo = new YamlConfiguration();
+            viejo.setDefaults(c.getRoot());
+            ConfigurationSection cv = viejo.getConfigurationSection(c.getCurrentPath());
+            h.ok("config vieja sin rayos: la tormenta de la PARCA trae los del jar",
+                    cv != null && Rayo.de(seccion(cv, PARCA).getConfigurationSection("rayos")) != null);
+            h.ok("config vieja sin rayos: la tormenta trae los del jar",
+                    cv != null && Rayo.de(seccion(cv, "tormenta").getConfigurationSection("rayos")) != null);
         }
         for (Sonido so : sonidos(seccion(c, "tormenta").getMapList("sonidos"))) audible(h, "tormenta", so);
+    }
+
+    /** Las particulas y sonidos de una seccion: que existan, que no sean lluvia, DUST para Bedrock y presupuesto. */
+    private static void autotestSeccion(Autotest.Hoja h, ConfigurationSection c, String id, double tormenta) {
+        int cada = Math.max(1, c.getInt("efectos.cada-ticks", EFECTOS_CADA_TICKS));
+        double pulsos = 20.0 / cada;
+        ConfigurationSection s = seccion(c, id);
+        List<Capa> capas = capas(s.getMapList("particulas"));
+        h.ok("jar: " + id + " tiene particulas", !capas.isEmpty());
+        h.ok("jar: " + id + " tiene al menos una capa que se ve a cubierto o una a cielo abierto",
+                capas.stream().anyMatch(k -> k.cantidad() > 0));
+        int porPulso = 0;
+        boolean conDust = false;
+        for (Capa k : capas) {
+            h.ok("jar: " + id + ": " + k.particula() + " no es lluvia de Minecraft",
+                    !PARTICULAS_DE_LLUVIA.contains(k.particula()));
+            h.ok("jar: " + id + ": " + k.particula() + " existe", existe(k.particula()));
+            h.ok("jar: " + id + ": " + k.particula() + " radio entre 1 y 16", k.radio() >= 1 && k.radio() <= 16);
+            if (k.viento()) {
+                h.ok("jar: " + id + ": el viento va de una en una, con pocas (" + k.cantidad() + ")", k.cantidad() <= 4);
+                h.ok("jar: " + id + ": el viento se mueve", k.velocidad() > 0);
+            }
+            porPulso += k.cantidad();
+            conDust |= k.particula().equals("DUST");
+        }
+        h.ok("jar: " + id + " lleva DUST (la que Bedrock pinta seguro)", conDust);
+        double maximo = porPulso * pulsos * tormenta;
+        h.ok("jar: " + id + ": " + Math.round(maximo) + " particulas/s por jugador con tormenta (tope "
+                + PRESUPUESTO_SEGUNDO + ")", maximo <= PRESUPUESTO_SEGUNDO);
+        h.ok("jar: " + id + ": " + Math.round(porPulso * tormenta) + " por pulso, dentro del tope-por-pulso",
+                porPulso * tormenta <= c.getInt("efectos.tope-por-pulso", TOPE_PULSO));
+        List<Sonido> sons = sonidos(s.getMapList("sonidos"));
+        h.ok("jar: " + id + " tiene sonidos", !sons.isEmpty());
+        for (Sonido so : sons) audible(h, id, so);
+    }
+
+    /** Un rayo: que se vea (dentro de los 32 bloques del cliente), que tenga trueno y que no sea un parpadeo continuo. */
+    private static void autotestRayo(Autotest.Hoja h, String de, Rayo r) {
+        h.ok("jar: " + de + ".rayos dentro de lo que pinta el cliente (" + Math.round(r.alcance()) + " < 32)",
+                r.alcance() < 32);
+        h.ok("jar: " + de + ".rayos: no mas de uno cada 5 s", r.cada() >= 5);
+        h.ok("jar: " + de + ".rayos con trueno", r.sonido() != null && r.sonido().contains("thunder") && r.volumen() > 0);
+        h.ok("jar: " + de + ".rayos claros (se ven de noche)", luminancia(r.color()) > 0.5);
+    }
+
+    private static double luminancia(int rgb) {
+        return (0.2126 * ((rgb >> 16) & 0xFF) + 0.7152 * ((rgb >> 8) & 0xFF) + 0.0722 * (rgb & 0xFF)) / 255.0;
     }
 
     /** Que no sea la lluvia de Minecraft y que se oiga: con volumen 1 o menos el cliente lo apaga a 16 bloques. */

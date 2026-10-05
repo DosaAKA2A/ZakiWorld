@@ -251,14 +251,24 @@ final class CicloClima {
         hc.marcarSucio();
     }
 
+    /**
+     * 1.12 · El aviso, segun el clima del bioma en el que esta (tambien en el spawn: al salir es lo que va a
+     * encontrar). Donde no va a pasar nada (un bioma sin clima, con el temporal apagado) no se avisa.
+     */
     private void avisar(World w, String fase) {
+        Clima clima = hc.clima();
+        if (clima == null) return;
         for (Player p : w.getPlayers()) {
             if (!hc.cuenta(p)) continue;
-            Clima clima = hc.clima();
-            Clima.Tipo tipo = clima == null || hc.enSpawn(p) ? Clima.Tipo.NINGUNO
-                    : hc.valor("clima", () -> clima.tipoAhora(p), Clima.Tipo.NINGUNO);
+            Clima.Tipo tipo = hc.valor("clima", () -> clima.tipoAhora(p), Clima.Tipo.NINGUNO);
+            if (!avisaEn(tipo)) continue;
             hc.cordura().destello(p, aviso(fase, tipo), 4);
         }
+    }
+
+    /** 1.12: si se avisa a quien esta en un bioma de ese clima (en uno sin clima no va a pasar nada). */
+    static boolean avisaEn(Clima.Tipo tipo) {
+        return tipo != null && tipo != Clima.Tipo.NINGUNO;
     }
 
     // ------------------------------------------------------------------ comando y placeholders
@@ -424,12 +434,14 @@ final class CicloClima {
     static Component aviso(String fase, Clima.Tipo tipo) {
         Clima.Tipo t = tipo == null ? Clima.Tipo.NINGUNO : tipo;
         TextColor color = t != Clima.Tipo.NINGUNO ? Clima.color(t) : TORMENTA.equals(fase) ? Paleta.CIFRA : Paleta.TEXTO;
+        if (t == Clima.Tipo.GENERICO && TORMENTA.equals(fase)) color = Paleta.CIFRA;
         String texto = switch (t) {
             case ACIDA -> "Se acerca lluvia ácida";
             case ROJO -> "Se acerca el cielo rojo";
             case ESPORAS -> "Se acercan las esporas";
             case POLEN -> "Se acerca la polinización";
             case CENIZA -> "Se acerca la ceniza";
+            case GENERICO -> TORMENTA.equals(fase) ? "Se acerca una tormenta" : "Se acerca la lluvia";
             case NINGUNO -> TORMENTA.equals(fase) ? "Se acerca una tormenta" : "Se acerca el mal tiempo";
         };
         return Component.text(texto, color);
@@ -493,6 +505,12 @@ final class CicloClima {
         h.igual("aviso en las llanuras de hongos", "Se acercan las esporas", plano.serialize(aviso(LLUVIA, Clima.Tipo.ESPORAS)));
         h.igual("aviso en la taiga condenada", "Se acerca la ceniza", plano.serialize(aviso(TORMENTA, Clima.Tipo.CENIZA)));
         h.igual("aviso sin bioma: null vale como ninguno", "Se acerca el mal tiempo", plano.serialize(aviso(LLUVIA, null)));
+        // 1.12: el temporal de los biomas sin clima propio, y no se avisa donde no va a pasar nada.
+        h.igual("aviso del temporal: lluvia", "Se acerca la lluvia", plano.serialize(aviso(LLUVIA, Clima.Tipo.GENERICO)));
+        h.igual("aviso del temporal: tormenta", "Se acerca una tormenta", plano.serialize(aviso(TORMENTA, Clima.Tipo.GENERICO)));
+        h.ok("se avisa en el temporal", avisaEn(Clima.Tipo.GENERICO));
+        h.ok("se avisa en la lluvia acida", avisaEn(Clima.Tipo.ACIDA));
+        h.ok("en un bioma sin clima no se avisa", !avisaEn(Clima.Tipo.NINGUNO) && !avisaEn(null));
 
         // Tiempo restante.
         h.igual("12 min", "12 min", restante(11 * 60_000L + 1));

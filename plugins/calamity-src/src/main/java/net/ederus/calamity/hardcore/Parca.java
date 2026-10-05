@@ -453,12 +453,23 @@ final class Parca implements Listener {
     }
 
     /**
-     * Calamity 1.9.0: si alguna PARCA le tiene puesto su cielo (lluvia o noche de sus fases). Clima
-     * no toca entonces ni el clima ni la hora de ese jugador: la PARCA no los repone si se los pisan.
+     * Calamity 1.9.0: si alguna PARCA le tiene puesto su cielo. Clima no toca entonces la hora de ese
+     * jugador: la PARCA no la repone si se la pisan. 1.12: solo la noche de la fase IV; la tormenta de la
+     * III ya no toca el cielo (ver lluviaSobre).
      */
     boolean cieloSobre(Player p) {
         if (p == null) return false;
         for (ParcaViva pe : peleas) if (pe.ambienteSobre(p.getUniqueId())) return true;
+        return false;
+    }
+
+    /**
+     * 1.12 · Si le cae la tormenta de alguna PARCA (fase III en adelante, a 48 bloques). Clima calla entonces
+     * las particulas y los sonidos del clima de su bioma, para no pintarle dos lluvias a la vez.
+     */
+    boolean lluviaSobre(Player p) {
+        if (p == null) return false;
+        for (ParcaViva pe : peleas) if (pe.lluviaSobre(p.getUniqueId())) return true;
         return false;
     }
 
