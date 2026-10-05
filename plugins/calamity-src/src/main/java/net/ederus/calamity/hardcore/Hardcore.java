@@ -662,8 +662,8 @@ public final class Hardcore implements Listener {
             if (!esHardcore(w)) continue;
             for (Player p : w.getPlayers()) {
                 if (!cuenta(p)) {
-                    // 1.11: quien no cuenta (creativo, vanish) ve el mismo clima, sin dano: sin lluvia en el spawn y,
-                    // fuera, el cielo rojo y la lluvia acida en lugar de la lluvia azul.
+                    // 1.11: quien no cuenta (creativo, vanish) ve el mismo clima, sin dano: en el spawn solo el cielo rojo y,
+                    // fuera, el clima de su bioma (1.12: el mundo nunca llueve; todo lo pinta Clima).
                     if (clima != null) seguro("clima", () -> clima.soloVista(p, enSpawn(p)));
                     continue;
                 }
@@ -678,10 +678,10 @@ public final class Hardcore implements Listener {
                 if (!spawn) {
                     drenar(p, e);
                     efectosDeBioma(p);
-                    // 1.9.0: lluvia acida y cielo rojo, solo con tormenta de verdad y fuera del spawn.
+                    // 1.9.0/1.12: el clima de su bioma mientras dura la lluvia del ciclo, fuera del spawn.
                     if (clima != null) seguro("clima", () -> clima.segundo(p));
                 } else if (clima != null) {
-                    // 1.11: en el spawn no llueve (en su pantalla).
+                    // 1.11: en el spawn no hay clima, salvo el cielo de sangre del bioma rojo.
                     seguro("clima", () -> clima.enSpawn(p));
                 }
                 // 1.7: el aviso de franja de distancia, antes de pintar para que salga ya.
