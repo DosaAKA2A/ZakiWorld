@@ -69,6 +69,14 @@ public final class Paleta {
     public static final int AMBUSH_HASTA = 0xFF6B6B;
     /** Ambush en un solo color (el menu de la Sentencia, la barra de accion). */
     public static final TextColor AMBUSH = TextColor.color(0xFF6B6B);
+    /**
+     * Calamity 1.13.0 · El Vigilante: del amarillo palido de su luz al oro de sus nucleos (su nombre, sus
+     * avisos y su barra). Claro a proposito: se lee sobre el fondo oscuro del chat y de la barra.
+     */
+    public static final int VIGILANTE_DESDE = 0xFFF1B8;
+    public static final int VIGILANTE_HASTA = 0xF2B92C;
+    /** El Vigilante en un solo color (barra de accion, avisos, nucleos). */
+    public static final TextColor VIGILANTE = TextColor.color(0xF5C842);
     /** El gris acero de la Masamune (el nombre de la katana que lleva Ambush). */
     public static final TextColor ACERO = TextColor.color(0xC9D1D9);
     /**
@@ -375,6 +383,11 @@ public final class Paleta {
     /** Calamity 1.8.0 · Degradado de Ambush (su nombre, el titulo de la Sentencia, su barra de jefe). */
     public static Component ambush(String texto) {
         return degradado(texto, AMBUSH_DESDE, AMBUSH_HASTA);
+    }
+
+    /** Calamity 1.13.0 · Degradado del Vigilante (su nombre, sus avisos y su barra de jefe). */
+    public static Component vigilante(String texto) {
+        return degradado(texto, VIGILANTE_DESDE, VIGILANTE_HASTA);
     }
 
     /**

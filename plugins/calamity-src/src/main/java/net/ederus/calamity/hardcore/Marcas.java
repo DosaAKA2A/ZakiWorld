@@ -79,6 +79,11 @@ public final class Marcas {
     public static final NamespacedKey PERGAMINO = clave("pergamino");
     /** BYTE 1: un Barometro (Calamity 1.12.2), la brujula que lee el reloj del clima (Barometro). */
     public static final NamespacedKey BAROMETRO = clave("barometro");
+    /**
+     * STRING uuid del Vigilante: sus piezas (ojo, nucleos, pilares, escombros y meteoro). Todas son no
+     * persistentes; la marca sirve para reconocerlas en los eventos y que nada las toque (Calamity 1.13.0).
+     */
+    public static final NamespacedKey VIGILANTE = clave("vigilante_pieza");
 
     private Marcas() {
     }
@@ -92,7 +97,7 @@ public final class Marcas {
         return List.of(AMENAZA, PRESA, ECO, ECO_DUENO, DANO_JUGADOR, VIDA_LOGICA, CASCARA, ECO_COPIA, RELIQUIA, RELIQUIA_ID,
                 RELIQUIA_ORIGEN, RELIQUIA_NACIO, RELIQUIA_ESPECIAL, RELIQUIA_NIVEL, RELIQUIA_MINIJEFE,
                 RELIQUIA_VALIDA, RELIQUIA_ENTRADA, TROFEO, PRESTADO, LIGADO, TALISMAN, GRABADO, SALVOCONDUCTO, FRAGMENTO_MASAMUNE, RECLAMO,
-                PERGAMINO, BAROMETRO);
+                PERGAMINO, BAROMETRO, VIGILANTE);
     }
 
     /** Si una entidad es nuestra (PARCA, planidera, Eco...). */
