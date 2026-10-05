@@ -95,7 +95,8 @@ import java.util.concurrent.ThreadLocalRandom;
  *
  * Tormenta de la PARCA (1.12, seccion tormenta-parca): la que ve quien esta cerca de ella desde la fase III,
  * en cualquier bioma y fase del ciclo. La pinta este modulo a peticion de ParcaAnomalia (segundoParca,
- * pulsoParca); mientras dura, el clima de su bioma no se pinta (Parca.lluviaSobre).
+ * pulsoParca); mientras dura, el clima de su bioma ni se pinta ni hace nada (Parca.lluviaSobre). Con
+ * hardcore.clima.activo en false tampoco hay tormenta de la PARCA.
  *
  * Paso de hora (1.12): el cielo rojo fija la hora del jugador. Entrar o salir de el andando, volando o
  * porque escampa ya no es un salto: un barrido de cielo-rojo.transicion-ticks lleva su cielo por el camino
@@ -590,7 +591,9 @@ final class Clima implements Listener {
             e.profundo = false;
             e.deParca = false;
         }
-        boolean fuera = !spawn && danino;
+        // Encargo de Dosa (2026-10-05): bajo la tormenta de la PARCA el clima del bioma no se ve, asi que tampoco
+        // hace nada (ni acida, ni quemadura, ni cordura, ni efecto): nada que dane sin verse. La hora roja sigue.
+        boolean fuera = !spawn && danino && !e.deParca;
         lluviaAcida(p, e, fuera && tipo == Tipo.ACIDA && e.expuesto, seccion(c, "lluvia-acida"));
         cieloRojo(p, e, tipo == Tipo.ROJO, fuera, r);
         exposicion(p, e, tipo, fuera && tipo.porExposicion() && e.expuesto, s);
@@ -1476,12 +1479,12 @@ final class Clima implements Listener {
     /**
      * 1.12 · El segundo de la tormenta de la PARCA para un jugador (lo llama ParcaAnomalia cada segundo a
      * quien esta cerca en la fase III o IV): mide su cielo y suena; a cielo abierto, rayos. Solo particulas y
-     * sonidos suyos: el mundo y su clima no se tocan. Con tormenta-parca.activa en false, nada.
+     * sonidos suyos: el mundo y su clima no se tocan. Con tormenta-parca.activa o hardcore.clima.activo en false, nada.
      */
     void segundoParca(Player p, Cielo k) {
         ConfigurationSection c = cfg();
         ConfigurationSection s = seccion(c, PARCA);
-        if (!encendido(s) || p.isDead()) return;
+        if (!c.getBoolean("activo", true) || !encendido(s) || p.isDead()) return;
         k.segundos++;
         medirCielo(p, k, s.getBoolean("hojas-protegen", true), c.getInt("efectos.profundidad", PROFUNDIDAD));
         if (k.profundo) return;
@@ -1493,7 +1496,7 @@ final class Clima implements Listener {
     void pulsoParca(Player p, Cielo k) {
         if (k.profundo || k.segundos <= 0) return;
         ConfigurationSection c = cfg();
-        if (!encendido(seccion(c, PARCA))) return;
+        if (!c.getBoolean("activo", true) || !encendido(seccion(c, PARCA))) return;
         pintar(p, receta(PARCA, c), k, Math.max(0.0, c.getDouble("efectos.densidad", DENSIDAD)),
                 c.getInt("efectos.tope-por-pulso", TOPE_PULSO));
     }

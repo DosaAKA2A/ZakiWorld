@@ -1291,7 +1291,8 @@ hardcore:
         - {sonido: "minecraft:entity.lightning_bolt.thunder", cada: 23, volumen: 0.3, tono: 0.6, distancia: 10}
     # La tormenta de la Parca: la que ve quien esta a 48 bloques de ella desde la fase III, en cualquier
     # bioma y aunque el ciclo este despejado. Oscura y carmesi, con viento, truenos y rayos rojizos. Mientras
-    # dura, el clima de su bioma no se pinta. Solo se ve y se oye (el dano es el de la Parca).
+    # dura, el clima de su bioma ni se pinta ni hace nada (ni dano, ni cordura, ni efectos). Solo se ve y se
+    # oye (el dano es el de la Parca). Con hardcore.clima.activo en false tampoco sale.
     tormenta-parca:
       activa: true
       hojas-protegen: true
