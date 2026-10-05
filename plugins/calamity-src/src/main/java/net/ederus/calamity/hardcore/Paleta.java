@@ -20,7 +20,7 @@ import java.time.Duration;
  * Calamity se ve como una sola cosa y no como veinte paquetes con su gusto cada uno.
  *
  * Reglas de la casa que se aplican aqui para que nadie tenga que acordarse:
- *  - negrita solo en la marca (marca());
+ *  - negrita solo en la marca (marca()) y en el nombre de los objetos (Tono.nombre, desde la 1.12.1);
  *  - nada de cursiva (todo lo que sale de aqui la apaga, tambien para nombres de items);
  *  - los titulos con presencia llevan degradado, el resto un color plano.
  */
@@ -182,9 +182,14 @@ public final class Paleta {
             return TextColor.lerp(0.6f, TextColor.color(hasta), TextColor.color(0x8A8A8A));
         }
 
-        /** El nombre del objeto: de casi blanco teñido al tono fuerte encendido, sin cursiva ni negrita. */
+        /**
+         * El nombre del objeto: de casi blanco teñido al tono fuerte encendido, sin cursiva y EN NEGRITA.
+         * Calamity 1.12.1 · La unica negrita de un objeto: probado sin ella (muestra antes/despues), el nombre
+         * seguia pesando lo mismo que la historia y los titulos de seccion, que van en el mismo tono. El lore
+         * sigue sin negrita en ninguna linea (Ficha.faltas).
+         */
         public Component nombre(String texto) {
-            return degradado(texto, nombreDesde(), nombreHasta()).decoration(TextDecoration.BOLD, false);
+            return degradado(texto, nombreDesde(), nombreHasta()).decoration(TextDecoration.BOLD, true);
         }
     }
 

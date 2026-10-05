@@ -41,7 +41,7 @@ import java.util.Map;
  * Reglas de la casa que se cumplen aqui para que ningun objeto tenga que acordarse:
  *  - un solo color por objeto (su Tono) mas el dorado de las estrellas: nada de arcoiris;
  *  - sin rayas: los bloques se separan con lineas en blanco (hueco(); nunca dos seguidas ni al final);
- *  - sin cursiva ni negrita en ninguna linea;
+ *  - sin cursiva ni negrita en ninguna linea del lore (el nombre si va en negrita desde la 1.12.1: Tono.nombre);
  *  - lineas de 38 caracteres como mucho (Bedrock parte mal las largas): todo se corta por palabras.
  *
  * Lo marcado: "{6}" sale en blanco (cifras), "[Esencias]" en el tono palido (monedas y objetos dentro
@@ -759,7 +759,7 @@ final class Ficha {
                 && t.palido().equals(dato.get(3).color()) && GRIS.equals(dato.get(4).color()));
         h.igual("el palido es el inicio un 35 % hacia blanco",
                 TextColor.lerp(0.35f, TextColor.color(t.desde()), TextColor.color(0xFFFFFF)), t.palido());
-        h.ok("el nombre: degradado sin negrita", t.nombre("Ámbar").decoration(TextDecoration.BOLD) == TextDecoration.State.FALSE
+        h.ok("el nombre: degradado en negrita (la unica del objeto)", t.nombre("Ámbar").decoration(TextDecoration.BOLD) == TextDecoration.State.TRUE
                 && t.nombre("Ámbar").children().size() == 5);
         h.igual("palabra mas larga que la linea: sola, sin partir", List.of("x".repeat(45)),
                 new Ficha(t).texto("x".repeat(45)).lineas());
