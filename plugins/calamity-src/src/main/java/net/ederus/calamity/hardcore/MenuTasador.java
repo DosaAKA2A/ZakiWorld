@@ -562,11 +562,24 @@ final class MenuTasador implements Listener {
             ItemStack si = Marco.icono(Material.LIME_CONCRETE, Component.text("Sí, véndeselo todo", Marco.SI), List.of(
                     Marco.tenue("Oren se queda todo lo de"), Marco.tenue("arriba y te paga al momento."), Component.empty(),
                     Marco.accion("Clic para vender")), false);
+            // Lo que se ensena va en la accion: si al confirmar ya no es lo mismo, no se vende a ciegas.
+            String firma = firma(o);
             for (int c : new int[]{32, 33, 34}) {
                 inv.setItem(c, si);
-                v.acciones().put(c, "si-todo");
+                v.acciones().put(c, "si-todo:" + firma);
             }
         }
+    }
+
+    /**
+     * Lo que la confirmacion de "Vender todo" le ha ensenado: cuantas piezas de cada tipo y lo que
+     * cobraria. Si al pulsar "Si" ya no coincide (ha recogido algo del suelo, le ha llegado un premio, ha
+     * cambiado el tope o la Racha), la venta no se hace y la confirmacion se vuelve a pintar.
+     */
+    static String firma(Tasacion.Oferta o) {
+        StringBuilder sb = new StringBuilder();
+        for (Tasacion.Grupo g : o.grupos()) sb.append(g.clave()).append('=').append(g.cantidad()).append(';');
+        return sb.append(o.pagaEsencias()).append(';').append(o.pagaMc()).toString();
     }
 
     // ------------------------------------------------------------------ la Aduana (tramos)
@@ -899,6 +912,18 @@ final class MenuTasador implements Listener {
             vender(p, accion.substring(7));
             return;
         }
+        if (accion.startsWith("si-todo:")) {
+            Tasacion tas = hc.tasacion();
+            Tasacion.Oferta o = tas == null ? null : hc.valor("tasacion", () -> tas.oferta(p), null);
+            if (o == null || o.vacia() || !firma(o).equals(accion.substring(8))) {
+                p.sendMessage(ComandoCalamity.mensaje("Lo que llevas ha cambiado: revisa el resumen antes de vender."));
+                Marco.sonidoNo(p);
+                tarea(() -> abrirVista(p, V_TODO));
+                return;
+            }
+            vender(p, null);
+            return;
+        }
         if (accion.startsWith("tab:")) {
             String a = accion.substring(4);
             tarea(() -> Marco.irA(hc, p, a));
@@ -946,7 +971,6 @@ final class MenuTasador implements Listener {
                 Marco.sonar(p, "ui.button.click", 0.45f, 0.8f);
                 tarea(() -> abrirVista(p, PORTADA));
             }
-            case "si-todo" -> vender(p, null);
             case "depositar" -> {
                 // El boton Depositar del Altar vive en el saldo: lo mismo, y solo fuera de Calamity.
                 Altar altar = hc.altar();
