@@ -172,6 +172,8 @@ final class Reliquias implements Listener {
                 apilable ? null : fechaCorta(ahora + caducaMillis())).lore());
         meta.setEnchantmentGlintOverride(true);
         item.setItemMeta(meta);
+        // Sin la cancion del disco ni el material de adorno del ladrillo, igual que una renovada (desactivar).
+        desactivar(item);
         if (id != null) registro.emitida(id, g, o, ahora);
         return item;
     }
@@ -706,6 +708,15 @@ final class Reliquias implements Listener {
         }
     }
 
+    /** Si aun lleva algo de lo que desactivar quita (una creada antes de que crear lo llamara). */
+    static boolean conUsos(ItemStack it) {
+        try {
+            return it.hasData(DataComponentTypes.JUKEBOX_PLAYABLE) || it.hasData(DataComponentTypes.PROVIDES_TRIM_MATERIAL);
+        } catch (Throwable sinApi) {
+            return false;
+        }
+    }
+
     /** Caducidad: una Reliquia pasada de fecha se deshace al tocarla en un inventario. */
     @EventHandler(ignoreCancelled = true)
     public void onTocar(InventoryClickEvent e) {
@@ -747,7 +758,8 @@ final class Reliquias implements Listener {
         Component nombre = tono(g, esp).nombre(nombre(c, g, esp, minijefe(it)));
         ItemMeta meta = it.getItemMeta();
         if (meta == null) return null;
-        if (it.getType() == quiere && Ficha.iguales(lore, meta.lore()) && Ficha.igual(nombre, meta.displayName())) return null;
+        if (it.getType() == quiere && !conUsos(it) && Ficha.iguales(lore, meta.lore())
+                && Ficha.igual(nombre, meta.displayName())) return null;
         ItemStack r = it.getType() == quiere ? it.clone() : it.withType(quiere);
         r.editMeta(m -> {
             m.displayName(nombre);
@@ -1081,6 +1093,12 @@ final class Reliquias implements Listener {
         h.ok("una especial de antes pasa al disco, sin cancion y con su id", ambarNuevo != null
                 && idFalso.equals(id(ambarNuevo)) && ambarNuevo.getType() == Material.MUSIC_DISC_LAVA_CHICKEN
                 && !ambarNuevo.hasData(DataComponentTypes.JUKEBOX_PLAYABLE) && ECLIPSADA.equals(especial(ambarNuevo)));
+        ItemStack disco = new ItemStack(Material.MUSIC_DISC_LAVA_CHICKEN), ladrillo = new ItemStack(Material.RESIN_BRICK);
+        boolean antes = conUsos(disco) && conUsos(ladrillo);
+        desactivar(disco);
+        desactivar(ladrillo);
+        h.ok("desactivar: el disco sin cancion y el ladrillo sin adorno", antes && !conUsos(disco) && !conUsos(ladrillo)
+                && !conUsos(astilla));
         h.ok("lore sin rayas ni negrita", Ficha.faltas(astilla.getItemMeta().lore()).isEmpty());
         // Los demas objetos que ya circulan: una Esencia y una cabeza de Eco con el nombre y el lore de la 1.10.
         ItemsCalamity items = hc.items();
