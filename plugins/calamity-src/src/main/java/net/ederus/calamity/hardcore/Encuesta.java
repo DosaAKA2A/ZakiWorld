@@ -136,7 +136,7 @@ final class Encuesta {
     // ------------------------------------------------------------------- API
 
     /**
-     * Lo llama la Tasacion al final (Tasacion.tasar). Un tick despues, ya fuera, abre como
+     * Lo llama la salida con vida (Tasacion.alSalir). Un tick despues, ya fuera, abre como
      * mucho un menu: la encuesta pendiente o el Voto del Botin.
      */
     void trasTasar(Player p) {

@@ -27,11 +27,11 @@ import java.util.Map;
  *   Una linea de historia en gris.        historia()
  *   Cayo del Heraldo Carmesi              texto()
  *   ────────────────────────
- *   Valor al salir vivo                   etiqueta()
+ *   Oren te paga                          etiqueta()
  *    6 Esencias · 100 MobCoins            dato()
  *   ────────────────────────
  *   ▸ Que hacer con el.                   accion()
- *   Si mueres antes de salir, la pierdes. nota()
+ *   Si mueres en Calamity, la pierdes.    nota()
  * </pre>
  *
  * Reglas de la casa que se cumplen aqui para que ningun objeto tenga que acordarse:
@@ -88,7 +88,7 @@ final class Ficha {
         return anadir("", "", marcado, TEXTO);
     }
 
-    /** El titulo de un bloque de datos ("Valor al salir vivo", "Objetivo"): gris. */
+    /** El titulo de un bloque de datos ("Oren te paga", "Objetivo"): gris. */
     Ficha etiqueta(String texto) {
         return anadir("", "", texto, ETIQUETA);
     }
@@ -379,15 +379,18 @@ final class Ficha {
         h.ok("Ambar: de quien cayo", ambar.contains("Cayó del Heraldo Carmesí"));
         h.ok("Ambar: su valor sale de la config", ambar.contains(" " + plano(valor(e3, mc3))));
         h.ok("Ambar: pieza unica y caducidad", ambar.contains("Pieza única · no se apila") && ambar.contains("Caduca el 18/10"));
-        h.igual("Ambar: el aviso del final", "Si mueres antes de salir, la pierdes.", ambar.get(ambar.size() - 1));
+        h.ok("Ambar: se le vende a Oren", ambar.stream().anyMatch(l -> l.startsWith("▸ Véndesela a Oren")));
+        h.ok("Ambar: si mueres en Calamity la pierdes", ambar.contains("Si mueres en Calamity, la pierdes."));
+        h.igual("Ambar: el aviso del final", "Fuera de Calamity no se puede guardar.", ambar.get(ambar.size() - 1));
         List<String> astilla = todas.get("astilla").lineas();
         h.ok("Astilla: sin origen ni caducidad", astilla.stream().noneMatch(l -> l.startsWith("Caduca") || l.startsWith("La soltó")));
         h.ok("Astilla: el tope del dia", astilla.contains("Se pagan hasta " + c.getInt("reliquias.tope-dia.1", 60) + " al día"));
-        h.ok("Astilla: valor de cada una", astilla.contains("Valor de cada una al salir vivo"));
+        h.ok("Astilla: lo que paga Oren por cada una", astilla.contains("Oren te paga por cada una"));
         List<String> sello = todas.get("sello").lineas();
         h.ok("Sello: dice que pieza desbloquea", sello.contains("Desbloquea en la Forja de Vael")
                 && sello.contains(" Yelmo de Calamidad"));
-        h.igual("Sello: masculino", "Si mueres antes de salir, lo pierdes.", sello.get(sello.size() - 1));
+        h.ok("Sello: masculino", sello.contains("Si mueres en Calamity, lo pierdes.")
+                && sello.stream().anyMatch(l -> l.startsWith("▸ Véndeselo a Oren")));
         List<String> campana = todas.get("campana").lineas();
         h.ok("Campana alta: Fragmento y Llave", campana.contains(" + 1 Fragmento de Guadaña")
                 && campana.stream().anyMatch(l -> l.contains("de ganar una Llave del Caos")));

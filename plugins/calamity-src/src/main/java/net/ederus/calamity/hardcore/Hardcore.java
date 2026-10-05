@@ -1919,8 +1919,9 @@ public final class Hardcore implements Listener {
         if (destino == null) return;
         if (activo()) {
             if (extraccion) {
-                // La tasacion va antes del teleport: lo que se tasa es lo que lleva DENTRO.
-                seguro("tasacion", () -> tasacion.tasar(p, motivo));
+                // Salir ya no vende nada (rama venta-oren): se lleva lo que lleva y se lo vende a Oren.
+                // Antes del teleport: la primera salida del dia, contratos, telemetria y encuesta.
+                seguro("tasacion", () -> tasacion.alSalir(p, motivo));
                 seguro("estadisticas", () -> {
                     estadisticas.sumar(p.getUniqueId(), "extracciones", 1);
                     estadisticas.maximo(p.getUniqueId(), "expedicion-max-seg", cordura.estado(p).segundosDentro);
@@ -1990,11 +1991,11 @@ public final class Hardcore implements Listener {
         sacar(p, "admin", true);
         if (esHardcore(p)) {
             // Otro plugin (uno de combate, por ejemplo) ha frenado el teleport: la Tasacion ya se hizo.
-            quien.sendMessage(Component.text("Se ha tasado a " + p.getName() + ", pero algo ha frenado el teleport: "
+            quien.sendMessage(Component.text("Se ha procesado la salida de " + p.getName() + ", pero algo ha frenado el teleport: "
                     + "sigue en Calamity.", Paleta.AVISO));
             return;
         }
-        quien.sendMessage(Component.text(p.getName() + " ha salido de Calamity con su Tasación.", Paleta.BIEN));
+        quien.sendMessage(Component.text(p.getName() + " ha salido de Calamity con lo que llevaba.", Paleta.BIEN));
     }
 
     /** Mete a un jugador por la puerta: el teleport y la llegada (alLlegar). */
@@ -2038,6 +2039,7 @@ public final class Hardcore implements Listener {
             seguro("altar", () -> altar.alEntrar(p));
             seguro("eclipse", () -> eclipse.alEntrar(p));
             seguro("telemetria", () -> telemetria.entra(p));
+            seguro("tasacion", () -> tasacion.alEntrar(p));
         }
 
         int oleada = cfg().getInt("dificultad.oleada-de-entrada", 5);

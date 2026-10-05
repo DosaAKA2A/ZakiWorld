@@ -20,7 +20,6 @@ import org.bukkit.event.block.BlockPlaceEvent;
 import org.bukkit.event.inventory.BrewEvent;
 import org.bukkit.event.inventory.FurnaceSmeltEvent;
 import org.bukkit.event.inventory.InventoryClickEvent;
-import org.bukkit.event.inventory.InventoryOpenEvent;
 import org.bukkit.event.inventory.PrepareAnvilEvent;
 import org.bukkit.event.inventory.PrepareGrindstoneEvent;
 import org.bukkit.event.inventory.PrepareItemCraftEvent;
@@ -56,9 +55,13 @@ import java.util.logging.Logger;
 /**
  * M3 · Reliquias: crearlas, reconocerlas, llevar su registro y que no sirvan para otra cosa.
  *
- * Una Reliquia no vale nada dentro: es la promesa de un pago que solo se cumple si sales
- * vivo (Tasacion). Por eso todo lo que haria de ella otra cosa (colocarla, craftear, fundir,
- * encender la carga ignea del Sello) se corta aqui, y fuera de Calamity no existe.
+ * Una Reliquia no vale nada dentro: es la promesa de un pago que solo se cumple si la llevas a
+ * Oren, el mercader del spawn de Calamity (Tasacion.vender, MenuTasador). Por eso todo lo que haria
+ * de ella otra cosa (colocarla, craftear, fundir, encender la carga ignea del Sello) se corta aqui.
+ *
+ * Rama venta-oren: antes "fuera de Calamity no existia" (se deshacia al cambiar de mundo, porque la
+ * Tasacion ya la habia vendido en la puerta). Ahora sale contigo y se vende a Oren; lo que impide
+ * guardarla, venderla en /ah o pasarla por un cofre fuera de Calamity lo hace Sellos.
  *
  * Dos clases de Reliquia (DIS M3 [alineado]):
  * - I y II "de monton": apilables, sin UUID, sin registro ni caducidad. Un dupe de estas lo
@@ -87,13 +90,6 @@ final class Reliquias implements Listener {
 
     private final Hardcore hc;
     private final Registro registro;
-    /**
-     * Quien acaba de pasar por la Tasacion y va camino de la puerta: el cambio de mundo que
-     * sigue al teleport no le borra nada (la Tasacion ya se lo ha quitado todo; si algo
-     * quedara, se deshace en el siguiente inventario que abra fuera). Es la bandera de
-     * extraccion de DIS M3.
-     */
-    private final Set<UUID> extrayendo = new HashSet<>();
 
     Reliquias(Hardcore hc) {
         this.hc = hc;
@@ -111,7 +107,6 @@ final class Reliquias implements Listener {
 
     void parar() {
         registro.cerrar();
-        extrayendo.clear();
     }
 
     Registro registro() {
@@ -249,7 +244,7 @@ final class Reliquias implements Listener {
         Ficha f = new Ficha(color(g)).tipo("Reliquia · Grado " + ROMANO[g] + " " + Ficha.estrellas(g)).filete()
                 .historia(historia(g, esp));
         f.texto(origen(origen, nivel, minijefe));
-        f.filete().etiqueta(unica ? "Valor al salir vivo" : "Valor de cada una al salir vivo");
+        f.filete().etiqueta(unica ? "Oren te paga" : "Oren te paga por cada una");
         f.dato(Ficha.valor(c.getDouble("reliquias.grados." + g + ".esencias", ESENCIAS_SERIE[g]),
                 c.getLong("reliquias.grados." + g + ".mobcoins", MC_SERIE[g])));
 
@@ -286,8 +281,9 @@ final class Reliquias implements Listener {
         else f.nota("Se pagan hasta {" + c.getInt("reliquias.tope-dia." + g, g == 1 ? 60 : 30) + "} al día");
         if (caduca != null) f.nota("Caduca el {" + caduca + "}");
         return f.filete()
-                .accion((masculino ? "Se vende solo" : "Se vende sola") + " al salir de Calamity por la puerta o con un Cristal.")
-                .nota(masculino ? "Si mueres antes de salir, lo pierdes." : "Si mueres antes de salir, la pierdes.");
+                .accion(masculino ? "Véndeselo a Oren, en el spawn de Calamity." : "Véndesela a Oren, en el spawn de Calamity.")
+                .nota(masculino ? "Si mueres en Calamity, lo pierdes." : "Si mueres en Calamity, la pierdes.")
+                .nota("Fuera de Calamity no se puede guardar.");
     }
 
     /** "Para qué sirve" y una linea por pieza: " 7 Fragmentos · Guadaña de la Parca". */
@@ -480,8 +476,8 @@ final class Reliquias implements Listener {
 
     /*
      * Los bloqueos no preguntan el mundo: una Reliquia no puede servir de campana, de carga
-     * ignea ni de material en NINGUN sitio (fuera se deshace, pero entre el teleport y el
-     * siguiente inventario hay un momento). La comprobacion barata es la marca del objeto.
+     * ignea ni de material en NINGUN sitio, dentro o fuera de Calamity (desde la rama venta-oren
+     * sale contigo). La comprobacion barata es la marca del objeto.
      */
 
     /** La Campana es una campana y el Ambar se coloca: no se pone ninguna. */
@@ -553,64 +549,56 @@ final class Reliquias implements Listener {
         hc.plugin().bitacora().anotar("reliquia", "caducada", quien.getName(), String.valueOf(id));
     }
 
-    // ------------------------------------------------------- fuera no existen
-
-    /** La llama la Tasacion justo antes del teleport de salida (sacar con extraccion). */
-    void marcarExtraccion(Player p) {
-        extrayendo.add(p.getUniqueId());
-    }
-
-    @EventHandler
-    public void onCambiarMundo(PlayerChangedWorldEvent e) {
-        Player p = e.getPlayer();
-        if (!hc.esHardcore(e.getFrom()) || hc.esHardcore(p)) return;
-        if (extrayendo.remove(p.getUniqueId())) return;
-        deshacerFuera(p, null);
-    }
-
-    @EventHandler
-    public void onEntrar(PlayerJoinEvent e) {
-        Player p = e.getPlayer();
-        extrayendo.remove(p.getUniqueId());
-        if (hc.esHardcore(p)) return;
-        deshacerFuera(p, null);
-    }
-
-    @EventHandler(ignoreCancelled = true)
-    public void onAbrir(InventoryOpenEvent e) {
-        if (!(e.getPlayer() instanceof Player p) || hc.esHardcore(p)) return;
-        deshacerFuera(p, e.getInventory());
-    }
+    // ------------------------------------------------------- fuera de Calamity
 
     /**
-     * Borra las Reliquias que alguien lleve fuera de Calamity (y las del inventario que abre).
-     * Pasa con la salida de un admin (sacar sin extraccion), con un cofre que se lleno dentro
-     * y se abre desde fuera, o con cualquier via que no sea la puerta o el Cristal.
+     * Rehace el lore de una Reliquia con la plantilla de hoy, leyendo lo que guarda su marca. Rama
+     * venta-oren: las que ya circulaban decian "se vende sola al salir"; con esto dicen lo de ahora y
+     * se apilan con las nuevas. true si cambio algo.
      */
-    private void deshacerFuera(Player p, Inventory abierto) {
-        if (!activas()) return;
-        int n = quitarTodas(p.getInventory());
-        if (es(p.getItemOnCursor())) {
-            n += p.getItemOnCursor().getAmount();
-            p.setItemOnCursor(null);
-        }
-        if (abierto != null && abierto != p.getInventory()) n += quitarTodas(abierto);
-        if (n <= 0) return;
-        p.sendMessage(ComandoCalamity.mensaje("Las Reliquias no existen fuera de Calamity: las que llevabas se han deshecho."));
-        hc.plugin().bitacora().anotar("reliquia", "perdida", p.getName(), String.valueOf(n),
-                p.getWorld().getKey().getKey());
+    boolean renovar(ItemStack it) {
+        if (!es(it)) return false;
+        ItemMeta meta = it.getItemMeta();
+        if (meta == null) return false;
+        int g = Math.max(1, Math.min(4, grado(it)));
+        String id = id(it);
+        boolean apilable = id == null;
+        long n = nacio(it);
+        List<Component> lore = ficha(hc.cfg(), g, especial(it), nivel(it), minijefe(it), valida(it),
+                apilable ? null : leer(it, Marcas.RELIQUIA_ORIGEN, PersistentDataType.STRING), !apilable,
+                apilable || n <= 0 ? null : fechaCorta(n + caducaMillis())).lore();
+        if (lore.equals(meta.lore())) return false;
+        meta.lore(lore);
+        it.setItemMeta(meta);
+        return true;
     }
 
-    private int quitarTodas(Inventory inv) {
-        int n = 0;
-        ItemStack[] c = inv.getContents();
-        for (int i = 0; i < c.length; i++) {
-            if (!es(c[i])) continue;
-            n += c[i].getAmount();
-            inv.setItem(i, null);
+    /** Las Reliquias y Esencias de su inventario, con el lore de hoy (al entrar y al cambiar de mundo). */
+    void renovarInventario(Player p) {
+        if (p == null) return;
+        ItemsCalamity items = hc.items();
+        for (ItemStack it : p.getInventory().getContents()) {
+            if (it == null) continue;
+            renovar(it);
+            if (items != null) items.renovarEsencia(it);
         }
-        return n;
     }
+
+    @EventHandler(priority = EventPriority.MONITOR)
+    public void onEntrarServidor(PlayerJoinEvent e) {
+        hc.seguro("reliquias", () -> renovarInventario(e.getPlayer()));
+    }
+
+    @EventHandler(priority = EventPriority.MONITOR)
+    public void onCambiarMundo(PlayerChangedWorldEvent e) {
+        hc.seguro("reliquias", () -> renovarInventario(e.getPlayer()));
+    }
+
+    /*
+     * Rama venta-oren: aqui vivia "fuera no existen" (deshacerFuera al cambiar de mundo, al entrar al
+     * servidor y al abrir un inventario fuera). Ya no: la Reliquia sale contigo y se le vende a Oren.
+     * Que no se guarde ni se venda fuera de Calamity lo vigila Sellos.
+     */
 
     // ----------------------------------------------------------------- comando
 
