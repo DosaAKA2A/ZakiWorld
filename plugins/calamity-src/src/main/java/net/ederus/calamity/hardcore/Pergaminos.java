@@ -76,6 +76,8 @@ final class Pergaminos implements Listener {
      * (Aduana.pagar con objetoSiDentro). Lo dicen el pergamino y el menu de Oren con las mismas palabras.
      */
     static final String COBRO_DENTRO = "Al cumplirlo recibes el premio en la mano.";
+    /** Rama venta-oren: los de Reliquias se cumplen y se cobran al venderselas a Oren. */
+    static final String COBRO_VENTA = "Se cobra al vendérselas a Oren.";
     /** Casillas de la barra de progreso del lore (con los mismos caracteres que la de cordura). */
     static final int CASILLAS = 10;
     /** La "casilla" del cursor en lo que devuelve revisar(). */
@@ -236,7 +238,7 @@ final class Pergaminos implements Listener {
             case "minutos-sin-frasco" -> "Sin el Frasco, solo te sostiene tu cabeza.";
             case "eco-valido" -> "Los Ecos ajenos no descansan hasta que alguien los calla.";
             case "redimir" -> "Tu Eco te espera donde caíste. Dale descanso.";
-            case "reliquia-ii", "tasa-ii" -> "Encontrarla no vale nada: lo que vale es salir vivo con ella.";
+            case "reliquia-ii", "tasa-ii" -> "Encontrarla no vale nada: lo que vale es llevársela a Oren.";
             default -> "Oren paga, y Oren no olvida.";
         };
     }
@@ -261,7 +263,7 @@ final class Pergaminos implements Listener {
                 .etiqueta("Objetivo").dato(d.texto())
                 .etiqueta("Progreso").dato(barra(llenas) + " {" + hecho + "/" + objetivo + "}")
                 .etiqueta("Premio").dato(premioMarcado(d)).filete()
-                .accion(Contratos.seCobraAlSalir(d) ? "Se cobra al salir vivo de Calamity." : COBRO_DENTRO)
+                .accion(Contratos.seCobraAlSalir(d) ? COBRO_VENTA : COBRO_DENTRO)
                 .nota("Si mueres, el avance vuelve a cero.");
     }
 

@@ -259,16 +259,17 @@ final class Contratos implements Listener {
     }
 
     /*
-     * 1.10: sin " y sal" en los que ya se cobran al cumplirlos; los dos de Reliquias conservan su texto
-     * (se cumplen al sacarlas, en la Tasacion). La etiqueta es lo que sale en la barra de accion.
+     * 1.10: sin " y sal" en los que ya se cobran al cumplirlos. Rama venta-oren: los dos de Reliquias se
+     * cumplen al vendérselas a Oren (en su tienda, dentro de Calamity: el pergamino no sale). La etiqueta es
+     * lo que sale en la barra de accion.
      */
     static final List<Def> POR_DEFECTO = List.of(
             new Def("corto-mobs", "Mata 10 mobs", "mob", 10, 2, 20, true, "", "Mobs"),
             new Def("corto-cofre", "Abre un cofre de estructura", "cofre", 1, 2, 20, true, "cofres.activo", "Cofre"),
-            new Def("corto-reliquia", "Saca una Reliquia de grado II o más", "reliquia-ii", 1, 2, 20, true, "reliquias.activas",
+            new Def("corto-reliquia", "Véndele a Oren una Reliquia de grado II o más", "reliquia-ii", 1, 2, 20, true, "reliquias.activas",
                     "Reliquia"),
             new Def("corto-15", "Pasa 15 min en Calamity", "minutos", 15, 2, 20, true, "", "Minutos"),
-            new Def("extraer-ii", "Saca 3 Reliquias de grado II o más en una sola salida", "reliquia-ii", 3, 4, 60, false,
+            new Def("extraer-ii", "Véndele a Oren 3 Reliquias de grado II o más", "reliquia-ii", 3, 4, 60, false,
                     "reliquias.activas", "Reliquias"),
             new Def("destacados", "Mata 5 mobs destacados", "destacado", 5, 3, 40, false, "", "Destacados"),
             new Def("eco", "Derrota un Eco ajeno válido", "eco-valido", 1, 5, 80, false, "eco.activo", "Eco"),
@@ -1585,7 +1586,7 @@ final class Contratos implements Listener {
         for (Component c : Pergaminos.lore(mobs, 6)) sinCursiva &= c.decoration(TextDecoration.ITALIC) == TextDecoration.State.FALSE;
         h.ok("pergamino: lore sin cursiva", sinCursiva);
         List<String> rl = Pergaminos.lineas(reliquia, 0);
-        h.ok("pergamino de Reliquias: se cobra al salir", rl.contains("▸ Se cobra al salir vivo de Calamity."));
+        h.ok("pergamino de Reliquias: se cobra al venderlas a Oren", rl.contains("▸ " + Pergaminos.COBRO_VENTA));
         List<String> largas = new ArrayList<>();
         for (Def d : base.values()) {
             largas.addAll(Ficha.largas(Pergaminos.lineas(d, 0)));
@@ -1645,7 +1646,7 @@ final class Contratos implements Listener {
         h.ok("tras morir sigue cobrado", s.getBoolean("lista.1.cobrado") && s.getInt("lista.1.progreso") == 10);
         h.ok("tras morir no vuelve a avanzar ni a pagar", avanzar(s, base, "mob", 20, Set.of(1)).cambiados().isEmpty()
                 && cobrables(s).isEmpty() && pendientesDe(s, base, "mob").isEmpty());
-        h.ok("las de Reliquias se cobran al salir; el resto, al cumplirlas",
+        h.ok("las de Reliquias se cobran al venderlas; el resto, al cumplirlas",
                 seCobraAlSalir(reliquia) && seCobraAlSalir(base.get("extraer-ii")) && !seCobraAlSalir(mobs) && !seCobraAlSalir(base.get("minijefe")));
 
         h.igual("etiqueta: la de serie por id", "Mobs", etiquetaPorDefecto("corto-mobs", "otra cosa"));

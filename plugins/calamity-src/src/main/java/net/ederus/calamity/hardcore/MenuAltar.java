@@ -897,7 +897,7 @@ final class MenuAltar implements Listener {
             }, 1L);
             case "depositar" -> {
                 if (hc.esHardcore(p)) {
-                    p.sendMessage(ComandoCalamity.mensaje("En Calamity no se puede: las Esencias pasan a tu saldo cuando sales vivo."));
+                    p.sendMessage(ComandoCalamity.mensaje("Aquí no: ingrésalas con el botón de las Esencias en la tienda de Oren."));
                     Marco.sonidoNo(p);
                     return;
                 }
