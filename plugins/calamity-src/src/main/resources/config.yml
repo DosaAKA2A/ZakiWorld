@@ -408,6 +408,16 @@ hardcore:
     aviso-cada-niveles: 5
     # Segundos que se queda ese aviso en la barra de accion (1.8.2; antes, 3).
     aviso-segundos: 5
+    # 1.12.3 · El susto del Guardian Anciano (la cara que salta a la pantalla con su chillido,
+    # como al acercarse a un monumento marino) al cruzar esta distancia del borde de la zona
+    # spawn hacia fuera. No sale al entrar ya pasado ni dentro de la zona spawn; vuelve a
+    # poder salir tras volver "rearme" bloques por dentro de la raya (o pisar la zona spawn) y
+    # pasados "pausa-segundos" desde el ultimo.
+    grito:
+      activo: true
+      bloques: 1000
+      rearme: 100
+      pausa-segundos: 300
 
   # Las quince reglas, cada una con su propio interruptor. Poner una en false (o en 0
   # las que son numero) la apaga sin tocar el resto.

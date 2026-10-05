@@ -78,6 +78,8 @@ public final class Distancia {
     private final Hardcore hc;
     /** Lo que se le ha dicho a cada uno de los que estan dentro. Se poda en cada tick. */
     private final Map<UUID, Aviso> avisos = new HashMap<>();
+    /** 1.12.3 · Por donde va cada uno respecto a la raya del grito. Se poda con los avisos. */
+    private final Map<UUID, Grito> gritos = new HashMap<>();
 
     Distancia(Hardcore hc) {
         this.hc = hc;
@@ -118,7 +120,9 @@ public final class Distancia {
     /** Lo del tick de 1 s de Hardcore: si ha cruzado una franja, el destello en la barra. */
     void segundo(Player p, boolean enSpawn) {
         Ajustes a = ajustes();
-        int n = !a.activa() || enSpawn ? 0 : niveles(bloques(p.getLocation()), a);
+        double b = enSpawn ? 0 : bloques(p.getLocation());
+        gritar(p, b, enSpawn);
+        int n = !a.activa() || enSpawn ? 0 : niveles(b, a);
         Aviso av = avisos.computeIfAbsent(p.getUniqueId(), k -> new Aviso());
         String que = av.decidir(n, enSpawn, a, System.currentTimeMillis());
         if (que == null) return;
@@ -128,6 +132,69 @@ public final class Distancia {
     /** Los que ya no estan dentro se olvidan: al volver se empieza sin avisar. */
     void podar(Set<UUID> dentro) {
         avisos.keySet().retainAll(dentro);
+        gritos.keySet().retainAll(dentro);
+    }
+
+    // ================================================================== el grito de los 1.000 bloques
+
+    /**
+     * 1.12.3 · Lo que se lee de hardcore.distancia.grito. Sin la seccion, los de serie: a 1.000
+     * bloques del borde de la zona spawn, se rearma al volver 100 bloques por dentro de la raya y
+     * entre dos gritos al mismo jugador pasan al menos 300 s.
+     */
+    record AjustesGrito(boolean activo, int bloques, int rearme, int pausaSegundos) {
+        static AjustesGrito de(ConfigurationSection c) {
+            if (c == null) return defecto();
+            return new AjustesGrito(c.getBoolean("activo", true), Math.max(1, c.getInt("bloques", 1000)),
+                    Math.max(0, c.getInt("rearme", 100)), Math.max(0, c.getInt("pausa-segundos", 300)));
+        }
+
+        static AjustesGrito defecto() {
+            return new AjustesGrito(true, 1000, 100, 300);
+        }
+    }
+
+    /**
+     * Pedido de Dosa: al pasar el bloque 1.000, el susto del Guardian Anciano (la cara que salta a
+     * la pantalla con su chillido, como al acercarse a un monumento marino). Sale solo al cruzar
+     * la raya hacia fuera, nunca al entrar a Calamity ya pasado ni dentro de la zona spawn.
+     */
+    private void gritar(Player p, double bloques, boolean enSpawn) {
+        AjustesGrito g = AjustesGrito.de(hc.cfg().getConfigurationSection("distancia.grito"));
+        if (!g.activo()) {
+            gritos.remove(p.getUniqueId());
+            return;
+        }
+        Grito gr = gritos.computeIfAbsent(p.getUniqueId(), k -> new Grito());
+        if (gr.decidir(bloques, enSpawn, g, System.currentTimeMillis())) p.showElderGuardian(false);
+    }
+
+    /** Por donde va un jugador respecto a la raya. decidir() es puro para el autotest. */
+    static final class Grito {
+        /** -1 = aun no se sabe (acaba de entrar), 0 = por dentro de la raya, 1 = pasada. */
+        int estado = -1;
+        long ultimo;
+
+        boolean decidir(double bloques, boolean enSpawn, AjustesGrito g, long ahora) {
+            if (enSpawn) {
+                estado = 0;
+                return false;
+            }
+            boolean pasada = bloques >= g.bloques();
+            if (estado < 0) {
+                estado = pasada ? 1 : 0;
+                return false;
+            }
+            if (estado == 1) {
+                if (bloques < g.bloques() - g.rearme()) estado = 0;
+                return false;
+            }
+            if (!pasada) return false;
+            estado = 1;
+            if (ultimo != 0 && ahora - ultimo < g.pausaSegundos() * 1000L) return false;
+            ultimo = ahora;
+            return true;
+        }
     }
 
     /** "Calamity · Te alejas del spawn · mobs +10 niveles", con la Paleta. */
@@ -357,6 +424,27 @@ public final class Distancia {
         ocho.set("aviso-segundos", 8);
         h.igual("aviso: aviso-segundos 8 lo deja 8 s", 8, Ajustes.de(ocho).avisoSegundos());
         h.igual("aviso: el config.yml del jar trae aviso-segundos 5", 5, delJar("hardcore.distancia.aviso-segundos"));
+
+        // 1.12.3 · El grito de los 1.000 bloques.
+        AjustesGrito g = AjustesGrito.defecto();
+        Grito gr = new Grito();
+        long u = 5_000_000L;
+        h.igual("grito: entrar ya pasado de la raya no grita", false, gr.decidir(1500, false, g, u));
+        h.igual("grito: seguir pasado no grita", false, gr.decidir(1600, false, g, u += 1000));
+        h.igual("grito: volver a 950 no rearma (rearme 100)", false, gr.decidir(950, false, g, u += 1000));
+        h.igual("grito: y cruzar otra vez no grita", false, gr.decidir(1001, false, g, u += 1000));
+        h.igual("grito: volver a 899 rearma", false, gr.decidir(899, false, g, u += 1000));
+        h.igual("grito: cruzar los 1.000 grita", true, gr.decidir(1000, false, g, u += 1000));
+        h.igual("grito: 2.000 no repite", false, gr.decidir(2000, false, g, u += 1000));
+        h.igual("grito: rearmado (800) y cruzado antes de 300 s no grita", false,
+                gr.decidir(800, false, g, u += 1000) || gr.decidir(1200, false, g, u += 1000));
+        h.igual("grito: rearmado y cruzado pasados 300 s grita", true,
+                !gr.decidir(800, false, g, u += 300_000) && gr.decidir(1200, false, g, u += 1000));
+        Grito sp = new Grito();
+        sp.decidir(1500, false, g, u);
+        h.igual("grito: la zona spawn rearma", false, sp.decidir(0, true, g, u += 1000));
+        h.igual("grito: y al salir y cruzar grita", true, sp.decidir(1000, false, g, u += 1000));
+        h.igual("grito: el config.yml del jar lo pone a 1.000 bloques", 1000, delJar("hardcore.distancia.grito.bloques"));
         return h.lineas();
     }
 }
