@@ -30,6 +30,20 @@
 #                       volumen: 0 a 1
 #
 #  Con lluvia: true en un clima frio (temperatura bajo 0.15 en su .json) lo que cae es nieve.
+
+# En los mundos de Calamity el clima es de Calamity, sin la lluvia de Minecraft:
+# ahi lluvia: true no moja al jugador (y la ceniza no le despeja el cielo). Las
+# particulas, los rayos, el gas, los ecos y los sonidos del clima si salen.
+#   activo:            false = tratar los mundos de Calamity como cualquier otro
+#   mundos:            mundos que se tratan como de Calamity ademas de los que
+#                      Calamity tiene en hardcore.mundos (esos se leen solos)
+#   cenizas-sin-dato:  la ceniza en modo LLUVIA sale con la lluvia de Calamity
+#                      (lo pregunta por %lethalworld_clima%). Si no se puede
+#                      preguntar (sin PlaceholderAPI o sin Calamity): SIEMPRE o NUNCA
+calamity:
+  activo: true
+  mundos: []
+  cenizas-sin-dato: NUNCA
 biomas:
   sandstorm:
     nombre: 'Tormenta de arena'

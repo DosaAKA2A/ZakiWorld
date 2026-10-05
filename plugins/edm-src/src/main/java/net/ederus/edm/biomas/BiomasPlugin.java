@@ -123,6 +123,13 @@ public final class BiomasPlugin extends Module implements Listener {
     public String recargar() {
         reloadConfig();
         cargarZonas();
+        // Que se vuelva a mirar que mundos son de Calamity y se le repinte el clima a quien este dentro.
+        mundosCalamityHasta = 0L;
+        for (UUID id : new ArrayList<>(dentro.keySet())) {
+            Player p = core.getServer().getPlayer(id);
+            if (p != null) deshacer(p);
+        }
+        dentro.clear();
         return zonas.size() + " zona(s).";
     }
 
@@ -470,20 +477,84 @@ public final class BiomasPlugin extends Module implements Listener {
         ConfigurationSection a = ajustes(clima);
         long hora = a.getLong("hora", -1);
         if (hora >= 0) p.setPlayerTime(hora, false);
+        // En Calamity el clima es suyo y sin lluvia de Minecraft: ni se moja ni se despeja al jugador.
+        // Las particulas del clima (ceniza, rayos, gas, ecos, sonidos) siguen.
+        if (esCalamity(p.getWorld())) return;
         if (a.getBoolean("lluvia", false)) p.setPlayerWeather(WeatherType.DOWNFALL);
         if (!"NUNCA".equalsIgnoreCase(a.getString("cenizas", "NUNCA"))) p.setPlayerWeather(WeatherType.CLEAR);
     }
+
+    // --------------------------------------------------------------------- calamity
+
+    private static final String CLIMA_CALAMITY = "%lethalworld_clima%";
+    private Set<String> mundosCalamity = Set.of();
+    private long mundosCalamityHasta;
+    private java.lang.reflect.Method papi;
+    private boolean papiBuscado;
+
+    /**
+     * Si ese mundo es de Calamity. Manda Calamity: los mundos de su hardcore.mundos (con
+     * hardcore.activo), leidos de su config cada 10 s; mas los de calamity.mundos de este
+     * config, por si Calamity no esta o hay otro mundo que tratar igual. Se compara con el
+     * nombre del mundo y con su clave corta, sin mayusculas.
+     */
+    boolean esCalamity(World w) {
+        if (w == null || !getConfig().getBoolean("calamity.activo", true)) return false;
+        long ahora = System.currentTimeMillis();
+        if (ahora >= mundosCalamityHasta) {
+            Set<String> s = new HashSet<>();
+            for (String m : getConfig().getStringList("calamity.mundos")) s.add(m.toLowerCase(Locale.ROOT));
+            org.bukkit.plugin.Plugin cal = core.getServer().getPluginManager().getPlugin("Calamity");
+            if (cal != null && cal.isEnabled() && cal.getConfig().getBoolean("hardcore.activo", true)) {
+                for (String m : cal.getConfig().getStringList("hardcore.mundos")) s.add(m.toLowerCase(Locale.ROOT));
+            }
+            mundosCalamity = s;
+            mundosCalamityHasta = ahora + 10_000L;
+        }
+        return mundosCalamity.contains(w.getName().toLowerCase(Locale.ROOT))
+                || mundosCalamity.contains(w.getKey().getKey().toLowerCase(Locale.ROOT));
+    }
+
+    /**
+     * La fase del clima de Calamity que ve ese jugador (%lethalworld_clima%: despejado,
+     * lluvia o tormenta), "" si Calamity tiene su ciclo apagado, o null si no se puede
+     * preguntar (sin PlaceholderAPI o sin Calamity).
+     */
+    private String faseCalamity(Player p) {
+        if (!papiBuscado) {
+            papiBuscado = true;
+            try {
+                papi = Class.forName("me.clip.placeholderapi.PlaceholderAPI")
+                        .getMethod("setPlaceholders", org.bukkit.OfflinePlayer.class, String.class);
+            } catch (Throwable t) {
+                papi = null;
+            }
+        }
+        if (papi == null) return null;
+        try {
+            String r = String.valueOf(papi.invoke(null, p, CLIMA_CALAMITY)).trim().toLowerCase(Locale.ROOT);
+            return r.contains("%") ? null : r;
+        } catch (Throwable t) {
+            return null;
+        }
+    }
+
 
     private void deshacer(Player p) {
         p.resetPlayerTime();
         p.resetPlayerWeather();
     }
 
-    /** Ceniza que cae alrededor de cada jugador; con LLUVIA, solo si el mundo llueve. */
+    /** Ceniza que cae alrededor de cada jugador; con LLUVIA, solo si llueve (en Calamity, su lluvia). */
     private void cenizas(World w, ConfigurationSection a, List<Player> jugadores) {
         String modo = a.getString("cenizas", "NUNCA").toUpperCase(Locale.ROOT);
         if (modo.equals("NUNCA")) return;
-        if (modo.equals("LLUVIA") && !w.hasStorm()) return;
+        if (modo.equals("LLUVIA")) {
+            boolean calamity = esCalamity(w);
+            String fase = calamity ? faseCalamity(jugadores.get(0)) : null;
+            if (!ClimaCalamity.cenizaConLluvia(calamity, fase, w.hasStorm(),
+                    getConfig().getString("calamity.cenizas-sin-dato", "NUNCA"))) return;
+        }
         for (Player p : jugadores) {
             Location l = p.getLocation().add(0, 7, 0);
             p.spawnParticle(Particle.ASH, l, 70, 12, 6, 12, 0);
