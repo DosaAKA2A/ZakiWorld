@@ -24,8 +24,8 @@ import java.util.Map;
  * Esta es la forma de ahora, la de la maqueta que aprobo:
  *
  * <pre>
- *   Astilla del Umbral                  el nombre, con el degradado de su Tono (Paleta.Tono.nombre)
- *   Reliquia · Grado I  ★★★★           cabecera(): categoria en el tono fuerte, detalle en el palido
+ *   Astilla del Umbral                  el nombre: de casi blanco teñido al fuerte encendido (Tono.nombre)
+ *   Reliquia · Grado I  ★★★★           cabecera(): categoria en el fuerte apagado, detalle en gris claro
  *
  *   "Se quiebra cada vez que alguien    historia(): entre comillas, en el tono palido
  *    no vuelve."
@@ -57,6 +57,8 @@ final class Ficha {
     static final TextColor BLANCO = Paleta.LORE_BLANCO;
     /** Lo secundario y las notas del final: gris. */
     static final TextColor GRIS = Paleta.LORE_GRIS;
+    /** El detalle de la cabecera: gris claro. */
+    static final TextColor GRIS_CLARO = Paleta.LORE_GRIS_CLARO;
     /** Las casillas vacias de una barra de progreso: un gris mas oscuro que el de las notas. */
     static final TextColor VACIA = Paleta.CASILLA_VACIA;
     static final String ROMBO = "◆";
@@ -85,15 +87,17 @@ final class Ficha {
     // ------------------------------------------------------------------ piezas
 
     /**
-     * "Reliquia · Grado I  ★☆☆☆": la categoria en el tono fuerte, " · " en gris, el detalle en el palido
-     * y, con estrellas > 0, cuatro estrellas (las conseguidas doradas, las que faltan grises).
+     * "Reliquia · Grado I  ★☆☆☆": la categoria en el tono fuerte apagado hacia gris (Tono.tintado), " · "
+     * en gris, el detalle en gris claro y, con estrellas > 0, cuatro estrellas (las conseguidas doradas,
+     * las que faltan grises). Calamity 1.12.1 · Antes iba en el fuerte y el palido y le robaba el sitio al
+     * nombre: ahora la cabecera se queda atras y lo llamativo es el nombre.
      */
     Ficha cabecera(String categoria, String detalle, int estrellas) {
         List<Trozo> l = new ArrayList<>();
-        l.add(new Trozo(categoria, fuerte));
+        l.add(new Trozo(categoria, tono.tintado()));
         if (detalle != null && !detalle.isBlank()) {
             l.add(new Trozo(" · ", GRIS));
-            l.add(new Trozo(detalle, palido));
+            l.add(new Trozo(detalle, GRIS_CLARO));
         }
         if (estrellas > 0) {
             int g = Math.min(4, estrellas);
@@ -681,6 +685,16 @@ final class Ficha {
         return sb.toString();
     }
 
+    /** La luminancia percibida de un color (0..255), para comparar cuanto resalta. */
+    static int luz(TextColor c) {
+        return (int) Math.round(0.299 * c.red() + 0.587 * c.green() + 0.114 * c.blue());
+    }
+
+    /** Lo vivo que es un color (0..255): la distancia entre su canal mas alto y el mas bajo. */
+    static int croma(TextColor c) {
+        return Math.max(c.red(), Math.max(c.green(), c.blue())) - Math.min(c.red(), Math.min(c.green(), c.blue()));
+    }
+
     /** Pruebas de la plantilla sola (sin servidor): corte, sangrias, colores, huecos y estrellas. */
     static List<String> autotest() {
         Autotest.Hoja h = new Autotest.Hoja();
@@ -717,8 +731,19 @@ final class Ficha {
                 .decoration(TextDecoration.ITALIC, false))).isEmpty());
         // Los colores: la categoria en el fuerte, el detalle en el palido, estrellas doradas y grises.
         List<Component> cab = lore.get(0).children();
-        h.igual("categoria en el tono fuerte", t.fuerte(), cab.get(0).color());
-        h.igual("detalle en el tono palido", t.palido(), cab.get(2).color());
+        h.igual("categoria en el tono apagado", t.tintado(), cab.get(0).color());
+        h.igual("detalle en gris claro", GRIS_CLARO, cab.get(2).color());
+        h.ok("la categoria ya no va en el tono fuerte", !t.fuerte().equals(cab.get(0).color()));
+        // El nombre resalta: arranca mas claro que el palido y acaba mas luminoso que la categoria.
+        Component nom = t.nombre("Ámbar");
+        TextColor primera = nom.children().get(0).color(), ultima = nom.children().get(4).color();
+        h.ok("el nombre arranca casi en blanco (mas claro que el palido)", luz(primera) > luz(t.palido()));
+        h.ok("el nombre acaba en el fuerte encendido (brillo al maximo)", Math.max(ultima.red(), Math.max(ultima.green(), ultima.blue())) == 255);
+        for (Paleta.Tono x : Paleta.TONOS.values()) {
+            TextColor d = TextColor.color(x.nombreDesde()), fin = TextColor.color(x.nombreHasta()), cat = x.tintado();
+            h.ok("tono " + Integer.toHexString(x.hasta()) + ": el nombre resalta sobre la categoria (mas claro al empezar, mas vivo al acabar)",
+                    luz(d) > luz(cat) + 60 && croma(fin) > 2 * croma(cat));
+        }
         boolean oro = false, gris = false;
         for (Component c : cab) {
             if (c instanceof TextComponent x && x.content().contains(ESTRELLA)) {

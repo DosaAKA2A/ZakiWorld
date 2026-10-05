@@ -159,9 +159,32 @@ public final class Paleta {
             return TextColor.lerp(0.35f, TextColor.color(desde), TextColor.color(0xFFFFFF));
         }
 
-        /** El nombre del objeto con el degradado, sin cursiva ni negrita. */
+        /**
+         * Calamity 1.12.1 · Donde arranca el degradado del nombre: el inicio del tono un 60 % hacia blanco,
+         * casi blanco pero teñido. Dosa vio en el juego (2026-10-05) que el nombre no se distinguia de la
+         * cabecera, que iba en el mismo tono fuerte.
+         */
+        public int nombreDesde() {
+            return TextColor.lerp(0.6f, TextColor.color(desde), TextColor.color(0xFFFFFF)).value();
+        }
+
+        /** Donde acaba el degradado del nombre: el tono fuerte con todo el brillo y un punto mas de saturacion. */
+        public int nombreHasta() {
+            float[] hsb = java.awt.Color.RGBtoHSB((hasta >> 16) & 0xFF, (hasta >> 8) & 0xFF, hasta & 0xFF, null);
+            return java.awt.Color.HSBtoRGB(hsb[0], Math.min(1f, hsb[1] * 1.08f), 1f) & 0xFFFFFF;
+        }
+
+        /**
+         * Calamity 1.12.1 · La categoria de la cabecera ("Reliquia especial"): el tono fuerte apagado hacia
+         * gris, para que le deje todo el protagonismo al nombre sin perder la familia.
+         */
+        public TextColor tintado() {
+            return TextColor.lerp(0.6f, TextColor.color(hasta), TextColor.color(0x8A8A8A));
+        }
+
+        /** El nombre del objeto: de casi blanco teñido al tono fuerte encendido, sin cursiva ni negrita. */
         public Component nombre(String texto) {
-            return degradado(texto, desde, hasta).decoration(TextDecoration.BOLD, false);
+            return degradado(texto, nombreDesde(), nombreHasta()).decoration(TextDecoration.BOLD, false);
         }
     }
 
@@ -223,6 +246,8 @@ public final class Paleta {
     public static final TextColor LORE_BLANCO = TextColor.color(0xF4F4F4);
     /** Lo secundario de los lores y las notas del final: gris. */
     public static final TextColor LORE_GRIS = TextColor.color(0x7A7A7A);
+    /** Calamity 1.12.1 · El detalle de la cabecera ("Grado IV", "Cordura"): gris claro. */
+    public static final TextColor LORE_GRIS_CLARO = TextColor.color(0xB8B8B8);
     /** Las estrellas de rareza conseguidas: dorado. Las que faltan van en LORE_GRIS. */
     public static final TextColor ESTRELLA = TextColor.color(0xFFD54A);
 
