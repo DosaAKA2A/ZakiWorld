@@ -181,8 +181,12 @@ public abstract class Module implements Plugin {
         if (suya >= esperada) return;
 
         String base = nombre.replace(".yml", "");
-        File aparte = new File(this.dataFolder,
-                base + "-v" + suya + "-" + java.time.LocalDate.now() + ".yml");
+        // Con fecha y hora; si aun asi ya existe uno con ese nombre, con un numero detras:
+        // un respaldo no se sobrescribe nunca (renameTo lo haria en Linux sin decir nada).
+        String sello = base + "-v" + suya + "-" + java.time.LocalDate.now() + "-"
+                + java.time.LocalTime.now().format(java.time.format.DateTimeFormatter.ofPattern("HHmmss"));
+        File aparte = new File(this.dataFolder, sello + ".yml");
+        for (int n = 2; aparte.exists(); n++) aparte = new File(this.dataFolder, sello + "-" + n + ".yml");
         if (destino.renameTo(aparte)) {
             saveResource(nombre, false);
             getLogger().warning(nombre + " era de la versión " + suya + " y se actualizo. "
