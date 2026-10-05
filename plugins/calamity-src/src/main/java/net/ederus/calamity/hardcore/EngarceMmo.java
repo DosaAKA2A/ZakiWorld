@@ -116,6 +116,7 @@ final class EngarceMmo {
         ItemStack nueva = r.getResult();
         if (nueva == null || nueva.getType().isAir()) return new Engarce.Resultado(Engarce.Estado.NADA, pieza, "MMOItems no devolvió la pieza");
         conservarMarcas(pieza, nueva);
+        Ligado.copiarLineaLigado(pieza, nueva);
         nueva.setAmount(Math.max(1, pieza.getAmount()));
         return new Engarce.Resultado(Engarce.Estado.HECHO, nueva, null);
     }
@@ -151,6 +152,7 @@ final class EngarceMmo {
             if (uuid.equals(h.uuid())) return new Engarce.Resultado(Engarce.Estado.NADA, pieza, "MMOItems no ha soltado la gema");
         }
         conservarMarcas(pieza, nueva);
+        Ligado.copiarLineaLigado(pieza, nueva);
         nueva.setAmount(Math.max(1, pieza.getAmount()));
         return new Engarce.Resultado(Engarce.Estado.HECHO, nueva, null);
     }

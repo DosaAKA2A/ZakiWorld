@@ -1,0 +1,46 @@
+# =============================================================================
+#  Lote de gemas (Calamity 1.12.3) · 3 de 3
+#  Fichero del servidor: plugins/Calamity/config.yml (dentro de "hardcore:").
+#
+#  NADA de esto es obligatorio: si falta, Calamity usa estos mismos valores de serie, y una
+#  entrada de botín vieja ({id: gema, objeto: ""}) ya sale con la gema de su minijefe.
+#  Se deja escrito para que el config del servidor diga lo que pasa de verdad.
+# =============================================================================
+
+hardcore:
+
+  # --- hardcore.entregas.mmo: añadir estas seis líneas (si es un mapa en una línea, {tintura: ...,
+  #     gema: ..., ascua: ...}, pásalo a líneas o añádelas dentro de las llaves).
+  entregas:
+    mmo:
+      gema-custodio: "CALAMITY_GEMAS.GEMA_DEL_CUSTODIO"
+      gema-matriarca: "CALAMITY_GEMAS.GEMA_DE_LA_MATRIARCA"
+      gema-sanador: "CALAMITY_GEMAS.GEMA_DEL_SANADOR"
+      gema-centinela: "CALAMITY_GEMAS.GEMA_DEL_CENTINELA"
+      gema-heraldo: "CALAMITY_GEMAS.GEMA_DEL_HERALDO"
+      gema-vigilante: "CALAMITY_GEMAS.GEMA_OJO_DEL_VIGILANTE"
+
+  # --- hardcore.engarzador: sección nueva.
+  engarzador:
+    # Devuelve a las piezas de Calamity sus marcas (el ligado a su dueño) cuando MMOItems las
+    # rehace por su revision-id. Apagarlo solo si se sabe por qué.
+    conservar-marcas-al-actualizar: true
+
+  # --- hardcore.minijefes.botin: en la entrada "gema" de cada minijefe, cambiar  objeto: ""
+  #     por su gema. Lo demás de la entrada (25 %, al mejor, sin piedad) sigue igual.
+  minijefes:
+    botin:
+      custodio-de-las-ruinas:
+        - {id: gema, prob: 0.25, para: mejor, objeto: gema-custodio, nombre: "la Gema del Custodio", anuncio: false}
+      matriarca-tejedora:
+        - {id: gema, prob: 0.25, para: mejor, objeto: gema-matriarca, nombre: "la Gema de la Matriarca", anuncio: false}
+      sanador-del-fango:
+        - {id: gema, prob: 0.25, para: mejor, objeto: gema-sanador, nombre: "la Gema del Sanador", anuncio: false}
+      centinela-de-toba:
+        - {id: gema, prob: 0.25, para: mejor, objeto: gema-centinela, nombre: "la Gema del Centinela", anuncio: false}
+      heraldo-carmes:
+        - {id: gema, prob: 0.25, para: mejor, objeto: gema-heraldo, nombre: "la Gema del Heraldo", anuncio: false}
+
+# Para probar a mano: /calamity give gema-custodio <jugador> (y las demás, gema-vigilante incluida).
+# Si una plantilla no está en MMOItems, la gema de ese minijefe no sale ni cuenta piedad, y
+# /calamity selftest minibosses lo dice ("MMOItems crea la gema de ...").

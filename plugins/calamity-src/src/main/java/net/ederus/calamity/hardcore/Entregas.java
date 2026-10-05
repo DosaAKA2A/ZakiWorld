@@ -59,10 +59,21 @@ final class Entregas implements Listener {
     static final String NOMBRE_GRABADO = "Grabado de Calamidad";
     static final String NOMBRE_SALVOCONDUCTO = "Salvoconducto del Insomne";
 
+    /**
+     * Lote de gemas (1.12.3) · Las gemas de Calamity por su nombre de dar(): la de la Forja, la de cada
+     * minijefe (su botin, Minijefes.GEMAS) y el Ojo del Vigilante. Todas de CALAMITY_GEMAS y del color
+     * de hueco Calamidad; sus TIPO.ID, en entregas.mmo (o MMO_DEFECTO si la config no los trae).
+     */
+    static final String GEMA_CUSTODIO = "gema-custodio", GEMA_MATRIARCA = "gema-matriarca", GEMA_SANADOR = "gema-sanador",
+            GEMA_CENTINELA = "gema-centinela", GEMA_HERALDO = "gema-heraldo", GEMA_VIGILANTE = "gema-vigilante";
+    static final List<String> GEMAS = List.of("gema", GEMA_CUSTODIO, GEMA_MATRIARCA, GEMA_SANADOR, GEMA_CENTINELA,
+            GEMA_HERALDO, GEMA_VIGILANTE);
+
     /** Los objetos que entiende dar (ademas de credito:<tipo>, credito-caja:<tipo> y forja:<pieza>). 1.10: el Reclamo. */
     static final List<String> OBJETOS = List.of("esencia", "frasco", "frasco-1", "cristal", "tintura", "gema", "ascua",
             "talisman", "grabado", "salvoconducto", "libro", "llave", "llave-hito", FragmentosMasamune.OBJETO, "reclamo",
-            PuenteBovedas.LLAVE_UMBRAL, PuenteBovedas.LLAVE_OMINOSA, Barometro.OBJETO);
+            PuenteBovedas.LLAVE_UMBRAL, PuenteBovedas.LLAVE_OMINOSA, Barometro.OBJETO,
+            GEMA_CUSTODIO, GEMA_MATRIARCA, GEMA_SANADOR, GEMA_CENTINELA, GEMA_HERALDO, GEMA_VIGILANTE);
 
     private final Hardcore hc;
     private final Set<BukkitTask> tareas = new HashSet<>();
@@ -286,6 +297,13 @@ final class Entregas implements Listener {
     private static final Map<String, String> MMO_DEFECTO = Map.ofEntries(
             Map.entry("tintura", "CALAMITY_CONSUMIBLES.TINTURA_DE_CENIZA"),
             Map.entry("gema", "CALAMITY_GEMAS.GEMA_DE_CALAMIDAD"),
+            // 1.12.3: el lote de gemas (docs/lote-gemas/01-calamity_gemas.yml). El id del Ojo lo usa el Vigilante.
+            Map.entry(GEMA_CUSTODIO, "CALAMITY_GEMAS.GEMA_DEL_CUSTODIO"),
+            Map.entry(GEMA_MATRIARCA, "CALAMITY_GEMAS.GEMA_DE_LA_MATRIARCA"),
+            Map.entry(GEMA_SANADOR, "CALAMITY_GEMAS.GEMA_DEL_SANADOR"),
+            Map.entry(GEMA_CENTINELA, "CALAMITY_GEMAS.GEMA_DEL_CENTINELA"),
+            Map.entry(GEMA_HERALDO, "CALAMITY_GEMAS.GEMA_DEL_HERALDO"),
+            Map.entry(GEMA_VIGILANTE, "CALAMITY_GEMAS.GEMA_OJO_DEL_VIGILANTE"),
             Map.entry("ascua", "CALAMITY_CONSUMIBLES.ASCUA_DE_CALAMIDAD"),
             Map.entry("yelmo", "CALAMITY.YELMO_DE_CALAMIDAD"),
             Map.entry("coraza", "CALAMITY.CORAZA_DE_CALAMIDAD"),
@@ -1148,6 +1166,14 @@ final class Entregas implements Listener {
         h.igual("tintura de entregas.mmo", "CALAMITY_CONSUMIBLES.TINTURA_DE_CENIZA", idMmo("tintura"));
         h.igual("pieza de la Forja", "CALAMITY.YELMO_DE_CALAMIDAD", idMmo("forja:yelmo"));
         h.igual("objeto que no existe", null, idMmo("espada-de-madera"));
+        // 1.12.3: el lote de gemas. El id del Ojo es el que usa el botin del Vigilante: tiene que ser exacto.
+        h.igual("el Ojo del Vigilante", "CALAMITY_GEMAS.GEMA_OJO_DEL_VIGILANTE", idMmo(GEMA_VIGILANTE));
+        boolean gemasBien = true;
+        for (String g : GEMAS) {
+            String id = idMmo(g);
+            gemasBien &= id != null && id.startsWith("CALAMITY_GEMAS.") && (g.equals("gema") || OBJETOS.contains(g));
+        }
+        h.ok("las siete gemas son de CALAMITY_GEMAS y dar() las entiende", gemasBien);
         boolean hayMmo = PuenteMmo.disponible();
         h.igual("sin MMOItems no se crea la tintura", hayMmo, crear("tintura") != null);
         if (!hayMmo) h.igual("motivo sin MMOItems", "sin MMOItems", motivoSinObjeto("tintura"));

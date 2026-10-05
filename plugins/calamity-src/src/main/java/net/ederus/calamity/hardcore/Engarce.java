@@ -111,12 +111,25 @@ final class Engarce {
      * hueco sin color admite cualquier gema y si no, el color tiene que ser el mismo.
      */
     static String hueco(Ficha pieza, String color, String sinColor) {
-        for (Hueco h : pieza.huecos()) {
+        int i = indiceHueco(pieza, color, sinColor);
+        return i < 0 ? null : pieza.huecos().get(i).color();
+    }
+
+    /**
+     * Lote de gemas · La posicion en pieza.huecos() del hueco libre donde entraria una gema de ese
+     * color, o -1. Es el primero que encaja, como en MMOItems: el menu lo marca ("aqui entrara la
+     * gema") antes de engarzar.
+     */
+    static int indiceHueco(Ficha pieza, String color, String sinColor) {
+        if (pieza == null) return -1;
+        List<Hueco> huecos = pieza.huecos();
+        for (int i = 0; i < huecos.size(); i++) {
+            Hueco h = huecos.get(i);
             if (!h.libre()) continue;
             String c = h.color();
-            if (color == null || color.isEmpty() || c.equals(sinColor) || color.equals(c)) return c;
+            if (color == null || color.isEmpty() || c.equals(sinColor) || color.equals(c)) return i;
         }
-        return null;
+        return -1;
     }
 
     private static boolean contiene(Set<String> tipos, String tipo) {

@@ -104,7 +104,7 @@ final class MenuAltar implements Listener {
             Map.entry("salvoconducto", List.of("Si mueres en Calamity, conservas", "una pieza de tu equipo.")),
             Map.entry("ofrenda", List.of("Suma una Ofrenda a tu nombre.", "No da ningún objeto.")),
             Map.entry("talisman", List.of("+3 de vida. En Calamity, la", "cordura baja un 20 % más despacio.")),
-            Map.entry("gema", List.of("Lior la engarza en el Yelmo, la", "Coraza o el Hacha del Heraldo.")),
+            Map.entry("gema", List.of("Lior la engarza en cualquier", "pieza de Calamity.")),
             Map.entry("grabado", List.of("Sube de nivel un encantamiento", "que ya esté al máximo.",
                     "Solo en equipo vanilla.")),
             Map.entry("ascua", List.of("Sube un nivel de mejora a una", "pieza del Manto, del Vestigio", "del Eco o a la Guadaña.")),
