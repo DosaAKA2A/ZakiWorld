@@ -30,6 +30,7 @@ import org.bukkit.event.player.PlayerChangedWorldEvent;
 import org.bukkit.event.player.PlayerQuitEvent;
 import org.bukkit.event.weather.ThunderChangeEvent;
 import org.bukkit.event.weather.WeatherChangeEvent;
+import org.bukkit.event.world.WorldLoadEvent;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.potion.PotionEffect;
 import org.bukkit.potion.PotionEffectType;
@@ -356,8 +357,11 @@ final class Clima implements Listener {
 
     Clima(Hardcore hc) {
         this.hc = hc;
-        hc.plugin().getServer().getPluginManager().registerEvents(this, hc.plugin());
         this.ciclo = new CicloClima(hc);
+        // Despues del ciclo: onLluvia/onTrueno lo leen, y si el ciclo no arranca no queda un oyente suelto.
+        hc.plugin().getServer().getPluginManager().registerEvents(this, hc.plugin());
+        // Un mundo que se guardo lloviendo (1.11 ponia setStorm(true)) se despeja ya, no al primer segundo.
+        for (World w : hc.plugin().getServer().getWorlds()) hc.seguro("ciclo-clima", () -> ciclo.despejar(w));
         int cada = Math.max(1, Math.min(20, cfg().getInt("efectos.cada-ticks", EFECTOS_CADA_TICKS)));
         this.pulso = hc.plugin().getServer().getScheduler().runTaskTimer(hc.plugin(),
                 () -> hc.seguro("clima", this::pulso), 20L, cada);
@@ -528,6 +532,22 @@ final class Clima implements Listener {
     @EventHandler(priority = EventPriority.HIGH, ignoreCancelled = true)
     public void onTrueno(ThunderChangeEvent ev) {
         if (cancelaLluvia(ev.toThunderState(), hc.esHardcore(ev.getWorld()), ciclo.activo())) ev.setCancelled(true);
+    }
+
+    /**
+     * 1.12 · Un mundo de Calamity que se carga con lluvia guardada (de la 1.11, o de antes de ponerlo en
+     * hardcore.mundos) se despeja al cargar y otra vez al tick siguiente (por si aun no estaba registrado
+     * como mundo de Calamity): sin esto, quien entra antes del primer segundo del ciclo ve llover.
+     */
+    @EventHandler(priority = EventPriority.MONITOR)
+    public void onCargarMundo(WorldLoadEvent ev) {
+        World w = ev.getWorld();
+        hc.seguro("ciclo-clima", () -> ciclo.despejar(w));
+        UUID id = w.getUID();
+        hc.plugin().getServer().getScheduler().runTask(hc.plugin(), () -> {
+            World cargado = Bukkit.getWorld(id);
+            if (cargado != null) hc.seguro("ciclo-clima", () -> ciclo.despejar(cargado));
+        });
     }
 
     /** Si hay que cancelar un cambio de clima del mundo: solo hacia lluvia/trueno, en Calamity y con su ciclo. */

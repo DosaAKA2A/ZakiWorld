@@ -190,6 +190,12 @@ final class CicloClima {
         if (w.isThundering() != trueno) w.setThundering(trueno);
     }
 
+    /** 1.12 · Despeja ya ese mundo si es de Calamity y manda su ciclo (al arrancar y al cargar un mundo). */
+    void despejar(World w) {
+        if (w == null || !hc.esHardcore(w) || !activo()) return;
+        aplicar(w, DESPEJADO);
+    }
+
     /** 1.12: si el MUNDO llueve en esa fase. Nunca: la lluvia de Minecraft no se ve en Calamity. */
     static boolean lluviaDelMundo(String fase) {
         return false;
