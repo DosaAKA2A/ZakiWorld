@@ -411,15 +411,26 @@ final class Clima implements Listener {
     record Rayo(int cada, int color, float tam, double distancia, double altura, String sonido, float volumen,
                 float tono) {
 
-        /** Null si no hay seccion o cada es 0 o menos (sin rayos). */
+        /**
+         * Null si no hay seccion o cada es 0 o menos (sin rayos). Se lee sin valor por defecto explicito
+         * (s.get(k)): asi, en un config.yml del servidor anterior a la 1.12 (sin 'rayos'), valen los del jar.
+         * Con getInt("cada", 0) Bukkit no mira los del jar y la tormenta se quedaba sin rayos.
+         */
         static Rayo de(ConfigurationSection s) {
             if (s == null) return null;
-            int cada = s.getInt("cada", 0);
+            int cada = (int) Math.round(num(s, "cada", 0));
             if (cada <= 0) return null;
-            return new Rayo(cada, colorDe(s.get("color"), 0xE6E1F5), (float) s.getDouble("tam", 1.6),
-                    Math.max(4, s.getDouble("distancia", 20)), Math.max(4, s.getDouble("altura", 18)),
-                    s.getString("sonido", "minecraft:entity.lightning_bolt.thunder"), (float) s.getDouble("volumen", 0.6),
-                    (float) s.getDouble("tono", 1.0));
+            Object son = s.get("sonido");
+            return new Rayo(cada, colorDe(s.get("color"), 0xE6E1F5), (float) num(s, "tam", 1.6),
+                    Math.max(4, num(s, "distancia", 20)), Math.max(4, num(s, "altura", 18)),
+                    son == null ? "minecraft:entity.lightning_bolt.thunder" : String.valueOf(son),
+                    (float) num(s, "volumen", 0.6), (float) num(s, "tono", 1.0));
+        }
+
+        /** Un numero de la seccion, o del jar si el servidor no lo tiene, o 'def'. */
+        private static double num(ConfigurationSection s, String k, double def) {
+            Object v = s.get(k);
+            return v instanceof Number n ? n.doubleValue() : def;
         }
 
         /** Lo mas lejos que queda la punta del rayo de sus ojos (la distancia con su variacion y la altura). */
@@ -693,10 +704,14 @@ final class Clima implements Listener {
             barridos.remove(u);
             if (!esHora(p.isPlayerTimeRelative(), p.getPlayerTimeOffset(), b.ultimo)) return;
             ConfigurationSection r = seccion(cfg(), "cielo-rojo");
-            long off = offsetHora(p.getWorld().getFullTime(), hora(r), r.getLong("periodo-dia", CIELO_PERIODO));
+            long periodo = r.getLong("periodo-dia", CIELO_PERIODO);
+            long off = offsetHora(p.getWorld().getFullTime(), hora(r), periodo);
             p.setPlayerTime(off, false);
             e.horaPuesta = true;
             e.hora = off;
+            // Para que repasarHora la reponga al cambiar de bloque de 24000 (un estado recien hecho los tiene a 0).
+            e.horaDestino = hora(r);
+            e.periodoDestino = periodo;
             return;
         }
         soltarHora(p, e);
@@ -1072,8 +1087,13 @@ final class Clima implements Listener {
             Barrido b = en.getValue();
             Player p = Bukkit.getPlayer(en.getKey());
             if (p == null || !p.isOnline() || p.isDead() || !p.getWorld().getUID().equals(b.mundo)) {
-                // Se fue, murio o cambio de mundo: lo devuelven soltar() y los oyentes. Aqui solo se olvida.
+                // Se fue, murio o cambio de mundo: lo devuelven soltar() y los oyentes. Por si alguno no llego
+                // (un evento cancelado, otro orden), si sigue en linea con nuestra hora se le devuelve aqui.
                 it.remove();
+                if (p != null && p.isOnline() && esHora(p.isPlayerTimeRelative(), p.getPlayerTimeOffset(), b.ultimo)) {
+                    p.resetPlayerTime();
+                }
+                if (b.estado != null) b.estado.horaPuesta = false;
                 continue;
             }
             boolean rel = p.isPlayerTimeRelative();
@@ -2033,6 +2053,16 @@ final class Clima implements Listener {
         Rayo rayoParca = Rayo.de(seccion(c, PARCA).getConfigurationSection("rayos"));
         h.ok("jar: la tormenta de la PARCA trae rayos", rayoParca != null);
         if (rayoParca != null) autotestRayo(h, PARCA, rayoParca);
+        // Un config.yml del servidor de antes de la 1.12 (sin tormenta-parca ni tormenta.rayos): valen los rayos del jar.
+        if (c.getRoot() != null) {
+            YamlConfiguration viejo = new YamlConfiguration();
+            viejo.setDefaults(c.getRoot());
+            ConfigurationSection cv = viejo.getConfigurationSection(c.getCurrentPath());
+            h.ok("config vieja sin rayos: la tormenta de la PARCA trae los del jar",
+                    cv != null && Rayo.de(seccion(cv, PARCA).getConfigurationSection("rayos")) != null);
+            h.ok("config vieja sin rayos: la tormenta trae los del jar",
+                    cv != null && Rayo.de(seccion(cv, "tormenta").getConfigurationSection("rayos")) != null);
+        }
         for (Sonido so : sonidos(seccion(c, "tormenta").getMapList("sonidos"))) audible(h, "tormenta", so);
     }
 

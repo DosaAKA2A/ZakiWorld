@@ -1310,7 +1310,11 @@ final class ParcaAnomalia extends BossFight implements ParcaViva {
     /** 1.12 · Lo pregunta Clima (via Parca.lluviaSobre) para callar el clima del bioma mientras dura la tormenta. */
     @Override
     public boolean lluviaSobre(UUID jugador) {
-        return jugador != null && conLluvia.containsKey(jugador);
+        // Solo mientras de verdad se pinta (tormenta()): con el cuerpo invalido ambient() no corre y conLluvia
+        // no se vacia hasta limpiar, y el clima del bioma quedaba callado sin tormenta que lo sustituya.
+        return jugador != null && conLluvia.containsKey(jugador)
+                && (estado == Estado.PELEA || estado == Estado.ESPERA)
+                && cuerpo != null && cuerpo.isValid() && !cuerpo.isDead();
     }
 
     private void quitarAmbiente() {
