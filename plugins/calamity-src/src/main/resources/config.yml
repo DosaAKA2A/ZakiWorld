@@ -1138,8 +1138,10 @@ hardcore:
     # el clima de Minecraft, con su lluvia.
     #
     # El clima de cada bioma mientras dura la lluvia o la tormenta del ciclo. Tipos: lluvia-acida, esporas,
-    # polinizacion, ceniza, cielo-rojo y ninguno. El bioma va con o sin namespace; "panacea/*" vale para
-    # todos los de Panacea y "*" para cualquier otro. Gana el mas concreto. Si la quitas, vale esta.
+    # polinizacion, ceniza, cielo-rojo, generico (el temporal: lluvia oscura, viento y truenos, sin dano) y
+    # ninguno. El bioma va con o sin namespace; "panacea/*" vale para todos los de Panacea y "*" para
+    # cualquier otro (los de Minecraft y las zonas de /lbiomes, que tienen su propio clima). Gana el mas
+    # concreto. Si la quitas, vale esta.
     por-bioma:
       panacea/sweltering_swamp: lluvia-acida
       panacea/wildflower_bog: lluvia-acida
@@ -1151,6 +1153,7 @@ hardcore:
       panacea/honeybee_biome: polinizacion
       panacea/condemned_taiga: ceniza
       panacea/crimson_organism: cielo-rojo
+      "panacea/*": generico
       "*": ninguno
     # Al empezar a ver un clima, una linea corta en el centro ("Comienza la lluvia ácida"; en Bedrock va en
     # la barra), no mas de una vez cada tantos segundos por clima.
@@ -1165,17 +1168,26 @@ hardcore:
       profundidad: 12
       # Bajo techo los sonidos suenan a este tanto.
       volumen-a-cubierto: 0.5
+      # Tope de particulas por pulso y jugador, sumando sus capas (con la tormenta incluida). Si un clima
+      # pide mas, todas sus capas se rebajan en proporcion. 0 = sin tope.
+      tope-por-pulso: 60
     # La tormenta del ciclo: el mismo clima de cada bioma, mas denso y con truenos a lo lejos.
     tormenta:
       densidad: 1.5
       sonidos:
         - {sonido: "minecraft:entity.lightning_bolt.thunder", cada: 17, volumen: 0.45, tono: 0.8, distancia: 10}
+      # Rayos en el horizonte, solo a cielo abierto y solo para el: uno cada 'cada' segundos (+-40 %), a
+      # 'distancia' bloques y bajando desde 'altura' sobre el, con su trueno. Valen para cualquier clima en
+      # la tormenta (si el clima no trae los suyos). cada 0 = sin rayos.
+      rayos: {cada: 13, color: "#E6E1F5", tam: 1.6, distancia: 20, altura: 18, sonido: "minecraft:entity.lightning_bolt.thunder", volumen: 0.6, tono: 1.0}
     #
     # Cada clima: nombre y aviso (la linea de la barra al exponerse: "Nombre: aviso"; vacio = sin linea),
     # inicio (lo de aviso-inicio), hojas-protegen (si las hojas cuentan como techo), particulas y sonidos.
     # particulas, por pulso: particula (nombre de Paper), cantidad, radio (horizontal), altura (sobre los
     # pies), espesor (vertical), color "#RRGGBB" y tam (DUST), bloque (FALLING_DUST) y techo (true: tambien
-    # bajo techo; son las que caen y chocan con el tejado. Sin techo, solo a cielo abierto).
+    # bajo techo; son las que caen y chocan con el tejado. Sin techo, solo a cielo abierto). viento: true =
+    # cada particula sale empujada en la direccion del viento a 'velocidad' (una por paquete: pocas).
+    # racha-cada / racha-dura: la capa solo sale 'dura' segundos de cada 'cada' (las rachas de viento).
     # sonidos: sonido, cada (segundos), volumen, tono y distancia (bloques).
     #
     # Lluvia acida: a cielo abierto quema y bajo techo no pasa nada. Primero sale un aviso en la barra y
@@ -1257,6 +1269,42 @@ hardcore:
       sonidos:
         - {sonido: "minecraft:ambient.basalt_deltas.additions", cada: 6, volumen: 0.5, tono: 1.0, distancia: 6}
         - {sonido: "minecraft:block.fire.ambient", cada: 4, volumen: 0.3, tono: 0.8, distancia: 4}
+    # Temporal: el clima de los biomas de Panacea sin clima propio. Solo se ve y se oye: lluvia oscura,
+    # rachas de viento y truenos lejanos; en la tormenta, ademas, rayos (tormenta.rayos). Sin dano. Con
+    # activo en false, esos biomas se quedan sin nada (y sin aviso).
+    generico:
+      activo: true
+      nombre: "Temporal"
+      inicio: "Empieza a llover"
+      # El anuncio si se lo encuentra ya en la fase de tormenta.
+      inicio-tormenta: "Estalla la tormenta"
+      aviso: ""
+      hojas-protegen: true
+      particulas:
+        - {particula: FALLING_DUST, bloque: GRAY_CONCRETE_POWDER, cantidad: 16, radio: 8, altura: 7, espesor: 2, techo: true}
+        - {particula: FALLING_DUST, bloque: CYAN_TERRACOTTA, cantidad: 6, radio: 7, altura: 6, espesor: 2, techo: true}
+        - {particula: DUST, color: "#5B6672", tam: 0.8, cantidad: 6, radio: 6, altura: 2, espesor: 2}
+        - {particula: CLOUD, viento: true, velocidad: 0.35, cantidad: 3, radio: 7, altura: 1.5, espesor: 1.2, racha-cada: 7, racha-dura: 2}
+      sonidos:
+        - {sonido: "minecraft:block.pointed_dripstone.drip_water", cada: 1, volumen: 0.45, tono: 0.8, distancia: 5}
+        - {sonido: "minecraft:entity.breeze.idle_air", cada: 7, volumen: 0.35, tono: 0.6, distancia: 4}
+        - {sonido: "minecraft:entity.lightning_bolt.thunder", cada: 23, volumen: 0.3, tono: 0.6, distancia: 10}
+    # La tormenta de la Parca: la que ve quien esta a 48 bloques de ella desde la fase III, en cualquier
+    # bioma y aunque el ciclo este despejado. Oscura y carmesi, con viento, truenos y rayos rojizos. Mientras
+    # dura, el clima de su bioma no se pinta. Solo se ve y se oye (el dano es el de la Parca).
+    tormenta-parca:
+      activa: true
+      hojas-protegen: true
+      particulas:
+        - {particula: FALLING_DUST, bloque: NETHER_WART_BLOCK, cantidad: 14, radio: 9, altura: 8, espesor: 2, techo: true}
+        - {particula: FALLING_DUST, bloque: BLACK_CONCRETE_POWDER, cantidad: 8, radio: 9, altura: 8, espesor: 2, techo: true}
+        - {particula: DUST, color: "#5A121C", tam: 1.5, cantidad: 7, radio: 7, altura: 2.5, espesor: 2.5}
+        - {particula: LARGE_SMOKE, viento: true, velocidad: 0.3, cantidad: 2, radio: 7, altura: 1.5, espesor: 1.2, racha-cada: 6, racha-dura: 2}
+      sonidos:
+        - {sonido: "minecraft:block.pointed_dripstone.drip_water", cada: 1, volumen: 0.4, tono: 0.6, distancia: 5}
+        - {sonido: "minecraft:entity.breeze.idle_air", cada: 6, volumen: 0.4, tono: 0.5, distancia: 4}
+        - {sonido: "minecraft:entity.lightning_bolt.thunder", cada: 9, volumen: 0.5, tono: 0.6, distancia: 10}
+      rayos: {cada: 8, color: "#FF9C9C", tam: 1.8, distancia: 18, altura: 18, sonido: "minecraft:entity.lightning_bolt.thunder", volumen: 0.7, tono: 0.8}
     # Cielo rojo: el cielo se oscurece en rojo y cada cierto tiempo arde. La resistencia al fuego protege
     # de la quemadura.
     cielo-rojo:
@@ -1274,6 +1322,10 @@ hardcore:
       # segundo la que hay que mandar para que caiga en la 'hora' de arriba. Solo cambiarlo si
       # cambia el timeline del datapack.
       periodo-dia: 72000
+      # Ticks que tarda su cielo en pasar al rojo al entrar, y del rojo al suyo al salir (andando, volando o
+      # porque escampa): la hora avanza por el camino corto del dia de Panacea en vez de saltar. Morir,
+      # cambiar de mundo, desconectarse o teletransportarse lejos lo devuelven en el acto. 0 = salto.
+      transicion-ticks: 40
       # En la zona spawn, si es de este bioma, el mismo cielo y las mismas particulas (sin fuego ni dano).
       # Es el unico clima que entra en la zona spawn.
       en-spawn: true

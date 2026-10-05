@@ -15,7 +15,6 @@ import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.Particle;
 import org.bukkit.SoundCategory;
-import org.bukkit.WeatherType;
 import org.bukkit.World;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.file.YamlConfiguration;
@@ -212,8 +211,13 @@ final class ParcaAnomalia extends BossFight implements ParcaViva {
 
     private BossBar barra;
     private final Set<UUID> viendo = new HashSet<>();
-    /** A quien se le ha puesto la lluvia (fase III) y la noche (fase IV): se les quita al alejarse o al acabar. */
-    private final Set<UUID> conLluvia = new HashSet<>();
+    /**
+     * A quien le cae la tormenta (fase III en adelante), con lo que Clima le mide cada segundo, y a quien se
+     * le ha puesto la noche (fase IV). 1.12: la tormenta son particulas y sonidos suyos (Clima, seccion
+     * tormenta-parca), nada de lluvia de Minecraft: al salir de aqui deja de pintarse y no hay nada que
+     * devolver. La noche si se devuelve al alejarse o al acabar.
+     */
+    private final Map<UUID, Clima.Cielo> conLluvia = new HashMap<>();
     private final Set<UUID> conNoche = new HashSet<>();
 
     ParcaAnomalia(AnomalyPlugin plugin, ActiveAnomaly event, Location arena, PuenteAnomalia puente,
@@ -508,6 +512,7 @@ final class ParcaAnomalia extends BossFight implements ParcaViva {
         if (estado == Estado.FIN) return;
         seguirCuerpo();
         presencia(w, tk);
+        if (!conLluvia.isEmpty()) tormenta(tk);
         if (tk % 20 == 0) {
             ambiente();
             refrescarBarra();
@@ -1245,26 +1250,26 @@ final class ParcaAnomalia extends BossFight implements ParcaViva {
     }
 
     /**
-     * El cielo de cada fase, solo para quien este a 48 (por jugador: el mundo no se toca): en la
-     * III llueve, en la IV ademas es de noche. Al alejarse o al acabar se devuelve el suyo.
+     * El cielo de cada fase, solo para quien este a 48 (por jugador: el mundo no se toca): desde la
+     * III, su tormenta; en la IV ademas es de noche. Al alejarse o al acabar se devuelve el suyo.
+     *
+     * 1.12 · La tormenta ya no es la lluvia de Minecraft (setPlayerWeather DOWNFALL, azul y con el
+     * cielo gris): es la de Calamity, oscura y carmesi, solo para el (Clima.segundoParca y, cada
+     * pulso, tormenta()). Se mide y suena aqui una vez por segundo.
      */
     private void ambiente() {
         if (!aj.ambiente || cuerpo == null) return;
         int f = estado == Estado.PELEA || estado == Estado.ESPERA ? phase() : 0;
         Set<UUID> cerca = new HashSet<>();
         if (f >= 3) for (Player p : Fx.viewersNear(cuerpo.getLocation(), RADIO_AMBIENTE)) cerca.add(p.getUniqueId());
+        conLluvia.keySet().removeIf(id -> !cerca.contains(id));
+        Clima clima = hc.clima();
         for (UUID id : cerca) {
             Player p = hc.plugin().getServer().getPlayer(id);
             if (p == null) continue;
-            if (conLluvia.add(id)) p.setPlayerWeather(WeatherType.DOWNFALL);
+            Clima.Cielo c = conLluvia.computeIfAbsent(id, k -> new Clima.Cielo());
+            if (clima != null) hc.seguro("clima", () -> clima.segundoParca(p, c));
             if (f >= 4 && conNoche.add(id)) p.setPlayerTime(18000, false);
-        }
-        for (Iterator<UUID> it = conLluvia.iterator(); it.hasNext(); ) {
-            UUID id = it.next();
-            if (cerca.contains(id)) continue;
-            it.remove();
-            Player p = hc.plugin().getServer().getPlayer(id);
-            if (p != null) p.resetPlayerWeather();
         }
         for (Iterator<UUID> it = conNoche.iterator(); it.hasNext(); ) {
             UUID id = it.next();
@@ -1275,17 +1280,40 @@ final class ParcaAnomalia extends BossFight implements ParcaViva {
         }
     }
 
-    /** Calamity 1.9.0: lo pregunta Clima (via Parca.cieloSobre) antes de tocarle el cielo a nadie. */
+    /**
+     * 1.12 · Un pulso de la tormenta a quien le toque en este tick (cada uno en el suyo, cada
+     * efectos.cada-ticks). Solo a quien sigue en linea, vivo, en el mundo de la PARCA y a 48: quien se
+     * desconecta, cambia de mundo o se aleja deja de verla en el acto, sin esperar al segundo.
+     */
+    private void tormenta(long tk) {
+        if (estado != Estado.PELEA && estado != Estado.ESPERA) return;
+        Clima clima = hc.clima();
+        if (clima == null) return;
+        Location centro = cuerpo.getLocation();
+        double r2 = RADIO_AMBIENTE * RADIO_AMBIENTE;
+        for (Map.Entry<UUID, Clima.Cielo> en : conLluvia.entrySet()) {
+            if (!clima.tocaPulso(en.getKey(), tk)) continue;
+            Player p = hc.plugin().getServer().getPlayer(en.getKey());
+            if (p == null || !p.isOnline() || p.isDead() || p.getWorld() != centro.getWorld()
+                    || p.getLocation().distanceSquared(centro) > r2) continue;
+            Clima.Cielo c = en.getValue();
+            hc.seguro("clima", () -> clima.pulsoParca(p, c));
+        }
+    }
+
+    /** Calamity 1.9.0: lo pregunta Clima (via Parca.cieloSobre) antes de tocarle la hora a nadie. 1.12: solo la noche. */
     @Override
     public boolean ambienteSobre(UUID jugador) {
-        return jugador != null && (conLluvia.contains(jugador) || conNoche.contains(jugador));
+        return jugador != null && conNoche.contains(jugador);
+    }
+
+    /** 1.12 · Lo pregunta Clima (via Parca.lluviaSobre) para callar el clima del bioma mientras dura la tormenta. */
+    @Override
+    public boolean lluviaSobre(UUID jugador) {
+        return jugador != null && conLluvia.containsKey(jugador);
     }
 
     private void quitarAmbiente() {
-        for (UUID id : conLluvia) {
-            Player p = hc.plugin().getServer().getPlayer(id);
-            if (p != null) p.resetPlayerWeather();
-        }
         for (UUID id : conNoche) {
             Player p = hc.plugin().getServer().getPlayer(id);
             if (p != null) p.resetPlayerTime();

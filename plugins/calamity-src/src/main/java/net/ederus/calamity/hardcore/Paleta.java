@@ -132,6 +132,8 @@ public final class Paleta {
     public static final TextColor POLEN = TextColor.color(0xF2D36B);
     /** Calamity 1.12 · La ceniza: gris calido claro, el de la ceniza que cae. */
     public static final TextColor CENIZA = TextColor.color(0xD3CBBE);
+    /** Calamity 1.12 · El temporal de los biomas sin clima propio: gris pizarra claro, el de las nubes de tormenta. */
+    public static final TextColor TEMPORAL = TextColor.color(0xAEB8C4);
 
     // --------------------------------------------------------------- piezas
 

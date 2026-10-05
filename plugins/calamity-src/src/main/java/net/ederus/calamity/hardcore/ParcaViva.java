@@ -116,11 +116,16 @@ interface ParcaViva {
     void limpiar();
 
     /**
-     * Calamity 1.9.0: si le esta poniendo su cielo a ese jugador (la lluvia de la fase III o la
-     * noche de la IV). Lo pregunta Clima para no pisarlo: mientras la PARCA pelea, el cielo es
-     * suyo. La de reserva no toca el cielo de nadie.
+     * Calamity 1.9.0: si le esta poniendo su cielo a ese jugador (1.12: la noche de la fase IV; la
+     * tormenta de la III son solo particulas y no toca el cielo). Lo pregunta Clima para no pisarlo:
+     * mientras la PARCA pelea, el cielo es suyo. La de reserva no toca el cielo de nadie.
      */
     default boolean ambienteSobre(UUID jugador) {
+        return false;
+    }
+
+    /** 1.12 · Si le cae su tormenta (fase III en adelante). La de reserva no tiene. */
+    default boolean lluviaSobre(UUID jugador) {
         return false;
     }
 }
