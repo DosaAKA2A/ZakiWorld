@@ -188,8 +188,8 @@ final class Aduana {
         if (!r.tipoTopado()) {
             // 1.12: lo que se consigue dentro lleva la entrada (la Racha solo sube con lo de esta entrada).
             if (online != null && hc.esHardcore(online)) {
-                String entrada = Tasacion.entrada(hc, u);
-                for (ItemStack it : rel) Tasacion.marcarEntrada(it, entrada);
+                String marca = Tasacion.marca(hc, u);
+                for (ItemStack it : rel) Tasacion.marcarEntrada(it, marca);
             }
             entregar(p, online, t, pago, rel, objetoSiDentro, recoger);
             if (pago.mc() > 0) vigilarGlobal(pago.mc(), ahora);

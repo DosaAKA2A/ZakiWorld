@@ -56,8 +56,9 @@ public final class Marcas {
     public static final NamespacedKey RELIQUIA_MINIJEFE = clave("reliquia_minijefe");
     public static final NamespacedKey RELIQUIA_VALIDA = clave("reliquia_valida");
     /**
-     * STRING: la entrada a Calamity (los millis de Tasacion.alEntrar) en la que se consiguio una Reliquia
-     * de grado II o mas (1.12). Solo sube la Racha de Codicia si es la entrada de ahora.
+     * STRING: el jugador y la entrada a Calamity ("uuid@millis", Tasacion.marca) en la que se consiguio una
+     * Reliquia de grado II o mas (1.12). Solo sube la Racha de Codicia si es la de ahora; las de otra
+     * entrada se quitan al entrar otra vez y al vender (Tasacion.limpiarMarcas).
      */
     public static final NamespacedKey RELIQUIA_ENTRADA = clave("reliquia_entrada");
     public static final NamespacedKey TROFEO = clave("trofeo");

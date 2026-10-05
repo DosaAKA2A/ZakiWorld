@@ -203,6 +203,8 @@ final class Tasacion {
     void alEntrar(Player p) {
         hc.datos().set("expedicion." + p.getUniqueId(), String.valueOf(System.currentTimeMillis()));
         hc.marcarSucio();
+        // La entrada de antes ya no sube la Racha: sus marcas fuera, y las II vuelven a apilar con las demas.
+        limpiarMarcas(p, marca(hc, p.getUniqueId()));
     }
 
     private String expedicion(UUID u) {
@@ -212,6 +214,51 @@ final class Tasacion {
     /** La entrada a Calamity en la que esta (o estuvo por ultima vez) el jugador: los millis de alEntrar. */
     static String entrada(Hardcore hc, UUID u) {
         return hc.datos().getString("expedicion." + u, "");
+    }
+
+    /**
+     * Lo que se apunta en la Reliquia (Marcas.RELIQUIA_ENTRADA): el jugador y su entrada, "uuid@millis".
+     * Con el UUID, dos jugadores que entran en el mismo milisegundo no comparten marca. Sin entrada, "".
+     */
+    static String marca(Hardcore hc, UUID u) {
+        return marca(u, entrada(hc, u));
+    }
+
+    static String marca(UUID u, String entrada) {
+        return u == null || entrada == null || entrada.isEmpty() ? "" : u + "@" + entrada;
+    }
+
+    /**
+     * Quita la marca de entrada de las Reliquias del inventario (y el cursor) que no lleven la de ahora
+     * (actual): ya no suben la Racha, y sin ella las II vuelven a apilar con las demas. Cuantas cambio.
+     */
+    static int limpiarMarcas(Player p, String actual) {
+        if (p == null) return 0;
+        int n = 0;
+        PlayerInventory inv = p.getInventory();
+        ItemStack[] c = inv.getContents();
+        for (int i = 0; i < c.length; i++) {
+            if (quitarMarcaVieja(c[i], actual)) {
+                inv.setItem(i, c[i]);
+                n++;
+            }
+        }
+        ItemStack cursor = p.getItemOnCursor();
+        if (quitarMarcaVieja(cursor, actual)) {
+            p.setItemOnCursor(cursor);
+            n++;
+        }
+        return n;
+    }
+
+    /** Quita la marca si la hay y no es actual (actual vacio o null: cualquiera). Si la quito. */
+    static boolean quitarMarcaVieja(ItemStack it, String actual) {
+        String m = entradaDe(it);
+        if (m == null || (actual != null && !actual.isEmpty() && actual.equals(m))) return false;
+        ItemMeta meta = it.getItemMeta();
+        meta.getPersistentDataContainer().remove(Marcas.RELIQUIA_ENTRADA);
+        it.setItemMeta(meta);
+        return true;
     }
 
     /**
@@ -429,6 +476,8 @@ final class Tasacion {
             return null;
         }
         Reliquias rel = hc.reliquias();
+        // Las marcas de otra entrada no cuentan: fuera antes de leer, y las II se juntan con las demas.
+        limpiarMarcas(p, marca(hc, p.getUniqueId()));
         List<ItemStack> quitadas = new ArrayList<>();
         int quedan = 0;
         if (rel != null && activas() && !ESENCIAS.equals(clave)) {
@@ -561,7 +610,7 @@ final class Tasacion {
         if (rel != null) for (ItemStack it : items) if (rel.es(it)) piezas.add(leer(rel, it));
         String rutaDia = "tasacion-dia." + u;
         int[] ya = yaHoy(u);
-        Cuenta k = contar(piezas, reg, ya[1], ya[2], v, ahora, expedicion(u));
+        Cuenta k = contar(piezas, reg, ya[1], ya[2], v, ahora, marca(hc, u));
 
         Censo.Foto foto = online == null ? null : hc.valor("censo", () -> Censo.de(online), null);
         Racha racha = hc.racha();
@@ -1185,6 +1234,14 @@ final class Tasacion {
         reg.emitida(dup, 3, "prueba", ahora);
         h.ok("racha: una ya cobrada (duplicada) de esta entrada no cuenta", !contar(List.of(new Pieza(3, null, dup, ahora,
                 0, null, false, 1, e2)), cobradaYa(reg, dup, ahora), 0, 0, v, ahora, e2).deLaEntrada);
+
+        // La marca lleva el jugador: dos que entran en el mismo milisegundo no comparten marca.
+        UUID ua = UUID.randomUUID(), ub = UUID.randomUUID();
+        h.ok("racha: la marca es uuid@entrada", marca(ua, "1000").equals(ua + "@1000"));
+        h.ok("racha: misma entrada, otro jugador, otra marca", !marca(ua, "1000").equals(marca(ub, "1000")));
+        h.ok("racha: sin entrada no hay marca", marca(ua, "").isEmpty() && marca(ua, null).isEmpty() && marca(null, "1").isEmpty());
+        h.ok("racha: la Reliquia de otro jugador (misma entrada) no cuenta", !contar(List.of(new Pieza(3, null, iii, ahora,
+                0, null, false, 1, marca(ub, e2))), reg, 0, 0, v, ahora, marca(ua, e2)).deLaEntrada);
 
         // Extras, como se leen en el menu.
         String cam = UUID.randomUUID().toString(), lag = UUID.randomUUID().toString();
