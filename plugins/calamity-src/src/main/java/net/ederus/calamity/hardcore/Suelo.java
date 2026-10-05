@@ -50,9 +50,19 @@ final class Suelo {
         final BukkitTask[] t = new BukkitTask[1];
         t[0] = plugin.getServer().getScheduler().runTaskLater(plugin, () -> {
             TAREAS.remove(t[0]);
-            if (it.isValid() && dueno.equals(it.getOwner())) it.setOwner(null);
+            if (it.isValid() && dueno.equals(it.getOwner()) && !sigueSuyo(plugin, it)) it.setOwner(null);
         }, 200L);
         TAREAS.add(t[0]);
+    }
+
+    /**
+     * Rama venta-oren: una Reliquia o Esencia en el suelo fuera de Calamity no se suelta nunca (si no, a
+     * los 10 s la cogeria cualquiera y seria otra forma de pasarsela a otro: Sellos.onRecoger).
+     */
+    private static boolean sigueSuyo(CalamityPlugin plugin, Item it) {
+        Hardcore hc = plugin.hardcore();
+        Sellos s = hc == null ? null : hc.sellos();
+        return s != null && s.selladaFuera(it);
     }
 
     /** Al parar: los que queden en el suelo se quedan con su dueno (no pasa nada). */

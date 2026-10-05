@@ -381,6 +381,11 @@ final class Sellos implements Listener {
         it.setCanMobPickup(false);
     }
 
+    /** Si ese objeto del suelo esta fuera de Calamity, con el sello de fuera, y es Reliquia o Esencia (Suelo). */
+    boolean selladaFuera(Item it) {
+        return it != null && !hc.esHardcore(it.getWorld()) && sello("fuera") && valioso(it.getItemStack());
+    }
+
     /** Fuera: ningun mob, y solo quien la tiro si se sabe quien fue. */
     @EventHandler(priority = EventPriority.LOWEST, ignoreCancelled = true)
     public void onRecoger(EntityPickupItemEvent e) {
