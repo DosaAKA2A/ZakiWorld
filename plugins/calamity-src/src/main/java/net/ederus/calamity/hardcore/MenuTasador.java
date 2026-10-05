@@ -779,7 +779,7 @@ final class MenuTasador implements Listener {
             case "destacado" -> Material.GOLDEN_SWORD;
             case "minijefe" -> Material.WITHER_SKELETON_SKULL;
             case "cofre" -> Material.CHEST_MINECART;
-            case "reliquia-ii", "tasa-ii" -> Material.RESIN_CLUMP;
+            case "reliquia-ii", "tasa-ii" -> Material.MANGROVE_PROPAGULE;
             case "minutos" -> Material.CLOCK;
             case "minutos-limite" -> Material.SOUL_LANTERN;
             case "minutos-sin-frasco" -> Material.GLASS_BOTTLE;

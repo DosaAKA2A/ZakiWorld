@@ -1,5 +1,7 @@
 package net.ederus.calamity.hardcore;
 
+import io.papermc.paper.datacomponent.DataComponentTypes;
+import io.papermc.paper.event.player.PlayerFlowerPotManipulateEvent;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.TextColor;
 import net.kyori.adventure.text.format.TextDecoration;
@@ -10,21 +12,30 @@ import org.bukkit.OfflinePlayer;
 import org.bukkit.command.CommandSender;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.file.YamlConfiguration;
+import org.bukkit.entity.Allay;
 import org.bukkit.entity.HumanEntity;
 import org.bukkit.entity.Player;
 import org.bukkit.event.Event;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
+import org.bukkit.event.block.BlockDispenseEvent;
 import org.bukkit.event.block.BlockPlaceEvent;
+import org.bukkit.event.block.CrafterCraftEvent;
+import org.bukkit.event.entity.EntityPickupItemEvent;
 import org.bukkit.event.inventory.BrewEvent;
+import org.bukkit.event.inventory.FurnaceBurnEvent;
 import org.bukkit.event.inventory.FurnaceSmeltEvent;
 import org.bukkit.event.inventory.InventoryClickEvent;
+import org.bukkit.event.inventory.InventoryDragEvent;
+import org.bukkit.event.inventory.InventoryMoveItemEvent;
+import org.bukkit.event.inventory.InventoryType;
 import org.bukkit.event.inventory.PrepareAnvilEvent;
 import org.bukkit.event.inventory.PrepareGrindstoneEvent;
 import org.bukkit.event.inventory.PrepareItemCraftEvent;
 import org.bukkit.event.inventory.PrepareSmithingEvent;
 import org.bukkit.event.player.PlayerChangedWorldEvent;
+import org.bukkit.event.player.PlayerInteractEntityEvent;
 import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.event.player.PlayerJoinEvent;
 import org.bukkit.inventory.Inventory;
@@ -81,11 +92,8 @@ final class Reliquias implements Listener {
     static final String SELLO = "sello-minijefe";
     static final String ECLIPSADA = "eclipsada";
 
-    /** Ambar: el lore y los nombres altos. */
+    /** Ambar: los avisos de chat sobre Reliquias (no el lore: cada Reliquia tiene su Tono). */
     static final TextColor AMBAR = TextColor.color(0xE8A33D);
-    /** Del verde palido de Calamity al ambar segun el grado; la IV en el naranja de la Esencia. */
-    private static final TextColor[] COLOR_GRADO = {
-            AMBAR, TextColor.color(0x9FD6A0), TextColor.color(0xC4BD6E), AMBAR, TextColor.color(0xE8903C)};
     static final String[] ROMANO = {"", "I", "II", "III", "IV"};
 
     private final Hardcore hc;
@@ -140,7 +148,7 @@ final class Reliquias implements Listener {
         ItemStack item = new ItemStack(material(c, g, esp));
         ItemMeta meta = item.getItemMeta();
         if (meta == null) return item;
-        meta.displayName(texto(nombre(c, g, esp, minijefe), COLOR_GRADO[g]));
+        meta.displayName(tono(g, esp).nombre(nombre(c, g, esp, minijefe)));
 
         PersistentDataContainer pdc = meta.getPersistentDataContainer();
         pdc.set(Marcas.RELIQUIA, PersistentDataType.INTEGER, g);
@@ -165,6 +173,8 @@ final class Reliquias implements Listener {
                 apilable ? null : fechaCorta(ahora + caducaMillis())).lore());
         meta.setEnchantmentGlintOverride(true);
         item.setItemMeta(meta);
+        // Sin la cancion del disco ni el material de adorno del ladrillo, igual que una renovada (desactivar).
+        desactivar(item);
         if (id != null) registro.emitida(id, g, o, ahora);
         return item;
     }
@@ -179,15 +189,27 @@ final class Reliquias implements Listener {
         return DateTimeFormatter.ofPattern("dd/MM").format(Instant.ofEpochMilli(millis).atZone(zona));
     }
 
-    private static Component texto(String s, TextColor color) {
-        return Component.text(s, color).decoration(TextDecoration.ITALIC, false);
-    }
-
     // ------------------------------------------------------------------- lore
 
-    /** El color del nombre de una Reliquia de ese grado: el acento de todo su lore. */
-    static TextColor color(int grado) {
-        return COLOR_GRADO[Math.max(1, Math.min(4, grado))];
+    /**
+     * Rama lore-items · El tono de una Reliquia: el de su grado (I turquesa, II azul, III violeta, IV ambar)
+     * o el de su especial (Campana carmesi, Lagrima celeste, Sello el de los minijefes, Eclipsada magenta).
+     */
+    static Paleta.Tono tono(int grado, String esp) {
+        if (esp != null) {
+            return Ficha.tono(switch (esp) {
+                case CAMPANA -> "campana";
+                case LAGRIMA -> "lagrima";
+                case SELLO -> "sello";
+                default -> "eclipsada";
+            });
+        }
+        return Ficha.tono("grado-" + Math.max(1, Math.min(4, grado)));
+    }
+
+    /** El color de una Reliquia en los menus (el de Oren): el tono fuerte de su familia. */
+    static TextColor color(int grado, String esp) {
+        return tono(grado, esp).fuerte();
     }
 
     /** La linea de historia de cada clase de Reliquia. */
@@ -201,7 +223,7 @@ final class Reliquias implements Listener {
             };
         }
         return switch (g) {
-            case 1 -> "Esquirla del umbral. Se quiebra cada vez que alguien no vuelve.";
+            case 1 -> "Se quiebra cada vez que alguien no vuelve.";
             case 2 -> "Aún tararea la nana que Bracken cantaba antes de pudrirse.";
             case 3 -> "Resina que el bosque lloró sobre los que no volvieron.";
             default -> "Lleva algo atrapado dentro. A veces se mueve.";
@@ -209,13 +231,13 @@ final class Reliquias implements Listener {
     }
 
     /**
-     * De donde salio, dicho para el jugador ("Cayó del Heraldo Carmesí"), o null si no se sabe o no
+     * De donde salio, dicho para el jugador ("Cayó del Heraldo Carmesí."), o null si no se sabe o no
      * importa (admin). Lo que guarda RELIQUIA_ORIGEN: mob, destacado, minijefe, cofre, eco, parca, eclipse.
      */
     static String origen(String origen, int nivel, String minijefe) {
         if (origen == null) return null;
         String nv = nivel > 0 ? " de nivel {" + nivel + "}" : "";
-        return switch (origen) {
+        String s = switch (origen) {
             case "mob" -> "La soltó una criatura" + (nivel > 0 ? nv : " de Calamity");
             case "destacado" -> "La soltó una criatura destacada" + nv;
             case "minijefe" -> minijefe == null || minijefe.isBlank() ? "Cayó de un minijefe" + nv
@@ -226,13 +248,14 @@ final class Reliquias implements Listener {
             case "eclipse" -> "Cayó durante un Eclipse";
             default -> null;
         };
+        return s == null ? null : s + ".";
     }
 
     /**
-     * El lore de una Reliquia con la plantilla comun (Ficha): grado en estrellas, historia, origen, lo que
-     * vale al salir vivo (reliquias.grados.N de la config viva), lo que da de mas y para que sirve (los
-     * especiales, de la Tasacion y de altar.trueques), si es pieza unica y cuando caduca. Pura: la prueba
-     * el autotest "fichas".
+     * El lore de una Reliquia con la plantilla comun (Ficha): grado en estrellas, historia, lo que paga Oren
+     * (reliquias.grados.N de la config viva), lo que da de mas y para que sirve (los especiales, de la
+     * Tasacion y de altar.trueques), de donde salio, si es pieza unica y cuando caduca. Pura: la prueba el
+     * autotest "fichas".
      *
      * @param origen null para no decirlo (las de monton, que no lo guardan)
      * @param caduca "18/10" o null (las de monton no caducan)
@@ -241,58 +264,63 @@ final class Reliquias implements Listener {
                        String origen, boolean unica, String caduca) {
         int g = Math.max(1, Math.min(4, grado));
         boolean masculino = SELLO.equals(esp);
-        Ficha f = new Ficha(color(g)).tipo("Reliquia · Grado " + ROMANO[g] + " " + Ficha.estrellas(g)).filete()
-                .historia(historia(g, esp));
-        f.texto(origen(origen, nivel, minijefe));
-        f.filete().etiqueta(unica ? "Oren te paga" : "Oren te paga por cada una");
-        f.dato(Ficha.valor(c.getDouble("reliquias.grados." + g + ".esencias", ESENCIAS_SERIE[g]),
-                c.getLong("reliquias.grados." + g + ".mobcoins", MC_SERIE[g])));
+        Ficha f = new Ficha(tono(g, esp)).cabecera(esp == null ? "Reliquia" : "Reliquia especial", "Grado " + ROMANO[g], g)
+                .historia(historia(g, esp))
+                .seccion("Se vende a Oren, en el spawn");
+        double es = c.getDouble("reliquias.grados." + g + ".esencias", ESENCIAS_SERIE[g]);
+        long mc = c.getLong("reliquias.grados." + g + ".mobcoins", MC_SERIE[g]);
+        if (unica) {
+            f.dato(Ficha.valor(es, mc));
+        } else {
+            // Las de monton, por unidad: "5 MobCoins cada una", "1 Esencia por cada 5" y el tope del dia.
+            if (mc > 0) f.dato(Ficha.cantidad(mc, "MobCoin", "MobCoins") + " cada una");
+            String e = Ficha.esencias(es);
+            if (e != null) f.dato(e.contains("por cada") ? e : e + " cada una");
+            f.dato("Hasta {" + c.getInt("reliquias.tope-dia." + g, g == 1 ? 60 : 30) + "} al día");
+        }
 
+        String falta = null;
         int minimo = c.getInt("reliquias.especiales.campana-parca.fragmento-nivel-minimo", 40);
         if (CAMPANA.equals(esp)) {
             boolean fragmento = nivel >= minimo;
-            if (fragmento) f.dato("+ {1} Fragmento de Guadaña");
-            if (g == 4) f.dato("+ " + Ficha.probabilidad(c.getDouble("reliquias.especiales.campana-parca.llave-caos-iv", 0.25))
-                    + " de ganar una Llave del Caos");
-            if (fragmento) {
-                usos(f, Ficha.usosDeCredito(c, "fragmento"), "Fragmento", "Fragmentos");
-            } else {
-                f.nota("Solo la de una Parca de nivel {" + minimo + "} o más da un Fragmento de Guadaña.");
-            }
+            if (fragmento) f.dato("+ {1} <Fragmento de Guadaña>");
+            if (g == 4) f.dato(Ficha.probabilidad(c.getDouble("reliquias.especiales.campana-parca.llave-caos-iv", 0.25))
+                    + " de una <Llave del Caos>");
+            if (fragmento) usos(f, Ficha.usosDeCredito(c, "fragmento"), "Fragmento", "Fragmentos");
+            else falta = "Solo la de una Parca de nivel {" + minimo + "} o más da un Fragmento de Guadaña.";
         } else if (LAGRIMA.equals(esp)) {
             boolean marca = valida || g == 4;
-            if (marca) f.dato("+ {1} Marca de Eco (máximo {" + c.getInt("eco.marcas.dia", 2) + "} al día)");
-            if (g == 4) f.dato("+ " + Ficha.probabilidad(c.getDouble("reliquias.especiales.lagrima-eco.llave-caos-iv", 0.20))
-                    + " de ganar una Llave del Caos");
+            if (marca) {
+                f.dato("+ {1} <Marca de Eco>");
+                f.dato("Máximo {" + c.getInt("eco.marcas.dia", 2) + "} Marcas al día");
+            }
+            if (g == 4) f.dato(Ficha.probabilidad(c.getDouble("reliquias.especiales.lagrima-eco.llave-caos-iv", 0.20))
+                    + " de una <Llave del Caos>");
             if (marca) usos(f, Ficha.usosDeCredito(c, "marca"), "Marca", "Marcas");
-            else f.nota("Solo la de una caza válida da Marca de Eco.");
+            else falta = "Solo la de una caza válida da Marca de Eco.";
         } else if (SELLO.equals(esp)) {
             List<Ficha.Uso> u = minijefe == null || minijefe.isBlank() ? List.of()
                     : Ficha.usosDeCredito(c, "sello:" + minijefe.trim().toLowerCase(Locale.ROOT));
             if (u.isEmpty()) {
-                f.etiqueta("Para qué sirve").dato("Vale como crédito en la Forja de Vael.");
+                f.seccion("Para qué sirve").dato("Vale como crédito en la Forja de Vael.");
             } else {
-                f.etiqueta("Desbloquea en la Forja de Vael");
-                for (Ficha.Uso x : u) f.dato("{" + x.da() + "}");
+                f.seccion("Desbloquea en la Forja de Vael");
+                for (Ficha.Uso x : u) f.dato("<" + x.da() + ">");
             }
         }
 
-        if (unica) f.nota("Pieza única · no se apila");
-        else f.nota("Se pagan hasta {" + c.getInt("reliquias.tope-dia." + g, g == 1 ? 60 : 30) + "} al día");
-        if (caduca != null) f.nota("Caduca el {" + caduca + "}");
-        return f.filete()
-                .accion(masculino ? "Véndeselo a Oren, en el spawn de Calamity." : "Véndesela a Oren, en el spawn de Calamity.")
-                .nota(masculino ? "Si mueres en Calamity, lo pierdes." : "Si mueres en Calamity, la pierdes.")
+        f.hueco().nota(falta).nota(origen(origen, nivel, minijefe));
+        if (unica) f.nota(caduca != null ? "Pieza única. Caduca el {" + caduca + "}." : "Pieza única: no se apila.");
+        return f.nota(masculino ? "Si mueres sin venderlo, lo pierdes." : "Si mueres sin venderla, la pierdes.")
                 .nota("Fuera de Calamity no se puede guardar.");
     }
 
-    /** "Para qué sirve" y una linea por pieza: " 7 Fragmentos · Guadaña de la Parca". */
+    /** "◆ Para qué sirve" y una linea por pieza: " 7 Fragmentos · Guadaña de la Parca". */
     private static void usos(Ficha f, List<Ficha.Uso> usos, String uno, String varios) {
         if (usos.isEmpty()) return;
-        f.etiqueta("Para qué sirve");
-        for (Ficha.Uso u : usos) f.dato(Ficha.cantidad(u.cantidad(), uno, varios) + " · " + u.da());
+        f.seccion("Para qué sirve");
+        for (Ficha.Uso u : usos) f.dato(Ficha.cantidad(u.cantidad(), uno, varios) + " · <" + u.da() + ">");
     }
-
     /** Los valores de serie de la Tasacion (Tasacion.Valores), por si la config no trae el grado. */
     private static final double[] ESENCIAS_SERIE = {0, 0.2, 1, 3, 6};
     private static final long[] MC_SERIE = {0, 5, 15, 40, 100};
@@ -310,8 +338,39 @@ final class Reliquias implements Listener {
         return s;
     }
 
-    private static Material material(ConfigurationSection c, int g, String esp) {
-        String def = switch (esp == null ? "" : esp) {
+    /**
+     * El material de serie de cada Reliquia. Rama lore-items (Dosa): la Astilla es una sandia reluciente, el
+     * Fragmento de Nana un propagulo de mangle, el Ambar Coagulado un ladrillo de resina, el Ambar Mayor la
+     * plantilla del adorno Rayo, la Eclipsada el disco Lava Chicken y la Lagrima un farol de cobre oxidado.
+     * Todos tienen un uso vanilla (pociones, plantarse, crafteos, herreria, tocadiscos, colocarse) que se
+     * corta en los bloqueos de abajo.
+     */
+    static String materialDeSerie(int g, String esp) {
+        return switch (esp == null ? "" : esp) {
+            case CAMPANA -> "BELL";
+            case LAGRIMA -> "OXIDIZED_COPPER_LANTERN";
+            case SELLO -> "FIRE_CHARGE";
+            case ECLIPSADA -> "MUSIC_DISC_LAVA_CHICKEN";
+            default -> switch (g) {
+                case 1 -> "GLISTERING_MELON_SLICE";
+                case 2 -> "MANGROVE_PROPAGULE";
+                case 3 -> "RESIN_BRICK";
+                default -> "BOLT_ARMOR_TRIM_SMITHING_TEMPLATE";
+            };
+        };
+    }
+
+    /** Los materiales que pone una config (grados 1-4, Campana, Lagrima, Sello, Eclipsada), para el autotest. */
+    static List<String> materialesDeSerie(ConfigurationSection c) {
+        List<String> out = new ArrayList<>();
+        for (int g = 1; g <= 4; g++) out.add(c.getString("reliquias.grados." + g + ".material", "?"));
+        for (String e : List.of(CAMPANA, LAGRIMA, SELLO, ECLIPSADA)) out.add(c.getString("reliquias.especiales." + e + ".material", "?"));
+        return out;
+    }
+
+    /** El material de serie de antes de la rama lore-items: el que traen las Reliquias que ya circulan. */
+    static String materialViejo(int g, String esp) {
+        return switch (esp == null ? "" : esp) {
             case CAMPANA -> "BELL";
             case LAGRIMA -> "ECHO_SHARD";
             case SELLO -> "FIRE_CHARGE";
@@ -322,10 +381,22 @@ final class Reliquias implements Listener {
                 default -> "RESIN_CLUMP";
             };
         };
+    }
+
+    /**
+     * El material de una Reliquia: el de la config (reliquias.grados.N.material, reliquias.especiales.X.material)
+     * o el de serie. Un config.yml ya instalado conserva los materiales de antes (Bukkit no los cambia): si lo
+     * que pone es el material de serie VIEJO, vale el nuevo, como conTildes con los nombres. Si Dosa pone otro,
+     * manda lo suyo.
+     */
+    static Material material(ConfigurationSection c, int g, String esp) {
+        String def = materialDeSerie(g, esp);
         String ruta = esp != null ? "reliquias.especiales." + esp + ".material" : "reliquias.grados." + g + ".material";
-        Material m = Material.matchMaterial(c.getString(ruta, def));
+        String puesto = c.getString(ruta, def);
+        if (puesto != null && puesto.trim().equalsIgnoreCase(materialViejo(g, esp))) puesto = def;
+        Material m = puesto == null ? null : Material.matchMaterial(puesto.trim());
         if (m == null || !m.isItem() || m.isAir()) m = Material.matchMaterial(def);
-        return m == null ? Material.PRISMARINE_SHARD : m;
+        return m == null ? Material.GLISTERING_MELON_SLICE : m;
     }
 
     private static String nombre(ConfigurationSection c, int g, String esp, String minijefe) {
@@ -481,7 +552,10 @@ final class Reliquias implements Listener {
      * sale contigo). La comprobacion barata es la marca del objeto.
      */
 
-    /** La Campana es una campana y el Ambar se coloca: no se pone ninguna. */
+    /**
+     * Ninguna se coloca ni se planta: la Campana es una campana, el propagulo de la Nana se planta en barro o
+     * tierra (y se lo comeria el suelo) y el farol de la Lagrima se cuelga. BlockMultiPlaceEvent tambien pasa.
+     */
     @EventHandler(ignoreCancelled = true)
     public void onColocar(BlockPlaceEvent e) {
         if (es(e.getItemInHand())) e.setCancelled(true);
@@ -490,11 +564,77 @@ final class Reliquias implements Listener {
     /**
      * El Sello es una carga ignea: con clic derecho prenderia fuego. Se niega el USO del
      * objeto y no el clic entero: con una Astilla en la mano se tiene que poder abrir un cofre.
+     *
+     * Rama lore-items: los bloques que se quedan lo que tienes en la mano al hacerles clic (la compostadora
+     * se come el propagulo, el tocadiscos el disco, la maceta planta el propagulo) tampoco lo reciben: con
+     * una Reliquia en la mano no se usan.
      */
     @EventHandler(priority = EventPriority.LOW)
     public void onUsar(PlayerInteractEvent e) {
         if (!e.getAction().isRightClick()) return;
-        if (es(e.getItem())) e.setUseItemInHand(Event.Result.DENY);
+        if (!es(e.getItem())) return;
+        e.setUseItemInHand(Event.Result.DENY);
+        if (e.getClickedBlock() != null && meteria(e.getClickedBlock())) e.setUseInteractedBlock(Event.Result.DENY);
+    }
+
+    /**
+     * Si un clic con la Reliquia en la mano la meteria en ese bloque. Sacar lo que ya tiene si se puede: el
+     * disco del tocadiscos, la flor de la maceta y el polvo de hueso de la compostadora llena (con algo en la
+     * mano que no entra, vanilla hace lo mismo que con la mano vacia).
+     */
+    static boolean meteria(org.bukkit.block.Block b) {
+        Material m = b.getType();
+        if (!seLaQueda(m)) return false;
+        if (m.name().startsWith("POTTED_")) return false;
+        if (m == Material.JUKEBOX) return !(b.getState(false) instanceof org.bukkit.block.Jukebox j && j.hasRecord());
+        if (m == Material.COMPOSTER) {
+            return !(b.getBlockData() instanceof org.bukkit.block.data.Levelled l && l.getLevel() >= l.getMaximumLevel());
+        }
+        return true;
+    }
+
+    /** Bloques que se quedan (o gastan) el objeto de la mano al hacerles clic derecho. */
+    static boolean seLaQueda(Material m) {
+        if (m == null) return false;
+        return m == Material.COMPOSTER || m == Material.JUKEBOX || m == Material.FLOWER_POT
+                || m.name().startsWith("POTTED_") || m == Material.DECORATED_POT || m.name().endsWith("_SHELF");
+    }
+
+    /** La maceta tiene su propio evento en Paper: plantar el propagulo de la Nana en ella, no. */
+    @EventHandler(ignoreCancelled = true)
+    public void onMaceta(PlayerFlowerPotManipulateEvent e) {
+        if (e.isPlacing() && es(e.getItem())) e.setCancelled(true);
+    }
+
+    /**
+     * Un allay se queda lo que le das y luego recoge del suelo todo lo que se le parezca: ni una Reliquia ni una
+     * Esencia, en ningun mundo y tampoco el staff (Sellos lo corta solo con su sello y no al staff). Con los
+     * animales no hace falta nada: ningun material de Reliquia es comida, y montar o sentar a uno con una en la
+     * mano tiene que funcionar.
+     */
+    @EventHandler(priority = EventPriority.LOW, ignoreCancelled = true)
+    public void onAllay(PlayerInteractEntityEvent e) {
+        if (!(e.getRightClicked() instanceof Allay)) return;
+        if (valioso(e.getPlayer().getInventory().getItem(e.getHand()))) e.setCancelled(true);
+    }
+
+    /**
+     * Ninguna entidad que no sea un jugador recoge una Reliquia o una Esencia del suelo, dentro ni fuera de
+     * Calamity: piglins (la sandia y la campana les encantan), zorros, allays, mobs que recogen cosas, tolvas
+     * aparte (eso es Sellos). Dentro ya lo cortaba Hardcore.onRecoger; fuera solo con el sello de fuera.
+     */
+    @EventHandler(priority = EventPriority.LOWEST, ignoreCancelled = true)
+    public void onRecogerMob(EntityPickupItemEvent e) {
+        if (e.getEntity() instanceof Player) return;
+        if (valioso(e.getItem().getItemStack())) e.setCancelled(true);
+    }
+
+    /** Reliquia o Esencia. */
+    private boolean valioso(ItemStack it) {
+        if (it == null || it.getType().isAir()) return false;
+        if (es(it)) return true;
+        ItemsCalamity items = hc.items();
+        return items != null && items.esEsencia(it);
     }
 
     @EventHandler
@@ -504,6 +644,14 @@ final class Reliquias implements Listener {
                 e.getInventory().setResult(null);
                 return;
             }
+        }
+    }
+
+    /** El crafter (autocrafteo con tolvas) no pasa por PrepareItemCraftEvent: la plantilla se duplicaria ahi. */
+    @EventHandler(ignoreCancelled = true)
+    public void onCrafter(CrafterCraftEvent e) {
+        if (e.getBlock().getState(false) instanceof org.bukkit.block.Crafter cr && hayReliquia(cr.getInventory())) {
+            e.setCancelled(true);
         }
     }
 
@@ -527,14 +675,87 @@ final class Reliquias implements Listener {
         if (es(e.getSource())) e.setCancelled(true);
     }
 
+    /** El propagulo de la Nana arde como un brote: no se quema de combustible. */
+    @EventHandler(ignoreCancelled = true)
+    public void onArder(FurnaceBurnEvent e) {
+        if (es(e.getFuel())) e.setCancelled(true);
+    }
+
     @EventHandler(ignoreCancelled = true)
     public void onDestilar(BrewEvent e) {
         if (hayReliquia(e.getContents())) e.setCancelled(true);
     }
 
+    /** Un dispensador no la dispara, no la planta ni la pone en ningun sitio. */
+    @EventHandler(ignoreCancelled = true)
+    public void onDispensar(BlockDispenseEvent e) {
+        if (es(e.getItem())) e.setCancelled(true);
+    }
+
+    /**
+     * Las ventanas que transforman o se quedan lo que les metes (soporte de pociones, hornos, herreria, yunque,
+     * telar, crafter, compostadora, tocadiscos, aldeanos...): una Reliquia no entra, ni por clic, ni con
+     * mayusculas, ni con la tecla numerica. Sellos ya lo corta a los jugadores, pero el staff se lo salta y el
+     * sello se puede apagar: esto no, porque no es guardarla sino gastarla.
+     */
+    static boolean gasta(InventoryType t) {
+        return t != null && Gastan.TIPOS.contains(t);
+    }
+
+    /** Aparte, para que cargar Reliquias no cargue InventoryType (fuera del servidor no tiene registros). */
+    private static final class Gastan {
+        static final Set<InventoryType> TIPOS = java.util.EnumSet.of(InventoryType.BREWING, InventoryType.FURNACE,
+                InventoryType.BLAST_FURNACE, InventoryType.SMOKER, InventoryType.SMITHING, InventoryType.ANVIL,
+                InventoryType.GRINDSTONE, InventoryType.LOOM, InventoryType.STONECUTTER, InventoryType.CARTOGRAPHY,
+                InventoryType.ENCHANTING, InventoryType.BEACON, InventoryType.CRAFTER, InventoryType.COMPOSTER,
+                InventoryType.JUKEBOX, InventoryType.MERCHANT);
+    }
+
+    @EventHandler(priority = EventPriority.LOW, ignoreCancelled = true)
+    public void onMeter(InventoryClickEvent e) {
+        if (!gasta(e.getView().getTopInventory().getType())) return;
+        if (es(Sellos.entraArriba(e))) e.setCancelled(true);
+    }
+
+    @EventHandler(priority = EventPriority.LOW, ignoreCancelled = true)
+    public void onArrastrar(InventoryDragEvent e) {
+        if (gasta(e.getView().getTopInventory().getType()) && es(e.getOldCursor()) && Sellos.tocaArriba(e)) {
+            e.setCancelled(true);
+        }
+    }
+
+    /** Tolvas y soltadores: nunca a una de esas (el disco al tocadiscos, el propagulo a la compostadora...). */
+    @EventHandler(priority = EventPriority.LOW, ignoreCancelled = true)
+    public void onTolva(InventoryMoveItemEvent e) {
+        if (gasta(e.getDestination().getType()) && es(e.getItem())) e.setCancelled(true);
+    }
+
     private boolean hayReliquia(Inventory inv) {
         for (ItemStack it : inv.getContents()) if (es(it)) return true;
         return false;
+    }
+
+    /**
+     * Lo que el material trae de serie y una Reliquia no debe hacer, quitado del objeto: el disco sin
+     * cancion (el tocadiscos no lo acepta), el ladrillo de resina sin material de adorno (la herreria no lo
+     * usa). Lo llaman crear y renovar, asi una renovada y una nueva tienen los mismos componentes y se apilan.
+     */
+    static void desactivar(ItemStack it) {
+        try {
+            it.unsetData(DataComponentTypes.JUKEBOX_PLAYABLE);
+            it.unsetData(DataComponentTypes.PROVIDES_TRIM_MATERIAL);
+        } catch (Throwable sinApi) {
+            // Sin la API de componentes quedan los eventos de arriba.
+        }
+    }
+
+    /** Si aun lleva algo de lo que desactivar quita (una creada antes de que crear lo llamara). */
+    static boolean conUsos(ItemStack it) {
+        try {
+            return it.hasData(DataComponentTypes.JUKEBOX_PLAYABLE) || it.hasData(DataComponentTypes.PROVIDES_TRIM_MATERIAL);
+        } catch (Throwable sinApi) {
+            return false;
+        }
     }
 
     /** Caducidad: una Reliquia pasada de fecha se deshace al tocarla en un inventario. */
@@ -553,35 +774,62 @@ final class Reliquias implements Listener {
     // ------------------------------------------------------- fuera de Calamity
 
     /**
-     * Rehace el lore de una Reliquia con la plantilla de hoy, leyendo lo que guarda su marca. Rama
-     * venta-oren: las que ya circulaban decian "se vende sola al salir"; con esto dicen lo de ahora y
-     * se apilan con las nuevas. true si cambio algo.
+     * Una Reliquia con la plantilla de hoy, leyendo lo que guarda su marca, o null si ya esta al dia. Rama
+     * venta-oren: las que ya circulaban decian "se vende sola al salir"; con esto dicen lo de ahora y se
+     * apilan con las nuevas.
+     *
+     * Rama lore-items: ademas del lore, el nombre (con el degradado de su Tono) y el MATERIAL. Una Astilla
+     * de prismarina pasa a sandia reluciente, una Nana de fragmento de disco a propagulo, etc. withType copia
+     * todos los datos del objeto (marca, id, origen, nacimiento, nivel, brillo) y la cantidad; luego se le
+     * quita lo que el material nuevo trae de serie (desactivar), igual que a una recien creada, asi que una
+     * Astilla renovada y una nueva son el mismo objeto y se apilan.
      */
-    boolean renovar(ItemStack it) {
-        if (!es(it)) return false;
-        ItemMeta meta = it.getItemMeta();
-        if (meta == null) return false;
+    ItemStack renovada(ItemStack it) {
+        if (!es(it)) return null;
+        ConfigurationSection c = hc.cfg();
         int g = Math.max(1, Math.min(4, grado(it)));
+        String esp = especial(it);
         String id = id(it);
         boolean apilable = id == null;
         long n = nacio(it);
-        List<Component> lore = ficha(hc.cfg(), g, especial(it), nivel(it), minijefe(it), valida(it),
+        Material quiere = material(c, g, esp);
+        List<Component> lore = ficha(c, g, esp, nivel(it), minijefe(it), valida(it),
                 apilable ? null : leer(it, Marcas.RELIQUIA_ORIGEN, PersistentDataType.STRING), !apilable,
                 apilable || n <= 0 ? null : fechaCorta(n + caducaMillis())).lore();
-        if (lore.equals(meta.lore())) return false;
-        meta.lore(lore);
-        it.setItemMeta(meta);
-        return true;
+        Component nombre = tono(g, esp).nombre(nombre(c, g, esp, minijefe(it)));
+        ItemMeta meta = it.getItemMeta();
+        if (meta == null) return null;
+        if (it.getType() == quiere && !conUsos(it) && Ficha.iguales(lore, meta.lore())
+                && Ficha.igual(nombre, meta.displayName())) return null;
+        ItemStack r = it.getType() == quiere ? it.clone() : it.withType(quiere);
+        r.editMeta(m -> {
+            m.displayName(nombre);
+            m.lore(lore);
+        });
+        desactivar(r);
+        return r;
     }
 
-    /** Las Reliquias y Esencias de su inventario, con el lore de hoy (al entrar y al cambiar de mundo). */
+    /**
+     * Los objetos de Calamity de su inventario (armadura y mano izquierda incluidas), con el nombre, el lore
+     * y el material de hoy: Reliquias, Esencias, Frascos, Cristales, Fragmentos de Masamune, Reclamos,
+     * Talismanes, Grabados, Salvoconductos, llaves de boveda y cabezas de Eco. Al entrar al servidor, al
+     * cambiar de mundo y al abrir el menu de Oren.
+     */
     void renovarInventario(Player p) {
         if (p == null) return;
         ItemsCalamity items = hc.items();
-        for (ItemStack it : p.getInventory().getContents()) {
-            if (it == null) continue;
-            renovar(it);
-            if (items != null) items.renovarEsencia(it);
+        Entregas en = hc.entregas();
+        org.bukkit.inventory.PlayerInventory inv = p.getInventory();
+        for (int i = 0; i < inv.getSize(); i++) {
+            ItemStack it = inv.getItem(i);
+            if (it == null || it.getType().isAir() || !it.hasItemMeta()) continue;
+            ItemStack r = renovada(it);
+            if (r == null && items != null) r = items.renovado(it);
+            if (r == null && en != null) r = en.renovado(it);
+            if (r == null) r = PuenteBovedas.renovada(it);
+            if (r == null) r = Ecos.trofeoRenovado(it);
+            if (r != null) inv.setItem(i, r);
         }
     }
 
@@ -792,12 +1040,34 @@ final class Reliquias implements Listener {
         Autotest.Hoja h = new Autotest.Hoja();
         ConfigurationSection vacia = new YamlConfiguration();
         h.igual("apilables de serie", Set.of(1, 2), apilables(vacia));
-        h.igual("material de la I", Material.PRISMARINE_SHARD, material(vacia, 1, null));
-        h.igual("material de la II", Material.DISC_FRAGMENT_5, material(vacia, 2, null));
-        h.igual("material de la III", Material.RESIN_CLUMP, material(vacia, 3, null));
+        h.igual("material de la I", Material.GLISTERING_MELON_SLICE, material(vacia, 1, null));
+        h.igual("material de la II", Material.MANGROVE_PROPAGULE, material(vacia, 2, null));
+        h.igual("material de la III", Material.RESIN_BRICK, material(vacia, 3, null));
+        h.igual("material de la IV", Material.BOLT_ARMOR_TRIM_SMITHING_TEMPLATE, material(vacia, 4, null));
         h.igual("material de la Campana", Material.BELL, material(vacia, 4, CAMPANA));
-        h.igual("material de la Lagrima", Material.ECHO_SHARD, material(vacia, 4, LAGRIMA));
+        h.igual("material de la Lagrima", Material.OXIDIZED_COPPER_LANTERN, material(vacia, 4, LAGRIMA));
         h.igual("material del Sello", Material.FIRE_CHARGE, material(vacia, 4, SELLO));
+        h.igual("material de la Eclipsada", Material.MUSIC_DISC_LAVA_CHICKEN, material(vacia, 3, ECLIPSADA));
+        // Un config.yml ya instalado trae los materiales de antes: valen los nuevos; uno puesto a mano, manda.
+        YamlConfiguration vieja = new YamlConfiguration();
+        vieja.set("reliquias.grados.1.material", "PRISMARINE_SHARD");
+        vieja.set("reliquias.grados.4.material", "RESIN_CLUMP");
+        vieja.set("reliquias.especiales.lagrima-eco.material", "ECHO_SHARD");
+        vieja.set("reliquias.grados.2.material", "AMETHYST_SHARD");
+        h.igual("config vieja: la I pasa a la sandia", Material.GLISTERING_MELON_SLICE, material(vieja, 1, null));
+        h.igual("config vieja: la IV pasa a la plantilla", Material.BOLT_ARMOR_TRIM_SMITHING_TEMPLATE, material(vieja, 4, null));
+        h.igual("config vieja: la Lagrima pasa al farol", Material.OXIDIZED_COPPER_LANTERN, material(vieja, 4, LAGRIMA));
+        h.igual("config con otro material: manda", Material.AMETHYST_SHARD, material(vieja, 2, null));
+        h.igual("config de serie: los materiales nuevos", List.of("GLISTERING_MELON_SLICE", "MANGROVE_PROPAGULE",
+                "RESIN_BRICK", "BOLT_ARMOR_TRIM_SMITHING_TEMPLATE", "BELL", "OXIDIZED_COPPER_LANTERN", "FIRE_CHARGE",
+                "MUSIC_DISC_LAVA_CHICKEN"), materialesDeSerie(Ficha.deSerie()));
+        h.ok("bloques que se quedan la mano: compostadora, tocadiscos y maceta", seLaQueda(Material.COMPOSTER)
+                && seLaQueda(Material.JUKEBOX) && seLaQueda(Material.FLOWER_POT) && seLaQueda(Material.POTTED_MANGROVE_PROPAGULE)
+                && !seLaQueda(Material.CHEST));
+        h.ok("ventanas que gastan: soporte, herreria, crafter, tocadiscos y compostadora",
+                gasta(InventoryType.BREWING) && gasta(InventoryType.SMITHING) && gasta(InventoryType.CRAFTER)
+                        && gasta(InventoryType.JUKEBOX) && gasta(InventoryType.COMPOSTER) && gasta(InventoryType.FURNACE)
+                        && !gasta(InventoryType.CHEST));
         h.igual("nombre del Sello", "Sello del Heraldo Carmesí", nombre(vacia, 4, SELLO, "heraldo-carmes"));
         h.igual("nombre del Sello de la Matriarca", "Sello de la Matriarca Tejedora", nombre(vacia, 4, SELLO, "matriarca-tejedora"));
         h.igual("nombre del IV sin especial", "Ámbar Mayor", nombre(vacia, 4, null, null));
@@ -838,6 +1108,84 @@ final class Reliquias implements Listener {
         h.ok("lore sin cursiva", astilla.getItemMeta().lore() != null
                 && astilla.getItemMeta().lore().stream().allMatch(c -> c.decoration(TextDecoration.ITALIC)
                 == TextDecoration.State.FALSE || c.equals(Component.empty())));
+        h.ok("la I sale sandia", astilla.getType() == Material.GLISTERING_MELON_SLICE);
+        // Una Astilla de antes (prismarina, nombre y lore viejos) se renueva: material nuevo, mismos datos, se apila.
+        ItemStack vieja1 = astilla.withType(Material.PRISMARINE_SHARD);
+        vieja1.setAmount(7);
+        vieja1.editMeta(mm -> {
+            mm.displayName(Component.text("Astilla del Umbral"));
+            mm.lore(List.of(Component.text("────────"), Component.text("Se vende sola al salir")));
+        });
+        ItemStack nueva1 = renovada(vieja1);
+        h.ok("renovada: pasa a sandia y conserva cantidad y marca", nueva1 != null && nueva1.getType() == Material.GLISTERING_MELON_SLICE
+                && nueva1.getAmount() == 7 && grado(nueva1) == 1);
+        h.ok("renovada: se apila con una nueva", nueva1 != null && nueva1.isSimilar(astilla));
+        h.igual("una al dia no se renueva", null, renovada(astilla));
+        // Una Eclipsada de antes (ambar de resina, con su id), hecha a mano: crear() la apuntaria en reliquias.log.
+        String idFalso = UUID.randomUUID().toString();
+        ItemStack ambarViejo = astilla.withType(Material.RESIN_CLUMP);
+        ambarViejo.editMeta(mm -> {
+            mm.getPersistentDataContainer().set(Marcas.RELIQUIA, PersistentDataType.INTEGER, 3);
+            mm.getPersistentDataContainer().set(Marcas.RELIQUIA_ID, PersistentDataType.STRING, idFalso);
+            mm.getPersistentDataContainer().set(Marcas.RELIQUIA_ESPECIAL, PersistentDataType.STRING, ECLIPSADA);
+            mm.getPersistentDataContainer().set(Marcas.RELIQUIA_NACIO, PersistentDataType.LONG, System.currentTimeMillis());
+        });
+        ItemStack ambarNuevo = renovada(ambarViejo);
+        h.ok("una especial de antes pasa al disco, sin cancion y con su id", ambarNuevo != null
+                && idFalso.equals(id(ambarNuevo)) && ambarNuevo.getType() == Material.MUSIC_DISC_LAVA_CHICKEN
+                && !ambarNuevo.hasData(DataComponentTypes.JUKEBOX_PLAYABLE) && ECLIPSADA.equals(especial(ambarNuevo)));
+        ItemStack disco = new ItemStack(Material.MUSIC_DISC_LAVA_CHICKEN), ladrillo = new ItemStack(Material.RESIN_BRICK);
+        boolean antes = conUsos(disco) && conUsos(ladrillo);
+        desactivar(disco);
+        desactivar(ladrillo);
+        h.ok("desactivar: el disco sin cancion y el ladrillo sin adorno", antes && !conUsos(disco) && !conUsos(ladrillo)
+                && !conUsos(astilla));
+        h.ok("lore sin rayas ni negrita", Ficha.faltas(astilla.getItemMeta().lore()).isEmpty());
+        // Los demas objetos que ya circulan: una Esencia y una cabeza de Eco con el nombre y el lore de la 1.10.
+        ItemsCalamity items = hc.items();
+        if (items != null) {
+            ItemStack esencia = items.esencia(3), viejaE = esencia.clone();
+            viejaE.editMeta(mm -> {
+                mm.displayName(Component.text("Esencia de Calamidad", TextColor.color(0xE8903C)));
+                mm.lore(List.of(Component.text("Moneda de Calamity"), Component.text("────────")));
+            });
+            ItemStack renovadaE = items.renovado(viejaE);
+            h.ok("Esencia de antes: renovada, se apila con una nueva", renovadaE != null && renovadaE.isSimilar(esencia)
+                    && renovadaE.getAmount() == 3);
+            h.igual("Esencia al dia: no se toca", null, items.renovado(esencia));
+            ItemStack frasco = Ligado.ligar(items.frasco(2), Autotest.sintetico(52));
+            frasco.editMeta(mm -> {
+                List<Component> l = new ArrayList<>(List.of(Component.text("────")));
+                l.add(Component.text("Ligado a Dosa · no se vende ni se cambia"));
+                mm.lore(l);
+            });
+            ItemStack frascoNuevo = items.renovado(frasco);
+            h.ok("Frasco de antes: lore de hoy, conserva tragos y la linea de ligado", frascoNuevo != null
+                    && items.tragos(frascoNuevo) == 2 && "Dosa".equals(Ficha.ligadoDe(frascoNuevo.getItemMeta().lore()))
+                    && Ficha.faltas(frascoNuevo.getItemMeta().lore()).isEmpty());
+            // Beber y recargar: el mismo frasco con otros tragos, sin perder lo prestado ni el ligado.
+            UUID duenoPrueba = Autotest.sintetico(53);
+            ItemStack delKit = Kit.prestar(Ligado.ligar(items.frasco(3), duenoPrueba));
+            delKit.setAmount(2);
+            ItemStack bebido = items.conTragos(delKit, 2), lleno = items.conTragos(bebido, 3);
+            List<Component> lb = bebido.getItemMeta().lore();
+            h.ok("frasco bebido: un trago menos, una unidad, sigue prestado y ligado", items.tragos(bebido) == 2
+                    && bebido.getAmount() == 1 && Kit.esPrestado(bebido) && duenoPrueba.equals(Ligado.duenoDe(bebido))
+                    && lb != null && "Se deshace al salir de Calamity.".equals(Hardcore.plano(lb.get(lb.size() - 1))));
+            h.ok("frasco recargado: lleno, sigue prestado y ligado", items.tragos(lleno) == 3 && Kit.esPrestado(lleno)
+                    && duenoPrueba.equals(Ligado.duenoDe(lleno)) && delKit.getAmount() == 2);
+        }
+        ItemStack cabeza = new ItemStack(Material.PLAYER_HEAD);
+        cabeza.editMeta(mm -> {
+            mm.displayName(Component.text("Cabeza de Otro"));
+            mm.lore(List.of(Component.text("Trofeo · Eco derrotado"), Component.text("────"),
+                    Component.text("Lo derrotó Dosa"), Component.text("El 04/10/2026")));
+            mm.getPersistentDataContainer().set(Marcas.TROFEO, PersistentDataType.BYTE, (byte) 1);
+        });
+        ItemStack cabezaNueva = Ecos.trofeoRenovado(cabeza);
+        h.ok("cabeza de Eco de antes: lore de hoy con cazador y fecha", cabezaNueva != null
+                && cabezaNueva.getItemMeta().lore().stream().anyMatch(c -> Hardcore.plano(c).equals(" Dosa, el 04/10/2026"))
+                && Ecos.trofeoRenovado(cabezaNueva) == null);
         h.ok("una espada no es Reliquia", !es(new ItemStack(Material.DIAMOND_SWORD)));
         h.igual("grado de lo que no es Reliquia", 0, grado(new ItemStack(Material.STONE)));
         return h.lineas();

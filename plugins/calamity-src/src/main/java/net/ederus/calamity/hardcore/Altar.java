@@ -1131,13 +1131,8 @@ final class Altar implements Listener {
             Compat.soundPlayers(p.getWorld(), p.getLocation(), "block.note_block.bass", 0.8f, 0.6f);
             return;
         }
-        ItemStack lleno = items.frasco(max);
-        UUID dueno = Ligado.duenoDe(frasco);
-        if (dueno != null) {
-            Entregas e = hc.entregas();
-            if (e != null) e.ligar(lleno, dueno);
-            else Ligado.ligar(lleno, dueno);
-        }
+        // El mismo frasco, lleno: conserva el ligado (marca y linea), lo prestado y lo demas que llevase.
+        ItemStack lleno = items.conTragos(frasco, max);
         if (frasco.getAmount() > 1) {
             frasco.setAmount(frasco.getAmount() - 1);
             Suelo.dar(hc.plugin(), p, lleno);

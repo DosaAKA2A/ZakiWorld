@@ -5,7 +5,6 @@ import io.papermc.paper.datacomponent.item.TooltipDisplay;
 import com.destroystokyo.paper.event.inventory.PrepareResultEvent;
 import io.papermc.paper.event.player.PlayerLoomPatternSelectEvent;
 import net.kyori.adventure.text.Component;
-import net.kyori.adventure.text.format.TextDecoration;
 import org.bukkit.Material;
 import org.bukkit.block.Block;
 import org.bukkit.configuration.ConfigurationSection;
@@ -75,9 +74,14 @@ final class Pergaminos implements Listener {
      * Como se cobra lo que se cumple dentro: el premio llega en el acto y sus Esencias, como objeto
      * (Aduana.pagar con objetoSiDentro). Lo dicen el pergamino y el menu de Oren con las mismas palabras.
      */
-    static final String COBRO_DENTRO = "Al cumplirlo recibes el premio en la mano.";
+    static final String COBRO_DENTRO = "Al cumplirlo, el premio va a tu mano.";
     /** Rama venta-oren: los de Reliquias se cumplen y se cobran al venderselas a Oren. */
     static final String COBRO_VENTA = "Se cobra al vendérselas a Oren.";
+    /**
+     * Rama lore-items · Lo mismo, dicho entero en el pergamino: la venta solo cuenta en el spawn de Calamity
+     * (donde esta Oren) y con el pergamino encima, como todos los contratos.
+     */
+    static final String COBRO_VENTA_PERGAMINO = "La venta solo cuenta en el spawn de Calamity, con este pergamino encima.";
     /** Casillas de la barra de progreso del lore (con los mismos caracteres que la de cordura). */
     static final int CASILLAS = 10;
     /** La "casilla" del cursor en lo que devuelve revisar(). */
@@ -174,16 +178,15 @@ final class Pergaminos implements Listener {
         }
     }
 
-    /** "Contrato · Mobs", en el ambar de los contratos, sin cursiva ni negrita. El objetivo va en el lore. */
+    /** "Contrato: Mobs", con el degradado dorado de los contratos, sin cursiva ni negrita. El objetivo va en el lore. */
     static Component nombre(Contratos.Def d) {
-        return Component.text(titulo(d), Contratos.AMBAR)
-                .decoration(TextDecoration.ITALIC, false).decoration(TextDecoration.BOLD, false);
+        return Ficha.tono("contrato").nombre(titulo(d));
     }
 
-    /** "Contrato · " y la etiqueta (la misma de la barra de accion): corto, cabe siempre en una linea. */
+    /** "Contrato: " y la etiqueta (la misma de la barra de accion): corto, cabe siempre en una linea. */
     static String titulo(Contratos.Def d) {
         String e = d.etiqueta() == null || d.etiqueta().isBlank() ? d.texto() : d.etiqueta();
-        return "Contrato · " + e;
+        return "Contrato: " + e;
     }
 
     /** Si es un pergamino de contrato (por la marca: da igual el material y como se llame). */
@@ -243,33 +246,27 @@ final class Pergaminos implements Listener {
         };
     }
 
-    /** "{2} Esencias · {20} MobCoins": el premio con las cifras marcadas para el acento. */
+    /** "{2} [Esencias] · {20} [MobCoins]": el premio marcado (cifras en blanco, monedas en el palido). */
     static String premioMarcado(Contratos.Def d) {
         if (d.esencias() <= 0 && d.mobcoins() <= 0) return "Sin premio";
         return Ficha.valor(d.esencias(), d.mobcoins());
     }
 
     /**
-     * Calamity 1.10 (lores) · El lore con la plantilla comun (Ficha): la clase de contrato, su historia,
-     * Objetivo, Progreso (la barra con las casillas llenas en el acento) y Premio, como se cobra y que el
-     * avance es de esta expedicion. Lineas de 38 como mucho y filete fijo.
+     * El lore con la plantilla comun (Ficha), en el tono de los contratos: la clase de contrato, su historia,
+     * Objetivo, Progreso (la cuenta en el titulo y la barra debajo) y Premio, como se cobra y que el avance es
+     * de esta expedicion. Lineas de 38 como mucho.
      */
     static Ficha ficha(Contratos.Def d, int progreso) {
         int objetivo = Math.max(1, d.objetivo());
         int hecho = Math.max(0, Math.min(progreso, objetivo));
-        int llenas = llenas(hecho, objetivo);
-        return new Ficha(Contratos.AMBAR).tipo(d.corto() ? "Contrato de Oren · Corto" : "Contrato de Oren").filete()
-                .historia(historia(d)).filete()
-                .etiqueta("Objetivo").dato(d.texto())
-                .etiqueta("Progreso").dato(barra(llenas) + " {" + hecho + "/" + objetivo + "}")
-                .etiqueta("Premio").dato(premioMarcado(d)).filete()
-                .accion(Contratos.seCobraAlSalir(d) ? COBRO_VENTA : COBRO_DENTRO)
+        return new Ficha(Ficha.tono("contrato")).cabecera("Contrato de Oren", d.corto() ? "Corto" : "Calamity", 0)
+                .historia(historia(d))
+                .seccion("Objetivo").texto(d.texto())
+                .seccion("Progreso", "{" + hecho + "}/" + objetivo).barra(llenas(hecho, objetivo), CASILLAS)
+                .seccion("Premio").dato(premioMarcado(d))
+                .hueco().nota(Contratos.seCobraAlSalir(d) ? COBRO_VENTA_PERGAMINO : COBRO_DENTRO)
                 .nota("Si mueres, el avance vuelve a cero.");
-    }
-
-    /** Las llenas entre llaves (acento); las vacias se repintan en gris oscuro en lore(). */
-    private static String barra(int llenas) {
-        return (llenas > 0 ? "{" + "▮".repeat(llenas) + "}" : "") + "▯".repeat(CASILLAS - llenas);
     }
 
     /** El lore en texto plano, linea a linea (sin Bukkit: el autotest lo compara tal cual). */
@@ -277,13 +274,9 @@ final class Pergaminos implements Listener {
         return ficha(d, progreso).lineas();
     }
 
-    /** El lore pintado, sin cursiva; las casillas vacias de la barra en el gris de la de cordura. */
+    /** El lore pintado, sin cursiva ni negrita (la barra ya sale con sus dos colores de la Ficha). */
     static List<Component> lore(Contratos.Def d, int progreso) {
-        List<Component> out = new ArrayList<>();
-        for (Component c : ficha(d, progreso).lore()) {
-            out.add(c.replaceText(b -> b.matchLiteral("▯").replacement(m -> m.color(Paleta.CASILLA_VACIA))));
-        }
-        return out;
+        return ficha(d, progreso).lore();
     }
 
     // ------------------------------------------------------------------ en el inventario

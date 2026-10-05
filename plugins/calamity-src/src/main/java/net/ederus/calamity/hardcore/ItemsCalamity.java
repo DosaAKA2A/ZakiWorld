@@ -57,8 +57,7 @@ public final class ItemsCalamity {
         ItemStack item = new ItemStack(Material.POTION);
         ItemMeta meta = item.getItemMeta();
         if (meta != null) {
-            meta.displayName(Component.text("Frasco de Calma", VERDE)
-                    .decoration(TextDecoration.ITALIC, false));
+            meta.displayName(Ficha.tono("frasco").nombre(NOMBRE_FRASCO));
             meta.lore(fichaFrasco(hardcore(), quedan).lore());
             if (meta instanceof org.bukkit.inventory.meta.PotionMeta pm) {
                 pm.setColor(org.bukkit.Color.fromRGB(0x8FD6A8));
@@ -67,6 +66,23 @@ public final class ItemsCalamity {
             item.setItemMeta(meta);
         }
         return item;
+    }
+
+    /**
+     * Ese mismo frasco (una unidad) con otros tragos: conserva todo lo que ya llevaba (ligado, prestado, sus
+     * marcas) y rehace el nombre y el lore con Ficha.renovar, que guarda las lineas de ligado y de prestado.
+     * Lo usan beber (Hardcore) y recargar (Altar): antes hacian uno nuevo con frasco(n) y el de un Kit dejaba de
+     * ser prestado al primer trago. Si no es un frasco, uno nuevo.
+     */
+    public ItemStack conTragos(ItemStack frasco, int usos) {
+        if (!esFrasco(frasco)) return frasco(usos);
+        int max = plugin.getConfig().getInt("hardcore.frasco.usos", 3);
+        int quedan = Math.max(0, Math.min(max, usos));
+        ItemStack it = frasco.clone();
+        it.setAmount(1);
+        it.editMeta(m -> m.getPersistentDataContainer().set(claveFrasco, PersistentDataType.INTEGER, quedan));
+        ItemStack r = Ficha.renovar(it, Ficha.tono("frasco").nombre(NOMBRE_FRASCO), fichaFrasco(hardcore(), quedan).lore());
+        return r == null ? it : r;
     }
 
     /** Tragos que le quedan al frasco, o -1 si el objeto no es un frasco. */
@@ -88,8 +104,7 @@ public final class ItemsCalamity {
         ItemStack item = new ItemStack(Material.AMETHYST_SHARD);
         ItemMeta meta = item.getItemMeta();
         if (meta != null) {
-            meta.displayName(Component.text("Cristal de Regreso", MORADO)
-                    .decoration(TextDecoration.ITALIC, false));
+            meta.displayName(Ficha.tono("cristal").nombre(NOMBRE_CRISTAL));
             meta.lore(fichaCristal(hardcore()).lore());
             meta.setEnchantmentGlintOverride(true);
             meta.getPersistentDataContainer().set(claveCristal, PersistentDataType.BYTE, (byte) 1);
@@ -118,8 +133,7 @@ public final class ItemsCalamity {
         ItemStack item = new ItemStack(materialEsencia(), Math.max(1, Math.min(64, cantidad)));
         ItemMeta meta = item.getItemMeta();
         if (meta != null) {
-            meta.displayName(Component.text("Esencia de Calamidad", NARANJA_ESENCIA)
-                    .decoration(TextDecoration.ITALIC, false));
+            meta.displayName(Ficha.tono("esencia").nombre(NOMBRE_ESENCIA));
             meta.lore(fichaEsencia().lore());
             meta.setEnchantmentGlintOverride(true);
             meta.getPersistentDataContainer().set(claveEsencia, PersistentDataType.BYTE, (byte) 1);
@@ -141,7 +155,7 @@ public final class ItemsCalamity {
         ItemStack item = new ItemStack(Material.NETHERITE_SCRAP, Math.max(1, Math.min(64, cantidad)));
         ItemMeta meta = item.getItemMeta();
         if (meta != null) {
-            meta.displayName(Paleta.degradado(FragmentosMasamune.NOMBRE, Paleta.ACERO_DESDE, Paleta.ACERO_HASTA));
+            meta.displayName(Ficha.tono("masamune").nombre(FragmentosMasamune.NOMBRE));
             meta.lore(fichaFragmento(Ficha.cfg()).lore());
             meta.setEnchantmentGlintOverride(true);
             meta.getPersistentDataContainer().set(Marcas.FRAGMENTO_MASAMUNE, PersistentDataType.BYTE, (byte) 1);
@@ -172,7 +186,7 @@ public final class ItemsCalamity {
         ItemStack item = new ItemStack(Material.GOAT_HORN);
         ItemMeta meta = item.getItemMeta();
         if (meta != null) {
-            meta.displayName(Paleta.degradado("Reclamo", Paleta.MINIJEFE_DESDE, Paleta.MINIJEFE_HASTA));
+            meta.displayName(Ficha.tono("reclamo").nombre(NOMBRE_RECLAMO));
             meta.lore(fichaReclamo(Ficha.cfg()).lore());
             meta.setEnchantmentGlintOverride(true);
             meta.getPersistentDataContainer().set(Marcas.RECLAMO, PersistentDataType.BYTE, (byte) 1);
@@ -207,66 +221,90 @@ public final class ItemsCalamity {
         int max = c.getInt("frasco.usos", 3);
         int q = Math.max(0, Math.min(max, quedan));
         int precio = Math.max(0, c.getInt("frasco.esencias-por-trago", 1));
-        Ficha f = new Ficha(VERDE).tipo("Objeto de Calamity · Cordura").filete()
-                .historia("Agua del último manantial limpio de Bracken. Sabe a algo que ya no existe.").filete()
-                .texto((q == 1 ? "Le queda {1} de {" : "Le quedan {" + q + "} de {") + max + "} tragos")
-                .texto("Cada trago devuelve {" + c.getInt("frasco.cordura", 40) + "} de cordura");
-        if (precio > 0) f.texto("Recargar un trago: " + Ficha.cantidad(precio, "Esencia", "Esencias"));
-        return f.filete().accion("Clic derecho para beber.").nota("Se recarga en el Altar.");
+        Ficha f = new Ficha(Ficha.tono("frasco")).cabecera("Consumible", "Cordura", 0)
+                .historia("Agua del último manantial limpio de Bracken. Sabe a algo que ya no existe.")
+                .seccion("Al beberlo")
+                .dato("Cada trago devuelve {" + c.getInt("frasco.cordura", 40) + "} de cordura")
+                .dato((q == 1 ? "Le queda {1} de {" : "Le quedan {" + q + "} de {") + max + "} tragos");
+        if (precio > 0) f.dato("Recargar un trago: " + Ficha.cantidad(precio, "Esencia", "Esencias"));
+        return f.accion("Clic derecho para beber.").hueco().nota("Se recarga en el [Altar].");
     }
 
     static Ficha fichaCristal(ConfigurationSection c) {
-        return new Ficha(MORADO).tipo("Objeto de Calamity · Salida").filete()
-                .historia("Vibra en el mismo tono que la puerta. Quien lo escucha quieto vuelve a casa.").filete()
-                .texto("Te devuelve al spawn de Calamity. Para salir, cruza el portal.")
-                .texto("Quieto {" + c.getInt("cristal.segundos", 5) + "} s: si te mueves, se apaga.")
-                .texto("En combate no funciona.").filete()
+        return new Ficha(Ficha.tono("cristal")).cabecera("Consumible", "Regreso", 0)
+                .historia("Vibra en el mismo tono que la puerta. Quien lo escucha quieto vuelve a casa.")
+                .seccion("Al usarlo")
+                .dato("Te devuelve al spawn de Calamity.")
+                .dato("Quieto {" + c.getInt("cristal.segundos", 5) + "} s: si te mueves, se apaga.")
+                .dato("En combate no funciona.")
                 .accion("Clic derecho y quédate quieto.")
-                .nota("Se gasta al usarlo.");
+                .hueco().nota("Para salir de Calamity, cruza el portal.").nota("Se gasta al usarlo.");
     }
 
     /** Sin cifras de la config a proposito: todas las Esencias nuevas llevan el mismo lore y se apilan. */
     static Ficha fichaEsencia() {
-        return new Ficha(NARANJA_ESENCIA).tipo("Moneda de Calamity").filete()
-                .historia("Lo que queda de algo de Calamity cuando muere de verdad.").filete()
-                .texto("La sueltan los mobs y los cofres.")
-                .texto("Oren te la ingresa en tu saldo. Con el saldo pagas en el Altar y en la Forja.").filete()
-                .accion("Llévasela a Oren, en el spawn de Calamity.")
+        return new Ficha(Ficha.tono("esencia")).cabecera("Moneda", "Calamity", 0)
+                .historia("Lo que queda de algo de Calamity cuando muere de verdad.")
+                .seccion("Llévasela a Oren, en el spawn")
+                .dato("Te la ingresa en tu saldo.")
+                .dato("Con el saldo pagas en el [Altar] y en la [Forja].")
+                .hueco().nota("La sueltan los mobs y los cofres.")
                 .nota("Si mueres en Calamity, la pierdes.")
                 .nota("Fuera de Calamity no se puede guardar.");
     }
 
     static Ficha fichaFragmento(ConfigurationSection c) {
-        Ficha f = new Ficha(Paleta.ACERO).tipo("Objeto de Calamity · Forja").filete()
-                .historia("Un trozo de la katana de Ambush. Todavía corta a quien lo aprieta.").filete();
+        Ficha f = new Ficha(Ficha.tono("masamune")).cabecera("Material de forja", "Masamune", 0)
+                .historia("Un trozo de la katana de Ambush. Todavía corta a quien lo aprieta.")
+                .seccion("Para qué sirve");
         List<Ficha.Uso> usos = Ficha.usosDeEntrega(c, FragmentosMasamune.OBJETO);
         if (usos.isEmpty()) usos = List.of(new Ficha.Uso("Masamune", 5, ""));
-        f.etiqueta("Para qué sirve");
         for (Ficha.Uso u : usos) {
-            f.dato(u.da() + ": {" + u.cantidad() + "}" + (u.con().isEmpty()
-                    ? (u.cantidad() == 1 ? " Fragmento" : " Fragmentos") : " y " + u.con()));
+            f.dato("<" + u.da() + ">: {" + u.cantidad() + "}" + (u.con().isEmpty()
+                    ? (u.cantidad() == 1 ? " [Fragmento]" : " [Fragmentos]") : " y " + u.con()));
         }
-        return f.filete().accion("Llévalos a la Forja de Vael.")
-                .nota("Si mueres en Calamity, lo pierdes.");
+        return f.accion("Llévalos a la Forja de Vael.")
+                .hueco().nota("Si mueres en Calamity, lo pierdes.");
     }
 
     static Ficha fichaReclamo(ConfigurationSection c) {
         int segundos = Math.max(0, Math.min(30, c.getInt("minijefes.reclamo.segundos", 3)));
         int tope = c.getInt("minijefes.reclamo.tope-dia", 6);
         int descanso = c.getInt("minijefes.cada-minutos", 10);
-        Ficha f = new Ficha(TextColor.color(Paleta.MINIJEFE_DESDE)).tipo("Objeto de Calamity · Llamada").filete()
-                .historia("Cuerno de cabra tallado en hueso. Lo que manda en el bioma lo oye y viene.").filete()
-                .texto("Llama al minijefe del bioma donde estás. Llega a los {" + segundos + "} s.");
-        if (descanso > 0) f.texto("Descanso de {" + descanso + "} min entre minijefes.");
-        if (tope > 0) f.texto("Hasta {" + tope + "} al día.");
-        return f.texto("No responde con la Parca detrás.").filete()
+        Ficha f = new Ficha(Ficha.tono("reclamo")).cabecera("Llamada", "Minijefes", 0)
+                .historia("Cuerno de cabra tallado en hueso. Lo que manda en el bioma lo oye y viene.")
+                .seccion("Al hacerlo sonar")
+                .dato("Llama al minijefe del bioma donde estás.")
+                .dato("Llega a los {" + segundos + "} s.");
+        if (descanso > 0) f.dato("Descanso de {" + descanso + "} min entre minijefes.");
+        if (tope > 0) f.dato("Hasta {" + tope + "} al día.");
+        return f.dato("No responde con la Parca detrás.")
                 .accion("Clic derecho para hacerlo sonar, lejos del spawn de Calamity.")
-                .nota("Solo se gasta si el minijefe llega.");
+                .hueco().nota("Solo se gasta si el minijefe llega.");
     }
 
-    /** El naranja del nombre de la Esencia. */
-    static final TextColor NARANJA_ESENCIA = TextColor.color(0xE8903C);
+    static final String NOMBRE_FRASCO = "Frasco de Calma";
+    static final String NOMBRE_CRISTAL = "Cristal de Regreso";
+    static final String NOMBRE_ESENCIA = "Esencia de Calamidad";
+    static final String NOMBRE_RECLAMO = "Reclamo";
 
+    /**
+     * Rama lore-items · El mismo objeto con el nombre y el lore de hoy (Frasco, Cristal, Esencia, Fragmento de
+     * Masamune, Reclamo), o null si no es uno de estos o ya los lleva. Conserva todo lo demas (marcas, tragos,
+     * la linea de ligado y la de prestado). Lo llama Reliquias.renovarInventario.
+     */
+    public ItemStack renovado(ItemStack it) {
+        if (it == null || !it.hasItemMeta()) return null;
+        ConfigurationSection c = hardcore();
+        if (esFrasco(it)) return Ficha.renovar(it, Ficha.tono("frasco").nombre(NOMBRE_FRASCO), fichaFrasco(c, tragos(it)).lore());
+        if (esCristal(it)) return Ficha.renovar(it, Ficha.tono("cristal").nombre(NOMBRE_CRISTAL), fichaCristal(c).lore());
+        if (esEsencia(it)) return Ficha.renovar(it, Ficha.tono("esencia").nombre(NOMBRE_ESENCIA), fichaEsencia().lore());
+        if (esFragmentoMasamune(it)) {
+            return Ficha.renovar(it, Ficha.tono("masamune").nombre(FragmentosMasamune.NOMBRE), fichaFragmento(c).lore());
+        }
+        if (esReclamo(it)) return Ficha.renovar(it, Ficha.tono("reclamo").nombre(NOMBRE_RECLAMO), fichaReclamo(c).lore());
+        return null;
+    }
     /** Ultimo valor raro de esencias.material ya avisado, para no llenar la consola. */
     private String materialAvisado;
 
@@ -280,20 +318,6 @@ public final class ItemsCalamity {
                     + "\" no es un objeto; las Esencias salen como GHAST_TEAR.");
         }
         return Material.GHAST_TEAR;
-    }
-
-    /**
-     * Rama venta-oren: una Esencia con el lore de antes ("al salir vivo pasa a tu saldo") pasa a llevar el
-     * de hoy, y asi se apila con las nuevas. true si cambio algo.
-     */
-    public boolean renovarEsencia(ItemStack item) {
-        if (!esEsencia(item)) return false;
-        ItemMeta meta = item.getItemMeta();
-        List<Component> lore = fichaEsencia().lore();
-        if (lore.equals(meta.lore())) return false;
-        meta.lore(lore);
-        item.setItemMeta(meta);
-        return true;
     }
 
     public boolean esEsencia(ItemStack item) {

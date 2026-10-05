@@ -42,6 +42,7 @@ import org.bukkit.event.world.EntitiesLoadEvent;
 import org.bukkit.event.world.EntitiesUnloadEvent;
 import org.bukkit.inventory.EquipmentSlot;
 import org.bukkit.inventory.ItemStack;
+import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.inventory.meta.SkullMeta;
 import org.bukkit.persistence.PersistentDataType;
 
@@ -736,19 +737,51 @@ final class Ecos implements Listener {
             } catch (Throwable t) {
                 meta.setOwningPlayer(Bukkit.getOfflinePlayer(e.dueno));
             }
-            meta.displayName(Component.text("Cabeza de " + e.nombre, GRIS).decoration(TextDecoration.ITALIC, false));
+            meta.displayName(Ficha.tono("trofeo").nombre("Cabeza de " + e.nombre));
             meta.lore(fichaTrofeo(killerNombre, fecha).lore());
             meta.getPersistentDataContainer().set(Marcas.TROFEO, PersistentDataType.BYTE, (byte) 1);
         });
         return h;
     }
 
-    /** 1.10 (lores): el lore de la cabeza de un Eco, con la plantilla comun (Ficha). */
+    /** El lore de la cabeza de un Eco, con la plantilla comun (Ficha) y el tono de los trofeos. */
     static Ficha fichaTrofeo(String cazador, String fecha) {
-        return new Ficha(GRIS).tipo("Trofeo · Eco derrotado").filete()
-                .historia("Lo que queda de alguien que se negó a irse del todo.").filete()
-                .texto("Lo derrotó {" + cazador + "}")
-                .nota("El " + fecha);
+        return new Ficha(Ficha.tono("trofeo")).cabecera("Trofeo", "Eco derrotado", 0)
+                .historia("Lo que queda de alguien que se negó a irse del todo.")
+                .seccion("Lo derrotó")
+                .dato("{" + cazador + "}, el " + fecha);
+    }
+
+    /**
+     * Rama lore-items · Una cabeza de Eco que ya circula, con el nombre y el lore de hoy. El cazador y la
+     * fecha solo estan escritos en el lore (la marca no los guarda): se leen de ahi, del de la 1.10
+     * ("Lo derrotó X", "El 04/10/2026") o del de ahora ("◆ Lo derrotó", " X, el 04/10/2026"). Null si no es un trofeo, no se entiende o ya esta.
+     */
+    static ItemStack trofeoRenovado(ItemStack it) {
+        if (!Marcas.tiene(it, Marcas.TROFEO)) return null;
+        ItemMeta meta = it.getItemMeta();
+        if (meta == null || meta.lore() == null) return null;
+        var plano = net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer.plainText();
+        List<String> l = new ArrayList<>();
+        for (Component c : meta.lore()) l.add(plano.serialize(c));
+        String cazador = null, fecha = null;
+        for (int i = 0; i < l.size(); i++) {
+            String t = l.get(i);
+            if (t.startsWith("Lo derrotó ")) {
+                cazador = t.substring("Lo derrotó ".length()).trim();
+            } else if (t.startsWith("El ") && t.length() >= 13) {
+                fecha = t.substring(3).trim();
+            } else if (t.equals("◆ Lo derrotó") && i + 1 < l.size()) {
+                String[] p = l.get(i + 1).trim().split(", el ", 2);
+                if (p.length == 2) {
+                    cazador = p[0];
+                    fecha = p[1];
+                }
+            }
+        }
+        String nombre = meta.displayName() == null ? null : plano.serialize(meta.displayName());
+        if (cazador == null || fecha == null || nombre == null || !nombre.startsWith("Cabeza de ")) return null;
+        return Ficha.renovar(it, Ficha.tono("trofeo").nombre(nombre), fichaTrofeo(cazador, fecha).lore());
     }
 
     // --------------------------------------------------------------- listener

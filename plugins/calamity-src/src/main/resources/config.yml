@@ -889,6 +889,34 @@ hardcore:
     # Nivel final al que puede subir cada uno (PLAN 5.3); uno que no este aqui llega a su maximo vanilla + 1.
     topes: {SHARPNESS: 7, PROTECTION: 5, EFFICIENCY: 6, POWER: 6, UNBREAKING: 4, LOOTING: 4, FORTUNE: 4}
 
+  # ------------------------------------------------------------------ LORES DE LOS OBJETOS
+  # Rama lore-items: cada familia de objeto tiene su color. El nombre lleva un degradado del primero
+  # (claro) al segundo (fuerte); el lore usa el fuerte para la categoria, los titulos y lo destacado, y
+  # el primero aclarado para la historia y los nombres de monedas. Si falta una, vale la de serie.
+  lores:
+    tonos:
+      contrato: "#FFE27A #FF8A2B"        # pergaminos de contrato de Oren
+      grado-1: "#B8FFF4 #2FD3C8"         # Astilla del Umbral
+      grado-2: "#BFD9FF #4A8DFF"         # Fragmento de Nana
+      grado-3: "#E3C8FF #9B5CFF"         # Ambar Coagulado
+      grado-4: "#FFE3A8 #FFAA2B"         # Ambar Mayor
+      campana: "#FF9DB4 #FF3D6E"         # Campana de la Parca
+      lagrima: "#D6F6FF #5CC8FF"         # Lagrima de Eco
+      sello: "#FF7A7A #E63946"           # Sello de minijefe (el degradado de los minijefes)
+      eclipsada: "#FFC2F0 #E03CC4"       # Reliquia Eclipsada
+      esencia: "#E7C8FF #B266FF"
+      frasco: "#CFFFE0 #3DDC84"
+      cristal: "#DCDFFF #7C83FF"
+      reclamo: "#FFD3C4 #FF6B47"
+      talisman: "#F0FFC4 #A8DC3A"
+      grabado: "#FFF0C2 #E0B23A"
+      salvoconducto: "#FFD6E2 #F06A93"
+      masamune: "#EEF3F8 #8FA6BA"        # Fragmento de Masamune
+      kit: "#FFEBC7 #E6A955"             # lo prestado del Kit de Expedicion
+      trofeo: "#E3EBFA #8EA6D6"          # cabeza de un Eco derrotado
+      llave-umbral: "#E2F4FA #7FB8CC"    # el color de la Boveda de Ruinas
+      llave-ominosa: "#EEDFFF #A97FDD"   # el color de la Boveda Caida
+
   # ------------------------------------------------------------------ M3. RELIQUIAS
   reliquias:
     activas: true
@@ -897,17 +925,20 @@ hardcore:
     # Rama venta-oren: salir de Calamity ya no vende nada; las Reliquias se le venden a Oren, en su menu
     # (el NPC "mercader"), con estos valores, el tope del dia y la caducidad de siempre.
     grados:
-      1: {nombre: "Astilla del Umbral", material: PRISMARINE_SHARD, esencias: 0.2, mobcoins: 5}
-      2: {nombre: "Fragmento de Nana", material: DISC_FRAGMENT_5, esencias: 1, mobcoins: 15}
-      3: {nombre: "Ambar Coagulado", material: RESIN_CLUMP, esencias: 3, mobcoins: 40}
-      4: {nombre: "Ambar Mayor", material: RESIN_CLUMP, esencias: 6, mobcoins: 100}
+      # Rama lore-items: materiales nuevos (los de antes, PRISMARINE_SHARD, DISC_FRAGMENT_5, RESIN_CLUMP y
+      # ECHO_SHARD, se leen como estos). Lo que el material hace en vanilla (pociones, plantarse, crafteos,
+      # herreria, tocadiscos, colocarse) esta cortado para cualquier Reliquia.
+      1: {nombre: "Astilla del Umbral", material: GLISTERING_MELON_SLICE, esencias: 0.2, mobcoins: 5}
+      2: {nombre: "Fragmento de Nana", material: MANGROVE_PROPAGULE, esencias: 1, mobcoins: 15}
+      3: {nombre: "Ambar Coagulado", material: RESIN_BRICK, esencias: 3, mobcoins: 40}
+      4: {nombre: "Ambar Mayor", material: BOLT_ARMOR_TRIM_SMITHING_TEMPLATE, esencias: 6, mobcoins: 100}
     apilables: [1, 2]
     tope-dia: {1: 60, 2: 30}
     especiales:
       campana-parca: {nombre: "Campana de la Parca", material: BELL, fragmento-nivel-minimo: 40, llave-caos-iv: 0.25}
-      lagrima-eco: {nombre: "Lagrima de Eco", material: ECHO_SHARD, llave-caos-iv: 0.20}
+      lagrima-eco: {nombre: "Lagrima de Eco", material: OXIDIZED_COPPER_LANTERN, llave-caos-iv: 0.20}
       sello-minijefe: {nombre: "Sello de %minijefe%", material: FIRE_CHARGE}
-      eclipsada: {nombre: "Reliquia Eclipsada", material: RESIN_CLUMP}
+      eclipsada: {nombre: "Reliquia Eclipsada", material: MUSIC_DISC_LAVA_CHICKEN}
     drop:
       comun: {1: 0.02}
       destacado: {1: 0.20, 2: 0.05}
@@ -1387,9 +1418,9 @@ hardcore:
     pool:
       corto-mobs: {texto: "Mata 10 mobs", etiqueta: "Mobs", evento: mob, objetivo: 10, esencias: 2, mobcoins: 20, corto: true}
       corto-cofre: {texto: "Abre un cofre de estructura", etiqueta: "Cofre", evento: cofre, objetivo: 1, esencias: 2, mobcoins: 20, corto: true, mecanica: cofres.activo}
-      corto-reliquia: {texto: "Véndele a Oren una Reliquia de grado II o más", etiqueta: "Reliquia", evento: reliquia-ii, objetivo: 1, esencias: 2, mobcoins: 20, corto: true, mecanica: reliquias.activas}
+      corto-reliquia: {texto: "Véndele a Oren en el spawn una Reliquia de grado II o más", etiqueta: "Reliquia", evento: reliquia-ii, objetivo: 1, esencias: 2, mobcoins: 20, corto: true, mecanica: reliquias.activas}
       corto-15: {texto: "Pasa 15 min en Calamity", etiqueta: "Minutos", evento: minutos, objetivo: 15, esencias: 2, mobcoins: 20, corto: true}
-      extraer-ii: {texto: "Véndele a Oren 3 Reliquias de grado II o más", etiqueta: "Reliquias", evento: reliquia-ii, objetivo: 3, esencias: 4, mobcoins: 60, mecanica: reliquias.activas}
+      extraer-ii: {texto: "Véndele a Oren en el spawn 3 Reliquias de grado II o más", etiqueta: "Reliquias", evento: reliquia-ii, objetivo: 3, esencias: 4, mobcoins: 60, mecanica: reliquias.activas}
       destacados: {texto: "Mata 5 mobs destacados", etiqueta: "Destacados", evento: destacado, objetivo: 5, esencias: 3, mobcoins: 40}
       eco: {texto: "Derrota un Eco ajeno válido", etiqueta: "Eco", evento: eco-valido, objetivo: 1, esencias: 5, mobcoins: 80, mecanica: eco.activo}
       al-limite: {texto: "Aguanta 15 min con la cordura por debajo de 25", etiqueta: "Al límite", evento: minutos-limite, objetivo: 15, esencias: 5, mobcoins: 80}
@@ -1509,7 +1540,7 @@ hardcore:
           mide: "Reliquias que has sacado vivo y vendido."
           vistas: [semana, historico]
           textura: "b1f868761a5c9139da1fec6726e1655929429a43ab972c8118ba26b9255e7c"       # Red Chest (hierro)
-          material: RESIN_CLUMP
+          material: RESIN_BRICK
         salidas:
           clave: extracciones
           nombre: "Salidas"
@@ -1567,7 +1598,7 @@ hardcore:
           casco: {icono: NETHERITE_HELMET, texto: "El casco"}
           pechera: {icono: NETHERITE_CHESTPLATE, texto: "La pechera"}
           arma: {icono: NETHERITE_SWORD, texto: "El arma"}
-          reliquias: {icono: RESIN_CLUMP, texto: "Mis Reliquias"}
+          reliquias: {icono: GLISTERING_MELON_SLICE, texto: "Mis Reliquias"}
           nada: {icono: BARRIER, texto: "Nada, entro desnudo"}
       premio:
         texto: "¿Qué te importa más de un premio?"

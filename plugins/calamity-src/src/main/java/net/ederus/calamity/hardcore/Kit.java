@@ -57,7 +57,8 @@ import java.util.function.Predicate;
  */
 final class Kit implements Listener {
 
-    private static final String LINEA = "Objeto prestado: se deshace al salir de Calamity.";
+    /** La ultima linea de lo prestado (el autotest la busca al final del lore). */
+    private static final String LINEA = "Se deshace al salir de Calamity.";
 
     private final Hardcore hc;
 
@@ -106,10 +107,20 @@ final class Kit implements Listener {
         if (meta == null) return it;
         meta.getPersistentDataContainer().set(Marcas.PRESTADO, PersistentDataType.BYTE, (byte) 1);
         List<Component> lore = meta.lore() == null ? new ArrayList<>() : new ArrayList<>(meta.lore());
-        lore.add(Component.text(LINEA, Paleta.TENUE).decoration(TextDecoration.ITALIC, false));
+        if (!lore.isEmpty()) lore.add(Ficha.enBlanco());
+        lore.addAll(lineasPrestado());
         meta.lore(lore);
         it.setItemMeta(meta);
         return it;
+    }
+
+    /**
+     * Rama lore-items · Lo que lleva escrito lo prestado, con el estilo de los lores de Calamity: "Kit de
+     * Expedición · Prestado" en el tono del Kit (arena, la lona de la expedicion) y el aviso en gris. Sin la
+     * linea en blanco de delante: la pone quien la anade a un lore que ya tiene algo.
+     */
+    static List<Component> lineasPrestado() {
+        return new Ficha(Ficha.tono("kit")).cabecera("Kit de Expedición", "Prestado", 0).nota(LINEA).lore();
     }
 
     /** Lo que se presta, ya marcado. frasco null = sin frasco (autotest sin ItemsCalamity). */

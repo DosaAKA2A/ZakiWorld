@@ -692,7 +692,7 @@ final class Encuesta {
                 "solo", "PLAYER_HEAD", "Entro solo y me aburro");
         pre("salvar", "Si al morir pudieras salvar una sola cosa, ¿cuál sería?", false,
                 "casco", "NETHERITE_HELMET", "El casco", "pechera", "NETHERITE_CHESTPLATE", "La pechera",
-                "arma", "NETHERITE_SWORD", "El arma", "reliquias", "RESIN_CLUMP", "Mis Reliquias",
+                "arma", "NETHERITE_SWORD", "El arma", "reliquias", "GLISTERING_MELON_SLICE", "Mis Reliquias",
                 "nada", "BARRIER", "Nada, entro desnudo");
         pre("premio", "¿Qué te importa más de un premio?", false,
                 "fuerza", "DIAMOND_SWORD", "Que me haga más fuerte", "verse", "GLOW_INK_SAC", "Que se vea",
