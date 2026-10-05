@@ -7,7 +7,7 @@
 # SIN prefijo, empiezala con {sin-prefijo}. Las lineas de holograma, objeto y
 # menu nunca llevan prefijo.
 # ---------------------------------------------------------------------------
-version: 2
+version: 3
 
 prefijo: '&x&0&0&8&3&F&D&lBEACON &8» &f'
 
@@ -107,39 +107,57 @@ holograma-de-clan: '&#8A8A8AClan &f[%clan%] &#8A8A8A· líder &f%dueno%'
 # De clan, pero su dueño no tiene clan ahora mismo.
 holograma-de-lider: '&#8A8A8Alíder &f%dueno%'
 
-# --- el objeto (lore) ---
-# Bloques separados por lore-raya: que es; a quien y que da; de quien y hasta
-# cuando; como se usa. Lineas de 38 caracteres como mucho.
-# %acento% %texto% %radio% %elige% %elegibles% %efecto% %simbolo% %dueno% %fecha%
-# %clan% %desde% %hasta% %tipo%
+# --- el objeto (nombre y lore) ---
+# Un solo color por objeto, el de su tipo (el primero de su nombre en config.yml),
+# en tres tonos que pone el plugin:
+#   %fuerte%  el color del tipo: la categoria, "◆ Efectos..." y los ✦
+#   %palido%  el mismo, aclarado: la frase y las etiquetas (Líder:, Vence el...)
+#   el nombre va en degradado del tono claro al fuerte, sin negrita.
+# El resto en blanco (&#F4F4F4) o gris (&#7A7A7A). Bloques separados por una
+# linea en blanco, sin rayas. Las lineas de mas de 38 caracteres se parten solas.
+#
+# Bajo el nombre: "<categoria> · <para quien>".
+lore-cabecera: '%fuerte%%categoria%&#7A7A7A · %palido%%para%'
+lore-cabecera-sola: '%fuerte%%categoria%'
+lore-categoria: 'Super Beacon'
+# Los semanales (el trofeo). Sin clan fijado sale solo esto.
+lore-categoria-trofeo: 'Campeón de la semana'
+lore-de-dueno: 'Personal'
+lore-de-clan: 'De clan'
+lore-de-clan-fijo: 'Clan %clan%'
+lore-de-todos: 'Para todos'
+# La frase de cada tipo, entre comillas y en palido (frase-<tipo>). Sin la suya,
+# un tipo usa su descripcion de config.yml.
+frase-hogar: 'Cuida tu base mientras trabajas.'
+frase-granja: 'La tierra rinde más bajo su luz.'
+frase-guerra: 'Tu clan pelea mejor bajo su luz, en la base o en el frente.'
+frase-fortuna: 'Siete días en que todo rinde más.'
+frase-trofeo: 'Un solo clan lo gana cada semana. Esta vez, el tuyo.'
+# Los efectos. Si ya se eligieron algunos, los no elegidos salen apagados.
+lore-efectos-dueno: '%fuerte%◆ Efectos para ti'
+lore-efectos-clan: '%fuerte%◆ Efectos para tu clan'
+lore-efectos-todos: '%fuerte%◆ Efectos para todos'
+lore-efecto: ' %fuerte%✦ &#F4F4F4%efecto%'
+lore-efecto-libre: ' &#4E4E4E✦ &#7A7A7A%efecto%'
+# %elige% sale solo en los que se eligen.
+lore-alcance: '&#7A7A7AA %radio% bloques a la redonda.%elige%'
+lore-elige: ' Elige %elegibles%.'
+# De quien y hasta cuando. %fecha%: "domingo 11/10 a las 22:55" (con el año si
+# no es el actual).
+lore-dueno: '%palido%Dueño: &#F4F4F4%dueno%'
+lore-lider: '%palido%Líder: &#F4F4F4%dueno%'
+lore-dueno-libre: '%palido%Dueño: &#F4F4F4quien lo coloque primero'
+lore-lider-libre: '%palido%Líder: &#F4F4F4quien lo coloque primero'
+lore-vence: '%palido%Vence el &#F4F4F4%fecha%%palido%.'
+lore-vencio: '%palido%Venció el &#F4F4F4%fecha%%palido%.'
+lore-permanente: '%palido%Duración: &#F4F4F4permanente'
+# Como se usa. %regla%: una de las tres de abajo.
+lore-uso: '&#7A7A7AColócalo y haz clic derecho para abrir su menú. %regla%'
+lore-regla-libre: 'Se vuelve tuyo al colocarlo.'
+lore-regla-dueno: 'Solo su dueño lo mueve.'
+lore-regla-lider: 'Solo el líder lo mueve.'
+# La raya de la ficha del menu.
 lore-raya: '&#4E4E4E────────────────'
-# Bajo el nombre. En el trofeo: el clan y la semana que gano; en el resto, la
-# primera linea de su descripcion (config.yml) sin el punto.
-lore-subtitulo: '%acento%◆ &#C4C4C4%texto%'
-lore-subtitulo-sigue: '  &#C4C4C4%texto%'
-lore-clan: 'Clan [%clan%]'
-lore-semana: 'semana %desde% al %hasta%'
-# Cabecera de los efectos, segun a quien beneficia. %elige% sale solo si se eligen.
-lore-para-dueno: '&#C4C4C4Para ti, en %radio% bloques%elige%:'
-lore-para-clan: '&#C4C4C4A tu clan, en %radio% bloques%elige%:'
-lore-para-todos: '&#C4C4C4Para todos, en %radio% bloques%elige%:'
-lore-elige: '. Elige %elegibles%'
-# Cada efecto. %simbolo%: ❤ vida y defensa, ▸ movimiento y mineria, ✦ boosts.
-lore-efecto: ' %acento%%simbolo% &f%efecto%'
-lore-efecto-elegido: ' %acento%● &f%efecto%'
-lore-efecto-libre: ' &#4E4E4E○ &#8A8A8A%efecto%'
-lore-dueno: '&#8A8A8ADueño · &f%dueno%'
-lore-lider: '&#8A8A8ALíder · &f%dueno%'
-lore-dueno-libre: '&#8A8A8ADueño · &fquien lo coloque primero'
-lore-lider-libre: '&#8A8A8ALíder · &fquien lo coloque primero'
-# %fecha%: "domingo 11/10, 22:55" (con el año si no es el actual)
-lore-vence: '&#8A8A8AVence · &f%fecha%'
-lore-vencio: '&#8A8A8AVenció · &f%fecha%'
-lore-permanente: '&#8A8A8ADuración · &fpermanente'
-lore-uso: '&#8A8A8AColócalo y úsalo para abrir su menú.'
-lore-regla-libre: '&#8A8A8ASe vuelve tuyo al colocarlo.'
-lore-regla-dueno: '&#8A8A8ASolo su dueño lo coloca o lo recoge.'
-lore-regla-lider: '&#8A8A8ASolo el líder lo coloca o lo recoge.'
 objeto-tipo-perdido: '&#FF5C5CSu tipo (%tipo%) ya no existe. Avisa al staff.'
 
 # --- el menu ---

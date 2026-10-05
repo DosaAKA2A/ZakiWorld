@@ -62,6 +62,58 @@ final class GuardiaObjeto implements Listener {
 
     /* ============================================================== en el suelo */
 
+    /* ================================================================ repintar */
+
+    /** Jugadores con su inventario ya apuntado para repintar en el tic siguiente. */
+    private final java.util.Set<java.util.UUID> porRepintar = new java.util.HashSet<>();
+
+    /**
+     * Al abrir un contenedor de verdad (cofre, cofre doble, barril, shulker, ender, el de una
+     * entidad), los Super Beacons que haya dentro se repintan con el lore de ahora. Solo
+     * cambia nombre y lore; el PDC, que es la verdad, no se toca. Las interfaces de otros
+     * plugins (subastas, vistas de cajas, /pv...) no se tocan nunca: alli el objeto puede ser
+     * una copia que el plugin compara con la suya.
+     */
+    @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
+    public void alAbrir(org.bukkit.event.inventory.InventoryOpenEvent e) {
+        if (plugin.detenido()) return;
+        org.bukkit.inventory.Inventory top = e.getView().getTopInventory();
+        if (contenedorReal(top)) plugin.objeto().renovar(top);
+    }
+
+    /** Un inventario del mundo, no una interfaz: lo dice su dueño (sin copiar el bloque). */
+    static boolean contenedorReal(org.bukkit.inventory.Inventory inv) {
+        if (inv == null) return false;
+        if (inv.getType() == org.bukkit.event.inventory.InventoryType.ENDER_CHEST) return true;
+        org.bukkit.inventory.InventoryHolder h = inv.getHolder(false);
+        if (h instanceof org.bukkit.entity.HumanEntity) return false;
+        return h instanceof org.bukkit.inventory.BlockInventoryHolder || h instanceof org.bukkit.block.DoubleChest
+                || h instanceof org.bukkit.entity.Entity;
+    }
+
+    /**
+     * Lo que se saca de otros sitios (/pv, una interfaz, el suelo) entra al inventario del
+     * jugador con el lore con que se guardo: al recoger un Super Beacon y al cerrar cualquier
+     * inventario, su propio inventario (41 casillas) se repinta en el tic siguiente.
+     */
+    @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
+    public void alRecoger(org.bukkit.event.entity.EntityPickupItemEvent e) {
+        if (e.getEntity() instanceof org.bukkit.entity.Player p && nuestro(e.getItem().getItemStack())) repintarLuego(p);
+    }
+
+    @EventHandler(priority = EventPriority.MONITOR)
+    public void alCerrar(org.bukkit.event.inventory.InventoryCloseEvent e) {
+        if (e.getPlayer() instanceof org.bukkit.entity.Player p) repintarLuego(p);
+    }
+
+    private void repintarLuego(org.bukkit.entity.Player p) {
+        if (plugin.detenido() || !porRepintar.add(p.getUniqueId())) return;
+        org.bukkit.Bukkit.getScheduler().runTask(plugin.core(), () -> {
+            porRepintar.remove(p.getUniqueId());
+            if (!plugin.detenido() && p.isOnline()) plugin.objeto().renovar(p.getInventory());
+        });
+    }
+
     @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
     public void alTirarse(ItemSpawnEvent e) {
         if (nuestro(e.getEntity().getItemStack())) e.getEntity().setUnlimitedLifetime(true);

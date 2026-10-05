@@ -32,7 +32,10 @@ import org.bukkit.inventory.ItemStack;
  *   - los huecos vigilados (posiciones vaciadas) sobre un data.yml temporal;
  *   - en que mundos se puede colocar, y el nombre del dueño al dia;
  *   - la presentacion: la semana del trofeo, las fechas, los numeros, el corte de
- *     lineas a 38 caracteres y el alto del menu.
+ *     lineas a 38 caracteres y el alto del menu;
+ *   - el lore del objeto (1.79): un solo color en tres tonos, bloques sin rayas, el
+ *     nombre en degradado, sin negrita, y lo mismo con los respaldos que con el
+ *     mensajes.yml de serie.
  * Y dentro del servidor (modulo en marcha):
  *   - leer tipos de un config con errores, y que el config de serie no tenga ninguno;
  *   - la ida y vuelta del objeto: crear, leer el PDC y que salga lo mismo (semana incluida);
@@ -82,6 +85,7 @@ final class AutotestSuperBeacon {
             t.mundos();
             t.nombres();
             t.presentacion();
+            t.lore();
             t.renovar();
             if (modulo != null) {
                 t.lectura(modulo);
@@ -117,7 +121,11 @@ final class AutotestSuperBeacon {
 
     /** Un efecto de mentira: solo su grupo y su fuerza, que es lo que mira la fusion. */
     private static Efecto falso(String clave, String grupo, double fuerza) {
-        return new Efecto(clave, clave, Material.STONE) {
+        return falso(clave, grupo, fuerza, clave);
+    }
+
+    private static Efecto falso(String clave, String grupo, double fuerza, String nombre) {
+        return new Efecto(clave, nombre, Material.STONE) {
             @Override
             ClaseEfecto clase() {
                 return null;
@@ -503,6 +511,131 @@ final class AutotestSuperBeacon {
         igual("y a elegir efectos", lunes, conSemana.conElegidos(List.of("a")).semana());
         igual("y pasa por la baliza colocada", lunes,
                 new Baliza(conSemana, "w", 0, 64, 0, Material.BEACON, 0).ficha().semana());
+    }
+
+    /* ================================================================== lore */
+
+    private static final java.util.regex.Pattern HEX = java.util.regex.Pattern.compile("&#([0-9A-Fa-f]{6})");
+
+    private static String plano(String l) {
+        return Presentacion.plano(l);
+    }
+
+    private static List<String> planas(List<String> l) {
+        List<String> out = new ArrayList<>();
+        for (String x : l) out.add(plano(x));
+        return out;
+    }
+
+    private static TipoBaliza tipoLore(int color, TipoBaliza.Beneficia b, double dias, int elegibles, boolean semanal) {
+        Map<String, Efecto> ef = new LinkedHashMap<>();
+        ef.put("vida", falso("vida", "a", 1, "+6 corazones"));
+        ef.put("prisa", falso("prisa", "b", 1, "Prisa IV"));
+        ef.put("habilidades", falso("habilidades", "c", 1, "Experiencia de habilidades x1,5"));
+        return new TipoBaliza("prueba", Presentacion.hex(color) + "&lNombre de Prueba", Material.BEACON, 48, dias,
+                TipoBaliza.AlCaducar.APAGAR, b, !semanal, !semanal, elegibles,
+                List.of("Una frase de prueba que es lo bastante larga para partirse en dos lineas."), ef, null, 0, 0,
+                semanal);
+    }
+
+    private void lore() throws Exception {
+        ZoneId utc = ZoneId.of("UTC");
+        long ahora = java.time.ZonedDateTime.of(2026, 10, 4, 22, 55, 0, 0, utc).toInstant().toEpochMilli();
+        long vence = java.time.ZonedDateTime.of(2026, 10, 11, 22, 0, 0, 0, utc).toInstant().toEpochMilli();
+        igual("lore: la fecha", "domingo 11/10 a las 22:00", Presentacion.fechaLore(vence, utc, ahora));
+        igual("lore: mezcla a blanco a la mitad", 0xFFE4AB, Presentacion.mezcla(0xFFC857, 0xFFFFFF, 0.5));
+
+        LoreBaliza respaldo = new LoreBaliza((k, r) -> r, utc);
+        int oro = 0xFFC857;
+        TipoBaliza trofeo = tipoLore(oro, TipoBaliza.Beneficia.CLAN, 7, 0, true);
+        Ficha ft = new Ficha(UUID.randomUUID(), "prueba", UUID.randomUUID(), "Dosa__", "TEST", vence,
+                List.of(), 20_724L);
+        List<String> l = respaldo.lore(ft, trofeo, ahora);
+        igual("lore: el trofeo, linea a linea", List.of(
+                "Campeón de la semana · Clan TEST",
+                "",
+                "\"Una frase de prueba que es lo",
+                " bastante larga para partirse en dos",
+                " lineas.\"",
+                "",
+                "◆ Efectos para tu clan",
+                " ✦ +6 corazones",
+                " ✦ Prisa IV",
+                " ✦ Experiencia de habilidades x1,5",
+                "A 48 bloques a la redonda.",
+                "",
+                "Líder: Dosa__",
+                "Vence el domingo 11/10 a las 22:00.",
+                "",
+                "Colócalo y haz clic derecho para abrir",
+                "su menú. Solo el líder lo mueve."), planas(l));
+
+        Set<String> permitidos = Set.of(Presentacion.hex(oro), Presentacion.hex(LoreBaliza.palido(oro)),
+                LoreBaliza.BLANCO, LoreBaliza.GRIS, LoreBaliza.APAGADO);
+        List<String> ajenos = new ArrayList<>();
+        for (String x : l) {
+            java.util.regex.Matcher m = HEX.matcher(x);
+            while (m.find()) {
+                String c = "&#" + m.group(1).toUpperCase(java.util.Locale.ROOT);
+                if (!permitidos.contains(c)) ajenos.add(c);
+            }
+        }
+        igual("lore: un solo color en dos tonos, mas blanco y gris", List.of(), ajenos);
+        ok("lore: sin rayas, sin negrita y sin la semana", l.stream().noneMatch(x -> x.contains("─")
+                || x.toLowerCase(java.util.Locale.ROOT).contains("&l") || plano(x).matches(".*\\d\\d/\\d\\d al .*")));
+        ok("lore: ninguna linea pasa de 38", l.stream().allMatch(x -> Presentacion.largo(x) <= Presentacion.ANCHO));
+
+        String nombre = LoreBaliza.nombre(trofeo);
+        ok("lore: el nombre sin negrita y del claro al fuerte",
+                !nombre.toLowerCase(java.util.Locale.ROOT).contains("&l")
+                        && nombre.startsWith(Presentacion.hex(LoreBaliza.claro(oro)) + "N")
+                        && nombre.endsWith(Presentacion.hex(oro) + "a")
+                        && plano(nombre).equals("Nombre de Prueba"));
+
+        TipoBaliza hogar = tipoLore(0x7EC8FF, TipoBaliza.Beneficia.DUENO, 0, 2, false);
+        String azul = Presentacion.hex(0x7EC8FF);
+        Ficha fh = new Ficha(UUID.randomUUID(), "prueba", UUID.randomUUID(), "Dosa__", null, 0, List.of("prisa"));
+        List<String> lh = respaldo.lore(fh, hogar, ahora);
+        igual("lore: uno normal, categoria y para quien", "Super Beacon · Personal", plano(lh.get(0)));
+        ok("lore: el elegido brilla y los demas, apagados",
+                lh.contains(" " + azul + "✦ " + LoreBaliza.BLANCO + "Prisa IV")
+                        && lh.contains(" " + LoreBaliza.APAGADO + "✦ " + LoreBaliza.GRIS + "+6 corazones"));
+        ok("lore: el alcance dice cuantos se eligen", lh.contains(LoreBaliza.GRIS + "A 48 bloques a la redonda. Elige 2."));
+        ok("lore: permanente", planas(lh).contains("Duración: permanente"));
+        Ficha libre = new Ficha(UUID.randomUUID(), "prueba", null, null, null, 0, List.of());
+        List<String> ll = respaldo.lore(libre, hogar, ahora);
+        ok("lore: sin elegir nada, todos brillan", ll.contains(" " + azul + "✦ " + LoreBaliza.BLANCO + "+6 corazones"));
+        ok("lore: sin dueño, quien lo coloque primero, y se vuelve tuyo",
+                planas(ll).contains("Dueño: quien lo coloque primero")
+                        && String.join(" ", planas(ll)).contains("Se vuelve tuyo al colocarlo."));
+        Ficha vencida = new Ficha(UUID.randomUUID(), "prueba", UUID.randomUUID(), "Dosa__", "TEST", ahora - Tiempo.DIA,
+                List.of(), 20_724L);
+        ok("lore: vencido, Venció el...",
+                planas(respaldo.lore(vencida, trofeo, ahora)).contains("Venció el sábado 03/10 a las 22:55."));
+        TipoBaliza guerra = tipoLore(0xFF7B6B, TipoBaliza.Beneficia.CLAN, 0, 3, false);
+        igual("lore: uno de clan sin clan fijado", "Super Beacon · De clan",
+                plano(respaldo.lore(new Ficha(UUID.randomUUID(), "prueba", UUID.randomUUID(), "Dosa__", null, 0,
+                        List.of()), guerra, ahora).get(0)));
+
+        // Los mismos textos con el mensajes.yml de serie que con los respaldos del codigo.
+        YamlConfiguration msg = new YamlConfiguration();
+        try (InputStream in = AutotestSuperBeacon.class.getClassLoader().getResourceAsStream("superbeacon/mensajes.yml")) {
+            if (in == null) {
+                ok("el jar trae superbeacon/mensajes.yml", false);
+                return;
+            }
+            msg.load(new InputStreamReader(in, StandardCharsets.UTF_8));
+        }
+        LoreBaliza serie = new LoreBaliza((k, r) -> msg.getString(k, r), utc);
+        igual("lore: mensajes.yml de serie = respaldos (trofeo)", l, serie.lore(ft, trofeo, ahora));
+        igual("lore: mensajes.yml de serie = respaldos (elegido)", lh, serie.lore(fh, hogar, ahora));
+        igual("lore: mensajes.yml de serie = respaldos (libre)", ll, serie.lore(libre, hogar, ahora));
+        List<String> malas = new ArrayList<>();
+        for (String id : List.of("hogar", "granja", "guerra", "fortuna", "trofeo")) {
+            String f = msg.getString("frase-" + id);
+            if (f == null || f.isBlank()) malas.add(id);
+        }
+        igual("lore: cada tipo de serie tiene su frase", List.of(), malas);
     }
 
     private static List<Integer> lista(int[] a) {
