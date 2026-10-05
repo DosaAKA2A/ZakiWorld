@@ -40,7 +40,7 @@ import java.util.logging.Level;
  * El cierre es el lunes 00:00 en hardcore.zona: la tarea de cada recalcular-segundos mira si
  * la semana anterior ya se cerro (ranking-cerrada en datos). La primera vez que corre solo
  * apunta la semana anterior como cerrada: encender el ranking no paga semanas viejas.
- * /lw hardcore ranking cerrar cierra la semana EN CURSO a mano (pruebas) y la marca cerrada.
+ * /calamity ranking close cierra la semana EN CURSO a mano (pruebas) y la marca cerrada.
  *
  * Los tops de los placeholders se recalculan en esa misma tarea y se sirven de una cache
  * inmutable: PlaceholderAPI pregunta desde otros hilos y no puede leer hardcore-datos.yml
@@ -83,8 +83,8 @@ final class Rankings implements Listener {
     Rankings(Hardcore hc) {
         this.hc = hc;
         hc.plugin().getServer().getPluginManager().registerEvents(this, hc.plugin());
-        Subcomandos.lw().registrar("ranking", "ranking [ver|cerrar]: tablas de la semana; cerrar paga ya (M17)",
-                "ederus.mundos", this::comando, args -> args.length == 2 ? List.of("ver", "cerrar") : List.of());
+        Subcomandos.staff().registrar("ranking", "ranking [view|close]: tablas de la semana; close paga ya (M17)",
+                Subcomandos.PERMISO, this::comando, args -> args.length == 2 ? List.of("view", "close") : List.of());
         PlaceholdersLethal.registrar("parcas", (j, r) -> stat(j, "parcas"));
         PlaceholdersLethal.registrar("ecos", (j, r) -> stat(j, "ecos-cerrados"));
         // 1.8.0: contratos de Ambush vencidos (la estadistica "ambush"); no es categoria del ranking.
@@ -443,7 +443,7 @@ final class Rankings implements Listener {
         String cmd = plantilla.replace("%jugador%", nombre).trim();
         if (cmd.startsWith("/")) cmd = cmd.substring(1);
         try {
-            return hc.plugin().getServer().dispatchCommand(hc.plugin().getServer().getConsoleSender(), cmd);
+            return hc.plugin().getServer().dispatchCommand(hc.plugin().getServer().getConsoleSender(), ComandosViejos.traducir(cmd));
         } catch (Throwable t) {
             hc.plugin().getLogger().warning("[Calamity] Falló el comando de ranking \"" + cmd + "\": " + t);
             return false;
@@ -482,14 +482,14 @@ final class Rankings implements Listener {
     // ------------------------------------------------------------------ comando
 
     private void comando(CommandSender quien, String[] args) {
-        String sub = args.length > 1 ? args[1].toLowerCase(Locale.ROOT) : "ver";
+        String sub = args.length > 1 ? args[1].toLowerCase(Locale.ROOT) : "view";
         Estadisticas st = hc.estadisticas();
         if (st == null) {
             quien.sendMessage(ComandoCalamity.mensaje("Sin estadísticas: el módulo no arrancó."));
             return;
         }
         String semana = cal().semana();
-        if (sub.equals("cerrar")) {
+        if (sub.equals("close")) {
             if (!activo()) quien.sendMessage(ComandoCalamity.mensaje("ranking.activo está apagado, pero se cierra igual porque lo pides a mano."));
             List<Puesto> res = cerrar(semana, "admin");
             quien.sendMessage(ComandoCalamity.mensaje("Semana " + semana + " cerrada: " + res.size() + " premios."));
@@ -579,7 +579,7 @@ final class Rankings implements Listener {
         h.igual("top con n fuera de rango", null, top(null, "tasado-mc_11_valor"));
         h.igual("stat sin jugador", "", PlaceholdersLethal.resolver(null, "stat_parcas"));
         h.ok("autotest no toca stats-semana reales", !hc.datos().isSet("stats-semana." + sem + "." + uno));
-        h.ok("/lw hardcore ranking registrado", Subcomandos.lw().nombres(null).contains("ranking"));
+        h.ok("/calamity ranking registrado", Subcomandos.staff().nombres(null).contains("ranking"));
         return h.lineas();
     }
 }

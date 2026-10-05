@@ -109,9 +109,9 @@ final class Equipo implements Listener {
         this.hc = hc;
         cargar();
         hc.plugin().getServer().getPluginManager().registerEvents(this, hc.plugin());
-        Subcomandos.lw().registrar("equipo",
-                "equipo [jugador]: lo que cuenta de su equipo en Calamity (efectos de GodItems) y lo que suma",
-                "ederus.mundos", this::comando, args -> args.length == 2 ? Entregas.nombresConectados() : List.of());
+        Subcomandos.staff().registrar("gear",
+                "gear [player]: lo que cuenta de su equipo en Calamity (efectos de GodItems) y lo que suma",
+                Subcomandos.PERMISO, this::comando, args -> args.length == 2 ? Entregas.nombresConectados() : List.of());
         Autotest.registrar("equipo", this::autotest);
     }
 
@@ -143,7 +143,7 @@ final class Equipo implements Listener {
 
     /**
      * Ya no hay nada que leer: solo se comprueba que GodItems esta y se avisa si queda el equipo.yml
-     * viejo con piezas o sets (que ya no hacen nada). Devuelve el resumen para /calamidad reload.
+     * viejo con piezas o sets (que ya no hacen nada). Devuelve el resumen para /calamity reload.
      */
     String cargar() {
         if (!conApi() && !avisadoSinApi) {
@@ -366,14 +366,14 @@ final class Equipo implements Listener {
     // ================================================================== comando
 
     /**
-     * /calamidad equipo [jugador]: el informe de GodItems acotado a calamity.* (cada hueco, que cuenta y
+     * /calamity gear [player]: el informe de GodItems acotado a calamity.* (cada hueco, que cuenta y
      * por que no, los sets y el total con topes) y, para los castigos, en que se queda el x2.
      */
     private void comando(CommandSender quien, String[] args) {
         Player p = args.length >= 2 ? Bukkit.getPlayerExact(args[1]) : (quien instanceof Player j ? j : null);
         if (p == null) {
             quien.sendMessage(Paleta.aviso(args.length >= 2 ? "No encuentro a " + args[1] + " conectado."
-                    : "Uso: /calamidad equipo <jugador>"));
+                    : "Uso: /calamity gear <player>"));
             return;
         }
         quien.sendMessage(Paleta.mensaje(Component.text("Equipo de ").append(Component.text(p.getName(), Paleta.DETALLE))

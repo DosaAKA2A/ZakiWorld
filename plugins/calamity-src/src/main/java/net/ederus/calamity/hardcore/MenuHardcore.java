@@ -161,7 +161,7 @@ public final class MenuHardcore implements Listener {
                 Component.empty(),
                 Marco.tenue("Cada casilla es una regla."),
                 Marco.tenue("Los portales y los objetos van"),
-                Marco.tenue("por /calamidad.")), true));
+                Marco.tenue("por /calamity.")), true));
 
         for (int i = 0; i < REGLAS.size() && i < CASILLAS.length; i++) {
             Regla r = REGLAS.get(i);

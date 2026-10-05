@@ -121,8 +121,8 @@ final class BovedaCaida implements Listener {
         String cajas = PuenteBovedas.asegurar();
         hc.plugin().getLogger().info("[Calamity] Bóvedas de EDM: " + (cajas == null
                 ? "el módulo dungeonloot no está (EDM 1.78.1 o superior): sin Bóvedas de Ruinas ni Caídas." : cajas));
-        Subcomandos.lw().registrar("vault", "vault <drop [random]|info|clear>: la Bóveda Caída (forzar, ver, quitar)",
-                "ederus.mundos", this::comando, args -> args.length == 2 ? List.of("drop", "info", "clear")
+        Subcomandos.staff().registrar("vault", "vault <drop [random]|info|clear>: la Bóveda Caída (forzar, ver, quitar)",
+                Subcomandos.PERMISO, this::comando, args -> args.length == 2 ? List.of("drop", "info", "clear")
                         : args.length == 3 && args[1].equalsIgnoreCase("drop") ? List.of("random") : List.of());
         Autotest.registrar("boveda-caida", BovedaCaida::autotest);
         reloj = hc.plugin().getServer().getScheduler().runTaskTimer(hc.plugin(), () -> hc.seguro("boveda-caida", this::segundo), 60L, 20L);
@@ -214,7 +214,7 @@ final class BovedaCaida implements Listener {
             retirarActiva("caduca");
             return;
         }
-        // Abierta y sin BovedaVaciadaEvent (un reinicio o un /calamidad reload a mitad de soltar, o EDM que
+        // Abierta y sin BovedaVaciadaEvent (un reinicio o un /calamity reload a mitad de soltar, o EDM que
         // corto la apertura): sin esto se quedaba activa para siempre y no volvia a caer ninguna. EDM suelta
         // todo en unos segundos; pasado un minuto, se quita igual. Sin abierta-en (datos de antes), ya.
         if (abierta && ahora - datos().getLong(RUTA + ".activa.abierta-en", 0) >= 60_000L) {
@@ -686,7 +686,7 @@ final class BovedaCaida implements Listener {
         switch (sub) {
             case "drop" -> {
                 if (hayActiva() || cayendo) {
-                    quien.sendMessage(ComandoCalamity.mensaje("Ya hay una Bóveda Caída activa. Quítala con /calamidad vault clear."));
+                    quien.sendMessage(ComandoCalamity.mensaje("Ya hay una Bóveda Caída activa. Quítala con /calamity vault clear."));
                     return;
                 }
                 boolean alAzar = args.length > 2 && args[2].equalsIgnoreCase("random");

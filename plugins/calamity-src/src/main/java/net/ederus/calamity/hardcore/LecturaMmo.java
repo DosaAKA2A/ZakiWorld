@@ -21,7 +21,7 @@ import java.util.Set;
 import java.util.TreeMap;
 
 /**
- * Lo que el autotest objetos-reales y /calamidad objetos leen de MMOItems 6.10.1 y MythicLib 1.7.1 para
+ * Lo que el autotest real-items y /calamity items leen de MMOItems 6.10.1 y MythicLib 1.7.1 para
  * comprobar que un objeto de Calamity hace lo que dice su lore: las etiquetas del item generado, los bonos y
  * habilidades de un set tal y como los cargo MMOItems, y el StatMap de un jugador. Por reflexion, como PuenteMmo
  * (MT sec. 6.2): sin MMOItems en el pom y con el mismo jar en un servidor que no lo tenga.

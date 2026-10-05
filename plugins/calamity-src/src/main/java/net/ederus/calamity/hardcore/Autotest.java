@@ -26,7 +26,12 @@ import java.util.function.Supplier;
 import java.util.logging.Level;
 
 /**
- * Pruebas sin jugadores de cada modulo: /lw hardcore autotest <modulo|todo> (consola o RCON).
+ * Pruebas sin jugadores de cada modulo: /calamity selftest <module|all> (consola o RCON).
+ *
+ * Los modulos se registran con su id de siempre (en espanol: es el nombre interno, el de la
+ * Bitacora y el de hc.seguro), pero en el comando se escriben y se leen en ingles (NOMBRES): los
+ * comandos de Ederus van siempre en ingles. Un modulo nuevo sin nombre ingles lo senala el
+ * autotest "commands".
  *
  * Cada modulo registra la suya con registrar("<modulo>", () -> lineas). Convencion de las
  * lineas: una por comprobacion; las que empiezan por "OK" han pasado y cualquier otra es
@@ -45,6 +50,48 @@ final class Autotest {
 
     private static final Map<String, Supplier<List<String>>> PRUEBAS = new LinkedHashMap<>();
     private static final Set<String> PENDIENTES = new LinkedHashSet<>();
+
+    /** Lo que se escribe en /calamity selftest por cada id interno. Los que coinciden tambien van, por el autotest. */
+    static final Map<String, String> NOMBRES = Map.ofEntries(
+            Map.entry("aduana", "customs"), Map.entry("altar", "altar"), Map.entry("alucinaciones", "hallucinations"),
+            Map.entry("ambush", "ambush"), Map.entry("apariciones", "spawns"), Map.entry("barra", "actionbar"),
+            Map.entry("base", "base"), Map.entry("botin-calamity", "loot"), Map.entry("boveda-caida", "fallen-vault"),
+            Map.entry("censo", "census"), Map.entry("ciclo-clima", "weather-cycle"), Map.entry("clanes", "clans"),
+            Map.entry("clima", "climate"), Map.entry("cofres", "chests"), Map.entry("combate", "combat"),
+            Map.entry("comandos", "commands"), Map.entry("contratos", "contracts"), Map.entry("creditos", "credits"),
+            Map.entry("dificultad-amenazas", "threat-difficulty"), Map.entry("distancia", "distance"),
+            Map.entry("eclipse", "eclipse"), Map.entry("eco", "echo"), Map.entry("encuesta", "poll"),
+            Map.entry("engarce", "gemsetting"), Map.entry("entregas", "delivery"), Map.entry("equipo", "gear"),
+            Map.entry("exentos", "exempt"), Map.entry("fichas", "sheets"), Map.entry("fragmentos", "fragments"),
+            Map.entry("grieta", "rift"), Map.entry("grifo", "faucet"), Map.entry("hitos", "milestones"),
+            Map.entry("horas", "hours"), Map.entry("huella", "footprint"), Map.entry("kit", "kit"),
+            Map.entry("ligado", "binding"), Map.entry("medidor-cordura", "sanity-meter"), Map.entry("menus", "menus"),
+            Map.entry("minijefes", "minibosses"), Map.entry("mmo", "mmo"), Map.entry("monedero", "wallet"),
+            Map.entry("npcs", "npcs"), Map.entry("objetos", "items"), Map.entry("objetos-reales", "real-items"),
+            Map.entry("parca", "reaper"), Map.entry("parca-anomalia", "reaper-anomaly"), Map.entry("parte", "death-report"),
+            Map.entry("puente-bovedas", "vault-bridge"), Map.entry("racha", "streak"), Map.entry("ranking", "ranking"),
+            Map.entry("reclamo", "lure"), Map.entry("reliquias", "relics"), Map.entry("ruinas", "ruins"),
+            Map.entry("saldo", "balance"), Map.entry("sellos", "seals"), Map.entry("sentidos", "senses"),
+            Map.entry("stats", "stats"), Map.entry("tablero", "board"), Map.entry("tasacion", "appraisal"),
+            Map.entry("telemetria", "telemetry"), Map.entry("testigos", "witnesses"), Map.entry("tops", "tops"),
+            Map.entry("zona-spawn", "spawn-zone"));
+
+    /** El nombre en ingles de un modulo (el id interno si aun no tiene). */
+    static String nombre(String interno) {
+        return NOMBRES.getOrDefault(interno, interno);
+    }
+
+    /** El id interno de lo que se escribe (el nombre ingles). */
+    static String interno(String escrito) {
+        String e = escrito.toLowerCase(Locale.ROOT);
+        for (Map.Entry<String, String> x : NOMBRES.entrySet()) if (x.getValue().equals(e)) return x.getKey();
+        return e;
+    }
+
+    /** Los ids internos registrados (con prueba o pendientes), para el autotest de los comandos. */
+    static Set<String> modulos() {
+        return new LinkedHashSet<>(todos());
+    }
 
     private Autotest() {
     }
@@ -73,18 +120,21 @@ final class Autotest {
 
     // ------------------------------------------------------------------ el comando
 
-    /** Registra /lw hardcore autotest y las pruebas propias de WP0 (base y mmo). */
+    /** Registra /calamity selftest y las pruebas propias de WP0 (base y mmo). */
     static void instalar(Hardcore hc) {
-        Subcomandos.lw().registrar("autotest", "autotest <módulo|todo>: pruebas sin jugadores", "ederus.mundos",
+        Subcomandos.staff().registrar("selftest", "selftest <module|all>: pruebas sin jugadores", Subcomandos.PERMISO,
                 (quien, args) -> comando(hc, quien, args),
                 args -> {
                     if (args.length != 2) return List.of();
-                    List<String> op = new ArrayList<>(todos());
-                    op.add("todo");
+                    List<String> op = new ArrayList<>();
+                    for (String m : todos()) op.add(nombre(m));
+                    op.add("all");
                     return op;
                 });
         registrar("base", () -> base(hc));
         registrar("mmo", () -> mmo(hc));
+        // 1.12: todo /calamity en ingles y de staff; ningun comando viejo en los textos.
+        registrar("comandos", () -> PruebaComandos.autotest(hc));
     }
 
     private static List<String> todos() {
@@ -95,12 +145,12 @@ final class Autotest {
 
     private static void comando(Hardcore hc, CommandSender quien, String[] args) {
         if (args.length < 2) {
-            decir(hc, quien, "autotest | uso | /calamidad autotest <" + String.join("|", todos()) + "|todo>", true);
+            decir(hc, quien, "selftest | uso | /calamity selftest <" + String.join("|", nombres()) + "|all>", true);
             return;
         }
         String cual = args[1].toLowerCase(Locale.ROOT);
-        if (!cual.equals("todo")) {
-            correr(hc, quien, cual);
+        if (!cual.equals("all")) {
+            correr(hc, quien, interno(cual));
             return;
         }
         int bien = 0, mal = 0, pendientes = 0;
@@ -110,17 +160,24 @@ final class Autotest {
             else if (r < 0) mal++;
             else pendientes++;
         }
-        decir(hc, quien, "autotest | todo | " + bien + " OK, " + mal + " con fallos, " + pendientes + " pendientes", mal == 0);
+        decir(hc, quien, "selftest | all | " + bien + " OK, " + mal + " con fallos, " + pendientes + " pendientes", mal == 0);
     }
 
     /** 1 = todo bien, -1 = algun fallo, 0 = pendiente o no existe. */
+    private static List<String> nombres() {
+        List<String> out = new ArrayList<>();
+        for (String m : todos()) out.add(nombre(m));
+        return out;
+    }
+
     private static int correr(Hardcore hc, CommandSender quien, String modulo) {
         Supplier<List<String>> prueba = PRUEBAS.get(modulo);
+        String visto = nombre(modulo);
         if (prueba == null) {
             if (PENDIENTES.contains(modulo)) {
-                decir(hc, quien, "autotest | " + modulo + " | pendiente", true);
+                decir(hc, quien, "selftest | " + visto + " | pendiente", true);
             } else {
-                decir(hc, quien, "autotest | " + modulo + " | no existe (hay: " + String.join(", ", todos()) + ")", false);
+                decir(hc, quien, "selftest | " + visto + " | no existe (hay: " + String.join(", ", nombres()) + ")", false);
             }
             return 0;
         }
@@ -129,20 +186,20 @@ final class Autotest {
             lineas = prueba.get();
         } catch (Throwable t) {
             hc.plugin().getLogger().log(Level.WARNING, "[Calamity] autotest " + modulo + " revienta", t);
-            decir(hc, quien, "autotest | " + modulo + " | FALLO | excepcion: " + t, false);
+            decir(hc, quien, "selftest | " + visto + " | FALLO | excepcion: " + t, false);
             return -1;
         }
         if (lineas == null) lineas = List.of();
         int total = lineas.size(), bien = 0;
         for (String l : lineas) {
             if (l != null && l.startsWith("OK")) bien++;
-            else decir(hc, quien, "autotest | " + modulo + " | FALLO | " + l, false);
+            else decir(hc, quien, "selftest | " + visto + " | FALLO | " + l, false);
         }
         if (bien == total) {
-            decir(hc, quien, "autotest | " + modulo + " | OK " + bien + "/" + total, true);
+            decir(hc, quien, "selftest | " + visto + " | OK " + bien + "/" + total, true);
             return 1;
         }
-        decir(hc, quien, "autotest | " + modulo + " | FALLO " + bien + "/" + total, false);
+        decir(hc, quien, "selftest | " + visto + " | FALLO " + bien + "/" + total, false);
         return -1;
     }
 
@@ -280,8 +337,8 @@ final class Autotest {
         h.cerca("a la entidad le llega el golpe topado por la escala", 195.2 * 1024 / 2440.0,
                 Amenazas.golpeLogico(400, 0.08, 2440) * Amenazas.escalaPara(2440), 1e-9);
 
-        h.ok("/lw hardcore autotest registrado", Subcomandos.lw().nombres(null).contains("autotest"));
-        h.ok("/lw hardcore amenazas registrado", Subcomandos.lw().nombres(null).contains("amenazas"));
+        h.ok("/calamity selftest registrado", Subcomandos.staff().nombres(null).contains("selftest"));
+        h.ok("/calamity threats registrado", Subcomandos.staff().nombres(null).contains("threats"));
         h.igual("placeholder cordura sin jugador", "", PlaceholdersLethal.resolver(null, "cordura"));
         h.igual("placeholder que no existe", null, PlaceholdersLethal.resolver(null, "no_existe_de_verdad"));
         h.igual("hardcore-datos.yml sigue sin stats sinteticas", false, hc.datos().isSet("stats-semana." + madrid.semana() + "." + u));

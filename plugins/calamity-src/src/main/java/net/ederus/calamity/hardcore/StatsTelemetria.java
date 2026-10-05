@@ -26,7 +26,7 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 /**
- * /lw hardcore stats [dias]: el resumen de la telemetria para el staff (MED sec. 3.4).
+ * /calamity stats [days]: el resumen de la telemetria para el staff (MED sec. 3.4).
  *
  * Existe para contestar sin sacar el analizador de Python la pregunta de cada dia: que
  * entra, que sale vivo y que se pierde. Por objeto: entregado (recompensas y trueques),
@@ -48,8 +48,8 @@ final class StatsTelemetria {
     StatsTelemetria(Hardcore hc, File carpeta) {
         this.hc = hc;
         this.carpeta = carpeta;
-        Subcomandos.lw().registrar("stats", "stats [días]: qué se entrega, qué se saca vivo y qué se pierde (telemetría)",
-                "ederus.mundos", this::comando, args -> args.length == 2 ? List.of("1", "7", "30") : List.of());
+        Subcomandos.staff().registrar("stats", "stats [days]: qué se entrega, qué se saca vivo y qué se pierde (telemetría)",
+                Subcomandos.PERMISO, this::comando, args -> args.length == 2 ? List.of("1", "7", "30") : List.of());
         Autotest.registrar("stats", StatsTelemetria::autotest);
     }
 

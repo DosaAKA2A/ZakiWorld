@@ -223,7 +223,7 @@ final class PuenteAnomalia {
         return callada != null;
     }
 
-    /** /lw hardcore parca anomalia: lo que hay en EDM y que saldria ahora. */
+    /** /calamity reaper anomaly: lo que hay en EDM y que saldria ahora. */
     String estado() {
         AnomalyPlugin a = modulo();
         if (a == null) return "anomalia | sin el módulo de anomalías de EDM | la siguiente: reserva";

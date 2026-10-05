@@ -206,11 +206,11 @@ final class Minijefes {
         // Aparte y protegido: si el Reclamo no arranca, los minijefes se siguen repartiendo.
         this.reclamo = hc.valor("reclamo", () -> new Reclamo(hc), null);
         Autotest.registrar("minijefes", this::autotest);
-        Subcomandos.lw().registrar("minijefe",
-                "minijefe muerte <tipo> <N> <jugador:fracción>,...: simula un reparto (el primero es el asesino)",
-                "ederus.mundos", this::comandoMuerte, this::tabMuerte);
-        Subcomandos.lw().registrar("piedad", "piedad <jugador> [tipo] [n]: ver o poner la piedad de los Sellos",
-                "ederus.mundos", this::comandoPiedad, args -> switch (args.length) {
+        Subcomandos.staff().registrar("miniboss",
+                "miniboss death <type> <N> <player:share>,...: simula un reparto (el primero es el asesino)",
+                Subcomandos.PERMISO, this::comandoMuerte, this::tabMuerte);
+        Subcomandos.staff().registrar("pity", "pity <player> [type] [n]: ver o poner la piedad de los Sellos",
+                Subcomandos.PERMISO, this::comandoPiedad, args -> switch (args.length) {
                     case 2 -> Reliquias.conectados();
                     case 3 -> TIPOS;
                     default -> List.of();
@@ -398,7 +398,7 @@ final class Minijefes {
         repartir(tipo, nivel, asesino, fr);
     }
 
-    /** Para /lw hardcore minijefe muerte: el primero de fracciones es el asesino. */
+    /** Para /calamity miniboss death: el primero de fracciones es el asesino. */
     void simularMuerte(String tipo, int nivel, LinkedHashMap<OfflinePlayer, Double> fracciones) {
         if (fracciones == null || fracciones.isEmpty()) return;
         repartir(tipo, nivel, fracciones.keySet().iterator().next(), fracciones);
@@ -836,11 +836,11 @@ final class Minijefes {
 
     // ------------------------------------------------------------------ comandos
 
-    /** minijefe muerte <tipo> <N> Dosa__:0.6,Otro:0.3,Tercero:0.05 */
+    /** miniboss death <type> <N> Dosa__:0.6,Otro:0.3,Tercero:0.05 */
     private void comandoMuerte(CommandSender quien, String[] args) {
-        if (args.length < 5 || !args[1].equalsIgnoreCase("muerte")) {
+        if (args.length < 5 || !args[1].equalsIgnoreCase("death")) {
             quien.sendMessage(ComandoCalamity.mensaje(
-                    "Uso: /calamidad minijefe muerte <tipo> <N> <jugador:fracción>,... (el primero es el asesino)"));
+                    "Uso: /calamity miniboss death <type> <N> <player:share>,... (el primero es el asesino)"));
             return;
         }
         String tipo = args[2].toLowerCase(Locale.ROOT);
@@ -887,7 +887,7 @@ final class Minijefes {
 
     private List<String> tabMuerte(String[] args) {
         return switch (args.length) {
-            case 2 -> List.of("muerte");
+            case 2 -> List.of("death");
             case 3 -> TIPOS;
             case 4 -> List.of("50");
             case 5 -> {
@@ -899,10 +899,10 @@ final class Minijefes {
         };
     }
 
-    /** piedad <jugador> [tipo] [n] */
+    /** pity <player> [type] [n] */
     private void comandoPiedad(CommandSender quien, String[] args) {
         if (args.length < 2) {
-            quien.sendMessage(ComandoCalamity.mensaje("Uso: /calamidad piedad <jugador> [tipo] [n]"));
+            quien.sendMessage(ComandoCalamity.mensaje("Uso: /calamity pity <player> [type] [n]"));
             return;
         }
         OfflinePlayer op = Reliquias.jugador(args[1]);
@@ -1003,7 +1003,7 @@ final class Minijefes {
     }
 
     /**
-     * 1.10 · /calamidad autotest minijefes: donde vive cada uno (elegir, delBioma) y el botin extra
+     * 1.10 · /calamity selftest minibosses: donde vive cada uno (elegir, delBioma) y el botin extra
      * (leerBotin, tirarBotin), sin jugadores ni escrituras; y que la config viva cuadre: cada minijefe de
      * la tabla de biomas tiene que estar en minijefes.tipos, o su bioma se queda sin dueno.
      */

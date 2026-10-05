@@ -103,12 +103,12 @@ final class Encuesta {
         this.menu = new MenuEncuesta(hc, this);
 
         Autotest.registrar("encuesta", this::autotest);
-        Subcomandos.lw().registrar("encuesta",
-                "encuesta [id] | abrir <id> | cerrar [botin] | simular <n>: recuento, abrir y cerrar la pregunta",
-                "ederus.mundos", this::comandoStaff, this::tabStaff);
-        Subcomandos.lw().registrar("voto", "voto: recuento del Voto del Botin (total y esta semana)", "ederus.mundos",
+        Subcomandos.staff().registrar("poll",
+                "poll [id] | open <id> | close [botin] | simulate <n>: recuento, abrir y cerrar la pregunta",
+                Subcomandos.PERMISO, this::comandoStaff, this::tabStaff);
+        Subcomandos.staff().registrar("lootvote", "lootvote: recuento del Voto del Botin (total y esta semana)", Subcomandos.PERMISO,
                 (quien, args) -> recuento(quien, BOTIN), null);
-        Subcomandos.calamity().registrar("encuesta", "contesta la pregunta de Calamity", "lethalworld.calamity",
+        Subcomandos.jugador().registrar("poll", "contesta la pregunta de Calamity", null,
                 (quien, args) -> {
                     if (quien instanceof Player p) abrirPendiente(p);
                     else quien.sendMessage(Component.text("Solo se puede usar dentro del juego.", Paleta.AVISO));
@@ -159,7 +159,7 @@ final class Encuesta {
         }, 1L);
     }
 
-    /** /calamity encuesta: la pendiente, si no el Botin, si no nada. */
+    /** "calamity open <player> poll" (Ilen, el Cronista): la pendiente, si no el Botin, si no nada. */
     void abrirPendiente(Player p) {
         if (!activo()) {
             p.sendMessage(ComandoCalamity.mensaje("Ahora mismo no hay nada que votar."));
@@ -245,11 +245,11 @@ final class Encuesta {
         chat.pedir(p, linea -> {
             String limpio = limpiar(linea);
             if (limpio.isEmpty()) {
-                p.sendMessage(ComandoCalamity.mensaje("No he podido leer tu respuesta. Vuelve a intentarlo con /calamity encuesta."));
+                p.sendMessage(ComandoCalamity.mensaje("No he podido leer tu respuesta. Vuelve a intentarlo hablando con Ilen."));
                 return;
             }
             votar(p, q, OTRA, limpio);
-        }, () -> p.sendMessage(ComandoCalamity.mensaje("Respuesta cancelada. Puedes contestar más tarde con /calamity encuesta.")));
+        }, () -> p.sendMessage(ComandoCalamity.mensaje("Respuesta cancelada. Puedes contestar más tarde hablando con Ilen.")));
     }
 
     /**
@@ -400,32 +400,32 @@ final class Encuesta {
                     recuento(quien, a);
                 }
             }
-            case "abrir" -> abrir(quien, args.length >= 3 ? args[2].toLowerCase(Locale.ROOT) : "");
-            case "cerrar" -> cerrar(quien, args.length >= 3 ? args[2].toLowerCase(Locale.ROOT) : null);
-            case "simular" -> simular(quien, args.length >= 3 ? args[2] : "10");
+            case "open" -> abrir(quien, args.length >= 3 ? args[2].toLowerCase(Locale.ROOT) : "");
+            case "close" -> cerrar(quien, args.length >= 3 ? args[2].toLowerCase(Locale.ROOT) : null);
+            case "simulate" -> simular(quien, args.length >= 3 ? args[2] : "10");
             default -> recuento(quien, sub);
         }
     }
 
     private List<String> tabStaff(String[] args) {
         if (args.length == 2) {
-            List<String> op = new ArrayList<>(List.of("abrir", "cerrar", "simular"));
+            List<String> op = new ArrayList<>(List.of("open", "close", "simulate"));
             op.addAll(preguntas().keySet());
             return op;
         }
-        if (args.length == 3 && args[1].equalsIgnoreCase("abrir")) {
+        if (args.length == 3 && args[1].equalsIgnoreCase("open")) {
             List<String> op = new ArrayList<>();
             for (Pregunta q : preguntas().values()) if (!q.fija()) op.add(q.id());
             return op;
         }
-        if (args.length == 3 && args[1].equalsIgnoreCase("cerrar")) return List.of(BOTIN);
+        if (args.length == 3 && args[1].equalsIgnoreCase("close")) return List.of(BOTIN);
         return List.of();
     }
 
     private void abrir(CommandSender quien, String id) {
         Pregunta q = preguntas().get(id);
         if (q == null || q.fija()) {
-            quien.sendMessage(Component.text("encuesta abrir <id>: una de " + ids(false) + ".", Paleta.AVISO));
+            quien.sendMessage(Component.text("poll open <id>: una de " + ids(false) + ".", Paleta.AVISO));
             return;
         }
         String antes = activa();

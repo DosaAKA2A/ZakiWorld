@@ -13,7 +13,7 @@ import java.util.Locale;
  * hacer, y usa el peso de aqui como punto de partida.
  *
  * Una fila por tecnica y nada mas: si se anade una, sale sola en el menu, en /anomaly test y
- * en /lw hardcore parca habilidad.
+ * en /calamity reaper ability.
  */
 enum HabilidadParca {
 
@@ -74,7 +74,7 @@ enum HabilidadParca {
         this.iconos = iconos;
     }
 
-    /** El id sin el prefijo: lo que se escribe en /lw hardcore parca habilidad. */
+    /** El id sin el prefijo: lo que se escribe en /calamity reaper ability. */
     String alias() {
         return id.substring(3);
     }

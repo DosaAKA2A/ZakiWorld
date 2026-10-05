@@ -53,7 +53,7 @@ import java.util.function.Predicate;
  * Calamity 1.8.0 · Ambush: el samurai de los contratos de muerte.
  *
  * En la antesala, el NPC de la Sentencia (lo pone el staff con Citizens; su clic es
- * "calamidad abrir <p> sentencia", MenuSentencia) lista a quien este ahora en Calamity fuera del
+ * "calamity open <p> bounty", MenuSentencia) lista a quien este ahora en Calamity fuera del
  * spawn. Alguien paga el contrato de otro (ambush.contrato.esencias de su saldo) y a la presa le
  * llega un titulo, una linea en el chat y una cuenta atras en la barra: tiene SEGUNDOS para irse
  * por la puerta o con un Cristal de Regreso. Si sale de Calamity (o se desconecta, o muere) antes,
@@ -200,9 +200,9 @@ final class Ambush implements Listener {
         this.menu = new MenuSentencia(hc, this);
         this.brillo = new BrilloCrimson(hc);
         Autotest.registrar("ambush", Ambush::autotest);
-        Subcomandos.lw().registrar("ambush",
-                "ambush <presa> [pagador] | info: fuerza un contrato de Ambush sin cobrar (pruebas) o lista los que hay",
-                "ederus.mundos", this::comando, this::tab);
+        Subcomandos.staff().registrar("ambush",
+                "ambush <target> [payer] | info: fuerza un contrato de Ambush sin cobrar (pruebas) o lista los que hay",
+                Subcomandos.PERMISO, this::comando, this::tab);
         this.tipo = AmbushType.crear(this);
         podar();
     }
@@ -895,12 +895,12 @@ final class Ambush implements Listener {
     // ================================================================ comando
 
     /**
-     * /calamidad ambush <presa> [pagador]: un contrato sin cobrar ni contar para las reglas (para
-     * probar). /calamidad ambush info: los contratos vivos y como van.
+     * /calamity ambush <target> [payer]: un contrato sin cobrar ni contar para las reglas (para
+     * probar). /calamity ambush info: los contratos vivos y como van.
      */
     private void comando(CommandSender quien, String[] args) {
         if (args.length < 2) {
-            quien.sendMessage(Component.text("Uso: /calamidad ambush <presa> [pagador] | info", Paleta.AVISO));
+            quien.sendMessage(Component.text("Uso: /calamity ambush <target> [payer] | info", Paleta.AVISO));
             return;
         }
         if (args[1].equalsIgnoreCase("info")) {

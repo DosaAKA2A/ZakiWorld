@@ -127,10 +127,10 @@ final class Parca implements Listener {
         hc.plugin().getServer().getPluginManager().registerEvents(this, hc.plugin());
         cargarSegadas();
         Autotest.registrar("parca", Parca::autotest);
-        Subcomandos.lw().registrar("parca",
-                "parca <jugador> [segundos] | info <jugador> | vida <0-1> | habilidad <nombre> | retirar [jugador]"
-                        + " | prueba <x> <y> <z> [N] | anomalia",
-                "ederus.mundos", this::comando, this::tab);
+        Subcomandos.staff().registrar("reaper",
+                "reaper <player> [seconds] | info <player> | health <0-1> | ability <name> | remove [player]"
+                        + " | test <x> <y> <z> [N] | anomaly",
+                Subcomandos.PERMISO, this::comando, this::tab);
         // Calamity 1.1.0: la PARCA tambien es una anomalia DIOS de EDM (ParcaType/ParcaAnomalia).
         anomalia = PuenteAnomalia.crear(this);
     }
@@ -874,7 +874,7 @@ final class Parca implements Listener {
         return hc.enSpawn(sitio) ? null : sitio;
     }
 
-    /** Exento a mano de la PARCA (/lw hardcore exento; ningun permiso lo concede). */
+    /** Exento a mano de la PARCA (/calamity exempt; ningun permiso lo concede). */
     boolean exento(Player p) {
         return hc.exentos() != null && hc.exentos().parca(p.getUniqueId());
     }
@@ -1203,7 +1203,7 @@ final class Parca implements Listener {
         if (!nombre.matches("[A-Za-z0-9_]{1,16}")) return;
         for (String c : a.raroComandos) {
             String cmd = c.replace("%player%", nombre).replace("%jugador%", nombre);
-            hc.plugin().getServer().dispatchCommand(hc.plugin().getServer().getConsoleSender(), cmd);
+            hc.plugin().getServer().dispatchCommand(hc.plugin().getServer().getConsoleSender(), ComandosViejos.traducir(cmd));
         }
         hc.plugin().bitacora().anotar("parca", "raro", nombre);
     }
@@ -1432,28 +1432,29 @@ final class Parca implements Listener {
     // ================================================================ comando
 
     /**
-     * /lw hardcore parca ... (DIS sec. 6):
-     *   parca <jugador> [segundos]    pone su quieto (el limite por defecto = la invoca ya)
-     *   parca info <jugador>          lo que sabe la Huella y lo pendiente
-     *   parca vida <0-1>              vida de la PARCA mas cercana (probar fases)
-     *   parca habilidad <nombre>      la mas cercana suelta esa habilidad ya (ver los avisos)
-     *   parca retirar [jugador]       una o todas, sin botin
-     *   parca prueba <x> <y> <z> [N]  en el primer mundo hardcore, sin presa
+     * /calamity reaper ... (DIS sec. 6):
+     *   reaper <player> [seconds]     pone su quieto (el limite por defecto = la invoca ya)
+     *   reaper info <player>          lo que sabe la Huella y lo pendiente
+     *   reaper health <0-1>           vida de la PARCA mas cercana (probar fases)
+     *   reaper ability <name>         la mas cercana suelta esa habilidad ya (ver los avisos)
+     *   reaper remove [player]        una o todas, sin botin
+     *   reaper test <x> <y> <z> [N]   en el primer mundo hardcore, sin presa
+     *   reaper anomaly                lo que hay en EDM y que saldria ahora
      */
     private void comando(CommandSender quien, String[] args) {
         if (args.length < 2) {
-            quien.sendMessage(Component.text("Uso: /calamidad parca <jugador> [segundos] | info <jugador> | vida <0-1>"
-                    + " | habilidad <nombre> | retirar [jugador] | prueba <x> <y> <z> [N] | anomalia", Paleta.AVISO));
+            quien.sendMessage(Component.text("Uso: /calamity reaper <player> [seconds] | info <player> | health <0-1>"
+                    + " | ability <name> | remove [player] | test <x> <y> <z> [N] | anomaly", Paleta.AVISO));
             return;
         }
         String sub = args[1].toLowerCase(Locale.ROOT);
         switch (sub) {
             case "info" -> info(quien, args);
-            case "vida" -> vida(quien, args);
-            case "habilidad" -> habilidad(quien, args);
-            case "retirar" -> retirar(quien, args);
-            case "prueba" -> prueba(quien, args);
-            case "anomalia" -> decir(quien, anomalia == null ? "anomalia | EDM no trae las clases de anomalías: siempre sale la de reserva"
+            case "health" -> vida(quien, args);
+            case "ability" -> habilidad(quien, args);
+            case "remove" -> retirar(quien, args);
+            case "test" -> prueba(quien, args);
+            case "anomaly" -> decir(quien, anomalia == null ? "anomalia | EDM no trae las clases de anomalías: siempre sale la de reserva"
                     : anomalia.estado());
             default -> forzar(quien, args);
         }
@@ -1462,13 +1463,13 @@ final class Parca implements Listener {
     private List<String> tab(String[] args) {
         List<String> out = new ArrayList<>();
         if (args.length == 2) {
-            out.addAll(List.of("info", "vida", "habilidad", "retirar", "prueba", "anomalia"));
+            out.addAll(List.of("info", "health", "ability", "remove", "test", "anomaly"));
             for (Player p : hc.plugin().getServer().getOnlinePlayers()) out.add(p.getName());
-        } else if (args.length == 3 && (args[1].equalsIgnoreCase("info") || args[1].equalsIgnoreCase("retirar"))) {
+        } else if (args.length == 3 && (args[1].equalsIgnoreCase("info") || args[1].equalsIgnoreCase("remove"))) {
             for (Player p : hc.plugin().getServer().getOnlinePlayers()) out.add(p.getName());
-        } else if (args.length == 3 && args[1].equalsIgnoreCase("vida")) {
+        } else if (args.length == 3 && args[1].equalsIgnoreCase("health")) {
             out.addAll(List.of("0.5", "0.2"));
-        } else if (args.length == 3 && args[1].equalsIgnoreCase("habilidad")) {
+        } else if (args.length == 3 && args[1].equalsIgnoreCase("ability")) {
             out.addAll(HabilidadParca.nombres());
         }
         return out;
@@ -1508,7 +1509,7 @@ final class Parca implements Listener {
 
     private void info(CommandSender quien, String[] args) {
         if (args.length < 3) {
-            quien.sendMessage(Component.text("Uso: /calamidad parca info <jugador>", Paleta.AVISO));
+            quien.sendMessage(Component.text("Uso: /calamity reaper info <player>", Paleta.AVISO));
             return;
         }
         OfflinePlayer op = hc.plugin().getServer().getOfflinePlayerIfCached(args[2]);
@@ -1559,7 +1560,7 @@ final class Parca implements Listener {
         try {
             f = Double.parseDouble(args.length > 2 ? args[2] : "x");
         } catch (NumberFormatException ex) {
-            quien.sendMessage(Component.text("Uso: /calamidad parca vida <0-1>", Paleta.AVISO));
+            quien.sendMessage(Component.text("Uso: /calamity reaper health <0-1>", Paleta.AVISO));
             return;
         }
         ParcaViva pe = masCercana(quien);
@@ -1607,7 +1608,7 @@ final class Parca implements Listener {
 
     private void prueba(CommandSender quien, String[] args) {
         if (args.length < 5) {
-            quien.sendMessage(Component.text("Uso: /calamidad parca prueba <x> <y> <z> [N]", Paleta.AVISO));
+            quien.sendMessage(Component.text("Uso: /calamity reaper test <x> <y> <z> [N]", Paleta.AVISO));
             return;
         }
         World w = null;

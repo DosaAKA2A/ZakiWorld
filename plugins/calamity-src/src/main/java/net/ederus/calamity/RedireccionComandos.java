@@ -1,58 +1,66 @@
 package net.ederus.calamity;
 
+import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.List;
 import java.util.Locale;
 import java.util.Set;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 
+import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
+import org.bukkit.command.CommandMap;
+import org.bukkit.command.CommandSender;
 import org.bukkit.command.PluginCommand;
+import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
 import org.bukkit.event.player.PlayerCommandPreprocessEvent;
 import org.bukkit.event.server.ServerCommandEvent;
 
+import net.ederus.calamity.hardcore.ComandosViejos;
+
 /**
- * /lw hardcore ... y /lw level ... siguen funcionando: se reescriben a /calamidad.
- *
- * Hasta LethalWorld 1.1.1 la administracion de Calamity colgaba de /lw. Al separarse, /lw se
- * quedo con los mundos y esto paso a /calamidad, pero hay costumbre (el staff, las notas, los
- * scripts) y hay comandos guardados en la config que no tienen por que romperse: los premios
- * de hitos y contratos son "lw hardcore dar ..." y se lanzan por consola.
- *
- *  - "lw hardcore X ..." -> "calamidad X ..." (sobra la palabra hardcore)
- *  - "lw level X ..."    -> "calamidad level X ..." (level es un subcomando mas de /calamidad)
+ * Lo viejo sigue funcionando un tiempo: /lw hardcore, /lw level y el comando de staff en espanol de
+ * la 1.11 se reescriben al /calamity de ahora (ComandosViejos dice como). TEMPORAL.
  *
  * Un comando llega por tres caminos, y los tres se cubren:
- *  - lo escribe un jugador: PlayerCommandPreprocessEvent;
+ *  - lo escribe un jugador: PlayerCommandPreprocessEvent. Solo /lw hardcore y /lw level (los
+ *    escribe el staff por costumbre); el comando en espanol ya no existe para los jugadores;
  *  - lo escribe la consola (o RCON, o un bloque de comandos): ServerCommandEvent;
- *  - lo lanza un plugin con dispatchCommand, que es lo que hacen Hitos, Contratos, Entregas
- *    y Rankings con los comandos de la config: ahi no salta NINGUN evento, asi que ademas se
- *    envuelve el ejecutor de /lw (engancharLw). Sin eso, "lw hardcore dar llave ..." caeria
- *    en la ayuda de /lw y el premio se perderia sin un solo aviso.
+ *  - lo lanza un plugin con dispatchCommand (Citizens con el clic de un NPC, las crates, los
+ *    premios de la config): ahi no salta NINGUN evento. Para /lw se envuelve su ejecutor
+ *    (engancharLw) y para el comando en espanol hay uno OCULTO (registrarOculto) que solo atiende
+ *    a la consola: no sale en el tab ni en /help de nadie, y a un jugador, aunque sea op, le dice
+ *    que no existe.
  *
- * No se cancela nada ni se miran permisos: el comando reescrito sigue su camino normal y
- * /calamidad pide ederus.mundos, el mismo permiso que pedia /lw.
+ * Cada linea vieja distinta se avisa UNA vez por arranque en la consola con su forma nueva, para
+ * que el staff la cambie donde este guardada (el NPC, la crate, el config). Cuando ya no salga
+ * ningun aviso, se quita esto y el comando oculto.
+ *
+ * No se cancela nada ni se miran permisos: el comando reescrito sigue su camino normal y /calamity
+ * pide calamity.admin.
  */
 public final class RedireccionComandos implements Listener {
 
-    /** Como se puede escribir /lw: su nombre, el alias del plugin.yml y los dos con prefijo. */
-    private static final Set<String> ETIQUETAS_LW = Set.of("lw", "lethalworld", "lethalworld:lw",
-            "lethalworld:lethalworld");
+    /** Los nombres del comando oculto: los dos del plugin.yml de la 1.11. */
+    static final List<String> OCULTOS = List.of("calamidad", "cld");
 
-    /**
-     * Etiqueta, un espacio, hardcore|level y detras un espacio o nada: "lw hardcorex" o
-     * "lw levels" no son lo viejo y se dejan pasar tal cual.
-     */
-    private static final Pattern VIEJO = Pattern.compile("^(\\S+) (hardcore|level)(?= |$)(.*)$",
-            Pattern.CASE_INSENSITIVE | Pattern.DOTALL);
+    private static CalamityPlugin plugin;
+    private static final Set<String> avisadas = new HashSet<>();
+
+    RedireccionComandos(CalamityPlugin plugin) {
+        RedireccionComandos.plugin = plugin;
+    }
 
     @EventHandler(priority = EventPriority.LOWEST)
     public void alEscribirJugador(PlayerCommandPreprocessEvent e) {
         String mensaje = e.getMessage();
         if (!mensaje.startsWith("/")) return;
-        String nuevo = reescribir(mensaje.substring(1));
+        String linea = mensaje.substring(1);
+        // El comando en espanol no se le traduce a un jugador: para el ya no existe.
+        if (!esDeLw(linea)) return;
+        String nuevo = ComandosViejos.viejo(linea);
         if (nuevo != null) e.setMessage("/" + nuevo);
     }
 
@@ -61,20 +69,24 @@ public final class RedireccionComandos implements Listener {
         // La consola lo manda sin barra, pero hay quien la pone: se respeta lo que venga.
         String comando = e.getCommand();
         boolean barra = comando.startsWith("/");
-        String nuevo = reescribir(barra ? comando.substring(1) : comando);
-        if (nuevo != null) e.setCommand((barra ? "/" : "") + nuevo);
+        String linea = barra ? comando.substring(1) : comando;
+        String nuevo = ComandosViejos.viejo(linea);
+        if (nuevo == null) return;
+        avisar(linea, nuevo);
+        e.setCommand((barra ? "/" : "") + nuevo);
     }
 
-    /**
-     * La linea de comando (sin la barra) ya reescrita a /calamidad, o null si no es
-     * /lw hardcore ni /lw level.
-     */
-    static String reescribir(String linea) {
-        if (linea == null) return null;
-        Matcher m = VIEJO.matcher(linea);
-        if (!m.matches() || !ETIQUETAS_LW.contains(m.group(1).toLowerCase(Locale.ROOT))) return null;
-        String resto = m.group(3);
-        return m.group(2).equalsIgnoreCase("hardcore") ? "calamidad" + resto : "calamidad level" + resto;
+    private static boolean esDeLw(String linea) {
+        int espacio = linea.indexOf(' ');
+        String raiz = (espacio < 0 ? linea : linea.substring(0, espacio)).toLowerCase(Locale.ROOT);
+        return ComandosViejos.RAICES_LW.contains(raiz);
+    }
+
+    /** Una vez por linea distinta y por arranque: "comando viejo: X, ahora es Y". */
+    static void avisar(String viejo, String nuevo) {
+        if (plugin == null || !avisadas.add(viejo)) return;
+        plugin.getLogger().warning("[Calamity] Comando viejo: \"" + viejo + "\". Ahora es \"" + nuevo
+                + "\". Cámbialo donde esté guardado (NPC, crate, config): el viejo dejará de funcionar.");
     }
 
     // ------------------------------------------------------- dispatchCommand (sin evento)
@@ -82,11 +94,12 @@ public final class RedireccionComandos implements Listener {
     private static PluginCommand lw;
     private static CommandExecutor original;
     private static CommandExecutor puente;
+    private static final List<Command> ocultos = new ArrayList<>();
 
     /**
      * Envuelve el ejecutor de /lw (el ComandoMundos de LethalWorld): si le llega hardcore o
-     * level, lo manda a /calamidad; lo demas le llega igual que siempre. Es la red para los
-     * dispatchCommand, que no pasan por los eventos de arriba. Se suelta en soltarLw().
+     * level, lo manda a /calamity; lo demas le llega igual que siempre. Es la red para los
+     * dispatchCommand, que no pasan por los eventos de arriba. Se suelta en soltar().
      */
     static void engancharLw(CalamityPlugin plugin) {
         PluginCommand comando = plugin.lethalWorld().getCommand("lw");
@@ -97,8 +110,12 @@ public final class RedireccionComandos implements Listener {
         }
         CommandExecutor antes = comando.getExecutor();
         CommandExecutor nuevo = (quien, cmd, etiqueta, args) -> {
-            String linea = args.length == 0 ? null : reescribir("lw " + String.join(" ", args));
-            if (linea != null) return plugin.getServer().dispatchCommand(quien, linea);
+            String linea = args.length == 0 ? null : "lw " + String.join(" ", args);
+            String traducida = ComandosViejos.viejo(linea);
+            if (traducida != null) {
+                if (!(quien instanceof Player)) avisar(linea, traducida);
+                return plugin.getServer().dispatchCommand(quien, traducida);
+            }
             return antes.onCommand(quien, cmd, etiqueta, args);
         };
         comando.setExecutor(nuevo);
@@ -107,11 +124,60 @@ public final class RedireccionComandos implements Listener {
         puente = nuevo;
     }
 
-    /** Devuelve a /lw su ejecutor de siempre, si nadie lo ha cambiado despues. */
-    static void soltarLw() {
+    /**
+     * El comando de staff de la 1.11, solo para la consola y sin dejarse ver: lo usan los NPCs de
+     * Citizens, las crates y las recompensas que aun no se han cambiado. testPermissionSilent dice
+     * que no a cualquier jugador, y Paper no manda al cliente (ni al tab ni a /help) lo que no pasa
+     * esa prueba; si un jugador lo escribe igual, ve el "comando desconocido" de siempre.
+     */
+    static void registrarOculto(CalamityPlugin plugin) {
+        CommandMap mapa = plugin.getServer().getCommandMap();
+        for (String nombre : OCULTOS) {
+            Command c = new Command(nombre) {
+                @Override
+                public boolean execute(CommandSender quien, String etiqueta, String[] args) {
+                    if (quien instanceof Player) {
+                        quien.sendMessage(ComandoRaiz.desconocido());
+                        return true;
+                    }
+                    String linea = nombre + (args.length == 0 ? "" : " " + String.join(" ", args));
+                    String traducida = ComandosViejos.traducir(linea);
+                    avisar(linea, traducida);
+                    return plugin.getServer().dispatchCommand(quien, traducida);
+                }
+
+                @Override
+                public boolean testPermissionSilent(CommandSender quien) {
+                    return !(quien instanceof Player);
+                }
+
+                @Override
+                public List<String> tabComplete(CommandSender quien, String alias, String[] args) {
+                    return List.of();
+                }
+            };
+            c.setDescription("Calamity: forma vieja, solo consola (temporal)");
+            boolean suyo = mapa.register(nombre, "calamity", c);
+            ocultos.add(c);
+            if (!suyo) plugin.getLogger().warning("[Calamity] Otro plugin ya usa /" + nombre
+                    + ": la forma vieja solo se traduce cuando la escribe la consola.");
+        }
+    }
+
+    /** Devuelve a /lw su ejecutor de siempre (si nadie lo ha cambiado despues) y quita el comando oculto. */
+    static void soltar() {
         if (lw != null && lw.getExecutor() == puente) lw.setExecutor(original);
         lw = null;
         original = null;
         puente = null;
+        if (plugin != null && !ocultos.isEmpty()) {
+            CommandMap mapa = plugin.getServer().getCommandMap();
+            for (Command c : ocultos) {
+                c.unregister(mapa);
+                mapa.getKnownCommands().values().removeIf(x -> x == c);
+            }
+        }
+        ocultos.clear();
+        avisadas.clear();
     }
 }

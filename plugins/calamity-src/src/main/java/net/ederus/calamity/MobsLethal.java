@@ -1088,7 +1088,7 @@ public final class MobsLethal implements Listener {
         return nivelBase(rango(p), poder(p));
     }
 
-    /** La formula de nivelBase con los numeros ya leidos. Para el autotest y para /lw level. */
+    /** La formula de nivelBase con los numeros ya leidos. Para el autotest y para /calamity level. */
     public int nivelBase(int rango, int poder) {
         ConfigurationSection n = cfg().getConfigurationSection("nivel");
         if (n == null) n = new YamlConfiguration();

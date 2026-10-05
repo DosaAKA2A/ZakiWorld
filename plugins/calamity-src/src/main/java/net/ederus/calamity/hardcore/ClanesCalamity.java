@@ -93,8 +93,8 @@ final class ClanesCalamity {
             for (Fila f : top) if (f.clave().equals(k)) return String.valueOf(f.puntos());
             return "0";
         });
-        Subcomandos.lw().registrar("clans", "clans [close|holo here|holo off]: ranking semanal de clanes; close lo cierra ya",
-                "ederus.mundos", this::comando, args -> args.length == 2 ? List.of("close", "holo")
+        Subcomandos.staff().registrar("clans", "clans [close|holo here|holo off]: ranking semanal de clanes; close lo cierra ya",
+                Subcomandos.PERMISO, this::comando, args -> args.length == 2 ? List.of("close", "holo")
                         : args.length == 3 && args[1].equalsIgnoreCase("holo") ? List.of("here", "off") : List.of());
         Autotest.registrar("clanes", ClanesCalamity::autotest);
         reloj = hc.plugin().getServer().getScheduler().runTaskTimer(hc.plugin(), () -> hc.seguro("clanes", this::ciclo), 80L, 20L);

@@ -104,9 +104,9 @@ final class Reliquias implements Listener {
         Autotest.registrar("reliquias", this::autotest);
         // 1.10 (lores): la plantilla comun y el lore de cada objeto propio, con la config viva.
         Autotest.registrar("fichas", () -> Ficha.autotestObjetos(hc.cfg()));
-        Subcomandos.lw().registrar("reliquia",
-                "reliquia <1-4> [jugador] [especial[:N][:valida|:minijefe]]: emite una Reliquia (origen admin)",
-                "ederus.mundos", this::comando, this::tab);
+        Subcomandos.staff().registrar("relic",
+                "relic <1-4> [player] [special[:N][:valid|:miniboss]]: emite una Reliquia (origen admin)",
+                Subcomandos.PERMISO, this::comando, this::tab);
     }
 
     void parar() {
@@ -463,7 +463,8 @@ final class Reliquias implements Listener {
         boolean valida = false;
         for (int i = desde; i < t.length; i++) {
             if (t[i].isBlank()) continue;
-            if (t[i].equals("valida")) {
+            // "valid" es lo que se escribe; "valida" (antes de la 1.12) sigue valiendo en lo guardado.
+            if (t[i].equals("valid") || t[i].equals("valida")) {
                 valida = true;
                 continue;
             }
@@ -614,10 +615,10 @@ final class Reliquias implements Listener {
 
     // ----------------------------------------------------------------- comando
 
-    /** /lw hardcore reliquia <1-4> [jugador] [especial]: la emite (origen admin) y la entrega la Aduana. */
+    /** /calamity relic <1-4> [player] [special]: la emite (origen admin) y la entrega la Aduana. */
     private void comando(CommandSender quien, String[] args) {
         if (args.length < 2) {
-            quien.sendMessage(ComandoCalamity.mensaje("Uso: /calamidad reliquia <1-4> [jugador] [especial]"));
+            quien.sendMessage(ComandoCalamity.mensaje("Uso: /calamity relic <1-4> [player] [special]"));
             return;
         }
         int grado;
@@ -640,7 +641,7 @@ final class Reliquias implements Listener {
             esp = espec(args[3], false, grado);
             if (esp == null) {
                 quien.sendMessage(ComandoCalamity.mensaje(
-                        "No conozco ese especial. Valen: campana[:N], lagrima[:N][:valida], sello:<minijefe>, eclipsada o mayor."));
+                        "No conozco ese especial. Valen: campana[:N], lagrima[:N][:valid], sello:<miniboss>, eclipsada o mayor."));
                 return;
             }
         }
@@ -661,7 +662,7 @@ final class Reliquias implements Listener {
         if (args.length == 2) return List.of("1", "2", "3", "4");
         if (args.length == 3) return conectados();
         if (args.length == 4) {
-            List<String> op = new ArrayList<>(List.of("campana:50", "lagrima:50:valida", "eclipsada", "mayor"));
+            List<String> op = new ArrayList<>(List.of("campana:50", "lagrima:50:valid", "eclipsada", "mayor"));
             for (String id : Minijefes.TIPOS) op.add("sello:" + id);
             return op;
         }

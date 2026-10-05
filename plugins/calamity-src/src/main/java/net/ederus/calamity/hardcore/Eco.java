@@ -882,7 +882,7 @@ final class Eco {
 
     /**
      * El cuerpo por bioma (cuerpo.por-bioma) y la variante en el registro. Sin mundo ni servidor:
-     * lo usan /calamidad autotest eco y el arnes de fuera.
+     * lo usan /calamity selftest echo y el arnes de fuera.
      */
     static void probarCuerpo(Autotest.Hoja h) {
         // --- la tabla de serie (config sin cuerpo.por-bioma), con los biomas de Bracken de Calamity

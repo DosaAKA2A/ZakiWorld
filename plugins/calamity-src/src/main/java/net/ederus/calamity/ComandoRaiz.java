@@ -18,29 +18,47 @@ import net.kyori.adventure.text.format.NamedTextColor;
 import net.kyori.adventure.text.format.TextColor;
 
 /**
- * /calamidad (alias /cld): la administracion de Calamity, de staff (ederus.mundos).
+ * /calamity (alias /cal): el unico comando de Calamity, solo de staff (op o calamity.admin) y
+ * todo en ingles desde la 1.12.
  *
- * Es lo que hasta LethalWorld 1.1.1 eran /lw hardcore y /lw level, con el mismo cuerpo: al
- * salir Calamity a plugin propio, /lw se quedo con los mundos y esto vino aqui. Como ya no
- * lleva "hardcore" delante, los argumentos van un puesto antes: "/lw hardcore cordura 50
- * Dosa__" es ahora "/calamidad cordura 50 Dosa__". level es un subcomando mas:
- * "/calamidad level Dosa__". Lo viejo sigue funcionando: RedireccionComandos lo reescribe.
+ * Hasta la 1.11 habia dos: /calamity para los jugadores (saldo, eco, contratos...) y otro de staff
+ * en espanol, que a su vez venia de /lw hardcore y /lw level. Dosa: "TODOS los comandos deberian ser
+ * con /calamity y no deberia haber comandos en espanol" y "nadie sin op o admin/owner/dev deberia
+ * tener permiso de usar /calamity ni ningun subcomando: solo deben poder ver y recibir cosas desde
+ * los NPCs". Lo de los jugadores lo abren ahora los NPCs con "calamity open <player> <id>" desde la
+ * consola (Npcs). Lo viejo escrito en la consola, en los NPCs o en las recompensas lo traduce
+ * ComandosViejos mientras dura la transicion.
  *
- * Los cuatro puntos (entrada, llegada, salida y puerta de salida) se marcan PISANDOLOS, que
- * es la unica forma comoda de hacerlo desde Bedrock y sin menus.
+ * Sin el permiso, /calamity no sale en el tab (Paper no lo manda al cliente) y contesta como un
+ * comando que no existe. La consola lo tiene siempre.
  *
- * Lo que no esta en el switch lo registran los modulos de Calamity en Subcomandos.lw(): cada
+ * Las puertas se marcan con la vara y los dos puntos PISANDOLOS, que es la unica forma comoda de
+ * hacerlo desde Bedrock y sin menus.
+ *
+ * Lo que no esta en el switch lo registran los modulos de Calamity en Subcomandos.staff(): cada
  * uno trae su subcomando sin tocar este fichero, que es lo que deja trabajar en paralelo.
  */
-public final class ComandoCalamidad implements TabExecutor {
+public final class ComandoRaiz implements TabExecutor {
 
     private static final TextColor MARCA = TextColor.color(0xE0664A);
     private static final TextColor SUAVE = TextColor.color(0xC9BDB8);
 
+    /** Los subcomandos de este fichero, en el orden del tab. */
+    public static final List<String> PROPIOS = List.of("status", "level", "reload", "menu", "wand", "define", "item", "sanity", "time");
+    /** Lo que se escribe en define: las tres cajas de la vara y los dos puntos que se pisan. */
+    public static final List<String> DEFINE = List.of("entry", "exit", "spawn", "arrival", "return");
+    /** Lo que se escribe en item. */
+    public static final List<String> ITEMS = List.of("flask", "crystal", "essence");
+
     private final CalamityPlugin plugin;
 
-    public ComandoCalamidad(CalamityPlugin plugin) {
+    public ComandoRaiz(CalamityPlugin plugin) {
         this.plugin = plugin;
+    }
+
+    /** Lo que ve quien no tiene permiso: lo mismo que con un comando que no existe. */
+    public static Component desconocido() {
+        return Component.translatable("command.unknown.command", NamedTextColor.RED);
     }
 
     private void decir(CommandSender a, Component texto) {
@@ -62,13 +80,12 @@ public final class ComandoCalamidad implements TabExecutor {
 
     @Override
     public boolean onCommand(CommandSender q, Command cmd, String etiqueta, String[] args) {
-        if (!q.hasPermission("ederus.mundos")) {
-            decir(q, Component.text("No tienes permiso.", NamedTextColor.RED));
+        if (!q.hasPermission(Subcomandos.PERMISO)) {
+            q.sendMessage(desconocido());
             return true;
         }
         // level y reload NO dependen de que las reglas hardcore esten encendidas: se miran
-        // antes del guard de hc, igual que antes /lw level y /lw reload iban aparte de
-        // /lw hardcore. Los mobs con nivel salen en todos los mundos de Lethal World.
+        // antes del guard de hc. Los mobs con nivel salen en todos los mundos de Lethal World.
         if (args.length >= 1 && args[0].equalsIgnoreCase("level")) {
             nivel(q, args);
             return true;
@@ -84,7 +101,6 @@ public final class ComandoCalamidad implements TabExecutor {
             decir(q, Component.text("Las reglas hardcore están apagadas en la configuración.", NamedTextColor.RED));
             return true;
         }
-        // Antes "/lw hardcore" a secas caia en el default (sub = "status").
         if (args.length == 0) {
             estado(q, hc);
             return true;
@@ -92,7 +108,8 @@ public final class ComandoCalamidad implements TabExecutor {
         String sub = args[0].toLowerCase(Locale.ROOT);
 
         switch (sub) {
-            case "wand", "vara" -> {
+            case "status" -> estado(q, hc);
+            case "wand" -> {
                 if (!(q instanceof Player p)) {
                     decir(q, Component.text("La vara se entrega en el juego.", NamedTextColor.RED));
                     return true;
@@ -101,37 +118,7 @@ public final class ComandoCalamidad implements TabExecutor {
                 decir(q, Component.text("Vara entregada: ", NamedTextColor.GREEN)
                         .append(Component.text("golpe = esquina 1, clic derecho = esquina 2.", SUAVE)));
             }
-            case "define" -> {
-                if (!(q instanceof Player p)) {
-                    decir(q, Component.text("Eso se hace dentro del juego.", NamedTextColor.RED));
-                    return true;
-                }
-                String cual = args.length >= 2 ? args[1].toLowerCase(Locale.ROOT) : "";
-                if (!cual.equals("entrada") && !cual.equals("salida") && !cual.equals("spawn")) {
-                    decir(q, Component.text("¿Cuál? Usa ", NamedTextColor.RED)
-                            .append(Component.text("/calamidad define entrada|salida|spawn", MARCA)));
-                    return true;
-                }
-                String hecho = hc.vara().definir(p, cual);
-                if (hecho == null) {
-                    decir(q, Component.text("Primero marca las dos esquinas con la vara.",
-                            NamedTextColor.RED));
-                    return true;
-                }
-                decir(q, Component.text(cual.equals("spawn") ? "Zona del spawn (Grieta): " : "Puerta de " + cual + ": ",
-                        NamedTextColor.GREEN)
-                        .append(Component.text(hecho, MARCA)));
-            }
-            case "entrada", "llegada", "salida", "puerta-salida" -> {
-                if (!(q instanceof Player p)) {
-                    decir(q, Component.text("Ese punto se marca desde el juego, estando en el sitio.", NamedTextColor.RED));
-                    return true;
-                }
-                hc.punto(sub, p.getLocation());
-                decir(q, Component.text("Marcado ", NamedTextColor.GREEN)
-                        .append(Component.text(sub, MARCA))
-                        .append(Component.text(" aquí mismo.", SUAVE)));
-            }
+            case "define" -> definir(q, hc, args);
             case "menu" -> {
                 if (!(q instanceof Player p)) {
                     decir(q, Component.text("El panel solo se abre dentro del juego.", NamedTextColor.RED));
@@ -139,7 +126,7 @@ public final class ComandoCalamidad implements TabExecutor {
                 }
                 hc.menu().abrir(p);
             }
-            case "tiempo" -> {
+            case "time" -> {
                 Player destino = args.length >= 2
                         ? plugin.getServer().getPlayer(args[1])
                         : (q instanceof Player p ? p : null);
@@ -154,25 +141,30 @@ public final class ComandoCalamidad implements TabExecutor {
                         .append(Component.text(horas >= 24 ? "  ·  ya tiene el tag." : "  ·  el tag se gana a las 24 h.",
                                 NamedTextColor.GRAY)));
             }
-            case "frasco", "cristal", "esencia" -> {
-                Player destino = args.length >= 2
-                        ? plugin.getServer().getPlayer(args[1])
+            case "item" -> {
+                String cual = args.length >= 2 ? args[1].toLowerCase(Locale.ROOT) : "";
+                if (!ITEMS.contains(cual)) {
+                    decir(q, Component.text("¿Cuál? Usa ", NamedTextColor.RED)
+                            .append(Component.text("/calamity item flask|crystal|essence [player]", MARCA)));
+                    return true;
+                }
+                Player destino = args.length >= 3
+                        ? plugin.getServer().getPlayer(args[2])
                         : (q instanceof Player p ? p : null);
                 if (destino == null) {
                     decir(q, Component.text("No encuentro a ese jugador.", NamedTextColor.RED));
                     return true;
                 }
-                var item = switch (sub) {
-                    case "frasco" -> hc.items().frasco(plugin.getConfig().getInt("hardcore.frasco.usos", 3));
-                    case "cristal" -> hc.items().cristal();
+                var item = switch (cual) {
+                    case "flask" -> hc.items().frasco(plugin.getConfig().getInt("hardcore.frasco.usos", 3));
+                    case "crystal" -> hc.items().cristal();
                     default -> hc.items().esencia(1);
                 };
                 destino.getInventory().addItem(item);
                 decir(q, Component.text("Entregado a " + destino.getName() + ".", NamedTextColor.GREEN));
             }
-            case "cordura" -> {
-                // /calamidad cordura [valor] [player]: con los dos, el jugador es args[2]
-                // (antes, con "hardcore" delante, era args[3]).
+            case "sanity" -> {
+                // /calamity sanity [value] [player]: con los dos, el jugador es args[2].
                 Player destino = args.length >= 3
                         ? plugin.getServer().getPlayer(args[2])
                         : (q instanceof Player p ? p : null);
@@ -194,9 +186,8 @@ public final class ComandoCalamidad implements TabExecutor {
                         .append(Component.text(" de cordura.", SUAVE)));
             }
             default -> {
-                // Lo que registran los modulos de Calamity (Subcomandos). Ya no hace falta
-                // quitar "hardcore" de delante: args[0] es el nombre del subcomando.
-                if (Subcomandos.lw().ejecutar(q, args)) return true;
+                // Lo que registran los modulos de Calamity (Subcomandos).
+                if (Subcomandos.staff().ejecutar(q, args)) return true;
                 estado(q, hc);
             }
         }
@@ -204,9 +195,43 @@ public final class ComandoCalamidad implements TabExecutor {
     }
 
     /**
-     * Sin subcomando (o con uno que no existe): los mundos, las puertas, los puntos y la
-     * ayuda. Es lo que antes salia en el default de /lw hardcore.
+     * define entry|exit|spawn guarda la caja de la vara como puerta de entrada, de salida o zona del
+     * spawn; define arrival|return marca donde estas el punto donde aparece quien entra y adonde se
+     * vuelve al salir. En la config siguen con sus nombres de siempre (puertas.entrada, puertas.salida,
+     * puertas.spawn, llegada y salida): son datos del servidor.
      */
+    private void definir(CommandSender q, Hardcore hc, String[] args) {
+        if (!(q instanceof Player p)) {
+            decir(q, Component.text("Eso se hace dentro del juego.", NamedTextColor.RED));
+            return;
+        }
+        String cual = args.length >= 2 ? args[1].toLowerCase(Locale.ROOT) : "";
+        switch (cual) {
+            case "entry", "exit", "spawn" -> {
+                String clave = cual.equals("entry") ? "entrada" : cual.equals("exit") ? "salida" : "spawn";
+                String hecho = hc.vara().definir(p, clave);
+                if (hecho == null) {
+                    decir(q, Component.text("Primero marca las dos esquinas con la vara (/calamity wand).",
+                            NamedTextColor.RED));
+                    return;
+                }
+                decir(q, Component.text(cual.equals("spawn") ? "Zona del spawn (Grieta): "
+                                : cual.equals("entry") ? "Puerta de entrada: " : "Puerta de salida: ", NamedTextColor.GREEN)
+                        .append(Component.text(hecho, MARCA)));
+            }
+            case "arrival", "return" -> {
+                hc.punto(cual.equals("arrival") ? "llegada" : "salida", p.getLocation());
+                decir(q, Component.text(cual.equals("arrival") ? "Marcado aquí el punto de llegada"
+                        : "Marcado aquí el punto de vuelta", NamedTextColor.GREEN)
+                        .append(Component.text(cual.equals("arrival") ? " (donde aparece quien entra)."
+                                : " (adonde se vuelve al salir).", SUAVE)));
+            }
+            default -> decir(q, Component.text("¿Cuál? Usa ", NamedTextColor.RED)
+                    .append(Component.text("/calamity define entry|exit|spawn|arrival|return", MARCA)));
+        }
+    }
+
+    /** Sin subcomando (o con uno que no existe): los mundos, las puertas, los puntos y la ayuda. */
     private void estado(CommandSender q, Hardcore hc) {
         cabecera(q, "los mundos hardcore");
         linea(q, "Mundos", String.join(", ", hc.mundos()));
@@ -220,25 +245,29 @@ public final class ComandoCalamidad implements TabExecutor {
                     : donde.getWorld().getKey() + "  " + donde.getBlockX() + " "
                             + donde.getBlockY() + " " + donde.getBlockZ());
         }
-        linea(q, "/calamidad wand", "la vara: dos esquinas marcan la puerta");
-        linea(q, "/calamidad define entrada|salida|spawn", "guarda esa caja como puerta o como zona del spawn");
-        linea(q, "/calamidad llegada", "marca aquí el punto donde aparece quien entra");
-        linea(q, "/calamidad salida", "marca aquí el punto adonde se vuelve al salir");
-        linea(q, "/calamidad frasco|cristal|esencia [jugador]", "le da uno");
-        linea(q, "/calamidad cordura [valor] [jugador]", "consulta la cordura o la fija");
-        linea(q, "/calamidad tiempo [jugador]", "horas acumuladas y si ya tiene el tag");
-        linea(q, "/calamidad menu", "panel de las reglas de dificultad");
-        linea(q, "/calamidad level [jugador]", "de dónde sale el nivel de sus mobs");
-        linea(q, "/calamidad reload", "relee la configuración de Calamity (el equipo es de GodItems: /gi reload)");
-        for (String[] s : Subcomandos.lw().ayuda(q)) linea(q, "/calamidad " + s[0], s[1]);
+        for (String[] s : ayudaPropia()) linea(q, "/calamity " + s[0], s[1]);
+        for (String[] s : Subcomandos.staff().ayuda(q)) linea(q, "/calamity " + s[0], s[1]);
+    }
+
+    /** La ayuda de los subcomandos de este fichero: [uso, que hace]. Tambien la mira el autotest. */
+    public static List<String[]> ayudaPropia() {
+        return List.of(
+                new String[]{"status", "los mundos, las puertas, los puntos y esta ayuda"},
+                new String[]{"wand", "la vara: dos esquinas marcan la puerta"},
+                new String[]{"define entry|exit|spawn", "guarda esa caja como puerta o como zona del spawn"},
+                new String[]{"define arrival|return", "marca aquí donde aparece quien entra o adonde se vuelve al salir"},
+                new String[]{"item flask|crystal|essence [player]", "le da uno"},
+                new String[]{"sanity [value] [player]", "consulta la cordura o la fija"},
+                new String[]{"time [player]", "horas acumuladas y si ya tiene el tag"},
+                new String[]{"menu", "panel de las reglas de dificultad"},
+                new String[]{"level [player]", "de dónde sale el nivel de sus mobs"},
+                new String[]{"reload", "relee la configuración de Calamity (el equipo es de GodItems: /gi reload)"});
     }
 
     /**
      * De donde sale el nivel de los mobs para ese jugador: el marcador del rango tal cual lo
      * devuelve PlaceholderAPI, el poder de AuraSkills y la cuenta con los valores de la config.
      * Sirve para ver de un vistazo cual de los dos dispara un nivel que no cuadra.
-     *
-     * args[0] es "level", como en /lw level: aqui los indices no se mueven.
      */
     private void nivel(CommandSender q, String[] args) {
         MobsLethal mobs = plugin.mobs();
@@ -248,7 +277,7 @@ public final class ComandoCalamidad implements TabExecutor {
         }
         Player p = args.length >= 2 ? plugin.getServer().getPlayerExact(args[1]) : (q instanceof Player j ? j : null);
         if (p == null) {
-            linea(q, "/calamidad level [jugador]", "el jugador tiene que estar conectado");
+            linea(q, "/calamity level [player]", "el jugador tiene que estar conectado");
             return;
         }
         var n = plugin.getConfig().getConfigurationSection("mobs.nivel");
@@ -276,14 +305,12 @@ public final class ComandoCalamidad implements TabExecutor {
     }
 
     /**
-     * Relee el config de Calamity (el equipo ya no: lo lleva GodItems desde la 1.6). Antes lo hacia /lw reload, cuando mobs: y hardcore:
-     * iban en el config de LethalWorld; ahora /lw reload solo relee el de los mundos.
-     * No rearranca mobs ni reglas: lo que se lee en cada vuelta (topes, niveles, puertas)
-     * se entera solo; lo que se monta al arrancar necesita reiniciar.
+     * Relee el config de Calamity (el equipo ya no: lo lleva GodItems desde la 1.6). /lw reload solo
+     * relee el de los mundos. No rearranca mobs ni reglas: lo que se lee en cada vuelta (topes,
+     * niveles, puertas) se entera solo; lo que se monta al arrancar necesita reiniciar.
      */
     private void recargar(CommandSender q) {
         plugin.reloadConfig();
-        // Calamity 1.6: el equipo ya no se relee aqui (es de GodItems, /gi reload); solo se dice de donde sale.
         String equipo = plugin.hardcore() == null ? null : plugin.hardcore().recargarEquipo();
         decir(q, "Configuración de Calamity releída" + (equipo == null ? "" : ". Equipo: " + equipo + " (se relee con /gi reload)")
                 + ". Lo que se carga al arrancar necesita un reinicio.");
@@ -292,17 +319,18 @@ public final class ComandoCalamidad implements TabExecutor {
     @Override
     public List<String> onTabComplete(CommandSender q, Command cmd, String etiqueta, String[] args) {
         List<String> op = new ArrayList<>();
+        if (!q.hasPermission(Subcomandos.PERMISO)) return op;
         if (args.length == 1) {
-            op.addAll(List.of("level", "reload", "status", "menu", "wand", "define", "llegada", "salida",
-                    "frasco", "cristal", "esencia", "cordura", "tiempo"));
-            op.addAll(Subcomandos.lw().nombres(q));
-        } else if (args.length >= 2 && Subcomandos.lw().nombres(q).contains(args[0].toLowerCase(Locale.ROOT))) {
-            op.addAll(Subcomandos.lw().tab(q, args));
+            op.addAll(PROPIOS);
+            op.addAll(Subcomandos.staff().nombres(q));
+        } else if (args.length >= 2 && Subcomandos.staff().nombres(q).contains(args[0].toLowerCase(Locale.ROOT))) {
+            op.addAll(Subcomandos.staff().tab(q, args));
         } else if (args.length == 2 && args[0].equalsIgnoreCase("define")) {
-            op.addAll(List.of("entrada", "salida", "spawn"));
-        } else if (args.length == 2 && (args[0].equalsIgnoreCase("level")
-                || List.of("frasco", "cristal", "esencia", "cordura", "tiempo")
-                        .contains(args[0].toLowerCase(Locale.ROOT)))) {
+            op.addAll(DEFINE);
+        } else if (args.length == 2 && args[0].equalsIgnoreCase("item")) {
+            op.addAll(ITEMS);
+        } else if ((args.length == 2 && List.of("level", "time").contains(args[0].toLowerCase(Locale.ROOT)))
+                || (args.length == 3 && List.of("item", "sanity").contains(args[0].toLowerCase(Locale.ROOT)))) {
             for (Player p : plugin.getServer().getOnlinePlayers()) op.add(p.getName());
         }
         String ultimo = args.length == 0 ? "" : args[args.length - 1].toLowerCase(Locale.ROOT);

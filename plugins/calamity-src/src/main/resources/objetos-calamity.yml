@@ -1,7 +1,7 @@
 # =============================================================================
 #  Calamity · objetos-calamity.yml (generado por gen_config.py: NO editar a mano)
 #  Lo que cada objeto y set de MMOItems de Calamity tiene que llevar DE VERDAD.
-#  Lo usan /calamidad autotest objetos-reales y /calamidad objetos stats <jugador>.
+#  Lo usan /calamity selftest real-items y /calamity items stats <player>.
 #  stats: IDs de MMOItems (MythicLib los guarda en custom_data como MMOITEMS_<ID>).
 #  bonos: por nivel del set, sin acumular (MMOItems suma [2]..[n]).
 #  pieza: la clave de forja.piezas / entregas.mmo; si la config lleva otro TIPO.ID, manda la config.

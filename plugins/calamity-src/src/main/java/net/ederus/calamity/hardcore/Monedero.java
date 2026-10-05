@@ -30,7 +30,7 @@ import java.util.regex.Pattern;
  * escrito en la config no puede regalar el Manto.
  *
  * monedero.modo: prueba guarda saldos falsos en monedero-prueba.<uuid> (solo para el Test,
- * donde no hay UltimateMobCoins) y /lw hardcore mc <jugador> <n> los pone.
+ * donde no hay UltimateMobCoins) y /calamity mc <player> <n> los pone.
  */
 final class Monedero {
 

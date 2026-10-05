@@ -18,28 +18,27 @@ depend: [EDM, LethalWorld]
 softdepend: [PlaceholderAPI, AuraSkills, UltimateMobCoins, WorldGuard, MMOItems, LibsDisguises, MythicMobs]
 
 commands:
+  # 1.12: un solo comando, solo de staff y en ingles. Los jugadores no escriben nada: todo lo que
+  # consultaban (saldo, Ecos, contratos, historias...) lo abren los NPCs de la antesala con
+  # "calamity open <player> <id>" por consola (Citizens). Sin calamity.admin no sale en el tab y
+  # contesta como un comando que no existe. La forma vieja de staff (en espanol) la atiende un
+  # comando oculto, solo de consola y temporal, que monta el plugin (RedireccionComandos).
   calamity:
-    description: Calamity para jugadores (tu saldo, tus Ecos, tus contratos y más)
-    usage: /calamity [saldo|eco|contratos|cambiar|camino|cronista|tablero|kit|eclipse|encuesta|deseos]
+    description: Calamity para el staff
+    usage: /calamity <subcommand>
     aliases: [cal]
-    permission: lethalworld.calamity
-  calamidad:
-    description: Calamity para el staff (antes /lw hardcore y /lw level)
-    usage: /calamidad <subcomando>
-    aliases: [cld]
-    permission: ederus.mundos
+    permission: calamity.admin
 
-# OJO: ederus.mundos NO se declara aqui aunque /calamidad lo pida. Ya lo declara el
-# plugin.yml de LethalWorld (default: op), y Bukkit no admite el mismo nodo de permiso en
-# dos plugin.yml: el segundo plugin falla al registrarlo. Como LethalWorld es depend, el
-# nodo ya existe cuando Calamity carga.
 permissions:
-  # El nodo se sigue llamando lethalworld.calamity aunque el plugin ya sea otro: los
-  # grupos de LuckPerms del servidor ya lo tienen puesto.
-  lethalworld.calamity:
-    description: /calamity para los jugadores
-    default: true
+  # El nodo de staff de /calamity y de todos sus subcomandos. default: op; en LuckPerms lo llevan
+  # los grupos admin, owner y dev. Es propio de Calamity: ederus.mundos lo declara LethalWorld y
+  # Bukkit no admite el mismo nodo en dos plugin.yml.
+  calamity.admin:
+    description: /calamity y todos sus subcomandos (staff)
+    default: op
+  # lethalworld.calamity (default true, el /calamity de los jugadores hasta la 1.11) ya no abre
+  # nada y no se declara: los grupos de LuckPerms que lo tengan puesto no ganan ningun comando.
   # lethalworld.parca.exento y lethalworld.aduana.exento ya no existen (LethalWorld 1.1.1):
   # con el comodin "*" de LuckPerms todo el staff los heredaba. Las exenciones van a mano,
-  # una a una: /calamidad exento <jugador> <parca|aduana|todo> <on|off> (se guardan en
+  # una a una: /calamity exempt <player> <reaper|customs|all> <on|off> (se guardan en
   # hardcore-datos.yml).

@@ -92,9 +92,9 @@ final class Combate implements Listener {
         this.hc = hc;
         hc.plugin().getServer().getPluginManager().registerEvents(this, hc.plugin());
         Autotest.registrar("combate", this::autotest);
-        Subcomandos.lw().registrar("combate",
-                "combate <info|etiquetar|llegada|cable> <jugador> [borrar]: etiqueta, llegada protegida y desconexiones en combate",
-                "ederus.mundos", this::comando, this::tab);
+        Subcomandos.staff().registrar("combat",
+                "combat <info|tag|arrival|disconnect> <player> [clear]: etiqueta, llegada protegida y desconexiones en combate",
+                Subcomandos.PERMISO, this::comando, this::tab);
     }
 
     // ------------------------------------------------------------------ config
@@ -682,11 +682,11 @@ final class Combate implements Listener {
     private void comando(CommandSender quien, String[] args) {
         if (args.length < 3) {
             quien.sendMessage(ComandoCalamity.mensaje(
-                    "Uso: /calamidad combate <info|etiquetar|llegada|cable> <jugador> [borrar]"));
+                    "Uso: /calamity combat <info|tag|arrival|disconnect> <player> [clear]"));
             return;
         }
         String accion = args[1].toLowerCase(Locale.ROOT);
-        if (accion.equals("cable")) {
+        if (accion.equals("disconnect")) {
             OfflinePlayer o = hc.plugin().getServer().getOfflinePlayerIfCached(args[2]);
             if (o == null) {
                 quien.sendMessage(ComandoCalamity.mensaje("No encuentro a ese jugador."));
@@ -694,7 +694,7 @@ final class Combate implements Listener {
             }
             String ruta = "cable." + o.getUniqueId();
             long cuando = hc.datos().getLong(ruta, 0);
-            if (args.length > 3 && args[3].equalsIgnoreCase("borrar")) {
+            if (args.length > 3 && args[3].equalsIgnoreCase("clear")) {
                 hc.datos().set(ruta, null);
                 hc.marcarSucio();
                 quien.sendMessage(ComandoCalamity.mensaje("Borrada la desconexión en combate pendiente de " + o.getName() + "."));
@@ -712,12 +712,12 @@ final class Combate implements Listener {
         }
         long ahora = System.currentTimeMillis();
         switch (accion) {
-            case "etiquetar" -> {
+            case "tag" -> {
                 etiquetar(p);
                 quien.sendMessage(ComandoCalamity.mensaje(enCombate(p) ? p.getName() + " en combate."
                         : "No se puede: fuera de Calamity o combate apagado."));
             }
-            case "llegada" -> {
+            case "arrival" -> {
                 llegada(p);
                 quien.sendMessage(ComandoCalamity.mensaje(protegido(p) ? p.getName() + " con llegada protegida."
                         : "No se puede: combate apagado o llegada-segundos a 0."));
@@ -734,7 +734,7 @@ final class Combate implements Listener {
                         + " · último agresor " + (g == null ? "nadie" : nombre(g.agresor()))
                         + " · cable " + (hc.datos().isSet("cable." + p.getUniqueId()) ? "pendiente" : "no")));
             }
-            default -> quien.sendMessage(ComandoCalamity.mensaje("Acciones: info, etiquetar, llegada, cable."));
+            default -> quien.sendMessage(ComandoCalamity.mensaje("Acciones: info, tag, arrival, disconnect."));
         }
     }
 
@@ -744,13 +744,13 @@ final class Combate implements Listener {
     }
 
     private List<String> tab(String[] args) {
-        if (args.length == 2) return List.of("info", "etiquetar", "llegada", "cable");
+        if (args.length == 2) return List.of("info", "tag", "arrival", "disconnect");
         if (args.length == 3) {
             List<String> nombres = new ArrayList<>();
             for (Player p : hc.plugin().getServer().getOnlinePlayers()) nombres.add(p.getName());
             return nombres;
         }
-        if (args.length == 4 && args[1].equalsIgnoreCase("cable")) return List.of("borrar");
+        if (args.length == 4 && args[1].equalsIgnoreCase("disconnect")) return List.of("clear");
         return List.of();
     }
 
@@ -826,7 +826,7 @@ final class Combate implements Listener {
         h.ok("autotest no deja relojes de UUID sinteticos en el modulo",
                 !relojes.combateHasta.containsKey(a) && !relojes.llegadaHasta.containsKey(b));
         h.ok("autotest no escribe cable en hardcore-datos.yml", !hc.datos().isSet("cable." + a));
-        h.ok("/lw hardcore combate registrado", Subcomandos.lw().nombres(null).contains("combate"));
+        h.ok("/calamity combat registrado", Subcomandos.staff().nombres(null).contains("combat"));
         return h.lineas();
     }
 }

@@ -213,7 +213,7 @@ final class Ruinas implements Listener {
         if (l.isEmpty()) m.remove(clave(c[0] >> 4, c[2] >> 4));
     }
 
-    /** Ruinas apuntadas, cofres y bovedas puestos, para /calamidad vault info. */
+    /** Ruinas apuntadas, cofres y bovedas puestos, para /calamity vault info. */
     int[] cuentas() {
         int ruinas = 0, c = 0, b = 0;
         for (String mundo : registro.getKeys(false)) {

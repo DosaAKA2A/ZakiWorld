@@ -32,7 +32,7 @@ import java.util.UUID;
  * Calamity. Dentro sigue siendo objeto (se pierde al morir, que es la gracia); fuera es un
  * numero que solo el Altar sabe gastar. Al extraer pasan al saldo (la Tasacion llama a
  * depositarFisicas) y, si aparece una fisica fuera por cualquier otra via (Esencias viejas,
- * salida por admin, /lw hardcore esencia), se deposita sola al entrar al servidor, al cambiar
+ * salida por admin, /calamity item essence), se deposita sola al entrar al servidor, al cambiar
  * de mundo o al abrir un inventario. No se destruye nada: se convierte.
  *
  * Segunda barrera (DIS M2, "Esencias vendibles"): la Esencia es una lagrima de ghast y la

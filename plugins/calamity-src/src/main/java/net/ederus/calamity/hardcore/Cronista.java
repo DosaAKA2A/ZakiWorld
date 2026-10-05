@@ -3,6 +3,7 @@ package net.ederus.calamity.hardcore;
 import net.ederus.edm.comun.Compat;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.TextComponent;
+import net.kyori.adventure.text.event.ClickCallback;
 import net.kyori.adventure.text.event.ClickEvent;
 import net.kyori.adventure.text.event.HoverEvent;
 import net.kyori.adventure.text.format.TextColor;
@@ -18,6 +19,7 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.time.Duration;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
@@ -28,8 +30,8 @@ import java.util.regex.Pattern;
 
 /**
  * El Cronista de la antesala (1.2.0): la historia de Calamity y como se juega, por capitulos
- * cortos. Sale al hacer clic en su NPC y con /calamity cronista [capitulo], que es inofensivo:
- * solo cuenta.
+ * cortos. Sale al hacer clic en su NPC (Ilen): desde la 1.12 abre su menu (MenuCronista), un libro
+ * por historia, y la historia elegida se cuenta en el chat. Ya no hay comando de jugador.
  *
  * Los textos viven en la config (hardcore.cronista.capitulos) para que Dosa los cambie
  * sin recompilar. Si alli no hay ninguno (un config.yml de antes de 1.2.0 no los trae), salen
@@ -41,8 +43,8 @@ import java.util.regex.Pattern;
  * sus elementos llevan id, por el id (altar.trueques.cristal.esencias). Lo que no lleve a
  * ningun valor se deja tal cual, con sus llaves, para que se vea (y el autotest lo caza).
  *
- * Todo por texto y comando: en Java el indice y las flechas se pulsan; desde Bedrock se
- * escribe el numero.
+ * En Java las flechas del pie se pulsan (callbacks, sin comando); desde Bedrock se vuelve a hablar
+ * con Ilen y se elige en su menu.
  */
 final class Cronista {
 
@@ -57,9 +59,11 @@ final class Cronista {
     static final String RUTA = "cronista.capitulos";
 
     private final Hardcore hc;
+    private final MenuCronista menu;
 
     Cronista(Hardcore hc) {
         this.hc = hc;
+        this.menu = new MenuCronista(hc, this);
     }
 
     // ------------------------------------------------------------------ capitulos
@@ -241,77 +245,77 @@ final class Cronista {
 
     // ------------------------------------------------------------------ chat
 
-    /** /calamity cronista [capitulo]. */
-    void comando(CommandSender quien, String[] args) {
-        List<Capitulo> l = capitulos();
-        if (l.isEmpty()) {
-            quien.sendMessage(ComandoCalamity.mensaje("Ilen no tiene nada que contar todavía."));
-            return;
-        }
-        if (args.length < 2) {
-            indice(quien, l);
-            return;
-        }
-        int i = buscar(l, args[1]);
-        if (i < 0) {
-            quien.sendMessage(ComandoCalamity.mensaje(Component.text("Ese capítulo no existe. Tienes la lista en ")
-                    .append(Component.text("/calamity cronista", Paleta.DETALLE)).append(Component.text("."))));
-            return;
-        }
-        capitulo(quien, l, i);
-    }
-
-    /** El indice (el clic en el NPC). */
+    /** El clic en Ilen: su menu (MenuCronista). A quien no es jugador (la consola) se le lista en el chat. */
     void indice(CommandSender quien) {
+        if (quien instanceof Player p) {
+            menu.abrir(p);
+            return;
+        }
         List<Capitulo> l = capitulos();
         if (l.isEmpty()) {
             quien.sendMessage(ComandoCalamity.mensaje("Ilen no tiene nada que contar todavía."));
             return;
         }
-        indice(quien, l);
-    }
-
-    private void indice(CommandSender quien, List<Capitulo> l) {
-        quien.sendMessage(ComandoCalamity.mensaje(Component.text("Ilen conoce ")
-                .append(Paleta.cifra(l.size())).append(Component.text(l.size() == 1 ? " historia. " : " historias. "))
-                .append(Component.text("Toca la que quieras leer.", Paleta.TENUE))));
+        quien.sendMessage(ComandoCalamity.mensaje("Ilen conoce " + l.size() + (l.size() == 1 ? " historia:" : " historias:")));
         for (int i = 0; i < l.size(); i++) {
-            Capitulo c = l.get(i);
-            quien.sendMessage(Component.text("  " + (i + 1) + ". ", Paleta.TENUE)
-                    .append(enlace(c.titulo(), Paleta.DETALLE, i + 1, "Leer: " + c.titulo())));
+            quien.sendMessage(Component.text("  " + (i + 1) + ". " + l.get(i).titulo(), Paleta.TENUE));
         }
-        quien.sendMessage(Component.text("  O escribe /calamity cronista <número>.", Paleta.TENUE));
-        sonar(quien);
     }
 
-    private void capitulo(CommandSender quien, List<Capitulo> l, int i) {
+    /** La historia n.o i (0 = la primera) en el chat; lo que pide el menu de Ilen. */
+    void leer(Player p, int i) {
+        List<Capitulo> l = capitulos();
+        if (i < 0 || i >= l.size()) {
+            p.sendMessage(ComandoCalamity.mensaje("Esa historia ya no está. Habla con Ilen para ver las que conoce."));
+            return;
+        }
+        capitulo(p, l, i);
+    }
+
+    private void capitulo(Player quien, List<Capitulo> l, int i) {
         Capitulo c = l.get(i);
         quien.sendMessage(Paleta.prefijo().append(Component.text("Ilen · ", Paleta.TENUE))
                 .append(Component.text(c.titulo(), Paleta.DETALLE))
                 .append(Component.text("  " + (i + 1) + "/" + l.size(), Paleta.TENUE)));
         ConfigurationSection raiz = hc.cfg();
         for (String t : c.texto()) quien.sendMessage(Component.text("  ").append(linea(t, raiz)));
-        // Las flechas: anterior, indice y siguiente, solo las que existen.
+        // Las flechas: anterior, todas y siguiente, solo las que existen. Son callbacks (Java); en
+        // Bedrock no se pulsan y se vuelve a hablar con Ilen.
         TextComponent.Builder nav = Component.text().append(Component.text("  "));
         if (i > 0) {
-            nav.append(enlace("« Anterior", Paleta.DETALLE, i, l.get(i - 1).titulo()))
+            nav.append(enlace("« Anterior", Paleta.DETALLE, i - 1, l.get(i - 1).titulo()))
                     .append(Component.text("   ", Paleta.TENUE));
         }
-        nav.append(enlace("Índice", Paleta.DETALLE, 0, "Todas las historias"));
+        nav.append(enlace("Todas", Paleta.DETALLE, -1, "Todas las historias"));
         if (i + 1 < l.size()) {
             nav.append(Component.text("   ", Paleta.TENUE))
-                    .append(enlace("Siguiente »", Paleta.DETALLE, i + 2, l.get(i + 1).titulo()));
+                    .append(enlace("Siguiente »", Paleta.DETALLE, i + 1, l.get(i + 1).titulo()));
         }
         quien.sendMessage(nav.build());
         sonar(quien);
     }
 
-    /** Un texto que al pulsarlo lleva a ese capitulo (0 = el indice). */
-    private static Component enlace(String texto, TextColor color, int capitulo, String ayuda) {
-        String cmd = "/calamity cronista" + (capitulo > 0 ? " " + capitulo : "");
+    /**
+     * Un texto que al pulsarlo lleva a esa historia (-1 = el menu de Ilen). Sin comando: un callback
+     * de Paper, que el jugador puede pulsar sin ningun permiso. Vale media hora y las veces que haga falta.
+     */
+    private Component enlace(String texto, TextColor color, int capitulo, String ayuda) {
+        ClickCallback.Options opciones = ClickCallback.Options.builder()
+                .uses(ClickCallback.UNLIMITED_USES).lifetime(Duration.ofMinutes(30)).build();
         return Component.text(texto, color)
-                .clickEvent(ClickEvent.runCommand(cmd))
+                .clickEvent(ClickEvent.callback(quien -> {
+                    if (!(quien instanceof Player p)) return;
+                    hc.seguro("cronista", () -> {
+                        if (capitulo < 0) menu.abrir(p);
+                        else leer(p, capitulo);
+                    });
+                }, opciones))
                 .hoverEvent(HoverEvent.showText(Component.text(ayuda, Paleta.TEXTO)));
+    }
+
+    /** Al parar: el menu deja de escuchar. */
+    void parar() {
+        menu.parar();
     }
 
     private static void sonar(CommandSender quien) {

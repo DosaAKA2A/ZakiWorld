@@ -34,13 +34,18 @@ import java.util.UUID;
  * Los NPCs los pone y los cuida el staff a mano con Citizens; Calamity no los crea ni depende
  * de Citizens. Cada uno lleva un comando de clic sin -p, que Citizens ejecuta como CONSOLA
  * y en el que cambia <p> por quien hizo clic (-l -r: los dos botones, tambien con mayusculas):
- *     /npc command add -l -r calamidad abrir <p> umbral
- * (y forja, mercader, cronista, cazador o engarzador en los otros cinco; "tasador" sigue valiendo). La receta completa del
- * Engarzador, con el /npc create, la dice /calamidad engarzador.
+ *     /npc command add -l -r calamity open <p> altar
+ * (y forge, merchant, chronicler, hunter, gemsetter o bounty en los otros seis). /calamity npcs
+ * dice la receta de todos, lista para copiar.
+ *
+ * Calamity 1.12: /calamity es solo de staff (calamity.admin) y en ingles. Lo que los jugadores
+ * consultaban por comando (su saldo, sus Ecos, los contratos, el Tablero, el kit...) lo registran
+ * los modulos en Subcomandos.jugador() y se abre igual: "calamity open <player> <id>" por consola,
+ * desde el NPC que se quiera. Al jugador nunca se le dice que escriba nada.
  *
  * La regla que no se negocia: el Altar no se abre a distancia. Vende el Cristal de Regreso,
  * que es la salida, y abierto dentro de Calamity romperia la extraccion. Por eso no hay un
- * comando de jugador que lo abra: /calamidad abrir pide ederus.mundos, que tienen la consola
+ * comando de jugador que lo abra: /calamity open pide calamity.admin, que tienen la consola
  * (el clic del NPC) y el staff, y aqui se repiten las comprobaciones del bloque del Altar
  * (Altar.onTocar): altar encendido y el jugador fuera de Calamity o en su zona spawn
  * (Marco.puedeAltar). El menu, ademas, lo vuelve a mirar en cada clic (MenuAltar.accion) y en
@@ -50,16 +55,17 @@ final class Npcs implements Listener {
 
     /** Los seis: el id que va en el comando de Citizens y como se llaman para el staff. */
     enum Tipo {
-        UMBRAL("umbral", "Sael (Altar del Umbral)"),
-        FORJA("forja", "Vael (Forja)"),
-        // El Mercader (1.5.0; antes "el Tasador"): su id es "mercader" y "tasador" sigue valiendo
-        // como alias, porque los NPCs de Citizens que ya hay en el servidor llevan ese comando.
-        TASADOR("mercader", "Oren (mercader)", "tasador"),
-        CRONISTA("cronista", "Ilen (cronista)"),
-        CAZADOR("cazador", "Rhen (cazador)"),
-        ENGARZADOR("engarzador", "Lior (engarzador)"),
+        // 1.12: los ids van en ingles, como todo lo que se escribe en un comando. Los de antes
+        // (umbral, mercader, tasador...) los traduce ComandosViejos mientras duren los NPCs viejos.
+        UMBRAL("altar", "Sael (Altar del Umbral)"),
+        FORJA("forge", "Vael (Forja)"),
+        // El Mercader (1.5.0; antes "el Tasador").
+        TASADOR("merchant", "Oren (mercader)"),
+        CRONISTA("chronicler", "Ilen (cronista)"),
+        CAZADOR("hunter", "Rhen (cazador)"),
+        ENGARZADOR("gemsetter", "Lior (engarzador)"),
         // 1.8.0: el NPC lo pone y lo nombra Dosa; para el staff se llama como su menu.
-        SENTENCIA("sentencia", "Sentencia (contratos de Ambush)");
+        SENTENCIA("bounty", "Sentencia (contratos de Ambush)");
 
         final String id;
         final String nombre;
@@ -107,16 +113,17 @@ final class Npcs implements Listener {
         this.cazador = new MenuCazador(hc);
         this.engarzador = new MenuEngarzador(hc);
         hc.plugin().getServer().getPluginManager().registerEvents(this, hc.plugin());
-        Subcomandos.lw().registrar("abrir",
-                "abrir <jugador> <" + String.join("|", Tipo.ids()) + ">: lo que abre cada NPC de la antesala"
+        Subcomandos.staff().registrar("open",
+                "open <player> <npc|id> [args]: lo que abre cada NPC de la antesala, o lo que consulta un jugador"
                         + " (el clic de Citizens, como consola)",
-                "ederus.mundos", this::comandoAbrir, args -> switch (args.length) {
+                Subcomandos.PERMISO, this::comandoAbrir, args -> switch (args.length) {
                     case 2 -> Entregas.nombresConectados();
-                    case 3 -> Tipo.ids();
+                    case 3 -> destinos();
+                    case 4 -> Tipo.de(args[2]) == Tipo.CRONISTA ? cronista.sugerencias() : List.of();
                     default -> List.of();
                 });
-        Subcomandos.calamity().registrar("cronista", "[capítulo]: la historia de Calamity y cómo se juega",
-                "lethalworld.calamity", cronista::comando, args -> args.length == 2 ? cronista.sugerencias() : List.of());
+        Subcomandos.staff().registrar("npcs", "npcs: el comando de clic de cada NPC de la antesala, para Citizens",
+                Subcomandos.PERMISO, (quien, args) -> recetas(quien), null);
         Autotest.registrar("npcs", this::autotest);
     }
 
@@ -133,6 +140,7 @@ final class Npcs implements Listener {
         hc.seguro("tasador", tasador::parar);
         hc.seguro("cazador", cazador::parar);
         hc.seguro("engarzador", engarzador::parar);
+        hc.seguro("cronista", cronista::parar);
         ultimoClic.clear();
     }
 
@@ -143,11 +151,38 @@ final class Npcs implements Listener {
 
     // ================================================================ abrir (el clic)
 
-    /** /calamidad abrir <jugador> <id>. */
+    /** Los NPCs y, detras, lo que un jugador puede consultar: lo que se escribe en open. */
+    static List<String> destinos() {
+        List<String> out = new ArrayList<>(Tipo.ids());
+        for (String s : Subcomandos.jugador().nombres(null)) if (!out.contains(s)) out.add(s);
+        return out;
+    }
+
+    /** El comando de clic de un NPC, tal cual va en Citizens (sin -p: lo ejecuta la consola). */
+    static String clic(Tipo t) {
+        return "/npc command add -l -r calamity open <p> " + t.id;
+    }
+
+    /** /calamity npcs: la receta de cada NPC, lista para copiar. */
+    private void recetas(CommandSender quien) {
+        quien.sendMessage(ComandoCalamity.mensaje("Los NPCs de la antesala (Citizens; Calamity no los crea):"));
+        for (Tipo t : Tipo.values()) {
+            quien.sendMessage(Component.text("  " + t.nombre, Paleta.DETALLE));
+            quien.sendMessage(Component.text("    " + clic(t), Paleta.TEXTO));
+        }
+        quien.sendMessage(Component.text("Con el NPC seleccionado (/npc select). Sin -p: lo ejecuta la consola y cambia <p>"
+                + " por quien hace clic. El jugador no necesita ningún permiso.", Paleta.TENUE));
+        quien.sendMessage(Component.text("Otros ids para un NPC: " + String.join(", ", Subcomandos.jugador().nombres(null)),
+                Paleta.TENUE));
+    }
+
+    /** /calamity open <player> <npc|id> [args]. */
     private void comandoAbrir(CommandSender quien, String[] args) {
-        Tipo t = args.length >= 3 ? Tipo.de(args[2]) : null;
-        if (t == null) {
-            quien.sendMessage(Component.text("Uso: /calamidad abrir <jugador> <" + String.join("|", Tipo.ids()) + ">",
+        String id = args.length >= 3 ? args[2].toLowerCase(Locale.ROOT) : "";
+        Tipo t = Tipo.de(id);
+        boolean accion = t == null && Subcomandos.jugador().nombres(null).contains(id);
+        if (t == null && !accion) {
+            quien.sendMessage(Component.text("Uso: /calamity open <player> <" + String.join("|", destinos()) + ">",
                     Paleta.AVISO));
             return;
         }
@@ -160,6 +195,25 @@ final class Npcs implements Listener {
         Long antes = ultimoClic.get(p.getUniqueId());
         if (antes != null && ahora - antes < ESPERA_MS) return;
         ultimoClic.put(p.getUniqueId(), ahora);
+        if (accion) {
+            // Lo de Subcomandos.jugador(): la accion recibe al jugador, como cuando lo escribia el.
+            String[] resto = new String[args.length - 2];
+            System.arraycopy(args, 2, resto, 0, resto.length);
+            resto[0] = id;
+            Subcomandos.jugador().ejecutar(p, resto);
+            if (!(quien instanceof ConsoleCommandSender) && quien != p) {
+                quien.sendMessage(ComandoCalamity.mensaje("Abierto " + id + " a " + p.getName() + "."));
+            }
+            return;
+        }
+        // Ilen con una historia detras: esa historia en el chat, sin pasar por su menu.
+        if (t == Tipo.CRONISTA && args.length >= 4) {
+            int i = Cronista.buscar(cronista.capitulos(), args[3]);
+            if (i >= 0) {
+                cronista.leer(p, i);
+                return;
+            }
+        }
         String no = abrir(p, t);
         // A la consola no se le cuenta nada: cada clic en un NPC le escribiria una linea.
         if (quien instanceof ConsoleCommandSender || quien == p) return;
@@ -257,15 +311,16 @@ final class Npcs implements Listener {
     private List<String> autotest() {
         Autotest.Hoja h = new Autotest.Hoja();
 
-        h.igual("id umbral", Tipo.UMBRAL, Tipo.de("umbral"));
-        h.igual("id sin mayusculas ni espacios", Tipo.FORJA, Tipo.de("  FORJA "));
-        h.igual("id que no existe", null, Tipo.de("altar"));
+        h.igual("id altar: Sael", Tipo.UMBRAL, Tipo.de("altar"));
+        h.igual("id sin mayusculas ni espacios", Tipo.FORJA, Tipo.de("  FORGE "));
+        h.igual("id que no existe", null, Tipo.de("umbral"));
         h.igual("id null", null, Tipo.de(null));
-        h.igual("los siete ids", List.of("umbral", "forja", "mercader", "cronista", "cazador", "engarzador", "sentencia"),
+        h.igual("los siete ids, en ingles", List.of("altar", "forge", "merchant", "chronicler", "hunter", "gemsetter", "bounty"),
                 Tipo.ids());
-        h.igual("id mercader", Tipo.TASADOR, Tipo.de("mercader"));
-        h.igual("alias tasador: abre a Oren (NPCs viejos de Citizens)", Tipo.TASADOR, Tipo.de("Tasador"));
-        h.ok("el alias no sale en el tab", !Tipo.ids().contains("tasador"));
+        h.igual("id merchant", Tipo.TASADOR, Tipo.de("merchant"));
+        h.igual("el clic de Citizens de Oren", "/npc command add -l -r calamity open <p> merchant", clic(Tipo.TASADOR));
+        h.igual("un NPC viejo (tasador) se traduce a Oren", "calamity open <p> merchant",
+                ComandosViejos.traducir("calamidad abrir <p> tasador"));
         // 1.5.2: cada NPC tiene nombre propio, sin articulo ni oficio en masculino delante.
         List<String> nombres = new ArrayList<>();
         for (Tipo t : Tipo.values()) nombres.add(t.nombre.substring(0, t.nombre.indexOf(' ')));
@@ -325,7 +380,7 @@ final class Npcs implements Listener {
                 h.ok("capitulo " + c.id() + ": linea corta (" + r.length() + ")", r.length() <= 130);
             }
         }
-        // Los de la config viva (los que lee de verdad /calamity cronista), si Dosa ha puesto los suyos.
+        // Los de la config viva (los que cuenta de verdad Ilen), si Dosa ha puesto los suyos.
         for (Cronista.Capitulo c : cronista.capitulos()) {
             for (String t : c.texto()) {
                 List<String> sin = Cronista.sinValor(t, hc.cfg());
@@ -337,9 +392,21 @@ final class Npcs implements Listener {
         h.igual("buscar fuera de rango", -1, Cronista.buscar(serie, "99"));
         h.igual("buscar cero", -1, Cronista.buscar(serie, "0"));
 
-        h.ok("/calamidad abrir registrado", Subcomandos.lw().nombres(null).contains("abrir"));
-        h.ok("/calamity cronista registrado", Subcomandos.calamity().nombres(null).contains("cronista"));
-        h.igual("tab de abrir: los siete", Tipo.ids(), Subcomandos.lw().tab(null, new String[]{"abrir", "Dosa__", ""}));
+        h.ok("/calamity open registrado", Subcomandos.staff().nombres(null).contains("open"));
+        h.ok("/calamity npcs registrado", Subcomandos.staff().nombres(null).contains("npcs"));
+        h.igual("tab de open: los siete NPCs y lo de los jugadores", destinos(),
+                Subcomandos.staff().tab(null, new String[]{"open", "Dosa__", ""}));
+        h.ok("tab de open empieza por los NPCs", destinos().subList(0, Tipo.values().length).equals(Tipo.ids()));
+        // El menu de Ilen: las historias en las filas 1-2, los botones debajo y Cerrar abajo en el centro.
+        var plano = MenuCronista.plano(6, List.of("echoes", "poll"));
+        h.igual("Ilen con 6 historias y 2 botones: 36 casillas", "36", plano.get(-1));
+        h.igual("la primera historia, en la fila 1", "c:1", plano.get(10));
+        h.igual("los botones, en la fila 2", "echoes", plano.get(21));
+        h.igual("Cerrar abajo en el centro", "cerrar", plano.get(31));
+        var nueve = MenuCronista.plano(9, List.of());
+        h.igual("Ilen con 9 historias: la octava abre la fila 2", "c:8", nueve.get(21));
+        h.igual("y Cerrar baja a la fila 3", "cerrar", nueve.get(31));
+        h.ok("el titulo de Ilen cabe", MenuCronista.TITULO.ancho() <= Marco.ANCHO_TITULO);
         return h.lineas();
     }
 }

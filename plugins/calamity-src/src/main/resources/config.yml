@@ -9,8 +9,8 @@
 # se enciende ninguna regla. Los mobs con nivel (mobs:), en cambio, salen en todos los
 # mundos de Lethal World.
 #
-# Se administra con /calamidad (antes /lw hardcore y /lw level) y se relee con
-# /calamidad reload.
+# Se administra con /calamity (solo staff: calamity.admin; todo en ingles) y se relee con
+# /calamity reload. Los jugadores no escriben ningun comando: todo les llega desde los NPCs.
 
 # Mobs de Lethal World: tipos de esbirro (se editan en /esb, carpeta "Lethal World · Panacea")
 # que aparecen alrededor de cada jugador segun el bioma donde caen. El spawn natural de
@@ -330,19 +330,19 @@ hardcore:
     segundos: 5
 
   # A donde se sale (muerte, cristal y portal de salida). Sin esto, al spawn del
-  # mundo principal. Se pone con /lw hardcore salida estando en el sitio.
+  # mundo principal. Se pone con /calamity define return estando en el sitio.
   salida: {}
 
   # Las dos PUERTAS. Ya no son puntos con radio: son CAJAS, porque una esfera no
-  # encaja en un marco construido. Se marcan con la vara (/lw hardcore wand: golpe
+  # encaja en un marco construido. Se marcan con la vara (/calamity wand: golpe
   # = esquina 1, clic derecho = esquina 2) y se guardan con
-  # /calamidad define entrada|salida. Las escribe el plugin, no hace falta tocarlo.
-  # 1.1.0: aqui va tambien la zona SPAWN (/calamidad define spawn), la caja donde el
+  # /calamity define entry|exit. Las escribe el plugin, no hace falta tocarlo.
+  # 1.1.0: aqui va tambien la zona SPAWN (/calamity define spawn), la caja donde el
   # AFK dura 5 minutos y acaba en la Grieta (ver parca.spawn). 1.2: solo se usa en un
   # mundo sin la region de WorldGuard de spawn.region (ver spawn, abajo).
   puertas: {}
 
-  # Donde aparece el que entra. Se pone con /lw hardcore llegada dentro de Calamity.
+  # Donde aparece el que entra. Se pone con /calamity define arrival dentro de Calamity.
   llegada: {}
 
   # 1.2 · La ZONA SPAWN: donde Calamity no hace nada salvo la Grieta (ver parca.spawn). Dentro
@@ -352,8 +352,8 @@ hardcore:
   # Cristal y la Tasacion siguen igual. Quien muere dentro deja el Eco fuera, en el borde.
   # Es la region de WorldGuard con este nombre en cada mundo hardcore (la del spawn de
   # calamity2 se llama "calamity"); si WorldGuard no esta o ese mundo no la tiene, la caja de
-  # la vara (/calamidad define spawn). "" = solo la vara. Se relee cada 5 s: un /rg redefine
-  # o un /calamidad define spawn se notan sin reiniciar. /calamidad dice cual se esta usando.
+  # la vara (/calamity define spawn). "" = solo la vara. Se relee cada 5 s: un /rg redefine
+  # o un /calamity define spawn se notan sin reiniciar. /calamity status dice cual se esta usando.
   spawn:
     region: calamity
     # Los mobs de Calamity que se cuelen (persiguiendo a alguien) se retiran en humo, y
@@ -495,7 +495,7 @@ hardcore:
   # 1.1.1 (tras la primera prueba): la PARCA con cuerpo de NPC (parca.cuerpo), mini withers
   # en el Cortejo (parca.planideras), avisos mas largos y legibles, la Huella cuenta las
   # interacciones variadas y el vuelo (parca.interacciones...), y las exenciones van a mano
-  # con /lw hardcore exento (ya no por permiso). Los colores de los mensajes, en Paleta.java.
+  # con /calamity exempt (ya no por permiso). Los colores de los mensajes, en Paleta.java.
   # Bloque de DISENO-CALAMITY, seccion 4. Las mecanicas P1 van apagadas de serie
   # (activo: false) hasta probarlas; las P2 estan escritas pero no programadas.
   # Lo que el plugin escribe solo va a hardcore-datos.yml, nunca aqui.
@@ -537,7 +537,7 @@ hardcore:
     giro-minimo: 1.5              # grados que tiene que girar la camara entre dos de ellas
     vuelo-minimo: 1.0             # bloques desplazados volando entre muestras
     # Exentos de la Huella y la PARCA: ya no por permiso (el comodin de LuckPerms se lo daba
-    # a todo el staff), sino a mano con /lw hardcore exento <jugador> parca on.
+    # a todo el staff), sino a mano con /calamity exempt <player> reaper on.
     avisos: [150, 210, 255, 270, 285]   # segundos de quietud de cada aviso, todos antes de minutos x 60
                                         # (con 10 minutos eran 300, 420, 510, 540 y 570)
     radio-campana-ajena: 48       # a cuanto oyen los demas la campana del cuarto aviso
@@ -669,7 +669,7 @@ hardcore:
 
   # ------------------------------------------------------------------ 1b. AMBUSH (1.8.0)
   # El samurai de los contratos. El NPC de la Sentencia (lo pone el staff con Citizens, como los
-  # demas: /npc command add -l -r calamidad abrir <p> sentencia) lista a quien este ahora en
+  # demas: /npc command add -l -r calamity open <p> bounty) lista a quien este ahora en
   # Calamity fuera del spawn. Pagar su contrato le da 1 minuto para irse (puerta o Cristal de
   # Regreso); si se queda, Ambush aparece a 12 bloques. Un contrato por presa cada 24 h y como
   # mucho 2 al dia por pagador, los dos con las horas minimas de la Aduana y sin compartir
@@ -705,7 +705,7 @@ hardcore:
   # y vida x1,4 x1,2 x1,4 = x2,35.
   # La Siega y la Sentencia de la Parca, que quitan una parte de tu vida, suben con el mismo
   # multiplicador de daño hasta su tope (parca.siega.tope y parca.campanada.tope).
-  # /calamidad parca info <jugador> y /calamidad ambush info enseñan lo que lleva cada una.
+  # /calamity reaper info <player> y /calamity ambush info enseñan lo que lleva cada una.
   # Si esta sección no está en el config.yml del servidor, valen estos mismos valores.
   dificultad-amenazas:
     # Distancia al borde de la zona spawn (la misma medida que hardcore.distancia): cada
@@ -984,7 +984,7 @@ hardcore:
   # cae una bóveda ominosa (caja calamity_caida de EDM, Llave Ominosa) entre distancia-min y distancia-max del
   # centro del spawn. Solo la abre el primero; abierta, o a los vida-minutos, desaparece. Se anuncia el bioma,
   # la distancia redondeada a 100 y el rumbo (nunca las coordenadas) y se ve un haz durante haz-minutos.
-  # /calamidad vault drop [random] la fuerza (cerca de ti, o en el anillo), vault info y vault clear.
+  # /calamity vault drop [random] la fuerza (cerca de ti, o en el anillo), vault info y vault clear.
   boveda-caida:
     activo: true
     cada-minutos: 150
@@ -1020,7 +1020,7 @@ hardcore:
   # colores; el líder, de placeholder-lider sobre un miembro conectado (si no se puede leer, el miembro que
   # más puntos dio). Cierra el lunes 00:00 en hardcore.zona: el clan con más puntos (empate: el que llegó
   # antes) recibe trofeo.comando; si repite y su trofeo sigue existiendo, se renueva (EDM 1.78.1).
-  # /calamidad clans (top), clans close (cierra ya), clans holo here|off (el holograma, uno solo).
+  # /calamity clans (top), clans close (cierra ya), clans holo here|off (el holograma, uno solo).
   clanes:
     activo: true
     placeholder: "%uclans_tag_color%"
@@ -1066,7 +1066,7 @@ hardcore:
     activo: true
     # Calamity 1.11 · Cuando llueve lo decide Calamity, no el ciclo al azar de Minecraft: en sus mundos
     # se apaga la regla del ciclo de clima y se alterna despejado y lluvia con estas duraciones (en
-    # tiempo real; un reinicio no lo reinicia). /calamidad weather [rain|storm|clear] [minutos] lo fuerza
+    # tiempo real; un reinicio no lo reinicia). /calamity weather [rain|storm|clear] [minutes] lo fuerza
     # y, sin nada, dice como va. Placeholders: %lethalworld_clima% (despejado|lluvia|tormenta),
     # %lethalworld_clima_restante% ("12 min", "45 s") y %lethalworld_clima_proximo% (la fase que viene).
     ciclo:
@@ -1164,7 +1164,7 @@ hardcore:
     precio-cambio: 1
     semana-objetivo: 12
     # Calamity 1.11: y una Llave del Umbral (ligada, por Entregas).
-    semana-premio: ["lw hardcore dar llave %jugador% 1", "lw hardcore dar llave-umbral %jugador% 1 contratos"]
+    semana-premio: ["calamity give llave %jugador% 1", "calamity give llave-umbral %jugador% 1 contratos"]
     pergamino:
       activo: true                # false: como antes de la 1.10 (sin papel; todo se cobra al salir vivo)
       entregar-al-entrar: true    # false: Oren no los deja solos al entrar; hay que pedirselos en su menu
@@ -1199,14 +1199,14 @@ hardcore:
     # estan confirmados en produccion; Dosa decide si lo enciende alli (en el Test va encendido).
     activo: true
     manto-ids: ["CALAMITY.YELMO_DE_CALAMIDAD", "CALAMITY.CORAZA_DE_CALAMIDAD", "CALAMITY.GREBAS_DE_CALAMIDAD", "CALAMITY.SOLERETAS_DE_CALAMIDAD", "CALAMITY_ARMAS.HACHA_DEL_HERALDO"]
-    umbral: {estadistica: extracciones-con-reliquia, umbral: 1, nombre: "Umbral", anuncio: false, comandos: ["lw hardcore dar llave-hito %jugador% 1"]}
-    desvelado: {estadistica: horas-activas, umbral: 6, nombre: "Desvelado", anuncio: false, comandos: ["lw hardcore dar llave-hito %jugador% 1"]}
-    h12: {estadistica: horas-activas, umbral: 12, nombre: "Doce horas", anuncio: false, comandos: ["lw hardcore dar llave-hito %jugador% 2", "lw hardcore dar esencia %jugador% 10"]}
-    insomne-1: {estadistica: horas-activas, umbral: 24, nombre: "[INSOMNE] I", anuncio: true, comandos: ["lp user %jugador% permission set insomne.badge.unlocked true", "lw hardcore dar salvoconducto %jugador% 1"]}
-    h48: {estadistica: horas-activas, umbral: 48, nombre: "Cuarenta y ocho horas", anuncio: true, comandos: ["lp user %jugador% permission set rip.death.specters true", "lw hardcore dar credito:sello-errante %jugador% 1"]}
-    insomne-2: {estadistica: horas-activas, umbral: 72, nombre: "[INSOMNE] II", anuncio: true, comandos: ["lp user %jugador% permission set insomne2.badge.unlocked true", "lw hardcore dar credito:sello-errante %jugador% 1"]}
+    umbral: {estadistica: extracciones-con-reliquia, umbral: 1, nombre: "Umbral", anuncio: false, comandos: ["calamity give llave-hito %jugador% 1"]}
+    desvelado: {estadistica: horas-activas, umbral: 6, nombre: "Desvelado", anuncio: false, comandos: ["calamity give llave-hito %jugador% 1"]}
+    h12: {estadistica: horas-activas, umbral: 12, nombre: "Doce horas", anuncio: false, comandos: ["calamity give llave-hito %jugador% 2", "calamity give esencia %jugador% 10"]}
+    insomne-1: {estadistica: horas-activas, umbral: 24, nombre: "[INSOMNE] I", anuncio: true, comandos: ["lp user %jugador% permission set insomne.badge.unlocked true", "calamity give salvoconducto %jugador% 1"]}
+    h48: {estadistica: horas-activas, umbral: 48, nombre: "Cuarenta y ocho horas", anuncio: true, comandos: ["lp user %jugador% permission set rip.death.specters true", "calamity give credito:sello-errante %jugador% 1"]}
+    insomne-2: {estadistica: horas-activas, umbral: 72, nombre: "[INSOMNE] II", anuncio: true, comandos: ["lp user %jugador% permission set insomne2.badge.unlocked true", "calamity give credito:sello-errante %jugador% 1"]}
     vigia: {estadistica: horas-activas, umbral: 100, nombre: "Vigía", anuncio: true, activo: false, comandos: ["ae giverandombook %jugador% LEGENDARY", "lp user %jugador% permission set rip.kill.souls true", "lp user %jugador% permission set gkit.voidwalker true"]}
-    insomne-3: {estadistica: horas-activas, umbral: 150, nombre: "[INSOMNE] III", anuncio: true, comandos: ["lp user %jugador% permission set insomne3.badge.unlocked true", "lw hardcore dar llave-hito %jugador% 2"]}
+    insomne-3: {estadistica: horas-activas, umbral: 150, nombre: "[INSOMNE] III", anuncio: true, comandos: ["lp user %jugador% permission set insomne3.badge.unlocked true", "calamity give llave-hito %jugador% 2"]}
     sin-alba: {estadistica: horas-activas, umbral: 250, nombre: "Sin Alba", anuncio: true, activo: false, comandos: ["ae giverandombook %jugador% FABLED", "lp user %jugador% permission set rip.death.silencio true"]}
     segador-1: {estadistica: parcas, umbral: 1, nombre: "[SEGADOR] I", anuncio: true, comandos: ["lp user %jugador% permission set segador.badge.unlocked true", "lp user %jugador% permission set rip.death.souls true"]}
     segador-2: {estadistica: parcas, umbral: 10, nombre: "[SEGADOR] II", anuncio: true, comandos: ["lp user %jugador% permission set segador2.badge.unlocked true", "lp user %jugador% permission set gkit.grimreaper true"]}
@@ -1336,7 +1336,7 @@ hardcore:
           material: ENDER_CHEST
   tablero: {activo: false, ecos: 7, redondeo: 50, cache-segundos: 30}
   # [alineado] Encuesta y Voto del Botin (MED 4). Una pregunta activa a la vez (la abre el staff con
-  # /lw hardcore encuesta abrir <id>); "botin" es la fija del Voto del Botin, siempre abierta.
+  # /calamity poll open <id>); "botin" es la fija del Voto del Botin, siempre abierta.
   # Cada opcion: id -> {icono, texto}. Sin emojis: Bedrock los pinta mal.
   encuesta:
     activo: false
@@ -1409,25 +1409,28 @@ hardcore:
   # uno lleva un clic que Citizens ejecuta como CONSOLA (sin -p) y en el que cambia <p> por
   # quien hace clic; -l -r = los dos botones. Cada uno tiene nombre propio (1.5.2), sin
   # articulo: se crea con "/npc create <Nombre>" y, con el NPC seleccionado (/npc select):
-  #   Sael  /npc command add -l -r calamidad abrir <p> umbral     Altar, pagina Umbral
-  #   Vael  /npc command add -l -r calamidad abrir <p> forja      Altar, pagina Forja
-  #   Oren  /npc command add -l -r calamidad abrir <p> mercader   dinero, ventas y contratos de hoy
-  #                                                             ("tasador", su id de antes, sigue valiendo)
-  #   Ilen  /npc command add -l -r calamidad abrir <p> cronista   los capitulos de abajo
-  #   Rhen  /npc command add -l -r calamidad abrir <p> cazador    tablas de la semana y el Tablero
-  #   Lior  /npc command add -l -r calamidad abrir <p> engarzador pone y quita las Gemas de Calamidad (1.4)
-  # /calamidad engarzador repite la receta de Lior. Engarzar es gratis y quitar una gema la
-  # rompe. Admite las gemas del tipo de entregas.mmo.gema (CALAMITY_GEMAS) en las piezas de los
-  # tipos de forja.piezas que tengan hueco.
-  # El jugador no necesita permiso (/calamidad es de staff y consola) y el Altar solo se abre
+  #   Sael       /npc command add -l -r calamity open <p> altar       Altar, pagina Umbral
+  #   Vael       /npc command add -l -r calamity open <p> forge       Altar, pagina Forja
+  #   Oren       /npc command add -l -r calamity open <p> merchant    dinero, ventas y contratos de hoy
+  #   Ilen       /npc command add -l -r calamity open <p> chronicler  las historias de abajo, tus Ecos,
+  #                                                                   el Eclipse, la encuesta y los deseos
+  #   Rhen       /npc command add -l -r calamity open <p> hunter      tablas de la semana (o el Tablero)
+  #   Lior       /npc command add -l -r calamity open <p> gemsetter   pone y quita las Gemas de Calamidad (1.4)
+  #   Sentencia  /npc command add -l -r calamity open <p> bounty      contratos de Ambush (1.8.0)
+  # /calamity npcs repite estas recetas. Otros ids que puede abrir un NPC (lo que antes era un
+  # comando de jugador): balance, echoes, contracts, reroll, path, board, kit, eclipse, poll y
+  # wishes. Engarzar es gratis y quitar una gema la rompe. Admite las gemas del tipo de
+  # entregas.mmo.gema (CALAMITY_GEMAS) en las piezas de los tipos de forja.piezas que tengan hueco.
+  # El jugador no necesita permiso (/calamity es de staff y consola) y el Altar solo se abre
   # desde el NPC o su bloque, nunca a distancia ni dentro de Calamity.
   cronista:
-    # Los capitulos de /calamity cronista, en este orden (el id tambien vale: /calamity
-    # cronista parca). {ruta} se cambia al leerlo por ese valor de hardcore:, asi las cifras
+    # Las historias de Ilen, en este orden: un libro por historia en su menu, y la elegida se
+    # cuenta en el chat. {ruta} se cambia al leerlo por ese valor de hardcore:, asi las cifras
     # siguen a la config: {parca.minutos} -> 5. En una lista se entra por el id de sus
     # elementos ({altar.trueques.cristal.esencias}) o por posicion, desde 0
     # ({aduana.tramos-mc.0.hasta}). Una ruta que no exista sale tal cual, entre llaves, y
-    # /calamidad autotest npcs la senala. Lineas cortas: cada una tiene que caber en el chat.
+    # /calamity selftest npcs la senala. Lineas cortas: cada una tiene que caber en el chat.
+    # Caben 14 historias (dos filas de siete).
     capitulos:
       calamity:
         titulo: "Qué es Calamity"

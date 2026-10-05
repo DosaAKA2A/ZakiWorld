@@ -456,7 +456,7 @@ final class Reclamo implements Listener {
 
     // ------------------------------------------------------------------ autotest
 
-    /** /calamidad autotest reclamo: las reglas (descanso, tope, orden) y el objeto, sin jugadores. */
+    /** /calamity selftest lure: las reglas (descanso, tope, orden) y el objeto, sin jugadores. */
     private List<String> autotest() {
         Autotest.Hoja h = new Autotest.Hoja();
         long ahora = 1_790_000_000_000L;

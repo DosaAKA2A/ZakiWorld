@@ -37,7 +37,7 @@ import java.util.function.Consumer;
 
 /**
  * M2/M32 · El Altar del Umbral (DIS M2 [alineado], PLAN sec. 4): el unico sitio donde las
- * Esencias se vuelven cosas. Un bloque fuera de Calamity, marcado con /lw hardcore altar;
+ * Esencias se vuelven cosas. Un bloque fuera de Calamity, marcado con /calamity altar;
  * clic derecho abre dos paginas de 54 (Umbral y Forja, MenuAltar). Dentro de Calamity el
  * altar no escucha (P-M05).
  *
@@ -222,9 +222,9 @@ final class Altar implements Listener {
         this.camino = new Camino(hc, this);
         this.menu = new MenuAltar(hc, this);
         hc.plugin().getServer().getPluginManager().registerEvents(this, hc.plugin());
-        Subcomandos.lw().registrar("altar",
-                "altar [probar <jugador> <trueque> | reset <jugador> | abrir [umbral|forja|camino] | info]: sin argumentos marca el bloque que miras",
-                "ederus.mundos", this::comando, this::tab);
+        Subcomandos.staff().registrar("altar",
+                "altar [test <player> <trade> | reset <player> | open [altar|forge|path] | info]: sin argumentos marca el bloque que miras",
+                Subcomandos.PERMISO, this::comando, this::tab);
         Autotest.registrar("altar", this::autotest);
         hc.seguro("altar", this::podar);
     }
@@ -274,7 +274,7 @@ final class Altar implements Listener {
         camino.destelloAlEntrar(p);
     }
 
-    /** Trueque contra el saldo sin menu (/lw hardcore altar probar). True si se cobro y entrego. */
+    /** Trueque contra el saldo sin menu (/calamity altar test). True si se cobro y entrego. */
     boolean probar(OfflinePlayer p, String trueque) {
         boolean[] ok = {false};
         comprar(p, trueque, Bukkit.getConsoleSender(), r -> ok[0] = r.ok());
@@ -1241,9 +1241,9 @@ final class Altar implements Listener {
         String sub = args.length >= 2 ? args[1].toLowerCase(Locale.ROOT) : "";
         switch (sub) {
             case "" -> marcar(quien);
-            case "probar" -> {
+            case "test" -> {
                 if (args.length < 4) {
-                    quien.sendMessage(Component.text("Uso: /calamidad altar probar <jugador> <trueque>", Paleta.AVISO));
+                    quien.sendMessage(Component.text("Uso: /calamity altar test <player> <trade>", Paleta.AVISO));
                     return;
                 }
                 OfflinePlayer a = Entregas.buscar(args[2]);
@@ -1259,7 +1259,7 @@ final class Altar implements Listener {
                  * nada ni toca el saldo, los creditos, la espera de la Forja ni el stock comun. */
                 OfflinePlayer a = args.length >= 3 ? Entregas.buscar(args[2]) : null;
                 if (a == null) {
-                    quien.sendMessage(Component.text("Uso: /calamidad altar reset <jugador>", Paleta.AVISO));
+                    quien.sendMessage(Component.text("Uso: /calamity altar reset <player>", Paleta.AVISO));
                     return;
                 }
                 UUID u = a.getUniqueId();
@@ -1270,7 +1270,7 @@ final class Altar implements Listener {
                 hc.plugin().bitacora().anotar("altar", "reset", Entregas.nombre(a), quien.getName());
                 quien.sendMessage(ComandoCalamity.mensaje("Cupos del Altar de " + Entregas.nombre(a) + " puestos a cero."));
             }
-            case "abrir" -> {
+            case "open" -> {
                 if (!(quien instanceof Player p)) {
                     quien.sendMessage(Component.text("Solo se puede usar dentro del juego.", Paleta.AVISO));
                     return;
@@ -1279,9 +1279,9 @@ final class Altar implements Listener {
                     p.sendMessage(ComandoCalamity.mensaje("El Altar solo se abre fuera de Calamity o en su spawn."));
                     return;
                 }
-                String pagina = args.length >= 3 ? args[2].toLowerCase(Locale.ROOT) : MenuAltar.UMBRAL;
-                if (pagina.equals("camino")) camino.abrir(p);
-                else menu.abrir(p, pagina.equals(MenuAltar.FORJA) ? MenuAltar.FORJA : MenuAltar.UMBRAL);
+                String pagina = args.length >= 3 ? args[2].toLowerCase(Locale.ROOT) : "altar";
+                if (pagina.equals("path")) camino.abrir(p);
+                else menu.abrir(p, pagina.equals("forge") ? MenuAltar.FORJA : MenuAltar.UMBRAL);
             }
             case "info" -> {
                 Location l = altar();
@@ -1293,7 +1293,7 @@ final class Altar implements Listener {
                 quien.sendMessage(Component.text("  Trueques: " + String.join(", ", ids), Paleta.TENUE));
             }
             default -> quien.sendMessage(Component.text(
-                    "Uso: /calamidad altar [probar <jugador> <trueque> | reset <jugador> | abrir [umbral|forja|camino] | info]", Paleta.AVISO));
+                    "Uso: /calamity altar [test <player> <trade> | reset <player> | open [altar|forge|path] | info]", Paleta.AVISO));
         }
     }
 
@@ -1322,12 +1322,12 @@ final class Altar implements Listener {
     }
 
     private List<String> tab(String[] args) {
-        if (args.length == 2) return List.of("probar", "reset", "abrir", "info");
-        if (args.length == 3 && (args[1].equalsIgnoreCase("probar") || args[1].equalsIgnoreCase("reset"))) {
+        if (args.length == 2) return List.of("test", "reset", "open", "info");
+        if (args.length == 3 && (args[1].equalsIgnoreCase("test") || args[1].equalsIgnoreCase("reset"))) {
             return Entregas.nombresConectados();
         }
-        if (args.length == 3 && args[1].equalsIgnoreCase("abrir")) return List.of("umbral", "forja", "camino");
-        if (args.length == 4 && args[1].equalsIgnoreCase("probar")) {
+        if (args.length == 3 && args[1].equalsIgnoreCase("open")) return List.of("altar", "forge", "path");
+        if (args.length == 4 && args[1].equalsIgnoreCase("test")) {
             List<String> ids = new ArrayList<>();
             for (Trueque t : trueques()) ids.add(t.id());
             return ids;
@@ -1663,8 +1663,8 @@ final class Altar implements Listener {
 
         h.ok("la prueba no toca hardcore-datos.yml", !hc.datos().isSet("altar.usos.2026-W39." + u)
                 && !hc.datos().isSet("esencias." + u));
-        h.ok("/lw hardcore altar registrado", Subcomandos.lw().nombres(null).contains("altar"));
-        h.ok("/calamity camino registrado", Subcomandos.calamity().nombres(null).contains("camino"));
+        h.ok("/calamity altar registrado", Subcomandos.staff().nombres(null).contains("altar"));
+        h.ok("el Camino se abre desde un NPC (open <player> path)", Subcomandos.jugador().nombres(null).contains("path"));
         h.igual("nombre con tildes", "Talismán de Vigilia", nombre(ts.get("talisman")));
         h.igual("nombre de una pieza sin nombre", "Yelmo de Calamidad", nombre(ts.get("yelmo-manto")));
         return h.lineas();

@@ -23,7 +23,7 @@ import java.util.UUID;
  * comodin "*" de LuckPerms todo el staff los heredaba sin que nadie lo decidiera: inmunes a
  * la PARCA y sin la comparacion de IP (la PARCA de la primera prueba no vino por nadie del
  * staff por eso). Ahora es un interruptor por jugador en hardcore-datos.yml, en
- * exentos.<uuid>.{nombre, parca, aduana}, que se pone con /lw hardcore exento y queda en la
+ * exentos.<uuid>.{nombre, parca, aduana}, que se pone con /calamity exempt y queda en la
  * Bitacora. Ningun permiso lo concede.
  *
  * Se lee en cada consulta (una lectura del YAML en memoria): nada que cachear ni que limpiar.
@@ -39,9 +39,9 @@ final class Exentos {
     Exentos(Hardcore hc) {
         this.hc = hc;
         Autotest.registrar("exentos", Exentos::autotest);
-        Subcomandos.lw().registrar("exento",
-                "exento [<jugador> <parca|aduana|todo> <on|off>]: exenciones a mano (sin argumentos, la lista)",
-                "ederus.mundos", this::comando, this::tab);
+        Subcomandos.staff().registrar("exempt",
+                "exempt [<player> <reaper|customs|all> <on|off>]: exenciones a mano (sin argumentos, la lista)",
+                Subcomandos.PERMISO, this::comando, this::tab);
     }
 
     // ------------------------------------------------------------------ nucleo
@@ -77,6 +77,19 @@ final class Exentos {
         };
     }
 
+    /**
+     * Lo que se escribe en /calamity exempt (reaper, customs o all) como lo guarda el fichero
+     * (parca, aduana o todo); null si no es ninguno.
+     */
+    static String interno(String escrito) {
+        return switch (escrito == null ? "" : escrito.toLowerCase(Locale.ROOT)) {
+            case "reaper" -> PARCA;
+            case "customs" -> ADUANA;
+            case "all" -> "todo";
+            default -> null;
+        };
+    }
+
     /** Cada exento con lo suyo: "Nombre: parca, aduana". */
     static List<String> lista(ConfigurationSection datos) {
         List<String> out = new ArrayList<>();
@@ -107,8 +120,8 @@ final class Exentos {
     // ------------------------------------------------------------------ comando
 
     /**
-     * /lw hardcore exento                                   la lista
-     * /lw hardcore exento <jugador> <parca|aduana|todo> <on|off>
+     * /calamity exempt                                       la lista
+     * /calamity exempt <player> <reaper|customs|all> <on|off>
      */
     private void comando(CommandSender quien, String[] args) {
         if (args.length == 1) {
@@ -123,7 +136,7 @@ final class Exentos {
             return;
         }
         if (args.length < 4) {
-            quien.sendMessage(Component.text("Uso: /calamidad exento [<jugador> <parca|aduana|todo> <on|off>]", Paleta.AVISO));
+            quien.sendMessage(Component.text("Uso: /calamity exempt [<player> <reaper|customs|all> <on|off>]", Paleta.AVISO));
             return;
         }
         OfflinePlayer o = Entregas.buscar(args[1]);
@@ -131,15 +144,15 @@ final class Exentos {
             quien.sendMessage(Component.text("No encuentro a ese jugador.", Paleta.AVISO));
             return;
         }
-        String que = args[2].toLowerCase(Locale.ROOT);
-        if (cuales(que).isEmpty()) {
-            quien.sendMessage(Component.text("Tiene que ser parca, aduana o todo.", Paleta.AVISO));
+        String que = interno(args[2]);
+        if (que == null) {
+            quien.sendMessage(Component.text("Tiene que ser reaper, customs o all.", Paleta.AVISO));
             return;
         }
         String interruptor = args[3].toLowerCase(Locale.ROOT);
         boolean on;
-        if (interruptor.equals("on") || interruptor.equals("si") || interruptor.equals("true")) on = true;
-        else if (interruptor.equals("off") || interruptor.equals("no") || interruptor.equals("false")) on = false;
+        if (interruptor.equals("on") || interruptor.equals("true")) on = true;
+        else if (interruptor.equals("off") || interruptor.equals("false")) on = false;
         else {
             quien.sendMessage(Component.text("Tiene que ser on u off.", Paleta.AVISO));
             return;
@@ -165,7 +178,7 @@ final class Exentos {
         if (args.length == 2) {
             for (Player p : hc.plugin().getServer().getOnlinePlayers()) out.add(p.getName());
         } else if (args.length == 3) {
-            out.addAll(List.of(PARCA, ADUANA, "todo"));
+            out.addAll(List.of("reaper", "customs", "all"));
         } else if (args.length == 4) {
             out.addAll(List.of("on", "off"));
         }
@@ -190,6 +203,10 @@ final class Exentos {
         poner(d, a, "Staff", ADUANA, false);
         h.ok("sin ninguna -> fuera del fichero", !d.isSet("exentos." + a) && !d.isSet("exentos"));
         h.ok("una palabra que no es ninguna no toca nada", cuales("permiso").isEmpty());
+        h.igual("reaper se guarda como parca", PARCA, interno("Reaper"));
+        h.igual("customs se guarda como aduana", ADUANA, interno("customs"));
+        h.igual("all son las dos", List.of(PARCA, ADUANA), cuales(interno("all")));
+        h.igual("las palabras de antes ya no se escriben", null, interno("parca"));
         return h.lineas();
     }
 }

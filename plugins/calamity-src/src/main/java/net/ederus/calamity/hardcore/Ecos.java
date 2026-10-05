@@ -108,11 +108,11 @@ final class Ecos implements Listener {
         this.hc = hc;
         hc.plugin().getServer().getPluginManager().registerEvents(this, hc.plugin());
         Autotest.registrar("eco", this::autotest);
-        Subcomandos.lw().registrar("eco",
-                "eco crear|lista|borrar|tp|prueba|despertar|matar: gestiona los Ecos",
-                "ederus.mundos", this::comando, this::tab);
-        Subcomandos.calamity().registrar("eco", "tus Ecos: dónde están, su nivel y cuánto les queda",
-                "lethalworld.calamity", this::comandoJugador, null);
+        Subcomandos.staff().registrar("echo",
+                "echo create|list|delete|tp|test|wake|kill: gestiona los Ecos",
+                Subcomandos.PERMISO, this::comando, this::tab);
+        Subcomandos.jugador().registrar("echoes", "tus Ecos: dónde están, su nivel y cuánto les queda",
+                null, this::comandoJugador, null);
         PlaceholdersLethal.registrar("eco", (jugador, resto) -> placeholder(jugador, false));
         PlaceholdersLethal.registrar("eco_reliquias", (jugador, resto) -> placeholder(jugador, true));
         cargar();
@@ -301,7 +301,7 @@ final class Ecos implements Listener {
                 continue;
             }
             if (e.cuerpo != null) {
-                // Se fue sin avisar (chunk descargado, /lw hardcore amenazas limpiar): duerme con la ultima vida vista.
+                // Se fue sin avisar (chunk descargado, /calamity threats clear): duerme con la ultima vida vista.
                 dormir(e, "perdido");
             }
             if (!activo() || ahora < e.alzarEn) continue;
@@ -1133,32 +1133,32 @@ final class Ecos implements Listener {
     // ------------------------------------------------------------------ comandos
 
     private List<String> tab(String[] args) {
-        if (args.length == 2) return List.of("crear", "lista", "borrar", "tp", "prueba", "despertar", "matar");
+        if (args.length == 2) return List.of("create", "list", "delete", "tp", "test", "wake", "kill");
         if (args.length == 3) {
             String sub = args[1].toLowerCase(Locale.ROOT);
-            if (sub.equals("crear")) {
+            if (sub.equals("create")) {
                 List<String> n = new ArrayList<>();
                 for (Player p : Bukkit.getOnlinePlayers()) n.add(p.getName());
                 return n;
             }
-            if (List.of("borrar", "tp", "despertar", "matar").contains(sub)) return new ArrayList<>(ecos.keySet());
+            if (List.of("delete", "tp", "wake", "kill").contains(sub)) return new ArrayList<>(ecos.keySet());
         }
-        if (args.length == 5 && args[1].equalsIgnoreCase("matar")) return List.of("--forzar-valida");
+        if (args.length == 5 && args[1].equalsIgnoreCase("kill")) return List.of("--force-valid");
         return List.of();
     }
 
     private void comando(CommandSender quien, String[] args) {
-        String sub = args.length >= 2 ? args[1].toLowerCase(Locale.ROOT) : "lista";
+        String sub = args.length >= 2 ? args[1].toLowerCase(Locale.ROOT) : "list";
         switch (sub) {
-            case "lista" -> lista(quien);
-            case "crear" -> crear(quien, args);
-            case "borrar" -> borrar(quien, args);
+            case "list" -> lista(quien);
+            case "create" -> crear(quien, args);
+            case "delete" -> borrar(quien, args);
             case "tp" -> tp(quien, args);
-            case "prueba" -> prueba(quien, args);
-            case "despertar" -> despertarCmd(quien, args);
-            case "matar" -> matar(quien, args);
+            case "test" -> prueba(quien, args);
+            case "wake" -> despertarCmd(quien, args);
+            case "kill" -> matar(quien, args);
             default -> quien.sendMessage(Component.text(
-                    "Uso: /calamidad eco crear|lista|borrar|tp|prueba|despertar|matar", Paleta.AVISO));
+                    "Uso: /calamity echo create|list|delete|tp|test|wake|kill", Paleta.AVISO));
         }
     }
 
@@ -1189,7 +1189,7 @@ final class Ecos implements Listener {
     /** Eco con lo que lleva puesto, sin matarlo (sin Reliquias ni Esencias: no duplica). */
     private void crear(CommandSender quien, String[] args) {
         if (args.length < 3) {
-            decir(quien, "Uso: /calamidad eco crear <jugador>");
+            decir(quien, "Uso: /calamity echo create <player>");
             return;
         }
         Player p = Bukkit.getPlayerExact(args[2]);
@@ -1212,7 +1212,7 @@ final class Ecos implements Listener {
 
     private void borrar(CommandSender quien, String[] args) {
         if (args.length < 3) {
-            decir(quien, "Uso: /calamidad eco borrar <id|jugador>");
+            decir(quien, "Uso: /calamity echo delete <id|player>");
             return;
         }
         List<Eco> fuera = new ArrayList<>();
@@ -1249,7 +1249,7 @@ final class Ecos implements Listener {
      */
     private void prueba(CommandSender quien, String[] args) {
         if (args.length < 6) {
-            decir(quien, "Uso: /calamidad eco prueba <nombre> <x> <y> <z> [N] [escalón]");
+            decir(quien, "Uso: /calamity echo test <name> <x> <y> <z> [N] [tier]");
             return;
         }
         World w = primerMundo();
@@ -1357,8 +1357,8 @@ final class Ecos implements Listener {
     }
 
     /**
-     * eco matar <id> [killer] [--forzar-valida]: lo mata como si lo hubiera matado ese jugador
-     * (conectado o no). Sin killer, sin botin. Con --forzar-valida paga aunque la caza no valga.
+     * echo kill <id> [killer] [--force-valid]: lo mata como si lo hubiera matado ese jugador
+     * (conectado o no). Sin killer, sin botin. Con --force-valid paga aunque la caza no valga.
      */
     private void matar(CommandSender quien, String[] args) {
         Eco e = args.length >= 3 ? ecos.get(args[2]) : null;
@@ -1369,7 +1369,7 @@ final class Ecos implements Listener {
         boolean forzar = false;
         OfflinePlayer killer = null;
         for (int i = 3; i < args.length; i++) {
-            if (args[i].equalsIgnoreCase("--forzar-valida")) {
+            if (args[i].equalsIgnoreCase("--force-valid")) {
                 forzar = true;
                 continue;
             }
@@ -1385,7 +1385,7 @@ final class Ecos implements Listener {
         decir(quien, "eco | " + e.id + " | muerto");
     }
 
-    /** /calamity eco: tus Ecos, con bioma, sitio, nivel, reliquias y lo que les queda. */
+    /** "calamity open <player> echoes": tus Ecos, con bioma, sitio, nivel, reliquias y lo que les queda. */
     private void comandoJugador(CommandSender quien, String[] args) {
         if (!(quien instanceof Player p)) {
             decir(quien, "Solo se puede usar dentro del juego.");
@@ -1436,7 +1436,7 @@ final class Ecos implements Listener {
     // --------------------------------------------------------------- autotest
 
     /**
-     * /lw hardcore autotest eco: las cuentas de sec. 2.4, las reglas de caza valida y el cuerpo por
+     * /calamity selftest echo: las cuentas de sec. 2.4, las reglas de caza valida y el cuerpo por
      * bioma con datos sinteticos (UUID 00..0N, YamlConfiguration en memoria, config vacia = los defectos).
      */
     private List<String> autotest() {

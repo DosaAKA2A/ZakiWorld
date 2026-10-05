@@ -23,7 +23,7 @@ interface ParcaViva {
 
     Estado estado();
 
-    /** Sin presa: /lw hardcore parca prueba, o abierta a mano desde /anomaly. No paga ni deja pendiente. */
+    /** Sin presa: /calamity reaper test, o abierta a mano desde /anomaly. No paga ni deja pendiente. */
     boolean prueba();
 
     /** Null en las de prueba. */
@@ -87,10 +87,10 @@ interface ParcaViva {
     /** Le han hecho dano de verdad: el cuerpo que se ve se estremece. */
     void dolor();
 
-    /** /lw hardcore parca vida: que mire ya si le toca cambiar de fase. */
+    /** /calamity reaper health: que mire ya si le toca cambiar de fase. */
     void revisarFase();
 
-    /** /lw hardcore parca habilidad: suelta esa habilidad ya. Devuelve por que no, o null. */
+    /** /calamity reaper ability: suelta esa habilidad ya. Devuelve por que no, o null. */
     String forzar(String nombre, Player quien);
 
     void agregarMarcado(Player p);

@@ -52,7 +52,7 @@ import java.util.UUID;
  * Decisiones de Dosa (2026-09-27): solo gemas de Calamity y solo en piezas de Calamity con un
  * hueco libre de su color; engarzar es gratis; quitar una gema la rompe (no vuelve) y el hueco
  * queda libre. El NPC lo pone Dosa a mano con Citizens; aqui solo esta lo que su clic ejecuta
- * como consola, "/calamidad abrir <p> engarzador" (Npcs), y la receta en /calamidad engarzador.
+ * como consola, "calamity open <p> gemsetter" (Npcs), y la receta en /calamity npcs.
  *
  * El menu (54, marco negro de Calamity):
  *  - arriba en el centro, la ayuda; abajo en el centro, Cerrar (como en todos los menus, 1.7.3);
@@ -116,8 +116,6 @@ final class MenuEngarzador implements Listener {
         this.hc = hc;
         this.conHuecos = piezasConHuecos(hc);
         hc.plugin().getServer().getPluginManager().registerEvents(this, hc.plugin());
-        Subcomandos.lw().registrar("engarzador", "engarzador: la receta de Citizens de Lior, el NPC que engarza gemas",
-                "ederus.mundos", this::comandoReceta, null);
         Autotest.registrar("engarce", this::autotest);
     }
 
@@ -668,21 +666,11 @@ final class MenuEngarzador implements Listener {
 
     // ================================================================= comando
 
-    /** /calamidad engarzador: la receta de Citizens, lista para copiar. */
-    private void comandoReceta(CommandSender q, String[] args) {
-        q.sendMessage(ComandoCalamity.mensaje("Lior (engarzador): pone y quita las Gemas de Calamidad."));
-        q.sendMessage(Component.text("Receta de Citizens (el NPC lo pones tú; Calamity no crea NPCs):", Paleta.TENUE));
-        for (String l : receta()) q.sendMessage(Component.text("  " + l, NamedTextColor.WHITE));
-        q.sendMessage(Component.text("El clic lo ejecuta la consola (sin -p) y cambia <p> por quien hace clic.", Paleta.TENUE));
-        q.sendMessage(Component.text("El jugador no necesita ningún permiso. Para probarlo tú: /calamidad abrir "
-                + (q instanceof Player p ? p.getName() : "<jugador>") + " engarzador", Paleta.TENUE));
-        if (!PuenteMmo.disponible()) q.sendMessage(Paleta.aviso("Ojo: MMOItems no está en este servidor y el menú no se abrirá."));
-    }
-
+    /** La receta de Citizens de Lior (la de todos los NPCs la dice /calamity npcs). */
     static List<String> receta() {
         return List.of(
                 "/npc create Lior",
-                "/npc command add -l -r calamidad abrir <p> engarzador");
+                Npcs.clic(Npcs.Tipo.ENGARZADOR));
     }
 
     // ================================================================= autotest
@@ -726,8 +714,7 @@ final class MenuEngarzador implements Listener {
             String t = Engarce.texto(mot, yelmo, roja);
             h.ok("aviso de " + mot + " con frase propia", !t.isBlank() && !t.contains("null") && !t.equals("Ahora mismo no se puede."));
         }
-        h.ok("/calamidad engarzador registrado", Subcomandos.lw().nombres(null).contains("engarzador"));
-        h.ok("la receta abre a Lior", receta().get(receta().size() - 1).endsWith("calamidad abrir <p> engarzador"));
+        h.ok("la receta abre a Lior", receta().get(receta().size() - 1).endsWith("calamity open <p> gemsetter"));
         h.igual("la receta crea a Lior, por su nombre", "/npc create Lior", receta().get(0));
         h.igual("el titulo es el del lugar", "CALAMITY | Engarce", Marco.T_ENGARZADOR.texto());
         h.ok("el titulo cabe en la ventana", Marco.T_ENGARZADOR.ancho() <= Marco.ANCHO_TITULO);
