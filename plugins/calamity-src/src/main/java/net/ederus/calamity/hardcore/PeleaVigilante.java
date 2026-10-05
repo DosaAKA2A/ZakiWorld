@@ -195,7 +195,12 @@ final class PeleaVigilante implements Runnable {
     private final Map<UUID, Integer> visto = new HashMap<>();
     private final Map<UUID, Long> marcaHasta = new HashMap<>();
     /** Ventana de golpes fuertes por jugador: {tick de inicio, fraccion acumulada}. */
-    private final Map<UUID, double[]> ventana = new HashMap<>();
+    /**
+     * 1.13.0 · La ventana de golpes fuertes por jugador, COMPARTIDA entre todas las peleas: con dos
+     * Vigilantes vivos, el golpe de uno y el del otro en el mismo tick tampoco pasan de golpes.maximo.
+     * El reloj es el tick del servidor, no el de cada pelea.
+     */
+    private static final Map<UUID, double[]> VENTANA = new HashMap<>();
     /** Permiso de vuelo prestado (para que el servidor no eche a quien lanza por el aire): hasta que tick. */
     private final Map<UUID, Long> vuelo = new HashMap<>();
 
@@ -830,10 +835,13 @@ final class PeleaVigilante implements Runnable {
     void golpeFuerte(Player v, double base, String etiqueta) {
         if (v == null || !Fx.isFightable(v) || hc.enSpawn(v) || cuerpo == null) return;
         double f = Vigilante.fraccionGolpe(base, escala.multFraccion(), marcado(v), a);
-        double[] w = ventana.get(v.getUniqueId());
-        if (w == null || ticks - w[0] > a.ventanaTicks) {
-            w = new double[]{ticks, 0};
-            ventana.put(v.getUniqueId(), w);
+        long ahora = org.bukkit.Bukkit.getCurrentTick();
+        double[] w = VENTANA.get(v.getUniqueId());
+        if (w == null || ahora - w[0] > a.ventanaTicks) {
+            // De paso se olvidan las ventanas viejas de otros: el mapa no crece con quien ya no pelea.
+            VENTANA.values().removeIf(x -> ahora - x[0] > a.ventanaTicks * 4L);
+            w = new double[]{ahora, 0};
+            VENTANA.put(v.getUniqueId(), w);
         }
         double entra = Vigilante.recorteVentana(f, w[1], a.golpeMaximo);
         if (entra <= 0) return;

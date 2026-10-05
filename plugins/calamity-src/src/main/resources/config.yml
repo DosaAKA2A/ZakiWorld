@@ -1916,7 +1916,6 @@ hardcore:
 
   # ------------------------------------------------------------------ P2 (apagadas)
   rondador: {activo: false, probabilidad-por-minuto: 0.25, cordura-maxima: 50, luz-maxima: 8, distancia: 24, velocidad-acecho: 0.35, velocidad-huida: 0.3, velocidad-carga: 0.4, enfado-carga: 3, agarre-vida: 0.35, agarre-cordura: 20, vida-base: 60, vida-por-nivel: 0.05, extra-nivel: 5, dura-segundos: 180}
-  hogueras: {activo: false, radio: 6, radio-sin-mobs: 16, minutos: 4, distancia-minima: 48, quemada-minutos: 30, cooldown-jugador-minutos: 20, coste-esencias: 1, factor-parca: 1.5}
   infamia: {activo: false, marcado: 3, baja-minutos: 30, recompensa-esencias: 2, recompensa-mobcoins: 20}
   pacto: {activo: false, maximo: 4, ventana-segundos: 120, bonus-por-aliado: 0.10, bonus-maximo: 0.30, traicion-multiplicador: 1.5, traicion-minutos: 30, traicion-niveles-eco: 10}
   bestiario: {activo: false, estudiado: 25, dominado: 100, pagina-esencias: 5}

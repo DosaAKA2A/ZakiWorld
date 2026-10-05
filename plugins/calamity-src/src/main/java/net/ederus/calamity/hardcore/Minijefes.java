@@ -143,6 +143,17 @@ final class Minijefes {
                  int piedadDespues) {
     }
 
+    /**
+     * Lote de gemas (1.12.3) · La gema de cada minijefe, por su nombre de Entregas.dar (su TIPO.ID, en
+     * entregas.mmo). Antes de este lote la entrada iba sin objeto y no salia.
+     */
+    static final Map<String, String> GEMAS = Map.of(
+            "custodio-de-las-ruinas", Entregas.GEMA_CUSTODIO,
+            "matriarca-tejedora", Entregas.GEMA_MATRIARCA,
+            "sanador-del-fango", Entregas.GEMA_SANADOR,
+            "centinela-de-toba", Entregas.GEMA_CENTINELA,
+            "heraldo-carmes", Entregas.GEMA_HERALDO);
+
     /** minijefes.botin de serie: lo comun ("todos") y lo de cada tipo. Vale si ni el servidor ni el jar lo traen. */
     static final Map<String, List<Botin>> BOTIN_DE_SERIE;
 
@@ -169,16 +180,6 @@ final class Minijefes {
         return new Botin("mascota", 0.03, "mejor", 30, "", "pets egg unique " + bicho + " %jugador%", nombre, true);
     }
 
-    /**
-     * Lote de gemas (1.12.3) · La gema de cada minijefe, por su nombre de Entregas.dar (su TIPO.ID, en
-     * entregas.mmo). Antes de este lote la entrada iba sin objeto y no salia.
-     */
-    static final Map<String, String> GEMAS = Map.of(
-            "custodio-de-las-ruinas", Entregas.GEMA_CUSTODIO,
-            "matriarca-tejedora", Entregas.GEMA_MATRIARCA,
-            "sanador-del-fango", Entregas.GEMA_SANADOR,
-            "centinela-de-toba", Entregas.GEMA_CENTINELA,
-            "heraldo-carmes", Entregas.GEMA_HERALDO);
 
     /** La gema de un minijefe: 25 % al que mas dano hizo, sin piedad, como estaba apalabrado. */
     private static Botin gema(String tipo, String nombre) {
