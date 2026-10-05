@@ -371,9 +371,11 @@ final class Barometro implements Listener {
         }
 
         // El lore.
-        List<String> lore = ficha(hardcore == null ? new YamlConfiguration() : hardcore).lineas();
+        // La misma seccion para el lore y para la cifra que se espera (cfg ya lleva los 500 de la prueba de arriba).
+        ConfigurationSection base = hardcore == null ? new YamlConfiguration() : hardcore;
+        List<String> lore = ficha(base).lineas();
         h.ok("lore: dice que no se gasta y donde marca", lore.contains("No se gasta.") && lore.contains("Solo marca en Calamity."));
-        h.ok("lore: el enfriamiento", lore.contains(" Se puede mirar cada " + enfriamiento(hardcore == null ? cfg : hardcore) + " s."));
+        h.ok("lore: el enfriamiento", lore.contains(" Se puede mirar cada " + enfriamiento(base) + " s."));
         h.igual("lore: lineas de 38 como mucho", List.of(), Ficha.largas(lore));
         h.igual("nombre y lore sin negrita ni rayas", List.of(), Ficha.faltas(Ficha.tono("barometro").nombre(NOMBRE),
                 ficha(new YamlConfiguration()).lore()));
