@@ -931,7 +931,10 @@ hardcore:
       1: {nombre: "Astilla del Umbral", material: GLISTERING_MELON_SLICE, esencias: 0.2, mobcoins: 5}
       2: {nombre: "Fragmento de Nana", material: MANGROVE_PROPAGULE, esencias: 1, mobcoins: 15}
       3: {nombre: "Ambar Coagulado", material: RESIN_BRICK, esencias: 3, mobcoins: 40}
-      4: {nombre: "Ambar Mayor", material: BOLT_ARMOR_TRIM_SMITHING_TEMPLATE, esencias: 6, mobcoins: 100}
+      # 1.12.1: el Ambar Mayor es PAPER con el modelo de la plantilla del adorno Rayo (modelo: es el
+      # componente minecraft:item_model; vale en cualquier grado o especial). La plantilla de la 1.12.0 se
+      # lee como esto y las que circulan se renuevan solas.
+      4: {nombre: "Ambar Mayor", material: PAPER, modelo: "minecraft:bolt_armor_trim_smithing_template", esencias: 6, mobcoins: 100}
     apilables: [1, 2]
     tope-dia: {1: 60, 2: 30}
     especiales:

@@ -175,6 +175,7 @@ final class Reliquias implements Listener {
         item.setItemMeta(meta);
         // Sin la cancion del disco ni el material de adorno del ladrillo, igual que una renovada (desactivar).
         desactivar(item);
+        ponerModelo(item, modelo(c, g, esp));
         if (id != null) registro.emitida(id, g, o, ahora);
         return item;
     }
@@ -344,6 +345,14 @@ final class Reliquias implements Listener {
      * plantilla del adorno Rayo, la Eclipsada el disco Lava Chicken y la Lagrima un farol de cobre oxidado.
      * Todos tienen un uso vanilla (pociones, plantarse, crafteos, herreria, tocadiscos, colocarse) que se
      * corta en los bloqueos de abajo.
+     *
+     * Calamity 1.12.1 · El Ambar Mayor ya no ES la plantilla: la plantilla traia de serie "Smithing Template /
+     * Applies to: Armor / Ingredients: Ingots and Crystals" en el tooltip y eso no se quita con componentes.
+     * Ahora es PAPEL con el modelo de la plantilla (modelo(): componente minecraft:item_model), y se ve igual.
+     * Papel porque es lo mas inerte que hay: no se coloca, no se come, no arde en el horno, no tiene texto
+     * propio y no hace nada con clic derecho; solo sirve en crafteos, en la mesa de cartografia y en los
+     * tratos de aldeano, y las tres cosas ya estan cortadas para cualquier Reliquia (onCraftear, onCrafter y
+     * las ventanas de gasta()).
      */
     static String materialDeSerie(int g, String esp) {
         return switch (esp == null ? "" : esp) {
@@ -355,9 +364,58 @@ final class Reliquias implements Listener {
                 case 1 -> "GLISTERING_MELON_SLICE";
                 case 2 -> "MANGROVE_PROPAGULE";
                 case 3 -> "RESIN_BRICK";
-                default -> "BOLT_ARMOR_TRIM_SMITHING_TEMPLATE";
+                default -> "PAPER";
             };
         };
+    }
+
+    /**
+     * Calamity 1.12.1 · El modelo de serie (componente minecraft:item_model) de cada Reliquia, o null si se ve
+     * como su material. Solo el Ambar Mayor: papel con la cara de la plantilla del adorno Rayo.
+     */
+    static String modeloDeSerie(int g, String esp) {
+        return esp == null && g == 4 ? "minecraft:bolt_armor_trim_smithing_template" : null;
+    }
+
+    /**
+     * El modelo de una Reliquia: el de la config (reliquias.grados.N.modelo, reliquias.especiales.X.modelo; vacio
+     * es "sin modelo") o, si no lo pone y el material es el de serie, el de serie. Con otro material puesto a
+     * mano y sin modelo, ninguno: que se vea lo que Dosa eligio. Un id sin espacio de nombres va a minecraft:.
+     */
+    static String modelo(ConfigurationSection c, int g, String esp) {
+        String ruta = (esp != null ? "reliquias.especiales." + esp : "reliquias.grados." + g) + ".modelo";
+        String m;
+        if (c.isSet(ruta)) {
+            m = c.getString(ruta, "");
+        } else {
+            Material def = Material.matchMaterial(materialDeSerie(g, esp));
+            m = material(c, g, esp) == def ? modeloDeSerie(g, esp) : null;
+        }
+        if (m == null || m.isBlank()) return null;
+        m = m.trim().toLowerCase(Locale.ROOT);
+        if (!m.contains(":")) m = "minecraft:" + m;
+        return m.matches("[a-z0-9_.-]+:[a-z0-9_./-]+") ? m : null;
+    }
+
+    /** Le pone (o le quita, con null) el modelo a un objeto. Sin la API de componentes, nada. */
+    static void ponerModelo(ItemStack it, String modelo) {
+        try {
+            if (modelo == null) it.resetData(DataComponentTypes.ITEM_MODEL);
+            else it.setData(DataComponentTypes.ITEM_MODEL, net.kyori.adventure.key.Key.key(modelo));
+        } catch (Throwable sinApi) {
+            // Se ve como su material.
+        }
+    }
+
+    /** El modelo que lleva puesto un objeto, o null si el de su material. */
+    static String modeloDe(ItemStack it) {
+        try {
+            if (!it.isDataOverridden(DataComponentTypes.ITEM_MODEL)) return null;
+            net.kyori.adventure.key.Key k = it.getData(DataComponentTypes.ITEM_MODEL);
+            return k == null ? null : k.asString();
+        } catch (Throwable sinApi) {
+            return null;
+        }
     }
 
     /** Los materiales que pone una config (grados 1-4, Campana, Lagrima, Sello, Eclipsada), para el autotest. */
@@ -366,6 +424,18 @@ final class Reliquias implements Listener {
         for (int g = 1; g <= 4; g++) out.add(c.getString("reliquias.grados." + g + ".material", "?"));
         for (String e : List.of(CAMPANA, LAGRIMA, SELLO, ECLIPSADA)) out.add(c.getString("reliquias.especiales." + e + ".material", "?"));
         return out;
+    }
+
+    /**
+     * Los materiales de serie de antes: el de antes de la rama lore-items (materialViejo) y, para el Ambar
+     * Mayor, la plantilla del adorno Rayo de la 1.11/1.12.0. Un config.yml instalado que ponga uno de estos
+     * se lee como el de hoy.
+     */
+    static boolean esMaterialViejo(int g, String esp, String puesto) {
+        if (puesto == null) return false;
+        String p = puesto.trim();
+        if (p.equalsIgnoreCase(materialViejo(g, esp))) return true;
+        return esp == null && g == 4 && p.equalsIgnoreCase("BOLT_ARMOR_TRIM_SMITHING_TEMPLATE");
     }
 
     /** El material de serie de antes de la rama lore-items: el que traen las Reliquias que ya circulan. */
@@ -393,7 +463,7 @@ final class Reliquias implements Listener {
         String def = materialDeSerie(g, esp);
         String ruta = esp != null ? "reliquias.especiales." + esp + ".material" : "reliquias.grados." + g + ".material";
         String puesto = c.getString(ruta, def);
-        if (puesto != null && puesto.trim().equalsIgnoreCase(materialViejo(g, esp))) puesto = def;
+        if (esMaterialViejo(g, esp, puesto)) puesto = def;
         Material m = puesto == null ? null : Material.matchMaterial(puesto.trim());
         if (m == null || !m.isItem() || m.isAir()) m = Material.matchMaterial(def);
         return m == null ? Material.GLISTERING_MELON_SLICE : m;
@@ -793,20 +863,22 @@ final class Reliquias implements Listener {
         boolean apilable = id == null;
         long n = nacio(it);
         Material quiere = material(c, g, esp);
+        String modelo = modelo(c, g, esp);
         List<Component> lore = ficha(c, g, esp, nivel(it), minijefe(it), valida(it),
                 apilable ? null : leer(it, Marcas.RELIQUIA_ORIGEN, PersistentDataType.STRING), !apilable,
                 apilable || n <= 0 ? null : fechaCorta(n + caducaMillis())).lore();
         Component nombre = tono(g, esp).nombre(nombre(c, g, esp, minijefe(it)));
         ItemMeta meta = it.getItemMeta();
         if (meta == null) return null;
-        if (it.getType() == quiere && !conUsos(it) && Ficha.iguales(lore, meta.lore())
-                && Ficha.igual(nombre, meta.displayName())) return null;
+        if (it.getType() == quiere && !conUsos(it) && java.util.Objects.equals(modelo, modeloDe(it))
+                && Ficha.iguales(lore, meta.lore()) && Ficha.igual(nombre, meta.displayName())) return null;
         ItemStack r = it.getType() == quiere ? it.clone() : it.withType(quiere);
         r.editMeta(m -> {
             m.displayName(nombre);
             m.lore(lore);
         });
         desactivar(r);
+        ponerModelo(r, modelo);
         return r;
     }
 
@@ -1043,7 +1115,10 @@ final class Reliquias implements Listener {
         h.igual("material de la I", Material.GLISTERING_MELON_SLICE, material(vacia, 1, null));
         h.igual("material de la II", Material.MANGROVE_PROPAGULE, material(vacia, 2, null));
         h.igual("material de la III", Material.RESIN_BRICK, material(vacia, 3, null));
-        h.igual("material de la IV", Material.BOLT_ARMOR_TRIM_SMITHING_TEMPLATE, material(vacia, 4, null));
+        h.igual("material de la IV: papel", Material.PAPER, material(vacia, 4, null));
+        h.igual("modelo de la IV: la plantilla del adorno Rayo", "minecraft:bolt_armor_trim_smithing_template", modelo(vacia, 4, null));
+        h.igual("las demas sin modelo", null, modelo(vacia, 3, null));
+        h.igual("la Campana sin modelo", null, modelo(vacia, 4, CAMPANA));
         h.igual("material de la Campana", Material.BELL, material(vacia, 4, CAMPANA));
         h.igual("material de la Lagrima", Material.OXIDIZED_COPPER_LANTERN, material(vacia, 4, LAGRIMA));
         h.igual("material del Sello", Material.FIRE_CHARGE, material(vacia, 4, SELLO));
@@ -1055,11 +1130,28 @@ final class Reliquias implements Listener {
         vieja.set("reliquias.especiales.lagrima-eco.material", "ECHO_SHARD");
         vieja.set("reliquias.grados.2.material", "AMETHYST_SHARD");
         h.igual("config vieja: la I pasa a la sandia", Material.GLISTERING_MELON_SLICE, material(vieja, 1, null));
-        h.igual("config vieja: la IV pasa a la plantilla", Material.BOLT_ARMOR_TRIM_SMITHING_TEMPLATE, material(vieja, 4, null));
+        h.igual("config vieja: la IV pasa al papel", Material.PAPER, material(vieja, 4, null));
+        YamlConfiguration v112 = new YamlConfiguration();
+        v112.set("reliquias.grados.4.material", "BOLT_ARMOR_TRIM_SMITHING_TEMPLATE");
+        h.igual("config de la 1.12.0 (plantilla, sin modelo): papel", Material.PAPER, material(v112, 4, null));
+        h.igual("config de la 1.12.0: con el modelo de la plantilla", "minecraft:bolt_armor_trim_smithing_template", modelo(v112, 4, null));
+        YamlConfiguration otra = new YamlConfiguration();
+        otra.set("reliquias.grados.4.material", "AMETHYST_SHARD");
+        h.igual("otro material a mano y sin modelo: sin modelo", null, modelo(otra, 4, null));
+        otra.set("reliquias.grados.4.modelo", "echo_shard");
+        h.igual("modelo sin espacio de nombres: minecraft:", "minecraft:echo_shard", modelo(otra, 4, null));
+        otra.set("reliquias.grados.4.modelo", "");
+        h.igual("modelo vacio: ninguno", null, modelo(otra, 4, null));
+        otra.set("reliquias.especiales.eclipsada.modelo", "minecraft:music_disc_5");
+        h.igual("una especial tambien acepta modelo", "minecraft:music_disc_5", modelo(otra, 3, ECLIPSADA));
+        otra.set("reliquias.grados.3.modelo", "Mal Modelo!");
+        h.igual("modelo que no es un id: ninguno", null, modelo(otra, 3, null));
+        h.igual("config de serie: el modelo de la IV", "minecraft:bolt_armor_trim_smithing_template",
+                Ficha.deSerie().getString("reliquias.grados.4.modelo"));
         h.igual("config vieja: la Lagrima pasa al farol", Material.OXIDIZED_COPPER_LANTERN, material(vieja, 4, LAGRIMA));
         h.igual("config con otro material: manda", Material.AMETHYST_SHARD, material(vieja, 2, null));
         h.igual("config de serie: los materiales nuevos", List.of("GLISTERING_MELON_SLICE", "MANGROVE_PROPAGULE",
-                "RESIN_BRICK", "BOLT_ARMOR_TRIM_SMITHING_TEMPLATE", "BELL", "OXIDIZED_COPPER_LANTERN", "FIRE_CHARGE",
+                "RESIN_BRICK", "PAPER", "BELL", "OXIDIZED_COPPER_LANTERN", "FIRE_CHARGE",
                 "MUSIC_DISC_LAVA_CHICKEN"), materialesDeSerie(Ficha.deSerie()));
         h.ok("bloques que se quedan la mano: compostadora, tocadiscos y maceta", seLaQueda(Material.COMPOSTER)
                 && seLaQueda(Material.JUKEBOX) && seLaQueda(Material.FLOWER_POT) && seLaQueda(Material.POTTED_MANGROVE_PROPAGULE)
@@ -1141,6 +1233,21 @@ final class Reliquias implements Listener {
         h.ok("desactivar: el disco sin cancion y el ladrillo sin adorno", antes && !conUsos(disco) && !conUsos(ladrillo)
                 && !conUsos(astilla));
         h.ok("lore sin rayas ni negrita", Ficha.faltas(astilla.getItemMeta().lore()).isEmpty());
+        // Calamity 1.12.1 · Un Ambar Mayor de la 1.12.0 (la plantilla) pasa a papel con el modelo, conserva sus
+        // datos y no se vuelve a renovar; dos papeles con el mismo modelo apilan.
+        ItemStack plantilla = astilla.withType(Material.BOLT_ARMOR_TRIM_SMITHING_TEMPLATE);
+        plantilla.setAmount(2);
+        plantilla.editMeta(mm -> mm.getPersistentDataContainer().set(Marcas.RELIQUIA, PersistentDataType.INTEGER, 4));
+        ItemStack mayor = renovada(plantilla);
+        h.ok("Ambar Mayor de la 1.12.0: pasa a papel con el modelo de la plantilla y conserva cantidad y grado",
+                mayor != null && mayor.getType() == Material.PAPER && mayor.getAmount() == 2 && grado(mayor) == 4
+                        && "minecraft:bolt_armor_trim_smithing_template".equals(modeloDe(mayor)));
+        h.ok("Ambar Mayor renovado: ya no se vuelve a renovar", mayor != null && renovada(mayor) == null);
+        ItemStack papel = new ItemStack(Material.PAPER), papel2 = new ItemStack(Material.PAPER);
+        ponerModelo(papel, "minecraft:bolt_armor_trim_smithing_template");
+        ponerModelo(papel2, "minecraft:bolt_armor_trim_smithing_template");
+        h.ok("dos papeles con el mismo modelo apilan; sin modelo no", papel.isSimilar(papel2)
+                && !papel.isSimilar(new ItemStack(Material.PAPER)));
         // Los demas objetos que ya circulan: una Esencia y una cabeza de Eco con el nombre y el lore de la 1.10.
         ItemsCalamity items = hc.items();
         if (items != null) {
