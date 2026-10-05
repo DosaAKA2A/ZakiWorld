@@ -277,7 +277,11 @@ hardcore:
       # Sello). El libro pasa por el tope del mes (caja.libro-tope-mes; pasado, sus Esencias, que
       # paga la Aduana como las del minijefe: dentro de Calamity, en la mano). El
       # libro y los comandos se dan al momento por consola: quien no está conectado ni tira ni
-      # pierde su piedad. Sin objeto ni comando (las gemas, hasta que llegue su lote), no hace nada.
+      # pierde su piedad. Sin objeto ni comando, no hace nada.
+      # 1.12.3 · Lote de gemas: cada minijefe suelta SU gema (gema-custodio, gema-matriarca,
+      # gema-sanador, gema-centinela, gema-heraldo; sus TIPO.ID en entregas.mmo). Si la plantilla
+      # de MMOItems no existe en el servidor, esa entrada no sale ni cuenta piedad. Una entrada
+      # "id: gema" sin objeto (la de antes del lote) lleva la gema de su minijefe; para quitarla, prob: 0.
       todos:
         - {id: libro, prob: 0.08, para: mejor, objeto: libro, nombre: "un libro LEGENDARY", anuncio: false}
         # Calamity 1.11: las llaves de las bóvedas (EDM, /dl). Dentro de Calamity llegan a la mano, sin ligar.
@@ -285,19 +289,19 @@ hardcore:
         - {id: llave-ominosa, prob: 0.03, para: mejor, objeto: llave-ominosa, nombre: "una Llave Ominosa", anuncio: false}
       custodio-de-las-ruinas:
         - {id: mascota, prob: 0.03, piedad: 30, para: mejor, comando: "pets egg unique iron_golem %jugador%", nombre: "el huevo del Gólem de hierro", anuncio: true}
-        - {id: gema, prob: 0.25, para: mejor, objeto: "", nombre: "la Gema del Custodio", anuncio: false}
+        - {id: gema, prob: 0.25, para: mejor, objeto: gema-custodio, nombre: "la Gema del Custodio", anuncio: false}
       matriarca-tejedora:
         - {id: mascota, prob: 0.03, piedad: 30, para: mejor, comando: "pets egg unique cave_spider %jugador%", nombre: "el huevo de la Araña de cueva", anuncio: true}
-        - {id: gema, prob: 0.25, para: mejor, objeto: "", nombre: "la Gema de la Matriarca", anuncio: false}
+        - {id: gema, prob: 0.25, para: mejor, objeto: gema-matriarca, nombre: "la Gema de la Matriarca", anuncio: false}
       sanador-del-fango:
         - {id: mascota, prob: 0.03, piedad: 30, para: mejor, comando: "pets egg unique evoker %jugador%", nombre: "el huevo del Invocador", anuncio: true}
-        - {id: gema, prob: 0.25, para: mejor, objeto: "", nombre: "la Gema del Sanador", anuncio: false}
+        - {id: gema, prob: 0.25, para: mejor, objeto: gema-sanador, nombre: "la Gema del Sanador", anuncio: false}
       centinela-de-toba:
         - {id: mascota, prob: 0.03, piedad: 30, para: mejor, comando: "pets egg unique wither_skeleton %jugador%", nombre: "el huevo del Esqueleto wither", anuncio: true}
-        - {id: gema, prob: 0.25, para: mejor, objeto: "", nombre: "la Gema del Centinela", anuncio: false}
+        - {id: gema, prob: 0.25, para: mejor, objeto: gema-centinela, nombre: "la Gema del Centinela", anuncio: false}
       heraldo-carmes:
         - {id: mascota, prob: 0.03, piedad: 30, para: mejor, comando: "pets egg unique ravager %jugador%", nombre: "el huevo del Devastador", anuncio: true}
-        - {id: gema, prob: 0.25, para: mejor, objeto: "", nombre: "la Gema del Heraldo", anuncio: false}
+        - {id: gema, prob: 0.25, para: mejor, objeto: gema-heraldo, nombre: "la Gema del Heraldo", anuncio: false}
 
   muerte:
     # Al morir se pierde TODO lo que llevabas encima y la experiencia.
@@ -884,7 +888,26 @@ hardcore:
       masamune: "CALAMITY_ARMAS.MASAMUNE"               # 1.8.0: las katanas de Ambush
       crimson: "CALAMITY_ARMAS.CRIMSON_MASAMUNE"
   entregas:   # TINTURA_DE_CENIZA: PLAN 9 paso 2.2. GEMA/ASCUA: ids que crea el paquete MMOItems (WP10)
-    mmo: {tintura: "CALAMITY_CONSUMIBLES.TINTURA_DE_CENIZA", gema: "CALAMITY_GEMAS.GEMA_DE_CALAMIDAD", ascua: "CALAMITY_CONSUMIBLES.ASCUA_DE_CALAMIDAD"}
+    mmo:
+      tintura: "CALAMITY_CONSUMIBLES.TINTURA_DE_CENIZA"
+      gema: "CALAMITY_GEMAS.GEMA_DE_CALAMIDAD"
+      ascua: "CALAMITY_CONSUMIBLES.ASCUA_DE_CALAMIDAD"
+      # 1.12.3 · Lote de gemas: la de cada minijefe (su botín) y el Ojo del Vigilante (el botín del
+      # Vigilante usa este id exacto). Las plantillas, en docs/lote-gemas/01-calamity_gemas.yml.
+      # Si falta una línea aquí, vale la misma de serie.
+      gema-custodio: "CALAMITY_GEMAS.GEMA_DEL_CUSTODIO"
+      gema-matriarca: "CALAMITY_GEMAS.GEMA_DE_LA_MATRIARCA"
+      gema-sanador: "CALAMITY_GEMAS.GEMA_DEL_SANADOR"
+      gema-centinela: "CALAMITY_GEMAS.GEMA_DEL_CENTINELA"
+      gema-heraldo: "CALAMITY_GEMAS.GEMA_DEL_HERALDO"
+      gema-vigilante: "CALAMITY_GEMAS.GEMA_OJO_DEL_VIGILANTE"
+  # 1.12.3 · El Engarzador (Lior). Si falta la sección, valen estos mismos valores.
+  engarzador:
+    # Para que las piezas que ya tienen los jugadores reciban su hueco de gema, se sube el
+    # revision-id de su plantilla y MMOItems las rehace (al entrar, al recogerlas o al tocarlas).
+    # Ese rehacer pierde las marcas de otros plugins, entre ellas el ligado a su dueño. Con true,
+    # Calamity se las devuelve en el momento (solo en los tipos de Calamity: piezas y gemas).
+    conservar-marcas-al-actualizar: true
   llave-caos: {tope-semana: 4, sobrante-esencias: 10, comando: "crates key give %jugador% caos %n%"}
   caja: {libro-tope-mes: 2, libro-sustituto-esencias: 20, libro-comando: "ae giverandombook %jugador% LEGENDARY"}
   creditos: {horas-para-errantes: 48}
@@ -1736,12 +1759,13 @@ hardcore:
   #   Ilen       /npc command add -l -r calamity open <p> chronicler  las historias de abajo, tus Ecos,
   #                                                                   el Eclipse, la encuesta y los deseos
   #   Rhen       /npc command add -l -r calamity open <p> hunter      tablas de la semana (o el Tablero)
-  #   Lior       /npc command add -l -r calamity open <p> gemsetter   pone y quita las Gemas de Calamidad (1.4)
+  #   Lior       /npc command add -l -r calamity open <p> gemsetter   pone y quita las gemas de Calamity (1.4)
   #   Sentencia  /npc command add -l -r calamity open <p> bounty      contratos de Ambush (1.8.0)
   # /calamity npcs repite estas recetas. Otros ids que puede abrir un NPC (lo que antes era un
   # comando de jugador): balance, echoes, contracts, reroll, path, board, kit, eclipse, poll y
   # wishes. Engarzar es gratis y quitar una gema la rompe. Admite las gemas del tipo de
-  # entregas.mmo.gema (CALAMITY_GEMAS) en las piezas de los tipos de forja.piezas que tengan hueco.
+  # entregas.mmo.gema (CALAMITY_GEMAS) en las piezas de los tipos de forja.piezas que tengan hueco
+  # (desde el lote de gemas, 1.12.3, las diez piezas de la Forja llevan uno de color Calamidad).
   # El jugador no necesita permiso (/calamity es de staff y consola) y el Altar solo se abre
   # desde el NPC o su bloque, nunca a distancia ni dentro de Calamity.
   cronista:
@@ -1799,7 +1823,7 @@ hardcore:
           - "En la Forja, Vael hace el Manto de Calamidad: cada pieza pide Esencias, MobCoins y el Sello de su minijefe."
           - "El Vestigio del Eco pide Marcas de Eco, y la Guadaña, {altar.trueques.guadana.creditos} Fragmentos de Guadaña. Todo lo forjado queda ligado a ti."
           - "Si pierdes en Calamity una pieza del Manto y la repones antes de {forja.reposicion-dias} días, te cuesta la mitad de Esencias."
-          - "Lior te engarza gratis las Gemas de Calamidad en las piezas que tienen hueco. Si quitas una gema, se rompe."
+          - "Lior te engarza gratis las gemas en cualquier pieza de Calamity: la de la Forja y la que suelta cada minijefe. Si quitas una gema, se rompe."
 
   # ------------------------------------------------------------------ P2 (apagadas)
   rondador: {activo: false, probabilidad-por-minuto: 0.25, cordura-maxima: 50, luz-maxima: 8, distancia: 24, velocidad-acecho: 0.35, velocidad-huida: 0.3, velocidad-carga: 0.4, enfado-carga: 3, agarre-vida: 0.35, agarre-cordura: 20, vida-base: 60, vida-por-nivel: 0.05, extra-nivel: 5, dura-segundos: 180}

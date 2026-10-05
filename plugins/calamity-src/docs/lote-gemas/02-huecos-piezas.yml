@@ -1,0 +1,75 @@
+# =============================================================================
+#  Lote de gemas (Calamity 1.12.3) · 2 de 3
+#  Un hueco de gema de color Calamidad en las DIEZ piezas de Calamity (forja.piezas):
+#    Manto de Calamidad: Yelmo, Coraza, Grebas, Soleretas y Hacha del Heraldo
+#    Vestigio del Eco: Máscara y Filo · Guadaña de la Parca · Masamune y Crimson Masamune
+#  Yelmo, Coraza y Hacha YA lo tienen: no se tocan (ni su revision-id).
+#
+#  ORDEN (importante):
+#   1. Primero, Calamity 1.12.3 desplegado y arrancado. Al subir el revision-id, MMOItems rehace
+#      las piezas que ya tienen los jugadores (al entrar, al recogerlas o al tocarlas) con un
+#      ItemStack nuevo que pierde las marcas de otros plugins: sin el Calamity nuevo, las piezas
+#      perderían el ligado a su dueño. Calamity 1.12.3 se lo devuelve en el momento
+#      (ActualizacionMmo, engarzador.conservar-marcas-al-actualizar: true) y lo apunta en la
+#      Bitácora ("actualizacion-mmo | ... | sigue-ligado").
+#   2. Copia de los dos ficheros (backup-AAAAMMDD, solo el último).
+#   3. En cada plantilla de abajo, DENTRO de su "base:", añadir las dos claves que se indican.
+#      Si una plantilla ya tuviera revision-id, súbelo en 1 en vez de poner 2.
+#   4. /mi reload y /calamity selftest gemsetting (con alguien conectado) y real-items.
+#
+#  Qué conserva la actualización (MMOItems/config.yml, item-revision.keep-data del Test):
+#  gemas, mejoras del Ascua, encantamientos, nombre y tier. El lore se rehace desde la
+#  plantilla; la línea "Ligado a X" la vuelve a poner Calamity.
+# =============================================================================
+
+# ----------------------------------------------------------------------------- calamity.yml
+# Fichero: plugins/MMOItems/item/calamity.yml  (tipo CALAMITY)
+
+GREBAS_DE_CALAMIDAD:
+  base:
+    revision-id: 2
+    gem-sockets:
+    - Calamidad
+
+SOLERETAS_DE_CALAMIDAD:
+  base:
+    revision-id: 2
+    gem-sockets:
+    - Calamidad
+
+MASCARA_DEL_ECO:
+  base:
+    revision-id: 2
+    gem-sockets:
+    - Calamidad
+
+# ----------------------------------------------------------------------------- calamity_armas.yml
+# Fichero: plugins/MMOItems/item/calamity_armas.yml  (tipo CALAMITY_ARMAS)
+
+FILO_DEL_ECO:
+  base:
+    revision-id: 2
+    gem-sockets:
+    - Calamidad
+
+GUADANA_DE_LA_PARCA:
+  base:
+    revision-id: 2
+    gem-sockets:
+    - Calamidad
+
+MASAMUNE:
+  base:
+    revision-id: 2
+    gem-sockets:
+    - Calamidad
+
+CRIMSON_MASAMUNE:
+  base:
+    revision-id: 2
+    gem-sockets:
+    - Calamidad
+
+# ----------------------------------------------------------------------------- ya lo tienen
+# YELMO_DE_CALAMIDAD, CORAZA_DE_CALAMIDAD (calamity.yml) y HACHA_DEL_HERALDO (calamity_armas.yml):
+#   gem-sockets: [Calamidad] desde la fase 2. Sin cambios.

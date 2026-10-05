@@ -155,6 +155,24 @@ final class Ligado implements Listener {
     }
 
     /**
+     * Lote de gemas (1.12.3) · Si la pieza vieja decia "Ligado a X" en su lore (Entregas.ligar) y la nueva
+     * no, se la pone al final (cambia la nueva en el sitio). Para lo que MMOItems rehace desde la
+     * plantilla (engarzar, quitar una gema, actualizar por revision-id): el ligado se conserva por la
+     * marca, pero su linea de lore se perdia. True si la ha puesto.
+     */
+    static boolean copiarLineaLigado(ItemStack vieja, ItemStack nueva) {
+        if (vieja == null || nueva == null || !vieja.hasItemMeta() || nueva.getItemMeta() == null) return false;
+        String nombre = Ficha.ligadoDe(vieja.getItemMeta().lore());
+        ItemMeta meta = nueva.getItemMeta();
+        if (nombre == null || Ficha.ligadoDe(meta.lore()) != null) return false;
+        List<Component> lore = meta.lore() == null ? new ArrayList<>() : new ArrayList<>(meta.lore());
+        lore.addAll(Ficha.lineasLigado(nombre));
+        meta.lore(lore);
+        nueva.setItemMeta(meta);
+        return true;
+    }
+
+    /**
      * El primer dueno que no es "portador" en el objeto o dentro de el (bolsa, shulker), o
      * null. Con portador null devuelve el primer dueno que encuentre.
      */

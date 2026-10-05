@@ -124,7 +124,7 @@ final class Minijefes {
     record Botin(String id, double prob, String para, int piedad, String objeto, String comando, String nombre,
                  boolean anuncio) {
 
-        /** Sin objeto ni comando no hay nada que dar (las gemas, hasta que llegue su lote): ni tira ni cuenta piedad. */
+        /** Sin objeto ni comando no hay nada que dar: ni tira ni cuenta piedad. */
         boolean entregable() {
             return !objeto.isEmpty() || !comando.isEmpty();
         }
@@ -153,15 +153,15 @@ final class Minijefes {
                 new Botin(PuenteBovedas.LLAVE_UMBRAL, 0.25, "mejor", 0, PuenteBovedas.LLAVE_UMBRAL, "", "una Llave del Umbral", false),
                 new Botin(PuenteBovedas.LLAVE_OMINOSA, 0.03, "mejor", 0, PuenteBovedas.LLAVE_OMINOSA, "", "una Llave Ominosa", false)));
         m.put("custodio-de-las-ruinas", List.of(mascota("iron_golem", "el huevo del Gólem de hierro"),
-                gemaSinLote("la Gema del Custodio")));
+                gema("custodio-de-las-ruinas", "la Gema del Custodio")));
         m.put("matriarca-tejedora", List.of(mascota("cave_spider", "el huevo de la Araña de cueva"),
-                gemaSinLote("la Gema de la Matriarca")));
+                gema("matriarca-tejedora", "la Gema de la Matriarca")));
         m.put("sanador-del-fango", List.of(mascota("evoker", "el huevo del Invocador"),
-                gemaSinLote("la Gema del Sanador")));
+                gema("sanador-del-fango", "la Gema del Sanador")));
         m.put("centinela-de-toba", List.of(mascota("wither_skeleton", "el huevo del Esqueleto wither"),
-                gemaSinLote("la Gema del Centinela")));
+                gema("centinela-de-toba", "la Gema del Centinela")));
         m.put("heraldo-carmes", List.of(mascota("ravager", "el huevo del Devastador"),
-                gemaSinLote("la Gema del Heraldo")));
+                gema("heraldo-carmes", "la Gema del Heraldo")));
         BOTIN_DE_SERIE = Collections.unmodifiableMap(m);
     }
 
@@ -169,9 +169,44 @@ final class Minijefes {
         return new Botin("mascota", 0.03, "mejor", 30, "", "pets egg unique " + bicho + " %jugador%", nombre, true);
     }
 
-    /** Las gemas de cada minijefe llegan en otro lote: de momento sin objeto, asi que no salen. */
-    private static Botin gemaSinLote(String nombre) {
-        return new Botin("gema", 0.25, "mejor", 0, "", "", nombre, false);
+    /**
+     * Lote de gemas (1.12.3) · La gema de cada minijefe, por su nombre de Entregas.dar (su TIPO.ID, en
+     * entregas.mmo). Antes de este lote la entrada iba sin objeto y no salia.
+     */
+    static final Map<String, String> GEMAS = Map.of(
+            "custodio-de-las-ruinas", Entregas.GEMA_CUSTODIO,
+            "matriarca-tejedora", Entregas.GEMA_MATRIARCA,
+            "sanador-del-fango", Entregas.GEMA_SANADOR,
+            "centinela-de-toba", Entregas.GEMA_CENTINELA,
+            "heraldo-carmes", Entregas.GEMA_HERALDO);
+
+    /** La gema de un minijefe: 25 % al que mas dano hizo, sin piedad, como estaba apalabrado. */
+    private static Botin gema(String tipo, String nombre) {
+        return new Botin("gema", 0.25, "mejor", 0, GEMAS.get(tipo), "", nombre, false);
+    }
+
+    /**
+     * Lote de gemas · Una entrada de la gema escrita antes de su lote (id gema, sin objeto ni comando, en
+     * uno de los cinco) lleva ya su gema: el config del servidor no se actualiza solo y si no, no saldria
+     * nunca. Las demas, tal cual. Para quitarla, prob: 0.
+     */
+    static Botin conGemaDelLote(Botin b, String tipo) {
+        String g = tipo == null ? null : GEMAS.get(tipo.trim().toLowerCase(Locale.ROOT));
+        if (g == null || !b.id().equals("gema") || b.entregable()) return b;
+        return new Botin(b.id(), b.prob(), b.para(), b.piedad(), g, b.comando(), b.nombre(), b.anuncio());
+    }
+
+    /**
+     * Lote de gemas · Las entradas que se pueden dar ahora: fuera las de un objeto que el servidor no sabe
+     * crear (existe da false: una gema cuya plantilla de MMOItems aun no esta). Asi no salen ni cuentan
+     * piedad, como antes de su lote, en vez de caer y fallar al entregarse. Las que no traen objeto no se
+     * miran aqui (tirarBotin ya salta las que no tienen nada que dar).
+     */
+    static List<Botin> disponibles(List<Botin> entradas, Predicate<String> existe) {
+        List<Botin> out = new ArrayList<>();
+        if (entradas == null) return out;
+        for (Botin b : entradas) if (b.objeto().isEmpty() || existe.test(b.objeto())) out.add(b);
+        return out;
     }
 
     /** Lo que le toca a cada uno en una muerte. */
@@ -556,7 +591,8 @@ final class Minijefes {
      * minijefes.botin (null = la de serie). Si la seccion esta, manda entera: un tipo que no aparece no
      * tiene entradas propias. Una entrada que no se entiende (sin id, con un "para" que no existe, un id
      * repetido en el tipo, un comando sin %jugador%) no sale y se dice en avisos. Las que no traen objeto
-     * ni comando SI salen: tirarBotin las salta en silencio (las gemas, hasta que llegue su lote).
+     * ni comando SI salen: tirarBotin las salta en silencio. 1.12.3: la gema de antes de su lote (id gema sin
+     * objeto) lleva ya la de su minijefe (conGemaDelLote).
      */
     static List<Botin> leerBotin(ConfigurationSection s, String tipo, List<String> avisos) {
         String t = tipo == null ? "" : tipo.trim().toLowerCase(Locale.ROOT);
@@ -578,7 +614,7 @@ final class Minijefes {
                         continue;
                     }
                     Botin b = botinDe(m, donde, avisos);
-                    if (b != null) lista.add(b);
+                    if (b != null) lista.add(conGemaDelLote(b, grupo));
                 }
             }
             for (Botin b : lista) {
@@ -728,6 +764,9 @@ final class Minijefes {
         List<String> avisos = new ArrayList<>();
         List<Botin> entradas = leerBotin(seccionBotin(), t, avisos);
         avisar(avisos);
+        // 1.12.3: una gema sin plantilla en MMOItems no sale ni cuenta piedad (como antes de su lote).
+        Entregas ent = hc.entregas();
+        entradas = disponibles(entradas, o -> ent == null || !esMmo(ent, o) || ent.crear(o) != null);
         if (entradas.isEmpty()) return;
         Map<String, Integer> antes = new HashMap<>();
         for (Botin b : entradas) {
@@ -750,6 +789,12 @@ final class Minijefes {
             OfflinePlayer op = quien.get(c.jugador());
             if (c.cae() && op != null) hc.seguro("minijefes", () -> entregarBotin(c, op, t, nivel));
         }
+    }
+
+    /** Si ese objeto de Entregas es de MMOItems (una gema, una pieza): el libro, las llaves y los de Calamity no. */
+    private static boolean esMmo(Entregas ent, String objeto) {
+        String o = objeto.toLowerCase(Locale.ROOT);
+        return !o.equals("libro") && !PuenteBovedas.esLlave(o) && ent.idMmo(o) != null;
     }
 
     /**
@@ -1027,6 +1072,14 @@ final class Minijefes {
             avisos.addAll(estos);
         }
         h.igual("config: minijefes.botin se entiende entero", List.of(), new ArrayList<>(avisos));
+        // 1.12.3: sin su plantilla en MMOItems, la gema de un minijefe no sale (docs/lote-gemas).
+        Entregas ent = hc.entregas();
+        if (ent != null && PuenteMmo.disponible()) {
+            for (String t : TIPOS) {
+                String g = GEMAS.get(t);
+                h.ok("MMOItems crea la gema de " + nombre(t) + " (" + ent.idMmo(g) + "); sin ella no sale", ent.crear(g) != null);
+            }
+        }
         h.ok("la prueba no toca hardcore-datos.yml", !hc.datos().isSet("piedad-botin." + Autotest.sintetico(1)));
         return h.lineas();
     }
@@ -1125,8 +1178,29 @@ final class Minijefes {
         Botin libro = custodio.get(0), mascota = custodio.get(3), gema = custodio.get(4);
         h.ok("1.11: las llaves de boveda van por Entregas (objeto), no por consola",
                 custodio.get(1).entregable() && !custodio.get(1).porConsola() && custodio.get(2).entregable());
-        h.ok("la gema aun no se entrega (sin objeto ni comando)", !gema.entregable());
         h.ok("el libro y la mascota van por consola", libro.porConsola() && mascota.porConsola());
+        // 1.12.3: el lote de gemas. La de cada minijefe, 25 % al mejor, por Entregas (no por consola).
+        h.ok("la gema del Custodio ya se entrega (gema-custodio, 25 %, al mejor, sin piedad)", gema.entregable()
+                && Entregas.GEMA_CUSTODIO.equals(gema.objeto()) && !gema.porConsola() && gema.prob() == 0.25
+                && "mejor".equals(gema.para()) && gema.piedad() == 0);
+        boolean cincoConGema = true;
+        Set<String> distintas = new HashSet<>();
+        for (String t : TIPOS) {
+            Botin g = null;
+            for (Botin b : leerBotin(null, t, avisos)) if (b.id().equals("gema")) g = b;
+            cincoConGema &= g != null && g.entregable() && g.objeto().equals(GEMAS.get(t));
+            if (g != null) distintas.add(g.objeto());
+        }
+        h.ok("botin de serie: los cinco con SU gema, cada una distinta", cincoConGema && distintas.size() == TIPOS.size());
+        Botin vieja = new Botin("gema", 0.25, "mejor", 0, "", "", "la Gema del Heraldo", false);
+        h.igual("la entrada de antes del lote lleva su gema", Entregas.GEMA_HERALDO, conGemaDelLote(vieja, "heraldo-carmes").objeto());
+        h.igual("en 'todos' no se toca", "", conGemaDelLote(vieja, "todos").objeto());
+        Botin otraCosa = new Botin("gema", 0.25, "mejor", 0, "cristal", "", "un cristal", false);
+        h.igual("una gema con objeto propio se respeta", "cristal", conGemaDelLote(otraCosa, "heraldo-carmes").objeto());
+        h.igual("sin plantilla en MMOItems la gema no sale (ni cuenta piedad)", List.of("libro", "mascota"),
+                ids(disponibles(List.of(libro, mascota, gema), o -> !o.equals(Entregas.GEMA_CUSTODIO))));
+        h.igual("con plantilla, sale", List.of("libro", "mascota", "gema"), ids(disponibles(List.of(libro, mascota, gema), o -> true)));
+        Botin vacia = new Botin("nada", 1.0, "mejor", 5, "", "", "nada", false);
 
         UUID dosa = Autotest.sintetico(1), otro = Autotest.sintetico(2), tercero = Autotest.sintetico(3);
         LinkedHashMap<UUID, Double> fr = new LinkedHashMap<>();
@@ -1141,8 +1215,12 @@ final class Minijefes {
         };
         DoubleSupplier siempre = () -> 0.0;
 
-        List<Caida> c = tirarBotin(List.of(gema), dosa, fr, 0.10, Map.of(), todos, nunca);
+        List<Caida> c = tirarBotin(List.of(vacia), dosa, fr, 0.10, Map.of(), todos, nunca);
         h.ok("sin objeto ni comando: ni tira ni cuenta piedad", c.isEmpty() && tiradas[0] == 0);
+        c = tirarBotin(List.of(gema), dosa, fr, 0.10, Map.of(), u -> false, siempre);
+        h.ok("la gema le cae al mejor aunque este desconectado (espera en pendientes)",
+                c.size() == 1 && c.get(0).jugador().equals(dosa) && c.get(0).cae());
+        tiradas[0] = 0;
 
         c = tirarBotin(List.of(mascota), dosa, fr, 0.10, Map.of(), todos, nunca);
         h.igual("mejor: solo tira Dosa (60 %)", 1, tiradas[0]);
@@ -1205,6 +1283,8 @@ final class Minijefes {
         avisos.clear();
         List<Botin> leidos = leerBotin(y, "custodio-de-las-ruinas", avisos);
         h.igual("leer: lo comun y lo suyo, sin los rotos", List.of("libro", "mascota", "gema"), ids(leidos));
+        h.igual("leer: la gema sin objeto del config viejo sale con la suya", Entregas.GEMA_CUSTODIO,
+                leidos.size() < 3 ? null : leidos.get(2).objeto());
         if (leidos.size() >= 2) {
             Botin m = leidos.get(1);
             h.cerca("leer: una probabilidad de mas de 1 se queda en 1", 1.0, m.prob(), 1e-9);

@@ -1,0 +1,179 @@
+# =============================================================================
+#  Lote de gemas (Calamity 1.12.3) · 1 de 3
+#  Fichero del servidor: plugins/MMOItems/item/calamity_gemas.yml  (tipo CALAMITY_GEMAS)
+#
+#  A) Las seis gemas nuevas: PEGAR AL FINAL del fichero, tal cual (claves de primer nivel).
+#  B) GEMA_DE_CALAMIDAD: SUSTITUIR el bloque entero por el de abajo. Solo cambia el lore
+#     (ya no dice "Yelmo, Coraza o Hacha": ahora entra en las diez piezas) y lleva
+#     revision-id: 2 para que las que ya tienen los jugadores se actualicen. Las stats no cambian.
+#  Despues: /mi reload (o reiniciar) y /calamity selftest gemsetting con alguien conectado.
+#
+#  Todas: color de hueco Calamidad (gem-color), sin negrita, degradado de un tinte claro a su
+#  color, el rombo ambar de la Gema de Calamidad delante. Valores y por que, al final.
+# =============================================================================
+
+# ----------------------------------------------------------------------------- A) nuevas
+
+GEMA_DEL_CUSTODIO:
+  base:
+    material: QUARTZ
+    tier: BRASA
+    name: <#E8A33D>◆ <#E4ECF5>G<#DAE4EF>e<#D1DCE9>m<#C8D5E3>a <#BECDDE>d<#B4C5D8>e<#ABBDD2>l <#A2B6CC>C<#98AEC6>u<#8EA6C0>s<#859EBA>t<#7C96B5>o<#728FAF>d<#6887A9>i<#5F7FA3>o
+    gem-color: Calamidad
+    damage-reduction: 3
+    max-health: 1
+    disable-crafting: true
+    lore:
+    - '&7Piedra de un muro que no cayó.'
+    - ''
+    - <#E8A33D>◆ <#9FD6A0>Custodio de las Ruinas
+    - '&7Encaja en el hueco de cualquier'
+    - '&7pieza de Calamity.'
+    - ''
+    - <#E8A33D>Botín de Calamity &8· <#9FD6A0>Edición Custodio
+    - ''
+
+GEMA_DE_LA_MATRIARCA:
+  base:
+    material: AMETHYST_SHARD
+    tier: BRASA
+    name: <#E8A33D>◆ <#F0E4FA>G<#EADBF7>e<#E4D2F3>m<#DDC9F0>a <#D7C0EC>d<#D1B7E9>e <#CAAEE6>l<#C4A5E2>a <#BE9CDF>M<#B894DC>a<#B28BD8>t<#AB82D5>r<#A579D2>i<#9F70CE>a<#9867CB>r<#925EC7>c<#8C55C4>a
+    gem-color: Calamidad
+    critical-strike-chance: 5
+    max-health: 1
+    disable-crafting: true
+    lore:
+    - '&7Un nudo de su tela, endurecido.'
+    - ''
+    - <#E8A33D>◆ <#9FD6A0>Matriarca Tejedora
+    - '&7Encaja en el hueco de cualquier'
+    - '&7pieza de Calamity.'
+    - ''
+    - <#E8A33D>Botín de Calamity &8· <#9FD6A0>Edición Matriarca
+    - ''
+
+GEMA_DEL_SANADOR:
+  base:
+    material: PRISMARINE_CRYSTALS
+    tier: BRASA
+    name: <#E8A33D>◆ <#DFF4EE>G<#D1ECE5>e<#C4E4DC>m<#B6DDD3>a <#A9D5CA>d<#9BCDC1>e<#8DC5B8>l <#80BEAE>S<#72B6A5>a<#64AE9C>n<#57A693>a<#499F8A>d<#3C9781>o<#2E8F78>r
+    gem-color: Calamidad
+    max-health: 3
+    disable-crafting: true
+    lore:
+    - '&7Late despacio, como el fango.'
+    - ''
+    - <#E8A33D>◆ <#9FD6A0>Sanador del Fango
+    - '&7Encaja en el hueco de cualquier'
+    - '&7pieza de Calamity.'
+    - ''
+    - <#E8A33D>Botín de Calamity &8· <#9FD6A0>Edición Sanador
+    - ''
+
+GEMA_DEL_CENTINELA:
+  base:
+    material: ECHO_SHARD
+    tier: BRASA
+    name: <#E8A33D>◆ <#F1E7DC>G<#EBDFD2>e<#E6D7C9>m<#E0CFBF>a <#DAC7B5>d<#D5BFAB>e<#CFB7A2>l <#C9AF98>C<#C4A78E>e<#BE9F84>n<#B8977B>t<#B38F71>i<#AD8767>n<#A77F5D>e<#A27754>l<#9C6F4A>a
+    gem-color: Calamidad
+    pve-damage: 4
+    max-health: 1
+    disable-crafting: true
+    lore:
+    - '&7Toba que recuerda cada golpe.'
+    - ''
+    - <#E8A33D>◆ <#9FD6A0>Centinela de Toba
+    - '&7Encaja en el hueco de cualquier'
+    - '&7pieza de Calamity.'
+    - ''
+    - <#E8A33D>Botín de Calamity &8· <#9FD6A0>Edición Centinela
+    - ''
+
+GEMA_DEL_HERALDO:
+  base:
+    material: RESIN_BRICK
+    tier: BRASA
+    name: <#E8A33D>◆ <#FFDDD5>G<#FBD0C8>e<#F7C2BB>m<#F3B5AE>a <#EEA8A1>d<#EA9A94>e<#E68D87>l <#E2807A>H<#DE736D>e<#DA6560>r<#D55853>a<#D14B46>l<#CD3D39>d<#C9302C>o
+    gem-color: Calamidad
+    movement-speed: 0.004
+    max-health: 1
+    disable-crafting: true
+    lore:
+    - '&7Todavía tiene prisa.'
+    - ''
+    - <#E8A33D>◆ <#9FD6A0>Heraldo Carmesí
+    - '&7Encaja en el hueco de cualquier'
+    - '&7pieza de Calamity.'
+    - ''
+    - <#E8A33D>Botín de Calamity &8· <#9FD6A0>Edición Heraldo
+    - ''
+
+# El id es EXACTO: lo usa el botín del Vigilante (CALAMITY_GEMAS.GEMA_OJO_DEL_VIGILANTE).
+GEMA_OJO_DEL_VIGILANTE:
+  base:
+    material: HEART_OF_THE_SEA
+    tier: CALAMIDAD
+    name: <#E8A33D>◆ <#F2F5F8>O<#E9EDF1>j<#DFE5EA>o <#D6DCE3>d<#CDD4DC>e<#C3CCD5>l <#BAC4CE>V<#B0BCC7>i<#A7B3C0>g<#9EABB9>i<#94A3B2>l<#8B9BAB>a<#8292A4>n<#788A9D>t<#6F8296>e
+    gem-color: Calamidad
+    pve-damage: 3
+    damage-reduction: 2
+    max-health: 1
+    disable-crafting: true
+    lore:
+    - '&7Sigue mirando. No parpadea.'
+    - ''
+    - <#E8A33D>◆ <#9FD6A0>El Vigilante
+    - '&7Encaja en el hueco de cualquier'
+    - '&7pieza de Calamity.'
+    - ''
+    - <#E8A33D>Botín de Calamity &8· <#9FD6A0>Edición Vigilante
+    - ''
+
+# ----------------------------------------------------------------------------- B) sustituir
+
+GEMA_DE_CALAMIDAD:
+  base:
+    material: EMERALD
+    tier: BRASA
+    revision-id: 2
+    name: <#E8A33D>◆ <#C8F5CF>&lG<#BEEEC7>&lE<#B4E8BE>&lM<#ABE2B6>&lA <#A1DBAE>&lD<#97D4A6>&lE <#8DCE9D>&lC<#84C895>&lA<#7AC18D>&lL<#70BA84>&lA<#66B47C>&lM<#5CAE74>&lI<#53A76C>&lD<#49A063>&lA<#3F9A5B>&lD
+    gem-color: Calamidad
+    pve-damage: 2
+    undead-damage: 4
+    max-health: 1
+    disable-crafting: true
+    lore:
+    - '&7Un ojo de RAIZ, cerrado.'
+    - ''
+    - <#E8A33D>◆ <#9FD6A0>Forja de Calamity
+    - '&7Encaja en el hueco de cualquier'
+    - '&7pieza de Calamity.'
+    - '&7Al engarzarla, se abre un poco.'
+    - ''
+    - <#E8A33D>Botín de Calamity &8· <#9FD6A0>Edición Forja
+    - ''
+
+# =============================================================================
+#  Valores (calibrados contra la Gema de Calamidad: +2 % PvE, +4 % no-muertos, +1 vida)
+#
+#  Regla: nada de armadura ni dureza. El Manto ya llega a 28 de 30 de armadura y a 20 de 20
+#  de dureza, y la Protección VIII ya pasa del 80 %: ahí una gema no daría nada (o rompería
+#  el tope). Lo defensivo va en reducción de daño (%) y en vida.
+#  Lo que puede llevar alguien a la vez son 5 gemas (4 piezas de armadura y el arma en la mano).
+#
+#  Gema                 Stats                         x5 a la vez
+#  Gema de Calamidad    +2 % PvE, +4 % no-muertos, +1  +10 % PvE, +20 % no-muertos, +5 vida
+#  Gema del Custodio    -3 % daño recibido, +1 vida     -15 % daño (con el set, -18 %), +5 vida
+#  Gema de la Matriarca +5 % crítico, +1 vida           +25 % crítico (Hacha: 32 -> 57 %)
+#  Gema del Sanador     +3 vida (1,5 corazones)         +15 vida
+#  Gema del Centinela   +4 % daño a mobs, +1 vida       +20 % PvE (Hacha: 20 -> 40 %)
+#  Gema del Heraldo     +0,004 velocidad (+4 %), +1     +20 % velocidad (como Velocidad I)
+#  Ojo del Vigilante    +3 % PvE, -2 % daño, +1 vida    +15 % PvE, -10 % daño, +5 vida
+#
+#  A la par: medido como "% de daño a mobs + % de vida efectiva", la Gema de Calamidad da ~5,8
+#  (2 + la mitad de los 4 de no-muertos + 1 de vida sobre ~57). Las de minijefe quedan entre
+#  4,3 y 5,8; el Ojo, ~6,8: un escalón por encima (x1,15, el paso de la escala de estrellas)
+#  y la única con tres stats útiles en todo combate. Tier: BRASA las de minijefe, como la de
+#  Calamidad; CALAMIDAD el Ojo.
+#  Materiales que no hacen nada al usarlos (ni se lanzan, ni se comen, ni encienden fuego).
+# =============================================================================

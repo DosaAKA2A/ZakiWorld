@@ -42,7 +42,7 @@ import java.util.Set;
 import java.util.UUID;
 
 /**
- * El Engarzador (Calamity 1.4): el NPC de la antesala que pone y quita las Gemas de Calamidad.
+ * El Engarzador (Calamity 1.4): el NPC de la antesala que pone y quita las gemas de Calamity.
  *
  * Por que existe: la Gema se engarzaba con el metodo de MMOItems (arrastrarla sobre la pieza en
  * el inventario) y Dosa lo dijo claro, nadie lo descubre. Ahora hay un sitio y un menu. Se llama
@@ -54,12 +54,16 @@ import java.util.UUID;
  * queda libre. El NPC lo pone Dosa a mano con Citizens; aqui solo esta lo que su clic ejecuta
  * como consola, "calamity open <p> gemsetter" (Npcs), y la receta en /calamity npcs.
  *
- * El menu (54, marco negro de Calamity):
+ * El menu (54, marco negro de Calamity). Lote de gemas (1.12.3), como lo pidio Dosa: la pieza AL
+ * CENTRO y sus huecos ALREDEDOR, como una piedra en su engaste:
  *  - arriba en el centro, la ayuda; abajo en el centro, Cerrar (como en todos los menus, 1.7.3);
- *  - fila del medio: la pieza a la izquierda, Engarzar en el centro y la gema a la derecha;
- *  - fila de abajo: los huecos de la pieza, libres (cristal) y ocupados (la gema de verdad, con
- *    su lore de MMOItems). Tocar un hueco ocupado pide confirmar en la misma ventana, avisando
- *    de que la gema se rompe.
+ *  - la pieza en el centro (PIEZA) y sus huecos en las ocho casillas que la rodean (anillo),
+ *    repartidos de forma simetrica segun cuantos tenga: libres (cristal) y ocupados (la gema de
+ *    verdad, con su lore de MMOItems). Tocar un hueco ocupado pide confirmar en la misma ventana,
+ *    avisando de que la gema se rompe;
+ *  - en la fila de la pieza, la gema que se va a engarzar a la izquierda (GEMA) y Engarzar a la
+ *    derecha (ENGARZAR): se lee gema, pieza, engarzar. Con una gema puesta que entra, su hueco se
+ *    marca con brillo ("aqui entrara la gema").
  * Se pone una cosa TOCANDOLA EN TU INVENTARIO (la de abajo): el menu sabe si es pieza o gema y
  * la coloca en su sitio; tocarla arriba te la devuelve. Nada se arrastra ni se suelta, y todo
  * se hace con un clic izquierdo suelto: asi funciona igual en Bedrock (Geyser), que no tiene
@@ -71,14 +75,32 @@ import java.util.UUID;
  * a lo que suelta al morir, como si lo llevara encima). Todos los clics se cancelan: los objetos
  * solo los mueve este codigo, uno a uno, y la ventana solo ensena copias. Numeros del teclado,
  * doble clic, soltar y arrastrar no hacen nada.
+ *
+ * 1.12.3 · Tambien vive aqui ActualizacionMmo: cuando MMOItems rehace una pieza de Calamity por
+ * su revision-id (para darle su hueco nuevo), le devuelve sus marcas (el ligado a su dueno).
  */
 final class MenuEngarzador implements Listener {
 
-    /** Donde va cada cosa (54). Cerrar, abajo en el centro como en todos los menus. */
-    static final int AYUDA = 4, PIEZA = 20, ENGARZAR = 22, GEMA = 24, FILA_HUECOS = 36, FILA_ENGARCE = 18,
-            CERRAR = 49;
-    /** La pantalla de confirmar (misma ventana): la pieza, la gema que se rompe y los dos botones. */
-    static final int C_PIEZA = 13, C_GEMA = 22;
+    /** Donde va cada cosa (54). La ayuda arriba y Cerrar abajo, en el centro, como en todos los menus. */
+    static final int AYUDA = 4, PIEZA = 22, GEMA = 19, ENGARZAR = 25, CERRAR = 49;
+    /**
+     * Los huecos alrededor de la pieza segun cuantos tenga (0 a 8), en el orden de la ficha
+     * (Engarce.Ficha.huecos): siempre simetricos respecto a la columna de la pieza. Uno, encima;
+     * dos, encima y debajo; tres, en triangulo; cuatro, en cruz; ocho, el anillo entero.
+     */
+    private static final int[][] ANILLO_DE = {
+            {},
+            {13},
+            {13, 31},
+            {13, 30, 32},
+            {13, 21, 23, 31},
+            {13, 21, 23, 30, 32},
+            {12, 14, 21, 23, 30, 32},
+            {12, 13, 14, 21, 23, 30, 32},
+            {12, 13, 14, 21, 23, 30, 31, 32}};
+    /** Los que caben alrededor de la pieza. Una pieza con mas (no hay ninguna) ensena los primeros. */
+    static final int MAX_HUECOS = 8;
+    /** La pantalla de confirmar (misma ventana): la pieza en su sitio, la gema en su hueco y los dos botones. */
     static final int[] C_NO = {37, 38, 39}, C_SI = {41, 42, 43};
     /** Engarzar y quitar, un clic cada tanto (un doble toque no hace dos veces lo mismo). */
     private static final long ESPERA_MS = 400;
@@ -111,11 +133,16 @@ final class MenuEngarzador implements Listener {
     private final Map<UUID, Long> ultimoClic = new HashMap<>();
     /** Los nombres de las piezas que traen hueco (objetos-calamity.yml), para el hueco vacio de la pieza. */
     private final List<String> conHuecos;
+    /** 1.12.3: el que conserva el ligado cuando MMOItems actualiza una pieza. Null sin MMOItems. */
+    private final ActualizacionMmo actualizacion;
 
     MenuEngarzador(Hardcore hc) {
         this.hc = hc;
         this.conHuecos = piezasConHuecos(hc);
         hc.plugin().getServer().getPluginManager().registerEvents(this, hc.plugin());
+        // Importa MMOItems: solo si esta (la clase no se carga hasta aqui). Si falla, el menu sigue.
+        this.actualizacion = PuenteMmo.disponible()
+                ? hc.valor("engarzador", () -> new ActualizacionMmo(hc, this::tiposCalamity), null) : null;
         Autotest.registrar("engarce", this::autotest);
     }
 
@@ -128,6 +155,7 @@ final class MenuEngarzador implements Listener {
         }
         abiertas.clear();
         ultimoClic.clear();
+        if (actualizacion != null) hc.seguro("engarzador", actualizacion::parar);
         HandlerList.unregisterAll(this);
     }
 
@@ -156,6 +184,13 @@ final class MenuEngarzador implements Listener {
         }
         if (out.isEmpty()) out.addAll(List.of("CALAMITY", "CALAMITY_ARMAS"));
         out.removeAll(tiposGema());
+        return out;
+    }
+
+    /** Piezas y gemas: los tipos cuyas marcas conserva ActualizacionMmo. */
+    Set<String> tiposCalamity() {
+        Set<String> out = new LinkedHashSet<>(tiposPieza());
+        out.addAll(tiposGema());
         return out;
     }
 
@@ -188,6 +223,19 @@ final class MenuEngarzador implements Listener {
             if (x != null && !x.getStringList("huecos").isEmpty()) out.add(x.getString("nombre", k));
         }
         return out;
+    }
+
+    // ================================================================= disposicion
+
+    /** Las casillas de n huecos alrededor de la pieza (ANILLO_DE), en el orden de la ficha. */
+    static int[] anillo(int n) {
+        return ANILLO_DE[Math.max(0, Math.min(MAX_HUECOS, n))].clone();
+    }
+
+    /** Si una casilla toca la de la pieza (las ocho de alrededor). */
+    static boolean alrededor(int casilla) {
+        int df = Math.abs(casilla / 9 - PIEZA / 9), dc = Math.abs(casilla % 9 - PIEZA % 9);
+        return casilla != PIEZA && df <= 1 && dc <= 1;
     }
 
     // ================================================================= abrir y pintar
@@ -224,46 +272,37 @@ final class MenuEngarzador implements Listener {
         if (m.confirmar != null) {
             Engarce.Hueco h = fp == null ? null : buscar(fp, m.confirmar);
             if (h != null) {
-                pintarConfirmar(m, h);
+                pintarConfirmar(m, fp, h);
                 Marco.rellenar(inv);
                 return;
             }
             m.confirmar = null;
         }
 
-        Marco.ponerBanda(inv, FILA_ENGARCE, Marco.banda(Material.RED_STAINED_GLASS_PANE, "El engarce",
-                List.of("La pieza a la izquierda, la gema", "a la derecha, y toca Engarzar.")));
-        // La pieza.
+        // La pieza, en el centro.
         if (m.pieza == null) {
-            List<Component> lore = new ArrayList<>();
-            lore.add(Marco.texto("Toca la pieza en tu inventario"));
-            lore.add(Marco.texto("y se colocará aquí."));
-            if (!conHuecos.isEmpty()) {
-                lore.add(Component.empty());
-                lore.add(Marco.tenue("Llevan hueco de gema:"));
-                for (String n : conHuecos) lore.add(Marco.tenue("· " + n));
-            }
-            lore.add(Component.empty());
-            lore.add(Marco.tenue("Si la llevas puesta, quítatela antes."));
-            inv.setItem(PIEZA, Marco.icono(Material.ARMOR_STAND, Component.text("Pon aquí la pieza", Paleta.DETALLE), lore, false));
+            inv.setItem(PIEZA, Marco.icono(Material.ARMOR_STAND, Component.text("Pon aquí la pieza", Paleta.DETALLE),
+                    lorePiezaVacia(), false));
             m.acciones.put(PIEZA, "falta-pieza");
         } else {
             inv.setItem(PIEZA, conLineas(m.pieza, List.of(Marco.accion("Clic para devolvértela"))));
             m.acciones.put(PIEZA, "pieza");
         }
-        // La gema.
+        // La gema que se va a engarzar, a la izquierda.
         if (m.gema == null) {
             inv.setItem(GEMA, Marco.icono(Material.GRAY_DYE, Component.text("Pon aquí la gema", Paleta.DETALLE), List.of(
-                    Marco.texto("Toca una Gema de Calamidad"),
+                    Marco.texto("Toca una gema de Calamity"),
                     Marco.texto("en tu inventario."),
                     Component.empty(),
-                    Marco.tenue("Se compran en la Forja.")), false));
+                    Marco.tenue("La Gema de Calamidad se compra"),
+                    Marco.tenue("en la Forja; las demás las"),
+                    Marco.tenue("sueltan los minijefes.")), false));
             m.acciones.put(GEMA, "falta-gema");
         } else {
             inv.setItem(GEMA, conLineas(m.gema, List.of(Marco.accion("Clic para devolvértela"))));
             m.acciones.put(GEMA, "gema");
         }
-        // Engarzar.
+        // Engarzar, a la derecha.
         String motivo = m.pieza == null ? Engarce.SIN_PIEZA : m.gema == null ? Engarce.SIN_GEMA
                 : Engarce.motivoEngarce(fp, fg, tiposPieza(), tiposGema(), EngarceMmo.sinColor());
         List<Component> lore = new ArrayList<>();
@@ -277,33 +316,53 @@ final class MenuEngarzador implements Listener {
                 Component.text("Engarzar", motivo == null ? Paleta.DETALLE : Paleta.TENUE), lore, motivo == null));
         m.acciones.put(ENGARZAR, motivo == null ? "engarzar" : "no:" + motivo);
 
-        // Los huecos de la pieza.
-        Marco.ponerBanda(inv, FILA_HUECOS, Marco.banda(Material.RED_STAINED_GLASS_PANE, "Huecos de la pieza",
-                List.of("Toca una gema engarzada", "para quitarla (se rompe).")));
-        if (fp == null) {
-            inv.setItem(FILA_HUECOS + 4, Marco.icono(Material.LIGHT_GRAY_DYE, Component.text("Sin pieza", Paleta.TENUE),
-                    List.of(Marco.tenue("Aquí verás sus huecos, libres"), Marco.tenue("y ocupados.")), false));
-        } else {
+        // Los huecos de la pieza, alrededor. El que recibira la gema puesta, con brillo.
+        if (fp != null) {
+            int destino = motivo == null && fg != null ? Engarce.indiceHueco(fp, fg.colorGema(), EngarceMmo.sinColor()) : -1;
             List<Engarce.Hueco> huecos = fp.huecos();
-            int[] cols = Marco.columnas(Math.min(Marco.COLUMNAS, huecos.size()));
-            for (int i = 0; i < cols.length; i++) {
+            int[] casillas = anillo(huecos.size());
+            for (int i = 0; i < casillas.length; i++) {
                 Engarce.Hueco h = huecos.get(i);
-                int casilla = FILA_HUECOS + cols[i];
-                inv.setItem(casilla, icono(h));
-                if (!h.libre()) m.acciones.put(casilla, "hueco:" + h.uuid());
+                inv.setItem(casillas[i], icono(h, i == destino));
+                if (!h.libre()) m.acciones.put(casillas[i], "hueco:" + h.uuid());
             }
         }
         Marco.rellenar(inv);
     }
 
-    /** Un hueco: libre, un cristal; ocupado, la gema de verdad (con su lore de MMOItems) y como quitarla. */
-    private ItemStack icono(Engarce.Hueco h) {
+    /** El lore del hueco de la pieza vacio: como se pone y que piezas llevan hueco. */
+    private List<Component> lorePiezaVacia() {
+        List<Component> lore = new ArrayList<>();
+        lore.add(Marco.texto("Toca la pieza en tu inventario"));
+        lore.add(Marco.texto("y se colocará aquí. Sus huecos"));
+        lore.add(Marco.texto("salen alrededor."));
+        if (!conHuecos.isEmpty()) {
+            lore.add(Component.empty());
+            lore.add(Marco.tenue("Llevan hueco de gema:"));
+            for (String l : Entregas.partir(String.join(", ", conHuecos) + ".", 34)) lore.add(Marco.tenue(l));
+        }
+        lore.add(Component.empty());
+        lore.add(Marco.tenue("Si la llevas puesta, quítatela antes."));
+        return lore;
+    }
+
+    /**
+     * Un hueco: libre, un cristal (con brillo si es donde entrara la gema puesta); ocupado, la gema
+     * de verdad (con su lore de MMOItems) y como quitarla.
+     */
+    private ItemStack icono(Engarce.Hueco h, boolean destino) {
         if (h.libre()) {
-            return Marco.icono(Material.GLASS, Component.text("Hueco libre", Paleta.DETALLE), List.of(
-                    Marco.dato("Color", h.color()),
-                    Component.empty(),
-                    Marco.tenue("Pon una gema de este color"),
-                    Marco.tenue("y toca Engarzar.")), false);
+            List<Component> lore = new ArrayList<>();
+            lore.add(Marco.dato("Color", h.color()));
+            lore.add(Component.empty());
+            if (destino) {
+                lore.add(Component.text("Aquí entrará la gema.", Paleta.BIEN));
+                lore.add(Marco.tenue("Toca Engarzar."));
+            } else {
+                lore.add(Marco.tenue("Pon una gema de este color"));
+                lore.add(Marco.tenue("y toca Engarzar."));
+            }
+            return Marco.icono(Material.GLASS, Component.text("Hueco libre", Paleta.DETALLE), lore, destino);
         }
         List<Component> extra = List.of(
                 Marco.dato("Color del hueco", h.color()),
@@ -317,18 +376,22 @@ final class MenuEngarzador implements Listener {
                 Paleta.DETALLE), lore, false);
     }
 
-    /** La pantalla de confirmar, en la misma ventana: nada sale ni entra al cambiar. */
-    private void pintarConfirmar(Mesa m, Engarce.Hueco h) {
+    /**
+     * La pantalla de confirmar, en la misma ventana: la pieza sigue en el centro y la gema que se
+     * rompe en su mismo hueco; el resto se apaga. Nada sale ni entra al cambiar.
+     */
+    private void pintarConfirmar(Mesa m, Engarce.Ficha fp, Engarce.Hueco h) {
         Inventory inv = m.inv;
-        Marco.ponerBanda(inv, FILA_ENGARCE, Marco.banda(Material.RED_STAINED_GLASS_PANE, "Quitar una gema",
-                List.of("La gema se rompe y el hueco", "queda libre para otra.")));
-        inv.setItem(C_PIEZA, conLineas(m.pieza, List.of()));
+        inv.setItem(PIEZA, conLineas(m.pieza, List.of()));
+        int[] casillas = anillo(fp.huecos().size());
+        int i = fp.huecos().indexOf(h);
+        int casilla = i >= 0 && i < casillas.length ? casillas[i] : 13;
         ItemStack gema = h.gemaEnlace() == null ? null : EngarceMmo.crear(h.gemaEnlace());
         List<Component> aviso = List.of(
                 Component.text("¿Quitar esta gema?", Paleta.AVISO),
                 Marco.texto("Se rompe: no vuelve a tu inventario."),
                 Marco.texto("El hueco queda libre para otra."));
-        inv.setItem(C_GEMA, gema != null ? conLineas(gema, aviso)
+        inv.setItem(casilla, gema != null ? conLineas(gema, aviso)
                 : Marco.icono(Material.EMERALD, Component.text(h.gema() == null ? "Gema" : h.gema(), Paleta.DETALLE), aviso, false));
         ItemStack no = Marco.icono(Material.RED_CONCRETE, Component.text("✘ Cancelar", Marco.NO), List.of(
                 Marco.tenue("La gema se queda donde está.")), false);
@@ -367,8 +430,10 @@ final class MenuEngarzador implements Listener {
 
     private static ItemStack ayuda() {
         List<Component> lore = new ArrayList<>();
-        lore.add(Marco.texto("1. Toca la pieza en tu inventario."));
-        lore.add(Marco.texto("2. Toca la Gema de Calamidad."));
+        lore.add(Marco.texto("1. Toca la pieza en tu inventario:"));
+        lore.add(Marco.texto("   va al centro y sus huecos, alrededor."));
+        lore.add(Marco.texto("2. Toca una gema de Calamity:"));
+        lore.add(Marco.texto("   va a la izquierda."));
         lore.add(Marco.texto("3. Toca Engarzar. Es gratis."));
         lore.add(Component.empty());
         lore.add(Marco.tenue("Para quitar una gema, toca su hueco."));
@@ -681,6 +746,7 @@ final class MenuEngarzador implements Listener {
         h.ok("tipos de pieza: CALAMITY y CALAMITY_ARMAS " + tp, tp.contains("CALAMITY") && tp.contains("CALAMITY_ARMAS"));
         h.ok("las gemas no cuentan como pieza", !tp.contains("CALAMITY_GEMAS"));
         h.ok("tipos de gema: CALAMITY_GEMAS " + tg, tg.contains("CALAMITY_GEMAS"));
+        h.ok("al actualizar se conservan las marcas de piezas y gemas", tiposCalamity().containsAll(tp) && tiposCalamity().containsAll(tg));
 
         // Las reglas con fichas inventadas (sin MMOItems).
         String sc = "Sin color";
@@ -707,6 +773,10 @@ final class MenuEngarzador implements Listener {
         h.igual("algo que no es gema donde va la gema", Engarce.NO_ES_GEMA, Engarce.motivoGema(yelmo, fg));
         h.igual("una pieza llena se acepta (para quitarle la gema)", null, Engarce.motivoPieza(lleno, fp));
         h.igual("el hueco donde entra", "Calamidad", Engarce.hueco(yelmo, "Calamidad", sc));
+        Engarce.Ficha mixta = new Engarce.Ficha("CALAMITY", "MIXTA", false, null,
+                List.of(ocupado, new Engarce.Hueco("Rojo", null, null, null), libre));
+        h.igual("el hueco donde entra: el primero libre de su color", 2, Engarce.indiceHueco(mixta, "Calamidad", sc));
+        h.igual("sin hueco de su color, ninguno", -1, Engarce.indiceHueco(lleno, "Calamidad", sc));
         String color = Engarce.texto(Engarce.COLOR, yelmo, roja);
         h.ok("el aviso de color dice los dos colores (" + color + ")", color.contains("Rojo") && color.contains("Calamidad"));
         for (String mot : List.of(Engarce.SIN_PIEZA, Engarce.SIN_GEMA, Engarce.NO_MMO, Engarce.ES_GEMA, Engarce.PIEZA_AJENA,
@@ -718,6 +788,10 @@ final class MenuEngarzador implements Listener {
         h.igual("la receta crea a Lior, por su nombre", "/npc create Lior", receta().get(0));
         h.igual("el titulo es el del lugar", "CALAMITY | Engarce", Marco.T_ENGARZADOR.texto());
         h.ok("el titulo cabe en la ventana", Marco.T_ENGARZADOR.ancho() <= Marco.ANCHO_TITULO);
+
+        probarDisposicion(h);
+        probarPintado(h);
+        probarLineaLigado(h);
 
         if (!PuenteMmo.disponible()) {
             h.ok("sin MMOItems en este servidor: las pruebas con objetos reales se hacen donde esté", true);
@@ -737,6 +811,93 @@ final class MenuEngarzador implements Listener {
         return h.lineas();
     }
 
+    /** 1.12.3 · La disposicion pedida por Dosa: la pieza al centro y sus huecos alrededor, sin pisar nada. */
+    static void probarDisposicion(Autotest.Hoja h) {
+        h.igual("la ayuda, arriba en el centro", 4, AYUDA);
+        h.igual("Cerrar, abajo en el centro", Marco.abajo(54), CERRAR);
+        h.igual("la pieza, en el centro de las filas de contenido", 4, PIEZA % 9);
+        h.ok("la pieza no es marco", !Marco.esBorde(PIEZA, 54));
+        h.ok("gema y Engarzar en la fila de la pieza, a la misma distancia",
+                GEMA / 9 == PIEZA / 9 && ENGARZAR / 9 == PIEZA / 9 && PIEZA - GEMA == ENGARZAR - PIEZA);
+        h.ok("gema y Engarzar no tocan la pieza (entre medias van los huecos)", !alrededor(GEMA) && !alrededor(ENGARZAR));
+        Set<Integer> fijas = new LinkedHashSet<>(List.of(AYUDA, CERRAR, PIEZA, GEMA, ENGARZAR));
+        for (int c : C_NO) fijas.add(c);
+        for (int c : C_SI) fijas.add(c);
+        h.igual("las casillas fijas no se pisan entre si", 5 + C_NO.length + C_SI.length, fijas.size());
+        boolean todos = true, simetricos = true, distintos = true, libres = true, enOrden = true;
+        for (int n = 0; n <= MAX_HUECOS; n++) {
+            int[] a = anillo(n);
+            todos &= a.length == n;
+            Set<Integer> vistas = new LinkedHashSet<>();
+            int antes = -1;
+            for (int c : a) {
+                distintos &= vistas.add(c);
+                todos &= alrededor(c);
+                libres &= !fijas.contains(c) && !Marco.esBorde(c, 54);
+                enOrden &= c > antes;
+                antes = c;
+            }
+            // Simetrico respecto a la columna de la pieza: cada hueco tiene su espejo.
+            for (int c : a) simetricos &= vistas.contains(c - (c % 9) + 2 * (PIEZA % 9) - c % 9);
+        }
+        h.ok("de 0 a 8 huecos: cada uno en una de las ocho casillas alrededor de la pieza", todos);
+        h.ok("los huecos no se repiten", distintos);
+        h.ok("los huecos no pisan la ayuda, Cerrar, la gema, Engarzar ni los botones de confirmar", libres);
+        h.ok("los huecos van en orden de lectura (como en la ficha)", enOrden);
+        h.ok("los huecos, simetricos a los dos lados de la pieza", simetricos);
+        h.ok("uno solo, encima de la pieza", anillo(1).length == 1 && anillo(1)[0] == PIEZA - 9);
+        h.igual("con mas de 8 se ensenan 8", MAX_HUECOS, anillo(12).length);
+        h.igual("el anillo entero son las ocho de alrededor", 8, anillo(MAX_HUECOS).length);
+    }
+
+    /**
+     * 1.12.3 · El menu de verdad (Bukkit), sin MMOItems ni jugador: una mesa vacia pinta la ayuda, Cerrar,
+     * la pieza y la gema por poner, Engarzar apagado y el marco negro en todo lo demas; ningun hueco.
+     */
+    private void probarPintado(Autotest.Hoja h) {
+        Mesa m = new Mesa(Autotest.sintetico(8));
+        m.inv = hc.plugin().getServer().createInventory(m, 54, Marco.T_ENGARZADOR.componente());
+        pintar(m);
+        Inventory inv = m.inv;
+        h.igual("vacio: la ayuda", Material.KNOWLEDGE_BOOK, tipo(inv, AYUDA));
+        h.igual("vacio: Cerrar", Material.BARRIER, tipo(inv, CERRAR));
+        h.igual("vacio: la pieza por poner, en el centro", Material.ARMOR_STAND, tipo(inv, PIEZA));
+        h.igual("vacio: la gema por poner", Material.GRAY_DYE, tipo(inv, GEMA));
+        h.igual("vacio: Engarzar", Material.SMITHING_TABLE, tipo(inv, ENGARZAR));
+        boolean negro = true;
+        for (int i = 0; i < inv.getSize(); i++) {
+            if (i == AYUDA || i == CERRAR || i == PIEZA || i == GEMA || i == ENGARZAR) continue;
+            negro &= tipo(inv, i) == Material.BLACK_STAINED_GLASS_PANE;
+        }
+        h.ok("vacio: todo lo demas, marco negro (sin huecos)", negro);
+        h.igual("vacio: Cerrar cierra", "cerrar", m.acciones.get(CERRAR));
+        h.igual("vacio: tocar la pieza pide ponerla", "falta-pieza", m.acciones.get(PIEZA));
+        h.igual("vacio: Engarzar dice por que no", "no:" + Engarce.SIN_PIEZA, m.acciones.get(ENGARZAR));
+        h.igual("vacio: solo responden la pieza, la gema, Engarzar y Cerrar", 4, m.acciones.size());
+    }
+
+    /** 1.12.3 · Lo que MMOItems rehace pierde la linea "Ligado a X" del lore: se le devuelve, una sola vez. */
+    static void probarLineaLigado(Autotest.Hoja h) {
+        ItemStack vieja = new ItemStack(Material.PAPER), nueva = new ItemStack(Material.PAPER);
+        ItemMeta mv = vieja.getItemMeta();
+        List<Component> lore = new ArrayList<>(List.of(Marco.texto("Una pieza.")));
+        lore.addAll(Ficha.lineasLigado("Dosa"));
+        mv.lore(lore);
+        vieja.setItemMeta(mv);
+        ItemMeta mn = nueva.getItemMeta();
+        mn.lore(List.of(Marco.texto("Una pieza rehecha.")));
+        nueva.setItemMeta(mn);
+        h.ok("rehecha sin la linea de ligado: se le pone", Ligado.copiarLineaLigado(vieja, nueva));
+        h.igual("y dice de quien es", "Dosa", Ficha.ligadoDe(nueva.getItemMeta().lore()));
+        h.ok("una segunda vez no la repite", !Ligado.copiarLineaLigado(vieja, nueva));
+        h.ok("sin ligado en la vieja no se inventa", !Ligado.copiarLineaLigado(new ItemStack(Material.PAPER), new ItemStack(Material.PAPER)));
+    }
+
+    private static Material tipo(Inventory inv, int casilla) {
+        ItemStack it = inv.getItem(casilla);
+        return it == null ? Material.AIR : it.getType();
+    }
+
     /**
      * Con objetos creados por MMOItems (las plantillas de verdad), a nombre de un jugador
      * conectado. No toca su inventario: engarzar y quitar trabajan sobre copias.
@@ -745,10 +906,7 @@ final class MenuEngarzador implements Listener {
         Entregas ent = hc.entregas();
         String idGema = ent == null ? "CALAMITY_GEMAS.GEMA_DE_CALAMIDAD" : ent.idMmo("gema");
         String idYelmo = ent == null ? "CALAMITY.YELMO_DE_CALAMIDAD" : ent.idMmo("yelmo");
-        String idHacha = ent == null ? "CALAMITY_ARMAS.HACHA_DEL_HERALDO" : ent.idMmo("hacha");
-        String idGrebas = ent == null ? "CALAMITY.GREBAS_DE_CALAMIDAD" : ent.idMmo("grebas");
         ItemStack gema = PuenteMmo.crear(idGema), yelmo = PuenteMmo.crear(idYelmo);
-        ItemStack hacha = PuenteMmo.crear(idHacha), grebas = PuenteMmo.crear(idGrebas);
         String sc = EngarceMmo.sinColor();
         if (gema == null || yelmo == null) {
             h.ok("MMOItems crea la gema (" + idGema + ") y el yelmo (" + idYelmo + ")", false);
@@ -762,11 +920,7 @@ final class MenuEngarzador implements Listener {
         h.igual("la Gema entra en el Yelmo", null, Engarce.motivoEngarce(fy, fg, tp, tg, sc));
 
         // Lo que suma la gema: sus stats reales (las que trae la plantilla).
-        List<String> stats = new ArrayList<>();
-        for (String s : List.of("PVE_DAMAGE", "UNDEAD_DAMAGE", "MAX_HEALTH", "ATTACK_DAMAGE", "ARMOR", "DEFENSE",
-                "CRITICAL_STRIKE_CHANCE", "PVP_DAMAGE")) {
-            if (PuenteMmo.stat(gema, s) != 0) stats.add(s);
-        }
+        List<String> stats = statsDe(gema);
         h.ok("la Gema trae stats que sumar " + stats, !stats.isEmpty());
 
         UUID dueno = Autotest.sintetico(7);
@@ -815,21 +969,84 @@ final class MenuEngarzador implements Listener {
         }
         h.igual("quitar una gema que no está", Engarce.Estado.NADA, EngarceMmo.quitar(yelmo, UUID.randomUUID().toString()).estado());
 
-        // El Hacha del Heraldo: un arma, y el Altar promete que tambien admite la Gema.
-        if (hacha == null) {
-            h.ok("MMOItems crea el Hacha (" + idHacha + ")", false);
-        } else {
-            Engarce.Ficha fh = EngarceMmo.leer(hacha);
-            h.igual("la Gema entra en el Hacha", null, fh == null ? "no-mmo" : Engarce.motivoEngarce(fh, fg, tp, tg, sc));
-            h.igual("engarzar en el Hacha", Engarce.Estado.HECHO, EngarceMmo.engarzar(p, hacha, gema).estado());
+        // 1.12.3 · El menu con la pieza y la gema puestas: el hueco, encima de la pieza y marcado.
+        Mesa m = new Mesa(Autotest.sintetico(9));
+        m.inv = hc.plugin().getServer().createInventory(m, 54, Marco.T_ENGARZADOR.componente());
+        m.pieza = PuenteMmo.crear(idYelmo);
+        m.gema = gema.clone();
+        pintar(m);
+        int[] a = anillo(fy.huecos().size());
+        ItemStack hueco = a.length == 0 ? null : m.inv.getItem(a[0]);
+        h.ok("menu: el hueco libre del Yelmo, alrededor de la pieza", hueco != null && hueco.getType() == Material.GLASS);
+        ItemMeta mh = hueco == null ? null : hueco.getItemMeta();
+        h.ok("menu: marcado donde entrara la gema", mh != null && mh.hasEnchantmentGlintOverride()
+                && mh.getEnchantmentGlintOverride());
+        h.igual("menu: Engarzar listo", "engarzar", m.acciones.get(ENGARZAR));
+        h.igual("menu: la pieza en el centro", idYelmo, PuenteMmo.enlace(m.inv.getItem(PIEZA)));
+        h.igual("menu: la gema a la izquierda", idGema, PuenteMmo.enlace(m.inv.getItem(GEMA)));
+        m.pieza = con;
+        m.gema = null;
+        pintar(m);
+        String accion = a.length == 0 ? null : m.acciones.get(a[0]);
+        h.ok("menu: tocar la gema engarzada pide quitarla", accion != null && accion.equals("hueco:" + uuid));
+        m.confirmar = uuid;
+        pintar(m);
+        h.ok("menu: confirmar en la misma ventana, la gema en su hueco",
+                a.length > 0 && idGema.equals(PuenteMmo.enlace(m.inv.getItem(a[0]))));
+        h.ok("menu: confirmar tiene Cancelar y Quitar", "no".equals(m.acciones.get(C_NO[0])) && "si".equals(m.acciones.get(C_SI[0])));
+        h.ok("menu: confirmar no deja engarzar", !m.acciones.containsKey(ENGARZAR) && !m.acciones.containsKey(GEMA));
+
+        // 1.12.3 · Las diez piezas de la Forja llevan su hueco Calamidad (docs/lote-gemas/02).
+        ConfigurationSection piezas = hc.cfg().getConfigurationSection("forja.piezas");
+        List<String> sinHueco = new ArrayList<>(), noSalen = new ArrayList<>();
+        int vistas = 0;
+        for (String k : piezas == null ? List.<String>of() : piezas.getKeys(false)) {
+            String id = ent == null ? piezas.getString(k) : ent.idMmo("forja:" + k);
+            ItemStack it = id == null ? null : PuenteMmo.crear(id);
+            if (it == null) {
+                noSalen.add(k);
+                continue;
+            }
+            vistas++;
+            Engarce.Ficha f = EngarceMmo.leer(it);
+            if (f == null || Engarce.motivoEngarce(f, fg, tp, tg, sc) != null) sinHueco.add(k);
         }
-        // Las Grebas no tienen hueco: se rechazan, y MMOItems tampoco las toca.
-        if (grebas == null) {
-            h.ok("MMOItems crea las Grebas (" + idGrebas + ")", false);
-        } else {
-            h.igual("las Grebas no admiten gemas", Engarce.SIN_HUECOS, Engarce.motivoPieza(EngarceMmo.leer(grebas), tp));
-            h.igual("MMOItems tampoco engarza en las Grebas", Engarce.Estado.NADA, EngarceMmo.engarzar(p, grebas, gema).estado());
+        h.igual("MMOItems crea todas las piezas de la Forja", List.of(), noSalen);
+        h.ok("las " + vistas + " piezas de la Forja admiten la Gema de Calamidad" + (sinHueco.isEmpty() ? ""
+                : "; sin hueco: " + sinHueco + " (aplica docs/lote-gemas/02-huecos-piezas.yml)"), sinHueco.isEmpty() && vistas > 0);
+        // Algo de Calamity sin hueco (la pesca de Marea Celeste), si el servidor lo tiene: se rechaza.
+        ItemStack capucha = PuenteMmo.crear("CALAMITY.MAREA_CELESTE_CAPUCHA");
+        if (capucha != null) {
+            h.igual("una pieza sin hueco no admite gemas", Engarce.SIN_HUECOS, Engarce.motivoPieza(EngarceMmo.leer(capucha), tp));
+            h.igual("MMOItems tampoco engarza en ella", Engarce.Estado.NADA, EngarceMmo.engarzar(p, capucha, gema).estado());
         }
+
+        // 1.12.3 · Las seis gemas del lote: de Calamity, color Calamidad, entran y suman lo suyo.
+        for (String g : Entregas.GEMAS) {
+            if (g.equals("gema")) continue;
+            String id = ent == null ? null : ent.idMmo(g);
+            ItemStack it = id == null ? null : PuenteMmo.crear(id);
+            if (it == null) {
+                h.ok("MMOItems crea " + g + " (" + id + "); aplica docs/lote-gemas/01-calamity_gemas.yml", false);
+                continue;
+            }
+            Engarce.Ficha f = EngarceMmo.leer(it);
+            h.ok(g + ": gema de Calamity de color Calamidad", f != null && Engarce.motivoGema(f, tg) == null
+                    && "Calamidad".equals(f.colorGema()));
+            List<String> suyas = statsDe(it);
+            h.ok(g + ": trae stats " + suyas, !suyas.isEmpty());
+            ItemStack base = PuenteMmo.crear(idYelmo);
+            Map<String, Double> previo = new HashMap<>();
+            for (String s : suyas) previo.put(s, base == null ? 0 : PuenteMmo.stat(base, s));
+            Engarce.Resultado rg = base == null ? null : EngarceMmo.engarzar(p, base, it);
+            h.igual(g + ": entra en el Yelmo", Engarce.Estado.HECHO, rg == null ? null : rg.estado());
+            if (rg != null && rg.estado() == Engarce.Estado.HECHO) {
+                for (String s : suyas) {
+                    h.cerca(g + ": suma " + s, previo.get(s) + PuenteMmo.stat(it, s), PuenteMmo.stat(rg.pieza(), s), 1e-6);
+                }
+            }
+        }
+
         // Algo vanilla no es ni pieza ni gema.
         ItemStack esmeralda = new ItemStack(Material.EMERALD);
         h.igual("una esmeralda no es una gema", Engarce.NO_ES_GEMA, Engarce.motivoGema(EngarceMmo.leer(esmeralda), tg));
@@ -843,6 +1060,18 @@ final class MenuEngarzador implements Listener {
             h.igual("una gema de MMOItems que no es de Calamity (" + ajena + ")", Engarce.GEMA_AJENA,
                     Engarce.motivoGema(EngarceMmo.leer(PuenteMmo.crear(ajena)), tg));
         }
+        h.ok("conserva las marcas al actualizar (engarzador.conservar-marcas-al-actualizar)",
+                actualizacion != null && actualizacion.activo());
+    }
+
+    /** Las stats de MMOItems que trae una gema (las que puede dar una de Calamity). */
+    private static List<String> statsDe(ItemStack gema) {
+        List<String> out = new ArrayList<>();
+        for (String s : List.of("PVE_DAMAGE", "UNDEAD_DAMAGE", "MAX_HEALTH", "ATTACK_DAMAGE", "ARMOR", "DEFENSE",
+                "DAMAGE_REDUCTION", "CRITICAL_STRIKE_CHANCE", "MOVEMENT_SPEED", "PVP_DAMAGE")) {
+            if (PuenteMmo.stat(gema, s) != 0) out.add(s);
+        }
+        return out;
     }
 
     private static int contar(Player p, String enlace) {
