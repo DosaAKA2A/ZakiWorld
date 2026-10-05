@@ -43,3 +43,8 @@ permissions:
   # con el comodin "*" de LuckPerms todo el staff los heredaba. Las exenciones van a mano,
   # una a una: /calamidad exento <jugador> <parca|aduana|todo> <on|off> (se guardan en
   # hardcore-datos.yml).
+  # Rama venta-oren: el staff que puede usar /ec y /pv dentro de Calamity y guardar Reliquias y
+  # Esencias fuera (Sellos). ederus.mundos tambien se lo salta.
+  calamity.bypass.storage:
+    description: Saltarse los sellos de almacen de Calamity (/ec y /pv dentro; guardar Reliquias y Esencias fuera)
+    default: op

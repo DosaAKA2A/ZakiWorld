@@ -2117,6 +2117,9 @@ public final class Hardcore implements Listener {
         if (cmd.startsWith("/")) cmd = cmd.substring(1);
         if (cmd.contains(":")) cmd = cmd.substring(cmd.indexOf(':') + 1);
         if (!cfg().getStringList("comandos-prohibidos").contains(cmd)) return;
+        // Rama venta-oren: el cofre ender y los vaults los lleva Sellos, que deja pasar al staff con su permiso.
+        String raiz = cmd;
+        if (sellos != null && p.hasPermission(Sellos.BYPASS) && valor("sellos", () -> sellos.comandoDeAlmacen(raiz), false)) return;
         e.setCancelled(true);
         p.sendMessage(Component.text("En Calamity no puedes usar ese comando. Para salir, usa la puerta de salida o un Cristal de Regreso.",
                 Paleta.AVISO));
