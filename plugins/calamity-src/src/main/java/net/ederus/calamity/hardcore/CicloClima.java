@@ -23,7 +23,11 @@ import java.util.concurrent.ThreadLocalRandom;
  * En cada mundo hardcore se apaga la regla del ciclo de clima (GameRules.ADVANCE_WEATHER, la antigua
  * doWeatherCycle) y el plugin lleva su propio reloj: despejado (despejado-minutos), lluvia
  * (lluvia-minutos), despejado... cada fase con +-variacion, y una de cada tormenta-cada lluvias es
- * tormenta electrica. Clima sigue igual: mira World#hasStorm, que ahora es la lluvia que pone este reloj.
+ * tormenta electrica.
+ *
+ * Calamity 1.12: la fase ya no moja el mundo. Lluvia y tormenta son solo el estado de este reloj (llueve(),
+ * tormenta()); el mundo se queda despejado siempre (aplicar) y Clima cancela cualquier cambio hacia lluvia,
+ * asi que el cliente no recibe nunca la lluvia de Minecraft. Lo que se ve lo pinta Clima por bioma.
  *
  * El reloj va en tiempo real y se guarda en hardcore-datos (clima-ciclo.<mundo>: fase, hasta en millis,
  * cuantas lluvias van, si ya se aviso): un reinicio a mitad de una lluvia sigue con la misma lluvia hasta
@@ -173,12 +177,62 @@ final class CicloClima {
         hc.marcarSucio();
     }
 
-    /** El mundo con el clima de su fase. Solo se toca si no lo tiene: casi siempre son dos lecturas. */
+    /**
+     * El mundo con el clima de su fase. Calamity 1.12: el mundo no llueve en ninguna fase (lluviaDelMundo):
+     * la lluvia y la tormenta son solo el estado de este reloj y las pinta Clima. Aqui solo se despeja si
+     * algo lo ha mojado (Clima cancela los cambios hacia lluvia; esto es la red por si alguno se cuela).
+     * Solo se toca si no lo tiene: casi siempre son dos lecturas.
+     */
     private static void aplicar(World w, String fase) {
-        boolean lluvia = !DESPEJADO.equals(fase);
-        boolean trueno = TORMENTA.equals(fase);
+        boolean lluvia = lluviaDelMundo(fase);
+        boolean trueno = truenoDelMundo(fase);
         if (w.hasStorm() != lluvia) w.setStorm(lluvia);
         if (w.isThundering() != trueno) w.setThundering(trueno);
+    }
+
+    /** 1.12 · Despeja ya ese mundo si es de Calamity y manda su ciclo (al arrancar y al cargar un mundo). */
+    void despejar(World w) {
+        if (w == null || !hc.esHardcore(w) || !activo()) return;
+        aplicar(w, DESPEJADO);
+    }
+
+    /** 1.12: si el MUNDO llueve en esa fase. Nunca: la lluvia de Minecraft no se ve en Calamity. */
+    static boolean lluviaDelMundo(String fase) {
+        return false;
+    }
+
+    /** 1.12: si el MUNDO truena en esa fase. Nunca (los truenos de la tormenta los suena Clima). */
+    static boolean truenoDelMundo(String fase) {
+        return false;
+    }
+
+    /** Si esa fase es clima de Calamity (lluvia o tormenta): lo que mira Clima. */
+    static boolean llueveEnFase(String fase) {
+        return LLUVIA.equals(fase) || TORMENTA.equals(fase);
+    }
+
+    /** Si el ciclo de Calamity manda (hardcore.clima.ciclo.activo). */
+    boolean activo() {
+        return cfg().getBoolean("activo", ACTIVO);
+    }
+
+    /**
+     * 1.12 · Si en ese mundo es fase de lluvia o tormenta de Calamity (el mundo en si no llueve). Con el ciclo
+     * apagado manda Minecraft: lo que diga su lluvia.
+     */
+    boolean llueve(World w) {
+        if (w == null) return false;
+        if (!activo()) return w.hasStorm();
+        Estado e = estados.get(w.getKey().getKey());
+        return e != null && llueveEnFase(e.fase());
+    }
+
+    /** 1.12 · Si en ese mundo es fase de tormenta de Calamity (o, con el ciclo apagado, si truena). */
+    boolean tormenta(World w) {
+        if (w == null) return false;
+        if (!activo()) return w.isThundering();
+        Estado e = estados.get(w.getKey().getKey());
+        return e != null && TORMENTA.equals(e.fase());
     }
 
     private void apagarRegla(World w) {
@@ -363,23 +417,21 @@ final class CicloClima {
         }
     }
 
-    /** El destello del aviso, segun lo que viene y el bioma en el que esta. */
+    /**
+     * El destello del aviso, segun lo que viene y el bioma en el que esta. 1.12: en un bioma sin clima propio
+     * no se ve lluvia, asi que el aviso es del mal tiempo en general (o de la tormenta, que se oye).
+     */
     static Component aviso(String fase, Clima.Tipo tipo) {
-        TextColor color;
-        String texto;
-        if (tipo == Clima.Tipo.ACIDA) {
-            texto = "Se acerca lluvia ácida";
-            color = Paleta.ACIDO;
-        } else if (tipo == Clima.Tipo.ROJO) {
-            texto = "Se acerca el cielo rojo";
-            color = Paleta.FUEGO;
-        } else if (TORMENTA.equals(fase)) {
-            texto = "Se acerca una tormenta";
-            color = Paleta.CIFRA;
-        } else {
-            texto = "Se acerca la lluvia";
-            color = Paleta.TEXTO;
-        }
+        Clima.Tipo t = tipo == null ? Clima.Tipo.NINGUNO : tipo;
+        TextColor color = t != Clima.Tipo.NINGUNO ? Clima.color(t) : TORMENTA.equals(fase) ? Paleta.CIFRA : Paleta.TEXTO;
+        String texto = switch (t) {
+            case ACIDA -> "Se acerca lluvia ácida";
+            case ROJO -> "Se acerca el cielo rojo";
+            case ESPORAS -> "Se acercan las esporas";
+            case POLEN -> "Se acerca la polinización";
+            case CENIZA -> "Se acerca la ceniza";
+            case NINGUNO -> TORMENTA.equals(fase) ? "Se acerca una tormenta" : "Se acerca el mal tiempo";
+        };
         return Component.text(texto, color);
     }
 
@@ -433,10 +485,14 @@ final class CicloClima {
         h.ok("ya avisado: no repite", !tocaAviso(DESPEJADO, 30_000, 60_000, true));
         h.ok("lloviendo no se avisa", !tocaAviso(LLUVIA, 10_000, 60_000, false));
         h.ok("aviso 0: nunca", !tocaAviso(DESPEJADO, 0, 0, false));
-        h.igual("aviso normal", "Se acerca la lluvia", plano.serialize(aviso(LLUVIA, Clima.Tipo.NINGUNO)));
+        h.igual("aviso normal", "Se acerca el mal tiempo", plano.serialize(aviso(LLUVIA, Clima.Tipo.NINGUNO)));
         h.igual("aviso de tormenta", "Se acerca una tormenta", plano.serialize(aviso(TORMENTA, Clima.Tipo.NINGUNO)));
         h.igual("aviso en bioma verde", "Se acerca lluvia ácida", plano.serialize(aviso(TORMENTA, Clima.Tipo.ACIDA)));
         h.igual("aviso en el carmesi", "Se acerca el cielo rojo", plano.serialize(aviso(LLUVIA, Clima.Tipo.ROJO)));
+        h.igual("aviso en el colmenar", "Se acerca la polinización", plano.serialize(aviso(LLUVIA, Clima.Tipo.POLEN)));
+        h.igual("aviso en las llanuras de hongos", "Se acercan las esporas", plano.serialize(aviso(LLUVIA, Clima.Tipo.ESPORAS)));
+        h.igual("aviso en la taiga condenada", "Se acerca la ceniza", plano.serialize(aviso(TORMENTA, Clima.Tipo.CENIZA)));
+        h.igual("aviso sin bioma: null vale como ninguno", "Se acerca el mal tiempo", plano.serialize(aviso(LLUVIA, null)));
 
         // Tiempo restante.
         h.igual("12 min", "12 min", restante(11 * 60_000L + 1));

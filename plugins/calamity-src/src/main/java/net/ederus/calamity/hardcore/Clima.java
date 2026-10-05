@@ -1,14 +1,19 @@
 package net.ederus.calamity.hardcore;
 
 import net.ederus.edm.comun.Compat;
+import net.ederus.edm.comun.Plataforma;
 import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.format.TextColor;
+import net.kyori.adventure.title.Title;
 import net.kyori.adventure.util.TriState;
 import org.bukkit.Bukkit;
+import org.bukkit.Color;
+import org.bukkit.HeightMap;
 import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.Particle;
 import org.bukkit.SoundCategory;
-import org.bukkit.WeatherType;
+import org.bukkit.World;
 import org.bukkit.block.data.BlockData;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.file.YamlConfiguration;
@@ -23,48 +28,68 @@ import org.bukkit.event.entity.EntityDamageEvent.DamageCause;
 import org.bukkit.event.entity.PlayerDeathEvent;
 import org.bukkit.event.player.PlayerChangedWorldEvent;
 import org.bukkit.event.player.PlayerQuitEvent;
+import org.bukkit.event.weather.ThunderChangeEvent;
+import org.bukkit.event.weather.WeatherChangeEvent;
+import org.bukkit.event.world.WorldLoadEvent;
+import org.bukkit.inventory.ItemStack;
+import org.bukkit.potion.PotionEffect;
+import org.bukkit.potion.PotionEffectType;
+import org.bukkit.scheduler.BukkitTask;
 
+import java.time.Duration;
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.EnumMap;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
+import java.util.concurrent.ThreadLocalRandom;
 
 /**
- * Calamity 1.9.0 · El clima de Calamity por bioma, solo mientras llueve de verdad en el mundo
- * (World#hasStorm). Encargo de Dosa: en los biomas verdes la lluvia es acida y hace dano; en los
- * rojos no se ve la lluvia, el cielo se oscurece en rojo y cada cierto tiempo arde.
+ * Calamity 1.9.0 · El clima de Calamity por bioma, solo mientras dura la lluvia del ciclo. Encargo de
+ * Dosa: en los biomas verdes la lluvia es acida y hace dano; en los rojos el cielo se oscurece en rojo y
+ * cada cierto tiempo arde.
  *
- * Todo pasa en la pantalla de cada jugador (setPlayerWeather, setPlayerTime, particulas suyas):
- * el mundo no se toca, asi que dos jugadores en biomas distintos ven cada uno su cielo. Nada de
- * esto entra en la zona spawn: Hardcore.tick solo llama a segundo() fuera de ella.
+ * Calamity 1.12 · Encargo de Dosa (2026-10-05): la lluvia de Minecraft se retira por completo, y cada bioma
+ * tiene su propio clima, muy visible: lluvia acida en los pantanos y biomas toxicos, esporas (quitan
+ * cordura) en los de hongos y bosques oscuros, polinizacion (polen amarillo y Lentitud) en el colmenar,
+ * ceniza en la taiga condenada y el cielo rojo de siempre en el organismo carmesi. La tabla bioma -> tipo
+ * es hardcore.clima.por-bioma.
  *
- * Lluvia acida: p.isInRain() ya mira el techo, las hojas y si el bioma llueve, asi que bajo techo
- * no pasa nada. Primero un aviso en la barra y un margen; despues quita vida cada pocos segundos.
- * Va por damage(MAGIC) sin entidad y no por DanoVerdadero: no es un combate, asi que no pone la
- * etiqueta "En combate" ni congela la Huella. Sin regeneracion natural cada golpe cuenta, y por
- * eso el aviso y el margen: quien busca refugio a tiempo no pierde nada.
+ * Por que el mundo ya no llueve nunca: hasta la 1.11 el ciclo ponia World#setStorm(true) y aqui se le
+ * ocultaba la lluvia a cada jugador con setPlayerWeather(CLEAR) una vez por segundo. El servidor manda el
+ * paquete de "empieza a llover" a todos en cuanto cambia el mundo, asi que siempre habia un hueco de hasta
+ * un segundo (y el fundido de lluvia del cliente) antes de que llegara el CLEAR, ademas de en cada
+ * entrada, respawn, cambio de mundo o paso por un bioma sin clima propio. Ahora la fase (despejado,
+ * lluvia, tormenta) es solo un estado de CicloClima: el mundo se queda despejado, WeatherChangeEvent y
+ * ThunderChangeEvent hacia lluvia se cancelan en los mundos de Calamity (un /weather, otro plugin, el
+ * ciclo vanilla) y el cliente nunca recibe nada de lluvia. Todo lo que se ve lo pinta este modulo.
  *
- * Cielo rojo: se le oculta la lluvia (CLEAR), se le pone la hora del cielo de sangre del ciclo de
- * Panacea (recalculada cada segundo, porque el servidor la fija por bloques de 24000 y el dia de
- * Panacea dura 72000: ver offsetHora) y Vineta le suma su borde rojo (vinetaExtra, igual que el Eclipse: nunca un segundo
- * borde). La lluvia de verdad del servidor apaga el fuego vanilla, asi que la quemadura se hace a
- * mano: fuego visual y dano de fuego (ON_FIRE) cada segundo. La resistencia al fuego lo para, y es
- * la forma legitima de aguantar alli.
+ * Lo que se ve: particulas solo para cada jugador (Player#spawnParticle: un paquete por capa) a su
+ * alrededor, repartidas en pulsos cada efectos.cada-ticks, y sonidos suyos. Bajo techo solo siguen las
+ * capas que caen (techo: true, chocan con el tejado) y bien bajo tierra (efectos.profundidad) nada.
+ * Nada de esto entra en la zona spawn salvo el cielo de sangre del bioma rojo (cielo-rojo.en-spawn).
  *
- * Convivencia: solo se devuelve lo que puso este modulo, y solo si sigue siendo lo suyo (si otro lo
- * cambio despues, no se toca). El cielo de la PARCA manda (Parca.cieloSobre: ella no lo repone si
- * se lo pisan) y la hora del Eclipse tambien. EDM (Lethal Biomes, los efectos de muerte de rip)
- * puede resetear la hora o el clima sin preguntar: cada segundo se mira si sigue puesto y, si no,
- * se repone. En una zona pintada con /lbiomes el bioma deja de ser de Panacea, asi que ahi este
- * modulo no hace nada y no se pelea con EDM.
+ * Lluvia acida: a cielo abierto (las hojas tapan, como tapaba la lluvia de verdad) quema tras un aviso y
+ * un margen. Va por damage(MAGIC) sin entidad y no por DanoVerdadero: no es un combate, asi que no pone
+ * la etiqueta "En combate" ni congela la Huella.
  *
- * Calamity 1.11: cuando llueve lo decide el plugin (CicloClima, hardcore.clima.ciclo): apaga el ciclo
- * vanilla en el mundo y pone la lluvia con setStorm, asi que World#hasStorm sigue siendo la fuente de
- * verdad de este modulo. CicloClima vive aqui dentro: nace, late (tick) y se para con Clima.
+ * Cielo rojo: la hora del cielo de sangre del ciclo de Panacea (recalculada cada segundo, ver offsetHora)
+ * y Vineta le suma su borde rojo. La quemadura es a mano: fuego visual y dano de fuego (ON_FIRE) cada
+ * segundo; la resistencia al fuego lo para.
+ *
+ * Esporas, polinizacion y ceniza: a cielo abierto (de serie las hojas no tapan las esporas ni el polen,
+ * que flotan) quitan cordura-por-segundo y/o ponen efecto (Lentitud en el polen), con un aviso en la
+ * barra la primera vez de cada episodio.
+ *
+ * Convivencia: solo se devuelve lo que puso este modulo, y solo si sigue siendo lo suyo. El cielo de la
+ * PARCA manda (Parca.cieloSobre) y la hora del Eclipse tambien. En una zona pintada con /lbiomes el bioma
+ * deja de ser de Panacea: la tabla de serie no la nombra y ahi este modulo no pinta nada.
  */
 final class Clima implements Listener {
 
@@ -74,12 +99,12 @@ final class Clima implements Listener {
 
     /*
      * Los valores de serie. Son los mismos que trae hardcore.clima en el config.yml del jar (el
-     * autotest los compara uno a uno): si el servidor no tiene la seccion, da igual de donde se lean.
+     * autotest los compara uno a uno): si el servidor no tiene la clave, da igual de donde se lean.
      */
-    static final List<String> BIOMAS_VERDES = List.of("panacea/horsetail_tropics", "panacea/creeper_dominion",
-            "panacea/polypore_plains", "panacea/wildflower_bog", "panacea/hungering_jungle",
-            "panacea/ravenous_greenwood", "panacea/sweltering_swamp");
-    static final List<String> BIOMAS_ROJOS = List.of("panacea/crimson_organism");
+
+    /** La tabla de serie bioma -> tipo (hardcore.clima.por-bioma). "*" = cualquier otro. */
+    static final Map<String, String> POR_BIOMA = Collections.unmodifiableMap(porBiomaDeSerie());
+
     static final double ACIDA_DANO = 1.0;
     static final int ACIDA_CADA = 2;
     static final int ACIDA_MARGEN = 2;
@@ -101,8 +126,139 @@ final class Clima implements Listener {
     static final double CIELO_DANO = 1.0;
     static final int CIELO_OLVIDO = 30;
 
-    /** Lo que le toca al bioma en el que esta: nada, lluvia acida o cielo rojo. */
-    enum Tipo { NINGUNO, ACIDA, ROJO }
+    /** 1.12: esporas, polinizacion y ceniza. */
+    static final double ESPORAS_CORDURA = 0.1;
+    static final String POLEN_EFECTO = "slowness";
+    static final int POLEN_NIVEL = 1;
+    static final int EXPO_OLVIDO = 15;
+    /** Lo que dura cada toque del efecto (se renueva cada segundo mientras sigue fuera). */
+    static final int EFECTO_TICKS = 50;
+
+    /** 1.12: los pulsos de particulas y el aviso de inicio. */
+    static final int EFECTOS_CADA_TICKS = 4;
+    static final double DENSIDAD = 1.0;
+    static final int PROFUNDIDAD = 12;
+    static final double VOLUMEN_CUBIERTO = 0.5;
+    static final double TORMENTA_DENSIDAD = 1.5;
+    static final boolean AVISO_INICIO = true;
+    static final int AVISO_INICIO_ESPERA = 90;
+    /** Tope de particulas por segundo y jugador con la config del jar, tormenta incluida (autotest). */
+    static final int PRESUPUESTO_SEGUNDO = 300;
+    /** Las particulas que son la lluvia de Minecraft (azules): ningun tipo puede usarlas. */
+    static final Set<String> PARTICULAS_DE_LLUVIA = Set.of("RAIN", "FALLING_WATER", "DRIPPING_WATER", "SPLASH",
+            "FALLING_DRIPSTONE_WATER", "DRIPPING_DRIPSTONE_WATER", "BUBBLE", "BUBBLE_POP");
+
+    /** Lo que le toca al bioma en el que esta. El id es tambien el nombre de su seccion en la config. */
+    enum Tipo {
+        NINGUNO("ninguno"),
+        ACIDA("lluvia-acida"),
+        ROJO("cielo-rojo"),
+        ESPORAS("esporas"),
+        POLEN("polinizacion"),
+        CENIZA("ceniza");
+
+        final String id;
+
+        Tipo(String id) {
+            this.id = id;
+        }
+
+        /** "lluvia-acida", "acida", "Polen"... o null si no es ningun tipo. */
+        static Tipo deTexto(String s) {
+            if (s == null) return null;
+            return switch (s.trim().toLowerCase(Locale.ROOT).replace('_', '-').replace(' ', '-')) {
+                case "ninguno", "nada", "none" -> NINGUNO;
+                case "lluvia-acida", "acida", "ácida", "lluvia-ácida" -> ACIDA;
+                case "cielo-rojo", "rojo" -> ROJO;
+                case "esporas", "espora" -> ESPORAS;
+                case "polinizacion", "polinización", "polen" -> POLEN;
+                case "ceniza", "cenizas" -> CENIZA;
+                default -> null;
+            };
+        }
+
+        /** Los que pasan por exposicion(): cordura y/o efecto a cielo abierto. */
+        boolean generico() {
+            return this == ESPORAS || this == POLEN || this == CENIZA;
+        }
+    }
+
+    private static LinkedHashMap<String, String> porBiomaDeSerie() {
+        LinkedHashMap<String, String> m = new LinkedHashMap<>();
+        m.put("panacea/sweltering_swamp", "lluvia-acida");
+        m.put("panacea/wildflower_bog", "lluvia-acida");
+        m.put("panacea/creeper_dominion", "lluvia-acida");
+        m.put("panacea/horsetail_tropics", "lluvia-acida");
+        m.put("panacea/hungering_jungle", "lluvia-acida");
+        m.put("panacea/polypore_plains", "esporas");
+        m.put("panacea/ravenous_greenwood", "esporas");
+        m.put("panacea/honeybee_biome", "polinizacion");
+        m.put("panacea/condemned_taiga", "ceniza");
+        m.put("panacea/crimson_organism", "cielo-rojo");
+        m.put("*", "ninguno");
+        return m;
+    }
+
+    /** Si ese tipo esta encendido de serie ('activa' o 'activo' en su seccion). */
+    private static boolean encendido(ConfigurationSection s) {
+        return s.getBoolean("activa", s.getBoolean("activo", true));
+    }
+
+    /** Si las hojas tapan ese clima de serie: la lluvia, la ceniza y el cielo si; esporas y polen flotan bajo la copa. */
+    static boolean hojasDeSerie(Tipo t) {
+        return t != Tipo.ESPORAS && t != Tipo.POLEN;
+    }
+
+    static String nombreDeSerie(Tipo t) {
+        return switch (t) {
+            case ACIDA -> "Lluvia ácida";
+            case ROJO -> "El cielo arde";
+            case ESPORAS -> "Esporas";
+            case POLEN -> "Polinización";
+            case CENIZA -> "Ceniza";
+            default -> "";
+        };
+    }
+
+    static String inicioDeSerie(Tipo t) {
+        return switch (t) {
+            case ACIDA -> "Comienza la lluvia ácida";
+            case ROJO -> "El cielo se tiñe de sangre";
+            case ESPORAS -> "Se levantan las esporas";
+            case POLEN -> "Llega la polinización";
+            case CENIZA -> "Empieza a caer ceniza";
+            default -> "";
+        };
+    }
+
+    static String avisoDeSerie(Tipo t) {
+        return switch (t) {
+            case ACIDA -> "busca un techo, que quema.";
+            case ROJO -> "te vas a quemar.";
+            case ESPORAS -> "te nublan la mente; busca un techo.";
+            case POLEN -> "te pesa en el paso; busca un techo.";
+            default -> "";
+        };
+    }
+
+    static double corduraDeSerie(Tipo t) {
+        return t == Tipo.ESPORAS ? ESPORAS_CORDURA : 0.0;
+    }
+
+    static String efectoDeSerie(Tipo t) {
+        return t == Tipo.POLEN ? POLEN_EFECTO : "";
+    }
+
+    static TextColor color(Tipo t) {
+        return switch (t) {
+            case ACIDA -> Paleta.ACIDO;
+            case ROJO -> Paleta.FUEGO;
+            case ESPORAS -> Paleta.ESPORAS;
+            case POLEN -> Paleta.POLEN;
+            case CENIZA -> Paleta.CENIZA;
+            default -> Paleta.TEXTO;
+        };
+    }
 
     /**
      * Segundos seguidos dentro de algo (bajo la lluvia acida, bajo el cielo rojo) con memoria corta:
@@ -126,41 +282,89 @@ final class Clima implements Listener {
                 fuera = 0;
             }
         }
+
+        void olvidar() {
+            dentro = 0;
+            fuera = 0;
+        }
     }
 
     /** Lo de cada jugador. Lo "puesto" es lo que este modulo le ha cambiado y tiene que devolverle. */
     private static final class Estado {
         final Episodio acida = new Episodio();
         final Episodio rojo = new Episodio();
+        /** 1.12: esporas, polinizacion y ceniza (uno a la vez: al cambiar de tipo se olvida). */
+        final Episodio expo = new Episodio();
+        /** 1.12: el clima que ve ahora; lo pinta el pulso de particulas. */
+        Tipo tipo = Tipo.NINGUNO;
+        /** Segundos seguidos con este tipo (el ritmo de los sonidos). */
+        int segundos;
+        boolean tormenta;
+        /** A cielo abierto para este tipo (con o sin hojas segun hojas-protegen). */
+        boolean expuesto;
+        /** Muy bajo tierra: ni particulas ni sonidos. */
+        boolean profundo;
         /** Bajo el cielo rojo ahora mismo: Vineta le suma su parte mientras dure. */
         boolean bajoCielo;
-        /** 1.11: en un bioma de lluvia acida mientras llueve (se le oculta la lluvia azul y caen gotas verdes). */
-        boolean bajoAcida;
-        boolean climaPuesto;
         boolean horaPuesta;
         /** El offset que le mandamos (no la hora del ciclo: ver offsetHora). */
         long hora;
         boolean fuegoPuesto;
     }
 
+    /** Una capa de particulas de un tipo (hardcore.clima.<tipo>.particulas), por pulso. */
+    record Capa(String particula, int cantidad, double radio, double altura, double espesor, double velocidad,
+                int color, int color2, float tam, String bloque, boolean techo) {
+
+        static Capa de(Map<?, ?> m) {
+            return new Capa(texto(m, "particula", "").trim().toUpperCase(Locale.ROOT),
+                    (int) Math.round(numero(m, "cantidad", 0)), numero(m, "radio", 6), numero(m, "altura", 2),
+                    numero(m, "espesor", 1.5), numero(m, "velocidad", 0), colorDe(m.get("color"), 0xFFFFFF),
+                    colorDe(m.get("color2"), colorDe(m.get("color"), 0xFFFFFF)), (float) numero(m, "tam", 1.0),
+                    texto(m, "bloque", ""), Boolean.parseBoolean(texto(m, "techo", "false")));
+        }
+    }
+
+    /** Un sonido de un tipo: cada 'cada' segundos, a 'distancia' bloques de el como mucho. */
+    record Sonido(String sonido, int cada, float volumen, float tono, double distancia) {
+
+        static Sonido de(Map<?, ?> m) {
+            return new Sonido(texto(m, "sonido", ""), Math.max(1, (int) Math.round(numero(m, "cada", 5))),
+                    (float) numero(m, "volumen", 0.5), (float) numero(m, "tono", 1.0), numero(m, "distancia", 4));
+        }
+    }
+
+    /** Lo ya leido de un tipo: sus capas (con los datos de particula hechos) y sus sonidos. */
+    private record Receta(List<Capa> capas, List<Particle> particulas, List<Object> datos, List<Sonido> sonidos) {
+    }
+
     private final Hardcore hc;
     private final Map<UUID, Estado> estados = new HashMap<>();
-    /** A quien se ha mirado este segundo; al que no (spawn, espectador, otro mundo) se le devuelve todo en tick(). */
+    /** A quien se ha mirado este segundo; al que no (espectador, otro mundo) se le devuelve todo en tick(). */
     private final Set<UUID> vistos = new HashSet<>();
     /** Quien esta recibiendo ahora mismo un golpe del clima, y cual: lo lee ParteDefuncion.onDano. */
     private final Map<UUID, String> enCurso = new HashMap<>();
-    /** El polvo que cae (FALLING_DUST toma el color del bloque). Aqui y no estatico: sin servidor no hay BlockData. */
-    private final BlockData polvoAcido;
-    private final BlockData polvoRojo;
+    /** 1.12: cuando se le anuncio cada tipo por ultima vez (aviso-inicio-espera). */
+    private final Map<UUID, Map<Tipo, Long>> anuncios = new HashMap<>();
+    /** 1.12: lo leido de la config, por tipo; se rehace si cambia la seccion (reload). */
+    private final Map<Tipo, Receta> recetas = new EnumMap<>(Tipo.class);
+    private ConfigurationSection recetasDe;
+    private ConfigurationSection tablaDe;
+    private Map<String, Tipo> tabla = Map.of();
     /** 1.11: el reloj del clima (cuando llueve). */
     private final CicloClima ciclo;
+    private final BukkitTask pulso;
 
     Clima(Hardcore hc) {
         this.hc = hc;
-        this.polvoAcido = Material.LIME_CONCRETE_POWDER.createBlockData();
-        this.polvoRojo = Material.RED_CONCRETE_POWDER.createBlockData();
-        hc.plugin().getServer().getPluginManager().registerEvents(this, hc.plugin());
         this.ciclo = new CicloClima(hc);
+        // Despues del ciclo: onLluvia/onTrueno lo leen, y si el ciclo no arranca no queda un oyente suelto.
+        hc.plugin().getServer().getPluginManager().registerEvents(this, hc.plugin());
+        // Un mundo que se guardo lloviendo (1.11 ponia setStorm(true)) se despeja ya, no al primer segundo.
+        for (World w : hc.plugin().getServer().getWorlds()) hc.seguro("ciclo-clima", () -> ciclo.despejar(w));
+        int cada = Math.max(1, Math.min(20, cfg().getInt("efectos.cada-ticks", EFECTOS_CADA_TICKS)));
+        this.pulso = hc.plugin().getServer().getScheduler().runTaskTimer(hc.plugin(),
+                () -> hc.seguro("clima", this::pulso), 20L, cada);
         Autotest.registrar("clima", () -> autotest(hc.plugin().getConfig().getDefaults()));
     }
 
@@ -178,9 +382,31 @@ final class Clima implements Listener {
 
     /**
      * Una vez por segundo por jugador que cuenta, desde Hardcore.tick y SOLO fuera de la zona
-     * spawn. Quien no pase por aqui en un segundo pierde lo que tuviera en tick().
+     * spawn. Quien no pase por aqui (ni por enSpawn/soloVista) en un segundo pierde lo suyo en tick().
      */
     void segundo(Player p) {
+        pasar(p, false, true);
+    }
+
+    /** En la zona spawn: sin clima, salvo el cielo de sangre del bioma rojo (sin fuego ni dano). */
+    void enSpawn(Player p) {
+        pasar(p, true, false);
+    }
+
+    /**
+     * 1.11 · Lo que se VE del clima, sin dano ni avisos: quien no cuenta (creativo, vanish) tambien tiene
+     * que ver el Calamity de verdad. En el spawn, lo mismo que enSpawn.
+     */
+    void soloVista(Player p, boolean spawn) {
+        pasar(p, spawn, false);
+    }
+
+    /**
+     * El segundo de un jugador. 'danino' = cuenta y esta fuera del spawn: solo entonces hay dano, fuego,
+     * vineta, cordura, efectos y avisos en la barra; lo que se ve (particulas, sonidos, hora, el anuncio
+     * de inicio) es para todos.
+     */
+    private void pasar(Player p, boolean spawn, boolean danino) {
         ConfigurationSection c = cfg();
         if (!c.getBoolean("activo", true)) return;
         UUID u = p.getUniqueId();
@@ -188,7 +414,9 @@ final class Clima implements Listener {
             soltar(p);
             return;
         }
-        Tipo tipo = p.getWorld().hasStorm() ? tipo(bioma(p), c) : Tipo.NINGUNO;
+        ConfigurationSection r = seccion(c, "cielo-rojo");
+        Tipo tipo = ciclo.llueve(p.getWorld()) ? tipo(bioma(p), c) : Tipo.NINGUNO;
+        if (spawn && !(tipo == Tipo.ROJO && r.getBoolean("en-spawn", true))) tipo = Tipo.NINGUNO;
         Estado e = estados.get(u);
         if (e == null) {
             if (tipo == Tipo.NINGUNO) return;
@@ -196,76 +424,38 @@ final class Clima implements Listener {
             estados.put(u, e);
         }
         vistos.add(u);
-        lluviaAcida(p, e, tipo == Tipo.ACIDA && p.isInRain(), seccion(c, "lluvia-acida"));
-        cieloRojo(p, e, tipo == Tipo.ROJO, seccion(c, "cielo-rojo"));
-        cieloAcido(p, e, tipo == Tipo.ACIDA, seccion(c, "lluvia-acida"));
-        // Sin nada puesto y con las dos cuentas olvidadas, no hace falta seguir acordandose de el.
-        if (e.acida.dentro == 0 && e.rojo.dentro == 0 && !e.bajoCielo && !e.bajoAcida && !e.climaPuesto
-                && !e.horaPuesta && estados.get(u) == e) {
-            estados.remove(u);
+        if (tipo != e.tipo) {
+            e.segundos = 0;
+            e.expo.olvidar();
+            if (tipo != Tipo.NINGUNO) anunciar(p, tipo, c);
         }
-    }
-
-    /**
-     * 1.11 · Encargo de Dosa: en la zona spawn no llueve. Hardcore.tick lo llama alli en vez de
-     * segundo(): mientras el mundo llueve se le oculta la lluvia (solo en su pantalla) y nada de lo de
-     * fuera (cielo rojo, gotas, fuego) le sigue dentro. Al salir, segundo() se la devuelve.
-     */
-    void enSpawn(Player p) {
-        soloVista(p, true);
-    }
-
-    /**
-     * 1.11 · Lo que se VE del clima, sin dano ni avisos: en la zona spawn (para todos) y fuera para quien
-     * no cuenta (creativo, vanish), que tambien tiene que ver el Calamity de verdad. Dosa (2026-10-04): la
-     * lluvia azul no se tiene que ver ni en el spawn ni bajo el cielo rojo o la lluvia acida.
-     * En el spawn: sin lluvia y, en el bioma rojo, su cielo de sangre y su ceniza. Fuera: lo mismo que ve
-     * quien cuenta (cielo rojo, gotas verdes), pero sin fuego, sin vineta y sin quitar vida.
-     */
-    void soloVista(Player p, boolean spawn) {
-        ConfigurationSection c = cfg();
-        if (!c.getBoolean("activo", true) || p.isDead()) return;
-        if (spawn && !c.getBoolean("spawn-sin-lluvia", true)) return;
-        UUID u = p.getUniqueId();
-        boolean llueve = p.getWorld().hasStorm();
-        Tipo tipo = llueve ? tipo(bioma(p), c) : Tipo.NINGUNO;
-        Estado e = estados.get(u);
-        if (e == null) {
-            if (!llueve) return;
-            e = new Estado();
-            estados.put(u, e);
-        }
-        vistos.add(u);
-        e.bajoCielo = false;
-        quitarFuego(p, e);
-        ConfigurationSection r = seccion(c, "cielo-rojo");
-        ConfigurationSection a = seccion(c, "lluvia-acida");
-        boolean rojo = tipo == Tipo.ROJO && (!spawn || r.getBoolean("en-spawn", true));
-        if (rojo) {
-            Parca parca = hc.parca();
-            boolean deParca = parca != null && hc.valor("parca", () -> parca.cieloSobre(p), false);
-            Eclipse eclipse = hc.eclipse();
-            boolean deEclipse = eclipse != null && hc.valor("eclipse", eclipse::activo, false);
-            ponerHora(p, e, r, deParca, deEclipse);
-            if (p.isInRain()) ceniza(p);
+        e.tipo = tipo;
+        e.segundos++;
+        ConfigurationSection s = seccion(c, tipo.id);
+        if (tipo != Tipo.NINGUNO) {
+            e.tormenta = ciclo.tormenta(p.getWorld());
+            medirCielo(p, e, s.getBoolean("hojas-protegen", hojasDeSerie(tipo)),
+                    c.getInt("efectos.profundidad", PROFUNDIDAD));
         } else {
-            soltarHora(p, e);
+            e.tormenta = false;
+            e.expuesto = false;
+            e.profundo = false;
         }
-        boolean acida = !spawn && tipo == Tipo.ACIDA;
-        e.bajoAcida = acida;
-        if (acida) gotas(p);
-        boolean ocultar = spawn ? llueve
-                : (rojo && r.getBoolean("ocultar-lluvia", true)) || (acida && a.getBoolean("ocultar-lluvia", true));
-        if (ocultar) ocultarLluvia(p, e);
-        else soltarClima(p, e);
-        if (!e.climaPuesto && !e.horaPuesta && e.acida.dentro == 0 && e.rojo.dentro == 0 && estados.get(u) == e) {
+        boolean fuera = !spawn && danino;
+        lluviaAcida(p, e, fuera && tipo == Tipo.ACIDA && e.expuesto, seccion(c, "lluvia-acida"));
+        cieloRojo(p, e, tipo == Tipo.ROJO, fuera, r);
+        exposicion(p, e, tipo, fuera && tipo.generico() && e.expuesto, s);
+        sonidos(p, e, c);
+        // Sin nada puesto y con las cuentas olvidadas, no hace falta seguir acordandose de el.
+        if (e.tipo == Tipo.NINGUNO && e.acida.dentro == 0 && e.rojo.dentro == 0 && e.expo.dentro == 0
+                && !e.bajoCielo && !e.horaPuesta && !e.fuegoPuesto && estados.get(u) == e) {
             estados.remove(u);
         }
     }
 
     /** Una vez por segundo, despues de los jugadores: quien no se ha visto recupera su cielo. */
     void tick() {
-        // 1.11: primero el reloj del clima, que decide si llueve (lo vera el segundo siguiente de cada jugador).
+        // 1.11: primero el reloj del clima, que decide la fase (la vera el segundo siguiente de cada jugador).
         hc.seguro("ciclo-clima", ciclo::tick);
         if (!estados.isEmpty()) {
             for (UUID u : new ArrayList<>(estados.keySet())) {
@@ -298,6 +488,7 @@ final class Clima implements Listener {
 
     void parar() {
         HandlerList.unregisterAll(this);
+        if (pulso != null) pulso.cancel();
         hc.seguro("ciclo-clima", ciclo::parar);
         for (UUID u : new ArrayList<>(estados.keySet())) {
             Estado e = estados.remove(u);
@@ -307,6 +498,7 @@ final class Clima implements Listener {
         estados.clear();
         vistos.clear();
         enCurso.clear();
+        anuncios.clear();
     }
 
     @EventHandler(priority = EventPriority.MONITOR)
@@ -323,9 +515,69 @@ final class Clima implements Listener {
     public void onSalir(PlayerQuitEvent ev) {
         // El fuego visual NO es de la conexion: Paper lo guarda en el jugador (Paper.FireOverride)
         // y los datos se guardan despues de este evento, asi que quien se va ardiendo volveria en
-        // llamas para siempre. Se le devuelve todo antes; la hora y el clima no se guardan, pero
-        // soltarlos aqui no cuesta nada.
+        // llamas para siempre. Se le devuelve todo antes.
         soltar(ev.getPlayer());
+        anuncios.remove(ev.getPlayer().getUniqueId());
+    }
+
+    /**
+     * 1.12 · En los mundos de Calamity el mundo no llueve nunca: ni el ciclo vanilla, ni un /weather, ni
+     * otro plugin. Solo con el ciclo de Calamity encendido (con el apagado vuelve el clima de Minecraft).
+     */
+    @EventHandler(priority = EventPriority.HIGH, ignoreCancelled = true)
+    public void onLluvia(WeatherChangeEvent ev) {
+        if (cancelaLluvia(ev.toWeatherState(), hc.esHardcore(ev.getWorld()), ciclo.activo())) ev.setCancelled(true);
+    }
+
+    @EventHandler(priority = EventPriority.HIGH, ignoreCancelled = true)
+    public void onTrueno(ThunderChangeEvent ev) {
+        if (cancelaLluvia(ev.toThunderState(), hc.esHardcore(ev.getWorld()), ciclo.activo())) ev.setCancelled(true);
+    }
+
+    /**
+     * 1.12 · Un mundo de Calamity que se carga con lluvia guardada (de la 1.11, o de antes de ponerlo en
+     * hardcore.mundos) se despeja al cargar y otra vez al tick siguiente (por si aun no estaba registrado
+     * como mundo de Calamity): sin esto, quien entra antes del primer segundo del ciclo ve llover.
+     */
+    @EventHandler(priority = EventPriority.MONITOR)
+    public void onCargarMundo(WorldLoadEvent ev) {
+        World w = ev.getWorld();
+        hc.seguro("ciclo-clima", () -> ciclo.despejar(w));
+        UUID id = w.getUID();
+        hc.plugin().getServer().getScheduler().runTask(hc.plugin(), () -> {
+            World cargado = Bukkit.getWorld(id);
+            if (cargado != null) hc.seguro("ciclo-clima", () -> ciclo.despejar(cargado));
+        });
+    }
+
+    /** Si hay que cancelar un cambio de clima del mundo: solo hacia lluvia/trueno, en Calamity y con su ciclo. */
+    static boolean cancelaLluvia(boolean haciaLluvia, boolean mundoCalamity, boolean cicloActivo) {
+        return haciaLluvia && mundoCalamity && cicloActivo;
+    }
+
+    // ------------------------------------------------------------ cielo abierto
+
+    /**
+     * Si esta a cielo abierto (los ojos por encima del bloque mas alto de su columna) y si esta muy bajo
+     * tierra. Dos lecturas del mapa de alturas por jugador y segundo: es lo que hacia isInRain, que ya no
+     * sirve (el mundo no llueve).
+     */
+    private static void medirCielo(Player p, Estado e, boolean hojas, int profundidad) {
+        Location l = p.getLocation();
+        World w = p.getWorld();
+        int ojo = (int) Math.floor(p.getEyeLocation().getY());
+        int suelo = w.getHighestBlockYAt(l.getBlockX(), l.getBlockZ(), HeightMap.MOTION_BLOCKING_NO_LEAVES);
+        int copa = hojas ? w.getHighestBlockYAt(l.getBlockX(), l.getBlockZ(), HeightMap.MOTION_BLOCKING) : suelo;
+        e.expuesto = aCieloAbierto(ojo, copa);
+        e.profundo = muyProfundo(ojo, suelo, profundidad);
+    }
+
+    static boolean aCieloAbierto(int ojo, int alturaColumna) {
+        return ojo > alturaColumna;
+    }
+
+    static boolean muyProfundo(int ojo, int superficie, int profundidad) {
+        return profundidad > 0 && superficie - ojo > profundidad;
     }
 
     // ------------------------------------------------------------ lluvia acida
@@ -336,8 +588,7 @@ final class Clima implements Listener {
         int s = e.acida.dentro;
         salpicadura(p);
         if (avisaAcida(s)) {
-            hc.cordura().destello(p, Component.text("Lluvia ácida", Paleta.ACIDO)
-                    .append(Component.text(": busca un techo, que quema.", Paleta.TEXTO)), 3);
+            destello(p, Tipo.ACIDA, a, 3);
         }
         if (!muerdeAcida(s, a.getInt("margen-segundos", ACIDA_MARGEN), a.getInt("cada-segundos", ACIDA_CADA))) return;
         double dano = Math.max(0.0, a.getDouble("dano", ACIDA_DANO));
@@ -357,65 +608,96 @@ final class Clima implements Listener {
         return segundo >= primero && (segundo - primero) % Math.max(1, cada) == 0;
     }
 
+    // ------------------------------------------- esporas, polinizacion, ceniza
+
     /**
-     * 1.11 · Encargo de Dosa: la lluvia azul de Minecraft no pega con la lluvia acida. En un bioma
-     * verde, mientras llueve, se le oculta la lluvia (como en el cielo rojo) y en su lugar caen las
-     * gotas verdes a su alrededor. La lluvia del servidor sigue ahi: isInRain y el dano no cambian.
+     * 1.12 · A cielo abierto bajo esporas, polen o ceniza: aviso en la barra la primera vez del episodio,
+     * cordura-por-segundo menos y el efecto (Lentitud I en el polen) renovado cada segundo.
      */
-    private void cieloAcido(Player p, Estado e, boolean dentro, ConfigurationSection a) {
-        e.bajoAcida = dentro;
-        if (dentro) {
-            gotas(p);
-            if (a.getBoolean("ocultar-lluvia", true)) {
-                ocultarLluvia(p, e);
-                return;
-            }
-        }
-        // Sin acido, la lluvia solo se devuelve si el cielo rojo no la esta ocultando.
-        if (!e.bajoCielo) soltarClima(p, e);
+    private void exposicion(Player p, Estado e, Tipo tipo, boolean bajo, ConfigurationSection s) {
+        e.expo.paso(bajo, s.getInt("olvido-segundos", EXPO_OLVIDO));
+        if (!bajo) return;
+        if (e.expo.dentro == 1) destello(p, tipo, s, 3);
+        double cordura = s.getDouble("cordura-por-segundo", corduraDeSerie(tipo));
+        if (cordura > 0) hc.cordura().sumar(p, -cordura);
+        String efecto = s.getString("efecto.tipo", efectoDeSerie(tipo));
+        int nivel = s.getInt("efecto.nivel", tipo == Tipo.POLEN ? POLEN_NIVEL : 1);
+        if (efecto == null || efecto.isBlank() || nivel <= 0) return;
+        PotionEffectType t = Compat.effect(efecto.trim().toLowerCase(Locale.ROOT));
+        if (t == null) return;
+        // Ambiental, sin particulas y con icono: vanilla no acorta uno mas largo ni rebaja uno mas fuerte.
+        p.addPotionEffect(new PotionEffect(t, EFECTO_TICKS, nivel - 1, true, false, true));
     }
 
-    /** Le quita la lluvia de la pantalla, salvo que el cielo sea de la PARCA (el suyo manda entero). */
-    private void ocultarLluvia(Player p, Estado e) {
-        Parca parca = hc.parca();
-        if (parca != null && hc.valor("parca", () -> parca.cieloSobre(p), false)) {
-            soltarClima(p, e);
+    /** "Esporas: te nublan la mente; busca un techo." en la barra (el nombre en su color). Sin aviso, nada. */
+    private void destello(Player p, Tipo tipo, ConfigurationSection s, int segundos) {
+        String aviso = s.getString("aviso", avisoDeSerie(tipo));
+        if (aviso == null || aviso.isBlank()) return;
+        hc.cordura().destello(p, Component.text(s.getString("nombre", nombreDeSerie(tipo)), color(tipo))
+                .append(Component.text(": " + aviso, Paleta.TEXTO)), segundos);
+    }
+
+    /**
+     * 1.12 · "Comienza la lluvia ácida": al empezar a verlo, como subtitulo corto (sin titular), y no mas de
+     * una vez cada aviso-inicio-espera segundos por tipo (pasear por la linea entre dos biomas no lo repite).
+     * En Bedrock el subtitulo solo no siempre sale: alli va en la barra.
+     */
+    private void anunciar(Player p, Tipo tipo, ConfigurationSection c) {
+        if (!c.getBoolean("aviso-inicio", AVISO_INICIO)) return;
+        String texto = seccion(c, tipo.id).getString("inicio", inicioDeSerie(tipo));
+        if (texto == null || texto.isBlank()) return;
+        long ahora = System.currentTimeMillis();
+        Map<Tipo, Long> m = anuncios.computeIfAbsent(p.getUniqueId(), k -> new EnumMap<>(Tipo.class));
+        if (!tocaAnuncio(m.get(tipo), ahora, c.getInt("aviso-inicio-espera", AVISO_INICIO_ESPERA) * 1000L)) return;
+        m.put(tipo, ahora);
+        Component linea = Component.text(texto, color(tipo));
+        boolean bedrock = hc.valor("clima", () -> Plataforma.esBedrock(p), false);
+        if (bedrock) {
+            hc.cordura().destello(p, linea, 3);
             return;
         }
-        if (!e.climaPuesto || p.getPlayerWeather() != WeatherType.CLEAR) {
-            p.setPlayerWeather(WeatherType.CLEAR);
-            e.climaPuesto = true;
-        }
+        p.showTitle(Title.title(Component.empty(), linea,
+                Title.Times.times(Duration.ofMillis(400), Duration.ofMillis(2600), Duration.ofMillis(900))));
+    }
+
+    /** Si toca anunciar: nunca anunciado o hace al menos 'espera' ms. */
+    static boolean tocaAnuncio(Long ultimo, long ahora, long espera) {
+        return ultimo == null || ahora - ultimo >= Math.max(0, espera);
     }
 
     // --------------------------------------------------------------- cielo rojo
 
-    private void cieloRojo(Player p, Estado e, boolean dentro, ConfigurationSection r) {
-        e.rojo.paso(dentro, r.getInt("olvido-segundos", CIELO_OLVIDO));
+    private void cieloRojo(Player p, Estado e, boolean dentro, boolean danino, ConfigurationSection r) {
+        e.rojo.paso(dentro && danino, r.getInt("olvido-segundos", CIELO_OLVIDO));
         if (!dentro) {
-            // 1.11: la lluvia no se toca aqui; la devuelve cieloAcido, que sabe si el acido la quiere oculta.
             e.bajoCielo = false;
             soltarHora(p, e);
             quitarFuego(p, e);
             return;
         }
+        Parca parca = hc.parca();
+        boolean deParca = parca != null && hc.valor("parca", () -> parca.cieloSobre(p), false);
+        Eclipse eclipse = hc.eclipse();
+        boolean deEclipse = eclipse != null && hc.valor("eclipse", eclipse::activo, false);
+        ponerHora(p, e, r, deParca, deEclipse);
+        if (!danino) {
+            // En el spawn o sin contar (creativo, vanish): el cielo se ve, pero sin fuego ni vineta.
+            e.bajoCielo = false;
+            quitarFuego(p, e);
+            return;
+        }
         e.bajoCielo = true;
-        ponerCielo(p, e, r);
-        // La ceniza solo a cielo abierto: dentro de una casa no tiene de donde caer.
-        boolean expuesto = p.isInRain();
-        if (expuesto) ceniza(p);
 
         int s = e.rojo.dentro;
         int cada = r.getInt("arde-cada-segundos", CIELO_CADA);
         int aviso = r.getInt("aviso-segundos", CIELO_AVISO);
         int dura = r.getInt("arde-segundos", CIELO_ARDE);
         if (avisaQuema(s, cada, aviso, dura)) {
-            hc.cordura().destello(p, Component.text("El cielo arde", Paleta.FUEGO)
-                    .append(Component.text(": te vas a quemar.", Paleta.TEXTO)), Math.max(1, aviso) + 1);
+            destello(p, Tipo.ROJO, r, Math.max(1, aviso) + 1);
             p.playSound(p.getLocation(), "minecraft:item.firecharge.use", SoundCategory.HOSTILE, 0.7f, 0.6f);
         }
-        // Con techo-protege, bajo techo no arde (isInRain mira la lluvia del servidor, que sigue ahi).
-        boolean arde = arde(s, cada, aviso, dura) && (!r.getBoolean("techo-protege", false) || expuesto);
+        // Con techo-protege, bajo techo no arde.
+        boolean arde = arde(s, cada, aviso, dura) && (!r.getBoolean("techo-protege", false) || e.expuesto);
         if (!arde) {
             quitarFuego(p, e);
             return;
@@ -426,29 +708,7 @@ final class Clima implements Listener {
         if (dano > 0) herir(p, dano, DamageType.ON_FIRE, CAUSA_CIELO);
     }
 
-    /**
-     * El cielo del jugador: sin lluvia y a la hora del cielo de sangre. Cada segundo se mira si
-     * sigue siendo el nuestro y se repone si alguien (EDM, un /ptime) lo ha cambiado. El de la
-     * PARCA manda entero; la hora del Eclipse, tambien.
-     */
-    private void ponerCielo(Player p, Estado e, ConfigurationSection r) {
-        Parca parca = hc.parca();
-        boolean deParca = parca != null && hc.valor("parca", () -> parca.cieloSobre(p), false);
-        Eclipse eclipse = hc.eclipse();
-        boolean deEclipse = eclipse != null && hc.valor("eclipse", eclipse::activo, false);
-
-        if (r.getBoolean("ocultar-lluvia", true) && !deParca) {
-            if (!e.climaPuesto || p.getPlayerWeather() != WeatherType.CLEAR) {
-                p.setPlayerWeather(WeatherType.CLEAR);
-                e.climaPuesto = true;
-            }
-        } else {
-            soltarClima(p, e);
-        }
-        ponerHora(p, e, r, deParca, deEclipse);
-    }
-
-    /** La hora del cielo de sangre (sin tocar la lluvia): la del cielo rojo y, 1.11, la del spawn. */
+    /** La hora del cielo de sangre. El de la PARCA manda entero; la hora del Eclipse, tambien. */
     private void ponerHora(Player p, Estado e, ConfigurationSection r, boolean deParca, boolean deEclipse) {
         long hora = hora(r);
         if (hora > 0 && !deParca && !deEclipse) {
@@ -524,16 +784,9 @@ final class Clima implements Listener {
 
     private static void soltarCielo(Player p, Estado e) {
         e.bajoCielo = false;
-        soltarClima(p, e);
+        e.tipo = Tipo.NINGUNO;
         soltarHora(p, e);
         quitarFuego(p, e);
-    }
-
-    /** Devuelve la lluvia solo si sigue la nuestra: si la PARCA le ha puesto la suya encima, es suya. */
-    private static void soltarClima(Player p, Estado e) {
-        if (!e.climaPuesto) return;
-        e.climaPuesto = false;
-        if (p.isOnline() && p.getPlayerWeather() == WeatherType.CLEAR) p.resetPlayerWeather();
     }
 
     /** Devuelve la hora solo si sigue la nuestra: la noche del Eclipse o de la PARCA no se toca. */
@@ -588,19 +841,61 @@ final class Clima implements Listener {
         return p.getWorld().getBiome(l.getBlockX(), l.getBlockY(), l.getBlockZ()).getKey().getKey();
     }
 
-    /** El clima de ese bioma ("panacea/<id>", con o sin namespace) segun la config. */
-    static Tipo tipo(String bioma, ConfigurationSection c) {
-        if (bioma == null || bioma.isBlank()) return Tipo.NINGUNO;
+    /** El clima de ese bioma ("panacea/<id>", con o sin namespace) segun la tabla y los interruptores. */
+    Tipo tipo(String bioma, ConfigurationSection c) {
+        if (c != tablaDe) {
+            tabla = tabla(c);
+            tablaDe = c;
+        }
+        return tipo(bioma, tabla, c);
+    }
+
+    /** Lo mismo, con la tabla ya leida (estatico: lo usa el autotest). */
+    static Tipo tipo(String bioma, Map<String, Tipo> tabla, ConfigurationSection c) {
+        Tipo t = buscar(bioma, tabla);
+        if (t == Tipo.NINGUNO) return t;
+        return encendido(seccion(c, t.id)) ? t : Tipo.NINGUNO;
+    }
+
+    /**
+     * hardcore.clima.por-bioma, ya normalizada (Clima.clave; "panacea/*" y "*" tal cual). Si el servidor no
+     * la tiene, la del jar; sin ninguna (autotest), la de serie del codigo. Un tipo que no existe se ignora.
+     */
+    static Map<String, Tipo> tabla(ConfigurationSection c) {
+        ConfigurationSection s = c == null ? null : c.getConfigurationSection("por-bioma");
+        ConfigurationSection origen = s;
+        if (s != null && s.getKeys(false).isEmpty()) origen = s.getDefaultSection();
+        Map<String, Tipo> out = new LinkedHashMap<>();
+        if (origen != null) {
+            for (String k : origen.getKeys(false)) {
+                Tipo t = Tipo.deTexto(origen.getString(k));
+                if (t != null) out.put(clave(k), t);
+            }
+        }
+        if (out.isEmpty()) {
+            for (Map.Entry<String, String> en : POR_BIOMA.entrySet()) out.put(clave(en.getKey()), Tipo.deTexto(en.getValue()));
+        }
+        return out;
+    }
+
+    /** El tipo de un bioma en la tabla: el exacto, si no el comodin "prefijo*" mas largo, si no "*", si no nada. */
+    static Tipo buscar(String bioma, Map<String, Tipo> tabla) {
+        if (bioma == null || bioma.isBlank() || tabla == null) return Tipo.NINGUNO;
         String b = clave(bioma);
-        ConfigurationSection a = seccion(c, "lluvia-acida");
-        if (a.getBoolean("activa", true) && contiene(a.isList("biomas") ? a.getStringList("biomas") : BIOMAS_VERDES, b)) {
-            return Tipo.ACIDA;
+        Tipo exacto = tabla.get(b);
+        if (exacto != null) return exacto;
+        Tipo mejor = null;
+        int largo = -1;
+        for (Map.Entry<String, Tipo> en : tabla.entrySet()) {
+            String k = en.getKey();
+            if (!k.endsWith("*")) continue;
+            String prefijo = k.substring(0, k.length() - 1);
+            if (b.startsWith(prefijo) && prefijo.length() > largo) {
+                mejor = en.getValue();
+                largo = prefijo.length();
+            }
         }
-        ConfigurationSection r = seccion(c, "cielo-rojo");
-        if (r.getBoolean("activo", true) && contiene(r.isList("biomas") ? r.getStringList("biomas") : BIOMAS_ROJOS, b)) {
-            return Tipo.ROJO;
-        }
-        return Tipo.NINGUNO;
+        return mejor == null ? Tipo.NINGUNO : mejor;
     }
 
     /** "Bracken:Panacea/Crimson_Organism " -> "panacea/crimson_organism": sin namespace ni mayusculas. */
@@ -610,86 +905,316 @@ final class Clima implements Listener {
         return i >= 0 ? s.substring(i + 1) : s;
     }
 
-    private static boolean contiene(List<String> lista, String clave) {
-        for (String s : lista) if (s != null && clave(s).equals(clave)) return true;
-        return false;
-    }
-
     // --------------------------------------------------------------- efectos
 
     /**
-     * La lluvia acida que ve: gotas verdes cayendo alrededor, en lugar de la lluvia azul que se le
-     * oculta (1.11: mas y mas repartidas, porque ahora son toda la lluvia que hay). Solo las ve el.
+     * 1.12 · El pulso (cada efectos.cada-ticks): las capas de particulas del clima que ve cada jugador, solo
+     * para el. Un paquete por capa y jugador; el cliente reparte las 'cantidad' particulas por el radio.
      */
-    private void gotas(Player p) {
-        particula(p, Compat.FALLING_DUST, p.getLocation().add(0, 6, 0), 40, 7, 2.5, 7, polvoAcido);
+    private void pulso() {
+        if (estados.isEmpty()) return;
+        ConfigurationSection c = cfg();
+        if (!c.getBoolean("activo", true)) return;
+        double densidad = Math.max(0.0, c.getDouble("efectos.densidad", DENSIDAD));
+        double tormenta = Math.max(0.0, c.getDouble("tormenta.densidad", TORMENTA_DENSIDAD));
+        for (Map.Entry<UUID, Estado> en : estados.entrySet()) {
+            Estado e = en.getValue();
+            if (e.tipo == Tipo.NINGUNO || e.profundo) continue;
+            Player p = Bukkit.getPlayer(en.getKey());
+            if (p == null || p.isDead()) continue;
+            Receta r = receta(e.tipo, c);
+            double f = densidad * (e.tormenta ? tormenta : 1.0);
+            Location base = p.getLocation();
+            for (int i = 0; i < r.capas().size(); i++) {
+                Capa k = r.capas().get(i);
+                if (!k.techo() && !e.expuesto) continue;
+                int n = cantidad(k.cantidad(), f);
+                if (n <= 0) continue;
+                particula(p, r.particulas().get(i), base.clone().add(0, k.altura(), 0), n, k.radio(), k.espesor(),
+                        k.radio(), k.velocidad(), r.datos().get(i));
+            }
+        }
+    }
+
+    /** Las particulas de una capa con la densidad aplicada (redondeo normal; nunca negativo). */
+    static int cantidad(int base, double factor) {
+        return (int) Math.max(0, Math.round(base * factor));
+    }
+
+    /** Los sonidos del tipo (y los de la tormenta), a su ritmo; mas bajos a cubierto, ninguno muy bajo tierra. */
+    private void sonidos(Player p, Estado e, ConfigurationSection c) {
+        if (e.tipo == Tipo.NINGUNO || e.profundo) return;
+        float factor = e.expuesto ? 1f : (float) Math.max(0, c.getDouble("efectos.volumen-a-cubierto", VOLUMEN_CUBIERTO));
+        if (factor <= 0) return;
+        for (Sonido s : receta(e.tipo, c).sonidos()) sonar(p, e, s, factor);
+        if (e.tormenta) for (Sonido s : sonidosTormenta(c)) sonar(p, e, s, factor);
+    }
+
+    private List<Sonido> tormentaSonidos;
+    private ConfigurationSection tormentaDe;
+
+    private List<Sonido> sonidosTormenta(ConfigurationSection c) {
+        if (c != tormentaDe || tormentaSonidos == null) {
+            tormentaSonidos = sonidos(seccion(c, "tormenta").getMapList("sonidos"));
+            tormentaDe = c;
+        }
+        return tormentaSonidos;
+    }
+
+    private static void sonar(Player p, Estado e, Sonido s, float factor) {
+        if (s.sonido().isBlank() || e.segundos % s.cada() != 0) return;
+        ThreadLocalRandom azar = ThreadLocalRandom.current();
+        double ang = azar.nextDouble(Math.PI * 2);
+        double d = s.distancia() <= 0 ? 0 : azar.nextDouble(s.distancia() * 0.4, s.distancia());
+        Location l = p.getLocation().add(Math.cos(ang) * d, 1.5, Math.sin(ang) * d);
+        float tono = (float) Math.max(0.5, Math.min(2.0, s.tono() * (0.9 + azar.nextDouble() * 0.2)));
+        try {
+            p.playSound(l, s.sonido(), SoundCategory.WEATHER, s.volumen() * factor, tono);
+        } catch (Throwable ignorado) {
+            // Un sonido con mal nombre no puede cortar el segundo.
+        }
+    }
+
+    /** Lo leido de la config para un tipo (capas validas con sus datos, y sonidos). */
+    private Receta receta(Tipo tipo, ConfigurationSection c) {
+        if (c != recetasDe) {
+            recetas.clear();
+            recetasDe = c;
+        }
+        return recetas.computeIfAbsent(tipo, t -> {
+            ConfigurationSection s = seccion(c, t.id);
+            List<Capa> capas = new ArrayList<>();
+            List<Particle> parts = new ArrayList<>();
+            List<Object> datos = new ArrayList<>();
+            for (Capa k : capas(s.getMapList("particulas"))) {
+                Particle pt = Compat.particleByName(k.particula());
+                if (pt == null || PARTICULAS_DE_LLUVIA.contains(k.particula())) continue;
+                Object d = datos(pt, k);
+                if (d == SIN_DATOS) continue;
+                capas.add(k);
+                parts.add(pt);
+                datos.add(d);
+            }
+            return new Receta(capas, parts, datos, sonidos(s.getMapList("sonidos")));
+        });
+    }
+
+    static List<Capa> capas(List<Map<?, ?>> lista) {
+        List<Capa> out = new ArrayList<>();
+        if (lista == null) return out;
+        for (Map<?, ?> m : lista) if (m != null) out.add(Capa.de(m));
+        return out;
+    }
+
+    static List<Sonido> sonidos(List<Map<?, ?>> lista) {
+        List<Sonido> out = new ArrayList<>();
+        if (lista == null) return out;
+        for (Map<?, ?> m : lista) if (m != null) out.add(Sonido.de(m));
+        return out;
+    }
+
+    /** Marca de "esta capa no se puede pintar" (datos que no sabemos hacer). */
+    private static final Object SIN_DATOS = new Object();
+
+    /** Los datos que pide esa particula: color, bloque u objeto. Null si no pide nada. */
+    private static Object datos(Particle t, Capa k) {
+        Class<?> cl = t.getDataType();
+        if (cl == Void.class) return null;
+        if (cl == Particle.DustOptions.class) return new Particle.DustOptions(Color.fromRGB(k.color()), Math.max(0.1f, k.tam()));
+        if (cl == Particle.DustTransition.class) {
+            return new Particle.DustTransition(Color.fromRGB(k.color()), Color.fromRGB(k.color2()), Math.max(0.1f, k.tam()));
+        }
+        if (cl == Color.class) return Color.fromRGB(k.color());
+        if (cl == BlockData.class) {
+            Material m = Material.matchMaterial(k.bloque());
+            return m != null && m.isBlock() ? m.createBlockData() : SIN_DATOS;
+        }
+        if (cl == ItemStack.class) {
+            Material m = Material.matchMaterial(k.bloque());
+            return m != null && m.isItem() ? new ItemStack(m) : SIN_DATOS;
+        }
+        return SIN_DATOS;
     }
 
     /** El acido sobre el: lo que se ve cuando le esta cayendo encima. */
     private void salpicadura(Player p) {
-        particula(p, Compat.DUST, p.getLocation().add(0, 1.2, 0), 5, 0.5, 0.7, 0.5,
+        particula(p, Compat.DUST, p.getLocation().add(0, 1.2, 0), 5, 0.5, 0.7, 0.5, 0,
                 Compat.dust(Paleta.ACIDO.value(), 0.9f));
     }
 
     /** Un chisporroteo suave cuando la lluvia le quema. */
     private void chisporroteo(Player p) {
-        particula(p, Compat.SMOKE, p.getLocation().add(0, 1.0, 0), 4, 0.3, 0.5, 0.3, null);
+        particula(p, Compat.SMOKE, p.getLocation().add(0, 1.0, 0), 4, 0.3, 0.5, 0.3, 0, null);
         p.playSound(p.getLocation(), "minecraft:block.fire.extinguish", SoundCategory.PLAYERS, 0.25f, 1.8f);
     }
 
-    /** Ceniza y polvo rojo cayendo mientras esta bajo el cielo rojo; solo lo ve el. */
-    private void ceniza(Player p) {
-        particula(p, Compat.FALLING_DUST, p.getLocation().add(0, 5, 0), 16, 5, 1.5, 5, polvoRojo);
-        particula(p, Compat.DUST, p.getEyeLocation(), 6, 4, 2, 4, Compat.dust(Paleta.CIELO_ROJO, 1.2f));
-    }
-
     private void llamas(Player p) {
-        particula(p, Compat.FLAME, p.getLocation().add(0, 1.0, 0), 5, 0.3, 0.6, 0.3, null);
+        particula(p, Compat.FLAME, p.getLocation().add(0, 1.0, 0), 5, 0.3, 0.6, 0.3, 0, null);
     }
 
     /** Una particula solo para ese jugador. Si cambia de nombre o de datos, no sale y ya. */
     private static void particula(Player p, Particle tipo, Location l, int n, double ox, double oy, double oz,
-                                  Object datos) {
+                                  double velocidad, Object datos) {
         if (tipo == null || l == null) return;
         try {
             Class<?> clase = tipo.getDataType();
-            if (clase == Void.class) p.spawnParticle(tipo, l, n, ox, oy, oz, 0);
-            else if (datos != null && clase.isInstance(datos)) p.spawnParticle(tipo, l, n, ox, oy, oz, 0, datos);
+            if (clase == Void.class) p.spawnParticle(tipo, l, n, ox, oy, oz, velocidad);
+            else if (datos != null && clase.isInstance(datos)) p.spawnParticle(tipo, l, n, ox, oy, oz, velocidad, datos);
         } catch (Throwable ignorado) {
             // Una particula que falle no puede cortar el golpe ni el cielo.
+        }
+    }
+
+    // ------------------------------------------------------- lectura de mapas
+
+    private static String texto(Map<?, ?> m, String k, String def) {
+        Object v = m.get(k);
+        return v == null ? def : String.valueOf(v);
+    }
+
+    private static double numero(Map<?, ?> m, String k, double def) {
+        Object v = m.get(k);
+        if (v instanceof Number n) return n.doubleValue();
+        if (v == null) return def;
+        try {
+            return Double.parseDouble(String.valueOf(v).trim().replace(',', '.'));
+        } catch (NumberFormatException e) {
+            return def;
+        }
+    }
+
+    /** "#8FD14F", "8FD14F", 0x8FD14F o 9425231 -> el entero; lo que no se entienda, 'def'. */
+    static int colorDe(Object v, int def) {
+        if (v instanceof Number n) return n.intValue() & 0xFFFFFF;
+        if (v == null) return def;
+        String s = String.valueOf(v).trim();
+        if (s.startsWith("#")) s = s.substring(1);
+        else if (s.startsWith("0x") || s.startsWith("0X")) s = s.substring(2);
+        try {
+            return Integer.parseInt(s, 16) & 0xFFFFFF;
+        } catch (NumberFormatException e) {
+            return def;
         }
     }
 
     // ------------------------------------------------------------------ autotest
 
     /**
-     * La logica pura (biomas, ritmos, horas, vineta y parte de defuncion) y que los valores de serie
-     * del codigo sean los del config.yml del jar. 'jar' es la config por defecto del jar (la raiz);
-     * con null se salta esa comparacion. No toca a ningun jugador ni la config del servidor.
+     * La logica pura (tabla de biomas, ritmos, horas, cielo abierto, vineta y parte de defuncion), que el
+     * mundo no llueva nunca y que los valores de serie del codigo sean los del config.yml del jar (con sus
+     * particulas: que existan, que ninguna sea lluvia de Minecraft y que quepan en el presupuesto). 'jar' es
+     * la config por defecto del jar (la raiz); con null se salta esa parte. No toca a ningun jugador.
      */
     static List<String> autotest(ConfigurationSection jar) {
         Autotest.Hoja h = new Autotest.Hoja();
         YamlConfiguration vacia = new YamlConfiguration();
+        Map<String, Tipo> serie = tabla(vacia);
 
-        // Biomas: los verdes y el rojo de serie, con o sin namespace; los demas, nada.
-        for (String b : BIOMAS_VERDES) h.igual(b + " es lluvia acida", Tipo.ACIDA, tipo(b, vacia));
-        h.igual("crimson_organism es cielo rojo", Tipo.ROJO, tipo("panacea/crimson_organism", vacia));
-        h.igual("con namespace tambien", Tipo.ROJO, tipo("bracken:panacea/crimson_organism", vacia));
-        h.igual("condemned_taiga no tiene clima", Tipo.NINGUNO, tipo("panacea/condemned_taiga", vacia));
-        h.igual("bamboo_valley no es verde de serie", Tipo.NINGUNO, tipo("panacea/bamboo_valley", vacia));
-        h.igual("sin bioma, nada", Tipo.NINGUNO, tipo(null, vacia));
+        // Tabla de serie: lo aprobado por Dosa.
+        for (String b : List.of("sweltering_swamp", "wildflower_bog", "creeper_dominion", "horsetail_tropics",
+                "hungering_jungle")) {
+            h.igual(b + " es lluvia acida", Tipo.ACIDA, tipo("panacea/" + b, serie, vacia));
+        }
+        h.igual("polypore_plains: esporas", Tipo.ESPORAS, tipo("panacea/polypore_plains", serie, vacia));
+        h.igual("ravenous_greenwood: esporas", Tipo.ESPORAS, tipo("panacea/ravenous_greenwood", serie, vacia));
+        h.igual("honeybee_biome: polinizacion", Tipo.POLEN, tipo("panacea/honeybee_biome", serie, vacia));
+        h.igual("condemned_taiga: ceniza", Tipo.CENIZA, tipo("panacea/condemned_taiga", serie, vacia));
+        h.igual("crimson_organism: cielo rojo", Tipo.ROJO, tipo("panacea/crimson_organism", serie, vacia));
+        h.igual("con namespace tambien", Tipo.ROJO, tipo("bracken:panacea/crimson_organism", serie, vacia));
+        h.igual("bamboo_valley: nada", Tipo.NINGUNO, tipo("panacea/bamboo_valley", serie, vacia));
+        h.igual("un clima de /lbiomes: nada", Tipo.NINGUNO, tipo("lethal:crimson", serie, vacia));
+        h.igual("sin bioma, nada", Tipo.NINGUNO, tipo(null, serie, vacia));
+        h.igual("la tabla de serie tiene sus 11 entradas", 11, serie.size());
+
+        // Tipos por texto.
+        h.igual("texto: acida", Tipo.ACIDA, Tipo.deTexto(" Acida "));
+        h.igual("texto: polen", Tipo.POLEN, Tipo.deTexto("polen"));
+        h.igual("texto: polinización", Tipo.POLEN, Tipo.deTexto("Polinización"));
+        h.igual("texto: cielo_rojo", Tipo.ROJO, Tipo.deTexto("cielo_rojo"));
+        h.igual("texto: raro", null, Tipo.deTexto("granizo"));
+        for (Tipo t : Tipo.values()) h.igual("texto: el id de " + t + " vuelve a " + t, t, Tipo.deTexto(t.id));
+
+        // Interruptores por tipo.
         YamlConfiguration apagada = new YamlConfiguration();
         apagada.set("lluvia-acida.activa", false);
         apagada.set("cielo-rojo.activo", false);
-        h.igual("lluvia acida apagada", Tipo.NINGUNO, tipo("panacea/creeper_dominion", apagada));
-        h.igual("cielo rojo apagado", Tipo.NINGUNO, tipo("panacea/crimson_organism", apagada));
+        apagada.set("polinizacion.activa", false);
+        h.igual("lluvia acida apagada", Tipo.NINGUNO, tipo("panacea/creeper_dominion", serie, apagada));
+        h.igual("cielo rojo apagado", Tipo.NINGUNO, tipo("panacea/crimson_organism", serie, apagada));
+        h.igual("polinizacion apagada", Tipo.NINGUNO, tipo("panacea/honeybee_biome", serie, apagada));
+        h.igual("las esporas siguen", Tipo.ESPORAS, tipo("panacea/polypore_plains", serie, apagada));
+
+        // La tabla de la config manda, con comodines: el exacto gana al prefijo y el prefijo mas largo a "*".
         YamlConfiguration otra = new YamlConfiguration();
-        otra.set("cielo-rojo.biomas", List.of(" Bracken:Panacea/Bamboo_Valley "));
-        otra.set("lluvia-acida.biomas", List.of());
-        h.igual("la lista de la config manda (namespace y mayusculas dan igual)", Tipo.ROJO,
-                tipo("panacea/bamboo_valley", otra));
-        h.igual("con otra lista, crimson ya no", Tipo.NINGUNO, tipo("panacea/crimson_organism", otra));
-        h.igual("una lista vacia apaga esos biomas", Tipo.NINGUNO, tipo("panacea/creeper_dominion", otra));
+        otra.set("por-bioma.Bracken:Panacea/Bamboo_Valley", "cielo-rojo");
+        otra.set("por-bioma.panacea/*", "esporas");
+        otra.set("por-bioma.panacea/honey*", "polen");
+        otra.set("por-bioma.*", "ceniza");
+        otra.set("por-bioma.panacea/quicksand_springs", "granizo");
+        Map<String, Tipo> t2 = tabla(otra);
+        h.igual("exacto (namespace y mayusculas dan igual)", Tipo.ROJO, tipo("panacea/bamboo_valley", t2, otra));
+        h.igual("prefijo mas largo", Tipo.POLEN, tipo("panacea/honeybee_biome", t2, otra));
+        h.igual("prefijo de Panacea", Tipo.ESPORAS, tipo("panacea/crimson_organism", t2, otra));
+        h.igual("un tipo que no existe se ignora (cae en el prefijo)", Tipo.ESPORAS,
+                tipo("panacea/quicksand_springs", t2, otra));
+        h.igual("el resto, el *", Tipo.CENIZA, tipo("minecraft:plains", t2, otra));
+        YamlConfiguration sinComodin = new YamlConfiguration();
+        sinComodin.set("por-bioma.panacea/honeybee_biome", "lluvia-acida");
+        Map<String, Tipo> t3 = tabla(sinComodin);
+        h.igual("tabla propia: el colmenar pasa a acida", Tipo.ACIDA, tipo("panacea/honeybee_biome", t3, sinComodin));
+        h.igual("tabla propia sin *: lo demas, nada", Tipo.NINGUNO, tipo("panacea/crimson_organism", t3, sinComodin));
+
+        // El mundo no llueve nunca: los cambios hacia lluvia se cancelan en Calamity con el ciclo encendido.
+        h.ok("lluvia en Calamity: se cancela", cancelaLluvia(true, true, true));
+        h.ok("despejar en Calamity: se deja", !cancelaLluvia(false, true, true));
+        h.ok("lluvia fuera de Calamity: se deja", !cancelaLluvia(true, false, true));
+        h.ok("con el ciclo apagado manda Minecraft", !cancelaLluvia(true, true, false));
+        for (String fase : List.of(CicloClima.DESPEJADO, CicloClima.LLUVIA, CicloClima.TORMENTA)) {
+            h.ok("fase " + fase + ": el mundo sigue sin lluvia ni trueno", !CicloClima.lluviaDelMundo(fase)
+                    && !CicloClima.truenoDelMundo(fase));
+        }
+        h.ok("lluvia y tormenta son clima de Calamity", CicloClima.llueveEnFase(CicloClima.LLUVIA)
+                && CicloClima.llueveEnFase(CicloClima.TORMENTA) && !CicloClima.llueveEnFase(CicloClima.DESPEJADO));
+
+        // Cielo abierto y profundidad.
+        h.ok("ojos por encima de la columna: a cielo abierto", aCieloAbierto(71, 70));
+        h.ok("tejado justo encima: a cubierto", !aCieloAbierto(70, 71));
+        h.ok("ojos a la altura del tejado: a cubierto", !aCieloAbierto(70, 70));
+        h.ok("a 5 bajo la superficie: no es profundo", !muyProfundo(60, 65, PROFUNDIDAD));
+        h.ok("a 20 bajo la superficie: profundo", muyProfundo(40, 60, PROFUNDIDAD));
+        h.ok("profundidad 0: nunca profundo", !muyProfundo(-40, 100, 0));
+        h.ok("hojas: tapan la lluvia y la ceniza", hojasDeSerie(Tipo.ACIDA) && hojasDeSerie(Tipo.CENIZA)
+                && hojasDeSerie(Tipo.ROJO));
+        h.ok("hojas: no tapan esporas ni polen", !hojasDeSerie(Tipo.ESPORAS) && !hojasDeSerie(Tipo.POLEN));
+
+        // Anuncio de inicio: una vez y no otra hasta la espera.
+        h.ok("nunca anunciado: toca", tocaAnuncio(null, 1_000, 90_000));
+        h.ok("hace 10 s: no", !tocaAnuncio(1_000L, 11_000, 90_000));
+        h.ok("hace 90 s: si", tocaAnuncio(1_000L, 91_000, 90_000));
+        for (Tipo t : Tipo.values()) {
+            if (t == Tipo.NINGUNO) continue;
+            h.ok("inicio de " + t.id + " sin emojis ni mayusculas sostenidas", textoLimpio(inicioDeSerie(t)));
+            h.ok("color de " + t.id + " distinto del texto", !Paleta.TEXTO.equals(color(t)));
+        }
+
+        // Efectos de serie: esporas quitan cordura; el polen pone Lentitud I; la ceniza, de serie solo se ve.
+        h.ok("esporas: cordura", corduraDeSerie(Tipo.ESPORAS) > 0 && efectoDeSerie(Tipo.ESPORAS).isEmpty());
+        h.ok("polen: Lentitud", "slowness".equals(efectoDeSerie(Tipo.POLEN)) && POLEN_NIVEL == 1
+                && corduraDeSerie(Tipo.POLEN) == 0);
+        h.ok("ceniza: nada de serie", corduraDeSerie(Tipo.CENIZA) == 0 && efectoDeSerie(Tipo.CENIZA).isEmpty());
+        h.igual("densidad 1: igual", 14, cantidad(14, 1.0));
+        h.igual("tormenta 1.5", 21, cantidad(14, 1.5));
+        h.igual("densidad 0: ninguna", 0, cantidad(14, 0));
+        h.igual("densidad negativa: ninguna", 0, cantidad(14, -2));
+        h.igual("color #8FD14F", 0x8FD14F, colorDe("#8FD14F", 0));
+        h.igual("color sin #", 0xDA5955, colorDe("da5955", 0));
+        h.igual("color raro: el de defecto", 7, colorDe("verde", 7));
+        Capa capa = Capa.de(Map.of("particula", "falling_dust", "bloque", "LIME_CONCRETE_POWDER", "cantidad", 14,
+                "radio", 8, "altura", 7, "techo", true));
+        h.igual("capa: nombre en mayusculas", "FALLING_DUST", capa.particula());
+        h.ok("capa: techo y cantidad", capa.techo() && capa.cantidad() == 14 && capa.radio() == 8);
+        Sonido son = Sonido.de(Map.of("sonido", "minecraft:entity.bee.loop", "cada", 0));
+        h.igual("sonido: cada 0 se trata como 1", 1, son.cada());
 
         // Lluvia acida de serie: aviso el primer segundo, primer golpe 2 s despues y luego cada 2 s.
         h.ok("segundo 1: aviso", avisaAcida(1));
@@ -713,6 +1238,8 @@ final class Clima implements Listener {
         h.igual("15 s a cubierto: de cero", 0, ep.dentro);
         ep.paso(true, ACIDA_OLVIDO);
         h.ok("al volver, aviso otra vez", avisaAcida(ep.dentro));
+        ep.olvidar();
+        h.igual("olvidar: de cero", 0, ep.dentro);
         Episodio corto = new Episodio();
         corto.paso(true, 0);
         corto.paso(false, 0);
@@ -749,15 +1276,12 @@ final class Clima implements Listener {
         h.ok("relativa (reseteada): no", !esHora(true, CIELO_HORA, CIELO_HORA));
         h.ok("la noche del Eclipse: no", !esHora(false, 18_000L, CIELO_HORA));
 
-        // El offset: el servidor manda base + offset y el timeline lo lee modulo 72000. Con el reloj
-        // en el bloque k de 24000 (k = 0, 1, 2 y alguno lejano), lo que ve el jugador es el cielo de sangre.
         long[] relojes = {0L, 5_000L, 23_999L, 24_000L, 30_123L, 47_999L, 48_000L, 60_000L, 71_999L, 72_000L,
                 96_500L, 1_000_000L, 123_456_789L};
         for (long reloj : relojes) {
             long off = offsetHora(reloj, CIELO_HORA, CIELO_PERIODO);
             h.igual("reloj " + reloj + ": ve el cielo de sangre", CIELO_HORA,
                     Math.floorMod(vistaServidor(reloj, off), CIELO_PERIODO));
-            // Con la hora ya fija, getPlayerTime - offset es la base: da el mismo offset.
             h.igual("reloj " + reloj + ": estable con la hora fija", off,
                     offsetHora(vistaServidor(reloj, off) - off, CIELO_HORA, CIELO_PERIODO));
             h.ok("reloj " + reloj + ": nunca choca con la noche del Eclipse", off != 18_000L);
@@ -768,9 +1292,6 @@ final class Clima implements Listener {
         h.igual("k = 2: offset 16250", 16_250L, offsetHora(50_000L, CIELO_HORA, CIELO_PERIODO));
         h.ok("al pasar de bloque cambia el offset (y se repone)",
                 offsetHora(23_999L, CIELO_HORA, CIELO_PERIODO) != offsetHora(24_000L, CIELO_HORA, CIELO_PERIODO));
-        h.ok("el offset viejo ya no es el nuestro tras pasar de bloque",
-                !esHora(false, offsetHora(23_999L, CIELO_HORA, CIELO_PERIODO),
-                        offsetHora(24_000L, CIELO_HORA, CIELO_PERIODO)));
         h.igual("periodo 0: vale el de serie", offsetHora(30_000L, CIELO_HORA, CIELO_PERIODO),
                 offsetHora(30_000L, CIELO_HORA, 0));
         h.igual("dia de 24000: la hora dentro del dia de siempre", 6_000L, offsetHora(50_000L, 6_000L, 24_000L));
@@ -804,27 +1325,109 @@ final class Clima implements Listener {
         } else if (c == null) {
             h.ok("el config.yml del jar trae hardcore.clima", false);
         } else {
-            h.igual("jar: activo", true, c.getBoolean("activo", false));
-            h.igual("jar: lluvia-acida.activa", true, c.getBoolean("lluvia-acida.activa", false));
-            h.igual("jar: lluvia-acida.biomas", BIOMAS_VERDES, c.getStringList("lluvia-acida.biomas"));
-            h.cerca("jar: lluvia-acida.dano", ACIDA_DANO, c.getDouble("lluvia-acida.dano", -1), 1e-9);
-            h.igual("jar: lluvia-acida.cada-segundos", ACIDA_CADA, c.getInt("lluvia-acida.cada-segundos", -1));
-            h.igual("jar: lluvia-acida.margen-segundos", ACIDA_MARGEN, c.getInt("lluvia-acida.margen-segundos", -1));
-            h.igual("jar: lluvia-acida.olvido-segundos", ACIDA_OLVIDO, c.getInt("lluvia-acida.olvido-segundos", -1));
-            h.igual("jar: cielo-rojo.activo", true, c.getBoolean("cielo-rojo.activo", false));
-            h.igual("jar: cielo-rojo.biomas", BIOMAS_ROJOS, c.getStringList("cielo-rojo.biomas"));
-            h.igual("jar: cielo-rojo.hora", CIELO_HORA, c.getLong("cielo-rojo.hora", -1));
-            h.igual("jar: cielo-rojo.periodo-dia", CIELO_PERIODO, c.getLong("cielo-rojo.periodo-dia", -1));
-            h.igual("jar: cielo-rojo.ocultar-lluvia", true, c.getBoolean("cielo-rojo.ocultar-lluvia", false));
-            h.cerca("jar: cielo-rojo.vinheta", CIELO_VINETA, c.getDouble("cielo-rojo.vinheta", -1), 1e-9);
-            h.igual("jar: cielo-rojo.arde-cada-segundos", CIELO_CADA, c.getInt("cielo-rojo.arde-cada-segundos", -1));
-            h.igual("jar: cielo-rojo.arde-segundos", CIELO_ARDE, c.getInt("cielo-rojo.arde-segundos", -1));
-            h.igual("jar: cielo-rojo.aviso-segundos", CIELO_AVISO, c.getInt("cielo-rojo.aviso-segundos", -1));
-            h.cerca("jar: cielo-rojo.dano-por-segundo", CIELO_DANO, c.getDouble("cielo-rojo.dano-por-segundo", -1), 1e-9);
-            h.igual("jar: cielo-rojo.techo-protege", false, c.getBoolean("cielo-rojo.techo-protege", true));
-            h.igual("jar: cielo-rojo.olvido-segundos", CIELO_OLVIDO, c.getInt("cielo-rojo.olvido-segundos", -1));
+            autotestJar(h, c);
         }
         return h.lineas();
+    }
+
+    /** hardcore.clima del jar contra el codigo, y sus particulas y sonidos. */
+    private static void autotestJar(Autotest.Hoja h, ConfigurationSection c) {
+        h.igual("jar: activo", true, c.getBoolean("activo", false));
+        Map<String, String> jarTabla = new LinkedHashMap<>();
+        ConfigurationSection pb = c.getConfigurationSection("por-bioma");
+        if (pb != null) for (String k : pb.getKeys(false)) jarTabla.put(k, pb.getString(k));
+        h.igual("jar: por-bioma", POR_BIOMA, jarTabla);
+        h.igual("jar: aviso-inicio", AVISO_INICIO, c.getBoolean("aviso-inicio", !AVISO_INICIO));
+        h.igual("jar: aviso-inicio-espera", AVISO_INICIO_ESPERA, c.getInt("aviso-inicio-espera", -1));
+        h.igual("jar: efectos.cada-ticks", EFECTOS_CADA_TICKS, c.getInt("efectos.cada-ticks", -1));
+        h.cerca("jar: efectos.densidad", DENSIDAD, c.getDouble("efectos.densidad", -1), 1e-9);
+        h.igual("jar: efectos.profundidad", PROFUNDIDAD, c.getInt("efectos.profundidad", -1));
+        h.cerca("jar: efectos.volumen-a-cubierto", VOLUMEN_CUBIERTO, c.getDouble("efectos.volumen-a-cubierto", -1), 1e-9);
+        h.cerca("jar: tormenta.densidad", TORMENTA_DENSIDAD, c.getDouble("tormenta.densidad", -1), 1e-9);
+        h.ok("jar: sin las listas viejas de biomas", !c.isSet("lluvia-acida.biomas") && !c.isSet("cielo-rojo.biomas"));
+        h.ok("jar: sin ocultar-lluvia (ya no hay lluvia que ocultar)",
+                !c.isSet("lluvia-acida.ocultar-lluvia") && !c.isSet("cielo-rojo.ocultar-lluvia"));
+
+        h.igual("jar: lluvia-acida.activa", true, c.getBoolean("lluvia-acida.activa", false));
+        h.cerca("jar: lluvia-acida.dano", ACIDA_DANO, c.getDouble("lluvia-acida.dano", -1), 1e-9);
+        h.igual("jar: lluvia-acida.cada-segundos", ACIDA_CADA, c.getInt("lluvia-acida.cada-segundos", -1));
+        h.igual("jar: lluvia-acida.margen-segundos", ACIDA_MARGEN, c.getInt("lluvia-acida.margen-segundos", -1));
+        h.igual("jar: lluvia-acida.olvido-segundos", ACIDA_OLVIDO, c.getInt("lluvia-acida.olvido-segundos", -1));
+        h.igual("jar: cielo-rojo.activo", true, c.getBoolean("cielo-rojo.activo", false));
+        h.igual("jar: cielo-rojo.hora", CIELO_HORA, c.getLong("cielo-rojo.hora", -1));
+        h.igual("jar: cielo-rojo.periodo-dia", CIELO_PERIODO, c.getLong("cielo-rojo.periodo-dia", -1));
+        h.cerca("jar: cielo-rojo.vinheta", CIELO_VINETA, c.getDouble("cielo-rojo.vinheta", -1), 1e-9);
+        h.igual("jar: cielo-rojo.arde-cada-segundos", CIELO_CADA, c.getInt("cielo-rojo.arde-cada-segundos", -1));
+        h.igual("jar: cielo-rojo.arde-segundos", CIELO_ARDE, c.getInt("cielo-rojo.arde-segundos", -1));
+        h.igual("jar: cielo-rojo.aviso-segundos", CIELO_AVISO, c.getInt("cielo-rojo.aviso-segundos", -1));
+        h.cerca("jar: cielo-rojo.dano-por-segundo", CIELO_DANO, c.getDouble("cielo-rojo.dano-por-segundo", -1), 1e-9);
+        h.igual("jar: cielo-rojo.techo-protege", false, c.getBoolean("cielo-rojo.techo-protege", true));
+        h.igual("jar: cielo-rojo.olvido-segundos", CIELO_OLVIDO, c.getInt("cielo-rojo.olvido-segundos", -1));
+        h.cerca("jar: esporas.cordura-por-segundo", ESPORAS_CORDURA, c.getDouble("esporas.cordura-por-segundo", -1), 1e-9);
+        h.igual("jar: polinizacion.efecto.tipo", POLEN_EFECTO, c.getString("polinizacion.efecto.tipo"));
+        h.igual("jar: polinizacion.efecto.nivel", POLEN_NIVEL, c.getInt("polinizacion.efecto.nivel", -1));
+        h.igual("jar: ceniza.efecto.tipo", "", c.getString("ceniza.efecto.tipo", "?"));
+
+        int cada = Math.max(1, c.getInt("efectos.cada-ticks", EFECTOS_CADA_TICKS));
+        double pulsos = 20.0 / cada;
+        for (Tipo t : Tipo.values()) {
+            if (t == Tipo.NINGUNO) continue;
+            ConfigurationSection s = seccion(c, t.id);
+            h.igual("jar: " + t.id + ".nombre", nombreDeSerie(t), s.getString("nombre"));
+            h.igual("jar: " + t.id + ".inicio", inicioDeSerie(t), s.getString("inicio"));
+            h.igual("jar: " + t.id + ".aviso", avisoDeSerie(t), s.getString("aviso", ""));
+            h.igual("jar: " + t.id + ".hojas-protegen", hojasDeSerie(t), s.getBoolean("hojas-protegen", !hojasDeSerie(t)));
+            List<Capa> capas = capas(s.getMapList("particulas"));
+            h.ok("jar: " + t.id + " tiene particulas", !capas.isEmpty());
+            h.ok("jar: " + t.id + " tiene al menos una capa que se ve a cubierto o una a cielo abierto",
+                    capas.stream().anyMatch(k -> k.cantidad() > 0));
+            double porSegundo = 0;
+            boolean conDust = false;
+            for (Capa k : capas) {
+                h.ok("jar: " + t.id + ": " + k.particula() + " no es lluvia de Minecraft",
+                        !PARTICULAS_DE_LLUVIA.contains(k.particula()));
+                h.ok("jar: " + t.id + ": " + k.particula() + " existe", existe(k.particula()));
+                h.ok("jar: " + t.id + ": " + k.particula() + " radio entre 1 y 16", k.radio() >= 1 && k.radio() <= 16);
+                porSegundo += k.cantidad() * pulsos;
+                conDust |= k.particula().equals("DUST");
+            }
+            h.ok("jar: " + t.id + " lleva DUST (la que Bedrock pinta seguro)", conDust);
+            double maximo = porSegundo * Math.max(1.0, c.getDouble("tormenta.densidad", TORMENTA_DENSIDAD));
+            h.ok("jar: " + t.id + ": " + Math.round(maximo) + " particulas/s por jugador con tormenta (tope "
+                    + PRESUPUESTO_SEGUNDO + ")", maximo <= PRESUPUESTO_SEGUNDO);
+            List<Sonido> sons = sonidos(s.getMapList("sonidos"));
+            h.ok("jar: " + t.id + " tiene sonidos", !sons.isEmpty());
+            for (Sonido so : sons) audible(h, t.id, so);
+        }
+        for (Sonido so : sonidos(seccion(c, "tormenta").getMapList("sonidos"))) audible(h, "tormenta", so);
+    }
+
+    /** Que no sea la lluvia de Minecraft y que se oiga: con volumen 1 o menos el cliente lo apaga a 16 bloques. */
+    private static void audible(Autotest.Hoja h, String de, Sonido so) {
+        h.ok("jar: " + de + ": " + so.sonido() + " no es la lluvia de Minecraft", !so.sonido().contains("weather.rain"));
+        double alcance = 16.0 * Math.max(1.0, so.volumen());
+        h.ok("jar: " + de + ": " + so.sonido() + " se oye (distancia " + so.distancia() + " < " + alcance + ")",
+                so.distancia() < alcance * 0.75 && so.volumen() > 0);
+    }
+
+    private static boolean existe(String particula) {
+        try {
+            Particle.valueOf(particula);
+            return true;
+        } catch (RuntimeException e) {
+            return false;
+        }
+    }
+
+    /** Sin emojis (nada fuera del plano basico) y sin palabras enteras en mayusculas. */
+    private static boolean textoLimpio(String s) {
+        if (s == null || s.isBlank()) return false;
+        if (s.codePoints().anyMatch(cp -> cp > 0xFFFF || Character.getType(cp) == Character.OTHER_SYMBOL)) return false;
+        for (String palabra : s.split("\\s+")) {
+            if (palabra.length() > 1 && palabra.equals(palabra.toUpperCase(Locale.ROOT))
+                    && !palabra.equals(palabra.toLowerCase(Locale.ROOT))) return false;
+        }
+        return true;
     }
 
     /** Lo que el servidor le manda al cliente con la hora fija (ServerPlayer.getPlayerTime en 26.1.2). */

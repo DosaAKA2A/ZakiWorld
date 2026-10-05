@@ -126,6 +126,12 @@ public final class Paleta {
      * en su propio bioma (#DA5955), que se ve de dia y de noche sin llegar al rojo oscuro ilegible.
      */
     public static final int CIELO_ROJO = 0xDA5955;
+    /** Calamity 1.12 · Las esporas: verde salvia apagado (el de la niebla de esporas). */
+    public static final TextColor ESPORAS = TextColor.color(0xA9C79A);
+    /** Calamity 1.12 · La polinizacion: amarillo miel claro. */
+    public static final TextColor POLEN = TextColor.color(0xF2D36B);
+    /** Calamity 1.12 · La ceniza: gris calido claro, el de la ceniza que cae. */
+    public static final TextColor CENIZA = TextColor.color(0xD3CBBE);
 
     // --------------------------------------------------------------- piezas
 

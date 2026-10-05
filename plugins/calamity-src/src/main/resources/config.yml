@@ -1081,22 +1081,61 @@ hardcore:
       # Segundos antes de cada lluvia en los que se avisa a quien este dentro ("Se acerca la lluvia",
       # "Se acerca una tormenta" o, segun el bioma, "Se acerca lluvia ácida"). 0 = sin aviso.
       aviso-segundos: 60
-    # 1.11: en la zona spawn no se ve la lluvia (solo en la pantalla de cada jugador).
-    spawn-sin-lluvia: true
-    # En los biomas verdes la lluvia es acida: a cielo abierto quema y bajo techo no pasa nada.
-    # Primero sale un aviso en la barra y hay un margen antes del primer golpe.
+    # Calamity 1.12 · En los mundos de Calamity la lluvia de Minecraft no existe: el mundo se queda siempre
+    # despejado (se cancela cualquier cambio a lluvia: el ciclo vanilla, /weather, otros plugins) y la lluvia
+    # o tormenta del ciclo de arriba es solo un estado de Calamity. Lo que se ve lo pinta el plugin segun el
+    # bioma: particulas y sonidos solo para cada jugador, a su alrededor. Con ciclo.activo en false vuelve
+    # el clima de Minecraft, con su lluvia.
+    #
+    # El clima de cada bioma mientras dura la lluvia o la tormenta del ciclo. Tipos: lluvia-acida, esporas,
+    # polinizacion, ceniza, cielo-rojo y ninguno. El bioma va con o sin namespace; "panacea/*" vale para
+    # todos los de Panacea y "*" para cualquier otro. Gana el mas concreto. Si la quitas, vale esta.
+    por-bioma:
+      panacea/sweltering_swamp: lluvia-acida
+      panacea/wildflower_bog: lluvia-acida
+      panacea/creeper_dominion: lluvia-acida
+      panacea/horsetail_tropics: lluvia-acida
+      panacea/hungering_jungle: lluvia-acida
+      panacea/polypore_plains: esporas
+      panacea/ravenous_greenwood: esporas
+      panacea/honeybee_biome: polinizacion
+      panacea/condemned_taiga: ceniza
+      panacea/crimson_organism: cielo-rojo
+      "*": ninguno
+    # Al empezar a ver un clima, una linea corta en el centro ("Comienza la lluvia ácida"; en Bedrock va en
+    # la barra), no mas de una vez cada tantos segundos por clima.
+    aviso-inicio: true
+    aviso-inicio-espera: 90
+    efectos:
+      # Cada cuantos ticks se pintan las particulas (las 'cantidad' de abajo son por pulso). Pide reinicio.
+      cada-ticks: 4
+      # Multiplica todas las cantidades (0.5 = la mitad; 0 = sin particulas).
+      densidad: 1.0
+      # Mas de tantos bloques por debajo de la superficie no se ve ni se oye nada (cuevas).
+      profundidad: 12
+      # Bajo techo los sonidos suenan a este tanto.
+      volumen-a-cubierto: 0.5
+    # La tormenta del ciclo: el mismo clima de cada bioma, mas denso y con truenos a lo lejos.
+    tormenta:
+      densidad: 1.5
+      sonidos:
+        - {sonido: "minecraft:entity.lightning_bolt.thunder", cada: 17, volumen: 0.45, tono: 0.8, distancia: 10}
+    #
+    # Cada clima: nombre y aviso (la linea de la barra al exponerse: "Nombre: aviso"; vacio = sin linea),
+    # inicio (lo de aviso-inicio), hojas-protegen (si las hojas cuentan como techo), particulas y sonidos.
+    # particulas, por pulso: particula (nombre de Paper), cantidad, radio (horizontal), altura (sobre los
+    # pies), espesor (vertical), color "#RRGGBB" y tam (DUST), bloque (FALLING_DUST) y techo (true: tambien
+    # bajo techo; son las que caen y chocan con el tejado. Sin techo, solo a cielo abierto).
+    # sonidos: sonido, cada (segundos), volumen, tono y distancia (bloques).
+    #
+    # Lluvia acida: a cielo abierto quema y bajo techo no pasa nada. Primero sale un aviso en la barra y
+    # hay un margen antes del primer golpe.
     lluvia-acida:
       activa: true
-      # 1.11: oculta la lluvia azul de Minecraft en estos biomas; en su lugar caen gotas verdes.
-      ocultar-lluvia: true
-      biomas:
-        - panacea/horsetail_tropics
-        - panacea/creeper_dominion
-        - panacea/polypore_plains
-        - panacea/wildflower_bog
-        - panacea/hungering_jungle
-        - panacea/ravenous_greenwood
-        - panacea/sweltering_swamp
+      nombre: "Lluvia ácida"
+      inicio: "Comienza la lluvia ácida"
+      aviso: "busca un techo, que quema."
+      hojas-protegen: true
       # Vida que quita cada golpe (1 = medio corazon). Recuerda que en Calamity no hay
       # regeneracion natural.
       dano: 1.0
@@ -1107,12 +1146,75 @@ hardcore:
       # Si pasa este tiempo seguido a cubierto, al volver a la lluvia hay aviso y margen otra
       # vez. Con menos, la cuenta sigue donde estaba (esconderse un segundo no la reinicia).
       olvido-segundos: 15
-    # En los biomas rojos no se ve la lluvia: el cielo se oscurece en rojo y cada cierto
-    # tiempo arde. La resistencia al fuego protege de la quemadura.
+      particulas:
+        - {particula: FALLING_DUST, bloque: LIME_CONCRETE_POWDER, cantidad: 14, radio: 8, altura: 7, espesor: 2, techo: true}
+        - {particula: DUST, color: "#8FD14F", tam: 0.9, cantidad: 6, radio: 6, altura: 2, espesor: 1.5}
+        - {particula: ITEM_SLIME, cantidad: 3, radio: 5, altura: 0.2, espesor: 0.1}
+      sonidos:
+        - {sonido: "minecraft:block.pointed_dripstone.drip_water", cada: 1, volumen: 0.6, tono: 1.1, distancia: 5}
+        - {sonido: "minecraft:block.fire.extinguish", cada: 5, volumen: 0.12, tono: 1.8, distancia: 4}
+    # Esporas: a cielo abierto (bajo la copa de los arboles tambien) quitan cordura poco a poco.
+    esporas:
+      activa: true
+      nombre: "Esporas"
+      inicio: "Se levantan las esporas"
+      aviso: "te nublan la mente; busca un techo."
+      hojas-protegen: false
+      cordura-por-segundo: 0.1
+      efecto: {tipo: "", nivel: 1}
+      olvido-segundos: 15
+      particulas:
+        - {particula: SPORE_BLOSSOM_AIR, cantidad: 3, radio: 10, altura: 3, espesor: 3}
+        - {particula: MYCELIUM, cantidad: 6, radio: 7, altura: 1, espesor: 1.5}
+        - {particula: DUST, color: "#9DB58A", tam: 1.3, cantidad: 4, radio: 8, altura: 2.5, espesor: 2}
+      sonidos:
+        - {sonido: "minecraft:ambient.warped_forest.additions", cada: 6, volumen: 0.5, tono: 1.0, distancia: 6}
+        - {sonido: "minecraft:entity.puffer_fish.blow_out", cada: 4, volumen: 0.25, tono: 0.6, distancia: 5}
+    # Polinizacion: polen amarillo en el aire; a cielo abierto ralentiza (efecto, renovado cada segundo).
+    polinizacion:
+      activa: true
+      nombre: "Polinización"
+      inicio: "Llega la polinización"
+      aviso: "te pesa en el paso; busca un techo."
+      hojas-protegen: false
+      cordura-por-segundo: 0
+      # Nivel 1 = Lentitud I. tipo vacio = sin efecto.
+      efecto: {tipo: slowness, nivel: 1}
+      olvido-segundos: 15
+      particulas:
+        - {particula: DUST, color: "#F2D36B", tam: 1.0, cantidad: 8, radio: 9, altura: 2.5, espesor: 2.5}
+        - {particula: FALLING_NECTAR, cantidad: 4, radio: 8, altura: 6, espesor: 2, techo: true}
+        - {particula: WAX_ON, cantidad: 2, radio: 6, altura: 2, espesor: 2}
+      sonidos:
+        - {sonido: "minecraft:entity.bee.loop", cada: 3, volumen: 0.35, tono: 1.0, distancia: 5}
+        - {sonido: "minecraft:block.beehive.work", cada: 7, volumen: 0.4, tono: 1.0, distancia: 6}
+    # Ceniza: de serie solo se ve y se oye. Para un sofoco leve, pon un efecto (p. ej. {tipo: weakness,
+    # nivel: 1}) o cordura-por-segundo.
+    ceniza:
+      activa: true
+      nombre: "Ceniza"
+      inicio: "Empieza a caer ceniza"
+      aviso: ""
+      hojas-protegen: true
+      cordura-por-segundo: 0
+      efecto: {tipo: "", nivel: 1}
+      olvido-segundos: 15
+      particulas:
+        - {particula: WHITE_ASH, cantidad: 18, radio: 10, altura: 4, espesor: 4}
+        - {particula: ASH, cantidad: 8, radio: 9, altura: 3, espesor: 3}
+        - {particula: FALLING_DUST, bloque: LIGHT_GRAY_CONCRETE_POWDER, cantidad: 6, radio: 8, altura: 7, espesor: 2, techo: true}
+        - {particula: DUST, color: "#BDB5A8", tam: 1.1, cantidad: 3, radio: 8, altura: 2, espesor: 2}
+      sonidos:
+        - {sonido: "minecraft:ambient.basalt_deltas.additions", cada: 6, volumen: 0.5, tono: 1.0, distancia: 6}
+        - {sonido: "minecraft:block.fire.ambient", cada: 4, volumen: 0.3, tono: 0.8, distancia: 4}
+    # Cielo rojo: el cielo se oscurece en rojo y cada cierto tiempo arde. La resistencia al fuego protege
+    # de la quemadura.
     cielo-rojo:
       activo: true
-      biomas:
-        - panacea/crimson_organism
+      nombre: "El cielo arde"
+      inicio: "El cielo se tiñe de sangre"
+      aviso: "te vas a quemar."
+      hojas-protegen: true
       # Hora que se le pone al jugador mientras esta alli: la del cielo de sangre del ciclo de
       # Panacea (el dia dura 72000 ticks y el cielo rojo va de 63500 a 65000). 0 = no se toca.
       # Durante un Eclipse, o si la Parca le ha cambiado el cielo, manda el de ellos.
@@ -1122,9 +1224,8 @@ hardcore:
       # segundo la que hay que mandar para que caiga en la 'hora' de arriba. Solo cambiarlo si
       # cambia el timeline del datapack.
       periodo-dia: 72000
-      # Ocultarle la lluvia a quien esta en el bioma.
-      ocultar-lluvia: true
-      # 1.11: en la zona spawn, si es de este bioma, el mismo cielo y la misma ceniza (sin fuego ni dano).
+      # En la zona spawn, si es de este bioma, el mismo cielo y las mismas particulas (sin fuego ni dano).
+      # Es el unico clima que entra en la zona spawn.
       en-spawn: true
       # Vineta roja en los bordes de la pantalla (0 a 0.95), aunque sentidos.vinheta este
       # apagada. Se suma a la de la cordura si esta encendida. 0 = sin vineta.
@@ -1140,6 +1241,13 @@ hardcore:
       # Como en la lluvia acida: tras este tiempo fuera, la cuenta hasta la proxima quemadura
       # empieza de cero.
       olvido-segundos: 30
+      particulas:
+        - {particula: FALLING_DUST, bloque: RED_CONCRETE_POWDER, cantidad: 8, radio: 8, altura: 6, espesor: 2, techo: true}
+        - {particula: DUST, color: "#DA5955", tam: 1.2, cantidad: 3, radio: 6, altura: 1.6, espesor: 2}
+        - {particula: CRIMSON_SPORE, cantidad: 6, radio: 8, altura: 2, espesor: 2}
+      sonidos:
+        - {sonido: "minecraft:ambient.crimson_forest.additions", cada: 6, volumen: 0.5, tono: 0.9, distancia: 6}
+        - {sonido: "minecraft:block.fire.ambient", cada: 5, volumen: 0.25, tono: 0.7, distancia: 4}
   # [alineado] pool con los 12 contratos de ESTUDIO 5.9 (corto: true en los 4 cortos); semanal = 1 Llave del Caos.
   # Cada contrato: texto, evento que lo hace avanzar (Contratos.progreso), objetivo, premio (esencias y
   # mobcoins, por la Aduana), "mecanica": el interruptor que tiene que estar encendido para que salga
