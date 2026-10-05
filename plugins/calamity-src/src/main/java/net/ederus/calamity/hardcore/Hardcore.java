@@ -261,7 +261,7 @@ public final class Hardcore implements Listener {
     /** Lo leen Vineta (el borde del cielo rojo) y ParteDefuncion (el nombre del golpe). */
     Clima clima() { return clima; }
     Distancia distancia() { return distancia; }
-    /** Lo que abren los NPCs de la antesala (/calamidad abrir) y el Cronista. */
+    /** Lo que abren los NPCs de la antesala (/calamity open) y el Cronista. */
     Npcs npcs() { return npcs; }
     ZonaSpawn zonaSpawn() { return zona; }
     Ruinas ruinas() { return ruinas; }
@@ -295,7 +295,7 @@ public final class Hardcore implements Listener {
         return p != null && enSpawn(p.getLocation());
     }
 
-    /** La zona spawn en uso en cada mundo hardcore, para /calamidad. */
+    /** La zona spawn en uso en cada mundo hardcore, para /calamity status. */
     public String describirSpawn() {
         return zona == null ? "sin zona (las reglas no han arrancado)" : valor("zona-spawn", zona::describir, "?");
     }
@@ -372,7 +372,7 @@ public final class Hardcore implements Listener {
      * queda en null y se avisa: sus ganchos fallan dentro de seguro() y el resto sigue.
      */
     private void crearModulos() {
-        // Lo de WP0 primero: /lw hardcore autotest y el placeholder de la cordura. Los
+        // Lo de WP0 primero: /calamity selftest y el placeholder de la cordura. Los
         // modulos registran sus pruebas, subcomandos y placeholders al nacer, debajo.
         Autotest.instalar(this);
         Autotest.registrar("barra", BarraAccion::autotest);
@@ -383,8 +383,8 @@ public final class Hardcore implements Listener {
         // 1.9.0: la tabla de biomas y los mobs especiales (las usa MobsLethal, que no ve Autotest).
         Autotest.registrar("apariciones", Apariciones::autotest);
         // 1.11: la salida completa a mano, para el staff (en ingles, como todos los comandos nuevos).
-        Subcomandos.lw().registrar("extract", "extract <jugador>: lo saca de Calamity como si cruzara la puerta, con Tasación",
-                "ederus.mundos", this::comandoExtract, args -> args.length == 2 ? Entregas.nombresConectados() : List.of());
+        Subcomandos.staff().registrar("extract", "extract <player>: lo saca de Calamity como si cruzara la puerta, con Tasación",
+                Subcomandos.PERMISO, this::comandoExtract, args -> args.length == 2 ? Entregas.nombresConectados() : List.of());
         PlaceholdersLethal.registrar("cordura", (jugador, resto) -> corduraTexto(jugador));
         // Lo primero: la Grieta, las amenazas y los mobs preguntan por ella desde que nacen.
         zona = crear("zona-spawn", () -> new ZonaSpawn(this));
@@ -500,8 +500,8 @@ public final class Hardcore implements Listener {
         distancia = null;
         enZona.clear();
         cordura.aSalvo(null);
-        Subcomandos.lw().vaciar();
-        Subcomandos.calamity().vaciar();
+        Subcomandos.staff().vaciar();
+        Subcomandos.jugador().vaciar();
         Autotest.vaciar();
     }
 
@@ -575,7 +575,7 @@ public final class Hardcore implements Listener {
         return valor("equipo", () -> eq.esencias(p, n), n);
     }
 
-    /** /calamidad reload dice de donde sale el equipo (GodItems). Devuelve el resumen, o null con las reglas apagadas. */
+    /** /calamity reload dice de donde sale el equipo (GodItems). Devuelve el resumen, o null con las reglas apagadas. */
     public String recargarEquipo() {
         Equipo eq = equipo;
         return eq == null ? null : valor("equipo", eq::cargar, null);
@@ -841,7 +841,7 @@ public final class Hardcore implements Listener {
                 (float) s.getDouble("yaw"), (float) s.getDouble("pitch"));
     }
 
-    /** Guarda un punto donde este el jugador. Lo usa /lw hardcore. */
+    /** Guarda un punto donde este el jugador. Lo usa /calamity define. */
     public void punto(String nombre, Location donde) {
         String base = "hardcore." + nombre + ".";
         plugin.getConfig().set(base + "mundo", donde.getWorld().getKey().toString());
@@ -1149,14 +1149,14 @@ public final class Hardcore implements Listener {
         return valor("distancia", () -> distancia.niveles(p), 0);
     }
 
-    /** Bloques del jugador al borde de la zona spawn (o al spawn del mundo), para /calamidad level y el parte. */
+    /** Bloques del jugador al borde de la zona spawn (o al spawn del mundo), para /calamity level y el parte. */
     public double bloquesAlSpawn(Player p) {
         if (distancia == null || p == null) return 0;
         return valor("distancia", () -> distancia.bloques(p.getLocation()), 0.0);
     }
 
     /**
-     * Para /calamidad level: de donde salen los niveles y los mobs de mas de Calamity para ese
+     * Para /calamity level: de donde salen los niveles y los mobs de mas de Calamity para ese
      * jugador ahora mismo, en pares {que, cuanto}. Vacio si no esta en un mundo hardcore.
      */
     public List<String[]> desgloseNivel(Player p) {
@@ -1955,7 +1955,7 @@ public final class Hardcore implements Listener {
     }
 
     /**
-     * Calamity 1.11 · /calamidad extract <jugador>: la salida completa a mano. Es la de la puerta
+     * Calamity 1.11 · /calamity extract <player>: la salida completa a mano. Es la de la puerta
      * (sacar con extraccion): Tasacion de lo que lleva (y con ella los contratos de la Tasacion, la
      * Racha y la telemetria "sale" con motivo "admin"), pergaminos y Frasco prestado fuera, la PARCA
      * le espera como a cualquiera que sale, y cordura entera. Para sacar a alguien atascado o en
@@ -1963,7 +1963,7 @@ public final class Hardcore implements Listener {
      */
     private void comandoExtract(org.bukkit.command.CommandSender quien, String[] args) {
         if (args.length < 2) {
-            quien.sendMessage(Component.text("Uso: /calamidad extract <jugador>", Paleta.AVISO));
+            quien.sendMessage(Component.text("Uso: /calamity extract <player>", Paleta.AVISO));
             return;
         }
         Player p = plugin.getServer().getPlayerExact(args[1]);
@@ -1980,7 +1980,7 @@ public final class Hardcore implements Listener {
             return;
         }
         if (salida() == null) {
-            quien.sendMessage(Component.text("No hay punto de salida: márcalo con /calamidad salida.", Paleta.AVISO));
+            quien.sendMessage(Component.text("No hay punto de salida: márcalo con /calamity define return.", Paleta.AVISO));
             return;
         }
         canalizando.remove(p.getUniqueId());

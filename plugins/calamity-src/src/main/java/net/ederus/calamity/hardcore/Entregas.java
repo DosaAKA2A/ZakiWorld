@@ -32,7 +32,7 @@ import java.util.UUID;
 import java.util.regex.Pattern;
 
 /**
- * M31 · /lw hardcore dar: la entrega unica de premios de Calamity (DIS M31, PLAN cabecera).
+ * M31 · /calamity give: la entrega unica de premios de Calamity (DIS M31, PLAN cabecera).
  *
  * Todo lo que Calamity da FUERA (Altar, Caja del Caos, Mercado, hitos, rankings, contratos)
  * pasa por aqui, por comando o desde otro modulo, y aqui se hace lo que no puede olvidarse:
@@ -76,20 +76,20 @@ final class Entregas implements Listener {
     Entregas(Hardcore hc) {
         this.hc = hc;
         hc.plugin().getServer().getPluginManager().registerEvents(this, hc.plugin());
-        Subcomandos.lw().registrar("dar", "dar <objeto> <jugador> [n] [origen]: entrega un premio ligado a su dueño",
-                "ederus.mundos", this::comandoDar, this::tabDar);
-        Subcomandos.lw().registrar("saldo", "saldo <jugador> [+n|-n]: ver o ajustar el saldo de Esencias",
-                "ederus.mundos", this::comandoSaldo, args -> args.length == 2 ? nombresConectados() : List.of());
-        Subcomandos.lw().registrar("creditos", "creditos <jugador> [tipo +n|-n]: ver o ajustar sus créditos (Sellos, Marcas, Fragmentos)",
-                "ederus.mundos", this::comandoCreditos, args -> switch (args.length) {
+        Subcomandos.staff().registrar("give", "give <item> <player> [n] [source]: entrega un premio ligado a su dueño",
+                Subcomandos.PERMISO, this::comandoDar, this::tabDar);
+        Subcomandos.staff().registrar("balance", "balance <player> [+n|-n]: ver o ajustar el saldo de Esencias",
+                Subcomandos.PERMISO, this::comandoSaldo, args -> args.length == 2 ? nombresConectados() : List.of());
+        Subcomandos.staff().registrar("credits", "credits <player> [type +n|-n]: ver o ajustar sus créditos (Sellos, Marcas, Fragmentos)",
+                Subcomandos.PERMISO, this::comandoCreditos, args -> switch (args.length) {
                     case 2 -> nombresConectados();
                     case 3 -> List.of("sello:", Creditos.ERRANTE, "fragmento", "marca");
                     case 4 -> List.of("+1", "-1");
                     default -> List.of();
                 });
-        Subcomandos.lw().registrar("mc", "mc <jugador> <n>: MobCoins de prueba (solo con monedero.modo: prueba)",
-                "ederus.mundos", this::comandoMc, args -> args.length == 2 ? nombresConectados() : List.of());
-        Subcomandos.calamity().registrar("saldo", "tu saldo de Esencias y tus créditos", "lethalworld.calamity",
+        Subcomandos.staff().registrar("mc", "mc <player> <n>: MobCoins de prueba (solo con monedero.modo: prueba)",
+                Subcomandos.PERMISO, this::comandoMc, args -> args.length == 2 ? nombresConectados() : List.of());
+        Subcomandos.jugador().registrar("balance", "tu saldo de Esencias y tus créditos", null,
                 this::comandoMiSaldo, null);
         Autotest.registrar("entregas", this::autotest);
         // Los que ya estan conectados (recarga del plugin): sus Fragmentos de Masamune guardados, ya en fisico.
@@ -244,7 +244,7 @@ final class Entregas implements Listener {
         } else {
             donde = entregarObjetos(a, o, items, org);
         }
-        // Como en dar: que /calamidad dar no diga "Entregado" a una llave que se queda pendiente.
+        // Como en give: que /calamity give no diga "Entregado" a una llave que se queda pendiente.
         ultimoDonde = donde;
         hc.plugin().bitacora().anotar("entrega", "ok", o, nombre(a), String.valueOf(n), org, donde);
         recompensa(a, o, n, org, !enCampo);
@@ -262,7 +262,7 @@ final class Entregas implements Listener {
             case "grabado" -> grabado();
             case "salvoconducto" -> salvoconducto();
             case FragmentosMasamune.OBJETO -> ItemsCalamity.fragmentoMasamune(1);
-            // 1.10: lo llama Reclamo (Altar, dar:reclamo; /calamidad dar reclamo <jugador> <n>).
+            // 1.10: lo llama Reclamo (Altar, dar:reclamo; /calamity give reclamo <player> <n>).
             case "reclamo" -> ItemsCalamity.reclamo();
             default -> {
                 String id = idMmo(o);
@@ -540,7 +540,7 @@ final class Entregas implements Listener {
         String cmd = plantilla.replace("%jugador%", jugador).replace("%n%", String.valueOf(n)).trim();
         if (cmd.startsWith("/")) cmd = cmd.substring(1);
         try {
-            return hc.plugin().getServer().dispatchCommand(hc.plugin().getServer().getConsoleSender(), cmd);
+            return hc.plugin().getServer().dispatchCommand(hc.plugin().getServer().getConsoleSender(), ComandosViejos.traducir(cmd));
         } catch (Throwable t) {
             hc.plugin().getLogger().warning("[Calamity] Fallo el comando de entrega \"" + cmd + "\": " + t);
             return false;
@@ -862,8 +862,8 @@ final class Entregas implements Listener {
 
     private void comandoDar(CommandSender quien, String[] args) {
         if (args.length < 3) {
-            quien.sendMessage(Component.text("Uso: /calamidad dar <objeto> <jugador> [n] [origen]", Paleta.AVISO));
-            quien.sendMessage(Component.text("Objetos: " + String.join(", ", OBJETOS)
+            quien.sendMessage(Component.text("Uso: /calamity give <item> <player> [n] [source]", Paleta.AVISO));
+            quien.sendMessage(Component.text("Objetos (ids del servidor): " + String.join(", ", OBJETOS)
                     + ", credito:<tipo>, credito-caja:<tipo>, forja:<pieza>", Paleta.TENUE));
             return;
         }
@@ -895,7 +895,7 @@ final class Entregas implements Listener {
     }
 
     /**
-     * Calamity 1.11 · Lo que se le contesta al staff tras un /calamidad dar que ha ido bien, segun donde
+     * Calamity 1.11 · Lo que se le contesta al staff tras un /calamity give que ha ido bien, segun donde
      * acabo el objeto (ultimoDonde: inventario, suelo, pendiente, o null si no era un objeto). Antes
      * decia "Entregado" aunque se quedara en premios pendientes. Estatica para el autotest.
      */
@@ -929,7 +929,7 @@ final class Entregas implements Listener {
 
     private void comandoSaldo(CommandSender quien, String[] args) {
         if (args.length < 2) {
-            quien.sendMessage(Component.text("Uso: /calamidad saldo <jugador> [+n|-n]", Paleta.AVISO));
+            quien.sendMessage(Component.text("Uso: /calamity balance <player> [+n|-n]", Paleta.AVISO));
             return;
         }
         OfflinePlayer a = buscar(args[1]);
@@ -961,7 +961,7 @@ final class Entregas implements Listener {
 
     private void comandoCreditos(CommandSender quien, String[] args) {
         if (args.length < 2) {
-            quien.sendMessage(Component.text("Uso: /calamidad creditos <jugador> [tipo +n|-n]", Paleta.AVISO));
+            quien.sendMessage(Component.text("Uso: /calamity credits <player> [type +n|-n]", Paleta.AVISO));
             return;
         }
         OfflinePlayer a = buscar(args[1]);
@@ -981,7 +981,7 @@ final class Entregas implements Listener {
             }
             c.sumar(u, args[2], n, "admin:" + (quien instanceof Player p ? p.getName() : "consola"), false);
         } else if (args.length == 3) {
-            quien.sendMessage(Component.text("Falta la cantidad. Uso: /calamidad creditos <jugador> <tipo> +n|-n", Paleta.AVISO));
+            quien.sendMessage(Component.text("Falta la cantidad. Uso: /calamity credits <player> <type> +n|-n", Paleta.AVISO));
             return;
         }
         Map<String, Integer> todos = c.todos(u);
@@ -1001,7 +1001,7 @@ final class Entregas implements Listener {
 
     private void comandoMc(CommandSender quien, String[] args) {
         if (args.length < 3) {
-            quien.sendMessage(Component.text("Uso: /calamidad mc <jugador> <n>", Paleta.AVISO));
+            quien.sendMessage(Component.text("Uso: /calamity mc <player> <n>", Paleta.AVISO));
             return;
         }
         OfflinePlayer a = buscar(args[1]);
@@ -1024,10 +1024,10 @@ final class Entregas implements Listener {
                 + (prueba ? "." : "  (ojo: monedero.modo no es «prueba», así que no se usan)"), prueba ? Paleta.BIEN : Paleta.CIFRA));
     }
 
-    /** /calamity saldo: P-M08 y los creditos, con lo que aun no se puede canjear. */
+    /** "calamity open <player> balance": P-M08 y los creditos, con lo que aun no se puede canjear. */
     private void comandoMiSaldo(CommandSender quien, String[] args) {
         if (!(quien instanceof Player p)) {
-            quien.sendMessage(Component.text("Solo se puede usar dentro del juego. Para consultar a un jugador: /calamidad saldo <jugador>.",
+            quien.sendMessage(Component.text("Solo se puede usar dentro del juego. Para consultar a un jugador: /calamity balance <player>.",
                     Paleta.AVISO));
             return;
         }
@@ -1064,7 +1064,7 @@ final class Entregas implements Listener {
 
     // ------------------------------------------------------------------ pruebas
 
-    /** Calamity 1.11 · La respuesta de /calamidad dar segun donde acaba el objeto. */
+    /** Calamity 1.11 · La respuesta de /calamity give segun donde acaba el objeto. */
     static void probarRespuesta(Autotest.Hoja h) {
         h.igual("dar en mano: Entregado", "Entregado: cristal x1 a Dosa__.",
                 respuestaDar("cristal", 1, "Dosa__", "inventario", true));
@@ -1120,8 +1120,8 @@ final class Entregas implements Listener {
         h.igual("nombre con espacio no vale para comandos", false, NOMBRE_VALIDO.matcher("a b").matches());
         h.igual("nombre con punto y coma no vale", false, NOMBRE_VALIDO.matcher("x;op").matches());
         h.igual("nombre de Bedrock vale", true, NOMBRE_VALIDO.matcher(".Sain_01").matches());
-        h.ok("dar registrado", Subcomandos.lw().nombres(null).contains("dar"));
-        h.ok("/calamity saldo registrado", Subcomandos.calamity().nombres(null).contains("saldo"));
+        h.ok("give registrado", Subcomandos.staff().nombres(null).contains("give"));
+        h.ok("el saldo se abre desde un NPC (open <player> balance)", Subcomandos.jugador().nombres(null).contains("balance"));
         h.ok("la prueba no deja pendientes", !hc.datos().isSet("premios-pendientes." + u));
         return h.lineas();
     }

@@ -126,7 +126,7 @@ final class Telemetria implements Listener {
 
         Autotest.registrar("telemetria", this::autotest);
         Autotest.registrar("censo", Telemetria::autotestCenso);
-        Subcomandos.lw().registrar("telemetria", "telemetría: estado de la cola y fichero del mes", "ederus.mundos",
+        Subcomandos.staff().registrar("telemetry", "telemetry: estado de la cola y fichero del mes", Subcomandos.PERMISO,
                 (quien, args) -> estado(quien), null);
         // Lo ultimo: si algo de arriba revienta, no queda un hilo suelto sin nadie que lo pare.
         hilo.start();

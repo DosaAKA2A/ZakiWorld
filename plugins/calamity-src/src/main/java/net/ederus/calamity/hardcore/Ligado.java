@@ -96,11 +96,11 @@ final class Ligado implements Listener {
         this.hc = hc;
         hc.plugin().getServer().getPluginManager().registerEvents(this, hc.plugin());
         Autotest.registrar("ligado", this::autotest);
-        Subcomandos.lw().registrar("ligado",
-                "ligado <info|poner [jugador]|quitar>: el ligado del objeto de tu mano (pruebas)",
-                "ederus.mundos", this::comando,
-                args -> args.length == 2 ? List.of("info", "poner", "quitar")
-                        : args.length == 3 && args[1].equalsIgnoreCase("poner") ? conectados() : List.of());
+        Subcomandos.staff().registrar("bind",
+                "bind <info|set [player]|remove>: el ligado del objeto de tu mano (pruebas)",
+                Subcomandos.PERMISO, this::comando,
+                args -> args.length == 2 ? List.of("info", "set", "remove")
+                        : args.length == 3 && args[1].equalsIgnoreCase("set") ? conectados() : List.of());
     }
 
     void parar() {
@@ -473,7 +473,7 @@ final class Ligado implements Listener {
         }
         String accion = args.length > 1 ? args[1].toLowerCase(Locale.ROOT) : "info";
         switch (accion) {
-            case "poner" -> {
+            case "set" -> {
                 OfflinePlayer a = args.length > 2 ? hc.plugin().getServer().getOfflinePlayerIfCached(args[2]) : p;
                 if (a == null) {
                     p.sendMessage(ComandoCalamity.mensaje("No encuentro a ese jugador."));
@@ -483,7 +483,7 @@ final class Ligado implements Listener {
                 hc.plugin().bitacora().anotar("ligado", "admin", p.getName(), objetoId(mano), "a " + a.getName());
                 p.sendMessage(ComandoCalamity.mensaje("Ligado a " + a.getName() + "."));
             }
-            case "quitar" -> {
+            case "remove" -> {
                 ItemMeta meta = mano.getItemMeta();
                 meta.getPersistentDataContainer().remove(Marcas.LIGADO);
                 mano.setItemMeta(meta);

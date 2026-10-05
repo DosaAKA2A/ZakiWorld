@@ -798,7 +798,7 @@ final class PeleaParca implements Runnable, ParcaViva {
     }
 
     /**
-     * /lw hardcore parca habilidad <nombre>: suelta esa habilidad ya (para ver los avisos y
+     * /calamity reaper ability <name>: suelta esa habilidad ya (para ver los avisos y
      * los golpes con un cliente). Tiron y Paso Umbral necesitan un jugador (quien lo pide).
      * Devuelve por que no, o null si ha empezado.
      */

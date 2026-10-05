@@ -670,13 +670,15 @@ final class Marco {
         lore.add(linea("Oren", "tu dinero y tus contratos."));
         lore.add(linea("Rhen", "el ranking y el Tablero."));
         lore.add(linea("Lior", "pone y quita las gemas."));
+        lore.add(linea("Ilen", "las historias de Calamity y tus Ecos."));
         // La encuesta y la lista de deseos van apagadas de serie: solo se anuncian si estan abiertas.
+        // 1.12: sin comandos; las tiene Ilen en su menu (MenuCronista).
         boolean encuesta = c.getBoolean("encuesta.activo", false), deseos = c.getBoolean("deseos.activo", false);
         if (encuesta || deseos) {
             lore.add(Component.empty());
-            lore.add(texto("Para dar tu opinión:"));
-            if (encuesta) lore.add(Component.text("  /calamity encuesta", Paleta.DETALLE));
-            if (deseos) lore.add(Component.text("  /calamity deseos", Paleta.DETALLE));
+            lore.add(texto("Para dar tu opinión, habla con Ilen:"));
+            if (encuesta) lore.add(tenue("  la encuesta y el Voto del Botín."));
+            if (deseos) lore.add(tenue("  la lista de deseos."));
         }
         return icono(Material.KNOWLEDGE_BOOK, Component.text("¿Cómo funciona?", Paleta.MARCA), lore, false);
     }

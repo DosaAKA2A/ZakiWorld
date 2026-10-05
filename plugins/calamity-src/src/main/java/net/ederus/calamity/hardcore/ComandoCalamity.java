@@ -1,26 +1,17 @@
 package net.ederus.calamity.hardcore;
 
-import net.ederus.calamity.CalamityPlugin;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.TextColor;
-import org.bukkit.command.Command;
-import org.bukkit.command.CommandSender;
-import org.bukkit.command.TabExecutor;
-
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Locale;
 
 /**
- * /calamity (alias /cal): lo que un jugador puede consultar de Calamity (DIS sec. 6).
+ * Los mensajes de sistema de Calamity: el prefijo con la marca y el texto en los colores de la
+ * Paleta.
  *
- * No tiene subcomandos propios: cada modulo registra los suyos en Subcomandos.calamity()
- * (eco, saldo, contratos, kit, tablero, encuesta, camino, cronista). Sin argumentos, o con uno
- * que no existe, sale la ayuda corta con lo que haya registrado y el jugador pueda usar.
- *
- * Todo por comando y texto: desde Bedrock se usa igual.
+ * Hasta la 1.11 era tambien el /calamity de los jugadores. Desde la 1.12 /calamity es solo de staff
+ * (net.ederus.calamity.ComandoRaiz) y lo que consultaban los jugadores lo abren los NPCs ("calamity
+ * open <player> <id>", Npcs); la clase se queda por estos ayudantes, que usan todos los modulos.
  */
-public final class ComandoCalamity implements TabExecutor {
+public final class ComandoCalamity {
 
     /**
      * Antes el rojo de muerte (#8B1A1A) del prefijo; no se leia sobre el chat. Queda como
@@ -29,10 +20,7 @@ public final class ComandoCalamity implements TabExecutor {
     @Deprecated
     public static final TextColor ROJO = Paleta.AVISO;
 
-    private final CalamityPlugin plugin;
-
-    public ComandoCalamity(CalamityPlugin plugin) {
-        this.plugin = plugin;
+    private ComandoCalamity() {
     }
 
     /** "Calamity · " con el degradado de la marca (Paleta.prefijo). */
@@ -48,42 +36,5 @@ public final class ComandoCalamity implements TabExecutor {
     /** Lo mismo con un cuerpo ya montado (nombres en DETALLE, cifras en CIFRA...). */
     public static Component mensaje(Component cuerpo) {
         return Paleta.mensaje(cuerpo);
-    }
-
-    @Override
-    public boolean onCommand(CommandSender quien, Command cmd, String etiqueta, String[] args) {
-        Hardcore hc = plugin.hardcore();
-        if (hc == null || !hc.activo()) {
-            quien.sendMessage(mensaje("Calamity está cerrado ahora mismo."));
-            return true;
-        }
-        if (args.length > 0 && Subcomandos.calamity().ejecutar(quien, args)) return true;
-        ayuda(quien, etiqueta);
-        return true;
-    }
-
-    private void ayuda(CommandSender quien, String etiqueta) {
-        quien.sendMessage(mensaje("Comandos de Calamity:"));
-        List<String[]> subs = Subcomandos.calamity().ayuda(quien);
-        if (subs.isEmpty()) {
-            quien.sendMessage(Component.text("  Ahora mismo no hay nada que consultar.", Paleta.TENUE));
-            return;
-        }
-        String raiz = "/" + (etiqueta == null || etiqueta.isBlank() ? "calamity" : etiqueta.toLowerCase(Locale.ROOT));
-        for (String[] s : subs) {
-            quien.sendMessage(Component.text("  " + raiz + " " + s[0], Paleta.DETALLE)
-                    .append(Component.text(s[1].isEmpty() ? "" : "  " + s[1], Paleta.TENUE)));
-        }
-    }
-
-    @Override
-    public List<String> onTabComplete(CommandSender quien, Command cmd, String etiqueta, String[] args) {
-        if (args.length == 1) {
-            List<String> out = new ArrayList<>();
-            String escrito = args[0].toLowerCase(Locale.ROOT);
-            for (String s : Subcomandos.calamity().nombres(quien)) if (s.startsWith(escrito)) out.add(s);
-            return out;
-        }
-        return Subcomandos.calamity().tab(quien, args);
     }
 }

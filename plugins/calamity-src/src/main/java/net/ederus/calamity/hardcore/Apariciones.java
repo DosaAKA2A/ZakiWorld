@@ -372,7 +372,7 @@ public final class Apariciones {
 
     // ================================================================ autotest
 
-    /** /calamidad autotest apariciones: la tabla, la config de serie de los especiales y los sitios. */
+    /** /calamity selftest spawns: la tabla, la config de serie de los especiales y los sitios. */
     static List<String> autotest() {
         Autotest.Hoja h = new Autotest.Hoja();
 

@@ -104,9 +104,9 @@ final class Tasacion {
     Tasacion(Hardcore hc) {
         this.hc = hc;
         Autotest.registrar("tasacion", this::autotest);
-        Subcomandos.lw().registrar("tasar",
-                "tasar <jugador> <g1> <g2> <g3> [especial:grado:N[:valida|:minijefe] ...] | tasar <jugador> reset: vende Reliquias virtuales",
-                "ederus.mundos", this::comando, this::tab);
+        Subcomandos.staff().registrar("appraise",
+                "appraise <player> <g1> <g2> <g3> [special:tier:N[:valid|:miniboss] ...] | appraise <player> reset: vende Reliquias virtuales",
+                Subcomandos.PERMISO, this::comando, this::tab);
     }
 
     void parar() {
@@ -520,7 +520,7 @@ final class Tasacion {
         }
         if (args.length < 5) {
             quien.sendMessage(ComandoCalamity.mensaje(
-                    "Uso: /calamidad tasar <jugador> <g1> <g2> <g3> [especial:grado:N[:valida|:minijefe] ...]"));
+                    "Uso: /calamity appraise <player> <g1> <g2> <g3> [special:tier:N[:valid|:miniboss] ...]"));
             return;
         }
         Reliquias rel = hc.reliquias();
@@ -547,7 +547,7 @@ final class Tasacion {
             Reliquias.Espec e = Reliquias.espec(args[i], true, 4);
             if (e == null) {
                 quien.sendMessage(ComandoCalamity.mensaje("No entiendo «" + args[i]
-                        + "». Ejemplos: campana:3:45, lagrima:4:60:valida, sello:4:heraldo-carmes."));
+                        + "». Ejemplos: campana:3:45, lagrima:4:60:valid, sello:4:heraldo-carmes."));
                 return;
             }
             especiales.add(e);

@@ -33,7 +33,7 @@ import java.util.function.IntPredicate;
  */
 final class FragmentosMasamune {
 
-    /** Como se pide en /calamidad dar y en entregar de altar.trueques. */
+    /** Como se pide en /calamity give y en entregar de altar.trueques. */
     static final String OBJETO = "fragmento-masamune";
     /** El credito de antes, que ya no se usa (se convierte al entrar). */
     static final String CREDITO_VIEJO = "masamune";

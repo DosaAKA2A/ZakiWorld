@@ -88,7 +88,7 @@ public final class VaraPortales implements Listener {
                     Component.text("Clic derecho: esquina 2", Paleta.TEXTO)
                             .decoration(TextDecoration.ITALIC, false),
                     Component.empty(),
-                    Component.text("Luego: /calamidad define entrada|salida|spawn", Paleta.TENUE)
+                    Component.text("Luego: /calamity define entry|exit|spawn", Paleta.TENUE)
                             .decoration(TextDecoration.ITALIC, false)));
             meta.setEnchantmentGlintOverride(true);
             meta.getPersistentDataContainer().set(clave, PersistentDataType.BYTE, (byte) 1);
@@ -113,7 +113,8 @@ public final class VaraPortales implements Listener {
         Block b = e.getClickedBlock();
         if (b == null) return;
         Player p = e.getPlayer();
-        if (!p.hasPermission("ederus.mundos")) return;
+        // 1.12: la vara la da /calamity wand, asi que la usa quien tiene su permiso.
+        if (!p.hasPermission(Subcomandos.PERMISO)) return;
         e.setCancelled(true);
 
         boolean primera = e.getAction() == Action.LEFT_CLICK_BLOCK;
@@ -315,7 +316,7 @@ public final class VaraPortales implements Listener {
         return 0;
     }
 
-    /** Descripcion corta de una puerta para el /lw hardcore. */
+    /** Descripcion corta de una puerta para /calamity status. */
     public String describir(String cual) {
         ConfigurationSection c = plugin.getConfig()
                 .getConfigurationSection("hardcore.puertas." + cual);

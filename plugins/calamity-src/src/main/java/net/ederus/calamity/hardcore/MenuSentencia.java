@@ -23,7 +23,7 @@ import java.util.UUID;
 
 /**
  * Calamity 1.8.0 · "CALAMITY | Sentencia": el menu del NPC de los contratos de Ambush (lo abre
- * /calamidad abrir <p> sentencia, el clic de Citizens; ver Npcs).
+ * calamity open <p> bounty, el clic de Citizens; ver Npcs).
  *
  * Como los demas menus de Calamity (Marco): 54 casillas con el marco de cristal negro, arriba en el
  * centro lo que es y lo que cuesta, en medio una cabeza por cada jugador que esta ahora en Calamity

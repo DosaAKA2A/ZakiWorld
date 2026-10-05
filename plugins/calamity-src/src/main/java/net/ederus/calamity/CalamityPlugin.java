@@ -15,9 +15,9 @@ import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.plugin.java.JavaPlugin;
 
-import net.ederus.calamity.hardcore.ComandoCalamity;
 import net.ederus.calamity.hardcore.Hardcore;
 import net.ederus.calamity.hardcore.PlaceholdersLethal;
+import net.ederus.calamity.hardcore.Subcomandos;
 import net.ederus.edm.comun.Bitacora;
 import net.ederus.lethalworld.LethalWorldPlugin;
 
@@ -41,9 +41,10 @@ import net.ederus.lethalworld.LethalWorldPlugin;
  *
  * Lo que NO cambia al separarlos, y es a proposito: las marcas del PersistentDataContainer
  * siguen siendo lethal_world: (Marcas.NAMESPACE), los placeholders siguen siendo
- * %lethalworld_...% y el permiso de /calamity sigue siendo lethalworld.calamity. Son cosas que
- * ya existen en el servidor (objetos, mobs, scoreboards, grupos de LuckPerms) y tienen que
- * seguir reconociendose igual que antes.
+ * %lethalworld_...%. Son cosas que ya existen en el servidor (objetos, mobs, scoreboards) y
+ * tienen que seguir reconociendose igual que antes. El permiso de los jugadores,
+ * lethalworld.calamity, ya no abre nada desde la 1.12: /calamity es solo de staff (calamity.admin)
+ * y los jugadores lo hacen todo desde los NPCs.
  */
 public final class CalamityPlugin extends JavaPlugin {
 
@@ -97,31 +98,27 @@ public final class CalamityPlugin extends JavaPlugin {
         hardcore = new Hardcore(this);
         hardcore.arrancar();
 
-        // /calamity es de los jugadores: va aparte de /calamidad, que es de staff.
+        // 1.12: /calamity es el unico comando y es de staff (calamity.admin). Sin el permiso no sale
+        // en el tab y contesta como un comando que no existe; los jugadores van por los NPCs.
         var cal = getCommand("calamity");
         if (cal != null) {
-            var calamity = new ComandoCalamity(this);
-            cal.setExecutor(calamity);
-            cal.setTabCompleter(calamity);
+            var raiz = new ComandoRaiz(this);
+            cal.setExecutor(raiz);
+            cal.setTabCompleter(raiz);
+            cal.setPermission(Subcomandos.PERMISO);
+            cal.permissionMessage(ComandoRaiz.desconocido());
         } else {
             getLogger().warning("El comando /calamity no está en el plugin.yml.");
-        }
-        // /calamidad: lo que antes era /lw hardcore y /lw level.
-        var cld = getCommand("calamidad");
-        if (cld != null) {
-            var calamidad = new ComandoCalamidad(this);
-            cld.setExecutor(calamidad);
-            cld.setTabCompleter(calamidad);
-        } else {
-            getLogger().warning("El comando /calamidad no está en el plugin.yml.");
         }
 
         // Despues de arrancar: los modulos registran sus placeholders al nacer.
         PlaceholdersLethal.activar(this);
 
-        // /lw hardcore y /lw level siguen funcionando: se reescriben a /calamidad.
-        getServer().getPluginManager().registerEvents(new RedireccionComandos(), this);
+        // TEMPORAL: /lw hardcore, /lw level y la forma en espanol de la 1.11 se traducen a /calamity
+        // (por consola, NPCs y premios guardados) y avisan en la consola para que se cambien.
+        getServer().getPluginManager().registerEvents(new RedireccionComandos(this), this);
         RedireccionComandos.engancharLw(this);
+        RedireccionComandos.registrarOculto(this);
 
         getLogger().info("[Calamity] " + VERSION + " listo, sobre LethalWorld "
                 + lethalWorld.getPluginMeta().getVersion() + ".");
@@ -129,7 +126,7 @@ public final class CalamityPlugin extends JavaPlugin {
 
     @Override
     public void onDisable() {
-        RedireccionComandos.soltarLw();
+        RedireccionComandos.soltar();
         if (mobs != null) mobs.parar();
         if (hardcore != null) hardcore.parar();
         PlaceholdersLethal.desactivar();

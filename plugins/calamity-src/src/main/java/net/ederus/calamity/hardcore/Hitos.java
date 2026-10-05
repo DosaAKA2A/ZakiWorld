@@ -45,8 +45,8 @@ final class Hitos {
 
     Hitos(Hardcore hc) {
         this.hc = hc;
-        Subcomandos.lw().registrar("hitos", "hitos <jugador>: hitos entregados y lo que le falta (M16)",
-                "ederus.mundos", this::comando, args -> args.length == 2 ? Entregas.nombresConectados() : List.of());
+        Subcomandos.staff().registrar("milestones", "milestones <player>: hitos entregados y lo que le falta (M16)",
+                Subcomandos.PERMISO, this::comando, args -> args.length == 2 ? Entregas.nombresConectados() : List.of());
         Autotest.registrar("hitos", this::autotest);
     }
 
@@ -188,7 +188,7 @@ final class Hitos {
         String cmd = plantilla.replace("%jugador%", nombre).trim();
         if (cmd.startsWith("/")) cmd = cmd.substring(1);
         try {
-            return hc.plugin().getServer().dispatchCommand(hc.plugin().getServer().getConsoleSender(), cmd);
+            return hc.plugin().getServer().dispatchCommand(hc.plugin().getServer().getConsoleSender(), ComandosViejos.traducir(cmd));
         } catch (Throwable t) {
             hc.plugin().getLogger().warning("[Calamity] Falló el comando de hito \"" + cmd + "\": " + t);
             return false;
@@ -231,7 +231,7 @@ final class Hitos {
 
     private void comando(CommandSender quien, String[] args) {
         if (args.length < 2) {
-            quien.sendMessage(ComandoCalamity.mensaje("Uso: /calamidad hitos <jugador>"));
+            quien.sendMessage(ComandoCalamity.mensaje("Uso: /calamity milestones <player>"));
             return;
         }
         OfflinePlayer o = Entregas.buscar(args[1]);
@@ -330,7 +330,7 @@ final class Hitos {
             h.ok("config: segador-3 apagado", !real.getBoolean("segador-3.activo", true));
         }
         h.ok("autotest no toca hitos-entregados reales", !hc.datos().isSet("hitos-entregados." + u));
-        h.ok("/lw hardcore hitos registrado", Subcomandos.lw().nombres(null).contains("hitos"));
+        h.ok("/calamity milestones registrado", Subcomandos.staff().nombres(null).contains("milestones"));
         return h.lineas();
     }
 }

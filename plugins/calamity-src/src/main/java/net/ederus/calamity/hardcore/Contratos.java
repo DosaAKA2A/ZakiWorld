@@ -105,8 +105,12 @@ final class Contratos implements Listener {
     private static final Map<String, String> POR_ESTADISTICA = Map.of(
             "eco-valido", "cazas-validas",
             "redimir", "ecos-redimidos");
-    /** "lw hardcore dar llave %jugador% N" en semana-premio: la llave va por Entregas con origen contratos. */
-    private static final Pattern LLAVE = Pattern.compile("^/?lw hardcore dar llave %jugador% (\\d+)$");
+    /**
+     * "calamity give llave %jugador% N" en semana-premio: la llave va por Entregas con origen contratos.
+     * Las formas de antes de la 1.12 ("lw hardcore dar", "calamidad dar") siguen valiendo: estan en el
+     * config.yml de los servidores.
+     */
+    private static final Pattern LLAVE = Pattern.compile("^/?(?:calamity give|lw hardcore dar|calamidad dar) llave %jugador% (\\d+)$");
     /** Calamity 1.10: contratos.barra.modo. */
     static final List<String> MODOS_BARRA = List.of("siempre", "avance", "nunca");
     /** Calamity 1.10: lo que se puede pedir de un hueco en %lethalworld_contrato_<n>_<campo>%. */
@@ -158,20 +162,20 @@ final class Contratos implements Listener {
         // (getConfigurationSection puede crear una seccion vacia si solo esta en el config del jar).
         pool();
         PlaceholdersLethal.registrar("contrato", this::placeholder);
-        Subcomandos.lw().registrar("contratos", "contratos <jugador> [reset]: ver o volver a sortear sus contratos (M14)",
-                "ederus.mundos", this::comandoAdmin,
+        Subcomandos.staff().registrar("contracts", "contracts <player> [reset]: ver o volver a sortear sus contratos (M14)",
+                Subcomandos.PERMISO, this::comandoAdmin,
                 args -> switch (args.length) {
                     case 2 -> Entregas.nombresConectados();
                     case 3 -> List.of("reset");
                     default -> List.of();
                 });
-        Subcomandos.calamity().registrar("contratos", "tus contratos de hoy y cómo van",
-                "lethalworld.calamity", (quien, args) -> {
+        Subcomandos.jugador().registrar("contracts", "tus contratos de hoy y cómo van",
+                null, (quien, args) -> {
                     if (quien instanceof Player p) mostrar(p, p);
                     else quien.sendMessage(ComandoCalamity.mensaje("Solo se puede usar dentro del juego."));
                 }, null);
-        Subcomandos.calamity().registrar("cambiar", "cambiar <1-3>: cambia un contrato (uno gratis al día)",
-                "lethalworld.calamity", (quien, args) -> {
+        Subcomandos.jugador().registrar("reroll", "reroll <1-3>: cambia un contrato (uno gratis al día)",
+                null, (quien, args) -> {
                     if (!(quien instanceof Player p)) {
                         quien.sendMessage(ComandoCalamity.mensaje("Solo se puede usar dentro del juego."));
                         return;
@@ -180,7 +184,7 @@ final class Contratos implements Listener {
                     try {
                         i = Integer.parseInt(args.length > 1 ? args[1] : "");
                     } catch (NumberFormatException e) {
-                        p.sendMessage(ComandoCalamity.mensaje("Uso: /calamity cambiar <1-3>"));
+                        p.sendMessage(ComandoCalamity.mensaje("Ese contrato no existe."));
                         return;
                     }
                     cambiar(p, i);
@@ -645,8 +649,8 @@ final class Contratos implements Listener {
         if (queda && !dia.equals(s.getString("avisado", ""))) {
             s.set("avisado", dia);
             // Dos segundos despues: al entrar llueven mensajes (bienvenida, Ecos, altar).
-            luego(p, 40L, () -> p.sendMessage(ComandoCalamity.mensaje(Component.text("Oren tiene contratos para ti. Míralos con ")
-                    .append(Component.text("/calamity contratos", Paleta.DETALLE)).append(Component.text(".")))));
+            luego(p, 40L, () -> p.sendMessage(ComandoCalamity.mensaje(Component.text("Oren tiene contratos para ti. ")
+                    .append(Component.text("Habla con él en la antesala para verlos.", Paleta.DETALLE)))));
         }
     }
 
@@ -719,8 +723,8 @@ final class Contratos implements Listener {
         hc.plugin().bitacora().anotar("contrato", "renovada", p.getName(), "de " + (diaViejo.isEmpty() ? "?" : diaViejo),
                 "a " + hoy, "pergaminos viejos " + borrados);
         if (!pergaminoActivo()) {
-            luego(p, 40L, () -> p.sendMessage(ComandoCalamity.mensaje(Component.text("Oren tiene contratos nuevos para ti. Míralos con ")
-                    .append(Component.text("/calamity contratos", Paleta.DETALLE)).append(Component.text(".")))));
+            luego(p, 40L, () -> p.sendMessage(ComandoCalamity.mensaje(Component.text("Oren tiene contratos nuevos para ti. ")
+                    .append(Component.text("Habla con él en la antesala para verlos.", Paleta.DETALLE)))));
             return true;
         }
         Set<Integer> tiene = new HashSet<>();
@@ -1067,12 +1071,13 @@ final class Contratos implements Listener {
         hc.guardarYa();
         List<String> premio = hc.cfg().getStringList("contratos.semana-premio");
         if (premio.isEmpty() && !hc.cfg().isSet("contratos.semana-premio")) {
-            premio = List.of("lw hardcore dar llave %jugador% 1", "lw hardcore dar llave-umbral %jugador% 1 contratos");
+            premio = List.of("calamity give llave %jugador% 1", "calamity give llave-umbral %jugador% 1 contratos");
         }
         boolean umbral = false;
         for (String plantilla : premio) {
             umbral |= plantilla.contains(" " + PuenteBovedas.LLAVE_UMBRAL + " ");
-            Matcher m = LLAVE.matcher(plantilla.trim());
+            // Lo viejo (lw hardcore, el alias corto, el prefijo...) se pasa antes a la forma de ahora.
+            Matcher m = LLAVE.matcher(ComandosViejos.traducir(plantilla.trim()));
             if (m.matches()) {
                 // Por Entregas y no por el comando: asi la llave cuenta en el tope con origen "contratos".
                 Entregas en = hc.entregas();
@@ -1096,7 +1101,7 @@ final class Contratos implements Listener {
         String cmd = plantilla.replace("%jugador%", nombre).trim();
         if (cmd.startsWith("/")) cmd = cmd.substring(1);
         try {
-            return hc.plugin().getServer().dispatchCommand(hc.plugin().getServer().getConsoleSender(), cmd);
+            return hc.plugin().getServer().dispatchCommand(hc.plugin().getServer().getConsoleSender(), ComandosViejos.traducir(cmd));
         } catch (Throwable t) {
             hc.plugin().getLogger().warning("[Calamity] Falló el comando de contrato \"" + cmd + "\": " + t);
             return false;
@@ -1192,7 +1197,7 @@ final class Contratos implements Listener {
 
     // ------------------------------------------------------------------ jugador
 
-    /** /calamity contratos (en el menu, la fila del Tasador): los tres de hoy y como van. */
+    /** Los contratos de hoy en el chat ("calamity open <player> contracts" y /calamity contracts <player>). */
     void mostrar(CommandSender a, Player p) {
         if (!activo()) {
             a.sendMessage(ComandoCalamity.mensaje("Oren no tiene contratos ahora mismo."));
@@ -1233,7 +1238,7 @@ final class Contratos implements Listener {
         a.sendMessage(Component.text("  " + (gratis == 1 ? "Hoy te queda 1 cambio gratis"
                 : gratis > 1 ? "Hoy te quedan " + gratis + " cambios gratis"
                 : "Cambiar uno cuesta " + precio + (precio == 1 ? " Esencia" : " Esencias"))
-                + " (/calamity cambiar <1-3>).", Paleta.TENUE));
+                + ". Oren te los cambia.", Paleta.TENUE));
         int objetivo = Math.max(1, hc.cfg().getInt("contratos.semana-objetivo", 12));
         int hechos = semana().equals(s.getString("semana", "")) ? s.getInt("cobrados-semana", 0) : 0;
         a.sendMessage(Component.text("  Esta semana llevas " + Math.min(hechos, objetivo) + " de " + objetivo
@@ -1304,7 +1309,7 @@ final class Contratos implements Listener {
     }
 
     /**
-     * /calamity cambiar <1-3> (y el boton Cambiar contrato del Tasador). True si se cambio. Dentro de
+     * El boton Cambiar contrato del Tasador (y "calamity open <player> reroll <1-3>"). True si se cambio. Dentro de
      * Calamity y con pergaminos (1.10), el viejo deja de valer y, si lo llevaba, Oren le da el nuevo.
      */
     boolean cambiar(Player p, int i) {
@@ -1316,7 +1321,7 @@ final class Contratos implements Listener {
         ConfigurationSection s = libreta(u, !hc.esHardcore(p));
         String r = "lista." + i;
         if (!s.isSet(r + ".id")) {
-            p.sendMessage(ComandoCalamity.mensaje("Uso: /calamity cambiar <1-3>"));
+            p.sendMessage(ComandoCalamity.mensaje("Ese contrato no existe."));
             return false;
         }
         if (s.getBoolean(r + ".cobrado", false)) {
@@ -1381,7 +1386,7 @@ final class Contratos implements Listener {
 
     private void comandoAdmin(CommandSender quien, String[] args) {
         if (args.length < 2) {
-            quien.sendMessage(ComandoCalamity.mensaje("Uso: /calamidad contratos <jugador> [reset]"));
+            quien.sendMessage(ComandoCalamity.mensaje("Uso: /calamity contracts <player> [reset]"));
             return;
         }
         OfflinePlayer o = Entregas.buscar(args[1]);
@@ -1556,7 +1561,8 @@ final class Contratos implements Listener {
 
         h.ok("autotest no toca contratos reales", !hc.datos().isSet("contratos." + Autotest.sintetico(1))
                 && !hc.datos().isSet("contratos." + Autotest.sintetico(61)));
-        h.ok("/calamity contratos registrado", Subcomandos.calamity().nombres(null).contains("contratos"));
+        h.ok("/calamity contracts registrado", Subcomandos.staff().nombres(null).contains("contracts"));
+        h.ok("Oren y los NPCs abren los contratos (open <player> contracts)", Subcomandos.jugador().nombres(null).contains("contracts"));
         h.igual("placeholder sin jugador: vacio", "", PlaceholdersLethal.resolver(null, "contrato_1_texto"));
         h.igual("placeholder con un campo que no existe: no es nuestro", null, PlaceholdersLethal.resolver(null, "contrato_1_nada"));
         return h.lineas();

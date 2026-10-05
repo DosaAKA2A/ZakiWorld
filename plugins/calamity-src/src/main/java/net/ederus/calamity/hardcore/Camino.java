@@ -23,8 +23,8 @@ import java.util.UUID;
  * Eco o los Fragmentos que tiene (los de Masamune son objetos: cuentan los que lleva encima), y
  * arriba las horas activas y el proximo hito. 1.10: en las piezas con Sello, tambien donde vive su
  * minijefe (minijefes.por-bioma) y que se le puede llamar con un Reclamo.
- * Sale del Tasador (1.3.1; antes, del Altar, que ahora es solo tienda) y de /calamity camino
- * (informativo: se puede mirar en cualquier sitio). Al entrar en Calamity, la barra de accion
+ * Sale del Tasador (1.3.1; antes, del Altar, que ahora es solo tienda) y de "calamity open
+ * <player> path" (informativo: se puede mirar en cualquier sitio). Al entrar en Calamity, la barra de accion
  * ensena el credito mas cercano (P-W03).
  *
  * Existe porque el Manto son semanas de juego y lo que no se ve no se persigue: la encuesta
@@ -47,8 +47,8 @@ final class Camino {
     Camino(Hardcore hc, Altar altar) {
         this.hc = hc;
         this.altar = altar;
-        Subcomandos.calamity().registrar("camino", "lo que te falta para el Manto, el Vestigio, la Guadaña y las Masamune",
-                "lethalworld.calamity", this::comando, null);
+        Subcomandos.jugador().registrar("path", "lo que te falta para el Manto, el Vestigio, la Guadaña y las Masamune",
+                null, this::comando, null);
     }
 
     private void comando(CommandSender quien, String[] args) {

@@ -30,7 +30,7 @@ import java.util.Set;
 import java.util.UUID;
 
 /**
- * M18 · Tablero (/calamity tablero y el boton de los rankings del Cazador): con poca gente
+ * M18 · Tablero ("calamity open <player> board" y Rhen, el Cazador, con los rankings apagados): con poca gente
  * dentro, lo que hace que se encuentren.
  *
  * Menu de 36 con el marco negro de Calamity (Marco), solo clic izquierdo y un clic cada 500 ms.
@@ -76,7 +76,7 @@ final class Tablero implements Listener {
     Tablero(Hardcore hc) {
         this.hc = hc;
         hc.plugin().getServer().getPluginManager().registerEvents(this, hc.plugin());
-        Subcomandos.calamity().registrar("tablero", "los Ecos con botín y las Parcas sueltas", "lethalworld.calamity",
+        Subcomandos.jugador().registrar("board", "los Ecos con botín y las Parcas sueltas", null,
                 (quien, args) -> {
                     if (quien instanceof Player p) abrir(p);
                     else quien.sendMessage(ComandoCalamity.mensaje("Solo se puede usar dentro del juego."));
@@ -147,7 +147,7 @@ final class Tablero implements Listener {
 
     // ------------------------------------------------------------------ menu
 
-    /** /calamity tablero y el boton de los rankings del Cazador. */
+    /** "calamity open <player> board" y Rhen, el Cazador, con los rankings apagados. */
     void abrir(Player p) {
         if (!activo()) {
             p.sendMessage(ComandoCalamity.mensaje("El Tablero está cerrado ahora mismo."));
@@ -274,7 +274,7 @@ final class Tablero implements Listener {
         h.igual("20 minutos -> 1 h", 1L, horasQuedan(ahora + 20 * 60_000L, ahora));
         h.igual("caducado -> 0", 0L, horasQuedan(ahora - 1, ahora));
         h.igual("11 h y 1 min -> 12 h", 12L, horasQuedan(ahora + 11 * 3_600_000L + 60_000L, ahora));
-        h.ok("/calamity tablero registrado", Subcomandos.calamity().nombres(null).contains("tablero"));
+        h.ok("el Tablero se abre desde un NPC (open <player> board)", Subcomandos.jugador().nombres(null).contains("board"));
         return h.lineas();
     }
 }

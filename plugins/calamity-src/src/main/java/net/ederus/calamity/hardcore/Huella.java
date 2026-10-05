@@ -601,7 +601,7 @@ final class Huella implements Listener {
             return true;
         }
 
-        /** /lw hardcore parca <jugador> [segundos]: llena el anillo con la celda actual. */
+        /** /calamity reaper <player> [seconds]: llena el anillo con la celda actual. */
         void forzar(int segundosQuieto, double x, double y, double z, Ajustes a) {
             if (celdas.length != a.tamano()) {
                 celdas = new long[a.tamano()];
@@ -874,7 +874,7 @@ final class Huella implements Listener {
     }
 
     /**
-     * No cuenta (DIS sec. 1.2.6): exento a mano (/lw hardcore exento, ya no por permiso: con
+     * No cuenta (DIS sec. 1.2.6): exento a mano (/calamity exempt, ya no por permiso: con
      * el comodin de LuckPerms todo el staff quedaba inmune), quien ya tiene una
      * PARCA encima, quien esta en la llegada protegida, la gracia tras una PARCA y los
      * muertos y quien canaliza el Cristal (DIS). Espectador y creativo ya los filtra
@@ -1148,7 +1148,7 @@ final class Huella implements Listener {
         return r == null ? 0 : r.quieto;
     }
 
-    /** /lw hardcore parca <jugador> [segundos]: pone su quieto (el limite = la llama en el siguiente segundo). */
+    /** /calamity reaper <player> [seconds]: pone su quieto (el limite = la llama en el siguiente segundo). */
     void forzar(Player p, int segundos) {
         Location l = p.getVehicle() != null ? p.getVehicle().getLocation() : p.getLocation();
         Ajustes a = ajustes();
@@ -1168,7 +1168,7 @@ final class Huella implements Listener {
         r.avisoDado = nivel;
     }
 
-    /** /lw hardcore parca info: lo que sabe la Huella de ese jugador. */
+    /** /calamity reaper info: lo que sabe la Huella de ese jugador. */
     String info(Player p) {
         Rastro r = rastros.get(p.getUniqueId());
         if (r == null) return "sin huella";

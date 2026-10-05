@@ -1966,7 +1966,7 @@ final class PeleaAmbush implements Runnable {
         return estado == Estado.PELEA ? (ticks - inicioPelea) / 20 : 0;
     }
 
-    /** Para /calamidad ambush info: fase, vida y tiempo. */
+    /** Para /calamity ambush info: fase, vida y tiempo. */
     String estadoTexto() {
         if (cuerpo == null) return "sin cuerpo";
         long s = segundosDePelea();

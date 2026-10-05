@@ -32,7 +32,7 @@ import java.util.concurrent.ThreadLocalRandom;
  * reloj y no se avisa a nadie. Un mundo descargado espera; al volver a cargarse se pone al dia.
  *
  * Cada segundo (Clima.tick) se mira si el mundo sigue con el clima de su fase y, si alguien lo cambio
- * (un /weather, otro plugin), se repone: el que manda es /calamidad weather.
+ * (un /weather, otro plugin), se repone: el que manda es /calamity weather.
  *
  * Aviso aviso-segundos antes de cada lluvia, una sola vez por cambio, como destello corto a quien este
  * dentro: "Se acerca la lluvia", "Se acerca una tormenta" o, segun el bioma en el que esta, "Se acerca
@@ -75,8 +75,8 @@ final class CicloClima {
     CicloClima(Hardcore hc) {
         this.hc = hc;
         PlaceholdersLethal.registrar("clima", this::placeholder);
-        Subcomandos.lw().registrar("weather",
-                "weather [rain|storm|clear] [minutos]: el clima de Calamity (sin nada, como va)", "ederus.mundos",
+        Subcomandos.staff().registrar("weather",
+                "weather [rain|storm|clear] [minutes]: el clima de Calamity (sin nada, como va)", Subcomandos.PERMISO,
                 this::comando, args -> switch (args.length) {
                     case 2 -> List.of("rain", "storm", "clear");
                     case 3 -> List.of("5", "10", "20");
@@ -234,7 +234,7 @@ final class CicloClima {
             default -> null;
         };
         if (fase == null) {
-            quien.sendMessage(ComandoCalamity.mensaje("Uso: /calamidad weather [rain|storm|clear] [minutos]"));
+            quien.sendMessage(ComandoCalamity.mensaje("Uso: /calamity weather [rain|storm|clear] [minutes]"));
             return;
         }
         Double minutos = null;
@@ -353,7 +353,7 @@ final class CicloClima {
         return s + " s";
     }
 
-    /** Los minutos de /calamidad weather, o null si no valen. */
+    /** Los minutos de /calamity weather, o null si no valen. */
     static Double minutos(String texto) {
         try {
             double m = Double.parseDouble(texto.trim().replace(',', '.'));

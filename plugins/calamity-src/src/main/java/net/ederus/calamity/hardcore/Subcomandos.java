@@ -15,59 +15,94 @@ import java.util.function.Function;
 import java.util.logging.Level;
 
 /**
- * Los subcomandos de /lw hardcore y de /calamity, por registro.
+ * Los subcomandos de /calamity y lo que abren los NPCs, por registro.
  *
- * Existe para poder trabajar en paralelo: cada modulo de Calamity registra los suyos en
- * su constructor y nadie mas tiene que tocar ComandoMundos (que lleva el switch de toda
- * la vida) ni ComandoCalamity. Los subcomandos que ya existian en ComandoMundos siguen
- * alli; lo que no encuentra en su switch lo pregunta aqui.
+ * Existe para poder trabajar en paralelo: cada modulo de Calamity registra los suyos en su
+ * constructor y nadie mas tiene que tocar ComandoRaiz (que lleva el switch de toda la vida).
+ * Lo que ComandoRaiz no encuentra en su switch lo pregunta aqui.
  *
- * Convencion de argumentos, la misma para accion y tab: args[0] es el nombre del
- * subcomando y lo demas va detras. "/lw hardcore dar esencia Dosa__ 10" llega como
- * [dar, esencia, Dosa__, 10]. Para tab, el ultimo argumento es el que se esta escribiendo;
- * lo que devuelva se filtra aqui por lo ya escrito.
+ * Dos registros:
+ *  - staff(): los subcomandos de /calamity. Desde la 1.12 todo /calamity es de staff (op o el
+ *    permiso calamity.admin) y va en ingles; todos piden PERMISO aunque el modulo diga otro.
+ *  - jugador(): lo que un jugador consulta (su saldo, sus Ecos, el Cronista...). Ya no es un
+ *    comando: lo abre un NPC con "calamity open <player> <id>" desde la consola (Citizens), y el
+ *    staff, para probarlo, igual. La accion recibe al jugador como CommandSender.
+ *
+ * Convencion de argumentos, la misma para accion y tab: args[0] es el nombre del subcomando y lo
+ * demas va detras. "/calamity give esencia Dosa__ 10" llega como [give, esencia, Dosa__, 10]. Para
+ * tab, el ultimo argumento es el que se esta escribiendo; lo que devuelva se filtra aqui por lo ya
+ * escrito.
  *
  * Todo en el hilo principal (comandos de Bukkit): no hace falta sincronizar.
  */
 public final class Subcomandos {
+
+    /**
+     * El permiso de staff de /calamity (default: op en el plugin.yml; los grupos admin, owner y dev
+     * lo llevan en LuckPerms). Sin el, /calamity no sale en el tab y contesta como un comando que no
+     * existe.
+     */
+    public static final String PERMISO = "calamity.admin";
+
+    /**
+     * Los nodos que pedian los subcomandos antes de la 1.12. Un modulo que aun registre con uno de
+     * ellos (una rama vieja) pide PERMISO igual: nadie entra por un nodo de jugador.
+     */
+    private static final java.util.Set<String> PERMISOS_VIEJOS = java.util.Set.of("ederus.mundos", "lethalworld.calamity");
 
     private record Entrada(String nombre, String ayuda, String permiso,
                            BiConsumer<CommandSender, String[]> accion,
                            Function<String[], List<String>> tab) {
     }
 
-    // La raiz solo sale en los avisos ("/calamidad dar ha fallado: ..."): el comando de staff es
-    // /calamidad desde la 1.0 (lo de /lw hardcore lo reescribe RedireccionComandos).
-    private static final Subcomandos LW = new Subcomandos("/calamidad");
-    private static final Subcomandos CALAMITY = new Subcomandos("/calamity");
+    // La raiz solo sale en los avisos ("/calamity give ha fallado: ...").
+    private static final Subcomandos STAFF = new Subcomandos("/calamity", true);
+    private static final Subcomandos JUGADOR = new Subcomandos("/calamity open <player>", false);
 
     private final String raiz;
+    /** true: todo pide PERMISO (los de /calamity); false: lo que abren los NPCs, sin permiso propio. */
+    private final boolean deStaff;
     private final Map<String, Entrada> entradas = new LinkedHashMap<>();
 
-    private Subcomandos(String raiz) {
+    private Subcomandos(String raiz, boolean deStaff) {
         this.raiz = raiz;
+        this.deStaff = deStaff;
     }
 
-    /** Los de /lw hardcore (staff; /lw ya pide ederus.mundos). */
+    /** Los subcomandos de /calamity (staff). */
+    public static Subcomandos staff() {
+        return STAFF;
+    }
+
+    /** Lo que abre un NPC para un jugador: "calamity open <player> <id>". */
+    public static Subcomandos jugador() {
+        return JUGADOR;
+    }
+
+    /** @deprecated desde la 1.12 es staff(): se queda para las ramas que aun registran con lw(). */
+    @Deprecated
     public static Subcomandos lw() {
-        return LW;
+        return STAFF;
     }
 
-    /** Los de /calamity (jugadores). */
+    /** @deprecated desde la 1.12 es jugador(): /calamity ya no es de jugadores. */
+    @Deprecated
     public static Subcomandos calamity() {
-        return CALAMITY;
+        return JUGADOR;
     }
 
     /**
      * Registra un subcomando. Si ya habia uno con ese nombre, lo sustituye y lo avisa: dos
      * modulos con el mismo nombre es un fallo de reparto que tiene que verse.
      *
-     * @param permiso null = sin permiso propio (vale el del comando)
+     * @param permiso en staff(), null o un nodo viejo = PERMISO; en jugador() no se mira (abre la consola)
      * @param tab     null = sin sugerencias
      */
     public void registrar(String nombre, String ayuda, String permiso,
                           BiConsumer<CommandSender, String[]> accion, Function<String[], List<String>> tab) {
         String clave = nombre.toLowerCase(Locale.ROOT);
+        if (!deStaff) permiso = null;
+        else if (permiso == null || PERMISOS_VIEJOS.contains(permiso)) permiso = PERMISO;
         if (entradas.containsKey(clave)) {
             log(Level.WARNING, raiz + " " + clave + " se registra dos veces; se queda el último.", null);
         }
@@ -88,7 +123,9 @@ public final class Subcomandos {
         } catch (Throwable t) {
             // Un modulo que revienta no puede dejar el comando sin respuesta: se dice y se
             // deja la traza en consola para el que lo tenga que arreglar.
-            quien.sendMessage(Component.text(raiz + " " + e.nombre() + " ha fallado: " + t, Paleta.AVISO));
+            // Al jugador (lo de los NPCs) no se le ensena ningun comando ni la excepcion.
+            quien.sendMessage(Component.text(deStaff ? raiz + " " + e.nombre() + " ha fallado: " + t
+                    : "Algo ha fallado. Avisa al staff.", Paleta.AVISO));
             log(Level.WARNING, raiz + " " + e.nombre() + " ha fallado", t);
         }
         return true;
@@ -131,6 +168,18 @@ public final class Subcomandos {
             }
         }
         return out;
+    }
+
+    /** El permiso que pide ese subcomando (null si no lo hay o no pide ninguno). Para el autotest. */
+    public String permiso(String nombre) {
+        Entrada e = nombre == null ? null : entradas.get(nombre.toLowerCase(Locale.ROOT));
+        return e == null ? null : e.permiso();
+    }
+
+    /** El texto de ayuda de ese subcomando ("" si no hay). Para el autotest. */
+    public String ayuda(String nombre) {
+        Entrada e = nombre == null ? null : entradas.get(nombre.toLowerCase(Locale.ROOT));
+        return e == null ? "" : e.ayuda();
     }
 
     /** Al parar Calamity: los modulos nuevos se registraran otra vez al arrancar. */

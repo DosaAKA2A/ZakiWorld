@@ -833,7 +833,7 @@ final class ParcaAnomalia extends BossFight implements ParcaViva {
     }
 
     /**
-     * /lw hardcore parca habilidad <nombre> (y /anomaly test): suelta esa tecnica ya, en
+     * /calamity reaper ability <name> (y /anomaly test): suelta esa tecnica ya, en
      * cualquier fase, para ver los avisos y los golpes con un cliente. Devuelve por que no, o null.
      */
     @Override

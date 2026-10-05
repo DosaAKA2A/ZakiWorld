@@ -30,7 +30,7 @@ import java.util.UUID;
  *
  * Las candidatas salen de hardcore.deseos.candidatas (<id>: {icono, nombre, lore}); si la
  * config no trae ninguna, las de serie de aqui. Los ids casan con catalogo.yml del
- * analizador (tools/calamity). Se abre con /calamity deseos y desde el Altar (WP3).
+ * analizador (tools/calamity). Se abre desde Ilen, el Cronista ("calamity open <player> wishes"), y desde el Altar (WP3).
  * Datos: deseos-votos.<uuid> = [ids].
  */
 final class Deseos {
@@ -62,9 +62,9 @@ final class Deseos {
     Deseos(Hardcore hc, Encuesta encuesta) {
         this.hc = hc;
         this.encuesta = encuesta;
-        Subcomandos.lw().registrar("deseos", "deseos: recuento de la lista de deseos", "ederus.mundos",
+        Subcomandos.staff().registrar("wishes", "wishes: recuento de la lista de deseos", Subcomandos.PERMISO,
                 (quien, args) -> recuento(quien), null);
-        Subcomandos.calamity().registrar("deseos", "vota lo que quieres que dé Calamity (3 votos)", "lethalworld.calamity",
+        Subcomandos.jugador().registrar("wishes", "vota lo que quieres que dé Calamity (3 votos)", null,
                 (quien, args) -> {
                     if (quien instanceof Player p) abrir(p);
                     else quien.sendMessage(Component.text("Solo se puede usar dentro del juego.", Paleta.AVISO));

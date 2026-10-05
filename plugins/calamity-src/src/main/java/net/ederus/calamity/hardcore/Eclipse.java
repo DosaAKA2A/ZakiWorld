@@ -58,7 +58,7 @@ import java.util.UUID;
  * El estado vive en hardcore-datos.yml (eclipse.hasta y compania) para que un reinicio a
  * mitad no corte el eclipse ni regale una segunda Reliquia al mismo jugador.
  *
- * "/lw hardcore eclipse iniciar" funciona aunque eclipse.activo sea false: es la forma de
+ * "/calamity eclipse start" funciona aunque eclipse.activo sea false: es la forma de
  * probarlo (y de montar uno a mano en un evento) sin encender el horario.
  */
 final class Eclipse implements Listener {
@@ -93,10 +93,10 @@ final class Eclipse implements Listener {
         this.reloj = new Reloj(hc.datos());
         hc.plugin().getServer().getPluginManager().registerEvents(this, hc.plugin());
         Autotest.registrar("eclipse", this::autotest);
-        Subcomandos.lw().registrar("eclipse",
-                "eclipse iniciar [minutos]|parar|info: el Eclipse de Calamidad a mano", "ederus.mundos",
-                this::comando, args -> args.length == 2 ? List.of("iniciar", "parar", "info") : List.of());
-        Subcomandos.calamity().registrar("eclipse", "cuándo es el próximo Eclipse", "lethalworld.calamity",
+        Subcomandos.staff().registrar("eclipse",
+                "eclipse start [minutes]|stop|info: el Eclipse de Calamidad a mano", Subcomandos.PERMISO,
+                this::comando, args -> args.length == 2 ? List.of("start", "stop", "info") : List.of());
+        Subcomandos.jugador().registrar("eclipse", "cuándo es el próximo Eclipse", null,
                 (quien, args) -> quien.sendMessage(ComandoCalamity.mensaje(resumen(System.currentTimeMillis()))), null);
         PlaceholdersLethal.registrar("eclipse", (jugador, resto) -> placeholder(System.currentTimeMillis()));
         if (reloj.activo(System.currentTimeMillis())) {
@@ -525,12 +525,12 @@ final class Eclipse implements Listener {
 
     // ------------------------------------------------------- comando y placeholder
 
-    /** /lw hardcore eclipse iniciar [minutos] | parar | info. */
+    /** /calamity eclipse start [minutes] | stop | info. */
     private void comando(CommandSender quien, String[] args) {
         String sub = args.length >= 2 ? args[1].toLowerCase(Locale.ROOT) : "info";
         long ahora = System.currentTimeMillis();
         switch (sub) {
-            case "iniciar" -> {
+            case "start" -> {
                 if (reloj.activo(ahora)) {
                     quien.sendMessage(ComandoCalamity.mensaje("Ya hay un eclipse. Acaba a las " + hora(reloj.hasta()) + "."));
                     return;
@@ -549,7 +549,7 @@ final class Eclipse implements Listener {
                         + hora(reloj.hasta()) + (hc.cfg().getBoolean("eclipse.activo", false) ? "."
                         : ". El horario sigue apagado (eclipse.activo: false).")));
             }
-            case "parar" -> {
+            case "stop" -> {
                 if (!reloj.activo(ahora)) {
                     quien.sendMessage(ComandoCalamity.mensaje("No hay ningún eclipse en curso."));
                     return;
@@ -566,12 +566,12 @@ final class Eclipse implements Listener {
                             + ", PvP ×" + factorPvp() + "."));
                 }
             }
-            default -> quien.sendMessage(ComandoCalamity.mensaje("Uso: /calamidad eclipse iniciar [minutos]|parar|info"));
+            default -> quien.sendMessage(ComandoCalamity.mensaje("Uso: /calamity eclipse start [minutes]|stop|info"));
         }
     }
 
-    /** Una frase para /calamity eclipse y /lw hardcore eclipse info. */
-    private String resumen(long ahora) {
+    /** Una frase para el Cronista ("calamity open <player> eclipse") y /calamity eclipse info. */
+    String resumen(long ahora) {
         if (reloj.activo(ahora)) {
             return "Eclipse de Calamidad en curso. Quedan " + cuenta((reloj.hasta() - ahora) / 1000) + ".";
         }

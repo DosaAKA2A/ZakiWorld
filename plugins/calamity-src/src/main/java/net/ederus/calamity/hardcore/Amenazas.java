@@ -110,10 +110,10 @@ final class Amenazas implements Listener {
     Amenazas(Hardcore hc) {
         this.hc = hc;
         hc.plugin().getServer().getPluginManager().registerEvents(this, hc.plugin());
-        Subcomandos.lw().registrar("amenazas",
-                "amenazas [contar|limpiar|prueba <x> <y> <z> [vida]]: las Parcas, los Ecos y demás amenazas vivas",
-                "ederus.mundos", this::comando,
-                args -> args.length == 2 ? List.of("contar", "limpiar", "prueba") : List.of());
+        Subcomandos.staff().registrar("threats",
+                "threats [count|clear|test <x> <y> <z> [health]]: las Parcas, los Ecos y demás amenazas vivas",
+                Subcomandos.PERMISO, this::comando,
+                args -> args.length == 2 ? List.of("count", "clear", "test") : List.of());
     }
 
     // ------------------------------------------------------------------ invocar
@@ -319,7 +319,7 @@ final class Amenazas implements Listener {
         return max <= 0 ? 0 : Math.max(0, Math.min(1, e.getHealth() / max));
     }
 
-    /** Le deja esa fraccion de vida (0-1). Para probar fases: /lw hardcore parca vida 0.5. */
+    /** Le deja esa fraccion de vida (0-1). Para probar fases: /calamity reaper health 0.5. */
     void ponerFraccion(LivingEntity e, double fraccion) {
         double max = Compat.getAttribute(e, "max_health", 0);
         if (max <= 0) return;
@@ -603,15 +603,15 @@ final class Amenazas implements Listener {
 
     // ------------------------------------------------------------------- comando
 
-    /** /lw hardcore amenazas [contar|limpiar]. Mira las entidades cargadas: es la verdad, no el registro. */
+    /** /calamity threats [count|clear|test]. Mira las entidades cargadas: es la verdad, no el registro. */
     private void comando(CommandSender quien, String[] args) {
-        String que = args.length >= 2 ? args[1].toLowerCase(Locale.ROOT) : "contar";
+        String que = args.length >= 2 ? args[1].toLowerCase(Locale.ROOT) : "count";
         List<LivingEntity> todas = new ArrayList<>();
         for (World w : hc.plugin().getServer().getWorlds()) {
             for (LivingEntity e : w.getLivingEntities()) if (Marcas.esAmenaza(e)) todas.add(e);
         }
         switch (que) {
-            case "contar" -> {
+            case "count" -> {
                 // Solo el total lleva cifras: el banco de pruebas busca el numero suelto.
                 StringBuilder tipos = new StringBuilder();
                 for (int i = 0; i < todas.size() && i < 10; i++) {
@@ -622,7 +622,7 @@ final class Amenazas implements Listener {
                 quien.sendMessage(Component.text("amenazas | " + todas.size()
                         + (todas.isEmpty() ? "" : " | " + tipos), Paleta.TENUE));
             }
-            case "limpiar" -> {
+            case "clear" -> {
                 // Los gestores ven su entidad invalida en su siguiente tick y cierran la pelea.
                 // Los Ecos siguen en hardcore-datos.yml: vuelven a despertar.
                 for (LivingEntity e : todas) e.remove();
@@ -634,9 +634,9 @@ final class Amenazas implements Listener {
                     // Sin bitacora no se pierde nada: ya se dijo por el comando.
                 }
             }
-            case "prueba" -> prueba(quien, args);
+            case "test" -> prueba(quien, args);
             default -> quien.sendMessage(Component.text(
-                    "Uso: /calamidad amenazas [contar|limpiar|prueba <x> <y> <z> [vida]]", Paleta.AVISO));
+                    "Uso: /calamity threats [count|clear|test <x> <y> <z> [health]]", Paleta.AVISO));
         }
     }
 
@@ -647,7 +647,7 @@ final class Amenazas implements Listener {
      */
     private void prueba(CommandSender quien, String[] args) {
         if (args.length < 5) {
-            quien.sendMessage(Component.text("Uso: /calamidad amenazas prueba <x> <y> <z> [vida]", Paleta.AVISO));
+            quien.sendMessage(Component.text("Uso: /calamity threats test <x> <y> <z> [health]", Paleta.AVISO));
             return;
         }
         World w = null;

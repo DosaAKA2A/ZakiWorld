@@ -111,9 +111,9 @@ final class Aduana {
         this.hc = hc;
         sal();
         podar(System.currentTimeMillis());
-        Subcomandos.lw().registrar("aduana",
-                "aduana <jugador> [reset]: horas, huellas, topes y MC de hoy, Fusible; reset los pone a cero",
-                "ederus.mundos", this::comando, args -> args.length == 2 ? Entregas.nombresConectados()
+        Subcomandos.staff().registrar("customs",
+                "customs <player> [reset]: horas, huellas, topes y MC de hoy, Fusible; reset los pone a cero",
+                Subcomandos.PERMISO, this::comando, args -> args.length == 2 ? Entregas.nombresConectados()
                         : args.length == 3 ? List.of("reset") : List.of());
         Autotest.registrar("aduana", this::autotest);
     }
@@ -355,7 +355,7 @@ final class Aduana {
     }
 
     /**
-     * Exento a mano de la comparacion de huella (/lw hardcore exento <jugador> aduana on).
+     * Exento a mano de la comparacion de huella (/calamity exempt <player> customs on).
      * Antes era el permiso lethalworld.aduana.exento, que el comodin de LuckPerms daba a todo
      * el staff. Vale tambien desconectado.
      */
@@ -494,7 +494,7 @@ final class Aduana {
 
     private void comando(CommandSender quien, String[] args) {
         if (args.length < 2) {
-            quien.sendMessage(Component.text("Uso: /calamidad aduana <jugador> [reset]", Paleta.AVISO));
+            quien.sendMessage(Component.text("Uso: /calamity customs <player> [reset]", Paleta.AVISO));
             return;
         }
         OfflinePlayer o = Entregas.buscar(args[1]);

@@ -53,13 +53,13 @@ import java.util.regex.Pattern;
  * Calamity 1.3.3 · Que los objetos de Calamity hagan DE VERDAD lo que promete su lore (auditoria de objetos,
  * 2026-09-27: "si no, para que nos sirve ese lore"). Dos herramientas contra los items REALES de MMOItems:
  *
- *   /calamidad autotest objetos-reales  genera cada objeto con la plantilla del servidor (lo mismo que mi give) y
+ *   /calamity selftest real-items       genera cada objeto con la plantilla del servidor (lo mismo que mi give) y
  *                                        mira en el item sus stats (MMOITEMS_<ID> de custom_data), tier, set,
  *                                        encantamientos, efectos, huecos y mejora; en MMOItems, cada set con sus
  *                                        bonos acumulados por nivel y la habilidad del [5] con sus parametros; y lo
  *                                        de alrededor que puede dejar un bono en nada (el permiso de habilidades de
  *                                        MMOItems, el robo de vida de MythicLib, su critico base).
- *   /calamidad objetos stats <jugador>  con el equipo puesto: lo que MythicLib le tiene apuntado de cada pieza de
+ *   /calamity items stats <player>      con el equipo puesto: lo que MythicLib le tiene apuntado de cada pieza de
  *                                        Calamity y de su set, contra lo que promete el lore-tag.
  *
  * Lo esperado es objetos-calamity.yml, que saca gen_config.py de los mismos datos que los ficheros de MMOItems (va
@@ -75,7 +75,7 @@ final class ObjetosReales {
     /** El radio de un selector de GodItems: @cerca{r=3,enemigos} o @cerca{3,enemigos}. */
     private static final Pattern RADIO = Pattern.compile("[{,]\\s*(?:r|radio)?\\s*=?\\s*([0-9]+(?:\\.[0-9]+)?)\\s*[,}]");
 
-    /** Las casillas que mira /calamidad objetos stats: su hueco en MythicLib y como se dice. */
+    /** Las casillas que mira /calamity items stats: su hueco en MythicLib y como se dice. */
     private static final String[][] HUECOS = {{"HEAD", "Cabeza"}, {"CHEST", "Pecho"}, {"LEGS", "Piernas"},
             {"FEET", "Pies"}, {"MAIN_HAND", "Mano"}, {"OFF_HAND", "Otra mano"}};
 
@@ -99,10 +99,10 @@ final class ObjetosReales {
     ObjetosReales(Hardcore hc) {
         this.hc = hc;
         Autotest.registrar("objetos-reales", this::autotest);
-        Subcomandos.lw().registrar("objetos",
-                "objetos stats <jugador> | probar: lo que dan DE VERDAD las piezas y sets de Calamity",
-                "ederus.mundos", this::comando, args -> switch (args.length) {
-                    case 2 -> List.of("stats", "probar");
+        Subcomandos.staff().registrar("items",
+                "items stats <player> | test: lo que dan DE VERDAD las piezas y sets de Calamity",
+                Subcomandos.PERMISO, this::comando, args -> switch (args.length) {
+                    case 2 -> List.of("stats", "test");
                     case 3 -> args[1].equalsIgnoreCase("stats") ? Entregas.nombresConectados() : List.<String>of();
                     default -> List.<String>of();
                 });
@@ -607,22 +607,22 @@ final class ObjetosReales {
         return t == null ? n : t.getKey().getKey();
     }
 
-    // ================================================================= /calamidad objetos
+    // ================================================================= /calamity items
 
     private void comando(CommandSender quien, String[] args) {
         String sub = args.length >= 2 ? args[1].toLowerCase(Locale.ROOT) : "";
         switch (sub) {
-            case "probar" -> Subcomandos.lw().ejecutar(quien, new String[]{"autotest", "objetos-reales"});
+            case "test" -> Subcomandos.staff().ejecutar(quien, new String[]{"selftest", "real-items"});
             case "stats" -> {
                 Player p = args.length >= 3 ? Bukkit.getPlayerExact(args[2]) : (quien instanceof Player yo ? yo : null);
                 if (p == null) {
-                    quien.sendMessage(ComandoCalamity.mensaje("Dime un jugador conectado: /calamidad objetos stats <jugador>"));
+                    quien.sendMessage(ComandoCalamity.mensaje("Dime un jugador conectado: /calamity items stats <player>"));
                     return;
                 }
                 stats(quien, p);
             }
             default -> quien.sendMessage(ComandoCalamity.mensaje(
-                    "Uso: /calamidad objetos stats <jugador> (con el equipo puesto) · /calamidad objetos probar"));
+                    "Uso: /calamity items stats <player> (con el equipo puesto) · /calamity items test"));
         }
     }
 

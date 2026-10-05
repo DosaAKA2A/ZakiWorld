@@ -52,10 +52,10 @@ import java.util.UUID;
  * De donde sale, por mundo hardcore y en este orden:
  *   1. la region de WorldGuard que diga hardcore.spawn.region (cuboide o poligono), si
  *      WorldGuard esta y ese mundo la tiene;
- *   2. la caja de la vara (/calamidad define spawn), si es de ese mundo;
+ *   2. la caja de la vara (/calamity define spawn), si es de ese mundo;
  *   3. ninguna: ese mundo no tiene spawn seguro.
  * WorldGuard se lee por reflexion (no hay jar suyo en _toolchain/libs) y solo al refrescar: cada
- * CADA_MS se vuelve a mirar, asi que un /rg redefine o un /calamidad define spawn se nota sin
+ * CADA_MS se vuelve a mirar, asi que un /rg redefine o un /calamity define spawn se nota sin
  * reiniciar, y lo que se pregunta en cada evento (dentro()) es una busqueda en un mapa y seis
  * comparaciones.
  *
@@ -186,7 +186,7 @@ final class ZonaSpawn implements Listener {
             return (z1 + z2 + 1) / 2.0;
         }
 
-        /** Lo que sale en /calamidad: de donde sale, en que mundo y sus esquinas. */
+        /** Lo que sale en /calamity status: de donde sale, en que mundo y sus esquinas. */
         String describir() {
             String esquinas = x1 + " " + y1 + " " + z1 + "  a  " + x2 + " " + y2 + " " + z2;
             if (REGION.equals(origen)) {
@@ -281,7 +281,7 @@ final class ZonaSpawn implements Listener {
         return fuera(de(l.getWorld()), l.getX(), l.getZ(), margen);
     }
 
-    /** Para /calamidad: la zona de cada mundo hardcore, o por que no hay. Relee en el acto. */
+    /** Para /calamity status: la zona de cada mundo hardcore, o por que no hay. Relee en el acto. */
     String describir() {
         refrescar(true);
         boolean hayWg = worldGuard() != null;

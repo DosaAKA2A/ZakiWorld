@@ -32,11 +32,11 @@ final class Racha {
         this.hc = hc;
         Autotest.registrar("racha", this::autotest);
         PlaceholdersLethal.registrar("racha", (jugador, resto) -> jugador == null ? "" : String.valueOf(de(jugador.getUniqueId())));
-        Subcomandos.lw().registrar("racha", "racha <jugador> [n]: ver o poner la Racha de Codicia", "ederus.mundos",
+        Subcomandos.staff().registrar("streak", "streak <player> [n]: ver o poner la Racha de Codicia", Subcomandos.PERMISO,
                 (quien, args) -> {
                     OfflinePlayer op = args.length >= 2 ? Reliquias.jugador(args[1]) : null;
                     if (op == null) {
-                        quien.sendMessage(ComandoCalamity.mensaje("Uso: /calamidad racha <jugador> [n]"));
+                        quien.sendMessage(ComandoCalamity.mensaje("Uso: /calamity streak <player> [n]"));
                         return;
                     }
                     if (args.length >= 3) {
@@ -79,7 +79,7 @@ final class Racha {
         return factor(p.getUniqueId(), salida);
     }
 
-    /** Lo mismo por UUID: la tasacion de prueba (/lw hardcore tasar) no tiene jugador conectado. */
+    /** Lo mismo por UUID: la tasacion de prueba (/calamity appraise) no tiene jugador conectado. */
     double factor(UUID jugador, Censo.Foto salida) {
         if (!activa()) return 1.0;
         return factor(de(jugador), tope(salida), hc.cfg().getDouble("racha.por-punto", 0.10));

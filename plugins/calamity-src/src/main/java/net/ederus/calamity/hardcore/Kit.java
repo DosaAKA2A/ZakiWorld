@@ -39,7 +39,7 @@ import java.util.function.Predicate;
  * M15 · Kit de Expedicion (DIS M15, PLAN sec. 7.2): perderlo todo es la primera causa de
  * abandono en un modo asi, y el kit es lo justo para volver a entrar despues de morir.
  *
- * /calamity kit, fuera de Calamity, una vez cada kit.cada-horas (20) y solo sin armadura
+ * "calamity open <player> kit" (desde un NPC), fuera de Calamity, una vez cada kit.cada-horas (20) y solo sin armadura
  * puesta: hierro completo, espada de piedra, 8 panes y un Frasco de kit.frasco-tragos (1).
  * Todo lleva lethal_world:prestado (BYTE 1) y la linea "Prestado. Se deshace al salir de
  * Calamity."; el Censo no lo cuenta y el Eco solo lo copia.
@@ -64,8 +64,8 @@ final class Kit implements Listener {
     Kit(Hardcore hc) {
         this.hc = hc;
         hc.plugin().getServer().getPluginManager().registerEvents(this, hc.plugin());
-        Subcomandos.calamity().registrar("kit", "Kit de Expedición: fuera de Calamity, sin armadura, cada 20 h",
-                "lethalworld.calamity", (quien, args) -> {
+        Subcomandos.jugador().registrar("kit", "Kit de Expedición: fuera de Calamity, sin armadura, cada 20 h",
+                null, (quien, args) -> {
                     if (quien instanceof Player p) pedir(p);
                     else quien.sendMessage(ComandoCalamity.mensaje("Solo se puede usar dentro del juego."));
                 }, null);
@@ -422,7 +422,7 @@ final class Kit implements Listener {
         h.igual("quitar se lleva lo prestado (1 casco + 8 panes)", 9, quitar(inv));
         h.ok("quitar deja lo que no es prestado", inv[0] != null && inv[0].getAmount() == 5 && inv[1] == null && inv[3] == null);
         h.ok("un saco se reconoce", esSaco(new ItemStack(Material.BUNDLE)));
-        h.ok("/calamity kit registrado", Subcomandos.calamity().nombres(null).contains("kit"));
+        h.ok("el kit se abre desde un NPC (open <player> kit)", Subcomandos.jugador().nombres(null).contains("kit"));
         return h.lineas();
     }
 }
