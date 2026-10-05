@@ -959,6 +959,8 @@ hardcore:
       salir-con-objetos: "Te llevas Reliquias o Esencias sin vender. Oren te las compra en el spawn de Calamity; fuera no se pueden guardar."
       solo-en-el-spawn: "Oren solo compra en el spawn de Calamity o fuera de Calamity."
       nada-que-vender: "No llevas nada que Oren te compre."
+      # 1.12: Oren solo se lleva lo que paga; las I-II que pasan del tope de hoy se quedan contigo. {n} = cuantas.
+      tope-se-quedan: "Hoy Oren ya no compra más Reliquias de grado I y II: te quedas {n}. Mañana te las compra."
   combate: {activo: true, etiqueta-segundos: 15, combat-log: true, contar-timeout: true, llegada-segundos: 20}
   # [alineado] PLAN 3.2: la clave "ruinas" pasa a llamarse "cofres" (la usa ESTUDIO Anexo A)
   cofres:

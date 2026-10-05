@@ -45,7 +45,9 @@ import java.util.UUID;
  *
  * Una Reliquia con UUID solo paga si esta emitida en reliquias.log y no esta cobrada: la falsa y la
  * duplicada se quitan igual y se apuntan (la duplicada avisa al staff). Las I-II no llevan UUID; las
- * acota el tope diario (60 / 30) y lo que pasa se anota como exceso.
+ * acota el tope diario (60 / 30). Calamity 1.12: Oren solo retira las I-II que paga (retirar); lo que
+ * pasa del tope se queda en el inventario del jugador para venderlo otro dia. El exceso que aun se
+ * anota es el de las ventas que no salen de un inventario (la de ausente y appraise).
  */
 final class Tasacion {
 
@@ -118,6 +120,16 @@ final class Tasacion {
         boolean esencias() {
             return ESENCIAS.equals(clave);
         }
+
+        /** Las I-II de este tipo que pasan del tope de hoy: Oren no las retira, se quedan contigo. */
+        int quedan() {
+            return cuenta == null ? 0 : cuenta.exceso[1] + cuenta.exceso[2];
+        }
+
+        /** Lo que Oren se lleva hoy de este tipo: lo que paga y lo que no vale nada (falsas, caducadas...). */
+        int compra() {
+            return Math.max(0, cantidad - quedan());
+        }
     }
 
     /**
@@ -135,6 +147,16 @@ final class Tasacion {
             int n = 0;
             for (Grupo g : grupos) n += g.cantidad();
             return n;
+        }
+
+        /** Las I-II que pasan del tope de hoy vendiendolo todo: se quedan en el inventario. */
+        int quedan() {
+            return total.exceso[1] + total.exceso[2];
+        }
+
+        /** Lo que Oren se lleva vendiendolo todo (las Esencias incluidas). */
+        int compra() {
+            return Math.max(0, piezas() - quedan());
         }
     }
 
@@ -369,14 +391,39 @@ final class Tasacion {
         }
         Reliquias rel = hc.reliquias();
         List<ItemStack> quitadas = new ArrayList<>();
+        int quedan = 0;
         if (rel != null && activas() && !ESENCIAS.equals(clave)) {
+            // Calamity 1.12: solo se retira lo que Oren paga. Las I-II que pasan del tope de hoy se quedan
+            // en su hueco (si un monton pasa a medias, se parte); lo que no vale nada si se lo queda Oren.
             PlayerInventory inv = p.getInventory();
             ItemStack[] c = inv.getContents();
+            List<Integer> huecos = new ArrayList<>();
+            List<Pieza> piezas = new ArrayList<>();
             for (int i = 0; i < c.length; i++) {
                 if (!rel.es(c[i])) continue;
                 if (clave != null && !clave.equals(clave(c[i]))) continue;
-                quitadas.add(c[i]);
-                inv.setItem(i, null);
+                huecos.add(i);
+                piezas.add(leer(rel, c[i]));
+            }
+            int[] ya = yaHoy(p.getUniqueId());
+            int[] tomar = retirar(piezas, Valores.de(hc.cfg()), ya[1], ya[2]);
+            for (int k = 0; k < huecos.size(); k++) {
+                int i = huecos.get(k);
+                ItemStack it = c[i];
+                int n = tomar[k], hay = it.getAmount();
+                quedan += hay - n;
+                if (n <= 0) continue;
+                if (n >= hay) {
+                    quitadas.add(it);
+                    inv.setItem(i, null);
+                } else {
+                    ItemStack parte = it.clone();
+                    parte.setAmount(n);
+                    quitadas.add(parte);
+                    ItemStack resto = it.clone();
+                    resto.setAmount(hay - n);
+                    inv.setItem(i, resto);
+                }
             }
         }
         int fisicas = 0;
@@ -385,7 +432,8 @@ final class Tasacion {
             if (s != null) fisicas = hc.valor("saldo", () -> s.depositarFisicas(p), 0);
         }
         if (quitadas.isEmpty() && fisicas == 0) {
-            p.sendMessage(ComandoCalamity.mensaje(texto("nada-que-vender", "No llevas nada que Oren te compre.")));
+            p.sendMessage(ComandoCalamity.mensaje(quedan > 0 ? topeLleno(quedan)
+                    : texto("nada-que-vender", "No llevas nada que Oren te compre.")));
             return null;
         }
         hc.plugin().bitacora().anotar("venta", p.getName(), clave == null ? "todo" : clave, Aduana.idsReliquias(quitadas),
@@ -395,7 +443,47 @@ final class Tasacion {
             Saldo s = hc.saldo();
             if (s != null) p.sendMessage(s.avisoDeposito(p, fisicas));
         }
+        if (quedan > 0) p.sendMessage(ComandoCalamity.mensaje(topeLleno(quedan)));
         return r;
+    }
+
+    /** "Hoy Oren ya no compra más Reliquias de grado I y II: te quedas 10. Mañana te las compra." */
+    String topeLleno(int quedan) {
+        return topeLleno(texto("tope-se-quedan", TOPE_SE_QUEDAN), quedan);
+    }
+
+    static final String TOPE_SE_QUEDAN =
+            "Hoy Oren ya no compra más Reliquias de grado I y II: te quedas {n}. Mañana te las compra.";
+
+    static String topeLleno(String plantilla, int quedan) {
+        return plantilla.replace("{n}", Altar.miles(quedan));
+    }
+
+    /**
+     * Cuantas unidades de cada pieza se lleva Oren (mismo orden que piezas). Las I-II apilables, solo
+     * las que caben en lo que queda del tope de hoy (en el orden del inventario); todo lo demas entero:
+     * las III-IV y especiales que pagan, y lo que no vale nada (falsas, caducadas, duplicadas), que se
+     * retira sin pagar como siempre. Pura: lo mira el autotest. Usa la misma regla de apilable que contar.
+     */
+    static int[] retirar(List<Pieza> piezas, Valores v, int ya1, int ya2) {
+        int[] ya = {0, ya1, ya2, 0, 0};
+        int[] libre = new int[5];
+        for (int g = 1; g <= 4; g++) {
+            libre[g] = v.topeDia()[g] == Integer.MAX_VALUE ? Integer.MAX_VALUE : Math.max(0, v.topeDia()[g] - ya[g]);
+        }
+        int[] out = new int[piezas.size()];
+        for (int i = 0; i < piezas.size(); i++) {
+            Pieza p = piezas.get(i);
+            int g = Math.max(1, Math.min(4, p.grado()));
+            if (p.id() == null && p.especial() == null && v.apilables().contains(g)) {
+                int n = Math.min(p.cantidad(), libre[g]);
+                if (libre[g] != Integer.MAX_VALUE) libre[g] -= n;
+                out[i] = n;
+            } else {
+                out[i] = p.cantidad();
+            }
+        }
+        return out;
     }
 
     /**
@@ -589,8 +677,9 @@ final class Tasacion {
             p.sendMessage(ComandoCalamity.mensaje(c.append(Component.text("."))));
         }
         if (k.nulas() > 0) {
-            p.sendMessage(ComandoCalamity.mensaje(k.nulas() == 1 ? "Una Reliquia no valía nada (caducada o no válida)."
-                    : k.nulas() + " Reliquias no valían nada (caducadas o no válidas)."));
+            p.sendMessage(ComandoCalamity.mensaje(k.nulas() == 1
+                    ? "Una Reliquia no valía nada (caducada, falsa o duplicada): Oren se la ha quedado sin pagar."
+                    : k.nulas() + " Reliquias no valían nada (caducadas, falsas o duplicadas): Oren se las ha quedado sin pagar."));
         }
         int exceso = k.exceso[1] + k.exceso[2];
         if (exceso > 0) {
@@ -875,6 +964,9 @@ final class Tasacion {
         h.igual("70 I con 10 ya vendidas hoy: pagan 50", 50, b2.porGrado[1]);
         Cuenta b3 = contar(List.of(pieza(2, 40)), reg, 0, 25, v, ahora);
         h.igual("40 II con 25 hoy: pagan 5", 5, b3.porGrado[2]);
+        // Calamity 1.12: Oren solo se lleva lo que paga; el exceso se queda en el inventario.
+        h.igual("70 I a Oren: se lleva 60", 60, retirar(List.of(pieza(1, 70)), v, 0, 0)[0]);
+        h.igual("40 II con 25 hoy a Oren: se lleva 5", 5, retirar(List.of(pieza(2, 40)), v, 0, 25)[0]);
         String cam2 = UUID.randomUUID().toString();
         reg.emitida(cam2, 2, "prueba", ahora);
         Cuenta b4 = contar(List.of(uuid(2, cam2, Reliquias.CAMPANA, 20, null, false, ahora)), reg, 0, 30, v, ahora);
@@ -946,6 +1038,29 @@ final class Tasacion {
      */
     private List<String> autotestVenta() {
         Autotest.Hoja h = new Autotest.Hoja();
+        ventaPura(h, hc.cfg());
+
+        // Lo que reconoce como suyo: Reliquias y Esencias, por su marca.
+        Reliquias rel = hc.reliquias();
+        if (rel != null) {
+            ItemStack astilla = rel.crear(1, "prueba", null, 0, null, false);
+            h.igual("reconoce una Astilla", clave(1, null, null), clave(astilla));
+            ItemStack falsa = new ItemStack(Material.PRISMARINE_SHARD);
+            ItemMeta meta = falsa.getItemMeta();
+            meta.getPersistentDataContainer().set(Marcas.RELIQUIA, PersistentDataType.INTEGER, 2);
+            falsa.setItemMeta(meta);
+            h.igual("una Reliquia hecha a mano tambien se detecta (y luego no paga)", clave(2, null, null), clave(falsa));
+        }
+        h.igual("reconoce una Esencia", ESENCIAS, clave(hc.items().esencia(3)));
+        h.igual("una piedra no es de Oren", null, clave(new ItemStack(Material.STONE)));
+        return h.lineas();
+    }
+
+    /**
+     * Lo de la venta que no necesita objetos ni servidor (se puede correr fuera): grupos, topes, lo que
+     * Oren retira, la Racha, los extras y los textos de la config.
+     */
+    static void ventaPura(Autotest.Hoja h, ConfigurationSection cfg) {
         Valores v = Valores.de(new YamlConfiguration());
         long ahora = System.currentTimeMillis();
         Reliquias.Registro reg = Reliquias.Registro.enMemoria();
@@ -984,22 +1099,52 @@ final class Tasacion {
         h.igual("extras: las dos tiradas de llave", 2L, ex.stream().filter(x -> x.contains("Llave del Caos")).count());
         h.igual("extras: nada sin especiales", List.of(), extrasTexto(contar(List.of(pieza(1, 3)), reg, 0, 0, v, ahora)));
 
-        // Lo que reconoce como suyo: Reliquias y Esencias, por su marca.
-        Reliquias rel = hc.reliquias();
-        if (rel != null) {
-            ItemStack astilla = rel.crear(1, "prueba", null, 0, null, false);
-            h.igual("reconoce una Astilla", clave(1, null, null), clave(astilla));
-            ItemStack falsa = new ItemStack(Material.PRISMARINE_SHARD);
-            ItemMeta meta = falsa.getItemMeta();
-            meta.getPersistentDataContainer().set(Marcas.RELIQUIA, PersistentDataType.INTEGER, 2);
-            falsa.setItemMeta(meta);
-            h.igual("una Reliquia hecha a mano tambien se detecta (y luego no paga)", clave(2, null, null), clave(falsa));
+        // Calamity 1.12: Oren solo retira lo que paga. Lo que pasa del tope de hoy se queda contigo.
+        int[] t = retirar(List.of(pieza(1, 64), pieza(1, 6)), v, 10, 0);
+        h.igual("retirar: 64 + 6 I con 10 ya vendidas: se lleva 50 del primero y deja el segundo", "50,0", t[0] + "," + t[1]);
+        h.igual("retirar: tope de las II lleno: no se lleva ninguna", 0, retirar(List.of(pieza(2, 40)), v, 0, 30)[0]);
+        h.igual("retirar: sin tope gastado se lo lleva todo", 12, retirar(List.of(pieza(2, 12)), v, 0, 0)[0]);
+        h.igual("retirar: el tope de las I no toca a las II", 7, retirar(List.of(pieza(1, 5), pieza(2, 7)), v, 60, 0)[1]);
+        String tres = UUID.randomUUID().toString(), camII = UUID.randomUUID().toString();
+        reg.emitida(tres, 3, "prueba", ahora);
+        reg.emitida(camII, 2, "prueba", ahora);
+        List<Pieza> mezcla = List.of(pieza(1, 70), uuid(3, tres, null, 0, null, false, ahora),
+                uuid(2, camII, Reliquias.CAMPANA, 20, null, false, ahora), new Pieza(3, null, null, 0, 0, null, false, 1),
+                uuid(4, UUID.randomUUID().toString(), null, 0, null, false, ahora));
+        int[] m = retirar(mezcla, v, 0, 30);
+        h.igual("retirar: las I hasta el tope; la III, la Campana II, la falsa y la no emitida enteras", "60,1,1,1,1",
+                m[0] + "," + m[1] + "," + m[2] + "," + m[3] + "," + m[4]);
+        List<Pieza> llevadas = new ArrayList<>();
+        for (int i = 0; i < mezcla.size(); i++) {
+            Pieza pz = mezcla.get(i);
+            if (m[i] > 0) llevadas.add(new Pieza(pz.grado(), pz.especial(), pz.id(), pz.nacio(), pz.nivel(), pz.minijefe(),
+                    pz.valida(), m[i]));
         }
-        h.igual("reconoce una Esencia", ESENCIAS, clave(hc.items().esencia(3)));
-        h.igual("una piedra no es de Oren", null, clave(new ItemStack(Material.STONE)));
+        Cuenta todoJunto = contar(mezcla, reg, 0, 30, v, ahora), soloLlevadas = contar(llevadas, reg, 0, 30, v, ahora);
+        h.ok("retirar: lo que se lleva paga lo mismo y ya no tiene exceso",
+                soloLlevadas.exceso[1] + soloLlevadas.exceso[2] == 0 && soloLlevadas.mc == todoJunto.mc
+                        && soloLlevadas.esencias == todoJunto.esencias);
+        h.igual("retirar: las que no valen nada se retiran igual (sin pagar)", 2, soloLlevadas.nulas());
+
+        // Lo que enseña el menu: cuantas compra hoy y cuantas se quedan contigo.
+        Grupo astillas = new Grupo(clave(1, null, null), "Astilla", null, Material.PRISMARINE_SHARD, 1, null, 70,
+                contar(List.of(pieza(1, 70)), reg, 0, 0, v, ahora), 0L);
+        h.igual("grupo: de 70 I compra 60", 60, astillas.compra());
+        h.igual("grupo: y se quedan 10", 10, astillas.quedan());
+        Grupo falsas = new Grupo(clave(3, null, null), "Ámbar", null, Material.RESIN_CLUMP, 3, null, 1,
+                contar(List.of(new Pieza(3, null, null, 0, 0, null, false, 1)), reg, 0, 0, v, ahora), 0L);
+        h.ok("grupo: una falsa se la lleva (sin pagar) y no se queda", falsas.compra() == 1 && falsas.quedan() == 0);
+        Grupo esencias = new Grupo(ESENCIAS, "Esencia", null, Material.GHAST_TEAR, 0, null, 5, null, 0L);
+        h.ok("grupo: las Esencias, todas", esencias.compra() == 5 && esencias.quedan() == 0);
+        Oferta oferta = new Oferta(List.of(astillas, esencias), contar(List.of(pieza(1, 70)), reg, 0, 0, v, ahora), 5, 1.0,
+                12, 300, 0, 0);
+        h.ok("vender todo: compra 65 de 75 y te quedas 10", oferta.piezas() == 75 && oferta.compra() == 65 && oferta.quedan() == 10);
+        h.ok("aviso de tope lleno con la cifra", topeLleno(TOPE_SE_QUEDAN, 10).contains("te quedas 10")
+                && !topeLleno(TOPE_SE_QUEDAN, 10).contains("{n}"));
+        String plantilla = cfg.getString("venta.mensajes.tope-se-quedan");
+        h.ok("venta.mensajes.tope-se-quedan lleva {n} (o no esta y va el de serie)", plantilla == null || plantilla.contains("{n}"));
 
         // Ningun texto dice ya que se vende solo al salir.
-        ConfigurationSection cfg = hc.cfg();
         List<String> textos = new ArrayList<>();
         for (int gr = 1; gr <= 4; gr++) {
             for (String esp : new String[]{null, Reliquias.CAMPANA, Reliquias.LAGRIMA, Reliquias.SELLO, Reliquias.ECLIPSADA}) {
@@ -1013,11 +1158,10 @@ final class Tasacion {
         ConfigurationSection pool = cfg.getConfigurationSection("contratos.pool");
         if (pool != null) for (String id : pool.getKeys(false)) textos.add(pool.getString(id + ".texto", ""));
         List<String> malos = new ArrayList<>();
-        for (String t : textos) if (vendeSolo(t)) malos.add(t);
+        for (String x : textos) if (vendeSolo(x)) malos.add(x);
         h.igual("ningun lore, capitulo ni contrato dice que se vende solo al salir", List.of(), malos);
         h.ok("el detector de textos viejos funciona", vendeSolo("Se vende sola al salir de Calamity")
                 && vendeSolo("Al salir vivo, tus Reliquias se venden solas") && !vendeSolo("Véndesela a Oren."));
-        return h.lineas();
     }
 
     /** Si un texto aun dice que lo de Calamity se vende (o pasa al saldo) solo al salir. */

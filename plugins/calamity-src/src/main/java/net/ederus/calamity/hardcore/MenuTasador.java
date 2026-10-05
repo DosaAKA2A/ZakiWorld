@@ -248,7 +248,8 @@ final class MenuTasador implements Listener {
                     continue;
                 }
                 inv.setItem(casillas[i], botonGrupo(g, o, puede));
-                if (puede) v.acciones().put(casillas[i], "vender:" + g.clave());
+                // 1.12: si hoy no se lleva ninguna (tope lleno), el clic no hace nada.
+                if (puede && g.compra() > 0) v.acciones().put(casillas[i], "vender:" + g.clave());
             }
         }
         inv.setItem(TOPES, topes(p, o));
@@ -262,6 +263,27 @@ final class MenuTasador implements Listener {
                 List.of("Frascos, Cristales de Regreso,", "Tinturas y la Llave del Caos."), altar);
         Marco.enlace(inv, v.acciones(), IR_FORJA, Marco.FORJA, Material.ANVIL, "La Forja",
                 List.of("El Manto, el Vestigio del Eco,", "la Guadaña y sus mejoras."), altar);
+    }
+
+    /**
+     * Calamity 1.12: cuantas se lleva Oren hoy y cuantas se quedan contigo (las I-II que pasan del tope
+     * de hoy no se retiran), y las que no valen nada, que si se lleva sin pagar. Nada si se lo lleva todo
+     * y todo vale. Lo usan el boton de cada tipo y el resumen de Vender todo.
+     */
+    static List<Component> lineasTope(int compra, int quedan, int nulas) {
+        List<Component> out = new ArrayList<>();
+        if (quedan > 0) {
+            out.add(fila("Te compra hoy", Altar.miles(compra)));
+            out.add(fila("Se quedan contigo", Altar.miles(quedan)));
+            out.add(Component.text(quedan == 1 ? "Pasa del tope de hoy." : "Pasan del tope de hoy.", Paleta.AVISO));
+            out.add(Component.text(quedan == 1 ? "Mañana te la compra." : "Mañana te las compra.", Paleta.AVISO));
+        }
+        if (nulas > 0) {
+            out.add(Component.text(nulas == 1 ? "1 caducada, falsa o duplicada:"
+                    : Altar.miles(nulas) + " caducadas, falsas o duplicadas:", Paleta.AVISO));
+            out.add(Component.text(nulas == 1 ? "Oren se la queda sin pagar." : "Oren se las queda sin pagar.", Paleta.AVISO));
+        }
+        return out;
     }
 
     /** Un tipo de lo que llevas: que es, cuantas, cuanto da cada una y todas, el tope, los extras. */
@@ -295,14 +317,7 @@ final class MenuTasador implements Listener {
                 int ya = gr == 1 ? o.ya1() : o.ya2();
                 lore.add(fila("Tope de hoy", "te quedan " + Math.max(0, tope - ya) + " de " + tope));
             }
-            if (k.exceso[gr] > 0) {
-                lore.add(Component.text(k.exceso[gr] == 1 ? "1 pasa del tope y no paga nada."
-                        : k.exceso[gr] + " pasan del tope y no pagan nada.", Paleta.AVISO));
-            }
-            if (k.nulas() > 0) {
-                lore.add(Component.text(k.nulas() == 1 ? "1 no vale nada (caducada o falsa)."
-                        : k.nulas() + " no valen nada (caducadas o falsas).", Paleta.AVISO));
-            }
+            lore.addAll(lineasTope(g.compra(), g.quedan(), k.nulas()));
             List<String> extras = Tasacion.extrasTexto(k);
             if (!extras.isEmpty()) {
                 lore.add(Component.empty());
@@ -313,6 +328,7 @@ final class MenuTasador implements Listener {
         }
         lore.add(Component.empty());
         if (!puede) lore.add(Marco.porQueNo("Oren solo compra en el spawn."));
+        else if (g.compra() == 0) lore.add(Marco.porQueNo("Hoy ya no compra más de estas."));
         else lore.add(Marco.accion(g.esencias() ? "Clic para ingresarlas" : "Clic para vendérselas a Oren"));
         ItemStack icono = new ItemStack(g.material(), Math.max(1, Math.min(64, g.cantidad())));
         return Marco.icono(icono, Component.text(g.nombre() + " ×" + Altar.miles(g.cantidad()), g.color()), lore,
@@ -335,10 +351,13 @@ final class MenuTasador implements Listener {
         }
         lore.addAll(resumen(o, null));
         lore.add(Component.empty());
+        boolean compra = o.compra() > 0;
         if (!puede) lore.add(Marco.porQueNo("Oren solo compra en el spawn."));
+        else if (!compra) lore.add(Marco.porQueNo("Hoy ya no te compra nada más."));
         else lore.add(Marco.accion("Clic para ver el resumen"));
-        inv.setItem(VENDER_TODO, Marco.icono(Material.EMERALD, Component.text("Vender todo", Marco.SI), lore, puede));
-        if (puede) v.acciones().put(VENDER_TODO, "ver:" + V_TODO);
+        inv.setItem(VENDER_TODO, Marco.icono(Material.EMERALD, Component.text("Vender todo", puede && compra ? Marco.SI : Paleta.TENUE),
+                lore, puede && compra));
+        if (puede && compra) v.acciones().put(VENDER_TODO, "ver:" + V_TODO);
     }
 
     /**
@@ -348,6 +367,7 @@ final class MenuTasador implements Listener {
     private List<Component> resumen(Tasacion.Oferta o, Player p) {
         List<Component> lore = new ArrayList<>();
         lore.add(fila("Llevas", cuantas(o.piezas(), "objeto que Oren compra", "objetos que Oren compra")));
+        lore.addAll(lineasTope(o.compra(), o.quedan(), o.total().nulas()));
         lore.add(Component.empty());
         lore.add(Marco.tenue("Recibes:"));
         long esencias = (long) o.pagaEsencias() + o.esencias();
@@ -368,11 +388,6 @@ final class MenuTasador implements Listener {
             lore.add(Marco.tenue("Además:"));
             for (String x : extras) lore.add(Marco.texto(x));
         }
-        int exceso = o.total().exceso[1] + o.total().exceso[2];
-        if (exceso > 0) lore.add(Component.text(exceso == 1 ? "1 pasa del tope de hoy y no paga."
-                : exceso + " pasan del tope de hoy y no pagan.", Paleta.AVISO));
-        if (o.total().nulas() > 0) lore.add(Component.text(o.total().nulas() == 1 ? "1 no vale nada (caducada o falsa)."
-                : o.total().nulas() + " no valen nada (caducadas o falsas).", Paleta.AVISO));
         return lore;
     }
 
@@ -545,7 +560,7 @@ final class MenuTasador implements Listener {
                     que.add(Marco.tenue("y " + (o.grupos().size() - 10) + " tipos más"));
                     break;
                 }
-                que.add(Component.text(Altar.miles(g.cantidad()) + " × ", Paleta.TEXTO).append(Component.text(g.nombre(), g.color())));
+                que.add(lineaTodo(g));
             }
             inv.setItem(13, Marco.icono(Material.CHEST, Component.text("Le vendes a Oren", Paleta.TEXTO), que, false));
             inv.setItem(22, Marco.icono(Material.EMERALD, Component.text("Recibes: ", Paleta.TEXTO)
@@ -558,10 +573,16 @@ final class MenuTasador implements Listener {
             inv.setItem(c, no);
             v.acciones().put(c, "no-todo");
         }
-        if (o != null && !o.vacia()) {
-            ItemStack si = Marco.icono(Material.LIME_CONCRETE, Component.text("Sí, véndeselo todo", Marco.SI), List.of(
-                    Marco.tenue("Oren se queda todo lo de"), Marco.tenue("arriba y te paga al momento."), Component.empty(),
-                    Marco.accion("Clic para vender")), false);
+        if (o != null && !o.vacia() && o.compra() > 0) {
+            List<Component> siLore = new ArrayList<>(List.of(Marco.tenue("Oren se queda lo de arriba"),
+                    Marco.tenue("y te paga al momento.")));
+            if (o.quedan() > 0) {
+                siLore.add(Marco.tenue("Lo que pasa del tope de hoy"));
+                siLore.add(Marco.tenue("se queda en tu inventario."));
+            }
+            siLore.add(Component.empty());
+            siLore.add(Marco.accion("Clic para vender"));
+            ItemStack si = Marco.icono(Material.LIME_CONCRETE, Component.text("Sí, véndeselo todo", Marco.SI), siLore, false);
             // Lo que se ensena va en la accion: si al confirmar ya no es lo mismo, no se vende a ciegas.
             String firma = firma(o);
             for (int c : new int[]{32, 33, 34}) {
@@ -569,6 +590,15 @@ final class MenuTasador implements Listener {
                 v.acciones().put(c, "si-todo:" + firma);
             }
         }
+    }
+
+    /** "60 × Astilla del Umbral  (te quedas 10)" o, si hoy no se lleva ninguna, "Astilla del Umbral: te quedas 10". */
+    private static Component lineaTodo(Tasacion.Grupo g) {
+        if (g.compra() == 0) {
+            return Component.text(g.nombre(), g.color()).append(Component.text(": te quedas " + Altar.miles(g.quedan()), Paleta.TENUE));
+        }
+        Component c = Component.text(Altar.miles(g.compra()) + " × ", Paleta.TEXTO).append(Component.text(g.nombre(), g.color()));
+        return g.quedan() > 0 ? c.append(Component.text("  (te quedas " + Altar.miles(g.quedan()) + ")", Paleta.TENUE)) : c;
     }
 
     /**
@@ -1024,6 +1054,12 @@ final class MenuTasador implements Listener {
 
     // ------------------------------------------------------------------ autotest (en "menus")
 
+    private static List<String> plano(List<Component> lineas) {
+        List<String> out = new ArrayList<>();
+        for (Component c : lineas) out.add(net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer.plainText().serialize(c));
+        return out;
+    }
+
     static void autotest(Autotest.Hoja h) {
         List<double[]> serie = List.of(new double[]{1500, 1.0}, new double[]{999999, 0.0});
         List<Tramo> t = tramosHoy(300, serie);
@@ -1075,6 +1111,21 @@ final class MenuTasador implements Listener {
         h.igual("paga: los dos", "12 Esencias y 300 MobCoins", paga(12, 300));
         h.igual("paga: una Esencia", "1 Esencia", paga(1, 0));
         h.igual("paga: nada", "nada", paga(0, 0));
+
+        // Calamity 1.12: lo que Oren compra hoy y lo que se queda contigo.
+        h.igual("tope: sin exceso ni falsas, ninguna linea", List.of(), plano(lineasTope(12, 0, 0)));
+        List<String> tope = plano(lineasTope(60, 10, 0));
+        h.ok("tope: dice cuantas compra hoy", tope.contains("Te compra hoy: 60"));
+        h.ok("tope: dice cuantas se quedan contigo", tope.contains("Se quedan contigo: 10"));
+        h.ok("tope: y que mañana las compra", tope.contains("Pasan del tope de hoy.") && tope.contains("Mañana te las compra."));
+        h.ok("tope: en singular", plano(lineasTope(29, 1, 0)).contains("Mañana te la compra."));
+        List<String> nulas = plano(lineasTope(3, 0, 2));
+        h.ok("sin valor: dice que Oren se las queda sin pagar", nulas.contains("2 caducadas, falsas o duplicadas:")
+                && nulas.contains("Oren se las queda sin pagar."));
+        h.ok("sin valor: en singular", plano(lineasTope(1, 0, 1)).contains("Oren se la queda sin pagar."));
+        boolean cortas = true;
+        for (String l : plano(lineasTope(1_250, 1_250, 1_250))) cortas &= l.length() <= 38;
+        h.ok("tope: las lineas caben en un lore", cortas);
         for (String vista : List.of(PORTADA, V_DINERO, V_CONTRATOS, V_TODO)) {
             h.ok("titulo de la vista '" + vista + "' cabe", titulo(vista).ancho() <= Marco.ANCHO_TITULO);
         }
