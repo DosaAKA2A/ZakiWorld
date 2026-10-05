@@ -15,7 +15,8 @@ import java.util.UUID;
  * M11 · Racha de Codicia (P1, apagada de serie).
  *
  * Cada salida que tasa al menos una Reliquia de grado II o mas suma 1 (tope 5; 7 si sales con
- * equipo de verdad). Lo tasado se multiplica por 1 + 0,10 x racha y morir la pone a 0. La
+ * equipo de verdad). Rama venta-oren: ahora suma la primera venta a Oren con grado II o mas de cada
+ * entrada a Calamity (Tasacion.subeRacha), y el factor se aplica a lo que le vendes. Lo tasado se multiplica por 1 + 0,10 x racha y morir la pone a 0. La
  * codicia tambien se paga dentro: cada punto sube 2 niveles a los mobs (Hardcore.bonusNivel),
  * y el Eco nace con esos niveles. Premia volver, que es lo que se quiere medir.
  *

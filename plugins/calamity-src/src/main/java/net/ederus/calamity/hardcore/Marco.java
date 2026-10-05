@@ -135,7 +135,8 @@ final class Marco {
     static final Titulo T_TASADOR = new Titulo("Mercado");
     static final Titulo T_TASADOR_DINERO = new Titulo("Tu dinero");
     static final Titulo T_TASADOR_CONTRATOS = new Titulo("Contratos");
-    static final Titulo T_TASADOR_RELIQUIAS = new Titulo("Tus Reliquias");
+    /** Rama venta-oren: la confirmacion de "Vender todo" en la tienda de Oren. */
+    static final Titulo T_VENDER_TODO = new Titulo("Vender todo");
     // "¿Cambiar contrato?" no cabe con la marca delante.
     static final Titulo T_CAMBIAR = new Titulo("Cambiar contrato");
     // "Rankings de la semana" no cabe.
@@ -163,7 +164,7 @@ final class Marco {
     /** Todos los titulos de ventana de Calamity, para que el autotest mida que caben. */
     static List<Titulo> titulos() {
         List<Titulo> out = new ArrayList<>(List.of(T_ALTAR, T_FORJA, T_COMPRAR, T_FORJAR, T_TASADOR, T_TASADOR_DINERO,
-                T_TASADOR_CONTRATOS, T_TASADOR_RELIQUIAS, T_CAMBIAR, T_RANKINGS, T_RANKINGS_HISTORICO,
+                T_TASADOR_CONTRATOS, T_VENDER_TODO, T_CAMBIAR, T_RANKINGS, T_RANKINGS_HISTORICO,
                 T_TABLERO, T_CAMINO, T_GRABAR, T_DESEOS, T_VOTO, T_PREGUNTA, T_DIFICULTAD, T_SALVOCONDUCTO, T_ENGARZADOR,
                 T_SENTENCIA));
         for (MenuAltar.Categoria c : MenuAltar.CATEGORIAS) {
@@ -620,9 +621,9 @@ final class Marco {
         if (encima > 0) {
             lore.add(Component.empty());
             lore.add(Component.text("Llevas " + esencias(encima) + " encima.", Paleta.CIFRA));
-            // En la zona spawn el Altar vende, pero lo fisico se sigue ingresando al salir vivo:
-            // si no, se guardarian las Esencias a mitad de expedicion sin cruzar la puerta.
-            lore.add(dentro ? tenue("Pasan a tu saldo cuando sales vivo.") : accion("Clic para ingresarlas"));
+            // Rama venta-oren: dentro (en la zona spawn) las ingresa Oren, en su tienda; fuera, tambien
+            // este boton, como siempre.
+            lore.add(dentro ? tenue("Oren te las ingresa en su tienda.") : accion("Clic para ingresarlas"));
         }
         inv.setItem(casilla, icono(Material.GHAST_TEAR, Component.text("Tu saldo: ", Paleta.TEXTO)
                 .append(Component.text(esencias(saldo), Paleta.CIFRA)), lore, ingresa));
@@ -652,22 +653,22 @@ final class Marco {
         String mayor = rel == null ? "Ámbar Mayor" : rel.nombreDe(4, null, null);
         lore.add(texto("De dónde sale cada cosa:"));
         lore.add(linea("Esencias", "de los mobs de Calamity"));
-        lore.add(tenue("  y de las Reliquias que sacas."));
+        lore.add(tenue("  y de las Reliquias que vendes a Oren."));
         lore.add(tenue("  Cada " + astilla + " vale " + numero(v.esencias()[1]) + ";"));
         lore.add(tenue("  cada " + mayor + ", " + numero(v.esencias()[4]) + "."));
         lore.add(linea("Sellos", "los suelta su minijefe"));
         lore.add(tenue("  (" + porcentaje(sello) + ", seguro a las " + piedad + " muertes)."));
-        lore.add(linea("Marcas de Eco", "al sacar Lágrimas"));
+        lore.add(linea("Marcas de Eco", "al vender Lágrimas"));
         lore.add(tenue("  de Eco, hasta " + marcasDia + " al día."));
-        lore.add(linea("Fragmentos", "al sacar Campanas de la"));
+        lore.add(linea("Fragmentos", "al vender Campanas de la"));
         lore.add(tenue("  Parca de nivel " + nivelCampana + " o más."));
-        lore.add(texto("Solo cuenta lo que sacas vivo."));
+        lore.add(texto("Si mueres en Calamity, lo pierdes."));
         lore.add(texto("Tu saldo de Esencias no caduca."));
         lore.add(Component.empty());
         lore.add(texto("Quién es quién:"));
         lore.add(linea("Sael", "frascos, cristales, tinturas y llaves."));
         lore.add(linea("Vael", "el equipo de la Forja."));
-        lore.add(linea("Oren", "tu dinero y tus contratos."));
+        lore.add(linea("Oren", "compra lo que sacas, y contratos."));
         lore.add(linea("Rhen", "el ranking y el Tablero."));
         lore.add(linea("Lior", "pone y quita las gemas."));
         lore.add(linea("Ilen", "las historias de Calamity y tus Ecos."));

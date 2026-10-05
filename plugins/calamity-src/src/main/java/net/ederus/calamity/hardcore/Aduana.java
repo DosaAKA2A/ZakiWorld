@@ -274,15 +274,15 @@ final class Aduana {
                 if (en != null) en.pendienteMc(u, pago.mc(), "pago:" + tipo);
             }
         }
-        /* Las Reliquias no existen fuera (PLAN sec. 2): a quien esta dentro se le dan; a un
-         * desconectado o a quien esta fuera (un Eco cerrado a su nombre por un admin, un cazador
-         * que se ha ido) se le tasan en el acto, y lo que valen va a saldo y premios pendientes.
-         * Perderlas no: una Lagrima valida es la unica fuente de Marcas. */
+        /* Rama venta-oren: las Reliquias salen de Calamity y se le venden a Oren, asi que a quien esta
+         * conectado se le dan, dentro o fuera. A un desconectado (un Eco cerrado a su nombre por un admin,
+         * un cazador que se ha ido) no se le pueden dar: se venden en el acto a su nombre y lo que valen
+         * va a saldo y premios pendientes. Perderlas no: una Lagrima valida es la unica fuente de Marcas. */
         List<ItemStack> ausente = new ArrayList<>();
         for (ItemStack it : reliquias) {
             if (it == null || it.getType().isAir()) continue;
             if (aMano) recoger.add(it);
-            else if (online != null && hc.esHardcore(online)) Suelo.dar(hc.plugin(), online, it);
+            else if (online != null) Suelo.dar(hc.plugin(), online, it);
             else ausente.add(it);
         }
         if (ausente.isEmpty()) return;

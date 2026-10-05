@@ -1,16 +1,20 @@
 package net.ederus.calamity.hardcore;
 
 import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.format.TextColor;
+import org.bukkit.Material;
 import org.bukkit.OfflinePlayer;
 import org.bukkit.command.CommandSender;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.entity.Player;
-import org.bukkit.event.inventory.InventoryType;
-import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemStack;
+import org.bukkit.inventory.PlayerInventory;
+import org.bukkit.inventory.meta.ItemMeta;
+import org.bukkit.persistence.PersistentDataType;
 
 import java.security.SecureRandom;
+import java.text.Normalizer;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
@@ -21,26 +25,31 @@ import java.util.Set;
 import java.util.UUID;
 
 /**
- * M3 · La Tasacion: lo que vale salir vivo.
+ * M3 · La venta a Oren: lo que vale lo que sacas de Calamity.
  *
- * Al cruzar la puerta o terminar un Cristal (Hardcore.sacar con extraccion), antes del
- * teleport, se quitan TODAS las Reliquias que lleve (inventario, cursor, rejilla de
- * crafteo) y se pagan en UN solo Aduana.pagar(p, "tasacion", ...): las Reliquias validas x
- * la Racha, mas la primera extraccion del dia. Un solo pago para que la Bitacora tenga una
- * linea por salida y los topes de la Aduana vean la salida entera, no trozos.
+ * Calamity 1.11 (rama venta-oren) · Dosa: "esa mecanica de la tasacion no me gusta, siento que los
+ * usuarios no la entenderian". Antes, al cruzar la puerta, las Reliquias se vendian solas y las Esencias
+ * pasaban al saldo sin que nadie lo viera. Ahora salir no vende nada: el jugador se lleva sus cosas y se
+ * las vende a Oren, el mercader del spawn de Calamity, en su menu (MenuTasador), que las detecta en el
+ * inventario y dice cuanto da cada una. Los numeros no cambian: la misma cuenta de antes (contar), los
+ * mismos topes del dia, la misma caducidad y los mismos extras de las especiales. Lo que hacia la
+ * Tasacion al cobrar lo hace ahora vender(): un solo Aduana.pagar(p, "tasacion", ...) por venta,
+ * creditos de las IV (Sello, Fragmento de Guadana, Marca de Eco), tiradas de Llave del Caos, puntos de
+ * clan, estadisticas (hitos y rankings), contratos de Reliquias y telemetria ("venta").
  *
- * Aparte del pago (no son Esencias ni MobCoins nuevas): creditos de las IV (Sello, Fragmento
- * de Guadana, Marca de Eco), tiradas de Llave del Caos (Entregas.llave, con su tope), las
- * Esencias fisicas que lleve pasan al saldo (Saldo.depositarFisicas), y al final los
- * contratos cumplidos (se pagan ellos por la Aduana, tipo "contratos") y la encuesta.
+ * Lo que sigue siendo de la SALIDA (alSalir, desde Hardcore.sacar con extraccion): la primera salida del
+ * dia (sus Esencias de mas), los contratos ya cumplidos que se cobran al salir vivo, la telemetria "sale"
+ * y la encuesta. La Racha de Codicia sube con la venta, una vez por entrada a Calamity (subeRacha): asi
+ * no se puede subir saliendo y entrando con la misma Reliquia, y vender por partes tampoco la sube dos
+ * veces.
  *
- * Una Reliquia con UUID solo paga si esta emitida en reliquias.log y no esta cobrada: la
- * falsa y la duplicada se quitan igual y se apuntan (la duplicada avisa al staff). Las I-II
- * no llevan UUID; las acota el tope diario (60 / 30) y lo que pasa se anota como exceso.
+ * Una Reliquia con UUID solo paga si esta emitida en reliquias.log y no esta cobrada: la falsa y la
+ * duplicada se quitan igual y se apuntan (la duplicada avisa al staff). Las I-II no llevan UUID; las
+ * acota el tope diario (60 / 30) y lo que pasa se anota como exceso.
  */
 final class Tasacion {
 
-    /** Lo que pagaria (o pago) una tasacion. */
+    /** Lo que pagaria (o pago) una venta. */
     record Resumen(int esencias, long mobcoins, List<String> lineas) {
     }
 
@@ -49,7 +58,7 @@ final class Tasacion {
                  int cantidad) {
     }
 
-    /** Los numeros de la Tasacion, de la config con los de serie (PLAN sec. 3.1). */
+    /** Los numeros de la venta, de la config con los de serie (PLAN sec. 3.1). */
     record Valores(double[] esencias, long[] mc, int[] topeDia, Set<Integer> apilables, long caducaMillis,
                    int fragmentoNivel, double llaveCampana, double llaveLagrima, int primeraBase, int primeraSiTasa) {
 
@@ -70,7 +79,7 @@ final class Tasacion {
         }
     }
 
-    /** El recuento de una tasacion, sin escribir nada. */
+    /** El recuento de una venta, sin escribir nada. */
     static final class Cuenta {
         double esencias;
         long mc;
@@ -86,7 +95,7 @@ final class Tasacion {
         final List<String> caducadas = new ArrayList<>();
         /** sello:<id>, fragmento, marca (en el orden en que salen). */
         final List<String> creditos = new ArrayList<>();
-        /** Minijefes de los Sellos que salen vivos (anuncio P-W05). */
+        /** Minijefes de los Sellos vendidos (anuncio P-W05). */
         final List<String> sellos = new ArrayList<>();
         /** [especial, probabilidad] de cada tirada de Llave del Caos. */
         final List<Object[]> llaves = new ArrayList<>();
@@ -98,12 +107,47 @@ final class Tasacion {
         }
     }
 
+    /**
+     * Un tipo de lo que Oren compra, tal como lo enseña su menu: todas las piezas con el mismo nombre
+     * (grado, especial y minijefe) o las Esencias. cuenta: lo que valen esas piezas solas (para las I-II,
+     * con lo que queda del tope de hoy); null en las Esencias, que valen una cada una.
+     */
+    record Grupo(String clave, String nombre, TextColor color, Material material, int grado, String especial,
+                 int cantidad, Cuenta cuenta, long caducaPrimero) {
+
+        boolean esencias() {
+            return ESENCIAS.equals(clave);
+        }
+    }
+
+    /**
+     * Lo que Oren le compraria ahora mismo: los tipos (las Reliquias de grado alto primero y las Esencias
+     * al final), la cuenta de todo junto, el factor de la Racha y lo que se pagaria con el.
+     */
+    record Oferta(List<Grupo> grupos, Cuenta total, int esencias, double factor, int pagaEsencias, long pagaMc,
+                  int ya1, int ya2) {
+
+        boolean vacia() {
+            return grupos.isEmpty();
+        }
+
+        int piezas() {
+            int n = 0;
+            for (Grupo g : grupos) n += g.cantidad();
+            return n;
+        }
+    }
+
+    /** Clave del grupo de las Esencias fisicas. */
+    static final String ESENCIAS = "esencias";
+
     private final Hardcore hc;
     private final SecureRandom azar = new SecureRandom();
 
     Tasacion(Hardcore hc) {
         this.hc = hc;
         Autotest.registrar("tasacion", this::autotest);
+        Autotest.registrar("venta", this::autotestVenta);
         Subcomandos.staff().registrar("appraise",
                 "appraise <player> <g1> <g2> <g3> [special:tier:N[:valid|:miniboss] ...] | appraise <player> reset: vende Reliquias virtuales",
                 Subcomandos.PERMISO, this::comando, this::tab);
@@ -112,61 +156,271 @@ final class Tasacion {
     void parar() {
     }
 
-    // ------------------------------------------------------------------ tasar
-
-    /** Hardcore.sacar(p, motivo, true), antes del teleport. */
-    void tasar(Player p, String motivo) {
-        List<ItemStack> recogidas = new ArrayList<>();
+    private boolean activas() {
         Reliquias rel = hc.reliquias();
-        if (rel != null && rel.activas()) {
-            quitar(p.getInventory(), rel, recogidas);
-            if (rel.es(p.getItemOnCursor())) {
-                recogidas.add(p.getItemOnCursor());
-                p.setItemOnCursor(null);
-            }
-            // La rejilla 2x2 del inventario propio: si la dejo ahi al cruzar, tambien cuenta.
-            Inventory arriba = p.getOpenInventory().getTopInventory();
-            if (arriba.getType() == InventoryType.CRAFTING) quitar(arriba, rel, recogidas);
-            rel.marcarExtraccion(p);
-        }
-        procesar(p, p, recogidas, motivo == null ? "?" : motivo, true, true);
+        return rel != null && rel.activas();
+    }
+
+    // ------------------------------------------------------------------ la entrada y la salida
+
+    /** Hardcore.alLlegar: empieza una entrada nueva (la Racha sube como mucho una vez en cada una). */
+    void alEntrar(Player p) {
+        hc.datos().set("expedicion." + p.getUniqueId(), String.valueOf(System.currentTimeMillis()));
+        hc.marcarSucio();
+    }
+
+    private String expedicion(UUID u) {
+        return hc.datos().getString("expedicion." + u, "");
     }
 
     /**
-     * Reliquias que la Aduana tiene que dar a quien no puede llevarlas: desconectado o fuera de
-     * Calamity (un Eco cerrado con "eco matar ... <jugador>", un cazador que se ha ido). Fuera
-     * no existen, asi que darlas seria perderlas: se tasan en el acto a su nombre y lo que valen
-     * va al saldo y a premios pendientes. Sin la primera salida del dia, que no ha salido.
+     * Hardcore.sacar con extraccion (puerta o /calamity extract), antes del teleport. No vende nada: el
+     * jugador se lleva lo que lleva. Paga la primera salida del dia, cobra los contratos que esperaban a
+     * la salida, cierra la expedicion en la telemetria, abre la encuesta y, si se lleva algo sin vender,
+     * le recuerda que Oren se lo compra.
+     */
+    void alSalir(Player p, String motivo) {
+        UUID u = p.getUniqueId();
+        String m = motivo == null ? "?" : motivo;
+        String dia = hc.calendario() != null ? hc.calendario().dia() : "";
+        Valores v = Valores.de(hc.cfg());
+
+        List<ItemStack> lleva = activas() ? reliquiasEncima(p) : List.of();
+        Cuenta k = cuentaSin(p, lleva);
+        int[] porGrado = new int[5];
+        Reliquias rel = hc.reliquias();
+        if (rel != null) for (ItemStack it : lleva) porGrado[Math.max(1, Math.min(4, rel.grado(it)))] += it.getAmount();
+        Saldo s = hc.saldo();
+        int esencias = s == null ? 0 : s.encima(p);
+
+        boolean primera = !dia.equals(hc.datos().getString("primera-extraccion." + u, ""));
+        boolean vendio = dia.equals(hc.datos().getString("vendio-dia." + u, ""))
+                && expedicion(u).equals(hc.datos().getString("vendio." + u, ""));
+        int extra = primera ? primera(k.validas, vendio, v) : 0;
+        int pagadas = 0;
+        if (primera) {
+            hc.datos().set("primera-extraccion." + u, dia);
+            hc.marcarSucio();
+            Aduana ad = hc.aduana();
+            if (ad != null && extra > 0) {
+                Aduana.Pago pago = ad.pagar(p, "tasacion", extra, 0, List.of(), "primera-salida:" + m);
+                pagadas = pago == null ? 0 : pago.esencias();
+            }
+            if (pagadas > 0) {
+                p.sendMessage(ComandoCalamity.mensaje(Component.text("Por ser tu primera salida del día, ganas ")
+                        .append(Paleta.cifra(pagadas)).append(Component.text(pagadas == 1 ? " Esencia más." : " Esencias más."))));
+            }
+        }
+
+        List<String> contratos = List.of();
+        Contratos ct = hc.contratos();
+        if (ct != null) contratos = hc.valor("contratos", () -> ct.cobrarEnTasacion(p), List.of());
+
+        Telemetria te = hc.telemetria();
+        if (te != null) {
+            Map<String, Object> t = new LinkedHashMap<>();
+            Map<String, Object> grados = new LinkedHashMap<>();
+            for (int g = 1; g <= 4; g++) grados.put(String.valueOf(g), porGrado[g]);
+            // "tasado" es lo que se SACA vivo (StatsTelemetria lo cuenta asi); se vende luego, con Oren.
+            t.put("tasado", grados);
+            t.put("esencias", pagadas);
+            t.put("mc", 0);
+            t.put("esencias_encima", esencias);
+            t.put("primera", primera ? "si" : "no");
+            t.put("contratos", contratos);
+            hc.seguro("telemetria", () -> te.sale(p, m, t));
+        }
+        int piezas = esencias;
+        for (int g = 1; g <= 4; g++) piezas += porGrado[g];
+        if (piezas > 0) p.sendMessage(ComandoCalamity.mensaje(texto("salir-con-objetos",
+                "Te llevas Reliquias o Esencias sin vender. Oren te las compra en el spawn de Calamity; fuera no se pueden guardar.")));
+        Encuesta enc = hc.encuesta();
+        if (enc != null) hc.seguro("encuesta", () -> enc.trasTasar(p));
+    }
+
+    /** Un texto de venta.mensajes, con el de serie si la config no lo trae. */
+    String texto(String clave, String deSerie) {
+        String t = hc.cfg().getString("venta.mensajes." + clave);
+        return t == null || t.isBlank() ? deSerie : t;
+    }
+
+    // ------------------------------------------------------------------ vender
+
+    /** Donde compra Oren: fuera de Calamity o en su spawn (como el Altar), nunca a mitad de expedicion. */
+    boolean puedeVender(Player p) {
+        return Marco.puedeAltar(hc, p);
+    }
+
+    /** Las Reliquias del inventario del jugador (tambien armadura y mano secundaria), sin el cursor. */
+    List<ItemStack> reliquiasEncima(Player p) {
+        Reliquias rel = hc.reliquias();
+        List<ItemStack> out = new ArrayList<>();
+        if (rel == null) return out;
+        for (ItemStack it : p.getInventory().getContents()) if (rel.es(it)) out.add(it);
+        return out;
+    }
+
+    /** La clave del grupo de una Reliquia: grado, especial y minijefe (lo que le da nombre). */
+    static String clave(int grado, String especial, String minijefe) {
+        return "r:" + Math.max(1, Math.min(4, grado)) + ":" + (especial == null ? "-" : especial) + ":"
+                + (minijefe == null || minijefe.isBlank() ? "-" : minijefe.toLowerCase(Locale.ROOT));
+    }
+
+    /** El grupo de un objeto: el de su Reliquia, ESENCIAS o null si Oren no lo compra. */
+    String clave(ItemStack it) {
+        if (it == null || it.getType().isAir()) return null;
+        if (hc.items().esEsencia(it)) return ESENCIAS;
+        Reliquias rel = hc.reliquias();
+        if (rel == null || !rel.es(it)) return null;
+        return clave(rel.grado(it), rel.especial(it), rel.minijefe(it));
+    }
+
+    /**
+     * Lo que Oren compraria ahora: cada tipo con su cuenta y la de todo junto, con la Racha. Solo lee.
+     * Las I-II de cada grupo se cuentan con el tope que queda hoy; el total, igual que una venta de todo.
+     */
+    Oferta oferta(Player p) {
+        Reliquias rel = hc.reliquias();
+        UUID u = p.getUniqueId();
+        Valores v = Valores.de(hc.cfg());
+        int[] ya = yaHoy(u);
+        long ahora = System.currentTimeMillis();
+        List<Grupo> grupos = new ArrayList<>();
+        Cuenta total = new Cuenta();
+        if (rel != null && activas()) {
+            Reliquias.Registro reg = rel.registro();
+            List<ItemStack> encima = new ArrayList<>(reliquiasEncima(p));
+            encima.sort((a, b) -> Integer.compare(rel.grado(b), rel.grado(a)));
+            Map<String, List<Pieza>> piezas = new LinkedHashMap<>();
+            Map<String, ItemStack> muestra = new LinkedHashMap<>();
+            Map<String, Long> caduca = new LinkedHashMap<>();
+            List<Pieza> todas = new ArrayList<>();
+            for (ItemStack it : encima) {
+                String c = clave(it);
+                Pieza pz = leer(rel, it);
+                piezas.computeIfAbsent(c, x -> new ArrayList<>()).add(pz);
+                muestra.putIfAbsent(c, it);
+                if (pz.id() != null && pz.nacio() > 0) caduca.merge(c, pz.nacio() + v.caducaMillis(), Math::min);
+                todas.add(pz);
+            }
+            for (Map.Entry<String, List<Pieza>> e : piezas.entrySet()) {
+                ItemStack it = muestra.get(e.getKey());
+                int g = Math.max(1, Math.min(4, rel.grado(it)));
+                int n = 0;
+                for (Pieza pz : e.getValue()) n += pz.cantidad();
+                grupos.add(new Grupo(e.getKey(), rel.nombreDe(g, rel.especial(it), rel.minijefe(it)), Reliquias.color(g),
+                        it.getType(), g, rel.especial(it), n, contar(e.getValue(), reg, ya[1], ya[2], v, ahora),
+                        caduca.getOrDefault(e.getKey(), 0L)));
+            }
+            total = contar(todas, reg, ya[1], ya[2], v, ahora);
+        }
+        Saldo s = hc.saldo();
+        int esencias = s == null ? 0 : s.encima(p);
+        if (esencias > 0) {
+            grupos.add(new Grupo(ESENCIAS, "Esencia de Calamidad", ItemsCalamity.NARANJA_ESENCIA,
+                    materialEsencia(p), 0, null, esencias, null, 0L));
+        }
+        double f = factor(p);
+        return new Oferta(grupos, total, esencias, f, (int) Math.floor(total.esencias * f + 1e-9),
+                Math.round(total.mc * f), ya[1], ya[2]);
+    }
+
+    private Material materialEsencia(Player p) {
+        for (ItemStack it : p.getInventory().getContents()) if (hc.items().esEsencia(it)) return it.getType();
+        return Material.GHAST_TEAR;
+    }
+
+    /** Las I y II apilables ya vendidas hoy ([_, I, II]). */
+    int[] yaHoy(UUID u) {
+        String dia = hc.calendario() != null ? hc.calendario().dia() : "";
+        String ruta = "tasacion-dia." + u;
+        boolean mismoDia = dia.equals(hc.datos().getString(ruta + ".dia", ""));
+        return new int[]{0, mismoDia ? hc.datos().getInt(ruta + ".1", 0) : 0, mismoDia ? hc.datos().getInt(ruta + ".2", 0) : 0};
+    }
+
+    /** El multiplicador de la Racha de Codicia que se le aplicaria ahora (1 si esta apagada). */
+    double factor(Player p) {
+        Racha racha = hc.racha();
+        if (racha == null) return 1.0;
+        Censo.Foto foto = hc.valor("censo", () -> Censo.de(p), null);
+        return racha.factor(p.getUniqueId(), foto);
+    }
+
+    /** La cuenta de unas Reliquias sin vender nada (la salida la usa para la primera del dia). */
+    private Cuenta cuentaSin(Player p, List<ItemStack> items) {
+        Reliquias rel = hc.reliquias();
+        if (rel == null) return new Cuenta();
+        List<Pieza> piezas = new ArrayList<>();
+        for (ItemStack it : items) if (rel.es(it)) piezas.add(leer(rel, it));
+        int[] ya = yaHoy(p.getUniqueId());
+        return contar(piezas, rel.registro(), ya[1], ya[2], Valores.de(hc.cfg()), System.currentTimeMillis());
+    }
+
+    /**
+     * Vende a Oren lo de ese grupo (clave) o todo (clave null): quita las piezas del inventario, las
+     * Esencias van al saldo y las Reliquias se pagan como siempre. Devuelve lo pagado, o null si no se
+     * pudo (fuera de sitio o nada que vender); el aviso al jugador lo da ella misma.
+     */
+    Resumen vender(Player p, String clave) {
+        if (!puedeVender(p)) {
+            p.sendMessage(ComandoCalamity.mensaje(texto("solo-en-el-spawn",
+                    "Oren solo compra en el spawn de Calamity o fuera de Calamity.")));
+            return null;
+        }
+        Reliquias rel = hc.reliquias();
+        List<ItemStack> quitadas = new ArrayList<>();
+        if (rel != null && activas() && !ESENCIAS.equals(clave)) {
+            PlayerInventory inv = p.getInventory();
+            ItemStack[] c = inv.getContents();
+            for (int i = 0; i < c.length; i++) {
+                if (!rel.es(c[i])) continue;
+                if (clave != null && !clave.equals(clave(c[i]))) continue;
+                quitadas.add(c[i]);
+                inv.setItem(i, null);
+            }
+        }
+        int fisicas = 0;
+        if (clave == null || ESENCIAS.equals(clave)) {
+            Saldo s = hc.saldo();
+            if (s != null) fisicas = hc.valor("saldo", () -> s.depositarFisicas(p), 0);
+        }
+        if (quitadas.isEmpty() && fisicas == 0) {
+            p.sendMessage(ComandoCalamity.mensaje(texto("nada-que-vender", "No llevas nada que Oren te compre.")));
+            return null;
+        }
+        hc.plugin().bitacora().anotar("venta", p.getName(), clave == null ? "todo" : clave, Aduana.idsReliquias(quitadas),
+                "esencias " + fisicas);
+        Resumen r = procesar(p, p, quitadas, fisicas, "oren", true, true);
+        if (fisicas > 0) {
+            Saldo s = hc.saldo();
+            if (s != null) p.sendMessage(s.avisoDeposito(p, fisicas));
+        }
+        return r;
+    }
+
+    /**
+     * Reliquias que la Aduana tiene que dar a quien no esta conectado (un Eco cerrado con "eco matar ...
+     * <jugador>", un cazador que se ha ido). No se le pueden dar en mano, asi que se venden en el acto a su
+     * nombre, sin Racha, y lo que valen va al saldo y a premios pendientes.
      */
     Resumen tasarAusente(OfflinePlayer p, List<ItemStack> reliquias, String motivo) {
         hc.plugin().bitacora().anotar("tasacion", "ausente", Minijefes.nombreDe(p), Aduana.idsReliquias(reliquias),
                 motivo == null ? "-" : motivo);
-        // Sin jugador: ni mensajes, ni censo, ni deposito, ni contratos, ni encuesta; no ha salido.
-        return procesar(p, null, reliquias, motivo == null ? "ausente" : motivo, true, false);
+        return procesar(p, null, reliquias, 0, motivo == null ? "ausente" : motivo, true, false);
     }
 
-    private static void quitar(Inventory inv, Reliquias rel, List<ItemStack> a) {
-        ItemStack[] c = inv.getContents();
-        for (int i = 0; i < c.length; i++) {
-            if (!rel.es(c[i])) continue;
-            a.add(c[i]);
-            inv.setItem(i, null);
-        }
-    }
-
-    /** Lo que pagaria una tasacion con estas Reliquias ahora mismo. No escribe nada. */
+    /** Lo que pagaria una venta con estas Reliquias ahora mismo. No escribe nada. */
     Resumen simular(OfflinePlayer p, List<ItemStack> reliquias) {
-        return procesar(p, null, reliquias == null ? List.of() : reliquias, "simulacion", false, true);
+        return procesar(p, null, reliquias == null ? List.of() : reliquias, 0, "simulacion", false, true);
     }
 
     /**
-     * El cuerpo de la tasacion. online = el jugador conectado (mensajes, censo, saldo fisico,
-     * contratos, encuesta, telemetria); null en la tasacion de prueba del comando.
-     * esSalida: false en la tasacion de ausente, que no es una salida: sin primera del dia y
-     * sin Racha (ni su factor ni subirla), que premian salir vivo.
+     * El cuerpo de la venta. online = el jugador conectado (mensajes, contratos, clanes, telemetria);
+     * null en la de ausente y en la de prueba del comando. conRacha: false en la de ausente, que no es
+     * una venta suya (ni el factor de la Racha ni subirla). fisicas: Esencias que ya paso al saldo.
      */
-    private Resumen procesar(OfflinePlayer op, Player online, List<ItemStack> items, String motivo, boolean real,
-                             boolean esSalida) {
+    private Resumen procesar(OfflinePlayer op, Player online, List<ItemStack> items, int fisicas, String motivo,
+                             boolean real, boolean conRacha) {
         UUID u = op.getUniqueId();
         String nombre = Minijefes.nombreDe(op);
         ConfigurationSection c = hc.cfg();
@@ -179,29 +433,23 @@ final class Tasacion {
         List<Pieza> piezas = new ArrayList<>();
         if (rel != null) for (ItemStack it : items) if (rel.es(it)) piezas.add(leer(rel, it));
         String rutaDia = "tasacion-dia." + u;
-        boolean mismoDia = dia.equals(hc.datos().getString(rutaDia + ".dia", ""));
-        int ya1 = mismoDia ? hc.datos().getInt(rutaDia + ".1", 0) : 0;
-        int ya2 = mismoDia ? hc.datos().getInt(rutaDia + ".2", 0) : 0;
-        Cuenta k = contar(piezas, reg, ya1, ya2, v, ahora);
+        int[] ya = yaHoy(u);
+        Cuenta k = contar(piezas, reg, ya[1], ya[2], v, ahora);
 
-        Censo.Foto salida = online == null ? null : hc.valor("censo", () -> Censo.de(online), null);
+        Censo.Foto foto = online == null ? null : hc.valor("censo", () -> Censo.de(online), null);
         Racha racha = hc.racha();
-        int r = racha == null ? 0 : racha.de(u);
-        double factor = racha == null || !esSalida ? 1.0 : racha.factor(u, salida);
+        double factor = racha == null || !conRacha ? 1.0 : racha.factor(u, foto);
         int esencias = (int) Math.floor(k.esencias * factor + 1e-9);
         long mc = Math.round(k.mc * factor);
-        boolean primera = esSalida && !dia.equals(hc.datos().getString("primera-extraccion." + u, ""));
-        int extra = primera ? primera(k.validas, v) : 0;
 
         List<String> lineas = new ArrayList<>();
         lineas.add("reliquias " + k.porGrado[1] + "/" + k.porGrado[2] + "/" + k.porGrado[3] + "/" + k.porGrado[4]
                 + " (I/II/III/IV) -> " + esencias + " E y " + mc + " MC" + (factor > 1 ? " (racha x" + num(factor) + ")" : ""));
-        if (extra > 0) lineas.add("primera salida del dia: +" + extra + " E");
         if (k.exceso[1] + k.exceso[2] > 0) lineas.add("exceso del tope diario: " + k.exceso[1] + " I, " + k.exceso[2] + " II");
         if (k.nulas() > 0) lineas.add("sin valor: " + k.falsas.size() + " falsas, " + k.duplicadas.size()
                 + " duplicadas, " + k.caducadas.size() + " caducadas");
         if (!k.creditos.isEmpty()) lineas.add("creditos: " + String.join(", ", k.creditos));
-        if (!real) return new Resumen(esencias + extra, mc, lineas);
+        if (!real) return new Resumen(esencias, mc, lineas);
 
         // --- a partir de aqui, escribe: primero lo que cierra el dupe (C en reliquias.log).
         for (String id : k.cobrar) reg.cobrada(id, nombre, ahora);
@@ -217,32 +465,25 @@ final class Tasacion {
         // Solo las apilables: una Campana II o una Lagrima II llevan UUID y no gastan el tope.
         if (k.monton[1] > 0 || k.monton[2] > 0) {
             hc.datos().set(rutaDia + ".dia", dia);
-            hc.datos().set(rutaDia + ".1", ya1 + k.monton[1]);
-            hc.datos().set(rutaDia + ".2", ya2 + k.monton[2]);
+            hc.datos().set(rutaDia + ".1", ya[1] + k.monton[1]);
+            hc.datos().set(rutaDia + ".2", ya[2] + k.monton[2]);
         }
-        if (primera) hc.datos().set("primera-extraccion." + u, dia);
+        // Para la primera salida del dia: si en esta entrada ya vendio alguna Reliquia que valia.
+        if (k.validas > 0 && online != null) {
+            hc.datos().set("vendio." + u, expedicion(u));
+            hc.datos().set("vendio-dia." + u, dia);
+        }
         hc.marcarSucio();
-
-        // 1.11: cuantas Esencias fisicas saca, para los puntos de su clan.
-        int[] fisicas = {0};
-        if (online != null) {
-            Saldo s = hc.saldo();
-            if (s != null) hc.seguro("saldo", () -> fisicas[0] = s.depositarFisicas(online));
-        }
 
         Aduana ad = hc.aduana();
         Aduana.Pago pago = null;
-        if (ad != null && (esencias + extra > 0 || mc > 0)) {
-            pago = ad.pagar(op, "tasacion", esencias + extra, mc, List.of(), motivo);
-        }
+        if (ad != null && (esencias > 0 || mc > 0)) pago = ad.pagar(op, "tasacion", esencias, mc, List.of(), motivo);
         int pagadasE = pago == null ? 0 : pago.esencias();
         long pagadasMc = pago == null ? 0 : pago.mc();
-        // Calamity 1.11: lo que saca vivo suma para su clan (las Esencias que lleva y lo que valen sus Reliquias,
-        // sin el extra de la primera salida del dia). Solo en una salida de verdad.
+        // Calamity 1.11: lo que vende suma para su clan (las Esencias que ingresa y lo que valen sus Reliquias).
         ClanesCalamity clanes = hc.clanes();
-        if (online != null && esSalida && clanes != null) {
-            int deReliquias = Math.max(0, pagadasE - Math.min(pagadasE, extra));
-            hc.seguro("clanes", () -> clanes.alTasar(online, fisicas[0], deReliquias));
+        if (online != null && conRacha && clanes != null) {
+            hc.seguro("clanes", () -> clanes.alTasar(online, fisicas, pagadasE));
         }
 
         // Creditos de las IV (la Marca con su tope de dia y semana).
@@ -255,14 +496,13 @@ final class Tasacion {
             }
             if (cr != null) cr.sumar(u, tipo, 1, "tasacion", false);
             ganados.add(tipo);
-            // La linea de la Tasacion, aparte de la que ponga Creditos: dice de que salida salio.
             bit.anotar("tasacion", "credito", nombre, tipo + " +1");
             if (online != null) online.sendMessage(ComandoCalamity.mensaje(Component.text("Con la venta has ganado ")
                     .append(Component.text(nombreCredito(tipo), Paleta.DETALLE)).append(Component.text("."))));
         }
         for (String mj : k.sellos) {
             hc.plugin().getServer().broadcast(ComandoCalamity.mensaje(Component.text(nombre, Paleta.DETALLE)
-                    .append(Component.text(" ha salido de Calamity con el "))
+                    .append(Component.text(" ha vendido a Oren el "))
                     .append(Component.text("Sello " + Forja.delMinijefe(mj), Paleta.DETALLE))
                     .append(Component.text("."))));
         }
@@ -275,8 +515,16 @@ final class Tasacion {
             if (sale && en != null) en.llave(op, 1, "tasacion", true);
         }
 
-        int rachaNueva = r;
-        if (k.dosOMas && racha != null && esSalida) rachaNueva = racha.subir(u, online, salida);
+        // La Racha: una vez por entrada a Calamity, con una venta que lleve grado II o mas.
+        int rachaNueva = racha == null ? 0 : racha.de(u);
+        if (racha != null && conRacha && online != null) {
+            String exp = expedicion(u);
+            if (subeRacha(exp, hc.datos().getString("racha-venta." + u), k.dosOMas)) {
+                rachaNueva = racha.subir(u, online, foto);
+                hc.datos().set("racha-venta." + u, exp);
+                hc.marcarSucio();
+            }
+        }
 
         Estadisticas st = hc.estadisticas();
         if (st != null) {
@@ -299,35 +547,26 @@ final class Tasacion {
                 Map<String, Object> t = new LinkedHashMap<>();
                 Map<String, Object> porGrado = new LinkedHashMap<>();
                 for (int g = 1; g <= 4; g++) porGrado.put(String.valueOf(g), k.porGrado[g]);
-                t.put("tasado", porGrado);
+                t.put("vendido", porGrado);
                 t.put("esencias", pagadasE);
                 t.put("mc", pagadasMc);
                 t.put("mc_no_pagadas", pago == null ? 0 : pago.mcNoPagadas());
+                t.put("esencias_fisicas", fisicas);
                 t.put("racha", rachaNueva);
-                t.put("racha_tope", racha == null ? 5 : racha.tope(salida));
-                t.put("primera", primera ? "si" : "no");
                 t.put("exceso", k.exceso[1] + k.exceso[2]);
                 t.put("sin_valor", k.nulas());
                 t.put("creditos", ganados);
                 t.put("contratos", contratos);
-                // mobs, destacados, minijefes y cofres los cuenta la propia Telemetria en su
-                // sesion (los mismos para "sale" y "muere"): aqui no se mandan.
-                hc.seguro("telemetria", () -> te.sale(online, motivo, t));
+                t.put("donde", hc.esHardcore(online) ? "spawn" : "fuera");
+                hc.seguro("telemetria", () -> te.suceso("venta", online, t));
             }
-            // Si la Aduana recortara Esencias, el recorte sale primero de la primera salida.
-            int deLaPrimera = Math.min(pagadasE, extra);
-            avisar(online, k, pagadasE - deLaPrimera, pagadasMc, factor, deLaPrimera);
-            Encuesta enc = hc.encuesta();
-            if (enc != null) hc.seguro("encuesta", () -> enc.trasTasar(online));
+            avisar(online, k, pagadasE, pagadasMc, factor);
         }
         return new Resumen(pagadasE, pagadasMc, lineas);
     }
 
-    /**
-     * P-R01 y P-W06: "Has vendido 7 Reliquias (5 de grado I y 2 de grado II) por 3 Esencias y
-     * 55 MobCoins." Numeros y nombres en su color (DIS sec. 5).
-     */
-    private void avisar(Player p, Cuenta k, int esencias, long mc, double factor, int extra) {
+    /** "Le has vendido a Oren 7 Reliquias (5 de grado I y 2 de grado II) por 3 Esencias y 55 MobCoins." */
+    private void avisar(Player p, Cuenta k, int esencias, long mc, double factor) {
         int vendidas = 0;
         List<String> grados = new ArrayList<>();
         for (int g = 1; g <= 4; g++) {
@@ -336,7 +575,7 @@ final class Tasacion {
             grados.add(k.porGrado[g] + " de grado " + Reliquias.ROMANO[g]);
         }
         if (vendidas > 0) {
-            Component c = Component.text("Has vendido ").append(cifra(vendidas))
+            Component c = Component.text("Le has vendido a Oren ").append(cifra(vendidas))
                     .append(Component.text(vendidas == 1 ? " Reliquia" : " Reliquias"));
             if (grados.size() == 1) c = c.append(Component.text(" de grado " + Reliquias.ROMANO[primerGrado(k)]));
             else c = c.append(Component.text(" (" + lista(grados) + ")"));
@@ -358,10 +597,6 @@ final class Tasacion {
             p.sendMessage(ComandoCalamity.mensaje("Has llegado al tope diario de Reliquias de grado I y II: "
                     + (exceso == 1 ? "una no ha pagado nada." : exceso + " no han pagado nada.")));
         }
-        if (extra > 0) {
-            p.sendMessage(ComandoCalamity.mensaje(Component.text("Por ser tu primera salida del día, ganas ")
-                    .append(cifra(extra)).append(Component.text(extra == 1 ? " Esencia más." : " Esencias más."))));
-        }
     }
 
     private static int primerGrado(Cuenta k) {
@@ -370,7 +605,7 @@ final class Tasacion {
     }
 
     /** "a", "a y b", "a, b y c". */
-    private static String lista(List<String> cosas) {
+    static String lista(List<String> cosas) {
         if (cosas.size() <= 1) return cosas.isEmpty() ? "" : cosas.get(0);
         return String.join(", ", cosas.subList(0, cosas.size() - 1)) + " y " + cosas.get(cosas.size() - 1);
     }
@@ -380,7 +615,7 @@ final class Tasacion {
     }
 
     /** El credito ganado, con su articulo: "un Sello del Heraldo Carmesí", "una Marca de Eco". */
-    private static String nombreCredito(String tipo) {
+    static String nombreCredito(String tipo) {
         if (tipo.startsWith("sello:")) return "un Sello " + Forja.delMinijefe(tipo.substring(6));
         return switch (tipo) {
             case "fragmento" -> "un Fragmento de Guadaña";
@@ -407,9 +642,17 @@ final class Tasacion {
                 rel.valida(it), Math.max(1, it.getAmount()));
     }
 
-    /** +base, y +si-tasa si alguna Reliquia valio. */
-    static int primera(int validas, Valores v) {
-        return v.primeraBase() + (validas > 0 ? v.primeraSiTasa() : 0);
+    /**
+     * La primera salida del dia: +base, y +si-tasa si sale con alguna Reliquia que vale o si en esta misma
+     * entrada ya le vendio alguna a Oren (antes, "si alguna Reliquia valio en la Tasacion").
+     */
+    static int primera(int validasEncima, boolean vendioEnEstaEntrada, Valores v) {
+        return v.primeraBase() + (validasEncima > 0 || vendioEnEstaEntrada ? v.primeraSiTasa() : 0);
+    }
+
+    /** Si una venta sube la Racha: con grado II o mas y si en esta entrada aun no la subio ninguna. */
+    static boolean subeRacha(String entrada, String yaSubioEn, boolean dosOMas) {
+        return dosOMas && !(entrada == null ? "" : entrada).equals(yaSubioEn);
     }
 
     /**
@@ -481,6 +724,27 @@ final class Tasacion {
     }
 
     /**
+     * Los extras de una cuenta dichos para el jugador, sin repetir: "+ 2 Fragmentos de Guadaña",
+     * "+ 25 % de ganar una Llave del Caos" (con cuantas tiradas, si son varias). Puro: lo pinta el menu
+     * de Oren y lo mira el autotest.
+     */
+    static List<String> extrasTexto(Cuenta k) {
+        Map<String, Integer> creditos = new LinkedHashMap<>();
+        for (String c : k.creditos) creditos.merge(c, 1, Integer::sum);
+        List<String> out = new ArrayList<>();
+        for (Map.Entry<String, Integer> e : creditos.entrySet()) {
+            out.add("+ " + MenuAltar.creditoLinea(e.getKey(), e.getValue()));
+        }
+        Map<String, int[]> llaves = new LinkedHashMap<>();
+        for (Object[] ll : k.llaves) llaves.computeIfAbsent(Marco.porcentaje((double) ll[1]), x -> new int[1])[0]++;
+        for (Map.Entry<String, int[]> e : llaves.entrySet()) {
+            int n = e.getValue()[0];
+            out.add("+ " + e.getKey() + " de ganar una Llave del Caos" + (n > 1 ? " (" + n + " tiradas)" : ""));
+        }
+        return out;
+    }
+
+    /**
      * Tope de Marcas de Eco (2 al dia, 8 a la semana). UNA sola cuenta: la de Ecos
      * (marcas.<uuid>, que tambien lleva la Marca del Eco propio). Si toca, ya queda apuntada.
      * Sin Ecos en marcha, la misma regla estatica sobre los mismos datos.
@@ -499,7 +763,7 @@ final class Tasacion {
 
     /**
      * tasar <jugador> <g1> <g2> <g3> [especial:grado:N[:valida|:minijefe] ...]: crea las
-     * Reliquias (las III y especiales quedan emitidas en reliquias.log) y las tasa de verdad
+     * Reliquias (las III y especiales quedan emitidas en reliquias.log) y las vende de verdad
      * a su nombre, sin tocar su inventario. Paga, escribe la C y cuenta los topes del dia.
      */
     private void comando(CommandSender quien, String[] args) {
@@ -565,7 +829,7 @@ final class Tasacion {
         for (Reliquias.Espec e : especiales) {
             items.add(rel.crear(e.grado(), "admin", e.especial(), e.nivel(), e.minijefe(), e.valida()));
         }
-        Resumen r = procesar(op, null, items, "tasar-admin", true, true);
+        Resumen r = procesar(op, null, items, 0, "tasar-admin", true, true);
         quien.sendMessage(ComandoCalamity.mensaje("Venta de " + Minijefes.nombreDe(op) + ": " + r.esencias()
                 + " Esencias y " + r.mobcoins() + " MobCoins pagadas."));
         for (String l : r.lineas()) quien.sendMessage(Component.text("  " + l, Paleta.TENUE));
@@ -575,7 +839,7 @@ final class Tasacion {
         if (args.length == 2) return Reliquias.conectados();
         if (args.length == 3) return List.of("0", "1", "5", "reset");
         if (args.length <= 5) return List.of("0", "1", "5");
-        List<String> op = new ArrayList<>(List.of("campana:3:45", "campana:4:52", "lagrima:4:60:valida", "lagrima:3:30",
+        List<String> op = new ArrayList<>(List.of("campana:3:45", "campana:4:52", "lagrima:4:60:valid", "lagrima:3:30",
                 "eclipsada:3", "mayor"));
         for (String t : Minijefes.TIPOS) op.add("sello:4:" + t);
         return op;
@@ -591,12 +855,13 @@ final class Tasacion {
         String ambar = UUID.randomUUID().toString();
         reg.emitida(ambar, 3, "prueba", ahora);
 
-        // Aceptacion 1: 5 I, 1 II, 1 III -> 5 E y 80 MC; con la primera del dia, 8 E.
+        // Aceptacion 1: 5 I, 1 II, 1 III -> 5 E y 80 MC; la primera del dia, 2 + 1.
         Cuenta a = contar(List.of(pieza(1, 5), pieza(2, 1), uuid(3, ambar, null, 0, null, false, ahora)), reg, 0, 0, v, ahora);
         h.igual("5 I + 1 II + 1 III: Esencias", 5, (int) Math.floor(a.esencias + 1e-9));
         h.igual("5 I + 1 II + 1 III: MC", 80L, a.mc);
-        h.igual("primera del dia tasando algo", 3, primera(a.validas, v));
-        h.igual("primera del dia sin tasar nada", 2, primera(0, v));
+        h.igual("primera del dia saliendo con algo que vale", 3, primera(a.validas, false, v));
+        h.igual("primera del dia sin nada encima ni vendido", 2, primera(0, false, v));
+        h.igual("primera del dia habiendo vendido ya en esta entrada", 3, primera(0, true, v));
         h.igual("la III se marca para cobrar", List.of(ambar), a.cobrar);
         h.ok("con II o mas sube la racha", a.dosOMas);
 
@@ -607,7 +872,7 @@ final class Tasacion {
         h.igual("70 I: exceso", 10, b.exceso[1]);
         h.ok("solo I no sube la racha", !b.dosOMas);
         Cuenta b2 = contar(List.of(pieza(1, 70)), reg, 10, 0, v, ahora);
-        h.igual("70 I con 10 ya tasadas hoy: pagan 50", 50, b2.porGrado[1]);
+        h.igual("70 I con 10 ya vendidas hoy: pagan 50", 50, b2.porGrado[1]);
         Cuenta b3 = contar(List.of(pieza(2, 40)), reg, 0, 25, v, ahora);
         h.igual("40 II con 25 hoy: pagan 5", 5, b3.porGrado[2]);
         String cam2 = UUID.randomUUID().toString();
@@ -645,7 +910,7 @@ final class Tasacion {
         reg.emitida(doble, 3, "prueba", ahora);
         Cuenta g = contar(List.of(uuid(3, doble, null, 0, null, false, ahora), uuid(3, doble, null, 0, null, false, ahora)),
                 reg, 0, 0, v, ahora);
-        h.ok("el mismo UUID dos veces en una salida: una paga, otra duplicada",
+        h.ok("el mismo UUID dos veces en una venta: una paga, otra duplicada",
                 g.porGrado[3] == 1 && g.duplicadas.size() == 1);
         String vieja = UUID.randomUUID().toString();
         reg.emitida(vieja, 3, "prueba", ahora);
@@ -672,6 +937,96 @@ final class Tasacion {
         h.igual("num 1.2", "1.2", num(1.2));
         h.igual("num 1", "1", num(1.0));
         return h.lineas();
+    }
+
+    /**
+     * La venta a Oren (rama venta-oren): grupos, topes por partes, la Racha una vez por entrada, los
+     * extras dichos para el jugador, que reconoce lo que compra y que ningun texto diga ya que se vende
+     * solo al salir.
+     */
+    private List<String> autotestVenta() {
+        Autotest.Hoja h = new Autotest.Hoja();
+        Valores v = Valores.de(new YamlConfiguration());
+        long ahora = System.currentTimeMillis();
+        Reliquias.Registro reg = Reliquias.Registro.enMemoria();
+
+        // Grupos: el nombre lo dan grado, especial y minijefe.
+        h.igual("clave de una Astilla", "r:1:-:-", clave(1, null, null));
+        h.igual("clave de un Sello", "r:4:sello-minijefe:heraldo-carmes", clave(4, Reliquias.SELLO, "Heraldo-Carmes"));
+        h.ok("dos Sellos de minijefes distintos son dos grupos",
+                !clave(4, Reliquias.SELLO, "heraldo-carmes").equals(clave(4, Reliquias.SELLO, "custodio-de-las-ruinas")));
+        h.ok("el grado fuera de rango se acota", clave(9, null, null).equals(clave(4, null, null)));
+
+        // Vender por partes no se salta el tope: la segunda venta del dia ve lo que ya vendio la primera.
+        Cuenta primeraVenta = contar(List.of(pieza(1, 40)), reg, 0, 0, v, ahora);
+        Cuenta segunda = contar(List.of(pieza(1, 40)), reg, primeraVenta.monton[1], 0, v, ahora);
+        h.igual("tope: 40 I y luego 40 I pagan 40 + 20", 20, segunda.porGrado[1]);
+        h.igual("tope: y el resto es exceso", 20, segunda.exceso[1]);
+        Cuenta todo = contar(List.of(pieza(1, 80)), reg, 0, 0, v, ahora);
+        h.igual("tope: vender todo de golpe paga lo mismo", primeraVenta.porGrado[1] + segunda.porGrado[1], todo.porGrado[1]);
+
+        // La Racha: una vez por entrada, solo con grado II o mas.
+        h.ok("racha: primera venta con una II en la entrada sube", subeRacha("100", null, true));
+        h.ok("racha: segunda venta en la misma entrada no sube", !subeRacha("100", "100", true));
+        h.ok("racha: entrada nueva vuelve a subir", subeRacha("200", "100", true));
+        h.ok("racha: solo Astillas no la sube", !subeRacha("200", "100", false));
+        h.ok("racha: sin entrada apuntada sube una vez", subeRacha("", null, true) && !subeRacha("", "", true));
+
+        // Extras, como se leen en el menu.
+        String cam = UUID.randomUUID().toString(), lag = UUID.randomUUID().toString();
+        reg.emitida(cam, 4, "prueba", ahora);
+        reg.emitida(lag, 4, "prueba", ahora);
+        Cuenta e = contar(List.of(uuid(4, cam, Reliquias.CAMPANA, 50, null, false, ahora),
+                uuid(4, lag, Reliquias.LAGRIMA, 60, null, true, ahora)), reg, 0, 0, v, ahora);
+        List<String> ex = extrasTexto(e);
+        h.ok("extras: Fragmento de Guadaña", ex.contains("+ 1 Fragmento de Guadaña"));
+        h.ok("extras: Marca de Eco", ex.contains("+ 1 Marca de Eco"));
+        h.igual("extras: las dos tiradas de llave", 2L, ex.stream().filter(x -> x.contains("Llave del Caos")).count());
+        h.igual("extras: nada sin especiales", List.of(), extrasTexto(contar(List.of(pieza(1, 3)), reg, 0, 0, v, ahora)));
+
+        // Lo que reconoce como suyo: Reliquias y Esencias, por su marca.
+        Reliquias rel = hc.reliquias();
+        if (rel != null) {
+            ItemStack astilla = rel.crear(1, "prueba", null, 0, null, false);
+            h.igual("reconoce una Astilla", clave(1, null, null), clave(astilla));
+            ItemStack falsa = new ItemStack(Material.PRISMARINE_SHARD);
+            ItemMeta meta = falsa.getItemMeta();
+            meta.getPersistentDataContainer().set(Marcas.RELIQUIA, PersistentDataType.INTEGER, 2);
+            falsa.setItemMeta(meta);
+            h.igual("una Reliquia hecha a mano tambien se detecta (y luego no paga)", clave(2, null, null), clave(falsa));
+        }
+        h.igual("reconoce una Esencia", ESENCIAS, clave(hc.items().esencia(3)));
+        h.igual("una piedra no es de Oren", null, clave(new ItemStack(Material.STONE)));
+
+        // Ningun texto dice ya que se vende solo al salir.
+        ConfigurationSection cfg = hc.cfg();
+        List<String> textos = new ArrayList<>();
+        for (int gr = 1; gr <= 4; gr++) {
+            for (String esp : new String[]{null, Reliquias.CAMPANA, Reliquias.LAGRIMA, Reliquias.SELLO, Reliquias.ECLIPSADA}) {
+                textos.add(String.join(" ", Reliquias.ficha(cfg, gr, esp, 50, "heraldo-carmes", true, "mob", gr >= 3,
+                        "18/10").lineas()));
+            }
+        }
+        textos.add(String.join(" ", ItemsCalamity.fichaEsencia().lineas()));
+        ConfigurationSection caps = cfg.getConfigurationSection("cronista.capitulos");
+        if (caps != null) for (String cap : caps.getKeys(false)) textos.addAll(caps.getStringList(cap + ".texto"));
+        ConfigurationSection pool = cfg.getConfigurationSection("contratos.pool");
+        if (pool != null) for (String id : pool.getKeys(false)) textos.add(pool.getString(id + ".texto", ""));
+        List<String> malos = new ArrayList<>();
+        for (String t : textos) if (vendeSolo(t)) malos.add(t);
+        h.igual("ningun lore, capitulo ni contrato dice que se vende solo al salir", List.of(), malos);
+        h.ok("el detector de textos viejos funciona", vendeSolo("Se vende sola al salir de Calamity")
+                && vendeSolo("Al salir vivo, tus Reliquias se venden solas") && !vendeSolo("Véndesela a Oren."));
+        return h.lineas();
+    }
+
+    /** Si un texto aun dice que lo de Calamity se vende (o pasa al saldo) solo al salir. */
+    static boolean vendeSolo(String t) {
+        if (t == null) return false;
+        String s = Normalizer.normalize(t.toLowerCase(Locale.ROOT), Normalizer.Form.NFD).replaceAll("\\p{M}", "")
+                .replaceAll("\\s+", " ");
+        return s.contains("se vende sol") || s.contains("se venden sol") || s.contains("pasan a tu saldo")
+                || s.contains("pasa a tu saldo") || s.contains("valor al salir") || s.contains("cada reliquia que sacas vivo");
     }
 
     private static Pieza pieza(int grado, int cantidad) {

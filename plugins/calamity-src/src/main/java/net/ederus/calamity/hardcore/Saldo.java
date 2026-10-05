@@ -30,10 +30,13 @@ import java.util.UUID;
  * Por que un saldo y no el objeto (DIS sec. 0.3, PLAN sec. 2): una Esencia fisica fuera se
  * vende en /ah, entra en el cofre de otro y deja que el baltop compre el Manto sin pisar
  * Calamity. Dentro sigue siendo objeto (se pierde al morir, que es la gracia); fuera es un
- * numero que solo el Altar sabe gastar. Al extraer pasan al saldo (la Tasacion llama a
- * depositarFisicas) y, si aparece una fisica fuera por cualquier otra via (Esencias viejas,
- * salida por admin, /calamity item essence), se deposita sola al entrar al servidor, al cambiar
- * de mundo o al abrir un inventario. No se destruye nada: se convierte.
+ * numero que solo el Altar sabe gastar.
+ *
+ * Rama venta-oren: las fisicas ya no pasan solas al saldo al salir. Se las ingresa Oren, en su
+ * menu (Tasacion.vender llama a depositarFisicas), o el boton del saldo del Altar fuera de Calamity.
+ * Fuera no se pueden guardar ni vender en /ah (Sellos). El deposito solo de antes (al entrar al
+ * servidor, al cambiar de mundo o al abrir un inventario fuera) sigue aqui, apagado de serie:
+ * esencias.deposito-automatico.
  *
  * Segunda barrera (DIS M2, "Esencias vendibles"): la Esencia es una lagrima de ghast y la
  * lagrima tiene receta de pocion. Con la marca, ni se elabora ni entra en un alambique,
@@ -197,10 +200,14 @@ final class Saldo implements Listener {
         return p == null ? "0" : String.valueOf(encima(p));
     }
 
-    /** Fuera de Calamity y con el saldo encendido, lo fisico se convierte en saldo. */
+    /**
+     * Fuera de Calamity, con el saldo y el deposito automatico encendidos, lo fisico se convierte en
+     * saldo. Rama venta-oren: apagado de serie (esencias.deposito-automatico), lo ingresa Oren.
+     */
     private void depositoSolo(Player p) {
         if (p == null || !p.isOnline() || hc.esHardcore(p)) return;
         if (!hc.cfg().getBoolean("esencias.saldo", true)) return;
+        if (!hc.cfg().getBoolean("esencias.deposito-automatico", false)) return;
         int n = depositarFisicas(p);
         if (n > 0) {
             p.sendMessage(ComandoCalamity.mensaje(

@@ -230,8 +230,10 @@ public final class ItemsCalamity {
         return new Ficha(NARANJA_ESENCIA).tipo("Moneda de Calamity").filete()
                 .historia("Lo que queda de algo de Calamity cuando muere de verdad.").filete()
                 .texto("La sueltan los mobs y los cofres.")
-                .texto("Al salir vivo pasa a tu saldo. Con el saldo pagas en el Altar y en la Forja.").filete()
-                .nota("Si mueres antes de salir, la pierdes.");
+                .texto("Oren te la ingresa en tu saldo. Con el saldo pagas en el Altar y en la Forja.").filete()
+                .accion("Llévasela a Oren, en el spawn de Calamity.")
+                .nota("Si mueres en Calamity, la pierdes.")
+                .nota("Fuera de Calamity no se puede guardar.");
     }
 
     static Ficha fichaFragmento(ConfigurationSection c) {
@@ -278,6 +280,20 @@ public final class ItemsCalamity {
                     + "\" no es un objeto; las Esencias salen como GHAST_TEAR.");
         }
         return Material.GHAST_TEAR;
+    }
+
+    /**
+     * Rama venta-oren: una Esencia con el lore de antes ("al salir vivo pasa a tu saldo") pasa a llevar el
+     * de hoy, y asi se apila con las nuevas. true si cambio algo.
+     */
+    public boolean renovarEsencia(ItemStack item) {
+        if (!esEsencia(item)) return false;
+        ItemMeta meta = item.getItemMeta();
+        List<Component> lore = fichaEsencia().lore();
+        if (lore.equals(meta.lore())) return false;
+        meta.lore(lore);
+        item.setItemMeta(meta);
+        return true;
     }
 
     public boolean esEsencia(ItemStack item) {

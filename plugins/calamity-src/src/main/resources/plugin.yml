@@ -36,9 +36,17 @@ permissions:
   calamity.admin:
     description: /calamity y todos sus subcomandos (staff)
     default: op
+    # El staff de Calamity tambien se salta los sellos de almacen (Sellos lo mira igualmente).
+    children:
+      calamity.bypass.storage: true
   # lethalworld.calamity (default true, el /calamity de los jugadores hasta la 1.11) ya no abre
   # nada y no se declara: los grupos de LuckPerms que lo tengan puesto no ganan ningun comando.
   # lethalworld.parca.exento y lethalworld.aduana.exento ya no existen (LethalWorld 1.1.1):
   # con el comodin "*" de LuckPerms todo el staff los heredaba. Las exenciones van a mano,
   # una a una: /calamity exempt <player> <reaper|customs|all> <on|off> (se guardan en
   # hardcore-datos.yml).
+  # Rama venta-oren: el staff que puede usar /ec y /pv dentro de Calamity y guardar Reliquias y
+  # Esencias fuera (Sellos). ederus.mundos y calamity.admin (hijo) tambien se lo saltan.
+  calamity.bypass.storage:
+    description: Saltarse los sellos de almacen de Calamity (/ec y /pv dentro; guardar Reliquias y Esencias fuera)
+    default: op

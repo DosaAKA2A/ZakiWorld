@@ -367,7 +367,7 @@ final class MenuAltar implements Listener {
         inv.setItem(CERRAR, Marco.cerrar());
         m.acciones().put(CERRAR, "cerrar");
         Marco.enlace(inv, m.acciones(), IR_TASADOR, Marco.TASADOR, Material.EMERALD, "Mercado de Oren",
-                List.of("Tu dinero, tus contratos", "y tus Reliquias."), hc.npcs() != null);
+                List.of("Te compra Reliquias y Esencias;", "tu dinero y tus contratos."), hc.npcs() != null);
     }
 
     /** Una categoria: sus articulos en rejilla y abajo las flechas y Volver. */
@@ -897,7 +897,7 @@ final class MenuAltar implements Listener {
             }, 1L);
             case "depositar" -> {
                 if (hc.esHardcore(p)) {
-                    p.sendMessage(ComandoCalamity.mensaje("En Calamity no se puede: las Esencias pasan a tu saldo cuando sales vivo."));
+                    p.sendMessage(ComandoCalamity.mensaje("Aquí no: ingrésalas con el botón de las Esencias en la tienda de Oren."));
                     Marco.sonidoNo(p);
                     return;
                 }
