@@ -463,6 +463,9 @@ final class Ruinas implements Listener {
         }
         Contratos ct = hc.contratos();
         if (ct != null) hc.seguro("contratos", () -> ct.progreso(p, "cofre", 1));
+        // 1.13.0: tambien cuenta para que caiga el Vigilante.
+        Vigilante vg = hc.vigilante();
+        if (vg != null) hc.seguro("vigilante", () -> vg.alAbrirCofre(p));
 
         ConfigurationSection c = cfg();
         double bloques = hc.distancia() == null ? 0 : hc.valor("distancia", () -> hc.distancia().bloques(bloque.getLocation()), 0.0);

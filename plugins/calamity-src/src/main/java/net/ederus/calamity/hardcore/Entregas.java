@@ -293,8 +293,15 @@ final class Entregas implements Listener {
         return id == null || id.isBlank() ? null : id;
     }
 
+    /**
+     * Calamity 1.13.0 · El botin del Vigilante que llega en otro lote: la gema Ojo del Vigilante y las placas
+     * del Mazo del Vigilante. Mientras MMOItems no los tenga, crear() da null y el Vigilante no los saca.
+     */
+    static final String OJO_DEL_VIGILANTE = "ojo-del-vigilante";
+    static final String PLACA_DEL_VIGILANTE = "placa-del-vigilante";
+
     /** Los ids de DIS sec. 4, por si la config del servidor aun no los tiene. */
-    private static final Map<String, String> MMO_DEFECTO = Map.ofEntries(
+    static final Map<String, String> MMO_DEFECTO = Map.ofEntries(
             Map.entry("tintura", "CALAMITY_CONSUMIBLES.TINTURA_DE_CENIZA"),
             Map.entry("gema", "CALAMITY_GEMAS.GEMA_DE_CALAMIDAD"),
             // 1.12.3: el lote de gemas (docs/lote-gemas/01-calamity_gemas.yml). El id del Ojo lo usa el Vigilante.
@@ -315,7 +322,10 @@ final class Entregas implements Listener {
             Map.entry("guadana", "CALAMITY_ARMAS.GUADANA_DE_LA_PARCA"),
             // 1.8.0: las katanas de Ambush.
             Map.entry("masamune", "CALAMITY_ARMAS.MASAMUNE"),
-            Map.entry("crimson", "CALAMITY_ARMAS.CRIMSON_MASAMUNE"));
+            Map.entry("crimson", "CALAMITY_ARMAS.CRIMSON_MASAMUNE"),
+            // 1.13.0: el botin del Vigilante (otro lote).
+            Map.entry(OJO_DEL_VIGILANTE, "CALAMITY_GEMAS.GEMA_OJO_DEL_VIGILANTE"),
+            Map.entry(PLACA_DEL_VIGILANTE, "CALAMITY_MATERIALES.PLACA_DEL_VIGILANTE"));
 
     private String motivoSinObjeto(String o) {
         String id = idMmo(o);

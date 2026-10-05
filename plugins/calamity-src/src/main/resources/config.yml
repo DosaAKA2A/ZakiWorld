@@ -710,6 +710,95 @@ hardcore:
     skin-fase-2: Nagazaki_Yakuza
     fase-2-vida: 0.5
 
+  # ------------------------------------------------------------------ 1b2. EL VIGILANTE (1.13.0)
+  # Anomalia Monarca de tierra, un escalon bajo la Parca: un golem de hierro gigante con un ojo de
+  # luz amarilla en el pecho y tres nucleos que le giran alrededor. Cae del cielo como un meteoro
+  # sobre quien, pasados llegada.bloques del borde de la zona spawn, abre llegada.cofres cofres o
+  # mata llegada.minijefes minijefes ahi (cofres de estructura y de ruinas). Antes, dos avisos.
+  # Una vez al dia por jugador y como mucho llegada.maximo-vivos a la vez (los que caen cuentan).
+  # Su ojo marca a quien ve dos segundos sin nada en medio: sus golpes fuertes van a el. Cuatro
+  # fases por vida (75/50/25 %): Centinela, Demoledor, Ojo y Vigilante.
+  # Los golpes fuertes quitan una parte de TU vida maxima (entre golpes.minimo y golpes.maximo),
+  # sin que la armadura los pare, y siempre se avisan en el suelo al menos 20 ticks antes (un
+  # aviso-ticks menor se sube solo). Con la vida llena nunca te matan, ni dos juntos.
+  # Staff: /calamity vigilant spawn [player] | test | info [player] | health <0-1>
+  #        | ability <name> | remove | reset <player>. Tambien sale en /anomaly (prueba sin botin).
+  # Si esta seccion no esta en el config.yml del servidor, valen estos mismos valores.
+  vigilante:
+    activo: true
+    llegada:
+      bloques: 1000               # desde el borde de la zona spawn (la medida de hardcore.distancia)
+      cofres: 3                   # cofres abiertos pasada la raya, en el dia (0 = no cuentan)
+      minijefes: 1                # o minijefes muertos pasada la raya (0 = no cuentan)
+      maximo-vivos: 2             # Vigilantes vivos o cayendo a la vez en todo el servidor
+      aviso-segundos: 5           # del aviso 1 al 2, y del 2 al meteoro
+      caida-ticks: 40             # lo que tarda el meteoro en caer, con su marca en el suelo
+      distancia: 10               # a cuantos bloques por detras de la presa cae
+      impacto-radio: 4
+      impacto-fraccion: 0.25      # el golpe del meteoro, como golpe fuerte
+    vida-base: 360                # vida logica = base x (1 + por-nivel x (N-1)) x jugadores x Poder x dificultad
+    vida-por-nivel: 0.10
+    extra-nivel: 8                # N = el nivel de Calamity mas alto del grupo + esto (la Parca, +10)
+    golpe-base: 9                 # su golpe a mano (attack_damage), con el mismo escalado
+    golpe-por-nivel: 0.04
+    tope-golpe-fraccion: 0.08     # ningun golpe le quita mas que esto de su vida logica
+    escala-cuerpo: 2.2            # tamano del golem
+    velocidad: 0.30
+    duracion-minutos: 10          # sin caer en esto, vuelve al cielo sin botin
+    abandono-segundos: 30         # sin nadie a radio-pelea tanto tiempo, se va
+    atasco-segundos: 15           # sin golpear tanto tiempo, salta hacia su objetivo
+    radio-pelea: 48
+    radio-grupo: 24               # quien este a esto al caer cuenta para su escala
+    escala:
+      por-jugador: 0.35           # vida x(1 + esto) por cada jugador de mas, contando los que se suman
+      jugadores-tope: 5
+      poder-cada: 2000            # cada tanto de Poder (/flex) es un tramo
+      poder-vida: 0.06            # vida +6 % por tramo
+      poder-dano: 0.04            # golpe a mano +4 % por tramo
+      poder-tope-tramos: 6
+      poder-placeholder: "%edm_poder%"   # solo si la API de EDM no responde
+    golpes:
+      minimo: 0.25                # fraccion de tu vida maxima; los golpes fuertes suben con dificultad-amenazas
+      maximo: 0.90                # nunca 1: con la vida llena no te mata
+      marcado-extra: 0.25         # al marcado, un 25 % mas
+      ventana-ticks: 10           # dos golpes fuertes en esta ventana no pasan de maximo entre los dos
+    mirada:
+      alcance: 24
+      angulo: 70                  # ancho total del cono de luz, en grados
+      segundos: 2                 # visto tanto tiempo sin nada en medio, queda marcado
+      marca-segundos: 15
+    habilidades:
+      # espera-ticks: hasta que la repite; aviso-ticks: lo que se ve en el suelo antes; fraccion: de tu vida maxima.
+      machaque: {espera-ticks: 120, aviso-ticks: 24, fraccion: 0.30, radio: 5.5, angulo: 120}
+      salto: {espera-ticks: 220, aviso-ticks: 24, fraccion: 0.35, radio: 3.5, onda-fraccion: 0.25, onda-radio: 10}
+      barrido: {espera-ticks: 240, aviso-ticks: 24, fraccion: 0.30, radio: 14, angulo: 120}
+      embestida: {espera-ticks: 200, aviso-ticks: 24, fraccion: 0.45, largo: 20}
+      escombros: {espera-ticks: 260, aviso-ticks: 28, fraccion: 0.30, radio: 2.2, circulos: 5}
+      pilares: {espera-ticks: 600, cuantos: 6, segundos: 30}
+      rayo: {espera-ticks: 240, aviso-ticks: 30, fraccion: 0.45}
+      # Los nucleos: golpes que aguanta cada uno (+ por jugador de mas) y segundos para romperlos;
+      # rotos a tiempo, aturdido; si no, cada uno estalla con fraccion en su radio.
+      nucleos: {espera-ticks: 900, fraccion: 0.50, golpes: 4, golpes-por-jugador: 2, segundos: 14, radio: 5, aturdido-segundos: 6, aturdido-dano-extra: 0.30}
+      tiron: {espera-ticks: 300, aviso-ticks: 24, distancia-minima: 12, fuerza: 1.6}
+      faro: {espera-ticks: 600, aviso-ticks: 20, fraccion: 0.35, vueltas: 2, ticks-por-vuelta: 80, adelanto-ticks: 20, alcance: 20}
+      ondas: {espera-ticks: 360, aviso-ticks: 20, fraccion: 0.30, separacion-ticks: 24, radio: 16}
+      sentencia: {espera-ticks: 420, aviso-ticks: 60, fraccion: 0.75, radio: 8}
+    botin:
+      horas-entre-cobros: 24
+      participacion-minima: 0.10  # de su vida logica, para cobrar
+      esencias-base: 5            # cada uno que cobra: esto + 1 cada esencias-cada-niveles niveles
+      esencias-cada-niveles: 10
+      reliquia-grado-iv: 50       # una Reliquia alta: IV desde este N, III por debajo
+      # Lo de mas, como minijefes.botin (para: mejor | asesino | participantes; piedad: a la N-esima
+      # sin que caiga, cae). La gema y las placas son de MMOItems: CALAMITY_GEMAS.GEMA_OJO_DEL_VIGILANTE
+      # y CALAMITY_MATERIALES.PLACA_DEL_VIGILANTE (se pueden cambiar en entregas.mmo.ojo-del-vigilante y
+      # entregas.mmo.placa-del-vigilante; no se ponen ahi de serie porque el selftest mmo crea todo lo
+      # de esa lista). Mientras MMOItems no los tenga, no salen ni cuentan piedad.
+      extra:
+        - {id: gema, prob: 0.20, para: mejor, piedad: 8, objeto: ojo-del-vigilante, nombre: "la gema Ojo del Vigilante", anuncio: true}
+        - {id: placa, prob: 0.60, para: participantes, piedad: 3, objeto: placa-del-vigilante, nombre: "una Placa del Vigilante"}
+        - {id: libro, prob: 0.06, para: mejor, objeto: libro, nombre: "un libro LEGENDARY"}
+
   # ------------------------------------------------------------------ 1c. LO QUE ENDURECE A LA PARCA Y A AMBUSH
   # La Parca y Ambush salen más fuertes cuanto peor lo tiene su presa en el momento en que
   # aparecen: lejos del spawn, con poca cordura y con mucho rato dentro. Cada una de las tres
@@ -807,7 +896,7 @@ hardcore:
     tramos-mc:                    # [alineado] PLAN 3.3: tope duro de 1.500 MC al dia
       - {hasta: 1500, factor: 1.0}
       - {hasta: 999999, factor: 0.0}
-    topes-diarios: {parca: 1, eco: 5, sangre: 12, contratos: 3, cazas: 3, encuesta: 2, ambush: 1}   # [alineado] encuesta + voto; 1.8.0 ambush
+    topes-diarios: {parca: 1, eco: 5, sangre: 12, contratos: 3, cazas: 3, encuesta: 2, ambush: 1, vigilante: 1}   # [alineado] encuesta + voto; 1.8.0 ambush; 1.13.0 vigilante
     fusible:
       mc-jugador-hora: 500        # [alineado] era 600. Por encima, el resto de la hora paga x recorte
       recorte: 0.25

@@ -431,6 +431,9 @@ final class Minijefes {
         }
         if (fr.isEmpty()) return;
         repartir(tipo, nivel, asesino, fr);
+        // 1.13.0: un minijefe muerto lejos cuenta para que caiga el Vigilante sobre quien lo mato.
+        Vigilante vg = hc.vigilante();
+        if (vg != null && asesino != null) hc.seguro("vigilante", () -> vg.alMatarMinijefe(asesino));
     }
 
     /** Para /calamity miniboss death: el primero de fracciones es el asesino. */

@@ -156,6 +156,8 @@ public final class Hardcore implements Listener {
     private Parca parca;
     /** Calamity 1.8.0: los contratos de la Sentencia y su samurai. Null con las reglas apagadas. */
     private Ambush ambush;
+    /** Calamity 1.13.0: el Vigilante, la anomalia Monarca que cae sobre quien se aleja demasiado. */
+    private Vigilante vigilante;
     private Ecos ecos;
     private ParteDefuncion parte;
     private Testigos testigos;
@@ -248,6 +250,7 @@ public final class Hardcore implements Listener {
     Huella huella() { return huella; }
     Parca parca() { return parca; }
     Ambush ambush() { return ambush; }
+    Vigilante vigilante() { return vigilante; }
     Ecos ecos() { return ecos; }
     ParteDefuncion parte() { return parte; }
     Testigos testigos() { return testigos; }
@@ -445,6 +448,8 @@ public final class Hardcore implements Listener {
         parca = crear("parca", () -> new Parca(this));
         // 1.8.0: despues de la Parca, cuyo cuerpo de NPC (CuerpoNpc) y listener de cascaras usa.
         ambush = crear("ambush", () -> new Ambush(this));
+        // 1.13.0: despues de la Parca (a la que pregunta si persigue) y de Ambush, con las mismas amenazas.
+        vigilante = crear("vigilante", () -> new Vigilante(this));
         ecos = crear("ecos", () -> new Ecos(this));
         parte = crear("parte", () -> new ParteDefuncion(this));
         testigos = crear("testigos", () -> new Testigos(this));
@@ -510,6 +515,8 @@ public final class Hardcore implements Listener {
         if (testigos != null) seguro("testigos", () -> testigos.parar());
         if (parte != null) seguro("parte", () -> parte.parar());
         if (ecos != null) seguro("ecos", () -> ecos.parar());
+        if (vigilante != null) seguro("vigilante", () -> vigilante.parar());
+        vigilante = null;
         if (ambush != null) seguro("ambush", () -> ambush.parar());
         if (parca != null) seguro("parca", () -> parca.parar());
         if (huella != null) seguro("huella", () -> huella.parar());
@@ -748,6 +755,7 @@ public final class Hardcore implements Listener {
         seguro("zona-spawn", this::vigilarSinPresa);
         seguro("parca", () -> parca.tick());
         if (ambush != null) seguro("ambush", () -> ambush.tick());
+        if (vigilante != null) seguro("vigilante", () -> vigilante.tick());
         seguro("ecos", () -> ecos.tick());
         seguro("aduana", () -> aduana.tick());
         seguro("eclipse", () -> eclipse.tick());
@@ -1804,6 +1812,10 @@ public final class Hardcore implements Listener {
     @EventHandler(ignoreCancelled = true)
     public void onBotinDeCofre(LootGenerateEvent e) {
         if (!esHardcore(e.getWorld())) return;
+        // 1.13.0: un cofre abierto lejos cuenta para que caiga el Vigilante (vacio o no).
+        if (vigilante != null && e.getInventoryHolder() != null && e.getEntity() instanceof Player j && cuenta(j)) {
+            seguro("vigilante", () -> vigilante.alAbrirCofre(j));
+        }
         if (cfg().getBoolean("dificultad.cofres-vacios", true)) {
             e.setLoot(java.util.Collections.emptyList());
             return;
