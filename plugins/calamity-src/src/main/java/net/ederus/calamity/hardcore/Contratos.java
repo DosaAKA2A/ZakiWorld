@@ -1656,9 +1656,9 @@ final class Contratos implements Listener {
         h.ok("pergamino: se reconoce por la marca", Pergaminos.es(papel));
         h.igual("pergamino: lleva su sello", sello, Pergaminos.sello(papel));
         h.igual("pergamino: el nombre", "Contrato: Mobs", meta == null ? null : plano(meta.displayName()));
-        h.ok("pergamino: nombre sin cursiva y en negrita", meta != null && meta.displayName() != null
+        h.ok("pergamino: nombre sin cursiva ni negrita", meta != null && meta.displayName() != null
                 && meta.displayName().decoration(TextDecoration.ITALIC) == TextDecoration.State.FALSE
-                && meta.displayName().decoration(TextDecoration.BOLD) == TextDecoration.State.TRUE);
+                && Ficha.faltas(meta.displayName(), List.of()).isEmpty());
         h.igual("pergamino: el lore del objeto es el de lineas()", Pergaminos.lineas(mobs, 6),
                 meta == null || meta.lore() == null ? null : planos(meta.lore()));
         h.igual("pergamino: no se apila", 1, papel.getMaxStackSize());

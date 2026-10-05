@@ -20,7 +20,7 @@ import java.time.Duration;
  * Calamity se ve como una sola cosa y no como veinte paquetes con su gusto cada uno.
  *
  * Reglas de la casa que se aplican aqui para que nadie tenga que acordarse:
- *  - negrita solo en la marca (marca()) y en el nombre de los objetos (Tono.nombre, desde la 1.12.1);
+ *  - negrita solo en la marca (marca()); los nombres de objetos tampoco (Tono.nombre, desde la 1.12.2);
  *  - nada de cursiva (todo lo que sale de aqui la apaga, tambien para nombres de items);
  *  - los titulos con presencia llevan degradado, el resto un color plano.
  */
@@ -149,23 +149,29 @@ public final class Paleta {
     /** El color de una familia de objetos: el degradado de su nombre, de "desde" (claro) a "hasta" (fuerte). */
     public record Tono(int desde, int hasta) {
 
-        /** La categoria, los titulos de seccion (◆) y lo destacado: el final del degradado. */
+        /** El final del degradado tal cual (el color de una Reliquia en los menus de Oren, el de la Esencia). */
         public TextColor fuerte() {
             return TextColor.color(hasta);
         }
 
-        /** La historia y los nombres de monedas y objetos dentro del texto: el inicio, un 35 % hacia blanco. */
-        public TextColor palido() {
-            return TextColor.lerp(0.35f, TextColor.color(desde), TextColor.color(0xFFFFFF));
-        }
+        /*
+         * Calamity 1.12.2 · Tres pesos por familia, solo con color y sin negrita (Dosa, 2026-10-05: "la negrita
+         * no era la solucion"; "baja un poco la opacidad del texto en si, tirandolo a su version cercana al
+         * blanco, y el nombre mantiene su color llamativo; solo algunas partes pueden usar el tono medio"):
+         *   1. nombre(): el degradado de la familia, de "desde" al fuerte encendido. Lo unico con el color pleno.
+         *   2. medio(): a mitad entre el final del nombre y el texto. Solo para lo que tiene que destacar sin
+         *      opacar al nombre: la categoria, los titulos (◆), el triangulo de la accion, las cifras y los
+         *      nombres marcados dentro del texto.
+         *   3. texto(): el cuerpo (historia, datos, accion): el fuerte muy aclarado hacia blanco y un poco
+         *      apagado hacia gris. Teñido de la familia, no gris neutro. nota() es un paso mas apagado.
+         */
 
         /**
-         * Calamity 1.12.1 · Donde arranca el degradado del nombre: el inicio del tono un 60 % hacia blanco,
-         * casi blanco pero teñido. Dosa vio en el juego (2026-10-05) que el nombre no se distinguia de la
-         * cabecera, que iba en el mismo tono fuerte.
+         * Donde arranca el degradado del nombre: el inicio claro de la familia, a medio camino del final, para
+         * que el nombre entero lleve color y no empiece casi tan claro como el texto.
          */
         public int nombreDesde() {
-            return TextColor.lerp(0.6f, TextColor.color(desde), TextColor.color(0xFFFFFF)).value();
+            return TextColor.lerp(0.5f, TextColor.color(desde), TextColor.color(nombreHasta())).value();
         }
 
         /** Donde acaba el degradado del nombre: el tono fuerte con todo el brillo y un punto mas de saturacion. */
@@ -174,24 +180,30 @@ public final class Paleta {
             return java.awt.Color.HSBtoRGB(hsb[0], Math.min(1f, hsb[1] * 1.08f), 1f) & 0xFFFFFF;
         }
 
-        /**
-         * Calamity 1.12.1 · La categoria de la cabecera ("Reliquia especial"): el tono fuerte apagado hacia
-         * gris, para que le deje todo el protagonismo al nombre sin perder la familia.
-         */
-        public TextColor tintado() {
-            return TextColor.lerp(0.6f, TextColor.color(hasta), TextColor.color(0x8A8A8A));
+        /** El cuerpo del lore: el fuerte un 75 % hacia blanco y luego un 25 % hacia gris (menos "opacidad"). */
+        public TextColor texto() {
+            TextColor claro = TextColor.lerp(0.75f, TextColor.color(hasta), TextColor.color(0xFFFFFF));
+            return TextColor.lerp(0.25f, claro, TextColor.color(0x9A9A9A));
         }
 
-        /**
-         * El nombre del objeto: de casi blanco teñido al tono fuerte encendido, sin cursiva y EN NEGRITA.
-         * Calamity 1.12.1 · La unica negrita de un objeto: probado sin ella (muestra antes/despues), el nombre
-         * seguia pesando lo mismo que la historia y los titulos de seccion, que van en el mismo tono. El lore
-         * sigue sin negrita en ninguna linea (Ficha.faltas).
-         */
+        /** Lo del final (de donde salio, la caducidad, el aviso de morir): el texto un paso mas apagado. */
+        public TextColor nota() {
+            return TextColor.lerp(0.45f, texto(), TextColor.color(0x6E6E6E));
+        }
+
+        /** El tono medio: entre el final del nombre y el texto, mas cerca del texto (65 %) para no competir con el nombre. */
+        public TextColor medio() {
+            return TextColor.lerp(0.65f, TextColor.color(nombreHasta()), texto());
+        }
+
+        /** El nombre del objeto: el degradado llamativo de la familia, sin cursiva ni negrita. */
         public Component nombre(String texto) {
-            return degradado(texto, nombreDesde(), nombreHasta()).decoration(TextDecoration.BOLD, true);
+            return degradado(texto, nombreDesde(), nombreHasta()).decoration(TextDecoration.BOLD, false);
         }
     }
+
+    /** Lo que no es de ninguna familia (la linea de ligado, que se pega a cualquier objeto): grises. */
+    public static final Tono T_NEUTRO = new Tono(0xE6E6E6, 0xA8A8A8);
 
     /** Pergaminos de contrato de Oren: dorado a naranja. */
     public static final Tono T_CONTRATO = new Tono(0xFFE27A, 0xFF8A2B);

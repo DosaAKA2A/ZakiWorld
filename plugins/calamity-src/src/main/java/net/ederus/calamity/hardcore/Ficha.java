@@ -24,28 +24,31 @@ import java.util.Map;
  * Esta es la forma de ahora, la de la maqueta que aprobo:
  *
  * <pre>
- *   Astilla del Umbral                  el nombre: de casi blanco teñido al fuerte encendido (Tono.nombre)
- *   Reliquia · Grado I  ★★★★           cabecera(): categoria en el fuerte apagado, detalle en gris claro
+ *   Astilla del Umbral                  el nombre: el degradado llamativo de la familia (Tono.nombre)
+ *   Reliquia · Grado I  ★★★★           cabecera(): categoria en el tono medio, detalle en el texto
  *
- *   "Se quiebra cada vez que alguien    historia(): entre comillas, en el tono palido
+ *   "Se quiebra cada vez que alguien    historia(): entre comillas, en el texto
  *    no vuelve."
  *
- *   ◆ Se vende a Oren                   seccion(): el rombo y el titulo en el tono fuerte
- *    5 MobCoins cada una                dato(): gris, {cifras} en blanco, [nombres] en el palido
+ *   ◆ Se vende a Oren                   seccion(): el rombo y el titulo en el tono medio
+ *    5 MobCoins cada una                dato(): texto; {cifras}, [nombres] y <destacado> en el medio
  *    Hasta 60 al día
  *
- *   ▸ Clic derecho para beber.          accion(): el triangulo en el tono fuerte, el texto en blanco
- *   Si mueres antes de venderla, ...    nota(): gris
+ *   ▸ Clic derecho para beber.          accion(): el triangulo en el medio, lo demas en el texto
+ *   Si mueres antes de venderla, ...    nota(): el texto un paso mas apagado
  * </pre>
  *
  * Reglas de la casa que se cumplen aqui para que ningun objeto tenga que acordarse:
- *  - un solo color por objeto (su Tono) mas el dorado de las estrellas: nada de arcoiris;
+ *  - un solo color por objeto (su Tono) mas el dorado de las estrellas: nada de arcoiris. Calamity 1.12.2 ·
+ *    en tres pesos (Paleta.Tono): el nombre con el color pleno, el tono medio para lo que destaca y el
+ *    texto, la familia aclarada hacia blanco y algo apagada. El contraste es solo de color;
  *  - sin rayas: los bloques se separan con lineas en blanco (hueco(); nunca dos seguidas ni al final);
- *  - sin cursiva ni negrita en ninguna linea del lore (el nombre si va en negrita desde la 1.12.1: Tono.nombre);
+ *  - sin cursiva ni negrita en ninguna linea del lore ni en el nombre (la negrita de la 1.12.1 se quito en la
+ *    1.12.2: Dosa, "la negrita no era la solucion");
  *  - lineas de 38 caracteres como mucho (Bedrock parte mal las largas): todo se corta por palabras.
  *
- * Lo marcado: "{6}" sale en blanco (cifras), "[Esencias]" en el tono palido (monedas y objetos dentro
- * del texto) y "<Llave del Caos>" en el tono fuerte (lo destacado). Lo demas, en el color de la pieza.
+ * Lo marcado: "{6}" (cifras), "[Esencias]" (monedas y objetos dentro del texto) y "<Llave del Caos>" (lo
+ * destacado) salen en el tono medio. Lo demas, en el color de la pieza.
  *
  * Es pura (solo Adventure): lineas() devuelve el texto plano y el autotest lo compara sin servidor.
  */
@@ -53,12 +56,6 @@ final class Ficha {
 
     /** Lo mas largo que puede ser una linea, sangria incluida. */
     static final int ANCHO = 38;
-    /** Cifras y texto principal: blanco. */
-    static final TextColor BLANCO = Paleta.LORE_BLANCO;
-    /** Lo secundario y las notas del final: gris. */
-    static final TextColor GRIS = Paleta.LORE_GRIS;
-    /** El detalle de la cabecera: gris claro. */
-    static final TextColor GRIS_CLARO = Paleta.LORE_GRIS_CLARO;
     /** Las casillas vacias de una barra de progreso: un gris mas oscuro que el de las notas. */
     static final TextColor VACIA = Paleta.CASILLA_VACIA;
     static final String ROMBO = "◆";
@@ -69,15 +66,18 @@ final class Ficha {
     }
 
     private final Paleta.Tono tono;
-    private final TextColor fuerte;
-    private final TextColor palido;
+    /** Calamity 1.12.2 · Los tres pesos de la familia (Paleta.Tono): medio, texto y nota. */
+    private final TextColor medio;
+    private final TextColor cuerpo;
+    private final TextColor apagado;
     /** Las lineas; una lista vacia es un hueco (linea en blanco). */
     private final List<List<Trozo>> lineas = new ArrayList<>();
 
     Ficha(Paleta.Tono tono) {
-        this.tono = tono == null ? Paleta.T_CONTRATO : tono;
-        this.fuerte = this.tono.fuerte();
-        this.palido = this.tono.palido();
+        this.tono = tono == null ? Paleta.T_NEUTRO : tono;
+        this.medio = this.tono.medio();
+        this.cuerpo = this.tono.texto();
+        this.apagado = this.tono.nota();
     }
 
     Paleta.Tono tono() {
@@ -87,23 +87,21 @@ final class Ficha {
     // ------------------------------------------------------------------ piezas
 
     /**
-     * "Reliquia · Grado I  ★☆☆☆": la categoria en el tono fuerte apagado hacia gris (Tono.tintado), " · "
-     * en gris, el detalle en gris claro y, con estrellas > 0, cuatro estrellas (las conseguidas doradas,
-     * las que faltan grises). Calamity 1.12.1 · Antes iba en el fuerte y el palido y le robaba el sitio al
-     * nombre: ahora la cabecera se queda atras y lo llamativo es el nombre.
+     * "Reliquia · Grado I  ★☆☆☆": la categoria en el tono medio, " · " en el apagado, el detalle en el texto
+     * y, con estrellas > 0, cuatro estrellas (las conseguidas doradas, las que faltan en el apagado).
      */
     Ficha cabecera(String categoria, String detalle, int estrellas) {
         List<Trozo> l = new ArrayList<>();
-        l.add(new Trozo(categoria, tono.tintado()));
+        l.add(new Trozo(categoria, medio));
         if (detalle != null && !detalle.isBlank()) {
-            l.add(new Trozo(" · ", GRIS));
-            l.add(new Trozo(detalle, GRIS_CLARO));
+            l.add(new Trozo(" · ", apagado));
+            l.add(new Trozo(detalle, cuerpo));
         }
         if (estrellas > 0) {
             int g = Math.min(4, estrellas);
-            l.add(new Trozo("  ", GRIS));
+            l.add(new Trozo("  ", apagado));
             l.add(new Trozo(ESTRELLA.repeat(g), Paleta.ESTRELLA));
-            if (g < 4) l.add(new Trozo(ESTRELLA.repeat(4 - g), GRIS));
+            if (g < 4) l.add(new Trozo(ESTRELLA.repeat(4 - g), apagado));
         }
         lineas.add(l);
         return this;
@@ -115,70 +113,70 @@ final class Ficha {
         return this;
     }
 
-    /** La frase de ambiente: entre comillas, en el tono palido, entre huecos. */
+    /** La frase de ambiente: entre comillas, en el texto, entre huecos. */
     Ficha historia(String texto) {
         if (texto == null || texto.isBlank()) return this;
         hueco();
-        anadir("", " ", "\"" + texto.trim() + "\"", palido);
+        anadir("", " ", "\"" + texto.trim() + "\"", cuerpo);
         return hueco();
     }
 
-    /** "◆ Objetivo": un hueco delante y el titulo en el tono fuerte. */
+    /** "◆ Objetivo": un hueco delante y el titulo en el tono medio. */
     Ficha seccion(String titulo) {
         return seccion(titulo, null);
     }
 
-    /** "◆ Progreso 6/10": el titulo y, detras, algo marcado en gris ({cifras} en blanco). */
+    /** "◆ Progreso 6/10": el titulo y, detras, algo marcado en el texto ({cifras} en el medio). */
     Ficha seccion(String titulo, String marcado) {
         hueco();
         List<Trozo> l = new ArrayList<>();
-        l.add(new Trozo(ROMBO + " " + titulo, fuerte));
+        l.add(new Trozo(ROMBO + " " + titulo, medio));
         if (marcado != null && !marcado.isBlank()) {
-            l.add(new Trozo(" ", GRIS));
-            l.addAll(pintar(marcado, GRIS));
+            l.add(new Trozo(" ", cuerpo));
+            l.addAll(pintar(marcado, cuerpo));
         }
         lineas.add(l);
         return this;
     }
 
-    /** Texto principal (blanco), sin sangria: el objetivo de un contrato. */
+    /** Texto principal, sin sangria: el objetivo de un contrato. */
     Ficha texto(String marcado) {
-        return anadir("", "", marcado, BLANCO);
+        return anadir("", "", marcado, cuerpo);
     }
 
-    /** Un dato de una seccion, con un espacio de sangria: gris, {cifras} en blanco, [nombres] en el palido. */
+    /** Un dato de una seccion, con un espacio de sangria: en el texto, lo marcado en el medio. */
     Ficha dato(String marcado) {
-        return anadir(" ", " ", marcado, GRIS);
+        return anadir(" ", " ", marcado, cuerpo);
     }
 
-    /** "▸ Clic derecho para beber.": el triangulo en el tono fuerte, el texto en blanco. Con un hueco delante. */
+    /** "▸ Clic derecho para beber.": el triangulo en el medio, lo demas en el texto. Con un hueco delante. */
     Ficha accion(String marcado) {
         if (marcado == null || marcado.isBlank()) return this;
         hueco();
         int antes = lineas.size();
-        anadir("  ", "  ", marcado, BLANCO);
+        anadir("  ", "  ", marcado, cuerpo);
         if (lineas.size() > antes) {
             List<Trozo> primera = new ArrayList<>(lineas.get(antes));
             // La sangria de dos espacios de la primera linea se cambia por el triangulo.
             Trozo t = primera.get(0);
             primera.set(0, new Trozo(t.texto().substring(2), t.color()));
-            primera.add(0, new Trozo("▸ ", fuerte));
+            primera.add(0, new Trozo("▸ ", medio));
             lineas.set(antes, primera);
         }
         return this;
     }
 
-    /** Lo que se lee al final (de donde salio, la caducidad, el aviso de morir): gris. */
+    /** Lo que se lee al final (de donde salio, la caducidad, el aviso de morir): el texto mas apagado. */
     Ficha nota(String marcado) {
-        return anadir("", "", marcado, GRIS);
+        return anadir("", "", marcado, apagado);
     }
 
-    /** Una barra de progreso de "total" casillas: las llenas en el tono fuerte, las vacias en gris oscuro. */
+    /** Una barra de progreso de "total" casillas: las llenas en el tono medio, las vacias en gris oscuro. */
     Ficha barra(int llenas, int total) {
         int t = Math.max(1, Math.min(ANCHO, total));
         int n = Math.max(0, Math.min(t, llenas));
         List<Trozo> l = new ArrayList<>();
-        if (n > 0) l.add(new Trozo(CASILLA.repeat(n), fuerte));
+        if (n > 0) l.add(new Trozo(CASILLA.repeat(n), medio));
         if (n < t) l.add(new Trozo(CASILLA.repeat(t - n), VACIA));
         lineas.add(l);
         return this;
@@ -226,7 +224,7 @@ final class Ficha {
 
     // ------------------------------------------------------------------ objetos que ya circulan
 
-    /** Lo que Entregas.ligar anade al lore: un hueco y "Ligado a Dosa: no se vende ni se cambia." en gris. */
+    /** Lo que Entregas.ligar anade al lore: un hueco y "Ligado a Dosa: no se vende ni se cambia." en gris (T_NEUTRO). */
     static List<Component> lineasLigado(String nombre) {
         List<Component> out = new ArrayList<>();
         out.add(enBlanco());
@@ -295,7 +293,7 @@ final class Ficha {
 
     // ------------------------------------------------------------------ cortar
 
-    /** Lo marcado en trozos de color: {blanco}, [palido], <fuerte>; lo demas en "base". */
+    /** Lo marcado en trozos de color: {cifras}, [nombres] y <destacado> en el medio; lo demas en "base". */
     private List<Trozo> pintar(String marcado, TextColor base) {
         List<Trozo> out = new ArrayList<>();
         StringBuilder plano = new StringBuilder();
@@ -322,9 +320,7 @@ final class Ficha {
         for (int i = 0; i < marcado.length(); i++) {
             char c = marcado.charAt(i);
             switch (c) {
-                case '{' -> dentro = BLANCO;
-                case '[' -> dentro = palido;
-                case '<' -> dentro = fuerte;
+                case '{', '[', '<' -> dentro = medio;
                 case '}', ']', '>' -> dentro = null;
                 default -> {
                     plano.append(c);
@@ -420,7 +416,7 @@ final class Ficha {
         }
     }
 
-    /** "{1.500} [MobCoins]", "{6} [Esencias]": una cantidad marcada (cifra en blanco, moneda en el palido). */
+    /** "{1.500} [MobCoins]", "{6} [Esencias]": una cantidad marcada (cifra y moneda en el tono medio). */
     static String cantidad(long n, String uno, String varios) {
         return "{" + Altar.miles(n) + "} [" + (n == 1 ? uno : varios) + "]";
     }
@@ -546,6 +542,19 @@ final class Ficha {
         return out;
     }
 
+    /**
+     * Calamity 1.12.2 · Lo mismo mirando tambien el nombre: la negrita que se le puso en la 1.12.1 se quito
+     * (Dosa: "la negrita no era la solucion") y el autotest falla si vuelve, en el nombre o en el lore.
+     */
+    static List<String> faltas(Component nombre, List<Component> lore) {
+        List<String> out = new ArrayList<>();
+        if (nombre != null && negrita(nombre)) {
+            out.add("negrita en el nombre: " + net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer.plainText().serialize(nombre));
+        }
+        out.addAll(faltas(lore));
+        return out;
+    }
+
     /** Si algun trozo de la linea (o sus hijos) lleva la negrita puesta. */
     private static boolean negrita(Component c) {
         if (c.decoration(TextDecoration.BOLD) == TextDecoration.State.TRUE) return true;
@@ -580,10 +589,10 @@ final class Ficha {
         List<String> largas = new ArrayList<>(), faltas = new ArrayList<>();
         for (Map.Entry<String, Ficha> e : todas.entrySet()) {
             for (String l : largas(e.getValue().lineas())) largas.add(e.getKey() + ": " + l);
-            for (String f : faltas(e.getValue().lore())) faltas.add(e.getKey() + ": " + f);
+            for (String f : faltas(e.getValue().tono().nombre(e.getKey()), e.getValue().lore())) faltas.add(e.getKey() + ": " + f);
         }
         h.igual("ninguna linea de ningun objeto pasa de 38", List.of(), largas);
-        h.igual("ningun lore de objeto lleva rayas, negrita, cursiva ni huecos de mas", List.of(), faltas);
+        h.igual("ningun objeto lleva rayas, negrita (tampoco en el nombre), cursiva ni huecos de mas", List.of(), faltas);
         boolean conHistoria = true;
         for (Map.Entry<String, Ficha> e : todas.entrySet()) {
             List<String> l = e.getValue().lineas();
@@ -729,38 +738,47 @@ final class Ficha {
         h.ok("el detector ve la negrita de un hijo", !faltas(List.of(Component.text().append(
                 Component.text("x").decoration(TextDecoration.BOLD, true)).build()
                 .decoration(TextDecoration.ITALIC, false))).isEmpty());
-        // Los colores: la categoria en el fuerte, el detalle en el palido, estrellas doradas y grises.
+        h.ok("el detector ve la negrita del nombre", !faltas(Component.text("Ámbar").decoration(TextDecoration.BOLD, true),
+                lore).isEmpty() && !faltas(Component.text().append(Component.text("Á").decoration(TextDecoration.BOLD, true))
+                .append(Component.text("mbar")).build(), lore).isEmpty());
+        h.igual("un nombre sin negrita y un lore limpio: sin faltas", List.of(), faltas(t.nombre("Ámbar"), lore));
+        // Calamity 1.12.2 · Los tres pesos: categoria en el medio, detalle en el texto, estrellas doradas y apagadas.
         List<Component> cab = lore.get(0).children();
-        h.igual("categoria en el tono apagado", t.tintado(), cab.get(0).color());
-        h.igual("detalle en gris claro", GRIS_CLARO, cab.get(2).color());
-        h.ok("la categoria ya no va en el tono fuerte", !t.fuerte().equals(cab.get(0).color()));
-        // El nombre resalta: arranca mas claro que el palido y acaba mas luminoso que la categoria.
-        Component nom = t.nombre("Ámbar");
-        TextColor primera = nom.children().get(0).color(), ultima = nom.children().get(4).color();
-        h.ok("el nombre arranca casi en blanco (mas claro que el palido)", luz(primera) > luz(t.palido()));
-        h.ok("el nombre acaba en el fuerte encendido (brillo al maximo)", Math.max(ultima.red(), Math.max(ultima.green(), ultima.blue())) == 255);
-        for (Paleta.Tono x : Paleta.TONOS.values()) {
-            TextColor d = TextColor.color(x.nombreDesde()), fin = TextColor.color(x.nombreHasta()), cat = x.tintado();
-            h.ok("tono " + Integer.toHexString(x.hasta()) + ": el nombre resalta sobre la categoria (mas claro al empezar, mas vivo al acabar)",
-                    luz(d) > luz(cat) + 60 && croma(fin) > 2 * croma(cat));
-        }
+        h.igual("categoria en el tono medio", t.medio(), cab.get(0).color());
+        h.igual("detalle de la cabecera en el texto", t.texto(), cab.get(2).color());
         boolean oro = false, gris = false;
         for (Component c : cab) {
             if (c instanceof TextComponent x && x.content().contains(ESTRELLA)) {
                 oro |= Paleta.ESTRELLA.equals(x.color());
-                gris |= GRIS.equals(x.color());
+                gris |= t.nota().equals(x.color());
             }
         }
-        h.ok("estrellas conseguidas doradas y las que faltan grises", oro && gris);
-        h.igual("la historia en el palido", t.palido(), lore.get(2).children().get(0).color());
-        h.igual("el rombo en el fuerte", t.fuerte(), lore.get(5).children().get(0).color());
+        h.ok("estrellas conseguidas doradas y las que faltan apagadas", oro && gris);
+        h.igual("la historia en el texto", t.texto(), lore.get(2).children().get(0).color());
+        h.igual("el rombo en el medio", t.medio(), lore.get(5).children().get(0).color());
         List<Component> dato = lore.get(6).children();
-        h.ok("dato: cifra en blanco, moneda en el palido, lo demas gris", BLANCO.equals(dato.get(1).color())
-                && t.palido().equals(dato.get(3).color()) && GRIS.equals(dato.get(4).color()));
-        h.igual("el palido es el inicio un 35 % hacia blanco",
-                TextColor.lerp(0.35f, TextColor.color(t.desde()), TextColor.color(0xFFFFFF)), t.palido());
-        h.ok("el nombre: degradado en negrita (la unica del objeto)", t.nombre("Ámbar").decoration(TextDecoration.BOLD) == TextDecoration.State.TRUE
-                && t.nombre("Ámbar").children().size() == 5);
+        h.ok("dato: cifra y moneda en el medio, lo demas en el texto", t.medio().equals(dato.get(1).color())
+                && t.medio().equals(dato.get(3).color()) && t.texto().equals(dato.get(4).color()));
+        h.igual("accion: el triangulo en el medio", t.medio(), lore.get(8).children().get(0).color());
+        h.igual("accion: el texto en el texto", t.texto(), lore.get(8).children().get(1).color());
+        h.igual("nota: el texto mas apagado", t.nota(), lore.get(lore.size() - 1).children().get(0).color());
+        Component nom = t.nombre("Ámbar");
+        h.ok("el nombre: degradado sin negrita en ningun trozo", nom.decoration(TextDecoration.BOLD) == TextDecoration.State.FALSE
+                && nom.children().size() == 5 && nom.children().stream().noneMatch(x -> x.decoration(TextDecoration.BOLD) == TextDecoration.State.TRUE));
+        TextColor ultima = nom.children().get(4).color();
+        h.ok("el nombre acaba en el fuerte encendido (brillo al maximo)", Math.max(ultima.red(), Math.max(ultima.green(), ultima.blue())) == 255);
+        // En cada familia: el nombre es lo mas vivo, el medio queda entre los dos y el texto es claro, teñido y
+        // apagado (ni gris neutro ni blanco puro); la nota, un paso por debajo del texto.
+        for (Paleta.Tono x : Paleta.TONOS.values()) {
+            TextColor fin = TextColor.color(x.nombreHasta()), med = x.medio(), tex = x.texto(), not = x.nota();
+            String n = "tono " + Integer.toHexString(x.hasta()) + ": ";
+            h.ok(n + "el nombre es lo mas vivo (croma nombre > medio > texto)", croma(fin) > croma(med) && croma(med) > croma(tex));
+            h.ok(n + "el texto es claro pero no blanco (luz 170-225)", luz(tex) >= 170 && luz(tex) <= 225);
+            h.ok(n + "el texto va teñido de la familia (no gris neutro)", croma(tex) > 0 && croma(tex) * 6 >= croma(x.fuerte()));
+            h.ok(n + "la nota, mas apagada que el texto y legible", luz(not) < luz(tex) - 30 && luz(not) >= 120);
+            h.ok(n + "el medio no llega al color pleno del nombre", croma(med) <= croma(fin) * 0.75);
+        }
+        h.igual("lo neutro (ligado) va en gris", 0, croma(Paleta.T_NEUTRO.nota()));
         h.igual("palabra mas larga que la linea: sola, sin partir", List.of("x".repeat(45)),
                 new Ficha(t).texto("x".repeat(45)).lineas());
         h.igual("sin texto no anade nada", 0, new Ficha(t).texto("").nota(null).historia(" ").lineas().size());

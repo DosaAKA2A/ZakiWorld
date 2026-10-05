@@ -1237,7 +1237,7 @@ final class Reliquias implements Listener {
         desactivar(ladrillo);
         h.ok("desactivar: el disco sin cancion y el ladrillo sin adorno", antes && !conUsos(disco) && !conUsos(ladrillo)
                 && !conUsos(astilla));
-        h.ok("lore sin rayas ni negrita", Ficha.faltas(astilla.getItemMeta().lore()).isEmpty());
+        h.ok("nombre y lore sin rayas ni negrita", Ficha.faltas(astilla.getItemMeta().displayName(), astilla.getItemMeta().lore()).isEmpty());
         // Calamity 1.12.1 · Un Ambar Mayor de la 1.12.0 (la plantilla) pasa a papel con el modelo, conserva sus
         // datos y no se vuelve a renovar; dos papeles con el mismo modelo apilan.
         ItemStack plantilla = astilla.withType(Material.BOLT_ARMOR_TRIM_SMITHING_TEMPLATE);
@@ -1274,7 +1274,7 @@ final class Reliquias implements Listener {
             ItemStack frascoNuevo = items.renovado(frasco);
             h.ok("Frasco de antes: lore de hoy, conserva tragos y la linea de ligado", frascoNuevo != null
                     && items.tragos(frascoNuevo) == 2 && "Dosa".equals(Ficha.ligadoDe(frascoNuevo.getItemMeta().lore()))
-                    && Ficha.faltas(frascoNuevo.getItemMeta().lore()).isEmpty());
+                    && Ficha.faltas(frascoNuevo.getItemMeta().displayName(), frascoNuevo.getItemMeta().lore()).isEmpty());
             // Beber y recargar: el mismo frasco con otros tragos, sin perder lo prestado ni el ligado.
             UUID duenoPrueba = Autotest.sintetico(53);
             ItemStack delKit = Kit.prestar(Ligado.ligar(items.frasco(3), duenoPrueba));
