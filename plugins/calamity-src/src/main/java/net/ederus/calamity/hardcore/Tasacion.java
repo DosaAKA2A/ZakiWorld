@@ -330,7 +330,7 @@ final class Tasacion {
                 int g = Math.max(1, Math.min(4, rel.grado(it)));
                 int n = 0;
                 for (Pieza pz : e.getValue()) n += pz.cantidad();
-                grupos.add(new Grupo(e.getKey(), rel.nombreDe(g, rel.especial(it), rel.minijefe(it)), Reliquias.color(g),
+                grupos.add(new Grupo(e.getKey(), rel.nombreDe(g, rel.especial(it), rel.minijefe(it)), Reliquias.color(g, rel.especial(it)),
                         it.getType(), g, rel.especial(it), n, contar(e.getValue(), reg, ya[1], ya[2], v, ahora),
                         caduca.getOrDefault(e.getKey(), 0L)));
             }
@@ -339,7 +339,7 @@ final class Tasacion {
         Saldo s = hc.saldo();
         int esencias = s == null ? 0 : s.encima(p);
         if (esencias > 0) {
-            grupos.add(new Grupo(ESENCIAS, "Esencia de Calamidad", ItemsCalamity.NARANJA_ESENCIA,
+            grupos.add(new Grupo(ESENCIAS, "Esencia de Calamidad", Ficha.tono("esencia").fuerte(),
                     materialEsencia(p), 0, null, esencias, null, 0L));
         }
         double f = factor(p);

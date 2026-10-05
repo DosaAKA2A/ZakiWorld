@@ -133,6 +133,97 @@ public final class Paleta {
     /** Calamity 1.12 · La ceniza: gris calido claro, el de la ceniza que cae. */
     public static final TextColor CENIZA = TextColor.color(0xD3CBBE);
 
+    // ------------------------------------------------------- tonos de los objetos
+
+    /*
+     * Rama lore-items · Cada familia de objeto tiene SU color. Dosa vio los lores de la 1.10 y le
+     * parecieron "deprimentes, sin armonia": todo en el mismo gris y ambar apagado, y cualquier objeto
+     * parecia de categoria baja. Ahora el nombre lleva el degradado de su tono (claro -> fuerte, sin
+     * negrita) y el lore usa ese mismo tono para la categoria, los titulos de seccion y los nombres
+     * destacados; lo demas es blanco (cifras), gris (lo secundario) y el dorado de las estrellas. Un solo
+     * color por objeto: nada de arcoiris. Los tonos se pueden cambiar en hardcore.lores.tonos (Ficha.tono).
+     */
+
+    /** El color de una familia de objetos: el degradado de su nombre, de "desde" (claro) a "hasta" (fuerte). */
+    public record Tono(int desde, int hasta) {
+
+        /** La categoria, los titulos de seccion (◆) y lo destacado: el final del degradado. */
+        public TextColor fuerte() {
+            return TextColor.color(hasta);
+        }
+
+        /** La historia y los nombres de monedas y objetos dentro del texto: el inicio, un 35 % hacia blanco. */
+        public TextColor palido() {
+            return TextColor.lerp(0.35f, TextColor.color(desde), TextColor.color(0xFFFFFF));
+        }
+
+        /** El nombre del objeto con el degradado, sin cursiva ni negrita. */
+        public Component nombre(String texto) {
+            return degradado(texto, desde, hasta).decoration(TextDecoration.BOLD, false);
+        }
+    }
+
+    /** Pergaminos de contrato de Oren: dorado a naranja. */
+    public static final Tono T_CONTRATO = new Tono(0xFFE27A, 0xFF8A2B);
+    /** Reliquias por grado: I turquesa, II azul, III violeta, IV ambar. */
+    public static final Tono T_GRADO_I = new Tono(0xB8FFF4, 0x2FD3C8);
+    public static final Tono T_GRADO_II = new Tono(0xBFD9FF, 0x4A8DFF);
+    public static final Tono T_GRADO_III = new Tono(0xE3C8FF, 0x9B5CFF);
+    public static final Tono T_GRADO_IV = new Tono(0xFFE3A8, 0xFFAA2B);
+    /** Campana de la Parca: carmesi. */
+    public static final Tono T_CAMPANA = new Tono(0xFF9DB4, 0xFF3D6E);
+    /** Lagrima de Eco: celeste. */
+    public static final Tono T_LAGRIMA = new Tono(0xD6F6FF, 0x5CC8FF);
+    /** Sello de minijefe: el degradado de los minijefes (su nombre en el cartel). */
+    public static final Tono T_SELLO = new Tono(MINIJEFE_DESDE, MINIJEFE_HASTA);
+    /** Reliquia Eclipsada: el borde del Eclipse, de rosa palido a magenta. */
+    public static final Tono T_ECLIPSADA = new Tono(0xFFC2F0, 0xE03CC4);
+    /** Esencia de Calamidad: morado. */
+    public static final Tono T_ESENCIA = new Tono(0xE7C8FF, 0xB266FF);
+    /** Frasco de Calma: verde de manantial (la cordura). */
+    public static final Tono T_FRASCO = new Tono(0xCFFFE0, 0x3DDC84);
+    /** Cristal de Regreso: indigo lavanda, el tono de la puerta. */
+    public static final Tono T_CRISTAL = new Tono(0xDCDFFF, 0x7C83FF);
+    /** Reclamo: coral, pariente del rojo de los minijefes a los que llama. */
+    public static final Tono T_RECLAMO = new Tono(0xFFD3C4, 0xFF6B47);
+    /** Talisman de Vigilia: lima, la mente despierta. */
+    public static final Tono T_TALISMAN = new Tono(0xF0FFC4, 0xA8DC3A);
+    /** Grabado de Calamidad: laton, las runas de la Forja. */
+    public static final Tono T_GRABADO = new Tono(0xFFF0C2, 0xE0B23A);
+    /** Salvoconducto del Insomne: rosa lacre, el de la firma. */
+    public static final Tono T_SALVOCONDUCTO = new Tono(0xFFD6E2, 0xF06A93);
+    /** Fragmento de Masamune: el acero de la katana (ACERO_DESDE a ACERO_HASTA, un punto mas vivo). */
+    public static final Tono T_MASAMUNE = new Tono(0xEEF3F8, 0x8FA6BA);
+    /** Lo prestado del Kit de Expedicion: arena, la lona de la expedicion. */
+    public static final Tono T_KIT = new Tono(0xFFEBC7, 0xE6A955);
+    /** Cabeza de un Eco derrotado: el gris azulado del Eco, mas vivo. */
+    public static final Tono T_TROFEO = new Tono(0xE3EBFA, 0x8EA6D6);
+    /** Llave del Umbral: azul hielo, el color de la Boveda de Ruinas (#9FC9D6). */
+    public static final Tono T_LLAVE_UMBRAL = new Tono(0xE2F4FA, 0x7FB8CC);
+    /** Llave Ominosa: lila, el color de la Boveda Caida (#C7A6E8). */
+    public static final Tono T_LLAVE_OMINOSA = new Tono(0xEEDFFF, 0xA97FDD);
+
+    /** Los tonos por su nombre en hardcore.lores.tonos (Ficha.tono). */
+    public static final java.util.Map<String, Tono> TONOS = java.util.Map.ofEntries(
+            java.util.Map.entry("contrato", T_CONTRATO), java.util.Map.entry("grado-1", T_GRADO_I),
+            java.util.Map.entry("grado-2", T_GRADO_II), java.util.Map.entry("grado-3", T_GRADO_III),
+            java.util.Map.entry("grado-4", T_GRADO_IV), java.util.Map.entry("campana", T_CAMPANA),
+            java.util.Map.entry("lagrima", T_LAGRIMA), java.util.Map.entry("sello", T_SELLO),
+            java.util.Map.entry("eclipsada", T_ECLIPSADA), java.util.Map.entry("esencia", T_ESENCIA),
+            java.util.Map.entry("frasco", T_FRASCO), java.util.Map.entry("cristal", T_CRISTAL),
+            java.util.Map.entry("reclamo", T_RECLAMO), java.util.Map.entry("talisman", T_TALISMAN),
+            java.util.Map.entry("grabado", T_GRABADO), java.util.Map.entry("salvoconducto", T_SALVOCONDUCTO),
+            java.util.Map.entry("masamune", T_MASAMUNE), java.util.Map.entry("kit", T_KIT),
+            java.util.Map.entry("trofeo", T_TROFEO), java.util.Map.entry("llave-umbral", T_LLAVE_UMBRAL),
+            java.util.Map.entry("llave-ominosa", T_LLAVE_OMINOSA));
+
+    /** Las cifras de los lores: blanco. */
+    public static final TextColor LORE_BLANCO = TextColor.color(0xF4F4F4);
+    /** Lo secundario de los lores y las notas del final: gris. */
+    public static final TextColor LORE_GRIS = TextColor.color(0x7A7A7A);
+    /** Las estrellas de rareza conseguidas: dorado. Las que faltan van en LORE_GRIS. */
+    public static final TextColor ESTRELLA = TextColor.color(0xFFD54A);
+
     // --------------------------------------------------------------- piezas
 
     /** "Calamity" con el degradado de la marca, en negrita (la unica negrita permitida). */

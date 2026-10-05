@@ -270,10 +270,10 @@ final class Contratos implements Listener {
     static final List<Def> POR_DEFECTO = List.of(
             new Def("corto-mobs", "Mata 10 mobs", "mob", 10, 2, 20, true, "", "Mobs"),
             new Def("corto-cofre", "Abre un cofre de estructura", "cofre", 1, 2, 20, true, "cofres.activo", "Cofre"),
-            new Def("corto-reliquia", "Véndele a Oren una Reliquia de grado II o más", "reliquia-ii", 1, 2, 20, true, "reliquias.activas",
+            new Def("corto-reliquia", "Véndele a Oren en el spawn una Reliquia de grado II o más", "reliquia-ii", 1, 2, 20, true, "reliquias.activas",
                     "Reliquia"),
             new Def("corto-15", "Pasa 15 min en Calamity", "minutos", 15, 2, 20, true, "", "Minutos"),
-            new Def("extraer-ii", "Véndele a Oren 3 Reliquias de grado II o más", "reliquia-ii", 3, 4, 60, false,
+            new Def("extraer-ii", "Véndele a Oren en el spawn 3 Reliquias de grado II o más", "reliquia-ii", 3, 4, 60, false,
                     "reliquias.activas", "Reliquias"),
             new Def("destacados", "Mata 5 mobs destacados", "destacado", 5, 3, 40, false, "", "Destacados"),
             new Def("eco", "Derrota un Eco ajeno válido", "eco-valido", 1, 5, 80, false, "eco.activo", "Eco"),
@@ -1540,7 +1540,7 @@ final class Contratos implements Listener {
         ItemMeta meta = papel.getItemMeta();
         h.ok("pergamino: se reconoce por la marca", Pergaminos.es(papel));
         h.igual("pergamino: lleva su sello", sello, Pergaminos.sello(papel));
-        h.igual("pergamino: el nombre", "Contrato · Mobs", meta == null ? null : plano(meta.displayName()));
+        h.igual("pergamino: el nombre", "Contrato: Mobs", meta == null ? null : plano(meta.displayName()));
         h.ok("pergamino: nombre sin cursiva ni negrita", meta != null && meta.displayName() != null
                 && meta.displayName().decoration(TextDecoration.ITALIC) == TextDecoration.State.FALSE
                 && meta.displayName().decoration(TextDecoration.BOLD) == TextDecoration.State.FALSE);
@@ -1576,15 +1576,14 @@ final class Contratos implements Listener {
      */
     static void probarPergaminos(Autotest.Hoja h, Map<String, Def> base) {
         Def mobs = base.get("corto-mobs"), reliquia = base.get("corto-reliquia");
-        // 1.10 (lores): la plantilla comun (Ficha), con lineas de 38 como mucho y filete fijo.
-        String raya = Ficha.RAYA.repeat(Ficha.RAYAS);
-        List<String> esperadas = List.of("Contrato de Oren · Corto", raya, "Oren paga por cada criatura que no",
-                "vuelva a levantarse.", raya, "Objetivo", " Mata 10 mobs", "Progreso", " ▮▮▮▮▮▮▯▯▯▯ 6/10", "Premio",
-                " 2 Esencias · 20 MobCoins", raya, "▸ Al cumplirlo recibes el premio en", "  la mano.",
-                "Si mueres, el avance vuelve a cero.");
+        // Rama lore-items: la plantilla comun (Ficha), sin rayas, con lineas de 38 como mucho.
+        List<String> esperadas = List.of("Contrato de Oren · Corto", "", "\"Oren paga por cada criatura que no",
+                " vuelva a levantarse.\"", "", "◆ Objetivo", "Mata 10 mobs", "", "◆ Progreso 6/10", "■■■■■■■■■■", "",
+                "◆ Premio", " 2 Esencias · 20 MobCoins", "", Pergaminos.COBRO_DENTRO, "Si mueres, el avance vuelve a cero.");
         h.igual("pergamino: lore a 6/10", esperadas, Pergaminos.lineas(mobs, 6));
-        h.igual("pergamino: a 0/10 la barra vacia", " ▯▯▯▯▯▯▯▯▯▯ 0/10", tras(Pergaminos.lineas(mobs, 0), "Progreso"));
-        h.igual("pergamino: el progreso no pasa del objetivo", " ▮▮▮▮▮▮▮▮▮▮ 10/10", tras(Pergaminos.lineas(mobs, 14), "Progreso"));
+        h.ok("pergamino: a 0/10", Pergaminos.lineas(mobs, 0).contains("◆ Progreso 0/10"));
+        h.ok("pergamino: el progreso no pasa del objetivo", Pergaminos.lineas(mobs, 14).contains("◆ Progreso 10/10"));
+        h.igual("pergamino: sin rayas, negrita ni cursiva", List.of(), Ficha.faltas(Pergaminos.lore(mobs, 6)));
         h.igual("pergamino: 1 de 30 ya pinta una casilla", 1, Pergaminos.llenas(1, 30));
         h.igual("pergamino: 29 de 30 aun no llena la barra", 9, Pergaminos.llenas(29, 30));
         h.igual("pergamino: lo pintado dice lo mismo que lo plano", esperadas, planos(Pergaminos.lore(mobs, 6)));
@@ -1592,7 +1591,10 @@ final class Contratos implements Listener {
         for (Component c : Pergaminos.lore(mobs, 6)) sinCursiva &= c.decoration(TextDecoration.ITALIC) == TextDecoration.State.FALSE;
         h.ok("pergamino: lore sin cursiva", sinCursiva);
         List<String> rl = Pergaminos.lineas(reliquia, 0);
-        h.ok("pergamino de Reliquias: se cobra al venderlas a Oren", rl.contains("▸ " + Pergaminos.COBRO_VENTA));
+        h.ok("pergamino de Reliquias: solo cuenta en el spawn con el pergamino encima", String.join(" ", rl)
+                .contains(Pergaminos.COBRO_VENTA_PERGAMINO));
+        h.ok("contratos de Reliquias: dicen que es en el spawn", reliquia.texto().contains("en el spawn")
+                && base.get("extraer-ii").texto().contains("en el spawn"));
         List<String> largas = new ArrayList<>();
         for (Def d : base.values()) {
             largas.addAll(Ficha.largas(Pergaminos.lineas(d, 0)));
@@ -1686,12 +1688,6 @@ final class Contratos implements Listener {
 
     private static String plano(Component c) {
         return c == null ? null : PlainTextComponentSerializer.plainText().serialize(c);
-    }
-
-    /** La linea que sigue a "etiqueta" (el dato de un bloque del pergamino), o null. */
-    private static String tras(List<String> l, String etiqueta) {
-        int i = l.indexOf(etiqueta);
-        return i < 0 || i + 1 >= l.size() ? null : l.get(i + 1);
     }
 
     private static List<String> planos(List<Component> l) {

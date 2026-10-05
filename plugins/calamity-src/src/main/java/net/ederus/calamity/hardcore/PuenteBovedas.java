@@ -9,7 +9,6 @@ import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
-import net.kyori.adventure.text.format.TextColor;
 
 import java.security.SecureRandom;
 import java.util.LinkedHashMap;
@@ -84,30 +83,52 @@ final class PuenteBovedas {
         ItemStack k = d.llave(caja, Math.max(1, Math.min(64, n)));
         // El lore generico de /dl ("Bóveda común", "Abre", "Se gasta") se leia raro: dentro de Calamity
         // la llave lleva la plantilla de los demas objetos. Fijo y sin cifras, para que todas se apilen.
+        // Rama lore-items: y el nombre con el degradado del color de su boveda.
         ItemMeta meta = k == null ? null : k.getItemMeta();
         if (meta != null) {
+            meta.displayName(tono(objeto).nombre(nombre(objeto, 1)));
             meta.lore(ficha(objeto).lore());
             k.setItemMeta(meta);
         }
         return k;
     }
 
-    /** El lore de cada llave, con el color de su boveda de acento. */
+    /** El tono de cada llave: el color de su boveda (#9FC9D6 la de Ruinas, #C7A6E8 la Caida) hecho degradado. */
+    static Paleta.Tono tono(String objeto) {
+        return Ficha.tono(CAJA_RUINAS.equals(cajaDe(objeto)) ? "llave-umbral" : "llave-ominosa");
+    }
+
+    /** El lore de cada llave, con el tono de su boveda. */
     static Ficha ficha(String objeto) {
         if (CAJA_RUINAS.equals(cajaDe(objeto))) {
-            return new Ficha(TextColor.color(0x9FC9D6)).tipo("Llave de Calamity · Bóvedas").filete()
-                    .historia("Solo gira en las cerraduras que dejaron las ruinas.").filete()
-                    .texto("Abre una {Bóveda de Ruinas}.")
-                    .texto("Cada bóveda la abres una sola vez.").filete()
+            return new Ficha(tono(objeto)).cabecera("Llave", "Bóveda de Ruinas", 0)
+                    .historia("Solo gira en las cerraduras que dejaron las ruinas.")
+                    .seccion("Abre")
+                    .dato("Una <Bóveda de Ruinas>.")
+                    .dato("Cada bóveda la abres una sola vez.")
                     .accion("Clic derecho sobre la bóveda.")
-                    .nota("Se queda en la cerradura al usarla.");
+                    .hueco().nota("Se queda en la cerradura al usarla.");
         }
-        return new Ficha(TextColor.color(0xC7A6E8)).tipo("Llave de Calamity · Bóvedas").filete()
-                .historia("Late como algo vivo. Pesa más de lo que debería.").filete()
-                .texto("Abre la {Bóveda Caída}.")
-                .texto("Lo de dentro es solo para el primero que llega.").filete()
+        return new Ficha(tono(objeto)).cabecera("Llave", "Bóveda Caída", 0)
+                .historia("Late como algo vivo. Pesa más de lo que debería.")
+                .seccion("Abre")
+                .dato("La <Bóveda Caída>.")
+                .dato("Lo de dentro es solo para el primero que llega.")
                 .accion("Clic derecho sobre la bóveda.")
-                .nota("Se queda en la cerradura al usarla.");
+                .hueco().nota("Se queda en la cerradura al usarla.");
+    }
+
+    /**
+     * Rama lore-items · Una llave de boveda que ya circula, con el nombre y el lore de hoy; null si no es una
+     * llave de Calamity (o sin el modulo) o si ya los lleva.
+     */
+    static ItemStack renovada(ItemStack it) {
+        DungeonLootPlugin d = modulo();
+        if (d == null || it == null || !it.hasItemMeta()) return null;
+        String caja = d.cajaDeLlave(it);
+        String objeto = CAJA_RUINAS.equals(caja) ? LLAVE_UMBRAL : CAJA_CAIDA.equals(caja) ? LLAVE_OMINOSA : null;
+        if (objeto == null) return null;
+        return Ficha.renovar(it, tono(objeto).nombre(nombre(objeto, 1)), ficha(objeto).lore());
     }
 
     /** Si ese objeto es una llave de ese objeto de Entregas (por la marca de EDM, no por el material). */
