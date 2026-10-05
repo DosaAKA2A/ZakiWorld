@@ -187,7 +187,9 @@ final class LoreBaliza {
 
     private static String colores(String s, String fuerte, String palido) {
         return s.replace("%fuerte%", fuerte).replace("%acento%", fuerte).replace("%palido%", palido)
-                .replace("%blanco%", BLANCO).replace("%gris%", GRIS);
+                .replace("%blanco%", BLANCO).replace("%gris%", GRIS)
+                // %simbolo% era del lore v2: un mensajes.yml viejo que no se pudo apartar no lo deja suelto.
+                .replace("%simbolo%", "✦");
     }
 
     /**

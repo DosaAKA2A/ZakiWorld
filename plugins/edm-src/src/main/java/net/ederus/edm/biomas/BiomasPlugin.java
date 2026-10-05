@@ -64,7 +64,7 @@ public final class BiomasPlugin extends Module implements Listener {
 
     private final Map<String, Zona> zonas = new LinkedHashMap<>();
     private final Map<String, List<Location>> fumarolas = new HashMap<>();
-    /** Que clima le esta mandando el modulo a cada jugador, para deshacerlo al salir. */
+    /** Que clima le esta mandando el modulo a cada jugador (clima|mundo[|calamity]), para deshacerlo al salir. */
     private final Map<UUID, String> dentro = new HashMap<>();
     private final Set<String> pintando = new HashSet<>();
     private final Map<String, String> pendientes = new HashMap<>();
@@ -392,15 +392,20 @@ public final class BiomasPlugin extends Module implements Listener {
         for (Player p : core.getServer().getOnlinePlayers()) {
             Zona z = zonaPintadaEn(p.getLocation());
             String clima = z == null ? null : z.actual();
+            // El clima con su mundo y si es de Calamity: el mismo clima en otro mundo (o un mundo
+            // que pasa a ser de Calamity) se deshace y se vuelve a aplicar, y nadie se lleva la
+            // lluvia de un mundo normal a Calamity.
+            String clave = clima == null ? null
+                    : clima + "|" + p.getWorld().getName() + (esCalamity(p.getWorld()) ? "|calamity" : "");
             String antes = dentro.get(p.getUniqueId());
-            if (antes != null && !antes.equals(clima)) {
+            if (antes != null && !antes.equals(clave)) {
                 deshacer(p);
                 dentro.remove(p.getUniqueId());
             }
             if (clima == null) continue;
-            if (!clima.equals(dentro.get(p.getUniqueId()))) {
+            if (!clave.equals(dentro.get(p.getUniqueId()))) {
                 aplicar(p, clima);
-                dentro.put(p.getUniqueId(), clima);
+                dentro.put(p.getUniqueId(), clave);
             }
             porZona.computeIfAbsent(z.nombre(), k -> new ArrayList<>()).add(p);
         }
