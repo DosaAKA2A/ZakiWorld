@@ -791,11 +791,11 @@ hardcore:
       reliquia-grado-iv: 50       # una Reliquia alta: IV desde este N, III por debajo
       # Lo de mas, como minijefes.botin (para: mejor | asesino | participantes; piedad: a la N-esima
       # sin que caiga, cae). La gema y las placas son de MMOItems: CALAMITY_GEMAS.GEMA_OJO_DEL_VIGILANTE
-      # y CALAMITY_MATERIALES.PLACA_DEL_VIGILANTE (se pueden cambiar en entregas.mmo.ojo-del-vigilante y
+      # y CALAMITY_MATERIALES.PLACA_DEL_VIGILANTE (se pueden cambiar en entregas.mmo.gema-vigilante y
       # entregas.mmo.placa-del-vigilante; no se ponen ahi de serie porque el selftest mmo crea todo lo
       # de esa lista). Mientras MMOItems no los tenga, no salen ni cuentan piedad.
       extra:
-        - {id: gema, prob: 0.20, para: mejor, piedad: 8, objeto: ojo-del-vigilante, nombre: "la gema Ojo del Vigilante", anuncio: true}
+        - {id: gema, prob: 0.20, para: mejor, piedad: 8, objeto: gema-vigilante, nombre: "la gema Ojo del Vigilante", anuncio: true}
         - {id: placa, prob: 0.60, para: participantes, piedad: 3, objeto: placa-del-vigilante, nombre: "una Placa del Vigilante"}
         - {id: libro, prob: 0.06, para: mejor, objeto: libro, nombre: "un libro LEGENDARY"}
 

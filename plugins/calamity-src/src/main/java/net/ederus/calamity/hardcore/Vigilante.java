@@ -1488,7 +1488,7 @@ final class Vigilante implements Listener {
         List<Minijefes.Caida> con = Minijefes.tirarBotin(conLote, p0, fr, a.participacion, piedad, u -> true, () -> 0.99);
         h.ok("con lote: la gema cae por piedad al octavo", con.stream().anyMatch(c -> c.jugador().equals(p0)
                 && c.botin().id().equals("gema") && c.cae() && "piedad".equals(c.porQue())));
-        h.igual("objetos de la gema y las placas", List.of("ojo-del-vigilante", "placa-del-vigilante"),
+        h.igual("objetos de la gema y las placas", List.of("gema-vigilante", "placa-del-vigilante"),
                 List.of(Entregas.OJO_DEL_VIGILANTE, Entregas.PLACA_DEL_VIGILANTE));
         h.igual("sin cobro: poco daño", "No cobras por el Vigilante: tu daño no llegó al mínimo (10 % de su vida).",
                 sinCobro(a, "poco-dano", "", 10));
@@ -1509,10 +1509,12 @@ final class Vigilante implements Listener {
                     && j.miradaTicks == a.miradaTicks && j.vidaBase == a.vidaBase && j.golpeBase == a.golpeBase
                     && j.nucleosSegundos == a.nucleosSegundos && j.faroTicksVuelta == a.faroTicksVuelta);
             h.igual("config.yml: tope diario de la Aduana para el Vigilante", 1, jar.getInt("hardcore.aduana.topes-diarios.vigilante", -1));
-            // Fuera de entregas.mmo a proposito: el selftest "mmo" crea todo lo que haya ahi y fallaria hasta que llegue el lote.
-            h.ok("config.yml: la gema y las placas no estan en entregas.mmo (van por los ids de serie)",
-                    !jar.isSet("hardcore.entregas.mmo." + Entregas.OJO_DEL_VIGILANTE)
-                            && !jar.isSet("hardcore.entregas.mmo." + Entregas.PLACA_DEL_VIGILANTE));
+            // 1.13.0: la gema ya llega con el lote de gemas (entregas.mmo.gema-vigilante); las placas
+            // siguen fuera hasta que exista su plantilla, para que el selftest "mmo" no falle.
+            h.igual("config.yml: la gema del Vigilante en entregas.mmo", "CALAMITY_GEMAS.GEMA_OJO_DEL_VIGILANTE",
+                    jar.getString("hardcore.entregas.mmo." + Entregas.OJO_DEL_VIGILANTE));
+            h.ok("config.yml: las placas no estan en entregas.mmo (van por el id de serie)",
+                    !jar.isSet("hardcore.entregas.mmo." + Entregas.PLACA_DEL_VIGILANTE));
         }
         h.igual("ids de MMOItems de serie de la gema y las placas",
                 List.of("CALAMITY_GEMAS.GEMA_OJO_DEL_VIGILANTE", "CALAMITY_MATERIALES.PLACA_DEL_VIGILANTE"),

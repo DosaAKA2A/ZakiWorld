@@ -297,7 +297,8 @@ final class Entregas implements Listener {
      * Calamity 1.13.0 · El botin del Vigilante que llega en otro lote: la gema Ojo del Vigilante y las placas
      * del Mazo del Vigilante. Mientras MMOItems no los tenga, crear() da null y el Vigilante no los saca.
      */
-    static final String OJO_DEL_VIGILANTE = "ojo-del-vigilante";
+    /** El Ojo es la gema del lote de gemas: un solo id para las dos ramas (1.13.0). */
+    static final String OJO_DEL_VIGILANTE = GEMA_VIGILANTE;
     static final String PLACA_DEL_VIGILANTE = "placa-del-vigilante";
 
     /** Los ids de DIS sec. 4, por si la config del servidor aun no los tiene. */
@@ -324,7 +325,6 @@ final class Entregas implements Listener {
             Map.entry("masamune", "CALAMITY_ARMAS.MASAMUNE"),
             Map.entry("crimson", "CALAMITY_ARMAS.CRIMSON_MASAMUNE"),
             // 1.13.0: el botin del Vigilante (otro lote).
-            Map.entry(OJO_DEL_VIGILANTE, "CALAMITY_GEMAS.GEMA_OJO_DEL_VIGILANTE"),
             Map.entry(PLACA_DEL_VIGILANTE, "CALAMITY_MATERIALES.PLACA_DEL_VIGILANTE"));
 
     private String motivoSinObjeto(String o) {
