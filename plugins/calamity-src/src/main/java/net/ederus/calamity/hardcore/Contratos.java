@@ -850,7 +850,12 @@ final class Contratos implements Listener {
             List<Integer> tocan = pendientesDe(s, pool, ev);
             if (tocan.isEmpty()) return;
             lleva = revisar(p, s);
-            if (!lleva.keySet().containsAll(tocan)) avisarSinPergamino(p, s);
+            if (!lleva.keySet().containsAll(tocan)) {
+                // 1.12.1: el que falta puede ser una oferta (se acepta) o uno aceptado cuyo papel se perdio (se pide otro).
+                boolean perdido = false;
+                for (int i : tocan) perdido |= !lleva.containsKey(i) && aceptado(s, i);
+                avisarSinPergamino(p, s, perdido);
+            }
         }
         Avance a = avanzar(s, pool, ev, n, lleva == null ? null : lleva.keySet());
         if (a.cambiados().isEmpty()) return;
@@ -892,11 +897,14 @@ final class Contratos implements Listener {
     }
 
     /** 1.10: algo habria contado y le falta su pergamino. Una vez por expedicion (se apunta en la libreta). */
-    private void avisarSinPergamino(Player p, ConfigurationSection s) {
+    private void avisarSinPergamino(Player p, ConfigurationSection s, boolean perdido) {
         if (s.getBoolean("sin-pergamino", false)) return;
         s.set("sin-pergamino", true);
         hc.marcarSucio();
-        p.sendMessage(ComandoCalamity.mensaje("Sin su pergamino, un contrato no cuenta: acéptalo con Oren, en el spawn."));
+        p.sendMessage(ComandoCalamity.mensaje(!perdido
+                ? "Sin su pergamino, un contrato no cuenta: acéptalo con Oren, en el spawn."
+                : recuperarPerdido() ? "Sin su pergamino, un contrato no cuenta: pídele otro a Oren, en el spawn."
+                : "Sin su pergamino, un contrato no cuenta, y Oren no da otro: puedes cambiarlo."));
     }
 
     /** P-O01, como mucho uno cada 2 s. */

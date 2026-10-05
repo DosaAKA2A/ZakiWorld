@@ -394,7 +394,10 @@ final class Reliquias implements Listener {
         if (m == null || m.isBlank()) return null;
         m = m.trim().toLowerCase(Locale.ROOT);
         if (!m.contains(":")) m = "minecraft:" + m;
-        return m.matches("[a-z0-9_.-]+:[a-z0-9_./-]+") ? m : null;
+        if (!m.matches("[a-z0-9_.-]+:[a-z0-9_./-]+")) return null;
+        // El modelo de su propio material no es un modelo: el juego no lo guarda como cambio (modeloDe da null)
+        // y la Reliquia se renovaria cada vez que se mira.
+        return m.equals(material(c, g, esp).getKey().asString()) ? null : m;
     }
 
     /** Le pone (o le quita, con null) el modelo a un objeto. Sin la API de componentes, nada. */
@@ -1142,6 +1145,8 @@ final class Reliquias implements Listener {
         h.igual("modelo sin espacio de nombres: minecraft:", "minecraft:echo_shard", modelo(otra, 4, null));
         otra.set("reliquias.grados.4.modelo", "");
         h.igual("modelo vacio: ninguno", null, modelo(otra, 4, null));
+        otra.set("reliquias.grados.4.modelo", "amethyst_shard");
+        h.igual("el modelo de su propio material: ninguno (si no, se renovaria siempre)", null, modelo(otra, 4, null));
         otra.set("reliquias.especiales.eclipsada.modelo", "minecraft:music_disc_5");
         h.igual("una especial tambien acepta modelo", "minecraft:music_disc_5", modelo(otra, 3, ECLIPSADA));
         otra.set("reliquias.grados.3.modelo", "Mal Modelo!");

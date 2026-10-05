@@ -367,8 +367,11 @@ final class MenuTasador implements Listener {
         else if (g.compra() == 0) lore.add(Marco.porQueNo("Hoy ya no compra más de estas."));
         else lore.add(Marco.accion(g.esencias() ? "Clic para ingresarlas" : "Clic para vendérselas a Oren"));
         ItemStack icono = new ItemStack(g.material(), Math.max(1, Math.min(64, g.cantidad())));
-        return Marco.icono(icono, Component.text(g.nombre() + " ×" + Altar.miles(g.cantidad()), g.color()), lore,
+        ItemStack boton = Marco.icono(icono, Component.text(g.nombre() + " ×" + Altar.miles(g.cantidad()), g.color()), lore,
                 puede && (daE > 0 || daMc > 0));
+        // 1.12.1: el Ambar Mayor es papel con el modelo de la plantilla; sin el modelo, aqui se veria papel.
+        if (!g.esencias()) Reliquias.ponerModelo(boton, Reliquias.modelo(hc.cfg(), g.grado(), g.especial()));
+        return boton;
     }
 
     private String fecha(long millis) {
@@ -841,7 +844,10 @@ final class MenuTasador implements Listener {
             if (e.cobrado()) {
                 lore.add(Marco.tiene("Ya lo cobraste."));
             } else if (e.cumplido()) {
-                lore.add(Component.text("Cumplido: se cobra al venderlas.", Paleta.CIFRA));
+                // Con pergaminos solo espera el de Reliquias (los demas se cobran al cumplirlos); sin ellos, todos
+                // se cobran al salir vivo.
+                lore.add(Component.text(papel && Contratos.seCobraAlSalir(d) ? "Cumplido: se cobra al venderlas."
+                        : "Cumplido: lo cobras al salir vivo.", Paleta.CIFRA));
             } else if (!papel) {
                 lore.add(Marco.tenue("Si mueres, vuelve a empezar."));
             } else if (e.oferta()) {
