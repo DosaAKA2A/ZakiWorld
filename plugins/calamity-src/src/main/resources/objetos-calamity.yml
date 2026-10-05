@@ -8,6 +8,8 @@
 #  padre: el tipo de MMOItems cuyo comportamiento hereda su tipo (atacar, engastar, consumir).
 #  1.12.3 (lote de gemas, a mano): hueco Calamidad en las diez piezas, la Masamune y la Crimson
 #  Masamune, y las seis gemas nuevas (docs/lote-gemas). Pasarlo a gen_config.py al regenerar.
+#  1.13.0 (a mano): el Manto baja a la escala de proteccion de Ederus, ~102 (Veyra 100, anomalias
+#  110, Dios 120): armadura 2.5/6/4/2.5, dureza 3, vida 4/9/9/4; bonos [2] +1 corazon, [3] -1 %, [4] sin vida.
 # =============================================================================
 
 objetos:
@@ -20,9 +22,9 @@ objetos:
     tier: CALAMIDAD
     set: CALAMIDAD
     stats:
-      ARMOR: 6
-      ARMOR_TOUGHNESS: 5
-      MAX_HEALTH: 7
+      ARMOR: 2.5
+      ARMOR_TOUGHNESS: 3
+      MAX_HEALTH: 4
       KNOCKBACK_RESISTANCE: 0.1
     encantamientos:
       protection: 8
@@ -48,9 +50,9 @@ objetos:
     tier: CALAMIDAD
     set: CALAMIDAD
     stats:
-      ARMOR: 8
-      ARMOR_TOUGHNESS: 5
-      MAX_HEALTH: 7
+      ARMOR: 6
+      ARMOR_TOUGHNESS: 3
+      MAX_HEALTH: 9
       KNOCKBACK_RESISTANCE: 0.1
     encantamientos:
       protection: 8
@@ -73,9 +75,9 @@ objetos:
     tier: CALAMIDAD
     set: CALAMIDAD
     stats:
-      ARMOR: 7
-      ARMOR_TOUGHNESS: 5
-      MAX_HEALTH: 7
+      ARMOR: 4
+      ARMOR_TOUGHNESS: 3
+      MAX_HEALTH: 9
       KNOCKBACK_RESISTANCE: 0.1
     encantamientos:
       protection: 8
@@ -98,9 +100,9 @@ objetos:
     tier: CALAMIDAD
     set: CALAMIDAD
     stats:
-      ARMOR: 5
-      ARMOR_TOUGHNESS: 5
-      MAX_HEALTH: 7
+      ARMOR: 2.5
+      ARMOR_TOUGHNESS: 3
+      MAX_HEALTH: 4
       KNOCKBACK_RESISTANCE: 0.1
     encantamientos:
       protection: 8
@@ -388,15 +390,13 @@ sets:
     - CALAMITY_ARMAS.HACHA_DEL_HERALDO
     bonos:
       '2':
-        MAX_HEALTH: 4
-        ARMOR: 2
+        MAX_HEALTH: 2
       '3':
-        DAMAGE_REDUCTION: 3
+        DAMAGE_REDUCTION: 1
         KNOCKBACK_RESISTANCE: 0.1
       '4':
         ATTACK_DAMAGE: 6
         PVE_DAMAGE: 8
-        MAX_HEALTH: 5
         CRITICAL_STRIKE_CHANCE: 4
       '5':
         UNDEAD_DAMAGE: 15
