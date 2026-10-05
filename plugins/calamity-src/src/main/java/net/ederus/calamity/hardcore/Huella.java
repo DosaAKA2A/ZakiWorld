@@ -901,6 +901,8 @@ final class Huella implements Listener {
      */
     private void avisos(Player p, Rastro r, Ajustes a, Grieta.Umbral u) {
         int q = r.quieto;
+        // M24 · Al amparo de una hoguera de calma la quietud cuenta x1,5 (la calma atrae a la PARCA).
+        if (!u.spawn()) q = Hogueras.quietoEfectivo(q, hc.factorHuella(p));
         // Calamity 1.1.0: en la zona spawn el limite y los avisos son los de la Grieta (parca.spawn).
         if (q >= u.limite() && u.spawn()) {
             boolean abierta = hc.valor("parca", () -> grieta.abrir(p, r.celdasDistintas()), false);

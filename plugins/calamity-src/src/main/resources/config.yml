@@ -1181,6 +1181,38 @@ hardcore:
   sangre-fresca: {activo: false, pvp: 20, eco: 10, minijefe: 15, parca: 40, ambush: 25, minutos-misma-victima: 30, piezas-minimas: 2, minutos-dentro-victima: 5}
   eclipse: {activo: false, horario: ["18:00", "22:00"], minutos: 20, avisos-minutos: [10, 5, 1], cordura: 2.0, niveles: 10, botin: 2.0, pvp: 1.25, minijefe-cada-minutos: 5, ecos-despertar: 2.0, vinheta-extra: 0.2, minutos-minimos: 10, ventana-despues: 10}
 
+  # ------------------------------------------------------------------ M24 · Hogueras de calma (1.12.3)
+  # Clic derecho (en Bedrock, tocar) con una Esencia en la mano principal sobre una fogata de almas
+  # (SOUL_CAMPFIRE) encendida la consagra. Si no se puede, no se gasta la Esencia y se dice por que en la
+  # barra de accion. Mientras arde: a radio-calma la cordura no baja y se regenera vida despacio, y a
+  # radio-apariciones no nace ningun mob (lo que traen la PARCA o un Eco si). Al acabar la fogata se apaga
+  # de verdad y su zona queda quemada. Nunca es un santuario: la Huella cuenta x factor-huella a
+  # radio-calma, y a quien ya persigue la PARCA la hoguera no le ampara.
+  # Staff: /calamity campfire info | clear | reset <player>. Sin esta seccion valen estos mismos valores.
+  hogueras:
+    activa: true
+    # Esencias que cuesta consagrar una (en creativo no se gastan).
+    coste-esencias: 1
+    # Bloques minimos hasta otra hoguera activa o quemada, y hasta las puertas (entrada, salida y llegada).
+    distancia-otra: 48
+    distancia-puertas: 48
+    # Cada jugador puede consagrar una cada tantos minutos.
+    pausa-minutos: 20
+    # Lo que arde (minutos; admite decimales) y lo que su zona queda quemada despues.
+    duracion-minutos: 4
+    quemada-minutos: 30
+    # A esta distancia la cordura no baja y hay regeneracion; a la otra no nace nada.
+    radio-calma: 6
+    radio-apariciones: 16
+    # Lo que multiplica la quietud de la Huella a radio-calma (1 = nada).
+    factor-huella: 1.5
+    # Regeneracion a radio-calma (nivel 1 = Regeneracion I). No se suma a otra regeneracion que ya lleves.
+    regeneracion: true
+    regeneracion-nivel: 1
+    # Las llamas de alma, el anillo del radio y la ceniza de la zona quemada; y el cartel con la cuenta atras.
+    particulas: true
+    cartel: true
+
   # ------------------------------------------------------------------ Clima (1.9.0)
   # El tiempo de Calamity segun el bioma. Solo actua mientras llueve de verdad en el mundo
   # y nunca en la zona spawn. Todo pasa en la pantalla de cada jugador: el mundo no se toca.

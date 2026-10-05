@@ -64,7 +64,7 @@ final class Autotest {
             Map.entry("engarce", "gemsetting"), Map.entry("entregas", "delivery"), Map.entry("equipo", "gear"),
             Map.entry("exentos", "exempt"), Map.entry("fichas", "sheets"), Map.entry("fragmentos", "fragments"),
             Map.entry("grieta", "rift"), Map.entry("grifo", "faucet"), Map.entry("hitos", "milestones"),
-            Map.entry("horas", "hours"), Map.entry("huella", "footprint"), Map.entry("kit", "kit"),
+            Map.entry("hogueras", "campfires"), Map.entry("horas", "hours"), Map.entry("huella", "footprint"), Map.entry("kit", "kit"),
             Map.entry("ligado", "binding"), Map.entry("medidor-cordura", "sanity-meter"), Map.entry("menus", "menus"),
             Map.entry("minijefes", "minibosses"), Map.entry("mmo", "mmo"), Map.entry("monedero", "wallet"),
             Map.entry("npcs", "npcs"), Map.entry("objetos", "items"), Map.entry("objetos-reales", "real-items"),

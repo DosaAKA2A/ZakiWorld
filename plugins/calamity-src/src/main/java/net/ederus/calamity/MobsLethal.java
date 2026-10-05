@@ -255,12 +255,17 @@ public final class MobsLethal implements Listener {
 
     /** Un mob del bioma de ese sitio, con el nivel del jugador. Null si el bioma no tiene tabla. */
     private LivingEntity invocar(Player p, Location sitio) {
+        return invocar(p, sitio, true);
+    }
+
+    /** M24: calma = false para lo que no para una hoguera de calma (la guardia de la Boveda Caida). */
+    private LivingEntity invocar(Player p, Location sitio, boolean calma) {
         Apariciones.Tabla t = tabla.get(sitio.getBlock().getBiome().getKey().asString());
         if (t == null) return null;
         Apariciones.Eleccion sale = t.elegir(random.nextDouble(), cfg().getDouble("probabilidad-destacado", 0.05),
                 random.nextInt(t.comunes().size()));
         if (!cabe(sitio, sale.id())) return null;
-        return invocarTipo(p, sale.id(), sale.destacado(), sitio);
+        return invocarTipo(p, sale.id(), sale.destacado(), sitio, calma);
     }
 
     /**
@@ -279,9 +284,19 @@ public final class MobsLethal implements Listener {
     }
 
     private LivingEntity invocarTipo(Player p, String id, boolean destacado, Location sitio) {
+        return invocarTipo(p, id, destacado, sitio, true);
+    }
+
+    /**
+     * M24 · calma: si una hoguera de calma lo impide (nada nace a su radio-apariciones). Lo del ciclo, la
+     * oleada, los especiales y las guarniciones, si; los minijefes (los de cordura cero y los de la Boveda
+     * Caida) y la guardia de la Boveda, no: la hoguera no para lo que ya viene a por alguien.
+     */
+    private LivingEntity invocarTipo(Player p, String id, boolean destacado, Location sitio, boolean calma) {
         // Calamity 1.2: el unico sitio por el que nace un mob de Lethal World (ciclo, oleada,
         // minijefe y guarnicion), asi que la zona spawn se cierra aqui una vez para todos.
         if (zonaSegura(sitio)) return null;
+        if (calma && enCalma(sitio)) return null;
         AnomalyPlugin a = anomaly();
         if (a == null) return null;
         MinionType tipo = a.minions().type(id);
@@ -309,7 +324,7 @@ public final class MobsLethal implements Listener {
         if (sitio == null) sitio = p.getLocation().add(
                 (random.nextDouble() - 0.5) * distancia, 0, (random.nextDouble() - 0.5) * distancia);
 
-        LivingEntity mob = invocarTipo(p, id, true, sitio);
+        LivingEntity mob = invocarTipo(p, id, true, sitio, false);
         if (mob == null) return null;
 
         /* Calamity 1.11: la vida de la ficha a su nivel (healthAt), no la de la entidad, que vanilla ya topa
@@ -424,7 +439,7 @@ public final class MobsLethal implements Listener {
         int n = 0;
         for (int i = 0; i < cuantos; i++) {
             Location sitio = sitioEn(centro.getWorld(), caja);
-            if (sitio != null && invocar(p, sitio) != null) n++;
+            if (sitio != null && invocar(p, sitio, false) != null) n++;
         }
         return n;
     }
@@ -834,6 +849,11 @@ public final class MobsLethal implements Listener {
             e.setCancelled(true);
             return;
         }
+        // M24: ni a radio-apariciones de una hoguera de calma (spawners, refuerzos, patrullas...).
+        if (enCalma(e.getLocation())) {
+            e.setCancelled(true);
+            return;
+        }
         if (esAjeno(mob)) return;
         plugin.getServer().getScheduler().runTask(plugin, () -> {
             AnomalyPlugin a = anomaly();
@@ -860,6 +880,12 @@ public final class MobsLethal implements Listener {
     private boolean zonaSegura(Location l) {
         Hardcore hc = plugin.hardcore();
         return hc != null && hc.enSpawn(l);
+    }
+
+    /** M24 · Si una hoguera de calma encendida no deja nacer nada ahi (Hardcore.sinApariciones). */
+    private boolean enCalma(Location l) {
+        Hardcore hc = plugin.hardcore();
+        return hc != null && hc.sinApariciones(l);
     }
 
     private Player masCercano(Location donde, double radio) {

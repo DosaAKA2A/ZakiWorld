@@ -181,6 +181,8 @@ public final class Hardcore implements Listener {
     private Ruinas ruinas;
     private BovedaCaida bovedaCaida;
     private ClanesCalamity clanes;
+    /** M24 · Las hogueras de calma (Calamity 1.12.3). Null con las reglas apagadas. */
+    private Hogueras hogueras;
     /** Calamity 1.2: la zona spawn (region de WorldGuard o caja de la vara). Null con las reglas apagadas. */
     private ZonaSpawn zona;
     /** Quien estaba en la zona spawn el segundo anterior, para notar cuando entra y cuando sale. */
@@ -268,6 +270,7 @@ public final class Hardcore implements Listener {
     ZonaSpawn zonaSpawn() { return zona; }
     Ruinas ruinas() { return ruinas; }
     ClanesCalamity clanes() { return clanes; }
+    Hogueras hogueras() { return hogueras; }
 
     ConfigurationSection cfg() {
         ConfigurationSection s = plugin.getConfig().getConfigurationSection("hardcore");
@@ -295,6 +298,30 @@ public final class Hardcore implements Listener {
 
     public boolean enSpawn(Player p) {
         return p != null && enSpawn(p.getLocation());
+    }
+
+    /**
+     * M24 · Si ese jugador esta al amparo de una hoguera de calma (radio-calma): su cordura no baja. A
+     * quien ya persigue la PARCA no le ampara. Corre en cada resta de cordura: con ninguna encendida, nada.
+     */
+    boolean enCalma(Player p) {
+        Hogueras h = hogueras;
+        return h != null && p != null && valor("hogueras", () -> h.amparo(p), false);
+    }
+
+    /**
+     * M24 · Si en ese sitio no nace nada por una hoguera de calma (radio-apariciones). Publico: lo mira
+     * MobsLethal en sus apariciones y en las de vanilla. Lo que invoca un plugin (PARCA, Ecos) no pasa por aqui.
+     */
+    public boolean sinApariciones(Location l) {
+        Hogueras h = hogueras;
+        return h != null && l != null && valor("hogueras", () -> h.sinApariciones(l), false);
+    }
+
+    /** M24 · Lo que multiplica la Huella de ese jugador (factor-huella al amparo de una hoguera; 1 si no). */
+    double factorHuella(Player p) {
+        Hogueras h = hogueras;
+        return h == null || p == null ? 1 : valor("hogueras", () -> h.factorHuella(p), 1.0);
     }
 
     /** La zona spawn en uso en cada mundo hardcore, para /calamity status. */
@@ -326,7 +353,8 @@ public final class Hardcore implements Listener {
         vara = new VaraPortales(plugin);
         crearModulos();
         // En la zona spawn la cordura no baja por nada (drenaje, sustos, testigos, la PARCA...).
-        cordura.aSalvo(this::enSpawn);
+        // M24: tampoco al amparo de una hoguera de calma, salvo para quien ya persigue la PARCA.
+        cordura.aSalvo(p -> enSpawn(p) || enCalma(p));
         // Un segundo justo: la cordura se cuenta en segundos y la barra tiene que
         // repintarse a ese ritmo o parpadea contra los avisos de otros plugins.
         reloj = plugin.getServer().getScheduler().runTaskTimer(
@@ -438,6 +466,8 @@ public final class Hardcore implements Listener {
         ruinas = crear("ruinas", () -> new Ruinas(this));
         bovedaCaida = crear("boveda-caida", () -> new BovedaCaida(this));
         clanes = crear("clanes", () -> new ClanesCalamity(this));
+        // M24 · Las hogueras de calma: preguntan a la zona spawn, la vara (puertas), la PARCA y las Esencias.
+        hogueras = crear("hogueras", () -> new Hogueras(this));
         // Lo ultimo: los NPCs de la antesala solo abren lo que ya existe (Altar, Tablero...).
         npcs = crear("npcs", () -> new Npcs(this));
     }
@@ -454,6 +484,8 @@ public final class Hardcore implements Listener {
     /** Al reves de como nacieron: los de arriba usan a los de abajo mientras se paran. */
     private void pararModulos() {
         if (npcs != null) seguro("npcs", () -> npcs.parar());
+        if (hogueras != null) seguro("hogueras", () -> hogueras.parar());
+        hogueras = null;
         if (clanes != null) seguro("clanes", () -> clanes.parar());
         if (bovedaCaida != null) seguro("boveda-caida", () -> bovedaCaida.parar());
         if (ruinas != null) seguro("ruinas", () -> ruinas.parar());
@@ -701,6 +733,7 @@ public final class Hardcore implements Listener {
                 seguro("ecos", () -> ecos.avisoDistancia(p));
                 seguro("combate", () -> combate.tick(p));
                 seguro("objetos", () -> objetos.tick(p));
+                if (hogueras != null) seguro("hogueras", () -> hogueras.segundo(p, spawn));
             }
         }
         // Quien ya no esta dentro (salio, murio, se desconecto) deja de contar como "en el spawn".
@@ -718,6 +751,7 @@ public final class Hardcore implements Listener {
         seguro("ecos", () -> ecos.tick());
         seguro("aduana", () -> aduana.tick());
         seguro("eclipse", () -> eclipse.tick());
+        if (hogueras != null) seguro("hogueras", () -> hogueras.tick());
         // Quien no ha pasado por clima.segundo (spawn, espectador, fuera del mundo) recupera su cielo.
         if (clima != null) seguro("clima", () -> clima.tick());
         if (++segundosManto >= 30) {
