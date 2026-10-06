@@ -772,12 +772,20 @@ final class ObjetosCalamity implements Listener {
             out.put("filo", "CALAMITY_ARMAS.FILO_DEL_ECO");
             out.put("guadana", "CALAMITY_ARMAS.GUADANA_DE_LA_PARCA");
         }
+        // El set del Vigilante cuenta aunque el forja.piezas del servidor no lo traiga: su id de la config si
+        // lo lleva (con los de serie del jar detras) y, si no, el de Entregas.MMO_DEFECTO.
+        for (String k : Forja.PIEZAS_VIGILANTE) {
+            if (out.containsKey(k)) continue;
+            String id = hc.cfg().getString("forja.piezas." + k);
+            if (id == null || id.isBlank()) id = Entregas.MMO_DEFECTO.get(k);
+            if (id != null) out.put(k, id);
+        }
         return out;
     }
 
     /**
-     * Apunta perdidas.<uuid>.<pieza> = ahora por cada pieza del Manto, el Hacha o la Guadana
-     * que llevaba puesta o en las manos (DIS M32: reposicion durante forja.reposicion-dias).
+     * Apunta perdidas.<uuid>.<pieza> = ahora por cada pieza del Manto, el Hacha, la Guadana o el set
+     * del Vigilante que llevaba puesta o en las manos (DIS M32: reposicion durante forja.reposicion-dias).
      * La Mascara y el Filo no tienen reposicion (PLAN sec. 4). La que salvo el Salvoconducto
      * ya no esta en el inventario, asi que no se apunta.
      */

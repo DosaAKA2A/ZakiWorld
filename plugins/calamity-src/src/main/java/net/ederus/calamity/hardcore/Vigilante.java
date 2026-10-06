@@ -341,9 +341,10 @@ final class Vigilante implements Listener {
     }
 
     /**
-     * El botin extra de serie. La gema y las placas llegan en otro lote: hasta que MMOItems tenga
-     * CALAMITY_GEMAS.GEMA_OJO_DEL_VIGILANTE y CALAMITY_MATERIALES.PLACA_DEL_VIGILANTE no salen ni cuentan
-     * piedad (disponibles), en silencio, como Minijefes.gemaSinLote.
+     * El botin extra de serie. Mientras MMOItems no tenga CALAMITY_GEMAS.GEMA_OJO_DEL_VIGILANTE o
+     * CALAMITY_MATERIALES.PLACA_DEL_VIGILANTE, no salen ni cuentan piedad (disponibles), en silencio, como
+     * Minijefes.gemaSinLote; en cuanto la plantilla esta en el servidor, salen sin tocar nada mas. Las placas
+     * van ligadas a cada uno (Entregas.dar) y la Forja las pide para el set del Vigilante (docs/set-vigilante).
      */
     static final List<Minijefes.Botin> EXTRA_DE_SERIE = List.of(
             new Minijefes.Botin("gema", 0.20, "mejor", 8, Entregas.OJO_DEL_VIGILANTE, "", "la gema Ojo del Vigilante", true),
@@ -1748,6 +1749,38 @@ final class Vigilante implements Listener {
         h.igual("sin cobro: poco daño", "No cobras por el Vigilante: tu daño no llegó al mínimo (10 % de su vida).",
                 sinCobro(a, "poco-dano", "", 10));
 
+        // ---- Las Placas del Vigilante, que pagan su set en la Forja (Altar.pruebasVigilante).
+        Minijefes.Botin placa = null;
+        for (Minijefes.Botin b : conLote) if (b.id().equals("placa")) placa = b;
+        h.ok("placa: 60 % a cada participante, piedad 3, objeto de MMOItems (ligado a cada uno, sin comando)", placa != null
+                && placa.prob() == 0.60 && "participantes".equals(placa.para()) && placa.piedad() == 3
+                && Entregas.PLACA_DEL_VIGILANTE.equals(placa.objeto()) && placa.comando().isEmpty() && !placa.porConsola());
+        List<Minijefes.Caida> tirada = Minijefes.tirarBotin(conLote, p0, fr, a.participacion, new HashMap<>(), u -> true, () -> 0.5);
+        h.igual("con lote y un 0,5: la placa cae por tirada a los dos que cobran, no solo al mejor", 2L, tirada.stream()
+                .filter(c -> c.botin().id().equals("placa") && c.cae() && "tirada".equals(c.porQue())).count());
+        Map<String, Integer> dosSin = new HashMap<>();
+        dosSin.put(Minijefes.clavePiedad(a1, "placa"), 2);
+        List<Minijefes.Caida> terca = Minijefes.tirarBotin(conLote, p0, fr, a.participacion, dosSin, u -> true, () -> 0.99);
+        h.ok("con lote: a la tercera victoria sin placa, cae por piedad", terca.stream().anyMatch(c -> c.jugador().equals(a1)
+                && c.botin().id().equals("placa") && c.cae() && "piedad".equals(c.porQue())));
+        // La media con la que se ponen los precios de la Forja: unas 0,64 placas por victoria.
+        java.util.Random suerte = new java.util.Random(7);
+        List<Minijefes.Botin> soloPlaca = conLote.stream().filter(b -> b.id().equals("placa")).toList();
+        LinkedHashMap<UUID, Double> solo = new LinkedHashMap<>();
+        solo.put(p0, 1.0);
+        Map<String, Integer> pd = new HashMap<>();
+        int caen = 0, vueltas = 20_000;
+        for (int i = 0; i < vueltas; i++) {
+            for (Minijefes.Caida c : Minijefes.tirarBotin(soloPlaca, p0, solo, a.participacion, pd, u -> true, suerte::nextDouble)) {
+                if (c.cae()) caen++;
+                pd.put(Minijefes.clavePiedad(c.jugador(), c.botin().id()), c.piedadDespues());
+            }
+        }
+        double media = caen / (double) vueltas;
+        h.ok("placas por victoria: " + String.format(Locale.ROOT, "%.3f", media) + " (0,64 con la piedad): las 13 del set son unas "
+                + Math.round(13 / media) + " victorias", media > 0.62 && media < 0.66);
+        setVigilante(h);
+
         // ---- El config.yml del jar dice lo mismo que los valores de serie del codigo.
         YamlConfiguration jar = Ambush.configDelJar();
         if (jar == null) {
@@ -1815,5 +1848,82 @@ final class Vigilante implements Listener {
         // ---- La pelea: habilidades, fases, golpes por distancia, saltos y la caja escalada.
         PeleaVigilante.autotest(h, a);
         return h.lineas();
+    }
+
+    /**
+     * El set del Vigilante tal cual lo promete objetos-calamity.yml (lo que comprueba real-items contra MMOItems):
+     * su indice de proteccion (~95, un poco por debajo de Veyra = 100 y del Manto), el [4] sin vida, el anti-empuje sin
+     * pasar del tope y el Mazo sin superar en lo ofensivo a las armas de la Forja (Hacha, Guadaña y Masamune).
+     */
+    static void setVigilante(Autotest.Hoja h) {
+        YamlConfiguration objs = ObjetosReales.delJar();
+        if (objs == null) {
+            h.ok("objetos-calamity.yml del jar encontrado", false);
+            return;
+        }
+        double[] vig = sumaSet(objs, "VIGILANTE"), manto = sumaSet(objs, "CALAMIDAD");
+        double iv = ObjetosReales.indiceProteccion(vig[0], vig[1], vig[2], 20, vig[3]);
+        double im = ObjetosReales.indiceProteccion(manto[0], manto[1], manto[2], 20, manto[3]);
+        h.ok(String.format(Locale.ROOT, "set del Vigilante: indice %.1f (Veyra 100; %.1f de vida, %.1f de armadura, %.1f de dureza, "
+                + "-%.0f %%)", iv, vig[0], vig[1], vig[2], vig[3]), iv >= 93 && iv <= 97);
+        h.ok(String.format(Locale.ROOT, "y por debajo del Manto de Calamidad (%.1f)", im), iv < im);
+        h.ok("el indice de Veyra con la misma cuenta: 100", Math.abs(ObjetosReales.indiceProteccion(46, 15, 12, 20, 0) - 100) < 1e-9);
+        h.ok("[4] del Vigilante sin vida", !objs.isSet("sets/VIGILANTE/bonos/4/MAX_HEALTH"));
+        h.ok(String.format(Locale.ROOT, "anti-empuje con el set puesto: %.0f %% (tope 100 %%)", vig[4] * 100), Math.abs(vig[4] - 0.6) < 1e-9);
+        h.igual("piezas del set", List.of("CALAMITY.YELMO_DEL_VIGILANTE", "CALAMITY.CORAZA_DEL_VIGILANTE", "CALAMITY.GREBAS_DEL_VIGILANTE",
+                "CALAMITY.BOTAS_DEL_VIGILANTE", "CALAMITY_ARMAS.MAZO_DEL_VIGILANTE"), objs.getStringList("sets/VIGILANTE/piezas"));
+        List<String> forja = new ArrayList<>();
+        for (String id : objs.getStringList("sets/VIGILANTE/piezas")) forja.add(objs.getString("objetos/" + id + "/pieza"));
+        h.igual("cada una con su pieza de la Forja", Forja.PIEZAS_VIGILANTE, forja);
+        h.igual("la placa, su objeto de MMOItems", Entregas.PLACA_DEL_VIGILANTE,
+                objs.getString("objetos/" + Entregas.MMO_DEFECTO.get(Entregas.PLACA_DEL_VIGILANTE) + "/pieza"));
+        ConfigurationSection mazo = objs.getConfigurationSection("objetos/CALAMITY_ARMAS.MAZO_DEL_VIGILANTE/stats");
+        if (mazo == null) {
+            h.ok("el Mazo del Vigilante en objetos-calamity.yml", false);
+            return;
+        }
+        for (String arma : List.of("HACHA_DEL_HERALDO", "GUADANA_DE_LA_PARCA", "MASAMUNE")) {
+            ConfigurationSection o = objs.getConfigurationSection("objetos/CALAMITY_ARMAS." + arma + "/stats");
+            if (o == null) {
+                h.ok(arma + " en objetos-calamity.yml", false);
+                continue;
+            }
+            double golpes = mazo.getDouble("ATTACK_DAMAGE") * mazo.getDouble("ATTACK_SPEED");
+            double suyos = o.getDouble("ATTACK_DAMAGE") * o.getDouble("ATTACK_SPEED");
+            h.ok(String.format(Locale.ROOT, "el Mazo no supera a %s: daño por segundo %.1f frente a %.1f, crítico y PvE no más altos",
+                    arma, golpes, suyos), golpes < suyos
+                    && mazo.getDouble("CRITICAL_STRIKE_CHANCE") <= o.getDouble("CRITICAL_STRIKE_CHANCE")
+                    && mazo.getDouble("CRITICAL_STRIKE_POWER") <= o.getDouble("CRITICAL_STRIKE_POWER")
+                    && mazo.getDouble("PVE_DAMAGE") <= o.getDouble("PVE_DAMAGE"));
+        }
+    }
+
+    /**
+     * Lo que da un set de objetos-calamity.yml con todas sus piezas puestas y sus bonos: {vida total (con los 20 de
+     * base), armadura, dureza, reduccion de daño %, anti-empuje}.
+     */
+    private static double[] sumaSet(YamlConfiguration objs, String set) {
+        double vida = 20, armadura = 0, dureza = 0, reduccion = 0, anti = 0;
+        for (String id : objs.getStringList("sets/" + set + "/piezas")) {
+            ConfigurationSection st = objs.getConfigurationSection("objetos/" + id + "/stats");
+            if (st == null) continue;
+            vida += st.getDouble("MAX_HEALTH");
+            armadura += st.getDouble("ARMOR");
+            dureza += st.getDouble("ARMOR_TOUGHNESS");
+            anti += st.getDouble("KNOCKBACK_RESISTANCE");
+        }
+        ConfigurationSection bonos = objs.getConfigurationSection("sets/" + set + "/bonos");
+        if (bonos != null) {
+            for (String k : bonos.getKeys(false)) {
+                ConfigurationSection b = bonos.getConfigurationSection(k);
+                if (b == null) continue;
+                vida += b.getDouble("MAX_HEALTH");
+                armadura += b.getDouble("ARMOR");
+                dureza += b.getDouble("ARMOR_TOUGHNESS");
+                reduccion += b.getDouble("DAMAGE_REDUCTION");
+                anti += b.getDouble("KNOCKBACK_RESISTANCE");
+            }
+        }
+        return new double[]{vida, armadura, dureza, reduccion, anti};
     }
 }

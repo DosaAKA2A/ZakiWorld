@@ -1,0 +1,51 @@
+# =============================================================================
+#  Set del Vigilante · 4 de 6 · el Mazo del Vigilante
+#  Fichero del servidor: plugins/MMOItems/item/calamity_armas.yml (tipo CALAMITY_ARMAS): PEGAR AL FINAL.
+#
+#  Dentro del set (como el Hacha en el Manto). Por debajo de las armas de la Forja en lo ofensivo:
+#    golpe 20 a 1 por segundo (Hacha 21 x 1,1; Guadaña 24 x 1,2; Masamune 22 x 1,7), crítico 20 % x1,8
+#    (Hacha 28 % x2, Guadaña 20 % x1,8, Masamune 30 % x1,8), PvE 10 % (12, 12 y 10), sin Afilado.
+#  Lo suyo, sin habilidades de MythicLib: es una maza de verdad. El golpe en caída de la maza vanilla
+#  (más daño por cada bloque que caes y empuja a los de alrededor), Densidad II (un poco más por bloque)
+#  y Ráfaga de viento I (tras un golpe en caída te relanza hacia arriba, como el Lanzamiento del jinete).
+# =============================================================================
+
+MAZO_DEL_VIGILANTE:
+  base:
+    revision-id: 1
+    material: MACE
+    tier: CALAMIDAD
+    set: VIGILANTE
+    attack-damage: 20
+    attack-speed: 1.0
+    critical-strike-chance: 20
+    critical-strike-power: 1.8
+    pve-damage: 10
+    unbreakable: true
+    enchants:
+      DENSITY: 2
+      WIND_BURST: 1
+      UNBREAKING: 8
+      MENDING: 1
+    name: <#D9CBB8>◆ <#FCE3CC>M<#FADCC1>a<#F8D5B7>z<#F6CEAC>o <#F5C7A2>d<#F3C097>e<#F1B98D>l <#EFB282>V<#EDAB78>i<#EBA46D>g<#E99D63>i<#E79658>l<#E68F4E>a<#E48843>n<#E28139>t<#E07A2E>e
+    upgrade:
+      template: calamidad
+      reference: calamidad
+      max: 5
+      success: 100
+      workbench: false
+    gem-sockets:
+    - Calamidad
+    lore:
+    - '&7Todavía tiene tierra pegada.'
+    - ''
+    - <#D9CBB8>◆ <#E07A2E>Set del Vigilante
+    - '&7Con él partía la tierra y mandaba'
+    - '&7a los suyos por los aires.'
+    - ''
+    - '<#F6D2B0>Al golpear cayendo, pega más'
+    - '<#F6D2B0>cuanto más alto caes y te'
+    - '<#F6D2B0>relanza hacia arriba.'
+    - ''
+    - <#D9CBB8>Botín de Calamity &8· <#E07A2E>Edición Vigilante
+    - ''

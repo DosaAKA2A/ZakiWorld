@@ -1051,6 +1051,13 @@ final class Altar implements Listener {
                     .append(Component.text(n == 1 ? "una " + PuenteBovedas.nombre(fa.objeto(), 1) : PuenteBovedas.nombre(fa.objeto(), n), Paleta.DETALLE))
                     .append(Component.text(": llevas " + fa.tiene() + " de " + fa.pide() + ".")));
         }
+        if (Forja.esPlaca(fa.objeto())) {
+            // El set del Vigilante: "Te falta una Placa del Vigilante: llevas 2 de 3."
+            int n = Math.max(1, fa.faltan());
+            return ComandoCalamity.mensaje(Component.text(n == 1 ? "Te falta " : "Te faltan ")
+                    .append(Component.text(n == 1 ? "una Placa del Vigilante" : Forja.placas(n), Paleta.DETALLE))
+                    .append(Component.text(": llevas " + fa.tiene() + " de " + fa.pide() + ".")));
+        }
         return ComandoCalamity.mensaje(Component.text("Para forjarla tienes que llevar encima tu ")
                 .append(Component.text(Forja.nombrePieza(fa.objeto()), Paleta.DETALLE))
                 .append(Component.text(".")));
@@ -1433,7 +1440,25 @@ final class Altar implements Listener {
                     "entregar", List.of(t("objeto", FragmentosMasamune.OBJETO, "cantidad", 5)), "da", "forja:masamune"),
             t("id", "crimson-masamune", "pagina", "forja", "icono", "COPPER_SWORD", "esencias", 96, "mobcoins", 8000,
                     "entregar", List.of(t("objeto", "masamune", "cantidad", 1), t("objeto", FragmentosMasamune.OBJETO, "cantidad", 5)),
-                    "da", "forja:crimson"));
+                    "da", "forja:crimson"),
+            // El set del Vigilante: el precio de las piezas del Manto (y del Hacha para el Mazo), con Placas del
+            // Vigilante entregadas en vez del Sello. 13 placas el set entero: unas 20 victorias (0,64 por victoria
+            // con el 60 % y la piedad 3, y una al dia como mucho). La reposicion baja las Esencias; las placas no.
+            t("id", "yelmo-vigilante", "pagina", "forja", "icono", "NETHERITE_HELMET", "esencias", 48, "mobcoins", 3000,
+                    "entregar", List.of(t("objeto", Entregas.PLACA_DEL_VIGILANTE, "cantidad", 2)), "da", "forja:vig-yelmo",
+                    "reposicion", t("esencias", 24, "mobcoins", 3000)),
+            t("id", "coraza-vigilante", "pagina", "forja", "icono", "NETHERITE_CHESTPLATE", "esencias", 48, "mobcoins", 3000,
+                    "entregar", List.of(t("objeto", Entregas.PLACA_DEL_VIGILANTE, "cantidad", 3)), "da", "forja:vig-coraza",
+                    "reposicion", t("esencias", 24, "mobcoins", 3000)),
+            t("id", "grebas-vigilante", "pagina", "forja", "icono", "NETHERITE_LEGGINGS", "esencias", 48, "mobcoins", 3000,
+                    "entregar", List.of(t("objeto", Entregas.PLACA_DEL_VIGILANTE, "cantidad", 3)), "da", "forja:vig-grebas",
+                    "reposicion", t("esencias", 24, "mobcoins", 3000)),
+            t("id", "botas-vigilante", "pagina", "forja", "icono", "NETHERITE_BOOTS", "esencias", 48, "mobcoins", 3000,
+                    "entregar", List.of(t("objeto", Entregas.PLACA_DEL_VIGILANTE, "cantidad", 2)), "da", "forja:vig-botas",
+                    "reposicion", t("esencias", 24, "mobcoins", 3000)),
+            t("id", "mazo-vigilante", "pagina", "forja", "icono", "MACE", "esencias", 64, "mobcoins", 5000,
+                    "entregar", List.of(t("objeto", Entregas.PLACA_DEL_VIGILANTE, "cantidad", 3)), "da", "forja:vig-mazo",
+                    "reposicion", t("esencias", 32, "mobcoins", 5000)));
 
     // ================================================================ pruebas
 
@@ -1525,7 +1550,8 @@ final class Altar implements Listener {
         Autotest.Hoja h = new Autotest.Hoja();
         Map<String, Trueque> ts = new HashMap<>();
         for (Trueque t : leer(DEFECTO)) ts.put(t.id(), t);
-        h.igual("trueques de serie (1.16.0: con los dos Faroles y la Brujula de la Caida)", 30, ts.size());
+        h.igual("trueques de serie (1.16.0: con los dos Faroles y la Brujula de la Caida; y las cinco piezas del Vigilante)",
+                35, ts.size());
         Trueque ominosa = ts.get("llave-ominosa");
         h.ok("1.11: la Llave Ominosa pide entregar 5 Llaves del Umbral",
                 ominosa != null && ominosa.pide("llave-umbral") == 5 && "llave-ominosa".equals(ominosa.objeto()));
@@ -1698,6 +1724,90 @@ final class Altar implements Listener {
         h.ok("el Camino se abre desde un NPC (open <player> path)", Subcomandos.jugador().nombres(null).contains("path"));
         h.igual("nombre con tildes", "Talismán de Vigilia", nombre(ts.get("talisman")));
         h.igual("nombre de una pieza sin nombre", "Yelmo de Calamidad", nombre(ts.get("yelmo-manto")));
+        pruebasVigilante(h);
         return h.lineas();
+    }
+
+    /**
+     * El set del Vigilante en la Forja, sin servidor: cada pieza con sus Placas del Vigilante y el precio del Manto
+     * (los de serie y los del config.yml del jar, que tienen que decir lo mismo); sin todas las placas no se cobra
+     * nada, con ellas la Forja se las queda, si algo falla vuelven, y reponer baja las Esencias pero no las placas.
+     */
+    static void pruebasVigilante(Autotest.Hoja h) {
+        // trueque -> {placas, Esencias, MobCoins, Esencias de reposicion}; la pieza, en el orden de Forja.PIEZAS_VIGILANTE.
+        Map<String, int[]> esperado = new LinkedHashMap<>();
+        esperado.put("yelmo-vigilante", new int[]{2, 48, 3000, 24});
+        esperado.put("coraza-vigilante", new int[]{3, 48, 3000, 24});
+        esperado.put("grebas-vigilante", new int[]{3, 48, 3000, 24});
+        esperado.put("botas-vigilante", new int[]{2, 48, 3000, 24});
+        esperado.put("mazo-vigilante", new int[]{3, 64, 5000, 32});
+        Map<String, List<? extends Map<?, ?>>> fuentes = new LinkedHashMap<>();
+        fuentes.put("de serie", DEFECTO);
+        YamlConfiguration jar = Ambush.configDelJar();
+        if (jar == null) h.ok("config.yml del jar encontrado", false);
+        else fuentes.put("config.yml", jar.getMapList("hardcore.altar.trueques"));
+        Map<String, Trueque> ts = new HashMap<>();
+        for (Map.Entry<String, List<? extends Map<?, ?>>> f : fuentes.entrySet()) {
+            Map<String, Trueque> estos = new HashMap<>();
+            for (Trueque t : leer(f.getValue())) estos.put(t.id(), t);
+            if (ts.isEmpty()) ts = estos;
+            int i = 0, placas = 0;
+            for (Map.Entry<String, int[]> e : esperado.entrySet()) {
+                Trueque t = estos.get(e.getKey());
+                int[] p = e.getValue();
+                String pieza = Forja.PIEZAS_VIGILANTE.get(i++);
+                boolean bien = t != null && "forja".equals(t.pagina()) && pieza.equals(t.pieza()) && t.credito() == null
+                        && t.entregar().size() == 1 && t.pide(Entregas.PLACA_DEL_VIGILANTE) == p[0]
+                        && t.esencias() == p[1] && t.mobcoins() == p[2] && t.conReposicion() && t.reposEsencias() == p[3]
+                        && t.reposMc() == p[2];
+                h.ok(f.getKey() + ": " + e.getKey() + " (forja:" + pieza + ") pide " + Forja.placas(p[0]) + ", " + p[1]
+                        + " Esencias y " + miles(p[2]) + " MobCoins; reponerla, " + p[3] + " Esencias", bien);
+                if (t != null) placas += t.pide(Entregas.PLACA_DEL_VIGILANTE);
+            }
+            h.igual(f.getKey() + ": el set entero pide 13 placas", 13, placas);
+        }
+        h.igual("nombre del Mazo en la Forja", "Mazo del Vigilante", nombre(ts.get("mazo-vigilante")));
+        h.ok("las placas que pide la Forja son las que suelta el Vigilante", Vigilante.EXTRA_DE_SERIE.stream()
+                .anyMatch(b -> b.id().equals("placa") && b.objeto().equals(Entregas.PLACA_DEL_VIGILANTE)));
+
+        Trueque yelmo = ts.get("yelmo-vigilante");
+        if (yelmo == null) return;
+        CajaPrueba c = new CajaPrueba();
+        UUID u = Autotest.sintetico(321);
+        String placa = u + ":" + Entregas.PLACA_DEL_VIGILANTE;
+        c.saldo.sumar(u, 48, "prueba");
+        c.mc.put(u, 3000L);
+        c.encima.put(placa, 1);
+        Resultado r = probarEn(c, yelmo, u);
+        h.ok("yelmo con 1 placa de 2: no se cobra ni se quita nada", "objeto".equals(r.motivo()) && !r.devuelto()
+                && r.faltan() instanceof Falta fa && Entregas.PLACA_DEL_VIGILANTE.equals(fa.objeto()) && fa.tiene() == 1
+                && fa.pide() == 2 && c.saldo.de(u) == 48 && c.mc(u) == 3000 && c.cuantos(u, Entregas.PLACA_DEL_VIGILANTE) == 1
+                && c.entregados.isEmpty());
+        String aviso = Hardcore.plano(avisoObjeto(new Falta(Entregas.PLACA_DEL_VIGILANTE, 1, 2)));
+        h.ok("y se lo dice: " + aviso, aviso.endsWith("Te falta una Placa del Vigilante: llevas 1 de 2."));
+        h.ok("con dos de menos, en plural", Hardcore.plano(avisoObjeto(new Falta(Entregas.PLACA_DEL_VIGILANTE, 1, 3)))
+                .endsWith("Te faltan 2 Placas del Vigilante: llevas 1 de 3."));
+        c.encima.put(placa, 3);
+        c.crear = false;
+        r = probarEn(c, yelmo, u);
+        h.ok("sin poder crearlo: devuelto, con sus placas", r.devuelto() && "creacion".equals(r.motivo())
+                && c.cuantos(u, Entregas.PLACA_DEL_VIGILANTE) == 3 && c.saldo.de(u) == 48 && c.mc(u) == 3000);
+        c.crear = true;
+        r = probarEn(c, yelmo, u);
+        h.ok("con 3 placas el yelmo se forja: gasta 2, 48 Esencias y 3.000 MobCoins", r.ok()
+                && c.cuantos(u, Entregas.PLACA_DEL_VIGILANTE) == 1 && c.saldo.de(u) == 0 && c.mc(u) == 0);
+        h.igual("y se entrega por forja:vig-yelmo", "forja:vig-yelmox1", c.entregados.get(c.entregados.size() - 1));
+        h.igual("forjas.<uuid>.vig-yelmo apuntado", c.ahora, c.d.getLong("forjas." + u + ".vig-yelmo"));
+        c.d.set("perdidas." + u + ".vig-yelmo", c.ahora - 86_400_000L);
+        Precio pr = precio(c, yelmo, u);
+        h.ok("reponer el yelmo: 24 Esencias y 3.000 MobCoins", pr.reposicion() && pr.esencias() == 24 && pr.mc() == 3000);
+        c.saldo.sumar(u, 24, "prueba");
+        c.mc.put(u, 3000L);
+        r = probarEn(c, yelmo, u);
+        h.ok("reponerlo sigue pidiendo sus 2 placas", "objeto".equals(r.motivo()) && c.saldo.de(u) == 24);
+        c.encima.put(placa, 2);
+        r = probarEn(c, yelmo, u);
+        h.ok("con ellas, repuesto y la perdida borrada", r.ok() && r.precio().reposicion()
+                && !c.d.isSet("perdidas." + u + ".vig-yelmo") && c.cuantos(u, Entregas.PLACA_DEL_VIGILANTE) == 0);
     }
 }

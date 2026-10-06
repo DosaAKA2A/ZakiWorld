@@ -1,0 +1,89 @@
+# =============================================================================
+#  Set del Vigilante · 6 de 6 · el config de Calamity del servidor
+#  Fichero del servidor: plugins/Calamity/config.yml (dentro de "hardcore:").
+#
+#  A) OBLIGATORIO. hardcore.altar.trueques del servidor es SU lista (el jar no la completa): pegar
+#     estas cinco entradas AL FINAL de la lista, justo debajo de la de crimson-masamune (antes de la
+#     línea "  forja:"). Estilo de bloque y sangría como el resto: "    - id:" a 4 espacios.
+#     Después: /calamity reload. Va DESPUÉS del jar nuevo: "forja:vig-*" solo lo entiende él.
+#
+#  Precios: los de las piezas del Manto (48 Esencias + 3.000 MobCoins; el Mazo, los del Hacha,
+#  64 + 5.000) con Placas del Vigilante entregadas en vez del Sello: Yelmo 2, Coraza 3, Grebas 3,
+#  Botas 2, Mazo 3 = 13 placas. El Vigilante suelta una al 60 % a cada uno que cobra, con piedad 3 y
+#  un cobro cada 24 h: 0,64 por victoria, unas 20 victorias el set entero (unas 3 semanas a diario).
+#  Reposición (14 días tras perderla dentro): la mitad de Esencias, pero vuelve a pedir sus placas.
+#
+#  B) OPCIONAL. hardcore.forja.piezas: si faltan, valen los mismos ids de serie del jar. Si se añaden,
+#     el selftest mmo también comprobará que MMOItems las crea.
+# =============================================================================
+
+# ----------------------------------------------------------------------------- A) PEGAR desde aquí
+    - id: yelmo-vigilante
+      pagina: forja
+      icono: NETHERITE_HELMET
+      esencias: 48
+      mobcoins: 3000
+      entregar:
+      - objeto: placa-del-vigilante
+        cantidad: 2
+      da: forja:vig-yelmo
+      reposicion:
+        esencias: 24
+        mobcoins: 3000
+    - id: coraza-vigilante
+      pagina: forja
+      icono: NETHERITE_CHESTPLATE
+      esencias: 48
+      mobcoins: 3000
+      entregar:
+      - objeto: placa-del-vigilante
+        cantidad: 3
+      da: forja:vig-coraza
+      reposicion:
+        esencias: 24
+        mobcoins: 3000
+    - id: grebas-vigilante
+      pagina: forja
+      icono: NETHERITE_LEGGINGS
+      esencias: 48
+      mobcoins: 3000
+      entregar:
+      - objeto: placa-del-vigilante
+        cantidad: 3
+      da: forja:vig-grebas
+      reposicion:
+        esencias: 24
+        mobcoins: 3000
+    - id: botas-vigilante
+      pagina: forja
+      icono: NETHERITE_BOOTS
+      esencias: 48
+      mobcoins: 3000
+      entregar:
+      - objeto: placa-del-vigilante
+        cantidad: 2
+      da: forja:vig-botas
+      reposicion:
+        esencias: 24
+        mobcoins: 3000
+    - id: mazo-vigilante
+      pagina: forja
+      icono: MACE
+      esencias: 64
+      mobcoins: 5000
+      entregar:
+      - objeto: placa-del-vigilante
+        cantidad: 3
+      da: forja:vig-mazo
+      reposicion:
+        esencias: 32
+        mobcoins: 5000
+# ----------------------------------------------------------------------------- A) hasta aquí
+
+# ----------------------------------------------------------------------------- B) opcional
+# Dentro de "  forja:" > "    piezas:", debajo de guadana:
+      vig-yelmo: CALAMITY.YELMO_DEL_VIGILANTE
+      vig-coraza: CALAMITY.CORAZA_DEL_VIGILANTE
+      vig-grebas: CALAMITY.GREBAS_DEL_VIGILANTE
+      vig-botas: CALAMITY.BOTAS_DEL_VIGILANTE
+      vig-mazo: CALAMITY_ARMAS.MAZO_DEL_VIGILANTE

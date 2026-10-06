@@ -69,12 +69,18 @@ final class Entregas implements Listener {
     static final List<String> GEMAS = List.of("gema", GEMA_CUSTODIO, GEMA_MATRIARCA, GEMA_SANADOR, GEMA_CENTINELA,
             GEMA_HERALDO, GEMA_VIGILANTE);
 
+    /**
+     * Las Placas del Vigilante: su botin (60 % por participante, piedad 3) y lo que pide la Forja para su set
+     * (entregar: placa-del-vigilante). Objeto de MMOItems CALAMITY_MATERIALES.PLACA_DEL_VIGILANTE (MMO_DEFECTO).
+     */
+    static final String PLACA_DEL_VIGILANTE = "placa-del-vigilante";
+
     /** Los objetos que entiende dar (ademas de credito:<tipo>, credito-caja:<tipo> y forja:<pieza>). 1.10: el Reclamo. */
     static final List<String> OBJETOS = List.of("esencia", "frasco", "frasco-1", "cristal", "tintura", "gema", "ascua",
             "talisman", "grabado", "salvoconducto", "libro", "llave", "llave-hito", FragmentosMasamune.OBJETO, "reclamo",
             PuenteBovedas.LLAVE_UMBRAL, PuenteBovedas.LLAVE_OMINOSA, Barometro.OBJETO,
             Faroles.OBJETO_I, Faroles.OBJETO_II, BrujulaCaida.OBJETO,
-            GEMA_CUSTODIO, GEMA_MATRIARCA, GEMA_SANADOR, GEMA_CENTINELA, GEMA_HERALDO, GEMA_VIGILANTE);
+            GEMA_CUSTODIO, GEMA_MATRIARCA, GEMA_SANADOR, GEMA_CENTINELA, GEMA_HERALDO, GEMA_VIGILANTE, PLACA_DEL_VIGILANTE);
 
     private final Hardcore hc;
     private final Set<BukkitTask> tareas = new HashSet<>();
@@ -299,12 +305,11 @@ final class Entregas implements Listener {
     }
 
     /**
-     * Calamity 1.13.0 · El botin del Vigilante que llega en otro lote: la gema Ojo del Vigilante y las placas
-     * del Mazo del Vigilante. Mientras MMOItems no los tenga, crear() da null y el Vigilante no los saca.
+     * Calamity 1.13.0 · El botin del Vigilante: la gema Ojo del Vigilante y las Placas del Vigilante (PLACA_DEL_VIGILANTE,
+     * arriba), que la Forja pide para su set. Mientras MMOItems no los tenga, crear() da null y el Vigilante no los saca.
+     * El Ojo es la gema del lote de gemas: un solo id para las dos ramas (1.13.0).
      */
-    /** El Ojo es la gema del lote de gemas: un solo id para las dos ramas (1.13.0). */
     static final String OJO_DEL_VIGILANTE = GEMA_VIGILANTE;
-    static final String PLACA_DEL_VIGILANTE = "placa-del-vigilante";
 
     /** Los ids de DIS sec. 4, por si la config del servidor aun no los tiene. */
     static final Map<String, String> MMO_DEFECTO = Map.ofEntries(
@@ -329,8 +334,14 @@ final class Entregas implements Listener {
             // 1.8.0: las katanas de Ambush.
             Map.entry("masamune", "CALAMITY_ARMAS.MASAMUNE"),
             Map.entry("crimson", "CALAMITY_ARMAS.CRIMSON_MASAMUNE"),
-            // 1.13.0: el botin del Vigilante (otro lote).
-            Map.entry(PLACA_DEL_VIGILANTE, "CALAMITY_MATERIALES.PLACA_DEL_VIGILANTE"));
+            // 1.13.0: el botin del Vigilante. Sus placas pagan su set en la Forja (forja:vig-*): tipo propio
+            // CALAMITY_MATERIALES (padre MISCELLANEOUS); armaduras en CALAMITY y el Mazo en CALAMITY_ARMAS.
+            Map.entry(PLACA_DEL_VIGILANTE, "CALAMITY_MATERIALES.PLACA_DEL_VIGILANTE"),
+            Map.entry("vig-yelmo", "CALAMITY.YELMO_DEL_VIGILANTE"),
+            Map.entry("vig-coraza", "CALAMITY.CORAZA_DEL_VIGILANTE"),
+            Map.entry("vig-grebas", "CALAMITY.GREBAS_DEL_VIGILANTE"),
+            Map.entry("vig-botas", "CALAMITY.BOTAS_DEL_VIGILANTE"),
+            Map.entry("vig-mazo", "CALAMITY_ARMAS.MAZO_DEL_VIGILANTE"));
 
     private String motivoSinObjeto(String o) {
         String id = idMmo(o);
@@ -983,6 +994,7 @@ final class Entregas implements Listener {
                 for (String k : List.of("yelmo", "coraza", "grebas", "soleretas", "hacha", "mascara", "filo", "guadana")) {
                     op.add("forja:" + k);
                 }
+                for (String k : Forja.PIEZAS_VIGILANTE) op.add("forja:" + k);
                 yield op;
             }
             case 3 -> nombresConectados();
@@ -1199,6 +1211,12 @@ final class Entregas implements Listener {
             gemasBien &= id != null && id.startsWith("CALAMITY_GEMAS.") && (g.equals("gema") || OBJETOS.contains(g));
         }
         h.ok("las siete gemas son de CALAMITY_GEMAS y dar() las entiende", gemasBien);
+        // El set del Vigilante: la placa y las cinco piezas de la Forja, aunque la config del servidor no las traiga.
+        h.igual("la Placa del Vigilante", "CALAMITY_MATERIALES.PLACA_DEL_VIGILANTE", idMmo(PLACA_DEL_VIGILANTE));
+        h.ok("dar() entiende la placa", OBJETOS.contains(PLACA_DEL_VIGILANTE));
+        h.igual("piezas del Vigilante en la Forja", List.of("CALAMITY.YELMO_DEL_VIGILANTE", "CALAMITY.CORAZA_DEL_VIGILANTE",
+                        "CALAMITY.GREBAS_DEL_VIGILANTE", "CALAMITY.BOTAS_DEL_VIGILANTE", "CALAMITY_ARMAS.MAZO_DEL_VIGILANTE"),
+                Forja.PIEZAS_VIGILANTE.stream().map(k -> idMmo("forja:" + k)).toList());
         boolean hayMmo = PuenteMmo.disponible();
         h.igual("sin MMOItems no se crea la tintura", hayMmo, crear("tintura") != null);
         if (!hayMmo) h.igual("motivo sin MMOItems", "sin MMOItems", motivoSinObjeto("tintura"));

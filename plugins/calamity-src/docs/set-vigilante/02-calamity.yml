@@ -1,0 +1,163 @@
+# =============================================================================
+#  Set del Vigilante · 3 de 6 · las cuatro piezas de armadura
+#  Fichero del servidor: plugins/MMOItems/item/calamity.yml (tipo CALAMITY): PEGAR AL FINAL.
+#
+#  Índice de protección ~95 (Veyra 100, el de ederus-kits-nivel-veyra):
+#    armadura 2.5/6/4/2.5 = 15, dureza 2.5 cada una = 10, vida 3.5/7.5/7.5/3.5 = 22,
+#    Protección VIII en las cuatro (EPF topado en 20), anti-empuje 0.1 cada una.
+#    Con el set: [2] +1 corazón (vida 20 + 22 + 2 = 44), [3] -1 % de daño.
+#    Golpe de 10: 15 - 40/18 = 12,78 de armadura -> x0,489 x0,2 x0,99 -> 454,5 de vida efectiva.
+#    Golpe de 100: max(3, 15 - 400/18) = 3 -> x0,88 x0,2 x0,99 -> 252,5.
+#    Media 353,5 / 370,3 (Veyra: 479,2 y 261,4) = 95,5.
+#  Hueco de gema de Calamity, mejora del Ascua (plantilla calamidad, 5 como mucho), irrompibles,
+#  adorno de costillas en resina (negro y naranja), nombres sin negrita, revision-id 1.
+# =============================================================================
+
+YELMO_DEL_VIGILANTE:
+  base:
+    revision-id: 1
+    material: NETHERITE_HELMET
+    tier: CALAMIDAD
+    set: VIGILANTE
+    armor: 2.5
+    armor-toughness: 2.5
+    max-health: 3.5
+    knockback-resistance: 0.1
+    unbreakable: true
+    enchants:
+      PROTECTION: 8
+      UNBREAKING: 8
+      MENDING: 1
+      RESPIRATION: 3
+    name: <#D9CBB8>◆ <#FCE3CC>Y<#FADCC2>e<#F8D6B8>l<#F7CFAE>m<#F5C9A4>o <#F3C29B>d<#F2BC91>e<#F0B587>l <#EEAE7D>V<#ECA873>i<#EAA169>g<#E99B5F>i<#E79456>l<#E58E4C>a<#E48742>n<#E28138>t<#E07A2E>e
+    trim-pattern: minecraft:rib
+    trim-material: minecraft:resin
+    hide-armor-trim: true
+    upgrade:
+      template: calamidad
+      reference: calamidad
+      max: 5
+      success: 100
+      workbench: false
+    gem-sockets:
+    - Calamidad
+    lore:
+    - '&7Huele a calabaza quemada.'
+    - ''
+    - <#D9CBB8>◆ <#E07A2E>Set del Vigilante
+    - '&7El jinete no tenía cara debajo:'
+    - '&7solo este yelmo, mirando.'
+    - ''
+    - <#D9CBB8>Botín de Calamity &8· <#E07A2E>Edición Vigilante
+    - ''
+CORAZA_DEL_VIGILANTE:
+  base:
+    revision-id: 1
+    material: NETHERITE_CHESTPLATE
+    tier: CALAMIDAD
+    set: VIGILANTE
+    armor: 6
+    armor-toughness: 2.5
+    max-health: 7.5
+    knockback-resistance: 0.1
+    unbreakable: true
+    enchants:
+      PROTECTION: 8
+      UNBREAKING: 8
+      MENDING: 1
+      THORNS: 3
+    name: <#D9CBB8>◆ <#FCE3CC>C<#FADDC3>o<#F9D7B9>r<#F7D0B0>a<#F5CAA7>z<#F4C49E>a <#F2BE94>d<#F0B88B>e<#EFB282>l <#EDAB78>V<#ECA56F>i<#EA9F66>g<#E8995C>i<#E79353>l<#E58D4A>a<#E38641>n<#E28037>t<#E07A2E>e
+    trim-pattern: minecraft:rib
+    trim-material: minecraft:resin
+    hide-armor-trim: true
+    upgrade:
+      template: calamidad
+      reference: calamidad
+      max: 5
+      success: 100
+      workbench: false
+    gem-sockets:
+    - Calamidad
+    lore:
+    - '&7Abollada desde dentro.'
+    - ''
+    - <#D9CBB8>◆ <#E07A2E>Set del Vigilante
+    - '&7La llevaba sobre las costillas,'
+    - '&7sin nada que proteger.'
+    - ''
+    - <#D9CBB8>Botín de Calamity &8· <#E07A2E>Edición Vigilante
+    - ''
+GREBAS_DEL_VIGILANTE:
+  base:
+    revision-id: 1
+    material: NETHERITE_LEGGINGS
+    tier: CALAMIDAD
+    set: VIGILANTE
+    armor: 4
+    armor-toughness: 2.5
+    max-health: 7.5
+    knockback-resistance: 0.1
+    unbreakable: true
+    enchants:
+      PROTECTION: 8
+      UNBREAKING: 8
+      MENDING: 1
+      SWIFT_SNEAK: 3
+    name: <#D9CBB8>◆ <#FCE3CC>G<#FADDC3>r<#F9D7B9>e<#F7D0B0>b<#F5CAA7>a<#F4C49E>s <#F2BE94>d<#F0B88B>e<#EFB282>l <#EDAB78>V<#ECA56F>i<#EA9F66>g<#E8995C>i<#E79353>l<#E58D4A>a<#E38641>n<#E28037>t<#E07A2E>e
+    trim-pattern: minecraft:rib
+    trim-material: minecraft:resin
+    hide-armor-trim: true
+    upgrade:
+      template: calamidad
+      reference: calamidad
+      max: 5
+      success: 100
+      workbench: false
+    gem-sockets:
+    - Calamidad
+    lore:
+    - '&7Todavía huelen a bestia.'
+    - ''
+    - <#D9CBB8>◆ <#E07A2E>Set del Vigilante
+    - '&7Rozaron el lomo del Zoglin'
+    - '&7noche tras noche, de caza.'
+    - ''
+    - <#D9CBB8>Botín de Calamity &8· <#E07A2E>Edición Vigilante
+    - ''
+BOTAS_DEL_VIGILANTE:
+  base:
+    revision-id: 1
+    material: NETHERITE_BOOTS
+    tier: CALAMIDAD
+    set: VIGILANTE
+    armor: 2.5
+    armor-toughness: 2.5
+    max-health: 3.5
+    knockback-resistance: 0.1
+    unbreakable: true
+    enchants:
+      PROTECTION: 8
+      UNBREAKING: 8
+      MENDING: 1
+      DEPTH_STRIDER: 3
+    name: <#D9CBB8>◆ <#FCE3CC>B<#FADCC2>o<#F8D6B8>t<#F7CFAE>a<#F5C9A4>s <#F3C29B>d<#F2BC91>e<#F0B587>l <#EEAE7D>V<#ECA873>i<#EAA169>g<#E99B5F>i<#E79456>l<#E58E4C>a<#E48742>n<#E28138>t<#E07A2E>e
+    trim-pattern: minecraft:rib
+    trim-material: minecraft:resin
+    hide-armor-trim: true
+    upgrade:
+      template: calamidad
+      reference: calamidad
+      max: 5
+      success: 100
+      workbench: false
+    gem-sockets:
+    - Calamidad
+    lore:
+    - '&7Pisan aunque no camines.'
+    - ''
+    - <#D9CBB8>◆ <#E07A2E>Set del Vigilante
+    - '&7Los pasos que oyes detrás de ti'
+    - '&7a veces son de estas botas.'
+    - ''
+    - <#D9CBB8>Botín de Calamity &8· <#E07A2E>Edición Vigilante
+    - ''

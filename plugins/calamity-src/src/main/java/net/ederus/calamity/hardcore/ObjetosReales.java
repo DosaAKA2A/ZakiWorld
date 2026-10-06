@@ -141,6 +141,35 @@ final class ObjetosReales {
         return y.isConfigurationSection("objetos") && y.isConfigurationSection("sets") ? y : null;
     }
 
+    /** El objetos-calamity.yml del jar, sin servidor (los autotest puros). Null si no esta o no se lee. */
+    static YamlConfiguration delJar() {
+        try (InputStream in = ObjetosReales.class.getClassLoader().getResourceAsStream(FICHERO)) {
+            return in == null ? null : leer(new String(in.readAllBytes(), StandardCharsets.UTF_8));
+        } catch (IOException e) {
+            return null;
+        }
+    }
+
+    /**
+     * El indice de proteccion de Ederus (memoria ederus-kits-nivel-veyra, el de la Armeria): la vida efectiva media ante un
+     * golpe de 10 y otro de 100, con la armadura topada en 30, la dureza en 20 y el EPF en 20 (Proteccion de las cuatro
+     * piezas), y la reduccion de daño en %. Formula de Minecraft: armadura efectiva = max(armadura/5, armadura - 4 *
+     * golpe / (dureza + 8)), hasta 20, y cada punto quita un 4 %. Veyra = 100 (46 de vida, 15 de armadura, 12 de dureza,
+     * Proteccion VIII: 479 y 261). vida es la total, con los 20 de base.
+     */
+    static double indiceProteccion(double vida, double armadura, double dureza, double epf, double reduccion) {
+        return 100 * vidaEfectivaMedia(vida, armadura, dureza, epf, reduccion) / vidaEfectivaMedia(46, 15, 12, 20, 0);
+    }
+
+    private static double vidaEfectivaMedia(double vida, double armadura, double dureza, double epf, double reduccion) {
+        double a = Math.min(30, armadura), d = Math.min(20, dureza), e = Math.min(20, epf), suma = 0;
+        for (double golpe : new double[]{10, 100}) {
+            double efectiva = Math.min(20, Math.max(a / 5, a - 4 * golpe / (d + 8)));
+            suma += vida / ((1 - efectiva / 25) * (1 - e / 25) * (1 - reduccion / 100));
+        }
+        return suma / 2;
+    }
+
     /** El TIPO.ID con el que el servidor crea el objeto: el de la config si lo trae (entregas.mmo, forja.piezas). */
     String idReal(String clave, ConfigurationSection o) {
         String pieza = o.getString("pieza");

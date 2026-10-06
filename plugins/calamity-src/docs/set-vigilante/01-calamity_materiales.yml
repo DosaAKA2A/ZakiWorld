@@ -1,0 +1,27 @@
+# =============================================================================
+#  Set del Vigilante · 2 de 6 · la Placa del Vigilante
+#  Fichero del servidor: plugins/MMOItems/item/calamity_materiales.yml (NUEVO; tipo CALAMITY_MATERIALES)
+#  El id es EXACTO: lo usan el botín del Vigilante y la Forja (CALAMITY_MATERIALES.PLACA_DEL_VIGILANTE).
+#  La marca lethal_world:ligado la pone Calamity al entregarla: va ligada a quien la gana.
+#  Escama de armadillo: parece una placa y no trae líneas vanilla en el tooltip (las plantillas de
+#  herrería sí). La chatarra de netherita ya es el Fragmento de Masamune.
+# =============================================================================
+
+PLACA_DEL_VIGILANTE:
+  base:
+    revision-id: 1
+    material: ARMADILLO_SCUTE
+    tier: CALAMIDAD
+    name: <#D9CBB8>◆ <#FCE3CC>P<#FADCC2>l<#F8D6B8>a<#F7CFAE>c<#F5C9A4>a <#F3C29B>d<#F2BC91>e<#F0B587>l <#EEAE7D>V<#ECA873>i<#EAA169>g<#E99B5F>i<#E79456>l<#E58E4C>a<#E48742>n<#E28138>t<#E07A2E>e
+    disable-crafting: true
+    disable-repairing: true
+    disable-interaction: true
+    lore:
+    - '&7Fría aunque la tengas en la mano.'
+    - ''
+    - <#D9CBB8>◆ <#E07A2E>El Vigilante
+    - '&7Vael la funde en la Forja para'
+    - '&7el set del Vigilante.'
+    - ''
+    - <#D9CBB8>Botín de Calamity &8· <#E07A2E>Edición Vigilante
+    - ''

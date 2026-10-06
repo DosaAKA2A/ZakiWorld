@@ -1,0 +1,41 @@
+# =============================================================================
+#  Set del Vigilante · 1 de 6 · el tipo de la Placa
+#  Fichero del servidor: plugins/MMOItems/item-types.yml
+#
+#  CALAMITY_MATERIALES NO existe en el dev: ni en item-types.yml (copia del 04-10; confírmalo en el
+#  panel, esa copia no es la de hoy) ni hay item/calamity_materiales.yml en la de hoy (06-10 21:50).
+#  Es el id que ya usan el botín del Vigilante y la Forja (CALAMITY_MATERIALES.PLACA_DEL_VIGILANTE).
+#
+#  PEGAR AL FINAL del fichero, tal cual. SANGRÍA DE 4 ESPACIOS, como VIP, ANOMALIA y CALAMITY: un
+#  item-types.yml que no se lee tumba TODOS los tipos. Copia antes (backup-AAAAMMDD).
+#  Después de /mi reload, en la consola: "N Item Types" (uno más que antes) y ningún
+#  "Could not register type" ni "Cannot load plugins/MMOItems/..." después del último "reloaded".
+#
+#  Hereda de MISCELLANEOUS (no se usa, no se come, no se equipa: es un material). modifier-source,
+#  el mismo que su padre (MAINHAND_ITEM): la placa no tiene stats, y así real-items lo da por bueno.
+#
+#  ORDEN de todo el lote (00 a 05):
+#   1. El jar de Calamity con el set y un reinicio: "forja:vig-*" y las Placas en la Forja son suyos.
+#   2. Copia de item-types.yml, item/calamity.yml, item/calamity_armas.yml e item-sets.yml.
+#   3. 00 al final de item-types.yml; 01 como fichero nuevo; 02, 03 y 04 al final de los suyos.
+#   4. /mi reload y la consola (tipos, "Could not"); /calamity selftest real-items y mmo.
+#   5. 05-A en plugins/Calamity/config.yml y /calamity reload; /calamity selftest altar y menus.
+#  Si MMOItems va antes que el jar no se rompe nada: el Vigilante ya soltaría Placas (el jar de hoy
+#  tiene su id), pero la Forja no las pediría hasta el paso 5.
+# =============================================================================
+
+CALAMITY_MATERIALES:
+    display: ARMADILLO_SCUTE
+    name: 'Calamity · Materiales'
+    parent: 'MISCELLANEOUS'
+    modifier-source: MAINHAND_ITEM
+    unident-item:
+        name: '&f#prefix#Material de Calamity sin identificar'
+        lore:
+        - '&7Este objeto está sin identificar.'
+        - '&7Hay que encontrar la forma de'
+        - '&7identificarlo.'
+        - '{tier}'
+        - '{tier}&8Datos del objeto:'
+        - '{range}&8- &7Niveles: &e#range#'
+        - '{tier}&8- &7Rareza: #prefix##tier#'

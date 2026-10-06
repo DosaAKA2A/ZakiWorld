@@ -10,6 +10,9 @@
 #  Masamune, y las seis gemas nuevas (docs/lote-gemas). Pasarlo a gen_config.py al regenerar.
 #  1.13.0 (a mano): el Manto baja a la escala de proteccion de Ederus, ~102 (Veyra 100, anomalias
 #  110, Dios 120): armadura 2.5/6/4/2.5, dureza 3, vida 4/9/9/4; bonos [2] +1 corazon, [3] -1 %, [4] sin vida.
+#  Set del Vigilante (a mano, docs/set-vigilante): indice ~95 (un poco por debajo de Veyra): armadura
+#  2.5/6/4/2.5, dureza 2.5, vida 3.5/7.5/7.5/3.5; [2] +1 corazon, [3] -1 % y +20 % anti-empuje, [4] sin vida;
+#  el Mazo (MACE) dentro del set, y la Placa del Vigilante (tipo propio CALAMITY_MATERIALES, padre MISCELLANEOUS).
 # =============================================================================
 
 objetos:
@@ -378,6 +381,140 @@ objetos:
       MAX_HEALTH: 1
     color-gema: Calamidad
     sin-receta: true
+  CALAMITY.YELMO_DEL_VIGILANTE:
+    pieza: vig-yelmo
+    nombre: Yelmo del Vigilante
+    fase: 3
+    padre: ARMOR
+    material: NETHERITE_HELMET
+    tier: CALAMIDAD
+    set: VIGILANTE
+    stats:
+      ARMOR: 2.5
+      ARMOR_TOUGHNESS: 2.5
+      MAX_HEALTH: 3.5
+      KNOCKBACK_RESISTANCE: 0.1
+    encantamientos:
+      protection: 8
+      unbreaking: 8
+      mending: 1
+      respiration: 3
+    irrompible: true
+    huecos:
+    - Calamidad
+    mejora:
+      plantilla: calamidad
+      referencia: calamidad
+      max: 5
+  CALAMITY.CORAZA_DEL_VIGILANTE:
+    pieza: vig-coraza
+    nombre: Coraza del Vigilante
+    fase: 3
+    padre: ARMOR
+    material: NETHERITE_CHESTPLATE
+    tier: CALAMIDAD
+    set: VIGILANTE
+    stats:
+      ARMOR: 6
+      ARMOR_TOUGHNESS: 2.5
+      MAX_HEALTH: 7.5
+      KNOCKBACK_RESISTANCE: 0.1
+    encantamientos:
+      protection: 8
+      unbreaking: 8
+      mending: 1
+      thorns: 3
+    irrompible: true
+    huecos:
+    - Calamidad
+    mejora:
+      plantilla: calamidad
+      referencia: calamidad
+      max: 5
+  CALAMITY.GREBAS_DEL_VIGILANTE:
+    pieza: vig-grebas
+    nombre: Grebas del Vigilante
+    fase: 3
+    padre: ARMOR
+    material: NETHERITE_LEGGINGS
+    tier: CALAMIDAD
+    set: VIGILANTE
+    stats:
+      ARMOR: 4
+      ARMOR_TOUGHNESS: 2.5
+      MAX_HEALTH: 7.5
+      KNOCKBACK_RESISTANCE: 0.1
+    encantamientos:
+      protection: 8
+      unbreaking: 8
+      mending: 1
+      swift_sneak: 3
+    irrompible: true
+    huecos:
+    - Calamidad
+    mejora:
+      plantilla: calamidad
+      referencia: calamidad
+      max: 5
+  CALAMITY.BOTAS_DEL_VIGILANTE:
+    pieza: vig-botas
+    nombre: Botas del Vigilante
+    fase: 3
+    padre: ARMOR
+    material: NETHERITE_BOOTS
+    tier: CALAMIDAD
+    set: VIGILANTE
+    stats:
+      ARMOR: 2.5
+      ARMOR_TOUGHNESS: 2.5
+      MAX_HEALTH: 3.5
+      KNOCKBACK_RESISTANCE: 0.1
+    encantamientos:
+      protection: 8
+      unbreaking: 8
+      mending: 1
+      depth_strider: 3
+    irrompible: true
+    huecos:
+    - Calamidad
+    mejora:
+      plantilla: calamidad
+      referencia: calamidad
+      max: 5
+  CALAMITY_ARMAS.MAZO_DEL_VIGILANTE:
+    pieza: vig-mazo
+    nombre: Mazo del Vigilante
+    fase: 3
+    padre: SWORD
+    material: MACE
+    tier: CALAMIDAD
+    set: VIGILANTE
+    stats:
+      ATTACK_DAMAGE: 20
+      ATTACK_SPEED: 1
+      CRITICAL_STRIKE_CHANCE: 20
+      CRITICAL_STRIKE_POWER: 1.8
+      PVE_DAMAGE: 10
+    encantamientos:
+      density: 2
+      wind_burst: 1
+      unbreaking: 8
+      mending: 1
+    irrompible: true
+    huecos:
+    - Calamidad
+    mejora:
+      plantilla: calamidad
+      referencia: calamidad
+      max: 5
+  CALAMITY_MATERIALES.PLACA_DEL_VIGILANTE:
+    pieza: placa-del-vigilante
+    nombre: Placa del Vigilante
+    fase: 3
+    padre: MISCELLANEOUS
+    material: ARMADILLO_SCUTE
+    tier: CALAMIDAD
+    sin-receta: true
 sets:
   CALAMIDAD:
     nombre: Manto de Calamidad
@@ -481,3 +618,42 @@ sets:
       nivel: '2'
       clave: MAX_HEALTH
       valor: 2
+  VIGILANTE:
+    nombre: Set del Vigilante
+    fase: 3
+    piezas:
+    - CALAMITY.YELMO_DEL_VIGILANTE
+    - CALAMITY.CORAZA_DEL_VIGILANTE
+    - CALAMITY.GREBAS_DEL_VIGILANTE
+    - CALAMITY.BOTAS_DEL_VIGILANTE
+    - CALAMITY_ARMAS.MAZO_DEL_VIGILANTE
+    bonos:
+      '2':
+        MAX_HEALTH: 2
+      '3':
+        DAMAGE_REDUCTION: 1
+        KNOCKBACK_RESISTANCE: 0.2
+      '4':
+        ATTACK_DAMAGE: 4
+        PVE_DAMAGE: 6
+    promete:
+    - texto: +1 ❤
+      nivel: '2'
+      clave: MAX_HEALTH
+      valor: 2
+    - texto: -1% daño
+      nivel: '3'
+      clave: DAMAGE_REDUCTION
+      valor: 1
+    - texto: +20% anti-empuje
+      nivel: '3'
+      clave: KNOCKBACK_RESISTANCE
+      valor: 0.2
+    - texto: +4 daño
+      nivel: '4'
+      clave: ATTACK_DAMAGE
+      valor: 4
+    - texto: +6% PvE
+      nivel: '4'
+      clave: PVE_DAMAGE
+      valor: 6

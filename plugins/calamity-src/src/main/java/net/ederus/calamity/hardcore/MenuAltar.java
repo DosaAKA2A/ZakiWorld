@@ -43,7 +43,8 @@ import java.util.UUID;
  *    de pagina en las esquinas de abajo y Volver al Altar en el centro;
  *  - la Forja (54, la que abre Vael y la tarjeta de la portada) pone cada grupo en su fila con
  *    una banda a los lados (el cristal negro del marco con el nombre del grupo al pasar por
- *    encima): Mejoras (con Grabar), El Manto y el Hacha, El Vestigio del Eco y La Guadana.
+ *    encima): Mejoras (con Grabar), El Manto y el Hacha, El Vigilante y, en una fila, el Eco, la
+ *    Parca y Ambush (Vestigio, Guadana y Masamune: con una quinta fila no cabria en una hoja).
  * Lo que no es comprar salio del Altar: depositar va en el icono del saldo (y en el Tasador);
  * Tu camino y las horas activas, los contratos, en el Tasador; los rankings y el Tablero, en el
  * Cazador; la encuesta y la lista de deseos, en sus comandos. Los trueques depositar y camino
@@ -109,7 +110,7 @@ final class MenuAltar implements Listener {
             Map.entry("gema", List.of("Lior la engarza en cualquier", "pieza de Calamity.")),
             Map.entry("grabado", List.of("Sube de nivel un encantamiento", "que ya esté al máximo.",
                     "Solo en equipo vanilla.")),
-            Map.entry("ascua", List.of("Sube un nivel de mejora a una", "pieza del Manto, del Vestigio", "del Eco o a la Guadaña.")),
+            Map.entry("ascua", List.of("Sube un nivel de mejora a una", "pieza del Manto, del Vigilante,", "del Eco o a la Guadaña.")),
             Map.entry("mascara-eco", List.of("Casco del Vestigio del Eco.", "Con el Filo del Eco activa", "el bono del set.")),
             Map.entry("filo-eco", List.of("Espada del Vestigio del Eco.", "Con la Máscara del Eco activa", "el bono del set.")),
             Map.entry("guadana", List.of("El arma de la Parca. Se forja", "con Fragmentos de Guadaña.")),
@@ -148,7 +149,7 @@ final class MenuAltar implements Listener {
             new Categoria(LLAVES, Material.VAULT, "Llaves y ofrendas",
                     List.of("La Llave del Caos y la Ofrenda,", "a cambio de Esencias."), "Llaves"),
             new Categoria(FORJA, Material.ANVIL, "La Forja",
-                    List.of("El Manto, el Vestigio del Eco,", "la Guadaña, la Masamune y mejoras."), "Forja"));
+                    List.of("El Manto, el Vigilante, el Eco,", "la Guadaña, la Masamune y mejoras."), "Forja"));
 
     /** La tarjeta del Kit de Expedicion en la portada: nombre, lore y si brilla (se puede pedir ya). */
     record Tarjeta(Component nombre, List<Component> lore, boolean brillo) {
@@ -263,10 +264,11 @@ final class MenuAltar implements Listener {
         if (t.pieza() == null) return "mejoras";
         String c = t.credito() == null ? "" : t.credito();
         if (c.startsWith("sello:") || c.equals(Creditos.ERRANTE)) return "manto";
-        if (c.equals("marca")) return "eco";
-        // Las Masamune (piden Fragmentos de Masamune) van en la fila de la Guadana: con una quinta fila
-        // la Forja no cabria en una hoja.
-        if (c.equals("fragmento") || t.pide(FragmentosMasamune.OBJETO) > 0) return "guadana";
+        // El set del Vigilante: piden Placas del Vigilante.
+        if (t.pide(Entregas.PLACA_DEL_VIGILANTE) > 0) return "vigilante";
+        // El Vestigio (Marcas de Eco), la Guadana (Fragmentos de Guadana) y las Masamune (Fragmentos de
+        // Masamune) comparten fila: con una quinta fila la Forja no cabria en una hoja.
+        if (c.equals("marca") || c.equals("fragmento") || t.pide(FragmentosMasamune.OBJETO) > 0) return "amenazas";
         return "piezas";
     }
 
@@ -277,11 +279,11 @@ final class MenuAltar implements Listener {
                 List.of("Para el equipo que ya tienes:", "talismán, gemas, grabados y ascuas."), new ArrayList<>()));
         s.put("manto", new Seccion("manto", Material.ORANGE_STAINED_GLASS_PANE, "El Manto y el Hacha",
                 List.of("Cada pieza pide el Sello", "de su minijefe."), new ArrayList<>()));
-        s.put("eco", new Seccion("eco", Material.CYAN_STAINED_GLASS_PANE, "El Vestigio del Eco",
-                List.of("Piden Marcas de Eco, que salen", "de las Lágrimas de Eco."), new ArrayList<>()));
-        s.put("guadana", new Seccion("guadana", Material.PURPLE_STAINED_GLASS_PANE, "La Guadaña y las Masamune",
-                List.of("La Guadaña pide Fragmentos de Guadaña,", "que salen de las Campanas de la Parca.",
-                        "Las Masamune piden Fragmentos de", "Masamune, que salen de vencer a Ambush."), new ArrayList<>()));
+        s.put("vigilante", new Seccion("vigilante", Material.BROWN_STAINED_GLASS_PANE, "El Vigilante",
+                List.of("Cada pieza pide Placas del Vigilante,", "que suelta al ser vencido."), new ArrayList<>()));
+        s.put("amenazas", new Seccion("amenazas", Material.PURPLE_STAINED_GLASS_PANE, "El Eco, la Parca y Ambush",
+                List.of("El Vestigio pide Marcas de Eco;", "la Guadaña, Fragmentos de Guadaña;",
+                        "las Masamune, Fragmentos de Masamune."), new ArrayList<>()));
         s.put("piezas", new Seccion("piezas", Material.LIGHT_GRAY_STAINED_GLASS_PANE, "Otras piezas",
                 List.of("Piden créditos de Calamity."), new ArrayList<>()));
         for (Altar.Trueque t : trueques(FORJA, todos, salvoconducto)) s.get(grupoDe(t)).cosas().add(new Cosa(t, null));
@@ -587,6 +589,10 @@ final class MenuAltar implements Listener {
         if (t.pieza() == null) return List.of();
         List<String> out = new ArrayList<>();
         if (Set.of("yelmo", "coraza", "grebas", "soleretas").contains(t.pieza())) out.add("Pieza del Manto de Calamidad.");
+        if (Forja.PIEZAS_VIGILANTE.contains(t.pieza())) {
+            out.add(t.pieza().equals("vig-mazo") ? "El arma del set del Vigilante." : "Pieza del set del Vigilante.");
+            out.add("Las Placas las suelta el Vigilante.");
+        }
         String c = t.credito() == null ? "" : t.credito();
         if (c.startsWith("sello:")) {
             String de = Forja.delMinijefe(c.substring(6));
@@ -653,6 +659,12 @@ final class MenuAltar implements Listener {
             return tiene >= en.cantidad()
                     ? Marco.tiene(llaves + (en.cantidad() == 1 ? "  (la entregas)" : "  (las entregas)"))
                     : Marco.falta(PuenteBovedas.nombre(en.objeto(), 2).replaceFirst("^2 ", "") + ": llevas " + tiene + " de " + en.cantidad(), null);
+        }
+        if (Forja.esPlaca(en.objeto())) {
+            // El set del Vigilante: "✔ 3 Placas del Vigilante  (las entregas)" o "✘ Placas del Vigilante: llevas 1 de 3".
+            return tiene >= en.cantidad()
+                    ? Marco.tiene(Forja.placas(en.cantidad()) + (en.cantidad() == 1 ? "  (la entregas)" : "  (las entregas)"))
+                    : Marco.falta("Placas del Vigilante: llevas " + tiene + " de " + en.cantidad(), null);
         }
         String que = "Tu " + Forja.nombrePieza(en.objeto());
         return tiene >= en.cantidad() ? Marco.tiene(que + "  (la entregas)") : Marco.falta(que, "no la llevas encima");
@@ -721,6 +733,9 @@ final class MenuAltar implements Listener {
                 int n = Math.max(1, fa.faltan());
                 if (PuenteBovedas.esLlave(fa.objeto())) {
                     yield (n == 1 ? "Te falta una " : "Te faltan ") + PuenteBovedas.nombre(fa.objeto(), n) + ".";
+                }
+                if (Forja.esPlaca(fa.objeto())) {
+                    yield n == 1 ? "Te falta una Placa del Vigilante." : "Te faltan " + Forja.placas(n) + ".";
                 }
                 yield FragmentosMasamune.OBJETO.equals(fa.objeto())
                         ? (n == 1 ? "Te falta " : "Te faltan ") + FragmentosMasamune.nombre(n) + "."
@@ -831,6 +846,13 @@ final class MenuAltar implements Listener {
                 resumen.add(llaves);
                 continue;
             }
+            if (Forja.esPlaca(en.objeto())) {
+                // El set del Vigilante: las Placas, con las que llevas y las que te quedarian, con su aspecto real.
+                String placas = Forja.placas(en.cantidad());
+                pagos.add(pago(materialPlaca(), "−" + placas, altar.caja().cuantos(u, en.objeto()), en.cantidad()));
+                resumen.add(placas);
+                continue;
+            }
             // Una pieza, sin "tienes/te quedarian": es una y se va.
             String que = "Tu " + Forja.nombrePieza(en.objeto());
             pagos.add(pago(Material.NETHERITE_SWORD, "−" + que, -1, 0));
@@ -861,6 +883,16 @@ final class MenuAltar implements Listener {
         Marco.rellenar(inv);
         p.openInventory(inv);
         Marco.sonar(p, forja ? "block.anvil.place" : "block.note_block.hat", 0.5f, 1.3f);
+    }
+
+    /**
+     * El material de la Placa del Vigilante tal cual la crea MMOItems (el de su plantilla); sin MMOItems, el de
+     * docs/set-vigilante (la escama de armadillo: una placa, sin lineas vanilla en el tooltip).
+     */
+    private Material materialPlaca() {
+        Entregas e = hc.entregas();
+        ItemStack it = e == null ? null : hc.valor("entregas", () -> e.crear(Entregas.PLACA_DEL_VIGILANTE), null);
+        return it != null ? it.getType() : Material.ARMADILLO_SCUTE;
     }
 
     /** Lo que se paga en la pantalla de confirmar: "−48 Esencias", lo que tienes y lo que te queda. */
@@ -1146,9 +1178,31 @@ final class MenuAltar implements Listener {
                 idsDe(trueques(LLAVES, serie, true)));
         ids = new ArrayList<>();
         for (Seccion s : forja(serie, false)) ids.add(s.id());
-        h.igual("grupos de la Forja", List.of("mejoras", "manto", "eco", "guadana"), ids);
+        h.igual("grupos de la Forja", List.of("mejoras", "manto", "vigilante", "amenazas"), ids);
         List<Cosa> mejoras = forja(serie, false).get(0).cosas();
         h.igual("Grabar al final de las mejoras", "grabar", mejoras.get(mejoras.size() - 1).boton());
+        // El set del Vigilante: su fila, debajo del Manto; el Vestigio, la Guadana y las Masamune comparten la ultima.
+        Map<String, List<String>> filas = new LinkedHashMap<>();
+        for (Seccion s : forja(serie, false)) {
+            List<String> es = new ArrayList<>();
+            for (Cosa x : s.cosas()) if (x.t() != null) es.add(x.t().id());
+            filas.put(s.id(), es);
+        }
+        h.igual("la fila del Vigilante", List.of("yelmo-vigilante", "coraza-vigilante", "grebas-vigilante", "botas-vigilante",
+                "mazo-vigilante"), filas.get("vigilante"));
+        h.igual("la fila del Eco, la Parca y Ambush", List.of("mascara-eco", "filo-eco", "guadana", "masamune", "crimson-masamune"),
+                filas.get("amenazas"));
+        List<Marco.Sitio> sf = sitios(FORJA, serie, false);
+        h.igual("la Forja con el Vigilante: una hoja, cuatro filas con su banda", List.of(9, 18, 27, 36), bandas(sf, 0));
+        var planoLinea = net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer.plainText();
+        h.igual("placas que lleva", "✔ 3 Placas del Vigilante  (las entregas)",
+                planoLinea.serialize(entregaLinea(new Altar.Entrega(Entregas.PLACA_DEL_VIGILANTE, 3), 4)));
+        h.ok("placas que le faltan", planoLinea.serialize(entregaLinea(new Altar.Entrega(Entregas.PLACA_DEL_VIGILANTE, 3), 1))
+                .contains("Placas del Vigilante: llevas 1 de 3"));
+        h.igual("por que no, en el icono", "Te faltan 2 Placas del Vigilante.",
+                porQueNo(new Altar.Plan(null, null, "objeto", new Altar.Falta(Entregas.PLACA_DEL_VIGILANTE, 1, 3))));
+        h.igual("por que no, con una", "Te falta una Placa del Vigilante.",
+                porQueNo(new Altar.Plan(null, null, "objeto", new Altar.Falta(Entregas.PLACA_DEL_VIGILANTE, 2, 3))));
         h.igual("pagina que no existe: la portada", UMBRAL, pagina("camino"));
 
         // Muchos trueques en la config: hojas, y cada uno una vez entre todas.

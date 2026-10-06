@@ -28,9 +28,10 @@ import java.util.UUID;
  *
  * - Nombres de piezas y creditos para el menu y los mensajes ("el Sello del Custodio de
  *   las Ruinas", "5 Marcas de Eco").
- * - Reposicion: si una pieza del Manto, el Hacha o la Guadana se perdio dentro hace menos
- *   de forja.reposicion-dias (14), vuelve a mitad de Esencias (ObjetosCalamity apunta la
- *   perdida al morir; el motor del Altar aplica el precio y borra la perdida al reponer).
+ * - Reposicion: si una pieza del Manto, el Hacha, la Guadana o el set del Vigilante se perdio
+ *   dentro hace menos de forja.reposicion-dias (14), vuelve a mitad de Esencias (ObjetosCalamity
+ *   apunta la perdida al morir; el motor del Altar aplica el precio y borra la perdida al reponer).
+ *   Lo que pide entregar (las Placas del Vigilante) se sigue pidiendo entero, como el Sello del Manto.
  * - Lo que pasa al forjar: stats.forjas y forja-<pieza> (los hitos Vestigio y Guadana los
  *   leen), telemetria "forja", anuncio a todo el servidor (P-W02) y, con la primera pieza,
  *   el aviso de la vitrina de /flex (sin copiar nada: tocar el almacen de /flex desde otro
@@ -57,6 +58,12 @@ final class Forja {
         // 1.8.0: las katanas de Ambush.
         PIEZAS.put("masamune", "Masamune");
         PIEZAS.put("crimson", "Crimson Masamune");
+        // El set del Vigilante: cada pieza pide entregar Placas del Vigilante, su botin.
+        PIEZAS.put("vig-yelmo", "Yelmo del Vigilante");
+        PIEZAS.put("vig-coraza", "Coraza del Vigilante");
+        PIEZAS.put("vig-grebas", "Grebas del Vigilante");
+        PIEZAS.put("vig-botas", "Botas del Vigilante");
+        PIEZAS.put("vig-mazo", "Mazo del Vigilante");
         CORTAS.put("yelmo", "Yelmo");
         CORTAS.put("coraza", "Coraza");
         CORTAS.put("grebas", "Grebas");
@@ -68,6 +75,12 @@ final class Forja {
         CORTAS.put("masamune", "Masamune");
         CORTAS.put("crimson", "Crimson Masamune");
     }
+
+    /**
+     * Las piezas del set del Vigilante (forja:<pieza>), en el orden de la Forja. Sus TIPO.ID salen de
+     * forja.piezas si el servidor los trae y, si no, de los de serie (config del jar, Entregas.MMO_DEFECTO).
+     */
+    static final List<String> PIEZAS_VIGILANTE = List.of("vig-yelmo", "vig-coraza", "vig-grebas", "vig-botas", "vig-mazo");
 
     private final Hardcore hc;
     private final Altar altar;
@@ -106,6 +119,16 @@ final class Forja {
             case "fragmento" -> n == 1 ? "1 Fragmento de Guadaña" : n + " Fragmentos de Guadaña";
             default -> n + " " + t;
         };
+    }
+
+    /** Si lo que pide entregar un trueque son Placas del Vigilante (el set del Vigilante). */
+    static boolean esPlaca(String objeto) {
+        return Entregas.PLACA_DEL_VIGILANTE.equals(objeto);
+    }
+
+    /** "1 Placa del Vigilante", "3 Placas del Vigilante". */
+    static String placas(int n) {
+        return n == 1 ? "1 Placa del Vigilante" : n + " Placas del Vigilante";
     }
 
     /** Si esa pieza se perdio dentro hace menos de "dias" (reposicion abierta). */

@@ -1,0 +1,28 @@
+# =============================================================================
+#  Set del Vigilante · 5 de 6 · el set
+#  Fichero del servidor: plugins/MMOItems/item-sets.yml: PEGAR AL FINAL (clave de primer nivel).
+#  Las cinco piezas llevan set: VIGILANTE (las cuatro de armadura y el Mazo).
+#  El patrón de los sets: [2] +1 corazón, [3] defensa (-1 % como el Manto) y lo temático, +20 % de
+#  anti-empuje (con las cuatro piezas, 0.4 + 0.2 = 60 %; el tope es 100 %): contra el Zoglin que
+#  te lanza y la maza del jinete. [4] sin vida: +4 daño y +6 % PvE, por debajo del [4] del Manto
+#  (+6 daño, +8 % PvE y +4 % crítico). Ojo: el Lanzamiento y el Martillazo del Vigilante son velocidad
+#  directa y el anti-empuje no los frena (la caída sigue siendo tuya); frena los golpes normales.
+# =============================================================================
+
+VIGILANTE:
+  name: '<#E07A2E>Set del Vigilante'
+  bonuses:
+    '2':
+      max-health: 2
+    '3':
+      damage-reduction: 1
+      knockback-resistance: 0.2
+    '4':
+      attack-damage: 4
+      pve-damage: 6
+  lore-tag:
+    - ''
+    - '<#D9CBB8>◆ <#E07A2E>Set del Vigilante'
+    - '<#B85F1F>[2] <#F6D2B0>+1 ❤'
+    - '<#B85F1F>[3] <#F6D2B0>-1% daño  +20% anti-empuje'
+    - '<#B85F1F>[4] <#F6D2B0>+4 daño  +6% PvE'

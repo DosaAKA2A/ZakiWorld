@@ -187,10 +187,16 @@ final class MenuEngarzador implements Listener {
         return out;
     }
 
-    /** Piezas y gemas: los tipos cuyas marcas conserva ActualizacionMmo. */
+    /**
+     * Piezas, gemas y la Placa del Vigilante (CALAMITY_MATERIALES): los tipos cuyas marcas conserva ActualizacionMmo.
+     * La placa sale ligada como las piezas; si un dia sube su revision-id, que no pierda el ligado.
+     */
     Set<String> tiposCalamity() {
         Set<String> out = new LinkedHashSet<>(tiposPieza());
         out.addAll(tiposGema());
+        Entregas ent = hc.entregas();
+        String placa = tipoDe(ent == null ? Entregas.MMO_DEFECTO.get(Entregas.PLACA_DEL_VIGILANTE) : ent.idMmo(Entregas.PLACA_DEL_VIGILANTE));
+        if (placa != null) out.add(placa);
         return out;
     }
 
@@ -747,6 +753,8 @@ final class MenuEngarzador implements Listener {
         h.ok("las gemas no cuentan como pieza", !tp.contains("CALAMITY_GEMAS"));
         h.ok("tipos de gema: CALAMITY_GEMAS " + tg, tg.contains("CALAMITY_GEMAS"));
         h.ok("al actualizar se conservan las marcas de piezas y gemas", tiposCalamity().containsAll(tp) && tiposCalamity().containsAll(tg));
+        h.ok("y las de la Placa del Vigilante (CALAMITY_MATERIALES), que no es pieza ni gema",
+                tiposCalamity().contains("CALAMITY_MATERIALES") && !tp.contains("CALAMITY_MATERIALES") && !tg.contains("CALAMITY_MATERIALES"));
 
         // Las reglas con fichas inventadas (sin MMOItems).
         String sc = "Sin color";
