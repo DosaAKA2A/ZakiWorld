@@ -1325,6 +1325,177 @@ hardcore:
     particulas: true
     cartel: true
 
+  # ------------------------------------------------------------------ La corrupción
+  # En Calamity nada de lo que construye un jugador dura: sin granjas AFK ni bases que aguanten. Todo bloque que
+  # pone un jugador fuera de la zona spawn (también el agua, la lava o la nieve polvo de un cubo) se anota, y en
+  # el barrido que llega cuando ya lleva edad-minutos puesto se corrompe según su forma y el color del bioma:
+  #   bloque entero -> uno de los enteros de la paleta, al azar;
+  #   losa / escalera / muro -> la losa / escalera / muro de la paleta, con la misma forma (arriba o abajo,
+  #   orientación, con agua...). Un muro sin muro en la paleta pasa a bloque entero;
+  #   lo funcional y lo que no es sólido -> se pudre: desaparece sin soltar nada (su inventario se vacía antes).
+  # Lo corrompido no se vuelve a anotar y al romperlo no suelta nada. Lo exento no se toca nunca. Lo que pone
+  # alguien en creativo (sin contar-creativo) o el propio plugin no se anota. Si un bloque anotado se rompe o
+  # lo cambia otra cosa antes del barrido, se olvida; lo que el jugador le hace (descortezar, arar, encerar)
+  # no lo salva. Lo de un chunk descargado espera a que se cargue: nunca se fuerza una carga.
+  # Staff: /calamity corruption info | now | clear <radius>. Sin esta sección valen estos mismos valores.
+  corrupcion:
+    activa: true
+    # Cada cuánto se hace un barrido, y lo que tiene que llevar puesto un bloque para corromperse (minutos;
+    # admiten decimales). Lo anotado sobrevive a los reinicios y el tiempo apagado también cuenta.
+    cada-minutos: 5
+    edad-minutos: 5
+    # Bloques como mucho por tick en un barrido (el resto, en los ticks siguientes).
+    por-tick: 50
+    # Unas pocas partículas del bloque nuevo y un crujido grave (una vez por chunk y barrido) que solo se oye
+    # a radio-sonido bloques. sonido vacío = sin sonido.
+    particulas: true
+    sonido: "block.sculk.spread"
+    radio-sonido: 12
+    # La primera vez que alguien pone un bloque en cada entrada a Calamity se le dice en el chat.
+    aviso: true
+    texto-aviso: "En Calamity nada de lo que construyes dura. La corrupción lo reclama."
+    # Bloques: su nombre de Minecraft, "#etiqueta" (una etiqueta de bloques de Minecraft) o "*final" (todo
+    # bloque cuyo nombre acaba así). Lo que no existe en el servidor se avisa en la consola y se ignora.
+    # Lo exento no se toca nunca: las antorchas y las fogatas (las hogueras de calma son fogatas de almas).
+    exentos: [torch, wall_torch, soul_torch, soul_wall_torch, copper_torch, copper_wall_torch, "#campfires"]
+    # Lo que se pudre en vez de corromperse.
+    funcionales:
+      # Contenedores
+      - hopper
+      - chest
+      - trapped_chest
+      - "#copper_chests"
+      - barrel
+      - "#shulker_boxes"
+      - ender_chest
+      - furnace
+      - blast_furnace
+      - smoker
+      - dispenser
+      - dropper
+      - crafter
+      # Redstone
+      - piston
+      - sticky_piston
+      - observer
+      - redstone_wire
+      - redstone_torch
+      - redstone_wall_torch
+      - repeater
+      - comparator
+      - redstone_block
+      - redstone_lamp
+      - "*copper_bulb"
+      - daylight_detector
+      - target
+      - note_block
+      - jukebox
+      - tnt
+      - "#lightning_rods"
+      - sculk_sensor
+      - calibrated_sculk_sensor
+      - sculk_shrieker
+      - sculk_catalyst
+      - "#rails"
+      - lever
+      - "#buttons"
+      - "#pressure_plates"
+      - tripwire_hook
+      - tripwire
+      # Puertas, trampillas, vallas, camas y lo que se trepa (escaleras de mano, andamios, enredaderas)
+      - "#trapdoors"
+      - "#doors"
+      - "#fences"
+      - "#fence_gates"
+      - "#beds"
+      - "#climbable"
+      # Mesas de crafteo y de trabajo
+      - crafting_table
+      - cartography_table
+      - fletching_table
+      - smithing_table
+      - loom
+      - stonecutter
+      - grindstone
+      - brewing_stand
+      - lectern
+      - composter
+      - "#cauldrons"
+      - enchanting_table
+      - "#anvil"
+      - bell
+      - beacon
+      - conduit
+      - respawn_anchor
+      - lodestone
+      - "#beehives"
+      - "#wooden_shelves"
+      - chiseled_bookshelf
+      - decorated_pot
+      # Camas elásticas, carteles y alfombras
+      - slime_block
+      - honey_block
+      - "#all_signs"
+      - "#banners"
+      - "#wool_carpets"
+      - moss_carpet
+      - pale_moss_carpet
+      # Flores y cultivos
+      - "#flowers"
+      - "#crops"
+      - attached_pumpkin_stem
+      - attached_melon_stem
+      - "#saplings"
+      - sugar_cane
+      - cactus
+      - bamboo
+      - bamboo_sapling
+      - sweet_berry_bush
+      - nether_wart
+      - cocoa
+      - kelp
+      - kelp_plant
+      - "#cave_vines"
+      - "#candles"
+      - "#candle_cakes"
+      - cake
+      - powder_snow
+      # Generadores de mobs (si alguien llegara a ponerlos)
+      - spawner
+      - trial_spawner
+      - vault
+    # El color de cada bioma, como "panacea/<id>" (el "bracken:" de delante es opcional). "*" = cualquier
+    # otro bioma. Gana el más concreto. Para quitar un color, déjalo con [].
+    biomas:
+      rojo: ["panacea/crimson_organism"]
+      verde: ["panacea/creeper_dominion", "panacea/horsetail_tropics", "panacea/polypore_plains", "panacea/wildflower_bog", "panacea/hungering_jungle", "panacea/conure_conclave", "panacea/ravenous_greenwood"]
+      amarillo: ["panacea/bamboo_valley", "panacea/honeybee_biome", "panacea/sweltering_swamp", "panacea/quicksand_springs"]
+      negro: ["panacea/condemned_taiga", "*"]
+    # Los bloques de cada color. "a|b" = a, y si a no existe en este servidor, b (el cinabrio llega con
+    # Minecraft 26.2; en 26.1.2 se usa lo más parecido). Solo valen bloques sin luz y que no sean funcionales;
+    # cada lista tiene que ser de su forma (las losas, losas...). Un muro: [] = sin muro (pasa a bloque entero).
+    paletas:
+      rojo:
+        enteros: [netherrack, "cinnabar|red_terracotta", nether_wart_block]
+        losa: ["cinnabar_slab|red_nether_brick_slab", "polished_cinnabar_slab|red_nether_brick_slab"]
+        escalera: ["cinnabar_stairs|red_nether_brick_stairs", "polished_cinnabar_stairs|red_nether_brick_stairs"]
+        muro: ["cinnabar_wall|red_nether_brick_wall", "polished_cinnabar_wall|red_nether_brick_wall"]
+      verde:
+        enteros: [moss_block, green_wool, mossy_cobblestone, warped_planks, azalea_leaves]
+        losa: [warped_slab]
+        escalera: [warped_stairs, mossy_cobblestone_stairs]
+        muro: [mossy_cobblestone_wall]
+      amarillo:
+        enteros: [yellow_terracotta, stripped_bamboo_block, honeycomb_block]
+        losa: [bamboo_mosaic_slab]
+        escalera: [bamboo_mosaic_stairs]
+        muro: []
+      negro:
+        enteros: [deepslate, cobbled_deepslate, tuff, polished_tuff]
+        losa: [tuff_slab]
+        escalera: [tuff_stairs]
+        muro: [tuff_wall, cobbled_deepslate_wall]
+
   # ------------------------------------------------------------------ Clima (1.9.0)
   # El tiempo de Calamity segun el bioma. Solo actua mientras llueve de verdad en el mundo
   # y nunca en la zona spawn. Todo pasa en la pantalla de cada jugador: el mundo no se toca.

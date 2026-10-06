@@ -84,6 +84,12 @@ public final class Marcas {
      * persistentes; la marca sirve para reconocerlas en los eventos y que nada las toque (Calamity 1.13.0).
      */
     public static final NamespacedKey VIGILANTE = clave("vigilante_pieza");
+    /**
+     * La corrupcion (Corrupcion). En un chunk: INTEGER_ARRAY con las posiciones (Corrupcion.local) de los bloques ya
+     * corrompidos, que no se vuelven a anotar y no sueltan nada al romperse. En un bloque que cae (FallingBlock):
+     * LONG con la hora en que se puso, para anotar donde aterriza.
+     */
+    public static final NamespacedKey CORRUPCION = clave("corrupcion");
 
     private Marcas() {
     }
@@ -97,7 +103,7 @@ public final class Marcas {
         return List.of(AMENAZA, PRESA, ECO, ECO_DUENO, DANO_JUGADOR, VIDA_LOGICA, CASCARA, ECO_COPIA, RELIQUIA, RELIQUIA_ID,
                 RELIQUIA_ORIGEN, RELIQUIA_NACIO, RELIQUIA_ESPECIAL, RELIQUIA_NIVEL, RELIQUIA_MINIJEFE,
                 RELIQUIA_VALIDA, RELIQUIA_ENTRADA, TROFEO, PRESTADO, LIGADO, TALISMAN, GRABADO, SALVOCONDUCTO, FRAGMENTO_MASAMUNE, RECLAMO,
-                PERGAMINO, BAROMETRO, VIGILANTE);
+                PERGAMINO, BAROMETRO, VIGILANTE, CORRUPCION);
     }
 
     /** Si una entidad es nuestra (PARCA, planidera, Eco...). */
