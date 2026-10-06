@@ -88,7 +88,7 @@ final class PeleaVigilante implements Runnable {
                 "Agacha la cabeza, embiste a uno solo y lo manda por los aires.",
                 1, 4, 100, 20, 0.30, 4, Material.FEATHER, 40),
         EMBESTIDA("vi_embestida", "charge", "embestida", "Embestida",
-                "Marca una línea en el suelo y la cruza a toda velocidad, apartando a quien pille.",
+                "Marca una línea en el suelo y la cruza a toda velocidad, apartando a quien alcance.",
                 1, 4, 160, 20, 0.35, 4, Material.ANVIL, 50),
         HUNDIMIENTO("vi_hundimiento", "burrow", "hundimiento", "Hundimiento",
                 "Se mete bajo tierra y sale debajo de uno de ustedes: si el suelo tiembla bajo tus pies, apártate.",
@@ -1036,7 +1036,7 @@ final class PeleaVigilante implements Runnable {
         Location l = cuerpo.getLocation();
         Compat.sound(l.getWorld(), l, "entity.zoglin.ambient", 1.6f, 0.4f);
         Component c = Component.text("El ", Paleta.TEXTO).append(Component.text("Vigilante", Paleta.VIGILANTE))
-                .append(Component.text(" se ha estrellado: queda aturdido y recibe más daño.", Paleta.TEXTO));
+                .append(Component.text(" se estrelló: queda aturdido y recibe más daño.", Paleta.TEXTO));
         for (Player p : Fx.viewersNear(l, 48)) hc.barra().aviso(p, c, 3);
         hc.plugin().bitacora().anotar("vigilante", "aturdido", presaNombre);
         nombreBarra();
@@ -1298,6 +1298,11 @@ final class PeleaVigilante implements Runnable {
         int x0 = (int) Math.floor(suelo.getX() - m + 0.01), x1 = (int) Math.floor(suelo.getX() + m - 0.01);
         int z0 = (int) Math.floor(suelo.getZ() - m + 0.01), z1 = (int) Math.floor(suelo.getZ() + m - 0.01);
         int y0 = (int) Math.floor(suelo.getY() + 0.01), y1 = (int) Math.floor(suelo.getY() + alto - 0.01);
+        // La caja (hasta 4x4) puede asomar al chunk de al lado: leer un bloque de un chunk descargado lo cargaria
+        // en el hilo principal. Sin sus chunks cargados no cabe.
+        for (int cx = x0 >> 4; cx <= x1 >> 4; cx++) {
+            for (int cz = z0 >> 4; cz <= z1 >> 4; cz++) if (!w.isChunkLoaded(cx, cz)) return false;
+        }
         for (int x = x0; x <= x1; x++) {
             for (int z = z0; z <= z1; z++) {
                 for (int y = y0; y <= y1; y++) {

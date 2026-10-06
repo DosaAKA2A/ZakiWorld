@@ -1095,6 +1095,10 @@ final class Vigilante implements Listener {
                 try {
                     f = Double.parseDouble(args.length > 2 ? args[2] : "x");
                 } catch (NumberFormatException e) {
+                    f = Double.NaN;
+                }
+                // "NaN" tambien lo lee parseDouble, y pasaria los topes de abajo: vida NaN para el Vigilante.
+                if (Double.isNaN(f)) {
                     decirAviso(quien, "Uso: /calamity vigilant health <0-1>");
                     return;
                 }
@@ -1337,6 +1341,9 @@ final class Vigilante implements Listener {
 
     /** Las cuentas de otros dias, los dias gastados viejos y los cobros de hace mas de horas-entre-cobros. */
     private void podar() {
+        // Los reintentos ya vencidos de quien no volvio a pasar por intentar (se desconecto, salio de Calamity).
+        long ya = System.currentTimeMillis();
+        reintento.values().removeIf(hasta -> hasta <= ya);
         String hoy = dia();
         boolean cambio = false;
         ConfigurationSection s = hc.datos().getConfigurationSection("vigilante.cuenta");

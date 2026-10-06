@@ -816,9 +816,13 @@ final class Parca implements Listener {
         // Marcado en grupo: los que esten cerca y lleven quieto-marca-grupo tambien.
         List<Player> grupo = new ArrayList<>();
         grupo.add(p);
+        Vigilante vigilante = hc.vigilante();
         for (Player o : p.getWorld().getPlayers()) {
             if (o.equals(p) || !hc.cuenta(o) || persigue(o) || exento(o) || hc.enSpawn(o)) continue;
             if (o.getLocation().distanceSquared(p.getLocation()) > a.radioMarcaGrupo * a.radioMarcaGrupo) continue;
+            // Ley 6: quien pelea con un Vigilante no entra en el grupo (su quieto de antes de la pelea sigue
+            // apuntado: la Huella solo lo congela).
+            if (vigilante != null && hc.valor("vigilante", () -> vigilante.persigue(o), false)) continue;
             if (hc.huella() != null && hc.huella().quieto(o) >= a.quietoMarcaGrupo) grupo.add(o);
         }
         int r = repeticiones(p.getUniqueId());

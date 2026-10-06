@@ -53,7 +53,8 @@ import java.util.function.Predicate;
  *     a quien esta exento de la Parca (el staff que vigila) ni a quien no cuenta (espectador, creativo);
  *   - ley 2: ninguna campana. "La campana siempre es real: solo la Parca y las muertes" (lo dice el menu
  *     de Calamity). El plan pedia block.bell.resonate; en su lugar suena el lamento;
- *   - ley 6: con la PARCA encima o en combate (Combate.enCombate) se calla todo menos el latido;
+ *   - ley 6: con la PARCA o un Vigilante encima, o en combate (Combate.enCombate), se calla todo menos
+ *     el latido;
  *   - sonidos vanilla que tambien oye Bedrock (Geyser los traduce todos, el autotest mira que existan);
  *   - topes: una pausa minima entre dos sustos y un tope por minuto (el latido no cuenta).
  *
@@ -254,6 +255,9 @@ final class Locura {
     private final Alucinaciones alucinaciones;
     private final Random azar = new Random();
     private final Map<UUID, Estado> estados = new HashMap<>();
+    /** La config de la que salieron los ajustes de cache (por identidad). */
+    private Object vista;
+    private Ajustes cache;
 
     Locura(Hardcore hc, Alucinaciones alucinaciones) {
         this.hc = hc;
@@ -264,8 +268,17 @@ final class Locura {
                 Subcomandos.PERMISO, this::comando, this::tab);
     }
 
+    /**
+     * Los ajustes de la config viva. Se leian enteros en cada llamada (cada segundo por jugador, y otra vez
+     * en cada tirada); ahora solo cuando cambia la config (un /calamity reload la cambia entera).
+     */
     Ajustes ajustes() {
-        return Ajustes.de(hc.cfg().getConfigurationSection("locura"));
+        Object v = hc.plugin().getConfig();
+        if (cache == null || v != vista) {
+            vista = v;
+            cache = Ajustes.de(hc.cfg().getConfigurationSection("locura"));
+        }
+        return cache;
     }
 
     // ---------------------------------------------------------------- el segundo
@@ -339,10 +352,16 @@ final class Locura {
         return ex != null && hc.valor("exentos", () -> ex.parca(p.getUniqueId()), false);
     }
 
-    /** Ley 6: la PARCA le persigue o esta en combate (PvP, PARCA, Eco, minijefe). */
+    /**
+     * Ley 6: la PARCA le persigue, un Vigilante va a por el (viene escarbando o pelea a su lado) o esta
+     * en combate (PvP, PARCA, Eco, minijefe). Los golpes fuertes del Vigilante van por DanoVerdadero y
+     * no etiquetan combate, y su rugido quita cordura: sin esto, los sustos sonarian en plena pelea.
+     */
     private boolean callado(Player p) {
         Parca parca = hc.parca();
         if (parca != null && hc.valor("parca", () -> parca.persigue(p), false)) return true;
+        Vigilante vigilante = hc.vigilante();
+        if (vigilante != null && hc.valor("vigilante", () -> vigilante.persigue(p), false)) return true;
         Combate c = hc.combate();
         return c != null && hc.valor("combate", () -> c.enCombate(p), false);
     }

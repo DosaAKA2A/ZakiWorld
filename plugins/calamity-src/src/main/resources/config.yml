@@ -1295,8 +1295,8 @@ hardcore:
   alucinaciones: {activo: false, por-minuto: [3.0, 2.0, 1.0, 0.5, 0], coste-pegar: 2, tipos: {pasos: true, puerta: true, figura: true, siseo: true, golpe: true, susurro: true, carrera: true}}
 
   # Locura: los sustos que oye quien tiene la cordura baja (Locura.java). Todo es solo para él y suena
-  # a su alrededor; nada en la zona spawn, nada a quien está exento de la Parca y nada con la Parca
-  # encima o en combate (salvo el latido). Ni efectos ni partículas: sonido y chat. Si falta esta
+  # a su alrededor; nada en la zona spawn, nada a quien está exento de la Parca y nada con la Parca o
+  # un Vigilante encima o en combate (salvo el latido). Ni efectos ni partículas: sonido y chat. Si falta esta
   # sección (el config del servidor no se reemplaza), valen estos mismos valores, que están en el código.
   # Probar sin bajar la cordura: /calamity madness <player> <steps|breath|scream|heartbeat|wail|whisper|all>.
   # Sonidos: sonido, volumen y tono (de 0.5 a 2; por debajo de 0.5 Java no baja más). Sin campanas: la

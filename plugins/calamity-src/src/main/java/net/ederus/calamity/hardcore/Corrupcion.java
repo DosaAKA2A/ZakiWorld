@@ -12,7 +12,9 @@ import org.bukkit.World;
 import org.bukkit.block.Block;
 import org.bukkit.block.BlockFace;
 import org.bukkit.block.BlockState;
+import org.bukkit.block.PistonMoveReaction;
 import org.bukkit.block.Chest;
+import org.bukkit.block.TileState;
 import org.bukkit.block.data.Bisected;
 import org.bukkit.block.data.BlockData;
 import org.bukkit.block.data.Directional;
@@ -107,7 +109,8 @@ import java.util.logging.Level;
  *     Lo exento (corrupcion.exentos: antorchas y fogatas, que son las hogueras de calma) no se toca nunca.
  *  4. Lo corrompido lleva una marca en el chunk (Marcas.CORRUPCION, un INTEGER_ARRAY de posiciones): no se
  *     vuelve a anotar y al romperlo no suelta nada. Si una explosion, un wither o un enderman se lo llevan,
- *     desaparece sin soltar nada; si un piston lo mueve, la marca va con el.
+ *     desaparece sin soltar nada; si un piston lo mueve, la marca va con el, y si lo rompe (las hojas),
+ *     desaparece sin soltar nada.
  *
  * Si el bloque anotado se rompe o lo cambia otra cosa antes del barrido, se olvida. Lo que el propio jugador
  * le hace al bloque (descortezarlo, ararlo, encerarlo, que se oxide, que el polvo de hormigon frague, que caiga
@@ -234,6 +237,8 @@ final class Corrupcion implements Listener {
     private long escrita;
     private BukkitTask trabajo;
     private long proximo;
+    /** Tras parar(): ni barridos ni comandos (el registro de subcomandos sigue apuntando aqui). */
+    private boolean parado;
     private boolean sucio;
     private int segundosSinGuardar;
     private Object vista;
@@ -1168,18 +1173,31 @@ final class Corrupcion implements Listener {
         mover(e.getBlock().getWorld(), e.getBlocks(), e.getDirection());
     }
 
-    /** Lo que mueve un piston se lleva su anotacion y su marca: primero se quitan todas y luego se ponen. */
+    /**
+     * Lo que mueve un piston se lleva su anotacion y su marca: primero se quitan todas y luego se ponen.
+     *
+     * La lista del evento trae tambien lo que el piston rompe en vez de mover (PistonMoveReaction.BREAK: las hojas,
+     * las plantas). Eso no se mueve: lo anotado se olvida (suelta lo suyo, como al romperlo) y lo corrompido (las
+     * hojas de azalea de la paleta verde) se quita ya sin soltar nada; el piston lee el bloque despues del evento y,
+     * con aire, no suelta botin.
+     */
     private void mover(World w, List<Block> bloques, BlockFace dir) {
         if (bloques.isEmpty() || !hc.esHardcore(w)) return;
         String mundo = w.getName();
+        Ajustes a = ajustes();
         List<Map.Entry<Block, Anotado>> anotados = new ArrayList<>();
         List<Block> marcas = new ArrayList<>();
         for (Block b : bloques) {
+            boolean rompe = b.getPistonMoveReaction() == PistonMoveReaction.BREAK;
             Anotado an = registro.olvidar(mundo, b.getX(), b.getY(), b.getZ());
-            if (an != null) anotados.add(Map.entry(b.getRelative(dir), an));
+            if (an != null) {
+                sucio = true;
+                if (!rompe) anotados.add(Map.entry(b.getRelative(dir), an));
+            }
             if (marcado(b)) {
                 desmarcar(b);
-                marcas.add(b.getRelative(dir));
+                if (!rompe) marcas.add(b.getRelative(dir));
+                else if (a.corruptos().contains(b.getType())) b.setType(Material.AIR, false);
             }
         }
         for (Map.Entry<Block, Anotado> en : anotados) {
@@ -1187,7 +1205,6 @@ final class Corrupcion implements Listener {
             registro.anotar(mundo, d.getX(), d.getY(), d.getZ(), en.getValue());
         }
         for (Block d : marcas) marcar(d);
-        if (!anotados.isEmpty()) sucio = true;
     }
 
     // ------------------------------------------------------------------ eventos: chunks y jugadores
@@ -1261,7 +1278,7 @@ final class Corrupcion implements Listener {
     }
 
     private void arrancarTrabajo() {
-        if (trabajo != null || cola.isEmpty()) return;
+        if (parado || trabajo != null || cola.isEmpty()) return;
         trabajo = hc.plugin().getServer().getScheduler().runTaskTimer(hc.plugin(), this::trabajar, 1L, 1L);
     }
 
@@ -1340,6 +1357,11 @@ final class Corrupcion implements Listener {
             if (antes == null || !a.funcionales().contains(antes) || !a.funcionales().contains(actual)) {
                 return Resultado.OLVIDADO;
             }
+            // Nunca un bloque con bloque-entidad que no es el que se anoto: lo pone otro (el cofre de una ruina
+            // o la boveda de una Boveda Caida donde el jugador habia puesto una enredadera o una flor). Los
+            // cambios de un contenedor del propio jugador (el cobre que se oxida, encerarlo) ya se siguen por
+            // sus eventos, asi que aqui solo puede ser de otro.
+            if (b.getState(false) instanceof TileState) return Resultado.OLVIDADO;
         }
         BlockData viejo = b.getBlockData();
         Destino d = destino(actual, viejo, a);
@@ -1390,7 +1412,9 @@ final class Corrupcion implements Listener {
         Material queda = Columnas.DE_AGUA.contains(m) ? Material.WATER : Material.AIR;
         // Con agua alrededor se avisa a los vecinos para que el agua vuelva a su sitio.
         b.setType(queda, anegado);
-        if (otra != null && otra.getType() == m) {
+        // La otra parte de una cama puede caer en el chunk de al lado: si no esta cargado, no se carga (la otra
+        // mitad tiene su propia anotacion y se pudre cuando su chunk se cargue).
+        if (otra != null && otra.getWorld().isChunkLoaded(otra.getX() >> 4, otra.getZ() >> 4) && otra.getType() == m) {
             registro.olvidar(otra.getWorld().getName(), otra.getX(), otra.getY(), otra.getZ());
             vaciar(otra);
             otra.setType(queda, false);
@@ -1509,6 +1533,7 @@ final class Corrupcion implements Listener {
 
     /** Al parar las reglas: lo que quedaba del barrido se hara en el siguiente arranque. */
     void parar() {
+        parado = true;
         HandlerList.unregisterAll(this);
         if (trabajo != null) trabajo.cancel();
         trabajo = null;
@@ -1522,6 +1547,12 @@ final class Corrupcion implements Listener {
     // ================================================================== comando
 
     private void comando(CommandSender quien, String[] args) {
+        // El registro de subcomandos es estatico y sobrevive a parar(): con las reglas apagadas, este modulo ya no
+        // escucha ni guarda, y un barrido suyo corromperia bloques con una lista vieja.
+        if (parado) {
+            quien.sendMessage(ComandoCalamity.mensaje("La corrupción está parada: las reglas de Calamity están apagadas."));
+            return;
+        }
         String sub = args.length > 1 ? args[1].toLowerCase(Locale.ROOT) : "info";
         Ajustes a = ajustes();
         long ahora = System.currentTimeMillis();
