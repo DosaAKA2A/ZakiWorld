@@ -70,13 +70,15 @@ public final class Paleta {
     /** Ambush en un solo color (el menu de la Sentencia, la barra de accion). */
     public static final TextColor AMBUSH = TextColor.color(0xFF6B6B);
     /**
-     * Calamity 1.13.0 · El Vigilante: del amarillo palido de su luz al oro de sus nucleos (su nombre, sus
-     * avisos y su barra). Claro a proposito: se lee sobre el fondo oscuro del chat y de la barra.
+     * Calamity 1.15.0 · El naranja calabaza del Vigilante, el jinete sin cabeza de Halloween (#E07A2E,
+     * pedido de Dosa). Es solo suyo: su nombre sobre el jinete, el titulo de su barra de jefe, los avisos y
+     * titulos de su llegada y de sus fases, su botin y su ficha de /anomaly. Ningun otro color de la Paleta
+     * apunta aqui ni lo comparte (ni la marca, ni las cifras, ni el fuego, ni las estrellas).
      */
-    public static final int VIGILANTE_DESDE = 0xFFF1B8;
-    public static final int VIGILANTE_HASTA = 0xF2B92C;
-    /** El Vigilante en un solo color (barra de accion, avisos, nucleos). */
-    public static final TextColor VIGILANTE = TextColor.color(0xF5C842);
+    public static final int CALABAZA_RGB = 0xE07A2E;
+    public static final TextColor CALABAZA = TextColor.color(CALABAZA_RGB);
+    /** El Vigilante en un solo color: el naranja calabaza (barra de accion, avisos, su nombre en el chat). */
+    public static final TextColor VIGILANTE = CALABAZA;
     /** El gris acero de la Masamune (el nombre de la katana que lleva Ambush). */
     public static final TextColor ACERO = TextColor.color(0xC9D1D9);
     /**
@@ -385,9 +387,12 @@ public final class Paleta {
         return degradado(texto, AMBUSH_DESDE, AMBUSH_HASTA);
     }
 
-    /** Calamity 1.13.0 · Degradado del Vigilante (su nombre, sus avisos y su barra de jefe). */
+    /**
+     * El nombre del Vigilante (sobre el jinete, en su barra de jefe y en los titulos de su llegada y sus
+     * fases): todo en el naranja calabaza, sin degradado. 1.15.0: antes era un degradado amarillo y oro.
+     */
     public static Component vigilante(String texto) {
-        return degradado(texto, VIGILANTE_DESDE, VIGILANTE_HASTA);
+        return degradado(texto, CALABAZA_RGB, CALABAZA_RGB);
     }
 
     /**

@@ -93,6 +93,7 @@ final class VigilanteType implements AnomalyType {
         return "Vigilante";
     }
 
+    /** 1.15.0: su ficha de /anomaly en el naranja calabaza del Vigilante (Paleta.CALABAZA, solo suyo). */
     @Override
     public TextColor color() {
         return Paleta.VIGILANTE;

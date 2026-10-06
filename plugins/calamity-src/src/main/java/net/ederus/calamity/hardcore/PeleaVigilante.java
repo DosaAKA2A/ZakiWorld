@@ -3078,13 +3078,21 @@ final class PeleaVigilante implements Runnable {
             }
             Location l = hueco.clone();
             l.setYaw(yawSalir);
-            if (monturaViva()) mover(l);
+            if (monturaViva()) {
+                mover(l);
+            } else if (jineteVivo() && Vigilante.cargado(l) && !hc.enSpawn(l)) {
+                // Sin bestia (muerta con /kill o borrada a medio hundirse): el jinete iba con ella bajo tierra y
+                // nadie lo subiria; se quedaba enterrado, sin poder pegarle, hasta que la pelea caducara.
+                hc.amenazas().teleportar(jinete, l);
+            }
             restaurar();
         }
 
         private void restaurar() {
             if (!monturaViva()) {
-                if (oculto) ocultar(false);
+                // Siempre, no solo si iba oculto: al hundirse (etapa 0) y al salir (etapa 3) el jinete ya es
+                // invulnerable sin estar oculto, y sin la bestia nadie se lo quitaba (jinete inmortal).
+                ocultar(false);
                 return;
             }
             ocultar(false);
@@ -3299,6 +3307,7 @@ final class PeleaVigilante implements Runnable {
         float yaw;
         List<Location> marca;
         BlockData bd;
+        boolean barrido, reves;
 
         Barrido(Player obj) {
             super(Habilidad.BARRIDO);
@@ -3322,10 +3331,18 @@ final class PeleaVigilante implements Runnable {
                     marca = arco(c, yaw, a.barridoRadio, a.barridoAngulo);
                     pintar(w, marca, tono(t / (double) aviso()), bd);
                 }
-                if (t == aviso() / 2 && conNpc && npc.valido()) npc.reves();
+                if (!reves && t >= aviso() / 2) {
+                    reves = true;
+                    if (conNpc && npc.valido()) npc.reves();
+                }
                 return false;
             }
-            if (t == aviso()) golpe(w, c);
+            // t sube de 2 en 2: con un aviso-ticks impar en la config, "t == aviso()" no llegaba nunca y el
+            // barrido avisaba en el suelo y no golpeaba.
+            if (!barrido) {
+                barrido = true;
+                golpe(w, c);
+            }
             return t >= aviso() + 6;
         }
 
@@ -3848,6 +3865,10 @@ final class PeleaVigilante implements Runnable {
      * se descarga su mundo.
      */
     void limpiar() {
+        // Antes de quitar nada: en Paper 26 la retirada de una entidad montada lanza un EntityDismountEvent
+        // CANCELABLE (stopRiding sin suppressCancellation), y con montadoDeseado en pie onDesmonte lo vetaria:
+        // el maniqui y el jinete se irian del mundo colgados todavia de la bestia como pasajeros.
+        montadoDeseado = false;
         for (Tecnica tec : new Tecnica[]{actual, suelta, arriba}) {
             if (tec == null) continue;
             try {
@@ -3994,6 +4015,20 @@ final class PeleaVigilante implements Runnable {
         h.ok("jinete: calabaza TALLADA en la cabeza (nunca jack o'lantern) y una maza en la mano",
                 CASCO == Material.CARVED_PUMPKIN && ARMA == Material.MACE);
         h.ok("solo el jinete lleva nombre y barra; la montura, ninguno", NOMBRE_JINETE && !NOMBRE_MONTURA);
+        // 1.15.0: el naranja calabaza de Halloween (#E07A2E), propio del Vigilante.
+        net.kyori.adventure.text.format.TextColor calabaza = net.kyori.adventure.text.format.TextColor.color(0xE07A2E);
+        h.igual("color: el Vigilante va en naranja calabaza (#E07A2E)", calabaza, Paleta.VIGILANTE);
+        Component nombre = Paleta.vigilante("Vigilante");
+        boolean todoCalabaza = !nombre.children().isEmpty();
+        for (Component letra : nombre.children()) todoCalabaza &= calabaza.equals(letra.color());
+        h.ok("color: su nombre (cartel, barra, titulos) entero en naranja calabaza, sin degradado", todoCalabaza);
+        boolean propio = true;
+        for (net.kyori.adventure.text.format.TextColor otro : List.of(Paleta.MARCA, Paleta.CIFRA, Paleta.FUEGO, Paleta.ESTRELLA,
+                Paleta.POLEN, Paleta.PARCA, Paleta.AMBUSH, Paleta.AVISO, Paleta.DETALLE)) {
+            propio &= !calabaza.equals(otro);
+        }
+        h.ok("color: el naranja calabaza es solo suyo (no es el de la marca, las cifras, el fuego, las estrellas ni otra amenaza)",
+                propio);
         h.igual("golpe de un jugador a la montura: pasa al jinete", Redirige.AL_JINETE, redirigir(Rol.MONTURA, false, true));
         h.igual("golpe de un jugador al maniqui: pasa al jinete", Redirige.AL_JINETE, redirigir(Rol.CASCARA, false, true));
         h.igual("caida, fuego o un mob a la montura: no entra nada", Redirige.CANCELA, redirigir(Rol.MONTURA, false, false));
