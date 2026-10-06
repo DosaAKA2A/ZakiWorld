@@ -544,6 +544,10 @@ hardcore:
     pausa-ventana-minutos: 10     # ...por esta ventana (cierra a los alts que se pegan)
     reconexion-minutos: 30        # la huella se guarda en memoria tras desconectarse
     gracia-minutos: 5             # sin contar tras acabar una Parca
+    # 1.14.1: tras VENCERLA (no si cosecha a su presa ni si se va), sus marcados y quien le hizo al
+    # menos botin.participacion-minima de su vida no la ven en este rato: ni por quedarse quietos,
+    # ni por la Grieta, ni en el grupo de otra presa. Sobrevive a salir, morir y reiniciar. 0 = sin tregua.
+    tregua-minutos: 60
     # 1.1.1: tambien es moverse interactuar de forma VARIADA: romper, poner o picar bloques,
     # golpear y abrir contenedores en sitios distintos, con la camara girando sin patron. Un
     # autoclicker repite objetivo y angulo, y eso sigue sin contar. Y volando (creativo, /fly,

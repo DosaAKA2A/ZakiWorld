@@ -3305,7 +3305,7 @@ final class ParcaAnomalia extends BossFight implements ParcaViva {
             Fx.helix(cuerpo.getLocation(), 0.8, h, 12, 2, l -> Compat.spawn(w, Compat.SOUL, l, 1, 0, 0, 0, 0));
         }
         if (t >= TICKS_COSECHA) {
-            graciaMarcados();
+            hc.seguro("parca", () -> gestor.acabar(this, Tregua.Fin.COSECHA, null, 0));
             limpiar();
         }
     }
@@ -3338,7 +3338,8 @@ final class ParcaAnomalia extends BossFight implements ParcaViva {
         estado = Estado.FIN;
         edmCerrado = true;
         limpiarPropio();
-        graciaMarcados();
+        // 1.14.1: la han vencido: gracia y, ademas, la tregua (Tregua) con el mismo dano del botin.
+        hc.seguro("parca", () -> gestor.acabar(this, Tregua.Fin.VENCIDA, dano, vida));
         if (presa != null) gestor.borrarPendiente(presa);
     }
 
@@ -3361,17 +3362,8 @@ final class ParcaAnomalia extends BossFight implements ParcaViva {
         }
         hc.plugin().bitacora().anotar("parca", "se-va", "sin botin", presaNombre, motivo, "anomalia");
         gestor.telemetria("se-va", this, null, null);
-        graciaMarcados();
+        hc.seguro("parca", () -> gestor.acabar(this, Tregua.Fin.SE_VA, null, 0));
         limpiar();
-    }
-
-    /** Fin de la PARCA para sus marcados: gracia-minutos sin contar en la Huella. */
-    private void graciaMarcados() {
-        if (hc.huella() == null) return;
-        for (UUID id : marcados) {
-            Player m = hc.plugin().getServer().getPlayer(id);
-            if (m != null && hc.esHardcore(m)) hc.seguro("huella", () -> hc.huella().gracia(m));
-        }
     }
 
     /**

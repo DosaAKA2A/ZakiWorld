@@ -878,10 +878,13 @@ final class Huella implements Listener {
      * el comodin de LuckPerms todo el staff quedaba inmune), quien ya tiene una
      * PARCA encima, quien esta en la llegada protegida, la gracia tras una PARCA y los
      * muertos y quien canaliza el Cristal (DIS). Espectador y creativo ya los filtra
-     * Hardcore.tick (cuenta).
+     * Hardcore.tick (cuenta). 1.14.1: y quien esta en tregua por haberla vencido (Tregua).
      */
     private boolean exento(Player p, Rastro r, long ahora, Ajustes a) {
         if (p.isDead() || ahora < r.graciaHasta) return true;
+        // 1.14.1 · En tregua no cuenta nada: ni avisos, ni campana, ni la Grieta del spawn. Vive en la Parca y
+        // en hardcore-datos, no en el Rastro: entrar, salir o morir no la tocan.
+        if (hc.parca() != null && hc.valor("parca", () -> hc.parca().enTregua(p), false)) return true;
         // Canalizando el Cristal se esta quieto a proposito: son 5-10 s y luego sale.
         if (hc.canalizando(p)) return true;
         if (hc.exentos() != null && hc.exentos().parca(p.getUniqueId())) return true;

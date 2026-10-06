@@ -1627,7 +1627,7 @@ final class PeleaParca implements Runnable, ParcaViva {
         }
         if (t >= TICKS_COSECHA) {
             limpiar();
-            graciaMarcados();
+            hc.seguro("parca", () -> gestor.acabar(this, Tregua.Fin.COSECHA, null, 0));
             estado = Estado.FIN;
         }
     }
@@ -1656,7 +1656,8 @@ final class PeleaParca implements Runnable, ParcaViva {
         }
         hc.seguro("parca", () -> gestor.pagar(this, dano, vida, segundos));
         limpiar();
-        graciaMarcados();
+        // 1.14.1: la han vencido: gracia y, ademas, la tregua (Tregua) con el mismo dano del botin.
+        hc.seguro("parca", () -> gestor.acabar(this, Tregua.Fin.VENCIDA, dano, vida));
         if (presa != null) gestor.borrarPendiente(presa);
         estado = Estado.FIN;
     }
@@ -1679,17 +1680,8 @@ final class PeleaParca implements Runnable, ParcaViva {
         hc.plugin().bitacora().anotar("parca", "se-va", "sin botin", presaNombre, motivo);
         gestor.telemetria("se-va", this, null, null);
         limpiar();
-        graciaMarcados();
+        hc.seguro("parca", () -> gestor.acabar(this, Tregua.Fin.SE_VA, null, 0));
         estado = Estado.FIN;
-    }
-
-    /** Fin de la PARCA para sus marcados: gracia-minutos sin contar en la Huella. */
-    private void graciaMarcados() {
-        if (hc.huella() == null) return;
-        for (UUID id : marcados) {
-            Player m = hc.plugin().getServer().getPlayer(id);
-            if (m != null && hc.esHardcore(m)) hc.seguro("huella", () -> hc.huella().gracia(m));
-        }
     }
 
     /** Retira todo lo suyo (idempotente): barra, planideras, maniqui, cuerpo y la pelea de la tarea de 2 ticks. */

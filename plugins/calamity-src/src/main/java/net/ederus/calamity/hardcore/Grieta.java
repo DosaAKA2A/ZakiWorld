@@ -230,7 +230,8 @@ final class Grieta {
         Parca parca = hc.parca();
         if (parca == null) return false;
         Parca.Ajustes a = parca.ajustes();
-        if (!a.activa || parca.vivas() >= a.maximoSimultaneas || parca.persigue(p)) return false;
+        // 1.14.1: en tregua no se abre (la Huella ya no le cuenta: esto es por si alguien la llama sin mirar).
+        if (!a.activa || parca.vivas() >= a.maximoSimultaneas || parca.persigue(p) || parca.enTregua(p)) return false;
         enCurso.add(id);
         World w = p.getWorld();
         Location boca = p.getLocation().clone();

@@ -118,6 +118,8 @@ final class Parca implements Listener {
     private int segundos;
     /** Calamity 1.1.0: el puente con las anomalias de EDM (la PARCA DIOS); null si EDM no trae las clases. */
     private final PuenteAnomalia anomalia;
+    /** 1.14.1 · Quien la ha vencido y hasta cuando no viene a por el (hardcore-datos parca.tregua). */
+    private final Tregua tregua = new Tregua();
 
     private record Segada(String mundo, double x, double z, long hasta) {
     }
@@ -126,11 +128,15 @@ final class Parca implements Listener {
         this.hc = hc;
         hc.plugin().getServer().getPluginManager().registerEvents(this, hc.plugin());
         cargarSegadas();
+        tregua.cargar(hc.datos());
         Autotest.registrar("parca", Parca::autotest);
+        Autotest.registrar("parca-tregua", Tregua::autotest);
         Subcomandos.staff().registrar("reaper",
                 "reaper <player> [seconds] | info <player> | health <0-1> | ability <name> | remove [player]"
-                        + " | test <x> <y> <z> [N] | anomaly",
+                        + " | test <x> <y> <z> [N] | anomaly | truce <player> [clear|set <minutes>]",
                 Subcomandos.PERMISO, this::comando, this::tab);
+        // 1.14.1 · %lethalworld_parca_tregua%: lo que le queda de tregua (mm:ss o h:mm:ss); vacio sin ella.
+        PlaceholdersLethal.registrar("parca_tregua", (j, resto) -> j == null ? "" : treguaPlaceholder(j.getUniqueId()));
         // Calamity 1.1.0: la PARCA tambien es una anomalia DIOS de EDM (ParcaType/ParcaAnomalia).
         anomalia = PuenteAnomalia.crear(this);
     }
@@ -165,6 +171,8 @@ final class Parca implements Listener {
         final int furiaMinutos, duracionMaxima, atasco;
         final double presenciaRadio, presenciaFactor, radioCosecha, radioCosechaBloques, tierraSegadaRadio;
         final int tierraSegadaMinutos, marcaFuera, pendienteHoras, esperaDesconexion, reapareceSegundos;
+        /** 1.14.1 · Minutos sin PARCA para quienes la vencen (Tregua); 0 = sin tregua. */
+        final int treguaMinutos;
         final int cristalSegundos;
         final double cristalRadio;
         final String cabezaTextura;
@@ -258,6 +266,9 @@ final class Parca implements Listener {
             pendienteHoras = s.getInt("pendiente-horas", 24);
             esperaDesconexion = s.getInt("espera-desconexion-segundos", 60);
             reapareceSegundos = s.getInt("reaparece-segundos", 5);
+            // 1.14.1: "si alguien vence a la Parca, esta no aparece durante 1 hora aunque se queden AFK" (Dosa).
+            // De serie aqui: el config.yml del servidor no se reemplaza y no la trae.
+            treguaMinutos = Math.max(0, s.getInt("tregua-minutos", 60));
             cristalSegundos = s.getInt("cristal-segundos-marcado", 10);
             cristalRadio = s.getDouble("cristal-radio-marcado", 24);
             cabezaTextura = s.getString("cabeza-textura", "");
@@ -490,6 +501,7 @@ final class Parca implements Listener {
     void tick() {
         peleas.removeIf(pe -> pe.estado() == ParcaViva.Estado.FIN);
         if (++segundos % 60 == 0) podarSegadas();
+        if (!tregua.vacia()) avisarTreguas();
         // Si EDM recarga su modulo de anomalias, el catalogo nuevo no la trae: se vuelve a registrar.
         if (segundos % 60 == 0 && anomalia != null) hc.seguro("parca", anomalia::revisar);
     }
@@ -619,8 +631,11 @@ final class Parca implements Listener {
     /**
      * Entra por la puerta. Si la PARCA le esperaba (marca de la puerta o algo pendiente), vuelve
      * cuando acaba la llegada protegida (M5): a 24 bloques con marca (P-24), a 6 si no (P-22).
+     * 1.14.1: en tregua se le recuerda cuanto le queda, y lo pendiente espera a otra entrada.
      */
     void alEntrar(Player p) {
+        recordarTregua(p);
+        if (enTregua(p)) return;
         Pendiente pd = leerPendiente(p.getUniqueId());
         if (pd == null) return;
         boolean conMarca = hc.datos().getLong("parca.marca." + p.getUniqueId(), 0) > System.currentTimeMillis();
@@ -693,16 +708,20 @@ final class Parca implements Listener {
         pe.esperar();
     }
 
-    /** Vuelve al servidor: si ella seguia esperando, sigue; si hay algo pendiente y esta dentro, vuelve (P-22). */
+    /**
+     * Vuelve al servidor: si ella seguia esperando, sigue; si hay algo pendiente y esta dentro, vuelve (P-22).
+     * 1.14.1: en tregua se le recuerda cuanto le queda y lo pendiente no vuelve.
+     */
     void alVolver(Player p) {
         if (!hc.esHardcore(p)) return;
+        recordarTregua(p);
         for (ParcaViva pe : peleas) {
             if (pe.estado() == ParcaViva.Estado.ESPERA && p.getUniqueId().equals(pe.presa())) {
                 pe.reanudar();
                 return;
             }
         }
-        if (leerPendiente(p.getUniqueId()) == null) return;
+        if (enTregua(p) || leerPendiente(p.getUniqueId()) == null) return;
         UUID id = p.getUniqueId();
         BukkitTask[] t = new BukkitTask[1];
         t[0] = hc.plugin().getServer().getScheduler().runTaskLater(hc.plugin(), () -> {
@@ -801,6 +820,9 @@ final class Parca implements Listener {
         Ajustes a = ajustes();
         if (!a.activa || !hc.esHardcore(p)) return false;
         if (persigue(p)) return true;
+        // 1.14.1: en tregua no viene, ni nueva ni entrando en la de otro (Tregua). La Huella ya no le cuenta
+        // y la Grieta no se abre: esto es lo ultimo por si alguna via nueva llama aqui sin mirar.
+        if (enTregua(p)) return false;
         // 1.2: en la zona spawn no aparece nunca; alli el AFK es cosa de la Grieta (que la trae lejos).
         if (hc.enSpawn(p)) return false;
         // Otro que llega a 600 a <= 32 de una viva no trae otra: entra en esa con M+1.
@@ -808,6 +830,7 @@ final class Parca implements Listener {
             if (pe.prueba() || !pe.aceptaMarcados() || pe.cuerpo().getWorld() != p.getWorld()) continue;
             if (pe.cuerpo().getLocation().distanceSquared(p.getLocation()) <= 32 * 32) {
                 pe.agregarMarcado(p);
+                tregua.gastarSalto(p.getUniqueId());
                 return true;
             }
         }
@@ -823,7 +846,8 @@ final class Parca implements Listener {
             // Ley 6: quien pelea con un Vigilante no entra en el grupo (su quieto de antes de la pelea sigue
             // apuntado: la Huella solo lo congela).
             if (vigilante != null && hc.valor("vigilante", () -> vigilante.persigue(o), false)) continue;
-            if (hc.huella() != null && hc.huella().quieto(o) >= a.quietoMarcaGrupo) grupo.add(o);
+            // 1.14.1: quien esta en tregua no entra en el grupo de otra presa, por quieto que este.
+            if (hc.huella() != null && marcaEnGrupo(a, hc.huella().quieto(o), enTregua(o))) grupo.add(o);
         }
         int r = repeticiones(p.getUniqueId());
         int n0 = 1;
@@ -837,7 +861,11 @@ final class Parca implements Listener {
         registrar(pe);
 
         long ahora = System.currentTimeMillis();
-        for (Player g : grupo) apuntarHistorial(g.getUniqueId(), ahora);
+        for (Player g : grupo) {
+            apuntarHistorial(g.getUniqueId(), ahora);
+            // La forzada por el staff en plena tregua ya ha llegado: la tregua vuelve a valer.
+            tregua.gastarSalto(g.getUniqueId());
+        }
         hc.marcarSucio();
         Location l = pe.cuerpo().getLocation();
         hc.plugin().bitacora().anotar("parca", "llega", p.getName(), "N " + n, "r " + r, "M " + m,
@@ -1038,7 +1066,8 @@ final class Parca implements Listener {
      */
     private boolean reaparecer(Player p, double distancia, String mensaje) {
         Pendiente pd = leerPendiente(p.getUniqueId());
-        if (pd == null || persigue(p) || !p.isOnline() || !hc.esHardcore(p) || !hc.cuenta(p)) return true;
+        // 1.14.1: en tregua tampoco vuelve lo pendiente; se queda guardado para otra entrada.
+        if (pd == null || persigue(p) || !p.isOnline() || !hc.esHardcore(p) || !hc.cuenta(p) || enTregua(p)) return true;
         if (hc.enSpawn(p)) return false;
         Ajustes a = ajustes();
         if (!a.activa || vivas() >= a.maximoSimultaneas) return true;   // lo pendiente sigue ahi
@@ -1102,6 +1131,84 @@ final class Parca implements Listener {
         }
         hc.datos().set("parca.segada", lista.isEmpty() ? null : lista);
         hc.marcarSucio();
+    }
+
+    // ================================================================= tregua
+
+    /** 1.14.1 · Si la tregua le libra ahora de la PARCA (Tregua.bloquea). Lo miran todas las vias que la traen. */
+    boolean enTregua(Player p) {
+        return p != null && tregua.bloquea(p.getUniqueId(), System.currentTimeMillis());
+    }
+
+    /** Si su quieto le mete en el grupo de otra presa (marcado en grupo). En tregua, nunca. La prueba "parca-tregua". */
+    static boolean marcaEnGrupo(Ajustes a, int quieto, boolean enTregua) {
+        return !enTregua && quieto >= a.quietoMarcaGrupo;
+    }
+
+    /**
+     * Fin de una PARCA para sus marcados, sea como sea: lo llaman las dos peleas al cosechar, al caer y al
+     * irse (antes cada una tenia su graciaMarcados). Gracia-minutos sin contar en la Huella, como siempre,
+     * y solo si la han VENCIDO (Tregua.da), la tregua para sus marcados y para quien la vencio con su dano
+     * (Tregua.quienes, con el mismo dano logico que el botin).
+     */
+    void acabar(ParcaViva pe, Tregua.Fin como, Map<UUID, Double> dano, double vida) {
+        if (hc.huella() != null) {
+            for (UUID id : pe.marcados()) {
+                Player m = hc.plugin().getServer().getPlayer(id);
+                if (m != null && hc.esHardcore(m)) hc.seguro("huella", () -> hc.huella().gracia(m));
+            }
+        }
+        Ajustes a = ajustes();
+        if (!Tregua.da(como, pe.prueba(), a.treguaMinutos)) return;
+        long fin = System.currentTimeMillis() + a.treguaMinutos * 60_000L;
+        Component aviso = ComandoCalamity.mensaje(Tregua.textoVencida(a.treguaMinutos));
+        List<String> nombres = new ArrayList<>();
+        for (UUID id : Tregua.quienes(pe.marcados(), dano, vida, a.participacionMinima)) {
+            tregua.poner(id, fin);
+            nombres.add(nombre(id));
+            Player j = hc.plugin().getServer().getPlayer(id);
+            // Desconectado: se le recuerda al volver (recordarTregua).
+            if (j == null) continue;
+            j.sendMessage(aviso);
+            // Su Huella empieza de cero: al acabar la tregua no arrastra lo de antes de la pelea.
+            if (hc.huella() != null && hc.esHardcore(j)) hc.seguro("huella", () -> hc.huella().reiniciar(j));
+        }
+        guardarTregua(true);
+        hc.plugin().bitacora().anotar("parca", "tregua", pe.presaNombre(), a.treguaMinutos + " min", String.join(",", nombres));
+    }
+
+    /** Al entrar en Calamity o conectarse dentro con la tregua en marcha: cuanto le queda, en el chat. */
+    private void recordarTregua(Player p) {
+        long queda = tregua.restante(p.getUniqueId(), System.currentTimeMillis());
+        if (queda > 0) p.sendMessage(ComandoCalamity.mensaje(Tregua.textoSigue(queda)));
+    }
+
+    /** Cada segundo, si hay alguna apuntada: a quien se le acabo y esta dentro, el aviso de fin (una vez). */
+    private void avisarTreguas() {
+        int antes = tregua.tamano();
+        List<UUID> acabadas = tregua.acabadas(System.currentTimeMillis(), id -> {
+            Player j = hc.plugin().getServer().getPlayer(id);
+            return j != null && hc.esHardcore(j);
+        });
+        for (UUID id : acabadas) {
+            Player j = hc.plugin().getServer().getPlayer(id);
+            if (j != null) j.sendMessage(ComandoCalamity.mensaje(Tregua.FIN));
+            hc.plugin().bitacora().anotar("parca", "tregua", nombre(id), "acaba");
+        }
+        if (tregua.tamano() != antes) guardarTregua(false);
+    }
+
+    /** A hardcore-datos: guardarYa al darla o ponerla (que un reinicio no se la lleve), marcarSucio al quitarla. */
+    private void guardarTregua(boolean ya) {
+        tregua.guardar(hc.datos());
+        if (ya) hc.guardarYa();
+        else hc.marcarSucio();
+    }
+
+    /** %lethalworld_parca_tregua%. Puede llegar desde otro hilo: solo lee el mapa concurrente de Tregua. */
+    private String treguaPlaceholder(UUID id) {
+        long queda = tregua.restante(id, System.currentTimeMillis());
+        return queda <= 0 ? "" : Eclipse.cuenta((queda + 999) / 1000);
     }
 
     // ================================================================= botin
@@ -1455,11 +1562,13 @@ final class Parca implements Listener {
      *   reaper remove [player]        una o todas, sin botin
      *   reaper test <x> <y> <z> [N]   en el primer mundo hardcore, sin presa
      *   reaper anomaly                lo que hay en EDM y que saldria ahora
+     *   reaper truce <player> [clear|set <minutes>]   1.14.1: su tregua (verla, quitarla o ponerla)
      */
     private void comando(CommandSender quien, String[] args) {
         if (args.length < 2) {
             quien.sendMessage(Component.text("Uso: /calamity reaper <player> [seconds] | info <player> | health <0-1>"
-                    + " | ability <name> | remove [player] | test <x> <y> <z> [N] | anomaly", Paleta.AVISO));
+                    + " | ability <name> | remove [player] | test <x> <y> <z> [N] | anomaly"
+                    + " | truce <player> [clear|set <minutes>]", Paleta.AVISO));
             return;
         }
         String sub = args[1].toLowerCase(Locale.ROOT);
@@ -1471,6 +1580,7 @@ final class Parca implements Listener {
             case "test" -> prueba(quien, args);
             case "anomaly" -> decir(quien, anomalia == null ? "anomalia | EDM no trae las clases de anomalías: siempre sale la de reserva"
                     : anomalia.estado());
+            case "truce" -> comandoTregua(quien, args);
             default -> forzar(quien, args);
         }
     }
@@ -1478,10 +1588,15 @@ final class Parca implements Listener {
     private List<String> tab(String[] args) {
         List<String> out = new ArrayList<>();
         if (args.length == 2) {
-            out.addAll(List.of("info", "health", "ability", "remove", "test", "anomaly"));
+            out.addAll(List.of("info", "health", "ability", "remove", "test", "anomaly", "truce"));
             for (Player p : hc.plugin().getServer().getOnlinePlayers()) out.add(p.getName());
-        } else if (args.length == 3 && (args[1].equalsIgnoreCase("info") || args[1].equalsIgnoreCase("remove"))) {
+        } else if (args.length == 3 && (args[1].equalsIgnoreCase("info") || args[1].equalsIgnoreCase("remove")
+                || args[1].equalsIgnoreCase("truce"))) {
             for (Player p : hc.plugin().getServer().getOnlinePlayers()) out.add(p.getName());
+        } else if (args.length == 4 && args[1].equalsIgnoreCase("truce")) {
+            out.addAll(List.of("clear", "set"));
+        } else if (args.length == 5 && args[1].equalsIgnoreCase("truce") && args[3].equalsIgnoreCase("set")) {
+            out.addAll(List.of("60", "30"));
         } else if (args.length == 3 && args[1].equalsIgnoreCase("health")) {
             out.addAll(List.of("0.5", "0.2"));
         } else if (args.length == 3 && args[1].equalsIgnoreCase("ability")) {
@@ -1516,10 +1631,76 @@ final class Parca implements Listener {
             quien.sendMessage(Component.text("La Huella no está en marcha.", Paleta.AVISO));
             return;
         }
+        // 1.14.1: el staff se salta la tregua: la Parca que fuerza llega igual, una vez, y la tregua sigue.
+        long ahora = System.currentTimeMillis();
+        boolean salta = tregua.activa(p.getUniqueId(), ahora);
+        if (salta) tregua.saltar(p.getUniqueId());
         hc.huella().forzar(p, Math.max(0, s));
         decir(quien, "parca | " + p.getName() + " | quieto " + hc.huella().quieto(p) + " s"
-                + (hc.huella().quieto(p) >= limite ? " | llega en el siguiente segundo" : ""));
+                + (hc.huella().quieto(p) >= limite ? " | llega en el siguiente segundo" : "")
+                + (salta ? " | se salta su tregua (le quedan " + Tregua.quedan(tregua.restante(p.getUniqueId(), ahora))
+                + "; la tregua sigue después)" : ""));
         hc.plugin().bitacora().anotar("parca", "forzar", p.getName(), s + " s", quien.getName());
+        if (salta) hc.plugin().bitacora().anotar("parca", "tregua", p.getName(), "salto del staff", quien.getName());
+    }
+
+    /**
+     * 1.14.1 · /calamity reaper truce <player> [clear|set <minutes>]. Sin mas, cuanto le queda; clear se la
+     * quita (y se le dice, si esta conectado); set se la pone de N minutos desde ahora (y se le dice).
+     * Vale para desconectados: la tregua vive en hardcore-datos.
+     */
+    private void comandoTregua(CommandSender quien, String[] args) {
+        if (args.length < 3) {
+            quien.sendMessage(Component.text("Uso: /calamity reaper truce <player> [clear|set <minutes>]", Paleta.AVISO));
+            return;
+        }
+        Player p = hc.plugin().getServer().getPlayerExact(args[2]);
+        OfflinePlayer op = p != null ? p : hc.plugin().getServer().getOfflinePlayerIfCached(args[2]);
+        if (op == null) {
+            quien.sendMessage(Component.text("No encuentro a ese jugador.", Paleta.AVISO));
+            return;
+        }
+        UUID id = op.getUniqueId();
+        String nombre = op.getName() == null ? args[2] : op.getName();
+        long ahora = System.currentTimeMillis();
+        String accion = args.length > 3 ? args[3].toLowerCase(Locale.ROOT) : "";
+        switch (accion) {
+            case "" -> {
+                String estado = tregua.activa(id, ahora)
+                        ? "le quedan " + Tregua.quedan(tregua.restante(id, ahora))
+                        + (tregua.salta(id) ? " | salto del staff pendiente: la próxima Parca forzada llega igual" : "")
+                        : tregua.fin(id) > 0 ? "acabada, falta decírselo al entrar" : "sin tregua";
+                decir(quien, "parca | tregua | " + nombre + " | " + estado);
+            }
+            case "clear" -> {
+                if (!tregua.quitar(id)) {
+                    decir(quien, "parca | tregua | " + nombre + " | no tenía tregua");
+                    return;
+                }
+                guardarTregua(false);
+                if (p != null) p.sendMessage(ComandoCalamity.mensaje(Tregua.FIN));
+                decir(quien, "parca | tregua | " + nombre + " | quitada: la Huella vuelve a contar");
+                hc.plugin().bitacora().anotar("parca", "tregua", nombre, "quitada", quien.getName());
+            }
+            case "set" -> {
+                int minutos;
+                try {
+                    minutos = Integer.parseInt(args.length > 4 ? args[4] : "x");
+                } catch (NumberFormatException ex) {
+                    minutos = -1;
+                }
+                if (minutos < 1 || minutos > 10_080) {
+                    quien.sendMessage(Component.text("Uso: /calamity reaper truce <player> set <minutes> (1-10080)", Paleta.AVISO));
+                    return;
+                }
+                tregua.poner(id, ahora + minutos * 60_000L);
+                guardarTregua(true);
+                if (p != null) p.sendMessage(ComandoCalamity.mensaje(Tregua.textoPuesta(minutos)));
+                decir(quien, "parca | tregua | " + nombre + " | " + Tregua.quedan(minutos * 60_000L));
+                hc.plugin().bitacora().anotar("parca", "tregua", nombre, "puesta " + minutos + " min", quien.getName());
+            }
+            default -> quien.sendMessage(Component.text("Uso: /calamity reaper truce <player> [clear|set <minutes>]", Paleta.AVISO));
+        }
     }
 
     private void info(CommandSender quien, String[] args) {
@@ -1546,7 +1727,9 @@ final class Parca implements Listener {
                 + " | pendiente " + (pd == null ? "no" : pd.motivo() + " " + Math.round(pd.fraccion() * 100) + " % hasta "
                 + (pd.hasta() - ahora) / 60_000 + " min")
                 + " | marca " + (marca > ahora ? (marca - ahora) / 60_000 + " min" : "no")
-                + " | cobro " + (yaCobro(id, ahora, ajustes()) ? "hecho" : "libre"));
+                + " | cobro " + (yaCobro(id, ahora, ajustes()) ? "hecho" : "libre")
+                + " | tregua " + (tregua.activa(id, ahora) ? Tregua.quedan(tregua.restante(id, ahora))
+                + (tregua.salta(id) ? " (salto del staff)" : "") : "no"));
         // 1.8: lo que la endurece (DificultadAmenaza), con la foto de su presa al aparecer.
         if (pe != null) decir(quien, "parca | " + nombre + " | dificultad | " + pe.dificultad().texto());
     }
