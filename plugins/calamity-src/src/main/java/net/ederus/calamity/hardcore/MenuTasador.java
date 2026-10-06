@@ -510,7 +510,7 @@ final class MenuTasador implements Listener {
         List<Component> lore = new ArrayList<>();
         if (con == null || !hc.valor("contratos", con::activo, false)) {
             lore.add(Marco.tenue("Oren no tiene contratos ahora mismo."));
-            inv.setItem(CONTRATOS, Marco.icono(Material.PAPER, Component.text("Contratos", Paleta.TENUE), lore, false));
+            inv.setItem(CONTRATOS, iconoContratos(Component.text("Contratos", Paleta.TENUE), lore, false));
             return;
         }
         boolean papel = hc.valor("contratos", con::pergaminoActivo, false);
@@ -536,7 +536,7 @@ final class MenuTasador implements Listener {
         lore.add(fila("Esta semana", Math.min(semana[0], semana[1]) + " de " + semana[1]));
         lore.add(Component.empty());
         lore.add(Marco.accion(papel ? "Clic para verlos y aceptarlos" : "Clic para verlos o cambiarlos"));
-        inv.setItem(CONTRATOS, Marco.icono(Material.PAPER, Component.text("Contratos", Paleta.DETALLE), lore, listo));
+        inv.setItem(CONTRATOS, iconoContratos(Component.text("Contratos", Paleta.DETALLE), lore, listo));
         v.acciones().put(CONTRATOS, "ver:" + V_CONTRATOS);
     }
 
@@ -787,6 +787,13 @@ final class MenuTasador implements Listener {
     }
 
     // ------------------------------------------------------------------ subvista: contratos
+
+    /** 1.16.1 · El boton de Contratos con un pergamino (diseño de estandarte), como los de los contratos. */
+    private static ItemStack iconoContratos(Component nombre, List<Component> lore, boolean brillo) {
+        ItemStack it = Marco.icono(Material.GLOBE_BANNER_PATTERN, nombre, lore, brillo);
+        Pergaminos.ocultarDiseno(it);
+        return it;
+    }
 
     /** El icono de un contrato por lo que pide (el evento del pool). */
     private static Material iconoContrato(String evento) {
