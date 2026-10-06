@@ -17,6 +17,8 @@ import org.bukkit.event.entity.PlayerDeathEvent;
 import org.bukkit.event.inventory.InventoryClickEvent;
 import org.bukkit.event.player.PlayerJoinEvent;
 import org.bukkit.event.player.PlayerRespawnEvent;
+import org.bukkit.inventory.CraftingInventory;
+import org.bukkit.inventory.InventoryView;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.PlayerInventory;
 import org.bukkit.inventory.meta.ItemMeta;
@@ -25,6 +27,7 @@ import org.bukkit.plugin.Plugin;
 
 import java.io.File;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
@@ -53,9 +56,10 @@ import java.util.regex.Pattern;
  * bendecidas; huir por el cable la perdia, y un reinicio entre morir y reaparecer tambien.
  *
  * Por eso aqui lo hace Calamity, en LOW (antes que AE) y solo en sus mundos con muerte.lo-pierde-todo:
- *   - lo bendecido que se salva sale del inventario y de lo que suelta (AE ya no ve nada que hacer), y en
- *     MONITOR, si la muerte no se cancelo, se le gasta la bendicion como haria AE y se guarda en
- *     hardcore-datos.yml (bendicion.devolver.<uuid>). Se devuelve al reaparecer o al volver a entrar;
+ *   - lo bendecido que se salva sale del inventario (tambien del cursor y de la rejilla de crafteo abierta) y
+ *     de lo que suelta (AE ya no ve nada que hacer), y en MONITOR, si la muerte no se cancelo, se le gasta la
+ *     bendicion como haria AE y se guarda en hardcore-datos.yml (bendicion.devolver.<uuid>). Se devuelve al
+ *     reaparecer o al volver a entrar;
  *   - lo que en Calamity nunca se salva (prestado, copias del Eco, pergaminos de Maren, Reliquias y Esencias:
  *     lo de la Aduana) pierde la bendicion y corre la suerte de todo lo demas. Tampoco se deja bendecir;
  *   - con muerte.bendicion: false nada se salva y todo pierde la bendicion (como "lo pierde todo" a secas).
@@ -89,7 +93,10 @@ final class Bendicion implements Listener {
         GASTA
     }
 
-    /** Lo apartado de un muerto: la casilla de donde salio (-1: solo estaba en lo que suelta) y el objeto. */
+    /**
+     * Lo apartado de un muerto: la casilla de donde salio (-1: solo estaba en lo que suelta; de 41 en adelante:
+     * el cursor o la rejilla de crafteo, ver todo()) y el objeto.
+     */
     record Apartado(int casilla, ItemStack objeto) {
     }
 
@@ -297,14 +304,42 @@ final class Bendicion implements Listener {
     }
 
     private void apartar(Player p, PlayerDeathEvent e) {
-        PlayerInventory inv = p.getInventory();
-        ItemStack[] contenido = inv.getContents();
+        ItemStack[] contenido = todo(p);
         List<String> lineas = lineas();
         Reparto r = repartir(contenido, e.getDrops(), activa(), this::clase, it -> quitar(it, lineas));
         if (r.salvados().isEmpty() && r.gastados().isEmpty()) return;
-        inv.setContents(contenido);
-        for (String g : r.gastados()) hc.plugin().bitacora().anotar("bendicion", "gasta", p.getName(), g);
+        ponerTodo(p, contenido);
+        // Lo apartado se apunta antes que nada: ya no esta ni en el inventario ni en lo que suelta.
         if (!r.salvados().isEmpty()) enCurso.put(p.getUniqueId(), r.salvados());
+        for (String g : r.gastados()) hc.plugin().bitacora().anotar("bendicion", "gasta", p.getName(), g);
+    }
+
+    /**
+     * Lo que se reparte al morir o al huir: el inventario entero (41 casillas) y, detras, lo que no esta en el y
+     * tambien se pierde: el cursor (lo que lleva cogido con una ventana abierta) y las casillas de entrada de la
+     * rejilla de crafteo abierta (la 2x2 del inventario o una mesa; el resultado no, que es una vista previa y
+     * salvarlo daria dos). Al morir eso no esta en lo que suelta y al huir Combate.vaciar lo borra: sin mirarlo,
+     * lo bendecido que estaba ahi se perdia. Lo que sale de una casilla de 41 en adelante no tiene sitio fijo al
+     * reponerse (va a donde quepa).
+     */
+    private static ItemStack[] todo(Player p) {
+        ItemStack[] inv = p.getInventory().getContents();
+        ItemStack[] rejilla = p.getOpenInventory().getTopInventory() instanceof CraftingInventory ci ? ci.getMatrix() : new ItemStack[0];
+        ItemStack[] out = Arrays.copyOf(inv, inv.length + 1 + rejilla.length);
+        out[inv.length] = p.getItemOnCursor();
+        System.arraycopy(rejilla, 0, out, inv.length + 1, rejilla.length);
+        return out;
+    }
+
+    /** Lo contrario de todo(): cada cosa a su sitio (inventario, cursor y rejilla), ya repartida. */
+    private static void ponerTodo(Player p, ItemStack[] todo) {
+        PlayerInventory inv = p.getInventory();
+        int n = inv.getContents().length;
+        inv.setContents(Arrays.copyOf(todo, n));
+        p.setItemOnCursor(todo[n]);
+        if (todo.length > n + 1 && p.getOpenInventory().getTopInventory() instanceof CraftingInventory ci) {
+            ci.setMatrix(Arrays.copyOfRange(todo, n + 1, todo.length));
+        }
     }
 
     /** MONITOR: con la muerte ya decidida se gasta la bendicion y se guarda; si alguien la cancelo, se devuelve. */
@@ -321,18 +356,17 @@ final class Bendicion implements Listener {
 
     /**
      * Desde Combate.cable, ANTES de la foto del Eco: huir por el cable cuenta como morir, tambien para la
-     * bendicion. Lo que se salva se guarda ya (el jugador se esta yendo) y se devuelve al volver.
+     * bendicion. Lo que se salva se guarda ya (el jugador se esta yendo) y se devuelve al volver. Sin mirar
+     * muerte.lo-pierde-todo: el cable vacia el inventario siempre (Combate.vaciar).
      */
     void alHuir(Player p) {
-        if (!hc.cfg().getBoolean("muerte.lo-pierde-todo", true)) return;
-        PlayerInventory inv = p.getInventory();
-        ItemStack[] contenido = inv.getContents();
+        ItemStack[] contenido = todo(p);
         List<String> lineas = lineas();
         Reparto r = repartir(contenido, null, activa(), this::clase, it -> quitar(it, lineas));
         if (r.salvados().isEmpty() && r.gastados().isEmpty()) return;
-        inv.setContents(contenido);
-        for (String g : r.gastados()) hc.plugin().bitacora().anotar("bendicion", "gasta", p.getName(), g);
+        ponerTodo(p, contenido);
         if (!r.salvados().isEmpty()) guardar(p, r.salvados(), "cable");
+        for (String g : r.gastados()) hc.plugin().bitacora().anotar("bendicion", "gasta", p.getName(), g);
     }
 
     private static String ruta(UUID u) {
@@ -427,7 +461,7 @@ final class Bendicion implements Listener {
     /**
      * AE la aplica en un InventoryClickEvent que no respeta la cancelacion (lo mira en NORMAL y cancela el
      * suyo). Aqui se apunta antes (LOWEST) y, si AE la puso en algo que no se salva, se deshace en MONITOR:
-     * el objeto vuelve sin bendecir y el pergamino al cursor, entero.
+     * el objeto vuelve sin bendecir y se devuelve el pergamino que AE gasto (devolverPergamino).
      */
     @EventHandler(priority = EventPriority.LOWEST)
     public void antesDeAplicar(InventoryClickEvent e) {
@@ -447,13 +481,46 @@ final class Bendicion implements Listener {
         if (a == null || a.casilla() != e.getRawSlot() || !bendecido(e.getCurrentItem())) return;
         e.setCancelled(true);
         e.setCurrentItem(a.objeto());
-        e.getView().setCursor(a.pergamino());
+        devolverPergamino(p, e.getView(), a.pergamino());
         p.sendMessage(ComandoCalamity.mensaje(switch (a.clase()) {
             case "prestado" -> "La Bendición de Dios no sirve en lo prestado del kit: se deshace al salir de Calamity.";
             case "reliquia", "esencia" -> "La Bendición de Dios no protege Reliquias ni Esencias.";
             default -> "La Bendición de Dios no se puede poner ahí.";
         }));
         hc.plugin().bitacora().anotar("bendicion", "rechaza", p.getName(), a.clase(), descripcion(a.objeto()));
+    }
+
+    /**
+     * Cuantos pergaminos gasto AE en el clic, mirando el cursor: "antes" los que tenia cogidos y "ahora" los que
+     * quedan de esa misma pila (0 si quedo vacio o con otra cosa). AE 9.24.13 (HolyWhiteScroll.onItemInventoryMerge)
+     * gasta uno: vacia el cursor y los que sobran los mete en el inventario (o al suelo si no caben). Si no falta
+     * ninguno, no gasto nada.
+     */
+    static int gastados(int antes, int ahora) {
+        return ahora < antes ? 1 : 0;
+    }
+
+    /**
+     * Le devuelve el pergamino que gasto AE: al cursor si quedo vacio o es la misma pila y cabe; si no, al
+     * inventario (o a sus pies). Nunca la pila entera: AE ya devolvio los que sobraban, y reponerla en el cursor
+     * regalaba uno por cada uno de ellos en cada clic (hoy no pasa porque el pergamino de Ederus es un patron de
+     * estandarte, que no se apila; con uno que se apile, como el PAPER de serie de AE, si).
+     */
+    private void devolverPergamino(Player p, InventoryView vista, ItemStack antes) {
+        ItemStack cursor = vista.getCursor();
+        boolean misma = cursor != null && cursor.isSimilar(antes);
+        if (gastados(antes.getAmount(), misma ? cursor.getAmount() : 0) == 0) return;
+        ItemStack uno = antes.clone();
+        uno.setAmount(1);
+        if (cursor == null || cursor.getType().isAir()) {
+            vista.setCursor(uno);
+        } else if (misma && cursor.getAmount() < cursor.getMaxStackSize()) {
+            ItemStack mas = cursor.clone();
+            mas.setAmount(cursor.getAmount() + 1);
+            vista.setCursor(mas);
+        } else {
+            Suelo.dar(hc.plugin(), p, uno);
+        }
     }
 
     // ================================================================== pruebas
@@ -483,6 +550,12 @@ final class Bendicion implements Listener {
         List<String> lista = new ArrayList<>(List.of("espada", "casco", "espada"));
         h.igual("casar: el primero igual", 0, casar(lista, "espada", String::equals));
         h.igual("casar: ninguno", -1, casar(lista, "botas", String::equals));
+
+        // Deshacer el clic de AE en lo prestado: se devuelve el pergamino que gasto, no la pila entera.
+        h.igual("AE vacia el cursor con 3 cogidos (y mete 2 en el inventario): se devuelve 1", 1, gastados(3, 0));
+        h.igual("con 1 cogido y el cursor vacio: se devuelve 1", 1, gastados(1, 0));
+        h.igual("si AE dejara 2 de 3 en el cursor: se devuelve 1", 1, gastados(3, 2));
+        h.igual("si el cursor sigue con la pila entera, AE no gasto nada: ninguno", 0, gastados(3, 3));
         return h.lineas();
     }
 
@@ -530,6 +603,16 @@ final class Bendicion implements Listener {
         h.igual("lo gastado se apunta", 1, r.gastados().size());
         h.ok("en lo que suelta no queda nada bendecido", drops.stream().noneMatch(Bendicion::bendecido));
         h.igual("en lo que suelta siguen el pan y lo prestado", 2, drops.size());
+
+        // Con el cursor y la rejilla de crafteo detras del inventario (todo()): no estan en lo que suelta y se salvan.
+        ItemStack[] conCursor = new ItemStack[41 + 1 + 4];
+        conCursor[41] = bendecida(Material.DIAMOND_AXE);
+        conCursor[43] = bendecida(Material.GOLDEN_HELMET);
+        conCursor[44] = new ItemStack(Material.STICK);
+        Reparto rc = repartir(conCursor, new ArrayList<>(), true, this::clase, it -> quitar(it, lineas));
+        h.ok("lo bendecido del cursor y de la rejilla se salva (casillas 41 y 43), una vez cada uno",
+                rc.salvados().size() == 2 && rc.salvados().get(0).casilla() == 41 && rc.salvados().get(1).casilla() == 43
+                        && conCursor[41] == null && conCursor[43] == null && conCursor[44] != null);
 
         ItemStack[] inv2 = {bendecida(Material.DIAMOND_SWORD), null};
         Reparto r2 = repartir(inv2, new ArrayList<>(), true, this::clase, it -> quitar(it, lineas));
