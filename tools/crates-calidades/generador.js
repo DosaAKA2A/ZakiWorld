@@ -64,12 +64,14 @@ function generar(original, spec, idCaja) {
   const amp = hex => '&x' + hex.slice(1).split('').map(c => '&' + c).join('');
   const loreDe = b => {
     const c = cal[b.p.calidad];
+    const tope = b.p['por-jugador'];
     return [
       '',
       [['◆ ', c.color], [c.nombre, c.color]],
       [['Probabilidad de la calidad: ', 'gray'], [pct(b.pCal), 'white']],
       [['Dentro de la calidad: ', 'gray'], [pct(b.pDentro), 'white']],
       [['Probabilidad total: ', 'gray'], [pct(b.pTotal), c.color]],
+      ...(tope ? [[[tope === 1 ? 'Solo se gana una vez por jugador' : 'Máximo ' + tope + ' veces por jugador', 'gray']]] : []),
     ];
   };
   const snbt = b => loreDe(b).map(p => p === '' ? '{text:""}' : linea(p.map(([t, col]) => comp(t, col))));
@@ -191,6 +193,38 @@ function generar(original, spec, idCaja) {
     if (!b.lineas.some(l => /^    - mi give /.test(l))) continue;
     const iw = b.lineas.findIndex(l => /^    allow-win-message:/.test(l));
     if (iw >= 0) b.lineas[iw] = '    allow-win-message: false';
+  }
+
+  // Premios que cada jugador gana como mucho N veces ('por-jugador' -> win-limits) y que no salen a quien ya
+  // tiene alguno de los permisos de 'excluir-con-permiso' (-> restricted-permissions). PhoenixCrates 6.2.1 los saca
+  // del sorteo de ese jugador (Crate.getAvailableRewards) y elige otro premio entre los demas por peso. Exige la
+  // recompensa alternativa apagada (si no, daria esa en su lugar) y sin win-limit-cooldown (si no, el tope se reinicia).
+  for (const b of bloques) {
+    const tope = b.p['por-jugador'], perms = b.p['excluir-con-permiso'];
+    if (tope === undefined && perms === undefined) continue;
+    const donde = idCaja + ' premio ' + b.n;
+    const fijar = (clave, nuevas) => {
+      const i = b.lineas.findIndex(l => new RegExp('^    ' + clave + ':').test(l));
+      if (i < 0) { b.lineas.splice(b.lineas.findIndex(l => /^    weight:/.test(l)) + 1, 0, ...nuevas); return; }
+      let e = i + 1;
+      if (/:\s*$/.test(b.lineas[i])) while (e < b.lineas.length && /^    - /.test(b.lineas[e])) e++;
+      b.lineas.splice(i, e - i, ...nuevas);
+    };
+    if (tope !== undefined) {
+      if (!Number.isInteger(tope) || tope < 1) throw new Error(donde + ': por-jugador debe ser un entero >= 1');
+      fijar('win-limits', ['    win-limits: ' + tope]);
+      const iC = b.lineas.findIndex(l => /^    cooldowns:/.test(l));
+      for (let k = iC + 1; iC >= 0 && k < b.lineas.length && /^      /.test(b.lineas[k]); k++)
+        if (/^      win-limit-cooldown:/.test(b.lineas[k])) b.lineas[k] = '      win-limit-cooldown: 0';
+    }
+    if (perms !== undefined) {
+      // el premio tiene que dar ese permiso: si no aparece, la posicion 'n' no es el premio que creemos
+      perms.forEach(p => { if (!b.lineas.some(l => l.includes(p))) throw new Error(donde + ': no da el permiso ' + p); });
+      fijar('restricted-permissions', perms.length ? ['    restricted-permissions:', ...perms.map(p => '    - ' + p)] : ['    restricted-permissions: []']);
+    }
+    const iA = b.lineas.findIndex(l => /^    alternative-reward:/.test(l));
+    for (let k = iA + 1; iA >= 0 && k < b.lineas.length && /^      /.test(b.lineas[k]); k++)
+      if (/^      enabled:\s*true/.test(b.lineas[k])) throw new Error(donde + ': tiene la recompensa alternativa encendida');
   }
 
   // Menu de vista previa propio de la caja

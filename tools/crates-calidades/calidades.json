@@ -1,5 +1,5 @@
 {
-  "_nota": "Fuente de verdad de las calidades de PhoenixCrates. Primero sale la calidad (porcentaje de 'calidades' de cada caja) y despues el premio (peso dentro de su calidad). 'n' es la posicion del premio en la copia original crates/<caja>.yml.bak-calidades-20261006; calidad null = premio apagado (peso 0). generador.js convierte esto en el weight final y en las lineas de lore de la vista previa. 'nombre' es el nombre que tenia la caja en ExcellentCrates (MiniMessage); se usa como display-name y como titulo de su menu.",
+  "_nota": "Fuente de verdad de las calidades de PhoenixCrates. Primero sale la calidad (porcentaje de 'calidades' de cada caja) y despues el premio (peso dentro de su calidad). 'n' es la posicion del premio en la copia original crates/<caja>.yml.bak-calidades-20261006; calidad null = premio apagado (peso 0). generador.js convierte esto en el weight final y en las lineas de lore de la vista previa. 'nombre' es el nombre que tenia la caja en ExcellentCrates (MiniMessage); se usa como display-name y como titulo de su menu. Opcional por premio: 'por-jugador' = N veces como mucho por jugador (win-limits de PhoenixCrates) y 'excluir-con-permiso' = lista de permisos (restricted-permissions); quien ya llego al tope o tiene el permiso no lo puede sacar y la caja sortea otro premio en su lugar.",
   "calidades": {
     "inmortal": {
       "nombre": "Inmortal",
@@ -165,14 +165,15 @@
       "nombre": "<#FF6FD8><bold>✦ CRATE CAOS ✦</bold>",
       "titulo": { "texto": "CRATE CAOS", "de": "#C0318D", "a": "#9E1F6B", "llave": "caos" },
       "calidades": {
-        "legendario": 1,
+        "unico": 0.25,
+        "legendario": 0.75,
         "mitico": 6,
         "epico": 33,
         "raro": 60
       },
       "premios": [
-        { "n": 22, "calidad": "legendario", "peso": 40, "_": "Mascota Creaking" },
-        { "n": 23, "calidad": "legendario", "peso": 40, "_": "Mascota Warden" },
+        { "n": 22, "calidad": "unico", "peso": 50, "por-jugador": 1, "excluir-con-permiso": ["pet.type.creaking"], "_": "Mascota Creaking" },
+        { "n": 23, "calidad": "unico", "peso": 50, "por-jugador": 1, "excluir-con-permiso": ["pet.type.warden"], "_": "Mascota Warden" },
         { "n": 24, "calidad": "legendario", "peso": 20, "_": "Tag Caja del Caos" },
         { "n": 16, "calidad": "mitico", "peso": 88.67, "_": "Slot increaser" },
         { "n": 17, "calidad": "mitico", "peso": 177.34, "_": "Esencia x20" },
