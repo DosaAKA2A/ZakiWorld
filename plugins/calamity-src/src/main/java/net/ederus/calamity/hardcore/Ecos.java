@@ -546,7 +546,8 @@ final class Ecos implements Listener {
     /** El dueno mata a su Eco: recupera lo suyo, cordura y (una vez por semana) una Marca. Sin Esencias nuevas ni Lagrima. */
     private void redimido(Eco e, OfflinePlayer dueno, Player duenoP) {
         ConfigurationSection c = cfg();
-        boolean conCordura = duenoP != null && hc.esHardcore(duenoP);
+        // 1.16.0: con un Farol de Tranquilidad encendido la cordura no sube (y el mensaje no la promete).
+        boolean conCordura = duenoP != null && hc.esHardcore(duenoP) && !hc.cordura().tranquilo(duenoP);
         if (conCordura) hc.cordura().sumar(duenoP, c.getDouble("cordura-dueno", 30));
         hc.seguro("estadisticas", () -> hc.estadisticas().sumar(dueno.getUniqueId(), "ecos-redimidos", 1));
         // Lo que suelta (Reliquias y Esencias) ya esta en el suelo, reservado para el; el equipo eran copias.

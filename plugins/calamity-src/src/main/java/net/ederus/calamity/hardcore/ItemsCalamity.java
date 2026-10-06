@@ -304,6 +304,9 @@ public final class ItemsCalamity {
         }
         if (esReclamo(it)) return Ficha.renovar(it, Ficha.tono("reclamo").nombre(NOMBRE_RECLAMO), fichaReclamo(c).lore());
         if (Barometro.es(it)) return Barometro.renovado(it);
+        // 1.16.0: el farol con los minutos que le quedan de verdad; la brujula conserva su rumbo.
+        if (Faroles.es(it)) return Faroles.renovado(it);
+        if (BrujulaCaida.es(it)) return BrujulaCaida.renovado(it);
         return null;
     }
     /** Ultimo valor raro de esencias.material ya avisado, para no llenar la consola. */

@@ -32,6 +32,10 @@ import java.util.UUID;
  * Locura (los sustos de la cordura baja) corre aqui cada segundo. Por debajo de locura.umbral-gritos
  * (20) el latido lo lleva ella y se acelera cuanto mas baja la cordura; entonces el de aqui calla,
  * para no oir el mismo sonido dos veces. Con sentidos.latido en false no late ninguno de los dos.
+ *
+ * Calamity 1.16.0 · Con un Farol de Tranquilidad encendido todo esto mira la cordura sentida (la entera): ni Locura,
+ * ni latido de la cordura, ni vineta roja, ni tiradas de alucinacion, ni minutos de lucidez. El latido de la PARCA
+ * cerca y la vineta del Eclipse siguen (no son de la cordura). alTranquilizar corta lo que ya estaba en marcha.
  */
 final class Sentidos implements Listener {
 
@@ -64,13 +68,16 @@ final class Sentidos implements Listener {
     /** Una vez por segundo por jugador que cuenta, desde Hardcore.tick (ya en mundo hardcore). */
     void latido(Player p) {
         Cordura.Estado e = hc.cordura().estado(p);
-        int tramo = Cordura.tramo(e.valor);
+        // 1.16.0: con un Farol de Tranquilidad, lo que sienten los sentidos es la cordura entera.
+        boolean tranquilo = hc.cordura().tranquilo(p);
+        double sentida = tranquilo ? Cordura.MAXIMO : e.valor;
+        int tramo = Cordura.tramo(sentida);
         int segundo = e.segundosDentro;
         ConfigurationSection s = cfg();
         boolean latido = s.getBoolean("latido", true);
 
         // Locura: los sustos de la cordura baja. Si este segundo el latido es suyo, el de aqui calla.
-        boolean latidoDeLocura = hc.valor("locura", () -> locura.segundo(p, e.valor, latido), false);
+        boolean latidoDeLocura = hc.valor("locura", () -> locura.segundo(p, sentida, latido), false);
         if (latido && !latidoDeLocura) {
             Parca parca = hc.parca();
             double distancia = parca == null ? Double.MAX_VALUE
@@ -81,9 +88,9 @@ final class Sentidos implements Listener {
         }
 
         hc.seguro("sentidos", () -> vineta.segundo(p, tramo));
-        if (e.valor < 25) lucidez.merge(p.getUniqueId(), 1, Integer::sum);
+        if (sentida < 25) lucidez.merge(p.getUniqueId(), 1, Integer::sum);
         // Cada 20 s dentro, la tirada de las alucinaciones (DIS M20).
-        if (segundo > 0 && segundo % 20 == 0) hc.seguro("alucinaciones", () -> alucinaciones.tirada(p, tramo));
+        if (!tranquilo && segundo > 0 && segundo % 20 == 0) hc.seguro("alucinaciones", () -> alucinaciones.tirada(p, tramo));
     }
 
     /**
@@ -121,6 +128,15 @@ final class Sentidos implements Listener {
      */
     void alEntrarSpawn(Player p) {
         vineta.quitar(p);
+        alucinaciones.olvidar(p);
+        locura.olvidar(p);
+    }
+
+    /**
+     * 1.16.0 · Se le enciende un Farol de Tranquilidad (Faroles): fuera lo que la locura tenia en marcha (la racha de
+     * pasos, la figura, lo que quedaba en la cola de sonidos). La vineta la pone al dia el siguiente latido().
+     */
+    void alTranquilizar(Player p) {
         alucinaciones.olvidar(p);
         locura.olvidar(p);
     }

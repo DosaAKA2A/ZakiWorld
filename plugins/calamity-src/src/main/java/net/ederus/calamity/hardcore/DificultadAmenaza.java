@@ -178,7 +178,9 @@ final class DificultadAmenaza {
     static Foto foto(Hardcore hc, Player p) {
         if (p == null) return null;
         Cordura.Estado e = hc.cordura().estado(p);
-        return new Foto(hc.bloquesAlSpawn(p), e.valor, e.segundosDentro);
+        // 1.16.0: la cordura sentida. Con un Farol de Tranquilidad encendido la cordura baja no endurece a la amenaza
+        // (la amenaza viene igual: la distancia y los minutos dentro cuentan como siempre).
+        return new Foto(hc.bloquesAlSpawn(p), hc.cordura().sentida(p), e.segundosDentro);
     }
 
     /** Los multiplicadores de esa foto con la config de ahora; NEUTRO sin foto. */

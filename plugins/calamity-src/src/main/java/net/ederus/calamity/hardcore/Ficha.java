@@ -681,6 +681,10 @@ final class Ficha {
         todas.put("salvoconducto", Entregas.fichaSalvoconducto());
         todas.put("trofeo", Ecos.fichaTrofeo("Dosa", "04/10/2026"));
         todas.put("barometro", Barometro.ficha(c));
+        // 1.16.0: el Farol de Tranquilidad recien comprado y a punto de apagarse, y la Brujula de la Caida.
+        todas.put("farol", Faroles.ficha(2, Faroles.DURACION_II, Faroles.DURACION_II));
+        todas.put("farol-1-min", Faroles.ficha(1, 40, Faroles.DURACION_I));
+        todas.put("brujula-caida", BrujulaCaida.ficha(c));
         return todas;
     }
 

@@ -33,6 +33,9 @@ import java.util.UUID;
  * Color por tramo, con los umbrales de Cordura.tramo: verde de 50 para arriba, amarillo de 25 a 50 y
  * rojo por debajo de 25. El titulo va sin negrita: "Cordura" en el color normal, la cifra en el del
  * tramo y, si hay contrato (Cordura.extra), "   ·   Mobs 6/10" en gris.
+ *
+ * Calamity 1.16.0 · Con un Farol de Tranquilidad encendido, entre la cifra y el contrato: "   ·   Tranquilidad 3:42",
+ * en el jade del farol. La cifra de la cordura sigue siendo la de verdad (no se mueve mientras arde).
  */
 final class MedidorCordura {
 
@@ -59,8 +62,13 @@ final class MedidorCordura {
 
     /** La ensena (la primera vez) o la pone al dia. Extra: lo que va detras (un contrato), o null. */
     void mostrar(Player p, double valor, Component extra) {
+        mostrar(p, valor, -1, extra);
+    }
+
+    /** Lo mismo con los segundos del Farol de Tranquilidad que arde (-1 = ninguno). */
+    void mostrar(Player p, double valor, int calma, Component extra) {
         int puntos = puntos(valor);
-        Component titulo = titulo(puntos, extra);
+        Component titulo = titulo(puntos, calma, extra);
         Pantalla s = pantallas.get(p.getUniqueId());
         if (s == null) {
             BossBar b = BossBar.bossBar(titulo, progreso(puntos), color(puntos), ESTILO);
@@ -147,14 +155,28 @@ final class MedidorCordura {
 
     /** "Cordura 74%" y, si hay contrato, "   ·   Mobs 6/10" en gris (el texto, sin los colores de la barra de accion). */
     static Component titulo(int puntos, Component extra) {
+        return titulo(puntos, -1, extra);
+    }
+
+    /**
+     * Calamity 1.16.0 · Lo mismo con el Farol de Tranquilidad: calma = los segundos que le quedan (-1 = no arde) y va
+     * entre la cifra y el contrato.
+     */
+    static Component titulo(int puntos, int calma, Component extra) {
         Component t = Component.text("Cordura ", Paleta.TEXTO)
                 .append(Component.text(puntos + "%", acento(puntos)));
+        if (calma >= 0) t = t.append(Component.text("   ·   ", Paleta.TENUE)).append(calma(calma));
         String mas = extra == null ? "" : PlainTextComponentSerializer.plainText().serialize(extra);
         if (mas.isBlank()) return t;
         String limpio = mas.strip();
         if (limpio.startsWith("·")) limpio = limpio.substring(1).strip();
         if (limpio.isEmpty()) return t;
         return t.append(Component.text("   ·   " + limpio, Paleta.TENUE));
+    }
+
+    /** "Tranquilidad 3:42", en el jade del farol (el tono medio de su familia: no compite con la cifra). */
+    static Component calma(int segundos) {
+        return Component.text(Faroles.BARRA + " " + Faroles.reloj(segundos), Ficha.tono("farol").medio());
     }
 
     // ------------------------------------------------------------------ autotest
@@ -198,6 +220,12 @@ final class MedidorCordura {
                 java.util.stream.Stream.of(t), t.children().stream()).map(Component::color).filter(java.util.Objects::nonNull)
                 .distinct().count());
         h.igual("la cifra va en el color del tramo", AMARILLO, t.children().get(0).color());
+        // 1.16.0: el Farol de Tranquilidad, entre la cifra y el contrato.
+        h.igual("con farol", "Cordura 20%   ·   Tranquilidad 3:42", plano.serialize(titulo(20, 222, null)));
+        h.igual("con farol y contrato", "Cordura 20%   ·   Tranquilidad 0:05   ·   Mobs 6/10",
+                plano.serialize(titulo(20, 5, contrato)));
+        h.igual("sin farol (-1): como siempre", "Cordura 20%", plano.serialize(titulo(20, -1, null)));
+        h.igual("el farol en su jade", Ficha.tono("farol").medio(), calma(60).color());
         h.ok("mismos datos, mismo titulo (no se reenvia)", titulo(74, contrato).equals(titulo(74, contrato)));
         h.ok("estilo con muescas", ESTILO == BossBar.Overlay.NOTCHED_10);
         return h.lineas();

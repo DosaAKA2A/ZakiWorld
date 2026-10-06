@@ -72,6 +72,9 @@ import java.util.function.Consumer;
  * la deja donde esta, con su vida, su haz y su guardia como estuvieran.
  *
  * Tambien escucha la apertura de la Boveda de Ruinas (caja calamity_ruinas), que paga Ruinas.
+ *
+ * Calamity 1.16.0 · La Brujula de la Caida apunta a la que sigue cerrada: al caer, al abrirse y al irse se le avisa
+ * (avisarBrujulas) para que todas cambien de rumbo en el momento, sin esperar a su repaso de cada 2 s.
  */
 final class BovedaCaida implements Listener {
 
@@ -438,6 +441,7 @@ final class BovedaCaida implements Listener {
         datos().set(base + "bioma", bioma);
         datos().set(RUTA + ".proxima", null);
         hc.guardarYa();
+        avisarBrujulas();
         asegurarHaz(sitio);
         columna(sitio);
 
@@ -544,6 +548,13 @@ final class BovedaCaida implements Listener {
         datos().set(RUTA + ".activa", null);
         programar(System.currentTimeMillis());
         hc.guardarYa();
+        avisarBrujulas();
+    }
+
+    /** 1.16.0 · Las Brujulas de la Caida, al rumbo de ahora (la boveda acaba de caer, de abrirse o de irse). */
+    private void avisarBrujulas() {
+        BrujulaCaida b = hc.brujula();
+        if (b != null) hc.seguro("brujula-caida", b::repasarTodos);
     }
 
     /** Quita el bloque y su boveda de EDM; con el chunk sin cargar, la deja en por-quitar. */
@@ -644,6 +655,7 @@ final class BovedaCaida implements Listener {
         datos().set(RUTA + ".activa.abierta-por", p.getName());
         datos().set(RUTA + ".activa.abierta-en", System.currentTimeMillis());
         hc.guardarYa();
+        avisarBrujulas();
         ConfigurationSection c = cfg();
         List<BotinCalamity.Tirada> t = BotinCalamity.tirar(BotinCalamity.filas(c, "botin", BOTIN_DE_SERIE), 0, 0, 0,
                 1, azar::nextDouble);

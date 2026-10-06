@@ -261,6 +261,18 @@ public final class Paleta {
      */
     public static final Tono T_BAROMETRO = new Tono(0xD4E1F2, 0x4E7DB8);
 
+    /**
+     * Calamity 1.16.0 · Farol de Tranquilidad: jade, la llama verde del farol de cobre. Entre el verde del Frasco
+     * (#3DDC84), que es la cordura, y el turquesa de la Astilla (#2FD3C8): de la familia de la calma, sin confundirse.
+     */
+    public static final Tono T_FAROL = new Tono(0xD6F5E6, 0x52C79A);
+
+    /**
+     * Calamity 1.16.0 · Brujula de la Caida: el violeta del haz de la Boveda Caida (#B58CFF), un punto mas hondo que
+     * el lila de la Llave Ominosa (#A97FDD) para que no sean el mismo objeto.
+     */
+    public static final Tono T_BRUJULA_CAIDA = new Tono(0xE6DBFF, 0x8C6ADB);
+
     /** Los tonos por su nombre en hardcore.lores.tonos (Ficha.tono). */
     public static final java.util.Map<String, Tono> TONOS = java.util.Map.ofEntries(
             java.util.Map.entry("contrato", T_CONTRATO), java.util.Map.entry("grado-1", T_GRADO_I),
@@ -273,7 +285,8 @@ public final class Paleta {
             java.util.Map.entry("grabado", T_GRABADO), java.util.Map.entry("salvoconducto", T_SALVOCONDUCTO),
             java.util.Map.entry("masamune", T_MASAMUNE), java.util.Map.entry("kit", T_KIT),
             java.util.Map.entry("trofeo", T_TROFEO), java.util.Map.entry("llave-umbral", T_LLAVE_UMBRAL),
-            java.util.Map.entry("llave-ominosa", T_LLAVE_OMINOSA), java.util.Map.entry("barometro", T_BAROMETRO));
+            java.util.Map.entry("llave-ominosa", T_LLAVE_OMINOSA), java.util.Map.entry("barometro", T_BAROMETRO),
+            java.util.Map.entry("farol", T_FAROL), java.util.Map.entry("brujula-caida", T_BRUJULA_CAIDA));
 
     /** Las cifras de los lores: blanco. */
     public static final TextColor LORE_BLANCO = TextColor.color(0xF4F4F4);

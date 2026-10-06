@@ -100,6 +100,8 @@ final class MenuAltar implements Listener {
             Map.entry("reclamo", List.of("Hazlo sonar en Calamity y vendrá", "el minijefe del bioma donde estés.")),
             // 1.12.2: el Barometro.
             Map.entry("barometro", List.of("Dice qué clima viene a tu bioma", "y cuánto falta. No se gasta.")),
+            // 1.16.0: la Brujula de la Caida (los Faroles salen con sus minutos de la config, en descripcion()).
+            Map.entry("brujula-caida", List.of("Su aguja apunta a la Bóveda Caída", "mientras siga cerrada. No se gasta.")),
             Map.entry("llave", List.of("Abre la Crate Caos del spawn.", "Cuenta para tu tope semanal", "de llaves.")),
             Map.entry("salvoconducto", List.of("Si mueres en Calamity, conservas", "una pieza de tu equipo.")),
             Map.entry("ofrenda", List.of("Suma una Ofrenda a tu nombre.", "No da ningún objeto.")),
@@ -142,7 +144,7 @@ final class MenuAltar implements Listener {
 
     static final List<Categoria> CATEGORIAS = List.of(
             new Categoria(EXPEDICION, Material.LANTERN, "Para la expedición",
-                    List.of("Frascos de Calma, Cristales de", "Regreso, Tinturas y Reclamos."), "Expedición"),
+                    List.of("Frascos, Cristales, Tinturas,", "Reclamos, Faroles e instrumentos."), "Expedición"),
             new Categoria(LLAVES, Material.VAULT, "Llaves y ofrendas",
                     List.of("La Llave del Caos y la Ofrenda,", "a cambio de Esencias."), "Llaves"),
             new Categoria(FORJA, Material.ANVIL, "La Forja",
@@ -238,7 +240,8 @@ final class MenuAltar implements Listener {
         String o = t.objeto();
         // 1.10: el Reclamo es para usarlo dentro, como el Cristal: va con lo de la expedicion.
         if ("tintura".equals(o) || "frasco-1".equals(o) || "cristal".equals(o) || "reclamo".equals(o)
-                || Barometro.OBJETO.equals(o)) return EXPEDICION;
+                || Barometro.OBJETO.equals(o) || Faroles.OBJETO_I.equals(o) || Faroles.OBJETO_II.equals(o)
+                || BrujulaCaida.OBJETO.equals(o)) return EXPEDICION;
         return LLAVES;
     }
 
@@ -516,8 +519,17 @@ final class MenuAltar implements Listener {
             case "cristal" -> List.of("Te saca de Calamity si te", "quedas quieto " + c.getInt("cristal.segundos", 5) + " segundos.");
             case "talisman" -> List.of("+" + c.getInt("talisman.vida", 3) + " de vida. En Calamity, la",
                     "cordura baja un " + Math.round((1 - c.getDouble("talisman.drenaje", 0.80)) * 100) + " % más despacio.");
+            // 1.16.0: lo que arde cada farol, de la config.
+            case "farol-1" -> descripcionFarol(Faroles.duracion(Faroles.seccion(c), 1));
+            case "farol-2" -> descripcionFarol(Faroles.duracion(Faroles.seccion(c), 2));
             default -> DESCRIPCION.getOrDefault(t.id(), descripcionPieza(t));
         };
+    }
+
+    /** 1.16.0 · "Arde 5 min en la mano: tu cordura" / "no se mueve y la locura calla." */
+    static List<String> descripcionFarol(int segundos) {
+        String t = segundos % 60 == 0 ? (segundos / 60) + " min" : Faroles.reloj(segundos);
+        return List.of("Arde " + t + " en la mano: tu cordura", "no se mueve y la locura calla.");
     }
 
     /** Un trueque en su casilla: que es, el coste linea a linea, el cupo y el clic (o por que no). */
@@ -1119,11 +1131,15 @@ final class MenuAltar implements Listener {
         List<String> ids = new ArrayList<>();
         for (Categoria c : CATEGORIAS) ids.add(c.id());
         h.igual("tarjetas de la portada", List.of(EXPEDICION, LLAVES, FORJA), ids);
-        h.igual("para la expedicion", List.of("recargar", "frasco", "cristal", "tintura", "reclamo", "barometro"),
+        h.igual("para la expedicion", List.of("recargar", "frasco", "cristal", "tintura", "reclamo", "barometro",
+                        "farol-1", "farol-2", "brujula-caida"),
                 idsDe(trueques(EXPEDICION, serie, false)));
-        // 1.12.2: con el Barometro son seis: 3 arriba y 3 debajo, con aire.
-        h.igual("expedicion con el Barometro: 20, 22, 24, 29, 31 y 33", List.of(20, 22, 24, 29, 31, 33),
-                casillas(sitios(EXPEDICION, serie, false)));
+        // 1.16.0: con los dos Faroles y la Brujula de la Caida son nueve: tres filas de tres, con aire.
+        h.igual("expedicion con los Faroles y la Brujula: 11, 13, 15, 20, 22, 24, 29, 31 y 33",
+                List.of(11, 13, 15, 20, 22, 24, 29, 31, 33), casillas(sitios(EXPEDICION, serie, false)));
+        h.igual("descripcion del Farol I", List.of("Arde 5 min en la mano: tu cordura", "no se mueve y la locura calla."),
+                descripcionFarol(300));
+        h.igual("descripcion del Farol II", "Arde 12 min en la mano: tu cordura", descripcionFarol(720).get(0));
         // 1.11: con las llaves de las bovedas delante de la del Caos.
         h.igual("llaves y ofrendas", List.of("llave-umbral", "llave-ominosa", "llave", "ofrenda"), idsDe(trueques(LLAVES, serie, false)));
         h.igual("llaves y ofrendas con salvoconducto", List.of("llave-umbral", "llave-ominosa", "llave", "salvoconducto", "ofrenda"),

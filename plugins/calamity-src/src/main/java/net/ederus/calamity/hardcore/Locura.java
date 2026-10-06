@@ -315,10 +315,10 @@ final class Locura {
         return propio;
     }
 
-    /** Si los pasos de la tirada de Alucinaciones tienen que ser los pesados de aqui. */
+    /** Si los pasos de la tirada de Alucinaciones tienen que ser los pesados de aqui. 1.16.0: con la cordura sentida. */
     boolean pesados(Player p) {
         Ajustes a = ajustes();
-        return a.activo() && a.pasos().activo() && hc.cordura().valor(p) < a.umbralPasos() && !exento(p);
+        return a.activo() && a.pasos().activo() && hc.cordura().sentida(p) < a.umbralPasos() && !exento(p);
     }
 
     /**
@@ -327,8 +327,9 @@ final class Locura {
      */
     boolean pasosDeTirada(Player p) {
         Ajustes a = ajustes();
-        double cordura = hc.cordura().valor(p);
-        if (hc.enSpawn(p) || callado(p)) return false;
+        double cordura = hc.cordura().sentida(p);
+        // 1.16.0: con un Farol de Tranquilidad encendido, ni los pasos de la tirada.
+        if (hc.enSpawn(p) || callado(p) || hc.cordura().tranquilo(p)) return false;
         Estado e = estados.computeIfAbsent(p.getUniqueId(), k -> new Estado());
         long ahora = System.currentTimeMillis();
         boolean limite = limite(a, cordura);
@@ -730,6 +731,11 @@ final class Locura {
         }
         if (hc.enSpawn(p)) {
             quien.sendMessage(Component.text(p.getName() + " está en la zona spawn: ahí no suena nada.", Paleta.AVISO));
+            return;
+        }
+        if (hc.cordura().tranquilo(p)) {
+            quien.sendMessage(Component.text(p.getName() + " lleva un Farol de Tranquilidad encendido: no le suena nada.",
+                    Paleta.AVISO));
             return;
         }
         Ajustes a = ajustes();

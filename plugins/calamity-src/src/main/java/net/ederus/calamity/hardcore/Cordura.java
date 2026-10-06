@@ -9,6 +9,7 @@ import java.util.Map;
 import java.util.UUID;
 import java.util.function.Function;
 import java.util.function.Predicate;
+import java.util.function.ToIntFunction;
 
 /**
  * La cordura de cada jugador dentro de Calamity, y la barra que la ensena.
@@ -26,6 +27,11 @@ import java.util.function.Predicate;
  *
  * 1.7.1: ni la barra ni los destellos escriben en la barra de accion por su cuenta; pasan
  * por BarraAccion, que respeta la reserva "ederus_actionbar" de otros plugins (la pesca).
+ *
+ * Calamity 1.16.0 · Con un Farol de Tranquilidad ardiendo en sus manos (Faroles) la cordura se queda QUIETA: sumar()
+ * no la mueve en ningun sentido (ni el drenaje, ni los golpes, ni el Frasco). Y lo que reacciona a la cordura baja
+ * (Locura, Alucinaciones, la vineta, los mobs y niveles de mas, el Frenesi, el minijefe de cordura cero) mira
+ * sentida(), que con el farol encendido es la cordura entera. Al apagarse, valor() es el de antes y todo sigue igual.
  */
 public final class Cordura {
 
@@ -59,6 +65,11 @@ public final class Cordura {
     private final MedidorCordura medidor = new MedidorCordura();
     /** Calamity 1.11: true = BossBar; false = la barra de accion de la 1.10. Lo pone Hardcore cada segundo. */
     private boolean enBossBar = true;
+    /**
+     * Calamity 1.16.0 · Los segundos que le quedan al Farol de Tranquilidad que arde en sus manos este segundo, o -1 si
+     * no arde ninguno (Faroles.restante). Lo pone Hardcore; tiene que ser barato: lo mira cada sumar().
+     */
+    private ToIntFunction<Player> farol = p -> -1;
 
     /**
      * Calamity 1.2: a quien no se le resta cordura, venga de donde venga (drenaje, golpes, testigos,
@@ -66,6 +77,24 @@ public final class Cordura {
      */
     void aSalvo(Predicate<Player> quien) {
         aSalvo = quien == null ? p -> false : quien;
+    }
+
+    /** Calamity 1.16.0 · De donde sale el Farol de Tranquilidad de cada uno (null = de nadie). */
+    void farol(ToIntFunction<Player> f) {
+        farol = f == null ? p -> -1 : f;
+    }
+
+    /** Calamity 1.16.0 · Si le arde un Farol de Tranquilidad: su cordura no se mueve y los efectos de la baja callan. */
+    public boolean tranquilo(Player p) {
+        return p != null && farol.applyAsInt(p) >= 0;
+    }
+
+    /**
+     * Calamity 1.16.0 · La cordura que sienten los efectos de la cordura baja: la de verdad o, con un Farol de
+     * Tranquilidad encendido, la entera (como si estuviera bien). La de verdad no cambia: la ensena la barra.
+     */
+    public double sentida(Player p) {
+        return tranquilo(p) ? MAXIMO : valor(p);
     }
 
     void salida(BarraAccion barra) {
@@ -93,9 +122,13 @@ public final class Cordura {
         estado(p).valor = Math.max(0, Math.min(MAXIMO, v));
     }
 
-    /** Suma (o resta) y devuelve lo que queda. En la zona spawn no resta (aSalvo). */
+    /**
+     * Suma (o resta) y devuelve lo que queda. En la zona spawn no resta (aSalvo). Con un Farol de Tranquilidad
+     * encendido no hace nada, ni para abajo ni para arriba (1.16.0): la cordura se queda quieta.
+     */
     public double sumar(Player p, double delta) {
         Estado e = estado(p);
+        if (delta != 0 && tranquilo(p)) return e.valor;
         if (delta < 0 && aSalvo.test(p)) return e.valor;
         e.valor = Math.max(0, Math.min(MAXIMO, e.valor + delta));
         return e.valor;
@@ -196,14 +229,17 @@ public final class Cordura {
      */
     public void pintar(Player p) {
         Estado e = estado(p);
+        // 1.16.0: con un Farol de Tranquilidad, "Tranquilidad 3:42" detras de la cifra, en la misma linea.
+        int calma = farol.applyAsInt(p);
         if (enBossBar) {
             if (p.isDead()) medidor.ocultar(p);
-            else medidor.mostrar(p, e.valor, extra.apply(p));
+            else medidor.mostrar(p, e.valor, calma, extra.apply(p));
             if (salida != null) salida.repintar(p);
             return;
         }
         if (salida == null) return;
         Component c = barra(e.valor);
+        if (calma >= 0) c = c.append(Component.text("  ·  ", Paleta.SEPARADOR)).append(MedidorCordura.calma(calma));
         Component mas = extra.apply(p);
         salida.fondo(p, mas == null ? c : c.append(mas));
     }

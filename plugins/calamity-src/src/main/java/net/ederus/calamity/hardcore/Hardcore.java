@@ -176,6 +176,10 @@ public final class Hardcore implements Listener {
     private Clima clima;
     /** Calamity 1.12.2 · El Barometro: lee el reloj del clima (Clima.ciclo) y la tabla por bioma. */
     private Barometro barometro;
+    /** Calamity 1.16.0 · Los Faroles de Tranquilidad: con uno ardiendo en la mano, la cordura se queda quieta. */
+    private Faroles faroles;
+    /** Calamity 1.16.0 · La Brujula de la Caida: apunta a la Boveda Caida que sigue cerrada. */
+    private BrujulaCaida brujula;
     /** Calamity 1.7: los niveles por distancia al spawn y su aviso. */
     private Distancia distancia;
     private Npcs npcs;
@@ -273,6 +277,10 @@ public final class Hardcore implements Listener {
     /** Lo que abren los NPCs de la antesala (/calamity open) y el Cronista. */
     Npcs npcs() { return npcs; }
     ZonaSpawn zonaSpawn() { return zona; }
+    /** 1.16.0: los Faroles de Tranquilidad (null con las reglas apagadas). */
+    Faroles faroles() { return faroles; }
+    /** 1.16.0: la Brujula de la Caida; la avisa BovedaCaida al caer, abrirse o irse la boveda. */
+    BrujulaCaida brujula() { return brujula; }
     Ruinas ruinas() { return ruinas; }
     ClanesCalamity clanes() { return clanes; }
     Hogueras hogueras() { return hogueras; }
@@ -360,6 +368,11 @@ public final class Hardcore implements Listener {
         // En la zona spawn la cordura no baja por nada (drenaje, sustos, testigos, la PARCA...).
         // M24: tampoco al amparo de una hoguera de calma, salvo para quien ya persigue la PARCA.
         cordura.aSalvo(p -> enSpawn(p) || enCalma(p));
+        // 1.16.0: con un Farol de Tranquilidad ardiendo en la mano, la cordura no se mueve y sus efectos callan.
+        cordura.farol(p -> {
+            Faroles f = faroles;
+            return f == null ? -1 : f.restante(p);
+        });
         // Un segundo justo: la cordura se cuenta en segundos y la barra tiene que
         // repintarse a ese ritmo o parpadea contra los avisos de otros plugins.
         reloj = plugin.getServer().getScheduler().runTaskTimer(
@@ -469,9 +482,13 @@ public final class Hardcore implements Listener {
         // 1.9.0: despues del Eclipse y de la Parca, a los que pregunta si el cielo es suyo.
         clima = crear("clima", () -> new Clima(this));
         barometro = crear("barometro", () -> new Barometro(this));
+        // 1.16.0: los Faroles de Tranquilidad (los mira la cordura en cada sumar y los quema el reloj cada segundo).
+        faroles = crear("farol", () -> new Faroles(this));
         // Calamity 1.11: los cofres y las Bovedas de Ruinas, la Boveda Caida y el ranking de clanes.
         ruinas = crear("ruinas", () -> new Ruinas(this));
         bovedaCaida = crear("boveda-caida", () -> new BovedaCaida(this));
+        // 1.16.0: la Brujula de la Caida lee lo que BovedaCaida apunta en hardcore-datos.
+        brujula = crear("brujula-caida", () -> new BrujulaCaida(this));
         clanes = crear("clanes", () -> new ClanesCalamity(this));
         // M24 · Las hogueras de calma: preguntan a la zona spawn, la vara (puertas), la PARCA y las Esencias.
         hogueras = crear("hogueras", () -> new Hogueras(this));
@@ -498,11 +515,15 @@ public final class Hardcore implements Listener {
         if (hogueras != null) seguro("hogueras", () -> hogueras.parar());
         hogueras = null;
         if (clanes != null) seguro("clanes", () -> clanes.parar());
+        if (brujula != null) seguro("brujula-caida", () -> brujula.parar());
+        brujula = null;
         if (bovedaCaida != null) seguro("boveda-caida", () -> bovedaCaida.parar());
         if (ruinas != null) seguro("ruinas", () -> ruinas.parar());
         clanes = null;
         bovedaCaida = null;
         ruinas = null;
+        if (faroles != null) seguro("farol", () -> faroles.parar());
+        faroles = null;
         if (barometro != null) seguro("barometro", () -> barometro.parar());
         barometro = null;
         if (clima != null) seguro("clima", () -> clima.parar());
@@ -550,6 +571,7 @@ public final class Hardcore implements Listener {
         distancia = null;
         enZona.clear();
         cordura.aSalvo(null);
+        cordura.farol(null);
         Subcomandos.staff().vaciar();
         Subcomandos.jugador().vaciar();
         Autotest.vaciar();
@@ -724,6 +746,8 @@ public final class Hardcore implements Listener {
                  * Grieta), la barra, el Cristal, las horas, el suelo, el aviso de su Eco, la etiqueta
                  * de combate y sus objetos. Ni drenaje, ni bioma, ni niebla, ni minijefe, ni sentidos. */
                 boolean spawn = vigilarSpawn(p);
+                // 1.16.0: el Farol de Tranquilidad, antes del drenaje y de los sentidos: el segundo que gasta es el que protege.
+                if (faroles != null) seguro("farol", () -> faroles.segundo(p, spawn));
                 seguro("huella", () -> huella.segundo(p));
                 if (!spawn) {
                     drenar(p, e);
@@ -740,7 +764,8 @@ public final class Hardcore implements Listener {
                 vigilarCanalizacion(p);
                 if (!spawn) nieblaDeNoche(p);
                 contarTiempo(p);
-                if (!spawn && e.valor <= 0) minijefeSiTocaCordura(p, e);
+                // 1.16.0: con un Farol de Tranquilidad encendido no viene (la cordura a cero no "se siente").
+                if (!spawn && e.valor <= 0 && !cordura.tranquilo(p)) minijefeSiTocaCordura(p, e);
                 apuntarSuelo(p);
                 if (!spawn) seguro("sentidos", () -> sentidos.latido(p));
                 seguro("ecos", () -> ecos.avisoDistancia(p));
@@ -751,6 +776,8 @@ public final class Hardcore implements Listener {
         }
         // Quien ya no esta dentro (salio, murio, se desconecto) deja de contar como "en el spawn".
         enZona.retainAll(vistos);
+        // 1.16.0: y deja de tener un farol encendido.
+        if (faroles != null) faroles.podar(vistos);
         // 1.11: la BossBar de la cordura solo la tiene quien se acaba de pintar (dentro y contando).
         cordura.podarPantalla(vistos);
         if (distancia != null) distancia.podar(vistos);
@@ -1159,12 +1186,25 @@ public final class Hardcore implements Listener {
         return mobsExtraCordura(p) + mobsExtraTiempo(p);
     }
 
-    /** La parte de bonusTope que pone la cordura (por debajo de 50 y a cero). */
+    /**
+     * La parte de bonusTope que pone la cordura (por debajo de 50 y a cero). 1.16.0: la sentida, que con un Farol de
+     * Tranquilidad encendido es la entera (sin mobs de mas).
+     */
     int mobsExtraCordura(Player p) {
-        double v = cordura.valor(p);
+        return mobsExtraPorCordura(cordura.sentida(p), cfg().getInt("cordura.mobs-extra", 4),
+                cfg().getInt("cordura.mobs-extra-vacio", 6));
+    }
+
+    /** 1.16.0 · Los mobs de mas que pone una cordura: ninguno de 50 para arriba, "extra" por debajo y "vacio" a cero. Puro. */
+    static int mobsExtraPorCordura(double v, int extra, int vacio) {
         if (v >= 50) return 0;
-        return v <= 0 ? cfg().getInt("cordura.mobs-extra-vacio", 6)
-                : cfg().getInt("cordura.mobs-extra", 4);
+        return v <= 0 ? vacio : extra;
+    }
+
+    /** 1.16.0 · Los niveles de mas que pone una cordura: "critico" por debajo de 25, "extra" por debajo de 50. Puro. */
+    static int nivelPorCordura(double v, int extra, int critico) {
+        if (v < 25) return critico;
+        return v < 50 ? extra : 0;
     }
 
     /** La parte de bonusTope que pone el tiempo dentro (mismo contador de sesion que el nivel). */
@@ -1180,10 +1220,9 @@ public final class Hardcore implements Listener {
      */
     public int bonusNivel(Player p) {
         if (!esHardcore(p)) return 0;
-        int extra = 0;
-        double v = cordura.valor(p);
-        if (v < 25) extra += cfg().getInt("cordura.nivel-extra-critico", 20);
-        else if (v < 50) extra += cfg().getInt("cordura.nivel-extra", 10);
+        // 1.16.0: la cordura sentida (con un Farol de Tranquilidad encendido, la entera: sin niveles de mas).
+        int extra = nivelPorCordura(cordura.sentida(p), cfg().getInt("cordura.nivel-extra", 10),
+                cfg().getInt("cordura.nivel-extra-critico", 20));
 
         // Y sube con los minutos que lleves dentro: quedarse es cada vez peor idea.
         extra += Distancia.nivelPorMinutos(cordura.estado(p).segundosDentro,
@@ -1220,9 +1259,10 @@ public final class Hardcore implements Listener {
         if (!esHardcore(p)) return List.of();
         List<String[]> l = new ArrayList<>();
         double v = cordura.valor(p);
-        int porCordura = v < 25 ? cfg().getInt("cordura.nivel-extra-critico", 20)
-                : v < 50 ? cfg().getInt("cordura.nivel-extra", 10) : 0;
-        l.add(new String[]{"cordura +" + porCordura, "cordura " + Math.round(v) + " %"});
+        int porCordura = nivelPorCordura(cordura.sentida(p), cfg().getInt("cordura.nivel-extra", 10),
+                cfg().getInt("cordura.nivel-extra-critico", 20));
+        l.add(new String[]{"cordura +" + porCordura, "cordura " + Math.round(v) + " %"
+                + (cordura.tranquilo(p) ? ", quieta por un Farol de Tranquilidad" : "")});
         int segundos = cordura.estado(p).segundosDentro;
         int cada = cfg().getInt("dificultad.nivel-cada-minutos", 3);
         l.add(new String[]{"minutos +" + Distancia.nivelPorMinutos(segundos, cada),
@@ -2228,6 +2268,14 @@ public final class Hardcore implements Listener {
     private void beber(Player p, ItemStack frasco) {
         if (!esHardcore(p)) {
             p.sendMessage(Component.text("El Frasco de Calma solo funciona en Calamity.", Paleta.TEXTO));
+            return;
+        }
+        // 1.16.0: con un Farol de Tranquilidad encendido la cordura no se mueve: el trago no haria nada y no se gasta.
+        if (cordura.tranquilo(p)) {
+            ConfigurationSection f = cfg().getConfigurationSection("farol");
+            String t = f == null ? null : f.getString("textos.frasco");
+            cordura.destello(p, Component.text(t == null || t.isBlank()
+                    ? "Con el farol encendido tu cordura no se mueve. Apártalo de tus manos para beber." : t, Paleta.TEXTO), 3);
             return;
         }
         int quedan = items.tragos(frasco);

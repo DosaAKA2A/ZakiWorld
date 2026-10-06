@@ -990,6 +990,10 @@ hardcore:
       - {id: reclamo, pagina: umbral, icono: GOAT_HORN, nombre: "Reclamo", esencias: 6, da: "dar:reclamo", limite-dia: 3}   # 1.10: llama al minijefe del bioma (minijefes.reclamo)
       # Calamity 1.12.2: el Barómetro (hardcore.barometro). No se gasta: uno al día basta para reponer el que se pierda.
       - {id: barometro, pagina: umbral, icono: COMPASS, nombre: "Barómetro", esencias: 15, da: "dar:barometer", limite-dia: 1}
+      # Calamity 1.16.0: los Faroles de Tranquilidad (hardcore.farol) y la Brújula de la Caída (hardcore.brujula-caida).
+      - {id: farol-1, pagina: umbral, icono: EXPOSED_COPPER_LANTERN, nombre: "Farol de Tranquilidad I", esencias: 5, da: "dar:lantern1", limite-dia: 6}
+      - {id: farol-2, pagina: umbral, icono: COPPER_LANTERN, nombre: "Farol de Tranquilidad II", esencias: 10, da: "dar:lantern2", limite-dia: 3}
+      - {id: brujula-caida, pagina: umbral, icono: COMPASS, nombre: "Brújula de la Caída", esencias: 20, da: "dar:fallcompass", limite-dia: 1}
       # Calamity 1.11: las llaves de las bóvedas. La del Umbral cuesta lo que vale de media una Bóveda de Ruinas
       # (unas 8-10 Esencias): comprarla es comodidad, no negocio. La Ominosa pide entregar 5 del Umbral.
       - {id: llave-umbral, pagina: umbral, icono: TRIAL_KEY, nombre: "Llave del Umbral", esencias: 10, da: "dar:llave-umbral", limite-dia: 2}
@@ -1084,6 +1088,44 @@ hardcore:
       escampa: "{ahora}. Escampa en {tiempo}."
       sin-clima: "{ahora}. En este bioma no cambia el tiempo."
       fuera: "Aquí no marca nada."
+  # Calamity 1.16.0 · Los Faroles de Tranquilidad I y II. Mientras uno arde en tu mano (la principal o la
+  # secundaria), en Calamity y fuera de la zona spawn, tu cordura se queda quieta (no baja ni sube) y callan
+  # todos los efectos de la cordura baja: la locura, las alucinaciones, la viñeta, los mobs y niveles de más,
+  # el Frenesí y el minijefe de cordura cero. No toca a la Parca, al Vigilante ni al Eclipse. El tiempo solo
+  # corre en la mano y se guarda en el propio farol (su barra de durabilidad): guardado, se detiene. Con dos
+  # en las manos arde el que menos tiempo tiene. Al acabarse se consume. No se puede colocar.
+  # Se compran en el Altar (trueques farol-1 y farol-2) o con /calamity give lantern1|lantern2 <player>.
+  farol:
+    activo: true
+    # Segundos que arde cada uno. Cuenta al crearlo: los que ya existen siguen con lo que traían.
+    duracion-i: 300
+    duracion-ii: 720
+    # El aspecto (el de la captura: el I es el farol de cobre expuesto y el II el de cobre). No uses el
+    # OXIDIZED_COPPER_LANTERN: es la Lágrima de Eco. Se reconocen por su marca, no por el material.
+    material-i: EXPOSED_COPPER_LANTERN
+    material-ii: COPPER_LANTERN
+    textos:
+      enciende: "Tu mente se aquieta."
+      apaga: "Se consumió. Tu cordura vuelve a moverse."
+      no-colocar: "El farol no se puede colocar."
+      frasco: "Con el farol encendido tu cordura no se mueve. Apártalo de tus manos para beber."
+  # Calamity 1.16.0 · La Brújula de la Caída: su aguja apunta al bloque exacto de la Bóveda Caída mientras
+  # siga cerrada, como una brújula al norte. Sin bóveda (no cayó, ya la abrieron o se desvaneció) gira sin
+  # rumbo. Con clic derecho dice cuánto le queda. No se gasta. Altar (trueque brujula-caida) o
+  # /calamity give fallcompass <player>.
+  brujula-caida:
+    # Segundos entre una consulta y la siguiente (los clics de en medio no hacen nada). 0 = sin espera.
+    enfriamiento-segundos: 3
+    # Dónde sale la respuesta del clic derecho: en el chat y/o como aviso en la barra de acción.
+    chat: true
+    barra: true
+    # {tiempo}: "22 min", "45 s".
+    textos:
+      desvanece: "La bóveda se desvanece en {tiempo}."
+      sin-hora: "La aguja apunta a la bóveda."
+      abierta: "Alguien ya abrió la bóveda."
+      sin-boveda: "No ha caído ninguna bóveda."
+      fuera: "Aquí la aguja no encuentra nada."
   grabado:
     por-semana: 1
     encantamientos: [SHARPNESS, PROTECTION, EFFICIENCY, POWER, UNBREAKING, LOOTING, FORTUNE]
@@ -1120,6 +1162,8 @@ hardcore:
       llave-umbral: "#E2F4FA #7FB8CC"    # el color de la Boveda de Ruinas
       llave-ominosa: "#EEDFFF #A97FDD"   # el color de la Boveda Caida
       barometro: "#D4E1F2 #4E7DB8"       # azul tormenta (1.12.2)
+      farol: "#D6F5E6 #52C79A"           # jade, la llama verde del farol (1.16.0)
+      brujula-caida: "#E6DBFF #8C6ADB"   # el violeta del haz de la Bóveda Caída (1.16.0)
 
   # ------------------------------------------------------------------ M3. RELIQUIAS
   reliquias:

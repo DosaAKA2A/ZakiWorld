@@ -73,6 +73,7 @@ final class Entregas implements Listener {
     static final List<String> OBJETOS = List.of("esencia", "frasco", "frasco-1", "cristal", "tintura", "gema", "ascua",
             "talisman", "grabado", "salvoconducto", "libro", "llave", "llave-hito", FragmentosMasamune.OBJETO, "reclamo",
             PuenteBovedas.LLAVE_UMBRAL, PuenteBovedas.LLAVE_OMINOSA, Barometro.OBJETO,
+            Faroles.OBJETO_I, Faroles.OBJETO_II, BrujulaCaida.OBJETO,
             GEMA_CUSTODIO, GEMA_MATRIARCA, GEMA_SANADOR, GEMA_CENTINELA, GEMA_HERALDO, GEMA_VIGILANTE);
 
     private final Hardcore hc;
@@ -277,6 +278,10 @@ final class Entregas implements Listener {
             case "reclamo" -> ItemsCalamity.reclamo();
             // 1.12.2: el Barometro (Altar, dar:barometer; /calamity give barometer <player>).
             case Barometro.OBJETO -> Barometro.crear();
+            // 1.16.0: los Faroles de Tranquilidad y la Brujula de la Caida (Altar; /calamity give lantern1|lantern2|fallcompass).
+            case Faroles.OBJETO_I -> Faroles.crear(1);
+            case Faroles.OBJETO_II -> Faroles.crear(2);
+            case BrujulaCaida.OBJETO -> BrujulaCaida.crear();
             default -> {
                 String id = idMmo(o);
                 yield id == null ? null : PuenteMmo.crear(id);

@@ -173,7 +173,8 @@ final class Alucinaciones implements Listener {
 
     /** Cada 20 s por jugador que cuenta, desde Sentidos.latido. */
     void tirada(Player p, int tramo) {
-        if (!activo() || !hc.esHardcore(p)) return;
+        // 1.16.0: con un Farol de Tranquilidad encendido no hay tirada (Sentidos ya no la pide; por si acaso).
+        if (!activo() || !hc.esHardcore(p) || hc.cordura().tranquilo(p)) return;
         // 1.4: el equipo (cordura-alucinaciones) quita esa fraccion de la probabilidad; sin equipo, igual.
         double prob = Equipo.menos(probabilidad(porMinuto(), tramo), hc.delEquipo(p, Equipo.Efecto.CORDURA_ALUCINACIONES));
         if (prob <= 0 || azar.nextDouble() >= prob) return;
@@ -396,7 +397,8 @@ final class Alucinaciones implements Listener {
             if (s.tick() > ticks) continue;
             it.remove();
             Player p = Bukkit.getPlayer(s.jugador());
-            if (p == null || !hc.esHardcore(p)) continue;
+            // 1.16.0: lo que quedaba en la cola de quien enciende un Farol de Tranquilidad ya no suena.
+            if (p == null || !hc.esHardcore(p) || hc.cordura().tranquilo(p)) continue;
             // Locura: nada suena dentro de la zona spawn, tampoco lo que solo oye el.
             Location l = aSonar(p.getLocation(), s, hc::enSpawn);
             if (l != null) p.playSound(l, s.clave(), s.categoria(), s.volumen(), s.tono());
@@ -413,7 +415,7 @@ final class Alucinaciones implements Listener {
             long vida = ticks - f.nace;
             double d = p.getLocation().distance(f.cuerpo.getLocation());
             boolean fin;
-            if (parca) fin = true;                               // ley 6
+            if (parca || hc.cordura().tranquilo(p)) fin = true;  // ley 6, y el Farol de Tranquilidad (1.16.0)
             else if (f.carrera) fin = d <= 2 || vida >= 160;    // se deshace a 2 bloques (o a los 8 s)
             else fin = vida >= 400 || d < 12 || deFrente(p.getEyeLocation().getDirection(),
                     f.cuerpo.getLocation().add(0, 1.2, 0).toVector().subtract(p.getEyeLocation().toVector()));

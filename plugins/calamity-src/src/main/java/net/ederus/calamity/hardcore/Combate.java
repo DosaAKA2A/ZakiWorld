@@ -174,7 +174,8 @@ final class Combate implements Listener {
             return;
         }
         double umbral = hc.cfg().getDouble("frenesi.umbral", 25);
-        if (hc.cordura().valor(p) < umbral) {
+        // 1.16.0: la cordura sentida (con un Farol de Tranquilidad encendido, la entera: sin Frenesi).
+        if (hc.cordura().sentida(p) < umbral) {
             if (enFrenesi.add(u)) {
                 hc.cordura().destello(p, Component.text("Frenesí: haces y recibes más daño.", Paleta.AVISO), 3);
             }
@@ -490,6 +491,8 @@ final class Combate implements Listener {
      */
     void sangreFresca(Player asesino, String tipo, String victima) {
         if (asesino == null || !sangreActiva() || !hc.esHardcore(asesino)) return;
+        // 1.16.0: con un Farol de Tranquilidad encendido la cordura no sube; no se gasta el tope del dia en nada.
+        if (hc.cordura().tranquilo(asesino)) return;
         int n = hc.cfg().getInt("sangre-fresca." + tipo, switch (tipo) {
             case "pvp" -> 20;
             case "eco" -> 10;
@@ -555,7 +558,7 @@ final class Combate implements Listener {
     /** Frenesi de un jugador para "dano-hecho" o "dano-recibido"; 1 si no aplica. */
     private double frenesi(Player p, String clave) {
         if (!frenesiActivo() || !hc.esHardcore(p) || !hc.cordura().conoce(p) || hc.enSpawn(p)) return 1.0;
-        return factorFrenesi(hc.cordura().valor(p), hc.cfg().getDouble("frenesi.umbral", 25),
+        return factorFrenesi(hc.cordura().sentida(p), hc.cfg().getDouble("frenesi.umbral", 25),
                 hc.cfg().getDouble("frenesi." + clave, 0.15));
     }
 

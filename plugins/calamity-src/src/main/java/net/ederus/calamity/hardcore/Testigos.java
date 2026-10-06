@@ -98,19 +98,21 @@ final class Testigos {
                 if (!testigo(d2, radio, p.hasLineOfSight(muerto), false,
                         ultimoTestigo.get(p.getUniqueId()), ahora, cada)) continue;
                 ultimoTestigo.put(p.getUniqueId(), ahora);
-                if (resta > 0) hc.cordura().sumar(p, -resta);
+                // 1.16.0: con un Farol de Tranquilidad encendido no cuesta nada (y el aviso no dice que cueste).
+                double quita = hc.cordura().tranquilo(p) ? 0 : resta;
+                if (quita > 0) hc.cordura().sumar(p, -quita);
                 // Lo que cuesta, con su cifra, como el "+40 de cordura" del Frasco.
                 hc.cordura().destello(p, Component.text("Has visto caer a ", Paleta.TEXTO)
                         .append(Component.text(muerto.getName(), Paleta.DETALLE))
-                        .append(resta > 0 ? Component.text(" · ", Paleta.SEPARADOR)
-                                .append(Component.text("-" + Marco.numero(resta) + " de cordura", Paleta.AVISO))
+                        .append(quita > 0 ? Component.text(" · ", Paleta.SEPARADOR)
+                                .append(Component.text("-" + Marco.numero(quita) + " de cordura", Paleta.AVISO))
                                 : Component.text(".", Paleta.TEXTO)), 3);
                 vistos.add(p.getName());
                 Telemetria t = hc.telemetria();
                 if (t != null) {
                     Map<String, Object> campos = new LinkedHashMap<>();
                     campos.put("muerto", muerto.getName());
-                    campos.put("cordura", -resta);
+                    campos.put("cordura", -quita);
                     t.suceso("testigo", p, campos);
                 }
             }

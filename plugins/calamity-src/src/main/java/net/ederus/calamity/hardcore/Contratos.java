@@ -942,7 +942,9 @@ final class Contratos implements Listener {
         }
         if (++c[0] % 60 == 0) progreso(p, "minutos", 1);
         Cordura.Estado e = hc.cordura().todos().get(u);
-        if (e != null && e.valor < hc.cfg().getDouble("contratos.cordura-limite", 25) && ++c[1] % 60 == 0) {
+        // 1.16.0: con un Farol de Tranquilidad encendido no se esta "al limite".
+        if (e != null && e.valor < hc.cfg().getDouble("contratos.cordura-limite", 25) && !hc.cordura().tranquilo(p)
+                && ++c[1] % 60 == 0) {
             progreso(p, "minutos-limite", 1);
         }
         if (++c[2] % 60 == 0) progreso(p, "minutos-sin-frasco", 1);

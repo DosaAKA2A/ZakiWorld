@@ -1384,6 +1384,13 @@ final class Altar implements Listener {
             // 1.12.2: el Barometro, que dice cuanto falta para el cambio de clima y que trae (no se gasta).
             t("id", "barometro", "pagina", "umbral", "icono", "COMPASS", "nombre", "Barómetro", "esencias", 15,
                     "da", "dar:" + Barometro.OBJETO, "limite-dia", 1),
+            // 1.16.0: los Faroles de Tranquilidad (5 y 12 min de cordura quieta) y la Brujula de la Caida.
+            t("id", "farol-1", "pagina", "umbral", "icono", "EXPOSED_COPPER_LANTERN", "nombre", "Farol de Tranquilidad I",
+                    "esencias", 5, "da", "dar:" + Faroles.OBJETO_I, "limite-dia", 6),
+            t("id", "farol-2", "pagina", "umbral", "icono", "COPPER_LANTERN", "nombre", "Farol de Tranquilidad II",
+                    "esencias", 10, "da", "dar:" + Faroles.OBJETO_II, "limite-dia", 3),
+            t("id", "brujula-caida", "pagina", "umbral", "icono", "COMPASS", "nombre", "Brújula de la Caída", "esencias", 20,
+                    "da", "dar:" + BrujulaCaida.OBJETO, "limite-dia", 1),
             // 1.11: las llaves de las bovedas. La del Umbral, por Esencias con tope diario; la Ominosa, cambiando
             // cinco del Umbral y Esencias, una por semana.
             t("id", "llave-umbral", "pagina", "umbral", "icono", "TRIAL_KEY", "nombre", "Llave del Umbral", "esencias", 10,
@@ -1518,7 +1525,7 @@ final class Altar implements Listener {
         Autotest.Hoja h = new Autotest.Hoja();
         Map<String, Trueque> ts = new HashMap<>();
         for (Trueque t : leer(DEFECTO)) ts.put(t.id(), t);
-        h.igual("trueques de serie (1.12.2: con el Barometro)", 27, ts.size());
+        h.igual("trueques de serie (1.16.0: con los dos Faroles y la Brujula de la Caida)", 30, ts.size());
         Trueque ominosa = ts.get("llave-ominosa");
         h.ok("1.11: la Llave Ominosa pide entregar 5 Llaves del Umbral",
                 ominosa != null && ominosa.pide("llave-umbral") == 5 && "llave-ominosa".equals(ominosa.objeto()));
@@ -1666,6 +1673,24 @@ final class Altar implements Listener {
         h.igual("cuesta 15 Esencias", antesBarometro - 15, c.saldo.de(u));
         h.igual("y se entrega por dar:barometer", Barometro.OBJETO + "x1", c.entregados.get(c.entregados.size() - 1));
         h.igual("2.o Barometro del dia -> cupo", "cupo", probarEn(c, ts.get("barometro"), u).motivo());
+
+        // 1.16.0: los Faroles de Tranquilidad (I: 5 Esencias, 6 al dia; II: 10, 3 al dia) y la Brujula de la Caida (20, 1).
+        c.saldo.sumar(u, 200, "prueba");
+        long antesFaroles = c.saldo.de(u);
+        for (int i = 0; i < 6; i++) probarEn(c, ts.get("farol-1"), u);
+        h.igual("seis Faroles I: 30 Esencias", antesFaroles - 30, c.saldo.de(u));
+        h.igual("y se entregan por dar:lantern1", Faroles.OBJETO_I + "x1", c.entregados.get(c.entregados.size() - 1));
+        h.igual("7.o Farol I del dia -> cupo", "cupo", probarEn(c, ts.get("farol-1"), u).motivo());
+        long antesII = c.saldo.de(u);
+        for (int i = 0; i < 3; i++) probarEn(c, ts.get("farol-2"), u);
+        h.igual("tres Faroles II: 30 Esencias", antesII - 30, c.saldo.de(u));
+        h.igual("y se entregan por dar:lantern2", Faroles.OBJETO_II + "x1", c.entregados.get(c.entregados.size() - 1));
+        h.igual("4.o Farol II del dia -> cupo", "cupo", probarEn(c, ts.get("farol-2"), u).motivo());
+        long antesBrujula = c.saldo.de(u);
+        h.ok("la Brujula de la Caida se compra", probarEn(c, ts.get("brujula-caida"), u).ok());
+        h.igual("cuesta 20 Esencias", antesBrujula - 20, c.saldo.de(u));
+        h.igual("y se entrega por dar:fallcompass", BrujulaCaida.OBJETO + "x1", c.entregados.get(c.entregados.size() - 1));
+        h.igual("2.a Brujula del dia -> cupo", "cupo", probarEn(c, ts.get("brujula-caida"), u).motivo());
 
         h.ok("la prueba no toca hardcore-datos.yml", !hc.datos().isSet("altar.usos.2026-W39." + u)
                 && !hc.datos().isSet("esencias." + u));

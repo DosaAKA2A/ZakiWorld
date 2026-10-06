@@ -90,6 +90,13 @@ public final class Marcas {
      * LONG con la hora en que se puso, para anotar donde aterriza.
      */
     public static final NamespacedKey CORRUPCION = clave("corrupcion");
+    /**
+     * INTEGER 1|2: un Farol de Tranquilidad I o II (Calamity 1.16.0, Faroles). El tiempo que le queda va en el propio
+     * objeto, en su durabilidad (max_damage = lo que arde entero, damage = lo que ya ardio), no en otra marca.
+     */
+    public static final NamespacedKey FAROL = clave("farol");
+    /** BYTE 1: una Brujula de la Caida (Calamity 1.16.0, BrujulaCaida), la que apunta a la Boveda Caida. */
+    public static final NamespacedKey BRUJULA_CAIDA = clave("brujula_caida");
 
     private Marcas() {
     }
@@ -103,7 +110,7 @@ public final class Marcas {
         return List.of(AMENAZA, PRESA, ECO, ECO_DUENO, DANO_JUGADOR, VIDA_LOGICA, CASCARA, ECO_COPIA, RELIQUIA, RELIQUIA_ID,
                 RELIQUIA_ORIGEN, RELIQUIA_NACIO, RELIQUIA_ESPECIAL, RELIQUIA_NIVEL, RELIQUIA_MINIJEFE,
                 RELIQUIA_VALIDA, RELIQUIA_ENTRADA, TROFEO, PRESTADO, LIGADO, TALISMAN, GRABADO, SALVOCONDUCTO, FRAGMENTO_MASAMUNE, RECLAMO,
-                PERGAMINO, BAROMETRO, VIGILANTE, CORRUPCION);
+                PERGAMINO, BAROMETRO, VIGILANTE, CORRUPCION, FAROL, BRUJULA_CAIDA);
     }
 
     /** Si una entidad es nuestra (PARCA, planidera, Eco...). */
