@@ -41,13 +41,13 @@ import java.util.UUID;
 /**
  * Calamity 1.16.0 · La Brujula de la Caida: una brujula que apunta al punto EXACTO de la Boveda Caida que sigue
  * cerrada, como una brujula apunta al norte. Sin boveda (ninguna cayo, ya la abrieron o se desvanecio) la aguja gira
- * sin rumbo; fuera de Calamity tambien (la boveda esta en otra dimension).
+ * sin rumbo; fuera del mundo de la boveda tambien: se le quita el rumbo (rumboEn), tambien para Bedrock.
  *
  * Como: es una BRUJULA (COMPASS) con la marca lethal_world:brujula_caida y un lodestone_tracker sin magnetita
  * (tracked = false, asi no hace falta ningun bloque de magnetita ni se borra si no lo hay) con la posicion de la boveda,
  * o sin posicion para que gire. Al cambiar ese componente en la mano el cliente repite la animacion de sacarla, asi que
  * solo se toca cuando cambia el destino: al caer la boveda, al abrirse o al irse (BovedaCaida llama a repasarTodos), y
- * a las que llegan nuevas al inventario (un repaso cada 2 s de los que estan en Calamity, y uno ya al entrar al mundo,
+ * a las que llegan nuevas al inventario (un repaso cada 2 s de los conectados, y uno ya al entrar al mundo,
  * al conectarse o al recoger una del suelo). El repaso solo reescribe las que apuntan a otro sitio.
  *
  * Clic derecho (al aire o a un bloque, con cualquier mano): cuanto le queda a la boveda ("La bóveda se desvanece en
@@ -163,27 +163,45 @@ final class BrujulaCaida implements Listener {
         return w == null ? null : new Location(w, o.x(), o.y(), o.z());
     }
 
-    /** Todas las de los que estan en Calamity, al rumbo de ahora. Lo llaman el reloj (cada 2 s) y BovedaCaida. */
+    /**
+     * Todas las de los conectados, al rumbo de ahora. Lo llaman el reloj (cada 2 s) y BovedaCaida.
+     *
+     * 1.16.0 (revision): tambien las de fuera de Calamity, que se quedan girando. En Java una aguja con la boveda
+     * en otra dimension gira sola, pero Geyser le pasa a Bedrock como overworld toda dimension que no sea el Nether
+     * ni el End: con la de Calamity y la del Survival iguales, en Bedrock la brujula apuntaba fuera a esas mismas
+     * coordenadas en el mundo donde estuviera (y en otro mundo de Calamity, igual). Sacarla del cofre ender fuera
+     * tambien la deja girando en este repaso. Cuesta poco: casi nadie lleva una y el resto se descarta por el tipo.
+     */
     void repasarTodos() {
         Location d = destino();
-        for (World w : hc.plugin().getServer().getWorlds()) {
-            if (!hc.esHardcore(w)) continue;
-            for (Player p : w.getPlayers()) repasar(p, d);
-        }
+        for (Player p : hc.plugin().getServer().getOnlinePlayers()) repasar(p, d);
     }
 
-    /** Las de ese jugador que apuntan a otro sitio, al destino. Solo dentro de Calamity: fuera giran solas. */
+    /**
+     * Las de ese jugador que no apuntan a donde toca: a la boveda si esta en su mismo mundo; si no, girando
+     * (rumboEn). Solo se reescribe la que cambia: en la mano, reescribirla repite la animacion de sacarla.
+     */
     private void repasar(Player p, Location destino) {
-        if (p == null || !p.isOnline() || !hc.esHardcore(p)) return;
+        if (p == null || !p.isOnline()) return;
+        Location d = rumboEn(destino, p.getWorld());
         PlayerInventory inv = p.getInventory();
         ItemStack[] todo = inv.getContents();
         for (int i = 0; i < todo.length; i++) {
             ItemStack it = todo[i];
-            if (!es(it) || mismo(rumbo(it), destino)) continue;
+            if (!es(it) || (d == null ? gira(it) : mismo(rumbo(it), d))) continue;
             ItemStack nueva = it.clone();
-            apuntar(nueva, destino);
+            apuntar(nueva, d);
             inv.setItem(i, nueva);
         }
+    }
+
+    /**
+     * Si gira de verdad: sin destino. rumbo() tambien da null con un destino en un mundo que no esta cargado (Paper
+     * no encuentra su World), y esa en Bedrock apuntaria a sus coordenadas: se compara el componente entero.
+     */
+    private static boolean gira(ItemStack it) {
+        LodestoneTracker t = it.getData(DataComponentTypes.LODESTONE_TRACKER);
+        return t != null && t.equals(LodestoneTracker.lodestoneTracker(null, false));
     }
 
     /** Un tick despues (el inventario ya esta puesto): las suyas, al rumbo de ahora. */
@@ -307,6 +325,14 @@ final class BrujulaCaida implements Listener {
         return vence > 0 && ahora >= vence ? Estado.NINGUNA : Estado.CERRADA;
     }
 
+    /**
+     * 1.16.0 (revision) · El rumbo de una brujula de quien esta en 'mundo': la boveda si cayo en ese mismo mundo; en
+     * cualquier otro (fuera de Calamity u otro mundo de Calamity), ninguno: girando, tambien en Bedrock.
+     */
+    static Location rumboEn(Location destino, World mundo) {
+        return destino != null && mundo != null && mundo.equals(destino.getWorld()) ? destino : null;
+    }
+
     /** Si dos rumbos son el mismo: los dos sin rumbo, o el mismo bloque del mismo mundo. */
     static boolean mismo(Location a, Location b) {
         if (a == null || b == null) return a == b;
@@ -391,6 +417,14 @@ final class BrujulaCaida implements Listener {
         h.ok("las dos girando: no se toca", mismo(null, null));
         h.ok("girando y con boveda: se reescribe", !mismo(null, a) && !mismo(a, null));
 
+        // Revision: fuera del mundo de la boveda, girando (Bedrock la haria apuntar a esas coordenadas en otro mundo).
+        World calamity = mundoFalso("calamity"), survival = mundoFalso("world");
+        Location enCalamity = new Location(calamity, 812, 71, -1430);
+        h.ok("en el mundo de la boveda: apunta", rumboEn(enCalamity, calamity) == enCalamity);
+        h.ok("fuera de Calamity (o en otro mundo de Calamity): gira", rumboEn(enCalamity, survival) == null);
+        h.ok("sin boveda: gira en todas partes", rumboEn(null, calamity) == null && rumboEn(null, survival) == null);
+        h.ok("sin mundo: gira", rumboEn(enCalamity, null) == null);
+
         YamlConfiguration cfg = new YamlConfiguration();
         h.igual("enfriamiento de serie: 3 s", 3, enfriamiento(cfg));
         cfg.set("brujula-caida.enfriamiento-segundos", 500);
@@ -407,17 +441,30 @@ final class BrujulaCaida implements Listener {
             ItemStack br = crear();
             h.ok("give fallcompass: brujula con su marca", br != null && br.getType() == Material.COMPASS && es(br));
             h.ok("nueva: gira sin rumbo", br != null && br.hasData(DataComponentTypes.LODESTONE_TRACKER) && rumbo(br) == null);
+            h.ok("nueva: gira de verdad (sin destino guardado)", br != null && gira(br));
             h.ok("sin brillo", br != null && Boolean.FALSE.equals(br.getItemMeta().getEnchantmentGlintOverride()));
             World w = Bukkit.getWorlds().isEmpty() ? null : Bukkit.getWorlds().get(0);
             if (br != null && w != null) {
                 Location donde = new Location(w, 812, 71, -1430);
                 apuntar(br, donde);
                 h.ok("al caer: apunta a la boveda", mismo(rumbo(br), donde));
+                h.ok("con destino: ya no gira", !gira(br));
                 h.ok("sin magnetita (tracked = false)", !br.getData(DataComponentTypes.LODESTONE_TRACKER).tracked());
                 apuntar(br, null);
-                h.ok("al abrirse o irse: vuelve a girar", rumbo(br) == null);
+                h.ok("al abrirse o irse: vuelve a girar", rumbo(br) == null && gira(br));
             }
         }
         return h.lineas();
+    }
+
+    /** Un mundo de mentira con ese nombre (para rumboEn sin servidor): solo se compara consigo mismo. */
+    private static World mundoFalso(String nombre) {
+        return (World) java.lang.reflect.Proxy.newProxyInstance(World.class.getClassLoader(), new Class<?>[]{World.class},
+                (proxy, m, args) -> switch (m.getName()) {
+                    case "equals" -> proxy == args[0];
+                    case "hashCode" -> System.identityHashCode(proxy);
+                    case "getName", "toString" -> nombre;
+                    default -> null;
+                });
     }
 }
