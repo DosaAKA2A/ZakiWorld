@@ -1,7 +1,6 @@
 package net.ederus.calamity.hardcore;
 
 import net.kyori.adventure.text.Component;
-import net.kyori.adventure.text.format.TextColor;
 import org.bukkit.Material;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
@@ -39,17 +38,17 @@ import java.util.UUID;
  *   portada (27)       fila 1: los tipos que llevas, centrados y en orden (grado I a IV, especiales,
  *                      Esencias); un clic vende ese tipo. Si no caben (mas de 7), los de mas valor y
  *                      "Y N tipos mas". Sin nada, un papel en el centro.
- *                      fila 2: Contratos (20) · Vender todo (22, con el resumen y los topes de hoy) ·
- *                      Tu dinero (24)
+ *                      fila 2: Vender todo (21, con el resumen y los topes de hoy) · Tu dinero (23)
  *   Vender todo (27)   No (11) · lo que vendes y lo que recibes (13) · Si (15)
  *   Tu dinero (27)     fila 1: saldo, premios, lo vendido, primera salida, Racha y Tu camino; Volver (22)
- *   Contratos (27)     fila 1: los contratos de hoy (un clic acepta una oferta o pide otra copia del
- *                      pergamino perdido); fila 2: la semana (20) · Volver (22) · Cambiar uno (24)
- *   Cambiar (27)       elegir: los que se pueden cambiar en la fila 1 y Volver; confirmar: No (11) ·
- *                      el contrato y lo que cuesta (13) · Si (15)
  *
  * Fuera quedan el Altar, la Forja, la ayuda, Tu camino y Cerrar como botones sueltos: el Altar y la Forja
  * tienen sus NPCs, Tu camino va en Tu dinero y la ventana se cierra con Esc.
+ *
+ * Calamity 1.16.2 · Los contratos ya no son de Oren. Dosa: "vamos a separar los contratos de Oren a otro
+ * NPC, porque es confuso llevar tienda y contratos en uno solo". La vista Contratos, la de cambiar uno y su
+ * confirmacion se fueron tal cual al menu de Maren (MenuContratos, "calamity open <p> contracts"); el
+ * Mercado se queda con Vender todo y Tu dinero, centrados en su fila (Marco.columnas(2): 21 y 23).
  *
  * Reglas de los menus de Calamity (Marco): titulo "CALAMITY | seccion", marco de cristal negro, Volver
  * abajo en el centro, una paleta corta, la ultima linea dice que hace el clic, y solo clic izquierdo
@@ -61,27 +60,27 @@ final class MenuTasador implements Listener {
     private static final long ESPERA_MS = 500;
     /** Todas las vistas: 3 filas. */
     static final int TAMANO = 27;
-    /** 1.16.1 · Las vistas con botones abajo (Mercado, Tu dinero, Contratos, elegir) llevan una fila mas de
+    /** 1.16.1 · Las vistas con botones abajo (Mercado y Tu dinero; tambien las de Maren) llevan una fila mas de
      *  cristal debajo, de margen: Dosa, "ponle mas margen abajo, con los cristales". Los botones no se mueven. */
     static final int TAMANO_MARGEN = 36;
-    /** La fila del medio: lo que se ensena (tipos, contratos, tu dinero). */
+    /** La fila del medio: lo que se ensena (tipos, tu dinero; en Maren, los contratos). */
     static final int FILA = 9;
     /** Como mucho, tipos en la fila: las 7 columnas de dentro del marco. */
     static final int MAX_TIPOS = Marco.COLUMNAS;
-    /** Portada, abajo: Contratos a la izquierda, Vender todo en el centro y Tu dinero a la derecha. */
-    static final int CONTRATOS = 20, VENDER_TODO = 22, DINERO = 24;
+    /**
+     * Portada, abajo: Vender todo y Tu dinero, centrados (columnas 3 y 5 de Marco.columnas(2)). 1.16.2: sin
+     * Contratos a la izquierda, que se fueron a Maren.
+     */
+    static final int VENDER_TODO = 21, DINERO = 23;
     /** Subvistas: Volver abajo en el centro (Marco.abajo). */
     static final int SALIR = 22;
-    /** Contratos, abajo: la semana y Cambiar a los lados de Volver. */
-    static final int SEMANA = 20, CAMBIAR = 24;
     /** Confirmaciones: No, lo que se confirma y Si, en la fila del medio. */
     static final int NO = 11, CENTRO = 13, SI = 15;
 
-    static final String PORTADA = Marco.TASADOR, V_DINERO = "dinero", V_CONTRATOS = "contratos",
-            V_ELEGIR = "elegir", V_CAMBIAR = "cambiar", V_TODO = "todo";
+    static final String PORTADA = Marco.TASADOR, V_DINERO = "dinero", V_TODO = "todo";
 
-    /** Nuestra ventana. pantalla: la vista; hueco: el contrato que se cambia (en "cambiar"). */
-    record Vista(String pantalla, Map<Integer, String> acciones, int hueco) implements InventoryHolder {
+    /** Nuestra ventana. pantalla: la vista. */
+    record Vista(String pantalla, Map<Integer, String> acciones) implements InventoryHolder {
         @Override
         public Inventory getInventory() {
             return null;
@@ -134,8 +133,6 @@ final class MenuTasador implements Listener {
     private static Marco.Titulo titulo(String pantalla) {
         return switch (pantalla) {
             case V_DINERO -> Marco.T_TASADOR_DINERO;
-            case V_CONTRATOS -> Marco.T_TASADOR_CONTRATOS;
-            case V_ELEGIR, V_CAMBIAR -> Marco.T_CAMBIAR;
             case V_TODO -> Marco.T_VENDER_TODO;
             default -> Marco.T_TASADOR;
         };
@@ -143,18 +140,14 @@ final class MenuTasador implements Listener {
 
     private static int tamano(String pantalla) {
         return switch (pantalla) {
-            case PORTADA, V_DINERO, V_CONTRATOS, V_ELEGIR -> TAMANO_MARGEN;
+            case PORTADA, V_DINERO -> TAMANO_MARGEN;
             default -> TAMANO;
         };
     }
 
     private void abrirVista(Player p, String pantalla) {
-        // Calamity 1.11: dentro de Calamity, con la libreta de otro dia y nada a medias, Oren da la de hoy
-        // (Contratos.renovar). Aqui y no en abrir(): los enlaces abren las vistas directamente. Sin libreta
-        // caducada es mirar una seccion y sus tres huecos.
-        Contratos con = hc.contratos();
-        if (con != null && hc.esHardcore(p)) hc.seguro("contratos", () -> con.renovar(p));
-        Vista v = new Vista(pantalla, new HashMap<>(), 0);
+        // 1.16.2: la libreta de contratos de otro dia ya no la renueva Oren, sino Maren (MenuContratos).
+        Vista v = new Vista(pantalla, new HashMap<>());
         Inventory inv = hc.plugin().getServer().createInventory(v, tamano(pantalla), titulo(pantalla).componente());
         pintar(inv, p, v);
         p.openInventory(inv);
@@ -163,7 +156,7 @@ final class MenuTasador implements Listener {
     private void repintar(Player p) {
         if (!p.isOnline()) return;
         Inventory top = p.getOpenInventory().getTopInventory();
-        if (top.getHolder() instanceof Vista v && !v.pantalla().equals(V_CAMBIAR)) pintar(top, p, v);
+        if (top.getHolder() instanceof Vista v) pintar(top, p, v);
     }
 
     private void pintar(Inventory inv, Player p, Vista v) {
@@ -171,18 +164,13 @@ final class MenuTasador implements Listener {
         v.acciones().clear();
         switch (v.pantalla()) {
             case V_DINERO -> vistaDinero(inv, p, v);
-            case V_CONTRATOS -> vistaContratos(inv, p, v);
-            case V_ELEGIR -> vistaElegir(inv, p, v);
             case V_TODO -> vistaTodo(inv, p, v);
             default -> portada(inv, p, v);
         }
         // 1.12.1: sin Cerrar en la portada (Esc cierra); Volver en las subvistas que no confirman nada.
-        if (v.pantalla().equals(V_DINERO) || v.pantalla().equals(V_CONTRATOS)) {
+        if (v.pantalla().equals(V_DINERO)) {
             inv.setItem(SALIR, Marco.volver("al Mercado"));
             v.acciones().put(SALIR, "volver");
-        } else if (v.pantalla().equals(V_ELEGIR)) {
-            inv.setItem(SALIR, Marco.volver("a tus contratos"));
-            v.acciones().put(SALIR, "volver-contratos");
         }
         Marco.rellenar(inv);
     }
@@ -302,7 +290,6 @@ final class MenuTasador implements Listener {
                         List.of(Marco.tenue("No caben aquí: se venden"), Marco.tenue("con Vender todo.")), false));
             }
         }
-        botonContratos(inv, p, v);
         botonTodo(inv, p, o, puede, v);
         botonDinero(inv, p, v);
     }
@@ -507,43 +494,6 @@ final class MenuTasador implements Listener {
         boolean recoge = pend > 0 && (en == null ? !hc.esHardcore(p) : en.recibeYa(p));
         inv.setItem(DINERO, Marco.icono(Material.GOLD_INGOT, Component.text("Tu dinero", Paleta.CIFRA), lore, recoge));
         v.acciones().put(DINERO, "ver:" + V_DINERO);
-    }
-
-    /** Contratos de hoy: cada uno en una linea con como va, los activos y los de la semana. */
-    private void botonContratos(Inventory inv, Player p, Vista v) {
-        UUID u = p.getUniqueId();
-        Contratos con = hc.contratos();
-        List<Component> lore = new ArrayList<>();
-        if (con == null || !hc.valor("contratos", con::activo, false)) {
-            lore.add(Marco.tenue("Oren no tiene contratos ahora mismo."));
-            inv.setItem(CONTRATOS, iconoContratos(Component.text("Contratos", Paleta.TENUE), lore, false));
-            return;
-        }
-        boolean papel = hc.valor("contratos", con::pergaminoActivo, false);
-        lore.add(Marco.texto("Encargos de Oren que cambian"));
-        lore.add(Marco.texto(papel ? "cada día. Acepta los que quieras." : "cada día. Se cobran al salir vivo."));
-        lore.add(Component.empty());
-        List<Contratos.Estado> lista = hc.valor("contratos", () -> con.estados(p), List.of());
-        boolean listo = false;
-        for (Contratos.Estado e : lista) {
-            Contratos.Def d = e.def();
-            Component l = Component.text("· " + d.texto() + "  ", e.cobrado() ? Paleta.TENUE : Paleta.TEXTO);
-            if (e.cobrado()) l = l.append(Component.text("cobrado", Paleta.TENUE));
-            else if (e.cumplido()) l = l.append(Component.text("cumplido", Paleta.BIEN));
-            else if (papel && e.oferta()) l = l.append(Component.text("oferta", Paleta.DETALLE));
-            else l = l.append(Component.text(Math.min(e.progreso(), d.objetivo()) + "/" + d.objetivo(), Paleta.CIFRA));
-            lore.add(l);
-            listo |= e.cumplido() && !e.cobrado();
-            listo |= papel && e.oferta();
-        }
-        if (lista.isEmpty()) lore.add(Marco.tenue("Hoy no tienes ninguno."));
-        if (papel) lore.add(fila("Activos", hc.valor("contratos", () -> con.activosDe(p), 0) + " de " + con.activosMax()));
-        int[] semana = con.semanaDe(u);
-        lore.add(fila("Esta semana", Math.min(semana[0], semana[1]) + " de " + semana[1]));
-        lore.add(Component.empty());
-        lore.add(Marco.accion(papel ? "Clic para verlos y aceptarlos" : "Clic para verlos o cambiarlos"));
-        inv.setItem(CONTRATOS, iconoContratos(Component.text("Contratos", Paleta.DETALLE), lore, listo));
-        v.acciones().put(CONTRATOS, "ver:" + V_CONTRATOS);
     }
 
     /** Tu camino (en Tu dinero desde la 1.12.1): las horas activas y el proximo hito; el clic abre el Camino. */
@@ -792,203 +742,6 @@ final class MenuTasador implements Listener {
         return String.valueOf(m.get("objeto"));
     }
 
-    // ------------------------------------------------------------------ subvista: contratos
-
-    /** 1.16.1 · El boton de Contratos con un pergamino (diseño de estandarte), como los de los contratos. */
-    private static ItemStack iconoContratos(Component nombre, List<Component> lore, boolean brillo) {
-        ItemStack it = Marco.icono(Material.GLOBE_BANNER_PATTERN, nombre, lore, brillo);
-        Pergaminos.ocultarDiseno(it);
-        return it;
-    }
-
-    /** El icono de un contrato por lo que pide (el evento del pool). */
-    private static Material iconoContrato(String evento) {
-        return switch (evento) {
-            case "mob" -> Material.IRON_SWORD;
-            case "destacado" -> Material.GOLDEN_SWORD;
-            case "minijefe" -> Material.WITHER_SKELETON_SKULL;
-            case "cofre" -> Material.CHEST_MINECART;
-            case "reliquia-ii", "tasa-ii" -> Material.MANGROVE_PROPAGULE;
-            case "minutos" -> Material.CLOCK;
-            case "minutos-limite" -> Material.SOUL_LANTERN;
-            case "minutos-sin-frasco" -> Material.GLASS_BOTTLE;
-            case "eco-valido" -> Material.ECHO_SHARD;
-            case "redimir" -> Material.AMETHYST_SHARD;
-            default -> Material.PAPER;
-        };
-    }
-
-    /**
-     * Calamity 1.12.1 · Los contratos de hoy en la fila del medio. Una oferta se acepta con un clic (y llega
-     * su pergamino); uno aceptado cuyo pergamino no llevas, con un clic Oren te da otra copia; todo en el
-     * spawn de Calamity. Abajo: la semana, Volver y Cambiar uno (con su confirmacion: un toque en un contrato
-     * nunca lo cambia).
-     */
-    private void vistaContratos(Inventory inv, Player p, Vista v) {
-        UUID u = p.getUniqueId();
-        Contratos con = hc.contratos();
-        if (con == null || !hc.valor("contratos", con::activo, false)) {
-            inv.setItem(CENTRO, Marco.icono(Material.PAPER, Component.text("Oren no tiene contratos ahora", Paleta.TENUE),
-                    List.of(Marco.tenue("Vuelve más adelante.")), false));
-            return;
-        }
-        List<Contratos.Estado> lista = hc.valor("contratos", () -> con.estados(p), List.of());
-        int precio = con.precioCambio(u), gratis = con.cambiosGratis(u);
-        boolean papel = hc.valor("contratos", con::pergaminoActivo, false);
-        boolean lugar = hc.valor("contratos", () -> con.lugarParaAceptar(p), false);
-        int activos = hc.valor("contratos", () -> con.activosDe(p), 0), max = con.activosMax();
-        Set<Integer> lleva = papel ? hc.valor("contratos", () -> con.llevados(p), Set.<Integer>of()) : Set.of();
-        int[] casillas = casillasFila(lista.size());
-        boolean hayCambiable = false;
-        for (int k = 0; k < casillas.length; k++) {
-            Contratos.Estado e = lista.get(k);
-            Contratos.Def d = e.def();
-            hayCambiable |= !e.cumplido() && !e.cobrado();
-            List<Component> lore = new ArrayList<>();
-            if (!e.oferta() || !papel) lore.add(Marco.barra(e.progreso(), d.objetivo()));
-            lore.add(fila("Paga", Contratos.premio(d)));
-            lore.add(fila("Dura", "hasta la medianoche"));
-            if (d.corto()) lore.add(Marco.tenue("Es corto: se hace en una entrada rápida."));
-            lore.add(Marco.tenue(!papel ? "Se cobra al salir vivo." : Contratos.seCobraAlSalir(d) ? Pergaminos.COBRO_VENTA
-                    : Pergaminos.COBRO_DENTRO));
-            lore.add(Component.empty());
-            // La ultima linea: lo que hace el clic o por que no hace nada.
-            String accion = null;
-            if (e.cobrado()) {
-                lore.add(Marco.tiene("Ya lo cobraste."));
-            } else if (e.cumplido()) {
-                // Con pergaminos solo espera el de Reliquias (los demas se cobran al cumplirlos); sin ellos, todos
-                // se cobran al salir vivo.
-                lore.add(Component.text(papel && Contratos.seCobraAlSalir(d) ? "Cumplido: se cobra al venderlas."
-                        : "Cumplido: lo cobras al salir vivo.", Paleta.CIFRA));
-            } else if (!papel) {
-                lore.add(Marco.tenue("Si mueres, vuelve a empezar."));
-            } else if (e.oferta()) {
-                lore.add(Marco.tenue("Al aceptarlo te da su pergamino:"));
-                lore.add(Marco.tenue("llévalo encima para que cuente."));
-                if (!lugar) lore.add(Marco.porQueNo("Se acepta con Oren, en el spawn."));
-                else if (activos >= max) lore.add(Marco.porQueNo("Ya llevas " + max + " activos."));
-                else {
-                    lore.add(Marco.accion("Clic para aceptarlo"));
-                    accion = "p:" + e.hueco();
-                }
-            } else if (lleva.contains(e.hueco())) {
-                lore.add(Marco.tiene("Aceptado: llevas su pergamino."));
-            } else if (!con.recuperarPerdido()) {
-                lore.add(Component.text("Perdiste su pergamino.", Paleta.AVISO));
-                lore.add(Marco.tenue("Oren no da otro: puedes cambiarlo."));
-            } else if (!lugar) {
-                lore.add(Component.text("No llevas su pergamino.", Paleta.AVISO));
-                lore.add(Marco.tenue("Oren te da otro en el spawn."));
-            } else {
-                lore.add(Component.text("No llevas su pergamino.", Paleta.AVISO));
-                lore.add(Marco.accion("Clic para pedirle otro"));
-                accion = "p:" + e.hueco();
-            }
-            TextColor color = e.cobrado() ? Paleta.TENUE : e.cumplido() ? Paleta.BIEN : e.oferta() ? Paleta.TEXTO : Paleta.DETALLE;
-            Material icono = e.cobrado() ? Material.MAP : iconoContrato(d.evento());
-            inv.setItem(casillas[k], Marco.icono(icono, Component.text(d.texto(), color), lore,
-                    (e.cumplido() && !e.cobrado()) || accion != null));
-            if (accion != null) v.acciones().put(casillas[k], accion);
-        }
-        if (lista.isEmpty()) {
-            inv.setItem(CENTRO, Marco.icono(Material.PAPER, Component.text("Hoy no tienes contratos", Paleta.TENUE),
-                    List.of(Marco.tenue("Vuelve a mirar mañana.")), false));
-        }
-
-        int[] semana = con.semanaDe(u);
-        List<Component> sl = new ArrayList<>();
-        sl.add(Marco.barra(semana[0], semana[1]));
-        sl.add(Marco.texto("Si cobras " + semana[1] + " en la semana,"));
-        sl.add(Marco.texto("Oren te da la Llave del Caos."));
-        if (papel) {
-            sl.add(Component.empty());
-            sl.add(fila("Activos", activos + " de " + max));
-            sl.add(Marco.tenue("Un aceptado ocupa su sitio hasta"));
-            sl.add(Marco.tenue("cobrarlo, aunque pierdas el papel."));
-        }
-        inv.setItem(SEMANA, Marco.icono(Material.TRIAL_KEY, Component.text("Esta semana: ", Paleta.TEXTO)
-                .append(Component.text(Math.min(semana[0], semana[1]) + "/" + semana[1], Paleta.CIFRA)), sl, semana[0] >= semana[1]));
-
-        List<Component> cl = new ArrayList<>();
-        cl.add(Marco.tenue("Oren te da otro encargo en lugar"));
-        cl.add(Marco.tenue("de uno de estos. Pierdes lo que"));
-        cl.add(Marco.tenue("llevas hecho de ese."));
-        cl.add(Component.empty());
-        cl.add(Marco.tenue(gratis > 0 ? "Hoy te " + (gratis == 1 ? "queda 1 cambio gratis." : "quedan " + gratis + " cambios gratis.")
-                : "Cambiar uno cuesta " + Marco.esencias(precio) + "."));
-        cl.add(hayCambiable ? Marco.accion("Clic para elegir cuál") : Marco.tenue("Ahora no hay ninguno que cambiar."));
-        inv.setItem(CAMBIAR, Marco.icono(Material.FEATHER, Component.text("Cambiar un contrato", hayCambiable ? Paleta.DETALLE : Paleta.TENUE),
-                cl, false));
-        if (hayCambiable) v.acciones().put(CAMBIAR, "ver:" + V_ELEGIR);
-    }
-
-    /** Cambiar un contrato, paso 1: los que se pueden cambiar en la fila del medio; un clic abre la confirmacion. */
-    private void vistaElegir(Inventory inv, Player p, Vista v) {
-        Contratos con = hc.contratos();
-        List<Contratos.Estado> lista = new ArrayList<>();
-        if (con != null) {
-            for (Contratos.Estado e : hc.valor("contratos", () -> con.estados(p), List.<Contratos.Estado>of())) {
-                if (!e.cumplido() && !e.cobrado()) lista.add(e);
-            }
-        }
-        if (lista.isEmpty()) {
-            inv.setItem(CENTRO, Marco.icono(Material.PAPER, Component.text("No hay ninguno que cambiar", Paleta.TENUE),
-                    List.of(Marco.tenue("Los cumplidos y cobrados no se cambian.")), false));
-            return;
-        }
-        int[] casillas = casillasFila(lista.size());
-        for (int k = 0; k < casillas.length; k++) {
-            Contratos.Estado e = lista.get(k);
-            inv.setItem(casillas[k], Marco.icono(iconoContrato(e.def().evento()), Component.text(e.def().texto(), Paleta.TEXTO),
-                    List.of(Marco.barra(e.progreso(), e.def().objetivo()), Component.empty(), Marco.accion("Clic para cambiar este")), false));
-            v.acciones().put(casillas[k], "c:" + e.hueco());
-        }
-    }
-
-    // ------------------------------------------------------------------ cambiar un contrato
-
-    /** Confirmar el cambio de un contrato: No (11), el contrato con lo que cuesta (13) y Si (15). */
-    private void abrirCambiar(Player p, int hueco) {
-        Contratos con = hc.contratos();
-        if (con == null) return;
-        Contratos.Estado e = null;
-        for (Contratos.Estado x : hc.valor("contratos", () -> con.estados(p), List.<Contratos.Estado>of())) {
-            if (x.hueco() == hueco) e = x;
-        }
-        if (e == null || e.cumplido() || e.cobrado()) {
-            abrirVista(p, V_CONTRATOS);
-            return;
-        }
-        Vista v = new Vista(V_CAMBIAR, new HashMap<>(), hueco);
-        Inventory inv = hc.plugin().getServer().createInventory(v, TAMANO, Marco.T_CAMBIAR.componente());
-        int precio = con.precioCambio(p.getUniqueId());
-        Saldo s = hc.saldo();
-        long saldo = s == null ? 0 : s.de(p.getUniqueId());
-        List<Component> lore = new ArrayList<>();
-        lore.add(Marco.barra(e.progreso(), e.def().objetivo()));
-        lore.add(Marco.tenue("Si lo cambias, pierdes lo que llevas."));
-        lore.add(Component.empty());
-        if (precio == 0) lore.add(Marco.tiene("Gratis: es tu cambio gratis de hoy."));
-        else {
-            lore.add(fila("Cuesta", Marco.esencias(precio)));
-            lore.add(fila("Tienes", Altar.miles(saldo)));
-            lore.add(fila("Te quedarían", Altar.miles(Math.max(0, saldo - precio))));
-        }
-        inv.setItem(CENTRO, Marco.icono(iconoContrato(e.def().evento()), Component.text(e.def().texto(), Paleta.TEXTO), lore, false));
-        inv.setItem(NO, Marco.icono(Material.RED_CONCRETE, Component.text("No, déjalo", Marco.NO),
-                List.of(Marco.tenue("Vuelves a tus contratos sin"), Marco.tenue("cambiar nada."), Component.empty(),
-                        Marco.accion("Clic para volver")), false));
-        v.acciones().put(NO, "no");
-        inv.setItem(SI, Marco.icono(Material.LIME_CONCRETE, Component.text("Sí, cámbialo", Marco.SI), List.of(
-                Marco.tenue("Oren te da otro encargo en su"), Marco.tenue("lugar, como oferta: si lo quieres,"),
-                Marco.tenue("lo aceptas."), Component.empty(), Marco.accion("Clic para cambiarlo")), false));
-        v.acciones().put(SI, "si");
-        Marco.rellenar(inv);
-        p.openInventory(inv);
-        Marco.sonar(p, "block.note_block.hat", 0.5f, 1.3f);
-    }
-
     // ------------------------------------------------------------------ clics
 
     @EventHandler
@@ -1004,7 +757,7 @@ final class MenuTasador implements Listener {
         Long antes = ultimoClic.get(p.getUniqueId());
         if (antes != null && ahora - antes < ESPERA_MS) return;
         ultimoClic.put(p.getUniqueId(), ahora);
-        hc.seguro("tasador", () -> accion(p, v, accion));
+        hc.seguro("tasador", () -> accion(p, accion));
     }
 
     /** Vende un tipo (clave) o todo (null) y vuelve a pintar la tienda con lo que queda. */
@@ -1020,7 +773,7 @@ final class MenuTasador implements Listener {
         tarea(() -> abrirVista(p, PORTADA));
     }
 
-    private void accion(Player p, Vista v, String accion) {
+    private void accion(Player p, String accion) {
         if (accion.startsWith("vender:")) {
             vender(p, accion.substring(7));
             return;
@@ -1052,30 +805,6 @@ final class MenuTasador implements Listener {
             tarea(() -> abrirVista(p, vista));
             return;
         }
-        if (accion.startsWith("c:")) {
-            int hueco = Integer.parseInt(accion.substring(2));
-            tarea(() -> abrirCambiar(p, hueco));
-            return;
-        }
-        if (accion.startsWith("p:")) {
-            // 1.12.1: aceptar la oferta (o pedir otra copia del pergamino perdido). Si no, se le dice por que.
-            int hueco = Integer.parseInt(accion.substring(2));
-            Contratos con = hc.contratos();
-            if (con == null) return;
-            // valor() cambia un null por el defecto: "" es "hecho" y el defecto, un fallo del modulo.
-            String no = hc.valor("contratos", () -> {
-                String r = con.pedirDesdeMenu(p, hueco);
-                return r == null ? "" : r;
-            }, "Ahora mismo Oren no puede darte el pergamino.");
-            if (no.isEmpty()) {
-                Marco.sonar(p, "item.book.page_turn", 0.8f, 1.0f);
-            } else {
-                p.sendMessage(ComandoCalamity.mensaje(no));
-                Marco.sonidoNo(p);
-            }
-            tarea(() -> repintar(p));
-            return;
-        }
         switch (accion) {
             case "cerrar" -> tarea(() -> {
                 if (p.getOpenInventory().getTopInventory().getHolder() instanceof Vista) p.closeInventory();
@@ -1083,10 +812,6 @@ final class MenuTasador implements Listener {
             case "volver", "no-todo" -> {
                 Marco.sonar(p, "ui.button.click", 0.45f, 0.8f);
                 tarea(() -> abrirVista(p, PORTADA));
-            }
-            case "volver-contratos" -> {
-                Marco.sonar(p, "ui.button.click", 0.45f, 0.8f);
-                tarea(() -> abrirVista(p, V_CONTRATOS));
             }
             case "depositar" -> {
                 // El boton Depositar del Altar vive en el saldo: lo mismo, y solo fuera de Calamity.
@@ -1113,16 +838,6 @@ final class MenuTasador implements Listener {
                 en.pendientes(p);
                 Marco.sonar(p, "entity.item.pickup", 0.8f, 1.0f);
                 tarea(() -> repintar(p));
-            }
-            case "si" -> {
-                Contratos con = hc.contratos();
-                if (con != null && con.cambiar(p, v.hueco())) Marco.sonar(p, "item.book.page_turn", 0.8f, 1.2f);
-                else Marco.sonidoNo(p);
-                tarea(() -> abrirVista(p, V_CONTRATOS));
-            }
-            case "no" -> {
-                Marco.sonar(p, "ui.button.click", 0.45f, 0.8f);
-                tarea(() -> abrirVista(p, V_CONTRATOS));
             }
             default -> {
             }
@@ -1172,10 +887,14 @@ final class MenuTasador implements Listener {
         h.igual("la barra llega a 3.000", 3000L, escala(t));
         h.igual("sin tope: escala -1", -1L, escala(tramosHoy(0, List.of(new double[]{999999, 1.0}))));
 
-        // 1.12.1: todo en 3 filas; la fila del medio para lo que se ensena y tres botones abajo.
+        // 1.12.1: todo en 3 filas; la fila del medio para lo que se ensena y los botones abajo. 1.16.1: con
+        // botones abajo, una fila mas de cristal. 1.16.2: dos botones, los contratos son de Maren.
         h.igual("tienda: 27 casillas", 27, TAMANO);
-        h.igual("con botones abajo: una fila de cristal debajo", 36, tamano(V_CONTRATOS));
-        h.ok("botones por encima de la fila de margen", CONTRATOS < TAMANO_MARGEN - 9 && SALIR < TAMANO_MARGEN - 9);
+        h.igual("Mercado: una fila de cristal debajo", 36, tamano(PORTADA));
+        h.igual("Tu dinero: una fila de cristal debajo", 36, tamano(V_DINERO));
+        h.igual("Vender todo (confirmar): 3 filas", 27, tamano(V_TODO));
+        h.ok("botones por encima de la fila de margen", VENDER_TODO < TAMANO_MARGEN - 9 && DINERO < TAMANO_MARGEN - 9
+                && SALIR < TAMANO_MARGEN - 9);
         h.igual("tienda: un tipo va en el centro", List.of(13), lista(casillasFila(1)));
         h.igual("tienda: tres tipos con aire (11, 13 y 15)", List.of(11, 13, 15), lista(casillasFila(3)));
         h.igual("tienda: siete tipos llenan la fila", List.of(10, 11, 12, 13, 14, 15, 16), lista(casillasFila(7)));
@@ -1183,13 +902,14 @@ final class MenuTasador implements Listener {
         boolean enFila = true;
         for (int n = 1; n <= 7; n++) for (int c : casillasFila(n)) enFila &= c / 9 == 1 && c % 9 >= 1 && c % 9 <= 7;
         h.ok("tienda: los tipos, en la fila del medio y lejos de los bordes", enFila);
-        h.ok("tienda: Vender todo abajo en el centro", VENDER_TODO == Marco.abajo(TAMANO));
-        h.ok("tienda: Contratos a la izquierda y Tu dinero a la derecha", CONTRATOS == VENDER_TODO - 2 && DINERO == VENDER_TODO + 2
-                && CONTRATOS / 9 == 2 && DINERO / 9 == 2);
+        int[] dos = Marco.columnas(2);
+        h.ok("tienda: Vender todo y Tu dinero, centrados en la fila de botones", VENDER_TODO == 18 + dos[0]
+                && DINERO == 18 + dos[1] && VENDER_TODO + DINERO == 2 * Marco.abajo(TAMANO));
+        h.ok("tienda: sin Contratos (son de Maren) y sin vistas de contratos",
+                !List.of(PORTADA, V_DINERO, V_TODO).contains(MenuContratos.PORTADA) && titulo("contratos") == Marco.T_TASADOR);
         h.ok("subvistas: Volver abajo en el centro", SALIR == Marco.abajo(TAMANO));
-        h.ok("contratos: la semana y Cambiar a los lados de Volver", SEMANA == SALIR - 2 && CAMBIAR == SALIR + 2);
         h.ok("confirmar: No, lo confirmado y Si en la fila del medio", NO == 11 && CENTRO == 13 && SI == 15);
-        List<Integer> todas = new ArrayList<>(List.of(CONTRATOS, VENDER_TODO, DINERO));
+        List<Integer> todas = new ArrayList<>(List.of(VENDER_TODO, DINERO));
         for (int c : casillasFila(7)) todas.add(c);
         boolean bien = new HashSet<>(todas).size() == todas.size();
         for (int c : todas) bien &= c >= 0 && c < TAMANO && c / 9 >= 1;
@@ -1230,7 +950,7 @@ final class MenuTasador implements Listener {
         boolean cortas = true;
         for (String l : plano(lineasTope(1_250, 1_250, 1_250))) cortas &= l.length() <= 38;
         h.ok("tope: las lineas caben en un lore", cortas);
-        for (String vista : List.of(PORTADA, V_DINERO, V_CONTRATOS, V_ELEGIR, V_TODO)) {
+        for (String vista : List.of(PORTADA, V_DINERO, V_TODO)) {
             h.ok("titulo de la vista '" + vista + "' cabe", titulo(vista).ancho() <= Marco.ANCHO_TITULO);
         }
     }

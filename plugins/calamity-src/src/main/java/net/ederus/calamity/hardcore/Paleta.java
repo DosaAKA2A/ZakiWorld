@@ -215,7 +215,7 @@ public final class Paleta {
     /** Lo que no es de ninguna familia (la linea de ligado, que se pega a cualquier objeto): grises. */
     public static final Tono T_NEUTRO = new Tono(0xE6E6E6, 0xA8A8A8);
 
-    /** Pergaminos de contrato de Oren: dorado a naranja. */
+    /** Pergaminos de contrato de Maren: dorado a naranja. */
     public static final Tono T_CONTRATO = new Tono(0xFFE27A, 0xFF8A2B);
     /** Reliquias por grado: I turquesa, II azul, III violeta, IV ambar. */
     public static final Tono T_GRADO_I = new Tono(0xB8FFF4, 0x2FD3C8);

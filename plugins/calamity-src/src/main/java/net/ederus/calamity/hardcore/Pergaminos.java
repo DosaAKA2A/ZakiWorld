@@ -47,7 +47,7 @@ import java.util.UUID;
 import java.util.function.Predicate;
 
 /**
- * Calamity 1.10 · Los pergaminos de los contratos de Oren: cada contrato que queda por cumplir es un
+ * Calamity 1.10 · Los pergaminos de los contratos de Maren (antes, de Oren): cada contrato que queda por cumplir es un
  * pergamino (un diseño de estandarte, uno por clase de contrato) en el inventario, con su objetivo, su progreso y su premio escritos en el lore.
  *
  * Por que: Dosa lo pidio asi, "entregar por mision o contrato un pergamino, que lleve el lore y tambien
@@ -64,7 +64,7 @@ import java.util.function.Predicate;
  *   - se borra al salir (Hardcore.sacar, el cambio a un mundo que no es hardcore, entrar al servidor fuera);
  *   - no entra en ningun inventario que no sea el del jugador (cofres, tolvas, menus de otros plugins,
  *     aldeanos, el telar...), ni en un saco, un marco, un soporte, un allay, un jarron o un estante, ni en una receta;
- *   - tirado al suelo se rompe: no llega a caer, asi nadie mas puede cogerlo, y Oren da otro;
+ *   - tirado al suelo se rompe: no llega a caer, asi nadie mas puede cogerlo, y Maren da otro;
  *   - al morir se va con el inventario, y si por lo que sea iba a caer, no cae.
  * El Eco no lo copia ni el Censo lo cuenta: es papel, y los dos lo saltan ademas por la marca.
  */
@@ -72,7 +72,7 @@ final class Pergaminos implements Listener {
 
     /**
      * Como se cobra lo que se cumple dentro: el premio llega en el acto y sus Esencias, como objeto
-     * (Aduana.pagar con objetoSiDentro). Lo dicen el pergamino y el menu de Oren con las mismas palabras.
+     * (Aduana.pagar con objetoSiDentro). Lo dicen el pergamino y el menu de Maren con las mismas palabras.
      */
     static final String COBRO_DENTRO = "Al cumplirlo, el premio va a tu mano.";
     /** Rama venta-oren: los de Reliquias se cumplen y se cobran al venderselas a Oren. */
@@ -82,6 +82,10 @@ final class Pergaminos implements Listener {
      * (donde esta Oren) y con el pergamino encima, como todos los contratos.
      */
     static final String COBRO_VENTA_PERGAMINO = "La venta solo cuenta en el spawn de Calamity, con este pergamino encima.";
+    /** 1.16.2: los contratos los da Maren (hasta la 1.16.1, Oren). La primera linea del lore. */
+    static final String CABECERA = "Contrato de Maren";
+    /** Lo que se le dice al romper un pergamino tirandolo. */
+    static final String ROTO = "Rompiste el pergamino. Maren te da otro si se lo pides en el spawn.";
     /** Casillas de la barra de progreso del lore (con los mismos caracteres que la de cordura). */
     static final int CASILLAS = 10;
     /** La "casilla" del cursor en lo que devuelve revisar(). */
@@ -232,17 +236,17 @@ final class Pergaminos implements Listener {
     static String historia(Contratos.Def d) {
         String ev = d == null || d.evento() == null ? "" : d.evento();
         return switch (ev) {
-            case "mob" -> "Oren paga por cada criatura que no vuelva a levantarse.";
-            case "destacado" -> "Las marcadas valen más. Oren las quiere muertas.";
+            case "mob" -> "Maren paga por cada criatura que no vuelva a levantarse.";
+            case "destacado" -> "Las marcadas valen más. Maren las quiere muertas.";
             case "cofre" -> "Lo que guardaron los que no volvieron todavía espera dueño.";
-            case "minijefe" -> "Algunos de aquí tienen nombre. Oren quiere que dejen de tenerlo.";
-            case "minutos" -> "Quedarse ya es una hazaña. Oren lo sabe.";
+            case "minijefe" -> "Algunos de aquí tienen nombre. Maren quiere que dejen de tenerlo.";
+            case "minutos" -> "Quedarse ya es una hazaña. Maren lo sabe.";
             case "minutos-limite" -> "Al borde de la locura, Calamity habla más claro.";
             case "minutos-sin-frasco" -> "Sin el Frasco, solo te sostiene tu cabeza.";
             case "eco-valido" -> "Los Ecos ajenos no descansan hasta que alguien los calla.";
             case "redimir" -> "Tu Eco te espera donde caíste. Dale descanso.";
             case "reliquia-ii", "tasa-ii" -> "Encontrarla no vale nada: lo que vale es llevársela a Oren.";
-            default -> "Oren paga, y Oren no olvida.";
+            default -> "Maren paga, y Maren no olvida.";
         };
     }
 
@@ -260,7 +264,7 @@ final class Pergaminos implements Listener {
     static Ficha ficha(Contratos.Def d, int progreso) {
         int objetivo = Math.max(1, d.objetivo());
         int hecho = Math.max(0, Math.min(progreso, objetivo));
-        return new Ficha(Ficha.tono("contrato")).cabecera("Contrato de Oren", d.corto() ? "Corto" : "Calamity", 0)
+        return new Ficha(Ficha.tono("contrato")).cabecera(CABECERA, d.corto() ? "Corto" : "Calamity", 0)
                 .historia(historia(d))
                 .seccion("Objetivo").texto(d.texto())
                 .seccion("Progreso", "{" + hecho + "}/" + objetivo).barra(llenas(hecho, objetivo), CASILLAS)
@@ -290,7 +294,7 @@ final class Pergaminos implements Listener {
         return mirar(p, libreta, true);
     }
 
-    /** Lo mismo sin borrar nada: los huecos cuyo pergamino lleva (el menu de Oren solo mira). */
+    /** Lo mismo sin borrar nada: los huecos cuyo pergamino lleva (el menu de Maren solo mira). */
     Set<Integer> validos(Player p, ConfigurationSection libreta) {
         return mirar(p, libreta, false).keySet();
     }
@@ -304,7 +308,7 @@ final class Pergaminos implements Listener {
         }
         mirarUno(p, p.getItemOnCursor(), CURSOR, libreta, borrar, out, p::setItemOnCursor);
         // Revision 1.10: la rejilla de crafteo (la 2x2 de su inventario, o una mesa). Un papel aparcado ahi
-        // sigue siendo suyo: cuenta para el contrato, y Oren no le da otro. La casilla 0 es el resultado.
+        // sigue siendo suyo: cuenta para el contrato, y Maren no le da otro. La casilla 0 es el resultado.
         Inventory rej = rejilla(p);
         if (rej != null) {
             for (int i = 1; i < rej.getSize(); i++) {
@@ -434,7 +438,7 @@ final class Pergaminos implements Listener {
     }
 
     /**
-     * Tirado, se rompe: el objeto no llega a caer (nadie mas lo coge) y Oren da otro. Al final de la
+     * Tirado, se rompe: el objeto no llega a caer (nadie mas lo coge) y Maren da otro. Al final de la
      * cadena (HIGHEST) y sin cancelados: si otro plugin no deja tirar, el pergamino se queda donde estaba.
      */
     @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
@@ -443,7 +447,7 @@ final class Pergaminos implements Listener {
         Player p = e.getPlayer();
         Sello s = sello(e.getItemDrop().getItemStack());
         e.getItemDrop().remove();
-        p.sendMessage(ComandoCalamity.mensaje("Rompiste el pergamino. Oren te da otro si se lo pides en el spawn."));
+        p.sendMessage(ComandoCalamity.mensaje(ROTO));
         Marco.sonar(p, "item.book.page_turn", 0.6f, 0.6f);
         hc.plugin().bitacora().anotar("contrato", "pergamino-roto", p.getName(), s == null ? "?" : s.id());
         // Un tick despues el inventario ya no lo tiene en ninguna via (Q, cursor fuera de la ventana).
@@ -513,7 +517,7 @@ final class Pergaminos implements Listener {
         avisar(p);
     }
 
-    /** Ni en la rejilla 2x2: el papel da libros y cohetes, y Oren lo regala. */
+    /** Ni en la rejilla 2x2: el papel da libros y cohetes, y Maren lo regala. */
     @EventHandler(priority = EventPriority.HIGHEST)
     public void alReceta(PrepareItemCraftEvent e) {
         for (ItemStack it : e.getInventory().getMatrix()) {

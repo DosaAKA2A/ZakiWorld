@@ -29,13 +29,15 @@ import java.util.UUID;
  * Desde 1.4 hay un sexto, el Engarzador (MenuEngarzador): pone y quita las Gemas de Calamidad,
  * que antes solo se engarzaban arrastrandolas sobre la pieza, como manda MMOItems, y nadie lo
  * descubria. Desde 1.8.0 hay un septimo, el de la Sentencia (MenuSentencia): alli se pagan los
- * contratos de Ambush contra quien este en Calamity.
+ * contratos de Ambush contra quien este en Calamity. Desde 1.16.2 hay un octavo, Maren (MenuContratos): los
+ * contratos del dia, que hasta entonces llevaba Oren en su Mercado. Dosa: "es confuso llevar tienda y
+ * contratos en uno solo".
  *
  * Los NPCs los pone y los cuida el staff a mano con Citizens; Calamity no los crea ni depende
  * de Citizens. Cada uno lleva un comando de clic sin -p, que Citizens ejecuta como CONSOLA
  * y en el que cambia <p> por quien hizo clic (-l -r: los dos botones, tambien con mayusculas):
  *     /npc command add -l -r calamity open <p> altar
- * (y forge, merchant, chronicler, hunter, gemsetter o bounty en los otros seis). /calamity npcs
+ * (y forge, merchant, contracts, chronicler, hunter, gemsetter o bounty en los otros siete). /calamity npcs
  * dice la receta de todos, lista para copiar.
  *
  * Calamity 1.12: /calamity es solo de staff (calamity.admin) y en ingles. Lo que los jugadores
@@ -53,7 +55,7 @@ import java.util.UUID;
  */
 final class Npcs implements Listener {
 
-    /** Los seis: el id que va en el comando de Citizens y como se llaman para el staff. */
+    /** Los ocho: el id que va en el comando de Citizens y como se llaman para el staff. */
     enum Tipo {
         // 1.12: los ids van en ingles, como todo lo que se escribe en un comando. Los de antes
         // (umbral, mercader, tasador...) los traduce ComandosViejos mientras duren los NPCs viejos.
@@ -61,6 +63,8 @@ final class Npcs implements Listener {
         FORJA("forge", "Vael (Forja)"),
         // El Mercader (1.5.0; antes "el Tasador").
         TASADOR("merchant", "Oren (mercader)"),
+        // 1.16.2: los contratos del dia, fuera del Mercado de Oren. La skin y el sitio los pone Dosa.
+        CONTRATOS("contracts", "Maren (contratos)"),
         CRONISTA("chronicler", "Ilen (cronista)"),
         CAZADOR("hunter", "Rhen (cazador)"),
         ENGARZADOR("gemsetter", "Lior (engarzador)"),
@@ -102,6 +106,7 @@ final class Npcs implements Listener {
     private final Hardcore hc;
     private final Cronista cronista;
     private final MenuTasador tasador;
+    private final MenuContratos contratos;
     private final MenuCazador cazador;
     private final MenuEngarzador engarzador;
     private final Map<UUID, Long> ultimoClic = new HashMap<>();
@@ -110,6 +115,7 @@ final class Npcs implements Listener {
         this.hc = hc;
         this.cronista = new Cronista(hc);
         this.tasador = new MenuTasador(hc);
+        this.contratos = new MenuContratos(hc);
         this.cazador = new MenuCazador(hc);
         this.engarzador = new MenuEngarzador(hc);
         hc.plugin().getServer().getPluginManager().registerEvents(this, hc.plugin());
@@ -138,6 +144,7 @@ final class Npcs implements Listener {
     void parar() {
         HandlerList.unregisterAll(this);
         hc.seguro("tasador", tasador::parar);
+        hc.seguro("contratos", contratos::parar);
         hc.seguro("cazador", cazador::parar);
         hc.seguro("engarzador", engarzador::parar);
         hc.seguro("cronista", cronista::parar);
@@ -246,6 +253,7 @@ final class Npcs implements Listener {
                 altar.menu().abrir(p, t == Tipo.FORJA ? MenuAltar.FORJA : MenuAltar.UMBRAL);
             }
             case TASADOR -> tasador(p);
+            case CONTRATOS -> hc.seguro("contratos", () -> contratos.abrir(p, true));
             case CRONISTA -> cronista.indice(p);
             case CAZADOR -> cazador(p);
             case ENGARZADOR -> {
@@ -271,8 +279,8 @@ final class Npcs implements Listener {
 
     /**
      * El Tasador: su menu (MenuTasador), con el saldo y los creditos, los premios pendientes, lo
-     * tasado esta semana, la primera salida de hoy, la Aduana, los contratos y las Reliquias que
-     * lleva encima con lo que valdrian. Antes era todo chat.
+     * tasado esta semana, la primera salida de hoy, la Aduana y las Reliquias que lleva encima con lo
+     * que valdrian. Antes era todo chat. Los contratos, desde la 1.16.2, son de Maren.
      *
      * La "ultima tasacion" no sale: no se guarda en ningun sitio (Tasacion paga y se lo dice al
      * jugador en el momento; lo unico que queda son las sumas de Estadisticas y la telemetria),
@@ -309,24 +317,37 @@ final class Npcs implements Listener {
 
     // ================================================================ autotest
 
-    private List<String> autotest() {
-        Autotest.Hoja h = new Autotest.Hoja();
-
+    /** Lo de los ids y los nombres, sin servidor (lo corre tambien el arnes de fuera). */
+    static void autotestIds(Autotest.Hoja h) {
         h.igual("id altar: Sael", Tipo.UMBRAL, Tipo.de("altar"));
         h.igual("id sin mayusculas ni espacios", Tipo.FORJA, Tipo.de("  FORGE "));
         h.igual("id que no existe", null, Tipo.de("umbral"));
         h.igual("id null", null, Tipo.de(null));
-        h.igual("los siete ids, en ingles", List.of("altar", "forge", "merchant", "chronicler", "hunter", "gemsetter", "bounty"),
-                Tipo.ids());
+        h.igual("los ocho ids, en ingles", List.of("altar", "forge", "merchant", "contracts", "chronicler", "hunter", "gemsetter",
+                "bounty"), Tipo.ids());
         h.igual("id merchant", Tipo.TASADOR, Tipo.de("merchant"));
         h.igual("el clic de Citizens de Oren", "/npc command add -l -r calamity open <p> merchant", clic(Tipo.TASADOR));
         h.igual("un NPC viejo (tasador) se traduce a Oren", "calamity open <p> merchant",
                 ComandosViejos.traducir("calamidad abrir <p> tasador"));
+        // 1.16.2: Maren, los contratos del dia (antes en el Mercado de Oren).
+        h.igual("id contracts: Maren", Tipo.CONTRATOS, Tipo.de("contracts"));
+        h.igual("el clic de Citizens de Maren", "/npc command add -l -r calamity open <p> contracts", clic(Tipo.CONTRATOS));
+        h.igual("un NPC viejo (contratos) se traduce a Maren", "calamity open <p> contracts",
+                ComandosViejos.traducir("calamidad abrir <p> contratos"));
         // 1.5.2: cada NPC tiene nombre propio, sin articulo ni oficio en masculino delante.
         List<String> nombres = new ArrayList<>();
         for (Tipo t : Tipo.values()) nombres.add(t.nombre.substring(0, t.nombre.indexOf(' ')));
-        h.igual("los nombres propios", List.of("Sael", "Vael", "Oren", "Ilen", "Rhen", "Lior", "Sentencia"), nombres);
+        h.igual("los nombres propios", List.of("Sael", "Vael", "Oren", "Maren", "Ilen", "Rhen", "Lior", "Sentencia"), nombres);
         h.igual("lo que lee el staff", "Oren (mercader)", Tipo.TASADOR.nombre);
+        h.igual("lo que lee el staff de Maren", "Maren (contratos)", Tipo.CONTRATOS.nombre);
+    }
+
+    private List<String> autotest() {
+        Autotest.Hoja h = new Autotest.Hoja();
+        autotestIds(h);
+        // 1.16.2: "contracts" es Maren y ya no la accion de jugador que escribia los contratos en el chat.
+        h.ok("contracts abre a Maren y no el chat", !Subcomandos.jugador().nombres(null).contains("contracts")
+                && destinos().indexOf("contracts") == Tipo.CONTRATOS.ordinal());
 
         h.igual("ranking en MobCoins", "1.234 MC", valorRanking("tasado-mc", 1234));
         h.igual("ranking de una expedicion larga", "1 h 05 min", valorRanking("expedicion-max-seg", 3900));
@@ -401,7 +422,7 @@ final class Npcs implements Listener {
         h.igual("Rhen: el Tablero en su fila 4, en el centro", 40, MenuCazador.TABLERO);
         h.igual("Sael: con el Kit, cuatro tarjetas en la fila del medio", List.of(19, 21, 23, 25),
                 java.util.Arrays.stream(MenuAltar.tarjetas(4)).boxed().toList());
-        h.igual("tab de open: los siete NPCs y lo de los jugadores", destinos(),
+        h.igual("tab de open: los ocho NPCs y lo de los jugadores", destinos(),
                 Subcomandos.staff().tab(null, new String[]{"open", "Dosa__", ""}));
         h.ok("tab de open empieza por los NPCs", destinos().subList(0, Tipo.values().length).equals(Tipo.ids()));
         // El menu de Ilen: las historias en las filas 1-2, los botones debajo y Cerrar abajo en el centro.

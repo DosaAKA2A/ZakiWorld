@@ -64,8 +64,10 @@ public final class ComandosViejos {
                     "ambas", "all", "si", "on", "no", "off")),
             Map.entry("bind", Map.of("poner", "set", "quitar", "remove")),
             Map.entry("miniboss", Map.of("muerte", "death")),
+            // 1.16.2: "contratos" es Maren (antes los contratos estaban en el Mercado de Oren).
             Map.entry("open", Map.of("umbral", "altar", "forja", "forge", "mercader", "merchant", "tasador", "merchant",
-                    "cronista", "chronicler", "cazador", "hunter", "engarzador", "gemsetter", "sentencia", "bounty")),
+                    "contratos", "contracts", "cronista", "chronicler", "cazador", "hunter", "engarzador", "gemsetter",
+                    "sentencia", "bounty")),
             Map.entry("items", Map.of("probar", "test")),
             Map.entry("reaper", Map.of("vida", "health", "habilidad", "ability", "retirar", "remove", "prueba", "test",
                     "anomalia", "anomaly")),

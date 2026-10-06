@@ -415,7 +415,7 @@ final class MenuAltar implements Listener {
         inv.setItem(CERRAR, Marco.cerrar());
         m.acciones().put(CERRAR, "cerrar");
         Marco.enlace(inv, m.acciones(), IR_TASADOR, Marco.TASADOR, Material.EMERALD, "Mercado de Oren",
-                List.of("Te compra Reliquias y Esencias;", "tu dinero y tus contratos."), hc.npcs() != null);
+                List.of("Te compra Reliquias y Esencias", "y te muestra tu dinero."), hc.npcs() != null);
     }
 
     /** Una categoria: sus articulos en rejilla y abajo las flechas y Volver. */
@@ -1234,6 +1234,7 @@ final class MenuAltar implements Listener {
         }
 
         MenuTasador.autotest(h);
+        MenuContratos.autotest(h);
         MenuCazador.autotest(h);
         return h.lineas();
     }

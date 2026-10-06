@@ -72,7 +72,7 @@ public final class Marcas {
     /** BYTE 1: un Reclamo (Calamity 1.10), el cuerno que llama al minijefe del bioma donde suena. */
     public static final NamespacedKey RECLAMO = clave("reclamo");
     /**
-     * STRING "uuid;dia;hueco;id": el pergamino de un contrato de Oren (Calamity 1.10, Pergaminos). Dice
+     * STRING "uuid;dia;hueco;id": el pergamino de un contrato de Maren (Calamity 1.10, Pergaminos). Dice
      * de quien es, de que dia, que hueco y que contrato; la verdad sigue en contratos.<uuid>, y un papel
      * que no cuadra con ella es inerte y se borra.
      */

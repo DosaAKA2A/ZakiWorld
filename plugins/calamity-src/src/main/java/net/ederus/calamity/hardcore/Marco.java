@@ -134,7 +134,8 @@ final class Marco {
     static final Titulo T_FORJAR = new Titulo("¿Forjarlo?");
     static final Titulo T_TASADOR = new Titulo("Mercado");
     static final Titulo T_TASADOR_DINERO = new Titulo("Tu dinero");
-    static final Titulo T_TASADOR_CONTRATOS = new Titulo("Contratos");
+    /** 1.16.2: la portada del menu de Maren, los contratos (hasta la 1.16.1, una vista del Mercado de Oren). */
+    static final Titulo T_CONTRATOS = new Titulo("Contratos");
     /** Rama venta-oren: la confirmacion de "Vender todo" en la tienda de Oren. */
     static final Titulo T_VENDER_TODO = new Titulo("Vender todo");
     // "¿Cambiar contrato?" no cabe con la marca delante.
@@ -164,7 +165,7 @@ final class Marco {
     /** Todos los titulos de ventana de Calamity, para que el autotest mida que caben. */
     static List<Titulo> titulos() {
         List<Titulo> out = new ArrayList<>(List.of(T_ALTAR, T_FORJA, T_COMPRAR, T_FORJAR, T_TASADOR, T_TASADOR_DINERO,
-                T_TASADOR_CONTRATOS, T_VENDER_TODO, T_CAMBIAR, T_RANKINGS, T_RANKINGS_HISTORICO,
+                T_CONTRATOS, T_VENDER_TODO, T_CAMBIAR, T_RANKINGS, T_RANKINGS_HISTORICO,
                 T_TABLERO, T_CAMINO, T_GRABAR, T_DESEOS, T_VOTO, T_PREGUNTA, T_DIFICULTAD, T_SALVOCONDUCTO, T_ENGARZADOR,
                 T_SENTENCIA));
         for (MenuAltar.Categoria c : MenuAltar.CATEGORIAS) {
@@ -668,7 +669,8 @@ final class Marco {
         lore.add(texto("Quién es quién:"));
         lore.add(linea("Sael", "frascos, cristales, tinturas y llaves."));
         lore.add(linea("Vael", "el equipo de la Forja."));
-        lore.add(linea("Oren", "compra lo que sacas, y contratos."));
+        lore.add(linea("Oren", "compra lo que sacas."));
+        lore.add(linea("Maren", "los contratos del día."));
         lore.add(linea("Rhen", "el ranking y el Tablero."));
         lore.add(linea("Lior", "pone y quita las gemas."));
         lore.add(linea("Ilen", "las historias de Calamity y tus Ecos."));

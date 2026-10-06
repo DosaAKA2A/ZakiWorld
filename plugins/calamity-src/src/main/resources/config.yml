@@ -1140,7 +1140,7 @@ hardcore:
   # Si falta una, vale la de serie.
   lores:
     tonos:
-      contrato: "#FFE27A #FF8A2B"        # pergaminos de contrato de Oren
+      contrato: "#FFE27A #FF8A2B"        # pergaminos de contrato de Maren
       grado-1: "#B8FFF4 #2FD3C8"         # Astilla del Umbral
       grado-2: "#BFD9FF #4A8DFF"         # Fragmento de Nana
       grado-3: "#E3C8FF #9B5CFF"         # Ambar Coagulado
@@ -1928,10 +1928,11 @@ hardcore:
   #
   # Calamity 1.10 · Pergaminos: cada contrato es un pergamino (papel con su objetivo, su progreso y su
   # premio). 1.12.1: al entrar no se da nada; los de hoy son ofertas que se aceptan una a una con un clic
-  # en el menu de Oren, en el spawn de Calamity, y solo entonces llega el pergamino. Una oferta aceptada
-  # no se vuelve a aceptar, ocupa sitio (activos-max) aunque se pierda el papel y nada la repone sola: si
-  # se pierde, Oren da otra copia si se le pide en el spawn (recuperar-perdido). Cambiar un contrato lo
-  # deja otra vez como oferta. Sin su pergamino el contrato no avanza. Lo que se cumple dentro se cobra
+  # en el menu de Maren (1.16.2; antes en el de Oren), en el spawn de Calamity, y solo entonces llega el
+  # pergamino. Una oferta aceptada no se vuelve a aceptar, ocupa sitio (activos-max) aunque se pierda el
+  # papel y nada la repone sola: si se pierde, Maren da otra copia si se le pide en el spawn
+  # (recuperar-perdido). Cambiar un contrato lo deja otra vez como oferta. Sin su pergamino el contrato no
+  # avanza. Lo que se cumple dentro se cobra
   # al momento: el pergamino se rompe y la Aduana paga con las Esencias en la mano, como las de un mob
   # (si no caben, a tus pies; si mueres antes de salir, las pierdes), y las MobCoins como siempre. Los de
   # Reliquias se cumplen y se cobran al vendérselas a Oren en su tienda, al saldo. Los pergaminos no salen de
@@ -1949,7 +1950,7 @@ hardcore:
     semana-premio: ["calamity give llave %jugador% 1", "calamity give llave-umbral %jugador% 1 contratos"]
     pergamino:
       activo: true                # false: como antes de la 1.10 (sin papel; todo se cobra al salir vivo)
-      # entregar-al-entrar ya no existe (1.12.1): Oren no deja nada al entrar, se aceptan en su menu.
+      # entregar-al-entrar ya no existe (1.12.1): al entrar no se da nada, se aceptan en el menu de Maren.
       activos-max: 3              # contratos aceptados y sin cobrar a la vez (un perdido tambien cuenta)
       recuperar-perdido: true     # false: un pergamino aceptado que se pierde no se repone; queda cambiarlo
     # El contrato que va a la derecha de la cordura ("Mobs 6/10"; en la BossBar desde la 1.11): el ultimo que
@@ -2002,7 +2003,7 @@ hardcore:
     redimido: {estadistica: ecos-redimidos, umbral: 1, nombre: "Redimido", anuncio: false, comandos: ["lp user %jugador% permission set rip.death.phoenix true"]}
     vestigio: {estadisticas: [forja-mascara, forja-filo], umbral: 1, nombre: "Vestigio", anuncio: false, comandos: ["lp user %jugador% permission set rip.death.glitch true"]}
     guadana: {estadistica: forja-guadana, umbral: 1, nombre: "Guadaña", anuncio: true, comandos: ["lp user %jugador% permission set rip.death.angel true"]}
-    tasador: {estadistica: contratos, umbral: 60, nombre: "Buen cliente de Oren", anuncio: false, comandos: []}
+    tasador: {estadistica: contratos, umbral: 60, nombre: "Buen cliente de Maren", anuncio: false, comandos: []}
   # [alineado] PLAN 7.3: cuatro tablas; llaves por Entregas (tope de 4); con < 8 elegibles solo el 1.o
   ranking:
     activo: false
@@ -2100,7 +2101,7 @@ hardcore:
         contratos:
           clave: contratos
           nombre: "Contratos"
-          mide: "Contratos de Oren cumplidos y cobrados."
+          mide: "Contratos de Maren cumplidos y cobrados."
           vistas: [semana, historico]
           textura: "b1ed20567068cb0cc072d732f5322d734bf849e688c7fe011a302e1b9473d20c"     # Book
           material: PAPER
@@ -2195,16 +2196,17 @@ hardcore:
   # articulo: se crea con "/npc create <Nombre>" y, con el NPC seleccionado (/npc select):
   #   Sael       /npc command add -l -r calamity open <p> altar       Altar, pagina Umbral
   #   Vael       /npc command add -l -r calamity open <p> forge       Altar, pagina Forja
-  #   Oren       /npc command add -l -r calamity open <p> merchant    compra Reliquias y Esencias; dinero y contratos
+  #   Oren       /npc command add -l -r calamity open <p> merchant    compra Reliquias y Esencias; tu dinero
+  #   Maren      /npc command add -l -r calamity open <p> contracts   los contratos de cada dia
   #   Ilen       /npc command add -l -r calamity open <p> chronicler  las historias de abajo, tus Ecos,
   #                                                                   el Eclipse, la encuesta y los deseos
   #   Rhen       /npc command add -l -r calamity open <p> hunter      tablas de la semana (o el Tablero)
   #   Lior       /npc command add -l -r calamity open <p> gemsetter   pone y quita las gemas de Calamity (1.4)
   #   Sentencia  /npc command add -l -r calamity open <p> bounty      contratos de Ambush (1.8.0)
   # /calamity npcs repite estas recetas. Otros ids que puede abrir un NPC (lo que antes era un
-  # comando de jugador): balance, echoes, contracts, reroll, path, board, kit, eclipse, poll y
-  # wishes. Engarzar es gratis y quitar una gema la rompe. Admite las gemas del tipo de
-  # entregas.mmo.gema (CALAMITY_GEMAS) en las piezas de los tipos de forja.piezas que tengan hueco
+  # comando de jugador): balance, echoes, reroll, path, board, kit, eclipse, poll y wishes
+  # (contracts es Maren desde la 1.16.2). Engarzar es gratis y quitar una gema la rompe. Admite
+  # las gemas del tipo de entregas.mmo.gema (CALAMITY_GEMAS) en las piezas de los tipos de forja.piezas que tengan hueco
   # (desde el lote de gemas, 1.12.3, las diez piezas de la Forja llevan uno de color Calamidad).
   # El jugador no necesita permiso (/calamity es de staff y consola) y el Altar solo se abre
   # desde el NPC o su bloque, nunca a distancia ni dentro de Calamity.
