@@ -1,5 +1,5 @@
 {
-  "_nota": "Fuente de verdad de las calidades de PhoenixCrates. Primero sale la calidad (porcentaje de 'calidades' de cada caja) y despues el premio (peso dentro de su calidad). 'n' es la posicion del premio en la copia original crates/<caja>.yml.bak-calidades-20261006; calidad null = premio apagado (peso 0). generador.js convierte esto en el weight final y en las lineas de lore de la vista previa. 'nombre' es el nombre que tenia la caja en ExcellentCrates (MiniMessage); se usa como display-name y como titulo de su menu. Opcional por premio: 'por-jugador' = N veces como mucho por jugador (win-limits de PhoenixCrates) y 'excluir-con-permiso' = lista de permisos (restricted-permissions); quien ya llego al tope o tiene el permiso no lo puede sacar y la caja sortea otro premio en su lugar.",
+  "_nota": "Fuente de verdad de las calidades de PhoenixCrates. Primero sale la calidad (porcentaje de 'calidades' de cada caja) y despues el premio (peso dentro de su calidad). 'n' es la posicion del premio en la copia original crates/<caja>.yml.bak-calidades-20261006; calidad null = premio apagado (peso 0). generador.js convierte esto en el weight final y en las lineas de lore de la vista previa. 'nombre' es el nombre que tenia la caja en ExcellentCrates (MiniMessage); se usa como display-name y como titulo de su menu. Opcional por premio: 'por-jugador' = N veces como mucho por jugador (win-limits de PhoenixCrates) y 'excluir-con-permiso' = lista de permisos (restricted-permissions); quien ya llego al tope o tiene el permiso no lo puede sacar y la caja sortea otro premio en su lugar. Premios que no estan en la .bak: entrada con 'nuevo' {identifier, material, nombre, descripcion, comandos} en lugar de 'n'; el generador escribe el bloque entero con imagen simple, y 'estilo-nuevos' de la caja ({degradado: [de, a], descripcion: color}) les da el mismo nombre en degradado y la misma linea gris que al resto.",
   "calidades": {
     "inmortal": {
       "nombre": "Inmortal",
@@ -164,6 +164,7 @@
     "caos": {
       "nombre": "<#FF6FD8><bold>✦ CRATE CAOS ✦</bold>",
       "titulo": { "texto": "CRATE CAOS", "de": "#C0318D", "a": "#9E1F6B", "llave": "caos" },
+      "estilo-nuevos": { "degradado": ["#FFA6E8", "#C21E9C"], "descripcion": "#A1A1A1" },
       "calidades": {
         "unico": 0.25,
         "legendario": 0.75,
@@ -189,10 +190,16 @@
         { "n": 13, "calidad": "epico", "peso": 420, "_": "Grabado" },
         { "n": 14, "calidad": "epico", "peso": 280, "_": "Llave KOTH" },
         { "n": 15, "calidad": "epico", "peso": 280, "_": "Talismán" },
+        { "nuevo": { "identifier": "caos_356d02c503d87117", "material": "SUGAR", "nombre": "Polvo Estelar Legendario", "descripcion": "Más éxito y menos riesgo de rotura para un libro Legendario.", "comandos": ["ae giveitem %player% magic 1 LEGENDARY"] }, "calidad": "epico", "peso": 345, "_": "Polvo Estelar Legendario (AE magic-dust; propuesta epic 10 de 100 -> 10 % de los 3450 de epico)" },
+        { "nuevo": { "identifier": "caos_e9628d785373773f", "material": "MAGMA_CREAM", "nombre": "Contador de Bajas", "descripcion": "Cuenta los jugadores que derrotas con el objeto.", "comandos": ["ae giveitem %player% stattrak 1"] }, "calidad": "epico", "peso": 207, "_": "Contador de Bajas (AE stattrak; propuesta epic 6 de 100)" },
+        { "nuevo": { "identifier": "caos_0e37593adaea23b8", "material": "FIREWORK_STAR", "nombre": "Contador de Peces", "descripcion": "Cuenta los peces que sacas con la caña.", "comandos": ["ae giveitem %player% fishtrak 1"] }, "calidad": "epico", "peso": 138, "_": "Contador de Peces (AE fishtrak; propuesta epic 4 de 100)" },
         { "n": 0, "calidad": "raro", "peso": 1300, "_": "Cristal" },
         { "n": 1, "calidad": "raro", "peso": 2275, "_": "Esencia x6" },
         { "n": 2, "calidad": "raro", "peso": 975, "_": "Frasco" },
         { "n": 8, "calidad": "raro", "peso": 1300, "_": "Tintura x3" },
+        { "nuevo": { "identifier": "caos_d45139e9897d1279", "material": "SUGAR", "nombre": "Polvo Estelar Supremo", "descripcion": "Más éxito y menos riesgo de rotura para un libro Supremo.", "comandos": ["ae giveitem %player% magic 1 ULTIMATE"] }, "calidad": "raro", "peso": 585, "_": "Polvo Estelar Supremo (AE magic-dust; propuesta rare 10 de 100 -> 10 % de los 5850 de raro)" },
+        { "nuevo": { "identifier": "caos_1aa8082c796a5484", "material": "SLIME_BALL", "nombre": "Contador de Criaturas", "descripcion": "Cuenta las criaturas que matas con el arma.", "comandos": ["ae giveitem %player% mobtrak 1"] }, "calidad": "raro", "peso": 351, "_": "Contador de Criaturas (AE mobtrak; propuesta rare 6 de 100)" },
+        { "nuevo": { "identifier": "caos_47e9c09563074a44", "material": "SLIME_BALL", "nombre": "Contador de Bloques", "descripcion": "Cuenta los bloques que rompes con la herramienta.", "comandos": ["ae giveitem %player% blocktrak 1"] }, "calidad": "raro", "peso": 351, "_": "Contador de Bloques (AE blocktrak; propuesta rare 6 de 100)" },
         { "n": 3, "calidad": null, "_": "Esencia x10 duplicada, ya estaba en 0" },
         { "n": 4, "calidad": null, "_": "Tag Caja del Caos duplicado, ya estaba en 0" },
         { "n": 5, "calidad": null, "_": "Sello errante duplicado, ya estaba en 0" },

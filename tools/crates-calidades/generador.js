@@ -4,7 +4,8 @@
 // - premios reordenados por calidad (de mas rara a mas comun) y, dentro, de menor a mayor probabilidad
 // - lineas de calidad añadidas al final del lore de la imagen de cada premio
 // Trabaja SIEMPRE sobre la copia original (.bak), nunca sobre su propia salida: los premios se
-// emparejan por texto ("match") o por su posicion en esa copia ("n").
+// emparejan por texto ("match") o por su posicion en esa copia ("n"). Los premios añadidos despues
+// ("nuevo") no estan en la copia: su bloque se escribe entero desde calidades.json.
 
 function generar(original, spec, idCaja) {
   const eol = original.includes('\r\n') ? '\r\n' : '\n';
@@ -23,20 +24,51 @@ function generar(original, spec, idCaja) {
     if (bloques.length) bloques[bloques.length - 1].lineas.push(L[i]);
   }
 
-  // Emparejar cada premio con su entrada de la tabla
+  // Emparejar cada premio con su entrada de la tabla (las entradas 'nuevo' no estan en la copia original)
   const usados = new Set();
   for (const b of bloques) {
-    const cand = caja.premios.filter(p => p.n !== undefined ? p.n === b.n : b.lineas.some(l => {
+    const cand = caja.premios.filter(p => !p.nuevo && (p.n !== undefined ? p.n === b.n : b.lineas.some(l => {
       const t = l.trim().replace(/^- /, '');
       return p.match.startsWith('material: ') ? t === p.match : t.includes(p.match);
-    }));
+    })));
     if (cand.length !== 1) throw new Error(idCaja + ' premio ' + b.n + ': ' + cand.length + ' coincidencias');
     if (usados.has(cand[0])) throw new Error(idCaja + ': entrada usada dos veces');
     usados.add(cand[0]);
     b.p = cand[0];
   }
-  const sobran = caja.premios.filter(p => !usados.has(p));
+  const sobran = caja.premios.filter(p => !p.nuevo && !usados.has(p));
   if (sobran.length) throw new Error(idCaja + ': sin premio en la caja: ' + sobran.map(p => p.n ?? p.match).join(', '));
+
+  // Premios que no estaban en la copia original: el bloque entero sale de calidades.json ('nuevo'), con los mismos
+  // campos que guarda PhoenixCrates 6.2.1 y una imagen simple (material, nombre y una linea de descripcion; las
+  // lineas de calidad se añaden despues como en cualquier imagen simple). El nombre lleva el degradado de
+  // 'estilo-nuevos' de la caja, letra a letra igual que los premios que ya tenia.
+  const ids = new Set(bloques.map(b => (b.lineas.find(l => /^    identifier:/.test(l)) || '').replace(/^\s+identifier:\s*/, '')));
+  caja.premios.filter(p => p.nuevo).forEach((p, i) => {
+    const nv = p.nuevo, est = caja['estilo-nuevos'] || {};
+    const donde = idCaja + ' nuevo ' + (nv.identifier || i);
+    if (!nv.identifier || ids.has(nv.identifier)) throw new Error(donde + ': identifier vacio o repetido');
+    if (!/^[A-Z0-9_]+$/.test(nv.material || '')) throw new Error(donde + ': material no valido');
+    if (!(nv.comandos || []).length) throw new Error(donde + ': sin comandos');
+    ids.add(nv.identifier);
+    const q = s => "'" + s.replace(/'/g, "''") + "'";
+    const nombre = est.degradado ? degradado(nv.nombre, est.degradado[0], est.degradado[1]) : legado(nv.nombre);
+    const desc = nv.descripcion ? [(est.descripcion ? hexAmp(est.descripcion) : '&7') + nv.descripcion] : [];
+    bloques.push({ n: 1000 + i, p, lineas: [
+      "  '" + (1000 + i) + "':", '    enabled: true', '    identifier: ' + nv.identifier,
+      '    display-item:', '      material: ' + nv.material, '      amount: 1', '      display-name: ' + q(nombre),
+      ...(desc.length ? ['      lore:', ...desc.map(x => '      - ' + q(x))] : []),
+      '    win-items: {}', '    win-commands:', ...nv.comandos.map(c => '    - ' + c),
+      '    broadcast: ' + (nv.anunciar ? 'true' : 'false'), '    weight: 0', '    win-limits: -1', '    global-win-limit: -1',
+      '    cooldowns:', '      win-limit-cooldown: 0', '      global-win-limit-cooldown: 0', '      time-limited-cooldown: 0',
+      '      time-limited-expiry: 0', '    guaranteed-win: -1', '    required-keys: 1', '    allow-win-message: true',
+      '    notification-type: CHAT', '    share-players-online: false', '    restricted-permissions: []',
+      '    required-permissions: []', '    max-win:', '      item-amount: -1', '      command-amount: -1',
+      '    alternative-reward:', '      enabled: false', '      reward:', '        item:', '          material: DIAMOND_PICKAXE',
+      '          display-name: §x§3§2§e§6§3§2Alternative Item', '          amount: 1', '        virtual: false',
+      '        broadcast: false', '        allow-win-message: true', '        share-players-online: false', '        commands: []',
+    ] });
+  });
 
   // Probabilidades en dos pasos (calidad null = premio apagado, peso 0)
   const activos = bloques.filter(b => b.p.calidad);
@@ -307,6 +339,27 @@ function legado(mm) {
   return out;
 }
 
+// #RRGGBB -> &x&R&R&G&G&B&B
+function hexAmp(h) {
+  return '&x' + h.replace('#', '').toUpperCase().split('').map(c => '&' + c).join('');
+}
+
+// Degradado letra a letra en formato &, sin negrita, como lo dejo la migracion desde ExcellentCrates en los nombres
+// de premio (<gradient:#de:#a>): la letra i de n (sin contar espacios) toma de + (a - de) * i / n, truncado;
+// los espacios no llevan codigo. Con #FFA6E8 -> #C21E9C reproduce los nombres que ya tiene la Caja del Caos.
+function degradado(texto, de, a) {
+  const p = h => [1, 3, 5].map(i => parseInt(h.slice(i, i + 2), 16));
+  const A = p(de), B = p(a), letras = [...texto];
+  const n = letras.filter(c => c !== ' ').length;
+  let i = 0, out = '';
+  for (const c of letras) {
+    if (c === ' ') { out += c; continue; }
+    out += hexAmp('#' + A.map((v, k) => Math.floor(v + (B[k] - v) * i / n).toString(16).padStart(2, '0')).join('')) + c;
+    i++;
+  }
+  return out;
+}
+
 // Titulo del menu: "CRATE X" en mayusculas, negrita y degradado (legible sobre el gris del cofre, #C6C6C6)
 // y detras "✦ N llaves" con las llaves del jugador. Si no cabe en los 160 px de la barra, solo "✦ N".
 function tituloMenu({ texto, de, a, llave }) {
@@ -370,4 +423,4 @@ function generarMenu(base, titulo) {
   return t.join(eol);
 }
 
-if (typeof module !== 'undefined') module.exports = { generar, generarMenu, legado, tituloMenu };
+if (typeof module !== 'undefined') module.exports = { generar, generarMenu, legado, tituloMenu, degradado };
