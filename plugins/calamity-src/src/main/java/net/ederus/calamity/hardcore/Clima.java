@@ -103,6 +103,10 @@ import java.util.concurrent.ThreadLocalRandom;
  * corto del dia de Panacea. Morir, cambiar de mundo, desconectarse, apagar el plugin o teletransportarse
  * lejos son cortes: ahi se le devuelve la hora en el acto, nunca queda fijada.
  *
+ * 1.15.2: Panacea tiene noches (el dia vanilla corre debajo de su timeline, LethalWorld 2.1.1). El cielo
+ * de sangre pasa al mediodia (CIELO_HORA) y el barrido va por el camino corto del dia vanilla, medio dia
+ * como mucho: por el del dia de Panacea podia recorrer dia y medio (sol, luna y noches) en dos segundos.
+ *
  * Convivencia: solo se devuelve lo que puso este modulo, y solo si sigue siendo lo suyo. El cielo de la
  * PARCA manda (Parca.cieloSobre) y la hora del Eclipse tambien. En una zona pintada con /lbiomes el bioma
  * deja de ser de Panacea: la tabla de serie no la nombra y ahi este modulo no pinta nada.
@@ -125,10 +129,27 @@ final class Clima implements Listener {
     static final int ACIDA_CADA = 2;
     static final int ACIDA_MARGEN = 2;
     static final int ACIDA_OLVIDO = 15;
-    /** La hora del cielo de sangre del ciclo de Panacea (dia de 72000 ticks; el rojo va de 63500 a 65000). */
-    static final long CIELO_HORA = 64_250L;
+    /**
+     * La hora del cielo de sangre del ciclo de Panacea (dia de 72000 ticks; el rojo va de 53250 a 54750).
+     *
+     * 1.15.2: era 64250, el pico del rojo de Bracken. Desde LethalWorld 2.1.1 Panacea tiene el dia vanilla
+     * (minecraft:day) debajo de su timeline, y 64250 cae de noche (64250 % 24000 = 16250): el rojo
+     * multiplicado por un cielo negro se ve negro. El datapack mueve el cielo de sangre al mediodia del
+     * tercer dia (54000 % 24000 = 6000) y esta hora va con el.
+     */
+    static final long CIELO_HORA = 54_000L;
+    /**
+     * 1.15.2 · La hora de serie hasta la 1.15.1. Un config.yml del servidor que aun la tenga escrita se lee
+     * como CIELO_HORA (ver hora): con ella el cielo rojo del bioma carmesi se veria negro.
+     */
+    static final long CIELO_HORA_VIEJA = 64_250L;
     /** Lo que dura el dia de Panacea: el period_ticks de bracken:timeline/panacea_day. */
     static final long CIELO_PERIODO = 72_000L;
+    /**
+     * 1.15.2 · Lo que dura el dia vanilla (minecraft:day), que desde LethalWorld 2.1.1 tambien corre en
+     * Panacea: el sol, la luna y las estrellas se repiten cada 24000 ticks.
+     */
+    static final long DIA_VANILLA = 24_000L;
     /**
      * El bloque en el que el servidor fija la hora. Con la hora fija (relative false) no manda el
      * offset tal cual: ServerPlayer.getPlayerTime devuelve reloj - (reloj % 24000) + offset, y el
@@ -451,6 +472,7 @@ final class Clima implements Listener {
      * manda una hora fija un poco mas cerca del destino por el camino corto del dia de Panacea; al acabar
      * se le devuelve su hora (resetPlayerTime) o se le fija la del cielo rojo. 'ultimo' es el offset que se
      * le puso el tick anterior: si ya no lo tiene, otro (Eclipse, PARCA) le ha cambiado la hora y se deja.
+     * 1.15.2: el camino es el del dia vanilla, medio dia como mucho (ver alinear y periodoDeVuelta).
      */
     private static final class Barrido {
         final UUID mundo;
@@ -935,7 +957,7 @@ final class Clima implements Listener {
      * La hora del cielo de sangre. El de la PARCA manda entero; la hora del Eclipse, tambien.
      *
      * 1.12: al entrar no se fija de golpe: un barrido de transicion-ticks lleva su cielo hasta el rojo por el
-     * camino corto del dia de Panacea (ver Barrido). Mientras barre, aqui no se toca nada.
+     * camino corto (1.15.2: el del dia vanilla, ver Barrido). Mientras barre, aqui no se toca nada.
      */
     private void ponerHora(Player p, Estado e, ConfigurationSection r, boolean deParca, boolean deEclipse) {
         long hora = hora(r);
@@ -967,9 +989,13 @@ final class Clima implements Listener {
         }
     }
 
-    /** La hora del cielo rojo; 0 (o menos) = no se toca la hora. */
+    /**
+     * La hora del cielo rojo; 0 (o menos) = no se toca la hora. 1.15.2: la de serie de antes (64250) se lee
+     * como la de ahora, para que un config.yml del servidor que la tenga escrita no deje el cielo en negro.
+     */
     static long hora(ConfigurationSection r) {
-        return Math.max(0L, r.getLong("hora", CIELO_HORA));
+        long hora = r.getLong("hora", CIELO_HORA);
+        return Math.max(0L, hora == CIELO_HORA_VIEJA ? CIELO_HORA : hora);
     }
 
     /**
@@ -1075,8 +1101,11 @@ final class Clima implements Listener {
         // El offset que tiene ahora pasa a ser nuestro: el del barrido anterior, o el fijo que tenga (la hora
         // roja, u otra que se pisa como se pisaba antes), o ninguno si va con su hora (relativa).
         long ultimo = antes != null ? antes.ultimo : p.isPlayerTimeRelative() ? SIN_OFFSET : p.getPlayerTimeOffset();
-        Barrido b = new Barrido(p.getWorld().getUID(), haciaRojo, hora, periodo > 0 ? periodo : CIELO_PERIODO, e,
-                p.getPlayerTime(), Math.max(1, ticks), ultimo);
+        long per = periodo > 0 ? periodo : CIELO_PERIODO;
+        // 1.15.2: hacia el rojo se sale de lo que ve movido unos dias vanilla enteros (alinear), para no
+        // recorrer mas de medio dia vanilla.
+        double visto = haciaRojo ? alinear(p.getPlayerTime(), hora, per) : p.getPlayerTime();
+        Barrido b = new Barrido(p.getWorld().getUID(), haciaRojo, hora, per, e, visto, Math.max(1, ticks), ultimo);
         barridos.put(p.getUniqueId(), b);
         if (e != null) {
             // La hora es nuestra mientras barre: si muere o se va, soltarHora la devuelve.
@@ -1114,7 +1143,8 @@ final class Clima implements Listener {
             }
             long reloj = p.getWorld().getFullTime();
             double destino = b.haciaRojo ? b.hora : reloj;
-            b.visto = pasoHacia(b.visto, destino, b.quedan, b.periodo);
+            // 1.15.2: de vuelta, por el dia vanilla (ver periodoDeVuelta); hacia el rojo ya va por el (alinear).
+            b.visto = pasoHacia(b.visto, destino, b.quedan, b.haciaRojo ? b.periodo : periodoDeVuelta(b.periodo));
             b.quedan--;
             long off;
             if (b.quedan <= 0) {
@@ -1165,6 +1195,30 @@ final class Clima implements Listener {
     /** Un tick de barrido: lo que queda hasta el destino repartido entre los ticks que quedan. */
     static double pasoHacia(double visto, double destino, int quedan, long periodo) {
         return visto + arco(visto, destino, periodo) / Math.max(1, quedan);
+    }
+
+    /**
+     * 1.15.2 · Desde donde barrer hacia el rojo: lo que ve, movido un numero entero de dias vanilla para que
+     * el camino corto del dia de Panacea hasta 'hora' sea el del dia vanilla (medio dia como mucho). El salto
+     * no se nota: el sol, la luna y las estrellas estan donde estaban y el dia de Panacea, fuera del rojo, es
+     * el mismo tinte todo el rato (solo puede cambiar la fase de la luna). Sin esto el barrido recorria hasta
+     * 36000 ticks, dia y medio con sus noches, en dos segundos. Un periodo que no sea un numero entero de
+     * dias vanilla (otro timeline) se deja como estaba.
+     */
+    static double alinear(double visto, long hora, long periodo) {
+        if (periodo <= 0 || periodo % DIA_VANILLA != 0) return visto;
+        return visto + arco(visto, hora, periodo) - arco(visto, hora, DIA_VANILLA);
+    }
+
+    /**
+     * 1.15.2 · El dia por el que se barre de vuelta a su hora: el vanilla, medio dia como mucho. Al acabar se
+     * le devuelve su hora y lo que ve salta unos dias vanilla enteros, que no se notan (ver alinear). La unica
+     * pega: si su reloj va a menos de 750 ticks del mediodia (la hora del rojo dentro del dia vanilla), el
+     * barrido acaba aun con algo de rojo y ese resto se va de golpe al devolverle la hora. Un periodo que no
+     * sea un numero entero de dias vanilla, como antes.
+     */
+    static long periodoDeVuelta(long periodo) {
+        return periodo > 0 && periodo % DIA_VANILLA == 0 ? DIA_VANILLA : periodo;
     }
 
     private static void ponerFuego(Player p, Estado e) {
@@ -1879,8 +1933,17 @@ final class Clima implements Listener {
 
         // La hora: la del cielo de sangre de Panacea; 0 la apaga.
         h.igual("hora de serie", CIELO_HORA, hora(vacia));
-        h.ok("la hora de serie cae en el cielo de sangre (63500-65000)", CIELO_HORA >= 63_500 && CIELO_HORA <= 65_000);
+        h.ok("la hora de serie cae en el cielo de sangre (53250-54750)", CIELO_HORA >= 53_250 && CIELO_HORA <= 54_750);
+        // 1.15.2: con el dia vanilla debajo, el rojo entero (+-750) cae a pleno dia: el cielo vanilla en blanco de
+        // 133 a 11867, ni amanecer ni atardecer. De noche (la hora de antes, 16250) el rojo se veria negro.
+        h.ok("el cielo de sangre cae a pleno dia vanilla", Math.floorMod(CIELO_HORA - 750, DIA_VANILLA) >= 133
+                && Math.floorMod(CIELO_HORA + 750, DIA_VANILLA) <= 11_867);
+        h.ok("la hora de antes caia de noche (16250)", Math.floorMod(CIELO_HORA_VIEJA, DIA_VANILLA) == 16_250);
         YamlConfiguration sinHora = new YamlConfiguration();
+        sinHora.set("hora", CIELO_HORA_VIEJA);
+        h.igual("un config.yml con la hora de antes: vale la de ahora", CIELO_HORA, hora(sinHora));
+        sinHora.set("hora", 6_000L);
+        h.igual("otra hora escrita a mano: se respeta", 6_000L, hora(sinHora));
         sinHora.set("hora", 0);
         h.igual("hora 0: no se toca", 0L, hora(sinHora));
         sinHora.set("hora", -5);
@@ -1899,10 +1962,16 @@ final class Clima implements Listener {
                     offsetHora(vistaServidor(reloj, off) - off, CIELO_HORA, CIELO_PERIODO));
             h.ok("reloj " + reloj + ": nunca choca con la noche del Eclipse", off != 18_000L);
             h.ok("reloj " + reloj + ": offset dentro del dia", off >= 0 && off < CIELO_PERIODO);
+            // 1.15.2: el rojo fijo es siempre mediodia vanilla, y la medianoche fija del Eclipse y de la PARCA
+            // (offset 18000) nunca cae en la ventana del rojo: su noche es noche.
+            h.igual("reloj " + reloj + ": el rojo fijo es mediodia vanilla", Math.floorMod(CIELO_HORA, DIA_VANILLA),
+                    Math.floorMod(vistaServidor(reloj, off), DIA_VANILLA));
+            long noche = Math.floorMod(vistaServidor(reloj, 18_000L), CIELO_PERIODO);
+            h.ok("reloj " + reloj + ": la noche del Eclipse no es roja", Math.abs(arco(noche, CIELO_HORA, CIELO_PERIODO)) > 750);
         }
-        h.igual("k = 0: offset 64250", 64_250L, offsetHora(10_000L, CIELO_HORA, CIELO_PERIODO));
-        h.igual("k = 1: offset 40250", 40_250L, offsetHora(30_000L, CIELO_HORA, CIELO_PERIODO));
-        h.igual("k = 2: offset 16250", 16_250L, offsetHora(50_000L, CIELO_HORA, CIELO_PERIODO));
+        h.igual("k = 0: offset 54000", 54_000L, offsetHora(10_000L, CIELO_HORA, CIELO_PERIODO));
+        h.igual("k = 1: offset 30000", 30_000L, offsetHora(30_000L, CIELO_HORA, CIELO_PERIODO));
+        h.igual("k = 2: offset 6000", 6_000L, offsetHora(50_000L, CIELO_HORA, CIELO_PERIODO));
         h.ok("al pasar de bloque cambia el offset (y se repone)",
                 offsetHora(23_999L, CIELO_HORA, CIELO_PERIODO) != offsetHora(24_000L, CIELO_HORA, CIELO_PERIODO));
         h.igual("periodo 0: vale el de serie", offsetHora(30_000L, CIELO_HORA, CIELO_PERIODO),
@@ -1956,8 +2025,19 @@ final class Clima implements Listener {
         h.ok("arco: nunca mas de medio dia", Math.abs(arco(0, 36_001, CIELO_PERIODO)) <= 36_000);
         h.cerca("paso: en el ultimo tick llega", 11_000, pasoHacia(10_000, 11_000, 1, CIELO_PERIODO), 1e-9);
         h.cerca("paso: quedan 0 vale 1", 11_000, pasoHacia(10_000, 11_000, 0, CIELO_PERIODO), 1e-9);
-        long[] relojes = {5_000L, 23_990L, 30_123L, 47_995L, 63_000L, 71_990L, 1_000_000L};
-        boolean salida = true, entrada = true, cortos = true, enTicks = true;
+        // 1.15.2: el dia vanilla corre debajo de Panacea. alinear mueve dias vanilla enteros y deja el rojo a
+        // medio dia vanilla como mucho; de vuelta se barre por el dia vanilla.
+        h.cerca("alinear: de medianoche del dia 0 al rojo, por el camino de 12000", 54_000 - 12_000,
+                alinear(18_000, CIELO_HORA, CIELO_PERIODO), 1e-9);
+        h.cerca("alinear: ya en el dia del rojo no se mueve", 50_000, alinear(50_000, CIELO_HORA, CIELO_PERIODO), 1e-9);
+        h.cerca("alinear: con otro periodo, tal cual", 18_000, alinear(18_000, CIELO_HORA, 70_000), 1e-9);
+        h.igual("de vuelta por el dia vanilla", DIA_VANILLA, periodoDeVuelta(CIELO_PERIODO));
+        h.igual("de vuelta con otro periodo, el suyo", 70_000L, periodoDeVuelta(70_000));
+        long[] relojes = {5_000L, 6_200L, 18_000L, 23_990L, 30_123L, 42_000L, 47_995L, 54_100L, 63_000L, 66_000L,
+                71_990L, 1_000_000L};
+        double medio = DIA_VANILLA / 2.0 + CIELO_TRANSICION;
+        boolean salida = true, entrada = true, cortos = true, enTicks = true, alineado = true, sinRojo = true;
+        boolean medioDia = true;
         for (long reloj0 : relojes) {
             // Salida: tenia el cielo rojo fijo; tras CIELO_TRANSICION ticks se le suelta y ve su reloj.
             long reloj = reloj0;
@@ -1965,33 +2045,49 @@ final class Clima implements Listener {
             double visto = baseServidor(reloj) + off;
             double antes = visto;
             int quedan = CIELO_TRANSICION, pasos = 0;
-            double total = Math.abs(arco(visto, reloj + CIELO_TRANSICION, CIELO_PERIODO));
+            long vuelta = periodoDeVuelta(CIELO_PERIODO);
+            double total = Math.abs(arco(visto, reloj + CIELO_TRANSICION, vuelta));
+            medioDia &= total <= medio;
             while (quedan > 0) {
                 reloj++;
-                visto = pasoHacia(visto, reloj, quedan, CIELO_PERIODO);
+                visto = pasoHacia(visto, reloj, quedan, vuelta);
                 quedan--;
                 pasos++;
                 long enviado = baseServidor(reloj) + (Math.round(visto) - baseServidor(reloj));
-                cortos &= Math.abs(arco(antes, enviado, CIELO_PERIODO)) <= total / CIELO_TRANSICION * 2 + 2;
+                cortos &= Math.abs(enviado - antes) <= total / CIELO_TRANSICION * 2 + 2;
                 antes = enviado;
             }
-            salida &= Math.abs(arco(visto, reloj, CIELO_PERIODO)) <= 1.0;
+            // Al soltarle la hora salta dias vanilla enteros (el sol y la luna donde estaban)...
+            salida &= Math.abs(arco(visto, reloj, DIA_VANILLA)) <= 1.0;
+            // ...y sin rojo, salvo si su reloj va a menos de 750 ticks del mediodia (el resto se va de golpe).
+            if (Math.abs(arco(reloj, CIELO_HORA, DIA_VANILLA)) > 750) {
+                sinRojo &= Math.abs(arco(visto, CIELO_HORA, CIELO_PERIODO)) > 750;
+            }
             enTicks &= pasos == CIELO_TRANSICION;
             // Entrada: con su hora (relativa) hasta el rojo; el ultimo paso fija el offset de offsetHora.
             reloj = reloj0;
-            visto = reloj;
+            visto = alinear(reloj, CIELO_HORA, CIELO_PERIODO);
+            alineado &= Math.abs(arco(visto, reloj, DIA_VANILLA)) <= 1e-6;
+            antes = visto;
+            total = Math.abs(arco(visto, CIELO_HORA, CIELO_PERIODO));
+            medioDia &= total <= medio;
             quedan = CIELO_TRANSICION;
             while (quedan > 0) {
                 reloj++;
                 visto = pasoHacia(visto, CIELO_HORA, quedan, CIELO_PERIODO);
                 quedan--;
+                cortos &= Math.abs(visto - antes) <= total / CIELO_TRANSICION * 2 + 2;
+                antes = visto;
             }
             long fija = baseServidor(reloj) + offsetHora(reloj, CIELO_HORA, CIELO_PERIODO);
             entrada &= Math.abs(arco(visto, fija, CIELO_PERIODO)) <= 1.0
                     && Math.floorMod(fija, CIELO_PERIODO) == CIELO_HORA;
         }
-        h.ok("barrido de salida: acaba en su reloj, sin salto al soltarle la hora", salida);
+        h.ok("barrido de salida: acaba en su sol y su luna, sin salto al soltarle la hora", salida);
+        h.ok("barrido de salida: sin rojo al acabar (lejos del mediodia)", sinRojo);
+        h.ok("barrido de entrada: el punto de salida es lo que ve, en dias vanilla enteros", alineado);
         h.ok("barrido de entrada: acaba en el cielo de sangre, sin salto al fijarlo", entrada);
+        h.ok("barrido: medio dia vanilla como mucho (nunca recorre noches enteras)", medioDia);
         h.ok("barrido: dura justo transicion-ticks", enTicks);
         h.ok("barrido: pasos parejos, ninguno gordo", cortos);
         h.ok("de serie: 2 s de transicion", CIELO_TRANSICION == 40);

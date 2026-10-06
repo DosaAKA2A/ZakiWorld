@@ -968,7 +968,15 @@ public final class Hardcore implements Listener {
         anunciarTramo(p, e, antes);
     }
 
-    /** De noche en su mundo, o durante un Eclipse (que es de noche para todo lo que cuenta). */
+    /**
+     * De noche en su mundo, o durante un Eclipse (que es de noche para todo lo que cuenta).
+     *
+     * 1.15.2: hasta LethalWorld 2.1.1 Panacea no tenia noche que ver (el sol fijo de Bracken) y esta franja
+     * contaba una noche invisible. Ahora corre el dia vanilla y es la misma que se ve: de 13000 a 23000 el
+     * cielo esta oscuro y la luz del cielo baja de 8 a 4 y vuelve. Las horas fijadas por jugador no cuentan,
+     * salvo la del Eclipse: la medianoche de la PARCA en la fase IV ya pone su propio drenaje, y el cielo
+     * rojo del clima es un mediodia rojo, no una noche.
+     */
     public boolean esNoche(Player p) {
         long hora = p.getWorld().getTime();
         if (hora >= 13000 && hora <= 23000) return true;
