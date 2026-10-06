@@ -49,7 +49,7 @@
   "cajas": {
     "legendary": {
       "nombre": "<gradient:#FFD166:#FF8A00><bold>CRATE LEGENDARIA</bold></gradient>",
-      "titulo": { "texto": "CRATE LEGENDARIA", "de": "#A35F00", "a": "#8A3800", "llave": "legendary" },
+      "titulo": { "texto": "CRATE LEGENDARIA", "de": "#D88400", "a": "#C85A00", "llave": "legendary" },
       "menu": "legendaria_preview",
       "calidades": {
         "inmortal": 0.2,
