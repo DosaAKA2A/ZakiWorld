@@ -80,8 +80,8 @@ public final class Marcas {
     /** BYTE 1: un Barometro (Calamity 1.12.2), la brujula que lee el reloj del clima (Barometro). */
     public static final NamespacedKey BAROMETRO = clave("barometro");
     /**
-     * STRING uuid del Vigilante: sus piezas (ojo, nucleos, pilares, escombros y meteoro). Todas son no
-     * persistentes; la marca sirve para reconocerlas en los eventos y que nada las toque (Calamity 1.13.0).
+     * STRING uuid del Vigilante: los bloques del suelo que hace saltar (FallingBlock efimeros). No son
+     * persistentes; la marca sirve para reconocerlos y que nunca se coloquen al caer (Calamity 1.13.0).
      */
     public static final NamespacedKey VIGILANTE = clave("vigilante_pieza");
 

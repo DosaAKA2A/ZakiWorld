@@ -4,65 +4,73 @@ import net.ederus.edm.comun.Compat;
 import net.ederus.edm.comun.Fx;
 import net.kyori.adventure.bossbar.BossBar;
 import net.kyori.adventure.text.Component;
-import org.bukkit.Color;
-import org.bukkit.DyeColor;
 import org.bukkit.EntityEffect;
-import org.bukkit.FluidCollisionMode;
 import org.bukkit.GameMode;
 import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.Particle;
+import org.bukkit.SoundCategory;
 import org.bukkit.World;
+import org.bukkit.block.Block;
+import org.bukkit.block.BlockFace;
 import org.bukkit.block.data.BlockData;
-import org.bukkit.entity.BlockDisplay;
-import org.bukkit.entity.Display;
 import org.bukkit.entity.Entity;
-import org.bukkit.entity.IronGolem;
+import org.bukkit.entity.FallingBlock;
+import org.bukkit.entity.LivingEntity;
 import org.bukkit.entity.Player;
-import org.bukkit.entity.Shulker;
+import org.bukkit.entity.Zoglin;
 import org.bukkit.persistence.PersistentDataType;
-import org.bukkit.util.RayTraceResult;
-import org.bukkit.util.Transformation;
 import org.bukkit.util.Vector;
-import org.joml.AxisAngle4f;
-import org.joml.Vector3f;
 
+import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.EnumMap;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
-import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ThreadLocalRandom;
+import java.util.function.Predicate;
 
 /**
- * Una pelea contra el Vigilante (Calamity 1.13.0). El gestor es Vigilante.
+ * Una pelea contra el Vigilante. El gestor es Vigilante.
  *
- * El cuerpo es un golem de hierro de Amenazas (vida logica, tope por golpe del 8 %, dano logico para
- * el botin, marca lethal_world:amenaza) a escala-cuerpo (2,2) veces su tamano. Las grietas del golem
- * las pinta el cliente con la vida de la entidad, y con la vida logica de Amenazas esa fraccion es la
- * de verdad: se agrieta en el 75, el 50 y el 25 %, justo donde cambia de fase, sin forzar nada. Lleva un
- * ojo de luz en el pecho (BlockDisplay que brilla) y tres nucleos que le giran alrededor (BlockDisplay).
- * Todo lo que pone (ojo, nucleos, pilares, escombros) es no persistente, lleva la marca
- * lethal_world:vigilante_pieza y se retira en limpiar(), que es por donde pasan todos los finales.
- * Nada toca un bloque del mundo: los pilares son BlockDisplay y su cobertura se calcula aparte.
+ * El cuerpo es un Zoglin de verdad a cuerpo.escala (2,6) veces su tamano, sin nada pegado ni flotando
+ * alrededor, sin brillo y sin luces: una bestia de la tierra. Es una amenaza de Amenazas (vida logica,
+ * tope por golpe del 8 %, dano logico para el botin, marca lethal_world:amenaza; solo le hacen dano los
+ * jugadores, asi que caidas, asfixia, lava y fuego no le hacen nada) y no se transforma, no se hace bebe
+ * ni desaparece por lejania.
  *
- * La mirada: el ojo proyecta un cono de luz (mirada.angulo, mirada.alcance). Quien este dentro dos
- * segundos seguidos sin nada en medio (raytrace de bloques y los pilares) queda marcado: una corona de
- * luz sobre la cabeza, sus golpes fuertes van a el y le quitan golpes.marcado-extra mas.
+ * Se mueve con su IA de vanilla (su velocidad es un atributo, sin teletransportes cada tick) y va a por
+ * su presa: el cerebro del Zoglin no lee el setTarget de Bukkit, asi que el objetivo se le escribe en
+ * su memoria (Cerebro). Entre golpe y golpe muerde y cornea como un Zoglin, que ya lanza por el aire.
+ * Mientras prepara una habilidad no anda (velocidad 0) pero sigue con su fisica: los saltos y las
+ * embestidas son velocidades de verdad, y el cliente las ve fluidas.
  *
- * Fases por vida (Vigilante.faseDe): I Centinela, II Demoledor, III Ojo, IV Vigilante. Cada una abre
- * sus habilidades (Habilidad). Los golpes fuertes quitan una fraccion de tu vida maxima entre
- * golpes.minimo y golpes.maximo, por DanoVerdadero (la armadura no los para), siempre con al menos un
- * segundo de aviso en el suelo; entre golpe y golpe pega con la mano, con su IA, como un golem.
+ * Las habilidades (Habilidad) avisan siempre en el suelo al menos un segundo (Ajustes.AVISO_MINIMO):
+ * el suelo se agrieta (particulas del propio bloque) dentro de un circulo o una linea de polvo que
+ * pasa del color de la tierra al de la sangre seca, y cada una tiene su sonido de aviso. Los golpes
+ * fuertes quitan una fraccion de tu vida maxima entre golpes.minimo y golpes.maximo, por DanoVerdadero.
+ * Quien sale volando por un golpe suyo no recibe dano de caida (CAIDA): la caida no puede matar con la
+ * vida llena lo que el golpe no mato (ley 5).
  *
- * Una sola tarea: la de 2 ticks de Amenazas (registrarPelea). Las piezas se mueven por teleport con
- * interpolacion de 2 ticks para que el cliente las vea fluidas.
+ * Fases por vida (Vigilante.faseDe): I Acecho, II Bajo tierra (se hunde y ruge), III Demolicion (el
+ * martillazo encadena la embestida) y IV Furia (mas rapido, dos martillazos seguidos y hundimientos
+ * mas frecuentes).
+ *
+ * Los bloques que saltan del suelo son FallingBlock efimeros: no se colocan al caer (cancelDrop), no
+ * sueltan nada (dropItem), llevan la marca lethal_world:vigilante_pieza (Vigilante cancela su
+ * EntityChangeBlockEvent por si acaso) y se retiran a efimeros.vida-ticks. Hay un tope por golpe y otro
+ * por Vigilante. Nada toca un bloque del mundo.
+ *
+ * Ambiente de Halloween mientras dura: lamentos lejanos, susurros, la cueva y la respiracion de la
+ * bestia, todo con sonidos de vanilla y graves. Nunca campanas: la campana es solo de la Parca (ley 2).
+ *
+ * Una sola tarea: la de 2 ticks de Amenazas (registrarPelea).
  */
 final class PeleaVigilante implements Runnable {
 
@@ -73,42 +81,21 @@ final class PeleaVigilante implements Runnable {
      * hardcore.vigilante.habilidades; alias = el nombre en ingles del comando de staff.
      */
     enum Habilidad {
-        MACHAQUE("vi_machaque", "slam", "machaque", "Machaque",
-                "Levanta los brazos y golpea el suelo delante de él: te lanza por el aire.",
-                1, 4, 120, 24, 0.30, 5, Material.IRON_BLOCK, 30),
-        SALTO("vi_salto", "leap", "salto", "Salto sísmico",
-                "Marca dónde va a caer, salta y suelta una onda por el suelo que hay que saltar.",
-                1, 4, 220, 24, 0.35, 3, Material.PISTON, 70),
-        BARRIDO("vi_barrido", "sweep", "barrido", "Barrido del ojo",
-                "Su ojo barre un abanico de luz: si te alcanza sin nada delante, te quema y te marca.",
-                1, 4, 240, 24, 0.30, 4, Material.SPYGLASS, 44),
+        MARTILLAZO("vi_martillazo", "slam", "martillazo", "Martillazo",
+                "Salta muy alto y cae aplastando el suelo: cerca te lanza al cielo; más lejos, te barre.",
+                1, 4, 140, 20, 0.30, 5, Material.MACE, 60),
+        LANZAMIENTO("vi_lanzamiento", "toss", "lanzamiento", "Cabezazo",
+                "Agacha la cabeza, embiste a uno solo y lo manda por los aires.",
+                1, 4, 100, 20, 0.30, 4, Material.FEATHER, 40),
         EMBESTIDA("vi_embestida", "charge", "embestida", "Embestida",
-                "Marca una línea en el suelo y la recorre de golpe; rompe los pilares que encuentra.",
-                2, 4, 200, 24, 0.45, 4, Material.ANVIL, 50),
-        ESCOMBROS("vi_escombros", "debris", "escombros", "Lluvia de escombros",
-                "Caen piedras sobre los círculos marcados en el suelo.",
-                2, 4, 260, 28, 0.30, 4, Material.COBBLED_DEEPSLATE, 60),
-        PILARES("vi_pilares", "pillars", "pilares", "Pilares",
-                "Levanta seis pilares de piedra que tapan su mirada. Se deshacen solos.",
-                2, 3, 600, 0, 0, 2, Material.STONE_BRICKS, 20),
-        RAYO("vi_rayo", "beam", "rayo", "Rayo del ojo",
-                "Fija el ojo en un marcado y dispara: se corta si rompes la línea de visión.",
-                3, 4, 240, 30, 0.45, 4, Material.END_ROD, 40),
-        NUCLEOS("vi_nucleos", "cores", "nucleos", "Núcleos",
-                "Suelta sus tres núcleos y no recibe daño hasta que los rompan. Si no llegan a tiempo, estallan.",
-                3, 3, 900, 0, 0.50, 2, Material.RAW_GOLD_BLOCK, 300),
-        TIRON("vi_tiron", "pull", "tiron", "Tirón magnético",
-                "Atrae hacia él a los que pelean de lejos.",
-                3, 4, 300, 24, 0, 3, Material.LODESTONE, 30),
-        FARO("vi_faro", "lighthouse", "faro", "Faro",
-                "Su ojo gira como un faro dos vueltas: cúbrete de la luz.",
-                4, 4, 600, 20, 0.35, 2, Material.LANTERN, 180),
-        ONDAS("vi_ondas", "waves", "ondas", "Tres ondas",
-                "Golpea el suelo tres veces con ritmo: salta cada onda.",
-                4, 4, 360, 20, 0.30, 4, Material.NOTE_BLOCK, 110),
-        SENTENCIA("vi_sentencia", "sentence", "sentencia", "Sentencia",
-                "Un círculo se cierra sobre su presa y él le cae encima: sal antes de que se cierre.",
-                4, 4, 420, 60, 0.75, 3, Material.TARGET, 80);
+                "Marca una línea en el suelo y la cruza a toda velocidad, apartando a quien pille.",
+                1, 4, 160, 20, 0.35, 4, Material.ANVIL, 50),
+        HUNDIMIENTO("vi_hundimiento", "burrow", "hundimiento", "Hundimiento",
+                "Se mete bajo tierra y sale debajo de uno de ustedes: si el suelo tiembla bajo tus pies, apártate.",
+                2, 4, 320, 20, 0.30, 3, Material.ROOTED_DIRT, 120),
+        RUGIDO("vi_rugido", "roar", "rugido", "Rugido",
+                "Un grito largo y grave: te nubla la vista un instante y te quita cordura.",
+                2, 4, 400, 20, 0, 2, Material.SCULK_SHRIEKER, 40);
 
         final String id, alias, clave, nombre, descripcion;
         final int faseDesde, faseHasta, espera, aviso, peso, duracion;
@@ -136,7 +123,7 @@ final class PeleaVigilante implements Runnable {
             return f >= faseDesde && f <= faseHasta;
         }
 
-        /** Por id (vi_rayo), alias en ingles (beam) o clave (rayo). */
+        /** Por id (vi_rugido), alias en ingles (roar) o clave (rugido). */
         static Habilidad buscar(String nombre) {
             if (nombre == null) return null;
             String n = nombre.trim().toLowerCase(Locale.ROOT);
@@ -145,19 +132,27 @@ final class PeleaVigilante implements Runnable {
         }
     }
 
+    /** Donde pilla a cada uno el martillazo, por su distancia al sitio donde cae. */
+    enum Zona { CERCA, MEDIO, LEJOS, FUERA }
+
     // ------------------------------------------------------------ numeros
 
-    /** El amarillo del ojo y de su luz. */
-    static final int RGB_OJO = 0xFFD54A;
-    /** Los avisos en el suelo: del amarillo claro al naranja rojizo segun se acerca el golpe. */
-    static final int RGB_AVISO_DESDE = 0xFFF0A0, RGB_AVISO_HASTA = 0xFF6A1F;
-    /** El rojo de los nucleos a punto de estallar. */
-    static final int RGB_ESTALLIDO = 0xFF3B30;
-    /** Lo que mide un pilar: ancho y alto, y el radio con el que tapa. */
-    static final float PILAR_ANCHO = 1.6f, PILAR_ALTO = 4.5f;
-    static final double PILAR_RADIO = 0.9;
-    /** Cuanto tarda en aparecer (invulnerable, quieto) tras caer. */
-    private static final long TICKS_APARECE = 40;
+    /** Los avisos en el suelo: del polvo de tierra a la sangre seca segun se acerca el golpe. */
+    static final int RGB_AVISO_DESDE = 0xA89279, RGB_AVISO_HASTA = 0x8E1E1E;
+    /** La caja de un Zoglin a escala 1 (vanilla): la suya es esto por cuerpo.escala. */
+    static final double ZOGLIN_ANCHO = 1.3965, ZOGLIN_ALTO = 1.4;
+    /** La fisica de vanilla por tick: gravedad, freno vertical, freno en el aire y en el suelo normal. */
+    static final double GRAVEDAD = 0.08, ROCE_VERTICAL = 0.98, ROCE_AIRE = 0.91, ROCE_SUELO = 0.546;
+    /** Lo mas que se le da a una velocidad por eje: el paquete de velocidad del cliente no pasa de aqui. */
+    static final double VELOCIDAD_MAXIMA = 3.9;
+    /** Lo que tarda en salir del todo de la tierra al aparecer, tras el estallido. */
+    static final int SUBIDA_TICKS = 30;
+    /** Lo que levanta el empujon del martillazo a media distancia: lo justo para que vuele lejos sin frenar en el suelo. */
+    static final double EMPUJE_MEDIO_ALTO = 0.6;
+    /** Lo hondo que espera bajo tierra (bajo el sitio de salida): su cartel de nombre tampoco asoma. */
+    static final double HONDO = 2.6;
+    /** Cuanto dura el perdon de la caida tras salir volando por un golpe suyo (ticks del servidor). */
+    private static final long PERDON_CAIDA = 240;
 
     private final Vigilante gestor;
     private final Hardcore hc;
@@ -167,49 +162,73 @@ final class PeleaVigilante implements Runnable {
     final String presaNombre;
     final boolean prueba;
     final Vigilante.Escala escala;
-    private double golpe;
+    private final double golpe;
+    /** Lo que mide su caja a cuerpo.escala. */
+    private final double ancho, alto;
 
-    IronGolem cuerpo;
+    Zoglin cuerpo;
     Estado estado = Estado.APARECE;
     private int fase = 1;
+    private boolean furia;
     private long ticks;
     private int vueltas;
     private long inicioPelea;
     private final long nacio = System.currentTimeMillis();
     private boolean pagada;
 
+    /** Donde sale al nacer (a ras de suelo, con hueco para su caja) y hacia donde mira. */
+    private Location salida;
+    private float yawSalida;
+    private boolean estallo;
+    private long estallido;
+    private List<Location> avisoSalida, avisoSalidaDentro;
+    private BlockData sueloSalida;
+
     private Tecnica actual;
     private Habilidad siguiente;
+    /** La que va justo despues de la que esta en curso (el martillazo y la embestida de la fase III). */
+    private Habilidad encadenar;
     private final EnumMap<Habilidad, Long> listo = new EnumMap<>(Habilidad.class);
     private Habilidad ultima;
     private long respiroHasta;
-    private long ultimoGolpe;
     private long sinNadieDesde = -1;
     private long aturdidoHasta;
     private int jugadoresContados;
     private final Set<UUID> participantes = new HashSet<>();
 
-    /** A donde mira el ojo este tick (lo pone la habilidad); null = a su objetivo. */
-    private Float yawFijo;
-    private float yawOjo;
-    private final Map<UUID, Integer> visto = new HashMap<>();
-    private final Map<UUID, Long> marcaHasta = new HashMap<>();
-    /** Ventana de golpes fuertes por jugador: {tick de inicio, fraccion acumulada}. */
+    /** El atasco: desde cuando no se aleja mas de bloque y medio de este sitio. */
+    private Location anclaAtasco;
+    private long anclaDesde;
+    private long ultimoEscape = -10_000;
+
+    /** Las pisadas (va en silencio: sus sonidos los pone la pelea, graves) y el ambiente. */
+    private Location ultimaPos;
+    private double andado;
+    private long proximoAmbiente;
+    private long proximoGrunido;
+    private long ultimoDolor = -100;
+
     /**
-     * 1.13.0 · La ventana de golpes fuertes por jugador, COMPARTIDA entre todas las peleas: con dos
-     * Vigilantes vivos, el golpe de uno y el del otro en el mismo tick tampoco pasan de golpes.maximo.
-     * El reloj es el tick del servidor, no el de cada pelea.
+     * La ventana de golpes fuertes por jugador, COMPARTIDA entre todas las peleas: con dos Vigilantes
+     * vivos, el golpe de uno y el del otro en el mismo tick tampoco pasan de golpes.maximo. El reloj es el
+     * tick del servidor, no el de cada pelea. {tick de inicio, fraccion acumulada}.
      */
     private static final Map<UUID, double[]> VENTANA = new HashMap<>();
+    /**
+     * Quien ha salido volando por un golpe de un Vigilante: su siguiente caida no hace dano hasta ese tick
+     * del servidor. Estatico: si el Vigilante muere con alguien en el aire, el perdon sigue valiendo.
+     */
+    private static final Map<UUID, Long> CAIDA = new HashMap<>();
     /** Permiso de vuelo prestado (para que el servidor no eche a quien lanza por el aire): hasta que tick. */
     private final Map<UUID, Long> vuelo = new HashMap<>();
 
-    private BlockDisplay ojo;
-    private final List<BlockDisplay> orbita = new ArrayList<>();
-    private double giro;
-    private boolean nucleosFuera;
-    private final List<Pilar> pilares = new ArrayList<>();
-    private final Map<UUID, Nucleo> nucleos = new LinkedHashMap<>();
+    /** Un bloque del suelo que salta: se retira solo en "hasta" (tick de la pelea) si no ha caido antes. */
+    private record Efimero(FallingBlock bloque, long hasta) {
+    }
+
+    private final List<Efimero> efimeros = new ArrayList<>();
+    /** Las salpicaduras al herirle: carne de bestia (se crea al primer uso; sin servidor no existe). */
+    private static BlockData carne;
 
     private BossBar barra;
     private final Set<UUID> viendo = new HashSet<>();
@@ -224,9 +243,14 @@ final class PeleaVigilante implements Runnable {
         this.escala = escala;
         this.golpe = escala.golpe();
         this.jugadoresContados = Math.max(1, Math.min(a.jugadoresTope, jugadores));
+        this.ancho = anchoDe(a.escalaCuerpo);
+        this.alto = altoDe(a.escalaCuerpo);
     }
 
-    /** Lo pone en el mundo en "sitio" y arranca la aparicion. Null si el spawn lo cancela alguien. */
+    /**
+     * Lo pone enterrado bajo "sitio" (a ras de suelo, con hueco para su caja) y arranca la aparicion: el
+     * suelo se agrieta, estalla y sale escarbando. Null si el spawn lo cancela alguien.
+     */
     static PeleaVigilante crear(Vigilante gestor, UUID presa, String nombre, Vigilante.Escala escala, Location sitio, int jugadores) {
         if (sitio == null || sitio.getWorld() == null || !Vigilante.cargado(sitio)) return null;
         PeleaVigilante pe = new PeleaVigilante(gestor, presa, nombre, escala, jugadores);
@@ -236,140 +260,54 @@ final class PeleaVigilante implements Runnable {
     private boolean nacer(Location sitio) {
         Amenazas am = hc.amenazas();
         if (am == null) return false;
-        Location l = sitio.clone();
-        l.setPitch(0);
+        salida = sitio.clone();
+        salida.setPitch(0);
         Player cerca = presa != null ? hc.plugin().getServer().getPlayer(presa) : Fx.nearest(sitio, 32);
-        if (cerca != null && cerca.getWorld() == l.getWorld()) l.setYaw(PeleaAmbush.yaw(l, cerca.getLocation()));
-        IronGolem g = am.invocar(IronGolem.class, l, Vigilante.AMENAZA, escala.nivel(), Paleta.vigilante("Vigilante"), e -> {
+        if (cerca != null && cerca.getWorld() == salida.getWorld()) salida.setYaw(PeleaAmbush.yaw(salida, cerca.getLocation()));
+        yawSalida = salida.getYaw();
+        Location bajo = enterrado(salida, HONDO);
+        Zoglin z = am.invocar(Zoglin.class, bajo, Vigilante.AMENAZA, escala.nivel(), Paleta.vigilante("Vigilante"), e -> {
             if (presa != null) e.getPersistentDataContainer().set(Marcas.PRESA, PersistentDataType.STRING, presa.toString());
-            e.setPlayerCreated(false);
+            // finalizeSpawn lo hace bebe una de cada cinco veces (y corre antes que esto).
+            e.setBaby(false);
             e.setAI(false);
             e.setInvulnerable(true);
+            // Sus sonidos los pone la pelea, mas graves: un Zoglin a tono normal no suena a algo de este tamano.
+            e.setSilent(true);
             Compat.setAttribute(e, "scale", a.escalaCuerpo);
             Compat.setAttribute(e, "knockback_resistance", 1.0);
             Compat.setAttribute(e, "movement_speed", a.velocidad);
             Compat.setAttribute(e, "follow_range", 48);
+            // El escalado no toca el paso: sin esto, un bloque de desnivel le obliga a saltar.
+            Compat.setAttribute(e, "step_height", a.paso);
             Compat.setAttribute(e, "attack_damage", golpe);
+            // Su cornada de vanilla ya lanza por el aire; un poco mas, que se note el tamano.
+            Compat.setAttribute(e, "attack_knockback", 1.6);
         });
-        if (g == null) return false;
-        cuerpo = g;
-        am.vidaLogica(g, escala.vida());
-        am.topeGolpe(g, a.topeGolpe);
-        am.ancla(g, sitio);
-        yawOjo = l.getYaw();
-        crearOjo();
-        crearOrbita();
+        if (z == null) return false;
+        cuerpo = z;
+        am.vidaLogica(z, escala.vida());
+        am.topeGolpe(z, a.topeGolpe);
+        am.ancla(z, salida);
         am.registrarPelea(this);
         gestor.registrar(this);
-        Compat.soundPlayers(l.getWorld(), l, "entity.iron_golem.repair", 2.0f, 0.5f);
-        Compat.soundPlayers(l.getWorld(), l, "block.beacon.activate", 1.5f, 0.6f);
         return true;
     }
 
-    // ================================================================ piezas
-
-    private BlockDisplay pieza(Location l, Material m, float escala, boolean brilla) {
-        try {
-            return l.getWorld().spawn(l, BlockDisplay.class, d -> {
-                d.setBlock(m.createBlockData());
-                d.setPersistent(false);
-                d.setViewRange(3f);
-                d.setBrightness(new Display.Brightness(15, 15));
-                d.setTeleportDuration(2);
-                d.setTransformation(new Transformation(new Vector3f(-escala / 2, -escala / 2, -escala / 2), new AxisAngle4f(),
-                        new Vector3f(escala, escala, escala), new AxisAngle4f()));
-                if (brilla) {
-                    d.setGlowing(true);
-                    d.setGlowColorOverride(Color.fromRGB(RGB_OJO));
-                }
-                d.getPersistentDataContainer().set(Marcas.VIGILANTE, PersistentDataType.STRING, cuerpo.getUniqueId().toString());
-            });
-        } catch (Throwable t) {
-            return null;
-        }
+    /** Donde esta justo bajo tierra para salir en "suelo" (nunca por debajo del fondo del mundo). */
+    private Location enterrado(Location suelo) {
+        return enterrado(suelo, 0);
     }
 
-    private double alto() {
-        return cuerpo.getHeight();
-    }
-
-    /** El ojo: en el pecho, por delante del cuerpo. */
-    private Location ojoPos() {
-        Location l = cuerpo.getLocation();
-        float yaw = l.getYaw();
-        try {
-            yaw = cuerpo.getBodyYaw();
-        } catch (Throwable ignorado) {
-            // Sin yaw del cuerpo, el de la cabeza.
-        }
-        Vector f = PeleaAmbush.dir(yaw).multiply(0.42 * a.escalaCuerpo);
-        Location o = l.add(0, alto() * 0.62, 0).add(f);
-        o.setYaw(0);
-        o.setPitch(0);
-        return o;
-    }
-
-    private void crearOjo() {
-        ojo = pieza(ojoPos(), Material.OCHRE_FROGLIGHT, 0.5f * (float) a.escalaCuerpo / 2.2f * 1.0f, true);
-    }
-
-    private Location orbitaPos(int i) {
-        double ang = giro + i * Math.PI * 2 / 3;
-        double r = 0.75 * cuerpo.getWidth() + 0.9;
-        double y = alto() * 0.45 + Math.sin(giro * 2 + i) * 0.35;
-        return cuerpo.getLocation().add(Math.cos(ang) * r, y, Math.sin(ang) * r);
-    }
-
-    private void crearOrbita() {
-        quitarOrbita();
-        for (int i = 0; i < 3; i++) {
-            BlockDisplay d = pieza(orbitaPos(i), Material.RAW_GOLD_BLOCK, 0.85f, true);
-            if (d != null) orbita.add(d);
-        }
-        nucleosFuera = false;
-    }
-
-    private void quitarOrbita() {
-        for (BlockDisplay d : orbita) Fx.safeRemove(d);
-        orbita.clear();
-    }
-
-    /** Cada 2 ticks: el ojo y los nucleos con el cuerpo, los pilares que caducan y las chispas para Bedrock. */
-    private void moverPiezas(World w) {
-        if (ojo != null && ojo.isValid()) {
-            Location o = ojoPos();
-            ojo.teleport(o);
-            if (vueltas % 3 == 0 && !aturdido()) Compat.spawn(w, Compat.DUST, o, 2, 0.15, 0.15, 0.15, 0, Compat.dust(RGB_OJO, 1.2f));
-        } else if (ojo != null) {
-            ojo = null;
-        }
-        if (!nucleosFuera) {
-            giro += 0.22;
-            for (int i = 0; i < orbita.size(); i++) {
-                BlockDisplay d = orbita.get(i);
-                if (d.isValid()) d.teleport(orbitaPos(i));
-            }
-            if (vueltas % 5 == 0) {
-                for (int i = 0; i < orbita.size(); i++) Compat.spawn(w, Compat.END_ROD, orbitaPos(i), 1, 0.1, 0.1, 0.1, 0.01);
-            }
-        }
-        for (Iterator<Pilar> it = pilares.iterator(); it.hasNext(); ) {
-            Pilar p = it.next();
-            if (!p.vivo) {
-                it.remove();
-                continue;
-            }
-            if (ticks >= p.hasta) {
-                derrumbar(p);
-                it.remove();
-            } else if (vueltas % 5 == 0) {
-                // Para quien juega desde Bedrock, que no ve las entidades de bloque: el contorno en polvo de piedra.
-                BlockData piedra = Material.STONE_BRICKS.createBlockData();
-                for (double y = 0.5; y < p.alto; y += 1.4) {
-                    Compat.spawn(w, Compat.BLOCK, new Location(w, p.x, p.y0 + y, p.z), 1, 0.4, 0.2, 0.4, 0, piedra);
-                }
-            }
-        }
+    /**
+     * Lo mismo "extra" bloques mas hondo: mientras espera o viaja bajo tierra va a HONDO, para que el
+     * cartel de nombre (que va encima de su caja) quede tambien bajo el suelo y no asome.
+     */
+    private Location enterrado(Location suelo, double extra) {
+        Location l = suelo.clone().subtract(0, alto + 0.4 + extra, 0);
+        double fondo = suelo.getWorld().getMinHeight() + 3;
+        if (l.getY() < fondo) l.setY(fondo);
+        return l;
     }
 
     // ================================================================ cada 2 ticks
@@ -388,8 +326,8 @@ final class PeleaVigilante implements Runnable {
         ticks += 2;
         boolean segundo = ++vueltas % 10 == 0;
         World w = cuerpo.getWorld();
-        yawFijo = null;
         cortarVuelo();
+        podarEfimeros();
         if (segundo) {
             refrescarBarra();
             devolverVuelo(false);
@@ -397,14 +335,12 @@ final class PeleaVigilante implements Runnable {
             barra.progress((float) Math.max(0, Math.min(1, Amenazas.fraccion(cuerpo))));
         }
         if (estado == Estado.APARECE) {
-            moverPiezas(w);
-            Compat.spawn(w, Compat.LARGE_SMOKE, cuerpo.getLocation().add(0, 0.3, 0), 6, 1.2, 0.2, 1.2, 0.01);
-            if (ticks >= TICKS_APARECE) empezarPelea();
+            aparecer(w);
             return;
         }
         if (ticks - inicioPelea >= a.duracionMinutos * 1200L) {
             irse("tiempo", ComandoCalamity.mensaje(Component.text("El ").append(Component.text("Vigilante", Paleta.VIGILANTE))
-                    .append(Component.text(" vuelve al cielo."))));
+                    .append(Component.text(" se hunde en la tierra."))));
             return;
         }
         if (segundo) {
@@ -429,26 +365,102 @@ final class PeleaVigilante implements Runnable {
                 fin = true;
             }
             tec.t += 2;
-            if (fin && actual == tec) acabar();
+            if (fin && actual == tec) acabar(tec.h);
         } else if (aturdido()) {
-            Compat.spawn(w, Compat.CRIT, cuerpo.getLocation().add(0, alto() + 0.3, 0), 4, 0.6, 0.1, 0.6, 0.05);
+            if (vueltas % 3 == 0) {
+                Compat.spawn(w, Compat.SMOKE, pie().add(0, alto + 0.2, 0), 4, ancho * 0.25, 0.1, ancho * 0.25, 0.01);
+            }
         } else {
             if (aturdidoHasta > 0) finAturdido();
             dirigir(segundo);
         }
-        apuntarOjo();
-        moverPiezas(w);
-        mirada(w);
-        if (vueltas % 3 == 0) pintarMarcas(w);
+        pasos(w);
+        ambiente(w);
+    }
+
+    /**
+     * La aparicion: emerger-aviso-ticks de suelo agrietandose donde va a salir (el aviso del estallido),
+     * el estallido (bloques que saltan, golpe a quien este encima) y SUBIDA_TICKS saliendo de la tierra.
+     */
+    private void aparecer(World w) {
+        if (!estallo) {
+            if (avisoSalida == null) {
+                avisoSalida = anillo(salida, a.impactoRadio);
+                avisoSalidaDentro = anillo(salida, a.impactoRadio * 0.5);
+                sueloSalida = materialSuelo(salida);
+                Compat.soundPlayers(w, salida, "entity.sniffer.digging", 2.0f, 0.5f);
+                Compat.sound(w, salida, "entity.zoglin.angry", 1.8f, 0.45f);
+            }
+            double k = Math.min(1, ticks / (double) a.emergerAviso);
+            if (ticks % 4 == 2) {
+                pintar(w, avisoSalida, tono(k), sueloSalida);
+                pintar(w, avisoSalidaDentro, tono(k), null);
+            }
+            Compat.spawn(w, Compat.BLOCK, salida.clone().add(0, 0.15, 0), 6, 0.5 + k, 0.05, 0.5 + k, 0.12, sueloSalida);
+            if (ticks % 6 == 2) Compat.sound(w, salida, "block.rooted_dirt.break", 1.6f, 0.5f);
+            if (ticks < a.emergerAviso) return;
+            estallar(w);
+            return;
+        }
+        long s = ticks - estallido;
+        double k = Math.min(1, s / (double) SUBIDA_TICKS);
+        Location bajo = enterrado(salida);
+        Location l = bajo.clone();
+        l.setY(bajo.getY() + (salida.getY() - bajo.getY()) * k);
+        l.setYaw(yawSalida);
+        l.setPitch(0);
+        mover(l);
+        if (s % 4 == 0) {
+            Compat.spawn(w, Compat.BLOCK, salida.clone().add(0, 0.2, 0), 12, ancho * 0.45, 0.1, ancho * 0.45, 0.15, sueloSalida);
+            Compat.spawn(w, Compat.LARGE_SMOKE, salida.clone().add(0, 0.4, 0), 3, ancho * 0.4, 0.2, ancho * 0.4, 0.01);
+        }
+        if (s % 8 == 0 && s < SUBIDA_TICKS - 6) saltarAnillo(salida, ancho * 0.5, 2, 0.6);
+        if (s == 12) {
+            Compat.soundPlayers(w, salida, "entity.ravager.roar", 2.5f, 0.5f);
+            Compat.sound(w, salida, "entity.zoglin.angry", 2.5f, 0.45f);
+        }
+        if (k >= 1) empezarPelea();
+    }
+
+    /** El suelo revienta donde sale: bloques que saltan, polvo y un golpe fuerte a quien este encima. */
+    private void estallar(World w) {
+        estallo = true;
+        estallido = ticks;
+        Location bajo = enterrado(salida);
+        bajo.setYaw(yawSalida);
+        mover(bajo);
+        Compat.soundPlayers(w, salida, "entity.generic.explode", 2.0f, 0.55f);
+        Compat.soundPlayers(w, salida, "entity.warden.dig", 2.0f, 0.6f);
+        Compat.sound(w, salida, "block.rooted_dirt.break", 2.0f, 0.5f);
+        estallidoSuelo(w, salida, ancho * 0.5, a.efimerosPorGolpe, 1.0);
+        Set<UUID> tocados = new HashSet<>();
+        for (Player v : Fx.playersNear(salida, a.impactoRadio)) {
+            if (!valido(v) || Math.abs(v.getLocation().getY() - salida.getY()) > 3) continue;
+            tocados.add(v.getUniqueId());
+            golpeFuerte(v, a.impactoFraccion, "Emergencia");
+            lanzar(v, PeleaAmbush.plano(salida, v.getLocation(), PeleaAmbush.dir(yawSalida)).multiply(0.35), 7);
+        }
+        for (Player v : Fx.playersNear(salida, a.impactoRadio + 5)) {
+            if (tocados.contains(v.getUniqueId()) || !valido(v)) continue;
+            empujar(v, PeleaAmbush.plano(salida, v.getLocation(), PeleaAmbush.dir(yawSalida)).multiply(0.9).setY(0.35), true);
+        }
+        sacudir(salida, a.impactoRadio + 12);
     }
 
     private void empezarPelea() {
         estado = Estado.PELEA;
         inicioPelea = ticks;
-        ultimoGolpe = ticks;
-        respiroHasta = ticks + 20;
+        respiroHasta = ticks + 16;
+        proximoAmbiente = ticks + 80;
+        proximoGrunido = ticks + 60;
+        Location l = salida.clone();
+        l.setYaw(yawSalida);
+        mover(l);
         cuerpo.setInvulnerable(false);
         cuerpo.setAI(true);
+        anclaAtasco = cuerpo.getLocation();
+        anclaDesde = ticks;
+        liberar();
         nombreBarra();
     }
 
@@ -493,18 +505,18 @@ final class PeleaVigilante implements Runnable {
 
     private static String nombreFase(int f) {
         return switch (f) {
-            case 1 -> "Centinela";
-            case 2 -> "Demoledor";
-            case 3 -> "Ojo";
-            default -> "Vigilante";
+            case 1 -> "Acecho";
+            case 2 -> "Bajo tierra";
+            case 3 -> "Demolición";
+            default -> "Furia";
         };
     }
 
     private static String consejoFase(int f) {
         return switch (f) {
-            case 2 -> "Levanta pilares: úsalos para taparte de su ojo.";
-            case 3 -> "Rompe sus núcleos antes de que estallen.";
-            default -> "Su ojo gira como un faro: busca dónde cubrirte.";
+            case 2 -> "Se mete bajo tierra: si el suelo tiembla bajo tus pies, apártate.";
+            case 3 -> "Encadena el martillazo con la embestida: sal de su línea.";
+            default -> "Entra en furia: más rápido y dos martillazos seguidos.";
         };
     }
 
@@ -512,17 +524,21 @@ final class PeleaVigilante implements Runnable {
         fase = nueva;
         cortarTecnica();
         siguiente = switch (nueva) {
-            case 2 -> Habilidad.PILARES;
-            case 3 -> Habilidad.NUCLEOS;
-            case 4 -> Habilidad.FARO;
+            case 2 -> Habilidad.RUGIDO;
+            case 3, 4 -> Habilidad.MARTILLAZO;
             default -> null;
         };
+        if (nueva >= 4 && !furia) {
+            furia = true;
+            if (actual == null && !aturdido()) Compat.setAttribute(cuerpo, "movement_speed", velocidadActual());
+        }
         respiroHasta = ticks + 10;
         Location l = cuerpo.getLocation();
-        Compat.soundPlayers(l.getWorld(), l, "entity.iron_golem.damage", 2.0f, 0.5f);
-        Compat.soundPlayers(l.getWorld(), l, "block.beacon.power_select", 1.5f, 0.6f);
-        Compat.spawn(l.getWorld(), Compat.BLOCK, l.clone().add(0, alto() * 0.5, 0), 40, 1.2, 1.5, 1.2, 0.1,
-                Material.IRON_BLOCK.createBlockData());
+        World w = l.getWorld();
+        Compat.soundPlayers(w, l, "entity.hoglin.angry", 2.2f, 0.4f);
+        Compat.sound(w, l, "entity.zoglin.hurt", 2.0f, 0.45f);
+        Compat.spawn(w, Compat.BLOCK, l.clone().add(0, alto * 0.5, 0), 30, ancho * 0.35, alto * 0.3, ancho * 0.35, 0.1, carne());
+        Compat.spawn(w, Compat.LARGE_SMOKE, l.clone().add(0, 0.4, 0), 16, ancho * 0.5, 0.2, ancho * 0.5, 0.02);
         Component c = Paleta.vigilante("Fase " + Parca.romano(nueva) + " · " + nombreFase(nueva))
                 .append(Component.text(" · ", Paleta.SEPARADOR)).append(Component.text(consejoFase(nueva), Paleta.TEXTO));
         for (Player p : Fx.viewersNear(l, 48)) hc.barra().aviso(p, c, 4);
@@ -535,89 +551,133 @@ final class PeleaVigilante implements Runnable {
     private void dirigir(boolean segundo) {
         Player obj = objetivo();
         if (obj == null) {
-            cuerpo.setTarget(null);
+            if (segundo) Cerebro.soltar(cuerpo);
             return;
         }
-        if (segundo) cuerpo.setTarget(obj);
+        if (segundo) {
+            forzarObjetivo(obj);
+            if (revisarAtasco(obj)) return;
+        }
         if (ticks < respiroHasta) return;
         double dist = PeleaAmbush.distPlano(cuerpo.getLocation(), obj.getLocation());
         Habilidad h = null;
-        if (siguiente != null && siguiente.enFase(fase) && puede(siguiente, obj, dist)) {
+        if (encadenar != null) {
+            Habilidad e = encadenar;
+            encadenar = null;
+            if (e.enFase(fase) && puede(e, obj, dist)) h = e;
+            else if (puede(Habilidad.LANZAMIENTO, obj, dist)) h = Habilidad.LANZAMIENTO;
+        }
+        if (h == null && siguiente != null && siguiente.enFase(fase) && puede(siguiente, obj, dist)) {
             h = siguiente;
             siguiente = null;
-        } else if ((ticks - ultimoGolpe >= a.atascoSegundos * 20L || dist > 30) && puede(Habilidad.SALTO, obj, Math.min(dist, 30))
-                && ticks >= listo.getOrDefault(Habilidad.SALTO, 0L) - a.hab(Habilidad.SALTO).espera() / 2) {
-            // Atascado o lejos: salta hacia su objetivo (con su aviso, como siempre).
-            h = Habilidad.SALTO;
-            ultimoGolpe = ticks;
-        } else {
+        }
+        if (h == null) {
             List<Habilidad> cand = new ArrayList<>();
             for (Habilidad x : Habilidad.values()) {
                 if (!x.enFase(fase) || ticks < listo.getOrDefault(x, 0L) || x.peso <= 0) continue;
                 if (puede(x, obj, dist)) cand.add(x);
             }
-            h = sortear(cand, ultima, ThreadLocalRandom.current().nextDouble());
+            h = sortear(cand, ultima, furia, ThreadLocalRandom.current().nextDouble());
         }
-        if (h != null) empezar(h, obj);
+        if (h != null) empezar(h, obj, false);
+    }
+
+    /**
+     * Cada segundo: si lleva cuerpo.atasco-segundos sin alejarse bloque y medio del mismo sitio y sin
+     * estar pegado a su objetivo, no cabe por donde va (su caja escalada es grande): se hunde y sale
+     * debajo de el. Como mucho una vez cada 8 s.
+     */
+    private boolean revisarAtasco(Player obj) {
+        Location l = cuerpo.getLocation();
+        if (anclaAtasco == null || anclaAtasco.getWorld() != l.getWorld() || PeleaAmbush.distPlano(anclaAtasco, l) > 1.5
+                || Math.abs(anclaAtasco.getY() - l.getY()) > 1.5) {
+            anclaAtasco = l;
+            anclaDesde = ticks;
+            return false;
+        }
+        double dist = PeleaAmbush.distPlano(l, obj.getLocation());
+        boolean pegado = dist <= ancho / 2 + 2.5 && Math.abs(l.getY() - obj.getLocation().getY()) < 3;
+        if (pegado) {
+            anclaDesde = ticks;
+            return false;
+        }
+        if (ticks - anclaDesde < a.atascoTicks || ticks - ultimoEscape < 160 || !puedeHundirse(obj)) return false;
+        ultimoEscape = ticks;
+        anclaDesde = ticks;
+        hc.plugin().bitacora().anotar("vigilante", "atasco", presaNombre, l.getBlockX() + " " + l.getBlockY() + " " + l.getBlockZ());
+        empezar(Habilidad.HUNDIMIENTO, obj, true);
+        return true;
     }
 
     /** Si esa habilidad tiene sentido ahora contra obj a "dist" bloques. */
     private boolean puede(Habilidad h, Player obj, double dist) {
         return switch (h) {
-            case MACHAQUE -> dist <= a.machaqueRadio + 0.5;
-            case SALTO -> dist >= 6 && dist <= 30 && !hc.enSpawn(obj) && Vigilante.cargado(obj.getLocation());
-            case BARRIDO -> dist <= a.barridoRadio;
+            case MARTILLAZO -> dist <= a.martilloAlcance && Vigilante.cargado(obj.getLocation()) && !hc.enSpawn(obj);
+            case LANZAMIENTO -> dist >= 2 && dist <= a.lanzaAlcance;
             case EMBESTIDA -> dist >= 5 && dist <= a.embestidaLargo;
-            case ESCOMBROS, SENTENCIA -> dist <= 24;
-            case PILARES -> pilaresVivos() <= 2;
-            case RAYO -> marcadoCerca(24) != null;
-            case NUCLEOS -> nucleos.isEmpty() && !nucleosFuera;
-            case TIRON -> !lejanos().isEmpty();
-            case FARO -> true;
-            case ONDAS -> dist <= a.ondasRadio;
+            case HUNDIMIENTO -> puedeHundirse(obj);
+            case RUGIDO -> !validosCerca(pie(), a.rugidoRadio).isEmpty();
         };
     }
 
+    private boolean puedeHundirse(Player obj) {
+        return valido(obj) && Vigilante.cargado(obj.getLocation()) && !hc.enSpawn(obj)
+                && obj.getLocation().distanceSquared(pie()) <= 36 * 36;
+    }
+
+    /** El peso de una habilidad en el sorteo: en furia, los hundimientos pesan el doble. */
+    static double pesoEn(Habilidad h, boolean furia) {
+        return h.peso * (furia && h == Habilidad.HUNDIMIENTO ? 2 : 1);
+    }
+
     /** Sorteo por peso (puro); la ultima que uso pesa un 35 %. Null sin candidatas. */
-    static Habilidad sortear(List<Habilidad> cand, Habilidad ultima, double azar) {
+    static Habilidad sortear(List<Habilidad> cand, Habilidad ultima, boolean furia, double azar) {
         double total = 0;
-        for (Habilidad h : cand) total += h.peso * (h == ultima ? 0.35 : 1);
+        for (Habilidad h : cand) total += pesoEn(h, furia) * (h == ultima ? 0.35 : 1);
         if (cand.isEmpty() || total <= 0) return null;
         double tirada = Math.max(0, Math.min(0.999999, azar)) * total;
         for (Habilidad h : cand) {
-            tirada -= h.peso * (h == ultima ? 0.35 : 1);
+            tirada -= pesoEn(h, furia) * (h == ultima ? 0.35 : 1);
             if (tirada < 0) return h;
         }
         return cand.get(cand.size() - 1);
     }
 
-    private void empezar(Habilidad h, Player obj) {
+    /**
+     * Hasta cuando no la repite (puro): espera-ticks, y en furia por furia-espera (los hundimientos, aun
+     * mas a menudo). El rugido nunca baja: su oscuridad no puede volverse continua.
+     */
+    static int esperaEfectiva(Habilidad h, int espera, boolean furia, double factorFuria) {
+        if (!furia || h == Habilidad.RUGIDO) return espera;
+        double f = h == Habilidad.HUNDIMIENTO ? factorFuria * 0.75 : factorFuria;
+        return Math.max(40, (int) Math.round(espera * f));
+    }
+
+    private void empezar(Habilidad h, Player obj, boolean escape) {
         Tecnica tec = switch (h) {
-            case MACHAQUE -> new Machaque(obj);
-            case SALTO -> new Salto(obj);
-            case BARRIDO -> new Barrido(obj);
+            case MARTILLAZO -> new Martillazo(obj);
+            case LANZAMIENTO -> new Lanzamiento(obj);
             case EMBESTIDA -> new Embestida(obj);
-            case ESCOMBROS -> new Escombros();
-            case PILARES -> new Pilares();
-            case RAYO -> new Rayo(obj);
-            case NUCLEOS -> new Nucleos();
-            case TIRON -> new Tiron();
-            case FARO -> new Faro();
-            case ONDAS -> new Ondas();
-            case SENTENCIA -> new Sentencia(obj);
+            case HUNDIMIENTO -> new Hundimiento(obj, escape);
+            case RUGIDO -> new Rugido();
         };
         actual = tec;
-        cuerpo.setAI(false);
-        cuerpo.setTarget(null);
-        listo.put(h, ticks + a.hab(h).espera());
+        sujetar();
+        listo.put(h, ticks + esperaEfectiva(h, a.hab(h).espera(), furia, a.furiaEspera));
         ultima = h;
         nombreBarra();
     }
 
-    private void acabar() {
+    private void acabar(Habilidad h) {
         actual = null;
-        respiroHasta = ticks + 16 + ThreadLocalRandom.current().nextInt(14);
-        if (!aturdido() && cuerpo != null && cuerpo.isValid()) cuerpo.setAI(true);
+        ThreadLocalRandom r = ThreadLocalRandom.current();
+        respiroHasta = ticks + (furia ? 6 + r.nextInt(8) : 14 + r.nextInt(12));
+        // Fase III en adelante: tras el martillazo, la embestida.
+        if (h == Habilidad.MARTILLAZO && fase >= 3) {
+            encadenar = Habilidad.EMBESTIDA;
+            respiroHasta = ticks + 4;
+        }
+        if (!aturdido()) liberar();
         nombreBarra();
     }
 
@@ -630,32 +690,138 @@ final class PeleaVigilante implements Runnable {
         } catch (Throwable ignorado) {
             // Lo que no se pudo cortar lo retira limpiar() al acabar.
         }
-        if (!aturdido() && cuerpo != null && cuerpo.isValid() && estado == Estado.PELEA) cuerpo.setAI(true);
+        if (!aturdido()) liberar();
         nombreBarra();
     }
 
     /** /calamity vigilant ability y /anomaly test: suelta esa habilidad ya. Devuelve por que no, o null. */
     String forzar(Habilidad h) {
-        if (estado != Estado.PELEA) return "aún está apareciendo";
+        if (estado != Estado.PELEA) return "aún está saliendo de la tierra";
         Player obj = objetivo();
-        if (obj == null) return "no tiene a nadie a quien apuntar";
+        if (obj == null) return "no tiene a nadie a quien ir";
         if (aturdido()) aturdidoHasta = ticks;
         cortarTecnica();
-        empezar(h, obj);
+        empezar(h, obj, false);
         return null;
     }
 
-    // ================================================================ objetivo y mirada
+    /** Si ahora mismo no persigue con su IA (aparece, una habilidad o aturdido): nadie le cambia el objetivo. */
+    boolean ocupado() {
+        return estado != Estado.PELEA || actual != null || aturdido();
+    }
+
+    // ================================================================ cuerpo, IA y objetivo
+
+    private double velocidadActual() {
+        return a.velocidad * (furia ? a.furiaVelocidad : 1);
+    }
+
+    /** Quieto para una habilidad: sin velocidad de andar ni objetivo (su fisica sigue, para saltar y embestir). */
+    private void sujetar() {
+        if (cuerpo == null || !cuerpo.isValid()) return;
+        Compat.setAttribute(cuerpo, "movement_speed", 0);
+        Cerebro.soltar(cuerpo);
+    }
+
+    /** Vuelve a perseguir con su IA. */
+    private void liberar() {
+        if (cuerpo == null || !cuerpo.isValid() || estado != Estado.PELEA) return;
+        if (!cuerpo.hasAI()) cuerpo.setAI(true);
+        Compat.setAttribute(cuerpo, "movement_speed", velocidadActual());
+        Player obj = objetivo();
+        if (obj != null) forzarObjetivo(obj);
+    }
+
+    private void forzarObjetivo(Player obj) {
+        if (cuerpo == null || obj == null) return;
+        if (Cerebro.apuntar(cuerpo, obj)) return;
+        // Sin acceso a su cerebro: lo de Bukkit, y que ande hacia el con el Pathfinder de Paper.
+        try {
+            cuerpo.setTarget(obj);
+            if (PeleaAmbush.distPlano(cuerpo.getLocation(), obj.getLocation()) > 3) cuerpo.getPathfinder().moveTo(obj, 1.0);
+        } catch (Throwable ignorado) {
+            // Sin objetivo forzado le queda el suyo: el jugador mas cercano.
+        }
+    }
+
+    /**
+     * El cerebro del Zoglin (Brain de vanilla): Mob#setTarget de Bukkit solo cambia un campo que su
+     * cerebro no lee. Aqui, por reflexion y con los nombres de Mojang que usa Paper 26, lo mismo que hace
+     * el propio Zoglin cuando le pegan: borra CANT_REACH_WALK_TARGET_SINCE y pone ATTACK_TARGET con
+     * caducidad. Si los nombres cambian algun dia, se apaga solo y queda setTarget mas el Pathfinder.
+     */
+    private static final class Cerebro {
+        private static boolean roto;
+        private static Method handleBestia, handleJugador, cerebro, poner, borrar;
+        private static Object ataque, andar, noLlega;
+
+        private static Object cerebroDe(Zoglin z) throws Exception {
+            if (handleBestia == null) {
+                handleBestia = z.getClass().getMethod("getHandle");
+                Object nms = handleBestia.invoke(z);
+                cerebro = nms.getClass().getMethod("getBrain");
+                Object brain = cerebro.invoke(nms);
+                Class<?> tipo = Class.forName("net.minecraft.world.entity.ai.memory.MemoryModuleType", false,
+                        nms.getClass().getClassLoader());
+                poner = brain.getClass().getMethod("setMemoryWithExpiry", tipo, Object.class, long.class);
+                borrar = brain.getClass().getMethod("eraseMemory", tipo);
+                ataque = tipo.getField("ATTACK_TARGET").get(null);
+                andar = tipo.getField("WALK_TARGET").get(null);
+                noLlega = tipo.getField("CANT_REACH_WALK_TARGET_SINCE").get(null);
+            }
+            return cerebro.invoke(handleBestia.invoke(z));
+        }
+
+        static boolean apuntar(Zoglin z, Player p) {
+            if (roto || z == null || p == null) return false;
+            try {
+                Object brain = cerebroDe(z);
+                if (handleJugador == null) handleJugador = p.getClass().getMethod("getHandle");
+                Object jugador = handleJugador.invoke(p);
+                borrar.invoke(brain, noLlega);
+                poner.invoke(brain, ataque, jugador, 200L);
+                return true;
+            } catch (Throwable t) {
+                roto = true;
+                return false;
+            }
+        }
+
+        static void soltar(Zoglin z) {
+            if (z == null) return;
+            try {
+                z.getPathfinder().stopPathfinding();
+            } catch (Throwable ignorado) {
+                // Sin Pathfinder: se queda quieto igual por la velocidad 0.
+            }
+            try {
+                z.setTarget(null);
+            } catch (Throwable ignorado) {
+                // Nada que soltar.
+            }
+            if (roto) return;
+            try {
+                Object brain = cerebroDe(z);
+                borrar.invoke(brain, ataque);
+                borrar.invoke(brain, andar);
+            } catch (Throwable t) {
+                roto = true;
+            }
+        }
+    }
 
     private boolean valido(Player p) {
         return p != null && Fx.isFightable(p) && cuerpo != null && p.getWorld() == cuerpo.getWorld() && !hc.enSpawn(p);
     }
 
-    /** A quien va: el marcado mas cercano; si no, su presa; si no, el mas cercano. A 40 bloques como mucho. */
+    /** Si puede ser su objetivo (lo mira el EntityTargetEvent de Vigilante). */
+    boolean objetivoValido(Player p) {
+        return valido(p);
+    }
+
+    /** A quien va: su presa si esta a 40 bloques; si no, el mas cercano. */
     Player objetivo() {
         if (cuerpo == null) return null;
-        Player m = marcadoCerca(40);
-        if (m != null) return m;
         Location l = cuerpo.getLocation();
         if (presa != null) {
             Player p = hc.plugin().getServer().getPlayer(presa);
@@ -674,43 +840,23 @@ final class PeleaVigilante implements Runnable {
         return mejor;
     }
 
-    boolean marcado(Player p) {
-        Long h = p == null ? null : marcaHasta.get(p.getUniqueId());
-        return h != null && h > ticks;
+    private List<Player> validosCerca(Location c, double radio) {
+        List<Player> out = new ArrayList<>();
+        for (Player p : Fx.playersNear(c, radio)) if (valido(p)) out.add(p);
+        return out;
     }
 
-    private Player marcadoCerca(double radio) {
-        Player mejor = null;
-        double md = radio * radio;
-        for (Player p : Fx.playersNear(cuerpo.getLocation(), radio)) {
-            if (!valido(p) || !marcado(p)) continue;
-            double d = p.getLocation().distanceSquared(cuerpo.getLocation());
-            if (d <= md) {
-                md = d;
-                mejor = p;
-            }
-        }
-        return mejor;
+    /** Si ese jugador esta a "radio" de el (para la ley 6: Vigilante.persigue). */
+    boolean cerca(Player p, double radio) {
+        return p != null && cuerpo != null && cuerpo.isValid() && p.getWorld() == cuerpo.getWorld()
+                && p.getLocation().distanceSquared(cuerpo.getLocation()) <= radio * radio;
     }
 
-    private List<Player> lejanos() {
-        List<Player> l = new ArrayList<>();
-        for (Player p : Fx.playersNear(cuerpo.getLocation(), 36)) {
-            if (valido(p) && PeleaAmbush.distPlano(cuerpo.getLocation(), p.getLocation()) >= a.tironMinima) l.add(p);
-        }
-        return l;
+    private Location pie() {
+        return cuerpo.getLocation();
     }
 
-    private void apuntarOjo() {
-        if (yawFijo != null) {
-            yawOjo = yawFijo;
-            return;
-        }
-        Player obj = objetivo();
-        if (obj != null) yawOjo = PeleaAmbush.yaw(cuerpo.getLocation(), obj.getLocation());
-    }
-
-    /** El golem mira hacia "dir" mientras no se mueve por su cuenta. */
+    /** Lo gira hacia "yaw" (cuerpo y cabeza) mientras prepara algo. */
     private void mirar(float yaw) {
         try {
             cuerpo.setRotation(yaw, 0);
@@ -720,109 +866,31 @@ final class PeleaVigilante implements Runnable {
         }
     }
 
-    /** Si el cono del ojo (puro): dentro del alcance, del angulo en el plano y sin mucha diferencia de altura. */
-    static boolean enMirada(double dx, double dy, double dz, float yaw, double alcance, double angulo) {
-        if (dx * dx + dy * dy + dz * dz > alcance * alcance) return false;
-        if (Math.abs(dy) > alcance * 0.6) return false;
-        Vector d = PeleaAmbush.dir(yaw);
-        return ParcaAnomalia.enArco(dx, dz, d.getX(), d.getZ(), alcance, angulo);
+    private boolean mover(Location l) {
+        if (l == null || hc.enSpawn(l) || !Vigilante.cargado(l)) return false;
+        return hc.amenazas().teleportar(cuerpo, l);
     }
 
-    /**
-     * Si un pilar tapa el segmento a-b (puro): el punto del segmento mas cercano al eje del pilar en el
-     * plano esta a "radio" o menos y a una altura entre y0 e y1.
-     */
-    static boolean tapaPilar(double ax, double ay, double az, double bx, double by, double bz,
-                             double cx, double cz, double y0, double y1, double radio) {
-        double vx = bx - ax, vz = bz - az;
-        double l2 = vx * vx + vz * vz;
-        double k = l2 < 1e-12 ? 0 : Math.max(0, Math.min(1, ((cx - ax) * vx + (cz - az) * vz) / l2));
-        double px = ax + vx * k, pz = az + vz * k;
-        if ((px - cx) * (px - cx) + (pz - cz) * (pz - cz) > radio * radio) return false;
-        double y = ay + (by - ay) * k;
-        return y >= y0 && y <= y1;
-    }
-
-    /** Sin nada en medio: ni bloques (raytrace, sin cargar nada) ni sus pilares. */
-    private boolean libre(Location desde, Location hasta) {
-        if (desde.getWorld() != hasta.getWorld()) return false;
-        Vector d = hasta.toVector().subtract(desde.toVector());
-        double largo = d.length();
-        if (largo < 0.5) return true;
+    private void impulsar(Vector v) {
         try {
-            RayTraceResult r = desde.getWorld().rayTraceBlocks(desde, d.multiply(1 / largo), largo, FluidCollisionMode.NEVER, true);
-            if (r != null && r.getHitBlock() != null) return false;
+            cuerpo.setVelocity(limitar(v));
         } catch (Throwable ignorado) {
-            // Sin raytrace se cuenta como visto: mejor un marcado de mas que un ojo ciego.
+            // Una velocidad rara (NaN) no se aplica: se queda donde esta.
         }
-        for (Pilar p : pilares) {
-            if (p.vivo && tapaPilar(desde.getX(), desde.getY(), desde.getZ(), hasta.getX(), hasta.getY(), hasta.getZ(),
-                    p.x, p.z, p.y0, p.y0 + p.alto, PILAR_RADIO)) {
-                return false;
-            }
-        }
-        return true;
     }
 
-    /** El cono de luz y quien queda marcado tras mirada.segundos dentro de el sin nada en medio. */
-    private void mirada(World w) {
-        if (estado != Estado.PELEA || aturdido() || nucleosFuera) {
-            visto.clear();
-            return;
+    /** La cabeza de un Zoglin que cornea (vanilla: el mismo efecto que su ataque). */
+    private void anim() {
+        try {
+            cuerpo.playEffect(EntityEffect.ENTITY_ATTACK);
+        } catch (Throwable ignorado) {
+            // Sin la animacion, el golpe se ve en el suelo.
         }
-        Location o = ojoPos();
-        if (vueltas % 2 == 0) pintarCono(w, o, yawOjo, a.miradaAlcance, a.miradaAngulo);
-        Set<UUID> ahora = new HashSet<>();
-        for (Player p : Fx.playersNear(o, a.miradaAlcance)) {
-            if (!valido(p)) continue;
-            Location e = p.getEyeLocation();
-            if (!enMirada(e.getX() - o.getX(), e.getY() - o.getY(), e.getZ() - o.getZ(), yawOjo, a.miradaAlcance, a.miradaAngulo)) continue;
-            if (!libre(o, e)) continue;
-            ahora.add(p.getUniqueId());
-            int n = visto.merge(p.getUniqueId(), 2, Integer::sum);
-            if (n >= a.miradaTicks) marcar(p);
-        }
-        visto.keySet().retainAll(ahora);
     }
 
-    private void marcar(Player p) {
-        boolean nueva = !marcado(p);
-        marcaHasta.put(p.getUniqueId(), ticks + a.marcaSegundos * 20L);
-        if (!nueva) return;
-        hc.barra().aviso(p, Component.text("El ", Paleta.TEXTO).append(Component.text("Vigilante", Paleta.VIGILANTE))
-                .append(Component.text(" te tiene en la mira: cúbrete tras el terreno o sus pilares.", Paleta.TEXTO)), 3);
-        p.playSound(p.getLocation(), "block.beacon.power_select", 1.0f, 1.4f);
-    }
-
-    /** Tres rayos de luz amarilla (los bordes y el centro), un poco hacia el suelo, y un arco donde cae la luz. */
-    private void pintarCono(World w, Location o, float yaw, double alcance, double angulo) {
-        Particle.DustOptions luz = Compat.dust(RGB_OJO, 0.9f);
-        for (double lado : new double[]{-angulo / 2, 0, angulo / 2}) {
-            Vector d = PeleaAmbush.dir((float) (yaw + lado)).setY(-0.12).normalize();
-            for (double s = 1.5; s <= alcance; s += 1.6) Compat.spawn(w, Compat.DUST, o.clone().add(d.clone().multiply(s)), 1, 0, 0, 0, 0, luz);
-        }
-        Location c = o.clone();
-        c.setY(cuerpo.getLocation().getY());
-        Fx.arc(c, PeleaAmbush.dir(yaw), alcance * 0.55, Math.toRadians(angulo), 7, l -> {
-            if (Vigilante.cargado(l)) Compat.spawn(w, Compat.DUST, Fx.ground(l, 4).add(0, 0.15, 0), 1, 0, 0, 0, 0, luz);
-        });
-    }
-
-    /** La corona de luz sobre la cabeza de cada marcado. */
-    private void pintarMarcas(World w) {
-        if (marcaHasta.isEmpty()) return;
-        Particle.DustOptions luz = Compat.dust(RGB_OJO, 1.0f);
-        for (Iterator<Map.Entry<UUID, Long>> it = marcaHasta.entrySet().iterator(); it.hasNext(); ) {
-            Map.Entry<UUID, Long> e = it.next();
-            if (e.getValue() <= ticks) {
-                it.remove();
-                continue;
-            }
-            Player p = hc.plugin().getServer().getPlayer(e.getKey());
-            if (p == null || p.getWorld() != w) continue;
-            Location cabeza = p.getLocation().add(0, p.getHeight() + 0.45, 0);
-            Fx.ring(cabeza, 0.45, 8, l -> Compat.spawn(w, Compat.DUST, l, 1, 0, 0, 0, 0, luz));
-        }
+    @SuppressWarnings("deprecation")
+    private static boolean enSuelo(Entity e) {
+        return e.isOnGround();
     }
 
     // ================================================================ golpes
@@ -834,7 +902,7 @@ final class PeleaVigilante implements Runnable {
      */
     void golpeFuerte(Player v, double base, String etiqueta) {
         if (v == null || !Fx.isFightable(v) || hc.enSpawn(v) || cuerpo == null) return;
-        double f = Vigilante.fraccionGolpe(base, escala.multFraccion(), marcado(v), a);
+        double f = Vigilante.fraccionGolpe(base, escala.multFraccion(), a);
         long ahora = org.bukkit.Bukkit.getCurrentTick();
         double[] w = VENTANA.get(v.getUniqueId());
         if (w == null || ahora - w[0] > a.ventanaTicks) {
@@ -848,27 +916,57 @@ final class PeleaVigilante implements Runnable {
         w[1] += entra;
         double vidaMax = Compat.getAttribute(v, "max_health", 20);
         DanoVerdadero.aplicar(v, entra * vidaMax, a.golpeMaximo, cuerpo, etiqueta);
-        ultimoGolpe = ticks;
     }
 
-    /** Un empujon (o una velocidad exacta). Si levanta, presta el vuelo un momento para que el servidor no lo eche. */
+    /** Ninguna velocidad pasa del tope del paquete por eje. */
+    static Vector limitar(Vector v) {
+        return new Vector(Fx.clamp(v.getX(), -VELOCIDAD_MAXIMA, VELOCIDAD_MAXIMA),
+                Fx.clamp(v.getY(), -VELOCIDAD_MAXIMA, VELOCIDAD_MAXIMA), Fx.clamp(v.getZ(), -VELOCIDAD_MAXIMA, VELOCIDAD_MAXIMA));
+    }
+
+    /**
+     * Un empujon (o una velocidad exacta). Si levanta, presta el vuelo un momento para que el servidor no
+     * lo eche; si es fuerte, perdona la caida que venga.
+     */
     private void empujar(Player v, Vector vel, boolean exacta) {
         if (v == null || !Fx.isFightable(v) || hc.enSpawn(v)) return;
         try {
-            if (vel.getY() > 0.1) prestarVuelo(v);
-            v.setVelocity(exacta ? vel : v.getVelocity().add(vel));
+            Vector lim = limitar(vel);
+            if (lim.getY() > 0.1) prestarVuelo(v, lim.getY() > 1 ? 120 : 60);
+            if (lim.getY() > 0.3 || Math.hypot(lim.getX(), lim.getZ()) > 0.9) perdonarCaida(v);
+            v.setVelocity(exacta ? lim : limitar(v.getVelocity().add(lim)));
         } catch (Throwable ignorado) {
             // Sin empujon el golpe ya ha entrado.
         }
     }
 
-    private void prestarVuelo(Player v) {
+    /** Lo manda hacia arriba "altura" bloques (y un poco en "plano"), con su caida perdonada. */
+    private void lanzar(Player v, Vector plano, double altura) {
+        empujar(v, plano.clone().setY(velocidadParaAltura(altura)), true);
+    }
+
+    private static void perdonarCaida(Player v) {
+        long ahora = org.bukkit.Bukkit.getCurrentTick();
+        if (CAIDA.size() > 64) CAIDA.values().removeIf(h -> h < ahora);
+        CAIDA.put(v.getUniqueId(), ahora + PERDON_CAIDA);
+    }
+
+    /**
+     * Si su caida no hace dano (Vigilante.onCaida): salio volando por un golpe de un Vigilante hace poco.
+     * Se gasta al usarse: un perdon por vuelo.
+     */
+    static boolean perdonaCaida(UUID u) {
+        Long h = CAIDA.remove(u);
+        return h != null && h >= org.bukkit.Bukkit.getCurrentTick();
+    }
+
+    private void prestarVuelo(Player v, int duracion) {
         if (vuelo.containsKey(v.getUniqueId())) {
-            vuelo.put(v.getUniqueId(), ticks + 60);
+            vuelo.put(v.getUniqueId(), Math.max(vuelo.get(v.getUniqueId()), ticks + duracion));
             return;
         }
         if (v.getAllowFlight()) return;
-        vuelo.put(v.getUniqueId(), ticks + 60);
+        vuelo.put(v.getUniqueId(), ticks + duracion);
         v.setAllowFlight(true);
     }
 
@@ -904,8 +1002,11 @@ final class PeleaVigilante implements Runnable {
         if (p != null && vuelo.remove(p.getUniqueId()) != null) quitarVuelo(p);
     }
 
-    void haGolpeado() {
-        ultimoGolpe = ticks;
+    /** Su mordisco de vanilla ha entrado (Vigilante.onGolpe): su sonido, grave, y la caida perdonada. */
+    void haGolpeado(Player v) {
+        if (cuerpo == null) return;
+        Compat.sound(cuerpo.getWorld(), cuerpo.getLocation(), "entity.zoglin.attack", 1.8f, 0.55f);
+        if (v != null) perdonarCaida(v);
     }
 
     boolean aturdido() {
@@ -916,46 +1017,38 @@ final class PeleaVigilante implements Runnable {
         return aturdido() ? 1 + a.aturdidoExtra : 1.0;
     }
 
+    /** Dano de verdad: una salpicadura de carne y un quejido grave (como mucho cada medio segundo). */
     void dolor() {
         if (cuerpo == null) return;
-        Compat.spawn(cuerpo.getWorld(), Compat.BLOCK, cuerpo.getLocation().add(0, alto() * 0.55, 0), 6, 0.8, 0.8, 0.8, 0.05,
-                Material.IRON_BLOCK.createBlockData());
-    }
-
-    private void anim() {
-        try {
-            cuerpo.playEffect(EntityEffect.ENTITY_ATTACK);
-        } catch (Throwable ignorado) {
-            // Sin la animacion de los brazos, el golpe se ve en el suelo.
+        World w = cuerpo.getWorld();
+        Compat.spawn(w, Compat.BLOCK, cuerpo.getLocation().add(0, alto * 0.55, 0), 8, ancho * 0.3, alto * 0.25, ancho * 0.3, 0.05,
+                carne());
+        if (ticks - ultimoDolor >= 10) {
+            ultimoDolor = ticks;
+            Compat.sound(w, cuerpo.getLocation(), "entity.zoglin.hurt", 1.6f, 0.55f);
         }
     }
 
-    private void aturdir() {
-        aturdidoHasta = ticks + a.aturdidoSegundos * 20L;
-        cuerpo.setAI(false);
-        cuerpo.setTarget(null);
-        if (ojo != null && ojo.isValid()) {
-            ojo.setGlowing(false);
-            ojo.setBrightness(new Display.Brightness(3, 3));
-        }
+    private void aturdir(long duracion) {
+        if (duracion <= 0) return;
+        aturdidoHasta = ticks + duracion;
+        sujetar();
         Location l = cuerpo.getLocation();
-        Compat.soundPlayers(l.getWorld(), l, "block.beacon.deactivate", 2.0f, 0.6f);
+        Compat.sound(l.getWorld(), l, "entity.zoglin.ambient", 1.6f, 0.4f);
         Component c = Component.text("El ", Paleta.TEXTO).append(Component.text("Vigilante", Paleta.VIGILANTE))
-                .append(Component.text(" queda aturdido y recibe más daño.", Paleta.TEXTO));
+                .append(Component.text(" se ha estrellado: queda aturdido y recibe más daño.", Paleta.TEXTO));
         for (Player p : Fx.viewersNear(l, 48)) hc.barra().aviso(p, c, 3);
         hc.plugin().bitacora().anotar("vigilante", "aturdido", presaNombre);
+        nombreBarra();
     }
 
     private void finAturdido() {
         aturdidoHasta = 0;
-        if (ojo != null && ojo.isValid()) {
-            ojo.setGlowing(true);
-            ojo.setBrightness(new Display.Brightness(15, 15));
-        }
-        if (cuerpo != null && cuerpo.isValid() && actual == null) cuerpo.setAI(true);
+        if (actual == null) liberar();
+        nombreBarra();
     }
 
-    // ================================================================ utilidades de dibujo
+    // ================================================================ suelo, avisos y bloques que saltan
 
     static int tono(double k) {
         return PeleaParca.mezcla(RGB_AVISO_DESDE, RGB_AVISO_HASTA, k);
@@ -965,54 +1058,172 @@ final class PeleaVigilante implements Runnable {
         return Fx.ground(l, 4).add(0, 0.12, 0);
     }
 
-    /** Un circulo en el suelo (solo sobre chunks cargados). */
-    static void circulo(World w, Location c, double r, int rgb, float tam) {
-        Particle.DustOptions d = Compat.dust(rgb, tam);
-        int puntos = Math.max(12, (int) (r * 7));
+    private static BlockData carne() {
+        if (carne == null) carne = Material.NETHER_WART_BLOCK.createBlockData();
+        return carne;
+    }
+
+    /**
+     * Lo que salta del suelo (puro, por nombre): tierra, piedra, arena, madera... Nada que parezca botin
+     * (menas, bloques de metal, amatista) ni bloques tecnicos.
+     */
+    static boolean valioso(String nombre) {
+        String n = nombre == null ? "" : nombre.toUpperCase(Locale.ROOT);
+        return n.contains("ORE") || n.contains("DIAMOND") || n.contains("EMERALD") || n.contains("GOLD") || n.contains("NETHERITE")
+                || n.equals("IRON_BLOCK") || n.contains("ANCIENT_DEBRIS") || n.contains("LAPIS") || n.equals("REDSTONE_BLOCK")
+                || n.contains("AMETHYST") || n.contains("SPAWNER") || n.contains("BEDROCK") || n.contains("BARRIER")
+                || n.contains("COMMAND") || n.contains("STRUCTURE") || n.contains("JIGSAW") || n.contains("REINFORCED")
+                || n.contains("BEACON") || n.contains("VAULT") || n.contains("TRIAL") || n.contains("SHULKER");
+    }
+
+    /** El bloque del suelo bajo "l" para las particulas y los bloques que saltan; tierra si no vale. */
+    static BlockData materialSuelo(Location l) {
+        try {
+            Block b = l.getBlock();
+            if (b.isPassable()) b = b.getRelative(BlockFace.DOWN);
+            Material m = b.getType();
+            if (m.isSolid() && m.isOccluding() && !m.isInteractable() && !valioso(m.name())) return m.createBlockData();
+            World.Environment env = l.getWorld() == null ? World.Environment.NORMAL : l.getWorld().getEnvironment();
+            Material f = env == World.Environment.NETHER ? Material.NETHERRACK : env == World.Environment.THE_END ? Material.END_STONE
+                    : l.getY() < 0 ? Material.COBBLED_DEEPSLATE : Material.DIRT;
+            return f.createBlockData();
+        } catch (Throwable t) {
+            return Material.DIRT.createBlockData();
+        }
+    }
+
+    /** Los puntos de un circulo a ras de suelo (solo en chunks cargados), para pintarlo sin buscar el suelo cada vez. */
+    private static List<Location> anillo(Location c, double r) {
+        List<Location> out = new ArrayList<>();
+        int puntos = Math.max(12, (int) (r * 6));
         Fx.ring(c, r, puntos, l -> {
-            if (Vigilante.cargado(l)) Compat.spawn(w, Compat.DUST, suelo(l), 1, 0, 0, 0, 0, d);
+            if (Vigilante.cargado(l)) out.add(suelo(l));
+        });
+        return out;
+    }
+
+    /** Una franja recta a ras de suelo: el centro y los dos bordes a "lado", cada bloque. */
+    private static List<Location> franja(Location desde, Vector dir, double largo, double lado) {
+        List<Location> out = new ArrayList<>();
+        Vector perp = new Vector(-dir.getZ(), 0, dir.getX()).multiply(lado);
+        for (double d = 1; d <= largo; d += 1.0) {
+            Location c = desde.clone().add(dir.clone().multiply(d));
+            for (Location l : new Location[]{c, c.clone().add(perp), c.clone().subtract(perp)}) {
+                if (Vigilante.cargado(l)) out.add(suelo(l));
+            }
+        }
+        return out;
+    }
+
+    /** El aviso: polvo del color del momento y, si hay bloque, el suelo agrietandose (una de cada tres). */
+    private static void pintar(World w, List<Location> ps, int rgb, BlockData bd) {
+        if (ps == null) return;
+        Particle.DustOptions d = Compat.dust(rgb, 1.4f);
+        for (int i = 0; i < ps.size(); i++) {
+            Location l = ps.get(i);
+            Compat.spawn(w, Compat.DUST, l, 1, 0, 0, 0, 0, d);
+            if (bd != null && i % 3 == 0) Compat.spawn(w, Compat.BLOCK, l, 2, 0.15, 0.04, 0.15, 0, bd);
+        }
+    }
+
+    /** El suelo que se remueve en un punto. */
+    private static void temblor(World w, Location l, double ancho, int n) {
+        Compat.spawn(w, Compat.BLOCK, l.clone().add(0, 0.15, 0), n, ancho, 0.05, ancho, 0.12, materialSuelo(l));
+    }
+
+    /** Un bloque del suelo que salta: un FallingBlock que no se coloca ni suelta nada, con su tope. */
+    private void saltar(Location desde, Vector vel, BlockData bd) {
+        if (desde == null || desde.getWorld() == null || bd == null || efimeros.size() >= a.efimerosMaximo) return;
+        if (!Vigilante.cargado(desde) || hc.enSpawn(desde)) return;
+        String marca = cuerpo == null ? "vigilante" : cuerpo.getUniqueId().toString();
+        Vector v = limitar(vel);
+        FallingBlock fb;
+        try {
+            fb = desde.getWorld().spawn(desde, FallingBlock.class, f -> {
+                f.setBlockData(bd);
+                f.setDropItem(false);
+                f.setCancelDrop(true);
+                f.setHurtEntities(false);
+                f.setPersistent(false);
+                f.getPersistentDataContainer().set(Marcas.VIGILANTE, PersistentDataType.STRING, marca);
+                f.setVelocity(v);
+            });
+        } catch (Throwable t) {
+            try {
+                fb = desde.getWorld().spawnFallingBlock(desde, bd);
+                fb.setDropItem(false);
+                fb.setCancelDrop(true);
+                fb.setHurtEntities(false);
+                fb.setPersistent(false);
+                fb.getPersistentDataContainer().set(Marcas.VIGILANTE, PersistentDataType.STRING, marca);
+                fb.setVelocity(v);
+            } catch (Throwable t2) {
+                return;
+            }
+        }
+        if (fb != null && fb.isValid()) efimeros.add(new Efimero(fb, ticks + a.efimerosVida));
+    }
+
+    /** "cuantos" bloques del suelo saltan hacia fuera desde un circulo de radio "radio" alrededor de "c". */
+    private void saltarAnillo(Location c, double radio, int cuantos, double fuerza) {
+        int n = Math.min(cuantos, a.efimerosPorGolpe);
+        if (n <= 0) return;
+        ThreadLocalRandom r = ThreadLocalRandom.current();
+        double ang0 = r.nextDouble(Math.PI * 2);
+        for (int i = 0; i < n; i++) {
+            double ang = ang0 + i * Math.PI * 2 / n + r.nextDouble(-0.2, 0.2);
+            double d = radio + r.nextDouble(0, 1.2);
+            Location l = c.clone().add(Math.cos(ang) * d, 1.5, Math.sin(ang) * d);
+            if (!Vigilante.cargado(l)) continue;
+            Location g = Fx.ground(l, 4);
+            if (Math.abs(g.getY() - c.getY()) > 3) continue;
+            Vector v = new Vector(Math.cos(ang), 0, Math.sin(ang)).multiply(r.nextDouble(0.15, 0.32) * fuerza)
+                    .setY(r.nextDouble(0.45, 0.75) * fuerza);
+            saltar(g.add(0, 0.1, 0), v, materialSuelo(g));
+        }
+    }
+
+    /** El suelo revienta: polvo del propio bloque, una columna de polvo, humo y bloques que saltan. */
+    private void estallidoSuelo(World w, Location c, double radio, int cuantos, double fuerza) {
+        BlockData bd = materialSuelo(c);
+        Compat.spawn(w, Compat.BLOCK, c.clone().add(0, 0.3, 0), 70, radio * 0.7, 0.3, radio * 0.7, 0.18, bd);
+        Compat.spawn(w, Compat.DUST_PILLAR, c.clone().add(0, 0.2, 0), 40, radio * 0.6, 0.1, radio * 0.6, 0.3, bd);
+        Compat.spawn(w, Compat.LARGE_SMOKE, c.clone().add(0, 0.5, 0), 14, radio * 0.6, 0.4, radio * 0.6, 0.02);
+        saltarAnillo(c, radio, cuantos, fuerza);
+    }
+
+    /** Una onda de polvo por el suelo, en un anillo de radio "r" (lo visual tras un golpe). */
+    private static void ondaSuelo(World w, Location c, double r) {
+        BlockData bd = materialSuelo(c);
+        int puntos = Math.max(12, (int) (r * 4));
+        Fx.ring(c, r, puntos, l -> {
+            if (!Vigilante.cargado(l)) return;
+            Location s = suelo(l);
+            Compat.spawn(w, Compat.BLOCK, s, 3, 0.25, 0.05, 0.25, 0.1, bd);
+            Compat.spawn(w, Compat.DUST_PILLAR, s, 1, 0.1, 0, 0.1, 0.1, bd);
         });
     }
 
-    private static void puntos(World w, List<Location> ps, int rgb, float tam) {
-        Particle.DustOptions d = Compat.dust(rgb, tam);
-        for (Location l : ps) Compat.spawn(w, Compat.DUST, l, 1, 0, 0, 0, 0, d);
-    }
-
-    /** El abanico de un golpe en el suelo (tres arcos y los dos bordes). */
-    private static void sector(Location origen, float yaw, double radio, double angulo, List<Location> out) {
-        out.clear();
-        Vector dir = PeleaAmbush.dir(yaw);
-        double spread = Math.toRadians(angulo);
-        for (double f : new double[]{0.4, 0.7, 1.0}) {
-            double r = radio * f;
-            Fx.arc(origen, dir, r, spread, Math.max(6, (int) (r * spread * 2)), l -> {
-                if (Vigilante.cargado(l)) out.add(suelo(l));
-            });
-        }
-        for (int lado = -1; lado <= 1; lado += 2) {
-            Vector borde = PeleaAmbush.dir((float) (yaw + lado * angulo / 2));
-            for (double d = 1; d <= radio; d += 0.8) {
-                Location l = origen.clone().add(borde.clone().multiply(d));
-                if (Vigilante.cargado(l)) out.add(suelo(l));
+    /** Los bloques que ya cayeron o caducaron, fuera. */
+    private void podarEfimeros() {
+        if (efimeros.isEmpty()) return;
+        for (Iterator<Efimero> it = efimeros.iterator(); it.hasNext(); ) {
+            Efimero e = it.next();
+            if (!e.bloque().isValid()) {
+                it.remove();
+            } else if (ticks >= e.hasta()) {
+                Fx.safeRemove(e.bloque());
+                it.remove();
             }
         }
     }
 
-    private static void linea(World w, Location a, Location b, double paso, int rgb, float tam) {
-        Particle.DustOptions d = Compat.dust(rgb, tam);
-        Fx.beam(a, b, paso, l -> Compat.spawn(w, Compat.DUST, l, 1, 0, 0, 0, 0, d));
+    private void quitarEfimeros() {
+        for (Efimero e : efimeros) Fx.safeRemove(e.bloque());
+        efimeros.clear();
     }
 
-    private boolean mover(Location l) {
-        if (l == null || hc.enSpawn(l) || !Vigilante.cargado(l)) return false;
-        return hc.amenazas().teleportar(cuerpo, l);
-    }
-
-    private Location pie() {
-        return cuerpo.getLocation();
-    }
-
+    /** La vista tiembla un instante SIN dano a quien este cerca (la animacion de golpe del cliente). */
     private void sacudir(Location desde, double radio) {
         for (Player p : Fx.playersNear(desde, radio)) {
             try {
@@ -1023,80 +1234,197 @@ final class PeleaVigilante implements Runnable {
         }
     }
 
-    // ================================================================ pilares y nucleos
-
-    /** Un pilar: un BlockDisplay de piedra que tapa la mirada y el rayo. Nunca es un bloque del mundo. */
-    private static final class Pilar {
-        BlockDisplay d;
-        double x, z, y0, alto;
-        long hasta;
-        boolean vivo = true;
+    /** Las pisadas: va en silencio, asi que suenan aqui, graves, con polvo, cada 2,4 bloques andados. */
+    private void pasos(World w) {
+        Location l = cuerpo.getLocation();
+        if (ultimaPos != null && ultimaPos.getWorld() == l.getWorld() && !cuerpo.isInvisible()) {
+            double d = PeleaAmbush.distPlano(ultimaPos, l);
+            if (d < 4 && enSuelo(cuerpo)) andado += d;
+            if (andado >= 2.4) {
+                andado = 0;
+                Compat.sound(w, l, "entity.ravager.step", 1.2f, 0.55f);
+                Compat.spawn(w, Compat.BLOCK, l.clone().add(0, 0.1, 0), 5, ancho * 0.35, 0.05, ancho * 0.35, 0, materialSuelo(l));
+            }
+        }
+        ultimaPos = l;
     }
 
-    private int pilaresVivos() {
+    /**
+     * El ambiente de Halloween: cada ambiente-segundos (con algo de azar) un lamento lejano, un susurro que
+     * solo oye uno, la cueva o la respiracion de la bestia; su grunido cada pocos segundos y, en furia, un
+     * latido. Todo vanilla y grave. Nunca campanas (ley 2: la campana es de la Parca).
+     */
+    private void ambiente(World w) {
+        if (cuerpo.isInvisible()) return;
+        ThreadLocalRandom r = ThreadLocalRandom.current();
+        Location l = cuerpo.getLocation();
+        if (ticks >= proximoGrunido) {
+            proximoGrunido = ticks + 70 + r.nextInt(60);
+            Compat.sound(w, l, r.nextBoolean() ? "entity.zoglin.ambient" : "entity.hoglin.ambient", 1.7f, 0.45f + r.nextFloat() * 0.1f);
+        }
+        if (furia && vueltas % 15 == 0) Compat.sound(w, l, "entity.warden.heartbeat", 1.6f, 0.6f);
+        if (ticks < proximoAmbiente) return;
+        proximoAmbiente = ticks + a.ambienteTicks + r.nextInt(Math.max(1, a.ambienteTicks / 2));
+        List<Player> cerca = validosCerca(l, a.radioPelea);
+        if (cerca.isEmpty()) return;
+        Player p = cerca.get(r.nextInt(cerca.size()));
+        Location pl = p.getLocation();
+        Vector lejos = PeleaAmbush.dir(r.nextFloat() * 360f).multiply(18 + r.nextInt(8));
+        switch (r.nextInt(5)) {
+            case 0 -> Compat.sound(w, pl.clone().add(lejos), "entity.ghast.ambient", 2.0f, 0.5f);
+            case 1 -> p.playSound(pl.clone().add(r.nextDouble(-2, 2), 1, r.nextDouble(-2, 2)), "entity.vex.ambient",
+                    SoundCategory.HOSTILE, 0.5f, 0.6f);
+            case 2 -> p.playSound(pl, "ambient.cave", SoundCategory.AMBIENT, 0.8f, 0.5f);
+            case 3 -> Compat.sound(w, pl.clone().add(lejos), "entity.elder_guardian.ambient", 1.6f, 0.5f);
+            default -> Compat.sound(w, l, "entity.ravager.ambient", 1.6f, 0.45f);
+        }
+    }
+
+    // ================================================================ huecos para su caja
+
+    static double anchoDe(double escala) {
+        return ZOGLIN_ANCHO * escala;
+    }
+
+    static double altoDe(double escala) {
+        return ZOGLIN_ALTO * escala;
+    }
+
+    /** Si su caja (ancho x alto) cabe de pie en "suelo": todo lo que ocupa es atravesable y no es liquido. */
+    static boolean cabe(Location suelo, double ancho, double alto) {
+        World w = suelo.getWorld();
+        if (w == null) return false;
+        double m = ancho / 2;
+        int x0 = (int) Math.floor(suelo.getX() - m + 0.01), x1 = (int) Math.floor(suelo.getX() + m - 0.01);
+        int z0 = (int) Math.floor(suelo.getZ() - m + 0.01), z1 = (int) Math.floor(suelo.getZ() + m - 0.01);
+        int y0 = (int) Math.floor(suelo.getY() + 0.01), y1 = (int) Math.floor(suelo.getY() + alto - 0.01);
+        for (int x = x0; x <= x1; x++) {
+            for (int z = z0; z <= z1; z++) {
+                for (int y = y0; y <= y1; y++) {
+                    Block b = w.getBlockAt(x, y, z);
+                    if (!b.isPassable() || b.isLiquid()) return false;
+                }
+            }
+        }
+        return true;
+    }
+
+    /**
+     * El sitio mas cercano a "c" (hasta "radio" bloques, por anillos) donde su caja cabe de pie, a ras de
+     * suelo y a menos de 4 de altura; null si no hay. "vale" filtra (fuera de la zona spawn...).
+     */
+    static Location hueco(Location c, Vigilante.Ajustes a, int radio, Predicate<Location> vale) {
+        if (c == null || c.getWorld() == null) return null;
+        double an = anchoDe(a.escalaCuerpo), al = altoDe(a.escalaCuerpo);
+        // Centrado en la esquina de un bloque: una caja de 3,6 ocupa 4x4 bloques (en el centro de uno, 5x5).
+        Location centro = new Location(c.getWorld(), Math.round(c.getX()), c.getY(), Math.round(c.getZ()));
+        for (int r = 0; r <= radio; r++) {
+            for (int dx = -r; dx <= r; dx++) {
+                for (int dz = -r; dz <= r; dz++) {
+                    if (Math.max(Math.abs(dx), Math.abs(dz)) != r) continue;
+                    Location l = centro.clone().add(dx, 2, dz);
+                    if (!Vigilante.cargado(l)) continue;
+                    Location g = Fx.ground(l, 8);
+                    if (Math.abs(g.getY() - c.getY()) > 4) continue;
+                    if (!cabe(g, an, al) || !vale.test(g)) continue;
+                    g.setYaw(c.getYaw());
+                    g.setPitch(0);
+                    return g;
+                }
+            }
+        }
+        return null;
+    }
+
+    // ================================================================ fisica (pura)
+
+    /** La altura maxima que alcanza un jugador lanzado hacia arriba con "vy" (vanilla, tick a tick). */
+    static double alturaCon(double vy) {
+        double y = 0, v = vy, max = 0;
+        for (int i = 0; i < 400 && v > 0; i++) {
+            y += v;
+            max = Math.max(max, y);
+            v = (v - GRAVEDAD) * ROCE_VERTICAL;
+        }
+        return max;
+    }
+
+    /** La velocidad hacia arriba que sube a un jugador "altura" bloques (con el tope del paquete). */
+    static double velocidadParaAltura(double altura) {
+        double lo = 0, hi = VELOCIDAD_MAXIMA;
+        if (alturaCon(hi) <= altura) return hi;
+        for (int i = 0; i < 40; i++) {
+            double m = (lo + hi) / 2;
+            if (alturaCon(m) < altura) lo = m;
+            else hi = m;
+        }
+        return hi;
+    }
+
+    /** Los ticks en el aire de algo que sale del suelo con "vy" hasta volver a la misma altura. */
+    static int ticksDeVuelo(double vy) {
+        return ticksDeVuelo(vy, 0);
+    }
+
+    /**
+     * Los ticks en el aire hasta caer a "dy" bloques sobre donde salio (mas alto, antes; si ni llega,
+     * hasta lo mas alto del salto).
+     */
+    static int ticksDeVuelo(double vy, double dy) {
+        double y = 0, v = vy;
         int n = 0;
-        for (Pilar p : pilares) if (p.vivo) n++;
+        do {
+            y += v;
+            v = (v - GRAVEDAD) * ROCE_VERTICAL;
+            n++;
+        } while ((v > 0 || y > dy) && n < 400);
         return n;
     }
 
-    private void derrumbar(Pilar p) {
-        if (!p.vivo) return;
-        p.vivo = false;
-        World w = p.d != null && p.d.isValid() ? p.d.getWorld() : cuerpo == null ? null : cuerpo.getWorld();
-        if (w != null) {
-            Location c = new Location(w, p.x, p.y0 + p.alto / 2, p.z);
-            Compat.spawn(w, Compat.BLOCK, c, 40, 0.6, p.alto / 3, 0.6, 0.1, Material.STONE_BRICKS.createBlockData());
-            Compat.sound(w, c, "block.stone.break", 1.5f, 0.6f);
-        }
-        Fx.safeRemove(p.d);
-        p.d = null;
+    /** Lo que avanza en horizontal en "ticks" ya en el aire con velocidad inicial v0. */
+    static double avanceAire(double v0, int ticks) {
+        return v0 * (1 - Math.pow(ROCE_AIRE, Math.max(0, ticks))) / (1 - ROCE_AIRE);
     }
 
-    /** Los pilares que toca el tramo a-b (la embestida) se rompen. */
-    private void romperPilares(Location a0, Location b0, double radio) {
-        for (Pilar p : pilares) {
-            if (!p.vivo) continue;
-            if (ParcaAnomalia.distanciaASegmento(p.x, p.z, a0.getX(), a0.getZ(), b0.getX(), b0.getZ()) <= radio + PILAR_RADIO) {
-                derrumbar(p);
-                Compat.sound(b0.getWorld(), b0, "entity.zombie.break_wooden_door", 1.2f, 0.5f);
-            }
-        }
+    /**
+     * Lo que avanza en horizontal en "ticks" de vuelo saliendo del suelo con v0: el primer tick avanza v0
+     * y lo frena el suelo (vanilla mira el rozamiento antes de moverse), el resto el aire.
+     */
+    static double avanceDesdeSuelo(double v0, int ticks) {
+        if (ticks <= 0) return 0;
+        return v0 + ROCE_SUELO * avanceAire(v0, ticks - 1);
     }
 
-    /** Un nucleo suelto: un shulker amarillo sin IA que aguanta unos golpes (ver Vigilante.golpesNucleo). */
-    private static final class Nucleo {
-        Shulker s;
-        Location sitio;
-        int golpes;
+    /** La velocidad horizontal para recorrer "distancia" en "ticks" de vuelo saliendo del suelo. */
+    static double velocidadHorizontal(double distancia, int ticks) {
+        double f = avanceDesdeSuelo(1, Math.max(1, ticks));
+        return distancia / f;
     }
 
-    boolean esNucleo(Entity e) {
-        return e != null && nucleos.containsKey(e.getUniqueId());
+    /** Lo lejos que llega en horizontal alguien empujado desde el suelo con v0 y vy, mientras esta en el aire. */
+    static double distanciaEmpuje(double v0, double vy) {
+        return avanceDesdeSuelo(v0, ticksDeVuelo(vy));
     }
 
-    /** Un jugador ha golpeado un nucleo (Vigilante.onGolpe): uno menos; a cero se rompe. */
-    void golpeNucleo(Entity e, Player j) {
-        Nucleo n = nucleos.get(e.getUniqueId());
-        if (n == null || n.s == null) return;
-        n.golpes--;
-        World w = n.sitio.getWorld();
-        Compat.spawn(w, Compat.CRIT, n.sitio.clone().add(0, 0.5, 0), 10, 0.3, 0.3, 0.3, 0.2);
-        Compat.sound(w, n.sitio, "block.anvil.land", 0.7f, 1.6f);
-        if (n.golpes > 0) {
-            n.s.customName(Component.text("Núcleo · ", Paleta.VIGILANTE).append(Component.text(n.golpes, Paleta.CIFRA)));
-            return;
-        }
-        Compat.spawn(w, Compat.BLOCK, n.sitio.clone().add(0, 0.5, 0), 30, 0.4, 0.4, 0.4, 0.1, Material.RAW_GOLD_BLOCK.createBlockData());
-        Compat.spawn(w, Compat.EXPLOSION, n.sitio.clone().add(0, 0.5, 0), 1);
-        Compat.sound(w, n.sitio, "block.amethyst_block.break", 1.5f, 0.5f);
-        Fx.safeRemove(n.s);
-        nucleos.remove(e.getUniqueId());
-        hc.plugin().bitacora().anotar("vigilante", "nucleo-roto", j.getName(), presaNombre);
+    /**
+     * La velocidad que hay que darle en el suelo cada 2 ticks para que avance "bloquesPorTick" de media:
+     * el primer tick avanza v y el suelo lo frena (x0,546) para el segundo.
+     */
+    static double impulsoSuelo(double bloquesPorTick) {
+        return 2 * bloquesPorTick / (1 + ROCE_SUELO);
     }
 
-    private void quitarNucleos() {
-        for (Nucleo n : nucleos.values()) Fx.safeRemove(n.s);
-        nucleos.clear();
+    /** Donde pilla a cada uno el martillazo por su distancia al sitio donde cae (puro). */
+    static Zona zona(double d, Vigilante.Ajustes a) {
+        if (d <= a.martilloCerca) return Zona.CERCA;
+        if (d <= a.martilloMedio) return Zona.MEDIO;
+        if (d <= a.martilloLejos) return Zona.LEJOS;
+        return Zona.FUERA;
+    }
+
+    /** Los ticks de oscuridad del rugido (puro): siempre entre 1 y 3 s, como manda la regla de la oscuridad. */
+    static int ticksOscuridad(double segundos) {
+        return (int) Math.round(Fx.clamp(segundos, 1, 3) * 20);
     }
 
     // ================================================================ tecnicas
@@ -1124,767 +1452,609 @@ final class PeleaVigilante implements Runnable {
         }
     }
 
-    // ------------------------------------------------------------------ Fase I
+    /**
+     * Martillazo: se agacha (el sitio donde va a caer se agrieta en dos circulos), salta muy alto hacia
+     * su objetivo y cae aplastando el suelo. Por distancia al sitio: cerca (radio-cerca) sale lanzado
+     * hacia arriba altura-lanzado bloques; a media distancia (radio-medio) sale empujado muy lejos; mas
+     * lejos (radio-lejos), un empujon leve. Una onda de polvo y bloques corre por el suelo. En furia,
+     * dos seguidos (cada uno con su aviso).
+     */
+    private final class Martillazo extends Tecnica {
+        final int golpes;
+        final UUID blanco;
+        int hechos;
+        long desde;
+        Location destino;
+        List<Location> cerca, medio;
+        BlockData bd;
+        boolean enAire, despego;
+        long tSalto;
+        double onda = -1;
+        Location centroOnda;
+        /** Los bloques que aun pueden saltar en la onda de este golpe (el total por golpe no pasa de efimeros.por-golpe). */
+        int quedan;
 
-    /** Brazos arriba y al suelo: un abanico delante que te lanza por el aire. */
-    private final class Machaque extends Tecnica {
-        final Location origen;
-        final float yaw;
-        final List<Location> marca = new ArrayList<>();
-
-        Machaque(Player obj) {
-            super(Habilidad.MACHAQUE);
-            origen = pie();
-            yaw = PeleaAmbush.yaw(origen, obj.getLocation());
-            sector(origen, yaw, a.machaqueRadio, a.machaqueAngulo, marca);
+        Martillazo(Player obj) {
+            super(Habilidad.MARTILLAZO);
+            golpes = furia ? 2 : 1;
+            blanco = obj.getUniqueId();
         }
 
         @Override
         boolean paso(World w) {
-            mirar(yaw);
-            yawFijo = yaw;
-            if (t == 0) Compat.soundPlayers(w, origen, "entity.iron_golem.repair", 1.5f, 0.5f);
-            if (t < aviso()) {
-                if (t % 4 == 0) puntos(w, marca, tono(t / (double) aviso()), 1.3f);
+            if (onda >= 0) return ondaTrasGolpe(w);
+            if (destino == null) elegir(w);
+            long s = t - desde;
+            float yaw = PeleaAmbush.yaw(pie(), destino);
+            if (s < aviso()) {
+                mirar(yaw);
+                double k = s / (double) aviso();
+                if (s % 4 == 0) {
+                    pintar(w, cerca, tono(k), bd);
+                    pintar(w, medio, PeleaParca.mezcla(RGB_AVISO_DESDE, tono(k), 0.5), null);
+                }
+                // Se agacha y escarba antes de saltar.
+                if (s % 6 == 0) temblor(w, pie(), ancho * 0.4, 6);
                 return false;
             }
-            anim();
-            Compat.soundPlayers(w, origen, "entity.iron_golem.attack", 2.0f, 0.6f);
-            Compat.sound(w, origen, "entity.generic.explode", 1.0f, 1.3f);
-            BlockData piedra = Material.STONE.createBlockData();
-            for (int i = 0; i < marca.size(); i += 3) Compat.spawn(w, Compat.BLOCK, marca.get(i), 2, 0.2, 0.1, 0.2, 0.05, piedra);
-            Vector dir = PeleaAmbush.dir(yaw);
-            for (Player v : Fx.playersNear(origen, a.machaqueRadio + 0.5)) {
-                Vector hv = v.getLocation().toVector().subtract(origen.toVector());
-                if (Math.abs(hv.getY()) > 3) continue;
-                if (!ParcaAnomalia.enArco(hv.getX(), hv.getZ(), dir.getX(), dir.getZ(), a.machaqueRadio, a.machaqueAngulo)) continue;
-                golpeFuerte(v, fraccion(), h.nombre);
-                Vector fuera = PeleaAmbush.plano(origen, v.getLocation(), dir).multiply(0.6).setY(1.15);
-                empujar(v, fuera, true);
+            if (!enAire) {
+                despegar(w);
+                return false;
             }
-            sacudir(origen, a.machaqueRadio + 4);
+            long vuelo = t - tSalto;
+            if (vuelo % 4 == 0) pintar(w, cerca, RGB_AVISO_HASTA, bd);
+            if (vuelo % 8 == 0) pintar(w, medio, PeleaParca.mezcla(RGB_AVISO_DESDE, RGB_AVISO_HASTA, 0.5), null);
+            boolean tierra = enSuelo(cuerpo);
+            if (!tierra) despego = true;
+            // Aterriza; o no llego a despegar (un techo); o algo lo tiene en el aire demasiado.
+            if ((despego && tierra && vuelo >= 6) || (!despego && tierra && vuelo >= 10) || vuelo >= 70) golpear(w);
+            return false;
+        }
+
+        private void elegir(World w) {
+            Player obj = hc.plugin().getServer().getPlayer(blanco);
+            if (!valido(obj)) obj = objetivo();
+            Location base = pie();
+            Location d = null;
+            if (obj != null && PeleaAmbush.distPlano(base, obj.getLocation()) <= a.martilloAlcance + 2
+                    && Vigilante.cargado(obj.getLocation()) && !hc.enSpawn(obj)) {
+                d = Fx.ground(obj.getLocation(), 6);
+                if (hc.enSpawn(d) || Math.abs(d.getY() - base.getY()) > 12) d = null;
+            }
+            destino = d != null ? d : base.clone();
+            cerca = anillo(destino, a.martilloCerca);
+            medio = anillo(destino, a.martilloMedio);
+            bd = materialSuelo(destino);
+            desde = t;
+            enAire = false;
+            despego = false;
+            Location l = pie();
+            Compat.soundPlayers(w, l, "entity.ravager.attack", 1.8f, 0.5f);
+            Compat.sound(w, l, "block.rooted_dirt.break", 1.6f, 0.5f);
+        }
+
+        private void despegar(World w) {
+            enAire = true;
+            tSalto = t;
+            Location base = pie();
+            double vy = a.martilloSalto;
+            int vuelo = ticksDeVuelo(vy, Fx.clamp(destino.getY() - base.getY(), -8, 6));
+            double dist = PeleaAmbush.distPlano(base, destino);
+            Vector dir = PeleaAmbush.plano(base, destino, PeleaAmbush.dir(base.getYaw()));
+            double vh = Math.min(2.5, velocidadHorizontal(dist, vuelo));
+            impulsar(dir.multiply(vh).setY(vy));
+            anim();
+            Compat.soundPlayers(w, base, "entity.zoglin.angry", 2.2f, 0.5f);
+            Compat.sound(w, base, "entity.hoglin.attack", 1.8f, 0.45f);
+            estallidoSuelo(w, base, ancho * 0.4, Math.min(4, a.efimerosPorGolpe / 3), 0.6);
+        }
+
+        private void golpear(World w) {
+            Location aqui = pie();
+            boolean honesto = PeleaAmbush.distPlano(aqui, destino) <= 3 && Math.abs(aqui.getY() - destino.getY()) <= 3;
+            // El golpe va donde se aviso; si cayo lejos (un muro le corto el salto), solo empuja.
+            Location c = honesto ? destino : aqui;
+            anim();
+            Compat.soundPlayers(w, c, "entity.generic.explode", 2.2f, 0.6f);
+            Compat.soundPlayers(w, c, "entity.warden.attack_impact", 2.2f, 0.5f);
+            Compat.sound(w, c, "entity.zoglin.attack", 2.0f, 0.5f);
+            Compat.sound(w, c, "block.rooted_dirt.break", 2.0f, 0.5f);
+            int centro = (a.efimerosPorGolpe + 1) / 2;
+            quedan = a.efimerosPorGolpe - centro;
+            estallidoSuelo(w, c, ancho * 0.5, centro, 1.0);
+            Vector otra = PeleaAmbush.dir(aqui.getYaw());
+            for (Player v : Fx.playersNear(c, a.martilloLejos)) {
+                if (!valido(v) || Math.abs(v.getLocation().getY() - c.getY()) > 4) continue;
+                Vector fuera = PeleaAmbush.plano(c, v.getLocation(), otra);
+                switch (zona(PeleaAmbush.distPlano(c, v.getLocation()), a)) {
+                    case CERCA -> {
+                        if (honesto) golpeFuerte(v, fraccion(), h.nombre);
+                        lanzar(v, fuera.multiply(0.25), a.martilloAltura);
+                    }
+                    case MEDIO -> {
+                        if (honesto) golpeFuerte(v, a.martilloFraccionMedio, h.nombre);
+                        empujar(v, fuera.multiply(a.martilloEmpujeMedio).setY(EMPUJE_MEDIO_ALTO), true);
+                    }
+                    case LEJOS -> empujar(v, fuera.multiply(a.martilloEmpujeLejos).setY(0.35), true);
+                    default -> {
+                    }
+                }
+            }
+            sacudir(c, a.martilloLejos + 8);
+            hechos++;
+            onda = ancho * 0.5;
+            centroOnda = c;
+        }
+
+        /** La onda de polvo y bloques que corre por el suelo tras el golpe; luego el segundo (furia) o fin. */
+        private boolean ondaTrasGolpe(World w) {
+            onda += 2.0;
+            ondaSuelo(w, centroOnda, onda);
+            if (quedan > 0) {
+                int n = Math.min(2, quedan);
+                saltarAnillo(centroOnda, onda, n, 0.5);
+                quedan -= n;
+            }
+            if (onda < a.martilloLejos) return false;
+            onda = -1;
+            if (hechos >= golpes) return true;
+            destino = null;
+            return false;
+        }
+    }
+
+    /**
+     * Cabezazo: agacha la cabeza, araña el suelo y una linea marca por donde va (sigue a su blanco la
+     * primera mitad del aviso y luego se fija). Embiste por esa linea y al primero que pilla lo cornea y lo
+     * manda por los aires (altura). Solo a uno.
+     */
+    private final class Lanzamiento extends Tecnica {
+        final UUID blanco;
+        float yaw;
+        double dist;
+        Vector dir;
+        double largo, recorrido;
+        Location antes;
+        boolean carga;
+        int quieto;
+
+        Lanzamiento(Player obj) {
+            super(Habilidad.LANZAMIENTO);
+            blanco = obj.getUniqueId();
+            yaw = PeleaAmbush.yaw(pie(), obj.getLocation());
+            dist = PeleaAmbush.distPlano(pie(), obj.getLocation());
+        }
+
+        @Override
+        boolean paso(World w) {
+            if (t < aviso()) {
+                Player v = hc.plugin().getServer().getPlayer(blanco);
+                if (valido(v) && t < aviso() / 2) {
+                    yaw = PeleaAmbush.yaw(pie(), v.getLocation());
+                    dist = PeleaAmbush.distPlano(pie(), v.getLocation());
+                }
+                mirar(yaw);
+                if (t == 0) {
+                    Compat.soundPlayers(w, pie(), "entity.zoglin.angry", 1.8f, 0.75f);
+                    Compat.sound(w, pie(), "entity.hoglin.ambient", 1.6f, 0.55f);
+                }
+                if (t % 6 == 0) {
+                    Compat.sound(w, pie(), "entity.hoglin.step", 1.4f, 0.5f);
+                    temblor(w, pie().add(PeleaAmbush.dir(yaw).multiply(ancho * 0.4)), 0.5, 5);
+                }
+                if (t % 4 == 0) {
+                    double l = Math.min(a.lanzaAlcance + 2, dist + 2);
+                    pintar(w, franja(pie(), PeleaAmbush.dir(yaw), l, 1.0), tono(t / (double) aviso()), materialSuelo(pie()));
+                }
+                return false;
+            }
+            if (!carga) {
+                carga = true;
+                dir = PeleaAmbush.dir(yaw);
+                largo = Math.min(a.lanzaAlcance + 2, dist + 2);
+                antes = pie();
+                Compat.soundPlayers(w, pie(), "entity.zoglin.attack", 1.8f, 0.6f);
+            }
+            long s = t - aviso();
+            mirar(yaw);
+            Vector v0 = dir.clone().multiply(impulsoSuelo(a.lanzaVelocidad));
+            impulsar(v0.setY(enSuelo(cuerpo) ? 0 : Math.min(0, cuerpo.getVelocity().getY())));
+            Location ahora = pie();
+            double paso = PeleaAmbush.distPlano(antes, ahora);
+            recorrido += paso;
+            quieto = s >= 4 && paso < 0.2 ? quieto + 1 : 0;
+            if (s % 4 == 0) temblor(w, ahora, ancho * 0.35, 6);
+            for (Player p : Fx.playersNear(ahora, ancho / 2 + 1.6)) {
+                if (!valido(p) || Math.abs(p.getLocation().getY() - ahora.getY()) > 3) continue;
+                cornear(w, p);
+                return true;
+            }
+            antes = ahora;
+            if (hc.enSpawn(ahora.clone().add(dir.clone().multiply(3)))) return frenar();
+            return recorrido >= largo || quieto >= 2 || s > 30 ? frenar() : false;
+        }
+
+        private void cornear(World w, Player p) {
+            anim();
+            Location l = p.getLocation();
+            Compat.soundPlayers(w, l, "entity.warden.attack_impact", 2.0f, 0.7f);
+            Compat.sound(w, l, "entity.zoglin.attack", 2.0f, 0.5f);
+            Compat.spawn(w, Compat.BLOCK, l.clone().add(0, 0.2, 0), 20, 0.6, 0.1, 0.6, 0.15, materialSuelo(l));
+            golpeFuerte(p, fraccion(), h.nombre);
+            lanzar(p, dir.clone().multiply(1.3), a.lanzaAltura);
+            frenar();
+        }
+
+        private boolean frenar() {
+            impulsar(dir == null ? new Vector() : dir.clone().multiply(0.15));
             return true;
         }
     }
 
-    /** Marca donde va a caer, salta en parabola y suelta una onda por el suelo que hay que saltar. */
-    private final class Salto extends Tecnica {
-        static final int VUELO = 12;
-        final Location desde;
-        final Location destino;
-        final Set<UUID> tocados = new HashSet<>();
-        double onda = -1;
-        boolean aterrizado;
-
-        Salto(Player obj) {
-            super(Habilidad.SALTO);
-            desde = pie();
-            Location d = Vigilante.cargado(obj.getLocation()) ? Fx.ground(obj.getLocation(), 6) : null;
-            destino = d == null || hc.enSpawn(d) ? null : d;
-        }
-
-        @Override
-        boolean paso(World w) {
-            if (destino == null) return true;
-            float yaw = PeleaAmbush.yaw(desde, destino);
-            yawFijo = yaw;
-            if (t < aviso()) {
-                mirar(yaw);
-                if (t == 0) Compat.soundPlayers(w, desde, "entity.iron_golem.step", 2.0f, 0.4f);
-                if (t % 4 == 0) {
-                    double k = t / (double) aviso();
-                    circulo(w, destino, a.saltoRadio, tono(k), 1.5f);
-                    circulo(w, destino, a.saltoRadio * 0.5, tono(k), 1.0f);
-                }
-                Compat.spawn(w, Compat.CLOUD, desde.clone().add(0, 0.2, 0), 3, 1, 0.1, 1, 0.01);
-                return false;
-            }
-            long s = t - aviso();
-            if (!aterrizado) {
-                double k = Math.min(1, s / (double) VUELO);
-                Location p = desde.clone().add(destino.toVector().subtract(desde.toVector()).multiply(k));
-                p.add(0, 7 * 4 * k * (1 - k), 0);
-                p.setYaw(yaw);
-                mover(p);
-                Compat.spawn(w, Compat.CLOUD, p, 4, 0.6, 0.6, 0.6, 0.01);
-                if (k < 1) return false;
-                // Aterriza.
-                aterrizado = true;
-                anim();
-                Compat.spawn(w, Compat.EXPLOSION_EMITTER, destino.clone().add(0, 0.5, 0), 1);
-                Compat.soundPlayers(w, destino, "entity.generic.explode", 1.8f, 0.7f);
-                for (Player v : Fx.playersNear(destino, a.saltoRadio)) {
-                    if (Math.abs(v.getLocation().getY() - destino.getY()) > 3) continue;
-                    golpeFuerte(v, fraccion(), h.nombre);
-                    tocados.add(v.getUniqueId());
-                    empujar(v, PeleaAmbush.plano(destino, v.getLocation(), new Vector(0, 0, 1)).multiply(0.5).setY(0.9), true);
-                }
-                sacudir(destino, a.saltoRadio + 6);
-                onda = a.saltoRadio * 0.6;
-                return false;
-            }
-            onda += 1.2;
-            circulo(w, destino, onda, RGB_AVISO_HASTA, 1.6f);
-            for (Player v : Fx.playersNear(destino, onda + 1.5)) {
-                if (tocados.contains(v.getUniqueId())) continue;
-                double d = PeleaAmbush.distPlano(destino, v.getLocation());
-                if (Math.abs(d - onda) > 0.9 || Math.abs(v.getLocation().getY() - destino.getY()) > 1.5 || !enSuelo(v)) continue;
-                tocados.add(v.getUniqueId());
-                golpeFuerte(v, a.saltoOndaFraccion, "Onda");
-                empujar(v, PeleaAmbush.plano(destino, v.getLocation(), new Vector(0, 0, 1)).multiply(0.4).setY(0.3), false);
-            }
-            return onda >= a.saltoOndaRadio;
-        }
-    }
-
-    @SuppressWarnings("deprecation")
-    private static boolean enSuelo(Player v) {
-        return v.isOnGround();
-    }
-
-    /** El ojo barre un abanico: quien quede en la luz sin nada delante, golpe y marca. */
-    private final class Barrido extends Tecnica {
-        static final int DURA = 16;
-        final Location origen;
-        final float centro;
-        final List<Location> marca = new ArrayList<>();
-        final Set<UUID> tocados = new HashSet<>();
-
-        Barrido(Player obj) {
-            super(Habilidad.BARRIDO);
-            origen = pie();
-            centro = PeleaAmbush.yaw(origen, obj.getLocation());
-            sector(origen, centro, a.barridoRadio, a.barridoAngulo, marca);
-        }
-
-        @Override
-        boolean paso(World w) {
-            mirar(centro);
-            if (t < aviso()) {
-                yawFijo = (float) (centro - a.barridoAngulo / 2);
-                if (t % 4 == 0) puntos(w, marca, tono(t / (double) aviso()), 1.2f);
-                if (t == 0) Compat.soundPlayers(w, origen, "block.beacon.ambient", 2.0f, 1.4f);
-                return false;
-            }
-            long s = t - aviso();
-            double k = Math.min(1, s / (double) DURA);
-            float ang = (float) (centro - a.barridoAngulo / 2 + a.barridoAngulo * k);
-            yawFijo = ang;
-            Location o = ojoPos();
-            Vector d = PeleaAmbush.dir(ang).setY(-0.15).normalize();
-            linea(w, o, o.clone().add(d.clone().multiply(a.barridoRadio)), 0.7, RGB_OJO, 1.6f);
-            if (s % 4 == 0) Compat.sound(w, o, "block.beacon.power_select", 0.8f, 1.8f);
-            double paso = a.barridoAngulo / (DURA / 2.0);
-            for (Player v : Fx.playersNear(origen, a.barridoRadio)) {
-                if (tocados.contains(v.getUniqueId()) || !valido(v)) continue;
-                double dy = PeleaAmbush.difYaw(PeleaAmbush.yaw(origen, v.getLocation()), ang);
-                if (Math.abs(dy) > Math.max(10, paso)) continue;
-                if (!libre(o, v.getEyeLocation())) continue;
-                tocados.add(v.getUniqueId());
-                golpeFuerte(v, fraccion(), h.nombre);
-                marcar(v);
-            }
-            return s >= DURA;
-        }
-    }
-
-    // ------------------------------------------------------------------ Fase II
-
-    /** Marca una linea y la recorre de golpe: golpe y empujon a un lado; rompe los pilares que pisa. */
+    /**
+     * Embestida: marca una franja recta en el suelo (embestida.largo) y la cruza a toda velocidad
+     * (embestida.velocidad bloques por tick). A quien pille lo aparta lejos hacia un lado y hacia delante.
+     * Si se estrella contra una pared, queda aturdido (embestida.aturdido-segundos) y recibe mas dano.
+     */
     private final class Embestida extends Tecnica {
         final Location origen;
         final float yaw;
         final Vector dir;
-        final List<Location> ruta = new ArrayList<>();
+        final List<Location> marca;
+        final BlockData bd;
         final Set<UUID> tocados = new HashSet<>();
-        int i;
+        double recorrido;
+        Location antes;
+        boolean carga;
+        int quieto;
 
         Embestida(Player obj) {
             super(Habilidad.EMBESTIDA);
             origen = pie();
             yaw = PeleaAmbush.yaw(origen, obj.getLocation());
             dir = PeleaAmbush.dir(yaw);
-            ParcaAnomalia.trazar(origen, dir, a.embestidaLargo, ruta);
-            ruta.removeIf(l -> !Vigilante.cargado(l));
+            marca = franja(origen, dir, a.embestidaLargo, ancho / 2 + 0.6);
+            bd = materialSuelo(origen);
         }
 
         @Override
         boolean paso(World w) {
             mirar(yaw);
-            yawFijo = yaw;
             if (t < aviso()) {
-                if (t % 4 == 0) {
-                    int rgb = tono(t / (double) aviso());
-                    Vector lado = new Vector(-dir.getZ(), 0, dir.getX()).multiply(1.6);
-                    List<Location> ps = new ArrayList<>();
-                    for (int k = 0; k < ruta.size(); k += 2) {
-                        Location l = ruta.get(k).clone().add(0, 0.15, 0);
-                        ps.add(l);
-                        ps.add(l.clone().add(lado));
-                        ps.add(l.clone().subtract(lado));
-                    }
-                    puntos(w, ps, rgb, 1.2f);
+                if (t == 0) {
+                    Compat.soundPlayers(w, origen, "entity.ravager.ambient", 2.0f, 0.5f);
+                    Compat.sound(w, origen, "entity.hoglin.angry", 1.8f, 0.45f);
                 }
-                if (t % 8 == 0) Compat.soundPlayers(w, origen, "entity.ravager.step", 1.6f, 0.5f);
+                if (t % 6 == 0) {
+                    // Escarba con las patas, como un toro.
+                    Compat.sound(w, origen, "entity.hoglin.step", 1.6f, 0.45f);
+                    temblor(w, origen, ancho * 0.35, 8);
+                }
+                if (t % 4 == 0) pintar(w, marca, tono(t / (double) aviso()), bd);
                 return false;
             }
-            if (ruta.size() < 3) return true;
-            int prev = i;
-            i = Math.min(ruta.size() - 1, i + 4);
-            Location a0 = ruta.get(prev), b0 = ruta.get(i).clone();
-            b0.setYaw(yaw);
-            if (hc.enSpawn(b0)) return true;
-            mover(b0);
-            Compat.spawn(w, Compat.BLOCK, b0.clone().add(0, 0.2, 0), 8, 1, 0.1, 1, 0.05, Material.STONE.createBlockData());
-            if (i % 8 == 0) Compat.soundPlayers(w, b0, "entity.iron_golem.step", 2.0f, 0.5f);
-            for (Player v : Fx.playersNear(b0, 6)) {
-                if (tocados.contains(v.getUniqueId())) continue;
+            long s = t - aviso();
+            if (!carga) {
+                carga = true;
+                antes = pie();
+                Compat.soundPlayers(w, origen, "entity.zoglin.angry", 2.2f, 0.5f);
+                Compat.sound(w, origen, "entity.hoglin.attack", 2.0f, 0.5f);
+            }
+            Vector v0 = dir.clone().multiply(impulsoSuelo(a.embestidaVelocidad));
+            impulsar(v0.setY(enSuelo(cuerpo) ? 0 : Math.min(0, cuerpo.getVelocity().getY())));
+            Location ahora = pie();
+            double paso = PeleaAmbush.distPlano(antes, ahora);
+            recorrido += paso;
+            quieto = s >= 4 && paso < 0.3 ? quieto + 1 : 0;
+            if (s % 4 == 0) {
+                Compat.sound(w, ahora, "entity.ravager.step", 1.8f, 0.5f);
+                temblor(w, ahora, ancho * 0.4, 10);
+                Vector lado = new Vector(-dir.getZ(), 0, dir.getX()).multiply(ThreadLocalRandom.current().nextBoolean() ? 1 : -1);
+                Location borde = ahora.clone().add(lado.clone().multiply(ancho * 0.6));
+                if (Vigilante.cargado(borde)) {
+                    Location g = Fx.ground(borde.add(0, 1.5, 0), 4);
+                    if (Math.abs(g.getY() - ahora.getY()) <= 2) saltar(g.add(0, 0.1, 0), lado.multiply(0.3).setY(0.5), materialSuelo(g));
+                }
+            }
+            double radio = ancho / 2 + 1.2;
+            for (Player v : Fx.playersNear(ahora, radio + paso + 1)) {
+                if (tocados.contains(v.getUniqueId()) || !valido(v)) continue;
                 Location lv = v.getLocation();
-                if (Math.abs(lv.getY() - b0.getY()) > 3) continue;
-                if (ParcaAnomalia.distanciaASegmento(lv.getX(), lv.getZ(), a0.getX(), a0.getZ(), b0.getX(), b0.getZ()) > 2.0) continue;
+                if (Math.abs(lv.getY() - ahora.getY()) > 3) continue;
+                if (ParcaAnomalia.distanciaASegmento(lv.getX(), lv.getZ(), antes.getX(), antes.getZ(), ahora.getX(), ahora.getZ()) > radio) continue;
                 tocados.add(v.getUniqueId());
                 golpeFuerte(v, fraccion(), h.nombre);
                 Vector lado = new Vector(-dir.getZ(), 0, dir.getX());
-                if (lado.dot(lv.toVector().subtract(b0.toVector())) < 0) lado.multiply(-1);
-                empujar(v, lado.multiply(0.9).add(dir.clone().multiply(0.4)).setY(0.45), true);
+                if (lado.dot(lv.toVector().subtract(ahora.toVector())) < 0) lado.multiply(-1);
+                empujar(v, lado.multiply(a.embestidaEmpuje).add(dir.clone().multiply(0.9)).setY(0.6), true);
+                Compat.soundPlayers(w, lv, "entity.warden.attack_impact", 1.8f, 0.6f);
             }
-            romperPilares(a0, b0, 2.0);
-            return i >= ruta.size() - 1;
-        }
-    }
-
-    /** Circulos en el suelo y una piedra que cae sobre cada uno, uno tras otro. */
-    private final class Escombros extends Tecnica {
-        final class Caida {
-            Location c;
-            long cae;
-            BlockDisplay d;
-            boolean hecha;
+            antes = ahora;
+            if (hc.enSpawn(ahora.clone().add(dir.clone().multiply(ancho)))) return frenar();
+            if (quieto >= 2) {
+                choque(w, ahora);
+                return true;
+            }
+            return recorrido >= a.embestidaLargo || s > 70 ? frenar() : false;
         }
 
-        final List<Caida> caidas = new ArrayList<>();
-
-        Escombros() {
-            super(Habilidad.ESCOMBROS);
-            Location base = pie();
-            List<Location> sitios = new ArrayList<>();
-            for (Player p : Fx.playersNear(base, 24)) if (valido(p) && Vigilante.cargado(p.getLocation())) sitios.add(p.getLocation());
-            ThreadLocalRandom r = ThreadLocalRandom.current();
-            int quiere = Math.max(a.escombrosCirculos, sitios.size());
-            for (int intento = 0; sitios.size() < quiere && intento < quiere * 4; intento++) {
-                double ang = r.nextDouble(Math.PI * 2), d = 4 + r.nextDouble(9);
-                Location l = base.clone().add(Math.cos(ang) * d, 0, Math.sin(ang) * d);
-                if (Vigilante.cargado(l) && !hc.enSpawn(l)) sitios.add(l);
-            }
-            for (int k = 0; k < sitios.size(); k++) {
-                Caida c = new Caida();
-                c.c = Fx.ground(sitios.get(k), 6);
-                c.cae = aviso() + k * 4L;
-                caidas.add(c);
-            }
-        }
-
-        @Override
-        boolean paso(World w) {
-            if (t == 0) {
-                anim();
-                Compat.soundPlayers(w, pie(), "entity.iron_golem.attack", 2.0f, 0.4f);
-            }
-            boolean todas = true;
-            for (Caida c : caidas) {
-                if (c.hecha) continue;
-                todas = false;
-                if (t < c.cae) {
-                    if (t % 4 == 0) circulo(w, c.c, a.escombrosRadio, tono(t / (double) c.cae), 1.3f);
-                    long falta = c.cae - t;
-                    if (falta <= 10) {
-                        Location arriba = c.c.clone().add(0, 0.6 + 12 * falta / 10.0, 0);
-                        if (c.d == null) c.d = pieza(arriba, Material.COBBLED_DEEPSLATE, 1.4f, false);
-                        else if (c.d.isValid()) c.d.teleport(arriba);
-                    }
-                    continue;
-                }
-                c.hecha = true;
-                Fx.safeRemove(c.d);
-                c.d = null;
-                Compat.spawn(w, Compat.BLOCK, c.c.clone().add(0, 0.3, 0), 25, 0.8, 0.2, 0.8, 0.1, Material.COBBLED_DEEPSLATE.createBlockData());
-                Compat.spawn(w, Compat.EXPLOSION, c.c.clone().add(0, 0.5, 0), 1);
-                Compat.sound(w, c.c, "block.deepslate.break", 1.6f, 0.6f);
-                for (Player v : Fx.playersNear(c.c, a.escombrosRadio)) {
-                    if (Math.abs(v.getLocation().getY() - c.c.getY()) > 2.5) continue;
-                    golpeFuerte(v, fraccion(), h.nombre);
-                }
-            }
-            return todas;
-        }
-
-        @Override
-        void cortar() {
-            for (Caida c : caidas) Fx.safeRemove(c.d);
-        }
-    }
-
-    /** Seis pilares de piedra alrededor: suben del suelo y tapan su ojo hasta que caducan o los embiste. */
-    private final class Pilares extends Tecnica {
-        final List<Pilar> nuevos = new ArrayList<>();
-
-        Pilares() {
-            super(Habilidad.PILARES);
-        }
-
-        @Override
-        boolean paso(World w) {
-            if (t == 0) {
-                anim();
-                Location base = pie();
-                Compat.soundPlayers(w, base, "entity.iron_golem.attack", 2.0f, 0.5f);
-                ThreadLocalRandom r = ThreadLocalRandom.current();
-                double ang0 = r.nextDouble(Math.PI * 2);
-                for (int k = 0; k < a.pilaresCuantos; k++) {
-                    double ang = ang0 + k * Math.PI * 2 / a.pilaresCuantos + r.nextDouble(-0.25, 0.25);
-                    double d = 5.5 + r.nextDouble(4);
-                    Location l = base.clone().add(Math.cos(ang) * d, 3, Math.sin(ang) * d);
-                    if (!Vigilante.cargado(l) || hc.enSpawn(l)) continue;
-                    Location g = Fx.ground(l, 10);
-                    if (Math.abs(g.getY() - base.getY()) > 5) continue;
-                    Pilar p = new Pilar();
-                    p.x = g.getBlockX() + 0.5;
-                    p.z = g.getBlockZ() + 0.5;
-                    p.y0 = g.getY();
-                    p.alto = PILAR_ALTO;
-                    p.hasta = ticks + a.pilaresSegundos * 20L;
-                    Location en = new Location(w, p.x, p.y0, p.z);
-                    try {
-                        p.d = w.spawn(en, BlockDisplay.class, e -> {
-                            e.setBlock(Material.STONE_BRICKS.createBlockData());
-                            e.setPersistent(false);
-                            e.setViewRange(3f);
-                            e.setTransformation(new Transformation(new Vector3f(-PILAR_ANCHO / 2, 0, -PILAR_ANCHO / 2),
-                                    new AxisAngle4f(), new Vector3f(PILAR_ANCHO, 0.05f, PILAR_ANCHO), new AxisAngle4f()));
-                            e.getPersistentDataContainer().set(Marcas.VIGILANTE, PersistentDataType.STRING,
-                                    cuerpo.getUniqueId().toString());
-                        });
-                    } catch (Throwable ignorado) {
-                        continue;
-                    }
-                    Compat.spawn(w, Compat.BLOCK, en.clone().add(0, 0.3, 0), 20, 0.6, 0.1, 0.6, 0.1, Material.STONE.createBlockData());
-                    Compat.sound(w, en, "block.stone.place", 1.4f, 0.5f);
-                    nuevos.add(p);
-                    pilares.add(p);
-                }
-                return false;
-            }
-            if (t == 2) {
-                // Un tick despues de nacer: asi el cliente interpola el crecimiento en vez de verlo ya alto.
-                for (Pilar p : nuevos) {
-                    if (p.d == null || !p.d.isValid()) continue;
-                    p.d.setInterpolationDelay(0);
-                    p.d.setInterpolationDuration(10);
-                    p.d.setTransformation(new Transformation(new Vector3f(-PILAR_ANCHO / 2, 0, -PILAR_ANCHO / 2),
-                            new AxisAngle4f(), new Vector3f(PILAR_ANCHO, PILAR_ALTO, PILAR_ANCHO), new AxisAngle4f()));
-                }
-            }
-            return t >= 14;
-        }
-    }
-
-    // ------------------------------------------------------------------ Fase III
-
-    /** Fija el ojo en un marcado, carga y dispara; se corta si se rompe la linea de vision. */
-    private final class Rayo extends Tecnica {
-        final UUID blanco;
-
-        Rayo(Player obj) {
-            super(Habilidad.RAYO);
-            Player m = marcadoCerca(24);
-            blanco = (m != null ? m : obj).getUniqueId();
-        }
-
-        @Override
-        boolean paso(World w) {
-            Player v = hc.plugin().getServer().getPlayer(blanco);
-            if (!valido(v)) return true;
-            float yaw = PeleaAmbush.yaw(pie(), v.getLocation());
-            mirar(yaw);
-            yawFijo = yaw;
-            Location o = ojoPos();
-            Location e = v.getEyeLocation().subtract(0, 0.3, 0);
-            boolean libre = libre(o, e);
-            if (t < aviso()) {
-                if (t == 0) {
-                    hc.barra().aviso(v, Component.text("El ojo te apunta: rompe la línea de visión.", Paleta.VIGILANTE), 2);
-                }
-                linea(w, o, e, 0.9, RGB_OJO, 0.6f);
-                if (t % 4 == 0) {
-                    Location pv = v.getLocation();
-                    linea(w, suelo(pie()), suelo(pv), 1.0, tono(t / (double) aviso()), 1.0f);
-                    circulo(w, pv, 1.2, tono(t / (double) aviso()), 1.1f);
-                }
-                if (t % 6 == 0) Compat.sound(w, o, "block.beacon.ambient", 1.4f, 0.8f + t / (float) aviso());
-                if (t >= 10 && !libre) return cortado(w, v, o, e);
-                return false;
-            }
-            if (!libre) return cortado(w, v, o, e);
-            linea(w, o, e, 0.4, RGB_OJO, 2.0f);
-            Compat.spawn(w, Compat.END_ROD, e, 12, 0.3, 0.3, 0.3, 0.05);
-            Compat.soundPlayers(w, o, "entity.guardian.attack", 2.0f, 0.6f);
-            golpeFuerte(v, fraccion(), h.nombre);
-            marcar(v);
-            empujar(v, PeleaAmbush.plano(o, v.getLocation(), new Vector(0, 0, 1)).multiply(0.5).setY(0.2), false);
+        private boolean frenar() {
+            impulsar(dir.clone().multiply(0.2));
             return true;
         }
 
-        private boolean cortado(World w, Player v, Location o, Location e) {
-            Compat.sound(w, o, "block.beacon.deactivate", 1.4f, 1.2f);
-            Compat.spawn(w, Compat.SMOKE, e, 10, 0.2, 0.2, 0.2, 0.02);
-            hc.barra().aviso(v, Component.text("El rayo se corta.", Paleta.TEXTO), 2);
-            return true;
+        /** Contra la pared: estruendo, el muro que suelta polvo y bloques, y aturdido. */
+        private void choque(World w, Location aqui) {
+            Location frente = aqui.clone().add(dir.clone().multiply(ancho * 0.6));
+            Compat.soundPlayers(w, frente, "entity.warden.attack_impact", 2.2f, 0.45f);
+            Compat.sound(w, frente, "entity.generic.explode", 1.4f, 0.7f);
+            Compat.sound(w, aqui, "entity.zoglin.hurt", 1.8f, 0.45f);
+            estallidoSuelo(w, frente, ancho * 0.3, 4, 0.6);
+            sacudir(aqui, 14);
+            impulsar(dir.clone().multiply(-0.3).setY(0.2));
+            aturdir(a.aturdidoTicks);
         }
     }
 
     /**
-     * Suelta sus tres nucleos (shulkers amarillos que aguantan unos golpes) y no recibe dano hasta que
-     * caigan. Rotos a tiempo: queda aturdido. Si no: cada uno que quede estalla en su circulo, que se ve
-     * todo el rato (rojo los dos ultimos segundos).
+     * Hundimiento: se mete bajo tierra (baja entre bloques que saltan), el suelo se mueve hacia uno de
+     * ustedes al azar (o hacia su objetivo si se hundio por atasco), un circulo se agrieta bajo sus pies
+     * (aviso) y sale de golpe debajo, lanzandolo hacia arriba (hundimiento.altura). Mientras esta bajo
+     * tierra no recibe dano.
      */
-    private final class Nucleos extends Tecnica {
-        final List<Location> destinos = new ArrayList<>();
-        final List<Location> salida = new ArrayList<>();
+    private final class Hundimiento extends Tecnica {
+        static final int HUNDE = 24, SALE = 8, VIAJE_MAXIMO = 80;
+        final boolean escape;
+        UUID victima;
+        final Location inicio;
+        Location cabeza, fijo, hueco;
+        List<Location> fuera, dentro;
+        BlockData bd;
+        int etapa;
+        long desde;
+        float yawSalir;
 
-        Nucleos() {
-            super(Habilidad.NUCLEOS);
-            Location base = pie();
-            double ang0 = ThreadLocalRandom.current().nextDouble(Math.PI * 2);
-            for (int k = 0; k < 3; k++) {
-                Location elegido = null;
-                for (double d : new double[]{8, 6, 4}) {
-                    double ang = ang0 + k * Math.PI * 2 / 3;
-                    Location l = base.clone().add(Math.cos(ang) * d, 3, Math.sin(ang) * d);
-                    if (!Vigilante.cargado(l) || hc.enSpawn(l)) continue;
-                    Location g = Fx.ground(l, 10);
-                    if (Math.abs(g.getY() - base.getY()) > 5 || !Parca.libre(g, 1)) continue;
-                    elegido = g;
-                    break;
-                }
-                destinos.add(elegido != null ? elegido : base.clone().add(0, 0, 0));
-            }
+        Hundimiento(Player obj, boolean escape) {
+            super(Habilidad.HUNDIMIENTO);
+            this.escape = escape;
+            inicio = pie();
+            List<Player> c = validosCerca(inicio, 32);
+            c.removeIf(p -> !Vigilante.cargado(p.getLocation()));
+            victima = (escape || c.isEmpty() ? obj : c.get(ThreadLocalRandom.current().nextInt(c.size()))).getUniqueId();
         }
 
         @Override
         boolean paso(World w) {
+            switch (etapa) {
+                case 0 -> hundirse(w);
+                case 1 -> viajar(w);
+                case 2 -> {
+                    return avisar(w);
+                }
+                default -> {
+                    return subir(w);
+                }
+            }
+            return false;
+        }
+
+        private void hundirse(World w) {
             if (t == 0) {
+                cuerpo.setAI(false);
                 cuerpo.setInvulnerable(true);
-                nucleosFuera = true;
-                for (int i = 0; i < 3; i++) salida.add(orbitaPos(i));
-                Compat.soundPlayers(w, pie(), "block.respawn_anchor.charge", 2.0f, 0.6f);
-                Component c = Component.text("Suelta sus núcleos: rómpelos antes de que estallen.", Paleta.VIGILANTE);
-                for (Player p : Fx.viewersNear(pie(), 48)) hc.barra().aviso(p, c, 3);
-            }
-            if (t < 10) {
-                double k = (t + 2) / 10.0;
-                for (int i = 0; i < orbita.size() && i < 3; i++) {
-                    BlockDisplay d = orbita.get(i);
-                    Location s = salida.get(i);
-                    Location l = s.clone().add(destinos.get(i).clone().add(0, 0.5, 0).toVector().subtract(s.toVector()).multiply(k));
-                    if (d.isValid()) d.teleport(l);
+                Compat.soundPlayers(w, inicio, "entity.warden.dig", 2.0f, 0.6f);
+                Compat.sound(w, inicio, "entity.zoglin.angry", 1.8f, 0.45f);
+                estallidoSuelo(w, inicio, ancho * 0.5, (a.efimerosPorGolpe + 1) / 2, 0.7);
+                if (escape) {
+                    Component c = Component.text("El ", Paleta.TEXTO).append(Component.text("Vigilante", Paleta.VIGILANTE))
+                            .append(Component.text(" se hunde en la tierra.", Paleta.TEXTO));
+                    for (Player p : Fx.viewersNear(inicio, 40)) hc.barra().aviso(p, c, 2);
                 }
-                return false;
             }
-            if (t == 10) soltar(w);
-            long s = t - 10;
-            long total = a.nucleosSegundos * 20L;
-            if (nucleos.isEmpty()) {
-                volver(w);
-                aturdir();
-                return true;
+            double k = Math.min(1, (t + 2) / (double) HUNDE);
+            Location l = inicio.clone().subtract(0, (alto + 0.4) * k, 0);
+            if (l.getY() < w.getMinHeight() + 3) l.setY(w.getMinHeight() + 3);
+            mover(l);
+            Compat.spawn(w, Compat.BLOCK, inicio.clone().add(0, 0.2, 0), 10, ancho * 0.45, 0.1, ancho * 0.45, 0.15, materialSuelo(inicio));
+            if (t % 8 == 4) saltarAnillo(inicio, ancho * 0.5, 2, 0.5);
+            if (k < 1) return;
+            // Mas hondo e invisible: ni una cueva lo ensena ni su cartel asoma por el suelo.
+            Location hondo = enterrado(inicio, HONDO);
+            hondo.setYaw(inicio.getYaw());
+            mover(hondo);
+            cuerpo.setInvisible(true);
+            etapa = 1;
+            desde = t;
+            cabeza = Fx.ground(inicio.clone().add(0, 1, 0), 6);
+        }
+
+        private void viajar(World w) {
+            Player v = hc.plugin().getServer().getPlayer(victima);
+            if (!valido(v) || !Vigilante.cargado(v.getLocation())) {
+                Player otro = objetivo();
+                v = otro;
+                if (otro != null) victima = otro.getUniqueId();
             }
+            long s = t - desde;
+            Location meta = v != null ? v.getLocation() : inicio;
+            double d = PeleaAmbush.distPlano(cabeza, meta);
+            double paso = Math.min(d, a.hundeVelocidad * 2);
+            if (paso > 0.01) {
+                Location sig = cabeza.clone().add(PeleaAmbush.plano(cabeza, meta, new Vector(0, 0, 1)).multiply(paso));
+                if (Vigilante.cargado(sig)) cabeza = Fx.ground(sig.add(0, 2, 0), 8);
+            }
+            bd = materialSuelo(cabeza);
+            Compat.spawn(w, Compat.BLOCK, cabeza.clone().add(0, 0.15, 0), 10, 0.8, 0.05, 0.8, 0.14, bd);
+            if (s % 6 == 0) Compat.sound(w, cabeza, "block.rooted_dirt.break", 1.4f, 0.5f);
+            if (s % 10 == 0) Compat.sound(w, cabeza, "entity.sniffer.digging", 1.6f, 0.5f);
+            if (s % 20 == 0) Compat.sound(w, cabeza, "entity.zoglin.ambient", 1.0f, 0.4f);
+            if (s % 8 == 0) saltarAnillo(cabeza, 0.8, 1, 0.4);
+            if (v != null && d - paso > 1.5 && s < VIAJE_MAXIMO) return;
+            // Bajo sus pies: el circulo que avisa de donde sale.
+            fijo = Fx.ground((v != null ? v.getLocation() : cabeza).clone().add(0, 1, 0), 6);
+            fuera = anillo(fijo, a.hundeRadio);
+            dentro = anillo(fijo, a.hundeRadio * 0.5);
+            bd = materialSuelo(fijo);
+            etapa = 2;
+            desde = t;
+            Compat.soundPlayers(w, fijo, "entity.sniffer.digging", 2.0f, 0.5f);
+            if (v != null) {
+                hc.barra().aviso(v, Component.text("El suelo se mueve bajo tus pies: apártate.", Paleta.VIGILANTE), 2);
+                try {
+                    v.playHurtAnimation(0f);
+                } catch (Throwable ignorado) {
+                    // Sin temblor, el circulo avisa igual.
+                }
+            }
+        }
+
+        private boolean avisar(World w) {
+            long s = t - desde;
+            double k = s / (double) aviso();
             if (s % 4 == 0) {
-                int rgb = s >= total - 40 ? RGB_ESTALLIDO : tono(s / (double) total);
-                for (Nucleo n : nucleos.values()) {
-                    circulo(w, n.sitio, a.nucleosRadio, rgb, 1.4f);
-                    Compat.spawn(w, Compat.END_ROD, n.sitio.clone().add(0, 1.2, 0), 1, 0.1, 0.3, 0.1, 0.01);
-                }
+                pintar(w, fuera, tono(k), bd);
+                pintar(w, dentro, tono(k), null);
             }
-            if (s % 20 == 0) {
-                Component c = Component.text("Núcleos · ", Paleta.VIGILANTE)
-                        .append(Component.text(Math.max(0, (total - s) / 20) + " s", Paleta.CIFRA));
-                for (Player p : Fx.viewersNear(pie(), 40)) hc.barra().aviso(p, c, 2);
+            temblor(w, fijo, 0.6 + k * a.hundeRadio * 0.5, 8);
+            if (s % 6 == 0) Compat.sound(w, fijo, "block.rooted_dirt.break", 1.6f, 0.5f);
+            if (s % 6 == 2) saltarAnillo(fijo, a.hundeRadio * 0.7, 1, 0.35);
+            if (s < aviso()) return false;
+            salir(w);
+            return false;
+        }
+
+        private void salir(World w) {
+            Location h0 = PeleaVigilante.hueco(fijo, a, 4, l -> !hc.enSpawn(l));
+            hueco = h0 != null ? h0 : fijo.clone();
+            Player v = hc.plugin().getServer().getPlayer(victima);
+            yawSalir = v != null && v.getWorld() == w ? PeleaAmbush.yaw(hueco, v.getLocation()) : inicio.getYaw();
+            Location bajo = enterrado(hueco);
+            bajo.setYaw(yawSalir);
+            mover(bajo);
+            cuerpo.setInvisible(false);
+            Compat.soundPlayers(w, fijo, "entity.generic.explode", 2.2f, 0.6f);
+            Compat.soundPlayers(w, fijo, "entity.zoglin.angry", 2.2f, 0.45f);
+            Compat.sound(w, fijo, "entity.warden.dig", 1.8f, 0.7f);
+            estallidoSuelo(w, fijo, ancho * 0.5, a.efimerosPorGolpe, 1.1);
+            Set<UUID> tocados = new HashSet<>();
+            Vector otra = PeleaAmbush.dir(yawSalir);
+            for (Player p : Fx.playersNear(fijo, a.hundeRadio)) {
+                if (!valido(p) || Math.abs(p.getLocation().getY() - fijo.getY()) > 3) continue;
+                tocados.add(p.getUniqueId());
+                golpeFuerte(p, fraccion(), h.nombre);
+                lanzar(p, PeleaAmbush.plano(fijo, p.getLocation(), otra).multiply(0.2), a.hundeAltura);
             }
-            if (s < total) return false;
-            // Estallan los que quedan: a cada uno le llega la suma de los que le pillan, de una vez.
-            Map<UUID, Double> suma = new HashMap<>();
-            Map<UUID, Player> quien = new HashMap<>();
-            for (Nucleo n : nucleos.values()) {
-                Compat.spawn(w, Compat.EXPLOSION_EMITTER, n.sitio.clone().add(0, 0.5, 0), 1);
-                Compat.soundPlayers(w, n.sitio, "entity.generic.explode", 2.0f, 0.5f);
-                for (Player v : Fx.playersNear(n.sitio, a.nucleosRadio)) {
-                    suma.merge(v.getUniqueId(), fraccion(), Double::sum);
-                    quien.put(v.getUniqueId(), v);
-                }
+            for (Player p : Fx.playersNear(fijo, a.hundeRadio + 4)) {
+                if (tocados.contains(p.getUniqueId()) || !valido(p)) continue;
+                empujar(p, PeleaAmbush.plano(fijo, p.getLocation(), otra).multiply(0.9).setY(0.4), true);
             }
-            for (Map.Entry<UUID, Double> e : suma.entrySet()) golpeFuerte(quien.get(e.getKey()), e.getValue(), "Estallido");
-            volver(w);
+            sacudir(fijo, a.hundeRadio + 10);
+            etapa = 3;
+            desde = t;
+        }
+
+        private boolean subir(World w) {
+            long s = t - desde;
+            double k = Math.min(1, (s + 2) / (double) SALE);
+            Location bajo = enterrado(hueco);
+            Location l = bajo.clone();
+            l.setY(bajo.getY() + (hueco.getY() - bajo.getY()) * k);
+            l.setYaw(yawSalir);
+            mover(l);
+            Compat.spawn(w, Compat.BLOCK, hueco.clone().add(0, 0.2, 0), 10, ancho * 0.45, 0.1, ancho * 0.45, 0.15, materialSuelo(hueco));
+            if (k < 1) return false;
+            restaurar();
             return true;
         }
 
-        private void soltar(World w) {
-            if (!nucleos.isEmpty()) return;
-            int golpes = Vigilante.golpesNucleo(a, jugadoresContados);
-            quitarOrbita();
-            for (Location d : destinos) {
-                Location en = d.clone();
-                en.setYaw(0);
-                en.setPitch(0);
-                try {
-                    Shulker s = w.spawn(en, Shulker.class, e -> {
-                        e.getPersistentDataContainer().set(Marcas.AMENAZA, PersistentDataType.STRING, "vigilante-nucleo");
-                        e.getPersistentDataContainer().set(Marcas.VIGILANTE, PersistentDataType.STRING, cuerpo.getUniqueId().toString());
-                        e.setAI(false);
-                        e.setPersistent(false);
-                        e.setRemoveWhenFarAway(false);
-                        e.setSilent(true);
-                        e.setGravity(false);
-                        e.setColor(DyeColor.YELLOW);
-                        e.setGlowing(true);
-                        e.customName(Component.text("Núcleo · ", Paleta.VIGILANTE).append(Component.text(golpes, Paleta.CIFRA)));
-                        e.setCustomNameVisible(true);
-                    });
-                    if (s == null || !s.isValid()) continue;
-                    Nucleo n = new Nucleo();
-                    n.s = s;
-                    n.sitio = en;
-                    n.golpes = golpes;
-                    nucleos.put(s.getUniqueId(), n);
-                    Compat.spawn(w, Compat.BLOCK, en.clone().add(0, 0.5, 0), 20, 0.4, 0.2, 0.4, 0.1, Material.RAW_GOLD_BLOCK.createBlockData());
-                } catch (Throwable ignorado) {
-                    // Un nucleo que no pudo nacer no cuenta: si no nace ninguno, queda aturdido sin mas.
-                }
-            }
-            Compat.soundPlayers(w, pie(), "block.anvil.land", 1.5f, 0.5f);
-        }
-
-        /** Los nucleos vuelven a girar y deja de ser invulnerable. */
-        private void volver(World w) {
-            quitarNucleos();
-            if (cuerpo != null && cuerpo.isValid()) {
-                cuerpo.setInvulnerable(false);
-                crearOrbita();
-            }
-        }
-
+        /** Vuelve arriba visible y con IA (la habilidad se corta a medias: fase, staff o el fin de la pelea). */
         @Override
         void cortar() {
-            volver(cuerpo == null ? null : cuerpo.getWorld());
+            if (etapa < 3 || hueco == null) {
+                Location base = etapa == 0 ? inicio : fijo != null ? fijo : cabeza != null ? cabeza : inicio;
+                Location h0 = PeleaVigilante.hueco(base, a, 4, l -> !hc.enSpawn(l));
+                hueco = h0 != null ? h0 : inicio;
+            }
+            Location l = hueco.clone();
+            l.setYaw(yawSalir);
+            if (cuerpo != null && cuerpo.isValid()) mover(l);
+            restaurar();
+        }
+
+        private void restaurar() {
+            if (cuerpo == null || !cuerpo.isValid()) return;
+            cuerpo.setInvisible(false);
+            cuerpo.setInvulnerable(false);
+            if (estado == Estado.PELEA) cuerpo.setAI(true);
+            anclaAtasco = cuerpo.getLocation();
+            anclaDesde = ticks;
         }
     }
 
-    /** Atrae hacia el a los que pelean de lejos, con su aviso. */
-    private final class Tiron extends Tecnica {
-        final List<UUID> lejos = new ArrayList<>();
+    /**
+     * Rugido: alza la cabeza y toma aire (aviso), y suelta un grito largo y grave (Zoglin, Ravager y
+     * Ghast, todos bajos) que a rugido.radio da Oscuridad rugido.oscuridad-segundos (entre 1 y 3: la
+     * oscuridad nunca es continua), quita rugido.cordura de cordura y empuja un poco. Sin dano.
+     */
+    private final class Rugido extends Tecnica {
+        Location centro;
+        double onda = -1;
 
-        Tiron() {
-            super(Habilidad.TIRON);
-            for (Player p : lejanos()) lejos.add(p.getUniqueId());
+        Rugido() {
+            super(Habilidad.RUGIDO);
         }
 
         @Override
         boolean paso(World w) {
-            if (t == 0) {
-                Compat.soundPlayers(w, pie(), "block.respawn_anchor.set_spawn", 2.0f, 0.5f);
-                for (UUID u : lejos) {
-                    Player v = hc.plugin().getServer().getPlayer(u);
-                    if (v != null) hc.barra().aviso(v, Component.text("El Vigilante te atrae hacia él.", Paleta.VIGILANTE), 2);
-                }
-            }
-            if (t < Math.max(Vigilante.Ajustes.AVISO_MINIMO, aviso())) {
-                Particle.DustOptions d = Compat.dust(RGB_OJO, 1.0f);
-                for (UUID u : lejos) {
-                    Player v = hc.plugin().getServer().getPlayer(u);
-                    if (!valido(v)) continue;
-                    double r = 1.6 - t / 30.0;
-                    Fx.ring(v.getLocation().add(0, 0.2 + (t % 10) / 10.0, 0), Math.max(0.3, r), 8,
-                            l -> Compat.spawn(w, Compat.DUST, l, 1, 0, 0, 0, 0, d));
-                    if (t % 4 == 0) linea(w, ojoPos(), v.getLocation().add(0, 1, 0), 1.5, RGB_OJO, 0.7f);
-                }
-                return false;
-            }
-            Location base = pie();
-            for (UUID u : lejos) {
-                Player v = hc.plugin().getServer().getPlayer(u);
-                if (!valido(v)) continue;
-                double d = PeleaAmbush.distPlano(base, v.getLocation());
-                Vector hacia = PeleaAmbush.plano(v.getLocation(), base, new Vector(0, 0, 1));
-                empujar(v, hacia.multiply(a.tironFuerza * Math.min(1.2, d / 16.0)).setY(0.45), true);
-                Compat.spawn(w, Compat.REVERSE_PORTAL, v.getLocation().add(0, 1, 0), 20, 0.3, 0.6, 0.3, 0.05);
-            }
-            Compat.soundPlayers(w, base, "entity.evoker.prepare_attack", 1.6f, 0.6f);
-            return true;
-        }
-    }
-
-    // ------------------------------------------------------------------ Fase IV
-
-    /** El ojo gira como un faro: el abanico de adelante se pinta en el suelo antes de que llegue la luz. */
-    private final class Faro extends Tecnica {
-        final float ang0;
-        final double grados;
-        final int total;
-        final Map<Integer, Set<UUID>> tocados = new HashMap<>();
-
-        Faro() {
-            super(Habilidad.FARO);
-            ang0 = yawOjo;
-            grados = 360.0 / a.faroTicksVuelta;
-            total = a.faroVueltas * a.faroTicksVuelta;
-        }
-
-        @Override
-        boolean paso(World w) {
-            Location o = ojoPos();
-            Location base = pie();
-            if (t == 0) {
-                Compat.soundPlayers(w, base, "block.beacon.activate", 2.0f, 0.5f);
-                Component c = Component.text("Su ojo gira como un faro: cúbrete de la luz.", Paleta.VIGILANTE);
-                for (Player p : Fx.viewersNear(base, 48)) hc.barra().aviso(p, c, 3);
-            }
-            long s = Math.max(0, t - aviso());
-            double ang = ang0 + grados * s;
-            yawFijo = (float) ang;
-            mirar((float) ang);
-            // Lo que va a barrer la luz en los proximos adelanto-ticks, pintado en el suelo.
-            if (t % 4 == 0) {
-                int rgb = tono(0.5);
-                List<Location> ps = new ArrayList<>();
-                for (int k = 4; k <= a.faroAdelanto; k += 4) {
-                    Vector d = PeleaAmbush.dir((float) (ang + grados * k));
-                    for (double r = 2; r <= a.faroAlcance; r += 2.2) {
-                        Location l = base.clone().add(d.clone().multiply(r));
-                        if (Vigilante.cargado(l)) ps.add(suelo(l));
-                    }
-                }
-                puntos(w, ps, rgb, 1.1f);
-            }
-            if (t < aviso()) return false;
-            Vector d = PeleaAmbush.dir((float) ang).setY(-0.1).normalize();
-            linea(w, o, o.clone().add(d.clone().multiply(a.faroAlcance)), 0.7, RGB_OJO, 1.8f);
-            if (s % 10 == 0) Compat.sound(w, o, "block.beacon.ambient", 1.6f, 1.6f);
-            int vuelta = (int) (s / a.faroTicksVuelta);
-            Set<UUID> ya = tocados.computeIfAbsent(vuelta, k -> new HashSet<>());
-            double ancho = Math.max(9, grados * 2.2);
-            for (Player v : Fx.playersNear(base, a.faroAlcance)) {
-                if (ya.contains(v.getUniqueId()) || !valido(v)) continue;
-                double dy = PeleaAmbush.difYaw(PeleaAmbush.yaw(base, v.getLocation()), ang);
-                if (Math.abs(dy) > ancho / 2 || !libre(o, v.getEyeLocation())) continue;
-                ya.add(v.getUniqueId());
-                golpeFuerte(v, fraccion(), h.nombre);
-                marcar(v);
-            }
-            return s >= total;
-        }
-    }
-
-    /** Tres ondas por el suelo con ritmo; cada una se anuncia con un pulso a sus pies un segundo antes. */
-    private final class Ondas extends Tecnica {
-        final double[] radio = {-1, -1, -1};
-        final List<Set<UUID>> tocados = List.of(new HashSet<>(), new HashSet<>(), new HashSet<>());
-        final Location centro;
-
-        Ondas() {
-            super(Habilidad.ONDAS);
-            centro = pie();
-        }
-
-        @Override
-        boolean paso(World w) {
-            boolean vivas = false;
-            for (int k = 0; k < 3; k++) {
-                long sale = aviso() + (long) k * a.ondasSeparacion;
-                if (radio[k] < 0) {
-                    if (t >= sale - Vigilante.Ajustes.AVISO_MINIMO && t < sale) {
-                        double q = (t - (sale - Vigilante.Ajustes.AVISO_MINIMO)) / (double) Vigilante.Ajustes.AVISO_MINIMO;
-                        if (t % 4 == 0) circulo(w, centro, 2.5 + q * 1.5, tono(q), 1.5f);
-                        if (t == sale - Vigilante.Ajustes.AVISO_MINIMO || t == sale - Vigilante.Ajustes.AVISO_MINIMO + 1) {
-                            Compat.soundPlayers(w, centro, "block.note_block.basedrum", 2.0f, 0.5f);
-                        }
-                        vivas = true;
-                    } else if (t >= sale) {
-                        anim();
-                        Compat.soundPlayers(w, centro, "entity.iron_golem.attack", 2.0f, 0.5f);
-                        Compat.sound(w, centro, "entity.generic.explode", 1.2f, 1.0f);
-                        radio[k] = 1.5;
-                    } else {
-                        vivas = true;
-                    }
-                }
-                if (radio[k] < 0 || radio[k] > a.ondasRadio) continue;
-                vivas = true;
-                radio[k] += 1.0;
-                circulo(w, centro, radio[k], RGB_AVISO_HASTA, 1.7f);
-                for (Player v : Fx.playersNear(centro, radio[k] + 1.5)) {
-                    if (tocados.get(k).contains(v.getUniqueId())) continue;
-                    double d = PeleaAmbush.distPlano(centro, v.getLocation());
-                    if (Math.abs(d - radio[k]) > 0.9 || Math.abs(v.getLocation().getY() - centro.getY()) > 1.5 || !enSuelo(v)) continue;
-                    tocados.get(k).add(v.getUniqueId());
-                    golpeFuerte(v, fraccion(), h.nombre);
-                    empujar(v, PeleaAmbush.plano(centro, v.getLocation(), new Vector(0, 0, 1)).multiply(0.4).setY(0.3), false);
-                }
-            }
-            return !vivas;
-        }
-    }
-
-    /** Un circulo se cierra sobre su presa y el le cae encima: hay que salir antes de que se cierre. */
-    private final class Sentencia extends Tecnica {
-        static final double FINAL = 2.0;
-        final UUID blanco;
-        final Location centro;
-
-        Sentencia(Player obj) {
-            super(Habilidad.SENTENCIA);
-            Player m = marcadoCerca(24);
-            Player b = m != null ? m : obj;
-            blanco = b.getUniqueId();
-            centro = Fx.ground(b.getLocation(), 6);
-        }
-
-        @Override
-        boolean paso(World w) {
-            float yaw = PeleaAmbush.yaw(pie(), centro);
-            mirar(yaw);
-            yawFijo = yaw;
             if (t < aviso()) {
-                double k = t / (double) aviso();
-                double r = a.sentenciaRadio - (a.sentenciaRadio - FINAL) * k;
-                circulo(w, centro, r, tono(k), 1.6f);
-                if (t % 8 == 0) circulo(w, centro, FINAL, RGB_ESTALLIDO, 1.0f);
-                if (t % 20 == 0) {
-                    Compat.soundPlayers(w, centro, "block.bell.use", 1.6f, 0.8f - (float) k * 0.3f);
-                    Player v = hc.plugin().getServer().getPlayer(blanco);
-                    if (v != null) hc.barra().aviso(v, Component.text("La sentencia se cierra: sal del círculo.", Paleta.VIGILANTE), 2);
+                if (t == 0) {
+                    centro = pie();
+                    Compat.soundPlayers(w, centro, "entity.breeze.inhale", 2.0f, 0.5f);
+                    Compat.sound(w, centro, "entity.hoglin.ambient", 1.8f, 0.4f);
                 }
+                try {
+                    cuerpo.setRotation(cuerpo.getLocation().getYaw(), -35);
+                } catch (Throwable ignorado) {
+                    // Sin alzar la cabeza, el sonido avisa igual.
+                }
+                Compat.spawn(w, Compat.ASH, centro.clone().add(0, alto * 0.8, 0), 6, ancho, alto * 0.4, ancho, 0.01);
                 return false;
             }
-            Location en = centro.clone();
-            en.setYaw(yaw);
-            mover(en);
-            anim();
-            Compat.spawn(w, Compat.EXPLOSION_EMITTER, centro.clone().add(0, 0.5, 0), 1);
-            Compat.soundPlayers(w, centro, "entity.generic.explode", 2.0f, 0.5f);
-            Compat.soundPlayers(w, centro, "block.anvil.land", 2.0f, 0.4f);
-            for (Player v : Fx.playersNear(centro, FINAL + 0.5)) {
-                if (Math.abs(v.getLocation().getY() - centro.getY()) > 3) continue;
-                golpeFuerte(v, fraccion(), h.nombre);
-                empujar(v, PeleaAmbush.plano(centro, v.getLocation(), new Vector(0, 0, 1)).multiply(0.5).setY(1.0), true);
+            if (onda < 0) {
+                rugir(w);
+                onda = 1.5;
+                return false;
             }
-            sacudir(centro, 10);
-            return true;
+            onda += 2.0;
+            Fx.ring(centro.clone().add(0, 0.6, 0), onda, Math.max(12, (int) (onda * 2.5)),
+                    l -> Compat.spawn(w, Compat.LARGE_SMOKE, l, 1, 0.1, 0.1, 0.1, 0.01));
+            ondaSuelo(w, centro, onda);
+            return onda >= a.rugidoRadio;
+        }
+
+        private void rugir(World w) {
+            Compat.soundPlayers(w, centro, "entity.ravager.roar", 3.0f, 0.5f);
+            Compat.sound(w, centro, "entity.zoglin.angry", 3.0f, 0.4f);
+            Compat.sound(w, centro, "entity.ghast.scream", 2.2f, 0.5f);
+            Compat.spawn(w, Compat.LARGE_SMOKE, centro.clone().add(0, alto * 0.7, 0), 20, ancho * 0.4, 0.3, ancho * 0.4, 0.06);
+            for (Player p : validosCerca(centro, a.rugidoRadio)) {
+                Compat.apply(p, "darkness", a.rugidoOscuridad, 0);
+                if (a.rugidoCordura > 0 && hc.esHardcore(p)) hc.cordura().sumar(p, -a.rugidoCordura);
+                empujar(p, PeleaAmbush.plano(centro, p.getLocation(), new Vector(0, 0, 1)).multiply(0.6).setY(0.25), false);
+                try {
+                    p.playHurtAnimation(PeleaParca.ladoDe(p, centro));
+                } catch (Throwable ignorado) {
+                    // Sin temblor, el grito se ha oido igual.
+                }
+            }
         }
     }
 
     // ================================================================ barra
 
     private Component tituloBarra() {
-        Component resto = actual != null ? Component.text(actual.h.nombre, Paleta.AVISO)
+        Component resto = estado == Estado.APARECE ? Component.text("Sale de la tierra", Paleta.AVISO)
+                : actual != null ? Component.text(actual.h.nombre, Paleta.AVISO)
                 : aturdido() ? Component.text("Aturdido", Paleta.BIEN)
                 : Component.text("Fase " + Parca.romano(fase) + " · " + nombreFase(fase), Paleta.TEXTO);
         return Paleta.vigilante("Vigilante").append(Component.text(" · ", Paleta.SEPARADOR)).append(resto);
@@ -1938,12 +2108,10 @@ final class PeleaVigilante implements Runnable {
     String estadoTexto() {
         if (cuerpo == null) return "sin cuerpo";
         long s = estado == Estado.PELEA ? (ticks - inicioPelea) / 20 : 0;
-        int marcados = 0;
-        for (long h : marcaHasta.values()) if (h > ticks) marcados++;
         Location l = cuerpo.getLocation();
-        return presaNombre + " | " + (estado == Estado.APARECE ? "apareciendo" : actual != null ? actual.h.nombre
-                : aturdido() ? "aturdido" : "pelea") + " | fase " + fase + " | vida " + Math.round(Amenazas.fraccion(cuerpo) * 100)
-                + " % | marcados " + marcados + " | pilares " + pilaresVivos() + " | " + s / 60 + ":"
+        return presaNombre + " | " + (estado == Estado.APARECE ? "saliendo" : actual != null ? actual.h.nombre
+                : aturdido() ? "aturdido" : "pelea") + " | fase " + fase + (furia ? " (furia)" : "") + " | vida "
+                + Math.round(Amenazas.fraccion(cuerpo) * 100) + " % | bloques en el aire " + efimeros.size() + " | " + s / 60 + ":"
                 + String.format(Locale.ROOT, "%02d", s % 60) + " | " + l.getWorld().getName() + " " + l.getBlockX() + " "
                 + l.getBlockY() + " " + l.getBlockZ() + " | " + escala.texto();
     }
@@ -1960,26 +2128,30 @@ final class PeleaVigilante implements Runnable {
         Location l = cuerpo.getLocation();
         World w = l.getWorld();
         cortarTecnica();
-        // Sus nucleos caen y se rompen; el ojo se apaga.
-        for (BlockDisplay d : orbita) {
-            if (d.isValid()) Compat.spawn(w, Compat.BLOCK, d.getLocation(), 20, 0.3, 0.3, 0.3, 0.1, Material.RAW_GOLD_BLOCK.createBlockData());
-        }
-        Compat.spawn(w, Compat.END_ROD, l.clone().add(0, alto() * 0.6, 0), 40, 0.6, 0.8, 0.6, 0.08);
-        Compat.soundPlayers(w, l, "block.beacon.deactivate", 2.0f, 0.4f);
+        // Cae como lo que es: un estruendo grave y la tierra que se lo traga a medias.
+        Compat.soundPlayers(w, l, "entity.zoglin.death", 3.0f, 0.4f);
+        Compat.sound(w, l, "entity.ravager.death", 2.2f, 0.5f);
+        Compat.sound(w, l, "block.rooted_dirt.break", 2.0f, 0.5f);
+        BlockData bd = materialSuelo(l);
+        Compat.spawn(w, Compat.BLOCK, l.clone().add(0, 0.3, 0), 60, ancho * 0.6, 0.3, ancho * 0.6, 0.15, bd);
+        Compat.spawn(w, Compat.DUST_PILLAR, l.clone().add(0, 0.2, 0), 30, ancho * 0.5, 0.1, ancho * 0.5, 0.25, bd);
+        Compat.spawn(w, Compat.LARGE_SMOKE, l.clone().add(0, alto * 0.4, 0), 24, ancho * 0.5, alto * 0.3, ancho * 0.5, 0.02);
         hc.seguro("vigilante", () -> gestor.botin(this, dano, vida, segundos));
         limpiar();
     }
 
-    /** Se va sin botin: tiempo, nadie cerca, el mundo se descarga o el staff. Sube al cielo en luz. */
+    /** Se va sin botin: tiempo, nadie cerca, el mundo se descarga o el staff. Se hunde en la tierra. */
     void irse(String motivo, Component aviso) {
         if (estado == Estado.FIN) return;
         cortarTecnica();
         if (cuerpo != null && cuerpo.isValid()) {
             World w = cuerpo.getWorld();
-            Location l = cuerpo.getLocation().add(0, 2, 0);
-            Compat.spawn(w, Compat.END_ROD, l, 60, 1, 3, 1, 0.15);
-            Compat.spawn(w, Compat.CLOUD, l, 30, 1, 1.5, 1, 0.05);
-            Compat.sound(w, l, "block.beacon.deactivate", 2.0f, 0.8f);
+            Location l = cuerpo.getLocation();
+            BlockData bd = materialSuelo(l);
+            Compat.spawn(w, Compat.BLOCK, l.clone().add(0, 0.3, 0), 60, ancho * 0.5, 0.3, ancho * 0.5, 0.15, bd);
+            Compat.spawn(w, Compat.LARGE_SMOKE, l.clone().add(0, 0.6, 0), 20, ancho * 0.5, 0.4, ancho * 0.5, 0.02);
+            Compat.sound(w, l, "entity.warden.dig", 2.0f, 0.6f);
+            Compat.sound(w, l, "entity.zoglin.ambient", 1.6f, 0.4f);
             if (aviso != null) for (Player o : Fx.viewersNear(l, 48)) o.sendMessage(aviso);
         }
         hc.plugin().bitacora().anotar("vigilante", "se-va", presaNombre, motivo, (System.currentTimeMillis() - nacio) / 1000 + " s");
@@ -1987,9 +2159,9 @@ final class PeleaVigilante implements Runnable {
     }
 
     /**
-     * Retira todo lo suyo (idempotente): habilidad, nucleos, ojo, orbita, pilares, barra, vuelo prestado
-     * y el cuerpo (si no esta muriendo: entonces vanilla lo tumba y lo quita). Pasan por aqui todos los
-     * finales: muere, se va, se para el plugin (Vigilante.parar) o se descarga su mundo.
+     * Retira todo lo suyo (idempotente): habilidad, bloques que saltan, barra, vuelo prestado y el cuerpo
+     * (si no esta muriendo: entonces vanilla lo tumba y lo quita). Pasan por aqui todos los finales: muere,
+     * se va, se para el plugin (Vigilante.parar) o se descarga su mundo.
      */
     void limpiar() {
         Tecnica tec = actual;
@@ -2001,12 +2173,7 @@ final class PeleaVigilante implements Runnable {
                 // Lo suyo se retira abajo igual.
             }
         }
-        quitarNucleos();
-        quitarOrbita();
-        Fx.safeRemove(ojo);
-        ojo = null;
-        for (Pilar p : pilares) Fx.safeRemove(p.d);
-        pilares.clear();
+        quitarEfimeros();
         quitarBarra();
         devolverVuelo(true);
         if (cuerpo != null && cuerpo.isValid() && !cuerpo.isDead()) Fx.safeRemove(cuerpo);
@@ -2016,7 +2183,7 @@ final class PeleaVigilante implements Runnable {
 
     // ================================================================ autotest
 
-    /** Lo de la pelea que no necesita servidor: habilidades, la mirada y los pilares. */
+    /** Lo de la pelea que no necesita servidor: habilidades, fases, sorteo, golpes por distancia, saltos y la caja. */
     static void autotest(Autotest.Hoja h, Vigilante.Ajustes a) {
         Set<String> ids = new HashSet<>(), alias = new HashSet<>();
         boolean bien = true;
@@ -2030,34 +2197,97 @@ final class PeleaVigilante implements Runnable {
             for (Habilidad x : Habilidad.values()) if (x.enFase(f) && x.peso > 0) n++;
             h.ok("fase " + f + ": " + n + " habilidades (>= 3)", n >= 3);
         }
-        h.ok("fase 1: machaque, salto y barrido", Habilidad.MACHAQUE.enFase(1) && Habilidad.SALTO.enFase(1) && Habilidad.BARRIDO.enFase(1)
-                && !Habilidad.EMBESTIDA.enFase(1));
-        h.ok("fase 3: rayo, nucleos y tiron; fase 4: faro, ondas y sentencia", Habilidad.RAYO.enFase(3) && Habilidad.NUCLEOS.enFase(3)
-                && Habilidad.TIRON.enFase(3) && Habilidad.FARO.enFase(4) && Habilidad.ONDAS.enFase(4) && Habilidad.SENTENCIA.enFase(4)
-                && !Habilidad.FARO.enFase(3));
-        h.ok("sorteo: sin candidatas, nada", sortear(List.of(), null, 0.5) == null);
-        h.igual("sorteo: con una sola, esa", Habilidad.RAYO, sortear(List.of(Habilidad.RAYO), Habilidad.RAYO, 0.9));
-        h.igual("sorteo: por peso (5 de 8 para el machaque)", Habilidad.MACHAQUE,
-                sortear(List.of(Habilidad.MACHAQUE, Habilidad.SALTO), null, 0.6));
-        h.igual("sorteo: la ultima pesa menos (1,75 de 4,75)", Habilidad.SALTO,
-                sortear(List.of(Habilidad.MACHAQUE, Habilidad.SALTO), Habilidad.MACHAQUE, 0.6));
+        h.ok("fase 1: martillazo, cabezazo y embestida; sin hundimiento ni rugido", Habilidad.MARTILLAZO.enFase(1)
+                && Habilidad.LANZAMIENTO.enFase(1) && Habilidad.EMBESTIDA.enFase(1) && !Habilidad.HUNDIMIENTO.enFase(1)
+                && !Habilidad.RUGIDO.enFase(1));
+        boolean todas = true;
+        for (Habilidad x : Habilidad.values()) todas &= x.enFase(2) && x.enFase(3) && x.enFase(4);
+        h.ok("de la fase II en adelante, las cinco", todas);
+        h.ok("sorteo: sin candidatas, nada", sortear(List.of(), null, false, 0.5) == null);
+        h.igual("sorteo: con una sola, esa", Habilidad.RUGIDO, sortear(List.of(Habilidad.RUGIDO), Habilidad.RUGIDO, false, 0.9));
+        h.igual("sorteo: por peso (5 de 9 para el martillazo)", Habilidad.MARTILLAZO,
+                sortear(List.of(Habilidad.MARTILLAZO, Habilidad.EMBESTIDA), null, false, 0.5));
+        h.igual("sorteo: la ultima pesa menos (1,75 de 5,75)", Habilidad.EMBESTIDA,
+                sortear(List.of(Habilidad.MARTILLAZO, Habilidad.EMBESTIDA), Habilidad.MARTILLAZO, false, 0.5));
+        h.cerca("furia: los hundimientos pesan el doble", 2 * Habilidad.HUNDIMIENTO.peso, pesoEn(Habilidad.HUNDIMIENTO, true), 1e-9);
+        h.igual("furia: con hundimiento (6) y martillazo (5), al 0,5 sale el hundimiento", Habilidad.HUNDIMIENTO,
+                sortear(List.of(Habilidad.HUNDIMIENTO, Habilidad.MARTILLAZO), null, true, 0.5));
+        int hNormal = esperaEfectiva(Habilidad.HUNDIMIENTO, a.hab(Habilidad.HUNDIMIENTO).espera(), false, a.furiaEspera);
+        int hFuria = esperaEfectiva(Habilidad.HUNDIMIENTO, a.hab(Habilidad.HUNDIMIENTO).espera(), true, a.furiaEspera);
+        int mFuria = esperaEfectiva(Habilidad.MARTILLAZO, a.hab(Habilidad.MARTILLAZO).espera(), true, a.furiaEspera);
+        h.ok("furia: hundimientos mas frecuentes (" + hNormal + " -> " + hFuria + " ticks) y mas que los demas",
+                hFuria < hNormal && hFuria / (double) hNormal < mFuria / (double) a.hab(Habilidad.MARTILLAZO).espera());
+        h.igual("furia: el rugido no se acelera", a.hab(Habilidad.RUGIDO).espera(),
+                esperaEfectiva(Habilidad.RUGIDO, a.hab(Habilidad.RUGIDO).espera(), true, a.furiaEspera));
+        boolean minimo = true;
+        for (Habilidad x : Habilidad.values()) minimo &= esperaEfectiva(x, 20, true, 0.3) >= 20;
+        h.ok("furia: ninguna espera baja de 1 s aunque la config lo pida", minimo);
 
-        // La mirada: yaw 0 mira a +Z.
-        h.ok("mirada: delante a 10 bloques, visto", enMirada(0, 0, 10, 0f, a.miradaAlcance, a.miradaAngulo));
-        h.ok("mirada: detras, no", !enMirada(0, 0, -10, 0f, a.miradaAlcance, a.miradaAngulo));
-        h.ok("mirada: a 40 grados de lado (cono de 70), no", !enMirada(Math.sin(Math.toRadians(40)) * 10, 0,
-                Math.cos(Math.toRadians(40)) * 10, 0f, a.miradaAlcance, a.miradaAngulo));
-        h.ok("mirada: a 30 grados de lado, si", enMirada(-Math.sin(Math.toRadians(30)) * 10, 0,
-                Math.cos(Math.toRadians(30)) * 10, 0f, a.miradaAlcance, a.miradaAngulo));
-        h.ok("mirada: mas alla del alcance, no", !enMirada(0, 0, a.miradaAlcance + 1, 0f, a.miradaAlcance, a.miradaAngulo));
-        h.igual("mirada: dos segundos para marcar", 40, a.miradaTicks);
+        // El martillazo por distancias.
+        h.igual("martillazo: a 2, 7, 13 y 20 bloques = cerca, medio, lejos y fuera",
+                List.of(Zona.CERCA, Zona.MEDIO, Zona.LEJOS, Zona.FUERA), List.of(zona(2, a), zona(7, a), zona(13, a), zona(20, a)));
+        h.ok("martillazo: radios en orden (cerca < medio < lejos)", a.martilloCerca < a.martilloMedio && a.martilloMedio < a.martilloLejos);
+        double vy = velocidadParaAltura(a.martilloAltura);
+        h.cerca("martillazo: lanzado hacia arriba " + Math.round(a.martilloAltura) + " bloques", a.martilloAltura, alturaCon(vy), 0.3);
+        h.ok("martillazo: altura de serie entre 15 y 20 bloques", a.martilloAltura >= 15 && a.martilloAltura <= 20);
+        h.ok("y su velocidad cabe en el paquete (" + Math.round(vy * 100) / 100.0 + ")", vy < VELOCIDAD_MAXIMA);
+        double lejos = distanciaEmpuje(a.martilloEmpujeMedio, EMPUJE_MEDIO_ALTO);
+        h.ok("martillazo: a media distancia sale empujado muy lejos (" + Math.round(lejos) + " bloques, >= 15)", lejos >= 15);
+        h.ok("martillazo: mas lejos, un empujon leve (< 8 bloques)", distanciaEmpuje(a.martilloEmpujeLejos, 0.35) < 8);
+        int vuelo = ticksDeVuelo(a.martilloSalto);
+        double vh = velocidadHorizontal(12, vuelo);
+        h.cerca("martillazo: el salto llega a 12 bloques en su vuelo (el primer tick frena el suelo)", 12,
+                avanceDesdeSuelo(vh, vuelo), 1e-6);
+        h.ok("y saltando a algo mas alto vuela menos", ticksDeVuelo(a.martilloSalto, 3) < vuelo);
+        double ingenua = avanceDesdeSuelo(12 / avanceAire(1, vuelo), vuelo);
+        h.ok("sin contar el freno del suelo se quedaria corto (" + Math.round(ingenua * 10) / 10.0 + " de 12)", ingenua < 11);
+        h.ok("martillazo: el salto se ve en el aire mas de un segundo (" + vuelo + " ticks)", vuelo > 20);
+        ConfigLoca.probar(h);
 
-        // Los pilares tapan: el ojo a 3,7 de alto en (0, 0) y el jugador en (0, 10) a 1,6; pilar en (0, 5) de 0 a 4,5.
-        h.ok("pilar en medio: tapa", tapaPilar(0, 3.7, 0, 0, 1.6, 10, 0, 5, 0, PILAR_ALTO, PILAR_RADIO));
-        h.ok("pilar a 2 bloques de la linea: no tapa", !tapaPilar(0, 3.7, 0, 0, 1.6, 10, 2, 5, 0, PILAR_ALTO, PILAR_RADIO));
-        h.ok("pilar detras del jugador: no tapa", !tapaPilar(0, 3.7, 0, 0, 1.6, 10, 0, 13, 0, PILAR_ALTO, PILAR_RADIO));
-        h.ok("linea por encima del pilar: no tapa", !tapaPilar(0, 9, 0, 0, 8, 10, 0, 5, 0, PILAR_ALTO, PILAR_RADIO));
-        h.ok("el faro no deja huecos: su luz es mas ancha que lo que gira cada 2 ticks",
-                Math.max(9, 360.0 / a.faroTicksVuelta * 2.2) >= 360.0 / a.faroTicksVuelta * 2);
+        // Cabezazo, embestida, hundimiento y rugido.
+        h.ok("cabezazo: lo manda por los aires (>= 6 bloques)", alturaCon(velocidadParaAltura(a.lanzaAltura)) >= 6);
+        h.cerca("embestida: de media avanza su velocidad por tick", a.embestidaVelocidad,
+                impulsoSuelo(a.embestidaVelocidad) * (1 + ROCE_SUELO) / 2, 1e-9);
+        h.ok("embestida: rapida (>= 15 bloques por segundo)", a.embestidaVelocidad * 20 >= 15);
+        h.ok("hundimiento: sale lanzando hacia arriba (>= 8 bloques)", alturaCon(velocidadParaAltura(a.hundeAltura)) >= 8);
+        h.ok("rugido: oscuridad de 2 a 3 s de serie (" + a.rugidoOscuridad + " ticks)", a.rugidoOscuridad >= 40 && a.rugidoOscuridad <= 60);
+        h.igual("rugido: 10 s en la config se quedan en 3", 60, ticksOscuridad(10));
+        h.ok("rugido: la oscuridad nunca es continua (espera >= 5 veces lo que dura)",
+                a.hab(Habilidad.RUGIDO).espera() >= 5 * a.rugidoOscuridad);
+
+        // La caja escalada.
+        double an = anchoDe(a.escalaCuerpo), al = altoDe(a.escalaCuerpo);
+        h.cerca("caja: escala 2,6 de serie", 2.6, a.escalaCuerpo, 1e-9);
+        h.ok("caja: " + Math.round(an * 100) / 100.0 + " x " + Math.round(al * 100) / 100.0 + " cabe en un hueco de 4x4x4",
+                Math.ceil(an) <= 4 && Math.ceil(al) <= 4);
+        h.ok("sube un escalon de 1 bloque sin saltar (paso " + a.paso + ")", a.paso >= 1.0);
+        h.ok("el atasco salta antes de 10 s", a.atascoTicks <= 200);
+        h.ok("bloques que saltan: tope por golpe <= tope del Vigilante", a.efimerosPorGolpe <= a.efimerosMaximo);
+        h.ok("nada de botin en lo que salta (menas, metales, amatista, bedrock)", valioso("DIAMOND_ORE") && valioso("IRON_BLOCK")
+                && valioso("AMETHYST_BLOCK") && valioso("BEDROCK") && valioso("SPAWNER") && !valioso("GRASS_BLOCK")
+                && !valioso("DEEPSLATE") && !valioso("OAK_PLANKS"));
+        h.ok("la velocidad nunca pasa del paquete", limitar(new Vector(9, -9, 2)).getX() == VELOCIDAD_MAXIMA
+                && limitar(new Vector(9, -9, 2)).getY() == -VELOCIDAD_MAXIMA);
+    }
+
+    /** Una config con numeros disparatados: los topes de Ajustes la dejan jugable. */
+    private static final class ConfigLoca {
+        static void probar(Autotest.Hoja h) {
+            org.bukkit.configuration.file.YamlConfiguration y = new org.bukkit.configuration.file.YamlConfiguration();
+            y.set("habilidades.martillazo.altura-lanzado", 60);
+            y.set("habilidades.rugido.espera-ticks", 40);
+            y.set("habilidades.rugido.oscuridad-segundos", 30);
+            y.set("cuerpo.paso", 0.4);
+            y.set("cuerpo.escala", 9);
+            y.set("efimeros.por-golpe", 500);
+            y.set("efimeros.maximo", 900);
+            Vigilante.Ajustes loco = new Vigilante.Ajustes(y);
+            h.ok("config loca: lanzado como mucho 24 bloques", loco.martilloAltura <= 24);
+            h.ok("config loca: el rugido no se repite antes de 15 s", loco.hab(Habilidad.RUGIDO).espera() >= 300);
+            h.ok("config loca: oscuridad como mucho 3 s", loco.rugidoOscuridad <= 60);
+            h.ok("config loca: sigue subiendo escalones (paso >= 1,1)", loco.paso >= 1.1);
+            h.ok("config loca: escala como mucho 4", loco.escalaCuerpo <= 4);
+            h.ok("config loca: como mucho 24 bloques por golpe y 64 a la vez", loco.efimerosPorGolpe <= 24 && loco.efimerosMaximo <= 64);
+        }
     }
 }

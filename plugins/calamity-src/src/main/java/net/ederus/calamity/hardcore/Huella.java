@@ -886,6 +886,8 @@ final class Huella implements Listener {
         if (hc.canalizando(p)) return true;
         if (hc.exentos() != null && hc.exentos().parca(p.getUniqueId())) return true;
         if (hc.parca() != null && hc.valor("parca", () -> hc.parca().persigue(p), false)) return true;
+        // Ley 6: con el Vigilante encima (presa o peleando con el) tampoco cuenta lo quieto.
+        if (hc.vigilante() != null && hc.valor("vigilante", () -> hc.vigilante().persigue(p), false)) return true;
         // 1.2: en la zona spawn solo cuenta la Grieta. Con ella apagada (parca.spawn.activa false) no
         // cuenta nada: la PARCA de los 10 minutos no viene nunca al spawn.
         if (!grieta.ajustes().activa() && hc.enSpawn(p)) return true;

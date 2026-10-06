@@ -19,16 +19,16 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Calamity 1.13.0 · La ficha del Vigilante en el catalogo de anomalias de EDM, como la de Ambush
- * (AmbushType): clase Monarca, elemento tierra y brillo amarillo. Sale en /anomaly (menu, start, here,
- * test) con sus doce habilidades.
+ * La ficha del Vigilante en el catalogo de anomalias de EDM, como la de Ambush (AmbushType): clase
+ * Monarca, elemento tierra y sin brillo (sin color de brillo EDM tampoco pinta su pilar de luz: viene de
+ * la tierra y por sorpresa). Sale en /anomaly (menu, start, here, test) con sus cinco habilidades.
  *
- * El que cae sobre un jugador no pasa por EDM (EDM lleva una anomalia a la vez y aqui puede haber dos
+ * El que sale bajo un jugador no pasa por EDM (EDM lleva una anomalia a la vez y aqui puede haber dos
  * Vigilantes). Abierto a mano desde /anomaly es una prueba (VigilanteEdm): sin presa ni botin de
  * Calamity, contra quien este cerca.
  *
  * Se registra al arrancar y se vuelve a mirar cada minuto (si EDM recarga su modulo, el catalogo nuevo
- * no lo trae). Sin el modulo de anomalias no pasa nada: el Vigilante cae igual.
+ * no lo trae). Sin el modulo de anomalias no pasa nada: el Vigilante sale igual.
  */
 final class VigilanteType implements AnomalyType {
 
@@ -49,7 +49,7 @@ final class VigilanteType implements AnomalyType {
             return t;
         } catch (Throwable t) {
             gestor.hc().plugin().getLogger().warning("[Calamity] El Vigilante no se puede registrar como anomalía de EDM"
-                    + " (cae igual sobre los jugadores): " + t);
+                    + " (sale igual bajo los jugadores): " + t);
             return null;
         }
     }
@@ -97,9 +97,10 @@ final class VigilanteType implements AnomalyType {
         return Paleta.VIGILANTE;
     }
 
+    /** Sin brillo: ni contorno de color ni pilar de luz en /anomaly. */
     @Override
     public NamedTextColor glowColor() {
-        return NamedTextColor.YELLOW;
+        return null;
     }
 
     @Override
@@ -109,7 +110,7 @@ final class VigilanteType implements AnomalyType {
 
     @Override
     public Material icon() {
-        return Material.CARVED_PUMPKIN;
+        return Material.ZOGLIN_SPAWN_EGG;
     }
 
     @Override
@@ -119,25 +120,24 @@ final class VigilanteType implements AnomalyType {
 
     @Override
     public String tagline() {
-        return "El gólem que cae del cielo sobre quien se aleja demasiado";
+        return "La bestia que sale de la tierra tras quien se aleja demasiado";
     }
 
     @Override
     public List<String> origin() {
         return List.of(
                 "Pasados los mil bloques del spawn, abre",
-                "tres cofres o mata un minijefe: una luz",
-                "amarilla te mira desde lo alto y cae.");
+                "tres cofres o mata un minijefe: la tierra",
+                "late bajo tus pies y algo sale escarbando.");
     }
 
     @Override
     public List<String> threat() {
         return List.of(
-                "Anomalía Monarca: una pelea en cuatro fases.",
-                "Si su ojo te ve dos segundos, te marca y",
-                "sus golpes van a ti. Cúbrete con el terreno",
-                "o con sus pilares, rompe sus núcleos y sal",
-                "del círculo de la Sentencia.");
+                "Anomalía Monarca: un zoglin gigante en cuatro",
+                "fases. Salta y aplasta el suelo, embiste, se",
+                "hunde y sale bajo tus pies. Su rugido nubla",
+                "la vista. Bajo el 25 % entra en furia.");
     }
 
     /** Solo para el menu: la vida de verdad sale de la escala de Calamity. Esta es la de N 60 solo. */

@@ -710,19 +710,24 @@ hardcore:
     skin-fase-2: Nagazaki_Yakuza
     fase-2-vida: 0.5
 
-  # ------------------------------------------------------------------ 1b2. EL VIGILANTE (1.13.0)
-  # Anomalia Monarca de tierra, un escalon bajo la Parca: un golem de hierro gigante con un ojo de
-  # luz amarilla en el pecho y tres nucleos que le giran alrededor. Cae del cielo como un meteoro
-  # sobre quien, pasados llegada.bloques del borde de la zona spawn, abre llegada.cofres cofres o
-  # mata llegada.minijefes minijefes ahi (cofres de estructura y de ruinas). Antes, dos avisos.
-  # Una vez al dia por jugador y como mucho llegada.maximo-vivos a la vez (los que caen cuentan).
-  # Su ojo marca a quien ve dos segundos sin nada en medio: sus golpes fuertes van a el. Cuatro
-  # fases por vida (75/50/25 %): Centinela, Demoledor, Ojo y Vigilante.
+  # ------------------------------------------------------------------ 1b2. EL VIGILANTE
+  # Anomalia Monarca de tierra, un escalon bajo la Parca: un zoglin gigante que sale escarbando de la
+  # tierra detras de quien, pasados llegada.bloques del borde de la zona spawn, abre llegada.cofres
+  # cofres o mata llegada.minijefes minijefes ahi (cofres de estructura y de ruinas). Antes, dos avisos;
+  # con el segundo el suelo retumba bajo la presa y algo se acerca escarbando. Una vez al dia por
+  # jugador y como mucho llegada.maximo-vivos a la vez (los que vienen escarbando cuentan). No viene si
+  # ya tiene encima la Parca, un contrato de Ambush u otro Vigilante (una amenaza grande a la vez).
+  # Cuatro fases por vida (75/50/25 %): Acecho, Bajo tierra, Demolicion y Furia.
+  # Sin brillo, sin luces y sin nada pegado al cuerpo; los bloques que saltan del suelo son efimeros
+  # (no se colocan ni sueltan nada). Sonidos de vanilla y graves; nunca campanas (son de la Parca).
   # Los golpes fuertes quitan una parte de TU vida maxima (entre golpes.minimo y golpes.maximo),
   # sin que la armadura los pare, y siempre se avisan en el suelo al menos 20 ticks antes (un
-  # aviso-ticks menor se sube solo). Con la vida llena nunca te matan, ni dos juntos.
+  # aviso-ticks menor se sube solo). Con la vida llena nunca te matan, ni dos juntos, y quien sale
+  # volando por un golpe suyo no recibe dano de caida.
   # Staff: /calamity vigilant spawn [player] | test | info [player] | health <0-1>
   #        | ability <name> | remove | reset <player>. Tambien sale en /anomaly (prueba sin botin).
+  # Las claves del golem de la 1.13.0 que ya no se usan (escala-cuerpo, velocidad, atasco-segundos,
+  # llegada.caida-ticks, golpes.marcado-extra, mirada y las habilidades viejas) se ignoran.
   # Si esta seccion no esta en el config.yml del servidor, valen estos mismos valores.
   vigilante:
     activo: true
@@ -730,59 +735,61 @@ hardcore:
       bloques: 1000               # desde el borde de la zona spawn (la medida de hardcore.distancia)
       cofres: 3                   # cofres abiertos pasada la raya, en el dia (0 = no cuentan)
       minijefes: 1                # o minijefes muertos pasada la raya (0 = no cuentan)
-      maximo-vivos: 2             # Vigilantes vivos o cayendo a la vez en todo el servidor
-      aviso-segundos: 5           # del aviso 1 al 2, y del 2 al meteoro
-      caida-ticks: 40             # lo que tarda el meteoro en caer, con su marca en el suelo
-      distancia: 10               # a cuantos bloques por detras de la presa cae
-      impacto-radio: 4
-      impacto-fraccion: 0.25      # el golpe del meteoro, como golpe fuerte
+      maximo-vivos: 2             # Vigilantes vivos o viniendo a la vez en todo el servidor
+      aviso-segundos: 5           # del aviso 1 al 2; con el 2 empieza a escarbar hacia la presa
+      temblor-ticks: 80           # lo que tarda en llegar escarbando bajo tierra (20 a 200)
+      emerger-aviso-ticks: 24     # el suelo se agrieta donde sale antes de reventar (nunca menos de 20)
+      distancia: 10               # a cuantos bloques por detras de la presa sale
+      impacto-radio: 4            # al reventar el suelo: golpe fuerte a quien este encima
+      impacto-fraccion: 0.25
     vida-base: 360                # vida logica = base x (1 + por-nivel x (N-1)) x jugadores x Poder x dificultad
     vida-por-nivel: 0.10
     extra-nivel: 8                # N = el nivel de Calamity mas alto del grupo + esto (la Parca, +10)
-    golpe-base: 9                 # su golpe a mano (attack_damage), con el mismo escalado
+    golpe-base: 9                 # su mordisco a mano (attack_damage), con el mismo escalado
     golpe-por-nivel: 0.04
     tope-golpe-fraccion: 0.08     # ningun golpe le quita mas que esto de su vida logica
-    escala-cuerpo: 2.2            # tamano del golem
-    velocidad: 0.30
-    duracion-minutos: 10          # sin caer en esto, vuelve al cielo sin botin
+    cuerpo:
+      escala: 2.6                 # tamano del zoglin (1 a 4); su caja mide 1,4 x esto de ancho y de alto
+      velocidad: 0.34             # movement_speed de su IA (0,1 a 0,6)
+      paso: 1.6                   # step_height: sube un bloque de desnivel sin saltar (1,1 a 2,5)
+      furia-velocidad: 1.3        # bajo el 25 %, velocidad x esto
+      furia-espera: 0.65          # bajo el 25 %, las esperas de sus habilidades x esto (los hundimientos, aun menos)
+      atasco-segundos: 4          # sin alejarse del sitio ni llegar a su objetivo tanto rato: se hunde y sale debajo
+    duracion-minutos: 10          # sin caer en esto, se hunde en la tierra sin botin
     abandono-segundos: 30         # sin nadie a radio-pelea tanto tiempo, se va
-    atasco-segundos: 15           # sin golpear tanto tiempo, salta hacia su objetivo
     radio-pelea: 48
-    radio-grupo: 24               # quien este a esto al caer cuenta para su escala
+    radio-grupo: 24               # quien este a esto al salir cuenta para su escala
     escala:
       por-jugador: 0.35           # vida x(1 + esto) por cada jugador de mas, contando los que se suman
       jugadores-tope: 5
       poder-cada: 2000            # cada tanto de Poder (/flex) es un tramo
       poder-vida: 0.06            # vida +6 % por tramo
-      poder-dano: 0.04            # golpe a mano +4 % por tramo
+      poder-dano: 0.04            # mordisco +4 % por tramo
       poder-tope-tramos: 6
       poder-placeholder: "%edm_poder%"   # solo si la API de EDM no responde
     golpes:
       minimo: 0.25                # fraccion de tu vida maxima; los golpes fuertes suben con dificultad-amenazas
       maximo: 0.90                # nunca 1: con la vida llena no te mata
-      marcado-extra: 0.25         # al marcado, un 25 % mas
       ventana-ticks: 10           # dos golpes fuertes en esta ventana no pasan de maximo entre los dos
-    mirada:
-      alcance: 24
-      angulo: 70                  # ancho total del cono de luz, en grados
-      segundos: 2                 # visto tanto tiempo sin nada en medio, queda marcado
-      marca-segundos: 15
+    efimeros:
+      por-golpe: 12               # bloques del suelo que saltan en cada golpe (como mucho 24)
+      maximo: 40                  # en el aire a la vez por Vigilante (como mucho 64)
+      vida-ticks: 60              # se retiran a los 3 s aunque no hayan caido
+    ambiente-segundos: 6          # cada cuanto suena algo de Halloween alrededor (lamentos, susurros, la cueva)
     habilidades:
       # espera-ticks: hasta que la repite; aviso-ticks: lo que se ve en el suelo antes; fraccion: de tu vida maxima.
-      machaque: {espera-ticks: 120, aviso-ticks: 24, fraccion: 0.30, radio: 5.5, angulo: 120}
-      salto: {espera-ticks: 220, aviso-ticks: 24, fraccion: 0.35, radio: 3.5, onda-fraccion: 0.25, onda-radio: 10}
-      barrido: {espera-ticks: 240, aviso-ticks: 24, fraccion: 0.30, radio: 14, angulo: 120}
-      embestida: {espera-ticks: 200, aviso-ticks: 24, fraccion: 0.45, largo: 20}
-      escombros: {espera-ticks: 260, aviso-ticks: 28, fraccion: 0.30, radio: 2.2, circulos: 5}
-      pilares: {espera-ticks: 600, cuantos: 6, segundos: 30}
-      rayo: {espera-ticks: 240, aviso-ticks: 30, fraccion: 0.45}
-      # Los nucleos: golpes que aguanta cada uno (+ por jugador de mas) y segundos para romperlos;
-      # rotos a tiempo, aturdido; si no, cada uno estalla con fraccion en su radio.
-      nucleos: {espera-ticks: 900, fraccion: 0.50, golpes: 4, golpes-por-jugador: 2, segundos: 14, radio: 5, aturdido-segundos: 6, aturdido-dano-extra: 0.30}
-      tiron: {espera-ticks: 300, aviso-ticks: 24, distancia-minima: 12, fuerza: 1.6}
-      faro: {espera-ticks: 600, aviso-ticks: 20, fraccion: 0.35, vueltas: 2, ticks-por-vuelta: 80, adelanto-ticks: 20, alcance: 20}
-      ondas: {espera-ticks: 360, aviso-ticks: 20, fraccion: 0.30, separacion-ticks: 24, radio: 16}
-      sentencia: {espera-ticks: 420, aviso-ticks: 60, fraccion: 0.75, radio: 8}
+      # Martillazo: salta (salto = su velocidad hacia arriba) hacia su objetivo y cae aplastando el suelo.
+      # Hasta radio-cerca sales lanzado hacia arriba altura-lanzado bloques (como mucho 24); hasta
+      # radio-medio, empujado muy lejos (empuje-medio) con fraccion-medio; hasta radio-lejos, un empujon.
+      martillazo: {espera-ticks: 140, aviso-ticks: 20, fraccion: 0.30, alcance: 22, salto: 1.3, radio-cerca: 4.5, radio-medio: 10, radio-lejos: 16, altura-lanzado: 18, fraccion-medio: 0.25, empuje-medio: 3.6, empuje-lejos: 1.0}
+      # Cabezazo: embiste a uno (velocidad en bloques por tick) y lo manda altura bloques hacia arriba.
+      lanzamiento: {espera-ticks: 100, aviso-ticks: 20, fraccion: 0.30, alcance: 10, velocidad: 1.1, altura: 10}
+      # Embestida en linea recta de largo bloques; contra una pared queda aturdido y recibe mas dano.
+      embestida: {espera-ticks: 160, aviso-ticks: 20, fraccion: 0.35, largo: 24, velocidad: 1.0, empuje: 1.6, aturdido-segundos: 2, aturdido-dano-extra: 0.30}
+      # Se hunde, va bajo tierra (velocidad) hasta uno al azar y sale debajo: a radio, lanzado altura bloques.
+      hundimiento: {espera-ticks: 320, aviso-ticks: 20, fraccion: 0.30, radio: 3, altura: 14, velocidad: 0.9}
+      # Sin dano: Oscuridad (1 a 3 s, nunca continua: no se repite antes de 300 ticks) y cordura menos.
+      rugido: {espera-ticks: 400, aviso-ticks: 20, radio: 16, oscuridad-segundos: 2.5, cordura: 4}
     botin:
       horas-entre-cobros: 24
       participacion-minima: 0.10  # de su vida logica, para cobrar

@@ -1044,6 +1044,8 @@ public final class Hardcore implements Listener {
     private void minijefeSiTocaCordura(Player p, Cordura.Estado e) {
         // Ley 6: una amenaza grande a la vez. Con la PARCA encima no viene nadie mas.
         if (valor("parca", () -> parca.persigue(p), false)) return;
+        // Tampoco con el Vigilante encima: su rugido quita cordura y no puede traer otra amenaza.
+        if (vigilante != null && valor("vigilante", () -> vigilante.persigue(p), false)) return;
         long ahora = System.currentTimeMillis();
         if (Reclamo.faltanMinutos(ultimoMinijefe(p), ahora, minutosMinijefe()) > 0) return;
 

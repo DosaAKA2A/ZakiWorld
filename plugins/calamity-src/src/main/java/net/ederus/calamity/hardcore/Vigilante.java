@@ -5,39 +5,33 @@ import net.ederus.edm.comun.Compat;
 import net.ederus.edm.comun.Fx;
 import net.ederus.edm.comun.Poder;
 import net.kyori.adventure.text.Component;
-import org.bukkit.Color;
 import org.bukkit.Location;
-import org.bukkit.Material;
 import org.bukkit.OfflinePlayer;
+import org.bukkit.SoundCategory;
 import org.bukkit.World;
+import org.bukkit.block.data.BlockData;
 import org.bukkit.command.CommandSender;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.file.YamlConfiguration;
-import org.bukkit.entity.BlockDisplay;
-import org.bukkit.entity.Display;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.LivingEntity;
 import org.bukkit.entity.Player;
 import org.bukkit.entity.Projectile;
-import org.bukkit.entity.Shulker;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
 import org.bukkit.event.HandlerList;
 import org.bukkit.event.Listener;
+import org.bukkit.event.entity.EntityChangeBlockEvent;
 import org.bukkit.event.entity.EntityDamageByEntityEvent;
 import org.bukkit.event.entity.EntityDamageEvent;
 import org.bukkit.event.entity.EntityDeathEvent;
 import org.bukkit.event.entity.EntityTargetEvent;
-import org.bukkit.event.player.PlayerInteractAtEntityEvent;
-import org.bukkit.event.player.PlayerInteractEntityEvent;
 import org.bukkit.event.player.PlayerQuitEvent;
 import org.bukkit.event.world.WorldUnloadEvent;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.persistence.PersistentDataType;
 import org.bukkit.plugin.Plugin;
-import org.bukkit.util.Transformation;
-import org.joml.AxisAngle4f;
-import org.joml.Vector3f;
+import org.bukkit.util.Vector;
 
 import java.security.SecureRandom;
 import java.time.Duration;
@@ -45,7 +39,6 @@ import java.util.ArrayList;
 import java.util.EnumMap;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -56,20 +49,21 @@ import java.util.UUID;
 import java.util.function.Predicate;
 
 /**
- * Calamity 1.13.0 · El Vigilante: la anomalia Monarca de tierra, un escalon bajo la Parca.
+ * El Vigilante: la anomalia Monarca de tierra de Calamity, un escalon bajo la Parca.
  *
- * Un golem de hierro a 2,2 veces su tamano con un ojo de luz amarilla en el pecho y tres nucleos
- * que le giran alrededor. Baja del cielo como un meteoro sobre quien se adentra demasiado: pasados
- * llegada.bloques (1.000) del borde de la zona spawn (la medida de Distancia.bloques), al abrir
- * llegada.cofres (3) cofres o matar llegada.minijefes (1) minijefe ahi. Antes, dos avisos (titulo
- * breve y barra de accion con la Paleta) y la marca de donde cae. Una vez al dia por jugador y como
- * mucho llegada.maximo-vivos (2) a la vez, contando los que estan cayendo.
+ * Un Zoglin gigante (cuerpo.escala, 2,6) que sale escarbando de la tierra detras de quien se adentra
+ * demasiado: pasados llegada.bloques (1.000) del borde de la zona spawn (la medida de
+ * Distancia.bloques), al abrir llegada.cofres (3) cofres o matar llegada.minijefes (1) minijefe ahi.
+ * Antes, dos avisos (titulo breve y barra de accion con la Paleta); con el segundo el suelo empieza a
+ * retumbar bajo la presa y algo se acerca escarbando (gruñidos graves, tierra que se remueve, un
+ * lamento lejano). Una vez al dia por jugador y como mucho llegada.maximo-vivos (2) a la vez, contando
+ * los que vienen escarbando. Ley 6: no viene si ya tiene encima la Parca o un contrato de Ambush.
  *
- * Esto es el gestor (como Ambush para PeleaAmbush): las cuentas de la llegada, la caida, el botin
+ * Esto es el gestor (como Ambush para PeleaAmbush): las cuentas de la llegada, el temblor, el botin
  * por la Aduana, el comando de staff (/calamity vigilant), el unico Listener de la familia y su
  * ficha en el catalogo de EDM (VigilanteType, sale en /anomaly como las demas). La pelea es
- * PeleaVigilante y se mueve con la tarea de 2 ticks de Amenazas: no hay ninguna tarea propia, la
- * caida tambien va colgada de esa misma tarea.
+ * PeleaVigilante y se mueve con la tarea de 2 ticks de Amenazas: no hay ninguna tarea propia, el
+ * temblor de la llegada tambien va colgado de esa misma tarea.
  *
  * Como Ambush y por lo mismo, la pelea de verdad no pasa por EDM: EDM solo lleva una anomalia a la
  * vez y aqui puede haber dos Vigilantes, ni se puede anunciar a todo el servidor cada vez que alguien
@@ -79,6 +73,10 @@ import java.util.function.Predicate;
  * Los numeros son puros (escala, golpes, llegada, reparto) y el autotest "vigilante" los prueba:
  * los golpes fuertes entre el 25 % y el 90 % de la vida maxima y nunca matan con la vida llena; a el
  * ningun golpe le quita mas del 8 % de su vida; y las condiciones de la llegada.
+ *
+ * Claves viejas del golem (1.13.0) que ya no se leen y se ignoran sin aviso: escala-cuerpo, velocidad,
+ * atasco-segundos, llegada.caida-ticks, golpes.marcado-extra, mirada.* y habilidades.machaque, salto,
+ * barrido, escombros, pilares, rayo, nucleos, tiron, faro, ondas y sentencia.
  */
 final class Vigilante implements Listener {
 
@@ -95,43 +93,45 @@ final class Vigilante implements Listener {
 
     /**
      * hardcore.vigilante, con los valores de serie si falta (el config del dev no la trae). Se relee
-     * cada 5 s. Los avisos de los golpes fuertes nunca bajan de AVISO_MINIMO ticks.
+     * cada 5 s. Los avisos de los golpes fuertes nunca bajan de AVISO_MINIMO ticks. Todos los numeros
+     * de la pelea tienen tope: una config disparatada no rompe la regla de la oscuridad, ni lanza a
+     * nadie a cien bloques, ni llena el mundo de bloques en el aire.
      */
     static final class Ajustes {
         /** Ningun golpe fuerte sin al menos un segundo de aviso en el suelo. */
         static final int AVISO_MINIMO = 20;
+        /** El rugido no se repite antes: su oscuridad (2-3 s) nunca puede volverse continua. */
+        static final int RUGIDO_ESPERA_MINIMA = 300;
 
         final boolean activo;
         // llegada
         final double llegadaBloques;
-        final int llegadaCofres, llegadaMinijefes, maximoVivos, avisoSegundos, caidaTicks;
+        final int llegadaCofres, llegadaMinijefes, maximoVivos, avisoSegundos, temblorTicks, emergerAviso;
         final double llegadaDistancia, impactoRadio, impactoFraccion;
         // cuerpo y numeros
-        final double vidaBase, vidaPorNivel, golpeBase, golpePorNivel, topeGolpe, escalaCuerpo, velocidad;
-        final int extraNivel, duracionMinutos, abandonoSegundos, atascoSegundos;
+        final double vidaBase, vidaPorNivel, golpeBase, golpePorNivel, topeGolpe;
+        final double escalaCuerpo, velocidad, paso, furiaVelocidad, furiaEspera;
+        final int extraNivel, duracionMinutos, abandonoSegundos, atascoTicks;
         final double radioPelea, radioGrupo;
         // escala
         final double porJugador, poderCada, poderVida, poderDano;
         final int jugadoresTope, poderTope;
         final String poderPlaceholder;
         // golpes fuertes
-        final double golpeMinimo, golpeMaximo, marcadoExtra;
+        final double golpeMinimo, golpeMaximo;
         final int ventanaTicks;
-        // mirada
-        final double miradaAlcance, miradaAngulo;
-        final int miradaTicks, marcaSegundos;
+        // bloques que saltan y ambiente
+        final int efimerosPorGolpe, efimerosMaximo, efimerosVida, ambienteTicks;
         // habilidades
         final Map<PeleaVigilante.Habilidad, Hab> hab = new EnumMap<>(PeleaVigilante.Habilidad.class);
-        final double machaqueRadio, machaqueAngulo, saltoRadio, saltoOndaFraccion, saltoOndaRadio;
-        final double barridoRadio, barridoAngulo, embestidaLargo, escombrosRadio;
-        final int escombrosCirculos, pilaresCuantos, pilaresSegundos;
-        final int nucleosGolpes, nucleosGolpesPorJugador, nucleosSegundos, aturdidoSegundos;
-        final double nucleosRadio, aturdidoExtra;
-        final double tironMinima, tironFuerza;
-        final int faroVueltas, faroTicksVuelta, faroAdelanto;
-        final double faroAlcance;
-        final int ondasSeparacion;
-        final double ondasRadio, sentenciaRadio;
+        final double martilloAlcance, martilloSalto, martilloCerca, martilloMedio, martilloLejos, martilloAltura;
+        final double martilloFraccionMedio, martilloEmpujeMedio, martilloEmpujeLejos;
+        final double lanzaAlcance, lanzaVelocidad, lanzaAltura;
+        final double embestidaLargo, embestidaVelocidad, embestidaEmpuje, aturdidoExtra;
+        final int aturdidoTicks;
+        final double hundeRadio, hundeAltura, hundeVelocidad;
+        final double rugidoRadio, rugidoCordura;
+        final int rugidoOscuridad;
         // botin
         final int horasEntreCobros, esenciasBase, esenciasCada, gradoIV;
         final double participacion;
@@ -146,7 +146,8 @@ final class Vigilante implements Listener {
             llegadaMinijefes = Math.max(0, s.getInt("llegada.minijefes", 1));
             maximoVivos = Math.max(0, s.getInt("llegada.maximo-vivos", 2));
             avisoSegundos = Math.max(1, s.getInt("llegada.aviso-segundos", 5));
-            caidaTicks = Math.max(AVISO_MINIMO, s.getInt("llegada.caida-ticks", 40));
+            temblorTicks = rango(s.getInt("llegada.temblor-ticks", 80), 20, 200);
+            emergerAviso = Math.max(AVISO_MINIMO, s.getInt("llegada.emerger-aviso-ticks", 24));
             llegadaDistancia = Math.max(4, s.getDouble("llegada.distancia", 10));
             impactoRadio = Math.max(1, s.getDouble("llegada.impacto-radio", 4));
             impactoFraccion = s.getDouble("llegada.impacto-fraccion", 0.25);
@@ -157,11 +158,15 @@ final class Vigilante implements Listener {
             golpeBase = s.getDouble("golpe-base", 9);
             golpePorNivel = s.getDouble("golpe-por-nivel", 0.04);
             topeGolpe = Math.max(0, s.getDouble("tope-golpe-fraccion", 0.08));
-            escalaCuerpo = Math.max(1.0, Math.min(4.0, s.getDouble("escala-cuerpo", 2.2)));
-            velocidad = s.getDouble("velocidad", 0.30);
+            escalaCuerpo = rango(s.getDouble("cuerpo.escala", 2.6), 1.0, 4.0);
+            velocidad = rango(s.getDouble("cuerpo.velocidad", 0.34), 0.1, 0.6);
+            // Por debajo de 1 un bloque de desnivel le obliga a saltar (el escalado no toca el paso).
+            paso = rango(s.getDouble("cuerpo.paso", 1.6), 1.1, 2.5);
+            furiaVelocidad = rango(s.getDouble("cuerpo.furia-velocidad", 1.3), 1.0, 2.0);
+            furiaEspera = rango(s.getDouble("cuerpo.furia-espera", 0.65), 0.3, 1.0);
+            atascoTicks = (int) Math.round(rango(s.getDouble("cuerpo.atasco-segundos", 4), 2, 30) * 20);
             duracionMinutos = Math.max(1, s.getInt("duracion-minutos", 10));
             abandonoSegundos = Math.max(5, s.getInt("abandono-segundos", 30));
-            atascoSegundos = Math.max(5, s.getInt("atasco-segundos", 15));
             radioPelea = Math.max(16, s.getDouble("radio-pelea", 48));
             radioGrupo = Math.max(4, s.getDouble("radio-grupo", 24));
 
@@ -176,49 +181,48 @@ final class Vigilante implements Listener {
             golpeMinimo = Math.max(0, Math.min(1, s.getDouble("golpes.minimo", 0.25)));
             // Ley 5: con la vida llena nada te mata de un golpe. Nunca 1 o mas.
             golpeMaximo = Math.max(golpeMinimo, Math.min(0.95, s.getDouble("golpes.maximo", 0.90)));
-            marcadoExtra = Math.max(0, s.getDouble("golpes.marcado-extra", 0.25));
             ventanaTicks = Math.max(0, s.getInt("golpes.ventana-ticks", 10));
 
-            miradaAlcance = Math.max(4, s.getDouble("mirada.alcance", 24));
-            miradaAngulo = Math.max(10, Math.min(180, s.getDouble("mirada.angulo", 70)));
-            miradaTicks = Math.max(2, (int) Math.round(s.getDouble("mirada.segundos", 2) * 20));
-            marcaSegundos = Math.max(1, s.getInt("mirada.marca-segundos", 15));
+            efimerosPorGolpe = rango(s.getInt("efimeros.por-golpe", 12), 0, 24);
+            efimerosMaximo = rango(s.getInt("efimeros.maximo", 40), efimerosPorGolpe, 64);
+            efimerosVida = rango(s.getInt("efimeros.vida-ticks", 60), 20, 200);
+            ambienteTicks = (int) Math.round(rango(s.getDouble("ambiente-segundos", 6), 3, 60) * 20);
 
             for (PeleaVigilante.Habilidad h : PeleaVigilante.Habilidad.values()) {
                 String b = "habilidades." + h.clave + ".";
-                int aviso = s.getInt(b + "aviso-ticks", h.aviso);
-                if (h.fraccion > 0) aviso = Math.max(AVISO_MINIMO, aviso);
-                hab.put(h, new Hab(Math.max(20, s.getInt(b + "espera-ticks", h.espera)), Math.max(0, aviso),
-                        Math.max(0, s.getDouble(b + "fraccion", h.fraccion))));
+                int aviso = Math.max(h.fraccion > 0 ? AVISO_MINIMO : 10, s.getInt(b + "aviso-ticks", h.aviso));
+                int espera = Math.max(h == PeleaVigilante.Habilidad.RUGIDO ? RUGIDO_ESPERA_MINIMA : 20,
+                        s.getInt(b + "espera-ticks", h.espera));
+                hab.put(h, new Hab(espera, aviso, Math.max(0, s.getDouble(b + "fraccion", h.fraccion))));
             }
-            machaqueRadio = Math.max(2, s.getDouble("habilidades.machaque.radio", 5.5));
-            machaqueAngulo = Math.max(30, Math.min(360, s.getDouble("habilidades.machaque.angulo", 120)));
-            saltoRadio = Math.max(1.5, s.getDouble("habilidades.salto.radio", 3.5));
-            saltoOndaFraccion = Math.max(0, s.getDouble("habilidades.salto.onda-fraccion", 0.25));
-            saltoOndaRadio = Math.max(3, s.getDouble("habilidades.salto.onda-radio", 10));
-            barridoRadio = Math.max(4, s.getDouble("habilidades.barrido.radio", 14));
-            barridoAngulo = Math.max(30, Math.min(300, s.getDouble("habilidades.barrido.angulo", 120)));
-            embestidaLargo = Math.max(4, s.getDouble("habilidades.embestida.largo", 20));
-            escombrosRadio = Math.max(1, s.getDouble("habilidades.escombros.radio", 2.2));
-            escombrosCirculos = Math.max(1, s.getInt("habilidades.escombros.circulos", 5));
-            pilaresCuantos = Math.max(1, Math.min(12, s.getInt("habilidades.pilares.cuantos", 6)));
-            pilaresSegundos = Math.max(5, s.getInt("habilidades.pilares.segundos", 30));
-            nucleosGolpes = Math.max(1, s.getInt("habilidades.nucleos.golpes", 4));
-            nucleosGolpesPorJugador = Math.max(0, s.getInt("habilidades.nucleos.golpes-por-jugador", 2));
-            // El estallido se avisa todo el rato que estan sueltos: nunca menos de un segundo.
-            nucleosSegundos = Math.max(5, s.getInt("habilidades.nucleos.segundos", 14));
-            nucleosRadio = Math.max(1, s.getDouble("habilidades.nucleos.radio", 5));
-            aturdidoSegundos = Math.max(1, s.getInt("habilidades.nucleos.aturdido-segundos", 6));
-            aturdidoExtra = Math.max(0, s.getDouble("habilidades.nucleos.aturdido-dano-extra", 0.30));
-            tironMinima = Math.max(4, s.getDouble("habilidades.tiron.distancia-minima", 12));
-            tironFuerza = Math.max(0.2, Math.min(3, s.getDouble("habilidades.tiron.fuerza", 1.6)));
-            faroVueltas = Math.max(1, s.getInt("habilidades.faro.vueltas", 2));
-            faroTicksVuelta = Math.max(40, s.getInt("habilidades.faro.ticks-por-vuelta", 80));
-            faroAdelanto = Math.max(AVISO_MINIMO, s.getInt("habilidades.faro.adelanto-ticks", 20));
-            faroAlcance = Math.max(6, s.getDouble("habilidades.faro.alcance", 20));
-            ondasSeparacion = Math.max(10, s.getInt("habilidades.ondas.separacion-ticks", 24));
-            ondasRadio = Math.max(4, s.getDouble("habilidades.ondas.radio", 16));
-            sentenciaRadio = Math.max(3, s.getDouble("habilidades.sentencia.radio", 8));
+            String m = "habilidades.martillazo.";
+            martilloAlcance = rango(s.getDouble(m + "alcance", 22), 4, 32);
+            martilloSalto = rango(s.getDouble(m + "salto", 1.3), 0.8, 2.0);
+            martilloCerca = rango(s.getDouble(m + "radio-cerca", 4.5), 2, 8);
+            martilloMedio = rango(s.getDouble(m + "radio-medio", 10), martilloCerca + 1, 16);
+            martilloLejos = rango(s.getDouble(m + "radio-lejos", 16), martilloMedio + 1, 24);
+            martilloAltura = rango(s.getDouble(m + "altura-lanzado", 18), 4, 24);
+            martilloFraccionMedio = rango(s.getDouble(m + "fraccion-medio", 0.25), 0, 1);
+            martilloEmpujeMedio = rango(s.getDouble(m + "empuje-medio", 3.6), 0.5, 3.9);
+            martilloEmpujeLejos = rango(s.getDouble(m + "empuje-lejos", 1.0), 0, 2);
+            String l = "habilidades.lanzamiento.";
+            lanzaAlcance = rango(s.getDouble(l + "alcance", 10), 3, 16);
+            lanzaVelocidad = rango(s.getDouble(l + "velocidad", 1.1), 0.4, 1.6);
+            lanzaAltura = rango(s.getDouble(l + "altura", 10), 3, 20);
+            String e = "habilidades.embestida.";
+            embestidaLargo = rango(s.getDouble(e + "largo", 24), 6, 40);
+            embestidaVelocidad = rango(s.getDouble(e + "velocidad", 1.0), 0.4, 1.6);
+            embestidaEmpuje = rango(s.getDouble(e + "empuje", 1.6), 0.3, 3);
+            aturdidoTicks = (int) Math.round(rango(s.getDouble(e + "aturdido-segundos", 2), 0, 10) * 20);
+            aturdidoExtra = rango(s.getDouble(e + "aturdido-dano-extra", 0.30), 0, 1);
+            String u = "habilidades.hundimiento.";
+            hundeRadio = rango(s.getDouble(u + "radio", 3), 1.5, 6);
+            hundeAltura = rango(s.getDouble(u + "altura", 14), 3, 20);
+            hundeVelocidad = rango(s.getDouble(u + "velocidad", 0.9), 0.3, 1.5);
+            String r = "habilidades.rugido.";
+            rugidoRadio = rango(s.getDouble(r + "radio", 16), 4, 32);
+            rugidoOscuridad = PeleaVigilante.ticksOscuridad(s.getDouble(r + "oscuridad-segundos", 2.5));
+            rugidoCordura = rango(s.getDouble(r + "cordura", 4), 0, 20);
 
             horasEntreCobros = Math.max(0, s.getInt("botin.horas-entre-cobros", 24));
             participacion = Math.max(0, Math.min(1, s.getDouble("botin.participacion-minima", 0.10)));
@@ -232,14 +236,17 @@ final class Vigilante implements Listener {
             return hab.get(h);
         }
 
-        /** Los ticks que avisa en el suelo un golpe fuerte de esa habilidad; -1 si no hace dano. */
+        /** Los ticks que avisa en el suelo un golpe fuerte de esa habilidad; -1 si no hace dano (el rugido). */
         int avisoDe(PeleaVigilante.Habilidad h) {
-            return switch (h) {
-                case PILARES, TIRON -> -1;
-                case NUCLEOS -> nucleosSegundos * 20;
-                case FARO -> Math.min(hab(h).aviso(), faroAdelanto);
-                default -> hab(h).aviso();
-            };
+            return h.fraccion > 0 ? hab(h).aviso() : -1;
+        }
+
+        static int rango(int v, int min, int max) {
+            return Math.max(min, Math.min(max, v));
+        }
+
+        static double rango(double v, double min, double max) {
+            return Math.max(min, Math.min(max, v));
         }
     }
 
@@ -285,7 +292,7 @@ final class Vigilante implements Listener {
     private final List<Llegada> llegadas = new ArrayList<>();
     /** Quien ya cumplio las cuentas pero aun no ha podido recibirlo (tope de vivos, se acerco al spawn...). */
     private final Set<UUID> pendientes = new LinkedHashSet<>();
-    /** Una caida que no llego a caer (se fue al spawn, salio...) se vuelve a intentar pasado este momento. */
+    /** Una llegada que no llego a salir (se fue al spawn, salio...) se vuelve a intentar pasado este momento. */
     private final Map<UUID, Long> reintento = new HashMap<>();
     /** Null si EDM no trae las clases de anomalias: entonces solo falta el registro en /anomaly. */
     private final VigilanteType tipo;
@@ -375,9 +382,9 @@ final class Vigilante implements Listener {
         return new Escala(n, j, poder, tp, d, vida, golpe, d.dano());
     }
 
-    /** La fraccion de TU vida maxima que quita un golpe fuerte: base x multiplicador (x marcado), entre minimo y maximo. */
-    static double fraccionGolpe(double base, double mult, boolean marcado, Ajustes a) {
-        double f = base * Math.max(0, mult) * (marcado ? 1 + a.marcadoExtra : 1);
+    /** La fraccion de TU vida maxima que quita un golpe fuerte: base x multiplicador, entre minimo y maximo. */
+    static double fraccionGolpe(double base, double mult, Ajustes a) {
+        double f = base * Math.max(0, mult);
         return Math.max(a.golpeMinimo, Math.min(a.golpeMaximo, f));
     }
 
@@ -401,15 +408,11 @@ final class Vigilante implements Listener {
         return Math.max(actual, f);
     }
 
-    /** Golpes que aguanta cada nucleo: golpes + golpes-por-jugador x (jugadores - 1). */
-    static int golpesNucleo(Ajustes a, int jugadores) {
-        return a.nucleosGolpes + a.nucleosGolpesPorJugador * Math.max(0, jugadores - 1);
-    }
-
     /**
      * Por que no le cae ahora a ese jugador, o null si le cae. Sin Bukkit:
      *   apagado | hoy (ya vino hoy) | faltan (ni cofres ni minijefes suficientes) | cerca (no ha pasado la
-     *   raya) | spawn | ocupado (la Parca o un Vigilante encima) | lleno (ya hay maximo-vivos).
+     *   raya) | spawn | ocupado (ley 6: la Parca, un contrato de Ambush o un Vigilante encima) | lleno (ya
+     *   hay maximo-vivos).
      */
     static String motivoLlegada(Ajustes a, double bloques, int cofres, int minijefes, boolean yaHoy, boolean enSpawn,
                                 boolean ocupado, int vivos) {
@@ -601,7 +604,7 @@ final class Vigilante implements Listener {
         intentar(p, false);
     }
 
-    /** Si le toca, empieza la caida; si aun no puede (tope, spawn...), se queda pendiente. */
+    /** Si le toca, empieza la llegada; si aun no puede (tope, spawn...), se queda pendiente. */
     private void intentar(Player p, boolean desdeTick) {
         UUID u = p.getUniqueId();
         Long r = reintento.get(u);
@@ -612,7 +615,8 @@ final class Vigilante implements Listener {
             }
             reintento.remove(u);
         }
-        boolean ocupado = (hc.parca() != null && hc.valor("parca", () -> hc.parca().persigue(p), false)) || conVigilante(u);
+        boolean ocupado = (hc.parca() != null && hc.valor("parca", () -> hc.parca().persigue(p), false)) || conVigilante(u)
+                || (hc.ambush() != null && hc.valor("ambush", () -> hc.ambush().tieneContrato(u), false));
         String no = motivoLlegada(ajustes(), hc.bloquesAlSpawn(p), cuenta(u, "cofres"), cuenta(u, "minijefes"), yaHoy(u),
                 hc.enSpawn(p), ocupado, vivos());
         if (no == null) {
@@ -627,14 +631,27 @@ final class Vigilante implements Listener {
         if (!desdeTick && "lleno".equals(no)) hc.plugin().bitacora().anotar("vigilante", "espera", p.getName(), "lleno");
     }
 
-    /** Si ya tiene una caida o una pelea encima (como presa). */
+    /** Si ya tiene una llegada o una pelea encima (como presa). */
     private boolean conVigilante(UUID u) {
         for (Llegada l : llegadas) if (l.presa.equals(u)) return true;
         for (PeleaVigilante pe : peleas) if (pe.estado != PeleaVigilante.Estado.FIN && u.equals(pe.presa)) return true;
         return false;
     }
 
-    /** Empieza los dos avisos y la caida. forzada: del staff, sin mirar ni gastar el dia. */
+    /**
+     * Ley 6, una amenaza grande a la vez: si un Vigilante va a por ese jugador (como presa, viniendo o
+     * peleando) o lo tiene a radio-pelea. Lo miran la Huella (la Parca no cuenta lo quieto) y el minijefe
+     * de cordura cero.
+     */
+    boolean persigue(Player p) {
+        if (p == null) return false;
+        if (conVigilante(p.getUniqueId())) return true;
+        double radio = ajustes().radioPelea;
+        for (PeleaVigilante pe : peleas) if (pe.estado != PeleaVigilante.Estado.FIN && pe.cerca(p, radio)) return true;
+        return false;
+    }
+
+    /** Empieza los dos avisos y el temblor. forzada: del staff, sin mirar ni gastar el dia. */
     boolean empezarLlegada(Player p, boolean forzada) {
         if (p == null || conVigilante(p.getUniqueId())) return false;
         Llegada l = new Llegada(p, forzada);
@@ -664,12 +681,15 @@ final class Vigilante implements Listener {
     }
 
     /**
-     * Los dos avisos y la caida, colgados de la tarea de 2 ticks de Amenazas:
-     *   0 s: aviso 1 (titulo breve y barra de accion);
-     *   aviso-segundos: aviso 2;
-     *   2 x aviso-segundos: el meteoro aparece a 40 bloques sobre el sitio, que se marca en el suelo, y cae
-     *   en caida-ticks (nunca menos de un segundo); al tocar el suelo golpea alrededor y nace el Vigilante.
-     * Si la presa se va (sale, muere, entra al spawn, se desconecta) antes de que caiga, no viene y el dia
+     * Los avisos y el temblor, colgados de la tarea de 2 ticks de Amenazas:
+     *   0 s: aviso 1 (titulo breve y barra de accion; la cueva y un gruñido lejano);
+     *   aviso-segundos: aviso 2, y empieza el temblor: algo escarba bajo tierra desde lejos hacia el sitio
+     *   de salida (llegada.distancia por detras de la presa, con hueco para su caja; si la presa se mueve,
+     *   el sitio la sigue). Se ve la tierra removerse por donde va, se oye cada vez mas cerca (tierra,
+     *   gruñidos de Zoglin graves, un lamento lejano) y bajo los pies de la presa el suelo late;
+     *   pasados temblor-ticks: nace el Vigilante enterrado en el sitio, y PeleaVigilante agrieta el suelo
+     *   (emerger-aviso-ticks, el aviso del estallido), revienta y sale escarbando.
+     * Si la presa se va (sale, muere, entra al spawn, se desconecta) antes de que salga, no viene y el dia
      * no se gasta.
      */
     private final class Llegada implements Runnable {
@@ -678,10 +698,11 @@ final class Vigilante implements Listener {
         final boolean forzada;
         /** Los tiempos se leen al empezar: un cambio de config a medias no la deja colgada. */
         final long aviso;
-        final int caidaTicks;
+        final int temblorTicks;
         long t;
-        Location destino;
-        BlockDisplay meteoro;
+        /** Donde va a salir (a ras de suelo, con hueco para su caja) y por donde va escarbando. */
+        Location destino, cabeza;
+        long empiezaTemblor;
         boolean fin;
 
         Llegada(Player p, boolean forzada) {
@@ -689,7 +710,7 @@ final class Vigilante implements Listener {
             this.nombre = p.getName();
             this.forzada = forzada;
             this.aviso = ajustes().avisoSegundos * 20L;
-            this.caidaTicks = ajustes().caidaTicks;
+            this.temblorTicks = ajustes().temblorTicks;
         }
 
         @Override
@@ -707,85 +728,112 @@ final class Vigilante implements Listener {
                 return;
             }
             if (t == 0) avisar(p, 1);
-            else if (t == aviso) avisar(p, 2);
-            else if (t == aviso * 2) {
-                if (!prepararCaida(p, a)) {
+            else if (t == aviso) {
+                avisar(p, 2);
+                if (!empezarTemblor(p, a)) {
                     cancelar(p, "sin-sitio");
                     return;
                 }
             }
-            if (destino != null) caer(a);
+            if (destino != null && !temblor(p, a)) return;
             t += 2;
         }
 
         private void avisar(Player p, int cual) {
-            Component grande = Paleta.vigilante(cual == 1 ? "Algo te observa" : "El Vigilante");
-            String pequena = cual == 1 ? "Una luz amarilla te sigue desde lo alto." : "Cae del cielo. Busca dónde cubrirte.";
+            Component grande = Paleta.vigilante(cual == 1 ? "Algo escarba" : "El Vigilante");
+            String pequena = cual == 1 ? "La tierra late bajo tus pies." : "Sale de la tierra detrás de ti.";
             p.showTitle(Paleta.titulo(grande, pequena, Duration.ofMillis(200), Duration.ofMillis(1600), Duration.ofMillis(500)));
-            Component barra = Component.text(cual == 1 ? "Algo te observa desde lo alto." : "El Vigilante cae sobre ti.",
+            Component barra = Component.text(cual == 1 ? "Algo se mueve bajo tierra." : "El Vigilante escarba hacia ti.",
                     Paleta.VIGILANTE);
             hc.barra().aviso(p, barra, 3);
-            Compat.soundPlayers(p.getWorld(), p.getLocation(), cual == 1 ? "block.beacon.ambient" : "block.beacon.activate",
-                    1.0f, cual == 1 ? 0.6f : 0.5f);
-            if (cual == 2) {
-                Component cerca = Component.text("El Vigilante cae cerca de ", Paleta.TEXTO)
-                        .append(Component.text(p.getName(), Paleta.DETALLE)).append(Component.text(".", Paleta.TEXTO));
-                for (Player o : Fx.viewersNear(p.getLocation(), 48)) if (!o.equals(p)) hc.barra().aviso(o, cerca, 3);
+            World w = p.getWorld();
+            Vector mira = p.getLocation().getDirection().setY(0);
+            if (mira.lengthSquared() < 1e-4) mira = new Vector(0, 0, 1);
+            Location atras = p.getLocation().subtract(mira.normalize().multiply(14));
+            if (cual == 1) {
+                p.playSound(p.getLocation(), "ambient.cave", SoundCategory.AMBIENT, 1.0f, 0.5f);
+                Compat.sound(w, atras, "entity.zoglin.ambient", 1.0f, 0.4f);
+                return;
             }
+            Compat.sound(w, atras, "entity.elder_guardian.ambient", 1.6f, 0.5f);
+            Compat.sound(w, atras, "entity.zoglin.angry", 1.2f, 0.4f);
+            Component cerca = Component.text("El Vigilante sale de la tierra cerca de ", Paleta.TEXTO)
+                    .append(Component.text(p.getName(), Paleta.DETALLE)).append(Component.text(".", Paleta.TEXTO));
+            for (Player o : Fx.viewersNear(p.getLocation(), 48)) if (!o.equals(p)) hc.barra().aviso(o, cerca, 3);
         }
 
-        /** El sitio: a llegada.distancia por detras de la presa (o delante si detras queda el spawn), con el chunk cargado. */
-        private boolean prepararCaida(Player p, Ajustes a) {
-            Location s = Parca.sitioDetras(p, a.llegadaDistancia);
-            if (hc.enSpawn(s) || !cargado(s)) {
-                Location girado = p.getLocation();
-                girado.setYaw(girado.getYaw() + 180);
-                s = Parca.sitioDetras(girado, a.llegadaDistancia);
-            }
-            if (hc.enSpawn(s) || !cargado(s)) return false;
+        /** El sitio de salida y desde donde viene escarbando (16 bloques mas alla, si esta cargado). */
+        private boolean empezarTemblor(Player p, Ajustes a) {
+            Location s = sitioSalida(p, a);
+            if (s == null) return false;
             destino = s;
-            World w = s.getWorld();
-            Location alto = s.clone().add(6, 40, 6);
-            try {
-                meteoro = w.spawn(alto, BlockDisplay.class, d -> {
-                    d.setBlock(Material.RAW_GOLD_BLOCK.createBlockData());
-                    d.setPersistent(false);
-                    d.setViewRange(4f);
-                    d.setBrightness(new Display.Brightness(15, 15));
-                    d.setGlowing(true);
-                    d.setGlowColorOverride(Color.fromRGB(PeleaVigilante.RGB_OJO));
-                    d.setTeleportDuration(2);
-                    d.setTransformation(new Transformation(new Vector3f(-1.5f, -1.5f, -1.5f), new AxisAngle4f(),
-                            new Vector3f(3f, 3f, 3f), new AxisAngle4f()));
-                    d.getPersistentDataContainer().set(Marcas.VIGILANTE, PersistentDataType.STRING, presa.toString());
-                });
-            } catch (Throwable ignorado) {
-                meteoro = null;
-            }
-            Compat.soundPlayers(w, s, "entity.blaze.shoot", 1.5f, 0.4f);
+            Vector lejos = PeleaAmbush.plano(p.getLocation(), s, new Vector(0, 0, 1)).multiply(16);
+            Location c = s.clone().add(lejos);
+            cabeza = cargado(c) && !hc.enSpawn(c) ? Fx.ground(c.add(0, 2, 0), 8) : s.clone();
+            empiezaTemblor = t;
+            Compat.sound(s.getWorld(), cabeza, "entity.ghast.ambient", 1.6f, 0.5f);
             return true;
         }
 
-        /** Cada 2 ticks: el meteoro baja, deja estela y la marca del suelo avisa; al llegar, golpe y Vigilante. */
-        private void caer(Ajustes a) {
-            long desde = aviso * 2;
-            double k = Math.min(1, (t - desde) / (double) caidaTicks);
+        /**
+         * llegada.distancia por detras de la presa (o delante si detras queda el spawn o no hay hueco), con
+         * hueco para su caja a 4 bloques o menos y el chunk cargado; null si no hay donde.
+         */
+        private Location sitioSalida(Player p, Ajustes a) {
+            Predicate<Location> vale = l -> !hc.enSpawn(l) && cargado(l);
+            Location s = PeleaVigilante.hueco(Parca.sitioDetras(p, a.llegadaDistancia), a, 4, vale);
+            if (s == null) {
+                Location girado = p.getLocation();
+                girado.setYaw(girado.getYaw() + 180);
+                s = PeleaVigilante.hueco(Parca.sitioDetras(girado, a.llegadaDistancia), a, 4, vale);
+            }
+            return s;
+        }
+
+        /**
+         * Cada 2 ticks: la cabeza del temblor avanza hacia el sitio (que sigue a la presa cada segundo), con
+         * tierra que se remueve y sonidos que suben segun se acerca; bajo la presa el suelo late. Pasados
+         * temblor-ticks sale. False si la llegada ha terminado aqui.
+         */
+        private boolean temblor(Player p, Ajustes a) {
+            long s = t - empiezaTemblor;
             World w = destino.getWorld();
-            Location pos = destino.clone().add(6 * (1 - k), 40 * (1 - k) + 1.5, 6 * (1 - k));
-            if (meteoro != null && meteoro.isValid()) meteoro.teleport(pos);
-            Compat.spawn(w, Compat.FLAME, pos, 6, 0.6, 0.6, 0.6, 0.02);
-            Compat.spawn(w, Compat.LARGE_SMOKE, pos, 3, 0.5, 0.5, 0.5, 0.01);
-            if ((t - desde) % 4 == 0) PeleaVigilante.circulo(w, destino, a.impactoRadio, PeleaVigilante.tono(k), 1.4f);
-            if (k < 1) return;
-            // Impacto.
-            Fx.safeRemove(meteoro);
-            meteoro = null;
-            Compat.spawn(w, Compat.EXPLOSION_EMITTER, destino.clone().add(0, 0.5, 0), 1);
-            Compat.spawn(w, Compat.BLOCK, destino.clone().add(0, 0.3, 0), 60, 2, 0.3, 2, 0.1,
-                    Material.STONE.createBlockData());
-            Compat.soundPlayers(w, destino, "entity.generic.explode", 2.0f, 0.6f);
-            Compat.soundPlayers(w, destino, "entity.iron_golem.damage", 2.0f, 0.4f);
-            Player p = hc.plugin().getServer().getPlayer(presa);
+            if (s > 0 && s % 20 == 0 && s <= temblorTicks - 30) {
+                Location n = sitioSalida(p, a);
+                if (n != null && n.getWorld() == w) destino = n;
+            }
+            long falta = Math.max(2, temblorTicks - s);
+            double d = PeleaAmbush.distPlano(cabeza, destino);
+            double paso = Math.min(d, Math.max(0.6, d / (falta / 2.0)));
+            if (paso > 0.01) {
+                Location sig = cabeza.clone().add(PeleaAmbush.plano(cabeza, destino, new Vector(0, 0, 1)).multiply(paso));
+                if (cargado(sig)) cabeza = Fx.ground(sig.add(0, 2, 0), 8);
+            }
+            double k = Math.min(1, s / (double) temblorTicks);
+            BlockData tierra = PeleaVigilante.materialSuelo(cabeza);
+            Compat.spawn(w, Compat.BLOCK, cabeza.clone().add(0, 0.15, 0), 8, 0.7, 0.05, 0.7, 0.12, tierra);
+            if (s % 4 == 0) Compat.spawn(w, Compat.BLOCK, cabeza.clone().add(0, 0.2, 0), 4, 1.1, 0.1, 1.1, 0.3, tierra);
+            if (s % 6 == 0) Compat.sound(w, cabeza, "block.rooted_dirt.break", (float) (0.8 + 1.0 * k), 0.5f);
+            if (s % 10 == 0) Compat.sound(w, cabeza, "entity.sniffer.digging", (float) (0.8 + 1.2 * k), 0.5f);
+            if (s % 24 == 0) Compat.sound(w, cabeza, "entity.zoglin.angry", (float) (0.6 + 1.4 * k), 0.45f);
+            if (s % 6 == 0) {
+                Location pie = p.getLocation();
+                Compat.spawn(w, Compat.BLOCK, pie.clone().add(0, 0.1, 0), 5, 0.8, 0.02, 0.8, 0.05, PeleaVigilante.materialSuelo(pie));
+            }
+            if (s == temblorTicks / 4 * 2) {
+                try {
+                    p.playHurtAnimation(PeleaParca.ladoDe(p, cabeza));
+                } catch (Throwable ignorado) {
+                    // Sin temblor de la vista, el suelo lo dice igual.
+                }
+            }
+            if (s < temblorTicks) return true;
+            salir(p, a);
+            return false;
+        }
+
+        /** Nace el Vigilante enterrado en el sitio: su pelea agrieta el suelo, revienta y sale. */
+        private void salir(Player p, Ajustes a) {
             List<Player> grupo = grupo(p, destino);
             Escala esc = escalaPara(p, grupo);
             PeleaVigilante pe = PeleaVigilante.crear(Vigilante.this, presa, nombre, esc, destino, grupo.size());
@@ -793,24 +841,22 @@ final class Vigilante implements Listener {
                 cancelar(p, "spawn-cancelado");
                 return;
             }
-            // El impacto del meteoro tambien es un golpe fuerte: avisado desde que aparecio en el cielo.
-            for (Player v : Fx.playersNear(destino, a.impactoRadio)) pe.golpeFuerte(v, a.impactoFraccion, "Meteoro");
             if (!forzada) {
                 hc.datos().set("vigilante.visto." + presa, dia());
                 hc.datos().set(base(presa), null);
                 hc.marcarSucio();
             }
-            Location l = pe.cuerpo.getLocation();
-            hc.plugin().bitacora().anotar("vigilante", "llega", nombre, l.getBlockX() + " " + l.getBlockY() + " " + l.getBlockZ(),
-                    forzada ? "forzado" : "cuentas", esc.texto());
+            hc.plugin().bitacora().anotar("vigilante", "llega", nombre,
+                    destino.getBlockX() + " " + destino.getBlockY() + " " + destino.getBlockZ(), forzada ? "forzado" : "cuentas",
+                    esc.texto());
             terminar();
         }
 
         void cancelar(Player p, String motivo) {
-            if (p != null && p.isOnline() && destino == null && !"se-fue".equals(motivo)) {
+            if (p != null && p.isOnline() && !"se-fue".equals(motivo)) {
                 hc.barra().aviso(p, Component.text("El Vigilante pierde tu rastro.", Paleta.TEXTO), 3);
             }
-            // No ha caido: el dia no se gasta y lo vuelve a intentar en medio minuto, si sigue pasada la raya.
+            // No ha salido: el dia no se gasta y lo vuelve a intentar en medio minuto, si sigue pasada la raya.
             if (!forzada && !"desconexion".equals(motivo)) {
                 reintento.put(presa, System.currentTimeMillis() + 30_000L);
                 pendientes.add(presa);
@@ -821,13 +867,10 @@ final class Vigilante implements Listener {
 
         void terminar() {
             fin = true;
-            Fx.safeRemove(meteoro);
-            meteoro = null;
             llegadas.remove(this);
             hc.amenazas().quitarPelea(this);
         }
     }
-
     static boolean cargado(Location l) {
         return l != null && l.getWorld() != null && l.getWorld().isChunkLoaded(l.getBlockX() >> 4, l.getBlockZ() >> 4);
     }
@@ -1001,7 +1044,10 @@ final class Vigilante implements Listener {
      */
     PeleaVigilante prueba(Location donde) {
         Player encima = Fx.nearest(donde, 4);
-        Location sitio = encima != null ? Parca.sitioDetras(encima, 8) : Fx.ground(donde.clone(), 12);
+        Location base = encima != null ? Parca.sitioDetras(encima, 8) : Fx.ground(donde.clone(), 12);
+        // Donde quepa su caja; si no hay hueco cerca, ahi mismo (y si se atasca, se hunde y sale).
+        Location hueco = PeleaVigilante.hueco(base, ajustes(), 5, l -> !hc.enSpawn(l));
+        Location sitio = hueco != null ? hueco : base;
         List<Player> grupo = grupo(null, sitio);
         Escala esc = escalaPara(null, grupo);
         PeleaVigilante pe = PeleaVigilante.crear(this, null, "prueba", esc, sitio, Math.max(1, grupo.size()));
@@ -1029,7 +1075,9 @@ final class Vigilante implements Listener {
                     decirAviso(quien, p.getName() + " ya tiene un Vigilante encima.");
                     return;
                 }
-                decir(quien, "vigilante | cae sobre " + p.getName() + " en " + ajustes().avisoSegundos * 2 + " s (forzado: no gasta su día)");
+                Ajustes a = ajustes();
+                long s = Math.round(a.avisoSegundos + (a.temblorTicks + a.emergerAviso) / 20.0);
+                decir(quien, "vigilante | escarba hacia " + p.getName() + ": sale en unos " + s + " s (forzado: no gasta su día)");
             }
             case "test" -> {
                 if (!(quien instanceof Player yo)) {
@@ -1119,7 +1167,7 @@ final class Vigilante implements Listener {
             decir(quien, "vigilante | " + p.getName() + " | escala ahora: " + escalaPara(p, grupo(p, p.getLocation())).texto());
             return;
         }
-        decir(quien, "vigilante | vivos " + vivos() + "/" + a.maximoVivos + " | cayendo " + llegadas.size() + " | pendientes "
+        decir(quien, "vigilante | vivos " + vivos() + "/" + a.maximoVivos + " | viniendo " + llegadas.size() + " | pendientes "
                 + pendientes.size() + (a.activo ? "" : " | apagado"));
         for (PeleaVigilante pe : peleas) {
             if (pe.estado == PeleaVigilante.Estado.FIN) continue;
@@ -1178,12 +1226,7 @@ final class Vigilante implements Listener {
         return null;
     }
 
-    private PeleaVigilante deNucleo(Entity e) {
-        if (e == null || peleas.isEmpty()) return null;
-        for (PeleaVigilante pe : peleas) if (pe.estado != PeleaVigilante.Estado.FIN && pe.esNucleo(e)) return pe;
-        return null;
-    }
-
+    /** Un bloque del suelo que ha hecho saltar (FallingBlock efimero con la marca vigilante_pieza). */
     private static boolean esPieza(Entity e) {
         return e != null && e.getPersistentDataContainer().has(Marcas.VIGILANTE, PersistentDataType.STRING);
     }
@@ -1193,37 +1236,24 @@ final class Vigilante implements Listener {
         return e;
     }
 
-    /** Muere el Vigilante: su botin. Y un nucleo muerto a mano (/kill) no suelta nada. */
+    /** Muere el Vigilante: su botin. */
     @EventHandler(priority = EventPriority.HIGH)
     public void onMuerte(EntityDeathEvent e) {
         LivingEntity muerto = e.getEntity();
-        if (esPieza(muerto)) {
-            e.getDrops().clear();
-            e.setDroppedExp(0);
-            return;
-        }
         if (peleas.isEmpty() || !Marcas.esAmenaza(muerto)) return;
         PeleaVigilante pe = deCuerpo(muerto);
         if (pe != null) hc.seguro("vigilante", pe::alMorir);
     }
 
     /**
-     * Golpes: a un nucleo suelto (cuenta un golpe por jugador y se cancela siempre); al Vigilante (el
-     * extra si esta aturdido; Amenazas escala y topa despues, en HIGHEST); y los suyos (el atasco).
+     * Golpes: al Vigilante (el extra si esta aturdido; Amenazas escala y topa despues, en HIGHEST) y los
+     * suyos (su mordisco de vanilla: sonido grave y caida perdonada).
      */
     @EventHandler(priority = EventPriority.HIGH, ignoreCancelled = true)
     public void onGolpe(EntityDamageByEntityEvent e) {
         if (peleas.isEmpty()) return;
         Entity victima = e.getEntity();
         Entity quien = autor(e.getDamager());
-        if (esPieza(victima)) {
-            e.setCancelled(true);
-            PeleaVigilante pe = deNucleo(victima);
-            if (pe != null && quien instanceof Player j && !hc.enSpawn(j) && Fx.isFightable(j)) {
-                hc.seguro("vigilante", () -> pe.golpeNucleo(victima, j));
-            }
-            return;
-        }
         PeleaVigilante recibe = Marcas.esAmenaza(victima) ? deCuerpo(victima) : null;
         if (recibe != null) {
             if (quien instanceof Player j && hc.enSpawn(j)) {
@@ -1234,21 +1264,24 @@ final class Vigilante implements Listener {
             if (f != 1.0) e.setDamage(e.getDamage() * f);
             return;
         }
-        if (victima instanceof Player) {
+        if (victima instanceof Player j) {
             PeleaVigilante da = deCuerpo(e.getDamager());
-            if (da != null) da.haGolpeado();
+            if (da != null) da.haGolpeado(j);
         }
     }
 
-    /** Los nucleos y demas piezas no reciben dano de nada (caidas, fuego, explosiones): solo cuentan golpes. */
+    /**
+     * Quien sale volando por un golpe de un Vigilante no recibe dano de caida (ley 5: lo que el golpe no
+     * mato no lo remata el suelo, y en Calamity la caida hace el doble). LOW: antes de que Hardcore la
+     * doble (HIGH). Mira el perdon aunque no quede ninguna pelea: el ultimo golpe pudo matarlo.
+     */
     @EventHandler(priority = EventPriority.LOW, ignoreCancelled = true)
-    public void onDanoPieza(EntityDamageEvent e) {
-        if (!esPieza(e.getEntity()) || e.getCause() == EntityDamageEvent.DamageCause.KILL) return;
-        if (e instanceof EntityDamageByEntityEvent) return;
-        e.setCancelled(true);
+    public void onCaida(EntityDamageEvent e) {
+        if (e.getCause() != EntityDamageEvent.DamageCause.FALL || !(e.getEntity() instanceof Player p)) return;
+        if (PeleaVigilante.perdonaCaida(p.getUniqueId())) e.setCancelled(true);
     }
 
-    /** Dano de verdad al Vigilante: se le nota (sonido y grietas). */
+    /** Dano de verdad al Vigilante: se le nota (salpicadura y quejido). */
     @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
     public void onDolor(EntityDamageEvent e) {
         if (peleas.isEmpty() || e.getFinalDamage() <= 0 || !Marcas.esAmenaza(e.getEntity())) return;
@@ -1256,24 +1289,31 @@ final class Vigilante implements Listener {
         if (pe != null) pe.dolor();
     }
 
-    /** Nada de chapas, riendas ni clic derecho en un nucleo. */
-    @EventHandler(ignoreCancelled = true)
-    public void onTocar(PlayerInteractEntityEvent e) {
-        if (esPieza(e.getRightClicked())) e.setCancelled(true);
+    /**
+     * Los bloques que hace saltar nunca se colocan: ya llevan cancelDrop, y esto por si otro plugin se lo
+     * quita. Se cancela y el bloque desaparece (sin soltar nada: dropItem va apagado).
+     */
+    @EventHandler(priority = EventPriority.LOWEST)
+    public void onBloqueCae(EntityChangeBlockEvent e) {
+        if (!esPieza(e.getEntity())) return;
+        e.setCancelled(true);
+        Fx.safeRemove(e.getEntity());
     }
 
-    @EventHandler(ignoreCancelled = true)
-    public void onTocarEn(PlayerInteractAtEntityEvent e) {
-        onTocar(e);
-    }
-
-    /** Un nucleo no apunta a nadie ni nadie a el (por si otro plugin le devuelve la IA). */
+    /**
+     * Su objetivo: mientras aparece, prepara una habilidad o esta aturdido no cambia de objetivo por su
+     * cuenta (su cerebro buscaria al mas cercano); y nunca va a por quien no pelea (espectador, creativo o
+     * en la zona spawn). Que no apunte a mobs ya lo hace Amenazas.
+     */
     @EventHandler(ignoreCancelled = true)
     public void onObjetivo(EntityTargetEvent e) {
-        if (esPieza(e.getEntity()) || esPieza(e.getTarget())) e.setCancelled(true);
+        if (peleas.isEmpty() || e.getTarget() == null || !Marcas.esAmenaza(e.getEntity())) return;
+        PeleaVigilante pe = deCuerpo(e.getEntity());
+        if (pe == null) return;
+        if (pe.ocupado() || !(e.getTarget() instanceof Player p) || !pe.objetivoValido(p)) e.setCancelled(true);
     }
 
-    /** Se desconecta: si cayendo era su presa, no viene; si tenia permiso de vuelo prestado, se le quita. */
+    /** Se desconecta: si venia escarbando a por el, no viene; si tenia permiso de vuelo prestado, se le quita. */
     @EventHandler
     public void onSalir(PlayerQuitEvent e) {
         Player p = e.getPlayer();
@@ -1328,7 +1368,7 @@ final class Vigilante implements Listener {
         if (cambio) hc.marcarSucio();
     }
 
-    /** Un reinicio acaba las peleas y las caidas: se retira todo lo que haya en el mundo (no queda nada suelto). */
+    /** Un reinicio acaba las peleas y las llegadas: se retira todo lo que haya en el mundo (no queda nada suelto). */
     void parar() {
         for (Llegada l : new ArrayList<>(llegadas)) hc.seguro("vigilante", l::terminar);
         llegadas.clear();
@@ -1346,30 +1386,32 @@ final class Vigilante implements Listener {
      * "vigilante", sin servidor: los golpes fuertes entre el 25 % y el 90 % de tu vida maxima y nunca
      * mortales con la vida llena (tampoco dos juntos), el tope del 8 % por golpe que recibe el, la escala,
      * las fases, las condiciones de la llegada (1.000 bloques, 3 cofres o 1 minijefe, una vez al dia,
-     * como mucho dos vivos), el reparto, el botin sin lote y que cada golpe fuerte avisa al menos un segundo.
+     * como mucho dos vivos), el reparto, el botin sin lote, que cada golpe fuerte avisa al menos un segundo
+     * y que el config.yml del jar trae los mismos numeros que el codigo. Lo de la pelea, PeleaVigilante.autotest.
      */
     static List<String> autotest() {
         Autotest.Hoja h = new Autotest.Hoja();
         Ajustes a = new Ajustes(new YamlConfiguration());
 
         // ---- Los golpes fuertes: entre el 25 % y el 90 %.
-        h.cerca("golpe fuerte flojo sube al 25 %", 0.25, fraccionGolpe(0.05, 1, false, a), 1e-9);
-        h.cerca("golpe fuerte enorme se queda en el 90 %", 0.90, fraccionGolpe(0.75, 6.688, true, a), 1e-9);
-        h.cerca("golpe fuerte normal (machaque 30 %)", 0.30, fraccionGolpe(0.30, 1, false, a), 1e-9);
-        h.cerca("al marcado le pega un 25 % mas (30 -> 37,5 %)", 0.375, fraccionGolpe(0.30, 1, true, a), 1e-9);
+        h.cerca("golpe fuerte flojo sube al 25 %", 0.25, fraccionGolpe(0.05, 1, a), 1e-9);
+        h.cerca("golpe fuerte enorme se queda en el 90 %", 0.90, fraccionGolpe(0.75, 6.688, a), 1e-9);
+        h.cerca("golpe fuerte normal (martillazo 30 %)", 0.30, fraccionGolpe(0.30, 1, a), 1e-9);
+        h.cerca("con la dificultad sube (30 % x1,25 = 37,5 %)", 0.375, fraccionGolpe(0.30, 1.25, a), 1e-9);
+        List<Double> bases = new ArrayList<>(List.of(a.impactoFraccion, a.martilloFraccionMedio));
+        for (PeleaVigilante.Habilidad x : PeleaVigilante.Habilidad.values()) if (x.fraccion > 0) bases.add(a.hab(x).fraccion());
         boolean entre = true;
-        for (PeleaVigilante.Habilidad x : PeleaVigilante.Habilidad.values()) {
+        for (double base : bases) {
             for (double m : new double[]{0.1, 1, 3.584, 6.688}) {
-                for (boolean marca : new boolean[]{false, true}) {
-                    double f = fraccionGolpe(a.hab(x).fraccion(), m, marca, a);
-                    entre &= f >= 0.25 - 1e-9 && f <= 0.90 + 1e-9;
-                }
+                double f = fraccionGolpe(base, m, a);
+                entre &= f >= 0.25 - 1e-9 && f <= 0.90 + 1e-9;
             }
         }
-        h.ok("todas las habilidades, con cualquier dificultad: entre el 25 % y el 90 %", entre);
+        h.ok("todos los golpes fuertes (habilidades, la emergencia y el martillazo a media distancia), con cualquier"
+                + " dificultad: entre el 25 % y el 90 %", entre);
         boolean nuncaMata = true;
         for (double vidaMax : new double[]{20, 40, 60, 200}) {
-            double f = fraccionGolpe(0.95, 9, true, a);
+            double f = fraccionGolpe(0.95, 9, a);
             nuncaMata &= quita(f, vidaMax, a.golpeMaximo) < vidaMax;
         }
         h.ok("con la vida llena, ningun golpe fuerte mata (20, 40, 60 y 200 de vida)", nuncaMata);
@@ -1413,7 +1455,7 @@ final class Vigilante implements Listener {
         h.igual("fases 80/60/40/20 %", List.of(1, 2, 3, 4),
                 List.of(faseDe(0.8, 1), faseDe(0.6, 1), faseDe(0.4, 1), faseDe(0.2, 1)));
         h.igual("curarse no le devuelve a una fase anterior", 3, faseDe(0.9, 3));
-        h.igual("nucleos: 4 golpes solo, 8 con tres jugadores", List.of(4, 8), List.of(golpesNucleo(a, 1), golpesNucleo(a, 3)));
+        h.ok("la furia (fase IV) empieza bajo el 25 %", faseDe(0.24, 1) == 4 && faseDe(0.26, 1) == 3);
 
         // ---- La llegada: 1.000 bloques, 3 cofres o 1 minijefe, una vez al dia, como mucho dos vivos.
         h.igual("a 999 bloques con 3 cofres: aun no", "cerca", motivoLlegada(a, 999, 3, 0, false, false, false, 0));
@@ -1424,7 +1466,8 @@ final class Vigilante implements Listener {
         h.igual("con uno vivo: viene", null, motivoLlegada(a, 1500, 3, 0, false, false, false, 1));
         h.igual("con dos vivos: espera", "lleno", motivoLlegada(a, 1500, 3, 0, false, false, false, 2));
         h.igual("en el spawn: espera", "spawn", motivoLlegada(a, 1500, 3, 0, false, true, false, 0));
-        h.igual("con la Parca encima: espera", "ocupado", motivoLlegada(a, 1500, 3, 0, false, false, true, 0));
+        h.igual("con la Parca, un contrato de Ambush u otro Vigilante encima: espera (ley 6)", "ocupado",
+                motivoLlegada(a, 1500, 3, 0, false, false, true, 0));
         h.ok("un cofre a 999 bloques no cuenta; a 1.000 si", !cuentaAhi(a, 999, false) && cuentaAhi(a, 1000, false));
         h.ok("un cofre en la zona spawn no cuenta", !cuentaAhi(a, 5000, true));
         YamlConfiguration apagado = new YamlConfiguration();
@@ -1436,9 +1479,7 @@ final class Vigilante implements Listener {
         // ---- Cada golpe fuerte avisa al menos un segundo en el suelo, aunque la config diga menos.
         YamlConfiguration prisa = new YamlConfiguration();
         for (PeleaVigilante.Habilidad x : PeleaVigilante.Habilidad.values()) prisa.set("habilidades." + x.clave + ".aviso-ticks", 2);
-        prisa.set("habilidades.faro.adelanto-ticks", 1);
-        prisa.set("habilidades.nucleos.segundos", 0);
-        prisa.set("llegada.caida-ticks", 4);
+        prisa.set("llegada.emerger-aviso-ticks", 4);
         for (Ajustes x : List.of(a, new Ajustes(prisa))) {
             int minimo = Integer.MAX_VALUE;
             String cual = "";
@@ -1451,8 +1492,12 @@ final class Vigilante implements Listener {
                 }
             }
             h.ok((x == a ? "de serie" : "con avisos de 2 ticks en la config") + ": ningun golpe fuerte avisa menos de 20 ticks (minimo "
-                    + minimo + ": " + cual + ")", minimo >= 20 && x.caidaTicks >= 20);
+                    + minimo + ": " + cual + "; al salir de la tierra " + x.emergerAviso + ")", minimo >= 20 && x.emergerAviso >= 20);
+            h.ok((x == a ? "de serie" : "con avisos de 2 ticks en la config") + ": el rugido tambien avisa (medio segundo o mas)",
+                    x.hab(PeleaVigilante.Habilidad.RUGIDO).aviso() >= 10);
         }
+        h.ok("de serie, los avisos de un segundo: rapidos pero legibles", a.hab(PeleaVigilante.Habilidad.MARTILLAZO).aviso() == 20
+                && a.hab(PeleaVigilante.Habilidad.EMBESTIDA).aviso() == 20 && a.emergerAviso <= 30);
 
         // ---- El reparto y el botin extra.
         UUID p0 = Autotest.sintetico(901), a1 = Autotest.sintetico(902), flojo = Autotest.sintetico(903);
@@ -1503,11 +1548,28 @@ final class Vigilante implements Listener {
             h.igual("config.yml: las habilidades como las de serie", a.hab, j.hab);
             h.igual("config.yml: el botin extra como el de serie", EXTRA_DE_SERIE, j.extra);
             h.ok("config.yml: sin avisos al leer el botin extra", j.avisosBotin.isEmpty());
-            h.ok("config.yml: llegada, golpes y mirada como los de serie", j.llegadaBloques == a.llegadaBloques
+            h.ok("config.yml: llegada, golpes y escala como los de serie", j.llegadaBloques == a.llegadaBloques
                     && j.llegadaCofres == a.llegadaCofres && j.llegadaMinijefes == a.llegadaMinijefes && j.maximoVivos == a.maximoVivos
-                    && j.golpeMinimo == a.golpeMinimo && j.golpeMaximo == a.golpeMaximo && j.topeGolpe == a.topeGolpe
-                    && j.miradaTicks == a.miradaTicks && j.vidaBase == a.vidaBase && j.golpeBase == a.golpeBase
-                    && j.nucleosSegundos == a.nucleosSegundos && j.faroTicksVuelta == a.faroTicksVuelta);
+                    && j.avisoSegundos == a.avisoSegundos && j.temblorTicks == a.temblorTicks && j.emergerAviso == a.emergerAviso
+                    && j.llegadaDistancia == a.llegadaDistancia && j.impactoRadio == a.impactoRadio
+                    && j.impactoFraccion == a.impactoFraccion && j.golpeMinimo == a.golpeMinimo && j.golpeMaximo == a.golpeMaximo
+                    && j.topeGolpe == a.topeGolpe && j.vidaBase == a.vidaBase && j.golpeBase == a.golpeBase);
+            h.igual("config.yml: el cuerpo como el de serie",
+                    List.of(a.escalaCuerpo, a.velocidad, a.paso, a.furiaVelocidad, a.furiaEspera, (double) a.atascoTicks,
+                            (double) a.efimerosPorGolpe, (double) a.efimerosMaximo, (double) a.efimerosVida, (double) a.ambienteTicks),
+                    List.of(j.escalaCuerpo, j.velocidad, j.paso, j.furiaVelocidad, j.furiaEspera, (double) j.atascoTicks,
+                            (double) j.efimerosPorGolpe, (double) j.efimerosMaximo, (double) j.efimerosVida, (double) j.ambienteTicks));
+            h.igual("config.yml: los numeros de las habilidades como los de serie",
+                    List.of(a.martilloAlcance, a.martilloSalto, a.martilloCerca, a.martilloMedio, a.martilloLejos, a.martilloAltura,
+                            a.martilloFraccionMedio, a.martilloEmpujeMedio, a.martilloEmpujeLejos, a.lanzaAlcance, a.lanzaVelocidad,
+                            a.lanzaAltura, a.embestidaLargo, a.embestidaVelocidad, a.embestidaEmpuje, (double) a.aturdidoTicks,
+                            a.aturdidoExtra, a.hundeRadio, a.hundeAltura, a.hundeVelocidad, a.rugidoRadio, (double) a.rugidoOscuridad,
+                            a.rugidoCordura),
+                    List.of(j.martilloAlcance, j.martilloSalto, j.martilloCerca, j.martilloMedio, j.martilloLejos, j.martilloAltura,
+                            j.martilloFraccionMedio, j.martilloEmpujeMedio, j.martilloEmpujeLejos, j.lanzaAlcance, j.lanzaVelocidad,
+                            j.lanzaAltura, j.embestidaLargo, j.embestidaVelocidad, j.embestidaEmpuje, (double) j.aturdidoTicks,
+                            j.aturdidoExtra, j.hundeRadio, j.hundeAltura, j.hundeVelocidad, j.rugidoRadio, (double) j.rugidoOscuridad,
+                            j.rugidoCordura));
             h.igual("config.yml: tope diario de la Aduana para el Vigilante", 1, jar.getInt("hardcore.aduana.topes-diarios.vigilante", -1));
             // 1.13.0: la gema ya llega con el lote de gemas (entregas.mmo.gema-vigilante); las placas
             // siguen fuera hasta que exista su plantilla, para que el selftest "mmo" no falle.
@@ -1521,7 +1583,7 @@ final class Vigilante implements Listener {
                 List.of(Entregas.MMO_DEFECTO.get(Entregas.OJO_DEL_VIGILANTE), Entregas.MMO_DEFECTO.get(Entregas.PLACA_DEL_VIGILANTE)));
         h.igual("Aduana: tope de serie del Vigilante", 1, Aduana.TOPES_DE_SERIE.get("vigilante"));
 
-        // ---- La geometria de la mirada y de los pilares.
+        // ---- La pelea: habilidades, fases, golpes por distancia, saltos y la caja escalada.
         PeleaVigilante.autotest(h, a);
         return h.lineas();
     }
