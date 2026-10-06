@@ -35,7 +35,12 @@ import java.util.function.ToDoubleFunction;
  *   manto                      1 en cuanto se ve el [5] del Manto puesto dentro (tickManto)
  *   estadisticas: [a, b]       todas a la vez: vale lo que valga la menor
  *
- * Los de 100 h, 250 h y [SEGADOR] III vienen con activo: false hasta el visto bueno de Dosa.
+ * Los de 100 h y 250 h vienen con activo: false hasta el visto bueno de Dosa.
+ *
+ * [SEGADOR] (Dosa, 2026-10-06): "el tag si a los 10" y el God Kit GrimReaper "que requiera matar a la Parca 30
+ * veces". segador-2 (10 PARCAs) da solo el tag II; segador-3 sube de 25 a 30, se enciende y da el tag III, su
+ * efecto de RIP y gkit.grimreaper. El kit se reclama una vez: al reclamarlo, AE le pone la espera mas larga que
+ * admite y el propio kit le quita el permiso. Ningun otro hito da gkit.grimreaper (autotestSegador).
  */
 final class Hitos {
 
@@ -267,6 +272,52 @@ final class Hitos {
 
     // ------------------------------------------------------------------ autotest
 
+    /**
+     * Los hitos del Segador de una config (la del jar o la del servidor), sin servidor: el tag II a las 10
+     * PARCAs sin el God Kit, el III a las 30 encendido y con gkit.grimreaper, y nadie mas que lo de.
+     */
+    static List<String> autotestSegador(ConfigurationSection hitos, String origen) {
+        Autotest.Hoja h = new Autotest.Hoja();
+        if (hitos == null) {
+            h.ok(origen + ": sin hitos", false);
+            return h.lineas();
+        }
+        String gkit = "permission set gkit.grimreaper";
+        ConfigurationSection s2 = hitos.getConfigurationSection("segador-2"), s3 = hitos.getConfigurationSection("segador-3");
+        h.ok(origen + ": segador-2 y segador-3 existen", s2 != null && s3 != null);
+        if (s2 == null || s3 == null) return h.lineas();
+        h.cerca(origen + ": segador-2 a las 10 PARCAs", 10, s2.getDouble("umbral", 0), 1e-9);
+        h.ok(origen + ": segador-2 da el tag II", s2.getStringList("comandos").stream().anyMatch(c -> c.contains("segador2.badge.unlocked")));
+        h.ok(origen + ": segador-2 ya no da el God Kit", s2.getStringList("comandos").stream().noneMatch(c -> c.contains(gkit)));
+        h.cerca(origen + ": segador-3 a las 30 PARCAs", 30, s3.getDouble("umbral", 0), 1e-9);
+        h.ok(origen + ": segador-3 encendido", s3.getBoolean("activo", true));
+        h.ok(origen + ": segador-3 da el tag III", s3.getStringList("comandos").stream().anyMatch(c -> c.contains("segador3.badge.unlocked")));
+        h.ok(origen + ": segador-3 da el God Kit", s3.getStringList("comandos").stream().anyMatch(c -> c.contains(gkit)));
+        int conGkit = 0;
+        for (String id : hitos.getKeys(false)) {
+            ConfigurationSection x = hitos.getConfigurationSection(id);
+            if (x != null && x.getStringList("comandos").stream().anyMatch(c -> c.contains(gkit))) conGkit++;
+        }
+        h.igual(origen + ": un solo hito da gkit.grimreaper", 1, conGkit);
+
+        YamlConfiguration entregados = new YamlConfiguration();
+        UUID u = Autotest.sintetico(2);
+        entregados.set(u + ".segador-1", true);
+        entregados.set(u + ".segador-2", true);
+        Map<String, Double> v = new LinkedHashMap<>();
+        ToDoubleFunction<String> val = e -> v.getOrDefault(e, 0.0);
+        v.put("parcas", 10.0);
+        h.ok(origen + ": 10 PARCAs no dan el III", !pendientes(hitos, new YamlConfiguration(), u, "parcas", val).contains("segador-3"));
+        v.put("parcas", 29.0);
+        h.ok(origen + ": 29 PARCAs tampoco", !pendientes(hitos, entregados, u, "parcas", val).contains("segador-3"));
+        v.put("parcas", 30.0);
+        h.ok(origen + ": 30 PARCAs dan el III", pendientes(hitos, entregados, u, "parcas", val).contains("segador-3"));
+        entregados.set(u + ".segador-3", true);
+        h.ok(origen + ": entregado, no se repite (el permiso no vuelve tras reclamar el kit)",
+                !pendientes(hitos, entregados, u, null, val).contains("segador-3"));
+        return h.lineas();
+    }
+
     private List<String> autotest() {
         Autotest.Hoja h = new Autotest.Hoja();
         YamlConfiguration conf = new YamlConfiguration();
@@ -322,12 +373,18 @@ final class Hitos {
         h.ok("vestigio con las dos forjas", pendientes(conf, entregados, u, "forja-filo", val).contains("vestigio"));
         h.ok("manto-ids no es un hito", !pendientes(conf, entregados, u, null, val).contains("manto-ids"));
 
+        YamlConfiguration jar = Ambush.configDelJar();
+        if (jar != null) {
+            for (String l : autotestSegador(jar.getConfigurationSection("hardcore.hitos"), "jar")) {
+                h.ok(l.startsWith("OK ") ? l.substring(3) : l, l.startsWith("OK "));
+            }
+        }
         ConfigurationSection real = lista();
         if (real != null && real.isConfigurationSection("insomne-1")) {
             h.cerca("config: insomne-1 a las 24 h", 24, real.getDouble("insomne-1.umbral", 0), 1e-9);
             h.ok("config: vigia (100 h) apagado", !real.getBoolean("vigia.activo", true));
             h.ok("config: sin-alba (250 h) apagado", !real.getBoolean("sin-alba.activo", true));
-            h.ok("config: segador-3 apagado", !real.getBoolean("segador-3.activo", true));
+            for (String l : autotestSegador(real, "config")) h.ok(l.startsWith("OK ") ? l.substring(3) : l, l.startsWith("OK "));
         }
         h.ok("autotest no toca hitos-entregados reales", !hc.datos().isSet("hitos-entregados." + u));
         h.ok("/calamity milestones registrado", Subcomandos.staff().nombres(null).contains("milestones"));
