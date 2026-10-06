@@ -243,7 +243,7 @@ final class FragmentosMasamune {
         Ambush.katanas(h, "formato nuevo", nuevos);
         Altar.Trueque masamune = nuevos.get("masamune"), crimson = nuevos.get("crimson-masamune");
         if (masamune != null && crimson != null) {
-            h.igual("la Masamune va con la Guadaña en la Forja", "guadana", MenuAltar.grupoDe(masamune));
+            h.igual("la Masamune va con la Guadaña en la Forja (fila El Eco, la Parca y Ambush)", "amenazas", MenuAltar.grupoDe(masamune));
             Altar.CajaPrueba c = new Altar.CajaPrueba();
             UUID j = Autotest.sintetico(621);
             String frag = j + ":" + OBJETO;
