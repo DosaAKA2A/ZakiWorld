@@ -871,6 +871,121 @@ def verde_con_musgo(datapack: Path, cuenta: Counter) -> None:
     cuenta["verde: cuarzo -> manchas de musgo"] += cambios
 
 
+# ------------------------------------------------------------------ noches de Panacea
+
+# Panacea (el tipo de dimension del mundo de Calamity) no tenia noche. Su lista de timelines
+# (#bracken:in_panacea) solo traia el universal de los aldeanos y bracken:panacea_day: un "dia"
+# de 72000 ticks con el sol clavado a 60 grados, la luna y las estrellas girando a su aire y una
+# penumbra (luz del cielo x0,5 / x0,2 / x0,5) que hacia las veces de noche. /time set night no
+# cambiaba nada (Dosa, 2026-10-06: "cuando hago de noche no veo ningun cambio").
+#
+# Desde LethalWorld 2.1.1 corren el dia y la luna vanilla (los del overworld: el sol que se mueve,
+# la luna con sus fases, las estrellas y la oscuridad que deja salir mobs y hace falta alumbrar) y
+# bracken:panacea_day va DETRAS. El juego aplica los timelines en el orden de la etiqueta, encima
+# de la dimension y del bioma: los "multiply" de Panacea colorean el dia vanilla y sus "override"
+# mandan sobre el. early_game (patrullas de saqueadores los primeros dias) no hace falta aqui.
+TIMELINES_PANACEA = ["#minecraft:universal", "minecraft:day", "minecraft:moon", "bracken:panacea_day"]
+TIMELINES_PANACEA_BRACKEN = ["#minecraft:universal", "bracken:panacea_day"]
+# Lo que en Bracken hacia de cielo y de noche: fuera, ahora lo lleva el dia vanilla.
+PISTAS_FUERA = (
+    "minecraft:visual/sun_angle",            # el sol fijo a 60 grados
+    "minecraft:visual/moon_angle",           # la luna y las estrellas, una vuelta cada 72000 ticks
+    "minecraft:visual/star_angle",
+    "minecraft:gameplay/bees_stay_in_hive",  # las abejas en la colmena durante la penumbra
+)
+# El cielo de sangre de Bracken va de 63500 a 65000, con el pico en 64250. Con el dia vanilla eso
+# cae de noche (64250 % 24000 = 16250), y un rojo multiplicado por un cielo negro es negro: no se
+# veria. Se mueve al mediodia del tercer dia (54000 % 24000 = 6000), donde el dia vanilla deja el
+# cielo en blanco y el rojo sale entero, como lo pinto Bracken: cielo rojo, nubes negras, el suelo
+# a oscuras (luz del cielo x0) y las estrellas encendidas, una vez cada tres dias (una hora real).
+# OJO: Calamity fija esta misma hora para el cielo rojo de su clima (Clima.CIELO_HORA y
+# hardcore.clima.cielo-rojo.hora en su config.yml). Si se mueve aqui, se mueve alli.
+SANGRE_BRACKEN = (63_500, 64_250, 65_000)
+SANGRE = (53_250, 54_000, 54_750)
+# Pistas que quedan como "el tinte de siempre todo el periodo + el cielo de sangre en su ventana",
+# con los valores de Bracken en 63500, 64250 y 65000. Se va la penumbra: encima de la noche vanilla
+# dejaba las noches en negro total y, a ratos, los dias tan oscuros como una noche (y la cordura de
+# Calamity, que cuenta la noche por la hora, ya no casaria con lo que se ve).
+# Valor: el modificador nuevo, o None para dejar el suyo.
+PISTAS_SANGRE = {
+    "minecraft:visual/sky_color": None,
+    "minecraft:visual/sky_light_color": None,
+    "minecraft:visual/sky_light_factor": None,
+    "minecraft:gameplay/sky_light_level": None,
+    "minecraft:visual/cloud_color": None,
+    # "maximum": fuera del rojo vale 0 y mandan las estrellas vanilla (de noche si, de dia no).
+    "minecraft:visual/star_brightness": None,
+    "minecraft:gameplay/piglins_zombify": None,
+    # Era override: un resplandor verde fijo en el horizonte (tambien de noche) que tapaba los
+    # amaneceres y atardeceres vanilla. Con multiply y el alfa al maximo los vuelve verdosos.
+    "minecraft:visual/sunrise_sunset_color": "multiply",
+}
+# Las tortugas nacian alrededor del cielo de sangre: se mueven con el.
+PISTAS_CON_LA_SANGRE = ("minecraft:gameplay/turtle_egg_hatch_chance",)
+# El dia vanilla hace arder a los monstruos al sol (monsters_burn). En Panacea no ardian nunca (no
+# tenia dia) y los mobs de Calamity ya salen con setShouldBurnInDay(false): se queda como estaba.
+# Si algun dia se quiere que ardan, basta con quitar esta pista.
+SIN_ARDER = {"minecraft:gameplay/monsters_burn": {"keyframes": [{"ticks": 0, "value": False}], "modifier": "and"}}
+
+
+def alfa_plena(valor):
+    """Un color #aarrggbb con el alfa al maximo (multiplicar por el no cambia la transparencia)."""
+    if isinstance(valor, str) and re.fullmatch(r"#[0-9a-fA-F]{8}", valor):
+        return "#ff" + valor[3:]
+    return valor
+
+
+def panacea_con_noches(datapack: Path, cuenta: Counter) -> None:
+    base = datapack / "data" / "bracken"
+    fetiqueta = base / "tags" / "timeline" / "in_panacea.json"
+    etiqueta = json.loads(fetiqueta.read_text(encoding="utf-8"))
+    if etiqueta.get("values") != TIMELINES_PANACEA_BRACKEN:
+        sys.exit(f"#bracken:in_panacea ya no es {TIMELINES_PANACEA_BRACKEN}: revisar panacea_con_noches")
+    etiqueta["values"] = TIMELINES_PANACEA
+    fetiqueta.write_text(json.dumps(etiqueta, ensure_ascii=False, indent=1), encoding="utf-8")
+
+    fdia = base / "timeline" / "panacea_day.json"
+    dia = json.loads(fdia.read_text(encoding="utf-8"))
+    periodo = dia.get("period_ticks")
+    if periodo != 72_000 or dia.get("clock") != "minecraft:overworld":
+        sys.exit("bracken:panacea_day ya no es un dia de 72000 ticks del reloj overworld: revisar panacea_con_noches")
+    pistas = dia["tracks"]
+    for p in PISTAS_FUERA:
+        if pistas.pop(p, None) is not None:
+            cuenta["panacea: pistas fuera (sol, luna, estrellas, colmenas)"] += 1
+    for p, modificador in PISTAS_SANGRE.items():
+        pista = pistas.get(p)
+        if pista is None:
+            sys.exit(f"bracken:panacea_day ya no trae {p}: revisar panacea_con_noches")
+        claves = {k["ticks"]: k["value"] for k in pista["keyframes"]}
+        if any(t not in claves for t in SANGRE_BRACKEN):
+            sys.exit(f"{p} ya no tiene el cielo de sangre en {SANGRE_BRACKEN}: revisar panacea_con_noches")
+        valores = [claves[t] for t in SANGRE_BRACKEN]
+        if modificador is not None:
+            pista["modifier"] = modificador
+            if modificador == "multiply":
+                valores = [alfa_plena(v) for v in valores]
+        pista["keyframes"] = [{"ticks": t, "value": v} for t, v in zip(SANGRE, valores)]
+        cuenta["panacea: pistas con solo el tinte y el cielo de sangre"] += 1
+    salto = SANGRE[1] - SANGRE_BRACKEN[1]
+    for p in PISTAS_CON_LA_SANGRE:
+        pista = pistas.get(p)
+        if pista is None:
+            continue
+        for k in pista["keyframes"]:
+            k["ticks"] = (k["ticks"] + salto) % periodo
+        pista["keyframes"].sort(key=lambda k: k["ticks"])
+        cuenta["panacea: pistas movidas con el cielo de sangre"] += 1
+    pistas.update(SIN_ARDER)
+
+    # Comprobacion: nada fija ya el sol, la luna ni las estrellas, y todo cae dentro del periodo.
+    quedan = [p for p in PISTAS_FUERA if p in pistas]
+    fuera = [p for p, v in pistas.items() if any(not 0 <= k["ticks"] < periodo for k in v["keyframes"])]
+    if quedan or fuera:
+        sys.exit(f"panacea_day mal: pistas que no debian quedar {quedan}, fuera del periodo {fuera}")
+    fdia.write_text(json.dumps(dia, ensure_ascii=False, indent=1), encoding="utf-8")
+
+
 # Piezas que Bracken v129 ya referencia sin incluirlas: Minecraft las salta sin romper nada.
 ROTAS_DE_ORIGEN = {
     "bracken:omnidrome/omnidrome_palace_fin",
@@ -959,6 +1074,7 @@ def main() -> None:
 
     carmesi_sin_musgo(datapack, cuenta)
     verde_con_musgo(datapack, cuenta)
+    panacea_con_noches(datapack, cuenta)
     construir_ruinas(datapack, cuenta)
 
     # Indices: el plugin no puede listar carpetas dentro de su propio jar, asi que sabe que copiar por aqui.

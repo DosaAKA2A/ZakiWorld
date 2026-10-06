@@ -1836,17 +1836,20 @@ hardcore:
       aviso: "te vas a quemar."
       hojas-protegen: true
       # Hora que se le pone al jugador mientras esta alli: la del cielo de sangre del ciclo de
-      # Panacea (el dia dura 72000 ticks y el cielo rojo va de 63500 a 65000). 0 = no se toca.
-      # Durante un Eclipse, o si la Parca le ha cambiado el cielo, manda el de ellos.
-      hora: 64250
+      # Panacea (el dia dura 72000 ticks y el cielo rojo va de 53250 a 54750, el mediodia del
+      # tercer dia vanilla). 0 = no se toca. Durante un Eclipse, o si la Parca le ha cambiado el
+      # cielo, manda el de ellos. Hasta la 1.15.1 era 64250, que con las noches de LethalWorld 2.1.1
+      # cae de noche y se ve negro: si un config.yml aun la tiene, se lee como 54000.
+      hora: 54000
       # Lo que dura el dia de Panacea en ticks (el periodo de su timeline). El servidor solo
       # deja fijar la hora dentro de bloques de 24000, asi que con este valor se calcula cada
       # segundo la que hay que mandar para que caiga en la 'hora' de arriba. Solo cambiarlo si
       # cambia el timeline del datapack.
       periodo-dia: 72000
       # Ticks que tarda su cielo en pasar al rojo al entrar, y del rojo al suyo al salir (andando, volando o
-      # porque escampa): la hora avanza por el camino corto del dia de Panacea en vez de saltar. Morir,
-      # cambiar de mundo, desconectarse o teletransportarse lejos lo devuelven en el acto. 0 = salto.
+      # porque escampa): la hora avanza por el camino corto del dia vanilla (medio dia como mucho) en
+      # vez de saltar. Morir, cambiar de mundo, desconectarse o teletransportarse lejos lo devuelven en
+      # el acto. 0 = salto.
       transicion-ticks: 40
       # En la zona spawn, si es de este bioma, el mismo cielo y las mismas particulas (sin fuego ni dano).
       # Es el unico clima que entra en la zona spawn.

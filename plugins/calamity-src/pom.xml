@@ -6,7 +6,7 @@
 
   <groupId>net.ederus</groupId>
   <artifactId>Calamity</artifactId>
-  <version>1.15.1</version>
+  <version>1.15.2</version>
   <packaging>jar</packaging>
   <name>Calamity</name>
   <description>Calamity: la PARCA, el Eco, la Aduana y las reglas hardcore de los mundos de Lethal World</description>
@@ -19,7 +19,7 @@
     <edm.version>1.79.0</edm.version>
     <!-- La version de LethalWorld contra la que se compila. Al subir LethalWorld, subirla
          aqui tambien: el jar se busca por su nombre, con la version dentro. -->
-    <lethalworld.version>2.1.0</lethalworld.version>
+    <lethalworld.version>2.1.1</lethalworld.version>
     <!-- Donde estan los jars de terceros (PlaceholderAPI). En el repo es
          ProyectosGit/_toolchain/libs, tres niveles por encima; en un worktree de
          ZakiWorld-wt/<paquete> es uno mas arriba, y eso lo arregla el perfil de abajo. -->
