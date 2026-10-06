@@ -585,6 +585,14 @@ final class Entregas implements Listener {
      * para que se sepa por que no se deja vender.
      */
     ItemStack ligar(ItemStack item, UUID dueno) {
+        return ligar(item, dueno, dueno == null ? null : nombreDe(dueno));
+    }
+
+    /**
+     * Lo mismo con el nombre que va en la linea del lore. Para el autotest: un uuid sintetico no tiene nombre
+     * y la linea saldria con el uuid entero, que no cabe en 38 y parte "Ligado a" del nombre.
+     */
+    ItemStack ligar(ItemStack item, UUID dueno, String nombre) {
         if (item == null || item.getType().isAir() || dueno == null || item.getItemMeta() == null) return item;
         boolean ya = Ligado.duenoDe(item) != null;
         Ligado.ligar(item, dueno);
@@ -592,7 +600,7 @@ final class Entregas implements Listener {
             ItemMeta meta = item.getItemMeta();
             List<Component> lore = meta.lore() == null ? new ArrayList<>() : new ArrayList<>(meta.lore());
             // Rama lore-items: un hueco y la nota en gris de la plantilla (Ficha), cortada a 38 si el nombre es largo.
-            lore.addAll(Ficha.lineasLigado(nombreDe(dueno)));
+            lore.addAll(Ficha.lineasLigado(nombre));
             meta.lore(lore);
             item.setItemMeta(meta);
         }
@@ -1162,9 +1170,11 @@ final class Entregas implements Listener {
                 && bar.getData(io.papermc.paper.datacomponent.DataComponentTypes.LODESTONE_TRACKER).location() == null);
         h.ok("barometro: nombre y lore sin negrita", bar != null
                 && Ficha.faltas(bar.getItemMeta().displayName(), bar.getItemMeta().lore()).isEmpty());
-        ItemStack barLigado = ligar(crear(Barometro.OBJETO), u);
+        // Con un nombre de jugador, como en el juego: el uuid sintetico no tiene nombre y su linea de ligado
+        // (el uuid entero, 36 caracteres) se parte en dos, asi que ligadoDe no la reconoce.
+        ItemStack barLigado = ligar(crear(Barometro.OBJETO), u, "Dosa__");
         h.ok("barometro ligado: al renovarlo no cambia nada", Barometro.renovado(barLigado) == null
-                && Ficha.ligadoDe(barLigado.getItemMeta().lore()) != null);
+                && "Dosa__".equals(Ficha.ligadoDe(barLigado.getItemMeta().lore())));
         ItemStack g1 = grabado(), g2 = grabado();
         String id1 = g1.getItemMeta().getPersistentDataContainer().get(Marcas.GRABADO, PersistentDataType.STRING);
         String id2 = g2.getItemMeta().getPersistentDataContainer().get(Marcas.GRABADO, PersistentDataType.STRING);
