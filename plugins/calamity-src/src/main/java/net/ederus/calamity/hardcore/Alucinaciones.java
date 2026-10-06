@@ -8,6 +8,7 @@ import net.kyori.adventure.text.Component;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.Particle;
+import org.bukkit.SoundCategory;
 import org.bukkit.World;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.file.YamlConfiguration;
@@ -55,6 +56,12 @@ import java.util.function.Predicate;
  * (setVisibleByDefault(false) + showEntity), sin IA, invulnerables, sin colision, con la marca
  * lethal_world:amenaza = "alucinacion" (Amenazas les quita objetivos y teleports ajenos), no
  * persistentes, y se borran en el quit, al morir, al salir del mundo y al parar.
+ *
+ * Locura · La cola de sonidos es tambien la de Locura (los sustos de la cordura baja): Locura
+ * decide que suena y cuando, y aqui se toca. Un sonido puede ir fijo en una direccion del mundo (asi se
+ * le puede plantar cara) y formar parte de una racha que se calla en seco si el jugador se gira a mirar
+ * hacia ella. Con la cordura por debajo de locura.umbral-pasos, los pasos de la tirada son los pesados
+ * de Locura. Nada de la cola suena dentro de la zona spawn.
  */
 final class Alucinaciones implements Listener {
 
@@ -71,8 +78,35 @@ final class Alucinaciones implements Listener {
     /** Cada cuanto se mueve lo que esta vivo: figuras, carreras y la cola de pasos. */
     private static final long CADA_TICKS = 2;
 
-    /** Un sonido que tiene que sonar mas tarde (los pasos), relativo a donde este entonces. */
-    private record Sonido(UUID jugador, long tick, double detras, String clave, float volumen, float tono) {
+    /**
+     * Un sonido que tiene que sonar mas tarde, puesto donde este el jugador entonces.
+     *
+     *  - rumbo null: a 'distancia' bloques en 'angulo' grados de donde mire en ese momento (180 = justo
+     *    detras). Le sigue la cabeza: lo de la nuca sigue en la nuca aunque se gire.
+     *  - rumbo fijo (horizontal): a 'distancia' bloques en esa direccion del mundo. Si se gira, lo tiene
+     *    delante: asi van los pasos de Locura.
+     *  - racha distinta de 0 y corte de 1 o menos: si su mirada y el rumbo forman un coseno mayor que
+     *    'corte', lo que queda de la racha sale de la cola sin sonar (paran en seco).
+     *
+     * 'altura' se suma a sus pies (1,5 = a la altura de la cabeza). En Locura, 'tick' es el retraso
+     * desde ahora; encolar() lo pasa al reloj de aqui.
+     */
+    record Sonido(UUID jugador, long tick, double distancia, double angulo, Vector rumbo, double altura,
+                  String clave, SoundCategory categoria, float volumen, float tono, int racha, double corte) {
+
+        /** Los de siempre (los pasos de la tirada): detras de donde mire, sin racha, en la categoria de serie. */
+        static Sonido detras(UUID jugador, long tick, double distancia, String clave, float volumen, float tono) {
+            return new Sonido(jugador, tick, distancia, 180, null, 0, clave, SoundCategory.MASTER, volumen, tono, 0, 2);
+        }
+
+        Sonido en(long t) {
+            return new Sonido(jugador, t, distancia, angulo, rumbo, altura, clave, categoria, volumen, tono, racha, corte);
+        }
+
+        /** Si se calla cuando el jugador mira hacia el. */
+        boolean cortable() {
+            return racha != 0 && rumbo != null && corte <= 1;
+        }
     }
 
     private static final class Figura {
@@ -96,11 +130,20 @@ final class Alucinaciones implements Listener {
     private final List<Sonido> cola = new ArrayList<>();
     private BukkitTask tarea;
     private long ticks;
+    /** Locura: el numero de la ultima racha de sonidos (0 = sin racha). */
+    private int rachas;
+    /** Locura: los sustos de la cordura baja. Lo pone Sentidos; null = los pasos de siempre. */
+    private Locura locura;
 
     Alucinaciones(Hardcore hc) {
         this.hc = hc;
         hc.plugin().getServer().getPluginManager().registerEvents(this, hc.plugin());
         Autotest.registrar("alucinaciones", this::autotest);
+    }
+
+    /** Locura: lo llama Sentidos al crear Locura. */
+    void locura(Locura l) {
+        locura = l;
     }
 
     private ConfigurationSection cfg() {
@@ -164,8 +207,11 @@ final class Alucinaciones implements Listener {
         UUID u = p.getUniqueId();
         switch (tipo) {
             case PASOS -> {
+                // Locura: con la cordura por debajo de locura.umbral-pasos son los pasos pesados de Locura,
+                // con sus topes; si no caben (otro susto hace un momento, una racha en marcha), la tirada se pierde.
+                if (locura != null && locura.pesados(p)) return locura.pasosDeTirada(p);
                 // Tres pasos a 4 bloques detras, cada 8 ticks: se oyen acercarse y no hay nadie.
-                for (int i = 0; i < 3; i++) cola.add(new Sonido(u, ticks + i * 8L, 4, S_PASO, 0.9f, 0.9f));
+                for (int i = 0; i < 3; i++) cola.add(Sonido.detras(u, ticks + i * 8L, 4, S_PASO, 0.9f, 0.9f));
                 asegurarTarea();
                 return true;
             }
@@ -314,14 +360,46 @@ final class Alucinaciones implements Listener {
                 () -> hc.seguro("alucinaciones", this::cadaDosTicks), CADA_TICKS, CADA_TICKS);
     }
 
+    // ------------------------------------------------------------ la cola (Locura)
+
+    /** Mete en la cola lo que manda Locura; el tick de cada uno es el retraso desde ahora. */
+    void encolar(List<Sonido> sonidos) {
+        if (sonidos == null || sonidos.isEmpty()) return;
+        for (Sonido s : sonidos) cola.add(s.en(ticks + Math.max(0, s.tick())));
+        asegurarTarea();
+    }
+
+    /** Un numero nuevo para una racha (nunca 0). */
+    int nuevaRacha() {
+        if (++rachas == 0) rachas = 1;
+        return rachas;
+    }
+
+    /** Si ese jugador tiene una racha sonando (unos pasos que aun no llegan). */
+    boolean enRacha(UUID jugador) {
+        for (Sonido s : cola) if (s.racha() != 0 && s.jugador().equals(jugador)) return true;
+        return false;
+    }
+
     private void cadaDosTicks() {
         ticks += CADA_TICKS;
+        // Locura: primero las rachas hacia las que se giro a mirar: lo que les quedaba ya no suena.
+        if (!cola.isEmpty()) {
+            Set<Integer> cortadas = cortadas(cola, u -> {
+                Player p = Bukkit.getPlayer(u);
+                return p == null ? null : p.getLocation().getDirection();
+            });
+            if (!cortadas.isEmpty()) cola.removeIf(s -> cortadas.contains(s.racha()));
+        }
         for (Iterator<Sonido> it = cola.iterator(); it.hasNext(); ) {
             Sonido s = it.next();
             if (s.tick() > ticks) continue;
             it.remove();
             Player p = Bukkit.getPlayer(s.jugador());
-            if (p != null && hc.esHardcore(p)) p.playSound(detras(p, s.detras()), s.clave(), s.volumen(), s.tono());
+            if (p == null || !hc.esHardcore(p)) continue;
+            // Locura: nada suena dentro de la zona spawn, tampoco lo que solo oye el.
+            Location l = aSonar(p.getLocation(), s, hc::enSpawn);
+            if (l != null) p.playSound(l, s.clave(), s.categoria(), s.volumen(), s.tono());
         }
         boolean parca = parcaViva();
         for (Iterator<Figura> it = figuras.values().iterator(); it.hasNext(); ) {
@@ -505,8 +583,49 @@ final class Alucinaciones implements Listener {
 
     /** Si la esta mirando de frente (producto escalar > 0,97): entonces se deshace. */
     static boolean deFrente(Vector mirada, Vector hacia) {
-        if (mirada.lengthSquared() < 1e-9 || hacia.lengthSquared() < 1e-9) return false;
-        return mirada.clone().normalize().dot(hacia.clone().normalize()) > 0.97;
+        return deFrente(mirada, hacia, 0.97);
+    }
+
+    /** Lo mismo con otro margen: 'coseno' es el del angulo mas abierto que aun cuenta como mirar. */
+    static boolean deFrente(Vector mirada, Vector hacia, double coseno) {
+        if (mirada == null || hacia == null || mirada.lengthSquared() < 1e-9 || hacia.lengthSquared() < 1e-9) return false;
+        return mirada.clone().normalize().dot(hacia.clone().normalize()) > coseno;
+    }
+
+    /**
+     * Locura · Las rachas que hay que callar: las de quien mira (en horizontal, la cabeza arriba o abajo
+     * no cuenta) hacia el rumbo de donde vienen. 'mirada' da hacia donde mira cada jugador (null = no esta).
+     */
+    static Set<Integer> cortadas(List<Sonido> cola, java.util.function.Function<UUID, Vector> mirada) {
+        Set<Integer> out = new HashSet<>();
+        Set<Integer> vistas = new HashSet<>();
+        for (Sonido s : cola) {
+            if (!s.cortable() || !vistas.add(s.racha())) continue;
+            Vector m = mirada.apply(s.jugador());
+            if (m == null) continue;
+            if (deFrente(m.clone().setY(0), s.rumbo().clone().setY(0), s.corte())) out.add(s.racha());
+        }
+        return out;
+    }
+
+    /** Donde suena ese sonido con el jugador en 'pie' (sus pies y su mirada). */
+    static Location donde(Location pie, Sonido s) {
+        Vector dir;
+        if (s.rumbo() != null) {
+            dir = s.rumbo().clone().setY(0);
+        } else {
+            dir = pie.getDirection().setY(0);
+            if (dir.lengthSquared() < 1e-6) dir = new Vector(0, 0, 1);
+            dir.normalize().rotateAroundY(Math.toRadians(s.angulo()));
+        }
+        if (dir.lengthSquared() < 1e-9) dir = new Vector(0, 0, 1);
+        return pie.clone().add(dir.normalize().multiply(s.distancia())).add(0, s.altura(), 0);
+    }
+
+    /** Donde suena, o null si cae en la zona spawn: ahi no suena nada. */
+    static Location aSonar(Location pie, Sonido s, Predicate<Location> enSpawn) {
+        Location l = donde(pie, s);
+        return enSpawn != null && enSpawn.test(l) ? null : l;
     }
 
     private static Location detras(Player p, double bloques) {
@@ -562,6 +681,13 @@ final class Alucinaciones implements Listener {
         h.ok("figura a 20-35 bloques y a su altura (300 tiradas)", distancias);
         h.ok("mirarla de frente la deshace", deFrente(new Vector(0, 0, 1), new Vector(0.1, 0, 1)));
         h.ok("de reojo no", !deFrente(new Vector(0, 0, 1), new Vector(1, 0, 1)));
+
+        // Locura: la cola ahora es tambien la de Locura; los pasos de siempre suenan donde sonaban.
+        Location pie = new Location(null, 0, 64, 0, 0f, 0f);   // yaw 0: mira hacia +Z
+        Location paso = donde(pie, Sonido.detras(Autotest.sintetico(1), 0, 4, S_PASO, 0.9f, 0.9f));
+        h.ok("paso de siempre: 4 bloques justo detras", Math.abs(paso.getZ() + 4) < 1e-6 && Math.abs(paso.getX()) < 1e-6
+                && Math.abs(paso.getY() - 64) < 1e-6);
+        h.ok("paso de siempre: no se corta al mirar", !Sonido.detras(Autotest.sintetico(1), 0, 4, S_PASO, 1f, 1f).cortable());
 
         long ahora = 50_000_000L;
         UUID yo = Autotest.sintetico(1), ana = Autotest.sintetico(2), beto = Autotest.sintetico(3),
