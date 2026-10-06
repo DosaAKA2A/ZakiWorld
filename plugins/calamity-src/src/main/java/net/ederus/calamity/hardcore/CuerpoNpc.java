@@ -29,6 +29,9 @@ import java.util.regex.Pattern;
  * sino del constructor; la Parca sigue llamando al de siempre. Ambush cambia de skin al pasar
  * a su fase 2 (cambiarSkin) y suelta y recoge la katana (empunar).
  *
+ * Calamity 1.14.1: tambien es el jinete del Vigilante, con su maza y la calabaza tallada. Montado en
+ * el zoglin no se le puede teleportar (lo bajaria): se le gira (girar), como hace Alba con encarar.
+ *
  * Los golpes que recibe el maniqui los pasa Parca.onDanoCascara al esqueleto, con el jugador
  * de verdad como autor (tambien las flechas: el tirador, no la flecha). Por eso NO se usa el
  * shell de BossFight en la anomalia: EDM le pasaria el golpe con la flecha como autor, y
@@ -212,6 +215,26 @@ final class CuerpoNpc {
         l.setPitch(Math.max(-30f, Math.min(30f, l.getPitch())));
         mq.teleport(l);
         // El primer paquete a veces llega sin la skin (BossFight.wearShell): otra vez a los 2 ticks.
+        if (++pulsos == 2 && perfil != null) mq.setProfile(perfil);
+        return true;
+    }
+
+    /**
+     * Calamity 1.14.1 · Lo gira sin moverlo (setRotation), para cuando va montado: un teleport lo
+     * bajaria de la montura (como en Alba). Con el mismo reintento del perfil que seguir. False si el
+     * maniqui ya no existe.
+     */
+    boolean girar(float yaw, float pitch) {
+        if (mq == null) return false;
+        if (!mq.isValid()) {
+            mq = null;
+            return false;
+        }
+        try {
+            mq.setRotation(yaw, Math.max(-30f, Math.min(30f, pitch)));
+        } catch (Throwable ignorado) {
+            // Sin girar, sigue mirando a donde miraba: la pelea sigue.
+        }
         if (++pulsos == 2 && perfil != null) mq.setProfile(perfil);
         return true;
     }

@@ -106,6 +106,11 @@ final class Amenazas implements Listener {
      * y bloquea todos los demas (enderman, /tp de otro plugin, portales).
      */
     private boolean teleportPropio;
+    /**
+     * Calamity 1.14.1 · Levantada mientras subimos nosotros a alguien a una montura (el jinete del
+     * Vigilante a su zoglin): onMontar deja pasar esa y sigue vetando todas las demas.
+     */
+    private boolean montajePropio;
 
     Amenazas(Hardcore hc) {
         this.hc = hc;
@@ -137,6 +142,16 @@ final class Amenazas implements Listener {
      */
     <T extends LivingEntity> T invocar(Class<T> tipo, Location sitio, String amenaza, int nivel,
                                        Component nombre, Consumer<T> extra) {
+        return invocar(tipo, sitio, amenaza, nivel, nombre, extra, true);
+    }
+
+    /**
+     * Calamity 1.14.1 · Lo mismo, y con cartel = false sin el cartel "Nv. X" ni nombre: la montura del
+     * Vigilante es una amenaza (nadie la mueve, no arde, no apunta a mobs) pero el unico nombre de la
+     * pelea es el del jinete.
+     */
+    <T extends LivingEntity> T invocar(Class<T> tipo, Location sitio, String amenaza, int nivel,
+                                       Component nombre, Consumer<T> extra, boolean cartel) {
         if (tipo == null || sitio == null || sitio.getWorld() == null || amenaza == null) return null;
         // 1.2: en la zona spawn no nace ninguna, como si la hubiera cancelado WorldGuard (la prueba
         // de /lw amenazas si: es de staff y se pone donde se diga).
@@ -165,7 +180,7 @@ final class Amenazas implements Listener {
         Double guardada = mob.getPersistentDataContainer().get(Marcas.VIDA_LOGICA, PersistentDataType.DOUBLE);
         if (guardada != null && guardada > 0) aplicarVida(s, guardada, false);
 
-        ponerCartel(mob, nivel, nombre == null ? Component.text(amenaza) : nombre);
+        if (cartel) ponerCartel(mob, nivel, nombre == null ? Component.text(amenaza) : nombre);
         asegurarTarea();
         return mob;
     }
@@ -377,6 +392,21 @@ final class Amenazas implements Listener {
         }
     }
 
+    /**
+     * Calamity 1.14.1 · Sube "pasajero" a "vehiculo" sin que el veto a montar se lo impida (addPassenger
+     * de Bukkit: sin tope de pasajeros). Usarlo SIEMPRE para montar una amenaza o montar algo en ella.
+     */
+    boolean montar(Entity vehiculo, Entity pasajero) {
+        if (vehiculo == null || pasajero == null || !vehiculo.isValid() || !pasajero.isValid()) return false;
+        if (vehiculo.getPassengers().contains(pasajero)) return true;
+        montajePropio = true;
+        try {
+            return vehiculo.addPassenger(pasajero);
+        } finally {
+            montajePropio = false;
+        }
+    }
+
     // ------------------------------------------------------------------- peleas
 
     /** Una pelea viva que tiene que moverse cada 2 ticks (PARCA, planideras, telegraph del Eco). */
@@ -529,6 +559,7 @@ final class Amenazas implements Listener {
 
     @EventHandler(ignoreCancelled = true)
     public void onMontar(EntityMountEvent e) {
+        if (montajePropio) return;
         if (Marcas.esAmenaza(e.getEntity()) || Marcas.esAmenaza(e.getMount())) e.setCancelled(true);
     }
 

@@ -21,7 +21,8 @@ import java.util.List;
 /**
  * La ficha del Vigilante en el catalogo de anomalias de EDM, como la de Ambush (AmbushType): clase
  * Monarca, elemento tierra y sin brillo (sin color de brillo EDM tampoco pinta su pilar de luz: viene de
- * la tierra y por sorpresa). Sale en /anomaly (menu, start, here, test) con sus cinco habilidades.
+ * la tierra y por sorpresa). Sale en /anomaly (menu, start, here, test) con sus habilidades: las de la
+ * pareja montada, las del jinete a pie y las de la bestia suelta (1.14.1).
  *
  * El que sale bajo un jugador no pasa por EDM (EDM lleva una anomalia a la vez y aqui puede haber dos
  * Vigilantes). Abierto a mano desde /anomaly es una prueba (VigilanteEdm): sin presa ni botin de
@@ -108,9 +109,10 @@ final class VigilanteType implements AnomalyType {
         return Element.TIERRA;
     }
 
+    /** 1.14.1: la calabaza tallada del jinete sin cabeza (apagada, como la que lleva). */
     @Override
     public Material icon() {
-        return Material.ZOGLIN_SPAWN_EGG;
+        return Material.CARVED_PUMPKIN;
     }
 
     @Override
@@ -120,7 +122,7 @@ final class VigilanteType implements AnomalyType {
 
     @Override
     public String tagline() {
-        return "La bestia que sale de la tierra tras quien se aleja demasiado";
+        return "El jinete sin cabeza que sale de la tierra tras quien se aleja demasiado";
     }
 
     @Override
@@ -128,16 +130,24 @@ final class VigilanteType implements AnomalyType {
         return List.of(
                 "Pasados los mil bloques del spawn, abre",
                 "tres cofres o mata un minijefe: la tierra",
-                "late bajo tus pies y algo sale escarbando.");
+                "late bajo tus pies, se oye una risa grave",
+                "y algo sale escarbando.");
     }
 
+    /** Con los umbrales de la config: bajo jinete.desmonte desmonta, bajo jinete.remonte vuelve a montar. */
     @Override
     public List<String> threat() {
+        Vigilante.Ajustes a = gestor == null ? new Vigilante.Ajustes(new YamlConfiguration()) : gestor.ajustes();
+        long d = Math.round(a.desmonteVida * 100), r = Math.round(a.remonteVida * 100);
         return List.of(
-                "Anomalía Monarca: un zoglin gigante en cuatro",
-                "fases. Salta y aplasta el suelo, embiste, se",
-                "hunde y sale bajo tus pies. Su rugido nubla",
-                "la vista. Bajo el 25 % entra en furia.");
+                "Anomalía Monarca: un jinete sin cabeza, con",
+                "una maza, sobre un zoglin gigante. Montado,",
+                "la bestia aplasta, embiste y se hunde bajo",
+                "tus pies. Bajo el " + d + " % desmonta: salta",
+                "sobre ti con la maza y lanza cabezas negras",
+                "a quien huye, mientras la bestia embiste",
+                "suelta. Bajo el " + r + " % vuelve a montar en furia.",
+                "Golpear a la bestia también lo hiere a él.");
     }
 
     /** Solo para el menu: la vida de verdad sale de la escala de Calamity. Esta es la de N 60 solo. */

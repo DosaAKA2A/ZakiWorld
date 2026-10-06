@@ -15,8 +15,11 @@ import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.LivingEntity;
+import org.bukkit.entity.Mannequin;
 import org.bukkit.entity.Player;
 import org.bukkit.entity.Projectile;
+import org.bukkit.entity.WitherSkull;
+import org.bukkit.entity.Zoglin;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
 import org.bukkit.event.HandlerList;
@@ -25,7 +28,10 @@ import org.bukkit.event.entity.EntityChangeBlockEvent;
 import org.bukkit.event.entity.EntityDamageByEntityEvent;
 import org.bukkit.event.entity.EntityDamageEvent;
 import org.bukkit.event.entity.EntityDeathEvent;
+import org.bukkit.event.entity.EntityDismountEvent;
 import org.bukkit.event.entity.EntityTargetEvent;
+import org.bukkit.event.entity.ExplosionPrimeEvent;
+import org.bukkit.event.entity.ProjectileHitEvent;
 import org.bukkit.event.player.PlayerQuitEvent;
 import org.bukkit.event.world.WorldUnloadEvent;
 import org.bukkit.inventory.ItemStack;
@@ -51,7 +57,11 @@ import java.util.function.Predicate;
 /**
  * El Vigilante: la anomalia Monarca de tierra de Calamity, un escalon bajo la Parca.
  *
- * Un Zoglin gigante (cuerpo.escala, 2,6) que sale escarbando de la tierra detras de quien se adentra
+ * Calamity 1.14.1: un JINETE sin cabeza (calabaza tallada, maza; un maniqui con skin sobre un esqueleto
+ * wither invisible) montado en un Zoglin gigante (cuerpo.escala, 2,6), como Alba en su caballo: el
+ * jinete es la anomalia (nombre, barra, vida, merito y botin) y la bestia es su montura, sin nombre y sin
+ * dano propio (los golpes de un jugador a ella pasan al jinete). Desmonta en la fase III y remonta en la
+ * IV (PeleaVigilante). Sale escarbando de la tierra con su montura detras de quien se adentra
  * demasiado: pasados llegada.bloques (1.000) del borde de la zona spawn (la medida de
  * Distancia.bloques), al abrir llegada.cofres (3) cofres o matar llegada.minijefes (1) minijefe ahi.
  * Antes, dos avisos (titulo breve y barra de accion con la Paleta); con el segundo el suelo empieza a
@@ -72,7 +82,9 @@ import java.util.function.Predicate;
  *
  * Los numeros son puros (escala, golpes, llegada, reparto) y el autotest "vigilante" los prueba:
  * los golpes fuertes entre el 25 % y el 90 % de la vida maxima y nunca matan con la vida llena; a el
- * ningun golpe le quita mas del 8 % de su vida; y las condiciones de la llegada.
+ * ningun golpe le quita mas del 8 % de su vida; y las condiciones de la llegada. La caida de quien sale
+ * volando por un golpe suyo SI hace su dano (el de Calamity, doble), aunque mate: desde la 1.14.1 no
+ * hay ningun perdon de caida (pedido expreso: caer de un lanzamiento suyo es parte del peligro).
  *
  * Claves viejas del golem (1.13.0) que ya no se leen y se ignoran sin aviso: escala-cuerpo, velocidad,
  * atasco-segundos, llegada.caida-ticks, golpes.marcado-extra, mirada.* y habilidades.machaque, salto,
@@ -132,6 +144,17 @@ final class Vigilante implements Listener {
         final double hundeRadio, hundeAltura, hundeVelocidad;
         final double rugidoRadio, rugidoCordura;
         final int rugidoOscuridad;
+        // el jinete (1.14.1)
+        final String jineteSkin;
+        final double jineteEscala, jineteVelocidad, desmonteVida, remonteVida, basicoAlcance, basicoDano, retirada;
+        final int basicoEspera, basicoEsperaMontado;
+        final double mazoAlcance, mazoSalto, mazoCerca, mazoMedio, mazoLejos, mazoAltura, mazoEmpujeMedio, mazoEmpujeLejos;
+        final double barridoRadio, barridoAngulo, barridoEmpuje, barridoArribaDano;
+        final int barridoArribaEspera, barridoArribaAviso;
+        final double cabezaMinima, cabezaAlcance, cabezaVelocidad, cabezaRadio;
+        final int cabezaMarchitez;
+        final double estampidaLargo;
+        final double desmonteRadio, desmonteOnda, desmonteEmpuje, desmonteSalto, remonteDistancia;
         // botin
         final int horasEntreCobros, esenciasBase, esenciasCada, gradoIV;
         final double participacion;
@@ -224,6 +247,48 @@ final class Vigilante implements Listener {
             rugidoOscuridad = PeleaVigilante.ticksOscuridad(s.getDouble(r + "oscuridad-segundos", 2.5));
             rugidoCordura = rango(s.getDouble(r + "cordura", 4), 0, 20);
 
+            // 1.14.1 · El jinete. Sin la seccion valen estos (el config del servidor no se reemplaza).
+            String j = "jinete.";
+            jineteSkin = s.getString(j + "skin", "RocketOniPad");
+            jineteEscala = rango(s.getDouble(j + "escala", 1.6), 1.0, 2.5);
+            jineteVelocidad = rango(s.getDouble(j + "velocidad", 0.30), 0.15, 0.5);
+            desmonteVida = rango(s.getDouble(j + "desmonte", 0.50), 0.30, 0.70);
+            remonteVida = rango(s.getDouble(j + "remonte", 0.25), 0.10, desmonteVida - 0.10);
+            basicoAlcance = rango(s.getDouble(j + "basico.alcance", 3.5), 2, 5);
+            basicoEspera = (int) rango(s.getInt(j + "basico.espera-ticks", 20), 10, 60);
+            basicoEsperaMontado = (int) rango(s.getInt(j + "basico.espera-montado-ticks", 36), 10, 100);
+            basicoDano = rango(s.getDouble(j + "basico.dano", 0.8), 0.2, 2.0);
+            retirada = rango(s.getDouble(j + "retirada", 16), 10, 28);
+            String z = "habilidades.mazazo.";
+            mazoAlcance = rango(s.getDouble(z + "alcance", 14), 6, 20);
+            mazoSalto = rango(s.getDouble(z + "salto", 1.1), 0.7, 1.6);
+            mazoCerca = rango(s.getDouble(z + "radio-cerca", 3), 1.5, 5);
+            mazoMedio = rango(s.getDouble(z + "radio-medio", 6.5), mazoCerca + 1, 10);
+            mazoLejos = rango(s.getDouble(z + "radio-lejos", 9), mazoMedio + 1, 14);
+            mazoAltura = rango(s.getDouble(z + "altura-lanzado", 10), 4, 14);
+            mazoEmpujeMedio = rango(s.getDouble(z + "empuje-medio", 2.4), 0.5, 3.9);
+            mazoEmpujeLejos = rango(s.getDouble(z + "empuje-lejos", 0.8), 0, 2);
+            String b = "habilidades.barrido.";
+            barridoRadio = rango(s.getDouble(b + "radio", 5.5), 3, 8);
+            barridoAngulo = rango(s.getDouble(b + "angulo", 150), 60, 240);
+            barridoEmpuje = rango(s.getDouble(b + "empuje", 1.5), 0.3, 3);
+            barridoArribaEspera = (int) rango(s.getInt(b + "arriba-espera-ticks", 40), 20, 120);
+            barridoArribaAviso = (int) rango(s.getInt(b + "arriba-aviso-ticks", 12), 10, 20);
+            barridoArribaDano = rango(s.getDouble(b + "arriba-dano", 1.0), 0.2, 2.0);
+            String c = "habilidades.cabeza-negra.";
+            cabezaMinima = rango(s.getDouble(c + "distancia-minima", 12), 8, 20);
+            cabezaAlcance = rango(s.getDouble(c + "alcance", 32), cabezaMinima + 4, 48);
+            cabezaVelocidad = rango(s.getDouble(c + "velocidad", 0.8), 0.4, 1.5);
+            cabezaRadio = rango(s.getDouble(c + "radio", 2), 1, 4);
+            cabezaMarchitez = (int) Math.round(rango(s.getDouble(c + "marchitez-segundos", 3), 0, 5) * 20);
+            estampidaLargo = rango(s.getDouble("habilidades.estampida.largo", 34), 16, 48);
+            String d = "habilidades.desmonte.";
+            desmonteRadio = rango(s.getDouble(d + "radio", 3.5), 2, 6);
+            desmonteOnda = rango(s.getDouble(d + "onda", 8), desmonteRadio + 1, 14);
+            desmonteEmpuje = rango(s.getDouble(d + "empuje", 1.3), 0.3, 3);
+            desmonteSalto = rango(s.getDouble(d + "salto", 1.0), 0.6, 1.5);
+            remonteDistancia = rango(s.getDouble("habilidades.remonte.distancia", 6), 3, 10);
+
             horasEntreCobros = Math.max(0, s.getInt("botin.horas-entre-cobros", 24));
             participacion = Math.max(0, Math.min(1, s.getDouble("botin.participacion-minima", 0.10)));
             esenciasBase = Math.max(0, s.getInt("botin.esencias-base", 5));
@@ -300,6 +365,8 @@ final class Vigilante implements Listener {
     private long ajustesLeidos;
     private int segundos;
     private final Set<String> avisados = new HashSet<>();
+    /** Lo que queda a la vista de un Vigilante caido (el maniqui y la bestia muriendo), hasta retirarlo. */
+    private final List<Entity> despedidas = new ArrayList<>();
 
     Vigilante(Hardcore hc) {
         this.hc = hc;
@@ -307,7 +374,7 @@ final class Vigilante implements Listener {
         Autotest.registrar("vigilante", Vigilante::autotest);
         Subcomandos.staff().registrar("vigilant",
                 "vigilant spawn [player] | test | info [player] | health <0-1> | ability <name> | remove | reset <player>"
-                        + ": el Vigilante (pruebas)",
+                        + ": el Vigilante, jinete y montura (pruebas)",
                 Subcomandos.PERMISO, this::comando, this::tab);
         this.tipo = VigilanteType.crear(this);
     }
@@ -402,9 +469,12 @@ final class Vigilante implements Listener {
         return DanoVerdadero.recorte(fraccion * vidaMax, maximo, vidaMax);
     }
 
-    /** En que fase esta por su vida: 1 por encima del 75 %, 2 del 50 %, 3 del 25 %, 4 debajo. Nunca vuelve atras. */
-    static int faseDe(double fraccion, int actual) {
-        int f = fraccion > 0.75 ? 1 : fraccion > 0.5 ? 2 : fraccion > 0.25 ? 3 : 4;
+    /**
+     * En que fase esta por su vida: 1 por encima del 75 %, 2 por encima de jinete.desmonte (50 %), 3 (a pie)
+     * por encima de jinete.remonte (25 %) y 4 (furia, otra vez montado) debajo. Nunca vuelve atras.
+     */
+    static int faseDe(double fraccion, int actual, double desmonte, double remonte) {
+        int f = fraccion > 0.75 ? 1 : fraccion > desmonte ? 2 : fraccion > remonte ? 3 : 4;
         return Math.max(actual, f);
     }
 
@@ -757,6 +827,8 @@ final class Vigilante implements Listener {
             }
             Compat.sound(w, atras, "entity.elder_guardian.ambient", 1.6f, 0.5f);
             Compat.sound(w, atras, "entity.zoglin.angry", 1.2f, 0.4f);
+            // La risa grave del jinete, lejos y por detras.
+            Compat.sound(w, atras, "entity.witch.celebrate", 1.0f, 0.45f);
             Component cerca = Component.text("El Vigilante sale de la tierra cerca de ", Paleta.TEXTO)
                     .append(Component.text(p.getName(), Paleta.DETALLE)).append(Component.text(".", Paleta.TEXTO));
             for (Player o : Fx.viewersNear(p.getLocation(), 48)) if (!o.equals(p)) hc.barra().aviso(o, cerca, 3);
@@ -1106,8 +1178,8 @@ final class Vigilante implements Listener {
                     decirAviso(quien, "No hay ningún Vigilante vivo.");
                     return;
                 }
-                hc.amenazas().ponerFraccion(pe.cuerpo, Math.max(0.01, Math.min(1, f)));
-                decir(quien, "vigilante | vida " + Math.round(Amenazas.fraccion(pe.cuerpo) * 100) + " %");
+                hc.amenazas().ponerFraccion(pe.jinete, Math.max(0.01, Math.min(1, f)));
+                decir(quien, "vigilante | vida " + Math.round(Amenazas.fraccion(pe.jinete) * 100) + " %");
             }
             case "ability" -> {
                 PeleaVigilante pe = masCercano(quien);
@@ -1118,7 +1190,7 @@ final class Vigilante implements Listener {
                 }
                 String no = pe.forzar(h);
                 if (no != null) decirAviso(quien, "vigilante | " + no);
-                else decir(quien, "vigilante | " + h.alias + " | fase " + pe.fase());
+                else decir(quien, "vigilante | " + h.alias + " | fase " + pe.fase() + " | " + pe.posturaTexto());
             }
             case "remove" -> {
                 int n = 0;
@@ -1183,10 +1255,10 @@ final class Vigilante implements Listener {
         PeleaVigilante mejor = null;
         double mejorD = Double.MAX_VALUE;
         for (PeleaVigilante pe : peleas) {
-            if (pe.estado == PeleaVigilante.Estado.FIN || pe.cuerpo == null || !pe.cuerpo.isValid()) continue;
+            if (pe.estado == PeleaVigilante.Estado.FIN || pe.jinete == null || !pe.jinete.isValid()) continue;
             double d = 0;
             if (quien instanceof Player p) {
-                d = p.getWorld() == pe.cuerpo.getWorld() ? p.getLocation().distanceSquared(pe.cuerpo.getLocation()) : Double.MAX_VALUE / 2;
+                d = p.getWorld() == pe.jinete.getWorld() ? p.getLocation().distanceSquared(pe.jinete.getLocation()) : Double.MAX_VALUE / 2;
             }
             if (d <= mejorD) {
                 mejor = pe;
@@ -1224,10 +1296,40 @@ final class Vigilante implements Listener {
 
     // =================================================================== listener
 
+    /** La pelea de ese jinete o esa montura (las dos amenazas de cada Vigilante), o null. */
     PeleaVigilante deCuerpo(Entity e) {
         if (e == null || peleas.isEmpty()) return null;
         for (PeleaVigilante pe : peleas) if (pe.estado != PeleaVigilante.Estado.FIN && pe.esCuerpo(e)) return pe;
         return null;
+    }
+
+    /** La pelea de ese maniqui (lo que se ve del jinete), o null. */
+    private PeleaVigilante deCascara(Entity e) {
+        if (e == null || peleas.isEmpty()) return null;
+        for (PeleaVigilante pe : peleas) if (pe.estado != PeleaVigilante.Estado.FIN && pe.esCascara(e)) return pe;
+        return null;
+    }
+
+    /** La pelea de esa cabeza negra, o null. */
+    private PeleaVigilante deCalavera(Entity e) {
+        if (!(e instanceof WitherSkull) || peleas.isEmpty() || !esPieza(e)) return null;
+        for (PeleaVigilante pe : peleas) if (pe.estado != PeleaVigilante.Estado.FIN && pe.esCalavera(e)) return pe;
+        return null;
+    }
+
+    /**
+     * Calamity 1.14.1 · El jinete muere y la bestia cae con el: lo que queda a la vista (el maniqui y el
+     * zoglin muriendo) se retira a los 2 s si vanilla no lo ha quitado ya. Un reinicio lo quita al momento.
+     */
+    void despedida(List<Entity> caen) {
+        if (caen == null || caen.isEmpty()) return;
+        despedidas.addAll(caen);
+        hc.plugin().getServer().getScheduler().runTaskLater(hc.plugin(), () -> {
+            for (Entity e : caen) {
+                Fx.safeRemove(e);
+                despedidas.remove(e);
+            }
+        }, 40L);
     }
 
     /** Un bloque del suelo que ha hecho saltar (FallingBlock efimero con la marca vigilante_pieza). */
@@ -1240,18 +1342,29 @@ final class Vigilante implements Listener {
         return e;
     }
 
-    /** Muere el Vigilante: su botin. */
+    /**
+     * Muere el jinete: su botin (y la bestia cae con el). Muere la montura antes (/kill): el jinete sigue a
+     * pie. El maniqui, muerto a mano o en la despedida, no suelta su maza ni su calabaza.
+     */
     @EventHandler(priority = EventPriority.HIGH)
     public void onMuerte(EntityDeathEvent e) {
         LivingEntity muerto = e.getEntity();
+        if (muerto instanceof Mannequin && muerto.getPersistentDataContainer().has(Marcas.CASCARA, PersistentDataType.STRING)) {
+            e.getDrops().clear();
+            e.setDroppedExp(0);
+            return;
+        }
         if (peleas.isEmpty() || !Marcas.esAmenaza(muerto)) return;
         PeleaVigilante pe = deCuerpo(muerto);
-        if (pe != null) hc.seguro("vigilante", pe::alMorir);
+        if (pe == null) return;
+        if (pe.esJinete(muerto)) hc.seguro("vigilante", pe::alMorir);
+        else hc.seguro("vigilante", pe::monturaMuerta);
     }
 
     /**
-     * Golpes: al Vigilante (el extra si esta aturdido; Amenazas escala y topa despues, en HIGHEST) y los
-     * suyos (su mordisco de vanilla: sonido grave y caida perdonada).
+     * Golpes: al jinete (el extra si esta aturdido; Amenazas escala y topa despues, en HIGHEST) y los
+     * suyos (el mordisco de la bestia, con su sonido grave). La caida de quien sale volando no se
+     * perdona: hace su dano, aunque mate.
      */
     @EventHandler(priority = EventPriority.HIGH, ignoreCancelled = true)
     public void onGolpe(EntityDamageByEntityEvent e) {
@@ -1270,27 +1383,104 @@ final class Vigilante implements Listener {
         }
         if (victima instanceof Player j) {
             PeleaVigilante da = deCuerpo(e.getDamager());
-            if (da != null) da.haGolpeado(j);
+            if (da == null) return;
+            // El jinete no pega con su IA de vanilla (ni marchita): sus golpes son los de la pelea. El golpe
+            // letal del dano verdadero (DanoVerdadero.enCurso) tambien es suyo y pasa.
+            if (da.esJinete(e.getDamager()) && !da.golpeDeLaPelea() && !DanoVerdadero.enCurso.contains(j.getUniqueId())) {
+                e.setCancelled(true);
+                return;
+            }
+            da.haGolpeado(j, e.getDamager());
         }
     }
 
     /**
-     * Quien sale volando por un golpe de un Vigilante no recibe dano de caida (ley 5: lo que el golpe no
-     * mato no lo remata el suelo, y en Calamity la caida hace el doble). LOW: antes de que Hardcore la
-     * doble (HIGH). Mira el perdon aunque no quede ninguna pelea: el ultimo golpe pudo matarlo.
+     * Calamity 1.14.1 · La montura no recibe dano propio (como el caballo de Alba), pero el golpe de un
+     * jugador a ella no se pierde: pasa al jinete con el mismo autor y la misma base, y ahi Amenazas lo
+     * escala, lo topa y lo apunta para el botin (el mismo merito que pegarle a el). Lo demas (caidas,
+     * fuego, asfixia, otros mobs) se cancela sin mas; /kill pasa. LOW y sin ignoreCancelled, como el
+     * maniqui de Ambush: otro listener pudo cancelarlo antes sin pasarlo.
      */
-    @EventHandler(priority = EventPriority.LOW, ignoreCancelled = true)
-    public void onCaida(EntityDamageEvent e) {
-        if (e.getCause() != EntityDamageEvent.DamageCause.FALL || !(e.getEntity() instanceof Player p)) return;
-        if (PeleaVigilante.perdonaCaida(p.getUniqueId())) e.setCancelled(true);
+    @EventHandler(priority = EventPriority.LOW)
+    public void onDanoMontura(EntityDamageEvent e) {
+        if (peleas.isEmpty() || !(e.getEntity() instanceof Zoglin z) || !Marcas.esAmenaza(z)) return;
+        PeleaVigilante pe = deCuerpo(z);
+        if (pe == null || !pe.esMontura(z)) return;
+        desviar(e, pe, PeleaVigilante.Rol.MONTURA);
     }
 
-    /** Dano de verdad al Vigilante: se le nota (salpicadura y quejido). */
+    /** Lo mismo para el maniqui del jinete: lo que se ve no recibe dano; el golpe de un jugador pasa al jinete. */
+    @EventHandler(priority = EventPriority.LOW)
+    public void onDanoCascara(EntityDamageEvent e) {
+        if (peleas.isEmpty() || !(e.getEntity() instanceof Mannequin mq)) return;
+        PeleaVigilante pe = deCascara(mq);
+        if (pe != null) desviar(e, pe, PeleaVigilante.Rol.CASCARA);
+    }
+
+    private void desviar(EntityDamageEvent e, PeleaVigilante pe, PeleaVigilante.Rol rol) {
+        Entity causa;
+        try {
+            causa = e.getDamageSource().getCausingEntity();
+        } catch (Throwable t) {
+            causa = null;
+        }
+        boolean kill = e.getCause() == EntityDamageEvent.DamageCause.KILL;
+        switch (PeleaVigilante.redirigir(rol, kill, causa instanceof Player)) {
+            case PASA -> {
+            }
+            case CANCELA -> e.setCancelled(true);
+            case AL_JINETE -> {
+                e.setCancelled(true);
+                Player p = (Player) causa;
+                // Desde la zona spawn no entra (el golpe al jinete lo cancelaria igual: onGolpe).
+                if (hc.enSpawn(p)) return;
+                double base = e.getDamage();
+                hc.seguro("vigilante", () -> pe.golpeAjeno(p, base, rol == PeleaVigilante.Rol.MONTURA));
+            }
+        }
+    }
+
+    /** Dano de verdad al jinete: se le nota (el maniqui se estremece, polvo de hueso y su quejido). */
     @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
     public void onDolor(EntityDamageEvent e) {
         if (peleas.isEmpty() || e.getFinalDamage() <= 0 || !Marcas.esAmenaza(e.getEntity())) return;
         PeleaVigilante pe = deCuerpo(e.getEntity());
-        if (pe != null) pe.dolor();
+        if (pe != null && pe.esJinete(e.getEntity())) pe.dolor();
+    }
+
+    /**
+     * Calamity 1.14.1 · Montado, ni el jinete ni su maniqui se bajan por su cuenta: un desmonte que no
+     * pidio la pelea se cancela (si se puede); si no se puede, el guardian de la pelea lo remonta (2 s).
+     */
+    @EventHandler(ignoreCancelled = true)
+    public void onDesmonte(EntityDismountEvent e) {
+        if (peleas.isEmpty()) return;
+        PeleaVigilante pe = deCuerpo(e.getDismounted());
+        if (pe == null || !pe.esMontura(e.getDismounted())) return;
+        if (pe.vetaDesmonte(e.getEntity()) && e.isCancellable()) e.setCancelled(true);
+    }
+
+    /**
+     * Las cabezas negras: su golpe lo pone la pelea (golpe fuerte, sin fuego ni bloques). En lo suyo (el
+     * jinete, la bestia, el maniqui) no estallan: lo atraviesan.
+     */
+    @EventHandler(priority = EventPriority.LOWEST)
+    public void onProyectil(ProjectileHitEvent e) {
+        PeleaVigilante pe = deCalavera(e.getEntity());
+        if (pe == null) return;
+        e.setCancelled(true);
+        Entity golpeado = e.getHitEntity();
+        Location donde = e.getHitBlock() != null ? e.getEntity().getLocation() : golpeado != null ? golpeado.getLocation() : null;
+        hc.seguro("vigilante", () -> pe.impactoCalavera((WitherSkull) e.getEntity(), golpeado, donde));
+    }
+
+    /** Ninguna cabeza negra explota de verdad (ni rompe ni prende nada), pase lo que pase. */
+    @EventHandler(priority = EventPriority.LOWEST)
+    public void onExplota(ExplosionPrimeEvent e) {
+        if (e.getEntity() instanceof WitherSkull s && esPieza(s)) {
+            e.setCancelled(true);
+            Fx.safeRemove(s);
+        }
     }
 
     /**
@@ -1307,14 +1497,15 @@ final class Vigilante implements Listener {
     /**
      * Su objetivo: mientras aparece, prepara una habilidad o esta aturdido no cambia de objetivo por su
      * cuenta (su cerebro buscaria al mas cercano); y nunca va a por quien no pelea (espectador, creativo o
-     * en la zona spawn). Que no apunte a mobs ya lo hace Amenazas.
+     * en la zona spawn). La bestia solo persigue con su jinete encima (suelta la lleva la pelea) y el
+     * jinete solo a pie. Que no apunten a mobs (ni a su propio maniqui) ya lo hace Amenazas.
      */
     @EventHandler(ignoreCancelled = true)
     public void onObjetivo(EntityTargetEvent e) {
         if (peleas.isEmpty() || e.getTarget() == null || !Marcas.esAmenaza(e.getEntity())) return;
         PeleaVigilante pe = deCuerpo(e.getEntity());
         if (pe == null) return;
-        if (pe.ocupado() || !(e.getTarget() instanceof Player p) || !pe.objetivoValido(p)) e.setCancelled(true);
+        if (!(e.getTarget() instanceof Player p) || !pe.puedeApuntar(e.getEntity(), p)) e.setCancelled(true);
     }
 
     /** Se desconecta: si venia escarbando a por el, no viene; si tenia permiso de vuelo prestado, se le quita. */
@@ -1381,6 +1572,8 @@ final class Vigilante implements Listener {
         llegadas.clear();
         for (PeleaVigilante pe : new ArrayList<>(peleas)) hc.seguro("vigilante", pe::limpiar);
         peleas.clear();
+        for (Entity e : new ArrayList<>(despedidas)) Fx.safeRemove(e);
+        despedidas.clear();
         pendientes.clear();
         reintento.clear();
         if (tipo != null) tipo.parar();
@@ -1460,9 +1653,19 @@ final class Vigilante implements Listener {
 
         // ---- Las fases por vida, sin volver atras.
         h.igual("fases 80/60/40/20 %", List.of(1, 2, 3, 4),
-                List.of(faseDe(0.8, 1), faseDe(0.6, 1), faseDe(0.4, 1), faseDe(0.2, 1)));
-        h.igual("curarse no le devuelve a una fase anterior", 3, faseDe(0.9, 3));
-        h.ok("la furia (fase IV) empieza bajo el 25 %", faseDe(0.24, 1) == 4 && faseDe(0.26, 1) == 3);
+                List.of(faseDe(0.8, 1, a.desmonteVida, a.remonteVida), faseDe(0.6, 1, a.desmonteVida, a.remonteVida),
+                        faseDe(0.4, 1, a.desmonteVida, a.remonteVida), faseDe(0.2, 1, a.desmonteVida, a.remonteVida)));
+        h.igual("curarse no le devuelve a una fase anterior", 3, faseDe(0.9, 3, a.desmonteVida, a.remonteVida));
+        h.ok("la furia (fase IV) empieza bajo el 25 %", faseDe(0.24, 1, a.desmonteVida, a.remonteVida) == 4
+                && faseDe(0.26, 1, a.desmonteVida, a.remonteVida) == 3);
+        h.ok("a pie (fase III) entre el 50 % y el 25 %", faseDe(0.49, 1, a.desmonteVida, a.remonteVida) == 3
+                && faseDe(0.51, 1, a.desmonteVida, a.remonteVida) == 2);
+        YamlConfiguration umbrales = new YamlConfiguration();
+        umbrales.set("jinete.desmonte", 0.6);
+        umbrales.set("jinete.remonte", 0.3);
+        Ajustes au = new Ajustes(umbrales);
+        h.ok("los umbrales de desmonte y remonte se leen de la config (0,6 y 0,3)", faseDe(0.55, 1, au.desmonteVida, au.remonteVida) == 3
+                && faseDe(0.29, 1, au.desmonteVida, au.remonteVida) == 4);
 
         // ---- La llegada: 1.000 bloques, 3 cofres o 1 minijefe, una vez al dia, como mucho dos vivos.
         h.igual("a 999 bloques con 3 cofres: aun no", "cerca", motivoLlegada(a, 999, 3, 0, false, false, false, 0));
@@ -1577,6 +1780,25 @@ final class Vigilante implements Listener {
                             j.lanzaAltura, j.embestidaLargo, j.embestidaVelocidad, j.embestidaEmpuje, (double) j.aturdidoTicks,
                             j.aturdidoExtra, j.hundeRadio, j.hundeAltura, j.hundeVelocidad, j.rugidoRadio, (double) j.rugidoOscuridad,
                             j.rugidoCordura));
+            h.ok("config.yml: hardcore.vigilante.jinete esta", jar.isConfigurationSection("hardcore.vigilante.jinete"));
+            h.igual("config.yml: el jinete como el de serie (skin, escala, velocidad, umbrales, basicos y retirada)",
+                    List.of(a.jineteSkin, a.jineteEscala, a.jineteVelocidad, a.desmonteVida, a.remonteVida, a.basicoAlcance,
+                            (double) a.basicoEspera, (double) a.basicoEsperaMontado, a.basicoDano, a.retirada),
+                    List.of(j.jineteSkin, j.jineteEscala, j.jineteVelocidad, j.desmonteVida, j.remonteVida, j.basicoAlcance,
+                            (double) j.basicoEspera, (double) j.basicoEsperaMontado, j.basicoDano, j.retirada));
+            h.igual("config.yml: mazazo, barrido, cabeza negra, estampida, desmonte y remonte como los de serie",
+                    List.of(a.mazoAlcance, a.mazoSalto, a.mazoCerca, a.mazoMedio, a.mazoLejos, a.mazoAltura, a.mazoEmpujeMedio,
+                            a.mazoEmpujeLejos, a.barridoRadio, a.barridoAngulo, a.barridoEmpuje, (double) a.barridoArribaEspera,
+                            (double) a.barridoArribaAviso, a.barridoArribaDano, a.cabezaMinima, a.cabezaAlcance, a.cabezaVelocidad,
+                            a.cabezaRadio, (double) a.cabezaMarchitez, a.estampidaLargo, a.desmonteRadio, a.desmonteOnda,
+                            a.desmonteEmpuje, a.desmonteSalto, a.remonteDistancia),
+                    List.of(j.mazoAlcance, j.mazoSalto, j.mazoCerca, j.mazoMedio, j.mazoLejos, j.mazoAltura, j.mazoEmpujeMedio,
+                            j.mazoEmpujeLejos, j.barridoRadio, j.barridoAngulo, j.barridoEmpuje, (double) j.barridoArribaEspera,
+                            (double) j.barridoArribaAviso, j.barridoArribaDano, j.cabezaMinima, j.cabezaAlcance, j.cabezaVelocidad,
+                            j.cabezaRadio, (double) j.cabezaMarchitez, j.estampidaLargo, j.desmonteRadio, j.desmonteOnda,
+                            j.desmonteEmpuje, j.desmonteSalto, j.remonteDistancia));
+            h.ok("config.yml: sin ninguna clave de perdon de caida", !jar.isSet("hardcore.vigilante.caida")
+                    && !jar.isSet("hardcore.vigilante.golpes.perdon-caida") && !jar.isSet("hardcore.vigilante.perdon-caida"));
             h.igual("config.yml: tope diario de la Aduana para el Vigilante", 1, jar.getInt("hardcore.aduana.topes-diarios.vigilante", -1));
             // 1.13.0: la gema ya llega con el lote de gemas (entregas.mmo.gema-vigilante); las placas
             // siguen fuera hasta que exista su plantilla, para que el selftest "mmo" no falle.
