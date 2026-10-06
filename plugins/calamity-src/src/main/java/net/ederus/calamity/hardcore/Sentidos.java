@@ -28,11 +28,16 @@ import java.util.UUID;
  * Tambien cuenta stats.lucidez-min: los minutos a cordura < 25 de una expedicion de la que se
  * sale vivo. Se cobran al salir del mundo (o al desconectarse, que no es morir) y se pierden
  * al morir o al huir por el cable (Testigos.alMorir llama a alMorir de aqui).
+ *
+ * Locura (los sustos de la cordura baja) corre aqui cada segundo. Por debajo de locura.umbral-gritos
+ * (20) el latido lo lleva ella y se acelera cuanto mas baja la cordura; entonces el de aqui calla,
+ * para no oir el mismo sonido dos veces. Con sentidos.latido en false no late ninguno de los dos.
  */
 final class Sentidos implements Listener {
 
     private final Hardcore hc;
     private final Alucinaciones alucinaciones;
+    private final Locura locura;
     private final Vineta vineta;
     /** Segundos a cordura < 25 en la expedicion en curso. Solo memoria; se cobra al salir vivo. */
     private final Map<UUID, Integer> lucidez = new HashMap<>();
@@ -41,6 +46,8 @@ final class Sentidos implements Listener {
         this.hc = hc;
         hc.plugin().getServer().getPluginManager().registerEvents(this, hc.plugin());
         this.alucinaciones = new Alucinaciones(hc);
+        this.locura = new Locura(hc, alucinaciones);
+        alucinaciones.locura(locura);
         this.vineta = new Vineta(hc);
         Autotest.registrar("sentidos", this::autotest);
     }
@@ -60,8 +67,11 @@ final class Sentidos implements Listener {
         int tramo = Cordura.tramo(e.valor);
         int segundo = e.segundosDentro;
         ConfigurationSection s = cfg();
+        boolean latido = s.getBoolean("latido", true);
 
-        if (s.getBoolean("latido", true)) {
+        // Locura: los sustos de la cordura baja. Si este segundo el latido es suyo, el de aqui calla.
+        boolean latidoDeLocura = hc.valor("locura", () -> locura.segundo(p, e.valor, latido), false);
+        if (latido && !latidoDeLocura) {
             Parca parca = hc.parca();
             double distancia = parca == null ? Double.MAX_VALUE
                     : hc.valor("parca", () -> parca.distancia(p), Double.MAX_VALUE);
@@ -101,6 +111,7 @@ final class Sentidos implements Listener {
         lucidez.remove(p.getUniqueId());
         vineta.quitar(p);
         alucinaciones.olvidar(p);
+        locura.olvidar(p);
     }
 
     /**
@@ -111,6 +122,7 @@ final class Sentidos implements Listener {
     void alEntrarSpawn(Player p) {
         vineta.quitar(p);
         alucinaciones.olvidar(p);
+        locura.olvidar(p);
     }
 
     /** Salir vivo: se cobran los minutos de lucidez. */
@@ -128,6 +140,7 @@ final class Sentidos implements Listener {
         cobrarLucidez(p);
         vineta.olvidar(p.getUniqueId());
         alucinaciones.olvidar(p);
+        locura.olvidar(p);
     }
 
     @EventHandler(priority = EventPriority.MONITOR)
@@ -136,6 +149,7 @@ final class Sentidos implements Listener {
         // El borde era del mundo de antes: fuera, y si el nuevo es hardcore se pone en el segundo.
         vineta.quitar(p);
         alucinaciones.olvidar(p);
+        locura.olvidar(p);
         if (hc.esHardcore(e.getFrom()) && !hc.esHardcore(p)) cobrarLucidez(p);
     }
 
@@ -152,6 +166,7 @@ final class Sentidos implements Listener {
         }
         lucidez.clear();
         alucinaciones.parar();
+        locura.parar();
         vineta.parar();
     }
 

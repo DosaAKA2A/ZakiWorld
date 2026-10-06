@@ -1294,6 +1294,86 @@ hardcore:
   # tipos.susurro: false apaga solo el susurro ("☠ Oyes la voz de <muerto>, que murió en Calamity hace 2 h: «vuelve…»").
   alucinaciones: {activo: false, por-minuto: [3.0, 2.0, 1.0, 0.5, 0], coste-pegar: 2, tipos: {pasos: true, puerta: true, figura: true, siseo: true, golpe: true, susurro: true, carrera: true}}
 
+  # Locura: los sustos que oye quien tiene la cordura baja (Locura.java). Todo es solo para él y suena
+  # a su alrededor; nada en la zona spawn, nada a quien está exento de la Parca y nada con la Parca
+  # encima o en combate (salvo el latido). Ni efectos ni partículas: sonido y chat. Si falta esta
+  # sección (el config del servidor no se reemplaza), valen estos mismos valores, que están en el código.
+  # Probar sin bajar la cordura: /calamity madness <player> <steps|breath|scream|heartbeat|wail|whisper|all>.
+  # Sonidos: sonido, volumen y tono (de 0.5 a 2; por debajo de 0.5 Java no baja más). Sin campanas: la
+  # campana siempre es real (la Parca y las muertes), así que en lugar de campana suena el lamento.
+  locura:
+    activo: true
+    # Por debajo de este porcentaje de cordura: pasos pesados que se acercan por detrás y respiración en la nuca.
+    umbral-pasos: 40
+    # Por debajo de este, además: gritos, el latido que se acelera, el lamento a lo lejos y su nombre en el chat.
+    umbral-gritos: 20
+    # Por debajo de este (cerca de 0): todo más seguido. Las esperas y la pausa se dividen por mas-seguido.
+    umbral-limite: 5
+    mas-seguido: 2.5
+    # Para que asuste y no canse (el latido no cuenta): segundos mínimos entre dos sustos y sustos por
+    # minuto como mucho; cerca de 0, tope-por-minuto-limite.
+    pausa-minima: 12
+    tope-por-minuto: 2
+    tope-por-minuto-limite: 5
+    # cada: [de, a] segundos al azar hasta que puede volver ese susto (el equipo con cordura-alucinaciones
+    # los alarga). La primera vez que se entra en su umbral llega antes: entre un cuarto y tres cuartos.
+    pasos:
+      activo: true
+      cada: [80, 160]
+      cantidad: [6, 9]          # pasos de cada racha
+      distancia: [12, 1.5]      # bloques detrás: de dónde empiezan a dónde llegan
+      ticks: [13, 7]            # entre paso y paso, al empezar y al llegar (se apuran)
+      mirar-grados: 60          # si se gira a menos de esto de donde vienen, paran en seco
+      final-grito: 0.4          # bajo umbral-gritos, probabilidad de que acaben en un grito al oído (si no, respiración)
+      # Suenan juntos en cada paso, del 35 % de este volumen en el primero al 100 % en el último.
+      sonidos:
+        - {sonido: "minecraft:entity.warden.step", volumen: 1.0, tono: 0.6}
+        - {sonido: "minecraft:block.deepslate.step", volumen: 0.8, tono: 0.5}
+    respiracion:
+      activo: true
+      cada: [70, 150]
+      veces: [2, 3]             # respiraciones seguidas, con los sonidos por turno
+      sonidos:
+        - {sonido: "minecraft:entity.horse.breathe", volumen: 0.8, tono: 0.5}
+        - {sonido: "minecraft:entity.warden.sniff", volumen: 0.5, tono: 0.6}
+    gritos:
+      activo: true
+      cada: [70, 160]
+      pegado: 0.35              # probabilidad de que suene pegado al oído; si no, lejos
+      lejos: [18, 30]           # bloques
+      volumen-lejos: 3.0        # el volumen de lejos se multiplica por esto para que llegue
+      sonidos:
+        - {sonido: "minecraft:entity.fox.screech", volumen: 1.0, tono: 0.6}
+        - {sonido: "minecraft:entity.enderman.scream", volumen: 1.0, tono: 0.55}
+        - {sonido: "minecraft:entity.goat.screaming.ambient", volumen: 1.0, tono: 0.6}
+        - {sonido: "minecraft:entity.goat.screaming.hurt", volumen: 1.0, tono: 0.55}
+        - {sonido: "minecraft:entity.ghast.scream", volumen: 0.9, tono: 0.5}
+    # El latido de sentidos.latido: por debajo de umbral-gritos lo lleva Locura y se acelera.
+    latido:
+      activo: true
+      ticks: [36, 12]           # entre latido y latido: en umbral-gritos y en 0 (20 ticks = 1 s)
+      volumen: [0.75, 1.0]
+      tono: [1.0, 1.2]
+    lamento:
+      activo: true
+      cada: [150, 300]
+      lejos: [28, 40]           # bloques
+      sonidos:
+        - {sonido: "minecraft:ambient.cave", volumen: 3.5, tono: 0.7}
+        - {sonido: "minecraft:entity.ghast.ambient", volumen: 3.5, tono: 0.5}
+        - {sonido: "minecraft:entity.elder_guardian.ambient", volumen: 3.5, tono: 0.5}
+    # Su nombre como un susurro en su chat (gris oscuro, en cursiva). {nombre} es su nombre.
+    nombre:
+      activo: true
+      cada: [240, 480]
+      frases:
+        - "…{nombre}…"
+        - "{nombre}, detrás de ti."
+        - "No mires atrás, {nombre}."
+        - "{nombre}… ¿por qué corres?"
+        - "Te estoy viendo, {nombre}."
+        - "Quédate, {nombre}."
+
   # ------------------------------------------------------------------ P1
   racha: {activa: false, maximo: 5, maximo-con-equipo: 7, equipo-piezas: 3, equipo-escalon: 12, por-punto: 0.10, niveles-por-punto: 2}   # [alineado]
   frenesi: {activo: false, umbral: 25, dano-hecho: 0.15, dano-recibido: 0.15}
