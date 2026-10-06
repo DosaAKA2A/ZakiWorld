@@ -100,14 +100,41 @@ function generar(original, spec, idCaja) {
         else if (ch === ',' && prof === 0) { items.push(snbtLore.slice(ini, i)); ini = i + 1; }
       }
       if (snbtLore.length > 2) items.push(snbtLore.slice(ini, snbtLore.length - 1));
-      const limpios = items.filter(x => !/Rareza:/.test(x));
-      while (limpios.length && /^\{(italic:0b,)?text:""(,italic:0b)?\}$/.test(limpios[limpios.length - 1].replace(/color:"\w+",?/, ''))) limpios.pop();
+      // Fuera la rareza vieja y el bloque "Encantamientos" del lore guardado: el modulo tooltip de EDM
+      // ya dibuja los encantamientos encima y se veian dos veces
+      const texto = x => [...x.matchAll(/text:"((?:[^"\\]|\\.)*)"/g)].map(m => m[1]).join('').trim();
+      const limpios = [];
+      let enEnc = false;
+      for (const x of items) {
+        const t = texto(x);
+        if (/^Encantamientos:?$/.test(t)) { enEnc = true; continue; }
+        if (enEnc && /^[\p{L} ']+:\s*\d+$/u.test(t)) continue;
+        enEnc = false;
+        if (/Rareza:/.test(x)) continue;
+        limpios.push(x);
+      }
+      while (limpios.length && texto(limpios[limpios.length - 1]) === '') limpios.pop();
       const nuevo = '[' + [...limpios, ...entradas].join(',') + ']';
       arr.splice(a, k - a + 1, "        minecraft:lore: '" + nuevo.replace(/'/g, "''") + "'");
     } else {
       const nueva = "        minecraft:lore: '[" + entradas.join(',') + "]'";
       if (iComp >= 0) arr.splice(s + iComp + 1, 0, nueva);
       else arr.splice(e, 0, '      components:', nueva);
+    }
+    // Ocultar el bloque vanilla de atributos ("When in Main Hand"), que muestra un daño que no es el real
+    let f = s + 1;
+    while (f < arr.length && /^      /.test(arr[f])) f++;
+    const iTd = arr.slice(s, f).findIndex(l => /^        minecraft:tooltip_display: '/.test(l));
+    if (iTd >= 0) {
+      const l = arr[s + iTd];
+      if (!/attribute_modifiers/.test(l)) {
+        arr[s + iTd] = /hidden_components:\[/.test(l)
+          ? l.replace('hidden_components:[', 'hidden_components:["minecraft:attribute_modifiers",')
+          : l.replace(/\{/, '{hidden_components:["minecraft:attribute_modifiers"],');
+      }
+    } else {
+      const iC = arr.slice(s, f).findIndex(l => /^      components:\s*$/.test(l));
+      arr.splice(s + iC + 1, 0, `        minecraft:tooltip_display: '{hidden_components:["minecraft:attribute_modifiers"]}'`);
     }
   };
 
@@ -153,6 +180,19 @@ function generar(original, spec, idCaja) {
     ponerLore(out, s, entradas, idCaja + ' ' + clave);
   }
 
+  // Nombre de la caja (el mismo que tenia en ExcellentCrates); tambien es el titulo de su menu
+  if (caja.nombre) {
+    const iN = out.findIndex(l => /^display-name:/.test(l));
+    out[iN] = "display-name: '" + legado(caja.nombre).replace(/'/g, "''") + "'";
+  }
+
+  // Un solo aviso al ganar: mi give ya manda "Recibiste ..." de MMOItems, asi que PhoenixCrates calla
+  for (const b of bloques) {
+    if (!b.lineas.some(l => /^    - mi give /.test(l))) continue;
+    const iw = b.lineas.findIndex(l => /^    allow-win-message:/.test(l));
+    if (iw >= 0) b.lineas[iw] = '    allow-win-message: false';
+  }
+
   // Menu de vista previa propio de la caja
   {
     const iMenus = out.findIndex(l => /^menus:\s*$/.test(l));
@@ -175,50 +215,106 @@ function generar(original, spec, idCaja) {
   return { texto: out.join(eol), informe };
 }
 
-// Menu de vista previa con el estilo de Ederus, a partir de default_rewards_preview.yml
-function generarMenu(base, seccion) {
+
+// Pasa un texto de ExcellentCrates (MiniMessage con <bold>, <#hex>, <c:#hex>, <gradient:#a:#b> y codigos &)
+// al formato & que lee PhoenixCrates, con el hex como &x&R&R&G&G&B&B letra a letra
+function legado(mm) {
+  const hex = h => '&x' + h.replace('#', '').toUpperCase().split('').map(c => '&' + c).join('');
+  const mezcla = (a, b, t) => {
+    const p = h => [1, 3, 5].map(i => parseInt(h.slice(i, i + 2), 16));
+    const A = p(a), B = p(b);
+    return '#' + A.map((v, i) => Math.round(v + (B[i] - v) * t).toString(16).padStart(2, '0')).join('');
+  };
+  // 1) trocear en letras con su estado (color, negrita); los & de color/estilo cambian el estado
+  const letras = [];
+  let color = null, negrita = false;
+  const pila = [];
+  let grad = null;
+  const re = /<(\/?)([^>]+)>|&([0-9a-fk-or])|([\s\S])/gi;
+  const nombres = { black: '0', dark_blue: '1', dark_green: '2', dark_aqua: '3', dark_red: '4', dark_purple: '5', gold: '6', gray: '7', dark_gray: '8', blue: '9', green: 'a', aqua: 'b', red: 'c', light_purple: 'd', yellow: 'e', white: 'f' };
+  let m;
+  while ((m = re.exec(mm))) {
+    if (m[2] !== undefined) {
+      const cierre = m[1] === '/', tag = m[2].toLowerCase();
+      if (tag === 'bold' || tag === 'b') { negrita = !cierre; continue; }
+      if (tag.startsWith('gradient')) {
+        if (cierre) { grad.fin = letras.length; grad = null; }
+        else { const c = m[2].split(':').filter(x => x.startsWith('#')); grad = { ini: letras.length, de: c[0], a: c[c.length - 1] }; letras.grads = letras.grads || []; letras.grads.push(grad); }
+        continue;
+      }
+      let c = null;
+      if (/^#[0-9a-f]{6}$/i.test(tag)) c = tag;
+      else if (/^(c|color):#[0-9a-f]{6}$/i.test(tag)) c = tag.split(':')[1];
+      else if (nombres[tag]) c = '&' + nombres[tag];
+      if (cierre) { color = pila.pop() || null; continue; }
+      if (c) { pila.push(color); color = c; }
+      continue;
+    }
+    if (m[3] !== undefined) {
+      const k = m[3].toLowerCase();
+      if (k === 'l') negrita = true;
+      else if (k === 'r') { negrita = false; color = null; }
+      else if (/[0-9a-f]/.test(k)) { color = '&' + k; negrita = false; }
+      continue;
+    }
+    letras.push({ ch: m[4], color, negrita });
+  }
+  (letras.grads || []).forEach(g => {
+    const n = (g.fin ?? letras.length) - g.ini;
+    for (let i = 0; i < n; i++) letras[g.ini + i].color = mezcla(g.de, g.a, n > 1 ? i / (n - 1) : 0);
+  });
+  // 2) escribir: color y negrita delante de cada letra que cambia
+  let out = '', prev = '';
+  for (const l of letras) {
+    const pref = (l.color ? (l.color.startsWith('#') ? hex(l.color) : l.color) : '&f') + (l.negrita ? '&l' : '');
+    if (pref !== prev) { out += pref; prev = pref; }
+    out += l.ch;
+  }
+  return out;
+}
+
+// Menu de vista previa con la misma forma que tenia ExcellentCrates: 5 filas, titulo = nombre de la caja,
+// marco de cristal negro con esquinas grises, llaves arriba en el centro, Volver (18), Siguiente (26), Salir (40)
+function generarMenu(base, titulo) {
   const eol = base.includes('\r\n') ? '\r\n' : '\n';
   let t = base.split(/\r?\n/);
-  const fija = (re, nueva) => { const i = t.findIndex(l => re.test(l)); if (i < 0) throw new Error('Falta ' + re); t[i] = nueva; return i; };
-  const bloque = (ini, sangria) => { let e = ini + 1; while (e < t.length && (t[e].startsWith(sangria) || t[e] === '')) e++; return e; };
-  const titulo = "  title: '&x&0&0&8&3&F&D&lEDERUS &8| &x&D&7&F&3&F&F" + seccion + "'";
-  fija(/^  title:/, titulo);
+  const seccion = re => { const i = t.findIndex(l => re.test(l)); let e = i + 1; while (e < t.length && (/^\s/.test(t[e]) || t[e] === '')) e++; return [i, e]; };
+  const item = (clave, slot, mat, nombre, lore, acciones, sinTooltip) => [
+    '  ' + clave + ':', "    slot: '" + slot + "'", '    material: ' + mat, '    amount: 1', '    custom-model-data: 0',
+    "    item-model: ''", '    glow: false', '    hide-attributes: true', "    display-name: '" + nombre + "'",
+    lore.length ? '    lore:' : '    lore: []', ...lore.map(x => "    - '" + x + "'"),
+    acciones.length ? '    actions:' : '    actions: []', ...acciones.map(x => "    - '" + x + "'"),
+    ...(sinTooltip ? ['    hide-tooltip: true'] : [])];
 
-  // Marco de cristal negro completo (deja libres las flechas 18/26 y el boton de cerrar 49)
-  const iFill = t.findIndex(l => /^  down-filler:/.test(l));
-  t[t.findIndex((l, i) => i > iFill && /^    slot:/.test(l))] = "    slot: 0-9, 17, 27, 35, 36, 44, 45-48, 50-53";
+  // items: marco y boton de salir
+  let [i, e] = seccion(/^items:/);
+  t.splice(i, e - i, 'items:',
+    ...item('marco-negro', '1-3, 5-7, 9, 17, 18, 26, 27, 35, 37-39, 41-43', 'BLACK_STAINED_GLASS_PANE', '', [], [], true),
+    ...item('marco-gris', '0, 8, 36, 44', 'GRAY_STAINED_GLASS_PANE', '', [], [], true),
+    ...item('close-menu', 40, 'SPRUCE_DOOR', '&c&lSalir', [], ['[CLOSE_INVENTORY]'], false));
 
-  // Cerrar: puerta de abeto en vez de barrera
-  const iClose = t.findIndex(l => /^  close-menu:/.test(l));
-  const eClose = bloque(iClose, '    ');
-  const cerrar = [
-    '  close-menu:', "    slot: '49'", '    material: SPRUCE_DOOR', '    amount: 1', '    custom-model-data: 0',
-    "    item-model: ''", '    glow: false', '    hide-attributes: true', "    display-name: '&x&D&7&F&3&F&FCerrar'",
-    '    lore:', "    - '&7Vuelves al juego.'", "    - ''", "    - '&eClic para cerrar'", '    actions:', "    - '[CLOSE_INVENTORY]'"];
-  t.splice(iClose, eClose - iClose, ...cerrar);
+  // titulo y filas
+  t[t.findIndex(l => /^  title:/.test(l))] = "  title: '" + legado(titulo).replace(/'/g, "''") + "'";
+  t[t.findIndex(l => /^  rows:/.test(l))] = '  rows: 5';
 
-  // Flechas
-  const flecha = (clave, nombre, simbolo) => {
-    const i = t.findIndex(l => new RegExp('^  ' + clave + ':').test(l));
-    const e = bloque(i, '    ');
-    const b = t.slice(i, e);
-    const iN = b.findIndex(l => /^    display-name:/.test(l));
-    b[iN] = "    display-name: '&x&D&7&F&3&F&F" + nombre + "'";
-    const iL = b.findIndex(l => /^    lore:/.test(l));
-    let k = iL + 1; while (k < b.length && /^    - /.test(b[k])) k++;
-    b.splice(iL, k - iL, '    lore:', "    - '&7Página %page%'", "    - ''", "    - '&eClic para " + simbolo + "'");
-    t.splice(i, e - i, ...b);
-  };
-  flecha('previous-item', 'Página anterior', 'retroceder');
-  flecha('next-item', 'Página siguiente', 'avanzar');
+  // flechas de pagina
+  for (const [clave, slot, nombre] of [['previous-item', 18, '&e&l« Volver'], ['next-item', 26, '&e&lSiguiente »']]) {
+    i = t.findIndex(l => new RegExp('^  ' + clave + ':').test(l));
+    e = i + 1; while (e < t.length && (/^    /.test(t[e]) || t[e] === '')) e++;
+    t.splice(i, e - i, ...item(clave, slot, 'ARROW', nombre, [], [], false));
+  }
 
-  // Premios: solo el lore del objeto (las lineas de calidad ya van dentro); fuera el texto de ejemplo
+  // llaves disponibles donde ExcellentCrates tenia "Hitos"
+  [i, e] = seccion(/^available-keys:/);
+  t[t.findIndex((l, k) => k > i && k < e && /^  slot:/.test(l))] = "  slot: '4'";
+
+  // premios: solo el lore del objeto (la calidad y las probabilidades ya van dentro); fuera el texto de ejemplo
   t = t.filter(l => !/Esta descripci/.test(l));
   const iRand = t.findIndex(l => /^  random-mode:/.test(l));
-  const iLore = t.findIndex((l, i) => i > iRand && /^    lore:/.test(l));
+  const iLore = t.findIndex((l, k) => k > iRand && /^    lore:/.test(l));
   let k = iLore + 1; while (/^    - /.test(t[k])) k++;
   t.splice(iLore, k - iLore, '    lore:', "    - '%reward_lore%'");
   return t.join(eol);
 }
 
-if (typeof module !== 'undefined') module.exports = { generar, generarMenu };
+if (typeof module !== 'undefined') module.exports = { generar, generarMenu, legado };
