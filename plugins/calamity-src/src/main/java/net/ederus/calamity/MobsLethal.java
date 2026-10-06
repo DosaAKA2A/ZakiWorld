@@ -2,6 +2,7 @@ package net.ederus.calamity;
 
 import java.io.File;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -11,6 +12,7 @@ import java.util.Map;
 import java.util.Random;
 import java.util.Set;
 import java.util.UUID;
+import java.util.function.Function;
 
 import org.bukkit.Chunk;
 import org.bukkit.GameMode;
@@ -182,6 +184,8 @@ public final class MobsLethal implements Listener {
         sembrar(a.minions());
         cargarTabla();
         cargarEspeciales(a.minions());
+        // 1.15.1: despues de sembrar y de leer los especiales, para que sus nombres ya esten.
+        quitarNegrita(a.minions());
         cargarGuarniciones();
         cargarMonedas();
         a.minionManager().heredable(clave);
@@ -980,7 +984,8 @@ public final class MobsLethal implements Listener {
         sinQuemarse(mob);
         mob.getPersistentDataContainer().set(clave, PersistentDataType.STRING, minijefe ? "minijefe" : "estructura");
         apuntarDistancia(mob, distancia);
-        mm.adoptar(mob, nivel, nombre, dano);
+        // 1.15.1: el nombre que trae la estructura pasa al cartel sin negrita, como el de las fichas.
+        mm.adoptar(mob, nivel, Paleta.sinNegrita(nombre), dano);
     }
 
     // ---------------------------------------------------------------- guarniciones
@@ -1306,6 +1311,12 @@ public final class MobsLethal implements Listener {
 
     // ---------------------------------------------------------------------- siembra
 
+    /** Las carpetas de /esb que crea Calamity. Lo que vive en ellas es suyo (fichasDeCalamity). */
+    private static final String CARPETA_PANACEA = "Lethal World · Panacea";
+    private static final String CARPETA_ESPECIALES = "Lethal World · Especiales";
+    private static final String CARPETA_MINIJEFES = "Lethal World · Minijefes";
+    private static final List<String> CARPETAS = List.of(CARPETA_PANACEA, CARPETA_ESPECIALES, CARPETA_MINIJEFES);
+
     private record Semilla(String nombre, EntityType tipo, boolean destacado, int color, MinionAbility... habilidades) {
     }
 
@@ -1398,7 +1409,7 @@ public final class MobsLethal implements Listener {
 
     /** Crea la carpeta y los tipos que falten, y las tablas si no hay. Nunca pisa lo editado. */
     private void sembrar(MinionRegistry reg) {
-        String nombreCarpeta = "Lethal World · Panacea";
+        String nombreCarpeta = CARPETA_PANACEA;
         MinionCategory carpeta = null;
         for (MinionCategory c : reg.categories()) {
             if (c.display().equals(nombreCarpeta)) carpeta = c;
@@ -1501,28 +1512,17 @@ public final class MobsLethal implements Listener {
         for (String aviso : avisos) plugin.getLogger().warning("[Lethal World] mobs.especiales." + aviso);
         if (leidos.isEmpty()) return;
 
-        MinionCategory carpeta = carpeta(reg, "Lethal World · Especiales", Material.PALE_OAK_LOG, Paleta.CARPETA_ESPECIALES);
+        MinionCategory carpeta = carpeta(reg, CARPETA_ESPECIALES, Material.PALE_OAK_LOG, Paleta.CARPETA_ESPECIALES);
         int creados = 0;
         boolean cambios = false;
         for (Apariciones.Especial e : leidos) {
             MinionType t = buscar(reg, e.nombre());
             if (t == null) {
                 t = reg.createType(e.nombre(), carpeta.id());
-                int color = Apariciones.colorDe(e.entidad());
-                t.colorRgb(color);
-                for (String h : e.habilidades()) {
-                    MinionAbility m = habilidad(h);
-                    if (m == null) {
-                        plugin.getLogger().warning("[Lethal World] mobs.especiales." + e.clave()
-                                + ": la habilidad '" + h + "' no existe en EDM.");
-                    } else if (!t.has(m)) {
-                        t.toggle(m);
-                    }
+                for (String h : prepararEspecial(t, e)) {
+                    plugin.getLogger().warning("[Lethal World] mobs.especiales." + e.clave()
+                            + ": la habilidad '" + h + "' no existe en EDM.");
                 }
-                MinionPresence look = t.presence();
-                look.featured(true);
-                look.auraName("DUST");
-                look.auraColor(color);
                 creados++;
             }
             cambios |= ajustar(t, e);
@@ -1532,6 +1532,27 @@ public final class MobsLethal implements Listener {
         if (creados > 0 || cambios) reg.save();
         plugin.getLogger().info("[Lethal World] Mobs especiales: " + String.join(", ", nombres(leidos))
                 + " (" + creados + " fichas nuevas en /esb).");
+    }
+
+    /**
+     * La ficha nueva de un especial: su color, sus habilidades y el aura de destacado, sin negrita
+     * (1.15.1). Devuelve las habilidades que EDM no conoce, para avisar de ellas. Aparte de
+     * cargarEspeciales para que el autotest la pruebe sobre una ficha en memoria.
+     */
+    private static List<String> prepararEspecial(MinionType t, Apariciones.Especial e) {
+        List<String> desconocidas = new ArrayList<>();
+        int color = Apariciones.colorDe(e.entidad());
+        t.colorRgb(color);
+        for (String h : e.habilidades()) {
+            MinionAbility m = habilidad(h);
+            if (m == null) desconocidas.add(h);
+            else if (!t.has(m)) t.toggle(m);
+        }
+        MinionPresence look = t.presence();
+        look.featured(true);
+        look.auraName("DUST");
+        look.auraColor(color);
+        return desconocidas;
     }
 
     private static List<String> nombres(List<Apariciones.Especial> l) {
@@ -1600,7 +1621,7 @@ public final class MobsLethal implements Listener {
      * partir de ahi Dosa los edita en /esb como cualquier otro.
      */
     private boolean sembrarMinijefes(MinionRegistry reg) {
-        String nombreCarpeta = "Lethal World · Minijefes";
+        String nombreCarpeta = CARPETA_MINIJEFES;
         MinionCategory carpeta = null;
         for (MinionCategory c : reg.categories()) {
             if (c.display().equals(nombreCarpeta)) carpeta = c;
@@ -1616,19 +1637,7 @@ public final class MobsLethal implements Listener {
             MinionType t = buscar(reg, m.nombre());
             if (t == null) {
                 t = reg.createType(m.nombre(), carpeta.id());
-                t.entity(m.tipo());
-                t.colorRgb(m.color());
-                // 1.8.4: sin negrita. El cartel lo repinta CartelesMinijefe, pero la ficha nueva ya nace sin ella.
-                t.baseHealth(120);
-                t.healthGrowth(0.12);
-                t.baseDamage(1.6);
-                t.damageGrowth(0.06);
-                t.mobcoins(150, 400);
-                for (MinionAbility h : m.habilidades()) if (!t.has(h)) t.toggle(h);
-                MinionPresence look = t.presence();
-                look.featured(true);
-                look.auraName("DUST");
-                look.auraColor(m.color());
+                configurarMinijefe(t, m);
             }
             ids.add(t.id());
         }
@@ -1641,13 +1650,31 @@ public final class MobsLethal implements Listener {
         return false;
     }
 
+    /** La ficha nueva de un minijefe. Aparte de sembrarMinijefes para que el autotest la pruebe en memoria. */
+    private static void configurarMinijefe(MinionType t, Minijefe m) {
+        t.entity(m.tipo());
+        t.colorRgb(m.color());
+        // 1.8.4: sin negrita. El cartel lo repinta CartelesMinijefe, pero la ficha nueva ya nace sin ella.
+        t.baseHealth(120);
+        t.healthGrowth(0.12);
+        t.baseDamage(1.6);
+        t.damageGrowth(0.06);
+        t.mobcoins(150, 400);
+        for (MinionAbility h : m.habilidades()) if (!t.has(h)) t.toggle(h);
+        MinionPresence look = t.presence();
+        look.featured(true);
+        look.auraName("DUST");
+        look.auraColor(m.color());
+    }
+
     private static void configurar(MinionType t, Semilla s) {
         t.entity(s.tipo());
         t.colorRgb(s.color());
         for (MinionAbility h : s.habilidades()) if (!t.has(h)) t.toggle(h);
         MinionPresence look = t.presence();
         if (s.destacado()) {
-            t.bold(true);
+            // 1.15.1: sin negrita, como los minijefes desde la 1.8.4. Lo que distingue al destacado es su
+            // aura, el casco y el nivel de mas; el Totem Selvatico salia en negrita por esta linea.
             t.baseHealth(80);
             t.healthGrowth(0.10);
             t.baseDamage(1.3);
@@ -1671,5 +1698,121 @@ public final class MobsLethal implements Listener {
             if (s.destacado()) look.gear().put(MinionPresence.Slot.CASCO, Material.LEATHER_HELMET);
             look.gearColor(s.color());
         }
+    }
+
+    // ---------------------------------------------------------------- sin negrita
+
+    /**
+     * Calamity 1.15.1 · Los nombres de los mobs de Calamity van sin negrita (Dosa, 2026-10-06: "todavia
+     * veo mobs que tienen nombres en negrita, como el Totem Selvatico"). Hasta la 1.15.0 los destacados
+     * de cada bioma se sembraban en negrita (configurar), y los minijefes hasta la 1.8.4; EDM la guarda
+     * en la ficha (negrita: true) y la pinta en el cartel (MinionType.name()). Dejar de ponerla al crear
+     * no basta, porque las fichas ya creadas la conservan: en cada arranque se apaga en todas las fichas
+     * de Calamity (deCalamity) y se guardan las que cambian (bold(false) las marca sucias). Si alguien la
+     * vuelve a encender en /esb, el siguiente arranque la quita otra vez. Las fichas de otras carpetas
+     * (las mazmorras del Survival) no se tocan.
+     */
+    private void quitarNegrita(MinionRegistry reg) {
+        List<String> quitadas = quitarNegrita(fichasDeCalamity(reg));
+        if (quitadas.isEmpty()) return;
+        reg.save();
+        plugin.getLogger().info("[Lethal World] Sin negrita en " + quitadas.size() + " fichas de /esb: "
+                + String.join(", ", quitadas) + ".");
+    }
+
+    /** Las fichas de Calamity en el registro vivo: sus carpetas, lo que siembra y los especiales leidos. */
+    private List<MinionType> fichasDeCalamity(MinionRegistry reg) {
+        List<String> nombres = new ArrayList<>(nombresSembrados());
+        for (Apariciones.Especial e : especiales.values()) nombres.add(e.nombre());
+        return deCalamity(reg.types(), t -> reg.categoryOf(t).display(), nombres);
+    }
+
+    /**
+     * Calamity 1.15.1 · Para el autotest: los nombres de las fichas de Calamity que siguen en negrita en
+     * el registro vivo. Solo lee. Vacia si todo esta bien (o sin el modulo anomaly).
+     */
+    public List<String> fichasEnNegrita() {
+        AnomalyPlugin a = anomaly();
+        if (a == null || a.minions() == null) return List.of();
+        List<String> out = new ArrayList<>();
+        for (MinionType t : fichasDeCalamity(a.minions())) if (t.boldFlag()) out.add(t.display());
+        return out;
+    }
+
+    /** Si el modulo anomaly esta y hay registro de fichas (para que el autotest sepa si ha mirado algo). */
+    public boolean hayFichas() {
+        AnomalyPlugin a = anomaly();
+        return a != null && a.minions() != null;
+    }
+
+    /** Los nombres de todo lo que siembra Calamity con nombre fijo: los tres de cada bioma y los cinco minijefes. */
+    public static List<String> nombresSembrados() {
+        List<String> out = new ArrayList<>();
+        for (Bioma b : PANACEA) {
+            for (Semilla s : List.of(b.comun1(), b.comun2(), b.destacado())) out.add(s.nombre());
+        }
+        for (Minijefe m : MINIJEFES) out.add(m.nombre());
+        return out;
+    }
+
+    /**
+     * Las fichas de Calamity entre todas: las que viven en una de sus carpetas (CARPETAS) y, por si
+     * alguien las ha movido de carpeta en /esb, las que se llaman como algo que siembra Calamity
+     * (nombres). carpeta da el nombre visible de la carpeta de cada ficha. Estatico para el autotest.
+     */
+    public static List<MinionType> deCalamity(Collection<MinionType> todas, Function<MinionType, String> carpeta,
+                                              Collection<String> nombres) {
+        List<MinionType> out = new ArrayList<>();
+        if (todas == null) return out;
+        for (MinionType t : todas) {
+            if (t == null) continue;
+            if (CARPETAS.contains(carpeta.apply(t)) || (nombres != null && nombres.contains(t.display()))) out.add(t);
+        }
+        return out;
+    }
+
+    /**
+     * Apaga la negrita de esas fichas. bold(false) las marca sucias, asi que el proximo save() de EDM
+     * las escribe. Devuelve los nombres de las que la tenian (vacio si no habia nada que quitar).
+     */
+    public static List<String> quitarNegrita(Collection<MinionType> fichas) {
+        List<String> quitadas = new ArrayList<>();
+        if (fichas == null) return quitadas;
+        for (MinionType t : fichas) {
+            if (t == null || !t.boldFlag()) continue;
+            t.bold(false);
+            quitadas.add(t.display());
+        }
+        return quitadas;
+    }
+
+    /**
+     * Calamity 1.15.1 · Para el autotest: una ficha en memoria (sin registro, sin disco) por cada cosa que
+     * siembra Calamity, hecha por el mismo camino que la de verdad: los tres de cada bioma (configurar),
+     * los cinco minijefes (configurarMinijefe) y los especiales de esa seccion (prepararEspecial).
+     */
+    public static List<MinionType> fichasDePrueba(ConfigurationSection especiales) {
+        List<MinionType> out = new ArrayList<>();
+        int n = 0;
+        for (Bioma b : PANACEA) {
+            for (Semilla s : List.of(b.comun1(), b.comun2(), b.destacado())) {
+                MinionType t = new MinionType("prueba-negrita-" + n++, s.nombre());
+                configurar(t, s);
+                out.add(t);
+            }
+        }
+        for (Minijefe m : MINIJEFES) {
+            MinionType t = new MinionType("prueba-negrita-" + n++, m.nombre());
+            configurarMinijefe(t, m);
+            out.add(t);
+        }
+        if (especiales != null) {
+            for (Apariciones.Especial e : Apariciones.leer(especiales, new ArrayList<>())) {
+                MinionType t = new MinionType("prueba-negrita-" + n++, e.nombre());
+                prepararEspecial(t, e);
+                out.add(t);
+            }
+        }
+        return out;
     }
 }

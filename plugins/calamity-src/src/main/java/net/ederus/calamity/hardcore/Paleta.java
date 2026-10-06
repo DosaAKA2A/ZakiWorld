@@ -338,6 +338,25 @@ public final class Paleta {
         return Component.text(t, c).decoration(TextDecoration.ITALIC, false);
     }
 
+    /**
+     * Calamity 1.15.1 · El mismo texto sin negrita en ningun trozo: la raiz la apaga y los trozos que la
+     * pedian pasan a heredarla (apagada). Para los nombres que llegan de fuera y acaban en el cartel de un
+     * mob (el customName de un mob de estructura que se adopta). null se queda en null.
+     */
+    public static Component sinNegrita(Component c) {
+        if (c == null) return null;
+        return negritaHeredada(c).decoration(TextDecoration.BOLD, false);
+    }
+
+    private static Component negritaHeredada(Component c) {
+        Component sin = c.decoration(TextDecoration.BOLD) == TextDecoration.State.TRUE
+                ? c.decoration(TextDecoration.BOLD, TextDecoration.State.NOT_SET) : c;
+        if (sin.children().isEmpty()) return sin;
+        java.util.List<Component> hijos = new java.util.ArrayList<>();
+        for (Component hijo : sin.children()) hijos.add(negritaHeredada(hijo));
+        return sin.children(hijos);
+    }
+
     // ------------------------------------------------------------ degradados
 
     /**

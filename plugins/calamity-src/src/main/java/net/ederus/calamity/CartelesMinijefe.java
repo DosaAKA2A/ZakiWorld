@@ -30,12 +30,15 @@ import net.kyori.adventure.text.format.TextDecoration;
  *
  * Lo que se ve encima de un minijefe no es su customName: EDM no le pone ninguno a sus esbirros.
  * Es el cartel de MinionManager, un TextDisplay suelto (marca anomaly:esbirro_holo = id del tipo)
- * con dos lineas: el nombre de la ficha de /esb (MinionType.name(), que en los cinco minijefes se
- * sembro en negrita) y "Nv. X  ❤ vida". EDM lo reescribe entero cada vez que cambia la vida, asi
- * que no basta con cambiarlo una vez: aqui se siguen los carteles de los minijefes de Calamity (los
- * de hardcore.minijefes.tipos y, desde la 1.10, tambien los de hardcore.minijefes.por-bioma:
- * Hardcore.esTipoMinijefe) y, cada vez que EDM los reescribe, se cambia la primera linea por
- * Paleta.minijefe y la segunda se deja como la pinta EDM.
+ * con dos lineas: el nombre de la ficha de /esb (MinionType.name(), en negrita si la ficha la tiene) y
+ * "Nv. X  ❤ vida". Hasta la 1.8.4 los cinco minijefes se sembraban con negrita: true, y las fichas de
+ * entonces la conservan; desde la 1.15.1 MobsLethal.quitarNegrita se la apaga al arrancar, y aqui se
+ * sigue apagando en la raiz por si alguna vuelve a traerla.
+ *
+ * EDM lo reescribe entero cada vez que cambia la vida, asi que no basta con cambiarlo una vez: aqui
+ * se siguen los carteles de los minijefes de Calamity (los de hardcore.minijefes.tipos y, desde la
+ * 1.10, tambien los de hardcore.minijefes.por-bioma: Hardcore.esTipoMinijefe) y, cada vez que EDM
+ * los reescribe, se cambia la primera linea por Paleta.minijefe y la segunda se deja como la pinta EDM.
  *
  * Por que no se llega a ver el cartel de EDM: el planificador de Paper corre por orden de creacion
  * las tareas que tocan en el mismo tick, y la de aqui se crea al aparecer un cartel de minijefe,

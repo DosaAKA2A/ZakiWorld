@@ -1,6 +1,8 @@
 package net.ederus.calamity.hardcore;
 
 import net.ederus.calamity.CartelesMinijefe;
+import net.ederus.calamity.MobsLethal;
+import net.ederus.edm.anomaly.minions.MinionType;
 import net.ederus.edm.comun.Compat;
 import net.ederus.edm.comun.MobCoins;
 import net.kyori.adventure.text.Component;
@@ -31,6 +33,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 import java.util.function.DoubleSupplier;
+import java.util.function.Function;
 import java.util.function.IntUnaryOperator;
 import java.util.function.Predicate;
 
@@ -1055,11 +1058,13 @@ final class Minijefes {
      * 1.10 · /calamity selftest minibosses: donde vive cada uno (elegir, delBioma) y el botin extra
      * (leerBotin, tirarBotin), sin jugadores ni escrituras; y que la config viva cuadre: cada minijefe de
      * la tabla de biomas tiene que estar en minijefes.tipos, o su bioma se queda sin dueno.
+     * 1.15.1: y ningun nombre de mob de Calamity en negrita (probarSinNegrita).
      */
     private List<String> autotest() {
         Autotest.Hoja h = new Autotest.Hoja();
         probarPorBioma(h);
         probarBotin(h);
+        probarSinNegrita(h, hc.plugin().mobs(), Apariciones.seccion(hc.plugin().getConfig(), "mobs.especiales"));
         Map<String, Habitat> vivos = porBioma(hc.plugin().getConfig());
         List<String> tipos = hc.cfg().getStringList("minijefes.tipos");
         if (!tipos.isEmpty()) {
@@ -1362,6 +1367,85 @@ final class Minijefes {
                 && cartel.decoration(TextDecoration.BOLD) == TextDecoration.State.FALSE);
         h.ok("cartel ya repintado: no se vuelve a tocar", CartelesMinijefe.repintado(cartel) == null);
         h.ok("cartel sin la forma de EDM: se deja como esta", CartelesMinijefe.repintado(Component.text("Heraldo Carmesí")) == null);
+    }
+
+    /**
+     * 1.15.1 · Ningun nombre de mob de Calamity en negrita (Dosa, 2026-10-06: el Totem Selvatico aun salia
+     * asi). Las fichas que siembra Calamity (las de cada bioma, los minijefes y los especiales) nacen sin
+     * ella; la migracion del arranque (MobsLethal.quitarNegrita) se la quita a las de Calamity que la traen
+     * y no toca las de otras carpetas; en el registro vivo no queda ninguna; y los nombres que Calamity
+     * pinta por su cuenta (PARCA, Ambush, Vigilante, Planidera, minijefes y adoptados de estructura)
+     * tampoco la llevan. Las fichas de prueba son de memoria: ni entran en el registro ni se guardan.
+     */
+    static void probarSinNegrita(Autotest.Hoja h, MobsLethal mobs, ConfigurationSection especiales) {
+        List<MinionType> semillas = MobsLethal.fichasDePrueba(especiales);
+        h.ok("semillas: las de cada bioma, los cinco minijefes y los especiales",
+                semillas.size() >= MobsLethal.nombresSembrados().size() + (especiales == null ? 0 : 1));
+        List<String> enNegrita = new ArrayList<>();
+        for (MinionType t : semillas) if (t.boldFlag() || !sinNegrita(t.name())) enNegrita.add(t.display());
+        h.igual("semillas: ninguna nace en negrita", List.of(), enNegrita);
+        MinionType totem = null;
+        for (MinionType t : semillas) if (t.display().equals("Tótem Selvático")) totem = t;
+        h.ok("semillas: el Tótem Selvático (destacado) nace sin negrita, aunque sea destacado",
+                totem != null && totem.presence().featured() && !totem.boldFlag() && sinNegrita(totem.name()));
+
+        // Fichas como las de antes de la 1.15.1: un destacado y un minijefe en negrita en sus carpetas, un
+        // especial en la suya, un destacado movido a otra carpeta y una ficha de mazmorra, que no es de Calamity.
+        MinionType destacado = new MinionType("prueba-totem", "Tótem Selvático");
+        MinionType minijefe = new MinionType("prueba-heraldo", "Heraldo Carmesí");
+        MinionType especial = new MinionType("prueba-crujidor", "Crujidor Pálido");
+        MinionType movido = new MinionType("prueba-raiz", "Raíz Voraz");
+        MinionType ajena = new MinionType("prueba-mazmorra", "Guardián del Piso 3");
+        MinionType redonda = new MinionType("prueba-apicultor", "Apicultor Picado");
+        for (MinionType t : List.of(destacado, minijefe, especial, movido, ajena)) t.bold(true);
+        Function<MinionType, String> carpeta = t -> t == minijefe ? "Lethal World · Minijefes"
+                : t == especial ? "Lethal World · Especiales"
+                : t == movido || t == ajena ? "Mazmorras · Piso 3" : "Lethal World · Panacea";
+        List<MinionType> deCalamity = MobsLethal.deCalamity(List.of(destacado, minijefe, especial, movido, ajena, redonda),
+                carpeta, MobsLethal.nombresSembrados());
+        h.ok("migracion: la ficha de mazmorra no es de Calamity", !deCalamity.contains(ajena));
+        h.ok("migracion: la movida de carpeta si, por su nombre", deCalamity.contains(movido));
+        h.ok("migracion: la del especial si, por su carpeta", deCalamity.contains(especial));
+        h.igual("migracion: quita la negrita a las cuatro de Calamity que la tenian",
+                List.of("Tótem Selvático", "Heraldo Carmesí", "Crujidor Pálido", "Raíz Voraz"),
+                MobsLethal.quitarNegrita(deCalamity));
+        boolean limpias = true;
+        for (MinionType t : List.of(destacado, minijefe, especial, movido, redonda)) {
+            limpias &= !t.boldFlag() && sinNegrita(t.name());
+        }
+        h.ok("migracion: ninguna de Calamity queda en negrita, tampoco en el nombre del cartel", limpias);
+        h.ok("migracion: la de mazmorra se queda como estaba", ajena.boldFlag() && !sinNegrita(ajena.name()));
+        h.igual("migracion: una segunda pasada no tiene nada que quitar", List.of(), MobsLethal.quitarNegrita(deCalamity));
+
+        if (mobs == null || !mobs.hayFichas()) {
+            h.ok("registro vivo: sin mobs de Lethal World o sin el modulo anomaly, nada que mirar", true);
+        } else {
+            h.igual("registro vivo: ninguna ficha de Calamity en negrita", List.of(), mobs.fichasEnNegrita());
+        }
+
+        Map<String, Component> pintados = new LinkedHashMap<>();
+        pintados.put("PARCA", Paleta.muerte("Parca"));
+        pintados.put("Ambush", Paleta.ambush("Ambush"));
+        pintados.put("Vigilante", Paleta.vigilante("Vigilante"));
+        pintados.put("Plañidera", Paleta.nombre("Plañidera", Paleta.HUESO));
+        for (Map.Entry<String, Component> e : pintados.entrySet()) {
+            h.ok("nombre de " + e.getKey() + ": sin negrita", sinNegrita(e.getValue()));
+        }
+        for (String t : TIPOS) {
+            Component c = Paleta.minijefe(nombre(t), 0);
+            h.igual("cartel de " + nombre(t) + ": solo la calavera delante", "☠ " + nombre(t), Hardcore.plano(c));
+            h.ok("cartel de " + nombre(t) + ": sin negrita", sinNegrita(c));
+        }
+
+        // El customName de un mob de estructura, en negrita entero y en un trozo, tal como se adopta.
+        Component deEstructura = Component.text("Creeper Gigatón", NamedTextColor.GREEN).decoration(TextDecoration.BOLD, true)
+                .append(Component.text(" II").decoration(TextDecoration.BOLD, true));
+        Component adoptado = Paleta.sinNegrita(deEstructura.color(NamedTextColor.RED));
+        h.ok("adoptado de estructura: llega al cartel sin negrita", sinNegrita(adoptado)
+                && adoptado.decoration(TextDecoration.BOLD) == TextDecoration.State.FALSE);
+        h.igual("adoptado de estructura: el texto no cambia", "Creeper Gigatón II", Hardcore.plano(adoptado));
+        h.igual("adoptado de estructura: el color tampoco", NamedTextColor.RED, adoptado.color());
+        h.igual("sinNegrita de null", null, Paleta.sinNegrita(null));
     }
 
     /** Que ningun trozo del texto pida negrita (lo que no la fija la hereda, y nadie la pone). */
