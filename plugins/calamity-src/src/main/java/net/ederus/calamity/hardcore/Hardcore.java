@@ -185,6 +185,8 @@ public final class Hardcore implements Listener {
     private ClanesCalamity clanes;
     /** M24 · Las hogueras de calma (Calamity 1.12.3). Null con las reglas apagadas. */
     private Hogueras hogueras;
+    /** La corrupcion de lo que construyen los jugadores. Null con las reglas apagadas. */
+    private Corrupcion corrupcion;
     /** Calamity 1.2: la zona spawn (region de WorldGuard o caja de la vara). Null con las reglas apagadas. */
     private ZonaSpawn zona;
     /** Quien estaba en la zona spawn el segundo anterior, para notar cuando entra y cuando sale. */
@@ -473,6 +475,8 @@ public final class Hardcore implements Listener {
         clanes = crear("clanes", () -> new ClanesCalamity(this));
         // M24 · Las hogueras de calma: preguntan a la zona spawn, la vara (puertas), la PARCA y las Esencias.
         hogueras = crear("hogueras", () -> new Hogueras(this));
+        // La corrupcion: pregunta a la zona spawn y a la telemetria; las fogatas (hogueras) son exentas por su tipo.
+        corrupcion = crear("corrupcion", () -> new Corrupcion(this));
         // Lo ultimo: los NPCs de la antesala solo abren lo que ya existe (Altar, Tablero...).
         npcs = crear("npcs", () -> new Npcs(this));
     }
@@ -489,6 +493,8 @@ public final class Hardcore implements Listener {
     /** Al reves de como nacieron: los de arriba usan a los de abajo mientras se paran. */
     private void pararModulos() {
         if (npcs != null) seguro("npcs", () -> npcs.parar());
+        if (corrupcion != null) seguro("corrupcion", () -> corrupcion.parar());
+        corrupcion = null;
         if (hogueras != null) seguro("hogueras", () -> hogueras.parar());
         hogueras = null;
         if (clanes != null) seguro("clanes", () -> clanes.parar());
@@ -760,6 +766,8 @@ public final class Hardcore implements Listener {
         seguro("aduana", () -> aduana.tick());
         seguro("eclipse", () -> eclipse.tick());
         if (hogueras != null) seguro("hogueras", () -> hogueras.tick());
+        // El barrido de la corrupcion (cuando toca) y su guardado del minuto.
+        if (corrupcion != null) seguro("corrupcion", () -> corrupcion.tick());
         // Quien no ha pasado por clima.segundo (spawn, espectador, fuera del mundo) recupera su cielo.
         if (clima != null) seguro("clima", () -> clima.tick());
         if (++segundosManto >= 30) {
