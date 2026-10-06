@@ -576,9 +576,13 @@ final class ObjetosCalamity implements Listener {
         return mejor;
     }
 
-    /** Lo que nunca se salva: vacio, Reliquias, Esencias, prestado, copias del Eco, el propio papel, > escalon 17. */
+    /**
+     * Lo que nunca se salva: vacio, Reliquias, Esencias, prestado, copias del Eco, el propio papel, > escalon 17.
+     * Tampoco lo bendecido: ya lo salva la Bendicion de Dios (Bendicion lo aparta antes; si ese modulo no
+     * arrancara, lo haria AE, y salvarlo aqui tambien daria dos).
+     */
     private boolean valeParaSalvar(ItemStack it) {
-        if (it == null || it.getType().isAir()) return false;
+        if (it == null || it.getType().isAir() || Bendicion.bendecido(it)) return false;
         if (Marcas.tiene(it, Marcas.PRESTADO) || Marcas.tiene(it, Marcas.ECO_COPIA) || Marcas.tiene(it, Marcas.SALVOCONDUCTO)) return false;
         if (hc.items().esEsencia(it)) return false;
         Reliquias r = hc.reliquias();

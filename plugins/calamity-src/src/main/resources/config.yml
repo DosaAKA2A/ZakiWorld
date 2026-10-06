@@ -306,6 +306,10 @@ hardcore:
   muerte:
     # Al morir se pierde TODO lo que llevabas encima y la experiencia.
     lo-pierde-todo: true
+    # La Bendición de Dios de AdvancedEnchantments manda sobre lo de arriba (Dosa, 2026-10-06): lo bendecido
+    # vuelve al reaparecer, sin la bendición, como fuera. Nunca lo prestado del kit, las copias del Eco, los
+    # pergaminos de Maren, las Reliquias ni las Esencias. También al huir por el cable. false: no salva nada.
+    bendicion: true
     # 13. Minutos de espera para volver a entrar tras morir dentro.
     #     APAGADA por Dosa el 2026-09-18.
     cuarentena-minutos: 0
@@ -2004,8 +2008,11 @@ hardcore:
     insomne-3: {estadistica: horas-activas, umbral: 150, nombre: "[INSOMNE] III", anuncio: true, comandos: ["lp user %jugador% permission set insomne3.badge.unlocked true", "calamity give llave-hito %jugador% 2"]}
     sin-alba: {estadistica: horas-activas, umbral: 250, nombre: "Sin Alba", anuncio: true, activo: false, comandos: ["ae giverandombook %jugador% FABLED", "lp user %jugador% permission set rip.death.silencio true"]}
     segador-1: {estadistica: parcas, umbral: 1, nombre: "[SEGADOR] I", anuncio: true, comandos: ["lp user %jugador% permission set segador.badge.unlocked true", "lp user %jugador% permission set rip.death.souls true"]}
-    segador-2: {estadistica: parcas, umbral: 10, nombre: "[SEGADOR] II", anuncio: true, comandos: ["lp user %jugador% permission set segador2.badge.unlocked true", "lp user %jugador% permission set gkit.grimreaper true"]}
-    segador-3: {estadistica: parcas, umbral: 25, nombre: "[SEGADOR] III", anuncio: true, activo: false, comandos: ["lp user %jugador% permission set segador3.badge.unlocked true", "lp user %jugador% permission set rip.death.trompeta true"]}
+    # Dosa (2026-10-06): "el tag si a los 10" y el God Kit GrimReaper "que requiera matar a la Parca 30 veces".
+    # El II da solo el tag; el III (antes 25 y apagado) da el tag III y gkit.grimreaper. El kit de AE se reclama
+    # una vez (menus/gkits.yml: espera maxima y quita el permiso al reclamarlo).
+    segador-2: {estadistica: parcas, umbral: 10, nombre: "[SEGADOR] II", anuncio: true, comandos: ["lp user %jugador% permission set segador2.badge.unlocked true"]}
+    segador-3: {estadistica: parcas, umbral: 30, nombre: "[SEGADOR] III", anuncio: true, comandos: ["lp user %jugador% permission set segador3.badge.unlocked true", "lp user %jugador% permission set rip.death.trompeta true", "lp user %jugador% permission set gkit.grimreaper true"]}
     cazaecos-1: {estadistica: cazas-validas, umbral: 5, nombre: "[CAZAECOS] I", anuncio: false, comandos: ["lp user %jugador% permission set cazaecos.badge.unlocked true"]}
     cazaecos-2: {estadistica: cazas-validas, umbral: 25, nombre: "[CAZAECOS] II", anuncio: true, comandos: ["lp user %jugador% permission set cazaecos2.badge.unlocked true", "lp user %jugador% permission set rip.kill.chains true"]}
     cazaecos-3: {estadistica: cazas-validas, umbral: 60, nombre: "[CAZAECOS] III", anuncio: true, comandos: ["lp user %jugador% permission set cazaecos3.badge.unlocked true"]}

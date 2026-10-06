@@ -163,6 +163,8 @@ public final class Hardcore implements Listener {
     private Testigos testigos;
     private Sentidos sentidos;
     private ObjetosCalamity objetos;
+    /** La Bendicion de Dios de AdvancedEnchantments, que se impone a lo-pierde-todo (Bendicion). */
+    private Bendicion bendicion;
     private Altar altar;
     private Horas horas;
     private Hitos hitos;
@@ -262,6 +264,8 @@ public final class Hardcore implements Listener {
     Testigos testigos() { return testigos; }
     Sentidos sentidos() { return sentidos; }
     ObjetosCalamity objetos() { return objetos; }
+    /** Null con las reglas apagadas. Lo llama Combate.cable antes de la foto del Eco. */
+    Bendicion bendicion() { return bendicion; }
     Altar altar() { return altar; }
     Horas horas() { return horas; }
     Hitos hitos() { return hitos; }
@@ -470,6 +474,8 @@ public final class Hardcore implements Listener {
         testigos = crear("testigos", () -> new Testigos(this));
         sentidos = crear("sentidos", () -> new Sentidos(this));
         objetos = crear("objetos", () -> new ObjetosCalamity(this));
+        // La Bendicion de Dios: aparta lo bendecido en LOW, antes de que onMuerte haga la foto y vacie.
+        bendicion = crear("bendicion", () -> new Bendicion(this));
         altar = crear("altar", () -> new Altar(this));
         horas = crear("horas", () -> new Horas(this));
         hitos = crear("hitos", () -> new Hitos(this));
@@ -537,6 +543,8 @@ public final class Hardcore implements Listener {
         if (hitos != null) seguro("hitos", () -> hitos.parar());
         if (horas != null) seguro("horas", () -> horas.parar());
         if (altar != null) seguro("altar", () -> altar.parar());
+        if (bendicion != null) seguro("bendicion", () -> bendicion.parar());
+        bendicion = null;
         if (objetos != null) seguro("objetos", () -> objetos.parar());
         if (sentidos != null) seguro("sentidos", () -> sentidos.parar());
         if (testigos != null) seguro("testigos", () -> testigos.parar());
@@ -1908,6 +1916,9 @@ public final class Hardcore implements Listener {
      *
      * Las tumbas de AxGraves hay que apagarlas por su config (disabled-worlds); esto
      * vacia la lista de drops igualmente, asi que aunque la tumba se cree sale vacia.
+     *
+     * Lo bendecido (la Bendicion de Dios de AE) ya no llega aqui: Bendicion lo saca en LOW del
+     * inventario y de lo que suelta, y se devuelve al reaparecer. La foto y lo demas no lo ven.
      */
     @EventHandler(priority = EventPriority.HIGHEST)
     public void onMuerte(PlayerDeathEvent e) {

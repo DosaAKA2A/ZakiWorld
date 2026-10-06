@@ -316,6 +316,10 @@ final class Combate implements Listener {
     private void cable(Player p) {
         UUID u = p.getUniqueId();
         Location l = p.getLocation();
+        // La Bendicion de Dios lo primero, como al morir (alli va en LOW, antes que todo esto): lo bendecido no
+        // se pierde, y ni la victima, ni la foto del Eco, ni la telemetria lo cuentan como perdido.
+        Bendicion bendicion = hc.bendicion();
+        if (bendicion != null) hc.seguro("bendicion", () -> bendicion.alHuir(p));
         Player asesino = asesinoReciente(u);
         Victima victima = victima(p, asesino);
 
