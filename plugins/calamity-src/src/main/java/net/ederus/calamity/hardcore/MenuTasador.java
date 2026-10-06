@@ -61,6 +61,9 @@ final class MenuTasador implements Listener {
     private static final long ESPERA_MS = 500;
     /** Todas las vistas: 3 filas. */
     static final int TAMANO = 27;
+    /** 1.16.1 · Las vistas con botones abajo (Mercado, Tu dinero, Contratos, elegir) llevan una fila mas de
+     *  cristal debajo, de margen: Dosa, "ponle mas margen abajo, con los cristales". Los botones no se mueven. */
+    static final int TAMANO_MARGEN = 36;
     /** La fila del medio: lo que se ensena (tipos, contratos, tu dinero). */
     static final int FILA = 9;
     /** Como mucho, tipos en la fila: las 7 columnas de dentro del marco. */
@@ -139,7 +142,10 @@ final class MenuTasador implements Listener {
     }
 
     private static int tamano(String pantalla) {
-        return TAMANO;
+        return switch (pantalla) {
+            case PORTADA, V_DINERO, V_CONTRATOS, V_ELEGIR -> TAMANO_MARGEN;
+            default -> TAMANO;
+        };
     }
 
     private void abrirVista(Player p, String pantalla) {
@@ -1168,6 +1174,8 @@ final class MenuTasador implements Listener {
 
         // 1.12.1: todo en 3 filas; la fila del medio para lo que se ensena y tres botones abajo.
         h.igual("tienda: 27 casillas", 27, TAMANO);
+        h.igual("con botones abajo: una fila de cristal debajo", 36, tamano(V_CONTRATOS));
+        h.ok("botones por encima de la fila de margen", CONTRATOS < TAMANO_MARGEN - 9 && SALIR < TAMANO_MARGEN - 9);
         h.igual("tienda: un tipo va en el centro", List.of(13), lista(casillasFila(1)));
         h.igual("tienda: tres tipos con aire (11, 13 y 15)", List.of(11, 13, 15), lista(casillasFila(3)));
         h.igual("tienda: siete tipos llenan la fila", List.of(10, 11, 12, 13, 14, 15, 16), lista(casillasFila(7)));
