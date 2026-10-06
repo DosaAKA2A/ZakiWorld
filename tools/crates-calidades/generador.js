@@ -273,6 +273,25 @@ function legado(mm) {
   return out;
 }
 
+// Titulo del menu: "CRATE X" en mayusculas, negrita y degradado (legible sobre el gris del cofre, #C6C6C6)
+// y detras "✦ N llaves" con las llaves del jugador. Si no cabe en los 160 px de la barra, solo "✦ N".
+function tituloMenu({ texto, de, a, llave }) {
+  const hex = h => '&x' + h.replace('#', '').toUpperCase().split('').map(c => '&' + c).join('');
+  const p = h => [1, 3, 5].map(i => parseInt(h.slice(i, i + 2), 16));
+  const A = p(de), B = p(a), letras = [...texto];
+  const nombre = letras.map((c, i) => {
+    if (c === ' ') return ' ';
+    const f = letras.length > 1 ? i / (letras.length - 1) : 0;
+    return hex('#' + A.map((v, k) => Math.round(v + (B[k] - v) * f).toString(16).padStart(2, '0')).join('')) + '&l' + c;
+  }).join('');
+  // ancho en pixeles con la fuente de Minecraft (avance = ancho + 1; negrita +1)
+  const ancho = (s, negrita) => [...s].reduce((n, c) => n + ({ ' ': 3, i: 1, l: 2, I: 3, t: 3, '!': 1, '.': 1, ':': 1, '|': 1, f: 4, k: 4, '✦': 7 }[c] ?? 5) + 1 + (negrita ? 1 : 0), 0);
+  const largo = (sufijo) => ancho(texto, true) + ancho('   ' + sufijo, false);
+  if (!llave) return nombre;
+  const marca = hex(a) + '✦ &8%phoenixcrates_keys_' + llave + '%';
+  return nombre + '   ' + marca + (largo('✦ 00 llaves') <= 160 ? ' llaves' : '');
+}
+
 // Menu de vista previa con la misma forma que tenia ExcellentCrates: 5 filas, titulo = nombre de la caja,
 // marco de cristal negro con esquinas grises, llaves arriba en el centro, Volver (18), Siguiente (26), Salir (40)
 function generarMenu(base, titulo) {
@@ -294,7 +313,7 @@ function generarMenu(base, titulo) {
     ...item('close-menu', 40, 'SPRUCE_DOOR', '&c&lSalir', [], ['[CLOSE_INVENTORY]'], false));
 
   // titulo y filas
-  t[t.findIndex(l => /^  title:/.test(l))] = "  title: '" + legado(titulo).replace(/'/g, "''") + "'";
+  t[t.findIndex(l => /^  title:/.test(l))] = "  title: '" + (typeof titulo === 'string' ? legado(titulo) : tituloMenu(titulo)).replace(/'/g, "''") + "'";
   t[t.findIndex(l => /^  rows:/.test(l))] = '  rows: 5';
 
   // flechas de pagina
@@ -317,4 +336,4 @@ function generarMenu(base, titulo) {
   return t.join(eol);
 }
 
-if (typeof module !== 'undefined') module.exports = { generar, generarMenu, legado };
+if (typeof module !== 'undefined') module.exports = { generar, generarMenu, legado, tituloMenu };

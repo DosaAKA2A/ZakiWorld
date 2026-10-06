@@ -49,6 +49,7 @@
   "cajas": {
     "legendary": {
       "nombre": "<gradient:#FFD166:#FF8A00><bold>CRATE LEGENDARIA</bold></gradient>",
+      "titulo": { "texto": "CRATE LEGENDARIA", "de": "#A35F00", "a": "#8A3800", "llave": "legendary" },
       "menu": "legendaria_preview",
       "calidades": {
         "inmortal": 0.2,
@@ -105,6 +106,7 @@
     },
     "spawners": {
       "nombre": "<#47D7FF><bold>✦ CRATE SPAWNERS ✦</bold>",
+      "titulo": { "texto": "CRATE SPAWNERS", "de": "#10759A", "a": "#0E6394", "llave": "spawner" },
       "calidades": {
         "legendario": 3,
         "mitico": 12,
@@ -127,6 +129,7 @@
     },
     "pets": {
       "nombre": "<gradient:#FF4FD8:#8B5CF6><bold>CRATE MASCOTAS</bold></gradient>",
+      "titulo": { "texto": "CRATE MASCOTAS", "de": "#BE32A3", "a": "#6D47C6", "llave": "pets" },
       "calidades": {
         "legendario": 1,
         "epico": 10,
@@ -160,6 +163,7 @@
     },
     "caos": {
       "nombre": "<#FF6FD8><bold>✦ CRATE CAOS ✦</bold>",
+      "titulo": { "texto": "CRATE CAOS", "de": "#C0318D", "a": "#9E1F6B", "llave": "caos" },
       "calidades": {
         "legendario": 1,
         "mitico": 6,
@@ -196,6 +200,7 @@
     },
     "koth": {
       "nombre": "&c&lCRATE &4&lKOTH",
+      "titulo": { "texto": "CRATE KOTH", "de": "#C42F2F", "a": "#7F1414", "llave": "koth" },
       "calidades": {
         "legendario": 1.5,
         "mitico": 6,
@@ -239,6 +244,7 @@
     },
     "booster": {
       "nombre": "<gradient:#5865F2:#9065F2>&lCRATE BOOSTER</gradient>",
+      "titulo": { "texto": "CRATE BOOSTER", "de": "#4F5BE0", "a": "#6948B8", "llave": "booster" },
       "calidades": {
         "legendario": 4,
         "mitico": 10,
@@ -292,6 +298,7 @@
     },
     "cajaepica": {
       "nombre": "&5&l CRATE EPICA",
+      "titulo": { "texto": "CRATE ÉPICA", "de": "#A23BD6", "a": "#7A2DB8", "llave": "llave_epica" },
       "calidades": {
         "legendario": 2,
         "mitico": 8,
@@ -342,6 +349,7 @@
     },
     "dungeon": {
       "nombre": "<#FFFFFF>&lCRATE <#3A54A3>&lDUNGEON",
+      "titulo": { "texto": "CRATE DUNGEON", "de": "#4A6BC9", "a": "#2E4590", "llave": "llave_dungeon" },
       "calidades": {
         "legendario": 2,
         "mitico": 10,
@@ -389,6 +397,7 @@
     },
     "rankup": {
       "nombre": "&c&lCRATE RANKUP",
+      "titulo": { "texto": "CRATE RANKUP", "de": "#C04931", "a": "#8E2614", "llave": "llave_rankup" },
       "calidades": {
         "legendario": 2,
         "mitico": 8,
@@ -428,6 +437,7 @@
     },
     "vote": {
       "nombre": "&a&lCRATE VOTE",
+      "titulo": { "texto": "CRATE VOTOS", "de": "#2D7E39", "a": "#1E6E31", "llave": "vote" },
       "calidades": {
         "legendario": 1,
         "mitico": 4,
