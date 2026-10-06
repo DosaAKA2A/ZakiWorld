@@ -1,0 +1,65 @@
+{
+  "_nota": "Fuente de verdad de las calidades de PhoenixCrates. Primero sale la calidad (peso entre las calidades presentes en la caja) y despues el premio (peso dentro de su calidad). generador.js convierte esto en el weight final de cada premio y en las lineas de lore de la vista previa.",
+  "calidades": {
+    "unico":      { "nombre": "Único",      "color": "#FFAA00", "peso": 0.1 },
+    "legendario": { "nombre": "Legendario", "color": "#FFB347", "peso": 0.1 },
+    "mitico":     { "nombre": "Mítico",     "color": "#C79BFF", "peso": 2.9 },
+    "epico":      { "nombre": "Épico",      "color": "#FF77FF", "peso": 12 },
+    "raro":       { "nombre": "Raro",       "color": "#7CFF7C", "peso": 25 },
+    "comun":      { "nombre": "Común",      "color": "#E0E0E0", "peso": 60 }
+  },
+  "orden": ["unico", "legendario", "mitico", "epico", "raro", "comun"],
+  "cajas": {
+    "legendary": {
+      "menu": "legendaria_preview",
+      "premios": [
+        { "match": "mi give ARMOR CORONA_DEL_VACIO",       "calidad": "mitico",     "peso": 6 },
+        { "match": "mi give ARMOR CORAZA_DEL_VACIO",       "calidad": "mitico",     "peso": 10 },
+        { "match": "mi give ARMOR GREBAS_DEL_VACIO",       "calidad": "mitico",     "peso": 10 },
+        { "match": "mi give ARMOR SOLERETAS_DEL_VACIO",    "calidad": "mitico",     "peso": 10 },
+        { "match": "mi give TOOL PICO_DEL_VACIO",          "calidad": "mitico",     "peso": 10 },
+        { "match": "mi give TOOL PALA_DEL_VACIO",          "calidad": "mitico",     "peso": 10 },
+        { "match": "mi give TOOL HACHA_DEL_VACIO",         "calidad": "mitico",     "peso": 10 },
+        { "match": "mi give SWORD HOJA_DEL_VACIO",         "calidad": "mitico",     "peso": 100 },
+        { "match": "mi give ARMOR CORAZA_DE_ESCARCHA",     "calidad": "mitico",     "peso": 10 },
+        { "match": "mi give TOOL PALA_DE_ESCARCHA",        "calidad": "mitico",     "peso": 10 },
+        { "match": "mi give SWORD COLMILLO_DE_ESCARCHA",   "calidad": "mitico",     "peso": 100 },
+        { "match": "material: custom:mmoitem:spear1",      "calidad": "mitico",     "peso": 10, "_": "Lanza de Escarcha" },
+        { "match": "mi give TOOL PICO_ANGEL_SABIDURIA",    "calidad": "mitico",     "peso": 2 },
+        { "match": "mi give TOOL PALA_VORTICE_ARIDO",      "calidad": "mitico",     "peso": 2 },
+        { "match": "mi give TOOL BALLESTA_DEVORADORA",     "calidad": "mitico",     "peso": 2 },
+        { "match": "material: custom:mmoitem:armor25",     "calidad": "mitico",     "peso": 0.8375023340410378, "_": "Elitros Eternos" },
+
+        { "match": "mi give SWORD FILO_DEL_ECLIPSE",       "calidad": "unico",      "peso": 100 },
+        { "match": "material: custom:mmoitem:spear3",      "calidad": "unico",      "peso": 10, "_": "Tridente del Leviatan" },
+
+        { "match": "mi give ARMOR CORAZA_DEL_ECLIPSE",     "calidad": "legendario", "peso": 10 },
+        { "match": "mi give TOOL PALA_DEL_ECLIPSE",        "calidad": "legendario", "peso": 10 },
+
+        { "match": "mi give ARMOR YELMO_DEL_ECLIPSE",      "calidad": "epico",      "peso": 6 },
+        { "match": "mi give ARMOR GREBAS_DEL_ECLIPSE",     "calidad": "epico",      "peso": 10 },
+        { "match": "mi give ARMOR BOTAS_DEL_ECLIPSE",      "calidad": "epico",      "peso": 10 },
+        { "match": "mi give TOOL PICO_DEL_ECLIPSE",        "calidad": "epico",      "peso": 10 },
+        { "match": "mi give TOOL HACHA_DEL_ECLIPSE",       "calidad": "epico",      "peso": 10 },
+        { "match": "mi give ARMOR CELADA_DE_ESCARCHA",     "calidad": "epico",      "peso": 6 },
+        { "match": "mi give ARMOR GREBAS_DE_ESCARCHA",     "calidad": "epico",      "peso": 10 },
+        { "match": "mi give ARMOR BOTAS_DE_ESCARCHA",      "calidad": "epico",      "peso": 10 },
+        { "match": "mi give TOOL PICO_DE_ESCARCHA",        "calidad": "epico",      "peso": 10 },
+        { "match": "mi give TOOL HACHA_DE_ESCARCHA",       "calidad": "epico",      "peso": 10 },
+        { "match": "mi give SWORD AGUIJON_DE_ARAGON",      "calidad": "epico",      "peso": 30 },
+        { "match": "mi give SWORD MAREA_DEL_LEVIATAN",     "calidad": "epico",      "peso": 25 },
+        { "match": "mi give SWORD LAMENTO_SEPULCRAL",      "calidad": "epico",      "peso": 20 },
+        { "match": "permission set tags.legend",           "calidad": "epico",      "peso": 2 },
+        { "match": "givebook %player% doublestrike",       "calidad": "epico",      "peso": 3 },
+        { "match": "givebook %player% lifesteal",          "calidad": "epico",      "peso": 3 },
+
+        { "match": "material: custom:mmoitem:hammer1",     "calidad": "raro",       "peso": 10, "_": "Mazo del Eclipse; en ExcellentCrates estaba en Raro (18,9 %), revisar" },
+        { "match": "mobcoin give %player% 60000",          "calidad": "raro",       "peso": 4 },
+        { "match": "eco give %player% 100000",             "calidad": "raro",       "peso": 4 },
+        { "match": "giveKey legendary %player% 2",         "calidad": "raro",       "peso": 5 },
+        { "match": "giveKey spawner %player% 2",           "calidad": "raro",       "peso": 5 },
+        { "match": "giveKey pets %player% 2",              "calidad": "raro",       "peso": 5 }
+      ]
+    }
+  }
+}
