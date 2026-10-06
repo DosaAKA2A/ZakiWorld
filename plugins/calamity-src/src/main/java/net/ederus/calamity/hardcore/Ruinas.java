@@ -92,6 +92,10 @@ import java.util.UUID;
  * La Boveda de Ruinas es la caja calamity_ruinas de EDM (una apertura por jugador, Llave del Umbral);
  * aqui solo se planta y se paga su botin (BovedaAbiertaEvent).
  *
+ * 1.16.4 · El cofre de ruina es un cofre comun (BotinCalamity.tirarComun): no da Reliquias aunque el
+ * config las traiga y lo raro (cofres.raros) sale de a 1 y uno por cofre, por mucho que suba el
+ * escalon. Las Reliquias son de las bovedas: la de Ruinas da las de grado I a III y la Caida, II a IV.
+ *
  * Nada en la zona spawn ni en las regiones de excluir-regiones (calamity_exterior).
  */
 final class Ruinas implements Listener {
@@ -100,12 +104,9 @@ final class Ruinas implements Listener {
     static final List<String> ESTRUCTURAS_DE_SERIE = List.of("lethal_world:ruinas_");
     static final List<String> EXCLUIR_DE_SERIE = List.of("calamity_exterior");
 
-    /** Lo de serie del botin de un cofre de ruina (hardcore.ruinas.cofres.botin). */
+    /** Lo de serie del botin de un cofre de ruina (hardcore.ruinas.cofres.botin). 1.16.4: sin Reliquias. */
     static final List<Map<?, ?>> COFRE_DE_SERIE = List.of(
             Map.of("objeto", "esencia", "prob", 0.45, "min", 1, "max", 2),
-            Map.of("objeto", "reliquia-1", "prob", 0.55, "min", 1, "max", 3),
-            Map.of("objeto", "reliquia-2", "prob", 0.25, "min", 1, "max", 1),
-            Map.of("objeto", "reliquia-3", "prob", 0.05, "min", 1, "max", 1),
             Map.of("objeto", "tintura", "prob", 0.15, "min", 1, "max", 2),
             Map.of("objeto", "cristal", "prob", 0.04, "min", 1, "max", 1),
             Map.of("objeto", "frasco-1", "prob", 0.04, "min", 1, "max", 1),
@@ -113,12 +114,15 @@ final class Ruinas implements Listener {
             Map.of("objeto", "material:BREAD", "prob", 0.40, "min", 1, "max", 3),
             Map.of("objeto", "material:ARROW", "prob", 0.30, "min", 4, "max", 10));
 
-    /** Lo de serie del botin de la Boveda de Ruinas (hardcore.ruinas.bovedas.botin). */
+    /**
+     * Lo de serie del botin de la Boveda de Ruinas (hardcore.ruinas.bovedas.botin). 1.16.4: las Reliquias de grado
+     * bajo y medio (I a III, sin IV); las altas son de la Boveda Caida.
+     */
     static final List<Map<?, ?>> BOVEDA_DE_SERIE = List.of(
             Map.of("objeto", "esencia", "prob", 1.0, "min", 2, "max", 4),
-            Map.of("objeto", "reliquia-2", "prob", 0.60, "min", 1, "max", 2),
-            Map.of("objeto", "reliquia-3", "prob", 0.20, "min", 1, "max", 1),
-            Map.of("objeto", "reliquia-4", "prob", 0.03, "min", 1, "max", 1),
+            Map.of("objeto", "reliquia-1", "prob", 0.70, "min", 1, "max", 3),
+            Map.of("objeto", "reliquia-2", "prob", 0.50, "min", 1, "max", 2),
+            Map.of("objeto", "reliquia-3", "prob", 0.10, "min", 1, "max", 1),
             Map.of("objeto", "tintura", "prob", 0.30, "min", 1, "max", 2),
             Map.of("objeto", "cristal", "prob", 0.15, "min", 1, "max", 1),
             Map.of("objeto", "frasco-1", "prob", 0.15, "min", 1, "max", 1),
@@ -148,7 +152,7 @@ final class Ruinas implements Listener {
         hc.plugin().getServer().getPluginManager().registerEvents(this, hc.plugin());
         reloj = hc.plugin().getServer().getScheduler().runTaskTimer(hc.plugin(), () -> hc.seguro("ruinas", this::segundo), 40L, 20L);
         Autotest.registrar("ruinas", Ruinas::autotest);
-        Autotest.registrar("botin-calamity", BotinCalamity::autotest);
+        Autotest.registrar("botin-calamity", () -> BotinCalamity.autotest(hc.cfg()));
         Autotest.registrar("puente-bovedas", PuenteBovedas::autotest);
     }
 
@@ -471,8 +475,10 @@ final class Ruinas implements Listener {
         double bloques = hc.distancia() == null ? 0 : hc.valor("distancia", () -> hc.distancia().bloques(bloque.getLocation()), 0.0);
         int esc = BotinCalamity.escalones(bloques, c.getInt("cofres.distancia-cada", 500), c.getInt("cofres.extra.tope", 6));
         double factor = BotinCalamity.factorBioma(c.getConfigurationSection("cofres.biomas"), Minijefes.bioma(bloque.getLocation()));
-        List<BotinCalamity.Tirada> t = BotinCalamity.tirar(BotinCalamity.filas(c, "cofres.botin", COFRE_DE_SERIE), esc,
-                c.getDouble("cofres.extra.prob", 0.15), c.getDouble("cofres.extra.cantidad", 0.5), factor, azar::nextDouble);
+        // 1.16.4: un cofre comun: sin Reliquias y lo raro de a 1 y uno por cofre (la Boveda de abajo, no: es premio).
+        List<BotinCalamity.Tirada> t = BotinCalamity.tirarComun(BotinCalamity.filas(c, "cofres.botin", COFRE_DE_SERIE),
+                BotinCalamity.raros(c, "cofres.raros"), esc, c.getDouble("cofres.extra.prob", 0.15),
+                c.getDouble("cofres.extra.cantidad", 0.5), factor, azar::nextDouble);
         // Dosa abrio un cofre vacio (fallaron todas las tiradas): como poco, una Esencia.
         if (t.isEmpty()) t = List.of(new BotinCalamity.Tirada("esencia", 1));
         BotinCalamity.Entrega en = BotinCalamity.entregar(hc, p, t, "cofre", "ruina");
@@ -726,7 +732,10 @@ final class Ruinas implements Listener {
         h.igual("coordenadas ida y vuelta", "12,-3,40", texto(xyz("12,-3,40")));
         h.igual("coordenadas rotas", null, xyz("12,x,40"));
         h.ok("clave de chunk distinta", clave(1, 2) != clave(2, 1) && clave(-1, 0) != clave(0, -1));
-        h.igual("filas de serie del cofre", 10, COFRE_DE_SERIE.size());
+        h.igual("filas de serie del cofre", 7, COFRE_DE_SERIE.size());
+        h.igual("filas de serie de la bóveda", 8, BOVEDA_DE_SERIE.size());
+        h.igual("el cofre de ruina de serie no trae Reliquias", "", BotinCalamity.reliquias(COFRE_DE_SERIE));
+        h.igual("la Bóveda de Ruinas de serie: grados I a III, sin IV", "1 2 3", BotinCalamity.grados(BOVEDA_DE_SERIE));
         return h.lineas();
     }
 }

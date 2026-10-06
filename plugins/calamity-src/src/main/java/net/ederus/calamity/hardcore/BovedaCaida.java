@@ -80,9 +80,13 @@ final class BovedaCaida implements Listener {
 
     static final String RUTA = "boveda-caida";
 
-    /** Lo de serie del botin (hardcore.boveda-caida.botin). */
+    /**
+     * Lo de serie del botin (hardcore.boveda-caida.botin). 1.16.4: las Reliquias altas, de grado II a IV (las de
+     * los cofres comunes ya no salen de ellos: son de las bovedas con llave).
+     */
     static final List<Map<?, ?>> BOTIN_DE_SERIE = List.of(
             Map.of("objeto", "esencia", "prob", 1.0, "min", 8, "max", 14),
+            Map.of("objeto", "reliquia-2", "prob", 0.60, "min", 1, "max", 2),
             Map.of("objeto", "reliquia-3", "prob", 0.80, "min", 1, "max", 2),
             Map.of("objeto", "reliquia-4", "prob", 0.25, "min", 1, "max", 1),
             Map.of("objeto", "cristal", "prob", 0.50, "min", 1, "max", 1),
@@ -796,7 +800,8 @@ final class BovedaCaida implements Listener {
         n.set("bamboo_valley", "el bambú");
         h.igual("bioma con nombre del config", "el bambú", nombreBioma("bracken:panacea/bamboo_valley", n));
         h.igual("bioma desconocido", "el bioma deep dark", nombreBioma("minecraft:deep_dark", null));
-        h.igual("filas de serie del botin", 7, BOTIN_DE_SERIE.size());
+        h.igual("filas de serie del botin", 8, BOTIN_DE_SERIE.size());
+        h.igual("sus Reliquias de serie: grados II, III y IV", "2 3 4", BotinCalamity.grados(BOTIN_DE_SERIE));
         return h.lineas();
     }
 }

@@ -13,7 +13,6 @@ import java.util.EnumSet;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.List;
-import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
@@ -24,13 +23,17 @@ import java.util.UUID;
  * Dos cosas distintas:
  * - Filtro vanilla, SIEMPRE: los cofres de Calamity no dan netherita ni manzanas de notch.
  *   Calamity no puede ser la forma rapida de sacar lo que en el Survival cuesta semanas.
- * - Lo que se anade (Esencias, Reliquias, Cristal, Tintura, Frasco), solo con un jugador que
- *   abre el cofre y solo los primeros cofres-pagados-dia (10) del dia: el saqueador vive de
- *   explorar lejos, no de abrir cien cofres de una aldea.
+ * - Lo que se anade (Esencias, Cristal, Tintura, Frasco), solo con un jugador que abre el cofre
+ *   y solo los primeros cofres-pagados-dia (10) del dia: el saqueador vive de explorar lejos, no
+ *   de abrir cien cofres de una aldea.
  *
- * Las Esencias y Reliquias van por la Aduana (tipo "cofre") al inventario de quien abre, no
- * dentro del cofre: toda Esencia o Reliquia que se crea sale por Aduana.pagar (regla 7), y
- * asi queda en la Bitacora quien las saco. Cristal, Tintura y Frasco si van al cofre.
+ * Las Esencias van por la Aduana (tipo "cofre") al inventario de quien abre, no dentro del
+ * cofre: toda Esencia que se crea sale por Aduana.pagar (regla 7), y asi queda en la Bitacora
+ * quien las saco. Cristal, Tintura y Frasco si van al cofre.
+ *
+ * 1.16.4 · Es un cofre comun (BotinCalamity.tirarComun): nunca da Reliquias, aunque el config las
+ * traiga (las Reliquias salen de las bovedas con llave), y lo raro (cofres.raros: Cristal, Frasco,
+ * llaves) sale de a 1 y como mucho uno por cofre.
  */
 final class Cofres {
 
@@ -68,18 +71,13 @@ final class Cofres {
         if (ct != null) hc.seguro("contratos", () -> ct.progreso(p, "cofre", 1));
 
         int esencias = 0;
-        List<ItemStack> reliquias = new ArrayList<>();
         List<ItemStack> alCofre = new ArrayList<>();
         if (turno > 0) {
-            Reliquias rel = hc.reliquias();
-            for (Map<?, ?> fila : anadir(c)) {
-                String objeto = String.valueOf(fila.get("objeto")).toLowerCase(Locale.ROOT);
-                double prob = decimal(fila.get("prob"), 0);
-                if (azar.nextDouble() >= prob) continue;
-                int min = Math.max(1, entero(fila.get("min"), 1));
-                int max = Math.max(min, entero(fila.get("max"), min));
-                int n = min + azar.nextInt(max - min + 1);
-                switch (objeto) {
+            // 1.16.4: un cofre comun. Sin Reliquias (son de las bovedas con llave) y lo raro de a 1 y uno por cofre.
+            for (BotinCalamity.Tirada t : BotinCalamity.tirarComun(anadir(c), BotinCalamity.raros(c, "cofres.raros"), 0, 0, 0,
+                    1, azar::nextDouble)) {
+                int n = t.n();
+                switch (t.objeto()) {
                     case "esencia" -> esencias += n;
                     case "cristal" -> {
                         ItemStack cr = hc.items().cristal();
@@ -93,26 +91,15 @@ final class Cofres {
                     }
                     case "tintura" -> {
                         String id = c.getString("entregas.mmo.tintura", "CALAMITY_CONSUMIBLES.TINTURA_DE_CENIZA");
-                        ItemStack t = PuenteMmo.crear(id);
+                        ItemStack ti = PuenteMmo.crear(id);
                         // Sin MMOItems (servidor de pruebas) esa tirada no da nada.
-                        if (t != null) {
-                            t.setAmount(n);
-                            alCofre.add(t);
+                        if (ti != null) {
+                            ti.setAmount(n);
+                            alCofre.add(ti);
                         }
                     }
                     default -> {
-                        if (!objeto.startsWith("reliquia-") || rel == null || !rel.activas()) break;
-                        int g = entero(objeto.substring("reliquia-".length()), 0);
-                        if (g < 1 || g > 4) break;
-                        ItemStack r = rel.crear(g, "cofre", null, 0, null, false);
-                        if (rel.id(r) == null) {
-                            r.setAmount(n);
-                            reliquias.add(r);
-                        } else {
-                            reliquias.add(r);
-                            for (int i = 1; i < n; i++) reliquias.add(rel.crear(g, "cofre", null, 0, null, false));
-                        }
-                        if (g >= 3) hc.plugin().bitacora().anotar("cofre", "reliquia-" + g, p.getName(), String.valueOf(n));
+                        // Lo demas no se da en un cofre de estructura.
                     }
                 }
             }
@@ -124,8 +111,8 @@ final class Cofres {
         // 1.4: las de mas del equipo (esencias-bonus) de quien abre, antes de la Aduana, que topa el total.
         esencias = hc.esenciasDelEquipo(p, esencias);
         Aduana ad = hc.aduana();
-        if (ad != null && (esencias > 0 || !reliquias.isEmpty())) {
-            Aduana.Pago pago = ad.pagar(p, "cofre", esencias, 0, reliquias, "cofre");
+        if (ad != null && esencias > 0) {
+            Aduana.Pago pago = ad.pagar(p, "cofre", esencias, 0, List.of(), "cofre");
             Grifo g = hc.grifo();
             if (pago != null && g != null) g.destelloEsencias(p, pago.esencias(), 0);
         }
@@ -139,16 +126,19 @@ final class Cofres {
         if (te != null) hc.seguro("telemetria", () -> te.suceso("vanilla-cofre", p, campos));
     }
 
-    private static List<Map<?, ?>> anadir(ConfigurationSection c) {
-        if (c.isList("cofres.anadir")) return c.getMapList("cofres.anadir");
-        return List.of(
-                Map.of("objeto", "esencia", "prob", 0.40, "min", 1, "max", 2),
-                Map.of("objeto", "reliquia-1", "prob", 0.50, "min", 1, "max", 2),
-                Map.of("objeto", "reliquia-2", "prob", 0.20, "min", 1, "max", 1),
-                Map.of("objeto", "reliquia-3", "prob", 0.04, "min", 1, "max", 1),
-                Map.of("objeto", "cristal", "prob", 0.05, "min", 1, "max", 1),
-                Map.of("objeto", "tintura", "prob", 0.10, "min", 1, "max", 2),
-                Map.of("objeto", "frasco-1", "prob", 0.03, "min", 1, "max", 1));
+    /**
+     * Lo de serie de cofres.anadir. 1.16.4: sin Reliquias (Dosa: "que en cofres comunes no pueda salir reliquias,
+     * solo en cofres con llaves"); el codigo las ignora aunque el config las traiga.
+     */
+    static final List<Map<?, ?>> ANADIR_DE_SERIE = List.of(
+            Map.of("objeto", "esencia", "prob", 0.40, "min", 1, "max", 2),
+            Map.of("objeto", "cristal", "prob", 0.05, "min", 1, "max", 1),
+            Map.of("objeto", "tintura", "prob", 0.10, "min", 1, "max", 2),
+            Map.of("objeto", "frasco-1", "prob", 0.03, "min", 1, "max", 1));
+
+    /** Las filas de cofres.anadir de la seccion hardcore, o las de serie. */
+    static List<Map<?, ?>> anadir(ConfigurationSection c) {
+        return BotinCalamity.filas(c, "cofres.anadir", ANADIR_DE_SERIE);
     }
 
     static Set<Material> filtro(ConfigurationSection c) {
@@ -193,24 +183,6 @@ final class Cofres {
         return n + 1;
     }
 
-    private static int entero(Object o, int def) {
-        if (o instanceof Number n) return n.intValue();
-        try {
-            return o == null ? def : Integer.parseInt(String.valueOf(o).trim());
-        } catch (NumberFormatException e) {
-            return def;
-        }
-    }
-
-    private static double decimal(Object o, double def) {
-        if (o instanceof Number n) return n.doubleValue();
-        try {
-            return o == null ? def : Double.parseDouble(String.valueOf(o).trim());
-        } catch (NumberFormatException e) {
-            return def;
-        }
-    }
-
     // ----------------------------------------------------------------- autotest
 
     private List<String> autotest() {
@@ -236,7 +208,12 @@ final class Cofres {
         h.igual("al dia siguiente vuelve a pagar", 1, turno(datos, u, "2026-09-27", 10));
         h.igual("otro jugador cuenta aparte", 1, turno(datos, Autotest.sintetico(2), "2026-09-26", 10));
         h.ok("las pruebas no tocan hardcore-datos.yml", !hc.datos().isSet("cofres-dia." + u));
-        h.igual("filas de serie para anadir", 7, anadir(new YamlConfiguration()).size());
+        h.igual("filas de serie para anadir", 4, anadir(new YamlConfiguration()).size());
+        // 1.16.4: un cofre de estructura no da Reliquias, ni las de serie ni las que traiga el config del servidor.
+        h.igual("lo de serie, sin Reliquias", "", BotinCalamity.reliquias(ANADIR_DE_SERIE));
+        int[] s = BotinCalamity.simular(anadir(hc.cfg()), BotinCalamity.raros(hc.cfg(), "cofres.raros"), 0, 0, 0, 2000, 26);
+        h.ok("config del servidor, 2.000 cofres: ninguna Reliquia, nunca dos raros, ningún raro de más de 1 ("
+                + s[0] + "/" + s[1] + "/" + s[2] + ")", s[0] == 0 && s[1] == 0 && s[2] == 0);
         return h.lineas();
     }
 }

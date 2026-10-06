@@ -1250,11 +1250,13 @@ hardcore:
     solo-con-jugador: true
     pagados-dia: 10
     filtrar-vanilla: [NETHERITE_INGOT, NETHERITE_UPGRADE_SMITHING_TEMPLATE, ENCHANTED_GOLDEN_APPLE]
+    # 1.16.4: un cofre de estructura es un cofre común. Nunca da Reliquias (son de las bóvedas con llave):
+    # una fila reliquia-N aquí no hace nada. Lo raro sale de a 1 aunque su fila diga más, y como mucho uno
+    # por cofre (si en la tirada entran varios, se queda uno al azar). Raro es lo de esta lista y cualquier
+    # fila con raro: true.
+    raros: [llave-umbral, llave-ominosa, cristal, frasco-1]
     anadir:
       - {objeto: esencia, prob: 0.40, min: 1, max: 2}
-      - {objeto: reliquia-1, prob: 0.50, min: 1, max: 2}
-      - {objeto: reliquia-2, prob: 0.20, min: 1, max: 1}
-      - {objeto: reliquia-3, prob: 0.04, min: 1, max: 1}
       - {objeto: cristal, prob: 0.05, min: 1, max: 1}
       - {objeto: tintura, prob: 0.10, min: 1, max: 2}
       - {objeto: frasco-1, prob: 0.03, min: 1, max: 1}
@@ -1282,12 +1284,14 @@ hardcore:
       extra: {prob: 0.15, cantidad: 0.5, tope: 6}
       biomas: {}                             # factor por bioma sobre la probabilidad: {crimson_organism: 1.25}
       # Pasa por el tope de cofres.pagados-dia (el mismo contador) y por cofres.solo-con-jugador.
-      # Esencias y Reliquias van a quien abre por la Aduana; lo demás, al cofre. "material:X" es vanilla.
+      # Las Esencias van a quien abre por la Aduana; lo demás, al cofre. "material:X" es vanilla.
+      # 1.16.4: es un cofre común, como los de estructura. Nunca da Reliquias (una fila reliquia-N aquí no
+      # hace nada) y lo raro sale de a 1, sin que el escalón le suba la cantidad, y como mucho uno por cofre
+      # (si entran varios, se queda uno al azar). Su probabilidad sí sube con el escalón. Raro es lo de esta
+      # lista y cualquier fila con raro: true.
+      raros: [llave-umbral, llave-ominosa, cristal, frasco-1]
       botin:
         - {objeto: esencia, prob: 0.45, min: 1, max: 2}
-        - {objeto: reliquia-1, prob: 0.55, min: 1, max: 3}
-        - {objeto: reliquia-2, prob: 0.25, min: 1, max: 1}
-        - {objeto: reliquia-3, prob: 0.05, min: 1, max: 1}
         - {objeto: tintura, prob: 0.15, min: 1, max: 2}
         - {objeto: cristal, prob: 0.04, min: 1, max: 1}
         - {objeto: frasco-1, prob: 0.04, min: 1, max: 1}
@@ -1295,7 +1299,8 @@ hardcore:
         - {objeto: "material:BREAD", prob: 0.40, min: 1, max: 3}
         - {objeto: "material:ARROW", prob: 0.30, min: 4, max: 10}
     # La Bóveda de Ruinas: la caja calamity_ruinas de EDM (se crea sola), común, una apertura por jugador,
-    # con la Llave del Umbral.
+    # con la Llave del Umbral. Es premio: sin el tope de raros de los cofres comunes.
+    # 1.16.4: las Reliquias de grado bajo y medio (I a III, sin IV); las altas son de la Bóveda Caída.
     bovedas:
       activo: true
       probabilidad: 0.12
@@ -1304,9 +1309,9 @@ hardcore:
       biomas: {}
       botin:
         - {objeto: esencia, prob: 1.0, min: 2, max: 4}
-        - {objeto: reliquia-2, prob: 0.60, min: 1, max: 2}
-        - {objeto: reliquia-3, prob: 0.20, min: 1, max: 1}
-        - {objeto: reliquia-4, prob: 0.03, min: 1, max: 1}
+        - {objeto: reliquia-1, prob: 0.70, min: 1, max: 3}
+        - {objeto: reliquia-2, prob: 0.50, min: 1, max: 2}
+        - {objeto: reliquia-3, prob: 0.10, min: 1, max: 1}
         - {objeto: tintura, prob: 0.30, min: 1, max: 2}
         - {objeto: cristal, prob: 0.15, min: 1, max: 1}
         - {objeto: frasco-1, prob: 0.15, min: 1, max: 1}
@@ -1331,8 +1336,10 @@ hardcore:
     # Al llegar el primero a radio bloques: mobs del bioma alrededor y, con esa probabilidad, el minijefe del bioma.
     guardia: {activo: true, radio: 40, mobs: 6, distancia: 10, minijefe: 0.25}
     nombres-biomas: {}                       # cómo se dice cada bioma en el aviso: {bamboo_valley: "el valle de bambú"}
+    # 1.16.4: las Reliquias altas, de grado II a IV. Es premio: sin el tope de raros de los cofres comunes.
     botin:
       - {objeto: esencia, prob: 1.0, min: 8, max: 14}
+      - {objeto: reliquia-2, prob: 0.60, min: 1, max: 2}
       - {objeto: reliquia-3, prob: 0.80, min: 1, max: 2}
       - {objeto: reliquia-4, prob: 0.25, min: 1, max: 1}
       - {objeto: cristal, prob: 0.50, min: 1, max: 1}
@@ -1533,8 +1540,11 @@ hardcore:
     texto-aviso: "En Calamity nada de lo que construyes dura. La corrupción lo reclama."
     # Bloques: su nombre de Minecraft, "#etiqueta" (una etiqueta de bloques de Minecraft) o "*final" (todo
     # bloque cuyo nombre acaba así). Lo que no existe en el servidor se avisa en la consola y se ignora.
-    # Lo exento no se toca nunca: las antorchas y las fogatas (las hogueras de calma son fogatas de almas).
-    exentos: [torch, wall_torch, soul_torch, soul_wall_torch, copper_torch, copper_wall_torch, "#campfires"]
+    # Lo exento no se toca nunca: las antorchas, las fogatas (las hogueras de calma son fogatas de almas) y,
+    # desde la 1.16.4, los faroles: el de siempre, el de almas y los ocho de cobre ("*copper_lantern": normal,
+    # expuesto, erosionado y oxidado, con cera y sin ella).
+    exentos: [torch, wall_torch, soul_torch, soul_wall_torch, copper_torch, copper_wall_torch, "#campfires", lantern,
+      soul_lantern, "*copper_lantern"]
     # Lo que se pudre en vez de corromperse.
     funcionales:
       # Contenedores

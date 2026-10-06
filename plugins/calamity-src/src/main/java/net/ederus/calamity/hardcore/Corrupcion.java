@@ -106,7 +106,8 @@ import java.util.logging.Level;
  *       muro   -> el muro de la paleta, o un entero si la paleta no tiene;
  *       lo funcional (corrupcion.funcionales) y lo que no es solido -> se pudre: desaparece sin soltar nada,
  *       con el inventario vaciado antes.
- *     Lo exento (corrupcion.exentos: antorchas y fogatas, que son las hogueras de calma) no se toca nunca.
+ *     Lo exento (corrupcion.exentos: antorchas, fogatas, que son las hogueras de calma, y desde la 1.16.4 los
+ *     faroles, el de siempre, el de almas y los ocho de cobre) no se toca nunca.
  *  4. Lo corrompido lleva una marca en el chunk (Marcas.CORRUPCION, un INTEGER_ARRAY de posiciones): no se
  *     vuelve a anotar y al romperlo no suelta nada. Si una explosion, un wither o un enderman se lo llevan,
  *     desaparece sin soltar nada; si un piston lo mueve, la marca va con el, y si lo rompe (las hojas),
@@ -134,9 +135,28 @@ final class Corrupcion implements Listener {
 
     // ================================================================== valores de serie
 
-    /** Lo que no se toca nunca: las antorchas y las fogatas (las hogueras de calma son fogatas de almas). */
+    /**
+     * Lo que no se toca nunca: las antorchas, las fogatas (las hogueras de calma son fogatas de almas) y, desde la
+     * 1.16.4, los faroles (Dosa: "los faroles no se pudren"): el de siempre, el de almas y los ocho de cobre
+     * (normal, expuesto, erosionado y oxidado, con cera y sin ella). Los Faroles de Tranquilidad no se colocan.
+     */
     static final List<String> EXENTOS = List.of("torch", "wall_torch", "soul_torch", "soul_wall_torch",
-            "copper_torch", "copper_wall_torch", "#campfires");
+            "copper_torch", "copper_wall_torch", "#campfires", "lantern", "soul_lantern", "*copper_lantern");
+
+    /** Si la lista nombra ese bloque, por su nombre o por un "*final" (las "#etiquetas" piden servidor: no se miran). */
+    static boolean cubre(List<String> lista, String bloque) {
+        String b = bloque.toLowerCase(Locale.ROOT);
+        for (String x : lista) {
+            String s = x == null ? "" : x.trim().toLowerCase(Locale.ROOT);
+            if (s.equals(b) || s.startsWith("*") && s.length() > 1 && b.endsWith(s.substring(1))) return true;
+        }
+        return false;
+    }
+
+    /** Los diez faroles que se pueden poner (1.16.4: exentos). */
+    static final List<String> FAROLES = List.of("lantern", "soul_lantern", "copper_lantern", "exposed_copper_lantern",
+            "weathered_copper_lantern", "oxidized_copper_lantern", "waxed_copper_lantern", "waxed_exposed_copper_lantern",
+            "waxed_weathered_copper_lantern", "waxed_oxidized_copper_lantern");
 
     /**
      * Lo que se pudre en vez de corromperse. "#tag" es una etiqueta de bloques de Minecraft y "*fin" todo
@@ -1645,6 +1665,14 @@ final class Corrupcion implements Listener {
         for (int x = 0; x < 16; x++) for (int z = 0; z < 16; z++) for (int y = -64; y < 320; y += 7) claves.add(local(x, y, z));
         h.igual("marca: sin choques en un chunk", 16 * 16 * 55, claves.size());
 
+        // 1.16.4: los faroles, exentos de serie (por nombre o por "*final", como los resuelve materiales), y nada mas que
+        // acabe en lantern: ni la linterna de mar ni la calabaza. Con el servidor, autotest() los mira bloque a bloque.
+        List<String> faltan = new ArrayList<>();
+        for (String n : FAROLES) if (!cubre(EXENTOS, n)) faltan.add(n);
+        h.igual("exentos de serie: los diez faroles", List.of(), faltan);
+        h.ok("exentos de serie: ni la linterna de mar ni la calabaza", !cubre(EXENTOS, "sea_lantern")
+                && !cubre(EXENTOS, "jack_o_lantern"));
+
         // El reparto: siempre el mismo para la misma semilla, y todos salen.
         List<String> cinco = List.of("a", "b", "c", "d", "e");
         Map<String, Integer> veces = new HashMap<>();
@@ -1749,11 +1777,23 @@ final class Corrupcion implements Listener {
         h.ok("amarillo no tiene muro: un muro pasa a entero", a.gamas().get("amarillo").muros().isEmpty());
         h.ok("lo corrompido se reconoce", a.corruptos().contains(Material.NETHERRACK) && a.corruptos().contains(Material.TUFF_SLAB));
 
-        for (String n : List.of("torch", "wall_torch", "soul_torch", "soul_wall_torch", "copper_torch", "copper_wall_torch",
-                "campfire", "soul_campfire")) {
+        List<String> exentos = new ArrayList<>(List.of("torch", "wall_torch", "soul_torch", "soul_wall_torch", "copper_torch",
+                "copper_wall_torch", "campfire", "soul_campfire"));
+        exentos.addAll(FAROLES);
+        for (String n : exentos) {
             Material m = Material.matchMaterial(n);
             h.ok("exento: " + n, m != null && destino(m, m.createBlockData(), a) == Destino.EXENTO);
         }
+        // Con el config del servidor (corrupcion.exentos, si lo trae, sustituye a la lista de serie).
+        Ajustes srv = ajustes();
+        List<String> pudren = new ArrayList<>();
+        for (String n : FAROLES) {
+            Material m = Material.matchMaterial(n);
+            if (m == null || destino(m, m.createBlockData(), srv) != Destino.EXENTO) pudren.add(n);
+        }
+        h.igual("config del servidor: ningún farol se pudre", List.of(), pudren);
+        h.ok("la linterna de mar no es farol: se corrompe como un bloque", destino(Material.SEA_LANTERN,
+                Material.SEA_LANTERN.createBlockData(), a) == Destino.ENTERO);
         for (String n : List.of("hopper", "chest", "trapped_chest", "barrel", "white_shulker_box", "furnace", "blast_furnace",
                 "smoker", "dispenser", "dropper", "piston", "sticky_piston", "observer", "redstone_wire", "redstone_torch",
                 "redstone_wall_torch", "repeater", "comparator", "redstone_block", "redstone_lamp", "rail", "powered_rail",
