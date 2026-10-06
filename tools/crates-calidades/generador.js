@@ -3,87 +3,132 @@
 // - weight final = P(calidad) * P(premio dentro de la calidad) * 10000
 // - premios reordenados por calidad (de mas rara a mas comun) y, dentro, de menor a mayor probabilidad
 // - lineas de calidad añadidas al final del lore de la imagen de cada premio
-// Trabaja SIEMPRE sobre la copia original (.bak), nunca sobre su propia salida.
+// Trabaja SIEMPRE sobre la copia original (.bak), nunca sobre su propia salida: los premios se
+// emparejan por texto ("match") o por su posicion en esa copia ("n").
 
 function generar(original, spec, idCaja) {
   const eol = original.includes('\r\n') ? '\r\n' : '\n';
   const L = original.split(/\r?\n/);
   const caja = spec.cajas[idCaja];
   const cal = spec.calidades;
+  const pesoCal = k => (caja.calidades && caja.calidades[k] !== undefined) ? caja.calidades[k] : cal[k].peso;
 
   const iRew = L.findIndex(l => /^rewards:\s*$/.test(l));
   let fin = iRew + 1;
   while (fin < L.length && (L[fin] === '' || /^\s/.test(L[fin]))) fin++;
   const bloques = [];
   for (let i = iRew + 1; i < fin; i++) {
-    if (/^  '?\d+'?:\s*$/.test(L[i])) bloques.push({ ini: i, lineas: [] });
+    const m = L[i].match(/^  '?(\d+)'?:\s*$/);
+    if (m) bloques.push({ n: +m[1], lineas: [] });
     if (bloques.length) bloques[bloques.length - 1].lineas.push(L[i]);
   }
 
   // Emparejar cada premio con su entrada de la tabla
   const usados = new Set();
   for (const b of bloques) {
-    const cand = caja.premios.filter(p => b.lineas.some(l => {
+    const cand = caja.premios.filter(p => p.n !== undefined ? p.n === b.n : b.lineas.some(l => {
       const t = l.trim().replace(/^- /, '');
       return p.match.startsWith('material: ') ? t === p.match : t.includes(p.match);
     }));
-    if (cand.length !== 1) throw new Error('Premio ' + b.lineas[0].trim() + ': ' + cand.length + ' coincidencias');
-    if (usados.has(cand[0].match)) throw new Error('Entrada usada dos veces: ' + cand[0].match);
-    usados.add(cand[0].match);
+    if (cand.length !== 1) throw new Error(idCaja + ' premio ' + b.n + ': ' + cand.length + ' coincidencias');
+    if (usados.has(cand[0])) throw new Error(idCaja + ': entrada usada dos veces');
+    usados.add(cand[0]);
     b.p = cand[0];
   }
-  const sobran = caja.premios.filter(p => !usados.has(p.match));
-  if (sobran.length) throw new Error('Sin premio en la caja: ' + sobran.map(p => p.match).join(', '));
+  const sobran = caja.premios.filter(p => !usados.has(p));
+  if (sobran.length) throw new Error(idCaja + ': sin premio en la caja: ' + sobran.map(p => p.n ?? p.match).join(', '));
 
-  // Probabilidades en dos pasos
-  const presentes = [...new Set(bloques.map(b => b.p.calidad))];
-  const totCal = presentes.reduce((a, k) => a + cal[k].peso, 0);
+  // Probabilidades en dos pasos (calidad null = premio apagado, peso 0)
+  const activos = bloques.filter(b => b.p.calidad);
+  const presentes = [...new Set(activos.map(b => b.p.calidad))];
+  presentes.forEach(k => { if (!cal[k]) throw new Error(idCaja + ': calidad desconocida ' + k); });
+  const totCal = presentes.reduce((a, k) => a + pesoCal(k), 0);
   const totDentro = {};
-  bloques.forEach(b => totDentro[b.p.calidad] = (totDentro[b.p.calidad] || 0) + b.p.peso);
+  activos.forEach(b => totDentro[b.p.calidad] = (totDentro[b.p.calidad] || 0) + b.p.peso);
   bloques.forEach(b => {
-    b.pCal = cal[b.p.calidad].peso / totCal;
+    if (!b.p.calidad) { b.pCal = b.pDentro = b.pTotal = 0; return; }
+    b.pCal = pesoCal(b.p.calidad) / totCal;
     b.pDentro = b.p.peso / totDentro[b.p.calidad];
     b.pTotal = b.pCal * b.pDentro;
   });
 
   const pct = v => {
     const x = v * 100;
-    const d = x >= 10 ? 1 : x >= 1 ? 2 : x >= 0.1 ? 2 : 3;
+    const d = x >= 10 ? 1 : x >= 0.1 ? 2 : 3;
     return x.toFixed(d).replace(/\.?0+$/, '').replace('.', ',') + ' %';
   };
 
-  // Lineas de lore en SNBT (para objetos guardados) y en & (para imagenes simples)
+  // Lineas de lore en SNBT (para objetos serializados) y en & (para imagenes simples)
   const comp = (texto, color) => '{color:"' + color + '",italic:0b,text:"' + texto.replace(/\\/g, '\\\\').replace(/"/g, '\\"') + '"}';
   const linea = partes => '{extra:[' + partes.join(',') + '],text:""}';
   const amp = hex => '&x' + hex.slice(1).split('').map(c => '&' + c).join('');
   const loreDe = b => {
     const c = cal[b.p.calidad];
     return [
-      ['', null],
-      [[['◆ ', c.color], [c.nombre, c.color]], 'cal'],
-      [[['Probabilidad de la calidad: ', 'gray'], [pct(b.pCal), 'white']]],
-      [[['Dentro de la calidad: ', 'gray'], [pct(b.pDentro), 'white']]],
-      [[['Probabilidad total: ', 'gray'], [pct(b.pTotal), c.color]]],
+      '',
+      [['◆ ', c.color], [c.nombre, c.color]],
+      [['Probabilidad de la calidad: ', 'gray'], [pct(b.pCal), 'white']],
+      [['Dentro de la calidad: ', 'gray'], [pct(b.pDentro), 'white']],
+      [['Probabilidad total: ', 'gray'], [pct(b.pTotal), c.color]],
     ];
   };
-  const snbt = b => loreDe(b).map(([p]) => p === '' ? '{text:""}' : linea(p.map(([t, col]) => comp(t, col))));
-  const ampLore = b => loreDe(b).map(([p]) => p === '' ? "''" :
+  const snbt = b => loreDe(b).map(p => p === '' ? '{text:""}' : linea(p.map(([t, col]) => comp(t, col))));
+  const ampLore = b => loreDe(b).map(p => p === '' ? "''" :
     "'" + p.map(([t, col]) => (col === 'gray' ? '&7' : col === 'white' ? '&f' : amp(col)) + t).join('').replace(/'/g, "''") + "'");
 
-  // Imagen del premio: objeto guardado (custom:<clave>) o imagen simple con lore propio
+  // Objeto serializado (cabecera con sangria 4, campos 6, componentes 8): cambia su lore en el sitio.
+  // Quita las entradas "Rareza:" que dejo la migracion y las vacias del final antes de añadir las nuevas.
+  const ponerLore = (arr, s, entradas, donde) => {
+    let e = s + 1;
+    while (e < arr.length && /^      /.test(arr[e])) e++;
+    const iComp = arr.slice(s, e).findIndex(l => /^      components:\s*$/.test(l));
+    const iLore = arr.slice(s, e).findIndex(l => /^        minecraft:lore: '/.test(l));
+    if (iLore >= 0) {
+      const a = s + iLore;
+      let k = a;
+      while (!/(^|[^'])('')*'$/.test(arr[k].trimEnd()) || (k === a && /minecraft:lore: '$/.test(arr[k].trimEnd()))) k++;
+      const crudo = [arr[a].replace(/^\s*minecraft:lore: '/, ''), ...arr.slice(a + 1, k + 1).map(l => l.trim())].join(' ');
+      const snbtLore = crudo.trimEnd().slice(0, -1).replace(/''/g, "'");
+      if (!snbtLore.startsWith('[') || !snbtLore.endsWith(']')) throw new Error('Lore raro en ' + donde);
+      const items = []; let prof = 0, enTexto = false, ini = 1;
+      for (let i = 1; i < snbtLore.length - 1; i++) {
+        const ch = snbtLore[i];
+        if (enTexto) { if (ch === '\\') i++; else if (ch === '"') enTexto = false; continue; }
+        if (ch === '"') enTexto = true;
+        else if (ch === '{' || ch === '[') prof++;
+        else if (ch === '}' || ch === ']') prof--;
+        else if (ch === ',' && prof === 0) { items.push(snbtLore.slice(ini, i)); ini = i + 1; }
+      }
+      if (snbtLore.length > 2) items.push(snbtLore.slice(ini, snbtLore.length - 1));
+      const limpios = items.filter(x => !/Rareza:/.test(x));
+      while (limpios.length && /^\{(italic:0b,)?text:""(,italic:0b)?\}$/.test(limpios[limpios.length - 1].replace(/color:"\w+",?/, ''))) limpios.pop();
+      const nuevo = '[' + [...limpios, ...entradas].join(',') + ']';
+      arr.splice(a, k - a + 1, "        minecraft:lore: '" + nuevo.replace(/'/g, "''") + "'");
+    } else {
+      const nueva = "        minecraft:lore: '[" + entradas.join(',') + "]'";
+      if (iComp >= 0) arr.splice(s + iComp + 1, 0, nueva);
+      else arr.splice(e, 0, '      components:', nueva);
+    }
+  };
+
+  // Imagen del premio: objeto guardado (custom:<clave>), serializada en el propio premio, o simple
   const loreGuardado = {};
   for (const b of bloques) {
+    if (!b.p.calidad) continue;
     const iD = b.lineas.findIndex(l => /^    display-item:/.test(l));
-    const mat = (b.lineas.slice(iD + 1).find(l => /^      material:/.test(l)) || '').replace(/^\s+material:\s*/, '').trim();
-    if (mat.startsWith('custom:')) {
+    let j = iD + 1;
+    while (j < b.lineas.length && /^      /.test(b.lineas[j])) j++;
+    const zona = b.lineas.slice(iD, j);
+    const mat = (zona.find(l => /^      material:/.test(l)) || '').replace(/^\s+material:\s*/, '').trim();
+    if (zona.some(l => /^      ==: org\.bukkit\.inventory\.ItemStack/.test(l))) {
+      ponerLore(b.lineas, iD, snbt(b), idCaja + ' premio ' + b.n);
+    } else if (mat.startsWith('custom:')) {
       const clave = mat.slice(7);
-      if (loreGuardado[clave]) throw new Error('Imagen compartida: ' + clave);
-      loreGuardado[clave] = snbt(b);
+      // dos premios pueden compartir imagen solo si su lore de calidad sale identico
+      const nuevo = snbt(b);
+      if (loreGuardado[clave] && loreGuardado[clave].join() !== nuevo.join()) throw new Error(idCaja + ': imagen compartida con lore distinto ' + clave);
+      loreGuardado[clave] = nuevo;
     } else {
-      // Quitar lineas de rareza viejas y añadir las nuevas al final de la lista de lore
-      let j = iD + 1;
-      while (j < b.lineas.length && /^      \S/.test(b.lineas[j])) j++;
-      const zona = b.lineas.slice(iD, j);
       const iLore = zona.findIndex(l => /^      lore:/.test(l));
       const nuevas = ampLore(b).map(x => '      - ' + x);
       if (iLore < 0) {
@@ -99,58 +144,26 @@ function generar(original, spec, idCaja) {
     }
   }
 
-  // Inyectar lore en los objetos guardados de internal-storage
   const out = L.slice(0, iRew);
   const iItems = out.findIndex(l => /^  items:\s*$/.test(l));
   for (const [clave, entradas] of Object.entries(loreGuardado)) {
     const re = new RegExp("^    '?" + clave.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + "'?:\\s*$");
     const s = out.findIndex((l, i) => i > iItems && re.test(l));
-    if (s < 0) throw new Error('No esta en internal-storage: ' + clave);
-    let e = s + 1;
-    while (e < out.length && /^      /.test(out[e])) e++;
-    const iComp = out.slice(s, e).findIndex(l => /^      components:\s*$/.test(l));
-    const iLore = out.slice(s, e).findIndex(l => /^        minecraft:lore: '/.test(l));
-    if (iLore >= 0) {
-      const a = s + iLore;
-      let k = a;
-      // fin del escalar entre comillas simples: linea que termina en un numero impar de '
-      while (!/(^|[^'])('')*'$/.test(out[k].trimEnd()) || (k === a && /minecraft:lore: '$/.test(out[k].trimEnd()))) k++;
-      // desplegar el escalar (cada salto de linea es un espacio) y quitar las comillas
-      const crudo = [out[a].replace(/^\s*minecraft:lore: '/, ''), ...out.slice(a + 1, k + 1).map(l => l.trim())].join(' ');
-      const snbtLore = crudo.trimEnd().slice(0, -1).replace(/''/g, "'");
-      if (!snbtLore.startsWith('[') || !snbtLore.endsWith(']')) throw new Error('Lore raro en ' + clave);
-      // separar las entradas de primer nivel, quitar las de rareza vieja y las vacias del final
-      const items = []; let prof = 0, enTexto = false, ini = 1;
-      for (let i = 1; i < snbtLore.length - 1; i++) {
-        const ch = snbtLore[i];
-        if (enTexto) { if (ch === '\\') i++; else if (ch === '"') enTexto = false; continue; }
-        if (ch === '"') enTexto = true;
-        else if (ch === '{' || ch === '[') prof++;
-        else if (ch === '}' || ch === ']') prof--;
-        else if (ch === ',' && prof === 0) { items.push(snbtLore.slice(ini, i)); ini = i + 1; }
-      }
-      if (snbtLore.length > 2) items.push(snbtLore.slice(ini, snbtLore.length - 1));
-      const limpios = items.filter(x => !/Rareza:/.test(x));
-      while (limpios.length && /^\{(italic:0b,)?text:""\}$/.test(limpios[limpios.length - 1])) limpios.pop();
-      const nuevo = '[' + [...limpios, ...entradas].join(',') + ']';
-      out.splice(a, k - a + 1, "        minecraft:lore: '" + nuevo.replace(/'/g, "''") + "'");
-    } else {
-      const nueva = "        minecraft:lore: '[" + entradas.join(',') + "]'";
-      if (iComp >= 0) out.splice(s + iComp + 1, 0, nueva);
-      else out.splice(e, 0, '      components:', nueva);
-    }
+    if (s < 0) throw new Error(idCaja + ': no esta en internal-storage ' + clave);
+    ponerLore(out, s, entradas, idCaja + ' ' + clave);
   }
 
   // Menu de vista previa propio de la caja
-  if (caja.menu) {
+  {
     const iMenus = out.findIndex(l => /^menus:\s*$/.test(l));
     const iR = out.findIndex((l, i) => i > iMenus && /^  rewards:/.test(l));
-    out[iR] = '  rewards: ' + caja.menu;
+    out[iR] = '  rewards: ' + (caja.menu || idCaja + '_preview');
   }
 
-  // Reordenar y renumerar
+  // Reordenar y renumerar (los apagados al final)
   const ord = spec.orden;
-  bloques.sort((a, b) => ord.indexOf(a.p.calidad) - ord.indexOf(b.p.calidad) || a.pTotal - b.pTotal);
+  const pos = b => b.p.calidad ? ord.indexOf(b.p.calidad) : ord.length;
+  bloques.sort((a, b) => pos(a) - pos(b) || a.pTotal - b.pTotal || a.n - b.n);
   bloques.forEach((b, n) => {
     b.lineas[0] = "  '" + n + "':";
     const iw = b.lineas.findIndex(l => /^    weight:/.test(l));
@@ -158,7 +171,7 @@ function generar(original, spec, idCaja) {
   });
   out.push(L[iRew], ...bloques.flatMap(b => b.lineas), ...L.slice(fin));
 
-  const informe = bloques.map(b => [b.p.calidad, pct(b.pCal), pct(b.pDentro), pct(b.pTotal), b.p.match.replace(/^(mi give \w+ |material: custom:)/, '')]);
+  const informe = bloques.map(b => [b.p.calidad || 'apagado', pct(b.pCal), pct(b.pDentro), pct(b.pTotal), b.p._ || b.p.match || ('#' + b.n)]);
   return { texto: out.join(eol), informe };
 }
 
