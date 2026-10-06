@@ -711,21 +711,29 @@ hardcore:
     fase-2-vida: 0.5
 
   # ------------------------------------------------------------------ 1b2. EL VIGILANTE
-  # Anomalia Monarca de tierra, un escalon bajo la Parca: un zoglin gigante que sale escarbando de la
-  # tierra detras de quien, pasados llegada.bloques del borde de la zona spawn, abre llegada.cofres
-  # cofres o mata llegada.minijefes minijefes ahi (cofres de estructura y de ruinas). Antes, dos avisos;
-  # con el segundo el suelo retumba bajo la presa y algo se acerca escarbando. Una vez al dia por
-  # jugador y como mucho llegada.maximo-vivos a la vez (los que vienen escarbando cuentan). No viene si
-  # ya tiene encima la Parca, un contrato de Ambush u otro Vigilante (una amenaza grande a la vez).
-  # Cuatro fases por vida (75/50/25 %): Acecho, Bajo tierra, Demolicion y Furia.
-  # Sin brillo, sin luces y sin nada pegado al cuerpo; los bloques que saltan del suelo son efimeros
-  # (no se colocan ni sueltan nada). Sonidos de vanilla y graves; nunca campanas (son de la Parca).
+  # Anomalia Monarca de tierra, un escalon bajo la Parca: un JINETE sin cabeza (calabaza tallada apagada
+  # y una maza) montado en un zoglin gigante, que salen juntos escarbando de la tierra detras de quien,
+  # pasados llegada.bloques del borde de la zona spawn, abre llegada.cofres cofres o mata
+  # llegada.minijefes minijefes ahi (cofres de estructura y de ruinas). Antes, dos avisos; con el
+  # segundo el suelo retumba bajo la presa y algo se acerca escarbando. Una vez al dia por jugador y como
+  # mucho llegada.maximo-vivos a la vez (los que vienen escarbando cuentan). No viene si ya tiene encima
+  # la Parca, un contrato de Ambush u otro Vigilante (una amenaza grande a la vez).
+  # Como Alba en su caballo: el jinete es la anomalia (nombre, barra, vida y botin); la bestia es su
+  # montura, sin nombre ni barra y sin dano propio, pero lo que un jugador le pega pasa al jinete.
+  # Cuatro fases por vida: Acecho y Bajo tierra (montado), A pie (bajo jinete.desmonte: desmonta y la
+  # bestia embiste suelta desde el borde) y Furia (bajo jinete.remonte: vuelve a montar).
+  # Sin brillo, sin luces y sin nada flotando; los bloques que saltan del suelo son efimeros (no se
+  # colocan ni sueltan nada) y las cabezas negras no arden ni rompen nada. Sonidos de vanilla y graves;
+  # nunca campanas (son de la Parca y las muertes).
   # Los golpes fuertes quitan una parte de TU vida maxima (entre golpes.minimo y golpes.maximo),
   # sin que la armadura los pare, y siempre se avisan en el suelo al menos 20 ticks antes (un
-  # aviso-ticks menor se sube solo). Con la vida llena nunca te matan, ni dos juntos, y quien sale
-  # volando por un golpe suyo no recibe dano de caida.
+  # aviso-ticks menor se sube solo). Con la vida llena nunca te matan, ni dos juntos. La caida de quien
+  # sale volando por un golpe suyo SI hace su dano (el de Calamity, doble), aunque mate.
   # Staff: /calamity vigilant spawn [player] | test | info [player] | health <0-1>
   #        | ability <name> | remove | reset <player>. Tambien sale en /anomaly (prueba sin botin).
+  #        info dice si va montado; ability acepta slam, toss, charge, burrow, roar (montado), smash,
+  #        sweep, skull (a pie; sweep montado es el barrido desde arriba), stampede (la bestia suelta),
+  #        dismount y remount.
   # Las claves del golem de la 1.13.0 que ya no se usan (escala-cuerpo, velocidad, atasco-segundos,
   # llegada.caida-ticks, golpes.marcado-extra, mirada y las habilidades viejas) se ignoran.
   # Si esta seccion no esta en el config.yml del servidor, valen estos mismos valores.
@@ -745,7 +753,7 @@ hardcore:
     vida-base: 360                # vida logica = base x (1 + por-nivel x (N-1)) x jugadores x Poder x dificultad
     vida-por-nivel: 0.10
     extra-nivel: 8                # N = el nivel de Calamity mas alto del grupo + esto (la Parca, +10)
-    golpe-base: 9                 # su mordisco a mano (attack_damage), con el mismo escalado
+    golpe-base: 9                 # el mordisco de la bestia (attack_damage) y la base de la maza del jinete, mismo escalado
     golpe-por-nivel: 0.04
     tope-golpe-fraccion: 0.08     # ningun golpe le quita mas que esto de su vida logica
     cuerpo:
@@ -755,6 +763,18 @@ hardcore:
       furia-velocidad: 1.3        # bajo el 25 %, velocidad x esto
       furia-espera: 0.65          # bajo el 25 %, las esperas de sus habilidades x esto (los hundimientos, aun menos)
       atasco-segundos: 4          # sin alejarse del sitio ni llegar a su objetivo tanto rato: se hunde y sale debajo
+    # El jinete: lo que se ve es un maniqui con la skin de una cuenta de Minecraft (solo letras, numeros y _;
+    # si no vale o Mojang no contesta, se ve el esqueleto con la calabaza y la maza). Lleva la vida y el nombre.
+    jinete:
+      skin: RocketOniPad          # la cuenta cuya skin lleva el jinete
+      escala: 1.6                 # tamano del jinete (1 a 2,5)
+      velocidad: 0.30             # a pie (fase III), movement_speed de su IA (0,15 a 0,5)
+      desmonte: 0.50              # bajo esta vida desmonta y pelea a pie (fase III; 0,3 a 0,7)
+      remonte: 0.25               # bajo esta vida vuelve a montar en furia (fase IV; al menos 0,1 menos que desmonte)
+      retirada: 16                # a pie, la bestia espera en el borde a esta distancia del jinete (10 a 28)
+      # Golpes basicos de la maza (dano normal, con armadura: golpe-base escalado x dano): a pie, a quien
+      # tenga a alcance bloques; montado, a quien se arrime a la bestia, mas espaciados.
+      basico: {alcance: 3.5, espera-ticks: 20, espera-montado-ticks: 36, dano: 0.8}
     duracion-minutos: 10          # sin caer en esto, se hunde en la tierra sin botin
     abandono-segundos: 30         # sin nadie a radio-pelea tanto tiempo, se va
     radio-pelea: 48
@@ -790,6 +810,28 @@ hardcore:
       hundimiento: {espera-ticks: 320, aviso-ticks: 20, fraccion: 0.30, radio: 3, altura: 14, velocidad: 0.9}
       # Sin dano: Oscuridad (1 a 3 s, nunca continua: no se repite antes de 300 ticks) y cordura menos.
       rugido: {espera-ticks: 400, aviso-ticks: 20, radio: 16, oscuridad-segundos: 2.5, cordura: 4}
+      # Lo del jinete a pie (fase III, o si se queda sin montura).
+      # Mazazo: salta alto sobre uno (salto) y cae con la maza. Como el martillazo pero mas corto y mas
+      # frecuente: hasta radio-cerca, lanzado altura-lanzado bloques (como mucho 14); hasta radio-medio,
+      # empujado lejos (empuje-medio); hasta radio-lejos, un empujon.
+      mazazo: {espera-ticks: 70, aviso-ticks: 20, fraccion: 0.25, alcance: 14, salto: 1.1, radio-cerca: 3, radio-medio: 6.5, radio-lejos: 9, altura-lanzado: 10, empuje-medio: 2.4, empuje-lejos: 0.8}
+      # Barrido de maza en arco delante de el (radio bloques, angulo grados). En furia, montado, barre
+      # tambien desde lo alto de la bestia a quien se le arrime: aviso de arriba-aviso-ticks (10 a 20),
+      # cada arriba-espera-ticks, dano normal golpe-base escalado x arriba-dano.
+      barrido: {espera-ticks: 60, aviso-ticks: 20, fraccion: 0.25, radio: 5.5, angulo: 150, empuje: 1.5, arriba-espera-ticks: 40, arriba-aviso-ticks: 12, arriba-dano: 1.0}
+      # Cabeza negra: a quien se aleje mas de distancia-minima (y hasta alcance), una cabeza de wither negra
+      # a velocidad bloques por tick. Estalla sin fuego ni bloques: golpe fuerte a radio y unos segundos de
+      # marchitamiento (como mucho 5).
+      cabeza-negra: {espera-ticks: 90, aviso-ticks: 20, fraccion: 0.25, distancia-minima: 12, alcance: 32, velocidad: 0.8, radio: 2, marchitez-segundos: 3}
+      # La bestia sin jinete (fase III): se retira al borde y cada espera-ticks cruza la pelea en estampida
+      # (largo bloques como mucho; antes si alguien se le arrima). Usa la velocidad y el empuje de embestida.
+      estampida: {espera-ticks: 180, aviso-ticks: 20, fraccion: 0.30, largo: 34}
+      # Desmonte (al entrar en la III): salta de la bestia (salto) y la maza golpea el suelo al caer: golpe
+      # fuerte a radio y una onda que aparta (empuje) hasta onda bloques.
+      desmonte: {aviso-ticks: 20, fraccion: 0.25, radio: 3.5, onda: 8, empuje: 1.3, salto: 1.0}
+      # Remonte (en la IV, o si algo lo baja fuera de la III: lo mira el guardian cada 2 s): la bestia viene
+      # a por el y a distancia bloques salta a su lomo.
+      remonte: {aviso-ticks: 10, distancia: 6}
     botin:
       horas-entre-cobros: 24
       participacion-minima: 0.10  # de su vida logica, para cobrar

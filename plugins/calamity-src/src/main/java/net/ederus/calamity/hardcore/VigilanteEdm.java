@@ -62,7 +62,8 @@ final class VigilanteEdm extends BossFight {
         if (!tipo.vivo()) throw new IllegalStateException("Calamity no está en marcha");
         pelea = tipo.gestor().prueba(arena);
         if (pelea == null) throw new IllegalStateException("el spawn del Vigilante se ha cancelado (protección, zona spawn o chunk)");
-        boss = pelea.cuerpo;
+        // La anomalia es el jinete (su vida, su nombre); la bestia es su montura.
+        boss = pelea.jinete;
         Tags.markBoss(boss, VigilanteType.ID);
     }
 
