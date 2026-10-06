@@ -32,23 +32,29 @@ import java.util.UUID;
  * venta-oren y en la 1.12.1).
  *
  * Calamity 1.12.1 · Dosa vio la tienda de 6 filas y dijo: "Esta interfaz es terrible, todo desordenado.
- * Minimiza, es muy molesto ver tantas cosas". Ahora todas las vistas miden 3 filas, con el marco de
- * cristal negro y nada suelto:
+ * Minimiza, es muy molesto ver tantas cosas". Desde entonces las vistas son cortas, con el marco de cristal
+ * negro y nada suelto. La 1.16.1 puso una fila mas de cristal, de margen, debajo de las que llevan botones
+ * abajo (Dosa: "ponle mas margen abajo, con los cristales"); las confirmaciones siguen en 3 filas:
  *
- *   portada (27)       fila 1: los tipos que llevas, centrados y en orden (grado I a IV, especiales,
+ *   portada (36)       fila 1: los tipos que llevas, centrados y en orden (grado I a IV, especiales,
  *                      Esencias); un clic vende ese tipo. Si no caben (mas de 7), los de mas valor y
  *                      "Y N tipos mas". Sin nada, un papel en el centro.
  *                      fila 2: Vender todo (21, con el resumen y los topes de hoy) · Tu dinero (23)
+ *                      fila 3: cristal, de margen
  *   Vender todo (27)   No (11) · lo que vendes y lo que recibes (13) · Si (15)
- *   Tu dinero (27)     fila 1: saldo, premios, lo vendido, primera salida, Racha y Tu camino; Volver (22)
+ *   Tu dinero (36)     fila 1: saldo, premios, lo vendido, primera salida, Racha y Tu camino; fila 2:
+ *                      Volver (22); fila 3: cristal, de margen
  *
  * Fuera quedan el Altar, la Forja, la ayuda, Tu camino y Cerrar como botones sueltos: el Altar y la Forja
  * tienen sus NPCs, Tu camino va en Tu dinero y la ventana se cierra con Esc.
  *
  * Calamity 1.16.2 · Los contratos ya no son de Oren. Dosa: "vamos a separar los contratos de Oren a otro
  * NPC, porque es confuso llevar tienda y contratos en uno solo". La vista Contratos, la de cambiar uno y su
- * confirmacion se fueron tal cual al menu de Maren (MenuContratos, "calamity open <p> contracts"); el
- * Mercado se queda con Vender todo y Tu dinero, centrados en su fila (Marco.columnas(2): 21 y 23).
+ * confirmacion se fueron al menu de Maren (MenuContratos, "calamity open <p> contracts"); el Mercado se
+ * queda con Vender todo y Tu dinero, centrados en su fila (Marco.columnas(2): 21 y 23). Lo unico de los
+ * contratos que sigue aqui: al abrir a Oren dentro de Calamity, la libreta de otro dia se cambia por la de
+ * hoy (Contratos.renovar, como al abrir a Maren), y al venderle Reliquias se cumplen los contratos que las
+ * piden (Tasacion).
  *
  * Reglas de los menus de Calamity (Marco): titulo "CALAMITY | seccion", marco de cristal negro, Volver
  * abajo en el centro, una paleta corta, la ultima linea dice que hace el clic, y solo clic izquierdo
@@ -58,12 +64,12 @@ import java.util.UUID;
 final class MenuTasador implements Listener {
 
     private static final long ESPERA_MS = 500;
-    /** Todas las vistas: 3 filas. */
+    /** La confirmacion (Vender todo): 3 filas. */
     static final int TAMANO = 27;
-    /** 1.16.1 · Las vistas con botones abajo (Mercado y Tu dinero; tambien las de Maren) llevan una fila mas de
-     *  cristal debajo, de margen: Dosa, "ponle mas margen abajo, con los cristales". Los botones no se mueven. */
+    /** 1.16.1 · Las vistas con botones abajo (Mercado y Tu dinero) llevan una fila mas de cristal debajo, de
+     *  margen: Dosa, "ponle mas margen abajo, con los cristales". Los botones no se mueven. */
     static final int TAMANO_MARGEN = 36;
-    /** La fila del medio: lo que se ensena (tipos, tu dinero; en Maren, los contratos). */
+    /** La fila 1: lo que se ensena (tipos, tu dinero; en Maren, los contratos, con su propio trazado de 5 filas). */
     static final int FILA = 9;
     /** Como mucho, tipos en la fila: las 7 columnas de dentro del marco. */
     static final int MAX_TIPOS = Marco.COLUMNAS;
@@ -126,6 +132,11 @@ final class MenuTasador implements Listener {
         // Lo que lleva con el lore de hoy: las Reliquias viejas decian "se vende sola al salir".
         Reliquias rel = hc.reliquias();
         if (rel != null) hc.seguro("reliquias", () -> rel.renovarInventario(p));
+        // Calamity 1.16.3 · Dentro de Calamity, con la libreta de otro dia y nada a medias, la de hoy
+        // (Contratos.renovar), como hasta la 1.16.1 y como hace Maren: quien pasa por Oren y no por Maren
+        // tambien la tiene al dia (los contratos de Reliquias se cumplen vendiendoselas a Oren).
+        Contratos con = hc.contratos();
+        if (con != null && hc.esHardcore(p)) hc.seguro("contratos", () -> con.renovar(p));
         abrirVista(p, PORTADA);
         if (conSonido) Marco.sonar(p, "item.book.page_turn", 0.8f, 0.8f);
     }
@@ -146,7 +157,6 @@ final class MenuTasador implements Listener {
     }
 
     private void abrirVista(Player p, String pantalla) {
-        // 1.16.2: la libreta de contratos de otro dia ya no la renueva Oren, sino Maren (MenuContratos).
         Vista v = new Vista(pantalla, new HashMap<>());
         Inventory inv = hc.plugin().getServer().createInventory(v, tamano(pantalla), titulo(pantalla).componente());
         pintar(inv, p, v);

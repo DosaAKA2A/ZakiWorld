@@ -21,17 +21,18 @@ import java.util.Map;
 import java.util.UUID;
 
 /**
- * Lo que abren los cinco NPCs de la antesala de Calamity (1.2.0): el Guardian del Umbral (la
- * portada del Altar) y el Forjador (la Forja), el Mercader (antes el Tasador; su menu, MenuTasador: saldo,
- * tasacion, Aduana, contratos del dia, Reliquias encima y Tu camino), el Cronista (la historia
- * y el tutorial, Cronista) y el Cazador (los rankings de la semana, MenuCazador, y desde ahi el
+ * Lo que abren los NPCs de la antesala de Calamity. Los cinco primeros (1.2.0): el Guardian del Umbral
+ * (la portada del Altar) y el Forjador (la Forja), el Mercader, Oren (antes el Tasador; su menu,
+ * MenuTasador: lo que le vendes, la Aduana y Tu dinero, con el saldo, lo vendido y Tu camino), el Cronista
+ * (la historia y el tutorial, Cronista) y el Cazador (los rankings de la semana, MenuCazador, y desde ahi el
  * Tablero). Desde 1.3.0 el Tasador y el Cazador ya no escriben en el chat: todo va en su menu.
  * Desde 1.4 hay un sexto, el Engarzador (MenuEngarzador): pone y quita las Gemas de Calamidad,
  * que antes solo se engarzaban arrastrandolas sobre la pieza, como manda MMOItems, y nadie lo
  * descubria. Desde 1.8.0 hay un septimo, el de la Sentencia (MenuSentencia): alli se pagan los
  * contratos de Ambush contra quien este en Calamity. Desde 1.16.2 hay un octavo, Maren (MenuContratos): los
- * contratos del dia, que hasta entonces llevaba Oren en su Mercado. Dosa: "es confuso llevar tienda y
- * contratos en uno solo".
+ * contratos del dia, que hasta entonces llevaba Oren en su Mercado (Dosa: "es confuso llevar tienda y
+ * contratos en uno solo"). En su menu cada contrato se ve con su pergamino (1.16.3) y, separados de ellos
+ * por una fila de cristal, van la semana y Cambiar un contrato.
  *
  * Los NPCs los pone y los cuida el staff a mano con Citizens; Calamity no los crea ni depende
  * de Citizens. Cada uno lleva un comando de clic sin -p, que Citizens ejecuta como CONSOLA

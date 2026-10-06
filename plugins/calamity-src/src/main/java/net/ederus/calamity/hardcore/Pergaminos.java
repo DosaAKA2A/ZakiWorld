@@ -1,5 +1,6 @@
 package net.ederus.calamity.hardcore;
 
+import io.papermc.paper.datacomponent.DataComponentType;
 import io.papermc.paper.datacomponent.DataComponentTypes;
 import io.papermc.paper.datacomponent.item.TooltipDisplay;
 import com.destroystokyo.paper.event.inventory.PrepareResultEvent;
@@ -39,6 +40,7 @@ import org.bukkit.persistence.PersistentDataType;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -172,11 +174,18 @@ final class Pergaminos implements Listener {
     /**
      * Oculta lo que el juego anade solo a un diseño de estandarte (el componente provides_banner_patterns),
      * para que el globo diga solo lo nuestro. Sin la API de componentes, el pergamino vale igual.
+     *
+     * 1.16.3 · Se suma a lo que el objeto ya ocultara: los contratos del menu de Maren son iconos de menu
+     * (Marco.icono ya les oculta el resto) y no tienen que volver a ensenarlo.
      */
     static void ocultarDiseno(ItemStack it) {
         try {
+            TooltipDisplay antes = it.getData(DataComponentTypes.TOOLTIP_DISPLAY);
+            Set<DataComponentType> ocultos = new HashSet<>();
+            if (antes != null) ocultos.addAll(antes.hiddenComponents());
+            ocultos.add(DataComponentTypes.PROVIDES_BANNER_PATTERNS);
             it.setData(DataComponentTypes.TOOLTIP_DISPLAY, TooltipDisplay.tooltipDisplay()
-                    .addHiddenComponents(DataComponentTypes.PROVIDES_BANNER_PATTERNS).build());
+                    .hideTooltip(antes != null && antes.hideTooltip()).hiddenComponents(ocultos).build());
         } catch (Throwable sinApi) {
             // Se veria la linea del diseño: nada mas.
         }
@@ -262,15 +271,24 @@ final class Pergaminos implements Listener {
      * de esta expedicion. Lineas de 38 como mucho.
      */
     static Ficha ficha(Contratos.Def d, int progreso) {
-        int objetivo = Math.max(1, d.objetivo());
-        int hecho = Math.max(0, Math.min(progreso, objetivo));
-        return new Ficha(Ficha.tono("contrato")).cabecera(CABECERA, d.corto() ? "Corto" : "Calamity", 0)
-                .historia(historia(d))
-                .seccion("Objetivo").texto(d.texto())
-                .seccion("Progreso", "{" + hecho + "}/" + objetivo).barra(llenas(hecho, objetivo), CASILLAS)
-                .seccion("Premio").dato(premioMarcado(d))
+        return cuerpo(d, progreso, true, true, Ficha.tono("contrato"))
                 .hueco().nota(Contratos.seCobraAlSalir(d) ? COBRO_VENTA_PERGAMINO : COBRO_DENTRO)
                 .nota("Si mueres, el avance vuelve a cero.");
+    }
+
+    /**
+     * Calamity 1.16.3 · Lo de arriba del pergamino: la cabecera, la historia, Objetivo, Progreso (la cuenta en el
+     * titulo y la barra debajo) y Premio. El menu de Maren pinta cada contrato con esto mismo (MenuContratos),
+     * sin la historia y, en una oferta, sin el progreso; tono: el de los contratos, o el gris de uno ya cobrado.
+     */
+    static Ficha cuerpo(Contratos.Def d, int progreso, boolean conHistoria, boolean conProgreso, Paleta.Tono tono) {
+        int objetivo = Math.max(1, d.objetivo());
+        int hecho = Math.max(0, Math.min(progreso, objetivo));
+        Ficha f = new Ficha(tono).cabecera(CABECERA, d.corto() ? "Corto" : "Calamity", 0);
+        if (conHistoria) f.historia(historia(d));
+        f.seccion("Objetivo").texto(d.texto());
+        if (conProgreso) f.seccion("Progreso", "{" + hecho + "}/" + objetivo).barra(llenas(hecho, objetivo), CASILLAS);
+        return f.seccion("Premio").dato(premioMarcado(d));
     }
 
     /** El lore en texto plano, linea a linea (sin Bukkit: el autotest lo compara tal cual). */

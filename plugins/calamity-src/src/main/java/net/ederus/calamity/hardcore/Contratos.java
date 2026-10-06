@@ -766,8 +766,8 @@ final class Contratos implements Listener {
      * Calamity 1.11 · La libreta de otro dia de quien sigue dentro. El sorteo solo pasaba al LLEGAR a
      * Calamity (alEntrar), y quien se quedaba en el mundo (reconecta dentro, /warp calamity desde el mismo
      * mundo) seguia con la de otro dia: caso real, la del 27 de septiembre usada el 4 de octubre. Lo
-     * llaman alVolver (al conectarse dentro) y el menu de Maren (MenuContratos; hasta la 1.16.1, el de Oren)
-     * dentro de Calamity.
+     * llaman alVolver (al conectarse dentro) y, dentro de Calamity, los menus de Maren (MenuContratos) y de
+     * Oren (MenuTasador.abrir: lo hacia hasta la 1.16.1 y lo vuelve a hacer desde la 1.16.3).
      *
      * Si caducada(): se borran sus pergaminos (los de otro dia ya son inertes), se sortea la de hoy con
      * el mismo sorteo (libreta, Bitacora "contrato | sorteo"), la expedicion cuenta desde aqui (como en
@@ -1691,6 +1691,21 @@ final class Contratos implements Listener {
                 papel.getData(io.papermc.paper.datacomponent.DataComponentTypes.TOOLTIP_DISPLAY);
         h.ok("pergamino: oculta la linea propia del diseño", td != null && td.hiddenComponents()
                 .contains(io.papermc.paper.datacomponent.DataComponentTypes.PROVIDES_BANNER_PATTERNS));
+        // 1.16.3: el menu de Maren pinta cada contrato con su pergamino (MenuContratos.pergamino): el mismo
+        // diseño, la linea del diseño oculta sin destapar lo que el icono ya ocultaba, y el brillo que se pida.
+        ItemStack enMenu = MenuContratos.pergamino(mobs, Pergaminos.nombre(mobs), Pergaminos.lore(mobs, 6), true);
+        ItemStack soloIcono = Marco.icono(Pergaminos.material(mobs), Pergaminos.nombre(mobs), Pergaminos.lore(mobs, 6), true);
+        io.papermc.paper.datacomponent.item.TooltipDisplay tdMenu =
+                enMenu.getData(io.papermc.paper.datacomponent.DataComponentTypes.TOOLTIP_DISPLAY);
+        ItemMeta metaMenu = enMenu.getItemMeta();
+        h.igual("menu de Maren: el contrato de mobs con el diseño de su pergamino", papel.getType(), enMenu.getType());
+        h.ok("menu de Maren: oculta la linea del diseño", tdMenu != null && tdMenu.hiddenComponents()
+                .contains(io.papermc.paper.datacomponent.DataComponentTypes.PROVIDES_BANNER_PATTERNS));
+        h.ok("menu de Maren: sigue ocultando lo que ocultaba el icono", metaMenu != null && soloIcono.getItemMeta() != null
+                && metaMenu.getItemFlags().containsAll(soloIcono.getItemMeta().getItemFlags()));
+        h.ok("menu de Maren: con su brillo", metaMenu != null && metaMenu.hasEnchantmentGlintOverride()
+                && Boolean.TRUE.equals(metaMenu.getEnchantmentGlintOverride()));
+        h.igual("menu de Maren: con el nombre del pergamino", "Contrato: Mobs", metaMenu == null ? null : plano(metaMenu.displayName()));
         h.ok("barra: el modo es uno de los tres", MODOS_BARRA.contains(modoBarra()));
 
         h.ok("autotest no toca contratos reales", !hc.datos().isSet("contratos." + Autotest.sintetico(1))
