@@ -626,7 +626,7 @@ final class Marco {
             // este boton, como siempre.
             lore.add(dentro ? tenue("Oren te las ingresa en su tienda.") : accion("Clic para ingresarlas"));
         }
-        inv.setItem(casilla, icono(Material.GHAST_TEAR, Component.text("Tu saldo: ", Paleta.TEXTO)
+        inv.setItem(casilla, icono(hc.items().materialEsencia(), Component.text("Tu saldo: ", Paleta.TEXTO)
                 .append(Component.text(esencias(saldo), Paleta.CIFRA)), lore, ingresa));
         if (ingresa) acciones.put(casilla, "depositar");
     }

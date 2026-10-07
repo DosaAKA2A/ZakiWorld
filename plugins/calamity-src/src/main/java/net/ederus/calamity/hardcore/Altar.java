@@ -1409,7 +1409,7 @@ final class Altar implements Listener {
             t("id", "salvoconducto", "pagina", "umbral", "icono", "PAPER", "nombre", "Salvoconducto del Insomne", "esencias", 64,
                     "da", "dar:salvoconducto", "limite-semana", 1, "requisito", "permiso:insomne.badge.unlocked"),
             t("id", "ofrenda", "pagina", "umbral", "icono", "BLAZE_POWDER", "nombre", "Ofrenda", "esencias", 100, "da", "ofrenda"),
-            t("id", "depositar", "pagina", "umbral", "icono", "GHAST_TEAR", "nombre", "Depositar Esencias", "da", "depositar"),
+            t("id", "depositar", "pagina", "umbral", "icono", "BLAZE_POWDER", "nombre", "Depositar Esencias", "da", "depositar"),
             t("id", "camino", "pagina", "umbral", "icono", "COMPASS", "nombre", "Tu camino", "da", "camino"),
             t("id", "talisman", "pagina", "forja", "icono", "CLOCK", "nombre", "Talisman de Vigilia", "esencias", 40,
                     "mobcoins", 2000, "da", "dar:talisman", "limite-semana", 1),

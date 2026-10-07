@@ -312,16 +312,17 @@ public final class ItemsCalamity {
     /** Ultimo valor raro de esencias.material ya avisado, para no llenar la consola. */
     private String materialAvisado;
 
-    private Material materialEsencia() {
-        String nombre = plugin.getConfig().getString("hardcore.esencias.material", "GHAST_TEAR");
+    /** El material de las Esencias nuevas (hardcore.esencias.material); tambien su icono en los menus. */
+    public Material materialEsencia() {
+        String nombre = plugin.getConfig().getString("hardcore.esencias.material", "BLAZE_POWDER");
         Material m = nombre == null ? null : Material.matchMaterial(nombre.trim());
         if (m != null && m.isItem() && !m.isAir()) return m;
         if (nombre != null && !nombre.equals(materialAvisado)) {
             materialAvisado = nombre;
             plugin.getLogger().warning("[Calamity] hardcore.esencias.material \"" + nombre
-                    + "\" no es un objeto; las Esencias salen como GHAST_TEAR.");
+                    + "\" no es un objeto; las Esencias salen como BLAZE_POWDER.");
         }
-        return Material.GHAST_TEAR;
+        return Material.BLAZE_POWDER;
     }
 
     public boolean esEsencia(ItemStack item) {

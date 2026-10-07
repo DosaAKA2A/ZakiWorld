@@ -815,7 +815,7 @@ final class MenuAltar implements Listener {
         List<String> resumen = new ArrayList<>();
         if (pr.esencias() > 0) {
             Saldo s = hc.saldo();
-            pagos.add(pago(Material.GHAST_TEAR, "−" + Marco.esencias(pr.esencias()), s == null ? -1 : s.de(u), pr.esencias()));
+            pagos.add(pago(hc.items().materialEsencia(), "−" + Marco.esencias(pr.esencias()), s == null ? -1 : s.de(u), pr.esencias()));
             resumen.add(Marco.esencias(pr.esencias()));
         }
         if (pr.mc() > 0) {

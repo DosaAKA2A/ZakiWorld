@@ -59,7 +59,7 @@ recompensas:
     nombre: Esencia de Calamidad
     ids:
       recompensa: [esencia]
-      tienda: [GHAST_TEAR]
+      tienda: [BLAZE_POWDER]
   tintura-ceniza:
     nombre: Tintura de Ceniza
     ids:

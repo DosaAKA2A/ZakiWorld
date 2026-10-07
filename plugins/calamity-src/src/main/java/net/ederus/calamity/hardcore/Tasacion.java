@@ -436,7 +436,7 @@ final class Tasacion {
 
     private Material materialEsencia(Player p) {
         for (ItemStack it : p.getInventory().getContents()) if (hc.items().esEsencia(it)) return it.getType();
-        return Material.GHAST_TEAR;
+        return hc.items().materialEsencia();
     }
 
     /** Las I y II apilables ya vendidas hoy ([_, I, II]). */

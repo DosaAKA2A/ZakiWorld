@@ -963,7 +963,7 @@ hardcore:
   # ------------------------------------------------------------------ M2. ESENCIAS Y ALTAR
   esencias:
     activo: true
-    material: GHAST_TEAR          # material de las esencias NUEVAS (se reconocen por la marca)
+    material: BLAZE_POWDER        # material de las esencias NUEVAS (se reconocen por la marca)
     cuota-jugador: 0.5            # fraccion de la vida del mob que tiene que venir de jugadores
     decae-por-hora: 30            # f = max(minimo, 1 - esencias de mobs en la ultima hora / esto)
     decae-minimo: 0.2
@@ -1006,7 +1006,7 @@ hardcore:
       - {id: llave, pagina: umbral, icono: TRIAL_KEY, nombre: "Llave del Caos", esencias: 40, da: "dar:llave", limite-semana: 1, requisito: "tope-llaves"}   # no cobra si el tope de 4 esta lleno
       - {id: salvoconducto, pagina: umbral, icono: PAPER, nombre: "Salvoconducto del Insomne", esencias: 64, da: "dar:salvoconducto", limite-semana: 1, requisito: "permiso:insomne.badge.unlocked"}
       - {id: ofrenda, pagina: umbral, icono: BLAZE_POWDER, nombre: "Ofrenda", esencias: 100, da: ofrenda}
-      - {id: depositar, pagina: umbral, icono: GHAST_TEAR, nombre: "Depositar Esencias", da: depositar}
+      - {id: depositar, pagina: umbral, icono: BLAZE_POWDER, nombre: "Depositar Esencias", da: depositar}
       - {id: camino, pagina: umbral, icono: COMPASS, nombre: "Tu camino", da: camino}
       - {id: talisman, pagina: forja, icono: CLOCK, nombre: "Talisman de Vigilia", esencias: 40, mobcoins: 2000, da: "dar:talisman", limite-semana: 1}
       - {id: gema, pagina: forja, icono: EMERALD, nombre: "Gema de Calamidad", esencias: 30, mobcoins: 1500, da: "dar:gema", limite-semana: 2}
@@ -2109,7 +2109,7 @@ hardcore:
           mide: "Esencias que te paga Oren por lo que le vendes."
           vistas: [semana, historico]
           textura: "e672959028f274b379d430f068f0f15a4f793eac12afb94ae0b4e50cf895df0f"     # Fine Ruby Gemstone
-          material: GHAST_TEAR
+          material: BLAZE_POWDER
         reliquias:
           clave: reliquias
           nombre: "Reliquias"
