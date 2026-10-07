@@ -1,8 +1,9 @@
 package net.ederus.edm.minas;
 
-import java.util.Collection;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
+import java.util.List;
 import java.util.Map;
 
 import org.bukkit.Location;
@@ -21,6 +22,7 @@ import org.bukkit.event.entity.EntityExplodeEvent;
 import org.bukkit.inventory.ItemStack;
 
 import net.ederus.edm.comun.Estilo;
+import net.ederus.edm.minas.api.MineDropsEvent;
 import net.kyori.adventure.text.Component;
 
 /**
@@ -51,7 +53,7 @@ public final class Guardia implements Listener {
         if (m == null) return;
         Player p = e.getPlayer();
 
-        if (m.reiniciando()) {
+        if (rellenandose(m)) {
             e.setCancelled(true);
             p.sendActionBar(plugin.texto("reiniciando", "{sin-prefijo}&7La mina se está reiniciando, espera un momento."));
             return;
@@ -62,18 +64,48 @@ public final class Guardia implements Listener {
             return;
         }
 
-        // Es suya: lo hayan cancelado o no antes, se pica.
+        // Es suya: lo hayan cancelado o no antes, se pica. Los drops los da el modulo en
+        // MONITOR (alPicado), y solo si nadie cancela la rotura despues de esto.
         e.setCancelled(false);
+        if (p.getGameMode() != org.bukkit.GameMode.CREATIVE) e.setDropItems(false);
+    }
+
+    private boolean rellenandose(Mina m) {
+        return m.reiniciando() || plugin.reinicio().rellenando(m.id());
+    }
+
+    /**
+     * 1.80.0 · La rotura ya es definitiva: se cuenta, se lanza MineDropsEvent con los drops
+     * todavia sin entregar y se entrega lo que quede en la lista. El bloque sigue puesto en
+     * MONITOR, asi que el tipo original y los drops con la fortuna del pico son los de verdad.
+     */
+    @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
+    public void alPicado(BlockBreakEvent e) {
+        Block b = e.getBlock();
+        Mina m = plugin.minas().en(b.getWorld().getName(), b.getX(), b.getY(), b.getZ());
+        if (m == null || rellenandose(m)) return;
+        Player p = e.getPlayer();
+        if (!plugin.puedeEntrar(p, m)) return;
         m.minado();
 
-        if (plugin.getConfig().getBoolean("directo-al-inventario", true)
-                && p.getGameMode() != org.bukkit.GameMode.CREATIVE) {
+        // En creativo no hay drops, como en vanilla.
+        if (p.getGameMode() != org.bukkit.GameMode.CREATIVE) {
             ItemStack herramienta = p.getInventory().getItemInMainHand();
-            Collection<ItemStack> drops = b.getDrops(herramienta, p);
+            List<ItemStack> drops = new ArrayList<>(b.getDrops(herramienta, p));
+            MineDropsEvent ev = new MineDropsEvent(m.id(), p, b.getLocation(), b.getType(), drops);
+            plugin.core().getServer().getPluginManager().callEvent(ev);
             e.setDropItems(false);
+            boolean directo = plugin.getConfig().getBoolean("directo-al-inventario", true);
             Location suelo = b.getLocation().add(0.5, 0.5, 0.5);
-            for (ItemStack d : drops) {
-                for (ItemStack sobra : p.getInventory().addItem(d).values()) {
+            for (ItemStack d : ev.getDrops()) {
+                if (d == null || d.getType().isAir() || d.getAmount() <= 0) continue;
+                // Copia: addItem cambia la cantidad del que recibe, y la lista puede repetir una instancia.
+                ItemStack copia = d.clone();
+                if (!directo) {
+                    b.getWorld().dropItemNaturally(suelo, copia);
+                    continue;
+                }
+                for (ItemStack sobra : p.getInventory().addItem(copia).values()) {
                     b.getWorld().dropItemNaturally(suelo, sobra);
                 }
             }
