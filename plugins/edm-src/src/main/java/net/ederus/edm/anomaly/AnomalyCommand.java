@@ -63,7 +63,17 @@ public final class AnomalyCommand implements CommandExecutor, TabCompleter {
             case "test", "probar" -> test(sender, args);
             case "hurt", "danar" -> hurt(sender, args);
             case "logros", "advancements" -> trophies(sender);
-            case "botin", "loot" -> lootPreview(sender, args);
+            case "botin", "loot" -> {
+                if (args.length > 1 && List.of("set", "sets").contains(args[1].toLowerCase(Locale.ROOT))) {
+                    lootSet(sender, args);
+                } else {
+                    lootPreview(sender, args);
+                }
+            }
+            case "coliseum", "coliseo" -> coliseum(sender, args);
+            case "rotation", "rotacion" -> rotation(sender, args);
+            case "auto", "automatico" -> auto(sender, args);
+            case "pillar", "pilar" -> pillar(sender, args);
             case "arena" -> arena(sender, args);
             case "biome" -> climate(sender, args);
             case "esbirros", "minions" -> {
@@ -79,6 +89,170 @@ public final class AnomalyCommand implements CommandExecutor, TabCompleter {
             default -> help(sender);
         }
         return true;
+    }
+
+    private void say(CommandSender sender, String text, TextColor color) {
+        sender.sendMessage(plugin.prefix().append(Component.text(text, color)));
+    }
+
+    /**
+     * /anomaly loot set <anomalia|all> [SET] [probabilidad]: mete las piezas del set en
+     * la fila de unicos de su tabla, reservadas al mejor. Las que ya esten no se repiten.
+     */
+    private void lootSet(CommandSender sender, String[] args) {
+        if (!net.ederus.edm.anomaly.drops.SetLoot.disponible()) {
+            say(sender, "MMOItems no está activo: no hay sets que meter.", NamedTextColor.RED);
+            return;
+        }
+        if (args.length < 3) {
+            say(sender, "Uso: /anomaly loot set <anomalia|all> [SET] [probabilidad]", SOFT);
+            return;
+        }
+        double chance = 10.0;
+        String setArg = null;
+        for (int i = 3; i < args.length; i++) {
+            try {
+                chance = Double.parseDouble(args[i].replace("%", "").replace(',', '.'));
+            } catch (NumberFormatException e) {
+                setArg = args[i];
+            }
+        }
+        List<AnomalyType> targets = new ArrayList<>();
+        if (args[2].equalsIgnoreCase("all") || args[2].equalsIgnoreCase("todas")) {
+            targets.addAll(plugin.registry().all());
+            setArg = null;
+        } else {
+            AnomalyType t = resolve(sender, args, 2);
+            if (t == null) return;
+            targets.add(t);
+        }
+        for (AnomalyType type : targets) {
+            String set = setArg != null ? setArg : net.ederus.edm.anomaly.drops.SetLoot.DE_SERIE.get(type.id());
+            if (set == null) {
+                say(sender, type.id() + ": no tiene set de serie; dilo a mano.", SOFT);
+                continue;
+            }
+            List<org.bukkit.inventory.ItemStack> piezas = net.ederus.edm.anomaly.drops.SetLoot.piezas(set);
+            if (piezas.isEmpty()) {
+                say(sender, type.id() + ": MMOItems no tiene ninguna pieza del set " + set + ".", NamedTextColor.RED);
+                continue;
+            }
+            var table = plugin.drops().table(type.id());
+            java.util.Set<String> ya = new java.util.HashSet<>();
+            for (var e : table.entries()) {
+                String id = net.ederus.edm.anomaly.drops.SetLoot.idDe(e.item());
+                if (id != null) ya.add(id);
+            }
+            int puestas = 0, llenas = 0;
+            for (var pieza : piezas) {
+                String id = net.ederus.edm.anomaly.drops.SetLoot.idDe(pieza);
+                if (id != null && ya.contains(id)) continue;
+                // Arriba si cabe; si la fila de unicos esta llena, abajo.
+                boolean unico = table.add(pieza, true);
+                if (!unico && !table.add(pieza, false)) {
+                    llenas++;
+                    continue;
+                }
+                var entry = table.entries().get(table.entries().size() - 1);
+                entry.chance(chance);
+                entry.to(net.ederus.edm.anomaly.drops.DropEntry.Recipient.MEJOR);
+                puestas++;
+            }
+            int comandos = 0;
+            for (String c : table.commands()) {
+                if (c.toLowerCase(Locale.ROOT).contains("mi give")) comandos++;
+            }
+            say(sender, type.id() + ": " + puestas + " pieza(s) de " + set + " al " + net.ederus.edm.anomaly.drops.DropTable.trimChance(chance) + " %"
+                    + ", reservadas al mejor" + (llenas > 0 ? " (" + llenas + " sin hueco)" : "")
+                    + (comandos > 0 ? ". Ojo: la tabla sigue con " + comandos + " línea(s) 'mi give'." : "."), SOFT);
+        }
+        plugin.drops().save();
+    }
+
+    /** /anomaly coliseum: marca donde estas como el punto de todas, o dice cual es. */
+    private void coliseum(CommandSender sender, String[] args) {
+        if (sender instanceof Player p && (args.length < 2 || !args[1].equalsIgnoreCase("info"))) {
+            plugin.settings().setColiseum(p.getLocation());
+            Location c = plugin.settings().coliseum();
+            say(sender, "Coliseo marcado en " + c.getWorld().getName() + " " + c.getBlockX() + " "
+                    + c.getBlockY() + " " + c.getBlockZ() + ". Todas las anomalías salen aquí.", SOFT);
+            return;
+        }
+        Location c = plugin.settings().coliseum();
+        say(sender, c == null ? "No hay coliseo marcado. Ponte en el sitio y escribe /anomaly coliseum."
+                : "Coliseo: " + c.getWorld().getName() + " " + c.getBlockX() + " " + c.getBlockY() + " " + c.getBlockZ(), SOFT);
+    }
+
+    /** /anomaly rotation [id] [on|off]: quien entra en el sorteo del automatico. */
+    private void rotation(CommandSender sender, String[] args) {
+        if (args.length < 2) {
+            for (AnomalyType t : plugin.registry().all()) {
+                boolean on = plugin.registry().inRotation(t) && plugin.registry().isEnabled(t);
+                sender.sendMessage(Component.text("  " + (on ? "● " : "○ "), on ? NamedTextColor.GREEN : DIM)
+                        .append(Component.text(t.display(), t.color()))
+                        .append(Component.text("  " + plugin.registry().classOf(t).display()
+                                + (plugin.registry().isEnabled(t) ? "" : " · apagada"), SOFT)));
+            }
+            return;
+        }
+        AnomalyType t = resolve(sender, args, 1);
+        if (t == null) return;
+        boolean value = args.length > 2 ? List.of("on", "si", "true").contains(args[2].toLowerCase(Locale.ROOT))
+                : !plugin.registry().inRotation(t);
+        plugin.registry().setInRotation(t, value);
+        say(sender, t.display() + (value ? " entra en la rotación." : " sale de la rotación."), SOFT);
+    }
+
+    /** /anomaly auto [on|off]: estado del horario y proximos turnos. */
+    private void auto(CommandSender sender, String[] args) {
+        if (args.length > 1) {
+            boolean on = List.of("on", "si", "true").contains(args[1].toLowerCase(Locale.ROOT));
+            plugin.settings().set("automatico.activo", on);
+            plugin.manager().restartScheduler();
+        }
+        var s = plugin.settings();
+        say(sender, "Automático " + (s.autoEnabled() ? "encendido" : "apagado") + " · "
+                + (s.autoBySchedule() ? "por horario (" + s.autoZone() + ")" : "cada " + s.autoIntervalMinutes() + " min")
+                + " · mínimo " + s.autoMinPlayers() + " jugadores", SOFT);
+        Location c = s.coliseum();
+        say(sender, c == null ? "Falta marcar el coliseo (/anomaly coliseum)." : "Coliseo: " + c.getWorld().getName()
+                + " " + c.getBlockX() + " " + c.getBlockY() + " " + c.getBlockZ(), c == null ? NamedTextColor.RED : SOFT);
+        if (s.autoBySchedule()) {
+            var fmt = java.time.format.DateTimeFormatter.ofPattern("dd/MM HH:mm");
+            for (var slot : plugin.manager().nextSlots(6)) {
+                sender.sendMessage(Component.text("  " + slot.at().format(fmt) + "  ", SOFT)
+                        .append(Component.text(slot.high() ? "Monarca o Dios" : "Esbirro o General",
+                                slot.high() ? NamedTextColor.LIGHT_PURPLE : NamedTextColor.GOLD)));
+            }
+        }
+    }
+
+    /**
+     * /anomaly pillar: marca el pilar de la flor de ROTTEN mirando su bloque de vidrio
+     * (hasta 8 bloques). Con "clear" se quita y la flor vuelve a levantar uno propio.
+     */
+    private void pillar(CommandSender sender, String[] args) {
+        AnomalyType raiz = plugin.registry().get(net.ederus.edm.anomaly.boss.Raiz.ID);
+        if (raiz == null) return;
+        if (args.length > 1 && List.of("clear", "quitar").contains(args[1].toLowerCase(Locale.ROOT))) {
+            plugin.registry().setFlowerPillar(raiz, null);
+            say(sender, "Pilar quitado: ROTTEN levantará uno propio junto a él.", SOFT);
+            return;
+        }
+        if (!(sender instanceof Player p)) {
+            Location l = plugin.registry().flowerPillar(raiz);
+            say(sender, l == null ? "Sin pilar marcado." : "Pilar: " + l.getWorld().getName() + " "
+                    + l.getBlockX() + " " + l.getBlockY() + " " + l.getBlockZ(), SOFT);
+            return;
+        }
+        var block = p.getTargetBlockExact(8);
+        if (block == null || !block.getType().name().contains("GLASS")) {
+            say(sender, "Mira el bloque de vidrio del pilar (a 8 bloques como mucho).", NamedTextColor.RED);
+            return;
+        }
+        plugin.registry().setFlowerPillar(raiz, block.getLocation());
+        say(sender, "Pilar de ROTTEN marcado en " + block.getX() + " " + block.getY() + " " + block.getZ()
+                + ". La flor va dentro del vidrio y las curaciones se tiran ahí.", SOFT);
     }
 
     /**
@@ -622,7 +796,7 @@ public final class AnomalyCommand implements CommandExecutor, TabCompleter {
         List<String> out = new ArrayList<>();
         if (!plugin.mayUseGui(sender)) return out;
         if (args.length == 1) {
-            for (String s : List.of("menu", "esbirros", "esbirro", "start", "here", "at", "stop", "info", "abilities", "test", "hurt", "botin", "arena", "biome", "logros", "reload")) {
+            for (String s : List.of("menu", "esbirros", "esbirro", "start", "here", "at", "stop", "info", "abilities", "test", "hurt", "botin", "coliseum", "rotation", "auto", "pillar", "arena", "biome", "logros", "reload")) {
                 if (s.startsWith(args[0].toLowerCase(Locale.ROOT))) out.add(s);
             }
             return out;
@@ -651,7 +825,7 @@ public final class AnomalyCommand implements CommandExecutor, TabCompleter {
             if ("none".startsWith(args[2].toLowerCase(Locale.ROOT))) out.add("none");
             return out;
         }
-        if (args.length == 2 && List.of("start", "here", "abilities", "biome").contains(args[0].toLowerCase(Locale.ROOT))) {
+        if (args.length == 2 && List.of("start", "here", "abilities", "biome", "rotation").contains(args[0].toLowerCase(Locale.ROOT))) {
             for (AnomalyType t : plugin.registry().all()) {
                 if (t.id().startsWith(args[1].toLowerCase(Locale.ROOT))) out.add(t.id());
             }

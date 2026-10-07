@@ -110,8 +110,12 @@ public final class Raiz extends BossFight {
     /** Las piezas de la flor, para limpiarlas cuando acabe. */
     private final List<Entity> flor = new ArrayList<>();
     private Location florEn;
-    /** La corola: cerrada al plantarla, abierta cuando lleva la mitad. */
-    private ItemDisplay florCorola;
+    /** La flor dentro del vidrio del pilar. */
+    private BlockDisplay florCorola;
+    /** El bloque de vidrio del pilar: ahi va la flor y ahi revientan las curaciones. */
+    private Location pilarVidrio;
+    /** Lo que habia donde se levanto un pilar provisional, para devolverlo al cerrar. */
+    private final Map<Location, org.bukkit.block.data.BlockData> pilarPrestado = new java.util.LinkedHashMap<>();
     /** Hasta que tick dura el ritual, para decir cuanto queda. */
     private long ritualHasta;
 
@@ -547,12 +551,13 @@ public final class Raiz extends BossFight {
          * nada mas nacer: al tick siguiente el ritual se cerraba como fallido y el
          * jefe se curaba un 20%. Era "la flor desaparece al instante". */
         limpiarFlor();
-        Location sitio = Fx.ground(c.clone().add(4.0, 0, 0), 8);
-        plantarFlor(sitio);
-        florEn = sitio;
+        Location vidrio = pilar(c);
+        plantarFlor(vidrio);
+        florEn = vidrio.clone().add(0.5, 0.5, 0.5);
+        Location sitio = florEn;
 
         titleNear(Component.text("LA FLOR", ACCENT, TextDecoration.BOLD),
-                Component.text("Tirad pociones de curación sobre ella", NamedTextColor.GRAY));
+                Component.text("Tiren pociones de curación al pilar", NamedTextColor.GRAY));
         announce(Component.text("Se derrumba. La flor pide " + dosisPedidas
                 + (dosisPedidas == 1 ? " poción de curación." : " pociones de curación; la de nivel II vale por dos.")));
         soundAt(c, "entity.creaking.deactivate", 2.0f, 0.5f);
@@ -560,35 +565,70 @@ public final class Raiz extends BossFight {
     }
 
     /**
-     * La flor: un tallo grueso de roble palido, una corola enorme que brilla y una
-     * columna de luz hasta el cielo. Tiene que verse desde cualquier punto de la
-     * arena, con niebla, con oscuridad o con veinte personas encima.
+     * El pilar de la flor: el que marco el admin con /anomaly pillar (el bloque de
+     * vidrio) o, si no hay, uno provisional junto a ROTTEN: bloque de piedra cincelada
+     * con vidrio encima, que se devuelve a como estaba al cerrar el ritual.
+     *
+     * Tiene que ser un bloque de verdad: la pocion choca contra el vidrio y revienta
+     * ahi. Contra un display pasaba de largo y caia donde fuera.
      */
-    private void plantarFlor(Location donde) {
-        for (int i = 0; i < 6; i++) {
-            ItemDisplay tallo = Fx.itemDisplay(world(), donde.clone().add(0, 0.6 + i * 0.85, 0),
-                    new ItemStack(Material.PALE_OAK_LOG), 1.5f);
-            if (tallo != null) {
-                markMinion(tallo);
-                flor.add(tallo);
-                Glow.apply(tallo, NamedTextColor.GREEN);
-            }
+    private Location pilar(Location c) {
+        Location marcado = plugin.registry().flowerPillar(event.type());
+        if (marcado != null && marcado.getWorld() == world() && marcado.distanceSquared(c) < 120 * 120) {
+            return marcado.getBlock().getLocation();
         }
-        florCorola = Fx.itemDisplay(world(), donde.clone().add(0, 6.2, 0),
-                new ItemStack(Material.CLOSED_EYEBLOSSOM), 6.0f);
+        Location suelo = Fx.ground(c.clone().add(5.0, 0, 0), 8);
+        org.bukkit.block.Block base = suelo.getBlock();
+        if (base.getType().isSolid()) base = base.getRelative(org.bukkit.block.BlockFace.UP);
+        org.bukkit.block.Block vidrio = base.getRelative(org.bukkit.block.BlockFace.UP);
+        prestar(base, Material.CHISELED_STONE_BRICKS);
+        prestar(vidrio, Material.GLASS);
+        return vidrio.getLocation();
+    }
+
+    private void prestar(org.bukkit.block.Block b, Material m) {
+        pilarPrestado.putIfAbsent(b.getLocation(), b.getBlockData().clone());
+        b.setType(m, false);
+    }
+
+    /**
+     * La flor: una eyeblossom abierta dentro del vidrio del pilar, con brillo verde, y
+     * una columna de luz encima para que se encuentre desde cualquier punto de la arena.
+     */
+    private void plantarFlor(Location vidrio) {
+        pilarVidrio = vidrio.clone();
+        Location centro = vidrio.clone().add(0.5, 0.5, 0.5);
+        florCorola = Fx.blockDisplay(world(), centro, Material.OPEN_EYEBLOSSOM, 0.85f);
         if (florCorola != null) {
-            /* Una flor es un sprite plano: fija, de lado no se ve. Encarada siempre
-             * al que mira, se ve igual desde cualquier punto de la arena. */
-            florCorola.setBillboard(Display.Billboard.CENTER);
             markMinion(florCorola);
             flor.add(florCorola);
             Glow.apply(florCorola, NamedTextColor.GREEN);
         }
-        BlockDisplay luz = Fx.lightColumn(world(), donde.clone(), Material.LIME_STAINED_GLASS, 0.45f, 48f);
+        BlockDisplay luz = Fx.lightColumn(world(), vidrio.clone().add(0.5, 1.0, 0.5),
+                Material.LIME_STAINED_GLASS, 0.45f, 40f);
         if (luz != null) {
             markMinion(luz);
             flor.add(luz);
         }
+    }
+
+    /**
+     * Una pocion revento en algun sitio de la arena. Cuenta si cayo en el pilar: contra
+     * el vidrio, encima o al pie (2,5 bloques del centro del vidrio).
+     */
+    @Override
+    public void onPotionSplash(ThrownPotion pocion, Location donde) {
+        if (!ritualActivo || florEn == null || donde.getWorld() != world()) return;
+        if (donde.distanceSquared(florEn) > 2.5 * 2.5) return;
+        int valor = dosisDe(pocion.getItem());
+        if (valor <= 0) return;
+        dosis += valor;
+        Compat.spawn(world(), Compat.HEART, florEn.clone().add(0, 0.8, 0), 18, 0.6, 0.5, 0.6, 0.03);
+        Compat.spawn(world(), Compat.HAPPY_VILLAGER, florEn, 24, 0.6, 0.8, 0.6, 0.02);
+        soundAt(florEn, "block.eyeblossom_open.long", 1.4f, 0.9f + dosis * 0.08f);
+        soundAt(florEn, "entity.player.levelup", 0.8f, 1.6f);
+        announce(Component.text("La flor lleva " + Math.min(dosis, dosisPedidas) + " de " + dosisPedidas + "."));
+        if (dosis >= dosisPedidas) cerrarRitual(true);
     }
 
     /**
@@ -600,39 +640,16 @@ public final class Raiz extends BossFight {
             cerrarRitual(false);
             return;
         }
-        // Las pociones arrojadizas que caen cerca cuentan como dosis. Se miran las
-        // entidades en vuelo en vez de escuchar el evento: el jefe no tiene listener
-        // propio, y asi la flor funciona igual la lance quien la lance.
-        for (Entity e : world().getNearbyEntities(florEn, 4.5, 8.0, 4.5)) {
-            if (!(e instanceof ThrownPotion pocion)) continue;
-            int valor = dosisDe(pocion.getItem());
-            if (valor <= 0) continue;
-            e.remove();
-            dosis += valor;
-            Compat.spawn(world(), Compat.HEART, florEn.clone().add(0, 6.2, 0), 24, 1.2, 0.8, 1.2, 0.03);
-            Compat.spawn(world(), Compat.HAPPY_VILLAGER, florEn.clone().add(0, 3.0, 0), 30, 0.8, 2.5, 0.8, 0.02);
-            soundAt(florEn, "block.eyeblossom_open.long", 1.4f, 0.9f + dosis * 0.08f);
-            soundAt(florEn, "entity.player.levelup", 0.8f, 1.6f);
-            announce(Component.text("La flor lleva " + Math.min(dosis, dosisPedidas) + " de " + dosisPedidas + "."));
-            if (florCorola != null && florCorola.isValid() && dosis * 2 >= dosisPedidas) {
-                florCorola.setItemStack(new ItemStack(Material.OPEN_EYEBLOSSOM));
-            }
-            if (dosis >= dosisPedidas) {
-                cerrarRitual(true);
-                return;
-            }
-        }
-
         // Se ve desde lejos: el aro del suelo crece con lo que lleva, y por la columna
         // suben chispas todo el rato.
         if (ticks() % 5 == 0) {
             double r = 2.0 + 3.0 * Math.min(1.0, dosis / (double) dosisPedidas);
-            Fx.ring(florEn.clone().add(0, 0.2, 0), r, 26, p ->
+            Fx.ring(florEn.clone().add(0, -1.3, 0), r, 26, p ->
                     Compat.spawn(world(), Compat.DUST, p, 1, 0, 0, 0, 0, Compat.dust(AMBAR, 1.6f)));
             Compat.spawn(world(), Compat.END_ROD, florEn.clone().add(0, 1 + random.nextDouble() * 9, 0), 3,
                     0.3, 0.6, 0.3, 0.01);
-            Compat.spawn(world(), Compat.SPORE_BLOSSOM_AIR, florEn.clone().add(0, 6.2, 0), 4,
-                    1.2, 0.8, 1.2, 0.01);
+            Compat.spawn(world(), Compat.SPORE_BLOSSOM_AIR, florEn.clone().add(0, 0.6, 0), 3,
+                    0.5, 0.3, 0.5, 0.01);
         }
         if (ticks() % 20 == 0) {
             int quedan = (int) Math.max(0, (ritualHasta - ticks()) / 20);
@@ -661,7 +678,7 @@ public final class Raiz extends BossFight {
 
         if (cumplido) {
             ritualCumplido = true;
-            Location desde = florEn == null ? center() : florEn.clone().add(0, 6.2, 0);
+            Location desde = florEn == null ? center() : florEn.clone();
             Location hasta = center().add(0, 1.4, 0);
             Fx.beam(desde, hasta, 0.4, p ->
                     Compat.spawn(world(), Compat.DUST, p, 2, 0.05, 0.05, 0.05, 0,
@@ -702,6 +719,10 @@ public final class Raiz extends BossFight {
         flor.clear();
         florCorola = null;
         florEn = null;
+        pilarVidrio = null;
+        // El pilar provisional se devuelve tal cual estaba; el marcado no se toca.
+        pilarPrestado.forEach((l, data) -> l.getBlock().setBlockData(data, false));
+        pilarPrestado.clear();
     }
 
     // ------------------------------------------------------------ flotar y esbirros

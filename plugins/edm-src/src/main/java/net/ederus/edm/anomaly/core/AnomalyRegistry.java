@@ -210,6 +210,53 @@ public final class AnomalyRegistry {
     }
 
     /**
+     * Si entra en el sorteo del automatico. Una anomalia activa pero fuera de la
+     * rotacion se puede abrir a mano y nunca sale sola: es para las que todavia no
+     * estan listas para el coliseo. Las dos de agua nacen fuera, porque sus cuerpos
+     * (guardianes) no pelean en seco.
+     */
+    public boolean inRotation(AnomalyType type) {
+        boolean def = !type.id().equals("leviatan_de_sal") && !type.id().equals("coro_abisal");
+        return fichas.getBoolean(type.id(), "rotacion", def);
+    }
+
+    public void setInRotation(AnomalyType type, boolean value) {
+        fichas.set(type.id(), "rotacion", value);
+    }
+
+    /** Las que pueden salir solas en un turno: activas, en rotacion y de esas clases. */
+    public AnomalyType randomForRotation(java.util.Set<AnomalyClass> classes, String avoid) {
+        List<AnomalyType> pool = new ArrayList<>();
+        for (AnomalyType t : types.values()) {
+            if (isEnabled(t) && inRotation(t) && classes.contains(classOf(t))) pool.add(t);
+        }
+        if (pool.size() > 1 && avoid != null) pool.removeIf(t -> t.id().equals(avoid));
+        return pool.isEmpty() ? null : pool.get(random.nextInt(pool.size()));
+    }
+
+    /** El pilar de la flor de ROTTEN (el bloque de vidrio), si se marco. */
+    public Location flowerPillar(AnomalyType type) {
+        String id = type.id();
+        String worldName = fichas.getString(id, "pilar.mundo", null);
+        if (worldName == null || worldName.isBlank()) return null;
+        org.bukkit.World world = plugin.getServer().getWorld(worldName);
+        if (world == null) return null;
+        return new Location(world, fichas.getDouble(id, "pilar.x", 0), fichas.getDouble(id, "pilar.y", 0),
+                fichas.getDouble(id, "pilar.z", 0));
+    }
+
+    public void setFlowerPillar(AnomalyType type, Location where) {
+        Map<String, Object> pilar = new LinkedHashMap<>();
+        if (where != null && where.getWorld() != null) {
+            pilar.put("mundo", where.getWorld().getName());
+            pilar.put("x", (double) where.getBlockX());
+            pilar.put("y", (double) where.getBlockY());
+            pilar.put("z", (double) where.getBlockZ());
+        }
+        fichas.setSection(type.id(), "pilar", pilar);
+    }
+
+    /**
      * La clase de la anomalia (Esbirro, General o Monarca). Se guarda en su ficha
      * en cuanto se toca desde el menu; si nunca se ha tocado vale la de diseno.
      */

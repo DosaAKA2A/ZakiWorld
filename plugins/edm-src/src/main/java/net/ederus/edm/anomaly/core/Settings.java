@@ -93,6 +93,73 @@ public final class Settings {
         return cfg().getString("automatico.anomalia", "aleatoria");
     }
 
+    /** "horario" (horas fijas del reloj) o "intervalo" (cada X minutos desde el arranque). */
+    public boolean autoBySchedule() {
+        return !"intervalo".equalsIgnoreCase(cfg().getString("automatico.modo", "horario"));
+    }
+
+    public java.time.ZoneId autoZone() {
+        try {
+            return java.time.ZoneId.of(cfg().getString("automatico.zona-horaria", "America/Lima"));
+        } catch (Exception e) {
+            return java.time.ZoneId.of("America/Lima");
+        }
+    }
+
+    /** Horas en las que sale una Esbirro o General. */
+    public List<java.time.LocalTime> autoCommonHours() {
+        return hours("automatico.horas-comunes");
+    }
+
+    /** Horas en las que sale una Monarca o Dios. */
+    public List<java.time.LocalTime> autoHighHours() {
+        return hours("automatico.horas-altas");
+    }
+
+    /** Cuanto se sigue intentando un turno si a la hora habia otra abierta o faltaba gente. */
+    public int autoGraceMinutes() {
+        return Math.max(1, cfg().getInt("automatico.margen-minutos", 60));
+    }
+
+    private List<java.time.LocalTime> hours(String path) {
+        List<java.time.LocalTime> out = new java.util.ArrayList<>();
+        for (String raw : cfg().getStringList(path)) {
+            String h = raw.trim();
+            try {
+                out.add(java.time.LocalTime.parse(h.length() == 4 ? "0" + h : h));
+            } catch (Exception ignored) {
+                plugin.getLogger().warning("Hora mal escrita en " + path + ": " + raw);
+            }
+        }
+        return out;
+    }
+
+    /**
+     * El punto del coliseo donde salen todas las anomalias. Null si no esta marcado
+     * o si su mundo no esta cargado.
+     */
+    public org.bukkit.Location coliseum() {
+        String world = cfg().getString("automatico.coliseo.mundo", "");
+        if (world == null || world.isBlank()) return null;
+        org.bukkit.World w = plugin.getServer().getWorld(world);
+        if (w == null) return null;
+        return new org.bukkit.Location(w, cfg().getDouble("automatico.coliseo.x"),
+                cfg().getDouble("automatico.coliseo.y"), cfg().getDouble("automatico.coliseo.z"));
+    }
+
+    public void setColiseum(org.bukkit.Location where) {
+        cfg().set("automatico.coliseo.mundo", where.getWorld().getName());
+        cfg().set("automatico.coliseo.x", where.getBlockX() + 0.5);
+        cfg().set("automatico.coliseo.y", (double) where.getBlockY());
+        cfg().set("automatico.coliseo.z", where.getBlockZ() + 0.5);
+        plugin.saveConfig();
+    }
+
+    /** Si una anomalia sin punto puede salir en un sitio aleatorio del mundo. */
+    public boolean randomSites() {
+        return cfg().getBoolean("general.buscar-sitio-aleatorio", false);
+    }
+
     // -------------------------------------------------------------------- combate
 
     public double participationRadius() {

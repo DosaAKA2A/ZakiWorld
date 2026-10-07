@@ -706,6 +706,13 @@ public abstract class BossFight {
     }
 
     /**
+     * Una pocion arrojadiza revento en el mundo de la pelea. Por omision no hace nada;
+     * la flor de ROTTEN cuenta las de curacion que caen en su pilar.
+     */
+    public void onPotionSplash(org.bukkit.entity.ThrownPotion potion, Location where) {
+    }
+
+    /**
      * Igual que el anterior pero sabiendo QUIEN pega. Lo usa el Storm Rider para que
      * en su fase de vuelo la espada no valga y haya que sacar el arco.
      */

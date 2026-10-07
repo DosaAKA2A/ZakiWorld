@@ -56,6 +56,10 @@ general:
   # y no en la superficie. Con menos de esto el sitio se descarta.
   profundidad-minima-agua: 8
 
+  # Una anomalia sin punto propio y sin coliseo marcado: si esto esta en false no
+  # sale (todas van al coliseo); en true busca un sitio aleatorio por el mundo.
+  buscar-sitio-aleatorio: false
+
 automatico:
   # Si se activa, el plugin abre anomalias solo cada X minutos.
   activo: false
@@ -64,6 +68,28 @@ automatico:
   jugadores-minimos: 2
   # Un id concreto, o "aleatoria" para que elija entre las activas.
   anomalia: aleatoria
+  # "horario": a las horas de abajo, que no se corren con un reinicio.
+  # "intervalo": cada intervalo-minutos desde que arranca el servidor.
+  modo: horario
+  zona-horaria: America/Lima
+  # A estas horas sale una Esbirro o General que este en rotacion.
+  horas-comunes:
+    - "04:00"
+    - "12:00"
+    - "20:00"
+  # A estas, una Monarca o Dios. Solo hay una abierta a la vez.
+  horas-altas:
+    - "00:00"
+    - "08:00"
+    - "16:00"
+  # Si a la hora habia otra abierta o faltaba gente, se sigue intentando estos minutos.
+  margen-minutos: 60
+  # Donde salen todas. Se marca de pie en el sitio con /anomaly coliseo.
+  coliseo:
+    mundo: ""
+    x: 0.0
+    y: 0.0
+    z: 0.0
 
 combate:
   # Quien este dentro de este radio ve las barras de jefe y cuenta para el botin.
