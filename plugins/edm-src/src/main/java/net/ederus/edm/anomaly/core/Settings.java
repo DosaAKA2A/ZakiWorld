@@ -125,6 +125,11 @@ public final class Settings {
         List<java.time.LocalTime> out = new java.util.ArrayList<>();
         for (String raw : cfg().getStringList(path)) {
             String h = raw.trim();
+            // YAML lee 4:00 sin comillas como sexagesimal (240): se devuelve a hora.
+            if (h.matches("\\d+")) {
+                int n = Integer.parseInt(h);
+                h = String.format("%02d:%02d", (n / 60) % 24, n % 60);
+            }
             try {
                 out.add(java.time.LocalTime.parse(h.length() == 4 ? "0" + h : h));
             } catch (Exception ignored) {
