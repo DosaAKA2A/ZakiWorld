@@ -132,6 +132,46 @@ public final class Acciones {
         });
 
         /*
+         * ATRAVESAR (1.82.0): el golpe sigue de largo. Hiere a todo lo vivo que haya DETRAS del golpeado, en la
+         * direccion del portador al golpeado, hasta distancia bloques y a ancho de la linea, con un porcentaje del
+         * golpe (%dano%). Ni al portador ni al golpeado. Una linea de particulas marca el recorrido. El Venablo de Rhen.
+         */
+        reg("ATRAVESAR", (ctx, a) -> {
+            Player yo = ctx.jugador();
+            Entity golpeado = ctx.objetivo();
+            if (yo == null || golpeado == null || golpeado.getWorld() != yo.getWorld()) return;
+            double dist = Math.max(1, Math.min(16, a.d("distancia", 5)));
+            double ancho = Math.max(0.3, Math.min(3, a.d("ancho", 1.2)));
+            double n = ctx.dano() * Math.max(0, a.d("porcentaje", 60)) / 100.0;
+            org.bukkit.util.Vector dir = golpeado.getLocation().toVector().subtract(yo.getLocation().toVector()).setY(0);
+            if (dir.lengthSquared() < 1e-6) dir = yo.getLocation().getDirection().setY(0);
+            if (dir.lengthSquared() < 1e-6) return;
+            dir.normalize();
+            Location inicio = golpeado.getLocation().add(0, golpeado.getHeight() * 0.5, 0);
+            Location fin = inicio.clone().add(dir.clone().multiply(dist));
+            String tipo = a.s("particula", "SWEEP_ATTACK");
+            try {
+                org.bukkit.Particle p = org.bukkit.Particle.valueOf(tipo.toUpperCase(java.util.Locale.ROOT));
+                for (double t = 0.5; t <= dist; t += 0.75) {
+                    Location l = inicio.clone().add(dir.clone().multiply(t));
+                    if (p.getDataType() == Void.class) l.getWorld().spawnParticle(p, l, 1, 0, 0, 0, 0);
+                }
+            } catch (IllegalArgumentException ignorado) {
+                // particula desconocida: sin linea, el golpe va igual
+            }
+            if (n <= 0) return;
+            org.bukkit.util.BoundingBox caja = org.bukkit.util.BoundingBox.of(inicio, fin).expand(ancho);
+            for (Entity e : golpeado.getWorld().getNearbyEntities(caja)) {
+                if (!(e instanceof LivingEntity le) || le.isDead() || e.equals(yo) || e.equals(golpeado)) continue;
+                org.bukkit.util.Vector rel = e.getLocation().add(0, le.getHeight() * 0.5, 0).toVector().subtract(inicio.toVector());
+                double avance = rel.dot(dir);
+                if (avance < 0 || avance > dist) continue;
+                if (rel.clone().subtract(dir.clone().multiply(avance)).length() > ancho) continue;
+                le.damage(n, yo);
+            }
+        });
+
+        /*
          * SENTENCIA (1.82.0): oscuridad unos segundos y, al acabar, un grito y un golpe con lo que el marcado
          * recibio mientras tanto (Sentencias). El Epitafio de Calamity.
          */

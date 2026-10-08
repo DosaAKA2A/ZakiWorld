@@ -381,6 +381,13 @@ public final class Catalogo {
                 Param.de("porcentaje", "Porcentaje del golpe", Clase.NUMERO, "50", "60 = el 60 % de %dano%.", "REDSTONE"),
                 Param.de("maximo", "Tope", Clase.NUMERO, "0", "0 = sin tope.", "BARRIER"));
 
+        acc("ATRAVESAR", "Combate", "El golpe sigue de largo y hiere a los de detrás.", "TRIDENT",
+                "@golpeado", null, null,
+                Param.de("distancia", "Hasta dónde", Clase.NUMERO, "5", "Bloques detrás del golpeado.", "SPYGLASS"),
+                Param.de("ancho", "Ancho de la línea", Clase.NUMERO, "1.2", "", "LEAD"),
+                Param.de("porcentaje", "Porcentaje del golpe", Clase.NUMERO, "60", "", "REDSTONE"),
+                Param.de("particula", "Partícula", Clase.TEXTO, "SWEEP_ATTACK", "", "FIREWORK_STAR"));
+
         acc("SENTENCIA", "Combate", "Oscuridad y, al acabar, grito y golpe con el daño recibido.", "SCULK_SHRIEKER",
                 "@golpeado", null, null,
                 Param.de("duracion", "Duración", Clase.TICKS, "40", "Lo que cuenta el daño.", "CLOCK"),
