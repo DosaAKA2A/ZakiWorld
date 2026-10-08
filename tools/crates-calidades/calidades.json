@@ -1,498 +1,2469 @@
 {
-  "_nota": "Fuente de verdad de las calidades de PhoenixCrates. Primero sale la calidad (porcentaje de 'calidades' de cada caja) y despues el premio (peso dentro de su calidad). 'n' es la posicion del premio en la copia original crates/<caja>.yml.bak-calidades-20261006; calidad null = premio apagado (peso 0). generador.js convierte esto en el weight final y en las lineas de lore de la vista previa. 'nombre' es el nombre que tenia la caja en ExcellentCrates (MiniMessage); se usa como display-name y como titulo de su menu. Opcional por premio: 'por-jugador' = N veces como mucho por jugador (win-limits de PhoenixCrates) y 'excluir-con-permiso' = lista de permisos (restricted-permissions); quien ya llego al tope o tiene el permiso no lo puede sacar y la caja sortea otro premio en su lugar. Premios que no estan en la .bak: entrada con 'nuevo' {identifier, material, nombre, descripcion, comandos} en lugar de 'n'; el generador escribe el bloque entero con imagen simple, y 'estilo-nuevos' de la caja ({degradado: [de, a], descripcion: color}) les da el mismo nombre en degradado y la misma linea gris que al resto.",
-  "calidades": {
-    "inmortal": {
-      "nombre": "Inmortal",
-      "color": "#FF5C7A",
-      "peso": 0.05
-    },
-    "unico": {
-      "nombre": "Único",
-      "color": "#FFAA00",
-      "peso": 0.1
-    },
-    "legendario": {
-      "nombre": "Legendario",
-      "color": "#FFB347",
-      "peso": 0.1
-    },
-    "mitico": {
-      "nombre": "Mítico",
-      "color": "#C79BFF",
-      "peso": 2.9
-    },
-    "epico": {
-      "nombre": "Épico",
-      "color": "#FF77FF",
-      "peso": 12
-    },
-    "raro": {
-      "nombre": "Raro",
-      "color": "#7CFF7C",
-      "peso": 25
-    },
-    "comun": {
-      "nombre": "Común",
-      "color": "#E0E0E0",
-      "peso": 60
-    }
+ "_nota": "Fuente de verdad de las calidades de PhoenixCrates. Primero sale la calidad (porcentaje de 'calidades' de cada caja) y despues el premio (peso dentro de su calidad). 'n' es la posicion del premio en la copia original crates/<caja>.yml.bak-calidades-20261006; calidad null = premio apagado (peso 0). generador.js convierte esto en el weight final y en las lineas de lore de la vista previa. 'nombre' es el nombre que tenia la caja en ExcellentCrates (MiniMessage); se usa como display-name y como titulo de su menu. Opcional por premio: 'por-jugador' = N veces como mucho por jugador (win-limits de PhoenixCrates) y 'excluir-con-permiso' = lista de permisos (restricted-permissions); quien ya llego al tope o tiene el permiso no lo puede sacar y la caja sortea otro premio en su lugar. Premios que no estan en la .bak: entrada con 'nuevo' {identifier, material, nombre, descripcion, comandos} en lugar de 'n'; el generador escribe el bloque entero con imagen simple, y 'estilo-nuevos' de la caja ({degradado: [de, a], descripcion: color}) les da el mismo nombre en degradado y la misma linea gris que al resto.",
+ "calidades": {
+  "inmortal": {
+   "nombre": "Inmortal",
+   "color": "#FF5C7A",
+   "peso": 0.05
   },
-  "orden": [
-    "inmortal",
-    "unico",
-    "legendario",
-    "mitico",
-    "epico",
-    "raro",
-    "comun"
-  ],
-  "cajas": {
-    "legendary": {
-      "nombre": "<gradient:#FFD166:#FF8A00><bold>CRATE LEGENDARIA</bold></gradient>",
-      "titulo": { "texto": "CRATE LEGENDARIA", "de": "#D88400", "a": "#C85A00", "llave": "legendary" },
-      "menu": "legendaria_preview",
-      "calidades": {
-        "inmortal": 0.2,
-        "unico": 0.8,
-        "legendario": 4,
-        "mitico": 12,
-        "epico": 20,
-        "raro": 63
-      },
-      "premios": [
-        { "match": "mi give SWORD HOJA_DEL_VACIO", "calidad": "inmortal", "peso": 10 },
-        { "match": "material: custom:mmoitem:armor25", "calidad": "inmortal", "peso": 10, "_": "Élitros Eternos" },
-        { "match": "mi give ARMOR CORONA_DEL_VACIO", "calidad": "unico", "peso": 10 },
-        { "match": "mi give ARMOR CORAZA_DEL_VACIO", "calidad": "unico", "peso": 10 },
-        { "match": "mi give ARMOR GREBAS_DEL_VACIO", "calidad": "unico", "peso": 10 },
-        { "match": "mi give ARMOR SOLERETAS_DEL_VACIO", "calidad": "unico", "peso": 10 },
-        { "match": "mi give TOOL PICO_DEL_VACIO", "calidad": "unico", "peso": 10 },
-        { "match": "mi give TOOL PALA_DEL_VACIO", "calidad": "unico", "peso": 10 },
-        { "match": "mi give TOOL HACHA_DEL_VACIO", "calidad": "unico", "peso": 10 },
-        { "match": "mi give ARMOR YELMO_DEL_ECLIPSE", "calidad": "legendario", "peso": 10 },
-        { "match": "mi give ARMOR CORAZA_DEL_ECLIPSE", "calidad": "legendario", "peso": 10 },
-        { "match": "mi give ARMOR GREBAS_DEL_ECLIPSE", "calidad": "legendario", "peso": 10 },
-        { "match": "mi give ARMOR BOTAS_DEL_ECLIPSE", "calidad": "legendario", "peso": 10 },
-        { "match": "mi give TOOL PICO_DEL_ECLIPSE", "calidad": "legendario", "peso": 10 },
-        { "match": "mi give TOOL PALA_DEL_ECLIPSE", "calidad": "legendario", "peso": 10 },
-        { "match": "mi give TOOL HACHA_DEL_ECLIPSE", "calidad": "legendario", "peso": 10 },
-        { "match": "mi give SWORD FILO_DEL_ECLIPSE", "calidad": "legendario", "peso": 6 },
-        { "match": "material: custom:mmoitem:hammer1", "calidad": "legendario", "peso": 6, "_": "Mazo del Eclipse" },
-        { "match": "mi give ARMOR CELADA_DE_ESCARCHA", "calidad": "mitico", "peso": 10 },
-        { "match": "mi give ARMOR CORAZA_DE_ESCARCHA", "calidad": "mitico", "peso": 10 },
-        { "match": "mi give ARMOR GREBAS_DE_ESCARCHA", "calidad": "mitico", "peso": 10 },
-        { "match": "mi give ARMOR BOTAS_DE_ESCARCHA", "calidad": "mitico", "peso": 10 },
-        { "match": "mi give TOOL PICO_DE_ESCARCHA", "calidad": "mitico", "peso": 10 },
-        { "match": "mi give TOOL PALA_DE_ESCARCHA", "calidad": "mitico", "peso": 10 },
-        { "match": "mi give TOOL HACHA_DE_ESCARCHA", "calidad": "mitico", "peso": 10 },
-        { "match": "mi give SWORD COLMILLO_DE_ESCARCHA", "calidad": "mitico", "peso": 6 },
-        { "match": "mi give SWORD LAMENTO_SEPULCRAL", "calidad": "mitico", "peso": 6 },
-        { "match": "mi give SWORD MAREA_DEL_LEVIATAN", "calidad": "mitico", "peso": 6 },
-        { "match": "mi give SWORD AGUIJON_DE_ARAGON", "calidad": "mitico", "peso": 6 },
-        { "match": "material: custom:mmoitem:spear1", "calidad": "mitico", "peso": 6, "_": "Lanza de Escarcha" },
-        { "match": "material: custom:mmoitem:spear3", "calidad": "mitico", "peso": 6, "_": "Tridente del Leviatán" },
-        { "match": "mi give TOOL PICO_ANGEL_SABIDURIA", "calidad": "epico", "peso": 10 },
-        { "match": "mi give TOOL PALA_VORTICE_ARIDO", "calidad": "epico", "peso": 10 },
-        { "match": "mi give TOOL BALLESTA_DEVORADORA", "calidad": "epico", "peso": 10 },
-        { "match": "givebook %player% doublestrike", "calidad": "epico", "peso": 10 },
-        { "match": "givebook %player% lifesteal", "calidad": "epico", "peso": 10 },
-        { "match": "permission set tags.legend", "calidad": "epico", "peso": 5 },
-        { "match": "giveKey legendary %player% 2", "calidad": "raro", "peso": 3 },
-        { "match": "giveKey spawner %player% 2", "calidad": "raro", "peso": 5 },
-        { "match": "giveKey pets %player% 2", "calidad": "raro", "peso": 5 },
-        { "match": "mobcoin give %player% 60000", "calidad": "raro", "peso": 4 },
-        { "match": "eco give %player% 100000", "calidad": "raro", "peso": 4 }
-      ]
-    },
-    "spawners": {
-      "nombre": "<#47D7FF><bold>✦ CRATE SPAWNERS ✦</bold>",
-      "titulo": { "texto": "CRATE SPAWNERS", "de": "#10759A", "a": "#0E6394", "llave": "spawner" },
-      "calidades": {
-        "legendario": 3,
-        "mitico": 12,
-        "epico": 30,
-        "raro": 55
-      },
-      "premios": [
-        { "n": 5, "calidad": "legendario", "peso": 3, "_": "Evocador" },
-        { "n": 7, "calidad": "legendario", "peso": 4, "_": "Gólem de hierro" },
-        { "n": 6, "calidad": "legendario", "peso": 5, "_": "Guardián" },
-        { "n": 2, "calidad": "mitico", "peso": 10, "_": "Esqueleto wither" },
-        { "n": 4, "calidad": "mitico", "peso": 10, "_": "Enderman" },
-        { "n": 8, "calidad": "epico", "peso": 10, "_": "Bruja" },
-        { "n": 9, "calidad": "epico", "peso": 10, "_": "Piglin zombificado" },
-        { "n": 10, "calidad": "epico", "peso": 10, "_": "Creeper x2" },
-        { "n": 0, "calidad": "raro", "peso": 10, "_": "Cubo de magma" },
-        { "n": 1, "calidad": "raro", "peso": 10, "_": "Slime" },
-        { "n": 3, "calidad": "raro", "peso": 10, "_": "Araña de cueva x2" }
-      ]
-    },
-    "pets": {
-      "nombre": "<gradient:#FF4FD8:#8B5CF6><bold>CRATE MASCOTAS</bold></gradient>",
-      "titulo": { "texto": "CRATE MASCOTAS", "de": "#BE32A3", "a": "#6D47C6", "llave": "pets" },
-      "calidades": {
-        "legendario": 1,
-        "epico": 10,
-        "raro": 34,
-        "comun": 55
-      },
-      "premios": [
-        { "n": 20, "calidad": "legendario", "peso": 10, "_": "Huevo aleatorio legendario" },
-        { "n": 17, "calidad": "epico", "peso": 10, "_": "Breeze (unique)" },
-        { "n": 19, "calidad": "epico", "peso": 10, "_": "Oso polar (unique)" },
-        { "n": 18, "calidad": "epico", "peso": 8, "_": "Huevo aleatorio épico" },
-        { "n": 10, "calidad": "raro", "peso": 10, "_": "Ahogado" },
-        { "n": 11, "calidad": "raro", "peso": 10, "_": "Araña" },
-        { "n": 12, "calidad": "raro", "peso": 10, "_": "Blaze" },
-        { "n": 13, "calidad": "raro", "peso": 10, "_": "Creeper" },
-        { "n": 14, "calidad": "raro", "peso": 10, "_": "Esqueleto" },
-        { "n": 16, "calidad": "raro", "peso": 10, "_": "Piglin" },
-        { "n": 15, "calidad": "raro", "peso": 6, "_": "Huevo aleatorio raro" },
-        { "n": 0, "calidad": "comun", "peso": 10, "_": "Abeja" },
-        { "n": 1, "calidad": "comun", "peso": 10, "_": "Cerdo" },
-        { "n": 2, "calidad": "comun", "peso": 10, "_": "Conejo" },
-        { "n": 3, "calidad": "comun", "peso": 10, "_": "Gallina" },
-        { "n": 4, "calidad": "comun", "peso": 10, "_": "Gato" },
-        { "n": 6, "calidad": "comun", "peso": 10, "_": "Lobo" },
-        { "n": 7, "calidad": "comun", "peso": 10, "_": "Oveja" },
-        { "n": 8, "calidad": "comun", "peso": 10, "_": "Vaca" },
-        { "n": 9, "calidad": "comun", "peso": 10, "_": "Zorro" },
-        { "n": 21, "calidad": "comun", "peso": 5, "_": "Panda" },
-        { "n": 5, "calidad": "comun", "peso": 5, "_": "Huevo aleatorio común" }
-      ]
-    },
-    "caos": {
-      "nombre": "<#FF6FD8><bold>✦ CRATE CAOS ✦</bold>",
-      "titulo": { "texto": "CRATE CAOS", "de": "#C0318D", "a": "#9E1F6B", "llave": "caos" },
-      "estilo-nuevos": { "degradado": ["#FFA6E8", "#C21E9C"], "descripcion": "#A1A1A1" },
-      "calidades": {
-        "unico": 0.25,
-        "legendario": 0.75,
-        "mitico": 6,
-        "epico": 33,
-        "raro": 60
-      },
-      "premios": [
-        { "n": 22, "calidad": "unico", "peso": 50, "por-jugador": 1, "excluir-con-permiso": ["pet.type.creaking"], "_": "Mascota Creaking" },
-        { "n": 23, "calidad": "unico", "peso": 50, "por-jugador": 1, "excluir-con-permiso": ["pet.type.warden"], "_": "Mascota Warden" },
-        { "n": 24, "calidad": "legendario", "peso": 20, "_": "Tag Caja del Caos" },
-        { "n": 16, "calidad": "mitico", "peso": 88.67, "_": "Slot increaser" },
-        { "n": 17, "calidad": "mitico", "peso": 177.34, "_": "Esencia x20" },
-        { "n": 18, "calidad": "mitico", "peso": 118.23, "_": "Crédito fragmento" },
-        { "n": 19, "calidad": "mitico", "peso": 44.33, "_": "Libro" },
-        { "n": 20, "calidad": "mitico", "peso": 82.76, "_": "Gema + ascua" },
-        { "n": 21, "calidad": "mitico", "peso": 88.67, "_": "Sello errante" },
-        { "n": 7, "calidad": "epico", "peso": 650, "_": "Libro ULTIMATE aleatorio" },
-        { "n": 9, "calidad": "epico", "peso": 420, "_": "Ascua" },
-        { "n": 10, "calidad": "epico", "peso": 280, "_": "Cristal x2" },
-        { "n": 11, "calidad": "epico", "peso": 560, "_": "Esencia x10" },
-        { "n": 12, "calidad": "epico", "peso": 560, "_": "Gema" },
-        { "n": 13, "calidad": "epico", "peso": 420, "_": "Grabado" },
-        { "n": 14, "calidad": "epico", "peso": 280, "_": "Llave KOTH" },
-        { "n": 15, "calidad": "epico", "peso": 280, "_": "Talismán" },
-        { "nuevo": { "identifier": "caos_356d02c503d87117", "material": "SUGAR", "nombre": "Polvo Estelar Legendario", "descripcion": "Más éxito y menos riesgo de rotura para un libro Legendario.", "comandos": ["ae giveitem %player% magic 1 LEGENDARY"] }, "calidad": "epico", "peso": 345, "_": "Polvo Estelar Legendario (AE magic-dust; propuesta epic 10 de 100 -> 10 % de los 3450 de epico)" },
-        { "nuevo": { "identifier": "caos_e9628d785373773f", "material": "MAGMA_CREAM", "nombre": "Contador de Bajas", "descripcion": "Cuenta los jugadores que derrotas con el objeto.", "comandos": ["ae giveitem %player% stattrak 1"] }, "calidad": "epico", "peso": 207, "_": "Contador de Bajas (AE stattrak; propuesta epic 6 de 100)" },
-        { "nuevo": { "identifier": "caos_0e37593adaea23b8", "material": "FIREWORK_STAR", "nombre": "Contador de Peces", "descripcion": "Cuenta los peces que sacas con la caña.", "comandos": ["ae giveitem %player% fishtrak 1"] }, "calidad": "epico", "peso": 138, "_": "Contador de Peces (AE fishtrak; propuesta epic 4 de 100)" },
-        { "n": 0, "calidad": "raro", "peso": 1300, "_": "Cristal" },
-        { "n": 1, "calidad": "raro", "peso": 2275, "_": "Esencia x6" },
-        { "n": 2, "calidad": "raro", "peso": 975, "_": "Frasco" },
-        { "n": 8, "calidad": "raro", "peso": 1300, "_": "Tintura x3" },
-        { "nuevo": { "identifier": "caos_d45139e9897d1279", "material": "SUGAR", "nombre": "Polvo Estelar Supremo", "descripcion": "Más éxito y menos riesgo de rotura para un libro Supremo.", "comandos": ["ae giveitem %player% magic 1 ULTIMATE"] }, "calidad": "raro", "peso": 585, "_": "Polvo Estelar Supremo (AE magic-dust; propuesta rare 10 de 100 -> 10 % de los 5850 de raro)" },
-        { "nuevo": { "identifier": "caos_1aa8082c796a5484", "material": "SLIME_BALL", "nombre": "Contador de Criaturas", "descripcion": "Cuenta las criaturas que matas con el arma.", "comandos": ["ae giveitem %player% mobtrak 1"] }, "calidad": "raro", "peso": 351, "_": "Contador de Criaturas (AE mobtrak; propuesta rare 6 de 100)" },
-        { "nuevo": { "identifier": "caos_47e9c09563074a44", "material": "SLIME_BALL", "nombre": "Contador de Bloques", "descripcion": "Cuenta los bloques que rompes con la herramienta.", "comandos": ["ae giveitem %player% blocktrak 1"] }, "calidad": "raro", "peso": 351, "_": "Contador de Bloques (AE blocktrak; propuesta rare 6 de 100)" },
-        { "n": 3, "calidad": null, "_": "Esencia x10 duplicada, ya estaba en 0" },
-        { "n": 4, "calidad": null, "_": "Tag Caja del Caos duplicado, ya estaba en 0" },
-        { "n": 5, "calidad": null, "_": "Sello errante duplicado, ya estaba en 0" },
-        { "n": 6, "calidad": null, "_": "Mascota Warden duplicada, ya estaba en 0" }
-      ]
-    },
-    "koth": {
-      "nombre": "&c&lCRATE &4&lKOTH",
-      "titulo": { "texto": "CRATE KOTH", "de": "#C42F2F", "a": "#7F1414", "llave": "koth" },
-      "calidades": {
-        "legendario": 1.5,
-        "mitico": 6,
-        "epico": 30,
-        "raro": 62.5
-      },
-      "premios": [
-        { "n": 0, "calidad": "legendario", "peso": 10, "_": "Yelmo Conquistador" },
-        { "n": 1, "calidad": "legendario", "peso": 10, "_": "Pechera Conquistador" },
-        { "n": 2, "calidad": "legendario", "peso": 10, "_": "Grebas Conquistador" },
-        { "n": 3, "calidad": "legendario", "peso": 10, "_": "Botas Conquistador" },
-        { "n": 4, "calidad": "mitico", "peso": 10, "_": "Devoradora de Soles" },
-        { "n": 5, "calidad": "mitico", "peso": 10, "_": "Pico Geoda Profunda" },
-        { "n": 6, "calidad": "mitico", "peso": 10, "_": "Hacha KOTH" },
-        { "n": 30, "calidad": "mitico", "peso": 10, "_": "Libro LEGENDARY aleatorio" },
-        { "n": 31, "calidad": "mitico", "peso": 8, "_": "Tag KOTH" },
-        { "n": 8, "calidad": "epico", "peso": 10, "_": "Faro x2" },
-        { "n": 13, "calidad": "epico", "peso": 10, "_": "Manzana encantada x5" },
-        { "n": 25, "calidad": "epico", "peso": 10, "_": "Holy white scroll" },
-        { "n": 26, "calidad": "epico", "peso": 8, "_": "Llave legendaria" },
-        { "n": 27, "calidad": "epico", "peso": 10, "_": "Llave épica" },
-        { "n": 28, "calidad": "epico", "peso": 10, "_": "Élitros" },
-        { "n": 29, "calidad": "epico", "peso": 10, "_": "Tótem" },
-        { "n": 7, "calidad": "raro", "peso": 10, "_": "10.000 de dinero" },
-        { "n": 9, "calidad": "raro", "peso": 10, "_": "Botellas de experiencia x32" },
-        { "n": 10, "calidad": "raro", "peso": 10, "_": "Vara de breeze x18" },
-        { "n": 11, "calidad": "raro", "peso": 10, "_": "Ballesta Perforación IV" },
-        { "n": 12, "calidad": "raro", "peso": 10, "_": "Bloque de diamante x5" },
-        { "n": 14, "calidad": "raro", "peso": 10, "_": "Flechas espectrales x64" },
-        { "n": 15, "calidad": "raro", "peso": 10, "_": "Manzana dorada x16" },
-        { "n": 16, "calidad": "raro", "peso": 10, "_": "3.000 MobCoins" },
-        { "n": 17, "calidad": "raro", "peso": 10, "_": "Obsidiana x32" },
-        { "n": 18, "calidad": "raro", "peso": 10, "_": "Perlas de ender x32" },
-        { "n": 24, "calidad": "raro", "peso": 10, "_": "Carga de viento x16" },
-        { "n": 19, "calidad": "raro", "peso": 8, "_": "Plantilla Rib x2" },
-        { "n": 20, "calidad": "raro", "peso": 8, "_": "Plantilla Snout x2" },
-        { "n": 21, "calidad": "raro", "peso": 8, "_": "Plantilla Snout x2" },
-        { "n": 22, "calidad": "raro", "peso": 8, "_": "Plantilla Vex x2" },
-        { "n": 23, "calidad": "raro", "peso": 8, "_": "Plantilla Ward x2" }
-      ]
-    },
-    "booster": {
-      "nombre": "<gradient:#5865F2:#9065F2>&lCRATE BOOSTER</gradient>",
-      "titulo": { "texto": "CRATE BOOSTER", "de": "#4F5BE0", "a": "#6948B8", "llave": "booster" },
-      "calidades": {
-        "legendario": 4,
-        "mitico": 10,
-        "epico": 26,
-        "raro": 60
-      },
-      "premios": [
-        { "n": 0, "calidad": "legendario", "peso": 10, "_": "Casco Cometa" },
-        { "n": 1, "calidad": "legendario", "peso": 10, "_": "Pechera Cometa" },
-        { "n": 2, "calidad": "legendario", "peso": 10, "_": "Grebas Cometa" },
-        { "n": 3, "calidad": "legendario", "peso": 10, "_": "Botas Cometa" },
-        { "n": 4, "calidad": "legendario", "peso": 10, "_": "Pico Cometa" },
-        { "n": 5, "calidad": "legendario", "peso": 10, "_": "Pala Cometa" },
-        { "n": 6, "calidad": "legendario", "peso": 10, "_": "Hacha Cometa" },
-        { "n": 41, "calidad": "legendario", "peso": 6, "_": "Libro FABLED aleatorio" },
-        { "n": 7, "calidad": "mitico", "peso": 10, "_": "Casco Impulso" },
-        { "n": 8, "calidad": "mitico", "peso": 10, "_": "Pechera Impulso" },
-        { "n": 9, "calidad": "mitico", "peso": 10, "_": "Grebas Impulso" },
-        { "n": 10, "calidad": "mitico", "peso": 10, "_": "Botas Impulso" },
-        { "n": 11, "calidad": "mitico", "peso": 10, "_": "Pico Impulso" },
-        { "n": 12, "calidad": "mitico", "peso": 10, "_": "Pala Impulso" },
-        { "n": 13, "calidad": "mitico", "peso": 10, "_": "Hacha Impulso" },
-        { "n": 23, "calidad": "mitico", "peso": 8, "_": "Bloque de netherita x2" },
-        { "n": 40, "calidad": "mitico", "peso": 8, "_": "Llave épica" },
-        { "n": 14, "calidad": "epico", "peso": 10, "_": "Yelmo de Cerezo" },
-        { "n": 15, "calidad": "epico", "peso": 10, "_": "Peto de Cerezo" },
-        { "n": 16, "calidad": "epico", "peso": 10, "_": "Grebas de Cerezo" },
-        { "n": 17, "calidad": "epico", "peso": 10, "_": "Botas de Cerezo" },
-        { "n": 18, "calidad": "epico", "peso": 10, "_": "Pico de Cerezo" },
-        { "n": 19, "calidad": "epico", "peso": 10, "_": "Hacha de Cerezo" },
-        { "n": 20, "calidad": "epico", "peso": 8, "_": "Susurro de Cerezo" },
-        { "n": 31, "calidad": "epico", "peso": 10, "_": "Caña Migrador de Almas" },
-        { "n": 39, "calidad": "epico", "peso": 10, "_": "Elixir de Vida del Eclipse" },
-        { "n": 33, "calidad": "epico", "peso": 10, "_": "Grimorio Sombrío" },
-        { "n": 34, "calidad": "epico", "peso": 8, "_": "Llave KOTH" },
-        { "n": 36, "calidad": "epico", "peso": 8, "_": "Llave Rankup" },
-        { "n": 21, "calidad": "raro", "peso": 10, "_": "Bloque de esmeralda x64" },
-        { "n": 22, "calidad": "raro", "peso": 10, "_": "Bloque de hierro x64" },
-        { "n": 24, "calidad": "raro", "peso": 10, "_": "Botellas de experiencia x32" },
-        { "n": 25, "calidad": "raro", "peso": 10, "_": "Cohetes x64" },
-        { "n": 26, "calidad": "raro", "peso": 10, "_": "30 niveles de experiencia" },
-        { "n": 27, "calidad": "raro", "peso": 10, "_": "Cohetes x64" },
-        { "n": 28, "calidad": "raro", "peso": 10, "_": "Manzana dorada x12" },
-        { "n": 29, "calidad": "raro", "peso": 10, "_": "Perlas de ender x16" },
-        { "n": 30, "calidad": "raro", "peso": 10, "_": "Zanahoria dorada x64" },
-        { "n": 32, "calidad": "raro", "peso": 10, "_": "70.000 de dinero" },
-        { "n": 35, "calidad": "raro", "peso": 10, "_": "Llave de mascotas" },
-        { "n": 37, "calidad": "raro", "peso": 10, "_": "Llave de votos" },
-        { "n": 38, "calidad": "raro", "peso": 10, "_": "40.000 MobCoins" }
-      ]
-    },
-    "cajaepica": {
-      "nombre": "&5&l CRATE EPICA",
-      "titulo": { "texto": "CRATE ÉPICA", "de": "#A23BD6", "a": "#7A2DB8", "llave": "llave_epica" },
-      "calidades": {
-        "legendario": 2,
-        "mitico": 8,
-        "epico": 30,
-        "raro": 60
-      },
-      "premios": [
-        { "n": 30, "calidad": "legendario", "peso": 8, "_": "Espada Eterna" },
-        { "n": 37, "calidad": "legendario", "peso": 10, "_": "Tag Arcano" },
-        { "n": 38, "calidad": "legendario", "peso": 6, "_": "Libro FABLED aleatorio" },
-        { "n": 25, "calidad": "mitico", "peso": 10, "_": "Tizona de Brasa" },
-        { "n": 26, "calidad": "mitico", "peso": 10, "_": "Cuerno de la Cabra" },
-        { "n": 27, "calidad": "mitico", "peso": 10, "_": "Espina de la Arboleda" },
-        { "n": 28, "calidad": "mitico", "peso": 10, "_": "Filo de Centella" },
-        { "n": 29, "calidad": "mitico", "peso": 10, "_": "Zarpa del Conejo" },
-        { "n": 31, "calidad": "mitico", "peso": 8, "_": "Maza" },
-        { "n": 35, "calidad": "mitico", "peso": 10, "_": "Lanza de netherita" },
-        { "n": 36, "calidad": "mitico", "peso": 10, "_": "Tridente" },
-        { "n": 0, "calidad": "epico", "peso": 10, "_": "Yelmo de Brasa" },
-        { "n": 1, "calidad": "epico", "peso": 10, "_": "Coraza de Brasa" },
-        { "n": 2, "calidad": "epico", "peso": 10, "_": "Grebas de Brasa" },
-        { "n": 3, "calidad": "epico", "peso": 10, "_": "Botas de Brasa" },
-        { "n": 4, "calidad": "epico", "peso": 10, "_": "Pico de Brasa" },
-        { "n": 5, "calidad": "epico", "peso": 10, "_": "Pala de Brasa" },
-        { "n": 6, "calidad": "epico", "peso": 10, "_": "Hacha de Brasa" },
-        { "n": 7, "calidad": "epico", "peso": 10, "_": "Yelmo de Centella" },
-        { "n": 8, "calidad": "epico", "peso": 10, "_": "Coraza de Centella" },
-        { "n": 9, "calidad": "epico", "peso": 10, "_": "Grebas de Centella" },
-        { "n": 10, "calidad": "epico", "peso": 10, "_": "Botas de Centella" },
-        { "n": 11, "calidad": "epico", "peso": 10, "_": "Pico de Centella" },
-        { "n": 12, "calidad": "epico", "peso": 10, "_": "Pala de Centella" },
-        { "n": 13, "calidad": "epico", "peso": 10, "_": "Hacha de Centella" },
-        { "n": 14, "calidad": "epico", "peso": 10, "_": "Yelmo de la Arboleda" },
-        { "n": 15, "calidad": "epico", "peso": 10, "_": "Peto de la Arboleda" },
-        { "n": 16, "calidad": "epico", "peso": 10, "_": "Grebas de la Arboleda" },
-        { "n": 17, "calidad": "epico", "peso": 10, "_": "Botas de la Arboleda" },
-        { "n": 18, "calidad": "epico", "peso": 10, "_": "Pico de la Arboleda" },
-        { "n": 19, "calidad": "epico", "peso": 10, "_": "Pala de la Arboleda" },
-        { "n": 20, "calidad": "epico", "peso": 10, "_": "Hacha de la Arboleda" },
-        { "n": 21, "calidad": "raro", "peso": 10, "_": "Armadura épica: casco" },
-        { "n": 22, "calidad": "raro", "peso": 10, "_": "Armadura épica: pechera" },
-        { "n": 23, "calidad": "raro", "peso": 10, "_": "Armadura épica: grebas" },
-        { "n": 24, "calidad": "raro", "peso": 10, "_": "Armadura épica: botas" },
-        { "n": 32, "calidad": "raro", "peso": 10, "_": "Caña de pescar" },
-        { "n": 33, "calidad": "raro", "peso": 10, "_": "90.000 de dinero" },
-        { "n": 34, "calidad": "raro", "peso": 10, "_": "20.000 MobCoins" }
-      ]
-    },
-    "dungeon": {
-      "nombre": "<#FFFFFF>&lCRATE <#3A54A3>&lDUNGEON",
-      "titulo": { "texto": "CRATE DUNGEON", "de": "#4A6BC9", "a": "#2E4590", "llave": "llave_dungeon" },
-      "calidades": {
-        "legendario": 2,
-        "mitico": 10,
-        "epico": 33,
-        "raro": 55
-      },
-      "premios": [
-        { "n": 0, "calidad": "legendario", "peso": 10, "_": "Casco Fuego de Dragón" },
-        { "n": 1, "calidad": "legendario", "peso": 10, "_": "Pechera Fuego de Dragón" },
-        { "n": 2, "calidad": "legendario", "peso": 10, "_": "Grebas Fuego de Dragón" },
-        { "n": 3, "calidad": "legendario", "peso": 10, "_": "Botas Fuego de Dragón" },
-        { "n": 33, "calidad": "legendario", "peso": 8, "_": "Emblema" },
-        { "n": 34, "calidad": "legendario", "peso": 8, "_": "Foco" },
-        { "n": 35, "calidad": "legendario", "peso": 6, "_": "Sello x3" },
-        { "n": 7, "calidad": "mitico", "peso": 10, "_": "Yelmo Explorador" },
-        { "n": 8, "calidad": "mitico", "peso": 10, "_": "Pechera Explorador" },
-        { "n": 9, "calidad": "mitico", "peso": 10, "_": "Grebas Explorador" },
-        { "n": 10, "calidad": "mitico", "peso": 10, "_": "Botas Explorador" },
-        { "n": 22, "calidad": "mitico", "peso": 10, "_": "Runa x2" },
-        { "n": 25, "calidad": "mitico", "peso": 10, "_": "Reliquia Colmillo Ancestral x8" },
-        { "n": 28, "calidad": "mitico", "peso": 10, "_": "Núcleo del Dragón x32" },
-        { "n": 30, "calidad": "mitico", "peso": 10, "_": "Sello del Guardián x8" },
-        { "n": 31, "calidad": "mitico", "peso": 10, "_": "Insignia Divina del Guardián x2" },
-        { "n": 32, "calidad": "mitico", "peso": 8, "_": "Fragmento" },
-        { "n": 4, "calidad": "epico", "peso": 10, "_": "Pico Astral" },
-        { "n": 5, "calidad": "epico", "peso": 10, "_": "Hacha de netherita Dungeon" },
-        { "n": 6, "calidad": "epico", "peso": 10, "_": "Faro x3" },
-        { "n": 14, "calidad": "epico", "peso": 10, "_": "Casco de netherita Dungeon" },
-        { "n": 15, "calidad": "epico", "peso": 10, "_": "Pechera de netherita Dungeon" },
-        { "n": 16, "calidad": "epico", "peso": 10, "_": "Grebas de netherita Dungeon" },
-        { "n": 17, "calidad": "epico", "peso": 10, "_": "Botas de netherita Dungeon" },
-        { "n": 21, "calidad": "epico", "peso": 10, "_": "Plantilla de mejora de netherita x2" },
-        { "n": 23, "calidad": "epico", "peso": 10, "_": "Plantilla Spire x3" },
-        { "n": 26, "calidad": "epico", "peso": 10, "_": "Colmillo Congelado x32" },
-        { "n": 27, "calidad": "epico", "peso": 10, "_": "Fragmento x4" },
-        { "n": 29, "calidad": "epico", "peso": 10, "_": "Núcleo Dracónico Purificado x8" },
-        { "n": 11, "calidad": "raro", "peso": 10, "_": "Bloque de oro x8" },
-        { "n": 12, "calidad": "raro", "peso": 10, "_": "Esmeralda x32" },
-        { "n": 13, "calidad": "raro", "peso": 10, "_": "Botellas de experiencia x64" },
-        { "n": 18, "calidad": "raro", "peso": 10, "_": "Manzana dorada x32" },
-        { "n": 19, "calidad": "raro", "peso": 10, "_": "Insignia x2" },
-        { "n": 20, "calidad": "raro", "peso": 10, "_": "Medalla" },
-        { "n": 24, "calidad": "raro", "peso": 10, "_": "Carga de viento x48" }
-      ]
-    },
-    "rankup": {
-      "nombre": "&c&lCRATE RANKUP",
-      "titulo": { "texto": "CRATE RANKUP", "de": "#C04931", "a": "#8E2614", "llave": "llave_rankup" },
-      "calidades": {
-        "legendario": 2,
-        "mitico": 8,
-        "epico": 28,
-        "raro": 62
-      },
-      "premios": [
-        { "n": 0, "calidad": "legendario", "peso": 10, "_": "Casco Cénit" },
-        { "n": 1, "calidad": "legendario", "peso": 10, "_": "Pechera Cénit" },
-        { "n": 2, "calidad": "legendario", "peso": 10, "_": "Grebas Cénit" },
-        { "n": 3, "calidad": "legendario", "peso": 10, "_": "Botas Cénit" },
-        { "n": 7, "calidad": "mitico", "peso": 10, "_": "Casco Ascenso" },
-        { "n": 8, "calidad": "mitico", "peso": 10, "_": "Pechera Ascenso" },
-        { "n": 9, "calidad": "mitico", "peso": 10, "_": "Grebas Ascenso" },
-        { "n": 10, "calidad": "mitico", "peso": 10, "_": "Botas Ascenso" },
-        { "n": 11, "calidad": "mitico", "peso": 10, "_": "Filo Cénit" },
-        { "n": 16, "calidad": "mitico", "peso": 8, "_": "400 niveles de experiencia" },
-        { "n": 21, "calidad": "mitico", "peso": 8, "_": "Escudo Dracónico" },
-        { "n": 27, "calidad": "mitico", "peso": 8, "_": "Tag Ascenso" },
-        { "n": 4, "calidad": "epico", "peso": 10, "_": "Pico Cumbre" },
-        { "n": 5, "calidad": "epico", "peso": 10, "_": "Pico Horizonte" },
-        { "n": 15, "calidad": "epico", "peso": 10, "_": "Manzana encantada x5" },
-        { "n": 18, "calidad": "epico", "peso": 10, "_": "Libro UNIQUE aleatorio" },
-        { "n": 20, "calidad": "epico", "peso": 10, "_": "Escama Dracónica x8" },
-        { "n": 22, "calidad": "epico", "peso": 10, "_": "Llave de spawners" },
-        { "n": 23, "calidad": "epico", "peso": 10, "_": "Llave de mascotas" },
-        { "n": 25, "calidad": "epico", "peso": 10, "_": "Libro Telepatía II" },
-        { "n": 26, "calidad": "epico", "peso": 10, "_": "Libro Veinminer II" },
-        { "n": 6, "calidad": "raro", "peso": 10, "_": "Hacha Votante" },
-        { "n": 12, "calidad": "raro", "peso": 10, "_": "Espada Alba" },
-        { "n": 13, "calidad": "raro", "peso": 10, "_": "Hoja del Primer Paso" },
-        { "n": 14, "calidad": "raro", "peso": 10, "_": "30.000 de dinero" },
-        { "n": 17, "calidad": "raro", "peso": 10, "_": "Libro SIMPLE aleatorio" },
-        { "n": 19, "calidad": "raro", "peso": 10, "_": "8.000 MobCoins" },
-        { "n": 24, "calidad": "raro", "peso": 10, "_": "2 llaves de votos" }
-      ]
-    },
-    "vote": {
-      "nombre": "&a&lCRATE VOTE",
-      "titulo": { "texto": "CRATE VOTOS", "de": "#2D7E39", "a": "#1E6E31", "llave": "vote" },
-      "calidades": {
-        "legendario": 1,
-        "mitico": 4,
-        "epico": 20,
-        "raro": 35,
-        "comun": 40
-      },
-      "premios": [
-        { "n": 37, "calidad": "legendario", "peso": 10, "_": "Élitros" },
-        { "n": 33, "calidad": "legendario", "peso": 8, "_": "Tag Bastión" },
-        { "n": 34, "calidad": "mitico", "peso": 10, "_": "Tag Mítico" },
-        { "n": 35, "calidad": "mitico", "peso": 10, "_": "Tag Soberano" },
-        { "n": 36, "calidad": "mitico", "peso": 10, "_": "Tag Supremo" },
-        { "n": 25, "calidad": "mitico", "peso": 10, "_": "Estrella del Nether x2" },
-        { "n": 20, "calidad": "mitico", "peso": 10, "_": "Núcleo pesado" },
-        { "n": 14, "calidad": "mitico", "peso": 10, "_": "Faro" },
-        { "n": 0, "calidad": "epico", "peso": 10, "_": "Yelmo Heraldo" },
-        { "n": 1, "calidad": "epico", "peso": 10, "_": "Pechera Heraldo" },
-        { "n": 2, "calidad": "epico", "peso": 10, "_": "Grebas Heraldo" },
-        { "n": 3, "calidad": "epico", "peso": 10, "_": "Botas Heraldo" },
-        { "n": 4, "calidad": "epico", "peso": 10, "_": "Pico Votante" },
-        { "n": 5, "calidad": "epico", "peso": 10, "_": "Pala Votante" },
-        { "n": 6, "calidad": "epico", "peso": 10, "_": "Azada Votante" },
-        { "n": 30, "calidad": "epico", "peso": 10, "_": "Arco Votante" },
-        { "n": 28, "calidad": "epico", "peso": 10, "_": "Tridente" },
-        { "n": 23, "calidad": "epico", "peso": 10, "_": "Lanza de diamante" },
-        { "n": 31, "calidad": "epico", "peso": 10, "_": "Llave de mascotas" },
-        { "n": 32, "calidad": "epico", "peso": 10, "_": "Llave de votos" },
-        { "n": 21, "calidad": "epico", "peso": 8, "_": "Plantilla Host" },
-        { "n": 26, "calidad": "epico", "peso": 8, "_": "Plantilla Sentry" },
-        { "n": 27, "calidad": "epico", "peso": 8, "_": "Plantilla Tide" },
-        { "n": 7, "calidad": "raro", "peso": 10, "_": "Casco Custodio" },
-        { "n": 8, "calidad": "raro", "peso": 10, "_": "Pechera Custodio" },
-        { "n": 9, "calidad": "raro", "peso": 10, "_": "Grebas Custodio" },
-        { "n": 10, "calidad": "raro", "peso": 10, "_": "Botas Custodio" },
-        { "n": 11, "calidad": "raro", "peso": 10, "_": "Yelmo de las Mareas" },
-        { "n": 13, "calidad": "raro", "peso": 10, "_": "Escudo" },
-        { "n": 15, "calidad": "raro", "peso": 10, "_": "Botellas de experiencia x16" },
-        { "n": 16, "calidad": "raro", "peso": 10, "_": "Vara de breeze x4" },
-        { "n": 18, "calidad": "raro", "peso": 10, "_": "Cohetes x32" },
-        { "n": 19, "calidad": "raro", "peso": 10, "_": "15 niveles de experiencia" },
-        { "n": 24, "calidad": "raro", "peso": 10, "_": "1.000 MobCoins" },
-        { "n": 12, "calidad": "comun", "peso": 10, "_": "Terracota esmaltada celeste" },
-        { "n": 17, "calidad": "comun", "peso": 10, "_": "Cofre" },
-        { "n": 22, "calidad": "comun", "peso": 10, "_": "Cofre trampa" },
-        { "n": 29, "calidad": "comun", "peso": 10, "_": "Cofre trampa" }
-      ]
-    }
+  "unico": {
+   "nombre": "Único",
+   "color": "#FFAA00",
+   "peso": 0.1
+  },
+  "legendario": {
+   "nombre": "Legendario",
+   "color": "#FFB347",
+   "peso": 0.1
+  },
+  "mitico": {
+   "nombre": "Mítico",
+   "color": "#C79BFF",
+   "peso": 2.9
+  },
+  "epico": {
+   "nombre": "Épico",
+   "color": "#FF77FF",
+   "peso": 12
+  },
+  "raro": {
+   "nombre": "Raro",
+   "color": "#7CFF7C",
+   "peso": 25
+  },
+  "comun": {
+   "nombre": "Común",
+   "color": "#E0E0E0",
+   "peso": 60
   }
+ },
+ "orden": [
+  "inmortal",
+  "unico",
+  "legendario",
+  "mitico",
+  "epico",
+  "raro",
+  "comun"
+ ],
+ "cajas": {
+  "legendary": {
+   "nombre": "<gradient:#FFD166:#FF8A00><bold>CRATE LEGENDARIA</bold></gradient>",
+   "titulo": {
+    "texto": "CRATE LEGENDARIA",
+    "de": "#D88400",
+    "a": "#C85A00",
+    "llave": "legendary"
+   },
+   "menu": "legendaria_preview",
+   "calidades": {
+    "inmortal": 0.2,
+    "unico": 0.8,
+    "legendario": 4,
+    "mitico": 12,
+    "epico": 20,
+    "raro": 63
+   },
+   "premios": [
+    {
+     "match": "mi give SWORD HOJA_DEL_VACIO",
+     "calidad": "inmortal",
+     "peso": 10
+    },
+    {
+     "match": "material: custom:mmoitem:armor25",
+     "calidad": "inmortal",
+     "peso": 10,
+     "_": "Élitros Eternos"
+    },
+    {
+     "match": "mi give ARMOR CORONA_DEL_VACIO",
+     "calidad": "unico",
+     "peso": 10
+    },
+    {
+     "match": "mi give ARMOR CORAZA_DEL_VACIO",
+     "calidad": "unico",
+     "peso": 10
+    },
+    {
+     "match": "mi give ARMOR GREBAS_DEL_VACIO",
+     "calidad": "unico",
+     "peso": 10
+    },
+    {
+     "match": "mi give ARMOR SOLERETAS_DEL_VACIO",
+     "calidad": "unico",
+     "peso": 10
+    },
+    {
+     "match": "mi give TOOL PICO_DEL_VACIO",
+     "calidad": "unico",
+     "peso": 10
+    },
+    {
+     "match": "mi give TOOL PALA_DEL_VACIO",
+     "calidad": "unico",
+     "peso": 10
+    },
+    {
+     "match": "mi give TOOL HACHA_DEL_VACIO",
+     "calidad": "unico",
+     "peso": 10
+    },
+    {
+     "match": "mi give ARMOR YELMO_DEL_ECLIPSE",
+     "calidad": "legendario",
+     "peso": 10
+    },
+    {
+     "match": "mi give ARMOR CORAZA_DEL_ECLIPSE",
+     "calidad": "legendario",
+     "peso": 10
+    },
+    {
+     "match": "mi give ARMOR GREBAS_DEL_ECLIPSE",
+     "calidad": "legendario",
+     "peso": 10
+    },
+    {
+     "match": "mi give ARMOR BOTAS_DEL_ECLIPSE",
+     "calidad": "legendario",
+     "peso": 10
+    },
+    {
+     "match": "mi give TOOL PICO_DEL_ECLIPSE",
+     "calidad": "legendario",
+     "peso": 10
+    },
+    {
+     "match": "mi give TOOL PALA_DEL_ECLIPSE",
+     "calidad": "legendario",
+     "peso": 10
+    },
+    {
+     "match": "mi give TOOL HACHA_DEL_ECLIPSE",
+     "calidad": "legendario",
+     "peso": 10
+    },
+    {
+     "match": "mi give SWORD FILO_DEL_ECLIPSE",
+     "calidad": "legendario",
+     "peso": 6
+    },
+    {
+     "match": "material: custom:mmoitem:hammer1",
+     "calidad": "legendario",
+     "peso": 6,
+     "_": "Mazo del Eclipse"
+    },
+    {
+     "match": "mi give ARMOR CELADA_DE_ESCARCHA",
+     "calidad": "mitico",
+     "peso": 10
+    },
+    {
+     "match": "mi give ARMOR CORAZA_DE_ESCARCHA",
+     "calidad": "mitico",
+     "peso": 10
+    },
+    {
+     "match": "mi give ARMOR GREBAS_DE_ESCARCHA",
+     "calidad": "mitico",
+     "peso": 10
+    },
+    {
+     "match": "mi give ARMOR BOTAS_DE_ESCARCHA",
+     "calidad": "mitico",
+     "peso": 10
+    },
+    {
+     "match": "mi give TOOL PICO_DE_ESCARCHA",
+     "calidad": "mitico",
+     "peso": 10
+    },
+    {
+     "match": "mi give TOOL PALA_DE_ESCARCHA",
+     "calidad": "mitico",
+     "peso": 10
+    },
+    {
+     "match": "mi give TOOL HACHA_DE_ESCARCHA",
+     "calidad": "mitico",
+     "peso": 10
+    },
+    {
+     "match": "mi give SWORD COLMILLO_DE_ESCARCHA",
+     "calidad": "mitico",
+     "peso": 6
+    },
+    {
+     "match": "mi give SWORD LAMENTO_SEPULCRAL",
+     "calidad": "mitico",
+     "peso": 6
+    },
+    {
+     "match": "mi give SWORD MAREA_DEL_LEVIATAN",
+     "calidad": "mitico",
+     "peso": 6
+    },
+    {
+     "match": "mi give SWORD AGUIJON_DE_ARAGON",
+     "calidad": "mitico",
+     "peso": 6
+    },
+    {
+     "match": "material: custom:mmoitem:spear1",
+     "calidad": "mitico",
+     "peso": 6,
+     "_": "Lanza de Escarcha"
+    },
+    {
+     "match": "material: custom:mmoitem:spear3",
+     "calidad": "mitico",
+     "peso": 6,
+     "_": "Tridente del Leviatán"
+    },
+    {
+     "match": "mi give TOOL PICO_ANGEL_SABIDURIA",
+     "calidad": "epico",
+     "peso": 10
+    },
+    {
+     "match": "mi give TOOL PALA_VORTICE_ARIDO",
+     "calidad": "epico",
+     "peso": 10
+    },
+    {
+     "match": "mi give TOOL BALLESTA_DEVORADORA",
+     "calidad": "epico",
+     "peso": 10
+    },
+    {
+     "match": "givebook %player% doublestrike",
+     "calidad": "epico",
+     "peso": 10
+    },
+    {
+     "match": "givebook %player% lifesteal",
+     "calidad": "epico",
+     "peso": 10
+    },
+    {
+     "match": "permission set tags.legend",
+     "calidad": "epico",
+     "peso": 5
+    },
+    {
+     "match": "giveKey legendary %player% 2",
+     "calidad": "raro",
+     "peso": 3
+    },
+    {
+     "match": "giveKey spawner %player% 2",
+     "calidad": "raro",
+     "peso": 5
+    },
+    {
+     "match": "giveKey pets %player% 2",
+     "calidad": "raro",
+     "peso": 5
+    },
+    {
+     "match": "mobcoin give %player% 60000",
+     "calidad": "raro",
+     "peso": 4
+    },
+    {
+     "match": "eco give %player% 100000",
+     "calidad": "raro",
+     "peso": 4
+    }
+   ]
+  },
+  "spawners": {
+   "nombre": "<#47D7FF><bold>✦ CRATE SPAWNERS ✦</bold>",
+   "titulo": {
+    "texto": "CRATE SPAWNERS",
+    "de": "#10759A",
+    "a": "#0E6394",
+    "llave": "spawner"
+   },
+   "calidades": {
+    "legendario": 3,
+    "mitico": 12,
+    "epico": 30,
+    "raro": 55
+   },
+   "premios": [
+    {
+     "n": 5,
+     "calidad": "legendario",
+     "peso": 3,
+     "_": "Evocador"
+    },
+    {
+     "n": 7,
+     "calidad": "legendario",
+     "peso": 4,
+     "_": "Gólem de hierro"
+    },
+    {
+     "n": 6,
+     "calidad": "legendario",
+     "peso": 5,
+     "_": "Guardián"
+    },
+    {
+     "n": 2,
+     "calidad": "mitico",
+     "peso": 10,
+     "_": "Esqueleto wither"
+    },
+    {
+     "n": 4,
+     "calidad": "mitico",
+     "peso": 10,
+     "_": "Enderman"
+    },
+    {
+     "n": 8,
+     "calidad": "epico",
+     "peso": 10,
+     "_": "Bruja"
+    },
+    {
+     "n": 9,
+     "calidad": "epico",
+     "peso": 10,
+     "_": "Piglin zombificado"
+    },
+    {
+     "n": 10,
+     "calidad": "epico",
+     "peso": 10,
+     "_": "Creeper x2"
+    },
+    {
+     "n": 0,
+     "calidad": "raro",
+     "peso": 10,
+     "_": "Cubo de magma"
+    },
+    {
+     "n": 1,
+     "calidad": "raro",
+     "peso": 10,
+     "_": "Slime"
+    },
+    {
+     "n": 3,
+     "calidad": "raro",
+     "peso": 10,
+     "_": "Araña de cueva x2"
+    }
+   ]
+  },
+  "pets": {
+   "nombre": "<gradient:#FF4FD8:#8B5CF6><bold>CRATE MASCOTAS</bold></gradient>",
+   "titulo": {
+    "texto": "CRATE MASCOTAS",
+    "de": "#BE32A3",
+    "a": "#6D47C6",
+    "llave": "pets"
+   },
+   "calidades": {
+    "legendario": 1,
+    "epico": 10,
+    "raro": 34,
+    "comun": 55
+   },
+   "premios": [
+    {
+     "n": 20,
+     "calidad": "legendario",
+     "peso": 10,
+     "_": "Huevo aleatorio legendario"
+    },
+    {
+     "n": 17,
+     "calidad": "epico",
+     "peso": 10,
+     "_": "Breeze (unique)"
+    },
+    {
+     "n": 19,
+     "calidad": "epico",
+     "peso": 10,
+     "_": "Oso polar (unique)"
+    },
+    {
+     "n": 18,
+     "calidad": "epico",
+     "peso": 8,
+     "_": "Huevo aleatorio épico"
+    },
+    {
+     "n": 10,
+     "calidad": "raro",
+     "peso": 10,
+     "_": "Ahogado"
+    },
+    {
+     "n": 11,
+     "calidad": "raro",
+     "peso": 10,
+     "_": "Araña"
+    },
+    {
+     "n": 12,
+     "calidad": "raro",
+     "peso": 10,
+     "_": "Blaze"
+    },
+    {
+     "n": 13,
+     "calidad": "raro",
+     "peso": 10,
+     "_": "Creeper"
+    },
+    {
+     "n": 14,
+     "calidad": "raro",
+     "peso": 10,
+     "_": "Esqueleto"
+    },
+    {
+     "n": 16,
+     "calidad": "raro",
+     "peso": 10,
+     "_": "Piglin"
+    },
+    {
+     "n": 15,
+     "calidad": "raro",
+     "peso": 6,
+     "_": "Huevo aleatorio raro"
+    },
+    {
+     "n": 0,
+     "calidad": "comun",
+     "peso": 10,
+     "_": "Abeja"
+    },
+    {
+     "n": 1,
+     "calidad": "comun",
+     "peso": 10,
+     "_": "Cerdo"
+    },
+    {
+     "n": 2,
+     "calidad": "comun",
+     "peso": 10,
+     "_": "Conejo"
+    },
+    {
+     "n": 3,
+     "calidad": "comun",
+     "peso": 10,
+     "_": "Gallina"
+    },
+    {
+     "n": 4,
+     "calidad": "comun",
+     "peso": 10,
+     "_": "Gato"
+    },
+    {
+     "n": 6,
+     "calidad": "comun",
+     "peso": 10,
+     "_": "Lobo"
+    },
+    {
+     "n": 7,
+     "calidad": "comun",
+     "peso": 10,
+     "_": "Oveja"
+    },
+    {
+     "n": 8,
+     "calidad": "comun",
+     "peso": 10,
+     "_": "Vaca"
+    },
+    {
+     "n": 9,
+     "calidad": "comun",
+     "peso": 10,
+     "_": "Zorro"
+    },
+    {
+     "n": 21,
+     "calidad": "comun",
+     "peso": 5,
+     "_": "Panda"
+    },
+    {
+     "n": 5,
+     "calidad": "comun",
+     "peso": 5,
+     "_": "Huevo aleatorio común"
+    }
+   ]
+  },
+  "caos": {
+   "nombre": "<#FF6FD8><bold>✦ CRATE CAOS ✦</bold>",
+   "titulo": {
+    "texto": "CRATE CAOS",
+    "de": "#C0318D",
+    "a": "#9E1F6B",
+    "llave": "caos"
+   },
+   "estilo-nuevos": {
+    "degradado": [
+     "#FFA6E8",
+     "#C21E9C"
+    ],
+    "descripcion": "#A1A1A1"
+   },
+   "calidades": {
+    "unico": 0.25,
+    "legendario": 0.75,
+    "mitico": 6,
+    "epico": 33,
+    "raro": 60
+   },
+   "premios": [
+    {
+     "n": 22,
+     "calidad": "unico",
+     "peso": 50,
+     "por-jugador": 1,
+     "excluir-con-permiso": [
+      "pet.type.creaking"
+     ],
+     "_": "Mascota Creaking",
+     "texto": {
+      "tipo": "Mascota · Permanente",
+      "desc": [
+       "Un Creaking que te acompaña",
+       "y pelea a tu lado."
+      ],
+      "uso": [
+       "Sácala desde el menú de mascotas."
+      ]
+     }
+    },
+    {
+     "n": 23,
+     "calidad": "unico",
+     "peso": 50,
+     "por-jugador": 1,
+     "excluir-con-permiso": [
+      "pet.type.warden"
+     ],
+     "_": "Mascota Warden",
+     "texto": {
+      "tipo": "Mascota · Permanente",
+      "desc": [
+       "Un Warden que te acompaña",
+       "y pelea a tu lado."
+      ],
+      "uso": [
+       "Sácala desde el menú de mascotas."
+      ]
+     }
+    },
+    {
+     "n": 24,
+     "calidad": "legendario",
+     "peso": 20,
+     "_": "Tag Caja del Caos",
+     "texto": {
+      "tipo": "Tag y mascota · Permanente",
+      "desc": [
+       "El tag [CAOS] junto a tu nombre",
+       "y un Wither como mascota."
+      ],
+      "uso": [
+       "El tag se pone en /tags."
+      ]
+     }
+    },
+    {
+     "n": 16,
+     "calidad": "mitico",
+     "peso": 88.67,
+     "_": "Slot increaser",
+     "texto": {
+      "tipo": "Mejora de objeto · Ranuras",
+      "desc": [
+       "Suma +1 al número de encanta-",
+       "mientos que admite un objeto.",
+       "De base son 4; el tope es 6."
+      ],
+      "uso": [
+       "Arrástralo sobre el objeto."
+      ]
+     },
+     "nombre": "Ampliador de Ranuras"
+    },
+    {
+     "n": 17,
+     "calidad": "mitico",
+     "peso": 177.34,
+     "_": "Esencia x20",
+     "icono": "minecraft:blaze_powder",
+     "texto": {
+      "tipo": "Moneda de Calamity · Esencias",
+      "desc": [
+       "Se suman directo a tu saldo.",
+       "Con el saldo pagas en el Altar",
+       "y en la Forja."
+      ]
+     }
+    },
+    {
+     "n": 18,
+     "calidad": "mitico",
+     "peso": 118.23,
+     "_": "Crédito fragmento",
+     "texto": {
+      "tipo": "Crédito de Calamity · Forja",
+      "desc": [
+       "Con 7 fragmentos, Vael forja la",
+       "Guadaña de la Parca. Se guarda",
+       "en tu cuenta, no se pierde."
+      ],
+      "uso": [
+       "Se puede usar con 48 h activas",
+       "en Calamity."
+      ]
+     }
+    },
+    {
+     "n": 19,
+     "calidad": "mitico",
+     "peso": 44.33,
+     "_": "Libro",
+     "texto": {
+      "tipo": "Mejora de objeto · Libro",
+      "desc": [
+       "Trae un encantamiento Legendario",
+       "elegido al azar. Solo salen 2 al",
+       "mes en el servidor; si ya salieron,",
+       "recibes 20 Esencias."
+      ],
+      "uso": [
+       "Arrástralo sobre el objeto."
+      ]
+     },
+     "nombre": "Libro de Encantamiento Legendario"
+    },
+    {
+     "n": 20,
+     "calidad": "mitico",
+     "peso": 82.76,
+     "_": "Gema + ascua",
+     "texto": {
+      "tipo": "Objeto de Calamity · Lote",
+      "desc": [
+       "Una Gema de Calamidad y una",
+       "Ascua de Calamidad juntas."
+      ],
+      "uso": [
+       "Gema con Lior; Ascua sobre la pieza."
+      ]
+     }
+    },
+    {
+     "n": 21,
+     "calidad": "mitico",
+     "peso": 88.67,
+     "_": "Sello errante",
+     "texto": {
+      "tipo": "Crédito de Calamity · Forja",
+      "desc": [
+       "Vale por el Sello de cualquier",
+       "minijefe: Vael te forja con él",
+       "una pieza del Manto."
+      ],
+      "uso": [
+       "Se puede usar con 48 h activas",
+       "en Calamity."
+      ]
+     }
+    },
+    {
+     "n": 7,
+     "calidad": "epico",
+     "peso": 650,
+     "_": "Libro ULTIMATE aleatorio",
+     "texto": {
+      "tipo": "Mejora de objeto · Libro",
+      "desc": [
+       "Trae un encantamiento Supremo",
+       "elegido al azar, con su propio",
+       "éxito y riesgo de rotura."
+      ],
+      "uso": [
+       "Arrástralo sobre el objeto."
+      ]
+     },
+     "nombre": "Libro de Encantamiento Supremo"
+    },
+    {
+     "n": 9,
+     "calidad": "epico",
+     "peso": 420,
+     "_": "Ascua",
+     "texto": {
+      "tipo": "Objeto de Calamity · Mejora",
+      "desc": [
+       "Sube un nivel de mejora a una",
+       "pieza de Calamity: el Manto, la",
+       "Máscara, el Filo o la Guadaña."
+      ],
+      "uso": [
+       "Arrástrala sobre la pieza."
+      ]
+     }
+    },
+    {
+     "n": 10,
+     "calidad": "epico",
+     "peso": 280,
+     "_": "Cristal x2",
+     "texto": {
+      "tipo": "Objeto de Calamity · Consumible",
+      "desc": [
+       "Cada uno te devuelve al spawn",
+       "de Calamity. Quédate quieto 5 s;",
+       "en combate no funciona."
+      ],
+      "uso": [
+       "Clic derecho dentro de Calamity."
+      ]
+     }
+    },
+    {
+     "n": 11,
+     "calidad": "epico",
+     "peso": 560,
+     "_": "Esencia x10",
+     "icono": "minecraft:blaze_powder",
+     "texto": {
+      "tipo": "Moneda de Calamity · Esencias",
+      "desc": [
+       "Se suman directo a tu saldo.",
+       "Con el saldo pagas en el Altar",
+       "y en la Forja."
+      ]
+     }
+    },
+    {
+     "n": 12,
+     "calidad": "epico",
+     "peso": 560,
+     "_": "Gema",
+     "texto": {
+      "tipo": "Objeto de Calamity · Gema",
+      "desc": [
+       "Encaja en el hueco de cualquier",
+       "pieza de Calamity: más daño a",
+       "mobs y más vida."
+      ],
+      "uso": [
+       "Engárzala con Lior, en el spawn."
+      ]
+     }
+    },
+    {
+     "n": 13,
+     "calidad": "epico",
+     "peso": 420,
+     "_": "Grabado",
+     "texto": {
+      "tipo": "Objeto de Calamity · Mejora",
+      "desc": [
+       "Sube un nivel a un encantamiento",
+       "que ya esté al máximo: Filo V",
+       "pasa a VI. Sirve con Filo,",
+       "Protección, Eficiencia, Poder,",
+       "Irrompibilidad, Saqueo y Fortuna."
+      ],
+      "uso": [
+       "Úsalo con Vael, en la Forja.",
+       "Uno por objeto y uno por semana."
+      ]
+     }
+    },
+    {
+     "n": 14,
+     "calidad": "epico",
+     "peso": 280,
+     "_": "Llave KOTH",
+     "texto": {
+      "tipo": "Llave de crate",
+      "desc": [
+       "Abre una vez la Crate KOTH."
+      ],
+      "uso": [
+       "Clic derecho sobre la crate."
+      ]
+     }
+    },
+    {
+     "n": 15,
+     "calidad": "epico",
+     "peso": 280,
+     "_": "Talismán",
+     "texto": {
+      "tipo": "Objeto de Calamity · Amuleto",
+      "desc": [
+       "Mientras lo lleves: +3 de vida",
+       "y la cordura baja un 20 %",
+       "más despacio. Varios no suman."
+      ],
+      "uso": [
+       "Basta con llevarlo encima."
+      ]
+     }
+    },
+    {
+     "nuevo": {
+      "identifier": "caos_356d02c503d87117",
+      "material": "SUGAR",
+      "nombre": "Polvo Estelar Legendario",
+      "descripcion": "Más éxito y menos riesgo de rotura para un libro Legendario.",
+      "comandos": [
+       "ae giveitem %player% magic 1 LEGENDARY"
+      ]
+     },
+     "calidad": "epico",
+     "peso": 345,
+     "_": "Polvo Estelar Legendario (AE magic-dust; propuesta epic 10 de 100 -> 10 % de los 3450 de epico)",
+     "texto": {
+      "tipo": "Mejora de libro · Polvo",
+      "desc": [
+       "Sube el éxito de un libro",
+       "Legendario y le baja lo mismo",
+       "a su riesgo de rotura."
+      ],
+      "uso": [
+       "Arrástralo sobre el libro."
+      ]
+     }
+    },
+    {
+     "nuevo": {
+      "identifier": "caos_e9628d785373773f",
+      "material": "MAGMA_CREAM",
+      "nombre": "Contador de Bajas",
+      "descripcion": "Cuenta los jugadores que derrotas con el objeto.",
+      "comandos": [
+       "ae giveitem %player% stattrak 1"
+      ]
+     },
+     "calidad": "epico",
+     "peso": 207,
+     "_": "Contador de Bajas (AE stattrak; propuesta epic 6 de 100)",
+     "texto": {
+      "tipo": "Contador · Jugadores",
+      "desc": [
+       "Añade al objeto una línea que",
+       "cuenta los jugadores que derrotas.",
+       "Sirve en armas, armaduras,",
+       "herramientas, arcos y tridentes."
+      ],
+      "uso": [
+       "Arrástralo sobre el objeto."
+      ]
+     }
+    },
+    {
+     "nuevo": {
+      "identifier": "caos_0e37593adaea23b8",
+      "material": "FIREWORK_STAR",
+      "nombre": "Contador de Peces",
+      "descripcion": "Cuenta los peces que sacas con la caña.",
+      "comandos": [
+       "ae giveitem %player% fishtrak 1"
+      ]
+     },
+     "calidad": "epico",
+     "peso": 138,
+     "_": "Contador de Peces (AE fishtrak; propuesta epic 4 de 100)",
+     "texto": {
+      "tipo": "Contador · Caña de pescar",
+      "desc": [
+       "Añade a la caña una línea que",
+       "cuenta los peces que sacas."
+      ],
+      "uso": [
+       "Arrástralo sobre la caña."
+      ]
+     }
+    },
+    {
+     "n": 0,
+     "calidad": "raro",
+     "peso": 1300,
+     "_": "Cristal",
+     "texto": {
+      "tipo": "Objeto de Calamity · Consumible",
+      "desc": [
+       "Te devuelve al spawn de Calamity.",
+       "Quédate quieto 5 s; en combate",
+       "no funciona."
+      ],
+      "uso": [
+       "Clic derecho dentro de Calamity."
+      ]
+     }
+    },
+    {
+     "n": 1,
+     "calidad": "raro",
+     "peso": 2275,
+     "_": "Esencia x6",
+     "icono": "minecraft:blaze_powder",
+     "texto": {
+      "tipo": "Moneda de Calamity · Esencias",
+      "desc": [
+       "Se suman directo a tu saldo.",
+       "Con el saldo pagas en el Altar",
+       "y en la Forja."
+      ]
+     }
+    },
+    {
+     "n": 2,
+     "calidad": "raro",
+     "peso": 975,
+     "_": "Frasco",
+     "texto": {
+      "tipo": "Objeto de Calamity · Consumible",
+      "desc": [
+       "Cada trago te devuelve 40 de",
+       "cordura. Trae 3 tragos y se",
+       "recarga en el Altar."
+      ],
+      "uso": [
+       "Clic derecho para beber."
+      ]
+     }
+    },
+    {
+     "n": 8,
+     "calidad": "raro",
+     "peso": 1300,
+     "_": "Tintura x3",
+     "texto": {
+      "tipo": "Objeto de Calamity · Consumible",
+      "desc": [
+       "Cada una cura 4 corazones",
+       "y te da Resistencia I."
+      ],
+      "uso": [
+       "Clic derecho para beberla."
+      ]
+     }
+    },
+    {
+     "nuevo": {
+      "identifier": "caos_d45139e9897d1279",
+      "material": "SUGAR",
+      "nombre": "Polvo Estelar Supremo",
+      "descripcion": "Más éxito y menos riesgo de rotura para un libro Supremo.",
+      "comandos": [
+       "ae giveitem %player% magic 1 ULTIMATE"
+      ]
+     },
+     "calidad": "raro",
+     "peso": 585,
+     "_": "Polvo Estelar Supremo (AE magic-dust; propuesta rare 10 de 100 -> 10 % de los 5850 de raro)",
+     "texto": {
+      "tipo": "Mejora de libro · Polvo",
+      "desc": [
+       "Sube el éxito de un libro",
+       "Supremo y le baja lo mismo",
+       "a su riesgo de rotura."
+      ],
+      "uso": [
+       "Arrástralo sobre el libro."
+      ]
+     }
+    },
+    {
+     "nuevo": {
+      "identifier": "caos_1aa8082c796a5484",
+      "material": "SLIME_BALL",
+      "nombre": "Contador de Criaturas",
+      "descripcion": "Cuenta las criaturas que matas con el arma.",
+      "comandos": [
+       "ae giveitem %player% mobtrak 1"
+      ]
+     },
+     "calidad": "raro",
+     "peso": 351,
+     "_": "Contador de Criaturas (AE mobtrak; propuesta rare 6 de 100)",
+     "texto": {
+      "tipo": "Contador · Criaturas",
+      "desc": [
+       "Añade a tu arma una línea que",
+       "cuenta las criaturas que matas.",
+       "Sirve en espadas, hachas, lanzas,",
+       "arcos, ballestas, mazas y tridentes."
+      ],
+      "uso": [
+       "Arrástralo sobre el arma."
+      ]
+     }
+    },
+    {
+     "nuevo": {
+      "identifier": "caos_47e9c09563074a44",
+      "material": "SLIME_BALL",
+      "nombre": "Contador de Bloques",
+      "descripcion": "Cuenta los bloques que rompes con la herramienta.",
+      "comandos": [
+       "ae giveitem %player% blocktrak 1"
+      ]
+     },
+     "calidad": "raro",
+     "peso": 351,
+     "_": "Contador de Bloques (AE blocktrak; propuesta rare 6 de 100)",
+     "texto": {
+      "tipo": "Contador · Herramientas",
+      "desc": [
+       "Añade a la herramienta una línea",
+       "que cuenta los bloques que rompes.",
+       "Sirve en picos, hachas, palas",
+       "y azadas."
+      ],
+      "uso": [
+       "Arrástralo sobre la herramienta."
+      ]
+     }
+    },
+    {
+     "n": 3,
+     "calidad": null,
+     "_": "Esencia x10 duplicada, ya estaba en 0",
+     "icono": "minecraft:blaze_powder"
+    },
+    {
+     "n": 4,
+     "calidad": null,
+     "_": "Tag Caja del Caos duplicado, ya estaba en 0"
+    },
+    {
+     "n": 5,
+     "calidad": null,
+     "_": "Sello errante duplicado, ya estaba en 0"
+    },
+    {
+     "n": 6,
+     "calidad": null,
+     "_": "Mascota Warden duplicada, ya estaba en 0"
+    }
+   ]
+  },
+  "koth": {
+   "nombre": "&c&lCRATE &4&lKOTH",
+   "titulo": {
+    "texto": "CRATE KOTH",
+    "de": "#C42F2F",
+    "a": "#7F1414",
+    "llave": "koth"
+   },
+   "calidades": {
+    "legendario": 1.5,
+    "mitico": 6,
+    "epico": 30,
+    "raro": 62.5
+   },
+   "premios": [
+    {
+     "n": 0,
+     "calidad": "legendario",
+     "peso": 10,
+     "_": "Yelmo Conquistador"
+    },
+    {
+     "n": 1,
+     "calidad": "legendario",
+     "peso": 10,
+     "_": "Pechera Conquistador"
+    },
+    {
+     "n": 2,
+     "calidad": "legendario",
+     "peso": 10,
+     "_": "Grebas Conquistador"
+    },
+    {
+     "n": 3,
+     "calidad": "legendario",
+     "peso": 10,
+     "_": "Botas Conquistador"
+    },
+    {
+     "n": 4,
+     "calidad": "mitico",
+     "peso": 10,
+     "_": "Devoradora de Soles"
+    },
+    {
+     "n": 5,
+     "calidad": "mitico",
+     "peso": 10,
+     "_": "Pico Geoda Profunda"
+    },
+    {
+     "n": 6,
+     "calidad": "mitico",
+     "peso": 10,
+     "_": "Hacha KOTH"
+    },
+    {
+     "n": 30,
+     "calidad": "mitico",
+     "peso": 10,
+     "_": "Libro LEGENDARY aleatorio"
+    },
+    {
+     "n": 31,
+     "calidad": "mitico",
+     "peso": 8,
+     "_": "Tag KOTH"
+    },
+    {
+     "n": 8,
+     "calidad": "epico",
+     "peso": 10,
+     "_": "Faro x2"
+    },
+    {
+     "n": 13,
+     "calidad": "epico",
+     "peso": 10,
+     "_": "Manzana encantada x5"
+    },
+    {
+     "n": 25,
+     "calidad": "epico",
+     "peso": 10,
+     "_": "Holy white scroll"
+    },
+    {
+     "n": 26,
+     "calidad": "epico",
+     "peso": 8,
+     "_": "Llave legendaria"
+    },
+    {
+     "n": 27,
+     "calidad": "epico",
+     "peso": 10,
+     "_": "Llave épica"
+    },
+    {
+     "n": 28,
+     "calidad": "epico",
+     "peso": 10,
+     "_": "Élitros"
+    },
+    {
+     "n": 29,
+     "calidad": "epico",
+     "peso": 10,
+     "_": "Tótem"
+    },
+    {
+     "n": 7,
+     "calidad": "raro",
+     "peso": 10,
+     "_": "10.000 de dinero"
+    },
+    {
+     "n": 9,
+     "calidad": "raro",
+     "peso": 10,
+     "_": "Botellas de experiencia x32"
+    },
+    {
+     "n": 10,
+     "calidad": "raro",
+     "peso": 10,
+     "_": "Vara de breeze x18"
+    },
+    {
+     "n": 11,
+     "calidad": "raro",
+     "peso": 10,
+     "_": "Ballesta Perforación IV"
+    },
+    {
+     "n": 12,
+     "calidad": "raro",
+     "peso": 10,
+     "_": "Bloque de diamante x5"
+    },
+    {
+     "n": 14,
+     "calidad": "raro",
+     "peso": 10,
+     "_": "Flechas espectrales x64"
+    },
+    {
+     "n": 15,
+     "calidad": "raro",
+     "peso": 10,
+     "_": "Manzana dorada x16"
+    },
+    {
+     "n": 16,
+     "calidad": "raro",
+     "peso": 10,
+     "_": "3.000 MobCoins"
+    },
+    {
+     "n": 17,
+     "calidad": "raro",
+     "peso": 10,
+     "_": "Obsidiana x32"
+    },
+    {
+     "n": 18,
+     "calidad": "raro",
+     "peso": 10,
+     "_": "Perlas de ender x32"
+    },
+    {
+     "n": 24,
+     "calidad": "raro",
+     "peso": 10,
+     "_": "Carga de viento x16"
+    },
+    {
+     "n": 19,
+     "calidad": "raro",
+     "peso": 8,
+     "_": "Plantilla Rib x2"
+    },
+    {
+     "n": 20,
+     "calidad": "raro",
+     "peso": 8,
+     "_": "Plantilla Snout x2"
+    },
+    {
+     "n": 21,
+     "calidad": "raro",
+     "peso": 8,
+     "_": "Plantilla Snout x2"
+    },
+    {
+     "n": 22,
+     "calidad": "raro",
+     "peso": 8,
+     "_": "Plantilla Vex x2"
+    },
+    {
+     "n": 23,
+     "calidad": "raro",
+     "peso": 8,
+     "_": "Plantilla Ward x2"
+    }
+   ]
+  },
+  "booster": {
+   "nombre": "<gradient:#5865F2:#9065F2>&lCRATE BOOSTER</gradient>",
+   "titulo": {
+    "texto": "CRATE BOOSTER",
+    "de": "#4F5BE0",
+    "a": "#6948B8",
+    "llave": "booster"
+   },
+   "calidades": {
+    "legendario": 4,
+    "mitico": 10,
+    "epico": 26,
+    "raro": 60
+   },
+   "premios": [
+    {
+     "n": 0,
+     "calidad": "legendario",
+     "peso": 10,
+     "_": "Casco Cometa"
+    },
+    {
+     "n": 1,
+     "calidad": "legendario",
+     "peso": 10,
+     "_": "Pechera Cometa"
+    },
+    {
+     "n": 2,
+     "calidad": "legendario",
+     "peso": 10,
+     "_": "Grebas Cometa"
+    },
+    {
+     "n": 3,
+     "calidad": "legendario",
+     "peso": 10,
+     "_": "Botas Cometa"
+    },
+    {
+     "n": 4,
+     "calidad": "legendario",
+     "peso": 10,
+     "_": "Pico Cometa"
+    },
+    {
+     "n": 5,
+     "calidad": "legendario",
+     "peso": 10,
+     "_": "Pala Cometa"
+    },
+    {
+     "n": 6,
+     "calidad": "legendario",
+     "peso": 10,
+     "_": "Hacha Cometa"
+    },
+    {
+     "n": 41,
+     "calidad": "legendario",
+     "peso": 6,
+     "_": "Libro FABLED aleatorio"
+    },
+    {
+     "n": 7,
+     "calidad": "mitico",
+     "peso": 10,
+     "_": "Casco Impulso"
+    },
+    {
+     "n": 8,
+     "calidad": "mitico",
+     "peso": 10,
+     "_": "Pechera Impulso"
+    },
+    {
+     "n": 9,
+     "calidad": "mitico",
+     "peso": 10,
+     "_": "Grebas Impulso"
+    },
+    {
+     "n": 10,
+     "calidad": "mitico",
+     "peso": 10,
+     "_": "Botas Impulso"
+    },
+    {
+     "n": 11,
+     "calidad": "mitico",
+     "peso": 10,
+     "_": "Pico Impulso"
+    },
+    {
+     "n": 12,
+     "calidad": "mitico",
+     "peso": 10,
+     "_": "Pala Impulso"
+    },
+    {
+     "n": 13,
+     "calidad": "mitico",
+     "peso": 10,
+     "_": "Hacha Impulso"
+    },
+    {
+     "n": 23,
+     "calidad": "mitico",
+     "peso": 8,
+     "_": "Bloque de netherita x2"
+    },
+    {
+     "n": 40,
+     "calidad": "mitico",
+     "peso": 8,
+     "_": "Llave épica"
+    },
+    {
+     "n": 14,
+     "calidad": "epico",
+     "peso": 10,
+     "_": "Yelmo de Cerezo"
+    },
+    {
+     "n": 15,
+     "calidad": "epico",
+     "peso": 10,
+     "_": "Peto de Cerezo"
+    },
+    {
+     "n": 16,
+     "calidad": "epico",
+     "peso": 10,
+     "_": "Grebas de Cerezo"
+    },
+    {
+     "n": 17,
+     "calidad": "epico",
+     "peso": 10,
+     "_": "Botas de Cerezo"
+    },
+    {
+     "n": 18,
+     "calidad": "epico",
+     "peso": 10,
+     "_": "Pico de Cerezo"
+    },
+    {
+     "n": 19,
+     "calidad": "epico",
+     "peso": 10,
+     "_": "Hacha de Cerezo"
+    },
+    {
+     "n": 20,
+     "calidad": "epico",
+     "peso": 8,
+     "_": "Susurro de Cerezo"
+    },
+    {
+     "n": 31,
+     "calidad": "epico",
+     "peso": 10,
+     "_": "Caña Migrador de Almas"
+    },
+    {
+     "n": 39,
+     "calidad": "epico",
+     "peso": 10,
+     "_": "Elixir de Vida del Eclipse"
+    },
+    {
+     "n": 33,
+     "calidad": "epico",
+     "peso": 10,
+     "_": "Grimorio Sombrío"
+    },
+    {
+     "n": 34,
+     "calidad": "epico",
+     "peso": 8,
+     "_": "Llave KOTH"
+    },
+    {
+     "n": 36,
+     "calidad": "epico",
+     "peso": 8,
+     "_": "Llave Rankup"
+    },
+    {
+     "n": 21,
+     "calidad": "raro",
+     "peso": 10,
+     "_": "Bloque de esmeralda x64"
+    },
+    {
+     "n": 22,
+     "calidad": "raro",
+     "peso": 10,
+     "_": "Bloque de hierro x64"
+    },
+    {
+     "n": 24,
+     "calidad": "raro",
+     "peso": 10,
+     "_": "Botellas de experiencia x32"
+    },
+    {
+     "n": 25,
+     "calidad": "raro",
+     "peso": 10,
+     "_": "Cohetes x64"
+    },
+    {
+     "n": 26,
+     "calidad": "raro",
+     "peso": 10,
+     "_": "30 niveles de experiencia"
+    },
+    {
+     "n": 27,
+     "calidad": "raro",
+     "peso": 10,
+     "_": "Cohetes x64"
+    },
+    {
+     "n": 28,
+     "calidad": "raro",
+     "peso": 10,
+     "_": "Manzana dorada x12"
+    },
+    {
+     "n": 29,
+     "calidad": "raro",
+     "peso": 10,
+     "_": "Perlas de ender x16"
+    },
+    {
+     "n": 30,
+     "calidad": "raro",
+     "peso": 10,
+     "_": "Zanahoria dorada x64"
+    },
+    {
+     "n": 32,
+     "calidad": "raro",
+     "peso": 10,
+     "_": "70.000 de dinero"
+    },
+    {
+     "n": 35,
+     "calidad": "raro",
+     "peso": 10,
+     "_": "Llave de mascotas"
+    },
+    {
+     "n": 37,
+     "calidad": "raro",
+     "peso": 10,
+     "_": "Llave de votos"
+    },
+    {
+     "n": 38,
+     "calidad": "raro",
+     "peso": 10,
+     "_": "40.000 MobCoins"
+    }
+   ]
+  },
+  "cajaepica": {
+   "nombre": "&5&l CRATE EPICA",
+   "titulo": {
+    "texto": "CRATE ÉPICA",
+    "de": "#A23BD6",
+    "a": "#7A2DB8",
+    "llave": "llave_epica"
+   },
+   "calidades": {
+    "legendario": 2,
+    "mitico": 8,
+    "epico": 30,
+    "raro": 60
+   },
+   "premios": [
+    {
+     "n": 30,
+     "calidad": "legendario",
+     "peso": 8,
+     "_": "Espada Eterna"
+    },
+    {
+     "n": 37,
+     "calidad": "legendario",
+     "peso": 10,
+     "_": "Tag Arcano"
+    },
+    {
+     "n": 38,
+     "calidad": "legendario",
+     "peso": 6,
+     "_": "Libro FABLED aleatorio"
+    },
+    {
+     "n": 25,
+     "calidad": "mitico",
+     "peso": 10,
+     "_": "Tizona de Brasa"
+    },
+    {
+     "n": 26,
+     "calidad": "mitico",
+     "peso": 10,
+     "_": "Cuerno de la Cabra"
+    },
+    {
+     "n": 27,
+     "calidad": "mitico",
+     "peso": 10,
+     "_": "Espina de la Arboleda"
+    },
+    {
+     "n": 28,
+     "calidad": "mitico",
+     "peso": 10,
+     "_": "Filo de Centella"
+    },
+    {
+     "n": 29,
+     "calidad": "mitico",
+     "peso": 10,
+     "_": "Zarpa del Conejo"
+    },
+    {
+     "n": 31,
+     "calidad": "mitico",
+     "peso": 8,
+     "_": "Maza"
+    },
+    {
+     "n": 35,
+     "calidad": "mitico",
+     "peso": 10,
+     "_": "Lanza de netherita"
+    },
+    {
+     "n": 36,
+     "calidad": "mitico",
+     "peso": 10,
+     "_": "Tridente"
+    },
+    {
+     "n": 0,
+     "calidad": "epico",
+     "peso": 10,
+     "_": "Yelmo de Brasa"
+    },
+    {
+     "n": 1,
+     "calidad": "epico",
+     "peso": 10,
+     "_": "Coraza de Brasa"
+    },
+    {
+     "n": 2,
+     "calidad": "epico",
+     "peso": 10,
+     "_": "Grebas de Brasa"
+    },
+    {
+     "n": 3,
+     "calidad": "epico",
+     "peso": 10,
+     "_": "Botas de Brasa"
+    },
+    {
+     "n": 4,
+     "calidad": "epico",
+     "peso": 10,
+     "_": "Pico de Brasa"
+    },
+    {
+     "n": 5,
+     "calidad": "epico",
+     "peso": 10,
+     "_": "Pala de Brasa"
+    },
+    {
+     "n": 6,
+     "calidad": "epico",
+     "peso": 10,
+     "_": "Hacha de Brasa"
+    },
+    {
+     "n": 7,
+     "calidad": "epico",
+     "peso": 10,
+     "_": "Yelmo de Centella"
+    },
+    {
+     "n": 8,
+     "calidad": "epico",
+     "peso": 10,
+     "_": "Coraza de Centella"
+    },
+    {
+     "n": 9,
+     "calidad": "epico",
+     "peso": 10,
+     "_": "Grebas de Centella"
+    },
+    {
+     "n": 10,
+     "calidad": "epico",
+     "peso": 10,
+     "_": "Botas de Centella"
+    },
+    {
+     "n": 11,
+     "calidad": "epico",
+     "peso": 10,
+     "_": "Pico de Centella"
+    },
+    {
+     "n": 12,
+     "calidad": "epico",
+     "peso": 10,
+     "_": "Pala de Centella"
+    },
+    {
+     "n": 13,
+     "calidad": "epico",
+     "peso": 10,
+     "_": "Hacha de Centella"
+    },
+    {
+     "n": 14,
+     "calidad": "epico",
+     "peso": 10,
+     "_": "Yelmo de la Arboleda"
+    },
+    {
+     "n": 15,
+     "calidad": "epico",
+     "peso": 10,
+     "_": "Peto de la Arboleda"
+    },
+    {
+     "n": 16,
+     "calidad": "epico",
+     "peso": 10,
+     "_": "Grebas de la Arboleda"
+    },
+    {
+     "n": 17,
+     "calidad": "epico",
+     "peso": 10,
+     "_": "Botas de la Arboleda"
+    },
+    {
+     "n": 18,
+     "calidad": "epico",
+     "peso": 10,
+     "_": "Pico de la Arboleda"
+    },
+    {
+     "n": 19,
+     "calidad": "epico",
+     "peso": 10,
+     "_": "Pala de la Arboleda"
+    },
+    {
+     "n": 20,
+     "calidad": "epico",
+     "peso": 10,
+     "_": "Hacha de la Arboleda"
+    },
+    {
+     "n": 21,
+     "calidad": "raro",
+     "peso": 10,
+     "_": "Armadura épica: casco"
+    },
+    {
+     "n": 22,
+     "calidad": "raro",
+     "peso": 10,
+     "_": "Armadura épica: pechera"
+    },
+    {
+     "n": 23,
+     "calidad": "raro",
+     "peso": 10,
+     "_": "Armadura épica: grebas"
+    },
+    {
+     "n": 24,
+     "calidad": "raro",
+     "peso": 10,
+     "_": "Armadura épica: botas"
+    },
+    {
+     "n": 32,
+     "calidad": "raro",
+     "peso": 10,
+     "_": "Caña de pescar"
+    },
+    {
+     "n": 33,
+     "calidad": "raro",
+     "peso": 10,
+     "_": "90.000 de dinero"
+    },
+    {
+     "n": 34,
+     "calidad": "raro",
+     "peso": 10,
+     "_": "20.000 MobCoins"
+    }
+   ]
+  },
+  "dungeon": {
+   "nombre": "<#FFFFFF>&lCRATE <#3A54A3>&lDUNGEON",
+   "titulo": {
+    "texto": "CRATE DUNGEON",
+    "de": "#4A6BC9",
+    "a": "#2E4590",
+    "llave": "llave_dungeon"
+   },
+   "calidades": {
+    "legendario": 2,
+    "mitico": 10,
+    "epico": 33,
+    "raro": 55
+   },
+   "premios": [
+    {
+     "n": 0,
+     "calidad": "legendario",
+     "peso": 10,
+     "_": "Casco Fuego de Dragón"
+    },
+    {
+     "n": 1,
+     "calidad": "legendario",
+     "peso": 10,
+     "_": "Pechera Fuego de Dragón"
+    },
+    {
+     "n": 2,
+     "calidad": "legendario",
+     "peso": 10,
+     "_": "Grebas Fuego de Dragón"
+    },
+    {
+     "n": 3,
+     "calidad": "legendario",
+     "peso": 10,
+     "_": "Botas Fuego de Dragón"
+    },
+    {
+     "n": 33,
+     "calidad": "legendario",
+     "peso": 8,
+     "_": "Emblema"
+    },
+    {
+     "n": 34,
+     "calidad": "legendario",
+     "peso": 8,
+     "_": "Foco"
+    },
+    {
+     "n": 35,
+     "calidad": "legendario",
+     "peso": 6,
+     "_": "Sello x3"
+    },
+    {
+     "n": 7,
+     "calidad": "mitico",
+     "peso": 10,
+     "_": "Yelmo Explorador"
+    },
+    {
+     "n": 8,
+     "calidad": "mitico",
+     "peso": 10,
+     "_": "Pechera Explorador"
+    },
+    {
+     "n": 9,
+     "calidad": "mitico",
+     "peso": 10,
+     "_": "Grebas Explorador"
+    },
+    {
+     "n": 10,
+     "calidad": "mitico",
+     "peso": 10,
+     "_": "Botas Explorador"
+    },
+    {
+     "n": 22,
+     "calidad": "mitico",
+     "peso": 10,
+     "_": "Runa x2"
+    },
+    {
+     "n": 25,
+     "calidad": "mitico",
+     "peso": 10,
+     "_": "Reliquia Colmillo Ancestral x8"
+    },
+    {
+     "n": 28,
+     "calidad": "mitico",
+     "peso": 10,
+     "_": "Núcleo del Dragón x32"
+    },
+    {
+     "n": 30,
+     "calidad": "mitico",
+     "peso": 10,
+     "_": "Sello del Guardián x8"
+    },
+    {
+     "n": 31,
+     "calidad": "mitico",
+     "peso": 10,
+     "_": "Insignia Divina del Guardián x2"
+    },
+    {
+     "n": 32,
+     "calidad": "mitico",
+     "peso": 8,
+     "_": "Fragmento"
+    },
+    {
+     "n": 4,
+     "calidad": "epico",
+     "peso": 10,
+     "_": "Pico Astral"
+    },
+    {
+     "n": 5,
+     "calidad": "epico",
+     "peso": 10,
+     "_": "Hacha de netherita Dungeon"
+    },
+    {
+     "n": 6,
+     "calidad": "epico",
+     "peso": 10,
+     "_": "Faro x3"
+    },
+    {
+     "n": 14,
+     "calidad": "epico",
+     "peso": 10,
+     "_": "Casco de netherita Dungeon"
+    },
+    {
+     "n": 15,
+     "calidad": "epico",
+     "peso": 10,
+     "_": "Pechera de netherita Dungeon"
+    },
+    {
+     "n": 16,
+     "calidad": "epico",
+     "peso": 10,
+     "_": "Grebas de netherita Dungeon"
+    },
+    {
+     "n": 17,
+     "calidad": "epico",
+     "peso": 10,
+     "_": "Botas de netherita Dungeon"
+    },
+    {
+     "n": 21,
+     "calidad": "epico",
+     "peso": 10,
+     "_": "Plantilla de mejora de netherita x2"
+    },
+    {
+     "n": 23,
+     "calidad": "epico",
+     "peso": 10,
+     "_": "Plantilla Spire x3"
+    },
+    {
+     "n": 26,
+     "calidad": "epico",
+     "peso": 10,
+     "_": "Colmillo Congelado x32"
+    },
+    {
+     "n": 27,
+     "calidad": "epico",
+     "peso": 10,
+     "_": "Fragmento x4"
+    },
+    {
+     "n": 29,
+     "calidad": "epico",
+     "peso": 10,
+     "_": "Núcleo Dracónico Purificado x8"
+    },
+    {
+     "n": 11,
+     "calidad": "raro",
+     "peso": 10,
+     "_": "Bloque de oro x8"
+    },
+    {
+     "n": 12,
+     "calidad": "raro",
+     "peso": 10,
+     "_": "Esmeralda x32"
+    },
+    {
+     "n": 13,
+     "calidad": "raro",
+     "peso": 10,
+     "_": "Botellas de experiencia x64"
+    },
+    {
+     "n": 18,
+     "calidad": "raro",
+     "peso": 10,
+     "_": "Manzana dorada x32"
+    },
+    {
+     "n": 19,
+     "calidad": "raro",
+     "peso": 10,
+     "_": "Insignia x2"
+    },
+    {
+     "n": 20,
+     "calidad": "raro",
+     "peso": 10,
+     "_": "Medalla"
+    },
+    {
+     "n": 24,
+     "calidad": "raro",
+     "peso": 10,
+     "_": "Carga de viento x48"
+    }
+   ]
+  },
+  "rankup": {
+   "nombre": "&c&lCRATE RANKUP",
+   "titulo": {
+    "texto": "CRATE RANKUP",
+    "de": "#C04931",
+    "a": "#8E2614",
+    "llave": "llave_rankup"
+   },
+   "calidades": {
+    "legendario": 2,
+    "mitico": 8,
+    "epico": 28,
+    "raro": 62
+   },
+   "premios": [
+    {
+     "n": 0,
+     "calidad": "legendario",
+     "peso": 10,
+     "_": "Casco Cénit"
+    },
+    {
+     "n": 1,
+     "calidad": "legendario",
+     "peso": 10,
+     "_": "Pechera Cénit"
+    },
+    {
+     "n": 2,
+     "calidad": "legendario",
+     "peso": 10,
+     "_": "Grebas Cénit"
+    },
+    {
+     "n": 3,
+     "calidad": "legendario",
+     "peso": 10,
+     "_": "Botas Cénit"
+    },
+    {
+     "n": 7,
+     "calidad": "mitico",
+     "peso": 10,
+     "_": "Casco Ascenso"
+    },
+    {
+     "n": 8,
+     "calidad": "mitico",
+     "peso": 10,
+     "_": "Pechera Ascenso"
+    },
+    {
+     "n": 9,
+     "calidad": "mitico",
+     "peso": 10,
+     "_": "Grebas Ascenso"
+    },
+    {
+     "n": 10,
+     "calidad": "mitico",
+     "peso": 10,
+     "_": "Botas Ascenso"
+    },
+    {
+     "n": 11,
+     "calidad": "mitico",
+     "peso": 10,
+     "_": "Filo Cénit"
+    },
+    {
+     "n": 16,
+     "calidad": "mitico",
+     "peso": 8,
+     "_": "400 niveles de experiencia"
+    },
+    {
+     "n": 21,
+     "calidad": "mitico",
+     "peso": 8,
+     "_": "Escudo Dracónico"
+    },
+    {
+     "n": 27,
+     "calidad": "mitico",
+     "peso": 8,
+     "_": "Tag Ascenso"
+    },
+    {
+     "n": 4,
+     "calidad": "epico",
+     "peso": 10,
+     "_": "Pico Cumbre"
+    },
+    {
+     "n": 5,
+     "calidad": "epico",
+     "peso": 10,
+     "_": "Pico Horizonte"
+    },
+    {
+     "n": 15,
+     "calidad": "epico",
+     "peso": 10,
+     "_": "Manzana encantada x5"
+    },
+    {
+     "n": 18,
+     "calidad": "epico",
+     "peso": 10,
+     "_": "Libro UNIQUE aleatorio"
+    },
+    {
+     "n": 20,
+     "calidad": "epico",
+     "peso": 10,
+     "_": "Escama Dracónica x8"
+    },
+    {
+     "n": 22,
+     "calidad": "epico",
+     "peso": 10,
+     "_": "Llave de spawners"
+    },
+    {
+     "n": 23,
+     "calidad": "epico",
+     "peso": 10,
+     "_": "Llave de mascotas"
+    },
+    {
+     "n": 25,
+     "calidad": "epico",
+     "peso": 10,
+     "_": "Libro Telepatía II"
+    },
+    {
+     "n": 26,
+     "calidad": "epico",
+     "peso": 10,
+     "_": "Libro Veinminer II"
+    },
+    {
+     "n": 6,
+     "calidad": "raro",
+     "peso": 10,
+     "_": "Hacha Votante"
+    },
+    {
+     "n": 12,
+     "calidad": "raro",
+     "peso": 10,
+     "_": "Espada Alba"
+    },
+    {
+     "n": 13,
+     "calidad": "raro",
+     "peso": 10,
+     "_": "Hoja del Primer Paso"
+    },
+    {
+     "n": 14,
+     "calidad": "raro",
+     "peso": 10,
+     "_": "30.000 de dinero"
+    },
+    {
+     "n": 17,
+     "calidad": "raro",
+     "peso": 10,
+     "_": "Libro SIMPLE aleatorio"
+    },
+    {
+     "n": 19,
+     "calidad": "raro",
+     "peso": 10,
+     "_": "8.000 MobCoins"
+    },
+    {
+     "n": 24,
+     "calidad": "raro",
+     "peso": 10,
+     "_": "2 llaves de votos"
+    }
+   ]
+  },
+  "vote": {
+   "nombre": "&a&lCRATE VOTE",
+   "titulo": {
+    "texto": "CRATE VOTOS",
+    "de": "#2D7E39",
+    "a": "#1E6E31",
+    "llave": "vote"
+   },
+   "calidades": {
+    "legendario": 1,
+    "mitico": 4,
+    "epico": 20,
+    "raro": 35,
+    "comun": 40
+   },
+   "premios": [
+    {
+     "n": 37,
+     "calidad": "legendario",
+     "peso": 10,
+     "_": "Élitros"
+    },
+    {
+     "n": 33,
+     "calidad": "legendario",
+     "peso": 8,
+     "_": "Tag Bastión"
+    },
+    {
+     "n": 34,
+     "calidad": "mitico",
+     "peso": 10,
+     "_": "Tag Mítico"
+    },
+    {
+     "n": 35,
+     "calidad": "mitico",
+     "peso": 10,
+     "_": "Tag Soberano"
+    },
+    {
+     "n": 36,
+     "calidad": "mitico",
+     "peso": 10,
+     "_": "Tag Supremo"
+    },
+    {
+     "n": 25,
+     "calidad": "mitico",
+     "peso": 10,
+     "_": "Estrella del Nether x2"
+    },
+    {
+     "n": 20,
+     "calidad": "mitico",
+     "peso": 10,
+     "_": "Núcleo pesado"
+    },
+    {
+     "n": 14,
+     "calidad": "mitico",
+     "peso": 10,
+     "_": "Faro"
+    },
+    {
+     "n": 0,
+     "calidad": "epico",
+     "peso": 10,
+     "_": "Yelmo Heraldo"
+    },
+    {
+     "n": 1,
+     "calidad": "epico",
+     "peso": 10,
+     "_": "Pechera Heraldo"
+    },
+    {
+     "n": 2,
+     "calidad": "epico",
+     "peso": 10,
+     "_": "Grebas Heraldo"
+    },
+    {
+     "n": 3,
+     "calidad": "epico",
+     "peso": 10,
+     "_": "Botas Heraldo"
+    },
+    {
+     "n": 4,
+     "calidad": "epico",
+     "peso": 10,
+     "_": "Pico Votante"
+    },
+    {
+     "n": 5,
+     "calidad": "epico",
+     "peso": 10,
+     "_": "Pala Votante"
+    },
+    {
+     "n": 6,
+     "calidad": "epico",
+     "peso": 10,
+     "_": "Azada Votante"
+    },
+    {
+     "n": 30,
+     "calidad": "epico",
+     "peso": 10,
+     "_": "Arco Votante"
+    },
+    {
+     "n": 28,
+     "calidad": "epico",
+     "peso": 10,
+     "_": "Tridente"
+    },
+    {
+     "n": 23,
+     "calidad": "epico",
+     "peso": 10,
+     "_": "Lanza de diamante"
+    },
+    {
+     "n": 31,
+     "calidad": "epico",
+     "peso": 10,
+     "_": "Llave de mascotas"
+    },
+    {
+     "n": 32,
+     "calidad": "epico",
+     "peso": 10,
+     "_": "Llave de votos"
+    },
+    {
+     "n": 21,
+     "calidad": "epico",
+     "peso": 8,
+     "_": "Plantilla Host"
+    },
+    {
+     "n": 26,
+     "calidad": "epico",
+     "peso": 8,
+     "_": "Plantilla Sentry"
+    },
+    {
+     "n": 27,
+     "calidad": "epico",
+     "peso": 8,
+     "_": "Plantilla Tide"
+    },
+    {
+     "n": 7,
+     "calidad": "raro",
+     "peso": 10,
+     "_": "Casco Custodio"
+    },
+    {
+     "n": 8,
+     "calidad": "raro",
+     "peso": 10,
+     "_": "Pechera Custodio"
+    },
+    {
+     "n": 9,
+     "calidad": "raro",
+     "peso": 10,
+     "_": "Grebas Custodio"
+    },
+    {
+     "n": 10,
+     "calidad": "raro",
+     "peso": 10,
+     "_": "Botas Custodio"
+    },
+    {
+     "n": 11,
+     "calidad": "raro",
+     "peso": 10,
+     "_": "Yelmo de las Mareas"
+    },
+    {
+     "n": 13,
+     "calidad": "raro",
+     "peso": 10,
+     "_": "Escudo"
+    },
+    {
+     "n": 15,
+     "calidad": "raro",
+     "peso": 10,
+     "_": "Botellas de experiencia x16"
+    },
+    {
+     "n": 16,
+     "calidad": "raro",
+     "peso": 10,
+     "_": "Vara de breeze x4"
+    },
+    {
+     "n": 18,
+     "calidad": "raro",
+     "peso": 10,
+     "_": "Cohetes x32"
+    },
+    {
+     "n": 19,
+     "calidad": "raro",
+     "peso": 10,
+     "_": "15 niveles de experiencia"
+    },
+    {
+     "n": 24,
+     "calidad": "raro",
+     "peso": 10,
+     "_": "1.000 MobCoins"
+    },
+    {
+     "n": 12,
+     "calidad": "comun",
+     "peso": 10,
+     "_": "Terracota esmaltada celeste"
+    },
+    {
+     "n": 17,
+     "calidad": "comun",
+     "peso": 10,
+     "_": "Cofre"
+    },
+    {
+     "n": 22,
+     "calidad": "comun",
+     "peso": 10,
+     "_": "Cofre trampa"
+    },
+    {
+     "n": 29,
+     "calidad": "comun",
+     "peso": 10,
+     "_": "Cofre trampa"
+    }
+   ]
+  }
+ }
 }

@@ -53,7 +53,8 @@ function generar(original, spec, idCaja) {
     ids.add(nv.identifier);
     const q = s => "'" + s.replace(/'/g, "''") + "'";
     const nombre = est.degradado ? degradado(nv.nombre, est.degradado[0], est.degradado[1]) : legado(nv.nombre);
-    const desc = nv.descripcion ? [(est.descripcion ? hexAmp(est.descripcion) : '&7') + nv.descripcion] : [];
+    // Con 'texto' (tipo, desc, uso) la descripcion la pone ampLore; si no, la linea gris de siempre
+    const desc = p.texto || !nv.descripcion ? [] : [(est.descripcion ? hexAmp(est.descripcion) : '&7') + nv.descripcion];
     bloques.push({ n: 1000 + i, p, lineas: [
       "  '" + (1000 + i) + "':", '    enabled: true', '    identifier: ' + nv.identifier,
       '    display-item:', '      material: ' + nv.material, '      amount: 1', '      display-name: ' + q(nombre),
@@ -94,16 +95,24 @@ function generar(original, spec, idCaja) {
   const comp = (texto, color) => '{color:"' + color + '",italic:0b,text:"' + texto.replace(/\\/g, '\\\\').replace(/"/g, '\\"') + '"}';
   const linea = partes => '{extra:[' + partes.join(',') + '],text:""}';
   const amp = hex => '&x' + hex.slice(1).split('').map(c => '&' + c).join('');
+  // Texto propio del premio ('texto': {tipo, desc, uso}): tipo en el acento, lo que hace en claro y como se
+  // usa en gris con ▸. Sustituye a la descripcion que traia la imagen. Colores de spec.textos (uno solo de acento).
+  const tx = Object.assign({ tipo: '#E584CF', desc: '#D2D2D2', uso: '#8F8F8F' }, spec.textos || {});
+  const textoDe = p => !p.texto ? [] : [
+    [[p.texto.tipo, tx.tipo]],
+    '',
+    ...(p.texto.desc || []).map(l => [[l, tx.desc]]),
+    ...(p.texto.uso || []).map((l, i) => [[(i === 0 ? '▸ ' : '  ') + l, tx.uso]]),
+  ];
+  // La calidad en una linea (Dosa, 2026-10-08: las tres lineas de probabilidad eran ruido): "◆ Raro · 2,95 %"
   const loreDe = b => {
     const c = cal[b.p.calidad];
     const tope = b.p['por-jugador'];
     return [
+      ...textoDe(b.p),
       '',
-      [['◆ ', c.color], [c.nombre, c.color]],
-      [['Probabilidad de la calidad: ', 'gray'], [pct(b.pCal), 'white']],
-      [['Dentro de la calidad: ', 'gray'], [pct(b.pDentro), 'white']],
-      [['Probabilidad total: ', 'gray'], [pct(b.pTotal), c.color]],
-      ...(tope ? [[[tope === 1 ? 'Solo se gana una vez por jugador' : 'Máximo ' + tope + ' veces por jugador', 'gray']]] : []),
+      [['◆ ' + c.nombre + ' · ' + pct(b.pTotal), c.color]],
+      ...(tope ? [[[tope === 1 ? 'Solo se gana una vez por jugador' : 'Máximo ' + tope + ' veces por jugador', tx.uso]]] : []),
     ];
   };
   const snbt = b => loreDe(b).map(p => p === '' ? '{text:""}' : linea(p.map(([t, col]) => comp(t, col))));
@@ -112,7 +121,7 @@ function generar(original, spec, idCaja) {
 
   // Objeto serializado (cabecera con sangria 4, campos 6, componentes 8): cambia su lore en el sitio.
   // Quita las entradas "Rareza:" que dejo la migracion y las vacias del final antes de añadir las nuevas.
-  const ponerLore = (arr, s, entradas, donde) => {
+  const ponerLore = (arr, s, entradas, donde, reemplazar) => {
     let e = s + 1;
     while (e < arr.length && /^      /.test(arr[e])) e++;
     const iComp = arr.slice(s, e).findIndex(l => /^      components:\s*$/.test(l));
@@ -148,6 +157,7 @@ function generar(original, spec, idCaja) {
         limpios.push(x);
       }
       while (limpios.length && texto(limpios[limpios.length - 1]) === '') limpios.pop();
+      if (reemplazar) limpios.length = 0;
       const nuevo = '[' + [...limpios, ...entradas].join(',') + ']';
       arr.splice(a, k - a + 1, "        minecraft:lore: '" + nuevo.replace(/'/g, "''") + "'");
     } else {
@@ -172,8 +182,44 @@ function generar(original, spec, idCaja) {
     }
   };
 
+  // Nombre nuevo de un objeto serializado: el degradado de 'estilo-nuevos' de la caja, letra a letra como los demas.
+  // El valor de minecraft:custom_name puede seguir en lineas mas sangradas (10 espacios): se cambia entero.
+  const ponerNombre = (arr, s, nombre) => {
+    let e = s + 1;
+    while (e < arr.length && /^      /.test(arr[e])) e++;
+    const i = arr.slice(s, e).findIndex(l => /^        minecraft:custom_name: '/.test(l));
+    if (i < 0) throw new Error(idCaja + ': sin custom_name para ' + nombre);
+    let k = s + i + 1;
+    while (k < arr.length && /^          /.test(arr[k])) k++;
+    const g = (caja['estilo-nuevos'] || {}).degradado || ['#FFFFFF', '#FFFFFF'];
+    const P = h => [1, 3, 5].map(j => parseInt(h.slice(j, j + 2), 16)), A = P(g[0]), B = P(g[1]);
+    const letras = [...nombre], n = letras.filter(c => c !== ' ').length;
+    let j = 0;
+    const partes = letras.map(c => {
+      if (c === ' ') return '{italic:0b,text:" "}';
+      const col = '#' + A.map((v, q) => Math.floor(v + (B[q] - v) * j / n).toString(16).padStart(2, '0')).join('').toUpperCase();
+      j++;
+      return '{bold:0b,color:"' + col + '",italic:0b,text:"' + c.replace(/"/g, '\\"') + '"}';
+    });
+    arr.splice(s + i, k - (s + i), "        minecraft:custom_name: '{extra:[" + partes.join(',').replace(/'/g, "''") + "],text:\"\"}'");
+  };
+  const ponerIcono = (arr, s, icono) => {
+    let e = s + 1;
+    while (e < arr.length && /^      /.test(arr[e])) e++;
+    const i = arr.slice(s, e).findIndex(l => /^      id: minecraft:/.test(l));
+    if (i < 0) throw new Error(idCaja + ': sin id para el icono ' + icono);
+    arr[s + i] = '      id: ' + icono;
+  };
+
+  // Icono propio (tambien en premios apagados, para que la imagen sea la misma en toda la caja)
+  for (const b of bloques) {
+    if (!b.p.icono) continue;
+    const iD = b.lineas.findIndex(l => /^    display-item:/.test(l));
+    ponerIcono(b.lineas, iD, b.p.icono);
+  }
+
   // Imagen del premio: objeto guardado (custom:<clave>), serializada en el propio premio, o simple
-  const loreGuardado = {};
+  const loreGuardado = {}, reemplazarGuardado = {};
   for (const b of bloques) {
     if (!b.p.calidad) continue;
     const iD = b.lineas.findIndex(l => /^    display-item:/.test(l));
@@ -182,13 +228,15 @@ function generar(original, spec, idCaja) {
     const zona = b.lineas.slice(iD, j);
     const mat = (zona.find(l => /^      material:/.test(l)) || '').replace(/^\s+material:\s*/, '').trim();
     if (zona.some(l => /^      ==: org\.bukkit\.inventory\.ItemStack/.test(l))) {
-      ponerLore(b.lineas, iD, snbt(b), idCaja + ' premio ' + b.n);
+      ponerLore(b.lineas, iD, snbt(b), idCaja + ' premio ' + b.n, !!b.p.texto);
+      if (b.p.nombre) ponerNombre(b.lineas, iD, b.p.nombre);
     } else if (mat.startsWith('custom:')) {
       const clave = mat.slice(7);
       // dos premios pueden compartir imagen solo si su lore de calidad sale identico
       const nuevo = snbt(b);
       if (loreGuardado[clave] && loreGuardado[clave].join() !== nuevo.join()) throw new Error(idCaja + ': imagen compartida con lore distinto ' + clave);
       loreGuardado[clave] = nuevo;
+      if (b.p.texto) reemplazarGuardado[clave] = true;
     } else {
       const iLore = zona.findIndex(l => /^      lore:/.test(l));
       const nuevas = ampLore(b).map(x => '      - ' + x);
@@ -197,7 +245,7 @@ function generar(original, spec, idCaja) {
       } else {
         let k = iLore + 1;
         while (k < zona.length && /^      - /.test(zona[k])) k++;
-        const viejas = zona.slice(iLore + 1, k).filter(l => !/Rareza|Objeto personalizado/.test(l));
+        const viejas = b.p.texto ? [] : zona.slice(iLore + 1, k).filter(l => !/Rareza|Objeto personalizado/.test(l));
         while (viejas.length && /^      - ''$/.test(viejas[viejas.length - 1])) viejas.pop();
         zona.splice(iLore, k - iLore, '      lore:', ...viejas, ...nuevas);
       }
@@ -211,7 +259,7 @@ function generar(original, spec, idCaja) {
     const re = new RegExp("^    '?" + clave.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + "'?:\\s*$");
     const s = out.findIndex((l, i) => i > iItems && re.test(l));
     if (s < 0) throw new Error(idCaja + ': no esta en internal-storage ' + clave);
-    ponerLore(out, s, entradas, idCaja + ' ' + clave);
+    ponerLore(out, s, entradas, idCaja + ' ' + clave, !!reemplazarGuardado[clave]);
   }
 
   // Nombre de la caja (el mismo que tenia en ExcellentCrates); tambien es el titulo de su menu
