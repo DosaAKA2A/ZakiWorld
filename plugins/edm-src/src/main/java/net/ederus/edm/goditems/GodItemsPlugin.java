@@ -81,6 +81,7 @@ public final class GodItemsPlugin extends Module {
     private Escuchas escuchas;
     private EscuchasMas escuchasMas;
     private Combate combate;
+    private Sentencias sentencias;
     private Auras auras;
 
     public Escuchas escuchas() {
@@ -93,6 +94,10 @@ public final class GodItemsPlugin extends Module {
 
     public Combate combate() {
         return this.combate;
+    }
+
+    public Sentencias sentencias() {
+        return this.sentencias;
     }
 
     public Auras auras() {
@@ -117,6 +122,7 @@ public final class GodItemsPlugin extends Module {
         this.usos = new Usos(this);
         this.cooldowns = new Cooldowns();
         this.combate = new Combate();
+        this.sentencias = new Sentencias(this);
         this.auras = new Auras(this);
         this.vuelo = new Vuelo();
         this.motor = new Motor(this);
@@ -145,6 +151,7 @@ public final class GodItemsPlugin extends Module {
         this.escuchasMas = new EscuchasMas(this);
         core.getServer().getPluginManager().registerEvents(this.escuchas, this);
         core.getServer().getPluginManager().registerEvents(this.escuchasMas, this);
+        core.getServer().getPluginManager().registerEvents(this.sentencias, this);
         core.getServer().getPluginManager().registerEvents(this.menu, this);
         this.auras.enganchar(this);
         /* La clase de escuchas de MMOItems referencia sus tipos: sin su jar

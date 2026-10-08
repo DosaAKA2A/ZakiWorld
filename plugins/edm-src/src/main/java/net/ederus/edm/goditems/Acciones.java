@@ -117,6 +117,31 @@ public final class Acciones {
          * Va sobre el daño que haya ya en el evento, o sea DESPUES de que
          * MMOItems haya puesto el suyo: multiplica el golpe real, no el base.
          */
+        /*
+         * DANO_DEL_GOLPE (1.82.0): un porcentaje del golpe que disparo el activador (%dano%, ya con
+         * armadura). Pensado para ir detras de un ESPERAR: el segundo corte del Iaido de la Masamune.
+         */
+        reg("DANO_DEL_GOLPE", (ctx, a) -> {
+            double n = ctx.dano() * Math.max(0, a.d("porcentaje", 50)) / 100.0;
+            double tope = a.d("maximo", 0);
+            if (tope > 0) n = Math.min(n, tope);
+            if (n <= 0) return;
+            for (LivingEntity e : Objetivos.vivos(ctx, a.selector() == null ? "@golpeado" : a.selector())) {
+                e.damage(n, ctx.jugador());
+            }
+        });
+
+        /*
+         * SENTENCIA (1.82.0): oscuridad unos segundos y, al acabar, un grito y un golpe con lo que el marcado
+         * recibio mientras tanto (Sentencias). El Epitafio de Calamity.
+         */
+        reg("SENTENCIA", (ctx, a) -> {
+            for (LivingEntity e : Objetivos.vivos(ctx, a.selector() == null ? "@golpeado" : a.selector())) {
+                ctx.modulo().sentencias().poner(e, ctx.jugador(), a.ticks("duracion", 40),
+                        a.d("porcentaje", 100) / 100.0, a.d("maximo", 0), a.s("grito", "entity.ghast.scream"));
+            }
+        });
+
         reg("MULTIPLICAR_DANO", (ctx, a) -> {
             double x = a.d("cantidad", a.d("factor", 1.5));
             if (!(ctx.evento() instanceof org.bukkit.event.entity.EntityDamageEvent d)) {

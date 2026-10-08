@@ -376,6 +376,18 @@ public final class Catalogo {
                 "@golpeado", null, null,
                 Param.de("duracion", "Tiempo sin poder recogerla", Clase.TICKS, "60", "", "CLOCK"));
 
+        acc("DANO_DEL_GOLPE", "Combate", "Un porcentaje del golpe que lo disparó, otra vez.", "IRON_SWORD",
+                "@golpeado", null, null,
+                Param.de("porcentaje", "Porcentaje del golpe", Clase.NUMERO, "50", "60 = el 60 % de %dano%.", "REDSTONE"),
+                Param.de("maximo", "Tope", Clase.NUMERO, "0", "0 = sin tope.", "BARRIER"));
+
+        acc("SENTENCIA", "Combate", "Oscuridad y, al acabar, grito y golpe con el daño recibido.", "SCULK_SHRIEKER",
+                "@golpeado", null, null,
+                Param.de("duracion", "Duración", Clase.TICKS, "40", "Lo que cuenta el daño.", "CLOCK"),
+                Param.de("porcentaje", "Porcentaje de lo recibido", Clase.NUMERO, "100", "", "REDSTONE"),
+                Param.de("maximo", "Tope del golpe", Clase.NUMERO, "0", "0 = sin tope.", "BARRIER"),
+                Param.de("grito", "Grito", Clase.TEXTO, "entity.ghast.scream", "Clave de sonido.", "GHAST_TEAR"));
+
         acc("MARCAR", "Combate", "Brillo y marca para la condición OBJETIVO_MARCADO.", "GLOWSTONE_DUST",
                 "@golpeado", null, null,
                 Param.de("duracion", "Duración", Clase.TICKS, "100", "", "CLOCK"));
