@@ -192,11 +192,13 @@ final class Reescritor {
         List<Component> sobre = conEncantos != null ? conEncantos
                 : (loreViejo == null ? List.of() : loreViejo.lines());
         List<Component> conStats = bloqueEstadisticas(sobre, a);
-        if (conEncantos == null && conStats == null) {
+        List<Component> hasta = conStats != null ? conStats : conEncantos != null ? conEncantos : sobre;
+        List<Component> conEspeciales = bloqueEspeciales(hasta, a);
+        if (conEncantos == null && conStats == null && conEspeciales == null) {
             return null;
         }
         ItemStack copia = base.clone();
-        copia.setData(DataComponentTypes.LORE, ItemLore.lore(conStats != null ? conStats : conEncantos));
+        copia.setData(DataComponentTypes.LORE, ItemLore.lore(conEspeciales != null ? conEspeciales : hasta));
         if (conEncantos != null) {
             copia.setData(DataComponentTypes.TOOLTIP_DISPLAY, ocultarEncantamientos(base));
         }
@@ -362,6 +364,54 @@ final class Reescritor {
     }
 
     /** Le pone nuestra vineta a una linea ajena, respetando sus colores. */
+    /**
+     * EDM 1.82.0 · Las lineas especiales de AdvancedEnchantments (contadores, Bendicion de Dios) se sacan de donde esten
+     * y se ponen en su propio bloque "Efectos" justo debajo de los encantamientos (o arriba del todo si no hay). null si
+     * el item no trae ninguna.
+     */
+    private static List<Component> bloqueEspeciales(List<Component> lore, Ajustes a) {
+        if (a.especiales().isEmpty() || lore == null || lore.isEmpty()) return null;
+        var plano = PlainTextComponentSerializer.plainText();
+        List<Component> sacadas = new ArrayList<>();
+        List<Component> resto = new ArrayList<>();
+        for (Component l : lore) {
+            String t = plano.serialize(l);
+            boolean casa = false;
+            for (Pattern p : a.especiales()) {
+                if (p.matcher(t).find()) {
+                    casa = true;
+                    break;
+                }
+            }
+            if (casa) sacadas.add(l);
+            else resto.add(l);
+        }
+        if (sacadas.isEmpty()) return null;
+        // Un renglon en blanco que quedara colgando al final (el que separaba la linea sacada) sobra.
+        while (!resto.isEmpty() && plano.serialize(resto.get(resto.size() - 1)).isBlank()) resto.remove(resto.size() - 1);
+        String cabEncantos = plano.serialize(a.encabezadoComponente()).trim();
+        int donde = -1;
+        for (int i = 0; i < resto.size(); i++) {
+            if (!cabEncantos.isEmpty() && plano.serialize(resto.get(i)).trim().equals(cabEncantos)) {
+                int j = i + 1;
+                while (j < resto.size() && !plano.serialize(resto.get(j)).isBlank()) j++;
+                donde = j;
+                break;
+            }
+        }
+        List<Component> bloque = new ArrayList<>();
+        bloque.add(Component.empty().decoration(TextDecoration.ITALIC, false));
+        bloque.add(a.encabezadoEspecialesComponente());
+        for (Component s : sacadas) bloque.add(vineta(s, a));
+        List<Component> out = new ArrayList<>(resto);
+        if (donde < 0) {
+            out.addAll(0, bloque);
+        } else {
+            out.addAll(donde, bloque);
+        }
+        return out;
+    }
+
     private static Component vineta(Component linea, Ajustes a) {
         return Component.empty()
                 .decoration(TextDecoration.ITALIC, false)

@@ -35,11 +35,17 @@ record Ajustes(
         List<String> paquetes,
         List<Tramo> tramos,
         List<Pattern> absorber,
-        List<Estadisticas> bloques) {
+        List<Estadisticas> bloques,
+        String encabezadoEspeciales,
+        List<Pattern> especiales) {
 
-    /** True si hay algun bloque de MMOItems que redibujar. */
+    /** True si hay algun bloque de MMOItems que redibujar (o lineas especiales que mover). */
     boolean hayBloques() {
-        return !this.bloques.isEmpty();
+        return !this.bloques.isEmpty() || !this.especiales.isEmpty();
+    }
+
+    Component encabezadoEspecialesComponente() {
+        return Estilo.legado(encabezadoEspeciales);
     }
 
     /**
@@ -101,7 +107,29 @@ record Ajustes(
                 paquetes(c),
                 tramos(c),
                 patrones(c),
-                bloques(c));
+                bloques(c),
+                c.getString("especiales.encabezado", "&#FFA500▎ Efectos:"),
+                especiales(c));
+    }
+
+    /*
+     * EDM 1.82.0 (Dosa): las lineas que AdvancedEnchantments pone al final del lore (contadores de bajas, criaturas,
+     * bloques y peces; la Bendicion de Dios) suben a un bloque "Efectos" debajo de los encantamientos. Sin la seccion
+     * en el config valen estas.
+     */
+    private static List<Pattern> especiales(FileConfiguration c) {
+        if (!c.getBoolean("especiales.activo", true)) return List.of();
+        List<String> fuentes = c.isList("especiales.lineas") ? c.getStringList("especiales.lineas")
+                : List.of("Jugadores Muertos:", "Criaturas Abatidas:", "Bloques Rotos:", "Peces Capturados:", "Bendición de Dios");
+        List<Pattern> out = new ArrayList<>();
+        for (String s : fuentes) {
+            try {
+                out.add(Pattern.compile(s));
+            } catch (PatternSyntaxException ignorado) {
+                // un patron roto no tumba el resto
+            }
+        }
+        return List.copyOf(out);
     }
 
     /**

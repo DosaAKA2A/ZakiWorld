@@ -139,3 +139,15 @@ efectos:
   linea: '^\s*(\S+)\s+(.+)$'
   conservar-icono: false
   linea-en-blanco-antes: true
+
+# EDM 1.82.0 · Las lineas que AdvancedEnchantments escribe al final del lore (contadores y la Bendicion de Dios)
+# suben a su propio bloque, justo debajo de los encantamientos. "lineas" son patrones sobre el texto plano.
+especiales:
+  activo: true
+  encabezado: '&#FFA500▎ Efectos:'
+  lineas:
+    - 'Jugadores Muertos:'
+    - 'Criaturas Abatidas:'
+    - 'Bloques Rotos:'
+    - 'Peces Capturados:'
+    - 'Bendición de Dios'
