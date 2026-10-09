@@ -21,6 +21,20 @@ ticks-de-revision: 10
 # normal basta con la linea de aviso.
 detalle-en-el-log: false
 
+# La bitacora de las habilidades: plugins/EDM/logs/goditems-AAAA-MM-DD.log.
+# Una linea por activacion (jugador, item, activador, objetivo, acciones), una por
+# accion que hiere o cura (con el daño que de verdad entro a cada objetivo), las
+# SENTENCIA al cerrarse, las recargas de espera (REINICIAR_COOLDOWN, COOLDOWN_DE a 0)
+# y los intentos rechazados por espera.
+bitacora:
+  activa: true
+  # Los intentos en espera se agrupan por jugador e item: el primero sale en el
+  # acto y el resto de estos segundos se resume en una sola linea.
+  espera-segundos: 30
+  # EN_MANO, PUESTO, EN_INVENTARIO y TEMPORIZADOR corren cada pocos ticks: de
+  # serie no se anotan.
+  activadores-de-tick: false
+
 # Los avisos que da el modulo por su cuenta. Aceptan codigos & y los mismos
 # %placeholders% que las acciones. Dejar uno vacio lo apaga.
 mensajes:

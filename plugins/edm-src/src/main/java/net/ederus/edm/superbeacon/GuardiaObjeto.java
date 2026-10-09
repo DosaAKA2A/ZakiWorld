@@ -226,7 +226,7 @@ final class GuardiaObjeto implements Listener {
             plugin.getLogger().warning("[SuperBeacon] Un plugin quito del suelo el Super Beacon "
                     + f.id().toString().substring(0, 8) + " (" + f.tipo() + ", " + donde + "). Si no lo guardo"
                     + " en otro sitio, se ha perdido: esta en la bitacora para reponerlo a mano.");
-            plugin.anotar("quitado-por-plugin", f.id().toString(), f.tipo(), f.duenoTexto(), donde);
+            plugin.anotarFicha("quitado-por-plugin", f, donde, "si no lo guardo en otro sitio, se perdio");
         }
     }
 }

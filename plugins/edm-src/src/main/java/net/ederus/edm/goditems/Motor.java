@@ -87,12 +87,16 @@ public final class Motor {
         }
 
         private void correr(Paso.Simple s) {
+            BitacoraGi bitacora = modulo.bitacoraGi();
+            if (bitacora != null) bitacora.antes(this.ctx, s.args().nombre());
             try {
                 s.accion().correr(this.ctx, s.args());
             } catch (Throwable t) {
                 modulo.getLogger().warning("[GodItems] " + this.ctx.definicion().id()
                         + " fallo en la accion: " + s.linea() + " -> " + t);
                 if (modulo.detalle()) t.printStackTrace();
+            } finally {
+                if (bitacora != null) bitacora.despues();
             }
         }
 

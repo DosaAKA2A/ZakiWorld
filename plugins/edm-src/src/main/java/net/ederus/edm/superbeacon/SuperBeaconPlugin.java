@@ -214,6 +214,8 @@ public final class SuperBeaconPlugin extends Module {
         }
         if (menu != null) menu.cerrarTodos();
         if (contorno != null) contorno.pararTodo();
+        // Lo que llevaba el resumen de receptores, antes de que el motor lo olvide.
+        resumirReceptores(System.currentTimeMillis(), true);
         if (motor != null) motor.parar();
         if (hologramas != null) hologramas.quitarTodos();
         if (registro != null) registro.guardar();
@@ -275,6 +277,8 @@ public final class SuperBeaconPlugin extends Module {
         }
         zona = z;
         clanes.configurar(c.getString("clan.placeholder", "%uclans_tag_color%"), c.getStringList("clan.sin-clan"));
+        receptoresCadaMs = Math.max(0, c.getInt("bitacora.receptores-minutos", 10)) * 60_000L;
+        proximoResumen = 0;
 
         List<String> errores = new ArrayList<>();
         tipos = Collections.unmodifiableMap(LectorTipos.leer(c.getConfigurationSection("tipos"), clases, errores));
@@ -333,6 +337,7 @@ public final class SuperBeaconPlugin extends Module {
             revisar(b, false);
             if (registro.porId(b.id) == b) refrescarClan(b);
         }
+        resumirReceptores(ahora, false);
         registro.podarVaciadas(ahora);
         for (Registro.Vaciada v : registro.vaciadas()) revisarVaciada(v);
         vuelo.podar(ahora);
@@ -427,8 +432,8 @@ public final class SuperBeaconPlugin extends Module {
             b.vistaVencida = true;
             hologramas.refrescar(b);
             menu.refrescar(b.id);
-            anotar("vencida", b.id.toString(), b.tipo, b.duenoTexto(), b.donde(),
-                    t.alCaducar == TipoBaliza.AlCaducar.APAGAR ? "apagada" : "por destruir");
+            anotarBaliza("vencida", b, t.alCaducar == TipoBaliza.AlCaducar.APAGAR ? "se apaga (al-caducar: apagar)"
+                    : "por destruir (al-caducar: destruir)");
         }
         if (t.alCaducar != TipoBaliza.AlCaducar.APAGAR || b.avisoVencida || b.dueno == null) return;
         Player d = Bukkit.getPlayer(b.dueno);
@@ -631,7 +636,7 @@ public final class SuperBeaconPlugin extends Module {
             b.olvidarCache();
             if (hologramas != null) hologramas.refrescar(b);
             if (menu != null) menu.refrescar(b.id);
-            anotar("renovada", b.id.toString(), b.tipo, b.clan, "colocada", Tiempo.fecha(b.vence, zona()), motivo);
+            anotarBaliza("renovada", b, "colocada", motivo);
             n++;
         }
         for (Pendiente pe : new ArrayList<>(registro.pendientes())) {
@@ -640,7 +645,7 @@ public final class SuperBeaconPlugin extends Module {
             Ficha nueva = new Ficha(f.id(), f.tipo(), f.dueno(), f.duenoNombre(), f.clan(),
                     venceRenovado(f.vence(), ahora, dias), f.elegidos(), semanaRenovada(f.tipo(), f.semana(), ahora));
             registro.pendiente(new Pendiente(nueva, pe.material, pe.para, pe.paraNombre, pe.motivo, pe.desde));
-            anotar("renovada", f.id().toString(), f.tipo(), f.clan(), "pendiente", Tiempo.fecha(nueva.vence(), zona()), motivo);
+            anotarFicha("renovada", nueva, "pendiente de " + pe.paraTexto(), motivo);
             n++;
         }
         if (objeto != null) {
@@ -653,8 +658,7 @@ public final class SuperBeaconPlugin extends Module {
                     Ficha nueva = new Ficha(f.id(), f.tipo(), f.dueno(), f.duenoNombre(), f.clan(),
                             venceRenovado(f.vence(), ahora, dias), f.elegidos(), semanaRenovada(f.tipo(), f.semana(), ahora));
                     inv.setItem(i, objeto.crear(nueva, it.getType()));
-                    anotar("renovada", f.id().toString(), f.tipo(), f.clan(), "objeto de " + p.getName(),
-                            Tiempo.fecha(nueva.vence(), zona()), motivo);
+                    anotarFicha("renovada", nueva, "inventario de " + p.getName(), motivo);
                     n++;
                 }
             }
@@ -693,6 +697,74 @@ public final class SuperBeaconPlugin extends Module {
 
     void anotar(String... campos) {
         if (bitacora != null) bitacora.anotar(campos);
+    }
+
+    /**
+     * Una linea de bitacora de una baliza colocada, siempre con los mismos campos en el mismo
+     * orden: suceso | id | tipo | dueño | clan | mundo x y z | vence | lo que añada quien llama.
+     * Asi el staff busca por clan, por coordenadas o por id sin adivinar en que columna esta.
+     */
+    void anotarBaliza(String suceso, Baliza b, String... extra) {
+        if (bitacora == null || b == null) return;
+        anotar(campos(suceso, b.id.toString(), b.tipo, b.duenoTexto(), clanTexto(b.clan, b.clanDueno), b.donde(),
+                b.vence, extra));
+    }
+
+    /** Lo mismo para una baliza que es objeto o pendiente: donde dice en que inventario o "-". */
+    void anotarFicha(String suceso, Ficha f, String donde, String... extra) {
+        if (bitacora == null || f == null) return;
+        anotar(campos(suceso, f.id().toString(), f.tipo(), f.duenoTexto(), clanTexto(f.clan(), null),
+                donde == null || donde.isBlank() ? "-" : donde, f.vence(), extra));
+    }
+
+    private String[] campos(String suceso, String id, String tipo, String dueno, String clan, String donde,
+                            long vence, String... extra) {
+        return lineaBitacora(suceso, id, tipo, dueno, clan, donde, vence, zona, extra);
+    }
+
+    /** La linea, sin estado, para el selftest. */
+    static String[] lineaBitacora(String suceso, String id, String tipo, String dueno, String clan, String donde,
+                                  long vence, ZoneId zona, String... extra) {
+        List<String> c = new ArrayList<>(List.of(suceso, id, tipo, "dueño " + (dueno == null ? "-" : dueno),
+                "clan " + (clan == null || clan.isBlank() ? "-" : clan), donde == null ? "-" : donde,
+                vence <= 0 ? "no caduca" : "vence " + Tiempo.fecha(vence, zona)));
+        if (extra != null) {
+            for (String e : extra) {
+                if (e != null && !e.isBlank()) c.add(e);
+            }
+        }
+        return c.toArray(new String[0]);
+    }
+
+    /** El clan fijado (el del give) o, si no hay, el de su dueño entre parentesis. Sin colores. */
+    static String clanTexto(String fijado, String delDueno) {
+        if (fijado != null && !fijado.isBlank()) return Clanes.limpiar(fijado);
+        if (delDueno != null && !delDueno.isBlank()) return "(" + Clanes.limpiar(delDueno) + " del dueño)";
+        return "-";
+    }
+
+    /* ======================================================= receptores (bitacora) */
+
+    /**
+     * Cada cuantos minutos se anota quien recibio efectos de cada baliza de clan (el trofeo,
+     * la de guerra). Un resumen y no una linea por ciclo: el motor aplica cada 2 s.
+     */
+    private long receptoresCadaMs = 10L * 60_000L;
+    private long proximoResumen;
+
+    private void resumirReceptores(long ahora, boolean yaMismo) {
+        if (receptoresCadaMs <= 0 || motor == null || registro == null) return;
+        if (proximoResumen == 0) proximoResumen = ahora + receptoresCadaMs;
+        if (!yaMismo && ahora < proximoResumen) return;
+        proximoResumen = ahora + receptoresCadaMs;
+        String ventana = "en los ultimos " + Math.max(1, receptoresCadaMs / 60_000L) + " min";
+        for (Map.Entry<UUID, Set<String>> e : motor.vaciarReceptores().entrySet()) {
+            Baliza b = registro.porId(e.getKey());
+            if (b == null) continue;
+            List<String> nombres = new ArrayList<>(e.getValue());
+            Collections.sort(nombres, String.CASE_INSENSITIVE_ORDER);
+            anotarBaliza("receptores", b, nombres.size() + " jugador(es): " + String.join(", ", nombres), ventana);
+        }
     }
 
     /* ========================================================= placeholders */

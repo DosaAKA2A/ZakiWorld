@@ -74,6 +74,13 @@ clan:
   # Lo que el placeholder devuelve cuando el jugador NO tiene clan.
   sin-clan: ["", "Sin clan", "N/A", "-"]
 
+# La bitacora (plugins/EDM/logs/superbeacon-AAAA-MM-DD.log) anota cada give, entrega,
+# colocacion, recogida, renovacion, vencimiento y perdida, con dueño, tipo, clan,
+# mundo y coordenadas y vencimiento. Ademas, cada tantos minutos, quien recibio
+# efectos de cada baliza de clan (el trofeo, la de guerra). 0 = sin ese resumen.
+bitacora:
+  receptores-minutos: 10
+
 # ---------------------------------------------------------------------------
 # Los tipos. Cada uno:
 #   nombre: con colores &#RRGGBB. Sin negrita salvo que la quieras en el nombre.

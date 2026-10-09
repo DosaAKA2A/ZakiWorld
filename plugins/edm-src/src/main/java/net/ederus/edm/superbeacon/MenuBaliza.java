@@ -475,7 +475,7 @@ final class MenuBaliza implements Listener {
             plugin.registro().marcar();
             plugin.motor().reindexar();
             plugin.hologramas().refrescar(b);
-            plugin.anotar("efectos", b.id.toString(), b.tipo, p.getName(), String.join(",", b.elegidos));
+            plugin.anotarBaliza("efectos", b, "por " + p.getName(), "elegidos " + String.join(",", b.elegidos));
             refrescar(b.id);
         }
     }

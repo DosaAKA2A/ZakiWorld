@@ -105,7 +105,11 @@ public final class Acciones {
             double cura = ctx.dano() * pct;
             if (cura <= 0) return;
             for (LivingEntity e : Objetivos.vivos(ctx, a.selector())) {
+                double antes = e.getHealth();
                 e.setHealth(Math.max(0, Math.min(Textos.maxVida(e), e.getHealth() + cura)));
+                ctx.modulo().bitacoraGi().nota(ctx, "cura a " + BitacoraGi.nombre(e) + " "
+                        + net.ederus.edm.comun.Bitacora.num(e.getHealth() - antes) + " (" + Math.round(pct * 100)
+                        + " % de " + net.ederus.edm.comun.Bitacora.num(ctx.dano()) + ")");
             }
         });
 
@@ -177,8 +181,12 @@ public final class Acciones {
          */
         reg("SENTENCIA", (ctx, a) -> {
             for (LivingEntity e : Objetivos.vivos(ctx, a.selector() == null ? "@golpeado" : a.selector())) {
-                ctx.modulo().sentencias().poner(e, ctx.jugador(), a.ticks("duracion", 40),
-                        a.d("porcentaje", 100) / 100.0, a.d("maximo", 0), a.s("grito", "entity.ghast.scream"));
+                int ticks = a.ticks("duracion", 40);
+                boolean puesta = ctx.modulo().sentencias().poner(e, ctx.jugador(), ticks,
+                        a.d("porcentaje", 100) / 100.0, a.d("maximo", 0), a.s("grito", "entity.ghast.scream"),
+                        ctx.definicion().id());
+                ctx.modulo().bitacoraGi().nota(ctx, (puesta ? "marca a " : "ya marcado, sin efecto: ")
+                        + BitacoraGi.nombre(e) + (puesta ? " por " + BitacoraGi.segundos(ticks) : ""));
             }
         });
 
@@ -191,8 +199,11 @@ public final class Acciones {
                                 + " Ponlo en GOLPEAR, RECIBIR_GOLPE o CAER.");
                 return;
             }
+            double antes = d.getFinalDamage();
             d.setDamage(Math.max(0, d.getDamage() * x));
             ctx.dano(d.getFinalDamage());
+            ctx.modulo().bitacoraGi().nota(ctx, "golpe x" + net.ederus.edm.comun.Bitacora.num(x) + ": "
+                    + net.ederus.edm.comun.Bitacora.num(antes) + " -> " + net.ederus.edm.comun.Bitacora.num(d.getFinalDamage()));
         });
 
         /*
@@ -206,10 +217,13 @@ public final class Acciones {
             if (n <= 0) return;
             for (LivingEntity e : Objetivos.vivos(ctx,
                     a.selector() == null ? "@golpeado" : a.selector())) {
+                double vidaAntes = BitacoraGi.vida(e);
                 double absorbe = Math.min(e.getAbsorptionAmount(), n);
                 e.setAbsorptionAmount(e.getAbsorptionAmount() - absorbe);
                 double resto = n - absorbe;
                 if (resto > 0) e.setHealth(Math.max(0, e.getHealth() - resto));
+                ctx.modulo().bitacoraGi().nota(ctx, "a pelo a " + BitacoraGi.nombre(e) + " "
+                        + net.ederus.edm.comun.Bitacora.num(vidaAntes - BitacoraGi.vida(e)));
                 e.playEffect(org.bukkit.EntityEffect.HURT);
             }
         });
@@ -1146,8 +1160,13 @@ public final class Acciones {
             String id = a.tiene("item") ? GodItem.normalizar(a.s("item", "")) : ctx.definicion().id();
             int t = a.ticks("tiempo", 0);
             for (Player p : Objetivos.jugadores(ctx, a.selector())) {
-                if (t <= 0) ctx.modulo().cooldowns().quitar(p, id, act);
-                else ctx.modulo().cooldowns().poner(p, id, act, t, a.b("visible", true));
+                if (t <= 0) {
+                    int quedaban = ctx.modulo().cooldowns().quedan(p, id, act);
+                    ctx.modulo().cooldowns().quitar(p, id, act);
+                    ctx.modulo().bitacoraGi().recarga(ctx, p, id, act, quedaban);
+                } else {
+                    ctx.modulo().cooldowns().poner(p, id, act, t, a.b("visible", true));
+                }
             }
         });
 
@@ -1164,6 +1183,7 @@ public final class Acciones {
                 if (quien.isBlank() || quien.equalsIgnoreCase("todos")
                         || quien.equalsIgnoreCase("all")) {
                     ctx.modulo().cooldowns().quitarTodo(p);
+                    ctx.modulo().bitacoraGi().recarga(ctx, p, null, null, 0);
                     continue;
                 }
                 Activador act = Activador.porNombre(quien);
@@ -1174,7 +1194,9 @@ public final class Acciones {
                 }
                 String id = a.tiene("item") ? GodItem.normalizar(a.s("item", ""))
                         : ctx.definicion().id();
+                int quedaban = ctx.modulo().cooldowns().quedan(p, id, act);
                 ctx.modulo().cooldowns().quitar(p, id, act);
+                ctx.modulo().bitacoraGi().recarga(ctx, p, id, act, quedaban);
             }
         });
 

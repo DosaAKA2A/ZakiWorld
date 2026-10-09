@@ -83,6 +83,12 @@ public final class GodItemsPlugin extends Module {
     private Combate combate;
     private Sentencias sentencias;
     private Auras auras;
+    private BitacoraGi bitacoraGi;
+
+    /** La bitacora de las habilidades (plugins/EDM/logs/goditems-*.log). */
+    public BitacoraGi bitacoraGi() {
+        return this.bitacoraGi;
+    }
 
     public Escuchas escuchas() {
         return this.escuchas;
@@ -114,6 +120,7 @@ public final class GodItemsPlugin extends Module {
     public void onEnable() {
         saveDefaultConfig();
         reloadConfig();
+        this.bitacoraGi = new BitacoraGi(this);
         leerAjustes();
 
         this.claveDueno = new NamespacedKey(this, "dueno");
@@ -152,6 +159,7 @@ public final class GodItemsPlugin extends Module {
         core.getServer().getPluginManager().registerEvents(this.escuchas, this);
         core.getServer().getPluginManager().registerEvents(this.escuchasMas, this);
         core.getServer().getPluginManager().registerEvents(this.sentencias, this);
+        core.getServer().getPluginManager().registerEvents(this.bitacoraGi, this);
         core.getServer().getPluginManager().registerEvents(this.menu, this);
         this.auras.enganchar(this);
         /* La clase de escuchas de MMOItems referencia sus tipos: sin su jar
@@ -203,6 +211,7 @@ public final class GodItemsPlugin extends Module {
         this.tareaBarra = core.getServer().getScheduler().runTaskTimer(core, () -> {
             this.cooldowns.repasar(this);
             this.combate.repasar();
+            this.bitacoraGi.repasar();
         }, 5L, 5L);
 
         /*
@@ -247,6 +256,7 @@ public final class GodItemsPlugin extends Module {
     @Override
     public void onDisable() {
         pararTareas();
+        if (this.bitacoraGi != null) this.bitacoraGi.vaciar();
         net.ederus.edm.goditems.api.EquipoApi.enganchar(null);
         if (this.equipo != null) this.equipo.parar();
         if (this.vuelo != null) this.vuelo.devolverTodo(this);
@@ -269,6 +279,7 @@ public final class GodItemsPlugin extends Module {
     private void leerAjustes() {
         this.detalle = getConfig().getBoolean("detalle-en-el-log", false);
         this.ticksDeRevision = Math.max(1, getConfig().getInt("ticks-de-revision", 10));
+        if (this.bitacoraGi != null) this.bitacoraGi.configurar(getConfig().getConfigurationSection("bitacora"));
         this.mensajes = new HashMap<>();
         var sec = getConfig().getConfigurationSection("mensajes");
         if (sec != null) {
@@ -374,6 +385,7 @@ public final class GodItemsPlugin extends Module {
 
         int quedan = this.cooldowns.quedan(j, def.id(), act);
         if (quedan > 0) {
+            this.bitacoraGi.espera(j, def, act, quedan);
             /* En los activadores de tick no se avisa: seria un mensaje cada
              * pocos ticks. El cooldown ahi solo sirve para espaciar. */
             if (!act.esTick()) {
@@ -406,6 +418,7 @@ public final class GodItemsPlugin extends Module {
             this.cooldowns.poner(j, def.id(), act, bloque.cooldown(), bloque.cuentaAtras());
         }
 
+        this.bitacoraGi.activa(ctx, bloque);
         this.motor.lanzar(ctx, bloque.pasos());
         return true;
     }

@@ -88,8 +88,7 @@ final class Entregas {
         String venceTxt = vence == 0 ? plugin.textos().crudo("permanente", "Permanente")
                 : "vence " + Tiempo.fecha(vence, plugin.zona());
         String clanTxt = clan == null ? "" : " · clan " + clan;
-        plugin.anotar("give", f.id().toString(), t.id, nombreReal, venceTxt, clan == null ? "-" : clan,
-                "por " + quien.getName());
+        plugin.anotarFicha("give", f, "-", "para " + nombreReal, "por " + quien.getName());
 
         boolean conectado = p != null;
         if (conectado && entregar(p, pe, false)) {
@@ -140,7 +139,7 @@ final class Entregas {
         if (!sobra.isEmpty()) return false;
         registro().quitarPendiente(id);
         registro().guardar();
-        plugin.anotar("entregada", id.toString(), f.tipo(), p.getName(), pe.motivo);
+        plugin.anotarFicha("entregada", f, "inventario de " + p.getName(), pe.motivo);
         if (avisar) {
             plugin.textos().manda(p, "entregado", "&fRecibiste %nombre%&f.", "%nombre%", nombreDe(f.tipo()));
         }
@@ -150,7 +149,7 @@ final class Entregas {
     private void descartar(Pendiente pe, String motivo) {
         registro().quitarPendiente(pe.ficha.id());
         registro().guardar();
-        plugin.anotar("pendiente-descartado", pe.ficha.id().toString(), pe.ficha.tipo(), pe.paraTexto(), motivo);
+        plugin.anotarFicha("pendiente-descartado", pe.ficha, "-", "para " + pe.paraTexto(), motivo);
     }
 
     /** Tiene en el inventario (o en la mano, o puesto) un objeto con ese id. */
@@ -244,14 +243,14 @@ final class Entregas {
         Baliza ya = registro().porId(f.id());
         if (ya != null) {
             plugin.textos().manda(p, "colocar-repetido", "&#FF5C5CEste Super Beacon ya está colocado en otro lugar.");
-            plugin.anotar("repetida", f.id().toString(), f.tipo(), p.getName(), "ya colocada en " + ya.donde());
+            plugin.anotarFicha("repetida", f, donde(donde), "por " + p.getName(), "ya colocada en " + ya.donde());
             return false;
         }
         boolean admin = plugin.esAdmin(p);
         Pendiente pe = registro().pendiente(f.id());
         if (pe != null && !pe.esPara(p) && !admin) {
             plugin.textos().manda(p, "colocar-reservado", "&#FF5C5CEste Super Beacon está reservado para otro jugador.");
-            plugin.anotar("reservada", f.id().toString(), f.tipo(), p.getName(), "pendiente para " + pe.paraTexto());
+            plugin.anotarFicha("reservada", f, donde(donde), "por " + p.getName(), "pendiente para " + pe.paraTexto());
             return false;
         }
         if (!admin && !esSuDueno(f, p)) {
@@ -325,7 +324,7 @@ final class Entregas {
             registro().guardar();
             plugin.getLogger().warning("[SuperBeacon] No se pudo apuntar el Super Beacon " + b.idCorto() + " en "
                     + b.donde() + "; vuelve a su dueño como pendiente.");
-            plugin.anotar("colocacion-fallida", b.id.toString(), b.tipo, b.duenoTexto(), b.donde());
+            plugin.anotarBaliza("colocacion-fallida", b, "por " + p.getName());
             Bukkit.getScheduler().runTask(plugin.core(), () -> {
                 if (registro().en(bl) == null && bl.getType() == b.material) bl.setType(Material.AIR);
                 Player d = dueno == null ? null : Bukkit.getPlayer(dueno);
@@ -336,7 +335,7 @@ final class Entregas {
         }
         Pendiente pe = registro().quitarPendiente(f.id());
         if (pe != null) {
-            plugin.anotar("pendiente-descartado", f.id().toString(), f.tipo(), pe.paraTexto(), "se coloco el objeto");
+            plugin.anotarFicha("pendiente-descartado", f, b.donde(), "para " + pe.paraTexto(), "se coloco el objeto");
         }
         registro().guardar();
         plugin.motor().reindexar();
@@ -352,7 +351,8 @@ final class Entregas {
                     "%elegibles%", String.valueOf(t.elegibles));
         }
         bl.getWorld().playSound(bl.getLocation().add(0.5, 0.5, 0.5), Sound.BLOCK_BEACON_ACTIVATE, 0.8f, 1.0f);
-        plugin.anotar("colocada", b.id.toString(), b.tipo, b.duenoTexto(), b.donde(), "por " + p.getName());
+        plugin.anotarBaliza("colocada", b, "por " + p.getName(),
+                b.vencida(ahora) ? "ya vencida: queda apagada" : null);
     }
 
     /* ================================================================ recoger */
@@ -400,7 +400,7 @@ final class Entregas {
                         "&7Tu %nombre% &7te espera: te llega cuando tengas una casilla libre.", "%nombre%", nombre);
             }
             quien.playSound(quien.getLocation(), Sound.ENTITY_ITEM_PICKUP, 0.7f, 1f);
-            plugin.anotar("recogida", b.id.toString(), b.tipo, b.duenoTexto(), b.donde(), "por " + quien.getName());
+            plugin.anotarBaliza("recogida", b, "por " + quien.getName(), dado ? "a su inventario" : "pendiente");
             return true;
         } finally {
             enCurso.remove(b.id);
@@ -437,8 +437,7 @@ final class Entregas {
             plugin.textos().manda(quien, "retirado", "&fRetirado %nombre% &fde &7%donde%&f. &7%destino%",
                     "%nombre%", nombreDe(b.tipo), "%donde%", b.donde(),
                     "%destino%", destino.replace("%dueno%", b.duenoTexto()));
-            plugin.anotar("retirada", b.id.toString(), b.tipo, b.duenoTexto(), b.donde(), "por " + quien.getName(),
-                    dado ? "devuelta" : "pendiente");
+            plugin.anotarBaliza("retirada", b, "por " + quien.getName(), dado ? "devuelta" : "pendiente");
         } finally {
             enCurso.remove(b.id);
         }
@@ -459,7 +458,7 @@ final class Entregas {
                 registro().quitar(b);
                 registro().guardar();
                 limpiarRastro(b);
-                plugin.anotar("vencida-destruida", b.id.toString(), b.tipo, b.duenoTexto(), b.donde(), "ya no estaba");
+                plugin.anotarBaliza("vencida-destruida", b, "su bloque ya no estaba");
                 return;
             }
             Pendiente pe = devolver(b, "desaparecida");
@@ -467,7 +466,7 @@ final class Entregas {
             plugin.getLogger().warning("[SuperBeacon] El bloque del Super Beacon " + b.idCorto() + " (" + b.tipo
                     + ", de " + b.duenoTexto() + ") en " + b.donde() + " ya no esta (hay " + encontrado
                     + "). Pasa a pendiente de devolver a su dueño.");
-            plugin.anotar("desaparecida", b.id.toString(), b.tipo, b.duenoTexto(), b.donde(), "habia " + encontrado);
+            plugin.anotarBaliza("desaparecida", b, "habia " + encontrado, "vuelve a su dueño como pendiente");
             Player d = b.dueno == null ? null : Bukkit.getPlayer(b.dueno);
             if (d != null) avisarDevuelta(d, b, entregar(d, pe, false));
         } finally {
@@ -490,7 +489,7 @@ final class Entregas {
             sacarDelMundo(b);
             plugin.getLogger().warning("[SuperBeacon] El Super Beacon " + b.idCorto() + " (" + b.tipo + ", de "
                     + b.duenoTexto() + ") en " + b.donde() + " esta dentro de una mina; vuelve a su dueño.");
-            plugin.anotar("en-mina", b.id.toString(), b.tipo, b.duenoTexto(), b.donde());
+            plugin.anotarBaliza("en-mina", b, "vuelve a su dueño");
             Player d = b.dueno == null ? null : Bukkit.getPlayer(b.dueno);
             if (d != null) avisarDevuelta(d, b, entregar(d, pe, false));
         } finally {
@@ -506,7 +505,7 @@ final class Entregas {
     void perdidaEnElSuelo(Ficha f, Material material, UUID tiro, String causa, String donde) {
         UUID id = f.id();
         if (registro().porId(id) != null || registro().pendiente(id) != null) {
-            plugin.anotar("perdida-ignorada", id.toString(), f.tipo(), causa, donde, "ya existe en otro sitio");
+            plugin.anotarFicha("perdida-ignorada", f, donde, causa, "ya existe en otro sitio");
             return;
         }
         UUID para = f.ligada() ? f.dueno() : tiro;
@@ -516,7 +515,7 @@ final class Entregas {
             plugin.getLogger().warning("[SuperBeacon] Se perdio en el suelo el Super Beacon " + id.toString().substring(0, 8)
                     + " (" + f.tipo() + ", " + causa + ", " + donde + ") sin dueño ni quien lo tirara: no hay a quien"
                     + " devolverlo. Esta en la bitacora por si hay que reponerlo a mano.");
-            plugin.anotar("perdida-sin-dueno", id.toString(), f.tipo(), causa, donde);
+            plugin.anotarFicha("perdida-sin-dueno", f, donde, causa, "reponer a mano");
             return;
         }
         Pendiente pe = new Pendiente(f, material, para, paraNombre, "perdida", System.currentTimeMillis());
@@ -524,7 +523,7 @@ final class Entregas {
         registro().guardar();
         plugin.getLogger().info("[SuperBeacon] El Super Beacon " + id.toString().substring(0, 8) + " (" + f.tipo()
                 + ") se perdio en el suelo (" + causa + ", " + donde + "); pasa a pendiente de " + pe.paraTexto() + ".");
-        plugin.anotar("perdida", id.toString(), f.tipo(), pe.paraTexto(), causa, donde);
+        plugin.anotarFicha("perdida", f, donde, causa, "vuelve como pendiente a " + pe.paraTexto());
         Player d = para != null ? Bukkit.getPlayer(para) : Bukkit.getPlayerExact(paraNombre);
         if (d != null) {
             plugin.textos().manda(d, "perdido-devuelto",
@@ -547,7 +546,7 @@ final class Entregas {
                 plugin.textos().manda(d, "vencido-destruido", "&7Tu %nombre% &7venció y desapareció.",
                         "%nombre%", nombreDe(b.tipo));
             }
-            plugin.anotar("vencida-destruida", b.id.toString(), b.tipo, b.duenoTexto(), b.donde());
+            plugin.anotarBaliza("vencida-destruida", b);
         } finally {
             enCurso.remove(b.id);
         }
@@ -585,6 +584,10 @@ final class Entregas {
         plugin.hologramas().quitar(b.id);
         plugin.menu().cerrar(b.id);
         plugin.motor().reindexar();
+    }
+
+    private static String donde(Block b) {
+        return b == null ? "-" : b.getWorld().getName() + " " + b.getX() + " " + b.getY() + " " + b.getZ();
     }
 
     private String nombreDe(String tipo) {

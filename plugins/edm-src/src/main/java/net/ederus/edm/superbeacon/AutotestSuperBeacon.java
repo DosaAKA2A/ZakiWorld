@@ -87,6 +87,7 @@ final class AutotestSuperBeacon {
             t.presentacion();
             t.lore();
             t.renovar();
+            t.bitacora();
             if (modulo != null) {
                 t.lectura(modulo);
                 t.objeto(modulo);
@@ -115,6 +116,27 @@ final class AutotestSuperBeacon {
         ok("renovar: otro tipo no", !SuperBeaconPlugin.delClan("ABC", "guerra", "abc", "trofeo"));
         ok("renovar: otro clan no", !SuperBeaconPlugin.delClan("ABD", "trofeo", "abc", "trofeo"));
         ok("renovar: sin clan fijado no", !SuperBeaconPlugin.delClan(null, "trofeo", "abc", "trofeo"));
+    }
+
+    /* ============================================================ bitacora */
+
+    private void bitacora() {
+        ZoneId utc = ZoneId.of("UTC");
+        String[] l = SuperBeaconPlugin.lineaBitacora("colocada", "id1", "trofeo", "Dosa__", "ABC", "world 1 64 2",
+                0L, utc, "por Dosa__", null, "");
+        igual("bitacora: campos fijos y los extra sin vacios", "colocada|id1|trofeo|dueño Dosa__|clan ABC|world 1 64 2"
+                + "|no caduca|por Dosa__", String.join("|", l));
+        String[] v = SuperBeaconPlugin.lineaBitacora("give", "id2", "trofeo", null, null, null, 86_400_000L, utc);
+        igual("bitacora: sin dueño, sin clan, sin sitio y con su vencimiento",
+                "give|id2|trofeo|dueño -|clan -|-|vence " + Tiempo.fecha(86_400_000L, utc), String.join("|", v));
+        igual("bitacora: el clan fijado sin colores", "ABC", SuperBeaconPlugin.clanTexto("&#FF0000ABC", "XYZ"));
+        igual("bitacora: sin fijado, el del dueño", "(XYZ del dueño)", SuperBeaconPlugin.clanTexto(null, "&aXYZ"));
+        igual("bitacora: sin ninguno", "-", SuperBeaconPlugin.clanTexto("", null));
+        // La caducidad va en la propia ficha (el PDC del objeto): un objeto guardado vence por fecha, este donde este.
+        Ficha f = new Ficha(UUID.randomUUID(), "trofeo", null, null, "ABC", 1_000L, List.of());
+        ok("caducidad: la ficha de un objeto vence por su fecha, sin estar colocada", f.vencida(1_000L) && !f.vencida(999L));
+        Baliza b = new Baliza(f, "world", 0, 64, 0, Material.BEACON, 0L);
+        ok("caducidad: al colocarla conserva esa fecha", b.vence == 1_000L && b.vencida(2_000L));
     }
 
     /* ================================================================ fusion */

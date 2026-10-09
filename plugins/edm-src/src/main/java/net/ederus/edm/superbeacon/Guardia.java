@@ -207,6 +207,8 @@ final class Guardia implements Listener {
         Long antes = avisados.get(p.getUniqueId());
         if (antes != null && ahora - antes < 2000) return;
         avisados.put(p.getUniqueId(), ahora);
+        // Uno que intenta romper la ajena (con la misma espera de 2 s del aviso: no inunda).
+        if (alPicar) plugin.anotarBaliza("romper-negado", b, "por " + p.getName(), "no es su dueño");
         if (alPicar && plugin.esAdmin(p)) {
             plugin.textos().manda(p, "romper-staff",
                     "&#FFB627Este Super Beacon es de &f%dueno%&#FFB627: picarlo no lo recoge. &7Para devolvérselo,"

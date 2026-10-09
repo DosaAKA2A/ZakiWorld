@@ -40,6 +40,11 @@ final class Motor {
 
     private final Map<UUID, Map<String, Efecto>> recibidos = new ConcurrentHashMap<>();
     private final Map<UUID, String> buffs = new ConcurrentHashMap<>();
+    /**
+     * Para la bitacora: baliza de clan -> quien recibio algo de ella desde el ultimo resumen
+     * (SuperBeaconPlugin.resumirReceptores). Solo hilo principal.
+     */
+    private Map<UUID, java.util.Set<String>> receptores = new java.util.HashMap<>();
     private boolean avisadoFallo;
 
     Motor(SuperBeaconPlugin plugin) {
@@ -133,10 +138,15 @@ final class Motor {
             TipoBaliza t = plugin.tipo(b.tipo);
             if (t == null || b.vencida(ahora) || !b.dentro(l.getX(), l.getY(), l.getZ(), t.radio)) continue;
             if (!recibe(b, t, p)) continue;
+            boolean algo = false;
             for (Efecto e : activos(b, t)) {
                 if (!e.clase().porJugador() || e.falta() != null) continue;
                 if (mejores == null) mejores = new LinkedHashMap<>();
                 Efecto.fusionar(mejores, e);
+                algo = true;
+            }
+            if (algo && t.beneficia == TipoBaliza.Beneficia.CLAN) {
+                receptores.computeIfAbsent(b.id, k -> new java.util.TreeSet<>()).add(p.getName());
             }
         }
         return mejores == null ? Map.of() : Collections.unmodifiableMap(mejores);
@@ -221,6 +231,13 @@ final class Motor {
     }
 
     /* =============================================================== jugadores */
+
+    /** Quien recibio algo de cada baliza de clan desde la ultima vez, y empieza de cero. */
+    Map<UUID, java.util.Set<String>> vaciarReceptores() {
+        Map<UUID, java.util.Set<String>> r = receptores;
+        receptores = new java.util.HashMap<>();
+        return r;
+    }
 
     /** Lo que recibe ahora (grupo -> efecto). Vacio si nada. Cualquier hilo. */
     Map<String, Efecto> recibidos(UUID jugador) {

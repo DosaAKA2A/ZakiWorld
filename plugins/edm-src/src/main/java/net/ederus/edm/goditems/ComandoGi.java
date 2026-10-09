@@ -267,6 +267,13 @@ public final class ComandoGi implements TabExecutor {
 
     /** /gi selftest: los efectos de equipo con un YAML de prueba y con items reales de MMOItems. */
     private void autotest(CommandSender quien) {
+        // La bitacora es logica pura: va siempre, aunque el equipo no este en marcha.
+        java.util.List<String> bit = BitacoraGi.autotest();
+        long bitFallos = bit.stream().filter(x -> x.startsWith("&cFALLO")).count();
+        quien.sendMessage(Estilo.cabecera("GODITEMS", "selftest de la bitacora"));
+        for (String l : bit) quien.sendMessage(Estilo.legado(l));
+        this.modulo.getLogger().info("[GodItems] selftest de la bitacora: " + (bit.size() - bitFallos) + " OK, "
+                + bitFallos + " fallos");
         if (this.modulo.equipo() == null) {
             quien.sendMessage(Estilo.legado("&cLos efectos de equipo no estan en marcha."));
             return;
@@ -275,8 +282,8 @@ public final class ComandoGi implements TabExecutor {
         quien.sendMessage(Estilo.cabecera("GODITEMS", "selftest de equipo"));
         for (String l : t.lineas()) quien.sendMessage(Estilo.legado(l));
         long oks = t.lineas().stream().filter(x -> x.startsWith("&aOK")).count();
-        quien.sendMessage(Estilo.legado(t.fallos() == 0 ? "&aTodo bien: " + oks + " comprobaciones."
-                : "&c" + t.fallos() + " fallo(s) de " + (oks + t.fallos()) + "."));
+        quien.sendMessage(Estilo.legado(t.fallos() == 0 && bitFallos == 0 ? "&aTodo bien: " + (oks + bit.size())
+                + " comprobaciones." : "&c" + (t.fallos() + bitFallos) + " fallo(s) de " + (oks + t.fallos() + bit.size()) + "."));
         this.modulo.getLogger().info("[GodItems] selftest de equipo: " + oks + " OK, " + t.fallos() + " fallos");
     }
 
