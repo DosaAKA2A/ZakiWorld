@@ -285,6 +285,26 @@ public final class CratesPlugin extends Module implements Listener {
     private int informe(CommandSender quien) {
         Calidades c = this.calidades;
         List<String> lineas = new ArrayList<>(c.avisos());
+        /* Sin licencia valida PhoenixCrates arranca pero no carga ninguna caja
+         * (paso en el dev el 2026-10-12: "HttpResponseCode: 403. Grace period has
+         * passed"). Se dice asi, en vez de "la caja no existe" por cada una. */
+        int cargadas;
+        try {
+            var m = PhoenixCratesAPI.getCratesManager();
+            cargadas = m == null ? 0 : m.getCrateTypes().size();
+        } catch (Throwable t) {
+            cargadas = 0;
+            lineas.add("No se pudo preguntar a PhoenixCrates por sus cajas: " + t);
+        }
+        if (cargadas == 0) {
+            lineas.add("PhoenixCrates no tiene ninguna caja cargada (mira su licencia en el arranque): "
+                    + "las calidades no se aplican hasta que las cargue y se haga /edm crates reload.");
+            for (String l : lineas) {
+                getLogger().warning("[crates] " + l);
+                if (quien != null) quien.sendMessage("§e" + l);
+            }
+            return lineas.size();
+        }
         for (Caja caja : c.cajas()) {
             CrateType tipo = tipo(caja.id());
             if (tipo == null) {
