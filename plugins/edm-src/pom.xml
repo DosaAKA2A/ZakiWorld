@@ -6,7 +6,7 @@
 
   <groupId>net.ederus</groupId>
   <artifactId>EDM</artifactId>
-  <version>1.82.2</version>
+  <version>1.83.0</version>
   <packaging>jar</packaging>
   <name>EDM</name>
   <description>Nucleo de Ederus: Rip + Anomaly + libros y avisos de tiendas</description>
@@ -89,6 +89,16 @@
       <version>5.5.0</version>
       <scope>system</scope>
       <systemPath>${project.basedir}/../../../_toolchain/libs/ProtocolLib.jar</systemPath>
+    </dependency>
+    <!-- PhoenixCrates. Solo su API: el modulo crates escucha el sorteo de premios
+         (CrateRewardSelectionEvent) y elige por calidades. Jar del propio servidor,
+         en _toolchain/libs como los demas. -->
+    <dependency>
+      <groupId>com.phoenixplugins</groupId>
+      <artifactId>PhoenixCrates</artifactId>
+      <version>6.2.1</version>
+      <scope>system</scope>
+      <systemPath>${project.basedir}/../../../_toolchain/libs/PhoenixCrates-6.2.1.jar</systemPath>
     </dependency>
     <!-- PlaceholderAPI, para registrar los %edm_...%. Jar del repo de extendedclip,
          guardado en _toolchain/libs como los demas. -->

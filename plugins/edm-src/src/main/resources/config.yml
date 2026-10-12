@@ -38,6 +38,9 @@ modulos:
   bp: true
   # El brillo (glow), sustituye a FancyGlow. Necesita TAB.
   glow: true
+  # Calidades de las cajas de PhoenixCrates: sortea primero la calidad y luego el
+  # premio dentro de ella. Necesita PhoenixCrates; el lore de la vista previa, ProtocolLib.
+  crates: true
   # Boosts temporales (/boost). Este es el unico que hay que encender a mano: si
   # falta la linea, queda apagado.
   boost: false

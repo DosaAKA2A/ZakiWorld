@@ -1,0 +1,114 @@
+# Calidades de las cajas de PhoenixCrates.
+#
+# Como sortea: al abrir una caja configurada aqui, EDM elige primero la CALIDAD
+# segun su porcentaje y despues el PREMIO dentro de esa calidad segun su peso.
+# PhoenixCrates sigue poniendo la llave, la animacion y el menu; el premio que
+# muestra la animacion es el que eligio EDM.
+#
+# El peso solo compara premios de la MISMA calidad: dos premios de peso 10 se
+# reparten su calidad a medias, y uno de peso 20 sale el doble que uno de 10.
+# El peso que tenga el premio en el yml de PhoenixCrates ya no cuenta.
+#
+# Una caja que no este aqui sortea como siempre, con los pesos de PhoenixCrates.
+# Un premio de una caja configurada que no este en su lista NO sale nunca (la
+# consola avisa al arrancar y al recargar).
+#
+# Despues de tocar este fichero: /edm crates reload
+# Para ver las probabilidades que salen: /edm crates info <caja>
+
+version: 1
+
+# De menor a mayor. El orden es el de esta lista.
+#   una-vez: true -> cada jugador puede sacar cada premio de esta calidad una sola
+#   vez. Si ya lo tiene, se sortea entre los que le faltan; si los tiene todos, esa
+#   calidad no cuenta para el.
+calidades:
+  raro:
+    nombre: Raro
+    color: '#7CFF7C'
+  epico:
+    nombre: Épico
+    color: '#FF77FF'
+  mitico:
+    nombre: Mítico
+    color: '#C79BFF'
+  legendario:
+    nombre: Legendario
+    color: '#FFB347'
+  ancestral:
+    nombre: Ancestral
+    color: '#FF7A45'
+  inmortal:
+    nombre: Inmortal
+    color: '#FF5C7A'
+  unico:
+    nombre: Único
+    color: '#FFAA00'
+    una-vez: true
+
+# Lo que se pinta en la vista previa de la caja, debajo del lore de cada premio.
+# %calidad% sale con el color de su calidad; %probabilidad% es la del premio.
+lore:
+  linea: '&#%color%◆ %calidad% &#8F8F8F· %probabilidad% %'
+  una-vez: '&#8F8F8FSe obtiene una sola vez'
+  ya-obtenido: '&#FF5C5CYa lo obtuviste'
+
+cajas:
+  legendary:
+    # Porcentaje de cada calidad. Si no suman 100 se reparten en proporcion.
+    calidades:
+      raro: 66.5
+      epico: 20
+      mitico: 12
+      legendario: 1
+      ancestral: 0.4
+      inmortal: 0.1
+    premios:
+      # Inmortal
+      legendary_3d26d77f9d7c6d88: {calidad: inmortal, peso: 10}    # Hoja del Vacío
+      legendary_e76650fcaf912310: {calidad: inmortal, peso: 10}    # Élitros Eternos
+      # Ancestral: el set del Vacío
+      legendary_3d3aa526a5fa6d9d: {calidad: ancestral, peso: 10}   # Corona del Vacío
+      legendary_2fc6abd5059b99f6: {calidad: ancestral, peso: 10}   # Coraza del Vacío
+      legendary_05c826d70529b609: {calidad: ancestral, peso: 10}   # Grebas del Vacío
+      legendary_21dc1e181b583b48: {calidad: ancestral, peso: 10}   # Soleretas del Vacío
+      legendary_b592f44c994f2301: {calidad: ancestral, peso: 10}   # Pico del Vacío
+      legendary_ccbce7655ce5f631: {calidad: ancestral, peso: 10}   # Pala del Vacío
+      legendary_f1068d88838936de: {calidad: ancestral, peso: 10}   # Hacha del Vacío
+      # Legendario: el set del Eclipse
+      legendary_c9d2f8ef8359d2f5: {calidad: legendario, peso: 10}  # Yelmo del Eclipse
+      legendary_11722654a6d98166: {calidad: legendario, peso: 10}  # Coraza del Eclipse
+      legendary_2a7c1d3f85eede56: {calidad: legendario, peso: 10}  # Grebas del Eclipse
+      legendary_e727a8e19a0cbf6e: {calidad: legendario, peso: 10}  # Botas del Eclipse
+      legendary_af10b5dfdf801f9f: {calidad: legendario, peso: 10}  # Pico del Eclipse
+      legendary_7c0f9f01aec81112: {calidad: legendario, peso: 10}  # Pala del Eclipse
+      legendary_b31a0a1eca49f1b3: {calidad: legendario, peso: 10}  # Hacha del Eclipse
+      legendary_26ae1512c3ab5c52: {calidad: legendario, peso: 6}   # Filo del Eclipse
+      legendary_bfb07bc027e5ca83: {calidad: legendario, peso: 6}   # Mazo del Eclipse
+      # Mítico
+      legendary_7fc8e0361343706d: {calidad: mitico, peso: 10}      # Celada de Escarcha
+      legendary_ddc1486bb88a8bb0: {calidad: mitico, peso: 10}      # Coraza de Escarcha
+      legendary_65299feb9e250fe1: {calidad: mitico, peso: 10}      # Grebas de Escarcha
+      legendary_c116bd18460e4899: {calidad: mitico, peso: 10}      # Botas de Escarcha
+      legendary_4729c0e11012d81a: {calidad: mitico, peso: 10}      # Pico de Escarcha
+      legendary_9ad3d86f844828ba: {calidad: mitico, peso: 10}      # Pala de Escarcha
+      legendary_1e6bc8b5768f5c19: {calidad: mitico, peso: 10}      # Hacha de Escarcha
+      legendary_ca33db74a262b9fe: {calidad: mitico, peso: 6}       # Colmillo de Escarcha
+      legendary_08a4599554c13068: {calidad: mitico, peso: 6}       # Lamento Sepulcral
+      legendary_220830efeb95a7af: {calidad: mitico, peso: 6}       # Marea del Leviatán
+      legendary_c97c5eac39bb2ab5: {calidad: mitico, peso: 6}       # Aguijón de Aragón
+      legendary_0da4dfa3415da93d: {calidad: mitico, peso: 6}       # Lanza de Escarcha
+      legendary_e07d011f2a40b174: {calidad: mitico, peso: 6}       # Tridente del Leviatán
+      # Épico
+      legendary_0bfc8c6864ee180d: {calidad: epico, peso: 10}       # Pico del Ángel de la Sabiduría
+      legendary_bc3b8af3c4606bb5: {calidad: epico, peso: 10}       # Pala del Vórtice Árido
+      legendary_49691cbdcc3c61e3: {calidad: epico, peso: 10}       # Ballesta Devoradora
+      legendary_320c128144baa974: {calidad: epico, peso: 10}       # Libro Golpe Doble III
+      legendary_5cd655e9dec9ece6: {calidad: epico, peso: 10}       # Libro Robo de Vida V
+      legendary_4882ea7b7f27a1e2: {calidad: epico, peso: 5}        # Tag Legend (solo en el dev, apagado)
+      # Raro
+      legendary_c0921ddfd858b8ae: {calidad: raro, peso: 3}         # 2 llaves legendarias
+      legendary_c8f428807e8e947b: {calidad: raro, peso: 5}         # 2 llaves de mascotas
+      legendary_e99fefca60579fac: {calidad: raro, peso: 5}         # 2 llaves de spawners
+      legendary_16716c1c87343931: {calidad: raro, peso: 4}         # 60.000 MobCoins
+      legendary_501666c0cca3d0f7: {calidad: raro, peso: 4}         # 700.000 de dinero
