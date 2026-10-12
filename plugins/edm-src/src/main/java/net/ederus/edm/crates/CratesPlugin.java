@@ -2,6 +2,7 @@ package net.ederus.edm.crates;
 
 import java.io.File;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -22,6 +23,7 @@ import org.bukkit.event.Listener;
 
 import com.phoenixplugins.phoenixcrates.api.PhoenixCratesAPI;
 import com.phoenixplugins.phoenixcrates.api.crate.CrateType;
+import com.phoenixplugins.phoenixcrates.api.crate.events.CrateRewardPlayerEvent;
 import com.phoenixplugins.phoenixcrates.api.crate.events.CrateRewardSelectionEvent;
 import com.phoenixplugins.phoenixcrates.api.reward.BaseReward;
 import com.phoenixplugins.phoenixcrates.api.reward.Reward;
@@ -62,6 +64,16 @@ public final class CratesPlugin extends Module implements Listener {
     private Vitrina vitrina;
     /** Para avisar una sola vez por premio sin configurar, no en cada apertura. */
     private final Set<String> avisados = new HashSet<>();
+    /**
+     * Unicos elegidos y aun sin entregar: jugador -> "caja:premio" -> cuando.
+     * Se anotan de verdad al entregarse ({@link #alEntregar}). La reserva evita
+     * que salgan dos veces en una apertura de varias llaves, y caduca sola si la
+     * entrega no llega (PhoenixCrates puede volver a sortear una apertura
+     * cortada: entonces el primero no se entrego y no debe contar).
+     */
+    private final Map<UUID, Map<String, Long>> reservas = new HashMap<>();
+    private static final long RESERVA_MS = 10 * 60 * 1000L;
+    private static final String ALTERNATIVA = "_alternative";
 
     public CratesPlugin(EDMPlugin core) {
         super(core, "crates", "EderusCrates");
@@ -101,7 +113,8 @@ public final class CratesPlugin extends Module implements Listener {
     public String recargar() {
         reloadConfig();
         this.calidades = Calidades.leer(getConfig());
-        this.unicos.cargar();
+        /* unicos.yml NO se relee: si un guardado fallo, lo que hay en memoria es
+         * lo bueno y releer el disco dejaria repetir un Unico. */
         this.avisados.clear();
         if (this.vitrina != null) this.vitrina.olvidarCajas();
         int problemas = informe(null);
@@ -121,54 +134,123 @@ public final class CratesPlugin extends Module implements Listener {
     /* El sorteo                                                           */
     /* ------------------------------------------------------------------ */
 
+    /** El premio del que sale una alternativa de PhoenixCrates ("<id>_alternative"). */
+    static String base(String id) {
+        return id != null && id.endsWith(ALTERNATIVA) ? id.substring(0, id.length() - ALTERNATIVA.length()) : id;
+    }
+
+    /** Si el jugador ya tiene (o tiene reservado) este premio de una vez. */
+    boolean bloqueado(UUID jugador, String caja, String premio) {
+        if (jugador == null) return false;
+        if (this.unicos.tiene(jugador, caja, premio)) return true;
+        Map<String, Long> r = this.reservas.get(jugador);
+        if (r == null) return false;
+        Long cuando = r.get(caja + ":" + premio);
+        if (cuando == null) return false;
+        if (System.currentTimeMillis() - cuando > RESERVA_MS) {
+            r.remove(caja + ":" + premio);
+            if (r.isEmpty()) this.reservas.remove(jugador);
+            return false;
+        }
+        return true;
+    }
+
+    /** Si este premio es de una vez y el jugador ya no puede sacarlo. */
+    private boolean unicoAgotado(Calidades c, Caja caja, UUID jugador, String id) {
+        Premio p = caja.premio(base(id));
+        Calidad q = p == null ? null : c.calidad(p.calidad());
+        return q != null && q.unaVez() && bloqueado(jugador, caja.id(), p.id());
+    }
+
+    /** Si este premio puede salir con calidades para este jugador. */
+    private boolean sorteable(Calidades c, Caja caja, UUID jugador, String id) {
+        Premio p = caja.premio(base(id));
+        return p != null && c.calidad(p.calidad()) != null && !unicoAgotado(c, caja, jugador, id);
+    }
+
     @EventHandler(priority = EventPriority.HIGH)
     public void alSortear(CrateRewardSelectionEvent e) {
         if (e.isHandled()) return;
         Calidades c = this.calidades;
-        String idCaja = e.getCrate().getType().getIdentifier();
-        Caja caja = c.caja(idCaja);
+        Caja caja = c.caja(e.getCrate().getType().getIdentifier());
         if (caja == null) return;
 
         Player jugador = e.getPlayer();
+        UUID uuid = jugador == null ? null : jugador.getUniqueId();
+        /* Por el premio base: la alternativa de un premio agotado lleva su calidad. */
         Map<String, BaseReward> candidatos = new LinkedHashMap<>();
-        for (BaseReward r : e.getCandidates()) candidatos.put(r.getIdentifier(), r);
-
-        Set<String> disponibles = new HashSet<>();
-        for (String id : candidatos.keySet()) {
-            Premio p = caja.premio(id);
-            if (p == null) {
-                if (this.avisados.add(caja.id() + ":" + id)) {
-                    getLogger().warning("[crates] La caja " + caja.id() + " tiene el premio " + id
-                            + " sin calidad en el config de EDM: no saldra nunca. Anadelo o apagalo en PhoenixCrates.");
-                }
-                continue;
+        for (BaseReward r : e.getCandidates()) {
+            String id = r.getIdentifier();
+            if (caja.premio(base(id)) == null && this.avisados.add(caja.id() + ":" + id)) {
+                getLogger().warning("[crates] La caja " + caja.id() + " tiene el premio " + id
+                        + " sin calidad en el config de EDM: no saldra nunca. Anadelo o apagalo en PhoenixCrates.");
             }
-            Calidad q = c.calidad(p.calidad());
-            if (q != null && q.unaVez() && jugador != null
-                    && this.unicos.tiene(jugador.getUniqueId(), caja.id(), id)) {
-                continue;
-            }
-            disponibles.add(id);
+            if (sorteable(c, caja, uuid, id)) candidatos.put(base(id), r);
         }
 
-        String elegido = Sorteo.elegir(caja, disponibles, () -> ThreadLocalRandom.current().nextDouble());
+        String elegido = Sorteo.elegir(caja, candidatos.keySet(), () -> ThreadLocalRandom.current().nextDouble());
         if (elegido == null) {
-            /* Nada que sortear con las calidades (todo agotado o sin configurar):
-             * se deja a PhoenixCrates para no dejar al jugador sin premio. */
+            /* Nada que sortear con calidades. PhoenixCrates sortea con sus pesos;
+             * se le quitan los Unicos ya sacados mientras quede algo, porque una
+             * lista vacia lo dejaria sin premio. */
+            try {
+                List<? extends BaseReward> lista = e.getCandidates();
+                if (lista.stream().anyMatch(r -> !unicoAgotado(c, caja, uuid, r.getIdentifier()))) {
+                    lista.removeIf(r -> unicoAgotado(c, caja, uuid, r.getIdentifier()));
+                }
+            } catch (UnsupportedOperationException ignored) {
+                // Lista de solo lectura: sortea PhoenixCrates con todo.
+            }
             getLogger().warning("[crates] La caja " + caja.id() + " no tenia ningun premio con calidad disponible para "
                     + (jugador == null ? "?" : jugador.getName()) + ": sorteo PhoenixCrates.");
             return;
         }
 
-        Premio premio = caja.premio(elegido);
-        Calidad q = c.calidad(premio.calidad());
         e.setSelectedReward(candidatos.get(elegido));
         e.setHandled(true);
-
-        if (q.unaVez() && jugador != null) {
-            this.unicos.anotar(jugador.getUniqueId(), caja.id(), elegido);
+        Calidad q = c.calidad(caja.premio(elegido).calidad());
+        if (q.unaVez() && uuid != null) {
+            this.reservas.computeIfAbsent(uuid, u -> new HashMap<>())
+                    .put(caja.id() + ":" + elegido, System.currentTimeMillis());
         }
-        this.bitacora.anotar(jugador == null ? "?" : jugador.getName(), caja.id(), q.nombre(), elegido);
+    }
+
+    /**
+     * La entrega de verdad: aqui se anota el Unico y la bitacora. Cubre tambien
+     * los premios garantizados, que PhoenixCrates da sin pasar por el sorteo.
+     */
+    @EventHandler(priority = EventPriority.MONITOR)
+    public void alEntregar(CrateRewardPlayerEvent e) {
+        if (e.getReward() == null || e.getCrate() == null) return;
+        Calidades c = this.calidades;
+        Caja caja = c.caja(e.getCrate().getType().getIdentifier());
+        if (caja == null) return;
+        String id = base(e.getReward().getIdentifier());
+        Premio p = caja.premio(id);
+        Calidad q = p == null ? null : c.calidad(p.calidad());
+        Player jugador = e.getPlayer();
+        if (q != null && q.unaVez() && jugador != null) {
+            this.unicos.anotar(jugador.getUniqueId(), caja.id(), id);
+            Map<String, Long> r = this.reservas.get(jugador.getUniqueId());
+            if (r != null) {
+                r.remove(caja.id() + ":" + id);
+                if (r.isEmpty()) this.reservas.remove(jugador.getUniqueId());
+            }
+        }
+        this.bitacora.anotar(jugador == null ? "?" : jugador.getName(), caja.id(),
+                q == null ? "sin calidad" : q.nombre(), e.getReward().getIdentifier());
+    }
+
+    /**
+     * Lo que puede salirle a este jugador: lo encendido en PhoenixCrates menos
+     * sus Unicos ya sacados. Es la base de la probabilidad que se le muestra.
+     */
+    Set<String> disponiblesPara(UUID jugador, Caja caja, CrateType tipo) {
+        Set<String> fuera = new HashSet<>();
+        for (String id : encendidos(tipo).keySet()) {
+            if (sorteable(this.calidades, caja, jugador, id)) fuera.add(base(id));
+        }
+        return fuera;
     }
 
     /* ------------------------------------------------------------------ */
@@ -189,7 +271,10 @@ public final class CratesPlugin extends Module implements Listener {
     static Map<String, Reward> encendidos(CrateType tipo) {
         Map<String, Reward> fuera = new LinkedHashMap<>();
         if (tipo == null) return fuera;
-        for (Reward r : tipo.getAvailableRewards()) fuera.put(r.getIdentifier(), r);
+        for (Reward r : tipo.getAvailableRewards()) {
+            /* Con peso 0, PhoenixCrates no lo da como candidato nunca. */
+            if (r.getWeight() > 0) fuera.put(r.getIdentifier(), r);
+        }
         return fuera;
     }
 
@@ -272,7 +357,7 @@ public final class CratesPlugin extends Module implements Listener {
     private void info(CommandSender quien, String[] args) {
         Caja caja = cajaDe(quien, args);
         if (caja == null) return;
-        Set<String> disp = encendidos(tipo(caja.id())).keySet();
+        Set<String> disp = disponiblesPara(null, caja, tipo(caja.id()));
         Map<String, Double> pq = Sorteo.porCalidad(caja, disp);
         Map<String, Double> pp = Sorteo.probabilidades(caja, disp);
         quien.sendMessage("§6Caja " + caja.id() + " §7(" + pp.size() + " premios que pueden salir)");
@@ -301,7 +386,7 @@ public final class CratesPlugin extends Module implements Listener {
                 return;
             }
         }
-        Set<String> disp = encendidos(tipo(caja.id())).keySet();
+        Set<String> disp = disponiblesPara(null, caja, tipo(caja.id()));
         Map<String, Integer> cuenta = new LinkedHashMap<>();
         ThreadLocalRandom r = ThreadLocalRandom.current();
         for (int i = 0; i < n; i++) {
@@ -319,13 +404,18 @@ public final class CratesPlugin extends Module implements Listener {
         }
     }
 
-    @SuppressWarnings("deprecation")
     private void unicosCmd(CommandSender quien, String[] args) {
         if (args.length < 2) {
             quien.sendMessage("§c/edm crates uniques <jugador> [remove <caja> <premio>]");
             return;
         }
-        OfflinePlayer op = Bukkit.getOfflinePlayer(args[1]);
+        /* Solo jugadores que ya pasaron por el servidor: preguntar a Mojang por un
+         * nombre desconocido bloquea el hilo y con Bedrock puede dar otro UUID. */
+        OfflinePlayer op = Bukkit.getOfflinePlayerIfCached(args[1]);
+        if (op == null) {
+            quien.sendMessage("§cNo conozco a '" + args[1] + "': tiene que haber entrado alguna vez al servidor.");
+            return;
+        }
         UUID u = op.getUniqueId();
         if (args.length >= 5 && args[2].equalsIgnoreCase("remove")) {
             boolean ok = this.unicos.quitar(u, args[3].toLowerCase(Locale.ROOT), args[4]);

@@ -7,7 +7,8 @@
 #
 # El peso solo compara premios de la MISMA calidad: dos premios de peso 10 se
 # reparten su calidad a medias, y uno de peso 20 sale el doble que uno de 10.
-# El peso que tenga el premio en el yml de PhoenixCrates ya no cuenta.
+# El peso que tenga el premio en el yml de PhoenixCrates ya no reparte nada, pero
+# tiene que ser mayor que 0: con peso 0 PhoenixCrates no lo ofrece y no sale.
 #
 # Una caja que no este aqui sortea como siempre, con los pesos de PhoenixCrates.
 # Un premio de una caja configurada que no este en su lista NO sale nunca (la

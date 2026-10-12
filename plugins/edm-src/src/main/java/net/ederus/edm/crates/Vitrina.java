@@ -63,12 +63,15 @@ final class Vitrina implements Listener {
         final long creada = System.currentTimeMillis();
         /** material + nombre -> lineas que se anaden al lore de ese premio. */
         final Map<String, List<Component>> lineas;
+        /** Nuestras propias lineas en texto plano, para no repetirlas. */
+        final Set<String> propias;
         volatile int ventana = -1;
         volatile int huecosArriba = -1;
 
-        Vista(String caja, Map<String, List<Component>> lineas) {
+        Vista(String caja, Map<String, List<Component>> lineas, Set<String> propias) {
             this.caja = caja;
             this.lineas = lineas;
+            this.propias = propias;
         }
     }
 
@@ -78,8 +81,6 @@ final class Vitrina implements Listener {
 
     private final CratesPlugin modulo;
     private final Map<UUID, Vista> vistas = new ConcurrentHashMap<>();
-    /** Por caja: material + nombre -> premio. Se rehace al recargar. */
-    private final Map<String, Map<String, String>> premiosPorItem = new ConcurrentHashMap<>();
     private PacketAdapter escucha;
 
     Vitrina(CratesPlugin modulo) {
@@ -119,7 +120,6 @@ final class Vitrina implements Listener {
     }
 
     void olvidarCajas() {
-        this.premiosPorItem.clear();
         this.vistas.clear();
     }
 
@@ -135,9 +135,14 @@ final class Vitrina implements Listener {
             this.vistas.remove(p.getUniqueId());
             return;
         }
-        Map<String, String> indice = this.premiosPorItem.computeIfAbsent(caja.id(),
-                k -> indice(e.getCrateType()));
-        this.vistas.put(p.getUniqueId(), new Vista(caja.id(), lineas(p, caja, e.getCrateType(), indice)));
+        /* El indice se rehace en cada apertura (unas 40 llamadas a build()): asi
+         * un premio editado o un /pcrates reload no dejan pintada otra calidad. */
+        Map<String, String> indice = indice(e.getCrateType());
+        Calidades.Lore l = this.modulo.calidades().lore();
+        Set<String> propias = Set.of(
+                PLANO.serialize(Estilo.legado(l.unaVez())).trim(),
+                PLANO.serialize(Estilo.legado(l.yaObtenido())).trim());
+        this.vistas.put(p.getUniqueId(), new Vista(caja.id(), lineas(p, caja, e.getCrateType(), indice), propias));
     }
 
     @EventHandler(priority = EventPriority.MONITOR)
@@ -179,22 +184,24 @@ final class Vitrina implements Listener {
     /** Las lineas de cada premio para este jugador, ya montadas. */
     private Map<String, List<Component>> lineas(Player p, Caja caja, CrateType tipo, Map<String, String> indice) {
         Calidades c = this.modulo.calidades();
-        Map<String, Double> prob = Sorteo.probabilidades(caja, CratesPlugin.encendidos(tipo).keySet());
+        /* Lo que le puede salir a ESTE jugador: sin sus Unicos ya sacados, que
+         * tampoco cuentan en el reparto de los demas. */
+        Map<String, Double> prob = Sorteo.probabilidades(caja, this.modulo.disponiblesPara(p.getUniqueId(), caja, tipo));
         Map<String, List<Component>> fuera = new HashMap<>();
         for (Map.Entry<String, String> e : indice.entrySet()) {
-            Premio premio = caja.premio(e.getValue());
-            Double x = premio == null ? null : prob.get(premio.id());
-            if (x == null) continue;
+            Premio premio = caja.premio(CratesPlugin.base(e.getValue()));
+            if (premio == null) continue;
             Calidad q = c.calidad(premio.calidad());
+            if (q == null) continue;
+            boolean agotado = q.unaVez() && this.modulo.bloqueado(p.getUniqueId(), caja.id(), premio.id());
+            Double x = prob.get(premio.id());
+            if (x == null && !agotado) continue;
             List<Component> l = new ArrayList<>();
             l.add(Estilo.legado(c.lore().linea()
                     .replace("%color%", q.color())
                     .replace("%calidad%", q.nombre())
-                    .replace("%probabilidad%", Sorteo.porcentaje(x))));
-            if (q.unaVez()) {
-                boolean tiene = this.modulo.unicos().tiene(p.getUniqueId(), caja.id(), premio.id());
-                l.add(Estilo.legado(tiene ? c.lore().yaObtenido() : c.lore().unaVez()));
-            }
+                    .replace("%probabilidad%", agotado ? "0" : Sorteo.porcentaje(x))));
+            if (q.unaVez()) l.add(Estilo.legado(agotado ? c.lore().yaObtenido() : c.lore().unaVez()));
             fuera.put(e.getKey(), l);
         }
         return fuera;
@@ -268,7 +275,7 @@ final class Vitrina implements Listener {
         ItemMeta meta = copia.getItemMeta();
         if (meta == null) return null;
         List<Component> lore = meta.lore() == null ? new ArrayList<>() : new ArrayList<>(meta.lore());
-        lore.removeIf(this::esLineaDeCalidad);
+        lore.removeIf(linea -> esLineaDeCalidad(linea, v.propias));
         while (!lore.isEmpty() && PLANO.serialize(lore.get(lore.size() - 1)).isBlank()) {
             lore.remove(lore.size() - 1);
         }
@@ -280,10 +287,12 @@ final class Vitrina implements Listener {
     }
 
     /** Las lineas de calidad que ya traia el lore guardado, de sistemas anteriores. */
-    private boolean esLineaDeCalidad(Component linea) {
+    private boolean esLineaDeCalidad(Component linea, Set<String> propias) {
         String s = PLANO.serialize(linea).trim();
-        if (s.startsWith("Probabilidad") || s.startsWith("Dentro de la calidad") || s.startsWith("Your chance")) {
-            return true;
+        /* Prefijos exactos: los lores de MMOItems llevan "Probabilidad critica"
+         * y esa linea es del arma, no de la caja. */
+        for (String viejo : PREFIJOS_VIEJOS) {
+            if (s.startsWith(viejo)) return true;
         }
         if (s.startsWith("◆ ")) {
             String resto = s.substring(2);
@@ -294,11 +303,13 @@ final class Vitrina implements Listener {
                 if (resto.startsWith(viejo)) return true;
             }
         }
-        Calidades.Lore l = this.modulo.calidades().lore();
-        String unaVez = PLANO.serialize(Estilo.legado(l.unaVez())).trim();
-        String yaObtenido = PLANO.serialize(Estilo.legado(l.yaObtenido())).trim();
-        return s.equals(unaVez) || s.equals(yaObtenido);
+        return propias.contains(s);
     }
+
+    /** Las lineas de probabilidad de ExcellentCrates, del generador y de PhoenixCrates. */
+    private static final List<String> PREFIJOS_VIEJOS = List.of(
+            "Probabilidad de la calidad", "Probabilidad real", "Probabilidad total", "Probabilidad:",
+            "Dentro de la calidad", "Your chance");
 
     /** Nombres de calidad que han existido en los lores guardados. */
     private static final List<String> VIEJAS = List.of(
