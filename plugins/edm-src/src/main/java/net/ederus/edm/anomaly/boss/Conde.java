@@ -580,6 +580,11 @@ public final class Conde extends BossFight {
             quitarBrillo(cuerpo);
             cuerpo.setInvisible(true);
             cuerpo.setCustomNameVisible(false);
+            /* Mientras shell() devuelve el murcielago, el manager ya no protege al
+             * maniqui: es un esbirro mas, encaja los golpes con su vida propia (y
+             * cuentan para el reparto) y puede morir. Si muere, al volver no hay
+             * cuerpo y el jefe queda invisible. Intocable hasta que vuelva. */
+            cuerpo.setInvulnerable(true);
         }
         // El zombi de debajo deja de andar y acompaña al murcielago: su caja tambien
         // va con el y cualquier golpe sigue llegando al jefe.
@@ -603,7 +608,9 @@ public final class Conde extends BossFight {
         final Vector[] rumbo = new Vector[1];
         final Set<UUID> golpeados = new HashSet<>();
 
-        animate(150, tick -> {
+        // 149 y no 150: Anim cuenta de 0 a la duracion INCLUIDA, y el tick 150 abria
+        // una cuarta pasada (otra victima, otro aleteo) justo antes de volver a humano.
+        animate(149, tick -> {
             if (!alive() || formaBat == null || !formaBat.isValid()) throw Stop.now();
             int s = tick % 50;
             if (s == 0) {
@@ -661,6 +668,7 @@ public final class Conde extends BossFight {
         boss.setAI(true);
         boss.setGravity(true);
         LivingEntity cuerpo = super.shell();
+        if (cuerpo != null && cuerpo.isValid()) cuerpo.setInvulnerable(false);
         if (conEfecto && cuerpo != null && cuerpo.isValid()) {
             cuerpo.setInvisible(false);
             cuerpo.setCustomNameVisible(true);
