@@ -27,14 +27,15 @@ import net.ederus.edm.comun.Compat;
  * Todos los iconos y el fondo son texturas VANILLA a proposito: un datapack que apunte
  * a una textura que no existe se ve como un cuadro morado y negro, y eso canta muchisimo.
  *
- * POR QUE SE ESCRIBE EN onLoad (EDMPlugin#onLoad -> installBeforeWorlds) Y NO EN onEnable.
- * El servidor lee los datapacks al cargar los mundos, y eso pasa DESPUES de onLoad y
- * ANTES de onEnable. Escrito en onEnable, cada arbol nuevo llegaba tarde: ese arranque
- * servia el viejo (o ninguno) y hacia falta un /minecraft:reload o un segundo reinicio.
- * Peor: mientras el servidor no conoce un logro, al guardar el progreso de un jugador
- * el juego TIRA lo que tuviera de ese logro. Por eso "se reiniciaban para todos" cada
- * vez que se tocaba el arbol. En onLoad el arbol nuevo ya esta en disco cuando el mundo
- * lo lee, en el mismo arranque. No lo devuelvas a onEnable.
+ * CUANDO LO LEE EL SERVIDOR. Se escribe en onLoad (EDMPlugin#onLoad -> installBeforeWorlds),
+ * pero OJO: ni onLoad llega a tiempo para ESTE arranque. Paper lee los datapacks del mundo
+ * principal (logros incluidos) en net.minecraft.server.Main, antes de crear el servidor y
+ * antes de cargar ningun plugin de Bukkit: en la consola "Loaded N advancements" sale antes
+ * que "[EDM] Loading server plugin". Comprobado en el bytecode de Paper 26.1.2 y en el log.
+ * Asi que un arbol que cambia se sirve en el SIGUIENTE arranque (o tras /minecraft:reload),
+ * y cuando cambia se avisa en la consola. Mientras el servidor no conoce un logro, al
+ * guardar el progreso de un jugador el juego TIRA lo que tuviera de ese logro: por eso un
+ * logro nunca se renombra ni se borra a la ligera.
  *
  * Las otras dos reglas que protegen el progreso:
  *   - un fichero solo se escribe si su contenido cambia (se comparan los bytes);
@@ -97,9 +98,9 @@ public final class Advancements {
     // ------------------------------------------------------------- el datapack
 
     /**
-     * El arranque temprano: escribe el arbol ANTES de que el servidor cargue los
-     * mundos, para que lo lea en este mismo arranque. Lo llama EDMPlugin#onLoad.
-     * Ver el comentario de la clase.
+     * El arranque temprano: pone el arbol al dia antes de que carguen los mundos. Lo
+     * llama EDMPlugin#onLoad. Ver el comentario de la clase: el servidor ya leyo los
+     * datapacks antes de onLoad, asi que si algo cambia lo vera en el proximo arranque.
      *
      * Monta un modulo de Anomaly de usar y tirar solo para leer su config y sus fichas
      * (los nombres de las anomalias salen de ahi); no registra nada en el servidor.
@@ -111,7 +112,13 @@ public final class Advancements {
         Advancements a = new Advancements(temprano, registro);
         if (!a.enabled()) return;
         registro.loadFichas();
-        a.install();
+        /* Sin este aviso el cambio pasaba en silencio: onEnable ya no encuentra nada
+         * que escribir y no dice nada, y el arbol nuevo no esta cargado. */
+        if (a.install()) {
+            core.getLogger().warning("El arbol de logros cambio, pero este arranque sigue con el "
+                    + "anterior: el servidor lee los datapacks antes de cargar los plugins. "
+                    + "Se cargara en el proximo reinicio (o con /minecraft:reload).");
+        }
     }
 
     /**

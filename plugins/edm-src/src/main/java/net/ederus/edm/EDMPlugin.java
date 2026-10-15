@@ -90,9 +90,9 @@ public class EDMPlugin extends JavaPlugin {
 
     /**
      * Corre ANTES de que el servidor cargue los mundos (onEnable va despues). Lo unico
-     * que se hace aqui es escribir el datapack de logros de Anomaly, para que el mundo
-     * lo lea en este mismo arranque. Ver el comentario de anomaly.core.Advancements:
-     * en onEnable llegaba tarde y el progreso de los jugadores se perdia.
+     * que se hace aqui es poner al dia el datapack de logros de Anomaly. OJO: Paper lee
+     * los datapacks antes incluso de onLoad, asi que un arbol que cambia se carga en el
+     * proximo arranque. Ver el comentario de anomaly.core.Advancements.
      */
     @Override
     public void onLoad() {
