@@ -36,7 +36,7 @@ import net.ederus.edm.tooltip.TooltipPlugin;
  */
 public class EDMPlugin extends JavaPlugin {
 
-    public static final String VERSION = "1.84.0";
+    public static final String VERSION = "1.84.1";
 
     /* La identidad del nucleo. La build de OneBlock (EDMOneBlock) la cambia:
      * alli se llama EDO, Ederus OneBlock, con su propio arte y su version. */
@@ -86,6 +86,22 @@ public class EDMPlugin extends JavaPlugin {
         b.podar(getConfig().getInt("logs.dias", 14));
         bitacoras.add(b);
         return b;
+    }
+
+    /**
+     * Corre ANTES de que el servidor cargue los mundos (onEnable va despues). Lo unico
+     * que se hace aqui es escribir el datapack de logros de Anomaly, para que el mundo
+     * lo lea en este mismo arranque. Ver el comentario de anomaly.core.Advancements:
+     * en onEnable llegaba tarde y el progreso de los jugadores se perdia.
+     */
+    @Override
+    public void onLoad() {
+        try {
+            saveDefaultConfig();
+            net.ederus.edm.anomaly.core.Advancements.installBeforeWorlds(this);
+        } catch (Throwable t) {
+            getLogger().warning("No se pudo preparar el arbol de logros antes de cargar el mundo: " + t);
+        }
     }
 
     @Override

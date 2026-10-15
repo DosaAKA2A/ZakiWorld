@@ -99,6 +99,26 @@ public final class AnomalyRegistry {
         return fichas;
     }
 
+    /**
+     * Solo las fichas, sin generar los ficheros de habilidades. Es lo que necesita el
+     * arbol de logros en el arranque temprano (onLoad), antes de que exista el mundo.
+     */
+    public void loadFichas() {
+        fichas.load(types.values());
+    }
+
+    /**
+     * Las anomalias del propio EDM, en el orden de registro (el historico). Sin las que
+     * registra otro plugin despues: es lo que cubre el arbol de logros.
+     */
+    public List<AnomalyType> own() {
+        List<AnomalyType> out = new ArrayList<>();
+        for (AnomalyType t : types.values()) {
+            if (propias.contains(t.id())) out.add(t);
+        }
+        return out;
+    }
+
     /** El nombre de la ficha; si no hay, el de diseno. */
     private String nombre(String id, String def) {
         return fichas.getString(id, "nombre", def);

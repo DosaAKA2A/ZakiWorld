@@ -2,7 +2,6 @@ package net.ederus.edm.anomaly.core;
 
 import net.ederus.edm.anomaly.AnomalyPlugin;
 import org.bukkit.NamespacedKey;
-import org.bukkit.World;
 import org.bukkit.advancement.Advancement;
 import org.bukkit.advancement.AdvancementProgress;
 import org.bukkit.entity.Player;
@@ -27,11 +26,30 @@ import net.ederus.edm.comun.Compat;
  *
  * Todos los iconos y el fondo son texturas VANILLA a proposito: un datapack que apunte
  * a una textura que no existe se ve como un cuadro morado y negro, y eso canta muchisimo.
+ *
+ * POR QUE SE ESCRIBE EN onLoad (EDMPlugin#onLoad -> installBeforeWorlds) Y NO EN onEnable.
+ * El servidor lee los datapacks al cargar los mundos, y eso pasa DESPUES de onLoad y
+ * ANTES de onEnable. Escrito en onEnable, cada arbol nuevo llegaba tarde: ese arranque
+ * servia el viejo (o ninguno) y hacia falta un /minecraft:reload o un segundo reinicio.
+ * Peor: mientras el servidor no conoce un logro, al guardar el progreso de un jugador
+ * el juego TIRA lo que tuviera de ese logro. Por eso "se reiniciaban para todos" cada
+ * vez que se tocaba el arbol. En onLoad el arbol nuevo ya esta en disco cuando el mundo
+ * lo lee, en el mismo arranque. No lo devuelvas a onEnable.
+ *
+ * Las otras dos reglas que protegen el progreso:
+ *   - un fichero solo se escribe si su contenido cambia (se comparan los bytes);
+ *   - los criterios tienen nombres fijos ("caida" en cada anomalia y el id de cada
+ *     anomalia en la coleccion). El progreso se guarda por nombre de criterio: si el
+ *     nombre cambiara, lo ganado se perderia.
+ *
+ * El arbol cubre solo las anomalias PROPIAS de EDM. Las de Calamity se registran mas
+ * tarde (en su onEnable): meterlas haria que el arbol dependiera de si Calamity esta
+ * cargado, y cada arranque con o sin el cambiaria la coleccion.
  */
 public final class Advancements {
 
-    /** Sube esto para que el datapack se reescriba en el proximo arranque. */
-    private static final int PACK_VERSION = 15;
+    /** Marcador de version del datapack. Es informativo: lo que manda es el contenido. */
+    private static final int PACK_VERSION = 16;
 
     private static final String NS = "anomaly";
     /* La raiz del arbol NO puede llamarse "raiz": es el id de ROTTEN (boss/Raiz).
@@ -41,50 +59,106 @@ public final class Advancements {
     private static final String ALL = "coleccionista";
 
     private final AnomalyPlugin plugin;
+    /* En el arranque temprano (onLoad) el modulo aun no tiene registro propio: se le
+     * pasa uno hecho a mano. Despues, null, y vale el del modulo. */
+    private final AnomalyRegistry fijo;
 
     public Advancements(AnomalyPlugin plugin) {
+        this(plugin, null);
+    }
+
+    private Advancements(AnomalyPlugin plugin, AnomalyRegistry fijo) {
         this.plugin = plugin;
+        this.fijo = fijo;
+    }
+
+    private AnomalyRegistry registry() {
+        return fijo != null ? fijo : plugin.registry();
     }
 
     /**
      * logros.activo. Si no esta en config.yml, depende de la build: encendido en EDM
      * y apagado en EDO (OneBlock no quiere logros de anomalias). Se lee en cada uso,
      * asi que /anomaly reload lo recoge sin mas.
+     *
+     * Se lee del config del modulo directamente y no por Settings: en onLoad todavia
+     * no hay Settings.
      */
     public boolean enabled() {
-        return plugin.settings().rawBool("logros.activo",
+        return plugin.getConfig().getBoolean("logros.activo",
                 !(plugin.core() instanceof net.ederus.edm.EDMOneBlock));
+    }
+
+    /** Las anomalias que tienen logro: las propias de EDM, en orden fijo. */
+    private List<AnomalyType> tipos() {
+        return registry().own();
     }
 
     // ------------------------------------------------------------- el datapack
 
     /**
-     * Escribe el datapack dentro del mundo principal si falta o si cambio de version.
+     * El arranque temprano: escribe el arbol ANTES de que el servidor cargue los
+     * mundos, para que lo lea en este mismo arranque. Lo llama EDMPlugin#onLoad.
+     * Ver el comentario de la clase.
      *
-     * @return true si lo ha (re)escrito, o sea que hace falta recargar para verlo
+     * Monta un modulo de Anomaly de usar y tirar solo para leer su config y sus fichas
+     * (los nombres de las anomalias salen de ahi); no registra nada en el servidor.
+     */
+    public static void installBeforeWorlds(net.ederus.edm.EDMPlugin core) {
+        if (!core.getConfig().getBoolean("modulos.anomaly", true)) return;
+        AnomalyPlugin temprano = new AnomalyPlugin(core);
+        AnomalyRegistry registro = new AnomalyRegistry(temprano);
+        Advancements a = new Advancements(temprano, registro);
+        if (!a.enabled()) return;
+        registro.loadFichas();
+        a.install();
+    }
+
+    /**
+     * La carpeta raiz del mundo principal.
+     *
+     * OJO: World#getWorldFolder devuelve la carpeta de la DIMENSION
+     * (world/dimensions/minecraft/overworld), y los datapacks van en la raiz del
+     * mundo. Hay que componerla desde el contenedor y el nombre del nivel. En onLoad
+     * no hay mundos todavia: el nombre se lee de server.properties (level-name).
+     */
+    private File mundoPrincipal() {
+        String nombre = null;
+        if (!plugin.getServer().getWorlds().isEmpty()) {
+            nombre = plugin.getServer().getWorlds().get(0).getName();
+        } else {
+            File props = new File("server.properties");
+            if (props.isFile()) {
+                java.util.Properties p = new java.util.Properties();
+                try (java.io.Reader r = Files.newBufferedReader(props.toPath(), StandardCharsets.UTF_8)) {
+                    p.load(r);
+                    nombre = p.getProperty("level-name");
+                } catch (IOException | IllegalArgumentException ignored) {
+                }
+            }
+        }
+        if (nombre == null || nombre.isBlank()) nombre = "world";
+        return new File(plugin.getServer().getWorldContainer(), nombre.trim());
+    }
+
+    /**
+     * Pone el datapack al dia dentro del mundo principal. Solo escribe los ficheros
+     * cuyo contenido cambia: si todo esta igual, no toca nada.
+     *
+     * @return true si ha escrito o borrado algo
      */
     public boolean install() {
         if (!enabled()) return false;
-        World world = plugin.getServer().getWorlds().isEmpty() ? null : plugin.getServer().getWorlds().get(0);
-        if (world == null) return false;
-
-        // OJO: World#getWorldFolder devuelve la carpeta de la DIMENSION
-        // (world/dimensions/minecraft/overworld), y los datapacks van en la raiz del
-        // mundo. Hay que componerla desde el contenedor y el nombre del nivel.
-        File pack = new File(plugin.getServer().getWorldContainer(),
-                world.getName() + "/datapacks/anomaly_logros");
+        File pack = new File(mundoPrincipal(), "datapacks/anomaly_logros");
         File marker = new File(pack, ".version");
         try {
-            if (marker.isFile()
-                    && Files.readString(marker.toPath(), StandardCharsets.UTF_8).trim().equals(String.valueOf(PACK_VERSION))) {
-                return false;
-            }
+            int cambios = 0;
             // Este mcmeta lleva LOS DOS esquemas de metadatos a la vez. Paper 26.1.x
             // todavia lee el viejo (pack_format + supported_formats) y sin el campo
             // supported_formats escupia "Error reading pack metadata" en cada arranque
             // — el propio error pedia ese campo. min_format/max_format quedan para
             // cuando el juego salte al esquema nuevo.
-            write(new File(pack, "pack.mcmeta"), """
+            cambios += write(new File(pack, "pack.mcmeta"), """
                     {
                       "pack": {
                         "description": "Anomaly - arbol de logros de las anomalias",
@@ -98,16 +172,17 @@ public final class Advancements {
             Path adv = new File(pack, "data/" + NS + "/advancement").toPath();
             Files.createDirectories(adv);
 
-            write(adv.resolve(ROOT + ".json").toFile(), root());
-            for (AnomalyType type : plugin.registry().all()) {
-                write(adv.resolve(type.id() + ".json").toFile(), forAnomaly(type));
+            cambios += write(adv.resolve(ROOT + ".json").toFile(), root());
+            for (AnomalyType type : tipos()) {
+                cambios += write(adv.resolve(type.id() + ".json").toFile(), forAnomaly(type));
             }
-            write(adv.resolve(ALL + ".json").toFile(), collector());
+            cambios += write(adv.resolve(ALL + ".json").toFile(), collector());
             int borrados = pruneOrphans(adv);
 
-            write(marker, String.valueOf(PACK_VERSION));
-            plugin.getLogger().info("Arbol de logros escrito en " + pack.getPath()
-                    + " (" + (plugin.registry().all().size() + 2) + " logros"
+            cambios += write(marker, String.valueOf(PACK_VERSION));
+            if (cambios == 0 && borrados == 0) return false;
+            plugin.getLogger().info("Arbol de logros puesto al dia en " + pack.getPath()
+                    + " (" + (tipos().size() + 2) + " logros, " + cambios + " fichero(s) cambiado(s)"
                     + (borrados > 0 ? ", " + borrados + " de anomalias que ya no existen borrados" : "")
                     + ").");
             return true;
@@ -129,7 +204,7 @@ public final class Advancements {
         java.util.Set<String> validos = new java.util.HashSet<>();
         validos.add(ROOT + ".json");
         validos.add(ALL + ".json");
-        for (AnomalyType type : plugin.registry().all()) validos.add(type.id() + ".json");
+        for (AnomalyType type : tipos()) validos.add(type.id() + ".json");
         int borrados = 0;
         try (java.util.stream.Stream<Path> files = Files.list(adv)) {
             for (Path f : (Iterable<Path>) files::iterator) {
@@ -142,9 +217,18 @@ public final class Advancements {
         return borrados;
     }
 
-    private static void write(File file, String content) throws IOException {
+    /**
+     * Escribe el fichero solo si su contenido cambia: un logro que no cambia no se
+     * toca nunca, ni siquiera se reescribe igual.
+     *
+     * @return 1 si lo ha escrito, 0 si ya estaba igual
+     */
+    private static int write(File file, String content) throws IOException {
+        byte[] nuevo = content.getBytes(StandardCharsets.UTF_8);
+        if (file.isFile() && java.util.Arrays.equals(Files.readAllBytes(file.toPath()), nuevo)) return 0;
         Files.createDirectories(file.getParentFile().toPath());
-        Files.writeString(file.toPath(), content, StandardCharsets.UTF_8);
+        Files.write(file.toPath(), nuevo);
+        return 1;
     }
 
     /**
@@ -205,9 +289,15 @@ public final class Advancements {
      *
      * requirements con todos los criterios en listas separadas significa "y", que es
      * justo lo que se quiere: no vale con uno, hay que traerlos todos.
+     *
+     * Cada criterio se llama como el id de su anomalia y va en su propia lista. Una
+     * anomalia nueva solo AÑADE un criterio: lo ya ganado se conserva (el progreso se
+     * guarda por nombre de criterio) y al jugador le falta solo la nueva. Ordenados por
+     * id para que el fichero no cambie si se cambia la clase de una anomalia en el menu.
      */
     private String collector() {
-        List<AnomalyType> all = plugin.registry().all();
+        List<AnomalyType> all = new ArrayList<>(tipos());
+        all.sort(java.util.Comparator.comparing(AnomalyType::id));
         StringBuilder criteria = new StringBuilder();
         StringBuilder reqs = new StringBuilder();
         for (int i = 0; i < all.size(); i++) {
@@ -292,7 +382,7 @@ public final class Advancements {
     /** Cuantos de los logros de anomalia lleva ya ese jugador. */
     public int owned(Player player) {
         int n = 0;
-        for (AnomalyType type : plugin.registry().all()) {
+        for (AnomalyType type : tipos()) {
             Advancement adv = advancement(type.id());
             if (adv != null && player.getAdvancementProgress(adv).isDone()) n++;
         }
@@ -302,7 +392,7 @@ public final class Advancements {
     /** Los nombres de las anomalias que ese jugador todavia no ha derrotado. */
     public List<String> missing(Player player) {
         List<String> out = new ArrayList<>();
-        for (AnomalyType type : plugin.registry().all()) {
+        for (AnomalyType type : tipos()) {
             Advancement adv = advancement(type.id());
             if (adv == null || !player.getAdvancementProgress(adv).isDone()) out.add(type.display());
         }

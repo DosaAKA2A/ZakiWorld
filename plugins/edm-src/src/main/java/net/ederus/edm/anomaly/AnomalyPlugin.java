@@ -149,8 +149,10 @@ public final class AnomalyPlugin extends net.ederus.edm.Module {
             getLogger().info("Logros de Anomaly apagados (logros.activo: false). "
                     + "Si existe world/datapacks/anomaly_logros, puede borrarse.");
         } else if (advancements.install()) {
-            getLogger().info("El arbol de logros es nuevo: hace falta un /minecraft:reload "
-                    + "o un reinicio para que el servidor lo cargue.");
+            /* Lo normal es que no escriba nada: el arbol ya lo puso al dia EDMPlugin#onLoad,
+             * antes de cargar el mundo. Si aqui cambia algo es que aquello fallo. */
+            getLogger().warning("El arbol de logros se puso al dia tarde (fallo el arranque temprano): "
+                    + "hace falta un /minecraft:reload para que el servidor lo cargue.");
         }
 
         banner();
@@ -323,7 +325,7 @@ public final class AnomalyPlugin extends net.ederus.edm.Module {
         registry.load();
         // Por si se acaban de encender los logros (logros.activo): apagados no hace nada.
         if (advancements.install()) {
-            getLogger().info("El arbol de logros es nuevo: hace falta un /minecraft:reload "
+            getLogger().info("El arbol de logros cambio: hace falta un /minecraft:reload "
                     + "o un reinicio para que el servidor lo cargue.");
         }
         drops.load();
