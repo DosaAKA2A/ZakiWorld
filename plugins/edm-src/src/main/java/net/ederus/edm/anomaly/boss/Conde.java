@@ -146,7 +146,7 @@ public final class Conde extends BossFight {
         Compat.setAttribute(boss, "knockback_resistance", 1.0);
         Compat.setAttribute(boss, "follow_range", 64);
         Compat.setAttribute(boss, "movement_speed", 0.30);
-        applyHealth(plugin.registry().scaledHealth(plugin.registry().get(ID), targets(96).size()));
+        applyHealth(plugin.registry().health(plugin.registry().get(ID)));
         boss.setMaximumNoDamageTicks(8);
         Tags.markBoss(boss, ID);
         glowBody(NamedTextColor.DARK_RED);
@@ -466,7 +466,7 @@ public final class Conde extends BossFight {
         List<Circulo> sellos = new ArrayList<>();
         for (Player p : objetivos) {
             sellos.add(circulo(Fx.ground(p.getLocation(), 6), 1.5, 36, false, false));
-            p.sendActionBar(Component.text("Tienes un sello rojo debajo. Sal de él.", ACCENT, TextDecoration.BOLD));
+            p.sendActionBar(Component.text("Tienes un sello rojo debajo. Sal de él.", ACCENT));
         }
         soundAt(loc(), "entity.evoker.cast_spell", 1.8f, 0.6f);
         announce(Component.text("Sello carmesí. Sal del círculo rojo."));
@@ -503,7 +503,7 @@ public final class Conde extends BossFight {
         final Player v = Fx.nearest(boss.getLocation(), 14);
         if (v == null) return;
         soundAt(loc(), "entity.evoker.prepare_attack", 1.6f, 1.2f);
-        v.sendActionBar(Component.text("El Conde va a morderte.", ACCENT, TextDecoration.BOLD));
+        v.sendActionBar(Component.text("El Conde va a morderte.", ACCENT));
 
         // Aviso: un hilo rojo de el hasta su presa y el cuerpo envuelto en rojo.
         animate(12, t -> {
@@ -1028,7 +1028,7 @@ public final class Conde extends BossFight {
             Player p = victimas.get(i);
             // Hasta ocho con circulo de verdad; el resto con su anillo de particulas.
             if (i < 8) sellos.add(circulo(Fx.ground(p.getLocation(), 6), 1.0, 62, false, true));
-            p.sendActionBar(Component.text("Festín de sangre. Aléjate más de 12 bloques.", ACCENT, TextDecoration.BOLD));
+            p.sendActionBar(Component.text("Festín de sangre. Aléjate más de 12 bloques.", ACCENT));
         }
         soundAt(loc(), "entity.illusioner.prepare_blindness", 1.6f, 0.6f);
         announce(Component.text("Festín de sangre. Aléjate más de 12 bloques."));
@@ -1105,8 +1105,8 @@ public final class Conde extends BossFight {
                 for (Player p : Fx.viewersNear(c, 40)) {
                     boolean fuera = plano(p.getLocation(), c) > r;
                     p.sendActionBar(Component.text("Eclipse en " + quedan + "s   ", NamedTextColor.GRAY)
-                            .append(Component.text(fuera ? "estás fuera" : "ESTÁS DENTRO",
-                                    fuera ? NamedTextColor.GREEN : NamedTextColor.RED, TextDecoration.BOLD)));
+                            .append(Component.text(fuera ? "estás fuera" : "estás dentro",
+                                    fuera ? NamedTextColor.GREEN : NamedTextColor.RED)));
                 }
             }
         }, () -> {

@@ -31,7 +31,7 @@ import net.ederus.edm.comun.Compat;
 public final class Advancements {
 
     /** Sube esto para que el datapack se reescriba en el proximo arranque. */
-    private static final int PACK_VERSION = 14;
+    private static final int PACK_VERSION = 15;
 
     private static final String NS = "anomaly";
     /* La raiz del arbol NO puede llamarse "raiz": es el id de ROTTEN (boss/Raiz).
