@@ -528,6 +528,10 @@ public final class Conde extends BossFight {
                 Location aqui = desde.clone().add(paso.multiply((t + 1) / 7.0));
                 aqui.setY(v.getLocation().getY());
                 aqui.setDirection(hacia.lengthSquared() < 0.01 ? desde.getDirection() : hacia);
+                // Si hay una pared por medio se queda delante: el teleport la cruzaria y
+                // lo dejaria metido en el muro (o al otro lado, fuera del coliseo).
+                if (aqui.getBlock().getType().isSolid()
+                        || aqui.clone().add(0, 1, 0).getBlock().getType().isSolid()) throw Stop.now();
                 boss.teleport(aqui);
                 Compat.spawn(world(), Compat.LARGE_SMOKE, aqui.clone().add(0, 1, 0), 2, 0.2, 0.4, 0.2, 0.01);
             }, () -> {
