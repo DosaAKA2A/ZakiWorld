@@ -98,4 +98,22 @@ public final class ActiveAnomaly {
         return damage.size();
     }
 
+    /*
+     * Cuando le pego la anomalia por ultima vez a cada jugador (milisegundos). Lo
+     * apunta BossFight#hit y lo lee el mensaje de muerte: los golpes sin entidad
+     * (p.damage sin fuente, setHealth) no dejan rastro de quien fue, y sin esto el
+     * chat decia que el jugador "murio" a secas.
+     */
+    private final Map<UUID, Long> lastHit = new HashMap<>();
+
+    public void markHit(Player p) {
+        if (p != null) lastHit.put(p.getUniqueId(), System.currentTimeMillis());
+    }
+
+    /** Si la anomalia le pego a ese jugador hace como mucho ms milisegundos. */
+    public boolean hitWithin(Player p, long ms) {
+        Long at = p == null ? null : lastHit.get(p.getUniqueId());
+        return at != null && System.currentTimeMillis() - at <= ms;
+    }
+
 }

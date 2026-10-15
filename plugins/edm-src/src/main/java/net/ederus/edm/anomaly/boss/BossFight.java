@@ -807,6 +807,8 @@ public abstract class BossFight {
     public void hit(Player p, double amount) {
         if (p == null || !Fx.isFightable(p)) return;
         amount *= plugin.registry().damageMultiplier(event.type()) * abilityDamage();
+        // Apuntado ANTES del golpe: si este lo mata, el mensaje de muerte ya sabe quien fue.
+        event.markHit(p);
         try {
             if (boss != null && boss.isValid()) {
                 p.damage(amount, boss);
@@ -837,6 +839,7 @@ public abstract class BossFight {
             for (Player otro : Fx.playersNear(centro.getLocation(), radio)) {
                 if (otro.getUniqueId().equals(centro.getUniqueId())) continue;
                 if (!Fx.isFightable(otro)) continue;
+                event.markHit(otro);
                 try {
                     if (boss != null && boss.isValid()) {
                         otro.damage(amount * fraccion, boss);

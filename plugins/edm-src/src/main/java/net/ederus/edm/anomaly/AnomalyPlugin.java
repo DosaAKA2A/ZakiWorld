@@ -108,6 +108,8 @@ public final class AnomalyPlugin extends net.ederus.edm.Module {
          * ignoran lo cancelado. */
         getServer().getPluginManager().registerEvents(guard, this);
         getServer().getPluginManager().registerEvents(manager, this);
+        getServer().getPluginManager().registerEvents(
+                new net.ederus.edm.anomaly.core.PlayerDeaths(this), this);
         getServer().getPluginManager().registerEvents(menus, this);
         getServer().getPluginManager().registerEvents(spawnMarker, this);
         // El almacen de botin escucha por el aviso de "quien se llevo el ÚNICO".

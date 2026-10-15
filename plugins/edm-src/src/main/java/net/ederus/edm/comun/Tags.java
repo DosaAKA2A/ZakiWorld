@@ -55,6 +55,12 @@ public final class Tags {
         return e.getPersistentDataContainer().has(MINION, PersistentDataType.STRING);
     }
 
+    /** De que anomalia es el esbirro (el id que se puso al marcarlo), o null. */
+    public static String minionId(Entity e) {
+        if (!ready() || e == null) return null;
+        return e.getPersistentDataContainer().get(MINION, PersistentDataType.STRING);
+    }
+
     /** Entidad decorativa: si sobrevive al final del evento, el barredor la borra. */
     public static void markTemporary(Entity e) {
         if (!ready() || e == null) return;

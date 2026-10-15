@@ -126,6 +126,7 @@ public final class AnomalyManager implements Listener {
             stop(true);
             return;
         }
+        nameCombatMob(fight, type);
 
         event.state(ActiveAnomaly.State.ACTIVA);
         paintArena(type, where);
@@ -134,6 +135,22 @@ public final class AnomalyManager implements Listener {
 
         ticker = plugin.getServer().getScheduler().runTaskTimer(
                 net.ederus.edm.Module.dueno(plugin), this::tick, 1L, 1L);
+    }
+
+    /**
+     * Le pone nombre al mob de combate si su anomalia no se lo puso.
+     *
+     * Los jefes con maniqui (Alba) pelean con un zombi invisible debajo, y si ese
+     * zombi nace sin nombre, el mensaje de muerte vanilla dice "asesinado por Zombie".
+     * El nombre va OCULTO: lo que se ve es el maniqui o la barra; esto solo existe
+     * para que cualquier texto del juego que lo nombre diga quien es. Es la red por
+     * si PlayerDeaths no llega a reescribir el mensaje.
+     */
+    private static void nameCombatMob(BossFight fight, AnomalyType type) {
+        LivingEntity mob = fight.entity();
+        if (mob == null || mob.customName() != null) return;
+        mob.customName(Component.text(type.display(), type.color()));
+        mob.setCustomNameVisible(false);
     }
 
     private static String describe(Location l) {
