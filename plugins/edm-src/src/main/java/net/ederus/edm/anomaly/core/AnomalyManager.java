@@ -58,6 +58,15 @@ public final class AnomalyManager implements Listener {
         return current;
     }
 
+    /**
+     * Si se esta buscando sitio para una anomalia. Ya no hay busqueda (todas salen en
+     * el Coliseo), pero Calamity lo consulta desde su puente antes de abrir una Parca:
+     * quitarlo rompe Calamity en caliente (NoSuchMethodError). Siempre false.
+     */
+    public boolean searching() {
+        return false;
+    }
+
     public boolean active() {
         return current != null;
     }
