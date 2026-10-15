@@ -42,7 +42,8 @@ public final class SetLoot {
             Map.entry("gemelos_cobre", "FUNDICION_DE_KEM_Y_KAM"),
             Map.entry("rabby", "BUNNY"),
             Map.entry("cazador", "CAZADOR"),
-            Map.entry("piromante", "CENIZA_PIROMANTE"));
+            Map.entry("piromante", "CENIZA_PIROMANTE"),
+            Map.entry("conde", "CONDE"));
 
     public static boolean disponible() {
         return Bukkit.getPluginManager().isPluginEnabled("MMOItems");
@@ -75,8 +76,20 @@ public final class SetLoot {
         return out;
     }
 
-    /** La etiqueta MMOITEMS_ITEM_SET, igual que la lee el puente de GodItems. */
+    /**
+     * La etiqueta MMOITEMS_ITEM_SET.
+     *
+     * Se lee con el NBTItem de MythicLib: MMOItems la guarda como clave NBT en
+     * MAYUSCULAS y sin namespace, y PersistentDataContainer#getKeys() solo devuelve
+     * claves que parsean como NamespacedKey (minusculas). Por el PDC la etiqueta no
+     * salia nunca y ningun set encontraba sus piezas. El PDC queda de respaldo.
+     */
     private static String setDe(ItemStack item) {
+        try {
+            String v = io.lumine.mythic.lib.api.item.NBTItem.get(item).getString("MMOITEMS_ITEM_SET");
+            if (v != null && !v.isBlank()) return v.toUpperCase(Locale.ROOT);
+        } catch (Throwable ignored) {
+        }
         var meta = item.getItemMeta();
         if (meta == null) return null;
         var pdc = meta.getPersistentDataContainer();
