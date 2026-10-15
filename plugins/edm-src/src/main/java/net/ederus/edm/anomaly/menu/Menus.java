@@ -2429,7 +2429,7 @@ public final class Menus implements Listener {
                 plugin.manager().start(type, ok -> {
                     if (!ok) {
                         player.sendMessage(plugin.prefix().append(Component.text(
-                                net.ederus.edm.anomaly.core.AnomalyManager.SIN_COLISEO, NamedTextColor.RED)));
+                                plugin.manager().whyNotOpened(), NamedTextColor.RED)));
                     }
                     if (player.isOnline() && player.getOpenInventory().getTopInventory().getHolder() instanceof Holder h
                             && h.screen == Screen.HUB) {

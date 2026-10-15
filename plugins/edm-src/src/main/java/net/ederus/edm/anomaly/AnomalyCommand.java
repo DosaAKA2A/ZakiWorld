@@ -437,7 +437,7 @@ public final class AnomalyCommand implements CommandExecutor, TabCompleter {
         }
         say(sender, "Abriéndola en el Coliseo...", SOFT);
         plugin.manager().start(type, ok -> {
-            if (!ok) say(sender, net.ederus.edm.anomaly.core.AnomalyManager.SIN_COLISEO, NamedTextColor.RED);
+            if (!ok) say(sender, plugin.manager().whyNotOpened(), NamedTextColor.RED);
         });
     }
 

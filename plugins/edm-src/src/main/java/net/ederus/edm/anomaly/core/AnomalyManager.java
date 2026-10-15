@@ -69,6 +69,17 @@ public final class AnomalyManager implements Listener {
             + "Márcalo desde el menú, botón Punto del Coliseo, o con /anomaly coliseum.";
 
     /**
+     * Por que acaba de fallar un start(), para decirlo en el chat. El callback solo
+     * dice si o no, y "falta el Coliseo" no es la unica causa: el jefe puede fallar al
+     * aparecer (sale en la consola) o haberse abierto otra justo antes.
+     */
+    public String whyNotOpened() {
+        if (active()) return "Ya hay una anomalía abierta.";
+        if (plugin.settings().coliseum() == null) return SIN_COLISEO;
+        return "El jefe falló al aparecer en el Coliseo; el detalle está en la consola.";
+    }
+
+    /**
      * Abre la anomalia en el Coliseo, que es el unico sitio donde salen todas.
      *
      * Antes cada una podia tener su punto propio o buscarse un sitio aleatorio por el
@@ -486,14 +497,17 @@ public final class AnomalyManager implements Listener {
                 markSlotDone(slot, type.id());
                 plugin.getLogger().info("Turno de las " + hora + ": abre " + type.id() + ".");
             } else {
-                // Con la otra cerrada y gente de sobra, si no abre es que falta el Coliseo:
-                // reintentarlo cada 20 s solo llenaria la consola.
+                // Con la otra cerrada y gente de sobra, si no abre es que falta el Coliseo
+                // o que el jefe fallo al aparecer: reintentarlo cada 20 s solo llenaria
+                // la consola.
+                String motivo = whyNotOpened();
                 markSlotDone(slot, null);
-                plugin.bitacora().anotar("auto", type.id(), "turno " + hora, "no abrio: sin Coliseo");
+                plugin.bitacora().anotar("auto", type.id(), "turno " + hora, "no abrio: "
+                        + (plugin.settings().coliseum() == null ? "sin Coliseo" : "fallo al aparecer"));
                 for (Player p : plugin.getServer().getOnlinePlayers()) {
                     if (plugin.mayUseGui(p)) {
                         p.sendMessage(plugin.prefix().append(Component.text(
-                                "El turno de las " + hora + " no abrió. " + SIN_COLISEO, NamedTextColor.RED)));
+                                "El turno de las " + hora + " no abrió. " + motivo, NamedTextColor.RED)));
                     }
                 }
             }
