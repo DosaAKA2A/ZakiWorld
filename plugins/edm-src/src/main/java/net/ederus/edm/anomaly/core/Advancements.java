@@ -34,7 +34,10 @@ public final class Advancements {
     private static final int PACK_VERSION = 14;
 
     private static final String NS = "anomaly";
-    private static final String ROOT = "raiz";
+    /* La raiz del arbol NO puede llamarse "raiz": es el id de ROTTEN (boss/Raiz).
+     * Con ese nombre el logro de ROTTEN pisaba el fichero de la raiz y quedaba como
+     * padre de si mismo, y el juego descartaba el arbol entero. */
+    private static final String ROOT = "inicio";
     private static final String ALL = "coleccionista";
 
     private final AnomalyPlugin plugin;
