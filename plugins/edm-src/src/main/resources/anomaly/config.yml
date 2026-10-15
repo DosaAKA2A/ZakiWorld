@@ -119,9 +119,12 @@ anuncio:
   activo: true
   sonido: true
   titulo: true
-  # Como se le dice a la gente que llegue: "ve /warp coliseo". Sale en el titulo
-  # y en el chat (pulsable). Vacio = el titulo lleva las coordenadas.
-  warp: "/warp coliseo"
+  # Como se le dice a la gente que llegue. El chat dice
+  #   "✦ NOMBRE · La lucha ha empezado en el /warp Coliseo"
+  # con el warp pulsable, y el titulo "ve /warp Coliseo". Vacio = el chat nombra el
+  # Coliseo sin nada que pulsar y el titulo lleva las coordenadas.
+  warp: "/warp Coliseo"
+
   # La columna de luz del color de la anomalia sobre el jefe. Se ve desde lejos y
   # marca donde esta peleando dentro del Coliseo. Apagalo solo si pesa.
   pilar-de-luz: true

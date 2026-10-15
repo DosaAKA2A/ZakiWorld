@@ -20,8 +20,9 @@ import net.ederus.edm.comun.Compat;
 /**
  * El anuncio del chat.
  *
- * La palabra "Anomalía" no es texto suelto: al pasar el raton cuenta que anomalia es,
- * de donde viene y, en otro color, que suelta. Las coordenadas se copian con un clic.
+ * El nombre de la anomalia no es texto suelto: al pasar el raton cuenta que anomalia
+ * es, de donde viene y, en otro color, que suelta. El warp del Coliseo se pulsa y
+ * lleva directo a la pelea.
  */
 public final class Announcer {
 
@@ -54,7 +55,7 @@ public final class Announcer {
         if (plugin.settings().announceTitle()) {
             /* El titulo es el NOMBRE, no la palabra "anomalia": lo que la gente tiene que
              * leer de un vistazo es quien ha salido y como llegar. Con un warp puesto,
-             * el subtitulo es "ve /warp coliseo"; sin el, las coordenadas. */
+             * el subtitulo es "ve /warp Coliseo"; sin el, las coordenadas. */
             String warp = plugin.settings().announceWarp();
             Location l = event.where();
             Component abajo = warp.isEmpty()
@@ -70,48 +71,32 @@ public final class Announcer {
     }
 
     /**
-     * Una sola linea, sin marcos ni segunda fila de texto apagado.
+     * Una sola linea: "✦ NOMBRE · La lucha ha empezado en el /warp Coliseo".
      *
-     * Todo lo demas (que es, de donde viene, que suelta, cuanto dura) vive en el hover,
-     * que es donde el usuario quiere que este. En el chat solo la frase y las coordenadas,
-     * y ambas en blanco: sobre el fondo oscuro el gris no se leia.
+     * Todas salen en el Coliseo, asi que las coordenadas sobran: lo que la gente
+     * necesita es saber quien salio y pulsar para ir. Todo lo demas (que es, de donde
+     * viene, que suelta) vive en el hover del nombre. El texto va en blanco: sobre el
+     * fondo oscuro el gris no se leia.
      */
     private Component openingLine(ActiveAnomaly event) {
         AnomalyType type = event.type();
-        Location l = event.where();
-        int step = 1;
-        int x = round(l.getBlockX(), step);
-        int y = l.getBlockY();
-        int z = round(l.getBlockZ(), step);
 
-        Component word = Component.text("Anomalía", type.color(), TextDecoration.BOLD)
+        Component name = Component.text(type.display(), type.color(), TextDecoration.BOLD)
                 .hoverEvent(HoverEvent.showText(dossier(event)));
 
-        String coordText = x + " " + y + " " + z;
-        Component coords = Component.text(coordText, NamedTextColor.WHITE, TextDecoration.BOLD)
-                .hoverEvent(HoverEvent.showText(Component.text("Clic para copiar", SOFT)))
-                .clickEvent(ClickEvent.copyToClipboard(coordText));
-
         Component linea = Component.text("✦ ", type.color())
-                .append(Component.text("Una ", NamedTextColor.WHITE))
-                .append(word)
-                .append(Component.text(" ha aparecido en ", NamedTextColor.WHITE))
-                .append(coords);
+                .append(name)
+                .append(Component.text(" · La lucha ha empezado en el ", NamedTextColor.WHITE));
 
-        // El atajo, pulsable: clic y te lleva. Sin warp configurado no se anade nada.
+        // El atajo, pulsable: clic y te lleva. Sin warp configurado se nombra el
+        // Coliseo a secas, sin nada que pulsar.
         String warp = plugin.settings().announceWarp();
-        if (!warp.isEmpty()) {
-            linea = linea.append(Component.text("  ·  ve ", NamedTextColor.WHITE))
-                    .append(Component.text(warp, type.color(), TextDecoration.BOLD)
-                            .hoverEvent(HoverEvent.showText(Component.text("Clic para ir", SOFT)))
-                            .clickEvent(ClickEvent.runCommand(warp)));
+        if (warp.isEmpty()) {
+            return linea.append(Component.text("Coliseo", NamedTextColor.WHITE));
         }
-        return linea;
-    }
-
-    private static int round(int value, int step) {
-        if (step <= 1) return value;
-        return Math.round(value / (float) step) * step;
+        return linea.append(Component.text(warp, NamedTextColor.WHITE, TextDecoration.BOLD)
+                .hoverEvent(HoverEvent.showText(Component.text("Clic para ir", SOFT)))
+                .clickEvent(ClickEvent.runCommand(warp)));
     }
 
     /**

@@ -248,6 +248,11 @@ public final class AnomalyPlugin extends net.ederus.edm.Module {
                 getLogger().info("config.yml: quitados " + quitadas + " ajuste(s) que ya no se usan "
                         + "(sitio aleatorio, horarios por clase, intervalo en minutos...).");
             }
+            // El warp de serie paso de "/warp coliseo" a "/warp Coliseo" (asi se lee en
+            // el anuncio). Solo se toca si seguia el viejo de serie tal cual.
+            if ("/warp coliseo".equals(getConfig().getString("anuncio.warp", null))) {
+                getConfig().set("anuncio.warp", "/warp Coliseo");
+            }
             int before = getConfig().getKeys(true).size();
             getConfig().options().copyDefaults(true);
             saveConfig();
