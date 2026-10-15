@@ -146,6 +146,15 @@ public abstract class BossFight {
         return false;
     }
 
+    /**
+     * Un color unico para todas sus barras de fase, o null (lo normal) para la
+     * escalada de siempre: blanco, amarillo, rojo. Lo usa el CONDE, que va en rojo
+     * de principio a fin. Con un color fijo el titulo de la barra va en el acento.
+     */
+    public net.kyori.adventure.bossbar.BossBar.Color barColor() {
+        return null;
+    }
+
     // --------------------------------------------------------------------- estado
 
     public LivingEntity entity() {

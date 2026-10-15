@@ -112,6 +112,12 @@ public final class Conde extends BossFight {
         return ACCENT;
     }
 
+    /** Sus barras van en rojo en las tres fases: es el color de la sangre y del Conde. */
+    @Override
+    public net.kyori.adventure.bossbar.BossBar.Color barColor() {
+        return net.kyori.adventure.bossbar.BossBar.Color.RED;
+    }
+
     // ------------------------------------------------------------------- aparicion
 
     @Override

@@ -34,14 +34,21 @@ public final class PhaseBars {
     private final Set<Player> viewers = new HashSet<>();
     private final String bossName;
     private final TextColor accent;
+    /** Color unico de todas las barras (BossFight#barColor); null = la escalada de siempre. */
+    private final BossBar.Color fixed;
 
     public PhaseBars(String bossName, TextColor accent) {
         this(bossName, accent, DEFAULT_PHASES);
     }
 
     public PhaseBars(String bossName, TextColor accent, int phases) {
+        this(bossName, accent, phases, null);
+    }
+
+    public PhaseBars(String bossName, TextColor accent, int phases, BossBar.Color fixed) {
         this.bossName = bossName;
         this.accent = accent;
+        this.fixed = fixed;
         this.phases = Math.max(1, Math.min(4, phases));
         this.bars = new BossBar[this.phases];
         for (int i = 0; i < this.phases; i++) {
@@ -49,7 +56,8 @@ public final class PhaseBars {
         }
     }
 
-    private static BossBar.Color colorFor(int index) {
+    private BossBar.Color colorFor(int index) {
+        if (fixed != null) return fixed;
         return switch (index) {
             case 0 -> BossBar.Color.WHITE;
             case 1 -> BossBar.Color.YELLOW;
@@ -79,6 +87,11 @@ public final class PhaseBars {
     }
 
     private Component title(int index) {
+        // Con color fijo, el texto entero va en el acento: nada de la escalada blanco-oro-rojo.
+        if (fixed != null) {
+            return Component.text("✦ " + bossName + "  ·  FASE " + roman(index) + " de " + roman(phases - 1),
+                    accent);
+        }
         TextColor phaseColor = switch (index) {
             case 0 -> NamedTextColor.WHITE;
             case 1 -> NamedTextColor.GOLD;
@@ -143,6 +156,11 @@ public final class PhaseBars {
     public void flash(int phase) {
         int index = phase - 1;
         if (index < 0 || index >= bars.length) return;
+        if (fixed != null) {
+            // El jefe pidio un solo color: el destello no lo cambia, solo el texto.
+            bars[index].name(Component.text("✦ ARMADURA ROTA", accent));
+            return;
+        }
         bars[index].color(BossBar.Color.WHITE);
         bars[index].name(Component.text("✦ ", NamedTextColor.WHITE)
                 .append(Component.text("ARMADURA ROTA", NamedTextColor.WHITE, TextDecoration.BOLD)));

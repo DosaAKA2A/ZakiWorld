@@ -124,7 +124,7 @@ public final class AnomalyManager implements Listener {
         event.fight(fight);
         // Un jefe doble pinta sus propias barras (una por gemelo): la de fases sobra.
         if (!fight.usesOwnBars()) {
-            event.bars(new PhaseBars(type.display(), type.color(), fight.phaseCount()));
+            event.bars(new PhaseBars(type.display(), type.color(), fight.phaseCount(), fight.barColor()));
         }
 
         /* El titulo y los ajustes van ANTES de spawn(): la linea "vida" la escribe
