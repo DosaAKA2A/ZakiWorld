@@ -1052,7 +1052,7 @@ public final class Conde extends BossFight {
             }
             if (alcanzados > 0) {
                 double max = Compat.getAttribute(boss, "max_health", boss.getHealth());
-                boss.setHealth(Math.min(max, boss.getHealth() + max * 0.03 * alcanzados));
+                boss.setHealth(Math.min(topeDeFase(), boss.getHealth() + max * 0.03 * alcanzados));
                 Compat.spawn(world(), Compat.ENTITY_EFFECT, boss.getLocation().add(0, 1, 0), 30,
                         0.5, 0.8, 0.5, 0, rojo());
             }
@@ -1089,7 +1089,8 @@ public final class Conde extends BossFight {
             }
             if (t % 10 == 0) {
                 soundAt(c, "block.bell.use", 1.6f, 0.5f + t * 0.005f);
-                int quedan = (40 - t) / 20 + 1;
+                // Segundos que quedan, redondeando hacia arriba: 2, 2, 1, 1 (antes salia un 3).
+                int quedan = Math.max(1, (40 - t + 19) / 20);
                 for (Player p : Fx.viewersNear(c, 40)) {
                     boolean fuera = plano(p.getLocation(), c) > r;
                     p.sendActionBar(Component.text("Eclipse en " + quedan + "s   ", NamedTextColor.GRAY)
@@ -1545,8 +1546,23 @@ public final class Conde extends BossFight {
     /** Cura vida "de diseno": se pasa a vida de la entidad con el mismo reescalado. */
     private void curar(double vida) {
         if (!alive() || vida <= 0) return;
+        boss.setHealth(Math.min(topeDeFase(), boss.getHealth() + vida * damageScale()));
+    }
+
+    /**
+     * Hasta donde puede curarse sin salirse de la fase en curso.
+     *
+     * Las barras (PhaseBars.update) se pintan solo con la fraccion de vida: si el
+     * Conde se curaba por encima del umbral, en fase II volvia a enseñar la barra de
+     * la fase I (y en blanco, del destello del cambio). canChangePhase impide que la
+     * PELEA retroceda, pero no las barras; esto impide que retroceda la vida.
+     */
+    private double topeDeFase() {
         double max = Compat.getAttribute(boss, "max_health", boss.getHealth());
-        boss.setHealth(Math.min(max, boss.getHealth() + vida * damageScale()));
+        int fases = Math.max(1, phaseCount());
+        double techo = (fases - phase() + 1) / (double) fases;
+        if (phase() > 1) techo -= 0.002;
+        return Math.max(boss.getHealth(), max * Fx.clamp(techo, 0, 1));
     }
 
     /** Glow.clear saca la entidad del equipo, pero el brillo blanco sigue: fuera los dos. */
