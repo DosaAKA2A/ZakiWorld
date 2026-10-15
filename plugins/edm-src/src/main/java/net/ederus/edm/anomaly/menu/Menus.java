@@ -2396,7 +2396,7 @@ public final class Menus implements Listener {
                 }
                 // Con el reloj nuevo puede quedar "pendiente" un turno de hace un rato
                 // que antes no existia: se da por hecho para no abrir una al instante.
-                plugin.manager().skipDueSlot();
+                plugin.manager().skipDueSlot(before);
                 plugin.manager().restartScheduler();
                 click(player, event.isLeftClick() ? 1.4f : 0.9f);
                 player.sendActionBar(Component.text("Sale una cada  ", MenuUtil.SOFT)

@@ -451,13 +451,22 @@ public final class AnomalyManager implements Listener {
      * Lo usa el menu al cambiar el intervalo: con el nuevo reloj puede aparecer un
      * turno de hace media hora que nunca existio, y sin esto saldria una anomalia al
      * instante solo por haber tocado el boton.
+     *
+     * Pero si con el reloj de ANTES (previousEvery) ya habia un turno pendiente, por
+     * ejemplo el de las 04:00 esperando a que hubiera gente, ese turno era de verdad
+     * y no se pierde por cambiar el intervalo.
      */
-    public void skipDueSlot() {
+    public void skipDueSlot(int previousEvery) {
         java.time.ZonedDateTime now = java.time.ZonedDateTime.now(plugin.settings().autoZone());
         List<Slot> due = slotsBetween(now.minusMinutes(plugin.settings().autoGraceMinutes()), now);
         if (due.isEmpty()) return;
         Slot slot = due.get(due.size() - 1);
-        if (slot.key().equals(state().getString("ultimo-turno", ""))) return;
+        String done = state().getString("ultimo-turno", "");
+        if (slot.key().equals(done)) return;
+        // Las claves son fecha y hora ISO: compararlas como texto es compararlas en el tiempo.
+        boolean pendiente = previousEvery > 0 && due.stream()
+                .anyMatch(s -> s.at().getHour() % previousEvery == 0 && s.key().compareTo(done) > 0);
+        if (pendiente) return;
         markSlotDone(slot, null);
     }
 
