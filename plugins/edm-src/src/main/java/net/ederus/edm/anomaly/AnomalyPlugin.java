@@ -257,6 +257,7 @@ public final class AnomalyPlugin extends net.ederus.edm.Module {
                 getConfig().set("anuncio.warp", "/warp Coliseo");
             }
             int before = getConfig().getKeys(true).size();
+            if (quitadas > 0 && defaults != null) refreshComments(defaults);
             getConfig().options().copyDefaults(true);
             saveConfig();
             int added = getConfig().getKeys(true).size() - before;
@@ -266,6 +267,33 @@ public final class AnomalyPlugin extends net.ederus.edm.Module {
             }
         } catch (Throwable t) {
             getLogger().warning("No se pudo completar config.yml: " + t);
+        }
+    }
+
+    /**
+     * Pone los comentarios de serie en un config.yml que acaba de perder claves viejas.
+     *
+     * Quitar una clave se lleva su comentario, pero los de las que se quedan seguian
+     * contando lo de antes ("abre anomalias cada X minutos", "ve /warp coliseo", el
+     * spawn de cada ficha en la cabecera), y las claves nuevas entraban sin explicar.
+     * Solo pasa una vez, en la migracion: despues no hay nada obsoleto que quitar y
+     * los comentarios que escriba el admin se respetan.
+     */
+    private void refreshComments(org.bukkit.configuration.Configuration defaults) {
+        var cfg = getConfig();
+        // Las nuevas se meten ya aqui (y no con copyDefaults al guardar) para que
+        // existan al ponerles el comentario; al final de su seccion, como en el de serie.
+        for (String key : defaults.getKeys(true)) {
+            if (defaults.isConfigurationSection(key) || cfg.contains(key, true)) continue;
+            cfg.set(key, defaults.get(key));
+        }
+        for (String key : defaults.getKeys(true)) {
+            if (!cfg.contains(key, true)) continue;
+            cfg.setComments(key, defaults.getComments(key));
+            cfg.setInlineComments(key, defaults.getInlineComments(key));
+        }
+        if (defaults instanceof org.bukkit.configuration.file.FileConfiguration serie) {
+            cfg.options().setHeader(serie.options().getHeader());
         }
     }
 
