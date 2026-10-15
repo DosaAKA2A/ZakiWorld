@@ -605,6 +605,7 @@ public final class Conde extends BossFight {
         final Player[] victima = new Player[1];
         final Location[] apice = new Location[1];
         final Location[] picado = new Location[1];
+        final Location[] subida = new Location[1];
         final Vector[] rumbo = new Vector[1];
         final Set<UUID> golpeados = new HashSet<>();
 
@@ -619,8 +620,10 @@ public final class Conde extends BossFight {
                 if (victima[0] == null) throw Stop.now();
                 Vector lado = victima[0].getLocation().toVector().subtract(formaBat.getLocation().toVector()).setY(0);
                 if (lado.lengthSquared() < 0.01) lado = new Vector(1, 0, 0);
-                apice[0] = victima[0].getLocation().clone()
-                        .add(lado.normalize().multiply(-7)).add(0, 7, 0);
+                // Recortado contra paredes y techos: el coliseo es cerrado, y un apice
+                // dentro de la grada dejaba al jefe, al volver a humano, encima de ella.
+                apice[0] = despejado(victima[0].getEyeLocation(), victima[0].getLocation().clone()
+                        .add(lado.normalize().multiply(-7)).add(0, 7, 0), 3.0);
                 soundAt(formaBat.getLocation(), "entity.bat.takeoff", 2.0f, 0.5f);
             }
             if (victima[0] == null) return;
@@ -647,7 +650,11 @@ public final class Conde extends BossFight {
                     soundAt(p.getLocation(), "entity.phantom.bite", 1.6f, 0.7f);
                 }
             } else {
-                fly(formaBat, picado[0].clone().add(rumbo[0].clone().setY(0).multiply(6)).add(0, 5, 0), 0.7);
+                if (s == 36) {
+                    subida[0] = despejado(formaBat.getLocation(),
+                            picado[0].clone().add(rumbo[0].clone().setY(0).multiply(6)).add(0, 5, 0), 3.0);
+                }
+                fly(formaBat, subida[0], 0.7);
             }
             boss.teleport(formaBat.getLocation());
         }, () -> volverHumano(true));
@@ -1251,9 +1258,40 @@ public final class Conde extends BossFight {
             double dist = step.length();
             if (dist < 0.02) return;
             Location next = dist <= speed ? to.clone() : here.clone().add(step.clone().multiply(speed / dist));
+            // El teleport no choca con nada: sin esto atravesaban las paredes del
+            // coliseo. Se frena al entrar en un bloque, no al salir de el, para que
+            // uno que nazca dentro de algo pueda escaparse.
+            if (next.getBlock().getType().isSolid() && !here.getBlock().getType().isSolid()) return;
             next.setDirection(step);
             bird.teleport(next);
         } catch (Throwable ignored) {
+        }
+    }
+
+    /**
+     * El punto mas cercano a 'hacia' al que se llega desde 'desde' en linea recta sin
+     * atravesar un bloque, con margen, y con 'alto' bloques libres por encima.
+     */
+    private Location despejado(Location desde, Location hacia, double alto) {
+        try {
+            Location fin = hacia.clone();
+            Vector dir = hacia.toVector().subtract(desde.toVector());
+            double dist = dir.length();
+            if (dist > 0.1) {
+                org.bukkit.util.RayTraceResult r = world().rayTraceBlocks(desde, dir.clone().multiply(1 / dist),
+                        dist, org.bukkit.FluidCollisionMode.NEVER, true);
+                if (r != null) {
+                    double hasta = Math.max(0, r.getHitPosition().distance(desde.toVector()) - 1.5);
+                    fin = desde.clone().add(dir.clone().multiply(hasta / dist));
+                }
+            }
+            // Que quepa entero: a escala 3.2 el murcielago mide casi tres bloques.
+            org.bukkit.util.RayTraceResult techo = world().rayTraceBlocks(fin, new Vector(0, 1, 0), alto,
+                    org.bukkit.FluidCollisionMode.NEVER, true);
+            if (techo != null) fin.setY(Math.max(desde.getY(), techo.getHitPosition().getY() - alto));
+            return fin;
+        } catch (Throwable t) {
+            return hacia;
         }
     }
 
