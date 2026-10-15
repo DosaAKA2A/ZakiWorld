@@ -66,7 +66,14 @@ public final class AnomalyFiles {
                     sueltas.add(f.getName());
                     continue;
                 }
-                fichas.put(id, YamlConfiguration.loadConfiguration(f));
+                YamlConfiguration yml = YamlConfiguration.loadConfiguration(f);
+                fichas.put(id, yml);
+                // El punto propio de cada anomalia ya no existe: todas salen en el
+                // Coliseo. Se quita de la ficha para que nadie crea que aun manda.
+                if (yml.isSet("spawn")) {
+                    yml.set("spawn", null);
+                    save(id);
+                }
             }
         }
         if (!sueltas.isEmpty()) {
@@ -96,7 +103,6 @@ public final class AnomalyFiles {
         def(yml, "dano", 1.0);
         def(yml, "descripcion", List.of());
         def(yml, "amenaza", List.of());
-        if (!yml.isSet("spawn")) yml.createSection("spawn");
         // Sin bioma escrito valia el clima de serie: se escribe ese para no perderlo.
         def(yml, "bioma", Settings.climaDeSerie(t.id()));
     }
@@ -112,7 +118,6 @@ public final class AnomalyFiles {
         yml.setInlineComments("dano", List.of("multiplicador de TODAS sus habilidades (0.1 a 20)"));
         yml.setInlineComments("descripcion", List.of("hover del anuncio; vacio = texto del plugin"));
         yml.setInlineComments("amenaza", List.of("aviso de peligro del hover; vacio = texto del plugin"));
-        yml.setInlineComments("spawn", List.of("mundo/x/y/z si tiene punto fijo; vacio = sitio aleatorio"));
         yml.setInlineComments("bioma", List.of("clima de la arena (/anomaly biome); vacio = ninguno"));
     }
 
@@ -185,6 +190,7 @@ public final class AnomalyFiles {
                 "Se edita desde /anomaly (menu) o a mano + /anomaly reload.",
                 "",
                 "  activa:       false = el automatico no la elige; a mano (/anomaly start) si.",
+                "  rotacion:     false = activa pero fuera del sorteo del automatico.",
                 "  clase:        ESBIRRO, GENERAL, MONARCA o DIOS. Ordena el catalogo.",
                 "  nombre:       el que sale en la barra de jefe y en el anuncio.",
                 "  vida:         hasta 400000 (por encima de 1024 el exceso se cobra en",
@@ -193,7 +199,6 @@ public final class AnomalyFiles {
                 "                Cada habilidad tiene ademas el suyo en Skills/Anomalias/" + id + ".yml.",
                 "  descripcion:  lineas del hover del anuncio (de donde viene). Vacio = las del plugin.",
                 "  amenaza:      el aviso de peligro del hover. Vacio = el del plugin.",
-                "  spawn:        punto fijo de aparicion (mundo/x/y/z), se marca desde el menu.",
                 "  bioma:        clima que pinta en la arena (/anomaly biome). Vacio = ninguno.",
                 "  mobcoins:     (opcional) bote que reparte al caer; sin el vale",
                 "                combate.mobcoins-por-defecto del config.yml."));

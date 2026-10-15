@@ -218,14 +218,37 @@ public final class AnomalyRegistry {
         fichas.set(type.id(), "rotacion", value);
     }
 
-    /** Las que pueden salir solas en un turno: activas, en rotacion y de esas clases. */
-    public AnomalyType randomForRotation(java.util.Set<AnomalyClass> classes, String avoid) {
+    /** Cuantas de las ultimas que salieron solas se quedan fuera del sorteo siguiente. */
+    public static final int NO_REPEAT = 3;
+
+    /** Las que pueden salir solas en un turno: activas y en rotacion, en el orden del catalogo. */
+    public List<AnomalyType> rotationPool() {
         List<AnomalyType> pool = new ArrayList<>();
-        for (AnomalyType t : types.values()) {
-            if (isEnabled(t) && inRotation(t) && classes.contains(classOf(t))) pool.add(t);
+        for (AnomalyType t : all()) {
+            if (isEnabled(t) && inRotation(t)) pool.add(t);
         }
-        if (pool.size() > 1 && avoid != null) pool.removeIf(t -> t.id().equals(avoid));
-        return pool.isEmpty() ? null : pool.get(random.nextInt(pool.size()));
+        return pool;
+    }
+
+    /**
+     * El sorteo del automatico: al azar entre las activas y en rotacion, sin repetir
+     * ninguna de las ultimas que salieron (recent va de la mas nueva a la mas vieja).
+     *
+     * Con tres o menos en rotacion la exclusion las dejaria a todas fuera; entonces
+     * se va soltando empezando por la MAS VIEJA, que es la que menos se nota repetir.
+     * Lo que no pasa nunca es quedarse sin candidata habiendo alguna en rotacion.
+     */
+    public AnomalyType randomForRotation(List<String> recent) {
+        List<AnomalyType> pool = rotationPool();
+        if (pool.isEmpty()) return null;
+        List<String> fuera = new ArrayList<>();
+        if (recent != null) fuera.addAll(recent.subList(0, Math.min(NO_REPEAT, recent.size())));
+        while (true) {
+            List<AnomalyType> left = new ArrayList<>(pool);
+            left.removeIf(t -> fuera.contains(t.id()));
+            if (!left.isEmpty()) return left.get(random.nextInt(left.size()));
+            fuera.remove(fuera.size() - 1);
+        }
     }
 
     /** El pilar de la flor de ROTTEN (el bloque de vidrio), si se marco. */
@@ -261,38 +284,6 @@ public final class AnomalyRegistry {
 
     public void setClass(AnomalyType type, AnomalyClass clazz) {
         fichas.set(type.id(), "clase", clazz.name());
-    }
-
-    /**
-     * El punto fijo de aparicion, si el admin marco uno golpeando un bloque desde el
-     * menu. Null significa lo de siempre: el buscador elige un sitio aleatorio valido.
-     *
-     * Si el mundo guardado ya no existe se devuelve null en vez de romper: la anomalia
-     * vuelve a ser aleatoria sola y el menu lo ensena como tal.
-     */
-    public Location spawnPoint(AnomalyType type) {
-        String id = type.id();
-        String worldName = fichas.getString(id, "spawn.mundo", null);
-        if (worldName == null || worldName.isBlank()) return null;
-        org.bukkit.World world = plugin.getServer().getWorld(worldName);
-        if (world == null) return null;
-        return new Location(world, fichas.getDouble(id, "spawn.x", 0), fichas.getDouble(id, "spawn.y", 0),
-                fichas.getDouble(id, "spawn.z", 0));
-    }
-
-    public void setSpawnPoint(AnomalyType type, Location where) {
-        if (where == null || where.getWorld() == null) return;
-        Map<String, Object> spawn = new LinkedHashMap<>();
-        spawn.put("mundo", where.getWorld().getName());
-        spawn.put("x", where.getX());
-        spawn.put("y", where.getY());
-        spawn.put("z", where.getZ());
-        fichas.setSection(type.id(), "spawn", spawn);
-    }
-
-    /** Borra la marca: la anomalia vuelve a aparecer en un sitio aleatorio. */
-    public void clearSpawnPoint(AnomalyType type) {
-        fichas.setSection(type.id(), "spawn", Map.of());
     }
 
     /**

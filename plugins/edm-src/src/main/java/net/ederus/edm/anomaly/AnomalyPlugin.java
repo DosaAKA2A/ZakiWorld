@@ -15,7 +15,6 @@ import net.ederus.edm.comun.Compat;
 import net.ederus.edm.comun.Fx;
 import net.ederus.edm.anomaly.core.Protection;
 import net.ederus.edm.anomaly.core.Settings;
-import net.ederus.edm.anomaly.core.SiteFinder;
 import net.ederus.edm.comun.Tags;
 import net.ederus.edm.anomaly.drops.DropStore;
 import net.ederus.edm.anomaly.menu.Menus;
@@ -24,6 +23,8 @@ import org.bukkit.command.CommandSender;
 import org.bukkit.command.PluginCommand;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.Player;
+
+import java.util.List;
 
 /**
  * ANOMALY  ·  Iris Studio
@@ -54,7 +55,6 @@ public final class AnomalyPlugin extends net.ederus.edm.Module {
     private AnomalyRegistry registry;
     private DropStore drops;
     private Protection protection;
-    private SiteFinder sites;
     private AnomalyManager manager;
     private Announcer announcer;
     private Menus menus;
@@ -81,7 +81,6 @@ public final class AnomalyPlugin extends net.ederus.edm.Module {
         this.drops = new DropStore(this);
         this.drops.load();
         this.protection = new Protection(this);
-        this.sites = new SiteFinder(this, protection, settings);
         this.announcer = new Announcer(this);
         this.guard = new net.ederus.edm.anomaly.core.ArenaGuard(this);
         this.manager = new AnomalyManager(this);
@@ -211,16 +210,44 @@ public final class AnomalyPlugin extends net.ederus.edm.Module {
     }
 
     /**
+     * Lo que se fue del config.yml en 1.84.0: el sitio aleatorio (todo 'general'),
+     * los horarios por clase y el intervalo en minutos (ahora automatico.cada-horas),
+     * la anomalia fija del automatico y la precision de unas coordenadas que el chat
+     * ya no ensena.
+     */
+    private static final List<String> OBSOLETAS = List.of(
+            "general",
+            "automatico.intervalo-minutos",
+            "automatico.anomalia",
+            "automatico.modo",
+            "automatico.horas-comunes",
+            "automatico.horas-altas",
+            "anuncio.precision-coordenadas");
+
+    /**
      * Mete en config.yml las claves nuevas sin tocar las que ya estan.
      *
      * saveDefaultConfig() NO sobrescribe un fichero existente, asi que un servidor que
      * instalo la primera version se quedaba para siempre con el config de entonces: las
      * anomalias añadidas despues no tenian ni su seccion ni sus valores. Con esto cada
      * arranque completa lo que falte y respeta lo que el admin haya cambiado.
+     *
+     * Antes de completar se quitan las claves que ya no lee nadie (OBSOLETAS): si se
+     * quedaran, el admin las veria en el fichero y creeria que aun mandan.
      */
     private void migrateConfig() {
         try {
             var defaults = getConfig().getDefaults();
+            int quitadas = 0;
+            for (String path : OBSOLETAS) {
+                if (getConfig().get(path, null) == null) continue;
+                getConfig().set(path, null);
+                quitadas++;
+            }
+            if (quitadas > 0) {
+                getLogger().info("config.yml: quitados " + quitadas + " ajuste(s) que ya no se usan "
+                        + "(sitio aleatorio, horarios por clase, intervalo en minutos...).");
+            }
             int before = getConfig().getKeys(true).size();
             getConfig().options().copyDefaults(true);
             saveConfig();
@@ -299,10 +326,6 @@ public final class AnomalyPlugin extends net.ederus.edm.Module {
 
     public Protection protection() {
         return protection;
-    }
-
-    public SiteFinder sites() {
-        return sites;
     }
 
     public AnomalyManager manager() {

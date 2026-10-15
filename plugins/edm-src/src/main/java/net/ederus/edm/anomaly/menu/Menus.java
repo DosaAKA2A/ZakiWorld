@@ -72,7 +72,7 @@ public final class Menus implements Listener {
     private static final int SLOT_BACK = 45;
     private static final int SLOT_HELP = 53;
 
-    private enum Screen {HUB, ANOMALIES, ABILITIES, DROPS, SETTINGS,
+    private enum Screen {HUB, ANOMALIES, ABILITIES, DROPS, SETTINGS, ROTATION,
         MINION_CATEGORIES, CATEGORY_EDIT, MINIONS, MINION_EDIT, MINION_ABILITIES, SPAWNERS, SPAWNER_EDIT}
 
     private final AnomalyPlugin plugin;
@@ -118,6 +118,7 @@ public final class Menus implements Listener {
             case ABILITIES -> "  Habilidades";
             case DROPS -> placeMode ? "  Botín · colocar" : "  Botín · ajustar";
             case SETTINGS -> "  Ajustes";
+            case ROTATION -> "  Rotación";
             case MINION_CATEGORIES -> "  Esbirros";
             case CATEGORY_EDIT -> "  Carpeta";
             case MINIONS -> {
@@ -164,6 +165,7 @@ public final class Menus implements Listener {
             case ABILITIES -> renderAbilities(inv, holder);
             case DROPS -> renderDrops(inv, holder);
             case SETTINGS -> renderSettings(inv);
+            case ROTATION -> renderRotation(inv);
             case MINION_CATEGORIES -> renderCategories(inv);
             case CATEGORY_EDIT -> renderCategoryEdit(inv, holder);
             case MINIONS -> renderMinions(inv, holder);
@@ -196,10 +198,29 @@ public final class Menus implements Listener {
 
     // ------------------------------------------------------------------------ hub
 
+    /*
+     * El panel, de arriba abajo:
+     *   10 Ir a la anomalia · 12 Punto del Coliseo · 14 Cada cuanto sale · 16 Rotacion
+     *   20 Iniciar · 22 Elegir · 24 Botin
+     *   29 Ajustes · 31 Detener · 33 Estado en vivo
+     * La primera fila es el "donde y cuando" del automatico; clickHub usa los mismos numeros.
+     */
+    private static final int HUB_TRAVEL = 10;
+    private static final int HUB_COLISEUM = 12;
+    private static final int HUB_EVERY = 14;
+    private static final int HUB_ROTATION = 16;
+    private static final int HUB_START = 20;
+    private static final int HUB_CHOOSE = 22;
+    private static final int HUB_LOOT = 24;
+    private static final int HUB_SETTINGS = 29;
+    private static final int HUB_STOP = 31;
+    private static final int HUB_LIVE = 33;
+
     private void renderHub(Inventory inv) {
         AnomalyType selected = plugin.selected();
         boolean active = plugin.manager().active();
         ActiveAnomaly live = plugin.manager().current();
+        Location coliseum = plugin.settings().coliseum();
 
         List<Component> tpLore = new ArrayList<>();
         if (live == null) {
@@ -216,36 +237,35 @@ public final class Menus implements Listener {
             tpLore.add(MenuUtil.blank());
             tpLore.add(MenuUtil.action("Clic para viajar allí"));
         }
-        inv.setItem(13, MenuUtil.icon(live == null ? Material.GRAY_DYE : Material.ENDER_PEARL,
+        inv.setItem(HUB_TRAVEL, MenuUtil.icon(live == null ? Material.GRAY_DYE : Material.ENDER_PEARL,
                 MenuUtil.title("Ir a la anomalía", live == null ? MenuUtil.DIM : NamedTextColor.LIGHT_PURPLE),
                 tpLore, live != null));
 
-        Location fixedSpawn = selected == null ? null : plugin.registry().spawnPoint(selected);
-        inv.setItem(20, MenuUtil.icon(active ? Material.GRAY_DYE : Material.NETHER_STAR,
+        inv.setItem(HUB_COLISEUM, coliseumItem(coliseum));
+        inv.setItem(HUB_EVERY, everyItem());
+        inv.setItem(HUB_ROTATION, rotationItem());
+
+        inv.setItem(HUB_START, MenuUtil.icon(active ? Material.GRAY_DYE : Material.NETHER_STAR,
                 MenuUtil.title("Iniciar anomalía", active ? MenuUtil.DIM : NamedTextColor.GREEN),
                 List.of(
-                        fixedSpawn == null
-                                ? MenuUtil.line("Abre la anomalía elegida en un punto")
-                                : MenuUtil.line("Abre la anomalía elegida en su punto"),
-                        fixedSpawn == null
-                                ? MenuUtil.line("valido del mapa y lo anuncia en el chat.")
-                                : MenuUtil.line("marcado y lo anuncia en el chat."),
+                        MenuUtil.line("Abre la anomalía elegida en el Coliseo"),
+                        MenuUtil.line("y la anuncia en el chat."),
                         MenuUtil.blank(),
                         MenuUtil.field("Elegida", selected == null ? "ninguna" : selected.display(),
                                 selected == null ? MenuUtil.DIM : selected.color()),
-                        MenuUtil.field("Aparece", fixedSpawn == null ? "en un sitio aleatorio"
-                                        : fixedSpawn.getBlockX() + " " + fixedSpawn.getBlockY() + " "
-                                        + fixedSpawn.getBlockZ(),
-                                fixedSpawn == null ? MenuUtil.SOFT : NamedTextColor.WHITE),
+                        MenuUtil.field("Coliseo", coliseum == null ? "sin marcar"
+                                        : coliseum.getBlockX() + " " + coliseum.getBlockY() + " "
+                                        + coliseum.getBlockZ(),
+                                coliseum == null ? NamedTextColor.RED : NamedTextColor.WHITE),
                         MenuUtil.blank(),
                         active
                                 ? Component.text("Ya hay una anomalía abierta.", NamedTextColor.RED)
-                                : MenuUtil.action("Clic para iniciar")),
-                !active && selected != null));
+                                : coliseum == null
+                                        ? Component.text("Marca primero el Punto del Coliseo.", NamedTextColor.RED)
+                                        : MenuUtil.action("Clic para iniciar")),
+                !active && selected != null && coliseum != null));
 
-        inv.setItem(15, spawnPointItem(selected, fixedSpawn));
-
-        inv.setItem(22, MenuUtil.icon(selected == null ? Material.BARRIER : selected.icon(),
+        inv.setItem(HUB_CHOOSE, MenuUtil.icon(selected == null ? Material.BARRIER : selected.icon(),
                 MenuUtil.title("Elegir anomalía", MenuUtil.GOLD),
                 List.of(
                         MenuUtil.line("El catálogo de anomalías del servidor."),
@@ -257,7 +277,7 @@ public final class Menus implements Listener {
                 false));
 
         DropTable table = selected == null ? null : plugin.drops().table(selected.id());
-        inv.setItem(24, MenuUtil.icon(Material.CHEST,
+        inv.setItem(HUB_LOOT, MenuUtil.icon(Material.CHEST,
                 MenuUtil.title("Botín", MenuUtil.LOOT),
                 List.of(
                         MenuUtil.line("Que suelta la anomalía al caer."),
@@ -273,20 +293,20 @@ public final class Menus implements Listener {
                                 : MenuUtil.action("Clic para editar el botín")),
                 false));
 
-        inv.setItem(29, MenuUtil.icon(Material.COMPARATOR,
+        inv.setItem(HUB_SETTINGS, MenuUtil.icon(Material.COMPARATOR,
                 MenuUtil.title("Ajustes", MenuUtil.GOLD),
                 List.of(
-                        MenuUtil.line("Distancias, tiempos, escalado por"),
-                        MenuUtil.line("jugadores y anomalías automaticas."),
+                        MenuUtil.line("Encendido del automático, gente mínima,"),
+                        MenuUtil.line("combate y anuncio."),
                         MenuUtil.blank(),
-                        MenuUtil.field("Automaticas", plugin.settings().autoEnabled()
-                                ? ("cada " + plugin.settings().autoIntervalMinutes() + " min") : "apagadas",
+                        MenuUtil.field("Automáticas", plugin.settings().autoEnabled()
+                                ? ("cada " + plugin.settings().autoEveryHours() + " h") : "apagadas",
                                 plugin.settings().autoEnabled() ? NamedTextColor.GREEN : MenuUtil.DIM),
                         MenuUtil.blank(),
                         MenuUtil.action("Clic para abrir")),
                 false));
 
-        inv.setItem(31, MenuUtil.icon(active ? Material.BARRIER : Material.GRAY_DYE,
+        inv.setItem(HUB_STOP, MenuUtil.icon(active ? Material.BARRIER : Material.GRAY_DYE,
                 MenuUtil.title("Detener anomalía", active ? NamedTextColor.RED : MenuUtil.DIM),
                 List.of(
                         MenuUtil.line("Cierra la anomalía abierta y borra el jefe,"),
@@ -297,40 +317,119 @@ public final class Menus implements Listener {
                                 : Component.text("No hay ninguna abierta.", MenuUtil.DIM)),
                 false));
 
-        inv.setItem(33, MenuUtil.icon(Material.SPYGLASS,
+        inv.setItem(HUB_LIVE, MenuUtil.icon(Material.SPYGLASS,
                 MenuUtil.title("Estado en vivo", NamedTextColor.AQUA),
                 liveLore(), false));
     }
 
     /**
-     * El boton del punto de aparicion: marca un bloque como spawner de la anomalia
-     * elegida, o la devuelve al modo aleatorio. Marcar SOLO marca; iniciar sigue
-     * siendo cosa del boton Iniciar.
+     * El boton del Coliseo: el unico punto donde salen todas. Clic = salir del menu y
+     * marcar un bloque a golpe. Marcar SOLO marca; iniciar sigue siendo cosa de Iniciar.
      */
-    private ItemStack spawnPointItem(AnomalyType selected, Location fixed) {
+    private ItemStack coliseumItem(Location coliseum) {
         List<Component> lore = new ArrayList<>();
-        lore.add(MenuUtil.line("Donde aparece la anomalía elegida al"));
-        lore.add(MenuUtil.line("pulsar Iniciar: un bloque marcado por ti"));
-        lore.add(MenuUtil.line("(tu coliseo) o un sitio aleatorio del mapa."));
+        lore.add(MenuUtil.line("Donde salen TODAS las anomalías, a"));
+        lore.add(MenuUtil.line("mano y por turno. Sin él no sale ninguna."));
         lore.add(MenuUtil.blank());
-        if (selected == null) {
-            lore.add(Component.text("Elige una anomalía primero.", MenuUtil.DIM));
-        } else if (fixed == null) {
-            lore.add(MenuUtil.field("Ahora", "aleatorio, lo busca el plugin", MenuUtil.SOFT));
-            lore.add(MenuUtil.blank());
-            lore.add(MenuUtil.action("Clic: salir y marcar un bloque a golpe"));
+        if (coliseum == null) {
+            lore.add(Component.text("Sin marcar todavía.", NamedTextColor.RED));
         } else {
-            lore.add(MenuUtil.field("Punto fijo", fixed.getBlockX() + " " + fixed.getBlockY() + " "
-                    + fixed.getBlockZ(), NamedTextColor.WHITE));
-            lore.add(MenuUtil.field("Mundo", fixed.getWorld() == null ? "?" : fixed.getWorld().getName(),
-                    MenuUtil.SOFT));
-            lore.add(MenuUtil.blank());
-            lore.add(MenuUtil.action("Clic: marcar un bloque nuevo"));
-            lore.add(Component.text("► Clic derecho: volver a aleatorio", NamedTextColor.YELLOW));
+            lore.add(MenuUtil.field("Mundo", coliseum.getWorld().getName(), MenuUtil.SOFT));
+            lore.add(MenuUtil.field("Coordenadas", coliseum.getBlockX() + " " + coliseum.getBlockY() + " "
+                    + coliseum.getBlockZ(), NamedTextColor.WHITE));
         }
-        return MenuUtil.icon(fixed == null ? Material.COMPASS : Material.LODESTONE,
-                MenuUtil.title("Punto de aparicion", fixed == null ? MenuUtil.GOLD : NamedTextColor.GREEN),
-                lore, fixed != null);
+        lore.add(MenuUtil.blank());
+        lore.add(MenuUtil.action("Clic: salir y marcar un bloque a golpe"));
+        return MenuUtil.icon(coliseum == null ? Material.COMPASS : Material.LODESTONE,
+                MenuUtil.title("Punto del Coliseo", coliseum == null ? NamedTextColor.RED : NamedTextColor.GREEN),
+                lore, coliseum != null);
+    }
+
+    /** El boton del intervalo: cada cuantas horas sale una, pegado al reloj. */
+    private ItemStack everyItem() {
+        int every = plugin.settings().autoEveryHours();
+        var hhmm = java.time.format.DateTimeFormatter.ofPattern("HH:mm");
+        List<String> horas = new ArrayList<>();
+        for (var t : plugin.manager().dailyHours()) horas.add(t.format(hhmm));
+        List<Component> lore = new ArrayList<>();
+        lore.add(MenuUtil.line("Cada cuántas horas sale una sola,"));
+        lore.add(MenuUtil.line("contando desde las 00:00 de " + plugin.settings().autoZone() + "."));
+        lore.add(MenuUtil.line("Un reinicio no corre el turno."));
+        lore.add(MenuUtil.blank());
+        lore.add(MenuUtil.field("Ahora", "cada " + every + " h", NamedTextColor.WHITE));
+        // Las horas del dia, de cuatro en cuatro por linea para que no se salga del lore.
+        for (int i = 0; i < horas.size(); i += 4) {
+            lore.add(Component.text((i == 0 ? "Turnos  " : "        ")
+                    + String.join("  ", horas.subList(i, Math.min(i + 4, horas.size()))), MenuUtil.SOFT));
+        }
+        lore.add(MenuUtil.field("Estado", plugin.settings().autoEnabled() ? "encendido" : "apagado (en Ajustes)",
+                plugin.settings().autoEnabled() ? NamedTextColor.GREEN : MenuUtil.DIM));
+        lore.add(MenuUtil.blank());
+        lore.add(MenuUtil.action("Clic izquierdo: +1 hora"));
+        lore.add(Component.text("► Clic derecho: -1 hora", NamedTextColor.YELLOW));
+        return MenuUtil.icon(Material.CLOCK, MenuUtil.title("Cada cuánto sale", MenuUtil.GOLD), lore, false);
+    }
+
+    /** El boton que abre la pantalla de rotacion, con el recuento de quien entra. */
+    private ItemStack rotationItem() {
+        int dentro = plugin.registry().rotationPool().size();
+        return MenuUtil.icon(Material.RECOVERY_COMPASS, MenuUtil.title("Rotación", MenuUtil.GOLD),
+                List.of(
+                        MenuUtil.line("Qué anomalías entran en el sorteo"),
+                        MenuUtil.line("del automático. Nunca sale una de"),
+                        MenuUtil.line("las " + net.ederus.edm.anomaly.core.AnomalyRegistry.NO_REPEAT
+                                + " últimas que salieron."),
+                        MenuUtil.blank(),
+                        MenuUtil.field("En rotación", dentro + " de " + plugin.registry().all().size(),
+                                dentro == 0 ? NamedTextColor.RED : NamedTextColor.WHITE),
+                        MenuUtil.blank(),
+                        MenuUtil.action("Clic para abrir")),
+                false);
+    }
+
+    // ------------------------------------------------------------------- rotacion
+
+    /** Todas las del catalogo con su interruptor de rotacion. Mismo orden que el catalogo. */
+    private void renderRotation(Inventory inv) {
+        List<AnomalyType> all = plugin.registry().all();
+        for (int i = 0; i < BODY.length && i < all.size(); i++) {
+            AnomalyType type = all.get(i);
+            boolean enabled = plugin.registry().isEnabled(type);
+            boolean inRotation = plugin.registry().inRotation(type);
+            net.ederus.edm.anomaly.core.AnomalyClass clazz = plugin.registry().classOf(type);
+
+            List<Component> lore = new ArrayList<>();
+            lore.add(Component.text("Clase  ", MenuUtil.LABEL)
+                    .append(Component.text(clazz.display(), enabled ? clazz.color() : MenuUtil.DIM)));
+            lore.add(MenuUtil.blank());
+            if (!enabled) {
+                lore.add(Component.text("Apagada: no entra en el sorteo.", MenuUtil.DIM));
+                lore.add(Component.text("Se activa en el catálogo (Elegir anomalía).", MenuUtil.DIM));
+            } else {
+                lore.add(MenuUtil.field("Sorteo", inRotation ? "dentro" : "fuera",
+                        inRotation ? NamedTextColor.GREEN : NamedTextColor.RED));
+                lore.add(MenuUtil.blank());
+                lore.add(MenuUtil.action(inRotation ? "Clic para sacarla" : "Clic para meterla"));
+            }
+
+            boolean lit = enabled && inRotation;
+            org.bukkit.inventory.ItemStack custom = lit ? type.iconItem() : null;
+            Component name = MenuUtil.title(type.display(), enabled ? type.color() : MenuUtil.DIM);
+            inv.setItem(BODY[i], custom != null
+                    ? MenuUtil.icon(custom, name, lore, true)
+                    : MenuUtil.icon(lit ? type.icon() : Material.GRAY_DYE, name, lore, lit));
+        }
+
+        int dentro = plugin.registry().rotationPool().size();
+        inv.setItem(49, MenuUtil.icon(Material.RECOVERY_COMPASS,
+                MenuUtil.title(dentro + " en rotación", dentro == 0 ? NamedTextColor.RED : MenuUtil.GOLD),
+                List.of(
+                        MenuUtil.line("Cada turno sale una al azar de estas,"),
+                        MenuUtil.line("sin repetir ninguna de las "
+                                + net.ederus.edm.anomaly.core.AnomalyRegistry.NO_REPEAT + " últimas."),
+                        MenuUtil.blank(),
+                        MenuUtil.field("Catálogo", plugin.registry().all().size() + " anomalías", MenuUtil.SOFT)),
+                false));
     }
 
     private List<Component> liveLore() {
@@ -338,9 +437,10 @@ public final class Menus implements Listener {
         ActiveAnomaly ev = plugin.manager().current();
         if (ev == null) {
             lore.add(Component.text("No hay ninguna anomalía abierta.", MenuUtil.DIM));
-            if (plugin.manager().searching()) {
+            if (plugin.settings().autoEnabled() && !plugin.manager().nextSlots(1).isEmpty()) {
                 lore.add(MenuUtil.blank());
-                lore.add(Component.text("Buscando sitio...", NamedTextColor.YELLOW));
+                lore.add(MenuUtil.field("Próximo turno", plugin.manager().nextSlots(1).get(0).at()
+                        .format(java.time.format.DateTimeFormatter.ofPattern("HH:mm")), NamedTextColor.WHITE));
             }
             return lore;
         }
@@ -674,44 +774,31 @@ public final class Menus implements Listener {
 
     // -------------------------------------------------------------------- ajustes
 
+    /*
+     * Una fila por tema: automatico (12, 14), combate (20, 22, 24) y anuncio (28, 30,
+     * 32, 34). El intervalo, el Coliseo y la rotacion viven en el panel, no aqui.
+     * clickSettings usa los mismos numeros.
+     */
     private void renderSettings(Inventory inv) {
-        inv.setItem(10, toggle(Material.CLOCK, "Anomalías automaticas", "automatico.activo", false,
-                "Abre una anomalía sola cada cierto tiempo."));
-        inv.setItem(11, number(Material.REPEATER, "Intervalo", "automatico.intervalo-minutos", 90,
-                " min", "Cada cuanto se intenta abrir una."));
-        inv.setItem(12, number(Material.PLAYER_HEAD, "Jugadores minimos", "automatico.jugadores-minimos", 2,
-                "", "Por debajo de esto no se abre ninguna."));
-        inv.setItem(14, number(Material.COMPASS, "Distancia mínima", "general.distancia-minima", 200,
-                " bloques", "Lo más cerca que puede salir de un jugador."));
-        inv.setItem(15, number(Material.RECOVERY_COMPASS, "Distancia máxima", "general.distancia-maxima", 1200,
-                " bloques", "Lo más lejos que puede salir."));
-        inv.setItem(16, number(Material.BEACON, "Lejos del spawn", "general.distancia-minima-spawn", 300,
-                " bloques", "Radio del spawn donde nunca aparecerá."));
+        inv.setItem(12, toggle(Material.CLOCK, "Anomalías automáticas", "automatico.activo", false,
+                "Abre una sola en cada turno del reloj."));
+        inv.setItem(14, number(Material.PLAYER_HEAD, "Jugadores mínimos", "automatico.jugadores-minimos", 2,
+                "", "Por debajo de esto el turno espera."));
 
-        inv.setItem(19, toggle(Material.OAK_DOOR, "Evitar bases sin claim", "general.evitar-bases", true,
-                "Descarta sitios con cofres, camas u hornos cerca."));
-        inv.setItem(20, number(Material.IRON_BARS, "Margen de protección", "general.margen-proteccion", 24,
-                " bloques", "Distancia de respeto al borde de un claim."));
-        inv.setItem(21, number(Material.GRASS_BLOCK, "Desnivel máximo", "general.desnivel-maximo", 4,
-                " bloques", "Cuanto puede subir o bajar el terreno."));
-        inv.setItem(23, number(Material.CLOCK, "Límite de combate", "combate.minutos-limite", 15,
+        inv.setItem(20, number(Material.CLOCK, "Límite de combate", "combate.minutos-limite", 15,
                 " min", "Si nadie la mata, se cierra sola."));
-        inv.setItem(24, number(Material.TARGET, "Radio de participacion", "combate.radio-participacion", 64,
+        inv.setItem(22, number(Material.TARGET, "Radio de participación", "combate.radio-participacion", 64,
                 " bloques", "Quien entra aquí ve la barra y cuenta para el botín."));
-        inv.setItem(25, percent(Material.GOLDEN_APPLE, "Vida extra por jugador", "combate.vida-extra-por-jugador",
-                0.15, "Cuanto sube la vida del jefe por cada jugador de más."));
+        inv.setItem(24, toggle(Material.PISTON, "Permitir empuje", "combate.permitir-empuje", true,
+                "Si se apaga, ninguna habilidad moverá a nadie."));
 
-        inv.setItem(28, toggle(Material.PISTON, "Permitir empuje", "combate.permitir-empuje", true,
-                "Si se apaga, ninguna habilidad movera a nadie."));
-        inv.setItem(29, toggle(Material.PAPER, "Anuncio en el chat", "anuncio.activo", true,
-                "El aviso con el hover y las coordenadas."));
+        inv.setItem(28, toggle(Material.PAPER, "Anuncio en el chat", "anuncio.activo", true,
+                "La línea del chat con el warp al Coliseo."));
         inv.setItem(30, toggle(Material.NOTE_BLOCK, "Sonido del anuncio", "anuncio.sonido", true,
                 "Suena a todo el servidor al abrirse."));
-        inv.setItem(31, toggle(Material.PAINTING, "Titulo en pantalla", "anuncio.titulo", true,
+        inv.setItem(32, toggle(Material.PAINTING, "Título en pantalla", "anuncio.titulo", true,
                 "El cartel grande al abrirse la anomalía."));
-        inv.setItem(32, number(Material.MAP, "Precisión de coordenadas", "anuncio.precision-coordenadas", 1,
-                " bloques", "Redondea el punto anunciado para dar margen."));
-        inv.setItem(33, toggle(Material.BEACON, "Pilar de luz", "anuncio.pilar-de-luz", true,
+        inv.setItem(34, toggle(Material.BEACON, "Pilar de luz", "anuncio.pilar-de-luz", true,
                 "Una columna del color de la anomalía sobre el jefe."));
     }
 
@@ -737,18 +824,6 @@ public final class Menus implements Listener {
                         MenuUtil.action("Clic izquierdo: subir"),
                         Component.text("► Clic derecho: bajar", NamedTextColor.YELLOW),
                         Component.text("► Shift para pasos de 10", NamedTextColor.GRAY)), false);
-    }
-
-    private ItemStack percent(Material material, String name, String path, double def, String help) {
-        double value = plugin.settings().raw(path, def);
-        return MenuUtil.icon(material, MenuUtil.title(name, MenuUtil.GOLD),
-                List.of(
-                        MenuUtil.line(help),
-                        MenuUtil.blank(),
-                        MenuUtil.field("Ahora", "+" + Math.round(value * 100) + "% por jugador", NamedTextColor.WHITE),
-                        MenuUtil.blank(),
-                        MenuUtil.action("Clic izquierdo: subir 5%"),
-                        Component.text("► Clic derecho: bajar 5%", NamedTextColor.YELLOW)), false);
     }
 
     // ------------------------------------------------------------------- esbirros
@@ -2144,6 +2219,17 @@ public final class Menus implements Listener {
             case SETTINGS -> {
                 lore.add(MenuUtil.line("Cada cambio se guarda al momento"));
                 lore.add(MenuUtil.line("en config.yml."));
+                lore.add(MenuUtil.blank());
+                lore.add(MenuUtil.line("El intervalo, el Coliseo y la rotación"));
+                lore.add(MenuUtil.line("están en el panel."));
+            }
+            case ROTATION -> {
+                lore.add(MenuUtil.line("Clic sobre una anomalía para meterla"));
+                lore.add(MenuUtil.line("o sacarla del sorteo del automático."));
+                lore.add(MenuUtil.blank());
+                lore.add(MenuUtil.line("Las apagadas salen en gris y no entran:"));
+                lore.add(MenuUtil.line("se activan en el catálogo."));
+                lore.add(MenuUtil.line("A mano (Iniciar) se puede abrir cualquiera."));
             }
             case MINIONS -> {
                 lore.add(MenuUtil.line("La tropa de las mazmorras. Cada tipo se"));
@@ -2268,6 +2354,7 @@ public final class Menus implements Listener {
             case ABILITIES -> clickAbilities(player, event, holder, slot);
             case DROPS -> clickDrops(player, event, holder, slot);
             case SETTINGS -> clickSettings(player, event, holder, slot);
+            case ROTATION -> clickRotation(player, event, holder, slot);
             case MINION_CATEGORIES -> clickCategories(player, event, holder, slot);
             case CATEGORY_EDIT -> clickCategoryEdit(player, event, holder, slot);
             case MINIONS -> clickMinions(player, event, holder, slot);
@@ -2280,29 +2367,7 @@ public final class Menus implements Listener {
 
     private void clickHub(Player player, InventoryClickEvent event, int slot) {
         switch (slot) {
-            case 15 -> {
-                AnomalyType type = plugin.selected();
-                if (type == null) {
-                    deny(player, "Elige una anomalía primero.");
-                    return;
-                }
-                if (event.isRightClick()) {
-                    if (plugin.registry().spawnPoint(type) == null) {
-                        deny(player, "Esa anomalía ya aparece en sitios aleatorios.");
-                        return;
-                    }
-                    plugin.registry().clearSpawnPoint(type);
-                    click(player, 0.8f);
-                    player.sendMessage(plugin.prefix()
-                            .append(Component.text(type.display(), type.color(), TextDecoration.BOLD))
-                            .append(Component.text(" vuelve a aparecer en un sitio aleatorio.", MenuUtil.SOFT)));
-                    render(event.getInventory(), player, (Holder) event.getInventory().getHolder());
-                    return;
-                }
-                click(player, 1.4f);
-                plugin.spawnMarker().begin(player, type);
-            }
-            case 13 -> {
+            case HUB_TRAVEL -> {
                 ActiveAnomaly live = plugin.manager().current();
                 if (live == null) {
                     deny(player, "No hay ninguna anomalía abierta.");
@@ -2312,7 +2377,35 @@ public final class Menus implements Listener {
                 player.closeInventory();
                 travelTo(player, live);
             }
-            case 20 -> {
+            case HUB_COLISEUM -> {
+                click(player, 1.4f);
+                plugin.spawnMarker().begin(player);
+            }
+            case HUB_EVERY -> {
+                int before = plugin.settings().autoEveryHours();
+                plugin.settings().bumpInt("automatico.cada-horas", event.isLeftClick() ? 1 : -1,
+                        net.ederus.edm.anomaly.core.Settings.MIN_EVERY_HOURS,
+                        net.ederus.edm.anomaly.core.Settings.MAX_EVERY_HOURS, 4);
+                int after = plugin.settings().autoEveryHours();
+                if (after == before) {
+                    deny(player, "El intervalo va de " + net.ederus.edm.anomaly.core.Settings.MIN_EVERY_HOURS
+                            + " a " + net.ederus.edm.anomaly.core.Settings.MAX_EVERY_HOURS + " horas.");
+                    return;
+                }
+                // Con el reloj nuevo puede quedar "pendiente" un turno de hace un rato
+                // que antes no existia: se da por hecho para no abrir una al instante.
+                plugin.manager().skipDueSlot();
+                plugin.manager().restartScheduler();
+                click(player, event.isLeftClick() ? 1.4f : 0.9f);
+                player.sendActionBar(Component.text("Sale una cada  ", MenuUtil.SOFT)
+                        .append(Component.text(after + " h", NamedTextColor.GOLD)));
+                render(event.getInventory(), player, (Holder) event.getInventory().getHolder());
+            }
+            case HUB_ROTATION -> {
+                click(player, 1.1f);
+                open(player, Screen.ROTATION, 0, plugin.selectedId(), false);
+            }
+            case HUB_START -> {
                 AnomalyType type = plugin.selected();
                 if (type == null) {
                     deny(player, "Elige una anomalía primero.");
@@ -2322,18 +2415,19 @@ public final class Menus implements Listener {
                     deny(player, "Ya hay una anomalía abierta.");
                     return;
                 }
+                if (plugin.settings().coliseum() == null) {
+                    deny(player, net.ederus.edm.anomaly.core.AnomalyManager.SIN_COLISEO);
+                    return;
+                }
                 click(player, 1.6f);
                 player.sendMessage(plugin.prefix().append(Component.text(
-                        plugin.registry().spawnPoint(type) != null
-                                ? "Abriendo la anomalía en su punto marcado..."
-                                : "Buscando un sitio libre para la anomalía...", MenuUtil.SOFT)));
+                        "Abriendo la anomalía en el Coliseo...", MenuUtil.SOFT)));
                 // El menu se queda abierto a proposito: en cuanto aparezca, el boton de
                 // viajar esta justo arriba y se quiere poder usar sin volver a abrirlo.
                 plugin.manager().start(type, ok -> {
                     if (!ok) {
                         player.sendMessage(plugin.prefix().append(Component.text(
-                                "No se encontro ningun sitio valido. Prueba a bajar la distancia mínima "
-                                        + "o el margen de protección en Ajustes.", NamedTextColor.RED)));
+                                net.ederus.edm.anomaly.core.AnomalyManager.SIN_COLISEO, NamedTextColor.RED)));
                     }
                     if (player.isOnline() && player.getOpenInventory().getTopInventory().getHolder() instanceof Holder h
                             && h.screen == Screen.HUB) {
@@ -2341,18 +2435,17 @@ public final class Menus implements Listener {
                         if (ok) {
                             player.sendMessage(plugin.prefix().append(Component.text(
                                     "Lista. Pulsa ", MenuUtil.SOFT))
-                                    .append(Component.text("Ir a la anomalía", NamedTextColor.LIGHT_PURPLE,
-                                            TextDecoration.BOLD))
+                                    .append(Component.text("Ir a la anomalía", NamedTextColor.LIGHT_PURPLE))
                                     .append(Component.text(" para viajar.", MenuUtil.SOFT)));
                         }
                     }
                 });
             }
-            case 22 -> {
+            case HUB_CHOOSE -> {
                 click(player, 1.1f);
                 open(player, Screen.ANOMALIES, 0, plugin.selectedId(), false);
             }
-            case 24 -> {
+            case HUB_LOOT -> {
                 AnomalyType type = plugin.selected();
                 if (type == null) {
                     deny(player, "Elige una anomalía primero.");
@@ -2361,11 +2454,11 @@ public final class Menus implements Listener {
                 click(player, 1.1f);
                 open(player, Screen.DROPS, 0, type.id(), true);
             }
-            case 29 -> {
+            case HUB_SETTINGS -> {
                 click(player, 1.1f);
                 open(player, Screen.SETTINGS, 0, plugin.selectedId(), false);
             }
-            case 31 -> {
+            case HUB_STOP -> {
                 if (!plugin.manager().active()) {
                     deny(player, "No hay ninguna anomalía abierta.");
                     return;
@@ -2374,13 +2467,32 @@ public final class Menus implements Listener {
                 plugin.manager().stop(false);
                 openHub(player);
             }
-            case 33 -> {
+            case HUB_LIVE -> {
                 click(player, 1.2f);
                 openHub(player);
             }
             default -> {
             }
         }
+    }
+
+    /** Mete o saca del sorteo la anomalia pulsada. Las apagadas no se tocan aqui. */
+    private void clickRotation(Player player, InventoryClickEvent event, Holder holder, int slot) {
+        int index = indexOf(BODY, slot);
+        if (index < 0) return;
+        List<AnomalyType> all = plugin.registry().all();
+        if (index >= all.size()) return;
+        AnomalyType type = all.get(index);
+        if (!plugin.registry().isEnabled(type)) {
+            deny(player, type.display() + " está apagada. Actívala en el catálogo (Shift + clic izquierdo).");
+            return;
+        }
+        boolean now = !plugin.registry().inRotation(type);
+        plugin.registry().setInRotation(type, now);
+        click(player, now ? 1.5f : 0.8f);
+        player.sendActionBar(Component.text(type.display(), type.color())
+                .append(Component.text(now ? "  entra en la rotación" : "  sale de la rotación", MenuUtil.SOFT)));
+        render(event.getInventory(), player, holder);
     }
 
     private void clickAnomalies(Player player, InventoryClickEvent event, Holder holder, int slot) {
@@ -2550,27 +2662,18 @@ public final class Menus implements Listener {
         int step = event.isShiftClick() ? 10 : 1;
         boolean up = event.isLeftClick();
         switch (slot) {
-            case 10 -> {
+            case 12 -> {
                 plugin.settings().toggle("automatico.activo", false);
                 plugin.manager().restartScheduler();
             }
-            case 11 -> plugin.settings().bumpInt("automatico.intervalo-minutos", up ? step * 5 : -step * 5, 5, 1440, 90);
-            case 12 -> plugin.settings().bumpInt("automatico.jugadores-minimos", up ? step : -step, 0, 100, 2);
-            case 14 -> plugin.settings().bumpInt("general.distancia-minima", up ? step * 25 : -step * 25, 0, 20000, 200);
-            case 15 -> plugin.settings().bumpInt("general.distancia-maxima", up ? step * 25 : -step * 25, 32, 60000, 1200);
-            case 16 -> plugin.settings().bumpInt("general.distancia-minima-spawn", up ? step * 25 : -step * 25, 0, 20000, 300);
-            case 19 -> plugin.settings().toggle("general.evitar-bases", true);
-            case 20 -> plugin.settings().bumpInt("general.margen-proteccion", up ? step * 4 : -step * 4, 0, 256, 24);
-            case 21 -> plugin.settings().bumpInt("general.desnivel-maximo", up ? step : -step, 1, 32, 4);
-            case 23 -> plugin.settings().bumpInt("combate.minutos-limite", up ? step : -step, 1, 180, 15);
-            case 24 -> plugin.settings().bumpInt("combate.radio-participacion", up ? step * 8 : -step * 8, 16, 256, 64);
-            case 25 -> plugin.settings().bump("combate.vida-extra-por-jugador", up ? 0.05 : -0.05, 0, 3, 0.15);
-            case 28 -> plugin.settings().toggle("combate.permitir-empuje", true);
-            case 29 -> plugin.settings().toggle("anuncio.activo", true);
+            case 14 -> plugin.settings().bumpInt("automatico.jugadores-minimos", up ? step : -step, 0, 100, 2);
+            case 20 -> plugin.settings().bumpInt("combate.minutos-limite", up ? step : -step, 1, 180, 15);
+            case 22 -> plugin.settings().bumpInt("combate.radio-participacion", up ? step * 8 : -step * 8, 16, 256, 64);
+            case 24 -> plugin.settings().toggle("combate.permitir-empuje", true);
+            case 28 -> plugin.settings().toggle("anuncio.activo", true);
             case 30 -> plugin.settings().toggle("anuncio.sonido", true);
-            case 31 -> plugin.settings().toggle("anuncio.titulo", true);
-            case 32 -> plugin.settings().bumpInt("anuncio.precision-coordenadas", up ? step : -step, 1, 256, 1);
-            case 33 -> plugin.settings().toggle("anuncio.pilar-de-luz", true);
+            case 32 -> plugin.settings().toggle("anuncio.titulo", true);
+            case 34 -> plugin.settings().toggle("anuncio.pilar-de-luz", true);
             default -> {
                 return;
             }

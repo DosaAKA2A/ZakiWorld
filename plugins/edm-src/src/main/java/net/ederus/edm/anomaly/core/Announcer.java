@@ -79,7 +79,7 @@ public final class Announcer {
     private Component openingLine(ActiveAnomaly event) {
         AnomalyType type = event.type();
         Location l = event.where();
-        int step = plugin.settings().coordinatePrecision();
+        int step = 1;
         int x = round(l.getBlockX(), step);
         int y = l.getBlockY();
         int z = round(l.getBlockZ(), step);

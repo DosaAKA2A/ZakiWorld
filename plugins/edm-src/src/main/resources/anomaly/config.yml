@@ -1,15 +1,15 @@
 # ============================================================
 #  ANOMALY  ·  Iris Studio
 #
-#  Todo esto se puede tocar desde el juego con /anomaly (menu Ajustes),
-#  y cada cambio hecho ahi se escribe aqui al momento.
+#  Todo esto se puede tocar desde el juego con /anomaly (el panel y su menu
+#  Ajustes), y cada cambio hecho ahi se escribe aqui al momento.
 #  Editar a mano tambien vale: despues, /anomaly reload.
 #
 #  Aqui solo van los ajustes GENERALES. Lo de cada jefe y cada esbirro vive
 #  en su propio fichero, dentro de esta misma carpeta:
 #
-#    Anomalias/<id>.yml          ficha de cada anomalia: activa, clase, nombre,
-#                                vida, dano, textos del anuncio, spawn y clima.
+#    Anomalias/<id>.yml          ficha de cada anomalia: activa, rotacion, clase,
+#                                nombre, vida, dano, textos del anuncio y clima.
 #    Skills/Anomalias/<id>.yml   numeros de sus habilidades: activa, fase,
 #                                enfriamiento, duracion, peso y dano de cada una.
 #    Esbirros/<carpeta>/         los esbirros, una carpeta por mazmorra.
@@ -20,71 +20,29 @@
 #  Los ficheros que falten se crean solos con los valores de diseno.
 # ============================================================
 
-general:
-  # Mundos donde puede aparecer una anomalia. Vacio = TODOS, incluidos nether y end,
-  # que rara vez es lo que se quiere. Por eso viene acotado al mundo normal.
-  mundos:
-    - world
-
-  # Lo mas cerca y lo mas lejos que puede salir respecto a un jugador conectado.
-  # Salir demasiado cerca mata la exploracion; demasiado lejos y no va nadie.
-  distancia-minima: 200
-  distancia-maxima: 1200
-
-  # Radio alrededor del spawn del mundo donde nunca aparecera.
-  distancia-minima-spawn: 300
-
-  # Cuantos puntos se prueban antes de rendirse. Cada intento carga un trozo
-  # de forma asincrona, asi que subirlo no congela el servidor, solo tarda mas.
-  intentos-de-busqueda: 40
-
-  # Distancia de respeto al borde de una region de WorldGuard / ProtectionStones.
-  # No basta con caer fuera del claim: el combate se mueve, y no queremos que la
-  # pelea acabe dentro del terreno de alguien.
-  margen-proteccion: 24
-
-  # Descarta sitios con senales de base aunque no haya claim: cofres, camas,
-  # hornos, yunques, spawners... Cuesta unas milesimas y evita disgustos.
-  evitar-bases: true
-  radio-escaneo-bases: 24
-
-  # El jefe va montado y necesita sitio. Estos dos deciden cuanto claro exige.
-  radio-arena: 12
-  desnivel-maximo: 4
-
-  # Profundidad minima de agua para las anomalias acuaticas, que pelean en el FONDO
-  # y no en la superficie. Con menos de esto el sitio se descarta.
-  profundidad-minima-agua: 8
-
-  # Una anomalia sin punto propio y sin coliseo marcado: si esto esta en false no
-  # sale (todas van al coliseo); en true busca un sitio aleatorio por el mundo.
-  buscar-sitio-aleatorio: false
-
 automatico:
-  # Si se activa, el plugin abre anomalias solo cada X minutos.
+  # Todas las anomalias salen en un solo sitio, el Coliseo (abajo). A mano (/anomaly
+  # start o el boton Iniciar) y por turno; sin Coliseo marcado no sale ninguna.
+  #
+  # Encendido, el plugin abre UNA anomalia en cada turno del reloj.
   activo: false
-  intervalo-minutos: 90
-  # Por debajo de esta gente conectada no abre ninguna.
-  jugadores-minimos: 2
-  # Un id concreto, o "aleatoria" para que elija entre las activas.
-  anomalia: aleatoria
-  # "horario": a las horas de abajo, que no se corren con un reinicio.
-  # "intervalo": cada intervalo-minutos desde que arranca el servidor.
-  modo: horario
+  # Cada cuantas horas hay turno, de 1 a 12. Los turnos cuentan desde las 00:00 de
+  # la zona horaria: con 4 salen a las 00, 04, 08, 12, 16 y 20. Un reinicio no los
+  # corre. Si no divide 24 (5, 7...), a las 00:00 se vuelve a empezar.
+  # Se cambia en el panel, boton "Cada cuanto sale".
+  cada-horas: 4
   zona-horaria: America/Lima
-  # A estas horas sale una Esbirro o General que este en rotacion.
-  horas-comunes:
-    - "04:00"
-    - "12:00"
-    - "20:00"
-  # A estas, una Monarca o Dios. Solo hay una abierta a la vez.
-  horas-altas:
-    - "00:00"
-    - "08:00"
-    - "16:00"
-  # Si a la hora habia otra abierta o faltaba gente, se sigue intentando estos minutos.
+  # Por debajo de esta gente conectada el turno espera.
+  jugadores-minimos: 2
+  # Si a la hora del turno habia otra abierta o faltaba gente, se sigue intentando
+  # estos minutos. Pasado el margen, ese turno se pierde y se espera al siguiente.
   margen-minutos: 60
-  # Donde salen todas. Se marca de pie en el sitio con /anomaly coliseo.
+  # Sale una al azar entre las activas y en rotacion (clave 'rotacion' de cada ficha,
+  # boton "Rotacion" del panel), sin repetir ninguna de las 3 ultimas que salieron.
+  # Las ultimas se guardan en automatico.yml.
+  #
+  # El Coliseo: el bloque donde aparecen. Se marca desde el panel ("Punto del
+  # Coliseo", golpeando el bloque) o de pie en el sitio con /anomaly coliseum.
   coliseo:
     mundo: ""
     x: 0.0
@@ -164,12 +122,8 @@ anuncio:
   # Como se le dice a la gente que llegue: "ve /warp coliseo". Sale en el titulo
   # y en el chat (pulsable). Vacio = el titulo lleva las coordenadas.
   warp: "/warp coliseo"
-  # Redondea las coordenadas anunciadas a multiplos de N para dar margen de busqueda.
-  # 1 = coordenadas exactas.
-  precision-coordenadas: 1
-
-  # La columna de luz del color de la anomalia sobre el jefe. Se ve desde lejos y es
-  # lo que hace que las coordenadas basten para encontrarlo. Apagalo solo si pesa.
+  # La columna de luz del color de la anomalia sobre el jefe. Se ve desde lejos y
+  # marca donde esta peleando dentro del Coliseo. Apagalo solo si pesa.
   pilar-de-luz: true
 
 # Los logros se escriben solos como datapack dentro del mundo y se conceden a todos

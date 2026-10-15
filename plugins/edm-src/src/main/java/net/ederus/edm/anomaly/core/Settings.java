@@ -27,75 +27,28 @@ public final class Settings {
         return ((net.ederus.edm.anomaly.AnomalyPlugin) plugin).registry().fichas();
     }
 
-    // ------------------------------------------------------------------ ubicacion
-
-    public List<String> allowedWorlds() {
-        return cfg().getStringList("general.mundos");
-    }
-
-    public double minDistance() {
-        return cfg().getDouble("general.distancia-minima", 200);
-    }
-
-    public double maxDistance() {
-        return cfg().getDouble("general.distancia-maxima", 1200);
-    }
-
-    public double minSpawnDistance() {
-        return cfg().getDouble("general.distancia-minima-spawn", 300);
-    }
-
-    public int searchAttempts() {
-        return cfg().getInt("general.intentos-de-busqueda", 40);
-    }
-
-    public double protectionMargin() {
-        return cfg().getDouble("general.margen-proteccion", 24);
-    }
-
-    public boolean avoidBases() {
-        return cfg().getBoolean("general.evitar-bases", true);
-    }
-
-    public int baseScanRadius() {
-        return cfg().getInt("general.radio-escaneo-bases", 24);
-    }
-
-    public int arenaRadius() {
-        return cfg().getInt("general.radio-arena", 12);
-    }
-
-    public int maxSlope() {
-        return cfg().getInt("general.desnivel-maximo", 4);
-    }
-
-    /** Profundidad minima de agua para una anomalia acuatica. Un charco no es un abismo. */
-    public int minWaterDepth() {
-        return cfg().getInt("general.profundidad-minima-agua", 8);
-    }
-
     // ----------------------------------------------------------------- automatico
 
     public boolean autoEnabled() {
         return cfg().getBoolean("automatico.activo", false);
     }
 
-    public int autoIntervalMinutes() {
-        return Math.max(5, cfg().getInt("automatico.intervalo-minutos", 90));
+    /** Los limites del intervalo del automatico, en horas. */
+    public static final int MIN_EVERY_HOURS = 1;
+    public static final int MAX_EVERY_HOURS = 12;
+
+    /**
+     * Cada cuantas horas sale una. Los turnos van pegados al reloj de la zona horaria
+     * contando desde las 00:00 (con 4: 00, 04, 08, 12, 16 y 20), asi que un reinicio
+     * no corre el turno: el siguiente sigue cayendo a la misma hora.
+     */
+    public int autoEveryHours() {
+        int h = cfg().getInt("automatico.cada-horas", 4);
+        return Math.max(MIN_EVERY_HOURS, Math.min(MAX_EVERY_HOURS, h));
     }
 
     public int autoMinPlayers() {
         return cfg().getInt("automatico.jugadores-minimos", 2);
-    }
-
-    /** Id de anomalia, o "aleatoria" para que elija el plugin. */
-    public String autoAnomaly() {
-        return cfg().getString("automatico.anomalia", "aleatoria");
-    }
-
-    /** "horario" (horas fijas del reloj) o "intervalo" (cada X minutos desde el arranque). */
-    public boolean autoBySchedule() {
-        return !"intervalo".equalsIgnoreCase(cfg().getString("automatico.modo", "horario"));
     }
 
     public java.time.ZoneId autoZone() {
@@ -106,42 +59,15 @@ public final class Settings {
         }
     }
 
-    /** Horas en las que sale una Esbirro o General. */
-    public List<java.time.LocalTime> autoCommonHours() {
-        return hours("automatico.horas-comunes");
-    }
-
-    /** Horas en las que sale una Monarca o Dios. */
-    public List<java.time.LocalTime> autoHighHours() {
-        return hours("automatico.horas-altas");
-    }
-
     /** Cuanto se sigue intentando un turno si a la hora habia otra abierta o faltaba gente. */
     public int autoGraceMinutes() {
         return Math.max(1, cfg().getInt("automatico.margen-minutos", 60));
     }
 
-    private List<java.time.LocalTime> hours(String path) {
-        List<java.time.LocalTime> out = new java.util.ArrayList<>();
-        for (String raw : cfg().getStringList(path)) {
-            String h = raw.trim();
-            // YAML lee 4:00 sin comillas como sexagesimal (240): se devuelve a hora.
-            if (h.matches("\\d+")) {
-                int n = Integer.parseInt(h);
-                h = String.format("%02d:%02d", (n / 60) % 24, n % 60);
-            }
-            try {
-                out.add(java.time.LocalTime.parse(h.length() == 4 ? "0" + h : h));
-            } catch (Exception ignored) {
-                plugin.getLogger().warning("Hora mal escrita en " + path + ": " + raw);
-            }
-        }
-        return out;
-    }
-
     /**
-     * El punto del coliseo donde salen todas las anomalias. Null si no esta marcado
-     * o si su mundo no esta cargado.
+     * El punto del Coliseo, el unico sitio donde salen las anomalias (a mano o por
+     * turno). Null si no esta marcado o si su mundo no esta cargado: entonces no se
+     * abre ninguna.
      */
     public org.bukkit.Location coliseum() {
         String world = cfg().getString("automatico.coliseo.mundo", "");
@@ -158,11 +84,6 @@ public final class Settings {
         cfg().set("automatico.coliseo.y", (double) where.getBlockY());
         cfg().set("automatico.coliseo.z", where.getBlockZ() + 0.5);
         plugin.saveConfig();
-    }
-
-    /** Si una anomalia sin punto puede salir en un sitio aleatorio del mundo. */
-    public boolean randomSites() {
-        return cfg().getBoolean("general.buscar-sitio-aleatorio", false);
     }
 
     // -------------------------------------------------------------------- combate
@@ -310,7 +231,7 @@ public final class Settings {
     }
 
     /**
-     * El atajo que se le dice a la gente para llegar: "ve /warp coliseo". Vacio = no se
+     * El atajo que se le dice a la gente para llegar: "ve /warp Coliseo". Vacio = no se
      * dice nada y el subtitulo lleva las coordenadas. Es texto, no un warp de verdad:
      * lo que haya escrito es lo que sale, y al clicarlo en el chat se ejecuta.
      *
@@ -330,11 +251,6 @@ public final class Settings {
     /** El pilar de luz sobre el jefe, del color de la anomalia. Se puede apagar si pesa. */
     public boolean lightPillar() {
         return cfg().getBoolean("anuncio.pilar-de-luz", true);
-    }
-
-    /** Redondea las coordenadas anunciadas a multiplos de N para dar margen de busqueda. */
-    public int coordinatePrecision() {
-        return Math.max(1, cfg().getInt("anuncio.precision-coordenadas", 1));
     }
 
     // ------------------------------------------------------------------ escritura

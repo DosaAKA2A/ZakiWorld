@@ -179,7 +179,7 @@ public final class AnomalyCommand implements CommandExecutor, TabCompleter {
             return;
         }
         Location c = plugin.settings().coliseum();
-        say(sender, c == null ? "No hay coliseo marcado. Ponte en el sitio y escribe /anomaly coliseum."
+        say(sender, c == null ? "No hay Coliseo marcado. Ponte en el sitio y escribe /anomaly coliseum."
                 : "Coliseo: " + c.getWorld().getName() + " " + c.getBlockX() + " " + c.getBlockY() + " " + c.getBlockZ(), SOFT);
     }
 
@@ -203,7 +203,7 @@ public final class AnomalyCommand implements CommandExecutor, TabCompleter {
         say(sender, t.display() + (value ? " entra en la rotación." : " sale de la rotación."), SOFT);
     }
 
-    /** /anomaly auto [on|off]: estado del horario y proximos turnos. */
+    /** /anomaly auto [on|off]: estado del reloj, proximos turnos y quien no puede repetir. */
     private void auto(CommandSender sender, String[] args) {
         if (args.length > 1) {
             boolean on = List.of("on", "si", "true").contains(args[1].toLowerCase(Locale.ROOT));
@@ -211,19 +211,28 @@ public final class AnomalyCommand implements CommandExecutor, TabCompleter {
             plugin.manager().restartScheduler();
         }
         var s = plugin.settings();
-        say(sender, "Automático " + (s.autoEnabled() ? "encendido" : "apagado") + " · "
-                + (s.autoBySchedule() ? "por horario (" + s.autoZone() + ")" : "cada " + s.autoIntervalMinutes() + " min")
+        say(sender, "Automático " + (s.autoEnabled() ? "encendido" : "apagado") + " · cada "
+                + s.autoEveryHours() + " h desde las 00:00 (" + s.autoZone() + ")"
                 + " · mínimo " + s.autoMinPlayers() + " jugadores", SOFT);
         Location c = s.coliseum();
-        say(sender, c == null ? "Falta marcar el coliseo (/anomaly coliseum)." : "Coliseo: " + c.getWorld().getName()
+        say(sender, c == null ? "Falta marcar el Coliseo (/anomaly coliseum)." : "Coliseo: " + c.getWorld().getName()
                 + " " + c.getBlockX() + " " + c.getBlockY() + " " + c.getBlockZ(), c == null ? NamedTextColor.RED : SOFT);
-        if (s.autoBySchedule()) {
-            var fmt = java.time.format.DateTimeFormatter.ofPattern("dd/MM HH:mm");
-            for (var slot : plugin.manager().nextSlots(6)) {
-                sender.sendMessage(Component.text("  " + slot.at().format(fmt) + "  ", SOFT)
-                        .append(Component.text(slot.high() ? "Monarca o Dios" : "Esbirro o General",
-                                slot.high() ? NamedTextColor.LIGHT_PURPLE : NamedTextColor.GOLD)));
+        say(sender, "En rotación: " + plugin.registry().rotationPool().size() + " de "
+                + plugin.registry().all().size() + " (/anomaly rotation)", SOFT);
+        var fmt = java.time.format.DateTimeFormatter.ofPattern("dd/MM HH:mm");
+        for (var slot : plugin.manager().nextSlots(6)) {
+            sender.sendMessage(Component.text("  " + slot.at().format(fmt), SOFT));
+        }
+        List<String> recientes = plugin.manager().recentAuto();
+        if (!recientes.isEmpty()) {
+            Component line = Component.text("  No se repiten: ", DIM);
+            for (int i = 0; i < recientes.size(); i++) {
+                AnomalyType t = plugin.registry().get(recientes.get(i));
+                if (i > 0) line = line.append(Component.text(", ", DIM));
+                line = line.append(t == null ? Component.text(recientes.get(i), DIM)
+                        : Component.text(t.display(), t.color()));
             }
+            sender.sendMessage(line);
         }
     }
 
@@ -422,14 +431,13 @@ public final class AnomalyCommand implements CommandExecutor, TabCompleter {
                     Component.text("Ya hay una anomalía abierta. Cierrala con /anomaly stop.", NamedTextColor.RED)));
             return;
         }
-        boolean fixed = plugin.registry().spawnPoint(type) != null;
-        sender.sendMessage(plugin.prefix().append(Component.text(
-                fixed ? "Abriendola en su punto marcado..." : "Buscando un sitio libre...", SOFT)));
+        if (plugin.settings().coliseum() == null) {
+            say(sender, net.ederus.edm.anomaly.core.AnomalyManager.SIN_COLISEO, NamedTextColor.RED);
+            return;
+        }
+        say(sender, "Abriéndola en el Coliseo...", SOFT);
         plugin.manager().start(type, ok -> {
-            if (ok) return;
-            sender.sendMessage(plugin.prefix().append(Component.text(
-                    "No se encontro ningun sitio valido tras " + plugin.settings().searchAttempts()
-                            + " intentos. Baja la distancia mínima o el margen de protección.", NamedTextColor.RED)));
+            if (!ok) say(sender, net.ederus.edm.anomaly.core.AnomalyManager.SIN_COLISEO, NamedTextColor.RED);
         });
     }
 
@@ -487,10 +495,9 @@ public final class AnomalyCommand implements CommandExecutor, TabCompleter {
         } else if (sender instanceof Player player) {
             world = player.getWorld();
         } else {
-            List<String> allowed = plugin.settings().allowedWorlds();
-            world = allowed.isEmpty()
-                    ? plugin.getServer().getWorlds().get(0)
-                    : plugin.getServer().getWorld(allowed.get(0));
+            // Desde consola y sin mundo: el del Coliseo, y si no hay, el principal.
+            Location coliseo = plugin.settings().coliseum();
+            world = coliseo != null ? coliseo.getWorld() : plugin.getServer().getWorlds().get(0);
         }
         if (world == null) {
             sender.sendMessage(plugin.prefix().append(
@@ -530,12 +537,12 @@ public final class AnomalyCommand implements CommandExecutor, TabCompleter {
         sender.sendMessage(field("Protecciones", plugin.protection().hasWorldGuard()
                 ? "WorldGuard enganchado" : "sin WorldGuard, solo heuristica"));
         sender.sendMessage(field("Particulas ausentes", String.valueOf(Compat.missingParticles())));
-        sender.sendMessage(field("Automaticas", plugin.settings().autoEnabled()
-                ? ("cada " + plugin.settings().autoIntervalMinutes() + " min") : "apagadas"));
+        sender.sendMessage(field("Automáticas", plugin.settings().autoEnabled()
+                ? ("cada " + plugin.settings().autoEveryHours() + " h") : "apagadas"));
 
         ActiveAnomaly ev = plugin.manager().current();
         if (ev == null) {
-            sender.sendMessage(field("Ahora mismo", plugin.manager().searching() ? "buscando sitio" : "en calma"));
+            sender.sendMessage(field("Ahora mismo", "en calma"));
         } else {
             sender.sendMessage(Component.empty());
             sender.sendMessage(field("Abierta", ev.type().display()));
@@ -747,7 +754,10 @@ public final class AnomalyCommand implements CommandExecutor, TabCompleter {
         line(sender, "/anomaly", "abre el panel");
         line(sender, "/anomaly esbirros", "el catálogo de esbirros de mazmorra");
         line(sender, "/anomaly esbirro <id> [nivel] [x y z]", "invoca uno suelto, para verlo");
-        line(sender, "/anomaly start [id]", "busca sitio y abre la anomalía");
+        line(sender, "/anomaly start [id]", "abre la anomalía en el Coliseo");
+        line(sender, "/anomaly coliseum [info]", "marca donde estás como el Coliseo");
+        line(sender, "/anomaly rotation [id] [on|off]", "quién entra en el sorteo del automático");
+        line(sender, "/anomaly auto [on|off]", "estado del automático y próximos turnos");
         line(sender, "/anomaly here [id]", "la abre donde estas, sin comprobaciones");
         line(sender, "/anomaly at <x> <y> <z> [id]", "la abre en esas coordenadas");
         line(sender, "/anomaly stop", "la cierra y limpia la escena");

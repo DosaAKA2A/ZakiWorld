@@ -49,7 +49,6 @@ public final class AnomalyManager implements Listener {
     private BukkitTask ticker;
     private BukkitTask autoTask;
     private final List<Chunk> forced = new ArrayList<>();
-    private boolean searching;
 
     public AnomalyManager(AnomalyPlugin plugin) {
         this.plugin = plugin;
@@ -63,53 +62,34 @@ public final class AnomalyManager implements Listener {
         return current != null;
     }
 
-    public boolean searching() {
-        return searching;
-    }
-
     // ------------------------------------------------------------------- apertura
 
+    /** Por que no se pudo abrir: lo que se le dice al admin en el chat. */
+    public static final String SIN_COLISEO = "No hay Coliseo marcado (o su mundo no está cargado). "
+            + "Márcalo desde el menú, botón Punto del Coliseo, o con /anomaly coliseum.";
+
     /**
-     * Abre la anomalia donde le toque: en su punto fijo si el admin marco uno desde
-     * el menu, y si no buscando un sitio aleatorio valido. La busqueda es asincrona,
-     * asi que el resultado llega por el callback: true si se abrio, false si no
-     * habia ningun sitio valido.
+     * Abre la anomalia en el Coliseo, que es el unico sitio donde salen todas.
+     *
+     * Antes cada una podia tener su punto propio o buscarse un sitio aleatorio por el
+     * mapa; eso se quito a proposito para que la gente sepa siempre a donde ir. Sin
+     * Coliseo marcado no se abre ninguna: el callback recibe false y la consola lo
+     * dice. Quien llama se encarga de decirlo en el chat (ver SIN_COLISEO).
      */
     public void start(AnomalyType type, Consumer<Boolean> done) {
-        if (active() || searching) {
+        if (active()) {
             done.accept(false);
             return;
         }
-
-        // El punto marcado manda: ahi no se busca ni se comprueba nada, porque el
-        // admin eligio ese bloque a proposito (un coliseo, una arena construida).
-        // Con coliseo marcado, el punto propio solo vale si esta en el mismo mundo:
-        // los viejos puntos sueltos por el mapa ya no cuentan.
-        Location fixed = plugin.registry().spawnPoint(type);
         Location coliseum = plugin.settings().coliseum();
-        if (coliseum != null && (fixed == null || fixed.getWorld() != coliseum.getWorld())) fixed = coliseum;
-        if (fixed != null) {
-            open(type, fixed);
-            done.accept(active());
-            return;
-        }
-        if (!plugin.settings().randomSites()) {
-            plugin.getLogger().info("No se abre " + type.id() + ": no hay coliseo marcado (/anomaly coliseo)"
-                    + " y la busqueda aleatoria esta apagada.");
+        if (coliseum == null) {
+            plugin.getLogger().warning("No se abre " + type.id() + ": no hay Coliseo marcado o su mundo no "
+                    + "está cargado (/anomaly coliseum).");
             done.accept(false);
             return;
         }
-
-        searching = true;
-        plugin.sites().find(type, loc -> {
-            searching = false;
-            if (loc == null) {
-                done.accept(false);
-                return;
-            }
-            open(type, loc);
-            done.accept(true);
-        });
+        open(type, coliseum);
+        done.accept(active());
     }
 
     /** Abre la anomalia en un punto concreto, sin buscar ni comprobar protecciones. */
@@ -325,105 +305,111 @@ public final class AnomalyManager implements Listener {
 
     // ------------------------------------------------------------------ automatico
 
+    /**
+     * Arranca (o rearranca) el reloj del automatico.
+     *
+     * Se mira la hora cada 20 s en vez de programar "dentro de X horas": asi un turno
+     * no depende de cuando arranco el servidor y un reinicio no lo corre.
+     */
     public void restartScheduler() {
         if (autoTask != null) {
             autoTask.cancel();
             autoTask = null;
         }
         if (!plugin.settings().autoEnabled()) return;
-        if (plugin.settings().autoBySchedule()) {
-            // Se mira el reloj cada 20 s: un turno no depende de cuando arranco el servidor.
-            autoTask = plugin.getServer().getScheduler().runTaskTimer(
-                    net.ederus.edm.Module.dueno(plugin), this::scheduleTick, 200L, 400L);
-            plugin.getLogger().info("Anomalías automaticas por horario (" + plugin.settings().autoZone()
-                    + "): comunes " + plugin.settings().autoCommonHours()
-                    + ", altas " + plugin.settings().autoHighHours() + ".");
-            return;
-        }
-        long period = plugin.settings().autoIntervalMinutes() * 60L * 20L;
         autoTask = plugin.getServer().getScheduler().runTaskTimer(
-                net.ederus.edm.Module.dueno(plugin), this::autoTrigger, period, period);
-        plugin.getLogger().info("Anomalías automaticas cada " + plugin.settings().autoIntervalMinutes() + " min.");
+                net.ederus.edm.Module.dueno(plugin), this::scheduleTick, 200L, 400L);
+        plugin.getLogger().info("Anomalías automáticas cada " + plugin.settings().autoEveryHours()
+                + " h desde las 00:00 (" + plugin.settings().autoZone() + "); próximo turno "
+                + nextSlots(1).stream().map(s -> s.at().toLocalTime().toString()).findFirst().orElse("?") + ".");
     }
 
     private boolean enoughPlayers() {
+        return fightablePlayers() >= plugin.settings().autoMinPlayers();
+    }
+
+    private int fightablePlayers() {
         int online = 0;
         for (Player p : plugin.getServer().getOnlinePlayers()) {
             if (Fx.isFightable(p)) online++;
         }
-        return online >= plugin.settings().autoMinPlayers();
+        return online;
     }
 
-    private void autoTrigger() {
-        if (active() || searching) return;
-        if (!enoughPlayers()) return;
-
-        String choice = plugin.settings().autoAnomaly();
-        AnomalyType type = "aleatoria".equalsIgnoreCase(choice)
-                ? plugin.registry().randomForRotation(java.util.EnumSet.allOf(AnomalyClass.class), lastAuto)
-                : plugin.registry().get(choice);
-        if (type == null || !plugin.registry().isEnabled(type)) return;
-        start(type, ok -> {
-            if (ok) lastAuto = type.id();
-            else plugin.getLogger().info("Anomalía automática descartada: no habia sitio libre.");
-        });
-    }
-
-    // -------------------------------------------------------------- por horario
-
-    private static final java.util.Set<AnomalyClass> COMUNES =
-            java.util.EnumSet.of(AnomalyClass.ESBIRRO, AnomalyClass.GENERAL);
-    private static final java.util.Set<AnomalyClass> ALTAS =
-            java.util.EnumSet.of(AnomalyClass.MONARCA, AnomalyClass.DIOS);
-
-    /** La ultima que salio sola, para no repetir la misma dos turnos seguidos. */
-    private String lastAuto;
-
-    /** Un turno del horario: cuando toca y si es de las altas. */
-    public record Slot(java.time.ZonedDateTime at, boolean high) {
+    /** Un turno del reloj: cuando toca. La clave es lo que se guarda en automatico.yml. */
+    public record Slot(java.time.ZonedDateTime at) {
         public String key() {
             return at.toLocalDateTime().toString();
         }
     }
 
-    /** Todos los turnos entre dos instantes, ordenados. Si una hora esta en las dos listas, gana la alta. */
+    /**
+     * Todos los turnos entre dos instantes, ordenados.
+     *
+     * Cada dia empieza a contar en las 00:00 de la zona horaria y suma el intervalo.
+     * Con un intervalo que no divide 24 (5, 7...) el ultimo turno del dia queda mas
+     * cerca de la medianoche y a las 00:00 se vuelve a empezar: es lo que hace que el
+     * horario sea el mismo todos los dias.
+     */
     private List<Slot> slotsBetween(java.time.ZonedDateTime from, java.time.ZonedDateTime to) {
-        java.util.TreeMap<java.time.ZonedDateTime, Boolean> out = new java.util.TreeMap<>();
+        int every = plugin.settings().autoEveryHours();
         java.time.ZoneId zone = plugin.settings().autoZone();
+        List<Slot> slots = new ArrayList<>();
         for (java.time.LocalDate d = from.toLocalDate().minusDays(1); !d.isAfter(to.toLocalDate()); d = d.plusDays(1)) {
-            for (java.time.LocalTime t : plugin.settings().autoCommonHours()) {
-                out.putIfAbsent(d.atTime(t).atZone(zone), false);
-            }
-            for (java.time.LocalTime t : plugin.settings().autoHighHours()) {
-                out.put(d.atTime(t).atZone(zone), true);
+            for (int h = 0; h < 24; h += every) {
+                java.time.ZonedDateTime at = d.atTime(h, 0).atZone(zone);
+                if (!at.isBefore(from) && !at.isAfter(to)) slots.add(new Slot(at));
             }
         }
-        List<Slot> slots = new ArrayList<>();
-        out.forEach((at, high) -> {
-            if (!at.isBefore(from) && !at.isAfter(to)) slots.add(new Slot(at, high));
-        });
         return slots;
     }
 
-    /** Los proximos turnos, para /anomaly automatico. */
+    /** Los proximos turnos, para /anomaly auto y el menu. */
     public List<Slot> nextSlots(int count) {
         java.time.ZonedDateTime now = java.time.ZonedDateTime.now(plugin.settings().autoZone());
         List<Slot> all = slotsBetween(now, now.plusDays(2));
         return all.subList(0, Math.min(count, all.size()));
     }
 
+    /** Las horas de un dia entero con el intervalo de ahora: "00:00, 04:00, ...". */
+    public List<java.time.LocalTime> dailyHours() {
+        List<java.time.LocalTime> out = new ArrayList<>();
+        for (int h = 0; h < 24; h += plugin.settings().autoEveryHours()) out.add(java.time.LocalTime.of(h, 0));
+        return out;
+    }
+
     private java.io.File stateFile() {
         return new java.io.File(plugin.getDataFolder(), "automatico.yml");
     }
 
-    private String lastDoneSlot() {
-        return org.bukkit.configuration.file.YamlConfiguration.loadConfiguration(stateFile()).getString("ultimo-turno", "");
+    private org.bukkit.configuration.file.YamlConfiguration state() {
+        return org.bukkit.configuration.file.YamlConfiguration.loadConfiguration(stateFile());
     }
 
-    private void markSlotDone(Slot slot, String anomaly) {
+    /**
+     * Las ultimas que salieron solas, de la mas nueva a la mas vieja (hasta tres).
+     * Un automatico.yml de antes solo traia ultima-anomalia: se lee como lista de una.
+     */
+    public List<String> recentAuto() {
+        var yml = state();
+        List<String> out = new ArrayList<>(yml.getStringList("ultimas"));
+        if (out.isEmpty()) {
+            String vieja = yml.getString("ultima-anomalia", null);
+            if (vieja != null && !vieja.isBlank()) out.add(vieja);
+        }
+        return out.subList(0, Math.min(AnomalyRegistry.NO_REPEAT, out.size()));
+    }
+
+    /** Apunta el turno como hecho y, si abrio una, la pone la primera de la lista. */
+    private void markSlotDone(Slot slot, String opened) {
+        List<String> ultimas = new ArrayList<>(recentAuto());
+        if (opened != null) {
+            ultimas.remove(opened);
+            ultimas.add(0, opened);
+        }
         var yml = new org.bukkit.configuration.file.YamlConfiguration();
         yml.set("ultimo-turno", slot.key());
-        yml.set("ultima-anomalia", anomaly);
+        yml.set("ultimas", ultimas.subList(0, Math.min(AnomalyRegistry.NO_REPEAT, ultimas.size())));
         try {
             yml.save(stateFile());
         } catch (java.io.IOException e) {
@@ -432,42 +418,67 @@ public final class AnomalyManager implements Listener {
     }
 
     /**
+     * Da por hecho el turno que este dentro del margen ahora mismo, sin abrir nada.
+     *
+     * Lo usa el menu al cambiar el intervalo: con el nuevo reloj puede aparecer un
+     * turno de hace media hora que nunca existio, y sin esto saldria una anomalia al
+     * instante solo por haber tocado el boton.
+     */
+    public void skipDueSlot() {
+        java.time.ZonedDateTime now = java.time.ZonedDateTime.now(plugin.settings().autoZone());
+        List<Slot> due = slotsBetween(now.minusMinutes(plugin.settings().autoGraceMinutes()), now);
+        if (due.isEmpty()) return;
+        Slot slot = due.get(due.size() - 1);
+        if (slot.key().equals(state().getString("ultimo-turno", ""))) return;
+        markSlotDone(slot, null);
+    }
+
+    /**
      * Cada 20 s: si hay un turno que ya llego, no se ha hecho y sigue dentro del
      * margen, lo intenta. Si hay otra abierta o falta gente, espera al siguiente
      * vistazo; pasado el margen el turno se pierde y se espera al proximo.
      */
     private void scheduleTick() {
-        if (active() || searching) return;
+        if (active()) return;
         java.time.ZonedDateTime now = java.time.ZonedDateTime.now(plugin.settings().autoZone());
         List<Slot> due = slotsBetween(now.minusMinutes(plugin.settings().autoGraceMinutes()), now);
         if (due.isEmpty()) return;
         Slot slot = due.get(due.size() - 1);
-        String done = lastDoneSlot();
-        if (slot.key().equals(done)) return;
+        if (slot.key().equals(state().getString("ultimo-turno", ""))) return;
         if (!enoughPlayers()) return;
 
-        if (lastAuto == null) {
-            lastAuto = org.bukkit.configuration.file.YamlConfiguration.loadConfiguration(stateFile())
-                    .getString("ultima-anomalia", null);
-        }
-        AnomalyType type = plugin.registry().randomForRotation(slot.high() ? ALTAS : COMUNES, lastAuto);
+        String hora = slot.at().toLocalTime().toString();
+        List<String> recientes = recentAuto();
+        List<AnomalyType> pool = plugin.registry().rotationPool();
+        AnomalyType type = plugin.registry().randomForRotation(recientes);
         if (type == null) {
-            plugin.getLogger().warning("Turno de las " + slot.at().toLocalTime() + " sin anomalía: ninguna "
-                    + (slot.high() ? "Monarca/Dios" : "Esbirro/General") + " está activa y en rotación.");
-            markSlotDone(slot, lastAuto);
+            plugin.getLogger().warning("Turno de las " + hora + " sin anomalía: ninguna está activa y en rotación.");
+            plugin.bitacora().anotar("auto", "-", "turno " + hora, "ninguna activa y en rotacion");
+            markSlotDone(slot, null);
             return;
         }
+        plugin.bitacora().anotar(
+                "auto",
+                type.id(),
+                "turno " + hora,
+                "sorteo entre " + pool.size(),
+                "sin repetir " + (recientes.isEmpty() ? "ninguna" : String.join(", ", recientes)),
+                fightablePlayers() + " jugador(es) conectados");
         start(type, ok -> {
             if (ok) {
-                lastAuto = type.id();
                 markSlotDone(slot, type.id());
-                plugin.getLogger().info("Turno de las " + slot.at().toLocalTime() + ": abre " + type.id() + ".");
+                plugin.getLogger().info("Turno de las " + hora + ": abre " + type.id() + ".");
             } else {
-                // Con la otra cerrada y gente de sobra, si no abre es que falta el coliseo:
+                // Con la otra cerrada y gente de sobra, si no abre es que falta el Coliseo:
                 // reintentarlo cada 20 s solo llenaria la consola.
-                markSlotDone(slot, lastAuto);
-                plugin.getLogger().warning("Turno de las " + slot.at().toLocalTime() + ": no se pudo abrir "
-                        + type.id() + ". ¿Está marcado el coliseo?");
+                markSlotDone(slot, null);
+                plugin.bitacora().anotar("auto", type.id(), "turno " + hora, "no abrio: sin Coliseo");
+                for (Player p : plugin.getServer().getOnlinePlayers()) {
+                    if (plugin.mayUseGui(p)) {
+                        p.sendMessage(plugin.prefix().append(Component.text(
+                                "El turno de las " + hora + " no abrió. " + SIN_COLISEO, NamedTextColor.RED)));
+                    }
+                }
             }
         });
     }

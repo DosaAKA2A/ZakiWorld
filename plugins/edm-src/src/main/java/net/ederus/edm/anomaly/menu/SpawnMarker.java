@@ -4,9 +4,9 @@ import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
 import net.kyori.adventure.text.format.TextDecoration;
 import net.ederus.edm.anomaly.AnomalyPlugin;
-import net.ederus.edm.anomaly.core.AnomalyType;
 import net.ederus.edm.comun.Compat;
 import net.ederus.edm.comun.Fx;
+import net.ederus.edm.comun.menu.MenuUtil;
 import org.bukkit.Location;
 import org.bukkit.block.Block;
 import org.bukkit.entity.Player;
@@ -23,15 +23,15 @@ import java.util.Map;
 import java.util.UUID;
 
 /**
- * El modo de marcar el punto de aparicion de una anomalia.
+ * El modo de marcar el punto del Coliseo, el unico sitio donde salen las anomalias.
  *
- * Desde el menu se pulsa "Punto de aparicion", el menu se cierra y el SIGUIENTE
- * bloque que el admin golpee (o toque con click derecho) queda marcado como el
- * spawner de esa anomalia: ahi aparecera siempre que se pulse Iniciar. Marcar solo
- * marca; la anomalia se sigue activando desde el menu, como siempre.
+ * Desde el menu se pulsa "Punto del Coliseo", el menu se cierra y el SIGUIENTE
+ * bloque que el admin golpee (o toque con clic derecho) queda como el Coliseo
+ * (automatico.coliseo del config.yml): ahi aparecen todas, a mano o por turno.
+ * Marcar solo marca; no abre nada.
  *
  * Vale golpear Y tocar a proposito: desde Bedrock (Geyser) el toque corto llega como
- * click derecho y el gesto de picar como izquierdo, asi que cualquiera de los dos
+ * clic derecho y el gesto de picar como izquierdo, asi que cualquiera de los dos
  * funciona igual desde consola, movil o Java.
  */
 public final class SpawnMarker implements Listener {
@@ -39,28 +39,26 @@ public final class SpawnMarker implements Listener {
     /** Cuanto dura el modo marcar antes de caducar solo. */
     private static final long TIMEOUT_MS = 60_000;
 
-    private record Pending(String anomalyId, long expiresAt) {
-    }
-
     private final AnomalyPlugin plugin;
-    private final Map<UUID, Pending> pending = new HashMap<>();
+    /** Quien esta marcando y hasta cuando vale. */
+    private final Map<UUID, Long> pending = new HashMap<>();
 
     public SpawnMarker(AnomalyPlugin plugin) {
         this.plugin = plugin;
     }
 
-    /** Arranca el modo marcar para ese admin y esa anomalia. */
-    public void begin(Player player, AnomalyType type) {
-        pending.put(player.getUniqueId(), new Pending(type.id(), System.currentTimeMillis() + TIMEOUT_MS));
-        // Cerrar el inventario DENTRO del click que nos trajo aqui esta prohibido por
+    /** Arranca el modo marcar el Coliseo para ese admin. */
+    public void begin(Player player) {
+        pending.put(player.getUniqueId(), System.currentTimeMillis() + TIMEOUT_MS);
+        // Cerrar el inventario DENTRO del clic que nos trajo aqui esta prohibido por
         // la API; un tick despues es seguro y nadie nota la diferencia.
         plugin.getServer().getScheduler().runTask(net.ederus.edm.Module.dueno(plugin), () -> {
             if (player.isOnline()) player.closeInventory();
         });
         player.sendMessage(plugin.prefix()
-                .append(Component.text("Golpea o toca el bloque donde quieres que aparezca ", NamedTextColor.WHITE))
-                .append(Component.text(type.display(), type.color(), TextDecoration.BOLD))
-                .append(Component.text(".", NamedTextColor.WHITE)));
+                .append(Component.text("Golpea o toca el bloque donde quieres el ", NamedTextColor.WHITE))
+                .append(Component.text("Coliseo", MenuUtil.GOLD))
+                .append(Component.text(". Las anomalías saldrán encima de él.", NamedTextColor.WHITE)));
         player.sendMessage(plugin.prefix()
                 .append(Component.text("Tienes 60 segundos. Para cancelar, vuelve a abrir el menú.",
                         NamedTextColor.GRAY)));
@@ -74,14 +72,14 @@ public final class SpawnMarker implements Listener {
 
     @EventHandler(priority = EventPriority.LOWEST)
     public void onInteract(PlayerInteractEvent e) {
-        // Cada click llega dos veces (mano principal y secundaria); con una basta.
+        // Cada clic llega dos veces (mano principal y secundaria); con una basta.
         if (e.getHand() != EquipmentSlot.HAND) return;
-        Pending pend = pending.get(e.getPlayer().getUniqueId());
-        if (pend == null) return;
-        if (System.currentTimeMillis() > pend.expiresAt()) {
+        Long expires = pending.get(e.getPlayer().getUniqueId());
+        if (expires == null) return;
+        if (System.currentTimeMillis() > expires) {
             pending.remove(e.getPlayer().getUniqueId());
             e.getPlayer().sendMessage(plugin.prefix()
-                    .append(Component.text("El modo de marcar caduco sin tocar nada.", NamedTextColor.GRAY)));
+                    .append(Component.text("El modo de marcar caducó sin tocar nada.", NamedTextColor.GRAY)));
             return;
         }
         Action a = e.getAction();
@@ -93,15 +91,12 @@ public final class SpawnMarker implements Listener {
         e.setCancelled(true);
         pending.remove(e.getPlayer().getUniqueId());
 
-        AnomalyType type = plugin.registry().get(pend.anomalyId());
-        if (type == null) return;
-
         // El jefe aparece DE PIE SOBRE el bloque marcado, centrado.
         Location spot = block.getLocation().add(0.5, 1.0, 0.5);
-        plugin.registry().setSpawnPoint(type, spot);
+        plugin.settings().setColiseum(spot);
 
-        // La marca se ve: un anillo del color de la anomalia sobre el bloque elegido.
-        var dust = Compat.dust(type.color().value(), 1.6f);
+        // La marca se ve: un anillo dorado sobre el bloque elegido.
+        var dust = Compat.dust(MenuUtil.GOLD.value(), 1.6f);
         Fx.ring(spot.clone().add(0, 0.2, 0), 1.1, 20, l ->
                 Compat.spawn(block.getWorld(), Compat.DUST, l, 1, 0, 0, 0, 0, dust));
         Compat.spawn(block.getWorld(), Compat.END_ROD, spot.clone().add(0, 0.6, 0), 12, 0.25, 0.4, 0.25, 0.02);
@@ -109,16 +104,12 @@ public final class SpawnMarker implements Listener {
 
         Player player = e.getPlayer();
         player.sendMessage(plugin.prefix()
-                .append(Component.text("Punto marcado  ", NamedTextColor.GREEN))
-                .append(Component.text(type.display(), type.color(), TextDecoration.BOLD))
-                .append(Component.text("  aparecerá en ", NamedTextColor.WHITE))
+                .append(Component.text("Coliseo marcado en ", NamedTextColor.GREEN))
                 .append(Component.text(block.getX() + " " + (block.getY() + 1) + " " + block.getZ(),
-                        NamedTextColor.WHITE, TextDecoration.BOLD))
+                        NamedTextColor.WHITE))
                 .append(Component.text("  (" + block.getWorld().getName() + ")", NamedTextColor.GRAY)));
         player.sendMessage(plugin.prefix()
-                .append(Component.text("La anomalía se activa como siempre, con el botón ", NamedTextColor.GRAY))
-                .append(Component.text("Iniciar", NamedTextColor.GREEN, TextDecoration.BOLD))
-                .append(Component.text(" del menú.", NamedTextColor.GRAY)));
+                .append(Component.text("Todas las anomalías salen aquí, a mano y por turno.", NamedTextColor.GRAY)));
 
         // De vuelta al panel un instante despues, con el punto ya pintado en su boton.
         plugin.getServer().getScheduler().runTaskLater(net.ederus.edm.Module.dueno(plugin), () -> {
