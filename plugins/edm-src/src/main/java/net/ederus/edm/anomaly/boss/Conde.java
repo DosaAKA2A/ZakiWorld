@@ -84,6 +84,8 @@ public final class Conde extends BossFight {
 
     /** Las runas del circulo. Todas se leen bien tumbadas en el suelo. */
     private static final String[] GLIFOS = {"✦", "ᚱ", "†", "ᛉ", "✧", "ᚦ", "◆", "⛧"};
+    /** Los glifos grandes de los puntos cardinales del circulo. */
+    private static final String[] GLIFOS_GRANDES = {"⛧", "†", "ᛉ", "†"};
 
     /* Los colmillos de evoker que son nuestros: su mordisco vanilla (6 fijos, sin el
      * multiplicador del menu) se cancela y el dano lo pone hit(). Si no, pegaria doble. */
@@ -1194,53 +1196,114 @@ public final class Conde extends BossFight {
                 soundAt(c, "entity.bat.takeoff", 2.0f, 0.6f);
                 bandada(bats, null, null, 0, 100, 5 * power(), 0.4);
             }
-            if (t == 120) for (Ataud at : ataudes) at.colocar(-0.9f, 1.9f, 20);
+            // La vela sigue encendida hasta que se abre la tapa: una chispa en la mecha.
+            if (t >= 22 && t < 40 && t % 4 == 0) for (Ataud at : ataudes) at.llama();
+            if (t == 120) for (Ataud at : ataudes) at.colocar(Ataud.HUNDIDO, 1.9f, 20);
         }, () -> {
             for (Ataud at : ataudes) at.quitar();
         });
     }
 
     /**
-     * Un ataud: caja de madera oscura, tapa negra con bisagra en un lado largo y un
-     * forro rojo que se ve al abrir. Tres displays que se mueven con interpolacion.
+     * Un ataud, de abajo arriba: una base de losa de piedra negra, la caja de madera
+     * oscura, el forro de ladrillo del nether rojo (se ve al abrir), la tapa negra con
+     * bisagra en un lado largo, dos asas de cadena en los costados y una vela roja
+     * encendida encima de la tapa que se apaga y cae al suelo al abrirse. Siete displays
+     * que suben del suelo y se abren por interpolacion.
+     *
+     * Medidas en el espacio del ataud (q lo gira): X el ancho (0,9), Z el largo (2),
+     * y la 'y' de colocar() es la cara de abajo de la base. Con y = 0 apoya en el suelo.
      */
     private final class Ataud {
+        /** Tan hundido que ni la tapa asoma: asi nace y asi se va. */
+        static final float HUNDIDO = -1.0f;
+        private static final float BASE = 0.15f;
+
         final Location pos;
         final Quaternionf q;
+        BlockDisplay base;
         BlockDisplay cuerpo;
         BlockDisplay forro;
         BlockDisplay tapa;
+        BlockDisplay asaIzq;
+        BlockDisplay asaDer;
+        BlockDisplay vela;
+        boolean velaEnPie = true;
+        float y = HUNDIDO;
 
         Ataud(Location pos, float giro) {
             this.pos = pos;
             this.q = new Quaternionf().rotateY(giro);
-            this.cuerpo = parte(Material.DARK_OAK_PLANKS, cuerpoT(-0.75f));
-            this.forro = parte(Material.RED_CONCRETE, forroT(-0.75f));
-            this.tapa = parte(Material.BLACK_CONCRETE, tapaT(-0.75f, 0f));
+            this.base = parte(Material.BLACKSTONE_SLAB.createBlockData(), baseT(HUNDIDO), 12);
+            this.cuerpo = parte(Material.DARK_OAK_PLANKS.createBlockData(), cuerpoT(HUNDIDO), 12);
+            this.forro = parte(Material.RED_NETHER_BRICKS.createBlockData(), forroT(HUNDIDO), 12);
+            this.tapa = parte(Material.BLACK_CONCRETE.createBlockData(), tapaT(HUNDIDO, 0f), 12);
+            BlockData cadena = Material.IRON_CHAIN.createBlockData("[axis=z]");
+            this.asaIzq = parte(cadena, asaT(HUNDIDO, -1), 12);
+            this.asaDer = parte(cadena.clone(), asaT(HUNDIDO, 1), 12);
+            BlockData encendida = Material.RED_CANDLE.createBlockData();
+            if (encendida instanceof Lightable l) l.setLit(true);
+            this.vela = parte(encendida, velaT(HUNDIDO), 15);
+        }
+
+        private Transformation t(Vector3f local, Quaternionf giro, Vector3f escala) {
+            return new Transformation(new Quaternionf(q).transform(local), giro, escala, new Quaternionf());
+        }
+
+        /* La losa ocupa la mitad de abajo de su bloque: a escala 0,3 de alto mide 0,15. */
+        private Transformation baseT(float y) {
+            return t(new Vector3f(-0.55f, y, -1.1f), new Quaternionf(q), new Vector3f(1.1f, 0.3f, 2.2f));
         }
 
         private Transformation cuerpoT(float y) {
-            return new Transformation(new Quaternionf(q).transform(new Vector3f(-0.45f, y, -1.0f)),
-                    new Quaternionf(q), new Vector3f(0.9f, 0.6f, 2.0f), new Quaternionf());
+            return t(new Vector3f(-0.45f, y + BASE, -1.0f), new Quaternionf(q), new Vector3f(0.9f, 0.6f, 2.0f));
         }
 
         private Transformation forroT(float y) {
-            return new Transformation(new Quaternionf(q).transform(new Vector3f(-0.38f, y + 0.6f, -0.93f)),
-                    new Quaternionf(q), new Vector3f(0.76f, 0.01f, 1.86f), new Quaternionf());
+            return t(new Vector3f(-0.38f, y + BASE + 0.6f, -0.93f), new Quaternionf(q),
+                    new Vector3f(0.76f, 0.01f, 1.86f));
         }
 
         /* La bisagra es la arista local x=0 de la tapa: girar en Z la levanta por el
          * otro lado, como una tapa de verdad. */
         private Transformation tapaT(float y, float angulo) {
-            return new Transformation(new Quaternionf(q).transform(new Vector3f(-0.475f, y + 0.6f, -1.025f)),
-                    new Quaternionf(q).rotateZ(angulo), new Vector3f(0.95f, 0.1f, 2.05f), new Quaternionf());
+            return t(new Vector3f(-0.475f, y + BASE + 0.6f, -1.025f), new Quaternionf(q).rotateZ(angulo),
+                    new Vector3f(0.95f, 0.1f, 2.05f));
         }
 
-        private BlockDisplay parte(Material mat, Transformation t0) {
+        /* La cadena va a lo largo de su eje Z y centrada en su bloque: a escala 0,5
+         * su centro esta a 0,25 de la esquina. Una por costado, pegada a la madera. */
+        private Transformation asaT(float y, int lado) {
+            return t(new Vector3f(lado * 0.48f - 0.25f, y + BASE + 0.3f - 0.25f, -0.3f), new Quaternionf(q),
+                    new Vector3f(0.5f, 0.5f, 0.6f));
+        }
+
+        /* La vela, de pie en la tapa hacia los pies del ataud. Centrada en su bloque:
+         * a escala 0,8 su centro esta a 0,4 de la esquina. */
+        private Transformation velaT(float y) {
+            return t(new Vector3f(0.1f - 0.4f, y + BASE + 0.7f, 0.5f - 0.4f), new Quaternionf(q),
+                    new Vector3f(0.8f));
+        }
+
+        /* Caida y tumbada en el suelo junto al lado que se abre (giro de -90 en Z: la
+         * vela queda a lo largo de X, fuera de la caja). */
+        private Transformation velaCaidaT(float y) {
+            return t(new Vector3f(0.62f, y + 0.45f, 0.5f - 0.4f), new Quaternionf(q).rotateZ((float) (-Math.PI / 2)),
+                    new Vector3f(0.8f));
+        }
+
+        /** La chispa de la mecha, mientras la vela sigue de pie. */
+        void llama() {
+            if (!velaEnPie || vela == null || !vela.isValid()) return;
+            Vector3f mecha = new Quaternionf(q).transform(new Vector3f(0.1f, y + BASE + 0.7f + 0.36f, 0.5f));
+            Compat.spawn(world(), Compat.SMALL_FLAME, pos.clone().add(mecha.x, mecha.y, mecha.z), 1, 0, 0, 0, 0);
+        }
+
+        private BlockDisplay parte(BlockData datos, Transformation t0, int luz) {
             try {
                 BlockDisplay d = world().spawn(pos, BlockDisplay.class, e -> {
-                    e.setBlock(mat.createBlockData());
-                    e.setBrightness(new Display.Brightness(12, 12));
+                    e.setBlock(datos);
+                    e.setBrightness(new Display.Brightness(luz, luz));
                     e.setViewRange(3.0f);
                     e.setShadowRadius(0f);
                     e.setPersistent(false);
@@ -1255,14 +1318,39 @@ public final class Conde extends BossFight {
             }
         }
 
+        /**
+         * Mueve el ataud entero a la altura 'y' con la tapa abierta 'angulo' radianes.
+         * En cuanto la tapa se abre, la vela se apaga y cae (en ocho ticks, mas rapida
+         * que la tapa, para que se lea que la tapa la tira).
+         */
         void colocar(float y, float angulo, int ticks) {
-            mover(cuerpo, cuerpoT(y), ticks);
-            mover(forro, forroT(y), ticks);
-            mover(tapa, tapaT(y, angulo), ticks);
+            this.y = y;
+            Conde.mover(base, baseT(y), ticks);
+            Conde.mover(cuerpo, cuerpoT(y), ticks);
+            Conde.mover(forro, forroT(y), ticks);
+            Conde.mover(tapa, tapaT(y, angulo), ticks);
+            Conde.mover(asaIzq, asaT(y, -1), ticks);
+            Conde.mover(asaDer, asaT(y, 1), ticks);
+            if (angulo > 0.01f && velaEnPie) {
+                velaEnPie = false;
+                if (vela != null && vela.isValid()) {
+                    try {
+                        BlockData apagada = Material.RED_CANDLE.createBlockData();
+                        if (apagada instanceof Lightable l) l.setLit(false);
+                        vela.setBlock(apagada);
+                    } catch (Throwable ignored) {
+                    }
+                    Compat.spawn(world(), Compat.SMOKE, vela.getLocation().add(0, y + 1.1, 0), 3,
+                            0.05, 0.05, 0.05, 0.01);
+                }
+                Conde.mover(vela, velaCaidaT(y), 8);
+                return;
+            }
+            Conde.mover(vela, velaEnPie ? velaT(y) : velaCaidaT(y), ticks);
         }
 
         void quitar() {
-            for (BlockDisplay d : new BlockDisplay[]{cuerpo, forro, tapa}) {
+            for (BlockDisplay d : new BlockDisplay[]{base, cuerpo, forro, tapa, asaIzq, asaDer, vela}) {
                 if (d == null) continue;
                 spawned.remove(d);
                 Fx.safeRemove(d);
@@ -1683,11 +1771,25 @@ public final class Conde extends BossFight {
      *
      * Los anillos son poligonos de segmentos alargados y no puntos sueltos: con
      * catorce o cuarenta lados se lee como una linea continua, y cuesta la mitad de
-     * entidades. Nace creciendo desde el centro de cada pieza, las runas giran
-     * despacio (la estrella en sentido contrario si se activa) y al acabar se encoge.
+     * entidades. Se dibuja por partes en ocho ticks (primero el borde rojo, luego el
+     * fino, el interior, las runas y la estrella), como se construyen el portal de la
+     * Parca y la Grieta de Calamity. Cada pieza nace creciendo desde su centro, las
+     * runas giran despacio (la estrella en sentido contrario si se activa) y al acabar
+     * se encoge.
      *
-     * @param ligero solo anillo exterior y runas: para los sellos de los pies, que
-     *               pueden ser muchos a la vez
+     * Lo que lleva, de fuera a dentro:
+     *   - anillo exterior rojo y, pegado por dentro, un anillo fino negro (borde doble);
+     *   - la banda de runas tumbadas mirando al cielo, con glifos GRANDES en los puntos
+     *     cardinales (cuatro en los pequeños, ocho en los grandes) entre las pequeñas;
+     *   - anillo interior negro (no en los ligeros);
+     *   - con pentaculo: la estrella de cinco puntas en trazo fino (rojo vivo sobre un
+     *     ribete negro) y un disco pequeño de ladrillo del nether rojo en el centro.
+     *
+     * Entidades: ~36 un sello de los pies, ~18 uno ligero, ~100 el Pentaculo y ~120
+     * el Eclipse.
+     *
+     * @param ligero sin anillo interior ni anillo fino: para cuando hay muchos a la vez
+     *               (el Festin, o los sellos a partir del decimotercero)
      */
     private Circulo circulo(Location suelo, double radio, int vida, boolean pentaculo, boolean ligero) {
         Location base = suelo.clone().add(0, 0.02, 0);
@@ -1695,32 +1797,47 @@ public final class Conde extends BossFight {
         base.setPitch(0);
         Circulo k = new Circulo(suelo.clone(), radio);
         float ancho = radio < 2.5 ? 0.07f : 0.12f;
+        float fino = ancho * 0.5f;
 
         // Anillo exterior, rojo.
-        int lados = (int) Fx.clamp(Math.round(radio * 5), ligero ? 10 : 14, 40);
+        int lados = (int) Fx.clamp(Math.round(radio * 4), 10, 36);
         anillo(k, base, radio, lados, ancho, Material.RED_CONCRETE);
+        // Pegado por dentro, el anillo fino negro.
+        if (!ligero) anillo(k, base, radio * 0.9, Math.max(8, (int) Math.round(lados * 0.6)), fino, Material.BLACK_CONCRETE);
         // Anillo interior, negro.
         double interior = radio * 0.66;
-        if (!ligero) anillo(k, base, interior, Math.max(10, (int) (lados * 0.75)), ancho, Material.BLACK_CONCRETE);
+        if (!ligero) anillo(k, base, interior, Math.max(10, (int) (lados * 0.7)), ancho, Material.BLACK_CONCRETE);
 
         // Las runas, en medio. Escala segun el radio: a 0.7 fijo no se verian en el grande.
-        int runas = (int) Fx.clamp(Math.round(radio * 3.6), ligero ? 6 : 8, 32);
+        // Tantas como quepan, redondeadas a multiplo de los glifos grandes para que estos
+        // caigan justo en los puntos cardinales.
+        int grandes = radio >= 4 ? 8 : 4;
+        int runas = (int) Fx.clamp(Math.round(radio * 3.6), 6, 24);
+        runas = Math.max(grandes * 2, Math.round(runas / (float) grandes) * grandes);
+        int cada = runas / grandes;
         float gs = (float) Fx.clamp(0.8 + radio * 0.25, 1.0, 3.0);
-        double rr = radio * 0.83 - gs * 0.12;
+        float gsGrande = gs * (radio >= 4 ? 1.7f : 1.5f);
         for (int i = 0; i < runas; i++) {
             double a = Math.PI * 2 * i / runas;
-            String glifo = GLIFOS[i % GLIFOS.length];
-            int color = i % 3 == 2 ? NEGRO : (i % 3 == 1 ? GRANATE : SANGRE);
-            // Tumbada (cara arriba) y con la parte de arriba de la letra mirando afuera.
+            boolean grande = i % cada == 0;
+            String glifo = grande ? GLIFOS_GRANDES[(i / cada) % GLIFOS_GRANDES.length] : GLIFOS[i % GLIFOS.length];
+            int color = grande ? SANGRE : (i % 3 == 2 ? NEGRO : (i % 3 == 1 ? GRANATE : SANGRE));
+            float s = grande ? gsGrande : gs;
+            // El texto crece desde su borde de abajo: se mete hacia dentro la mitad de su alto.
+            double rr = radio * (grande ? 0.78 : 0.83) - s * 0.12;
+            // Tumbada (cara al cielo: 90 grados en X, sin billboard) y con la parte de
+            // arriba de la letra mirando afuera.
             float yaw = (float) Math.atan2(-Math.cos(a), -Math.sin(a));
             Quaternionf q = new Quaternionf().rotateY(yaw).rotateX((float) (-Math.PI / 2));
-            Vector3f mid = new Vector3f((float) (Math.cos(a) * rr), 0.05f, (float) (Math.sin(a) * rr));
-            Vector3f esc = new Vector3f(gs, gs, gs);
+            Vector3f mid = new Vector3f((float) (Math.cos(a) * rr), grande ? 0.06f : 0.05f, (float) (Math.sin(a) * rr));
+            Vector3f esc = new Vector3f(s, s, s);
             TextDisplay td = runa(base, glifo, color, Pieza.forma(mid, q, esc, false, 0.02f, 0f));
             if (td != null) k.piezas.add(new Pieza(td, mid, q, esc, false, 1));
         }
 
-        // El pentaculo: cinco trazos que unen cada punta con la que esta a dos.
+        // El pentaculo: cinco trazos que unen cada punta con la que esta a dos. Cada
+        // trazo es una linea fina de rojo vivo sobre un ribete negro algo mas ancho y un
+        // pelo mas bajo, para que se lea nitida sobre cualquier suelo y no parpadee.
         if (pentaculo) {
             Vector3f[] v = new Vector3f[5];
             for (int i = 0; i < 5; i++) {
@@ -1731,13 +1848,30 @@ public final class Conde extends BossFight {
             for (int i = 0; i < 5; i++) {
                 Vector3f a = v[i];
                 Vector3f b = v[(i + 2) % 5];
-                segmento(k, base, a, b, ancho, Material.REDSTONE_BLOCK, 2);
+                segmento(k, base, a, b, ancho * 1.3f, Material.BLACK_CONCRETE, 2, 0f);
+                segmento(k, base, a, b, ancho * 0.55f, Material.REDSTONE_BLOCK, 2, 0.006f);
+            }
+            // El disco del centro: dos cuadrados de ladrillo rojo cruzados a 45 grados.
+            float lado = (float) (interior * 0.3);
+            for (int i = 0; i < 2; i++) {
+                double a = Math.PI / 4 * i;
+                Vector3f p0 = new Vector3f((float) (-Math.cos(a) * lado / 2), 0f, (float) (-Math.sin(a) * lado / 2));
+                Vector3f p1 = new Vector3f((float) (Math.cos(a) * lado / 2), 0f, (float) (Math.sin(a) * lado / 2));
+                segmento(k, base, p0, p1, lado, Material.RED_NETHER_BRICKS, 2, 0.003f * (i + 1));
             }
         }
 
+        // Por partes: la pieza n-esima aparece en el tick 2 + n*8/total.
+        final int total = Math.max(1, k.piezas.size());
         animate(vida, t -> {
             if (!k.vivo || cerrado) throw Stop.now();
-            if (t == 2) for (Pieza p : k.piezas) p.aplicar(1f, k.giroDe(p.grupo), 6);
+            if (t >= 2 && t <= 9) {
+                for (int i = 0; i < k.piezas.size(); i++) {
+                    if (2 + i * 8 / total != t) continue;
+                    Pieza p = k.piezas.get(i);
+                    p.aplicar(1f, k.giroDe(p.grupo), 6);
+                }
+            }
             if (t >= 10 && t % 10 == 0) {
                 k.giroRunas += 0.12f;
                 if (k.girarEstrella) k.giroEstrella -= 0.10f;
@@ -1761,19 +1895,23 @@ public final class Conde extends BossFight {
             double a1 = Math.PI * 2 * (i + 1) / lados;
             Vector3f p0 = new Vector3f((float) (Math.cos(a0) * r), 0f, (float) (Math.sin(a0) * r));
             Vector3f p1 = new Vector3f((float) (Math.cos(a1) * r), 0f, (float) (Math.sin(a1) * r));
-            segmento(k, base, p0, p1, ancho, mat, 0);
+            segmento(k, base, p0, p1, ancho, mat, 0, 0f);
         }
     }
 
-    /** Un trazo recto de a a b hecho con un bloque estirado. */
-    private void segmento(Circulo k, Location base, Vector3f a, Vector3f b, float ancho, Material mat, int grupo) {
+    /**
+     * Un trazo recto de a a b hecho con un bloque estirado. 'dy' lo sube un pelo sobre
+     * lo que tenga debajo: dos caras a la misma altura parpadean.
+     */
+    private void segmento(Circulo k, Location base, Vector3f a, Vector3f b, float ancho, Material mat, int grupo,
+                          float dy) {
         float dx = b.x - a.x;
         float dz = b.z - a.z;
         float largo = (float) Math.sqrt(dx * dx + dz * dz) + 0.03f;
         // Con rotateY, el eje X local acaba en (cos, 0, -sin): de ahi el -dz.
         float yaw = (float) Math.atan2(-dz, dx);
         Quaternionf q = new Quaternionf().rotateY(yaw);
-        Vector3f mid = new Vector3f((a.x + b.x) / 2f, 0f, (a.z + b.z) / 2f);
+        Vector3f mid = new Vector3f((a.x + b.x) / 2f, dy, (a.z + b.z) / 2f);
         Vector3f esc = new Vector3f(largo, 0.03f, ancho);
         try {
             BlockDisplay d = world().spawn(base, BlockDisplay.class, e -> {
