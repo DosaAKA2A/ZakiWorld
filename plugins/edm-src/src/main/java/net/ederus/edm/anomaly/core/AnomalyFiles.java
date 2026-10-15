@@ -59,13 +59,11 @@ public final class AnomalyFiles {
         if (files != null) {
             for (File f : files) {
                 String id = f.getName().substring(0, f.getName().length() - 4).toLowerCase(Locale.ROOT);
-                // La ficha de una anomalia que ya no existe (una retirada del catalogo)
-                // no se carga ni se borra: queda en disco por si vuelve, y se avisa
-                // sin alarma para que el admin sepa que puede quitarla.
-                if (!conocidas.contains(id)) {
-                    sueltas.add(f.getName());
-                    continue;
-                }
+                // Una ficha sin anomalia en el catalogo de EDM se carga igual: Calamity
+                // registra las suyas (vigilante, parca, ambush) DESPUES de este arranque
+                // y tiene que encontrar sus ajustes. Solo se avisa, sin alarma, por si es
+                // una retirada de verdad (mimic) que el admin quiera borrar.
+                if (!conocidas.contains(id)) sueltas.add(f.getName());
                 YamlConfiguration yml = YamlConfiguration.loadConfiguration(f);
                 fichas.put(id, yml);
                 // El punto propio de cada anomalia ya no existe: todas salen en el
@@ -77,8 +75,8 @@ public final class AnomalyFiles {
             }
         }
         if (!sueltas.isEmpty()) {
-            plugin.getLogger().info("Fichas de anomalias que ya no existen, se ignoran: "
-                    + String.join(", ", sueltas) + " (en " + CARPETA + "/, se pueden borrar).");
+            plugin.getLogger().info("Fichas sin anomalia en el catalogo de EDM: " + String.join(", ", sueltas)
+                    + " (en " + CARPETA + "/; si son de otro plugin, normal; si no, se pueden borrar).");
         }
         int nuevas = 0;
         for (AnomalyType t : types) {

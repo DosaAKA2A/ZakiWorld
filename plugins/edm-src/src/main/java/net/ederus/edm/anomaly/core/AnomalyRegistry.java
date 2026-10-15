@@ -45,6 +45,12 @@ public final class AnomalyRegistry {
     /** Las fichas (Anomalias/<id>.yml) y los numeros de sus habilidades (Skills/Anomalias/). */
     private final AnomalyFiles fichas;
     private final SkillSettings skills;
+    /**
+     * Las anomalias del propio EDM. Las que registra otro plugin despues (los minijefes
+     * de Calamity) pelean en su mundo, no en el Coliseo, y por eso no entran en el
+     * sorteo salvo que su ficha diga `rotacion: true`.
+     */
+    private final java.util.Set<String> propias = new java.util.HashSet<>();
 
     public AnomalyRegistry(AnomalyPlugin plugin) {
         this.plugin = plugin;
@@ -69,6 +75,7 @@ public final class AnomalyRegistry {
         register(new AlbaType());
         register(new RaizType());
         register(new CondeType());
+        propias.addAll(types.keySet());
     }
 
     /**
@@ -215,7 +222,8 @@ public final class AnomalyRegistry {
      * (guardianes) no pelean en seco.
      */
     public boolean inRotation(AnomalyType type) {
-        boolean def = !type.id().equals("leviatan_de_sal") && !type.id().equals("coro_abisal");
+        boolean def = propias.contains(type.id())
+                && !type.id().equals("leviatan_de_sal") && !type.id().equals("coro_abisal");
         return fichas.getBoolean(type.id(), "rotacion", def);
     }
 
