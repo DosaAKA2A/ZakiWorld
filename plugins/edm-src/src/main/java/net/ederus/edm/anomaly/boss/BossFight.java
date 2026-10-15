@@ -88,6 +88,10 @@ public abstract class BossFight {
     /* Un golpe salpicado no vuelve a salpicar: si no, tres jugadores juntos se
      * reparten el golpe en cadena hasta multiplicarlo por diez. */
     private boolean salpicando;
+    /* Mientras un golpe de habilidad (hit, o el de un jefe que reparte el suyo) esta
+     * llamando a p.damage. Ese golpe ya trae el multiplicador del menu, y el evento de
+     * dano que dispara no debe volver a aplicarlo. Ver dealingScaledDamage(). */
+    private boolean golpeEscalado;
 
     /** La animacion guionizada mas larga es la resurreccion (13 s); esto le da margen. */
     private static final int MAX_INVULNERABLE_TICKS = 400;
@@ -809,15 +813,39 @@ public abstract class BossFight {
         amount *= plugin.registry().damageMultiplier(event.type()) * abilityDamage();
         // Apuntado ANTES del golpe: si este lo mata, el mensaje de muerte ya sabe quien fue.
         event.markHit(p);
-        try {
+        final double golpe = amount;
+        dealScaled(() -> {
             if (boss != null && boss.isValid()) {
-                p.damage(amount, boss);
+                p.damage(golpe, boss);
             } else {
-                p.damage(amount);
+                p.damage(golpe);
             }
+            splash(p, golpe);
+        });
+    }
+
+    /**
+     * Ejecuta un golpe que YA lleva el multiplicador del menu aplicado.
+     *
+     * El evento de dano que dispare lo ve el manager, que multiplica el golpe cuerpo a
+     * cuerpo del jefe y de sus esbirros; con esta marca puesta lo deja pasar tal cual.
+     * Lo usa hit() y cualquier jefe que reparta dano con su propio metodo (los
+     * gemelos de cobre, que pegan cada uno con su cuerpo).
+     */
+    protected void dealScaled(Runnable golpe) {
+        boolean antes = golpeEscalado;
+        golpeEscalado = true;
+        try {
+            golpe.run();
         } catch (Throwable ignored) {
+        } finally {
+            golpeEscalado = antes;
         }
-        splash(p, amount);
+    }
+
+    /** Si ahora mismo se esta repartiendo un golpe que ya trae el multiplicador. */
+    public boolean dealingScaledDamage() {
+        return golpeEscalado;
     }
 
     /**

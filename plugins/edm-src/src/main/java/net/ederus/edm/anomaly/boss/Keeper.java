@@ -108,7 +108,7 @@ public final class Keeper extends BossFight {
             w.setCustomNameVisible(false);
         });
         net.ederus.edm.comun.Tags.markBoss(boss, ID);
-        applyHealth(plugin.registry().scaledHealth(plugin.registry().get(ID), targets(96).size()));
+        applyHealth(plugin.registry().health(plugin.registry().get(ID)));
         glowBody(NamedTextColor.AQUA);
 
         // La salida del abismo: el suelo "hierve" de sculk y el latido arranca.

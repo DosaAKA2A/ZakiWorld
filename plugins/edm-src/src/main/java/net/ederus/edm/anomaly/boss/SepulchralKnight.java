@@ -127,7 +127,7 @@ public final class SepulchralKnight extends BossFight {
         Compat.setAttribute(boss, "knockback_resistance", 1.0);
         Compat.setAttribute(boss, "follow_range", 60);
         Compat.setAttribute(boss, "movement_speed", 0.26);
-        applyHealth(plugin.registry().scaledHealth(plugin.registry().knight(), targets(96).size()));
+        applyHealth(plugin.registry().health(plugin.registry().knight()));
         // Con la invulnerabilidad vanilla de 20 ticks solo pega uno; bajarla es lo que
         // hace que un grupo pueda repartirse el trabajo de verdad.
         boss.setMaximumNoDamageTicks(6);

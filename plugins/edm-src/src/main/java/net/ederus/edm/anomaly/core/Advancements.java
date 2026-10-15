@@ -118,7 +118,7 @@ public final class Advancements {
      * Borra los logros que ya no tienen anomalia detras.
      *
      * Reescribir solo pisa los ficheros que tocan; los de una anomalia retirada se
-     * quedaban para siempre (mimic.json estuvo huerfano mucho tiempo) y el arbol del
+     * quedaban para siempre (ya paso con uno) y el arbol del
      * juego seguia ensenando un desafio imposible de conseguir. Aqui se quita todo
      * .json que no sea la raiz, la coleccion o una anomalia del registro.
      */

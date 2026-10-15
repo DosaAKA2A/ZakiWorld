@@ -89,7 +89,7 @@ public final class Bruja extends BossFight {
         Compat.setAttribute(boss, "follow_range", 64);
         Compat.setAttribute(boss, "movement_speed", 0.30);
         Compat.setAttribute(boss, "scale", 1.5);
-        applyHealth(plugin.registry().scaledHealth(plugin.registry().bruja(), targets(96).size()));
+        applyHealth(plugin.registry().health(plugin.registry().bruja()));
         boss.setMaximumNoDamageTicks(6);
 
         Tags.markBoss(boss, ID);

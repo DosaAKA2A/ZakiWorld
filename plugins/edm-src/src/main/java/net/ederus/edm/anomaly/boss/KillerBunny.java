@@ -105,7 +105,7 @@ public final class KillerBunny extends BossFight {
         Compat.setAttribute(boss, "follow_range", 64);
         Compat.setAttribute(boss, "movement_speed", 0.42);
         // Sin escala: del tamano de un conejo normal, como cualquiera de sus copias.
-        applyHealth(plugin.registry().scaledHealth(plugin.registry().bunny(), targets(96).size()));
+        applyHealth(plugin.registry().health(plugin.registry().bunny()));
         boss.setMaximumNoDamageTicks(6);
 
         Tags.markBoss(boss, ID);

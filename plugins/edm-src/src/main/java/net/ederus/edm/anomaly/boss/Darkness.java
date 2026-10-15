@@ -95,7 +95,7 @@ public final class Darkness extends BossFight {
         Compat.setAttribute(boss, "movement_speed", 0.38);
         // Poco mas grande que un enderman normal: lo gordo se guarda para la fase 3.
         Compat.setAttribute(boss, "scale", 1.5);
-        applyHealth(plugin.registry().scaledHealth(plugin.registry().darkness(), targets(96).size()));
+        applyHealth(plugin.registry().health(plugin.registry().darkness()));
         boss.setMaximumNoDamageTicks(6);
 
         Tags.markBoss(boss, ID);

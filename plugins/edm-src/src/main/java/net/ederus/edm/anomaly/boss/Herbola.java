@@ -125,7 +125,7 @@ public final class Herbola extends BossFight {
         // Rapida a proposito: su gracia es cubrir terreno, y para eso hay que andarlo.
         Compat.setAttribute(boss, "movement_speed", 0.40);
         Compat.setAttribute(boss, "scale", 1.8);
-        applyHealth(plugin.registry().scaledHealth(plugin.registry().herbola(), targets(96).size()));
+        applyHealth(plugin.registry().health(plugin.registry().herbola()));
         boss.setMaximumNoDamageTicks(6);
 
         Tags.markBoss(boss, ID);

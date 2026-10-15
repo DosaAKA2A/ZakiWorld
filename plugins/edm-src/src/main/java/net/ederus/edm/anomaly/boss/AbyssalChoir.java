@@ -100,7 +100,7 @@ public final class AbyssalChoir extends BossFight {
         Compat.setAttribute(boss, "knockback_resistance", 1.0);
         Compat.setAttribute(boss, "follow_range", 64);
         Compat.setAttribute(boss, "scale", 3.0);
-        applyHealth(plugin.registry().scaledHealth(plugin.registry().choir(), targets(96).size()));
+        applyHealth(plugin.registry().health(plugin.registry().choir()));
         boss.setMaximumNoDamageTicks(4);
 
         Tags.markBoss(boss, ID);

@@ -95,7 +95,7 @@ public final class ScreamingGoat extends BossFight {
         // Una cabra del tamano normal no impone; el atributo de escala existe desde
         // 1.20.5 y si la version no lo trae simplemente se queda pequena.
         Compat.setAttribute(boss, "scale", 2.4);
-        applyHealth(plugin.registry().scaledHealth(plugin.registry().goat(), targets(96).size()));
+        applyHealth(plugin.registry().health(plugin.registry().goat()));
         boss.setMaximumNoDamageTicks(6);
 
         Tags.markBoss(boss, ID);

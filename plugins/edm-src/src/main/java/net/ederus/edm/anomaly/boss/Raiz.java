@@ -210,7 +210,7 @@ public final class Raiz extends BossFight {
         markMinion(cuerpo);
         shell = cuerpo;
 
-        applyHealth(plugin.registry().scaledHealth(plugin.registry().get(ID), targets(96).size()));
+        applyHealth(plugin.registry().health(plugin.registry().get(ID)));
         glowBody(NamedTextColor.DARK_GREEN);
 
         // Nace del suelo: hojas palidas, resina y el crujido.
@@ -401,7 +401,11 @@ public final class Raiz extends BossFight {
             for (Player p : targets(60)) {
                 if (mirandoAlJefe(p)) continue;
                 caidos++;
-                // Dano PURO: no lo para la armadura ni la resistencia.
+                // Dano PURO: no lo para la armadura ni la resistencia. Es una sentencia
+                // (2000 mata a cualquiera), asi que el multiplicador del menu no cambia
+                // nada y no se aplica. Se apunta el golpe para que el mensaje de muerte
+                // diga que fue ROTTEN y no que el jugador murio solo.
+                event.markKill(p);
                 p.setHealth(Math.max(0, p.getHealth() - DANO_MIRADA));
                 Compat.spawn(world(), Compat.EXPLOSION, p.getLocation().add(0, 1, 0), 3, 0.3, 0.5, 0.3, 0);
                 soundAt(p.getLocation(), "entity.creaking.attack", 1.6f, 0.5f);

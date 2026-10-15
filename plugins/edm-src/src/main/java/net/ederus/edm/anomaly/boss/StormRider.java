@@ -106,7 +106,7 @@ public final class StormRider extends BossFight {
         Compat.setAttribute(boss, "armor", 10);
         Compat.setAttribute(boss, "knockback_resistance", 1.0);
         Compat.setAttribute(boss, "follow_range", 80);
-        applyHealth(plugin.registry().scaledHealth(plugin.registry().rider(), targets(96).size()));
+        applyHealth(plugin.registry().health(plugin.registry().rider()));
         boss.setMaximumNoDamageTicks(6);
 
         Tags.markBoss(boss, ID);

@@ -57,6 +57,8 @@ public final class PlayerDeaths implements Listener {
     }
 
     private boolean causedByAnomaly(PlayerDeathEvent e, Player victim, ActiveAnomaly event) {
+        // Lo que mata quitando la vida a pelo avisa antes: manda sobre todo lo demas.
+        if (event.killWithin(victim, HIT_WINDOW_MS)) return true;
         // La fuente de dano moderna ya separa quien pega (directa) de quien lo causo.
         try {
             var source = e.getDamageSource();

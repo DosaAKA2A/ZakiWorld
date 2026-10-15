@@ -214,8 +214,8 @@ public final class AnomalyPlugin extends net.ederus.edm.Module {
     /**
      * Lo que se fue del config.yml en 1.84.0: el sitio aleatorio (todo 'general'),
      * los horarios por clase y el intervalo en minutos (ahora automatico.cada-horas),
-     * la anomalia fija del automatico y la precision de unas coordenadas que el chat
-     * ya no ensena.
+     * la anomalia fija del automatico, la precision de unas coordenadas que el chat
+     * ya no ensena y la vida extra por jugador (el jefe pelea con la vida del menu).
      */
     private static final List<String> OBSOLETAS = List.of(
             "general",
@@ -224,7 +224,8 @@ public final class AnomalyPlugin extends net.ederus.edm.Module {
             "automatico.modo",
             "automatico.horas-comunes",
             "automatico.horas-altas",
-            "anuncio.precision-coordenadas");
+            "anuncio.precision-coordenadas",
+            "combate.vida-extra-por-jugador");
 
     /**
      * Mete en config.yml las claves nuevas sin tocar las que ya estan.
@@ -248,7 +249,7 @@ public final class AnomalyPlugin extends net.ederus.edm.Module {
             }
             if (quitadas > 0) {
                 getLogger().info("config.yml: quitados " + quitadas + " ajuste(s) que ya no se usan "
-                        + "(sitio aleatorio, horarios por clase, intervalo en minutos...).");
+                        + "(sitio aleatorio, horarios por clase, vida por jugador...).");
             }
             // El warp de serie paso de "/warp coliseo" a "/warp Coliseo" (asi se lee en
             // el anuncio). Solo se toca si seguia el viejo de serie tal cual.

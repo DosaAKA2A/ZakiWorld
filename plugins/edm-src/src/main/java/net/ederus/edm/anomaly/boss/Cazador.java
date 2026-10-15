@@ -105,7 +105,7 @@ public final class Cazador extends BossFight {
         Compat.setAttribute(boss, "follow_range", 80);
         Compat.setAttribute(boss, "movement_speed", 0.34);
         Compat.setAttribute(boss, "scale", 1.25);
-        applyHealth(plugin.registry().scaledHealth(plugin.registry().cazador(), targets(96).size()));
+        applyHealth(plugin.registry().health(plugin.registry().cazador()));
         boss.setMaximumNoDamageTicks(6);
 
         Tags.markBoss(boss, ID);

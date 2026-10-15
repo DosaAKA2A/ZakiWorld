@@ -123,7 +123,7 @@ public final class Rabby extends BossFight {
         Compat.setAttribute(boss, "knockback_resistance", 1.0);
         Compat.setAttribute(boss, "follow_range", 72);
         Compat.setAttribute(boss, "movement_speed", 0.26);
-        applyHealth(plugin.registry().scaledHealth(plugin.registry().rabby(), targets(96).size()));
+        applyHealth(plugin.registry().health(plugin.registry().rabby()));
         boss.setMaximumNoDamageTicks(6);
 
         Tags.markBoss(boss, ID);

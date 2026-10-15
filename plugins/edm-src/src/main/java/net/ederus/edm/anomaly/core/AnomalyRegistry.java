@@ -310,11 +310,24 @@ public final class AnomalyRegistry {
     }
 
     /**
-     * Tope del ajuste de vida. Da para un x20 largo sobre el jefe mas gordo del
+     * Tope del ajuste de vida. Da para un x40 largo sobre el jefe mas gordo del
      * catalogo; por encima de 1024 el exceso se cobra en reduccion de dano recibido
      * (ver BossFight#applyHealth), asi que el numero puede crecer sin romper nada.
+     * Es la vida con la que pelea el jefe, la misma vaya uno o vayan veinte.
      */
-    public static final double MAX_HEALTH_SETTING = 400000;
+    public static final double MAX_HEALTH_SETTING = 800000;
+
+    /**
+     * Cuanto mueve la vida un clic del menu. Va por tramos, mas o menos un 5% de lo
+     * que ya tiene: con 2000 un paso de 500 se nota, con 600000 no se notaria nada.
+     */
+    public static double healthStep(double current) {
+        if (current < 2000) return 100;
+        if (current < 10000) return 500;
+        if (current < 50000) return 2500;
+        if (current < 200000) return 10000;
+        return 25000;
+    }
 
     public void setHealth(AnomalyType type, double value) {
         fichas.set(type.id(), "vida",
@@ -328,16 +341,18 @@ public final class AnomalyRegistry {
         return Math.round(health(type) / base * 10.0) / 10.0;
     }
 
-    /**
-     * Multiplicador del dano de TODAS las habilidades de esta anomalia. 1.0 es el
-     * valor de diseno; subirlo o bajarlo mueve el jefe entero de golpe, sin tener que
-     * tocar habilidad por habilidad.
-     *
-     * No afecta al golpe cuerpo a cuerpo normal, que es un atributo de la entidad.
-     */
-    /** Tope del multiplicador de dano: hasta x20 el dano de diseno. */
-    public static final double MAX_DAMAGE_MULTIPLIER = 20.0;
+    /** Tope del multiplicador de dano: hasta x40 el dano de diseno. */
+    public static final double MAX_DAMAGE_MULTIPLIER = 40.0;
 
+    /**
+     * Multiplicador del dano de esta anomalia. 1.0 es el valor de diseno; subirlo o
+     * bajarlo mueve el jefe entero de golpe, sin tener que tocar habilidad por
+     * habilidad.
+     *
+     * Cubre las habilidades (BossFight#hit) y TAMBIEN el golpe cuerpo a cuerpo del
+     * jefe y de sus esbirros, y lo que disparan: eso lo multiplica el manager en el
+     * evento de dano (AnomalyManager#onDamage).
+     */
     public double damageMultiplier(AnomalyType type) {
         return Fx.clamp(fichas.getDouble(type.id(), "dano", 1.0),
                 0.1, MAX_DAMAGE_MULTIPLIER);
@@ -349,16 +364,18 @@ public final class AnomalyRegistry {
     }
 
     /**
-     * Vida final segun cuanta gente hay cerca. Con el valor por defecto (0.15) cada
-     * jugador extra suma un 15%, asi que un grupo de cinco pelea contra un jefe con
-     * un 60% mas de vida en vez de fundirlo en diez segundos.
+     * El siguiente valor del multiplicador al pulsar en el menu: de 0.5 en 0.5 hasta
+     * x5, que es donde se afina, y de 1 en 1 de ahi a x40. Se ajusta a la rejilla del
+     * tramo, asi un x1.3 escrito a mano pasa a x1.5 o x1.0 y no se queda descolocado.
      */
-    public double scaledHealth(AnomalyType type, int players) {
-        double base = health(type);
-        double perPlayer = plugin.settings().healthPerPlayer();
-        double scaled = base * (1 + perPlayer * Math.max(0, players - 1));
-        // Margen por encima del tope del ajuste: el escalado por jugadores se suma.
-        return Fx.clamp(scaled, 100, MAX_HEALTH_SETTING * 5);
+    public static double nextDamageStep(double current, boolean up) {
+        double v;
+        if (up) {
+            v = current < 5 ? Math.floor(current / 0.5 + 1e-9) * 0.5 + 0.5 : Math.floor(current + 1e-9) + 1;
+        } else {
+            v = current <= 5 ? Math.ceil(current / 0.5 - 1e-9) * 0.5 - 0.5 : Math.ceil(current - 1e-9) - 1;
+        }
+        return Fx.clamp(v, 0.1, MAX_DAMAGE_MULTIPLIER);
     }
 
     // ------------------------------------------------------- el Caballero Sepulcral

@@ -129,7 +129,7 @@ public final class Alba extends BossFight {
         Compat.setAttribute(boss, "knockback_resistance", 1.0);
         Compat.setAttribute(boss, "follow_range", 80);
         Compat.setAttribute(boss, "movement_speed", 0.3);
-        applyHealth(plugin.registry().scaledHealth(plugin.registry().alba(), targets(96).size()));
+        applyHealth(plugin.registry().health(plugin.registry().alba()));
         boss.setMaximumNoDamageTicks(6);
 
         Tags.markBoss(boss, ID);

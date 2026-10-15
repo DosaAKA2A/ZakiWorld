@@ -60,11 +60,6 @@ combate:
   # (misma regla que se pidio para las animaciones de Rip).
   permitir-empuje: true
 
-  # Cuanto sube la vida del jefe por cada jugador de mas. 0.15 = +15% por jugador,
-  # asi que cinco jugadores pelean contra un jefe con un 60% mas de vida.
-  # En 0 el jefe pelea con la vida que diga el menu y nada mas.
-  vida-extra-por-jugador: 0.15
-
   # Cada cuantos segundos el jefe se busca OTRO al que perseguir. La IA vanilla se
   # agarra al primero que ve y no lo suelta; contra un grupo eso regala la pelea.
   # Elige entre el que mas le ha pegado desde la ultima rotacion y otro al azar.

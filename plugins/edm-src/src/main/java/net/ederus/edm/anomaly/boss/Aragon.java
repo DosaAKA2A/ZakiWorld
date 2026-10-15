@@ -110,7 +110,7 @@ public final class Aragon extends BossFight {
         // suelo. A 2.8 sigue siendo una mole y pisa la tierra.
         Compat.setAttribute(boss, "scale", 2.8);
         Compat.setAttribute(boss, "step_height", 1.5);
-        applyHealth(plugin.registry().scaledHealth(plugin.registry().aragon(), targets(96).size()));
+        applyHealth(plugin.registry().health(plugin.registry().aragon()));
         boss.setMaximumNoDamageTicks(6);
 
         Tags.markBoss(boss, ID);

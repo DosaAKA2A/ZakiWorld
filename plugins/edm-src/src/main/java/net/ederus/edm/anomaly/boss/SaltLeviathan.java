@@ -89,7 +89,7 @@ public final class SaltLeviathan extends BossFight {
         Compat.setAttribute(boss, "follow_range", 64);
         Compat.setAttribute(boss, "movement_speed", 0.32);
         Compat.setAttribute(boss, "scale", 2.6);
-        applyHealth(plugin.registry().scaledHealth(plugin.registry().leviathan(), targets(96).size()));
+        applyHealth(plugin.registry().health(plugin.registry().leviathan()));
         boss.setMaximumNoDamageTicks(6);
 
         Tags.markBoss(boss, ID);

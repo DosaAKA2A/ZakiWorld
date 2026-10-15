@@ -118,7 +118,7 @@ public final class Piromante extends BossFight {
         Compat.setAttribute(boss, "follow_range", 80);
         Compat.setAttribute(boss, "movement_speed", 0.38);
         Compat.setAttribute(boss, "scale", 1.4);
-        applyHealth(plugin.registry().scaledHealth(plugin.registry().piromante(), targets(96).size()));
+        applyHealth(plugin.registry().health(plugin.registry().piromante()));
         boss.setMaximumNoDamageTicks(6);
         boss.setFireTicks(0);
 

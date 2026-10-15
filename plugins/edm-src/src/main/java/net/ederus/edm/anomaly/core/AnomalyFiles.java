@@ -114,8 +114,8 @@ public final class AnomalyFiles {
     private static void comments(YamlConfiguration yml) {
         yml.setInlineComments("activa", List.of("false = el automatico no la elige (a mano si se puede abrir)"));
         yml.setInlineComments("clase", List.of("ESBIRRO, GENERAL, MONARCA o DIOS"));
-        yml.setInlineComments("vida", List.of("vida base antes de escalar por jugadores (100 a 400000)"));
-        yml.setInlineComments("dano", List.of("multiplicador de TODAS sus habilidades (0.1 a 20)"));
+        yml.setInlineComments("vida", List.of("vida con la que pelea, vaya quien vaya (100 a 800000)"));
+        yml.setInlineComments("dano", List.of("multiplicador de su dano: habilidades y cuerpo a cuerpo (0.1 a 40)"));
         yml.setInlineComments("descripcion", List.of("hover del anuncio; vacio = texto del plugin"));
         yml.setInlineComments("amenaza", List.of("aviso de peligro del hover; vacio = texto del plugin"));
         yml.setInlineComments("bioma", List.of("clima de la arena (/anomaly biome); vacio = ninguno"));
@@ -193,9 +193,11 @@ public final class AnomalyFiles {
                 "  rotacion:     false = activa pero fuera del sorteo del automatico.",
                 "  clase:        ESBIRRO, GENERAL, MONARCA o DIOS. Ordena el catalogo.",
                 "  nombre:       el que sale en la barra de jefe y en el anuncio.",
-                "  vida:         hasta 400000 (por encima de 1024 el exceso se cobra en",
-                "                reduccion de dano recibido; la pelea dura lo configurado).",
-                "  dano:         multiplicador de TODAS sus habilidades, de 0.1 a 20.0.",
+                "  vida:         hasta 800000, la misma vaya un jugador o veinte (por encima",
+                "                de 1024 el exceso se cobra en reduccion de dano recibido;",
+                "                la pelea dura lo configurado).",
+                "  dano:         multiplicador de 0.1 a 40.0 de TODAS sus habilidades y del",
+                "                golpe cuerpo a cuerpo del jefe y de sus esbirros.",
                 "                Cada habilidad tiene ademas el suyo en Skills/Anomalias/" + id + ".yml.",
                 "  descripcion:  lineas del hover del anuncio (de donde viene). Vacio = las del plugin.",
                 "  amenaza:      el aviso de peligro del hover. Vacio = el del plugin.",

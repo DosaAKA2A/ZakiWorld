@@ -575,39 +575,41 @@ public final class Menus implements Listener {
         // subir y derecha para bajar, igual que en la pantalla de Ajustes.
         double health = plugin.registry().health(type);
         double times = plugin.registry().healthTimes(type);
+        int paso = (int) net.ederus.edm.anomaly.core.AnomalyRegistry.healthStep(health);
         inv.setItem(47, MenuUtil.icon(Material.GOLDEN_APPLE,
                 MenuUtil.title("Vida del jefe", MenuUtil.GOLD),
                 List.of(
-                        MenuUtil.field("Vida base", (int) health + "  (x" + times + " de lo original)",
+                        MenuUtil.field("Vida", (int) health + "  (x" + times + " de lo original)",
                                 NamedTextColor.GREEN),
-                        MenuUtil.field("Con 5 jugadores",
-                                String.valueOf((int) plugin.registry().scaledHealth(type, 5)), NamedTextColor.WHITE),
                         MenuUtil.blank(),
-                        MenuUtil.line("Sube un " + Math.round(plugin.settings().healthPerPlayer() * 100)
-                                + "% por cada jugador de más. Admite hasta"),
-                        MenuUtil.line("x20 largos de la vida original del jefe."),
-                        MenuUtil.line("Por encima de 1024 el resto se cobra bajandole"),
+                        MenuUtil.line("Es la vida con la que pelea, vaya uno o"),
+                        MenuUtil.line("vayan veinte. Admite hasta "
+                                + (int) net.ederus.edm.anomaly.core.AnomalyRegistry.MAX_HEALTH_SETTING + "."),
+                        MenuUtil.line("Por encima de 1024 el resto se cobra bajándole"),
                         MenuUtil.line("el daño que recibe; para quien pelea es igual."),
                         MenuUtil.blank(),
-                        MenuUtil.action("Clic izquierdo: +500"),
-                        Component.text("► Clic derecho: -500", NamedTextColor.YELLOW),
-                        Component.text("► Shift para pasos de 5000", NamedTextColor.GRAY)), times >= 2));
+                        MenuUtil.action("Clic izquierdo: +" + paso),
+                        Component.text("► Clic derecho: -" + paso, NamedTextColor.YELLOW),
+                        Component.text("► Shift para pasos de " + paso * 10, NamedTextColor.GRAY)), times >= 2));
 
         double dmg = plugin.registry().damageMultiplier(type);
         inv.setItem(51, MenuUtil.icon(Material.IRON_SWORD,
                 MenuUtil.title("Daño de las habilidades", MenuUtil.GOLD),
                 List.of(
-                        MenuUtil.field("Multiplicador", "x" + dmg + "  (hasta x20)",
+                        MenuUtil.field("Multiplicador", "x" + dmg + "  (hasta x"
+                                        + (int) net.ederus.edm.anomaly.core.AnomalyRegistry.MAX_DAMAGE_MULTIPLIER + ")",
                                 dmg > 1.0 ? NamedTextColor.RED
                                         : dmg < 1.0 ? NamedTextColor.GREEN : NamedTextColor.WHITE),
                         MenuUtil.blank(),
                         MenuUtil.line("Afecta a TODAS las habilidades de esta"),
-                        MenuUtil.line("anomalía a la vez. 1.0 es lo de diseno."),
-                        MenuUtil.line("No toca el golpe cuerpo a cuerpo normal."),
+                        MenuUtil.line("anomalía a la vez, y también al golpe"),
+                        MenuUtil.line("cuerpo a cuerpo del jefe y de sus esbirros."),
+                        MenuUtil.line("1.0 es lo de diseño."),
                         MenuUtil.blank(),
-                        MenuUtil.action("Clic izquierdo: +0.1"),
-                        Component.text("► Clic derecho: -0.1", NamedTextColor.YELLOW),
-                        Component.text("► Shift para pasos de 1.0", NamedTextColor.GRAY)), dmg != 1.0));
+                        MenuUtil.action("Clic izquierdo: subir"),
+                        Component.text("► Clic derecho: bajar", NamedTextColor.YELLOW),
+                        Component.text("► De 0.5 en 0.5 hasta x5; de ahí, de 1 en 1", NamedTextColor.GRAY),
+                        Component.text("► Shift para saltar de 5 en 5", NamedTextColor.GRAY)), dmg != 1.0));
     }
 
     // ---------------------------------------------------------------------- botin
@@ -2543,7 +2545,8 @@ public final class Menus implements Listener {
         }
         boolean up = event.isLeftClick();
         if (slot == 47) {
-            int step = (event.isShiftClick() ? 5000 : 500) * (up ? 1 : -1);
+            double paso = net.ederus.edm.anomaly.core.AnomalyRegistry.healthStep(plugin.registry().health(type));
+            double step = paso * (event.isShiftClick() ? 10 : 1) * (up ? 1 : -1);
             plugin.registry().setHealth(type, plugin.registry().health(type) + step);
             click(player, up ? 1.4f : 0.9f);
             player.sendActionBar(Component.text("Vida base de " + type.display() + "  ", MenuUtil.SOFT)
@@ -2553,8 +2556,11 @@ public final class Menus implements Listener {
             return;
         }
         if (slot == 51) {
-            double step = (event.isShiftClick() ? 1.0 : 0.1) * (up ? 1 : -1);
-            plugin.registry().setDamageMultiplier(type, plugin.registry().damageMultiplier(type) + step);
+            double now = plugin.registry().damageMultiplier(type);
+            double next = event.isShiftClick()
+                    ? now + (up ? 5 : -5)
+                    : net.ederus.edm.anomaly.core.AnomalyRegistry.nextDamageStep(now, up);
+            plugin.registry().setDamageMultiplier(type, next);
             click(player, up ? 1.4f : 0.9f);
             player.sendActionBar(Component.text("Daño de " + type.display() + "  ", MenuUtil.SOFT)
                     .append(Component.text("x" + plugin.registry().damageMultiplier(type),

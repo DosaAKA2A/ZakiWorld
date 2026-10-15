@@ -113,7 +113,7 @@ public final class Quimera extends BossFight {
         Compat.setAttribute(boss, "follow_range", 64);
         Compat.setAttribute(boss, "movement_speed", 0.32);
         Compat.setAttribute(boss, "scale", 1.35);
-        applyHealth(plugin.registry().scaledHealth(plugin.registry().quimera(), targets(96).size()));
+        applyHealth(plugin.registry().health(plugin.registry().quimera()));
         boss.setMaximumNoDamageTicks(6);
 
         Tags.markBoss(boss, ID);

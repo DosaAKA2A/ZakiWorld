@@ -150,7 +150,7 @@ public final class CopperTwins extends BossFight {
 
     @Override
     public void spawn() {
-        double total = plugin.registry().scaledHealth(plugin.registry().get(ID), targets(96).size());
+        double total = plugin.registry().health(plugin.registry().get(ID));
         // La vida configurada es la del DUETO: cada gemelo se lleva la mitad, para que
         // subir la vida en el menu siga significando lo mismo que en los demas jefes.
         double each = Math.max(200, total / 2.0);
@@ -580,14 +580,17 @@ public final class CopperTwins extends BossFight {
         if (p == null || !Fx.isFightable(p)) return;
         double dmg = amount * plugin.registry().damageMultiplier(event.type()) * abilityDamage();
         dmg *= 1 + 0.12 * rust.getOrDefault(p.getUniqueId(), 0);
-        try {
+        final double golpe = dmg;
+        event.markHit(p);
+        // Ya lleva el multiplicador: dealScaled evita que el manager lo vuelva a aplicar
+        // al verlo llegar como golpe de KEM o de KAM.
+        dealScaled(() -> {
             if (source != null && source.isValid()) {
-                p.damage(dmg, source);
+                p.damage(golpe, source);
             } else {
-                p.damage(dmg);
+                p.damage(golpe);
             }
-        } catch (Throwable ignored) {
-        }
+        });
     }
 
     // ------------------------------------------------------------- las dos firmadas

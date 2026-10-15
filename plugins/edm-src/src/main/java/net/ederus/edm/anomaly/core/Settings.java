@@ -136,10 +136,6 @@ public final class Settings {
         return cfg().getDouble("combate.mobcoins-minimo-por-jugador", 5);
     }
 
-    public double healthPerPlayer() {
-        return cfg().getDouble("combate.vida-extra-por-jugador", 0.15);
-    }
-
     /**
      * Si los golpes al jefe se saltan las protecciones de terreno.
      *

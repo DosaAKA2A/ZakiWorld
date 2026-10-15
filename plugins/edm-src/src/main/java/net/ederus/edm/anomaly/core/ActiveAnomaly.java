@@ -116,4 +116,21 @@ public final class ActiveAnomaly {
         return at != null && System.currentTimeMillis() - at <= ms;
     }
 
+    /*
+     * Lo mismo para lo que mata por setHealth (la Mirada de ROTTEN). Va aparte porque
+     * esa muerte no deja causa nueva: el ultimo dano registrado puede ser el golpe de
+     * otro mob de hace un rato, y sin esto se le atribuiria a el.
+     */
+    private final Map<UUID, Long> lastKill = new HashMap<>();
+
+    public void markKill(Player p) {
+        if (p != null) lastKill.put(p.getUniqueId(), System.currentTimeMillis());
+        markHit(p);
+    }
+
+    public boolean killWithin(Player p, long ms) {
+        Long at = p == null ? null : lastKill.get(p.getUniqueId());
+        return at != null && System.currentTimeMillis() - at <= ms;
+    }
+
 }

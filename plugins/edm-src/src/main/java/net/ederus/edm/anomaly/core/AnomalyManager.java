@@ -116,8 +116,8 @@ public final class AnomalyManager implements Listener {
                 type.id(),
                 "clase " + plugin.registry().classOf(type).name(),
                 "vida del menu " + Bitacora.num(plugin.registry().health(type)),
-                "extra por jugador x" + Bitacora.num(plugin.settings().healthPerPlayer()),
-                "cuentan para la vida " + Fx.playersNear(where, 96).size() + " jugador(es)");
+                "dano x" + Bitacora.num(plugin.registry().damageMultiplier(type)),
+                "cerca al abrir " + Fx.playersNear(where, 96).size() + " jugador(es)");
 
         try {
             fight.spawn();
@@ -622,6 +622,17 @@ public final class AnomalyManager implements Listener {
                     plugin.getLogger().warning("Fallo al reaccionar al daño de un esbirro: " + t);
                 }
             }
+        }
+
+        /* El multiplicador de dano del menu, para lo que NO pasa por hit(): el golpe
+         * cuerpo a cuerpo del jefe y de sus esbirros (es un atributo de la entidad) y
+         * lo que disparan o invocan (flechas, bolas de fuego, colmillos, nubes). Lo
+         * que ya viene de hit() o de un golpe de habilidad trae el multiplicador puesto
+         * y se marca mientras dura (dealingScaledDamage), asi que aqui no se repite. */
+        if (victim instanceof Player && !event.fight().dealingScaledDamage()
+                && PlayerDeaths.fromAnomaly(e.getDamager(), event)) {
+            double mult = plugin.registry().damageMultiplier(event.type());
+            if (mult != 1.0) e.setDamage(e.getDamage() * mult);
         }
 
         // El jefe o uno de los suyos le ha pegado a alguien: hay anomalias que
