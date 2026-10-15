@@ -70,6 +70,7 @@ public final class AnomalyRegistry {
         register(new CopperTwinsType());
         register(new AlbaType());
         register(new RaizType());
+        register(new CondeType());
     }
 
     /**
@@ -156,6 +157,10 @@ public final class AnomalyRegistry {
 
     public AnomalyType cazador() {
         return types.get(Cazador.ID);
+    }
+
+    public AnomalyType conde() {
+        return types.get(net.ederus.edm.anomaly.boss.Conde.ID);
     }
 
     public AnomalyType aragon() {
@@ -3356,6 +3361,139 @@ public final class AnomalyRegistry {
         public BossFight create(AnomalyPlugin plugin, ActiveAnomaly event, Location where) {
             return new net.ederus.edm.anomaly.boss.Raiz(plugin, event, where);
         }
+    }
+
+    // ---------------------------------------------------------------------- CONDE
+
+    /**
+     * CONDE, el señor de los murcielagos: la anomalia de Halloween. Vampiro con
+     * cuerpo de persona, murcielagos y circulos magicos rojos. Ver la clase Conde.
+     */
+    public final class CondeType implements AnomalyType {
+
+        @Override
+        public String id() {
+            return net.ederus.edm.anomaly.boss.Conde.ID;
+        }
+
+        @Override
+        public String display() {
+            return nombre(id(), "CONDE");
+        }
+
+        @Override
+        public TextColor color() {
+            return net.ederus.edm.anomaly.boss.Conde.ACCENT;
+        }
+
+        @Override
+        public NamedTextColor glowColor() {
+            return NamedTextColor.DARK_RED;
+        }
+
+        @Override
+        public Element element() {
+            return Element.TIERRA;
+        }
+
+        @Override
+        public Material icon() {
+            return AnomalyRegistry.icon("BAT_SPAWN_EGG", "RED_CANDLE");
+        }
+
+        @Override
+        public net.ederus.edm.anomaly.core.AnomalyClass defaultClass() {
+            return net.ederus.edm.anomaly.core.AnomalyClass.MONARCA;
+        }
+
+        @Override
+        public String tagline() {
+            return "El señor de los murciélagos";
+        }
+
+        @Override
+        public List<String> origin() {
+            return List.of(
+                    "Un noble que lleva siglos sin ver el sol.",
+                    "Llega al Coliseo con su bandada de murciélagos",
+                    "y no se va hasta que se hace de noche.");
+        }
+
+        @Override
+        public List<String> threat() {
+            return List.of(
+                    "Te ciega con oscuridad y te drena la vida para curarse.",
+                    "Sal de los círculos rojos antes de que estallen.",
+                    "Mata a sus murciélagos antes de que te muerdan.");
+        }
+
+        @Override
+        public double baseHealth() {
+            return 4200;
+        }
+
+        @Override
+        public int arenaRadius() {
+            return 24;
+        }
+
+        @Override
+        public List<Ability> abilities() {
+            List<Ability> list = new ArrayList<>();
+            // --- Fase I
+            add(list, "cd_colmillos", "Colmillos de Sombra", 1, 200, 40, 5,
+                    "Líneas de colmillos hacia tres jugadores; de los colmillos salen murciélagos.",
+                    AnomalyRegistry.icon("BONE", "IRON_NUGGET"), f -> conde(f).colmillosDeSombra());
+            add(list, "cd_enjambre", "Enjambre", 1, 260, 50, 5,
+                    "Murciélagos que le dan vueltas y después bajan en picado a morder.",
+                    AnomalyRegistry.icon("BAT_SPAWN_EGG", "FEATHER"), f -> conde(f).enjambre());
+            add(list, "cd_velo", "Velo de la Noche", 1, 280, 35, 4,
+                    "Un pulso que deja a oscuras y lento a quien esté a menos de 10 bloques.",
+                    AnomalyRegistry.icon("INK_SAC", "BLACK_DYE"), f -> conde(f).veloDeLaNoche());
+            add(list, "cd_sello", "Sello Carmesí", 1, 200, 40, 5,
+                    "Un círculo rojo bajo tres jugadores que estalla al segundo y medio.",
+                    AnomalyRegistry.icon("RED_CANDLE", "REDSTONE"), f -> conde(f).selloCarmesi());
+            // Cualquier fase: el mordisco rellena las fases II y III, que van cortas de repertorio.
+            add(list, "cd_mordisco", "Mordisco", 0, 160, 25, 4,
+                    "Se lanza sobre el más cercano, lo muerde y se cura con lo que le saca.",
+                    AnomalyRegistry.icon("ROTTEN_FLESH", "REDSTONE"), f -> conde(f).mordisco());
+            // --- Fase II
+            add(list, "cd_murcielago", "Forma de Murciélago", 2, 520, 170, 4,
+                    "Se convierte en un murciélago gigante y embiste tres veces desde el aire.",
+                    AnomalyRegistry.icon("PHANTOM_MEMBRANE", "FEATHER"), f -> conde(f).formaDeMurcielago());
+            add(list, "cd_lluvia", "Lluvia de Murciélagos", 2, 300, 60, 4,
+                    "Veinte murciélagos caen en picado sobre círculos marcados en el suelo.",
+                    AnomalyRegistry.icon("POINTED_DRIPSTONE", "ARROW"), f -> conde(f).lluviaDeMurcielagos());
+            add(list, "cd_pentaculo", "Pentáculo", 2, 340, 80, 4,
+                    "Un círculo enorme; de las cinco puntas de la estrella suben pilares de luz roja.",
+                    AnomalyRegistry.icon("RED_STAINED_GLASS", "REDSTONE_BLOCK"), f -> conde(f).pentaculo());
+            add(list, "cd_niebla", "Niebla Roja", 2, 420, 30, 3,
+                    "Seis segundos de niebla: ciega al entrar y dentro él es más rápido.",
+                    AnomalyRegistry.icon("CRIMSON_FUNGUS", "RED_DYE"), f -> conde(f).nieblaRoja());
+            // --- Fase III
+            add(list, "cd_medianoche", "Medianoche", 3, 900, 40, 3,
+                    "Se hace de noche doce segundos y llegan tres enjambres seguidos.",
+                    AnomalyRegistry.icon("CLOCK", "BLACK_CANDLE"), f -> conde(f).medianoche());
+            add(list, "cd_ataudes", "Ataúdes", 3, 420, 50, 4,
+                    "Cuatro ataúdes salen del suelo, se abren y sueltan murciélagos.",
+                    AnomalyRegistry.icon("DARK_OAK_TRAPDOOR", "DARK_OAK_PLANKS"), f -> conde(f).ataudes());
+            add(list, "cd_festin", "Festín de Sangre", 3, 360, 65, 4,
+                    "Drena a todos los que estén a menos de 12 bloques y se cura por cada uno.",
+                    AnomalyRegistry.icon("REDSTONE", "RED_DYE"), f -> conde(f).festinDeSangre());
+            add(list, "cd_eclipse", "ECLIPSE CARMESÍ", 3, 900, 60, 2,
+                    "Un círculo bajo todo el campo que estalla a los dos segundos. Sal de él.",
+                    AnomalyRegistry.icon("REDSTONE_BLOCK", "RED_CONCRETE"), f -> conde(f).eclipseCarmesi());
+            return skills.aplicar(id(), list);
+        }
+
+        @Override
+        public BossFight create(AnomalyPlugin plugin, ActiveAnomaly event, Location where) {
+            return new net.ederus.edm.anomaly.boss.Conde(plugin, event, where);
+        }
+    }
+
+    private static net.ederus.edm.anomaly.boss.Conde conde(BossFight fight) {
+        return (net.ederus.edm.anomaly.boss.Conde) fight;
     }
 
     private static void add(List<Ability> list, String id, String display, int phase,
