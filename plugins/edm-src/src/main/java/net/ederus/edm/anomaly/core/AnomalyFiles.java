@@ -52,12 +52,26 @@ public final class AnomalyFiles {
     public void load(Collection<AnomalyType> types) {
         migrate(types);
         fichas.clear();
+        java.util.Set<String> conocidas = new java.util.HashSet<>();
+        for (AnomalyType t : types) conocidas.add(t.id());
+        List<String> sueltas = new java.util.ArrayList<>();
         File[] files = dir().listFiles((d, name) -> name.toLowerCase(Locale.ROOT).endsWith(".yml"));
         if (files != null) {
             for (File f : files) {
                 String id = f.getName().substring(0, f.getName().length() - 4).toLowerCase(Locale.ROOT);
+                // La ficha de una anomalia que ya no existe (una retirada del catalogo)
+                // no se carga ni se borra: queda en disco por si vuelve, y se avisa
+                // sin alarma para que el admin sepa que puede quitarla.
+                if (!conocidas.contains(id)) {
+                    sueltas.add(f.getName());
+                    continue;
+                }
                 fichas.put(id, YamlConfiguration.loadConfiguration(f));
             }
+        }
+        if (!sueltas.isEmpty()) {
+            plugin.getLogger().info("Fichas de anomalias que ya no existen, se ignoran: "
+                    + String.join(", ", sueltas) + " (en " + CARPETA + "/, se pueden borrar).");
         }
         int nuevas = 0;
         for (AnomalyType t : types) {

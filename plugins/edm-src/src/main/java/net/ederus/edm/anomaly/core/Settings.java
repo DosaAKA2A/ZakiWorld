@@ -269,7 +269,6 @@ public final class Settings {
             java.util.Map.entry("conejo_asesino", "bloodmoon"),
             java.util.Map.entry("cazador", "bloodmoon"),
             java.util.Map.entry("bruja", "hypnos"),
-            java.util.Map.entry("mimic", "hypnos"),
             java.util.Map.entry("herbola", "aether"),
             java.util.Map.entry("rabby", "aether"),
             java.util.Map.entry("quimera", "radioactive"),

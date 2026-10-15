@@ -31,7 +31,7 @@ import net.ederus.edm.comun.Compat;
 public final class Advancements {
 
     /** Sube esto para que el datapack se reescriba en el proximo arranque. */
-    private static final int PACK_VERSION = 13;
+    private static final int PACK_VERSION = 14;
 
     private static final String NS = "anomaly";
     private static final String ROOT = "raiz";
@@ -100,15 +100,43 @@ public final class Advancements {
                 write(adv.resolve(type.id() + ".json").toFile(), forAnomaly(type));
             }
             write(adv.resolve(ALL + ".json").toFile(), collector());
+            int borrados = pruneOrphans(adv);
 
             write(marker, String.valueOf(PACK_VERSION));
             plugin.getLogger().info("Arbol de logros escrito en " + pack.getPath()
-                    + " (" + (plugin.registry().all().size() + 2) + " logros).");
+                    + " (" + (plugin.registry().all().size() + 2) + " logros"
+                    + (borrados > 0 ? ", " + borrados + " de anomalias que ya no existen borrados" : "")
+                    + ").");
             return true;
         } catch (IOException e) {
             plugin.getLogger().log(Level.WARNING, "No se pudo escribir el arbol de logros", e);
             return false;
         }
+    }
+
+    /**
+     * Borra los logros que ya no tienen anomalia detras.
+     *
+     * Reescribir solo pisa los ficheros que tocan; los de una anomalia retirada se
+     * quedaban para siempre (mimic.json estuvo huerfano mucho tiempo) y el arbol del
+     * juego seguia ensenando un desafio imposible de conseguir. Aqui se quita todo
+     * .json que no sea la raiz, la coleccion o una anomalia del registro.
+     */
+    private int pruneOrphans(Path adv) throws IOException {
+        java.util.Set<String> validos = new java.util.HashSet<>();
+        validos.add(ROOT + ".json");
+        validos.add(ALL + ".json");
+        for (AnomalyType type : plugin.registry().all()) validos.add(type.id() + ".json");
+        int borrados = 0;
+        try (java.util.stream.Stream<Path> files = Files.list(adv)) {
+            for (Path f : (Iterable<Path>) files::iterator) {
+                String name = f.getFileName().toString();
+                if (!name.endsWith(".json") || validos.contains(name)) continue;
+                Files.deleteIfExists(f);
+                borrados++;
+            }
+        }
+        return borrados;
     }
 
     private static void write(File file, String content) throws IOException {

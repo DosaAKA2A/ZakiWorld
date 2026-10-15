@@ -32,7 +32,6 @@ public final class SetLoot {
             Map.entry("herbola", "HERBOLA"),
             Map.entry("keeper", "KEEPER"),
             Map.entry("conejo_asesino", "CONEJO_ASESINO"),
-            Map.entry("mimic", "MIMIC"),
             Map.entry("quimera", "QUIMERA"),
             Map.entry("leviatan_de_sal", "LEVIATAN"),
             Map.entry("cabra_gritona", "CABRA_GRITONA"),

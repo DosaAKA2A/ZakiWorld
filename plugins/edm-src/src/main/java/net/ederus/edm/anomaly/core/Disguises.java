@@ -18,8 +18,7 @@ import java.util.UUID;
  * Hay dos niveles y se usan los dos:
  *
  *  - Con LibsDisguises (Ederus lo tiene), la entidad se ve como un jugador entero, con
- *    su skin, sus brazos y su forma. Es lo que hace que Rabby parezca un vecino y que
- *    el Mimic sea de verdad la copia de alguien.
+ *    su skin, sus brazos y su forma. Es lo que hace que Rabby parezca un vecino.
  *  - Sin el, queda el apano de siempre: la cabeza con la textura puesta como casco. Se
  *    nota que debajo hay un zombi, pero el plugin arranca igual.
  *

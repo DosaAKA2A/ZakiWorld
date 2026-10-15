@@ -506,7 +506,7 @@ public abstract class BossFight {
      * manager al morir el jefe, asi que ninguna anomalia puede quedarse sin un final
      * visible: las que tienen animacion propia la rematan con esto.
      *
-     * Ademas se lleva el CUERPO VISIBLE. Los jefes con maniqui (Rabby, el Mimic) no
+     * Ademas se lleva el CUERPO VISIBLE. Los jefes con maniqui (Rabby, Alba) no
      * mueven un dedo al morir —el que muere es el mob invisible de debajo— y el
      * cuerpo se quedaba plantado hasta que la limpieza lo borraba de golpe. Ahora se
      * encoge y se va en el destello, como las piezas de Rip.
@@ -755,8 +755,7 @@ public abstract class BossFight {
      * Fraccion de vida por debajo de la cual el jefe NO puede bajar todavia.
      *
      * Un jugador con equipo bueno puede quitar media barra de un golpe, y eso se llevaba
-     * por delante fases enteras: al Mimic le reventaban el cofre de la fase 2 y se moria
-     * sin llegar a robarle la cara a nadie. Con esto el golpe se recorta para dejarlo
+     * por delante fases enteras sin dar tiempo a ver lo que trae cada una. Con esto el golpe se recorta para dejarlo
      * justo en el umbral, la transicion salta en el tick siguiente y la pelea se juega
      * entera. Por defecto 0: los demas jefes no lo necesitan.
      */
@@ -989,7 +988,7 @@ public abstract class BossFight {
      * El equipo NO se copia del jefe: la invisibilidad esconde el cuerpo del mob
      * pero no lo que lleva puesto, asi que si el zombi de debajo cargara los mismos
      * items que el maniqui se verian flotando a su lado, todo por duplicado. El
-     * equipo se le pone directamente al cuerpo visible (ver Mimic.dressAs) y el mob
+     * equipo se le pone directamente al cuerpo visible y el mob
      * de debajo va vacio.
      */
     private void tickShell() {

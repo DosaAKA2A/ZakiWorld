@@ -714,8 +714,7 @@ public final class Alba extends BossFight {
     /**
      * Encara TODO lo visible hacia una direccion. El face() de siempre no sirve
      * montada: rota al zombi invisible, y lo que se ve es la pareja corcel+maniqui,
-     * que llevan su propia guiñada (era el fallo de las embestidas, el mismo que
-     * el del Mimic). setRotation NO desmonta al pasajero, un teleport si.
+     * que llevan su propia guiñada (era el fallo de las embestidas). setRotation NO desmonta al pasajero, un teleport si.
      */
     private void encarar(Vector dir) {
         if (dir == null || dir.lengthSquared() < 1.0E-4) return;
