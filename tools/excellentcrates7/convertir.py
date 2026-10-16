@@ -13,6 +13,8 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from texto import a_snbt, a_mm, plano
 
 SRC, EDM_CFG, QJSON, OUT = sys.argv[1:5]
+# Opcional: locations.yml del servidor de destino (el dev tiene las cajas en otro sitio que el Survival).
+LOCS = sys.argv[5] if len(sys.argv) > 5 else None
 
 # ---------------------------------------------------------------- calidades
 CALIDADES = [  # de mas comun a mas rara
@@ -215,10 +217,103 @@ def color_rgb(h):
     return {'red': int(h[1:3], 16), 'green': int(h[3:5], 16), 'blue': int(h[5:7], 16), 'alpha': 255}
 
 
+# Nombre Bukkit del mundo -> clave (los de LethalWorld no van en minecraft:)
+MUNDOS = {'world_lethal_world_calamity': 'lethal_world:calamity', 'world_lethal_world_calamity2': 'lethal_world:calamity2'}
+
 YAW = {'SOUTH': 0, 'SOUTH_SOUTH_WEST': 22.5, 'SOUTH_WEST': 45, 'WEST_SOUTH_WEST': 67.5, 'WEST': 90,
        'WEST_NORTH_WEST': 112.5, 'NORTH_WEST': 135, 'NORTH_NORTH_WEST': 157.5, 'NORTH': 180,
        'NORTH_NORTH_EAST': -157.5, 'NORTH_EAST': -135, 'EAST_NORTH_EAST': -112.5, 'EAST': -90,
        'EAST_SOUTH_EAST': -67.5, 'SOUTH_EAST': -45, 'SOUTH_SOUTH_EAST': -22.5}
+
+
+def rango(texto):
+    """'1-3, 5-7, 9' -> '1,2,3,5,6,7,9'"""
+    out = []
+    for t in str(texto).replace(' ', '').split(','):
+        if '-' in t:
+            a, b = t.split('-')
+            out += range(int(a), int(b) + 1)
+        elif t:
+            out.append(int(t))
+    return ','.join(map(str, out))
+
+
+def boton(material, nombre, slots):
+    return {'icon': {'Material': 'minecraft:' + material, 'Display_Name': nombre, 'Lore': [], 'Hide_Components': True},
+            'slots': str(slots)}
+
+
+def cristal(material, slots):
+    return {'icon': {'Material': 'minecraft:' + material, 'Lore': [], 'Hide_Components': True, 'Hide_Tooltip': True},
+            'slots': slots}
+
+
+def escribir_menu(obj, d, cid):
+    """La vista previa de la caja como su menu de PhoenixCrates: titulo, marco, flechas y salir."""
+    nombre = ((d.get('menus') or {}).get('rewards') or '')
+    ruta = os.path.join(SRC, 'menus', nombre + '.yml')
+    if not nombre or not os.path.exists(ruta):
+        return 'default'
+    m = yaml.safe_load(open(ruta, encoding='utf-8'))
+    titulo = m['settings']['title'].replace('%phoenixcrates_keys_', '%excellentcrates_keys_')
+    it = m.get('items') or {}
+    pag = m.get('pagination') or {}
+    filas = int(m['settings'].get('rows', 5))
+    usados = set()
+    items = {}
+    for k, v in it.items():
+        if v.get('material', '').endswith('STAINED_GLASS_PANE'):
+            items[k.replace('-', '_')] = cristal(v['material'].lower(), rango(v['slot']))
+            usados |= set(rango(v['slot']).split(','))
+    botones = {}
+    for k, v in it.items():
+        if 'CLOSE_INVENTORY' in str(v.get('actions')):
+            botones['close'] = boton(v['material'].lower(), a_mm(v.get('display-name', 'Salir')), v['slot'])
+            usados.add(str(v['slot']))
+    prev, nxt = pag.get('previous-item') or {}, pag.get('next-item') or {}
+    if prev:
+        botones['previous_page'] = boton(prev['material'].lower(), a_mm(prev['display-name']), prev['slot'])
+        botones['previous_page_inactive'] = cristal('black_stained_glass_pane', prev['slot'])
+        usados.add(str(prev['slot']))
+    if nxt:
+        botones['next_page'] = boton(nxt['material'].lower(), a_mm(nxt['display-name']), nxt['slot'])
+        botones['next_page_inactive'] = cristal('black_stained_glass_pane', nxt['slot'])
+        usados.add(str(nxt['slot']))
+    # El marco no pisa las casillas de los botones (las flechas tienen su propio cristal cuando no hay pagina)
+    ocupados = {str(b['slots']) for b in botones.values()}
+    for v in items.values():
+        v['slots'] = ','.join(x for x in v['slots'].split(',') if x not in ocupados)
+    premios = rango(pag.get('slots', '10-16, 19-25, 28-34'))
+    # La casilla de "llaves disponibles" de PhoenixCrates (el titulo ya dice cuantas): cristal negro.
+    libres = [str(i) for i in range(9) if str(i) not in usados and str(i) not in premios.split(',')]
+    if libres:
+        items['marco_llaves'] = cristal('black_stained_glass_pane', ','.join(libres))
+    perfil = {'Settings': {
+        'name': nombre,
+        'reward': {
+            'hide_unavailable': False,
+            'name': '%reward_name%',
+            'lore': {
+                'components': {
+                    'limit': {'condition': '%reward_has_limit_marker%',
+                              'format': '<br><#8F8F8F>Quedan <white>%reward_limit_remaining%</white> de '
+                                        '<white>%reward_limit_capacity%</white></#8F8F8F>', 'fallback': ''},
+                    'description': {'condition': '%reward_description%', 'format': '{value}', 'fallback': ''},
+                },
+                'groups': {},
+                'text': ['%description%', '%limit%'],
+            },
+            'slots': premios,
+        },
+        'inventory': {
+            'title': a_mm(titulo),
+            'type': 'minecraft:generic_9x%d' % filas,
+            'items': items,
+            'buttons': botones,
+        },
+    }}
+    escribir(os.path.join(obj, 'preview', 'inventory', cid + '.yml'), perfil)
+    return cid
 
 
 def main():
@@ -226,6 +321,8 @@ def main():
     qmap = json.load(open(QJSON, encoding='utf-8'))
     edm = yaml.safe_load(open(EDM_CFG, encoding='utf-8'))['cajas']
     locs = (yaml.safe_load(open(os.path.join(SRC, 'locations.yml'), encoding='utf-8')) or {}).get('locations', {})
+    if LOCS:  # las del destino mandan; las cajas que no tiene se quedan con las del Survival
+        locs.update((yaml.safe_load(open(LOCS, encoding='utf-8')) or {}).get('locations', {}))
     informe = {}
 
     # Calidades
@@ -336,8 +433,9 @@ def main():
         pos = {}
         for s in locs.get(pid, []):
             w, x, y, z, cara = s.split(';')
-            pos.setdefault('minecraft:' + w.lower(), []).append('%s,%s,%s,0.0,%s' % (
-                float(x), float(y), float(z), float(YAW.get(cara, 180))))
+            # La 7 compara la posicion con la del bloque (pitch y yaw 0): con otro yaw no reconoce la caja.
+            pos.setdefault(MUNDOS.get(w, 'minecraft:' + w.lower()), []).append('%s,%s,%s,0.0,0.0' % (
+                float(x), float(y), float(z)))
         escribir(os.path.join(obj, 'crate', cid + '.yml'), {
             'base': {'permission_required': False},
             'display': {'name': a_mm(d.get('display-name') or pid), 'lore': [a_mm(l) for l in item.get('lore') or []]},
@@ -346,9 +444,9 @@ def main():
             'key_requirements': {'enabled': bool(d.get('key-required', True)),
                                  'keys': {llave(k): {'amount': 1} for k in d.get('linked-keys-ids') or []}},
             'animation': {'enabled': True, 'profile': 'csgo_animation:default'},
-            'preview': {'enabled': True, 'config': 'inventory:default'},
+            'preview': {'enabled': True, 'config': 'inventory:' + escribir_menu(obj, d, cid)},
             'hologram': {'enabled': bool(holo), 'text': [a_mm(l) for l in holo],
-                         'offset': {'x': 0.0, 'y': float((d.get('hologram') or {}).get('offset', 0.7)), 'z': 0.0}},
+                         'offset': {'x': 0.0, 'y': 0.7, 'z': 0.0}},
             'blocks': {'positions': pos},
             'effect': {'enabled': True, 'profile': 'spiral:default'},
             'opening': {'enabled': True, 'opening_commands': []},
