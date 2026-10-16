@@ -160,6 +160,8 @@ public final class AnomalyPlugin extends net.ederus.edm.Module {
             getLogger().warning(Compat.missingParticles() + " particula(s) no existen en esta versión; "
                     + "las animaciones que las usen se veran más pobres.");
         }
+        // Comprueba el cargador de modelos de block-display.com sin crear entidades.
+        net.ederus.edm.anomaly.fx.ModeloBde.autoprueba(getLogger());
     }
 
     @Override

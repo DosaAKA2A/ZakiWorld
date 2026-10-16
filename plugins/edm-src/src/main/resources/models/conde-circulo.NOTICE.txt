@@ -1,0 +1,17 @@
+Modelo: Light Magic Circle animated
+Recurso: conde-circulo.json
+Autor: TheDuckInBlue
+Fuente: https://www.block-display.com/bd/56202
+Licencia: BDL BY (permite uso comercial y obras derivadas con atribucion)
+SHA-256 del .bdengine original: 569beb41a350cf270532e406ce91223d62da17451e7065f4d141188bb064daac
+
+Cambios respecto al original:
+- Convertido con tools/edm/bde-export.py a JSON formato 2: solo geometria, textos de un caracter, claves de animacion.
+- Colecciones sin animacion aplanadas en la matriz de sus hijos: 4. Grupos animados conservados: 1.
+- Escalado x0.417269: radio horizontal 1,0, centrado y con el suelo en y=0 (pose de la ultima clave, tick 5).
+- Recolor: yellow_concrete_powder -> RED_CONCRETE.
+- Textos en #B3122E, fondo transparente, sin sombra ni estilos.
+- Descartado: ajustes del editor (camara, fisicas, sonido vacio).
+- Descartado: color, fondo y estilos de los textos (color forzado, fondo transparente).
+- Descartado: etiquetas NBT (Tags) de las colecciones.
+- El .bdengine original no va en el jar; se guarda en tools/edm/fuentes/.
