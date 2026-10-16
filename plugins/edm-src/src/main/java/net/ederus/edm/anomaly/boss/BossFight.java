@@ -855,8 +855,19 @@ public abstract class BossFight {
      * sitio donde hace falta aplicar el multiplicador configurado.
      */
     public void hit(Player p, double amount) {
+        hit(p, amount, abilityDamage());
+    }
+
+    /**
+     * Igual que hit(), pero con el multiplicador de la habilidad que se leyo AL
+     * LANZARLA (abilityDamage() en el momento del cast). Para los golpes que caen
+     * despues de su 'cast' por diseno de la animacion, o cuando un fichero viejo
+     * trae un 'cast' mas corto que la animacion actual: sin esto ese golpe perdia el
+     * 'dano' de la habilidad y contaba como x1.0.
+     */
+    public void hit(Player p, double amount, double abilityMult) {
         if (p == null || !Fx.isFightable(p)) return;
-        amount *= plugin.registry().damageMultiplier(event.type()) * abilityDamage();
+        amount *= plugin.registry().damageMultiplier(event.type()) * abilityMult;
         // Apuntado ANTES del golpe: si este lo mata, el mensaje de muerte ya sabe quien fue.
         event.markHit(p);
         final double golpe = amount;

@@ -312,13 +312,25 @@ public final class Conde extends BossFight {
             if (t == ENTRADA_ATERRIZA + 2) at.desmontar();
         }, () -> {
             at.quitar();
-            if (!fuera[0] && !cerrado) soltarEntrada();
+            if (!fuera[0] && !cerrado) {
+                /* Cortada a medias: si el cuerpo no estaba (referencia vieja que el
+                 * manager reengancha luego), se suelta en cuanto vuelva (ambient):
+                 * si no, el jefe se quedaba sin IA ni gravedad flotando sobre el ataud. */
+                if (!soltarEntrada()) entradaPendiente = true;
+                encenderVelas();
+            }
         });
     }
 
-    /** El final de la entrada: IA, gravedad y golpeable. Tambien si la escena se corta. */
-    private void soltarEntrada() {
-        if (boss == null || !boss.isValid()) return;
+    /** La entrada se corto sin que el cuerpo estuviera: falta soltarlo. */
+    private boolean entradaPendiente;
+
+    /**
+     * El final de la entrada: IA, gravedad y golpeable. Tambien si la escena se corta.
+     * Devuelve false si no habia cuerpo al que soltar.
+     */
+    private boolean soltarEntrada() {
+        if (boss == null || !boss.isValid()) return false;
         boss.setAI(true);
         boss.setGravity(true);
         boss.setInvulnerable(false);
@@ -332,6 +344,7 @@ public final class Conde extends BossFight {
             }
             if (cuerpo instanceof Mannequin m) posar(m, Pose.STANDING);
         }
+        return true;
     }
 
     // -------------------------------------------------------------------- ambiente
@@ -344,6 +357,7 @@ public final class Conde extends BossFight {
     @Override
     protected void ambient() {
         if (!alive()) return;
+        if (entradaPendiente && soltarEntrada()) entradaPendiente = false;
         moverVelas();
         if (formaBat != null && formaBat.isValid()) {
             if (ticks() % 2 == 0) {
@@ -367,7 +381,8 @@ public final class Conde extends BossFight {
     private static final double RADIO_VELAS = 1.6;
 
     private void encenderVelas() {
-        if (boss == null) return;
+        // Una sola vez por pelea: la entrada las enciende al aterrizar o, si se corta, al final.
+        if (boss == null || !velas.isEmpty() || cerrado) return;
         Location c = boss.getLocation();
         for (int i = 0; i < 4; i++) {
             BlockDisplay v = vela(puntoVela(c, i), true, 2);
@@ -644,6 +659,17 @@ public final class Conde extends BossFight {
             Compat.spawn(world(), Compat.ENTITY_EFFECT, pecho, 6, 0.25, 0.3, 0.25, 0, rojo());
         }
 
+        /*
+         * El Conde y sus Vastagos son zombis: medio minuto bajo el agua y vanilla los
+         * cambia por un ahogado NUEVO (otro UUID). El jefe desapareceria del mundo y la
+         * pelea se cerraria "sin cuerpo". Ni el ni los suyos se transforman.
+         */
+        @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
+        public void onTransformar(org.bukkit.event.entity.EntityTransformEvent e) {
+            Entity quien = e.getEntity();
+            if ((boss != null && quien.equals(boss)) || vastagoDe(quien) != null) e.setCancelled(true);
+        }
+
         /** Quien se va en plena Medianoche vuelve con su hora de siempre. */
         @EventHandler
         public void onSalir(PlayerQuitEvent e) {
@@ -831,6 +857,9 @@ public final class Conde extends BossFight {
             sellos.add(new Sello(esc, c, reducido, i < SELLO_DIBUJADOS));
         }
         final Set<UUID> golpeados = new HashSet<>();
+        // El 'dano' de la habilidad se fija al lanzarla: el estallido (tick 46) cae
+        // fuera del 'cast' de un fichero viejo (40) y perderia el multiplicador.
+        final double mult = abilityDamage();
         soundAt(loc(), "block.bell.resonate", 1.6f, 0.6f);
         announce(Component.text("Sello carmesí. Sal del círculo rojo."));
 
@@ -864,7 +893,7 @@ public final class Conde extends BossFight {
                         if (plano(v.getLocation(), s.c) > SELLO_RADIO) continue;
                         if (Math.abs(v.getLocation().getY() - s.c.getY()) > 2.5) continue;
                         if (!golpeados.add(v.getUniqueId())) continue;
-                        hit(v, 16 * power());
+                        hit(v, 16 * power(), mult);
                         push(v, fuera(v.getLocation(), s.c).multiply(0.55).setY(0.3));
                     }
                 }
@@ -1287,6 +1316,8 @@ public final class Conde extends BossFight {
         final List<Set<UUID>> tocados = new ArrayList<>();
         for (int i = 0; i < 5; i++) tocados.add(new HashSet<>());
         final Set<UUID> onda = new HashSet<>();
+        // Los ultimos rayos (hasta el tick 79) rozan el final del 'cast' de 80.
+        final double mult = abilityDamage();
         animate(PENTA_FIN, t -> {
             if (cerrado || !alive()) throw Stop.now();
             k.tick(t);
@@ -1316,7 +1347,7 @@ public final class Conde extends BossFight {
                     double dy = p.getLocation().getY() - v.getY();
                     if (dy < -1 || dy > 40) continue;
                     if (!tocados.get(i).add(p.getUniqueId())) continue;
-                    hit(p, 18 * power());
+                    hit(p, 18 * power(), mult);
                     push(p, fuera(p.getLocation(), v).multiply(0.6).setY(0.35));
                 }
             }
@@ -1328,7 +1359,7 @@ public final class Conde extends BossFight {
                     if (plano(p.getLocation(), c) > 7) continue;
                     if (Math.abs(p.getLocation().getY() - c.getY()) > 3) continue;
                     if (!onda.add(p.getUniqueId())) continue;
-                    hit(p, 8 * power());
+                    hit(p, 8 * power(), mult);
                     push(p, fuera(p.getLocation(), c).multiply(0.7).setY(0.3));
                 }
             }
@@ -1747,6 +1778,8 @@ public final class Conde extends BossFight {
         final Escena esc = new Escena();
         final Eclipse k = new Eclipse(esc, c, Math.atan2(hacia.getX(), hacia.getZ()));
         Compat.apply(boss, "slowness", ECLIPSE_ESTALLA + 10, 4);
+        // El destello (tick 60) cae fuera del 'cast' de un fichero viejo (60).
+        final double mult = abilityDamage();
         titleNear(Component.text("ECLIPSE CARMESÍ", ACCENT),
                 Component.text("Sal del círculo rojo", NamedTextColor.GRAY));
         soundAt(c, "entity.wither.ambient", 1.6f, 0.5f);
@@ -1788,7 +1821,7 @@ public final class Conde extends BossFight {
                 double d = plano(p.getLocation(), c);
                 if (d > r + 0.2) continue;
                 if (Math.abs(p.getLocation().getY() - c.getY()) > 4) continue;
-                hit(p, (d < 3 ? 34 : 24) * power());
+                hit(p, (d < 3 ? 34 : 24) * power(), mult);
                 push(p, fuera(p.getLocation(), c).multiply(1.2).setY(0.55));
             }
         }, esc::quitar);
@@ -3437,6 +3470,8 @@ public final class Conde extends BossFight {
         final int tc;
         final int tl;
         final Supplier<Location> mira;
+        /** El 'dano' de la habilidad al lanzarla, para el golpe del choque. */
+        final double mult;
         private final Pz nucleo;
         private final Pz[] corona = new Pz[6];
         private final Pz[] brasa = new Pz[6];
@@ -3460,6 +3495,8 @@ public final class Conde extends BossFight {
             this.tc = tc;
             this.tl = tl;
             this.mira = mira;
+            // Se crea al lanzar la habilidad: el choque puede caer fuera de su 'cast'.
+            this.mult = abilityDamage();
             Location h = boss.getLocation();
             nucleo = e.pz(h, Material.REDSTONE_BLOCK, 0.45 * k, 0.45 * k, 0.45 * k);
             for (int i = 0; i < 6; i++) corona[i] = e.pz(h, Material.RED_STAINED_GLASS, 0.4 * k, 0.08 * k, 0.2 * k);
@@ -3612,7 +3649,7 @@ public final class Conde extends BossFight {
                 if (plano(p.getLocation(), G) > radio) continue;
                 double dy = p.getLocation().getY() - G.getY();
                 if (dy < -1.5 || dy > 3) continue;
-                hit(p, dano * power());
+                hit(p, dano * power(), mult);
                 push(p, fuera(p.getLocation(), G).multiply(grande ? 0.6 : 0.35).setY(0.25));
             }
         }
