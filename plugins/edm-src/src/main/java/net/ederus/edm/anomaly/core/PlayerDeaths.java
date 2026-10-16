@@ -52,8 +52,36 @@ public final class PlayerDeaths implements Listener {
         if (e.deathMessage() == null) return; // alguien las tiene apagadas: se respeta
 
         AnomalyType type = event.type();
+        Component quien = nombrePropio(e, victim, event);
         e.deathMessage(Component.text(victim.getName() + " ha sido asesinado por ", NamedTextColor.GRAY)
-                .append(Component.text(type.display(), type.color())));
+                .append(quien != null ? quien : Component.text(type.display(), type.color())));
+    }
+
+    /**
+     * Si la entidad que dio el golpe final tiene nombre propio en la pelea (un esbirro
+     * con nombre, como los Vastagos del Conde), ese nombre; si no, null y el mensaje
+     * lleva el de la anomalia. Lo decide la pelea con BossFight.killerName.
+     */
+    private static Component nombrePropio(PlayerDeathEvent e, Player victim, ActiveAnomaly event) {
+        BossFight fight = event.fight();
+        if (fight == null) return null;
+        java.util.List<Entity> candidatos = new java.util.ArrayList<>();
+        try {
+            var source = e.getDamageSource();
+            candidatos.add(source.getDirectEntity());
+            candidatos.add(source.getCausingEntity());
+        } catch (Throwable ignored) {
+        }
+        if (victim.getLastDamageCause() instanceof EntityDamageByEntityEvent by) candidatos.add(by.getDamager());
+        for (Entity c : candidatos) {
+            if (c == null) continue;
+            try {
+                Component nombre = fight.killerName(c);
+                if (nombre != null) return nombre;
+            } catch (Throwable ignored) {
+            }
+        }
+        return null;
     }
 
     private boolean causedByAnomaly(PlayerDeathEvent e, Player victim, ActiveAnomaly event) {

@@ -6,7 +6,9 @@ import net.kyori.adventure.text.format.TextColor;
 import net.kyori.adventure.text.format.TextDecoration;
 import net.kyori.adventure.title.Title;
 import net.ederus.edm.anomaly.AnomalyPlugin;
+import io.papermc.paper.datacomponent.item.ResolvableProfile;
 import net.ederus.edm.anomaly.core.ActiveAnomaly;
+import net.ederus.edm.anomaly.core.ArenaGuard;
 import net.ederus.edm.anomaly.core.Disguises;
 import net.ederus.edm.anomaly.core.Glow;
 import net.ederus.edm.anomaly.core.Stop;
@@ -25,7 +27,10 @@ import org.bukkit.entity.Display;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.EvokerFangs;
 import org.bukkit.entity.LivingEntity;
+import org.bukkit.entity.Mannequin;
 import org.bukkit.entity.Player;
+import org.bukkit.entity.Pose;
+import org.bukkit.entity.Projectile;
 import org.bukkit.entity.TextDisplay;
 import org.bukkit.entity.Zombie;
 import org.bukkit.event.EventHandler;
@@ -103,6 +108,13 @@ public final class Conde extends BossFight {
     private final List<BlockDisplay> velas = new ArrayList<>();
     private double giroVelas;
 
+    /** Los Vastagos que siguen en pie o cayendo. Ver la seccion VASTAGOS. */
+    private final List<Vastago> vastagos = new ArrayList<>();
+    /** La skin de los Vastagos ya resuelta contra Mojang; null hasta que llega. */
+    private ResolvableProfile perfilVastago;
+    /** Mientras un mordisco de Vastago reparte su salpicadura, para no salpicar dos veces. */
+    private boolean mordiendo;
+
     private final Escucha escucha = new Escucha();
 
     public Conde(AnomalyPlugin plugin, ActiveAnomaly event, Location where) {
@@ -153,6 +165,8 @@ public final class Conde extends BossFight {
         wearShell(Disguises.profileOfAccount(plugin, SKIN_ACCOUNT),
                 Component.text("CONDE", ACCENT, TextDecoration.BOLD));
         Disguises.resolveAccount(plugin, SKIN_ACCOUNT, this::reskinShell);
+        // La de los Vastagos se pide ya: cuando salga el primero, la cara buena estara lista.
+        Disguises.resolveAccount(plugin, SKIN_VASTAGO, p -> perfilVastago = p);
 
         Compat.setAttribute(boss, "max_health", 20);
         Compat.setAttribute(boss, "attack_damage", 10);
@@ -343,6 +357,8 @@ public final class Conde extends BossFight {
         devolverHora();
         volverHumano(false);
         apagarVelas();
+        // Sus Vastagos caen con el.
+        for (Vastago v : new ArrayList<>(vastagos)) v.caer(false);
         Location l = loc().clone().add(0, 1.1, 0);
         LivingEntity cuerpo = shell;
         if (cuerpo != null && cuerpo.isValid()) {
@@ -381,9 +397,25 @@ public final class Conde extends BossFight {
         } catch (Throwable ignored) {
         }
         colmillos.clear();
-        // Las velas estan en 'spawned': las quita super.cleanup(). Aqui solo la lista.
+        // Las velas y los Vastagos (zombi y maniqui) estan en 'spawned': los quita
+        // super.cleanup(), brillo incluido. Aqui solo las listas.
         velas.clear();
+        vastagos.clear();
         super.cleanup();
+    }
+
+    /** Un Vastago se cae al morir su zombi; con el sonido de muerte si lo mato alguien. */
+    @Override
+    public void onMinionDeath(LivingEntity minion) {
+        Vastago v = vastagoDe(minion);
+        if (v == null || !minion.equals(v.mob)) return;
+        v.caer(minion.getKiller() != null);
+    }
+
+    /** Quien muere por un Vastago lee su nombre, no el del Conde. */
+    @Override
+    public Component killerName(Entity killer) {
+        return vastagoDe(killer) != null ? Component.text(VASTAGO_NOMBRE, ACCENT) : null;
     }
 
     /**
@@ -412,6 +444,68 @@ public final class Conde extends BossFight {
                 }
             }
             if (directo instanceof EvokerFangs f && colmillos.contains(f.getUniqueId())) e.setCancelled(true);
+        }
+
+        /*
+         * Los suyos no se pegan entre ellos. El manager ya impide jefe contra esbirro y
+         * esbirro contra jefe; esto cubre esbirro contra esbirro (murcielagos, Vastagos
+         * y sus maniquies), que no lo cubria nadie.
+         */
+        @EventHandler(priority = EventPriority.LOWEST)
+        public void onEntreSuyos(EntityDamageByEntityEvent e) {
+            String id = event.typeId();
+            if (!id.equals(Tags.minionId(e.getEntity()))) return;
+            Entity origen = e.getDamager();
+            if (origen instanceof Projectile p && p.getShooter() instanceof Entity tirador) origen = tirador;
+            if (id.equals(Tags.minionId(origen)) || (boss != null && origen.equals(boss))) e.setCancelled(true);
+        }
+
+        /*
+         * Lo que se le pega al maniqui de un Vastago se le pasa a su zombi, como hace el
+         * manager con el cuerpo del jefe. Se veta para que ArenaGuard no lo descancele:
+         * si no, el maniqui perderia vida propia y el golpe contaria dos veces.
+         * El barrido de espada se descarta: ya le llega al zombi, que esta en el mismo sitio.
+         */
+        @EventHandler(priority = EventPriority.LOWEST)
+        public void onGolpeAlVastago(EntityDamageByEntityEvent e) {
+            if (vastagos.isEmpty()) return;
+            Vastago v = vastagoDe(e.getEntity());
+            if (v == null || !e.getEntity().equals(v.cuerpo)) return;
+            e.setCancelled(true);
+            ArenaGuard.vetar(e);
+            if (!v.vivo() || Tags.isOurs(e.getDamager())) return;
+            if (e.getCause() == EntityDamageEvent.DamageCause.ENTITY_SWEEP_ATTACK) return;
+            try {
+                v.mob.damage(e.getDamage(), e.getDamager());
+            } catch (Throwable ignored) {
+            }
+        }
+
+        /*
+         * El mordisco del Vastago: el golpe de su zombi a un jugador salpica con el
+         * mismo dano a los que esten pegados a el y le roba vida al Conde. En MONITOR
+         * para leer el dano ya final del manager (multiplicador del menu incluido); por
+         * eso la salpicadura va con dealScaled, para no multiplicarlo otra vez.
+         */
+        @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
+        public void onMordiscoVastago(EntityDamageByEntityEvent e) {
+            if (mordiendo || vastagos.isEmpty()) return;
+            if (!(e.getEntity() instanceof Player victima)) return;
+            Vastago v = vastagoDe(e.getDamager());
+            if (v == null || !v.vivo() || !e.getDamager().equals(v.mob)) return;
+            final double dano = e.getDamage();
+            mordiendo = true;
+            try {
+                for (Player otro : Fx.playersNear(victima.getLocation(), VASTAGO_MORDISCO_RADIO)) {
+                    if (otro.equals(victima) || !Fx.isFightable(otro)) continue;
+                    dealScaled(() -> otro.damage(dano, v.mob));
+                }
+            } finally {
+                mordiendo = false;
+            }
+            curar(VASTAGO_ROBO);
+            Location pecho = victima.getLocation().add(0, 1.1, 0);
+            Compat.spawn(world(), Compat.ENTITY_EFFECT, pecho, 6, 0.25, 0.3, 0.25, 0, rojo());
         }
 
         /** Quien se va en plena Medianoche vuelve con su hora de siempre. */
@@ -443,7 +537,7 @@ public final class Conde extends BossFight {
         List<Player> objetivos = targets(24);
         if (objetivos.isEmpty()) return;
         final Location origen = Fx.ground(boss.getLocation(), 4);
-        soundAt(origen, "entity.evoker.prepare_attack", 1.8f, 0.7f);
+        soundAt(origen, "block.respawn_anchor.charge", 1.6f, 0.6f);
         soundAt(origen, "entity.illusioner.prepare_mirror", 1.4f, 0.6f);
         announce(Component.text("Colmillos de sombra. Sal de la línea."));
 
@@ -476,7 +570,7 @@ public final class Conde extends BossFight {
             final List<Bat> linea = new ArrayList<>();
             later(15, () -> {
                 if (!alive()) return;
-                soundAt(origen, "entity.evoker.cast_spell", 1.6f, 0.6f);
+                soundAt(origen, "entity.wither.shoot", 1.2f, 0.5f);
                 for (int i = 0; i < puntos.size(); i++) {
                     final Location p = puntos.get(i);
                     final int retardo = i * 2;
@@ -532,8 +626,9 @@ public final class Conde extends BossFight {
             Bat b = murcielago(c.clone().add(Math.cos(a) * 3, 1.6 + (i % 3) * 0.5, Math.sin(a) * 3));
             if (b != null) bats.add(b);
         }
+        // Un coro de aleteos: el segundo, mas grave y un poco despues.
         soundAt(c, "entity.bat.takeoff", 2.0f, 0.6f);
-        soundAt(c, "entity.evoker.prepare_summon", 1.6f, 0.7f);
+        later(3, () -> soundAt(c, "entity.bat.takeoff", 1.6f, 0.5f));
         announce(Component.text("Enjambre. Mata los murciélagos antes de que bajen."));
         bandada(bats, null, () -> boss.getLocation(), 40, 120, 5 * power(), 0.5);
     }
@@ -543,7 +638,7 @@ public final class Conde extends BossFight {
         if (!alive()) return;
         final Location c = Fx.ground(boss.getLocation(), 4);
         soundAt(c, "entity.elder_guardian.curse", 1.6f, 0.8f);
-        soundAt(c, "entity.evoker.prepare_wololo", 1.8f, 0.6f);
+        soundAt(c, "entity.wither.ambient", 1.4f, 0.5f);
         announce(Component.text("Velo de la noche. Aléjate más de 10 bloques."));
 
         // Aviso: el borde del pulso marcado y la tinta entrando hacia el.
@@ -597,7 +692,7 @@ public final class Conde extends BossFight {
             p.sendActionBar(Component.text("Tienes un sello rojo debajo. Sal de él.", ACCENT));
         }
         final Set<UUID> golpeados = new HashSet<>();
-        soundAt(loc(), "entity.evoker.cast_spell", 1.8f, 0.6f);
+        soundAt(loc(), "block.bell.resonate", 1.6f, 0.6f);
         announce(Component.text("Sello carmesí. Sal del círculo rojo."));
 
         animate(30, t -> {
@@ -647,7 +742,7 @@ public final class Conde extends BossFight {
         if (!alive() || formaBat != null) return;
         final Player v = Fx.nearest(boss.getLocation(), 14);
         if (v == null) return;
-        soundAt(loc(), "entity.evoker.prepare_attack", 1.6f, 1.2f);
+        soundAt(loc(), "entity.warden.heartbeat", 1.6f, 0.8f);
         announce(Component.text("Mordisco. Sal del abanico rojo."));
 
         // Aviso: el hilo rojo hasta su presa y el abanico donde va a morder.
@@ -1148,12 +1243,15 @@ public final class Conde extends BossFight {
         }
     }
 
-    /** 11. Ataudes: cuatro ataudes salen del suelo, se abren y sueltan murcielagos. */
+    /**
+     * 11. Ataudes: cuatro ataudes salen del suelo, se abren y sueltan murcielagos. En
+     * cada uno, ademas, se levanta un Vastago (ver levantarVastago), cuatro como mucho.
+     */
     public void ataudes() {
         if (!alive()) return;
         final Location c = boss.getLocation();
         announce(Component.text("Ataúdes. Mata lo que salga de ellos."));
-        soundAt(c, "entity.evoker.prepare_summon", 1.6f, 0.6f);
+        soundAt(c, "entity.warden.heartbeat", 1.8f, 0.6f);
         soundAt(c, "block.rooted_dirt.break", 1.6f, 0.6f);
 
         final List<Ataud> ataudes = new ArrayList<>();
@@ -1183,6 +1281,8 @@ public final class Conde extends BossFight {
                 }
                 soundAt(c, "block.chest.open", 1.6f, 0.5f);
                 soundAt(c, "block.wooden_trapdoor.open", 1.4f, 0.6f);
+                // Dentro de cada uno, un Vastago tumbado; como mucho cuatro en pie a la vez.
+                if (alive()) for (Ataud at : ataudes) levantarVastago(at.pos, at.q);
             }
             if (t == 46 && alive()) {
                 List<Bat> bats = new ArrayList<>();
@@ -1506,6 +1606,282 @@ public final class Conde extends BossFight {
                 push(p, fuera(p.getLocation(), c).multiply(1.2).setY(0.55));
             }
         });
+    }
+
+    // ================================================================== VASTAGOS ==
+
+    /*
+     * Los Vastagos: los hijos del Conde que salen de los ataudes. Cada uno es como el
+     * propio Conde en pequeño: un zombi invisible que pelea (IA, vida, mordisco) y
+     * encima un maniqui con la skin de una cuenta real que es lo que se ve. El maniqui
+     * no tiene vida propia: lo que se le pega pasa a su zombi (Escucha.onGolpeAlVastago).
+     *
+     * Viven veinte segundos. Al acabarse, al morir su zombi o al caer el Conde, el
+     * maniqui se desploma y se deshace en humo negro. Zombi y maniqui son esbirros
+     * (markMinion), asi que si la pelea se cierra de golpe los borra super.cleanup().
+     */
+
+    /** La cuenta que lleva la skin de los Vastagos. */
+    private static final String SKIN_VASTAGO = "Guilletp";
+    private static final String VASTAGO_NOMBRE = "VÁSTAGO";
+    private static final int VASTAGOS_MAX = 4;
+    /** Vida util: veinte segundos. */
+    private static final int VASTAGO_VIDA = 400;
+    /** Lo que tarda en incorporarse desde que se abre el ataud. */
+    private static final int VASTAGO_LEVANTA = 10;
+    /** Lo que tarda en desplomarse antes de deshacerse. */
+    private static final int VASTAGO_CAE = 8;
+    /** A cuanto de la presa salpica su mordisco. */
+    private static final double VASTAGO_MORDISCO_RADIO = 1.5;
+    /** Vida "de diseno" que le roba al Conde cada mordisco. */
+    private static final double VASTAGO_ROBO = 2;
+    /** Donde se tumba: sobre el forro rojo del ataud abierto (la caja mide 0,75). */
+    private static final double VASTAGO_ALTO_ATAUD = 0.76;
+
+    /** Un Vastago: su zombi, su maniqui y en que punto de su vida esta. */
+    private final class Vastago {
+        final Zombie mob;
+        final Mannequin cuerpo;
+        /** Tumbado en el ataud hasta que se levanta; entonces sigue a su zombi. */
+        boolean dePie;
+        boolean cayendo;
+
+        Vastago(Zombie mob, Mannequin cuerpo) {
+            this.mob = mob;
+            this.cuerpo = cuerpo;
+        }
+
+        boolean vivo() {
+            return !cayendo && mob.isValid() && !mob.isDead();
+        }
+
+        boolean esSuyo(Entity e) {
+            return e != null && (e.equals(mob) || e.equals(cuerpo));
+        }
+
+        /** Un tick de su vida. Corta la animacion en cuanto deja de estar en pie. */
+        void tick(int t) {
+            if (cerrado || cayendo || !mob.isValid() || mob.isDead()) throw Stop.now();
+            if (t == VASTAGO_LEVANTA / 2) {
+                // Medio incorporado, ya en el centro del ataud.
+                posar(cuerpo, Pose.SNEAKING);
+                Location c = mob.getLocation();
+                if (cuerpo.isValid()) cuerpo.teleport(c);
+                Compat.spawn(world(), Compat.LARGE_SMOKE, c.clone().add(0, 0.4, 0), 6, 0.3, 0.2, 0.5, 0.01);
+            }
+            if (t == VASTAGO_LEVANTA) levantarse();
+            // Pegado a su zombi cada tick, como el cuerpo del jefe (tickShell).
+            if (dePie && cuerpo.isValid()) cuerpo.teleport(mob.getLocation());
+            if (t % 20 == 0) {
+                desnudar(mob);
+                if (dePie && !(mob.getTarget() instanceof Player p && Fx.isFightable(p))) {
+                    mob.setTarget(Fx.nearest(mob.getLocation(), 40));
+                }
+            }
+        }
+
+        private void levantarse() {
+            dePie = true;
+            posar(cuerpo, Pose.STANDING);
+            Location c = mob.getLocation().add(0, 1.0, 0);
+            Compat.spawn(world(), Compat.FLASH, c, 1, 0, 0, 0, 0, C_SANGRE);
+            Compat.spawn(world(), Compat.LARGE_SMOKE, c, 14, 0.35, 0.6, 0.35, 0.02);
+            soundAt(c, "entity.zombie.ambient", 1.2f, 0.5f);
+            // Baja del ataud por su pie y va a por el mas cercano.
+            mob.setGravity(true);
+            mob.setAI(true);
+            mob.setTarget(Fx.nearest(mob.getLocation(), 40));
+        }
+
+        /**
+         * Se desploma (se agacha, baja y se tumba) y se deshace en humo negro y
+         * esquirlas. Se puede llamar varias veces; tras el cierre de la pelea no hace
+         * nada, porque ya lo ha borrado todo super.cleanup().
+         */
+        void caer(boolean porJugador) {
+            if (cayendo) return;
+            cayendo = true;
+            if (cerrado) return;
+            Location donde = cuerpo.isValid() ? cuerpo.getLocation() : mob.getLocation();
+            if (porJugador) soundAt(donde, "entity.zombie.death", 1.2f, 0.6f);
+            // El zombi se va al tick siguiente: puede venir de dentro de su propia muerte.
+            later(1, () -> {
+                spawned.remove(mob);
+                Fx.safeRemove(mob);
+            });
+            if (!cuerpo.isValid()) {
+                vastagos.remove(this);
+                return;
+            }
+            posar(cuerpo, Pose.SNEAKING);
+            animate(VASTAGO_CAE, s -> {
+                if (cerrado || !cuerpo.isValid()) throw Stop.now();
+                if (s == VASTAGO_CAE - 3) posar(cuerpo, tumbado());
+                if (s < VASTAGO_CAE - 3) cuerpo.teleport(cuerpo.getLocation().add(0, -0.06, 0));
+                if (s % 2 == 0) {
+                    Compat.spawn(world(), Compat.SMOKE, cuerpo.getLocation().add(0, 0.3, 0), 2, 0.2, 0.1, 0.2, 0.01);
+                }
+            }, () -> {
+                vastagos.remove(this);
+                if (cerrado || !cuerpo.isValid()) return;
+                Location l = cuerpo.getLocation().add(0, 0.4, 0);
+                Compat.spawn(world(), Compat.LARGE_SMOKE, l, 20, 0.5, 0.3, 0.5, 0.03);
+                Compat.spawn(world(), Compat.SQUID_INK, l, 10, 0.4, 0.3, 0.4, 0.02);
+                Compat.spawn(world(), Compat.BLOCK, l, 6, 0.4, 0.2, 0.4, 0, Material.BLACKSTONE.createBlockData());
+                Glow.clear(cuerpo);
+                spawned.remove(cuerpo);
+                Fx.safeRemove(cuerpo);
+            });
+        }
+    }
+
+    /** El Vastago al que pertenece esa entidad (su zombi o su maniqui), o null. */
+    private Vastago vastagoDe(Entity e) {
+        if (e == null) return null;
+        for (Vastago v : vastagos) {
+            if (v.esSuyo(e)) return v;
+        }
+        return null;
+    }
+
+    private int vastagosEnPie() {
+        int n = 0;
+        for (Vastago v : vastagos) {
+            if (v.vivo()) n++;
+        }
+        return n;
+    }
+
+    /**
+     * Saca un Vastago tumbado dentro de un ataud abierto. Si ya hay cuatro en pie no
+     * sale nada: el ataud suelta solo sus murcielagos.
+     *
+     * @param centro el centro del ataud a ras de suelo
+     * @param giro   el giro del ataud: su eje Z local es el largo de la caja
+     */
+    private void levantarVastago(Location centro, Quaternionf giro) {
+        if (!alive() || vastagosEnPie() >= VASTAGOS_MAX) return;
+        Location encima = centro.clone().add(0, VASTAGO_ALTO_ATAUD, 0);
+        Zombie z;
+        try {
+            // Sin datos al azar: ni cria, ni jinete de gallina, ni equipo de serie.
+            z = world().spawn(encima, Zombie.class, false, e -> {
+                e.setAdult();
+                e.setInvisible(true);
+                e.setSilent(true);
+                e.setPersistent(false);
+                e.setRemoveWhenFarAway(true);
+                e.setCanPickupItems(false);
+                e.setShouldBurnInDay(false);
+                // Quieto y en el aire hasta que se levanta: esta encima de la caja.
+                e.setAI(false);
+                e.setGravity(false);
+                // Con nombre aunque no se vea: el de la muerte lo pone killerName().
+                e.customName(Component.text(VASTAGO_NOMBRE, ACCENT));
+                e.setCustomNameVisible(false);
+                Compat.setAttribute(e, "max_health", 60);
+                e.setHealth(60);
+                Compat.setAttribute(e, "attack_damage", 6);
+                Compat.setAttribute(e, "movement_speed", 0.33);
+                Compat.setAttribute(e, "follow_range", 40);
+                desnudar(e);
+            });
+        } catch (Throwable t) {
+            return;
+        }
+        markMinion(z);
+
+        /* Tumbado a lo largo de la caja. El cliente pinta la pose de dormir sin cama
+         * girando el cuerpo desde los pies, con la cabeza hacia (-cos yaw, sin yaw):
+         * de ahi el yaw, y los pies se retrasan 0,9 para que quede centrado. */
+        Vector3f largo = new Quaternionf(giro).transform(new Vector3f(0, 0, 1));
+        float yaw = (float) Math.toDegrees(Math.atan2(largo.z, -largo.x));
+        Location pies = encima.clone().add(-largo.x * 0.9, 0, -largo.z * 0.9);
+        pies.setYaw(yaw);
+        pies.setPitch(0);
+        Mannequin m = cuerpoVastago(pies);
+        if (m == null) {
+            spawned.remove(z);
+            Fx.safeRemove(z);
+            return;
+        }
+        Vastago v = new Vastago(z, m);
+        vastagos.add(v);
+        animate(VASTAGO_VIDA, v::tick, () -> v.caer(false));
+    }
+
+    /**
+     * El maniqui de un Vastago, tumbado. Lo mismo que wearShell hace para el jefe,
+     * pero suelto: wearShell es del cuerpo del Conde y no se puede usar dos veces.
+     */
+    private Mannequin cuerpoVastago(Location at) {
+        ResolvableProfile perfil = perfilVastago != null ? perfilVastago
+                : Disguises.profileOfAccount(plugin, SKIN_VASTAGO);
+        if (perfil == null) return null;
+        Mannequin m;
+        try {
+            m = world().spawn(at, Mannequin.class, e -> {
+                e.setProfile(perfil);
+                e.setPersistent(false);
+                e.setGravity(false);
+                e.setCollidable(false);
+                e.setSilent(true);
+                e.setImmovable(true);
+                e.setRotation(at.getYaw(), 0f);
+                e.setBodyYaw(at.getYaw());
+                e.customName(Component.text(VASTAGO_NOMBRE, ACCENT));
+                e.setCustomNameVisible(true);
+                // Sin la segunda linea "NPC" que trae de serie.
+                try {
+                    e.setDescription(Component.empty());
+                } catch (Throwable ignored) {
+                }
+                posar(e, tumbado());
+            });
+        } catch (Throwable t) {
+            plugin.getLogger().warning("No se pudo sacar el cuerpo de un Vastago: " + t);
+            return null;
+        }
+        markMinion(m);
+        Glow.apply(m, NamedTextColor.DARK_RED);
+        // Si la skin aun no habia llegado de Mojang, se le pone la cara buena al llegar.
+        if (perfilVastago == null) {
+            Disguises.resolveAccount(plugin, SKIN_VASTAGO, p -> {
+                perfilVastago = p;
+                if (m.isValid()) m.setProfile(p);
+            });
+        }
+        return m;
+    }
+
+    /** Tumbado si el maniqui lo admite; si no, agachado. */
+    private static Pose tumbado() {
+        try {
+            if (Mannequin.validPoses().contains(Pose.SLEEPING)) return Pose.SLEEPING;
+        } catch (Throwable ignored) {
+        }
+        return Pose.SNEAKING;
+    }
+
+    /** Pone una pose fija al maniqui; si esa version no la admite, lo deja como esta. */
+    private static void posar(Mannequin m, Pose pose) {
+        if (m == null) return;
+        try {
+            if (Mannequin.validPoses().contains(pose)) m.setPose(pose, true);
+        } catch (Throwable ignored) {
+        }
+    }
+
+    /** El zombi de debajo va desnudo: la invisibilidad no esconde el equipo. */
+    private static void desnudar(Zombie z) {
+        EntityEquipment eq = z.getEquipment();
+        if (eq == null) return;
+        boolean vestido = !eq.getItemInMainHand().getType().isAir() || !eq.getItemInOffHand().getType().isAir();
+        for (org.bukkit.inventory.ItemStack it : eq.getArmorContents()) {
+            if (it != null && !it.getType().isAir()) vestido = true;
+        }
+        if (!vestido) return;
+        eq.clear();
     }
 
     // ================================================================ MURCIELAGOS ==

@@ -776,6 +776,15 @@ public abstract class BossFight {
     }
 
     /**
+     * El nombre que dice el mensaje de muerte cuando el golpe final lo da esa entidad
+     * de la pelea. Por defecto null: el mensaje lleva el nombre de la anomalia. El
+     * Conde lo usa para que quien cae ante un Vastago lea "VÁSTAGO".
+     */
+    public Component killerName(Entity killer) {
+        return null;
+    }
+
+    /**
      * Aviso de que un JUGADOR le ha pegado a un esbirro, con el dano ya final.
      *
      * Existe por los jefes dobles: el segundo gemelo es tecnicamente un esbirro, y
