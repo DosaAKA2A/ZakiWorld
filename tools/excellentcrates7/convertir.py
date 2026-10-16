@@ -446,7 +446,7 @@ def main():
             'animation': {'enabled': True, 'profile': 'csgo_animation:default'},
             'preview': {'enabled': True, 'config': 'inventory:' + escribir_menu(obj, d, cid)},
             'hologram': {'enabled': bool(holo), 'text': [a_mm(l) for l in holo],
-                         'offset': {'x': 0.0, 'y': 0.7, 'z': 0.0}},
+                         'offset': {'x': 0.0, 'y': 1.0, 'z': 0.0}},
             'blocks': {'positions': pos},
             'effect': {'enabled': True, 'profile': 'spiral:default'},
             'opening': {'enabled': True, 'opening_commands': []},
