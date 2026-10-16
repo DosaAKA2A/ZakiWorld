@@ -316,6 +316,57 @@ def escribir_menu(obj, d, cid):
     return cid
 
 
+# Partículas en reposo por caja: forma según lo rara que es la caja y color de su título.
+# (modelo, color, tamaño, frames, intervalo, pausa)
+EFECTOS = {
+    'vote': ('sphere', '#2D7E39', 0.9, 8, 3, 30),
+    'pets': ('pulsar', '#9A3DB5', 0.9, 38, 2, 30),
+    'comunitaria': ('sphere', '#55FF55', 0.9, 8, 3, 30),
+    'comunitaria_vip': ('pulsar', '#FF55FF', 0.9, 38, 2, 30),
+    'rankup': ('helix', '#C04931', 1.0, 24, 1, 20),
+    'spawners': ('helix', '#107599', 1.0, 24, 1, 20),
+    'koth': ('helix', '#C42F2F', 1.0, 24, 1, 20),
+    'dungeon': ('vortex', '#4A6BC9', 1.0, 34, 1, 20),
+    'booster': ('vortex', '#5B55D6', 1.0, 34, 1, 20),
+    'caos': ('vortex', '#C0318D', 1.2, 34, 1, 10),
+    'cajaepica': ('spiral', '#A23BD6', 1.2, 50, 1, 10),
+    'legendary': ('spiral', '#FFB347', 1.3, 50, 1, 5),
+}
+# Animación de apertura: la de PhoenixCrates (llave) en las básicas, ruleta en las medias y firmas propias.
+ANIMACION = {
+    'rankup': 'ederus_ruleta:default', 'spawners': 'ederus_ruleta:default', 'koth': 'ederus_ruleta:default',
+    'dungeon': 'ederus_ruleta:default', 'cajaepica': 'ederus_revelacion:default',
+    'legendary': 'ederus_eclipse:default', 'caos': 'ederus_caos:default',
+}
+PERFILES_ANIMACION = {
+    'ederus_phoenix/llave': ('Phoenix: la llave entra', 'llave', '#404040'),
+    'ederus_phoenix/fuego': ('Phoenix: fuego', 'fuego', '#404040'),
+    'ederus_phoenix/grieta': ('Phoenix: grieta', 'grieta', '#404040'),
+    'ederus_revelacion/default': ('Revelación por calidad', '', '#FFFFFF'),
+    'ederus_ruleta/default': ('Ruleta orbital', '', '#FFFFFF'),
+    'ederus_eclipse/default': ('Eclipse (Legendaria)', '', '#FFB347'),
+    'ederus_caos/default': ('Caos', '', '#C0318D'),
+}
+
+
+def escribir_efecto(obj, cid, pid):
+    if pid not in EFECTOS:
+        return 'spiral:default'
+    modelo, color, tam, frames, intervalo, pausa = EFECTOS[pid]
+    escribir(os.path.join(obj, 'effects', modelo, cid + '.yml'), {'base-settings': {
+        'name': 'Ederus: ' + cid,
+        'particle': {'name': 'dust', 'data': {'color': color_rgb(color), 'size': tam}},
+        'max_frames': frames, 'tick_interval': intervalo, 'pause_ticks': pausa,
+    }})
+    return modelo + ':' + cid
+
+
+def escribir_animaciones(obj):
+    for ruta, (nombre, variante, color) in PERFILES_ANIMACION.items():
+        escribir(os.path.join(obj, 'animations', ruta + '.yml'),
+                 {'settings': {'name': nombre, 'variant': variante, 'color': color}})
+
+
 def main():
     obj = os.path.join(OUT, 'objects')
     qmap = json.load(open(QJSON, encoding='utf-8'))
@@ -324,6 +375,8 @@ def main():
     if LOCS:  # las del destino mandan; las cajas que no tiene se quedan con las del Survival
         locs.update((yaml.safe_load(open(LOCS, encoding='utf-8')) or {}).get('locations', {}))
     informe = {}
+
+    escribir_animaciones(obj)
 
     # Calidades
     for i, (k, n, c) in enumerate(CALIDADES):
@@ -443,12 +496,12 @@ def main():
             'rewards': {'reward_list': lista, 'required_rewards': 1},
             'key_requirements': {'enabled': bool(d.get('key-required', True)),
                                  'keys': {llave(k): {'amount': 1} for k in d.get('linked-keys-ids') or []}},
-            'animation': {'enabled': True, 'profile': 'csgo_animation:default'},
+            'animation': {'enabled': True, 'profile': ANIMACION.get(pid, 'ederus_phoenix:llave')},
             'preview': {'enabled': True, 'config': 'inventory:' + escribir_menu(obj, d, cid)},
             'hologram': {'enabled': bool(holo), 'text': [a_mm(l) for l in holo],
                          'offset': {'x': 0.0, 'y': 1.0, 'z': 0.0}},
             'blocks': {'positions': pos},
-            'effect': {'enabled': True, 'profile': 'spiral:default'},
+            'effect': {'enabled': True, 'profile': escribir_efecto(obj, cid, pid)},
             'opening': {'enabled': True, 'opening_commands': []},
             'selective_rewards': {'enabled': False},
         })
