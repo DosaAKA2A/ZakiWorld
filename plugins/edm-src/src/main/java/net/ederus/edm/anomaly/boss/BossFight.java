@@ -182,6 +182,26 @@ public abstract class BossFight {
     }
 
     /**
+     * Vuelve a enganchar la pelea a su cuerpo cuando la referencia se quedo vieja.
+     *
+     * Un mob puede seguir en el mundo con el mismo UUID pero detras de otro objeto
+     * (el trozo se descargo y se volvio a cargar, por ejemplo): la referencia vieja
+     * da isValid() false y la pelea se quedaba sin jefe aunque el jefe estuviera
+     * ahi. Lo llama el manager tras buscar el UUID en el servidor.
+     */
+    public void rebind(LivingEntity body) {
+        if (body == null || body == boss) return;
+        boss = body;
+        plugin.bitacora().anotar(
+                "cuerpo",
+                event.typeId(),
+                "cuerpo recuperado",
+                "tipo " + body.getType(),
+                "vida " + Bitacora.num(body.getHealth()),
+                "segundo " + (ticks / 20));
+    }
+
+    /**
      * Fija la vida del jefe respetando el tope de 1024 de Minecraft.
      *
      * Si la vida configurada lo supera, la entidad se queda en el tope y el exceso se
@@ -508,6 +528,14 @@ public abstract class BossFight {
             // de UUID de entidades muertas y el marcador crece sin parar.
             Glow.clear(boss);
             Fx.safeRemove(boss);
+            /* Si la referencia se quedo vieja pero el mob sigue en el mundo con el
+             * mismo UUID (persistente), se busca y se borra tambien: si no, volveria
+             * a aparecer como un zombi suelto la proxima vez que cargue su trozo. */
+            Entity same = plugin.getServer().getEntity(boss.getUniqueId());
+            if (same != null && same != boss) {
+                Glow.clear(same);
+                Fx.safeRemove(same);
+            }
         }
     }
 
@@ -1044,6 +1072,38 @@ public abstract class BossFight {
             if (shell.getVehicle() == null) shell.teleport(boss.getLocation());
         } catch (Throwable ignored) {
         }
+        if (ticks % 10 == 0) keepBossNaked();
+    }
+
+    /**
+     * Vuelve a vaciar el equipo del mob invisible de debajo del maniqui.
+     *
+     * wearShell lo desnuda al nacer, pero algo puede vestirlo despues (otro plugin
+     * en un tick posterior o el propio alta del mob en Paper): la invisibilidad no
+     * esconde el equipo, asi que se veia un casco flotando sobre el maniqui.
+     */
+    private void keepBossNaked() {
+        org.bukkit.inventory.EntityEquipment eq = boss.getEquipment();
+        if (eq == null) return;
+        boolean dressed = false;
+        for (org.bukkit.inventory.EquipmentSlot slot : new org.bukkit.inventory.EquipmentSlot[] {
+                org.bukkit.inventory.EquipmentSlot.HEAD, org.bukkit.inventory.EquipmentSlot.CHEST,
+                org.bukkit.inventory.EquipmentSlot.LEGS, org.bukkit.inventory.EquipmentSlot.FEET,
+                org.bukkit.inventory.EquipmentSlot.HAND, org.bukkit.inventory.EquipmentSlot.OFF_HAND}) {
+            org.bukkit.inventory.ItemStack item = eq.getItem(slot);
+            if (item != null && !item.getType().isAir()) {
+                dressed = true;
+                break;
+            }
+        }
+        if (!dressed) return;
+        eq.clear();
+        eq.setHelmetDropChance(0);
+        eq.setChestplateDropChance(0);
+        eq.setLeggingsDropChance(0);
+        eq.setBootsDropChance(0);
+        eq.setItemInMainHandDropChance(0);
+        eq.setItemInOffHandDropChance(0);
     }
 
     /**

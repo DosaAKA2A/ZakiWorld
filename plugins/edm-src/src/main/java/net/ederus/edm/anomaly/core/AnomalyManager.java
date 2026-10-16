@@ -139,11 +139,26 @@ public final class AnomalyManager implements Listener {
                 "dano x" + Bitacora.num(plugin.registry().damageMultiplier(type)),
                 "cerca al abrir " + Fx.playersNear(where, 96).size() + " jugador(es)");
 
+        creandoJefe = true;
         try {
             fight.spawn();
         } catch (Throwable t) {
             plugin.getLogger().severe("No se pudo crear el jefe de " + type.id() + ": " + t);
             stop(true);
+            return;
+        } finally {
+            creandoJefe = false;
+        }
+
+        /* spawn() puede volver sin error y con el jefe fuera del mundo (aparicion
+         * cancelada por otro plugin o entidad invalidada al momento). Paso en el dev
+         * con el CONDE: barra vacia en fase III, maniqui quieto y una pelea que no
+         * se cerraba nunca. Mejor no abrir que dejar una pelea fantasma. */
+        if (!fight.alive()) {
+            String estado = estadoDelCuerpo(fight.entity());
+            plugin.getLogger().severe("El jefe de " + type.id() + " no quedo en el mundo (" + estado + ").");
+            plugin.bitacora().anotar("cuerpo", type.id(), "no quedo en el mundo al abrir", estado);
+            stop(true, "cerrada al abrir: el jefe no quedo en el mundo");
             return;
         }
         nameCombatMob(fight, type);
@@ -171,6 +186,22 @@ public final class AnomalyManager implements Listener {
         if (mob == null || mob.customName() != null) return;
         mob.customName(Component.text(type.display(), type.color()));
         mob.setCustomNameVisible(false);
+    }
+
+    /** Valido, muerto, trozo cargado, mundo y posicion del cuerpo: para la consola y la bitacora. */
+    private static String estadoDelCuerpo(LivingEntity mob) {
+        if (mob == null) return "sin entidad";
+        Location l = mob.getLocation();
+        boolean cargado = false;
+        try {
+            cargado = l.getWorld() != null && l.getWorld().isChunkLoaded(l.getBlockX() >> 4, l.getBlockZ() >> 4);
+        } catch (Throwable ignored) {
+        }
+        return "valido=" + mob.isValid()
+                + ", muerto=" + mob.isDead()
+                + ", chunk cargado=" + cargado
+                + ", mundo=" + (l.getWorld() == null ? "?" : l.getWorld().getName())
+                + ", pos=" + l.getBlockX() + " " + l.getBlockY() + " " + l.getBlockZ();
     }
 
     private static String describe(Location l) {
@@ -221,6 +252,12 @@ public final class AnomalyManager implements Listener {
         BossFight fight = event.fight();
         if (fight == null) return;
 
+        if (event.state() == ActiveAnomaly.State.ACTIVA && fight.entity() != null && !fight.alive()) {
+            if (!recuperarCuerpo(event, fight)) return;
+        } else {
+            ticksSinCuerpo = 0;
+        }
+
         try {
             fight.tick();
         } catch (Throwable t) {
@@ -229,7 +266,9 @@ public final class AnomalyManager implements Listener {
 
         PhaseBars bars = event.bars();
         if (bars != null) {
-            bars.update(fight.healthFraction());
+            /* Sin cuerpo la fraccion sale 0 y la barra pintaba la ultima fase vacia:
+             * se deja como estaba hasta que el cuerpo vuelva o la pelea se cierre. */
+            if (fight.alive()) bars.update(fight.healthFraction());
             // Recalcular quien ve las barras cuesta un barrido de jugadores;
             // una vez por segundo es de sobra y no se nota al entrar al radio.
             if (fight.ticks() % 20 == 0) {
@@ -244,6 +283,66 @@ public final class AnomalyManager implements Listener {
             plugin.announcer().expired(event);
             stop(true);
         }
+    }
+
+    /** Ticks seguidos con la pelea activa y el jefe fuera del mundo. */
+    private int ticksSinCuerpo;
+    /** Cuantos ticks sin cuerpo se aguantan antes de cerrar la pelea (3 s). */
+    private static final int MAX_TICKS_SIN_CUERPO = 60;
+
+    /**
+     * La pelea esta activa pero su jefe ya no esta en el mundo y nadie lo mato.
+     *
+     * Primero se busca el mismo UUID en el servidor: si el mob sigue ahi detras de
+     * otro objeto, se reengancha y la pelea sigue. Si no aparece en 3 s se cierra:
+     * solo se cierra sola al morir el jefe, y sin cuerpo no muere nunca.
+     *
+     * Devuelve true si la pelea tiene cuerpo otra vez y el tick puede seguir.
+     */
+    private boolean recuperarCuerpo(ActiveAnomaly event, BossFight fight) {
+        LivingEntity viejo = fight.entity();
+        Entity mismo = plugin.getServer().getEntity(viejo.getUniqueId());
+        if (mismo instanceof LivingEntity vivo && mismo != viejo && vivo.isValid() && !vivo.isDead()) {
+            fight.rebind(vivo);
+            ticksSinCuerpo = 0;
+            return true;
+        }
+        if (++ticksSinCuerpo < MAX_TICKS_SIN_CUERPO) return false;
+        String estado = estadoDelCuerpo(viejo);
+        plugin.getLogger().severe("La anomalía " + event.typeId() + " se quedo sin jefe en el mundo ("
+                + estado + "); se cierra.");
+        plugin.bitacora().anotar("cuerpo", event.typeId(), "cuerpo perdido", estado,
+                "segundo " + event.elapsedSeconds());
+        stop(true, "cerrada sin cuerpo");
+        return false;
+    }
+
+    /*
+     * Mientras el jefe nace, ningun otro plugin le cancela la aparicion.
+     *
+     * Con el CONDE paso en el dev: spawn() devolvio un zombi que nunca llego al mundo,
+     * sin excepcion ni aviso. WorldGuard no cancela apariciones de plugin, asi que fue
+     * otro. Solo vale durante fight.spawn(): lo que salga despues sigue las reglas de
+     * siempre. Se escucha EntitySpawnEvent y no solo CreatureSpawnEvent para cubrir
+     * tambien el maniqui y lo que no sea una criatura.
+     */
+    private boolean creandoJefe;
+
+    @EventHandler(ignoreCancelled = false, priority = EventPriority.HIGHEST)
+    public void onBossSpawn(org.bukkit.event.entity.EntitySpawnEvent e) {
+        if (!creandoJefe || !e.isCancelled()) return;
+        ActiveAnomaly event = current;
+        plugin.bitacora().anotar("spawn", event == null ? "-" : event.typeId(),
+                "otro plugin cancelo la aparicion de " + e.getEntityType() + ", se fuerza");
+        e.setCancelled(false);
+    }
+
+    @EventHandler(ignoreCancelled = false, priority = EventPriority.MONITOR)
+    public void onBossSpawnMonitor(org.bukkit.event.entity.EntitySpawnEvent e) {
+        if (!creandoJefe || !e.isCancelled()) return;
+        ActiveAnomaly event = current;
+        plugin.bitacora().anotar("spawn", event == null ? "-" : event.typeId(),
+                "la aparicion de " + e.getEntityType() + " sigue cancelada en MONITOR");
     }
 
     /**
@@ -310,8 +409,14 @@ public final class AnomalyManager implements Listener {
 
     /** Cierra el evento y borra todo lo que haya quedado. */
     public void stop(boolean silent) {
+        stop(silent, "cerrada sin morir (a mano, por tiempo o al fallar)");
+    }
+
+    /** Igual que stop(boolean), con el motivo que queda en la linea "cierra" de la bitacora. */
+    public void stop(boolean silent, String motivo) {
         ActiveAnomaly event = current;
-        logClose(event, "cerrada sin morir (a mano, por tiempo o al fallar)");
+        ticksSinCuerpo = 0;
+        logClose(event, motivo);
         olvidarAnotados();
         current = null;
         if (ticker != null) {
