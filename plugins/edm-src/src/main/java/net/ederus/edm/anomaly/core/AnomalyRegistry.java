@@ -3340,13 +3340,20 @@ public final class AnomalyRegistry {
             add(list, "cd_velo", "Velo de la Noche", 1, 280, 35, 4,
                     "Un pulso que deja a oscuras y lento a quien esté a menos de 10 bloques.",
                     AnomalyRegistry.icon("INK_SAC", "BLACK_DYE"), f -> conde(f).veloDeLaNoche());
-            add(list, "cd_sello", "Sello Carmesí", 1, 200, 40, 5,
-                    "Un círculo rojo bajo tres jugadores que estalla al segundo y medio.",
+            add(list, "cd_sello", "Sello Carmesí", 1, 200, 58, 5,
+                    "Un sello rojo bajo cada jugador que estalla en un rayo a los dos segundos.",
                     AnomalyRegistry.icon("RED_CANDLE", "REDSTONE"), f -> conde(f).selloCarmesi());
             // Cualquier fase: el mordisco rellena las fases II y III, que van cortas de repertorio.
             add(list, "cd_mordisco", "Mordisco", 0, 160, 25, 4,
                     "Se lanza sobre el más cercano, lo muerde y se cura con lo que le saca.",
                     AnomalyRegistry.icon("ROTTEN_FLESH", "REDSTONE"), f -> conde(f).mordisco());
+            add(list, "cd_sangre", "Sangre Ardiente", 0, 280, 45, 4,
+                    "Carga una bola de sangre y la lanza al grupo; donde cae deja un charco que quema.",
+                    AnomalyRegistry.icon("FIRE_CHARGE", "MAGMA_CREAM"), f -> conde(f).sangreArdiente());
+            // Fase 0 en el fichero, pero el Conde la deja en espera durante la fase I.
+            add(list, "cd_rafaga", "Ráfaga de Sangre", 0, 200, 50, 3,
+                    "Desde la fase II: tres bolas pequeñas seguidas a tres jugadores distintos.",
+                    AnomalyRegistry.icon("MAGMA_CREAM", "FIRE_CHARGE"), f -> conde(f).rafagaDeSangre());
             // --- Fase II
             add(list, "cd_murcielago", "Forma de Murciélago", 2, 520, 170, 4,
                     "Se convierte en un murciélago gigante y embiste tres veces desde el aire.",
@@ -3355,7 +3362,7 @@ public final class AnomalyRegistry {
                     "Veinte murciélagos caen en picado sobre círculos marcados en el suelo.",
                     AnomalyRegistry.icon("POINTED_DRIPSTONE", "ARROW"), f -> conde(f).lluviaDeMurcielagos());
             add(list, "cd_pentaculo", "Pentáculo", 2, 340, 80, 4,
-                    "Un círculo enorme; de las cinco puntas de la estrella suben pilares de luz roja.",
+                    "Un círculo enorme que carga tres segundos; de las cinco puntas suben rayos rojos.",
                     AnomalyRegistry.icon("RED_STAINED_GLASS", "REDSTONE_BLOCK"), f -> conde(f).pentaculo());
             add(list, "cd_niebla", "Niebla Roja", 2, 420, 30, 3,
                     "Seis segundos de niebla: ciega al entrar y dentro él es más rápido.",
@@ -3370,8 +3377,8 @@ public final class AnomalyRegistry {
             add(list, "cd_festin", "Festín de Sangre", 3, 360, 65, 4,
                     "Drena a todos los que estén a menos de 12 bloques y se cura por cada uno.",
                     AnomalyRegistry.icon("REDSTONE", "RED_DYE"), f -> conde(f).festinDeSangre());
-            add(list, "cd_eclipse", "ECLIPSE CARMESÍ", 3, 900, 60, 2,
-                    "Un círculo bajo todo el campo que estalla a los dos segundos. Sal de él.",
+            add(list, "cd_eclipse", "ECLIPSE CARMESÍ", 3, 900, 76, 2,
+                    "Un círculo bajo todo el campo que estalla a los tres segundos. Sal de él.",
                     AnomalyRegistry.icon("REDSTONE_BLOCK", "RED_CONCRETE"), f -> conde(f).eclipseCarmesi());
             return skills.aplicar(id(), list);
         }

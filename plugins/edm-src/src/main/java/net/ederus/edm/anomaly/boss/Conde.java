@@ -50,6 +50,7 @@ import java.time.Duration;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Locale;
 import java.util.Set;
 import java.util.UUID;
 import java.util.function.Supplier;
@@ -142,14 +143,32 @@ public final class Conde extends BossFight {
 
     @Override
     public void spawn() {
-        Location spot = arena.clone();
+        Location spot = Fx.ground(arena.clone(), 4);
+        spot.setYaw(0);
+        spot.setPitch(0);
 
-        boss = world().spawn(spot, Zombie.class, z -> {
+        /* Nace tumbado dentro del ataud de la entrada (ver entrada()): sin IA, sin
+         * gravedad e intocable hasta que salta fuera. El cliente pinta la pose de
+         * dormir girando el cuerpo desde los pies, con la cabeza hacia el eje largo
+         * del ataud: de ahi el yaw y los pies retrasados 0,9 (como el Vastago). */
+        final float giro = (float) (random.nextDouble() * Math.PI * 2);
+        final Vector3f largo = new Quaternionf().rotateY(giro).transform(new Vector3f(0, 0, 1));
+        final float yawTumbado = (float) Math.toDegrees(Math.atan2(largo.z, -largo.x));
+        final Location encima = spot.clone().add(0, VASTAGO_ALTO_ATAUD * ENTRADA_ESCALA, 0);
+        final Location pies = encima.clone().add(-largo.x * 0.9, 0, -largo.z * 0.9);
+        pies.setYaw(yawTumbado);
+        pies.setPitch(0);
+
+        boss = world().spawn(pies, Zombie.class, z -> {
             z.setAdult();
             z.setPersistent(true);
             z.setRemoveWhenFarAway(false);
             z.setCanPickupItems(false);
             z.setShouldBurnInDay(false);
+            z.setAI(false);
+            z.setGravity(false);
+            z.setInvisible(true);
+            z.setInvulnerable(true);
             /* Con nombre aunque no se vea: lo leen los mensajes de muerte. */
             z.customName(Component.text("CONDE", ACCENT));
             z.setCustomNameVisible(false);
@@ -169,7 +188,7 @@ public final class Conde extends BossFight {
         Disguises.resolveAccount(plugin, SKIN_VASTAGO, p -> perfilVastago = p);
 
         Compat.setAttribute(boss, "max_health", 20);
-        Compat.setAttribute(boss, "attack_damage", 10);
+        Compat.setAttribute(boss, "attack_damage", 14);
         Compat.setAttribute(boss, "armor", 10);
         Compat.setAttribute(boss, "knockback_resistance", 1.0);
         Compat.setAttribute(boss, "follow_range", 64);
@@ -177,25 +196,142 @@ public final class Conde extends BossFight {
         applyHealth(plugin.registry().health(plugin.registry().get(ID)));
         boss.setMaximumNoDamageTicks(8);
         Tags.markBoss(boss, ID);
-        glowBody(NamedTextColor.DARK_RED);
+
+        // Escondido y tumbado hasta que se abre la tapa: el brillo se le pone al asomar.
+        if (shell instanceof Mannequin m && m.isValid()) {
+            m.setInvisible(true);
+            m.setCustomNameVisible(false);
+            m.setInvulnerable(true);
+            posar(m, tumbado());
+            try {
+                m.setRotation(yawTumbado, 0f);
+                m.setBodyYaw(yawTumbado);
+            } catch (Throwable ignored) {
+            }
+        }
 
         // Su escucha propia: colmillos sin dano vanilla y la hora de vuelta a quien se va.
         plugin.getServer().getPluginManager().registerEvents(escucha, net.ederus.edm.Module.dueno(plugin));
 
-        for (Player p : Fx.viewersNear(spot, 90)) {
-            p.showTitle(Title.title(
-                    Component.text("✦ ANOMALÍA ✦", ACCENT, TextDecoration.BOLD),
-                    Component.text("CONDE  ·  el señor de los murciélagos", NamedTextColor.GRAY),
-                    Title.Times.times(Duration.ofMillis(400), Duration.ofMillis(1800), Duration.ofMillis(600))));
+        // La Rafaga de Sangre es de la fase II en adelante: en la I se queda en espera.
+        // El cambio de fase (reset de todas las habilidades) la deja lista.
+        for (Ability a : abilities) {
+            if (a.id().equals("cd_rafaga") && a.phase() == 0) a.startCooldown(Long.MAX_VALUE / 4);
         }
-        Location l = spot.clone().add(0, 1, 0);
-        Compat.spawn(world(), Compat.LARGE_SMOKE, l, 40, 0.6, 0.9, 0.6, 0.03);
-        Compat.spawn(world(), Compat.FLASH, l, 1, 0, 0, 0, 0, C_SANGRE);
-        soundAt(spot, "entity.wither.spawn", 1.2f, 1.4f);
-        soundAt(spot, "entity.bat.takeoff", 2.0f, 0.6f);
-        soundAt(spot, "block.bell.use", 1.6f, 0.5f);
-        dispersar(l, 14, 30);
-        encenderVelas();
+
+        busyFor(ENTRADA_FIN + 5);
+        entrada(spot, giro, largo, encima);
+    }
+
+    /* La entrada: un ataud a escala 1,4 sube del suelo en 20 ticks y se abre en 15;
+     * dentro esta el Conde tumbado, se incorpora en 10 y salta fuera por los pies en
+     * otros 10. Al tocar el suelo el ataud se hunde y se desmonta mientras salen
+     * catorce murcielagos, y la pelea empieza. Unos 60 ticks intocable. */
+    private static final float ENTRADA_ESCALA = 1.4f;
+    private static final int ENTRADA_SUBE = 1;
+    private static final int ENTRADA_ABRE = 20;
+    private static final int ENTRADA_ASOMA = 35;
+    private static final int ENTRADA_SALTA = 47;
+    private static final int ENTRADA_ATERRIZA = 57;
+    private static final int ENTRADA_FIN = 76;
+
+    private void entrada(Location spot, float giro, Vector3f largo, Location encima) {
+        final Ataud at = new Ataud(spot, giro, ENTRADA_ESCALA);
+        // Sale por los pies del ataud, mirando hacia donde salta.
+        final Vector salida = new Vector(-largo.x, 0, -largo.z);
+        final Location suelo = Fx.ground(spot.clone().add(salida.clone().multiply(2.7)), 4);
+        final boolean[] fuera = {false};
+
+        animate(ENTRADA_FIN, t -> {
+            if (cerrado || boss == null || !boss.isValid()) throw Stop.now();
+            if (t == ENTRADA_SUBE) at.colocar(0f, 0f, 20);
+            if (t < 22 && t % 4 == 0) {
+                Compat.spawn(world(), Compat.BLOCK, spot.clone().add(0, 0.2, 0), 8, 0.7, 0.1, 1.2, 0,
+                        Material.SOUL_SOIL.createBlockData());
+                soundAt(spot, "block.gravel.break", 1.2f, 0.6f);
+            }
+            if (t == ENTRADA_ABRE) {
+                at.colocar(0f, 1.9f, 15);
+                for (Player p : Fx.viewersNear(spot, 90)) {
+                    p.showTitle(Title.title(
+                            Component.text("✦ ANOMALÍA ✦", ACCENT),
+                            Component.text("CONDE  ·  el señor de los murciélagos", NamedTextColor.GRAY),
+                            Title.Times.times(Duration.ofMillis(400), Duration.ofMillis(1800), Duration.ofMillis(600))));
+                }
+                Location l = spot.clone().add(0, 1.2, 0);
+                Compat.spawn(world(), Compat.LARGE_SMOKE, l, 30, 0.6, 0.6, 0.9, 0.03);
+                Compat.spawn(world(), Compat.FLASH, l, 1, 0, 0, 0, 0, C_SANGRE);
+                soundAt(spot, "entity.wither.spawn", 1.2f, 1.4f);
+                soundAt(spot, "block.chest.open", 1.6f, 0.5f);
+                soundAt(spot, "block.bell.use", 1.6f, 0.5f);
+            }
+            if (t >= 22 && t < ENTRADA_ABRE && t % 4 == 0) at.llama();
+            if (t == ENTRADA_ASOMA) {
+                LivingEntity cuerpo = super.shell();
+                if (cuerpo != null && cuerpo.isValid()) {
+                    cuerpo.setInvisible(false);
+                    cuerpo.setCustomNameVisible(true);
+                }
+                glowBody(NamedTextColor.DARK_RED);
+                Compat.spawn(world(), Compat.LARGE_SMOKE, encima, 12, 0.3, 0.2, 0.6, 0.01);
+            }
+            if (t == ENTRADA_ASOMA + 5) {
+                // Medio incorporado, ya en el centro del ataud y mirando a donde va a saltar.
+                if (super.shell() instanceof Mannequin m) posar(m, Pose.SNEAKING);
+                Location c = encima.clone();
+                c.setDirection(salida);
+                boss.teleport(c);
+            }
+            if (t == ENTRADA_ASOMA + 10) {
+                if (super.shell() instanceof Mannequin m) posar(m, Pose.STANDING);
+                soundAt(encima, "entity.bat.takeoff", 2.0f, 0.6f);
+            }
+            if (t >= ENTRADA_SALTA && t < ENTRADA_ATERRIZA) {
+                double u = (t - ENTRADA_SALTA + 1) / (double) (ENTRADA_ATERRIZA - ENTRADA_SALTA);
+                double h = sm(u);
+                Location p = new Location(world(),
+                        lerp(encima.getX(), suelo.getX(), h),
+                        lerp(encima.getY(), suelo.getY(), u) + 1.15 * Math.sin(Math.PI * u),
+                        lerp(encima.getZ(), suelo.getZ(), h));
+                p.setDirection(salida);
+                p.setPitch(0);
+                boss.teleport(p);
+            }
+            if (t == ENTRADA_ATERRIZA) {
+                fuera[0] = true;
+                soltarEntrada();
+                Location l = boss.getLocation().add(0, 0.2, 0);
+                Compat.spawn(world(), Compat.LARGE_SMOKE, l, 16, 0.6, 0.1, 0.6, 0.02);
+                Compat.spawn(world(), Compat.BLOCK, l, 12, 0.6, 0.1, 0.6, 0, Material.SOUL_SOIL.createBlockData());
+                soundAt(l, "entity.wither.shoot", 1.0f, 0.5f);
+                soundAt(l, "entity.bat.takeoff", 2.0f, 0.6f);
+                at.colocar(-0.57f, 1.9f, 12);
+                dispersar(spot.clone().add(0, 1.0, 0), 14, 30);
+                encenderVelas();
+            }
+            if (t == ENTRADA_ATERRIZA + 2) at.desmontar();
+        }, () -> {
+            at.quitar();
+            if (!fuera[0] && !cerrado) soltarEntrada();
+        });
+    }
+
+    /** El final de la entrada: IA, gravedad y golpeable. Tambien si la escena se corta. */
+    private void soltarEntrada() {
+        if (boss == null || !boss.isValid()) return;
+        boss.setAI(true);
+        boss.setGravity(true);
+        boss.setInvulnerable(false);
+        LivingEntity cuerpo = super.shell();
+        if (cuerpo != null && cuerpo.isValid()) {
+            cuerpo.setInvulnerable(false);
+            if (cuerpo.isInvisible()) {
+                cuerpo.setInvisible(false);
+                cuerpo.setCustomNameVisible(true);
+                glowBody(NamedTextColor.DARK_RED);
+            }
+            if (cuerpo instanceof Mannequin m) posar(m, Pose.STANDING);
+        }
     }
 
     // -------------------------------------------------------------------- ambiente
@@ -328,15 +464,15 @@ public final class Conde extends BossFight {
         if (to == 2) {
             damageBonus = 1.1;
             Compat.setAttribute(boss, "movement_speed", 0.33);
-            Compat.setAttribute(boss, "attack_damage", 13);
-            titleNear(Component.text("FASE II", ACCENT, TextDecoration.BOLD),
+            Compat.setAttribute(boss, "attack_damage", 18);
+            titleNear(Component.text("FASE II", ACCENT),
                     Component.text("Tiene sed", NamedTextColor.GRAY));
         }
         if (to == 3) {
             damageBonus = 1.2;
             Compat.setAttribute(boss, "movement_speed", 0.36);
-            Compat.setAttribute(boss, "attack_damage", 16);
-            titleNear(Component.text("FASE III", ACCENT, TextDecoration.BOLD),
+            Compat.setAttribute(boss, "attack_damage", 22);
+            titleNear(Component.text("FASE III", ACCENT),
                     Component.text("Se acerca la medianoche", NamedTextColor.GRAY));
         }
         Compat.spawn(world(), Compat.FLASH, l.clone().add(0, 1, 0), 1, 0, 0, 0, 0, C_SANGRE);
@@ -598,7 +734,7 @@ public final class Conde extends BossFight {
                         for (Player v : Fx.playersNear(p, 2.4)) {
                             if (plano(v.getLocation(), p) > 1.1) continue;
                             if (!mordidos.add(v.getUniqueId())) continue;
-                            hit(v, 8 * power());
+                            hit(v, 14 * power());
                         }
                         if (conCria && crias[0] < 12) {
                             Bat b = murcielago(p.clone().add(0, 1.0, 0));
@@ -682,58 +818,71 @@ public final class Conde extends BossFight {
      */
     public void selloCarmesi() {
         if (!alive()) return;
-        List<Player> objetivos = targets(20);
+        final List<Player> objetivos = targets(20);
         if (objetivos.isEmpty()) return;
-        List<Circulo> sellos = new ArrayList<>();
+        // Con mas de seis, todos el reducido; del undecimo en adelante solo particulas.
+        final boolean reducido = objetivos.size() > SELLO_COMPLETOS;
+        final Escena esc = new Escena();
+        final List<Sello> sellos = new ArrayList<>();
         for (int i = 0; i < objetivos.size(); i++) {
-            Player p = objetivos.get(i);
-            // Hasta doce sellos con circulo completo; del trece en adelante, el ligero.
-            sellos.add(circulo(Fx.ground(p.getLocation(), 6), 1.5, 36, false, i >= 12));
-            p.sendActionBar(Component.text("Tienes un sello rojo debajo. Sal de él.", ACCENT));
+            Location c = Fx.ground(objetivos.get(i).getLocation(), 6);
+            c.setYaw(0);
+            c.setPitch(0);
+            sellos.add(new Sello(esc, c, reducido, i < SELLO_DIBUJADOS));
         }
         final Set<UUID> golpeados = new HashSet<>();
         soundAt(loc(), "block.bell.resonate", 1.6f, 0.6f);
         announce(Component.text("Sello carmesí. Sal del círculo rojo."));
 
-        animate(30, t -> {
-            if (!alive()) throw Stop.now();
-            if (t % 4 != 0) return;
-            for (Circulo s : sellos) {
-                Compat.spawn(world(), Compat.WITCH, s.centro.clone().add(0, 0.3, 0), 2, 0.6, 0.1, 0.6, 0);
-            }
-            if (t % 10 == 0) soundAt(loc(), "block.respawn_anchor.deplete", 1.0f, 1.4f + t * 0.01f);
-        }, () -> {
-            for (Circulo s : sellos) {
-                s.quitar();
-                if (!alive()) continue;
-                Location c = s.centro.clone().add(0, 0.5, 0);
-                rayoRojo(s.centro, 26f, 14, 3.0f);
-                Compat.spawn(world(), Compat.FLASH, c, 1, 0, 0, 0, 0, C_SANGRE);
-                Compat.spawn(world(), Compat.DUST_COLOR_TRANSITION, c, 40, 0.9, 0.5, 0.9, 0, transicion(1.6f));
-                Compat.spawn(world(), Compat.LARGE_SMOKE, c, 10, 0.6, 0.3, 0.6, 0.03);
-                soundAt(c, "entity.generic.explode", 1.3f, 0.6f);
-                for (Player v : Fx.playersNear(s.centro, 3.5)) {
-                    if (plano(v.getLocation(), s.centro) > 1.7) continue;
-                    if (Math.abs(v.getLocation().getY() - s.centro.getY()) > 2.5) continue;
-                    if (!golpeados.add(v.getUniqueId())) continue;
-                    hit(v, 10 * power());
-                    push(v, fuera(v.getLocation(), s.centro).multiply(0.55).setY(0.3));
+        animate(SELLO_FIN, t -> {
+            if (cerrado || !alive()) throw Stop.now();
+            for (Sello s : sellos) s.tick(t);
+            if (t < SELLO_ESTALLA && t % 4 == 0) {
+                for (Sello s : sellos) {
+                    Compat.spawn(world(), Compat.DUST_COLOR_TRANSITION, s.c.clone().add(0, 0.25, 0), 2,
+                            0.5, 0.05, 0.5, 0, transicion(0.9f));
+                    // Los que no llevan displays, con su borde en particulas.
+                    if (!s.dibujado) Fx.ring(s.c.clone().add(0, 0.12, 0), 1.5, 14, p ->
+                            Compat.spawn(world(), Compat.DUST_COLOR_TRANSITION, p, 1, 0, 0, 0, 0, transicion(1.1f)));
                 }
             }
-        });
+            if (t < SELLO_ESTALLA && t % 10 == 0) {
+                soundAt(loc(), "block.respawn_anchor.charge", 1.0f, 0.8f + t * 0.015f);
+                String quedan = String.format(Locale.ROOT, "%.1f", (SELLO_ESTALLA - t) / 20.0).replace('.', ',');
+                for (Player p : objetivos) {
+                    if (!Fx.isFightable(p)) continue;
+                    p.sendActionBar(Component.text("Sello rojo bajo tus pies. Estalla en " + quedan + " s", ACCENT));
+                }
+            }
+            if (t == SELLO_ESTALLA) {
+                for (Sello s : sellos) {
+                    Location c = s.c.clone().add(0, 0.5, 0);
+                    Compat.spawn(world(), Compat.FLASH, c, 1, 0, 0, 0, 0, C_SANGRE);
+                    Compat.spawn(world(), Compat.DUST_COLOR_TRANSITION, c, 30, 0.9, 0.5, 0.9, 0, transicion(1.6f));
+                    soundAt(c, "entity.generic.explode", 1.3f, 0.6f);
+                    for (Player v : Fx.playersNear(s.c, 4)) {
+                        if (plano(v.getLocation(), s.c) > SELLO_RADIO) continue;
+                        if (Math.abs(v.getLocation().getY() - s.c.getY()) > 2.5) continue;
+                        if (!golpeados.add(v.getUniqueId())) continue;
+                        hit(v, 16 * power());
+                        push(v, fuera(v.getLocation(), s.c).multiply(0.55).setY(0.3));
+                    }
+                }
+            }
+        }, esc::quitar);
     }
 
     /* El mordisco en abanico: 120 grados delante de el, hasta 3,5 bloques. */
     private static final double MORDISCO_RADIO = 3.5;
     private static final double MORDISCO_MEDIO_ANGULO = Math.toRadians(60);
-    /** Como mucho se cura por tres mordidos, por grande que sea el grupo. */
-    private static final int MORDISCO_TOPE_CURA = 3;
+    /** Lo que se cura como mucho por mordisco (vida de diseno), por grande que sea el grupo. */
+    private static final double MORDISCO_TOPE_ROBO = 5;
 
     /**
      * 5. Mordisco: una embestida corta hacia el mas cercano y, al llegar, un mordisco
-     * en abanico de 120 grados y 3,5 bloques que muerde a TODOS los que alcance. Se
-     * cura con lo que le saca a cada uno, hasta un tope. El dano baja un 20 % (9 a
-     * 7,2) porque ya no es a uno solo.
+     * en abanico de 120 grados y 3,5 bloques que muerde a TODOS los que alcance (12 a
+     * cada uno). Se cura con el 30 % de lo que le saca a cada uno, 5 como mucho por
+     * mordisco.
      *
      * El aviso es el abanico dibujado en el suelo, donde va a acabar, apuntando a la
      * presa: quien este dentro, que se aparte.
@@ -793,13 +942,17 @@ public final class Conde extends BossFight {
                         3, 0.6, 0.2, 0.6, 0);
                 soundAt(yo, "entity.phantom.bite", 1.6f, 0.8f);
                 soundAt(yo, "entity.hoglin.attack", 1.2f, 1.3f);
-                int mordidos = 0;
+                double robado = 0;
                 for (Player p : Fx.playersNear(yo, MORDISCO_RADIO + 0.5)) {
                     if (!enAbanico(yo, frente, p.getLocation())) continue;
                     if (Math.abs(p.getLocation().getY() - yo.getY()) > 2.5) continue;
-                    double dano = 7.2 * power();
+                    double dano = 12 * power();
                     hit(p, dano);
-                    if (mordidos++ < MORDISCO_TOPE_CURA) curar(dano * 0.30);
+                    double cura = Math.min(dano * 0.30, MORDISCO_TOPE_ROBO - robado);
+                    if (cura > 0) {
+                        curar(cura);
+                        robado += cura;
+                    }
                     Location pecho = p.getLocation().add(0, 1.1, 0);
                     Compat.spawn(world(), Compat.DAMAGE_INDICATOR, pecho, 5, 0.3, 0.3, 0.3, 0.1);
                     Compat.spawn(world(), Compat.ENTITY_EFFECT, pecho, 10, 0.3, 0.4, 0.3, 0, rojo());
@@ -983,7 +1136,7 @@ public final class Conde extends BossFight {
                 fly(formaBat, picado[0].clone().add(rumbo[0].clone().multiply(3)), 1.1);
                 for (Player p : Fx.playersNear(formaBat.getLocation(), EMBESTIDA_RADIO)) {
                     if (!golpeados.add(p.getUniqueId())) continue;
-                    hit(p, 8 * power());
+                    hit(p, 13 * power());
                     push(p, rumbo[0].clone().setY(0).multiply(1.0).setY(0.45));
                     Compat.spawn(world(), Compat.DAMAGE_INDICATOR, p.getLocation().add(0, 1, 0), 4, 0.3, 0.3, 0.3, 0.1);
                     soundAt(p.getLocation(), "entity.phantom.bite", 1.6f, 0.7f);
@@ -1027,6 +1180,9 @@ public final class Conde extends BossFight {
         soundAt(l, "entity.illusioner.mirror_move", 1.6f, 0.6f);
         soundAt(l, "entity.bat.death", 1.4f, 0.6f);
     }
+
+    /** Lo que pega cada murcielago de la Lluvia: quien se coma los dos o tres suyos encaja de 30 a 45. */
+    private static final double LLUVIA_DANO = 15;
 
     /**
      * 7. Lluvia de Murcielagos: murcielagos que caen en picado sobre circulos marcados.
@@ -1095,7 +1251,7 @@ public final class Conde extends BossFight {
                     if (plano(v.getLocation(), g) > 1.4) continue;
                     double dy = v.getLocation().getY() - g.getY();
                     if (dy < -1 || dy > 2.5) continue;
-                    hit(v, 6 * power());
+                    hit(v, LLUVIA_DANO * power());
                 }
                 spawned.remove(b);
                 Fx.safeRemove(b);
@@ -1111,61 +1267,72 @@ public final class Conde extends BossFight {
     }
 
     /**
-     * 8. Pentaculo: un circulo enorme; de las cinco puntas de la estrella sube un rayo
-     * rojo (los de los Rayos del Alba, en carmesi) durante tres segundos. Quien este en
-     * un rayo encaja 11 una vez por rayo; se mide en el plano, como una columna.
+     * 8. Pentaculo: un circulo enorme que se monta por partes y carga tres segundos;
+     * de las cinco puntas de la estrella sube un rayo rojo de 80 bloques, uno cada dos
+     * ticks en sentido horario, y el anillo flotante baja y sale en onda. Cada rayo
+     * pega 18 a quien este a 2,5 o menos de su punta (una vez por rayo) y la onda 8 a
+     * todo el que este dentro del circulo.
      */
     public void pentaculo() {
         if (!alive()) return;
         final Location c = Fx.ground(boss.getLocation(), 4);
-        final Circulo k = circulo(c, 7, 84, true, false);
+        c.setYaw(0);
+        c.setPitch(0);
+        final Escena esc = new Escena();
+        final Pentaculo k = new Pentaculo(esc, c);
         soundAt(c, "block.bell.use", 1.8f, 0.5f);
         soundAt(c, "entity.illusioner.cast_spell", 1.6f, 0.7f);
         announce(Component.text("Pentáculo. No te quedes en las puntas de la estrella."));
 
-        final List<Rayo> rayos = new ArrayList<>();
         final List<Set<UUID>> tocados = new ArrayList<>();
-        animate(80, t -> {
-            if (!alive()) throw Stop.now();
-            if (t < 20) {
-                if (t % 2 == 0) {
-                    for (Location v : k.vertices) {
-                        Fx.ring(v.clone().add(0, 0.12, 0), 1.3, 14, p ->
-                                Compat.spawn(world(), Compat.DUST_COLOR_TRANSITION, p, 1, 0, 0, 0, 0, transicion(1.2f)));
-                        Compat.spawn(world(), Compat.SOUL_FIRE_FLAME, v.clone().add(0, 0.2, 0), 1, 0.3, 0, 0.3, 0.02);
-                    }
+        for (int i = 0; i < 5; i++) tocados.add(new HashSet<>());
+        final Set<UUID> onda = new HashSet<>();
+        animate(PENTA_FIN, t -> {
+            if (cerrado || !alive()) throw Stop.now();
+            k.tick(t);
+            if (t >= 7 && t < 92 && t % 6 == 0) {
+                for (int i = 0; i < 5; i++) {
+                    Compat.spawn(world(), Compat.SMALL_FLAME, k.pie[i].clone().add(0, 1.26, 0), 1, 0, 0, 0, 0);
                 }
-                return;
             }
-            if (t == 20) {
-                for (Location v : k.vertices) {
-                    // Sin plazo propio: lo apaga el final de la habilidad, a la vez que el circulo.
-                    rayos.add(rayoRojo(v, 40f, 0, 2.6f));
-                    tocados.add(new HashSet<>());
+            // La zona de cada rayo, marcada en el suelo mientras carga.
+            if (t >= 26 && t < PENTA_ESTALLA && t % 4 == 0) {
+                for (Location v : k.pie) {
+                    Fx.ring(v.clone().add(0, 0.12, 0), PENTA_RADIO_RAYO, 16, p ->
+                            Compat.spawn(world(), Compat.DUST_COLOR_TRANSITION, p, 1, 0, 0, 0, 0, transicion(1.1f)));
+                }
+            }
+            if (t < PENTA_ESTALLA && t % 20 == 0) soundAt(c, "block.respawn_anchor.charge", 1.4f, 0.6f + t * 0.01f);
+            for (int i = 0; i < 5; i++) {
+                int t0 = PENTA_ESTALLA + 2 * i;
+                if (t < t0 || t >= t0 + 6) continue;
+                Location v = k.pie[i];
+                if (t == t0) {
                     Compat.spawn(world(), Compat.FLASH, v.clone().add(0, 0.5, 0), 1, 0, 0, 0, 0, C_SANGRE);
+                    soundAt(v, "entity.wither.shoot", 1.2f, 0.5f + i * 0.08f);
                 }
-                soundAt(c, "block.bell.use", 1.8f, 0.5f);
-                soundAt(c, "entity.wither.shoot", 1.2f, 0.5f);
-            }
-            if (t % 2 != 0) return;
-            for (int i = 0; i < k.vertices.size(); i++) {
-                Location v = k.vertices.get(i);
-                // Chispas donde el rayo corta el suelo, como en el Alba.
-                Compat.spawn(world(), Compat.DUST_COLOR_TRANSITION, v.clone().add(0, 0.3, 0), 2,
-                        0.35, 0.1, 0.35, 0, transicion(1.0f));
                 for (Player p : Fx.playersNear(v, 41)) {
-                    if (plano(p.getLocation(), v) > 1.35) continue;
+                    if (plano(p.getLocation(), v) > PENTA_RADIO_RAYO) continue;
                     double dy = p.getLocation().getY() - v.getY();
                     if (dy < -1 || dy > 40) continue;
                     if (!tocados.get(i).add(p.getUniqueId())) continue;
-                    hit(p, 11 * power());
+                    hit(p, 18 * power());
                     push(p, fuera(p.getLocation(), v).multiply(0.6).setY(0.35));
                 }
             }
-        }, () -> {
-            for (Rayo r : rayos) r.quitar();
-            k.quitar();
-        });
+            if (t == PENTA_ESTALLA + 4) {
+                soundAt(c, "entity.generic.explode", 1.4f, 0.6f);
+                Fx.ring(c.clone().add(0, 0.3, 0), 6.4, 40, p ->
+                        Compat.spawn(world(), Compat.LARGE_SMOKE, p, 1, 0.1, 0.05, 0.1, 0.02));
+                for (Player p : Fx.playersNear(c, 9)) {
+                    if (plano(p.getLocation(), c) > 7) continue;
+                    if (Math.abs(p.getLocation().getY() - c.getY()) > 3) continue;
+                    if (!onda.add(p.getUniqueId())) continue;
+                    hit(p, 8 * power());
+                    push(p, fuera(p.getLocation(), c).multiply(0.7).setY(0.3));
+                }
+            }
+        }, esc::quitar);
     }
 
     /** 9. Niebla Roja: una niebla que ciega al entrar y en la que el es mas rapido. */
@@ -1207,7 +1374,7 @@ public final class Conde extends BossFight {
     /** 10. Medianoche: se hace de noche para todos y llegan tres enjambres. */
     public void medianoche() {
         if (!alive()) return;
-        titleNear(Component.text("MEDIANOCHE", ACCENT, TextDecoration.BOLD),
+        titleNear(Component.text("MEDIANOCHE", ACCENT),
                 Component.text("Llegan sus murciélagos", NamedTextColor.GRAY));
         Location l = loc();
         soundAt(l, "entity.wither.ambient", 1.4f, 0.6f);
@@ -1321,6 +1488,8 @@ public final class Conde extends BossFight {
 
         final Location pos;
         final Quaternionf q;
+        /** Escala del ataud entero: 1 los de la habilidad, 1,4 el de la entrada. */
+        final float k;
         BlockDisplay base;
         BlockDisplay cuerpo;
         BlockDisplay forro;
@@ -1332,8 +1501,13 @@ public final class Conde extends BossFight {
         float y = HUNDIDO;
 
         Ataud(Location pos, float giro) {
+            this(pos, giro, 1f);
+        }
+
+        Ataud(Location pos, float giro, float k) {
             this.pos = pos;
             this.q = new Quaternionf().rotateY(giro);
+            this.k = k;
             this.base = parte(Material.BLACKSTONE_SLAB.createBlockData(), baseT(HUNDIDO), 12);
             this.cuerpo = parte(Material.DARK_OAK_PLANKS.createBlockData(), cuerpoT(HUNDIDO), 12);
             this.forro = parte(Material.RED_NETHER_BRICKS.createBlockData(), forroT(HUNDIDO), 12);
@@ -1347,7 +1521,8 @@ public final class Conde extends BossFight {
         }
 
         private Transformation t(Vector3f local, Quaternionf giro, Vector3f escala) {
-            return new Transformation(new Quaternionf(q).transform(local), giro, escala, new Quaternionf());
+            return new Transformation(new Quaternionf(q).transform(new Vector3f(local).mul(k)), giro,
+                    new Vector3f(escala).mul(k), new Quaternionf());
         }
 
         /* La losa ocupa la mitad de abajo de su bloque: a escala 0,3 de alto mide 0,15. */
@@ -1395,7 +1570,7 @@ public final class Conde extends BossFight {
         /** La chispa de la mecha, mientras la vela sigue de pie. */
         void llama() {
             if (!velaEnPie || vela == null || !vela.isValid()) return;
-            Vector3f mecha = new Quaternionf(q).transform(new Vector3f(0.1f, y + BASE + 0.7f + 0.36f, 0.5f));
+            Vector3f mecha = new Quaternionf(q).transform(new Vector3f(0.1f, y + BASE + 0.7f + 0.36f, 0.5f).mul(k));
             Compat.spawn(world(), Compat.SMALL_FLAME, pos.clone().add(mecha.x, mecha.y, mecha.z), 1, 0, 0, 0, 0);
         }
 
@@ -1456,6 +1631,43 @@ public final class Conde extends BossFight {
                 Fx.safeRemove(d);
             }
         }
+
+        /**
+         * Se desmonta: cada parte sale hacia fuera y hacia arriba girando y se encoge a
+         * nada en diez ticks, con un tick de desfase entre partes. No las borra: eso
+         * lo hace quitar() cuando ya no se ven.
+         */
+        void desmontar() {
+            BlockDisplay[] partes = {base, cuerpo, forro, tapa, asaIzq, asaDer, vela};
+            for (int i = 0; i < partes.length; i++) {
+                final BlockDisplay d = partes[i];
+                if (d == null || !d.isValid()) continue;
+                final int n = i;
+                later(i % 4, () -> {
+                    if (!d.isValid()) return;
+                    try {
+                        Transformation tr = d.getTransformation();
+                        Quaternionf rot = new Quaternionf(tr.getLeftRotation());
+                        Vector3f centro = new Vector3f(tr.getTranslation())
+                                .add(new Quaternionf(rot).transform(new Vector3f(tr.getScale()).mul(0.5f)));
+                        float dx = centro.x;
+                        float dz = centro.z;
+                        float largo = (float) Math.sqrt(dx * dx + dz * dz);
+                        if (largo < 0.05f) {
+                            double a = n * 2.4;
+                            dx = (float) Math.cos(a);
+                            dz = (float) Math.sin(a);
+                            largo = 1f;
+                        }
+                        Vector3f fin = new Vector3f(centro.x + dx / largo * 1.8f * k, centro.y + 1.2f * k,
+                                centro.z + dz / largo * 1.8f * k);
+                        Quaternionf giro = new Quaternionf(rot).rotateX(1.4f).rotateY(1.0f);
+                        Conde.mover(d, new Transformation(fin, giro, new Vector3f(0.001f), new Quaternionf()), 10);
+                    } catch (Throwable ignored) {
+                    }
+                });
+            }
+        }
     }
 
     /** 12. Festin de Sangre: les drena a todos los cercanos y se cura por cada uno. */
@@ -1513,99 +1725,161 @@ public final class Conde extends BossFight {
         });
     }
 
-    /** 13. Eclipse Carmesi: el gran circulo bajo todo el campo. Quien no salga, lo paga. */
+    /**
+     * 13. Eclipse Carmesi: dos anillos bajo todo el campo, una luna roja a cinco
+     * bloques que un disco negro tapa en tres segundos, y los rayos naciendo. Al
+     * taparse del todo, destello: 24 a todo el que siga dentro del radio 9 y 10 mas a
+     * quien este a menos de 3 del rayo central.
+     */
     public void eclipseCarmesi() {
         if (!alive()) return;
         final Location c = Fx.ground(boss.getLocation(), 4);
-        final double r = 9;
-        final Circulo k = circulo(c, r, 46, true, false);
-        k.girarEstrella = true;
-        Compat.apply(boss, "slowness", 45, 4);
-        titleNear(Component.text("ECLIPSE CARMESÍ", ACCENT, TextDecoration.BOLD),
+        c.setYaw(0);
+        c.setPitch(0);
+        final double r = ECLIPSE_RADIO;
+        // La luna mira al centro de la arena; si el Conde esta en el, al grupo.
+        Vector hacia = arena.toVector().subtract(c.toVector()).setY(0);
+        if (hacia.lengthSquared() < 1) {
+            Location g = centroDe(targets());
+            hacia = g == null ? new Vector(1, 0, 0) : g.toVector().subtract(c.toVector()).setY(0);
+        }
+        if (hacia.lengthSquared() < 0.01) hacia = new Vector(1, 0, 0);
+        final Escena esc = new Escena();
+        final Eclipse k = new Eclipse(esc, c, Math.atan2(hacia.getX(), hacia.getZ()));
+        Compat.apply(boss, "slowness", ECLIPSE_ESTALLA + 10, 4);
+        titleNear(Component.text("ECLIPSE CARMESÍ", ACCENT),
                 Component.text("Sal del círculo rojo", NamedTextColor.GRAY));
         soundAt(c, "entity.wither.ambient", 1.6f, 0.5f);
         soundAt(c, "block.trial_spawner.ominous_activate", 1.4f, 0.6f);
         soundAt(c, "block.beacon.activate", 1.4f, 0.6f);
 
-        /* Los rayos, como en los Rayos del Alba: uno gordo en el centro y ocho que se
-         * abren en espiral desde el centro hasta el borde del circulo durante la carga.
-         * Llegan al borde justo al estallar: se ve hasta donde llega el eclipse. Son
-         * aviso, no pegan: el golpe es el estallido. */
-        final Rayo central = rayoRojo(c, 48f, 0, 4.2f);
-        final int n = 8;
-        final List<Rayo> espiral = new ArrayList<>();
-        final double giro0 = random.nextDouble() * Math.PI * 2;
-        for (int i = 0; i < n; i++) {
-            double a = giro0 + Math.PI * 2 * i / n;
-            espiral.add(rayoRojo(c.clone().add(Math.cos(a) * 0.8, 0, Math.sin(a) * 0.8), 40f, 0, 1.6f));
-        }
-
-        animate(40, t -> {
-            if (!alive()) throw Stop.now();
-            double re = 0.8 + (r - 0.8) * Math.min(1.0, t / 38.0);
-            double giro = giro0 + t * 0.045;
-            for (int i = 0; i < espiral.size(); i++) {
-                double a = giro + Math.PI * 2 * i / n;
-                Location pie = c.clone().add(Math.cos(a) * re, 0, Math.sin(a) * re);
-                espiral.get(i).mover(pie);
-                if (t % 3 == 0) {
-                    Compat.spawn(world(), Compat.DUST_COLOR_TRANSITION, Fx.ground(pie, 4).add(0, 0.3, 0), 1,
-                            0.15, 0.1, 0.15, 0, transicion(1.0f));
+        animate(ECLIPSE_FIN, t -> {
+            if (cerrado || !alive()) throw Stop.now();
+            k.tick(t);
+            if (t < ECLIPSE_ESTALLA) {
+                if (t % 15 == 0) soundAt(c, "block.beacon.ambient", 1.6f, 0.6f);
+                if (t % 4 == 0) {
+                    Fx.ring(c.clone().add(0, 0.2, 0), r, 36, p ->
+                            Compat.spawn(world(), Compat.DUST_COLOR_TRANSITION, p, 1, 0, 0, 0, 0, transicion(1.3f)));
                 }
-            }
-            if (t % 15 == 0) soundAt(c, "block.beacon.ambient", 1.6f, 0.6f);
-            if (t % 2 == 0) {
-                Fx.ring(c.clone().add(0, 0.15, 0), r, 50, p ->
-                        Compat.spawn(world(), Compat.DUST_COLOR_TRANSITION, p, 1, 0, 0, 0, 0, transicion(1.4f)));
-                for (int i = 0; i < 4; i++) {
-                    double a = random.nextDouble() * Math.PI * 2;
-                    Location borde = c.clone().add(Math.cos(a) * r, 0.3, Math.sin(a) * r);
-                    // Varillas que corren hacia el centro: se ve a donde va todo.
-                    Compat.spawn(world(), Compat.END_ROD, borde, 0, -Math.cos(a), 0, -Math.sin(a), 0.35);
-                    Compat.spawn(world(), Compat.TRIAL_OMEN, borde, 1, 0.1, 0.1, 0.1, 0);
+                if (t % 10 == 0) {
+                    soundAt(c, "block.bell.use", 1.6f, 0.5f + t * 0.005f);
+                    int quedan = Math.max(1, (ECLIPSE_ESTALLA - t + 19) / 20);
+                    for (Player p : Fx.viewersNear(c, 40)) {
+                        boolean fuera = plano(p.getLocation(), c) > r;
+                        p.sendActionBar(Component.text("Eclipse en " + quedan + " s   ", NamedTextColor.GRAY)
+                                .append(Component.text(fuera ? "estás fuera" : "estás dentro",
+                                        fuera ? NamedTextColor.GREEN : NamedTextColor.RED)));
+                    }
                 }
-            }
-            if (t % 10 == 0) {
-                soundAt(c, "block.bell.use", 1.6f, 0.5f + t * 0.005f);
-                // Segundos que quedan, redondeando hacia arriba: 2, 2, 1, 1 (antes salia un 3).
-                int quedan = Math.max(1, (40 - t + 19) / 20);
-                for (Player p : Fx.viewersNear(c, 40)) {
-                    boolean fuera = plano(p.getLocation(), c) > r;
-                    p.sendActionBar(Component.text("Eclipse en " + quedan + "s   ", NamedTextColor.GRAY)
-                            .append(Component.text(fuera ? "estás fuera" : "estás dentro",
-                                    fuera ? NamedTextColor.GREEN : NamedTextColor.RED)));
-                }
-            }
-        }, () -> {
-            k.quitar();
-            if (!alive()) {
-                central.quitar();
-                for (Rayo ry : espiral) ry.quitar();
                 return;
             }
-            // El destello: cada rayo se ensancha de golpe y se apaga, con un fogonazo al pie.
-            central.destello();
-            for (Rayo ry : espiral) {
-                Location pie = ry.pie();
-                if (pie != null) Compat.spawn(world(), Compat.FLASH, pie.clone().add(0, 0.5, 0), 1, 0, 0, 0, 0, C_SANGRE);
-                ry.destello();
-            }
+            if (t != ECLIPSE_ESTALLA) return;
             soundAt(c, "block.beacon.deactivate", 1.4f, 0.7f);
             Location m = c.clone().add(0, 1, 0);
+            Compat.spawn(world(), Compat.FLASH, c.clone().add(0, 5, 0), 1, 0, 0, 0, 0, C_SANGRE);
             Compat.spawn(world(), Compat.FLASH, m, 1, 0, 0, 0, 0, C_SANGRE);
+            Compat.spawn(world(), Compat.DUST, c.clone().add(0, 5, 0), 40, 1.6, 1.6, 1.6, 0, Compat.dust(SANGRE, 2.0f));
             Compat.spawn(world(), Compat.EXPLOSION_EMITTER, m, 2);
             Compat.spawn(world(), Compat.DUST_COLOR_TRANSITION, m, 120, r * 0.5, 0.6, r * 0.5, 0, transicion(2.0f));
-            Fx.ring(c.clone().add(0, 0.5, 0), r, 60, p ->
-                    Compat.spawn(world(), Compat.LARGE_SMOKE, p, 1, 0.1, 0.1, 0.1, 0.02));
             soundAt(c, "entity.wither.spawn", 1.5f, 1.0f);
             soundAt(c, "entity.generic.explode", 1.6f, 0.5f);
             for (Player p : Fx.playersNear(c, r + 3)) {
-                if (plano(p.getLocation(), c) > r + 0.2) continue;
+                double d = plano(p.getLocation(), c);
+                if (d > r + 0.2) continue;
                 if (Math.abs(p.getLocation().getY() - c.getY()) > 4) continue;
-                hit(p, 18 * power());
+                hit(p, (d < 3 ? 34 : 24) * power());
                 push(p, fuera(p.getLocation(), c).multiply(1.2).setY(0.55));
             }
+        }, esc::quitar);
+    }
+
+    // ============================================================ SANGRE ARDIENTE ==
+
+    /**
+     * 14. Sangre Ardiente: carga quince ticks una bola de sangre entre las manos,
+     * mirando al grupo mas denso, y la lanza hacia donde estaba el grupo al soltarla.
+     * Al chocar pega 22 en 3,5 bloques y deja un charco que quema cuatro segundos (3
+     * cada medio segundo y fuego a quien lo pise).
+     */
+    public void sangreArdiente() {
+        if (!alive()) return;
+        final List<Player> grupo = grupoDenso();
+        if (grupo.isEmpty()) return;
+        final Location[] mira = {centroDe(grupo)};
+        if (mira[0] == null) return;
+        Compat.apply(boss, "slowness", BOLA_CARGA + 4, 4);
+        soundAt(loc(), "item.firecharge.use", 1.6f, 0.6f);
+        soundAt(loc(), "entity.blaze.shoot", 1.2f, 0.5f);
+        announce(Component.text("Sangre ardiente. Sal de donde vaya a caer la bola."));
+        final Escena esc = new Escena();
+        final Bola b = new Bola(esc, 1.0, true, 0, BOLA_CARGA, () -> {
+            Location g = centroDe(grupo);
+            if (g != null) mira[0] = g;
+            return mira[0].clone().add(0, 0.9, 0);
         });
+        animate(BOLA_CARGA + BOLA_VUELO_MAX + 102, t -> {
+            if (cerrado || !alive()) throw Stop.now();
+            b.tick(t);
+            if (b.hecho) throw Stop.now();
+        }, esc::quitar);
+    }
+
+    /**
+     * 15. Rafaga de Sangre (fase II en adelante): tres bolas pequeñas seguidas, una
+     * cada seis ticks, a tres jugadores distintos; si hay menos, en abanico de 25
+     * grados hacia el grupo. Sin charco: 10 a quien este a 2 bloques del choque.
+     */
+    public void rafagaDeSangre() {
+        if (!alive()) return;
+        final List<Player> tres = new ArrayList<>(pickTargets(3));
+        if (tres.isEmpty()) return;
+        final Location centro = centroDe(tres);
+        if (centro == null) return;
+        Compat.apply(boss, "slowness", BOLA_CARGA + 16, 4);
+        soundAt(loc(), "item.firecharge.use", 1.6f, 0.8f);
+        announce(Component.text("Ráfaga de sangre. Tres bolas: muévete."));
+        final Escena esc = new Escena();
+        final Bola[] bolas = new Bola[3];
+        final double[] abanico = {-25 * D2R, 0, 25 * D2R};
+        for (int i = 0; i < 3; i++) {
+            final int n = i;
+            int tl = BOLA_CARGA + 6 * i;
+            int tc = i == 0 ? 0 : tl - 6;
+            Supplier<Location> mira;
+            if (tres.size() >= 3) {
+                final Player p = tres.get(i);
+                final Location[] ultima = {p.getLocation().add(0, 0.9, 0)};
+                mira = () -> {
+                    if (Fx.isFightable(p) && p.getWorld().equals(world())) ultima[0] = p.getLocation().add(0, 0.9, 0);
+                    return ultima[0].clone();
+                };
+            } else {
+                mira = () -> {
+                    Location yo = boss.getLocation();
+                    Location g = centroDe(tres);
+                    Location base = g != null ? g : centro;
+                    Vector d = base.toVector().subtract(yo.toVector()).setY(0);
+                    double dist = Fx.clamp(d.length(), 4, 22);
+                    if (d.lengthSquared() < 0.01) d = yo.getDirection().setY(0);
+                    if (d.lengthSquared() < 0.01) d = new Vector(1, 0, 0);
+                    d.normalize();
+                    double ca = Math.cos(abanico[n]), sa = Math.sin(abanico[n]);
+                    Vector r = new Vector(d.getX() * ca - d.getZ() * sa, 0, d.getX() * sa + d.getZ() * ca);
+                    return yo.clone().add(r.multiply(dist)).add(0, base.getY() - yo.getY() + 0.9, 0);
+                };
+            }
+            bolas[i] = new Bola(esc, 0.55, false, tc, tl, mira);
+        }
+        animate(BOLA_CARGA + 12 + BOLA_VUELO_MAX + 16, t -> {
+            if (cerrado || !alive()) throw Stop.now();
+            boolean quedan = false;
+            for (Bola b : bolas) {
+                b.tick(t);
+                if (!b.hecho) quedan = true;
+            }
+            if (!quedan) throw Stop.now();
+        }, esc::quitar);
     }
 
     // ================================================================== VASTAGOS ==
@@ -2161,8 +2435,8 @@ public final class Conde extends BossFight {
      *   - con pentaculo: la estrella de cinco puntas en trazo fino (rojo vivo sobre un
      *     ribete negro) y un disco pequeño de ladrillo del nether rojo en el centro.
      *
-     * Entidades: ~36 un sello de los pies, ~18 uno ligero, ~100 el Pentaculo y ~120
-     * el Eclipse.
+     * Hoy solo lo usa el Festin (la version ligera, ~18 entidades); el Sello, el
+     * Pentaculo y el Eclipse tienen sus propios efectos (ver EFECTOS v2).
      *
      * @param ligero sin anillo interior ni anillo fino: para cuando hay muchos a la vez
      *               (el Festin, o los sellos a partir del decimotercero)
@@ -2331,104 +2605,1207 @@ public final class Conde extends BossFight {
         }
     }
 
-    // ================================================================= RAYOS ROJOS ==
+    // ================================================================ EFECTOS v2 ==
 
-    /* Grosor de la funda y del nucleo a grosor 1, como el haz del Alba a escala. */
-    private static final float RAYO_FUNDA = 0.36f;
-    private static final float RAYO_NUCLEO = 0.15f;
-    /** Lo que queda bajo el suelo: el rayo sale de la tierra, no nace en el aire. */
-    private static final float RAYO_BAJO_SUELO = 3f;
+    /*
+     * Los efectos grandes (Sello, Pentaculo, Eclipse, Sangre Ardiente y la entrada) son
+     * los de la vista previa en 3D que aprobo Dosa (conde-v2), con sus medidas, tiempos
+     * y cantidades. Todo son BlockDisplay a brillo 15 (y TextDisplay para las runas):
+     * cada efecto es una funcion del tick que dice donde esta cada pieza, y en cada
+     * tick se le manda su transformacion con dos ticks de interpolacion; los giros y
+     * latidos van por transformacion y los desplazamientos largos (la bola, los rayos
+     * de la espiral) por teleport con dos ticks de deslizamiento.
+     *
+     * Las piezas nacen cuando les toca aparecer y nacen a escala cero, para que el
+     * cliente las vea crecer; una pieza que ya estaba a cero no manda nada. Todas van
+     * a 'spawned' y cada efecto borra las suyas al terminar o si se corta a medias.
+     */
+
+    private static final double TAU = Math.PI * 2;
+    private static final double D2R = Math.PI / 180;
+
+    private static double cl(double x) {
+        return x < 0 ? 0 : (x > 1 ? 1 : x);
+    }
+
+    /** El avance de t entre a y b, recortado a [0, 1]. */
+    private static double seg(double t, double a, double b) {
+        return cl((t - a) / (b - a));
+    }
+
+    /** Suavizado en los dos extremos. */
+    private static double sm(double x) {
+        x = cl(x);
+        return x * x * (3 - 2 * x);
+    }
+
+    /** Sale rapido y frena al final. */
+    private static double eo(double x) {
+        x = cl(x);
+        return 1 - Math.pow(1 - x, 3);
+    }
+
+    private static double lerp(double a, double b, double u) {
+        return a + (b - a) * u;
+    }
+
+    /** Ruido fijo en [0, 1): el mismo n da siempre lo mismo, como en la vista previa. */
+    private static double h1(double n) {
+        double x = Math.sin(n * 127.1 + 311.7) * 43758.5453;
+        return x - Math.floor(x);
+    }
+
+    /** Giro en X, luego en Y, luego en Z (el orden de la vista previa). */
+    private static Quaternionf xyz(double x, double y, double z) {
+        return new Quaternionf().rotateX((float) x).rotateY((float) y).rotateZ((float) z);
+    }
+
+    private static Quaternionf giroY(double a) {
+        return new Quaternionf().rotateY((float) a);
+    }
+
+    private static Location sinGiro(Location l) {
+        Location c = l.clone();
+        c.setYaw(0);
+        c.setPitch(0);
+        return c;
+    }
+
+    /** Un bloque de medida (sx, sy, sz) con su centro en (x, y, z) y girado q sobre ese centro. */
+    private static Transformation centrada(double x, double y, double z, Quaternionf q,
+                                           double sx, double sy, double sz) {
+        float fx = (float) Math.max(sx, 1e-4);
+        float fy = (float) Math.max(sy, 1e-4);
+        float fz = (float) Math.max(sz, 1e-4);
+        Vector3f mitad = new Quaternionf(q).transform(new Vector3f(fx / 2f, fy / 2f, fz / 2f));
+        return new Transformation(new Vector3f((float) x - mitad.x, (float) y - mitad.y, (float) z - mitad.z),
+                new Quaternionf(q), new Vector3f(fx, fy, fz), new Quaternionf());
+    }
+
+    /** Pone una pieza que va dentro de un grupo girado g (un anillo que gira). */
+    private static void poner(Pz p, Quaternionf g, double x, double y, double z, Quaternionf q, double s) {
+        Vector3f v = new Quaternionf(g).transform(new Vector3f((float) x, (float) y, (float) z));
+        p.put(v.x, v.y, v.z, new Quaternionf(g).mul(q), s);
+    }
+
+    private interface Parte {
+        void quitar();
+    }
+
+    /** Las piezas de un efecto, para borrarlas todas de una vez. */
+    private final class Escena {
+        private final List<Parte> partes = new ArrayList<>();
+
+        Pz pz(Location ancla, Material m, double w, double h, double l) {
+            return pz(ancla, m.createBlockData(), w, h, l, 2);
+        }
+
+        Pz pz(Location ancla, BlockData b, double w, double h, double l, int teleporte) {
+            Pz p = new Pz(ancla, b, w, h, l, teleporte);
+            partes.add(p);
+            return p;
+        }
+
+        Rn rn(Location ancla, String glifo, float escala) {
+            Rn r = new Rn(ancla, glifo, escala);
+            partes.add(r);
+            return r;
+        }
+
+        Rayo rayo(Location suelo, float ancho, float nucleo) {
+            Rayo r = new Rayo(suelo, ancho, nucleo);
+            partes.add(r);
+            return r;
+        }
+
+        void quitar() {
+            for (Parte p : partes) {
+                try {
+                    p.quitar();
+                } catch (Throwable ignored) {
+                }
+            }
+            partes.clear();
+        }
+    }
 
     /**
-     * Un rayo rojo: el de los Rayos del Alba (Alba#haz) en carmesi. Dos BlockDisplay
-     * anidados en el mismo punto: por fuera una funda de cristal rojo y por dentro un
-     * nucleo de bloque de redstone con contorno rojo, los dos a brillo maximo. Sube
-     * estirandose en cinco ticks (interpolacion) y se apaga adelgazando.
-     *
-     * El nucleo es REDSTONE_BLOCK y no RED_CONCRETE porque es el rojo mas vivo de los
-     * dos; si en el juego se viera demasiado veteado dentro del cristal, el cambio es
-     * solo el material.
-     *
-     * Para moverlo (la espiral del Eclipse) se teletransporta: con teleportDuration el
-     * cliente lo desliza en vez de saltar.
+     * Una pieza: un BlockDisplay con su medida base (w, h, l) que se coloca por su
+     * centro respecto a un ancla. Nace la primera vez que tiene tamaño, a escala cero.
      */
-    private final class Rayo {
-        final BlockDisplay funda;
-        final BlockDisplay nucleo;
-        final float alto;
-        final float grosor;
-        boolean vivo = true;
+    private final class Pz implements Parte {
+        private final BlockData datos;
+        private final double w;
+        private final double h;
+        private final double l;
+        private final int teleporte;
+        private Location ancla;
+        private BlockDisplay d;
+        private boolean oculto = true;
+        private boolean fallo;
 
-        Rayo(Location suelo, float alto, float grosor) {
-            this.alto = alto + RAYO_BAJO_SUELO;
-            this.grosor = grosor;
-            Location base = baseDe(suelo);
-            this.funda = parteRayo(base, Material.RED_STAINED_GLASS, RAYO_FUNDA * grosor, false);
-            this.nucleo = parteRayo(base, Material.REDSTONE_BLOCK, RAYO_NUCLEO * grosor, true);
-            // Un tick de margen: el cliente tiene que haber visto la forma corta para interpolar.
-            later(1, () -> {
-                if (!vivo) return;
-                Conde.mover(funda, columna(RAYO_FUNDA * grosor, this.alto), 5);
-                Conde.mover(nucleo, columna(RAYO_NUCLEO * grosor, this.alto), 5);
-            });
+        Pz(Location ancla, BlockData datos, double w, double h, double l, int teleporte) {
+            this.ancla = sinGiro(ancla);
+            this.datos = datos;
+            this.w = w;
+            this.h = h;
+            this.l = l;
+            this.teleporte = teleporte;
         }
 
-        /** Donde corta el suelo, o null si ya no esta. */
-        Location pie() {
-            BlockDisplay d = funda != null && funda.isValid() ? funda : nucleo;
-            if (d == null || !d.isValid()) return null;
-            return d.getLocation().add(0, RAYO_BAJO_SUELO, 0);
-        }
-
-        void mover(Location suelo) {
-            if (!vivo) return;
-            Location base = baseDe(suelo);
-            for (BlockDisplay d : new BlockDisplay[]{funda, nucleo}) {
-                if (d != null && d.isValid()) d.teleport(base);
+        /** Mueve el ancla (por teleport); las coordenadas de put son relativas a ella. */
+        void ancla(Location a) {
+            ancla = sinGiro(a);
+            if (d == null || !d.isValid()) return;
+            try {
+                d.teleport(ancla);
+            } catch (Throwable ignored) {
             }
         }
 
-        /** Se ensancha de golpe (tres ticks) y se apaga: el estallido. */
-        void destello() {
-            if (!vivo) return;
-            Conde.mover(funda, columna(RAYO_FUNDA * grosor * 2.4f, alto), 3);
-            Conde.mover(nucleo, columna(RAYO_NUCLEO * grosor * 2.4f, alto), 3);
-            later(4, this::quitar);
+        void put(double x, double y, double z, Quaternionf q, double s) {
+            put(x, y, z, q, s, s, s, false);
         }
 
-        /** Adelgaza en cinco ticks y desaparece. Se puede llamar varias veces. */
-        void quitar() {
-            if (!vivo) return;
-            vivo = false;
-            Conde.mover(funda, columna(0.02f, alto), 5);
-            Conde.mover(nucleo, columna(0.02f, alto), 5);
-            later(6, () -> {
-                for (BlockDisplay d : new BlockDisplay[]{funda, nucleo}) {
-                    if (d == null) continue;
-                    spawned.remove(d);
-                    Fx.safeRemove(d);
-                }
+        /** 'salto' = sin interpolacion: para lo que cambia de sitio de golpe (una chispa nueva). */
+        void put(double x, double y, double z, Quaternionf q, double sx, double sy, double sz, boolean salto) {
+            boolean nada = !(sx > 0.002 && sy > 0.002 && sz > 0.002);
+            if (nada && oculto) return;
+            if (d == null) {
+                if (fallo) return;
+                d = pieza(ancla, datos, centrada(x, y, z, q, 0, 0, 0), teleporte);
+                if (d == null) fallo = true;
+                else oculto = false;
+                return;
+            }
+            if (!d.isValid()) return;
+            oculto = nada;
+            Transformation tr = nada ? centrada(x, y, z, q, 0, 0, 0) : centrada(x, y, z, q, w * sx, h * sy, l * sz);
+            try {
+                d.setInterpolationDelay(0);
+                d.setInterpolationDuration(salto ? 0 : 2);
+                d.setTransformation(tr);
+            } catch (Throwable ignored) {
+            }
+        }
+
+        @Override
+        public void quitar() {
+            fallo = true;
+            oculto = true;
+            if (d == null) return;
+            spawned.remove(d);
+            Fx.safeRemove(d);
+            d = null;
+        }
+    }
+
+    private BlockDisplay pieza(Location at, BlockData datos, Transformation tr, int teleporte) {
+        try {
+            BlockDisplay e = world().spawn(at, BlockDisplay.class, x -> {
+                x.setBlock(datos);
+                x.setBrightness(new Display.Brightness(15, 15));
+                x.setViewRange(3.0f);
+                x.setShadowRadius(0f);
+                x.setPersistent(false);
+                x.setTeleportDuration(teleporte);
+                x.setInterpolationDelay(0);
+                x.setInterpolationDuration(2);
+                x.setTransformation(tr);
             });
-        }
-
-        private Location baseDe(Location suelo) {
-            Location b = new Location(world(), suelo.getX(), suelo.getY() - RAYO_BAJO_SUELO, suelo.getZ());
-            b.setYaw(0);
-            b.setPitch(0);
-            return b;
+            Tags.markTemporary(e);
+            track(e);
+            return e;
+        } catch (Throwable t) {
+            return null;
         }
     }
 
-    /** Un rayo rojo de 'alto' bloques sobre el suelo, que se apaga solo a los 'ticks' (0 = a mano). */
-    private Rayo rayoRojo(Location base, float alto, int ticks) {
-        return rayoRojo(base, alto, ticks, 1f);
+    /** Media altura de una linea de texto a escala 1: la runa se centra en su punto. */
+    private static final float RUNA_MEDIA = 0.12f;
+
+    /**
+     * Una runa: un TextDisplay rojo sobre transparente que siempre se ve de frente.
+     *
+     * Va colocada por TELEPORT y no por la traslacion de su transformacion: el cliente
+     * gira un display con billboard antes de aplicarle la transformacion, asi que una
+     * runa desplazada desde el ancla daria vueltas alrededor de ella segun mirase cada
+     * jugador. En la transformacion solo queda el centrado en altura, que no gira.
+     */
+    private final class Rn implements Parte {
+        private final String glifo;
+        private final float escala;
+        private final Location ancla;
+        private TextDisplay d;
+        private boolean oculto = true;
+        private boolean fallo;
+        private double ux;
+        private double uy;
+        private double uz;
+
+        Rn(Location ancla, String glifo, float escala) {
+            this.ancla = sinGiro(ancla);
+            this.glifo = glifo;
+            this.escala = escala;
+        }
+
+        void put(double x, double y, double z, double s) {
+            boolean nada = !(s > 0.002);
+            if (nada && oculto) return;
+            float e = nada || d == null ? 1e-4f : (float) (escala * s);
+            Transformation tr = new Transformation(new Vector3f(0f, -RUNA_MEDIA * e, 0f),
+                    new Quaternionf(), new Vector3f(e), new Quaternionf());
+            Location donde = ancla.clone().add(x, y, z);
+            if (d == null) {
+                if (fallo) return;
+                d = runaDe(donde, glifo, tr);
+                if (d == null) fallo = true;
+                else oculto = false;
+                ux = x;
+                uy = y;
+                uz = z;
+                return;
+            }
+            if (!d.isValid()) return;
+            oculto = nada;
+            try {
+                double dx = x - ux;
+                double dy = y - uy;
+                double dz = z - uz;
+                if (dx * dx + dy * dy + dz * dz > 1e-6) {
+                    d.teleport(donde);
+                    ux = x;
+                    uy = y;
+                    uz = z;
+                }
+                d.setInterpolationDelay(0);
+                d.setInterpolationDuration(2);
+                d.setTransformation(tr);
+            } catch (Throwable ignored) {
+            }
+        }
+
+        @Override
+        public void quitar() {
+            fallo = true;
+            oculto = true;
+            if (d == null) return;
+            spawned.remove(d);
+            Fx.safeRemove(d);
+            d = null;
+        }
     }
 
-    /** Lo mismo con grosor: 1 es el del Alba a escala; el central del Eclipse va a 4,2. */
-    private Rayo rayoRojo(Location base, float alto, int ticks, float grosor) {
-        Rayo r = new Rayo(base, alto, grosor);
-        if (ticks > 0) later(ticks, r::quitar);
-        return r;
+    private TextDisplay runaDe(Location at, String glifo, Transformation tr) {
+        try {
+            TextDisplay d = world().spawn(at, TextDisplay.class, e -> {
+                e.text(Component.text(glifo, TextColor.color(SANGRE)));
+                e.setBillboard(Display.Billboard.VERTICAL);
+                e.setAlignment(TextDisplay.TextAlignment.CENTER);
+                e.setDefaultBackground(false);
+                e.setBackgroundColor(Color.fromARGB(0, 0, 0, 0));
+                e.setSeeThrough(false);
+                e.setShadowed(false);
+                e.setBrightness(new Display.Brightness(15, 15));
+                e.setViewRange(3.0f);
+                e.setShadowRadius(0f);
+                e.setPersistent(false);
+                e.setTeleportDuration(2);
+                e.setInterpolationDelay(0);
+                e.setInterpolationDuration(2);
+                e.setTransformation(tr);
+            });
+            Tags.markTemporary(d);
+            track(d);
+            return d;
+        } catch (Throwable t) {
+            return null;
+        }
+    }
+
+    // ------------------------------------------------------------------- el rayo
+
+    private static final float RAYO_ALTO = 80f;
+
+    /**
+     * Un rayo rojo de 80 bloques apoyado en el suelo: una pieza de cristal rojo y
+     * dentro un nucleo de bloque de redstone. set(p, wf) le da la altura (p, de 0 a
+     * 1) y el grosor (wf); nace estirandose desde el suelo y se va adelgazando.
+     */
+    private final class Rayo implements Parte {
+        private final float ancho;
+        private final float nucleo;
+        private Location base;
+        private BlockDisplay funda;
+        private BlockDisplay alma;
+        private boolean oculto = true;
+        private boolean fallo;
+
+        Rayo(Location suelo, float ancho, float nucleo) {
+            this.ancho = ancho;
+            this.nucleo = nucleo;
+            this.base = baseRayo(suelo);
+        }
+
+        void set(double p, double wf) {
+            boolean nada = !(p > 0.002 && wf > 0.002);
+            if (nada && oculto) return;
+            if (funda == null && alma == null) {
+                if (fallo) return;
+                // Nace sin altura: el cliente lo ve estirarse desde el suelo.
+                alma = parteRayo(base, Material.REDSTONE_BLOCK, columna((float) (nucleo * wf), 0.001f));
+                funda = parteRayo(base, Material.RED_STAINED_GLASS, columna((float) (ancho * wf), 0.001f));
+                if (funda == null && alma == null) fallo = true;
+                else oculto = false;
+                return;
+            }
+            oculto = nada;
+            float alto = (float) (RAYO_ALTO * Math.max(p, 0.001));
+            float af = nada ? 1e-4f : (float) (ancho * wf);
+            float an = nada ? 1e-4f : (float) (nucleo * wf);
+            Conde.mover(funda, columna(af, alto), 2);
+            // El nucleo un pelo mas bajo: dos caras de arriba a la misma altura parpadean.
+            Conde.mover(alma, columna(an, Math.max(0.001f, alto - 0.05f)), 2);
+        }
+
+        /** Lo lleva a otro punto del suelo deslizandose (la espiral del Eclipse). */
+        void mover(Location suelo) {
+            base = baseRayo(suelo);
+            for (BlockDisplay d : new BlockDisplay[]{funda, alma}) {
+                if (d == null || !d.isValid()) continue;
+                try {
+                    d.teleport(base);
+                } catch (Throwable ignored) {
+                }
+            }
+        }
+
+        @Override
+        public void quitar() {
+            fallo = true;
+            oculto = true;
+            for (BlockDisplay d : new BlockDisplay[]{funda, alma}) {
+                if (d == null) continue;
+                spawned.remove(d);
+                Fx.safeRemove(d);
+            }
+            funda = null;
+            alma = null;
+        }
+    }
+
+    // ----------------------------------------------------------------- el nucleo
+
+    /**
+     * El nucleo de los circulos: un diamante de bloque de redstone que gira 6 grados
+     * por tick y late, una jaula de cuatro losas de piedra negra pulida que le orbita
+     * y tres esquirlas de cristal rojo. Ocho piezas.
+     */
+    private final class Nucleo {
+        private final double k;
+        private final Pz dia;
+        private final Pz[] losas = new Pz[4];
+        private final Pz[] esquirlas = new Pz[3];
+
+        Nucleo(Escena e, Location ancla, double k) {
+            this.k = k;
+            dia = e.pz(ancla, Material.REDSTONE_BLOCK, 1, 1, 1);
+            for (int i = 0; i < 4; i++) {
+                losas[i] = e.pz(ancla, Material.POLISHED_BLACKSTONE, 0.5 * k, 0.08 * k, 0.08 * k);
+            }
+            for (int i = 0; i < 3; i++) {
+                esquirlas[i] = e.pz(ancla, Material.RED_STAINED_GLASS, 0.12 * k, 0.12 * k, 0.12 * k);
+            }
+        }
+
+        /**
+         * @param y      altura del centro sobre el ancla
+         * @param crece  de 0 a 1 al montarse
+         * @param muere  de 1 a 0 al estallar el diamante
+         * @param st     tick en que empieza a montarse la jaula
+         * @param orbita radio de las esquirlas
+         * @param rompe  de 0 a 1: la jaula y las esquirlas salen disparadas
+         */
+        void tick(int t, double y, double crece, double muere, double periodo, double st, double orbita,
+                  double rompe) {
+            double eb = eo(rompe);
+            double lado = (0.475 + 0.075 * Math.sin(t / periodo * TAU)) * k;
+            dia.put(0, y, 0, giroY(6 * D2R * t).mul(xyz(45 * D2R, 0, 45 * D2R)), lado * crece * muere);
+            for (int i = 0; i < 4; i++) {
+                Quaternionf jaula = new Quaternionf().rotateX(0.28f).rotateY((float) (-2 * D2R * t))
+                        .rotateY((float) (i * Math.PI / 2));
+                Vector3f p = new Quaternionf(jaula).transform(
+                        new Vector3f((float) (0.55 * k + 2.5 * eb), (float) (1.2 * eb), 0f));
+                double cs = eo(seg(t, st + 1 + i * 0.5, st + 3 + i * 0.5));
+                losas[i].put(p.x, y + p.y, p.z,
+                        new Quaternionf(jaula).mul(xyz(0, Math.PI / 2, (i % 2 == 1 ? 35 : -35) * D2R)),
+                        cs * (1 - rompe));
+            }
+            for (int i = 0; i < 3; i++) {
+                double an = 15 * D2R * t + i * TAU / 3;
+                double r = orbita + 3.5 * eb;
+                esquirlas[i].put(Math.cos(an) * r, y + 0.12 * Math.sin(t / 6.0 + i) + 1.4 * eb, Math.sin(an) * r,
+                        xyz(t * 0.2, t * 0.3, 0), eo(seg(t, st + 2, st + 4)) * (1 - rompe));
+            }
+        }
+    }
+
+    // --------------------------------------------------------------- el sello
+
+    private static final int SELLO_ESTALLA = 46;
+    private static final int SELLO_FIN = 57;
+    /** Hasta seis jugadores, sello completo; con mas, todos el reducido. */
+    private static final int SELLO_COMPLETOS = 6;
+    /** Del undecimo en adelante, el sello va solo en particulas (presupuesto de entidades). */
+    private static final int SELLO_DIBUJADOS = 10;
+    private static final double SELLO_RADIO = 2.2;
+    private static final String[] RUNAS_SELLO = {"ᛉ", "ᛟ", "ᚦ", "ᛝ"};
+
+    /** Giro acumulado de los anillos del sello: x2 en los ultimos diez ticks de carga. */
+    private static double giroSello(int t, double grados) {
+        return grados * D2R * (Math.min(t, 36) + 2 * Math.max(0, Math.min(10, t - 36)));
+    }
+
+    /**
+     * Un sello bajo un jugador: anillo de 16 losas de cristal rojo (10 en el reducido)
+     * y anillo de 10 piezas de piedra negra girando al reves, 4 runas, el nucleo y el
+     * rayo. 40 piezas (24 el reducido).
+     */
+    private final class Sello {
+        final Location c;
+        final boolean dibujado;
+        private final Pz[] ext;
+        private final Pz[] inte;
+        private final Rn[] runas;
+        private final Nucleo nucleo;
+        private final Rayo rayo;
+
+        Sello(Escena e, Location c, boolean reducido, boolean dibujado) {
+            this.c = c;
+            this.dibujado = dibujado;
+            int nExt = dibujado ? (reducido ? 10 : 16) : 0;
+            int nInt = dibujado && !reducido ? 10 : 0;
+            double largo = reducido ? 0.5 : 0.35;
+            ext = new Pz[nExt];
+            for (int i = 0; i < nExt; i++) ext[i] = e.pz(c, Material.RED_STAINED_GLASS, largo, 0.06, 0.22);
+            inte = new Pz[nInt];
+            for (int i = 0; i < nInt; i++) inte[i] = e.pz(c, Material.BLACKSTONE, 0.22, 0.05, 0.14);
+            runas = new Rn[dibujado ? 4 : 0];
+            for (int i = 0; i < runas.length; i++) runas[i] = e.rn(c, RUNAS_SELLO[i], 1.2f);
+            nucleo = dibujado ? new Nucleo(e, c, 1) : null;
+            rayo = dibujado ? e.rayo(c, 0.45f, 0.2f) : null;
+        }
+
+        void tick(int t) {
+            if (!dibujado) return;
+            Quaternionf gO = giroY(giroSello(t, 12));
+            Quaternionf gI = giroY(-giroSello(t, 18));
+            for (int i = 0; i < ext.length; i++) {
+                double a = i * TAU / ext.length;
+                double ry = -a + Math.PI / 2;
+                if (t < SELLO_ESTALLA) {
+                    int st = i / 4;
+                    poner(ext[i], gO, Math.cos(a) * 1.5, 0.08, Math.sin(a) * 1.5, giroY(ry), eo(seg(t, st, st + 2)));
+                } else {
+                    double u = seg(t, 46, 56);
+                    double e = eo(u);
+                    double r = 1.5 + 2.4 * e;
+                    poner(ext[i], gO, Math.cos(a) * r, 0.08 + 1.9 * e, Math.sin(a) * r,
+                            xyz(u * 5, ry + u * 3, u * 4), 1 - u);
+                }
+            }
+            for (int i = 0; i < inte.length; i++) {
+                double a = i * TAU / inte.length;
+                double ry = -a + Math.PI / 2;
+                if (t < SELLO_ESTALLA) {
+                    int st = 1 + i / 4;
+                    poner(inte[i], gI, Math.cos(a) * 0.9, 0.075, Math.sin(a) * 0.9, giroY(ry), eo(seg(t, st, st + 2)));
+                } else {
+                    double u = seg(t, 46, 56);
+                    double e = eo(u);
+                    double r = 0.9 + 1.6 * e;
+                    poner(inte[i], gI, Math.cos(a) * r, 0.075 + 0.9 * e, Math.sin(a) * r, xyz(u * 4, ry, u * 5), 1 - u);
+                }
+            }
+            for (int i = 0; i < runas.length; i++) {
+                double a = i * TAU / 4;
+                int st = 3 + i / 2;
+                double y = 0.5 + 0.08 * Math.sin(t / 30.0 * TAU + i * 1.6);
+                double u = seg(t, 47, 57);
+                double e = eo(u);
+                double r = 1.3 + 1.0 * e;
+                runas[i].put(Math.cos(a) * r, y + 1.4 * e, Math.sin(a) * r, eo(seg(t, st, st + 2)) * (1 - u));
+            }
+            double cy = 0.4 + 0.8 * sm(seg(t, 36, 46)) + 0.6 * seg(t, 46, 49);
+            nucleo.tick(t, cy, eo(seg(t, 4, 6)), 1 - seg(t, 46, 49), 10, 3, 0.8, seg(t, 46, 56));
+            if (t >= SELLO_ESTALLA && t < SELLO_FIN) rayo.set(eo(seg(t, 46, 49)), 1 - sm(seg(t, 49, 57)));
+            else rayo.set(0, 0);
+        }
+    }
+
+    // ------------------------------------------------------------- el pentaculo
+
+    private static final int PENTA_ESTALLA = 66;
+    private static final int PENTA_FIN = 104;
+    /** Radio de las puntas de la estrella. */
+    private static final double PENTA_RV = 6.7;
+    /** Largo de cada trazo de la estrella: doce por lado la dibujan continua. */
+    private static final double PENTA_TRAZO = 1.06;
+    private static final double PENTA_RADIO_RAYO = 2.5;
+    private static final String[] RUNAS_PENTACULO = {"ᛉ", "ᛟ", "ᚦ", "ᛝ", "ᛗ"};
+
+    /**
+     * El pentaculo de radio 7: anillo de ladrillo del nether en el suelo (36), anillo
+     * flotante de cristal (24), estrella trazo a trazo (60), cinco puntas con pilar,
+     * vela y runa (15), disco de ocho cuñas, el nucleo a 1,3 y cinco rayos (10).
+     */
+    private final class Pentaculo {
+        final Location[] pie = new Location[5];
+        private final Pz[] base = new Pz[36];
+        private final Pz[] flo = new Pz[24];
+        private final Pz[] estrella = new Pz[60];
+        private final double[][] trazo = new double[60][3];
+        private final int[] trazoSale = new int[60];
+        private final int[] trazoBorra = new int[60];
+        private final Pz[] pilar = new Pz[5];
+        private final Pz[] vela = new Pz[5];
+        private final Rn[] runa = new Rn[5];
+        private final Pz[] cuna = new Pz[8];
+        private final double[][] punta = new double[5][2];
+        private final Rayo[] rayo = new Rayo[5];
+        private final Nucleo nucleo;
+
+        Pentaculo(Escena e, Location c) {
+            for (int i = 0; i < 36; i++) base[i] = e.pz(c, Material.RED_NETHER_BRICKS, 0.6, 0.08, 0.3);
+            for (int i = 0; i < 24; i++) flo[i] = e.pz(c, Material.RED_STAINED_GLASS, 0.5, 0.05, 0.25);
+            for (int i = 0; i < 5; i++) {
+                double a = -Math.PI / 2 + i * TAU / 5;
+                punta[i][0] = Math.cos(a) * PENTA_RV;
+                punta[i][1] = Math.sin(a) * PENTA_RV;
+                pie[i] = sinGiro(Fx.ground(c.clone().add(punta[i][0], 0, punta[i][1]), 4));
+            }
+            for (int s = 0; s < 5; s++) {
+                double[] a = punta[(2 * s) % 5];
+                double[] b = punta[(2 * s + 2) % 5];
+                double dx = b[0] - a[0];
+                double dz = b[1] - a[1];
+                double ry = -Math.atan2(dz, dx);
+                for (int i = 0; i < 12; i++) {
+                    int n = s * 12 + i;
+                    double f = (i + 0.5) / 12;
+                    trazo[n][0] = a[0] + dx * f;
+                    trazo[n][1] = a[1] + dz * f;
+                    trazo[n][2] = ry;
+                    trazoSale[n] = 6 + 4 * s + i / 3;
+                    trazoBorra[n] = 80 + 4 * (4 - s) + (11 - i) / 3;
+                    estrella[n] = e.pz(c, Material.RED_STAINED_GLASS, PENTA_TRAZO, 0.06, 0.12);
+                }
+            }
+            BlockData encendida = Material.RED_CANDLE.createBlockData();
+            if (encendida instanceof Lightable lt) lt.setLit(true);
+            for (int k = 0; k < 5; k++) {
+                pilar[k] = e.pz(c, Material.POLISHED_BLACKSTONE, 0.4, 0.9, 0.4);
+                vela[k] = e.pz(c, encendida.clone(), 1, 1, 1, 2);
+                runa[k] = e.rn(c, RUNAS_PENTACULO[k], 1.2f);
+                rayo[k] = e.rayo(pie[k], 0.45f, 0.2f);
+            }
+            for (int i = 0; i < 8; i++) cuna[i] = e.pz(c, Material.RED_NETHER_BRICKS, 1.5, 0.06, 0.62);
+            nucleo = new Nucleo(e, c, 1.3);
+        }
+
+        void tick(int t) {
+            Quaternionf gB = giroY(2 * D2R * Math.min(t, 92));
+            Quaternionf gF = giroY(-4 * D2R * Math.min(t, PENTA_ESTALLA));
+            for (int i = 0; i < 36; i++) {
+                double a = i * TAU / 36;
+                double ry = -a + Math.PI / 2;
+                int st = i / 6;
+                int d = i % 3;
+                double u = seg(t, 92 + d, 102 + d);
+                double e = eo(u);
+                double r = 7 + 3 * e;
+                poner(base[i], gB, Math.cos(a) * r, 0.08 + 1.6 * e, Math.sin(a) * r, xyz(u * 4, ry, u * 3),
+                        eo(seg(t, st, st + 2)) * (1 - u));
+            }
+            for (int i = 0; i < 24; i++) {
+                double a = (i + 0.5) * TAU / 24;
+                double ry = -a + Math.PI / 2;
+                int st = 3 + i / 8;
+                double s = eo(seg(t, st, st + 2));
+                double y = 1.225;
+                double r = 6.4;
+                double giro = 0;
+                if (t >= PENTA_ESTALLA) {
+                    // La onda: baja al suelo y sale hasta el radio 11 encogiendo.
+                    y = lerp(1.225, 0.1, sm(seg(t, 66, 70)));
+                    double u = seg(t, 70, 80);
+                    r = 6.4 + 4.6 * eo(u);
+                    s *= 1 - u;
+                    giro = u * 5;
+                }
+                poner(flo[i], gF, Math.cos(a) * r, y, Math.sin(a) * r, xyz(giro, ry, giro * 0.6), s);
+            }
+            for (int n = 0; n < 60; n++) {
+                double s = eo(seg(t, trazoSale[n], trazoSale[n] + 2)) * (1 - sm(seg(t, trazoBorra[n], trazoBorra[n] + 2)));
+                estrella[n].put(trazo[n][0], 0.11, trazo[n][1], giroY(trazo[n][2]), s);
+            }
+            for (int k = 0; k < 5; k++) {
+                double u = seg(t, 92 + k * 0.5, 102 + k * 0.5);
+                double e = eo(u);
+                double r = 1 + 0.35 * e;
+                double x = punta[k][0] * r;
+                double z = punta[k][1] * r;
+                int pst = 2 + k / 2;
+                pilar[k].put(x, 0.45 + 0.8 * e, z, xyz(u * 3, 0, u * 2), eo(seg(t, pst, pst + 2)) * (1 - u));
+                // La vela, de pie encima del pilar: su bloque se apoya por abajo.
+                double sv = 0.6 * eo(seg(t, 5, 7)) * (1 - u);
+                vela[k].put(x, 0.9 + 0.9 * e + sv / 2, z, new Quaternionf(), sv);
+                int gst = 5 + k / 3;
+                double fy = 0.08 * Math.sin(t / 24.0 * TAU + k);
+                runa[k].put(x, 1.6 + fy + 1.5 * e, z, eo(seg(t, gst, gst + 2)) * (1 - u));
+            }
+            for (int i = 0; i < 8; i++) {
+                double a = i * TAU / 8;
+                int st = 1 + i / 3;
+                double u = seg(t, 92, 102);
+                double e = eo(u);
+                double r = 0.85 + 2.5 * e;
+                cuna[i].put(Math.cos(a) * r, 0.05 + 0.8 * e, Math.sin(a) * r, xyz(0, -a, u * 3),
+                        eo(seg(t, st, st + 2)) * (1 - u));
+            }
+            double abre = sm(seg(t, 46, 66));
+            nucleo.tick(t, 1.0 + 1.5 * abre, eo(seg(t, 4, 6)), 1 - seg(t, 66, 70), 8, 3,
+                    0.8 * 1.3 + (1.6 - 0.8 * 1.3) * abre, seg(t, 66, 76));
+            // Los rayos, uno cada dos ticks en sentido horario visto desde arriba.
+            for (int k = 0; k < 5; k++) {
+                int t0 = PENTA_ESTALLA + 2 * k;
+                if (t >= t0 && t < t0 + 11) rayo[k].set(eo(seg(t, t0, t0 + 3)), 1 - sm(seg(t, t0 + 3, t0 + 11)));
+                else rayo[k].set(0, 0);
+            }
+        }
+    }
+
+    // --------------------------------------------------------------- el eclipse
+
+    private static final double ECLIPSE_RADIO = 9;
+    private static final int ECLIPSE_ESTALLA = 60;
+    private static final int ECLIPSE_FIN = 76;
+    private static final String[] RUNAS_ECLIPSE = {"ᛉ", "ᛟ", "ᚦ", "ᛝ", "ᚱ", "ᛗ", "ᛞ", "ᛇ"};
+
+    /**
+     * El eclipse de radio 9: anillo de piedra negra pulida (40) y anillo de ladrillo
+     * del nether (32) girando al reves, 8 runas grandes, la luna de cristal rojo (24)
+     * a cinco bloques con el disco negro (12) que la tapa, el nucleo a 1,3, el rayo
+     * central grueso y ocho finos en espiral.
+     */
+    private final class Eclipse {
+        private final Location c;
+        private final Pz[] ext = new Pz[40];
+        private final Pz[] inte = new Pz[32];
+        private final Rn[] runa = new Rn[8];
+        private final Pz[] luna = new Pz[24];
+        private final double[][] lunaP = new double[24][3];
+        private final Pz[] negro = new Pz[12];
+        private final double[][] negroP = new double[12][3];
+        private final Quaternionf giroLuna;
+        private final Nucleo nucleo;
+        private final Rayo central;
+        private final Rayo[] finos = new Rayo[8];
+
+        Eclipse(Escena e, Location c, double yawLuna) {
+            this.c = c;
+            this.giroLuna = giroY(yawLuna);
+            for (int i = 0; i < 40; i++) ext[i] = e.pz(c, Material.POLISHED_BLACKSTONE, 1.2, 0.08, 0.3);
+            for (int i = 0; i < 32; i++) inte[i] = e.pz(c, Material.RED_NETHER_BRICKS, 1.1, 0.08, 0.28);
+            for (int i = 0; i < 8; i++) runa[i] = e.rn(c, RUNAS_ECLIPSE[i], 1.6f);
+            // La luna: una losa en el centro, ocho en radio 0,85 y quince en 1,55.
+            int n = 0;
+            lunaP[n++] = new double[]{0, 0, 0};
+            for (int i = 0; i < 8; i++) {
+                double a = i * TAU / 8;
+                lunaP[n++] = new double[]{Math.cos(a) * 0.85, Math.sin(a) * 0.85, a};
+            }
+            for (int i = 0; i < 15; i++) {
+                double a = i * TAU / 15;
+                lunaP[n++] = new double[]{Math.cos(a) * 1.55, Math.sin(a) * 1.55, a};
+            }
+            for (int i = 0; i < 24; i++) luna[i] = e.pz(c, Material.RED_STAINED_GLASS, 0.5, 0.5, 0.06);
+            // El disco negro: cuatro cuadros en el centro y ocho alrededor.
+            double[][] cuadros = {{-0.43, -0.43}, {0.43, -0.43}, {-0.43, 0.43}, {0.43, 0.43}};
+            for (int i = 0; i < 4; i++) {
+                negroP[i] = new double[]{cuadros[i][0], cuadros[i][1], 0};
+                negro[i] = e.pz(c, Material.BLACKSTONE, 0.85, 0.85, 0.2);
+            }
+            for (int i = 0; i < 8; i++) {
+                double a = (i + 0.5) * TAU / 8;
+                negroP[4 + i] = new double[]{Math.cos(a) * 1.3, Math.sin(a) * 1.3, a};
+                negro[4 + i] = e.pz(c, Material.BLACKSTONE, 0.95, 0.95, 0.2);
+            }
+            nucleo = new Nucleo(e, c, 1.3);
+            central = e.rayo(c, 0.8f, 0.35f);
+            for (int j = 0; j < 8; j++) finos[j] = e.rayo(c, 0.3f, 0.12f);
+        }
+
+        void tick(int t) {
+            double tf = Math.min(t, ECLIPSE_ESTALLA);
+            Quaternionf gO = giroY(1.5 * D2R * tf);
+            Quaternionf gI = giroY(-2.5 * D2R * tf);
+            for (int i = 0; i < 40; i++) {
+                double a = i * TAU / 40;
+                int st = i / 8;
+                int d = i % 3;
+                double u = seg(t, 60 + d, 70 + d);
+                double e = eo(u);
+                double r = 9 + 3 * e;
+                poner(ext[i], gO, Math.cos(a) * r, 0.06 + 4 * u - 2.2 * u * u, Math.sin(a) * r,
+                        xyz(u * 5, -a + Math.PI / 2, u * 4), eo(seg(t, st, st + 2)) * (1 - sm(u)));
+            }
+            for (int i = 0; i < 32; i++) {
+                double a = i * TAU / 32;
+                int st = 1 + i / 8;
+                int d = i % 3;
+                double u = seg(t, 60 + d, 70 + d);
+                double e = eo(u);
+                double r = 7 + 2.6 * e;
+                poner(inte[i], gI, Math.cos(a) * r, 0.06 + 3.6 * u - 2 * u * u, Math.sin(a) * r,
+                        xyz(u * 4, -a + Math.PI / 2, u * 5), eo(seg(t, st, st + 2)) * (1 - sm(u)));
+            }
+            for (int i = 0; i < 8; i++) {
+                double a = (i + 0.5) * TAU / 8;
+                int st = 3 + i / 3;
+                double u = seg(t, 60, 70);
+                double e = eo(u);
+                double r = 7 + 1.5 * e;
+                Vector3f p = new Quaternionf(gI).transform(new Vector3f((float) (Math.cos(a) * r),
+                        (float) (2.2 + 0.1 * Math.sin(t / 26.0 * TAU + i) + 2 * e), (float) (Math.sin(a) * r)));
+                runa[i].put(p.x, p.y, p.z, eo(seg(t, st, st + 2)) * (1 - u));
+            }
+            // El disco negro entra de un lado y tapa la luna justo en el tick 60.
+            double fuera = -3.7 * (1 - seg(t, 0, ECLIPSE_ESTALLA));
+            for (int i = 0; i < 24; i++) trozoLuna(t, luna[i], lunaP[i], i, 2 + i / 6, 0);
+            for (int i = 0; i < 12; i++) trozoLuna(t, negro[i], negroP[i], i, 3 + i / 4, fuera);
+            nucleo.tick(t, 1.5, eo(seg(t, 4, 6)), 1 - seg(t, 66, 72), 10, 3, 0.8 * 1.3, seg(t, 60, 70));
+            if (t >= 20 && t < 74) central.set(eo(seg(t, 20, 23)), 1 - sm(seg(t, 66, 74)));
+            else central.set(0, 0);
+            for (int j = 0; j < 8; j++) {
+                int tj = 20 + 5 * j;
+                if (t < tj || t >= 74) {
+                    finos[j].set(0, 0);
+                    continue;
+                }
+                double an = j * TAU / 8 + 3 * D2R * (t - 20);
+                double r = 2 + 4 * sm(seg(t, tj, ECLIPSE_ESTALLA));
+                finos[j].mover(Fx.ground(c.clone().add(Math.cos(an) * r, 0, Math.sin(an) * r), 3));
+                finos[j].set(eo(seg(t, tj, tj + 3)), (1 + sm(seg(t, 60, 66))) * (1 - sm(seg(t, 66, 74))));
+            }
+        }
+
+        /** Una pieza de la luna (o del disco negro, desplazado 'dx'): al estallar sale hacia fuera. */
+        private void trozoLuna(int t, Pz p, double[] o, int i, int st, double dx) {
+            double u = seg(t, 66 + (i % 3), 76 + (i % 3));
+            double e = eo(u);
+            double len = Math.hypot(o[0], o[1]);
+            if (len == 0) len = 1;
+            double ux = o[0] / len;
+            double uy = o[1] / len;
+            if (ux == 0) ux = 0.3 * (h1(i) - 0.5);
+            if (uy == 0) uy = 0.6;
+            Vector3f v = new Quaternionf(giroLuna).transform(new Vector3f((float) (dx + o[0] + ux * 2.5 * e),
+                    (float) (o[1] + uy * 2.5 * e), (float) ((h1(i + 5) - 0.5) * 3 * e)));
+            p.put(v.x, 5 + v.y, v.z, new Quaternionf(giroLuna).mul(xyz(u * 4, u * 3, o[2])),
+                    eo(seg(t, st, st + 2)) * (1 - u));
+        }
+    }
+
+    // --------------------------------------------------------- la bola de sangre
+
+    private static final int BOLA_CARGA = 15;
+    private static final int BOLA_VUELO_MAX = 40;
+    private static final double BOLA_VELOCIDAD = 0.9;
+    private static final double BOLA_GRAVEDAD = 0.02;
+
+    /**
+     * Una bola de Sangre Ardiente: nucleo de redstone girando en dos ejes, corona de
+     * seis losas de cristal inclinada 30 grados y una estela de seis brasas. Carga
+     * entre las manos del Conde (crece y la corona se cierra), vuela recta con un poco
+     * de caida y choca contra un bloque o al pasar a 1,2 de un jugador. La grande deja
+     * charco; la pequeña (la de la rafaga, a 0,55) solo estalla.
+     */
+    private final class Bola {
+        final double k;
+        final boolean grande;
+        final int tc;
+        final int tl;
+        final Supplier<Location> mira;
+        private final Pz nucleo;
+        private final Pz[] corona = new Pz[6];
+        private final Pz[] brasa = new Pz[6];
+        private final int[] brasaT = {-99, -99, -99, -99, -99, -99};
+        private final Pz[] esquirla;
+        private final Charco charco;
+        private Location pos;
+        private Vector vel;
+        private Vector rumbo = new Vector(1, 0, 0);
+        private int pasos;
+        private int tI = -1;
+        private Location P;
+        private Location G;
+        private double hP;
+        private double yawI;
+        boolean hecho;
+
+        Bola(Escena e, double k, boolean grande, int tc, int tl, Supplier<Location> mira) {
+            this.k = k;
+            this.grande = grande;
+            this.tc = tc;
+            this.tl = tl;
+            this.mira = mira;
+            Location h = boss.getLocation();
+            nucleo = e.pz(h, Material.REDSTONE_BLOCK, 0.45 * k, 0.45 * k, 0.45 * k);
+            for (int i = 0; i < 6; i++) corona[i] = e.pz(h, Material.RED_STAINED_GLASS, 0.4 * k, 0.08 * k, 0.2 * k);
+            // Las brasas se quedan donde caen: teleport sin deslizamiento.
+            for (int i = 0; i < 6; i++) brasa[i] = e.pz(h, Material.RED_CONCRETE.createBlockData(), 1, 1, 1, 0);
+            esquirla = new Pz[grande ? 12 : 6];
+            for (int i = 0; i < esquirla.length; i++) {
+                esquirla[i] = e.pz(h, Material.REDSTONE_BLOCK, 0.12 * k, 0.12 * k, 0.12 * k);
+            }
+            charco = grande ? new Charco(e, h) : null;
+        }
+
+        void tick(int t) {
+            if (hecho || t < tc) return;
+            if (tI < 0 && t < tl) {
+                cargar(t);
+                return;
+            }
+            if (tI < 0) {
+                volar(t);
+                if (tI < 0) return;
+            }
+            estallar(t);
+        }
+
+        /** El punto entre sus manos: 1,4 de alto y 0,6 por delante, hacia donde apunta. */
+        private Location mano(Location aim) {
+            Location yo = boss.getLocation();
+            Vector d = aim.toVector().subtract(yo.toVector()).setY(0);
+            if (d.lengthSquared() < 0.01) d = yo.getDirection().setY(0);
+            if (d.lengthSquared() < 0.01) d = new Vector(1, 0, 0);
+            d.normalize();
+            rumbo = d.clone();
+            return yo.add(d.multiply(0.6)).add(0, 1.4, 0);
+        }
+
+        private void cargar(int t) {
+            Location aim = mira.get();
+            face(aim);
+            Location h = mano(aim);
+            pos = h;
+            double g = eo(seg(t, tc, tl));
+            dibujar(t, h, g, 1 - g);
+            if (t == tc) soundAt(h, "block.fire.ambient", 1.6f, 0.6f);
+            if (t % 2 == 0) {
+                for (int i = 0; i < 3; i++) {
+                    double a = random.nextDouble() * TAU;
+                    double r = 0.9 * k;
+                    Location p = h.clone().add(Math.cos(a) * r, (random.nextDouble() - 0.5) * r, Math.sin(a) * r);
+                    Vector v = h.toVector().subtract(p.toVector()).multiply(0.18);
+                    Compat.spawn(world(), Compat.SOUL_FIRE_FLAME, p, 0, v.getX(), v.getY(), v.getZ(), 1);
+                }
+                Compat.spawn(world(), Compat.DUST, h, 1, 0.1 * k, 0.1 * k, 0.1 * k, 0, Compat.dust(SANGRE, 1.0f));
+            }
+        }
+
+        private void volar(int t) {
+            if (vel == null) {
+                Location aim = mira.get();
+                face(aim);
+                Location h = mano(aim);
+                pos = h;
+                Vector v = aim.toVector().subtract(h.toVector());
+                if (v.lengthSquared() < 0.01) v = rumbo.clone();
+                vel = v.normalize().multiply(BOLA_VELOCIDAD);
+                soundAt(h, "entity.blaze.shoot", 1.4f, grande ? 0.5f : 0.8f);
+            } else {
+                Location sig = pos.clone().add(vel);
+                vel.setY(vel.getY() - BOLA_GRAVEDAD);
+                pasos++;
+                boolean bloque = false;
+                try {
+                    bloque = sig.getBlock().getType().isSolid();
+                } catch (Throwable ignored) {
+                }
+                boolean jugador = false;
+                if (!bloque) {
+                    for (Player p : Fx.playersNear(sig, 3)) {
+                        if (p.getLocation().add(0, 0.9, 0).distance(sig) <= 1.2) {
+                            jugador = true;
+                            break;
+                        }
+                    }
+                }
+                if (bloque || jugador || pasos >= BOLA_VUELO_MAX) {
+                    chocar(bloque ? pos : sig);
+                    tI = t;
+                    return;
+                }
+                pos = sig;
+            }
+            Vector plano = vel.clone().setY(0);
+            if (plano.lengthSquared() > 1e-4) rumbo = plano.normalize();
+            dibujar(t, pos, 1, 0);
+            // La estela: cada tick una brasa nueva donde esta la bola; dura seis.
+            int j = Math.floorMod(t - tl, 6);
+            brasa[j].ancla(pos);
+            brasaT[j] = t;
+            brasas(t);
+            Compat.spawn(world(), Compat.SOUL_FIRE_FLAME, pos, 1, 0.12 * k, 0.12 * k, 0.12 * k, 0.01);
+            Compat.spawn(world(), Compat.DUST, pos, 2, 0.2 * k, 0.2 * k, 0.2 * k, 0, Compat.dust(SANGRE, 1.2f));
+        }
+
+        /** Bola y corona en 'at'; g es su tamaño (0 a 1) y 'cierre' lo abierta que va la corona. */
+        private void dibujar(int t, Location at, double g, double cierre) {
+            nucleo.ancla(at);
+            for (Pz c : corona) c.ancla(at);
+            Quaternionf qg = giroY(-Math.atan2(rumbo.getZ(), rumbo.getX()));
+            nucleo.put(0, 0, 0, new Quaternionf(qg).mul(xyz(20 * D2R * t, 20 * D2R * t, 0)), g);
+            Quaternionf qc = new Quaternionf(qg).rotateX((float) (30 * D2R)).rotateY((float) (25 * D2R * t));
+            double rr = 0.55 * k * (1 + 1.6 * cierre);
+            double s = Math.min(1, g * 1.6);
+            for (int i = 0; i < 6; i++) {
+                double a = i * TAU / 6;
+                Vector3f p = new Quaternionf(qc).transform(
+                        new Vector3f((float) (Math.cos(a) * rr), 0f, (float) (Math.sin(a) * rr)));
+                corona[i].put(p.x, p.y, p.z, new Quaternionf(qc).mul(giroY(-a + Math.PI / 2)), s);
+            }
+        }
+
+        private void brasas(int t) {
+            for (int j = 0; j < 6; j++) {
+                int s = brasaT[j];
+                int edad = t - s;
+                if (s < 0 || edad >= 6) brasa[j].put(0, 0, 0, new Quaternionf(), 0);
+                else brasa[j].put(0, 0, 0, xyz(s, s * 0.7, 0), (0.15 - 0.1 * edad / 6.0) * k);
+            }
+        }
+
+        private void chocar(Location en) {
+            P = en.clone();
+            G = sinGiro(Fx.ground(P, 8));
+            hP = Math.max(0.06, P.getY() - G.getY());
+            yawI = Math.atan2(rumbo.getZ(), rumbo.getX());
+            nucleo.quitar();
+            for (Pz c : corona) c.ancla(P);
+            for (Pz q : esquirla) q.ancla(G);
+            if (charco != null) charco.ancla(G);
+
+            Location l = G.clone().add(0, 0.6, 0);
+            Compat.spawn(world(), Compat.FLASH, l, 1, 0, 0, 0, 0, C_SANGRE);
+            Compat.spawn(world(), Compat.DUST, l, grande ? 40 : 14, 0.8 * k, 0.4 * k, 0.8 * k, 0, Compat.dust(SANGRE, 1.6f));
+            Compat.spawn(world(), Compat.LARGE_SMOKE, l, grande ? 10 : 4, 0.5, 0.3, 0.5, 0.02);
+            soundAt(l, "entity.generic.explode", grande ? 1.4f : 0.9f, grande ? 0.7f : 1.1f);
+            if (grande) soundAt(l, "block.fire.extinguish", 1.2f, 0.6f);
+
+            double radio = grande ? 3.5 : 2.0;
+            double dano = grande ? 22 : 10;
+            for (Player p : Fx.playersNear(G, radio + 2)) {
+                if (plano(p.getLocation(), G) > radio) continue;
+                double dy = p.getLocation().getY() - G.getY();
+                if (dy < -1.5 || dy > 3) continue;
+                hit(p, dano * power());
+                push(p, fuera(p.getLocation(), G).multiply(grande ? 0.6 : 0.35).setY(0.25));
+            }
+        }
+
+        private void estallar(int t) {
+            int tau = t - tI;
+            brasas(t);
+            for (int i = 0; i < 6; i++) {
+                double phi = i * TAU / 6 + yawI;
+                if (grande) {
+                    // Salen en estrella y se clavan en el suelo a 2,6, inclinadas 55 grados.
+                    double lx = Math.cos(phi) * 2.6;
+                    double ly = G.getY() + 0.08 - P.getY();
+                    double lz = Math.sin(phi) * 2.6;
+                    if (tau < 5) {
+                        double u = tau / 5.0;
+                        corona[i].put(lx * eo(u), lerp(0, ly, u) + 0.9 * Math.sin(Math.PI * u), lz * eo(u),
+                                xyz(0, -phi, -55 * D2R * u), 1);
+                    } else if (tau < 35) {
+                        double tr = 4 * D2R * Math.sin(tau * 2.6) * (1 - (tau - 5) / 30.0);
+                        corona[i].put(lx, ly, lz, xyz(tr, -phi, -55 * D2R + tr), 1);
+                    } else {
+                        corona[i].put(lx, ly, lz, xyz(0, -phi, -55 * D2R), 1 - seg(tau, 35, 41));
+                    }
+                } else {
+                    double u = seg(tau, 0, 8);
+                    double e = eo(u);
+                    double up = 0.35 + 0.3 * h1(i);
+                    corona[i].put(Math.cos(phi) * 1.4 * e, up * 1.4 * e, Math.sin(phi) * 1.4 * e,
+                            xyz(u * 5, -phi, u * 4), 1 - u);
+                }
+            }
+            int n = esquirla.length;
+            int vida = grande ? 22 : 12;
+            for (int i = 0; i < n; i++) {
+                double phi = i * TAU / n + 0.3 * h1(i);
+                double vh = (0.14 + 0.1 * h1(i + 7)) * (grande ? 1 : 0.7);
+                double vy = 0.28 + 0.14 * h1(i + 13);
+                double gr = 0.05;
+                double tL = (vy + Math.sqrt(vy * vy + 2 * gr * Math.max(0, hP - 0.06))) / gr;
+                double te = Math.min(tau, tL);
+                esquirla[i].put(Math.cos(phi) * vh * te, Math.max(0.06, hP + vy * te - 0.5 * gr * te * te),
+                        Math.sin(phi) * vh * te, xyz(te * 0.6, te * 0.4, 0), 1 - seg(tau, vida - 6, vida));
+            }
+            if (charco != null) {
+                charco.tick(tau);
+                if (tau >= 10 && tau <= 80 && tau % 10 == 0) {
+                    for (Player p : Fx.playersNear(G, CHARCO_RADIO + 2)) {
+                        if (plano(p.getLocation(), G) > CHARCO_RADIO) continue;
+                        double dy = p.getLocation().getY() - G.getY();
+                        if (dy < -0.5 || dy > 2) continue;
+                        hit(p, 3 * power());
+                        try {
+                            p.setFireTicks(Math.max(p.getFireTicks(), 40));
+                        } catch (Throwable ignored) {
+                        }
+                    }
+                }
+            }
+            if (tau >= (grande ? 100 : 14)) hecho = true;
+        }
+    }
+
+    private static final double CHARCO_RADIO = 2.4;
+
+    /**
+     * El charco de la gran bola: un manchon de verruga del nether de borde irregular
+     * (14), grietas de redstone (6), placas de magma que parpadean (3), llamas de
+     * cristal rojo que cambian de alto y de sitio (10) y brasas que saltan (6). Quema
+     * 80 ticks y se apaga por partes: llamas, grietas y el manchon encogiendose.
+     */
+    private final class Charco {
+        private final Pz[] mancha = new Pz[14];
+        private final double[][] manchaP = new double[14][4];
+        private final Pz[] grieta = new Pz[6];
+        private final double[][] grietaP = new double[6][3];
+        private final Pz[] magma = new Pz[3];
+        private final double[][] magmaP = new double[3][3];
+        private final Pz[] llama = new Pz[10];
+        private final int[] llamaDur = new int[10];
+        private final Pz[] chispa = new Pz[6];
+        private final int[] chispaCiclo = {-1, -1, -1, -1, -1, -1};
+        private Location ancla;
+
+        Charco(Escena e, Location a) {
+            ancla = sinGiro(a);
+            for (int i = 0; i < 14; i++) {
+                double sz = 0.5 + 0.4 * h1(i + 40);
+                double r = 1.65 * Math.sqrt(h1(i + 50));
+                double an = i * 2.4 + h1(i + 60);
+                mancha[i] = e.pz(a, Material.NETHER_WART_BLOCK, sz, 0.04, sz * (0.8 + 0.4 * h1(i + 65)));
+                manchaP[i] = new double[]{Math.cos(an) * r, Math.sin(an) * r, h1(i + 70) * Math.PI, 0.02 + 0.0012 * i};
+            }
+            for (int i = 0; i < 6; i++) {
+                double ac = i * TAU / 6 + (h1(i + 80) - 0.5) * 0.6;
+                double rc = 0.35 + 0.75 * h1(i + 90);
+                grieta[i] = e.pz(a, Material.REDSTONE_BLOCK, 0.7, 0.05, 0.12);
+                grietaP[i] = new double[]{Math.cos(ac) * rc, Math.sin(ac) * rc, -ac};
+            }
+            for (int i = 0; i < 3; i++) {
+                double am = i * 2.1 + 0.5;
+                double rm = 0.5 + 0.8 * h1(i + 110);
+                magma[i] = e.pz(a, Material.MAGMA_BLOCK, 0.5, 0.05, 0.5);
+                magmaP[i] = new double[]{Math.cos(am) * rm, Math.sin(am) * rm, h1(i + 115) * Math.PI};
+            }
+            for (int i = 0; i < 10; i++) {
+                llama[i] = e.pz(a, Material.RED_STAINED_GLASS, 0.14, 0.45, 0.05);
+                llamaDur[i] = 3 + (int) Math.floor(h1(i + 100) * 4);
+            }
+            for (int i = 0; i < 6; i++) chispa[i] = e.pz(a, Material.RED_CONCRETE, 0.08, 0.08, 0.08);
+        }
+
+        void ancla(Location a) {
+            ancla = sinGiro(a);
+            for (Pz p : mancha) p.ancla(a);
+            for (Pz p : grieta) p.ancla(a);
+            for (Pz p : magma) p.ancla(a);
+            for (Pz p : llama) p.ancla(a);
+            for (Pz p : chispa) p.ancla(a);
+        }
+
+        void tick(int tau) {
+            boolean on = tau >= 0 && tau < 100;
+            double q = 1 - sm(seg(tau, 88, 100));
+            double finLlamas = 1 - sm(seg(tau, 80, 86));
+            double finGrietas = 1 - sm(seg(tau, 84, 90));
+            for (int i = 0; i < 14; i++) {
+                double[] m = manchaP[i];
+                int st = i / 5;
+                mancha[i].put(m[0] * q, m[3], m[1] * q, giroY(m[2]), on ? eo(seg(tau, st, st + 2)) * q : 0);
+            }
+            for (int i = 0; i < 6; i++) {
+                double[] g = grietaP[i];
+                int st = 2 + i / 3;
+                grieta[i].put(g[0] * q, 0.075, g[1] * q, giroY(g[2]), on ? eo(seg(tau, st, st + 2)) * finGrietas * q : 0);
+            }
+            for (int i = 0; i < 3; i++) {
+                double[] g = magmaP[i];
+                double parpadeo = ((tau + i) / 4) % 2 == 1 ? 1.1 : 0.9;
+                magma[i].put(g[0] * q, 0.08, g[1] * q, giroY(g[2]), on ? eo(seg(tau, 3, 5)) * q * parpadeo : 0);
+            }
+            for (int i = 0; i < 10; i++) {
+                int sale = 3 + i % 3;
+                if (!on || tau < sale) {
+                    llama[i].put(0, 0, 0, new Quaternionf(), 0);
+                    continue;
+                }
+                int tt = tau - sale;
+                int dur = llamaDur[i];
+                int c = tt / dur;
+                double u = (tt % dur) / (double) dur;
+                double alto = lerp(valorLlama(i, c), valorLlama(i, c + 1), sm(u));
+                double a = i * 2.4 + h1(i + 130) * 0.8;
+                double r = 0.3 + 1.4 * Math.sqrt(h1(i + 140));
+                double jx = (h1(i * 3 + c) - 0.5) * 0.25;
+                double jz = (h1(i * 5 + c) - 0.5) * 0.25;
+                double kk = eo(seg(tt, 0, 2)) * finLlamas;
+                if (kk < 0.003) {
+                    llama[i].put(0, 0, 0, new Quaternionf(), 0);
+                    continue;
+                }
+                llama[i].put(Math.cos(a) * r + jx, 0.06 + 0.225 * alto * kk + 0.12 * u * kk, Math.sin(a) * r + jz,
+                        giroY(h1(i + c * 3.3) * Math.PI), kk, alto * kk, kk, false);
+            }
+            for (int i = 0; i < 6; i++) {
+                if (!on || tau < 5 || tau >= 80) {
+                    chispa[i].put(0, 0, 0, new Quaternionf(), 0);
+                    continue;
+                }
+                int tt = tau - 5 + i * 3;
+                int per = 9 + (i % 3) * 2;
+                int c = tt / per;
+                double u = (tt % per) / (double) per;
+                double a = h1(i * 7 + c) * TAU;
+                double r = 1.6 * Math.sqrt(h1(i * 11 + c));
+                double d = h1(i + c * 2) * TAU;
+                boolean salto = c != chispaCiclo[i];
+                chispaCiclo[i] = c;
+                chispa[i].put(Math.cos(a) * r + Math.cos(d) * 0.3 * u, 0.08 + 0.6 * 4 * u * (1 - u),
+                        Math.sin(a) * r + Math.sin(d) * 0.3 * u, xyz(u * 4, u * 3, 0), 1, 1, 1, salto);
+            }
+            if (on && tau < 80 && tau % 3 == 0) {
+                double a = random.nextDouble() * TAU;
+                double r = random.nextDouble() * 2.0;
+                Location p = ancla.clone().add(Math.cos(a) * r, 0.15, Math.sin(a) * r);
+                Compat.spawn(world(), Compat.DUST, p, 1, 0.05, 0.05, 0.05, 0, Compat.dust(SANGRE, 1.0f));
+                if (tau % 9 == 0) Compat.spawn(world(), Compat.SMOKE, p, 1, 0.05, 0.05, 0.05, 0.01);
+            }
+        }
+
+        private double valorLlama(int i, int n) {
+            return 0.55 + 0.75 * h1(i * 13 + n * 7.1);
+        }
     }
 
     /** Una columna de 'ancho' x 'alto' centrada en su punto, creciendo hacia arriba. */
@@ -2437,7 +3814,15 @@ public final class Conde extends BossFight {
                 new Quaternionf(), new Vector3f(ancho, alto, ancho), new Quaternionf());
     }
 
-    private BlockDisplay parteRayo(Location base, Material mat, float ancho, boolean brilla) {
+    /** La base de un rayo: un pelo bajo el suelo, para que su cara de abajo no parpadee con el. */
+    private Location baseRayo(Location suelo) {
+        Location b = new Location(world(), suelo.getX(), suelo.getY() - 0.05, suelo.getZ());
+        b.setYaw(0);
+        b.setPitch(0);
+        return b;
+    }
+
+    private BlockDisplay parteRayo(Location base, Material mat, Transformation tr) {
         try {
             BlockDisplay d = world().spawn(base, BlockDisplay.class, e -> {
                 e.setBlock(mat.createBlockData());
@@ -2446,12 +3831,12 @@ public final class Conde extends BossFight {
                 e.setShadowRadius(0f);
                 e.setPersistent(false);
                 e.setTeleportDuration(2);
-                // Nace con la altura de lo enterrado: hasta que se estira no asoma del suelo.
-                e.setTransformation(columna(ancho, RAYO_BAJO_SUELO));
-                if (brilla) {
-                    e.setGlowColorOverride(C_SANGRE);
-                    e.setGlowing(true);
-                }
+                e.setInterpolationDelay(0);
+                e.setInterpolationDuration(2);
+                // Con 80 de alto, el cliente lo recortaria en cuanto la base saliera de pantalla.
+                e.setDisplayHeight(90f);
+                e.setDisplayWidth(3f);
+                e.setTransformation(tr);
             });
             Tags.markTemporary(d);
             track(d);
