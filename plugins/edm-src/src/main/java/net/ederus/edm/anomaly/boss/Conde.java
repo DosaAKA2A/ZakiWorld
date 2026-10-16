@@ -163,8 +163,11 @@ public final class Conde extends BossFight {
         pies.setYaw(yawTumbado);
         pies.setPitch(0);
 
-        boss = world().spawn(pies, Zombie.class, z -> {
+        // 1.84.4 · Sin datos al azar (ni equipo de serie) y desnudo desde el primer tick:
+        // la invisibilidad no esconde la armadura y se veia sobre el maniqui (Dosa).
+        boss = world().spawn(pies, Zombie.class, false, z -> {
             z.setAdult();
+            desnudar(z);
             z.setPersistent(true);
             z.setRemoveWhenFarAway(false);
             z.setCanPickupItems(false);
@@ -361,6 +364,8 @@ public final class Conde extends BossFight {
     @Override
     protected void ambient() {
         if (!alive()) return;
+        // Cada tick al principio (otro plugin puede vestirlo al tick siguiente de nacer) y luego cada 5.
+        if (ticks() < 100 || ticks() % 5 == 0) sinArmaduras();
         if (entradaPendiente && soltarEntrada()) entradaPendiente = false;
         moverVelas();
         if (formaBat != null && formaBat.isValid()) {
@@ -2183,7 +2188,21 @@ public final class Conde extends BossFight {
     }
 
     /** El zombi de debajo va desnudo: la invisibilidad no esconde el equipo. */
-    private static void desnudar(Zombie z) {
+    /**
+     * 1.84.4 · Quita lo que le hayan puesto al Conde y a sus Vastagos, al mob invisible y al
+     * maniqui: nadie del Conde lleva equipo (Dosa: "sigue apareciendo con armaduras puestas").
+     */
+    private void sinArmaduras() {
+        desnudar(boss);
+        if (shell instanceof Mannequin m && m.isValid()) desnudar(m);
+        for (Vastago v : vastagos) {
+            desnudar(v.mob);
+            desnudar(v.cuerpo);
+        }
+    }
+
+    private static void desnudar(LivingEntity z) {
+        if (z == null) return;
         EntityEquipment eq = z.getEquipment();
         if (eq == null) return;
         boolean vestido = !eq.getItemInMainHand().getType().isAir() || !eq.getItemInOffHand().getType().isAir();
