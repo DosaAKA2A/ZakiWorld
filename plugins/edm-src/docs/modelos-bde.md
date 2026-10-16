@@ -24,11 +24,12 @@ fotogramas de animacion. Nada de NBT, comandos, URLs ni ajustes del editor.
   ],
   "pieces": [
     {"id": "<uuid>", "group": "g1" | null,
-     "kind": "block" | "head" | "text",
+     "kind": "block" | "head" | "item" | "text",
      "matrix": [16 valores, fila mayor, LOCAL a su grupo (o al mundo si group es null)],
      "brightness": {"sky": 15, "block": 15},               (opcional)
      "material": "RED_CONCRETE",                            (kind block: nombre de org.bukkit.Material)
      "texture": "<valor base64 de la propiedad textures>",  (kind head)
+     "material": "WITHER_SKELETON_SKULL",                   (kind item: solo *_SKULL o *CANDLE; los pone --item-swap)
      "text": "ᚦ", "color": "#B3122E", "background": 0, "shadow": false  (kind text)
     }
   ]

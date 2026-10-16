@@ -13,20 +13,25 @@ import java.util.function.Consumer;
 /**
  * Como se coloca y se mueve una instancia de {@link ModeloBde}.
  *
- * @param base             punto del suelo del modelo (su centro horizontal). Su yaw y su pitch se ignoran.
+ * @param base             punto del suelo del modelo (su centro horizontal) si el modelo va con
+ *                         {@code "fit": "floor"}, o su centro si va con {@code "fit": "center"}.
+ *                         Su yaw y su pitch se ignoran.
  * @param yaw              giro fijo del modelo entero en grados, con el mismo sentido que el yaw de Minecraft.
  * @param escala           multiplica el modelo normalizado (radio 1): 3 da un modelo de 3 bloques de radio.
  * @param recolor          sustituye materiales de bloque al instanciar.
  * @param brillo           brillo forzado para todas las piezas; null usa el de cada pieza o 15/15.
  * @param registrar        recibe cada entidad en cuanto nace (el dueño la mete en su lista de limpieza).
- * @param giroPorTick      giro extra en Y en radianes por tick; negativo gira al reves.
+ * @param giroPorTick      giro extra en Y en radianes por tick; negativo gira al reves. Arranca en el
+ *                         tick 0 con una rampa de 20 ticks y se congela al desmontar.
  * @param ticksCrecimiento 0 aparece entero; mas de 0, cada pieza crece desde 0 con retardo segun su angulo.
- * @param animacion        reproduce en bucle las claves del editor.
+ * @param animacion        reproduce en bucle las claves del editor; sin ella, cada grupo animado queda
+ *                         quieto en su ultima clave (la pose final del editor).
  * @param alturaExtra      bloques que se sube el modelo sobre la base (no se escala).
+ * @param escalaY          multiplica solo la altura, sobre la escala: 2 da piezas el doble de altas.
  */
 public record Opciones(Location base, float yaw, float escala, Map<Material, Material> recolor,
                        Display.Brightness brillo, Consumer<Entity> registrar, float giroPorTick,
-                       int ticksCrecimiento, boolean animacion, float alturaExtra) {
+                       int ticksCrecimiento, boolean animacion, float alturaExtra, float escalaY) {
 
     public Opciones {
         Objects.requireNonNull(base, "base");
@@ -37,6 +42,7 @@ public record Opciones(Location base, float yaw, float escala, Map<Material, Mat
         if (!Float.isFinite(giroPorTick)) throw new IllegalArgumentException("giro no finito");
         if (ticksCrecimiento < 0) throw new IllegalArgumentException("ticksCrecimiento negativo");
         if (!Float.isFinite(alturaExtra)) throw new IllegalArgumentException("alturaExtra no finita");
+        if (!Float.isFinite(escalaY) || escalaY <= 0 || escalaY > 16) throw new IllegalArgumentException("escalaY fuera de rango");
         EnumMap<Material, Material> copia = new EnumMap<>(Material.class);
         if (recolor != null) {
             for (Map.Entry<Material, Material> e : recolor.entrySet()) {
@@ -55,7 +61,7 @@ public record Opciones(Location base, float yaw, float escala, Map<Material, Mat
     /** La misma configuracion en otra base. */
     public Opciones conBase(Location nueva) {
         return new Opciones(nueva, yaw, escala, recolor, brillo, registrar, giroPorTick,
-                ticksCrecimiento, animacion, alturaExtra);
+                ticksCrecimiento, animacion, alturaExtra, escalaY);
     }
 
     public static Builder en(Location base) {
@@ -73,6 +79,7 @@ public record Opciones(Location base, float yaw, float escala, Map<Material, Mat
         private int ticksCrecimiento;
         private boolean animacion;
         private float alturaExtra;
+        private float escalaY = 1;
 
         private Builder(Location base) {
             this.base = base;
@@ -88,10 +95,11 @@ public record Opciones(Location base, float yaw, float escala, Map<Material, Mat
         public Builder ticksCrecimiento(int ticks) { this.ticksCrecimiento = ticks; return this; }
         public Builder animacion(boolean animar) { this.animacion = animar; return this; }
         public Builder alturaExtra(float bloques) { this.alturaExtra = bloques; return this; }
+        public Builder escalaY(float factor) { this.escalaY = factor; return this; }
 
         public Opciones build() {
             return new Opciones(base, yaw, escala, recolor, brillo, registrar, giroPorTick,
-                    ticksCrecimiento, animacion, alturaExtra);
+                    ticksCrecimiento, animacion, alturaExtra, escalaY);
         }
     }
 }

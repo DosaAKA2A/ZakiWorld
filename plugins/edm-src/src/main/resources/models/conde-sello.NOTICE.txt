@@ -1,0 +1,29 @@
+Modelo: Magic Circle Spell
+Recurso: conde-sello.json
+Autor: ExoticPlunger
+Fuente: https://www.block-display.com/bd/140451
+Licencia: BDL BY (permite uso comercial y obras derivadas con atribucion)
+SHA-256 del .bdengine original: 413636ea04217f7e1a1006e5aa1305236f7c52ae88602e9d3225649952e28947
+
+Cambios respecto al original:
+- Convertido con tools/edm/bde-export.py a JSON formato 2: solo geometria.
+- Colecciones sin animacion aplanadas en la matriz de sus hijos: 164. Grupos animados conservados: 0.
+- Escalado x0.076979: radio horizontal 1,0, centrado y con el suelo en y=0 (pose de la ultima clave, tick 0).
+- Recolor: yellow_concrete -> RED_CONCRETE.
+- Item amethyst_shard cambiado por WITHER_SKELETON_SKULL (item de pie, x1.6).
+- Item blaze_powder cambiado por WITHER_SKELETON_SKULL (item de pie, x1.6).
+- Item diamond cambiado por WITHER_SKELETON_SKULL (item de pie, x1.6).
+- Item ender_pearl cambiado por WITHER_SKELETON_SKULL (item de pie, x1.6).
+- Item glowstone_dust cambiado por RED_CANDLE (bloque de pie, x2.5).
+- Item golden_apple cambiado por WITHER_SKELETON_SKULL (item de pie, x1.6).
+- Item gunpowder cambiado por RED_CANDLE (bloque de pie, x2.5).
+- Item nether_star cambiado por WITHER_SKELETON_SKULL (item de pie, x1.6).
+- Item porkchop cambiado por WITHER_SKELETON_SKULL (item de pie, x1.6).
+- Item redstone cambiado por RED_CANDLE (bloque de pie, x2.5).
+- Item sugar cambiado por RED_CANDLE (bloque de pie, x2.5).
+- Item totem_of_undying cambiado por WITHER_SKELETON_SKULL (item de pie, x1.6).
+- Descartado: ajustes del editor (camara, fisicas, sonido vacio).
+- Descartado: animaciones del editor (--static: pose fija).
+- Descartado: items originales (cambiados con --item-swap).
+- Descartado: textos del original (--drop-text).
+- El .bdengine original no va en el jar; se guarda en tools/edm/fuentes/.

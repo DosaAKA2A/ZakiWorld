@@ -12,6 +12,9 @@ import net.ederus.edm.anomaly.core.ArenaGuard;
 import net.ederus.edm.anomaly.core.Disguises;
 import net.ederus.edm.anomaly.core.Glow;
 import net.ederus.edm.anomaly.core.Stop;
+import net.ederus.edm.anomaly.fx.Instancia;
+import net.ederus.edm.anomaly.fx.ModeloBde;
+import net.ederus.edm.anomaly.fx.Opciones;
 import net.ederus.edm.comun.Compat;
 import net.ederus.edm.comun.Fx;
 import net.ederus.edm.comun.Tags;
@@ -53,6 +56,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Set;
 import java.util.UUID;
+import java.util.function.Consumer;
 import java.util.function.Supplier;
 
 /**
@@ -846,15 +850,14 @@ public final class Conde extends BossFight {
         if (!alive()) return;
         final List<Player> objetivos = targets(20);
         if (objetivos.isEmpty()) return;
-        // Con mas de seis, todos el reducido; del undecimo en adelante solo particulas.
-        final boolean reducido = objetivos.size() > SELLO_COMPLETOS;
+        // Del septimo en adelante, sin modelo: solo particulas (y el mismo daño).
         final Escena esc = new Escena();
         final List<Sello> sellos = new ArrayList<>();
         for (int i = 0; i < objetivos.size(); i++) {
             Location c = Fx.ground(objetivos.get(i).getLocation(), 6);
             c.setYaw(0);
             c.setPitch(0);
-            sellos.add(new Sello(esc, c, reducido, i < SELLO_DIBUJADOS));
+            sellos.add(new Sello(esc, c, i < SELLO_DIBUJADOS, i < SELLO_GRIMORIO));
         }
         final Set<UUID> golpeados = new HashSet<>();
         // El 'dano' de la habilidad se fija al lanzarla: el estallido (tick 46) cae
@@ -870,8 +873,8 @@ public final class Conde extends BossFight {
                 for (Sello s : sellos) {
                     Compat.spawn(world(), Compat.DUST_COLOR_TRANSITION, s.c.clone().add(0, 0.25, 0), 2,
                             0.5, 0.05, 0.5, 0, transicion(0.9f));
-                    // Los que no llevan displays, con su borde en particulas.
-                    if (!s.dibujado) Fx.ring(s.c.clone().add(0, 0.12, 0), 1.5, 14, p ->
+                    // Los que no llevan modelo, con su borde en particulas.
+                    if (s.sinModelo()) Fx.ring(s.c.clone().add(0, 0.12, 0), 1.5, 14, p ->
                             Compat.spawn(world(), Compat.DUST_COLOR_TRANSITION, p, 1, 0, 0, 0, 0, transicion(1.1f)));
                 }
             }
@@ -1296,9 +1299,9 @@ public final class Conde extends BossFight {
     }
 
     /**
-     * 8. Pentaculo: un circulo enorme que se monta por partes y carga tres segundos;
-     * de las cinco puntas de la estrella sube un rayo rojo de 80 bloques, uno cada dos
-     * ticks en sentido horario, y el anillo flotante baja y sale en onda. Cada rayo
+     * 8. Pentaculo: dos circulos enormes que crecen pieza a pieza y cargan tres segundos;
+     * de las cinco puntas (los pilares con vela) sube un rayo rojo de 80 bloques, uno cada
+     * dos ticks en sentido horario, y los circulos salen en onda hacia fuera. Cada rayo
      * pega 18 a quien este a 2,5 o menos de su punta (una vez por rayo) y la onda 8 a
      * todo el que este dentro del circulo.
      */
@@ -2715,12 +2718,6 @@ public final class Conde extends BossFight {
                 new Quaternionf(q), new Vector3f(fx, fy, fz), new Quaternionf());
     }
 
-    /** Pone una pieza que va dentro de un grupo girado g (un anillo que gira). */
-    private static void poner(Pz p, Quaternionf g, double x, double y, double z, Quaternionf q, double s) {
-        Vector3f v = new Quaternionf(g).transform(new Vector3f((float) x, (float) y, (float) z));
-        p.put(v.x, v.y, v.z, new Quaternionf(g).mul(q), s);
-    }
-
     private interface Parte {
         void quitar();
     }
@@ -2751,6 +2748,38 @@ public final class Conde extends BossFight {
             return r;
         }
 
+        /**
+         * Un modelo de block-display.com (ver anomaly/fx) con brillo 15 y sus entidades en
+         * 'spawned'. 'antes' recibe la instancia ya preparada y sin entidades (para darle
+         * escala o giro de salida). Devuelve null si el modelo no se pudo cargar o crear:
+         * el efecto sigue sin el dibujo (el daño y los avisos no dependen de el).
+         */
+        Instancia modelo(String nombre, Opciones.Builder opciones, Consumer<Instancia> antes) {
+            ModeloBde m = modeloBde(nombre);
+            if (m == null) return null;
+            Instancia inst;
+            try {
+                inst = m.crear(opciones.brillo(15, 15).registrar(x -> {
+                    Tags.markTemporary(x);
+                    track(x);
+                }).build());
+            } catch (RuntimeException fallo) {
+                plugin.getLogger().warning("CONDE: no se pudo preparar el modelo " + nombre + ": " + fallo.getMessage());
+                return null;
+            }
+            Modelo parte = new Modelo(inst);
+            partes.add(parte);
+            try {
+                if (antes != null) antes.accept(inst);
+                inst.spawn();
+            } catch (RuntimeException fallo) {
+                plugin.getLogger().warning("CONDE: no se pudo crear el modelo " + nombre + ": " + fallo.getMessage());
+                parte.quitar();
+                return null;
+            }
+            return inst;
+        }
+
         void quitar() {
             for (Parte p : partes) {
                 try {
@@ -2760,6 +2789,62 @@ public final class Conde extends BossFight {
             }
             partes.clear();
         }
+    }
+
+    /** Los modelos de block-display.com del Conde, dentro del jar (src/main/resources/models). */
+    private static final String MODELO_CIRCULO = "conde-circulo";
+    /**
+     * 1.84.3 · El "Magic Circle Spell" (el mismo diseño del circulo del Cuerno de Calamity), en
+     * rojo, con calaveras de wither esqueleto y velas rojas en lugar de sus 12 items (Dosa). Va
+     * en el Sello y en el Pentaculo; el Eclipse y el Festin siguen con conde-circulo.
+     */
+    private static final String MODELO_SELLO = "conde-sello";
+    /** Punto de la mecha de una vela del modelo, en el cubo local de su bloque. */
+    private static final Vector3f MECHA_VELA = new Vector3f(0.5f, 0.5f, 0.5f);
+    private static final String MODELO_BOLA = "conde-bola";
+    /** Modelos que ya fallaron al cargar: se avisa una sola vez por pelea. */
+    private final Set<String> modelosRotos = new HashSet<>();
+
+    /** Las velas de un modelo arden: una llama chica sobre cada mecha cada cuatro ticks. */
+    private void llamas(Instancia inst, int t) {
+        if (inst == null || t % 4 != 0) return;
+        for (Location l : inst.puntos(Material.RED_CANDLE, MECHA_VELA)) {
+            Compat.spawn(world(), Compat.SMALL_FLAME, l, 1, 0, 0, 0, 0);
+        }
+    }
+
+    private ModeloBde modeloBde(String nombre) {
+        if (modelosRotos.contains(nombre)) return null;
+        try {
+            return ModeloBde.cargar(nombre);
+        } catch (RuntimeException fallo) {
+            modelosRotos.add(nombre);
+            plugin.getLogger().warning("CONDE: el modelo " + nombre + " no carga; el efecto ira sin dibujo: "
+                    + fallo.getMessage());
+            return null;
+        }
+    }
+
+    /** Una instancia de un modelo dentro de una Escena: al quitarla, fuera sus entidades. */
+    private final class Modelo implements Parte {
+        private final Instancia inst;
+
+        Modelo(Instancia inst) {
+            this.inst = inst;
+        }
+
+        @Override
+        public void quitar() {
+            for (Entity x : inst.entidades()) spawned.remove(x);
+            inst.retirar();
+        }
+    }
+
+    /** Retira una instancia ya y saca sus entidades de 'spawned'. */
+    private void retirarModelo(Instancia inst) {
+        if (inst == null) return;
+        for (Entity x : inst.entidades()) spawned.remove(x);
+        inst.retirar();
     }
 
     /**
@@ -3087,87 +3172,44 @@ public final class Conde extends BossFight {
 
     private static final int SELLO_ESTALLA = 46;
     private static final int SELLO_FIN = 57;
-    /** Hasta seis jugadores, sello completo; con mas, todos el reducido. */
-    private static final int SELLO_COMPLETOS = 6;
-    /** Del undecimo en adelante, el sello va solo en particulas (presupuesto de entidades). */
-    private static final int SELLO_DIBUJADOS = 10;
+    /** Del septimo en adelante, el sello va solo en particulas (presupuesto de entidades). */
+    private static final int SELLO_DIBUJADOS = 6;
+    /** Los tres primeros con el circulo grande (400 piezas); del cuarto al sexto, el ligero (96). */
+    private static final int SELLO_GRIMORIO = 3;
     private static final double SELLO_RADIO = 2.2;
-    private static final String[] RUNAS_SELLO = {"ᛉ", "ᛟ", "ᚦ", "ᛝ"};
-
-    /** Giro acumulado de los anillos del sello: x2 en los ultimos diez ticks de carga. */
-    private static double giroSello(int t, double grados) {
-        return grados * D2R * (Math.min(t, 36) + 2 * Math.max(0, Math.min(10, t - 36)));
-    }
 
     /**
-     * Un sello bajo un jugador: anillo de 16 losas de cristal rojo (10 en el reducido)
-     * y anillo de 10 piezas de piedra negra girando al reves, 4 runas, el nucleo y el
-     * rayo. 40 piezas (24 el reducido).
+     * Un sello bajo un jugador: un circulo de block-display.com a radio 1,5 (conde-sello, 400
+     * piezas, en los tres primeros; conde-circulo, 96, en el resto) creciendo pieza a pieza en
+     * 40 ticks y girando, el nucleo (8) y el rayo (2). Al estallar, las piezas del circulo
+     * salen disparadas en 12 ticks.
      */
     private final class Sello {
         final Location c;
         final boolean dibujado;
-        private final Pz[] ext;
-        private final Pz[] inte;
-        private final Rn[] runas;
+        private final Instancia circulo;
         private final Nucleo nucleo;
         private final Rayo rayo;
 
-        Sello(Escena e, Location c, boolean reducido, boolean dibujado) {
+        Sello(Escena e, Location c, boolean dibujado, boolean grimorio) {
             this.c = c;
             this.dibujado = dibujado;
-            int nExt = dibujado ? (reducido ? 10 : 16) : 0;
-            int nInt = dibujado && !reducido ? 10 : 0;
-            double largo = reducido ? 0.5 : 0.35;
-            ext = new Pz[nExt];
-            for (int i = 0; i < nExt; i++) ext[i] = e.pz(c, Material.RED_STAINED_GLASS, largo, 0.06, 0.22);
-            inte = new Pz[nInt];
-            for (int i = 0; i < nInt; i++) inte[i] = e.pz(c, Material.BLACKSTONE, 0.22, 0.05, 0.14);
-            runas = new Rn[dibujado ? 4 : 0];
-            for (int i = 0; i < runas.length; i++) runas[i] = e.rn(c, RUNAS_SELLO[i], 1.2f);
+            circulo = dibujado ? e.modelo(grimorio ? MODELO_SELLO : MODELO_CIRCULO, Opciones.en(c).escala(1.5f).ticksCrecimiento(40)
+                    .giroPorTick(0.105f).alturaExtra(0.03f), null) : null;
             nucleo = dibujado ? new Nucleo(e, c, 1) : null;
             rayo = dibujado ? e.rayo(c, 0.45f, 0.2f) : null;
         }
 
+        boolean sinModelo() {
+            return circulo == null;
+        }
+
         void tick(int t) {
             if (!dibujado) return;
-            Quaternionf gO = giroY(giroSello(t, 12));
-            Quaternionf gI = giroY(-giroSello(t, 18));
-            for (int i = 0; i < ext.length; i++) {
-                double a = i * TAU / ext.length;
-                double ry = -a + Math.PI / 2;
-                if (t < SELLO_ESTALLA) {
-                    int st = i / 4;
-                    poner(ext[i], gO, Math.cos(a) * 1.5, 0.08, Math.sin(a) * 1.5, giroY(ry), eo(seg(t, st, st + 2)));
-                } else {
-                    double u = seg(t, 46, 56);
-                    double e = eo(u);
-                    double r = 1.5 + 2.4 * e;
-                    poner(ext[i], gO, Math.cos(a) * r, 0.08 + 1.9 * e, Math.sin(a) * r,
-                            xyz(u * 5, ry + u * 3, u * 4), 1 - u);
-                }
-            }
-            for (int i = 0; i < inte.length; i++) {
-                double a = i * TAU / inte.length;
-                double ry = -a + Math.PI / 2;
-                if (t < SELLO_ESTALLA) {
-                    int st = 1 + i / 4;
-                    poner(inte[i], gI, Math.cos(a) * 0.9, 0.075, Math.sin(a) * 0.9, giroY(ry), eo(seg(t, st, st + 2)));
-                } else {
-                    double u = seg(t, 46, 56);
-                    double e = eo(u);
-                    double r = 0.9 + 1.6 * e;
-                    poner(inte[i], gI, Math.cos(a) * r, 0.075 + 0.9 * e, Math.sin(a) * r, xyz(u * 4, ry, u * 5), 1 - u);
-                }
-            }
-            for (int i = 0; i < runas.length; i++) {
-                double a = i * TAU / 4;
-                int st = 3 + i / 2;
-                double y = 0.5 + 0.08 * Math.sin(t / 30.0 * TAU + i * 1.6);
-                double u = seg(t, 47, 57);
-                double e = eo(u);
-                double r = 1.3 + 1.0 * e;
-                runas[i].put(Math.cos(a) * r, y + 1.4 * e, Math.sin(a) * r, eo(seg(t, st, st + 2)) * (1 - u));
+            if (circulo != null) {
+                circulo.tick(t);
+                if (t == SELLO_ESTALLA) circulo.desmontar(12, 2.4f, 1.9f, 0);
+                if (t < SELLO_ESTALLA) llamas(circulo, t);
             }
             double cy = 0.4 + 0.8 * sm(seg(t, 36, 46)) + 0.6 * seg(t, 46, 49);
             nucleo.tick(t, cy, eo(seg(t, 4, 6)), 1 - seg(t, 46, 49), 10, 3, 0.8, seg(t, 46, 56));
@@ -3180,59 +3222,42 @@ public final class Conde extends BossFight {
 
     private static final int PENTA_ESTALLA = 66;
     private static final int PENTA_FIN = 104;
-    /** Radio de las puntas de la estrella. */
-    private static final double PENTA_RV = 6.7;
-    /** Largo de cada trazo de la estrella: doce por lado la dibujan continua. */
-    private static final double PENTA_TRAZO = 1.06;
+    /** Radio de las cinco puntas (pilar, vela, runa y rayo): justo por fuera del circulo de radio 7. */
+    private static final double PENTA_RV = 7.6;
     private static final double PENTA_RADIO_RAYO = 2.5;
+    /** El tick en que los dos circulos salen en onda hacia fuera. */
+    private static final int PENTA_ONDA = PENTA_ESTALLA + 4;
+    /** Ticks que la copia de radio 5 va detras de la grande. */
+    private static final int PENTA_RETRASO = 6;
     private static final String[] RUNAS_PENTACULO = {"ᛉ", "ᛟ", "ᚦ", "ᛝ", "ᛗ"};
 
     /**
-     * El pentaculo de radio 7: anillo de ladrillo del nether en el suelo (36), anillo
-     * flotante de cristal (24), estrella trazo a trazo (60), cinco puntas con pilar,
-     * vela y runa (15), disco de ocho cuñas, el nucleo a 1,3 y cinco rayos (10).
+     * El pentaculo: conde-sello a radio 7 (400, con sus calaveras y velas) y conde-circulo a
+     * radio 5 con las piezas al doble de alto girando al reves (96), cinco puntas con pilar,
+     * vela y runa (15), el nucleo a 1,3 (8) y cinco rayos (10). 529 entidades.
      */
     private final class Pentaculo {
         final Location[] pie = new Location[5];
-        private final Pz[] base = new Pz[36];
-        private final Pz[] flo = new Pz[24];
-        private final Pz[] estrella = new Pz[60];
-        private final double[][] trazo = new double[60][3];
-        private final int[] trazoSale = new int[60];
-        private final int[] trazoBorra = new int[60];
+        private final Instancia grande;
+        private final Instancia copia;
         private final Pz[] pilar = new Pz[5];
         private final Pz[] vela = new Pz[5];
         private final Rn[] runa = new Rn[5];
-        private final Pz[] cuna = new Pz[8];
         private final double[][] punta = new double[5][2];
         private final Rayo[] rayo = new Rayo[5];
         private final Nucleo nucleo;
 
         Pentaculo(Escena e, Location c) {
-            for (int i = 0; i < 36; i++) base[i] = e.pz(c, Material.RED_NETHER_BRICKS, 0.6, 0.08, 0.3);
-            for (int i = 0; i < 24; i++) flo[i] = e.pz(c, Material.RED_STAINED_GLASS, 0.5, 0.05, 0.25);
+            // Sin escalaY: las calaveras saldrian estiradas.
+            grande = e.modelo(MODELO_SELLO, Opciones.en(c).escala(7).ticksCrecimiento(60)
+                    .giroPorTick(0.02f).alturaExtra(0.03f), null);
+            copia = e.modelo(MODELO_CIRCULO, Opciones.en(c).escala(5).escalaY(2).ticksCrecimiento(60)
+                    .giroPorTick(-0.03f).alturaExtra(0.05f), null);
             for (int i = 0; i < 5; i++) {
                 double a = -Math.PI / 2 + i * TAU / 5;
                 punta[i][0] = Math.cos(a) * PENTA_RV;
                 punta[i][1] = Math.sin(a) * PENTA_RV;
                 pie[i] = sinGiro(Fx.ground(c.clone().add(punta[i][0], 0, punta[i][1]), 4));
-            }
-            for (int s = 0; s < 5; s++) {
-                double[] a = punta[(2 * s) % 5];
-                double[] b = punta[(2 * s + 2) % 5];
-                double dx = b[0] - a[0];
-                double dz = b[1] - a[1];
-                double ry = -Math.atan2(dz, dx);
-                for (int i = 0; i < 12; i++) {
-                    int n = s * 12 + i;
-                    double f = (i + 0.5) / 12;
-                    trazo[n][0] = a[0] + dx * f;
-                    trazo[n][1] = a[1] + dz * f;
-                    trazo[n][2] = ry;
-                    trazoSale[n] = 6 + 4 * s + i / 3;
-                    trazoBorra[n] = 80 + 4 * (4 - s) + (11 - i) / 3;
-                    estrella[n] = e.pz(c, Material.RED_STAINED_GLASS, PENTA_TRAZO, 0.06, 0.12);
-                }
             }
             BlockData encendida = Material.RED_CANDLE.createBlockData();
             if (encendida instanceof Lightable lt) lt.setLit(true);
@@ -3242,45 +3267,19 @@ public final class Conde extends BossFight {
                 runa[k] = e.rn(c, RUNAS_PENTACULO[k], 1.2f);
                 rayo[k] = e.rayo(pie[k], 0.45f, 0.2f);
             }
-            for (int i = 0; i < 8; i++) cuna[i] = e.pz(c, Material.RED_NETHER_BRICKS, 1.5, 0.06, 0.62);
             nucleo = new Nucleo(e, c, 1.3);
         }
 
         void tick(int t) {
-            Quaternionf gB = giroY(2 * D2R * Math.min(t, 92));
-            Quaternionf gF = giroY(-4 * D2R * Math.min(t, PENTA_ESTALLA));
-            for (int i = 0; i < 36; i++) {
-                double a = i * TAU / 36;
-                double ry = -a + Math.PI / 2;
-                int st = i / 6;
-                int d = i % 3;
-                double u = seg(t, 92 + d, 102 + d);
-                double e = eo(u);
-                double r = 7 + 3 * e;
-                poner(base[i], gB, Math.cos(a) * r, 0.08 + 1.6 * e, Math.sin(a) * r, xyz(u * 4, ry, u * 3),
-                        eo(seg(t, st, st + 2)) * (1 - u));
+            // La onda va de dentro a fuera: 8 ticks por radio del modelo, 14 cada pieza.
+            if (grande != null) {
+                grande.tick(t);
+                if (t == PENTA_ONDA) grande.desmontar(14, 4.5f, 1.6f, 8);
+                if (t < PENTA_ONDA) llamas(grande, t);
             }
-            for (int i = 0; i < 24; i++) {
-                double a = (i + 0.5) * TAU / 24;
-                double ry = -a + Math.PI / 2;
-                int st = 3 + i / 8;
-                double s = eo(seg(t, st, st + 2));
-                double y = 1.225;
-                double r = 6.4;
-                double giro = 0;
-                if (t >= PENTA_ESTALLA) {
-                    // La onda: baja al suelo y sale hasta el radio 11 encogiendo.
-                    y = lerp(1.225, 0.1, sm(seg(t, 66, 70)));
-                    double u = seg(t, 70, 80);
-                    r = 6.4 + 4.6 * eo(u);
-                    s *= 1 - u;
-                    giro = u * 5;
-                }
-                poner(flo[i], gF, Math.cos(a) * r, y, Math.sin(a) * r, xyz(giro, ry, giro * 0.6), s);
-            }
-            for (int n = 0; n < 60; n++) {
-                double s = eo(seg(t, trazoSale[n], trazoSale[n] + 2)) * (1 - sm(seg(t, trazoBorra[n], trazoBorra[n] + 2)));
-                estrella[n].put(trazo[n][0], 0.11, trazo[n][1], giroY(trazo[n][2]), s);
+            if (copia != null) {
+                copia.tick(t - PENTA_RETRASO);
+                if (t == PENTA_ONDA) copia.desmontar(14, 3.5f, 1.6f, 8);
             }
             for (int k = 0; k < 5; k++) {
                 double u = seg(t, 92 + k * 0.5, 102 + k * 0.5);
@@ -3296,15 +3295,6 @@ public final class Conde extends BossFight {
                 int gst = 5 + k / 3;
                 double fy = 0.08 * Math.sin(t / 24.0 * TAU + k);
                 runa[k].put(x, 1.6 + fy + 1.5 * e, z, eo(seg(t, gst, gst + 2)) * (1 - u));
-            }
-            for (int i = 0; i < 8; i++) {
-                double a = i * TAU / 8;
-                int st = 1 + i / 3;
-                double u = seg(t, 92, 102);
-                double e = eo(u);
-                double r = 0.85 + 2.5 * e;
-                cuna[i].put(Math.cos(a) * r, 0.05 + 0.8 * e, Math.sin(a) * r, xyz(0, -a, u * 3),
-                        eo(seg(t, st, st + 2)) * (1 - u));
             }
             double abre = sm(seg(t, 46, 66));
             nucleo.tick(t, 1.0 + 1.5 * abre, eo(seg(t, 4, 6)), 1 - seg(t, 66, 70), 8, 3,
@@ -3323,19 +3313,19 @@ public final class Conde extends BossFight {
     private static final double ECLIPSE_RADIO = 9;
     private static final int ECLIPSE_ESTALLA = 60;
     private static final int ECLIPSE_FIN = 76;
-    private static final String[] RUNAS_ECLIPSE = {"ᛉ", "ᛟ", "ᚦ", "ᛝ", "ᚱ", "ᛗ", "ᛞ", "ᛇ"};
+    /** Ticks que la copia de radio 7 va detras de la grande. */
+    private static final int ECLIPSE_RETRASO = 4;
 
     /**
-     * El eclipse de radio 9: anillo de piedra negra pulida (40) y anillo de ladrillo
-     * del nether (32) girando al reves, 8 runas grandes, la luna de cristal rojo (24)
-     * a cinco bloques con el disco negro (12) que la tapa, el nucleo a 1,3, el rayo
-     * central grueso y ocho finos en espiral.
+     * El eclipse de radio 9: el circulo de block-display.com a radio 9 (96) y una copia a
+     * radio 7 girando al reves (96), con sus runas; la luna de cristal rojo (24) a cinco
+     * bloques con el disco negro (12) que la tapa, el nucleo a 1,3 (8), el rayo central
+     * grueso y ocho finos en espiral (18). 254 entidades.
      */
     private final class Eclipse {
         private final Location c;
-        private final Pz[] ext = new Pz[40];
-        private final Pz[] inte = new Pz[32];
-        private final Rn[] runa = new Rn[8];
+        private final Instancia grande;
+        private final Instancia copia;
         private final Pz[] luna = new Pz[24];
         private final double[][] lunaP = new double[24][3];
         private final Pz[] negro = new Pz[12];
@@ -3348,9 +3338,10 @@ public final class Conde extends BossFight {
         Eclipse(Escena e, Location c, double yawLuna) {
             this.c = c;
             this.giroLuna = giroY(yawLuna);
-            for (int i = 0; i < 40; i++) ext[i] = e.pz(c, Material.POLISHED_BLACKSTONE, 1.2, 0.08, 0.3);
-            for (int i = 0; i < 32; i++) inte[i] = e.pz(c, Material.RED_NETHER_BRICKS, 1.1, 0.08, 0.28);
-            for (int i = 0; i < 8; i++) runa[i] = e.rn(c, RUNAS_ECLIPSE[i], 1.6f);
+            grande = e.modelo(MODELO_CIRCULO, Opciones.en(c).escala((float) ECLIPSE_RADIO).ticksCrecimiento(40)
+                    .giroPorTick((float) (1.5 * D2R)).alturaExtra(0.03f), null);
+            copia = e.modelo(MODELO_CIRCULO, Opciones.en(c).escala(7).ticksCrecimiento(40)
+                    .giroPorTick((float) (-2.5 * D2R)).alturaExtra(0.05f), null);
             // La luna: una losa en el centro, ocho en radio 0,85 y quince en 1,55.
             int n = 0;
             lunaP[n++] = new double[]{0, 0, 0};
@@ -3380,38 +3371,14 @@ public final class Conde extends BossFight {
         }
 
         void tick(int t) {
-            double tf = Math.min(t, ECLIPSE_ESTALLA);
-            Quaternionf gO = giroY(1.5 * D2R * tf);
-            Quaternionf gI = giroY(-2.5 * D2R * tf);
-            for (int i = 0; i < 40; i++) {
-                double a = i * TAU / 40;
-                int st = i / 8;
-                int d = i % 3;
-                double u = seg(t, 60 + d, 70 + d);
-                double e = eo(u);
-                double r = 9 + 3 * e;
-                poner(ext[i], gO, Math.cos(a) * r, 0.06 + 4 * u - 2.2 * u * u, Math.sin(a) * r,
-                        xyz(u * 5, -a + Math.PI / 2, u * 4), eo(seg(t, st, st + 2)) * (1 - sm(u)));
+            // Al destello las piezas del suelo saltan hacia fuera en 10 ticks; las de fuera, un poco despues.
+            if (grande != null) {
+                grande.tick(t);
+                if (t == ECLIPSE_ESTALLA) grande.desmontar(10, 3f, 2.2f, 3);
             }
-            for (int i = 0; i < 32; i++) {
-                double a = i * TAU / 32;
-                int st = 1 + i / 8;
-                int d = i % 3;
-                double u = seg(t, 60 + d, 70 + d);
-                double e = eo(u);
-                double r = 7 + 2.6 * e;
-                poner(inte[i], gI, Math.cos(a) * r, 0.06 + 3.6 * u - 2 * u * u, Math.sin(a) * r,
-                        xyz(u * 4, -a + Math.PI / 2, u * 5), eo(seg(t, st, st + 2)) * (1 - sm(u)));
-            }
-            for (int i = 0; i < 8; i++) {
-                double a = (i + 0.5) * TAU / 8;
-                int st = 3 + i / 3;
-                double u = seg(t, 60, 70);
-                double e = eo(u);
-                double r = 7 + 1.5 * e;
-                Vector3f p = new Quaternionf(gI).transform(new Vector3f((float) (Math.cos(a) * r),
-                        (float) (2.2 + 0.1 * Math.sin(t / 26.0 * TAU + i) + 2 * e), (float) (Math.sin(a) * r)));
-                runa[i].put(p.x, p.y, p.z, eo(seg(t, st, st + 2)) * (1 - u));
+            if (copia != null) {
+                copia.tick(t - ECLIPSE_RETRASO);
+                if (t == ECLIPSE_ESTALLA) copia.desmontar(10, 2.6f, 2f, 3);
             }
             // El disco negro entra de un lado y tapa la luna justo en el tick 60.
             double fuera = -3.7 * (1 - seg(t, 0, ECLIPSE_ESTALLA));
@@ -3458,11 +3425,12 @@ public final class Conde extends BossFight {
     private static final double BOLA_GRAVEDAD = 0.02;
 
     /**
-     * Una bola de Sangre Ardiente: nucleo de redstone girando en dos ejes, corona de
-     * seis losas de cristal inclinada 30 grados y una estela de seis brasas. Carga
-     * entre las manos del Conde (crece y la corona se cierra), vuela recta con un poco
-     * de caida y choca contra un bloque o al pasar a 1,2 de un jugador. La grande deja
-     * charco; la pequeña (la de la rafaga, a 0,55) solo estalla.
+     * Una bola de Sangre Ardiente: el modelo conde-bola (55 bloques: esfera roja y negra
+     * que gira sobre si misma y una cola de llamas) y una estela de seis brasas. Nace
+     * entre las manos del Conde creciendo de 0 a su tamaño, vuela recta con un poco de
+     * caida, con la cola hacia atras, y choca contra un bloque o al pasar a 1,2 de un
+     * jugador. La grande (modelo a 0,55, 1,1 bloques) deja charco; la pequeña (la de la
+     * rafaga, a 0,3) solo estalla.
      */
     private final class Bola {
         final double k;
@@ -3472,8 +3440,10 @@ public final class Conde extends BossFight {
         final Supplier<Location> mira;
         /** El 'dano' de la habilidad al lanzarla, para el golpe del choque. */
         final double mult;
-        private final Pz nucleo;
-        private final Pz[] corona = new Pz[6];
+        private final Escena escena;
+        /** El modelo; null hasta que empieza a cargar (o si no se pudo crear). */
+        private Instancia bola;
+        private boolean bolaPedida;
         private final Pz[] brasa = new Pz[6];
         private final int[] brasaT = {-99, -99, -99, -99, -99, -99};
         private final Pz[] esquirla;
@@ -3486,7 +3456,6 @@ public final class Conde extends BossFight {
         private Location P;
         private Location G;
         private double hP;
-        private double yawI;
         boolean hecho;
 
         Bola(Escena e, double k, boolean grande, int tc, int tl, Supplier<Location> mira) {
@@ -3497,9 +3466,8 @@ public final class Conde extends BossFight {
             this.mira = mira;
             // Se crea al lanzar la habilidad: el choque puede caer fuera de su 'cast'.
             this.mult = abilityDamage();
+            this.escena = e;
             Location h = boss.getLocation();
-            nucleo = e.pz(h, Material.REDSTONE_BLOCK, 0.45 * k, 0.45 * k, 0.45 * k);
-            for (int i = 0; i < 6; i++) corona[i] = e.pz(h, Material.RED_STAINED_GLASS, 0.4 * k, 0.08 * k, 0.2 * k);
             // Las brasas se quedan donde caen: teleport sin deslizamiento.
             for (int i = 0; i < 6; i++) brasa[i] = e.pz(h, Material.RED_CONCRETE.createBlockData(), 1, 1, 1, 0);
             esquirla = new Pz[grande ? 12 : 6];
@@ -3538,8 +3506,7 @@ public final class Conde extends BossFight {
             face(aim);
             Location h = mano(aim);
             pos = h;
-            double g = eo(seg(t, tc, tl));
-            dibujar(t, h, g, 1 - g);
+            dibujar(t, h, eo(seg(t, tc, tl)), rumbo);
             if (t == tc) soundAt(h, "block.fire.ambient", 1.6f, 0.6f);
             if (t % 2 == 0) {
                 for (int i = 0; i < 3; i++) {
@@ -3590,7 +3557,7 @@ public final class Conde extends BossFight {
             }
             Vector plano = vel.clone().setY(0);
             if (plano.lengthSquared() > 1e-4) rumbo = plano.normalize();
-            dibujar(t, pos, 1, 0);
+            dibujar(t, pos, 1, vel);
             // La estela: cada tick una brasa nueva donde esta la bola; dura seis.
             int j = Math.floorMod(t - tl, 6);
             brasa[j].ancla(pos);
@@ -3600,21 +3567,31 @@ public final class Conde extends BossFight {
             Compat.spawn(world(), Compat.DUST, pos, 2, 0.2 * k, 0.2 * k, 0.2 * k, 0, Compat.dust(SANGRE, 1.2f));
         }
 
-        /** Bola y corona en 'at'; g es su tamaño (0 a 1) y 'cierre' lo abierta que va la corona. */
-        private void dibujar(int t, Location at, double g, double cierre) {
-            nucleo.ancla(at);
-            for (Pz c : corona) c.ancla(at);
-            Quaternionf qg = giroY(-Math.atan2(rumbo.getZ(), rumbo.getX()));
-            nucleo.put(0, 0, 0, new Quaternionf(qg).mul(xyz(20 * D2R * t, 20 * D2R * t, 0)), g);
-            Quaternionf qc = new Quaternionf(qg).rotateX((float) (30 * D2R)).rotateY((float) (25 * D2R * t));
-            double rr = 0.55 * k * (1 + 1.6 * cierre);
-            double s = Math.min(1, g * 1.6);
-            for (int i = 0; i < 6; i++) {
-                double a = i * TAU / 6;
-                Vector3f p = new Quaternionf(qc).transform(
-                        new Vector3f((float) (Math.cos(a) * rr), 0f, (float) (Math.sin(a) * rr)));
-                corona[i].put(p.x, p.y, p.z, new Quaternionf(qc).mul(giroY(-a + Math.PI / 2)), s);
+        /**
+         * La bola en 'at' (su centro), a tamaño g (0 a 1) y con la cola (el +Z del modelo)
+         * hacia atras de 'hacia'. El modelo nace la primera vez que se dibuja.
+         */
+        private void dibujar(int t, Location at, double g, Vector hacia) {
+            Location mira = new Location(null, 0, 0, 0);
+            Vector atras = hacia.clone().multiply(-1);
+            if (atras.lengthSquared() < 1e-6) atras = rumbo.clone().multiply(-1);
+            mira.setDirection(atras);
+            float yaw = mira.getYaw();
+            float pitch = mira.getPitch();
+            float tam = (float) Math.max(0, Math.min(1, g));
+            if (!bolaPedida) {
+                bolaPedida = true;
+                bola = escena.modelo(MODELO_BOLA, Opciones.en(at).escala(grande ? 0.55f : 0.3f).animacion(true),
+                        b -> {
+                            b.girar(yaw, pitch);
+                            b.escalarTodo(tam);
+                        });
             }
+            if (bola == null) return;
+            bola.mover(at);
+            bola.girar(yaw, pitch);
+            bola.escalarTodo(tam);
+            bola.tick(t);
         }
 
         private void brasas(int t) {
@@ -3630,9 +3607,8 @@ public final class Conde extends BossFight {
             P = en.clone();
             G = sinGiro(Fx.ground(P, 8));
             hP = Math.max(0.06, P.getY() - G.getY());
-            yawI = Math.atan2(rumbo.getZ(), rumbo.getX());
-            nucleo.quitar();
-            for (Pz c : corona) c.ancla(P);
+            retirarModelo(bola);
+            bola = null;
             for (Pz q : esquirla) q.ancla(G);
             if (charco != null) charco.ancla(G);
 
@@ -3657,31 +3633,6 @@ public final class Conde extends BossFight {
         private void estallar(int t) {
             int tau = t - tI;
             brasas(t);
-            for (int i = 0; i < 6; i++) {
-                double phi = i * TAU / 6 + yawI;
-                if (grande) {
-                    // Salen en estrella y se clavan en el suelo a 2,6, inclinadas 55 grados.
-                    double lx = Math.cos(phi) * 2.6;
-                    double ly = G.getY() + 0.08 - P.getY();
-                    double lz = Math.sin(phi) * 2.6;
-                    if (tau < 5) {
-                        double u = tau / 5.0;
-                        corona[i].put(lx * eo(u), lerp(0, ly, u) + 0.9 * Math.sin(Math.PI * u), lz * eo(u),
-                                xyz(0, -phi, -55 * D2R * u), 1);
-                    } else if (tau < 35) {
-                        double tr = 4 * D2R * Math.sin(tau * 2.6) * (1 - (tau - 5) / 30.0);
-                        corona[i].put(lx, ly, lz, xyz(tr, -phi, -55 * D2R + tr), 1);
-                    } else {
-                        corona[i].put(lx, ly, lz, xyz(0, -phi, -55 * D2R), 1 - seg(tau, 35, 41));
-                    }
-                } else {
-                    double u = seg(tau, 0, 8);
-                    double e = eo(u);
-                    double up = 0.35 + 0.3 * h1(i);
-                    corona[i].put(Math.cos(phi) * 1.4 * e, up * 1.4 * e, Math.sin(phi) * 1.4 * e,
-                            xyz(u * 5, -phi, u * 4), 1 - u);
-                }
-            }
             int n = esquirla.length;
             int vida = grande ? 22 : 12;
             for (int i = 0; i < n; i++) {

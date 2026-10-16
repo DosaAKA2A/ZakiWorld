@@ -6,7 +6,7 @@
 
   <groupId>net.ederus</groupId>
   <artifactId>EDM</artifactId>
-  <version>1.84.2</version>
+  <version>1.84.3</version>
   <packaging>jar</packaging>
   <name>EDM</name>
   <description>Nucleo de Ederus: Rip + Anomaly + libros y avisos de tiendas</description>
@@ -117,6 +117,10 @@
       <resource>
         <directory>src/main/resources</directory>
         <filtering>false</filtering>
+        <!-- Los .bdengine originales nunca van en el jar: solo el JSON saneado. -->
+        <excludes>
+          <exclude>**/*.bdengine</exclude>
+        </excludes>
       </resource>
     </resources>
   </build>

@@ -11,6 +11,10 @@ Uso:
       --title "Light Magic Circle animated" --fit floor \
       --recolor yellow_concrete_powder=RED_CONCRETE --text-color B3122E [--expect block=48,text=48] [--check]
 
+Con --item-swap se cambian los items de un modelo por otra cosa (los items del original nunca pasan):
+  --item-swap diamond=WITHER_SKELETON_SKULL:item:1.2   calavera de pie en el centro del item, a 1,2 de su tamaño
+  --item-swap redstone=RED_CANDLE:block:1.5            bloque de pie, centrado en el item, a 1,5 de su tamaño
+
 Sin dependencias (Python 3.12).
 """
 
@@ -55,7 +59,9 @@ TEXT_OPTION_KEYS = {"color", "alpha", "backgroundColor", "backgroundAlpha", "bol
 #  BlockDisplay: cubo [0,1]^3.
 #  ItemDisplay de player_head sin transformacion de display: cubo de 0,5 con la base en y=-0,5.
 #  TextDisplay de un caracter: plano z=0, ~8 px de ancho y 13 px de alto a 0,025 bloques por pixel.
+#  ItemDisplay de un item cambiado (calaveras): como la cabeza.
 BOX = {
+    "item": ((-0.25, 0.25), (-0.5, 0.0), (-0.25, 0.25)),
     "block": ((0.0, 1.0), (0.0, 1.0), (0.0, 1.0)),
     "head": ((-0.25, 0.25), (-0.5, 0.0), (-0.25, 0.25)),
     "text": ((-0.1, 0.1), (0.0, 0.325), (0.0, 0.0)),
@@ -176,15 +182,19 @@ def clean(v):
 # ------------------------------------------------------------------ recorrido y saneado
 
 class Converter:
-    def __init__(self, recolor, text_color):
+    def __init__(self, recolor, text_color, swaps=None, static=False):
+        self.static = static
+        self.drop_text = False
         self.recolor = recolor
         self.used_recolor = set()
+        self.swaps = swaps or {}
+        self.used_swaps = set()
         self.text_color = text_color
         self.groups = []
         self.pieces = []
         self.ids = set()
         self.dropped = set()
-        self.counts = {"block": 0, "head": 0, "text": 0}
+        self.counts = {"block": 0, "head": 0, "item": 0, "text": 0}
         self.flattened = 0
 
     def new_group(self, name, parent, mat, pivot=None, keys=None):
@@ -230,6 +240,10 @@ class Converter:
         animation = node.get("animation") or []
         if not isinstance(animation, list):
             raise Rejected(f"{name}: animation invalida")
+        if animation and self.static:
+            # --static: el efecto lo anima EDM; se queda la pose fija del editor (transforms).
+            self.dropped.add("animaciones del editor (--static: pose fija)")
+            animation = []
         if not animation:
             self.flattened += 1
             for child in children:
@@ -291,6 +305,23 @@ class Converter:
                 raise Rejected(f"material invalido: {material}")
             piece.update(kind=kind, matrix=mat)
             piece["material"] = material
+        elif node.get("isItemDisplay") and (node.get("itemState") or {}).get("name") in self.swaps:
+            # 1.84.3 · El item original se cambia por un bloque o un item vanilla, de pie y sin el giro
+            # del original (los items del editor van tumbados): solo se conserva su centro y su tamaño.
+            state = node["itemState"]
+            material, kind, factor = self.swaps[state["name"]]
+            self.used_swaps.add(state["name"])
+            size = sum(math.sqrt(sum(mat[r * 4 + c] ** 2 for r in range(3))) for c in range(3)) / 3 * factor
+            cx, cy, cz = mat[3], mat[7], mat[11]
+            if kind == "block":
+                # BlockDisplay: cubo [0,1]^3, apoyado en el centro del item.
+                mat = [size, 0, 0, cx - size / 2, 0, size, 0, cy, 0, 0, size, cz - size / 2, 0, 0, 0, 1]
+            else:
+                # Calavera: cubo de 0,5 con la base en y=-0,5; se sube para que apoye en el centro del item.
+                mat = [size, 0, 0, cx, 0, size, 0, cy + size / 2, 0, 0, size, cz, 0, 0, 0, 1]
+            self.dropped.add("items originales (cambiados con --item-swap)")
+            piece.update(kind=kind, matrix=mat)
+            piece["material"] = material
         elif node.get("isItemDisplay"):
             kind = "head"
             state = node.get("itemState") or {}
@@ -311,6 +342,9 @@ class Converter:
             validate_texture(value)
             piece.update(kind=kind, matrix=mat)
             piece["texture"] = value
+        elif node.get("isTextDisplay") and self.drop_text:
+            self.dropped.add("textos del original (--drop-text)")
+            return
         elif node.get("isTextDisplay"):
             kind = "text"
             state = node.get("defaultTextState") or {}
@@ -441,13 +475,31 @@ def build_asset(args, root, data):
         if not re.fullmatch(r"#?[0-9A-Fa-f]{6}", args.text_color):
             raise SystemExit("--text-color debe ser RRGGBB")
         color = "#" + args.text_color.lstrip("#").upper()
-    conv = Converter(recolor, color)
+    swaps = {}
+    for item in args.item_swap or []:
+        src, _, rest = item.partition("=")
+        parts = rest.split(":")
+        if not BLOCK_NAME.fullmatch(src) or len(parts) != 3 or not MATERIAL.fullmatch(parts[0]) \
+                or parts[1] not in ("block", "item"):
+            raise SystemExit(f"--item-swap mal escrito: {item}")
+        try:
+            factor = float(parts[2])
+        except ValueError:
+            raise SystemExit(f"--item-swap con tamaño invalido: {item}")
+        if not 0.05 <= factor <= 8:
+            raise SystemExit(f"--item-swap con tamaño fuera de 0,05-8: {item}")
+        swaps[src] = (parts[0], parts[1], factor)
+    conv = Converter(recolor, color, swaps, args.static)
+    conv.drop_text = args.drop_text
     conv.walk(root, None, IDENTITY, 0)
     if not conv.pieces:
         raise Rejected("el modelo no tiene piezas")
     unused = set(recolor) - conv.used_recolor
     if unused:
         raise Rejected(f"recolor sin uso: {sorted(unused)}")
+    unused = set(swaps) - conv.used_swaps
+    if unused:
+        raise Rejected(f"item-swap sin uso: {sorted(unused)}")
     if args.expect:
         want = dict(part.split("=") for part in args.expect.split(","))
         got = {k: v for k, v in conv.counts.items() if v}
@@ -480,6 +532,7 @@ def build_asset(args, root, data):
         "groups": conv.groups,
         "pieces": pieces,
     }
+    asset["swaps"] = swaps
     return asset, conv, info, fingerprint, recolor, color
 
 
@@ -487,7 +540,7 @@ def serialize(asset):
     return json.dumps(asset, ensure_ascii=True, allow_nan=False, separators=(",", ":")) + "\n"
 
 
-def notice_text(args, conv, info, fingerprint, recolor, color):
+def notice_text(args, conv, info, fingerprint, recolor, color, swaps=None):
     animated = sum(1 for g in conv.groups if g.get("keys"))
     kept = [what for what, on in (("textos de un caracter", conv.counts["text"]),
                                   ("texturas de cabeza", conv.counts["head"]),
@@ -513,6 +566,8 @@ def notice_text(args, conv, info, fingerprint, recolor, color):
         lines.append(f"- Escalado x{info['scale']:.6f}: centro de la caja en el origen y media arista mayor 1,0.")
     for src, dst in sorted(recolor.items()):
         lines.append(f"- Recolor: {src} -> {dst}.")
+    for src, (dst, kind, factor) in sorted((swaps or {}).items()):
+        lines.append(f"- Item {src} cambiado por {dst} ({'bloque' if kind == 'block' else 'item'} de pie, x{factor:g}).")
     if color:
         lines.append(f"- Textos en {color}, fondo transparente, sin sombra ni estilos.")
     for item in sorted(conv.dropped):
@@ -533,6 +588,9 @@ def main():
     ap.add_argument("--fit", choices=("floor", "center"), default="floor")
     ap.add_argument("--recolor", action="append", metavar="bloque=MATERIAL")
     ap.add_argument("--text-color", metavar="RRGGBB")
+    ap.add_argument("--drop-text", action="store_true", help="descarta todos los textos del original")
+    ap.add_argument("--static", action="store_true", help="ignora las animaciones del editor (pose fija)")
+    ap.add_argument("--item-swap", action="append", metavar="item=MATERIAL:block|item:tamaño")
     ap.add_argument("--expect", help="conteo exacto por tipo, por ejemplo block=48,text=48")
     ap.add_argument("--sha256", help="huella esperada del .bdengine")
     ap.add_argument("--notice", type=Path, help="por omision <salida sin .json>.NOTICE.txt")
@@ -548,9 +606,10 @@ def main():
     except Rejected as fallo:
         print(f"RECHAZADO {args.source.name}: {fallo}", file=sys.stderr)
         raise SystemExit(2)
+    swaps = asset.pop("swaps")
     payload = serialize(asset).encode("utf-8")
     notice_path = args.notice or args.output.with_name(args.output.stem + ".NOTICE.txt")
-    notice = notice_text(args, conv, info, fingerprint, recolor, color).encode("utf-8")
+    notice = notice_text(args, conv, info, fingerprint, recolor, color, swaps).encode("utf-8")
     if args.check:
         same = args.output.exists() and args.output.read_bytes() == payload \
             and notice_path.exists() and notice_path.read_bytes() == notice

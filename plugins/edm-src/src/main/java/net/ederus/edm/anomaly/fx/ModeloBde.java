@@ -38,10 +38,16 @@ import java.util.regex.Pattern;
  */
 public final class ModeloBde {
 
-    /** Envolvente del modelo normalizado: radio horizontal y alturas del suelo y del techo. */
-    public record Bounds(float radius, float minY, float maxY) {}
+    /**
+     * Donde esta la base de un modelo: en el centro de su suelo ({@code "fit": "floor"}, lo normal
+     * en un circulo) o en su centro ({@code "fit": "center"}, lo normal en algo que vuela).
+     */
+    public enum Ajuste { SUELO, CENTRO }
 
-    public enum Tipo { BLOQUE, CABEZA, TEXTO }
+    /** Envolvente del modelo normalizado: radio horizontal, alturas del suelo y del techo y ajuste. */
+    public record Bounds(float radius, float minY, float maxY, Ajuste fit) {}
+
+    public enum Tipo { BLOQUE, CABEZA, OBJETO, TEXTO }
 
     /** Una clave del editor: tiempo en ticks y posicion, rotacion (radianes, XYZ) y escala. */
     record Clave(float tiempo, Vector3f posicion, Vector3f rotacion, Vector3f escala) {}
@@ -94,7 +100,7 @@ public final class ModeloBde {
         }
     }
 
-    /** Pieza visible: un bloque, una cabeza o un texto corto. */
+    /** Pieza visible: un bloque, una cabeza, un item vanilla (calaveras) o un texto corto. */
     public static final class Pieza {
         private final String id;
         private final int grupo;
@@ -138,14 +144,23 @@ public final class ModeloBde {
         public int fondo() { return fondo; }
         public boolean sombra() { return sombra; }
         Matrix4f matriz() { return matriz; }
-        /** Centro de la pieza en el espacio del modelo, en el tiempo 0 y sin animar. */
+        /** Centro de la pieza en el espacio del modelo, en la pose de reposo (ver {@link ModeloBde#reposo()}). */
         Vector3f centro() { return centro; }
         /** Angulo del centro alrededor del eje Y, de 0 a 2 PI. */
         float angulo() { return angulo; }
 
-        /** Punto local que hace de centro: los bloques van de 0 a 1, cabezas y textos en el origen. */
+        /**
+         * Punto local que hace de centro. Un bloque va de 0 a 1; una cabeza sin transformacion
+         * es un cubo de 0,5 con la base en y=-0,5 (centro en y=-0,25), igual que un item de calavera;
+         * un texto de una linea
+         * crece hacia arriba desde el origen y su centro queda a media linea (y=0,175).
+         */
         Vector3f centroLocal() {
-            return tipo == Tipo.BLOQUE ? new Vector3f(.5f, .5f, .5f) : new Vector3f();
+            return switch (tipo) {
+                case BLOQUE -> new Vector3f(.5f, .5f, .5f);
+                case CABEZA, OBJETO -> new Vector3f(0, -.25f, 0);
+                case TEXTO -> new Vector3f(0, .175f, 0);
+            };
         }
     }
 
@@ -181,6 +196,13 @@ public final class ModeloBde {
     /** Duracion del bucle de animacion en ticks (la ultima clave del modelo); 0 si es estatico. */
     public float periodo() { return periodo; }
     public boolean animado() { return periodo > 0; }
+
+    /**
+     * Tiempo del editor que se usa sin animacion: la ultima clave. En los modelos del CONDE la
+     * matriz fija de un grupo animado es su primera clave (el circulo a un decimo de su radio),
+     * y la forma buena, con la que se normalizaron los bounds, es la del final.
+     */
+    public float reposo() { return periodo; }
 
     /** Prepara una instancia sin crear entidades todavia (ver {@link Instancia#spawn()}). */
     public Instancia crear(Opciones opciones) {
@@ -276,7 +298,7 @@ public final class ModeloBde {
     }
 
     private void calcularCentros() {
-        Matrix4f[] g = matricesGrupos(0, false, nuevasMatricesGrupos());
+        Matrix4f[] g = matricesGrupos(reposo(), true, nuevasMatricesGrupos());
         for (Pieza p : piezas) {
             Matrix4f m = p.grupo < 0 ? new Matrix4f(p.matriz) : new Matrix4f(g[p.grupo]).mul(p.matriz);
             p.centro = m.transformPosition(p.centroLocal());
@@ -289,7 +311,13 @@ public final class ModeloBde {
         float minY = numero(b, "minY");
         float maxY = numero(b, "maxY");
         if (radio <= 0 || maxY < minY) throw new IllegalArgumentException("bounds incoherentes");
-        return new Bounds(radio, minY, maxY);
+        String fit = b.has("fit") && !b.get("fit").isJsonNull() ? b.get("fit").getAsString() : "floor";
+        Ajuste ajuste = switch (fit) {
+            case "floor" -> Ajuste.SUELO;
+            case "center" -> Ajuste.CENTRO;
+            default -> throw new IllegalArgumentException("fit desconocido: " + fit);
+        };
+        return new Bounds(radio, minY, maxY, ajuste);
     }
 
     private static List<Grupo> leerGrupos(JsonArray datos) {
@@ -386,6 +414,8 @@ public final class ModeloBde {
             switch (kind) {
                 case "block" -> piezas.add(new Pieza(id, grupo, Tipo.BLOQUE, matriz, brillo,
                         bloque(texto(p, "material")), null, null, null, 0, false));
+                case "item" -> piezas.add(new Pieza(id, grupo, Tipo.OBJETO, matriz, brillo,
+                        objeto(texto(p, "material")), null, null, null, 0, false));
                 case "head" -> piezas.add(new Pieza(id, grupo, Tipo.CABEZA, matriz, brillo,
                         Material.PLAYER_HEAD, textura(texto(p, "texture")), null, null, 0, false));
                 case "text" -> {
@@ -412,6 +442,18 @@ public final class ModeloBde {
     static Material bloque(String nombre) {
         Material m = Material.getMaterial(nombre);
         if (m == null || !m.isBlock() || m.isAir()) throw new IllegalArgumentException("material de bloque invalido: " + nombre);
+        return m;
+    }
+
+    /**
+     * 1.84.3 · Item de una pieza "item": solo calaveras y velas (lo que el conversor pone en lugar
+     * de los items del original). Nada con datos propios ni que se pueda usar.
+     */
+    static Material objeto(String nombre) {
+        Material m = Material.getMaterial(nombre);
+        if (m == null || !m.isItem() || m.isAir() || !(nombre.endsWith("_SKULL") || nombre.endsWith("CANDLE"))) {
+            throw new IllegalArgumentException("item no permitido en un modelo: " + nombre);
+        }
         return m;
     }
 
@@ -476,18 +518,29 @@ public final class ModeloBde {
 
     // ------------------------------------------------------------ autoprueba
 
+    /** Los modelos que se prueban al arrancar: la muestra y los que usa el CONDE. */
+    private static final List<String> PROBADOS = List.of("muestra-prueba", "conde-circulo", "conde-sello", "conde-bola");
+
     /**
-     * Carga la muestra del jar, recorre un ciclo completo de su animacion y deja en el log
-     * cuantas piezas y grupos valido. No crea entidades: sirve en el arranque.
+     * Carga cada modelo del jar que usa EDM, recorre un ciclo completo de su animacion y deja
+     * en el log una linea por modelo con las piezas y los grupos que valido. No crea
+     * entidades: sirve en el arranque. Devuelve false si alguno fallo.
      */
     public static boolean autoprueba(Logger log) {
+        boolean bien = true;
+        for (String nombre : PROBADOS) bien &= probar(nombre, log);
+        return bien;
+    }
+
+    private static boolean probar(String nombre, Logger log) {
         try {
-            ModeloBde m = cargar("muestra-prueba");
-            int bloques = 0, cabezas = 0, textos = 0, animados = 0;
+            ModeloBde m = cargar(nombre);
+            int bloques = 0, cabezas = 0, objetos = 0, textos = 0, animados = 0;
             for (Pieza p : m.piezas) {
                 switch (p.tipo) {
                     case BLOQUE -> bloques++;
                     case CABEZA -> cabezas++;
+                    case OBJETO -> objetos++;
                     case TEXTO -> textos++;
                 }
             }
@@ -500,12 +553,17 @@ public final class ModeloBde {
                     if (!x.isFinite()) throw new IllegalStateException("matriz no finita en el tick " + t);
                 }
             }
-            log.info("Modelos BDE: muestra-prueba valida, " + m.piezas.size() + " pieza(s) (" + bloques
-                    + " bloque(s), " + cabezas + " cabeza(s), " + textos + " texto(s)), " + m.grupos.size()
-                    + " grupo(s) (" + animados + " animado(s)), ciclo de " + ultimo + " tick(s).");
+            for (Pieza p : m.piezas) {
+                if (!p.centro.isFinite()) throw new IllegalStateException("centro no finito en la pieza " + p.id);
+            }
+            log.info("Modelos BDE: " + nombre + " valido, " + m.piezas.size() + " pieza(s) (" + bloques
+                    + " bloque(s), " + cabezas + " cabeza(s), " + objetos + " item(s), " + textos + " texto(s)), "
+                    + m.grupos.size()
+                    + " grupo(s) (" + animados + " animado(s)), ciclo de " + ultimo + " tick(s), ajuste "
+                    + (m.bounds.fit() == Ajuste.CENTRO ? "center" : "floor") + ".");
             return true;
         } catch (RuntimeException fallo) {
-            log.warning("Modelos BDE: la muestra no paso la autoprueba: " + fallo.getMessage());
+            log.warning("Modelos BDE: " + nombre + " no paso la autoprueba: " + fallo.getMessage());
             return false;
         }
     }
