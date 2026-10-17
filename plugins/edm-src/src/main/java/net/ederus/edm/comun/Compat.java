@@ -126,6 +126,13 @@ public final class Compat {
     public static final Particle FALLING_WATER = particle("FALLING_WATER");
     public static final Particle CRIMSON_SPORE = particle("CRIMSON_SPORE");
     public static final Particle WARPED_SPORE = particle("WARPED_SPORE");
+    // Las del jardin palido (1.21.4+): las usa ROTTEN.
+    public static final Particle PALE_OAK_LEAVES = particle("PALE_OAK_LEAVES", "CHERRY_LEAVES");
+    public static final Particle FIREFLY = particle("FIREFLY", "END_ROD");
+    /** Una mota que viaja hasta un destino (dato Particle.Trail): el hilo del corazon de creaking. */
+    public static final Particle TRAIL = particle("TRAIL");
+    /** El icono de un bloque, quieto y del tamano de un bloque, 4 s (dato BlockData). */
+    public static final Particle BLOCK_MARKER = particle("BLOCK_MARKER");
 
     private static final Enchantment GLOW_ENCHANT = resolveGlow();
 

@@ -10,14 +10,12 @@ import net.ederus.edm.anomaly.core.Glow;
 import net.ederus.edm.anomaly.core.Stop;
 import net.ederus.edm.comun.Compat;
 import net.ederus.edm.comun.Fx;
-import net.ederus.edm.comun.Tags;
+import org.bukkit.Color;
 import org.bukkit.Location;
 import org.bukkit.Material;
+import org.bukkit.Particle;
 import org.bukkit.block.data.BlockData;
-import org.bukkit.entity.BlockDisplay;
 import org.bukkit.entity.Creaking;
-import org.bukkit.entity.Display;
-import org.bukkit.entity.Entity;
 import org.bukkit.entity.LivingEntity;
 import org.bukkit.entity.Player;
 import org.bukkit.entity.ThrownPotion;
@@ -25,10 +23,7 @@ import org.bukkit.entity.Zombie;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.potion.PotionEffect;
 import org.bukkit.potion.PotionEffectType;
-import org.bukkit.util.Transformation;
 import org.bukkit.util.Vector;
-import org.joml.Quaternionf;
-import org.joml.Vector3f;
 
 import java.util.ArrayList;
 import java.util.Collection;
@@ -80,6 +75,20 @@ public final class Raiz extends BossFight {
     /** El verde de lo que es seguro pisar. */
     private static final int SEGURO = 0x9FD6A0;
 
+    /*
+     * ROTTEN se pinta SOLO con particulas (nada de BlockDisplay/ItemDisplay): cada
+     * hechizo con su firma, sacada del jardin palido. Las astillas y el polvo de bloque
+     * (BLOCK, FALLING_DUST) son lo que Bedrock ve bien; TRAIL, BLOCK_CRUMBLE,
+     * BLOCK_MARKER y DUST_PILLAR son adorno que Geyser puede no traducir.
+     */
+    private final BlockData roble = Material.PALE_OAK_LOG.createBlockData();
+    private final BlockData musgo = Material.PALE_MOSS_BLOCK.createBlockData();
+    private final BlockData resina = Material.RESIN_BLOCK.createBlockData();
+    private final BlockData corazonCreaking = Material.CREAKING_HEART.createBlockData();
+    private final BlockData raigambre = Material.ROOTED_DIRT.createBlockData();
+    private final BlockData ojo = Material.OPEN_EYEBLOSSOM.createBlockData();
+    private final ItemStack grumo = new ItemStack(Material.RESIN_CLUMP);
+
     /** Lo que la Mirada del Jardin cobra al que no estaba mirando: parte de su vida maxima. */
     private static final double MIRADA_FRACCION = 0.60;
     /** Ticks de margen de la Mirada: vale haberlo mirado hace tan poco (lag). */
@@ -117,8 +126,6 @@ public final class Raiz extends BossFight {
     /** Dosis que lleva la flor y las que pide. */
     private int dosis;
     private int dosisPedidas;
-    /** Las piezas de la flor, para limpiarlas cuando acabe. */
-    private final List<Entity> flor = new ArrayList<>();
     private Location florEn;
     /** Lo que habia donde se levanto un pilar provisional, para devolverlo al cerrar. */
     private final Map<Location, BlockData> pilarPrestado = new java.util.LinkedHashMap<>();
@@ -213,9 +220,9 @@ public final class Raiz extends BossFight {
         glowBody(NamedTextColor.DARK_GREEN);
         faseDesde = 0;
 
-        Compat.spawn(world(), Compat.CHERRY_LEAVES, at.clone().add(0, 1.6, 0), 40, 1.6, 1.4, 1.6, 0.04);
-        Fx.ring(at.clone().add(0, 0.2, 0), 4.5, 30, p ->
-                Compat.spawn(world(), Compat.DUST, p, 1, 0, 0, 0, 0, Compat.dust(CORTEZA, 1.6f)));
+        fx(Compat.PALE_OAK_LEAVES, at.clone().add(0, 1.6, 0), 40, 1.6, 1.4, 1.6, 0.04, null);
+        fx(Compat.DUST_PILLAR, at.clone().add(0, 0.1, 0), 24, 1.2, 0, 1.2, 0, raigambre);
+        Fx.ring(at.clone().add(0, 0.3, 0), 4.5, 30, p -> fx(Compat.BLOCK, p, 2, 0.1, 0.1, 0.1, 0, roble));
         soundAt(at, "entity.creaking.spawn", 1.8f, 0.6f);
         soundAt(at, "block.creaking_heart.spawn", 1.6f, 0.7f);
         titleNear(Component.text("ROTTEN", ACCENT),
@@ -229,7 +236,8 @@ public final class Raiz extends BossFight {
         faseDesde = ticks();
         damageBonus = to >= 3 ? 1.3 : to == 2 ? 1.15 : 1.0;
         Location c = suelo();
-        Fx.shockwave(world(), c, 7, Compat.CHERRY_LEAVES, 2);
+        Fx.shockwave(world(), c, 7, Compat.PALE_OAK_LEAVES, 2);
+        fx(Compat.BLOCK_CRUMBLE, center().add(0, 1.6, 0), 30, 0.8, 1.2, 0.8, 0, corazonCreaking);
         soundAt(c, "block.creaking_heart.break", 1.7f, 0.6f);
         soundAt(c, "entity.creaking.activate", 1.5f, 0.6f);
         titleNear(Component.text("FASE " + romano(to), ACCENT),
@@ -257,11 +265,14 @@ public final class Raiz extends BossFight {
         animate(90, tick -> {
             if (tick % 6 == 0) {
                 Fx.ring(c.clone().add(0, 0.4 + tick * 0.05, 0), 1.5 + tick * 0.09, 20, p ->
-                        Compat.spawn(world(), Compat.CHERRY_LEAVES, p, 1, 0.1, 0.1, 0.1, 0.02));
+                        fx(Compat.PALE_OAK_LEAVES, p, 1, 0.1, 0.1, 0.1, 0.02, null));
+                fx(Compat.BLOCK_CRUMBLE, c.clone().add(0, 1.6, 0), 6, 0.6, 1.0, 0.6, 0, roble);
             }
             if (tick % 18 == 0) soundAt(c, "entity.creaking.death", 1.4f, 0.6f + tick * 0.004f);
         }, () -> {
-            Compat.spawn(world(), Compat.EXPLOSION_EMITTER, c.clone().add(0, 1, 0), 1);
+            fx(Compat.BLOCK_CRUMBLE, c.clone().add(0, 1.6, 0), 60, 1.0, 1.4, 1.0, 0, corazonCreaking);
+            fx(Compat.BLOCK, c.clone().add(0, 1.0, 0), 40, 1.2, 1.0, 1.2, 0, roble);
+            fx(Compat.POOF, c.clone().add(0, 1.0, 0), 20, 1.0, 1.0, 1.0, 0.03, null);
             soundAt(c, "block.creaking_heart.break", 2.0f, 0.5f);
         });
     }
@@ -283,11 +294,11 @@ public final class Raiz extends BossFight {
         int pulso = 30 + (int) (30 * healthFraction());
         if (ticks() % Math.max(10, pulso) == 0) {
             soundAt(loc(), "block.creaking_heart.idle", 1.1f, 0.7f);
-            Compat.spawn(world(), Compat.DUST, center().add(0, 1.4, 0), 3, 0.5, 0.6, 0.5, 0,
-                    Compat.dust(AMBAR, 1.3f));
+            // La resina que rezuma el corazon con cada latido.
+            fx(Compat.DRIPPING_HONEY, center().add(0, 1.4, 0), 2, 0.4, 0.5, 0.4, 0, null);
         }
         if (ticks() % 14 == 0) {
-            Compat.spawn(world(), Compat.CHERRY_LEAVES, center().add(0, 2.2, 0), 3, 1.8, 0.8, 1.8, 0.01);
+            fx(Compat.PALE_OAK_LEAVES, center().add(0, 2.2, 0), 2, 1.8, 0.8, 1.8, 0.01, null);
         }
 
         if (ritualActivo) {
@@ -435,6 +446,14 @@ public final class Raiz extends BossFight {
         titleNear(Component.text("MÍRENLO", ACCENT),
                 Component.text("Quien aparte la vista pierde el 60 % de su vida", NamedTextColor.RED));
         soundAt(c, "entity.creaking.activate", 2.0f, 0.5f);
+        /* El cerco de la mirada: hilos ambar que se cierran solos sobre ROTTEN en los
+         * 4 s (los anima el cliente). Bedrock ve las astillas del corazon de abajo. */
+        Location cerco = c.clone().add(0, 0.3, 0);
+        for (int i = 0; i < 32; i++) {
+            double a = TAU * i / 32;
+            Vector u = new Vector(Math.cos(a), 0, Math.sin(a));
+            hilo(cerco.clone().add(u.clone().multiply(10.5)), cerco.clone().add(u.multiply(1.5)), AMBAR, fin, true);
+        }
 
         animate(fin, t -> {
             if (cerrado || !alive()) throw Stop.now();
@@ -449,8 +468,9 @@ public final class Raiz extends BossFight {
             }
             if (t % 4 == 0) {
                 double r = 9.0 * (1 - t / (double) fin) + 1.5;
-                Fx.ring(c.clone().add(0, 0.3, 0), r, 24, p ->
-                        Compat.spawn(world(), Compat.DUST, p, 1, 0, 0, 0, 0, Compat.dust(AMBAR, 1.4f)));
+                Fx.ring(c.clone().add(0, 0.3, 0), r, 14, t * 0.05, p -> fx(Compat.BLOCK, p, 1, 0.05, 0.1, 0.05, 0, corazonCreaking));
+                // Los ojos del corazon, encendidos mientras mira.
+                if (t >= aviso) fx(Compat.WAX_ON, center().add(0, 2.4, 0), 2, 0.3, 0.2, 0.3, 0.02, null);
                 String quedan = segundos(fin - t);
                 marcarCuenta();
                 for (Player p : targets()) {
@@ -478,7 +498,8 @@ public final class Raiz extends BossFight {
                 if (queda <= 0) event.markKill(p);
                 else event.markHit(p);
                 p.setHealth(Math.max(0, Math.min(max, queda)));
-                Compat.spawn(world(), Compat.EXPLOSION, p.getLocation().add(0, 1, 0), 2, 0.3, 0.5, 0.3, 0);
+                impacto(p, corazonCreaking);
+                fx(Compat.BLOCK_CRUMBLE, p.getLocation().add(0, 1, 0), 14, 0.3, 0.6, 0.3, 0, corazonCreaking);
                 soundAt(p.getLocation(), "entity.creaking.attack", 1.6f, 0.5f);
             }
             soundAt(c, "entity.creaking.deactivate", 1.8f, 0.6f);
@@ -558,21 +579,18 @@ public final class Raiz extends BossFight {
         b.setType(m, false);
     }
 
-    /** Una eyeblossom abierta dentro del vidrio y una columna de luz para encontrarla. */
+    /**
+     * Una eyeblossom abierta en maceta, bloque de verdad, encima del vidrio (si ahi hay
+     * aire): se presta como el pilar provisional y se devuelve al cerrar. La maceta no
+     * se cae con las actualizaciones de bloque y la pocion revienta contra ella o contra
+     * el vidrio, las dos dentro del radio. La columna de luz la pinta tickRitual.
+     */
     private void plantarFlor(Location vidrio) {
-        Location centro = vidrio.clone().add(0.5, 0.5, 0.5);
-        BlockDisplay corola = Fx.blockDisplay(world(), centro, Material.OPEN_EYEBLOSSOM, 0.85f);
-        if (corola != null) {
-            markMinion(corola);
-            flor.add(corola);
-            Glow.apply(corola, NamedTextColor.GREEN);
-        }
-        BlockDisplay luz = Fx.lightColumn(world(), vidrio.clone().add(0.5, 1.0, 0.5),
-                Material.LIME_STAINED_GLASS, 0.45f, 40f);
-        if (luz != null) {
-            markMinion(luz);
-            flor.add(luz);
-        }
+        org.bukkit.block.Block encima = vidrio.getBlock().getRelative(org.bukkit.block.BlockFace.UP);
+        if (encima.getType().isAir()) prestar(encima, Material.POTTED_OPEN_EYEBLOSSOM);
+        Location centro = vidrio.clone().add(0.5, 1.2, 0.5);
+        fx(Compat.BLOCK, centro, 16, 0.3, 0.3, 0.3, 0, ojo);
+        fx(Compat.FALLING_SPORE_BLOSSOM, centro.clone().add(0, 2, 0), 12, 0.6, 0.4, 0.6, 0, null);
     }
 
     /**
@@ -600,11 +618,15 @@ public final class Raiz extends BossFight {
             return;
         }
         if (ticks() % 5 == 0) {
+            // La columna de luz que se ve desde toda la arena (forzada: llega mas alla de 32 bloques).
+            Compat.spawnForced(world(), Compat.END_ROD, florEn.clone().add(0, 1.5 + random.nextDouble() * 12, 0), 3,
+                    0.15, 1.5, 0.15, 0.005, null);
+            fx(Compat.FIREFLY, florEn.clone().add(0, 1.2, 0), 1, 0.8, 0.6, 0.8, 0, null);
+        }
+        if (ticks() % 10 == 0) {
+            // El aro de lo que lleva: crece con cada dosis, en verde de crecimiento.
             double r = 2.0 + 3.0 * Math.min(1.0, dosis / (double) dosisPedidas);
-            Fx.ring(florEn.clone().add(0, -1.3, 0), r, 22, p ->
-                    Compat.spawn(world(), Compat.DUST, p, 1, 0, 0, 0, 0, Compat.dust(AMBAR, 1.4f)));
-            Compat.spawn(world(), Compat.END_ROD, florEn.clone().add(0, 1 + random.nextDouble() * 9, 0), 2,
-                    0.3, 0.6, 0.3, 0.01);
+            Fx.ring(florEn.clone().add(0, -1.2, 0), r, 18, p -> fx(Compat.HAPPY_VILLAGER, p, 1, 0, 0, 0, 0, null));
         }
         if (ticks() % 20 == 0 && ticks() - ultimaCuenta > 12) {
             int quedan = (int) Math.max(0, (ritualHasta - ticks()) / 20);
@@ -632,9 +654,9 @@ public final class Raiz extends BossFight {
             if (bajo > 0 && boss.getHealth() > bajo) boss.setHealth(bajo);
             Location desde = florEn == null ? center() : florEn.clone();
             Location hasta = center().add(0, 1.4, 0);
-            Fx.beam(desde, hasta, 0.4, p ->
-                    Compat.spawn(world(), Compat.DUST, p, 1, 0.05, 0.05, 0.05, 0,
-                            Compat.dust(0xFFFFFF, 1.5f)));
+            Fx.beam(desde, hasta, 0.6, p -> fx(Compat.END_ROD, p, 1, 0.03, 0.03, 0.03, 0, null));
+            for (int i = 0; i < 8; i++) hilo(desde, hasta, SEGURO, 6 + i * 2, true);
+            fx(Compat.FALLING_SPORE_BLOSSOM, hasta.clone().add(0, 1.5, 0), 30, 1.2, 0.5, 1.2, 0, null);
             Compat.spawn(world(), Compat.FLASH, hasta, 1);
             soundAt(hasta, "block.beacon.activate", 1.8f, 1.2f);
             announce(Component.text("La flor se abrió. ROTTEN cambia."));
@@ -643,7 +665,8 @@ public final class Raiz extends BossFight {
             double max = Compat.getAttribute(boss, "max_health", boss.getHealth());
             double vidaDiseno = damageScale() > 0 ? max / damageScale() : max;
             curar(vidaDiseno * 0.10);
-            Compat.spawn(world(), Compat.HEART, center().add(0, 1.6, 0), 16, 1.0, 1.0, 1.0, 0.04);
+            fx(Compat.HEART, center().add(0, 1.6, 0), 8, 1.0, 1.0, 1.0, 0.04, null);
+            fx(Compat.PALE_OAK_LEAVES, center().add(0, 2.0, 0), 16, 1.2, 1.0, 1.2, 0.02, null);
             soundAt(center(), "entity.creaking.activate", 1.8f, 0.5f);
             ritualNoAntesDe = ticks() + 20 * 20;
             announce(Component.text("La flor se marchitó. Se cura y la flor vuelve en 20 s."));
@@ -666,15 +689,9 @@ public final class Raiz extends BossFight {
     }
 
     private void limpiarFlor() {
-        for (Entity e : flor) {
-            // Fuera del equipo de brillo ANTES de quitarla: si no, su UUID se queda en el marcador.
-            Glow.clear(e);
-            spawned.remove(e);
-            Fx.safeRemove(e);
-        }
-        flor.clear();
         florEn = null;
-        // El pilar provisional se devuelve tal cual estaba; el marcado no se toca.
+        /* Lo prestado (el pilar provisional y la maceta de encima) se devuelve tal cual
+         * estaba; el vidrio marcado no se toca. */
         pilarPrestado.forEach((l, data) -> l.getBlock().setBlockData(data, false));
         pilarPrestado.clear();
     }
@@ -721,37 +738,43 @@ public final class Raiz extends BossFight {
         for (Player p : objetivos) sellos.add(sinGiro(Fx.ground(p.getLocation(), 6)));
         final Set<UUID> golpeados = new HashSet<>();
         final double mult = abilityDamage();
-        final Escena esc = new Escena();
         announce(Component.text("Raíces del Jardín. Salgan del círculo."));
         soundAt(suelo(), "block.roots.place", 1.6f, 0.6f);
+        final Location pie = suelo().add(0, 0.2, 0);
 
-        animate(estalla + 26, t -> {
+        animate(estalla + 2, t -> {
             if (cerrado || !alive()) throw Stop.now();
             if (t < estalla && t % 4 == 0) {
-                for (Location s : sellos) aviso(s, radio, CORTEZA, t, estalla);
+                for (Location s : sellos) {
+                    aviso(s, radio, BORDE_RAIZ, CORTEZA, t, estalla);
+                    // Las raices viajan bajo tierra desde el corazon hasta cada sello.
+                    hilo(pie, s.clone().add(0, 0.2, 0), CORTEZA, 14, true);
+                    fx(Compat.BLOCK, s.clone().add(0, 0.2, 0), 2, radio * 0.4, 0.05, radio * 0.4, 0, raigambre);
+                }
                 cuenta(objetivos, "Raíces bajo tus pies. Sal del círculo:", estalla - t);
             }
             if (t == estalla) {
+                List<Brote> brotes = new ArrayList<>();
                 for (Location s : sellos) {
                     for (int i = 0; i < 6; i++) {
                         double a = TAU * i / 6 + random.nextDouble() * 0.6;
                         double r = i == 0 ? 0 : 0.8 + random.nextDouble() * (radio - 1.2);
                         Location b = s.clone().add(Math.cos(a) * r, 0, Math.sin(a) * r);
-                        brote(esc, b, Material.PALE_OAK_LOG, 0.45 + random.nextDouble() * 0.2,
-                                2.2 + random.nextDouble() * 1.2, (random.nextDouble() - 0.5) * 0.5, 18);
+                        brotes.add(brote(b, 2.2 + random.nextDouble() * 1.2, (random.nextDouble() - 0.5) * 0.5));
                     }
-                    Compat.spawn(world(), Compat.BLOCK, s.clone().add(0, 0.3, 0), 14, 1.2, 0.2, 1.2, 0,
-                            Material.PALE_OAK_LOG.createBlockData());
+                    fx(Compat.BLOCK, s.clone().add(0, 0.3, 0), 14, 1.2, 0.2, 1.2, 0, raigambre);
                     soundAt(s, "block.roots.break", 1.5f, 0.6f);
                     for (Player v : Fx.playersNear(s, radio + 2)) {
                         if (!dentro(v, s, radio)) continue;
                         if (!golpeados.add(v.getUniqueId())) continue;
                         hit(v, 18 * power(), mult);
+                        impacto(v, roble);
                         push(v, new Vector(0, 0.85, 0));
                     }
                 }
+                brotar(brotes, 18);
             }
-        }, esc::quitar);
+        }, null);
     }
 
     /**
@@ -774,14 +797,15 @@ public final class Raiz extends BossFight {
             if (cerrado || !alive()) throw Stop.now();
             if (t < carga) {
                 if (t % 4 == 0) {
-                    aviso(c, 3.0 + 2.0 * t / carga, CORTEZA, t, carga);
+                    aviso(c, 3.0 + 2.0 * t / carga, BORDE_ESPINAS, CORTEZA, t, carga);
                     cuenta(targets(), "Onda de espinas. Salta cuando llegue:", carga - t);
                 }
                 return;
             }
+            if (t == carga) onda(c, R, v, CORTEZA);
             double r = (t - carga) * v;
             if (r > R) return;
-            frente(c, r, CORTEZA, t % 2 == 0);
+            if (t % 2 == 0) frente(c, r, roble, true);
             if (t % 6 == 0) soundAt(c, "block.pale_hanging_moss.idle", 1.0f, 0.6f);
             double banda = Math.max(0.7, v * 0.8);
             for (Player p : targets()) {
@@ -792,6 +816,7 @@ public final class Raiz extends BossFight {
                 if (enElAire(p)) continue;
                 golpeados.add(p.getUniqueId());
                 hit(p, 16 * power(), mult);
+                impacto(p, roble);
                 push(p, fuera(p.getLocation(), c).multiply(0.5).setY(0.25));
             }
             if (t % 4 == 0) {
@@ -830,52 +855,39 @@ public final class Raiz extends BossFight {
         }
         final Set<UUID> golpeados = new HashSet<>();
         final double mult = abilityDamage();
-        final Escena esc = new Escena();
-        final List<BlockDisplay> gotas = new ArrayList<>();
-        final List<BlockDisplay> charcos = new ArrayList<>();
         announce(Component.text("Lluvia de Resina. Salgan de las marcas naranjas."));
         soundAt(suelo(), "block.resin.place", 1.6f, 0.6f);
 
         animate(cae + charco, t -> {
             if (cerrado || !alive()) throw Stop.now();
             if (t < cae && t % 4 == 0) {
-                for (Location m : marcas) aviso(m, radio, RESINA, t, cae);
+                for (Location m : marcas) {
+                    aviso(m, radio, BORDE_RESINA, RESINA, t, cae);
+                    // Gotean del cielo justo encima: se ve DONDE va a caer antes de que caiga.
+                    fx(Compat.FALLING_HONEY, m.clone().add(0, 6, 0), 1, 0.3, 0.2, 0.3, 0, null);
+                }
                 cuenta(objetivos, "Cae resina. Sal de la marca naranja:", cae - t);
             }
-            if (t == cae - caida) {
-                for (Location m : marcas) {
-                    BlockDisplay g = esc.add(pieza(m.clone().add(0, 14, 0), Material.RESIN_BLOCK.createBlockData(),
-                            caja(new Quaternionf().rotateY((float) (random.nextDouble() * TAU)),
-                                    1.2, 1.2, 1.2, -0.6, 0, -0.6), 1));
-                    gotas.add(g);
-                }
-            }
             if (t > cae - caida && t < cae) {
+                // La gota: un grumo de resina que cae 14 bloques acelerando.
                 double u = (t - (cae - caida)) / (double) caida;
-                for (int i = 0; i < gotas.size(); i++) {
-                    BlockDisplay g = gotas.get(i);
-                    if (g == null || !g.isValid()) continue;
-                    try {
-                        g.teleport(marcas.get(i).clone().add(0, 14 * (1 - u * u), 0));
-                    } catch (Throwable ignored) {
-                    }
+                for (Location m : marcas) {
+                    Location g = m.clone().add(0, 0.6 + 14 * (1 - u * u), 0);
+                    fx(Compat.ITEM, g, 2, 0.2, 0.2, 0.2, 0.01, grumo);
+                    fx(Compat.BLOCK, g, 1, 0.25, 0.25, 0.25, 0, resina);
+                    if (t % 2 == 0) fx(Compat.FALLING_HONEY, g, 1, 0.15, 0.1, 0.15, 0, null);
                 }
             }
             if (t == cae) {
-                for (BlockDisplay g : gotas) {
-                    if (g == null) continue;
-                    spawned.remove(g);
-                    Fx.safeRemove(g);
-                }
                 for (Location m : marcas) {
-                    Compat.spawn(world(), Compat.BLOCK, m.clone().add(0, 0.4, 0), 12, 0.8, 0.2, 0.8, 0,
-                            Material.RESIN_BLOCK.createBlockData());
-                    charcos.add(esc.add(pieza(m.clone().add(0, 0.02, 0), Material.RESIN_BLOCK.createBlockData(),
-                            caja(new Quaternionf(), radio * 1.6, 0.06, radio * 1.6, -radio * 0.8, 0, -radio * 0.8), 0)));
+                    fx(Compat.BLOCK, m.clone().add(0, 0.4, 0), 14, 0.8, 0.2, 0.8, 0, resina);
+                    fx(Compat.ITEM, m.clone().add(0, 0.5, 0), 8, 0.4, 0.2, 0.4, 0.12, grumo);
+                    fx(Compat.LANDING_HONEY, m.clone().add(0, 0.1, 0), 10, radio * 0.45, 0, radio * 0.45, 0, null);
                     for (Player v : Fx.playersNear(m, radio + 2)) {
                         if (!dentro(v, m, radio)) continue;
                         if (!golpeados.add(v.getUniqueId())) continue;
                         hit(v, 14 * power(), mult);
+                        impacto(v, resina);
                     }
                 }
                 soundAt(suelo(), "block.resin.break", 1.8f, 0.6f);
@@ -886,11 +898,16 @@ public final class Raiz extends BossFight {
                         if (!dentro(v, m, radio)) continue;
                         v.addPotionEffect(new PotionEffect(PotionEffectType.SLOWNESS, 25, 2, true, false, false));
                     }
-                    Compat.spawn(world(), Compat.DUST, m.clone().add(0, 0.15, 0), 2, radio * 0.5, 0.02, radio * 0.5, 0,
-                            Compat.dust(RESINA, 1.2f));
+                    /* El charco: miel que se queda pegada al suelo (dura sola unos segundos)
+                     * y polvo de resina por encima, que es lo que pinta Bedrock. Se deja
+                     * de reponer a medio charco para que no sobreviva mucho al efecto. */
+                    if (t < cae + charco - 20) {
+                        fx(Compat.LANDING_HONEY, m.clone().add(0, 0.1, 0), 4, radio * 0.45, 0, radio * 0.45, 0, null);
+                    }
+                    fx(Compat.FALLING_DUST, m.clone().add(0, 0.5, 0), 3, radio * 0.45, 0.05, radio * 0.45, 0, resina);
                 }
             }
-        }, esc::quitar);
+        }, null);
     }
 
     /**
@@ -920,53 +937,37 @@ public final class Raiz extends BossFight {
         final int dura = sale + (int) Math.ceil(maxLargo / v) + 4;
         final Set<UUID> golpeados = new HashSet<>();
         final double mult = abilityDamage();
-        final Escena esc = new Escena();
-        final List<BlockDisplay> lanzas = new ArrayList<>();
         announce(Component.text("Lanzas Pálidas. Salgan de la línea."));
         soundAt(c, "entity.creaking.twitch", 1.6f, 0.6f);
 
         animate(dura, t -> {
             if (cerrado || !alive()) throw Stop.now();
             if (t < sale && t % 4 == 0) {
-                for (int i = 0; i < dirs.size(); i++) linea(c, dirs.get(i), largos.get(i), ancho, CORTEZA);
+                for (int i = 0; i < dirs.size(); i++) linea(c, dirs.get(i), largos.get(i), ancho, CORTEZA, t);
                 cuenta(objetivos, "Una lanza va por tu línea. Muévete a un lado:", sale - t);
             }
-            if (t == sale) {
-                for (Vector d : dirs) {
-                    float yaw = (float) Math.atan2(-d.getZ(), d.getX());
-                    Quaternionf q = new Quaternionf().rotateY(yaw);
-                    lanzas.add(esc.add(pieza(c.clone().add(0, 0.9, 0), Material.PALE_OAK_LOG.createBlockData(),
-                            caja(q, 3.4, 0.7, 0.7, -3.4, -0.35, -0.35), 1)));
-                }
-                soundAt(c, "block.roots.break", 1.8f, 0.5f);
-            }
+            if (t == sale) soundAt(c, "block.roots.break", 1.8f, 0.5f);
             if (t >= sale) {
                 double recorrido = (t - sale) * v;
                 for (int i = 0; i < dirs.size(); i++) {
                     if (recorrido > largos.get(i) + 1) continue;
                     Vector d = dirs.get(i);
                     Location punta = c.clone().add(d.clone().multiply(Math.min(recorrido, largos.get(i))));
-                    BlockDisplay l = lanzas.size() > i ? lanzas.get(i) : null;
-                    if (l != null && l.isValid()) {
-                        try {
-                            l.teleport(punta.clone().add(0, 0.9, 0));
-                        } catch (Throwable ignored) {
-                        }
-                    }
-                    if (t % 2 == 0) Compat.spawn(world(), Compat.BLOCK, punta.clone().add(0, 0.3, 0), 3, 0.3, 0.1, 0.3, 0,
-                            Material.PALE_OAK_LOG.createBlockData());
                     Location cola = c.clone().add(d.clone().multiply(Math.max(0, recorrido - 3.4)));
+                    lanza(cola, punta);
+                    if (t % 2 == 0) fx(Compat.BLOCK, punta.clone().add(0, 0.3, 0), 3, 0.3, 0.1, 0.3, 0, roble);
                     for (Player p : Fx.playersNear(punta, 6)) {
                         if (golpeados.contains(p.getUniqueId())) continue;
                         if (Math.abs(p.getLocation().getY() - c.getY()) > ALTO + 1) continue;
                         if (distSegmento(p.getLocation(), cola, punta) > ancho) continue;
                         golpeados.add(p.getUniqueId());
                         hit(p, 20 * power(), mult);
+                        impacto(p, roble);
                         push(p, d.clone().multiply(0.9).setY(0.35));
                     }
                 }
             }
-        }, esc::quitar);
+        }, null);
     }
 
     // =========================================================================
@@ -1000,8 +1001,9 @@ public final class Raiz extends BossFight {
             for (int k = 0; k < 2; k++) {
                 int t0 = inicio[k];
                 // El hueco de cada anillo se marca desde el principio hasta que pasa.
-                if (t < t0 + viaje && t % 4 == 0) huecoMarcado(c, hueco[k], medio, R, k == 0 ? 1.0f : 0.7f);
+                if (t < t0 + viaje && t % 4 == 0) huecoMarcado(c, hueco[k], medio, R, k == 0 ? 1.5 : 3.0, t);
                 if (t < t0 || t > t0 + viaje) continue;
+                if (t == t0) cierre(c, R, hueco[k], medio, viaje);
                 double r = R - (R - 1.5) * (t - t0) / (double) viaje;
                 if (t % 2 == 0) anilloConHueco(c, r, hueco[k], medio);
                 double banda = Math.max(0.8, (R - 1.5) / viaje * 0.9);
@@ -1013,6 +1015,7 @@ public final class Raiz extends BossFight {
                     if (enAngulo(p.getLocation(), c, hueco[k], medio)) continue;
                     golpeados.get(k).add(p.getUniqueId());
                     hit(p, 22 * power(), mult);
+                    impacto(p, musgo);
                     push(p, fuera(c, p.getLocation()).multiply(0.4).setY(0.25));
                 }
             }
@@ -1041,8 +1044,6 @@ public final class Raiz extends BossFight {
         final double w = Math.PI / gira * sentido;
         final Set<String> golpeados = new HashSet<>();
         final double mult = abilityDamage();
-        final Escena esc = new Escena();
-        final BlockDisplay[] brazos = new BlockDisplay[4];
         announce(Component.text("Cruz de Raíces. No pisen los brazos que giran."));
         soundAt(c, "block.roots.place", 1.8f, 0.5f);
 
@@ -1053,35 +1054,31 @@ public final class Raiz extends BossFight {
                 if (t % 4 == 0) {
                     for (int i = 0; i < 4; i++) {
                         double a = base + i * Math.PI / 2;
-                        linea(c, new Vector(Math.cos(a), 0, -Math.sin(a)), R, 0, CORTEZA);
+                        linea(c, new Vector(Math.cos(a), 0, -Math.sin(a)), R, 0, CORTEZA, t);
                     }
                     cuenta(targets(), "Cruz de raíces. No pises los brazos cuando giren:", carga - t);
                 }
                 return;
             }
-            if (t == carga) {
-                for (int i = 0; i < 4; i++) {
-                    float a = (float) (base + i * Math.PI / 2);
-                    brazos[i] = esc.add(pieza(c.clone().add(0, 0.0, 0), Material.PALE_OAK_LOG.createBlockData(),
-                            caja(new Quaternionf().rotateY(a), R - 1.5, 0.01, 0.9, 1.5, 0, -0.45), 0));
-                }
-                soundAt(c, "block.roots.break", 1.8f, 0.5f);
-            }
+            if (t == carga) soundAt(c, "block.roots.break", 1.8f, 0.5f);
             if (t <= carga + gira && t % 2 == 0) {
-                for (int i = 0; i < 4; i++) {
-                    float a = (float) (base + i * Math.PI / 2 + giro);
-                    forma(brazos[i], caja(new Quaternionf().rotateY(a), R - 1.5, 0.75, 0.9, 1.5, 0, -0.45), 2);
-                }
+                for (int i = 0; i < 4; i++) brazo(c, base + i * Math.PI / 2 + giro, R);
             }
             if (t == carga + gira) {
-                for (BlockDisplay b : brazos) forma(b, caja(new Quaternionf(), 0.01, 0.01, 0.01, 0, 0, 0), 8);
+                // Se hunden: un ultimo reguero de astillas a lo largo de cada brazo.
+                for (int i = 0; i < 4; i++) {
+                    double a = base + i * Math.PI / 2 + giro;
+                    for (double s = 1.5; s <= R; s += 2.5) {
+                        fx(Compat.BLOCK, c.clone().add(Math.cos(a) * s, 0.3, -Math.sin(a) * s), 2, 0.2, 0.1, 0.2, 0, raigambre);
+                    }
+                }
             }
             if (t > carga + gira) return;
             if (t % 3 == 0) {
                 for (int i = 0; i < 4; i++) {
                     double a = base + i * Math.PI / 2 + giro;
                     Location punta = c.clone().add(Math.cos(a) * R, 0.3, -Math.sin(a) * R);
-                    Compat.spawn(world(), Compat.BLOCK, punta, 2, 0.3, 0.1, 0.3, 0, Material.PALE_OAK_LOG.createBlockData());
+                    fx(Compat.BLOCK, punta, 2, 0.3, 0.1, 0.3, 0, roble);
                 }
             }
             if (t % 10 == 0) soundAt(c, "block.pale_hanging_moss.idle", 1.2f, 0.5f);
@@ -1098,11 +1095,12 @@ public final class Raiz extends BossFight {
                     String clave = p.getUniqueId() + ":" + i + ":" + (int) Math.floor(Math.abs(giro) / TAU);
                     if (!golpeados.add(clave)) continue;
                     hit(p, 16 * power(), mult);
+                    impacto(p, roble);
                     double tang = a + Math.PI / 2 * sentido;
                     push(p, new Vector(Math.cos(tang), 0, -Math.sin(tang)).multiply(0.6).setY(0.3));
                 }
             }
-        }, esc::quitar);
+        }, null);
     }
 
     /**
@@ -1119,10 +1117,6 @@ public final class Raiz extends BossFight {
         final int estalla = 60;
         final Location nube = sinGiro(Fx.ground(inicio, 6));
         final double mult = abilityDamage();
-        final Escena esc = new Escena();
-        final BlockDisplay nucleo = esc.add(pieza(nube.clone().add(0, 2.4, 0), Material.PALE_MOSS_BLOCK.createBlockData(),
-                caja(new Quaternionf(), 0.01, 0.01, 0.01, 0, 0, 0), 2));
-        later(1, () -> forma(nucleo, caja(new Quaternionf(), 1.4, 1.4, 1.4, -0.7, -0.7, -0.7), 6));
         announce(Component.text("Esporas sobre el grupo. Sepárense."));
         soundAt(nube, "block.spore_blossom.place", 1.6f, 0.6f);
 
@@ -1138,17 +1132,16 @@ public final class Raiz extends BossFight {
                         Location g = Fx.ground(nube, 6);
                         nube.setY(g.getY());
                     }
-                    if (nucleo != null && nucleo.isValid()) {
-                        try {
-                            nucleo.teleport(nube.clone().add(0, 2.4, 0));
-                        } catch (Throwable ignored) {
-                        }
-                    }
                 }
                 if (t % 4 == 0) {
-                    aviso(nube, radio, SEGURO, t, estalla);
-                    Compat.spawn(world(), Compat.SPORE_BLOSSOM_AIR, nube.clone().add(0, 2.4, 0), 6, 1.2, 0.6, 1.2, 0);
-                    Compat.spawn(world(), Compat.WHITE_SMOKE, nube.clone().add(0, 2.4, 0), 3, 0.8, 0.4, 0.8, 0.01);
+                    aviso(nube, radio, BORDE_ESPORAS, 0xE6E6DC, t, estalla);
+                    /* La nube: un nucleo de musgo palido deshaciendose, esporas que flotan
+                     * y otras que llueven sobre toda la zona que va a estallar. */
+                    Location alto = nube.clone().add(0, 2.4, 0);
+                    fx(Compat.FALLING_DUST, alto, 4, 0.5, 0.4, 0.5, 0, musgo);
+                    fx(Compat.SPORE_BLOSSOM_AIR, alto, 6, 1.2, 0.6, 1.2, 0, null);
+                    fx(Compat.WHITE_SMOKE, alto, 3, 0.8, 0.4, 0.8, 0.01, null);
+                    fx(Compat.FALLING_SPORE_BLOSSOM, alto, 5, radio * 0.6, 0.3, radio * 0.6, 0, null);
                     cuenta(Fx.playersNear(nube, radio + 6), "Esporas sobre ustedes. Sepárense:", estalla - t);
                 }
                 return;
@@ -1159,16 +1152,21 @@ public final class Raiz extends BossFight {
                 double dano = (18 + 6 * Math.max(0, dentro.size() - 1)) * power();
                 for (Player p : dentro) {
                     hit(p, dano, mult);
+                    impacto(p, musgo);
                     p.addPotionEffect(new PotionEffect(PotionEffectType.POISON, 60, 0, true, false, false));
                 }
+                // Revienta como una bola de polen: nube blanca, rafaga y esporas por todo el radio.
                 Location boom = nube.clone().add(0, 1.2, 0);
-                Compat.spawn(world(), Compat.EXPLOSION, boom, 2, 1.5, 0.5, 1.5, 0);
-                Compat.spawn(world(), Compat.SPORE_BLOSSOM_AIR, boom, 30, radio * 0.6, 1.0, radio * 0.6, 0.02);
+                fx(Compat.CLOUD, boom, 30, radio * 0.45, 0.6, radio * 0.45, 0.04, null);
+                fx(Compat.SMALL_GUST, boom, 3, 1.0, 0.4, 1.0, 0, null);
+                fx(Compat.SPORE_BLOSSOM_AIR, boom, 30, radio * 0.6, 1.0, radio * 0.6, 0.02, null);
+                fx(Compat.FALLING_SPORE_BLOSSOM, boom.clone().add(0, 1.5, 0), 30, radio * 0.6, 0.5, radio * 0.6, 0, null);
+                fx(Compat.FALLING_DUST, boom, 16, radio * 0.5, 0.6, radio * 0.5, 0, musgo);
                 Fx.shockwave(world(), nube, radio, Compat.WHITE_SMOKE, 2);
                 soundAt(boom, "block.spore_blossom.break", 1.9f, 0.6f);
                 soundAt(boom, "entity.generic.explode", 1.0f, 1.2f);
             }
-        }, esc::quitar);
+        }, null);
     }
 
     // =========================================================================
@@ -1196,19 +1194,21 @@ public final class Raiz extends BossFight {
         animate(dura, t -> {
             if (cerrado || !alive()) throw Stop.now();
             if (t < sale[0] && t % 4 == 0) {
-                aviso(c, 2.5 + 2.5 * t / sale[0], AMBAR, t, sale[0]);
+                aviso(c, 2.5 + 2.5 * t / sale[0], BORDE_LATIDO, AMBAR, t, sale[0]);
                 cuenta(targets(), "El corazón va a latir. Salta cuando llegue cada pulso:", sale[0] - t);
             }
             boolean pinta = t % 2 == 0;
             for (int k = 0; k < 3; k++) {
                 if (t == sale[k]) {
                     Compat.spawn(world(), Compat.FLASH, center().add(0, 1.4, 0), 1);
+                    fx(Compat.SMALL_GUST, c.clone().add(0, 0.6, 0), 2, 0.8, 0.1, 0.8, 0, null);
+                    onda(c, R, vel[k], k == 2 ? RESINA : AMBAR);
                     soundAt(c, "block.creaking_heart.break", 1.8f, 0.6f + k * 0.15f);
                 }
                 if (t < sale[k]) continue;
                 double r = (t - sale[k]) * vel[k];
                 if (r > R) continue;
-                frente(c, r, k == 2 ? RESINA : AMBAR, pinta);
+                if (pinta) frente(c, r, k == 2 ? resina : corazonCreaking, false);
                 double banda = Math.max(0.7, vel[k] * 0.8);
                 for (Player p : targets()) {
                     if (golpeados.get(k).contains(p.getUniqueId())) continue;
@@ -1218,6 +1218,7 @@ public final class Raiz extends BossFight {
                     if (enElAire(p)) continue;
                     golpeados.get(k).add(p.getUniqueId());
                     hit(p, 16 * power(), mult);
+                    impacto(p, corazonCreaking);
                     push(p, fuera(p.getLocation(), c).multiply(0.45).setY(0.2));
                 }
             }
@@ -1244,7 +1245,6 @@ public final class Raiz extends BossFight {
             seguros.add(sinGiro(Fx.ground(c.clone().add(Math.cos(a) * r, 0, Math.sin(a) * r), 8)));
         }
         final double mult = abilityDamage();
-        final Escena esc = new Escena();
         titleNear(Component.empty(), Component.text("Entren en un círculo verde", ACCENT));
         announce(Component.text("Bosque de Lanzas. Solo los círculos verdes son seguros."));
         soundAt(c, "block.creaking_heart.hurt", 1.9f, 0.5f);
@@ -1253,28 +1253,31 @@ public final class Raiz extends BossFight {
             if (cerrado || !alive()) throw Stop.now();
             if (t < carga && t % 4 == 0) {
                 for (Location s : seguros) {
-                    aviso(s, radio, SEGURO, t, carga);
+                    aviso(s, radio, BORDE_SEGURO, SEGURO, t, carga);
                     Compat.spawn(world(), Compat.END_ROD, s.clone().add(0, 0.6, 0), 1, 0.1, 0.6, 0.1, 0);
+                    // Las luciernagas del jardin: solo vuelan donde no va a brotar nada.
+                    if (t % 8 == 0) fx(Compat.FIREFLY, s.clone().add(0, 1.0, 0), 2, radio * 0.5, 0.5, radio * 0.5, 0, null);
                 }
-                // El resto de la arena, salpicado de brotes que avisan de lo que viene.
+                // El resto de la arena: la tierra se abre a saltos, donde van a salir las raices.
                 for (int i = 0; i < 18; i++) {
                     Location l = puntoDeArena(c, R);
                     if (enAlguno(l, seguros, radio)) continue;
-                    Compat.spawn(world(), Compat.DUST, l.clone().add(0, 0.15, 0), 1, 0, 0, 0, 0, Compat.dust(RESINA, 1.1f));
+                    fx(Compat.BLOCK, l.clone().add(0, 0.2, 0), 2, 0.2, 0.05, 0.2, 0, raigambre);
                 }
-                Fx.ring(c.clone().add(0, 0.2, 0), R, (int) Fx.clamp(R * 4, 40, 160), p ->
-                        Compat.spawn(world(), Compat.DUST, p, 1, 0, 0, 0, 0, Compat.dust(RESINA, 1.2f)));
+                // El borde de la arena, en polvo de resina, a lo que llega el bosque.
+                if (t % 8 == 0) {
+                    Fx.ring(c.clone().add(0, 0.6, 0), R, (int) Fx.clamp(R * 1.5, 30, 72), p ->
+                            fx(Compat.FALLING_DUST, p, 1, 0, 0, 0, 0, resina));
+                }
                 cuenta(targets(), "El bosque brota. Entra en un círculo verde:", carga - t);
             }
             if (t % 20 == 0 && t < carga) soundAt(c, "block.roots.place", 1.4f, 0.5f + t * 0.01f);
             if (t == carga) {
-                int brotes = 0;
-                for (int i = 0; i < 80 && brotes < 40; i++) {
+                List<Brote> brotes = new ArrayList<>();
+                for (int i = 0; i < 80 && brotes.size() < 40; i++) {
                     Location l = puntoDeArena(c, R);
                     if (enAlguno(l, seguros, radio + 0.4)) continue;
-                    brote(esc, l, Material.PALE_OAK_LOG, 0.4 + random.nextDouble() * 0.25,
-                            1.8 + random.nextDouble() * 1.6, (random.nextDouble() - 0.5) * 0.6, 20);
-                    brotes++;
+                    brotes.add(brote(l, 1.8 + random.nextDouble() * 1.6, (random.nextDouble() - 0.5) * 0.6));
                 }
                 for (Player p : targets()) {
                     boolean salvo = false;
@@ -1285,16 +1288,17 @@ public final class Raiz extends BossFight {
                         }
                     }
                     if (salvo) continue;
-                    brote(esc, Fx.ground(p.getLocation(), 4), Material.PALE_OAK_LOG, 0.5, 2.8, 0.15, 20);
+                    brotes.add(brote(Fx.ground(p.getLocation(), 4), 2.8, 0.15));
                     hit(p, 26 * power(), mult);
+                    impacto(p, roble);
                     push(p, new Vector(0, 0.6, 0));
                 }
-                Compat.spawn(world(), Compat.BLOCK, c.clone().add(0, 0.4, 0), 30, R * 0.4, 0.2, R * 0.4, 0,
-                        Material.PALE_OAK_LOG.createBlockData());
+                brotar(brotes, 20);
+                fx(Compat.BLOCK, c.clone().add(0, 0.4, 0), 30, R * 0.4, 0.2, R * 0.4, 0, roble);
                 soundAt(c, "block.roots.break", 2.0f, 0.5f);
                 soundAt(c, "block.wood.break", 1.8f, 0.6f);
             }
-        }, esc::quitar);
+        }, null);
     }
 
     /**
@@ -1326,7 +1330,7 @@ public final class Raiz extends BossFight {
                     centro.setZ(g.getZ());
                 }
                 if (t % 4 == 0) {
-                    aviso(centro, radio, AMBAR, t, estalla);
+                    aviso(centro, radio, BORDE_COSECHA, AMBAR, t, estalla);
                     Compat.spawn(world(), Compat.END_ROD, centro.clone().add(0, 2.6, 0), 2, 0.2, 0.8, 0.2, 0);
                     int dentro = 0;
                     for (Player p : Fx.playersNear(centro, radio + 2)) if (dentro(p, centro, radio)) dentro++;
@@ -1344,10 +1348,16 @@ public final class Raiz extends BossFight {
                 for (Player p : Fx.playersNear(centro, radio + 2)) if (dentro(p, centro, radio)) dentro.add(p);
                 double total = 46 * power();
                 double cada = total / Math.max(1, dentro.size());
-                for (Player p : dentro) hit(p, cada, mult);
+                for (Player p : dentro) {
+                    hit(p, cada, mult);
+                    impacto(p, null);
+                }
+                // La siega: petalos de eyeblossom y grumos de resina por todo el circulo.
                 Location boom = centro.clone().add(0, 0.6, 0);
                 Compat.spawn(world(), Compat.FLASH, boom, 1);
-                Compat.spawn(world(), Compat.DUST, boom, 24, radio * 0.5, 0.4, radio * 0.5, 0, Compat.dust(AMBAR, 1.6f));
+                fx(Compat.BLOCK, boom, 30, radio * 0.5, 0.4, radio * 0.5, 0, ojo);
+                fx(Compat.ITEM, boom, 12, radio * 0.4, 0.3, radio * 0.4, 0.08, grumo);
+                Fx.ring(boom, radio, 10, p -> fx(Compat.SWEEP_ATTACK, p, 1, 0, 0, 0, 0, null));
                 soundAt(boom, "entity.creaking.attack", 1.9f, 0.5f);
                 soundAt(boom, "block.eyeblossom.close_long", 1.6f, 0.6f);
                 announce(Component.text(dentro.size() <= 1 ? "La cosecha cayó sobre uno solo."
@@ -1400,18 +1410,9 @@ public final class Raiz extends BossFight {
             pilares.add(sinGiro(Fx.ground(c.clone().add(Math.cos(a) * dist, 0, Math.sin(a) * dist), 8)));
         }
         final double mult = abilityDamage();
-        final Escena esc = new Escena();
         for (Location p : pilares) {
-            BlockDisplay tronco = esc.add(pieza(p, Material.PALE_OAK_LOG.createBlockData(),
-                    caja(new Quaternionf(), rp * 2, 0.01, rp * 2, -rp, -0.2, -rp), 0));
-            BlockDisplay musgo = esc.add(pieza(p, Material.PALE_MOSS_BLOCK.createBlockData(),
-                    caja(new Quaternionf(), rp * 2.2, 0.01, rp * 2.2, -rp * 1.1, 4.8, -rp * 1.1), 0));
-            later(1, () -> {
-                forma(tronco, caja(new Quaternionf(), rp * 2, 5.0, rp * 2, -rp, -0.2, -rp), 10);
-                forma(musgo, caja(new Quaternionf(), rp * 2.2, 0.45, rp * 2.2, -rp * 1.1, 4.8, -rp * 1.1), 10);
-            });
-            Compat.spawn(world(), Compat.BLOCK, p.clone().add(0, 0.3, 0), 16, 0.8, 0.2, 0.8, 0,
-                    Material.PALE_OAK_LOG.createBlockData());
+            fx(Compat.DUST_PILLAR, p.clone().add(0, 0.1, 0), 20, 0.5, 0, 0.5, 0, roble);
+            fx(Compat.BLOCK, p.clone().add(0, 0.3, 0), 16, 0.8, 0.2, 0.8, 0, raigambre);
         }
         titleNear(Component.text("ESTALLIDO", TextColor.color(RESINA)),
                 Component.text("Escóndanse detrás de un pilar", NamedTextColor.GRAY));
@@ -1420,21 +1421,33 @@ public final class Raiz extends BossFight {
 
         animate(carga + 30, t -> {
             if (cerrado || !alive()) throw Stop.now();
+            if (t <= carga + 20) for (Location p : pilares) pilar(p, rp, t);
             if (t < carga) {
                 if (t % 4 == 0) {
                     double u = t / (double) carga;
-                    Fx.sphere(center().add(0, 1.2, 0), 1.0 + 1.6 * u, 14 + (int) (u * 14), p ->
-                            Compat.spawn(world(), Compat.DUST, p, 1, 0, 0, 0, 0, Compat.dust(RESINA, 1.3f)));
-                    Fx.ring(c.clone().add(0, 0.2, 0), R, (int) Fx.clamp(R * 3, 40, 140), p ->
-                            Compat.spawn(world(), Compat.DUST, p, 1, 0, 0, 0, 0, Compat.dust(RESINA, 1.2f)));
+                    // El corazon se carga: hilos de resina que vienen de fuera hacia el.
+                    Location nucleo = center().add(0, 1.2, 0);
+                    for (int i = 0; i < 4 + (int) (u * 6); i++) {
+                        Vector d = alAzar().multiply(3.5 + random.nextDouble());
+                        hilo(nucleo.clone().add(d), nucleo, i % 2 == 0 ? RESINA : AMBAR, 10, false);
+                    }
+                    fx(Compat.FALLING_DUST, nucleo, 3 + (int) (u * 6), 0.6 + u, 0.6 + u, 0.6 + u, 0, resina);
+                    if (t % 8 == 0) fx(Compat.DRIPPING_HONEY, nucleo, 3, 0.8, 0.6, 0.8, 0, null);
+                    // El borde de la arena, hasta donde llega el estallido.
+                    if (t % 8 == 0) {
+                        Fx.ring(c.clone().add(0, 0.6, 0), R, (int) Fx.clamp(R * 1.5, 30, 72), p ->
+                                fx(Compat.FALLING_DUST, p, 1, 0, 0, 0, 0, resina));
+                    }
                     // La sombra de cada pilar, en verde: ahi es seguro.
-                    for (Location p : pilares) {
-                        Vector d = p.toVector().subtract(c.toVector()).setY(0);
-                        if (d.lengthSquared() < 0.01) continue;
-                        d.normalize();
-                        for (double s = rp + 0.6; s <= rp + 6; s += 0.9) {
-                            Compat.spawn(world(), Compat.DUST, p.clone().add(d.clone().multiply(s)).add(0, 0.15, 0),
-                                    1, 0, 0, 0, 0, Compat.dust(SEGURO, 1.2f));
+                    if (t % 8 == 0) {
+                        for (Location p : pilares) {
+                            Vector d = p.toVector().subtract(c.toVector()).setY(0);
+                            if (d.lengthSquared() < 0.01) continue;
+                            d.normalize();
+                            for (double s = rp + 0.6; s <= rp + 6; s += 0.9) {
+                                fx(Compat.HAPPY_VILLAGER, p.clone().add(d.clone().multiply(s)).add(0, 0.3, 0),
+                                        1, 0.05, 0, 0.05, 0, null);
+                            }
                         }
                     }
                     marcarCuenta();
@@ -1457,18 +1470,25 @@ public final class Raiz extends BossFight {
                 soundAt(c, "entity.generic.explode", 1.6f, 0.6f);
                 for (Player p : targets()) {
                     if (cubierto(p, c, pilares, rp)) continue;
-                    Fx.beam(corazon, p.getLocation().add(0, 1, 0), 0.5, q ->
-                            Compat.spawn(world(), Compat.DUST, q, 1, 0, 0, 0, 0, Compat.dust(RESINA, 1.5f)));
+                    // El rayo: astillas de resina por el camino y hilos que llegan al jugador.
+                    Location blanco = p.getLocation().add(0, 1, 0);
+                    Fx.beam(corazon, blanco, 0.7, q -> fx(Compat.BLOCK_CRUMBLE, q, 1, 0.05, 0.05, 0.05, 0, resina));
+                    Fx.beam(corazon, blanco, 1.4, q -> fx(Compat.FALLING_HONEY, q, 1, 0.05, 0.05, 0.05, 0, null));
+                    for (int i = 0; i < 6; i++) hilo(corazon, blanco, RESINA, 3 + i, true);
                     hit(p, 35 * power(), mult);
+                    impacto(p, resina);
                     push(p, fuera(p.getLocation(), c).multiply(0.7).setY(0.35));
                 }
             }
             if (t == carga + 20) {
-                for (Entity e : esc.cosas) {
-                    if (e instanceof BlockDisplay b) forma(b, caja(new Quaternionf(), 0.01, 0.01, 0.01, 0, 0, 0), 8);
+                // Los pilares se deshacen.
+                for (Location p : pilares) {
+                    fx(Compat.BLOCK_CRUMBLE, p.clone().add(0, 2.5, 0), 30, rp * 0.6, 1.8, rp * 0.6, 0, roble);
+                    fx(Compat.BLOCK, p.clone().add(0, 1.5, 0), 20, rp * 0.6, 1.2, rp * 0.6, 0, roble);
                 }
+                soundAt(c, "block.wood.break", 1.6f, 0.6f);
             }
-        }, esc::quitar);
+        }, null);
     }
 
     // =========================================================================
@@ -1679,65 +1699,186 @@ public final class Raiz extends BossFight {
         for (Player p : ps) if (Fx.isFightable(p)) p.sendActionBar(c);
     }
 
+    // ------------------------------------------------------------- particulas
+
     /**
-     * El aviso de un circulo: el borde fijo y un aro interior que crece hasta llenarlo
-     * cuando toca el golpe. Se repinta cada 4 ticks mientras dura la carga.
+     * Como se pinta el borde de un aviso. 'perdura' marca las particulas que viven
+     * segundos (FALLING_DUST, LANDING_HONEY, HAPPY_VILLAGER): esas se reponen cada
+     * 8 ticks y no cada 4, o se amontonan.
      */
-    private void aviso(Location c, double r, int rgb, int t, int total) {
-        int puntos = (int) Fx.clamp(r * 6, 14, 90);
-        Fx.ring(c.clone().add(0, 0.12, 0), r, puntos, p ->
-                Compat.spawn(world(), Compat.DUST, p, 1, 0, 0, 0, 0, Compat.dust(rgb, 1.2f)));
-        double u = Fx.clamp(t / (double) Math.max(1, total), 0, 1);
-        double ri = Math.max(0.3, r * u);
-        Fx.ring(c.clone().add(0, 0.12, 0), ri, Math.max(8, (int) (puntos * u)), p ->
-                Compat.spawn(world(), Compat.DUST, p, 1, 0, 0, 0, 0, Compat.dust(rgb, 0.9f)));
+    private record Borde(Particle p, String dato, double alto, double paso, boolean perdura) {
     }
 
-    /** El frente de una onda por el suelo: polvo y, a saltos, astillas de corteza. */
-    private void frente(Location c, double r, int rgb, boolean pinta) {
-        if (!pinta || r < 0.5) return;
-        int puntos = (int) Fx.clamp(r * 3.2, 12, 150);
-        Fx.ring(c.clone().add(0, 0.25, 0), r, puntos, p -> {
-            Compat.spawn(world(), Compat.DUST, p, 1, 0.05, 0.1, 0.05, 0, Compat.dust(rgb, 1.3f));
-            if (random.nextInt(8) == 0) Compat.spawn(world(), Compat.BLOCK, p, 1, 0.1, 0.1, 0.1, 0,
-                    Material.PALE_OAK_LOG.createBlockData());
+    /** Raices del Jardin: polvo de corteza palida que se posa en el borde del sello. */
+    private static final Borde BORDE_RAIZ = new Borde(Compat.FALLING_DUST, "roble", 0.5, 0.7, true);
+    /** Anillo de Espinas: chispas de golpe critico, las espinas. */
+    private static final Borde BORDE_ESPINAS = new Borde(Compat.CRIT, null, 0.25, 0.8, false);
+    /** Lluvia de Resina: polvo de bloque de resina, naranja. */
+    private static final Borde BORDE_RESINA = new Borde(Compat.FALLING_DUST, "resina", 0.5, 0.7, true);
+    /** Esporas: bocanadas de nube blanca; la marca se mueve con la nube, asi que no puede durar. */
+    private static final Borde BORDE_ESPORAS = new Borde(Compat.CLOUD, null, 0.2, 0.9, false);
+    /** Latido: miel ambar que se queda en el suelo, el charco del corazon. */
+    private static final Borde BORDE_LATIDO = new Borde(Compat.LANDING_HONEY, null, 0.1, 0.8, true);
+    /** Los circulos seguros del Bosque: el verde del crecimiento. */
+    private static final Borde BORDE_SEGURO = new Borde(Compat.HAPPY_VILLAGER, null, 0.3, 0.8, true);
+    /**
+     * Cosecha: el unico borde en polvo de color. Sigue a un jugador que corre, y es lo
+     * unico que se borra lo bastante rapido y se lee igual en Java y en Bedrock.
+     */
+    private static final Borde BORDE_COSECHA = new Borde(Compat.DUST, "ambar", 0.12, 0.6, false);
+
+    private Object dato(String clave) {
+        if (clave == null) return null;
+        return switch (clave) {
+            case "roble" -> roble;
+            case "resina" -> resina;
+            case "ambar" -> Compat.dust(AMBAR, 1.3f);
+            default -> null;
+        };
+    }
+
+    /** Una particula con o sin dato. */
+    private void fx(Particle p, Location l, int n, double ox, double oy, double oz, double v, Object dato) {
+        if (dato == null) Compat.spawn(world(), p, l, n, ox, oy, oz, v);
+        else Compat.spawn(world(), p, l, n, ox, oy, oz, v, dato);
+    }
+
+    /**
+     * Un hilo (TRAIL), como el que une el corazon de creaking a su creaking: una mota
+     * que viaja de 'desde' a 'hasta' en 'ticks' y que anima el cliente, sin mas
+     * paquetes. Con desde == hasta es una mota quieta que dura justo 'ticks'.
+     * 'lejos' la manda a toda la arena (las que salen del centro y viajan lejos).
+     * Solo Java: Geyser no la traduce, por eso nunca es lo unico que avisa.
+     */
+    private void hilo(Location desde, Location hasta, int rgb, int ticks, boolean lejos) {
+        if (Compat.TRAIL == null || desde.getWorld() != hasta.getWorld()) return;
+        Particle.Trail tr = new Particle.Trail(hasta, Color.fromRGB(rgb), Math.max(1, ticks));
+        if (lejos) Compat.spawnForced(world(), Compat.TRAIL, desde, 1, 0, 0, 0, 0, tr);
+        else Compat.spawn(world(), Compat.TRAIL, desde, 1, 0, 0, 0, 0, tr);
+    }
+
+    /** Un golpe que entra: el tajo y unas astillas del material del hechizo. */
+    private void impacto(Player v, BlockData astilla) {
+        Location l = v.getLocation().add(0, 1.0, 0);
+        fx(Compat.SWEEP_ATTACK, l, 1, 0, 0, 0, 0, null);
+        if (astilla != null) fx(Compat.BLOCK, l, 8, 0.3, 0.4, 0.3, 0, astilla);
+    }
+
+    /**
+     * El aviso de un circulo: el borde con la firma del hechizo y un aro interior de
+     * motas que crece hasta llenarlo cuando toca el golpe. Se llama cada 4 ticks.
+     */
+    private void aviso(Location c, double r, Borde b, int rgb, int t, int total) {
+        if (!b.perdura() || t % 8 == 0) {
+            int puntos = (int) Fx.clamp(TAU * r / b.paso(), 10, 90);
+            Object d = dato(b.dato());
+            Fx.ring(c.clone().add(0, b.alto(), 0), r, puntos, p -> fx(b.p(), p, 1, 0, 0, 0, 0, d));
+        }
+        double u = Fx.clamp(t / (double) Math.max(1, total), 0, 1);
+        double ri = Math.max(0.3, r * u);
+        int n = (int) Fx.clamp(TAU * ri / 0.9, 6, 60);
+        Fx.ring(c.clone().add(0, 0.15, 0), ri, n, p -> hilo(p, p, rgb, 5, false));
+    }
+
+    /**
+     * El frente de una onda que sale del centro, para Java: un aro de hilos que el
+     * cliente lleva solo del centro al borde a la velocidad del golpe. Se lanza UNA vez.
+     */
+    private void onda(Location c, double R, double v, int rgb) {
+        int puntos = (int) Fx.clamp(R * 3.2, 24, 150);
+        int dura = (int) Math.ceil(R / v);
+        Location o = c.clone().add(0, 0.35, 0);
+        for (int i = 0; i < puntos; i++) {
+            double a = TAU * i / puntos;
+            hilo(o, o.clone().add(Math.cos(a) * R, 0, Math.sin(a) * R), rgb, dura, true);
+        }
+    }
+
+    /** Por donde pasa el frente ahora: astillas del material (lo que ve Bedrock) y, si son espinas, chispas. */
+    private void frente(Location c, double r, BlockData astilla, boolean espinas) {
+        if (r < 0.5) return;
+        int puntos = (int) Fx.clamp(r * 1.2, 8, 60);
+        Fx.ring(c.clone().add(0, 0.3, 0), r, puntos, random.nextDouble() * TAU, p -> {
+            fx(Compat.BLOCK, p, 1, 0.15, 0.1, 0.15, 0, astilla);
+            if (espinas && random.nextInt(3) == 0) {
+                fx(Compat.CRIT, p.clone().add(0, 0.2, 0), 1, 0.05, 0.15, 0.05, 0.05, null);
+            }
         });
     }
 
-    /** Una linea del suelo desde c en la direccion d, con sus bordes si tiene ancho. */
-    private void linea(Location c, Vector d, double largo, double ancho, int rgb) {
-        Vector n = new Vector(-d.getZ(), 0, d.getX());
-        for (double s = 1.5; s <= largo; s += 1.0) {
-            Location p = c.clone().add(d.clone().multiply(s)).add(0, 0.15, 0);
-            Compat.spawn(world(), Compat.DUST, p, 1, 0, 0, 0, 0, Compat.dust(rgb, 1.2f));
-            if (ancho > 0 && ((int) s) % 2 == 0) {
-                Compat.spawn(world(), Compat.DUST, p.clone().add(n.clone().multiply(ancho)), 1, 0, 0, 0, 0,
-                        Compat.dust(rgb, 0.8f));
-                Compat.spawn(world(), Compat.DUST, p.clone().add(n.clone().multiply(-ancho)), 1, 0, 0, 0, 0,
-                        Compat.dust(rgb, 0.8f));
+    /**
+     * Una linea del suelo desde c en la direccion d: polvo de corteza en el eje y en
+     * los bordes (si tiene ancho), y un hilo que corre por ella hacia fuera.
+     */
+    private void linea(Location c, Vector d, double largo, double ancho, int rgb, int t) {
+        if (t % 8 == 0) {
+            Vector n = new Vector(-d.getZ(), 0, d.getX());
+            int i = 0;
+            for (double s = 1.5; s <= largo; s += 1.0, i++) {
+                Location p = c.clone().add(d.clone().multiply(s)).add(0, 0.5, 0);
+                if (ancho <= 0 || i % 3 == 0) fx(Compat.FALLING_DUST, p, 1, 0, 0, 0, 0, roble);
+                if (ancho > 0 && i % 2 == 0) {
+                    fx(Compat.FALLING_DUST, p.clone().add(n.clone().multiply(ancho)), 1, 0, 0, 0, 0, roble);
+                    fx(Compat.FALLING_DUST, p.clone().add(n.clone().multiply(-ancho)), 1, 0, 0, 0, 0, roble);
+                }
+            }
+        }
+        Location o = c.clone().add(0, 0.25, 0);
+        hilo(o.clone().add(d.clone().multiply(1.5)), o.clone().add(d.clone().multiply(largo)), rgb, 12, true);
+    }
+
+    /** La lanza que corre: un tronco de 3,4 bloques de astillas de roble palido a media altura. */
+    private void lanza(Location cola, Location punta) {
+        Fx.beam(cola.clone().add(0, 0.9, 0), punta.clone().add(0, 0.9, 0), 0.45, p ->
+                fx(Compat.BLOCK_CRUMBLE, p, 1, 0.08, 0.08, 0.08, 0, roble));
+        fx(Compat.BLOCK, punta.clone().add(0, 0.9, 0), 2, 0.15, 0.15, 0.15, 0, roble);
+        fx(Compat.CRIT, punta.clone().add(0, 0.9, 0), 1, 0.05, 0.05, 0.05, 0.1, null);
+    }
+
+    /** Un brazo de la Cruz en el angulo a: astillas de roble que se deshacen enseguida, para que se vea girar. */
+    private void brazo(Location c, double a, double R) {
+        int i = 0;
+        for (double s = 1.5; s <= R; s += 1.2, i++) {
+            Location p = c.clone().add(Math.cos(a) * s, 0.35, -Math.sin(a) * s);
+            if (i % 2 == 0) fx(Compat.BLOCK_CRUMBLE, p, 1, 0.1, 0.05, 0.1, 0, roble);
+            else fx(Compat.BLOCK, p, 1, 0.1, 0.05, 0.1, 0, roble);
+        }
+    }
+
+    /** Un anillo de musgo palido con su hueco (sector sin pintar): por donde pasa ahora. */
+    private void anilloConHueco(Location c, double r, double hueco, double medio) {
+        int puntos = (int) Fx.clamp(r * 1.6, 10, 80);
+        for (int i = 0; i < puntos; i++) {
+            double a = TAU * i / puntos;
+            if (Math.abs(normal(a - hueco)) <= medio) continue;
+            Location p = c.clone().add(Math.cos(a) * r, 0.4, Math.sin(a) * r);
+            fx(Compat.BLOCK, p, 1, 0.1, 0.25, 0.1, 0, musgo);
+            if (random.nextInt(5) == 0) {
+                fx(Compat.PALE_OAK_LEAVES, p.clone().add(0, 0.8, 0), 1, 0.1, 0.2, 0.1, 0, null);
             }
         }
     }
 
-    /** Un anillo de raices con su hueco (sector sin pintar). */
-    private void anilloConHueco(Location c, double r, double hueco, double medio) {
-        int puntos = (int) Fx.clamp(r * 3.2, 12, 150);
+    /** El anillo que se cierra, para Java: hilos que van solos del borde al centro, sin el hueco. */
+    private void cierre(Location c, double R, double hueco, double medio, int viaje) {
+        int puntos = (int) Fx.clamp(R * 3.2, 24, 150);
+        Location o = c.clone().add(0, 0.35, 0);
         for (int i = 0; i < puntos; i++) {
             double a = TAU * i / puntos;
             if (Math.abs(normal(a - hueco)) <= medio) continue;
-            Location p = c.clone().add(Math.cos(a) * r, 0.3, Math.sin(a) * r);
-            Compat.spawn(world(), Compat.DUST, p, 1, 0.05, 0.2, 0.05, 0, Compat.dust(CORTEZA, 1.4f));
-            if (random.nextInt(6) == 0) Compat.spawn(world(), Compat.BLOCK, p, 1, 0.1, 0.2, 0.1, 0,
-                    Material.PALE_OAK_LOG.createBlockData());
+            Vector u = new Vector(Math.cos(a), 0, Math.sin(a));
+            hilo(o.clone().add(u.clone().multiply(R)), o.clone().add(u.multiply(1.5)), CORTEZA, viaje, true);
         }
     }
 
     /** Las dos rayas verdes que limitan el hueco de un anillo, del centro al borde. */
-    private void huecoMarcado(Location c, double hueco, double medio, double R, float tam) {
-        for (double borde : new double[]{hueco - medio, hueco + medio}) {
-            for (double s = 3; s <= R; s += 1.5) {
-                Location p = c.clone().add(Math.cos(borde) * s, 0.15, Math.sin(borde) * s);
-                Compat.spawn(world(), Compat.DUST, p, 1, 0, 0, 0, 0, Compat.dust(SEGURO, 1.1f * tam));
+    private void huecoMarcado(Location c, double hueco, double medio, double R, double paso, int t) {
+        if (t % 8 == 0) {
+            for (double borde : new double[]{hueco - medio, hueco + medio}) {
+                for (double s = 3; s <= R; s += paso) {
+                    Location p = c.clone().add(Math.cos(borde) * s, 0.3, Math.sin(borde) * s);
+                    fx(Compat.HAPPY_VILLAGER, p, 1, 0, 0, 0, 0, null);
+                }
             }
         }
         Location p = c.clone().add(Math.cos(hueco) * R * 0.8, 0.4, Math.sin(hueco) * R * 0.8);
@@ -1745,82 +1886,65 @@ public final class Raiz extends BossFight {
     }
 
     /**
-     * Una raiz que brota del suelo: crece en 3 ticks, aguanta 'vida' ticks, se encoge
-     * y desaparece. Inclinada un poco ('incl' radianes) y con giro al azar.
+     * Un pilar del Estallido, solo particulas: el icono del tronco de roble palido
+     * apilado (BLOCK_MARKER, quieto 4 s: se repone a los 0 y 40 ticks para durar los
+     * 6 s), polvo de corteza alrededor (lo que ve Bedrock) y musgo colgando de la copa.
+     * La cobertura sigue saliendo de su posicion (cubierto), no de lo que se pinta.
      */
-    private void brote(Escena esc, Location base, Material m, double w, double h, double incl, int vida) {
-        Quaternionf q = new Quaternionf().rotateY((float) (random.nextDouble() * TAU)).rotateX((float) incl);
-        BlockDisplay d = esc.add(pieza(sinGiro(base), m.createBlockData(), caja(q, w, 0.01, w, -w / 2, -0.3, -w / 2), 0));
-        if (d == null) return;
-        later(1, () -> forma(d, caja(q, w, h, w, -w / 2, -0.3, -w / 2), 3));
-        later(vida, () -> forma(d, caja(q, w * 0.6, 0.01, w * 0.6, -w * 0.3, -0.3, -w * 0.3), 5));
-        later(vida + 6, () -> {
-            spawned.remove(d);
-            Fx.safeRemove(d);
-        });
+    private void pilar(Location p, double rp, int t) {
+        if (t == 0 || t == 40) {
+            for (double y = 0.5; y <= 4.6; y += 1.0) {
+                Compat.spawnForced(world(), Compat.BLOCK_MARKER, p.clone().add(0, y, 0), 1, 0, 0, 0, 0, roble);
+            }
+        }
+        if (t % 8 != 0) return;
+        for (double y = 0.6; y <= 4.6; y += 1.0) {
+            Fx.ring(p.clone().add(0, y, 0), rp * 0.8, 4, y, q -> fx(Compat.FALLING_DUST, q, 1, 0, 0, 0, 0, roble));
+        }
+        Fx.ring(p.clone().add(0, 5.0, 0), rp * 1.1, 6, q -> fx(Compat.FALLING_DUST, q, 1, 0, 0, 0, 0, musgo));
+        fx(Compat.PALE_OAK_LEAVES, p.clone().add(0, 5.2, 0), 1, rp * 0.6, 0.2, rp * 0.6, 0, null);
+    }
+
+    /** Una direccion al azar en el espacio, de largo 1. */
+    private Vector alAzar() {
+        Vector d = new Vector(random.nextGaussian(), random.nextGaussian(), random.nextGaussian());
+        return d.lengthSquared() < 1e-6 ? new Vector(0, 1, 0) : d.normalize();
+    }
+
+    /** Una raiz que va a brotar: su pie y su inclinacion (desplazamiento en planta por bloque de alto). */
+    private record Brote(Location base, double alto, double dx, double dz) {
+    }
+
+    private Brote brote(Location base, double alto, double incl) {
+        double a = random.nextDouble() * TAU;
+        return new Brote(sinGiro(base), alto, Math.cos(a) * incl, Math.sin(a) * incl);
     }
 
     /**
-     * Una caja de medida (sx, sy, sz) girada q, con su esquina local (ox, oy, oz)
-     * respecto al ancla: (-sx/2, 0, -sz/2) la centra en planta y la apoya en el suelo.
+     * Brotan raices de particulas: un estallido de tierra al pie y una columna de
+     * astillas de roble que sube en 3 ticks, aguanta 'vida' y se hunde. Una sola
+     * animacion para todas, repintada cada 3 ticks.
      */
-    private static Transformation caja(Quaternionf q, double sx, double sy, double sz,
-                                       double ox, double oy, double oz) {
-        Vector3f t = new Quaternionf(q).transform(new Vector3f((float) ox, (float) oy, (float) oz));
-        return new Transformation(t, new Quaternionf(q),
-                new Vector3f((float) Math.max(sx, 1e-4), (float) Math.max(sy, 1e-4), (float) Math.max(sz, 1e-4)),
-                new Quaternionf());
-    }
-
-    /** Cambia la forma de una pieza con interpolacion. */
-    private static void forma(BlockDisplay d, Transformation tr, int interp) {
-        if (d == null || !d.isValid()) return;
-        try {
-            d.setInterpolationDelay(0);
-            d.setInterpolationDuration(interp);
-            d.setTransformation(tr);
-        } catch (Throwable ignored) {
+    private void brotar(List<Brote> brotes, int vida) {
+        if (brotes.isEmpty()) return;
+        for (Brote b : brotes) {
+            fx(Compat.DUST_PILLAR, b.base().clone().add(0, 0.1, 0), 4, 0.2, 0, 0.2, 0, raigambre);
+            fx(Compat.BLOCK, b.base().clone().add(0, 0.3, 0), 3, 0.3, 0.1, 0.3, 0, raigambre);
         }
-    }
-
-    /** Un BlockDisplay a brillo 15, marcado como temporal y en 'spawned'. */
-    private BlockDisplay pieza(Location at, BlockData datos, Transformation tr, int teleporte) {
-        try {
-            BlockDisplay e = world().spawn(at, BlockDisplay.class, x -> {
-                x.setBlock(datos);
-                x.setBrightness(new Display.Brightness(15, 15));
-                x.setViewRange(3.0f);
-                x.setShadowRadius(0f);
-                x.setPersistent(false);
-                x.setTeleportDuration(teleporte);
-                x.setInterpolationDelay(0);
-                x.setInterpolationDuration(2);
-                x.setTransformation(tr);
-            });
-            Tags.markTemporary(e);
-            track(e);
-            return e;
-        } catch (Throwable t) {
-            return null;
-        }
-    }
-
-    /** Las piezas de un hechizo, para quitarlas todas al terminar o si se corta. */
-    private final class Escena {
-        final List<Entity> cosas = new ArrayList<>();
-
-        <T extends Entity> T add(T e) {
-            if (e != null) cosas.add(e);
-            return e;
-        }
-
-        void quitar() {
-            for (Entity e : cosas) {
-                spawned.remove(e);
-                Fx.safeRemove(e);
+        animate(vida + 6, t -> {
+            if (cerrado) throw Stop.now();
+            if (t % 3 != 0) return;
+            double k = t < 3 ? (t + 1) / 3.0 : t > vida ? Math.max(0, 1 - (t - vida) / 6.0) : 1;
+            for (Brote b : brotes) {
+                double h = b.alto() * k;
+                int i = 0;
+                for (double y = 0.2; y <= h; y += 0.4, i++) {
+                    Location p = b.base().clone().add(b.dx() * y, y, b.dz() * y);
+                    fx(Compat.BLOCK_CRUMBLE, p, 1, 0.08, 0.05, 0.08, 0, roble);
+                    if (i % 3 == 0 && t < vida) fx(Compat.FALLING_DUST, p, 1, 0.1, 0, 0.1, 0, roble);
+                }
             }
-            cosas.clear();
-        }
+        }, null);
     }
 
     // -------------------------------------------------------------------- limpieza
