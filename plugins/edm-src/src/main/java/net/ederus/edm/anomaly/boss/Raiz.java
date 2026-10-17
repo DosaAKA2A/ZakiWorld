@@ -688,6 +688,21 @@ public final class Raiz extends BossFight {
         return false;
     }
 
+    /**
+     * Lo prestado (la maceta y el pilar provisional) es de la pelea: ArenaGuard no deja
+     * sacar la flor de la maceta y la rotura se cancela sin soltar nada. Se devuelve
+     * en limpiarFlor.
+     */
+    @Override
+    public boolean ownsBlock(org.bukkit.block.Block block) {
+        return block != null && pilarPrestado.containsKey(block.getLocation());
+    }
+
+    @Override
+    public boolean onBlockBroken(org.bukkit.block.Block block, Player who) {
+        return ownsBlock(block);
+    }
+
     private void limpiarFlor() {
         florEn = null;
         /* Lo prestado (el pilar provisional y la maceta de encima) se devuelve tal cual
@@ -1931,6 +1946,9 @@ public final class Raiz extends BossFight {
             fx(Compat.DUST_PILLAR, b.base().clone().add(0, 0.1, 0), 4, 0.2, 0, 0.2, 0, raigambre);
             fx(Compat.BLOCK, b.base().clone().add(0, 0.3, 0), 3, 0.3, 0.1, 0.3, 0, raigambre);
         }
+        /* Con muchas raices a la vez (Bosque de Lanzas, Raices con 10 jugadores) la
+         * columna se aclara para no pasar de ~150 particulas por tick. */
+        final double paso = Math.min(0.7, 0.4 * Math.max(1.0, brotes.size() / 24.0));
         animate(vida + 6, t -> {
             if (cerrado) throw Stop.now();
             if (t % 3 != 0) return;
@@ -1938,7 +1956,7 @@ public final class Raiz extends BossFight {
             for (Brote b : brotes) {
                 double h = b.alto() * k;
                 int i = 0;
-                for (double y = 0.2; y <= h; y += 0.4, i++) {
+                for (double y = 0.2; y <= h; y += paso, i++) {
                     Location p = b.base().clone().add(b.dx() * y, y, b.dz() * y);
                     fx(Compat.BLOCK_CRUMBLE, p, 1, 0.08, 0.05, 0.08, 0, roble);
                     if (i % 3 == 0 && t < vida) fx(Compat.FALLING_DUST, p, 1, 0.1, 0, 0.1, 0, roble);

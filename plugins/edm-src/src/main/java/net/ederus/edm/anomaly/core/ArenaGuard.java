@@ -44,6 +44,7 @@ import org.bukkit.event.player.PlayerArmorStandManipulateEvent;
 import org.bukkit.event.player.PlayerBucketEmptyEvent;
 import org.bukkit.event.player.PlayerBucketFillEvent;
 import org.bukkit.event.player.PlayerInteractEntityEvent;
+import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.event.player.PlayerQuitEvent;
 import org.bukkit.inventory.InventoryHolder;
 
@@ -238,6 +239,19 @@ public final class ArenaGuard implements Listener {
             // El adorno no puede impedir que el bloque se quite.
         }
         b.setType(Material.AIR, false);
+    }
+
+    /**
+     * Clic derecho sobre un bloque que puso la pelea (la maceta de la flor de ROTTEN):
+     * se niega el uso del BLOQUE, no el del objeto. Asi nadie saca la eyeblossom de la
+     * maceta, pero la pocion arrojadiza que apunta al pilar se sigue lanzando.
+     */
+    @EventHandler(priority = EventPriority.LOWEST)
+    public void onInteract(PlayerInteractEvent e) {
+        if (e.getAction() != org.bukkit.event.block.Action.RIGHT_CLICK_BLOCK || e.getClickedBlock() == null) return;
+        BossFight pelea = pelea();
+        if (pelea == null || !esDeLaPelea(pelea, e.getClickedBlock())) return;
+        e.setUseInteractedBlock(org.bukkit.event.Event.Result.DENY);
     }
 
     // ------------------------------------------------------- 2 · la arena protegida
