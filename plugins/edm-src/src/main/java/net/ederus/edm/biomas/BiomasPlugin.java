@@ -528,8 +528,9 @@ public final class BiomasPlugin extends Module implements Listener {
         double silencio = s != null && s.contains("silencio") ? s.getDouble("silencio") : r.getDouble("silencio", 0.2);
         List<Double> rango = s != null && s.contains("rango") ? s.getDoubleList("rango") : r.getDoubleList("rango");
         double r0 = rango.isEmpty() ? 0.5 : rango.get(0);
-        double r1 = rango.size() < 2 ? 1.5 : rango.get(1);
-        double seg = Math.max(minimo, cada * (r0 + random.nextDouble() * (r1 - r0)));
+        double r1 = rango.isEmpty() ? 1.5 : rango.size() < 2 ? r0 : rango.get(1);
+        // Con un minimo de 0 o un rango negativo en el config sonaria cada 5 ticks: nunca menos de 1 s.
+        double seg = Math.max(Math.max(1, minimo), cada * (r0 + random.nextDouble() * (r1 - r0)));
         if (random.nextDouble() < silencio) seg *= 2;
         return (long) (seg * 1000);
     }
