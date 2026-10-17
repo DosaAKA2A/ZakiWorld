@@ -5,6 +5,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.Reader;
 import java.nio.file.Files;
+import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -68,6 +69,8 @@ public final class BiomasPlugin extends Module implements Listener {
     private final Map<UUID, String> dentro = new HashMap<>();
     private final Set<String> pintando = new HashSet<>();
     private final Map<String, String> pendientes = new HashMap<>();
+    /** Por jugador y canal (sonidos, ecos, gas): cuando le toca el siguiente sonido suelto y cuales sonaron. */
+    private final Map<UUID, Map<String, Turno>> turnos = new HashMap<>();
     private final Random random = new Random();
     private BukkitTask efectos;
     private File ficheroZonas;
@@ -117,6 +120,7 @@ public final class BiomasPlugin extends Module implements Listener {
             if (p != null) deshacer(p);
         }
         dentro.clear();
+        turnos.clear();
     }
 
     @Override
@@ -130,6 +134,7 @@ public final class BiomasPlugin extends Module implements Listener {
             if (p != null) deshacer(p);
         }
         dentro.clear();
+        turnos.clear();
         return zonas.size() + " zona(s).";
     }
 
@@ -401,6 +406,7 @@ public final class BiomasPlugin extends Module implements Listener {
             if (antes != null && !antes.equals(clave)) {
                 deshacer(p);
                 dentro.remove(p.getUniqueId());
+                turnos.remove(p.getUniqueId());
             }
             if (clima == null) continue;
             if (!clave.equals(dentro.get(p.getUniqueId()))) {
@@ -418,8 +424,8 @@ public final class BiomasPlugin extends Module implements Listener {
             cenizas(w, a, e.getValue());
             rayos(w, z, a, e.getValue());
             gas(w, z, a, e.getValue());
-            ecos(w, a, e.getValue());
-            sonidos(a, e.getValue());
+            ecos(w, z.actual(), a, e.getValue());
+            sonidos(z.actual(), a, e.getValue());
         }
     }
 
@@ -427,26 +433,116 @@ public final class BiomasPlugin extends Module implements Listener {
      * Sonidos sueltos del clima: cada jugador oye de vez en cuando uno de la lista
      * desde un punto a 4-14 bloques, solo el. Es lo que el bioma no sabe hacer con
      * su 'additions' (un unico sonido, siempre encima del jugador y sin tono).
+     *
+     * Es ambiente de fondo: entre uno y otro hay al menos 'minimo' segundos, la espera
+     * cambia cada vez y a veces se alarga (un silencio), y nunca se repite el ultimo
+     * sonido (con 4 o mas en la lista, ninguno de los dos ultimos). Cada entrada de la
+     * lista puede ser un id o {id, volumen, tono} para darle a ese sonido los suyos.
      */
-    private void sonidos(ConfigurationSection a, List<Player> jugadores) {
+    private void sonidos(String clima, ConfigurationSection a, List<Player> jugadores) {
         ConfigurationSection s = a.getConfigurationSection("sonidos");
         if (s == null) return;
         double cada = s.getDouble("cada", 0);
-        List<String> lista = s.getStringList("lista");
+        List<?> lista = s.getList("lista", List.of());
         if (cada <= 0 || lista.isEmpty()) return;
-        List<Double> tono = s.getDoubleList("tono");
-        float t0 = tono.isEmpty() ? 0.9f : tono.get(0).floatValue();
-        float t1 = tono.size() < 2 ? 1.1f : tono.get(1).floatValue();
+        float[] tono = tono(s.getDoubleList("tono"), 0.9f, 1.1f);
         float volumen = (float) s.getDouble("volumen", 0.8);
+        long ahora = System.currentTimeMillis();
         for (Player p : jugadores) {
-            if (random.nextDouble() > 5.0 / (cada * 20.0)) continue;
+            Turno t = turno(p, "sonidos", clima, cada, s, ahora);
+            if (ahora < t.proximo) continue;
+            t.proximo = ahora + espera(cada, s);
+            Object entrada = lista.get(elegir(lista.size(), t));
+            String id;
+            float vol = volumen;
+            float[] tn = tono;
+            if (entrada instanceof Map<?, ?> m) {
+                Object v = m.get("id");
+                if (v == null) continue;
+                id = String.valueOf(v);
+                if (m.get("volumen") instanceof Number n) vol = n.floatValue();
+                if (m.get("tono") instanceof List<?> l) {
+                    List<Double> d = new ArrayList<>();
+                    for (Object o : l) if (o instanceof Number n) d.add(n.doubleValue());
+                    tn = tono(d, tono[0], tono[1]);
+                }
+            } else if (entrada instanceof ConfigurationSection c) {
+                id = c.getString("id");
+                if (id == null) continue;
+                vol = (float) c.getDouble("volumen", volumen);
+                if (c.contains("tono")) tn = tono(c.getDoubleList("tono"), tono[0], tono[1]);
+            } else {
+                id = String.valueOf(entrada);
+            }
+            if (!id.contains(":")) id = "minecraft:" + id;
             double ang = random.nextDouble() * Math.PI * 2;
             double d = 4 + random.nextDouble() * 10;
             Location desde = p.getLocation().add(Math.cos(ang) * d, -1 + random.nextDouble() * 3, Math.sin(ang) * d);
-            String id = lista.get(random.nextInt(lista.size()));
-            if (!id.contains(":")) id = "minecraft:" + id;
-            p.playSound(desde, id, SoundCategory.AMBIENT, volumen, t0 + random.nextFloat() * (t1 - t0));
+            p.playSound(desde, id, SoundCategory.AMBIENT, vol, tn[0] + random.nextFloat() * (tn[1] - tn[0]));
         }
+    }
+
+    /** [minimo, maximo] del tono; sin lista, los de serie; con un solo numero, ese fijo. */
+    private static float[] tono(List<Double> tono, float t0, float t1) {
+        if (tono.isEmpty()) return new float[]{t0, t1};
+        float a = tono.get(0).floatValue();
+        return new float[]{a, tono.size() < 2 ? a : tono.get(1).floatValue()};
+    }
+
+    /** Cuando le toca a un jugador el siguiente sonido de un canal, y los ultimos que oyo. */
+    private static final class Turno {
+        final String clima;
+        long proximo;
+        final ArrayDeque<Integer> ultimos = new ArrayDeque<>();
+
+        Turno(String clima) {
+            this.clima = clima;
+        }
+    }
+
+    /**
+     * El turno del jugador en ese canal. Al entrar en el clima (o cambiar de uno a otro)
+     * empieza de cero, con una primera espera mas corta para que el sitio no suene mudo.
+     */
+    private Turno turno(Player p, String canal, String clima, double cada, ConfigurationSection s, long ahora) {
+        Map<String, Turno> suyos = turnos.computeIfAbsent(p.getUniqueId(), k -> new HashMap<>());
+        Turno t = suyos.get(canal);
+        if (t == null || !t.clima.equals(clima)) {
+            t = new Turno(clima);
+            t.proximo = ahora + (long) (espera(cada, s) * (0.25 + random.nextDouble() * 0.5));
+            suyos.put(canal, t);
+        }
+        return t;
+    }
+
+    /**
+     * Milisegundos hasta el siguiente sonido: 'cada' por un factor al azar de 'rango'
+     * (de serie 0,5 a 1,5, o sea 'cada' de media), nunca menos de 'minimo' segundos, y
+     * con probabilidad 'silencio' el doble. Cada clima puede traer los suyos en su
+     * bloque de sonidos; si no, valen los de ritmo: en la raiz del config.
+     */
+    private long espera(double cada, ConfigurationSection s) {
+        ConfigurationSection r = getConfig().getConfigurationSection("ritmo");
+        if (r == null) r = new YamlConfiguration();
+        double minimo = s != null && s.contains("minimo") ? s.getDouble("minimo") : r.getDouble("minimo", 12);
+        double silencio = s != null && s.contains("silencio") ? s.getDouble("silencio") : r.getDouble("silencio", 0.2);
+        List<Double> rango = s != null && s.contains("rango") ? s.getDoubleList("rango") : r.getDoubleList("rango");
+        double r0 = rango.isEmpty() ? 0.5 : rango.get(0);
+        double r1 = rango.size() < 2 ? 1.5 : rango.get(1);
+        double seg = Math.max(minimo, cada * (r0 + random.nextDouble() * (r1 - r0)));
+        if (random.nextDouble() < silencio) seg *= 2;
+        return (long) (seg * 1000);
+    }
+
+    /** Un indice de la lista que no sea el ultimo que sono (ni el penultimo si hay 4 o mas). */
+    private int elegir(int tamano, Turno t) {
+        int memoria = tamano >= 4 ? 2 : tamano >= 2 ? 1 : 0;
+        List<Integer> libres = new ArrayList<>();
+        for (int i = 0; i < tamano; i++) if (!t.ultimos.contains(i)) libres.add(i);
+        int i = libres.isEmpty() ? random.nextInt(tamano) : libres.get(random.nextInt(libres.size()));
+        t.ultimos.addLast(i);
+        while (t.ultimos.size() > memoria) t.ultimos.removeFirst();
+        return i;
     }
 
     private static final Sound[] ECOS = {
@@ -458,17 +554,21 @@ public final class BiomasPlugin extends Module implements Listener {
      * eco del warden desde un punto a 12-20 bloques (solo el, no los de al lado) y el
      * sculk suelta almas a su alrededor. Nada de esto hace dano ni da oscuridad.
      */
-    private void ecos(World w, ConfigurationSection a, List<Player> jugadores) {
+    private void ecos(World w, String clima, ConfigurationSection a, List<Player> jugadores) {
         double cada = a.getDouble("ecos", 0);
         if (cada <= 0) return;
+        long ahora = System.currentTimeMillis();
         for (Player p : jugadores) {
             Location base = p.getLocation();
             p.spawnParticle(Particle.SCULK_SOUL, base.clone().add(0, 0.2, 0), 2, 7, 0.3, 7, 0.02);
-            if (random.nextDouble() > 5.0 / (cada * 20.0)) continue;
+            // Mismo ritmo que los sonidos del clima: espera minima y sin repetir el ultimo eco.
+            Turno t = turno(p, "ecos", clima, cada, null, ahora);
+            if (ahora < t.proximo) continue;
+            t.proximo = ahora + espera(cada, null);
             double ang = random.nextDouble() * Math.PI * 2;
             double d = 12 + random.nextDouble() * 8;
             Location eco = base.clone().add(Math.cos(ang) * d, -2 + random.nextDouble() * 4, Math.sin(ang) * d);
-            p.playSound(eco, ECOS[random.nextInt(ECOS.length)], 0.9f, 0.75f + random.nextFloat() * 0.2f);
+            p.playSound(eco, ECOS[elegir(ECOS.length, t)], 0.9f, 0.75f + random.nextFloat() * 0.2f);
             p.spawnParticle(Particle.SCULK_CHARGE_POP, eco, 12, 1.2, 0.4, 1.2, 0.01);
         }
     }
@@ -583,23 +683,37 @@ public final class BiomasPlugin extends Module implements Listener {
         w.strikeLightningEffect(new Location(w, x + 0.5, y + 1, zz + 0.5));
     }
 
-    /** Fumarolas: columnas de gas verde que salen de puntos fijos del suelo de la zona. */
+    /** Segundos medios entre dos chasquidos de fumarola que oye un mismo jugador. */
+    private static final double GAS_CADA = 16;
+
+    /**
+     * Fumarolas: columnas de gas verde que salen de puntos fijos del suelo de la zona.
+     * El chasquido va por jugador y con el ritmo de los sonidos del clima: uno cada
+     * tanto desde una fumarola cercana, no uno por fumarola (con 14 era un tableteo).
+     */
     private void gas(World w, Zona z, ConfigurationSection a, List<Player> jugadores) {
         int cuantas = a.getInt("gas", 0);
         if (cuantas <= 0) return;
         List<Location> puntos = fumarolas.computeIfAbsent(z.nombre(), k -> buscarFumarolas(w, z, cuantas));
         Color verde = Color.fromARGB(200, 138, 226, 52);
-        for (Location v : puntos) {
-            for (Player p : jugadores) {
-                if (p.getLocation().distanceSquared(v) > 48 * 48) continue;
+        long ahora = System.currentTimeMillis();
+        for (Player p : jugadores) {
+            List<Location> cerca = new ArrayList<>();
+            for (Location v : puntos) {
+                double d2 = p.getLocation().distanceSquared(v);
+                if (d2 > 48 * 48) continue;
                 p.spawnParticle(Particle.ENTITY_EFFECT, v, 6, 0.25, 0.9, 0.25, 0, verde);
                 if (random.nextInt(3) == 0) {
                     p.spawnParticle(Particle.CAMPFIRE_COSY_SMOKE, v, 1, 0.15, 0.2, 0.15, 0.015);
                 }
-                if (random.nextInt(40) == 0) {
-                    p.playSound(v, Sound.BLOCK_SCULK_SENSOR_CLICKING, 0.6f, 1.8f);
-                }
+                if (d2 <= 14 * 14) cerca.add(v);
             }
+            if (cerca.isEmpty()) continue;
+            Turno t = turno(p, "gas", z.actual(), GAS_CADA, null, ahora);
+            if (ahora < t.proximo) continue;
+            t.proximo = ahora + espera(GAS_CADA, null);
+            p.playSound(cerca.get(random.nextInt(cerca.size())), Sound.BLOCK_SCULK_SENSOR_CLICKING,
+                    SoundCategory.AMBIENT, 0.5f, 1.5f + random.nextFloat() * 0.4f);
         }
     }
 
@@ -618,5 +732,6 @@ public final class BiomasPlugin extends Module implements Listener {
     @EventHandler
     public void onQuit(PlayerQuitEvent e) {
         dentro.remove(e.getPlayer().getUniqueId());
+        turnos.remove(e.getPlayer().getUniqueId());
     }
 }
