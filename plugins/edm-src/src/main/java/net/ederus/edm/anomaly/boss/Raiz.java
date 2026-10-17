@@ -80,8 +80,10 @@ public final class Raiz extends BossFight {
     /** El verde de lo que es seguro pisar. */
     private static final int SEGURO = 0x9FD6A0;
 
-    /** Lo que la Mirada del Jardin cobra al que no estaba mirando. */
-    private static final double DANO_MIRADA = 2000;
+    /** Lo que la Mirada del Jardin cobra al que no estaba mirando: parte de su vida maxima. */
+    private static final double MIRADA_FRACCION = 0.60;
+    /** Ticks de margen de la Mirada: vale haberlo mirado hace tan poco (lag). */
+    private static final int MIRADA_GRACIA = 10;
 
     // --- ids de los hechizos (AnomalyRegistry.RaizType)
     public static final String MIRADA = "rz_mirada_jardin";
@@ -186,6 +188,10 @@ public final class Raiz extends BossFight {
             z.setCustomNameVisible(false);
         });
         net.ederus.edm.comun.Tags.markBoss(boss, ID);
+        /* Como el resto del catalogo (el Conde, 8). Con los 20 de serie, el golpe de un
+         * segundo jugador dentro del medio segundo siguiente se perdia casi entero: con
+         * varios pegando, ROTTEN parecia no recibir dano. */
+        boss.setMaximumNoDamageTicks(6);
 
         /* El que se ve: el creaking, al doble, sin IA (lo lleva tickShell del padre).
          * NUNCA invulnerable: vanilla no deja pegar a una entidad invulnerable a nadie
@@ -309,8 +315,33 @@ public final class Raiz extends BossFight {
     @Override
     public double survivalFloor() {
         if (!alive()) return 0;
+        if (phase() >= phaseCount()) return 0;
         double u = umbral(phase() + (ritualCumplido ? 1 : 0));
-        return u <= 0 ? 0 : u + 0.001;
+        /* Flor cumplida en la II: el cambio a la III salta en el tick siguiente, y sin
+         * este suelo un golpe gordo en ese hueco lo mataba en la II. */
+        if (u <= 0) return 0.02;
+        return u + 0.001;
+    }
+
+    /** Ultimo tick en que se le marco el golpe al cuerpo visible. */
+    private long ultimoGolpeVisto = -100;
+
+    /**
+     * El golpe se le pasa al zombi invisible y el creaking no se inmutaba: parecia que
+     * no recibia dano. Ahora el cuerpo que se ve acusa cada golpe que de verdad baja vida.
+     */
+    @Override
+    public void onDamaged(Player attacker, double amount) {
+        if (!alive() || amount <= 0 || shell == null || !shell.isValid()) return;
+        if (incomingDamageMultiplier() <= 0) return;
+        if (healthFraction() <= survivalFloor() + 0.0005) return;
+        if (ticks() - ultimoGolpeVisto < 4) return;
+        ultimoGolpeVisto = ticks();
+        try {
+            shell.playHurtAnimation(0);
+        } catch (Throwable ignored) {
+        }
+        soundAt(shell.getLocation(), "entity.creaking.sway", 1.0f, 0.8f + random.nextFloat() * 0.2f);
     }
 
     /** El umbral de vida que cierra una fase: 2/3 la I, 1/3 la II, nada la III. */
@@ -386,8 +417,9 @@ public final class Raiz extends BossFight {
     // =========================================================================
 
     /**
-     * Una vez por fase. Un segundo de aviso y tres de mirada: quien no lo tenga en el
-     * puntero al cerrarse recibe dos mil de dano puro. Durante esos tres segundos ni el
+     * Una vez por fase. Un segundo de aviso y tres de mirada: quien no lo haya tenido en
+     * el puntero en el ultimo medio segundo pierde el 60 % de su vida maxima, sin armadura
+     * (solo mata a quien ya estaba por debajo de eso). Durante esos tres segundos ni el
      * jefe recibe dano ni sus hechizos pegan; los jugadores llevan Resistencia.
      */
     public void miradaDelJardin() {
@@ -397,8 +429,11 @@ public final class Raiz extends BossFight {
         Location c = center();
         final int aviso = 20;
         final int fin = 80;
+        /* Ultimo tick en que cada jugador lo tenia en el puntero. Con lag, la direccion
+         * que ve el servidor llega tarde: se da por bueno haberlo mirado hace poco. */
+        final Map<UUID, Long> ultimaVez = new java.util.HashMap<>();
         titleNear(Component.text("MÍRENLO", ACCENT),
-                Component.text("Quien aparte la vista, muere", NamedTextColor.RED));
+                Component.text("Quien aparte la vista pierde el 60 % de su vida", NamedTextColor.RED));
         soundAt(c, "entity.creaking.activate", 2.0f, 0.5f);
 
         animate(fin, t -> {
@@ -408,6 +443,9 @@ public final class Raiz extends BossFight {
                 for (Player p : targets()) {
                     p.addPotionEffect(new PotionEffect(PotionEffectType.RESISTANCE, fin - aviso + 4, 4, true, false, false));
                 }
+            }
+            if (t >= fin - MIRADA_GRACIA - 2) {
+                for (Player p : targets()) if (mirandoAlJefe(p)) ultimaVez.put(p.getUniqueId(), ticks());
             }
             if (t % 4 == 0) {
                 double r = 9.0 * (1 - t / (double) fin) + 1.5;
@@ -431,10 +469,15 @@ public final class Raiz extends BossFight {
             int caidos = 0;
             for (Player p : targets()) {
                 if (mirandoAlJefe(p)) continue;
+                Long visto = ultimaVez.get(p.getUniqueId());
+                if (visto != null && ticks() - visto <= MIRADA_GRACIA) continue;
                 caidos++;
-                // Dano puro: es una sentencia y no pasa por el multiplicador.
-                event.markKill(p);
-                p.setHealth(Math.max(0, p.getHealth() - DANO_MIRADA));
+                // Dano puro: es una sentencia y no pasa por el multiplicador ni la armadura.
+                double max = Compat.getAttribute(p, "max_health", 20);
+                double queda = p.getHealth() - max * MIRADA_FRACCION;
+                if (queda <= 0) event.markKill(p);
+                else event.markHit(p);
+                p.setHealth(Math.max(0, Math.min(max, queda)));
                 Compat.spawn(world(), Compat.EXPLOSION, p.getLocation().add(0, 1, 0), 2, 0.3, 0.5, 0.3, 0);
                 soundAt(p.getLocation(), "entity.creaking.attack", 1.6f, 0.5f);
             }
@@ -624,6 +667,8 @@ public final class Raiz extends BossFight {
 
     private void limpiarFlor() {
         for (Entity e : flor) {
+            // Fuera del equipo de brillo ANTES de quitarla: si no, su UUID se queda en el marcador.
+            Glow.clear(e);
             spawned.remove(e);
             Fx.safeRemove(e);
         }
@@ -1044,7 +1089,7 @@ public final class Raiz extends BossFight {
                 double d = plano(p.getLocation(), c);
                 if (d < 1.5 || d > R + 0.5) continue;
                 if (Math.abs(p.getLocation().getY() - c.getY()) > ALTO + 1) continue;
-                if (alturaSobreSuelo(p) > 0.9) continue;
+                if (enElAire(p, 0.8)) continue;
                 double ang = Math.atan2(-(p.getLocation().getZ() - c.getZ()), p.getLocation().getX() - c.getX());
                 for (int i = 0; i < 4; i++) {
                     double a = base + i * Math.PI / 2 + giro;
@@ -1265,7 +1310,7 @@ public final class Raiz extends BossFight {
         final int estalla = 60;
         final double mult = abilityDamage();
         final Location centro = sinGiro(Fx.ground(marcado.getLocation(), 6));
-        Glow.apply(marcado, NamedTextColor.GOLD);
+        marcarCosecha(marcado);
         titleNear(Component.empty(), Component.text("Cosecha sobre " + marcado.getName() + ". Júntense con él",
                 TextColor.color(AMBAR)));
         announce(Component.text("Cosecha sobre " + marcado.getName() + ". El golpe se reparte entre los que estén dentro."));
@@ -1308,7 +1353,32 @@ public final class Raiz extends BossFight {
                 announce(Component.text(dentro.size() <= 1 ? "La cosecha cayó sobre uno solo."
                         : "La cosecha se repartió entre " + dentro.size() + "."));
             }
-        }, () -> Glow.clear(marcado));
+        }, () -> soltarCosecha(marcado));
+    }
+
+    /** El jugador que lleva la Cosecha encima y si ya brillaba antes de marcarlo. */
+    private Player cosechado;
+    private boolean cosechadoBrillaba;
+
+    /**
+     * Glow.clear solo saca del equipo de color: el jugador se quedaba BRILLANDO para
+     * siempre tras una Cosecha. Se guarda como estaba y se le devuelve.
+     */
+    private void marcarCosecha(Player p) {
+        if (cosechado != null) soltarCosecha(cosechado);
+        cosechado = p;
+        cosechadoBrillaba = p.isGlowing();
+        Glow.apply(p, NamedTextColor.GOLD);
+    }
+
+    private void soltarCosecha(Player p) {
+        if (p == null || p != cosechado) return;
+        Glow.clear(p);
+        try {
+            p.setGlowing(cosechadoBrillaba);
+        } catch (Throwable ignored) {
+        }
+        cosechado = null;
     }
 
     /**
@@ -1532,15 +1602,51 @@ public final class Raiz extends BossFight {
         return v.normalize();
     }
 
-    /** Cuanto esta el jugador por encima del suelo que pisa. */
+    /**
+     * Cuanto esta el jugador por encima de lo que tiene debajo, medido contra la CAJA DE
+     * COLISION de cada bloque (una valla o un muro miden 1,5; una losa, 0,5). Fx.ground
+     * redondea al bloque entero y daba por "en el aire" a quien estaba de pie en una
+     * valla, un muro o media escalera: las ondas no le pegaban nunca.
+     */
     private static double alturaSobreSuelo(Player p) {
-        Location g = Fx.ground(p.getLocation(), 4);
-        return p.getLocation().getY() - g.getY();
+        Location l = p.getLocation();
+        org.bukkit.World w = l.getWorld();
+        if (w == null) return 0;
+        double pies = l.getY();
+        int x = l.getBlockX(), z = l.getBlockZ();
+        int y0 = (int) Math.floor(pies + 0.01);
+        for (int y = y0; y >= y0 - 5; y--) {
+            org.bukkit.block.Block b = w.getBlockAt(x, y, z);
+            if (b.isPassable()) continue;
+            double techo = -1;
+            try {
+                for (org.bukkit.util.BoundingBox bb : b.getCollisionShape().getBoundingBoxes()) {
+                    techo = Math.max(techo, bb.getMaxY());
+                }
+            } catch (Throwable t) {
+                techo = 1;
+            }
+            if (techo < 0) continue;
+            double top = y + techo;
+            if (top <= pies + 0.05) return Math.max(0, pies - top);
+        }
+        return 6;
+    }
+
+    /**
+     * En el aire de verdad: el servidor no lo tiene apoyado (isOnGround) Y sus pies
+     * van al menos 'minimo' por encima de la colision de debajo. Lo primero cubre al
+     * que esta al borde de un bloque (sin nada justo bajo el centro); lo segundo, el
+     * instante de despegar. Nadar no cuenta: el agua no esquiva una onda.
+     */
+    private static boolean enElAire(Player p, double minimo) {
+        if (p.isOnGround() || p.isInWater() || p.isClimbing()) return false;
+        return alturaSobreSuelo(p) > minimo;
     }
 
     /** Saltando (o en el aire): lo que esquiva las ondas por el suelo. */
     private static boolean enElAire(Player p) {
-        return alturaSobreSuelo(p) > 0.4;
+        return enElAire(p, 0.3);
     }
 
     private Location puntoDeArena(Location c, double R) {
@@ -1723,6 +1829,7 @@ public final class Raiz extends BossFight {
     public void cleanup() {
         cerrado = true;
         limpiarFlor();
+        if (cosechado != null) soltarCosecha(cosechado);
         combateCongelado = false;
         miradaEnCurso = false;
         ritualActivo = false;

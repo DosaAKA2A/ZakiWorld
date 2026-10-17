@@ -3120,7 +3120,7 @@ public final class AnomalyRegistry {
             List<Ability> list = new ArrayList<>();
             // 0 = en todas; la Mirada sale una sola vez por fase (Raiz.puedeLanzar).
             add(list, net.ederus.edm.anomaly.boss.Raiz.MIRADA, "MIRADA DEL JARDÍN", 0, 6000, 85, 6,
-                    "Una vez por fase: tres segundos mirándolo. Quien aparte la vista recibe 2000 puros.",
+                    "Una vez por fase: tres segundos mirándolo. Quien aparte la vista pierde el 60 % de su vida.",
                     AnomalyRegistry.icon("ENDER_EYE", "SPYGLASS"), f -> raiz(f).miradaDelJardin());
             // FASE I (tambien en la II, con mas dano)
             add(list, "rz_raices_jardin", "Raíces del Jardín", 1, 240, 45, 5,
