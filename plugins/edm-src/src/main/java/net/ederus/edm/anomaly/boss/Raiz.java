@@ -253,7 +253,7 @@ public final class Raiz extends BossFight {
                 Fx.ring(c.clone().add(0, 0.4 + tick * 0.05, 0), 1.5 + tick * 0.09, 20, p ->
                         Compat.spawn(world(), Compat.CHERRY_LEAVES, p, 1, 0.1, 0.1, 0.1, 0.02));
             }
-            if (tick % 18 == 0) soundAt(c, "entity.creaking.die", 1.4f, 0.6f + tick * 0.004f);
+            if (tick % 18 == 0) soundAt(c, "entity.creaking.death", 1.4f, 0.6f + tick * 0.004f);
         }, () -> {
             Compat.spawn(world(), Compat.EXPLOSION_EMITTER, c.clone().add(0, 1, 0), 1);
             soundAt(c, "block.creaking_heart.break", 2.0f, 0.5f);
@@ -488,7 +488,7 @@ public final class Raiz extends BossFight {
                         NamedTextColor.GRAY));
         announce(Component.text("La flor pide " + dosisPedidas + " pociones de curación arrojadizas. Tienen 45 s."));
         soundAt(c, "entity.creaking.deactivate", 2.0f, 0.5f);
-        soundAt(florEn, "block.eyeblossom_open.long", 1.6f, 0.8f);
+        soundAt(florEn, "block.eyeblossom.open_long", 1.6f, 0.8f);
     }
 
     /**
@@ -544,7 +544,7 @@ public final class Raiz extends BossFight {
         dosis++;
         Compat.spawn(world(), Compat.HEART, florEn.clone().add(0, 0.8, 0), 10, 0.6, 0.5, 0.6, 0.03);
         Compat.spawn(world(), Compat.HAPPY_VILLAGER, florEn, 12, 0.6, 0.8, 0.6, 0.02);
-        soundAt(florEn, "block.eyeblossom_open.long", 1.4f, 0.9f + Math.min(dosis, 12) * 0.05f);
+        soundAt(florEn, "block.eyeblossom.open_long", 1.4f, 0.9f + Math.min(dosis, 12) * 0.05f);
         soundAt(florEn, "entity.player.levelup", 0.8f, 1.6f);
         announce(Component.text("La flor lleva " + Math.min(dosis, dosisPedidas) + " de " + dosisPedidas + "."));
         if (dosis >= dosisPedidas) cerrarRitual(true);
@@ -878,7 +878,7 @@ public final class Raiz extends BossFight {
         final Escena esc = new Escena();
         final List<BlockDisplay> lanzas = new ArrayList<>();
         announce(Component.text("Lanzas Pálidas. Salgan de la línea."));
-        soundAt(c, "entity.creaking.angry", 1.6f, 0.6f);
+        soundAt(c, "entity.creaking.twitch", 1.6f, 0.6f);
 
         animate(dura, t -> {
             if (cerrado || !alive()) throw Stop.now();
@@ -1247,7 +1247,7 @@ public final class Raiz extends BossFight {
                 Compat.spawn(world(), Compat.BLOCK, c.clone().add(0, 0.4, 0), 30, R * 0.4, 0.2, R * 0.4, 0,
                         Material.PALE_OAK_LOG.createBlockData());
                 soundAt(c, "block.roots.break", 2.0f, 0.5f);
-                soundAt(c, "block.pale_oak_wood.break", 1.8f, 0.6f);
+                soundAt(c, "block.wood.break", 1.8f, 0.6f);
             }
         }, esc::quitar);
     }
@@ -1269,7 +1269,7 @@ public final class Raiz extends BossFight {
         titleNear(Component.empty(), Component.text("Cosecha sobre " + marcado.getName() + ". Júntense con él",
                 TextColor.color(AMBAR)));
         announce(Component.text("Cosecha sobre " + marcado.getName() + ". El golpe se reparte entre los que estén dentro."));
-        soundAt(centro, "block.eyeblossom_open.long", 1.8f, 0.6f);
+        soundAt(centro, "block.eyeblossom.open_long", 1.8f, 0.6f);
 
         animate(estalla + 2, t -> {
             if (cerrado || !alive()) throw Stop.now();
@@ -1304,7 +1304,7 @@ public final class Raiz extends BossFight {
                 Compat.spawn(world(), Compat.FLASH, boom, 1);
                 Compat.spawn(world(), Compat.DUST, boom, 24, radio * 0.5, 0.4, radio * 0.5, 0, Compat.dust(AMBAR, 1.6f));
                 soundAt(boom, "entity.creaking.attack", 1.9f, 0.5f);
-                soundAt(boom, "block.eyeblossom_close.long", 1.6f, 0.6f);
+                soundAt(boom, "block.eyeblossom.close_long", 1.6f, 0.6f);
                 announce(Component.text(dentro.size() <= 1 ? "La cosecha cayó sobre uno solo."
                         : "La cosecha se repartió entre " + dentro.size() + "."));
             }
