@@ -25,11 +25,25 @@
 #   ecos:             segundos medios entre ecos del warden que oye cada jugador. 0 = sin ecos
 #   sonidos:          sonidos sueltos que cada jugador oye a 4-14 bloques, solo el:
 #                       cada: segundos medios entre uno y otro
-#                       lista: ids de sonido de Minecraft (sin minecraft: delante)
+#                       lista: ids de sonido de Minecraft (sin minecraft: delante). Una
+#                              entrada tambien puede ser {id: ..., volumen: ..., tono: [..]}
+#                              para que ese sonido lleve los suyos
 #                       tono: [minimo, maximo] del tono (1 = normal)
 #                       volumen: 0 a 1
+#                       minimo, silencio, rango: opcionales, los de ritmo para este clima
 #
 #  Con lluvia: true en un clima frio (temperatura bajo 0.15 en su .json) lo que cae es nieve.
+
+# Ritmo de los sonidos sueltos (sonidos, ecos y el chasquido del gas). Son ambiente
+# de fondo: nunca suena dos veces seguidas el mismo (con 4 o mas en la lista, ninguno
+# de los dos ultimos).
+#   minimo:    segundos que pasan como poco entre dos sonidos que oye un jugador
+#   rango:     la espera es 'cada' por un numero al azar entre estos dos (0.5 a 1.5 = 'cada' de media)
+#   silencio:  probabilidad (0 a 1) de que una espera dure el doble
+ritmo:
+  minimo: 12
+  rango: [0.5, 1.5]
+  silencio: 0.2
 
 # En los mundos de Calamity el clima es de Calamity, sin la lluvia de Minecraft:
 # ahi lluvia: true no moja al jugador (y la ceniza no le despeja el cielo). Las
@@ -70,7 +84,7 @@ biomas:
   ancient:
     nombre: 'Ciudad antigua'
     hora: 18000
-    ecos: 20
+    ecos: 24
 
 # --- climas nuevos (2026-09-23) ---
   crimson:
@@ -79,30 +93,45 @@ biomas:
   slimey:
     nombre: 'Viscoso'
     sonidos:
-      cada: 8
-      lista: ['entity.slime.squish', 'entity.slime.jump', 'block.slime_block.step']
+      cada: 20
+      lista: ['entity.slime.squish', 'entity.slime.squish_small', 'entity.slime.jump', 'block.slime_block.step',
+              'block.slime_block.fall', 'block.honey_block.slide', 'block.mud.step']
+      volumen: 0.5
+      tono: [0.8, 1.1]
   honeycomb:
     nombre: 'Panal'
     sonidos:
-      cada: 10
-      lista: ['entity.bee.pollinate', 'block.beehive.enter', 'block.beehive.exit']
+      cada: 22
+      lista: ['entity.bee.pollinate', 'entity.bee.loop', 'block.beehive.work', 'block.beehive.drip',
+              'block.beehive.enter', 'block.beehive.exit', 'block.honey_block.step']
+      volumen: 0.45
   frostbite:
     nombre: 'Escarcha'
     sonidos:
-      cada: 14
-      lista: ['block.glass.hit', 'block.amethyst_cluster.step']
-      volumen: 0.5
+      cada: 28
+      lista: ['block.glass.hit', 'block.amethyst_cluster.step', 'block.amethyst_block.resonate',
+              {id: 'block.powder_snow.step', tono: [0.9, 1.2]}, {id: 'block.snow.hit', tono: [0.9, 1.2]},
+              {id: 'block.pointed_dripstone.drip_water', tono: [1.0, 1.3]}]
+      volumen: 0.45
       tono: [1.4, 1.9]
   blizzard:
     nombre: 'Ventisca'
     lluvia: true
+    sonidos:
+      cada: 22
+      lista: ['entity.breeze.idle_air', 'entity.breeze.idle_ground', 'entity.breeze.slide',
+              {id: 'block.powder_snow.step', tono: [0.8, 1.0]}, {id: 'block.snow.break', tono: [0.8, 1.0]}]
+      volumen: 0.45
+      tono: [0.5, 0.7]
   abyss:
     nombre: 'Abismo'
     hora: 18000
     sonidos:
-      cada: 16
-      lista: ['entity.elder_guardian.ambient', 'entity.guardian.ambient']
-      volumen: 0.5
+      cada: 32
+      lista: ['entity.elder_guardian.ambient', 'entity.guardian.ambient', 'ambient.underwater.loop.additions.rare',
+              'ambient.underwater.loop.additions.ultra_rare', 'block.conduit.ambient.short',
+              'block.bubble_column.whirlpool_ambient']
+      volumen: 0.45
       tono: [0.6, 0.8]
   void:
     nombre: 'Vacío'
@@ -114,60 +143,71 @@ biomas:
     nombre: 'Caldera'
     cenizas: 'SIEMPRE'
     sonidos:
-      cada: 6
-      lista: ['block.lava.ambient', 'block.fire.ambient']
-      volumen: 0.6
+      cada: 18
+      lista: ['block.lava.ambient', 'block.fire.ambient', 'block.lava.pop', 'ambient.basalt_deltas.additions',
+              'block.campfire.crackle', 'block.blastfurnace.fire_crackle', 'block.pointed_dripstone.drip_lava']
+      volumen: 0.5
+      tono: [0.8, 1.1]
   spectral:
     nombre: 'Espectral'
     hora: 13500
     sonidos:
-      cada: 14
-      lista: ['entity.phantom.ambient', 'entity.vex.charge', 'entity.allay.ambient_without_item']
-      volumen: 0.5
+      cada: 28
+      lista: ['entity.phantom.ambient', 'entity.vex.ambient', 'entity.vex.charge', 'entity.allay.ambient_without_item',
+              'entity.allay.ambient_with_item', 'ambient.soul_sand_valley.additions', 'entity.ghast.ambient']
+      volumen: 0.4
       tono: [0.6, 0.9]
   prismatic:
     nombre: 'Prismático'
     sonidos:
-      cada: 9
-      lista: ['block.amethyst_cluster.hit', 'block.amethyst_cluster.step', 'block.note_block.chime']
-      volumen: 0.6
+      cada: 22
+      lista: ['block.amethyst_cluster.hit', 'block.amethyst_cluster.step', 'block.amethyst_block.resonate',
+              'block.amethyst_block.chime', 'block.small_amethyst_bud.place', 'block.large_amethyst_bud.place']
+      volumen: 0.5
       tono: [0.9, 1.5]
   rust:
     nombre: 'Óxido'
     sonidos:
-      cada: 10
-      lista: ['block.chain.step', 'block.chain.hit', 'block.grindstone.use', 'entity.iron_golem.repair']
-      volumen: 0.5
+      cada: 24
+      lista: ['block.chain.step', 'block.chain.hit', 'block.chain.fall', 'block.chain.place', 'block.grindstone.use',
+              'entity.iron_golem.repair', 'entity.copper_golem_weathered.step']
+      volumen: 0.45
       tono: [0.7, 1.0]
   fungal:
     nombre: 'Esporas'
     sonidos:
-      cada: 12
-      lista: ['entity.sniffer.digging', 'block.moss.step', 'block.sculk.spread']
-      volumen: 0.5
+      cada: 26
+      lista: ['entity.sniffer.digging', 'entity.sniffer.idle', 'block.moss.step', 'block.fungus.step',
+              'block.sculk.spread', 'ambient.warped_forest.additions', 'block.shroomlight.step']
+      volumen: 0.45
+      tono: [0.8, 1.0]
   glitch:
     nombre: 'Glitch'
     hora: 0
     sonidos:
-      cada: 6
-      lista: ['block.note_block.bit', 'entity.enderman.stare', 'entity.endermite.ambient', 'block.note_block.pling']
-      volumen: 0.6
+      cada: 18
+      lista: ['block.note_block.bit', 'entity.enderman.stare', 'entity.endermite.ambient', 'entity.shulker.ambient',
+              'entity.enderman.teleport', 'block.sculk_sensor.clicking', 'block.copper_bulb.turn_off',
+              'block.note_block.pling']
+      volumen: 0.45
       tono: [0.5, 2.0]
   eclipse:
     nombre: 'Eclipse'
     hora: 6000
     sonidos:
-      cada: 18
-      lista: ['block.respawn_anchor.ambient', 'block.beacon.deactivate']
-      volumen: 0.6
+      cada: 34
+      lista: ['block.respawn_anchor.ambient', 'block.beacon.deactivate', 'block.beacon.ambient',
+              'block.conduit.ambient.short', 'block.trial_spawner.ambient_ominous', 'ambient.cave']
+      volumen: 0.5
       tono: [0.5, 0.8]
   nightmare:
     nombre: 'Pesadilla'
     hora: 18000
     sonidos:
-      cada: 9
-      lista: ['entity.creaking.ambient', 'block.creaking_heart.idle', 'entity.phantom.ambient']
-      volumen: 0.7
+      cada: 24
+      lista: ['entity.creaking.ambient', 'entity.creaking.sway', 'block.creaking_heart.idle', 'entity.phantom.ambient',
+              'block.pale_hanging_moss.idle', 'block.eyeblossom.idle', 'ambient.soul_sand_valley.additions']
+      volumen: 0.55
       tono: [0.6, 0.9]
   blossom:
     nombre: 'Floración'
@@ -176,93 +216,115 @@ biomas:
     nombre: 'Neón'
     hora: 18000
     sonidos:
-      cada: 7
-      lista: ['block.copper_bulb.turn_on', 'block.copper_bulb.turn_off', 'block.sculk_sensor.clicking', 'block.note_block.bit']
-      volumen: 0.5
+      cada: 20
+      lista: ['block.copper_bulb.turn_on', 'block.copper_bulb.turn_off', 'block.sculk_sensor.clicking',
+              'block.note_block.bit', 'block.trial_spawner.ambient', {id: 'block.beacon.ambient', tono: [1.0, 1.3]}]
+      volumen: 0.4
       tono: [1.2, 1.8]
   ink:
     nombre: 'Tinta'
     sonidos:
-      cada: 12
-      lista: ['entity.squid.ambient', 'entity.glow_squid.ambient', 'entity.squid.squirt']
-      volumen: 0.6
+      cada: 26
+      lista: ['entity.squid.ambient', 'entity.glow_squid.ambient', 'entity.squid.squirt', 'entity.glow_squid.squirt',
+              'ambient.underwater.loop.additions', 'block.bubble_column.bubble_pop']
+      volumen: 0.5
+      tono: [0.8, 1.1]
   golden:
     nombre: 'Hora dorada'
     hora: 12300
     sonidos:
-      cada: 16
-      lista: ['entity.allay.ambient_without_item', 'block.note_block.chime']
-      volumen: 0.4
+      cada: 30
+      lista: ['entity.allay.ambient_without_item', 'block.amethyst_block.chime', 'entity.parrot.ambient',
+              'block.firefly_bush.idle', 'block.dry_grass.ambient', 'entity.bee.pollinate']
+      volumen: 0.35
   plague:
     nombre: 'Peste'
     gas: 8
     sonidos:
-      cada: 12
-      lista: ['entity.zombie.ambient', 'entity.zombie_villager.ambient', 'entity.witch.ambient', 'block.sponge.absorb']
-      volumen: 0.5
+      cada: 26
+      lista: ['entity.zombie.ambient', 'entity.zombie_villager.ambient', 'entity.husk.ambient', 'entity.witch.ambient',
+              'entity.witch.drink', 'block.sponge.absorb', 'block.honey_block.slide']
+      volumen: 0.45
       tono: [0.7, 0.9]
   quicksilver:
     nombre: 'Mercurio'
     sonidos:
-      cada: 12
-      lista: ['block.bell.resonate', 'block.chain.hit', 'block.amethyst_block.hit']
-      volumen: 0.5
+      cada: 26
+      lista: ['block.bell.resonate', 'block.chain.hit', 'block.chain.step', 'block.amethyst_block.hit',
+              'block.amethyst_block.resonate', 'block.pointed_dripstone.drip_water']
+      volumen: 0.45
+      tono: [0.8, 1.1]
   firefly:
     nombre: 'Luciérnagas'
     hora: 18000
     sonidos:
-      cada: 8
-      lista: ['entity.frog.ambient', 'block.big_dripleaf.tilt_down']
-      volumen: 0.6
+      cada: 20
+      lista: ['entity.frog.ambient', 'block.firefly_bush.idle', 'block.big_dripleaf.tilt_down',
+              'block.big_dripleaf.tilt_up', 'block.wet_grass.step', 'entity.bat.ambient']
+      volumen: 0.45
+      tono: [0.85, 1.1]
   reef:
     nombre: 'Arrecife'
     sonidos:
-      cada: 8
-      lista: ['entity.dolphin.ambient', 'entity.turtle.ambient_land', 'block.bubble_column.upwards_ambient', 'entity.tropical_fish.flop']
-      volumen: 0.6
+      cada: 22
+      lista: ['entity.dolphin.ambient', 'entity.dolphin.ambient_water', 'entity.turtle.ambient_land',
+              'block.bubble_column.upwards_ambient', 'block.bubble_column.bubble_pop', 'entity.tropical_fish.flop',
+              'entity.axolotl.idle_water', 'ambient.underwater.loop.additions']
+      volumen: 0.45
+  # Feria de noche: gente, algun fuego artificial lejano (tono bajo y suave) y el campo.
   carnival:
     nombre: 'Feria'
     hora: 13000
     sonidos:
-      cada: 6
-      lista: ['entity.firework_rocket.blast', 'entity.firework_rocket.launch', 'entity.villager.celebrate', 'block.note_block.bell']
-      volumen: 0.6
-      tono: [0.9, 1.3]
+      cada: 22
+      lista: [{id: 'entity.firework_rocket.blast_far', volumen: 0.4, tono: [0.6, 0.85]},
+              {id: 'entity.firework_rocket.large_blast_far', volumen: 0.35, tono: [0.55, 0.8]},
+              {id: 'entity.firework_rocket.twinkle_far', volumen: 0.4, tono: [0.7, 0.9]},
+              'entity.villager.celebrate', 'entity.villager.ambient', 'entity.villager.yes',
+              'entity.wandering_trader.yes', {id: 'block.firefly_bush.idle', tono: [0.9, 1.1]}]
+      volumen: 0.5
+      tono: [0.9, 1.2]
   drystorm:
     nombre: 'Tormenta seca'
     rayos: 4
     sonidos:
-      cada: 14
-      lista: ['block.copper_bulb.turn_on']
+      cada: 26
+      lista: ['block.copper_bulb.turn_on', 'block.copper_bulb.turn_off', 'block.dry_grass.ambient',
+              'block.deadbush.idle', 'block.sand.idle', 'entity.breeze.idle_air']
       volumen: 0.4
-      tono: [0.5, 0.7]
+      tono: [0.5, 0.8]
   cloudsea:
     nombre: 'Mar de nubes'
     sonidos:
-      cada: 10
-      lista: ['entity.breeze.idle_air', 'entity.breeze.whirl', 'entity.happy_ghast.ambient']
-      volumen: 0.5
+      cada: 26
+      lista: ['entity.breeze.idle_air', 'entity.breeze.idle_ground', 'entity.breeze.whirl', 'entity.breeze.slide',
+              'entity.happy_ghast.ambient', 'entity.ghastling.ambient']
+      volumen: 0.4
   catacomb:
     nombre: 'Catacumbas'
     hora: 18000
     sonidos:
-      cada: 10
-      lista: ['entity.skeleton.ambient', 'block.chain.step', 'block.bone_block.step', 'block.candle.extinguish']
-      volumen: 0.6
+      cada: 24
+      lista: ['entity.skeleton.ambient', 'entity.bogged.ambient', 'entity.skeleton.step', 'block.chain.step',
+              'block.bone_block.step', 'block.candle.extinguish', 'block.candle.ambient', 'entity.bat.ambient']
+      volumen: 0.5
       tono: [0.7, 1.0]
   dream:
     nombre: 'Onírico'
     hora: 23500
     sonidos:
-      cada: 10
-      lista: ['block.amethyst_block.chime', 'entity.allay.ambient_with_item', 'block.note_block.flute']
-      volumen: 0.4
+      cada: 26
+      lista: ['block.amethyst_block.chime', 'block.amethyst_block.resonate', 'entity.allay.ambient_with_item',
+              'entity.allay.ambient_without_item', 'block.note_block.flute', 'block.note_block.chime']
+      volumen: 0.35
       tono: [1.0, 1.6]
   meteor:
     nombre: 'Lluvia de estrellas'
     hora: 18000
     sonidos:
-      cada: 12
-      lista: ['entity.firework_rocket.launch', 'entity.breeze.deflect']
-      volumen: 0.5
+      cada: 30
+      lista: ['entity.firework_rocket.launch', 'entity.breeze.deflect', 'entity.breeze.wind_burst',
+              'entity.wind_charge.wind_burst', {id: 'entity.firework_rocket.blast_far', volumen: 0.35},
+              {id: 'block.amethyst_block.chime', tono: [0.9, 1.2]}]
+      volumen: 0.4
       tono: [0.6, 0.9]
