@@ -23,7 +23,7 @@
   "minecraft:audio/ambient_sounds": {
    "additions": {
     "sound": "minecraft:entity.slime.squish",
-    "tick_chance": 0.02
+    "tick_chance": 0.0015
    },
    "mood": {
     "sound": "minecraft:ambient.cave",

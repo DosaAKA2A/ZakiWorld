@@ -20,10 +20,9 @@
    }
   ],
   "minecraft:audio/ambient_sounds": {
-   "loop": "minecraft:entity.bee.loop",
    "additions": {
     "sound": "minecraft:block.beehive.work",
-    "tick_chance": 0.01
+    "tick_chance": 0.0015
    },
    "mood": {
     "sound": "minecraft:ambient.cave",

@@ -21,10 +21,9 @@
    }
   ],
   "minecraft:audio/ambient_sounds": {
-   "loop": "minecraft:block.beacon.ambient",
    "additions": {
     "sound": "minecraft:block.amethyst_block.chime",
-    "tick_chance": 0.008
+    "tick_chance": 0.0012
    },
    "mood": {
     "sound": "minecraft:block.bell.resonate",

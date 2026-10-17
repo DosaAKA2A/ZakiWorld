@@ -31,7 +31,7 @@
    "loop": "minecraft:ambient.soul_sand_valley.loop",
    "additions": {
     "sound": "minecraft:entity.warden.heartbeat",
-    "tick_chance": 0.004
+    "tick_chance": 0.0012
    },
    "mood": {
     "sound": "minecraft:ambient.cave",

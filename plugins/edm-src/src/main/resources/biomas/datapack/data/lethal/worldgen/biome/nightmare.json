@@ -20,7 +20,7 @@
    "loop": "minecraft:ambient.soul_sand_valley.loop",
    "additions": {
     "sound": "minecraft:entity.creaking.ambient",
-    "tick_chance": 0.003
+    "tick_chance": 0.0012
    },
    "mood": {
     "sound": "minecraft:ambient.cave",

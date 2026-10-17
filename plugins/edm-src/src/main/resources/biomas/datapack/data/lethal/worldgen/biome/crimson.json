@@ -25,7 +25,7 @@
    "loop": "minecraft:ambient.crimson_forest.loop",
    "additions": {
     "sound": "minecraft:entity.warden.heartbeat",
-    "tick_chance": 0.0025
+    "tick_chance": 0.001
    },
    "mood": {
     "sound": "minecraft:ambient.crimson_forest.mood",

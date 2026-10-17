@@ -36,8 +36,8 @@
   "minecraft:audio/ambient_sounds": {
    "loop": "minecraft:ambient.basalt_deltas.loop",
    "additions": {
-    "sound": "minecraft:block.lava.pop",
-    "tick_chance": 0.02
+    "sound": "minecraft:ambient.basalt_deltas.additions",
+    "tick_chance": 0.002
    },
    "mood": {
     "sound": "minecraft:ambient.basalt_deltas.mood",
