@@ -3098,11 +3098,11 @@ public final class AnomalyRegistry {
         @Override
         public List<String> threat() {
             return List.of(
-                    "DIOS: flota y no pega; el bosque pega por el.",
-                    "CINCO fases y NO cambia de fase hasta que le",
-                    "tireis pociones de curacion a su flor (la II",
-                    "vale por dos). Exige que todos lo miren y",
-                    "devuelve entero el dano que le haceis.");
+                    "DIOS: no se mueve; todo son hechizos que",
+                    "alcanzan la arena entera. TRES fases, y entre",
+                    "una y otra hay que curar su flor con pociones",
+                    "de curacion arrojadizas. Una vez por fase",
+                    "exige que todos lo miren.");
         }
 
         @Override
@@ -3118,132 +3118,46 @@ public final class AnomalyRegistry {
         @Override
         public List<Ability> abilities() {
             List<Ability> list = new ArrayList<>();
-            add(list, "rz_mirada", "MIRADA DEL JARDÍN", 0, 520, 150, 5,
-                    "Seis segundos mirándolo. Quien aparte la vista recibe 2000 puros.",
+            // 0 = en todas; la Mirada sale una sola vez por fase (Raiz.puedeLanzar).
+            add(list, net.ederus.edm.anomaly.boss.Raiz.MIRADA, "MIRADA DEL JARDÍN", 0, 6000, 85, 6,
+                    "Una vez por fase: tres segundos mirándolo. Quien aparte la vista recibe 2000 puros.",
                     AnomalyRegistry.icon("ENDER_EYE", "SPYGLASS"), f -> raiz(f).miradaDelJardin());
-            add(list, "rz_venganza", "VENGANZA", 2, 420, 180, 5,
-                    "Acumula todo lo que le peguéis y lo devuelve repartido en área.",
-                    AnomalyRegistry.icon("RESIN_CLUMP", "REDSTONE"), f -> raiz(f).venganza());
-            add(list, "rz_odio", "ODIO", 3, 400, 30, 5,
-                    "Cada golpe suyo que acierta lo hace pegar más fuerte y más rápido.",
-                    AnomalyRegistry.icon("REDSTONE_BLOCK", "REDSTONE"), f -> raiz(f).odio());
-            add(list, "rz_raices", "Raíces que Agarran", 1, 190, 40, 5,
-                    "Raíces bajo tres jugadores; frenan y hacen daño al salir.",
-                    AnomalyRegistry.icon("HANGING_ROOTS", "VINE"), f -> raiz(f).raicesQueAgarran());
-            add(list, "rz_resina", "Resina Pegajosa", 1, 220, 70, 4,
-                    "Mancha el suelo en círculos que crecen y pegan los pies.",
-                    AnomalyRegistry.icon("RESIN_BLOCK", "HONEY_BLOCK"), f -> raiz(f).resinaPegajosa());
-            add(list, "rz_rama", "Rama Barrida", 1, 150, 20, 5,
-                    "Un barrido de rama a todo lo que tenga delante.",
-                    AnomalyRegistry.icon("PALE_OAK_LOG", "STICK"), f -> raiz(f).ramaBarrida());
-            add(list, "rz_esporas", "Esporas Ciegas", 1, 210, 30, 4,
-                    "Ciega a los tres que estén más lejos: esconderse no vale.",
-                    AnomalyRegistry.icon("SPORE_BLOSSOM", "LILY_PAD"), f -> raiz(f).esporasCiegas());
-            add(list, "rz_pisoton", "Pisotón de Raíz", 1, 240, 40, 4,
-                    "Golpea el suelo y la onda empuja a todos.",
-                    AnomalyRegistry.icon("PALE_OAK_PLANKS", "OAK_PLANKS"), f -> raiz(f).pisotonDeRaiz());
-            add(list, "rz_flores", "Flores que Cierran", 1, 230, 45, 4,
-                    "Dos eyeblossoms que se cierran y revientan.",
-                    AnomalyRegistry.icon("OPEN_EYEBLOSSOM", "POPPY"), f -> raiz(f).floresQueCierran());
-            add(list, "rz_llamada", "Llamada del Bosque", 1, 300, 30, 3,
-                    "Dos crujidos menores que pelean por él.",
-                    AnomalyRegistry.icon("PALE_OAK_SAPLING", "OAK_SAPLING"), f -> raiz(f).llamadaDelBosque());
-            add(list, "rz_savia", "Savia Negra", 1, 200, 25, 4,
-                    "Escupe savia: daño, veneno y empujón a los de cerca.",
-                    AnomalyRegistry.icon("INK_SAC", "COAL"), f -> raiz(f).saviaNegra());
-            add(list, "rz_jardin", "Jardín Falso", 2, 360, 40, 4,
-                    "Tres copias suyas que solo avanzan cuando nadie las mira.",
-                    AnomalyRegistry.icon("PALE_MOSS_BLOCK", "MOSS_BLOCK"), f -> raiz(f).jardinFalso());
-            add(list, "rz_roble", "Roble que Cae", 2, 260, 50, 4,
-                    "Un roble pálido cae en línea y aplasta lo que pille.",
-                    AnomalyRegistry.icon("PALE_OAK_WOOD", "OAK_WOOD"), f -> raiz(f).robleQueCae());
-            add(list, "rz_niebla", "Niebla de Musgo", 2, 300, 145, 3,
-                    "El aire se llena de musgo y no se ve nada.",
-                    AnomalyRegistry.icon("PALE_HANGING_MOSS", "VINE"), f -> raiz(f).nieblaDeMusgo());
-            add(list, "rz_cerco", "Cerco de Espinas", 2, 320, 95, 4,
-                    "Cuatro anillos que se cierran sobre el centro.",
-                    AnomalyRegistry.icon("SWEET_BERRIES", "DEAD_BUSH"), f -> raiz(f).cercoDeEspinas());
-            add(list, "rz_apagar", "Apagar el Bosque", 2, 280, 25, 3,
-                    "Se lleva la luz y solo se ve lo que él ilumina.",
-                    AnomalyRegistry.icon("CLOSED_EYEBLOSSOM", "BLACK_DYE"), f -> raiz(f).apagarElBosque());
-            add(list, "rz_escupe", "Escupitajo de Resina", 2, 190, 25, 5,
-                    "Clava a tres donde estén con resina.",
-                    AnomalyRegistry.icon("RESIN_CLUMP", "SLIME_BALL"), f -> raiz(f).escupitajoDeResina());
-            add(list, "rz_latido", "Latido que Empuja", 2, 230, 45, 4,
-                    "Tres latidos seguidos que apartan a todo el que esté pegado.",
-                    AnomalyRegistry.icon("CREAKING_HEART", "REDSTONE_BLOCK"), f -> raiz(f).latidoQueEmpuja());
-            add(list, "rz_embestida", "Lanza de Raíz", 3, 250, 40, 5,
-                    "Una raíz recta sale disparada hacia el más cercano; lo que pille en la línea, fuera.",
-                    AnomalyRegistry.icon("PALE_OAK_LOG", "OAK_LOG"), f -> raiz(f).lanzaDeRaiz());
-            add(list, "rz_sujetan", "Raíces que Sujetan", 3, 280, 65, 4,
-                    "Clava a cuatro en el sitio y les cobra mientras dura.",
-                    AnomalyRegistry.icon("HANGING_ROOTS", "CHAIN"), f -> raiz(f).raicesQueSujetan());
-            add(list, "rz_lluvia_ramas", "Lluvia de Ramas", 3, 340, 115, 4,
-                    "Se sacude y el área entera recibe ramas.",
-                    AnomalyRegistry.icon("STICK", "DEAD_BUSH"), f -> raiz(f).lluviaDeRamas());
-            add(list, "rz_mordisco", "Mordisco de Savia", 3, 220, 25, 4,
-                    "Muerde a dos y se cura con lo que les saca.",
-                    AnomalyRegistry.icon("ROTTEN_FLESH", "BEETROOT"), f -> raiz(f).mordiscoDeSavia());
-            add(list, "rz_ojos", "Campo de Ojos", 3, 330, 75, 4,
-                    "Nueve eyeblossoms por el suelo que estallan a la vez.",
-                    AnomalyRegistry.icon("OPEN_EYEBLOSSOM", "ENDER_EYE"), f -> raiz(f).campoDeOjos());
-            add(list, "rz_coraza", "Coraza de Corteza", 3, 300, 165, 3,
-                    "Se envuelve en corteza y recibe la mitad un rato.",
-                    AnomalyRegistry.icon("PALE_OAK_PLANKS", "SHIELD"), f -> raiz(f).corazaDeCorteza());
-            add(list, "rz_tira", "Rama que Tira", 3, 200, 25, 4,
-                    "Trae de vuelta a los tres que estén más lejos.",
-                    AnomalyRegistry.icon("FISHING_ROD", "LEAD"), f -> raiz(f).ramaQueTira());
-            add(list, "rz_crujido", "Crujido que Aturde", 3, 240, 25, 4,
-                    "Cruje: daño, náusea y lentitud a todo lo cercano.",
-                    AnomalyRegistry.icon("CREAKING_HEART", "NOTE_BLOCK"), f -> raiz(f).crujidoQueAturde());
-            add(list, "rz_marchita", "Suela Marchita", 4, 380, 135, 5,
-                    "El suelo se seca: solo salvan cuatro manchas verdes.",
-                    AnomalyRegistry.icon("DEAD_BUSH", "SAND"), f -> raiz(f).suelaMarchita());
-            add(list, "rz_mitades", "Dos Mitades", 4, 360, 30, 3,
-                    "Se parte en dos que pegan por separado.",
-                    AnomalyRegistry.icon("PALE_OAK_SLAB", "OAK_SLAB"), f -> raiz(f).dosMitades());
-            add(list, "rz_jaula", "Jaula de Raíces", 4, 400, 205, 4,
-                    "Cierra el jardín: quien salga del anillo vuelve a la fuerza.",
-                    AnomalyRegistry.icon("IRON_BARS", "HANGING_ROOTS"), f -> raiz(f).jaulaDeRaices());
-            add(list, "rz_manos", "Marchitar las Manos", 4, 300, 25, 4,
-                    "Fatiga y debilidad a todos, un rato largo.",
-                    AnomalyRegistry.icon("WITHER_ROSE", "FERMENTED_SPIDER_EYE"), f -> raiz(f).marchitarLasManos());
-            add(list, "rz_estallido", "Estallido de Esporas", 4, 320, 65, 5,
-                    "Explota en esporas: daño alto y veneno en diez bloques.",
-                    AnomalyRegistry.icon("SPORE_BLOSSOM", "TNT"), f -> raiz(f).estallidoDeEsporas());
-            add(list, "rz_vista", "Robar la Vista", 4, 280, 125, 3,
-                    "Ceguera a todos; solo él se ve.",
-                    AnomalyRegistry.icon("CLOSED_EYEBLOSSOM", "INK_SAC"), f -> raiz(f).robarLaVista());
-            add(list, "rz_zarpazos", "Tres Zarpazos", 4, 210, 40, 4,
-                    "Tres golpes seguidos, cada uno a alguien distinto.",
-                    AnomalyRegistry.icon("IRON_SWORD", "STICK"), f -> raiz(f).tresZarpazos());
-            add(list, "rz_hundirse", "Hundirse y Salir", 4, 290, 75, 4,
-                    "Se hunde y sale detrás del que estaba más lejos.",
-                    AnomalyRegistry.icon("PALE_MOSS_CARPET", "MOSS_CARPET"), f -> raiz(f).hundirseYSalir());
-            add(list, "rz_noche", "LA NOCHE PÁLIDA", 5, 1500, 215, 5,
-                    "Oscuridad total; solo se ve la flor que se enciende, y ahí pega.",
-                    AnomalyRegistry.icon("CLOSED_EYEBLOSSOM", "BLACK_CONCRETE"), f -> raiz(f).nochePalida());
-            add(list, "rz_cierra", "El Jardín se Cierra", 5, 460, 115, 5,
-                    "Catorce bloques que hay que abandonar o cuesta setenta.",
+            // FASE I (tambien en la II, con mas dano)
+            add(list, "rz_raices_jardin", "Raíces del Jardín", 1, 240, 45, 5,
+                    "Un sello bajo cada jugador; a 1,5 s brotan raíces que pegan y lanzan. Sal del círculo.",
+                    AnomalyRegistry.icon("HANGING_ROOTS", "VINE"), f -> raiz(f).raicesDelJardin());
+            add(list, "rz_anillo_espinas", "Anillo de Espinas", 1, 300, 60, 4,
+                    "Una onda de espinas por el suelo hasta el borde de la arena. Salta cuando pase.",
+                    AnomalyRegistry.icon("PALE_OAK_PLANKS", "OAK_PLANKS"), f -> raiz(f).anilloDeEspinas());
+            add(list, "rz_lluvia_resina", "Lluvia de Resina", 1, 280, 50, 4,
+                    "Cae resina en 8 a 12 marcas y deja charcos que ralentizan. Sal de la marca.",
+                    AnomalyRegistry.icon("RESIN_BLOCK", "HONEY_BLOCK"), f -> raiz(f).lluviaDeResina());
+            add(list, "rz_lanzas_palidas", "Lanzas Pálidas", 1, 240, 55, 5,
+                    "Una lanza de raíz recorre la línea hacia cada jugador. Sal de la línea.",
+                    AnomalyRegistry.icon("PALE_OAK_LOG", "OAK_LOG"), f -> raiz(f).lanzasPalidas());
+            // FASE II
+            add(list, "rz_jardin_cierra", "El Jardín se Cierra", 2, 400, 120, 4,
+                    "Dos anillos de raíces se cierran hacia él. Quédate en el hueco verde.",
                     AnomalyRegistry.icon("RESIN_BRICKS", "BRICKS"), f -> raiz(f).elJardinSeCierra());
-            add(list, "rz_barrido", "Barrido de Raíces", 5, 420, 155, 4,
-                    "Cinco raíces gigantes barren el área una tras otra.",
-                    AnomalyRegistry.icon("HANGING_ROOTS", "PALE_OAK_LOG"), f -> raiz(f).barridoDeRaices());
-            add(list, "rz_cosecha", "Cosecha Pálida", 5, 440, 105, 4,
-                    "Se lleva casi la mitad de la vida de todos y se cura con ella.",
-                    AnomalyRegistry.icon("WHEAT", "GOLDEN_HOE"), f -> raiz(f).cosechaPalida());
-            add(list, "rz_guardia", "Última Guardia", 5, 380, 40, 3,
-                    "Cuatro crujidos a la vez alrededor.",
-                    AnomalyRegistry.icon("PALE_OAK_SAPLING", "SKELETON_SKULL"), f -> raiz(f).ultimaGuardia());
-            add(list, "rz_marca", "Marca de Raíz", 5, 400, 205, 4,
-                    "Fija a uno y no lo suelta mientras viva.",
-                    AnomalyRegistry.icon("REDSTONE", "RED_DYE"), f -> raiz(f).marcaDeRaiz());
-            add(list, "rz_hojas", "Lluvia de Hojas", 5, 340, 165, 4,
-                    "Llueven hojas que cortan por toda el área.",
-                    AnomalyRegistry.icon("PALE_OAK_LEAVES", "OAK_LEAVES"), f -> raiz(f).lluviaDeHojas());
-            add(list, "rz_comun", "Raíz Común", 5, 300, 30, 3,
-                    "Se cura con cada crujido suyo que siga vivo.",
-                    AnomalyRegistry.icon("PALE_MOSS_BLOCK", "MOSS_BLOCK"), f -> raiz(f).raizComun());
+            add(list, "rz_cruz_raices", "Cruz de Raíces", 2, 420, 120, 4,
+                    "Cuatro brazos de raíz giran media vuelta en 6 s. No pises un brazo.",
+                    AnomalyRegistry.icon("PALE_OAK_WOOD", "OAK_WOOD"), f -> raiz(f).cruzDeRaices());
+            add(list, "rz_esporas_palidas", "Esporas", 2, 300, 65, 4,
+                    "Una nube sigue al grupo más junto y estalla. Más gente dentro, más daño. Sepárense.",
+                    AnomalyRegistry.icon("SPORE_BLOSSOM", "LILY_PAD"), f -> raiz(f).esporas());
+            // FASE III
+            add(list, "rz_latido_corazon", "Latido", 3, 300, 110, 5,
+                    "Tres pulsos por el suelo, cada uno más rápido. Salta cada uno.",
+                    AnomalyRegistry.icon("CREAKING_HEART", "REDSTONE_BLOCK"), f -> raiz(f).latido());
+            add(list, "rz_bosque_lanzas", "Bosque de Lanzas", 3, 420, 90, 4,
+                    "Toda la arena se llena de raíces salvo unos círculos verdes. Entra en uno.",
+                    AnomalyRegistry.icon("HANGING_ROOTS", "PALE_OAK_LOG"), f -> raiz(f).bosqueDeLanzas());
+            add(list, "rz_cosecha_grupo", "Cosecha", 3, 380, 65, 4,
+                    "Un círculo sobre el que más daño le hizo; el golpe se reparte entre los de dentro.",
+                    AnomalyRegistry.icon("WHEAT", "GOLDEN_HOE"), f -> raiz(f).cosecha());
+            add(list, net.ederus.edm.anomaly.boss.Raiz.ESTALLIDO, "ESTALLIDO DEL CORAZÓN", 3, 900, 125, 6,
+                    "Carga 5 s y golpea a todos. Solo se salva quien esté detrás de un pilar de raíz.",
+                    AnomalyRegistry.icon("CREAKING_HEART", "TNT"), f -> raiz(f).estallidoDelCorazon());
             return skills.aplicar(id(), list);
         }
 
