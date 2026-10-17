@@ -452,11 +452,20 @@ public abstract class BossFight {
         return false;
     }
 
+    /**
+     * Si el jefe puede elegir ESTA habilidad en esta fase. Por omision, la fase de su
+     * ficha (0 = cualquiera). Lo sobreescribe ROTTEN: sus hechizos de la fase I siguen
+     * en la II, y la Mirada del Jardin sale una sola vez por fase.
+     */
+    protected boolean puedeLanzar(Ability a, int fase) {
+        return a.availableIn(fase);
+    }
+
     private void tryCast() {
         List<Ability> pool = new ArrayList<>();
         int total = 0;
         for (Ability a : abilities) {
-            if (!a.availableIn(phase) || !a.ready(ticks)) continue;
+            if (!puedeLanzar(a, phase) || !a.ready(ticks)) continue;
             pool.add(a);
             total += a.weight();
         }
@@ -739,8 +748,7 @@ public abstract class BossFight {
     /**
      * Aviso de que el jefe acaba de encajar un golpe, con la cifra ya reescalada.
      *
-     * Por omision no hace nada. Lo usa RAIZ: mientras VENGA, cada golpe que recibe se
-     * guarda para devolverlo entero. Va aparte del multiplicador porque no se trata de
+     * Por omision no hace nada. Va aparte del multiplicador porque no se trata de
      * reducir el dano, sino de APUNTARLO.
      */
     public void onIncomingDamage(double amount) {
