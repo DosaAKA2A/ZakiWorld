@@ -641,7 +641,16 @@ public final class AnomalyCommand implements CommandExecutor, TabCompleter {
         LivingEntity boss = ev.fight().entity();
         boolean shielded = boss.isInvulnerable();
         boss.setInvulnerable(false);
-        boss.setHealth(Math.max(0, boss.getHealth() - amount));
+        /* El suelo de fase (survivalFloor) tambien para la prueba: el setHealth a pelo se
+         * lo saltaba y ROTTEN podia morir en la fase I sin pasar por la flor. Los jefes
+         * sin suelo (0) siguen igual. */
+        double vida = Math.max(0, boss.getHealth() - amount);
+        double suelo = ev.fight().survivalFloor();
+        if (suelo > 0) {
+            double max = net.ederus.edm.comun.Compat.getAttribute(boss, "max_health", boss.getHealth());
+            vida = Math.max(vida, Math.min(boss.getHealth(), max * suelo));
+        }
+        boss.setHealth(vida);
         if (shielded && boss.getHealth() > 0) boss.setInvulnerable(true);
         sender.sendMessage(plugin.prefix().append(Component.text(
                 "Vida del jefe: " + ((int) boss.getHealth()) + "  ("

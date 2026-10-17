@@ -639,8 +639,12 @@ public final class AnomalyManager implements Listener {
 
     // -------------------------------------------------------------------- escuchas
 
-    /** Las pociones que revientan cerca de la pelea, para los jefes que las esperan (ROTTEN). */
-    @EventHandler(ignoreCancelled = true, priority = EventPriority.MONITOR)
+    /**
+     * Las pociones que revientan cerca de la pelea, para los jefes que las esperan (ROTTEN).
+     * Tambien las canceladas: una region con potion-splash en deny (el coliseo) cancela el
+     * evento, la pocion revienta igual a la vista y la flor no la contaba nunca.
+     */
+    @EventHandler(ignoreCancelled = false, priority = EventPriority.MONITOR)
     public void onPotionSplash(org.bukkit.event.entity.PotionSplashEvent e) {
         if (current == null || current.fight() == null) return;
         Location where = e.getEntity().getLocation();
