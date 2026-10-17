@@ -22,7 +22,7 @@
   "minecraft:audio/ambient_sounds": {
    "additions": {
     "sound": "minecraft:block.cherry_leaves.step",
-    "tick_chance": 0.006
+    "tick_chance": 0.0015
    },
    "mood": {
     "sound": "minecraft:ambient.cave",

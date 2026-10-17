@@ -35,7 +35,7 @@
   "minecraft:audio/ambient_sounds": {
    "additions": {
     "sound": "minecraft:entity.zombie_villager.ambient",
-    "tick_chance": 0.002
+    "tick_chance": 0.0012
    },
    "mood": {
     "sound": "minecraft:ambient.cave",

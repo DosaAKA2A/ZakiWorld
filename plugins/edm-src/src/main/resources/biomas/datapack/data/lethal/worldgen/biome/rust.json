@@ -18,8 +18,8 @@
   ],
   "minecraft:audio/ambient_sounds": {
    "additions": {
-    "sound": "minecraft:block.copper_bulb.turn_off",
-    "tick_chance": 0.004
+    "sound": "minecraft:block.chain.hit",
+    "tick_chance": 0.0012
    },
    "mood": {
     "sound": "minecraft:ambient.cave",

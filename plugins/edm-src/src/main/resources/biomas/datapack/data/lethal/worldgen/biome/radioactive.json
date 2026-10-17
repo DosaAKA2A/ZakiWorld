@@ -25,7 +25,7 @@
    "loop": "minecraft:ambient.basalt_deltas.loop",
    "additions": {
     "sound": "minecraft:block.sculk_sensor.clicking",
-    "tick_chance": 0.03
+    "tick_chance": 0.0012
    },
    "mood": {
     "sound": "minecraft:ambient.warped_forest.mood",

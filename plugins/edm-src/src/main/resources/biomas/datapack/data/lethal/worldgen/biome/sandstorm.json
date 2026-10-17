@@ -24,10 +24,10 @@
    }
   ],
   "minecraft:audio/ambient_sounds": {
-   "loop": "minecraft:item.elytra.flying",
+   "loop": "minecraft:ambient.basalt_deltas.loop",
    "additions": {
     "sound": "minecraft:block.sand.idle",
-    "tick_chance": 0.012
+    "tick_chance": 0.002
    },
    "mood": {
     "sound": "minecraft:ambient.basalt_deltas.mood",

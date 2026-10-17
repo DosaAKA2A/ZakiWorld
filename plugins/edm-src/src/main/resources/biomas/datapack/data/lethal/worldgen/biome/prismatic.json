@@ -7,8 +7,8 @@
   "minecraft:gameplay/monsters_burn": false,
   "minecraft:audio/ambient_sounds": {
    "additions": {
-    "sound": "minecraft:block.amethyst_block.chime",
-    "tick_chance": 0.008
+    "sound": "minecraft:block.amethyst_cluster.hit",
+    "tick_chance": 0.0012
    },
    "mood": {
     "sound": "minecraft:ambient.cave",

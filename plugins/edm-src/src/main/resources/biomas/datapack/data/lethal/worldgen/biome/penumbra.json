@@ -25,7 +25,7 @@
    "loop": "minecraft:ambient.soul_sand_valley.loop",
    "additions": {
     "sound": "minecraft:ambient.soul_sand_valley.additions",
-    "tick_chance": 0.02
+    "tick_chance": 0.002
    },
    "mood": {
     "sound": "minecraft:ambient.soul_sand_valley.mood",

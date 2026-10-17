@@ -30,7 +30,7 @@
   "minecraft:audio/ambient_sounds": {
    "additions": {
     "sound": "minecraft:block.note_block.bit",
-    "tick_chance": 0.012
+    "tick_chance": 0.001
    },
    "mood": {
     "sound": "minecraft:ambient.cave",

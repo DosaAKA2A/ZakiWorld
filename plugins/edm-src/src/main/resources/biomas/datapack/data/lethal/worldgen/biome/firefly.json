@@ -23,8 +23,8 @@
   ],
   "minecraft:audio/ambient_sounds": {
    "additions": {
-    "sound": "minecraft:entity.frog.ambient",
-    "tick_chance": 0.006
+    "sound": "minecraft:block.firefly_bush.idle",
+    "tick_chance": 0.002
    },
    "mood": {
     "sound": "minecraft:ambient.cave",

@@ -27,10 +27,10 @@
    }
   ],
   "minecraft:audio/ambient_sounds": {
-   "loop": "minecraft:item.elytra.flying",
+   "loop": "minecraft:ambient.basalt_deltas.loop",
    "additions": {
     "sound": "minecraft:entity.lightning_bolt.thunder",
-    "tick_chance": 0.0015
+    "tick_chance": 0.0012
    },
    "mood": {
     "sound": "minecraft:ambient.cave",

@@ -27,8 +27,8 @@
   ],
   "minecraft:audio/ambient_sounds": {
    "additions": {
-    "sound": "minecraft:entity.firework_rocket.twinkle",
-    "tick_chance": 0.006
+    "sound": "minecraft:entity.firework_rocket.twinkle_far",
+    "tick_chance": 0.0008
    },
    "mood": {
     "sound": "minecraft:ambient.cave",

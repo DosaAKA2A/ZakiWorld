@@ -18,7 +18,7 @@
   "minecraft:audio/ambient_sounds": {
    "additions": {
     "sound": "minecraft:block.amethyst_block.chime",
-    "tick_chance": 0.002
+    "tick_chance": 0.0012
    },
    "mood": {
     "sound": "minecraft:ambient.cave",

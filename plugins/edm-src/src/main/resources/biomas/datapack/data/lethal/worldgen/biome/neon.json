@@ -28,10 +28,10 @@
    }
   ],
   "minecraft:audio/ambient_sounds": {
-   "loop": "minecraft:block.beacon.ambient",
+   "loop": "minecraft:ambient.warped_forest.loop",
    "additions": {
     "sound": "minecraft:block.copper_bulb.turn_on",
-    "tick_chance": 0.006
+    "tick_chance": 0.001
    },
    "mood": {
     "sound": "minecraft:ambient.cave",
