@@ -61,6 +61,11 @@ final class Pintor {
             int cx = cx0;
             int cz = cz0;
             final Set<Long> billetes = new HashSet<>();
+            /* EDM 1.85.2 · Los billetes de carga van por plugin, no por quien los pide: si el trozo ya
+             * llevaba el de EDM (la arena de la anomalia abierta), al soltar aqui el "nuestro" se soltaba
+             * el de la arena, el trozo se descargaba sin nadie cerca y el jefe se iba con el (UNLOAD).
+             * Solo se suelta lo que se puso aqui. */
+            final Set<Long> puestos = new HashSet<>();
             List<Long> reenviar;
             int indice;
 
@@ -72,7 +77,10 @@ final class Pintor {
                         int bx = cx * 4, bz = cz * 4;
                         int chx = bx >> 4, chz = bz >> 4;
                         long clave = ((long) chx << 32) | (chz & 0xffffffffL);
-                        if (billetes.add(clave)) w.addPluginChunkTicket(chx, chz, Module.dueno(dueno));
+                        if (billetes.add(clave) && !yaLoTiene(w, chx, chz, Module.dueno(dueno))) {
+                            w.addPluginChunkTicket(chx, chz, Module.dueno(dueno));
+                            puestos.add(clave);
+                        }
                         for (int cy = cy0; cy <= cy1; cy++) {
                             w.setBiome(bx, cy * 4, bz, b);
                         }
@@ -97,13 +105,22 @@ final class Pintor {
                         }
                         hechos++;
                     }
-                    w.removePluginChunkTicket(chx, chz, Module.dueno(dueno));
+                    if (puestos.contains(clave)) w.removePluginChunkTicket(chx, chz, Module.dueno(dueno));
                 }
                 if (indice < reenviar.size()) return;
                 cancel();
                 if (alTerminar != null) alTerminar.run();
             }
         }.runTaskTimer(Module.dueno(dueno), 1L, 1L);
+    }
+
+    /** Si ese trozo ya tiene el billete de ese plugin (sin cargarlo: uno sin cargar no puede tenerlo). */
+    private static boolean yaLoTiene(World w, int chx, int chz, org.bukkit.plugin.Plugin dueno) {
+        try {
+            return w.isChunkLoaded(chx, chz) && w.getChunkAt(chx, chz).getPluginChunkTickets().contains(dueno);
+        } catch (Throwable t) {
+            return false;
+        }
     }
 
     private static boolean alguienCerca(World w, int chx, int chz) {

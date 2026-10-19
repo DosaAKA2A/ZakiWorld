@@ -1121,6 +1121,35 @@ public final class AnomalyManager implements Listener {
     }
 
     /**
+     * EDM 1.85.2 · Por que sale del mundo el jefe de la pelea abierta (muerte, despawn, chunk descargado, otro
+     * plugin...). Va al log y a la bitacora: sin esto, "se quedo sin jefe" no decia quien se lo llevo.
+     */
+    @EventHandler(priority = EventPriority.MONITOR)
+    public void onJefeFuera(org.bukkit.event.entity.EntityRemoveEvent e) {
+        ActiveAnomaly event = current;
+        if (event == null || event.fight() == null) return;
+        Entity en = e.getEntity();
+        if (!en.equals(event.fight().entity()) && !en.equals(event.fight().shell())) return;
+        String quien = en.equals(event.fight().entity()) ? "jefe" : "cuerpo";
+        Location l = en.getLocation();
+        String donde = (l.getWorld() == null ? "?" : l.getWorld().getName()) + " " + l.getBlockX() + " " + l.getBlockY() + " " + l.getBlockZ();
+        String causa = e.getCause().name();
+        if (e.getCause() == org.bukkit.event.entity.EntityRemoveEvent.Cause.PLUGIN) {
+            StringBuilder pila = new StringBuilder();
+            for (StackTraceElement st : Thread.currentThread().getStackTrace()) {
+                String c = st.getClassName();
+                if (c.startsWith("java.") || c.startsWith("jdk.") || c.startsWith("org.bukkit") || c.startsWith("net.minecraft")
+                        || c.startsWith("io.papermc") || c.startsWith("com.destroystokyo") || c.contains("AnomalyManager")) continue;
+                pila.append(" <- ").append(c.substring(c.lastIndexOf('.') + 1)).append('.').append(st.getMethodName());
+                if (pila.length() > 300) break;
+            }
+            causa += pila;
+        }
+        plugin.getLogger().warning("El " + quien + " de " + event.typeId() + " sale del mundo: " + causa + " (" + donde + ")");
+        plugin.bitacora().anotar("cuerpo", event.typeId(), quien + " fuera", causa, donde);
+    }
+
+    /**
      * EDM 1.85.2 · Lo que quedo de una anomalia anterior en un chunk que no estaba cargado al arrancar.
      *
      * Muchos jefes nacen persistentes (para recuperarlos si su chunk se descarga en plena pelea) y el barrido
