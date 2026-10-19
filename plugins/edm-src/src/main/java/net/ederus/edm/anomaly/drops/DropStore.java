@@ -519,7 +519,7 @@ public final class DropStore implements Listener {
         for (int i = 0; i < piles; i++) {
             int n = per + (i < rest ? 1 : 0);
             if (n <= 0) continue;
-            ItemStack copy = entry.item().clone();
+            ItemStack copy = SetLoot.actual(entry.item());
             copy.setAmount(n);
             Item it = w.dropItem(from, copy);
             Launch shot = aim(from, minD, maxD);

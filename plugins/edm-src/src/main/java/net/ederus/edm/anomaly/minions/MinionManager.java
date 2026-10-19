@@ -810,7 +810,7 @@ public final class MinionManager implements Listener {
                 int amount = entry.min() + (entry.max() > entry.min()
                         ? random.nextInt(entry.max() - entry.min() + 1) : 0);
                 while (amount > 0) {
-                    ItemStack copy = entry.item().clone();
+                    ItemStack copy = net.ederus.edm.anomaly.drops.SetLoot.actual(entry.item());
                     int n = Math.min(amount, Math.max(1, copy.getMaxStackSize()));
                     copy.setAmount(n);
                     drops.add(copy);

@@ -679,7 +679,7 @@ public final class Menus implements Listener {
             }
             // La cantidad se ve desde el propio inventario: el stack pinta el numero
             // que cae de verdad (el maximo de la horquilla), no hay que leer el lore.
-            ItemStack shown = entry.item().clone();
+            ItemStack shown = net.ederus.edm.anomaly.drops.SetLoot.actual(entry.item());
             shown.setAmount(Math.max(1, Math.min(64, entry.max())));
             inv.setItem(casilla, MenuUtil.decorate(shown, null, lore, entry.unique()));
         }

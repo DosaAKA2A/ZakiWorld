@@ -156,7 +156,7 @@ public final class Announcer {
             if (e.unique()) {
                 c = c.append(Component.text("✦ÚNICO ", NamedTextColor.AQUA, TextDecoration.BOLD));
             }
-            c = c.append(DropTable.nameOf(e.item()).colorIfAbsent(e.unique() ? NamedTextColor.AQUA : LOOT))
+            c = c.append(DropTable.nameOf(net.ederus.edm.anomaly.drops.SetLoot.actual(e.item())).colorIfAbsent(e.unique() ? NamedTextColor.AQUA : LOOT))
                     .append(Component.text("  x" + e.amountLabel(), TextColor.color(0xC79A3A)))
                     .append(Component.text("   " + DropTable.trimChance(e.chance()) + "%", DIM))
                     .append(Component.text("   " + e.to().display(), DIM))

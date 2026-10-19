@@ -157,7 +157,7 @@ public final class DropTable {
             line = line.append(Component.text("✦ÚNICO ", NamedTextColor.AQUA, TextDecoration.BOLD));
         }
         return line
-                .append(nameOf(star.item()).colorIfAbsent(accent))
+                .append(nameOf(SetLoot.actual(star.item())).colorIfAbsent(accent))
                 .append(Component.text("  x" + star.amountLabel(), NamedTextColor.GRAY))
                 .append(Component.text("  " + trimChance(star.chance()) + "%", NamedTextColor.DARK_GRAY))
                 .decoration(TextDecoration.ITALIC, false);

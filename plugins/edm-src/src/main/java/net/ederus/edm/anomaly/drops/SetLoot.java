@@ -43,7 +43,8 @@ public final class SetLoot {
             Map.entry("rabby", "BUNNY"),
             Map.entry("cazador", "CAZADOR"),
             Map.entry("piromante", "CENIZA_PIROMANTE"),
-            Map.entry("conde", "CONDE"));
+            Map.entry("conde", "CONDE"),
+            Map.entry("mimic", "MIMIC"));
 
     public static boolean disponible() {
         return Bukkit.getPluginManager().isPluginEnabled("MMOItems");
@@ -103,6 +104,29 @@ public final class SetLoot {
             }
         }
         return null;
+    }
+
+    /**
+     * EDM 1.85.2 · El objeto del botin tal como es HOY en MMOItems. La tabla guarda una foto
+     * del ItemStack de cuando se metio; si es de MMOItems, se vuelve a construir desde su
+     * plantilla (tipo e id) al caer y al enseñarlo, para que un cambio de lore o de stats
+     * llegue al botin sin tener que volver a meter el objeto. Si MMOItems no esta, la
+     * plantilla ya no existe o algo falla, sale la foto guardada. Siempre es una copia.
+     */
+    public static ItemStack actual(ItemStack guardado) {
+        if (guardado == null || !disponible()) return guardado == null ? null : guardado.clone();
+        try {
+            String tipo = MMOItems.getTypeName(guardado);
+            String id = MMOItems.getID(guardado);
+            if (tipo == null || id == null) return guardado.clone();
+            Type t = MMOItems.plugin.getTypes().get(tipo);
+            ItemStack hoy = t == null ? null : MMOItems.plugin.getItem(t, id);
+            if (hoy == null) return guardado.clone();
+            hoy.setAmount(guardado.getAmount());
+            return hoy;
+        } catch (Throwable fallo) {
+            return guardado.clone();
+        }
     }
 
     /** El TIPO e ID de MMOItems de un objeto, para comparar con las lineas `mi give`. */
