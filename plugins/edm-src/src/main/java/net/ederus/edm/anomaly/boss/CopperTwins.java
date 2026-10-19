@@ -70,6 +70,12 @@ public final class CopperTwins extends BossFight {
     private static final int PETRIFY_TICKS = 1200;
     /** El dano de la Marca de la Muerte. Practicamente un disparo unico. */
     private static final double DEATH_MARK_DAMAGE = 2000;
+    /**
+     * EDM 1.85.2 · Lo que pegan de diseno, sobre los numeros de cada habilidad. Con x1 se
+     * quedaban en 4-20 por golpe, muy por debajo del Conde (5-41); Dosa pidio ponerlos a su
+     * altura: con 2 quedan en 8-40 (64 con cinco capas de Herrumbre).
+     */
+    private static final double FUERZA = 2.0;
 
     private CopperGolem kam;
     /** Vida logica de KAM: la barra y la resurreccion se leen de aqui. */
@@ -578,7 +584,7 @@ public final class CopperTwins extends BossFight {
      */
     private void strike(LivingEntity source, Player p, double amount) {
         if (p == null || !Fx.isFightable(p)) return;
-        double dmg = amount * plugin.registry().damageMultiplier(event.type()) * abilityDamage();
+        double dmg = amount * FUERZA * plugin.registry().damageMultiplier(event.type()) * abilityDamage();
         dmg *= 1 + 0.12 * rust.getOrDefault(p.getUniqueId(), 0);
         final double golpe = dmg;
         event.markHit(p);
