@@ -1120,6 +1120,31 @@ public final class AnomalyManager implements Listener {
         });
     }
 
+    /**
+     * EDM 1.85.2 · Lo que quedo de una anomalia anterior en un chunk que no estaba cargado al arrancar.
+     *
+     * Muchos jefes nacen persistentes (para recuperarlos si su chunk se descarga en plena pelea) y el barrido
+     * de arranque solo ve lo cargado: un Herbola de una pelea cortada seguia guardado en el chunk del Coliseo y
+     * volvia a salir al acercarse alguien. Al cargar entidades se quita todo lo de una anomalia, salvo lo de la
+     * pelea abierta ahora mismo (su jefe, sus esbirros y su decoracion vuelven a su sitio).
+     */
+    @EventHandler
+    public void onEntidadesCargadas(org.bukkit.event.world.EntitiesLoadEvent e) {
+        ActiveAnomaly event = current;
+        String abierta = event == null ? null : event.typeId();
+        int quitadas = 0;
+        for (Entity en : e.getEntities()) {
+            if (!Tags.isOurs(en)) continue;
+            String de = Tags.isBoss(en) ? Tags.bossId(en) : Tags.isMinion(en) ? Tags.minionId(en) : null;
+            if (abierta != null && (de == null || abierta.equals(de))) continue;
+            Fx.safeRemove(en);
+            quitadas++;
+        }
+        if (quitadas > 0) {
+            plugin.getLogger().info("Barridas " + quitadas + " entidad(es) de una anomalía anterior al cargar un chunk.");
+        }
+    }
+
     @EventHandler
     public void onQuit(PlayerQuitEvent e) {
         ActiveAnomaly event = current;

@@ -182,6 +182,9 @@ public final class Raiz extends BossFight {
         flotaBase = Fx.ground(at, 8);
         boss = world().spawn(flotaBase.clone().add(0, 1.4, 0), Zombie.class, z -> {
             z.setPersistent(false);
+            /* 1.85.2 · Como el resto del catalogo. Sin esto Minecraft lo borraba al instante si no habia
+             * nadie a 128 bloques del centro (abrirla desde el warp del Coliseo): "se quedo sin jefe". */
+            z.setRemoveWhenFarAway(false);
             z.setShouldBurnInDay(false);
             z.setInvisible(true);
             z.setSilent(true);
@@ -208,6 +211,7 @@ public final class Raiz extends BossFight {
          * en supervivencia. Lo protegen onDamage y onEnvironmentalDamage del manager. */
         Creaking cuerpo = world().spawn(at, Creaking.class, c -> {
             c.setPersistent(false);
+            c.setRemoveWhenFarAway(false);
             c.setAI(false);
             c.setGravity(false);
             c.setSilent(false);

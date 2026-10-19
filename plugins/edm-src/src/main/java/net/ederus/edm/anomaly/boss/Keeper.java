@@ -108,6 +108,8 @@ public final class Keeper extends BossFight {
         Location at = arena.clone();
         boss = world().spawn(at, Warden.class, w -> {
             w.setPersistent(false);
+            // 1.85.2 · Como el resto del catalogo: que Minecraft no lo borre si nadie esta a 128 bloques.
+            w.setRemoveWhenFarAway(false);
             // El DOBLE de warden. A 2.0 pisa el suelo sin flotar; mas alla empieza
             // el problema de la caja de golpe que ya nos costo con Aragon.
             Compat.setAttribute(w, "scale", 2.0);
