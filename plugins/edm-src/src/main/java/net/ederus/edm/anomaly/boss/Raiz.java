@@ -737,11 +737,13 @@ public final class Raiz extends BossFight {
         return flotaBase != null ? flotaBase.clone() : Fx.ground(loc(), 6);
     }
 
-    /** Flota clavado en su sitio con un vaiven suave y de cara al mas cercano. */
+    /**
+     * Clavado en su sitio y de cara al mas cercano. 1.85.2 (Dosa: "que ya no flote"): de
+     * pie en el suelo; antes flotaba a 1,4 bloques con un vaiven. El nombre se queda.
+     */
     private void flotar() {
         if (flotaBase == null || boss == null || !boss.isValid()) return;
-        double alto = ritualActivo ? 0.1 : 1.4 + Math.sin(ticks() / 14.0) * 0.25;
-        Location l = flotaBase.clone().add(0, alto, 0);
+        Location l = flotaBase.clone();
         Player cerca = ticks() % 5 == 0 ? Fx.nearest(l, 40) : null;
         if (cerca != null) {
             Vector d = cerca.getLocation().toVector().subtract(l.toVector());
