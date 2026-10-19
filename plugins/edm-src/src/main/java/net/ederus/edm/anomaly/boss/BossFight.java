@@ -510,6 +510,8 @@ public abstract class BossFight {
     public void cleanup() {
         finished = true;
         clearAirTime();
+        // 1.85.2 · Nadie se queda en trance (en espectador) cuando acaba la pelea.
+        if (plugin.trance() != null) plugin.trance().salirTodos();
         if (shell != null) {
             /* Glow.clear ANTES de sacarlo: el maniqui es justo la entidad a la
              * que glowBody() le pone el color, y al sacarlo de 'spawned' se
@@ -782,6 +784,15 @@ public abstract class BossFight {
      * dejaria inmune a los golpes de la tecnica (el Combo Aereo de Rabby).
      */
     public boolean bloqueaCuerpoACuerpo(Player victim) {
+        return false;
+    }
+
+    /**
+     * EDM 1.85.2 · Un jugador hace clic derecho sobre otro durante la pelea. Devuelve true si
+     * la pelea lo ha usado (y se cancela el clic). Lo usan los Gemelos de Cobre para rascar
+     * con un hacha el oxido de un petrificado.
+     */
+    public boolean onPlayerUsePlayer(Player who, Player target) {
         return false;
     }
 

@@ -66,6 +66,8 @@ public final class AnomalyPlugin extends net.ederus.edm.Module {
     private net.ederus.edm.anomaly.minions.MinionManager minionManager;
     private net.ederus.edm.anomaly.minions.MinionWand minionWand;
     private net.ederus.edm.comun.Bitacora bitacora;
+    /** 1.85.2 · El trance con la vision del creeper (Esporas de ROTTEN). */
+    private net.ederus.edm.anomaly.core.Trance trance;
 
     @Override
     public void onEnable() {
@@ -108,6 +110,9 @@ public final class AnomalyPlugin extends net.ederus.edm.Module {
          * ignoran lo cancelado. */
         getServer().getPluginManager().registerEvents(guard, this);
         getServer().getPluginManager().registerEvents(manager, this);
+        trance = new net.ederus.edm.anomaly.core.Trance(this);
+        getServer().getPluginManager().registerEvents(trance, this);
+        trance.alArrancar();
         getServer().getPluginManager().registerEvents(
                 new net.ederus.edm.anomaly.core.PlayerDeaths(this), this);
         getServer().getPluginManager().registerEvents(menus, this);
@@ -166,6 +171,8 @@ public final class AnomalyPlugin extends net.ederus.edm.Module {
 
     @Override
     public void onDisable() {
+        // Antes que nada: que nadie se quede en espectador si el plugin se apaga.
+        if (trance != null) trance.salirTodos();
         if (manager != null) manager.shutdown();
         if (drops != null) drops.save();
         if (minionManager != null) {
@@ -354,6 +361,10 @@ public final class AnomalyPlugin extends net.ederus.edm.Module {
 
     public Settings settings() {
         return settings;
+    }
+
+    public net.ederus.edm.anomaly.core.Trance trance() {
+        return trance;
     }
 
     public AnomalyRegistry registry() {

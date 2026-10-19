@@ -386,6 +386,11 @@ public final class AnomalyRegistry {
      * jefe y de sus esbirros, y lo que disparan: eso lo multiplica el manager en el
      * evento de dano (AnomalyManager#onDamage).
      */
+    /** 1.85.2 · Un numero entero de la ficha de la anomalia (p. ej. trance-segundos de ROTTEN). */
+    public int fichaInt(AnomalyType type, String key, int def) {
+        return fichas.getInt(type.id(), key, def);
+    }
+
     public double damageMultiplier(AnomalyType type) {
         return Fx.clamp(fichas.getDouble(type.id(), "dano", 1.0),
                 0.1, MAX_DAMAGE_MULTIPLIER);

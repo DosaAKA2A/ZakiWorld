@@ -115,6 +115,12 @@ public final class CopperTwins extends BossFight {
     private final Map<UUID, Integer> rust = new HashMap<>();
     /** Quien esta petrificado ahora mismo, para no encadenar dos petrificaciones. */
     private final Set<UUID> petrified = new HashSet<>();
+    /** 1.85.2 · Hasta que tick dura cada petrificacion: rascarla con un hacha la acorta. */
+    private final Map<UUID, Long> petrifiedUntil = new HashMap<>();
+    /** 1.85.2 · Ultimo rascado de cada jugador (uno cada medio segundo como mucho). */
+    private final Map<UUID, Long> lastScrape = new HashMap<>();
+    /** Cada rascado con hacha quita esto: cinco rascados liberan al petrificado. */
+    private static final int SCRAPE_TICKS = PETRIFY_TICKS / 5;
 
     public CopperTwins(AnomalyPlugin plugin, ActiveAnomaly event, Location arena) {
         super(plugin, event, arena);
@@ -650,13 +656,17 @@ public final class CopperTwins extends BossFight {
         }, null);
     }
 
-    /** Deja a un jugador de piedra un minuto, con su brillo naranja de vergüenza. */
+    /**
+     * Deja a un jugador de piedra un minuto, con su brillo naranja de vergüenza. 1.85.2: sus
+     * compañeros pueden rascarle el oxido con un hacha (clic derecho): cada rascado le quita
+     * 12 s y con cinco queda libre (ver onPlayerUsePlayer).
+     */
     private void petrify(Player p) {
         if (!petrified.add(p.getUniqueId())) return;
+        petrifiedUntil.put(p.getUniqueId(), ticks() + PETRIFY_TICKS);
         Glow.clear(p);
         Glow.apply(p, NamedTextColor.GOLD);
         p.setGlowing(true);
-        root(p, PETRIFY_TICKS);
         Compat.apply(p, "slowness", PETRIFY_TICKS, 250);
         Compat.apply(p, "mining_fatigue", PETRIFY_TICKS, 250);
         Compat.apply(p, "weakness", PETRIFY_TICKS, 250);
@@ -668,6 +678,11 @@ public final class CopperTwins extends BossFight {
 
         animate(PETRIFY_TICKS, tick -> {
             if (!Fx.isFightable(p)) throw Stop.now();
+            long resta = petrifiedUntil.getOrDefault(p.getUniqueId(), 0L) - ticks();
+            if (resta <= 0) throw Stop.now();
+            // Clavado: lo que sube se corta (como root), caer se deja.
+            Vector v = p.getVelocity();
+            if (v.getY() > 0) p.setVelocity(new Vector(v.getX() * 0.2, -0.08, v.getZ() * 0.2));
             if (tick % 8 == 0) {
                 Fx.ring(p.getLocation().add(0, 1.0, 0), 0.6, 8, tick * 0.2, l ->
                         Compat.spawn(world(), Compat.DUST, l, 1, 0, 0, 0, 0, Compat.dust(KEM_RGB, 1.3f)));
@@ -675,10 +690,15 @@ public final class CopperTwins extends BossFight {
             if (tick % 20 == 0) {
                 p.sendActionBar(Component.text("PETRIFICADO  ", TextColor.color(KEM_RGB),
                         TextDecoration.BOLD)
-                        .append(Component.text(((PETRIFY_TICKS - tick) / 20) + "s", NamedTextColor.WHITE)));
+                        .append(Component.text((resta / 20) + "s", NamedTextColor.WHITE))
+                        .append(Component.text("  ·  que te rasquen con un hacha", NamedTextColor.GRAY)));
             }
         }, () -> {
             petrified.remove(p.getUniqueId());
+            petrifiedUntil.remove(p.getUniqueId());
+            p.removePotionEffect(org.bukkit.potion.PotionEffectType.SLOWNESS);
+            p.removePotionEffect(org.bukkit.potion.PotionEffectType.MINING_FATIGUE);
+            p.removePotionEffect(org.bukkit.potion.PotionEffectType.WEAKNESS);
             Glow.clear(p);
             p.setGlowing(false);
             if (Fx.isFightable(p)) {
@@ -686,6 +706,46 @@ public final class CopperTwins extends BossFight {
                         NamedTextColor.GREEN));
             }
         });
+    }
+
+    /**
+     * 1.85.2 · Rascar el oxido: clic derecho con un hacha sobre un petrificado le quita 12 s
+     * (cinco rascados lo liberan), con el sonido y las chispas de rascar cobre y un punto
+     * de durabilidad del hacha. Quien esta petrificado no puede rascar a otro.
+     */
+    @Override
+    public boolean onPlayerUsePlayer(Player who, Player target) {
+        Long hasta = petrifiedUntil.get(target.getUniqueId());
+        if (hasta == null) return false;
+        if (petrified.contains(who.getUniqueId()) || !Fx.isFightable(who)) return true;
+        org.bukkit.inventory.ItemStack mano = who.getInventory().getItemInMainHand();
+        if (!mano.getType().name().endsWith("_AXE")) {
+            who.sendActionBar(Component.text("Rasca el óxido con un hacha.", TextColor.color(KEM_RGB)));
+            return true;
+        }
+        long ahora = ticks();
+        if (ahora - lastScrape.getOrDefault(who.getUniqueId(), -100L) < 10) return true;
+        lastScrape.put(who.getUniqueId(), ahora);
+        long nuevo = hasta - SCRAPE_TICKS;
+        petrifiedUntil.put(target.getUniqueId(), nuevo);
+        try {
+            mano.damage(1, who);
+        } catch (Throwable ignored) {
+        }
+        Location en = target.getLocation().add(0, 1.0, 0);
+        world().spawnParticle(org.bukkit.Particle.SCRAPE, en, 14, 0.35, 0.6, 0.35, 0.4);
+        soundAt(en, "item.axe.scrape", 1.2f, 1.0f);
+        int quedan = (int) Math.max(0, (nuevo - ahora + SCRAPE_TICKS - 1) / SCRAPE_TICKS);
+        if (nuevo <= ahora) {
+            who.sendActionBar(Component.text("Liberaste a " + target.getName() + ".", NamedTextColor.GREEN));
+            soundAt(en, "block.copper.break", 1.4f, 1.2f);
+        } else {
+            who.sendActionBar(Component.text("Rascando el óxido de " + target.getName() + "  ·  faltan " + quedan,
+                    TextColor.color(KEM_RGB)));
+            target.sendActionBar(Component.text(who.getName() + " te rasca el óxido  ·  faltan " + quedan,
+                    NamedTextColor.GREEN));
+        }
+        return true;
     }
 
     /**
@@ -1453,6 +1513,8 @@ public final class CopperTwins extends BossFight {
             p.setGlowing(false);
         }
         petrified.clear();
+        petrifiedUntil.clear();
+        lastScrape.clear();
         rust.clear();
         if (kam != null && kam.isValid()) {
             Glow.clear(kam);

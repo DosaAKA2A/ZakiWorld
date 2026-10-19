@@ -667,6 +667,15 @@ public final class AnomalyManager implements Listener {
      */
     @EventHandler(ignoreCancelled = true, priority = EventPriority.LOWEST)
     public void onInteract(PlayerInteractEntityEvent e) {
+        // 1.85.2 · Clic derecho de un jugador a otro: la pelea puede usarlo (rascar el oxido
+        // de un petrificado en los Gemelos de Cobre).
+        if (e.getRightClicked() instanceof Player otro && e.getHand() == org.bukkit.inventory.EquipmentSlot.HAND) {
+            ActiveAnomaly event = current;
+            if (event != null && event.fight() != null && event.fight().onPlayerUsePlayer(e.getPlayer(), otro)) {
+                e.setCancelled(true);
+            }
+            return;
+        }
         if (isOurFighter(e.getRightClicked())) e.setCancelled(true);
     }
 

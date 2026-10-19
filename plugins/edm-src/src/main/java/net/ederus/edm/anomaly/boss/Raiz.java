@@ -1191,6 +1191,7 @@ public final class Raiz extends BossFight {
                     impacto(p, musgo);
                     p.addPotionEffect(new PotionEffect(PotionEffectType.POISON, 60, 0, true, false, false));
                 }
+                trancePorEsporas(dentro, nube);
                 // Revienta como una bola de polen: nube blanca, rafaga y esporas por todo el radio.
                 Location boom = nube.clone().add(0, 1.2, 0);
                 fx(Compat.CLOUD, boom, 30, radio * 0.45, 0.6, radio * 0.45, 0.04, null);
@@ -1203,6 +1204,40 @@ public final class Raiz extends BossFight {
                 soundAt(boom, "entity.generic.explode", 1.0f, 1.2f);
             }
         }, null);
+    }
+
+    /**
+     * EDM 1.85.2 · Las esporas alucinan: quien estaba dentro al estallar entra en TRANCE
+     * (la vision del creeper, sin poder hacer nada) durante trance-segundos de la ficha
+     * (4 de serie; 0 lo apaga). Si dentro estaba todo el grupo, se libra el que mas dano
+     * le ha hecho, para que la pelea nunca se quede sin nadie. Tras un trance hay 20 s de
+     * inmunidad, y los de Bedrock no entran (ver Trance).
+     */
+    private void trancePorEsporas(List<Player> dentro, Location nube) {
+        var trance = plugin.trance();
+        int segundos = plugin.registry().fichaInt(event.type(), "trance-segundos", 4);
+        if (trance == null || segundos <= 0 || dentro.isEmpty()) return;
+        List<Player> caen = new ArrayList<>(dentro);
+        if (caen.size() >= targets().size()) {
+            Player mejor = null;
+            double max = -1;
+            for (Player p : caen) {
+                double d = event.damage().getOrDefault(p.getUniqueId(), 0.0);
+                if (d > max) {
+                    max = d;
+                    mejor = p;
+                }
+            }
+            caen.remove(mejor);
+        }
+        int entraron = 0;
+        for (Player p : caen) {
+            if (trance.entrar(p, nube.clone().add(0, 1, 0), segundos * 20, e -> track(e))) entraron++;
+        }
+        if (entraron > 0) {
+            announce(Component.text(entraron == 1 ? "Uno respiró las esporas: está en trance."
+                    : entraron + " respiraron las esporas: están en trance.", ACCENT));
+        }
     }
 
     // =========================================================================
