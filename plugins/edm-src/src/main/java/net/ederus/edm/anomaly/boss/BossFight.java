@@ -777,6 +777,15 @@ public abstract class BossFight {
     }
 
     /**
+     * EDM 1.85.2 · Si el golpe cuerpo a cuerpo del jefe (su atributo, no hit()) se anula ahora.
+     * Para las tecnicas en las que el jefe va pegado a la victima y su golpe vanilla le
+     * dejaria inmune a los golpes de la tecnica (el Combo Aereo de Rabby).
+     */
+    public boolean bloqueaCuerpoACuerpo(Player victim) {
+        return false;
+    }
+
+    /**
      * Aviso de que uno de los esbirros del jefe acaba de morir. El Coro Abisal lo usa
      * para comprobar si lo mataron en el orden correcto.
      */
@@ -873,6 +882,18 @@ public abstract class BossFight {
      * trae un 'cast' mas corto que la animacion actual: sin esto ese golpe perdia el
      * 'dano' de la habilidad y contaba como x1.0.
      */
+    /**
+     * EDM 1.85.2 · Un golpe de una tanda rapida (combos, rafagas). Minecraft deja al jugador
+     * inmune unos 10 ticks tras cada golpe y en ese rato solo entra lo que supere al anterior:
+     * una tanda de golpes pequenos seguidos se perdia casi entera, y entera si el jefe le
+     * acababa de pegar cuerpo a cuerpo. Este golpe borra esa inmunidad antes de pegar.
+     */
+    public void hitRapido(Player p, double amount) {
+        if (p == null) return;
+        p.setNoDamageTicks(0);
+        hit(p, amount);
+    }
+
     public void hit(Player p, double amount, double abilityMult) {
         if (p == null || !Fx.isFightable(p)) return;
         amount *= plugin.registry().damageMultiplier(event.type()) * abilityMult;

@@ -770,6 +770,11 @@ public final class AnomalyManager implements Listener {
          * lo que disparan o invocan (flechas, bolas de fuego, colmillos, nubes). Lo
          * que ya viene de hit() o de un golpe de habilidad trae el multiplicador puesto
          * y se marca mientras dura (dealingScaledDamage), asi que aqui no se repite. */
+        if (victim instanceof Player hurtNow && boss != null && e.getDamager().equals(boss)
+                && !event.fight().dealingScaledDamage() && event.fight().bloqueaCuerpoACuerpo(hurtNow)) {
+            e.setCancelled(true);
+            return;
+        }
         if (victim instanceof Player && !event.fight().dealingScaledDamage()
                 && PlayerDeaths.fromAnomaly(e.getDamager(), event)) {
             double mult = plugin.registry().damageMultiplier(event.type());

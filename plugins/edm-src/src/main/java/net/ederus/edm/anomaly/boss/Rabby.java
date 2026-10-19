@@ -67,6 +67,8 @@ public final class Rabby extends BossFight {
 
     private boolean angry;
     private boolean concentrated;
+    /** 1.85.2 · Mientras dura el Combo Aereo no pega cuerpo a cuerpo: taparia los golpes del combo. */
+    private boolean enCombo;
     private long concentrationUntil;
     private double damageBonus = 1.0;
 
@@ -395,7 +397,7 @@ public final class Rabby extends BossFight {
                 if (!alive()) return;
                 Player near = Fx.nearest(boss.getLocation(), 4.5);
                 if (near == null) return;
-                hit(near, 4 * power());
+                hitRapido(near, 4 * power());
                 Compat.spawn(world(), Compat.CRIT, near.getLocation().add(0, 1.2, 0), 8, 0.25, 0.3, 0.25, 0.2);
                 Compat.spawn(world(), Compat.SWEEP_ATTACK, near.getLocation().add(0, 1, 0), 1);
                 soundAt(near.getLocation(), "entity.player.attack.strong", 1.0f,
@@ -428,6 +430,7 @@ public final class Rabby extends BossFight {
             if (!alive() || !Fx.isFightable(victim)) return;
             hit(victim, 10 * power());
             lift(victim, new Vector(0, 1.9, 0));
+            enCombo = true;
             Compat.spawn(world(), Compat.SONIC_BOOM, victim.getLocation().add(0, 1, 0), 1);
             soundAt(victim.getLocation(), "block.anvil.land", 1.3f, 1.9f);
 
@@ -450,7 +453,7 @@ public final class Rabby extends BossFight {
                     face(victim.getEyeLocation());
                     lift(victim, new Vector(0, 0.06, 0));
                     if (tick % 7 == 0) {
-                        hit(victim, 5 * power());
+                        hitRapido(victim, 5 * power());
                         Compat.spawn(world(), Compat.CRIT, victim.getLocation().add(0, 1, 0), 12,
                                 0.3, 0.3, 0.3, 0.25);
                         Compat.spawn(world(), Compat.SWEEP_ATTACK, victim.getLocation().add(0, 1, 0), 1);
@@ -470,7 +473,7 @@ public final class Rabby extends BossFight {
                 later(16, () -> {
                     if (!Fx.isFightable(victim)) return;
                     Location impact = Fx.ground(victim.getLocation(), 6);
-                    hit(victim, 22 * power());
+                    hitRapido(victim, 22 * power());
                     Compat.spawn(world(), Compat.EXPLOSION_EMITTER, impact, 1);
                     Compat.spawn(world(), Compat.DUST_PILLAR, impact, 30, 1.4, 0.2, 1.4, 0,
                             Material.STONE.createBlockData());
@@ -484,8 +487,13 @@ public final class Rabby extends BossFight {
                     if (under != null) boss.teleport(impact.clone().add(1.5, 0, 0));
                 });
                 throw Stop.now();
-            }, null);
+            }, () -> enCombo = false);
         });
+    }
+
+    @Override
+    public boolean bloqueaCuerpoACuerpo(Player victim) {
+        return enCombo;
     }
 
     /** 6. Acoso Relampago: se teletransporta a cuatro sitios pegando en cada uno. */
