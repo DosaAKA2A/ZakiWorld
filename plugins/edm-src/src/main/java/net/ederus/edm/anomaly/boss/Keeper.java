@@ -58,6 +58,18 @@ public final class Keeper extends BossFight {
     /** El verdeazul de las almas del pecho. */
     private static final int SOUL_TEAL = 0x1FA8B8;
 
+    /**
+     * EDM 1.85.2 · Lo que pega de diseno, sobre los numeros de cada habilidad (todas pasan
+     * por hit(Player, double)). Con x1 se quedaba en 6-26 por golpe, corto al lado del
+     * Conde (5-41); Dosa pidio subirlo: con 1.6 queda en 9,6-41,6.
+     */
+    private static final double FUERZA = 1.6;
+
+    @Override
+    public void hit(Player p, double amount) {
+        super.hit(p, amount * FUERZA);
+    }
+
     /** Donde estaba cada jugador hace medio segundo: asi se "oyen" las vibraciones. */
     private final Map<UUID, Location> lastSeen = new HashMap<>();
     /** Posiciones congeladas para el juicio del Cataclismo: quieto o boom. */
