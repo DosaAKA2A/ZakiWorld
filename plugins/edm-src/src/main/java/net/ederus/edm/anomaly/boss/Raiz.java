@@ -76,7 +76,8 @@ public final class Raiz extends BossFight {
     private static final int SEGURO = 0x9FD6A0;
 
     /*
-     * ROTTEN se pinta SOLO con particulas (nada de BlockDisplay/ItemDisplay): cada
+     * ROTTEN se pinta SOLO con particulas (nada de BlockDisplay/ItemDisplay; la unica
+     * excepcion, desde 1.85.2, es la flor quieta dentro del vidrio del pilar): cada
      * hechizo con su firma, sacada del jardin palido. Las astillas y el polvo de bloque
      * (BLOCK, FALLING_DUST) son lo que Bedrock ve bien; TRAIL, BLOCK_CRUMBLE,
      * BLOCK_MARKER y DUST_PILLAR son adorno que Geyser puede no traducir.
@@ -88,6 +89,8 @@ public final class Raiz extends BossFight {
     private final BlockData raigambre = Material.ROOTED_DIRT.createBlockData();
     private final BlockData ojo = Material.OPEN_EYEBLOSSOM.createBlockData();
     private final ItemStack grumo = new ItemStack(Material.RESIN_CLUMP);
+    /** 1.85.2 · La flor en maceta, dentro del vidrio (un bloque real no cabe en su casilla). */
+    private org.bukkit.entity.BlockDisplay florDentro;
 
     /** Lo que la Mirada del Jardin cobra al que no estaba mirando: parte de su vida maxima. */
     private static final double MIRADA_FRACCION = 0.60;
@@ -580,15 +583,29 @@ public final class Raiz extends BossFight {
     }
 
     /**
-     * Una eyeblossom abierta en maceta, bloque de verdad, encima del vidrio (si ahi hay
-     * aire): se presta como el pilar provisional y se devuelve al cerrar. La maceta no
-     * se cae con las actualizaciones de bloque y la pocion revienta contra ella o contra
-     * el vidrio, las dos dentro del radio. La columna de luz la pinta tickRitual.
+     * EDM 1.85.2 (Dosa: "la flor deberia estar dentro del cristal") · Una eyeblossom abierta
+     * en maceta DENTRO del vidrio: un BlockDisplay quieto a escala 0,62, centrado en la
+     * casilla, porque un bloque real no cabe donde ya esta el vidrio. Antes era una maceta
+     * real encima. La pocion sigue reventando contra el vidrio. Es de la pelea (track) y no
+     * se guarda en el mundo; limpiarFlor la quita. La columna de luz la pinta tickRitual.
      */
     private void plantarFlor(Location vidrio) {
-        org.bukkit.block.Block encima = vidrio.getBlock().getRelative(org.bukkit.block.BlockFace.UP);
-        if (encima.getType().isAir()) prestar(encima, Material.POTTED_OPEN_EYEBLOSSOM);
-        Location centro = vidrio.clone().add(0.5, 1.2, 0.5);
+        if (florDentro != null && florDentro.isValid()) florDentro.remove();
+        florDentro = null;
+        final float esc = 0.62f;
+        try {
+            florDentro = track(world().spawn(vidrio.getBlock().getLocation(), org.bukkit.entity.BlockDisplay.class, e -> {
+                e.setBlock(Material.POTTED_OPEN_EYEBLOSSOM.createBlockData());
+                e.setPersistent(false);
+                e.setShadowRadius(0.0f);
+                e.setTransformation(new org.bukkit.util.Transformation(
+                        new org.joml.Vector3f((1 - esc) / 2f, 0.04f, (1 - esc) / 2f), new org.joml.Quaternionf(),
+                        new org.joml.Vector3f(esc, esc, esc), new org.joml.Quaternionf()));
+            }));
+        } catch (Throwable ignored) {
+            florDentro = null;
+        }
+        Location centro = vidrio.clone().add(0.5, 0.5, 0.5);
         fx(Compat.BLOCK, centro, 16, 0.3, 0.3, 0.3, 0, ojo);
         fx(Compat.FALLING_SPORE_BLOSSOM, centro.clone().add(0, 2, 0), 12, 0.6, 0.4, 0.6, 0, null);
     }
@@ -689,9 +706,9 @@ public final class Raiz extends BossFight {
     }
 
     /**
-     * Lo prestado (la maceta y el pilar provisional) es de la pelea: ArenaGuard no deja
-     * sacar la flor de la maceta y la rotura se cancela sin soltar nada. Se devuelve
-     * en limpiarFlor.
+     * Lo prestado (el pilar provisional) es de la pelea: la rotura se cancela sin soltar
+     * nada y se devuelve en limpiarFlor. La flor (1.85.2) ya no es un bloque: es un
+     * display dentro del vidrio.
      */
     @Override
     public boolean ownsBlock(org.bukkit.block.Block block) {
@@ -705,7 +722,9 @@ public final class Raiz extends BossFight {
 
     private void limpiarFlor() {
         florEn = null;
-        /* Lo prestado (el pilar provisional y la maceta de encima) se devuelve tal cual
+        if (florDentro != null && florDentro.isValid()) florDentro.remove();
+        florDentro = null;
+        /* Lo prestado (el pilar provisional) se devuelve tal cual
          * estaba; el vidrio marcado no se toca. */
         pilarPrestado.forEach((l, data) -> l.getBlock().setBlockData(data, false));
         pilarPrestado.clear();
