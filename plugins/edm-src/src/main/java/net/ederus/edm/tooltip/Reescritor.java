@@ -151,7 +151,7 @@ final class Reescritor {
      * unico que puede hacer es mirar componentes; nada de construir texto.
      */
     private boolean interesa(ItemStack item) {
-        if (encantosInteresan(item)) {
+        if (encantosInteresan(item) || desgastado(item)) {
             return true;
         }
         if (!this.ajustes.hayBloques() || !item.hasData(DataComponentTypes.LORE)) {
@@ -186,6 +186,33 @@ final class Reescritor {
      * estadisticas de MMOItems (si lo trae). null si no habia nada que cambiar.
      */
     private ItemStack construir(ItemStack base) {
+        ItemStack hecho = construirTexto(base);
+        if (!desgastado(base)) {
+            return hecho;
+        }
+        // 1.85.2 · La barra de durabilidad: ver desgastado().
+        ItemStack copia = hecho != null ? hecho : base.clone();
+        copia.unsetData(DataComponentTypes.UNBREAKABLE);
+        return copia;
+    }
+
+    /**
+     * EDM 1.85.2 · Una pieza irrompible que aun asi tiene desgaste (Calamity las gasta dentro: su Desgaste).
+     * Minecraft no dibuja la barra de durabilidad en lo irrompible, asi que la copia que ve el jugador va sin
+     * la marca de irrompible y la barra sale con sus colores. El item del servidor no cambia: sigue siendo
+     * irrompible y fuera de Calamity no se gasta. Sin desgaste no se toca (la pieza nueva se ve como siempre).
+     */
+    private static boolean desgastado(ItemStack item) {
+        if (!item.hasData(DataComponentTypes.UNBREAKABLE)) {
+            return false;
+        }
+        Integer dano = item.getData(DataComponentTypes.DAMAGE);
+        return dano != null && dano > 0
+                && (item.hasData(DataComponentTypes.MAX_DAMAGE) || item.getType().getMaxDurability() > 0);
+    }
+
+    /** El texto dibujado (encantamientos, estadisticas, especiales), o null si no habia que cambiar nada. */
+    private ItemStack construirTexto(ItemStack base) {
         Ajustes a = this.ajustes;
         List<Component> conEncantos = encantosInteresan(base) ? bloqueEncantos(base, a) : null;
         ItemLore loreViejo = base.getData(DataComponentTypes.LORE);
