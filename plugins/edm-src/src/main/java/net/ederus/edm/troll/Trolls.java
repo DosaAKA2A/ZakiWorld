@@ -45,6 +45,9 @@ public final class Trolls {
                             "VS8Gko3zgOe2yalml0lozOw7azUa3/ZG01zaT2P5HEDjNj1jNcIlXv0gvVNX+E1Ula3LvsckOVt0JHszXeMPGX+zI9UQnmEoarSbCiYNM44HOFdfX5FowACNMleuyyW7U7VBcHeMRQKNQeGVFoaIbtgFWIKMLO7tLC+Ml12j4W9TKZsuA1edT03r490xaGURnUDGV+R6s61hWGPxNT0smRMxtYfdxcQ4lDU5fseUARwaD65gfoILShLh7itDoH6W3HmoksUqDf4eMR93PmLMEec1Nj0/qcryQoGu/N6okJ5vXWk/giiix9NQC8Rfga8ZlT7ikW28cUDfLxzZwDbbMY5yp+y1BAdZkOr2haf4Zj1Jjrx1OuXjk9hhD35Zk06oCltu+rSDTMCk5fKHK5IodwjQnVNvOvpCtQ66lmTLRKc4qeFw4GwI6LdlH//U9cjZbmJJuwz0y9K0kw4V348uPBQiQhKgsS0xrQ2Ca7qgEsCPSaOrhIdlfD6erbe4Qyi+g16qbrypmTcUdcO9TBVDJ6YT3RbJLjTddySyQjJgRFxd0V8Nv8d70y/g2sEeoM0wBMlrXv2NYNrEWOGocJsWjLmyOUClBgbhLM37LiJ1PQg+cXfvSJ5u3h0m2c09dYDKHLT3XN+5AvXBjQCvrVOXUNJ/z8FvWlkequ4bhVzbcp8="))
                     .build();
 
+    /** Quien esta saliendo de "Ojos de creeper": a ese si se le deja dejar de espectar. */
+    public static final java.util.Set<java.util.UUID> SALIENDO = java.util.concurrent.ConcurrentHashMap.newKeySet();
+
     private Trolls() { }
 
     public static Map<String, Troll> catalogo() {
@@ -178,6 +181,47 @@ public final class Trolls {
                 hb.teleport(tiembla);
             }, 1L, 1L);
             c.alAcabar(() -> { if (tarea[0] != null) tarea[0].cancel(); });
+        }));
+
+        pon(m, Troll.temporal("creeper-vista", "Ojos de creeper", "Lo ve todo en verde, como un creeper",
+                Material.GREEN_STAINED_GLASS, Familia.SUSTO, 10, c -> {
+            /* La vision verde es el filtro del cliente al mirar desde un creeper
+             * en modo espectador. Se le pone en espectador "dentro" de un creeper
+             * invisible, quieto e inofensivo que solo existe para el, y al acabar
+             * vuelve a su modo y a su sitio. Shift no le saca (Escuchas). */
+            Player v = c.v();
+            if (v.getGameMode() == GameMode.SPECTATOR) return;
+            GameMode modo = v.getGameMode();
+            Location sitio = v.getLocation();
+            var plugin = c.modulo().core();
+            var bicho = v.getWorld().spawn(sitio, org.bukkit.entity.Creeper.class, cr -> {
+                cr.setVisibleByDefault(false);
+                cr.setAI(false);
+                cr.setSilent(true);
+                cr.setInvulnerable(true);
+                cr.setInvisible(true);
+                cr.setExplosionRadius(0);
+                cr.setGravity(false);
+                cr.setCollidable(false);
+                cr.setPersistent(false);
+            });
+            v.showEntity(plugin, bicho);
+            c.bichoTemporal(bicho, c.segundos() * 20 + 20);
+            v.setGameMode(GameMode.SPECTATOR);
+            v.setSpectatorTarget(bicho);
+            c.sonido("entity.creeper.primed", 1f);
+            c.marcar(Estados.Marca.VISTA_CREEPER, () -> {
+                java.util.UUID id = v.getUniqueId();
+                SALIENDO.add(id);
+                try {
+                    v.setSpectatorTarget(null);
+                    v.teleport(sitio);
+                    v.setGameMode(modo);
+                } finally {
+                    SALIENDO.remove(id);
+                    bicho.remove();
+                }
+            });
         }));
 
         pon(m, Troll.de("calamares", "Lluvia de calamares", "Caen calamares del cielo",

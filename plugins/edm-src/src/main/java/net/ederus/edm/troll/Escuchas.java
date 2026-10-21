@@ -37,6 +37,14 @@ public final class Escuchas implements Listener {
 
     // -------------------------------------------------------------- moverse
 
+    // Con "Ojos de creeper" Shift le sacaria del creeper y quedaria suelto en espectador
+    @EventHandler(ignoreCancelled = true)
+    public void alDejarDeEspectar(com.destroystokyo.paper.event.player.PlayerStopSpectatingEntityEvent e) {
+        Player p = e.getPlayer();
+        if (Trolls.SALIENDO.contains(p.getUniqueId())) return;
+        if (estados().tiene(p, Estados.Marca.VISTA_CREEPER)) e.setCancelled(true);
+    }
+
     @EventHandler(ignoreCancelled = true)
     public void alMoverse(PlayerMoveEvent e) {
         Player p = e.getPlayer();

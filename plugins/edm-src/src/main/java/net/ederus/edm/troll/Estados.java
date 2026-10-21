@@ -38,7 +38,8 @@ public final class Estados {
         PATATA,         // lo que rompe suelta ademas una patata
         SIN_CAIDA,      // no recibe daño de caida (la red de las bromas de altura)
         INVERTIDO,      // se le da la vuelta cada poco
-        TITERE          // ni anda ni gira: lo mueve el admin (broma titere)
+        TITERE,         // ni anda ni gira: lo mueve el admin (broma titere)
+        VISTA_CREEPER   // espectando a un creeper: Shift no le saca
     }
 
     private record Activo(String clave, Marca marca, long hasta, Runnable deshacer) { }
