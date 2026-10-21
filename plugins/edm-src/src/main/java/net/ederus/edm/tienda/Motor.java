@@ -436,6 +436,45 @@ public final class Motor {
                 "%total%", fmt(total)), quitados, total);
     }
 
+    /**
+     * La venta del /autosell: lo que suelta un bloque picado, que nunca llega a
+     * entrar en el inventario. Mismo camino que vender() (precio dinamico del
+     * jugador, Demandas, topes, registro) pero sin sacar nada de ningun sitio.
+     * La cantidad del Resultado es lo que se cobro: lo que no, se devuelve a
+     * quien llama para que se lo entregue al jugador. Sin avisos ni mensajes,
+     * el resumen lo pinta Autoventa en la barra de accion.
+     */
+    public Resultado venderSuelto(Player jugador, Material material, int pedido) {
+        Catalogo.Articulo art = catalogo.de(material);
+        if (art == null || !art.seVende() || pedido <= 0) return Resultado.no(Estilo.vacio());
+
+        int cantidad = Math.min(pedido, Math.min(topes.restante(jugador.getUniqueId(), art), MAX_POR_OPERACION));
+        if (cantidad <= 0) return Resultado.no(Estilo.vacio());
+        int conBonus = 0;
+        if (rotacion != null) {
+            Rotacion.Trato t = demandaViva(art);
+            if (t != null) conBonus = Math.min(cantidad, rotacion.restanteHoy(t));
+        }
+
+        double total = totalVentaDe(art, cantidad, jugador.getUniqueId());
+        EconomyResponse resp = economia.depositPlayer(jugador, total);
+        if (!resp.transactionSuccess()) return Resultado.no(Estilo.vacio());
+
+        topes.anotar(jugador.getUniqueId(), art, cantidad);
+        mercado.anotarVenta(art, cantidad, jugador.getUniqueId());
+        if (conBonus > 0) rotacion.anotar(art.clave(), Math.min(conBonus, cantidad));
+        registro.anotar("AUTOVENTA", jugador.getName(), cantidad, art.clave(),
+                total / cantidad, total, economia.getBalance(jugador));
+        return new Resultado(true, Estilo.vacio(), cantidad, total);
+    }
+
+    /** Si el /autosell puede venderlo: esta en la tienda, se vende y es el item normal. */
+    public boolean seVendeSuelto(ItemStack stack) {
+        if (stack == null || stack.getType().isAir()) return false;
+        Catalogo.Articulo art = catalogo.de(stack.getType());
+        return art != null && art.seVende() && esLimpio(stack, stack.getType());
+    }
+
     // ----------------------------------------------------------------- comprar
 
     /** Por omision, la compra de la interfaz. Los comandos pasan su propio tipo. */

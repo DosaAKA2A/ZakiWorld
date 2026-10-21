@@ -37,6 +37,7 @@ public final class TiendaPlugin extends Module {
     private Economy economia;
     private BukkitTask tareaGuardado;
     private BukkitTask tareaRotacion;
+    private Autoventa autoventa;
 
     public TiendaPlugin(EDMPlugin core) {
         super(core, "tienda", "EderusTienda");
@@ -89,6 +90,8 @@ public final class TiendaPlugin extends Module {
         nuevo = new EditorNuevo(this, catalogo, secciones, chat);
         core.getServer().getPluginManager().registerEvents(nuevo, this);
         menu.enlazar(pantalla, chat, editor, nuevo);
+        autoventa = new Autoventa(this);
+        core.getServer().getPluginManager().registerEvents(autoventa, this);
         aplicarAjustes();
 
         ComandoTienda comando = new ComandoTienda(this, catalogo, topes);
@@ -103,6 +106,8 @@ public final class TiendaPlugin extends Module {
                 getLogger().warning("El comando /" + nombre + " no esta en el plugin.yml de EDM.");
             }
         }
+        var autosell = core.getCommand("autosell");
+        if (autosell != null) autosell.setExecutor(autoventa);
         /* Con EconomyShopGUI instalado, /shop se lo queda el que Bukkit decida.
          * Mientras convivan, la forma inequivoca de abrir la nuestra es /edm:shop. */
         if (core.getServer().getPluginManager().getPlugin("EconomyShopGUI") != null
@@ -160,6 +165,7 @@ public final class TiendaPlugin extends Module {
     public void onDisable() {
         if (tareaGuardado != null) tareaGuardado.cancel();
         if (tareaRotacion != null) tareaRotacion.cancel();
+        if (autoventa != null) autoventa.apagar();
         if (topes != null) topes.guardar();
         if (mercado != null) mercado.guardar();
         if (rotacion != null) rotacion.guardar();
@@ -213,6 +219,7 @@ public final class TiendaPlugin extends Module {
             menu.configurar(getConfig().getConfigurationSection("cantidad"),
                     getConfig().getConfigurationSection("buscador"));
         }
+        if (autoventa != null) autoventa.configurar(getConfig().getConfigurationSection("autoventa"));
     }
 
     @Override

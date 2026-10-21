@@ -1,5 +1,5 @@
 name: EDM
-version: '1.85.2'
+version: '1.86.0'
 main: net.ederus.edm.EDMPlugin
 api-version: '1.20'
 author: Iris Studio
@@ -26,6 +26,10 @@ commands:
     description: Vende todo lo vendible que lleves encima
     usage: /sellall
     aliases: [venderotodo]
+  autosell:
+    description: Vende solo lo que sueltan los bloques que picas (VIP)
+    usage: /autosell [on|off]
+    aliases: [autovender, autoventa]
   shop:
     description: 'La tienda de Ederus. Subcomandos en ingles por /shop, en espanol por /tienda'
     usage: /shop [search|sell|buy|price|limits|market|rotation]
@@ -162,6 +166,9 @@ permissions:
   ederus.coinflip.admin:
     description: Permite recargar el coinflip y devolver todas las apuestas
     default: op
+  ederus.tienda.autosell:
+    description: Permite usar /autosell (VIP, desde Aeris)
+    default: false
   ederus.tienda.usar:
     description: Permite comprar y vender en la tienda
     default: true

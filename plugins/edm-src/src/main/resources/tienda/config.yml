@@ -163,3 +163,23 @@ buscador:
 # En AxMinions/config.yml hay que poner hooks.prices: custom (si no, usa el suyo).
 minions:
   activo: true
+
+# ---------------------------------------------------------------------------
+# /autosell: lo que sueltan los bloques que pica el jugador se vende solo, al
+# precio de la tienda y con su propia devaluacion. Lo que la tienda no compra
+# cae como siempre. Es ventaja VIP (el permiso lo tiene el grupo aeris y los de
+# encima). Se recarga con /shop reload.
+# ---------------------------------------------------------------------------
+autoventa:
+  activo: true
+  permiso: ederus.tienda.autosell
+  # Cada cuanto se cobra lo juntado y sale el resumen en la barra de accion.
+  resumen-segundos: 3
+  # Mundos donde no funciona aunque este encendido.
+  mundos-bloqueados: []
+  mensajes:
+    activado: "&#FDFF66⚡ &fAutoventa &aactivada&7: lo que piques se vende solo."
+    desactivado: "&#FDFF66⚡ &fAutoventa &cdesactivada&7."
+    sin-permiso: "&cEl /autosell es una ventaja VIP, desde el rango Aeris."
+    apagado: "&cEl /autosell está desactivado ahora mismo."
+    resumen: "&#FDFF66⚡ &7Autoventa: &a+%total% &8• &7%cantidad% objetos"
