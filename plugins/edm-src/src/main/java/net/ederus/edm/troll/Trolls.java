@@ -36,6 +36,15 @@ import java.util.Map;
  */
 public final class Trolls {
 
+    /** La piel de MHF_Herobrine (Steve con los ojos blancos), firmada por Mojang. */
+    private static final io.papermc.paper.datacomponent.item.ResolvableProfile HEROBRINE =
+            io.papermc.paper.datacomponent.item.ResolvableProfile.resolvableProfile()
+                    .name("Herobrine")
+                    .addProperty(new com.destroystokyo.paper.profile.ProfileProperty("textures",
+                            "ewogICJ0aW1lc3RhbXAiIDogMTc5MjYxNTYwMjUzOCwKICAicHJvZmlsZUlkIiA6ICI5NTg2ZTVhYjE1N2E0NjU4YWQ4MGIwNzU1MmE5Y2E2MyIsCiAgInByb2ZpbGVOYW1lIiA6ICJNSEZfSGVyb2JyaW5lIiwKICAic2lnbmF0dXJlUmVxdWlyZWQiIDogdHJ1ZSwKICAidGV4dHVyZXMiIDogewogICAgIlNLSU4iIDogewogICAgICAidXJsIiA6ICJodHRwOi8vdGV4dHVyZXMubWluZWNyYWZ0Lm5ldC90ZXh0dXJlLzJjNjVlZDI4MjljODNlMTE5YTgwZGZiMjIyMTY0NDNlODc4ZWYxMDY0OWM0YTM1NGY3NGJmNDVhZDA2YmMxYTciCiAgICB9CiAgfQp9",
+                            "VS8Gko3zgOe2yalml0lozOw7azUa3/ZG01zaT2P5HEDjNj1jNcIlXv0gvVNX+E1Ula3LvsckOVt0JHszXeMPGX+zI9UQnmEoarSbCiYNM44HOFdfX5FowACNMleuyyW7U7VBcHeMRQKNQeGVFoaIbtgFWIKMLO7tLC+Ml12j4W9TKZsuA1edT03r490xaGURnUDGV+R6s61hWGPxNT0smRMxtYfdxcQ4lDU5fseUARwaD65gfoILShLh7itDoH6W3HmoksUqDf4eMR93PmLMEec1Nj0/qcryQoGu/N6okJ5vXWk/giiix9NQC8Rfga8ZlT7ikW28cUDfLxzZwDbbMY5yp+y1BAdZkOr2haf4Zj1Jjrx1OuXjk9hhD35Zk06oCltu+rSDTMCk5fKHK5IodwjQnVNvOvpCtQ66lmTLRKc4qeFw4GwI6LdlH//U9cjZbmJJuwz0y9K0kw4V348uPBQiQhKgsS0xrQ2Ca7qgEsCPSaOrhIdlfD6erbe4Qyi+g16qbrypmTcUdcO9TBVDJ6YT3RbJLjTddySyQjJgRFxd0V8Nv8d70y/g2sEeoM0wBMlrXv2NYNrEWOGocJsWjLmyOUClBgbhLM37LiJ1PQg+cXfvSJ5u3h0m2c09dYDKHLT3XN+5AvXBjQCvrVOXUNJ/z8FvWlkequ4bhVzbcp8="))
+                    .build();
+
     private Trolls() { }
 
     public static Map<String, Troll> catalogo() {
@@ -109,25 +118,25 @@ public final class Trolls {
             c.bichoTemporal(bicho, 40);
         }));
 
-        pon(m, Troll.temporal("herobrine", "Herobrine", "Aparece delante temblando y se esfuma si te acercas",
+        pon(m, Troll.temporal("herobrine", "Herobrine", "Aparece a tu espalda; si te giras a mirarlo, se esfuma",
                 Material.PLAYER_HEAD, Familia.SUSTO, 30, c -> {
-            /* Delante y en horizontal: antes salia 4 bloques DETRAS (y con la
-             * inclinacion de la mirada, a veces bajo tierra), asi que nadie lo
-             * veia nunca. Un maniqui con la piel por defecto es Steve, que es
-             * justo lo que es Herobrine. Solo lo ve la victima. */
+            /* A la espalda, en horizontal y en el suelo. Pasos y respiracion
+             * suenan DESDE donde esta, para que la victima se gire; en cuanto
+             * lo mira (o se le acerca) se esfuma. Solo lo ve la victima. */
             Location ojo = c.donde();
-            org.bukkit.util.Vector frente = ojo.getDirection().setY(0);
-            if (frente.lengthSquared() < 1.0E-4) frente = new org.bukkit.util.Vector(0, 0, 1);
-            Location sitio = suelo(ojo.clone().add(frente.normalize().multiply(8)));
+            org.bukkit.util.Vector atras = ojo.getDirection().setY(0);
+            if (atras.lengthSquared() < 1.0E-4) atras = new org.bukkit.util.Vector(0, 0, 1);
+            atras.normalize().multiply(-5);
+            Location sitio = suelo(ojo.clone().add(atras));
             if (sitio == null) {
-                c.barra("&7No hay sitio para Herobrine delante");
+                c.barra("&7No hay sitio para Herobrine detrás");
                 return;
             }
-            sitio.setDirection(ojo.toVector().subtract(sitio.toVector()));
             Location base = sitio.clone();
             var plugin = c.modulo().core();
             var hb = c.v().getWorld().spawn(sitio, org.bukkit.entity.Mannequin.class, mq -> {
                 mq.setVisibleByDefault(false);
+                mq.setProfile(HEROBRINE);
                 mq.setDescription(null);
                 mq.setImmovable(true);
                 mq.setInvulnerable(true);
@@ -138,27 +147,36 @@ public final class Trolls {
                 mq.setPersistent(false);
             });
             c.v().showEntity(plugin, hb);
-            c.sonido("ambient.cave", 0.6f);
             c.bichoTemporal(hb, c.segundos() * 20);
+            int[] tick = { 0 };
             org.bukkit.scheduler.BukkitTask[] tarea = { null };
             Bukkit.getScheduler().runTaskTimer(plugin, t -> {
                 tarea[0] = t;
-                if (!hb.isValid() || !c.v().isOnline() || !c.v().getWorld().equals(hb.getWorld())) {
+                Player v = c.v();
+                if (!hb.isValid() || !v.isOnline() || !v.getWorld().equals(hb.getWorld())) {
                     t.cancel();
                     return;
                 }
-                // Si se le acerca, se esfuma con un fogonazo
-                if (c.v().getLocation().distanceSquared(base) < 2.5 * 2.5) {
+                tick[0]++;
+                // Le mira (cono de ~25 grados y sin pared en medio) o se le acerca: fuera
+                Location ojos = v.getEyeLocation();
+                org.bukkit.util.Vector haciaEl = base.clone().add(0, 1.6, 0).toVector().subtract(ojos.toVector());
+                boolean loMira = haciaEl.clone().normalize().dot(ojos.getDirection()) > 0.9 && v.hasLineOfSight(hb);
+                if (loMira || v.getLocation().distanceSquared(base) < 2.5 * 2.5) {
                     hb.getWorld().spawnParticle(Particle.LARGE_SMOKE, base.clone().add(0, 1, 0), 30, 0.3, 0.8, 0.3, 0.02);
-                    c.sonido("entity.enderman.teleport", 0.5f);
+                    v.playSound(base, org.bukkit.Sound.ENTITY_ENDERMAN_TELEPORT, 0.6f, 0.5f);
                     hb.remove();
                     t.cancel();
                     return;
                 }
-                // Tiembla: un poco de un lado a otro, mirando siempre a la victima
+                // Pasos detras y, de vez en cuando, una respiracion: que se gire
+                if (tick[0] % 8 == 0) v.playSound(base, org.bukkit.Sound.BLOCK_GRAVEL_STEP, 0.9f, 0.8f);
+                if (tick[0] % 60 == 20) v.playSound(base, org.bukkit.Sound.ENTITY_PLAYER_BREATH, 1f, 0.6f);
+                if (tick[0] == 30) v.playSound(base, org.bukkit.Sound.AMBIENT_CAVE, 1f, 0.8f);
+                // Tiembla en su sitio, mirando siempre a la victima
                 var azar = Contexto.azar();
                 Location tiembla = base.clone().add((azar.nextDouble() - 0.5) * 0.12, 0, (azar.nextDouble() - 0.5) * 0.12);
-                tiembla.setDirection(c.v().getEyeLocation().toVector().subtract(tiembla.clone().add(0, 1.6, 0).toVector()));
+                tiembla.setDirection(ojos.toVector().subtract(tiembla.clone().add(0, 1.6, 0).toVector()));
                 hb.teleport(tiembla);
             }, 1L, 1L);
             c.alAcabar(() -> { if (tarea[0] != null) tarea[0].cancel(); });
