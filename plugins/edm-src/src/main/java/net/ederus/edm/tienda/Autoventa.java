@@ -3,7 +3,6 @@ package net.ederus.edm.tienda;
 import net.ederus.edm.comun.Estilo;
 import org.bukkit.GameMode;
 import org.bukkit.Material;
-import org.bukkit.NamespacedKey;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
@@ -16,14 +15,15 @@ import org.bukkit.event.Listener;
 import org.bukkit.event.block.BlockDropItemEvent;
 import org.bukkit.event.player.PlayerQuitEvent;
 import org.bukkit.inventory.ItemStack;
-import org.bukkit.persistence.PersistentDataType;
 import org.bukkit.scheduler.BukkitTask;
 
 import java.util.EnumMap;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 
 /**
@@ -36,12 +36,13 @@ import java.util.UUID;
  * Lo pendiente se cobra tambien al salir y al apagar, asi nunca se pierde nada.
  *
  * Es ventaja VIP: el permiso sale de autoventa.permiso (lo tiene el grupo aeris
- * y los de encima). Encendido o apagado se guarda en el propio jugador.
+ * y los de encima). Dura lo que dura la conexion: al salir se apaga y hay que
+ * volver a encenderlo al entrar.
  */
 final class Autoventa implements Listener, CommandExecutor {
 
     private final TiendaPlugin modulo;
-    private final NamespacedKey clave;
+    private final Set<UUID> encendidos = new HashSet<>();
     private final Map<UUID, Map<Material, Integer>> pendiente = new HashMap<>();
     private BukkitTask tarea;
 
@@ -53,7 +54,6 @@ final class Autoventa implements Listener, CommandExecutor {
 
     Autoventa(TiendaPlugin modulo) {
         this.modulo = modulo;
-        this.clave = new NamespacedKey(modulo.core(), "autoventa");
     }
 
     void configurar(ConfigurationSection s) {
@@ -86,7 +86,7 @@ final class Autoventa implements Listener, CommandExecutor {
     }
 
     private boolean encendida(Player p) {
-        return p.getPersistentDataContainer().getOrDefault(clave, PersistentDataType.BYTE, (byte) 0) == 1;
+        return encendidos.contains(p.getUniqueId());
     }
 
     // ------------------------------------------------------------------ comando
@@ -101,8 +101,8 @@ final class Autoventa implements Listener, CommandExecutor {
             if (args[0].equalsIgnoreCase("on")) ahora = true;
             else if (args[0].equalsIgnoreCase("off")) ahora = false;
         }
-        p.getPersistentDataContainer().set(clave, PersistentDataType.BYTE, (byte) (ahora ? 1 : 0));
-        if (!ahora) cobrar(p);
+        if (ahora) encendidos.add(p.getUniqueId());
+        else { encendidos.remove(p.getUniqueId()); cobrar(p); }
         p.sendMessage(Estilo.legado(ahora ? msgActivado : msgDesactivado));
         return true;
     }
@@ -133,6 +133,7 @@ final class Autoventa implements Listener, CommandExecutor {
     @EventHandler(priority = EventPriority.MONITOR)
     public void alSalir(PlayerQuitEvent e) {
         cobrar(e.getPlayer());
+        encendidos.remove(e.getPlayer().getUniqueId());
     }
 
     // ------------------------------------------------------------------ cobro
