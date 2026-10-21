@@ -37,7 +37,8 @@ public final class Estados {
         SIN_RECOGER,    // no puede recoger del suelo
         PATATA,         // lo que rompe suelta ademas una patata
         SIN_CAIDA,      // no recibe daño de caida (la red de las bromas de altura)
-        INVERTIDO       // se le da la vuelta cada poco
+        INVERTIDO,      // se le da la vuelta cada poco
+        TITERE          // ni anda ni gira: lo mueve el admin (broma titere)
     }
 
     private record Activo(String clave, Marca marca, long hasta, Runnable deshacer) { }

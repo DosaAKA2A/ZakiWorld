@@ -41,6 +41,13 @@ public final class Escuchas implements Listener {
     public void alMoverse(PlayerMoveEvent e) {
         Player p = e.getPlayer();
 
+        if (estados().tiene(p, Estados.Marca.TITERE)) {
+            /* Ni pasos ni camara: lo mueve el titere con teleports, que no pasan
+             * por aqui. Si su propio raton girara, se pelearia con el admin. */
+            e.setTo(e.getFrom());
+            return;
+        }
+
         if (estados().tiene(p, Estados.Marca.CONGELADO)) {
             Location de = e.getFrom();
             Location a = e.getTo();

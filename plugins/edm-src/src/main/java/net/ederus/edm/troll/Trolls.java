@@ -42,6 +42,7 @@ public final class Trolls {
         Map<String, Troll> m = new LinkedHashMap<>();
         sustos(m);
         movimiento(m);
+        titere(m);
         inventario(m);
         mentiras(m);
         mundo(m);
@@ -62,6 +63,17 @@ public final class Trolls {
     }
 
     private static void pon(Map<String, Troll> m, Troll t) { m.put(t.id(), t); }
+
+    /** El primer suelo firme con dos huecos de aire encima, de 4 arriba a 6 abajo. Null si no hay. */
+    private static Location suelo(Location l) {
+        for (int dy = 4; dy >= -6; dy--) {
+            var b = l.getWorld().getBlockAt(l.getBlockX(), l.getBlockY() + dy, l.getBlockZ());
+            if (b.getType().isSolid() && b.getRelative(0, 1, 0).isPassable() && b.getRelative(0, 2, 0).isPassable()) {
+                return b.getLocation().add(0.5, 1, 0.5);
+            }
+        }
+        return null;
+    }
 
     // ------------------------------------------------------------- SUSTOS
 
@@ -97,17 +109,59 @@ public final class Trolls {
             c.bichoTemporal(bicho, 40);
         }));
 
-        pon(m, Troll.de("herobrine", "Herobrine", "Alguien te mira y ya no esta",
-                Material.PLAYER_HEAD, Familia.SUSTO, c -> {
-            Location detras = c.donde().add(c.donde().getDirection().multiply(-4));
-            var soporte = c.v().getWorld().spawn(detras, org.bukkit.entity.ArmorStand.class, s -> {
-                s.setInvulnerable(true);
-                s.setGravity(false);
-                s.setBasePlate(false);
-                s.getEquipment().setHelmet(new ItemStack(Material.PLAYER_HEAD));
+        pon(m, Troll.temporal("herobrine", "Herobrine", "Aparece delante temblando y se esfuma si te acercas",
+                Material.PLAYER_HEAD, Familia.SUSTO, 30, c -> {
+            /* Delante y en horizontal: antes salia 4 bloques DETRAS (y con la
+             * inclinacion de la mirada, a veces bajo tierra), asi que nadie lo
+             * veia nunca. Un maniqui con la piel por defecto es Steve, que es
+             * justo lo que es Herobrine. Solo lo ve la victima. */
+            Location ojo = c.donde();
+            org.bukkit.util.Vector frente = ojo.getDirection().setY(0);
+            if (frente.lengthSquared() < 1.0E-4) frente = new org.bukkit.util.Vector(0, 0, 1);
+            Location sitio = suelo(ojo.clone().add(frente.normalize().multiply(8)));
+            if (sitio == null) {
+                c.barra("&7No hay sitio para Herobrine delante");
+                return;
+            }
+            sitio.setDirection(ojo.toVector().subtract(sitio.toVector()));
+            Location base = sitio.clone();
+            var plugin = c.modulo().core();
+            var hb = c.v().getWorld().spawn(sitio, org.bukkit.entity.Mannequin.class, mq -> {
+                mq.setVisibleByDefault(false);
+                mq.setDescription(null);
+                mq.setImmovable(true);
+                mq.setInvulnerable(true);
+                mq.setGravity(false);
+                mq.setSilent(true);
+                mq.setAI(false);
+                mq.setCollidable(false);
+                mq.setPersistent(false);
             });
+            c.v().showEntity(plugin, hb);
             c.sonido("ambient.cave", 0.6f);
-            c.bichoTemporal(soporte, 50);
+            c.bichoTemporal(hb, c.segundos() * 20);
+            org.bukkit.scheduler.BukkitTask[] tarea = { null };
+            Bukkit.getScheduler().runTaskTimer(plugin, t -> {
+                tarea[0] = t;
+                if (!hb.isValid() || !c.v().isOnline() || !c.v().getWorld().equals(hb.getWorld())) {
+                    t.cancel();
+                    return;
+                }
+                // Si se le acerca, se esfuma con un fogonazo
+                if (c.v().getLocation().distanceSquared(base) < 2.5 * 2.5) {
+                    hb.getWorld().spawnParticle(Particle.LARGE_SMOKE, base.clone().add(0, 1, 0), 30, 0.3, 0.8, 0.3, 0.02);
+                    c.sonido("entity.enderman.teleport", 0.5f);
+                    hb.remove();
+                    t.cancel();
+                    return;
+                }
+                // Tiembla: un poco de un lado a otro, mirando siempre a la victima
+                var azar = Contexto.azar();
+                Location tiembla = base.clone().add((azar.nextDouble() - 0.5) * 0.12, 0, (azar.nextDouble() - 0.5) * 0.12);
+                tiembla.setDirection(c.v().getEyeLocation().toVector().subtract(tiembla.clone().add(0, 1.6, 0).toVector()));
+                hb.teleport(tiembla);
+            }, 1L, 1L);
+            c.alAcabar(() -> { if (tarea[0] != null) tarea[0].cancel(); });
         }));
 
         pon(m, Troll.de("calamares", "Lluvia de calamares", "Caen calamares del cielo",
@@ -276,6 +330,50 @@ public final class Trolls {
                     c.quitarEfecto(PotionEffectType.LEVITATION);
                     c.titulo("&a&lTE HAN DEVUELTO", "&7de nada");
                 }
+            });
+        }));
+    }
+
+    private static void titere(Map<String, Troll> m) {
+        pon(m, Troll.temporal("titere", "Títere", "Copia cada paso y cada giro tuyo durante 5 segundos",
+                Material.LEAD, Familia.MOVIMIENTO, 5, c -> {
+            Player admin = c.a();
+            if (admin == null || admin.equals(c.v())) {
+                c.chat("&7El títere necesita que lo controle un jugador.");
+                return;
+            }
+            /* Sus teclas no hacen nada (marca TITERE en Escuchas) y cada tick se
+             * le mueve lo mismo que se ha movido el admin, en su sitio, con la
+             * misma mirada. Nada de seguir al admin: copia, no persigue. */
+            c.marcar(Estados.Marca.TITERE);
+            c.sinCaida(c.segundos() + 5);
+            c.barra("&#B57BFFAlguien te está controlando...");
+            c.sonido("entity.evoker.prepare_summon", 1.4f);
+            Location[] antes = { admin.getLocation() };
+            org.bukkit.scheduler.BukkitTask[] tarea = { null };
+            Bukkit.getScheduler().runTaskTimer(c.modulo().core(), t -> {
+                tarea[0] = t;
+                if (!admin.isOnline() || !c.v().isOnline()) {
+                    t.cancel();
+                    return;
+                }
+                Location ahora = admin.getLocation();
+                org.bukkit.util.Vector paso = admin.getWorld().equals(antes[0].getWorld())
+                        ? ahora.toVector().subtract(antes[0].toVector()) : new org.bukkit.util.Vector();
+                antes[0] = ahora;
+                if (paso.lengthSquared() > 4) paso.zero(); // un tp del admin no se copia
+                Location destino = c.v().getLocation().add(paso);
+                // Contra una pared no se mete: se queda donde esta y solo gira
+                if (!destino.getBlock().isPassable() || !destino.clone().add(0, 1, 0).getBlock().isPassable()) {
+                    destino = c.v().getLocation();
+                }
+                destino.setYaw(ahora.getYaw());
+                destino.setPitch(ahora.getPitch());
+                c.v().teleport(destino);
+            }, 1L, 1L);
+            c.alAcabar(() -> {
+                if (tarea[0] != null) tarea[0].cancel();
+                if (c.v().isOnline()) c.barra("&7Vuelves a moverte tú");
             });
         }));
     }
