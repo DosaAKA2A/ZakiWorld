@@ -74,6 +74,38 @@ public final class Trolls {
         c.alAcabar(() -> net.ederus.edm.comun.Compat.setAttribute(c.v(), "scale", antes));
     }
 
+    /**
+     * Una alucinacion: letras que no se leen parpadeando en la pantalla y
+     * sonidos raros a destiempo, a lo largo de toda la broma. Todo va solo a la
+     * victima. Los textos usan &k (ilegible) con alguna palabra suelta que casi
+     * se lee, para que inquiete.
+     */
+    private static void alucinar(Contexto c) {
+        String[] arriba = { "&4&kaaaaaaaaa", "&8&kaa&r&4 no &8&kaaaa", "&0&kaaaaaaaaaaaa", "&4&ka&r &4&kaaa&r &4&kaa",
+                "&2&kaaaaaa&r&8 ... &2&kaaa", "&8&kaaaa&r&7 te ve &8&kaaa" };
+        String[] abajo = { "&8&kaaaaaaaaaaaaaaaaaa", "&7&kaaaa&r &8detrás &7&kaaaa", "&2&kaaaaaaaaaa",
+                "&8&kaaaaa&r&8 sssss &8&kaaaa", "", "&4&kaa&r&4 no estás solo &4&kaa" };
+        String[] ruidos = { "ambient.cave", "entity.warden.heartbeat", "entity.enderman.stare",
+                "ambient.soul_sand_valley.mood", "entity.ghast.ambient", "block.sculk_shrieker.shriek",
+                "entity.elder_guardian.curse", "entity.creeper.hurt", "entity.zombie_villager.converted",
+                "entity.allay.ambient_without_item" };
+        int veces = Math.max(1, c.segundos() * 20 / 6);
+        c.repetir(6, veces, i -> {
+            var azar = Contexto.azar();
+            // Un parpadeo de texto cada poco, sin fundido: aparece y se va
+            if (azar.nextInt(3) == 0) {
+                c.v().showTitle(net.kyori.adventure.title.Title.title(
+                        net.ederus.edm.comun.Estilo.legado(arriba[azar.nextInt(arriba.length)]),
+                        net.ederus.edm.comun.Estilo.legado(abajo[azar.nextInt(abajo.length)]),
+                        net.kyori.adventure.title.Title.Times.times(java.time.Duration.ZERO,
+                                java.time.Duration.ofMillis(150 + azar.nextInt(400)), java.time.Duration.ofMillis(100))));
+            }
+            if (azar.nextInt(4) == 0) c.barra("&2&k" + "a".repeat(8 + azar.nextInt(20)));
+            // Y un sonido raro, a tono bajo, de vez en cuando
+            if (azar.nextInt(3) == 0) c.sonido(ruidos[azar.nextInt(ruidos.length)], 0.4f + azar.nextFloat() * 0.5f);
+        });
+    }
+
     private static void pon(Map<String, Troll> m, Troll t) { m.put(t.id(), t); }
 
     /** El primer suelo firme con dos huecos de aire encima, de 4 arriba a 6 abajo. Null si no hay. */
@@ -183,7 +215,7 @@ public final class Trolls {
             c.alAcabar(() -> { if (tarea[0] != null) tarea[0].cancel(); });
         }));
 
-        pon(m, Troll.temporal("creeper-vista", "Ojos de creeper", "Lo ve todo en verde, como un creeper",
+        pon(m, Troll.temporal("creeper-vista", "Ojos de creeper", "Lo ve todo en verde, con letras y ruidos que no deberian estar",
                 Material.GREEN_STAINED_GLASS, Familia.SUSTO, 10, c -> {
             /* La vision verde es el filtro del cliente al mirar desde un creeper
              * en modo espectador. Se le pone en espectador "dentro" de un creeper
@@ -210,6 +242,7 @@ public final class Trolls {
             v.setGameMode(GameMode.SPECTATOR);
             v.setSpectatorTarget(bicho);
             c.sonido("entity.creeper.primed", 1f);
+            alucinar(c);
             c.marcar(Estados.Marca.VISTA_CREEPER, () -> {
                 java.util.UUID id = v.getUniqueId();
                 SALIENDO.add(id);
