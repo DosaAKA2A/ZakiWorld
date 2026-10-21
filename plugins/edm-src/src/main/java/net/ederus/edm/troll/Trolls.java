@@ -163,9 +163,7 @@ public final class Trolls {
                 org.bukkit.util.Vector haciaEl = base.clone().add(0, 1.6, 0).toVector().subtract(ojos.toVector());
                 boolean loMira = haciaEl.clone().normalize().dot(ojos.getDirection()) > 0.9 && v.hasLineOfSight(hb);
                 if (loMira || v.getLocation().distanceSquared(base) < 2.5 * 2.5) {
-                    hb.getWorld().spawnParticle(Particle.LARGE_SMOKE, base.clone().add(0, 1, 0), 30, 0.3, 0.8, 0.3, 0.02);
-                    v.playSound(base, org.bukkit.Sound.ENTITY_ENDERMAN_TELEPORT, 0.6f, 0.5f);
-                    hb.remove();
+                    hb.remove(); // sin humo ni sonido: simplemente ya no esta
                     t.cancel();
                     return;
                 }
