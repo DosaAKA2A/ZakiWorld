@@ -1,6 +1,7 @@
 package net.ederus.edm.tienda;
 
 import net.ederus.edm.comun.Estilo;
+import net.ederus.edm.minas.api.MineDropsEvent;
 import org.bukkit.Bukkit;
 import org.bukkit.GameMode;
 import org.bukkit.Location;
@@ -8,6 +9,8 @@ import org.bukkit.Material;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
+import org.bukkit.block.BlockState;
+import org.bukkit.block.Container;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.entity.Item;
 import org.bukkit.entity.Player;
@@ -18,9 +21,12 @@ import org.bukkit.event.block.BlockBreakEvent;
 import org.bukkit.event.block.BlockDropItemEvent;
 import org.bukkit.event.entity.ItemSpawnEvent;
 import org.bukkit.event.player.PlayerQuitEvent;
+import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.scheduler.BukkitTask;
 
+import java.util.ArrayDeque;
+import java.util.Deque;
 import java.util.EnumMap;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -43,10 +49,14 @@ import java.util.UUID;
  * y los de encima). Dura lo que dura la conexion: al salir se apaga y hay que
  * volver a encenderlo al entrar.
  *
- * Las minas de OreRegenerator vacian el BlockDropItemEvent y sueltan ellas mismas
- * lo del bloque con dropItemNaturally. Para esas, cada bloque que pica alguien con
- * la autoventa encendida se apunta un par de ticks, y lo que aparece dentro de ese
- * bloque en ese momento se vende igual.
+ * Lo picado puede salir por cuatro sitios, y se vende salga por donde salga:
+ *  - el drop normal (BlockDropItemEvent);
+ *  - las minas de EDM, que lo meten directo en la mochila (MineDropsEvent);
+ *  - lo que otro plugin mete en la mochila mientras se rompe el bloque, como la
+ *    Telepatia de AdvancedEnchantments: se mira la mochila antes y despues;
+ *  - lo que otro plugin suelta el mismo dentro del bloque (la Fundicion sin
+ *    Telepatia, OreRegenerator): el bloque se apunta un par de ticks.
+ * Los cofres y demas contenedores no: lo que lleven dentro no se vende solo.
  */
 final class Autoventa implements Listener, CommandExecutor {
 
@@ -59,6 +69,12 @@ final class Autoventa implements Listener, CommandExecutor {
     private boolean devolviendo;
 
     private record Picado(UUID jugador, UUID mundo, int tick) {}
+
+    /** Lo vendible que llevaba cada uno en la mochila justo antes de romper el bloque. Es
+     * una pila: los encantamientos de area (explosivo, veinminer) rompen bloques dentro de
+     * la rotura del primero, y cada rotura tiene que cerrar con su propia foto. */
+    private final Map<UUID, Deque<Map<Material, Integer>>> antes = new HashMap<>();
+    private static final Map<Material, Integer> SIN_FOTO = Map.of();
 
     /* Ticks que se espera a que el plugin de la mina suelte lo del bloque. */
     private static final int MARGEN_TICKS = 2;
@@ -127,8 +143,6 @@ final class Autoventa implements Listener, CommandExecutor {
 
     // ------------------------------------------------------------------ eventos
 
-    /* HIGH y no MONITOR: hay que quitar los items antes de que aparezcan en el
-     * suelo. Lo que otro plugin ya se haya llevado (telepatia) no llega aqui. */
     private boolean vende(Player p) {
         return activo && p.getGameMode() == GameMode.SURVIVAL && encendida(p)
                 && !mundosBloqueados.contains(p.getWorld().getName()) && p.hasPermission(permiso);
@@ -144,15 +158,71 @@ final class Autoventa implements Listener, CommandExecutor {
         m.merge(stack.getType(), stack.getAmount(), Integer::sum);
     }
 
-    @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
-    public void alPicar(BlockBreakEvent e) {
-        if (!vende(e.getPlayer())) return;
-        var b = e.getBlock();
-        picados.put(clave(b.getX(), b.getY(), b.getZ()),
-                new Picado(e.getPlayer().getUniqueId(), b.getWorld().getUID(), Bukkit.getCurrentTick()));
+    private static boolean esContenedor(BlockState estado) {
+        return estado instanceof Container;
     }
 
-    /* Lo que suelta la mina por su cuenta (OreRegenerator) dentro del bloque picado. */
+    /** Lo vendible y limpio de la mochila, por material. */
+    private static Map<Material, Integer> vendibles(Motor motor, Inventory inv) {
+        Map<Material, Integer> m = new EnumMap<>(Material.class);
+        for (ItemStack s : inv.getStorageContents()) {
+            if (s != null && motor.seVendeSuelto(s)) m.merge(s.getType(), s.getAmount(), Integer::sum);
+        }
+        return m;
+    }
+
+    /* LOWEST: la foto de la mochila, antes de que nadie toque nada. */
+    @EventHandler(priority = EventPriority.LOWEST)
+    public void antesDePicar(BlockBreakEvent e) {
+        Player p = e.getPlayer();
+        Motor motor = modulo.motor();
+        boolean mira = motor != null && vende(p) && !esContenedor(e.getBlock().getState(false));
+        antes.computeIfAbsent(p.getUniqueId(), k -> new ArrayDeque<>())
+                .push(mira ? vendibles(motor, p.getInventory()) : SIN_FOTO);
+    }
+
+    /* MONITOR: lo que haya entrado en la mochila durante la rotura (Telepatia) se vende,
+     * y el bloque se apunta por si alguien suelta ahi lo picado en los ticks siguientes. */
+    @EventHandler(priority = EventPriority.MONITOR)
+    public void alPicar(BlockBreakEvent e) {
+        Player p = e.getPlayer();
+        Deque<Map<Material, Integer>> pila = antes.get(p.getUniqueId());
+        Map<Material, Integer> foto = pila == null ? null : pila.poll();
+        if (pila != null && pila.isEmpty()) antes.remove(p.getUniqueId());
+        if (foto == null || foto == SIN_FOTO || e.isCancelled() || !vende(p)) return;
+        Motor motor = modulo.motor();
+        if (motor == null) return;
+
+        Map<Material, Integer> ahora = vendibles(motor, p.getInventory());
+        for (Map.Entry<Material, Integer> en : ahora.entrySet()) {
+            int nuevas = en.getValue() - foto.getOrDefault(en.getKey(), 0);
+            if (nuevas <= 0) continue;
+            int quitadas = Motor.quitarLimpios(p.getInventory(), en.getKey(), nuevas);
+            if (quitadas > 0) apuntar(p.getUniqueId(), null, new ItemStack(en.getKey(), quitadas));
+        }
+
+        var b = e.getBlock();
+        picados.put(clave(b.getX(), b.getY(), b.getZ()),
+                new Picado(p.getUniqueId(), b.getWorld().getUID(), Bukkit.getCurrentTick()));
+    }
+
+    /* Las minas de EDM entregan en la mochila. HIGHEST para vender lo que dejen los
+     * eventos de mina (doble mineral...), que cambian la lista antes. */
+    @EventHandler(priority = EventPriority.HIGHEST)
+    public void alMinar(MineDropsEvent e) {
+        Player p = e.getPlayer();
+        if (!vende(p)) return;
+        Motor motor = modulo.motor();
+        if (motor == null) return;
+        for (Iterator<ItemStack> it = e.getDrops().iterator(); it.hasNext(); ) {
+            ItemStack stack = it.next();
+            if (stack == null || !motor.seVendeSuelto(stack)) continue;
+            apuntar(p.getUniqueId(), null, stack);
+            it.remove();
+        }
+    }
+
+    /* Lo que otro plugin suelta por su cuenta dentro del bloque picado. */
     @EventHandler(priority = EventPriority.HIGH, ignoreCancelled = true)
     public void alAparecer(ItemSpawnEvent e) {
         if (devolviendo || picados.isEmpty()) return;
@@ -169,10 +239,11 @@ final class Autoventa implements Listener, CommandExecutor {
         e.setCancelled(true);
     }
 
+    /* HIGH y no MONITOR: hay que quitar los items antes de que aparezcan en el suelo. */
     @EventHandler(priority = EventPriority.HIGH, ignoreCancelled = true)
     public void alSoltar(BlockDropItemEvent e) {
         Player p = e.getPlayer();
-        if (!vende(p)) return;
+        if (!vende(p) || esContenedor(e.getBlockState())) return;
         Motor motor = modulo.motor();
         if (motor == null) return;
 
@@ -191,6 +262,7 @@ final class Autoventa implements Listener, CommandExecutor {
         cobrar(e.getPlayer());
         encendidos.remove(e.getPlayer().getUniqueId());
         picados.values().removeIf(pic -> pic.jugador().equals(e.getPlayer().getUniqueId()));
+        antes.remove(e.getPlayer().getUniqueId());
     }
 
     // ------------------------------------------------------------------ cobro

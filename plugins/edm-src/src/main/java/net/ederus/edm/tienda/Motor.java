@@ -184,7 +184,7 @@ public final class Motor {
     }
 
     /** Quita hasta 'cantidad' y devuelve cuantos quito de verdad. */
-    private static int quitarLimpios(Inventory inv, Material material, int cantidad) {
+    static int quitarLimpios(Inventory inv, Material material, int cantidad) {
         int quedan = cantidad;
         ItemStack[] contenido = inv.getStorageContents();
         for (int i = 0; i < contenido.length && quedan > 0; i++) {
