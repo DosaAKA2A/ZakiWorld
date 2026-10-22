@@ -136,8 +136,8 @@ public final class MenuPoder implements Listener {
                 "piezas y los encantamientos."));
         inv.setItem(DEL_EQUIPO[3], dato(Material.BLAZE_POWDER, "Daño de más", d.dano(),
                 peso("por-dano", 60), "de daño",
-                "El golpe por encima del puño, con lo",
-                "que llevas en la mano ahora mismo."));
+                "El golpe medio por encima del puño, con",
+                "lo que llevas en la mano y sus críticos."));
 
         // Lo que ha jugado: no depende de lo que lleve puesto.
         inv.setItem(SLOT_RANGO, dato(Material.EMERALD, "Rango de rankup", d.rango(),

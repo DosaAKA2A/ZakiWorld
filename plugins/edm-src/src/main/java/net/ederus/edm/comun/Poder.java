@@ -54,6 +54,23 @@ public final class Poder {
         }
     }
 
+    /**
+     * Lo que suman de media los criticos de MythicLib a cada golpe: prob x (multiplicador - 1).
+     * CRITICAL_STRIKE_POWER ya trae la base (200 = x2) mas lo que den los items (+1.8 = +1,8 %).
+     * La prob se corta en el tope de MythicLib (80 %). 0 si MythicLib no esta.
+     */
+    public static double critico(Player p) {
+        try {
+            io.lumine.mythic.lib.api.stat.StatMap stats =
+                    io.lumine.mythic.lib.api.player.MMOPlayerData.get(p).getStatMap();
+            double prob = Math.min(80, Math.max(0, stats.getStat("CRITICAL_STRIKE_CHANCE"))) / 100.0;
+            double mult = Math.max(100, stats.getStat("CRITICAL_STRIKE_POWER")) / 100.0;
+            return prob * (mult - 1);
+        } catch (Throwable t) {
+            return 0;
+        }
+    }
+
     /** Poder de AuraSkills (suma de sus habilidades) por su API. 0 si no esta. */
     public static int auraskills(Player p) {
         try {
@@ -97,7 +114,10 @@ public final class Poder {
         double armadura = Compat.getAttribute(p, "armor", 0);
         double dureza = Compat.getAttribute(p, "armor_toughness", 0);
         double vida = Math.max(0, Compat.getAttribute(p, "max_health", 20) - 20);
-        double dano = Math.max(0, Compat.getAttribute(p, "attack_damage", 1) - 1);
+        // El dano cuenta con los criticos de MythicLib: un golpe medio vale
+        // dano x (1 + prob x (multiplicador - 1)). Con 30 % de critico a x2 pega un 30 % mas.
+        double golpe = Compat.getAttribute(p, "attack_damage", 1) * (1 + critico(p));
+        double dano = Math.max(0, golpe - 1);
 
         /* Los mismos numeros que el config de serie, A PROPOSITO: en un servidor que
          * ya tenia flex/config.yml (el Survival) el bloque poder: no se escribe solo,
