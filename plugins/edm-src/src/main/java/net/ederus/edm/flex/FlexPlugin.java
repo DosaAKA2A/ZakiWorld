@@ -96,6 +96,17 @@ public final class FlexPlugin extends Module implements org.bukkit.event.Listene
             getLogger().warning("El comando /flex no esta en el plugin.yml de EDM.");
         }
 
+        /* /damage vive con el Poder: cuenta los criticos con su misma regla, y asi
+         * /damage y /flex power no se contradicen nunca. */
+        ComandoDano dano = new ComandoDano();
+        var cmdDano = core.getCommand("damage");
+        if (cmdDano != null) {
+            cmdDano.setExecutor(dano);
+            cmdDano.setTabCompleter(dano);
+        }
+        /* Sin el comando en el plugin.yml (la build de OneBlock no lo declara) no se avisa:
+         * alli no hay MMOItems y no falta nada. */
+
         // El volcado va a su ritmo y no en cada clic: montar una vitrina son
         // veinte clics seguidos y no hay por que escribir el fichero veinte veces.
         volcado = core.getServer().getScheduler().runTaskTimerAsynchronously(
