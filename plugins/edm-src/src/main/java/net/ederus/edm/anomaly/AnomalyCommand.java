@@ -85,6 +85,7 @@ public final class AnomalyCommand implements CommandExecutor, TabCompleter {
                 plugin.menus().openMinions(player);
             }
             case "esbirro", "minion" -> spawnMinion(sender, args);
+            case "canjear", "exchange" -> canjear(sender, args);
             case "reload", "recargar" -> reload(sender);
             default -> help(sender);
         }
@@ -93,6 +94,21 @@ public final class AnomalyCommand implements CommandExecutor, TabCompleter {
 
     private void say(CommandSender sender, String text, TextColor color) {
         sender.sendMessage(plugin.prefix().append(Component.text(text, color)));
+    }
+
+    /**
+     * EDM 1.90.0 · /anomaly canjear <jugador>: los Fragmentos Anomalos por un Artefacto Anomalo. Lo
+     * lanza el NPC del canje (Citizens, como consola, con el jugador que hace clic); sin nombre y
+     * desde el juego, canjea para uno mismo.
+     */
+    private void canjear(CommandSender sender, String[] args) {
+        Player target = args.length > 1 ? plugin.getServer().getPlayerExact(args[1])
+                : sender instanceof Player self ? self : null;
+        if (target == null) {
+            say(sender, "Uso: /anomaly canjear <jugador conectado>", NamedTextColor.RED);
+            return;
+        }
+        plugin.fragmentos().canjear(target);
     }
 
     /**

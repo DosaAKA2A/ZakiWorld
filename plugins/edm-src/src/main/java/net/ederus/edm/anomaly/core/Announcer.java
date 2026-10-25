@@ -11,10 +11,14 @@ import net.ederus.edm.anomaly.AnomalyPlugin;
 import net.ederus.edm.anomaly.drops.DropEntry;
 import net.ederus.edm.anomaly.drops.DropTable;
 import org.bukkit.Location;
+import org.bukkit.OfflinePlayer;
 import org.bukkit.entity.Player;
 
 import java.time.Duration;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
+import java.util.UUID;
 import net.ederus.edm.comun.Compat;
 
 /**
@@ -31,6 +35,8 @@ public final class Announcer {
     private static final TextColor LINE = TextColor.color(0x3A3A3A);
     /** El color reservado al botin, distinto del de la anomalia a proposito. */
     private static final TextColor LOOT = TextColor.color(0xFFC64D);
+    /** El celeste del prefijo de Anomaly. */
+    private static final TextColor BRAND = TextColor.color(0x9BD7E4);
 
     private final AnomalyPlugin plugin;
 
@@ -184,26 +190,80 @@ public final class Announcer {
 
     // ----------------------------------------------------------------------- cierre
 
+    /** Oro, plata y bronce del top de dano. */
+    private static final TextColor[] PODIO = {
+            TextColor.color(0xFFD24A), TextColor.color(0xD7DEE6), TextColor.color(0xD08A4E)};
+    private static final TextColor NICK = TextColor.color(0xF2F2F2);
+    private static final TextColor NOTA = TextColor.color(0x7A7A7A);
+
+    /**
+     * EDM 1.90.0 · El cierre con el top de dano, como lo aprobo Dosa (25/10/2026):
+     *
+     *   ✦ ANOMALY  El Conde ha caído.
+     *
+     *         Mayor daño infligido
+     *
+     *           ✦  Fulano      ·   42%
+     *           ✦  Mengano     ·   25%
+     *           ✦  Zutano      ·   12%
+     *
+     *         9 jugadores participaron  ·  4 min 31 s
+     *
+     * Sin negritas salvo el prefijo, sin marcos y sin decir que se lleva cada uno. El "·" y el % van
+     * alineados aunque los nicks midan distinto (ver {@link #relleno}).
+     */
     public void defeated(ActiveAnomaly event, List<String> report) {
         AnomalyType type = event.type();
-        Component top = Component.text("✦ ", type.color())
-                .append(Component.text(type.display(), type.color(), TextDecoration.BOLD))
-                .append(Component.text(" ha caido.", NamedTextColor.GRAY));
+        Component cabecera = Component.text("✦ ", BRAND)
+                .append(Component.text("ANOMALY", BRAND, TextDecoration.BOLD))
+                .append(Component.text("  ", NamedTextColor.GRAY))
+                .append(Component.text(type.display(), type.color()))
+                .append(Component.text(" ha caído.", NamedTextColor.GRAY));
 
-        Component who = Component.text("   ", DIM);
-        if (event.participants() == 0) {
-            who = who.append(Component.text("Nadie reclamo el botín.", DIM));
-        } else {
-            who = who.append(Component.text(event.participants() + " ", NamedTextColor.WHITE))
-                    .append(Component.text(event.participants() == 1 ? "jugador se lo llevo" : "jugadores se lo repartieron", NamedTextColor.GRAY))
-                    .append(Component.text("   ·   ", DIM))
-                    .append(Component.text(format(event.elapsedSeconds()), SOFT));
+        List<Map.Entry<UUID, Double>> orden = new ArrayList<>(event.damage().entrySet());
+        orden.sort((a, b) -> Double.compare(b.getValue(), a.getValue()));
+        double total = 0;
+        for (Map.Entry<UUID, Double> en : orden) total += Math.max(0, en.getValue());
+
+        List<String> nombres = new ArrayList<>();
+        List<Integer> porcentajes = new ArrayList<>();
+        for (Map.Entry<UUID, Double> en : orden) {
+            if (nombres.size() == 3 || total <= 0) break;
+            OfflinePlayer op = plugin.getServer().getOfflinePlayer(en.getKey());
+            nombres.add(op.getName() == null ? "?" : op.getName());
+            porcentajes.add((int) Math.round(en.getValue() * 100.0 / total));
         }
 
-        plugin.getServer().sendMessage(Component.empty());
-        plugin.getServer().sendMessage(top);
-        plugin.getServer().sendMessage(who);
-        plugin.getServer().sendMessage(Component.empty());
+        List<Component> lineas = new ArrayList<>();
+        lineas.add(Component.empty());
+        lineas.add(cabecera);
+        lineas.add(Component.empty());
+        if (nombres.isEmpty()) {
+            lineas.add(Component.text("        Nadie llegó a hacerle daño.", NOTA));
+        } else {
+            lineas.add(Component.text("        Mayor daño infligido", NOTA));
+            lineas.add(Component.empty());
+            int ancho = 0;
+            for (String n : nombres) ancho = Math.max(ancho, ancho(n, false));
+            ancho += 12;
+            for (int i = 0; i < nombres.size(); i++) {
+                TextColor c = PODIO[i];
+                lineas.add(Component.text("          ✦  ", c)
+                        .append(Component.text(nombres.get(i), NICK))
+                        .append(relleno(ancho - ancho(nombres.get(i), false)))
+                        .append(Component.text("·   ", DIM))
+                        .append(Component.text(porcentajes.get(i) + "%", c)));
+            }
+            lineas.add(Component.empty());
+            int n = event.participants();
+            lineas.add(Component.text("        ")
+                    .append(Component.text(String.valueOf(n), NamedTextColor.WHITE))
+                    .append(Component.text(n == 1 ? " jugador participó" : " jugadores participaron", NOTA))
+                    .append(Component.text("  ·  ", DIM))
+                    .append(Component.text(duracion(event.elapsedSeconds()), NOTA)));
+        }
+        lineas.add(Component.empty());
+        for (Component l : lineas) plugin.getServer().sendMessage(l);
 
         if (plugin.settings().announceSound()) {
             for (Player p : plugin.getServer().getOnlinePlayers()) {
@@ -221,9 +281,44 @@ public final class Announcer {
                 .append(Component.text(event.type().display() + " sigue del otro lado.", DIM)));
     }
 
-    private static String format(long seconds) {
+    /** "4 min 31 s" / "45 s". */
+    private static String duracion(long seconds) {
         long m = seconds / 60;
         long s = seconds % 60;
-        return m > 0 ? (m + "m " + s + "s") : (s + "s");
+        return m > 0 ? (m + " min " + s + " s") : (s + " s");
     }
+
+    /**
+     * Ancho en pixeles de un texto con la fuente por defecto de Minecraft (cada glifo + 1 de
+     * separacion; la negrita suma 1 por caracter). Vale para nicks: letras, numeros y "_".
+     */
+    static int ancho(String s, boolean negrita) {
+        int px = 0;
+        for (int i = 0; i < s.length(); i++) {
+            char ch = s.charAt(i);
+            int w;
+            if ("i!.,:;|'".indexOf(ch) >= 0) w = 2;
+            else if (ch == 'l' || ch == '`') w = 3;
+            else if ("It[] ".indexOf(ch) >= 0) w = 4;
+            else if ("fk<>\"*()".indexOf(ch) >= 0) w = 5;
+            else if (ch == '@' || ch == '~') w = 7;
+            else w = 6;
+            px += w + (negrita ? 1 : 0);
+        }
+        return px;
+    }
+
+    /** Espacios que suman exactamente px pixeles: normales de 4 y en negrita de 5. */
+    static Component relleno(int px) {
+        px = Math.max(0, px);
+        for (int negritas = 0; negritas <= 3; negritas++) {
+            int resto = px - 5 * negritas;
+            if (resto >= 0 && resto % 4 == 0) {
+                return Component.text(" ".repeat(resto / 4))
+                        .append(Component.text(" ".repeat(negritas)).decoration(TextDecoration.BOLD, true));
+            }
+        }
+        return Component.text(" ".repeat(Math.round(px / 4f)));
+    }
+
 }

@@ -64,6 +64,15 @@ public final class DropStore implements Listener {
         return tables.computeIfAbsent(anomalyId, DropTable::new);
     }
 
+    /** EDM 1.90.0 · Las tablas de los jefes (sin las de esbirros), para el Artefacto Anomalo. */
+    public List<DropTable> bossTables() {
+        List<DropTable> out = new ArrayList<>();
+        for (Map.Entry<String, DropTable> en : tables.entrySet()) {
+            if (!en.getKey().startsWith(PREFIJO_ESBIRRO)) out.add(en.getValue());
+        }
+        return out;
+    }
+
     // ---------------------------------------------------------------------- disco
 
     /*
@@ -345,12 +354,21 @@ public final class DropStore implements Listener {
         List<String> report = new ArrayList<>();
         if (table == null || damage.isEmpty()) return report;
 
+        /* EDM 1.90.0: participa quien hizo al menos botin.participacion-minima % del dano total. El
+         * que da un golpe y se queda mirando no entra en el reparto. */
+        double totalDamage = 0;
+        for (double d : damage.values()) totalDamage += Math.max(0, d);
+        double minPct = plugin.settings().minParticipationPercent();
         List<Player> participants = new ArrayList<>();
-        for (UUID id : damage.keySet()) {
-            Player p = Bukkit.getPlayer(id);
-            if (p != null && p.isOnline()) participants.add(p);
+        for (Map.Entry<UUID, Double> en : damage.entrySet()) {
+            Player p = Bukkit.getPlayer(en.getKey());
+            if (p == null || !p.isOnline()) continue;
+            double pct = totalDamage <= 0 ? 0 : en.getValue() * 100.0 / totalDamage;
+            if (pct >= minPct) participants.add(p);
         }
         if (participants.isEmpty()) return report;
+        boolean toInventory = plugin.settings().lootToInventory();
+        Set<UUID> conPieza = new HashSet<>();
 
         Player best = null;
         double bestDamage = -1;
@@ -376,6 +394,23 @@ public final class DropStore implements Listener {
                 amount = MAX_POR_ENTRADA;
             }
 
+            if (toInventory) {
+                /* Directo al inventario: MEJOR va al que mas dano hizo; TODOS y ALEATORIO, a un
+                 * participante sorteado con peso por dano. Nada queda en el suelo para cualquiera. */
+                Player to = entry.to() == DropEntry.Recipient.MEJOR ? best : weighted(participants, damage);
+                ItemStack copy = SetLoot.actual(entry.item());
+                int stack = Math.max(1, copy.getMaxStackSize());
+                for (int left = amount; left > 0; left -= stack) {
+                    ItemStack part = copy.clone();
+                    part.setAmount(Math.min(stack, left));
+                    Fragmentos.entregar(to, part);
+                }
+                if (plugin.fragmentos().esPieza(copy)) conPieza.add(to.getUniqueId());
+                if (entry.unique()) announceUnique(to, anomalyId, copy);
+                report.add(amount + "x " + entry.item().getType()
+                        + (entry.unique() ? " [ÚNICO]" : "") + " -> " + to.getName());
+                continue;
+            }
             Player reserved = switch (entry.to()) {
                 case TODOS -> null;
                 case MEJOR -> best;
@@ -387,6 +422,21 @@ public final class DropStore implements Listener {
                     + (entry.unique() ? " [ÚNICO]" : "")
                     + " -> " + entry.to().name()
                     + (reserved != null ? " (" + reserved.getName() + ")" : ""));
+        }
+
+        /* Fragmentos Anomalos: quien participo y no se llevo ninguna pieza, de 1 a 3 segun su dano. */
+        if (plugin.settings().fragmentsEnabled()) {
+            for (Player p : participants) {
+                if (conPieza.contains(p.getUniqueId())) continue;
+                double pct = totalDamage <= 0 ? 0 : damage.getOrDefault(p.getUniqueId(), 0.0) * 100.0 / totalDamage;
+                int n = plugin.fragmentos().fragmentosPara(pct);
+                if (!plugin.fragmentos().dar(p, n)) {
+                    plugin.getLogger().warning("No existe el Fragmento Anómalo en MMOItems ("
+                            + plugin.settings().fragmentsType() + " " + plugin.settings().fragmentId() + ").");
+                    break;
+                }
+                report.add(n + "x fragmento -> " + p.getName());
+            }
         }
         if (anyBurst && where.getWorld() != null) {
             // El estallido de la pinata: se oye y se ve que algo acaba de saltar por los aires.
@@ -616,8 +666,13 @@ public final class DropStore implements Listener {
     public void onPickup(EntityPickupItemEvent e) {
         String anomalyId = Tags.uniqueDropOf(e.getItem());
         if (anomalyId == null || !(e.getEntity() instanceof Player p)) return;
+        announceUnique(p, anomalyId, e.getItem().getItemStack());
+    }
+
+    /** El aviso del UNICO a todo el servidor: al recogerlo del suelo o, con el botin al inventario, al darlo. */
+    private void announceUnique(Player p, String anomalyId, ItemStack item) {
         AnomalyType type = plugin.registry().get(anomalyId);
-        Component itemName = DropTable.nameOf(e.getItem().getItemStack());
+        Component itemName = DropTable.nameOf(item);
         Component who = Component.text("✦ ", NamedTextColor.AQUA)
                 .append(Component.text(p.getName(), NamedTextColor.WHITE, TextDecoration.BOLD))
                 .append(Component.text(" se llevo el objeto ", NamedTextColor.GRAY))

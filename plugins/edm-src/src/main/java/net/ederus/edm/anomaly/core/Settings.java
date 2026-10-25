@@ -136,6 +136,58 @@ public final class Settings {
         return cfg().getDouble("combate.mobcoins-minimo-por-jugador", 5);
     }
 
+    // ---------------------------------------------------------------------- botin
+
+    /**
+     * EDM 1.90.0 · El botin va directo al inventario de un participante (sorteado con peso por
+     * dano) en vez de reventar al suelo para el primero que lo agarre. En false, como antes.
+     */
+    public boolean lootToInventory() {
+        return cfg().getBoolean("botin.al-inventario", true);
+    }
+
+    /** % minimo del dano total para contar como participante (botin, fragmentos, experiencia). */
+    public double minParticipationPercent() {
+        return Math.max(0, Math.min(100, cfg().getDouble("botin.participacion-minima", 3.0)));
+    }
+
+    public boolean fragmentsEnabled() {
+        return cfg().getBoolean("fragmentos.activo", true);
+    }
+
+    /** El tipo de MMOItems de los dos objetos (ANOMALY_ITEMS). */
+    public String fragmentsType() {
+        return cfg().getString("fragmentos.tipo", "ANOMALY_ITEMS");
+    }
+
+    public String fragmentId() {
+        return cfg().getString("fragmentos.fragmento", "FRAGMENTO_ANOMALO");
+    }
+
+    public String artifactId() {
+        return cfg().getString("fragmentos.artefacto", "ARTEFACTO_ANOMALO");
+    }
+
+    /** Cuantos fragmentos pide el canje de un Artefacto Anomalo. */
+    public int fragmentsPerArtifact() {
+        return Math.max(1, cfg().getInt("fragmentos.por-canje", 15));
+    }
+
+    /** Desde este % de dano se dan 2 fragmentos; por debajo, 1. */
+    public double fragmentsMidPercent() {
+        return cfg().getDouble("fragmentos.tramo-medio", 10.0);
+    }
+
+    /** Desde este % de dano se dan 3 fragmentos. */
+    public double fragmentsHighPercent() {
+        return cfg().getDouble("fragmentos.tramo-alto", 25.0);
+    }
+
+    /** Probabilidad (%) de que el artefacto de una pieza rara (las de la fila de unicos). */
+    public double artifactRarePercent() {
+        return Math.max(0, Math.min(100, cfg().getDouble("fragmentos.rara", 10.0)));
+    }
+
     /**
      * Si los golpes al jefe se saltan las protecciones de terreno.
      *

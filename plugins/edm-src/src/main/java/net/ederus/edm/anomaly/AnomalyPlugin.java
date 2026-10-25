@@ -54,6 +54,8 @@ public final class AnomalyPlugin extends net.ederus.edm.Module {
     private Settings settings;
     private AnomalyRegistry registry;
     private DropStore drops;
+    /** 1.90.0 · Fragmentos y Artefacto Anomalo. */
+    private net.ederus.edm.anomaly.drops.Fragmentos fragmentos;
     private Protection protection;
     private AnomalyManager manager;
     private Announcer announcer;
@@ -82,6 +84,7 @@ public final class AnomalyPlugin extends net.ederus.edm.Module {
         this.registry.load(); // fichas (Anomalias/) y habilidades (Skills/Anomalias/)
         this.drops = new DropStore(this);
         this.drops.load();
+        this.fragmentos = new net.ederus.edm.anomaly.drops.Fragmentos(this);
         this.protection = new Protection(this);
         this.announcer = new Announcer(this);
         this.guard = new net.ederus.edm.anomaly.core.ArenaGuard(this);
@@ -119,6 +122,8 @@ public final class AnomalyPlugin extends net.ederus.edm.Module {
         getServer().getPluginManager().registerEvents(spawnMarker, this);
         // El almacen de botin escucha por el aviso de "quien se llevo el ÚNICO".
         getServer().getPluginManager().registerEvents(drops, this);
+        // 1.90.0 · Abrir el Artefacto Anomalo (y que su lampara no se coloque).
+        getServer().getPluginManager().registerEvents(fragmentos, this);
         getServer().getPluginManager().registerEvents(minionManager, this);
         getServer().getPluginManager().registerEvents(minionWand, this);
 
@@ -373,6 +378,10 @@ public final class AnomalyPlugin extends net.ederus.edm.Module {
 
     public DropStore drops() {
         return drops;
+    }
+
+    public net.ederus.edm.anomaly.drops.Fragmentos fragmentos() {
+        return fragmentos;
     }
 
     public Protection protection() {
