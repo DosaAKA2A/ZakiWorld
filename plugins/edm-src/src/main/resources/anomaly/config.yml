@@ -109,6 +109,24 @@ botin:
   # disparado en arco y nadie lo puede recoger hasta que toca el suelo.
   distancia-minima: 10
   distancia-maxima: 15
+  # 1.90.0: el botin va al inventario de un participante sorteado con peso por dano (MEJOR, al
+  # que mas pego). En false, revienta al suelo como antes.
+  al-inventario: true
+  # % minimo del dano total para contar como participante (botin, fragmentos, experiencia).
+  participacion-minima: 3.0
+
+# 1.90.0 · Fragmentos Anomalos: quien participa y no se lleva ninguna pieza recibe 1, 2 o 3 segun su
+# dano. En el NPC del canje (/anomaly canjear <jugador>) se cambian por un Artefacto Anomalo, que con
+# clic derecho da una armadura de las tablas de botin: normal o, con "rara" %, de la fila de unicos.
+fragmentos:
+  activo: true
+  tipo: ANOMALY_ITEMS
+  fragmento: FRAGMENTO_ANOMALO
+  artefacto: ARTEFACTO_ANOMALO
+  por-canje: 15
+  tramo-medio: 10.0
+  tramo-alto: 25.0
+  rara: 10.0
 
 anuncio:
   activo: true
