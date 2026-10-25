@@ -74,6 +74,11 @@ commands:
     usage: /flex [jugador|showcase|power|top]
     aliases: [vitrina]
     permission: ederus.flex
+  damage:
+    description: 'Cuanto pega el arma que llevas en la mano: golpe normal, critico y medio.'
+    usage: /damage
+    aliases: [daño, dano]
+    permission: ederus.damage
   mine:
     description: 'Minas de prision: zonas que se rellenan solas y se pican sin permiso de nadie.'
     usage: /mine [wand|create|edit|tp|reset|list|reload]
@@ -125,6 +130,9 @@ permissions:
   ederus.flex.admin:
     description: Recarga las vitrinas, salta el enfriamiento del anuncio y reinicia el top de Poder
     default: op
+  ederus.damage:
+    description: Permite usar /damage para ver cuanto pega el arma de la mano
+    default: true
   ederus.minas.usar:
     description: Abre el menu de minas y viaja a las que tenga permitidas
     default: true
