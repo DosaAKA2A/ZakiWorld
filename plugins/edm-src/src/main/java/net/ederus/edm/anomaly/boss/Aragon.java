@@ -598,7 +598,7 @@ public final class Aragon extends BossFight {
         target.sendActionBar(Component.text("Un hilo te tira.", NamedTextColor.RED, TextDecoration.BOLD));
 
         animate(50, tick -> {
-            if (!alive() || !Fx.isFightable(target)) throw Stop.now();
+            if (!alive() || !enLaPelea(target)) throw Stop.now();
             Fx.beam(boss.getLocation().add(0, 1.5, 0), target.getLocation().add(0, 1, 0), 0.9, p ->
                     Compat.spawn(world(), Compat.ITEM_COBWEB, p, 1, 0, 0, 0, 0));
             if (tick < 12 || tick % 5 != 0) return;

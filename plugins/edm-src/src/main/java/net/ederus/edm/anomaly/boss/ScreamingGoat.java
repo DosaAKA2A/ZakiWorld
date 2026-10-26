@@ -567,7 +567,7 @@ public final class ScreamingGoat extends BossFight {
         for (int i = 0; i < hops; i++) {
             final Player victim = victims.get(i);
             later(i * 22, () -> {
-                if (!alive() || !Fx.isFightable(victim)) return;
+                if (!alive() || !enLaPelea(victim)) return;
                 Location from = boss.getLocation();
                 Location to = Fx.ground(victim.getLocation(), 4);
                 Fx.beam(from.clone().add(0, 1, 0), to.clone().add(0, 1, 0), 0.5, p ->
@@ -639,7 +639,7 @@ public final class ScreamingGoat extends BossFight {
     /** Una cornada: el apunte con el cuerno y el lanzamiento vertical. */
     private void goreOn(Player target) {
         animate(40, tick -> {
-            if (!alive() || !Fx.isFightable(target)) throw Stop.now();
+            if (!alive() || !enLaPelea(target)) throw Stop.now();
             Location l = boss.getLocation().add(0, 1.2, 0);
             if (tick < 22) {
                 Fx.beam(l, target.getLocation().add(0, 1, 0), 0.4, p ->

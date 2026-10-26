@@ -372,7 +372,7 @@ public final class Quimera extends BossFight {
     }
 
     private boolean exposed(Player p) {
-        if (!Fx.isFightable(p)) return false;
+        if (!enLaPelea(p)) return false;
         if (p.isBlocking()) return false;
         if (behindPillar(p)) return false;
         return lookingAtIt(p);
@@ -387,13 +387,13 @@ public final class Quimera extends BossFight {
 
         BlockData stone = Material.STONE.createBlockData();
         animate(ticksHeld, tick -> {
-            if (!Fx.isFightable(p)) throw Stop.now();
+            if (!enLaPelea(p)) throw Stop.now();
             if (tick % 4 == 0) {
                 Compat.spawn(world(), Compat.FALLING_DUST_BLOCK, p.getLocation().add(0, 1.2, 0), 4,
                         0.3, 0.6, 0.3, 0, stone);
             }
         }, () -> {
-            if (!Fx.isFightable(p)) return;
+            if (!enLaPelea(p)) return;
             Compat.spawn(world(), Compat.BLOCK_CRUMBLE, p.getLocation().add(0, 1, 0), 20,
                     0.3, 0.6, 0.3, 0.06, stone);
             soundAt(p.getLocation(), "block.stone.break", 1.2f, 0.8f);
@@ -717,7 +717,7 @@ public final class Quimera extends BossFight {
         for (int i = 0; i < victims.size(); i++) {
             Player victim = victims.get(i);
             later(10 + i * 8, () -> {
-                if (!alive() || !Fx.isFightable(victim)) return;
+                if (!alive() || !enLaPelea(victim)) return;
                 Location head = snakeHead();
                 try {
                     org.bukkit.entity.LlamaSpit spit =

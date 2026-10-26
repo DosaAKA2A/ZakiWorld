@@ -443,7 +443,7 @@ public final class AbyssalChoir extends BossFight {
     /** Una horquilla del haz: la carga y la descarga sobre su objetivo. */
     private void beamOn(Player target) {
         animate(55, tick -> {
-            if (!alive() || !Fx.isFightable(target)) throw Stop.now();
+            if (!alive() || !enLaPelea(target)) throw Stop.now();
             Location from = boss.getLocation().add(0, 1.4, 0);
             Location to = target.getLocation().add(0, 1, 0);
             if (tick < 36) {
@@ -517,9 +517,9 @@ public final class AbyssalChoir extends BossFight {
             Player victim = randomTarget();
             if (victim == null) continue;
             later(i * 12, () -> {
-                if (!g.isValid() || !Fx.isFightable(victim)) return;
+                if (!g.isValid() || !enLaPelea(victim)) return;
                 animate(40, tick -> {
-                    if (!g.isValid() || !Fx.isFightable(victim)) throw Stop.now();
+                    if (!g.isValid() || !enLaPelea(victim)) throw Stop.now();
                     Location from = g.getLocation().add(0, 0.8, 0);
                     Location to = victim.getLocation().add(0, 1, 0);
                     if (tick < 26) {

@@ -499,7 +499,7 @@ public final class Bruja extends BossFight {
         Compat.apply(target, "weakness", 160, 0);
 
         animate(160, tick -> {
-            if (!alive() || !Fx.isFightable(target)) throw Stop.now();
+            if (!alive() || !enLaPelea(target)) throw Stop.now();
             Compat.spawn(world(), Compat.SPORE_BLOSSOM_AIR, target.getLocation().add(0, 2.2, 0), 2,
                     0.3, 0.1, 0.3, 0);
             if (tick % 40 == 0) {
@@ -507,7 +507,7 @@ public final class Bruja extends BossFight {
                 soundAt(target.getLocation(), "entity.witch.ambient", 0.8f, 1.3f);
             }
         }, () -> {
-            if (Fx.isFightable(target)) {
+            if (enLaPelea(target)) {
                 target.sendActionBar(Component.text("El maleficio se agota.", NamedTextColor.GREEN));
             }
         });
@@ -643,13 +643,13 @@ public final class Bruja extends BossFight {
     /** Un latigazo: la lengua sale, tira del jugador y lo suelta al llegar. */
     private void whipOn(Player target) {
         if (!alive() || !toadFreed || toad == null || !toad.isValid()) return;
-        if (target == null || !Fx.isFightable(target)) return;
+        if (target == null || !enLaPelea(target)) return;
         soundAt(toad.getLocation(), "entity.frog.tongue", 1.6f, 0.7f);
         target.sendActionBar(Component.text("La lengua del sapo te engancha.",
                 NamedTextColor.RED, TextDecoration.BOLD));
 
         animate(45, tick -> {
-            if (toad == null || !toad.isValid() || !Fx.isFightable(target)) throw Stop.now();
+            if (toad == null || !toad.isValid() || !enLaPelea(target)) throw Stop.now();
             Fx.beam(toad.getLocation().add(0, 0.6, 0), target.getLocation().add(0, 1, 0), 0.8, p ->
                     Compat.spawn(world(), Compat.SNEEZE, p, 1, 0.05, 0.05, 0.05, 0,
                             Compat.dust(0xE8A0B4, 1.3f)));
@@ -912,7 +912,7 @@ public final class Bruja extends BossFight {
             final Location b = p.getEyeLocation().clone();
             final int delay = jumps * 6;
             later(delay, () -> {
-                if (!alive() || !Fx.isFightable(p)) return;
+                if (!alive() || !enLaPelea(p)) return;
                 Fx.beam(a, b, 0.5, q -> {
                     Compat.spawn(world(), Compat.ELECTRIC_SPARK, q, 1, 0.04, 0.04, 0.04, 0.01);
                     Compat.spawn(world(), Compat.ENTITY_EFFECT, q, 1, 0, 0, 0, 0,
@@ -976,7 +976,7 @@ public final class Bruja extends BossFight {
 
         for (Player victim : pool) {
             animate(70, tick -> {
-                if (!alive() || !Fx.isFightable(victim)) throw Stop.now();
+                if (!alive() || !enLaPelea(victim)) throw Stop.now();
                 if (tick < 40) {
                     lift(victim, new Vector(0, 0.16, 0));
                     Compat.apply(victim, "slow_falling", 40, 0);

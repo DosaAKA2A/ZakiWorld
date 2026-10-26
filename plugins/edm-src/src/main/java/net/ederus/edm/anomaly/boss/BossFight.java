@@ -339,6 +339,9 @@ public abstract class BossFight {
         ultimaRotacion = ticks;
 
         List<Player> cerca = targets();
+        // 1.90.1 · A quien esta fuera de la correa (en un hoyo hondo, en lo alto de las
+        // gradas) no se le persigue: el jefe iria, se saldria y volveria, una y otra vez.
+        cerca.removeIf(p -> !dentroDeLaCorrea(p.getLocation()));
         if (cerca.isEmpty()) return;
 
         // Quien mas ha apretado DESDE la ultima rotacion, no en toda la pelea: si no,
@@ -384,58 +387,119 @@ public abstract class BossFight {
     private void vigilarCorrea() {
         if (volviendo && aMano) correrAMano();
         if (ticks % 10 != 0) return;
-        if (!plugin.settings().leashEnabled()) {
+        if (!correaActiva()) {
             if (volviendo) terminarVuelta();
             return;
         }
-        Location at = boss.getLocation();
-        double dist = distanciaAlInicio(at);
+        Entity mover = cuerpoQueCorre();
+        Location at = mover.getLocation();
+        boolean dentro = dentroDeLaCorrea(at);
         if (!volviendo) {
-            if (dentroDeLaCorrea(at)) return;
+            if (dentro) return;
             volviendo = true;
             aMano = false;
-            mejorDistancia = dist;
+            mejorDistancia = distancia3D(at);
             ultimoAvance = ticks;
             volviendoDesde = ticks;
+            double h = distanciaAlInicio(at);
             plugin.bitacora().anotar(
                     "correa",
                     event.typeId(),
                     "fuera en " + at.getWorld().getName() + " " + at.getBlockX() + " " + at.getBlockY() + " " + at.getBlockZ(),
-                    "a " + (dist == Double.MAX_VALUE ? "otro mundo" : Bitacora.num(dist) + " bloques"),
+                    "a " + (h == Double.MAX_VALUE ? "otro mundo" : Bitacora.num(h) + " bloques"),
                     "vuelve corriendo",
                     "segundo " + (ticks / 20));
         }
-        if (dist <= plugin.settings().leashArrival()) {
+        // Llegada: cerca del inicio Y dentro de la correa. Solo con la distancia en
+        // horizontal, un jefe metido en un hoyo justo debajo del punto se daba por llegado
+        // cada medio segundo sin haberse movido.
+        if (dentro && distanciaAlInicio(at) <= plugin.settings().leashArrival()) {
             terminarVuelta();
             return;
         }
-        if (dist < mejorDistancia - 1) {
-            mejorDistancia = dist;
+        // El avance se mide en 3D: salir de un hoyo tambien es acercarse.
+        double d3 = distancia3D(at);
+        if (d3 < mejorDistancia - 1) {
+            mejorDistancia = d3;
             ultimoAvance = ticks;
         }
-        Entity mover = boss.getVehicle() != null ? boss.getVehicle() : boss;
         if (at.getWorld() != arena.getWorld()
                 || ticks - ultimoAvance > plugin.settings().leashStuckSeconds() * 20L) {
-            Location to = Fx.ground(arena.clone().add(0, 1, 0), 6);
-            to.setYaw(at.getYaw());
-            mover.teleport(to, io.papermc.paper.entity.TeleportFlag.EntityState.RETAIN_PASSENGERS);
-            Compat.spawn(world(), Compat.PORTAL, to.clone().add(0, 1.5, 0), 60, 0.5, 1.2, 0.5, 0.2);
-            plugin.getLogger().warning(bossName() + " no podia volver andando al Coliseo; se le ha devuelto de un salto.");
-            plugin.bitacora().anotar("correa", event.typeId(), "atascado: devuelto de un salto", "segundo " + (ticks / 20));
-            terminarVuelta();
+            if (devolverDeUnSalto(mover)) {
+                plugin.getLogger().warning(bossName() + " no podia volver andando al Coliseo; se le ha devuelto de un salto.");
+                plugin.bitacora().anotar("correa", event.typeId(), "atascado: devuelto de un salto", "segundo " + (ticks / 20));
+                terminarVuelta();
+            } else {
+                // Si el salto no entra, se reintenta tras otro plazo entero, no cada medio segundo.
+                ultimoAvance = ticks;
+                plugin.getLogger().warning(bossName() + " esta fuera del Coliseo y no se le pudo devolver; se reintenta.");
+            }
             return;
         }
         // Mientras vuelve no lanza nada ni persigue a nadie; AnomalyManager le cancela
         // tambien los objetivos que la IA vanilla intente coger por el camino.
         busyFor(20);
-        if (mover instanceof org.bukkit.entity.Mob mob) mob.setTarget(null);
+        if (boss instanceof org.bukkit.entity.Mob mob) mob.setTarget(null);
+        if (mover != boss && mover instanceof org.bukkit.entity.Mob montura) montura.setTarget(null);
         // Segundo y medio con el pathfinder sin acercarse: a mano hasta que llegue.
         if (!aMano && ticks - volviendoDesde >= 30 && ticks - ultimoAvance >= 30) aMano = true;
-        if (!aMano && mover instanceof org.bukkit.entity.Mob mob) {
-            mob.getPathfinder().moveTo(arena, plugin.settings().leashSpeed());
+        if (!aMano && mover instanceof org.bukkit.entity.Mob corredor) {
+            corredor.getPathfinder().moveTo(arena, plugin.settings().leashSpeed());
         } else {
             aMano = true;
         }
+    }
+
+    /**
+     * El ultimo recurso: al punto del Coliseo de un salto. Devuelve si entro.
+     *
+     * Paper no deja cruzar de mundo a una entidad con pasajeros aunque se le pida
+     * conservarlos, asi que en ese caso se baja al jinete, se pasan los dos y se le
+     * vuelve a subir.
+     */
+    private boolean devolverDeUnSalto(Entity mover) {
+        Location to = Fx.ground(arena.clone().add(0, 1, 0), 6);
+        to.setYaw(mover.getLocation().getYaw());
+        List<Entity> jinetes = new ArrayList<>(mover.getPassengers());
+        boolean ok;
+        if (jinetes.isEmpty()) {
+            ok = mover.teleport(to);
+        } else if (mover.getWorld() == to.getWorld()) {
+            ok = mover.teleport(to, io.papermc.paper.entity.TeleportFlag.EntityState.RETAIN_PASSENGERS);
+        } else {
+            mover.eject();
+            ok = mover.teleport(to);
+            for (Entity j : jinetes) {
+                j.teleport(to);
+                if (ok) mover.addPassenger(j);
+            }
+        }
+        if (ok) Compat.spawn(world(), Compat.PORTAL, to.clone().add(0, 1.5, 0), 60, 0.5, 1.2, 0.5, 0.2);
+        return ok;
+    }
+
+    /**
+     * Lo que corre de vuelta al inicio: el jefe o, si va subido en algo, su montura. Un
+     * jefe con un cuerpo de combate aparte (Alba) lo sobrescribe.
+     */
+    protected Entity cuerpoQueCorre() {
+        return boss.getVehicle() != null ? boss.getVehicle() : boss;
+    }
+
+    /*
+     * Si esta pelea es la del Coliseo marcado. La correa solo vale ahi: las anomalias
+     * abiertas a mano en otro sitio (/anomaly here, at) y los minijefes de Calamity pelean
+     * en terreno natural, donde bajar cuatro bloques es lo normal. Se mira una vez.
+     */
+    private Boolean enColiseo;
+
+    private boolean correaActiva() {
+        if (!plugin.settings().leashEnabled()) return false;
+        if (enColiseo == null) {
+            Location col = plugin.settings().coliseum();
+            enColiseo = col != null && col.getWorld() == arena.getWorld() && col.distanceSquared(arena) <= 9;
+        }
+        return enColiseo;
     }
 
     /**
@@ -444,7 +508,7 @@ public abstract class BossFight {
      * carrera normal, que es lo que se buscaba en vez del teletransporte.
      */
     private void correrAMano() {
-        Entity mover = boss.getVehicle() != null ? boss.getVehicle() : boss;
+        Entity mover = cuerpoQueCorre();
         Location at = mover.getLocation();
         if (at.getWorld() != arena.getWorld()) return;
         Vector dir = arena.toVector().subtract(at.toVector()).setY(0);
@@ -464,7 +528,8 @@ public abstract class BossFight {
     private void terminarVuelta() {
         volviendo = false;
         aMano = false;
-        unbusy();
+        // Sin unbusy(): el busyFor(20) de la vuelta caduca solo en un segundo, y quitarlo
+        // a pelo cortaria una animacion de habilidad que siguiera en marcha.
         // Que elija a quien perseguir en el siguiente tick, no dentro de una rotacion entera.
         ultimaRotacion = Long.MIN_VALUE / 2;
     }
@@ -474,6 +539,11 @@ public abstract class BossFight {
         return volviendo;
     }
 
+    /** Distancia en linea recta al punto de aparicion; MAX_VALUE si esta en otro mundo. */
+    private double distancia3D(Location l) {
+        return l.getWorld() != arena.getWorld() ? Double.MAX_VALUE : l.distance(arena);
+    }
+
     /** Distancia en horizontal al punto de aparicion; MAX_VALUE si esta en otro mundo. */
     private double distanciaAlInicio(Location l) {
         if (l.getWorld() != arena.getWorld()) return Double.MAX_VALUE;
@@ -481,10 +551,25 @@ public abstract class BossFight {
         return Math.sqrt(dx * dx + dz * dz);
     }
 
-    /** Si l queda dentro de la correa del Coliseo: mismo mundo, radio y alturas. */
+    /**
+     * Si a un jugador le pueden alcanzar las habilidades: vivo, en supervivencia o
+     * aventura, en el mundo de la pelea y dentro del radio de la correa (sin mirar la
+     * altura: si no, subirse a las gradas o meterse en un hoyo seria un refugio).
+     *
+     * 1.90.1 · Las habilidades guardan al jugador y le pegan, lo atan o saltan hacia el
+     * segundos despues. Solo se miraba que siguiera vivo, asi que quien se iba de /warp a
+     * mitad se llevaba el golpe en otro mundo y el jefe salia detras de el.
+     */
+    public boolean enLaPelea(Player p) {
+        if (!Fx.isFightable(p) || p.getWorld() != arena.getWorld()) return false;
+        return !correaActiva()
+                || distanciaAlInicio(p.getLocation()) <= plugin.settings().leashRadius();
+    }
+
+    /** Si l queda dentro de la correa del Coliseo: mismo mundo, radio y alturas (fuera del Coliseo, solo el mundo). */
     public boolean dentroDeLaCorrea(Location l) {
         if (l == null || l.getWorld() != arena.getWorld()) return false;
-        if (!plugin.settings().leashEnabled()) return true;
+        if (!correaActiva()) return true;
         if (distanciaAlInicio(l) > plugin.settings().leashRadius()) return false;
         double dy = l.getY() - arena.getY();
         return dy >= -plugin.settings().leashDown() && dy <= plugin.settings().leashUp();
@@ -1059,7 +1144,7 @@ public abstract class BossFight {
     }
 
     public void hit(Player p, double amount, double abilityMult) {
-        if (p == null || !Fx.isFightable(p)) return;
+        if (p == null || !enLaPelea(p)) return;
         amount *= plugin.registry().damageMultiplier(event.type()) * abilityMult;
         // Apuntado ANTES del golpe: si este lo mata, el mensaje de muerte ya sabe quien fue.
         event.markHit(p);
@@ -1116,7 +1201,7 @@ public abstract class BossFight {
         try {
             for (Player otro : Fx.playersNear(centro.getLocation(), radio)) {
                 if (otro.getUniqueId().equals(centro.getUniqueId())) continue;
-                if (!Fx.isFightable(otro)) continue;
+                if (!enLaPelea(otro)) continue;
                 event.markHit(otro);
                 try {
                     if (boss != null && boss.isValid()) {
@@ -1341,11 +1426,11 @@ public abstract class BossFight {
      * por moverte demasiado rapido. Ahora se anula el salto a mano, tick a tick.
      */
     public void root(Player p, int ticksHeld) {
-        if (p == null || !Fx.isFightable(p)) return;
+        if (p == null || !enLaPelea(p)) return;
         Compat.apply(p, "slowness", ticksHeld, 250);
         Compat.apply(p, "mining_fatigue", ticksHeld, 1);
         animate(ticksHeld, tick -> {
-            if (!Fx.isFightable(p)) throw net.ederus.edm.anomaly.core.Stop.now();
+            if (!enLaPelea(p)) throw net.ederus.edm.anomaly.core.Stop.now();
             Vector v = p.getVelocity();
             // Solo se corta lo que sube; caer se deja, que si no queda flotando.
             if (v.getY() > 0) p.setVelocity(new Vector(v.getX() * 0.2, -0.08, v.getZ() * 0.2));

@@ -508,7 +508,7 @@ public final class StormRider extends BossFight {
 
     /** Un picado: la marca en el suelo, la caida y la subida. */
     private void diveOn(Player target) {
-        if (target == null || !alive() || grounded || !Fx.isFightable(target)) return;
+        if (target == null || !alive() || grounded || !enLaPelea(target)) return;
         Location mark = Fx.ground(target.getLocation(), 4);
 
         soundAt(loc(), "entity.phantom.swoop", 1.6f, 0.7f);
@@ -698,7 +698,7 @@ public final class StormRider extends BossFight {
         target.sendActionBar(Component.text("Te ha arponeado.", NamedTextColor.RED, TextDecoration.BOLD));
 
         animate(50, tick -> {
-            if (!alive() || !Fx.isFightable(target)) throw Stop.now();
+            if (!alive() || !enLaPelea(target)) throw Stop.now();
             Location from = boss.getLocation().add(0, 1.2, 0);
             Location to = target.getLocation().add(0, 1.0, 0);
             Fx.beam(from, to, 0.4, p ->
@@ -905,7 +905,7 @@ public final class StormRider extends BossFight {
         target.sendActionBar(Component.text("El cielo te ha elegido.", NamedTextColor.RED, TextDecoration.BOLD));
 
         animate(70, tick -> {
-            if (!Fx.isFightable(target)) throw Stop.now();
+            if (!enLaPelea(target)) throw Stop.now();
             Location tl = target.getLocation();
             Fx.beam(tl.clone().add(0, 0.3, 0), tl.clone().add(0, 12, 0), 0.9, p ->
                     Compat.spawn(world(), Compat.SMALL_GUST, p, 1, 0, 0, 0, 0, Compat.dust(STORM, 1.1f)));

@@ -284,7 +284,7 @@ public final class Keeper extends BossFight {
             if (tick != 30) return;
             soundAt(center(), "entity.warden.sonic_boom", 1.8f, 0.8f);
             for (Player m : marks) {
-                if (!Fx.isFightable(m)) continue;
+                if (!enLaPelea(m)) continue;
                 Vector dir = m.getLocation().add(0, 1, 0).toVector().subtract(center().toVector());
                 if (dir.lengthSquared() < 0.01) continue;
                 sonicLine(center(), dir.normalize(), Math.min(24, dir.length() + 4), 1.4, 10);
@@ -330,7 +330,7 @@ public final class Keeper extends BossFight {
         face(target.getLocation());
         soundAt(loc(), "entity.warden.attack_impact", 1.5f, 0.8f);
         later(10, () -> {
-            if (!alive() || !Fx.isFightable(target)) return;
+            if (!alive() || !enLaPelea(target)) return;
             if (boss.getLocation().distanceSquared(target.getLocation()) > 36) return;
             hit(target, 16);
             push(target, target.getLocation().toVector().subtract(loc().toVector())
@@ -442,7 +442,7 @@ public final class Keeper extends BossFight {
      * @param mode 0 = entierro largo con aviso; 1 = tunel rapido (para la cadena)
      */
     private void digAndEmerge(Player target, int mode) {
-        if (!alive() || target == null || !Fx.isFightable(target)) return;
+        if (!alive() || target == null || !enLaPelea(target)) return;
         final int digTime = mode == 0 ? 22 : 12;
         final Location downAt = loc().clone();
         soundAt(downAt, "entity.warden.dig", 1.7f, 0.9f);
@@ -463,7 +463,7 @@ public final class Keeper extends BossFight {
                         Material.SCULK.createBlockData());
                 return;
             }
-            if (Fx.isFightable(target) && dentroDeLaCorrea(target.getLocation())) {
+            if (enLaPelea(target) && dentroDeLaCorrea(target.getLocation())) {
                 Location cand = Fx.ground(target.getLocation(), 5);
                 if (dentroDeLaCorrea(cand)) lastMark[0] = cand;
             }
@@ -518,7 +518,7 @@ public final class Keeper extends BossFight {
                     return;
                 }
                 if (tick == 14) {
-                    if (!Fx.isFightable(m) || m.getLocation().distanceSquared(at) > 9) throw Stop.now();
+                    if (!enLaPelea(m) || m.getLocation().distanceSquared(at) > 9) throw Stop.now();
                     hit(m, 6);
                     root(m, 50);
                     soundAt(at, "block.sculk_vein.break", 1.4f, 0.6f);
@@ -709,7 +709,7 @@ public final class Keeper extends BossFight {
                 .limit(5)
                 .forEach(e -> {
                     Player p = plugin.getServer().getPlayer(e.getKey());
-                    if (p != null && Fx.isFightable(p)) ranked.add(p);
+                    if (p != null && enLaPelea(p)) ranked.add(p);
                 });
         if (ranked.isEmpty()) return;
         soundAt(loc(), "block.sculk_sensor.clicking", 1.6f, 0.5f);
@@ -718,7 +718,7 @@ public final class Keeper extends BossFight {
         for (Player m : ranked) {
             m.sendActionBar(Component.text("KEEPER te tiene ubicado.", NamedTextColor.RED, TextDecoration.BOLD));
             animate(50, tick -> {
-                if (!alive() || !Fx.isFightable(m)) throw Stop.now();
+                if (!alive() || !enLaPelea(m)) throw Stop.now();
                 if (tick < 40) {
                     Fx.ring(m.getLocation().add(0, 2.5, 0), 0.6, 8, tick * 0.4, p ->
                             Compat.spawn(world(), Compat.DUST, p, 1, 0, 0, 0, 0, Compat.dust(SOUL_TEAL, 1.3f)));
@@ -769,7 +769,7 @@ public final class Keeper extends BossFight {
                 });
 
         animate(100, tick -> {
-            if (!alive() || freed[0] || !Fx.isFightable(prisoner)) throw Stop.now();
+            if (!alive() || freed[0] || !enLaPelea(prisoner)) throw Stop.now();
             if (tick % 20 == 0) {
                 soundAt(cell, "entity.warden.heartbeat", 1.2f, 0.8f + tick / 100f);
                 Compat.spawn(world(), Compat.SCULK_CHARGE, cell.clone().add(0, 1.2, 0), 8, 1.2, 1.0, 1.2, 0.02);
@@ -864,7 +864,7 @@ public final class Keeper extends BossFight {
                 if (soul == null || !soul.isValid()) throw Stop.now();
                 Location l = soul.getLocation();
                 Compat.spawn(world(), Compat.SCULK_SOUL, l.clone().add(0, 0.4, 0), 2, 0.1, 0.1, 0.1, 0.01);
-                if (tick % 3 == 0 && Fx.isFightable(prey)) {
+                if (tick % 3 == 0 && enLaPelea(prey)) {
                     Vector to = prey.getLocation().add(0, 0.8, 0).toVector().subtract(l.toVector());
                     if (to.lengthSquared() > 0.04) {
                         soul.setVelocity(to.normalize().multiply(0.34).setY(
@@ -901,7 +901,7 @@ public final class Keeper extends BossFight {
             animate(46, tick -> {
                 if (!alive()) throw Stop.now();
                 if (tick < 26) {
-                    if (!Fx.isFightable(m)) throw Stop.now();
+                    if (!enLaPelea(m)) throw Stop.now();
                     Location to = m.getLocation();
                     Vector dir = to.toVector().subtract(from.toVector()).setY(0);
                     double len = Math.min(dir.length(), 2 + tick * 0.9);
@@ -1105,7 +1105,7 @@ public final class Keeper extends BossFight {
                 if (tick % 4 == 0) {
                     Compat.spawn(world(), Compat.SCULK_CHARGE_POP, l.clone().add(0, 0.3, 0), 1, 0.1, 0.1, 0.1, 0);
                 }
-                if (!Fx.isFightable(prey)) return;
+                if (!enLaPelea(prey)) return;
                 if (tick % 10 == 0) {
                     try {
                         spawnling.setTarget(prey);
@@ -1147,7 +1147,7 @@ public final class Keeper extends BossFight {
                 NamedTextColor.RED, TextDecoration.BOLD));
 
         animate(90, tick -> {
-            if (!alive() || !Fx.isFightable(caught)) throw Stop.now();
+            if (!alive() || !enLaPelea(caught)) throw Stop.now();
             if (embraceDamage >= 60) {
                 warn(Component.text("KEEPER suelta la presa.", NamedTextColor.GREEN));
                 Compat.apply(boss, "slowness", 50, 1);

@@ -428,7 +428,7 @@ public final class KillerBunny extends BossFight {
 
     /** Un salto asesino: sube, marca el suelo del objetivo y cae encima. */
     private void leapOn(Player target) {
-        if (target == null || !alive() || !Fx.isFightable(target)) return;
+        if (target == null || !alive() || !enLaPelea(target)) return;
         Location mark = Fx.ground(target.getLocation(), 4);
         reveal(4);
 
@@ -562,7 +562,7 @@ public final class KillerBunny extends BossFight {
 
         soundAt(loc(), "entity.rabbit.hurt", 1.2f, 0.7f);
         animate(35, tick -> {
-            if (!alive() || !Fx.isFightable(target)) throw Stop.now();
+            if (!alive() || !enLaPelea(target)) throw Stop.now();
             Location l = boss.getLocation();
             if (tick < 18) {
                 Compat.spawn(world(), Compat.BLOCK, Fx.ground(l, 3), 8, 0.4, 0.05, 0.4, 0.05, groundBlock(l));
@@ -603,7 +603,7 @@ public final class KillerBunny extends BossFight {
             for (Rabbit r : copies) {
                 if (r == null || !r.isValid()) continue;
                 Player target = marks.get(i++ % marks.size());
-                if (!Fx.isFightable(target)) continue;
+                if (!enLaPelea(target)) continue;
                 Location tl = target.getLocation();
                 if (tick % 10 == 0) {
                     Fx.ring(tl.clone().add(0, 0.15, 0), 1.6, 10, tick * 0.3, p ->
@@ -659,7 +659,7 @@ public final class KillerBunny extends BossFight {
     /** Una dentellada: el rastro, el bocado y la sangria que deja. */
     private void biteOn(Player target) {
         animate(45, tick -> {
-            if (!alive() || !Fx.isFightable(target)) throw Stop.now();
+            if (!alive() || !enLaPelea(target)) throw Stop.now();
             if (tick < 20) {
                 Fx.beam(boss.getLocation().add(0, 0.6, 0), target.getLocation().add(0, 1, 0), 0.4, p ->
                         Compat.spawn(world(), Compat.SMALL_GUST, p, 1, 0, 0, 0, 0, Compat.dust(BLOOD, 1.1f)));
@@ -858,7 +858,7 @@ public final class KillerBunny extends BossFight {
         target.sendActionBar(Component.text("Se te ha agarrado.", NamedTextColor.RED, TextDecoration.BOLD));
 
         animate(80, tick -> {
-            if (!alive() || !Fx.isFightable(target)) throw Stop.now();
+            if (!alive() || !enLaPelea(target)) throw Stop.now();
             Location tl = target.getLocation();
             if (tick < 24) {
                 Vector dir = tl.toVector().subtract(boss.getLocation().toVector());

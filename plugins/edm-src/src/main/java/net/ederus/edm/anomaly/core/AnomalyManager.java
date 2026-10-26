@@ -690,6 +690,9 @@ public final class AnomalyManager implements Listener {
     public void onSelfTeleport(org.bukkit.event.entity.EntityTeleportEvent e) {
         Entity en = e.getEntity();
         if (!(en instanceof org.bukkit.entity.Enderman) && !(en instanceof org.bukkit.entity.Shulker)) return;
+        // Los saltos propios del enderman nunca cambian de mundo; uno que si (el de ultimo
+        // recurso de la correa) es nuestro y no se toca.
+        if (e.getTo() == null || e.getTo().getWorld() != e.getFrom().getWorld()) return;
         if (isOurFighter(en)) e.setCancelled(true);
     }
 

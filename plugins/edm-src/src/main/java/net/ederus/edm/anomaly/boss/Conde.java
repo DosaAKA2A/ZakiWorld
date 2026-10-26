@@ -657,7 +657,7 @@ public final class Conde extends BossFight {
             mordiendo = true;
             try {
                 for (Player otro : Fx.playersNear(victima.getLocation(), VASTAGO_MORDISCO_RADIO)) {
-                    if (otro.equals(victima) || !Fx.isFightable(otro)) continue;
+                    if (otro.equals(victima) || !enLaPelea(otro)) continue;
                     dealScaled(() -> otro.damage(dano, v.mob));
                 }
             } finally {
@@ -887,7 +887,7 @@ public final class Conde extends BossFight {
                 soundAt(loc(), "block.respawn_anchor.charge", 1.0f, 0.8f + t * 0.015f);
                 String quedan = String.format(Locale.ROOT, "%.1f", (SELLO_ESTALLA - t) / 20.0).replace('.', ',');
                 for (Player p : objetivos) {
-                    if (!Fx.isFightable(p)) continue;
+                    if (!enLaPelea(p)) continue;
                     p.sendActionBar(Component.text("Sello rojo bajo tus pies. Estalla en " + quedan + " s", ACCENT));
                 }
             }
@@ -933,7 +933,7 @@ public final class Conde extends BossFight {
 
         // Aviso: el hilo rojo hasta su presa y el abanico donde va a morder.
         animate(12, t -> {
-            if (!alive() || !Fx.isFightable(v)) throw Stop.now();
+            if (!alive() || !enLaPelea(v)) throw Stop.now();
             face(v.getEyeLocation());
             if (t % 2 == 0) {
                 Fx.beam(boss.getLocation().add(0, 1.2, 0), v.getLocation().add(0, 1.0, 0), 0.7, p ->
@@ -948,7 +948,7 @@ public final class Conde extends BossFight {
                 }
             }
         }, () -> {
-            if (!alive() || !Fx.isFightable(v)) return;
+            if (!alive() || !enLaPelea(v)) return;
             final Location desde = boss.getLocation();
             soundAt(desde, "entity.phantom.swoop", 1.8f, 1.2f);
             animate(7, t -> {
@@ -970,7 +970,7 @@ public final class Conde extends BossFight {
                 if (!alive()) return;
                 // El abanico mira a donde mira el: hacia la presa si sigue ahi, si no hacia delante.
                 Location yo = boss.getLocation();
-                Vector frente = Fx.isFightable(v) && v.getWorld().equals(world())
+                Vector frente = enLaPelea(v) && v.getWorld().equals(world())
                         ? v.getLocation().toVector().subtract(yo.toVector()).setY(0)
                         : yo.getDirection().setY(0);
                 if (frente.lengthSquared() < 0.01) frente = new Vector(1, 0, 0);
@@ -1732,7 +1732,7 @@ public final class Conde extends BossFight {
             Location pecho = boss.getLocation().add(0, 1.3, 0);
             for (int i = 0; i < victimas.size(); i++) {
                 Player p = victimas.get(i);
-                if (!Fx.isFightable(p)) continue;
+                if (!enLaPelea(p)) continue;
                 Fx.beam(p.getLocation().add(0, 1.0, 0), pecho, 0.6, pt ->
                         Compat.spawn(world(), Compat.DUST_COLOR_TRANSITION, pt, 1, 0, 0, 0, 0, transicion(0.8f)));
                 if (i >= 8) {
@@ -1745,7 +1745,7 @@ public final class Conde extends BossFight {
             if (!alive()) return;
             int alcanzados = 0;
             for (Player p : victimas) {
-                if (!Fx.isFightable(p) || !p.getWorld().equals(world())) continue;
+                if (!enLaPelea(p) || !p.getWorld().equals(world())) continue;
                 if (p.getLocation().distance(boss.getLocation()) > 12) continue;
                 hit(p, 7 * power());
                 alcanzados++;
@@ -1892,7 +1892,7 @@ public final class Conde extends BossFight {
                 final Player p = tres.get(i);
                 final Location[] ultima = {p.getLocation().add(0, 0.9, 0)};
                 mira = () -> {
-                    if (Fx.isFightable(p) && p.getWorld().equals(world())) ultima[0] = p.getLocation().add(0, 0.9, 0);
+                    if (enLaPelea(p) && p.getWorld().equals(world())) ultima[0] = p.getLocation().add(0, 0.9, 0);
                     return ultima[0].clone();
                 };
             } else {
@@ -1989,7 +1989,7 @@ public final class Conde extends BossFight {
             if (dePie && cuerpo.isValid()) cuerpo.teleport(mob.getLocation());
             if (t % 20 == 0) {
                 desnudar(mob);
-                if (dePie && !(mob.getTarget() instanceof Player p && Fx.isFightable(p))) {
+                if (dePie && !(mob.getTarget() instanceof Player p && enLaPelea(p))) {
                     mob.setTarget(Fx.nearest(mob.getLocation(), 40));
                 }
             }
@@ -2268,7 +2268,7 @@ public final class Conde extends BossFight {
                 if (t == orbita && i == 0 && orbita > 0) soundAt(b.getLocation(), "entity.phantom.swoop", 1.8f, 1.1f);
 
                 Player obj = fijo != null ? fijo : asignado.get(i);
-                if (obj == null || !Fx.isFightable(obj) || !obj.getWorld().equals(world())) {
+                if (obj == null || !enLaPelea(obj) || !obj.getWorld().equals(world())) {
                     List<Player> pool = targets();
                     obj = pool.isEmpty() ? null : pool.get(i % pool.size());
                     asignado.set(i, obj);

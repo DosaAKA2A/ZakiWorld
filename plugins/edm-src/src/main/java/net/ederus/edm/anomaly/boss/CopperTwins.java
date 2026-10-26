@@ -589,7 +589,7 @@ public final class CopperTwins extends BossFight {
      * La Herrumbre de KEM se cobra aqui: cada capa sube lo que duele todo lo demas.
      */
     private void strike(LivingEntity source, Player p, double amount) {
-        if (p == null || !Fx.isFightable(p)) return;
+        if (p == null || !enLaPelea(p)) return;
         double dmg = amount * FUERZA * plugin.registry().damageMultiplier(event.type()) * abilityDamage();
         dmg *= 1 + 0.12 * rust.getOrDefault(p.getUniqueId(), 0);
         final double golpe = dmg;
@@ -677,7 +677,7 @@ public final class CopperTwins extends BossFight {
                 Title.Times.times(Duration.ofMillis(200), Duration.ofMillis(1600), Duration.ofMillis(500))));
 
         animate(PETRIFY_TICKS, tick -> {
-            if (!Fx.isFightable(p)) throw Stop.now();
+            if (!enLaPelea(p)) throw Stop.now();
             long resta = petrifiedUntil.getOrDefault(p.getUniqueId(), 0L) - ticks();
             if (resta <= 0) throw Stop.now();
             // Clavado: lo que sube se corta (como root), caer se deja.
@@ -701,7 +701,7 @@ public final class CopperTwins extends BossFight {
             p.removePotionEffect(org.bukkit.potion.PotionEffectType.WEAKNESS);
             Glow.clear(p);
             p.setGlowing(false);
-            if (Fx.isFightable(p)) {
+            if (enLaPelea(p)) {
                 p.sendActionBar(Component.text("El cobre se resquebraja. Ya puedes moverte.",
                         NamedTextColor.GREEN));
             }
@@ -717,7 +717,7 @@ public final class CopperTwins extends BossFight {
     public boolean onPlayerUsePlayer(Player who, Player target) {
         Long hasta = petrifiedUntil.get(target.getUniqueId());
         if (hasta == null) return false;
-        if (petrified.contains(who.getUniqueId()) || !Fx.isFightable(who)) return true;
+        if (petrified.contains(who.getUniqueId()) || !enLaPelea(who)) return true;
         org.bukkit.inventory.ItemStack mano = who.getInventory().getItemInMainHand();
         if (!mano.getType().name().endsWith("_AXE")) {
             who.sendActionBar(Component.text("Rasca el óxido con un hacha.", TextColor.color(KEM_RGB)));
@@ -808,7 +808,7 @@ public final class CopperTwins extends BossFight {
                 Title.Times.times(Duration.ofMillis(150), Duration.ofMillis(1400), Duration.ofMillis(400))));
 
         animate(100, tick -> {
-            if (!Fx.isFightable(p)) throw Stop.now();
+            if (!enLaPelea(p)) throw Stop.now();
             if (tick % 4 == 0) {
                 Fx.ring(p.getLocation().add(0, 2.4, 0), 0.5, 6, tick * 0.5, l ->
                         Compat.spawn(world(), Compat.DUST, l, 1, 0, 0, 0, 0, Compat.dust(KAM_RGB, 1.6f)));
@@ -866,7 +866,7 @@ public final class CopperTwins extends BossFight {
             Player p = chain.get(i);
             final Location prev = i == 0 ? from : chain.get(i - 1).getLocation().add(0, 1, 0);
             later(i * 6, () -> {
-                if (!kemUp() || !Fx.isFightable(p)) return;
+                if (!kemUp() || !enLaPelea(p)) return;
                 Fx.beam(prev, p.getLocation().add(0, 1, 0), 0.4, l -> {
                     Compat.spawn(world(), Compat.ELECTRIC_SPARK, l, 2, 0.05, 0.05, 0.05, 0.02);
                     Compat.spawn(world(), Compat.DUST, l, 1, 0, 0, 0, 0, Compat.dust(KEM_RGB, 1.2f));
@@ -1226,7 +1226,7 @@ public final class CopperTwins extends BossFight {
         root(prey, 30);
 
         animate(50, tick -> {
-            if (!kamUp() || !Fx.isFightable(prey)) throw Stop.now();
+            if (!kamUp() || !enLaPelea(prey)) throw Stop.now();
             if (tick < 30) {
                 Fx.beam(kam.getLocation().add(0, 1.5, 0), prey.getLocation().add(0, 1, 0), 0.5, l ->
                         Compat.spawn(world(), Compat.DUST, l, 1, 0, 0, 0, 0, Compat.dust(KAM_RGB, 1.4f)));

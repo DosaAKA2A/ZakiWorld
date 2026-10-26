@@ -407,7 +407,7 @@ public final class Piromante extends BossFight {
             int thrown = 0;
             for (Player p : pool) {
                 if (thrown++ >= 3) break;
-                if (!Fx.isFightable(p)) continue;
+                if (!enLaPelea(p)) continue;
                 try {
                     LargeFireball ball = boss.launchProjectile(LargeFireball.class,
                             p.getEyeLocation().toVector().subtract(hand.toVector()).normalize());
@@ -431,7 +431,7 @@ public final class Piromante extends BossFight {
         for (int i = 0; i < 6; i++) {
             final int idx = i;
             later(i * 5, () -> {
-                if (!alive() || !Fx.isFightable(target)) return;
+                if (!alive() || !enLaPelea(target)) return;
                 Location hand = boss.getEyeLocation();
                 Vector dir = target.getEyeLocation().toVector().subtract(hand.toVector()).normalize();
                 double spread = (idx - 2.5) * 0.09;
@@ -634,7 +634,7 @@ public final class Piromante extends BossFight {
             victim.sendActionBar(Component.text("Te arde una marca encima.",
                     NamedTextColor.RED, TextDecoration.BOLD));
             animate(90, tick -> {
-                if (!Fx.isFightable(victim)) throw Stop.now();
+                if (!enLaPelea(victim)) throw Stop.now();
                 if (tick < 80) {
                     Fx.ring(victim.getLocation().add(0, 2.3, 0), 0.5, 6, tick * 0.4, p ->
                             Compat.spawn(world(), Compat.SMALL_FLAME, p, 1, 0, 0, 0, 0));

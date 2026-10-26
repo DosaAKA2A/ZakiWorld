@@ -1398,7 +1398,7 @@ public final class Raiz extends BossFight {
         animate(estalla + 2, t -> {
             if (cerrado || !alive()) throw Stop.now();
             if (t < estalla) {
-                if (Fx.isFightable(marcado)) {
+                if (enLaPelea(marcado)) {
                     Location g = Fx.ground(marcado.getLocation(), 6);
                     centro.setX(g.getX());
                     centro.setY(g.getY());
@@ -1771,7 +1771,7 @@ public final class Raiz extends BossFight {
         marcarCuenta();
         Component c = Component.text(texto + " ", ACCENT)
                 .append(Component.text(segundos(quedan) + " s", NamedTextColor.WHITE));
-        for (Player p : ps) if (Fx.isFightable(p)) p.sendActionBar(c);
+        for (Player p : ps) if (enLaPelea(p)) p.sendActionBar(c);
     }
 
     // ------------------------------------------------------------- particulas

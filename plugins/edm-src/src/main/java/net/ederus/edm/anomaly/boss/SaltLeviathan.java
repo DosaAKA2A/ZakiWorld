@@ -295,7 +295,7 @@ public final class SaltLeviathan extends BossFight {
     /** Un haz: se tensa cuarenta ticks sobre el objetivo y descarga. */
     private void beamOn(Player target) {
         animate(60, tick -> {
-            if (!alive() || !Fx.isFightable(target)) throw Stop.now();
+            if (!alive() || !enLaPelea(target)) throw Stop.now();
             Location from = boss.getEyeLocation();
             Location to = target.getLocation().add(0, 1, 0);
             if (tick < 40) {
@@ -429,7 +429,7 @@ public final class SaltLeviathan extends BossFight {
             if (tick < 30) {
                 Location from = boss.getEyeLocation();
                 for (Player p : victims) {
-                    if (!Fx.isFightable(p)) continue;
+                    if (!enLaPelea(p)) continue;
                     Fx.beam(from, p.getLocation().add(0, 1, 0), 0.8, q ->
                             Compat.spawn(world(), Compat.NAUTILUS, q, 1, 0, 0, 0, 0, Compat.dust(PRISM, 0.9f)));
                 }
@@ -438,7 +438,7 @@ public final class SaltLeviathan extends BossFight {
             int index = (tick - 30) / 14;
             if ((tick - 30) % 14 != 0 || index >= victims.size()) return;
             Player p = victims.get(index);
-            if (!Fx.isFightable(p)) return;
+            if (!enLaPelea(p)) return;
             Location from = index == 0
                     ? boss.getEyeLocation()
                     : victims.get(index - 1).getLocation().add(0, 1, 0);
@@ -666,7 +666,7 @@ public final class SaltLeviathan extends BossFight {
 
         soundAt(loc(), "entity.elder_guardian.ambient", 1.6f, 0.5f);
         animate(70, tick -> {
-            if (!alive() || !Fx.isFightable(target)) throw Stop.now();
+            if (!alive() || !enLaPelea(target)) throw Stop.now();
             Location l = boss.getLocation();
             Location tl = target.getLocation();
             if (tick < 24) {

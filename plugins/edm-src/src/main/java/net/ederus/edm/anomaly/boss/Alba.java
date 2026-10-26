@@ -271,6 +271,16 @@ public final class Alba extends BossFight {
         }
     }
 
+    /**
+     * 1.90.1 · Montada, quien corre de vuelta al Coliseo es el caballo: el zombi de
+     * combate no va subido (el pasajero es el maniqui) y ambient() lo pega al caballo cada
+     * tick, asi que moverlo a el no servia de nada.
+     */
+    @Override
+    protected org.bukkit.entity.Entity cuerpoQueCorre() {
+        return mounted() ? steed : super.cuerpoQueCorre();
+    }
+
     @Override
     protected void ambient() {
         super.ambient();

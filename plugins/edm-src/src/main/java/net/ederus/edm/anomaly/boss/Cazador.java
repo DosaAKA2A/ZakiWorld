@@ -549,7 +549,7 @@ public final class Cazador extends BossFight {
         animate(50, tick -> {
             if (!mark.isValid()) throw Stop.now();
             Location here = mark.getLocation();
-            Player aim = Fx.isFightable(victim) ? victim : Fx.nearest(here, 40);
+            Player aim = enLaPelea(victim) ? victim : Fx.nearest(here, 40);
             if (aim == null) {
                 blast(here, null);
                 spawned.remove(mark);
@@ -624,7 +624,7 @@ public final class Cazador extends BossFight {
                 List<Player> now = targets(60);
                 if (now.isEmpty()) return;
                 Player p = now.get(idx % now.size());
-                if (!Fx.isFightable(p)) return;
+                if (!enLaPelea(p)) return;
                 shoot(p, 2.8, 7);
                 soundAt(loc(), "item.crossbow.shoot", 1.3f, 1.0f);
             });
@@ -679,7 +679,7 @@ public final class Cazador extends BossFight {
         animate(40, tick -> {
             if (!alive()) throw Stop.now();
             if (tick < 30) {
-                if (!Fx.isFightable(victim)) throw Stop.now();
+                if (!enLaPelea(victim)) throw Stop.now();
                 Fx.beam(boss.getEyeLocation(), victim.getEyeLocation(), 1.2, p ->
                         Compat.spawn(world(), Compat.WAX_ON, p, 1, 0.02, 0.02, 0.02, 0));
                 return;
@@ -859,7 +859,7 @@ public final class Cazador extends BossFight {
         if (boss instanceof org.bukkit.entity.Mob m) m.setTarget(target);
 
         animate(200, tick -> {
-            if (!alive() || !Fx.isFightable(target)) throw Stop.now();
+            if (!alive() || !enLaPelea(target)) throw Stop.now();
             if (tick % 10 == 0) {
                 Compat.spawn(world(), Compat.WAX_ON, target.getLocation().add(0, 2.4, 0), 3, 0.2, 0.1, 0.2, 0);
             }
@@ -908,7 +908,7 @@ public final class Cazador extends BossFight {
         victim.sendActionBar(Component.text("El Cazador te ha marcado.",
                 NamedTextColor.RED, TextDecoration.BOLD));
         animate(200, tick -> {
-            if (!alive() || !Fx.isFightable(victim)) throw Stop.now();
+            if (!alive() || !enLaPelea(victim)) throw Stop.now();
             if (tick % 10 == 0) {
                 Compat.spawn(world(), Compat.WAX_ON, victim.getLocation().add(0, 2.4, 0), 3, 0.2, 0.1, 0.2, 0);
             }

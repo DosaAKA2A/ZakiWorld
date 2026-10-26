@@ -427,7 +427,7 @@ public final class Rabby extends BossFight {
         if (to.lengthSquared() > 0.01) boss.setVelocity(to.normalize().multiply(1.1).setY(0.3));
 
         later(8, () -> {
-            if (!alive() || !Fx.isFightable(victim)) return;
+            if (!alive() || !enLaPelea(victim)) return;
             hit(victim, 10 * power());
             lift(victim, new Vector(0, 1.9, 0));
             enCombo = true;
@@ -436,7 +436,7 @@ public final class Rabby extends BossFight {
 
             // 2) sube con el y le pega arriba
             animate(110, tick -> {
-                if (!alive() || !Fx.isFightable(victim)) throw Stop.now();
+                if (!alive() || !enLaPelea(victim)) throw Stop.now();
                 if (tick == 14) {
                     boss.teleport(victim.getLocation().clone().add(0, 1.2, 0));
                     grantAirTime(victim, 200);
@@ -471,7 +471,7 @@ public final class Rabby extends BossFight {
                 victim.sendActionBar(Component.text("¡AL SUELO!", NamedTextColor.RED, TextDecoration.BOLD));
 
                 later(16, () -> {
-                    if (!Fx.isFightable(victim)) return;
+                    if (!enLaPelea(victim)) return;
                     Location impact = Fx.ground(victim.getLocation(), 6);
                     hitRapido(victim, 22 * power());
                     Compat.spawn(world(), Compat.EXPLOSION_EMITTER, impact, 1);
@@ -510,7 +510,7 @@ public final class Rabby extends BossFight {
             later(i * 14, () -> {
                 if (!alive()) return;
                 Player p = pool.get(idx % pool.size());
-                if (!Fx.isFightable(p)) return;
+                if (!enLaPelea(p)) return;
                 Location behind = p.getLocation().clone().add(
                         p.getLocation().getDirection().setY(0).normalize().multiply(-1.4));
                 Compat.spawn(world(), Compat.PORTAL, boss.getLocation().add(0, 1, 0), 20, 0.3, 0.5, 0.3, 0.1);
@@ -735,7 +735,7 @@ public final class Rabby extends BossFight {
                 NamedTextColor.RED, TextDecoration.BOLD));
 
         later(8, () -> {
-            if (!alive() || !Fx.isFightable(target)) return;
+            if (!alive() || !enLaPelea(target)) return;
             hit(target, 14 * power());
             Vector back = arena.toVector().subtract(target.getLocation().toVector()).setY(0);
             if (back.lengthSquared() < 0.01) back = new Vector(1, 0, 0);
@@ -806,7 +806,7 @@ public final class Rabby extends BossFight {
             later(i * 26, () -> {
                 if (!alive()) return;
                 Player p = pool.get(idx % pool.size());
-                if (!Fx.isFightable(p)) return;
+                if (!enLaPelea(p)) return;
                 Vector run = p.getLocation().toVector().subtract(boss.getLocation().toVector()).setY(0);
                 if (run.lengthSquared() < 0.01) return;
                 final Vector dir = run.normalize();

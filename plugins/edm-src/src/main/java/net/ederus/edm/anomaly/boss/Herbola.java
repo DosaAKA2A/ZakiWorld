@@ -66,6 +66,17 @@ public final class Herbola extends BossFight {
     /** Cuantos bloques lleva convertidos, solo para el tope y el log. */
     private int changed;
 
+    /**
+     * 1.90.1 · Como era cada bloque ANTES de que Herbola lo tocara, en el orden en que los
+     * fue tocando. Al acabar la pelea se devuelve todo: con el Coliseo fijo de /warp, el
+     * musgo de cada pelea se iba sumando al de la anterior.
+     */
+    private final java.util.LinkedHashMap<Block, org.bukkit.block.data.BlockData> original =
+            new java.util.LinkedHashMap<>();
+    /* Ya se devolvio el jardin: a partir de aqui no se convierte nada. Las animaciones no
+     * se cancelan al parar la pelea, y lo que pintaran despues se quedaria para siempre. */
+    private boolean jardinCerrado;
+
     private Parrot parrot;
     private boolean parrotFreed;
     /** Mientras el Cantor hace lo suyo (un picado, el llanto) nadie le toca la posicion. */
@@ -258,15 +269,40 @@ public final class Herbola extends BossFight {
     // --------------------------------------------------- LA CONVERSION DEL TERRENO
 
     /**
-     * Convierte un bloque. Lo que Herbola cambia SE QUEDA: el jardin es permanente,
-     * asi lo quiso el servidor. Por eso importa mas que nunca la lista blanca: solo
-     * toca terreno natural, nunca un cofre, una puerta ni nada construido.
+     * Convierte un bloque. Solo toca terreno natural (la lista blanca), nunca un cofre,
+     * una puerta ni nada construido. 1.90.1: ya no se queda; se apunta como era y
+     * cleanup() lo devuelve (ver original).
      */
     private void convert(Block b, Material to) {
-        if (changed >= MAX_CHANGED) return;
+        if (jardinCerrado || changed >= MAX_CHANGED) return;
         if (b.getType() == to) return;
+        // Solo la PRIMERA vez: si se convierte dos veces, lo que vale es lo de antes de la pelea.
+        original.putIfAbsent(b, b.getBlockData());
         b.setType(to, false);
         changed++;
+    }
+
+    /**
+     * Devuelve cada bloque a como estaba. Al reves de como se cambiaron, para quitar la
+     * flor antes que el musgo que la sostiene; sin fisica, para que nada se caiga ni suelte
+     * objetos por el camino.
+     */
+    private void restoreGarden() {
+        jardinCerrado = true;
+        if (original.isEmpty()) return;
+        List<java.util.Map.Entry<Block, org.bukkit.block.data.BlockData>> todo = new ArrayList<>(original.entrySet());
+        java.util.Collections.reverse(todo);
+        int vueltos = 0;
+        for (java.util.Map.Entry<Block, org.bukkit.block.data.BlockData> e : todo) {
+            try {
+                e.getKey().setBlockData(e.getValue(), false);
+                vueltos++;
+            } catch (Throwable t) {
+                plugin.getLogger().warning("Herbola: no se pudo devolver el bloque " + e.getKey().getLocation() + ": " + t);
+            }
+        }
+        original.clear();
+        plugin.getLogger().info("Herbola: devueltos " + vueltos + " bloque(s) a como estaban.");
     }
 
     /** El rastro de musgo por donde pisa, como la nieve del muneco. */
@@ -311,9 +347,7 @@ public final class Herbola extends BossFight {
 
     @Override
     public void cleanup() {
-        if (changed > 0) {
-            plugin.getLogger().info("Herbola: dejo " + changed + " bloque(s) convertidos. Es a proposito.");
-        }
+        restoreGarden();
         if (parrot != null) {
             Glow.clear(parrot);
             spawned.remove(parrot);
@@ -530,7 +564,7 @@ public final class Herbola extends BossFight {
         return 60 + 100 + 60;
     }
 
-    /** El llanto: se eleva, carga, y revienta en un jardin permanente. */
+    /** El llanto: se eleva, carga, y revienta en un jardin (se devuelve al acabar la pelea). */
     private void cantorWeeps(Location l) {
         if (parrot == null || !parrot.isValid()) {
             plugin.getLogger().warning("El Cantor ya no estaba al morir Herbola; no hubo llanto.");
@@ -589,7 +623,7 @@ public final class Herbola extends BossFight {
             soundAt(center, "entity.parrot.death", 1.8f, 0.7f);
             soundAt(center, "block.moss.place", 1.8f, 0.5f);
 
-            // Todo el circulo queda convertido, y se queda asi.
+            // Todo el circulo queda convertido hasta que acabe la pelea.
             bloomAround(center, (int) radius, 1.0);
             for (int r = 1; r <= 6; r++) {
                 final int ring = r;
@@ -814,7 +848,7 @@ public final class Herbola extends BossFight {
     /** Un picado del loro: sube, marca, cae y amarra si acierta. */
     private void diveOn(Player target) {
         if (!alive() || !parrotFreed || parrot == null || !parrot.isValid()) return;
-        if (target == null || !Fx.isFightable(target)) return;
+        if (target == null || !enLaPelea(target)) return;
 
         soundAt(parrot.getLocation(), "entity.parrot.fly", 1.5f, 0.9f);
         announce(Component.text("El loro se lanza.", ACCENT));
@@ -825,7 +859,7 @@ public final class Herbola extends BossFight {
         final Location top = parrot.getLocation().clone().add(0, 6, 0);
         animate(80, tick -> {
             if (!alive() || parrot == null || !parrot.isValid()) throw Stop.now();
-            if (!Fx.isFightable(target)) throw Stop.now();
+            if (!enLaPelea(target)) throw Stop.now();
             Location pl = parrot.getLocation();
             Location tl = target.getLocation().add(0, 1, 0);
 
@@ -996,7 +1030,7 @@ public final class Herbola extends BossFight {
                         if (tick % 8 == 0) soundAt(bl, "entity.parrot.fly", 0.8f, 1.4f);
                         return;
                     }
-                    Location aim = victim != null && Fx.isFightable(victim)
+                    Location aim = victim != null && enLaPelea(victim)
                             ? victim.getLocation() : Fx.ground(boss.getLocation(), 4);
                     if (tick == 64) {
                         soundAt(bl, "entity.parrot.imitate.ghast", 1.1f, 1.3f);

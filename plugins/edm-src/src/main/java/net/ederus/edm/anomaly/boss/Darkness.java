@@ -471,7 +471,7 @@ public final class Darkness extends BossFight {
             if (tick < 110) {
                 // Los sujeta y los sube despacio, sin dejarles caer.
                 for (Player p : caught) {
-                    if (!Fx.isFightable(p)) continue;
+                    if (!enLaPelea(p)) continue;
                     // Por lift() y no a pelo: es lo que concede el permiso de vuelo
                     // temporal. Sin el, el servidor expulsaba por volar a media subida.
                     lift(p, new Vector(0, 0.14, 0));
@@ -499,7 +499,7 @@ public final class Darkness extends BossFight {
             soundAt(l, "entity.enderman.scream", 1.8f, 0.5f);
 
             for (Player p : caught) {
-                if (!Fx.isFightable(p)) continue;
+                if (!enLaPelea(p)) continue;
                 Vector away = p.getLocation().toVector().subtract(l.toVector());
                 if (away.lengthSquared() < 0.01) away = new Vector(1, 0, 1);
                 hit(p, 26 * damageBonus);
@@ -562,7 +562,7 @@ public final class Darkness extends BossFight {
         for (int i = 0; i < 3; i++) {
             Player t = marks.get(i % marks.size());
             later(i * 26, () -> {
-                if (!alive() || !Fx.isFightable(t)) return;
+                if (!alive() || !enLaPelea(t)) return;
                 Location from = boss.getLocation();
                 Location to = detrasDe(t);
                 // 1.90.1 · Ni a la espalda ni a los lados hay suelo a la vista: se salta
@@ -575,7 +575,7 @@ public final class Darkness extends BossFight {
                 soundAt(to, "entity.enderman.teleport", 1.4f, 0.7f);
 
                 later(8, () -> {
-                    if (!alive() || !Fx.isFightable(t)) return;
+                    if (!alive() || !enLaPelea(t)) return;
                     hit(t, 17 * damageBonus);
                     Compat.apply(t, "darkness", 100, 0);
                     Compat.spawn(world(), Compat.CRIT, t.getLocation().add(0, 1, 0), 24, 0.3, 0.4, 0.3, 0.25);
@@ -594,7 +594,7 @@ public final class Darkness extends BossFight {
                 NamedTextColor.LIGHT_PURPLE, TextDecoration.BOLD));
 
         animate(160, tick -> {
-            if (!alive() || !Fx.isFightable(target)) throw Stop.now();
+            if (!alive() || !enLaPelea(target)) throw Stop.now();
             Location l = boss.getLocation().add(0, 2.0, 0);
             Location tl = target.getLocation().add(0, 1, 0);
             Fx.beam(l, tl, 0.7, p ->
@@ -663,7 +663,7 @@ public final class Darkness extends BossFight {
         target.sendActionBar(Component.text("Algo te tiene sujeto.", NamedTextColor.RED, TextDecoration.BOLD));
 
         animate(70, tick -> {
-            if (!alive() || !Fx.isFightable(target)) throw Stop.now();
+            if (!alive() || !enLaPelea(target)) throw Stop.now();
             Location from = boss.getLocation().add(0, 1.8, 0);
             Location to = target.getLocation().add(0, 1, 0);
             Fx.beam(from, to, 0.4, p -> {

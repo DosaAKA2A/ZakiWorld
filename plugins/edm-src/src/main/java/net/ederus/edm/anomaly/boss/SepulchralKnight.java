@@ -737,7 +737,7 @@ public final class SepulchralKnight extends BossFight {
 
     /** Una estocada de la cadena: aparicion a la espalda, carga corta y golpe en cono. */
     private void thrustAt(Player target) {
-        if (target == null || !alive() || !Fx.isFightable(target)) return;
+        if (target == null || !alive() || !enLaPelea(target)) return;
 
         Location from = boss.getLocation();
         Vector behind = target.getLocation().getDirection().setY(0).normalize().multiply(-2.2);
@@ -851,7 +851,7 @@ public final class SepulchralKnight extends BossFight {
         target.sendActionBar(Component.text("Te ha enganchado.", NamedTextColor.RED, TextDecoration.BOLD));
 
         animate(55, tick -> {
-            if (!alive() || !Fx.isFightable(target)) throw Stop.now();
+            if (!alive() || !enLaPelea(target)) throw Stop.now();
             Location from = boss.getLocation().add(0, 1.2, 0);
             Location to = target.getLocation().add(0, 1.0, 0);
             Fx.beam(from, to, 0.45, p -> {
@@ -898,7 +898,7 @@ public final class SepulchralKnight extends BossFight {
                 Title.Times.times(Duration.ofMillis(200), Duration.ofMillis(1200), Duration.ofMillis(400))));
 
         animate(140, tick -> {
-            if (!Fx.isFightable(target) || !alive()) throw Stop.now();
+            if (!enLaPelea(target) || !alive()) throw Stop.now();
             Location tl = target.getLocation().add(0, 2.4, 0);
             Fx.ring(tl, 0.7, 10, tick * 0.35, p ->
                     Compat.spawn(world(), Compat.CRIT, p, 1, 0, 0, 0, 0, Compat.dust(RUST, 1.2f)));
@@ -1206,7 +1206,7 @@ public final class SepulchralKnight extends BossFight {
         Compat.setAttribute(boss, "movement_speed", 0.46);
 
         animate(120, tick -> {
-            if (!alive() || !Fx.isFightable(target)) throw Stop.now();
+            if (!alive() || !enLaPelea(target)) throw Stop.now();
             Location l = boss.getLocation();
             Location tl = target.getLocation();
             if (l.getWorld() == null || !l.getWorld().equals(tl.getWorld())) throw Stop.now();
