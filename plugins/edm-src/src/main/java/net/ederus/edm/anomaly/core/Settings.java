@@ -214,6 +214,50 @@ public final class Settings {
         return cfg().getBoolean("arena.proteccion.activa", true);
     }
 
+    // ---------------------------------------------------------------- correa
+
+    /**
+     * 1.90.1 · La correa del Coliseo: hasta donde puede irse un jefe desde el punto
+     * donde aparecio. Si la pasa, deja de pelear y vuelve CORRIENDO al inicio (no se
+     * teletransporta). Ver BossFight.vigilarCorrea().
+     */
+    public boolean leashEnabled() {
+        return cfg().getBoolean("arena.correa.activa", true);
+    }
+
+    /** Bloques en horizontal desde el punto de aparicion. */
+    public double leashRadius() {
+        return Math.max(8, cfg().getDouble("arena.correa.radio", 170));
+    }
+
+    /** Bloques que puede bajar por debajo del punto de aparicion. */
+    public double leashDown() {
+        return Math.max(0, cfg().getDouble("arena.correa.bajar", 4));
+    }
+
+    /** Bloques que puede subir por encima del punto de aparicion. */
+    public double leashUp() {
+        return Math.max(0, cfg().getDouble("arena.correa.subir", 30));
+    }
+
+    /** Multiplicador de velocidad con el que vuelve corriendo. */
+    public double leashSpeed() {
+        return Math.max(0.5, cfg().getDouble("arena.correa.velocidad", 1.4));
+    }
+
+    /** A cuantos bloques del inicio da la vuelta por terminada y sigue peleando. */
+    public double leashArrival() {
+        return Math.max(2, cfg().getDouble("arena.correa.llegada", 8));
+    }
+
+    /**
+     * Segundos sin acercarse al inicio antes de rendirse y devolverlo de un salto. Es
+     * el ultimo recurso para un jefe atascado o en otro mundo, donde no hay camino.
+     */
+    public int leashStuckSeconds() {
+        return Math.max(3, cfg().getInt("arena.correa.atascado-segundos", 12));
+    }
+
     /**
      * Si la proteccion cubre la columna entera, del fondo del mundo al cielo. La zona
      * se creo pensando en el clima y su altura puede dejar fuera el techo o los

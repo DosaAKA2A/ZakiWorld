@@ -104,6 +104,21 @@ arena:
     # el clima y puede dejar fuera el techo o los cimientos). false = la altura justa.
     columna-entera: true
 
+  # 1.90.1 · La correa: hasta donde puede irse un jefe desde el punto del Coliseo. Si la
+  # pasa (en horizontal, o baja o sube mas de la cuenta), deja de pelear y vuelve
+  # CORRIENDO al inicio; al llegar a 'llegada' bloques sigue la pelea. Solo si lleva
+  # 'atascado-segundos' sin acercarse (o esta en otro mundo) se le devuelve de un salto.
+  # Tambien limita los saltos de habilidad (Darkness, Keeper) a suelo dentro de ella.
+  # Se cambia en caliente con /anomaly reload.
+  correa:
+    activa: true
+    radio: 170
+    bajar: 4
+    subir: 30
+    velocidad: 1.4
+    llegada: 8
+    atascado-segundos: 12
+
 botin:
   # A que distancia del cuerpo cae cada monton al reventar la tabla. El botin sale
   # disparado en arco y nadie lo puede recoger hasta que toca el suelo.

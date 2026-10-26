@@ -93,6 +93,16 @@ public abstract class BossFight {
      * dano que dispara no debe volver a aplicarlo. Ver dealingScaledDamage(). */
     private boolean golpeEscalado;
 
+    /* 1.90.1 · Correa del Coliseo: si el jefe esta volviendo corriendo al inicio, la
+     * mejor distancia que ha logrado y cuando la logro (para saber si se ha atascado). */
+    private boolean volviendo;
+    private double mejorDistancia;
+    private long ultimoAvance;
+    private long volviendoDesde;
+    /* Si el pathfinder no lo mueve (los jefes con IA de "cerebro": el warden de Keeper, la
+     * cabra, el aldeano del Piromante ignoran moveTo) se le lleva corriendo a mano. */
+    private boolean aMano;
+
     /** La animacion guionizada mas larga es la resurreccion (13 s); esto le da margen. */
     private static final int MAX_INVULNERABLE_TICKS = 400;
 
@@ -279,6 +289,7 @@ public abstract class BossFight {
         boss.setRemainingAir(boss.getMaximumAir());
 
         watchInvulnerability();
+        vigilarCorrea();
         rotateTarget();
         tickAirTime();
         tickShell();
@@ -323,7 +334,7 @@ public abstract class BossFight {
      */
     private void rotateTarget() {
         int cada = plugin.settings().targetRotationSeconds();
-        if (cada <= 0 || !(boss instanceof org.bukkit.entity.Mob mob)) return;
+        if (volviendo || cada <= 0 || !(boss instanceof org.bukkit.entity.Mob mob)) return;
         if (ticks - ultimaRotacion < cada * 20L) return;
         ultimaRotacion = ticks;
 
@@ -357,6 +368,148 @@ public abstract class BossFight {
 
         objetivoActual = elegido.getUniqueId();
         mob.setTarget(elegido);
+    }
+
+    /**
+     * La correa del Coliseo.
+     *
+     * Keeper salia detras de un jugador que se habia ido a otro mundo y Darkness, que es
+     * un enderman de verdad, saltaba a las gradas y a sitios donde nadie llega. Aqui se
+     * mira cada medio segundo si el jefe sigue dentro de lo que deja arena.correa (radio
+     * desde el punto de aparicion, cuanto puede bajar y cuanto subir). Si se ha salido,
+     * deja de pelear y vuelve CORRIENDO al inicio; no se le teletransporta, que es lo que
+     * pidio Dosa. Solo si en otro mundo no hay camino, o lleva atascado sin acercarse
+     * arena.correa.atascado-segundos, se le devuelve de un salto como ultimo recurso.
+     */
+    private void vigilarCorrea() {
+        if (volviendo && aMano) correrAMano();
+        if (ticks % 10 != 0) return;
+        if (!plugin.settings().leashEnabled()) {
+            if (volviendo) terminarVuelta();
+            return;
+        }
+        Location at = boss.getLocation();
+        double dist = distanciaAlInicio(at);
+        if (!volviendo) {
+            if (dentroDeLaCorrea(at)) return;
+            volviendo = true;
+            aMano = false;
+            mejorDistancia = dist;
+            ultimoAvance = ticks;
+            volviendoDesde = ticks;
+            plugin.bitacora().anotar(
+                    "correa",
+                    event.typeId(),
+                    "fuera en " + at.getWorld().getName() + " " + at.getBlockX() + " " + at.getBlockY() + " " + at.getBlockZ(),
+                    "a " + (dist == Double.MAX_VALUE ? "otro mundo" : Bitacora.num(dist) + " bloques"),
+                    "vuelve corriendo",
+                    "segundo " + (ticks / 20));
+        }
+        if (dist <= plugin.settings().leashArrival()) {
+            terminarVuelta();
+            return;
+        }
+        if (dist < mejorDistancia - 1) {
+            mejorDistancia = dist;
+            ultimoAvance = ticks;
+        }
+        Entity mover = boss.getVehicle() != null ? boss.getVehicle() : boss;
+        if (at.getWorld() != arena.getWorld()
+                || ticks - ultimoAvance > plugin.settings().leashStuckSeconds() * 20L) {
+            Location to = Fx.ground(arena.clone().add(0, 1, 0), 6);
+            to.setYaw(at.getYaw());
+            mover.teleport(to, io.papermc.paper.entity.TeleportFlag.EntityState.RETAIN_PASSENGERS);
+            Compat.spawn(world(), Compat.PORTAL, to.clone().add(0, 1.5, 0), 60, 0.5, 1.2, 0.5, 0.2);
+            plugin.getLogger().warning(bossName() + " no podia volver andando al Coliseo; se le ha devuelto de un salto.");
+            plugin.bitacora().anotar("correa", event.typeId(), "atascado: devuelto de un salto", "segundo " + (ticks / 20));
+            terminarVuelta();
+            return;
+        }
+        // Mientras vuelve no lanza nada ni persigue a nadie; AnomalyManager le cancela
+        // tambien los objetivos que la IA vanilla intente coger por el camino.
+        busyFor(20);
+        if (mover instanceof org.bukkit.entity.Mob mob) mob.setTarget(null);
+        // Segundo y medio con el pathfinder sin acercarse: a mano hasta que llegue.
+        if (!aMano && ticks - volviendoDesde >= 30 && ticks - ultimoAvance >= 30) aMano = true;
+        if (!aMano && mover instanceof org.bukkit.entity.Mob mob) {
+            mob.getPathfinder().moveTo(arena, plugin.settings().leashSpeed());
+        } else {
+            aMano = true;
+        }
+    }
+
+    /**
+     * Lo lleva corriendo hacia el inicio a golpe de velocidad, un tick cada vez: mira
+     * hacia donde va y salta si delante tiene un escalon de un bloque. Se ve como una
+     * carrera normal, que es lo que se buscaba en vez del teletransporte.
+     */
+    private void correrAMano() {
+        Entity mover = boss.getVehicle() != null ? boss.getVehicle() : boss;
+        Location at = mover.getLocation();
+        if (at.getWorld() != arena.getWorld()) return;
+        Vector dir = arena.toVector().subtract(at.toVector()).setY(0);
+        if (dir.lengthSquared() < 0.01) return;
+        dir.normalize();
+        Vector vel = dir.clone().multiply(0.3 * plugin.settings().leashSpeed() / 1.4);
+        vel.setY(mover.getVelocity().getY());
+        org.bukkit.block.Block ahead = at.clone().add(dir.clone().multiply(0.9)).getBlock();
+        if (mover.isOnGround() && ahead.getType().isSolid()
+                && !ahead.getRelative(org.bukkit.block.BlockFace.UP).getType().isSolid()) {
+            vel.setY(0.45);
+        }
+        mover.setVelocity(vel);
+        mover.setRotation((float) Math.toDegrees(Math.atan2(-dir.getX(), dir.getZ())), 0f);
+    }
+
+    private void terminarVuelta() {
+        volviendo = false;
+        aMano = false;
+        unbusy();
+        // Que elija a quien perseguir en el siguiente tick, no dentro de una rotacion entera.
+        ultimaRotacion = Long.MIN_VALUE / 2;
+    }
+
+    /** Si el jefe esta volviendo corriendo al inicio porque se salio de la correa. */
+    public boolean volviendo() {
+        return volviendo;
+    }
+
+    /** Distancia en horizontal al punto de aparicion; MAX_VALUE si esta en otro mundo. */
+    private double distanciaAlInicio(Location l) {
+        if (l.getWorld() != arena.getWorld()) return Double.MAX_VALUE;
+        double dx = l.getX() - arena.getX(), dz = l.getZ() - arena.getZ();
+        return Math.sqrt(dx * dx + dz * dz);
+    }
+
+    /** Si l queda dentro de la correa del Coliseo: mismo mundo, radio y alturas. */
+    public boolean dentroDeLaCorrea(Location l) {
+        if (l == null || l.getWorld() != arena.getWorld()) return false;
+        if (!plugin.settings().leashEnabled()) return true;
+        if (distanciaAlInicio(l) > plugin.settings().leashRadius()) return false;
+        double dy = l.getY() - arena.getY();
+        return dy >= -plugin.settings().leashDown() && dy <= plugin.settings().leashUp();
+    }
+
+    /**
+     * Si un salto de habilidad puede caer en 'to' viniendo de 'ref' (el jugador al que
+     * busca, o donde estaba el jefe): dentro de la correa, suelo firme con sitio para
+     * estar de pie, mas o menos a la misma altura y SIN un muro entre medias. Es lo que
+     * evita que un salto deje al jefe en lo alto de un muro o al otro lado de una pared.
+     */
+    public boolean sitioAlcanzable(Location to, Location ref) {
+        if (to == null || ref == null || to.getWorld() != ref.getWorld()) return false;
+        if (!dentroDeLaCorrea(to)) return false;
+        if (Math.abs(to.getY() - ref.getY()) > 2.5) return false;
+        org.bukkit.block.Block feet = to.getBlock();
+        if (feet.getType().isSolid() || feet.isLiquid()) return false;
+        if (feet.getRelative(org.bukkit.block.BlockFace.UP).getType().isSolid()) return false;
+        if (!feet.getRelative(org.bukkit.block.BlockFace.DOWN).getType().isSolid()) return false;
+        Location from = ref.clone().add(0, 1.2, 0);
+        Vector d = to.clone().add(0, 1.2, 0).toVector().subtract(from.toVector());
+        double len = d.length();
+        if (len < 0.5) return true;
+        return to.getWorld().rayTraceBlocks(from, d.normalize(), len,
+                org.bukkit.FluidCollisionMode.NEVER, true) == null;
     }
 
     /** A quien persigue ahora mismo, para las habilidades que quieran seguirle la pista. */

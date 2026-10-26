@@ -279,10 +279,20 @@ public final class Darkness extends BossFight {
 
         // Siete dobles repartidos en circulo, mas el original entre ellos.
         List<Location> spots = new ArrayList<>();
+        // 1.90.1 · Cada sitio tiene que ser suelo de la arena a la vista del centro: con 7
+        // bloques fijos el corro caia en lo alto del muro o detras de el. Si a 7 no vale se
+        // prueba mas cerca, y si no hay sitio ese doble no sale.
         for (int i = 0; i < DECOYS; i++) {
             double a = Math.PI * 2 * i / DECOYS;
-            spots.add(Fx.ground(c.clone().add(Math.cos(a) * 7, 1, Math.sin(a) * 7), 6));
+            for (double r : new double[]{7, 5, 3}) {
+                Location s = Fx.ground(c.clone().add(Math.cos(a) * r, 1, Math.sin(a) * r), 6);
+                if (sitioAlcanzable(s, c)) {
+                    spots.add(s);
+                    break;
+                }
+            }
         }
+        if (spots.isEmpty()) spots.add(c.clone());
         // El original se mete en uno de los sitios del corro; asi no canta por posicion.
         Location mine = spots.get(random.nextInt(spots.size()));
         boss.teleport(mine);
@@ -523,6 +533,23 @@ public final class Darkness extends BossFight {
         }, null);
     }
 
+    /**
+     * Donde aparecer pegado a un jugador: a su espalda y, si ahi hay muro o vacio, a un
+     * lado o delante. Null si ninguno es suelo alcanzable (ver sitioAlcanzable).
+     */
+    private Location detrasDe(Player t) {
+        Location at = t.getLocation();
+        Vector back = at.getDirection().setY(0);
+        if (back.lengthSquared() < 1.0E-4) back = new Vector(0, 0, 1);
+        back.normalize().multiply(-2.5);
+        Vector side = new Vector(-back.getZ(), 0, back.getX());
+        for (Vector off : new Vector[]{back, side, side.clone().multiply(-1), back.clone().multiply(-1)}) {
+            Location to = Fx.ground(at.clone().add(off), 4);
+            if (sitioAlcanzable(to, at)) return to;
+        }
+        return null;
+    }
+
     /** 5. Parpadeo: aparece detras de uno, pega y desaparece. Tres veces. */
     public void blink() {
         if (!alive()) return;
@@ -537,8 +564,10 @@ public final class Darkness extends BossFight {
             later(i * 26, () -> {
                 if (!alive() || !Fx.isFightable(t)) return;
                 Location from = boss.getLocation();
-                Vector behind = t.getLocation().getDirection().setY(0).normalize().multiply(-2.5);
-                Location to = Fx.ground(t.getLocation().add(behind), 4);
+                Location to = detrasDe(t);
+                // 1.90.1 · Ni a la espalda ni a los lados hay suelo a la vista: se salta
+                // esta aparicion antes que dejarlo detras de un muro o fuera del Coliseo.
+                if (to == null) return;
 
                 Compat.spawn(world(), Compat.REVERSE_PORTAL, from.clone().add(0, 1.5, 0), 50, 0.5, 1.0, 0.5, 0.15);
                 boss.teleport(to);

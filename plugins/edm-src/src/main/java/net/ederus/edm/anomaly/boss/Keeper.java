@@ -451,6 +451,10 @@ public final class Keeper extends BossFight {
         boss.setInvisible(true);
         boss.setInvulnerable(true);
         boss.setSilent(true);
+        // 1.90.1 · Sale donde estaba el jugador la ultima vez que seguia en el Coliseo. Antes
+        // se leia su posicion al salir, y si en esos segundos se iba de /warp, Keeper
+        // aparecia detras de el en otro mundo. Si nunca fue valida, sale donde se hundio.
+        final Location[] lastMark = {downAt.clone()};
 
         animate(digTime + 24, tick -> {
             if (!alive()) throw Stop.now();
@@ -459,7 +463,11 @@ public final class Keeper extends BossFight {
                         Material.SCULK.createBlockData());
                 return;
             }
-            Location mark = Fx.ground(target.getLocation(), 5);
+            if (Fx.isFightable(target) && dentroDeLaCorrea(target.getLocation())) {
+                Location cand = Fx.ground(target.getLocation(), 5);
+                if (dentroDeLaCorrea(cand)) lastMark[0] = cand;
+            }
+            Location mark = lastMark[0];
             if (tick < digTime + 22) {
                 Fx.telegraph(world(), mark, 3.6, DEEP);
                 if (tick % 6 == 0) {

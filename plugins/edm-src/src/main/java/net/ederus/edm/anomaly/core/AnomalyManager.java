@@ -679,6 +679,35 @@ public final class AnomalyManager implements Listener {
         if (isOurFighter(e.getRightClicked())) e.setCancelled(true);
     }
 
+    /**
+     * 1.90.1 · Los saltos PROPIOS de un enderman o un shulker (al recibir un golpe, al
+     * mojarse, al quedarse sin objetivo) no los hace un jefe ni un esbirro nuestro.
+     * Darkness es un enderman de verdad y saltaba hasta 32 bloques, a las gradas o a sitios
+     * a los que nadie llega. Sus saltos de habilidad siguen igual: un teleport() de plugin
+     * no pasa por este evento.
+     */
+    @EventHandler(ignoreCancelled = true, priority = EventPriority.HIGHEST)
+    public void onSelfTeleport(org.bukkit.event.entity.EntityTeleportEvent e) {
+        Entity en = e.getEntity();
+        if (!(en instanceof org.bukkit.entity.Enderman) && !(en instanceof org.bukkit.entity.Shulker)) return;
+        if (isOurFighter(en)) e.setCancelled(true);
+    }
+
+    /**
+     * 1.90.1 · Mientras el jefe vuelve corriendo al Coliseo (se salio de la correa), la IA
+     * vanilla no le puede dar otro objetivo por el camino: se daria la vuelta a perseguirlo.
+     */
+    @EventHandler(ignoreCancelled = true, priority = EventPriority.HIGHEST)
+    public void onTargetWhileReturning(org.bukkit.event.entity.EntityTargetEvent e) {
+        if (e.getTarget() == null) return;
+        ActiveAnomaly event = current;
+        if (event == null || event.fight() == null || !event.fight().volviendo()) return;
+        LivingEntity boss = event.fight().entity();
+        if (boss == null) return;
+        Entity en = e.getEntity();
+        if (en.equals(boss) || en.equals(boss.getVehicle())) e.setCancelled(true);
+    }
+
     /** El jefe, el maniqui que lo representa o uno de sus esbirros. */
     private boolean isOurFighter(Entity entity) {
         ActiveAnomaly event = current;
