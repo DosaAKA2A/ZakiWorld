@@ -983,7 +983,10 @@ public final class Orion extends BossFight {
         }
         if (s.soloVisual) return;
         if (!s.tocados.add(p.getUniqueId())) return;
-        if (s.rapida) p.setNoDamageTicks(0);
+        /* Todas, no solo las de rafaga: Orion dispara tan seguido que cualquier flecha que
+         * llegara en el medio segundo de invulnerabilidad del golpe anterior no hacia nada
+         * (Dosa: «varias flechas no hacen daño»). Cada flecha pega una vez por jugador. */
+        p.setNoDamageTicks(0);
         if (s.base > 0) hit(p, s.base * damageBonus, s.mult);
         Location at = p.getLocation().add(0, 1.0, 0);
         fx(Compat.CRIT, at, 8, 0.25, 0.4, 0.25, 0.15);
