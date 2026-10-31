@@ -122,6 +122,8 @@ public final class Orion extends BossFight {
     private static final double D_EFECTO_FUERTE = 14;
     private static final double D_EFECTO_MAX = 16;
     private static final double D_AREA = 18;
+    /** Cada quemadura de los rayos del Cinturon, cada 3 ticks mientras sigas dentro. */
+    private static final double D_RAYO = 9;
     private static final double D_AREA_MAX = 22;
     private static final double D_RIGEL = 26;
     private static final double D_RIGEL_BORDE = 10;
@@ -926,6 +928,15 @@ public final class Orion extends BossFight {
                 Fx.beam(s.antes, ahora, paso, q -> polvo(q, tipo.rgb, tipo.tam));
             }
             if (tipo.chispa != null && s.vida % 2 == 0) fx(tipo.chispa, ahora, 1, 0.04, 0.04, 0.04, 0.0);
+            /* La colision la comprobamos nosotros, del punto anterior al de ahora: la del juego
+             * no llegaba a dispararse con estas flechas (31/10, Dosa: el jugador quieto y
+             * ninguna le pegaba) y a 4,5-8 bloques por tick tambien se colaria alguna. */
+            if (s.antes != null && s.antes.getWorld() == ahora.getWorld() && cruzaJugador(s, s.antes, ahora)) {
+                s.antes = ahora;
+                it.remove();
+                borrar(a);
+                continue;
+            }
             s.antes = ahora;
             if (s.guiada != null) guiar(s);
             if (a.isInBlock() || a.isOnGround() || s.vida > s.vidaMax || s.quieta >= 6) {
@@ -939,6 +950,33 @@ public final class Orion extends BossFight {
             }
         }
         if (caidas != null) for (Saeta s : caidas) alCaer(s, s.antes);
+    }
+
+    /**
+     * Si el tramo que recorrio la flecha este tick cruza el cuerpo de un jugador de la pelea,
+     * le pega (como el impacto de siempre). Devuelve true si la flecha ya no sigue.
+     */
+    private boolean cruzaJugador(Saeta s, Location de, Location a) {
+        Vector inicio = de.toVector();
+        Vector tramo = a.toVector().subtract(inicio);
+        double largo = tramo.length();
+        if (largo < 1.0E-4) return false;
+        Vector dir = tramo.clone().multiply(1 / largo);
+        for (Player p : targets()) {
+            if (s.tocados.contains(p.getUniqueId()) || p.getWorld() != a.getWorld()) continue;
+            if (p.getLocation().distanceSquared(a) > (largo + 3) * (largo + 3)) continue;
+            org.bukkit.util.BoundingBox caja = p.getBoundingBox().expand(0.3);
+            if (caja.rayTrace(inicio, dir, largo) == null && !caja.contains(inicio)) continue;
+            depurar("cruce " + s.tipo + " con " + p.getName());
+            if (s.tipo == Tipo.MARCADA) {
+                if (!p.getUniqueId().equals(marcado)) continue;
+                golpear(s, p);
+                return true;
+            }
+            golpear(s, p);
+            if (!s.atraviesa) return true;
+        }
+        return false;
     }
 
     private void guiar(Saeta s) {
@@ -2815,10 +2853,12 @@ public final class Orion extends BossFight {
         // Las pasadas: de A a B por el suelo, cruzando por encima de alguien.
         final int rondas = 3, intro = 20, entre = 55, barrido = 36, aviso = 14;
         final Location[][] desde = new Location[rondas][3], hasta = new Location[rondas][3];
-        final List<Set<UUID>> tocados = new ArrayList<>();
+        // Por rayo, el ultimo tick en que quemo a cada jugador: pega cada 3 ticks mientras
+        // sigas dentro (Dosa: «deberia hacer varios ticks de daño», antes era un golpe y ya).
+        final List<Map<UUID, Integer>> tocados = new ArrayList<>();
         for (int r = 0; r < rondas; r++) {
             for (int i = 0; i < 3; i++) {
-                tocados.add(new HashSet<>());
+                tocados.add(new HashMap<>());
             }
         }
         final int total = intro + (rondas - 1) * entre + 2 * 5 + barrido + 12;
@@ -2863,15 +2903,24 @@ public final class Orion extends BossFight {
                             soundAt(sitio[i], "block.beacon.power_select", 1.2f, 1.8f);
                             soundAt(punto, "entity.guardian.attack", 0.8f, 1.6f);
                         }
-                        Set<UUID> ya = tocados.get(idx);
+                        Map<UUID, Integer> ya = tocados.get(idx);
                         for (Player p : Fx.playersNear(punto, 6)) {
-                            if (!enLaPelea(p) || ya.contains(p.getUniqueId())) continue;
+                            if (!enLaPelea(p)) continue;
+                            Integer ultimo = ya.get(p.getUniqueId());
+                            if (ultimo != null && t - ultimo < 3) continue;
                             if (enRayo(p, sitio[i], punto)) {
-                                ya.add(p.getUniqueId());
-                                hit(p, D_AREA * damageBonus, m);
+                                boolean primero = ultimo == null;
+                                ya.put(p.getUniqueId(), t);
+                                p.setNoDamageTicks(0);
+                                hit(p, D_RAYO * damageBonus, m);
                                 Compat.apply(p, "slowness", 30, 1);
-                                fx(Compat.FLASH, p.getLocation().add(0, 1, 0), 1, 0, 0, 0, 0, GLOW);
-                                soundAt(p.getLocation(), "block.amethyst_block.break", 1.2f, 1.4f);
+                                fx(Compat.DUST, p.getLocation().add(0, 1, 0), 8, 0.3, 0.5, 0.3, 0, Compat.dust(CELESTE, 1.3f));
+                                if (primero) {
+                                    fx(Compat.FLASH, p.getLocation().add(0, 1, 0), 1, 0, 0, 0, 0, GLOW);
+                                    soundAt(p.getLocation(), "block.amethyst_block.break", 1.2f, 1.4f);
+                                } else {
+                                    soundAt(p.getLocation(), "block.amethyst_block.hit", 0.9f, 1.8f);
+                                }
                             }
                         }
                     }
