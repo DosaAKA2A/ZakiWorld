@@ -62,3 +62,17 @@ equipo:
   #   night_vision: Visión nocturna
   # nombres-atributos:
   #   max_health: vida máxima
+
+# Armas a distancia (EDM 1.91.0): lo que se ve de las claves distancia.* de
+# equipo/distancia.yml. Las cifras van alli; aqui solo el aspecto y los avisos.
+distancia:
+  estela:
+    # Color (hex) y tamaño de la estela de las flechas (DUST + END_ROD).
+    color: '#6FD3FF'
+    tamano: 1.1
+  # Avisos en la barra de accion. Vacio = apagado.
+  mensajes:
+    # %marcas%, %max% y %extra% (el daño extra que ya suma el objetivo).
+    marca: '&#6FD3FF✦ Flecha Marcada &8» &f%marcas%&7/&f%max% &8· &f+%extra% &7de daño'
+    lluvia: '&#6FD3FF✦ Lluvia de estrellas'
+    lluvia-lista: '&#6FD3FF✦ &7Tu lluvia de estrellas vuelve a estar lista'

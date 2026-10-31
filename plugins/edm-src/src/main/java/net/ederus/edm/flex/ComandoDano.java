@@ -12,7 +12,6 @@ import org.bukkit.enchantments.Enchantment;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
-import org.bukkit.persistence.PersistentDataType;
 
 import net.ederus.edm.comun.Compat;
 import net.ederus.edm.comun.Estilo;
@@ -37,6 +36,11 @@ import net.kyori.adventure.text.format.TextColor;
  * Lo unico que el atributo no trae es Afilado, que vanilla suma aparte, y se
  * anade aqui. Castigo, Perdicion de los artropodos y Empalamiento no: solo
  * cuentan contra ciertos mobs y el numero dejaria de servir para comparar.
+ *
+ * A distancia (EDM 1.91.0) se cuenta lo mismo que en el Poder: la flecha de un
+ * arco de MMOItems con su Poder (MythicLib la multiplica), y un tridente con
+ * daño de lanzamiento de GodItems (distancia.tridente-lanzado) por ese daño, con
+ * el cuerpo a cuerpo debajo.
  */
 public final class ComandoDano implements CommandExecutor, TabCompleter {
 
@@ -70,7 +74,9 @@ public final class ComandoDano implements CommandExecutor, TabCompleter {
             return true;
         }
 
-        double golpe = clase == Clase.DISTANCIA ? danoDistancia(arma) : danoCuerpo(p, arma);
+        double lanzado = arma.getType() == Material.TRIDENT ? net.ederus.edm.comun.Poder.tridenteLanzado(arma) : 0;
+        double golpe = clase == Clase.DISTANCIA ? net.ederus.edm.comun.Poder.danoDistancia(p, arma)
+                : lanzado > 0 ? lanzado : danoCuerpo(p, arma);
         double[] crit = critico(p);
         double probBruta = crit[0];
         double prob = Math.min(TOPE_CRITICO, probBruta) / 100.0;
@@ -86,6 +92,9 @@ public final class ComandoDano implements CommandExecutor, TabCompleter {
         p.sendMessage(fila("Daño medio", numero(medio), null));
         if (clase == Clase.DISTANCIA) {
             p.sendMessage(Estilo.texto("   Con la cuerda tensada del todo.", TOPE));
+        } else if (lanzado > 0) {
+            p.sendMessage(fila("Cuerpo a cuerpo", numero(danoCuerpo(p, arma)), "sin lanzarlo"));
+            p.sendMessage(Estilo.texto("   Lanzándolo.", TOPE));
         }
         return true;
     }
@@ -123,25 +132,6 @@ public final class ComandoDano implements CommandExecutor, TabCompleter {
         return dano;
     }
 
-    /**
-     * A distancia, con la cuerda tensada del todo.
-     *
-     * Un arco o ballesta de MMOItems dispara con su stat attack-damage. Uno de
-     * vanilla dispara una flecha de 2 de daño por su velocidad (3 el arco, 3,15
-     * la ballesta), redondeando hacia arriba; Poder le suma un 25 % de esa base
-     * por nivel, mas otro 25 %. El extra al azar del tiro tensado de vanilla no
-     * se cuenta: no es el critico de MythicLib y no hay un numero fijo que dar.
-     */
-    private static double danoDistancia(ItemStack arma) {
-        double mmo = danoMmo(arma);
-        if (mmo > 0) return mmo;
-        double base = 2;
-        int poder = nivel(arma, Enchantment.POWER);
-        if (poder > 0) base += 0.5 * poder + 0.5;
-        double velocidad = arma.getType() == Material.CROSSBOW ? 3.15 : 3.0;
-        return Math.ceil(base * velocidad);
-    }
-
     private static int nivel(ItemStack item, Enchantment e) {
         try {
             return e == null ? 0 : item.getEnchantmentLevel(e);
@@ -150,39 +140,9 @@ public final class ComandoDano implements CommandExecutor, TabCompleter {
         }
     }
 
-    /**
-     * La stat attack-damage de un item de MMOItems, o 0. Primero por MythicLib, que
-     * es lo que no se rompe cuando cambian sus etiquetas; si no esta, a mano por el
-     * PDC de su namespace (la clave acaba en attack_damage).
-     */
+    /** La stat attack-damage de un item de MMOItems, o 0 (la misma lectura que el Poder). */
     private static double danoMmo(ItemStack item) {
-        try {
-            io.lumine.mythic.lib.api.item.NBTItem nbt = io.lumine.mythic.lib.api.item.NBTItem.get(item);
-            if (nbt.hasTag("MMOITEMS_ATTACK_DAMAGE")) return nbt.getDouble("MMOITEMS_ATTACK_DAMAGE");
-            return 0;
-        } catch (Throwable t) {
-            // Sin MythicLib: al PDC.
-        }
-        ItemMeta meta = item.getItemMeta();
-        if (meta == null) return 0;
-        var pdc = meta.getPersistentDataContainer();
-        for (var k : pdc.getKeys()) {
-            if (!k.getNamespace().equalsIgnoreCase("mmoitems")) continue;
-            if (!k.getKey().toLowerCase(Locale.ROOT).endsWith("attack_damage")) continue;
-            try {
-                Double d = pdc.get(k, PersistentDataType.DOUBLE);
-                if (d != null) return d;
-            } catch (Throwable ignored) {
-                // Puede estar guardado como texto.
-            }
-            try {
-                String s = pdc.get(k, PersistentDataType.STRING);
-                if (s != null) return Double.parseDouble(s.trim());
-            } catch (Throwable ignored) {
-                // No era un numero.
-            }
-        }
-        return 0;
+        return net.ederus.edm.comun.Poder.danoMmo(item);
     }
 
     /**

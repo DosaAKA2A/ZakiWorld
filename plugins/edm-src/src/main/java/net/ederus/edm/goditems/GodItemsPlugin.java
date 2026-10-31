@@ -59,6 +59,8 @@ public final class GodItemsPlugin extends Module {
     private net.ederus.edm.goditems.menu.MenuGi menu;
     /** Los efectos de equipo por pieza y por set (equipo/*.yml) y su API para otros plugins. */
     private net.ederus.edm.goditems.equipo.Equipo equipo;
+    /** Los efectos de arcos y tridentes lanzados (claves distancia.* del equipo). */
+    private Distancia distancia;
 
     private NamespacedKey claveDueno;
     private BukkitTask tareaTicks;
@@ -187,6 +189,8 @@ public final class GodItemsPlugin extends Module {
         this.equipo.arrancar();
         net.ederus.edm.goditems.api.EquipoApi.enganchar(this.equipo);
         getLogger().info("[GodItems] Efectos de equipo: " + this.equipo.resumen());
+        this.distancia = new Distancia(this);
+        this.distancia.arrancar();
 
         getLogger().info("GodItems activo | " + n + " item" + (n == 1 ? "" : "s")
                 + " | " + Acciones.nombres().size() + " acciones, "
@@ -258,6 +262,7 @@ public final class GodItemsPlugin extends Module {
         pararTareas();
         if (this.bitacoraGi != null) this.bitacoraGi.vaciar();
         net.ederus.edm.goditems.api.EquipoApi.enganchar(null);
+        if (this.distancia != null) this.distancia.parar();
         if (this.equipo != null) this.equipo.parar();
         if (this.vuelo != null) this.vuelo.devolverTodo(this);
         if (this.cooldowns != null) this.cooldowns.limpiar();
@@ -308,6 +313,7 @@ public final class GodItemsPlugin extends Module {
     public Cargador cargador() { return this.cargador; }
     public Motor motor() { return this.motor; }
     public net.ederus.edm.goditems.equipo.Equipo equipo() { return this.equipo; }
+    public Distancia distancia() { return this.distancia; }
     public net.ederus.edm.goditems.mmo.Puente puente() { return this.puente; }
     public net.ederus.edm.goditems.mmo.Conjuntos conjuntos() { return this.conjuntos; }
     public net.ederus.edm.goditems.mmo.Plantillas plantillas() { return this.plantillas; }

@@ -137,7 +137,7 @@ public final class Equipo implements Listener {
             carpeta.mkdirs();
             /* Solo la primera vez, como los items de ejemplo: si se escribieran
              * en cada arranque, se perderian los cambios hechos en el panel. */
-            for (String f : List.of("pesca.yml", "calamity.yml")) {
+            for (String f : List.of("pesca.yml", "calamity.yml", "distancia.yml")) {
                 try {
                     this.modulo.saveResource(CARPETA + "/" + f, false);
                 } catch (IllegalArgumentException sinRecurso) {
