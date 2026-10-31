@@ -759,9 +759,24 @@ public final class Orion extends BossFight {
         s.flecha.setVelocity(nueva.normalize().multiply(sp));
     }
 
+    /**
+     * Si el jefe sigue peleando. Tras morir pasan ~110 ticks hasta la limpieza (cerrado) y en
+     * ese rato las flechas en vuelo y las areas en curso seguian pegando, con daño puro incluido.
+     */
+    private boolean enCombate() {
+        return !cerrado && boss != null && !boss.isDead();
+    }
+
+    /** Ningun golpe de ORION entra con el jefe muerto o la pelea cerrada. */
+    @Override
+    public void hit(Player p, double amount, double abilityMult) {
+        if (!enCombate()) return;
+        super.hit(p, amount, abilityMult);
+    }
+
     /** Una flecha alcanza a un jugador. */
     private void golpear(Saeta s, Player p) {
-        if (!enLaPelea(p)) return;
+        if (!enCombate() || !enLaPelea(p)) return;
         if (s.tipo == Tipo.MARCADA) {
             if (!p.getUniqueId().equals(marcado)) return;
             if (!s.tocados.add(p.getUniqueId())) return;
@@ -918,7 +933,7 @@ public final class Orion extends BossFight {
         soundAt(c, "entity.blaze.shoot", 1.0f, 0.8f);
         soundAt(c, "block.fire.ambient", 1.4f, 1.0f);
         animate(100, t -> {
-            if (cerrado) throw Stop.now();
+            if (!enCombate()) throw Stop.now();
             if (t % 3 == 0) {
                 fx(Compat.FLAME, c, 6, 1.4, 0.15, 1.4, 0.01);
                 fx(Compat.SMALL_FLAME, c, 4, 1.6, 0.3, 1.6, 0.02);
@@ -3005,7 +3020,7 @@ public final class Orion extends BossFight {
         apuntado = null;
         tensar(true);
         animate(72, t -> {
-            if (cerrado) throw Stop.now();
+            if (!enCombate()) throw Stop.now();
             if (t < 50) {
                 double giro = t * 0.4;
                 for (int i = 0; i < 6; i++) {
@@ -3189,7 +3204,7 @@ public final class Orion extends BossFight {
         soundAt(loc(), "entity.illusioner.prepare_blindness", 1.4f, 1.3f);
         soundAt(loc(), "block.fire.extinguish", 1.0f, 0.6f);
         animate(170, t -> {
-            if (cerrado) throw Stop.now();
+            if (!enCombate()) throw Stop.now();
             for (int i = 0; i < nubes.size(); i++) {
                 Location n = nubes.get(i);
                 if (t >= 10) {
