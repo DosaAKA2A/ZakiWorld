@@ -2289,13 +2289,9 @@ public final class Orion extends BossFight {
             if (cl == null) cl = puntoDeArena(arena, 4, RADIO - 3);
             if (cl != null) claros.add(cl);
         }
+        // Sin columnas de cristal (Dosa: «se ven feas»): el haz de cada claro es de
+        // particulas, ver hazDeClaro. La lista se queda vacia para no tocar las firmas.
         List<BlockDisplay> columnas = new ArrayList<>();
-        for (Location cl : claros) {
-            BlockDisplay col = bloque(cl.clone().add(0, 0.05, 0), Material.WHITE_STAINED_GLASS,
-                    new Transformation(new Vector3f(-0.15f, 0, -0.15f), new Quaternionf(),
-                            new Vector3f(0.3f, 9f, 0.3f), new Quaternionf()), true);
-            if (col != null) columnas.add(col);
-        }
 
         final List<double[]> ondas = new ArrayList<>();
         final int[] siguiente = {0};
@@ -2337,7 +2333,7 @@ public final class Orion extends BossFight {
                         polvo(q, BLANCO, 1.4f);
                     });
                     Fx.ring(base, 1.4, 12, q -> polvo(q, BLANCO, 1.0f));
-                    fx(Compat.END_ROD, base.clone().add(0, 1 + random.nextDouble() * 6, 0), 1, 0.1, 0.1, 0.1, 0.01);
+                    hazDeClaro(base, t);
                 }
             }
             // La carga en el arco: luz que sube desde la mano.
@@ -2364,6 +2360,23 @@ public final class Orion extends BossFight {
             }
             soltarSaetaMayor(c, claros, columnas, m);
         });
+    }
+
+    /**
+     * El haz de luz que marca un claro de Star Deploy: una espiral fina de polvo blanco
+     * que sube girando hasta 8 bloques y chispas que escapan por arriba. Se ve de lejos
+     * sin tapar la vista como lo hacia la columna de cristal.
+     */
+    private void hazDeClaro(Location base, int t) {
+        double giro = t * 0.35;
+        for (int i = 0; i < 16; i++) {
+            double y = i * 0.5;
+            double a = giro + i * 0.55;
+            double r = 0.35;
+            polvo(base.clone().add(Math.cos(a) * r, y, Math.sin(a) * r), BLANCO, 0.9f);
+            polvo(base.clone().add(Math.cos(a + Math.PI) * r, y, Math.sin(a + Math.PI) * r), NUBE, 0.9f);
+        }
+        fx(Compat.END_ROD, base.clone().add(0, 8, 0), 1, 0.15, 0.2, 0.15, 0.02);
     }
 
     private static boolean enClaro(Location l, List<Location> claros) {
@@ -2529,6 +2542,7 @@ public final class Orion extends BossFight {
             if (t % 5 == 0 && t < dura) {
                 for (Location cl : claros) {
                     Fx.ring(cl.clone().add(0, 0.15, 0), 2.5, 20, q -> fx(Compat.END_ROD, q, 1, 0, 0, 0, 0));
+                    hazDeClaro(cl.clone().add(0, 0.15, 0), t);
                 }
             }
         }, () -> {
@@ -3271,17 +3285,13 @@ public final class Orion extends BossFight {
                             q -> polvo(Fx.ground(q, 3).add(0, 0.25, 0), rgb, 1.7f));
                 }
             }
-            // Se evapora como las espadas del Juicio de Espadas (RIP): pieza a pieza, cada dos
-            // ticks, de las plumas a la punta, cada una con su fogonazo, chispas de luz y tintineo.
-            if (k >= 14 && (k - 14) % 2 == 0) {
-                int i = piezas.size() - 1 - (k - 14) / 2;
-                if (i >= 0) {
+            // Se evapora como las espadas del Juicio de Espadas (RIP), pero la lanza ENTERA de
+            // golpe (Dosa: «que todo desaparezca de golpe»): el fogonazo grande en cada pieza
+            // a la vez y todas fuera en el mismo tick.
+            if (k == 14) {
+                for (int i = 0; i < piezas.size(); i++) {
                     BlockDisplay d = piezas.get(i);
-                    PiezaLanza p = deQue.get(i);
-                    Location at = centroDePieza(clavada, p);
-                    // La grande (como la espada gigante del RIP) es el astil, y la punta cierra.
-                    boolean grande = p.escala()[1] > 3 || i == 0;
-                    net.ederus.edm.rip.EffectRunner.evaporar(world(), at, grande);
+                    net.ederus.edm.rip.EffectRunner.evaporar(world(), centroDePieza(clavada, deQue.get(i)), true);
                     quitar(d);
                 }
             }
