@@ -1037,6 +1037,8 @@ public final class Orion extends BossFight {
     private int depuraciones;
 
     private void depurar(String msg) {
+        // Apagado: solo sirvio para cazar las flechas sin daño (31/10). Encenderlo = quitar el return.
+        if (true) return;
         if (depuraciones++ < 400) plugin.getLogger().info("[ORION-debug] " + msg);
     }
 
