@@ -172,6 +172,8 @@ public final class AnomalyPlugin extends net.ederus.edm.Module {
         }
         // Comprueba el cargador de modelos de block-display.com sin crear entidades.
         net.ederus.edm.anomaly.fx.ModeloBde.autoprueba(getLogger());
+        // 1.91.0 · ORION: skin firmada, cuentas de sus displays y sus 34 habilidades.
+        net.ederus.edm.anomaly.boss.Orion.autoprueba(getLogger(), registry);
     }
 
     @Override

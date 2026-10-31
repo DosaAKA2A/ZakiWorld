@@ -87,6 +87,19 @@ public interface AnomalyType {
     /** Vida base antes de escalar por numero de jugadores. */
     double baseHealth();
 
+    /**
+     * 1.91.0 · La vida que se escribe en su ficha NUEVA (Anomalias/<id>.yml). Por omision la de
+     * diseno; ORION nace ya con la vida viva del servidor para no tener que tocarla a mano.
+     */
+    default double vidaDeSerie() {
+        return baseHealth();
+    }
+
+    /** 1.91.0 · El multiplicador de dano de su ficha nueva. Por omision 1.0. */
+    default double danoDeSerie() {
+        return 1.0;
+    }
+
     /** Radio recomendado de la arena, para el aviso de coordenadas. */
     default int arenaRadius() {
         return 20;

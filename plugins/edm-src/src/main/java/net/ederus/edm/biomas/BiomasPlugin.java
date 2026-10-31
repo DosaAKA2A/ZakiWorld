@@ -57,7 +57,10 @@ public final class BiomasPlugin extends Module implements Listener {
             "crimson", "slimey", "honeycomb", "frostbite", "blizzard", "abyss", "void", "aurora", "ember", "spectral",
             "prismatic", "rust", "fungal", "glitch", "eclipse", "nightmare", "blossom", "neon", "ink", "golden",
             "plague", "quicksilver", "firefly", "reef", "carnival", "drystorm", "cloudsea", "catacomb", "dream",
-            "meteor");
+            "meteor",
+            // 1.91.0 · El cielo de ORION en su fase III (y en Star Deploy) y el blanco entero que
+            // Calamity manda por paquetes en el armisticio.
+            "orion", "armisticio");
 
     private static BiomasPlugin instancia;
 

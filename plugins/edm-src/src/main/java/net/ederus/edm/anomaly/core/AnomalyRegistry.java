@@ -75,6 +75,7 @@ public final class AnomalyRegistry {
         register(new AlbaType());
         register(new RaizType());
         register(new CondeType());
+        register(new OrionType());
         propias.addAll(types.keySet());
     }
 
@@ -198,6 +199,10 @@ public final class AnomalyRegistry {
 
     public AnomalyType alba() {
         return types.get(net.ederus.edm.anomaly.boss.Alba.ID);
+    }
+
+    public AnomalyType orion() {
+        return types.get(net.ederus.edm.anomaly.boss.Orion.ID);
     }
 
     /**
@@ -339,7 +344,7 @@ public final class AnomalyRegistry {
 
     /** Vida base configurada; si no hay override, la que trae la anomalia. */
     public double health(AnomalyType type) {
-        return fichas.getDouble(type.id(), "vida", type.baseHealth());
+        return fichas.getDouble(type.id(), "vida", type.vidaDeSerie());
     }
 
     /**
@@ -392,7 +397,7 @@ public final class AnomalyRegistry {
     }
 
     public double damageMultiplier(AnomalyType type) {
-        return Fx.clamp(fichas.getDouble(type.id(), "dano", 1.0),
+        return Fx.clamp(fichas.getDouble(type.id(), "dano", type.danoDeSerie()),
                 0.1, MAX_DAMAGE_MULTIPLIER);
     }
 
@@ -3306,6 +3311,232 @@ public final class AnomalyRegistry {
         public BossFight create(AnomalyPlugin plugin, ActiveAnomaly event, Location where) {
             return new net.ederus.edm.anomaly.boss.Conde(plugin, event, where);
         }
+    }
+
+    // ---------------------------------------------------------------------- ORION
+
+    /**
+     * ORION, el Arquero de las Estrellas: el tercer DIOS. Un arquero con cuerpo de persona y
+     * skin fija firmada, que no deja de disparar y en la fase III se queda con el cielo de la
+     * arena. Ver la clase Orion.
+     */
+    public final class OrionType implements AnomalyType {
+
+        @Override
+        public String id() {
+            return net.ederus.edm.anomaly.boss.Orion.ID;
+        }
+
+        @Override
+        public String display() {
+            return nombre(id(), "ORION");
+        }
+
+        @Override
+        public TextColor color() {
+            return net.ederus.edm.anomaly.boss.Orion.ACCENT;
+        }
+
+        @Override
+        public NamedTextColor glowColor() {
+            return NamedTextColor.AQUA;
+        }
+
+        @Override
+        public Element element() {
+            return Element.VIENTO;
+        }
+
+        @Override
+        public Material icon() {
+            return AnomalyRegistry.icon("BOW");
+        }
+
+        /** En el menu, la cabeza con su skin. */
+        @Override
+        public org.bukkit.inventory.ItemStack iconItem() {
+            return Disguises.head(plugin, net.ederus.edm.anomaly.boss.Orion.SKIN_HASH, "Orion");
+        }
+
+        /** Y en el arbol de logros, la misma cabeza con la textura firmada. */
+        @Override
+        public String iconComponentsJson() {
+            return "{\"minecraft:profile\": {\"properties\": [{\"name\": \"textures\", \"value\": \""
+                    + net.ederus.edm.anomaly.boss.Orion.SKIN_VALUE + "\", \"signature\": \""
+                    + net.ederus.edm.anomaly.boss.Orion.SKIN_SIGNATURE + "\"}]}}";
+        }
+
+        @Override
+        public net.ederus.edm.anomaly.core.AnomalyClass defaultClass() {
+            return net.ederus.edm.anomaly.core.AnomalyClass.DIOS;
+        }
+
+        @Override
+        public String tagline() {
+            return "El Arquero de las Estrellas: nunca falla dos veces";
+        }
+
+        @Override
+        public List<String> origin() {
+            return List.of(
+                    "Antes de que hubiera mapas, los marineros",
+                    "se guiaban por un arquero dibujado en el cielo.",
+                    "Una noche bajó a cobrarse todas las flechas",
+                    "que le pidieron y nadie le devolvió.");
+        }
+
+        @Override
+        public List<String> threat() {
+            return List.of(
+                    "DIOS: tres fases y un arco que no descansa.",
+                    "Marca a una presa y cada flecha le quita más",
+                    "vida. Deja reflejos que lo curan: mátenlos.",
+                    "En la fase III el cielo es suyo; cuando apunte",
+                    "arriba, corran a los círculos de luz.");
+        }
+
+        @Override
+        public double baseHealth() {
+            return 3600;
+        }
+
+        /** Nace con la vida que pelea en el servidor; el menu la mueve desde ahi. */
+        @Override
+        public double vidaDeSerie() {
+            return 95000;
+        }
+
+        /** El mismo multiplicador que ROTTEN: sus bases estan en la misma escala. */
+        @Override
+        public double danoDeSerie() {
+            return 20.0;
+        }
+
+        @Override
+        public int arenaRadius() {
+            return 30;
+        }
+
+        @Override
+        public List<Ability> abilities() {
+            List<Ability> list = new ArrayList<>();
+            // --- La firma
+            add(list, net.ederus.edm.anomaly.boss.Orion.STAR_DEPLOY, "Star Deploy", 2, 1100, 165, 4,
+                    "Apunta al cielo y carga; cae una lluvia de flechas sobre todo. Solo salvan los tres círculos de luz.",
+                    AnomalyRegistry.icon("SPECTRAL_ARROW", "ARROW"), f -> orion(f).starDeploy());
+            add(list, "flechas_marcadas", "Flechas Marcadas", 0, 700, 20, 3,
+                    "Marca a uno y le dispara sin parar: cada flecha quita un 5 % más de su vida máxima, daño puro.",
+                    AnomalyRegistry.icon("TARGET", "SPECTRAL_ARROW"), f -> orion(f).flechasMarcadas());
+            add(list, "paralaje", "Paralaje", 0, 600, 30, 3,
+                    "Salta a otro punto y deja un Reflejo que dispara y lo cura un 1 % por segundo. Mátenlo.",
+                    AnomalyRegistry.icon("ENDER_EYE", "ENDER_PEARL"), f -> orion(f).paralaje());
+            add(list, "nebula", "Nébula", 2, 700, 40, 2,
+                    "Niebla celeste en toda la arena: ocho segundos viendo a seis bloques, y a alguno le marea.",
+                    AnomalyRegistry.icon("LIGHT_BLUE_DYE", "GLASS_BOTTLE"), f -> orion(f).nebula());
+            // --- El carcaj
+            add(list, "saeta_plomo", "Saeta de Plomo", 0, 220, 24, 2,
+                    "Abanico de cinco flechas que dejan con Lentitud III cuatro segundos.",
+                    AnomalyRegistry.icon("IRON_NUGGET", "ARROW"), f -> orion(f).saetaPlomo());
+            add(list, "saeta_quebrantada", "Saeta Quebrantada", 0, 240, 30, 2,
+                    "Tres flechas seguidas que dejan Debilidad II.",
+                    AnomalyRegistry.icon("AMETHYST_SHARD", "ARROW"), f -> orion(f).saetaQuebrantada());
+            add(list, "saeta_venenosa", "Saeta Venenosa", 0, 260, 24, 2,
+                    "Donde cae deja una nube de Veneno II.",
+                    AnomalyRegistry.icon("POISONOUS_POTATO", "SPIDER_EYE"), f -> orion(f).saetaVenenosa());
+            add(list, "saeta_danina", "Saeta Dañina", 0, 260, 24, 2,
+                    "Daño instantáneo II, y rebota a otros dos jugadores.",
+                    AnomalyRegistry.icon("REDSTONE", "ARROW"), f -> orion(f).saetaDanina());
+            add(list, "saeta_ingravida", "Saeta Ingrávida", 0, 300, 60, 2,
+                    "Levita dos segundos y una ráfaga lo remata en el aire.",
+                    AnomalyRegistry.icon("PHANTOM_MEMBRANE", "FEATHER"), f -> orion(f).saetaIngravida());
+            add(list, "saeta_tejedora", "Saeta Tejedora", 0, 300, 24, 2,
+                    "Efecto Tejedor y telarañas alrededor del impacto.",
+                    AnomalyRegistry.icon("COBWEB", "STRING"), f -> orion(f).saetaTejedora());
+            add(list, "saeta_supurante", "Saeta Supurante", 0, 280, 24, 2,
+                    "Efecto Supurante: al recibir daño suelta limos.",
+                    AnomalyRegistry.icon("SLIME_BALL", "ARROW"), f -> orion(f).saetaSupurante());
+            add(list, "saeta_infestada", "Saeta Infestada", 0, 300, 24, 1,
+                    "Efecto Infestado: al recibir daño salen lepismas.",
+                    AnomalyRegistry.icon("STONE_BRICKS", "COBBLESTONE"), f -> orion(f).saetaInfestada());
+            add(list, "saeta_viento", "Saeta del Viento", 0, 240, 24, 2,
+                    "Revienta como una carga de viento y lanza a todos los de alrededor.",
+                    AnomalyRegistry.icon("WIND_CHARGE", "FEATHER"), f -> orion(f).saetaViento());
+            add(list, "saeta_ignea", "Saeta Ígnea", 0, 260, 24, 2,
+                    "Prende fuego y deja llamas en el suelo unos segundos.",
+                    AnomalyRegistry.icon("BLAZE_POWDER", "FIRE_CHARGE"), f -> orion(f).saetaIgnea());
+            add(list, "saeta_marchita", "Saeta Marchita", 0, 280, 24, 2,
+                    "Wither II seis segundos.",
+                    AnomalyRegistry.icon("WITHER_ROSE", "COAL"), f -> orion(f).saetaMarchita());
+            add(list, "saeta_espectral", "Saeta Espectral", 0, 260, 22, 2,
+                    "Brillo diez segundos: se te ve a través de las paredes.",
+                    AnomalyRegistry.icon("SPECTRAL_ARROW", "GLOWSTONE_DUST"), f -> orion(f).saetaEspectral());
+            add(list, "carcaj_completo", "Carcaj Completo", 3, 420, 50, 3,
+                    "Diez flechas de efectos distintos en dos segundos, repartidas entre todos.",
+                    AnomalyRegistry.icon("TIPPED_ARROW", "ARROW"), f -> orion(f).carcajCompleto());
+            // --- De area
+            add(list, "cinturon_orion", "Cinturón de Orión", 2, 520, 185, 4,
+                    "Tres estrellas sobre la arena barren el suelo con rayos. No te quedes en la línea.",
+                    AnomalyRegistry.icon("SEA_LANTERN", "LIGHT_BLUE_STAINED_GLASS"), f -> orion(f).cinturonDeOrion());
+            add(list, "constelacion", "Constelación", 0, 360, 50, 3,
+                    "Une a los jugadores con líneas de luz; al segundo y medio estallan. Sal de la línea.",
+                    AnomalyRegistry.icon("NETHER_STAR", "GLOWSTONE_DUST"), f -> orion(f).constelacion());
+            add(list, "abanico_celeste", "Abanico Celeste", 0, 220, 26, 4,
+                    "Quince flechas en un abanico de 120 grados.",
+                    AnomalyRegistry.icon("ARROW"), f -> orion(f).abanicoCeleste());
+            add(list, "supernova", "Supernova", 3, 560, 62, 3,
+                    "Implosión de luz y 64 flechas en todas direcciones.",
+                    AnomalyRegistry.icon("END_CRYSTAL", "FIREWORK_STAR"), f -> orion(f).supernova());
+            add(list, "lluvia_fugaz", "Lluvia Fugaz", 0, 420, 130, 3,
+                    "Seis segundos de estrellas fugaces sobre marcas en el suelo. Sal del círculo.",
+                    AnomalyRegistry.icon("FIREWORK_STAR", "NETHER_STAR"), f -> orion(f).lluviaFugaz());
+            add(list, "lanza_rigel", "Lanza de Rigel", 2, 440, 75, 4,
+                    "Una flecha gigante sobre quien más vida tiene: dos segundos de aviso y onda de choque.",
+                    AnomalyRegistry.icon("DIAMOND_BLOCK", "DIAMOND"), f -> orion(f).lanzaDeRigel());
+            add(list, "grilla_estelar", "Grilla Estelar", 3, 520, 125, 3,
+                    "Una cuadrícula de luz en el suelo que se enciende por turnos. Pisa entre líneas.",
+                    AnomalyRegistry.icon("LIGHT_BLUE_STAINED_GLASS_PANE", "GLASS_PANE"), f -> orion(f).grillaEstelar());
+            add(list, "ancla_gravitatoria", "Ancla Gravitatoria", 2, 460, 80, 3,
+                    "Arrastra a todos a un punto y suelta una andanada encima.",
+                    AnomalyRegistry.icon("HEAVY_CORE", "ANVIL"), f -> orion(f).anclaGravitatoria());
+            add(list, "sagitario", "Sagitario", 3, 600, 60, 3,
+                    "Dos arqueros de luz disparan ocho segundos desde los bordes de la arena.",
+                    AnomalyRegistry.icon("CROSSBOW", "BOW"), f -> orion(f).sagitario());
+            add(list, "nebulosa", "Nebulosa", 2, 480, 40, 3,
+                    "Tres nubes que persiguen, ralentizan y queman cuatro veces por segundo.",
+                    AnomalyRegistry.icon("BLUE_DYE", "LAPIS_LAZULI"), f -> orion(f).nebulosa());
+            // --- Rapidas y de movimiento
+            add(list, "rafaga_gemela", "Ráfaga Gemela", 0, 200, 30, 4,
+                    "Doce flechas en un segundo y poco al más cercano.",
+                    AnomalyRegistry.icon("ARROW"), f -> orion(f).rafagaGemela());
+            add(list, "disparo_hipersonico", "Disparo Hipersónico", 0, 260, 30, 4,
+                    "Línea de aviso y una flecha que atraviesa a todos los que estén en ella.",
+                    AnomalyRegistry.icon("END_ROD", "ARROW"), f -> orion(f).disparoHipersonico());
+            add(list, "rebote_astral", "Rebote Astral", 0, 240, 26, 3,
+                    "Una flecha que salta de jugador en jugador, hasta cinco.",
+                    AnomalyRegistry.icon("PRISMARINE_CRYSTALS", "ARROW"), f -> orion(f).reboteAstral());
+            add(list, "polaris", "Polaris", 0, 240, 30, 3,
+                    "Tres flechas teledirigidas al que más lejos está.",
+                    AnomalyRegistry.icon("COMPASS", "ARROW"), f -> orion(f).polaris());
+            add(list, "orbita", "Órbita", 3, 480, 130, 3,
+                    "Seis flechas le orbitan y paran las vuestras; luego salen una a una.",
+                    AnomalyRegistry.icon("CLOCK", "ARROW"), f -> orion(f).orbita());
+            add(list, "paso_cometa", "Paso del Cometa", 0, 200, 28, 3,
+                    "Se lanza de lado dejando sombras y dispara desde el aire.",
+                    AnomalyRegistry.icon("FEATHER", "ARROW"), f -> orion(f).pasoDelCometa());
+            add(list, "salto_atras", "Salto Atrás", 0, 160, 24, 3,
+                    "Empujón de viento a quien se le arrima, voltereta atrás y disparo doble.",
+                    AnomalyRegistry.icon("WIND_CHARGE", "RABBIT_FOOT"), f -> orion(f).saltoAtras());
+            return skills.aplicar(id(), list);
+        }
+
+        @Override
+        public BossFight create(AnomalyPlugin plugin, ActiveAnomaly event, Location where) {
+            return new net.ederus.edm.anomaly.boss.Orion(plugin, event, where);
+        }
+    }
+
+    private static net.ederus.edm.anomaly.boss.Orion orion(BossFight fight) {
+        return (net.ederus.edm.anomaly.boss.Orion) fight;
     }
 
     private static net.ederus.edm.anomaly.boss.Conde conde(BossFight fight) {

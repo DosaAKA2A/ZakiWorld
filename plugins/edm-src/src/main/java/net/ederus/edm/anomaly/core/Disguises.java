@@ -92,6 +92,38 @@ public final class Disguises {
     }
 
     /**
+     * 1.91.0 · El perfil de una skin FIJA con la textura firmada por Mojang (value + signature).
+     *
+     * Es la tercera via, y la que usa ORION: la textura suelta de profileOf(hash) no se pinta en
+     * el maniqui porque va sin firmar, y la de una cuenta depende de que esa cuenta no se cambie
+     * la skin y de que Mojang conteste. Aqui la propiedad viaja tal cual la devolvio Mojang, con
+     * su firma, asi que el cliente se fia de ella como de la de un jugador conectado y no hay que
+     * preguntar nada a nadie: sale al instante y siempre igual.
+     *
+     * El uuid y el nombre son los de la cuenta que firmo la textura (el value los lleva dentro);
+     * se ponen los mismos para que el perfil sea coherente. El nombre que se ve encima del jefe
+     * va aparte.
+     */
+    public static io.papermc.paper.datacomponent.item.ResolvableProfile profileOfSigned(
+            Plugin plugin, UUID uuid, String name, String value, String signature) {
+        try {
+            var profile = io.papermc.paper.datacomponent.item.ResolvableProfile.resolvableProfile()
+                    .uuid(uuid)
+                    .name(name)
+                    .addProperty(new com.destroystokyo.paper.profile.ProfileProperty("textures", value, signature))
+                    .build();
+            if (profile.dynamic()) {
+                plugin.getLogger().warning("El perfil firmado de " + name
+                        + " salio DINAMICO: se resolvera online y puede no verse la textura fija.");
+            }
+            return profile;
+        } catch (Throwable t) {
+            plugin.getLogger().warning("No se pudo construir el perfil firmado de " + name + ": " + t);
+            return null;
+        }
+    }
+
+    /**
      * El perfil de una CUENTA DE VERDAD, por su nombre.
      *
      * Esta es la unica forma de que un maniqui lleve una skin concreta, y costo

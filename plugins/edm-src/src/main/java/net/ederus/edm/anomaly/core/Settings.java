@@ -270,6 +270,7 @@ public final class Settings {
     /** Clima que pinta cada anomalia sobre la arena si su ficha no dice otro. */
     private static final java.util.Map<String, String> CLIMA_DE_SERIE = java.util.Map.ofEntries(
             java.util.Map.entry("alba", "celestial"),
+            java.util.Map.entry("orion", "aurora"),
             java.util.Map.entry("keeper", "ancient"),
             java.util.Map.entry("darkness", "penumbra"),
             java.util.Map.entry("coro_abisal", "penumbra"),

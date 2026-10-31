@@ -328,3 +328,16 @@ biomas:
               {id: 'block.amethyst_block.chime', tono: [0.9, 1.2]}]
       volumen: 0.4
       tono: [0.6, 0.9]
+  # 1.91.0 · El cielo de ORION: azul intenso de mediodia, niebla celeste y alguna chispa.
+  orion:
+    nombre: 'Cielo de Orión'
+    hora: 6000
+    sonidos:
+      cada: 28
+      lista: ['block.amethyst_block.chime', 'block.amethyst_block.resonate', 'block.beacon.ambient']
+      volumen: 0.3
+      tono: [1.2, 1.7]
+  # 1.91.0 · Todo blanco, sin particulas ni sonidos. Lo manda Calamity por paquetes.
+  armisticio:
+    nombre: 'Armisticio'
+    hora: 6000

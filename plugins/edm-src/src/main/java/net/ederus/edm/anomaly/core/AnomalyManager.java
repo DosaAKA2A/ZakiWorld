@@ -396,6 +396,36 @@ public final class AnomalyManager implements Listener {
         paintedArena = zona;
     }
 
+    /**
+     * 1.91.0 · Cambia el clima de la arena A MITAD de la pelea. Lo usa ORION: Star Deploy pone su
+     * cielo un rato y en la fase III se queda hasta el final.
+     *
+     * clima null = el de la ficha de la anomalia abierta (o el bioma base de la zona si la ficha
+     * no tiene). La zona queda apuntada como pintada, asi que al cerrar la anomalia restoreArena
+     * la devuelve a su base como siempre, aunque al abrir no se hubiera pintado nada.
+     *
+     * @return false si no hay zona de arena que contenga 'where' (o Lethal Biomes no esta):
+     *         entonces quien llama tiene que apañarse por su cuenta
+     */
+    public boolean climaDeArena(Location where, String clima) {
+        String zona = plugin.settings().arenaZone();
+        var biomas = net.ederus.edm.biomas.BiomasPlugin.activo();
+        if (zona.isBlank() || biomas == null || where == null) return false;
+        var z = biomas.zona(zona);
+        if (z == null || !z.contiene(where)) return false;
+        String destino = clima;
+        if (destino == null || destino.isBlank()) {
+            destino = current == null ? "" : plugin.settings().arenaClimate(current.typeId());
+        }
+        String error = biomas.pintar(zona, destino.isBlank() ? null : destino, null);
+        if (error != null) {
+            plugin.getLogger().warning("No se pudo cambiar el clima de la arena: " + error);
+            return true;
+        }
+        paintedArena = zona;
+        return true;
+    }
+
     private void restoreArena() {
         String zona = paintedArena;
         paintedArena = null;

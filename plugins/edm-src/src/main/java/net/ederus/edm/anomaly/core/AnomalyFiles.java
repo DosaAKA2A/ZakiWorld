@@ -97,8 +97,8 @@ public final class AnomalyFiles {
         def(yml, "activa", true);
         def(yml, "clase", t.defaultClass().name());
         def(yml, "nombre", t.display());
-        def(yml, "vida", Math.round(t.baseHealth()));
-        def(yml, "dano", 1.0);
+        def(yml, "vida", Math.round(t.vidaDeSerie()));
+        def(yml, "dano", t.danoDeSerie());
         def(yml, "descripcion", List.of());
         def(yml, "amenaza", List.of());
         // Sin bioma escrito valia el clima de serie: se escribe ese para no perderlo.
