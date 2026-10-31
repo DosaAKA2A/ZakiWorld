@@ -72,6 +72,8 @@ public final class BiomasPlugin extends Module implements Listener {
     private final Map<UUID, String> dentro = new HashMap<>();
     private final Set<String> pintando = new HashSet<>();
     private final Map<String, String> pendientes = new HashMap<>();
+    /** Lo que hay que avisar cuando se pinte el pendiente de cada zona (si quien lo pidio quiere saberlo). */
+    private final Map<String, Runnable> pendientesAviso = new HashMap<>();
     /** Por jugador y canal (sonidos, ecos, gas): cuando le toca el siguiente sonido suelto y cuales sonaron. */
     private final Map<UUID, Map<String, Turno>> turnos = new HashMap<>();
     private final Random random = new Random();
@@ -370,6 +372,9 @@ public final class BiomasPlugin extends Module implements Listener {
         if (!pintando.add(z.nombre())) {
             // Una anomalia que cierra y otra que abre en el mismo minuto: gana la ultima.
             pendientes.put(z.nombre(), limpiar ? "" : clima);
+            // El aviso va con el pendiente: si otro lo pisa, el suyo ya no llega a pintarse.
+            if (alTerminar != null) pendientesAviso.put(z.nombre(), alTerminar);
+            else pendientesAviso.remove(z.nombre());
             return null;
         }
 
@@ -382,13 +387,14 @@ public final class BiomasPlugin extends Module implements Listener {
         Pintor.pintar(this, w, z, b, () -> {
             pintando.remove(z.nombre());
             String siguiente = pendientes.remove(z.nombre());
+            Runnable avisoSiguiente = pendientesAviso.remove(z.nombre());
             getLogger().info("[Lethal Biomes] Zona " + z.nombre() + " -> " + (nuevo == null ? z.base() : nuevo)
                     + " (" + z.celdas() + " celdas, " + (System.currentTimeMillis() - inicio) + " ms)");
             bitacora.anotar("pintada", z.nombre(),
                     (nuevo == null ? "vuelve a su base " + z.base() : "clima " + nuevo),
                     z.celdas() + " celdas", (System.currentTimeMillis() - inicio) + " ms");
             if (alTerminar != null) alTerminar.run();
-            if (siguiente != null) pintar(z.nombre(), siguiente, null);
+            if (siguiente != null) pintar(z.nombre(), siguiente, avisoSiguiente);
         });
         return null;
     }

@@ -408,6 +408,14 @@ public final class AnomalyManager implements Listener {
      *         entonces quien llama tiene que apañarse por su cuenta
      */
     public boolean climaDeArena(Location where, String clima) {
+        return climaDeArena(where, clima, null);
+    }
+
+    /**
+     * Igual, avisando cuando el Pintor acaba de verdad (pintado y trozos reenviados): el cielo
+     * nuevo ya se ve. Si no se puede pintar, avisa enseguida para que nadie se quede esperando.
+     */
+    public boolean climaDeArena(Location where, String clima, Runnable alTerminar) {
         String zona = plugin.settings().arenaZone();
         var biomas = net.ederus.edm.biomas.BiomasPlugin.activo();
         if (zona.isBlank() || biomas == null || where == null) return false;
@@ -417,9 +425,10 @@ public final class AnomalyManager implements Listener {
         if (destino == null || destino.isBlank()) {
             destino = current == null ? "" : plugin.settings().arenaClimate(current.typeId());
         }
-        String error = biomas.pintar(zona, destino.isBlank() ? null : destino, null);
+        String error = biomas.pintar(zona, destino.isBlank() ? null : destino, alTerminar);
         if (error != null) {
             plugin.getLogger().warning("No se pudo cambiar el clima de la arena: " + error);
+            if (alTerminar != null) alTerminar.run();
             return true;
         }
         paintedArena = zona;
