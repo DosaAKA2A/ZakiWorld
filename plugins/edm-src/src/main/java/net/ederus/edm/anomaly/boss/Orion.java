@@ -34,6 +34,7 @@ import org.bukkit.entity.LivingEntity;
 import org.bukkit.entity.Mannequin;
 import org.bukkit.entity.Mob;
 import org.bukkit.entity.Player;
+import org.bukkit.entity.Pose;
 import org.bukkit.entity.Projectile;
 import org.bukkit.entity.Zombie;
 import org.bukkit.event.EventHandler;
@@ -190,6 +191,28 @@ public final class Orion extends BossFight {
     /* Telaranas de la Saeta Tejedora y cuando se quitan. */
     private final Map<Block, Long> telas = new LinkedHashMap<>();
 
+    /* La red de las piezas de luz: cada display de Orion con el tick en que caduca. Lo que pase
+     * de ahi se quita aunque su animacion no lo haya hecho (ver vigia()). */
+    private final Map<Entity, Long> caducan = new HashMap<>();
+    /** La etiqueta de todo lo que suelta Orion (displays y flechas): la usa el barrido. */
+    static final String MARCA = "edm_orion";
+    /** Vida maxima por defecto de un display de Orion: la animacion mas larga (Cinturon) dura ~9 s. */
+    private static final int VIDA_DISPLAY = 300;
+    private long avisoMotor;
+
+    /* El cielo de Star Deploy: generacion (para que un cieloBase atrasado no apague el de un Star
+     * Deploy nuevo), si el de Orion ya se ve del todo y quien espera a que se vea. */
+    private int cieloGen;
+    private boolean cieloListo;
+    private boolean cieloPintando;
+    private final List<Runnable> alPintarCielo = new ArrayList<>();
+
+    /* El movimiento: deslizamientos con estela de sombras entre disparo y disparo. */
+    private int dashGen;
+    private boolean deslizando;
+    private long proximoMovimiento = 90;
+    private long reflejoMover;
+
     /* Presupuesto de particulas del tick en curso. */
     private int tickPresupuesto = Integer.MIN_VALUE;
     private int gastado;
@@ -275,11 +298,10 @@ public final class Orion extends BossFight {
         if (eq != null) eq.clear();
 
         perfil = Disguises.profileOfSigned(plugin, SKIN_UUID, SKIN_NAME, SKIN_VALUE, SKIN_SIGNATURE);
-        wearShell(perfil, Component.text("✦ ", ACCENT)
-                .append(Component.text("ORION", ACCENT, TextDecoration.BOLD))
-                .append(Component.text(" ✦", ACCENT)));
+        wearShell(perfil, nombre());
         if (shell instanceof Mannequin m) {
             Compat.setAttribute(m, "scale", ESCALA);
+            dePieSiempre(m);
             try {
                 m.setImmovable(true);
             } catch (Throwable ignored) {
@@ -306,13 +328,48 @@ public final class Orion extends BossFight {
         plugin.getServer().getPluginManager().registerEvents(escucha, net.ederus.edm.Module.dueno(plugin));
         // El motor de las flechas: va aparte de ambient() para que sigan volando (y se
         // limpien) aunque el jefe este muerto o volviendo a la arena.
+        // Cada parte va por separado y sin dejar escapar nada: Anim corta la animacion a los cinco
+        // errores (sumados en toda la pelea), y si se cortaba el motor las flechas dejaban de caducar.
         animate(Integer.MAX_VALUE - 40, t -> {
             if (cerrado) throw Stop.now();
-            tickSaetas();
-            tickTelas();
+            seguro("flechas", this::tickSaetas);
+            seguro("telarañas", this::tickTelas);
+            if (t % 5 == 0) seguro("vigía", this::vigia);
+            if (t % 40 == 20) seguro("barrido", this::barrido);
         }, null);
 
         entrada(spot);
+    }
+
+    /**
+     * El nombre que se ve sobre el: el mismo en el cuerpo de verdad y en todas sus copias (el
+     * Reflejo, los arqueros de Sagitario), para que nadie sepa a simple vista cual es el bueno.
+     */
+    static Component nombre() {
+        return Component.text("✦ ", ACCENT)
+                .append(Component.text("ORION", ACCENT, TextDecoration.BOLD))
+                .append(Component.text(" ✦", ACCENT));
+    }
+
+    /** Siempre de pie: un maniqui se agacha solo si cree que no cabe (techo, salto, teletransporte). */
+    private static void dePieSiempre(LivingEntity m) {
+        try {
+            m.setPose(Pose.STANDING, true);
+        } catch (Throwable ignored) {
+        }
+    }
+
+    /** Corre una parte del motor sin que un fallo la tumbe; avisa como mucho cada diez segundos. */
+    private void seguro(String que, Runnable r) {
+        try {
+            r.run();
+        } catch (Throwable t) {
+            long ahora = ticks();
+            if (ahora - avisoMotor > 200) {
+                avisoMotor = ahora;
+                plugin.getLogger().warning("ORION: fallo en el motor (" + que + "): " + t);
+            }
+        }
     }
 
     /** El arco encantado en la mano y nada mas: el cuerpo ya lo pone la skin. */
@@ -427,7 +484,9 @@ public final class Orion extends BossFight {
 
     /**
      * El pulso del arquero: sin esperar a ninguna habilidad, tensa y suelta su disparo basico
-     * cada 0,8 s y se recoloca a media distancia. Si alguien se le pega, da un paso atras.
+     * cada 0,8 s y no se queda quieto: cada uno o dos segundos se desliza con su estela de sombras
+     * (de lado, de un salto atras o cambiando de lado alrededor de su presa) y sigue disparando
+     * mientras se mueve. Si alguien se le pega, salta atras.
      */
     private void pasiva() {
         Player t = objetivo(48);
@@ -442,8 +501,146 @@ public final class Orion extends BossFight {
             disparoBasico(t);
             tensar(false);
         }
-        if (ticks() % 50 == 25) recolocar(t);
-        if (ticks() % 10 == 3 && boss.getLocation().distanceSquared(t.getLocation()) < 16) retroceder(t);
+        if (deslizando) return;
+        boolean encima = boss.getLocation().distanceSquared(t.getLocation()) < 20;
+        if (ticks() >= proximoMovimiento || (encima && ticks() % 5 == 3)) {
+            proximoMovimiento = ticks() + 26 + random.nextInt(22);
+            if (!moverse(boss, t, encima)) recolocar(t);
+        }
+    }
+
+    /**
+     * Elige a donde deslizarse respecto a su presa y va: de lado (lo normal), cambiando de lado
+     * alrededor de ella o de un salto atras si la tiene encima. Siempre a sitio de pie, dentro de
+     * la arena y sin muros en medio. Devuelve si encontro hueco.
+     */
+    private boolean moverse(LivingEntity quien, Player t, boolean encima) {
+        Location yo = quien.getLocation();
+        Vector desdeEl = yo.toVector().subtract(t.getLocation().toVector()).setY(0);
+        double dist = desdeEl.length();
+        if (dist < 0.1) desdeEl = new Vector(1, 0, 0).rotateAroundY(random.nextDouble() * Math.PI * 2);
+        desdeEl.normalize();
+        for (int intento = 0; intento < 10; intento++) {
+            double giro, radio, arco;
+            int dura;
+            int r = random.nextInt(10);
+            if (encima || (dist < 7 && intento < 4)) {
+                // Salto atras: se aleja de golpe, un poco en diagonal.
+                giro = Math.toRadians(rnd(25));
+                radio = Math.max(dist, 1) + 6 + random.nextDouble() * 2;
+                dura = 7;
+                arco = 1.3;
+            } else if (r < 6) {
+                // De lado, corrigiendo la distancia hacia la buena (diez a dieciseis).
+                giro = Math.toRadians((random.nextBoolean() ? 1 : -1) * (24 + random.nextInt(26)));
+                radio = Fx.clamp(dist + rnd(2.5), 10, 16);
+                dura = 7;
+                arco = 0.5;
+            } else {
+                // Cambio de lado: le da media vuelta a su presa por el aire.
+                giro = Math.toRadians((random.nextBoolean() ? 1 : -1) * (85 + random.nextInt(60)));
+                radio = 10 + random.nextDouble() * 5;
+                dura = 11;
+                arco = 1.8;
+            }
+            Vector d = desdeEl.clone().rotateAroundY(giro).multiply(radio);
+            Location spot = Fx.ground(t.getLocation().clone().add(d).add(0, 2, 0), 8);
+            if (!sitioDeDeslizar(yo, spot)) continue;
+            spot.setYaw(yawDe(t.getLocation().toVector().subtract(spot.toVector())));
+            deslizar(quien, spot, dura, arco, 2, null);
+            return true;
+        }
+        return false;
+    }
+
+    /** Destino bueno para un deslizamiento: de pie, dentro de la arena, sin escalon y sin muro en medio. */
+    private boolean sitioDeDeslizar(Location desde, Location hasta) {
+        if (hasta == null || desde.getWorld() != hasta.getWorld()) return false;
+        if (!dentroDeArena(hasta) || !dePie(hasta) || Math.abs(hasta.getY() - desde.getY()) > 3) return false;
+        if (desde.distanceSquared(hasta) < 9) return false;
+        Vector paso = hasta.toVector().subtract(desde.toVector());
+        for (int i = 1; i <= 5; i++) {
+            Location q = desde.clone().add(paso.clone().multiply(i / 6.0));
+            if (!dentroDeArena(q)) return false;
+            if (q.clone().add(0, 1.2, 0).getBlock().getType().isSolid()) return false;
+        }
+        return true;
+    }
+
+    /**
+     * El deslizamiento de Paralaje, para todo el que lo use (el jefe y su Reflejo): de un sitio a
+     * otro en 'dura' ticks, con arrancada y frenada suaves y un arco de 'arco' bloques, movido un
+     * tick cada vez (el cliente lo interpola, sin saltos). Deja una sombra cada 'cadaSombra' ticks
+     * y una estela continua de luz. Si es el jefe, el maniqui va pegado en el mismo tick.
+     */
+    private void deslizar(LivingEntity quien, Location hasta, int dura, double arco, int cadaSombra, Runnable alLlegar) {
+        if (quien == null || !quien.isValid() || hasta == null || dura < 2) return;
+        final boolean jefe = quien == boss;
+        final int gen = jefe ? ++dashGen : 0;
+        final Location desde = quien.getLocation().clone();
+        final Location fin = hasta.clone();
+        final Vector recorrido = fin.toVector().subtract(desde.toVector());
+        if (jefe) {
+            deslizando = true;
+            try {
+                if (boss instanceof Mob mob) mob.getPathfinder().stopPathfinding();
+            } catch (Throwable ignored) {
+            }
+        }
+        soundAt(desde, "entity.illusioner.mirror_move", 0.8f, 1.5f + random.nextFloat() * 0.3f);
+        soundAt(desde, "entity.breeze.jump", 0.6f, 1.6f);
+        fx(Compat.SMALL_GUST, desde.clone().add(0, 0.2, 0), 3, 0.3, 0.05, 0.3, 0.01);
+        final Location[] antes = {desde.clone().add(0, 1.0, 0)};
+        final boolean[] cortado = {false};
+        animate(dura - 1, t -> {
+            if (cerrado || !quien.isValid() || (jefe && (gen != dashGen || !alive()))) {
+                cortado[0] = true;
+                throw Stop.now();
+            }
+            double u = Math.min(1, (t + 1) / (double) dura);
+            double e = u * u * (3 - 2 * u);
+            LivingEntity cuerpo = jefe ? body() : quien;
+            // La sombra se queda donde estaba ANTES de este paso, mirando a donde miraba.
+            if (cadaSombra > 0 && t % cadaSombra == 0 && t < dura - 1) {
+                sombra(cuerpo.getLocation(), cuerpo.getLocation().getYaw(), 9 + t / 2);
+            }
+            Location en = desde.clone().add(recorrido.clone().multiply(e));
+            en.add(0, arco * Math.sin(Math.PI * u), 0);
+            en.setYaw(cuerpo.getLocation().getYaw());
+            en.setPitch(cuerpo.getLocation().getPitch());
+            quien.teleport(en);
+            quien.setVelocity(new Vector());
+            if (jefe && shell != null && shell.isValid() && shell.getVehicle() == null) shell.teleport(en);
+            Location ahora = en.clone().add(0, 1.0, 0);
+            Fx.beam(antes[0], ahora, 0.3, q -> polvo(q, random.nextInt(3) == 0 ? BLANCO : CELESTE, 1.4f));
+            fx(Compat.END_ROD, ahora, 1, 0.15, 0.3, 0.15, 0.01);
+            antes[0] = ahora;
+        }, () -> {
+            if (jefe && gen == dashGen) deslizando = false;
+            if (cortado[0] || !quien.isValid()) return;
+            Location l = fin.clone();
+            LivingEntity cuerpo = jefe ? body() : quien;
+            l.setYaw(cuerpo.getLocation().getYaw());
+            l.setPitch(cuerpo.getLocation().getPitch());
+            quien.teleport(l);
+            quien.setVelocity(new Vector());
+            fx(Compat.SMALL_GUST, l.clone().add(0, 0.1, 0), 4, 0.35, 0.05, 0.35, 0.01);
+            polvo(l.clone().add(0, 0.15, 0), CELESTE, 1.8f);
+            if (alLlegar != null) alLlegar.run();
+        });
+    }
+
+    /** Corta el deslizamiento en curso del jefe (una habilidad lo mueve a su manera). */
+    private void cortarDeslizamiento() {
+        dashGen++;
+        deslizando = false;
+    }
+
+    /** Cada habilidad empieza con el jefe en su sitio: si iba deslizandose, se corta ahi. */
+    @Override
+    protected void startAbilityDamage(Ability a) {
+        cortarDeslizamiento();
+        super.startAbilityDamage(a);
     }
 
     private Player objetivo(double radio) {
@@ -483,16 +680,6 @@ public final class Orion extends BossFight {
             mob.getPathfinder().moveTo(Fx.ground(arena.clone(), 8), 1.2);
         } catch (Throwable ignored) {
         }
-    }
-
-    /** Un saltito hacia atras cuando lo tienen encima: es arquero, no espadachin. */
-    private void retroceder(Player t) {
-        Vector away = boss.getLocation().toVector().subtract(t.getLocation().toVector()).setY(0);
-        if (away.lengthSquared() < 0.01) return;
-        Location dest = boss.getLocation().clone().add(away.clone().normalize().multiply(2.5));
-        if (!dentroDeArena(dest)) return;
-        boss.setVelocity(away.normalize().multiply(0.55).setY(0.18));
-        fx(Compat.SMALL_GUST, boss.getLocation(), 2, 0.2, 0.1, 0.2, 0);
     }
 
     // ============================================================= POSE Y ARCO
@@ -650,6 +837,8 @@ public final class Orion extends BossFight {
         /** Rafagas: borra la inmunidad tras golpe para que no se pierdan. */
         boolean rapida;
         boolean resuelta;
+        /** Ticks seguidos sin moverse: una flecha sin gravedad que se para en el aire no cae nunca. */
+        int quieta;
         Consumer<Player> alGolpear;
 
         Saeta(Arrow flecha, Tipo tipo, double base, double mult, Location antes) {
@@ -690,6 +879,7 @@ public final class Orion extends BossFight {
             }
             if (tipo.brilla) a.setGlowing(true);
             Tags.markMinion(a, ID);
+            a.addScoreboardTag(MARCA);
             Saeta s = new Saeta(a, tipo, base, mult, desde.clone());
             saetas.put(a.getUniqueId(), s);
             return s;
@@ -707,7 +897,7 @@ public final class Orion extends BossFight {
     private void quitar(Saeta s) {
         if (s == null) return;
         saetas.remove(s.flecha.getUniqueId());
-        Fx.safeRemove(s.flecha);
+        borrar(s.flecha);
     }
 
     /** Estelas, guiado y caducidad de todas las flechas en vuelo. */
@@ -720,11 +910,17 @@ public final class Orion extends BossFight {
             Saeta s = it.next();
             Arrow a = s.flecha;
             if (!a.isValid()) {
+                // Sin valer (su trozo dejo de estar cargado) sigue existiendo: se borra igual, o
+                // se quedaria clavada en el aire para quien vuelva a cargar ese trozo.
                 it.remove();
+                borrar(a);
                 continue;
             }
             s.vida++;
             Location ahora = a.getLocation();
+            if (s.antes != null && s.antes.getWorld() == ahora.getWorld()
+                    && s.antes.distanceSquared(ahora) < 1.0E-4) s.quieta++;
+            else s.quieta = 0;
             final Tipo tipo = s.tipo;
             if (s.antes != null && s.antes.getWorld() == ahora.getWorld()) {
                 Fx.beam(s.antes, ahora, paso, q -> polvo(q, tipo.rgb, tipo.tam));
@@ -732,14 +928,14 @@ public final class Orion extends BossFight {
             if (tipo.chispa != null && s.vida % 2 == 0) fx(tipo.chispa, ahora, 1, 0.04, 0.04, 0.04, 0.0);
             s.antes = ahora;
             if (s.guiada != null) guiar(s);
-            if (a.isInBlock() || a.isOnGround() || s.vida > s.vidaMax) {
+            if (a.isInBlock() || a.isOnGround() || s.vida > s.vidaMax || s.quieta >= 6) {
                 it.remove();
                 if (!s.resuelta && (a.isInBlock() || a.isOnGround())) {
                     s.resuelta = true;
                     if (caidas == null) caidas = new ArrayList<>();
                     caidas.add(s);
                 }
-                Fx.safeRemove(a);
+                borrar(a);
             }
         }
         if (caidas != null) for (Saeta s : caidas) alCaer(s, s.antes);
@@ -1136,60 +1332,43 @@ public final class Orion extends BossFight {
         return reflejo != null && reflejo.isValid();
     }
 
-    /** 3. Paralaje: salta a otro punto de la arena y deja un Reflejo que lo cura. */
+    /**
+     * 3. Paralaje: se desliza a otro punto de la arena con su estela de sombras y deja donde
+     * estaba un Reflejo que lo cura. El Reflejo se llama igual que el y tambien se mueve.
+     */
     public void paralaje() {
         if (!alive()) return;
         double m = abilityDamage();
         Location desde = boss.getLocation().clone();
         Player ref = objetivo(50);
-        Location destino = puntoDeArena(ref != null ? ref.getLocation() : arena, 10, 18);
+        Location destino = null;
+        for (int i = 0; i < 8 && destino == null; i++) {
+            Location prueba = puntoDeArena(ref != null ? ref.getLocation() : arena, 10, 18);
+            if (prueba != null && sitioDeDeslizar(desde, prueba)) destino = prueba;
+        }
         if (destino == null) destino = puntoDeArena(arena, 6, RADIO - 4);
         if (destino == null) return;
         announce(Component.text("Paralaje: ¿cuál de los dos es el de verdad?", HIELO));
         soundAt(desde, "entity.illusioner.mirror_move", 1.5f, 1.2f);
         soundAt(desde, "entity.enderman.teleport", 1.0f, 1.6f);
-        estelaDeSalto(desde, destino);
         crearReflejo(desde, m);
-        saltarA(destino, ref != null ? pecho(ref) : null);
-        fx(Compat.FLASH, destino.clone().add(0, 1, 0), 1, 0, 0, 0, 0, GLOW);
-        fx(Compat.END_ROD, destino.clone().add(0, 1, 0), 30, 0.3, 0.8, 0.3, 0.1);
-        soundAt(destino, "block.amethyst_block.resonate", 1.4f, 1.6f);
-    }
-
-    /** Polvo de luz en linea de un sitio a otro y tres sombras por el camino. */
-    private void estelaDeSalto(Location desde, Location hasta) {
-        Fx.beam(desde.clone().add(0, 1, 0), hasta.clone().add(0, 1, 0), 0.35, q -> {
-            polvo(q, CELESTE, 1.6f);
-            if (random.nextInt(3) == 0) fx(Compat.END_ROD, q, 1, 0.05, 0.05, 0.05, 0.01);
+        final Location fin = destino.clone();
+        if (ref != null) fin.setYaw(yawDe(pecho(ref).toVector().subtract(fin.toVector())));
+        int dura = (int) Fx.clamp(Math.round(desde.distance(fin) / 2.2), 7, 13);
+        deslizar(boss, fin, dura, 1.4, 2, () -> {
+            fx(Compat.FLASH, fin.clone().add(0, 1, 0), 1, 0, 0, 0, 0, GLOW);
+            fx(Compat.END_ROD, fin.clone().add(0, 1, 0), 30, 0.3, 0.8, 0.3, 0.1);
+            soundAt(fin, "block.amethyst_block.resonate", 1.4f, 1.6f);
         });
-        Vector d = hasta.toVector().subtract(desde.toVector());
-        float yaw = yawDe(d.clone().setY(0).lengthSquared() < 0.01 ? new Vector(0, 0, 1) : d.clone().setY(0));
-        for (int i = 1; i <= 3; i++) {
-            Location en = desde.clone().add(d.clone().multiply(i / 4.0));
-            sombra(Fx.ground(en.clone().add(0, 1, 0), 4), yaw, 12 + i * 4);
-        }
-    }
-
-    /** Mueve el cuerpo de combate a un sitio ya comprobado; el maniqui le sigue solo. */
-    private void saltarA(Location to, Location mirando) {
-        if (!alive() || to == null) return;
-        try {
-            if (boss instanceof Mob mob) mob.getPathfinder().stopPathfinding();
-        } catch (Throwable ignored) {
-        }
-        Location dest = to.clone();
-        if (mirando != null) dest.setYaw(yawDe(mirando.toVector().subtract(to.toVector())));
-        dest.setPitch(0);
-        boss.teleport(dest);
-        boss.setVelocity(new Vector());
     }
 
     /**
-     * Una sombra: otro maniqui con su skin y su arco que se queda donde estuvo y se apaga.
-     * Intocable y sin barra; solo es animacion.
+     * Una sombra: otro maniqui con su skin y su arco que se queda donde estuvo y se apaga. Al
+     * final de su vida se vuelve invisible y solo queda el contorno de luz, que se deshace en
+     * polvo: asi la estela se desvanece en vez de desaparecer de golpe. Intocable y sin barra.
      */
     private void sombra(Location at, float yaw, int vida) {
-        if (sombras >= 10 || perfil == null || at == null) return;
+        if (sombras >= 16 || perfil == null || at == null || !cargado(at)) return;
         try {
             Location l = at.clone();
             l.setYaw(yaw);
@@ -1208,6 +1387,7 @@ public final class Orion extends BossFight {
                 }
             });
             Compat.setAttribute(s, "scale", ESCALA);
+            dePieSiempre(s);
             vestir(s);
             markMinion(s);
             Glow.apply(s, NamedTextColor.AQUA);
@@ -1215,8 +1395,16 @@ public final class Orion extends BossFight {
             later(2, () -> {
                 if (s.isValid()) s.setProfile(perfil);
             });
+            final int apaga = Math.max(3, vida * 3 / 5);
             animate(vida, t -> {
-                if (!s.isValid()) throw Stop.now();
+                if (!s.isValid() || cerrado) throw Stop.now();
+                if (t == apaga) {
+                    // Solo el contorno: la sombra se queda en un trazo de luz que se apaga.
+                    s.setInvisible(true);
+                    EntityEquipment eq = s.getEquipment();
+                    if (eq != null) eq.clear();
+                    fx(Compat.END_ROD, s.getLocation().add(0, 1.0, 0), 3, 0.2, 0.5, 0.2, 0.01);
+                }
                 if (t % 3 == 0) {
                     fx(Compat.DUST, s.getLocation().add(0, 1.0, 0), 3, 0.25, 0.6, 0.25, 0,
                             Compat.dust(t % 6 == 0 ? CELESTE : NUBE, 1.3f));
@@ -1228,7 +1416,7 @@ public final class Orion extends BossFight {
                 fx(Compat.POOF, s.getLocation().add(0, 1, 0), 8, 0.25, 0.5, 0.25, 0.02);
                 fx(Compat.END_ROD, s.getLocation().add(0, 1, 0), 6, 0.2, 0.6, 0.2, 0.03);
                 spawned.remove(s);
-                Fx.safeRemove(s);
+                borrar(s);
             });
         } catch (Throwable ignored) {
         }
@@ -1246,7 +1434,8 @@ public final class Orion extends BossFight {
                 x.setCollidable(false);
                 x.setSilent(true);
                 x.setImmovable(true);
-                x.customName(Component.text("✧ Reflejo de Orión ✧", HIELO));
+                // Se llama exactamente igual que el: a simple vista no se sabe cual es el bueno.
+                x.customName(nombre());
                 x.setCustomNameVisible(true);
                 try {
                     x.setDescription(Component.empty());
@@ -1254,6 +1443,7 @@ public final class Orion extends BossFight {
                 }
             });
             Compat.setAttribute(r, "scale", ESCALA);
+            dePieSiempre(r);
             Compat.setAttribute(r, "max_health", 1024);
             r.setHealth(1024);
             vestir(r);
@@ -1266,6 +1456,7 @@ public final class Orion extends BossFight {
             reflejoHasta = ticks() + 500;
             reflejoMult = m;
             reflejoDisparo = ticks() + 30;
+            reflejoMover = ticks() + 24 + random.nextInt(16);
             later(2, () -> {
                 if (r.isValid()) r.setProfile(perfil);
             });
@@ -1316,6 +1507,11 @@ public final class Orion extends BossFight {
                 soundAt(boca, "entity.arrow.shoot", 0.9f, 1.7f);
                 tensarCuerpo(reflejo, false);
             }
+            // Se mueve como el, con el mismo deslizamiento: quieto lo delataria enseguida.
+            if (ticks() >= reflejoMover) {
+                reflejoMover = ticks() + 26 + random.nextInt(22);
+                moverse(reflejo, t, r.distanceSquared(t.getLocation()) < 20);
+            }
         }
     }
 
@@ -1323,9 +1519,7 @@ public final class Orion extends BossFight {
     public void onMinionDamaged(LivingEntity minion, Player attacker, double amount) {
         if (reflejo == null || !minion.equals(reflejo)) return;
         reflejoVida -= amount;
-        double frac = Math.max(0, reflejoVida / reflejoMax);
-        reflejo.customName(Component.text("✧ Reflejo de Orión ✧ ", HIELO)
-                .append(Component.text(Math.round(frac * 100) + " %", NamedTextColor.WHITE)));
+        // Sin porcentaje en el nombre: lo delataria. Solo la chispa del golpe.
         fx(Compat.ELECTRIC_SPARK, reflejo.getLocation().add(0, 1.2, 0), 6, 0.3, 0.5, 0.3, 0.1);
         soundAt(reflejo.getLocation(), "block.glass.hit", 1.0f, 1.4f);
     }
@@ -1389,6 +1583,7 @@ public final class Orion extends BossFight {
     }
 
     private ItemDisplay objeto(Location at, ItemStack item, Transformation tr, boolean brilla, Display.Billboard bb) {
+        if (!cargado(at)) return null;
         try {
             ItemDisplay d = world().spawn(at, ItemDisplay.class, e -> {
                 e.setItemStack(item);
@@ -1407,7 +1602,9 @@ public final class Orion extends BossFight {
                 }
             });
             Tags.markTemporary(d);
+            d.addScoreboardTag(MARCA);
             track(d);
+            caducan.put(d, ticks() + VIDA_DISPLAY);
             return d;
         } catch (Throwable t) {
             return null;
@@ -1415,6 +1612,7 @@ public final class Orion extends BossFight {
     }
 
     private BlockDisplay bloque(Location at, Material mat, Transformation tr, boolean brilla) {
+        if (!cargado(at)) return null;
         try {
             BlockDisplay d = world().spawn(at, BlockDisplay.class, e -> {
                 e.setBlock(mat.createBlockData());
@@ -1431,7 +1629,9 @@ public final class Orion extends BossFight {
                 }
             });
             Tags.markTemporary(d);
+            d.addScoreboardTag(MARCA);
             track(d);
+            caducan.put(d, ticks() + VIDA_DISPLAY);
             return d;
         } catch (Throwable t) {
             return null;
@@ -1441,7 +1641,72 @@ public final class Orion extends BossFight {
     private void quitar(Entity d) {
         if (d == null) return;
         spawned.remove(d);
-        Fx.safeRemove(d);
+        caducan.remove(d);
+        borrar(d);
+    }
+
+    /**
+     * Borra una entidad aunque Bukkit diga que no vale. Fx.safeRemove solo borra lo que isValid(),
+     * y una entidad cuyo trozo no esta cargado del todo NO vale pero sigue en el mundo: el display
+     * se quedaba ahi, quieto, y aparecia colgado en cuanto alguien volvia a cargar ese trozo.
+     */
+    private static void borrar(Entity e) {
+        if (e == null) return;
+        try {
+            if (!e.isDead()) e.remove();
+        } catch (Throwable ignored) {
+        }
+    }
+
+    /** Si el trozo de ese sitio esta cargado (no se crea nada donde luego no se podria quitar). */
+    private boolean cargado(Location l) {
+        if (l == null || l.getWorld() == null) return false;
+        return l.getWorld().isChunkLoaded(l.getBlockX() >> 4, l.getBlockZ() >> 4);
+    }
+
+    /** Acorta la vida maxima de un display: pasado ese plazo la vigia lo quita sí o sí. */
+    private void caduca(Entity d, int ticksDeVida) {
+        if (d != null && caducan.containsKey(d)) caducan.put(d, ticks() + ticksDeVida);
+    }
+
+    /**
+     * La red: todo display de Orion que pase su vida maxima se quita, lo haya hecho su animacion
+     * o no (una animacion cortada, una excepcion a mitad, un tope que deja fuera el final).
+     */
+    private void vigia() {
+        if (caducan.isEmpty()) return;
+        long ahora = ticks();
+        Iterator<Map.Entry<Entity, Long>> it = caducan.entrySet().iterator();
+        while (it.hasNext()) {
+            Map.Entry<Entity, Long> e = it.next();
+            Entity d = e.getKey();
+            if (d.isDead()) {
+                it.remove();
+                spawned.remove(d);
+                continue;
+            }
+            if (ahora < e.getValue()) continue;
+            it.remove();
+            spawned.remove(d);
+            orbita.remove(d);
+            borrar(d);
+        }
+    }
+
+    /**
+     * Y la red de la red: cada dos segundos se mira la arena entera y se borra cualquier display o
+     * flecha con la etiqueta de Orion que ya no este en sus listas (se perdio su referencia).
+     */
+    private void barrido() {
+        World w = arena.getWorld();
+        if (w == null) return;
+        for (Entity e : w.getNearbyEntities(arena, 110, 160, 110)) {
+            if (!(e instanceof Display) && !(e instanceof AbstractArrow)) continue;
+            if (!e.getScoreboardTags().contains(MARCA)) continue;
+            if (caducan.containsKey(e) || saetas.containsKey(e.getUniqueId())) continue;
+            spawned.remove(e);
+            borrar(e);
+        }
     }
 
     /** Lleva la traslacion de un display a 'a' en 'ticks', interpolado por el cliente. */
@@ -1465,6 +1730,9 @@ public final class Orion extends BossFight {
                 true, Display.Billboard.FIXED);
         ItemDisplay b = objeto(at, flecha, new Transformation(new Vector3f(), new Quaternionf(izq), new Vector3f(s), puntaCruz()),
                 true, Display.Billboard.FIXED);
+        // Las dos viven menos de un segundo y medio (entrada, Saeta Mayor): con tres ya sobran.
+        caduca(a, 60);
+        caduca(b, 60);
         return new ItemDisplay[]{a, b};
     }
 
@@ -1514,9 +1782,27 @@ public final class Orion extends BossFight {
 
     /** El cielo de Orion sobre la arena: por la zona de Lethal Biomes o, sin ella, prestado a mano. */
     private void cieloOrion() {
-        if (cerrado || cieloPuesto) return;
+        cieloOrion(null);
+    }
+
+    /**
+     * Igual, avisando a 'listo' cuando el cielo ya se ve azul del todo. El Pintor de Lethal Biomes
+     * reparte la zona en varios ticks y reenvia los trozos al final (unos 3 s en el Coliseo); el
+     * cielo prestado se pinta de golpe y se reenvia a ocho trozos por tick.
+     */
+    private void cieloOrion(Runnable listo) {
+        if (cerrado) return;
+        if (cieloPuesto) {
+            if (listo != null) {
+                if (cieloPintando) alPintarCielo.add(listo);
+                else listo.run();
+            }
+            return;
+        }
         cieloPuesto = true;
-        if (plugin.manager().climaDeArena(arena, "orion")) return;
+        cieloPintando = true;
+        if (listo != null) alPintarCielo.add(listo);
+        if (plugin.manager().climaDeArena(arena, "orion", () -> later(0, this::cieloPintado))) return;
         if (prestado == null) {
             prestado = CieloPrestado.pintar(this, arena.clone());
             if (prestado == null && !avisoBioma) {
@@ -1525,6 +1811,30 @@ public final class Orion extends BossFight {
                         + "tras instalar el datapack?). El cielo no cambia.");
             }
         }
+        later(prestado == null ? 0 : prestado.trozos.size() / 8 + 2, this::cieloPintado);
+    }
+
+    /** El cielo de Orion ya se ve: se avisa a quien esperaba (Star Deploy, para soltar la lluvia). */
+    private void cieloPintado() {
+        cieloPintando = false;
+        if (alPintarCielo.isEmpty()) return;
+        List<Runnable> avisar = new ArrayList<>(alPintarCielo);
+        alPintarCielo.clear();
+        for (Runnable r : avisar) {
+            try {
+                r.run();
+            } catch (Throwable ignored) {
+            }
+        }
+    }
+
+    /** Devuelve el cielo base al rato, salvo que otro Star Deploy lo haya vuelto a pedir antes. */
+    private void cieloBaseLuego(int ticksDespues) {
+        if (cieloFijo) return;
+        final int gen = cieloGen;
+        later(ticksDespues, () -> {
+            if (gen == cieloGen) cieloBase();
+        });
     }
 
     /** Devuelve el cielo de la ficha (salvo en la fase III, que se queda en el de Orion). */
@@ -1532,6 +1842,8 @@ public final class Orion extends BossFight {
         // Cerrada la pelea, el clima ya lo devolvio el manager: repintar aqui lo dejaria puesto.
         if (cieloFijo || cerrado || !cieloPuesto) return;
         cieloPuesto = false;
+        cieloPintando = false;
+        alPintarCielo.clear();
         if (prestado != null) {
             prestado.devolver(this, false);
             prestado = null;
@@ -1776,9 +2088,13 @@ public final class Orion extends BossFight {
         } catch (Throwable ignored) {
         }
         desmarcar(false);
-        for (Saeta s : new ArrayList<>(saetas.values())) Fx.safeRemove(s.flecha);
+        for (Saeta s : new ArrayList<>(saetas.values())) borrar(s.flecha);
         saetas.clear();
         orbita.clear();
+        // Los displays tambien con borrar(): el barrido del padre solo quita lo que isValid().
+        for (Entity d : new ArrayList<>(caducan.keySet())) borrar(d);
+        caducan.clear();
+        alPintarCielo.clear();
         quitarTelas();
         if (prestado != null) {
             prestado.devolver(this, true);
@@ -1945,6 +2261,14 @@ public final class Orion extends BossFight {
         miraFija = null;
         pitchFijo = -90f;
         tensar(true);
+        // El cielo empieza a cambiar YA, en el primer tick de la carga: asi, cuando suelta la Saeta
+        // Mayor y caen las flechas, ya esta azul del todo. Con la generacion nueva, un cieloBase
+        // atrasado de un Star Deploy anterior no lo apaga a mitad.
+        final int gen = ++cieloGen;
+        cieloListo = false;
+        cieloOrion(() -> {
+            if (gen == cieloGen) cieloListo = true;
+        });
         titleNear(Component.text("✦ STAR DEPLOY ✦", ACCENT, TextDecoration.BOLD),
                 Component.text("Corre a un círculo de luz", HIELO));
         soundAt(c, "block.beacon.activate", 1.8f, 1.5f);
@@ -1976,9 +2300,12 @@ public final class Orion extends BossFight {
         final List<double[]> ondas = new ArrayList<>();
         final int[] siguiente = {0};
         final int carga = 60;
-        animate(carga, t -> {
+        // Si el cielo aun no se ve, la carga se alarga hasta segundo y medio esperandolo.
+        final int espera = 30;
+        animate(carga + espera, t -> {
             if (!alive() || cerrado) throw Stop.now();
-            double u = t / (double) carga;
+            if (t >= carga && (cieloListo || t >= carga + espera)) throw Stop.now();
+            double u = Math.min(1, t / (double) carga);
             if (t % 20 == 0) {
                 for (Player p : targets()) if (enLaPelea(p)) Compat.apply(p, "slowness", 30, 3);
             }
@@ -2032,6 +2359,7 @@ public final class Orion extends BossFight {
                 for (BlockDisplay col : columnas) quitar(col);
                 pitchFijo = null;
                 tensar(false);
+                cieloBaseLuego(20);
                 return;
             }
             soltarSaetaMayor(c, claros, columnas, m);
@@ -2078,7 +2406,6 @@ public final class Orion extends BossFight {
             fx(Compat.END_ROD, top, 60, 3, 3, 3, 0.2);
             soundAt(c, "entity.lightning_bolt.thunder", 1.2f, 1.6f);
             soundAt(c, "entity.firework_rocket.large_blast_far", 2.0f, 0.7f);
-            cieloOrion();
             pitchFijo = null;
             lluviaDeEstrellas(c, claros, columnas, m);
         });
@@ -2132,6 +2459,9 @@ public final class Orion extends BossFight {
                     double caida = 40 + random.nextDouble() * 8;
                     Vector recorrido = dir.clone().multiply(caida / -dir.getY());
                     Location desde = new Location(world(), x, suelo + 0.6, z).subtract(recorrido);
+                    // Ni nace ni cae en un trozo sin cargar: ahi no valdria ni para moverla ni para
+                    // quitarla y se quedaba colgada en el cielo hasta que alguien cargaba el trozo.
+                    if (!cargado(desde) || !cargado(desde.clone().add(recorrido))) continue;
                     float esc = 2.0f + random.nextFloat() * 0.9f;
                     Quaternionf izq = haciaY(dir);
                     boolean brilla = random.nextInt(3) == 0;
@@ -2139,6 +2469,7 @@ public final class Orion extends BossFight {
                             new Vector3f(esc, esc, esc), punta()), brilla, Display.Billboard.FIXED);
                     if (d == null) continue;
                     int tiempo = (int) Math.max(8, Math.ceil(recorrido.length() / velocidad));
+                    caduca(d, tiempo + 12);
                     cayendo.add(new Caida(d, desde, recorrido, t, tiempo));
                 }
             }
@@ -2204,7 +2535,7 @@ public final class Orion extends BossFight {
             for (Caida k : cayendo) quitar(k.d);
             cayendo.clear();
             for (BlockDisplay col : columnas) quitar(col);
-            if (!cieloFijo) later(50, this::cieloBase);
+            cieloBaseLuego(50);
         });
     }
 
@@ -2788,7 +3119,10 @@ public final class Orion extends BossFight {
                     estrella[0] = objeto(g.clone().add(desde), new ItemStack(Material.NETHER_STAR),
                             new Transformation(new Vector3f(), new Quaternionf(), new Vector3f(1.6f, 1.6f, 1.6f), new Quaternionf()),
                             true, Display.Billboard.CENTER);
-                    if (estrella[0] != null) estrella[0].setTeleportDuration(cae);
+                    if (estrella[0] != null) {
+                        estrella[0].setTeleportDuration(cae);
+                        caduca(estrella[0], 30);
+                    }
                 }
                 if (t == aviso - cae && estrella[0] != null) estrella[0].teleport(g.clone().add(0, 0.8, 0));
                 if (t >= aviso - cae) {
@@ -2830,6 +3164,14 @@ public final class Orion extends BossFight {
         }
     }
 
+    /** El centro aproximado de una pieza ya clavada (para el destello con el que se evapora). */
+    private static Location centroDePieza(Location clavada, PiezaLanza p) {
+        float[] t = p.tr(), e = p.escala();
+        // Girada 90 grados en Y, la caja (x, y, z) queda como (z, y, -x).
+        double cx = p.giroY() ? e[2] / 2 : e[0] / 2, cz = p.giroY() ? -e[0] / 2 : e[2] / 2;
+        return clavada.clone().add(t[0] + cx, t[1] + e[1] / 2, t[2] + cz);
+    }
+
     /** Cinco bloques, origen en la punta y apuntando abajo, todos con brillo celeste. */
     private static final List<PiezaLanza> LANZA = List.of(
             new PiezaLanza(Material.DIAMOND_BLOCK, new float[]{0f, 1.039f, -0.125f}, new float[]{0.9f, 1.5f, 0.25f}, false),
@@ -2864,9 +3206,11 @@ public final class Orion extends BossFight {
         final Location clavada = g.clone().add(0, -1.039 - 0.6, 0);
         final int aviso = 40, cae = 5;
         final List<BlockDisplay> piezas = new ArrayList<>();
+        final List<PiezaLanza> deQue = new ArrayList<>();
         for (PiezaLanza p : LANZA) {
             BlockDisplay d = bloque(clavada.clone().add(0, 34, 0), p.mat(), p.tr(1f), true);
             if (d == null) continue;
+            deQue.add(p);
             // La duracion del viaje va desde ya: si viaja en el mismo tick que el salto, el
             // cliente puede recibir el salto antes y la lanza aparece clavada sin caer.
             d.setTeleportDuration(cae);
@@ -2927,18 +3271,19 @@ public final class Orion extends BossFight {
                             q -> polvo(Fx.ground(q, 3).add(0, 0.25, 0), rgb, 1.7f));
                 }
             }
-            if (k == 14) {
-                // Se desmonta: encoge y sube un poco, y fuera.
-                for (int i = 0; i < piezas.size(); i++) {
+            // Se evapora como las espadas del Juicio de Espadas (RIP): pieza a pieza, cada dos
+            // ticks, de las plumas a la punta, cada una con su fogonazo, chispas de luz y tintineo.
+            if (k >= 14 && (k - 14) % 2 == 0) {
+                int i = piezas.size() - 1 - (k - 14) / 2;
+                if (i >= 0) {
                     BlockDisplay d = piezas.get(i);
-                    if (!d.isValid()) continue;
-                    Transformation tr = LANZA.get(i).tr(0.01f);
-                    d.setInterpolationDelay(0);
-                    d.setInterpolationDuration(12);
-                    d.setTransformation(new Transformation(new Vector3f(0, 3.5f, 0), tr.getLeftRotation(),
-                            tr.getScale(), tr.getRightRotation()));
+                    PiezaLanza p = deQue.get(i);
+                    Location at = centroDePieza(clavada, p);
+                    // La grande (como la espada gigante del RIP) es el astil, y la punta cierra.
+                    boolean grande = p.escala()[1] > 3 || i == 0;
+                    net.ederus.edm.rip.EffectRunner.evaporar(world(), at, grande);
+                    quitar(d);
                 }
-                soundAt(g, "block.amethyst_cluster.break", 1.4f, 1.0f);
             }
             if (k > 14 && k % 3 == 0) fx(Compat.END_ROD, g.clone().add(0, 3, 0), 3, 0.3, 1.5, 0.3, 0.03);
         }, () -> {
@@ -3180,7 +3525,7 @@ public final class Orion extends BossFight {
                 x.setSilent(true);
                 x.setInvulnerable(true);
                 x.setImmovable(true);
-                x.customName(Component.text("✧ Arquero de Luz ✧", HIELO));
+                x.customName(nombre());
                 x.setCustomNameVisible(true);
                 try {
                     x.setDescription(Component.empty());
@@ -3188,6 +3533,7 @@ public final class Orion extends BossFight {
                 }
             });
             Compat.setAttribute(a, "scale", ESCALA);
+            dePieSiempre(a);
             vestir(a);
             markMinion(a);
             Glow.apply(a, NamedTextColor.AQUA);
