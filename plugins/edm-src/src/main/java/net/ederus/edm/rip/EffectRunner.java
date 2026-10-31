@@ -336,16 +336,25 @@ public final class EffectRunner {
             // empty catch block
         }
         if (at != null) {
-            boolean big = scale > 3.0f;
-            Compat.spawn(w, Compat.FLASH, at, 1);
-            Compat.spawn(w, Compat.END_ROD, at, big ? 40 : 14, big ? 0.5 : 0.18, big ? 0.7 : 0.3, big ? 0.5 : 0.18, big ? 0.12 : 0.05);
-            Compat.spawn(w, Compat.ELECTRIC_SPARK, at, big ? 26 : 9, big ? 0.4 : 0.2, big ? 0.6 : 0.3, big ? 0.4 : 0.2, big ? 0.15 : 0.08);
-            Compat.soundPlayers(w, at, "block.amethyst_block.chime", big ? 1.2f : 0.6f, big ? 0.8f : (float)EffectRunner.rnd(1.3, 1.8));
-            if (big) {
-                Compat.soundPlayers(w, at, "entity.illusioner.mirror_move", 1.0f, 0.7f);
-            }
+            EffectRunner.evaporar(w, at, scale > 3.0f);
         }
         this.discard((Entity)display);
+    }
+
+    /**
+     * El destello con el que se evapora cada espada del Juicio de Espadas: fogonazo, chispas
+     * de luz y el tintineo de amatista (y el espejo si es la grande). Publico para que otras
+     * piezas (la Lanza de Rigel de ORION) se deshagan igual.
+     */
+    public static void evaporar(World w, Location at, boolean big) {
+        if (w == null || at == null) return;
+        Compat.spawn(w, Compat.FLASH, at, 1);
+        Compat.spawn(w, Compat.END_ROD, at, big ? 40 : 14, big ? 0.5 : 0.18, big ? 0.7 : 0.3, big ? 0.5 : 0.18, big ? 0.12 : 0.05);
+        Compat.spawn(w, Compat.ELECTRIC_SPARK, at, big ? 26 : 9, big ? 0.4 : 0.2, big ? 0.6 : 0.3, big ? 0.4 : 0.2, big ? 0.15 : 0.08);
+        Compat.soundPlayers(w, at, "block.amethyst_block.chime", big ? 1.2f : 0.6f, big ? 0.8f : (float)EffectRunner.rnd(1.3, 1.8));
+        if (big) {
+            Compat.soundPlayers(w, at, "entity.illusioner.mirror_move", 1.0f, 0.7f);
+        }
     }
 
     public void play(RipEffect effect, Location loc, Player killer, Player victim) {
