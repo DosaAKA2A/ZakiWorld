@@ -2363,20 +2363,22 @@ public final class Orion extends BossFight {
     }
 
     /**
-     * El haz de luz que marca un claro de Star Deploy: una espiral fina de polvo blanco
-     * que sube girando hasta 8 bloques y chispas que escapan por arriba. Se ve de lejos
-     * sin tapar la vista como lo hacia la columna de cristal.
+     * Lo que marca un claro de Star Deploy, todo a ras de suelo (Dosa: los sitios seguros
+     * se marcan sin nada que suba): destellos blancos y celestes que brillan dentro del
+     * circulo y un segundo anillo que gira despacio.
      */
     private void hazDeClaro(Location base, int t) {
-        double giro = t * 0.35;
-        for (int i = 0; i < 16; i++) {
-            double y = i * 0.5;
-            double a = giro + i * 0.55;
-            double r = 0.35;
-            polvo(base.clone().add(Math.cos(a) * r, y, Math.sin(a) * r), BLANCO, 0.9f);
-            polvo(base.clone().add(Math.cos(a + Math.PI) * r, y, Math.sin(a + Math.PI) * r), NUBE, 0.9f);
+        for (int i = 0; i < 6; i++) {
+            double a = random.nextDouble() * Math.PI * 2;
+            double r = Math.sqrt(random.nextDouble()) * 2.3;
+            Location q = base.clone().add(Math.cos(a) * r, 0.05, Math.sin(a) * r);
+            polvo(q, i % 2 == 0 ? BLANCO : NUBE, 1.1f);
         }
-        fx(Compat.END_ROD, base.clone().add(0, 8, 0), 1, 0.15, 0.2, 0.15, 0.02);
+        double giro = t * 0.12;
+        for (int i = 0; i < 8; i++) {
+            double a = giro + i * Math.PI / 4;
+            fx(Compat.END_ROD, base.clone().add(Math.cos(a) * 1.9, 0.08, Math.sin(a) * 1.9), 1, 0, 0, 0, 0);
+        }
     }
 
     private static boolean enClaro(Location l, List<Location> claros) {
