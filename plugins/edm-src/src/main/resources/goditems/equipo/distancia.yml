@@ -1,0 +1,164 @@
+# ---------------------------------------------------------------------------
+# GodItems - efectos de equipo: ARMAS A DISTANCIA (desde EDM 1.91.0)
+#
+# Arcos, ballestas y tridentes lanzados. Las claves distancia.* las aplica
+# GodItems solo (no las lee ningun otro plugin) y se dan como las demas: por
+# pieza (un arco que atraviesa) o por escalon de set (el [3] de un set de arco).
+# El lore de cada pieza sale de estas mismas cifras.
+#
+# En cada disparo cuenta la ARMADURA PUESTA y el ARMA QUE DISPARA. Otro arco,
+# ballesta o tridente en la otra mano no cuenta en ese disparo. Asi un escalon
+# que pide el arco del set (p. ej. el de 5 piezas: 4 de armadura + el arco) solo
+# sale disparando con ese arco.
+#
+# "Cargado del todo" = la cuerda tensada al 95 % o mas. Una ballesta siempre lo esta.
+#
+# Las claves:
+#   distancia.dano                fraccion de daño extra de tus flechas (0.10 = +10 %)
+#   distancia.velocidad           fraccion de velocidad extra de tus flechas (0.25 = +25 %)
+#   distancia.estela              1 = tus flechas dejan estela (color en goditems/config.yml > distancia.estela)
+#   distancia.marcada-cada        cada N disparos cargados del todo, una Flecha Marcada
+#   distancia.marcada-dano        fraccion de daño de TUS flechas que recibe el marcado, por marca (0.05)
+#   distancia.marcada-max         marcas como mucho
+#   distancia.marcada-segundos    lo que dura la pila (cada marca nueva la renueva)
+#   distancia.lluvia-flechas      lluvia de estrellas: unas N flechas (N-2 a N+2) al impactar un disparo cargado
+#   distancia.lluvia-dano         fraccion del daño del arco que hace cada estrella (0.35)
+#   distancia.lluvia-radio        bloques alrededor del impacto
+#   distancia.lluvia-enfriamiento segundos entre lluvias
+#   distancia.perforar            enemigos que atraviesa cada flecha
+#   distancia.triple-cada         cada N disparos, tres flechas en abanico
+#   distancia.furia               fraccion de daño extra con poca vida, como mucho
+#   distancia.furia-umbral        fraccion de vida por debajo de la cual el extra es el maximo (lineal desde vida llena)
+#   distancia.tridente-lanzado    daño del tridente AL LANZARLO (el cuerpo a cuerpo sigue con su attack-damage).
+#                                 Va SIEMPRE por pieza (el /flex y el /damage la leen del tridente).
+#
+# Comprobar: /gi equipo <jugador> distancia.   /damage   y   /flex power
+# ---------------------------------------------------------------------------
+
+grupos:
+  distancia: '<#6FD3FF>A distancia'
+
+claves:
+  distancia.dano:
+    nombre: daño con arco
+    lore: '&7· &f{valor} &7de daño con arco'
+    tope: 1.0
+    minimo: -0.9
+  distancia.velocidad:
+    nombre: velocidad de las flechas
+    lore: '&7· &7Flechas &f{cifra} &7más rápidas'
+    tope: 1.0
+    minimo: 0
+  distancia.estela:
+    nombre: estela en las flechas
+    lore: '&7· &7Tus flechas dejan una &bestela celeste'
+    formato: numero
+    tope: 1
+    minimo: 0
+  distancia.marcada-cada:
+    nombre: Flecha Marcada (cada N disparos)
+    lore: '&7· &7Cada &f{cifra}.º &7disparo cargado es una &bFlecha Marcada&7:'
+    formato: numero
+    minimo: 0
+  distancia.marcada-dano:
+    nombre: daño por marca
+    lore: '&7  el objetivo recibe &f{valor} &7de daño de tus flechas'
+  distancia.marcada-max:
+    nombre: marcas como mucho
+    lore: '&7  por marca, hasta &f{cifra} &7marcas'
+    formato: numero
+  distancia.marcada-segundos:
+    nombre: segundos de las marcas
+    lore: '&7  durante &f{cifra} s'
+    formato: numero
+  distancia.lluvia-flechas:
+    nombre: estrellas de la lluvia
+    lore: '&7· &bLluvia de estrellas&7: unas &f{cifra} &7flechas caen del cielo'
+    formato: numero
+    minimo: 0
+  distancia.lluvia-radio:
+    nombre: radio de la lluvia
+    lore: '&7  en &f{cifra} &7bloques alrededor del impacto,'
+    formato: numero
+  distancia.lluvia-dano:
+    nombre: daño de cada estrella
+    lore: '&7  con el &f{cifra} &7del daño del arco cada una'
+  distancia.lluvia-enfriamiento:
+    nombre: espera de la lluvia
+    lore: '&7  como mucho una vez cada &f{cifra} s'
+    formato: numero
+  distancia.perforar:
+    nombre: enemigos atravesados
+    lore: '&7· &7Tus flechas atraviesan a &f{cifra} &7enemigos'
+    formato: numero
+    tope: 10
+    minimo: 0
+  distancia.triple-cada:
+    nombre: disparo triple (cada N)
+    lore: '&7· &7Cada &f{cifra}.º &7disparo sale &ftriple&7, en abanico'
+    formato: numero
+    minimo: 0
+  distancia.furia:
+    nombre: daño con poca vida
+    lore: '&7· &7Cuanta menos vida, más pega: hasta &f{valor}'
+    tope: 1.0
+    minimo: 0
+  distancia.furia-umbral:
+    nombre: vida del daño máximo
+    lore: '&7  por debajo del &f{cifra} &7de vida'
+    tope: 0.99
+    minimo: 0
+  distancia.tridente-lanzado:
+    nombre: daño del tridente lanzado
+    lore: '&7· &7Lanzado pega &f{cifra} &7de daño'
+    formato: numero
+    minimo: 0
+
+# Ejemplos (quitar las # para usarlos; los TIPO.ID tienen que existir en MMOItems).
+#
+# piezas:
+#   BOW.ARCO_ATRAVESADOR:
+#     efectos:
+#       distancia.perforar: 3
+#   BOW.ARCO_TRIPLE:
+#     efectos:
+#       distancia.triple-cada: 4
+#   BOW.ARCO_FURIA:
+#     efectos:
+#       distancia.furia: 0.30
+#       distancia.furia-umbral: 0.30
+#   SPEAR.TRIDENTE_DE_PESCA:
+#     efectos:
+#       distancia.tridente-lanzado: 62
+#
+# sets:
+#   orion:
+#     nombre: Orión
+#     piezas:
+#       - ANOMALIA.ORION_YELMO
+#       - ANOMALIA.ORION_PECHERA
+#       - ANOMALIA.ORION_GREBAS
+#       - ANOMALIA.ORION_BOTAS
+#       - BOW.BETELGEUSE
+#     escalones:
+#       2:
+#         efectos:
+#           distancia.dano: 0.10
+#       3:
+#         efectos:
+#           distancia.velocidad: 0.25
+#           distancia.estela: 1
+#       4:
+#         efectos:
+#           distancia.marcada-cada: 5
+#           distancia.marcada-dano: 0.05
+#           distancia.marcada-max: 5
+#           distancia.marcada-segundos: 8
+#       5:
+#         efectos:
+#           distancia.lluvia-flechas: 10
+#           distancia.lluvia-radio: 4
+#           distancia.lluvia-dano: 0.35
+#           distancia.lluvia-enfriamiento: 30
+piezas: {}
+sets: {}

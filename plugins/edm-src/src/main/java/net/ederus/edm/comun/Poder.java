@@ -116,7 +116,10 @@ public final class Poder {
         double vida = Math.max(0, Compat.getAttribute(p, "max_health", 20) - 20);
         // El dano cuenta con los criticos de MythicLib: un golpe medio vale
         // dano x (1 + prob x (multiplicador - 1)). Con 30 % de critico a x2 pega un 30 % mas.
-        double golpe = Compat.getAttribute(p, "attack_damage", 1) * (1 + critico(p));
+        // El arma de la mano: una espada por su atributo; un arco por lo que pega su
+        // flecha tensada del todo y un tridente con daño de lanzamiento por ese daño
+        // (EDM 1.91.0). Sin esto un arco contaba como pegar con el puño.
+        double golpe = danoArma(p) * (1 + critico(p));
         double dano = Math.max(0, golpe - 1);
 
         /* Los mismos numeros que el config de serie, A PROPOSITO: en un servidor que
@@ -131,6 +134,117 @@ public final class Poder {
                 + dano * c.getDouble("por-dano", 60);
 
         return new Desglose(rango, auraskills, armadura, dureza, vida, dano, total);
+    }
+
+    /* ============================================================ armas */
+
+    /** La clave de GodItems con el daño del tridente lanzado (goditems/equipo/, por pieza). */
+    public static final String CLAVE_TRIDENTE = "distancia.tridente-lanzado";
+
+    /**
+     * El golpe base (sin criticos) del arma de la mano principal: el atributo de
+     * daño para lo cuerpo a cuerpo, la flecha tensada del todo para arcos y
+     * ballestas, y el daño de lanzamiento para un tridente que lo tenga en GodItems.
+     */
+    public static double danoArma(Player p) {
+        org.bukkit.inventory.ItemStack mano = p.getInventory().getItemInMainHand();
+        org.bukkit.Material m = mano.getType();
+        if (m == org.bukkit.Material.TRIDENT) {
+            double lanzado = tridenteLanzado(mano);
+            if (lanzado > 0) return lanzado;
+        }
+        if (m == org.bukkit.Material.BOW || m == org.bukkit.Material.CROSSBOW) return danoDistancia(p, mano);
+        return Compat.getAttribute(p, "attack_damage", 1);
+    }
+
+    /** El daño de lanzamiento que GodItems le da a ese tridente, o 0. */
+    public static double tridenteLanzado(org.bukkit.inventory.ItemStack item) {
+        try {
+            String id = net.ederus.edm.goditems.api.EquipoApi.identidad(item);
+            if (id == null) return 0;
+            Double d = net.ederus.edm.goditems.api.EquipoApi.efectosDePieza(id, "distancia.").get(CLAVE_TRIDENTE);
+            return d == null ? 0 : d;
+        } catch (Throwable t) {
+            return 0;
+        }
+    }
+
+    /**
+     * Lo que pega la flecha de un arco o ballesta tensado del todo.
+     *
+     * Uno de MMOItems dispara con el ATTACK_DAMAGE del tirador (el de MythicLib,
+     * que incluye el attack-damage del arco) y MythicLib lo multiplica por Poder:
+     * x(1,25 + 0,25 x nivel) si el arco lo lleva. Uno de vanilla dispara una
+     * flecha de 2 por su velocidad (3 el arco, 3,15 la ballesta), redondeando
+     * hacia arriba; Poder le suma 0,5 por nivel mas 0,5.
+     */
+    public static double danoDistancia(Player p, org.bukkit.inventory.ItemStack arco) {
+        double mmo = danoMmo(arco);
+        if (mmo > 0) return Math.max(mmo, ataqueMythic(p)) * factorPoder(arco);
+        double base = 2;
+        int poder = nivelPoder(arco);
+        if (poder > 0) base += 0.5 * poder + 0.5;
+        double velocidad = arco.getType() == org.bukkit.Material.CROSSBOW ? 3.15 : 3.0;
+        return Math.ceil(base * velocidad);
+    }
+
+    /** El multiplicador de Poder que MythicLib aplica a las flechas de MMOItems: 1 sin Poder. */
+    public static double factorPoder(org.bukkit.inventory.ItemStack arco) {
+        int n = nivelPoder(arco);
+        return n > 0 ? 1.25 + 0.25 * n : 1;
+    }
+
+    private static int nivelPoder(org.bukkit.inventory.ItemStack item) {
+        try {
+            return item == null ? 0 : item.getEnchantmentLevel(org.bukkit.enchantments.Enchantment.POWER);
+        } catch (Throwable t) {
+            return 0;
+        }
+    }
+
+    /** El ATTACK_DAMAGE del jugador para MythicLib, o 0 sin MythicLib. */
+    private static double ataqueMythic(Player p) {
+        try {
+            return io.lumine.mythic.lib.api.player.MMOPlayerData.get(p).getStatMap().getStat("ATTACK_DAMAGE");
+        } catch (Throwable t) {
+            return 0;
+        }
+    }
+
+    /**
+     * La stat attack-damage de un item de MMOItems, o 0. Primero por MythicLib, que
+     * es lo que no se rompe cuando cambian sus etiquetas; si no esta, a mano por el
+     * PDC de su namespace (la clave acaba en attack_damage).
+     */
+    public static double danoMmo(org.bukkit.inventory.ItemStack item) {
+        if (item == null || item.getType().isAir()) return 0;
+        try {
+            io.lumine.mythic.lib.api.item.NBTItem nbt = io.lumine.mythic.lib.api.item.NBTItem.get(item);
+            if (nbt.hasTag("MMOITEMS_ATTACK_DAMAGE")) return nbt.getDouble("MMOITEMS_ATTACK_DAMAGE");
+            return 0;
+        } catch (Throwable t) {
+            // Sin MythicLib: al PDC.
+        }
+        org.bukkit.inventory.meta.ItemMeta meta = item.getItemMeta();
+        if (meta == null) return 0;
+        var pdc = meta.getPersistentDataContainer();
+        for (var k : pdc.getKeys()) {
+            if (!k.getNamespace().equalsIgnoreCase("mmoitems")) continue;
+            if (!k.getKey().toLowerCase(Locale.ROOT).endsWith("attack_damage")) continue;
+            try {
+                Double d = pdc.get(k, org.bukkit.persistence.PersistentDataType.DOUBLE);
+                if (d != null) return d;
+            } catch (Throwable ignored) {
+                // Puede estar guardado como texto.
+            }
+            try {
+                String s = pdc.get(k, org.bukkit.persistence.PersistentDataType.STRING);
+                if (s != null) return Double.parseDouble(s.trim());
+            } catch (Throwable ignored) {
+                // No era un numero.
+            }
+        }
+        return 0;
     }
 
 }
