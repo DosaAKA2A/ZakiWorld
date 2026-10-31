@@ -293,6 +293,10 @@ public abstract class BossFight {
         rotateTarget();
         tickAirTime();
         tickShell();
+        /* Fuera de tickShell: si el maniqui se pierde un momento (desplazamientos, un
+         * reskin), el mob de debajo seguia sin desnudar y se le veia el equipo que le da
+         * el juego (31/10: calabaza de Halloween y armadura de oro sobre ORION). */
+        if (conCuerpo && ticks % 10 == 0) keepBossNaked();
         vigilarCaidaDeVida();
 
         int newPhase = PhaseBars.currentPhase(healthFraction(), phaseCount());
@@ -1288,6 +1292,7 @@ public abstract class BossFight {
                     });
             shell = body;
             shellProfile = profile;
+            conCuerpo = true;
             markMinion(body);
             boss.setInvisible(true);
             boss.setCustomNameVisible(false);
@@ -1357,6 +1362,9 @@ public abstract class BossFight {
      * equipo se le pone directamente al cuerpo visible y el mob
      * de debajo va vacio.
      */
+    /** El jefe lleva cuerpo de maniqui: su mob de debajo se mantiene desnudo. */
+    private boolean conCuerpo;
+
     private void tickShell() {
         if (shell == null) return;
         if (!shell.isValid()) {
@@ -1370,7 +1378,6 @@ public abstract class BossFight {
             if (shell.getVehicle() == null) shell.teleport(boss.getLocation());
         } catch (Throwable ignored) {
         }
-        if (ticks % 10 == 0) keepBossNaked();
     }
 
     /**

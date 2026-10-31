@@ -961,6 +961,13 @@ public final class Orion extends BossFight {
      * Si el jefe sigue peleando. Tras morir pasan ~110 ticks hasta la limpieza (cerrado) y en
      * ese rato las flechas en vuelo y las areas en curso seguian pegando, con daño puro incluido.
      */
+    /** TEMPORAL (31/10): registro de impactos para el fallo de «las flechas no hacen daño». */
+    private int depuraciones;
+
+    private void depurar(String msg) {
+        if (depuraciones++ < 300) plugin.getLogger().info("[ORION-debug] " + msg);
+    }
+
     private boolean enCombate() {
         return !cerrado && boss != null && !boss.isDead();
     }
@@ -987,7 +994,10 @@ public final class Orion extends BossFight {
          * llegara en el medio segundo de invulnerabilidad del golpe anterior no hacia nada
          * (Dosa: «varias flechas no hacen daño»). Cada flecha pega una vez por jugador. */
         p.setNoDamageTicks(0);
+        double antes = p.getHealth() + p.getAbsorptionAmount();
         if (s.base > 0) hit(p, s.base * damageBonus, s.mult);
+        depurar("golpe " + s.tipo + " a " + p.getName() + ": " + String.format(java.util.Locale.ROOT, "%.1f", antes)
+                + " -> " + String.format(java.util.Locale.ROOT, "%.1f", p.getHealth() + p.getAbsorptionAmount()));
         Location at = p.getLocation().add(0, 1.0, 0);
         fx(Compat.CRIT, at, 8, 0.25, 0.4, 0.25, 0.15);
         fx(Compat.DUST, at, 6, 0.25, 0.4, 0.25, 0, Compat.dust(s.tipo.rgb, 1.4f));
@@ -2121,6 +2131,9 @@ public final class Orion extends BossFight {
             Saeta s = saetas.get(e.getEntity().getUniqueId());
             if (s == null) return;
             Entity tocado = e.getHitEntity();
+            if (tocado instanceof Player dbg) depurar("impacto " + s.tipo + " en " + dbg.getName()
+                    + " base=" + s.base + " soloVisual=" + s.soloVisual + " enCombate=" + enCombate()
+                    + " enLaPelea=" + enLaPelea(dbg) + " noDmgTicks=" + dbg.getNoDamageTicks());
             if (tocado != null) {
                 e.setCancelled(true);
                 if (!(tocado instanceof Player p) || Tags.isOurs(tocado)) return;
