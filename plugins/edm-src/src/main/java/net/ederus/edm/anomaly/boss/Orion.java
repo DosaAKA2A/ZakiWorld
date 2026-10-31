@@ -320,7 +320,9 @@ public final class Orion extends BossFight {
         EntityEquipment eq = cuerpo.getEquipment();
         if (eq == null) return;
         eq.setItemInMainHand(arco());
-        eq.setItemInMainHandDropChance(0);
+        // El maniquí no es un Mob: Paper lanza si se le pone probabilidad de soltarlo
+        // (y tampoco suelta nada al morir, así que no hace falta).
+        if (cuerpo instanceof org.bukkit.entity.Mob) eq.setItemInMainHandDropChance(0);
     }
 
     private static ItemStack arco() {
