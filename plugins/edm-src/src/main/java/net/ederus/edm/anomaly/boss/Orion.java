@@ -1854,6 +1854,17 @@ public final class Orion extends BossFight {
         Location c = body().getLocation().add(0, 1.2, 0);
         for (Entity e : world().getNearbyEntities(c, 3.4, 3.4, 3.4)) {
             if (!(e instanceof Projectile pr) || !(pr.getShooter() instanceof Player)) continue;
+            /* Un tridente no se borra: es el objeto del jugador y se perderia (tambien el que
+             * ya esta clavado en el suelo junto al jefe). Se le corta el vuelo y cae. */
+            if (pr instanceof org.bukkit.entity.Trident tr) {
+                if (tr.isInBlock() || tr.isOnGround()) continue;
+                Vector v = tr.getVelocity();
+                if (v.lengthSquared() < 0.05) continue;
+                tr.setVelocity(v.multiply(-0.15).setY(0.1));
+                fx(Compat.ELECTRIC_SPARK, tr.getLocation(), 10, 0.15, 0.15, 0.15, 0.1);
+                soundAt(tr.getLocation(), "item.shield.block", 1.0f, 1.6f);
+                continue;
+            }
             Location l = pr.getLocation();
             fx(Compat.ELECTRIC_SPARK, l, 10, 0.15, 0.15, 0.15, 0.1);
             polvo(l, CELESTE, 1.6f);
