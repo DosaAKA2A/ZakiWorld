@@ -180,7 +180,7 @@ public final class Raiz extends BossFight {
         /* El que pelea: un zombi invisible. A ras de suelo de verdad: el punto de
          * apertura puede venir a media altura y flotar() lo dejaria ahi. */
         flotaBase = Fx.ground(at, 8);
-        boss = world().spawn(flotaBase.clone().add(0, 1.4, 0), Zombie.class, z -> {
+        boss = world().spawn(flotaBase.clone().add(0, 1.4, 0), Zombie.class, false, z -> {
             z.setPersistent(false);
             /* 1.85.2 · Como el resto del catalogo. Sin esto Minecraft lo borraba al instante si no habia
              * nadie a 128 bloques del centro (abrirla desde el warp del Coliseo): "se quedo sin jefe". */

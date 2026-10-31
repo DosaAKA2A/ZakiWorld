@@ -104,7 +104,7 @@ public final class Alba extends BossFight {
         Fx.ring(spot.clone().add(0, 0.2, 0), 5.0, 40, p ->
                 Compat.spawn(w, Compat.ELECTRIC_SPARK, p, 2, 0.05, 0.3, 0.05, 0.04));
 
-        boss = w.spawn(spot, Zombie.class, z -> {
+        boss = w.spawn(spot, Zombie.class, false, z -> {
             z.setAdult();
             z.setPersistent(true);
             z.setRemoveWhenFarAway(false);

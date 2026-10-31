@@ -280,7 +280,7 @@ public final class Orion extends BossFight {
         sueloY = spot.getY();
         World w = world();
 
-        boss = w.spawn(spot, Zombie.class, z -> {
+        boss = w.spawn(spot, Zombie.class, false, z -> {
             z.setAdult();
             z.setPersistent(true);
             z.setRemoveWhenFarAway(false);
@@ -861,7 +861,13 @@ public final class Orion extends BossFight {
         if (cerrado || saetas.size() >= MAX_SAETAS || dir == null || dir.lengthSquared() < 1.0E-6) return null;
         Vector d = dir.clone().normalize();
         try {
-            Arrow a = world().spawnArrow(desde, d, (float) vel, 0f);
+            disparando = true;
+            Arrow a;
+            try {
+                a = world().spawnArrow(desde, d, (float) vel, 0f);
+            } finally {
+                disparando = false;
+            }
             if (boss != null && boss.isValid()) a.setShooter(boss);
             a.setPersistent(false);
             a.setPickupStatus(AbstractArrow.PickupStatus.DISALLOWED);
@@ -884,10 +890,21 @@ public final class Orion extends BossFight {
             a.addScoreboardTag(MARCA);
             Saeta s = new Saeta(a, tipo, base, mult, desde.clone());
             saetas.put(a.getUniqueId(), s);
+            depurar("dispara " + tipo + " desde " + fmtL(desde) + " vel=" + vel + " dir=" + fmtV(d)
+                    + " valida=" + a.isValid() + " velReal=" + fmtV(a.getVelocity()) + " n=" + saetas.size());
             return s;
         } catch (Throwable t) {
+            depurar("dispara FALLO " + t);
             return null;
         }
+    }
+
+    private static String fmtL(Location l) {
+        return l == null ? "null" : String.format(java.util.Locale.ROOT, "%.1f %.1f %.1f", l.getX(), l.getY(), l.getZ());
+    }
+
+    private static String fmtV(Vector v) {
+        return v == null ? "null" : String.format(java.util.Locale.ROOT, "(%.2f %.2f %.2f)", v.getX(), v.getY(), v.getZ());
     }
 
     /** Dispara desde el arco hacia el pecho de alguien. */
@@ -903,7 +920,24 @@ public final class Orion extends BossFight {
     }
 
     /** Estelas, guiado y caducidad de todas las flechas en vuelo. */
+    private int tickDepura;
+    /** Mientras disparar() crea una flecha: para dejarla nacer aunque otro plugin la cancele. */
+    private boolean disparando;
+    private boolean culpableDicho;
+    private boolean danoListaDicha;
+
     private void tickSaetas() {
+        if (++tickDepura % 20 == 0) {
+            StringBuilder sb = new StringBuilder("motor: saetas=" + saetas.size() + " objetivos=");
+            for (Player p : targets()) sb.append(p.getName()).append('(').append(p.getGameMode()).append(' ')
+                    .append(String.format(java.util.Locale.ROOT, "%.1f", p.getLocation().distance(loc()))).append(") ");
+            for (Saeta s : saetas.values()) {
+                sb.append(" | ").append(s.tipo).append(" vida=").append(s.vida).append(" en ").append(fmtL(s.flecha.getLocation()))
+                        .append(" v=").append(fmtV(s.flecha.getVelocity())).append(" ok=").append(s.flecha.isValid());
+                break;
+            }
+            depurar(sb.toString());
+        }
         if (saetas.isEmpty()) return;
         List<Saeta> caidas = null;
         double paso = saetas.size() > 40 ? 0.9 : 0.45;
@@ -1003,7 +1037,7 @@ public final class Orion extends BossFight {
     private int depuraciones;
 
     private void depurar(String msg) {
-        if (depuraciones++ < 300) plugin.getLogger().info("[ORION-debug] " + msg);
+        if (depuraciones++ < 400) plugin.getLogger().info("[ORION-debug] " + msg);
     }
 
     private boolean enCombate() {
@@ -2164,14 +2198,80 @@ public final class Orion extends BossFight {
      */
     private final class Escucha implements Listener {
 
+        /* 31/10: otro plugin cancelaba la aparicion de sus flechas (salian «no validas» y se
+         * borraban al tick: no pegaba ninguna). Las que suelta disparar() se dejan nacer siempre. */
+        @EventHandler(priority = EventPriority.HIGHEST)
+        public void onNace(org.bukkit.event.entity.ProjectileLaunchEvent e) {
+            if (disparando && e.getEntity() instanceof Arrow && e.isCancelled()) {
+                if (!culpableDicho) {
+                    culpableDicho = true;
+                    StringBuilder sb = new StringBuilder();
+                    for (org.bukkit.plugin.RegisteredListener r : e.getHandlers().getRegisteredListeners()) {
+                        sb.append(r.getPlugin().getName()).append('/').append(r.getPriority()).append(' ');
+                    }
+                    plugin.getLogger().warning("[ORION] Un plugin cancelaba sus flechas al nacer; se dejan salir."
+                            + " Escuchan ProjectileLaunchEvent: " + sb);
+                }
+                e.setCancelled(false);
+            }
+        }
+
+        @EventHandler(priority = EventPriority.HIGHEST)
+        public void onNaceEntidad(org.bukkit.event.entity.EntitySpawnEvent e) {
+            if (disparando && e.getEntity() instanceof Arrow && e.isCancelled()) {
+                if (!culpableDicho) {
+                    culpableDicho = true;
+                    StringBuilder sb = new StringBuilder();
+                    for (org.bukkit.plugin.RegisteredListener r : e.getHandlers().getRegisteredListeners()) {
+                        sb.append(r.getPlugin().getName()).append('/').append(r.getPriority()).append(' ');
+                    }
+                    plugin.getLogger().warning("[ORION] Un plugin cancelaba sus flechas al nacer (EntitySpawnEvent); se dejan salir."
+                            + " Escuchan: " + sb);
+                }
+                e.setCancelled(false);
+            }
+        }
+
+        @EventHandler(priority = EventPriority.LOWEST)
+        public void onDanoAntes(org.bukkit.event.entity.EntityDamageEvent e) {
+            if (!(e.getEntity() instanceof Player p) || !dealingScaledDamage()) return;
+            depurar("dano LOWEST a " + p.getName() + " causa=" + e.getCause() + " dano=" + e.getDamage()
+                    + " cancelado=" + e.isCancelled() + " clase=" + e.getClass().getSimpleName());
+        }
+
+        @EventHandler(priority = EventPriority.MONITOR)
+        public void onDanoDespues(org.bukkit.event.entity.EntityDamageEvent e) {
+            if (!(e.getEntity() instanceof Player p) || !dealingScaledDamage()) return;
+            StringBuilder sb = new StringBuilder();
+            if (e.isCancelled() && !danoListaDicha) {
+                danoListaDicha = true;
+                for (org.bukkit.plugin.RegisteredListener r : e.getHandlers().getRegisteredListeners()) {
+                    sb.append(r.getPlugin().getName()).append('/').append(r.getPriority()).append(' ');
+                }
+                if (e instanceof org.bukkit.event.entity.EntityDamageByEntityEvent ee) {
+                    sb.append(" || EDBE: ");
+                    for (org.bukkit.plugin.RegisteredListener r : ee.getHandlers().getRegisteredListeners()) {
+                        sb.append(r.getPlugin().getName()).append('/').append(r.getPriority()).append(' ');
+                    }
+                }
+            }
+            depurar("dano MONITOR a " + p.getName() + " dano=" + e.getDamage() + " final=" + e.getFinalDamage()
+                    + " cancelado=" + e.isCancelled() + " " + sb);
+        }
+
         @EventHandler(priority = EventPriority.LOWEST)
         public void onImpacto(ProjectileHitEvent e) {
             Saeta s = saetas.get(e.getEntity().getUniqueId());
             if (s == null) return;
             Entity tocado = e.getHitEntity();
+            depurar("ProjectileHit " + s.tipo + " entidad=" + (tocado == null ? "-" : tocado.getType() + "/" + tocado.getName())
+                    + " bloque=" + (e.getHitBlock() == null ? "-" : e.getHitBlock().getType()) + " en " + fmtL(e.getEntity().getLocation()));
             if (tocado instanceof Player dbg) depurar("impacto " + s.tipo + " en " + dbg.getName()
                     + " base=" + s.base + " soloVisual=" + s.soloVisual + " enCombate=" + enCombate()
-                    + " enLaPelea=" + enLaPelea(dbg) + " noDmgTicks=" + dbg.getNoDamageTicks());
+                    + " enLaPelea=" + enLaPelea(dbg) + " noDmgTicks=" + dbg.getNoDamageTicks()
+                    + " invul=" + dbg.isInvulnerable() + " gm=" + dbg.getGameMode()
+                    + " efectos=" + dbg.getActivePotionEffects().stream().map(x -> x.getType().getKey().getKey() + x.getAmplifier()).toList()
+                    + " absorcion=" + dbg.getAbsorptionAmount());
             if (tocado != null) {
                 e.setCancelled(true);
                 if (!(tocado instanceof Player p) || Tags.isOurs(tocado)) return;

@@ -94,7 +94,7 @@ public final class Rabby extends BossFight {
     public void spawn() {
         Location spot = arena.clone();
 
-        boss = world().spawn(spot, Zombie.class, z -> {
+        boss = world().spawn(spot, Zombie.class, false, z -> {
             z.setAdult();
             z.setPersistent(true);
             z.setRemoveWhenFarAway(false);
