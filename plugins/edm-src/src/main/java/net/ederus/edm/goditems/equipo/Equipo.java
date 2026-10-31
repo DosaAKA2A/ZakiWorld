@@ -133,16 +133,16 @@ public final class Equipo implements Listener {
      */
     public String cargar() {
         File carpeta = new File(this.modulo.getDataFolder(), CARPETA);
-        if (!carpeta.isDirectory()) {
-            carpeta.mkdirs();
-            /* Solo la primera vez, como los items de ejemplo: si se escribieran
-             * en cada arranque, se perderian los cambios hechos en el panel. */
-            for (String f : List.of("pesca.yml", "calamity.yml", "distancia.yml")) {
-                try {
-                    this.modulo.saveResource(CARPETA + "/" + f, false);
-                } catch (IllegalArgumentException sinRecurso) {
-                    /* Un jar sin ese fichero: se sigue. */
-                }
+        carpeta.mkdirs();
+        /* Solo los que falten: el que ya esta no se toca, para no perder los cambios
+         * hechos en el panel. Asi un fichero de serie nuevo (distancia.yml en la
+         * 1.91.0) llega tambien a los servidores que ya tenian la carpeta. */
+        for (String f : List.of("pesca.yml", "calamity.yml", "distancia.yml")) {
+            if (new File(carpeta, f).exists()) continue;
+            try {
+                this.modulo.saveResource(CARPETA + "/" + f, false);
+            } catch (IllegalArgumentException sinRecurso) {
+                /* Un jar sin ese fichero: se sigue. */
             }
         }
         this.redaccion = new Redaccion(this.modulo.getConfig().getConfigurationSection("equipo"));
