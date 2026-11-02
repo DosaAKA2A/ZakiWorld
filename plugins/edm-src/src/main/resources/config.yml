@@ -2,18 +2,20 @@
 #
 # Cada modulo tiene su propia carpeta y su propio config dentro de plugins/EDM/:
 #   rip/      efectos de kill y muerte      (antes plugins/Rip)
-#   anomaly/  jefes y botin                 (antes plugins/Anomaly)
 #   core/     libros y avisos de tiendas    (antes plugins/EderusMain)
 #   tienda/   la tienda propia (/shop)
 #   coinflip/ apuestas entre jugadores (/cf)
 #   troll/    bromas de admin (/troll)
 #   tooltip/  como se ven los encantamientos de los items
 #   goditems/ comportamiento de los items (/gi)
-#   dungeonloot/ cajas y llaves de mazmorra (/dl)
 #   flex/     la vitrina de cada jugador (/flex)
 #   biomas/   Lethal Biomes, climas por zona (/lbiomes)
 #   boost/    boosts temporales de exp, habilidades, pesca, MobCoins y minions (/boost)
 #   superbeacon/ Super Beacons: balizas propias con efectos de area (/superbeacon)
+#
+# Las anomalias y las bovedas de mazmorra (/anomaly, /esb, /dl) son desde la 1.92.0 el
+# plugin Anomaly, con sus datos en plugins/Anomaly/. Se siguen encendiendo o apagando
+# aqui abajo, con modulos.anomaly y modulos.dungeonloot.
 #
 # Al arrancar por primera vez se copian solos desde las carpetas viejas,
 # que se conservan intactas por si hay que volver atras.

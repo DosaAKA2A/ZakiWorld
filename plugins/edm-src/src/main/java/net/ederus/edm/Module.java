@@ -36,16 +36,31 @@ import io.papermc.paper.plugin.lifecycle.event.LifecycleEventManager;
 public abstract class Module implements Plugin {
 
     protected final EDMPlugin core;
+    /* El plugin de Bukkit que es dueño del modulo: EDM para los suyos, y otro plugin
+     * (Anomaly) para los que viven fuera de EDM pero usan su nucleo. De el salen la
+     * carpeta de datos, los recursos del jar, los comandos y las tareas. */
+    private final Plugin host;
     private final String id;
     private final String legacyName;
     private final File dataFolder;
     private FileConfiguration config;
 
     protected Module(EDMPlugin core, String id, String legacyName) {
+        this(core, core, id, legacyName);
+    }
+
+    /** Un modulo de otro plugin (host) que se apoya en el nucleo de EDM. */
+    protected Module(EDMPlugin core, Plugin host, String id, String legacyName) {
         this.core = core;
+        this.host = host;
         this.id = id;
         this.legacyName = legacyName;
-        this.dataFolder = new File(core.getDataFolder(), id);
+        this.dataFolder = new File(host.getDataFolder(), id);
+    }
+
+    /** El plugin de Bukkit dueño del modulo (EDM, o el plugin de fuera que lo trae). */
+    public final Plugin host() {
+        return this.host;
     }
 
     /**
@@ -79,7 +94,7 @@ public abstract class Module implements Plugin {
      * que las marcas del mundo sigan siendo rip:algo.
      */
     public static Plugin dueno(Plugin p) {
-        return p instanceof Module m ? m.core : p;
+        return p instanceof Module m ? m.host : p;
     }
 
     public final EDMPlugin core() {
@@ -135,7 +150,7 @@ public abstract class Module implements Plugin {
     /* Los recursos del modulo viven dentro del jar en <id>/loquesea. */
     @Override
     public final InputStream getResource(String name) {
-        return this.core.getResource(this.id + "/" + name);
+        return this.host.getResource(this.id + "/" + name);
     }
 
     @Override
@@ -200,48 +215,48 @@ public abstract class Module implements Plugin {
 
     @Override
     public final Logger getLogger() {
-        return this.core.getLogger();
+        return this.host.getLogger();
     }
 
     @Override
     public final Server getServer() {
-        return this.core.getServer();
+        return this.host.getServer();
     }
 
     @Override
     public final PluginDescriptionFile getDescription() {
-        return this.core.getDescription();
+        return this.host.getDescription();
     }
 
     @Override
     public final PluginMeta getPluginMeta() {
-        return this.core.getPluginMeta();
+        return this.host.getPluginMeta();
     }
 
     @Override
     @SuppressWarnings("deprecation")
     public final PluginLoader getPluginLoader() {
-        return this.core.getPluginLoader();
+        return this.host.getPluginLoader();
     }
 
     @Override
     public final LifecycleEventManager<Plugin> getLifecycleManager() {
-        return this.core.getLifecycleManager();
+        return this.host.getLifecycleManager();
     }
 
     @Override
     public final boolean isEnabled() {
-        return this.core.isEnabled();
+        return this.host.isEnabled();
     }
 
     @Override
     public final boolean isNaggable() {
-        return this.core.isNaggable();
+        return this.host.isNaggable();
     }
 
     @Override
     public final void setNaggable(boolean naggable) {
-        this.core.setNaggable(naggable);
+        this.host.setNaggable(naggable);
     }
 
     @Override
@@ -260,7 +275,7 @@ public abstract class Module implements Plugin {
 
     /* Los comandos los declara el plugin.yml del nucleo. */
     public final org.bukkit.command.PluginCommand getCommand(String name) {
-        return this.core.getCommand(name);
+        return this.host instanceof org.bukkit.plugin.java.JavaPlugin jp ? jp.getCommand(name) : null;
     }
 
     /*

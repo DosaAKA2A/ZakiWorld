@@ -242,7 +242,7 @@ public final class MenuFlex implements Listener {
             if (it == null) continue;
             puestos++;
             out.add(Estilo.texto(" " + Estilo.FLECHA + " ", Estilo.APAGADO)
-                    .append(net.ederus.edm.anomaly.drops.DropTable.nameOf(it)
+                    .append(nombreDe(it)
                             .colorIfAbsent(Estilo.CLARO)
                             .decoration(TextDecoration.ITALIC, false)));
         }
@@ -250,5 +250,16 @@ public final class MenuFlex implements Listener {
             out.add(Estilo.texto("   y " + (v.cuantos() - puestos) + " más", Estilo.APAGADO));
         }
         return out;
+    }
+
+    /** El nombre que se ve del objeto: el puesto a mano, el del objeto o el del juego. */
+    private static net.kyori.adventure.text.Component nombreDe(ItemStack it) {
+        var meta = it.getItemMeta();
+        if (meta != null) {
+            var propio = meta.displayName();
+            if (propio != null) return propio;
+            if (meta.hasItemName()) return meta.itemName();
+        }
+        return net.kyori.adventure.text.Component.translatable(it.getType().translationKey());
     }
 }

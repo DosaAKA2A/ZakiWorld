@@ -1,9 +1,9 @@
 name: EDM
-version: '1.91.0'
+version: '1.92.0'
 main: net.ederus.edm.EDMPlugin
 api-version: '1.20'
 author: Iris Studio
-description: Nucleo de Ederus - Rip, Anomaly, libros, avisos de tiendas, tienda propia, apuestas, bromas y pase de batalla
+description: Nucleo de Ederus - Rip, libros, avisos de tiendas, tienda propia, apuestas, bromas y pase de batalla
 softdepend: [Vault, AxMinions, WorldGuard, ProtectionStones, MMOItems, LibsDisguises, AdvancedEnchantments, UltimateMobCoins, Quests, ProtocolLib, BattlePass, PlaceholderAPI, TAB, AuraSkills, PhoenixCrates]
 
 commands:
@@ -37,16 +37,6 @@ commands:
   rip:
     description: Menu y ajustes de efectos Rip
     usage: /rip <gui|kill|death|list|info|test|reload>
-  anomaly:
-    description: 'Panel de anomalias (jefes): iniciar, elegir, botin y ajustes.'
-    usage: /anomaly <menu|start|here|at|stop|info|abilities|test|hurt|arena|biome|logros|reload>
-    aliases: [anomalia, anom]
-    permission: anomaly.gui
-  esb:
-    description: 'Los esbirros de mazmorra, por carpetas: crear, ajustar e invocar.'
-    usage: /esb [lista|reload|<id> [nivel] [x y z]]
-    aliases: [esbirros, esbirro]
-    permission: anomaly.gui
   main:
     description: Comando principal del nucleo de Ederus
     usage: /main <reload|aviso|libro>
@@ -64,11 +54,6 @@ commands:
     usage: /troll [jugador] [broma]
     aliases: [bromas]
     permission: ederus.troll.usar
-  dl:
-    description: 'Cajas de mazmorra: bovedas del Trial Chamber con botin propio.'
-    usage: /dl [lista|llave|boveda|reload]
-    aliases: [dungeonloot, cajas]
-    permission: ederus.dl
   flex:
     description: 'Tu vitrina: pon a la vista tus mejores objetos.'
     usage: /flex [jugador|showcase|power|top]
@@ -118,12 +103,6 @@ permissions:
   fancyglow.flashing:
     description: El brillo que parpadea
     default: false
-  ederus.dl:
-    description: Abre el menu de cajas de mazmorra y entrega llaves y bovedas
-    default: op
-  ederus.dl.admin:
-    description: Permite colocar y retirar bovedas del mundo
-    default: op
   ederus.flex:
     description: Permite montar una vitrina, verla y mostrarla en el chat
     default: true
@@ -254,14 +233,6 @@ permissions:
       rip.death.lightning: true
       rip.death.pufferfish: true
       rip.death.requiem: true
-  anomaly.gui:
-    description: 'Abre el panel de Anomaly y usa todos sus subcomandos.'
-    default: op
-  anomaly.*:
-    description: 'Todo Anomaly.'
-    default: op
-    children:
-      anomaly.gui: true
   ederus.admin:
     description: Permite usar /main (recargar el nucleo y probar los avisos)
     default: op

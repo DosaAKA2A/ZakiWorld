@@ -12,9 +12,7 @@ import org.bukkit.command.Command;
 import org.bukkit.command.CommandSender;
 import org.bukkit.plugin.java.JavaPlugin;
 
-import net.ederus.edm.anomaly.AnomalyPlugin;
 import net.ederus.edm.coinflip.CoinflipPlugin;
-import net.ederus.edm.dungeonloot.DungeonLootPlugin;
 import net.ederus.edm.flex.FlexPlugin;
 import net.ederus.edm.troll.TrollPlugin;
 import net.ederus.edm.comun.EntradaChat;
@@ -27,8 +25,9 @@ import net.ederus.edm.tienda.TiendaPlugin;
 import net.ederus.edm.tooltip.TooltipPlugin;
 
 /*
- * EDM: el nucleo de Ederus. Reune Rip, Anomaly y EderusMain (libros + avisos de
- * las tiendas de MobCoins) en un solo plugin.
+ * EDM: el nucleo de Ederus. Reune Rip y EderusMain (libros + avisos de las tiendas
+ * de MobCoins) en un solo plugin. Anomaly vivio aqui hasta la 1.91.0; desde la 1.92.0
+ * es un plugin aparte que usa este nucleo (ver adoptar y PrimeraFila).
  *
  * Cada modulo arranca aislado: si uno revienta, se anota y los otros siguen.
  * Antes eran tres plugins y un fallo solo se llevaba el suyo; aqui el aislamiento
@@ -36,7 +35,7 @@ import net.ederus.edm.tooltip.TooltipPlugin;
  */
 public class EDMPlugin extends JavaPlugin {
 
-    public static final String VERSION = "1.91.0";
+    public static final String VERSION = "1.92.0";
 
     /* La identidad del nucleo. La build de OneBlock (EDMOneBlock) la cambia:
      * alli se llama EDO, Ederus OneBlock, con su propio arte y su version. */
@@ -96,12 +95,7 @@ public class EDMPlugin extends JavaPlugin {
      */
     @Override
     public void onLoad() {
-        try {
-            saveDefaultConfig();
-            net.ederus.edm.anomaly.core.Advancements.installBeforeWorlds(this);
-        } catch (Throwable t) {
-            getLogger().warning("No se pudo preparar el arbol de logros antes de cargar el mundo: " + t);
-        }
+        saveDefaultConfig();
     }
 
     @Override
@@ -110,6 +104,8 @@ public class EDMPlugin extends JavaPlugin {
 
         chat = new EntradaChat(this);
         getServer().getPluginManager().registerEvents(chat, this);
+        /* Antes que los modulos: ver PrimeraFila (los golpes de Anomaly van por delante). */
+        getServer().getPluginManager().registerEvents(new net.ederus.edm.comun.PrimeraFila(getLogger()), this);
 
         for (Module m : modulosBase()) arrancar(m);
         modulosOpcionales();
@@ -155,13 +151,11 @@ public class EDMPlugin extends JavaPlugin {
     protected List<Module> modulosBase() {
         return List.of(
                 new RipPlugin(this),
-                new AnomalyPlugin(this),
                 new EderusMain(this),
                 new TiendaPlugin(this),
                 new CoinflipPlugin(this),
                 new TrollPlugin(this),
                 new GodItemsPlugin(this),
-                new DungeonLootPlugin(this),
                 new FlexPlugin(this),
                 new net.ederus.edm.biomas.BiomasPlugin(this),
                 new net.ederus.edm.minas.MinasPlugin(this),
@@ -428,6 +422,7 @@ public class EDMPlugin extends JavaPlugin {
             /* Los listeners se registraron con el modulo, no con el nucleo:
              * Bukkit no los va a quitar solo. */
             HandlerList.unregisterAll(m);
+            net.ederus.edm.comun.PrimeraFila.soltar(m);
         }
         this.modulos.clear();
 
@@ -443,7 +438,6 @@ public class EDMPlugin extends JavaPlugin {
          * el cargador de clases del EDM viejo entero. */
         try {
             net.ederus.edm.comun.Webhook.cerrar();
-            net.ederus.edm.anomaly.core.Disguises.limpiarCache();
         } catch (Throwable t) {
             getLogger().warning("Fallo al soltar el estado compartido: " + t);
         }
@@ -465,6 +459,7 @@ public class EDMPlugin extends JavaPlugin {
              * listeners: sin esto se quedan atendiendo eventos con el modulo
              * medio construido, que da errores raros de un modulo "caido". */
             HandlerList.unregisterAll(modulo);
+            net.ederus.edm.comun.PrimeraFila.soltar(modulo);
             getLogger().severe("El modulo " + id + " no arranco: " + t);
             t.printStackTrace();
         }
@@ -477,6 +472,29 @@ public class EDMPlugin extends JavaPlugin {
 
     public Module modulo(String id) {
         return this.modulos.get(id);
+    }
+
+    /**
+     * Arranca un modulo que trae otro plugin (Anomaly) y lo deja en la lista de EDM, para
+     * que /edm estado, /edm <modulo> reload y modulo(id) lo vean como a los de siempre.
+     * Se respeta modulos.<id> del config de EDM. Devuelve true si quedo en marcha.
+     */
+    public boolean adoptar(Module modulo) {
+        arrancar(modulo);
+        return this.modulos.get(modulo.getId()) == modulo;
+    }
+
+    /** Apaga y quita un modulo adoptado (lo llama el plugin que lo trajo al apagarse). */
+    public void soltar(Module modulo) {
+        if (this.modulos.get(modulo.getId()) != modulo) return;
+        this.modulos.remove(modulo.getId());
+        try {
+            modulo.onDisable();
+        } catch (Throwable t) {
+            getLogger().warning("El modulo " + modulo.getId() + " fallo al apagarse: " + t);
+        }
+        HandlerList.unregisterAll(modulo);
+        net.ederus.edm.comun.PrimeraFila.soltar(modulo);
     }
 
     public boolean activo(String id) {

@@ -2,7 +2,6 @@ package net.ederus.edm;
 
 import java.util.List;
 
-import net.ederus.edm.anomaly.AnomalyPlugin;
 import net.ederus.edm.biomas.BiomasPlugin;
 import net.ederus.edm.boost.BoostPlugin;
 import net.ederus.edm.flex.FlexPlugin;
@@ -14,8 +13,8 @@ import net.ederus.edm.tienda.TiendaPlugin;
  * que cambia el plugin.yml (este main, solo los comandos de estos modulos), el
  * config.yml y el catalogo de precios por los de src/main/resources-oneblock.
  *
- * Anomaly va desde EDO 1.4.0 porque EderusDimensions puebla sus dimensiones
- * con los Esbirros (anomaly/minions). Sus dependencias externas son todas
+ * Anomaly fue dentro de EDO desde la 1.4.0 (EderusDimensions puebla sus dimensiones
+ * con los Esbirros); desde EDM 1.92.0 es un plugin aparte que se apoya en este nucleo. Sus dependencias externas son todas
  * opcionales: WorldGuard y LibsDisguises se buscan por reflexion y solo si
  * estan instalados, MobCoins y ServerVariables van por comando de consola (si
  * faltan, el comando falla solo) y los biomas se piden a BiomasPlugin.activo()
@@ -63,10 +62,8 @@ public class EDMOneBlock extends EDMPlugin {
 
     @Override
     protected List<Module> modulosBase() {
-        // Anomaly el primero, como en EDMPlugin.modulosBase(): su guardian de la
-        // arena tiene que registrar sus listeners antes que nadie (ver AnomalyPlugin).
+        // Anomaly ya no va dentro: es un plugin aparte que se apoya en este nucleo.
         return List.of(
-                new AnomalyPlugin(this),
                 new TiendaPlugin(this),
                 new FlexPlugin(this),
                 new BiomasPlugin(this),
