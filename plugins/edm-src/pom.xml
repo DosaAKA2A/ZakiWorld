@@ -9,7 +9,7 @@
   <version>1.92.0</version>
   <packaging>jar</packaging>
   <name>EDM</name>
-  <description>Nucleo de Ederus: Rip, libros y avisos de tiendas, tienda, sets y demas modulos</description>
+  <description>Nucleo de Ederus: libros y avisos de tiendas, tienda, sets y demas modulos</description>
 
   <properties>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>

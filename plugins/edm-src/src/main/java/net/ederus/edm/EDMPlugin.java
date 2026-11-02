@@ -20,14 +20,14 @@ import net.ederus.edm.core.EderusMain;
 import net.ederus.edm.goditems.GodItemsPlugin;
 import net.ederus.edm.misiones.MisionesPlugin;
 import net.ederus.edm.pase.PasePlugin;
-import net.ederus.edm.rip.RipPlugin;
 import net.ederus.edm.tienda.TiendaPlugin;
 import net.ederus.edm.tooltip.TooltipPlugin;
 
 /*
- * EDM: el nucleo de Ederus. Reune Rip y EderusMain (libros + avisos de las tiendas
- * de MobCoins) en un solo plugin. Anomaly vivio aqui hasta la 1.91.0; desde la 1.92.0
- * es un plugin aparte que usa este nucleo (ver adoptar y PrimeraFila).
+ * EDM: el nucleo de Ederus. Reune EderusMain (libros + avisos de las tiendas de
+ * MobCoins) y el resto de modulos del Survival en un solo plugin. Rip y Anomaly vivieron
+ * aqui hasta la 1.91.0; desde la 1.92.0 son plugins aparte que usan este nucleo (ver
+ * adoptar y PrimeraFila).
  *
  * Cada modulo arranca aislado: si uno revienta, se anota y los otros siguen.
  * Antes eran tres plugins y un fallo solo se llevaba el suyo; aqui el aislamiento
@@ -150,7 +150,6 @@ public class EDMPlugin extends JavaPlugin {
      */
     protected List<Module> modulosBase() {
         return List.of(
-                new RipPlugin(this),
                 new EderusMain(this),
                 new TiendaPlugin(this),
                 new CoinflipPlugin(this),

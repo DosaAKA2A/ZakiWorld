@@ -1,7 +1,6 @@
 # EDM - nucleo de Ederus
 #
 # Cada modulo tiene su propia carpeta y su propio config dentro de plugins/EDM/:
-#   rip/      efectos de kill y muerte      (antes plugins/Rip)
 #   core/     libros y avisos de tiendas    (antes plugins/EderusMain)
 #   tienda/   la tienda propia (/shop)
 #   coinflip/ apuestas entre jugadores (/cf)
@@ -14,8 +13,9 @@
 #   superbeacon/ Super Beacons: balizas propias con efectos de area (/superbeacon)
 #
 # Las anomalias y las bovedas de mazmorra (/anomaly, /esb, /dl) son desde la 1.92.0 el
-# plugin Anomaly, con sus datos en plugins/Anomaly/. Se siguen encendiendo o apagando
-# aqui abajo, con modulos.anomaly y modulos.dungeonloot.
+# plugin Anomaly, con sus datos en plugins/Anomaly/, y los efectos de kill y muerte (/rip)
+# el plugin Rip, en plugins/Rip/. Se siguen encendiendo o apagando aqui abajo, con
+# modulos.anomaly, modulos.dungeonloot y modulos.rip.
 #
 # Al arrancar por primera vez se copian solos desde las carpetas viejas,
 # que se conservan intactas por si hay que volver atras.
